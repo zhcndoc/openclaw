@@ -1,60 +1,59 @@
 ---
-summary: "CLI reference for `openclaw cron` (schedule and run background jobs)"
+summary: "`openclaw cron` 的 CLI 参考（调度和运行后台作业）"
 read_when:
-  - You want scheduled jobs and wakeups
-  - You’re debugging cron execution and logs
+  - 您需要定时作业和唤醒功能
+  - 您正在调试 cron 执行和日志
 title: "cron"
 ---
 
 # `openclaw cron`
 
-Manage cron jobs for the Gateway scheduler.
+管理网关调度器的 cron 作业。
 
-Related:
+相关内容：
 
-- Cron jobs: [Cron jobs](/automation/cron-jobs)
+- Cron 作业: [Cron 作业](/automation/cron-jobs)
 
-Tip: run `openclaw cron --help` for the full command surface.
+提示：运行 `openclaw cron --help` 获取完整命令信息。
 
-Note: isolated `cron add` jobs default to `--announce` delivery. Use `--no-deliver` to keep
-output internal. `--deliver` remains as a deprecated alias for `--announce`.
+注意：孤立的 `cron add` 作业默认使用 `--announce` 发送输出。使用 `--no-deliver` 可以保持输出为内部内容。`--deliver` 仍作为废弃别名对应 `--announce`。
 
-Note: one-shot (`--at`) jobs delete after success by default. Use `--keep-after-run` to keep them.
+注意：一次性（`--at`）作业在成功后默认自动删除。使用 `--keep-after-run` 可保留作业。
 
-Note: recurring jobs now use exponential retry backoff after consecutive errors (30s → 1m → 5m → 15m → 60m), then return to normal schedule after the next successful run.
+注意：循环作业在连续错误后采用指数递减重试间隔（30秒 → 1分钟 → 5分钟 → 15分钟 → 60分钟），然后在下一次成功运行后恢复正常调度。
 
-Note: retention/pruning is controlled in config:
+注意：保留和修剪由配置控制：
 
-- `cron.sessionRetention` (default `24h`) prunes completed isolated run sessions.
-- `cron.runLog.maxBytes` + `cron.runLog.keepLines` prune `~/.openclaw/cron/runs/<jobId>.jsonl`.
+- `cron.sessionRetention`（默认 `24h`）修剪已完成的孤立运行会话。
+- `cron.runLog.maxBytes` + `cron.runLog.keepLines` 修剪 `~/.openclaw/cron/runs/<jobId>.jsonl` 文件。
 
-## Common edits
+## 常用编辑操作
 
-Update delivery settings without changing the message:
+在不更改消息内容的情况下更新发送设置：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel telegram --to "123456789"
 ```
 
-Disable delivery for an isolated job:
+禁用孤立作业的发送功能：
 
 ```bash
 openclaw cron edit <job-id> --no-deliver
 ```
 
-Enable lightweight bootstrap context for an isolated job:
+为孤立作业启用轻量级引导上下文：
 
 ```bash
 openclaw cron edit <job-id> --light-context
 ```
 
-Announce to a specific channel:
+向指定频道宣布：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
 ```
 
-Create an isolated job with lightweight bootstrap context:
+创建带轻量级引导上下文的孤立作业：
 
 ```bash
 openclaw cron add \
@@ -66,4 +65,4 @@ openclaw cron add \
   --no-deliver
 ```
 
-`--light-context` applies to isolated agent-turn jobs only. For cron runs, lightweight mode keeps bootstrap context empty instead of injecting the full workspace bootstrap set.
+`--light-context` 仅适用于孤立的 agent-turn 作业。对于 cron 运行，轻量模式保持引导上下文为空，而不注入完整的工作区引导集。

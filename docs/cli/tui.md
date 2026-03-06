@@ -1,24 +1,24 @@
 ---
-summary: "CLI reference for `openclaw tui` (terminal UI connected to the Gateway)"
+summary: "`openclaw tui` 的 CLI 参考（连接到 Gateway 的终端 UI）"
 read_when:
-  - You want a terminal UI for the Gateway (remote-friendly)
-  - You want to pass url/token/session from scripts
+  - 你想要一个 Gateway 的终端 UI（适合远程使用）
+  - 你想从脚本中传递 url/token/session
 title: "tui"
 ---
 
 # `openclaw tui`
 
-Open the terminal UI connected to the Gateway.
+打开连接到 Gateway 的终端 UI。
 
-Related:
+相关：
 
-- TUI guide: [TUI](/web/tui)
+- TUI 指南: [TUI](/web/tui)
 
-Notes:
+注意：
 
-- `tui` resolves configured gateway auth SecretRefs for token/password auth when possible (`env`/`file`/`exec` providers).
+- `tui` 在可能的情况下解析已配置的 Gateway 认证 SecretRefs 用于 token/密码认证（`env`/`file`/`exec` 提供者）。
 
-## Examples
+## 示例
 
 ```bash
 openclaw tui

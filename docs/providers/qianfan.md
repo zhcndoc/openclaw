@@ -1,38 +1,37 @@
 ---
-summary: "Use Qianfan's unified API to access many models in OpenClaw"
+summary: "使用千帆的统一 API 访问 OpenClaw 中的多个模型"
 read_when:
-  - You want a single API key for many LLMs
-  - You need Baidu Qianfan setup guidance
-title: "Qianfan"
+  - 你想用一个 API key 访问多个大语言模型
+  - 你需要百度千帆的设置指导
+title: "千帆"
 ---
 
-# Qianfan Provider Guide
+# 千帆提供者指南
 
-Qianfan is Baidu's MaaS platform, provides a **unified API** that routes requests to many models behind a single
-endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switching the base URL.
+千帆是百度的 MaaS 平台，提供一个**统一的 API**，通过单一的端点和 API key 路由请求到多个模型。它兼容 OpenAI，因此大多数 OpenAI SDK 只需切换基础 URL 即可使用。
 
-## Prerequisites
+## 前提条件
 
-1. A Baidu Cloud account with Qianfan API access
-2. An API key from the Qianfan console
-3. OpenClaw installed on your system
+1. 拥有一个具备千帆 API 访问权限的百度云账号
+2. 从千帆控制台获取一个 API key
+3. 已在系统中安装 OpenClaw
 
-## Getting Your API Key
+## 获取你的 API key
 
-1. Visit the [Qianfan Console](https://console.bce.baidu.com/qianfan/ais/console/apiKey)
-2. Create a new application or select an existing one
-3. Generate an API key (format: `bce-v3/ALTAK-...`)
-4. Copy the API key for use with OpenClaw
+1. 访问 [千帆控制台](https://console.bce.baidu.com/qianfan/ais/console/apiKey)
+2. 创建一个新应用或选择已有应用
+3. 生成一个 API key（格式：`bce-v3/ALTAK-...`）
+4. 复制该 API key 用于 OpenClaw
 
-## CLI setup
+## CLI 设置
 
 ```bash
 openclaw onboard --auth-choice qianfan-api-key
 ```
 
-## Related Documentation
+## 相关文档
 
-- [OpenClaw Configuration](/gateway/configuration)
-- [Model Providers](/concepts/model-providers)
-- [Agent Setup](/concepts/agent)
-- [Qianfan API Documentation](https://cloud.baidu.com/doc/qianfan-api/s/3m7of64lb)
+- [OpenClaw 配置](/gateway/configuration)
+- [模型提供者](/concepts/model-providers)
+- [代理设置](/concepts/agent)
+- [千帆 API 文档](https://cloud.baidu.com/doc/qianfan-api/s/3m7of64lb)

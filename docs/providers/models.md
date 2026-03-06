@@ -1,20 +1,19 @@
 ---
-summary: "Model providers (LLMs) supported by OpenClaw"
+summary: "OpenClaw 支持的模型提供商（大型语言模型，LLMs）"
 read_when:
-  - You want to choose a model provider
-  - You want quick setup examples for LLM auth + model selection
-title: "Model Provider Quickstart"
+  - 你想选择一个模型提供商
+  - 你想快速了解 LLM 认证 + 模型选择的示例
+title: "模型提供商快速入门"
 ---
 
-# Model Providers
+# 模型提供商
 
-OpenClaw can use many LLM providers. Pick one, authenticate, then set the default
-model as `provider/model`.
+OpenClaw 可以使用多种大型语言模型提供商。选择一个，完成认证，然后将默认模型设置为 `provider/model`。
 
-## Quick start (two steps)
+## 快速开始（两步）
 
-1. Authenticate with the provider (usually via `openclaw onboard`).
-2. Set the default model:
+1. 与提供商完成认证（通常通过 `openclaw onboard`）。
+2. 设置默认模型：
 
 ```json5
 {
@@ -22,7 +21,7 @@ model as `provider/model`.
 }
 ```
 
-## Supported providers (starter set)
+## 支持的提供商（入门集）
 
 - [OpenAI (API + Codex)](/providers/openai)
 - [Anthropic (API + Claude Code CLI)](/providers/anthropic)
@@ -38,7 +37,7 @@ model as `provider/model`.
 - [MiniMax](/providers/minimax)
 - [Venice (Venice AI)](/providers/venice)
 - [Amazon Bedrock](/providers/bedrock)
-- [Qianfan](/providers/qianfan)
+- [千帆](/providers/qianfan)
 
-For the full provider catalog (xAI, Groq, Mistral, etc.) and advanced configuration,
-see [Model providers](/concepts/model-providers).
+若要查看完整的提供商目录（xAI、Groq、Mistral 等）及高级配置，
+请参阅 [模型提供商](/concepts/model-providers)。

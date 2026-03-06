@@ -1,44 +1,44 @@
 ---
-summary: "Gateway web surfaces: Control UI, bind modes, and security"
+summary: "网关网页界面：控制界面、绑定模式及安全性"
 read_when:
-  - You want to access the Gateway over Tailscale
-  - You want the browser Control UI and config editing
-title: "Web"
+  - 您希望通过 Tailscale 访问网关
+  - 您希望使用浏览器控制界面并进行配置编辑
+title: "网页"
 ---
 
-# Web (Gateway)
+# 网页（网关）
 
-The Gateway serves a small **browser Control UI** (Vite + Lit) from the same port as the Gateway WebSocket:
+网关通过与网关 WebSocket 相同的端口提供一个小型的 **浏览器控制界面**（Vite + Lit）：
 
-- default: `http://<host>:18789/`
-- optional prefix: set `gateway.controlUi.basePath` (e.g. `/openclaw`)
+- 默认地址：`http://<host>:18789/`
+- 可选前缀：设置 `gateway.controlUi.basePath`（例如 `/openclaw`）
 
-Capabilities live in [Control UI](/web/control-ui).
-This page focuses on bind modes, security, and web-facing surfaces.
+功能位于 [控制界面](/web/control-ui)。
+本页侧重于绑定模式、安全性及面向网页的接口。
 
-## Webhooks
+## Webhooks（网络钩子）
 
-When `hooks.enabled=true`, the Gateway also exposes a small webhook endpoint on the same HTTP server.
-See [Gateway configuration](/gateway/configuration) → `hooks` for auth + payloads.
+当设置 `hooks.enabled=true` 时，网关在同一 HTTP 服务器上还会暴露一个小型 webhook 端点。
+详见 [网关配置](/gateway/configuration) → `hooks` 中的认证及有效载荷说明。
 
-## Config (default-on)
+## 配置（默认开启）
 
-The Control UI is **enabled by default** when assets are present (`dist/control-ui`).
-You can control it via config:
+当存在资源文件（`dist/control-ui`）时，控制界面默认 **已启用**。
+您可以通过配置控制它：
 
 ```json5
 {
   gateway: {
-    controlUi: { enabled: true, basePath: "/openclaw" }, // basePath optional
+    controlUi: { enabled: true, basePath: "/openclaw" }, // basePath 可选
   },
 }
 ```
 
-## Tailscale access
+## Tailscale 访问
 
-### Integrated Serve (recommended)
+### 集成 Serve（推荐）
 
-Keep the Gateway on loopback and let Tailscale Serve proxy it:
+保持网关绑定在本机回环地址，并由 Tailscale Serve 代理：
 
 ```json5
 {
@@ -49,17 +49,17 @@ Keep the Gateway on loopback and let Tailscale Serve proxy it:
 }
 ```
 
-Then start the gateway:
+然后启动网关：
 
 ```bash
 openclaw gateway
 ```
 
-Open:
+打开：
 
-- `https://<magicdns>/` (or your configured `gateway.controlUi.basePath`)
+- `https://<magicdns>/`（或您配置的 `gateway.controlUi.basePath`）
 
-### Tailnet bind + token
+### Tailnet 绑定 + 令牌
 
 ```json5
 {
@@ -71,50 +71,49 @@ Open:
 }
 ```
 
-Then start the gateway (token required for non-loopback binds):
+然后启动网关（非回环地址绑定需要令牌）：
 
 ```bash
 openclaw gateway
 ```
 
-Open:
+打开：
 
-- `http://<tailscale-ip>:18789/` (or your configured `gateway.controlUi.basePath`)
+- `http://<tailscale-ip>:18789/`（或您配置的 `gateway.controlUi.basePath`）
 
-### Public internet (Funnel)
+### 公网访问（Funnel）
 
 ```json5
 {
   gateway: {
     bind: "loopback",
     tailscale: { mode: "funnel" },
-    auth: { mode: "password" }, // or OPENCLAW_GATEWAY_PASSWORD
+    auth: { mode: "password" }, // 或使用环境变量 OPENCLAW_GATEWAY_PASSWORD
   },
 }
 ```
 
-## Security notes
+## 安全注意事项
 
-- Gateway auth is required by default (token/password or Tailscale identity headers).
-- Non-loopback binds still **require** a shared token/password (`gateway.auth` or env).
-- The wizard generates a gateway token by default (even on loopback).
-- The UI sends `connect.params.auth.token` or `connect.params.auth.password`.
-- For non-loopback Control UI deployments, set `gateway.controlUi.allowedOrigins`
-  explicitly (full origins). Without it, gateway startup is refused by default.
-- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` enables
-  Host-header origin fallback mode, but is a dangerous security downgrade.
-- With Serve, Tailscale identity headers can satisfy Control UI/WebSocket auth
-  when `gateway.auth.allowTailscale` is `true` (no token/password required).
-  HTTP API endpoints still require token/password. Set
-  `gateway.auth.allowTailscale: false` to require explicit credentials. See
-  [Tailscale](/gateway/tailscale) and [Security](/gateway/security). This
-  tokenless flow assumes the gateway host is trusted.
-- `gateway.tailscale.mode: "funnel"` requires `gateway.auth.mode: "password"` (shared password).
+- 网关默认需要认证（令牌/密码或 Tailscale 身份头）。
+- 非回环绑定仍然 **必须** 使用共享令牌/密码（`gateway.auth` 或环境变量）。
+- 向导默认生成一个网关令牌（即使是回环地址）。
+- UI 发送 `connect.params.auth.token` 或 `connect.params.auth.password`。
+- 对于非回环的控制界面部署，须显式设置 `gateway.controlUi.allowedOrigins`（完整源）。
+  否则默认拒绝网关启动。
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 启用基于 Host 头的来源回退模式，但这是一种危险的安全降级。
+- 使用 Serve 模式时，当 `gateway.auth.allowTailscale` 为 `true` 时，
+  Tailscale 身份头可满足控制界面/WebSocket 的认证（无需令牌/密码）。
+  HTTP API 端点依然需要令牌/密码。
+  通过设定 `gateway.auth.allowTailscale: false` 可要求显式凭证。
+  详见 [Tailscale](/gateway/tailscale) 和 [安全](/gateway/security)。
+  此无令牌流程假设网关主机是可信的。
+- `gateway.tailscale.mode: "funnel"` 需要 `gateway.auth.mode: "password"`（共享密码）。
 
-## Building the UI
+## 构建界面
 
-The Gateway serves static files from `dist/control-ui`. Build them with:
+网关从 `dist/control-ui` 提供静态文件。使用以下命令构建：
 
 ```bash
-pnpm ui:build # auto-installs UI deps on first run
+pnpm ui:build # 首次运行会自动安装 UI 依赖
 ```

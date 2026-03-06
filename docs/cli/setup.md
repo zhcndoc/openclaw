@@ -1,28 +1,28 @@
 ---
-summary: "CLI reference for `openclaw setup` (initialize config + workspace)"
+summary: "`openclaw setup` 的命令行参考（初始化配置 + 工作区）"
 read_when:
-  - You’re doing first-run setup without the full onboarding wizard
-  - You want to set the default workspace path
+  - 您正在进行首次运行设置，但没有完整的引导向导
+  - 您想设置默认工作区路径
 title: "setup"
 ---
 
 # `openclaw setup`
 
-Initialize `~/.openclaw/openclaw.json` and the agent workspace.
+初始化 `~/.openclaw/openclaw.json` 及代理工作区。
 
-Related:
+相关内容：
 
-- Getting started: [Getting started](/start/getting-started)
-- Wizard: [Onboarding](/start/onboarding)
+- 入门指南：[入门指南](/start/getting-started)
+- 向导：[引导](/start/onboarding)
 
-## Examples
+## 示例
 
 ```bash
 openclaw setup
 openclaw setup --workspace ~/.openclaw/workspace
 ```
 
-To run the wizard via setup:
+通过 setup 运行向导：
 
 ```bash
 openclaw setup --wizard

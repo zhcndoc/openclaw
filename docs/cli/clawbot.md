@@ -1,21 +1,21 @@
 ---
-summary: "CLI reference for `openclaw clawbot` (legacy alias namespace)"
+summary: "`openclaw clawbot`（旧别名命名空间）的 CLI 参考"
 read_when:
-  - You maintain older scripts using `openclaw clawbot ...`
-  - You need migration guidance to current commands
+  - 你正在维护使用 `openclaw clawbot ...` 的旧脚本
+  - 你需要迁移到当前命令的指导
 title: "clawbot"
 ---
 
 # `openclaw clawbot`
 
-Legacy alias namespace kept for backwards compatibility.
+为向后兼容保留的旧别名命名空间。
 
-Current supported alias:
+当前支持的别名：
 
-- `openclaw clawbot qr` (same behavior as [`openclaw qr`](/cli/qr))
+- `openclaw clawbot qr`（与 [`openclaw qr`](/cli/qr) 行为相同）
 
-## Migration
+## 迁移
 
-Prefer modern top-level commands directly:
+推荐直接使用现代顶层命令：
 
 - `openclaw clawbot qr` -> `openclaw qr`

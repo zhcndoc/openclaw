@@ -1,18 +1,17 @@
 ---
-summary: "CLI reference for `openclaw system` (system events, heartbeat, presence)"
+summary: "`openclaw system` 的命令行参考（系统事件、心跳、存在状态）"
 read_when:
-  - You want to enqueue a system event without creating a cron job
-  - You need to enable or disable heartbeats
-  - You want to inspect system presence entries
+  - 你想要在不创建定时任务的情况下入列系统事件
+  - 你需要启用或禁用心跳
+  - 你想检查系统存在条目
 title: "system"
 ---
 
 # `openclaw system`
 
-System-level helpers for the Gateway: enqueue system events, control heartbeats,
-and view presence.
+网关的系统级辅助命令：入列系统事件，控制心跳，并查看存在状态。
 
-## Common commands
+## 常用命令
 
 ```bash
 openclaw system event --text "Check for urgent follow-ups" --mode now
@@ -23,38 +22,35 @@ openclaw system presence
 
 ## `system event`
 
-Enqueue a system event on the **main** session. The next heartbeat will inject
-it as a `System:` line in the prompt. Use `--mode now` to trigger the heartbeat
-immediately; `next-heartbeat` waits for the next scheduled tick.
+在 **main** 会话中入列一个系统事件。下一次心跳时，该事件将作为提示行中的 `System:` 行注入。使用 `--mode now` 立即触发心跳；使用 `next-heartbeat` 则等待下一次预定的心跳。
 
-Flags:
+参数：
 
-- `--text <text>`: required system event text.
-- `--mode <mode>`: `now` or `next-heartbeat` (default).
-- `--json`: machine-readable output.
+- `--text <text>`：必需，系统事件文本。
+- `--mode <mode>`：`now` 或 `next-heartbeat`（默认）。
+- `--json`：机器可读的输出格式。
 
 ## `system heartbeat last|enable|disable`
 
-Heartbeat controls:
+心跳控制：
 
-- `last`: show the last heartbeat event.
-- `enable`: turn heartbeats back on (use this if they were disabled).
-- `disable`: pause heartbeats.
+- `last`：显示上一个心跳事件。
+- `enable`：重新启用心跳（如果之前被禁用）。
+- `disable`：暂停心跳。
 
-Flags:
+参数：
 
-- `--json`: machine-readable output.
+- `--json`：机器可读的输出格式。
 
 ## `system presence`
 
-List the current system presence entries the Gateway knows about (nodes,
-instances, and similar status lines).
+列出网关当前已知的系统存在条目（节点、实例及类似状态行）。
 
-Flags:
+参数：
 
-- `--json`: machine-readable output.
+- `--json`：机器可读的输出格式。
 
-## Notes
+## 备注
 
-- Requires a running Gateway reachable by your current config (local or remote).
-- System events are ephemeral and not persisted across restarts.
+- 需要有一个可通过当前配置（本地或远程）访问的运行中的网关。
+- 系统事件是短暂的，重启后不会保存。

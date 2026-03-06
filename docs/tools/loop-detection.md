@@ -1,29 +1,29 @@
 ---
-title: "Tool-loop detection"
-description: "Configure optional guardrails for preventing repetitive or stalled tool-call loops"
-summary: "How to enable and tune guardrails that detect repetitive tool-call loops"
+title: "工具循环检测"
+description: "配置防止重复或卡顿工具调用循环的可选护栏"
+summary: "如何启用和调整检测重复工具调用循环的护栏"
 read_when:
-  - A user reports agents getting stuck repeating tool calls
-  - You need to tune repetitive-call protection
-  - You are editing agent tool/runtime policies
+  - 用户报告代理卡在重复工具调用中
+  - 您需要调整重复调用保护
+  - 您正在编辑代理工具/运行时策略
 ---
 
-# Tool-loop detection
+# 工具循环检测
 
-OpenClaw can keep agents from getting stuck in repeated tool-call patterns.
-The guard is **disabled by default**.
+OpenClaw 可以防止代理陷入重复的工具调用模式。
+该保护机制**默认关闭**。
 
-Enable it only where needed, because it can block legitimate repeated calls with strict settings.
+仅在必要时启用，因为严格的设置可能会阻止合法的重复调用。
 
-## Why this exists
+## 该功能存在的原因
 
-- Detect repetitive sequences that do not make progress.
-- Detect high-frequency no-result loops (same tool, same inputs, repeated errors).
-- Detect specific repeated-call patterns for known polling tools.
+- 检测没有进展的重复序列。
+- 检测高频率无结果循环（相同工具、相同输入、重复错误）。
+- 检测已知轮询工具的特定重复调用模式。
 
-## Configuration block
+## 配置块
 
-Global defaults:
+全局默认配置：
 
 ```json5
 {
@@ -44,7 +44,7 @@ Global defaults:
 }
 ```
 
-Per-agent override (optional):
+按代理覆盖（可选）：
 
 ```json5
 {
@@ -65,37 +65,37 @@ Per-agent override (optional):
 }
 ```
 
-### Field behavior
+### 字段行为
 
-- `enabled`: Master switch. `false` means no loop detection is performed.
-- `historySize`: number of recent tool calls kept for analysis.
-- `warningThreshold`: threshold before classifying a pattern as warning-only.
-- `criticalThreshold`: threshold for blocking repetitive loop patterns.
-- `globalCircuitBreakerThreshold`: global no-progress breaker threshold.
-- `detectors.genericRepeat`: detects repeated same-tool + same-params patterns.
-- `detectors.knownPollNoProgress`: detects known polling-like patterns with no state change.
-- `detectors.pingPong`: detects alternating ping-pong patterns.
+- `enabled`：主开关。`false` 表示不执行循环检测。
+- `historySize`：用于分析的最近工具调用数量。
+- `warningThreshold`：达到该阈值前，模式仅被分类为警告。
+- `criticalThreshold`：达到该阈值时阻止重复循环模式。
+- `globalCircuitBreakerThreshold`：全局无进展断路阈值。
+- `detectors.genericRepeat`：检测重复的相同工具和相同参数模式。
+- `detectors.knownPollNoProgress`：检测已知轮询类的无状态变化模式。
+- `detectors.pingPong`：检测交替的乒乓模式。
 
-## Recommended setup
+## 推荐设置
 
-- Start with `enabled: true`, defaults unchanged.
-- Keep thresholds ordered as `warningThreshold < criticalThreshold < globalCircuitBreakerThreshold`.
-- If false positives occur:
-  - raise `warningThreshold` and/or `criticalThreshold`
-  - (optionally) raise `globalCircuitBreakerThreshold`
-  - disable only the detector causing issues
-  - reduce `historySize` for less strict historical context
+- 从 `enabled: true` 开始，保持默认值不变。
+- 保持阈值顺序为 `warningThreshold < criticalThreshold < globalCircuitBreakerThreshold`。
+- 若出现误报：
+  - 提高 `warningThreshold` 和/或 `criticalThreshold`
+  - （可选）提高 `globalCircuitBreakerThreshold`
+  - 仅禁用引起问题的检测器
+  - 减小 `historySize` 以降低历史上下文严格度
 
-## Logs and expected behavior
+## 日志和预期行为
 
-When a loop is detected, OpenClaw reports a loop event and blocks or dampens the next tool-cycle depending on severity.
-This protects users from runaway token spend and lockups while preserving normal tool access.
+当检测到循环时，OpenClaw 会报告循环事件，并根据严重程度阻止或抑制下一次工具调用。
+这可保护用户免于代币过度消耗和锁死，同时保留正常的工具访问。
 
-- Prefer warning and temporary suppression first.
-- Escalate only when repeated evidence accumulates.
+- 首选警告和临时抑制。
+- 仅在重复证据累积时升级处理。
 
-## Notes
+## 备注
 
-- `tools.loopDetection` is merged with agent-level overrides.
-- Per-agent config fully overrides or extends global values.
-- If no config exists, guardrails stay off.
+- `tools.loopDetection` 与代理级覆盖配置合并。
+- 代理配置会完全覆盖或扩展全局值。
+- 无配置时，护栏保持关闭。

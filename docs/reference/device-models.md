@@ -1,36 +1,36 @@
 ---
-summary: "How OpenClaw vendors Apple device model identifiers for friendly names in the macOS app."
+summary: "OpenClaw 如何在 macOS 应用中将 Apple 设备型号标识符映射为友好名称。"
 read_when:
-  - Updating device model identifier mappings or NOTICE/license files
-  - Changing how Instances UI displays device names
-title: "Device Model Database"
+  - 更新设备型号标识符映射或 NOTICE/许可证文件时
+  - 更改 Instances 界面中设备名称显示方式时
+title: "设备型号数据库"
 ---
 
-# Device model database (friendly names)
+# 设备型号数据库（友好名称）
 
-The macOS companion app shows friendly Apple device model names in the **Instances** UI by mapping Apple model identifiers (e.g. `iPad16,6`, `Mac16,6`) to human-readable names.
+macOS 伴随应用通过将 Apple 型号标识符（例如 `iPad16,6`、`Mac16,6`）映射为可读友好的名称，在 **Instances** 界面展示 Apple 设备的友好型号名称。
 
-The mapping is vendored as JSON under:
+该映射以 JSON 格式管理于：
 
 - `apps/macos/Sources/OpenClaw/Resources/DeviceModels/`
 
-## Data source
+## 数据来源
 
-We currently vendor the mapping from the MIT-licensed repository:
+我们目前使用 MIT 许可的仓库提供的映射：
 
 - `kyle-seongwoo-jun/apple-device-identifiers`
 
-To keep builds deterministic, the JSON files are pinned to specific upstream commits (recorded in `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md`).
+为了保证构建的确定性，JSON 文件固定引用特定上游提交（记录在 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md` 中）。
 
-## Updating the database
+## 更新数据库
 
-1. Pick the upstream commits you want to pin to (one for iOS, one for macOS).
-2. Update the commit hashes in `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md`.
-3. Re-download the JSON files, pinned to those commits:
+1. 选择你要固定的上游提交（一个用于 iOS，一个用于 macOS）。
+2. 更新 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md` 中的提交哈希。
+3. 重新下载对应提交的 JSON 文件：
 
 ```bash
-IOS_COMMIT="<commit sha for ios-device-identifiers.json>"
-MAC_COMMIT="<commit sha for mac-device-identifiers.json>"
+IOS_COMMIT="<ios-device-identifiers.json 的提交哈希>"
+MAC_COMMIT="<mac-device-identifiers.json 的提交哈希>"
 
 curl -fsSL "https://raw.githubusercontent.com/kyle-seongwoo-jun/apple-device-identifiers/${IOS_COMMIT}/ios-device-identifiers.json" \
   -o apps/macos/Sources/OpenClaw/Resources/DeviceModels/ios-device-identifiers.json
@@ -39,8 +39,8 @@ curl -fsSL "https://raw.githubusercontent.com/kyle-seongwoo-jun/apple-device-ide
   -o apps/macos/Sources/OpenClaw/Resources/DeviceModels/mac-device-identifiers.json
 ```
 
-4. Ensure `apps/macos/Sources/OpenClaw/Resources/DeviceModels/LICENSE.apple-device-identifiers.txt` still matches upstream (replace it if the upstream license changes).
-5. Verify the macOS app builds cleanly (no warnings):
+4. 确认 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/LICENSE.apple-device-identifiers.txt` 与上游许可证一致（若上游许可证变化，请替换该文件）。
+5. 验证 macOS 应用能干净地构建（无警告）：
 
 ```bash
 swift build --package-path apps/macos

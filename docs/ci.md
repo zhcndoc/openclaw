@@ -1,56 +1,56 @@
 ---
-title: CI Pipeline
-description: How the OpenClaw CI pipeline works
-summary: "CI job graph, scope gates, and local command equivalents"
+title: CI 流水线
+description: OpenClaw CI 流水线如何工作
+summary: "CI 任务图、范围门控及本地命令等价物"
 read_when:
-  - You need to understand why a CI job did or did not run
-  - You are debugging failing GitHub Actions checks
+  - 你需要了解某个 CI 任务为何运行或未运行
+  - 你正在调试失败的 GitHub Actions 检查
 ---
 
-# CI Pipeline
+# CI 流水线
 
-The CI runs on every push to `main` and every pull request. It uses smart scoping to skip expensive jobs when only docs or native code changed.
+CI 会在每次推送到 `main` 以及每个拉取请求时运行。它使用智能范围判定，在仅文档或本地代码有变更时跳过高耗时任务。
 
-## Job Overview
+## 任务概览
 
-| Job               | Purpose                                                 | When it runs                                      |
-| ----------------- | ------------------------------------------------------- | ------------------------------------------------- |
-| `docs-scope`      | Detect docs-only changes                                | Always                                            |
-| `changed-scope`   | Detect which areas changed (node/macos/android/windows) | Non-docs PRs                                      |
-| `check`           | TypeScript types, lint, format                          | Push to `main`, or PRs with Node-relevant changes |
-| `check-docs`      | Markdown lint + broken link check                       | Docs changed                                      |
-| `code-analysis`   | LOC threshold check (1000 lines)                        | PRs only                                          |
-| `secrets`         | Detect leaked secrets                                   | Always                                            |
-| `build-artifacts` | Build dist once, share with other jobs                  | Non-docs, node changes                            |
-| `release-check`   | Validate npm pack contents                              | After build                                       |
-| `checks`          | Node/Bun tests + protocol check                         | Non-docs, node changes                            |
-| `checks-windows`  | Windows-specific tests                                  | Non-docs, windows-relevant changes                |
-| `macos`           | Swift lint/build/test + TS tests                        | PRs with macos changes                            |
-| `android`         | Gradle build + tests                                    | Non-docs, android changes                         |
+| 任务              | 目的                                                     | 运行时机                                           |
+| ----------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| `docs-scope`      | 检测仅文档变更                                           | 总是运行                                          |
+| `changed-scope`   | 检测哪些部分变更（node/macos/android/windows）          | 非文档类 PR                                       |
+| `check`           | TypeScript 类型检查、代码风格检查、格式化               | 推送到 `main` 或节点相关变更的 PR                  |
+| `check-docs`      | Markdown 代码风格检查 + 断链检查                         | 文档变更时                                        |
+| `code-analysis`   | 行数阈值检查（1000 行）                                  | 仅 PR                                            |
+| `secrets`         | 检测泄露的秘钥                                          | 总是运行                                          |
+| `build-artifacts` | 构建 dist，一次构建结果可供其他任务共享                  | 非文档类，节点变更时                              |
+| `release-check`   | 验证 npm 包内容                                          | 构建之后                                          |
+| `checks`          | Node/Bun 测试 + 协议检查                                | 非文档类，节点变更时                              |
+| `checks-windows`  | Windows 专属测试                                         | 非文档类，Windows 相关变更                         |
+| `macos`           | Swift 代码风格检查/构建/测试 + TS 测试                  | macos 变更的 PR                                   |
+| `android`         | Gradle 构建 + 测试                                       | 非文档类，Android 变更                            |
 
-## Fail-Fast Order
+## 快速失败顺序
 
-Jobs are ordered so cheap checks fail before expensive ones run:
+任务按顺序排列，便于在昂贵任务运行前，先让廉价检查失败：
 
-1. `docs-scope` + `code-analysis` + `check` (parallel, ~1-2 min)
-2. `build-artifacts` (blocked on above)
-3. `checks`, `checks-windows`, `macos`, `android` (blocked on build)
+1. `docs-scope` + `code-analysis` + `check`（并行，约1-2分钟）
+2. `build-artifacts`（依赖上述任务完成）
+3. `checks`、`checks-windows`、`macos`、`android`（依赖构建完成）
 
-Scope logic lives in `scripts/ci-changed-scope.mjs` and is covered by unit tests in `src/scripts/ci-changed-scope.test.ts`.
+范围判定逻辑位于 `scripts/ci-changed-scope.mjs`，有单元测试覆盖在 `src/scripts/ci-changed-scope.test.ts`。
 
-## Runners
+## 运行器
 
-| Runner                           | Jobs                                       |
-| -------------------------------- | ------------------------------------------ |
-| `blacksmith-16vcpu-ubuntu-2404`  | Most Linux jobs, including scope detection |
-| `blacksmith-32vcpu-windows-2025` | `checks-windows`                           |
-| `macos-latest`                   | `macos`, `ios`                             |
+| 运行器                           | 任务                                      |
+| -------------------------------- | ----------------------------------------- |
+| `blacksmith-16vcpu-ubuntu-2404`  | 大多数 Linux 任务，包括范围检测           |
+| `blacksmith-32vcpu-windows-2025` | `checks-windows`                         |
+| `macos-latest`                   | `macos`、`ios`                           |
 
-## Local Equivalents
+## 本地等价命令
 
 ```bash
-pnpm check          # types + lint + format
-pnpm test           # vitest tests
-pnpm check:docs     # docs format + lint + broken links
-pnpm release:check  # validate npm pack
+pnpm check          # 类型检查 + 代码风格 + 格式化
+pnpm test           # vitest 测试
+pnpm check:docs     # 文档格式 + 代码风格 + 断链检查
+pnpm release:check  # 验证 npm 包
 ```

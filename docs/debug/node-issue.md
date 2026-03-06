@@ -1,16 +1,16 @@
 ---
-summary: Node + tsx "__name is not a function" crash notes and workarounds
+summary: Node + tsx "__name 不是函数" 崩溃笔记及解决方案
 read_when:
-  - Debugging Node-only dev scripts or watch mode failures
-  - Investigating tsx/esbuild loader crashes in OpenClaw
-title: "Node + tsx Crash"
+  - 调试仅限 Node 的开发脚本或监视模式失败时
+  - 调查 OpenClaw 中 tsx/esbuild loader 崩溃时
+title: "Node + tsx 崩溃"
 ---
 
-# Node + tsx "\_\_name is not a function" crash
+# Node + tsx "\_\_name 不是函数" 崩溃
 
-## Summary
+## 摘要
 
-Running OpenClaw via Node with `tsx` fails at startup with:
+通过 Node 使用 `tsx` 运行 OpenClaw 时启动失败，报错：
 
 ```
 [openclaw] Failed to start CLI: TypeError: __name is not a function
@@ -18,68 +18,68 @@ Running OpenClaw via Node with `tsx` fails at startup with:
     at .../src/agents/auth-profiles/constants.ts:25:20
 ```
 
-This began after switching dev scripts from Bun to `tsx` (commit `2871657e`, 2026-01-06). The same runtime path worked with Bun.
+该问题始于将开发脚本从 Bun 切换到 `tsx`（提交 `2871657e`，2026-01-06）。相同的运行路径在 Bun 下正常。
 
-## Environment
+## 环境
 
-- Node: v25.x (observed on v25.3.0)
+- Node: v25.x（复现于 v25.3.0）
 - tsx: 4.21.0
-- OS: macOS (repro also likely on other platforms that run Node 25)
+- 操作系统: macOS（其他能运行 Node 25 的平台上也可能复现）
 
-## Repro (Node-only)
+## 复现步骤（仅限 Node）
 
 ```bash
-# in repo root
+# 在仓库根目录
 node --version
 pnpm install
 node --import tsx src/entry.ts status
 ```
 
-## Minimal repro in repo
+## 仓库内最小复现
 
 ```bash
 node --import tsx scripts/repro/tsx-name-repro.ts
 ```
 
-## Node version check
+## Node 版本检查
 
-- Node 25.3.0: fails
-- Node 22.22.0 (Homebrew `node@22`): fails
-- Node 24: not installed here yet; needs verification
+- Node 25.3.0：失败
+- Node 22.22.0（Homebrew 安装的 `node@22`）：失败
+- Node 24：尚未安装，需验证
 
-## Notes / hypothesis
+## 备注 / 假设
 
-- `tsx` uses esbuild to transform TS/ESM. esbuild’s `keepNames` emits a `__name` helper and wraps function definitions with `__name(...)`.
-- The crash indicates `__name` exists but is not a function at runtime, which implies the helper is missing or overwritten for this module in the Node 25 loader path.
-- Similar `__name` helper issues have been reported in other esbuild consumers when the helper is missing or rewritten.
+- `tsx` 使用 esbuild 转换 TS/ESM。esbuild 的 `keepNames` 会插入一个 `__name` 辅助函数，并用 `__name(...)` 包裹函数定义。
+- 崩溃表明运行时 `__name` 存在但不是函数，意味着该辅助函数在 Node 25 的 loader 路径中缺失或被覆盖。
+- 其他 esbuild 用户也报告过类似 `__name` 辅助函数缺失或被重写导致的问题。
 
-## Regression history
+## 回归历史
 
-- `2871657e` (2026-01-06): scripts changed from Bun to tsx to make Bun optional.
-- Before that (Bun path), `openclaw status` and `gateway:watch` worked.
+- `2871657e`（2026-01-06）：脚本从 Bun 改为 tsx，使 Bun 变得可选。
+- 之前（Bun 路径），`openclaw status` 和 `gateway:watch` 都能正常运行。
 
-## Workarounds
+## 解决方案
 
-- Use Bun for dev scripts (current temporary revert).
-- Use Node + tsc watch, then run compiled output:
+- 使用 Bun 进行开发脚本（当前临时回退）。
+- 使用 Node + tsc watch 编译后运行：
 
   ```bash
   pnpm exec tsc --watch --preserveWatchOutput
   node --watch openclaw.mjs status
   ```
 
-- Confirmed locally: `pnpm exec tsc -p tsconfig.json` + `node openclaw.mjs status` works on Node 25.
-- Disable esbuild keepNames in the TS loader if possible (prevents `__name` helper insertion); tsx does not currently expose this.
-- Test Node LTS (22/24) with `tsx` to see if the issue is Node 25–specific.
+- 本地验证过，`pnpm exec tsc -p tsconfig.json` + `node openclaw.mjs status` 在 Node 25 下正常。
+- 如果可能，禁用 TS loader 中 esbuild 的 keepNames（防止插入 `__name` 辅助）；tsx 目前不支持此选项。
+- 在 Node LTS 版本（22/24）上测试 `tsx`，确认是否仅是 Node 25 相关问题。
 
-## References
+## 参考资料
 
 - [https://opennext.js.org/cloudflare/howtos/keep_names](https://opennext.js.org/cloudflare/howtos/keep_names)
 - [https://esbuild.github.io/api/#keep-names](https://esbuild.github.io/api/#keep-names)
 - [https://github.com/evanw/esbuild/issues/1031](https://github.com/evanw/esbuild/issues/1031)
 
-## Next steps
+## 后续步骤
 
-- Repro on Node 22/24 to confirm Node 25 regression.
-- Test `tsx` nightly or pin to earlier version if a known regression exists.
-- If reproduces on Node LTS, file a minimal repro upstream with the `__name` stack trace.
+- 在 Node 22/24 上复现确认是否为 Node 25 回归。
+- 测试 `tsx` nightly 版本，或回退到早期版本，观察是否存在已知回归。
+- 若在 Node LTS 上仍复现，向上游提交带有 `__name` 堆栈追踪的最小复现用例。

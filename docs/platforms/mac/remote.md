@@ -1,84 +1,84 @@
 ---
-summary: "macOS app flow for controlling a remote OpenClaw gateway over SSH"
+summary: "macOS 应用通过 SSH 控制远程 OpenClaw 网关的流程"
 read_when:
-  - Setting up or debugging remote mac control
-title: "Remote Control"
+  - 设置或调试远程 mac 控制时
+title: "远程控制"
 ---
 
-# Remote OpenClaw (macOS ⇄ remote host)
+# 远程 OpenClaw（macOS ⇄ 远程主机）
 
-This flow lets the macOS app act as a full remote control for a OpenClaw gateway running on another host (desktop/server). It’s the app’s **Remote over SSH** (remote run) feature. All features—health checks, Voice Wake forwarding, and Web Chat—reuse the same remote SSH configuration from _Settings → General_.
+此流程使 macOS 应用可以作为运行在另一主机（桌面/服务器）上的 OpenClaw 网关的完整远程控制端。它是应用的**通过 SSH 远程**（远程运行）功能。所有功能——健康检查、语音唤醒转发和网页聊天——都复用同一个远程 SSH 配置，位于 _设置 → 通用_ 中。
 
-## Modes
+## 模式
 
-- **Local (this Mac)**: Everything runs on the laptop. No SSH involved.
-- **Remote over SSH (default)**: OpenClaw commands are executed on the remote host. The mac app opens an SSH connection with `-o BatchMode` plus your chosen identity/key and a local port-forward.
-- **Remote direct (ws/wss)**: No SSH tunnel. The mac app connects to the gateway URL directly (for example, via Tailscale Serve or a public HTTPS reverse proxy).
+- **本地（此 Mac）**：所有程序均在笔记本上运行。不涉及 SSH。
+- **通过 SSH 远程（默认）**：OpenClaw 命令在远程主机上执行。mac 应用打开一个带有 `-o BatchMode` 及你选择的身份/密钥和本地端口转发的 SSH 连接。
+- **直接远程（ws/wss）**：无 SSH 隧道。mac 应用直接连接到网关 URL（例如，通过 Tailscale Serve 或公用 HTTPS 反向代理）。
 
-## Remote transports
+## 远程传输方式
 
-Remote mode supports two transports:
+远程模式支持两种传输方式：
 
-- **SSH tunnel** (default): Uses `ssh -N -L ...` to forward the gateway port to localhost. The gateway will see the node’s IP as `127.0.0.1` because the tunnel is loopback.
-- **Direct (ws/wss)**: Connects straight to the gateway URL. The gateway sees the real client IP.
+- **SSH 隧道**（默认）：使用 `ssh -N -L ...` 将网关端口转发到本地。网关看到的节点 IP 是 `127.0.0.1`，因为隧道是回环的。
+- **直接（ws/wss）**：直接连接到网关 URL，网关看到真实的客户端 IP。
 
-## Prereqs on the remote host
+## 远程主机的先决条件
 
-1. Install Node + pnpm and build/install the OpenClaw CLI (`pnpm install && pnpm build && pnpm link --global`).
-2. Ensure `openclaw` is on PATH for non-interactive shells (symlink into `/usr/local/bin` or `/opt/homebrew/bin` if needed).
-3. Open SSH with key auth. We recommend **Tailscale** IPs for stable reachability off-LAN.
+1. 安装 Node + pnpm 并构建/安装 OpenClaw CLI（`pnpm install && pnpm build && pnpm link --global`）。
+2. 确保 `openclaw` 在非交互式 shell 的 PATH 中（如有需要，软链到 `/usr/local/bin` 或 `/opt/homebrew/bin`）。
+3. 开启基于密钥认证的 SSH。我们推荐使用 **Tailscale** IP 以确保局域网外的稳定访问性。
 
-## macOS app setup
+## macOS 应用配置
 
-1. Open _Settings → General_.
-2. Under **OpenClaw runs**, pick **Remote over SSH** and set:
-   - **Transport**: **SSH tunnel** or **Direct (ws/wss)**.
-   - **SSH target**: `user@host` (optional `:port`).
-     - If the gateway is on the same LAN and advertises Bonjour, pick it from the discovered list to auto-fill this field.
-   - **Gateway URL** (Direct only): `wss://gateway.example.ts.net` (or `ws://...` for local/LAN).
-   - **Identity file** (advanced): path to your key.
-   - **Project root** (advanced): remote checkout path used for commands.
-   - **CLI path** (advanced): optional path to a runnable `openclaw` entrypoint/binary (auto-filled when advertised).
-3. Hit **Test remote**. Success indicates the remote `openclaw status --json` runs correctly. Failures usually mean PATH/CLI issues; exit 127 means the CLI isn’t found remotely.
-4. Health checks and Web Chat will now run through this SSH tunnel automatically.
+1. 打开 _设置 → 通用_。
+2. 在 **OpenClaw 运行方式** 下，选择 **通过 SSH 远程** 并设置：
+   - **传输方式**：**SSH 隧道** 或 **直接（ws/wss）**。
+   - **SSH 目标**：`user@host` （可选 `:port`）。
+     - 如果网关在同一局域网并支持 Bonjour，可以从自动发现列表中选取，该字段会自动填充。
+   - **网关 URL**（仅限直接连接）：`wss://gateway.example.ts.net`（局域网可用 `ws://...`）。
+   - **身份文件**（高级）：密钥文件路径。
+   - **项目根目录**（高级）：远程检出路径，用于执行命令。
+   - **CLI 路径**（高级）：可选的可运行 `openclaw` 入口点/二进制路径（会自动填充，如果有广告服务）。
+3. 点击 **测试远程**。成功表示远程 `openclaw status --json` 正常运行。失败一般是 PATH/CLI 问题；退出码 127 意味远程找不到 CLI。
+4. 健康检查和网页聊天将自动通过此 SSH 隧道运行。
 
-## Web Chat
+## 网页聊天
 
-- **SSH tunnel**: Web Chat connects to the gateway over the forwarded WebSocket control port (default 18789).
-- **Direct (ws/wss)**: Web Chat connects straight to the configured gateway URL.
-- There is no separate WebChat HTTP server anymore.
+- **SSH 隧道**：网页聊天通过转发的 WebSocket 控制端口连接到网关（默认 18789）。
+- **直接（ws/wss）**：网页聊天直接连接到配置的网关 URL。
+- 目前已无独立的 WebChat HTTP 服务器。
 
-## Permissions
+## 权限
 
-- The remote host needs the same TCC approvals as local (Automation, Accessibility, Screen Recording, Microphone, Speech Recognition, Notifications). Run onboarding on that machine to grant them once.
-- Nodes advertise their permission state via `node.list` / `node.describe` so agents know what’s available.
+- 远程主机需要与本地相同的 TCC 许可（自动化、辅助功能、屏幕录制、麦克风、语音识别、通知）。在该机器上运行入门流程以授予权限。
+- 节点通过 `node.list` / `node.describe` 通知权限状态，供代理知道可用权限。
 
-## Security notes
+## 安全注意事项
 
-- Prefer loopback binds on the remote host and connect via SSH or Tailscale.
-- SSH tunneling uses strict host-key checking; trust the host key first so it exists in `~/.ssh/known_hosts`.
-- If you bind the Gateway to a non-loopback interface, require token/password auth.
-- See [Security](/gateway/security) and [Tailscale](/gateway/tailscale).
+- 优先使用远程主机的回环接口绑定，并通过 SSH 或 Tailscale 连接。
+- SSH 隧道使用严格的主机密钥检查；请先信任主机密钥，使其存在于 `~/.ssh/known_hosts`。
+- 如果你将网关绑定到非回环接口，必须启用令牌/密码认证。
+- 详见[安全](/gateway/security)与[Tailscale](/gateway/tailscale)。
 
-## WhatsApp login flow (remote)
+## WhatsApp 登录流程（远程）
 
-- Run `openclaw channels login --verbose` **on the remote host**. Scan the QR with WhatsApp on your phone.
-- Re-run login on that host if auth expires. Health check will surface link problems.
+- 在**远程主机上**运行 `openclaw channels login --verbose`。用手机上的 WhatsApp 扫描二维码。
+- 授权过期时，在该主机重新运行登录。健康检查会提示链接问题。
 
-## Troubleshooting
+## 故障排除
 
-- **exit 127 / not found**: `openclaw` isn’t on PATH for non-login shells. Add it to `/etc/paths`, your shell rc, or symlink into `/usr/local/bin`/`/opt/homebrew/bin`.
-- **Health probe failed**: check SSH reachability, PATH, and that Baileys is logged in (`openclaw status --json`).
-- **Web Chat stuck**: confirm the gateway is running on the remote host and the forwarded port matches the gateway WS port; the UI requires a healthy WS connection.
-- **Node IP shows 127.0.0.1**: expected with the SSH tunnel. Switch **Transport** to **Direct (ws/wss)** if you want the gateway to see the real client IP.
-- **Voice Wake**: trigger phrases are forwarded automatically in remote mode; no separate forwarder is needed.
+- **退出码 127 / 未找到**：`openclaw` 不在非登录 shell 的 PATH 中。请将其添加到 `/etc/paths`、shell 配置文件，或软链到 `/usr/local/bin`/`/opt/homebrew/bin`。
+- **健康检查失败**：检查 SSH 可达性、PATH，确保 Baileys 已登录（`openclaw status --json`）。
+- **网页聊天卡住**：确认远程主机上的网关正在运行，且转发端口和网关 WS 端口匹配；UI 需要健康的 WS 连接。
+- **节点 IP 显示为 127.0.0.1**：使用 SSH 隧道时正常。若需要网关看到真实客户端 IP，请切换 **传输方式** 为 **直接（ws/wss）**。
+- **语音唤醒**：触发词在远程模式下会自动转发，无需单独转发器。
 
-## Notification sounds
+## 通知声音
 
-Pick sounds per notification from scripts with `openclaw` and `node.invoke`, e.g.:
+可在命令中为不同通知选择声音，例如：
 
 ```bash
-openclaw nodes notify --node <id> --title "Ping" --body "Remote gateway ready" --sound Glass
+openclaw nodes notify --node <id> --title "Ping" --body "远程网关已准备好" --sound Glass
 ```
 
-There is no global “default sound” toggle in the app anymore; callers choose a sound (or none) per request.
+应用中不再有全局“默认声音”开关；调用方根据请求选择声音（或不选择声音）。

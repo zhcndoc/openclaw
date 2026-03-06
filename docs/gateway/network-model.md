@@ -1,20 +1,19 @@
 ---
-summary: "How the Gateway, nodes, and canvas host connect."
+summary: "网关、节点和画布主机如何连接。"
 read_when:
-  - You want a concise view of the Gateway networking model
-title: "Network model"
+  - 你想要简明了解网关的网络模型
+title: "网络模型"
 ---
 
-Most operations flow through the Gateway (`openclaw gateway`), a single long-running
-process that owns channel connections and the WebSocket control plane.
+大多数操作通过网关（`openclaw gateway`）进行，这是一个拥有通道连接和 WebSocket 控制平面的单个长时间运行的进程。
 
-## Core rules
+## 核心规则
 
-- One Gateway per host is recommended. It is the only process allowed to own the WhatsApp Web session. For rescue bots or strict isolation, run multiple gateways with isolated profiles and ports. See [Multiple gateways](/gateway/multiple-gateways).
-- Loopback first: the Gateway WS defaults to `ws://127.0.0.1:18789`. The wizard generates a gateway token by default, even for loopback. For tailnet access, run `openclaw gateway --bind tailnet --token ...` because tokens are required for non-loopback binds.
-- Nodes connect to the Gateway WS over LAN, tailnet, or SSH as needed. The legacy TCP bridge is deprecated.
-- Canvas host is served by the Gateway HTTP server on the **same port** as the Gateway (default `18789`):
+- 推荐每台主机运行一个网关。它是唯一被允许拥有 WhatsApp Web 会话的进程。对于救援机器人或严格隔离的情况，运行多个具有独立配置和端口的网关。参见[多个网关](/gateway/multiple-gateways)。
+- 优先使用回环地址：网关 WS 默认绑定到 `ws://127.0.0.1:18789`。向导默认生成一个网关令牌，即使是回环绑定。对于 Tailnet 访问，需运行 `openclaw gateway --bind tailnet --token ...`，因为非回环绑定需要令牌。
+- 节点根据需要通过局域网、Tailnet 或 SSH 连接到网关 WS。传统的 TCP 桥已被弃用。
+- 画布主机由网关 HTTP 服务器提供服务，使用与网关相同的**端口**（默认 `18789`）：
   - `/__openclaw__/canvas/`
   - `/__openclaw__/a2ui/`
-    When `gateway.auth` is configured and the Gateway binds beyond loopback, these routes are protected by Gateway auth. Node clients use node-scoped capability URLs tied to their active WS session. See [Gateway configuration](/gateway/configuration) (`canvasHost`, `gateway`).
-- Remote use is typically SSH tunnel or tailnet VPN. See [Remote access](/gateway/remote) and [Discovery](/gateway/discovery).
+    当配置了 `gateway.auth` 并且网关绑定地址不止回环时，这些路由受网关认证保护。节点客户端使用与其活动 WS 会话绑定的节点范围能力 URL。参见[网关配置](/gateway/configuration)（`canvasHost`、`gateway`）。
+- 远程使用通常通过 SSH 隧道或 Tailnet VPN。参见[远程访问](/gateway/remote)和[发现](/gateway/discovery)。

@@ -1,37 +1,37 @@
 ---
-summary: "Chrome extension: let OpenClaw drive your existing Chrome tab"
+summary: "Chrome 扩展：让 OpenClaw 驱动你现有的 Chrome 标签页"
 read_when:
-  - You want the agent to drive an existing Chrome tab (toolbar button)
-  - You need remote Gateway + local browser automation via Tailscale
-  - You want to understand the security implications of browser takeover
-title: "Chrome Extension"
+  - 你想让 agent 驱动现有的 Chrome 标签页（工具栏按钮）
+  - 你需要通过 Tailscale 实现远程 Gateway + 本地浏览器自动化
+  - 你想了解浏览器接管的安全影响
+title: "Chrome 扩展"
 ---
 
-# Chrome extension (browser relay)
+# Chrome 扩展（浏览器中继）
 
-The OpenClaw Chrome extension lets the agent control your **existing Chrome tabs** (your normal Chrome window) instead of launching a separate openclaw-managed Chrome profile.
+OpenClaw Chrome 扩展允许 agent 控制你**现有的 Chrome 标签页**（你正常使用的 Chrome 窗口），而不是启动一个由 openclaw 管理的单独 Chrome 配置文件。
 
-Attach/detach happens via a **single Chrome toolbar button**.
+附加/分离通过**单个 Chrome 工具栏按钮**完成。
 
-## What it is (concept)
+## 它是什么（概念）
 
-There are three parts:
+包含三部分：
 
-- **Browser control service** (Gateway or node): the API the agent/tool calls (via the Gateway)
-- **Local relay server** (loopback CDP): bridges between the control server and the extension (`http://127.0.0.1:18792` by default)
-- **Chrome MV3 extension**: attaches to the active tab using `chrome.debugger` and pipes CDP messages to the relay
+- **浏览器控制服务**（Gateway 或节点）：agent/工具调用的 API（通过 Gateway）
+- **本地中继服务器**（loopback CDP）：在控制服务器和扩展之间桥接（默认地址 `http://127.0.0.1:18792`）
+- **Chrome MV3 扩展**：使用 `chrome.debugger` 附加到活动标签页，并将 CDP 消息传输到中继
 
-OpenClaw then controls the attached tab through the normal `browser` tool surface (selecting the right profile).
+然后 OpenClaw 通过普通的 `browser` 工具接口控制附加的标签页（选择正确的配置文件）。
 
-## Install / load (unpacked)
+## 安装 / 加载（未打包）
 
-1. Install the extension to a stable local path:
+1. 将扩展安装到一个稳定的本地路径：
 
 ```bash
 openclaw browser extension install
 ```
 
-2. Print the installed extension directory path:
+2. 打印已安装的扩展目录路径：
 
 ```bash
 openclaw browser extension path
@@ -39,35 +39,35 @@ openclaw browser extension path
 
 3. Chrome → `chrome://extensions`
 
-- Enable “Developer mode”
-- “Load unpacked” → select the directory printed above
+- 启用“开发者模式”
+- 点击“加载已解压的扩展程序” → 选择上一步打印的目录
 
-4. Pin the extension.
+4. 固定扩展按钮。
 
-## Updates (no build step)
+## 更新（无需构建步骤）
 
-The extension ships inside the OpenClaw release (npm package) as static files. There is no separate “build” step.
+扩展作为静态文件包含在 OpenClaw 版本（npm 包）中，没有单独的“构建”步骤。
 
-After upgrading OpenClaw:
+升级 OpenClaw 后：
 
-- Re-run `openclaw browser extension install` to refresh the installed files under your OpenClaw state directory.
-- Chrome → `chrome://extensions` → click “Reload” on the extension.
+- 重新运行 `openclaw browser extension install`，刷新安装在 OpenClaw 状态目录下的文件。
+- Chrome → `chrome://extensions` → 点击扩展的“重新加载”。
 
-## Use it (set gateway token once)
+## 使用方法（设置 Gateway Token 一次）
 
-OpenClaw ships with a built-in browser profile named `chrome` that targets the extension relay on the default port.
+OpenClaw 自带一个名为 `chrome` 的内置浏览器配置文件，目标是默认端口上的扩展中继。
 
-Before first attach, open extension Options and set:
+首次附加前，打开扩展选项并设置：
 
-- `Port` (default `18792`)
-- `Gateway token` (must match `gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN`)
+- `端口`（默认 `18792`）
+- `Gateway token`（必须与 `gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 匹配）
 
-Use it:
+使用示例：
 
-- CLI: `openclaw browser --browser-profile chrome tabs`
-- Agent tool: `browser` with `profile="chrome"`
+- CLI：`openclaw browser --browser-profile chrome tabs`
+- Agent 工具：`browser`，参数 `profile="chrome"`
 
-If you want a different name or a different relay port, create your own profile:
+若想用不同名称或不同中继端口，可以创建自己的配置文件：
 
 ```bash
 openclaw browser create-profile \
@@ -77,67 +77,65 @@ openclaw browser create-profile \
   --color "#00AA00"
 ```
 
-### Custom Gateway ports
+### 自定义 Gateway 端口
 
-If you're using a custom gateway port, the extension relay port is automatically derived:
+如果使用自定义 Gateway 端口，中继端口自动计算：
 
-**Extension Relay Port = Gateway Port + 3**
+**扩展中继端口 = Gateway 端口 + 3**
 
-Example: if `gateway.port: 19001`, then:
+例如：若 `gateway.port: 19001`，则：
 
-- Extension relay port: `19004` (gateway + 3)
+- 扩展中继端口为：`19004`（Gateway 端口 + 3）
 
-Configure the extension to use the derived relay port in the extension Options page.
+在扩展选项中配置该自动派生的中继端口。
 
-## Attach / detach (toolbar button)
+## 附加 / 分离（工具栏按钮）
 
-- Open the tab you want OpenClaw to control.
-- Click the extension icon.
-  - Badge shows `ON` when attached.
-- Click again to detach.
+- 打开你想让 OpenClaw 控制的标签页。
+- 点击扩展图标。
+  - 附加时徽章显示 `ON`。
+- 再次点击即可分离。
 
-## Which tab does it control?
+## 它控制哪个标签页？
 
-- It does **not** automatically control “whatever tab you’re looking at”.
-- It controls **only the tab(s) you explicitly attached** by clicking the toolbar button.
-- To switch: open the other tab and click the extension icon there.
+- 它**不会**自动控制“你当前看的标签页”。
+- 它只控制你通过点击工具栏按钮**明确附加的标签页**。
+- 要切换控制标签页：打开另一个标签页并点击扩展图标。
 
-## Badge + common errors
+## 徽章与常见错误
 
-- `ON`: attached; OpenClaw can drive that tab.
-- `…`: connecting to the local relay.
-- `!`: relay not reachable/authenticated (most common: relay server not running, or gateway token missing/wrong).
+- `ON`：已附加，OpenClaw 可驱动该标签页。
+- `…`：正在连接本地中继。
+- `!`：中继不可达或未认证（最常见原因：中继服务器未运行，或者缺少/错误的 Gateway token）。
 
-If you see `!`:
+出现 `!` 时：
 
-- Make sure the Gateway is running locally (default setup), or run a node host on this machine if the Gateway runs elsewhere.
-- Open the extension Options page; it validates relay reachability + gateway-token auth.
+- 确保 Gateway 正在本地运行（默认配置），或者如果 Gateway 在其他机器，需在本机运行一个节点主机。
+- 打开扩展选项页面，会自动验证中继可达性和 Gateway token 认证。
 
-## Remote Gateway (use a node host)
+## 远程 Gateway（使用节点主机）
 
-### Local Gateway (same machine as Chrome) — usually **no extra steps**
+### 本地 Gateway（与 Chrome 同一台机器）— 通常**无需额外步骤**
 
-If the Gateway runs on the same machine as Chrome, it starts the browser control service on loopback
-and auto-starts the relay server. The extension talks to the local relay; the CLI/tool calls go to the Gateway.
+如果 Gateway 与 Chrome 在同一台机器，它会在回环地址启动浏览器控制服务并自动启动中继服务器。扩展连接本地中继，CLI/工具请求发送到 Gateway。
 
-### Remote Gateway (Gateway runs elsewhere) — **run a node host**
+### 远程 Gateway（Gateway 在其他机器）— **需启动节点主机**
 
-If your Gateway runs on another machine, start a node host on the machine that runs Chrome.
-The Gateway will proxy browser actions to that node; the extension + relay stay local to the browser machine.
+如果 Gateway 在另一台机器，需在运行 Chrome 的机器上启动一个节点主机。Gateway 会将浏览器操作代理到该节点；扩展和中继保持在浏览器机器本地。
 
-If multiple nodes are connected, pin one with `gateway.nodes.browser.node` or set `gateway.nodes.browser.mode`.
+若有多个节点连接，可通过 `gateway.nodes.browser.node` 固定其中一个，或设置 `gateway.nodes.browser.mode`。
 
-## Sandboxing (tool containers)
+## 沙箱（工具容器）
 
-If your agent session is sandboxed (`agents.defaults.sandbox.mode != "off"`), the `browser` tool can be restricted:
+如果你的 agent 会话处于沙箱环境（`agents.defaults.sandbox.mode != "off"`），`browser` 工具可能会受限：
 
-- By default, sandboxed sessions often target the **sandbox browser** (`target="sandbox"`), not your host Chrome.
-- Chrome extension relay takeover requires controlling the **host** browser control server.
+- 默认情况下，沙箱会话通常针对**沙箱浏览器**（`target="sandbox"`），而非宿主机的 Chrome。
+- Chrome 扩展中继接管需控制**宿主机**的浏览器控制服务。
 
-Options:
+选项：
 
-- Easiest: use the extension from a **non-sandboxed** session/agent.
-- Or allow host browser control for sandboxed sessions:
+- 最简单：从**非沙箱**会话/agent 使用扩展。
+- 或允许沙箱会话控制宿主浏览器：
 
 ```json5
 {
@@ -153,43 +151,43 @@ Options:
 }
 ```
 
-Then ensure the tool isn’t denied by tool policy, and (if needed) call `browser` with `target="host"`.
+然后确保工具策略未禁止，且（如有需要）调用 `browser` 时用 `target="host"`。
 
-Debugging: `openclaw sandbox explain`
+调试命令：`openclaw sandbox explain`
 
-## Remote access tips
+## 远程访问提示
 
-- Keep the Gateway and node host on the same tailnet; avoid exposing relay ports to LAN or public Internet.
-- Pair nodes intentionally; disable browser proxy routing if you don’t want remote control (`gateway.nodes.browser.mode="off"`).
+- 保持 Gateway 和节点主机在同一 tailnet 内，避免将中继端口暴露给局域网或公共互联网。
+- 有意对节点配对；若不希望远程控制可禁用浏览器代理路由（`gateway.nodes.browser.mode="off"`）。
 
-## How “extension path” works
+## “扩展路径”工作原理
 
-`openclaw browser extension path` prints the **installed** on-disk directory containing the extension files.
+`openclaw browser extension path` 打印**已安装**的扩展文件所在磁盘目录。
 
-The CLI intentionally does **not** print a `node_modules` path. Always run `openclaw browser extension install` first to copy the extension to a stable location under your OpenClaw state directory.
+CLI 故意不打印 `node_modules` 目录路径。始终先运行 `openclaw browser extension install`，将扩展复制到 OpenClaw 状态目录中的稳定位置。
 
-If you move or delete that install directory, Chrome will mark the extension as broken until you reload it from a valid path.
+若移动或删除此安装目录，Chrome 会将扩展视为损坏，直到从有效路径重新加载。
 
-## Security implications (read this)
+## 安全影响（必读）
 
-This is powerful and risky. Treat it like giving the model “hands on your browser”.
+该功能强大且风险较高。请视为赋予模型“在你浏览器里动手操作”的权限。
 
-- The extension uses Chrome’s debugger API (`chrome.debugger`). When attached, the model can:
-  - click/type/navigate in that tab
-  - read page content
-  - access whatever the tab’s logged-in session can access
-- **This is not isolated** like the dedicated openclaw-managed profile.
-  - If you attach to your daily-driver profile/tab, you’re granting access to that account state.
+- 扩展使用 Chrome 调试 API (`chrome.debugger`)。附加后，模型可以：
+  - 点击/输入/导航该标签页
+  - 读取页面内容
+  - 访问该标签页登录的任意会话权限
+- **这不是隔离环境**，不像单独 openclaw 管理的专用配置文件。
+  - 若附加到你的日常使用配置文件/标签页，即等于授权访问该账户状态。
 
-Recommendations:
+建议：
 
-- Prefer a dedicated Chrome profile (separate from your personal browsing) for extension relay usage.
-- Keep the Gateway and any node hosts tailnet-only; rely on Gateway auth + node pairing.
-- Avoid exposing relay ports over LAN (`0.0.0.0`) and avoid Funnel (public).
-- The relay blocks non-extension origins and requires gateway-token auth for both `/cdp` and `/extension`.
+- 优先使用专用的 Chrome 配置文件（与个人浏览隔离）来使用扩展中继。
+- 保持 Gateway 和节点主机仅限 tailnet 内访问，依赖 Gateway 认证和节点配对。
+- 避免在局域网（`0.0.0.0`）或公共（Funnel）暴露中继端口。
+- 中继阻止非扩展来源访问，且 `/cdp` 和 `/extension` 均需 Gateway token 验证。
 
-Related:
+相关内容：
 
-- Browser tool overview: [Browser](/tools/browser)
-- Security audit: [Security](/gateway/security)
-- Tailscale setup: [Tailscale](/gateway/tailscale)
+- 浏览器工具概述：[Browser](/tools/browser)
+- 安全审计：[Security](/gateway/security)
+- Tailscale 设置：[Tailscale](/gateway/tailscale)

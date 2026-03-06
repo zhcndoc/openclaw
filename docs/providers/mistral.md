@@ -1,26 +1,25 @@
 ---
-summary: "Use Mistral models and Voxtral transcription with OpenClaw"
+summary: "在 OpenClaw 中使用 Mistral 模型和 Voxtral 转录"
 read_when:
-  - You want to use Mistral models in OpenClaw
-  - You need Mistral API key onboarding and model refs
+  - 你想在 OpenClaw 中使用 Mistral 模型
+  - 你需要 Mistral API 密钥接入和模型引用
 title: "Mistral"
 ---
 
 # Mistral
 
-OpenClaw supports Mistral for both text/image model routing (`mistral/...`) and
-audio transcription via Voxtral in media understanding.
-Mistral can also be used for memory embeddings (`memorySearch.provider = "mistral"`).
+OpenClaw 支持 Mistral，用于文本/图像模型路由（`mistral/...`）以及通过 Voxtral 进行媒体理解中的音频转录。  
+Mistral 也可以用于记忆向量嵌入（`memorySearch.provider = "mistral"`）。
 
-## CLI setup
+## 命令行设置
 
 ```bash
 openclaw onboard --auth-choice mistral-api-key
-# or non-interactive
+# 或非交互式
 openclaw onboard --mistral-api-key "$MISTRAL_API_KEY"
 ```
 
-## Config snippet (LLM provider)
+## 配置示例（LLM 提供者）
 
 ```json5
 {
@@ -29,7 +28,7 @@ openclaw onboard --mistral-api-key "$MISTRAL_API_KEY"
 }
 ```
 
-## Config snippet (audio transcription with Voxtral)
+## 配置示例（使用 Voxtral 的音频转录）
 
 ```json5
 {
@@ -44,11 +43,11 @@ openclaw onboard --mistral-api-key "$MISTRAL_API_KEY"
 }
 ```
 
-## Notes
+## 注意事项
 
-- Mistral auth uses `MISTRAL_API_KEY`.
-- Provider base URL defaults to `https://api.mistral.ai/v1`.
-- Onboarding default model is `mistral/mistral-large-latest`.
-- Media-understanding default audio model for Mistral is `voxtral-mini-latest`.
-- Media transcription path uses `/v1/audio/transcriptions`.
-- Memory embeddings path uses `/v1/embeddings` (default model: `mistral-embed`).
+- Mistral 认证使用 `MISTRAL_API_KEY`。  
+- 提供者基本 URL 默认为 `https://api.mistral.ai/v1`。  
+- 默认接入模型是 `mistral/mistral-large-latest`。  
+- Mistral 的媒体理解默认音频模型是 `voxtral-mini-latest`。  
+- 媒体转录路径使用 `/v1/audio/transcriptions`。  
+- 记忆向量嵌入路径使用 `/v1/embeddings`（默认模型：`mistral-embed`）。

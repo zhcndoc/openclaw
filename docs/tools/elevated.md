@@ -1,63 +1,63 @@
 ---
-summary: "Elevated exec mode and /elevated directives"
+summary: "提升执行模式和 /elevated 指令"
 read_when:
-  - Adjusting elevated mode defaults, allowlists, or slash command behavior
-title: "Elevated Mode"
+  - 调整提升模式默认值、允许列表或斜杠命令行为时
+title: "提升模式"
 ---
 
-# Elevated Mode (/elevated directives)
+# 提升模式 (/elevated 指令)
 
-## What it does
+## 功能说明
 
-- `/elevated on` runs on the gateway host and keeps exec approvals (same as `/elevated ask`).
-- `/elevated full` runs on the gateway host **and** auto-approves exec (skips exec approvals).
-- `/elevated ask` runs on the gateway host but keeps exec approvals (same as `/elevated on`).
-- `on`/`ask` do **not** force `exec.security=full`; configured security/ask policy still applies.
-- Only changes behavior when the agent is **sandboxed** (otherwise exec already runs on the host).
-- Directive forms: `/elevated on|off|ask|full`, `/elev on|off|ask|full`.
-- Only `on|off|ask|full` are accepted; anything else returns a hint and does not change state.
+- `/elevated on` 在网关主机上运行并保留执行审批（与 `/elevated ask` 相同）。
+- `/elevated full` 在网关主机上运行 **并且** 自动批准执行（跳过执行审批）。
+- `/elevated ask` 在网关主机上运行但保留执行审批（与 `/elevated on` 相同）。
+- `on` / `ask` **不会** 强制设置 `exec.security=full`；仍然适用已配置的安全/询问策略。
+- 仅当代理处于 **沙箱环境** 时才改变行为（否则 exec 已经在主机上运行）。
+- 指令格式：`/elevated on|off|ask|full`，也支持 `/elev on|off|ask|full`。
+- 仅接受 `on|off|ask|full`，其他输入会返回提示且不改变状态。
 
-## What it controls (and what it doesn’t)
+## 控制范围（及不控制的部分）
 
-- **Availability gates**: `tools.elevated` is the global baseline. `agents.list[].tools.elevated` can further restrict elevated per agent (both must allow).
-- **Per-session state**: `/elevated on|off|ask|full` sets the elevated level for the current session key.
-- **Inline directive**: `/elevated on|ask|full` inside a message applies to that message only.
-- **Groups**: In group chats, elevated directives are only honored when the agent is mentioned. Command-only messages that bypass mention requirements are treated as mentioned.
-- **Host execution**: elevated forces `exec` onto the gateway host; `full` also sets `security=full`.
-- **Approvals**: `full` skips exec approvals; `on`/`ask` honor them when allowlist/ask rules require.
-- **Unsandboxed agents**: no-op for location; only affects gating, logging, and status.
-- **Tool policy still applies**: if `exec` is denied by tool policy, elevated cannot be used.
-- **Separate from `/exec`**: `/exec` adjusts per-session defaults for authorized senders and does not require elevated.
+- **可用门槛**：`tools.elevated` 是全局基线。`agents.list[].tools.elevated` 可以进一步限制每个代理的提升权限（两者都必须允许）。
+- **每会话状态**：`/elevated on|off|ask|full` 为当前会话密钥设置提升级别。
+- **内嵌指令**：消息中使用 `/elevated on|ask|full` 仅对该条消息生效。
+- **群组**：在群聊中，只有当代理被提及时，提升指令才生效。绕过提及要求的仅命令消息视同已提及。
+- **主机执行**：提升模式强制将 `exec` 放到网关主机上；`full` 还会设置 `security=full`。
+- **审批**：`full` 跳过执行审批；`on`/`ask` 在允许列表/询问规则要求时依然遵守审批。
+- **非沙箱代理**：位置无效，只影响门槛判断、日志和状态。
+- **工具策略依然适用**：如果工具策略拒绝 `exec`，则不能使用提升。
+- **独立于 `/exec` 指令**：`/exec` 调整授权发送者的每会话默认，不需要提升权限。
 
-## Resolution order
+## 决策顺序
 
-1. Inline directive on the message (applies only to that message).
-2. Session override (set by sending a directive-only message).
-3. Global default (`agents.defaults.elevatedDefault` in config).
+1. 消息中的内嵌指令（仅对该消息有效）。
+2. 会话覆盖（通过发送仅包含指令的消息设置）。
+3. 全局默认（配置中的 `agents.defaults.elevatedDefault`）。
 
-## Setting a session default
+## 设置会话默认值
 
-- Send a message that is **only** the directive (whitespace allowed), e.g. `/elevated full`.
-- Confirmation reply is sent (`Elevated mode set to full...` / `Elevated mode disabled.`).
-- If elevated access is disabled or the sender is not on the approved allowlist, the directive replies with an actionable error and does not change session state.
-- Send `/elevated` (or `/elevated:`) with no argument to see the current elevated level.
+- 发送仅包含指令的消息（允许有空白符），例如 `/elevated full`。
+- 会收到确认回复（如 “提升模式已设置为 full...” / “提升模式已禁用。”）。
+- 如果提升访问被禁用或发送者不在允许列表，会回复可操作的错误提示且不改变会话状态。
+- 发送 `/elevated`（或 `/elevated:`）无参数，可查看当前提升级别。
 
-## Availability + allowlists
+## 可用性与允许列表
 
-- Feature gate: `tools.elevated.enabled` (default can be off via config even if the code supports it).
-- Sender allowlist: `tools.elevated.allowFrom` with per-provider allowlists (e.g. `discord`, `whatsapp`).
-- Unprefixed allowlist entries match sender-scoped identity values only (`SenderId`, `SenderE164`, `From`); recipient routing fields are never used for elevated authorization.
-- Mutable sender metadata requires explicit prefixes:
-  - `name:<value>` matches `SenderName`
-  - `username:<value>` matches `SenderUsername`
-  - `tag:<value>` matches `SenderTag`
-  - `id:<value>`, `from:<value>`, `e164:<value>` are available for explicit identity targeting
-- Per-agent gate: `agents.list[].tools.elevated.enabled` (optional; can only further restrict).
-- Per-agent allowlist: `agents.list[].tools.elevated.allowFrom` (optional; when set, the sender must match **both** global + per-agent allowlists).
-- Discord fallback: if `tools.elevated.allowFrom.discord` is omitted, the `channels.discord.allowFrom` list is used as a fallback (legacy: `channels.discord.dm.allowFrom`). Set `tools.elevated.allowFrom.discord` (even `[]`) to override. Per-agent allowlists do **not** use the fallback.
-- All gates must pass; otherwise elevated is treated as unavailable.
+- 功能开关：`tools.elevated.enabled`（即使代码支持，配置默认也可能关闭）。
+- 发送者允许列表：`tools.elevated.allowFrom`，支持按服务提供商细分（如 `discord`、`whatsapp`）。
+- 无前缀的允许列表项仅匹配发送者身份标识值（`SenderId`、`SenderE164`、`From`）；收件人路由字段不用于提升授权。
+- 可变发送者元数据需要显式前缀：
+  - `name:<值>` 匹配 `SenderName`
+  - `username:<值>` 匹配 `SenderUsername`
+  - `tag:<值>` 匹配 `SenderTag`
+  - `id:<值>`、`from:<值>`、`e164:<值>` 可用作显式身份定位
+- 每代理门槛：`agents.list[].tools.elevated.enabled`（可选，只能进一步限制）。
+- 每代理允许列表：`agents.list[].tools.elevated.allowFrom`（可选，设置时发送者必须同时满足全局和代理允许列表）。
+- Discord 后备机制：若未设置 `tools.elevated.allowFrom.discord`，会使用 `channels.discord.allowFrom` 作为后备（旧版为 `channels.discord.dm.allowFrom`）。设置 `tools.elevated.allowFrom.discord`（包含空数组 `[]`）则覆盖后备。代理允许列表不适用后备机制。
+- 所有门槛均必须通过，否则视为提升不可用。
 
-## Logging + status
+## 日志与状态
 
-- Elevated exec calls are logged at info level.
-- Session status includes elevated mode (e.g. `elevated=ask`, `elevated=full`).
+- 提升执行调用以信息级别记录日志。
+- 会话状态包括提升模式状态（如 `elevated=ask`，`elevated=full`）。

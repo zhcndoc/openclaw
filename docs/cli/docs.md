@@ -1,13 +1,13 @@
 ---
-summary: "CLI reference for `openclaw docs` (search the live docs index)"
+summary: "`openclaw docs` 的命令行参考（搜索实时文档索引）"
 read_when:
-  - You want to search the live OpenClaw docs from the terminal
-title: "docs"
+  - 你想从终端搜索实时的 OpenClaw 文档
+title: "文档"
 ---
 
 # `openclaw docs`
 
-Search the live docs index.
+搜索实时文档索引。
 
 ```bash
 openclaw docs browser extension

@@ -1,43 +1,38 @@
 ---
-summary: "How the mac app embeds the gateway WebChat and how to debug it"
+summary: "mac 应用如何嵌入网关 WebChat 及如何调试"
 read_when:
-  - Debugging mac WebChat view or loopback port
+  - 调试 mac WebChat 视图或回环端口
 title: "WebChat"
 ---
 
-# WebChat (macOS app)
+# WebChat（macOS 应用）
 
-The macOS menu bar app embeds the WebChat UI as a native SwiftUI view. It
-connects to the Gateway and defaults to the **main session** for the selected
-agent (with a session switcher for other sessions).
+macOS 菜单栏应用将 WebChat UI 嵌入为本地的 SwiftUI 视图。它连接到网关并默认使用所选代理的**主会话**（可通过会话切换器切换到其他会话）。
 
-- **Local mode**: connects directly to the local Gateway WebSocket.
-- **Remote mode**: forwards the Gateway control port over SSH and uses that
-  tunnel as the data plane.
+- **本地模式**：直接连接本地网关 WebSocket。
+- **远程模式**：通过 SSH 转发网关控制端口，并使用该通道作为数据平面。
 
-## Launch & debugging
+## 启动与调试
 
-- Manual: Lobster menu → “Open Chat”.
-- Auto‑open for testing:
+- 手动：Lobster 菜单 → “打开聊天”。
+- 自动打开用于测试：
 
   ```bash
   dist/OpenClaw.app/Contents/MacOS/OpenClaw --webchat
   ```
 
-- Logs: `./scripts/clawlog.sh` (subsystem `ai.openclaw`, category `WebChatSwiftUI`).
+- 日志：`./scripts/clawlog.sh`（子系统 `ai.openclaw`，类别 `WebChatSwiftUI`）。
 
-## How it’s wired
+## 结构连接
 
-- Data plane: Gateway WS methods `chat.history`, `chat.send`, `chat.abort`,
-  `chat.inject` and events `chat`, `agent`, `presence`, `tick`, `health`.
-- Session: defaults to the primary session (`main`, or `global` when scope is
-  global). The UI can switch between sessions.
-- Onboarding uses a dedicated session to keep first‑run setup separate.
+- 数据平面：网关 WS 方法 `chat.history`、`chat.send`、`chat.abort`、`chat.inject` 及事件 `chat`、`agent`、`presence`、`tick`、`health`。
+- 会话：默认使用主会话（`main`，全局作用域时为 `global`）。UI 可切换会话。
+- 新手引导使用专用会话以保持首次运行设置的独立。
 
-## Security surface
+## 安全面
 
-- Remote mode forwards only the Gateway WebSocket control port over SSH.
+- 远程模式仅通过 SSH 转发网关 WebSocket 控制端口。
 
-## Known limitations
+## 已知限制
 
-- The UI is optimized for chat sessions (not a full browser sandbox).
+- UI 针对聊天会话进行了优化（非完整浏览器沙盒）。

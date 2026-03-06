@@ -1,34 +1,34 @@
 ---
-summary: "How the macOS app reports gateway/Baileys health states"
+summary: "macOS 应用如何报告网关/Baileys 健康状态"
 read_when:
-  - Debugging mac app health indicators
-title: "Health Checks"
+  - 调试 mac 应用健康指标时
+title: "健康检查"
 ---
 
-# Health Checks on macOS
+# macOS 上的健康检查
 
-How to see whether the linked channel is healthy from the menu bar app.
+如何从菜单栏应用查看已连接频道是否健康。
 
-## Menu bar
+## 菜单栏
 
-- Status dot now reflects Baileys health:
-  - Green: linked + socket opened recently.
-  - Orange: connecting/retrying.
-  - Red: logged out or probe failed.
-- Secondary line reads "linked · auth 12m" or shows the failure reason.
-- "Run Health Check" menu item triggers an on-demand probe.
+- 状态点现在反映 Baileys 健康状态：
+  - 绿色：已连接 + 套接字最近已打开。
+  - 橙色：正在连接/重试中。
+  - 红色：已注销或探测失败。
+- 次要行显示“linked · auth 12m”或显示失败原因。
+- “运行健康检查”菜单项触发按需探测。
 
-## Settings
+## 设置
 
-- General tab gains a Health card showing: linked auth age, session-store path/count, last check time, last error/status code, and buttons for Run Health Check / Reveal Logs.
-- Uses a cached snapshot so the UI loads instantly and falls back gracefully when offline.
-- **Channels tab** surfaces channel status + controls for WhatsApp/Telegram (login QR, logout, probe, last disconnect/error).
+- 常规标签新增健康卡，显示：已连接认证时长、会话存储路径/计数、上次检查时间、上次错误/状态码，以及“运行健康检查”/“显示日志”的按钮。
+- 使用缓存快照，保证界面瞬时加载且离线时能优雅降级。
+- **频道标签**显示频道状态 + WhatsApp/Telegram 的控制项（登录二维码、注销、探测、上次断开/错误）。
 
-## How the probe works
+## 探测如何工作
 
-- App runs `openclaw health --json` via `ShellExecutor` every ~60s and on demand. The probe loads creds and reports status without sending messages.
-- Cache the last good snapshot and the last error separately to avoid flicker; show the timestamp of each.
+- 应用每 ~60 秒以及按需通过 `ShellExecutor` 运行 `openclaw health --json`。探测加载凭据并报告状态，不发送消息。
+- 分别缓存上一次正常快照和上一次错误，避免闪烁；显示各自的时间戳。
 
-## When in doubt
+## 有疑问时
 
-- You can still use the CLI flow in [Gateway health](/gateway/health) (`openclaw status`, `openclaw status --deep`, `openclaw health --json`) and tail `/tmp/openclaw/openclaw-*.log` for `web-heartbeat` / `web-reconnect`.
+- 你仍可使用 CLI 流程（见 [网关健康](/gateway/health)）(`openclaw status`, `openclaw status --deep`, `openclaw health --json`) 并监视 `/tmp/openclaw/openclaw-*.log` 中的 `web-heartbeat` / `web-reconnect` 日志。

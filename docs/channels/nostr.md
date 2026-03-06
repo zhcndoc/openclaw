@@ -1,55 +1,55 @@
 ---
-summary: "Nostr DM channel via NIP-04 encrypted messages"
+summary: "通过 NIP-04 加密消息实现 Nostr 私信频道"
 read_when:
-  - You want OpenClaw to receive DMs via Nostr
-  - You're setting up decentralized messaging
+  - 你希望 OpenClaw 通过 Nostr 接收私信
+  - 你正在设置去中心化消息系统
 title: "Nostr"
 ---
 
 # Nostr
 
-**Status:** Optional plugin (disabled by default).
+**状态：** 可选插件（默认禁用）。
 
-Nostr is a decentralized protocol for social networking. This channel enables OpenClaw to receive and respond to encrypted direct messages (DMs) via NIP-04.
+Nostr 是一个去中心化社交网络协议。此频道使 OpenClaw 能够通过 NIP-04 接收和回复加密的私信（DM）。
 
-## Install (on demand)
+## 按需安装
 
-### Onboarding (recommended)
+### 新用户引导（推荐）
 
-- The onboarding wizard (`openclaw onboard`) and `openclaw channels add` list optional channel plugins.
-- Selecting Nostr prompts you to install the plugin on demand.
+- 新用户引导向导（`openclaw onboard`）和 `openclaw channels add` 会列出可选频道插件。
+- 选择 Nostr 时会提示你按需安装插件。
 
-Install defaults:
+安装默认行为：
 
-- **Dev channel + git checkout available:** uses the local plugin path.
-- **Stable/Beta:** downloads from npm.
+- **开发频道 + 可用 git 检出：** 使用本地插件路径。
+- **稳定/测试版：** 从 npm 下载。
 
-You can always override the choice in the prompt.
+你可以随时覆盖提示中的选择。
 
-### Manual install
+### 手动安装
 
 ```bash
 openclaw plugins install @openclaw/nostr
 ```
 
-Use a local checkout (dev workflows):
+使用本地检出（开发工作流）：
 
 ```bash
 openclaw plugins install --link <path-to-openclaw>/extensions/nostr
 ```
 
-Restart the Gateway after installing or enabling plugins.
+安装或启用插件后，请重启网关。
 
-## Quick setup
+## 快速配置
 
-1. Generate a Nostr keypair (if needed):
+1. 生成 Nostr 密钥对（如果需要）：
 
 ```bash
-# Using nak
+# 使用 nak
 nak key generate
 ```
 
-2. Add to config:
+2. 添加到配置：
 
 ```json
 {
@@ -61,31 +61,31 @@ nak key generate
 }
 ```
 
-3. Export the key:
+3. 导出密钥：
 
 ```bash
 export NOSTR_PRIVATE_KEY="nsec1..."
 ```
 
-4. Restart the Gateway.
+4. 重启网关。
 
-## Configuration reference
+## 配置参考
 
-| Key          | Type     | Default                                     | Description                         |
-| ------------ | -------- | ------------------------------------------- | ----------------------------------- |
-| `privateKey` | string   | required                                    | Private key in `nsec` or hex format |
-| `relays`     | string[] | `['wss://relay.damus.io', 'wss://nos.lol']` | Relay URLs (WebSocket)              |
-| `dmPolicy`   | string   | `pairing`                                   | DM access policy                    |
-| `allowFrom`  | string[] | `[]`                                        | Allowed sender pubkeys              |
-| `enabled`    | boolean  | `true`                                      | Enable/disable channel              |
-| `name`       | string   | -                                           | Display name                        |
-| `profile`    | object   | -                                           | NIP-01 profile metadata             |
+| 键           | 类型       | 默认值                                      | 描述                               |
+| ------------ | ---------- | ------------------------------------------- | ---------------------------------- |
+| `privateKey` | string     | 必填                                        | 私钥，支持 `nsec` 或十六进制格式     |
+| `relays`     | string[]   | `['wss://relay.damus.io', 'wss://nos.lol']` | 中继服务器地址（WebSocket）           |
+| `dmPolicy`   | string     | `pairing`                                   | 私信访问策略                       |
+| `allowFrom`  | string[]   | `[]`                                        | 允许的发送者公钥                   |
+| `enabled`    | boolean    | `true`                                      | 启用/禁用频道                      |
+| `name`       | string     | -                                           | 显示名称                         |
+| `profile`    | object     | -                                           | NIP-01 个人资料元数据               |
 
-## Profile metadata
+## 个人资料元数据
 
-Profile data is published as a NIP-01 `kind:0` event. You can manage it from the Control UI (Channels -> Nostr -> Profile) or set it directly in config.
+个人资料数据作为 NIP-01 `kind:0` 事件发布。你可以通过控制界面（频道 -> Nostr -> 个人资料）管理，也可以直接在配置中设置。
 
-Example:
+示例：
 
 ```json
 {
@@ -95,7 +95,7 @@ Example:
       "profile": {
         "name": "openclaw",
         "displayName": "OpenClaw",
-        "about": "Personal assistant DM bot",
+        "about": "个人助理私信机器人",
         "picture": "https://example.com/avatar.png",
         "banner": "https://example.com/banner.png",
         "website": "https://example.com",
@@ -107,21 +107,21 @@ Example:
 }
 ```
 
-Notes:
+备注：
 
-- Profile URLs must use `https://`.
-- Importing from relays merges fields and preserves local overrides.
+- 个人资料中的链接必须使用 `https://`。
+- 从中继服务器导入资料时会合并字段并保留本地覆盖。
 
-## Access control
+## 访问控制
 
-### DM policies
+### 私信策略
 
-- **pairing** (default): unknown senders get a pairing code.
-- **allowlist**: only pubkeys in `allowFrom` can DM.
-- **open**: public inbound DMs (requires `allowFrom: ["*"]`).
-- **disabled**: ignore inbound DMs.
+- **pairing**（默认）：未知发送者会收到配对码。
+- **allowlist**：只有 `allowFrom` 中的公钥可以私信。
+- **open**：开放的入站私信（需配置 `allowFrom: ["*"]`）。
+- **disabled**：忽略所有入站私信。
 
-### Allowlist example
+### 允许列表示例
 
 ```json
 {
@@ -135,16 +135,16 @@ Notes:
 }
 ```
 
-## Key formats
+## 密钥格式
 
-Accepted formats:
+支持格式：
 
-- **Private key:** `nsec...` or 64-char hex
-- **Pubkeys (`allowFrom`):** `npub...` or hex
+- **私钥：** `nsec...` 或 64 字符十六进制
+- **公钥（`allowFrom`）：** `npub...` 或十六进制
 
-## Relays
+## 中继服务器
 
-Defaults: `relay.damus.io` and `nos.lol`.
+默认：`relay.damus.io` 和 `nos.lol`。
 
 ```json
 {
@@ -157,28 +157,28 @@ Defaults: `relay.damus.io` and `nos.lol`.
 }
 ```
 
-Tips:
+提示：
 
-- Use 2-3 relays for redundancy.
-- Avoid too many relays (latency, duplication).
-- Paid relays can improve reliability.
-- Local relays are fine for testing (`ws://localhost:7777`).
+- 使用 2-3 个中继服务器保证冗余。
+- 避免太多中继以减少延迟和重复。
+- 付费中继可以提升可靠性。
+- 本地中继适合测试使用（`ws://localhost:7777`）。
 
-## Protocol support
+## 协议支持
 
-| NIP    | Status    | Description                           |
-| ------ | --------- | ------------------------------------- |
-| NIP-01 | Supported | Basic event format + profile metadata |
-| NIP-04 | Supported | Encrypted DMs (`kind:4`)              |
-| NIP-17 | Planned   | Gift-wrapped DMs                      |
-| NIP-44 | Planned   | Versioned encryption                  |
+| NIP    | 状态      | 描述                              |
+| ------ | --------- | ---------------------------------- |
+| NIP-01 | 支持      | 基础事件格式 + 个人资料元数据      |
+| NIP-04 | 支持      | 加密私信（`kind:4`）              |
+| NIP-17 | 规划中    | 礼物包装私信                      |
+| NIP-44 | 规划中    | 版本化加密                        |
 
-## Testing
+## 测试
 
-### Local relay
+### 本地中继
 
 ```bash
-# Start strfry
+# 启动 strfry
 docker run -p 7777:7777 ghcr.io/hoytech/strfry
 ```
 
@@ -193,41 +193,41 @@ docker run -p 7777:7777 ghcr.io/hoytech/strfry
 }
 ```
 
-### Manual test
+### 手动测试
 
-1. Note the bot pubkey (npub) from logs.
-2. Open a Nostr client (Damus, Amethyst, etc.).
-3. DM the bot pubkey.
-4. Verify the response.
+1. 从日志中记录机器人公钥（npub）。
+2. 打开 Nostr 客户端（如 Damus、Amethyst 等）。
+3. 给机器人公钥发送私信。
+4. 验证回复。
 
-## Troubleshooting
+## 故障排查
 
-### Not receiving messages
+### 收不到消息
 
-- Verify the private key is valid.
-- Ensure relay URLs are reachable and use `wss://` (or `ws://` for local).
-- Confirm `enabled` is not `false`.
-- Check Gateway logs for relay connection errors.
+- 确认私钥有效。
+- 确认中继地址可访问，使用 `wss://`（本地可使用 `ws://`）。
+- 确认 `enabled` 没有被设置为 `false`。
+- 查看网关日志是否有中继连接错误。
 
-### Not sending responses
+### 不发送回复
 
-- Check relay accepts writes.
-- Verify outbound connectivity.
-- Watch for relay rate limits.
+- 检查中继是否允许写入。
+- 确认外部网络连接正常。
+- 注意中继的速率限制。
 
-### Duplicate responses
+### 重复回复
 
-- Expected when using multiple relays.
-- Messages are deduplicated by event ID; only the first delivery triggers a response.
+- 使用多个中继时为预期行为。
+- 消息通过事件 ID 去重，只有首次收到消息时触发回复。
 
-## Security
+## 安全性
 
-- Never commit private keys.
-- Use environment variables for keys.
-- Consider `allowlist` for production bots.
+- 切勿提交私钥到代码库。
+- 使用环境变量存储密钥。
+- 生产环境建议使用 `allowlist` 策略。
 
-## Limitations (MVP)
+## 限制（MVP）
 
-- Direct messages only (no group chats).
-- No media attachments.
-- NIP-04 only (NIP-17 gift-wrap planned).
+- 仅支持直接私信（无群聊）。
+- 不支持媒体附件。
+- 仅支持 NIP-04（计划支持 NIP-17 礼物包装）。

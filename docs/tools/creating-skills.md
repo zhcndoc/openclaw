@@ -1,58 +1,58 @@
 ---
-title: "Creating Skills"
-summary: "Build and test custom workspace skills with SKILL.md"
+title: "创建技能"
+summary: "使用 SKILL.md 构建和测试自定义工作区技能"
 read_when:
-  - You are creating a new custom skill in your workspace
-  - You need a quick starter workflow for SKILL.md-based skills
+  - 您正在工作区中创建新的自定义技能
+  - 您需要一个基于 SKILL.md 技能的快速入门工作流程
 ---
 
-# Creating Custom Skills 🛠
+# 创建自定义技能 🛠
 
-OpenClaw is designed to be easily extensible. "Skills" are the primary way to add new capabilities to your assistant.
+OpenClaw 设计为易于扩展。“技能”是为您的助手添加新功能的主要方式。
 
-## What is a Skill?
+## 什么是技能？
 
-A skill is a directory containing a `SKILL.md` file (which provides instructions and tool definitions to the LLM) and optionally some scripts or resources.
+技能是一个包含 `SKILL.md` 文件（向大语言模型提供指令和工具定义）的目录，并且可选地包含一些脚本或资源。
 
-## Step-by-Step: Your First Skill
+## 逐步指导：您的第一个技能
 
-### 1. Create the Directory
+### 1. 创建目录
 
-Skills live in your workspace, usually `~/.openclaw/workspace/skills/`. Create a new folder for your skill:
+技能存放在您的工作区，通常是 `~/.openclaw/workspace/skills/`。为您的技能创建一个新文件夹：
 
 ```bash
 mkdir -p ~/.openclaw/workspace/skills/hello-world
 ```
 
-### 2. Define the `SKILL.md`
+### 2. 定义 `SKILL.md`
 
-Create a `SKILL.md` file in that directory. This file uses YAML frontmatter for metadata and Markdown for instructions.
+在该目录中创建一个 `SKILL.md` 文件。此文件使用 YAML 头部块定义元数据，使用 Markdown 撰写指令。
 
 ```markdown
 ---
 name: hello_world
-description: A simple skill that says hello.
+description: 一个简单的问候技能。
 ---
 
-# Hello World Skill
+# Hello World 技能
 
-When the user asks for a greeting, use the `echo` tool to say "Hello from your custom skill!".
+当用户请求问候时，使用 `echo` 工具说 "Hello from your custom skill!"。
 ```
 
-### 3. Add Tools (Optional)
+### 3. 添加工具（可选）
 
-You can define custom tools in the frontmatter or instruct the agent to use existing system tools (like `bash` or `browser`).
+您可以在头部块中定义自定义工具，或者指示代理使用现有的系统工具（例如 `bash` 或 `browser`）。
 
-### 4. Refresh OpenClaw
+### 4. 刷新 OpenClaw
 
-Ask your agent to "refresh skills" or restart the gateway. OpenClaw will discover the new directory and index the `SKILL.md`.
+让您的代理“刷新技能”或重启网关。OpenClaw 会发现新目录并索引 `SKILL.md` 文件。
 
-## Best Practices
+## 最佳实践
 
-- **Be Concise**: Instruct the model on _what_ to do, not how to be an AI.
-- **Safety First**: If your skill uses `bash`, ensure the prompts don't allow arbitrary command injection from untrusted user input.
-- **Test Locally**: Use `openclaw agent --message "use my new skill"` to test.
+- **简明扼要**：指示模型 _做什么_，而非如何作为 AI 来做。
+- **安全第一**：若您的技能使用 `bash`，确保提示信息不允许从不可信用户输入注入任意命令。
+- **本地测试**：使用 `openclaw agent --message "use my new skill"` 进行测试。
 
-## Shared Skills
+## 共享技能
 
-You can also browse and contribute skills to [ClawHub](https://clawhub.com).
+您也可以浏览并贡献技能到 [ClawHub](https://clawhub.com)。

@@ -1,22 +1,18 @@
 ---
-summary: "Write agent tools in a plugin (schemas, optional tools, allowlists)"
+summary: "在插件中编写代理工具（模式，可选工具，允许列表）"
 read_when:
-  - You want to add a new agent tool in a plugin
-  - You need to make a tool opt-in via allowlists
-title: "Plugin Agent Tools"
+  - 你想在插件中添加新的代理工具
+  - 你需要通过允许列表使工具成为可选
+title: "插件代理工具"
 ---
 
-# Plugin agent tools
+# 插件代理工具
 
-OpenClaw plugins can register **agent tools** (JSON‑schema functions) that are exposed
-to the LLM during agent runs. Tools can be **required** (always available) or
-**optional** (opt‑in).
+OpenClaw 插件可以注册 **代理工具**（JSON-schema 函数），这些工具在代理运行时向 LLM 暴露。工具可以是 **必需的**（始终可用）或 **可选的**（需选择加入）。
 
-Agent tools are configured under `tools` in the main config, or per‑agent under
-`agents.list[].tools`. The allowlist/denylist policy controls which tools the agent
-can call.
+代理工具在主配置的 `tools` 下配置，或在每个代理的 `agents.list[].tools` 下配置。允许列表/拒绝列表策略控制代理可以调用哪些工具。
 
-## Basic tool
+## 基础工具
 
 ```ts
 import { Type } from "@sinclair/typebox";
@@ -24,7 +20,7 @@ import { Type } from "@sinclair/typebox";
 export default function (api) {
   api.registerTool({
     name: "my_tool",
-    description: "Do a thing",
+    description: "执行一个操作",
     parameters: Type.Object({
       input: Type.String(),
     }),
@@ -35,17 +31,16 @@ export default function (api) {
 }
 ```
 
-## Optional tool (opt‑in)
+## 可选工具（需选择加入）
 
-Optional tools are **never** auto‑enabled. Users must add them to an agent
-allowlist.
+可选工具 **绝不会** 自动启用。用户必须将它们添加到代理允许列表中。
 
 ```ts
 export default function (api) {
   api.registerTool(
     {
       name: "workflow_tool",
-      description: "Run a local workflow",
+      description: "运行本地工作流",
       parameters: {
         type: "object",
         properties: {
@@ -62,7 +57,7 @@ export default function (api) {
 }
 ```
 
-Enable optional tools in `agents.list[].tools.allow` (or global `tools.allow`):
+在 `agents.list[].tools.allow`（或全局的 `tools.allow`）中启用可选工具：
 
 ```json5
 {
@@ -72,9 +67,9 @@ Enable optional tools in `agents.list[].tools.allow` (or global `tools.allow`):
         id: "main",
         tools: {
           allow: [
-            "workflow_tool", // specific tool name
-            "workflow", // plugin id (enables all tools from that plugin)
-            "group:plugins", // all plugin tools
+            "workflow_tool", // 具体工具名
+            "workflow", // 插件 id（启用该插件下所有工具）
+            "group:plugins", // 所有插件工具
           ],
         },
       },
@@ -83,17 +78,15 @@ Enable optional tools in `agents.list[].tools.allow` (or global `tools.allow`):
 }
 ```
 
-Other config knobs that affect tool availability:
+其他影响工具可用性的配置选项：
 
-- Allowlists that only name plugin tools are treated as plugin opt-ins; core tools remain
-  enabled unless you also include core tools or groups in the allowlist.
-- `tools.profile` / `agents.list[].tools.profile` (base allowlist)
-- `tools.byProvider` / `agents.list[].tools.byProvider` (provider‑specific allow/deny)
-- `tools.sandbox.tools.*` (sandbox tool policy when sandboxed)
+- 仅命名插件工具的允许列表被视为插件加入；核心工具保持启用状态，除非你也在允许列表中包含了核心工具或组。
+- `tools.profile` / `agents.list[].tools.profile`（基础允许列表）
+- `tools.byProvider` / `agents.list[].tools.byProvider`（供应商特定的允许/拒绝）
+- `tools.sandbox.tools.*`（受限环境中的沙盒工具策略）
 
-## Rules + tips
+## 规则 + 提示
 
-- Tool names must **not** clash with core tool names; conflicting tools are skipped.
-- Plugin ids used in allowlists must not clash with core tool names.
-- Prefer `optional: true` for tools that trigger side effects or require extra
-  binaries/credentials.
+- 工具名称 **不得** 与核心工具名称冲突；冲突工具将被跳过。
+- 允许列表中使用的插件 id 不得与核心工具名称冲突。
+- 对于触发副作用或需要额外二进制文件/凭证的工具，建议设置 `optional: true`。

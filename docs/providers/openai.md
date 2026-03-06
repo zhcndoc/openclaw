@@ -1,31 +1,29 @@
 ---
-summary: "Use OpenAI via API keys or Codex subscription in OpenClaw"
+summary: "在 OpenClaw 中通过 API 密钥或 Codex 订阅使用 OpenAI"
 read_when:
-  - You want to use OpenAI models in OpenClaw
-  - You want Codex subscription auth instead of API keys
+  - 你想在 OpenClaw 中使用 OpenAI 模型
+  - 你想用 Codex 订阅认证代替 API 密钥
 title: "OpenAI"
 ---
 
 # OpenAI
 
-OpenAI provides developer APIs for GPT models. Codex supports **ChatGPT sign-in** for subscription
-access or **API key** sign-in for usage-based access. Codex cloud requires ChatGPT sign-in.
-OpenAI explicitly supports subscription OAuth usage in external tools/workflows like OpenClaw.
+OpenAI 提供了 GPT 模型的开发者 API。Codex 支持 **ChatGPT 登录** 以获取订阅访问或 **API 密钥** 登录以按使用量计费。Codex 云端需要 ChatGPT 登录。OpenAI 明确支持在外部工具/工作流（如 OpenClaw）中使用订阅 OAuth。
 
-## Option A: OpenAI API key (OpenAI Platform)
+## 选项 A：OpenAI API 密钥（OpenAI 平台）
 
-**Best for:** direct API access and usage-based billing.
-Get your API key from the OpenAI dashboard.
+**适用场景：** 直接使用 API 并按使用量计费。  
+从 OpenAI 控制台获取你的 API 密钥。
 
-### CLI setup
+### CLI 配置
 
 ```bash
 openclaw onboard --auth-choice openai-api-key
-# or non-interactive
+# 或非交互式
 openclaw onboard --openai-api-key "$OPENAI_API_KEY"
 ```
 
-### Config snippet
+### 配置示例
 
 ```json5
 {
@@ -34,25 +32,24 @@ openclaw onboard --openai-api-key "$OPENAI_API_KEY"
 }
 ```
 
-OpenAI's current API model docs list `gpt-5.4` and `gpt-5.4-pro` for direct
-OpenAI API usage. OpenClaw forwards both through the `openai/*` Responses path.
+OpenAI 当前 API 模型文档中列出了用于直接调用 OpenAI API 的 `gpt-5.4` 和 `gpt-5.4-pro` 模型。OpenClaw 会通过 `openai/*` Responses 路径转发这两个模型。
 
-## Option B: OpenAI Code (Codex) subscription
+## 选项 B：OpenAI Code (Codex) 订阅
 
-**Best for:** using ChatGPT/Codex subscription access instead of an API key.
-Codex cloud requires ChatGPT sign-in, while the Codex CLI supports ChatGPT or API key sign-in.
+**适用场景：** 使用 ChatGPT/Codex 订阅访问代替 API 密钥。  
+Codex 云端需要 ChatGPT 登录，Codex CLI 支持 ChatGPT 或 API 密钥登录。
 
-### CLI setup (Codex OAuth)
+### CLI 配置（Codex OAuth）
 
 ```bash
-# Run Codex OAuth in the wizard
+# 在向导中运行 Codex OAuth
 openclaw onboard --auth-choice openai-codex
 
-# Or run OAuth directly
+# 或直接运行 OAuth
 openclaw models auth login --provider openai-codex
 ```
 
-### Config snippet (Codex subscription)
+### 配置示例（Codex 订阅）
 
 ```json5
 {
@@ -60,28 +57,24 @@ openclaw models auth login --provider openai-codex
 }
 ```
 
-OpenAI's current Codex docs list `gpt-5.4` as the current Codex model. OpenClaw
-maps that to `openai-codex/gpt-5.4` for ChatGPT/Codex OAuth usage.
+OpenAI 当前 Codex 文档中列出的当前 Codex 模型为 `gpt-5.4`。OpenClaw 将其映射为 `openai-codex/gpt-5.4` 用于 ChatGPT/Codex OAuth 访问。
 
-### Transport default
+### 传输默认设置
 
-OpenClaw uses `pi-ai` for model streaming. For both `openai/*` and
-`openai-codex/*`, default transport is `"auto"` (WebSocket-first, then SSE
-fallback).
+OpenClaw 使用 `pi-ai` 进行模型流式传输。对于 `openai/*` 和 `openai-codex/*`，默认传输方式为 `"auto"`（优先 WebSocket，失败后降级到 SSE）。
 
-You can set `agents.defaults.models.<provider/model>.params.transport`:
+你可以设置 `agents.defaults.models.<provider/model>.params.transport`：
 
-- `"sse"`: force SSE
-- `"websocket"`: force WebSocket
-- `"auto"`: try WebSocket, then fall back to SSE
+- `"sse"`：强制使用 SSE
+- `"websocket"`：强制使用 WebSocket
+- `"auto"`：尝试 WebSocket，失败后降级至 SSE
 
-For `openai/*` (Responses API), OpenClaw also enables WebSocket warm-up by
-default (`openaiWsWarmup: true`) when WebSocket transport is used.
+对于 `openai/*`（Responses API），当使用 WebSocket 传输时，OpenClaw 还默认启用 WebSocket 预热 (`openaiWsWarmup: true`)。
 
-Related OpenAI docs:
+相关 OpenAI 文档：
 
-- [Realtime API with WebSocket](https://platform.openai.com/docs/guides/realtime-websocket)
-- [Streaming API responses (SSE)](https://platform.openai.com/docs/guides/streaming-responses)
+- [实时 API（WebSocket）](https://platform.openai.com/docs/guides/realtime-websocket)
+- [流式响应 API（SSE）](https://platform.openai.com/docs/guides/streaming-responses)
 
 ```json5
 {
@@ -100,12 +93,11 @@ Related OpenAI docs:
 }
 ```
 
-### OpenAI WebSocket warm-up
+### OpenAI WebSocket 预热
 
-OpenAI docs describe warm-up as optional. OpenClaw enables it by default for
-`openai/*` to reduce first-turn latency when using WebSocket transport.
+OpenAI 文档中描述的预热是可选的。OpenClaw 对 `openai/*` 默认启用此功能，以在使用 WebSocket 传输时降低首次响应延迟。
 
-### Disable warm-up
+### 禁用预热
 
 ```json5
 {
@@ -123,7 +115,7 @@ OpenAI docs describe warm-up as optional. OpenClaw enables it by default for
 }
 ```
 
-### Enable warm-up explicitly
+### 显式启用预热
 
 ```json5
 {
@@ -141,11 +133,9 @@ OpenAI docs describe warm-up as optional. OpenClaw enables it by default for
 }
 ```
 
-### OpenAI priority processing
+### OpenAI 优先级处理
 
-OpenAI's API exposes priority processing via `service_tier=priority`. In
-OpenClaw, set `agents.defaults.models["openai/<model>"].params.serviceTier` to
-pass that field through on direct `openai/*` Responses requests.
+OpenAI 的 API 支持通过 `service_tier=priority` 来开启优先级处理。在 OpenClaw 中，设置 `agents.defaults.models["openai/<model>"].params.serviceTier` 可在直接使用 `openai/*` Responses 请求时传递该字段。
 
 ```json5
 {
@@ -163,24 +153,20 @@ pass that field through on direct `openai/*` Responses requests.
 }
 ```
 
-Supported values are `auto`, `default`, `flex`, and `priority`.
+支持的取值包括 `auto`、`default`、`flex` 和 `priority`。
 
-### OpenAI Responses server-side compaction
+### OpenAI Responses 服务器端压缩
 
-For direct OpenAI Responses models (`openai/*` using `api: "openai-responses"` with
-`baseUrl` on `api.openai.com`), OpenClaw now auto-enables OpenAI server-side
-compaction payload hints:
+对于直接的 OpenAI Responses 模型（使用 `api: "openai-responses"` 并且 `baseUrl` 指向 `api.openai.com` 的 `openai/*`），OpenClaw 现在默认启用 OpenAI 服务器端压缩 payload 提示：
 
-- Forces `store: true` (unless model compat sets `supportsStore: false`)
-- Injects `context_management: [{ type: "compaction", compact_threshold: ... }]`
+- 强制开启 `store: true`（除非模型兼容性设置了 `supportsStore: false`）
+- 注入 `context_management: [{ type: "compaction", compact_threshold: ... }]`
 
-By default, `compact_threshold` is `70%` of model `contextWindow` (or `80000`
-when unavailable).
+默认情况下，`compact_threshold` 是模型的 `contextWindow` 的 `70%`（若不可用则为 `80000`）。
 
-### Enable server-side compaction explicitly
+### 显式启用服务器端压缩
 
-Use this when you want to force `context_management` injection on compatible
-Responses models (for example Azure OpenAI Responses):
+当你需要强制注入 `context_management`（例如 Azure OpenAI Responses 兼容模型）时使用：
 
 ```json5
 {
@@ -198,7 +184,7 @@ Responses models (for example Azure OpenAI Responses):
 }
 ```
 
-### Enable with a custom threshold
+### 使用自定义阈值启用
 
 ```json5
 {
@@ -217,7 +203,7 @@ Responses models (for example Azure OpenAI Responses):
 }
 ```
 
-### Disable server-side compaction
+### 禁用服务器端压缩
 
 ```json5
 {
@@ -235,11 +221,9 @@ Responses models (for example Azure OpenAI Responses):
 }
 ```
 
-`responsesServerCompaction` only controls `context_management` injection.
-Direct OpenAI Responses models still force `store: true` unless compat sets
-`supportsStore: false`.
+`responsesServerCompaction` 仅控制 `context_management` 注入。直接使用的 OpenAI Responses 模型仍然会强制 `store: true`，除非兼容设置了 `supportsStore: false`。
 
-## Notes
+## 注意事项
 
-- Model refs always use `provider/model` (see [/concepts/models](/concepts/models)).
-- Auth details + reuse rules are in [/concepts/oauth](/concepts/oauth).
+- 模型引用始终使用 `provider/model` 格式（参见 [/concepts/models](/concepts/models)）。
+- 认证细节及复用规则见 [/concepts/oauth](/concepts/oauth)。

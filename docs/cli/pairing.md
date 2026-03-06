@@ -1,19 +1,19 @@
 ---
-summary: "CLI reference for `openclaw pairing` (approve/list pairing requests)"
+summary: "`openclaw pairing` 的命令行参考（审批/列出配对请求）"
 read_when:
-  - You’re using pairing-mode DMs and need to approve senders
-title: "pairing"
+  - 你正在使用配对模式私信并需要审批发送者
+title: "配对"
 ---
 
 # `openclaw pairing`
 
-Approve or inspect DM pairing requests (for channels that support pairing).
+审批或查看私信配对请求（适用于支持配对的频道）。
 
-Related:
+相关内容：
 
-- Pairing flow: [Pairing](/channels/pairing)
+- 配对流程：[配对](/channels/pairing)
 
-## Commands
+## 命令
 
 ```bash
 openclaw pairing list telegram
@@ -24,9 +24,9 @@ openclaw pairing approve telegram <code>
 openclaw pairing approve --channel telegram --account work <code> --notify
 ```
 
-## Notes
+## 说明
 
-- Channel input: pass it positionally (`pairing list telegram`) or with `--channel <channel>`.
-- `pairing list` supports `--account <accountId>` for multi-account channels.
-- `pairing approve` supports `--account <accountId>` and `--notify`.
-- If only one pairing-capable channel is configured, `pairing approve <code>` is allowed.
+- 频道输入：可以作为位置参数传入（`pairing list telegram`），也可以使用 `--channel <频道>`。
+- `pairing list` 支持 `--account <账户ID>`，适用于多账户频道。
+- `pairing approve` 支持 `--account <账户ID>` 和 `--notify`。
+- 如果只配置了一个支持配对的频道，则允许使用 `pairing approve <code>`。

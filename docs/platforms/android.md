@@ -1,92 +1,92 @@
 ---
-summary: "Android app (node): connection runbook + Connect/Chat/Voice/Canvas command surface"
+summary: "Android 应用（节点）：连接运行手册 + Connect/Chat/Voice/Canvas 命令界面"
 read_when:
-  - Pairing or reconnecting the Android node
-  - Debugging Android gateway discovery or auth
-  - Verifying chat history parity across clients
-title: "Android App"
+  - 配对或重新连接 Android 节点
+  - 调试 Android 网关发现或身份认证
+  - 验证跨客户端的聊天历史一致性
+title: "Android 应用"
 ---
 
-# Android App (Node)
+# Android 应用（节点）
 
-## Support snapshot
+## 支持快照
 
-- Role: companion node app (Android does not host the Gateway).
-- Gateway required: yes (run it on macOS, Linux, or Windows via WSL2).
-- Install: [Getting Started](/start/getting-started) + [Pairing](/channels/pairing).
-- Gateway: [Runbook](/gateway) + [Configuration](/gateway/configuration).
-  - Protocols: [Gateway protocol](/gateway/protocol) (nodes + control plane).
+- 角色：伴随节点应用（Android 不承载网关）。
+- 需要网关：是（运行在 macOS、Linux 或通过 WSL2 的 Windows 上）。
+- 安装：[快速开始](/start/getting-started) + [配对](/channels/pairing)。
+- 网关：[运行手册](/gateway) + [配置](/gateway/configuration)。
+  - 协议：[网关协议](/gateway/protocol)（节点 + 控制面）。
 
-## System control
+## 系统控制
 
-System control (launchd/systemd) lives on the Gateway host. See [Gateway](/gateway).
+系统控制（launchd/systemd）运行在网关主机上。请参见 [网关](/gateway)。
 
-## Connection Runbook
+## 连接运行手册
 
-Android node app ⇄ (mDNS/NSD + WebSocket) ⇄ **Gateway**
+Android 节点应用 ⇄ (mDNS/NSD + WebSocket) ⇄ **网关**
 
-Android connects directly to the Gateway WebSocket (default `ws://<host>:18789`) and uses device pairing (`role: node`).
+Android 直接连接至网关 WebSocket（默认 `ws://<host>:18789`），使用设备配对（`role: node`）。
 
-### Prerequisites
+### 前提条件
 
-- You can run the Gateway on the “master” machine.
-- Android device/emulator can reach the gateway WebSocket:
-  - Same LAN with mDNS/NSD, **or**
-  - Same Tailscale tailnet using Wide-Area Bonjour / unicast DNS-SD (see below), **or**
-  - Manual gateway host/port (fallback)
-- You can run the CLI (`openclaw`) on the gateway machine (or via SSH).
+- 你可以在“主控”机器上运行网关。
+- Android 设备/模拟器能够访问网关 WebSocket：
+  - 在同一局域网且支持 mDNS/NSD，**或者**
+  - 在同一 Tailscale tailnet，使用宽域 Bonjour / 单播 DNS-SD（见下文），**或者**
+  - 手动设置网关主机/端口（备选）
+- 你可以在网关机器上（或通过 SSH）运行 CLI（`openclaw`）。
 
-### 1) Start the Gateway
+### 1) 启动网关
 
 ```bash
 openclaw gateway --port 18789 --verbose
 ```
 
-Confirm in logs you see something like:
+在日志中确认看到类似：
 
 - `listening on ws://0.0.0.0:18789`
 
-For tailnet-only setups (recommended for Vienna ⇄ London), bind the gateway to the tailnet IP:
+对于仅 tailnet 的配置（推荐用于 Vienna ⇄ London），请绑定网关到 tailnet IP：
 
-- Set `gateway.bind: "tailnet"` in `~/.openclaw/openclaw.json` on the gateway host.
-- Restart the Gateway / macOS menubar app.
+- 在网关主机的 `~/.openclaw/openclaw.json` 设置 `gateway.bind: "tailnet"`。
+- 重启网关 / macOS 菜单栏应用。
 
-### 2) Verify discovery (optional)
+### 2) 验证发现（可选）
 
-From the gateway machine:
+从网关机器执行：
 
 ```bash
 dns-sd -B _openclaw-gw._tcp local.
 ```
 
-More debugging notes: [Bonjour](/gateway/bonjour).
+更多调试说明请参阅：[Bonjour](/gateway/bonjour)。
 
-#### Tailnet (Vienna ⇄ London) discovery via unicast DNS-SD
+#### 通过单播 DNS-SD 实现 Tailnet（Vienna ⇄ London）发现
 
-Android NSD/mDNS discovery won’t cross networks. If your Android node and the gateway are on different networks but connected via Tailscale, use Wide-Area Bonjour / unicast DNS-SD instead:
+Android 的 NSD/mDNS 发现不能跨网络。如果你的 Android 节点和网关在不同网络，但通过 Tailscale 连接，请使用宽域 Bonjour / 单播 DNS-SD：
 
-1. Set up a DNS-SD zone (example `openclaw.internal.`) on the gateway host and publish `_openclaw-gw._tcp` records.
-2. Configure Tailscale split DNS for your chosen domain pointing at that DNS server.
+1. 在网关主机上设置一个 DNS-SD 区域（示例为 `openclaw.internal.`），并发布 `_openclaw-gw._tcp` 记录。
+2. 配置 Tailscale 分割 DNS，针对你选择的域名指向该 DNS 服务器。
 
-Details and example CoreDNS config: [Bonjour](/gateway/bonjour).
+详情和 CoreDNS 配置示例请见：[Bonjour](/gateway/bonjour)。
 
-### 3) Connect from Android
+### 3) 从 Android 连接
 
-In the Android app:
+在 Android 应用中：
 
-- The app keeps its gateway connection alive via a **foreground service** (persistent notification).
-- Open the **Connect** tab.
-- Use **Setup Code** or **Manual** mode.
-- If discovery is blocked, use manual host/port (and TLS/token/password when required) in **Advanced controls**.
+- 应用通过 **前台服务**（持续通知）保持网关连接活跃。
+- 打开 **连接** 标签。
+- 使用 **设置码** 或 **手动** 模式。
+- 若发现被阻止，使用 **高级控制** 中的手动主机/端口（及需要时的 TLS/token/密码）。
 
-After the first successful pairing, Android auto-reconnects on launch:
+首次配对成功后，Android 会在启动时自动重连：
 
-- Manual endpoint (if enabled), otherwise
-- The last discovered gateway (best-effort).
+- 手动端点（若启用），否则
+- 上一次发现的网关（尽力而为）。
 
-### 4) Approve pairing (CLI)
+### 4) 批准配对（CLI）
 
-On the gateway machine:
+在网关机器上：
 
 ```bash
 openclaw devices list
@@ -94,76 +94,76 @@ openclaw devices approve <requestId>
 openclaw devices reject <requestId>
 ```
 
-Pairing details: [Pairing](/channels/pairing).
+配对详情：[配对](/channels/pairing)。
 
-### 5) Verify the node is connected
+### 5) 验证节点已连接
 
-- Via nodes status:
+- 通过节点状态：
 
   ```bash
   openclaw nodes status
   ```
 
-- Via Gateway:
+- 通过网关：
 
   ```bash
   openclaw gateway call node.list --params "{}"
   ```
 
-### 6) Chat + history
+### 6) 聊天 + 历史
 
-The Android Chat tab supports session selection (default `main`, plus other existing sessions):
+Android 聊天标签支持会话选择（默认 `main`，还有其他存在的会话）：
 
-- History: `chat.history`
-- Send: `chat.send`
-- Push updates (best-effort): `chat.subscribe` → `event:"chat"`
+- 历史：`chat.history`
+- 发送：`chat.send`
+- 推送更新（尽力而为）：`chat.subscribe` → `event:"chat"`
 
-### 7) Canvas + screen + camera
+### 7) 画布 + 屏幕 + 相机
 
-#### Gateway Canvas Host (recommended for web content)
+#### 网关画布主机（推荐用于网页内容）
 
-If you want the node to show real HTML/CSS/JS that the agent can edit on disk, point the node at the Gateway canvas host.
+如果你希望节点显示可由代理编辑盘上的真实 HTML/CSS/JS，可将节点指向网关画布主机。
 
-Note: nodes load canvas from the Gateway HTTP server (same port as `gateway.port`, default `18789`).
+注意：节点从网关 HTTP 服务器加载画布（与 `gateway.port` 端口相同，默认 `18789`）。
 
-1. Create `~/.openclaw/workspace/canvas/index.html` on the gateway host.
+1. 在网关主机上创建 `~/.openclaw/workspace/canvas/index.html`。
 
-2. Navigate the node to it (LAN):
+2. 让节点导航至该地址（局域网）：
 
 ```bash
 openclaw nodes invoke --node "<Android Node>" --command canvas.navigate --params '{"url":"http://<gateway-hostname>.local:18789/__openclaw__/canvas/"}'
 ```
 
-Tailnet (optional): if both devices are on Tailscale, use a MagicDNS name or tailnet IP instead of `.local`, e.g. `http://<gateway-magicdns>:18789/__openclaw__/canvas/`.
+Tailnet（可选）：若双方设备都在 Tailscale，使用 MagicDNS 名称或 tailnet IP 代替 `.local`，如 `http://<gateway-magicdns>:18789/__openclaw__/canvas/`。
 
-This server injects a live-reload client into HTML and reloads on file changes.
-The A2UI host lives at `http://<gateway-host>:18789/__openclaw__/a2ui/`.
+该服务器会向 HTML 注入实时重载客户端，并在文件变更时自动刷新。
+A2UI 主机位于 `http://<gateway-host>:18789/__openclaw__/a2ui/`。
 
-Canvas commands (foreground only):
+画布命令（仅前台）：
 
-- `canvas.eval`, `canvas.snapshot`, `canvas.navigate` (use `{"url":""}` or `{"url":"/"}` to return to the default scaffold). `canvas.snapshot` returns `{ format, base64 }` (default `format="jpeg"`).
-- A2UI: `canvas.a2ui.push`, `canvas.a2ui.reset` (`canvas.a2ui.pushJSONL` legacy alias)
+- `canvas.eval`，`canvas.snapshot`，`canvas.navigate`（使用 `{"url":""}` 或 `{"url":"/"}` 返回默认脚手架）。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
+- A2UI：`canvas.a2ui.push`，`canvas.a2ui.reset`（`canvas.a2ui.pushJSONL` 为旧别名）
 
-Camera commands (foreground only; permission-gated):
+相机命令（仅前台；需授权）：
 
-- `camera.snap` (jpg)
-- `camera.clip` (mp4)
+- `camera.snap`（jpg）
+- `camera.clip`（mp4）
 
-See [Camera node](/nodes/camera) for parameters and CLI helpers.
+参数和 CLI 辅助参见：[摄像头节点](/nodes/camera)。
 
-Screen commands:
+屏幕命令：
 
-- `screen.record` (mp4; foreground only)
+- `screen.record`（mp4；仅前台）
 
-### 8) Voice + expanded Android command surface
+### 8) 语音 + 扩展的 Android 命令界面
 
-- Voice: Android uses a single mic on/off flow in the Voice tab with transcript capture and TTS playback (ElevenLabs when configured, system TTS fallback).
-- Voice wake/talk-mode toggles are currently removed from Android UX/runtime.
-- Additional Android command families (availability depends on device + permissions):
-  - `device.status`, `device.info`, `device.permissions`, `device.health`
-  - `notifications.list`, `notifications.actions`
+- 语音：Android 在语音标签中采用单一麦克风开启/关闭流程，支持转录捕获及 TTS 播放（配置时使用 ElevenLabs，系统语音合成为后备）。
+- 语音唤醒/对话模式开关现已从 Android UX/运行时移除。
+- 额外的 Android 命令家族（可用性取决设备和权限）：
+  - `device.status`，`device.info`，`device.permissions`，`device.health`
+  - `notifications.list`，`notifications.actions`
   - `photos.latest`
-  - `contacts.search`, `contacts.add`
-  - `calendar.events`, `calendar.add`
-  - `motion.activity`, `motion.pedometer`
+  - `contacts.search`，`contacts.add`
+  - `calendar.events`，`calendar.add`
+  - `motion.activity`，`motion.pedometer`
   - `app.update`

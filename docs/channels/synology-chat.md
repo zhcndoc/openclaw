@@ -1,42 +1,41 @@
 ---
-summary: "Synology Chat webhook setup and OpenClaw config"
+summary: "群晖 Synology Chat webhook 设置及 OpenClaw 配置"
 read_when:
-  - Setting up Synology Chat with OpenClaw
-  - Debugging Synology Chat webhook routing
-title: "Synology Chat"
+  - 使用 OpenClaw 设置 Synology Chat
+  - 调试 Synology Chat webhook 路由
+title: "群晖 Synology Chat"
 ---
 
-# Synology Chat (plugin)
+# 群晖 Synology Chat（插件）
 
-Status: supported via plugin as a direct-message channel using Synology Chat webhooks.
-The plugin accepts inbound messages from Synology Chat outgoing webhooks and sends replies
-through a Synology Chat incoming webhook.
+状态：通过插件支持，作为使用 Synology Chat webhook 的私信通道。  
+该插件接收来自 Synology Chat 出站 webhook 的消息，并通过 Synology Chat 入站 webhook 发送回复。
 
-## Plugin required
+## 需要安装插件
 
-Synology Chat is plugin-based and not part of the default core channel install.
+Synology Chat 是基于插件的，不包含在默认核心通道安装中。
 
-Install from a local checkout:
+从本地仓库安装：
 
 ```bash
 openclaw plugins install ./extensions/synology-chat
 ```
 
-Details: [Plugins](/tools/plugin)
+详情见：[插件](/tools/plugin)
 
-## Quick setup
+## 快速设置
 
-1. Install and enable the Synology Chat plugin.
-2. In Synology Chat integrations:
-   - Create an incoming webhook and copy its URL.
-   - Create an outgoing webhook with your secret token.
-3. Point the outgoing webhook URL to your OpenClaw gateway:
-   - `https://gateway-host/webhook/synology` by default.
-   - Or your custom `channels.synology-chat.webhookPath`.
-4. Configure `channels.synology-chat` in OpenClaw.
-5. Restart gateway and send a DM to the Synology Chat bot.
+1. 安装并启用 Synology Chat 插件。  
+2. 在 Synology Chat 的集成中：  
+   - 创建一个入站 webhook，复制其 URL。  
+   - 创建一个带有密钥令牌的出站 webhook。  
+3. 将出站 webhook 的 URL 指向你的 OpenClaw 网关：  
+   - 默认是 `https://gateway-host/webhook/synology`。  
+   - 或你自定义的 `channels.synology-chat.webhookPath`。  
+4. 在 OpenClaw 中配置 `channels.synology-chat`。  
+5. 重启网关，并向 Synology Chat 机器人发送私信。
 
-Minimal config:
+最小配置示例：
 
 ```json5
 {
@@ -55,47 +54,49 @@ Minimal config:
 }
 ```
 
-## Environment variables
+## 环境变量
 
-For the default account, you can use env vars:
+对于默认账号，可以使用环境变量：
 
-- `SYNOLOGY_CHAT_TOKEN`
-- `SYNOLOGY_CHAT_INCOMING_URL`
-- `SYNOLOGY_NAS_HOST`
-- `SYNOLOGY_ALLOWED_USER_IDS` (comma-separated)
-- `SYNOLOGY_RATE_LIMIT`
-- `OPENCLAW_BOT_NAME`
+- `SYNOLOGY_CHAT_TOKEN`  
+- `SYNOLOGY_CHAT_INCOMING_URL`  
+- `SYNOLOGY_NAS_HOST`  
+- `SYNOLOGY_ALLOWED_USER_IDS`（逗号分隔）  
+- `SYNOLOGY_RATE_LIMIT`  
+- `OPENCLAW_BOT_NAME`  
 
-Config values override env vars.
+配置文件中的值优先于环境变量。
 
-## DM policy and access control
+## 私信策略与访问控制
 
-- `dmPolicy: "allowlist"` is the recommended default.
-- `allowedUserIds` accepts a list (or comma-separated string) of Synology user IDs.
-- In `allowlist` mode, an empty `allowedUserIds` list is treated as misconfiguration and the webhook route will not start (use `dmPolicy: "open"` for allow-all).
-- `dmPolicy: "open"` allows any sender.
-- `dmPolicy: "disabled"` blocks DMs.
-- Pairing approvals work with:
-  - `openclaw pairing list synology-chat`
+- 推荐默认使用 `dmPolicy: "allowlist"`。  
+- `allowedUserIds` 接受 Synology 用户 ID 列表（数组或逗号分隔字符串）。  
+- 在 `allowlist` 模式下，`allowedUserIds` 为空被视为配置错误，webhook 路由不会启动（可用 `dmPolicy: "open"` 开启所有访问）。  
+- `dmPolicy: "open"` 允许任何发送者。  
+- `dmPolicy: "disabled"` 禁止私信。  
+- 可使用以下命令管理配对授权：  
+  - `openclaw pairing list synology-chat`  
   - `openclaw pairing approve synology-chat <CODE>`
 
-## Outbound delivery
+## 出站发送
 
-Use numeric Synology Chat user IDs as targets.
+使用数字形式的 Synology Chat 用户 ID 作为目标。
 
-Examples:
+示例：
 
 ```bash
-openclaw message send --channel synology-chat --target 123456 --text "Hello from OpenClaw"
-openclaw message send --channel synology-chat --target synology-chat:123456 --text "Hello again"
+openclaw message send --channel synology-chat --target 123456 --text "来自 OpenClaw 的问候"
+openclaw message send --channel synology-chat --target synology-chat:123456 --text "再次问好"
 ```
 
-Media sends are supported by URL-based file delivery.
+支持通过 URL 形式的文件发送媒体消息。
 
-## Multi-account
+## 多账户支持
 
-Multiple Synology Chat accounts are supported under `channels.synology-chat.accounts`.
-Each account can override token, incoming URL, webhook path, DM policy, and limits.
+支持在 `channels.synology-chat.accounts` 下配置多个 Synology Chat 账户。  
+每个账户可以覆盖 token、入站 URL、webhook 路径、私信策略及限制。
+
+示例：
 
 ```json5
 {
@@ -120,9 +121,9 @@ Each account can override token, incoming URL, webhook path, DM policy, and limi
 }
 ```
 
-## Security notes
+## 安全注意事项
 
-- Keep `token` secret and rotate it if leaked.
-- Keep `allowInsecureSsl: false` unless you explicitly trust a self-signed local NAS cert.
-- Inbound webhook requests are token-verified and rate-limited per sender.
-- Prefer `dmPolicy: "allowlist"` for production.
+- 保密 `token`，如泄露请及时更换。  
+- 除非完全信任自签名的本地 NAS 证书，否则保持 `allowInsecureSsl: false`。  
+- 入站 webhook 请求会通过令牌验证且对发送者进行限流。  
+- 生产环境中推荐使用 `dmPolicy: "allowlist"`。

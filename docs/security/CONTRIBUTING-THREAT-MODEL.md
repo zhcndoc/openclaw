@@ -1,90 +1,90 @@
-# Contributing to the OpenClaw Threat Model
+# 参与 OpenClaw 威胁模型的贡献
 
-Thanks for helping make OpenClaw more secure. This threat model is a living document and we welcome contributions from anyone - you don't need to be a security expert.
+感谢您帮助提升 OpenClaw 的安全性。该威胁模型是一个不断完善的文档，我们欢迎任何人的贡献 —— 您无需成为安全专家。
 
-## Ways to Contribute
+## 贡献方式
 
-### Add a Threat
+### 添加威胁
 
-Spotted an attack vector or risk we haven't covered? Open an issue on [openclaw/trust](https://github.com/openclaw/trust/issues) and describe it in your own words. You don't need to know any frameworks or fill in every field - just describe the scenario.
+发现了我们尚未覆盖的攻击向量或风险？请在 [openclaw/trust](https://github.com/openclaw/trust/issues) 提交 Issue，并用您自己的话描述它。您不需要了解任何框架或填写所有字段 —— 只需描述该场景即可。
 
-**Helpful to include (but not required):**
+**建议包含的信息（非必需）：**
 
-- The attack scenario and how it could be exploited
-- Which parts of OpenClaw are affected (CLI, gateway, channels, ClawHub, MCP servers, etc.)
-- How severe you think it is (low / medium / high / critical)
-- Any links to related research, CVEs, or real-world examples
+- 攻击场景及其利用方式
+- 影响到 OpenClaw 的哪些部分（CLI、网关、频道、ClawHub、MCP 服务器等）
+- 您认为风险的严重程度（低 / 中 / 高 / 危急）
+- 相关研究、CVE 或现实案例的链接
 
-We'll handle the ATLAS mapping, threat IDs, and risk assessment during review. If you want to include those details, great - but it's not expected.
+我们会在评审时负责 ATLAS 映射、威胁 ID 和风险评估。如果您愿意包含这些细节也很好，但并非必须。
 
-> **This is for adding to the threat model, not reporting live vulnerabilities.** If you've found an exploitable vulnerability, see our [Trust page](https://trust.openclaw.ai) for responsible disclosure instructions.
+> **此项用于补充威胁模型，而非报告实时漏洞。** 如果您发现了可利用的漏洞，请参见我们的 [Trust 页面](https://trust.openclaw.ai) 获取负责任披露的指南。
 
-### Suggest a Mitigation
+### 建议缓解措施
 
-Have an idea for how to address an existing threat? Open an issue or PR referencing the threat. Useful mitigations are specific and actionable - for example, "per-sender rate limiting of 10 messages/minute at the gateway" is better than "implement rate limiting."
+有解决现有威胁的想法？请提出 Issue 或 PR 并引用相关威胁。有效的缓解措施应具体且可执行 —— 比如“在网关处设定每个发送者每分钟最多10条消息的速率限制” 优于 “实施速率限制”。
 
-### Propose an Attack Chain
+### 提出攻击链
 
-Attack chains show how multiple threats combine into a realistic attack scenario. If you see a dangerous combination, describe the steps and how an attacker would chain them together. A short narrative of how the attack unfolds in practice is more valuable than a formal template.
+攻击链展示了多个威胁如何组合成一个真实的攻击场景。如果您发现危险的组合，描述攻击步骤以及攻击者如何将它们串联起来。对攻击实际展开过程的简短叙述比正式模板更有价值。
 
-### Fix or Improve Existing Content
+### 修正或完善现有内容
 
-Typos, clarifications, outdated info, better examples - PRs welcome, no issue needed.
+拼写错误、说明不清、信息过时、更好的示例 —— 欢迎提交 PR，无需 Issue。
 
-## What We Use
+## 我们使用的标准
 
 ### MITRE ATLAS
 
-This threat model is built on [MITRE ATLAS](https://atlas.mitre.org/) (Adversarial Threat Landscape for AI Systems), a framework designed specifically for AI/ML threats like prompt injection, tool misuse, and agent exploitation. You don't need to know ATLAS to contribute - we map submissions to the framework during review.
+此威胁模型基于 [MITRE ATLAS](https://atlas.mitre.org/)（针对 AI 系统的对抗威胁景观）框架，专门设计用于应对如提示注入、工具滥用和代理利用等 AI/ML 威胁。您不需要了解 ATLAS 即可贡献 —— 我们会在评审时完成映射。
 
-### Threat IDs
+### 威胁 ID
 
-Each threat gets an ID like `T-EXEC-003`. The categories are:
+每条威胁有一个 ID，如 `T-EXEC-003`。类别如下：
 
-| Code    | Category                                   |
-| ------- | ------------------------------------------ |
-| RECON   | Reconnaissance - information gathering     |
-| ACCESS  | Initial access - gaining entry             |
-| EXEC    | Execution - running malicious actions      |
-| PERSIST | Persistence - maintaining access           |
-| EVADE   | Defense evasion - avoiding detection       |
-| DISC    | Discovery - learning about the environment |
-| EXFIL   | Exfiltration - stealing data               |
-| IMPACT  | Impact - damage or disruption              |
+| 代码     | 类别                           |
+| -------- | ------------------------------ |
+| RECON    | 侦察 - 信息收集               |
+| ACCESS   | 初始访问 - 获得入口           |
+| EXEC     | 执行 - 运行恶意操作           |
+| PERSIST  | 持续存在 - 维持访问           |
+| EVADE    | 防御规避 - 避免检测           |
+| DISC     | 发现 - 了解环境               |
+| EXFIL    | 渗漏 - 窃取数据               |
+| IMPACT   | 影响 - 损害或中断             |
 
-IDs are assigned by maintainers during review. You don't need to pick one.
+ID 由维护者在评审时分配，您无需选择。
 
-### Risk Levels
+### 风险级别
 
-| Level        | Meaning                                                           |
-| ------------ | ----------------------------------------------------------------- |
-| **Critical** | Full system compromise, or high likelihood + critical impact      |
-| **High**     | Significant damage likely, or medium likelihood + critical impact |
-| **Medium**   | Moderate risk, or low likelihood + high impact                    |
-| **Low**      | Unlikely and limited impact                                       |
+| 等级         | 含义                                                               |
+| ------------ | ------------------------------------------------------------------ |
+| **危急**     | 完全系统妥协，或高概率结合危急影响                                 |
+| **高**       | 可能造成重大损害，或中概率结合危急影响                             |
+| **中**       | 中等风险，或低概率结合高影响                                       |
+| **低**       | 不太可能且影响有限                                                 |
 
-If you're unsure about the risk level, just describe the impact and we'll assess it.
+如果您不确定风险级别，只需描述影响，我们会进行评估。
 
-## Review Process
+## 评审流程
 
-1. **Triage** - We review new submissions within 48 hours
-2. **Assessment** - We verify feasibility, assign ATLAS mapping and threat ID, validate risk level
-3. **Documentation** - We ensure everything is formatted and complete
-4. **Merge** - Added to the threat model and visualization
+1. **初筛** – 新提交会在48小时内进行审查
+2. **评估** – 验证可行性，分配 ATLAS 映射和威胁 ID，确认风险等级
+3. **文档整理** – 确认格式完整
+4. **合并** – 添加进威胁模型及可视化图表
 
-## Resources
+## 资源链接
 
-- [ATLAS Website](https://atlas.mitre.org/)
-- [ATLAS Techniques](https://atlas.mitre.org/techniques/)
-- [ATLAS Case Studies](https://atlas.mitre.org/studies/)
-- [OpenClaw Threat Model](/security/THREAT-MODEL-ATLAS)
+- [ATLAS 官网](https://atlas.mitre.org/)
+- [ATLAS 技术列表](https://atlas.mitre.org/techniques/)
+- [ATLAS 案例研究](https://atlas.mitre.org/studies/)
+- [OpenClaw 威胁模型](/security/THREAT-MODEL-ATLAS)
 
-## Contact
+## 联系方式
 
-- **Security vulnerabilities:** See our [Trust page](https://trust.openclaw.ai) for reporting instructions
-- **Threat model questions:** Open an issue on [openclaw/trust](https://github.com/openclaw/trust/issues)
-- **General chat:** Discord #security channel
+- **安全漏洞报告：** 请参见我们的 [Trust 页面](https://trust.openclaw.ai) 了解报告流程
+- **威胁模型相关问题：** 在 [openclaw/trust](https://github.com/openclaw/trust/issues) 提交 Issue
+- **一般讨论：** Discord #security 频道
 
-## Recognition
+## 致谢
 
-Contributors to the threat model are recognized in the threat model acknowledgments, release notes, and the OpenClaw security hall of fame for significant contributions.
+威胁模型的贡献者会被列入模型致谢、发布说明，以及 OpenClaw 安全部分名人堂（针对重大贡献）。

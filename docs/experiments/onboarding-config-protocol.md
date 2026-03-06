@@ -1,42 +1,42 @@
 ---
-summary: "RPC protocol notes for onboarding wizard and config schema"
-read_when: "Changing onboarding wizard steps or config schema endpoints"
-title: "Onboarding and Config Protocol"
+summary: "关于入职向导和配置方案的 RPC 协议笔记"
+read_when: "更改入职向导步骤或配置方案端点时"
+title: "入职和配置协议"
 ---
 
-# Onboarding + Config Protocol
+# 入职 + 配置协议
 
-Purpose: shared onboarding + config surfaces across CLI, macOS app, and Web UI.
+目的：在 CLI、macOS 应用和网页界面之间共享入职和配置相关的接口。
 
-## Components
+## 组件
 
-- Wizard engine (shared session + prompts + onboarding state).
-- CLI onboarding uses the same wizard flow as the UI clients.
-- Gateway RPC exposes wizard + config schema endpoints.
-- macOS onboarding uses the wizard step model.
-- Web UI renders config forms from JSON Schema + UI hints.
+- 向导引擎（共享会话 + 提示 + 入职状态）。
+- CLI 入职使用与 UI 客户端相同的向导流程。
+- 网关 RPC 暴露向导和配置方案端点。
+- macOS 入职使用向导步骤模型。
+- 网页界面根据 JSON Schema + UI 提示渲染配置表单。
 
-## Gateway RPC
+## 网关 RPC
 
-- `wizard.start` params: `{ mode?: "local"|"remote", workspace?: string }`
-- `wizard.next` params: `{ sessionId, answer?: { stepId, value? } }`
-- `wizard.cancel` params: `{ sessionId }`
-- `wizard.status` params: `{ sessionId }`
-- `config.schema` params: `{}`
-- `config.schema.lookup` params: `{ path }`
+- `wizard.start` 参数：`{ mode?: "local"|"remote", workspace?: string }`
+- `wizard.next` 参数：`{ sessionId, answer?: { stepId, value? } }`
+- `wizard.cancel` 参数：`{ sessionId }`
+- `wizard.status` 参数：`{ sessionId }`
+- `config.schema` 参数：`{}`
+- `config.schema.lookup` 参数：`{ path }`
 
-Responses (shape)
+响应（形态）
 
-- Wizard: `{ sessionId, done, step?, status?, error? }`
-- Config schema: `{ schema, uiHints, version, generatedAt }`
-- Config schema lookup: `{ path, schema, hint?, hintPath?, children[] }`
+- 向导：`{ sessionId, done, step?, status?, error? }`
+- 配置方案：`{ schema, uiHints, version, generatedAt }`
+- 配置方案查找：`{ path, schema, hint?, hintPath?, children[] }`
 
-## UI Hints
+## UI 提示
 
-- `uiHints` keyed by path; optional metadata (label/help/group/order/advanced/sensitive/placeholder).
-- Sensitive fields render as password inputs; no redaction layer.
-- Unsupported schema nodes fall back to the raw JSON editor.
+- `uiHints` 以路径为键；可选的元数据（标签/帮助/分组/顺序/高级/敏感/占位符）。
+- 敏感字段渲染为密码输入框；无编辑时遮挡层。
+- 不支持的方案节点回退到原始 JSON 编辑器。
 
-## Notes
+## 备注
 
-- This doc is the single place to track protocol refactors for onboarding/config.
+- 本文档是跟踪入职/配置协议重构的唯一来源。

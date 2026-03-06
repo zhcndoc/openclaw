@@ -1,21 +1,21 @@
 ---
-summary: "CLI reference for `openclaw channels` (accounts, status, login/logout, logs)"
+summary: "`openclaw channels` 的命令行参考（账户、状态、登录/登出、日志）"
 read_when:
-  - You want to add/remove channel accounts (WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost (plugin)/Signal/iMessage)
-  - You want to check channel status or tail channel logs
+  - 你想添加/移除渠道账户（WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage）
+  - 你想检查渠道状态或查看渠道日志
 title: "channels"
 ---
 
 # `openclaw channels`
 
-Manage chat channel accounts and their runtime status on the Gateway.
+管理网关上的聊天渠道账户及其运行时状态。
 
-Related docs:
+相关文档：
 
-- Channel guides: [Channels](/channels/index)
-- Gateway configuration: [Configuration](/gateway/configuration)
+- 渠道指南：[Channels](/channels/index)
+- 网关配置：[Configuration](/gateway/configuration)
 
-## Common commands
+## 常用命令
 
 ```bash
 openclaw channels list
@@ -26,67 +26,67 @@ openclaw channels resolve --channel slack "#general" "@jane"
 openclaw channels logs --channel all
 ```
 
-## Add / remove accounts
+## 添加 / 移除账户
 
 ```bash
 openclaw channels add --channel telegram --token <bot-token>
 openclaw channels remove --channel telegram --delete
 ```
 
-Tip: `openclaw channels add --help` shows per-channel flags (token, app token, signal-cli paths, etc).
+提示：`openclaw channels add --help` 会显示每个渠道的相关参数（token，应用 token，signal-cli 路径等）。
 
-When you run `openclaw channels add` without flags, the interactive wizard can prompt:
+当你运行 `openclaw channels add` 且不带参数时，交互式向导会提示：
 
-- account ids per selected channel
-- optional display names for those accounts
-- `Bind configured channel accounts to agents now?`
+- 每个选定渠道的账户 ID
+- 这些账户的可选显示名称
+- `是否现在绑定已配置的渠道账户到代理？`
 
-If you confirm bind now, the wizard asks which agent should own each configured channel account and writes account-scoped routing bindings.
+如果你确认立即绑定，向导会询问每个配置账户应归属哪个代理，并写入账户级别的路由绑定。
 
-You can also manage the same routing rules later with `openclaw agents bindings`, `openclaw agents bind`, and `openclaw agents unbind` (see [agents](/cli/agents)).
+你也可以之后使用 `openclaw agents bindings`、`openclaw agents bind` 和 `openclaw agents unbind` 管理相同的路由规则（参见 [agents](/cli/agents)）。
 
-When you add a non-default account to a channel that is still using single-account top-level settings (no `channels.<channel>.accounts` entries yet), OpenClaw moves account-scoped single-account top-level values into `channels.<channel>.accounts.default`, then writes the new account. This preserves the original account behavior while moving to the multi-account shape.
+当你给仍在使用单账户顶层设置（尚无 `channels.<channel>.accounts` 条目）的渠道添加非默认账户时，OpenClaw 会将账户范围的单账户顶层值移入 `channels.<channel>.accounts.default`，然后写入新账户。这样能在迁移到多账户结构的同时保持原有账户行为。
 
-Routing behavior stays consistent:
+路由行为保持一致：
 
-- Existing channel-only bindings (no `accountId`) continue to match the default account.
-- `channels add` does not auto-create or rewrite bindings in non-interactive mode.
-- Interactive setup can optionally add account-scoped bindings.
+- 现有的仅渠道绑定（无 `accountId`）继续匹配默认账户。
+- 非交互模式下，`channels add` 不会自动创建或重写绑定。
+- 交互式设置可选择添加账户范围的绑定。
 
-If your config was already in a mixed state (named accounts present, missing `default`, and top-level single-account values still set), run `openclaw doctor --fix` to move account-scoped values into `accounts.default`.
+如果你的配置已经处于混合状态（存在命名账户，缺少 `default`，且顶层单账户值仍被设置），请执行 `openclaw doctor --fix` 将账户范围的值移动到 `accounts.default`。
 
-## Login / logout (interactive)
+## 登录 / 登出（交互式）
 
 ```bash
 openclaw channels login --channel whatsapp
 openclaw channels logout --channel whatsapp
 ```
 
-## Troubleshooting
+## 故障排查
 
-- Run `openclaw status --deep` for a broad probe.
-- Use `openclaw doctor` for guided fixes.
-- `openclaw channels list` prints `Claude: HTTP 403 ... user:profile` → usage snapshot needs the `user:profile` scope. Use `--no-usage`, or provide a claude.ai session key (`CLAUDE_WEB_SESSION_KEY` / `CLAUDE_WEB_COOKIE`), or re-auth via Claude Code CLI.
-- `openclaw channels status` falls back to config-only summaries when the gateway is unreachable. If a supported channel credential is configured via SecretRef but unavailable in the current command path, it reports that account as configured with degraded notes instead of showing it as not configured.
+- 运行 `openclaw status --deep` 进行全面探测。
+- 使用 `openclaw doctor` 进行引导修复。
+- `openclaw channels list` 出现 `Claude: HTTP 403 ... user:profile` → 使用快照需要 `user:profile` 权限。可使用 `--no-usage`，或提供 claude.ai 会话密钥（`CLAUDE_WEB_SESSION_KEY` / `CLAUDE_WEB_COOKIE`），或通过 Claude Code CLI 重新认证。
+- 当网关不可访问时，`openclaw channels status` 会回退到仅配置的汇总。如果通过 SecretRef 配置了支持的渠道凭证但当前命令路径无法访问，该账户会被报告为已配置但状态降级，而非显示为未配置。
 
-## Capabilities probe
+## 能力探测
 
-Fetch provider capability hints (intents/scopes where available) plus static feature support:
+获取提供者能力提示（意图/范围，如有）及静态功能支持：
 
 ```bash
 openclaw channels capabilities
 openclaw channels capabilities --channel discord --target channel:123
 ```
 
-Notes:
+说明：
 
-- `--channel` is optional; omit it to list every channel (including extensions).
-- `--target` accepts `channel:<id>` or a raw numeric channel id and only applies to Discord.
-- Probes are provider-specific: Discord intents + optional channel permissions; Slack bot + user scopes; Telegram bot flags + webhook; Signal daemon version; MS Teams app token + Graph roles/scopes (annotated where known). Channels without probes report `Probe: unavailable`.
+- `--channel` 参数可选；省略时列出所有渠道（含扩展）。
+- `--target` 接受 `channel:<id>` 或纯数字渠道 ID，仅适用于 Discord。
+- 探测因提供者而异：Discord 意图 + 可选频道权限；Slack 机器人 + 用户权限范围；Telegram 机器人标志 + webhook；Signal 守护进程版本；MS Teams 应用令牌 + Graph 角色/权限范围（已知时注释）。未支持探测的渠道显示 `Probe: unavailable`。
 
-## Resolve names to IDs
+## 名称解析为 ID
 
-Resolve channel/user names to IDs using the provider directory:
+使用提供者目录将渠道/用户名称解析为 ID：
 
 ```bash
 openclaw channels resolve --channel slack "#general" "@jane"
@@ -94,8 +94,8 @@ openclaw channels resolve --channel discord "My Server/#support" "@someone"
 openclaw channels resolve --channel matrix "Project Room"
 ```
 
-Notes:
+说明：
 
-- Use `--kind user|group|auto` to force the target type.
-- Resolution prefers active matches when multiple entries share the same name.
-- `channels resolve` is read-only. If a selected account is configured via SecretRef but that credential is unavailable in the current command path, the command returns degraded unresolved results with notes instead of aborting the entire run.
+- 使用 `--kind user|group|auto` 强制目标类型。
+- 如果多个条目同名，会优先解析活动匹配项。
+- `channels resolve` 是只读操作。如果选中的账户通过 SecretRef 配置，但当前命令路径无法访问该凭证，命令会返回带注释的降级未解析结果，而非中断整个执行。

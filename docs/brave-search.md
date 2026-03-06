@@ -1,22 +1,22 @@
 ---
-summary: "Brave Search API setup for web_search"
+summary: "Brave 搜索 API 用于 web_search 的设置"
 read_when:
-  - You want to use Brave Search for web_search
-  - You need a BRAVE_API_KEY or plan details
-title: "Brave Search"
+  - 你想使用 Brave 搜索进行 web_search
+  - 你需要 BRAVE_API_KEY 或计划详情
+title: "Brave 搜索"
 ---
 
-# Brave Search API
+# Brave 搜索 API
 
-OpenClaw supports Brave Search as a web search provider for `web_search`.
+OpenClaw 支持 Brave 搜索作为 `web_search` 的网络搜索提供者。
 
-## Get an API key
+## 获取 API 密钥
 
-1. Create a Brave Search API account at [https://brave.com/search/api/](https://brave.com/search/api/)
-2. In the dashboard, choose the **Data for Search** plan and generate an API key.
-3. Store the key in config (recommended) or set `BRAVE_API_KEY` in the Gateway environment.
+1. 在 [https://brave.com/search/api/](https://brave.com/search/api/) 创建一个 Brave 搜索 API 账号
+2. 在控制面板中，选择 **Data for Search** 计划并生成 API 密钥。
+3. 将密钥存储在配置文件中（推荐）或设置到 Gateway 环境变量 `BRAVE_API_KEY`。
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -33,36 +33,36 @@ OpenClaw supports Brave Search as a web search provider for `web_search`.
 }
 ```
 
-## Tool parameters
+## 工具参数
 
-| Parameter     | Description                                                         |
-| ------------- | ------------------------------------------------------------------- |
-| `query`       | Search query (required)                                             |
-| `count`       | Number of results to return (1-10, default: 5)                      |
-| `country`     | 2-letter ISO country code (e.g., "US", "DE")                        |
-| `language`    | ISO 639-1 language code for search results (e.g., "en", "de", "fr") |
-| `ui_lang`     | ISO language code for UI elements                                   |
-| `freshness`   | Time filter: `day` (24h), `week`, `month`, or `year`                |
-| `date_after`  | Only results published after this date (YYYY-MM-DD)                 |
-| `date_before` | Only results published before this date (YYYY-MM-DD)                |
+| 参数         | 说明                                                             |
+| ------------ | ---------------------------------------------------------------- |
+| `query`      | 搜索查询（必填）                                                 |
+| `count`      | 返回结果数量（1-10，默认：5）                                    |
+| `country`    | 2 位 ISO 国家代码（例如 "US"、"DE"）                            |
+| `language`   | 搜索结果的 ISO 639-1 语言代码（例如 "en"、"de"、"fr"）         |
+| `ui_lang`    | UI 元素的 ISO 语言代码                                            |
+| `freshness`  | 时间过滤：`day`（24小时）、`week`、`month` 或 `year`            |
+| `date_after` | 仅返回该日期之后发布的结果（YYYY-MM-DD）                         |
+| `date_before`| 仅返回该日期之前发布的结果（YYYY-MM-DD）                         |
 
-**Examples:**
+**示例：**
 
 ```javascript
-// Country and language-specific search
+// 指定国家和语言的搜索
 await web_search({
   query: "renewable energy",
   country: "DE",
   language: "de",
 });
 
-// Recent results (past week)
+// 最近一周的结果
 await web_search({
   query: "AI news",
   freshness: "week",
 });
 
-// Date range search
+// 指定日期范围搜索
 await web_search({
   query: "AI developments",
   date_after: "2024-01-01",
@@ -70,11 +70,11 @@ await web_search({
 });
 ```
 
-## Notes
+## 注意事项
 
-- The Data for AI plan is **not** compatible with `web_search`.
-- Brave provides paid plans; check the Brave API portal for current limits.
-- Brave Terms include restrictions on some AI-related uses of Search Results. Review the Brave Terms of Service and confirm your intended use is compliant. For legal questions, consult your counsel.
-- Results are cached for 15 minutes by default (configurable via `cacheTtlMinutes`).
+- Data for AI 计划 **不兼容** `web_search`。
+- Brave 提供付费计划；请查看 Brave API 门户了解当前限制。
+- Brave 条款中包含对部分 AI 相关搜索结果使用的限制。请查阅 Brave 服务条款并确认你的使用符合规定。法律相关问题请咨询法律顾问。
+- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）。
 
-See [Web tools](/tools/web) for the full web_search configuration.
+完整的 web_search 配置请参见 [Web tools](/tools/web)。

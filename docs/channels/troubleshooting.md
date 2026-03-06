@@ -1,18 +1,18 @@
 ---
-summary: "Fast channel level troubleshooting with per channel failure signatures and fixes"
+summary: "通过每个频道的故障特征和修复快速进行频道级故障排查"
 read_when:
-  - Channel transport says connected but replies fail
-  - You need channel specific checks before deep provider docs
-title: "Channel Troubleshooting"
+  - 频道传输显示已连接但回复失败
+  - 你需要频道特定检查以替代深入的供应商文档
+title: "频道故障排查"
 ---
 
-# Channel troubleshooting
+# 频道故障排查
 
-Use this page when a channel connects but behavior is wrong.
+当频道连接但行为异常时使用本页面。
 
-## Command ladder
+## 命令步骤
 
-Run these in order first:
+请按顺序先运行以下命令：
 
 ```bash
 openclaw status
@@ -22,96 +22,96 @@ openclaw doctor
 openclaw channels status --probe
 ```
 
-Healthy baseline:
+健康基线：
 
-- `Runtime: running`
-- `RPC probe: ok`
-- Channel probe shows connected/ready
+- `Runtime: running`（运行时：运行中）
+- `RPC probe: ok`（RPC 探针：正常）
+- 频道探测显示已连接/准备就绪
 
 ## WhatsApp
 
-### WhatsApp failure signatures
+### WhatsApp 故障特征
 
-| Symptom                         | Fastest check                                       | Fix                                                     |
-| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
-| Connected but no DM replies     | `openclaw pairing list whatsapp`                    | Approve sender or switch DM policy/allowlist.           |
-| Group messages ignored          | Check `requireMention` + mention patterns in config | Mention the bot or relax mention policy for that group. |
-| Random disconnect/relogin loops | `openclaw channels status --probe` + logs           | Re-login and verify credentials directory is healthy.   |
+| 症状                         | 最快检查                                         | 修复                                                         |
+| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| 已连接但无 DM 回复            | `openclaw pairing list whatsapp`                 | 批准发送者或切换 DM 策略/白名单。                           |
+| 群组消息被忽略                | 检查配置中的 `requireMention` + 提及模式        | 提及机器人或放宽该群组的提及策略。                           |
+| 随机断开连接/重复登录循环    | `openclaw channels status --probe` + 日志          | 重新登录并确认凭证目录状态正常。                             |
 
-Full troubleshooting: [/channels/whatsapp#troubleshooting-quick](/channels/whatsapp#troubleshooting-quick)
+完整故障排查：[/channels/whatsapp#troubleshooting-quick](/channels/whatsapp#troubleshooting-quick)
 
 ## Telegram
 
-### Telegram failure signatures
+### Telegram 故障特征
 
-| Symptom                           | Fastest check                                   | Fix                                                                         |
-| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
-| `/start` but no usable reply flow | `openclaw pairing list telegram`                | Approve pairing or change DM policy.                                        |
-| Bot online but group stays silent | Verify mention requirement and bot privacy mode | Disable privacy mode for group visibility or mention bot.                   |
-| Send failures with network errors | Inspect logs for Telegram API call failures     | Fix DNS/IPv6/proxy routing to `api.telegram.org`.                           |
-| Upgraded and allowlist blocks you | `openclaw security audit` and config allowlists | Run `openclaw doctor --fix` or replace `@username` with numeric sender IDs. |
+| 症状                           | 最快检查                                      | 修复                                                       |
+| ------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| `/start` 后无有效回复流程       | `openclaw pairing list telegram`               | 批准配对或更改 DM 策略。                                   |
+| 机器人在线但群组保持沉默        | 验证提及需求和机器人隐私模式                    | 禁用隐私模式以允许群组可见，或提及机器人。                |
+| 发送失败伴网络错误              | 检查日志中的 Telegram API 调用失败              | 修复 `api.telegram.org` 的 DNS/IPv6/代理路由。            |
+| 升级后被白名单阻拦              | `openclaw security audit` 和配置白名单         | 运行 `openclaw doctor --fix` 或用数字发送者 ID 替换 `@username`。 |
 
-Full troubleshooting: [/channels/telegram#troubleshooting](/channels/telegram#troubleshooting)
+完整故障排查：[/channels/telegram#troubleshooting](/channels/telegram#troubleshooting)
 
 ## Discord
 
-### Discord failure signatures
+### Discord 故障特征
 
-| Symptom                         | Fastest check                       | Fix                                                       |
-| ------------------------------- | ----------------------------------- | --------------------------------------------------------- |
-| Bot online but no guild replies | `openclaw channels status --probe`  | Allow guild/channel and verify message content intent.    |
-| Group messages ignored          | Check logs for mention gating drops | Mention bot or set guild/channel `requireMention: false`. |
-| DM replies missing              | `openclaw pairing list discord`     | Approve DM pairing or adjust DM policy.                   |
+| 症状                         | 最快检查                           | 修复                                                         |
+| ----------------------------- | --------------------------------- | ------------------------------------------------------------ |
+| 机器人在线但公会无回复        | `openclaw channels status --probe` | 允许公会/频道并验证消息内容意图权限。                        |
+| 群组消息被忽略                | 检查日志中的提及门控丢弃            | 提及机器人或将公会/频道设置为 `requireMention: false`。     |
+| DM 回复缺失                   | `openclaw pairing list discord`    | 批准 DM 配对或调整 DM 策略。                                 |
 
-Full troubleshooting: [/channels/discord#troubleshooting](/channels/discord#troubleshooting)
+完整故障排查：[/channels/discord#troubleshooting](/channels/discord#troubleshooting)
 
 ## Slack
 
-### Slack failure signatures
+### Slack 故障特征
 
-| Symptom                                | Fastest check                             | Fix                                               |
-| -------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
-| Socket mode connected but no responses | `openclaw channels status --probe`        | Verify app token + bot token and required scopes. |
-| DMs blocked                            | `openclaw pairing list slack`             | Approve pairing or relax DM policy.               |
-| Channel message ignored                | Check `groupPolicy` and channel allowlist | Allow the channel or switch policy to `open`.     |
+| 症状                                | 最快检查                              | 修复                                                         |
+| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| 套接字模式已连接但无响应            | `openclaw channels status --probe`  | 验证应用令牌 + 机器人令牌及所需权限。                       |
+| 私信被阻止                        | `openclaw pairing list slack`        | 批准配对或放宽 DM 策略。                                    |
+| 频道消息被忽略                    | 检查 `groupPolicy` 和频道白名单      | 允许该频道或将策略切换为 `open`。                           |
 
-Full troubleshooting: [/channels/slack#troubleshooting](/channels/slack#troubleshooting)
+完整故障排查：[/channels/slack#troubleshooting](/channels/slack#troubleshooting)
 
-## iMessage and BlueBubbles
+## iMessage 和 BlueBubbles
 
-### iMessage and BlueBubbles failure signatures
+### iMessage 和 BlueBubbles 故障特征
 
-| Symptom                          | Fastest check                                                           | Fix                                                   |
-| -------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| No inbound events                | Verify webhook/server reachability and app permissions                  | Fix webhook URL or BlueBubbles server state.          |
-| Can send but no receive on macOS | Check macOS privacy permissions for Messages automation                 | Re-grant TCC permissions and restart channel process. |
-| DM sender blocked                | `openclaw pairing list imessage` or `openclaw pairing list bluebubbles` | Approve pairing or update allowlist.                  |
+| 症状                          | 最快检查                                             | 修复                                                         |
+| ----------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| 无入站事件                    | 验证 webhook/服务器可达性和应用权限                  | 修复 webhook URL 或 BlueBubbles 服务器状态。                |
+| macOS 可发送但不接收          | 检查 macOS 讯息自动化的隐私权限                      | 重新授权 TCC 权限并重启频道进程。                           |
+| 私信发送者被阻止              | `openclaw pairing list imessage` 或 `openclaw pairing list bluebubbles` | 批准配对或更新白名单。                                      |
 
-Full troubleshooting:
+完整故障排查：
 
 - [/channels/imessage#troubleshooting-macos-privacy-and-security-tcc](/channels/imessage#troubleshooting-macos-privacy-and-security-tcc)
 - [/channels/bluebubbles#troubleshooting](/channels/bluebubbles#troubleshooting)
 
 ## Signal
 
-### Signal failure signatures
+### Signal 故障特征
 
-| Symptom                         | Fastest check                              | Fix                                                      |
-| ------------------------------- | ------------------------------------------ | -------------------------------------------------------- |
-| Daemon reachable but bot silent | `openclaw channels status --probe`         | Verify `signal-cli` daemon URL/account and receive mode. |
-| DM blocked                      | `openclaw pairing list signal`             | Approve sender or adjust DM policy.                      |
-| Group replies do not trigger    | Check group allowlist and mention patterns | Add sender/group or loosen gating.                       |
+| 症状                         | 最快检查                          | 修复                                                      |
+| ----------------------------- | -------------------------------- | --------------------------------------------------------- |
+| 守护进程可达但机器人无响应    | `openclaw channels status --probe` | 验证 `signal-cli` 守护进程 URL/账户和接收模式。           |
+| 私信被阻止                   | `openclaw pairing list signal`    | 批准发送者或调整 DM 策略。                                |
+| 群组回复无触发               | 检查群组白名单和提及模式          | 添加发送者/群组或放松门控。                               |
 
-Full troubleshooting: [/channels/signal#troubleshooting](/channels/signal#troubleshooting)
+完整故障排查：[/channels/signal#troubleshooting](/channels/signal#troubleshooting)
 
 ## Matrix
 
-### Matrix failure signatures
+### Matrix 故障特征
 
-| Symptom                             | Fastest check                                | Fix                                             |
-| ----------------------------------- | -------------------------------------------- | ----------------------------------------------- |
-| Logged in but ignores room messages | `openclaw channels status --probe`           | Check `groupPolicy` and room allowlist.         |
-| DMs do not process                  | `openclaw pairing list matrix`               | Approve sender or adjust DM policy.             |
-| Encrypted rooms fail                | Verify crypto module and encryption settings | Enable encryption support and rejoin/sync room. |
+| 症状                             | 最快检查                              | 修复                                                         |
+| -------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| 已登录但忽略房间消息             | `openclaw channels status --probe`   | 检查 `groupPolicy` 和房间白名单。                           |
+| 私信不处理                     | `openclaw pairing list matrix`        | 批准发送者或调整 DM 策略。                                  |
+| 加密房间失败                   | 验证加密模块和加密设置                | 启用加密支持并重新加入/同步房间。                           |
 
-Full troubleshooting: [/channels/matrix#troubleshooting](/channels/matrix#troubleshooting)
+完整故障排查：[/channels/matrix#troubleshooting](/channels/matrix#troubleshooting)

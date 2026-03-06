@@ -1,82 +1,77 @@
 ---
-summary: "Routing rules per channel (WhatsApp, Telegram, Discord, Slack) and shared context"
+summary: "每个渠道（WhatsApp, Telegram, Discord, Slack）的路由规则及共享上下文"
 read_when:
-  - Changing channel routing or inbox behavior
-title: "Channel Routing"
+  - 更改渠道路由或收件箱行为时
+title: "渠道路由"
 ---
 
-# Channels & routing
+# 渠道与路由
 
-OpenClaw routes replies **back to the channel where a message came from**. The
-model does not choose a channel; routing is deterministic and controlled by the
-host configuration.
+OpenClaw 会将回复**路由回消息来源的渠道**。模型并不选择渠道；路由是确定性的，由主机配置控制。
 
-## Key terms
+## 关键术语
 
-- **Channel**: `whatsapp`, `telegram`, `discord`, `slack`, `signal`, `imessage`, `webchat`.
-- **AccountId**: per‑channel account instance (when supported).
-- Optional channel default account: `channels.<channel>.defaultAccount` chooses
-  which account is used when an outbound path does not specify `accountId`.
-  - In multi-account setups, set an explicit default (`defaultAccount` or `accounts.default`) when two or more accounts are configured. Without it, fallback routing may pick the first normalized account ID.
-- **AgentId**: an isolated workspace + session store (“brain”).
-- **SessionKey**: the bucket key used to store context and control concurrency.
+- **渠道（Channel）**：`whatsapp`、`telegram`、`discord`、`slack`、`signal`、`imessage`、`webchat`。
+- **AccountId**：每个渠道的账户实例（支持时）。
+- 可选渠道默认账户：`channels.<channel>.defaultAccount` 用于选择当出站路径未指定 `accountId` 时使用的账户。
+  - 在多账户设置下，当配置了两个或更多账户时，需设置明确默认账户（`defaultAccount` 或 `accounts.default`）。否则，回退路由可能会选中第一个标准化的账户 ID。
+- **AgentId**：一个独立的工作区 + 会话存储（“大脑”）。
+- **SessionKey**：用于存储上下文及控制并发的桶键。
 
-## Session key shapes (examples)
+## 会话键格式示例
 
-Direct messages collapse to the agent’s **main** session:
+私信会合并到代理的**主**会话：
 
-- `agent:<agentId>:<mainKey>` (default: `agent:main:main`)
+- `agent:<agentId>:<mainKey>`（默认：`agent:main:main`）
 
-Groups and channels remain isolated per channel:
+群组和频道在每个渠道中保持隔离：
 
-- Groups: `agent:<agentId>:<channel>:group:<id>`
-- Channels/rooms: `agent:<agentId>:<channel>:channel:<id>`
+- 群组：`agent:<agentId>:<channel>:group:<id>`
+- 频道/房间：`agent:<agentId>:<channel>:channel:<id>`
 
-Threads:
+线程：
 
-- Slack/Discord threads append `:thread:<threadId>` to the base key.
-- Telegram forum topics embed `:topic:<topicId>` in the group key.
+- Slack/Discord 线程在基本键后追加 `:thread:<threadId>`。
+- Telegram 论坛主题在群组键中嵌入 `:topic:<topicId>`。
 
-Examples:
+示例：
 
 - `agent:main:telegram:group:-1001234567890:topic:42`
 - `agent:main:discord:channel:123456:thread:987654`
 
-## Main DM route pinning
+## 主私信路由固定
 
-When `session.dmScope` is `main`, direct messages may share one main session.
-To prevent the session’s `lastRoute` from being overwritten by non-owner DMs,
-OpenClaw infers a pinned owner from `allowFrom` when all of these are true:
+当 `session.dmScope` 为 `main` 时，私信可能共享一个主会话。  
+为防止非拥有者的私信覆盖该会话的 `lastRoute`，当以下所有条件满足时，OpenClaw 会从 `allowFrom` 推断固定拥有者：
 
-- `allowFrom` has exactly one non-wildcard entry.
-- The entry can be normalized to a concrete sender ID for that channel.
-- The inbound DM sender does not match that pinned owner.
+- `allowFrom` 恰有一条非通配符条目。
+- 该条目可被标准化为该渠道的具体发送者 ID。
+- 入站私信的发送者与该固定拥有者不匹配。
 
-In that mismatch case, OpenClaw still records inbound session metadata, but it
-skips updating the main session `lastRoute`.
+在不匹配的情况下，OpenClaw 仍会记录入站会话元数据，但会跳过更新主会话的 `lastRoute`。
 
-## Routing rules (how an agent is chosen)
+## 路由规则（如何选择代理）
 
-Routing picks **one agent** for each inbound message:
+路由为每条入站消息选择**一个代理**：
 
-1. **Exact peer match** (`bindings` with `peer.kind` + `peer.id`).
-2. **Parent peer match** (thread inheritance).
-3. **Guild + roles match** (Discord) via `guildId` + `roles`.
-4. **Guild match** (Discord) via `guildId`.
-5. **Team match** (Slack) via `teamId`.
-6. **Account match** (`accountId` on the channel).
-7. **Channel match** (any account on that channel, `accountId: "*"`).
-8. **Default agent** (`agents.list[].default`, else first list entry, fallback to `main`).
+1. **精确同伴匹配**（`bindings` 中带 `peer.kind` + `peer.id`）。
+2. **父同伴匹配**（线程继承）。
+3. **公会 + 角色匹配**（Discord），通过 `guildId` + `roles`。
+4. **公会匹配**（Discord），通过 `guildId`。
+5. **团队匹配**（Slack），通过 `teamId`。
+6. **账户匹配**（渠道上的 `accountId`）。
+7. **渠道匹配**（该渠道上的任意账户，`accountId: "*"`）。
+8. **默认代理**（`agents.list[].default`，否则首个列表条目，后备为 `main`）。
 
-When a binding includes multiple match fields (`peer`, `guildId`, `teamId`, `roles`), **all provided fields must match** for that binding to apply.
+当绑定包含多个匹配字段（`peer`、`guildId`、`teamId`、`roles`）时，必须**所有提供字段均匹配**该绑定才生效。
 
-The matched agent determines which workspace and session store are used.
+匹配的代理决定使用哪个工作区和会话存储。
 
-## Broadcast groups (run multiple agents)
+## 广播群组（运行多个代理）
 
-Broadcast groups let you run **multiple agents** for the same peer **when OpenClaw would normally reply** (for example: in WhatsApp groups, after mention/activation gating).
+广播群组允许你为同一同伴在 OpenClaw 通常会回复时运行**多个代理**（例如：WhatsApp 群组内，在提及/激活门控之后）。
 
-Config:
+配置示例：
 
 ```json5
 {
@@ -88,19 +83,19 @@ Config:
 }
 ```
 
-See: [Broadcast Groups](/channels/broadcast-groups).
+详见：[广播群组](/channels/broadcast-groups)。
 
-## Config overview
+## 配置概览
 
-- `agents.list`: named agent definitions (workspace, model, etc.).
-- `bindings`: map inbound channels/accounts/peers to agents.
+- `agents.list`：具名代理定义（工作区、模型等）。
+- `bindings`：将入站渠道/账户/同伴映射到代理。
 
-Example:
+示例：
 
 ```json5
 {
   agents: {
-    list: [{ id: "support", name: "Support", workspace: "~/.openclaw/workspace-support" }],
+    list: [{ id: "support", name: "支持", workspace: "~/.openclaw/workspace-support" }],
   },
   bindings: [
     { match: { channel: "slack", teamId: "T123" }, agentId: "support" },
@@ -109,26 +104,25 @@ Example:
 }
 ```
 
-## Session storage
+## 会话存储
 
-Session stores live under the state directory (default `~/.openclaw`):
+会话存储位于状态目录（默认 `~/.openclaw`）下：
 
 - `~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- JSONL transcripts live alongside the store
+- JSONL 转录文件与存储文件共存
 
-You can override the store path via `session.store` and `{agentId}` templating.
+你可通过 `session.store` 配置及 `{agentId}` 模板覆盖存储路径。
 
-## WebChat behavior
+## WebChat 行为
 
-WebChat attaches to the **selected agent** and defaults to the agent’s main
-session. Because of this, WebChat lets you see cross‑channel context for that
-agent in one place.
+WebChat 附着于**选中代理**并默认使用该代理的主会话。  
+因此，WebChat 让你在一个地方查看该代理的跨渠道上下文。
 
-## Reply context
+## 回复上下文
 
-Inbound replies include:
+入站回复包含：
 
-- `ReplyToId`, `ReplyToBody`, and `ReplyToSender` when available.
-- Quoted context is appended to `Body` as a `[Replying to ...]` block.
+- 可用时的 `ReplyToId`、`ReplyToBody` 和 `ReplyToSender`。
+- 引用上下文会附加到 `Body` 中，作为 `[Replying to ...]` 块。
 
-This is consistent across channels.
+该行为在各渠道间保持一致。

@@ -1,17 +1,15 @@
 ---
-summary: "CLI reference for `openclaw config` (get/set/unset/file/validate)"
+summary: "`openclaw config` 的 CLI 参考（获取/设置/取消设置/文件/验证）"
 read_when:
-  - You want to read or edit config non-interactively
+  - 你想以非交互方式读取或编辑配置时
 title: "config"
 ---
 
 # `openclaw config`
 
-Config helpers: get/set/unset/validate values by path and print the active
-config file. Run without a subcommand to open
-the configure wizard (same as `openclaw configure`).
+配置助手：通过路径获取/设置/取消设置/验证值，并打印当前活动的配置文件。无子命令运行时会打开配置向导（与 `openclaw configure` 相同）。
 
-## Examples
+## 示例
 
 ```bash
 openclaw config file
@@ -24,26 +22,25 @@ openclaw config validate
 openclaw config validate --json
 ```
 
-## Paths
+## 路径
 
-Paths use dot or bracket notation:
+路径使用点号或括号符号表示法：
 
 ```bash
 openclaw config get agents.defaults.workspace
 openclaw config get agents.list[0].id
 ```
 
-Use the agent list index to target a specific agent:
+使用代理列表索引定位具体代理：
 
 ```bash
 openclaw config get agents.list
 openclaw config set agents.list[1].tools.exec.node "node-id-or-name"
 ```
 
-## Values
+## 值
 
-Values are parsed as JSON5 when possible; otherwise they are treated as strings.
-Use `--strict-json` to require JSON5 parsing. `--json` remains supported as a legacy alias.
+值尽可能按 JSON5 解析；否则将视为字符串。使用 `--strict-json` 强制 JSON5 解析。`--json` 仍作为旧别名兼容支持。
 
 ```bash
 openclaw config set agents.defaults.heartbeat.every "0m"
@@ -51,16 +48,15 @@ openclaw config set gateway.port 19001 --strict-json
 openclaw config set channels.whatsapp.groups '["*"]' --strict-json
 ```
 
-## Subcommands
+## 子命令
 
-- `config file`: Print the active config file path (resolved from `OPENCLAW_CONFIG_PATH` or default location).
+- `config file`：打印活动配置文件路径（从 `OPENCLAW_CONFIG_PATH` 环境变量或默认位置解析）。
 
-Restart the gateway after edits.
+修改后请重启网关。
 
-## Validate
+## 验证
 
-Validate the current config against the active schema without starting the
-gateway.
+在不启动网关的情况下，根据当前活动的 schema 验证当前配置。
 
 ```bash
 openclaw config validate

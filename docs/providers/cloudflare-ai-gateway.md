@@ -1,31 +1,31 @@
 ---
-title: "Cloudflare AI Gateway"
-summary: "Cloudflare AI Gateway setup (auth + model selection)"
+title: "Cloudflare AI 网关"
+summary: "Cloudflare AI 网关设置（认证 + 模型选择）"
 read_when:
-  - You want to use Cloudflare AI Gateway with OpenClaw
-  - You need the account ID, gateway ID, or API key env var
+  - 你想将 Cloudflare AI 网关与 OpenClaw 一起使用
+  - 你需要账号 ID、网关 ID 或 API 密钥环境变量
 ---
 
-# Cloudflare AI Gateway
+# Cloudflare AI 网关
 
-Cloudflare AI Gateway sits in front of provider APIs and lets you add analytics, caching, and controls. For Anthropic, OpenClaw uses the Anthropic Messages API through your Gateway endpoint.
+Cloudflare AI 网关位于提供商 API 之前，让你可以添加分析、缓存和控制。对于 Anthropic，OpenClaw 通过你的网关端点使用 Anthropic 消息 API。
 
-- Provider: `cloudflare-ai-gateway`
-- Base URL: `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`
-- Default model: `cloudflare-ai-gateway/claude-sonnet-4-5`
-- API key: `CLOUDFLARE_AI_GATEWAY_API_KEY` (your provider API key for requests through the Gateway)
+- 提供商：`cloudflare-ai-gateway`
+- 基础 URL：`https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`
+- 默认模型：`cloudflare-ai-gateway/claude-sonnet-4-5`
+- API 密钥：`CLOUDFLARE_AI_GATEWAY_API_KEY`（用以通过网关发送请求的提供商 API 密钥）
 
-For Anthropic models, use your Anthropic API key.
+对于 Anthropic 模型，请使用你的 Anthropic API 密钥。
 
-## Quick start
+## 快速开始
 
-1. Set the provider API key and Gateway details:
+1. 设置提供商 API 密钥和网关详情：
 
 ```bash
 openclaw onboard --auth-choice cloudflare-ai-gateway-api-key
 ```
 
-2. Set a default model:
+2. 设定默认模型：
 
 ```json5
 {
@@ -37,7 +37,7 @@ openclaw onboard --auth-choice cloudflare-ai-gateway-api-key
 }
 ```
 
-## Non-interactive example
+## 非交互式示例
 
 ```bash
 openclaw onboard --non-interactive \
@@ -48,9 +48,9 @@ openclaw onboard --non-interactive \
   --cloudflare-ai-gateway-api-key "$CLOUDFLARE_AI_GATEWAY_API_KEY"
 ```
 
-## Authenticated gateways
+## 认证网关
 
-If you enabled Gateway authentication in Cloudflare, add the `cf-aig-authorization` header (this is in addition to your provider API key).
+如果你在 Cloudflare 里启用了网关认证，需额外添加 `cf-aig-authorization` 头（这是除了你的提供商 API 密钥之外的认证）。
 
 ```json5
 {
@@ -66,6 +66,6 @@ If you enabled Gateway authentication in Cloudflare, add the `cf-aig-authorizati
 }
 ```
 
-## Environment note
+## 环境注意事项
 
-If the Gateway runs as a daemon (launchd/systemd), make sure `CLOUDFLARE_AI_GATEWAY_API_KEY` is available to that process (for example, in `~/.openclaw/.env` or via `env.shellEnv`).
+如果网关作为后台进程运行（launchd/systemd），请确保 `CLOUDFLARE_AI_GATEWAY_API_KEY` 能被该进程访问（例如存放在 `~/.openclaw/.env` 或通过 `env.shellEnv` 提供）。

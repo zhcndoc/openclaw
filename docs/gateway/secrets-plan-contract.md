@@ -1,21 +1,21 @@
 ---
-summary: "Contract for `secrets apply` plans: target validation, path matching, and `auth-profiles.json` target scope"
+summary: "`secrets apply` 计划的合约：目标验证、路径匹配和 `auth-profiles.json` 目标范围"
 read_when:
-  - Generating or reviewing `openclaw secrets apply` plans
-  - Debugging `Invalid plan target path` errors
-  - Understanding target type and path validation behavior
-title: "Secrets Apply Plan Contract"
+  - 生成或审核 `openclaw secrets apply` 计划时
+  - 调试 `Invalid plan target path` 错误时
+  - 了解目标类型和路径验证行为时
+title: "Secrets Apply 计划合约"
 ---
 
-# Secrets apply plan contract
+# Secrets apply 计划合约
 
-This page defines the strict contract enforced by `openclaw secrets apply`.
+本页定义了 `openclaw secrets apply` 强制执行的严格合约。
 
-If a target does not match these rules, apply fails before mutating configuration.
+如果目标不符合这些规则，应用将在修改配置之前失败。
 
-## Plan file shape
+## 计划文件结构
 
-`openclaw secrets apply --from <plan.json>` expects a `targets` array of plan targets:
+`openclaw secrets apply --from <plan.json>` 期望有一个包含计划目标的 `targets` 数组：
 
 ```json5
 {
@@ -40,67 +40,67 @@ If a target does not match these rules, apply fails before mutating configuratio
 }
 ```
 
-## Supported target scope
+## 支持的目标范围
 
-Plan targets are accepted for supported credential paths in:
+计划目标接受以下支持的凭据路径：
 
-- [SecretRef Credential Surface](/reference/secretref-credential-surface)
+- [SecretRef 凭据表面](/reference/secretref-credential-surface)
 
-## Target type behavior
+## 目标类型行为
 
-General rule:
+一般规则：
 
-- `target.type` must be recognized and must match the normalized `target.path` shape.
+- `target.type` 必须被识别，并且必须匹配规范化后的 `target.path` 结构。
 
-Compatibility aliases remain accepted for existing plans:
+兼容别名仍然被接受以支持现有计划：
 
 - `models.providers.apiKey`
 - `skills.entries.apiKey`
 - `channels.googlechat.serviceAccount`
 
-## Path validation rules
+## 路径验证规则
 
-Each target is validated with all of the following:
+每个目标均需通过以下所有验证：
 
-- `type` must be a recognized target type.
-- `path` must be a non-empty dot path.
-- `pathSegments` can be omitted. If provided, it must normalize to exactly the same path as `path`.
-- Forbidden segments are rejected: `__proto__`, `prototype`, `constructor`.
-- The normalized path must match the registered path shape for the target type.
-- If `providerId` or `accountId` is set, it must match the id encoded in the path.
-- `auth-profiles.json` targets require `agentId`.
-- When creating a new `auth-profiles.json` mapping, include `authProfileProvider`.
+- `type` 必须是被识别的目标类型。
+- `path` 必须是非空的点分路径。
+- `pathSegments` 可以省略。如果提供，必须规范化后与 `path` 完全相同。
+- 禁用的路径分段会被拒绝：`__proto__`，`prototype`，`constructor`。
+- 规范化路径必须匹配该目标类型的注册路径格式。
+- 如果设置了 `providerId` 或 `accountId`，必须与路径中编码的 ID 匹配。
+- `auth-profiles.json` 目标必须包含 `agentId`。
+- 创建新的 `auth-profiles.json` 映射时，必须包含 `authProfileProvider`。
 
-## Failure behavior
+## 失败行为
 
-If a target fails validation, apply exits with an error like:
+如果目标验证失败，应用会以类似如下错误退出：
 
 ```text
 Invalid plan target path for models.providers.apiKey: models.providers.openai.baseUrl
 ```
 
-No writes are committed for an invalid plan.
+无效计划不会写入任何内容。
 
-## Runtime and audit scope notes
+## 运行时和审计范围说明
 
-- Ref-only `auth-profiles.json` entries (`keyRef`/`tokenRef`) are included in runtime resolution and audit coverage.
-- `secrets apply` writes supported `openclaw.json` targets, supported `auth-profiles.json` targets, and optional scrub targets.
+- 仅引用的 `auth-profiles.json` 条目（`keyRef`/`tokenRef`）包含在运行时解析和审计范围内。
+- `secrets apply` 写入支持的 `openclaw.json` 目标、支持的 `auth-profiles.json` 目标，以及可选的清理目标。
 
-## Operator checks
+## 操作员检查
 
 ```bash
-# Validate plan without writes
+# 验证计划而不写入
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
 
-# Then apply for real
+# 然后真正应用
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
 ```
 
-If apply fails with an invalid target path message, regenerate the plan with `openclaw secrets configure` or fix the target path to a supported shape above.
+如果应用失败并显示无效目标路径消息，请使用 `openclaw secrets configure` 重新生成计划或修正目标路径至上述支持的格式。
 
-## Related docs
+## 相关文档
 
-- [Secrets Management](/gateway/secrets)
+- [Secrets 管理](/gateway/secrets)
 - [CLI `secrets`](/cli/secrets)
-- [SecretRef Credential Surface](/reference/secretref-credential-surface)
-- [Configuration Reference](/gateway/configuration-reference)
+- [SecretRef 凭据表面](/reference/secretref-credential-surface)
+- [配置参考](/gateway/configuration-reference)

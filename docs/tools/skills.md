@@ -1,115 +1,101 @@
 ---
-summary: "Skills: managed vs workspace, gating rules, and config/env wiring"
+summary: "技能：托管技能 vs 工作空间技能，访问规则，以及配置/环境变量连接"
 read_when:
-  - Adding or modifying skills
-  - Changing skill gating or load rules
-title: "Skills"
+  - 添加或修改技能时
+  - 更改技能访问或加载规则时
+title: "技能"
 ---
 
-# Skills (OpenClaw)
+# 技能 (OpenClaw)
 
-OpenClaw uses **[AgentSkills](https://agentskills.io)-compatible** skill folders to teach the agent how to use tools. Each skill is a directory containing a `SKILL.md` with YAML frontmatter and instructions. OpenClaw loads **bundled skills** plus optional local overrides, and filters them at load time based on environment, config, and binary presence.
+OpenClaw 使用与 **[AgentSkills](https://agentskills.io) 兼容** 的技能文件夹来教导代理如何使用工具。每个技能是一个目录，包含带有 YAML 头信息和说明的 `SKILL.md` 文件。OpenClaw 加载 **内置技能** 以及可选的本地覆盖，并在加载时根据环境、配置和二进制的存在情况进行过滤。
 
-## Locations and precedence
+## 位置与优先级
 
-Skills are loaded from **three** places:
+技能从 **三个** 位置加载：
 
-1. **Bundled skills**: shipped with the install (npm package or OpenClaw.app)
-2. **Managed/local skills**: `~/.openclaw/skills`
-3. **Workspace skills**: `<workspace>/skills`
+1. **内置技能**：随安装包一起提供（npm 包或 OpenClaw.app）
+2. **托管/本地技能**：`~/.openclaw/skills`
+3. **工作空间技能**：`<workspace>/skills`
 
-If a skill name conflicts, precedence is:
+如果技能名称冲突，优先级顺序为：
 
-`<workspace>/skills` (highest) → `~/.openclaw/skills` → bundled skills (lowest)
+`<workspace>/skills`（最高）→ `~/.openclaw/skills` → 内置技能（最低）
 
-Additionally, you can configure extra skill folders (lowest precedence) via
-`skills.load.extraDirs` in `~/.openclaw/openclaw.json`.
+另外，你可以通过 `~/.openclaw/openclaw.json` 中的 `skills.load.extraDirs` 配置额外的技能文件夹（优先级最低）。
 
-## Per-agent vs shared skills
+## 每个代理专用技能 vs 共享技能
 
-In **multi-agent** setups, each agent has its own workspace. That means:
+在 **多代理** 设置中，每个代理都有自己的工作空间。这意味着：
 
-- **Per-agent skills** live in `<workspace>/skills` for that agent only.
-- **Shared skills** live in `~/.openclaw/skills` (managed/local) and are visible
-  to **all agents** on the same machine.
-- **Shared folders** can also be added via `skills.load.extraDirs` (lowest
-  precedence) if you want a common skills pack used by multiple agents.
+- **每个代理专属技能** 存放在该代理的 `<workspace>/skills` 中。
+- **共享技能** 存放在 `~/.openclaw/skills`（托管/本地）中，对同一台机器上的 **所有代理** 都可见。
+- 共享文件夹也可以通过 `skills.load.extraDirs` 添加（优先级最低），如果你想为多个代理使用通用的技能包。
 
-If the same skill name exists in more than one place, the usual precedence
-applies: workspace wins, then managed/local, then bundled.
+如果同名技能存在于多个位置，依旧遵循以上优先级规则：工作空间优先，然后是托管/本地，最后是内置。
 
-## Plugins + skills
+## 插件 + 技能
 
-Plugins can ship their own skills by listing `skills` directories in
-`openclaw.plugin.json` (paths relative to the plugin root). Plugin skills load
-when the plugin is enabled and participate in the normal skill precedence rules.
-You can gate them via `metadata.openclaw.requires.config` on the plugin’s config
-entry. See [Plugins](/tools/plugin) for discovery/config and [Tools](/tools) for the
-tool surface those skills teach.
+插件可以通过在 `openclaw.plugin.json` 中列出相对插件根目录的 `skills` 文件夹来附带自己的技能。插件启用时加载其技能，并遵守普通技能优先级规则。可以通过插件配置项的 `metadata.openclaw.requires.config` 进行访问权限控制。详情见 [插件](/tools/plugin) 用于发现/配置，以及 [工具](/tools) 查看技能所教授的工具表面。
 
-## ClawHub (install + sync)
+## ClawHub（安装 + 同步）
 
-ClawHub is the public skills registry for OpenClaw. Browse at
-[https://clawhub.com](https://clawhub.com). Use it to discover, install, update, and back up skills.
-Full guide: [ClawHub](/tools/clawhub).
+ClawHub 是 OpenClaw 的公共技能注册表，浏览网址：[https://clawhub.com](https://clawhub.com)。可用于发现、安装、更新和备份技能。完整指南见：[ClawHub](/tools/clawhub)。
 
-Common flows:
+常用流程：
 
-- Install a skill into your workspace:
+- 在你的工作空间安装技能：
   - `clawhub install <skill-slug>`
-- Update all installed skills:
+- 更新所有已安装技能：
   - `clawhub update --all`
-- Sync (scan + publish updates):
+- 同步（扫描 + 发布更新）：
   - `clawhub sync --all`
 
-By default, `clawhub` installs into `./skills` under your current working
-directory (or falls back to the configured OpenClaw workspace). OpenClaw picks
-that up as `<workspace>/skills` on the next session.
+默认情况下，`clawhub` 会安装到当前工作目录下的 `./skills`（或回退到配置的 OpenClaw 工作空间）。OpenClaw 下一次会话时会将其识别为 `<workspace>/skills`。
 
-## Security notes
+## 安全提示
 
-- Treat third-party skills as **untrusted code**. Read them before enabling.
-- Prefer sandboxed runs for untrusted inputs and risky tools. See [Sandboxing](/gateway/sandboxing).
-- `skills.entries.*.env` and `skills.entries.*.apiKey` inject secrets into the **host** process
-  for that agent turn (not the sandbox). Keep secrets out of prompts and logs.
-- For a broader threat model and checklists, see [Security](/gateway/security).
+- 第三方技能请视为 **不受信任的代码**，启用前务必阅读。
+- 对于不受信任输入和高风险工具，优先使用沙箱运行。详见 [沙箱](/gateway/sandboxing)。
+- `skills.entries.*.env` 和 `skills.entries.*.apiKey` 会在该代理运行周期内向 **宿主** 进程注入秘密（非沙箱内）。避免将秘密写入提示或日志。
+- 更广泛的威胁模型和检查清单，见 [安全](/gateway/security)。
 
-## Format (AgentSkills + Pi-compatible)
+## 格式（兼容 AgentSkills + Pi）
 
-`SKILL.md` must include at least:
+`SKILL.md` 至少应包含：
 
 ```markdown
 ---
 name: nano-banana-pro
-description: Generate or edit images via Gemini 3 Pro Image
+description: 通过 Gemini 3 Pro Image 生成或编辑图像
 ---
 ```
 
-Notes:
+说明：
 
-- We follow the AgentSkills spec for layout/intent.
-- The parser used by the embedded agent supports **single-line** frontmatter keys only.
-- `metadata` should be a **single-line JSON object**.
-- Use `{baseDir}` in instructions to reference the skill folder path.
-- Optional frontmatter keys:
-  - `homepage` — URL surfaced as “Website” in the macOS Skills UI (also supported via `metadata.openclaw.homepage`).
-  - `user-invocable` — `true|false` (default: `true`). When `true`, the skill is exposed as a user slash command.
-  - `disable-model-invocation` — `true|false` (default: `false`). When `true`, the skill is excluded from the model prompt (still available via user invocation).
-  - `command-dispatch` — `tool` (optional). When set to `tool`, the slash command bypasses the model and dispatches directly to a tool.
-  - `command-tool` — tool name to invoke when `command-dispatch: tool` is set.
-  - `command-arg-mode` — `raw` (default). For tool dispatch, forwards the raw args string to the tool (no core parsing).
+- 我们遵循 AgentSkills 规范的布局和意图。
+- 内嵌代理使用的解析器只支持 **单行** 头信息键。
+- `metadata` 应为 **单行 JSON 对象**。
+- 在说明中使用 `{baseDir}` 引用技能文件夹路径。
+- 可选的头信息键：
+  - `homepage` — 在 macOS 技能 UI 中显示为“网站”的 URL（也支持通过 `metadata.openclaw.homepage`）。
+  - `user-invocable` — `true|false`（默认：`true`）。为 `true` 时，技能作为用户斜线命令暴露。
+  - `disable-model-invocation` — `true|false`（默认：`false`）。为 `true` 时，技能不会出现在模型提示中（仍可由用户调用）。
+  - `command-dispatch` — 可选值 `tool`。设置为 `tool` 时，斜线命令绕过模型，直接调度到工具。
+  - `command-tool` — 设置为 `command-dispatch: tool` 时调用的工具名。
+  - `command-arg-mode` — `raw`（默认）。用于工具调度，将原始参数字符串转发给工具（无核心解析）。
 
-    The tool is invoked with params:
-    `{ command: "<raw args>", commandName: "<slash command>", skillName: "<skill name>" }`.
+    工具调用参数为：
+    `{ command: "<raw args>", commandName: "<slash command>", skillName: "<skill name>" }`。
 
-## Gating (load-time filters)
+## 访问控制（加载时过滤）
 
-OpenClaw **filters skills at load time** using `metadata` (single-line JSON):
+OpenClaw 在加载时根据 `metadata`（单行 JSON）过滤技能：
 
 ```markdown
 ---
 name: nano-banana-pro
-description: Generate or edit images via Gemini 3 Pro Image
+description: 通过 Gemini 3 Pro Image 生成或编辑图像
 metadata:
   {
     "openclaw":
@@ -121,35 +107,34 @@ metadata:
 ---
 ```
 
-Fields under `metadata.openclaw`:
+`metadata.openclaw` 下的字段：
 
-- `always: true` — always include the skill (skip other gates).
-- `emoji` — optional emoji used by the macOS Skills UI.
-- `homepage` — optional URL shown as “Website” in the macOS Skills UI.
-- `os` — optional list of platforms (`darwin`, `linux`, `win32`). If set, the skill is only eligible on those OSes.
-- `requires.bins` — list; each must exist on `PATH`.
-- `requires.anyBins` — list; at least one must exist on `PATH`.
-- `requires.env` — list; env var must exist **or** be provided in config.
-- `requires.config` — list of `openclaw.json` paths that must be truthy.
-- `primaryEnv` — env var name associated with `skills.entries.<name>.apiKey`.
-- `install` — optional array of installer specs used by the macOS Skills UI (brew/node/go/uv/download).
+- `always: true` — 始终包含该技能（跳过其他访问规则）。
+- `emoji` — macOS 技能 UI 中的可选表情符号。
+- `homepage` — macOS 技能 UI 中显示为“网站”的可选 URL。
+- `os` — 可选平台列表（`darwin`，`linux`，`win32`）。设置后，技能仅在此操作系统上有效。
+- `requires.bins` — 列表；每个二进制必须在 `PATH` 中存在。
+- `requires.anyBins` — 列表；至少一个二进制必须在 `PATH` 中存在。
+- `requires.env` — 列表；环境变量必须存在 **或** 在配置中提供。
+- `requires.config` — `openclaw.json` 中必须为真值的路径列表。
+- `primaryEnv` — 关联到 `skills.entries.<name>.apiKey` 的环境变量名。
+- `install` — macOS 技能 UI 使用的可选安装器规范数组（brew/node/go/uv/download）。
 
-Note on sandboxing:
+关于沙箱：
 
-- `requires.bins` is checked on the **host** at skill load time.
-- If an agent is sandboxed, the binary must also exist **inside the container**.
-  Install it via `agents.defaults.sandbox.docker.setupCommand` (or a custom image).
-  `setupCommand` runs once after the container is created.
-  Package installs also require network egress, a writable root FS, and a root user in the sandbox.
-  Example: the `summarize` skill (`skills/summarize/SKILL.md`) needs the `summarize` CLI
-  in the sandbox container to run there.
+- `requires.bins` 在技能加载时在 **宿主机** 检查。
+- 如果代理在沙箱中，二进制必须存在 **容器内**。
+  使用 `agents.defaults.sandbox.docker.setupCommand`（或自定义镜像）安装。
+  `setupCommand` 在容器创建后运行一次。
+  软件包安装还需要网络访问、可写的根文件系统和容器中的 root 用户。
+  例如：`summarize` 技能（`skills/summarize/SKILL.md`）需要在沙箱容器中有 `summarize` CLI 才能运行。
 
-Installer example:
+安装器示例：
 
 ```markdown
 ---
 name: gemini
-description: Use Gemini CLI for coding assistance and Google search lookups.
+description: 使用 Gemini CLI 提供编码帮助和谷歌搜索查询。
 metadata:
   {
     "openclaw":
@@ -163,7 +148,7 @@ metadata:
               "kind": "brew",
               "formula": "gemini-cli",
               "bins": ["gemini"],
-              "label": "Install Gemini CLI (brew)",
+              "label": "安装 Gemini CLI（brew）",
             },
           ],
       },
@@ -171,23 +156,21 @@ metadata:
 ---
 ```
 
-Notes:
+说明：
 
-- If multiple installers are listed, the gateway picks a **single** preferred option (brew when available, otherwise node).
-- If all installers are `download`, OpenClaw lists each entry so you can see the available artifacts.
-- Installer specs can include `os: ["darwin"|"linux"|"win32"]` to filter options by platform.
-- Node installs honor `skills.install.nodeManager` in `openclaw.json` (default: npm; options: npm/pnpm/yarn/bun).
-  This only affects **skill installs**; the Gateway runtime should still be Node
-  (Bun is not recommended for WhatsApp/Telegram).
-- Go installs: if `go` is missing and `brew` is available, the gateway installs Go via Homebrew first and sets `GOBIN` to Homebrew’s `bin` when possible.
-- Download installs: `url` (required), `archive` (`tar.gz` | `tar.bz2` | `zip`), `extract` (default: auto when archive detected), `stripComponents`, `targetDir` (default: `~/.openclaw/tools/<skillKey>`).
+- 如果列出多个安装器，网关会选择一个 **优先选项**（优先 brew，其次 node）。
+- 如果所有安装器均为 `download`，OpenClaw 会列出每个条目以显示可用工件。
+- 安装器规格可以包含 `os: ["darwin"|"linux"|"win32"]` 用于按平台筛选选项。
+- Node 安装遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm/pnpm/yarn/bun）。
+  该配置仅影响 **技能安装**；网关运行时仍应使用 Node（不推荐 Bun 用于 WhatsApp/Telegram）。
+- Go 安装：若缺少 `go` 且存在 `brew`，网关先通过 Homebrew 安装 Go，并尽可能将 `GOBIN` 设置为 Homebrew 的 `bin`。
+- 下载安装：参数包括 `url`（必需）、`archive`（`tar.gz` | `tar.bz2` | `zip`）、`extract`（默认为检测到存档时自动）、`stripComponents`、`targetDir`（默认：`~/.openclaw/tools/<skillKey>`）。
 
-If no `metadata.openclaw` is present, the skill is always eligible (unless
-disabled in config or blocked by `skills.allowBundled` for bundled skills).
+如果没有 `metadata.openclaw`，该技能总是可用的（除非在配置中禁用或通过 `skills.allowBundled` 阻止内置技能）。
 
-## Config overrides (`~/.openclaw/openclaw.json`)
+## 配置覆盖 (`~/.openclaw/openclaw.json`)
 
-Bundled/managed skills can be toggled and supplied with env values:
+内置/托管技能可以开启/关闭并提供环境变量：
 
 ```json5
 {
@@ -195,7 +178,7 @@ Bundled/managed skills can be toggled and supplied with env values:
     entries: {
       "nano-banana-pro": {
         enabled: true,
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // or plaintext string
+        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或明文字符串
         env: {
           GEMINI_API_KEY: "GEMINI_KEY_HERE",
         },
@@ -211,48 +194,44 @@ Bundled/managed skills can be toggled and supplied with env values:
 }
 ```
 
-Note: if the skill name contains hyphens, quote the key (JSON5 allows quoted keys).
+注意：若技能名包含连字符，需对键使用引号（JSON5 允许键名带引号）。
 
-Config keys match the **skill name** by default. If a skill defines
-`metadata.openclaw.skillKey`, use that key under `skills.entries`.
+配置键默认匹配 **技能名称**。如果技能定义了 `metadata.openclaw.skillKey`，使用该键作为 `skills.entries` 下的配置键。
 
-Rules:
+规则：
 
-- `enabled: false` disables the skill even if it’s bundled/installed.
-- `env`: injected **only if** the variable isn’t already set in the process.
-- `apiKey`: convenience for skills that declare `metadata.openclaw.primaryEnv`.
-  Supports plaintext string or SecretRef object (`{ source, provider, id }`).
-- `config`: optional bag for custom per-skill fields; custom keys must live here.
-- `allowBundled`: optional allowlist for **bundled** skills only. If set, only
-  bundled skills in the list are eligible (managed/workspace skills unaffected).
+- `enabled: false` 禁用技能，即使其为内置/已安装。
+- `env`：仅在进程中未设置该变量时注入。
+- `apiKey`：简化设置，针对声明了 `metadata.openclaw.primaryEnv` 的技能。支持明文字符串或 SecretRef 对象（`{ source, provider, id }`）。
+- `config`：自定义每技能字段的可选容器；所有自定义键必须放这里。
+- `allowBundled`：仅对 **内置** 技能生效的允许列表。设置后，只有列表内内置技能有效（不影响托管/工作空间技能）。
 
-## Environment injection (per agent run)
+## 环境注入（每次代理运行）
 
-When an agent run starts, OpenClaw:
+当代理运行开始时，OpenClaw 会：
 
-1. Reads skill metadata.
-2. Applies any `skills.entries.<key>.env` or `skills.entries.<key>.apiKey` to
-   `process.env`.
-3. Builds the system prompt with **eligible** skills.
-4. Restores the original environment after the run ends.
+1. 读取技能元数据。
+2. 将任何 `skills.entries.<key>.env` 或 `skills.entries.<key>.apiKey` 注入到 `process.env`。
+3. 使用 **符合条件的** 技能构建系统提示。
+4. 运行结束后恢复原始环境。
 
-This is **scoped to the agent run**, not a global shell environment.
+此过程 **限于该代理运行周期**，非全局 shell 环境。
 
-## Session snapshot (performance)
+## 会话快照（性能）
 
-OpenClaw snapshots the eligible skills **when a session starts** and reuses that list for subsequent turns in the same session. Changes to skills or config take effect on the next new session.
+OpenClaw 会在 **会话开始时** 快照符合条件的技能列表，并在同一会话的后续回合重用。技能或配置的更改会在下一个新会话生效。
 
-Skills can also refresh mid-session when the skills watcher is enabled or when a new eligible remote node appears (see below). Think of this as a **hot reload**: the refreshed list is picked up on the next agent turn.
+启用技能观察器或出现新的符合条件的远程节点时，技能列表也可在会话中期刷新（见下文）。相当于 **热重载**：刷新后的列表将在下一回合被使用。
 
-## Remote macOS nodes (Linux gateway)
+## 远程 macOS 节点（Linux 网关）
 
-If the Gateway is running on Linux but a **macOS node** is connected **with `system.run` allowed** (Exec approvals security not set to `deny`), OpenClaw can treat macOS-only skills as eligible when the required binaries are present on that node. The agent should execute those skills via the `nodes` tool (typically `nodes.run`).
+如果网关运行在 Linux 上，但连接了一个 **允许 `system.run` 的 macOS 节点**（执行批准安全未设置为 `deny`），OpenClaw 可将仅限 macOS 的技能视为符合条件，只要该节点具备所需二进制。代理应通过 `nodes` 工具（通常是 `nodes.run`）执行这些技能。
 
-This relies on the node reporting its command support and on a bin probe via `system.run`. If the macOS node goes offline later, the skills remain visible; invocations may fail until the node reconnects.
+此功能依赖节点报告其命令支持并通过 `system.run` 探测二进制。如果 macOS 节点断线，技能仍显示，但调用可能失败，直至节点重新连接。
 
-## Skills watcher (auto-refresh)
+## 技能观察器（自动刷新）
 
-By default, OpenClaw watches skill folders and bumps the skills snapshot when `SKILL.md` files change. Configure this under `skills.load`:
+默认情况下，OpenClaw 监听技能文件夹，当 `SKILL.md` 文件变化时更新技能快照。该行为可通过 `skills.load` 配置：
 
 ```json5
 {
@@ -265,37 +244,34 @@ By default, OpenClaw watches skill folders and bumps the skills snapshot when `S
 }
 ```
 
-## Token impact (skills list)
+## 令牌影响（技能列表）
 
-When skills are eligible, OpenClaw injects a compact XML list of available skills into the system prompt (via `formatSkillsForPrompt` in `pi-coding-agent`). The cost is deterministic:
+符合条件时，OpenClaw 将编入一个紧凑的 XML 技能列表注入系统提示（通过 `pi-coding-agent` 的 `formatSkillsForPrompt`）。其开销是确定性的：
 
-- **Base overhead (only when ≥1 skill):** 195 characters.
-- **Per skill:** 97 characters + the length of the XML-escaped `<name>`, `<description>`, and `<location>` values.
+- **基础开销（当 ≥1 个技能时）：**195 字符
+- **每个技能：**97 字符 + XML 转义后的 `<name>`、`<description>` 和 `<location>` 字段长度
 
-Formula (characters):
+计算公式（字符）：
 
 ```
 total = 195 + Σ (97 + len(name_escaped) + len(description_escaped) + len(location_escaped))
 ```
 
-Notes:
+说明：
 
-- XML escaping expands `& < > " '` into entities (`&amp;`, `&lt;`, etc.), increasing length.
-- Token counts vary by model tokenizer. A rough OpenAI-style estimate is ~4 chars/token, so **97 chars ≈ 24 tokens** per skill plus your actual field lengths.
+- XML 转义将 `& < > " '` 扩展为实体（`&amp;`、`&lt;` 等），增加长度。
+- 不同模型分词器令牌计数不同。OpenAI 估算约 4 字符/令牌，因此 **97 字符 ≈ 24 令牌**，再加上实际字段长度。
 
-## Managed skills lifecycle
+## 托管技能生命周期
 
-OpenClaw ships a baseline set of skills as **bundled skills** as part of the
-install (npm package or OpenClaw.app). `~/.openclaw/skills` exists for local
-overrides (for example, pinning/patching a skill without changing the bundled
-copy). Workspace skills are user-owned and override both on name conflicts.
+OpenClaw 随安装包（npm 包或 OpenClaw.app）附带一套基础内置技能。`~/.openclaw/skills` 用于本地覆盖（例如，在不更改内置副本的情况下固定或修补技能）。工作空间技能属于用户所有，且与同名内置和托管技能相比优先级最高。
 
-## Config reference
+## 配置参考
 
-See [Skills config](/tools/skills-config) for the full configuration schema.
+完整配置架构见 [技能配置](/tools/skills-config)。
 
-## Looking for more skills?
+## 寻找更多技能？
 
-Browse [https://clawhub.com](https://clawhub.com).
+访问 [https://clawhub.com](https://clawhub.com) 浏览。
 
 ---

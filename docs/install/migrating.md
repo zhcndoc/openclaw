@@ -1,192 +1,192 @@
 ---
-summary: "Move (migrate) a OpenClaw install from one machine to another"
+summary: "将 OpenClaw 安装从一台机器迁移到另一台机器"
 read_when:
-  - You are moving OpenClaw to a new laptop/server
-  - You want to preserve sessions, auth, and channel logins (WhatsApp, etc.)
-title: "Migration Guide"
+  - 你正在将 OpenClaw 迁移到新的笔记本电脑/服务器
+  - 你想保留会话、认证和频道登录（WhatsApp 等）
+title: "迁移指南"
 ---
 
-# Migrating OpenClaw to a new machine
+# 将 OpenClaw 迁移到新机器
 
-This guide migrates a OpenClaw Gateway from one machine to another **without redoing onboarding**.
+本指南介绍如何将 OpenClaw Gateway 从一台机器迁移到另一台机器，**无需重新完成入门流程**。
 
-The migration is simple conceptually:
+迁移从概念上很简单：
 
-- Copy the **state directory** (`$OPENCLAW_STATE_DIR`, default: `~/.openclaw/`) — this includes config, auth, sessions, and channel state.
-- Copy your **workspace** (`~/.openclaw/workspace/` by default) — this includes your agent files (memory, prompts, etc.).
+- 复制 **状态目录**（`$OPENCLAW_STATE_DIR`，默认：`~/.openclaw/`）——包含配置、认证、会话和频道状态。
+- 复制你的 **工作区**（默认 `~/.openclaw/workspace/`）——包含你的代理文件（记忆、提示等）。
 
-But there are common footguns around **profiles**, **permissions**, and **partial copies**.
+但在 **配置文件（profiles）**、**权限** 和 **部分复制** 上存在常见陷阱。
 
-## Before you start (what you are migrating)
+## 开始之前（你要迁移的内容）
 
-### 1) Identify your state directory
+### 1) 确认你的状态目录
 
-Most installs use the default:
+大多数安装使用默认路径：
 
-- **State dir:** `~/.openclaw/`
+- **状态目录:** `~/.openclaw/`
 
-But it may be different if you use:
+但如果你使用了以下情况，可能不同：
 
-- `--profile <name>` (often becomes `~/.openclaw-<profile>/`)
+- `--profile <name>`（通常变成 `~/.openclaw-<profile>/`）
 - `OPENCLAW_STATE_DIR=/some/path`
 
-If you’re not sure, run on the **old** machine:
+如果不确定，请在**旧机**上运行：
 
 ```bash
 openclaw status
 ```
 
-Look for mentions of `OPENCLAW_STATE_DIR` / profile in the output. If you run multiple gateways, repeat for each profile.
+查看输出中关于 `OPENCLAW_STATE_DIR` / 配置文件的提示。如果你运行多个网关，对每个配置文件重复此操作。
 
-### 2) Identify your workspace
+### 2) 确认你的工作区
 
-Common defaults:
+常见默认路径：
 
-- `~/.openclaw/workspace/` (recommended workspace)
-- a custom folder you created
+- `~/.openclaw/workspace/`（推荐的工作区）
+- 你自定义创建的文件夹
 
-Your workspace is where files like `MEMORY.md`, `USER.md`, and `memory/*.md` live.
+你的工作区包含类似 `MEMORY.md`、`USER.md` 和 `memory/*.md` 的文件。
 
-### 3) Understand what you will preserve
+### 3) 理解将要保留的内容
 
-If you copy **both** the state dir and workspace, you keep:
+如果同时复制了状态目录和工作区，你将保留：
 
-- Gateway configuration (`openclaw.json`)
-- Auth profiles / API keys / OAuth tokens
-- Session history + agent state
-- Channel state (e.g. WhatsApp login/session)
-- Your workspace files (memory, skills notes, etc.)
+- 网关配置（`openclaw.json`）
+- 认证配置文件 / API 密钥 / OAuth 令牌
+- 会话历史和代理状态
+- 频道状态（例如 WhatsApp 登录/会话）
+- 你的工作区文件（记忆、技能笔记等）
 
-If you copy **only** the workspace (e.g., via Git), you do **not** preserve:
+如果只复制工作区（例如通过 Git），则不会保留：
 
-- sessions
-- credentials
-- channel logins
+- 会话
+- 凭证
+- 频道登录
 
-Those live under `$OPENCLAW_STATE_DIR`.
+这些都存放在 `$OPENCLAW_STATE_DIR` 下。
 
-## Migration steps (recommended)
+## 迁移步骤（推荐）
 
-### Step 0 — Make a backup (old machine)
+### 步骤 0 — 备份（旧机器）
 
-On the **old** machine, stop the gateway first so files aren’t changing mid-copy:
+在**旧机器**上，先停止网关以保证文件在复制时不被更改：
 
 ```bash
 openclaw gateway stop
 ```
 
-(Optional but recommended) archive the state dir and workspace:
+（可选但推荐）归档状态目录和工作区：
 
 ```bash
-# Adjust paths if you use a profile or custom locations
+# 如果你使用配置文件或自定义目录，请调整路径
 cd ~
 tar -czf openclaw-state.tgz .openclaw
 
 tar -czf openclaw-workspace.tgz .openclaw/workspace
 ```
 
-If you have multiple profiles/state dirs (e.g. `~/.openclaw-main`, `~/.openclaw-work`), archive each.
+如果你有多个配置文件 / 状态目录（例如 `~/.openclaw-main`, `~/.openclaw-work`），请分别归档。
 
-### Step 1 — Install OpenClaw on the new machine
+### 步骤 1 — 在新机器上安装 OpenClaw
 
-On the **new** machine, install the CLI (and Node if needed):
+在**新机器**上安装 CLI（及 Node，若需要）：
 
-- See: [Install](/install)
+- 参见：[安装](/install)
 
-At this stage, it’s OK if onboarding creates a fresh `~/.openclaw/` — you will overwrite it in the next step.
+此时，入门流程如果创建了新的 `~/.openclaw/` 也没关系——下一步你会覆盖它。
 
-### Step 2 — Copy the state dir + workspace to the new machine
+### 步骤 2 — 将状态目录和工作区复制到新机器
 
-Copy **both**:
+复制**两个**文件夹：
 
-- `$OPENCLAW_STATE_DIR` (default `~/.openclaw/`)
-- your workspace (default `~/.openclaw/workspace/`)
+- `$OPENCLAW_STATE_DIR`（默认 `~/.openclaw/`）
+- 你的工作区（默认 `~/.openclaw/workspace/`）
 
-Common approaches:
+常用方法：
 
-- `scp` the tarballs and extract
-- `rsync -a` over SSH
-- external drive
+- `scp` 传输归档包后解压
+- 通过 SSH 使用 `rsync -a`
+- 外接硬盘复制
 
-After copying, ensure:
+复制后，确认：
 
-- Hidden directories were included (e.g. `.openclaw/`)
-- File ownership is correct for the user running the gateway
+- 隐藏目录（例如 `.openclaw/`）被包含
+- 文件所有权归运行网关的用户所有
 
-### Step 3 — Run Doctor (migrations + service repair)
+### 步骤 3 — 运行 Doctor（迁移和服务修复）
 
-On the **new** machine:
+在**新机器**上：
 
 ```bash
 openclaw doctor
 ```
 
-Doctor is the “safe boring” command. It repairs services, applies config migrations, and warns about mismatches.
+Doctor 是“安全无忧”的命令。它会修复服务，应用配置迁移，并提示不匹配问题。
 
-Then:
+然后执行：
 
 ```bash
 openclaw gateway restart
 openclaw status
 ```
 
-## Common footguns (and how to avoid them)
+## 常见陷阱（及避免方法）
 
-### Footgun: profile / state-dir mismatch
+### 陷阱：配置文件（profile）/状态目录不匹配
 
-If you ran the old gateway with a profile (or `OPENCLAW_STATE_DIR`), and the new gateway uses a different one, you’ll see symptoms like:
+如果旧网关使用了某个配置文件（或 `OPENCLAW_STATE_DIR`），而新网关使用了不同的，可能出现：
 
-- config changes not taking effect
-- channels missing / logged out
-- empty session history
+- 配置更改无效
+- 频道缺失或登出
+- 会话历史为空
 
-Fix: run the gateway/service using the **same** profile/state dir you migrated, then rerun:
+解决方法：使用**相同的配置文件/状态目录**启动网关/服务，然后重新运行：
 
 ```bash
 openclaw doctor
 ```
 
-### Footgun: copying only `openclaw.json`
+### 陷阱：只复制了 `openclaw.json`
 
-`openclaw.json` is not enough. Many providers store state under:
+`openclaw.json` 并不足够。许多提供者的状态存放在：
 
 - `$OPENCLAW_STATE_DIR/credentials/`
 - `$OPENCLAW_STATE_DIR/agents/<agentId>/...`
 
-Always migrate the entire `$OPENCLAW_STATE_DIR` folder.
+务必迁移整个 `$OPENCLAW_STATE_DIR` 文件夹。
 
-### Footgun: permissions / ownership
+### 陷阱：权限 / 所有权问题
 
-If you copied as root or changed users, the gateway may fail to read credentials/sessions.
+如果你用 root 复制或者更换了用户，网关可能无法读取凭证或会话。
 
-Fix: ensure the state dir + workspace are owned by the user running the gateway.
+解决方法：确保状态目录和工作区归运行网关的用户所有。
 
-### Footgun: migrating between remote/local modes
+### 陷阱：远程/本地模式迁移问题
 
-- If your UI (WebUI/TUI) points at a **remote** gateway, the remote host owns the session store + workspace.
-- Migrating your laptop won’t move the remote gateway’s state.
+- 如果你的 UI（WebUI/TUI）指向**远程**网关，远程主机拥有会话存储和工作区数据。
+- 迁移本地笔记本电脑不会移动远程网关的状态。
 
-If you’re in remote mode, migrate the **gateway host**.
+如果处于远程模式，请迁移**网关所在主机**。
 
-### Footgun: secrets in backups
+### 陷阱：备份中包含秘密信息
 
-`$OPENCLAW_STATE_DIR` contains secrets (API keys, OAuth tokens, WhatsApp creds). Treat backups like production secrets:
+`$OPENCLAW_STATE_DIR` 包含敏感信息（API 密钥、OAuth 令牌、WhatsApp 凭证）。备份时请像对待生产环境秘密一样处理：
 
-- store encrypted
-- avoid sharing over insecure channels
-- rotate keys if you suspect exposure
+- 加密存储
+- 避免通过不安全渠道共享
+- 如果怀疑泄露，尽快更新密钥
 
-## Verification checklist
+## 验证清单
 
-On the new machine, confirm:
+在新机器上确认：
 
-- `openclaw status` shows the gateway running
-- Your channels are still connected (e.g. WhatsApp doesn’t require re-pair)
-- The dashboard opens and shows existing sessions
-- Your workspace files (memory, configs) are present
+- `openclaw status` 显示网关正在运行
+- 频道仍然连接（例如 WhatsApp 无需重新配对）
+- 控制面板打开并显示已有会话
+- 你的工作区文件（记忆、配置）完整存在
 
-## Related
+## 相关链接
 
 - [Doctor](/gateway/doctor)
-- [Gateway troubleshooting](/gateway/troubleshooting)
-- [Where does OpenClaw store its data?](/help/faq#where-does-openclaw-store-its-data)
+- [网关故障排除](/gateway/troubleshooting)
+- [OpenClaw 数据存储位置是什么？](/help/faq#where-does-openclaw-store-its-data)

@@ -1,33 +1,30 @@
 ---
-summary: "Use Xiaomi MiMo (mimo-v2-flash) with OpenClaw"
+summary: "在 OpenClaw 中使用 Xiaomi MiMo（mimo-v2-flash）"
 read_when:
-  - You want Xiaomi MiMo models in OpenClaw
-  - You need XIAOMI_API_KEY setup
+  - 你想在 OpenClaw 中使用 Xiaomi MiMo 模型
+  - 你需要设置 XIAOMI_API_KEY
 title: "Xiaomi MiMo"
 ---
 
 # Xiaomi MiMo
 
-Xiaomi MiMo is the API platform for **MiMo** models. It provides REST APIs compatible with
-OpenAI and Anthropic formats and uses API keys for authentication. Create your API key in
-the [Xiaomi MiMo console](https://platform.xiaomimimo.com/#/console/api-keys). OpenClaw uses
-the `xiaomi` provider with a Xiaomi MiMo API key.
+Xiaomi MiMo 是 **MiMo** 模型的 API 平台。它提供兼容 OpenAI 和 Anthropic 格式的 REST API，并使用 API Key 进行身份验证。在 [Xiaomi MiMo 控制台](https://platform.xiaomimimo.com/#/console/api-keys) 创建你的 API Key。OpenClaw 使用带有 Xiaomi MiMo API Key 的 `xiaomi` 提供者。
 
-## Model overview
+## 模型概览
 
-- **mimo-v2-flash**: 262144-token context window, Anthropic Messages API compatible.
-- Base URL: `https://api.xiaomimimo.com/anthropic`
-- Authorization: `Bearer $XIAOMI_API_KEY`
+- **mimo-v2-flash**：262144 令牌上下文窗口，兼容 Anthropic Messages API。
+- 基础 URL：`https://api.xiaomimimo.com/anthropic`
+- 授权方式：`Bearer $XIAOMI_API_KEY`
 
-## CLI setup
+## CLI 设置
 
 ```bash
 openclaw onboard --auth-choice xiaomi-api-key
-# or non-interactive
+# 或者非交互式
 openclaw onboard --auth-choice xiaomi-api-key --xiaomi-api-key "$XIAOMI_API_KEY"
 ```
 
-## Config snippet
+## 配置片段
 
 ```json5
 {
@@ -57,8 +54,8 @@ openclaw onboard --auth-choice xiaomi-api-key --xiaomi-api-key "$XIAOMI_API_KEY"
 }
 ```
 
-## Notes
+## 备注
 
-- Model ref: `xiaomi/mimo-v2-flash`.
-- The provider is injected automatically when `XIAOMI_API_KEY` is set (or an auth profile exists).
-- See [/concepts/model-providers](/concepts/model-providers) for provider rules.
+- 模型引用：`xiaomi/mimo-v2-flash`。
+- 当设置了 `XIAOMI_API_KEY`（或存在身份验证配置文件）时，会自动注入该提供者。
+- 详情请参见 [/concepts/model-providers](/concepts/model-providers) 了解提供者规则。

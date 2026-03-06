@@ -1,12 +1,12 @@
 ---
-title: "HEARTBEAT.md Template"
-summary: "Workspace template for HEARTBEAT.md"
+title: "HEARTBEAT.md 模板"
+summary: "HEARTBEAT.md 的工作区模板"
 read_when:
-  - Bootstrapping a workspace manually
+  - 手动引导工作区时
 ---
 
 # HEARTBEAT.md
 
-# Keep this file empty (or with only comments) to skip heartbeat API calls.
+# 保持此文件为空（或仅包含注释）以跳过心跳 API 调用。
 
-# Add tasks below when you want the agent to check something periodically.
+# 当您希望代理定期检查某些内容时，在此处添加任务。

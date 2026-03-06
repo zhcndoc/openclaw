@@ -1,21 +1,19 @@
 ---
-summary: "Agent tool surface for OpenClaw (browser, canvas, nodes, message, cron) replacing legacy `openclaw-*` skills"
+summary: "OpenClaw 的代理工具界面（浏览器、画布、节点、消息、定时任务），用于替代旧版的 `openclaw-*` 技能"
 read_when:
-  - Adding or modifying agent tools
-  - Retiring or changing `openclaw-*` skills
-title: "Tools"
+  - 添加或修改代理工具时
+  - 退役或修改 `openclaw-*` 技能时
+title: "工具"
 ---
 
-# Tools (OpenClaw)
+# 工具（OpenClaw）
 
-OpenClaw exposes **first-class agent tools** for browser, canvas, nodes, and cron.
-These replace the old `openclaw-*` skills: the tools are typed, no shelling,
-and the agent should rely on them directly.
+OpenClaw 暴露了**一流的代理工具**，覆盖浏览器、画布、节点和定时任务等功能。  
+这些工具取代了旧的 `openclaw-*` 技能：工具是类型安全的，无需执行 shell，代理应直接依赖它们。
 
-## Disabling tools
+## 禁用工具
 
-You can globally allow/deny tools via `tools.allow` / `tools.deny` in `openclaw.json`
-(deny wins). This prevents disallowed tools from being sent to model providers.
+你可以通过 `openclaw.json` 中的 `tools.allow` / `tools.deny` 全局允许/禁止工具（deny 优先）。这会阻止被禁止的工具发送给模型提供商。
 
 ```json5
 {
@@ -23,25 +21,25 @@ You can globally allow/deny tools via `tools.allow` / `tools.deny` in `openclaw.
 }
 ```
 
-Notes:
+注意事项：
 
-- Matching is case-insensitive.
-- `*` wildcards are supported (`"*"` means all tools).
-- If `tools.allow` only references unknown or unloaded plugin tool names, OpenClaw logs a warning and ignores the allowlist so core tools stay available.
+- 匹配不区分大小写。
+- 支持 `*` 通配符（`"*"` 代表所有工具）。
+- 如果 `tools.allow` 只包含未知或未加载的插件工具名称，OpenClaw 会记录警告并忽略允许列表，从而确保核心工具可用。
 
-## Tool profiles (base allowlist)
+## 工具配置文件（基础允许列表）
 
-`tools.profile` sets a **base tool allowlist** before `tools.allow`/`tools.deny`.
-Per-agent override: `agents.list[].tools.profile`.
+`tools.profile` 设置**基础工具允许列表**，优先于 `tools.allow` / `tools.deny`。  
+单代理覆盖：`agents.list[].tools.profile`。
 
-Profiles:
+配置文件选项：
 
-- `minimal`: `session_status` only
-- `coding`: `group:fs`, `group:runtime`, `group:sessions`, `group:memory`, `image`
-- `messaging`: `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status`
-- `full`: no restriction (same as unset)
+- `minimal`：仅 `session_status`
+- `coding`：`group:fs`、`group:runtime`、`group:sessions`、`group:memory`、`image`
+- `messaging`：`group:messaging`、`sessions_list`、`sessions_history`、`sessions_send`、`session_status`
+- `full`：无限制（等同于未设置）
 
-Example (messaging-only by default, allow Slack + Discord tools too):
+示例（默认仅消息，且允许 Slack + Discord 工具）：
 
 ```json5
 {
@@ -52,7 +50,7 @@ Example (messaging-only by default, allow Slack + Discord tools too):
 }
 ```
 
-Example (coding profile, but deny exec/process everywhere):
+示例（coding 配置文件，但全局禁止 exec/process）：
 
 ```json5
 {
@@ -63,7 +61,7 @@ Example (coding profile, but deny exec/process everywhere):
 }
 ```
 
-Example (global coding profile, messaging-only support agent):
+示例（全局 coding 配置文件，Support 代理仅支持消息）：
 
 ```json5
 {
@@ -79,18 +77,15 @@ Example (global coding profile, messaging-only support agent):
 }
 ```
 
-## Provider-specific tool policy
+## 按提供商限定工具策略
 
-Use `tools.byProvider` to **further restrict** tools for specific providers
-(or a single `provider/model`) without changing your global defaults.
-Per-agent override: `agents.list[].tools.byProvider`.
+使用 `tools.byProvider` 可**进一步限制**针对特定提供商或单一 `provider/model` 的工具，且不改变全局默认设置。  
+单代理覆盖：`agents.list[].tools.byProvider`。
 
-This is applied **after** the base tool profile and **before** allow/deny lists,
-so it can only narrow the tool set.
-Provider keys accept either `provider` (e.g. `google-antigravity`) or
-`provider/model` (e.g. `openai/gpt-5.2`).
+此限制应用于基础工具配置文件之后、允许/禁止列表之前，因此只能缩小工具集合。  
+提供商键支持 `provider`（如 `google-antigravity`）或 `provider/model`（如 `openai/gpt-5.2`）。
 
-Example (keep global coding profile, but minimal tools for Google Antigravity):
+示例（保留全局 coding 配置文件，但 Google Antigravity 限制为 minimal）：
 
 ```json5
 {
@@ -103,7 +98,7 @@ Example (keep global coding profile, but minimal tools for Google Antigravity):
 }
 ```
 
-Example (provider/model-specific allowlist for a flaky endpoint):
+示例（针对不稳定的端点，针对具体 provider/model 设置允许列表）：
 
 ```json5
 {
@@ -116,7 +111,7 @@ Example (provider/model-specific allowlist for a flaky endpoint):
 }
 ```
 
-Example (agent-specific override for a single provider):
+示例（为单一提供商设置代理特定覆盖）：
 
 ```json5
 {
@@ -135,25 +130,25 @@ Example (agent-specific override for a single provider):
 }
 ```
 
-## Tool groups (shorthands)
+## 工具组（快捷方式）
 
-Tool policies (global, agent, sandbox) support `group:*` entries that expand to multiple tools.
-Use these in `tools.allow` / `tools.deny`.
+工具策略（全局、代理、沙箱）支持 `group:*` 条目，可展开为多个工具。  
+在 `tools.allow` / `tools.deny` 中使用。
 
-Available groups:
+可用的工具组：
 
-- `group:runtime`: `exec`, `bash`, `process`
-- `group:fs`: `read`, `write`, `edit`, `apply_patch`
-- `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `session_status`
-- `group:memory`: `memory_search`, `memory_get`
-- `group:web`: `web_search`, `web_fetch`
-- `group:ui`: `browser`, `canvas`
-- `group:automation`: `cron`, `gateway`
-- `group:messaging`: `message`
-- `group:nodes`: `nodes`
-- `group:openclaw`: all built-in OpenClaw tools (excludes provider plugins)
+- `group:runtime`：`exec`、`bash`、`process`
+- `group:fs`：`read`、`write`、`edit`、`apply_patch`
+- `group:sessions`：`sessions_list`、`sessions_history`、`sessions_send`、`sessions_spawn`、`session_status`
+- `group:memory`：`memory_search`、`memory_get`
+- `group:web`：`web_search`、`web_fetch`
+- `group:ui`：`browser`、`canvas`
+- `group:automation`：`cron`、`gateway`
+- `group:messaging`：`message`
+- `group:nodes`：`nodes`
+- `group:openclaw`：全部内置 OpenClaw 工具（不含提供商插件）
 
-Example (allow only file tools + browser):
+示例（仅允许文件工具 + 浏览器）：
 
 ```json5
 {
@@ -163,72 +158,70 @@ Example (allow only file tools + browser):
 }
 ```
 
-## Plugins + tools
+## 插件 + 工具
 
-Plugins can register **additional tools** (and CLI commands) beyond the core set.
-See [Plugins](/tools/plugin) for install + config, and [Skills](/tools/skills) for how
-tool usage guidance is injected into prompts. Some plugins ship their own skills
-alongside tools (for example, the voice-call plugin).
+插件可注册**额外工具**（及 CLI 命令），超出核心工具集。  
+参阅 [插件](/tools/plugin) 了解安装和配置，参阅 [技能](/tools/skills) 了解如何将工具使用指南注入提示。部分插件自带技能，用于辅助工具（例如，语音通话插件）。
 
-Optional plugin tools:
+可选插件工具：
 
-- [Lobster](/tools/lobster): typed workflow runtime with resumable approvals (requires the Lobster CLI on the gateway host).
-- [LLM Task](/tools/llm-task): JSON-only LLM step for structured workflow output (optional schema validation).
-- [Diffs](/tools/diffs): read-only diff viewer and PNG or PDF file renderer for before/after text or unified patches.
+- [Lobster](/tools/lobster)：带有可恢复审批的类型化工作流运行时（需网关主机上安装 Lobster CLI）。
+- [LLM 任务](/tools/llm-task)：仅 JSON 格式的 LLM 步骤，用于结构化工作流输出（支持可选模式验证）。
+- [差异](/tools/diffs)：只读差异查看器，可渲染前后文本或统一补丁为 PNG 或 PDF 文件。
 
-## Tool inventory
+## 工具清单
 
 ### `apply_patch`
 
-Apply structured patches across one or more files. Use for multi-hunk edits.
-Experimental: enable via `tools.exec.applyPatch.enabled` (OpenAI models only).
-`tools.exec.applyPatch.workspaceOnly` defaults to `true` (workspace-contained). Set it to `false` only if you intentionally want `apply_patch` to write/delete outside the workspace directory.
+对一个或多个文件应用结构化补丁，适合多段编辑。  
+实验性功能：通过 `tools.exec.applyPatch.enabled` 启用（仅限 OpenAI 模型）。  
+`tools.exec.applyPatch.workspaceOnly` 默认为 `true`（限定在工作区内）。仅当你有意让 `apply_patch` 在工作区外写入或删除时，才设置为 `false`。
 
 ### `exec`
 
-Run shell commands in the workspace.
+在工作区内运行 shell 命令。
 
-Core parameters:
+核心参数：
 
-- `command` (required)
-- `yieldMs` (auto-background after timeout, default 10000)
-- `background` (immediate background)
-- `timeout` (seconds; kills the process if exceeded, default 1800)
-- `elevated` (bool; run on host if elevated mode is enabled/allowed; only changes behavior when the agent is sandboxed)
-- `host` (`sandbox | gateway | node`)
-- `security` (`deny | allowlist | full`)
-- `ask` (`off | on-miss | always`)
-- `node` (node id/name for `host=node`)
-- Need a real TTY? Set `pty: true`.
+- `command`（必填）
+- `yieldMs`（超时自动后台，默认 10000）
+- `background`（立即后台）
+- `timeout`（秒；超时强制终止，默认 1800）
+- `elevated`（布尔；启用/允许提升权限模式下在主机运行；仅当代理处于沙箱时生效）
+- `host`（`sandbox` | `gateway` | `node`）
+- `security`（`deny` | `allowlist` | `full`）
+- `ask`（`off` | `on-miss` | `always`）
+- `node`（`host=node` 时指定节点 id/名称）
+- 需要真实终端？设置 `pty: true`。
 
-Notes:
+注意事项：
 
-- Returns `status: "running"` with a `sessionId` when backgrounded.
-- Use `process` to poll/log/write/kill/clear background sessions.
-- If `process` is disallowed, `exec` runs synchronously and ignores `yieldMs`/`background`.
-- `elevated` is gated by `tools.elevated` plus any `agents.list[].tools.elevated` override (both must allow) and is an alias for `host=gateway` + `security=full`.
-- `elevated` only changes behavior when the agent is sandboxed (otherwise it’s a no-op).
-- `host=node` can target a macOS companion app or a headless node host (`openclaw node run`).
-- gateway/node approvals and allowlists: [Exec approvals](/tools/exec-approvals).
+- 后台执行时，返回 `status: "running"` 和 `sessionId`。
+- 使用 `process` 查询/日志/写入/终止/清理后台进程。
+- 如果禁止使用 `process`，`exec` 同步运行，忽略 `yieldMs` 和 `background`。
+- `elevated` 受 `tools.elevated` 及 `agents.list[].tools.elevated` 覆盖限制（两者均需允许），相当于 `host=gateway` 且 `security=full`。
+- `elevated` 仅在代理处于沙箱时改变运行行为（否则无效）。
+- `host=node` 可针对 macOS 伴随程序或无头节点主机（`openclaw node run`）。
+- 网关/节点审批及允许列表详见 [Exec approvals](/tools/exec-approvals)。
 
 ### `process`
 
-Manage background exec sessions.
+管理后台 exec 会话。
 
-Core actions:
+核心操作：
 
-- `list`, `poll`, `log`, `write`, `kill`, `clear`, `remove`
+- `list`、`poll`、`log`、`write`、`kill`、`clear`、`remove`
 
-Notes:
+注意事项：
 
-- `poll` returns new output and exit status when complete.
-- `log` supports line-based `offset`/`limit` (omit `offset` to grab the last N lines).
-- `process` is scoped per agent; sessions from other agents are not visible.
+- `poll` 返回新输出和完成时的退出状态。
+- `log` 支持基于行的 `offset`/`limit`（省略 `offset` 则获取最后 N 行）。
+- `process` 按代理隔离；不可见其他代理的会话。
 
-### `loop-detection` (tool-call loop guardrails)
+### `loop-detection`（工具调用循环守卫）
 
-OpenClaw tracks recent tool-call history and blocks or warns when it detects repetitive no-progress loops.
-Enable with `tools.loopDetection.enabled: true` (default is `false`).
+OpenClaw 跟踪近期工具调用历史，检测到重复无进展循环时阻止或警告。  
+通过 `tools.loopDetection.enabled: true` 启用（默认 `false`）。
 
 ```json5
 {
@@ -249,125 +242,127 @@ Enable with `tools.loopDetection.enabled: true` (default is `false`).
 }
 ```
 
-- `genericRepeat`: repeated same tool + same params call pattern.
-- `knownPollNoProgress`: repeating poll-like tools with identical outputs.
-- `pingPong`: alternating `A/B/A/B` no-progress patterns.
-- Per-agent override: `agents.list[].tools.loopDetection`.
+- `genericRepeat`：重复同一工具及相同参数调用模式。
+- `knownPollNoProgress`：多次轮询类工具输出无变化。
+- `pingPong`：交替 `A/B/A/B` 无进展模式。
+- 单代理覆盖：`agents.list[].tools.loopDetection`。
 
 ### `web_search`
 
-Search the web using Brave Search API.
+使用 Brave Search API 搜索网络。
 
-Core parameters:
+核心参数：
 
-- `query` (required)
-- `count` (1–10; default from `tools.web.search.maxResults`)
+- `query`（必填）
+- `count`（1–10；默认取 `tools.web.search.maxResults`）
 
-Notes:
+注意事项：
 
-- Requires a Brave API key (recommended: `openclaw configure --section web`, or set `BRAVE_API_KEY`).
-- Enable via `tools.web.search.enabled`.
-- Responses are cached (default 15 min).
-- See [Web tools](/tools/web) for setup.
+- 需要 Brave API 密钥（推荐执行 `openclaw configure --section web`，或设置环境变量 `BRAVE_API_KEY`）。
+- 通过 `tools.web.search.enabled` 启用。
+- 响应缓存（默认 15 分钟）。
+- 详见 [Web tools](/tools/web) 配置文档。
 
 ### `web_fetch`
 
-Fetch and extract readable content from a URL (HTML → markdown/text).
+抓取并提取网页内容（HTML → Markdown/文本）。
 
-Core parameters:
+核心参数：
 
-- `url` (required)
-- `extractMode` (`markdown` | `text`)
-- `maxChars` (truncate long pages)
+- `url`（必填）
+- `extractMode`（`markdown` | `text`）
+- `maxChars`（截断超长页面）
 
-Notes:
+注意事项：
 
-- Enable via `tools.web.fetch.enabled`.
-- `maxChars` is clamped by `tools.web.fetch.maxCharsCap` (default 50000).
-- Responses are cached (default 15 min).
-- For JS-heavy sites, prefer the browser tool.
-- See [Web tools](/tools/web) for setup.
-- See [Firecrawl](/tools/firecrawl) for the optional anti-bot fallback.
+- 通过 `tools.web.fetch.enabled` 启用。
+- `maxChars` 最大限制由 `tools.web.fetch.maxCharsCap` 控制（默认 50000）。
+- 响应缓存（默认 15 分钟）。
+- JS 交互重度页面优先使用浏览器工具。
+- 详见 [Web tools](/tools/web)。
+- 另可选用 [Firecrawl](/tools/firecrawl) 作为反爬虫备用方案。
 
 ### `browser`
 
-Control the dedicated OpenClaw-managed browser.
+控制专用的 OpenClaw 管理浏览器。
 
-Core actions:
+核心动作：
 
-- `status`, `start`, `stop`, `tabs`, `open`, `focus`, `close`
-- `snapshot` (aria/ai)
-- `screenshot` (returns image block + `MEDIA:<path>`)
-- `act` (UI actions: click/type/press/hover/drag/select/fill/resize/wait/evaluate)
-- `navigate`, `console`, `pdf`, `upload`, `dialog`
+- `status`、`start`、`stop`、`tabs`、`open`、`focus`、`close`
+- `snapshot`（aria/ai）
+- `screenshot`（返回图片块 + `MEDIA:<path>`）
+- `act`（UI 操作：点击/输入/按键/悬浮/拖拽/选择/填写/调整尺寸/等待/执行 JS）
+- `navigate`、`console`、`pdf`、`upload`、`dialog`
 
-Profile management:
+配置管理：
 
-- `profiles` — list all browser profiles with status
-- `create-profile` — create new profile with auto-allocated port (or `cdpUrl`)
-- `delete-profile` — stop browser, delete user data, remove from config (local only)
-- `reset-profile` — kill orphan process on profile's port (local only)
+- `profiles` — 列出所有浏览器配置文件及状态
+- `create-profile` — 新建配置文件，自动分配端口（或指定 `cdpUrl`）
+- `delete-profile` — 停止浏览器，删除用户数据，从配置中移除（本地限定）
+- `reset-profile` — 重启端口孤儿进程（本地限定）
 
-Common parameters:
+常用参数：
 
-- `profile` (optional; defaults to `browser.defaultProfile`)
-- `target` (`sandbox` | `host` | `node`)
-- `node` (optional; picks a specific node id/name)
-  Notes:
-- Requires `browser.enabled=true` (default is `true`; set `false` to disable).
-- All actions accept optional `profile` parameter for multi-instance support.
-- When `profile` is omitted, uses `browser.defaultProfile` (defaults to "chrome").
-- Profile names: lowercase alphanumeric + hyphens only (max 64 chars).
-- Port range: 18800-18899 (~100 profiles max).
-- Remote profiles are attach-only (no start/stop/reset).
-- If a browser-capable node is connected, the tool may auto-route to it (unless you pin `target`).
-- `snapshot` defaults to `ai` when Playwright is installed; use `aria` for the accessibility tree.
-- `snapshot` also supports role-snapshot options (`interactive`, `compact`, `depth`, `selector`) which return refs like `e12`.
-- `act` requires `ref` from `snapshot` (numeric `12` from AI snapshots, or `e12` from role snapshots); use `evaluate` for rare CSS selector needs.
-- Avoid `act` → `wait` by default; use it only in exceptional cases (no reliable UI state to wait on).
-- `upload` can optionally pass a `ref` to auto-click after arming.
-- `upload` also supports `inputRef` (aria ref) or `element` (CSS selector) to set `<input type="file">` directly.
+- `profile`（可选；默认取 `browser.defaultProfile`）
+- `target`（`sandbox` | `host` | `node`）
+- `node`（可选；指定节点 id/名称）
+
+注意事项：
+
+- 需启用 `browser.enabled=true`（默认启用；设置为 `false` 可禁用）。
+- 所有操作支持可选 `profile`，支持多实例。
+- 未指定 `profile` 时，使用 `browser.defaultProfile`（默认为 "chrome"）。
+- 配置文件名只允许小写字母数字加连字符（最长 64 字符）。
+- 端口范围：18800-18899（最多约 100 个配置文件）。
+- 远程配置文件仅支持连接，不支持启动/停止/重置。
+- 若已连接具浏览器功能节点，工具可能自动路由至该节点（除非锁定 `target`）。
+- Playwright 安装时，`snapshot` 默认使用 `ai` 模式；使用 `aria` 可获取辅助功能树。
+- `snapshot` 还支持 role-snapshot 选项（`interactive`、`compact`、`depth`、`selector`），返回类似 `e12` 的引用。
+- `act` 需要 `snapshot` 产生的 `ref`（AI 快照为数字，如 `12`，辅助快照为 `e12`）；少数 CSS 选择器使用 `evaluate`。
+- 默认避免 `act` 后紧跟 `wait`，仅在特殊场景使用（无可靠 UI 状态等待）。
+- `upload` 可选传递 `ref`，自动点击以启动上传。
+- `upload` 支持 `inputRef`（aria 引用）或 `element`（CSS 选择器），直接设置 `<input type="file">`。
 
 ### `canvas`
 
-Drive the node Canvas (present, eval, snapshot, A2UI).
+驱动节点画布（呈现、执行、快照、A2UI）。
 
-Core actions:
+核心动作：
 
-- `present`, `hide`, `navigate`, `eval`
-- `snapshot` (returns image block + `MEDIA:<path>`)
-- `a2ui_push`, `a2ui_reset`
+- `present`、`hide`、`navigate`、`eval`
+- `snapshot`（返回图片块 + `MEDIA:<path>`）
+- `a2ui_push`、`a2ui_reset`
 
-Notes:
+注意事项：
 
-- Uses gateway `node.invoke` under the hood.
-- If no `node` is provided, the tool picks a default (single connected node or local mac node).
-- A2UI is v0.8 only (no `createSurface`); the CLI rejects v0.9 JSONL with line errors.
-- Quick smoke: `openclaw nodes canvas a2ui push --node <id> --text "Hello from A2UI"`.
+- 底层调用网关的 `node.invoke`。
+- 未指定 `node` 时，自动选择默认（唯一连接节点或本地 mac 节点）。
+- A2UI 仅支持 v0.8（无 `createSurface`），CLI 拒绝 v0.9 JSONL 并报错。
+- 快速示例：`openclaw nodes canvas a2ui push --node <id> --text "Hello from A2UI"`。
 
 ### `nodes`
 
-Discover and target paired nodes; send notifications; capture camera/screen.
+发现和操作配对节点；发送通知；拍摄相机或屏幕内容。
 
-Core actions:
+核心动作：
 
-- `status`, `describe`
-- `pending`, `approve`, `reject` (pairing)
-- `notify` (macOS `system.notify`)
-- `run` (macOS `system.run`)
-- `camera_list`, `camera_snap`, `camera_clip`, `screen_record`
-- `location_get`, `notifications_list`, `notifications_action`
-- `device_status`, `device_info`, `device_permissions`, `device_health`
+- `status`、`describe`
+- `pending`、`approve`、`reject`（配对流程）
+- `notify`（macOS 系统通知）
+- `run`（macOS 系统运行）
+- `camera_list`、`camera_snap`、`camera_clip`、`screen_record`
+- `location_get`、`notifications_list`、`notifications_action`
+- `device_status`、`device_info`、`device_permissions`、`device_health`
 
-Notes:
+注意事项：
 
-- Camera/screen commands require the node app to be foregrounded.
-- Images return image blocks + `MEDIA:<path>`.
-- Videos return `FILE:<path>` (mp4).
-- Location returns a JSON payload (lat/lon/accuracy/timestamp).
-- `run` params: `command` argv array; optional `cwd`, `env` (`KEY=VAL`), `commandTimeoutMs`, `invokeTimeoutMs`, `needsScreenRecording`.
+- 相机/屏幕指令要求节点程序窗口处于前台。
+- 图片返回图片块 + `MEDIA:<path>`。
+- 视频返回 `FILE:<path>`（mp4 格式）。
+- 位置返回 JSON 负载（经度/纬度/精度/时间戳）。
+- `run` 参数：`command`（argv 数组）；可选 `cwd`、`env`（`KEY=VAL`）、`commandTimeoutMs`、`invokeTimeoutMs`、`needsScreenRecording`。
 
-Example (`run`):
+示例（`run`）：
 
 ```json
 {
@@ -383,34 +378,34 @@ Example (`run`):
 
 ### `image`
 
-Analyze an image with the configured image model.
+使用配置的图像模型分析图像。
 
-Core parameters:
+核心参数：
 
-- `image` (required path or URL)
-- `prompt` (optional; defaults to "Describe the image.")
-- `model` (optional override)
-- `maxBytesMb` (optional size cap)
+- `image`（必填，路径或 URL）
+- `prompt`（可选，默认 "Describe the image."）
+- `model`（可选覆盖）
+- `maxBytesMb`（可选大小限制）
 
-Notes:
+注意事项：
 
-- Only available when `agents.defaults.imageModel` is configured (primary or fallbacks), or when an implicit image model can be inferred from your default model + configured auth (best-effort pairing).
-- Uses the image model directly (independent of the main chat model).
+- 仅当配置了 `agents.defaults.imageModel`（主模型或备选）或可从默认模型+授权推断隐式图像模型时可用（最佳匹配）。
+- 直接调用图像模型，与主聊天模型独立。
 
 ### `pdf`
 
-Analyze one or more PDF documents.
+分析一个或多个 PDF 文档。
 
-For full behavior, limits, config, and examples, see [PDF tool](/tools/pdf).
+完整行为、限制、配置和示例详见 [PDF 工具](/tools/pdf)。
 
 ### `message`
 
-Send messages and channel actions across Discord/Google Chat/Slack/Telegram/WhatsApp/Signal/iMessage/MS Teams.
+跨 Discord/Google Chat/Slack/Telegram/WhatsApp/Signal/iMessage/MS Teams 发送消息和频道操作。
 
-Core actions:
+核心动作：
 
-- `send` (text + optional media; MS Teams also supports `card` for Adaptive Cards)
-- `poll` (WhatsApp/Discord/MS Teams polls)
+- `send`（文本 + 可选媒体；MS Teams 还支持 Adaptive Cards 的 `card`）
+- `poll`（WhatsApp/Discord/MS Teams 调查）
 - `react` / `reactions` / `read` / `edit` / `delete`
 - `pin` / `unpin` / `list-pins`
 - `permissions`
@@ -425,145 +420,144 @@ Core actions:
 - `event-list` / `event-create`
 - `timeout` / `kick` / `ban`
 
-Notes:
+注意事项：
 
-- `send` routes WhatsApp via the Gateway; other channels go direct.
-- `poll` uses the Gateway for WhatsApp and MS Teams; Discord polls go direct.
-- When a message tool call is bound to an active chat session, sends are constrained to that session’s target to avoid cross-context leaks.
+- WhatsApp 的 `send` 使用网关转发；其他频道直连。
+- WhatsApp 和 MS Teams 的 `poll` 使用网关；Discord 直接发送。
+- 当消息工具调用绑定至活跃聊天会话时，发送限制为该会话目标，避免跨上下文泄漏。
 
 ### `cron`
 
-Manage Gateway cron jobs and wakeups.
+管理网关定时任务和唤醒。
 
-Core actions:
+核心动作：
 
-- `status`, `list`
-- `add`, `update`, `remove`, `run`, `runs`
-- `wake` (enqueue system event + optional immediate heartbeat)
+- `status`、`list`
+- `add`、`update`、`remove`、`run`、`runs`
+- `wake`（入队系统事件 + 可选立即心跳）
 
-Notes:
+注意事项：
 
-- `add` expects a full cron job object (same schema as `cron.add` RPC).
-- `update` uses `{ jobId, patch }` (`id` accepted for compatibility).
+- `add` 需完整定时任务对象（与 `cron.add` RPC 结构相同）。
+- `update` 使用 `{ jobId, patch }` 格式（兼容接受 `id` 字段）。
 
 ### `gateway`
 
-Restart or apply updates to the running Gateway process (in-place).
+重启或应用网关进程的更新（在线升级）。
 
-Core actions:
+核心动作：
 
-- `restart` (authorizes + sends `SIGUSR1` for in-process restart; `openclaw gateway` restart in-place)
-- `config.schema.lookup` (inspect one config path at a time without loading the full schema into prompt context)
+- `restart`（授权并发送 `SIGUSR1` 实现进程内重启；等同于 `openclaw gateway` 在线重启）
+- `config.schema.lookup`（单独检查一个配置路径，无需加载整个 schema）
 - `config.get`
-- `config.apply` (validate + write config + restart + wake)
-- `config.patch` (merge partial update + restart + wake)
-- `update.run` (run update + restart + wake)
+- `config.apply`（校验 + 写入配置 + 重启 + 唤醒）
+- `config.patch`（合并增量更新 + 重启 + 唤醒）
+- `update.run`（执行更新 + 重启 + 唤醒）
 
-Notes:
+注意事项：
 
-- `config.schema.lookup` expects a targeted dot path such as `gateway.auth` or `agents.list.*.heartbeat`.
-- Use `delayMs` (defaults to 2000) to avoid interrupting an in-flight reply.
-- `config.schema` remains available to internal Control UI flows and is not exposed through the agent `gateway` tool.
-- `restart` is enabled by default; set `commands.restart: false` to disable it.
+- `config.schema.lookup` 期望具体点路径，如 `gateway.auth` 或 `agents.list.*.heartbeat`。
+- 使用 `delayMs`（默认 2000）避免打断正常回复。
+- `config.schema` 对内部 Control UI 流程开放，但不通过代理 `gateway` 工具暴露。
+- `restart` 默认启用；设置 `commands.restart: false` 禁用。
 
 ### `sessions_list` / `sessions_history` / `sessions_send` / `sessions_spawn` / `session_status`
 
-List sessions, inspect transcript history, or send to another session.
+列出会话、查看历史记录，或向其他会话发送消息。
 
-Core parameters:
+核心参数：
 
-- `sessions_list`: `kinds?`, `limit?`, `activeMinutes?`, `messageLimit?` (0 = none)
-- `sessions_history`: `sessionKey` (or `sessionId`), `limit?`, `includeTools?`
-- `sessions_send`: `sessionKey` (or `sessionId`), `message`, `timeoutSeconds?` (0 = fire-and-forget)
-- `sessions_spawn`: `task`, `label?`, `runtime?`, `agentId?`, `model?`, `thinking?`, `cwd?`, `runTimeoutSeconds?`, `thread?`, `mode?`, `cleanup?`, `sandbox?`, `streamTo?`, `attachments?`, `attachAs?`
-- `session_status`: `sessionKey?` (default current; accepts `sessionId`), `model?` (`default` clears override)
+- `sessions_list`：`kinds?`、`limit?`、`activeMinutes?`、`messageLimit?`（0=无）
+- `sessions_history`：`sessionKey`（或 `sessionId`）、`limit?`、`includeTools?`
+- `sessions_send`：`sessionKey`（或 `sessionId`）、`message`、`timeoutSeconds?`（0=火并忘记）
+- `sessions_spawn`：`task`、`label?`、`runtime?`、`agentId?`、`model?`、`thinking?`、`cwd?`、`runTimeoutSeconds?`、`thread?`、`mode?`、`cleanup?`、`sandbox?`、`streamTo?`、`attachments?`、`attachAs?`
+- `session_status`：`sessionKey?`（默认当前；支持 `sessionId`）、`model?`（`default` 清除覆盖）
 
-Notes:
+注意事项：
 
-- `main` is the canonical direct-chat key; global/unknown are hidden.
-- `messageLimit > 0` fetches last N messages per session (tool messages filtered).
-- Session targeting is controlled by `tools.sessions.visibility` (default `tree`: current session + spawned subagent sessions). If you run a shared agent for multiple users, consider setting `tools.sessions.visibility: "self"` to prevent cross-session browsing.
-- `sessions_send` waits for final completion when `timeoutSeconds > 0`.
-- Delivery/announce happens after completion and is best-effort; `status: "ok"` confirms the agent run finished, not that the announce was delivered.
-- `sessions_spawn` supports `runtime: "subagent" | "acp"` (`subagent` default). For ACP runtime behavior, see [ACP Agents](/tools/acp-agents).
-- For ACP runtime, `streamTo: "parent"` routes initial-run progress summaries back to the requester session as system events instead of direct child delivery.
-- `sessions_spawn` starts a sub-agent run and posts an announce reply back to the requester chat.
-  - Supports one-shot mode (`mode: "run"`) and persistent thread-bound mode (`mode: "session"` with `thread: true`).
-  - If `thread: true` and `mode` is omitted, mode defaults to `session`.
-  - `mode: "session"` requires `thread: true`.
-  - If `runTimeoutSeconds` is omitted, OpenClaw uses `agents.defaults.subagents.runTimeoutSeconds` when set; otherwise timeout defaults to `0` (no timeout).
-  - Discord thread-bound flows depend on `session.threadBindings.*` and `channels.discord.threadBindings.*`.
-  - Reply format includes `Status`, `Result`, and compact stats.
-  - `Result` is the assistant completion text; if missing, the latest `toolResult` is used as fallback.
-- Manual completion-mode spawns send directly first, with queue fallback and retry on transient failures (`status: "ok"` means run finished, not that announce delivered).
-- `sessions_spawn` supports inline file attachments for subagent runtime only (ACP rejects them). Each attachment has `name`, `content`, and optional `encoding` (`utf8` or `base64`) and `mimeType`. Files are materialized into the child workspace at `.openclaw/attachments/<uuid>/` with a `.manifest.json` metadata file. The tool returns a receipt with `count`, `totalBytes`, per file `sha256`, and `relDir`. Attachment content is automatically redacted from transcript persistence.
-  - Configure limits via `tools.sessions_spawn.attachments` (`enabled`, `maxTotalBytes`, `maxFiles`, `maxFileBytes`, `retainOnSessionKeep`).
-  - `attachAs.mountPath` is a reserved hint for future mount implementations.
-- `sessions_spawn` is non-blocking and returns `status: "accepted"` immediately.
-- ACP `streamTo: "parent"` responses may include `streamLogPath` (session-scoped `*.acp-stream.jsonl`) for tailing progress history.
-- `sessions_send` runs a reply‑back ping‑pong (reply `REPLY_SKIP` to stop; max turns via `session.agentToAgent.maxPingPongTurns`, 0–5).
-- After the ping‑pong, the target agent runs an **announce step**; reply `ANNOUNCE_SKIP` to suppress the announcement.
-- Sandbox clamp: when the current session is sandboxed and `agents.defaults.sandbox.sessionToolsVisibility: "spawned"`, OpenClaw clamps `tools.sessions.visibility` to `tree`.
+- `main` 是直接对话的规范 key；global/unknown 不显示。
+- `messageLimit > 0` 时每会话取最近 N 条消息（过滤工具消息）。
+- 会话目标受 `tools.sessions.visibility` 控制（默认 `tree`：当前会话加生成的子代理会话）。如运行多用户共享代理，建议设为 `tools.sessions.visibility: "self"` 防止跨会话查看。
+- `sessions_send` 当 `timeoutSeconds > 0` 时等待最终完成。
+- 发送/通知发生在完成后，且为尽力而为；`status: "ok"` 意味运行完毕，不保证通知送达。
+- `sessions_spawn` 支持 `runtime: "subagent"` 或 `"acp"`（默认 `subagent`）。ACP 运行时行为见 [ACP Agents](/tools/acp-agents)。
+- ACP 运行时，`streamTo: "parent"` 会将初步进度摘要作为系统事件传回请求会话，而非直接子会话传递。
+- `sessions_spawn` 启动子代理任务，并向请求聊天发布通告回复。
+  - 支持一次性模式（`mode: "run"`）和持久线程绑定模式（`mode: "session"` 且 `thread: true`）。
+  - 若 `thread: true` 且省略 `mode`，默认为 `session`。
+  - `mode: "session"` 必须 `thread: true`。
+  - 若未指定 `runTimeoutSeconds`，OpenClaw 使用 `agents.defaults.subagents.runTimeoutSeconds`（若配置）；否则超时设为 0（无限制）。
+  - Discord 线程绑定依赖于 `session.threadBindings.*` 和 `channels.discord.threadBindings.*`。
+  - 回复格式包含 `Status`、`Result` 及简洁统计信息。
+  - `Result` 是助手回复文本；缺失时采用最新的 `toolResult` 作为备用。
+- 完成模式下，先同步发送，出现队列，遇暂时失败重试（`status: "ok"` 表示运行结束，不代表通告完成）。
+- `sessions_spawn` 仅限子代理运行时支持内联文件附件（ACP 不支持）。每个附件包括 `name`、`content` 及可选 `encoding`（`utf8` 或 `base64`）和 `mimeType`。文件会被存放至子工作区 `.openclaw/attachments/<uuid>/` 内，含 `.manifest.json` 元数据文件。工具返回收据包含附件数、总字节数、每文件 `sha256` 和相对路径。附件内容自动从转录持久化中脱敏。
+  - 通过 `tools.sessions_spawn.attachments` 配置限制（`enabled`、`maxTotalBytes`、`maxFiles`、`maxFileBytes`、`retainOnSessionKeep`）。
+  - `attachAs.mountPath` 为未来挂载实现预留提示。
+- `sessions_spawn` 非阻塞，立即返回 `status: "accepted"`。
+- ACP 运行时，`streamTo: "parent"` 响应可能包含 `streamLogPath`（会话范围内 `*.acp-stream.jsonl`），用于尾部进度日志。
+- `sessions_send` 运行回声问答（回复 `REPLY_SKIP` 停止；最大回合数 `session.agentToAgent.maxPingPongTurns`，0–5）。
+- 回声结束后，目标代理执行**通告步骤**；回复 `ANNOUNCE_SKIP` 可跳过通知。
+- 沙箱限制：当当前会话处于沙箱且 `agents.defaults.sandbox.sessionToolsVisibility: "spawned"` 时，OpenClaw 会将 `tools.sessions.visibility` 限制为 `tree`。
 
 ### `agents_list`
 
-List agent ids that the current session may target with `sessions_spawn`.
+列出当前会话可用的代理 id（供 `sessions_spawn` 目标）。
 
-Notes:
+注意事项：
 
-- Result is restricted to per-agent allowlists (`agents.list[].subagents.allowAgents`).
-- When `["*"]` is configured, the tool includes all configured agents and marks `allowAny: true`.
+- 结果受限于每代理允许列表（`agents.list[].subagents.allowAgents`）。
+- 当配置为 `["*"]` 时，包含全部配置代理，并标记 `allowAny: true`。
 
-## Parameters (common)
+## 参数（通用）
 
-Gateway-backed tools (`canvas`, `nodes`, `cron`):
+网关支持工具（`canvas`、`nodes`、`cron`）：
 
-- `gatewayUrl` (default `ws://127.0.0.1:18789`)
-- `gatewayToken` (if auth enabled)
+- `gatewayUrl`（默认 `ws://127.0.0.1:18789`）
+- `gatewayToken`（启用身份验证时）
 - `timeoutMs`
 
-Note: when `gatewayUrl` is set, include `gatewayToken` explicitly. Tools do not inherit config
-or environment credentials for overrides, and missing explicit credentials is an error.
+注意：配置了 `gatewayUrl` 时必须显式包含 `gatewayToken`。工具不会继承配置或环境凭据，缺失显式认证视为错误。
 
-Browser tool:
+浏览器工具：
 
-- `profile` (optional; defaults to `browser.defaultProfile`)
-- `target` (`sandbox` | `host` | `node`)
-- `node` (optional; pin a specific node id/name)
+- `profile`（可选；默认取 `browser.defaultProfile`）
+- `target`（`sandbox` | `host` | `node`）
+- `node`（可选；锁定特定节点 id/名称）
 
-## Recommended agent flows
+## 推荐的代理流程
 
-Browser automation:
+浏览器自动化：
 
 1. `browser` → `status` / `start`
-2. `snapshot` (ai or aria)
-3. `act` (click/type/press)
-4. `screenshot` if you need visual confirmation
+2. `snapshot`（ai 或 aria）
+3. `act`（点击/输入/按键）
+4. 需要视觉确认时，执行 `screenshot`
 
-Canvas render:
+画布渲染：
 
 1. `canvas` → `present`
-2. `a2ui_push` (optional)
+2. （可选）`a2ui_push`
 3. `snapshot`
 
-Node targeting:
+节点定位：
 
 1. `nodes` → `status`
-2. `describe` on the chosen node
+2. 选定节点执行 `describe`
 3. `notify` / `run` / `camera_snap` / `screen_record`
 
-## Safety
+## 安全性
 
-- Avoid direct `system.run`; use `nodes` → `run` only with explicit user consent.
-- Respect user consent for camera/screen capture.
-- Use `status/describe` to ensure permissions before invoking media commands.
+- 避免直接调用 `system.run`，仅在获得明确用户许可时使用 `nodes` → `run`。
+- 尊重用户摄像头和屏幕采集许可。
+- 先调用 `status`/`describe` 确认权限，再执行媒体相关命令。
 
-## How tools are presented to the agent
+## 工具如何呈现给代理
 
-Tools are exposed in two parallel channels:
+工具通过两种并行渠道暴露：
 
-1. **System prompt text**: a human-readable list + guidance.
-2. **Tool schema**: the structured function definitions sent to the model API.
+1. **系统提示文本**：人类可读的列表及使用指导。
+2. **工具 schema**：以结构化函数定义形式发送给模型 API。
 
-That means the agent sees both “what tools exist” and “how to call them.” If a tool
-doesn’t appear in the system prompt or the schema, the model cannot call it.
+这意味着代理同时“知道有哪些工具”和“如何调用”。  
+若工具未出现在系统提示或 schema 中，模型无法调用该工具。

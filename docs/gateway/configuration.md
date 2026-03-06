@@ -1,29 +1,29 @@
 ---
-summary: "Configuration overview: common tasks, quick setup, and links to the full reference"
+summary: "配置概览：常见任务、快速设置及完整参考链接"
 read_when:
-  - Setting up OpenClaw for the first time
-  - Looking for common configuration patterns
-  - Navigating to specific config sections
-title: "Configuration"
+  - 第一次设置 OpenClaw
+  - 寻找常见配置模式
+  - 导航到特定配置部分
+title: "配置"
 ---
 
-# Configuration
+# 配置
 
-OpenClaw reads an optional <Tooltip tip="JSON5 supports comments and trailing commas">**JSON5**</Tooltip> config from `~/.openclaw/openclaw.json`.
+OpenClaw 会从 `~/.openclaw/openclaw.json` 读取一个可选的 <Tooltip tip="JSON5 支持注释和尾随逗号">**JSON5**</Tooltip> 配置文件。
 
-If the file is missing, OpenClaw uses safe defaults. Common reasons to add a config:
+如果文件不存在，OpenClaw 将使用安全默认值。添加配置的常见原因包括：
 
-- Connect channels and control who can message the bot
-- Set models, tools, sandboxing, or automation (cron, hooks)
-- Tune sessions, media, networking, or UI
+- 连接渠道并控制谁可以给机器人发消息
+- 设置模型、工具、沙箱环境或自动化（定时任务、钩子）
+- 调整会话、媒体、网络或 UI
 
-See the [full reference](/gateway/configuration-reference) for every available field.
+请参阅所有可用字段的[完整参考](/gateway/configuration-reference)。
 
 <Tip>
-**New to configuration?** Start with `openclaw onboard` for interactive setup, or check out the [Configuration Examples](/gateway/configuration-examples) guide for complete copy-paste configs.
+**配置新手？** 请先运行 `openclaw onboard` 进行交互式设置，或查看 [配置示例](/gateway/configuration-examples) 指南，获取完整的复制粘贴配置。
 </Tip>
 
-## Minimal config
+## 最小配置
 
 ```json5
 // ~/.openclaw/openclaw.json
@@ -33,49 +33,49 @@ See the [full reference](/gateway/configuration-reference) for every available f
 }
 ```
 
-## Editing config
+## 编辑配置
 
 <Tabs>
-  <Tab title="Interactive wizard">
+  <Tab title="交互式向导">
     ```bash
-    openclaw onboard       # full setup wizard
-    openclaw configure     # config wizard
+    openclaw onboard       # 完整设置向导
+    openclaw configure     # 配置向导
     ```
   </Tab>
-  <Tab title="CLI (one-liners)">
+  <Tab title="命令行（单行命令）">
     ```bash
     openclaw config get agents.defaults.workspace
     openclaw config set agents.defaults.heartbeat.every "2h"
     openclaw config unset tools.web.search.apiKey
     ```
   </Tab>
-  <Tab title="Control UI">
-    Open [http://127.0.0.1:18789](http://127.0.0.1:18789) and use the **Config** tab.
-    The Control UI renders a form from the config schema, with a **Raw JSON** editor as an escape hatch.
+  <Tab title="控制面板 UI">
+    打开 [http://127.0.0.1:18789](http://127.0.0.1:18789) 并使用 **配置** 标签页。
+    控制面板 UI 根据配置 schema 渲染表单，并提供一个 **原始 JSON** 编辑器作为应急方案。
   </Tab>
-  <Tab title="Direct edit">
-    Edit `~/.openclaw/openclaw.json` directly. The Gateway watches the file and applies changes automatically (see [hot reload](#config-hot-reload)).
+  <Tab title="直接编辑">
+    直接编辑 `~/.openclaw/openclaw.json` 文件。Gateway 会监视该文件并自动应用更改（参见 [热重载](#config-hot-reload)）。
   </Tab>
 </Tabs>
 
-## Strict validation
+## 严格校验
 
 <Warning>
-OpenClaw only accepts configurations that fully match the schema. Unknown keys, malformed types, or invalid values cause the Gateway to **refuse to start**. The only root-level exception is `$schema` (string), so editors can attach JSON Schema metadata.
+OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无效值都会导致 Gateway **拒绝启动**。唯一的根级例外是 `$schema`（字符串），允许编辑器附加 JSON Schema 元数据。
 </Warning>
 
-When validation fails:
+校验失败时：
 
-- The Gateway does not boot
-- Only diagnostic commands work (`openclaw doctor`, `openclaw logs`, `openclaw health`, `openclaw status`)
-- Run `openclaw doctor` to see exact issues
-- Run `openclaw doctor --fix` (or `--yes`) to apply repairs
+- Gateway 不启动
+- 仅诊断命令可用（`openclaw doctor`、`openclaw logs`、`openclaw health`、`openclaw status`）
+- 运行 `openclaw doctor` 查看具体问题
+- 运行 `openclaw doctor --fix`（或 `--yes`）自动修复
 
-## Common tasks
+## 常见任务
 
 <AccordionGroup>
-  <Accordion title="Set up a channel (WhatsApp, Telegram, Discord, etc.)">
-    Each channel has its own config section under `channels.<provider>`. See the dedicated channel page for setup steps:
+  <Accordion title="设置渠道（WhatsApp、Telegram、Discord 等）">
+    每个渠道都有自己的配置节，位于 `channels.<provider>` 下。请参见对应渠道页面的设置步骤：
 
     - [WhatsApp](/channels/whatsapp) — `channels.whatsapp`
     - [Telegram](/channels/telegram) — `channels.telegram`
@@ -87,7 +87,7 @@ When validation fails:
     - [Mattermost](/channels/mattermost) — `channels.mattermost`
     - [MS Teams](/channels/msteams) — `channels.msteams`
 
-    All channels share the same DM policy pattern:
+    所有渠道共享相同的私信（DM）策略模式：
 
     ```json5
     {
@@ -96,7 +96,7 @@ When validation fails:
           enabled: true,
           botToken: "123:abc",
           dmPolicy: "pairing",   // pairing | allowlist | open | disabled
-          allowFrom: ["tg:123"], // only for allowlist/open
+          allowFrom: ["tg:123"], // 仅适用于 allowlist/open
         },
       },
     }
@@ -104,8 +104,8 @@ When validation fails:
 
   </Accordion>
 
-  <Accordion title="Choose and configure models">
-    Set the primary model and optional fallbacks:
+  <Accordion title="选择并配置模型">
+    设置主模型及可选的备用模型：
 
     ```json5
     {
@@ -124,30 +124,30 @@ When validation fails:
     }
     ```
 
-    - `agents.defaults.models` defines the model catalog and acts as the allowlist for `/model`.
-    - Model refs use `provider/model` format (e.g. `anthropic/claude-opus-4-6`).
-    - `agents.defaults.imageMaxDimensionPx` controls transcript/tool image downscaling (default `1200`); lower values usually reduce vision-token usage on screenshot-heavy runs.
-    - See [Models CLI](/concepts/models) for switching models in chat and [Model Failover](/concepts/model-failover) for auth rotation and fallback behavior.
-    - For custom/self-hosted providers, see [Custom providers](/gateway/configuration-reference#custom-providers-and-base-urls) in the reference.
+    - `agents.defaults.models` 定义模型目录并作为 `/model` 的白名单。
+    - 模型引用格式为 `provider/model`（如 `anthropic/claude-opus-4-6`）。
+    - `agents.defaults.imageMaxDimensionPx` 控制转录/工具图像的缩放（默认 `1200`）；较低的数值通常在截图密集的运行中减少视觉令牌使用量。
+    - 参见 [模型命令行](/concepts/models) 以在聊天中切换模型，以及 [模型故障转移](/concepts/model-failover) 了解身份验证轮换和备用行为。
+    - 自定义/自托管提供者请参阅参考中的[自定义提供者](/gateway/configuration-reference#custom-providers-and-base-urls)。
 
   </Accordion>
 
-  <Accordion title="Control who can message the bot">
-    DM access is controlled per channel via `dmPolicy`:
+  <Accordion title="控制谁可以给机器人发消息">
+    私信访问通过渠道的 `dmPolicy` 控制：
 
-    - `"pairing"` (default): unknown senders get a one-time pairing code to approve
-    - `"allowlist"`: only senders in `allowFrom` (or the paired allow store)
-    - `"open"`: allow all inbound DMs (requires `allowFrom: ["*"]`)
-    - `"disabled"`: ignore all DMs
+    - `"pairing"`（默认）：未知发送者获得一次性配对码用于批准
+    - `"allowlist"`：仅允许 `allowFrom` 中的发送者（或配对的允许存储）
+    - `"open"`：允许所有入站私信（需设为 `allowFrom: ["*"]`）
+    - `"disabled"`：忽略所有私信
 
-    For groups, use `groupPolicy` + `groupAllowFrom` or channel-specific allowlists.
+    群组请使用 `groupPolicy` + `groupAllowFrom` 或渠道特定的允许列表。
 
-    See the [full reference](/gateway/configuration-reference#dm-and-group-access) for per-channel details.
+    详情请参阅[完整参考](/gateway/configuration-reference#dm-and-group-access)。
 
   </Accordion>
 
-  <Accordion title="Set up group chat mention gating">
-    Group messages default to **require mention**. Configure patterns per agent:
+  <Accordion title="设置群聊@提及门控">
+    群消息默认 **需要提及**。可按代理配置匹配模式：
 
     ```json5
     {
@@ -169,19 +169,19 @@ When validation fails:
     }
     ```
 
-    - **Metadata mentions**: native @-mentions (WhatsApp tap-to-mention, Telegram @bot, etc.)
-    - **Text patterns**: regex patterns in `mentionPatterns`
-    - See [full reference](/gateway/configuration-reference#group-chat-mention-gating) for per-channel overrides and self-chat mode.
+    - **元数据提及**：原生的 @-提及（WhatsApp 点击@，Telegram @bot 等）
+    - **文本模式**：`mentionPatterns` 中的正则表达式
+    - 详见[完整参考](/gateway/configuration-reference#group-chat-mention-gating)了解渠道覆盖和自聊模式
 
   </Accordion>
 
-  <Accordion title="Configure sessions and resets">
-    Sessions control conversation continuity and isolation:
+  <Accordion title="配置会话与重置">
+    会话控制对话连续性和隔离：
 
     ```json5
     {
       session: {
-        dmScope: "per-channel-peer",  // recommended for multi-user
+        dmScope: "per-channel-peer",  // 推荐多用户使用
         threadBindings: {
           enabled: true,
           idleHours: 24,
@@ -196,15 +196,15 @@ When validation fails:
     }
     ```
 
-    - `dmScope`: `main` (shared) | `per-peer` | `per-channel-peer` | `per-account-channel-peer`
-    - `threadBindings`: global defaults for thread-bound session routing (Discord supports `/focus`, `/unfocus`, `/agents`, `/session idle`, and `/session max-age`).
-    - See [Session Management](/concepts/session) for scoping, identity links, and send policy.
-    - See [full reference](/gateway/configuration-reference#session) for all fields.
+    - `dmScope`：`main`（共享）| `per-peer` | `per-channel-peer` | `per-account-channel-peer`
+    - `threadBindings`：线程绑定的全局默认，会话路由（Discord 支持 `/focus`、`/unfocus`、`/agents`、`/session idle` 和 `/session max-age`）。
+    - 详见 [会话管理](/concepts/session) 了解作用域、身份链接和发送策略。
+    - 详见[完整参考](/gateway/configuration-reference#session)获取所有字段。
 
   </Accordion>
 
-  <Accordion title="Enable sandboxing">
-    Run agent sessions in isolated Docker containers:
+  <Accordion title="启用沙箱环境">
+    在隔离的 Docker 容器中运行代理会话：
 
     ```json5
     {
@@ -219,13 +219,13 @@ When validation fails:
     }
     ```
 
-    Build the image first: `scripts/sandbox-setup.sh`
+    请先构建镜像：`scripts/sandbox-setup.sh`
 
-    See [Sandboxing](/gateway/sandboxing) for the full guide and [full reference](/gateway/configuration-reference#sandbox) for all options.
+    详见[沙箱环境指南](/gateway/sandboxing)及[完整参考](/gateway/configuration-reference#sandbox)了解所有选项。
 
   </Accordion>
 
-  <Accordion title="Set up heartbeat (periodic check-ins)">
+  <Accordion title="设置心跳（周期性签到）">
     ```json5
     {
       agents: {
@@ -239,14 +239,14 @@ When validation fails:
     }
     ```
 
-    - `every`: duration string (`30m`, `2h`). Set `0m` to disable.
-    - `target`: `last` | `whatsapp` | `telegram` | `discord` | `none`
-    - `directPolicy`: `allow` (default) or `block` for DM-style heartbeat targets
-    - See [Heartbeat](/gateway/heartbeat) for the full guide.
+    - `every`：时间间隔字符串（如 `30m`、`2h`），设置 `0m` 禁用。
+    - `target`：`last` | `whatsapp` | `telegram` | `discord` | `none`
+    - `directPolicy`：DM 风格心跳目标的策略，默认为 `allow`，可设为 `block`
+    - 详见[心跳指南](/gateway/heartbeat)
 
   </Accordion>
 
-  <Accordion title="Configure cron jobs">
+  <Accordion title="配置定时任务">
     ```json5
     {
       cron: {
@@ -261,14 +261,14 @@ When validation fails:
     }
     ```
 
-    - `sessionRetention`: prune completed isolated run sessions from `sessions.json` (default `24h`; set `false` to disable).
-    - `runLog`: prune `cron/runs/<jobId>.jsonl` by size and retained lines.
-    - See [Cron jobs](/automation/cron-jobs) for feature overview and CLI examples.
+    - `sessionRetention`：清理完成的隔离运行会话，默认 24 小时，设为 `false` 禁用。
+    - `runLog`：限制 `cron/runs/<jobId>.jsonl` 文件大小及保留行数。
+    - 详见[定时任务](/automation/cron-jobs)获取功能概览和 CLI 示例。
 
   </Accordion>
 
-  <Accordion title="Set up webhooks (hooks)">
-    Enable HTTP webhook endpoints on the Gateway:
+  <Accordion title="设置 Webhook（钩子）">
+    在 Gateway 上启用 HTTP webhook 端点：
 
     ```json5
     {
@@ -291,17 +291,17 @@ When validation fails:
     }
     ```
 
-    Security note:
-    - Treat all hook/webhook payload content as untrusted input.
-    - Keep unsafe-content bypass flags disabled (`hooks.gmail.allowUnsafeExternalContent`, `hooks.mappings[].allowUnsafeExternalContent`) unless doing tightly scoped debugging.
-    - For hook-driven agents, prefer strong modern model tiers and strict tool policy (for example messaging-only plus sandboxing where possible).
+    安全注意事项：
+    - 所有钩子/Webhook 负载内容均视为不可信输入。
+    - 除非进行严格范围的调试，否则保持不安全内容绕过标记（`hooks.gmail.allowUnsafeExternalContent`、`hooks.mappings[].allowUnsafeExternalContent`）关闭状态。
+    - 钩子驱动的代理建议优先使用现代高级模型和严格的工具策略（例如仅限消息传递且尽可能使用沙箱）。
 
-    See [full reference](/gateway/configuration-reference#hooks) for all mapping options and Gmail integration.
+    详见[完整参考](/gateway/configuration-reference#hooks)获取所有映射选项及 Gmail 集成。
 
   </Accordion>
 
-  <Accordion title="Configure multi-agent routing">
-    Run multiple isolated agents with separate workspaces and sessions:
+  <Accordion title="配置多代理路由">
+    运行多个隔离代理，使用独立的工作区和会话：
 
     ```json5
     {
@@ -318,12 +318,12 @@ When validation fails:
     }
     ```
 
-    See [Multi-Agent](/concepts/multi-agent) and [full reference](/gateway/configuration-reference#multi-agent-routing) for binding rules and per-agent access profiles.
+    详情参见[多代理](/concepts/multi-agent)及[完整参考](/gateway/configuration-reference#multi-agent-routing)的绑定规则和每代理访问配置。
 
   </Accordion>
 
-  <Accordion title="Split config into multiple files ($include)">
-    Use `$include` to organize large configs:
+  <Accordion title="拆分配置文件（$include）">
+    使用 `$include` 组织大型配置：
 
     ```json5
     // ~/.openclaw/openclaw.json
@@ -336,28 +336,28 @@ When validation fails:
     }
     ```
 
-    - **Single file**: replaces the containing object
-    - **Array of files**: deep-merged in order (later wins)
-    - **Sibling keys**: merged after includes (override included values)
-    - **Nested includes**: supported up to 10 levels deep
-    - **Relative paths**: resolved relative to the including file
-    - **Error handling**: clear errors for missing files, parse errors, and circular includes
+    - **单文件**：替换包含对象
+    - **文件数组**：顺序深度合并（后者覆盖前者）
+    - **同级键**：合并在包含后，覆盖包含值
+    - **嵌套包含**：支持最多 10 层深度
+    - **相对路径**：相对于包含文件解析
+    - **错误处理**：缺少文件、解析错误和循环包含均有清晰报错
 
   </Accordion>
 </AccordionGroup>
 
-## Config hot reload
+## 配置热重载
 
-The Gateway watches `~/.openclaw/openclaw.json` and applies changes automatically — no manual restart needed for most settings.
+Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改 — 大多数设置无需手动重启。
 
-### Reload modes
+### 重载模式
 
-| Mode                   | Behavior                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| **`hybrid`** (default) | Hot-applies safe changes instantly. Automatically restarts for critical ones.           |
-| **`hot`**              | Hot-applies safe changes only. Logs a warning when a restart is needed — you handle it. |
-| **`restart`**          | Restarts the Gateway on any config change, safe or not.                                 |
-| **`off`**              | Disables file watching. Changes take effect on the next manual restart.                 |
+| 模式                   | 行为                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| **`hybrid`**（默认）    | 安全更改即时热应用。关键信息变更自动重启。                                             |
+| **`hot`**              | 仅热应用安全更改。需要重启时记录警告，由你负责重启。                                     |
+| **`restart`**          | 任何配置变更（安全或非安全）均重启 Gateway。                                           |
+| **`off`**              | 关闭文件监视。变更仅在下次手动重启时生效。                                             |
 
 ```json5
 {
@@ -367,51 +367,51 @@ The Gateway watches `~/.openclaw/openclaw.json` and applies changes automaticall
 }
 ```
 
-### What hot-applies vs what needs a restart
+### 哪些更改热应用，哪些需要重启
 
-Most fields hot-apply without downtime. In `hybrid` mode, restart-required changes are handled automatically.
+大部分字段可热应用且无停机。`hybrid` 模式会自动处理需要重启的更改。
 
-| Category            | Fields                                                               | Restart needed? |
-| ------------------- | -------------------------------------------------------------------- | --------------- |
-| Channels            | `channels.*`, `web` (WhatsApp) — all built-in and extension channels | No              |
-| Agent & models      | `agent`, `agents`, `models`, `routing`                               | No              |
-| Automation          | `hooks`, `cron`, `agent.heartbeat`                                   | No              |
-| Sessions & messages | `session`, `messages`                                                | No              |
-| Tools & media       | `tools`, `browser`, `skills`, `audio`, `talk`                        | No              |
-| UI & misc           | `ui`, `logging`, `identity`, `bindings`                              | No              |
-| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP)                 | **Yes**         |
-| Infrastructure      | `discovery`, `canvasHost`, `plugins`                                 | **Yes**         |
+| 分类               | 字段                                                               | 需重启？     |
+| ------------------ | ------------------------------------------------------------------ | ------------ |
+| 渠道               | `channels.*`、`web`（WhatsApp）— 所有内置及扩展渠道                 | 否           |
+| 代理与模型         | `agent`, `agents`, `models`, `routing`                            | 否           |
+| 自动化             | `hooks`, `cron`, `agent.heartbeat`                                | 否           |
+| 会话与消息         | `session`, `messages`                                              | 否           |
+| 工具与媒体         | `tools`, `browser`, `skills`, `audio`, `talk`                     | 否           |
+| UI 与杂项          | `ui`, `logging`, `identity`, `bindings`                           | 否           |
+| Gateway 服务器     | `gateway.*`（端口、绑定、认证、tailscale、TLS、HTTP）               | **是**       |
+| 基础架构           | `discovery`, `canvasHost`, `plugins`                              | **是**       |
 
 <Note>
-`gateway.reload` and `gateway.remote` are exceptions — changing them does **not** trigger a restart.
+`gateway.reload` 和 `gateway.remote` 是例外——更改它们**不会**触发重启。
 </Note>
 
-## Config RPC (programmatic updates)
+## 配置 RPC（编程式更新）
 
 <Note>
-Control-plane write RPCs (`config.apply`, `config.patch`, `update.run`) are rate-limited to **3 requests per 60 seconds** per `deviceId+clientIp`. When limited, the RPC returns `UNAVAILABLE` with `retryAfterMs`.
+控制面写入 RPC（`config.apply`、`config.patch`、`update.run`）对每个 `deviceId+clientIp` 限制为**每 60 秒最多 3 次请求**。限制时，RPC 返回 `UNAVAILABLE` 并带 `retryAfterMs`。
 </Note>
 
 <AccordionGroup>
-  <Accordion title="config.apply (full replace)">
-    Validates + writes the full config and restarts the Gateway in one step.
+  <Accordion title="config.apply（完整替换）">
+    验证并写入完整配置，同时重启 Gateway。
 
     <Warning>
-    `config.apply` replaces the **entire config**. Use `config.patch` for partial updates, or `openclaw config set` for single keys.
+    `config.apply` 会替换**整个配置**。部分更新请使用 `config.patch`，单键修改请用 `openclaw config set`。
     </Warning>
 
-    Params:
+    参数：
 
-    - `raw` (string) — JSON5 payload for the entire config
-    - `baseHash` (optional) — config hash from `config.get` (required when config exists)
-    - `sessionKey` (optional) — session key for the post-restart wake-up ping
-    - `note` (optional) — note for the restart sentinel
-    - `restartDelayMs` (optional) — delay before restart (default 2000)
+    - `raw`（字符串）— 整个配置的 JSON5 内容
+    - `baseHash`（可选）— 来自 `config.get` 的配置哈希（配置已存在时必须）
+    - `sessionKey`（可选）— 重启后唤醒 ping 使用的会话密钥
+    - `note`（可选）— 重启哨兵的注释
+    - `restartDelayMs`（可选）— 重启前延迟，默认 2000 毫秒
 
-    Restart requests are coalesced while one is already pending/in-flight, and a 30-second cooldown applies between restart cycles.
+    重启请求在已有挂起/执行中的重启时会合并，且重启周期间隔为 30 秒冷却期。
 
     ```bash
-    openclaw gateway call config.get --params '{}'  # capture payload.hash
+    openclaw gateway call config.get --params '{}'  # 获取 payload.hash
     openclaw gateway call config.apply --params '{
       "raw": "{ agents: { defaults: { workspace: \"~/.openclaw/workspace\" } } }",
       "baseHash": "<hash>",
@@ -421,20 +421,20 @@ Control-plane write RPCs (`config.apply`, `config.patch`, `update.run`) are rate
 
   </Accordion>
 
-  <Accordion title="config.patch (partial update)">
-    Merges a partial update into the existing config (JSON merge patch semantics):
+  <Accordion title="config.patch（部分更新）">
+    按 JSON 合并补丁语义，将部分更新合并到现有配置：
 
-    - Objects merge recursively
-    - `null` deletes a key
-    - Arrays replace
+    - 对象递归合并
+    - `null` 删除键
+    - 数组替换
 
-    Params:
+    参数：
 
-    - `raw` (string) — JSON5 with just the keys to change
-    - `baseHash` (required) — config hash from `config.get`
-    - `sessionKey`, `note`, `restartDelayMs` — same as `config.apply`
+    - `raw`（字符串）— 仅包含要更改的键的 JSON5
+    - `baseHash`（必填）— 来自 `config.get` 的配置哈希
+    - `sessionKey`、`note`、`restartDelayMs` — 同 `config.apply`
 
-    Restart behavior matches `config.apply`: coalesced pending restarts plus a 30-second cooldown between restart cycles.
+    重启行为与 `config.apply` 相同：合并挂起的重启请求并设 30 秒冷却。
 
     ```bash
     openclaw gateway call config.patch --params '{
@@ -446,14 +446,14 @@ Control-plane write RPCs (`config.apply`, `config.patch`, `update.run`) are rate
   </Accordion>
 </AccordionGroup>
 
-## Environment variables
+## 环境变量
 
-OpenClaw reads env vars from the parent process plus:
+OpenClaw 会读取父进程的环境变量，以及：
 
-- `.env` from the current working directory (if present)
-- `~/.openclaw/.env` (global fallback)
+- 当前工作目录下的 `.env`（如果存在）
+- `~/.openclaw/.env`（全局备用）
 
-Neither file overrides existing env vars. You can also set inline env vars in config:
+两者都不会覆盖已有的环境变量。你还可以在配置中设置内联环境变量：
 
 ```json5
 {
@@ -464,8 +464,8 @@ Neither file overrides existing env vars. You can also set inline env vars in co
 }
 ```
 
-<Accordion title="Shell env import (optional)">
-  If enabled and expected keys aren't set, OpenClaw runs your login shell and imports only the missing keys:
+<Accordion title="Shell 环境导入（可选）">
+  如果启用且缺少预期的键，OpenClaw 会运行登录 shell，仅导入缺少的键：
 
 ```json5
 {
@@ -475,11 +475,11 @@ Neither file overrides existing env vars. You can also set inline env vars in co
 }
 ```
 
-Env var equivalent: `OPENCLAW_LOAD_SHELL_ENV=1`
+等价环境变量：`OPENCLAW_LOAD_SHELL_ENV=1`
 </Accordion>
 
-<Accordion title="Env var substitution in config values">
-  Reference env vars in any config string value with `${VAR_NAME}`:
+<Accordion title="配置值中的环境变量替换">
+  在任何配置字符串中，可以用 `${VAR_NAME}` 引用环境变量：
 
 ```json5
 {
@@ -488,18 +488,18 @@ Env var equivalent: `OPENCLAW_LOAD_SHELL_ENV=1`
 }
 ```
 
-Rules:
+规则：
 
-- Only uppercase names matched: `[A-Z_][A-Z0-9_]*`
-- Missing/empty vars throw an error at load time
-- Escape with `$${VAR}` for literal output
-- Works inside `$include` files
-- Inline substitution: `"${BASE}/v1"` → `"https://api.example.com/v1"`
+- 仅匹配大写名称：`[A-Z_][A-Z0-9_]*`
+- 缺失或空值在加载时抛错
+- 用 `$${VAR}` 转义输出字面量
+- 可用于 `$include` 文件中
+- 内联替换例子：`"${BASE}/v1"` → `"https://api.example.com/v1"`
 
 </Accordion>
 
-<Accordion title="Secret refs (env, file, exec)">
-  For fields that support SecretRef objects, you can use:
+<Accordion title="Secret 引用（env、file、exec）">
+  对支持 SecretRef 对象的字段，可以使用：
 
 ```json5
 {
@@ -531,16 +531,15 @@ Rules:
 }
 ```
 
-SecretRef details (including `secrets.providers` for `env`/`file`/`exec`) are in [Secrets Management](/gateway/secrets).
-Supported credential paths are listed in [SecretRef Credential Surface](/reference/secretref-credential-surface).
+SecretRef 详情（包括 `secrets.providers` 的 `env`/`file`/`exec`）见[秘密管理](/gateway/secrets)。支持的凭据路径列于[SecretRef 凭据接口](/reference/secretref-credential-surface)。
 </Accordion>
 
-See [Environment](/help/environment) for full precedence and sources.
+详见[环境](/help/environment)了解完整优先级和来源。
 
-## Full reference
+## 完整参考
 
-For the complete field-by-field reference, see **[Configuration Reference](/gateway/configuration-reference)**.
+字段逐项完整参考，请参阅 **[配置参考](/gateway/configuration-reference)**。
 
 ---
 
-_Related: [Configuration Examples](/gateway/configuration-examples) · [Configuration Reference](/gateway/configuration-reference) · [Doctor](/gateway/doctor)_
+_相关内容：[配置示例](/gateway/configuration-examples) · [配置参考](/gateway/configuration-reference) · [诊断](/gateway/doctor)_

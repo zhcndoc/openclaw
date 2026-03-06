@@ -1,36 +1,35 @@
 ---
-summary: "Exploration: model config, auth profiles, and fallback behavior"
+summary: "探索：模型配置、认证配置文件及回退行为"
 read_when:
-  - Exploring future model selection + auth profile ideas
-title: "Model Config Exploration"
+  - 探索未来模型选择和认证配置文件的想法
+title: "模型配置探索"
 ---
 
-# Model Config (Exploration)
+# 模型配置（探索）
 
-This document captures **ideas** for future model configuration. It is not a
-shipping spec. For current behavior, see:
+本文档记录了未来模型配置的**想法**。它不是正式发布的规范。当前行为请参见：
 
-- [Models](/concepts/models)
-- [Model failover](/concepts/model-failover)
-- [OAuth + profiles](/concepts/oauth)
+- [模型](/concepts/models)
+- [模型故障切换](/concepts/model-failover)
+- [OAuth + 配置文件](/concepts/oauth)
 
-## Motivation
+## 动机
 
-Operators want:
+运营者希望：
 
-- Multiple auth profiles per provider (personal vs work).
-- Simple `/model` selection with predictable fallbacks.
-- Clear separation between text models and image-capable models.
+- 每个提供商拥有多个认证配置文件（个人与工作区分）。
+- 简单的 `/model` 选择，并带有可预测的回退机制。
+- 清晰区分文本模型和具备图像能力的模型。
 
-## Possible direction (high level)
+## 可能的方向（高层次）
 
-- Keep model selection simple: `provider/model` with optional aliases.
-- Let providers have multiple auth profiles, with an explicit order.
-- Use a global fallback list so all sessions fail over consistently.
-- Only override image routing when explicitly configured.
+- 保持模型选择简单：`provider/model`，支持可选别名。
+- 允许提供商拥有多个认证配置文件，并设定明确顺序。
+- 使用全局回退列表，确保所有会话统一进行故障切换。
+- 仅在显式配置时覆盖图像路由。
 
-## Open questions
+## 未决问题
 
-- Should profile rotation be per-provider or per-model?
-- How should the UI surface profile selection for a session?
-- What is the safest migration path from legacy config keys?
+- 配置文件轮换应按提供商还是按模型进行？
+- UI 应如何展示会话的配置文件选择？
+- 从旧版配置键迁移的最安全路径是什么？

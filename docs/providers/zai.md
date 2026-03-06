@@ -1,26 +1,24 @@
 ---
-summary: "Use Z.AI (GLM models) with OpenClaw"
+summary: "在 OpenClaw 中使用 Z.AI（GLM 模型）"
 read_when:
-  - You want Z.AI / GLM models in OpenClaw
-  - You need a simple ZAI_API_KEY setup
+  - 你想在 OpenClaw 中使用 Z.AI / GLM 模型
+  - 你需要一个简单的 ZAI_API_KEY 配置
 title: "Z.AI"
 ---
 
 # Z.AI
 
-Z.AI is the API platform for **GLM** models. It provides REST APIs for GLM and uses API keys
-for authentication. Create your API key in the Z.AI console. OpenClaw uses the `zai` provider
-with a Z.AI API key.
+Z.AI 是 **GLM** 模型的 API 平台。它提供 GLM 的 REST API 并使用 API 密钥进行认证。在 Z.AI 控制台创建你的 API 密钥。OpenClaw 通过 `zai` 提供者和 Z.AI API 密钥进行使用。
 
-## CLI setup
+## CLI 设置
 
 ```bash
 openclaw onboard --auth-choice zai-api-key
-# or non-interactive
+# 或者非交互式
 openclaw onboard --zai-api-key "$ZAI_API_KEY"
 ```
 
-## Config snippet
+## 配置片段
 
 ```json5
 {
@@ -29,10 +27,10 @@ openclaw onboard --zai-api-key "$ZAI_API_KEY"
 }
 ```
 
-## Notes
+## 注意事项
 
-- GLM models are available as `zai/<model>` (example: `zai/glm-5`).
-- `tool_stream` is enabled by default for Z.AI tool-call streaming. Set
-  `agents.defaults.models["zai/<model>"].params.tool_stream` to `false` to disable it.
-- See [/providers/glm](/providers/glm) for the model family overview.
-- Z.AI uses Bearer auth with your API key.
+- GLM 模型以 `zai/<model>` 形式提供（例如：`zai/glm-5`）。
+- Z.AI 工具调用流（tool_stream）默认启用。若要禁用，可将
+  `agents.defaults.models["zai/<model>"].params.tool_stream` 设置为 `false`。
+- 查看 [/providers/glm](/providers/glm) 了解模型系列概述。
+- Z.AI 使用 Bearer 认证方式，携带你的 API 密钥。

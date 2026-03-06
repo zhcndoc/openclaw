@@ -1,29 +1,29 @@
 ---
-summary: "Where OpenClaw loads environment variables and the precedence order"
+summary: "OpenClaw 加载环境变量及优先级顺序"
 read_when:
-  - You need to know which env vars are loaded, and in what order
-  - You are debugging missing API keys in the Gateway
-  - You are documenting provider auth or deployment environments
-title: "Environment Variables"
+  - 你需要知道加载了哪些环境变量，以及它们的加载顺序
+  - 你正在调试 Gateway 中缺失的 API 密钥
+  - 你正在编写提供商认证或部署环境的文档
+title: "环境变量"
 ---
 
-# Environment variables
+# 环境变量
 
-OpenClaw pulls environment variables from multiple sources. The rule is **never override existing values**.
+OpenClaw 从多个来源拉取环境变量。规则是 **绝不覆盖已有值**。
 
-## Precedence (highest → lowest)
+## 优先级（从高到低）
 
-1. **Process environment** (what the Gateway process already has from the parent shell/daemon).
-2. **`.env` in the current working directory** (dotenv default; does not override).
-3. **Global `.env`** at `~/.openclaw/.env` (aka `$OPENCLAW_STATE_DIR/.env`; does not override).
-4. **Config `env` block** in `~/.openclaw/openclaw.json` (applied only if missing).
-5. **Optional login-shell import** (`env.shellEnv.enabled` or `OPENCLAW_LOAD_SHELL_ENV=1`), applied only for missing expected keys.
+1. **进程环境**（Gateway 进程从父 shell/守护进程继承的环境变量）。
+2. **当前工作目录下的 `.env` 文件**（dotenv 默认；不覆盖已有值）。
+3. **全局 `.env` 文件**，位于 `~/.openclaw/.env` （即 `$OPENCLAW_STATE_DIR/.env`；不覆盖已有值）。
+4. 配置文件 `env` 块，在 `~/.openclaw/openclaw.json` 中（仅在缺失时应用）。
+5. 可选的登录 shell 导入（通过 `env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1` 启用），仅为缺失的预期键导入。
 
-If the config file is missing entirely, step 4 is skipped; shell import still runs if enabled.
+如果配置文件完全缺失，则跳过第 4 步；但如果启用，仍会执行 shell 导入。
 
-## Config `env` block
+## 配置文件中 `env` 块
 
-Two equivalent ways to set inline env vars (both are non-overriding):
+有两种等效方式设置内联环境变量（均不覆盖已有值）：
 
 ```json5
 {
@@ -36,9 +36,9 @@ Two equivalent ways to set inline env vars (both are non-overriding):
 }
 ```
 
-## Shell env import
+## Shell 环境导入
 
-`env.shellEnv` runs your login shell and imports only **missing** expected keys:
+`env.shellEnv` 会运行你的登录 shell，仅导入缺失的预期键：
 
 ```json5
 {
@@ -51,26 +51,25 @@ Two equivalent ways to set inline env vars (both are non-overriding):
 }
 ```
 
-Env var equivalents:
+对应的环境变量等价设置：
 
 - `OPENCLAW_LOAD_SHELL_ENV=1`
 - `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`
 
-## Runtime-injected env vars
+## 运行时注入的环境变量
 
-OpenClaw also injects context markers into spawned child processes:
+OpenClaw 还会向子进程注入上下文标记：
 
-- `OPENCLAW_SHELL=exec`: set for commands run through the `exec` tool.
-- `OPENCLAW_SHELL=acp`: set for ACP runtime backend process spawns (for example `acpx`).
-- `OPENCLAW_SHELL=acp-client`: set for `openclaw acp client` when it spawns the ACP bridge process.
-- `OPENCLAW_SHELL=tui-local`: set for local TUI `!` shell commands.
+- `OPENCLAW_SHELL=exec`：对通过 `exec` 工具运行的命令设置。
+- `OPENCLAW_SHELL=acp`：对 ACP 运行时后台进程（例如 `acpx`）的生成设置。
+- `OPENCLAW_SHELL=acp-client`：对 `openclaw acp client` 在生成 ACP 桥接进程时设置。
+- `OPENCLAW_SHELL=tui-local`：对本地 TUI 中的 `!` shell 命令设置。
 
-These are runtime markers (not required user config). They can be used in shell/profile logic
-to apply context-specific rules.
+这些是运行时标记（不需要用户配置），可用于 shell/profile 逻辑中应用特定上下文规则。
 
-## Env var substitution in config
+## 配置中的环境变量替换
 
-You can reference env vars directly in config string values using `${VAR_NAME}` syntax:
+你可以直接在配置字符串值中通过 `${VAR_NAME}` 语法引用环境变量：
 
 ```json5
 {
@@ -84,38 +83,38 @@ You can reference env vars directly in config string values using `${VAR_NAME}` 
 }
 ```
 
-See [Configuration: Env var substitution](/gateway/configuration#env-var-substitution-in-config) for full details.
+完整细节请参见 [配置：配置中的环境变量替换](/gateway/configuration#env-var-substitution-in-config)。
 
-## Secret refs vs `${ENV}` strings
+## Secret 引用与 `${ENV}` 字符串
 
-OpenClaw supports two env-driven patterns:
+OpenClaw 支持两种基于环境变量的模式：
 
-- `${VAR}` string substitution in config values.
-- SecretRef objects (`{ source: "env", provider: "default", id: "VAR" }`) for fields that support secrets references.
+- 配置值中的 `${VAR}` 字符串替换。
+- 支持秘密引用的字段中使用 SecretRef 对象（`{ source: "env", provider: "default", id: "VAR" }`）。
 
-Both resolve from process env at activation time. SecretRef details are documented in [Secrets Management](/gateway/secrets).
+两者均在激活时从进程环境解析。SecretRef 的详细说明见 [秘密管理](/gateway/secrets)。
 
-## Path-related env vars
+## 与路径相关的环境变量
 
-| Variable               | Purpose                                                                                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`        | Override the home directory used for all internal path resolution (`~/.openclaw/`, agent dirs, sessions, credentials). Useful when running OpenClaw as a dedicated service user. |
-| `OPENCLAW_STATE_DIR`   | Override the state directory (default `~/.openclaw`).                                                                                                                            |
-| `OPENCLAW_CONFIG_PATH` | Override the config file path (default `~/.openclaw/openclaw.json`).                                                                                                             |
+| 变量                   | 作用                                                                                                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_HOME`        | 覆盖用于所有内部路径解析的主目录（如 `~/.openclaw/`、agent 目录、会话、凭据）。适用于将 OpenClaw 以专用服务用户运行的场景。                                            |
+| `OPENCLAW_STATE_DIR`   | 覆盖状态目录（默认 `~/.openclaw`）。                                                                                                                               |
+| `OPENCLAW_CONFIG_PATH` | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                            |
 
-## Logging
+## 日志相关
 
-| Variable             | Purpose                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_LOG_LEVEL` | Override log level for both file and console (e.g. `debug`, `trace`). Takes precedence over `logging.level` and `logging.consoleLevel` in config. Invalid values are ignored with a warning. |
+| 变量                   | 作用                                                                                                                                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_LOG_LEVEL`   | 覆盖文件及控制台日志级别（例如 `debug`、`trace`）。优先级高于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并输出警告。                                                                                                     |
 
 ### `OPENCLAW_HOME`
 
-When set, `OPENCLAW_HOME` replaces the system home directory (`$HOME` / `os.homedir()`) for all internal path resolution. This enables full filesystem isolation for headless service accounts.
+设置后，`OPENCLAW_HOME` 会替代系统主目录（`$HOME` / `os.homedir()`）用于所有内部路径解析。这使得无头服务账户可以实现完整的文件系统隔离。
 
-**Precedence:** `OPENCLAW_HOME` > `$HOME` > `USERPROFILE` > `os.homedir()`
+**优先级：** `OPENCLAW_HOME` > `$HOME` > `USERPROFILE` > `os.homedir()`
 
-**Example** (macOS LaunchDaemon):
+**示例**（macOS LaunchDaemon 配置）：
 
 ```xml
 <key>EnvironmentVariables</key>
@@ -125,10 +124,10 @@ When set, `OPENCLAW_HOME` replaces the system home directory (`$HOME` / `os.home
 </dict>
 ```
 
-`OPENCLAW_HOME` can also be set to a tilde path (e.g. `~/svc`), which gets expanded using `$HOME` before use.
+`OPENCLAW_HOME` 也可以设置为波浪号路径（如 `~/svc`），会在使用前用 `$HOME` 展开。
 
-## Related
+## 相关内容
 
-- [Gateway configuration](/gateway/configuration)
-- [FAQ: env vars and .env loading](/help/faq#env-vars-and-env-loading)
-- [Models overview](/concepts/models)
+- [Gateway 配置](/gateway/configuration)
+- [FAQ：环境变量和 .env 加载](/help/faq#env-vars-and-env-loading)
+- [模型概览](/concepts/models)

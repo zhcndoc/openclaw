@@ -1,53 +1,53 @@
 ---
-summary: "Talk mode: continuous speech conversations with ElevenLabs TTS"
+summary: "对话模式：与 ElevenLabs TTS 进行持续语音对话"
 read_when:
-  - Implementing Talk mode on macOS/iOS/Android
-  - Changing voice/TTS/interrupt behavior
-title: "Talk Mode"
+  - 在 macOS/iOS/Android 上实现对话模式
+  - 更改语音/TTS/打断行为
+title: "对话模式"
 ---
 
-# Talk Mode
+# 对话模式
 
-Talk mode is a continuous voice conversation loop:
+对话模式是一个持续的语音对话循环：
 
-1. Listen for speech
-2. Send transcript to the model (main session, chat.send)
-3. Wait for the response
-4. Speak it via ElevenLabs (streaming playback)
+1. 监听语音
+2. 将转录文本发送给模型（主会话，chat.send）
+3. 等待响应
+4. 通过 ElevenLabs 朗读（流式播放）
 
-## Behavior (macOS)
+## 行为（macOS）
 
-- **Always-on overlay** while Talk mode is enabled.
-- **Listening → Thinking → Speaking** phase transitions.
-- On a **short pause** (silence window), the current transcript is sent.
-- Replies are **written to WebChat** (same as typing).
-- **Interrupt on speech** (default on): if the user starts talking while the assistant is speaking, we stop playback and note the interruption timestamp for the next prompt.
+- 启用对话模式时，**始终显示覆盖层**。
+- 包含 **监听 → 思考 → 讲话** 阶段转换。
+- 在 **短暂停顿**（静默窗口）时，发送当前转录文本。
+- 回复被 **写入 WebChat**（同于输入）。
+- **检测语音中断**（默认开启）：用户在助理讲话时开始说话，我们会停止播放并记录中断时间戳用于下次提示。
 
-## Voice directives in replies
+## 回复中的语音指令
 
-The assistant may prefix its reply with a **single JSON line** to control voice:
+助理可能会在回复前以一行 **JSON 格式** 前缀来控制语音：
 
 ```json
 { "voice": "<voice-id>", "once": true }
 ```
 
-Rules:
+规则：
 
-- First non-empty line only.
-- Unknown keys are ignored.
-- `once: true` applies to the current reply only.
-- Without `once`, the voice becomes the new default for Talk mode.
-- The JSON line is stripped before TTS playback.
+- 仅限第一条非空行。
+- 未知键将被忽略。
+- `once: true` 仅应用于当前回复。
+- 无 `once` 时，语音设置将成为对话模式的新默认。
+- 该 JSON 行会在 TTS 播放前被移除。
 
-Supported keys:
+支持的键：
 
 - `voice` / `voice_id` / `voiceId`
 - `model` / `model_id` / `modelId`
-- `speed`, `rate` (WPM), `stability`, `similarity`, `style`, `speakerBoost`
-- `seed`, `normalize`, `lang`, `output_format`, `latency_tier`
+- `speed`，`rate`（词/分钟），`stability`，`similarity`，`style`，`speakerBoost`
+- `seed`，`normalize`，`lang`，`output_format`，`latency_tier`
 - `once`
 
-## Config (`~/.openclaw/openclaw.json`)
+## 配置（`~/.openclaw/openclaw.json`）
 
 ```json5
 {
@@ -61,30 +61,30 @@ Supported keys:
 }
 ```
 
-Defaults:
+默认值：
 
-- `interruptOnSpeech`: true
-- `voiceId`: falls back to `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID` (or first ElevenLabs voice when API key is available)
-- `modelId`: defaults to `eleven_v3` when unset
-- `apiKey`: falls back to `ELEVENLABS_API_KEY` (or gateway shell profile if available)
-- `outputFormat`: defaults to `pcm_44100` on macOS/iOS and `pcm_24000` on Android (set `mp3_*` to force MP3 streaming)
+- `interruptOnSpeech`：true
+- `voiceId`：回退使用 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（或 API key 可用时第一个 ElevenLabs 语音）
+- `modelId`：未设置时默认 `eleven_v3`
+- `apiKey`：回退使用 `ELEVENLABS_API_KEY`（或可用时的 gateway shell 配置）
+- `outputFormat`：macOS/iOS 默认 `pcm_44100`，Android 默认 `pcm_24000`（设置为 `mp3_*` 可强制使用 MP3 流）
 
-## macOS UI
+## macOS 界面
 
-- Menu bar toggle: **Talk**
-- Config tab: **Talk Mode** group (voice id + interrupt toggle)
-- Overlay:
-  - **Listening**: cloud pulses with mic level
-  - **Thinking**: sinking animation
-  - **Speaking**: radiating rings
-  - Click cloud: stop speaking
-  - Click X: exit Talk mode
+- 菜单栏切换项：**对话**
+- 配置页签：**对话模式** 分组（语音 ID + 中断开关）
+- 覆盖层：
+  - **监听**：云朵随麦克风音量闪动
+  - **思考**：下沉动画
+  - **讲话**：辐射环动画
+  - 点击云朵：停止讲话
+  - 点击 X：退出对话模式
 
-## Notes
+## 注意事项
 
-- Requires Speech + Microphone permissions.
-- Uses `chat.send` against session key `main`.
-- TTS uses ElevenLabs streaming API with `ELEVENLABS_API_KEY` and incremental playback on macOS/iOS/Android for lower latency.
-- `stability` for `eleven_v3` is validated to `0.0`, `0.5`, or `1.0`; other models accept `0..1`.
-- `latency_tier` is validated to `0..4` when set.
-- Android supports `pcm_16000`, `pcm_22050`, `pcm_24000`, and `pcm_44100` output formats for low-latency AudioTrack streaming.
+- 需要语音识别和麦克风权限。
+- 使用 `chat.send` 针对会话键 `main`。
+- TTS 使用带有 `ELEVENLABS_API_KEY` 的 ElevenLabs 流式 API，在 macOS/iOS/Android 上实现增量播放以降低延迟。
+- `eleven_v3` 语音的 `stability` 仅接受 `0.0`、`0.5` 或 `1.0`，其他模型则接受 `[0..1]` 区间值。
+- 设置时 `latency_tier` 被验证在 `[0..4]` 范围。
+- 安卓支持 `pcm_16000`、`pcm_22050`、`pcm_24000` 和 `pcm_44100` 输出格式，用于低延迟 AudioTrack 流式播放。

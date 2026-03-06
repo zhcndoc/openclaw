@@ -1,34 +1,33 @@
 ---
-summary: "Use Kilo Gateway's unified API to access many models in OpenClaw"
+summary: "使用 Kilo Gateway 的统一 API 访问 OpenClaw 中的多种模型"
 read_when:
-  - You want a single API key for many LLMs
-  - You want to run models via Kilo Gateway in OpenClaw
+  - 你想用一个 API 密钥访问多个大型语言模型（LLM）
+  - 你想通过 OpenClaw 中的 Kilo Gateway 运行模型
 ---
 
 # Kilo Gateway
 
-Kilo Gateway provides a **unified API** that routes requests to many models behind a single
-endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switching the base URL.
+Kilo Gateway 提供了一个**统一的 API**，通过单一端点和 API 密钥将请求路由到多个模型。它兼容 OpenAI，大多数 OpenAI SDK 只需切换基础 URL 即可使用。
 
-## Getting an API key
+## 获取 API 密钥
 
-1. Go to [app.kilo.ai](https://app.kilo.ai)
-2. Sign in or create an account
-3. Navigate to API Keys and generate a new key
+1. 访问 [app.kilo.ai](https://app.kilo.ai)
+2. 登录或创建账号
+3. 进入 API 密钥页面生成新密钥
 
-## CLI setup
+## CLI 设置
 
 ```bash
 openclaw onboard --kilocode-api-key <key>
 ```
 
-Or set the environment variable:
+或者设置环境变量：
 
 ```bash
 export KILOCODE_API_KEY="your-api-key"
 ```
 
-## Config snippet
+## 配置片段
 
 ```json5
 {
@@ -41,11 +40,11 @@ export KILOCODE_API_KEY="your-api-key"
 }
 ```
 
-## Surfaced model refs
+## 已展示的模型引用
 
-The built-in Kilo Gateway catalog currently surfaces these model refs:
+内置的 Kilo Gateway 目录当前提供以下模型引用：
 
-- `kilocode/anthropic/claude-opus-4.6` (default)
+- `kilocode/anthropic/claude-opus-4.6`（默认）
 - `kilocode/z-ai/glm-5:free`
 - `kilocode/minimax/minimax-m2.5:free`
 - `kilocode/anthropic/claude-sonnet-4.5`
@@ -55,10 +54,10 @@ The built-in Kilo Gateway catalog currently surfaces these model refs:
 - `kilocode/x-ai/grok-code-fast-1`
 - `kilocode/moonshotai/kimi-k2.5`
 
-## Notes
+## 备注
 
-- Model refs are `kilocode/<provider>/<model>` (e.g., `kilocode/anthropic/claude-opus-4.6`).
-- Default model: `kilocode/anthropic/claude-opus-4.6`
-- Base URL: `https://api.kilo.ai/api/gateway/`
-- For more model/provider options, see [/concepts/model-providers](/concepts/model-providers).
-- Kilo Gateway uses a Bearer token with your API key under the hood.
+- 模型引用格式为 `kilocode/<提供商>/<模型>`（例如 `kilocode/anthropic/claude-opus-4.6`）。
+- 默认模型：`kilocode/anthropic/claude-opus-4.6`
+- 基础 URL：`https://api.kilo.ai/api/gateway/`
+- 更多模型和提供商选项，请参见 [/concepts/model-providers](/concepts/model-providers)。
+- Kilo Gateway 底层使用包含你的 API 密钥的 Bearer 令牌认证。

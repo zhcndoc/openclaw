@@ -1,20 +1,20 @@
 ---
-summary: "CLI reference for `openclaw security` (audit and fix common security footguns)"
+summary: "`openclaw security` 的 CLI 参考（审计并修复常见安全误区）"
 read_when:
-  - You want to run a quick security audit on config/state
-  - You want to apply safe “fix” suggestions (chmod, tighten defaults)
+  - 您想快速审计配置/状态的安全性
+  - 您想应用安全的“修复”建议（chmod，收紧默认设置）
 title: "security"
 ---
 
 # `openclaw security`
 
-Security tools (audit + optional fixes).
+安全工具（审计 + 可选修复）。
 
-Related:
+相关内容：
 
-- Security guide: [Security](/gateway/security)
+- 安全指南：[Security](/gateway/security)
 
-## Audit
+## 审计
 
 ```bash
 openclaw security audit
@@ -23,49 +23,49 @@ openclaw security audit --fix
 openclaw security audit --json
 ```
 
-The audit warns when multiple DM senders share the main session and recommends **secure DM mode**: `session.dmScope="per-channel-peer"` (or `per-account-channel-peer` for multi-account channels) for shared inboxes.
-This is for cooperative/shared inbox hardening. A single Gateway shared by mutually untrusted/adversarial operators is not a recommended setup; split trust boundaries with separate gateways (or separate OS users/hosts).
-It also emits `security.trust_model.multi_user_heuristic` when config suggests likely shared-user ingress (for example open DM/group policy, configured group targets, or wildcard sender rules), and reminds you that OpenClaw is a personal-assistant trust model by default.
-For intentional shared-user setups, the audit guidance is to sandbox all sessions, keep filesystem access workspace-scoped, and keep personal/private identities or credentials off that runtime.
-It also warns when small models (`<=300B`) are used without sandboxing and with web/browser tools enabled.
-For webhook ingress, it warns when `hooks.defaultSessionKey` is unset, when request `sessionKey` overrides are enabled, and when overrides are enabled without `hooks.allowedSessionKeyPrefixes`.
-It also warns when sandbox Docker settings are configured while sandbox mode is off, when `gateway.nodes.denyCommands` uses ineffective pattern-like/unknown entries (exact node command-name matching only, not shell-text filtering), when `gateway.nodes.allowCommands` explicitly enables dangerous node commands, when global `tools.profile="minimal"` is overridden by agent tool profiles, when open groups expose runtime/filesystem tools without sandbox/workspace guards, and when installed extension plugin tools may be reachable under permissive tool policy.
-It also flags `gateway.allowRealIpFallback=true` (header-spoofing risk if proxies are misconfigured) and `discovery.mdns.mode="full"` (metadata leakage via mDNS TXT records).
-It also warns when sandbox browser uses Docker `bridge` network without `sandbox.browser.cdpSourceRange`.
-It also flags dangerous sandbox Docker network modes (including `host` and `container:*` namespace joins).
-It also warns when existing sandbox browser Docker containers have missing/stale hash labels (for example pre-migration containers missing `openclaw.browserConfigEpoch`) and recommends `openclaw sandbox recreate --browser --all`.
-It also warns when npm-based plugin/hook install records are unpinned, missing integrity metadata, or drift from currently installed package versions.
-It warns when channel allowlists rely on mutable names/emails/tags instead of stable IDs (Discord, Slack, Google Chat, MS Teams, Mattermost, IRC scopes where applicable).
-It warns when `gateway.auth.mode="none"` leaves Gateway HTTP APIs reachable without a shared secret (`/tools/invoke` plus any enabled `/v1/*` endpoint).
-Settings prefixed with `dangerous`/`dangerously` are explicit break-glass operator overrides; enabling one is not, by itself, a security vulnerability report.
-For the complete dangerous-parameter inventory, see the "Insecure or dangerous flags summary" section in [Security](/gateway/security).
+当多个 DM 发送者共享主会话时，审计会发出警告，并推荐启用 **安全 DM 模式**：`session.dmScope="per-channel-peer"` （或针对多账户频道使用 `per-account-channel-peer`）以实现共享收件箱的安全加固。  
+这适用于合作/共享收件箱的强化。由相互不信任或敌对操作者共享的单一 Gateway 并非推荐设置；请采用分割信任边界的方案，如使用多个 Gateway（或不同的操作系统用户/主机）。  
+当配置提示可能存在共享用户入口（例如开放的 DM/群组策略、配置的群组目标，或通配符发送者规则）时，审计还会发出 `security.trust_model.multi_user_heuristic` 警告，提醒您默认情况下 OpenClaw 是个人助理信任模型。  
+对于有意的共享用户环境，审计建议将所有会话沙盒化，使文件系统访问仅限于工作区，并避免在该运行时运行个人/私密身份或凭据。  
+当使用小模型（`<=300B`）且未进行沙盒隔离并启用网页/浏览器工具时，也会发出警告。  
+对于 webhook 入口，若未设置 `hooks.defaultSessionKey`、启用请求的 `sessionKey` 覆盖，或启用覆盖但未设置 `hooks.allowedSessionKeyPrefixes`，都会发出警告。  
+当配置了沙盒 Docker 设置但沙盒模式关闭时，或当 `gateway.nodes.denyCommands` 使用无效的类模式/未知条目（仅支持精确节点命令名匹配，不支持 shell 文本过滤）、`gateway.nodes.allowCommands` 明确启用危险节点命令、全局 `tools.profile="minimal"` 被代理工具配置覆盖、开放群组暴露运行时/文件系统工具且无沙盒/工作区保护、安装的扩展插件工具在宽松工具策略下可访问时，都会发出警告。  
+此外，还会标记 `gateway.allowRealIpFallback=true`（若代理配置错误存在头部伪造风险）及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录存在元数据泄漏风险）。  
+当沙盒浏览器使用 Docker `bridge` 网络且未设置 `sandbox.browser.cdpSourceRange` 时，会发出警告。  
+也会标记危险的沙盒 Docker 网络模式（包括 `host` 和 `container:*` 命名空间连接）。  
+当现有沙盒浏览器 Docker 容器缺少或存在陈旧的哈希标签（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`）时，建议运行 `openclaw sandbox recreate --browser --all`。  
+当基于 npm 的插件/钩子安装记录未固定版本、缺少完整性元数据，或与当前安装包版本不一致时，也会发出警告。  
+当频道允许列表依赖可变的名称/电子邮件/标签而非稳定 ID（适用于 Discord、Slack、Google Chat、MS Teams、Mattermost、IRC 作用域）时，会发出警告。  
+当 `gateway.auth.mode="none"` 导致 Gateway HTTP API 在无共享密钥情况下可访问（包括 `/tools/invoke` 及任意启用的 `/v1/*` 端点）时，会发出警告。  
+以 `dangerous`/`dangerously` 为前缀的设置是明确的越权操作员覆盖选项；单独启用其中之一不代表安全漏洞报告。  
+完整的危险参数清单请参见 [Security](/gateway/security) 中的“不安全或危险标志总结”部分。
 
-## JSON output
+## JSON 输出
 
-Use `--json` for CI/policy checks:
+使用 `--json` 进行 CI/策略检查：
 
 ```bash
 openclaw security audit --json | jq '.summary'
 openclaw security audit --deep --json | jq '.findings[] | select(.severity=="critical") | .checkId'
 ```
 
-If `--fix` and `--json` are combined, output includes both fix actions and final report:
+若结合使用 `--fix` 和 `--json`，输出将包含修复操作和最终报告：
 
 ```bash
 openclaw security audit --fix --json | jq '{fix: .fix.ok, summary: .report.summary}'
 ```
 
-## What `--fix` changes
+## `--fix` 做了哪些更改
 
-`--fix` applies safe, deterministic remediations:
+`--fix` 应用安全且确定性的修复：
 
-- flips common `groupPolicy="open"` to `groupPolicy="allowlist"` (including account variants in supported channels)
-- sets `logging.redactSensitive` from `"off"` to `"tools"`
-- tightens permissions for state/config and common sensitive files (`credentials/*.json`, `auth-profiles.json`, `sessions.json`, session `*.jsonl`)
+- 将常见的 `groupPolicy="open"` 翻转为 `groupPolicy="allowlist"`（包括支持频道中的账户变体）
+- 将 `logging.redactSensitive` 从 `"off"` 设置为 `"tools"`
+- 收紧状态/配置及常见敏感文件（`credentials/*.json`、`auth-profiles.json`、`sessions.json`、会话 `*.jsonl`）的权限
 
-`--fix` does **not**:
+`--fix` **不会**：
 
-- rotate tokens/passwords/API keys
-- disable tools (`gateway`, `cron`, `exec`, etc.)
-- change gateway bind/auth/network exposure choices
-- remove or rewrite plugins/skills
+- 轮换令牌/密码/API 密钥
+- 禁用工具（如 `gateway`、`cron`、`exec` 等）
+- 更改 Gateway 的绑定/认证/网络暴露选项
+- 移除或重写插件/技能

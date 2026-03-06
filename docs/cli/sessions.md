@@ -1,13 +1,13 @@
 ---
-summary: "CLI reference for `openclaw sessions` (list stored sessions + usage)"
+summary: "`openclaw sessions` 的命令行参考（列出存储的会话 + 用法）"
 read_when:
-  - You want to list stored sessions and see recent activity
+  - 你想列出存储的会话并查看最近活动
 title: "sessions"
 ---
 
 # `openclaw sessions`
 
-List stored conversation sessions.
+列出存储的对话会话。
 
 ```bash
 openclaw sessions
@@ -17,16 +17,16 @@ openclaw sessions --active 120
 openclaw sessions --json
 ```
 
-Scope selection:
+范围选择：
 
-- default: configured default agent store
-- `--agent <id>`: one configured agent store
-- `--all-agents`: aggregate all configured agent stores
-- `--store <path>`: explicit store path (cannot be combined with `--agent` or `--all-agents`)
+- 默认：配置的默认代理存储
+- `--agent <id>`：指定一个配置的代理存储
+- `--all-agents`：聚合所有配置的代理存储
+- `--store <path>`：显式存储路径（不可与 `--agent` 或 `--all-agents` 组合使用）
 
-JSON examples:
+JSON 示例：
 
-`openclaw sessions --all-agents --json`:
+`openclaw sessions --all-agents --json`：
 
 ```json
 {
@@ -45,9 +45,9 @@ JSON examples:
 }
 ```
 
-## Cleanup maintenance
+## 清理维护
 
-Run maintenance now (instead of waiting for the next write cycle):
+立即运行维护（而不是等待下一次写入周期）：
 
 ```bash
 openclaw sessions cleanup --dry-run
@@ -58,20 +58,20 @@ openclaw sessions cleanup --enforce --active-key "agent:main:telegram:dm:123"
 openclaw sessions cleanup --json
 ```
 
-`openclaw sessions cleanup` uses `session.maintenance` settings from config:
+`openclaw sessions cleanup` 使用配置中的 `session.maintenance` 设置：
 
-- Scope note: `openclaw sessions cleanup` maintains session stores/transcripts only. It does not prune cron run logs (`cron/runs/<jobId>.jsonl`), which are managed by `cron.runLog.maxBytes` and `cron.runLog.keepLines` in [Cron configuration](/automation/cron-jobs#configuration) and explained in [Cron maintenance](/automation/cron-jobs#maintenance).
+- 范围说明：`openclaw sessions cleanup` 仅维护会话存储和对话记录。它不会清理定时任务运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [定时任务配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [定时任务维护](/automation/cron-jobs#maintenance) 中有详细说明。
 
-- `--dry-run`: preview how many entries would be pruned/capped without writing.
-  - In text mode, dry-run prints a per-session action table (`Action`, `Key`, `Age`, `Model`, `Flags`) so you can see what would be kept vs removed.
-- `--enforce`: apply maintenance even when `session.maintenance.mode` is `warn`.
-- `--active-key <key>`: protect a specific active key from disk-budget eviction.
-- `--agent <id>`: run cleanup for one configured agent store.
-- `--all-agents`: run cleanup for all configured agent stores.
-- `--store <path>`: run against a specific `sessions.json` file.
-- `--json`: print a JSON summary. With `--all-agents`, output includes one summary per store.
+- `--dry-run`：预览将在不写入的情况下修剪/限制数量的条目。
+  - 以文本模式运行时，dry-run 会打印每个会话的操作表（`Action`，`Key`，`Age`，`Model`，`Flags`），让你看到哪些会被保留，哪些会被移除。
+- `--enforce`：即使 `session.maintenance.mode` 为 `warn`，也强制执行维护。
+- `--active-key <key>`：保护指定的活跃 key，不被磁盘预算驱逐。
+- `--agent <id>`：针对指定的某个配置代理存储运行清理。
+- `--all-agents`：针对所有配置的代理存储运行清理。
+- `--store <path>`：针对特定的 `sessions.json` 文件运行清理。
+- `--json`：打印 JSON 格式摘要。使用 `--all-agents` 时，输出包含每个存储的摘要。
 
-`openclaw sessions cleanup --all-agents --dry-run --json`:
+`openclaw sessions cleanup --all-agents --dry-run --json`：
 
 ```json
 {
@@ -99,6 +99,6 @@ openclaw sessions cleanup --json
 }
 ```
 
-Related:
+相关内容：
 
-- Session config: [Configuration reference](/gateway/configuration-reference#session)
+- 会话配置：[配置参考](/gateway/configuration-reference#session)

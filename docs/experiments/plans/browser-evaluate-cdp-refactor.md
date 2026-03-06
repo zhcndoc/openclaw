@@ -1,232 +1,210 @@
 ---
-summary: "Plan: isolate browser act:evaluate from Playwright queue using CDP, with end-to-end deadlines and safer ref resolution"
+summary: "计划：使用 CDP 将浏览器的 act:evaluate 从 Playwright 队列中隔离，配合端到端截止时间和更安全的 ref 解析"
 read_when:
-  - Working on browser `act:evaluate` timeout, abort, or queue blocking issues
-  - Planning CDP based isolation for evaluate execution
+  - 处理浏览器 `act:evaluate` 的超时、中止或队列阻塞问题时
+  - 计划基于 CDP 的隔离执行 evaluate
 owner: "openclaw"
 status: "draft"
 last_updated: "2026-02-10"
-title: "Browser Evaluate CDP Refactor"
+title: "浏览器 Evaluate CDP 重构"
 ---
 
-# Browser Evaluate CDP Refactor Plan
+# 浏览器 Evaluate CDP 重构计划
 
-## Context
+## 背景
 
-`act:evaluate` executes user provided JavaScript in the page. Today it runs via Playwright
-(`page.evaluate` or `locator.evaluate`). Playwright serializes CDP commands per page, so a
-stuck or long running evaluate can block the page command queue and make every later action
-on that tab look "stuck".
+`act:evaluate` 用于在页面中执行用户提供的 JavaScript。当前它是通过 Playwright
+（`page.evaluate` 或 `locator.evaluate`）来运行的。Playwright 会对每个页面的 CDP 命令进行序列化，因此一个卡住或长时间运行的 evaluate 会阻塞页面命令队列，导致后续在该标签页上的操作看起来像“卡住”了。
 
-PR #13498 adds a pragmatic safety net (bounded evaluate, abort propagation, and best-effort
-recovery). This document describes a larger refactor that makes `act:evaluate` inherently
-isolated from Playwright so a stuck evaluate cannot wedge normal Playwright operations.
+PR #13498 添加了一个务实的安全网（有限的 evaluate 时间、中止传播及尽力恢复）。本文档描述了一个更大的重构方案，使得 `act:evaluate` 本质上与 Playwright 隔离，从而卡住的 evaluate 无法阻塞正常的 Playwright 操作。
 
-## Goals
+## 目标
 
-- `act:evaluate` cannot permanently block later browser actions on the same tab.
-- Timeouts are single source of truth end to end so a caller can rely on a budget.
-- Abort and timeout are treated the same way across HTTP and in-process dispatch.
-- Element targeting for evaluate is supported without switching everything off Playwright.
-- Maintain backward compatibility for existing callers and payloads.
+- `act:evaluate` 无法永久阻塞同一标签页上的后续浏览器操作。
+- 超时为端到端的唯一可信源，调用方可以信赖预算。
+- HTTP 和进程内调度中的中止与超时统一处理。
+- 支持针对元素的 evaluate，且无需脱离 Playwright 完全重写。
+- 保持对现有调用者和负载的兼容性。
 
-## Non-goals
+## 非目标
 
-- Replace all browser actions (click, type, wait, etc.) with CDP implementations.
-- Remove the existing safety net introduced in PR #13498 (it remains a useful fallback).
-- Introduce new unsafe capabilities beyond the existing `browser.evaluateEnabled` gate.
-- Add process isolation (worker process/thread) for evaluate. If we still see hard to recover
-  stuck states after this refactor, that is a follow-up idea.
+- 使用 CDP 实现替换所有浏览器动作（点击、输入、等待等）。
+- 移除 PR #13498 中引入的安全网（它仍然是有用的回退方案）。
+- 引入除现有 `browser.evaluateEnabled` 限制之外的不安全能力。
+- 为 evaluate 引入进程隔离（工作进程/线程）。如果本次重构后依然出现难以恢复的卡住状态，进程隔离将作为后续方案。
 
-## Current Architecture (Why It Gets Stuck)
+## 当前架构（为什么会卡住）
 
-At a high level:
+整体流程：
 
-- Callers send `act:evaluate` to the browser control service.
-- The route handler calls into Playwright to execute the JavaScript.
-- Playwright serializes page commands, so an evaluate that never finishes blocks the queue.
-- A stuck queue means later click/type/wait operations on the tab can appear to hang.
+- 调用者向浏览器控制服务发送 `act:evaluate`。
+- 路由处理器调用 Playwright 执行 JavaScript。
+- Playwright 对页面命令进行序列化，永远不返回的 evaluate 会堵塞队列。
+- 队列阻塞导致同标签页的后续点击/输入/等待操作看似挂起。
 
-## Proposed Architecture
+## 拟议架构
 
-### 1. Deadline Propagation
+### 1. 截止时间传播
 
-Introduce a single budget concept and derive everything from it:
+引入单一预算概念，所有逻辑均从该预算派生：
 
-- Caller sets `timeoutMs` (or a deadline in the future).
-- The outer request timeout, route handler logic, and the execution budget inside the page
-  all use the same budget, with small headroom where needed for serialization overhead.
-- Abort is propagated as an `AbortSignal` everywhere so cancellation is consistent.
+- 调用者设置 `timeoutMs`（或未来的截止时间）。
+- 外层请求超时、路由处理逻辑和页面内执行预算均使用同一预算，允许序列化开销的小余量。
+- 中止通过 `AbortSignal` 一致传播，保证取消一致性。
 
-Implementation direction:
+实现方向：
 
-- Add a small helper (for example `createBudget({ timeoutMs, signal })`) that returns:
-  - `signal`: the linked AbortSignal
-  - `deadlineAtMs`: absolute deadline
-  - `remainingMs()`: remaining budget for child operations
-- Use this helper in:
-  - `src/browser/client-fetch.ts` (HTTP and in-process dispatch)
-  - `src/node-host/runner.ts` (proxy path)
-  - browser action implementations (Playwright and CDP)
+- 增加一个小帮手（例如 `createBudget({ timeoutMs, signal })`），返回：
+  - `signal`：关联的 AbortSignal
+  - `deadlineAtMs`：绝对截止时间
+  - `remainingMs()`：子操作剩余预算
+- 在以下地方使用该帮手：
+  - `src/browser/client-fetch.ts`（HTTP 和进程内调度）
+  - `src/node-host/runner.ts`（代理路径）
+  - 浏览器动作实现（Playwright 和 CDP）
 
-### 2. Separate Evaluate Engine (CDP Path)
+### 2. 独立 Evaluate 引擎（CDP 路径）
 
-Add a CDP based evaluate implementation that does not share Playwright's per page command
-queue. The key property is that the evaluate transport is a separate WebSocket connection
-and a separate CDP session attached to the target.
+添加基于 CDP 的 evaluate 实现，不共享 Playwright 的每页面命令队列。关键特性是 evaluate 的传输层是独立的 WebSocket 连接，并且有单独附加到目标的 CDP session。
 
-Implementation direction:
+实现方向：
 
-- New module, for example `src/browser/cdp-evaluate.ts`, that:
-  - Connects to the configured CDP endpoint (browser level socket).
-  - Uses `Target.attachToTarget({ targetId, flatten: true })` to get a `sessionId`.
-  - Runs either:
-    - `Runtime.evaluate` for page level evaluate, or
-    - `DOM.resolveNode` plus `Runtime.callFunctionOn` for element evaluate.
-  - On timeout or abort:
-    - Sends `Runtime.terminateExecution` best-effort for the session.
-    - Closes the WebSocket and returns a clear error.
+- 新模块，如 `src/browser/cdp-evaluate.ts`，功能包括：
+  - 连接配置的 CDP 端点（浏览器级别的套接字）。
+  - 使用 `Target.attachToTarget({ targetId, flatten: true })` 获取 `sessionId`。
+  - 执行：
+    - 页面级别使用 `Runtime.evaluate`，
+    - 元素级别使用 `DOM.resolveNode` 加上 `Runtime.callFunctionOn`。
+  - 超时或中止时：
+    - 尽力发送 `Runtime.terminateExecution` 给该 session。
+    - 关闭 WebSocket 并返回明确错误。
 
-Notes:
+备注：
 
-- This still executes JavaScript in the page, so termination can have side effects. The win
-  is that it does not wedge the Playwright queue, and it is cancelable at the transport
-  layer by killing the CDP session.
+- 该方法仍在页面中执行 JavaScript，终止有可能产生副作用。优势是不会卡住 Playwright 队列，且可通过关闭 CDP session 在传输层实现可取消。
 
-### 3. Ref Story (Element Targeting Without A Full Rewrite)
+### 3. 兼容方案（元素定位的渐进实现）
 
-The hard part is element targeting. CDP needs a DOM handle or `backendDOMNodeId`, while
-today most browser actions use Playwright locators based on refs from snapshots.
+元素定位是难点。CDP 需要 DOM handle 或 `backendDOMNodeId`，而当前大多数浏览器动作基于 Playwright 定位器使用快照中的 ref。
 
-Recommended approach: keep existing refs, but attach an optional CDP resolvable id.
+推荐方案：保留现有 refs，同时附加可选的 CDP 可解析 id。
 
-#### 3.1 Extend Stored Ref Info
+#### 3.1 扩展存储的 Ref 信息
 
-Extend the stored role ref metadata to optionally include a CDP id:
+扩展角色 ref 元数据，选填 CDP id：
 
-- Today: `{ role, name, nth }`
-- Proposed: `{ role, name, nth, backendDOMNodeId?: number }`
+- 当前格式：`{ role, name, nth }`
+- 拟议格式：`{ role, name, nth, backendDOMNodeId?: number }`
 
-This keeps all existing Playwright based actions working and allows CDP evaluate to accept
-the same `ref` value when the `backendDOMNodeId` is available.
+此方案保证现有基于 Playwright 的动作继续工作，且当有 `backendDOMNodeId` 时，CDP evaluate 支持使用相同的 `ref`。
 
-#### 3.2 Populate backendDOMNodeId At Snapshot Time
+#### 3.2 在快照时填充 backendDOMNodeId
 
-When producing a role snapshot:
+生成角色快照时：
 
-1. Generate the existing role ref map as today (role, name, nth).
-2. Fetch the AX tree via CDP (`Accessibility.getFullAXTree`) and compute a parallel map of
-   `(role, name, nth) -> backendDOMNodeId` using the same duplicate handling rules.
-3. Merge the id back into the stored ref info for the current tab.
+1. 按照当前做法生成角色 ref 映射（role, name, nth）。
+2. 通过 CDP (`Accessibility.getFullAXTree`) 获取辅助功能树，并用同样的去重规则计算并行映射 `(role, name, nth) -> backendDOMNodeId`。
+3. 将 id 合并回当前标签的存储 ref 信息。
 
-If mapping fails for a ref, leave `backendDOMNodeId` undefined. This makes the feature
-best-effort and safe to roll out.
+映射失败时，保持 `backendDOMNodeId` 为 undefined，保证该特性是尽力而为且安全的切换。
 
-#### 3.3 Evaluate Behavior With Ref
+#### 3.3 evaluate 行为（带 ref）
 
-In `act:evaluate`:
+在 `act:evaluate` 中：
 
-- If `ref` is present and has `backendDOMNodeId`, run element evaluate via CDP.
-- If `ref` is present but has no `backendDOMNodeId`, fall back to the Playwright path (with
-  the safety net).
+- 若 `ref` 存在且含有 `backendDOMNodeId`，通过 CDP 运行元素 evaluate。
+- 若 `ref` 存在但无 `backendDOMNodeId`，回退到 Playwright 路径（带安全网）。
 
-Optional escape hatch:
+可选逃生通道：
 
-- Extend the request shape to accept `backendDOMNodeId` directly for advanced callers (and
-  for debugging), while keeping `ref` as the primary interface.
+- 扩展请求结构，允许高级调用者直接传递 `backendDOMNodeId`（方便调试），而主接口仍是 `ref`。
 
-### 4. Keep A Last Resort Recovery Path
+### 4. 保持最后的恢复方案
 
-Even with CDP evaluate, there are other ways to wedge a tab or a connection. Keep the
-existing recovery mechanisms (terminate execution + disconnect Playwright) as a last resort
-for:
+即使用了 CDP evaluate，还有其它方式会卡住标签页或连接。保留现有恢复机制（终止执行 + 断开 Playwright）作为最后手段，适用于：
 
-- legacy callers
-- environments where CDP attach is blocked
-- unexpected Playwright edge cases
+- 旧调用
+- CDP 附加受限的环境
+- Playwright 异常边缘情况
 
-## Implementation Plan (Single Iteration)
+## 实施计划（一步迭代）
 
-### Deliverables
+### 交付物
 
-- A CDP based evaluate engine that runs outside the Playwright per-page command queue.
-- A single end-to-end timeout/abort budget used consistently by callers and handlers.
-- Ref metadata that can optionally carry `backendDOMNodeId` for element evaluate.
-- `act:evaluate` prefers the CDP engine when possible and falls back to Playwright when not.
-- Tests that prove a stuck evaluate does not wedge later actions.
-- Logs/metrics that make failures and fallbacks visible.
+- 一个基于 CDP 的 evaluate 引擎，运行在 Playwright 每页面命令队列之外。
+- 单一端到端的超时/中止预算，调用者和处理器统一使用。
+- 可选携带 `backendDOMNodeId` 的 ref 元数据，用于元素 evaluate。
+- `act:evaluate` 优先使用 CDP 引擎，条件不满足时回退到 Playwright。
+- 测试确保卡住的 evaluate 不阻塞后续操作。
+- 可观测性日志与指标，暴露失败与回退情况。
 
-### Implementation Checklist
+### 实施清单
 
-1. Add a shared "budget" helper to link `timeoutMs` + upstream `AbortSignal` into:
-   - a single `AbortSignal`
-   - an absolute deadline
-   - a `remainingMs()` helper for downstream operations
-2. Update all caller paths to use that helper so `timeoutMs` means the same thing everywhere:
-   - `src/browser/client-fetch.ts` (HTTP and in-process dispatch)
-   - `src/node-host/runner.ts` (node proxy path)
-   - CLI wrappers that call `/act` (add `--timeout-ms` to `browser evaluate`)
-3. Implement `src/browser/cdp-evaluate.ts`:
-   - connect to the browser-level CDP socket
-   - `Target.attachToTarget` to get a `sessionId`
-   - run `Runtime.evaluate` for page evaluate
-   - run `DOM.resolveNode` + `Runtime.callFunctionOn` for element evaluate
-   - on timeout/abort: best-effort `Runtime.terminateExecution` then close the socket
-4. Extend stored role ref metadata to optionally include `backendDOMNodeId`:
-   - keep existing `{ role, name, nth }` behavior for Playwright actions
-   - add `backendDOMNodeId?: number` for CDP element targeting
-5. Populate `backendDOMNodeId` during snapshot creation (best-effort):
-   - fetch AX tree via CDP (`Accessibility.getFullAXTree`)
-   - compute `(role, name, nth) -> backendDOMNodeId` and merge into the stored ref map
-   - if mapping is ambiguous or missing, leave the id undefined
-6. Update `act:evaluate` routing:
-   - if no `ref`: always use CDP evaluate
-   - if `ref` resolves to a `backendDOMNodeId`: use CDP element evaluate
-   - otherwise: fall back to Playwright evaluate (still bounded and abortable)
-7. Keep the existing "last resort" recovery path as a fallback, not the default path.
-8. Add tests:
-   - stuck evaluate times out within budget and the next click/type succeeds
-   - abort cancels evaluate (client disconnect or timeout) and unblocks subsequent actions
-   - mapping failures cleanly fall back to Playwright
-9. Add observability:
-   - evaluate duration and timeout counters
-   - terminateExecution usage
-   - fallback rate (CDP -> Playwright) and reasons
+1. 添加共享预算帮手，将 `timeoutMs` 和上游 `AbortSignal` 统一成：
+   - 单一 `AbortSignal`
+   - 绝对截止时间
+   - `remainingMs()` 辅助函数供下游使用
+2. 更新调用路径使用该帮手，使 `timeoutMs` 在各处行为一致：
+   - `src/browser/client-fetch.ts`（HTTP 和进程内调度）
+   - `src/node-host/runner.ts`（节点代理路径）
+   - 调用 `/act` 的 CLI 封装（增加 `--timeout-ms` 到 `browser evaluate`）
+3. 实现 `src/browser/cdp-evaluate.ts`：
+   - 连接浏览器级 CDP 套接字
+   - `Target.attachToTarget` 获取 `sessionId`
+   - 页面 evaluate 执行 `Runtime.evaluate`
+   - 元素 evaluate 执行 `DOM.resolveNode` + `Runtime.callFunctionOn`
+   - 超时/中止时尽力发送 `Runtime.terminateExecution` 并关闭套接字
+4. 扩展存储的角色 ref 元数据，选填 `backendDOMNodeId`：
+   - 保持现有 `{ role, name, nth }` 用于 Playwright 动作
+   - 新增 `backendDOMNodeId?: number` 用于 CDP 元素定位
+5. 快照生成时填充 `backendDOMNodeId`（尽力而为）：
+   - 通过 CDP 拿 AX 树（`Accessibility.getFullAXTree`）
+   - 计算 `(role, name, nth) -> backendDOMNodeId` 并合并入已存 ref
+   - 若映射不明或缺失，保持 id 未定义
+6. 更新 `act:evaluate` 路由：
+   - 无 `ref`：总是用 CDP evaluate
+   - `ref` 含 `backendDOMNodeId`：用 CDP 元素 evaluate
+   - 否则回退 Playwright evaluate（仍有限制且可中止）
+7. 保留现有“最后恢复”路径作为回退，非默认
+8. 编写测试：
+   - 持续卡住的 evaluate 可在预算内超时，且后续点击输入成功
+   - 中止操作（客户端断开或超时）能取消 evaluate 并解锁后续动作
+   - 映射失败时明确回退 Playwright
+9. 增加可观测性：
+   - evaluate 时长和超时计数
+   - terminateExecution 用量
+   - CDP -> Playwright 的回退率及原因
 
-### Acceptance Criteria
+### 验收标准
 
-- A deliberately hung `act:evaluate` returns within the caller budget and does not wedge the
-  tab for later actions.
-- `timeoutMs` behaves consistently across CLI, agent tool, node proxy, and in-process calls.
-- If `ref` can be mapped to `backendDOMNodeId`, element evaluate uses CDP; otherwise the
-  fallback path is still bounded and recoverable.
+- 故意卡住的 `act:evaluate` 能在调用方预算内返回，且不阻塞后续操作。
+- `timeoutMs` 在 CLI、代理工具、节点代理及进程内调用中行为一致。
+- 若 `ref` 能映射到 `backendDOMNodeId`，元素 evaluate 使用 CDP，否则回退路径仍有限制且可恢复。
 
-## Testing Plan
+## 测试计划
 
-- Unit tests:
-  - `(role, name, nth)` matching logic between role refs and AX tree nodes.
-  - Budget helper behavior (headroom, remaining time math).
-- Integration tests:
-  - CDP evaluate timeout returns within budget and does not block the next action.
-  - Abort cancels evaluate and triggers termination best-effort.
-- Contract tests:
-  - Ensure `BrowserActRequest` and `BrowserActResponse` remain compatible.
+- 单元测试：
+  - 角色 ref 与 AX 树节点的 `(role, name, nth)` 匹配逻辑。
+  - 预算帮手行为（裕度、剩余时间计算）。
+- 集成测试：
+  - CDP evaluate 超时可及时返回，且不阻塞后续操作。
+  - 中止能取消 evaluate 并触发尽力终止。
+- 合约测试：
+  - 确认 `BrowserActRequest` 和 `BrowserActResponse` 的兼容性。
 
-## Risks And Mitigations
+## 风险及缓解
 
-- Mapping is imperfect:
-  - Mitigation: best-effort mapping, fallback to Playwright evaluate, and add debug tooling.
-- `Runtime.terminateExecution` has side effects:
-  - Mitigation: only use on timeout/abort and document the behavior in errors.
-- Extra overhead:
-  - Mitigation: only fetch AX tree when snapshots are requested, cache per target, and keep
-    CDP session short lived.
-- Extension relay limitations:
-  - Mitigation: use browser level attach APIs when per page sockets are not available, and
-    keep the current Playwright path as fallback.
+- 映射不完美：
+  - 缓解：尽力映射，回退 Playwright evaluate，增加调试工具。
+- `Runtime.terminateExecution` 有副作用：
+  - 缓解：仅用于超时/中止场景，错误中说明行为。
+- 额外开销：
+  - 缓解：仅在请求快照时获取 AX 树，按目标缓存，CDP session 保持短暂。
+- 扩展中继限制：
+  - 缓解：页面套接字不行时使用浏览器级附加 API，保持 Playwright 路径作为回退。
 
-## Open Questions
+## 未决问题
 
-- Should the new engine be configurable as `playwright`, `cdp`, or `auto`?
-- Do we want to expose a new "nodeRef" format for advanced users, or keep `ref` only?
-- How should frame snapshots and selector scoped snapshots participate in AX mapping?
+- 新引擎是否应配置为 `playwright`、`cdp` 或 `auto`？
+- 是否打算暴露新的高级“nodeRef”格式，还是只保留 `ref`？
+- 框架快照和选择器作用域快照如何参与 AX 映射？

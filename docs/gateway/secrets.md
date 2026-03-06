@@ -1,79 +1,76 @@
 ---
-summary: "Secrets management: SecretRef contract, runtime snapshot behavior, and safe one-way scrubbing"
+summary: "秘密管理：SecretRef 约定、运行时快照行为及安全的单向擦除"
 read_when:
-  - Configuring SecretRefs for provider credentials and `auth-profiles.json` refs
-  - Operating secrets reload, audit, configure, and apply safely in production
-  - Understanding startup fail-fast, inactive-surface filtering, and last-known-good behavior
-title: "Secrets Management"
+  - 配置提供者凭证和 `auth-profiles.json` 引用的 SecretRef
+  - 在生产环境中安全操作秘密的重载、审计、配置和应用
+  - 理解启动快速失败、非活动表面过滤和最后已知良好状态行为
+title: "秘密管理"
 ---
 
-# Secrets management
+# 秘密管理
 
-OpenClaw supports additive SecretRefs so supported credentials do not need to be stored as plaintext in configuration.
+OpenClaw 支持可叠加的 SecretRefs，使支持的凭证无需以明文形式存储在配置中。
 
-Plaintext still works. SecretRefs are opt-in per credential.
+明文仍然可用。SecretRefs 是针对每个凭证的可选功能。
 
-## Goals and runtime model
+## 目标和运行时模型
 
-Secrets are resolved into an in-memory runtime snapshot.
+秘密解析为内存中的运行时快照。
 
-- Resolution is eager during activation, not lazy on request paths.
-- Startup fails fast when an effectively active SecretRef cannot be resolved.
-- Reload uses atomic swap: full success, or keep the last-known-good snapshot.
-- Runtime requests read from the active in-memory snapshot only.
+- 解析在激活期间进行，是主动的，而非请求路径上的懒加载。
+- 当无法解析一个有效激活的 SecretRef 时，启动会快速失败。
+- 重载使用原子交换：要么完全成功，要么保留最后已知良好的快照。
+- 运行时请求仅从活动的内存快照读取。
 
-This keeps secret-provider outages off hot request paths.
+这可以将秘密提供者的故障隔离出请求的热路径。
 
-## Active-surface filtering
+## 活动表面过滤
 
-SecretRefs are validated only on effectively active surfaces.
+仅对有效激活的表面验证 SecretRefs。
 
-- Enabled surfaces: unresolved refs block startup/reload.
-- Inactive surfaces: unresolved refs do not block startup/reload.
-- Inactive refs emit non-fatal diagnostics with code `SECRETS_REF_IGNORED_INACTIVE_SURFACE`.
+- 启用表面：未解析的引用会阻止启动/重载。
+- 非活动表面：未解析的引用不会阻止启动/重载。
+- 非活动引用会发出代码为 `SECRETS_REF_IGNORED_INACTIVE_SURFACE` 的非致命诊断。
 
-Examples of inactive surfaces:
+非活动表面示例：
 
-- Disabled channel/account entries.
-- Top-level channel credentials that no enabled account inherits.
-- Disabled tool/feature surfaces.
-- Web search provider-specific keys that are not selected by `tools.web.search.provider`.
-  In auto mode (provider unset), provider-specific keys are also active for provider auto-detection.
-- `gateway.remote.token` / `gateway.remote.password` SecretRefs are active (when `gateway.remote.enabled` is not `false`) if one of these is true:
+- 被禁用的频道/账户条目。
+- 顶层频道凭证，且没有任何启用的账户继承它们。
+- 被禁用的工具/功能表面。
+- 没有被 `tools.web.search.provider` 选中使用的网页搜索提供者特定秘钥。
+  在自动模式（提供者未设置）下，提供者特定秘钥也对提供者自动检测是活动的。
+- 如果满足以下任一条件且 `gateway.remote.enabled` 不为 `false`，则 `gateway.remote.token` / `gateway.remote.password` SecretRefs 是激活的：
   - `gateway.mode=remote`
-  - `gateway.remote.url` is configured
-  - `gateway.tailscale.mode` is `serve` or `funnel`
-    In local mode without those remote surfaces:
-  - `gateway.remote.token` is active when token auth can win and no env/auth token is configured.
-  - `gateway.remote.password` is active only when password auth can win and no env/auth password is configured.
-- `gateway.auth.token` SecretRef is inactive for startup auth resolution when `OPENCLAW_GATEWAY_TOKEN` (or `CLAWDBOT_GATEWAY_TOKEN`) is set, because env token input wins for that runtime.
+  - 配置了 `gateway.remote.url`
+  - `gateway.tailscale.mode` 为 `serve` 或 `funnel`
+    
+  在没有这些远程表面的本地模式下：
+  - 当令牌认证有效且未配置环境/认证令牌时，`gateway.remote.token` 是激活的。
+  - 当密码认证有效且未配置环境/认证密码时，`gateway.remote.password` 才是激活的。
+- 当设置了 `OPENCLAW_GATEWAY_TOKEN`（或 `CLAWDBOT_GATEWAY_TOKEN`）时，`gateway.auth.token` SecretRef 对启动时认证解析而言是非激活的，因为环境变量令牌在该运行时优先。
 
-## Gateway auth surface diagnostics
+## 网关认证表面诊断
 
-When a SecretRef is configured on `gateway.auth.token`, `gateway.auth.password`,
-`gateway.remote.token`, or `gateway.remote.password`, gateway startup/reload logs the
-surface state explicitly:
+当在 `gateway.auth.token`、`gateway.auth.password`、`gateway.remote.token` 或 `gateway.remote.password` 上配置 SecretRef 时，网关启动/重载日志会显式记录表面状态：
 
-- `active`: the SecretRef is part of the effective auth surface and must resolve.
-- `inactive`: the SecretRef is ignored for this runtime because another auth surface wins, or
-  because remote auth is disabled/not active.
+- `active`：SecretRef 属于有效认证表面，必须解析成功。
+- `inactive`：该 SecretRef 在此运行时被忽略，因为另一个认证表面优先，或远程认证被禁用/未激活。
 
-These entries are logged with `SECRETS_GATEWAY_AUTH_SURFACE` and include the reason used by the
-active-surface policy, so you can see why a credential was treated as active or inactive.
+这些条目以 `SECRETS_GATEWAY_AUTH_SURFACE` 标识日志记录，并包含活动表面策略使用的原因，方便查看凭证为何被视为激活或非激活。
 
-## Onboarding reference preflight
+## 上线参考预检
 
-When onboarding runs in interactive mode and you choose SecretRef storage, OpenClaw runs preflight validation before saving:
+当以交互模式运行上线流程并选择 SecretRef 存储时，OpenClaw 会在保存前执行预检验证：
 
-- Env refs: validates env var name and confirms a non-empty value is visible during onboarding.
-- Provider refs (`file` or `exec`): validates provider selection, resolves `id`, and checks resolved value type.
-- Quickstart reuse path: when `gateway.auth.token` is already a SecretRef, onboarding resolves it before probe/dashboard bootstrap (for `env`, `file`, and `exec` refs) using the same fail-fast gate.
+- 环境变量引用：验证环境变量名，并确认上线期间可见非空值。
+- 提供者引用（`file` 或 `exec`）：验证提供者选择，解析 `id`，并检查解析后的值类型。
+- 快速重用路径：当 `gateway.auth.token` 已是 SecretRef，界面会在探测/仪表盘启动前解析它（针对 `env`、`file` 和 `exec` 引用），使用同样的快速失败机制。
 
-If validation fails, onboarding shows the error and lets you retry.
+如果验证失败，上线流程会显示错误并允许重试。
 
-## SecretRef contract
+## SecretRef 约定
 
-Use one object shape everywhere:
+全局统一使用一个对象形态：
 
 ```json5
 { source: "env" | "file" | "exec", provider: "default", id: "..." }
@@ -85,10 +82,10 @@ Use one object shape everywhere:
 { source: "env", provider: "default", id: "OPENAI_API_KEY" }
 ```
 
-Validation:
+校验规则：
 
-- `provider` must match `^[a-z][a-z0-9_-]{0,63}$`
-- `id` must match `^[A-Z][A-Z0-9_]{0,127}$`
+- `provider` 必须匹配正则 `^[a-z][a-z0-9_-]{0,63}$`
+- `id` 必须匹配正则 `^[A-Z][A-Z0-9_]{0,127}$`
 
 ### `source: "file"`
 
@@ -96,11 +93,11 @@ Validation:
 { source: "file", provider: "filemain", id: "/providers/openai/apiKey" }
 ```
 
-Validation:
+校验规则：
 
-- `provider` must match `^[a-z][a-z0-9_-]{0,63}$`
-- `id` must be an absolute JSON pointer (`/...`)
-- RFC6901 escaping in segments: `~` => `~0`, `/` => `~1`
+- `provider` 必须匹配正则 `^[a-z][a-z0-9_-]{0,63}$`
+- `id` 必须为绝对 JSON 指针（以 `/` 开头）
+- JSON 指针段中使用 RFC6901 转义：字符 `~` 转为 `~0`，字符 `/` 转为 `~1`
 
 ### `source: "exec"`
 
@@ -108,14 +105,14 @@ Validation:
 { source: "exec", provider: "vault", id: "providers/openai/apiKey" }
 ```
 
-Validation:
+校验规则：
 
-- `provider` must match `^[a-z][a-z0-9_-]{0,63}$`
-- `id` must match `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$`
+- `provider` 必须匹配正则 `^[a-z][a-z0-9_-]{0,63}$`
+- `id` 必须匹配正则 `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$`
 
-## Provider config
+## 提供者配置
 
-Define providers under `secrets.providers`:
+在 `secrets.providers` 下定义提供者：
 
 ```json5
 {
@@ -125,7 +122,7 @@ Define providers under `secrets.providers`:
       filemain: {
         source: "file",
         path: "~/.openclaw/secrets.json",
-        mode: "json", // or "singleValue"
+        mode: "json", // 或 "singleValue"
       },
       vault: {
         source: "exec",
@@ -149,41 +146,41 @@ Define providers under `secrets.providers`:
 }
 ```
 
-### Env provider
+### 环境变量提供者
 
-- Optional allowlist via `allowlist`.
-- Missing/empty env values fail resolution.
+- 支持通过 `allowlist` 设定可选允许列表。
+- 缺失或空的环境变量值会导致解析失败。
 
-### File provider
+### 文件提供者
 
-- Reads local file from `path`.
-- `mode: "json"` expects JSON object payload and resolves `id` as pointer.
-- `mode: "singleValue"` expects ref id `"value"` and returns file contents.
-- Path must pass ownership/permission checks.
-- Windows fail-closed note: if ACL verification is unavailable for a path, resolution fails. For trusted paths only, set `allowInsecurePath: true` on that provider to bypass path security checks.
+- 从 `path` 路径读取本地文件。
+- `mode: "json"`：期望文件为 JSON 对象，引用 `id` 作为 JSON 指针解析。
+- `mode: "singleValue"`：引用 `id` 必须为 `"value"`，返回整个文件内容。
+- 路径必须通过所有权和权限检查。
+- Windows 的关闭失败备注：如果路径的 ACL 验证不可用，解析失败。仅对受信任路径，可在提供者上设置 `allowInsecurePath: true`，以绕过路径安全检查。
 
-### Exec provider
+### 执行提供者
 
-- Runs configured absolute binary path, no shell.
-- By default, `command` must point to a regular file (not a symlink).
-- Set `allowSymlinkCommand: true` to allow symlink command paths (for example Homebrew shims). OpenClaw validates the resolved target path.
-- Pair `allowSymlinkCommand` with `trustedDirs` for package-manager paths (for example `["/opt/homebrew"]`).
-- Supports timeout, no-output timeout, output byte limits, env allowlist, and trusted dirs.
-- Windows fail-closed note: if ACL verification is unavailable for the command path, resolution fails. For trusted paths only, set `allowInsecurePath: true` on that provider to bypass path security checks.
+- 运行已配置的绝对二进制路径，不使用 shell。
+- 默认情况下，`command` 必须指向常规文件（非符号链接）。
+- 设置 `allowSymlinkCommand: true` 以允许符号链接命令路径（比如 Homebrew 的 shim）。OpenClaw 会验证解析后的目标路径。
+- 可结合 `allowSymlinkCommand` 和 `trustedDirs` 使用，针对包管理器路径（比如 `["/opt/homebrew"]`）。
+- 支持超时、无输出超时、输出字节限制、环境变量允许列表和受信任目录。
+- Windows 的关闭失败备注：如果命令路径的 ACL 验证不可用，解析失败。仅对受信任路径，可在提供者上设置 `allowInsecurePath: true`，以绕过路径安全检查。
 
-Request payload (stdin):
+请求负载（标准输入）：
 
 ```json
 { "protocolVersion": 1, "provider": "vault", "ids": ["providers/openai/apiKey"] }
 ```
 
-Response payload (stdout):
+响应负载（标准输出）：
 
 ```json
 { "protocolVersion": 1, "values": { "providers/openai/apiKey": "sk-..." } }
 ```
 
-Optional per-id errors:
+可选的每个 ID 错误：
 
 ```json
 {
@@ -193,7 +190,7 @@ Optional per-id errors:
 }
 ```
 
-## Exec integration examples
+## 执行集成示例
 
 ### 1Password CLI
 
@@ -204,7 +201,7 @@ Optional per-id errors:
       onepassword_openai: {
         source: "exec",
         command: "/opt/homebrew/bin/op",
-        allowSymlinkCommand: true, // required for Homebrew symlinked binaries
+        allowSymlinkCommand: true, // Homebrew 符号链接二进制需要
         trustedDirs: ["/opt/homebrew"],
         args: ["read", "op://Personal/OpenClaw QA API Key/password"],
         passEnv: ["HOME"],
@@ -233,7 +230,7 @@ Optional per-id errors:
       vault_openai: {
         source: "exec",
         command: "/opt/homebrew/bin/vault",
-        allowSymlinkCommand: true, // required for Homebrew symlinked binaries
+        allowSymlinkCommand: true, // Homebrew 符号链接二进制需要
         trustedDirs: ["/opt/homebrew"],
         args: ["kv", "get", "-field=OPENAI_API_KEY", "secret/openclaw"],
         passEnv: ["VAULT_ADDR", "VAULT_TOKEN"],
@@ -262,7 +259,7 @@ Optional per-id errors:
       sops_openai: {
         source: "exec",
         command: "/opt/homebrew/bin/sops",
-        allowSymlinkCommand: true, // required for Homebrew symlinked binaries
+        allowSymlinkCommand: true, // Homebrew 符号链接二进制需要
         trustedDirs: ["/opt/homebrew"],
         args: ["-d", "--extract", '["providers"]["openai"]["apiKey"]', "/path/to/secrets.enc.json"],
         passEnv: ["SOPS_AGE_KEY_FILE"],
@@ -282,85 +279,85 @@ Optional per-id errors:
 }
 ```
 
-## Supported credential surface
+## 支持的凭证表面
 
-Canonical supported and unsupported credentials are listed in:
+规范支持和不支持的凭证列举见：
 
-- [SecretRef Credential Surface](/reference/secretref-credential-surface)
+- [SecretRef 凭证表面](/reference/secretref-credential-surface)
 
-Runtime-minted or rotating credentials and OAuth refresh material are intentionally excluded from read-only SecretRef resolution.
+运行时生成或轮换的凭证及 OAuth 刷新材料有意排除在只读 SecretRef 解析之外。
 
-## Required behavior and precedence
+## 必需行为和优先级
 
-- Field without a ref: unchanged.
-- Field with a ref: required on active surfaces during activation.
-- If both plaintext and ref are present, ref takes precedence on supported precedence paths.
+- 不带引用的字段：保持不变。
+- 带引用的字段：激活表面激活时是必须的。
+- 当同时存在明文和引用时，支持优先路径上以引用优先。
 
-Warning and audit signals:
+警告和审计信号：
 
-- `SECRETS_REF_OVERRIDES_PLAINTEXT` (runtime warning)
-- `REF_SHADOWED` (audit finding when `auth-profiles.json` credentials take precedence over `openclaw.json` refs)
+- `SECRETS_REF_OVERRIDES_PLAINTEXT`（运行时警告）
+- `REF_SHADOWED`（审计发现，当 `auth-profiles.json` 凭证优先于 `openclaw.json` 引用时）
 
-Google Chat compatibility behavior:
+Google Chat 兼容行为：
 
-- `serviceAccountRef` takes precedence over plaintext `serviceAccount`.
-- Plaintext value is ignored when sibling ref is set.
+- `serviceAccountRef` 优先于明文 `serviceAccount`。
+- 当同级引用被设置时，忽略明文值。
 
-## Activation triggers
+## 激活触发
 
-Secret activation runs on:
+Secret 激活于以下时刻运行：
 
-- Startup (preflight plus final activation)
-- Config reload hot-apply path
-- Config reload restart-check path
-- Manual reload via `secrets.reload`
+- 启动时（预检加最终激活）
+- 配置重载热应用路径
+- 配置重载重启检查路径
+- 通过 `secrets.reload` 手动重载
 
-Activation contract:
+激活约定：
 
-- Success swaps the snapshot atomically.
-- Startup failure aborts gateway startup.
-- Runtime reload failure keeps the last-known-good snapshot.
+- 成功则原子交换快照。
+- 启动失败则中止网关启动。
+- 运行时重载失败保持最后已知良好快照。
 
-## Degraded and recovered signals
+## 降级与恢复信号
 
-When reload-time activation fails after a healthy state, OpenClaw enters degraded secrets state.
+当重载激活失败发生在健康状态后，OpenClaw 进入秘密降级状态。
 
-One-shot system event and log codes:
+一次性系统事件和日志代码：
 
 - `SECRETS_RELOADER_DEGRADED`
 - `SECRETS_RELOADER_RECOVERED`
 
-Behavior:
+行为：
 
-- Degraded: runtime keeps last-known-good snapshot.
-- Recovered: emitted once after the next successful activation.
-- Repeated failures while already degraded log warnings but do not spam events.
-- Startup fail-fast does not emit degraded events because runtime never became active.
+- 降级：运行时保留最后已知良好快照。
+- 恢复：在下次成功激活后发出一次。
+- 已降级状态下重复失败日志警告，但不会泛滥事件。
+- 启动快速失败不会发出降级事件，因为运行时未曾激活。
 
-## Command-path resolution
+## 命令路径解析
 
-Command paths can opt into supported SecretRef resolution via gateway snapshot RPC.
+命令路径可选择使用通过网关快照 RPC 支持的 SecretRef 解析。
 
-There are two broad behaviors:
+主要有两种行为：
 
-- Strict command paths (for example `openclaw memory` remote-memory paths and `openclaw qr --remote`) read from the active snapshot and fail fast when a required SecretRef is unavailable.
-- Read-only command paths (for example `openclaw status`, `openclaw status --all`, `openclaw channels status`, `openclaw channels resolve`, and read-only doctor/config repair flows) also prefer the active snapshot, but degrade instead of aborting when a targeted SecretRef is unavailable in that command path.
+- 严格命令路径（如 `openclaw memory` 远程内存路径和 `openclaw qr --remote`）从活动快照读取，且当必需的 SecretRef 不可用时快速失败。
+- 只读命令路径（如 `openclaw status`、`openclaw status --all`、`openclaw channels status`、`openclaw channels resolve` 以及只读的 doctor/配置修复流程）也优先使用活动快照，但在命令路径中特定 SecretRef 不可用时降级处理而非中止。
 
-Read-only behavior:
+只读行为：
 
-- When the gateway is running, these commands read from the active snapshot first.
-- If gateway resolution is incomplete or the gateway is unavailable, they attempt targeted local fallback for the specific command surface.
-- If a targeted SecretRef is still unavailable, the command continues with degraded read-only output and explicit diagnostics such as “configured but unavailable in this command path”.
-- This degraded behavior is command-local only. It does not weaken runtime startup, reload, or send/auth paths.
+- 当网关正在运行时，这些命令优先从活动快照读取。
+- 如果网关解析不完整或网关不可用，则尝试针对该命令表面进行本地回退。
+- 如果目标 SecretRef 仍不可用，命令继续并输出降级的只读信息，附带明确的诊断（例如“已配置但在此命令路径中不可用”）。
+- 该降级行为仅限于本命令，不影响运行时启动、重载或发送/认证路径。
 
-Other notes:
+其他说明：
 
-- Snapshot refresh after backend secret rotation is handled by `openclaw secrets reload`.
-- Gateway RPC method used by these command paths: `secrets.resolve`.
+- 后端密钥轮换后快照刷新由 `openclaw secrets reload` 处理。
+- 这类命令路径使用的网关 RPC 方法：`secrets.resolve`。
 
-## Audit and configure workflow
+## 审计与配置工作流
 
-Default operator flow:
+默认运营者流程：
 
 ```bash
 openclaw secrets audit --check
@@ -370,76 +367,76 @@ openclaw secrets audit --check
 
 ### `secrets audit`
 
-Findings include:
+发现包括：
 
-- plaintext values at rest (`openclaw.json`, `auth-profiles.json`, `.env`)
-- unresolved refs
-- precedence shadowing (`auth-profiles.json` taking priority over `openclaw.json` refs)
-- legacy residues (`auth.json`, OAuth reminders)
+- 以明文存储的值（`openclaw.json`、`auth-profiles.json`、`.env`）
+- 未解析的引用
+- 优先级遮蔽（`auth-profiles.json` 优先于 `openclaw.json` 引用）
+- 旧遗留（`auth.json`，OAuth 提醒）
 
 ### `secrets configure`
 
-Interactive helper that:
+交互式助手，功能：
 
-- configures `secrets.providers` first (`env`/`file`/`exec`, add/edit/remove)
-- lets you select supported secret-bearing fields in `openclaw.json` plus `auth-profiles.json` for one agent scope
-- can create a new `auth-profiles.json` mapping directly in the target picker
-- captures SecretRef details (`source`, `provider`, `id`)
-- runs preflight resolution
-- can apply immediately
+- 先配置 `secrets.providers`（`env`/`file`/`exec`，可添加/编辑/删除）
+- 让你选择 `openclaw.json` 和 `auth-profiles.json` 中支持的携带秘密的字段，针对单个代理范围
+- 可以在目标选择器中直接创建新的 `auth-profiles.json` 映射
+- 捕获 SecretRef 详情（`source`、`provider`、`id`）
+- 运行预检解析
+- 可立即应用
 
-Helpful modes:
+有用模式：
 
 - `openclaw secrets configure --providers-only`
 - `openclaw secrets configure --skip-provider-setup`
 - `openclaw secrets configure --agent <id>`
 
-`configure` apply defaults:
+`configure` 应用默认行为：
 
-- scrub matching static credentials from `auth-profiles.json` for targeted providers
-- scrub legacy static `api_key` entries from `auth.json`
-- scrub matching known secret lines from `<config-dir>/.env`
+- 擦除针对目标提供者匹配的静态凭证，来自 `auth-profiles.json`
+- 擦除发现的旧静态 `api_key` 条目，来自 `auth.json`
+- 擦除匹配的已知秘密行，来自 `<config-dir>/.env`
 
 ### `secrets apply`
 
-Apply a saved plan:
+应用已保存计划：
 
 ```bash
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
 ```
 
-For strict target/path contract details and exact rejection rules, see:
+有关严格目标/路径约定细节及精确拒绝规则，参见：
 
-- [Secrets Apply Plan Contract](/gateway/secrets-plan-contract)
+- [Secrets 应用计划约定](/gateway/secrets-plan-contract)
 
-## One-way safety policy
+## 单向安全策略
 
-OpenClaw intentionally does not write rollback backups containing historical plaintext secret values.
+OpenClaw 有意不写包含历史明文秘密值的回滚备份。
 
-Safety model:
+安全模型：
 
-- preflight must succeed before write mode
-- runtime activation is validated before commit
-- apply updates files using atomic file replacement and best-effort restore on failure
+- 写入前必须通过预检
+- 提交前进行运行时激活验证
+- 应用时使用原子文件替换及失败时的最大努力恢复
 
-## Legacy auth compatibility notes
+## 旧版认证兼容说明
 
-For static credentials, runtime no longer depends on plaintext legacy auth storage.
+针对静态凭证，运行时不再依赖明文旧版认证存储。
 
-- Runtime credential source is the resolved in-memory snapshot.
-- Legacy static `api_key` entries are scrubbed when discovered.
-- OAuth-related compatibility behavior remains separate.
+- 运行时凭证来源是解析后的内存快照。
+- 发现的旧静态 `api_key` 条目会被擦除。
+- OAuth 相关兼容行为仍然独立存在。
 
-## Web UI note
+## Web UI 说明
 
-Some SecretInput unions are easier to configure in raw editor mode than in form mode.
+某些 SecretInput 联合类型在原始编辑模式下比表单模式更易配置。
 
-## Related docs
+## 相关文档
 
-- CLI commands: [secrets](/cli/secrets)
-- Plan contract details: [Secrets Apply Plan Contract](/gateway/secrets-plan-contract)
-- Credential surface: [SecretRef Credential Surface](/reference/secretref-credential-surface)
-- Auth setup: [Authentication](/gateway/authentication)
-- Security posture: [Security](/gateway/security)
-- Environment precedence: [Environment Variables](/help/environment)
+- CLI 命令：[secrets](/cli/secrets)
+- 计划约定详情：[Secrets 应用计划约定](/gateway/secrets-plan-contract)
+- 凭证表面：[SecretRef 凭证表面](/reference/secretref-credential-surface)
+- 认证设置：[认证](/gateway/authentication)
+- 安全态势：[安全](/gateway/security)
+- 环境优先级：[环境变量](/help/environment)

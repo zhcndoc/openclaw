@@ -1,22 +1,22 @@
 ---
-summary: "CLI reference for `openclaw memory` (status/index/search)"
+summary: "`openclaw memory` 的命令行参考（状态/索引/搜索）"
 read_when:
-  - You want to index or search semantic memory
-  - You’re debugging memory availability or indexing
+  - 你想要索引或搜索语义记忆
+  - 你正在调试记忆可用性或索引相关问题
 title: "memory"
 ---
 
 # `openclaw memory`
 
-Manage semantic memory indexing and search.
-Provided by the active memory plugin (default: `memory-core`; set `plugins.slots.memory = "none"` to disable).
+管理语义记忆的索引和搜索功能。
+由当前激活的记忆插件提供（默认：`memory-core`；设置 `plugins.slots.memory = "none"` 可禁用）。
 
-Related:
+相关内容：
 
-- Memory concept: [Memory](/concepts/memory)
-- Plugins: [Plugins](/tools/plugin)
+- 记忆概念：[Memory](/concepts/memory)
+- 插件：[Plugins](/tools/plugin)
 
-## Examples
+## 示例
 
 ```bash
 openclaw memory status
@@ -31,24 +31,24 @@ openclaw memory status --agent main
 openclaw memory index --agent main --verbose
 ```
 
-## Options
+## 选项
 
-Common:
+通用：
 
-- `--agent <id>`: scope to a single agent (default: all configured agents).
-- `--verbose`: emit detailed logs during probes and indexing.
+- `--agent <id>`：限定操作范围为单个代理（默认：所有已配置代理）。
+- `--verbose`：在探测和索引过程中输出详细日志。
 
-`memory search`:
+`memory search`：
 
-- Query input: pass either positional `[query]` or `--query <text>`.
-- If both are provided, `--query` wins.
-- If neither is provided, the command exits with an error.
+- 查询输入：可以传入位置参数 `[query]` 或 `--query <text>`。
+- 如果两者都提供，以 `--query` 为准。
+- 如果均未提供，命令将报错退出。
 
-Notes:
+注意事项：
 
-- `memory status --deep` probes vector + embedding availability.
-- `memory status --deep --index` runs a reindex if the store is dirty.
-- `memory index --verbose` prints per-phase details (provider, model, sources, batch activity).
-- `memory status` includes any extra paths configured via `memorySearch.extraPaths`.
-- If effectively active memory remote API key fields are configured as SecretRefs, the command resolves those values from the active gateway snapshot. If gateway is unavailable, the command fails fast.
-- Gateway version skew note: this command path requires a gateway that supports `secrets.resolve`; older gateways return an unknown-method error.
+- `memory status --deep` 会探测向量及嵌入的可用性。
+- `memory status --deep --index` 如果存储被标记为脏，则执行重新索引。
+- `memory index --verbose` 会打印每个阶段的详细信息（提供者、模型、来源、批处理活动）。
+- `memory status` 会包含通过 `memorySearch.extraPaths` 配置的额外路径。
+- 如果有效的记忆远程 API 密钥字段被配置为 SecretRefs，命令会从当前激活的网关快照中解析这些值。如果网关不可用，命令会快速失败。
+- 网关版本兼容提示：该命令路径需要支持 `secrets.resolve` 的网关；旧版网关会返回未知方法错误。

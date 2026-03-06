@@ -1,24 +1,24 @@
 ---
-summary: "Canonical supported vs unsupported SecretRef credential surface"
+summary: "Canonical 支持与不支持的 SecretRef 凭证范围"
 read_when:
-  - Verifying SecretRef credential coverage
-  - Auditing whether a credential is eligible for `secrets configure` or `secrets apply`
-  - Verifying why a credential is outside the supported surface
-title: "SecretRef Credential Surface"
+  - 验证 SecretRef 凭证覆盖范围
+  - 审计凭证是否符合 `secrets configure` 或 `secrets apply` 的资格
+  - 验证凭证为何不在支持范围内
+title: "SecretRef 凭证范围"
 ---
 
-# SecretRef credential surface
+# SecretRef 凭证范围
 
-This page defines the canonical SecretRef credential surface.
+本页面定义了规范的 SecretRef 凭证范围。
 
-Scope intent:
+范围意图：
 
-- In scope: strictly user-supplied credentials that OpenClaw does not mint or rotate.
-- Out of scope: runtime-minted or rotating credentials, OAuth refresh material, and session-like artifacts.
+- 范围内：严格指用户提供且 OpenClaw 不会铸造或轮换的凭证。
+- 范围外：运行时铸造或轮换的凭证、OAuth 刷新凭据及类似会话的产物。
 
-## Supported credentials
+## 支持的凭证
 
-### `openclaw.json` targets (`secrets configure` + `secrets apply` + `secrets audit`)
+### `openclaw.json` 目标（`secrets configure` + `secrets apply` + `secrets audit`）
 
 [//]: # "secretref-supported-list-start"
 
@@ -83,28 +83,28 @@ Scope intent:
 - `channels.zalo.webhookSecret`
 - `channels.zalo.accounts.*.botToken`
 - `channels.zalo.accounts.*.webhookSecret`
-- `channels.googlechat.serviceAccount` via sibling `serviceAccountRef` (compatibility exception)
-- `channels.googlechat.accounts.*.serviceAccount` via sibling `serviceAccountRef` (compatibility exception)
+- `channels.googlechat.serviceAccount` 通过同级的 `serviceAccountRef`（兼容异常）
+- `channels.googlechat.accounts.*.serviceAccount` 通过同级的 `serviceAccountRef`（兼容异常）
 
-### `auth-profiles.json` targets (`secrets configure` + `secrets apply` + `secrets audit`)
+### `auth-profiles.json` 目标（`secrets configure` + `secrets apply` + `secrets audit`）
 
-- `profiles.*.keyRef` (`type: "api_key"`)
-- `profiles.*.tokenRef` (`type: "token"`)
+- `profiles.*.keyRef`（`type: "api_key"`）
+- `profiles.*.tokenRef`（`type: "token"`）
 
 [//]: # "secretref-supported-list-end"
 
-Notes:
+备注：
 
-- Auth-profile plan targets require `agentId`.
-- Plan entries target `profiles.*.key` / `profiles.*.token` and write sibling refs (`keyRef` / `tokenRef`).
-- Auth-profile refs are included in runtime resolution and audit coverage.
-- For web search:
-  - In explicit provider mode (`tools.web.search.provider` set), only the selected provider key is active.
-  - In auto mode (`tools.web.search.provider` unset), `tools.web.search.apiKey` and provider-specific keys are active.
+- 认证配置文件计划目标需要 `agentId`。
+- 计划条目目标为 `profiles.*.key` / `profiles.*.token` 并写入同级引用（`keyRef` / `tokenRef`）。
+- 认证配置文件引用包括在运行时解析及审计覆盖中。
+- 关于网络搜索：
+  - 在显式提供者模式下（设置了 `tools.web.search.provider`），仅启用所选提供者的密钥。
+  - 在自动模式下（未设置 `tools.web.search.provider`），`tools.web.search.apiKey` 及提供者特定密钥均有效。
 
-## Unsupported credentials
+## 不支持的凭证
 
-Out-of-scope credentials include:
+范围外凭证包括：
 
 [//]: # "secretref-unsupported-list-start"
 
@@ -120,6 +120,6 @@ Out-of-scope credentials include:
 
 [//]: # "secretref-unsupported-list-end"
 
-Rationale:
+理由：
 
-- These credentials are minted, rotated, session-bearing, or OAuth-durable classes that do not fit read-only external SecretRef resolution.
+- 此类凭证为铸造、轮换、持有会话特性或 OAuth 持久类，不适合只读的外部 SecretRef 解析。

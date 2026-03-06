@@ -1,417 +1,417 @@
 ---
-summary: "Clawnet refactor: unify network protocol, roles, auth, approvals, identity"
+summary: "Clawnet 重构：统一网络协议、角色、认证、审批、身份"
 read_when:
-  - Planning a unified network protocol for nodes + operator clients
-  - Reworking approvals, pairing, TLS, and presence across devices
-title: "Clawnet Refactor"
+  - 规划节点 + 操作客户端的统一网络协议
+  - 重新设计跨设备的审批、配对、TLS 与在线状态
+title: "Clawnet 重构"
 ---
 
-# Clawnet refactor (protocol + auth unification)
+# Clawnet 重构（协议 + 认证统一）
 
-## Hi
+## 你好
 
-Hi Peter — great direction; this unlocks simpler UX + stronger security.
+你好 Peter —— 非常棒的方向；这解锁了更简洁的用户体验与更强的安全性。
 
-## Purpose
+## 目的
 
-Single, rigorous document for:
+一份单一、严谨的文档，用于：
 
-- Current state: protocols, flows, trust boundaries.
-- Pain points: approvals, multi‑hop routing, UI duplication.
-- Proposed new state: one protocol, scoped roles, unified auth/pairing, TLS pinning.
-- Identity model: stable IDs + cute slugs.
-- Migration plan, risks, open questions.
+- 当前状态：协议、流程、信任边界。
+- 痛点：审批、多跳路由、UI 重复。
+- 提议的新状态：一个协议、作用域角色、统一认证/配对、TLS 钉扎。
+- 身份模型：稳定的 ID + 可爱简短名。
+- 迁移计划、风险、待解决问题。
 
-## Goals (from discussion)
+## 目标（根据讨论）
 
-- One protocol for all clients (mac app, CLI, iOS, Android, headless node).
-- Every network participant authenticated + paired.
-- Role clarity: nodes vs operators.
-- Central approvals routed to where the user is.
-- TLS encryption + optional pinning for all remote traffic.
-- Minimal code duplication.
-- Single machine should appear once (no UI/node duplicate entry).
+- 所有客户端（mac 应用、CLI、iOS、Android、无头节点）使用统一协议。
+- 所有网络参与者均已认证并配对。
+- 明确角色区分：节点 与 操作者。
+- 中央审批路由至用户所在设备。
+- 所有远程流量使用 TLS 加密 + 可选钉扎。
+- 最小化代码重复。
+- 同一台机器只出现一次（无 UI/节点重复入口）。
 
-## Non‑goals (explicit)
+## 非目标（明确排除）
 
-- Remove capability separation (still need least‑privilege).
-- Expose full gateway control plane without scope checks.
-- Make auth depend on human labels (slugs remain non‑security).
+- 移除能力分离（仍需最小权限原则）。
+- 揭露完全的网关控制面且无作用域检测。
+- 使认证依赖人类标签（简短名非安全项）。
 
 ---
 
-# Current state (as‑is)
+# 当前状态（现状）
 
-## Two protocols
+## 两个协议
 
-### 1) Gateway WebSocket (control plane)
+### 1）网关 WebSocket（控制面）
 
-- Full API surface: config, channels, models, sessions, agent runs, logs, nodes, etc.
-- Default bind: loopback. Remote access via SSH/Tailscale.
-- Auth: token/password via `connect`.
-- No TLS pinning (relies on loopback/tunnel).
-- Code:
+- 完整 API 覆盖：配置、频道、模型、会话、代理运行、日志、节点等。
+- 默认绑定：回环地址。远程访问通过 SSH/Tailscale。
+- 认证：通过 `connect` 使用令牌/密码。
+- 无 TLS 钉扎（依赖回环/隧道）。
+- 代码：
   - `src/gateway/server/ws-connection/message-handler.ts`
   - `src/gateway/client.ts`
   - `docs/gateway/protocol.md`
 
-### 2) Bridge (node transport)
+### 2）Bridge（节点传输）
 
-- Narrow allowlist surface, node identity + pairing.
-- JSONL over TCP; optional TLS + cert fingerprint pinning.
-- TLS advertises fingerprint in discovery TXT.
-- Code:
+- 限定白名单范围，节点身份和配对。
+- TCP 上的 JSONL；可选 TLS + 证书指纹钉扎。
+- TLS 在发现 TXT 记录中广播指纹。
+- 代码：
   - `src/infra/bridge/server/connection.ts`
   - `src/gateway/server-bridge.ts`
   - `src/node-host/bridge-client.ts`
   - `docs/gateway/bridge-protocol.md`
 
-## Control plane clients today
+## 当前控制面客户端
 
-- CLI → Gateway WS via `callGateway` (`src/gateway/call.ts`).
-- macOS app UI → Gateway WS (`GatewayConnection`).
-- Web Control UI → Gateway WS.
-- ACP → Gateway WS.
-- Browser control uses its own HTTP control server.
+- CLI → 通过 `callGateway` 访问网关 WS（`src/gateway/call.ts`）。
+- macOS 应用 UI → 网关 WS（`GatewayConnection`）。
+- Web 控制 UI → 网关 WS。
+- ACP → 网关 WS。
+- 浏览器控制使用独立的 HTTP 控制服务器。
 
-## Nodes today
+## 当前节点
 
-- macOS app in node mode connects to Gateway bridge (`MacNodeBridgeSession`).
-- iOS/Android apps connect to Gateway bridge.
-- Pairing + per‑node token stored on gateway.
+- macOS 应用节点模式连接网关 Bridge（`MacNodeBridgeSession`）。
+- iOS/Android 应用连接网关 Bridge。
+- 配对与每节点令牌存储在网关。
 
-## Current approval flow (exec)
+## 当前审批流程（执行）
 
-- Agent uses `system.run` via Gateway.
-- Gateway invokes node over bridge.
-- Node runtime decides approval.
-- UI prompt shown by mac app (when node == mac app).
-- Node returns `invoke-res` to Gateway.
-- Multi‑hop, UI tied to node host.
+- 代理通过网关使用 `system.run`。
+- 网关通过 Bridge 调用节点。
+- 节点运行时决定审批。
+- mac 应用（节点即 mac 应用时）弹出 UI 提示。
+- 节点返回 `invoke-res` 给网关。
+- 多跳，UI 绑定位于节点宿主。
 
-## Presence + identity today
+## 当前在线状态 + 身份
 
-- Gateway presence entries from WS clients.
-- Node presence entries from bridge.
-- mac app can show two entries for same machine (UI + node).
-- Node identity stored in pairing store; UI identity separate.
-
----
-
-# Problems / pain points
-
-- Two protocol stacks to maintain (WS + Bridge).
-- Approvals on remote nodes: prompt appears on node host, not where user is.
-- TLS pinning only exists for bridge; WS depends on SSH/Tailscale.
-- Identity duplication: same machine shows as multiple instances.
-- Ambiguous roles: UI + node + CLI capabilities not clearly separated.
+- 网关在线状态来自 WS 客户端。
+- 节点在线状态来自 Bridge。
+- mac 应用同一机器可显示两条条目（UI + 节点）。
+- 节点身份存储于配对库；UI 身份独立。
 
 ---
 
-# Proposed new state (Clawnet)
+# 问题 / 痛点
 
-## One protocol, two roles
-
-Single WS protocol with role + scope.
-
-- **Role: node** (capability host)
-- **Role: operator** (control plane)
-- Optional **scope** for operator:
-  - `operator.read` (status + viewing)
-  - `operator.write` (agent run, sends)
-  - `operator.admin` (config, channels, models)
-
-### Role behaviors
-
-**Node**
-
-- Can register capabilities (`caps`, `commands`, permissions).
-- Can receive `invoke` commands (`system.run`, `camera.*`, `canvas.*`, `screen.record`, etc).
-- Can send events: `voice.transcript`, `agent.request`, `chat.subscribe`.
-- Cannot call config/models/channels/sessions/agent control plane APIs.
-
-**Operator**
-
-- Full control plane API, gated by scope.
-- Receives all approvals.
-- Does not directly execute OS actions; routes to nodes.
-
-### Key rule
-
-Role is per‑connection, not per device. A device may open both roles, separately.
+- 维护两套协议栈（WS + Bridge）。
+- 远程节点审批提示出现在节点宿主，而非用户所在。
+- TLS 钉扎仅限于 Bridge；WS 依赖 SSH/Tailscale。
+- 身份重复：同机多实例显示。
+- 角色模糊：UI + 节点 + CLI 能力未清晰划分。
 
 ---
 
-# Unified authentication + pairing
+# 新提议状态（Clawnet）
 
-## Client identity
+## 一个协议，两个角色
 
-Every client provides:
+统一 WS 协议，含角色 + 作用域。
 
-- `deviceId` (stable, derived from device key).
-- `displayName` (human name).
-- `role` + `scope` + `caps` + `commands`.
+- **角色：节点**（能力宿主）
+- **角色：操作员**（控制面）
+- 操作员附带可选 **作用域**：
+  - `operator.read`（状态 + 查看）
+  - `operator.write`（代理运行，发送）
+  - `operator.admin`（配置、频道、模型）
 
-## Pairing flow (unified)
+### 角色行为
 
-- Client connects unauthenticated.
-- Gateway creates a **pairing request** for that `deviceId`.
-- Operator receives prompt; approves/denies.
-- Gateway issues credentials bound to:
-  - device public key
-  - role(s)
-  - scope(s)
-  - capabilities/commands
-- Client persists token, reconnects authenticated.
+**节点**
 
-## Device‑bound auth (avoid bearer token replay)
+- 可注册能力（`caps`、`commands`、权限）。
+- 可接收 `invoke` 命令（`system.run`、`camera.*`、`canvas.*`、`screen.record` 等）。
+- 可发送事件：`voice.transcript`、`agent.request`、`chat.subscribe`。
+- 不能调用配置/模型/频道/会话/代理控制面 API。
 
-Preferred: device keypairs.
+**操作员**
 
-- Device generates keypair once.
-- `deviceId = fingerprint(publicKey)`.
-- Gateway sends nonce; device signs; gateway verifies.
-- Tokens are issued to a public key (proof‑of‑possession), not a string.
+- 完整控制面 API，根据作用域访问控制。
+- 接收所有审批请求。
+- 不直接执行操作系统动作，路由至节点执行。
 
-Alternatives:
+### 关键规则
 
-- mTLS (client certs): strongest, more ops complexity.
-- Short‑lived bearer tokens only as a temporary phase (rotate + revoke early).
-
-## Silent approval (SSH heuristic)
-
-Define it precisely to avoid a weak link. Prefer one:
-
-- **Local‑only**: auto‑pair when client connects via loopback/Unix socket.
-- **Challenge via SSH**: gateway issues nonce; client proves SSH by fetching it.
-- **Physical presence window**: after a local approval on gateway host UI, allow auto‑pair for a short window (e.g. 10 minutes).
-
-Always log + record auto‑approvals.
+角色按连接区分，不按设备。设备可分别开启两种角色连接。
 
 ---
 
-# TLS everywhere (dev + prod)
+# 统一认证 + 配对
 
-## Reuse existing bridge TLS
+## 客户端身份
 
-Use current TLS runtime + fingerprint pinning:
+每个客户端需提供：
+
+- `deviceId`（稳定，衍生自设备密钥）。
+- `displayName`（人类可读名称）。
+- `role` + `scope` + `caps` + `commands`。
+
+## 配对流程（统一）
+
+- 客户端未认证连接。
+- 网关为该 `deviceId` 创建**配对请求**。
+- 操作员收到提示，批准或拒绝。
+- 网关签发绑定：
+  - 设备公钥
+  - 角色
+  - 作用域
+  - 能力/命令
+- 客户端保存令牌，带认证重连。
+
+## 设备绑定认证（避免令牌重放）
+
+首选：设备密钥对。
+
+- 设备生成密钥对一次。
+- `deviceId = fingerprint(publicKey)`。
+- 网关发送随机数；设备签名；网关验证。
+- 令牌绑定公钥（所有权证明），非简单字符串。
+
+备选：
+
+- mTLS（客户端证书）：最强，多运维复杂性。
+- 短期 Bearer 令牌仅做临时阶段（频繁轮换与撤销）。
+
+## 静默审批（SSH 启发）
+
+需精确定义，避免弱链。推荐一种：
+
+- **本地独享**：当客户端通过回环/Unix 套接字连接时自动配对。
+- **SSH 挑战**：网关发随机数；客户端通过 SSH 证明后取回。
+- **物理存在窗口**：本地审批后允许短时间自动配对窗口（例如 10 分钟）。
+
+始终记录日志与自动审批操作。
+
+---
+
+# 全面 TLS（开发 + 生产）
+
+## 复用现有 Bridge TLS
+
+使用现有 TLS 运行时 + 指纹钉扎：
 
 - `src/infra/bridge/server/tls.ts`
-- fingerprint verification logic in `src/node-host/bridge-client.ts`
+- 指纹校验逻辑在 `src/node-host/bridge-client.ts`
 
-## Apply to WS
+## 应用于 WS
 
-- WS server supports TLS with same cert/key + fingerprint.
-- WS clients can pin fingerprint (optional).
-- Discovery advertises TLS + fingerprint for all endpoints.
-  - Discovery is locator hints only; never a trust anchor.
+- WS 服务端支持使用相同证书/密钥 + 指纹的 TLS。
+- WS 客户端可选钉扎证书指纹。
+- 发现机制公开所有服务 TLS + 指纹。
+  - 发现仅做定位提示，绝非信任锚。
 
-## Why
+## 原因
 
-- Reduce reliance on SSH/Tailscale for confidentiality.
-- Make remote mobile connections safe by default.
-
----
-
-# Approvals redesign (centralized)
-
-## Current
-
-Approval happens on node host (mac app node runtime). Prompt appears where node runs.
-
-## Proposed
-
-Approval is **gateway‑hosted**, UI delivered to operator clients.
-
-### New flow
-
-1. Gateway receives `system.run` intent (agent).
-2. Gateway creates approval record: `approval.requested`.
-3. Operator UI(s) show prompt.
-4. Approval decision sent to gateway: `approval.resolve`.
-5. Gateway invokes node command if approved.
-6. Node executes, returns `invoke-res`.
-
-### Approval semantics (hardening)
-
-- Broadcast to all operators; only the active UI shows a modal (others get a toast).
-- First resolution wins; gateway rejects subsequent resolves as already settled.
-- Default timeout: deny after N seconds (e.g. 60s), log reason.
-- Resolution requires `operator.approvals` scope.
-
-## Benefits
-
-- Prompt appears where user is (mac/phone).
-- Consistent approvals for remote nodes.
-- Node runtime stays headless; no UI dependency.
+- 降低对 SSH/Tailscale 保密性的依赖。
+- 默认使远程移动连接安全。
 
 ---
 
-# Role clarity examples
+# 审批重设计（集中式）
 
-## iPhone app
+## 当前
 
-- **Node role** for: mic, camera, voice chat, location, push‑to‑talk.
-- Optional **operator.read** for status and chat view.
-- Optional **operator.write/admin** only when explicitly enabled.
+审批发生于节点宿主（mac 应用节点运行时），提示显示在节点宿主处。
 
-## macOS app
+## 提议
 
-- Operator role by default (control UI).
-- Node role when “Mac node” enabled (system.run, screen, camera).
-- Same deviceId for both connections → merged UI entry.
+审批由**网关主机承载**，UI 发送至操作员客户端。
+
+### 新流程
+
+1. 网关接收 `system.run` 请求（代理）。
+2. 网关创建审批记录：`approval.requested`。
+3. 操作员 UI 显示提示。
+4. 审批结果发送网关：`approval.resolve`。
+5. 若批准，网关调用节点命令。
+6. 节点执行，返回 `invoke-res`。
+
+### 审批语义（强化）
+
+- 广播所有操作员；只有活跃 UI 弹出模态，其它显示提示消息。
+- 首次决议生效；网关拒绝后续重复决议。
+- 默认超时：N 秒后拒绝（例如 60 秒），记录原因。
+- 决议需具备 `operator.approvals` 作用域。
+
+## 优势
+
+- 提示显示用户所在设备（Mac/手机）。
+- 远程节点审批一致。
+- 节点运行时无 UI 依赖，保持无头。
+
+---
+
+# 角色明确示例
+
+## iPhone 应用
+
+- **节点角色**：麦克风、摄像头、语音聊天、定位、按键讲话。
+- 可选 **operator.read**：状态与聊天查看。
+- 明确启用时的 **operator.write/admin**。
+
+## macOS 应用
+
+- 默认操作员角色（控制 UI）。
+- 启用“Mac 节点”时具备节点角色（system.run、屏幕、摄像头）。
+- 两个连接共享同一 `deviceId` → 合并 UI 条目。
 
 ## CLI
 
-- Operator role always.
-- Scope derived by subcommand:
-  - `status`, `logs` → read
-  - `agent`, `message` → write
-  - `config`, `channels` → admin
-  - approvals + pairing → `operator.approvals` / `operator.pairing`
+- 恒定操作员角色。
+- 作用域由子命令推断：
+  - `status`、`logs` → read
+  - `agent`、`message` → write
+  - `config`、`channels` → admin
+  - 审批 + 配对 → `operator.approvals` / `operator.pairing`
 
 ---
 
-# Identity + slugs
+# 身份 + 简短名
 
-## Stable ID
+## 稳定 ID
 
-Required for auth; never changes.
-Preferred:
+认证必需；永不改变。
+优选：
 
-- Keypair fingerprint (public key hash).
+- 密钥对指纹（公钥哈希）。
 
-## Cute slug (lobster‑themed)
+## 可爱简短名（主题：龙虾）
 
-Human label only.
+仅用于人类标签。
 
-- Example: `scarlet-claw`, `saltwave`, `mantis-pinch`.
-- Stored in gateway registry, editable.
-- Collision handling: `-2`, `-3`.
+- 示例：`scarlet-claw`、`saltwave`、`mantis-pinch`。
+- 存储于网关注册表，可编辑。
+- 冲突处理：后缀 `-2`、`-3`。
 
-## UI grouping
+## UI 聚合
 
-Same `deviceId` across roles → single “Instance” row:
+相同 `deviceId`（跨角色）→ 单一“实例”行：
 
-- Badge: `operator`, `node`.
-- Shows capabilities + last seen.
-
----
-
-# Migration strategy
-
-## Phase 0: Document + align
-
-- Publish this doc.
-- Inventory all protocol calls + approval flows.
-
-## Phase 1: Add roles/scopes to WS
-
-- Extend `connect` params with `role`, `scope`, `deviceId`.
-- Add allowlist gating for node role.
-
-## Phase 2: Bridge compatibility
-
-- Keep bridge running.
-- Add WS node support in parallel.
-- Gate features behind config flag.
-
-## Phase 3: Central approvals
-
-- Add approval request + resolve events in WS.
-- Update mac app UI to prompt + respond.
-- Node runtime stops prompting UI.
-
-## Phase 4: TLS unification
-
-- Add TLS config for WS using bridge TLS runtime.
-- Add pinning to clients.
-
-## Phase 5: Deprecate bridge
-
-- Migrate iOS/Android/mac node to WS.
-- Keep bridge as fallback; remove once stable.
-
-## Phase 6: Device‑bound auth
-
-- Require key‑based identity for all non‑local connections.
-- Add revocation + rotation UI.
+- 徽章：`operator`、`node`。
+- 显示能力 + 最后在线时间。
 
 ---
 
-# Security notes
+# 迁移策略
 
-- Role/allowlist enforced at gateway boundary.
-- No client gets “full” API without operator scope.
-- Pairing required for _all_ connections.
-- TLS + pinning reduces MITM risk for mobile.
-- SSH silent approval is a convenience; still recorded + revocable.
-- Discovery is never a trust anchor.
-- Capability claims are verified against server allowlists by platform/type.
+## 阶段 0：文档 + 对齐
 
-# Streaming + large payloads (node media)
+- 发布本文档。
+- 清点所有协议调用 + 审批流程。
 
-WS control plane is fine for small messages, but nodes also do:
+## 阶段 1：为 WS 加入角色/作用域
 
-- camera clips
-- screen recordings
-- audio streams
+- 在 `connect` 参数添加 `role`、`scope`、`deviceId`。
+- 对节点角色加入白名单限制。
 
-Options:
+## 阶段 2：Bridge 兼容性
 
-1. WS binary frames + chunking + backpressure rules.
-2. Separate streaming endpoint (still TLS + auth).
-3. Keep bridge longer for media‑heavy commands, migrate last.
+- 保持 Bridge 运行。
+- 并行添加 WS 节点支持。
+- 通过配置标志控制功能。
 
-Pick one before implementation to avoid drift.
+## 阶段 3：中央审批
 
-# Capability + command policy
+- 添加 WS 中审批请求与决议事件。
+- 更新 mac 应用 UI 显示提示并响应。
+- 节点运行时停用本地 UI 提示。
 
-- Node‑reported caps/commands are treated as **claims**.
-- Gateway enforces per‑platform allowlists.
-- Any new command requires operator approval or explicit allowlist change.
-- Audit changes with timestamps.
+## 阶段 4：TLS 统一
 
-# Audit + rate limiting
+- 为 WS 添加使用 Bridge TLS 运行时的 TLS 配置。
+- 客户端加入证书钉扎。
 
-- Log: pairing requests, approvals/denials, token issuance/rotation/revocation.
-- Rate‑limit pairing spam and approval prompts.
+## 阶段 5：废弃 Bridge
 
-# Protocol hygiene
+- iOS/Android/mac 节点迁移至 WS。
+- 保留 Bridge 作为后备，稳定后移除。
 
-- Explicit protocol version + error codes.
-- Reconnect rules + heartbeat policy.
-- Presence TTL and last‑seen semantics.
+## 阶段 6：设备绑定认证
+
+- 所有非本地连接要求密钥身份。
+- 添加撤销 + 轮换 UI。
 
 ---
 
-# Open questions
+# 安全说明
 
-1. Single device running both roles: token model
-   - Recommend separate tokens per role (node vs operator).
-   - Same deviceId; different scopes; clearer revocation.
+- 角色/白名单在网关边界强制。
+- 未授予操作员作用域，不得获取“全”API。
+- 所有连接必须配对。
+- TLS + 钉扎降低移动端中间人攻击风险。
+- SSH 静默审批为便利，仍记录并可撤销。
+- 发现绝非信任锚。
+- 能力声明由网关根据平台/类型白名单验证。
 
-2. Operator scope granularity
-   - read/write/admin + approvals + pairing (minimum viable).
-   - Consider per‑feature scopes later.
+# 流媒体 + 大载荷（节点媒体）
 
-3. Token rotation + revocation UX
-   - Auto‑rotate on role change.
-   - UI to revoke by deviceId + role.
+WS 控制面适合小消息，但节点还需处理：
 
-4. Discovery
-   - Extend current Bonjour TXT to include WS TLS fingerprint + role hints.
-   - Treat as locator hints only.
+- 摄像头片段
+- 屏幕录制
+- 音频流
 
-5. Cross‑network approval
-   - Broadcast to all operator clients; active UI shows modal.
-   - First response wins; gateway enforces atomicity.
+选项：
+
+1. WS 二进制帧 + 分块 + 流控规则。
+2. 独立流媒体端点（仍用 TLS + 认证）。
+3. 保留 Bridge 较长时间用于媒体密集命令，最后迁移。
+
+实现前需选定方案，防止设计漂移。
+
+# 能力 + 命令策略
+
+- 节点上报的能力/命令视为**声明**。
+- 网关根据平台执行白名单强制。
+- 新命令需操作员审批或显式白名单变更。
+- 审计变更带时间戳。
+
+# 审计 + 速率限制
+
+- 记录：配对请求、审批/拒绝、令牌签发/轮换/撤销。
+- 速率限制配对垃圾请求和审批提示。
+
+# 协议规范
+
+- 明确协议版本 + 错误码。
+- 重连规则 + 保活策略。
+- 在线 TTL 及最近在线语义。
 
 ---
 
-# Summary (TL;DR)
+# 待解决问题
 
-- Today: WS control plane + Bridge node transport.
-- Pain: approvals + duplication + two stacks.
-- Proposal: one WS protocol with explicit roles + scopes, unified pairing + TLS pinning, gateway‑hosted approvals, stable device IDs + cute slugs.
-- Outcome: simpler UX, stronger security, less duplication, better mobile routing.
+1. 单设备同时运行两角色：令牌模型
+   - 推荐每角色独立令牌（节点 vs 操作员）。
+   - 同一 deviceId；不同作用域；易于撤销。
+
+2. 操作员作用域粒度
+   - read/write/admin + approvals + pairing（最简可用）。
+   - 后续考虑细化至每功能点。
+
+3. 令牌轮换 + 撤销用户体验
+   - 角色变更自动轮换。
+   - UI 支持按 deviceId + 角色撤销。
+
+4. 发现机制
+   - 扩展现有 Bonjour TXT，包含 WS TLS 指纹 + 角色提示。
+   - 仅作定位提示。
+
+5. 跨网络审批
+   - 广播至所有操作员客户端；活跃 UI 显示模态。
+   - 先响应者胜；网关保证原子性。
+
+---
+
+# 总结（简述）
+
+- 目前：WS 控制面 + Bridge 节点传输。
+- 痛点：审批、重复、多协议栈。
+- 建议：一个支持显式角色 + 作用域的 WS 协议，统一配对 + TLS 钉扎，网关主导审批，稳定设备 ID + 可爱简短名。
+- 结果：更简易用户体验、更强安全、更少重复、更佳移动端路由。

@@ -1,81 +1,81 @@
 ---
-summary: "Group chat behavior across surfaces (WhatsApp/Telegram/Discord/Slack/Signal/iMessage/Microsoft Teams/Zalo)"
+summary: "跨平台的群聊行为（WhatsApp/Telegram/Discord/Slack/Signal/iMessage/Microsoft Teams/Zalo）"
 read_when:
-  - Changing group chat behavior or mention gating
-title: "Groups"
+  - 变更群聊行为或提及门控时
+title: "群组"
 ---
 
-# Groups
+# 群组
 
-OpenClaw treats group chats consistently across surfaces: WhatsApp, Telegram, Discord, Slack, Signal, iMessage, Microsoft Teams, Zalo.
+OpenClaw 在各种平台上的群聊行为保持一致：WhatsApp、Telegram、Discord、Slack、Signal、iMessage、Microsoft Teams、Zalo。
 
-## Beginner intro (2 minutes)
+## 新手介绍（2分钟）
 
-OpenClaw “lives” on your own messaging accounts. There is no separate WhatsApp bot user.
-If **you** are in a group, OpenClaw can see that group and respond there.
+OpenClaw “运行” 在你自己的消息账户上。没有独立的 WhatsApp 机器人用户。
+如果**你**在某个群组里，OpenClaw 就能看到该群组并在那里回复。
 
-Default behavior:
+默认行为：
 
-- Groups are restricted (`groupPolicy: "allowlist"`).
-- Replies require a mention unless you explicitly disable mention gating.
+- 群组受到限制（`groupPolicy: "allowlist"`）。
+- 回复需要提及，除非你显式关闭提及门控。
 
-Translation: allowlisted senders can trigger OpenClaw by mentioning it.
+翻译：只有被白名单允许的发送者通过提及才能触发 OpenClaw。
 
-> TL;DR
+> 简单总结
 >
-> - **DM access** is controlled by `*.allowFrom`.
-> - **Group access** is controlled by `*.groupPolicy` + allowlists (`*.groups`, `*.groupAllowFrom`).
-> - **Reply triggering** is controlled by mention gating (`requireMention`, `/activation`).
+> - **私聊访问**由 `*.allowFrom` 控制。
+> - **群聊访问**由 `*.groupPolicy` + 白名单 (`*.groups`, `*.groupAllowFrom`) 控制。
+> - **回复触发**由提及门控控制（`requireMention`，`/activation`）。
 
-Quick flow (what happens to a group message):
+快速流程（群消息的处理流程）：
 
 ```
-groupPolicy? disabled -> drop
-groupPolicy? allowlist -> group allowed? no -> drop
-requireMention? yes -> mentioned? no -> store for context only
-otherwise -> reply
+groupPolicy? disabled -> 丢弃
+groupPolicy? allowlist -> 群组允许？否 -> 丢弃
+requireMention? 是 -> 是否被提及？否 -> 仅存为上下文
+否则 -> 回复
 ```
 
-![Group message flow](/images/groups-flow.svg)
+![群消息流程](/images/groups-flow.svg)
 
-If you want...
+如果你想要……
 
-| Goal                                         | What to set                                                |
+| 目标                                         | 设置内容                                                  |
 | -------------------------------------------- | ---------------------------------------------------------- |
-| Allow all groups but only reply on @mentions | `groups: { "*": { requireMention: true } }`                |
-| Disable all group replies                    | `groupPolicy: "disabled"`                                  |
-| Only specific groups                         | `groups: { "<group-id>": { ... } }` (no `"*"` key)         |
-| Only you can trigger in groups               | `groupPolicy: "allowlist"`, `groupAllowFrom: ["+1555..."]` |
+| 允许所有群组但只在被@时回复                   | `groups: { "*": { requireMention: true } }`                |
+| 禁用所有群组回复                              | `groupPolicy: "disabled"`                                  |
+| 只允许特定群组                              | `groups: { "<group-id>": { ... } }`（不含 `"*"` 键）       |
+| 只有你能在群组中触发                         | `groupPolicy: "allowlist"`, `groupAllowFrom: ["+1555..."]` |
 
-## Session keys
+## 会话密钥
 
-- Group sessions use `agent:<agentId>:<channel>:group:<id>` session keys (rooms/channels use `agent:<agentId>:<channel>:channel:<id>`).
-- Telegram forum topics add `:topic:<threadId>` to the group id so each topic has its own session.
-- Direct chats use the main session (or per-sender if configured).
-- Heartbeats are skipped for group sessions.
+- 群组会话使用 `agent:<agentId>:<channel>:group:<id>` 形式的会话密钥（房间/频道使用 `agent:<agentId>:<channel>:channel:<id>`）。
+- Telegram 论坛话题在群ID后添加 `:topic:<threadId>`，使每个话题都有独立会话。
+- 直接聊天使用主会话（或配置时每发送者独立）。
+- 群组会话跳过心跳检测。
 
-## Pattern: personal DMs + public groups (single agent)
+## 模式示例：个人私聊 + 公开群组（单一代理）
 
-Yes — this works well if your “personal” traffic is **DMs** and your “public” traffic is **groups**.
+是的 —— 如果你的“个人”通信是**私聊**，你的“公开”通信是**群组**，这非常有效。
 
-Why: in single-agent mode, DMs typically land in the **main** session key (`agent:main:main`), while groups always use **non-main** session keys (`agent:main:<channel>:group:<id>`). If you enable sandboxing with `mode: "non-main"`, those group sessions run in Docker while your main DM session stays on-host.
+原因：在单代理模式下，私聊通常落在**主**会话密钥（`agent:main:main`），而群组总是使用**非主**会话密钥（`agent:main:<channel>:group:<id>`）。如果开启 `mode: "non-main"` 的沙箱模式，这些群组会话在 Docker 中运行，而你主私聊会话保持本地运行。
 
-This gives you one agent “brain” (shared workspace + memory), but two execution postures:
+这给你一个代理“脑子”（共享工作区 + 记忆），但提供两种运行环境：
 
-- **DMs**: full tools (host)
-- **Groups**: sandbox + restricted tools (Docker)
+- **私聊**：完整工具（本地）
+- **群组**：沙箱 + 受限工具（Docker）
 
-> If you need truly separate workspaces/personas (“personal” and “public” must never mix), use a second agent + bindings. See [Multi-Agent Routing](/concepts/multi-agent).
+> 如果你需要真正分开的工作区/身份（“个人”和“公开”绝不混合），使用第二代理 + 绑定。详见[多代理路由](/concepts/multi-agent)。
 
-Example (DMs on host, groups sandboxed + messaging-only tools):
+示例（主机运行私聊，群组沙箱且仅限消息相关工具）:
 
 ```json5
 {
   agents: {
     defaults: {
       sandbox: {
-        mode: "non-main", // groups/channels are non-main -> sandboxed
-        scope: "session", // strongest isolation (one container per group/channel)
+        mode: "non-main", // 群组/频道被视为非主会话 -> 沙箱运行
+        scope: "session", // 最强隔离（每个群组/频道一个容器）
         workspaceAccess: "none",
       },
     },
@@ -83,7 +83,7 @@ Example (DMs on host, groups sandboxed + messaging-only tools):
   tools: {
     sandbox: {
       tools: {
-        // If allow is non-empty, everything else is blocked (deny still wins).
+        // 当 allow 非空时，其他工具全部阻止（deny 仍优先）。
         allow: ["group:messaging", "group:sessions"],
         deny: ["group:runtime", "group:fs", "group:ui", "nodes", "cron", "gateway"],
       },
@@ -92,7 +92,7 @@ Example (DMs on host, groups sandboxed + messaging-only tools):
 }
 ```
 
-Want “groups can only see folder X” instead of “no host access”? Keep `workspaceAccess: "none"` and mount only allowlisted paths into the sandbox:
+想让“群组只能访问文件夹X”，而不是“无主机访问”？保持 `workspaceAccess: "none"`，仅将白名单路径挂载进沙箱：
 
 ```json5
 {
@@ -104,7 +104,7 @@ Want “groups can only see folder X” instead of “no host access”? Keep `w
         workspaceAccess: "none",
         docker: {
           binds: [
-            // hostPath:containerPath:mode
+            // 主机路径:容器路径:模式
             "/home/user/FriendsShared:/data:ro",
           ],
         },
@@ -114,20 +114,20 @@ Want “groups can only see folder X” instead of “no host access”? Keep `w
 }
 ```
 
-Related:
+相关资源：
 
-- Configuration keys and defaults: [Gateway configuration](/gateway/configuration#agentsdefaultssandbox)
-- Debugging why a tool is blocked: [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated)
-- Bind mounts details: [Sandboxing](/gateway/sandboxing#custom-bind-mounts)
+- 配置键与默认值：[网关配置](/gateway/configuration#agentsdefaultssandbox)
+- 工具被阻原因调试：[沙箱 vs 工具策略 vs 提升](/gateway/sandbox-vs-tool-policy-vs-elevated)
+- 挂载点详情：[沙箱机制](/gateway/sandboxing#custom-bind-mounts)
 
-## Display labels
+## 显示标签
 
-- UI labels use `displayName` when available, formatted as `<channel>:<token>`.
-- `#room` is reserved for rooms/channels; group chats use `g-<slug>` (lowercase, spaces -> `-`, keep `#@+._-`).
+- UI 标签优先使用 `displayName`，格式为 `<channel>:<token>`。
+- `#room` 保留用于房间/频道；群聊使用 `g-<slug>` 格式（小写，空格转 `-`，保留 `#@+._-` 字符）。
 
-## Group policy
+## 群组策略
 
-Control how group/room messages are handled per channel:
+控制每个渠道群组/房间消息的处理：
 
 ```json5
 {
@@ -138,7 +138,7 @@ Control how group/room messages are handled per channel:
     },
     telegram: {
       groupPolicy: "disabled",
-      groupAllowFrom: ["123456789"], // numeric Telegram user id (wizard can resolve @username)
+      groupAllowFrom: ["123456789"], // 数字 Telegram 用户ID（向导可以解析 @用户名）
     },
     signal: {
       groupPolicy: "disabled",
@@ -174,36 +174,36 @@ Control how group/room messages are handled per channel:
 }
 ```
 
-| Policy        | Behavior                                                     |
+| 策略          | 行为说明                                                     |
 | ------------- | ------------------------------------------------------------ |
-| `"open"`      | Groups bypass allowlists; mention-gating still applies.      |
-| `"disabled"`  | Block all group messages entirely.                           |
-| `"allowlist"` | Only allow groups/rooms that match the configured allowlist. |
+| `"open"`      | 群组无视白名单；仍执行提及门控。                             |
+| `"disabled"`  | 完全阻止所有群消息。                                         |
+| `"allowlist"` | 仅允许配置的白名单群组/房间。                               |
 
-Notes:
+备注：
 
-- `groupPolicy` is separate from mention-gating (which requires @mentions).
-- WhatsApp/Telegram/Signal/iMessage/Microsoft Teams/Zalo: use `groupAllowFrom` (fallback: explicit `allowFrom`).
-- DM pairing approvals (`*-allowFrom` store entries) apply to DM access only; group sender authorization stays explicit to group allowlists.
-- Discord: allowlist uses `channels.discord.guilds.<id>.channels`.
-- Slack: allowlist uses `channels.slack.channels`.
-- Matrix: allowlist uses `channels.matrix.groups` (room IDs, aliases, or names). Use `channels.matrix.groupAllowFrom` to restrict senders; per-room `users` allowlists are also supported.
-- Group DMs are controlled separately (`channels.discord.dm.*`, `channels.slack.dm.*`).
-- Telegram allowlist can match user IDs (`"123456789"`, `"telegram:123456789"`, `"tg:123456789"`) or usernames (`"@alice"` or `"alice"`); prefixes are case-insensitive.
-- Default is `groupPolicy: "allowlist"`; if your group allowlist is empty, group messages are blocked.
-- Runtime safety: when a provider block is completely missing (`channels.<provider>` absent), group policy falls back to a fail-closed mode (typically `allowlist`) instead of inheriting `channels.defaults.groupPolicy`.
+- `groupPolicy` 与提及门控（需@）是分开的。
+- WhatsApp/Telegram/Signal/iMessage/Microsoft Teams/Zalo 使用 `groupAllowFrom`（回退为显式的 `allowFrom`）。
+- 私聊的配对批准（`*-allowFrom` 存储）仅适用于私聊访问；群发送者授权独立为群组白名单。
+- Discord 白名单使用 `channels.discord.guilds.<id>.channels`。
+- Slack 白名单使用 `channels.slack.channels`。
+- Matrix 白名单使用 `channels.matrix.groups`（房间ID、别名或名称）。可通过 `channels.matrix.groupAllowFrom` 限制发件人；同样支持每个房间的 `users` 白名单。
+- 群组私聊分开控制（`channels.discord.dm.*`，`channels.slack.dm.*`）。
+- Telegram 白名单可匹配用户ID（`"123456789"`, `"telegram:123456789"`, `"tg:123456789"`）或用户名（`"@alice"` 或 `"alice"`）；前缀大小写不敏感。
+- 默认策略是 `groupPolicy: "allowlist"`；如果群组白名单为空，则阻止群消息。
+- 运行时安全：当提供者模块缺失（无对应 `channels.<provider>`）时，群组策略退回到安全的关闭模式（通常是 `allowlist`），而不继承 `channels.defaults.groupPolicy`。
 
-Quick mental model (evaluation order for group messages):
+快速思路（群消息评估顺序）：
 
-1. `groupPolicy` (open/disabled/allowlist)
-2. group allowlists (`*.groups`, `*.groupAllowFrom`, channel-specific allowlist)
-3. mention gating (`requireMention`, `/activation`)
+1. `groupPolicy`（开放/禁用/白名单）
+2. 群组白名单（`*.groups`，`*.groupAllowFrom`，频道特定白名单）
+3. 提及门控（`requireMention`，`/activation`）
 
-## Mention gating (default)
+## 提及门控（默认）
 
-Group messages require a mention unless overridden per group. Defaults live per subsystem under `*.groups."*"`.
+除非针对每个群组单独配置，否则群消息需要提及。默认配置存放于子系统下的 `*.groups."*"`。
 
-Replying to a bot message counts as an implicit mention (when the channel supports reply metadata). This applies to Telegram, WhatsApp, Slack, Discord, and Microsoft Teams.
+回复机器人消息算作隐式提及（如果频道支持回复元数据）。适用于 Telegram、WhatsApp、Slack、Discord 和 Microsoft Teams。
 
 ```json5
 {
@@ -241,33 +241,33 @@ Replying to a bot message counts as an implicit mention (when the channel suppor
 }
 ```
 
-Notes:
+备注：
 
-- `mentionPatterns` are case-insensitive regexes.
-- Surfaces that provide explicit mentions still pass; patterns are a fallback.
-- Per-agent override: `agents.list[].groupChat.mentionPatterns` (useful when multiple agents share a group).
-- Mention gating is only enforced when mention detection is possible (native mentions or `mentionPatterns` are configured).
-- Discord defaults live in `channels.discord.guilds."*"` (overridable per guild/channel).
-- Group history context is wrapped uniformly across channels and is **pending-only** (messages skipped due to mention gating); use `messages.groupChat.historyLimit` for the global default and `channels.<channel>.historyLimit` (or `channels.<channel>.accounts.*.historyLimit`) for overrides. Set `0` to disable.
+- `mentionPatterns` 是不区分大小写的正则表达式。
+- 支持明确提及的平台直接通过；正则是备用方案。
+- 每代理可覆盖：`agents.list[].groupChat.mentionPatterns`（多代理共享群时有用）。
+- 仅当可检测提及时（本地提及或配置了 `mentionPatterns`）才强制。
+- Discord 默认设置在 `channels.discord.guilds."*"`（可针对公会/频道覆盖）。
+- 群消息历史上下文统一包装，且只包含**待处理**消息（因提及门控被跳过的消息）；全局默认通过 `messages.groupChat.historyLimit` 控制，特定渠道通过 `channels.<channel>.historyLimit` 或 `channels.<channel>.accounts.*.historyLimit` 覆盖。设置为 `0` 可禁用。
 
-## Group/channel tool restrictions (optional)
+## 群组/频道工具限制（可选）
 
-Some channel configs support restricting which tools are available **inside a specific group/room/channel**.
+部分渠道配置支持限制在**特定群组/房间/频道内**可用的工具。
 
-- `tools`: allow/deny tools for the whole group.
-- `toolsBySender`: per-sender overrides within the group.
-  Use explicit key prefixes:
-  `id:<senderId>`, `e164:<phone>`, `username:<handle>`, `name:<displayName>`, and `"*"` wildcard.
-  Legacy unprefixed keys are still accepted and matched as `id:` only.
+- `tools`：整个群组允许/禁止的工具。
+- `toolsBySender`：群组内部按发送者的覆盖设置。
+  使用明确的键前缀：
+  `id:<senderId>`、`e164:<电话>`、`username:<账号>`、`name:<显示名>` 和 `"*"`通配符。
+  兼容旧版无前缀的键，按 `id:` 匹配。
 
-Resolution order (most specific wins):
+解析顺序（越具体优先）：
 
-1. group/channel `toolsBySender` match
-2. group/channel `tools`
-3. default (`"*"`) `toolsBySender` match
-4. default (`"*"`) `tools`
+1. 群组/频道内 `toolsBySender` 匹配
+2. 群组/频道 `tools`
+3. 默认（`"*"`）的 `toolsBySender` 匹配
+4. 默认（`"*"`）的 `tools`
 
-Example (Telegram):
+示例（Telegram）：
 
 ```json5
 {
@@ -287,18 +287,18 @@ Example (Telegram):
 }
 ```
 
-Notes:
+备注：
 
-- Group/channel tool restrictions are applied in addition to global/agent tool policy (deny still wins).
-- Some channels use different nesting for rooms/channels (e.g., Discord `guilds.*.channels.*`, Slack `channels.*`, MS Teams `teams.*.channels.*`).
+- 群组/频道工具限制是在全局/代理工具策略基础上叠加执行（禁止规则依旧优先）。
+- 某些渠道的房间/频道结构不同（如 Discord 的 `guilds.*.channels.*`、Slack 的 `channels.*`、MS Teams 的 `teams.*.channels.*`）。
 
-## Group allowlists
+## 群组白名单
 
-When `channels.whatsapp.groups`, `channels.telegram.groups`, or `channels.imessage.groups` is configured, the keys act as a group allowlist. Use `"*"` to allow all groups while still setting default mention behavior.
+当配置 `channels.whatsapp.groups`、`channels.telegram.groups` 或 `channels.imessage.groups` 时，键名即为群组白名单。使用 `"*"` 表示允许所有群组，同时设定默认提及行为。
 
-Common intents (copy/paste):
+常见目的（复制粘贴）：
 
-1. Disable all group replies
+1. 禁止所有群回复
 
 ```json5
 {
@@ -306,7 +306,7 @@ Common intents (copy/paste):
 }
 ```
 
-2. Allow only specific groups (WhatsApp)
+2. 只允许特定群组（WhatsApp）
 
 ```json5
 {
@@ -321,7 +321,7 @@ Common intents (copy/paste):
 }
 ```
 
-3. Allow all groups but require mention (explicit)
+3. 允许所有群组，但强制提及（显式）
 
 ```json5
 {
@@ -333,7 +333,7 @@ Common intents (copy/paste):
 }
 ```
 
-4. Only the owner can trigger in groups (WhatsApp)
+4. 只有所有者能在群组触发（WhatsApp）
 
 ```json5
 {
@@ -347,33 +347,33 @@ Common intents (copy/paste):
 }
 ```
 
-## Activation (owner-only)
+## 激活指令（只限所有者）
 
-Group owners can toggle per-group activation:
+群聊所有者可切换单个群的激活状态：
 
 - `/activation mention`
 - `/activation always`
 
-Owner is determined by `channels.whatsapp.allowFrom` (or the bot’s self E.164 when unset). Send the command as a standalone message. Other surfaces currently ignore `/activation`.
+所有者由 `channels.whatsapp.allowFrom` 确定（或未设置时为机器人自身的 E.164 号码）。命令需单独作为消息发送。其他平台当前忽略 `/activation`。
 
-## Context fields
+## 上下文字段
 
-Group inbound payloads set:
+群聊入站消息携带：
 
 - `ChatType=group`
-- `GroupSubject` (if known)
-- `GroupMembers` (if known)
-- `WasMentioned` (mention gating result)
-- Telegram forum topics also include `MessageThreadId` and `IsForum`.
+- `GroupSubject`（若已知）
+- `GroupMembers`（若已知）
+- `WasMentioned`（提及门控结果）
+- Telegram 论坛话题额外包含 `MessageThreadId` 和 `IsForum`。
 
-The agent system prompt includes a group intro on the first turn of a new group session. It reminds the model to respond like a human, avoid Markdown tables, and avoid typing literal `\n` sequences.
+代理系统提示在新群组会话的首轮包含群组介绍，提醒模型像人类一样回复，避免使用 Markdown 表格，避免直接输入 `\n` 字符。
 
-## iMessage specifics
+## iMessage 特殊事项
 
-- Prefer `chat_id:<id>` when routing or allowlisting.
-- List chats: `imsg chats --limit 20`.
-- Group replies always go back to the same `chat_id`.
+- 路由或白名单优先使用 `chat_id:<id>`。
+- 查看聊天列表：`imsg chats --limit 20`。
+- 群组回复总是回到相同的 `chat_id`。
 
-## WhatsApp specifics
+## WhatsApp 特殊事项
 
-See [Group messages](/channels/group-messages) for WhatsApp-only behavior (history injection, mention handling details).
+详见[群聊消息](/channels/group-messages)说明 WhatsApp 特有的行为（历史注入，提及处理细节）。

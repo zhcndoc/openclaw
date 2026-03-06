@@ -1,125 +1,125 @@
 ---
-summary: "Google Chat app support status, capabilities, and configuration"
+summary: "Google Chat 应用支持状态、功能和配置"
 read_when:
-  - Working on Google Chat channel features
+  - 在开发 Google Chat 频道功能时
 title: "Google Chat"
 ---
 
-# Google Chat (Chat API)
+# Google Chat（Chat API）
 
-Status: ready for DMs + spaces via Google Chat API webhooks (HTTP only).
+状态：已准备好通过 Google Chat API webhook（仅限 HTTP）支持私聊和群组空间。
 
-## Quick setup (beginner)
+## 快速设置（初学者）
 
-1. Create a Google Cloud project and enable the **Google Chat API**.
-   - Go to: [Google Chat API Credentials](https://console.cloud.google.com/apis/api/chat.googleapis.com/credentials)
-   - Enable the API if it is not already enabled.
-2. Create a **Service Account**:
-   - Press **Create Credentials** > **Service Account**.
-   - Name it whatever you want (e.g., `openclaw-chat`).
-   - Leave permissions blank (press **Continue**).
-   - Leave principals with access blank (press **Done**).
-3. Create and download the **JSON Key**:
-   - In the list of service accounts, click on the one you just created.
-   - Go to the **Keys** tab.
-   - Click **Add Key** > **Create new key**.
-   - Select **JSON** and press **Create**.
-4. Store the downloaded JSON file on your gateway host (e.g., `~/.openclaw/googlechat-service-account.json`).
-5. Create a Google Chat app in the [Google Cloud Console Chat Configuration](https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat):
-   - Fill in the **Application info**:
-     - **App name**: (e.g. `OpenClaw`)
-     - **Avatar URL**: (e.g. `https://openclaw.ai/logo.png`)
-     - **Description**: (e.g. `Personal AI Assistant`)
-   - Enable **Interactive features**.
-   - Under **Functionality**, check **Join spaces and group conversations**.
-   - Under **Connection settings**, select **HTTP endpoint URL**.
-   - Under **Triggers**, select **Use a common HTTP endpoint URL for all triggers** and set it to your gateway's public URL followed by `/googlechat`.
-     - _Tip: Run `openclaw status` to find your gateway's public URL._
-   - Under **Visibility**, check **Make this Chat app available to specific people and groups in &lt;Your Domain&gt;**.
-   - Enter your email address (e.g. `user@example.com`) in the text box.
-   - Click **Save** at the bottom.
-6. **Enable the app status**:
-   - After saving, **refresh the page**.
-   - Look for the **App status** section (usually near the top or bottom after saving).
-   - Change the status to **Live - available to users**.
-   - Click **Save** again.
-7. Configure OpenClaw with the service account path + webhook audience:
-   - Env: `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE=/path/to/service-account.json`
-   - Or config: `channels.googlechat.serviceAccountFile: "/path/to/service-account.json"`.
-8. Set the webhook audience type + value (matches your Chat app config).
-9. Start the gateway. Google Chat will POST to your webhook path.
+1. 创建一个 Google Cloud 项目并启用 **Google Chat API**。
+   - 访问：[Google Chat API 凭据](https://console.cloud.google.com/apis/api/chat.googleapis.com/credentials)
+   - 如果尚未启用，点击启用该 API。
+2. 创建一个 **服务账号**：
+   - 点击 **创建凭据** > **服务账号**。
+   - 自行命名（例如：`openclaw-chat`）。
+   - 权限留空（点击 **继续**）。
+   - 无需添加可访问的主体，直接点击 **完成**。
+3. 创建并下载 **JSON 密钥**：
+   - 在服务账号列表中，点击刚创建的服务账号。
+   - 切换到 **密钥** 标签页。
+   - 点击 **添加密钥** > **创建新密钥**。
+   - 选择 **JSON** 格式，点击 **创建**。
+4. 将下载的 JSON 文件存放于网关主机，例如：`~/.openclaw/googlechat-service-account.json`。
+5. 在 [Google Cloud Console Chat 配置页](https://console.cloud.google.com/apis/api/chat.googleapis.com/hangouts-chat) 创建 Google Chat 应用：
+   - 填写 **应用信息**：
+     - **应用名称**：（例如 `OpenClaw`）
+     - **头像 URL**：（例如 `https://openclaw.ai/logo.png`）
+     - **描述**：（例如 `个人 AI 助手`）
+   - 启用 **交互式功能**。
+   - 在 **功能** 中，勾选 **加入空间和群聊**。
+   - 在 **连接设置** 中，选择 **HTTP 端点 URL**。
+   - 在 **触发器** 中，选择 **为所有触发器使用通用的 HTTP 端点 URL**，并设置为网关的公网地址后跟 `/googlechat`。
+     - _提示：运行 `openclaw status` 查看网关的公网 URL。_
+   - 在 **可见性** 中，勾选 **使此 Chat 应用对您所在域 &lt;Your Domain&gt; 的特定人员和群组可用**。
+   - 在文本框中输入你的邮箱地址（例如 `user@example.com`）。
+   - 点击页面底部的 **保存**。
+6. **启用应用状态**：
+   - 保存后，刷新页面。
+   - 找到 **应用状态** 部分（通常保存后页面顶部或底部）。
+   - 将状态切换为 **在线 - 对用户可用**。
+   - 再次点击 **保存**。
+7. 在 OpenClaw 中配置服务账号路径和 webhook 受众：
+   - 环境变量：`GOOGLE_CHAT_SERVICE_ACCOUNT_FILE=/path/to/service-account.json`
+   - 或者配置文件：`channels.googlechat.serviceAccountFile: "/path/to/service-account.json"`。
+8. 设置 webhook 受众类型和数值（需与 Chat 应用配置匹配）。
+9. 启动网关。Google Chat 会向你的 webhook 路径发送 POST 请求。
 
-## Add to Google Chat
+## 添加到 Google Chat
 
-Once the gateway is running and your email is added to the visibility list:
+网关运行并且你的邮箱加入到可见列表后：
 
-1. Go to [Google Chat](https://chat.google.com/).
-2. Click the **+** (plus) icon next to **Direct Messages**.
-3. In the search bar (where you usually add people), type the **App name** you configured in the Google Cloud Console.
-   - **Note**: The bot will _not_ appear in the "Marketplace" browse list because it is a private app. You must search for it by name.
-4. Select your bot from the results.
-5. Click **Add** or **Chat** to start a 1:1 conversation.
-6. Send "Hello" to trigger the assistant!
+1. 访问 [Google Chat](https://chat.google.com/)。
+2. 点击 **直接消息** 旁的 **+**（加号）图标。
+3. 在搜索框（平时添加联系人的地方）输入你在 Google Cloud Console 配置的 **应用名称**。
+   - **注意**：该机器人不会在“应用市场”浏览列表中显示，因为它是私有应用，必须通过名称搜索。
+4. 点击搜索结果中的你的机器人。
+5. 点击 **添加** 或 **聊天**，开始一对一对话。
+6. 发送“Hello”以触发助理！
 
-## Public URL (Webhook-only)
+## 公共 URL（仅限 Webhook）
 
-Google Chat webhooks require a public HTTPS endpoint. For security, **only expose the `/googlechat` path** to the internet. Keep the OpenClaw dashboard and other sensitive endpoints on your private network.
+Google Chat webhook 需要一个公网 HTTPS 端点。为安全起见，**只将 `/googlechat` 路径暴露到互联网**，OpenClaw 仪表盘和其他敏感端点应保持在私网中。
 
-### Option A: Tailscale Funnel (Recommended)
+### 选项 A：Tailscale Funnel（推荐）
 
-Use Tailscale Serve for the private dashboard and Funnel for the public webhook path. This keeps `/` private while exposing only `/googlechat`.
+使用 Tailscale Serve 保护私有仪表盘，利用 Funnel 公开 webhook 路径，只开放 `/googlechat`。
 
-1. **Check what address your gateway is bound to:**
+1. **检查网关绑定地址：**
 
    ```bash
    ss -tlnp | grep 18789
    ```
 
-   Note the IP address (e.g., `127.0.0.1`, `0.0.0.0`, or your Tailscale IP like `100.x.x.x`).
+   记录 IP 地址（例如：`127.0.0.1`、`0.0.0.0` 或你的 Tailscale IP，如 `100.x.x.x`）。
 
-2. **Expose the dashboard to the tailnet only (port 8443):**
+2. **仅向 tailnet 暴露仪表盘（端口 8443）：**
 
    ```bash
-   # If bound to localhost (127.0.0.1 or 0.0.0.0):
+   # 绑定到本地接口 (127.0.0.1 或 0.0.0.0)：
    tailscale serve --bg --https 8443 http://127.0.0.1:18789
 
-   # If bound to Tailscale IP only (e.g., 100.106.161.80):
+   # 如果绑定到 Tailscale IP（例如 100.106.161.80）：
    tailscale serve --bg --https 8443 http://100.106.161.80:18789
    ```
 
-3. **Expose only the webhook path publicly:**
+3. **仅公开 webhook 路径：**
 
    ```bash
-   # If bound to localhost (127.0.0.1 or 0.0.0.0):
+   # 绑定到本地接口 (127.0.0.1 或 0.0.0.0)：
    tailscale funnel --bg --set-path /googlechat http://127.0.0.1:18789/googlechat
 
-   # If bound to Tailscale IP only (e.g., 100.106.161.80):
+   # 绑定到 Tailscale IP（例如 100.106.161.80）：
    tailscale funnel --bg --set-path /googlechat http://100.106.161.80:18789/googlechat
    ```
 
-4. **Authorize the node for Funnel access:**
-   If prompted, visit the authorization URL shown in the output to enable Funnel for this node in your tailnet policy.
+4. **为该节点授权 Funnel 访问权限：**  
+   如果提示，访问输出中的授权 URL，在 tailnet 策略中启用此节点的 Funnel。
 
-5. **Verify the configuration:**
+5. **验证配置：**
 
    ```bash
    tailscale serve status
    tailscale funnel status
    ```
 
-Your public webhook URL will be:
-`https://<node-name>.<tailnet>.ts.net/googlechat`
+你的公网 webhook URL 为：  
+`https://<节点名>.<tailnet>.ts.net/googlechat`
 
-Your private dashboard stays tailnet-only:
-`https://<node-name>.<tailnet>.ts.net:8443/`
+私有仪表盘保持 tailnet 内部访问：  
+`https://<节点名>.<tailnet>.ts.net:8443/`
 
-Use the public URL (without `:8443`) in the Google Chat app config.
+在 Google Chat 应用配置中使用公网 URL（无 `:8443`）。
 
-> Note: This configuration persists across reboots. To remove it later, run `tailscale funnel reset` and `tailscale serve reset`.
+> 注意：此配置重启后依然生效。若要移除，运行 `tailscale funnel reset` 和 `tailscale serve reset`。
 
-### Option B: Reverse Proxy (Caddy)
+### 选项 B：反向代理（Caddy）
 
-If you use a reverse proxy like Caddy, only proxy the specific path:
+如果使用反向代理如 Caddy，仅代理指定路径：
 
 ```caddy
 your-domain.com {
@@ -127,40 +127,40 @@ your-domain.com {
 }
 ```
 
-With this config, any request to `your-domain.com/` will be ignored or returned as 404, while `your-domain.com/googlechat` is safely routed to OpenClaw.
+此配置下，访问 `your-domain.com/` 的请求会被忽略或返回 404，只有 `your-domain.com/googlechat` 会安全转发到 OpenClaw。
 
-### Option C: Cloudflare Tunnel
+### 选项 C：Cloudflare Tunnel
 
-Configure your tunnel's ingress rules to only route the webhook path:
+配置隧道的入口规则，仅路由 webhook 路径：
 
-- **Path**: `/googlechat` -> `http://localhost:18789/googlechat`
-- **Default Rule**: HTTP 404 (Not Found)
+- **路径**：`/googlechat` -> `http://localhost:18789/googlechat`
+- **默认规则**：HTTP 404（找不到）
 
-## How it works
+## 工作原理
 
-1. Google Chat sends webhook POSTs to the gateway. Each request includes an `Authorization: Bearer <token>` header.
-   - OpenClaw verifies bearer auth before reading/parsing full webhook bodies when the header is present.
-   - Google Workspace Add-on requests that carry `authorizationEventObject.systemIdToken` in the body are supported via a stricter pre-auth body budget.
-2. OpenClaw verifies the token against the configured `audienceType` + `audience`:
-   - `audienceType: "app-url"` → audience is your HTTPS webhook URL.
-   - `audienceType: "project-number"` → audience is the Cloud project number.
-3. Messages are routed by space:
-   - DMs use session key `agent:<agentId>:googlechat:dm:<spaceId>`.
-   - Spaces use session key `agent:<agentId>:googlechat:group:<spaceId>`.
-4. DM access is pairing by default. Unknown senders receive a pairing code; approve with:
-   - `openclaw pairing approve googlechat <code>`
-5. Group spaces require @-mention by default. Use `botUser` if mention detection needs the app’s user name.
+1. Google Chat 向网关发送 webhook POST，请求头中带有 `Authorization: Bearer <token>`。
+   - OpenClaw 会在存在该头时，先验证 bearer 令牌后才读取/解析完整 webhook 内容。
+   - 支持带有 `authorizationEventObject.systemIdToken` 的 Google Workspace 附加组件请求，使用更严格的预认证体大小限制。
+2. OpenClaw 检查 token，验证其是否匹配配置的 `audienceType` + `audience`：
+   - `audienceType: "app-url"` → 受众为你的 HTTPS webhook URL。
+   - `audienceType: "project-number"` → 受众为云项目编号。
+3. 消息按空间路由：
+   - 私聊使用会话键 `agent:<agentId>:googlechat:dm:<spaceId>`。
+   - 群聊空间使用会话键 `agent:<agentId>:googlechat:group:<spaceId>`。
+4. 私聊默认需配对。未知发送者收到配对码；使用命令批准配对：  
+   `openclaw pairing approve googlechat <code>`
+5. 群组空间默认需要@提及。若需要通过机器人的用户名检测提及，可配置 `botUser`。
 
-## Targets
+## 标识符（Targets）
 
-Use these identifiers for delivery and allowlists:
+用于消息投递和允许列表：
 
-- Direct messages: `users/<userId>` (recommended).
-- Raw email `name@example.com` is mutable and only used for direct allowlist matching when `channels.googlechat.dangerouslyAllowNameMatching: true`.
-- Deprecated: `users/<email>` is treated as a user id, not an email allowlist.
-- Spaces: `spaces/<spaceId>`.
+- 私聊：`users/<userId>`（推荐）。
+- 原始邮箱 `name@example.com` 是可变的，只在启用 `channels.googlechat.dangerouslyAllowNameMatching: true` 时用于直接允许列表匹配。
+- 已废弃：`users/<email>` 被视为用户 ID，不作为邮箱允许列表。
+- 空间：`spaces/<spaceId>`。
 
-## Config highlights
+## 配置示例
 
 ```json5
 {
@@ -168,11 +168,11 @@ Use these identifiers for delivery and allowlists:
     googlechat: {
       enabled: true,
       serviceAccountFile: "/path/to/service-account.json",
-      // or serviceAccountRef: { source: "file", provider: "filemain", id: "/channels/googlechat/serviceAccount" }
+      // 或使用 serviceAccountRef: { source: "file", provider: "filemain", id: "/channels/googlechat/serviceAccount" }
       audienceType: "app-url",
       audience: "https://gateway.example.com/googlechat",
       webhookPath: "/googlechat",
-      botUser: "users/1234567890", // optional; helps mention detection
+      botUser: "users/1234567890", // 可选，辅助提及检测
       dm: {
         policy: "pairing",
         allowFrom: ["users/1234567890"],
@@ -183,7 +183,7 @@ Use these identifiers for delivery and allowlists:
           allow: true,
           requireMention: true,
           users: ["users/1234567890"],
-          systemPrompt: "Short answers only.",
+          systemPrompt: "仅简短回答。",
         },
       },
       actions: { reactions: true },
@@ -194,68 +194,68 @@ Use these identifiers for delivery and allowlists:
 }
 ```
 
-Notes:
+注意事项：
 
-- Service account credentials can also be passed inline with `serviceAccount` (JSON string).
-- `serviceAccountRef` is also supported (env/file SecretRef), including per-account refs under `channels.googlechat.accounts.<id>.serviceAccountRef`.
-- Default webhook path is `/googlechat` if `webhookPath` isn’t set.
-- `dangerouslyAllowNameMatching` re-enables mutable email principal matching for allowlists (break-glass compatibility mode).
-- Reactions are available via the `reactions` tool and `channels action` when `actions.reactions` is enabled.
-- `typingIndicator` supports `none`, `message` (default), and `reaction` (reaction requires user OAuth).
-- Attachments are downloaded through the Chat API and stored in the media pipeline (size capped by `mediaMaxMb`).
+- 服务账号凭据也可以通过 `serviceAccount`（JSON 字符串）直接内联传递。
+- 还支持 `serviceAccountRef`（环境变量/文件 SecretRef），包括每个账号独立引用，路径为 `channels.googlechat.accounts.<id>.serviceAccountRef`。
+- 默认 webhook 路径为 `/googlechat`，如果未设置 `webhookPath`。
+- `dangerouslyAllowNameMatching` 用于重新启用可变邮箱匹配的允许列表（应急兼容模式）。
+- 启用 `actions.reactions` 后，可使用 `reactions` 工具和 `channels action` 进行反应操作。
+- `typingIndicator` 支持 `none`、`message`（默认）、`reaction`（反应需用户 OAuth）。
+- 附件通过 Chat API 下载并存储于媒体管道，大小受 `mediaMaxMb` 限制。
 
-Secrets reference details: [Secrets Management](/gateway/secrets).
+Secrets 参考详情见：[Secrets 管理](/gateway/secrets)。
 
-## Troubleshooting
+## 故障排查
 
-### 405 Method Not Allowed
+### 405 方法不被允许
 
-If Google Cloud Logs Explorer shows errors like:
+如果 Google Cloud 日志查看器显示错误：
 
 ```
 status code: 405, reason phrase: HTTP error response: HTTP/1.1 405 Method Not Allowed
 ```
 
-This means the webhook handler isn't registered. Common causes:
+表示 webhook 处理程序未注册。常见原因：
 
-1. **Channel not configured**: The `channels.googlechat` section is missing from your config. Verify with:
+1. **频道未配置**：配置中缺少 `channels.googlechat` 部分。用以下命令确认：
 
    ```bash
    openclaw config get channels.googlechat
    ```
 
-   If it returns "Config path not found", add the configuration (see [Config highlights](#config-highlights)).
+   如果返回“Config path not found”，请添加配置（参见[配置示例](#配置示例)）。
 
-2. **Plugin not enabled**: Check plugin status:
+2. **插件未启用**：检查插件状态：
 
    ```bash
    openclaw plugins list | grep googlechat
    ```
 
-   If it shows "disabled", add `plugins.entries.googlechat.enabled: true` to your config.
+   如果显示“disabled”，请在配置中加入 `plugins.entries.googlechat.enabled: true`。
 
-3. **Gateway not restarted**: After adding config, restart the gateway:
+3. **网关未重启**：添加配置后需要重启网关：
 
    ```bash
    openclaw gateway restart
    ```
 
-Verify the channel is running:
+确认频道正在运行：
 
 ```bash
 openclaw channels status
-# Should show: Google Chat default: enabled, configured, ...
+# 应显示：Google Chat default: enabled, configured, ...
 ```
 
-### Other issues
+### 其他问题
 
-- Check `openclaw channels status --probe` for auth errors or missing audience config.
-- If no messages arrive, confirm the Chat app's webhook URL + event subscriptions.
-- If mention gating blocks replies, set `botUser` to the app's user resource name and verify `requireMention`.
-- Use `openclaw logs --follow` while sending a test message to see if requests reach the gateway.
+- 使用 `openclaw channels status --probe` 检查认证错误或缺少受众配置。
+- 若无消息到达，确认 Chat 应用的 webhook URL 和事件订阅是否正确。
+- 如果提及限制阻止回复，设置 `botUser` 为应用的用户资源名称，检查 `requireMention` 配置。
+- 发送测试消息时，使用 `openclaw logs --follow` 查看请求是否到达网关。
 
-Related docs:
+相关文档：
 
-- [Gateway configuration](/gateway/configuration)
-- [Security](/gateway/security)
-- [Reactions](/tools/reactions)
+- [网关配置](/gateway/configuration)
+- [安全](/gateway/security)
+- [反应操作](/tools/reactions)

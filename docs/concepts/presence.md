@@ -1,102 +1,92 @@
 ---
-summary: "How OpenClaw presence entries are produced, merged, and displayed"
+summary: "OpenClaw 中的 presence 条目如何产生、合并和显示"
 read_when:
-  - Debugging the Instances tab
-  - Investigating duplicate or stale instance rows
-  - Changing gateway WS connect or system-event beacons
-title: "Presence"
+  - 调试 Instances 标签页
+  - 调查重复或过期的实例行
+  - 修改网关 WS 连接或 system-event 信标
+title: "Presence（存在状态）"
 ---
 
-# Presence
+# Presence（存在状态）
 
-OpenClaw “presence” is a lightweight, best‑effort view of:
+OpenClaw 的“presence”是一种轻量级、尽最大努力展示的视图：
 
-- the **Gateway** itself, and
-- **clients connected to the Gateway** (mac app, WebChat, CLI, etc.)
+- **网关（Gateway）** 本身，以及
+- **连接到网关的客户端**（mac 应用、WebChat、CLI 等）
 
-Presence is used primarily to render the macOS app’s **Instances** tab and to
-provide quick operator visibility.
+Presence 主要用于渲染 macOS 应用的 **Instances** 标签页，并提供快速的运维人员可视化。
 
-## Presence fields (what shows up)
+## Presence 字段（显示内容）
 
-Presence entries are structured objects with fields like:
+Presence 条目是结构化对象，包含如下字段：
 
-- `instanceId` (optional but strongly recommended): stable client identity (usually `connect.client.instanceId`)
-- `host`: human‑friendly host name
-- `ip`: best‑effort IP address
-- `version`: client version string
-- `deviceFamily` / `modelIdentifier`: hardware hints
-- `mode`: `ui`, `webchat`, `cli`, `backend`, `probe`, `test`, `node`, ...
-- `lastInputSeconds`: “seconds since last user input” (if known)
-- `reason`: `self`, `connect`, `node-connected`, `periodic`, ...
-- `ts`: last update timestamp (ms since epoch)
+- `instanceId`（可选，但强烈推荐）：稳定的客户端身份标识（通常是 `connect.client.instanceId`）
+- `host`：易读的主机名
+- `ip`：尽力获取的 IP 地址
+- `version`：客户端版本字符串
+- `deviceFamily` / `modelIdentifier`：硬件提示信息
+- `mode`：`ui`、`webchat`、`cli`、`backend`、`probe`、`test`、`node` 等
+- `lastInputSeconds`：距离上次用户输入时间的秒数（如果已知）
+- `reason`：`self`、`connect`、`node-connected`、`periodic` 等原因标识
+- `ts`：最后更新时间戳（自纪元起的毫秒数）
 
-## Producers (where presence comes from)
+## 产生者（Presence 来源）
 
-Presence entries are produced by multiple sources and **merged**.
+Presence 条目由多个来源产生并**合并**。
 
-### 1) Gateway self entry
+### 1）网关自有条目
 
-The Gateway always seeds a “self” entry at startup so UIs show the gateway host
-even before any clients connect.
+网关启动时总会创建一个“self”条目，确保 UI 在任何客户端连接前就能显示网关主机。
 
-### 2) WebSocket connect
+### 2）WebSocket 连接
 
-Every WS client begins with a `connect` request. On successful handshake the
-Gateway upserts a presence entry for that connection.
+每个 WS 客户端连接时都会发起 `connect` 请求。握手成功后，网关会更新该连接的 presence 条目。
 
-#### Why one‑off CLI commands don’t show up
+#### 为什么一次性 CLI 命令不会显示
 
-The CLI often connects for short, one‑off commands. To avoid spamming the
-Instances list, `client.mode === "cli"` is **not** turned into a presence entry.
+CLI 常用于短暂的一次性命令。为了避免刷屏，`client.mode === "cli"` **不会**被转换为 presence 条目。
 
-### 3) `system-event` beacons
+### 3）`system-event` 信标
 
-Clients can send richer periodic beacons via the `system-event` method. The mac
-app uses this to report host name, IP, and `lastInputSeconds`.
+客户端可以通过 `system-event` 方法发送更丰富的定期信标。mac 应用使用它报告主机名、IP 和 `lastInputSeconds`。
 
-### 4) Node connects (role: node)
+### 4）节点连接（role: node）
 
-When a node connects over the Gateway WebSocket with `role: node`, the Gateway
-upserts a presence entry for that node (same flow as other WS clients).
+当节点通过网关 WebSocket 连接且 `role: node` 时，网关会更新该节点的 presence 条目（流程同其他 WS 客户端）。
 
-## Merge + dedupe rules (why `instanceId` matters)
+## 合并与去重规则（为何 `instanceId` 很重要）
 
-Presence entries are stored in a single in‑memory map:
+Presence 条目存储于单一内存映射中：
 
-- Entries are keyed by a **presence key**.
-- The best key is a stable `instanceId` (from `connect.client.instanceId`) that survives restarts.
-- Keys are case‑insensitive.
+- 条目以**presence key**为键。
+- 最佳键是稳定的 `instanceId`（来自 `connect.client.instanceId`），可抵抗重启影响。
+- 键不区分大小写。
 
-If a client reconnects without a stable `instanceId`, it may show up as a
-**duplicate** row.
+如果客户端未带稳定的 `instanceId` 重新连接，可能会显示为**重复**行。
 
-## TTL and bounded size
+## TTL 与大小限制
 
-Presence is intentionally ephemeral:
+Presence 设计为临时信息：
 
-- **TTL:** entries older than 5 minutes are pruned
-- **Max entries:** 200 (oldest dropped first)
+- **TTL**：超过 5 分钟的条目会被清理
+- **最大条目数**：200（最旧的先丢弃）
 
-This keeps the list fresh and avoids unbounded memory growth.
+这样保持列表新鲜，避免内存无限增长。
 
-## Remote/tunnel caveat (loopback IPs)
+## 远程/隧道注意事项（回环 IP）
 
-When a client connects over an SSH tunnel / local port forward, the Gateway may
-see the remote address as `127.0.0.1`. To avoid overwriting a good client‑reported
-IP, loopback remote addresses are ignored.
+当客户端通过 SSH 隧道 / 本地端口转发连接时，网关可能会看到远程地址为 `127.0.0.1`。为避免覆盖客户端报告的有效 IP，回环远程地址会被忽略。
 
-## Consumers
+## 消费者
 
-### macOS Instances tab
+### macOS Instances 标签页
 
-The macOS app renders the output of `system-presence` and applies a small status
-indicator (Active/Idle/Stale) based on the age of the last update.
+macOS 应用渲染 `system-presence` 输出，并根据最后更新时间为条目添加状态指示器（活跃/空闲/过期）。
 
-## Debugging tips
+## 调试提示
 
-- To see the raw list, call `system-presence` against the Gateway.
-- If you see duplicates:
-  - confirm clients send a stable `client.instanceId` in the handshake
-  - confirm periodic beacons use the same `instanceId`
-  - check whether the connection‑derived entry is missing `instanceId` (duplicates are expected)
+- 要查看原始列表，请向网关调用 `system-presence`。
+- 如果看到重复行：
+  - 确认客户端握手时发送了稳定的 `client.instanceId`
+  - 确认周期性信标也使用相同的 `instanceId`
+  - 查看基于连接的条目是否缺少 `instanceId`（缺少时重复是预期的）

@@ -1,24 +1,24 @@
 ---
-title: "Default AGENTS.md"
-summary: "Default OpenClaw agent instructions and skills roster for the personal assistant setup"
+title: "默认 AGENTS.md"
+summary: "个人助手设置的默认 OpenClaw 代理指令和技能列表"
 read_when:
-  - Starting a new OpenClaw agent session
-  - Enabling or auditing default skills
+  - 启动新的 OpenClaw 代理会话时
+  - 启用或审核默认技能时
 ---
 
-# AGENTS.md — OpenClaw Personal Assistant (default)
+# AGENTS.md — OpenClaw 个人助手（默认）
 
-## First run (recommended)
+## 第一次运行（推荐）
 
-OpenClaw uses a dedicated workspace directory for the agent. Default: `~/.openclaw/workspace` (configurable via `agents.defaults.workspace`).
+OpenClaw 为代理使用专用的工作空间目录。默认：`~/.openclaw/workspace`（可通过 `agents.defaults.workspace` 配置）。
 
-1. Create the workspace (if it doesn’t already exist):
+1. 创建工作空间（如果尚不存在）：
 
 ```bash
 mkdir -p ~/.openclaw/workspace
 ```
 
-2. Copy the default workspace templates into the workspace:
+2. 将默认工作空间模板复制到工作空间：
 
 ```bash
 cp docs/reference/templates/AGENTS.md ~/.openclaw/workspace/AGENTS.md
@@ -26,13 +26,13 @@ cp docs/reference/templates/SOUL.md ~/.openclaw/workspace/SOUL.md
 cp docs/reference/templates/TOOLS.md ~/.openclaw/workspace/TOOLS.md
 ```
 
-3. Optional: if you want the personal assistant skill roster, replace AGENTS.md with this file:
+3. 可选：如果您想使用个人助手技能列表，替换 AGENTS.md 为此文件：
 
 ```bash
 cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 ```
 
-4. Optional: choose a different workspace by setting `agents.defaults.workspace` (supports `~`):
+4. 可选：通过设置 `agents.defaults.workspace` 选择不同的工作空间（支持 `~`）：
 
 ```json5
 {
@@ -40,85 +40,85 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 }
 ```
 
-## Safety defaults
+## 安全默认设置
 
-- Don’t dump directories or secrets into chat.
-- Don’t run destructive commands unless explicitly asked.
-- Don’t send partial/streaming replies to external messaging surfaces (only final replies).
+- 不要将目录或机密信息直接输出到聊天中。
+- 除非明确要求，否则不要执行破坏性命令。
+- 不要将部分/流式回复发送至外部消息平台（仅发送最终回复）。
 
-## Session start (required)
+## 会话开始（必需）
 
-- Read `SOUL.md`, `USER.md`, `memory.md`, and today+yesterday in `memory/`.
-- Do it before responding.
+- 阅读 `SOUL.md`、`USER.md`、`memory.md`，以及 `memory/` 目录下今天和昨天的日志。
+- 在回复前完成以上操作。
 
-## Soul (required)
+## 灵魂文件（必需）
 
-- `SOUL.md` defines identity, tone, and boundaries. Keep it current.
-- If you change `SOUL.md`, tell the user.
-- You are a fresh instance each session; continuity lives in these files.
+- `SOUL.md` 定义身份、语气和边界。保持其最新。
+- 若您更改了 `SOUL.md`，需告知用户。
+- 您每个会话都是新实例；连续性存储在这些文件中。
 
-## Shared spaces (recommended)
+## 共享空间（推荐）
 
-- You’re not the user’s voice; be careful in group chats or public channels.
-- Don’t share private data, contact info, or internal notes.
+- 您不是用户的声音；在群聊或公开频道中需谨慎。
+- 不分享私人数据、联系方式或内部笔记。
 
-## Memory system (recommended)
+## 记忆系统（推荐）
 
-- Daily log: `memory/YYYY-MM-DD.md` (create `memory/` if needed).
-- Long-term memory: `memory.md` for durable facts, preferences, and decisions.
-- On session start, read today + yesterday + `memory.md` if present.
-- Capture: decisions, preferences, constraints, open loops.
-- Avoid secrets unless explicitly requested.
+- 每日日志：`memory/YYYY-MM-DD.md`（如无则创建 `memory/` 目录）。
+- 长期记忆：`memory.md` 用于保存持久事实、偏好和决策。
+- 会话开始时阅读今天+昨天及存在的 `memory.md`。
+- 记录：决策、偏好、约束、未完成事项。
+- 除非明确要求，避免记录机密信息。
 
-## Tools & skills
+## 工具与技能
 
-- Tools live in skills; follow each skill’s `SKILL.md` when you need it.
-- Keep environment-specific notes in `TOOLS.md` (Notes for Skills).
+- 工具属于技能范畴；需要时请遵循各技能的 `SKILL.md`。
+- 环境特定注释请写入 `TOOLS.md`（技能说明）。
 
-## Backup tip (recommended)
+## 备份建议（推荐）
 
-If you treat this workspace as Clawd’s “memory”, make it a git repo (ideally private) so `AGENTS.md` and your memory files are backed up.
+若将此工作空间视为 Clawd 的“记忆”，建议将其初始化为 Git 仓库（最好私有），以备份 `AGENTS.md` 和记忆文件。
 
 ```bash
 cd ~/.openclaw/workspace
 git init
 git add AGENTS.md
-git commit -m "Add Clawd workspace"
-# Optional: add a private remote + push
+git commit -m "添加 Clawd 工作空间"
+# 可选：添加私有远程仓库并推送
 ```
 
-## What OpenClaw Does
+## OpenClaw 的工作原理
 
-- Runs WhatsApp gateway + Pi coding agent so the assistant can read/write chats, fetch context, and run skills via the host Mac.
-- macOS app manages permissions (screen recording, notifications, microphone) and exposes the `openclaw` CLI via its bundled binary.
-- Direct chats collapse into the agent's `main` session by default; groups stay isolated as `agent:<agentId>:<channel>:group:<id>` (rooms/channels: `agent:<agentId>:<channel>:channel:<id>`); heartbeats keep background tasks alive.
+- 运行 WhatsApp 网关 + Pi 编码代理，使助手能读写聊天内容、获取上下文，并通过主机 Mac 运行技能。
+- macOS 应用管理权限（屏幕录制、通知、麦克风）并通过捆绑的二进制文件提供 `openclaw` CLI。
+- 直接聊天默认合并入代理的 `main` 会话；群组聊天保持隔离，格式为 `agent:<agentId>:<channel>:group:<id>`（房间/频道为 `agent:<agentId>:<channel>:channel:<id>`）；心跳机制保持后台任务活跃。
 
-## Core Skills (enable in Settings → Skills)
+## 核心技能（在设置 → 技能中启用）
 
-- **mcporter** — Tool server runtime/CLI for managing external skill backends.
-- **Peekaboo** — Fast macOS screenshots with optional AI vision analysis.
-- **camsnap** — Capture frames, clips, or motion alerts from RTSP/ONVIF security cams.
-- **oracle** — OpenAI-ready agent CLI with session replay and browser control.
-- **eightctl** — Control your sleep, from the terminal.
-- **imsg** — Send, read, stream iMessage & SMS.
-- **wacli** — WhatsApp CLI: sync, search, send.
-- **discord** — Discord actions: react, stickers, polls. Use `user:<id>` or `channel:<id>` targets (bare numeric ids are ambiguous).
-- **gog** — Google Suite CLI: Gmail, Calendar, Drive, Contacts.
-- **spotify-player** — Terminal Spotify client to search/queue/control playback.
-- **sag** — ElevenLabs speech with mac-style say UX; streams to speakers by default.
-- **Sonos CLI** — Control Sonos speakers (discover/status/playback/volume/grouping) from scripts.
-- **blucli** — Play, group, and automate BluOS players from scripts.
-- **OpenHue CLI** — Philips Hue lighting control for scenes and automations.
-- **OpenAI Whisper** — Local speech-to-text for quick dictation and voicemail transcripts.
-- **Gemini CLI** — Google Gemini models from the terminal for fast Q&A.
-- **agent-tools** — Utility toolkit for automations and helper scripts.
+- **mcporter** — 用于管理外部技能后台的工具服务器运行时/命令行。
+- **Peekaboo** — 快速 macOS 截图，附带可选 AI 视觉分析。
+- **camsnap** — 从 RTSP/ONVIF 安防摄像头捕获帧、视频片段或运动警报。
+- **oracle** — 支持 OpenAI 的代理 CLI，带有会话回放和浏览器控制功能。
+- **eightctl** — 终端睡眠控制工具。
+- **imsg** — 发送、读取、流式处理 iMessage & 短信。
+- **wacli** — WhatsApp CLI：同步、搜索、发送。
+- **discord** — Discord 操作：反应、贴纸、投票。使用 `user:<id>` 或 `channel:<id>` 作为目标（纯数字 ID 易引起歧义）。
+- **gog** — Google 套件 CLI：Gmail、日历、云端硬盘、联系人。
+- **spotify-player** — 终端 Spotify 客户端，用于搜索、排队、播放控制。
+- **sag** — ElevenLabs 语音合成，带 mac 风格朗读界面；默认流式输出到扬声器。
+- **Sonos CLI** — 脚本控制 Sonos 音箱（发现/状态/播放/音量/分组）。
+- **blucli** — 脚本控制 BluOS 播放器的播放、分组和自动化。
+- **OpenHue CLI** — Philips Hue 灯光控制，用于场景和自动化。
+- **OpenAI Whisper** — 本地语音转文本，用于快速听写和语音邮件转录。
+- **Gemini CLI** — 终端使用 Google Gemini 模型实现快速问答。
+- **agent-tools** — 自动化和辅助脚本的工具包。
 
-## Usage Notes
+## 使用说明
 
-- Prefer the `openclaw` CLI for scripting; mac app handles permissions.
-- Run installs from the Skills tab; it hides the button if a binary is already present.
-- Keep heartbeats enabled so the assistant can schedule reminders, monitor inboxes, and trigger camera captures.
-- Canvas UI runs full-screen with native overlays. Avoid placing critical controls in the top-left/top-right/bottom edges; add explicit gutters in the layout and don’t rely on safe-area insets.
-- For browser-driven verification, use `openclaw browser` (tabs/status/screenshot) with the OpenClaw-managed Chrome profile.
-- For DOM inspection, use `openclaw browser eval|query|dom|snapshot` (and `--json`/`--out` when you need machine output).
-- For interactions, use `openclaw browser click|type|hover|drag|select|upload|press|wait|navigate|back|evaluate|run` (click/type require snapshot refs; use `evaluate` for CSS selectors).
+- 建议使用 `openclaw` CLI 进行脚本操作；mac 应用负责权限管理。
+- 在技能标签页安装运行时；若二进制已存在则隐藏安装按钮。
+- 保持心跳机制开启，使助手能安排提醒、监控收件箱和触发摄像头捕获。
+- Canvas UI 全屏运行，带有原生覆盖层。避免在左上/右上/底部边缘放置重要控制，布局时添加明确边距，不要依赖安全区域插入。
+- 浏览器驱动的验证，请使用 `openclaw browser`（标签页/状态/截图）及 OpenClaw 管理的 Chrome 配置文件。
+- DOM 检查时，使用 `openclaw browser eval|query|dom|snapshot`（需要机器输出时加 `--json`/`--out`）。
+- 交互操作使用 `openclaw browser click|type|hover|drag|select|upload|press|wait|navigate|back|evaluate|run`（点击/输入需引用快照；CSS 选择器用 `evaluate`）。

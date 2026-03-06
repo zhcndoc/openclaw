@@ -1,34 +1,32 @@
 ---
-summary: "Direct `openclaw agent` CLI runs (with optional delivery)"
+summary: "直接运行 `openclaw agent` CLI（可选投递）"
 read_when:
-  - Adding or modifying the agent CLI entrypoint
-title: "Agent Send"
+  - 添加或修改 agent CLI 入口点
+title: "Agent 发送"
 ---
 
-# `openclaw agent` (direct agent runs)
+# `openclaw agent`（直接运行 agent）
 
-`openclaw agent` runs a single agent turn without needing an inbound chat message.
-By default it goes **through the Gateway**; add `--local` to force the embedded
-runtime on the current machine.
+`openclaw agent` 运行单个 agent 回合，无需入站聊天消息。默认情况下，它 **通过 Gateway** 运行；添加 `--local` 可强制使用当前机器上的嵌入式运行时。
 
-## Behavior
+## 行为
 
-- Required: `--message <text>`
-- Session selection:
-  - `--to <dest>` derives the session key (group/channel targets preserve isolation; direct chats collapse to `main`), **or**
-  - `--session-id <id>` reuses an existing session by id, **or**
-  - `--agent <id>` targets a configured agent directly (uses that agent's `main` session key)
-- Runs the same embedded agent runtime as normal inbound replies.
-- Thinking/verbose flags persist into the session store.
-- Output:
-  - default: prints reply text (plus `MEDIA:<url>` lines)
-  - `--json`: prints structured payload + metadata
-- Optional delivery back to a channel with `--deliver` + `--channel` (target formats match `openclaw message --target`).
-- Use `--reply-channel`/`--reply-to`/`--reply-account` to override delivery without changing the session.
+- 必需参数：`--message <文本>`
+- 会话选择：
+  - `--to <目标>` 从目标推导会话密钥（群组/频道保持隔离；私聊合并为 `main`），**或者**
+  - `--session-id <id>` 复用已有会话 ID，**或者**
+  - `--agent <id>` 直接指定配置好的 agent（使用该 agent 的 `main` 会话密钥）
+- 运行与普通入站回复相同的嵌入式 agent 运行时。
+- 思考/详细标记会保留到会话存储中。
+- 输出：
+  - 默认：打印回复文本（加上 `MEDIA:<url>` 行）
+  - `--json`：打印结构化负载及元数据
+- 可选通过 `--deliver` + `--channel` 将回复投递到频道（目标格式匹配 `openclaw message --target`）。
+- 使用 `--reply-channel`/`--reply-to`/`--reply-account` 覆盖投递目标，而不改变会话。
 
-If the Gateway is unreachable, the CLI **falls back** to the embedded local run.
+如果 Gateway 不可达，CLI 会 **回退** 到嵌入式本地运行。
 
-## Examples
+## 示例
 
 ```bash
 openclaw agent --to +15555550123 --message "status update"
@@ -39,15 +37,15 @@ openclaw agent --to +15555550123 --message "Summon reply" --deliver
 openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"
 ```
 
-## Flags
+## 参数
 
-- `--local`: run locally (requires model provider API keys in your shell)
-- `--deliver`: send the reply to the chosen channel
-- `--channel`: delivery channel (`whatsapp|telegram|discord|googlechat|slack|signal|imessage`, default: `whatsapp`)
-- `--reply-to`: delivery target override
-- `--reply-channel`: delivery channel override
-- `--reply-account`: delivery account id override
-- `--thinking <off|minimal|low|medium|high|xhigh>`: persist thinking level (GPT-5.2 + Codex models only)
-- `--verbose <on|full|off>`: persist verbose level
-- `--timeout <seconds>`: override agent timeout
-- `--json`: output structured JSON
+- `--local`：本地运行（需要在 shell 中配置模型提供者 API 密钥）
+- `--deliver`：将回复发送到选定频道
+- `--channel`：投递频道（`whatsapp|telegram|discord|googlechat|slack|signal|imessage`，默认：`whatsapp`）
+- `--reply-to`：投递目标覆盖
+- `--reply-channel`：投递频道覆盖
+- `--reply-account`：投递账户 ID 覆盖
+- `--thinking <off|minimal|low|medium|high|xhigh>`：持久化思考等级（仅限 GPT-5.2 + Codex 模型）
+- `--verbose <on|full|off>`：持久化详细等级
+- `--timeout <秒>`：覆盖 agent 超时设置
+- `--json`：输出结构化 JSON

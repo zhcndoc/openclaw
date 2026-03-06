@@ -1,48 +1,48 @@
 ---
-summary: "Plan: one clean plugin SDK + runtime for all messaging connectors"
+summary: "计划：一个统一的插件 SDK 和运行时，支持所有消息连接器"
 read_when:
-  - Defining or refactoring the plugin architecture
-  - Migrating channel connectors to the plugin SDK/runtime
-title: "Plugin SDK Refactor"
+  - 定义或重构插件架构时
+  - 将频道连接器迁移到插件 SDK/运行时时
+title: "插件 SDK 重构"
 ---
 
-# Plugin SDK + Runtime Refactor Plan
+# 插件 SDK + 运行时重构计划
 
-Goal: every messaging connector is a plugin (bundled or external) using one stable API.
-No plugin imports from `src/**` directly. All dependencies go through the SDK or runtime.
+目标：每个消息连接器都是一个插件（捆绑或外部），使用统一稳定的 API。
+禁止插件直接从 `src/**` 导入，所有依赖必须通过 SDK 或运行时访问。
 
-## Why now
+## 为什么现在需要
 
-- Current connectors mix patterns: direct core imports, dist-only bridges, and custom helpers.
-- This makes upgrades brittle and blocks a clean external plugin surface.
+- 目前连接器混用了多种模式：直接导入核心、仅分发桥接、以及自定义辅助工具。
+- 这导致升级脆弱，且阻碍了干净的外部插件接口设计。
 
-## Target architecture (two layers)
+## 目标架构（两层）
 
-### 1) Plugin SDK (compile-time, stable, publishable)
+### 1) 插件 SDK（编译时，稳定，可发布）
 
-Scope: types, helpers, and config utilities. No runtime state, no side effects.
+范围：类型、辅助函数和配置工具。无运行时状态，无副作用。
 
-Contents (examples):
+内容示例：
 
-- Types: `ChannelPlugin`, adapters, `ChannelMeta`, `ChannelCapabilities`, `ChannelDirectoryEntry`.
-- Config helpers: `buildChannelConfigSchema`, `setAccountEnabledInConfigSection`, `deleteAccountFromConfigSection`,
-  `applyAccountNameToChannelSection`.
-- Pairing helpers: `PAIRING_APPROVED_MESSAGE`, `formatPairingApproveHint`.
-- Onboarding helpers: `promptChannelAccessConfig`, `addWildcardAllowFrom`, onboarding types.
-- Tool param helpers: `createActionGate`, `readStringParam`, `readNumberParam`, `readReactionParams`, `jsonResult`.
-- Docs link helper: `formatDocsLink`.
+- 类型：`ChannelPlugin`，适配器，`ChannelMeta`，`ChannelCapabilities`，`ChannelDirectoryEntry`。
+- 配置辅助：`buildChannelConfigSchema`、`setAccountEnabledInConfigSection`、`deleteAccountFromConfigSection`、
+  `applyAccountNameToChannelSection`。
+- 配对辅助：`PAIRING_APPROVED_MESSAGE`、`formatPairingApproveHint`。
+- 入门辅助：`promptChannelAccessConfig`、`addWildcardAllowFrom`、入门类型。
+- 工具参数辅助：`createActionGate`、`readStringParam`、`readNumberParam`、`readReactionParams`、`jsonResult`。
+- 文档链接辅助：`formatDocsLink`。
 
-Delivery:
+交付方式：
 
-- Publish as `openclaw/plugin-sdk` (or export from core under `openclaw/plugin-sdk`).
-- Semver with explicit stability guarantees.
+- 作为 `openclaw/plugin-sdk` 发布（或由核心导出，路径为 `openclaw/plugin-sdk`）。
+- 使用语义版本控制，提供明确的稳定性保证。
 
-### 2) Plugin Runtime (execution surface, injected)
+### 2) 插件运行时（执行接口，注入）
 
-Scope: everything that touches core runtime behavior.
-Accessed via `OpenClawPluginApi.runtime` so plugins never import `src/**`.
+范围：所有涉及核心运行时行为的功能。
+通过 `OpenClawPluginApi.runtime` 访问，插件绝不直接导入 `src/**`。
 
-Proposed surface (minimal but complete):
+建议接口（简洁且完整）：
 
 ```ts
 export type PluginRuntime = {
@@ -65,7 +65,7 @@ export type PluginRuntime = {
           onError?: (err: unknown, info: { kind: string }) => void;
         };
       }): Promise<void>;
-      createReplyDispatcherWithTyping?: unknown; // adapter for Teams-style flows
+      createReplyDispatcherWithTyping?: unknown; // 适配 Teams 风格流程
     };
     routing: {
       resolveAgentRoute(params: {
@@ -144,71 +144,71 @@ export type PluginRuntime = {
 };
 ```
 
-Notes:
+备注：
 
-- Runtime is the only way to access core behavior.
-- SDK is intentionally small and stable.
-- Each runtime method maps to an existing core implementation (no duplication).
+- 运行时是访问核心行为的唯一途径。
+- SDK 有意设计得轻量且稳定。
+- 每个运行时方法均映射到核心已有实现（无重复代码）。
 
-## Migration plan (phased, safe)
+## 迁移计划（分阶段，安全）
 
-### Phase 0: scaffolding
+### 第 0 阶段：搭建框架
 
-- Introduce `openclaw/plugin-sdk`.
-- Add `api.runtime` to `OpenClawPluginApi` with the surface above.
-- Maintain existing imports during a transition window (deprecation warnings).
+- 引入 `openclaw/plugin-sdk`。
+- 在 `OpenClawPluginApi` 添加 `api.runtime`，接口如上所示。
+- 在过渡期内保持旧导入（并添加废弃警告）。
 
-### Phase 1: bridge cleanup (low risk)
+### 第 1 阶段：桥接清理（低风险）
 
-- Replace per-extension `core-bridge.ts` with `api.runtime`.
-- Migrate BlueBubbles, Zalo, Zalo Personal first (already close).
-- Remove duplicated bridge code.
+- 用 `api.runtime` 替换各扩展的 `core-bridge.ts`。
+- 先迁移 BlueBubbles、Zalo、Zalo Personal（已接近完成）。
+- 删除重复的桥接代码。
 
-### Phase 2: light direct-import plugins
+### 第 2 阶段：轻量化直接导入插件
 
-- Migrate Matrix to SDK + runtime.
-- Validate onboarding, directory, group mention logic.
+- 迁移 Matrix 至 SDK + 运行时。
+- 验证入门、目录和群提及逻辑。
 
-### Phase 3: heavy direct-import plugins
+### 第 3 阶段：重量级直接导入插件
 
-- Migrate MS Teams (largest set of runtime helpers).
-- Ensure reply/typing semantics match current behavior.
+- 迁移 MS Teams（最大的运行时助手集）。
+- 确保回复/输入状态语义与当前行为一致。
 
-### Phase 4: iMessage pluginization
+### 第 4 阶段：iMessage 插件化
 
-- Move iMessage into `extensions/imessage`.
-- Replace direct core calls with `api.runtime`.
-- Keep config keys, CLI behavior, and docs intact.
+- 将 iMessage 移动至 `extensions/imessage`。
+- 用 `api.runtime` 替代直接核心调用。
+- 保持配置键、CLI 行为和文档不变。
 
-### Phase 5: enforcement
+### 第 5 阶段：强制执行
 
-- Add lint rule / CI check: no `extensions/**` imports from `src/**`.
-- Add plugin SDK/version compatibility checks (runtime + SDK semver).
+- 添加 lint 规则/CI 检查：禁止 `extensions/**` 直接导入 `src/**`。
+- 添加插件 SDK/版本兼容性检查（运行时 + SDK 语义版本控制）。
 
-## Compatibility and versioning
+## 兼容性和版本控制
 
-- SDK: semver, published, documented changes.
-- Runtime: versioned per core release. Add `api.runtime.version`.
-- Plugins declare a required runtime range (e.g., `openclawRuntime: ">=2026.2.0"`).
+- SDK：语义版本控制，发布，有文档说明变更。
+- 运行时：随核心版本同步版本号，添加 `api.runtime.version`。
+- 插件注明所需运行时版本范围（如 `openclawRuntime: ">=2026.2.0"`）。
 
-## Testing strategy
+## 测试策略
 
-- Adapter-level unit tests (runtime functions exercised with real core implementation).
-- Golden tests per plugin: ensure no behavior drift (routing, pairing, allowlist, mention gating).
-- A single end-to-end plugin sample used in CI (install + run + smoke).
+- 适配器层单元测试（运行时方法调用真实核心实现）。
+- 每个插件的金丝雀测试：确保路由、配对、白名单、提及限制等功能无回归。
+- CI 内使用单个端到端插件样例（安装+运行+冒烟测试）。
 
-## Open questions
+## 待解决问题
 
-- Where to host SDK types: separate package or core export?
-- Runtime type distribution: in SDK (types only) or in core?
-- How to expose docs links for bundled vs external plugins?
-- Do we allow limited direct core imports for in-repo plugins during transition?
+- SDK 类型放在哪里：单独包还是核心导出？
+- 运行时类型分发：放在 SDK（仅类型）还是核心？
+- 如何为捆绑和外部插件暴露文档链接？
+- 过渡期间是否允许仓内插件有限度直接导入核心代码？
 
-## Success criteria
+## 成功标准
 
-- All channel connectors are plugins using SDK + runtime.
-- No `extensions/**` imports from `src/**`.
-- New connector templates depend only on SDK + runtime.
-- External plugins can be developed and updated without core source access.
+- 所有频道连接器均为使用 SDK + 运行时的插件。
+- 无 `extensions/**` 直接导入 `src/**`。
+- 新连接器模板仅依赖 SDK + 运行时。
+- 外部插件可在无核心源码访问的情况下开发和更新。
 
-Related docs: [Plugins](/tools/plugin), [Channels](/channels/index), [Configuration](/gateway/configuration).
+相关文档：[插件](/tools/plugin)、[频道](/channels/index)、[配置](/gateway/configuration)。

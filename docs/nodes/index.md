@@ -1,125 +1,119 @@
 ---
-summary: "Nodes: pairing, capabilities, permissions, and CLI helpers for canvas/camera/screen/device/notifications/system"
+summary: "Nodes：用于 canvas/camera/screen/device/notifications/system 的配对、功能、权限及 CLI 辅助工具"
 read_when:
-  - Pairing iOS/Android nodes to a gateway
-  - Using node canvas/camera for agent context
-  - Adding new node commands or CLI helpers
-title: "Nodes"
+  - 给 iOS/Android 节点配对到网关时
+  - 使用节点的 canvas/camera 作为代理上下文时
+  - 添加新的节点命令或 CLI 辅助工具时
+title: "节点"
 ---
 
-# Nodes
+# 节点
 
-A **node** is a companion device (macOS/iOS/Android/headless) that connects to the Gateway **WebSocket** (same port as operators) with `role: "node"` and exposes a command surface (e.g. `canvas.*`, `camera.*`, `device.*`, `notifications.*`, `system.*`) via `node.invoke`. Protocol details: [Gateway protocol](/gateway/protocol).
+**节点** 是一台伴随设备（macOS/iOS/Android/无界面）以 `role: "node"` 连接到网关的 **WebSocket**（与操作员使用同一端口），并通过 `node.invoke` 暴露命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。协议详情见：[网关协议](/gateway/protocol)。
 
-Legacy transport: [Bridge protocol](/gateway/bridge-protocol) (TCP JSONL; deprecated/removed for current nodes).
+旧版传输： [Bridge 协议](/gateway/bridge-protocol)（TCP JSONL；已弃用/当前节点已移除）。
 
-macOS can also run in **node mode**: the menubar app connects to the Gateway’s WS server and exposes its local canvas/camera commands as a node (so `openclaw nodes …` works against this Mac).
+macOS 也可以运行在 **节点模式**：菜单栏应用连接到网关的 WS 服务器，并将其本地的 canvas/camera 命令作为节点暴露（因此 `openclaw nodes …` 可以针对这台 Mac 工作）。
 
-Notes:
+备注：
 
-- Nodes are **peripherals**, not gateways. They don’t run the gateway service.
-- Telegram/WhatsApp/etc. messages land on the **gateway**, not on nodes.
-- Troubleshooting runbook: [/nodes/troubleshooting](/nodes/troubleshooting)
+- 节点属于**外设**，不是网关。它们不运行网关服务。
+- Telegram/WhatsApp 等消息都通过 **网关** 到达，而非节点。
+- 故障排除运行手册：[/nodes/troubleshooting](/nodes/troubleshooting)
 
-## Pairing + status
+## 配对 + 状态
 
-**WS nodes use device pairing.** Nodes present a device identity during `connect`; the Gateway
-creates a device pairing request for `role: node`. Approve via the devices CLI (or UI).
+**WebSocket 节点使用设备配对。** 节点在 `connect` 时提供设备身份；网关会为 `role: node` 创建设备配对请求。通过设备 CLI（或 UI）批准。
 
-Quick CLI:
+快速 CLI：
 
 ```bash
 openclaw devices list
-openclaw devices approve <requestId>
-openclaw devices reject <requestId>
+openclaw devices approve <请求ID>
+openclaw devices reject <请求ID>
 openclaw nodes status
-openclaw nodes describe --node <idOrNameOrIp>
+openclaw nodes describe --node <节点ID或名称或IP>
 ```
 
-Notes:
+备注：
 
-- `nodes status` marks a node as **paired** when its device pairing role includes `node`.
-- `node.pair.*` (CLI: `openclaw nodes pending/approve/reject`) is a separate gateway-owned
-  node pairing store; it does **not** gate the WS `connect` handshake.
+- `nodes status` 当设备配对角色包含 `node` 时，会标记节点为 **已配对**。
+- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject`）是网关拥有的独立节点配对存储；它**不**是 WebSocket `connect` 握手的关卡。
 
-## Remote node host (system.run)
+## 远程节点主机（system.run）
 
-Use a **node host** when your Gateway runs on one machine and you want commands
-to execute on another. The model still talks to the **gateway**; the gateway
-forwards `exec` calls to the **node host** when `host=node` is selected.
+当网关运行在一台机器上，而希望命令在另一台机器执行时，使用**节点主机**。模型仍连接到**网关**；当选择 `host=node` 时，网关会将 `exec` 调用转发到**节点主机**。
 
-### What runs where
+### 运行分布
 
-- **Gateway host**: receives messages, runs the model, routes tool calls.
-- **Node host**: executes `system.run`/`system.which` on the node machine.
-- **Approvals**: enforced on the node host via `~/.openclaw/exec-approvals.json`.
+- **网关主机**：接收消息，运行模型，路由工具调用。
+- **节点主机**：在节点机器上执行 `system.run`/`system.which`。
+- **审批**：在节点主机通过 `~/.openclaw/exec-approvals.json` 强制执行。
 
-### Start a node host (foreground)
+### 启动节点主机（前台）
 
-On the node machine:
+在节点机器上：
 
 ```bash
-openclaw node run --host <gateway-host> --port 18789 --display-name "Build Node"
+openclaw node run --host <网关主机> --port 18789 --display-name "构建节点"
 ```
 
-### Remote gateway via SSH tunnel (loopback bind)
+### 通过 SSH 隧道访问远程网关（回环接口绑定）
 
-If the Gateway binds to loopback (`gateway.bind=loopback`, default in local mode),
-remote node hosts cannot connect directly. Create an SSH tunnel and point the
-node host at the local end of the tunnel.
+如果网关绑定的是回环地址（`gateway.bind=loopback`，本地模式默认值），远程节点主机无法直接连接。请建立 SSH 隧道，并将节点主机指向隧道的本地端。
 
-Example (node host -> gateway host):
+示例（节点主机 -> 网关主机）：
 
 ```bash
-# Terminal A (keep running): forward local 18790 -> gateway 127.0.0.1:18789
+# 终端 A（保持运行）：转发本地 18790 端口到网关的 127.0.0.1:18789
 ssh -N -L 18790:127.0.0.1:18789 user@gateway-host
 
-# Terminal B: export the gateway token and connect through the tunnel
-export OPENCLAW_GATEWAY_TOKEN="<gateway-token>"
-openclaw node run --host 127.0.0.1 --port 18790 --display-name "Build Node"
+# 终端 B：导出网关令牌，通过隧道连接
+export OPENCLAW_GATEWAY_TOKEN="<网关令牌>"
+openclaw node run --host 127.0.0.1 --port 18790 --display-name "构建节点"
 ```
 
-Notes:
+备注：
 
-- The token is `gateway.auth.token` from the gateway config (`~/.openclaw/openclaw.json` on the gateway host).
-- `openclaw node run` reads `OPENCLAW_GATEWAY_TOKEN` for auth.
+- 令牌来自网关配置中的 `gateway.auth.token`（位于网关主机的 `~/.openclaw/openclaw.json`）。
+- `openclaw node run` 读取环境变量 `OPENCLAW_GATEWAY_TOKEN` 用于身份验证。
 
-### Start a node host (service)
+### 启动节点主机（服务）
 
 ```bash
-openclaw node install --host <gateway-host> --port 18789 --display-name "Build Node"
+openclaw node install --host <网关主机> --port 18789 --display-name "构建节点"
 openclaw node restart
 ```
 
-### Pair + name
+### 配对 + 命名
 
-On the gateway host:
+在网关主机上操作：
 
 ```bash
 openclaw devices list
-openclaw devices approve <requestId>
+openclaw devices approve <请求ID>
 openclaw nodes status
 ```
 
-Naming options:
+命名选项：
 
-- `--display-name` on `openclaw node run` / `openclaw node install` (persists in `~/.openclaw/node.json` on the node).
-- `openclaw nodes rename --node <id|name|ip> --name "Build Node"` (gateway override).
+- 在 `openclaw node run` / `openclaw node install` 使用 `--display-name`（保存在节点的 `~/.openclaw/node.json` 中）。
+- 使用 `openclaw nodes rename --node <id|name|ip> --name "构建节点"`（网关覆盖）。
 
-### Allowlist the commands
+### 允许列表命令
 
-Exec approvals are **per node host**. Add allowlist entries from the gateway:
+执行审批是**每个节点主机独立**的。在网关添加允许列表项：
 
 ```bash
 openclaw approvals allowlist add --node <id|name|ip> "/usr/bin/uname"
 openclaw approvals allowlist add --node <id|name|ip> "/usr/bin/sw_vers"
 ```
 
-Approvals live on the node host at `~/.openclaw/exec-approvals.json`.
+审批文件保存在节点主机的 `~/.openclaw/exec-approvals.json`。
 
-### Point exec at the node
+### 指定 exec 运行节点
 
-Configure defaults (gateway config):
+配置默认（网关配置）：
 
 ```bash
 openclaw config set tools.exec.host node
@@ -127,43 +121,42 @@ openclaw config set tools.exec.security allowlist
 openclaw config set tools.exec.node "<id-or-name>"
 ```
 
-Or per session:
+或针对单次会话：
 
 ```
 /exec host=node security=allowlist node=<id-or-name>
 ```
 
-Once set, any `exec` call with `host=node` runs on the node host (subject to the
-node allowlist/approvals).
+设置完成后，任何带 `host=node` 的 `exec` 调用都会在节点主机上执行（受节点允许列表/审批限制）。
 
-Related:
+相关链接：
 
-- [Node host CLI](/cli/node)
-- [Exec tool](/tools/exec)
-- [Exec approvals](/tools/exec-approvals)
+- [节点主机 CLI](/cli/node)
+- [Exec 工具](/tools/exec)
+- [Exec 审批](/tools/exec-approvals)
 
-## Invoking commands
+## 调用命令
 
-Low-level (raw RPC):
+底层（原始 RPC）调用示例：
 
 ```bash
 openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"javaScript":"location.href"}'
 ```
 
-Higher-level helpers exist for the common “give the agent a MEDIA attachment” workflows.
+有更高级的辅助工具用于常用的“给代理发送 MEDIA 附件”工作流。
 
-## Screenshots (canvas snapshots)
+## 屏幕快照（canvas 截图）
 
-If the node is showing the Canvas (WebView), `canvas.snapshot` returns `{ format, base64 }`.
+如果节点显示 Canvas（WebView），`canvas.snapshot` 返回 `{ format, base64 }`。
 
-CLI helper (writes to a temp file and prints `MEDIA:<path>`):
+CLI 辅助（写入临时文件并打印 `MEDIA:<路径>`）：
 
 ```bash
 openclaw nodes canvas snapshot --node <idOrNameOrIp> --format png
 openclaw nodes canvas snapshot --node <idOrNameOrIp> --format jpg --max-width 1200 --quality 0.9
 ```
 
-### Canvas controls
+### Canvas 控制命令
 
 ```bash
 openclaw nodes canvas present --node <idOrNameOrIp> --target https://example.com
@@ -172,12 +165,12 @@ openclaw nodes canvas navigate https://example.com --node <idOrNameOrIp>
 openclaw nodes canvas eval --node <idOrNameOrIp> --js "document.title"
 ```
 
-Notes:
+备注：
 
-- `canvas present` accepts URLs or local file paths (`--target`), plus optional `--x/--y/--width/--height` for positioning.
-- `canvas eval` accepts inline JS (`--js`) or a positional arg.
+- `canvas present` 接受 URL 或本地文件路径（通过 `--target`），并可选用 `--x/--y/--width/--height` 定位。
+- `canvas eval` 接收内联 JS（`--js`）或位置参数。
 
-### A2UI (Canvas)
+### A2UI（Canvas）
 
 ```bash
 openclaw nodes canvas a2ui push --node <idOrNameOrIp> --text "Hello"
@@ -185,97 +178,97 @@ openclaw nodes canvas a2ui push --node <idOrNameOrIp> --jsonl ./payload.jsonl
 openclaw nodes canvas a2ui reset --node <idOrNameOrIp>
 ```
 
-Notes:
+备注：
 
-- Only A2UI v0.8 JSONL is supported (v0.9/createSurface is rejected).
+- 仅支持 A2UI v0.8 JSONL 格式（v0.9/createSurface 请求被拒绝）。
 
-## Photos + videos (node camera)
+## 照片 + 视频（节点相机）
 
-Photos (`jpg`):
+照片（`jpg`）：
 
 ```bash
 openclaw nodes camera list --node <idOrNameOrIp>
-openclaw nodes camera snap --node <idOrNameOrIp>            # default: both facings (2 MEDIA lines)
+openclaw nodes camera snap --node <idOrNameOrIp>            # 默认：双摄（2 条 MEDIA 行）
 openclaw nodes camera snap --node <idOrNameOrIp> --facing front
 ```
 
-Video clips (`mp4`):
+视频片段（`mp4`）：
 
 ```bash
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 10s
 openclaw nodes camera clip --node <idOrNameOrIp> --duration 3000 --no-audio
 ```
 
-Notes:
+备注：
 
-- The node must be **foregrounded** for `canvas.*` and `camera.*` (background calls return `NODE_BACKGROUND_UNAVAILABLE`).
-- Clip duration is clamped (currently `<= 60s`) to avoid oversized base64 payloads.
-- Android will prompt for `CAMERA`/`RECORD_AUDIO` permissions when possible; denied permissions fail with `*_PERMISSION_REQUIRED`.
+- 节点必须处于**前台**状态，`canvas.*` 和 `camera.*` 调用才生效（后台调用返回 `NODE_BACKGROUND_UNAVAILABLE`）。
+- 视频时长有限制（当前 `<= 60s`），以避免超大 base64 载荷。
+- Android 会在可能时请求 `CAMERA`/`RECORD_AUDIO` 权限；权限拒绝时返回 `*_PERMISSION_REQUIRED`。
 
-## Screen recordings (nodes)
+## 屏幕录制（节点）
 
-Nodes expose `screen.record` (mp4). Example:
+节点支持 `screen.record`（mp4）。示例：
 
 ```bash
 openclaw nodes screen record --node <idOrNameOrIp> --duration 10s --fps 10
 openclaw nodes screen record --node <idOrNameOrIp> --duration 10s --fps 10 --no-audio
 ```
 
-Notes:
+备注：
 
-- `screen.record` requires the node app to be foregrounded.
-- Android will show the system screen-capture prompt before recording.
-- Screen recordings are clamped to `<= 60s`.
-- `--no-audio` disables microphone capture (supported on iOS/Android; macOS uses system capture audio).
-- Use `--screen <index>` to select a display when multiple screens are available.
+- `screen.record` 需要节点应用处于前台。
+- Android 录制前会显示系统屏幕捕获提示。
+- 屏幕录制限制为 `<= 60s`。
+- `--no-audio` 禁用麦克风录音（iOS/Android 支持；macOS 使用系统声音录制）。
+- 多屏环境可用 `--screen <索引>` 选择显示屏。
 
-## Location (nodes)
+## 位置（节点）
 
-Nodes expose `location.get` when Location is enabled in settings.
+节点在启用定位服务时支持 `location.get`。
 
-CLI helper:
+CLI 辅助：
 
 ```bash
 openclaw nodes location get --node <idOrNameOrIp>
 openclaw nodes location get --node <idOrNameOrIp> --accuracy precise --max-age 15000 --location-timeout 10000
 ```
 
-Notes:
+备注：
 
-- Location is **off by default**.
-- “Always” requires system permission; background fetch is best-effort.
-- The response includes lat/lon, accuracy (meters), and timestamp.
+- 定位默认关闭。
+- “始终允许”需要系统权限；后台获取为尽力而为。
+- 返回包含经纬度、精度（米）和时间戳。
 
-## SMS (Android nodes)
+## 短信（Android 节点）
 
-Android nodes can expose `sms.send` when the user grants **SMS** permission and the device supports telephony.
+Android 节点在用户授权**短信权限**且设备支持电话功能时，支持 `sms.send`。
 
-Low-level invoke:
+底层调用示例：
 
 ```bash
 openclaw nodes invoke --node <idOrNameOrIp> --command sms.send --params '{"to":"+15555550123","message":"Hello from OpenClaw"}'
 ```
 
-Notes:
+备注：
 
-- The permission prompt must be accepted on the Android device before the capability is advertised.
-- Wi-Fi-only devices without telephony will not advertise `sms.send`.
+- 权限提示需在 Android 设备上接受后才会公开该能力。
+- 没电话功能的 Wi-Fi 设备不会公开 `sms.send`。
 
-## Android device + personal data commands
+## Android 设备与个人数据命令
 
-Android nodes can advertise additional command families when the corresponding capabilities are enabled.
+Android 节点启用相应权限后，可以提供更多命令分组：
 
-Available families:
+可用分组：
 
-- `device.status`, `device.info`, `device.permissions`, `device.health`
-- `notifications.list`, `notifications.actions`
+- `device.status`、`device.info`、`device.permissions`、`device.health`
+- `notifications.list`、`notifications.actions`
 - `photos.latest`
-- `contacts.search`, `contacts.add`
-- `calendar.events`, `calendar.add`
-- `motion.activity`, `motion.pedometer`
+- `contacts.search`、`contacts.add`
+- `calendar.events`、`calendar.add`
+- `motion.activity`、`motion.pedometer`
 - `app.update`
 
-Example invokes:
+示例调用：
 
 ```bash
 openclaw nodes invoke --node <idOrNameOrIp> --command device.status --params '{}'
@@ -283,91 +276,89 @@ openclaw nodes invoke --node <idOrNameOrIp> --command notifications.list --param
 openclaw nodes invoke --node <idOrNameOrIp> --command photos.latest --params '{"limit":1}'
 ```
 
-Notes:
+备注：
 
-- Motion commands are capability-gated by available sensors.
-- `app.update` is permission + policy gated by the node runtime.
+- 运动命令受可用传感器能力限制。
+- `app.update` 受权限和节点运行时策略限制。
 
-## System commands (node host / mac node)
+## 系统命令（节点主机 / Mac 节点）
 
-The macOS node exposes `system.run`, `system.notify`, and `system.execApprovals.get/set`.
-The headless node host exposes `system.run`, `system.which`, and `system.execApprovals.get/set`.
+macOS 节点暴露 `system.run`、`system.notify` 和 `system.execApprovals.get/set`。
+无界面节点主机暴露 `system.run`、`system.which` 和 `system.execApprovals.get/set`。
 
-Examples:
+示例：
 
 ```bash
 openclaw nodes run --node <idOrNameOrIp> -- echo "Hello from mac node"
 openclaw nodes notify --node <idOrNameOrIp> --title "Ping" --body "Gateway ready"
 ```
 
-Notes:
+备注：
 
-- `system.run` returns stdout/stderr/exit code in the payload.
-- `system.notify` respects notification permission state on the macOS app.
-- Unrecognized node `platform` / `deviceFamily` metadata uses a conservative default allowlist that excludes `system.run` and `system.which`. If you intentionally need those commands for an unknown platform, add them explicitly via `gateway.nodes.allowCommands`.
-- `system.run` supports `--cwd`, `--env KEY=VAL`, `--command-timeout`, and `--needs-screen-recording`.
-- For shell wrappers (`bash|sh|zsh ... -c/-lc`), request-scoped `--env` values are reduced to an explicit allowlist (`TERM`, `LANG`, `LC_*`, `COLORTERM`, `NO_COLOR`, `FORCE_COLOR`).
-- For allow-always decisions in allowlist mode, known dispatch wrappers (`env`, `nice`, `nohup`, `stdbuf`, `timeout`) persist inner executable paths instead of wrapper paths. If unwrapping is not safe, no allowlist entry is persisted automatically.
-- On Windows node hosts in allowlist mode, shell-wrapper runs via `cmd.exe /c` require approval (allowlist entry alone does not auto-allow the wrapper form).
-- `system.notify` supports `--priority <passive|active|timeSensitive>` and `--delivery <system|overlay|auto>`.
-- Node hosts ignore `PATH` overrides and strip dangerous startup/shell keys (`DYLD_*`, `LD_*`, `NODE_OPTIONS`, `PYTHON*`, `PERL*`, `RUBYOPT`, `SHELLOPTS`, `PS4`). If you need extra PATH entries, configure the node host service environment (or install tools in standard locations) instead of passing `PATH` via `--env`.
-- On macOS node mode, `system.run` is gated by exec approvals in the macOS app (Settings → Exec approvals).
-  Ask/allowlist/full behave the same as the headless node host; denied prompts return `SYSTEM_RUN_DENIED`.
-- On headless node host, `system.run` is gated by exec approvals (`~/.openclaw/exec-approvals.json`).
+- `system.run` 返回 stdout、stderr 和退出码。
+- `system.notify` 遵守 macOS 应用的通知权限状态。
+- 未识别的节点 `platform` / `deviceFamily` 元数据使用保守默认允许列表，排除 `system.run` 和 `system.which`。若需为未知平台启用这些命令，请通过 `gateway.nodes.allowCommands` 明确添加。
+- `system.run` 支持 `--cwd`、`--env KEY=VAL`、`--command-timeout` 和 `--needs-screen-recording`。
+- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求作用域的 `--env` 变量仅保留明确允许的变量（`TERM`, `LANG`, `LC_*`, `COLORTERM`, `NO_COLOR`, `FORCE_COLOR`）。
+- 允许列表模式下，对已知的包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`），会保持内部可执行路径，而非包装器路径。如果拆包不安全，则不自动保存允许列表条目。
+- Windows 节点主机允许列表模式，shell 包装执行（通过 `cmd.exe /c`）需要显式批准（仅允许条目不能自动批准包装器形式）。
+- `system.notify` 支持 `--priority <passive|active|timeSensitive>` 和 `--delivery <system|overlay|auto>`。
+- 节点主机会忽略 `PATH` 覆盖，并剥离危险的启动/shell 变量（`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`）。如果需要额外的 PATH 项，请配置节点主机服务环境，或将工具安装到标准路径，而非通过 `--env` 传递 `PATH`。
+- macOS 节点模式下，`system.run` 受 macOS 应用中的执行审批控制（设置 → 执行审批）。
+  询问/允许列表/完全模式与无界面节点主机一致；拒绝时返回 `SYSTEM_RUN_DENIED`。
+- 无界面节点主机中，`system.run` 受 `~/.openclaw/exec-approvals.json` 执行审批管理。
 
-## Exec node binding
+## Exec 节点绑定
 
-When multiple nodes are available, you can bind exec to a specific node.
-This sets the default node for `exec host=node` (and can be overridden per agent).
+当可用多个节点时，您可以将 exec 绑定到特定节点。
+这会设置 `exec host=node` 的默认节点（可针对具体代理覆写）。
 
-Global default:
+全局默认：
 
 ```bash
-openclaw config set tools.exec.node "node-id-or-name"
+openclaw config set tools.exec.node "节点ID或名称"
 ```
 
-Per-agent override:
+针对代理覆写：
 
 ```bash
 openclaw config get agents.list
-openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
+openclaw config set agents.list[0].tools.exec.node "节点ID或名称"
 ```
 
-Unset to allow any node:
+取消绑定以允许任意节点：
 
 ```bash
 openclaw config unset tools.exec.node
 openclaw config unset agents.list[0].tools.exec.node
 ```
 
-## Permissions map
+## 权限映射
 
-Nodes may include a `permissions` map in `node.list` / `node.describe`, keyed by permission name (e.g. `screenRecording`, `accessibility`) with boolean values (`true` = granted).
+节点可在 `node.list` / `node.describe` 中包含 `permissions` 映射，键名为权限名称（如 `screenRecording`、`accessibility`），值为布尔（`true` 表示已授权）。
 
-## Headless node host (cross-platform)
+## 无界面节点主机（跨平台）
 
-OpenClaw can run a **headless node host** (no UI) that connects to the Gateway
-WebSocket and exposes `system.run` / `system.which`. This is useful on Linux/Windows
-or for running a minimal node alongside a server.
+OpenClaw 可运行一个**无界面节点主机**（无 UI）连接网关 WebSocket，
+暴露 `system.run` / `system.which`。适用于 Linux/Windows，或在服务器旁运行简易节点。
 
-Start it:
+启动方式：
 
 ```bash
-openclaw node run --host <gateway-host> --port 18789
+openclaw node run --host <网关主机> --port 18789
 ```
 
-Notes:
+备注：
 
-- Pairing is still required (the Gateway will show a device pairing prompt).
-- The node host stores its node id, token, display name, and gateway connection info in `~/.openclaw/node.json`.
-- Exec approvals are enforced locally via `~/.openclaw/exec-approvals.json`
-  (see [Exec approvals](/tools/exec-approvals)).
-- On macOS, the headless node host executes `system.run` locally by default. Set
-  `OPENCLAW_NODE_EXEC_HOST=app` to route `system.run` through the companion app exec host; add
-  `OPENCLAW_NODE_EXEC_FALLBACK=0` to require the app host and fail closed if it is unavailable.
-- Add `--tls` / `--tls-fingerprint` when the Gateway WS uses TLS.
+- 依然需要配对（网关会显示设备配对提示）。
+- 节点主机将在 `~/.openclaw/node.json` 中存储节点 ID、令牌、显示名称和网关连接信息。
+- 执行审批通过本地的 `~/.openclaw/exec-approvals.json` 强制执行
+  （详见 [执行审批](/tools/exec-approvals)）。
+- macOS 中无界面节点主机默认本地执行 `system.run`。设置环境变量 `OPENCLAW_NODE_EXEC_HOST=app` 可通过伴随应用的执行主机执行；
+  添加 `OPENCLAW_NODE_EXEC_FALLBACK=0` 可强制使用应用主机，如不可用则失败。
+- 当网关 WS 启用 TLS，需加上 `--tls` / `--tls-fingerprint`。
 
-## Mac node mode
+## Mac 节点模式
 
-- The macOS menubar app connects to the Gateway WS server as a node (so `openclaw nodes …` works against this Mac).
-- In remote mode, the app opens an SSH tunnel for the Gateway port and connects to `localhost`.
+- macOS 菜单栏应用以节点身份连接网关 WS 服务器（使 `openclaw nodes …` 可操作该 Mac）。
+- 远程模式下，应用开启 SSH 隧道连接到网关端口的本地地址。

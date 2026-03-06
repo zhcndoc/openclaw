@@ -1,165 +1,162 @@
 ---
-summary: "Advanced setup and development workflows for OpenClaw"
+summary: "OpenClaw 的高级设置和开发工作流"
 read_when:
-  - Setting up a new machine
-  - You want “latest + greatest” without breaking your personal setup
-title: "Setup"
+  - 配置新机器时
+  - 想要“最新最强”且不破坏个人设置时
+title: "设置"
 ---
 
-# Setup
+# 设置
 
 <Note>
-If you are setting up for the first time, start with [Getting Started](/start/getting-started).
-For wizard details, see [Onboarding Wizard](/start/wizard).
+如果您是第一次设置，请从 [入门指南](/start/getting-started) 开始。
+关于向导的详细信息，请参见 [入职向导](/start/wizard)。
 </Note>
 
-Last updated: 2026-01-01
+最后更新：2026-01-01
 
-## TL;DR
+## 简要说明（TL;DR）
 
-- **Tailoring lives outside the repo:** `~/.openclaw/workspace` (workspace) + `~/.openclaw/openclaw.json` (config).
-- **Stable workflow:** install the macOS app; let it run the bundled Gateway.
-- **Bleeding edge workflow:** run the Gateway yourself via `pnpm gateway:watch`, then let the macOS app attach in Local mode.
+- **个性化内容放在仓库外：** `~/.openclaw/workspace`（工作区）+ `~/.openclaw/openclaw.json`（配置）。
+- **稳定工作流：** 安装 macOS 应用；让它运行捆绑的 Gateway。
+- **前沿工作流：** 自行通过 `pnpm gateway:watch` 运行 Gateway，然后让 macOS 应用以本地模式连接。
 
-## Prereqs (from source)
+## 前置条件（从源码）
 
 - Node `>=22`
 - `pnpm`
-- Docker (optional; only for containerized setup/e2e — see [Docker](/install/docker))
+- Docker（可选，仅用于容器化设置/端到端测试 — 参见 [Docker](/install/docker)）
 
-## Tailoring strategy (so updates don’t hurt)
+## 个性化策略（避免更新破坏设置）
 
-If you want “100% tailored to me” _and_ easy updates, keep your customization in:
+如果你想要“100% 量身定制”且便于更新，请将你的定制内容保存在：
 
-- **Config:** `~/.openclaw/openclaw.json` (JSON/JSON5-ish)
-- **Workspace:** `~/.openclaw/workspace` (skills, prompts, memories; make it a private git repo)
+- **配置：** `~/.openclaw/openclaw.json`（JSON/JSON5 格式）
+- **工作区：** `~/.openclaw/workspace`（技能、提示、记忆；建议作为私有 git 仓库管理）
 
-Bootstrap once:
-
-```bash
-openclaw setup
-```
-
-From inside this repo, use the local CLI entry:
+初始化一次：
 
 ```bash
 openclaw setup
 ```
 
-If you don’t have a global install yet, run it via `pnpm openclaw setup`.
+在此仓库内使用本地 CLI 入口：
 
-## Run the Gateway from this repo
+```bash
+openclaw setup
+```
 
-After `pnpm build`, you can run the packaged CLI directly:
+如果还没有全局安装，则通过 `pnpm openclaw setup` 运行。
+
+## 从此仓库运行 Gateway
+
+运行 `pnpm build` 后，可以直接运行打包的 CLI：
 
 ```bash
 node openclaw.mjs gateway --port 18789 --verbose
 ```
 
-## Stable workflow (macOS app first)
+## 稳定工作流（先安装 macOS 应用）
 
-1. Install + launch **OpenClaw.app** (menu bar).
-2. Complete the onboarding/permissions checklist (TCC prompts).
-3. Ensure Gateway is **Local** and running (the app manages it).
-4. Link surfaces (example: WhatsApp):
+1. 安装并启动 **OpenClaw.app**（菜单栏）。
+2. 完成入职流程/权限检查（TCC 提示）。
+3. 确保 Gateway 处于 **本地** 模式并正在运行（由应用管理）。
+4. 连接渠道（示例：WhatsApp）：
 
 ```bash
 openclaw channels login
 ```
 
-5. Sanity check:
+5. 健康检查：
 
 ```bash
 openclaw health
 ```
 
-If onboarding is not available in your build:
+如果你的构建版本中没有入职流程：
 
-- Run `openclaw setup`, then `openclaw channels login`, then start the Gateway manually (`openclaw gateway`).
+- 运行 `openclaw setup`，接着执行 `openclaw channels login`，然后手动启动 Gateway（`openclaw gateway`）。
 
-## Bleeding edge workflow (Gateway in a terminal)
+## 前沿工作流（在终端运行 Gateway）
 
-Goal: work on the TypeScript Gateway, get hot reload, keep the macOS app UI attached.
+目标：开发 TypeScript Gateway，支持热重载，并让 macOS 应用UI保持连接。
 
-### 0) (Optional) Run the macOS app from source too
+### 0）【可选】也从源码运行 macOS 应用
 
-If you also want the macOS app on the bleeding edge:
+如果你也想运行前沿版本的 macOS 应用：
 
 ```bash
 ./scripts/restart-mac.sh
 ```
 
-### 1) Start the dev Gateway
+### 1）启动开发模式 Gateway
 
 ```bash
 pnpm install
 pnpm gateway:watch
 ```
 
-`gateway:watch` runs the gateway in watch mode and reloads on TypeScript changes.
+`gateway:watch` 命令以监听模式运行 Gateway，TypeScript 代码改动时自动重载。
 
-### 2) Point the macOS app at your running Gateway
+### 2）让 macOS 应用连接到你运行的 Gateway
 
-In **OpenClaw.app**:
+在 **OpenClaw.app** 中：
 
-- Connection Mode: **Local**
-  The app will attach to the running gateway on the configured port.
+- 连接模式：**本地**
+  应用将自动连接到配置端口上的运行中 Gateway。
 
-### 3) Verify
+### 3）验证
 
-- In-app Gateway status should read **“Using existing gateway …”**
-- Or via CLI:
+- 应用内 Gateway 状态应显示 **“正在使用已有的网关...”**
+- 或通过 CLI 验证：
 
 ```bash
 openclaw health
 ```
 
-### Common footguns
+### 常见踩坑
 
-- **Wrong port:** Gateway WS defaults to `ws://127.0.0.1:18789`; keep app + CLI on the same port.
-- **Where state lives:**
-  - Credentials: `~/.openclaw/credentials/`
-  - Sessions: `~/.openclaw/agents/<agentId>/sessions/`
-  - Logs: `/tmp/openclaw/`
+- **端口错误：** Gateway 的 WS 默认地址为 `ws://127.0.0.1:18789`；请确保应用和 CLI 端口一致。
+- **状态存储位置：**
+  - 凭证：`~/.openclaw/credentials/`
+  - 会话：`~/.openclaw/agents/<agentId>/sessions/`
+  - 日志：`/tmp/openclaw/`
 
-## Credential storage map
+## 凭证存储映射
 
-Use this when debugging auth or deciding what to back up:
+调试认证或备份时请参考：
 
-- **WhatsApp**: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram bot token**: config/env or `channels.telegram.tokenFile`
-- **Discord bot token**: config/env or SecretRef (env/file/exec providers)
-- **Slack tokens**: config/env (`channels.slack.*`)
-- **Pairing allowlists**:
-  - `~/.openclaw/credentials/<channel>-allowFrom.json` (default account)
-  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json` (non-default accounts)
-- **Model auth profiles**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **File-backed secrets payload (optional)**: `~/.openclaw/secrets.json`
-- **Legacy OAuth import**: `~/.openclaw/credentials/oauth.json`
-  More detail: [Security](/gateway/security#credential-storage-map).
+- **WhatsApp：** `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
+- **Telegram 机器人令牌：** 配置文件/环境变量 或 `channels.telegram.tokenFile`
+- **Discord 机器人令牌：** 配置文件/环境变量 或 SecretRef（环境变量/文件/执行提供者）
+- **Slack 令牌：** 配置文件/环境变量（`channels.slack.*`）
+- **配对允许列表：**
+  - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账号）
+  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账号）
+- **模型认证配置文件：** `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- **文件支持的秘密载荷（可选）：** `~/.openclaw/secrets.json`
+- **旧版 OAuth 导入：** `~/.openclaw/credentials/oauth.json`
+  详细信息见：[安全性](/gateway/security#credential-storage-map)。
 
-## Updating (without wrecking your setup)
+## 更新（不破坏现有设置）
 
-- Keep `~/.openclaw/workspace` and `~/.openclaw/` as “your stuff”; don’t put personal prompts/config into the `openclaw` repo.
-- Updating source: `git pull` + `pnpm install` (when lockfile changed) + keep using `pnpm gateway:watch`.
+- 保持 `~/.openclaw/workspace` 和 `~/.openclaw/` 为“你的内容”；不要将个人提示或配置放入 `openclaw` 仓库中。
+- 更新源码执行 `git pull` + `pnpm install`（当锁文件变更时），然后继续使用 `pnpm gateway:watch`。
 
-## Linux (systemd user service)
+## Linux（systemd 用户服务）
 
-Linux installs use a systemd **user** service. By default, systemd stops user
-services on logout/idle, which kills the Gateway. Onboarding attempts to enable
-lingering for you (may prompt for sudo). If it’s still off, run:
+Linux 安装使用 systemd **用户**服务。默认情况下，systemd 会在注销/空闲时停止用户服务，导致 Gateway 被终止。入职流程会尝试为你启用 lingering（可能会提示输入 sudo 密码）。如果仍未启用，请执行：
 
 ```bash
 sudo loginctl enable-linger $USER
 ```
 
-For always-on or multi-user servers, consider a **system** service instead of a
-user service (no lingering needed). See [Gateway runbook](/gateway) for the systemd notes.
+对于需要常驻或多用户的服务器，建议使用 **系统**服务而不是用户服务（无需启用 lingering）。详见 [Gateway 运行手册](/gateway) 中的 systemd 说明。
 
-## Related docs
+## 相关文档
 
-- [Gateway runbook](/gateway) (flags, supervision, ports)
-- [Gateway configuration](/gateway/configuration) (config schema + examples)
-- [Discord](/channels/discord) and [Telegram](/channels/telegram) (reply tags + replyToMode settings)
-- [OpenClaw assistant setup](/start/openclaw)
-- [macOS app](/platforms/macos) (gateway lifecycle)
+- [Gateway 运行手册](/gateway)（标志、监控、端口）
+- [Gateway 配置](/gateway/configuration)（配置模式及示例）
+- [Discord](/channels/discord) 与 [Telegram](/channels/telegram)（回复标签与 replyToMode 设置）
+- [OpenClaw 助手设置](/start/openclaw)
+- [macOS 应用](/platforms/macos)（Gateway 生命周期）

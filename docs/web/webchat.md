@@ -1,61 +1,59 @@
 ---
-summary: "Loopback WebChat static host and Gateway WS usage for chat UI"
+summary: "Loopback WebChat 静态主机和 Gateway WS 用于聊天 UI"
 read_when:
-  - Debugging or configuring WebChat access
+  - 调试或配置 WebChat 访问时
 title: "WebChat"
 ---
 
-# WebChat (Gateway WebSocket UI)
+# WebChat（Gateway WebSocket UI）
 
-Status: the macOS/iOS SwiftUI chat UI talks directly to the Gateway WebSocket.
+状态：macOS/iOS SwiftUI 聊天 UI 直接与 Gateway WebSocket 通信。
 
-## What it is
+## 它是什么
 
-- A native chat UI for the gateway (no embedded browser and no local static server).
-- Uses the same sessions and routing rules as other channels.
-- Deterministic routing: replies always go back to WebChat.
+- 网关的原生聊天 UI（无嵌入浏览器且无本地静态服务器）。
+- 使用与其他渠道相同的会话和路由规则。
+- 确定性路由：回复总是返回到 WebChat。
 
-## Quick start
+## 快速开始
 
-1. Start the gateway.
-2. Open the WebChat UI (macOS/iOS app) or the Control UI chat tab.
-3. Ensure gateway auth is configured (required by default, even on loopback).
+1. 启动网关。
+2. 打开 WebChat UI（macOS/iOS 应用）或 Control UI 的聊天标签页。
+3. 确保配置了网关认证（默认要求，即使是回环访问）。
 
-## How it works (behavior)
+## 工作原理（行为）
 
-- The UI connects to the Gateway WebSocket and uses `chat.history`, `chat.send`, and `chat.inject`.
-- `chat.history` is bounded for stability: Gateway may truncate long text fields, omit heavy metadata, and replace oversized entries with `[chat.history omitted: message too large]`.
-- `chat.inject` appends an assistant note directly to the transcript and broadcasts it to the UI (no agent run).
-- Aborted runs can keep partial assistant output visible in the UI.
-- Gateway persists aborted partial assistant text into transcript history when buffered output exists, and marks those entries with abort metadata.
-- History is always fetched from the gateway (no local file watching).
-- If the gateway is unreachable, WebChat is read-only.
+- UI 连接到 Gateway WebSocket，使用 `chat.history`、`chat.send` 和 `chat.inject`。
+- 为了稳定性，`chat.history` 有界：网关可能截断长文本字段、忽略重量级元数据，并用 `[chat.history omitted: message too large]` 替换过大条目。
+- `chat.inject` 直接将助手备注追加到聊天记录中并广播到 UI（不运行代理）。
+- 中止的执行可以保留部分助手输出在 UI 中可见。
+- 网关在有缓冲输出时，将中止的部分助手文本持久化到聊天记录历史中，并用中止元数据标记。
+- 聊天历史总是从网关获取（无本地文件监视）。
+- 如果无法访问网关，WebChat 仅可读。
 
-## Control UI agents tools panel
+## Control UI 代理工具面板
 
-- The Control UI `/agents` Tools panel fetches a runtime catalog via `tools.catalog` and labels each
-  tool as `core` or `plugin:<id>` (plus `optional` for optional plugin tools).
-- If `tools.catalog` is unavailable, the panel falls back to a built-in static list.
-- The panel edits profile and override config, but effective runtime access still follows policy
-  precedence (`allow`/`deny`, per-agent and provider/channel overrides).
+- Control UI 的 `/agents` 工具面板通过 `tools.catalog` 获取运行时目录，并将每个工具标记为 `core` 或 `plugin:<id>`（可选插件工具额外标记为 `optional`）。
+- 如果 `tools.catalog` 不可用，面板会回退到内置静态列表。
+- 面板编辑配置文件和覆盖配置，但实际运行时访问仍遵循策略优先级（`allow`/`deny`，按代理和提供者/渠道覆盖）。
 
-## Remote use
+## 远程使用
 
-- Remote mode tunnels the gateway WebSocket over SSH/Tailscale.
-- You do not need to run a separate WebChat server.
+- 远程模式通过 SSH/Tailscale 隧道传输网关 WebSocket。
+- 无需运行独立的 WebChat 服务器。
 
-## Configuration reference (WebChat)
+## 配置参考（WebChat）
 
-Full configuration: [Configuration](/gateway/configuration)
+完整配置：[配置](/gateway/configuration)
 
-Channel options:
+渠道选项：
 
-- No dedicated `webchat.*` block. WebChat uses the gateway endpoint + auth settings below.
+- 无专用的 `webchat.*` 配置块。WebChat 使用下面的网关端点 + 认证设置。
 
-Related global options:
+相关全局选项：
 
-- `gateway.port`, `gateway.bind`: WebSocket host/port.
-- `gateway.auth.mode`, `gateway.auth.token`, `gateway.auth.password`: WebSocket auth (token/password).
-- `gateway.auth.mode: "trusted-proxy"`: reverse-proxy auth for browser clients (see [Trusted Proxy Auth](/gateway/trusted-proxy-auth)).
-- `gateway.remote.url`, `gateway.remote.token`, `gateway.remote.password`: remote gateway target.
-- `session.*`: session storage and main key defaults.
+- `gateway.port`、`gateway.bind`：WebSocket 主机/端口。
+- `gateway.auth.mode`、`gateway.auth.token`、`gateway.auth.password`：WebSocket 认证（token/密码）。
+- `gateway.auth.mode: "trusted-proxy"`：用于浏览器客户端的反向代理认证（参见[Trusted Proxy Auth](/gateway/trusted-proxy-auth)）。
+- `gateway.remote.url`、`gateway.remote.token`、`gateway.remote.password`：远程网关目标。
+- `session.*`：会话存储和主键默认设置。

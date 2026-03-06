@@ -1,51 +1,51 @@
 ---
-summary: "Gateway dashboard (Control UI) access and auth"
+summary: "网关仪表盘（控制界面）访问与认证"
 read_when:
-  - Changing dashboard authentication or exposure modes
-title: "Dashboard"
+  - 更改仪表盘认证或暴露模式时
+title: "仪表盘"
 ---
 
-# Dashboard (Control UI)
+# 仪表盘（控制界面）
 
-The Gateway dashboard is the browser Control UI served at `/` by default
-(override with `gateway.controlUi.basePath`).
+网关仪表盘是默认在 `/` 提供的浏览器控制界面
+（可通过 `gateway.controlUi.basePath` 覆盖）。
 
-Quick open (local Gateway):
+快速打开（本地网关）：
 
-- [http://127.0.0.1:18789/](http://127.0.0.1:18789/) (or [http://localhost:18789/](http://localhost:18789/))
+- [http://127.0.0.1:18789/](http://127.0.0.1:18789/) （或 [http://localhost:18789/](http://localhost:18789/)）
 
-Key references:
+主要参考：
 
-- [Control UI](/web/control-ui) for usage and UI capabilities.
-- [Tailscale](/gateway/tailscale) for Serve/Funnel automation.
-- [Web surfaces](/web) for bind modes and security notes.
+- [控制界面](/web/control-ui) 用于使用及界面功能介绍。
+- [Tailscale](/gateway/tailscale) 用于 Serve/Funnel 自动化。
+- [Web 界面](/web) 介绍绑定模式及安全注意事项。
 
-Authentication is enforced at the WebSocket handshake via `connect.params.auth`
-(token or password). See `gateway.auth` in [Gateway configuration](/gateway/configuration).
+认证在 WebSocket 握手阶段通过 `connect.params.auth`
+（令牌或密码）执行。详情参见 [网关配置](/gateway/configuration) 中的 `gateway.auth`。
 
-Security note: the Control UI is an **admin surface** (chat, config, exec approvals).
-Do not expose it publicly. The UI stores the token in `localStorage` after first load.
-Prefer localhost, Tailscale Serve, or an SSH tunnel.
+安全提示：控制界面是一个**管理员界面**（聊天、配置、执行审批）。
+请勿公开暴露。UI 首次加载后会将令牌存储在 `localStorage` 中。
+建议使用本地 localhost、Tailscale Serve 或 SSH 隧道。
 
-## Fast path (recommended)
+## 快捷路径（推荐）
 
-- After onboarding, the CLI auto-opens the dashboard and prints a clean (non-tokenized) link.
-- Re-open anytime: `openclaw dashboard` (copies link, opens browser if possible, shows SSH hint if headless).
-- If the UI prompts for auth, paste the token from `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`) into Control UI settings.
+- 导入后，CLI 自动打开仪表盘并打印干净的（无令牌）链接。
+- 随时重新打开：`openclaw dashboard`（复制链接，如可能则打开浏览器，若无界面则显示 SSH 提示）。
+- 若界面提示认证，粘贴 `gateway.auth.token`（或环境变量 `OPENCLAW_GATEWAY_TOKEN`）中的令牌到控制界面设置。
 
-## Token basics (local vs remote)
+## 令牌基础（本地与远程）
 
-- **Localhost**: open `http://127.0.0.1:18789/`.
-- **Token source**: `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`); the UI stores a copy in localStorage after you connect.
-- If `gateway.auth.token` is SecretRef-managed, `openclaw dashboard` prints/copies/opens a non-tokenized URL by design. This avoids exposing externally managed tokens in shell logs, clipboard history, or browser-launch arguments.
-- If `gateway.auth.token` is configured as a SecretRef and is unresolved in your current shell, `openclaw dashboard` still prints a non-tokenized URL plus actionable auth setup guidance.
-- **Not localhost**: use Tailscale Serve (tokenless for Control UI/WebSocket if `gateway.auth.allowTailscale: true`, assumes trusted gateway host; HTTP APIs still need token/password), tailnet bind with a token, or an SSH tunnel. See [Web surfaces](/web).
+- **本地主机**：打开 `http://127.0.0.1:18789/`。
+- **令牌来源**：`gateway.auth.token`（或环境变量 `OPENCLAW_GATEWAY_TOKEN`）；连接后 UI 会在 localStorage 中存一份。
+- 若 `gateway.auth.token` 由 SecretRef 管理，`openclaw dashboard` 按设计会打印/复制/打开无令牌的 URL，避免将外部托管的令牌暴露在 shell 日志、剪贴板历史或浏览器启动参数中。
+- 若 `gateway.auth.token` 配置为 SecretRef，且当前 shell 中未解析，`openclaw dashboard` 仍打印无令牌 URL，并提供可操作的认证配置指导。
+- **非本地主机**：可使用 Tailscale Serve（若 `gateway.auth.allowTailscale: true`，控制界面/WebSocket 无需令牌，假设网关主机可信；HTTP API 依然需要令牌/密码），或者带令牌的 tailnet 绑定，或者 SSH 隧道。详见 [Web 界面](/web)。
 
-## If you see “unauthorized” / 1008
+## 如果出现 “unauthorized” / 1008 错误
 
-- Ensure the gateway is reachable (local: `openclaw status`; remote: SSH tunnel `ssh -N -L 18789:127.0.0.1:18789 user@host` then open `http://127.0.0.1:18789/`).
-- Retrieve or supply the token from the gateway host:
-  - Plaintext config: `openclaw config get gateway.auth.token`
-  - SecretRef-managed config: resolve the external secret provider or export `OPENCLAW_GATEWAY_TOKEN` in this shell, then rerun `openclaw dashboard`
-  - No token configured: `openclaw doctor --generate-gateway-token`
-- In the dashboard settings, paste the token into the auth field, then connect.
+- 确认网关可连接（本地：`openclaw status`；远程：SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@host`，然后打开 `http://127.0.0.1:18789/`）。
+- 从网关主机获取或提供令牌：
+  - 明文配置：`openclaw config get gateway.auth.token`
+  - SecretRef 管理配置：解析外部密钥提供者，或在此 shell 中导出 `OPENCLAW_GATEWAY_TOKEN`，然后重新运行 `openclaw dashboard`
+  - 未配置令牌：`openclaw doctor --generate-gateway-token`
+- 在仪表盘设置中，将令牌粘贴到认证字段，然后连接。

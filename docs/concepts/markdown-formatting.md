@@ -1,50 +1,45 @@
 ---
-summary: "Markdown formatting pipeline for outbound channels"
+summary: "面向外发渠道的 Markdown 格式化流程"
 read_when:
-  - You are changing markdown formatting or chunking for outbound channels
-  - You are adding a new channel formatter or style mapping
-  - You are debugging formatting regressions across channels
-title: "Markdown Formatting"
+  - 你正在更改外发渠道的 Markdown 格式或拆分规则
+  - 你正在添加新的渠道格式化器或样式映射
+  - 你正在调试跨渠道的格式化回归问题
+title: "Markdown 格式化"
 ---
 
-# Markdown formatting
+# Markdown 格式化
 
-OpenClaw formats outbound Markdown by converting it into a shared intermediate
-representation (IR) before rendering channel-specific output. The IR keeps the
-source text intact while carrying style/link spans so chunking and rendering can
-stay consistent across channels.
+OpenClaw 通过将出站 Markdown 转换为共享的中间表示（IR）来格式化，然后再渲染成特定渠道输出。IR 保持源文本不变，同时携带样式/链接区间，以确保拆分和渲染在各渠道的一致性。
 
-## Goals
+## 目标
 
-- **Consistency:** one parse step, multiple renderers.
-- **Safe chunking:** split text before rendering so inline formatting never
-  breaks across chunks.
-- **Channel fit:** map the same IR to Slack mrkdwn, Telegram HTML, and Signal
-  style ranges without re-parsing Markdown.
+- **一致性：** 一次解析，多种渲染器。
+- **安全拆分：** 在渲染前拆分文本，确保行内格式在分块中不被破坏。
+- **渠道适配：** 同一 IR 可映射为 Slack mrkdwn、Telegram HTML 及 Signal 样式区间，无需重新解析 Markdown。
 
-## Pipeline
+## 流程
 
-1. **Parse Markdown -> IR**
-   - IR is plain text plus style spans (bold/italic/strike/code/spoiler) and link spans.
-   - Offsets are UTF-16 code units so Signal style ranges align with its API.
-   - Tables are parsed only when a channel opts into table conversion.
-2. **Chunk IR (format-first)**
-   - Chunking happens on the IR text before rendering.
-   - Inline formatting does not split across chunks; spans are sliced per chunk.
-3. **Render per channel**
-   - **Slack:** mrkdwn tokens (bold/italic/strike/code), links as `<url|label>`.
-   - **Telegram:** HTML tags (`<b>`, `<i>`, `<s>`, `<code>`, `<pre><code>`, `<a href>`).
-   - **Signal:** plain text + `text-style` ranges; links become `label (url)` when label differs.
+1. **解析 Markdown -> IR**
+   - IR 是纯文本加样式区间（加粗/斜体/删除线/代码/剧透）和链接区间。
+   - 偏移量使用 UTF-16 代码单元，以便 Signal 样式区间与其 API 对齐。
+   - 仅当某渠道启用表格转换时才解析表格。
+2. **拆分 IR（优先格式）**
+   - 在 IR 文本上拆分，渲染前完成。
+   - 行内格式在块内完整，区间按块切片。
+3. **各渠道渲染**
+   - **Slack：** mrkdwn 令牌（加粗/斜体/删除线/代码），链接格式 `<url|label>`。
+   - **Telegram：** HTML 标签 (`<b>`、`<i>`、`<s>`、`<code>`、`<pre><code>`、`<a href>`)。
+   - **Signal：** 纯文本 + `text-style` 区间；标签与 URL 不同则链接显示为 `label (url)`。
 
-## IR example
+## IR 示例
 
-Input Markdown:
+输入 Markdown：
 
 ```markdown
 Hello **world** — see [docs](https://docs.openclaw.ai).
 ```
 
-IR (schematic):
+IR（示意）：
 
 ```json
 {
@@ -54,23 +49,20 @@ IR (schematic):
 }
 ```
 
-## Where it is used
+## 使用场景
 
-- Slack, Telegram, and Signal outbound adapters render from the IR.
-- Other channels (WhatsApp, iMessage, MS Teams, Discord) still use plain text or
-  their own formatting rules, with Markdown table conversion applied before
-  chunking when enabled.
+- Slack、Telegram 和 Signal 的出站适配器均基于 IR 渲染。
+- 其他渠道（WhatsApp、iMessage、MS Teams、Discord）仍使用纯文本或自身格式规则，启用时表格转换在拆分前进行。
 
-## Table handling
+## 表格处理
 
-Markdown tables are not consistently supported across chat clients. Use
-`markdown.tables` to control conversion per channel (and per account).
+Markdown 表格在各聊天客户端支持不统一。使用 `markdown.tables` 为各渠道（及账户）控制转换方式。
 
-- `code`: render tables as code blocks (default for most channels).
-- `bullets`: convert each row into bullet points (default for Signal + WhatsApp).
-- `off`: disable table parsing and conversion; raw table text passes through.
+- `code`：将表格渲染为代码块（多渠道默认）。
+- `bullets`：将每行转换成项目符号列表（Signal 和 WhatsApp 默认）。
+- `off`：禁用表格解析和转换，保留原始表格文本。
 
-Config keys:
+配置示例：
 
 ```yaml
 channels:
@@ -83,48 +75,36 @@ channels:
           tables: off
 ```
 
-## Chunking rules
+## 拆分规则
 
-- Chunk limits come from channel adapters/config and are applied to the IR text.
-- Code fences are preserved as a single block with a trailing newline so channels
-  render them correctly.
-- List prefixes and blockquote prefixes are part of the IR text, so chunking
-  does not split mid-prefix.
-- Inline styles (bold/italic/strike/inline-code/spoiler) are never split across
-  chunks; the renderer reopens styles inside each chunk.
+- 拆分限制由渠道适配器/配置提供，应用于 IR 文本。
+- 代码块保持为单一块，尾部带换行，确保渠道正确渲染。
+- 列表前缀和引用前缀属于 IR 文本，拆分时不会断开前缀。
+- 行内样式（加粗/斜体/删除线/行内代码/剧透）不跨块拆分，渲染器在每块内重新开启样式。
 
-If you need more on chunking behavior across channels, see
-[Streaming + chunking](/concepts/streaming).
+如需了解更多跨渠道拆分行为，请参阅 [流式 + 拆分](/concepts/streaming)。
 
-## Link policy
+## 链接策略
 
-- **Slack:** `[label](url)` -> `<url|label>`; bare URLs remain bare. Autolink
-  is disabled during parse to avoid double-linking.
-- **Telegram:** `[label](url)` -> `<a href="url">label</a>` (HTML parse mode).
-- **Signal:** `[label](url)` -> `label (url)` unless label matches the URL.
+- **Slack：** `[label](url)` 转 `<url|label>`；裸 URL 保持不变。解析时禁用自动链接，避免重复。
+- **Telegram：** `[label](url)` 转 `<a href="url">label</a>`（HTML 解析模式）。
+- **Signal：** `[label](url)` 转为 `label (url)`，标签与 URL 相同时保留标签。
 
-## Spoilers
+## 剧透
 
-Spoiler markers (`||spoiler||`) are parsed only for Signal, where they map to
-SPOILER style ranges. Other channels treat them as plain text.
+剧透标记 (`||spoiler||`) 仅为 Signal 解析，映射为 SPOILER 样式区间。其他渠道视为普通文本。
 
-## How to add or update a channel formatter
+## 如何添加或更新渠道格式化器
 
-1. **Parse once:** use the shared `markdownToIR(...)` helper with channel-appropriate
-   options (autolink, heading style, blockquote prefix).
-2. **Render:** implement a renderer with `renderMarkdownWithMarkers(...)` and a
-   style marker map (or Signal style ranges).
-3. **Chunk:** call `chunkMarkdownIR(...)` before rendering; render each chunk.
-4. **Wire adapter:** update the channel outbound adapter to use the new chunker
-   and renderer.
-5. **Test:** add or update format tests and an outbound delivery test if the
-   channel uses chunking.
+1. **统一解析：** 使用共享的 `markdownToIR(...)` 辅助，传入渠道适用的选项（自动链接、标题样式、引用前缀）。
+2. **渲染实现：** 用 `renderMarkdownWithMarkers(...)` 和样式标记映射（或 Signal 样式区间）实现渲染。
+3. **拆分处理：** 渲染前调用 `chunkMarkdownIR(...)` 并对每块渲染。
+4. **接入适配器：** 更新渠道出站适配器，使用新拆分器和渲染器。
+5. **测试完善：** 添加或更新格式化测试，支持拆分的渠道要增加出站交付测试。
 
-## Common gotchas
+## 常见问题
 
-- Slack angle-bracket tokens (`<@U123>`, `<#C123>`, `<https://...>`) must be
-  preserved; escape raw HTML safely.
-- Telegram HTML requires escaping text outside tags to avoid broken markup.
-- Signal style ranges depend on UTF-16 offsets; do not use code point offsets.
-- Preserve trailing newlines for fenced code blocks so closing markers land on
-  their own line.
+- Slack 的尖括号令牌（`<@U123>`、`<#C123>`、`<https://...>`）必须保留；需安全转义原生 HTML。
+- Telegram HTML 需对标签外文本转义以避免标记错误。
+- Signal 样式区间依赖 UTF-16 偏移，不可使用代码点偏移。
+- 保留代码块尾部新行，确保闭合标记置于独立行。

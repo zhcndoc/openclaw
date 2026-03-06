@@ -1,313 +1,309 @@
 ---
-summary: "CLI reference for `openclaw hooks` (agent hooks)"
+summary: "`openclaw hooks` CLI 参考（代理钩子）"
 read_when:
-  - You want to manage agent hooks
-  - You want to install or update hooks
-title: "hooks"
+  - 你想管理代理钩子
+  - 你想安装或更新钩子
+title: "钩子"
 ---
 
 # `openclaw hooks`
 
-Manage agent hooks (event-driven automations for commands like `/new`, `/reset`, and gateway startup).
+管理代理钩子（针对 `/new`、`/reset` 和网关启动等命令的事件驱动自动化）。
 
-Related:
+相关内容：
 
-- Hooks: [Hooks](/automation/hooks)
-- Plugin hooks: [Plugins](/tools/plugin#plugin-hooks)
+- 钩子：[Hooks](/automation/hooks)
+- 插件钩子：[Plugins](/tools/plugin#plugin-hooks)
 
-## List All Hooks
+## 列出所有钩子
 
 ```bash
 openclaw hooks list
 ```
 
-List all discovered hooks from workspace, managed, and bundled directories.
+列出工作区、管理和捆绑目录中所有发现的钩子。
 
-**Options:**
+**选项：**
 
-- `--eligible`: Show only eligible hooks (requirements met)
-- `--json`: Output as JSON
-- `-v, --verbose`: Show detailed information including missing requirements
+- `--eligible`：只显示符合条件的钩子（满足要求）
+- `--json`：以 JSON 格式输出
+- `-v, --verbose`：显示详细信息，包括缺失的要求
 
-**Example output:**
+**示例输出：**
 
 ```
 Hooks (4/4 ready)
 
 Ready:
-  🚀 boot-md ✓ - Run BOOT.md on gateway startup
-  📎 bootstrap-extra-files ✓ - Inject extra workspace bootstrap files during agent bootstrap
-  📝 command-logger ✓ - Log all command events to a centralized audit file
-  💾 session-memory ✓ - Save session context to memory when /new command is issued
+  🚀 boot-md ✓ - 在网关启动时运行 BOOT.md
+  📎 bootstrap-extra-files ✓ - 代理启动时注入额外的工作区引导文件
+  📝 command-logger ✓ - 将所有命令事件记录到集中审计文件
+  💾 session-memory ✓ - 在执行 /new 命令时保存会话上下文到内存
 ```
 
-**Example (verbose):**
+**示例（详细模式）：**
 
 ```bash
 openclaw hooks list --verbose
 ```
 
-Shows missing requirements for ineligible hooks.
+显示不符合条件钩子缺失的要求。
 
-**Example (JSON):**
+**示例（JSON）：**
 
 ```bash
 openclaw hooks list --json
 ```
 
-Returns structured JSON for programmatic use.
+返回结构化 JSON 供程序调用。
 
-## Get Hook Information
+## 获取钩子信息
 
 ```bash
 openclaw hooks info <name>
 ```
 
-Show detailed information about a specific hook.
+显示特定钩子的详细信息。
 
-**Arguments:**
+**参数：**
 
-- `<name>`: Hook name (e.g., `session-memory`)
+- `<name>`：钩子名称（例如 `session-memory`）
 
-**Options:**
+**选项：**
 
-- `--json`: Output as JSON
+- `--json`：以 JSON 格式输出
 
-**Example:**
+**示例：**
 
 ```bash
 openclaw hooks info session-memory
 ```
 
-**Output:**
+**输出：**
 
 ```
 💾 session-memory ✓ Ready
 
-Save session context to memory when /new command is issued
+在执行 /new 命令时保存会话上下文到内存
 
-Details:
-  Source: openclaw-bundled
-  Path: /path/to/openclaw/hooks/bundled/session-memory/HOOK.md
-  Handler: /path/to/openclaw/hooks/bundled/session-memory/handler.ts
-  Homepage: https://docs.openclaw.ai/automation/hooks#session-memory
-  Events: command:new
+详情：
+  来源: openclaw-bundled
+  路径: /path/to/openclaw/hooks/bundled/session-memory/HOOK.md
+  处理程序: /path/to/openclaw/hooks/bundled/session-memory/handler.ts
+  主页: https://docs.openclaw.ai/automation/hooks#session-memory
+  事件: command:new
 
-Requirements:
-  Config: ✓ workspace.dir
+要求：
+  配置: ✓ workspace.dir
 ```
 
-## Check Hooks Eligibility
+## 检查钩子合格状态
 
 ```bash
 openclaw hooks check
 ```
 
-Show summary of hook eligibility status (how many are ready vs. not ready).
+显示钩子合格状态摘要（已准备/未准备数量）。
 
-**Options:**
+**选项：**
 
-- `--json`: Output as JSON
+- `--json`：以 JSON 格式输出
 
-**Example output:**
+**示例输出：**
 
 ```
 Hooks Status
 
-Total hooks: 4
-Ready: 4
-Not ready: 0
+总钩子数: 4
+准备好: 4
+未准备: 0
 ```
 
-## Enable a Hook
+## 启用钩子
 
 ```bash
 openclaw hooks enable <name>
 ```
 
-Enable a specific hook by adding it to your config (`~/.openclaw/config.json`).
+通过将钩子添加到配置文件（`~/.openclaw/config.json`）启用特定钩子。
 
-**Note:** Hooks managed by plugins show `plugin:<id>` in `openclaw hooks list` and
-can’t be enabled/disabled here. Enable/disable the plugin instead.
+**注意：** 由插件管理的钩子在 `openclaw hooks list` 中显示为 `plugin:<id>`，无法通过此命令启用/禁用。需启用/禁用对应插件。
 
-**Arguments:**
+**参数：**
 
-- `<name>`: Hook name (e.g., `session-memory`)
+- `<name>`：钩子名称（例如 `session-memory`）
 
-**Example:**
+**示例：**
 
 ```bash
 openclaw hooks enable session-memory
 ```
 
-**Output:**
+**输出：**
 
 ```
-✓ Enabled hook: 💾 session-memory
+✓ 已启用钩子：💾 session-memory
 ```
 
-**What it does:**
+**操作说明：**
 
-- Checks if hook exists and is eligible
-- Updates `hooks.internal.entries.<name>.enabled = true` in your config
-- Saves config to disk
+- 检查钩子是否存在且符合条件
+- 在配置中更新 `hooks.internal.entries.<name>.enabled = true`
+- 将配置保存至磁盘
 
-**After enabling:**
+**启用后：**
 
-- Restart the gateway so hooks reload (menu bar app restart on macOS, or restart your gateway process in dev).
+- 重启网关以重新加载钩子（macOS 菜单栏应用重启，或在开发中重启网关进程）
 
-## Disable a Hook
+## 禁用钩子
 
 ```bash
 openclaw hooks disable <name>
 ```
 
-Disable a specific hook by updating your config.
+通过更新配置禁用指定钩子。
 
-**Arguments:**
+**参数：**
 
-- `<name>`: Hook name (e.g., `command-logger`)
+- `<name>`：钩子名称（例如 `command-logger`）
 
-**Example:**
+**示例：**
 
 ```bash
 openclaw hooks disable command-logger
 ```
 
-**Output:**
+**输出：**
 
 ```
-⏸ Disabled hook: 📝 command-logger
+⏸ 已禁用钩子：📝 command-logger
 ```
 
-**After disabling:**
+**禁用后：**
 
-- Restart the gateway so hooks reload
+- 重启网关以重新加载钩子
 
-## Install Hooks
+## 安装钩子
 
 ```bash
 openclaw hooks install <path-or-spec>
 openclaw hooks install <npm-spec> --pin
 ```
 
-Install a hook pack from a local folder/archive or npm.
+从本地文件夹/归档或 npm 安装钩子包。
 
-Npm specs are **registry-only** (package name + optional version/tag). Git/URL/file
-specs are rejected. Dependency installs run with `--ignore-scripts` for safety.
+npm 规格仅限 **注册表**（包名 + 可选版本/标签），不支持 Git/URL/文件规格。本地依赖安装为安全起见会带上 `--ignore-scripts` 参数。
 
-**What it does:**
+**操作说明：**
 
-- Copies the hook pack into `~/.openclaw/hooks/<id>`
-- Enables the installed hooks in `hooks.internal.entries.*`
-- Records the install under `hooks.internal.installs`
+- 将钩子包复制到 `~/.openclaw/hooks/<id>`
+- 在 `hooks.internal.entries.*` 中启用已安装的钩子
+- 在 `hooks.internal.installs` 中记录安装信息
 
-**Options:**
+**选项：**
 
-- `-l, --link`: Link a local directory instead of copying (adds it to `hooks.internal.load.extraDirs`)
-- `--pin`: Record npm installs as exact resolved `name@version` in `hooks.internal.installs`
+- `-l, --link`：链接本地目录而非复制（添加至 `hooks.internal.load.extraDirs`）
+- `--pin`：将 npm 安装记录为精确的 `name@version`，保存在 `hooks.internal.installs`
 
-**Supported archives:** `.zip`, `.tgz`, `.tar.gz`, `.tar`
+**支持的归档格式：** `.zip`、`.tgz`、`.tar.gz`、`.tar`
 
-**Examples:**
+**示例：**
 
 ```bash
-# Local directory
+# 本地目录
 openclaw hooks install ./my-hook-pack
 
-# Local archive
+# 本地归档
 openclaw hooks install ./my-hook-pack.zip
 
-# NPM package
+# NPM 包
 openclaw hooks install @openclaw/my-hook-pack
 
-# Link a local directory without copying
+# 链接本地目录（不复制）
 openclaw hooks install -l ./my-hook-pack
 ```
 
-## Update Hooks
+## 更新钩子
 
 ```bash
 openclaw hooks update <id>
 openclaw hooks update --all
 ```
 
-Update installed hook packs (npm installs only).
+更新已安装的钩子包（仅限 npm 安装的）。
 
-**Options:**
+**选项：**
 
-- `--all`: Update all tracked hook packs
-- `--dry-run`: Show what would change without writing
+- `--all`：更新所有跟踪的钩子包
+- `--dry-run`：显示将要变更的内容但不写入
 
-When a stored integrity hash exists and the fetched artifact hash changes,
-OpenClaw prints a warning and asks for confirmation before proceeding. Use
-global `--yes` to bypass prompts in CI/non-interactive runs.
+当存在存储的完整性哈希且获取到的包哈希发生变化时，OpenClaw 会打印警告并要求确认是否继续。可使用全局 `--yes` 跳过 CI 或非交互式环境中的提示。
 
-## Bundled Hooks
+## 捆绑钩子
 
 ### session-memory
 
-Saves session context to memory when you issue `/new`.
+在执行 `/new` 时保存会话上下文到内存。
 
-**Enable:**
+**启用：**
 
 ```bash
 openclaw hooks enable session-memory
 ```
 
-**Output:** `~/.openclaw/workspace/memory/YYYY-MM-DD-slug.md`
+**输出：** `~/.openclaw/workspace/memory/YYYY-MM-DD-slug.md`
 
-**See:** [session-memory documentation](/automation/hooks#session-memory)
+**查看：** [session-memory 文档](/automation/hooks#session-memory)
 
 ### bootstrap-extra-files
 
-Injects additional bootstrap files (for example monorepo-local `AGENTS.md` / `TOOLS.md`) during `agent:bootstrap`.
+在 `agent:bootstrap` 期间注入额外的引导文件（例如 monorepo 本地的 `AGENTS.md` / `TOOLS.md`）。
 
-**Enable:**
+**启用：**
 
 ```bash
 openclaw hooks enable bootstrap-extra-files
 ```
 
-**See:** [bootstrap-extra-files documentation](/automation/hooks#bootstrap-extra-files)
+**查看：** [bootstrap-extra-files 文档](/automation/hooks#bootstrap-extra-files)
 
 ### command-logger
 
-Logs all command events to a centralized audit file.
+将所有命令事件记录到集中审计文件。
 
-**Enable:**
+**启用：**
 
 ```bash
 openclaw hooks enable command-logger
 ```
 
-**Output:** `~/.openclaw/logs/commands.log`
+**输出：** `~/.openclaw/logs/commands.log`
 
-**View logs:**
+**查看日志：**
 
 ```bash
-# Recent commands
+# 最近命令
 tail -n 20 ~/.openclaw/logs/commands.log
 
-# Pretty-print
+# 格式化输出
 cat ~/.openclaw/logs/commands.log | jq .
 
-# Filter by action
+# 按操作过滤
 grep '"action":"new"' ~/.openclaw/logs/commands.log | jq .
 ```
 
-**See:** [command-logger documentation](/automation/hooks#command-logger)
+**查看：** [command-logger 文档](/automation/hooks#command-logger)
 
 ### boot-md
 
-Runs `BOOT.md` when the gateway starts (after channels start).
+在网关启动时（频道启动后）运行 `BOOT.md`。
 
-**Events**: `gateway:startup`
+**事件**：`gateway:startup`
 
-**Enable**:
+**启用：**
 
 ```bash
 openclaw hooks enable boot-md
 ```
 
-**See:** [boot-md documentation](/automation/hooks#boot-md)
+**查看：** [boot-md 文档](/automation/hooks#boot-md)

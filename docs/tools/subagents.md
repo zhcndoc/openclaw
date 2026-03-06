@@ -1,19 +1,19 @@
 ---
-summary: "Sub-agents: spawning isolated agent runs that announce results back to the requester chat"
+summary: "子代理：生成独立的代理运行，并将结果通报回请求的聊天会话"
 read_when:
-  - You want background/parallel work via the agent
-  - You are changing sessions_spawn or sub-agent tool policy
-  - You are implementing or troubleshooting thread-bound subagent sessions
-title: "Sub-Agents"
+  - 你需要代理执行后台或并行任务
+  - 你正在修改 sessions_spawn 或子代理工具策略
+  - 你正在实现或排查绑定线程的子代理会话
+title: "子代理"
 ---
 
-# Sub-agents
+# 子代理
 
-Sub-agents are background agent runs spawned from an existing agent run. They run in their own session (`agent:<agentId>:subagent:<uuid>`) and, when finished, **announce** their result back to the requester chat channel.
+子代理是在现有代理运行中派生的后台代理实例。它们运行在独立的会话中（`agent:<agentId>:subagent:<uuid>`），任务完成后，会**将结果通报**回请求该子代理的聊天频道。
 
-## Slash command
+## 斜杠命令
 
-Use `/subagents` to inspect or control sub-agent runs for the **current session**:
+使用 `/subagents` 查看或控制**当前会话**的子代理运行：
 
 - `/subagents list`
 - `/subagents kill <id|#|all>`
@@ -23,9 +23,9 @@ Use `/subagents` to inspect or control sub-agent runs for the **current session*
 - `/subagents steer <id|#> <message>`
 - `/subagents spawn <agentId> <task> [--model <model>] [--thinking <level>]`
 
-Thread binding controls:
+线程绑定控制：
 
-These commands work on channels that support persistent thread bindings. See **Thread supporting channels** below.
+这些命令仅在支持持久线程绑定的频道中有效。详见下文**支持线程的频道**。
 
 - `/focus <subagent-label|session-key|session-id|session-label>`
 - `/unfocus`
@@ -33,222 +33,218 @@ These commands work on channels that support persistent thread bindings. See **T
 - `/session idle <duration|off>`
 - `/session max-age <duration|off>`
 
-`/subagents info` shows run metadata (status, timestamps, session id, transcript path, cleanup).
+`/subagents info` 显示运行元数据（状态、时间戳、会话ID、记录路径、清理信息）。
 
-### Spawn behavior
+### 启动行为
 
-`/subagents spawn` starts a background sub-agent as a user command, not an internal relay, and it sends one final completion update back to the requester chat when the run finishes.
+`/subagents spawn` 会以用户命令启动后台子代理（不是内部转发），运行结束后会向请求的聊天频道发送最终完成更新。
 
-- The spawn command is non-blocking; it returns a run id immediately.
-- On completion, the sub-agent announces a summary/result message back to the requester chat channel.
-- For manual spawns, delivery is resilient:
-  - OpenClaw tries direct `agent` delivery first with a stable idempotency key.
-  - If direct delivery fails, it falls back to queue routing.
-  - If queue routing is still not available, the announce is retried with a short exponential backoff before final give-up.
-- The completion handoff to the requester session is runtime-generated internal context (not user-authored text) and includes:
-  - `Result` (`assistant` reply text, or latest `toolResult` if the assistant reply is empty)
-  - `Status` (`completed successfully` / `failed` / `timed out` / `unknown`)
-  - compact runtime/token stats
-  - a delivery instruction telling the requester agent to rewrite in normal assistant voice (not forward raw internal metadata)
-- `--model` and `--thinking` override defaults for that specific run.
-- Use `info`/`log` to inspect details and output after completion.
-- `/subagents spawn` is one-shot mode (`mode: "run"`). For persistent thread-bound sessions, use `sessions_spawn` with `thread: true` and `mode: "session"`.
-- For ACP harness sessions (Codex, Claude Code, Gemini CLI), use `sessions_spawn` with `runtime: "acp"` and see [ACP Agents](/tools/acp-agents).
+- 启动命令非阻塞，立即返回运行 ID。
+- 完成后，子代理将汇总结果消息通报回请求聊天频道。
+- 对于手动启动，消息传递机制具有鲁棒性：
+  - OpenClaw 会优先尝试使用稳定幂等键进行直接 `agent` 投递。
+  - 若直接投递失败，则回退至队列路由。
+  - 若队列路由不可用，则采用短时间指数退避重试，最终放弃。
+- 通报过程是运行时生成的内部上下文（非用户文本），包括：
+  - `Result`（助手回复文本，若助手无回复，则为最新 `toolResult`）
+  - `Status`（成功完成 / 失败 / 超时 / 未知）
+  - 精简的运行时/令牌统计
+  - 交付指令，告知请求代理以普通助手语气复写回复（而非转发原始内部元数据）
+- `--model` 和 `--thinking` 可覆盖该运行的默认设置。
+- 运行完毕后，可用 `info` / `log` 查看详情和输出。
+- `/subagents spawn` 默认为一次性模式（`mode: "run"`）。如需持久线程绑定会话，请使用 `sessions_spawn` 并设置 `thread: true` 及 `mode: "session"`。
+- 适用于 ACP 运行时（Codex、Claude Code、Gemini CLI）的会话，使用 `sessions_spawn` 并设置 `runtime: "acp"`，详见 [ACP 代理](/tools/acp-agents)。
 
-Primary goals:
+主要目标：
 
-- Parallelize "research / long task / slow tool" work without blocking the main run.
-- Keep sub-agents isolated by default (session separation + optional sandboxing).
-- Keep the tool surface hard to misuse: sub-agents do **not** get session tools by default.
-- Support configurable nesting depth for orchestrator patterns.
+- 并行处理“调研／长任务／慢速工具”，避免阻塞主运行。
+- 默认使子代理相互隔离（会话分离 + 可选沙箱）。
+- 限制工具权限，子代理默认不具备会话工具访问权。
+- 支持配置嵌套深度，用于编排模式。
 
-Cost note: each sub-agent has its **own** context and token usage. For heavy or repetitive
-tasks, set a cheaper model for sub-agents and keep your main agent on a higher-quality model.
-You can configure this via `agents.defaults.subagents.model` or per-agent overrides.
+成本提示：每个子代理拥有**独立的上下文和令牌耗费**。对于重度或重复任务，建议为子代理设置较低成本模型，主代理使用更优质模型。配置可通过 `agents.defaults.subagents.model` 或针对单个代理覆盖实现。
 
-## Tool
+## 工具
 
-Use `sessions_spawn`:
+使用 `sessions_spawn` 工具：
 
-- Starts a sub-agent run (`deliver: false`, global lane: `subagent`)
-- Then runs an announce step and posts the announce reply to the requester chat channel
-- Default model: inherits the caller unless you set `agents.defaults.subagents.model` (or per-agent `agents.list[].subagents.model`); an explicit `sessions_spawn.model` still wins.
-- Default thinking: inherits the caller unless you set `agents.defaults.subagents.thinking` (or per-agent `agents.list[].subagents.thinking`); an explicit `sessions_spawn.thinking` still wins.
-- Default run timeout: if `sessions_spawn.runTimeoutSeconds` is omitted, OpenClaw uses `agents.defaults.subagents.runTimeoutSeconds` when set; otherwise it falls back to `0` (no timeout).
+- 启动子代理运行（`deliver: false`，全局队列通道：`subagent`）
+- 接着执行通报步骤，将结果回复发布至请求聊天频道
+- 默认模型：继承调用者模型，除非设置了 `agents.defaults.subagents.model`（或针对单代理的 `agents.list[].subagents.model`）；显式的 `sessions_spawn.model` 优先。
+- 默认思考级别：继承调用者思考级别，除非设置了 `agents.defaults.subagents.thinking`（或单代理覆盖）；显式的 `sessions_spawn.thinking` 优先。
+- 默认运行超时：若未设置 `sessions_spawn.runTimeoutSeconds`，OpenClaw 使用 `agents.defaults.subagents.runTimeoutSeconds`（若已设置）；否则默认为 `0`（无超时）。
 
-Tool params:
+工具参数：
 
-- `task` (required)
-- `label?` (optional)
-- `agentId?` (optional; spawn under another agent id if allowed)
-- `model?` (optional; overrides the sub-agent model; invalid values are skipped and the sub-agent runs on the default model with a warning in the tool result)
-- `thinking?` (optional; overrides thinking level for the sub-agent run)
-- `runTimeoutSeconds?` (defaults to `agents.defaults.subagents.runTimeoutSeconds` when set, otherwise `0`; when set, the sub-agent run is aborted after N seconds)
-- `thread?` (default `false`; when `true`, requests channel thread binding for this sub-agent session)
-- `mode?` (`run|session`)
-  - default is `run`
-  - if `thread: true` and `mode` omitted, default becomes `session`
-  - `mode: "session"` requires `thread: true`
-- `cleanup?` (`delete|keep`, default `keep`)
-- `sandbox?` (`inherit|require`, default `inherit`; `require` rejects spawn unless target child runtime is sandboxed)
-- `sessions_spawn` does **not** accept channel-delivery params (`target`, `channel`, `to`, `threadId`, `replyTo`, `transport`). For delivery, use `message`/`sessions_send` from the spawned run.
+- `task`（必填）
+- `label?`（可选）
+- `agentId?`（可选；若允许，可在其他代理 ID 下派生）
+- `model?`（可选；覆盖子代理模型；非法值被忽略，子代理使用默认模型并在工具结果中提示警告）
+- `thinking?`（可选；覆盖子代理的思考级别）
+- `runTimeoutSeconds?`（若设置，则子代理运行会在指定秒数后中止；默认根据 `agents.defaults.subagents.runTimeoutSeconds`，否则为 `0`）
+- `thread?`（默认 `false`；为 `true` 时，子代理会申请绑定频道线程）
+- `mode?`（`run|session`）
+  - 默认为 `run`
+  - 如果 `thread: true` 且未指定 `mode`，默认变为 `session`
+  - `mode: "session"` 要求必须 `thread: true`
+- `cleanup?`（`delete|keep`，默认为 `keep`）
+- `sandbox?`（`inherit|require`，默认为 `inherit`；`require` 会拒绝非沙箱子运行环境的启动）
+- `sessions_spawn` 不接受频道投递参数 (`target`、`channel`、`to`、`threadId`、`replyTo`、`transport`)，发消息请使用子代理运行的 `message` / `sessions_send`。
 
-## Thread-bound sessions
+## 绑定线程的会话
 
-When thread bindings are enabled for a channel, a sub-agent can stay bound to a thread so follow-up user messages in that thread keep routing to the same sub-agent session.
+当频道支持线程绑定时，子代理可绑定到某线程，使后续同线程用户消息继续定向该子代理会话。
 
-### Thread supporting channels
+### 支持线程的频道
 
-- Discord (currently the only supported channel): supports persistent thread-bound subagent sessions (`sessions_spawn` with `thread: true`), manual thread controls (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`), and adapter keys `channels.discord.threadBindings.enabled`, `channels.discord.threadBindings.idleHours`, `channels.discord.threadBindings.maxAgeHours`, and `channels.discord.threadBindings.spawnSubagentSessions`.
+- Discord（目前唯一支持的频道）：支持持久线程绑定的子代理会话（`sessions_spawn` 使用 `thread: true`），手动线程控制命令（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`），以及适配器配置键：`channels.discord.threadBindings.enabled`、`channels.discord.threadBindings.idleHours`、`channels.discord.threadBindings.maxAgeHours`、`channels.discord.threadBindings.spawnSubagentSessions`。
 
-Quick flow:
+快速流程：
 
-1. Spawn with `sessions_spawn` using `thread: true` (and optionally `mode: "session"`).
-2. OpenClaw creates or binds a thread to that session target in the active channel.
-3. Replies and follow-up messages in that thread route to the bound session.
-4. Use `/session idle` to inspect/update inactivity auto-unfocus and `/session max-age` to control the hard cap.
-5. Use `/unfocus` to detach manually.
+1. 使用 `sessions_spawn` 并设置 `thread: true`（可选 `mode: "session"`）启动。
+2. OpenClaw 在活跃频道创建或绑定一个线程到该会话目标。
+3. 该线程中的回复及后续消息均路由至绑定的子代理会话。
+4. 使用 `/session idle` 查看/设置非活动自动解绑时间，使用 `/session max-age` 控制最大绑定时长。
+5. 使用 `/unfocus` 手动解绑线程。
 
-Manual controls:
+手动控制：
 
-- `/focus <target>` binds the current thread (or creates one) to a sub-agent/session target.
-- `/unfocus` removes the binding for the current bound thread.
-- `/agents` lists active runs and binding state (`thread:<id>` or `unbound`).
-- `/session idle` and `/session max-age` only work for focused bound threads.
+- `/focus <target>` 绑定当前线程（或新建线程）至指定子代理/会话目标。
+- `/unfocus` 移除当前绑定线程的绑定。
+- `/agents` 列出活跃运行及绑定状态（`thread:<id>` 或 `unbound`）。
+- `/session idle` 和 `/session max-age` 仅对已绑定线程有效。
 
-Config switches:
+配置开关：
 
-- Global default: `session.threadBindings.enabled`, `session.threadBindings.idleHours`, `session.threadBindings.maxAgeHours`
-- Channel override and spawn auto-bind keys are adapter-specific. See **Thread supporting channels** above.
+- 全局默认：`session.threadBindings.enabled`、`session.threadBindings.idleHours`、`session.threadBindings.maxAgeHours`
+- 频道覆盖及启动自动绑定键依适配器而异，详见上文**支持线程的频道**。
 
-See [Configuration Reference](/gateway/configuration-reference) and [Slash commands](/tools/slash-commands) for current adapter details.
+白名单：
 
-Allowlist:
+- `agents.list[].subagents.allowAgents`：允许通过 `agentId` 指定的代理 ID 列表（`["*"]` 允许所有）。默认仅允许请求代理本身。
+- 沙箱继承限制：请求会话为沙箱环境时，`sessions_spawn` 会拒绝指向非沙箱运行时的目标。
 
-- `agents.list[].subagents.allowAgents`: list of agent ids that can be targeted via `agentId` (`["*"]` to allow any). Default: only the requester agent.
-- Sandbox inheritance guard: if the requester session is sandboxed, `sessions_spawn` rejects targets that would run unsandboxed.
+发现：
 
-Discovery:
+- 使用 `agents_list` 查询当前被允许用于 `sessions_spawn` 的代理 ID。
 
-- Use `agents_list` to see which agent ids are currently allowed for `sessions_spawn`.
+自动归档：
 
-Auto-archive:
+- 子代理会话会在 `agents.defaults.subagents.archiveAfterMinutes`（默认 60 分钟）后自动归档。
+- 归档过程调用 `sessions.delete`，并将对话记录重命名为 `*.deleted.<timestamp>`（同目录）。
+- `cleanup: "delete"` 会在通报完成后立即归档（记录通过重命名保留）。
+- 自动归档为尽力而为策略，网关重启会丢失待处理定时任务。
+- `runTimeoutSeconds` 不触发自动归档，仅终止运行，会话保持至自动归档。
+- 自动归档对深度 1 和深度 2 会话均适用。
 
-- Sub-agent sessions are automatically archived after `agents.defaults.subagents.archiveAfterMinutes` (default: 60).
-- Archive uses `sessions.delete` and renames the transcript to `*.deleted.<timestamp>` (same folder).
-- `cleanup: "delete"` archives immediately after announce (still keeps the transcript via rename).
-- Auto-archive is best-effort; pending timers are lost if the gateway restarts.
-- `runTimeoutSeconds` does **not** auto-archive; it only stops the run. The session remains until auto-archive.
-- Auto-archive applies equally to depth-1 and depth-2 sessions.
+## 嵌套子代理
 
-## Nested Sub-Agents
+默认子代理不能再产生子代理（`maxSpawnDepth: 1`）。可通过设置 `maxSpawnDepth: 2` 启用一层嵌套，实现**编排者模式**： 主代理 → 编排者子代理 → 工作者子子代理。
 
-By default, sub-agents cannot spawn their own sub-agents (`maxSpawnDepth: 1`). You can enable one level of nesting by setting `maxSpawnDepth: 2`, which allows the **orchestrator pattern**: main → orchestrator sub-agent → worker sub-sub-agents.
-
-### How to enable
+### 如何启用
 
 ```json5
 {
   agents: {
     defaults: {
       subagents: {
-        maxSpawnDepth: 2, // allow sub-agents to spawn children (default: 1)
-        maxChildrenPerAgent: 5, // max active children per agent session (default: 5)
-        maxConcurrent: 8, // global concurrency lane cap (default: 8)
-        runTimeoutSeconds: 900, // default timeout for sessions_spawn when omitted (0 = no timeout)
+        maxSpawnDepth: 2, // 允许子代理派生子节点（默认1）
+        maxChildrenPerAgent: 5, // 单代理会话最多同时活跃子会话数量（默认5）
+        maxConcurrent: 8, // 全局并发限制（默认8）
+        runTimeoutSeconds: 900, // sessions_spawn 默认超时（秒，0表示无超时）
       },
     },
   },
 }
 ```
 
-### Depth levels
+### 深度级别
 
-| Depth | Session key shape                            | Role                                          | Can spawn?                   |
-| ----- | -------------------------------------------- | --------------------------------------------- | ---------------------------- |
-| 0     | `agent:<id>:main`                            | Main agent                                    | Always                       |
-| 1     | `agent:<id>:subagent:<uuid>`                 | Sub-agent (orchestrator when depth 2 allowed) | Only if `maxSpawnDepth >= 2` |
-| 2     | `agent:<id>:subagent:<uuid>:subagent:<uuid>` | Sub-sub-agent (leaf worker)                   | Never                        |
+| 深度 | 会话键格式                                  | 角色                                               | 是否可再派生            |
+| ---- | ------------------------------------------ | -------------------------------------------------- | ----------------------- |
+| 0    | `agent:<id>:main`                          | 主代理                                             | 始终可                 |
+| 1    | `agent:<id>:subagent:<uuid>`               | 子代理（开启深度2时为编排者）                      | 仅当 `maxSpawnDepth >= 2` 时可 |
+| 2    | `agent:<id>:subagent:<uuid>:subagent:<uuid>` | 子子代理（叶子工作者）                              | 否                      |
 
-### Announce chain
+### 通报链
 
-Results flow back up the chain:
+结果沿链向上传递：
 
-1. Depth-2 worker finishes → announces to its parent (depth-1 orchestrator)
-2. Depth-1 orchestrator receives the announce, synthesizes results, finishes → announces to main
-3. Main agent receives the announce and delivers to the user
+1. 深度 2 工作者完成 → 通报给父节点（深度 1 编排者）
+2. 深度 1 编排者收到通报，综合结果后完成 → 通报给主代理
+3. 主代理接收通报并交付给用户
 
-Each level only sees announces from its direct children.
+每级只看到其直接子节点的通报。
 
-### Tool policy by depth
+### 按深度的工具权限策略
 
-- **Depth 1 (orchestrator, when `maxSpawnDepth >= 2`)**: Gets `sessions_spawn`, `subagents`, `sessions_list`, `sessions_history` so it can manage its children. Other session/system tools remain denied.
-- **Depth 1 (leaf, when `maxSpawnDepth == 1`)**: No session tools (current default behavior).
-- **Depth 2 (leaf worker)**: No session tools — `sessions_spawn` is always denied at depth 2. Cannot spawn further children.
+- **深度 1（编排者，`maxSpawnDepth >= 2`）**：拥有 `sessions_spawn`、`subagents`、`sessions_list`、`sessions_history`，以便管理其子节点。其他会话/系统工具禁用。
+- **深度 1（叶子，`maxSpawnDepth == 1`）**：无会话工具（当前默认行为）。
+- **深度 2（叶子工作者）**：无会话工具，`sessions_spawn` 始终禁用，无法继续派生。
 
-### Per-agent spawn limit
+### 每代理派生限制
 
-Each agent session (at any depth) can have at most `maxChildrenPerAgent` (default: 5) active children at a time. This prevents runaway fan-out from a single orchestrator.
+每个代理会话（任意深度）最多可同时拥有 `maxChildrenPerAgent`（默认 5）个活跃子会话，防止单点无限扩展。
 
-### Cascade stop
+### 级联停止
 
-Stopping a depth-1 orchestrator automatically stops all its depth-2 children:
+停止深度 1 编排者会级联停止其所有深度 2 子节点：
 
-- `/stop` in the main chat stops all depth-1 agents and cascades to their depth-2 children.
-- `/subagents kill <id>` stops a specific sub-agent and cascades to its children.
-- `/subagents kill all` stops all sub-agents for the requester and cascades.
+- 在主聊天执行 `/stop` 停止所有深度 1 子代理及其深度 2 子节点。
+- `/subagents kill <id>` 停止指定子代理及其子节点。
+- `/subagents kill all` 停止请求者所有子代理并级联。
 
-## Authentication
+## 身份验证
 
-Sub-agent auth is resolved by **agent id**, not by session type:
+子代理认证基于**代理 ID**，而非会话类型：
 
-- The sub-agent session key is `agent:<agentId>:subagent:<uuid>`.
-- The auth store is loaded from that agent's `agentDir`.
-- The main agent's auth profiles are merged in as a **fallback**; agent profiles override main profiles on conflicts.
+- 子代理会话键格式为：`agent:<agentId>:subagent:<uuid>`。
+- 认证信息从该代理的 `agentDir` 加载。
+- 主代理的认证配置作为**备用**合并：若冲突，代理配置优先。
 
-Note: the merge is additive, so main profiles are always available as fallbacks. Fully isolated auth per agent is not supported yet.
+注：合并为新增式，主代理配置始终作为回退。尚不支持代理间完全独立的认证。
 
-## Announce
+## 通报（Announce）
 
-Sub-agents report back via an announce step:
+子代理通过通报步骤汇报结果：
 
-- The announce step runs inside the sub-agent session (not the requester session).
-- If the sub-agent replies exactly `ANNOUNCE_SKIP`, nothing is posted.
-- Otherwise delivery depends on requester depth:
-  - top-level requester sessions use a follow-up `agent` call with external delivery (`deliver=true`)
-  - nested requester subagent sessions receive an internal follow-up injection (`deliver=false`) so the orchestrator can synthesize child results in-session
-  - if a nested requester subagent session is gone, OpenClaw falls back to that session's requester when available
-- Child completion aggregation is scoped to the current requester run when building nested completion findings, preventing stale prior-run child outputs from leaking into the current announce.
-- Announce replies preserve thread/topic routing when available on channel adapters.
-- Announce context is normalized to a stable internal event block:
-  - source (`subagent` or `cron`)
-  - child session key/id
-  - announce type + task label
-  - status line derived from runtime outcome (`success`, `error`, `timeout`, or `unknown`)
-  - result content from the announce step (or `(no output)` if missing)
-  - a follow-up instruction describing when to reply vs. stay silent
-- `Status` is not inferred from model output; it comes from runtime outcome signals.
+- 通报步骤运行在子代理会话（非请求者会话）内。
+- 若子代理回复精确为 `ANNOUNCE_SKIP`，则不发送通报。
+- 投递策略依请求深度区分：
+  - 顶层请求会话使用带外投递的 `agent` 跟进调用（`deliver=true`）
+  - 嵌套请求子代理会话使用内部跟进注入（`deliver=false`），便于编排者在会话内综合子结果
+  - 如果嵌套请求会话不可用，OpenClaw 回退至该会话的请求者（如有）
+- 汇总子层完成结果限定于当前请求运行，防止旧运行子结果混入。
+- 通报回复可保留线程/话题路由信息（若频道适配器支持）。
+- 通报上下文标准化为稳定内部事件块，包含：
+  - 来源（`subagent` 或 `cron`）
+  - 子会话键/ID
+  - 通报类型及任务标签
+  - 状态行，依据运行结果(`success`, `error`, `timeout`, `unknown`)
+  - 通报步骤产生的结果内容（缺失则标记 `(no output)`）
+  - 跟进指令，说明何时回复或保持沉默
+- `Status` 非模型输出推断，而由运行时信号确定。
 
-Announce payloads include a stats line at the end (even when wrapped):
+通报负载末尾包含统计行（即使有包装）：
 
-- Runtime (e.g., `runtime 5m12s`)
-- Token usage (input/output/total)
-- Estimated cost when model pricing is configured (`models.providers.*.models[].cost`)
-- `sessionKey`, `sessionId`, and transcript path (so the main agent can fetch history via `sessions_history` or inspect the file on disk)
-- Internal metadata is meant for orchestration only; user-facing replies should be rewritten in normal assistant voice.
+- 运行时长（如 `runtime 5m12s`）
+- 令牌使用（输入/输出/总计）
+- 估算成本（当配置了模型计费信息 `models.providers.*.models[].cost`）
+- `sessionKey`、`sessionId` 和记录路径（方便主代理通过 `sessions_history` 或本地文件查看）
+- 内部元数据仅供编排使用，展示给用户的回复应以正常助手语气重写。
 
-## Tool Policy (sub-agent tools)
+## 工具策略（子代理工具）
 
-By default, sub-agents get **all tools except session tools** and system tools:
+默认子代理可用**除会话工具和系统工具外所有工具**，具体剔除：
 
 - `sessions_list`
 - `sessions_history`
 - `sessions_send`
 - `sessions_spawn`
 
-When `maxSpawnDepth >= 2`, depth-1 orchestrator sub-agents additionally receive `sessions_spawn`, `subagents`, `sessions_list`, and `sessions_history` so they can manage their children.
+当 `maxSpawnDepth >= 2`，深度 1 编排者子代理额外获得 `sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history` 权限以管理子节点。
 
-Override via config:
+可通过配置覆写：
 
 ```json5
 {
@@ -262,9 +258,9 @@ Override via config:
   tools: {
     subagents: {
       tools: {
-        // deny wins
+        // 拒绝优先
         deny: ["gateway", "cron"],
-        // if allow is set, it becomes allow-only (deny still wins)
+        // 如果设置 allow，将变为仅允许列表（deny 依然优先）
         // allow: ["read", "exec", "process"]
       },
     },
@@ -272,23 +268,23 @@ Override via config:
 }
 ```
 
-## Concurrency
+## 并发
 
-Sub-agents use a dedicated in-process queue lane:
+子代理使用独立的进程内队列通道：
 
-- Lane name: `subagent`
-- Concurrency: `agents.defaults.subagents.maxConcurrent` (default `8`)
+- 通道名：`subagent`
+- 并发数上限：`agents.defaults.subagents.maxConcurrent`（默认 8）
 
-## Stopping
+## 停止
 
-- Sending `/stop` in the requester chat aborts the requester session and stops any active sub-agent runs spawned from it, cascading to nested children.
-- `/subagents kill <id>` stops a specific sub-agent and cascades to its children.
+- 在请求聊天内发送 `/stop` 会中止请求会话，并停止任何由其派生的活跃子代理，级联停止所有嵌套子节点。
+- `/subagents kill <id>` 停止指定子代理，并级联停止其子节点。
 
-## Limitations
+## 限制
 
-- Sub-agent announce is **best-effort**. If the gateway restarts, pending "announce back" work is lost.
-- Sub-agents still share the same gateway process resources; treat `maxConcurrent` as a safety valve.
-- `sessions_spawn` is always non-blocking: it returns `{ status: "accepted", runId, childSessionKey }` immediately.
-- Sub-agent context only injects `AGENTS.md` + `TOOLS.md` (no `SOUL.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, or `BOOTSTRAP.md`).
-- Maximum nesting depth is 5 (`maxSpawnDepth` range: 1–5). Depth 2 is recommended for most use cases.
-- `maxChildrenPerAgent` caps active children per session (default: 5, range: 1–20).
+- 子代理通报为**尽力而为**策略，网关重启会丢失待发送的通报。
+- 子代理仍共享同一网关进程资源，`maxConcurrent` 充当保护阀。
+- `sessions_spawn` 总是非阻塞：实时返回 `{ status: "accepted", runId, childSessionKey }`。
+- 子代理上下文仅注入 `AGENTS.md` + `TOOLS.md`，不含 `SOUL.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md` 或 `BOOTSTRAP.md`。
+- 最大嵌套深度为 5（`maxSpawnDepth` 范围：1~5），推荐多数场景使用深度 2。
+- `maxChildrenPerAgent` 限制每个会话活跃子节点数（默认 5，范围 1~20）。

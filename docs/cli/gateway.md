@@ -1,85 +1,85 @@
 ---
-summary: "OpenClaw Gateway CLI (`openclaw gateway`) — run, query, and discover gateways"
+summary: "OpenClaw Gateway CLI (`openclaw gateway`) — 运行、查询和发现网关"
 read_when:
-  - Running the Gateway from the CLI (dev or servers)
-  - Debugging Gateway auth, bind modes, and connectivity
-  - Discovering gateways via Bonjour (LAN + tailnet)
+  - 从 CLI 运行网关（开发或服务器环境）
+  - 调试网关认证、绑定模式和连接性
+  - 通过 Bonjour（局域网 + tailnet）发现网关
 title: "gateway"
 ---
 
-# Gateway CLI
+# 网关 CLI
 
-The Gateway is OpenClaw’s WebSocket server (channels, nodes, sessions, hooks).
+网关是 OpenClaw 的 WebSocket 服务器（支持频道、节点、会话、钩子）。
 
-Subcommands in this page live under `openclaw gateway …`.
+本页中的子命令均属于 `openclaw gateway …` 命令空间。
 
-Related docs:
+相关文档：
 
 - [/gateway/bonjour](/gateway/bonjour)
 - [/gateway/discovery](/gateway/discovery)
 - [/gateway/configuration](/gateway/configuration)
 
-## Run the Gateway
+## 运行网关
 
-Run a local Gateway process:
+运行本地网关进程：
 
 ```bash
 openclaw gateway
 ```
 
-Foreground alias:
+前台别名：
 
 ```bash
 openclaw gateway run
 ```
 
-Notes:
+说明：
 
-- By default, the Gateway refuses to start unless `gateway.mode=local` is set in `~/.openclaw/openclaw.json`. Use `--allow-unconfigured` for ad-hoc/dev runs.
-- Binding beyond loopback without auth is blocked (safety guardrail).
-- `SIGUSR1` triggers an in-process restart when authorized (`commands.restart` is enabled by default; set `commands.restart: false` to block manual restart, while gateway tool/config apply/update remain allowed).
-- `SIGINT`/`SIGTERM` handlers stop the gateway process, but they don’t restore any custom terminal state. If you wrap the CLI with a TUI or raw-mode input, restore the terminal before exit.
+- 默认情况下，除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则网关拒绝启动。可使用 `--allow-unconfigured` 进行临时/开发运行。
+- 禁止在未经认证的情况下绑定非环回地址（安全防护措施）。
+- 授权情况下（默认启用 `commands.restart`），发送 `SIGUSR1` 信号会触发进程内重启；设置 `commands.restart: false` 可阻止手动重启，但仍允许网关工具/配置应用和更新。
+- `SIGINT`/`SIGTERM` 处理器会停止网关进程，但不会恢复任何自定义终端状态。如果以 TUI 或原始模式输入包裹 CLI，退出前请恢复终端状态。
 
-### Options
+### 参数选项
 
-- `--port <port>`: WebSocket port (default comes from config/env; usually `18789`).
-- `--bind <loopback|lan|tailnet|auto|custom>`: listener bind mode.
-- `--auth <token|password>`: auth mode override.
-- `--token <token>`: token override (also sets `OPENCLAW_GATEWAY_TOKEN` for the process).
-- `--password <password>`: password override (also sets `OPENCLAW_GATEWAY_PASSWORD` for the process).
-- `--tailscale <off|serve|funnel>`: expose the Gateway via Tailscale.
-- `--tailscale-reset-on-exit`: reset Tailscale serve/funnel config on shutdown.
-- `--allow-unconfigured`: allow gateway start without `gateway.mode=local` in config.
-- `--dev`: create a dev config + workspace if missing (skips BOOTSTRAP.md).
-- `--reset`: reset dev config + credentials + sessions + workspace (requires `--dev`).
-- `--force`: kill any existing listener on the selected port before starting.
-- `--verbose`: verbose logs.
-- `--claude-cli-logs`: only show claude-cli logs in the console (and enable its stdout/stderr).
-- `--ws-log <auto|full|compact>`: websocket log style (default `auto`).
-- `--compact`: alias for `--ws-log compact`.
-- `--raw-stream`: log raw model stream events to jsonl.
-- `--raw-stream-path <path>`: raw stream jsonl path.
+- `--port <port>`：WebSocket 端口（默认取自配置或环境变量，通常为 `18789`）。
+- `--bind <loopback|lan|tailnet|auto|custom>`：监听绑定模式。
+- `--auth <token|password>`：认证模式覆盖。
+- `--token <token>`：token 覆盖（同时设置进程环境变量 `OPENCLAW_GATEWAY_TOKEN`）。
+- `--password <password>`：密码覆盖（同时设置进程环境变量 `OPENCLAW_GATEWAY_PASSWORD`）。
+- `--tailscale <off|serve|funnel>`：通过 Tailscale 曝露网关。
+- `--tailscale-reset-on-exit`：关闭时重置 Tailscale 服务/漏斗配置。
+- `--allow-unconfigured`：允许无 `gateway.mode=local` 配置启动网关。
+- `--dev`：若缺失则创建开发配置+工作区（跳过 BOOTSTRAP.md）。
+- `--reset`：重置开发配置、凭据、会话和工作区（需配合 `--dev` 使用）。
+- `--force`：启动前杀死指定端口上已有监听进程。
+- `--verbose`：启用详细日志。
+- `--claude-cli-logs`：仅在控制台显示 claude-cli 日志（并启用其 stdout/stderr）。
+- `--ws-log <auto|full|compact>`：WebSocket 日志风格（默认 `auto`）。
+- `--compact`：`--ws-log compact` 的别名。
+- `--raw-stream`：将原始模型流事件记录为 jsonl。
+- `--raw-stream-path <path>`：原始流 jsonl 文件路径。
 
-## Query a running Gateway
+## 查询运行中的网关
 
-All query commands use WebSocket RPC.
+所有查询命令均使用 WebSocket RPC。
 
-Output modes:
+输出模式：
 
-- Default: human-readable (colored in TTY).
-- `--json`: machine-readable JSON (no styling/spinner).
-- `--no-color` (or `NO_COLOR=1`): disable ANSI while keeping human layout.
+- 默认：人类可读（TTY 中带颜色）。
+- `--json`：机器可读 JSON（无样式/无加载动画）。
+- `--no-color`（或设置环境变量 `NO_COLOR=1`）：禁用 ANSI 颜色，但保留人类布局。
 
-Shared options (where supported):
+通用选项（支持时）：
 
-- `--url <url>`: Gateway WebSocket URL.
-- `--token <token>`: Gateway token.
-- `--password <password>`: Gateway password.
-- `--timeout <ms>`: timeout/budget (varies per command).
-- `--expect-final`: wait for a “final” response (agent calls).
+- `--url <url>`：网关 WebSocket URL。
+- `--token <token>`：网关令牌。
+- `--password <password>`：网关密码。
+- `--timeout <ms>`：超时/预算时间（各命令可能不同）。
+- `--expect-final`：等待“最终”响应（用于代理调用）。
 
-Note: when you set `--url`, the CLI does not fall back to config or environment credentials.
-Pass `--token` or `--password` explicitly. Missing explicit credentials is an error.
+注意：当指定了 `--url` 后，CLI 不会 fallback 至配置或环境变量中的凭据。
+必须显式传入 `--token` 或 `--password`。缺少显式凭据会导致错误。
 
 ### `gateway health`
 
@@ -89,72 +89,72 @@ openclaw gateway health --url ws://127.0.0.1:18789
 
 ### `gateway status`
 
-`gateway status` shows the Gateway service (launchd/systemd/schtasks) plus an optional RPC probe.
+`gateway status` 显示网关服务状态（launchd/systemd/schtasks），并可选择进行 RPC 探测。
 
 ```bash
 openclaw gateway status
 openclaw gateway status --json
 ```
 
-Options:
+参数：
 
-- `--url <url>`: override the probe URL.
-- `--token <token>`: token auth for the probe.
-- `--password <password>`: password auth for the probe.
-- `--timeout <ms>`: probe timeout (default `10000`).
-- `--no-probe`: skip the RPC probe (service-only view).
-- `--deep`: scan system-level services too.
+- `--url <url>`：覆盖探测 URL。
+- `--token <token>`：探测时的令牌认证。
+- `--password <password>`：探测时的密码认证。
+- `--timeout <ms>`：探测超时（默认 `10000` 毫秒）。
+- `--no-probe`：跳过 RPC 探测，仅显示服务状态。
+- `--deep`：扫描系统级服务。
 
-Notes:
+说明：
 
-- `gateway status` resolves configured auth SecretRefs for probe auth when possible.
-- If a required auth SecretRef is unresolved in this command path, probe auth can fail; pass `--token`/`--password` explicitly or resolve the secret source first.
+- `gateway status` 会尝试解析配置的认证 SecretRef 用于探测认证。
+- 如该命令路径中所需的认证 SecretRef 未被解析，探测认证可能失败；请显式提供 `--token` / `--password` 或先解析 SecretRef 源。
 
 ### `gateway probe`
 
-`gateway probe` is the “debug everything” command. It always probes:
+`gateway probe` 是“调试一切”命令。它总是探测：
 
-- your configured remote gateway (if set), and
-- localhost (loopback) **even if remote is configured**.
+- 配置的远程网关（如果设置），以及
+- 本地主机（环回接口）**即使远程网关配置存在**。
 
-If multiple gateways are reachable, it prints all of them. Multiple gateways are supported when you use isolated profiles/ports (e.g., a rescue bot), but most installs still run a single gateway.
+如果发现多个网关，会全部打印。多网关支持用于隔离的配置/端口（比如救援机器人），但大多数安装仍只运行单一网关。
 
 ```bash
 openclaw gateway probe
 openclaw gateway probe --json
 ```
 
-#### Remote over SSH (Mac app parity)
+#### 远程 SSH（Mac 应用同等功能）
 
-The macOS app “Remote over SSH” mode uses a local port-forward so the remote gateway (which may be bound to loopback only) becomes reachable at `ws://127.0.0.1:<port>`.
+macOS 应用中的“远程 SSH”模式使用本地端口映射，使得远程网关（可能只绑定环回）可通过 `ws://127.0.0.1:<端口>` 访问。
 
-CLI equivalent:
+CLI 等价命令：
 
 ```bash
 openclaw gateway probe --ssh user@gateway-host
 ```
 
-Options:
+参数：
 
-- `--ssh <target>`: `user@host` or `user@host:port` (port defaults to `22`).
-- `--ssh-identity <path>`: identity file.
-- `--ssh-auto`: pick the first discovered gateway host as SSH target (LAN/WAB only).
+- `--ssh <target>`：格式为 `user@host` 或 `user@host:port`（端口默认为 22）。
+- `--ssh-identity <path>`：SSH 身份文件路径。
+- `--ssh-auto`：自动选择第一个发现的网关主机作为 SSH 目标（仅限 LAN/WAB）。
 
-Config (optional, used as defaults):
+配置（可选，作为默认值）：
 
 - `gateway.remote.sshTarget`
 - `gateway.remote.sshIdentity`
 
 ### `gateway call <method>`
 
-Low-level RPC helper.
+低级 RPC 辅助命令。
 
 ```bash
 openclaw gateway call status
 openclaw gateway call logs.tail --params '{"sinceMs": 60000}'
 ```
 
-## Manage the Gateway service
+## 管理网关服务
 
 ```bash
 openclaw gateway install
@@ -164,33 +164,33 @@ openclaw gateway restart
 openclaw gateway uninstall
 ```
 
-Notes:
+说明：
 
-- `gateway install` supports `--port`, `--runtime`, `--token`, `--force`, `--json`.
-- When token auth requires a token and `gateway.auth.token` is SecretRef-managed, `gateway install` validates that the SecretRef is resolvable but does not persist the resolved token into service environment metadata.
-- If token auth requires a token and the configured token SecretRef is unresolved, install fails closed instead of persisting fallback plaintext.
-- In inferred auth mode, shell-only `OPENCLAW_GATEWAY_PASSWORD`/`CLAWDBOT_GATEWAY_PASSWORD` does not relax install token requirements; use durable config (`gateway.auth.password` or config `env`) when installing a managed service.
-- If both `gateway.auth.token` and `gateway.auth.password` are configured and `gateway.auth.mode` is unset, install is blocked until mode is set explicitly.
-- Lifecycle commands accept `--json` for scripting.
+- `gateway install` 支持 `--port`, `--runtime`, `--token`, `--force`, `--json` 参数。
+- 当令牌认证需令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证 SecretRef 是否可解析，但不会将解析出的令牌持久化入服务环境元数据。
+- 如果令牌认证需令牌且配置的令牌 SecretRef 未解析，安装将失败，而不是持久化回退的明文。
+- 在推断认证模式下，仅设置环境变量 `OPENCLAW_GATEWAY_PASSWORD`/`CLAWDBOT_GATEWAY_PASSWORD` 不会放宽安装时的令牌要求；安装托管服务时请使用持久配置（`gateway.auth.password` 或配置环境变量）。
+- 若同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，但未设置 `gateway.auth.mode`，安装时将被阻止，需显式设置模式。
+- 生命周期命令接受 `--json` 以支持脚本自动化。
 
-## Discover gateways (Bonjour)
+## 发现网关（Bonjour）
 
-`gateway discover` scans for Gateway beacons (`_openclaw-gw._tcp`).
+`gateway discover` 扫描网关信标（`_openclaw-gw._tcp`）。
 
-- Multicast DNS-SD: `local.`
-- Unicast DNS-SD (Wide-Area Bonjour): choose a domain (example: `openclaw.internal.`) and set up split DNS + a DNS server; see [/gateway/bonjour](/gateway/bonjour)
+- 多播 DNS-SD：`local.` 域。
+- 单播 DNS-SD（广域 Bonjour）：选择域（例如 `openclaw.internal.`），并设置分割 DNS + DNS 服务器；详见 [/gateway/bonjour](/gateway/bonjour)。
 
-Only gateways with Bonjour discovery enabled (default) advertise the beacon.
+只有启用了 Bonjour 发现（默认开启）的网关才会广播信标。
 
-Wide-Area discovery records include (TXT):
+广域发现记录包括（TXT）：
 
-- `role` (gateway role hint)
-- `transport` (transport hint, e.g. `gateway`)
-- `gatewayPort` (WebSocket port, usually `18789`)
-- `sshPort` (SSH port; defaults to `22` if not present)
-- `tailnetDns` (MagicDNS hostname, when available)
-- `gatewayTls` / `gatewayTlsSha256` (TLS enabled + cert fingerprint)
-- `cliPath` (optional hint for remote installs)
+- `role`（网关角色提示）
+- `transport`（传输提示，如 `gateway`）
+- `gatewayPort`（WebSocket 端口，通常为 `18789`）
+- `sshPort`（SSH 端口，不存在时默认为 `22`）
+- `tailnetDns`（MagicDNS 主机名，如可用）
+- `gatewayTls` / `gatewayTlsSha256`（TLS 启用状态及证书指纹）
+- `cliPath`（远程安装的可选提示）
 
 ### `gateway discover`
 
@@ -198,12 +198,12 @@ Wide-Area discovery records include (TXT):
 openclaw gateway discover
 ```
 
-Options:
+参数：
 
-- `--timeout <ms>`: per-command timeout (browse/resolve); default `2000`.
-- `--json`: machine-readable output (also disables styling/spinner).
+- `--timeout <ms>`：单次命令超时（浏览/解析）；默认 `2000` 毫秒。
+- `--json`：机器可读输出（同时禁用样式/加载动画）。
 
-Examples:
+示例：
 
 ```bash
 openclaw gateway discover --timeout 4000

@@ -1,64 +1,64 @@
 ---
-summary: "Curated links to the most used OpenClaw docs."
+summary: "精选链接，通往最常用的 OpenClaw 文档。"
 read_when:
-  - You want quick access to key docs pages
-title: "Docs directory"
+  - 你想快速访问关键文档页面
+title: "文档目录"
 ---
 
 <Note>
-This page is a curated index. If you are new, start with [Getting Started](/start/getting-started).
-For a complete map of the docs, see [Docs hubs](/start/hubs).
+此页面为精选索引。如果你是新手，请从[快速上手](/start/getting-started)开始。
+完整的文档地图请参见[文档中心](/start/hubs)。
 </Note>
 
-## Start here
+## 从这里开始
 
-- [Docs hubs (all pages linked)](/start/hubs)
-- [Help](/help)
-- [Configuration](/gateway/configuration)
-- [Configuration examples](/gateway/configuration-examples)
-- [Slash commands](/tools/slash-commands)
-- [Multi-agent routing](/concepts/multi-agent)
-- [Updating and rollback](/install/updating)
-- [Pairing (DM and nodes)](/channels/pairing)
-- [Nix mode](/install/nix)
-- [OpenClaw assistant setup](/start/openclaw)
-- [Skills](/tools/skills)
-- [Skills config](/tools/skills-config)
-- [Workspace templates](/reference/templates/AGENTS)
-- [RPC adapters](/reference/rpc)
-- [Gateway runbook](/gateway)
-- [Nodes (iOS and Android)](/nodes)
-- [Web surfaces (Control UI)](/web)
-- [Discovery and transports](/gateway/discovery)
-- [Remote access](/gateway/remote)
+- [文档中心（所有页面链接）](/start/hubs)
+- [帮助](/help)
+- [配置](/gateway/configuration)
+- [配置示例](/gateway/configuration-examples)
+- [斜线命令](/tools/slash-commands)
+- [多代理路由](/concepts/multi-agent)
+- [更新与回滚](/install/updating)
+- [配对（私信和节点）](/channels/pairing)
+- [Nix 模式](/install/nix)
+- [OpenClaw 助手设置](/start/openclaw)
+- [技能](/tools/skills)
+- [技能配置](/tools/skills-config)
+- [工作区模板](/reference/templates/AGENTS)
+- [RPC 适配器](/reference/rpc)
+- [网关运行手册](/gateway)
+- [节点（iOS 和 Android）](/nodes)
+- [网页界面（控制 UI）](/web)
+- [发现与传输](/gateway/discovery)
+- [远程访问](/gateway/remote)
 
-## Providers and UX
+## 服务提供商与用户体验
 
 - [WebChat](/web/webchat)
-- [Control UI (browser)](/web/control-ui)
+- [控制 UI（浏览器）](/web/control-ui)
 - [Telegram](/channels/telegram)
 - [Discord](/channels/discord)
-- [Mattermost (plugin)](/channels/mattermost)
-- [BlueBubbles (iMessage)](/channels/bluebubbles)
-- [iMessage (legacy)](/channels/imessage)
-- [Groups](/channels/groups)
-- [WhatsApp group messages](/channels/group-messages)
-- [Media images](/nodes/images)
-- [Media audio](/nodes/audio)
+- [Mattermost（插件）](/channels/mattermost)
+- [BlueBubbles（iMessage）](/channels/bluebubbles)
+- [iMessage（传统）](/channels/imessage)
+- [群组](/channels/groups)
+- [WhatsApp 群消息](/channels/group-messages)
+- [媒体图片](/nodes/images)
+- [媒体音频](/nodes/audio)
 
-## Companion apps
+## 伴侣应用
 
-- [macOS app](/platforms/macos)
-- [iOS app](/platforms/ios)
-- [Android app](/platforms/android)
-- [Windows (WSL2)](/platforms/windows)
-- [Linux app](/platforms/linux)
+- [macOS 应用](/platforms/macos)
+- [iOS 应用](/platforms/ios)
+- [Android 应用](/platforms/android)
+- [Windows（WSL2）](/platforms/windows)
+- [Linux 应用](/platforms/linux)
 
-## Operations and safety
+## 操作与安全
 
-- [Sessions](/concepts/session)
-- [Cron jobs](/automation/cron-jobs)
+- [会话](/concepts/session)
+- [定时任务](/automation/cron-jobs)
 - [Webhooks](/automation/webhook)
-- [Gmail hooks (Pub/Sub)](/automation/gmail-pubsub)
-- [Security](/gateway/security)
-- [Troubleshooting](/gateway/troubleshooting)
+- [Gmail 钩子（Pub/Sub）](/automation/gmail-pubsub)
+- [安全](/gateway/security)
+- [故障排除](/gateway/troubleshooting)

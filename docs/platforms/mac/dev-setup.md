@@ -1,104 +1,104 @@
 ---
-summary: "Setup guide for developers working on the OpenClaw macOS app"
+summary: "OpenClaw macOS 应用开发者的设置指南"
 read_when:
-  - Setting up the macOS development environment
-title: "macOS Dev Setup"
+  - 配置 macOS 开发环境时
+title: "macOS 开发环境配置"
 ---
 
-# macOS Developer Setup
+# macOS 开发者设置
 
-This guide covers the necessary steps to build and run the OpenClaw macOS application from source.
+本指南涵盖从源码构建和运行 OpenClaw macOS 应用所需的步骤。
 
-## Prerequisites
+## 前置条件
 
-Before building the app, ensure you have the following installed:
+在构建应用之前，请确保已安装以下内容：
 
-1. **Xcode 26.2+**: Required for Swift development.
-2. **Node.js 22+ & pnpm**: Required for the gateway, CLI, and packaging scripts.
+1. **Xcode 26.2+**：用于 Swift 开发。
+2. **Node.js 22+ 和 pnpm**：用于网关、CLI 以及打包脚本。
 
-## 1. Install Dependencies
+## 1. 安装依赖
 
-Install the project-wide dependencies:
+安装项目依赖：
 
 ```bash
 pnpm install
 ```
 
-## 2. Build and Package the App
+## 2. 构建并打包应用
 
-To build the macOS app and package it into `dist/OpenClaw.app`, run:
+运行以下命令以构建 macOS 应用并将其打包至 `dist/OpenClaw.app`：
 
 ```bash
 ./scripts/package-mac-app.sh
 ```
 
-If you don't have an Apple Developer ID certificate, the script will automatically use **ad-hoc signing** (`-`).
+如果您没有 Apple Developer ID 证书，脚本会自动使用 **ad-hoc 签名**（`-`）。
 
-For dev run modes, signing flags, and Team ID troubleshooting, see the macOS app README:
+有关开发运行模式、签名标志以及团队 ID 故障排查，请参阅 macOS 应用的 README：
 [https://github.com/openclaw/openclaw/blob/main/apps/macos/README.md](https://github.com/openclaw/openclaw/blob/main/apps/macos/README.md)
 
-> **Note**: Ad-hoc signed apps may trigger security prompts. If the app crashes immediately with "Abort trap 6", see the [Troubleshooting](#troubleshooting) section.
+> **注意**：ad-hoc 签名的应用可能会触发安全提示。如果应用启动后立即崩溃并显示“Abort trap 6”，请参阅[故障排查](#troubleshooting)部分。
 
-## 3. Install the CLI
+## 3. 安装 CLI
 
-The macOS app expects a global `openclaw` CLI install to manage background tasks.
+macOS 应用需要全局安装 `openclaw` CLI 来管理后台任务。
 
-**To install it (recommended):**
+**推荐安装步骤：**
 
-1. Open the OpenClaw app.
-2. Go to the **General** settings tab.
-3. Click **"Install CLI"**.
+1. 打开 OpenClaw 应用。
+2. 进入 **General（常规）** 设置标签。
+3. 点击 **“Install CLI（安装 CLI）”**。
 
-Alternatively, install it manually:
+您也可以手动安装：
 
 ```bash
 npm install -g openclaw@<version>
 ```
 
-## Troubleshooting
+## 故障排查
 
-### Build Fails: Toolchain or SDK Mismatch
+### 构建失败：工具链或 SDK 不匹配
 
-The macOS app build expects the latest macOS SDK and Swift 6.2 toolchain.
+macOS 应用构建期望使用最新的 macOS SDK 和 Swift 6.2 工具链。
 
-**System dependencies (required):**
+**系统依赖（必需）：**
 
-- **Latest macOS version available in Software Update** (required by Xcode 26.2 SDKs)
-- **Xcode 26.2** (Swift 6.2 toolchain)
+- **软件更新中提供的最新 macOS 版本**（Xcode 26.2 SDK 所需）
+- **Xcode 26.2**（Swift 6.2 工具链）
 
-**Checks:**
+**检查版本：**
 
 ```bash
 xcodebuild -version
 xcrun swift --version
 ```
 
-If versions don’t match, update macOS/Xcode and re-run the build.
+如果版本不匹配，请更新 macOS 或 Xcode 后重新构建。
 
-### App Crashes on Permission Grant
+### 应用在授权权限时崩溃
 
-If the app crashes when you try to allow **Speech Recognition** or **Microphone** access, it may be due to a corrupted TCC cache or signature mismatch.
+如果尝试允许 **语音识别** 或 **麦克风** 权限时应用崩溃，可能是由于 TCC 缓存损坏或签名不匹配。
 
-**Fix:**
+**解决方法：**
 
-1. Reset the TCC permissions:
+1. 重置 TCC 权限：
 
    ```bash
    tccutil reset All ai.openclaw.mac.debug
    ```
 
-2. If that fails, change the `BUNDLE_ID` temporarily in [`scripts/package-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/package-mac-app.sh) to force a "clean slate" from macOS.
+2. 若无效，可暂时修改 [`scripts/package-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/package-mac-app.sh) 中的 `BUNDLE_ID`，强制 macOS 清理权限缓存。
 
-### Gateway "Starting..." indefinitely
+### 网关状态停留在“Starting...”
 
-If the gateway status stays on "Starting...", check if a zombie process is holding the port:
+如果网关状态一直显示“Starting...”，请检查是否有僵尸进程占用端口：
 
 ```bash
 openclaw gateway status
 openclaw gateway stop
 
-# If you’re not using a LaunchAgent (dev mode / manual runs), find the listener:
+# 如果是非 LaunchAgent 运行（开发模式 / 手动运行），查找监听端口的进程：
 lsof -nP -iTCP:18789 -sTCP:LISTEN
 ```
 
-If a manual run is holding the port, stop that process (Ctrl+C). As a last resort, kill the PID you found above.
+若是手动运行的进程占用该端口，请停止此进程（Ctrl+C）。最后手段可杀掉对应 PID。

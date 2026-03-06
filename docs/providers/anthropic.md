@@ -1,32 +1,32 @@
 ---
-summary: "Use Anthropic Claude via API keys or setup-token in OpenClaw"
+summary: "通过 API 密钥或 OpenClaw 中的 setup-token 使用 Anthropic Claude"
 read_when:
-  - You want to use Anthropic models in OpenClaw
-  - You want setup-token instead of API keys
+  - 您想在 OpenClaw 中使用 Anthropic 模型
+  - 您想使用 setup-token 而非 API 密钥
 title: "Anthropic"
 ---
 
-# Anthropic (Claude)
+# Anthropic（Claude）
 
-Anthropic builds the **Claude** model family and provides access via an API.
-In OpenClaw you can authenticate with an API key or a **setup-token**.
+Anthropic 构建了 **Claude** 模型家族，并通过 API 提供访问。
+在 OpenClaw 中，您可以使用 API 密钥或 **setup-token** 进行身份验证。
 
-## Option A: Anthropic API key
+## 选项 A：Anthropic API 密钥
 
-**Best for:** standard API access and usage-based billing.
-Create your API key in the Anthropic Console.
+**适用场景：** 标准 API 访问和基于使用计费。
+请在 Anthropic 控制台创建您的 API 密钥。
 
-### CLI setup
+### 命令行配置
 
 ```bash
 openclaw onboard
-# choose: Anthropic API key
+# 选择：Anthropic API key
 
-# or non-interactive
+# 或非交互式方式
 openclaw onboard --anthropic-api-key "$ANTHROPIC_API_KEY"
 ```
 
-### Config snippet
+### 配置示例
 
 ```json5
 {
@@ -35,28 +35,28 @@ openclaw onboard --anthropic-api-key "$ANTHROPIC_API_KEY"
 }
 ```
 
-## Thinking defaults (Claude 4.6)
+## 思维默认值（Claude 4.6）
 
-- Anthropic Claude 4.6 models default to `adaptive` thinking in OpenClaw when no explicit thinking level is set.
-- You can override per-message (`/think:<level>`) or in model params:
-  `agents.defaults.models["anthropic/<model>"].params.thinking`.
-- Related Anthropic docs:
-  - [Adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
-  - [Extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
+- 当未显式设置思考等级时，Anthropic Claude 4.6 模型在 OpenClaw 中默认采用 `adaptive`（自适应）思考。
+- 您可以在每条消息中覆盖 (`/think:<level>`) 或在模型参数中设置：
+  `agents.defaults.models["anthropic/<model>"].params.thinking`。
+- 相关 Anthropic 文档：
+  - [自适应思考](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
+  - [扩展思考](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
 
-## Prompt caching (Anthropic API)
+## 提示缓存（Anthropic API）
 
-OpenClaw supports Anthropic's prompt caching feature. This is **API-only**; subscription auth does not honor cache settings.
+OpenClaw 支持 Anthropic 的提示缓存功能。此功能**仅限 API**；订阅授权不支持缓存设置。
 
-### Configuration
+### 配置
 
-Use the `cacheRetention` parameter in your model config:
+在模型配置中使用 `cacheRetention` 参数：
 
-| Value   | Cache Duration | Description                         |
-| ------- | -------------- | ----------------------------------- |
-| `none`  | No caching     | Disable prompt caching              |
-| `short` | 5 minutes      | Default for API Key auth            |
-| `long`  | 1 hour         | Extended cache (requires beta flag) |
+| 值       | 缓存时长       | 说明                         |
+| -------- | -------------- | ---------------------------- |
+| `none`   | 不缓存         | 禁用提示缓存                 |
+| `short`  | 5 分钟         | API 密钥认证默认值           |
+| `long`   | 1 小时         | 延长缓存（需要 beta 标志）   |
 
 ```json5
 {
@@ -72,13 +72,13 @@ Use the `cacheRetention` parameter in your model config:
 }
 ```
 
-### Defaults
+### 默认值
 
-When using Anthropic API Key authentication, OpenClaw automatically applies `cacheRetention: "short"` (5-minute cache) for all Anthropic models. You can override this by explicitly setting `cacheRetention` in your config.
+使用 Anthropic API 密钥认证时，OpenClaw 会自动为所有 Anthropic 模型应用 `cacheRetention: "short"`（5 分钟缓存）。您可以通过在配置中显式设置 `cacheRetention` 来覆盖该默认值。
 
-### Per-agent cacheRetention overrides
+### 每个 agent 的 cacheRetention 覆盖
 
-Use model-level params as your baseline, then override specific agents via `agents.list[].params`.
+以模型级参数作为基础，然后通过 `agents.list[].params` 覆盖特定 agent。
 
 ```json5
 {
@@ -87,47 +87,45 @@ Use model-level params as your baseline, then override specific agents via `agen
       model: { primary: "anthropic/claude-opus-4-6" },
       models: {
         "anthropic/claude-opus-4-6": {
-          params: { cacheRetention: "long" }, // baseline for most agents
+          params: { cacheRetention: "long" }, // 大多数 agent 的基础配置
         },
       },
     },
     list: [
       { id: "research", default: true },
-      { id: "alerts", params: { cacheRetention: "none" } }, // override for this agent only
+      { id: "alerts", params: { cacheRetention: "none" } }, // 仅此 agent 覆盖
     ],
   },
 }
 ```
 
-Config merge order for cache-related params:
+缓存相关参数的配置合并顺序：
 
 1. `agents.defaults.models["provider/model"].params`
-2. `agents.list[].params` (matching `id`, overrides by key)
+2. `agents.list[].params`（匹配 `id`，按键覆盖）
 
-This lets one agent keep a long-lived cache while another agent on the same model disables caching to avoid write costs on bursty/low-reuse traffic.
+这样一个 agent 可以保持长时间缓存，另一个使用相同模型的 agent 可以禁用缓存，以避免高峰/低复用流量时的写入成本。
 
-### Bedrock Claude notes
+### Bedrock Claude 说明
 
-- Anthropic Claude models on Bedrock (`amazon-bedrock/*anthropic.claude*`) accept `cacheRetention` pass-through when configured.
-- Non-Anthropic Bedrock models are forced to `cacheRetention: "none"` at runtime.
-- Anthropic API-key smart defaults also seed `cacheRetention: "short"` for Claude-on-Bedrock model refs when no explicit value is set.
+- Bedrock 上的 Anthropic Claude 模型（如 `amazon-bedrock/*anthropic.claude*`）在配置时支持传递 `cacheRetention`。
+- 非 Anthropic 的 Bedrock 模型在运行时强制设置为 `cacheRetention: "none"`。
+- Anthropic API 密钥的智能默认也会为在 Bedrock 上的 Claude 模型引用种子设置 `cacheRetention: "short"`，当未显式设置值时适用。
 
-### Legacy parameter
+### 旧参数
 
-The older `cacheControlTtl` parameter is still supported for backwards compatibility:
+为了向后兼容，仍然支持旧的 `cacheControlTtl` 参数：
 
-- `"5m"` maps to `short`
-- `"1h"` maps to `long`
+- `"5m"` 映射为 `short`
+- `"1h"` 映射为 `long`
 
-We recommend migrating to the new `cacheRetention` parameter.
+推荐迁移到新的 `cacheRetention` 参数。
 
-OpenClaw includes the `extended-cache-ttl-2025-04-11` beta flag for Anthropic API
-requests; keep it if you override provider headers (see [/gateway/configuration](/gateway/configuration)).
+OpenClaw 包含 Anthropic API 请求的 `extended-cache-ttl-2025-04-11` beta 标志；如果您覆盖了提供商头部（详见 [/gateway/configuration](/gateway/configuration)），请保留该标志。
 
-## 1M context window (Anthropic beta)
+## 1M 上下文窗口（Anthropic 测试版）
 
-Anthropic's 1M context window is beta-gated. In OpenClaw, enable it per model
-with `params.context1m: true` for supported Opus/Sonnet models.
+Anthropic 的 1M 上下文窗口处于测试版阶段。在 OpenClaw 中，可针对支持的 Opus/Sonnet 模型通过设置模型参数 `params.context1m: true` 来启用。
 
 ```json5
 {
@@ -143,53 +141,47 @@ with `params.context1m: true` for supported Opus/Sonnet models.
 }
 ```
 
-OpenClaw maps this to `anthropic-beta: context-1m-2025-08-07` on Anthropic
-requests.
+OpenClaw 会将其映射为 Anthropic 请求中的 `anthropic-beta: context-1m-2025-08-07`。
 
-This only activates when `params.context1m` is explicitly set to `true` for
-that model.
+此功能仅在模型显式设置 `params.context1m` 为 `true` 时激活。
 
-Requirement: Anthropic must allow long-context usage on that credential
-(typically API key billing, or a subscription account with Extra Usage
-enabled). Otherwise Anthropic returns:
-`HTTP 429: rate_limit_error: Extra usage is required for long context requests`.
+要求：Anthropic 必须允许该凭证使用长上下文（通常是 API 密钥计费，或开启额外使用的订阅账户）。否则 Anthropic 将返回：
+`HTTP 429: rate_limit_error: Extra usage is required for long context requests`。
 
-Note: Anthropic currently rejects `context-1m-*` beta requests when using
-OAuth/subscription tokens (`sk-ant-oat-*`). OpenClaw automatically skips the
-context1m beta header for OAuth auth and keeps the required OAuth betas.
+注意：当使用 OAuth/订阅令牌（`sk-ant-oat-*`）时，Anthropic 当前会拒绝带有 `context-1m-*` beta 的请求。OpenClaw 会自动跳过 OAuth 认证时的 context1m beta 头部，但保持所需的 OAuth beta。
 
-## Option B: Claude setup-token
+## 选项 B：Claude setup-token
 
-**Best for:** using your Claude subscription.
+**适用场景：** 使用您的 Claude 订阅。
 
-### Where to get a setup-token
+### 从何处获取 setup-token
 
-Setup-tokens are created by the **Claude Code CLI**, not the Anthropic Console. You can run this on **any machine**:
+Setup-token 由 **Claude Code CLI** 创建，而非 Anthropic 控制台。您可以在**任意机器**上运行：
 
 ```bash
 claude setup-token
 ```
 
-Paste the token into OpenClaw (wizard: **Anthropic token (paste setup-token)**), or run it on the gateway host:
+将生成的 token 粘贴到 OpenClaw（向导中选择：**Anthropic token（粘贴 setup-token）**），或者在网关主机上运行：
 
 ```bash
 openclaw models auth setup-token --provider anthropic
 ```
 
-If you generated the token on a different machine, paste it:
+如果您在另一台机器生成了 token，可以粘贴：
 
 ```bash
 openclaw models auth paste-token --provider anthropic
 ```
 
-### CLI setup (setup-token)
+### 命令行配置（setup-token）
 
 ```bash
-# Paste a setup-token during onboarding
+# 在引导配置时粘贴 setup-token
 openclaw onboard --auth-choice setup-token
 ```
 
-### Config snippet (setup-token)
+### 配置示例（setup-token）
 
 ```json5
 {
@@ -197,35 +189,33 @@ openclaw onboard --auth-choice setup-token
 }
 ```
 
-## Notes
+## 备注
 
-- Generate the setup-token with `claude setup-token` and paste it, or run `openclaw models auth setup-token` on the gateway host.
-- If you see “OAuth token refresh failed …” on a Claude subscription, re-auth with a setup-token. See [/gateway/troubleshooting#oauth-token-refresh-failed-anthropic-claude-subscription](/gateway/troubleshooting#oauth-token-refresh-failed-anthropic-claude-subscription).
-- Auth details + reuse rules are in [/concepts/oauth](/concepts/oauth).
+- 使用 `claude setup-token` 生成 setup-token 并粘贴，或在网关主机上运行 `openclaw models auth setup-token`。
+- 如果在 Claude 订阅中看到 “OAuth token refresh failed …”，请重新使用 setup-token 认证。详情见 [/gateway/troubleshooting#oauth-token-refresh-failed-anthropic-claude-subscription](/gateway/troubleshooting#oauth-token-refresh-failed-anthropic-claude-subscription)。
+- 认证细节及复用规则请参阅 [/concepts/oauth](/concepts/oauth)。
 
-## Troubleshooting
+## 故障排除
 
-**401 errors / token suddenly invalid**
+**401 错误 / 令牌突然无效**
 
-- Claude subscription auth can expire or be revoked. Re-run `claude setup-token`
-  and paste it into the **gateway host**.
-- If the Claude CLI login lives on a different machine, use
-  `openclaw models auth paste-token --provider anthropic` on the gateway host.
+- Claude 订阅认证可能过期或被吊销。请重新运行 `claude setup-token` 并粘贴至**网关主机**。
+- 如果 Claude CLI 登录保存在另一台机器上，请在网关主机运行
+  `openclaw models auth paste-token --provider anthropic`。
 
-**No API key found for provider "anthropic"**
+**找不到提供商 "anthropic" 的 API 密钥**
 
-- Auth is **per agent**. New agents don’t inherit the main agent’s keys.
-- Re-run onboarding for that agent, or paste a setup-token / API key on the
-  gateway host, then verify with `openclaw models status`.
+- 认证是**按 agent 分配**的。新建 agent 不会继承主 agent 的密钥。
+- 重新执行该 agent 的引导配置，或在网关主机粘贴 setup-token/API 密钥，然后用 `openclaw models status` 验证。
 
-**No credentials found for profile `anthropic:default`**
+**找不到配置文件 `anthropic:default` 的凭证**
 
-- Run `openclaw models status` to see which auth profile is active.
-- Re-run onboarding, or paste a setup-token / API key for that profile.
+- 运行 `openclaw models status` 查看当前激活的认证配置文件。
+- 重新引导配置，或为该配置文件粘贴 setup-token/API 密钥。
 
-**No available auth profile (all in cooldown/unavailable)**
+**无可用认证配置文件（均处于冷却/不可用状态）**
 
-- Check `openclaw models status --json` for `auth.unusableProfiles`.
-- Add another Anthropic profile or wait for cooldown.
+- 使用 `openclaw models status --json` 查看 `auth.unusableProfiles`。
+- 新增另一个 Anthropic 配置文件或等待冷却时间结束。
 
-More: [/gateway/troubleshooting](/gateway/troubleshooting) and [/help/faq](/help/faq).
+更多信息请见：[/gateway/troubleshooting](/gateway/troubleshooting) 和 [/help/faq](/help/faq)。

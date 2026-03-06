@@ -1,72 +1,72 @@
 ---
-summary: "Image and media handling rules for send, gateway, and agent replies"
+summary: "发送、网关和客服回复的图片及媒体处理规则"
 read_when:
-  - Modifying media pipeline or attachments
-title: "Image and Media Support"
+  - 修改媒体管道或附件时
+title: "图片与媒体支持"
 ---
 
-# Image & Media Support — 2025-12-05
+# 图片与媒体支持 — 2025-12-05
 
-The WhatsApp channel runs via **Baileys Web**. This document captures the current media handling rules for send, gateway, and agent replies.
+WhatsApp 通道通过 **Baileys Web** 运行。本文档记录了当前发送、网关及客服回复的媒体处理规则。
 
-## Goals
+## 目标
 
-- Send media with optional captions via `openclaw message send --media`.
-- Allow auto-replies from the web inbox to include media alongside text.
-- Keep per-type limits sane and predictable.
+- 通过 `openclaw message send --media` 发送带可选文字说明的媒体。
+- 允许网页收件箱中的自动回复包含文字和媒体。
+- 保持各类型限制合理且可预测。
 
-## CLI Surface
+## CLI 接口
 
-- `openclaw message send --media <path-or-url> [--message <caption>]`
-  - `--media` optional; caption can be empty for media-only sends.
-  - `--dry-run` prints the resolved payload; `--json` emits `{ channel, to, messageId, mediaUrl, caption }`.
+- `openclaw message send --media <路径或URL> [--message <说明>]`
+  - `--media` 可选；说明可留空实现仅发送媒体。
+  - `--dry-run` 打印解析后的负载；`--json` 输出 `{ channel, to, messageId, mediaUrl, caption }`。
 
-## WhatsApp Web channel behavior
+## WhatsApp Web 通道行为
 
-- Input: local file path **or** HTTP(S) URL.
-- Flow: load into a Buffer, detect media kind, and build the correct payload:
-  - **Images:** resize & recompress to JPEG (max side 2048px) targeting `agents.defaults.mediaMaxMb` (default 5 MB), capped at 6 MB.
-  - **Audio/Voice/Video:** pass-through up to 16 MB; audio is sent as a voice note (`ptt: true`).
-  - **Documents:** anything else, up to 100 MB, with filename preserved when available.
-- WhatsApp GIF-style playback: send an MP4 with `gifPlayback: true` (CLI: `--gif-playback`) so mobile clients loop inline.
-- MIME detection prefers magic bytes, then headers, then file extension.
-- Caption comes from `--message` or `reply.text`; empty caption is allowed.
-- Logging: non-verbose shows `↩️`/`✅`; verbose includes size and source path/URL.
+- 输入支持本地文件路径 **或** HTTP(S) URL。
+- 流程：加载为 Buffer，检测媒体类型，并构建正确的负载：
+  - **图片：** 调整尺寸并重新压缩为 JPEG（最大边长 2048px），目标大小为 `agents.defaults.mediaMaxMb`（默认 5 MB），最多 6 MB。
+  - **音频/语音/视频：** 直通，最大 16 MB；音频作为语音消息发送 (`ptt: true`)。
+  - **文档：** 其他格式，最大 100 MB，文件名可保留（若可用）。
+- WhatsApp GIF 风格播放：发送带 `gifPlayback: true` 的 MP4（CLI 使用 `--gif-playback`），使移动端可循环播放。
+- MIME 类型检测优先依赖魔术字节，然后是头部信息，最后是文件扩展名。
+- 说明文字来自 `--message` 或 `reply.text`，允许为空。
+- 日志记录：非详细模式显示 `↩️`/`✅`；详细模式包含文件大小及来源路径或 URL。
 
-## Auto-Reply Pipeline
+## 自动回复管道
 
-- `getReplyFromConfig` returns `{ text?, mediaUrl?, mediaUrls? }`.
-- When media is present, the web sender resolves local paths or URLs using the same pipeline as `openclaw message send`.
-- Multiple media entries are sent sequentially if provided.
+- `getReplyFromConfig` 返回 `{ text?, mediaUrl?, mediaUrls? }`。
+- 媒体存在时，网页发送端使用与 `openclaw message send` 相同的流程解析本地路径或 URL。
+- 多个媒体条目顺序发送。
 
-## Inbound Media to Commands (Pi)
+## 命令的入站媒体（Pi）
 
-- When inbound web messages include media, OpenClaw downloads to a temp file and exposes templating variables:
-  - `{{MediaUrl}}` pseudo-URL for the inbound media.
-  - `{{MediaPath}}` local temp path written before running the command.
-- When a per-session Docker sandbox is enabled, inbound media is copied into the sandbox workspace and `MediaPath`/`MediaUrl` are rewritten to a relative path like `media/inbound/<filename>`.
-- Media understanding (if configured via `tools.media.*` or shared `tools.media.models`) runs before templating and can insert `[Image]`, `[Audio]`, and `[Video]` blocks into `Body`.
-  - Audio sets `{{Transcript}}` and uses the transcript for command parsing so slash commands still work.
-  - Video and image descriptions preserve any caption text for command parsing.
-- By default only the first matching image/audio/video attachment is processed; set `tools.media.<cap>.attachments` to process multiple attachments.
+- 入站网页消息包含媒体时，OpenClaw 下载至临时文件并暴露模板变量：
+  - `{{MediaUrl}}` 模拟的入站媒体 URL。
+  - `{{MediaPath}}` 命令运行前写入的本地临时路径。
+- 启用每会话 Docker 沙箱时，入站媒体复制到沙箱工作区，`MediaPath`/`MediaUrl` 被重写为相对路径如 `media/inbound/<文件名>`。
+- 媒体理解（通过 `tools.media.*` 或共享 `tools.media.models` 配置）在模板渲染前执行，可以在 `Body` 中插入 `[Image]`、`[Audio]` 和 `[Video]` 块。
+  - 音频设置 `{{Transcript}}` 并使用转录文本解析命令，确保斜杠命令有效。
+  - 视频和图片描述保留任何说明文字供命令解析。
+- 默认仅处理第一个匹配的图片/音频/视频附件；设置 `tools.media.<cap>.attachments` 可处理多个附件。
 
-## Limits & Errors
+## 限制与错误
 
-**Outbound send caps (WhatsApp web send)**
+**出站发送限制（WhatsApp Web 发送）**
 
-- Images: ~6 MB cap after recompression.
-- Audio/voice/video: 16 MB cap; documents: 100 MB cap.
-- Oversize or unreadable media → clear error in logs and the reply is skipped.
+- 图片：重新压缩后大约 6 MB 限制。
+- 音频/语音/视频：16 MB 限制；文档：100 MB 限制。
+- 超大或不可读媒体 → 日志明确报错，跳过回复。
 
-**Media understanding caps (transcription/description)**
+**媒体理解限制（转录/描述）**
 
-- Image default: 10 MB (`tools.media.image.maxBytes`).
-- Audio default: 20 MB (`tools.media.audio.maxBytes`).
-- Video default: 50 MB (`tools.media.video.maxBytes`).
-- Oversize media skips understanding, but replies still go through with the original body.
+- 图片默认：10 MB（`tools.media.image.maxBytes`）。
+- 音频默认：20 MB（`tools.media.audio.maxBytes`）。
+- 视频默认：50 MB（`tools.media.video.maxBytes`）。
+- 超大媒体跳过理解，但原始正文仍正常回复。
 
-## Notes for Tests
+## 测试注意事项
 
-- Cover send + reply flows for image/audio/document cases.
-- Validate recompression for images (size bound) and voice-note flag for audio.
-- Ensure multi-media replies fan out as sequential sends.
+- 覆盖图片/音频/文档的发送与回复流程。
+- 验证图片重新压缩（大小限制）及音频的语音消息标记。
+- 确保多媒体回复按顺序逐条发送。

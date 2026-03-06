@@ -1,132 +1,127 @@
 ---
-summary: "Full reference for the CLI onboarding wizard: every step, flag, and config field"
+summary: "CLI 入门向导完整参考：每一步、每个标志和配置字段"
 read_when:
-  - Looking up a specific wizard step or flag
-  - Automating onboarding with non-interactive mode
-  - Debugging wizard behavior
-title: "Onboarding Wizard Reference"
-sidebarTitle: "Wizard Reference"
+  - 查找特定的向导步骤或标志
+  - 使用非交互模式自动化入门
+  - 调试向导行为
+title: "入门向导参考"
+sidebarTitle: "向导参考"
 ---
 
-# Onboarding Wizard Reference
+# 入门向导参考
 
-This is the full reference for the `openclaw onboard` CLI wizard.
-For a high-level overview, see [Onboarding Wizard](/start/wizard).
+这是 `openclaw onboard` CLI 向导的完整参考。
+有关概览，请参见 [入门向导](/start/wizard)。
 
-## Flow details (local mode)
+## 流程细节（本地模式）
 
 <Steps>
-  <Step title="Existing config detection">
-    - If `~/.openclaw/openclaw.json` exists, choose **Keep / Modify / Reset**.
-    - Re-running the wizard does **not** wipe anything unless you explicitly choose **Reset**
-      (or pass `--reset`).
-    - CLI `--reset` defaults to `config+creds+sessions`; use `--reset-scope full`
-      to also remove workspace.
-    - If the config is invalid or contains legacy keys, the wizard stops and asks
-      you to run `openclaw doctor` before continuing.
-    - Reset uses `trash` (never `rm`) and offers scopes:
-      - Config only
-      - Config + credentials + sessions
-      - Full reset (also removes workspace)
+  <Step title="已存在配置检测">
+    - 如果存在 `~/.openclaw/openclaw.json`，选择 **保留 / 修改 / 重置**。
+    - 重新运行向导**不会**擦除任何内容，除非你明确选择了**重置**（或传入 `--reset`）。
+    - CLI `--reset` 默认重置范围是 `config+creds+sessions`；使用 `--reset-scope full` 可同时移除工作区。
+    - 如果配置无效或包含遗留键，向导会停止并要求你先运行 `openclaw doctor`，然后才继续。
+    - 重置使用 `trash`（从不使用 `rm`），并提供以下范围选择：
+      - 仅配置
+      - 配置 + 凭证 + 会话
+      - 完全重置（也移除工作区）
   </Step>
-  <Step title="Model/Auth">
-    - **Anthropic API key**: uses `ANTHROPIC_API_KEY` if present or prompts for a key, then saves it for daemon use.
-    - **Anthropic OAuth (Claude Code CLI)**: on macOS the wizard checks Keychain item "Claude Code-credentials" (choose "Always Allow" so launchd starts don't block); on Linux/Windows it reuses `~/.claude/.credentials.json` if present.
-    - **Anthropic token (paste setup-token)**: run `claude setup-token` on any machine, then paste the token (you can name it; blank = default).
-    - **OpenAI Code (Codex) subscription (Codex CLI)**: if `~/.codex/auth.json` exists, the wizard can reuse it.
-    - **OpenAI Code (Codex) subscription (OAuth)**: browser flow; paste the `code#state`.
-      - Sets `agents.defaults.model` to `openai-codex/gpt-5.2` when model is unset or `openai/*`.
-    - **OpenAI API key**: uses `OPENAI_API_KEY` if present or prompts for a key, then stores it in auth profiles.
-    - **xAI (Grok) API key**: prompts for `XAI_API_KEY` and configures xAI as a model provider.
-    - **OpenCode Zen (multi-model proxy)**: prompts for `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`, get it at https://opencode.ai/auth).
-    - **API key**: stores the key for you.
-    - **Vercel AI Gateway (multi-model proxy)**: prompts for `AI_GATEWAY_API_KEY`.
-    - More detail: [Vercel AI Gateway](/providers/vercel-ai-gateway)
-    - **Cloudflare AI Gateway**: prompts for Account ID, Gateway ID, and `CLOUDFLARE_AI_GATEWAY_API_KEY`.
-    - More detail: [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
-    - **MiniMax M2.5**: config is auto-written.
-    - More detail: [MiniMax](/providers/minimax)
-    - **Synthetic (Anthropic-compatible)**: prompts for `SYNTHETIC_API_KEY`.
-    - More detail: [Synthetic](/providers/synthetic)
-    - **Moonshot (Kimi K2)**: config is auto-written.
-    - **Kimi Coding**: config is auto-written.
-    - More detail: [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
-    - **Skip**: no auth configured yet.
-    - Pick a default model from detected options (or enter provider/model manually). For best quality and lower prompt-injection risk, choose the strongest latest-generation model available in your provider stack.
-    - Wizard runs a model check and warns if the configured model is unknown or missing auth.
-    - API key storage mode defaults to plaintext auth-profile values. Use `--secret-input-mode ref` to store env-backed refs instead (for example `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`).
-    - OAuth credentials live in `~/.openclaw/credentials/oauth.json`; auth profiles live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (API keys + OAuth).
-    - More detail: [/concepts/oauth](/concepts/oauth)
+  <Step title="模型/认证">
+    - **Anthropic API 密钥**：如果存在环境变量 `ANTHROPIC_API_KEY` 则使用，否则提示输入密钥，随后保存供守护进程使用。
+    - **Anthropic OAuth（Claude Code CLI）**：在 macOS 上，向导检查钥匙串中名为 "Claude Code-credentials" 的条目（请选择“始终允许”，以免 launchd 启动阻塞）；在 Linux/Windows 上如果存在 `~/.claude/.credentials.json` 会复用它。
+    - **Anthropic 令牌（粘贴 setup-token）**：在任意主机运行 `claude setup-token`，然后粘贴令牌（可自定义名称，留空为默认）。
+    - **OpenAI Code（Codex）订阅（Codex CLI）**：如果存在 `~/.codex/auth.json`，向导可以重复使用它。
+    - **OpenAI Code（Codex）订阅（OAuth）**：浏览器流程；粘贴 `code#state`。
+      - 当模型未设置或为 `openai/*` 时，将设置 `agents.defaults.model` 为 `openai-codex/gpt-5.2`。
+    - **OpenAI API 密钥**：如果存在环境变量 `OPENAI_API_KEY` 则使用，否则提示输入密钥，随后存储至身份验证配置文件。
+    - **xAI (Grok) API 密钥**：提示输入 `XAI_API_KEY` 并配置 xAI 为模型提供者。
+    - **OpenCode Zen（多模型代理）**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取）。
+    - **API 密钥**：为你存储密钥。
+    - **Vercel AI Gateway（多模型代理）**：提示输入 `AI_GATEWAY_API_KEY`。
+    - 更多详情见：[Vercel AI Gateway](/providers/vercel-ai-gateway)
+    - **Cloudflare AI Gateway**：提示输入账号 ID、网关 ID 及 `CLOUDFLARE_AI_GATEWAY_API_KEY`。
+    - 更多详情见：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
+    - **MiniMax M2.5**：配置自动写入。
+    - 更多详情见：[MiniMax](/providers/minimax)
+    - **Synthetic（Anthropic 兼容）**：提示输入 `SYNTHETIC_API_KEY`。
+    - 更多详情见：[Synthetic](/providers/synthetic)
+    - **Moonshot（Kimi K2）**：配置自动写入。
+    - **Kimi Coding**：配置自动写入。
+    - 更多详情见：[Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
+    - **跳过**：尚未配置认证。
+    - 从检测到的选项中选择默认模型（或手动输入提供商/模型）。为了最佳质量与更低的提示注入风险，请选择你提供商堆栈中最强大最新一代的模型。
+    - 向导运行模型检查，如果配置的模型未知或缺少认证则发出警告。
+    - API 密钥存储模式默认使用明文的身份认证配置文件值。使用 `--secret-input-mode ref` 可改为存储基于环境的引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）。
+    - OAuth 凭据存储于 `~/.openclaw/credentials/oauth.json`；身份认证配置文件存储于 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（包含 API 密钥 + OAuth）。
+    - 更多详情见：[/concepts/oauth](/concepts/oauth)
     <Note>
-    Headless/server tip: complete OAuth on a machine with a browser, then copy
-    `~/.openclaw/credentials/oauth.json` (or `$OPENCLAW_STATE_DIR/credentials/oauth.json`) to the
-    gateway host.
+    无头/服务器提示：在有浏览器的机器上完成 OAuth，之后将 `~/.openclaw/credentials/oauth.json`（或 `$OPENCLAW_STATE_DIR/credentials/oauth.json`）复制到网关主机。
     </Note>
   </Step>
-  <Step title="Workspace">
-    - Default `~/.openclaw/workspace` (configurable).
-    - Seeds the workspace files needed for the agent bootstrap ritual.
-    - Full workspace layout + backup guide: [Agent workspace](/concepts/agent-workspace)
+  <Step title="工作区">
+    - 默认工作区路径为 `~/.openclaw/workspace`（可配置）。
+    - 预置代理引导仪式所需的工作区文件。
+    - 完整工作区布局及备份指南请参见：[代理工作区](/concepts/agent-workspace)
   </Step>
-  <Step title="Gateway">
-    - Port, bind, auth mode, tailscale exposure.
-    - Auth recommendation: keep **Token** even for loopback so local WS clients must authenticate.
-    - In token mode, interactive onboarding offers:
-      - **Generate/store plaintext token** (default)
-      - **Use SecretRef** (opt-in)
-      - Quickstart reuses existing `gateway.auth.token` SecretRefs across `env`, `file`, and `exec` providers for onboarding probe/dashboard bootstrap.
-      - If that SecretRef is configured but cannot be resolved, onboarding fails early with a clear fix message instead of silently degrading runtime auth.
-    - In password mode, interactive onboarding also supports plaintext or SecretRef storage.
-    - Non-interactive token SecretRef path: `--gateway-token-ref-env <ENV_VAR>`.
-      - Requires a non-empty env var in the onboarding process environment.
-      - Cannot be combined with `--gateway-token`.
-    - Disable auth only if you fully trust every local process.
-    - Non‑loopback binds still require auth.
+  <Step title="网关">
+    - 端口、绑定地址、认证模式、tailscale 暴露。
+    - 认证建议：即使是环回（loopback）也保持**Token**模式，这样本地 WS 客户端也必须认证。
+    - 在令牌模式下，交互式入门提供：
+      - **生成/存储明文令牌**（默认）
+      - **使用 SecretRef**（需选择）
+      - 快速入门复用现有的跨 `env`、`file` 和 `exec` 提供商的 `gateway.auth.token` SecretRef 以进行探针/仪表盘引导。
+      - 如果该 SecretRef 配置了但无法解析，入门会及早失败并给出明确的修复提示，而不是运行时静默降级认证。
+    - 在密码模式下，交互式入门也支持明文或 SecretRef 存储。
+    - 非交互式令牌 SecretRef 路径参数：`--gateway-token-ref-env <环境变量名>`。
+      - 需确保入门进程环境中该环境变量非空。
+      - 不能与 `--gateway-token` 一起使用。
+    - 只有在你完全信任所有本地进程时才禁用认证。
+    - 非环回绑定仍需认证。
   </Step>
-  <Step title="Channels">
-    - [WhatsApp](/channels/whatsapp): optional QR login.
-    - [Telegram](/channels/telegram): bot token.
-    - [Discord](/channels/discord): bot token.
-    - [Google Chat](/channels/googlechat): service account JSON + webhook audience.
-    - [Mattermost](/channels/mattermost) (plugin): bot token + base URL.
-    - [Signal](/channels/signal): optional `signal-cli` install + account config.
-    - [BlueBubbles](/channels/bluebubbles): **recommended for iMessage**; server URL + password + webhook.
-    - [iMessage](/channels/imessage): legacy `imsg` CLI path + DB access.
-    - DM security: default is pairing. First DM sends a code; approve via `openclaw pairing approve <channel> <code>` or use allowlists.
+  <Step title="频道">
+    - [WhatsApp](/channels/whatsapp)：可选二维码登录。
+    - [Telegram](/channels/telegram)：机器人令牌。
+    - [Discord](/channels/discord)：机器人令牌。
+    - [Google Chat](/channels/googlechat)：服务账号 JSON + webhook 受众。
+    - [Mattermost](/channels/mattermost)（插件）：机器人令牌 + 基础 URL。
+    - [Signal](/channels/signal)：可选安装 `signal-cli` + 账号配置。
+    - [BlueBubbles](/channels/bluebubbles)：**推荐用于 iMessage**；服务器 URL + 密码 + webhook。
+    - [iMessage](/channels/imessage)：遗留 `imsg` CLI 路径 + 数据库访问。
+    - DM 安全性：默认为配对。第一次 DM 发送验证码；可通过 `openclaw pairing approve <channel> <code>` 批准，或使用允许列表。
   </Step>
-  <Step title="Daemon install">
-    - macOS: LaunchAgent
-      - Requires a logged-in user session; for headless, use a custom LaunchDaemon (not shipped).
-    - Linux (and Windows via WSL2): systemd user unit
-      - Wizard attempts to enable lingering via `loginctl enable-linger <user>` so the Gateway stays up after logout.
-      - May prompt for sudo (writes `/var/lib/systemd/linger`); it tries without sudo first.
-    - **Runtime selection:** Node (recommended; required for WhatsApp/Telegram). Bun is **not recommended**.
-    - If token auth requires a token and `gateway.auth.token` is SecretRef-managed, daemon install validates it but does not persist resolved plaintext token values into supervisor service environment metadata.
-    - If token auth requires a token and the configured token SecretRef is unresolved, daemon install is blocked with actionable guidance.
-    - If both `gateway.auth.token` and `gateway.auth.password` are configured and `gateway.auth.mode` is unset, daemon install is blocked until mode is set explicitly.
+  <Step title="守护进程安装">
+    - macOS：LaunchAgent
+      - 需登录用户会话；无头环境请使用自定义 LaunchDaemon（不随发行包）。
+    - Linux（Windows 通过 WSL2）：systemd 用户单元
+      - 向导尝试通过 `loginctl enable-linger <user>` 使网关在注销后依然运行。
+      - 可能提示 sudo（写入 `/var/lib/systemd/linger`）；会先尝试无 sudo 执行。
+    - **运行时选择：**Node（推荐；WhatsApp/Telegram 必需）。不推荐使用 Bun。
+    - 如果令牌认证要求令牌且 `gateway.auth.token` 由 SecretRef 管理，守护进程安装会验证，但不会将已解析的明文令牌写入监管服务环境元数据。
+    - 如果令牌认证要求令牌且配置的令牌 SecretRef 无法解析，守护进程安装会阻止并给出可操作指导。
+    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，守护进程安装会阻止，直到明确设置认证模式。
   </Step>
-  <Step title="Health check">
-    - Starts the Gateway (if needed) and runs `openclaw health`.
-    - Tip: `openclaw status --deep` adds gateway health probes to status output (requires a reachable gateway).
+  <Step title="健康检查">
+    - 启动网关（如需），并运行 `openclaw health`。
+    - 提示：`openclaw status --deep` 会向状态输出添加网关健康探针（需能连接到网关）。
   </Step>
-  <Step title="Skills (recommended)">
-    - Reads the available skills and checks requirements.
-    - Lets you choose a node manager: **npm / pnpm** (bun not recommended).
-    - Installs optional dependencies (some use Homebrew on macOS).
+  <Step title="技能（推荐）">
+    - 读取可用技能并检查要求。
+    - 让你选择 Node 包管理器：**npm / pnpm**（不推荐 bun）。
+    - 安装可选依赖（部分使用 macOS Homebrew）。
   </Step>
-  <Step title="Finish">
-    - Summary + next steps, including iOS/Android/macOS apps for extra features.
+  <Step title="完成">
+    - 总结 + 下一步，包括 iOS/Android/macOS 应用享用额外功能。
   </Step>
 </Steps>
 
 <Note>
-If no GUI is detected, the wizard prints SSH port-forward instructions for the Control UI instead of opening a browser.
-If the Control UI assets are missing, the wizard attempts to build them; fallback is `pnpm ui:build` (auto-installs UI deps).
+如果未检测到 GUI，向导会打印 SSH 端口转发指令以访问控制 UI，而非打开浏览器。
+如果控制 UI 资产缺失，向导会尝试构建它们；备用命令为 `pnpm ui:build`（自动安装 UI 依赖）。
 </Note>
 
-## Non-interactive mode
+## 非交互模式
 
-Use `--non-interactive` to automate or script onboarding:
+使用 `--non-interactive` 来自动化或脚本化入门流程：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -140,9 +135,9 @@ openclaw onboard --non-interactive \
   --skip-skills
 ```
 
-Add `--json` for a machine‑readable summary.
+添加 `--json` 可输出机器可读摘要。
 
-Gateway token SecretRef in non-interactive mode:
+非交互模式下的网关令牌 SecretRef：
 
 ```bash
 export OPENCLAW_GATEWAY_TOKEN="your-token"
@@ -153,14 +148,14 @@ openclaw onboard --non-interactive \
   --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN
 ```
 
-`--gateway-token` and `--gateway-token-ref-env` are mutually exclusive.
+`--gateway-token` 与 `--gateway-token-ref-env` 不能同时使用。
 
 <Note>
-`--json` does **not** imply non-interactive mode. Use `--non-interactive` (and `--workspace`) for scripts.
+`--json` 不意味着非交互模式。脚本应使用 `--non-interactive`（和 `--workspace`）。
 </Note>
 
 <AccordionGroup>
-  <Accordion title="Gemini example">
+  <Accordion title="Gemini 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -170,7 +165,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="Z.AI example">
+  <Accordion title="Z.AI 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -180,7 +175,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="Vercel AI Gateway example">
+  <Accordion title="Vercel AI Gateway 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -190,7 +185,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="Cloudflare AI Gateway example">
+  <Accordion title="Cloudflare AI Gateway 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -202,7 +197,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="Moonshot example">
+  <Accordion title="Moonshot 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -212,7 +207,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="Synthetic example">
+  <Accordion title="Synthetic 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -222,7 +217,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="OpenCode Zen example">
+  <Accordion title="OpenCode Zen 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -234,7 +229,7 @@ openclaw onboard --non-interactive \
   </Accordion>
 </AccordionGroup>
 
-### Add agent (non-interactive)
+### 添加代理（非交互）
 
 ```bash
 openclaw agents add work \
@@ -245,36 +240,36 @@ openclaw agents add work \
   --json
 ```
 
-## Gateway wizard RPC
+## 网关向导 RPC
 
-The Gateway exposes the wizard flow over RPC (`wizard.start`, `wizard.next`, `wizard.cancel`, `wizard.status`).
-Clients (macOS app, Control UI) can render steps without re‑implementing onboarding logic.
+网关通过 RPC (`wizard.start`，`wizard.next`，`wizard.cancel`，`wizard.status`) 暴露向导流程。
+客户端（macOS 应用、控制 UI）可以呈现步骤，无需重新实现入门逻辑。
 
-## Signal setup (signal-cli)
+## Signal 设置（signal-cli）
 
-The wizard can install `signal-cli` from GitHub releases:
+向导可以从 GitHub 发行版安装 `signal-cli`：
 
-- Downloads the appropriate release asset.
-- Stores it under `~/.openclaw/tools/signal-cli/<version>/`.
-- Writes `channels.signal.cliPath` to your config.
+- 下载对应的发行版资产。
+- 存储于 `~/.openclaw/tools/signal-cli/<version>/`。
+- 将 `channels.signal.cliPath` 写入你的配置。
 
-Notes:
+说明：
 
-- JVM builds require **Java 21**.
-- Native builds are used when available.
-- Windows uses WSL2; signal-cli install follows the Linux flow inside WSL.
+- JVM 版本需要 **Java 21**。
+- 如果有本地版本则使用本地构建的。
+- Windows 使用 WSL2；signal-cli 安装流程在 WSL 内遵循 Linux 路径。
 
-## What the wizard writes
+## 向导写入内容
 
-Typical fields in `~/.openclaw/openclaw.json`:
+`~/.openclaw/openclaw.json` 中的典型字段：
 
 - `agents.defaults.workspace`
-- `agents.defaults.model` / `models.providers` (if Minimax chosen)
-- `tools.profile` (local onboarding defaults to `"messaging"` when unset; existing explicit values are preserved)
-- `gateway.*` (mode, bind, auth, tailscale)
-- `session.dmScope` (behavior details: [CLI Onboarding Reference](/start/wizard-cli-reference#outputs-and-internals))
-- `channels.telegram.botToken`, `channels.discord.token`, `channels.signal.*`, `channels.imessage.*`
-- Channel allowlists (Slack/Discord/Matrix/Microsoft Teams) when you opt in during the prompts (names resolve to IDs when possible).
+- `agents.defaults.model` / `models.providers`（如果选择 Minimax）
+- `tools.profile`（本地入门默认是 `"messaging"`，已有显式值保留）
+- `gateway.*`（模式、绑定、认证、tailscale）
+- `session.dmScope`（行为细节见：[CLI 入门参考](/start/wizard-cli-reference#outputs-and-internals)）
+- `channels.telegram.botToken`，`channels.discord.token`，`channels.signal.*`，`channels.imessage.*`
+- 频道允许列表（Slack/Discord/Matrix/Microsoft Teams），在选择时启用（名称会尽可能解析为 ID）。
 - `skills.install.nodeManager`
 - `wizard.lastRunAt`
 - `wizard.lastRunVersion`
@@ -282,18 +277,17 @@ Typical fields in `~/.openclaw/openclaw.json`:
 - `wizard.lastRunCommand`
 - `wizard.lastRunMode`
 
-`openclaw agents add` writes `agents.list[]` and optional `bindings`.
+`openclaw agents add` 会写入 `agents.list[]` 和可选绑定。
 
-WhatsApp credentials go under `~/.openclaw/credentials/whatsapp/<accountId>/`.
-Sessions are stored under `~/.openclaw/agents/<agentId>/sessions/`.
+WhatsApp 凭证存储于 `~/.openclaw/credentials/whatsapp/<accountId>/`。
+会话存储于 `~/.openclaw/agents/<agentId>/sessions/`。
 
-Some channels are delivered as plugins. When you pick one during onboarding, the wizard
-will prompt to install it (npm or a local path) before it can be configured.
+部分频道以插件形式提供。入门时选定后，向导会提示安装该插件（npm 或本地路径），然后才能配置。
 
-## Related docs
+## 相关文档
 
-- Wizard overview: [Onboarding Wizard](/start/wizard)
-- macOS app onboarding: [Onboarding](/start/onboarding)
-- Config reference: [Gateway configuration](/gateway/configuration)
-- Providers: [WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord), [Google Chat](/channels/googlechat), [Signal](/channels/signal), [BlueBubbles](/channels/bluebubbles) (iMessage), [iMessage](/channels/imessage) (legacy)
-- Skills: [Skills](/tools/skills), [Skills config](/tools/skills-config)
+- 向导概览：[入门向导](/start/wizard)
+- macOS 应用入门：[入门](/start/onboarding)
+- 配置参考：[网关配置](/gateway/configuration)
+- 提供商：[WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord), [Google Chat](/channels/googlechat), [Signal](/channels/signal), [BlueBubbles](/channels/bluebubbles)（iMessage）, [iMessage](/channels/imessage)（遗留）
+- 技能：[技能](/tools/skills), [技能配置](/tools/skills-config)

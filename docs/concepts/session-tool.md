@@ -1,119 +1,119 @@
 ---
-summary: "Agent session tools for listing sessions, fetching history, and sending cross-session messages"
+summary: "代理会话工具，用于列出会话、获取历史记录及发送跨会话消息"
 read_when:
-  - Adding or modifying session tools
-title: "Session Tools"
+  - 添加或修改会话工具时
+title: "会话工具"
 ---
 
-# Session Tools
+# 会话工具
 
-Goal: small, hard-to-misuse tool set so agents can list sessions, fetch history, and send to another session.
+目标：设计一组小巧且难以误用的工具，允许代理列出会话、获取历史并向另一个会话发送消息。
 
-## Tool Names
+## 工具名称
 
 - `sessions_list`
 - `sessions_history`
 - `sessions_send`
 - `sessions_spawn`
 
-## Key Model
+## 关键模型
 
-- Main direct chat bucket is always the literal key `"main"` (resolved to the current agent’s main key).
-- Group chats use `agent:<agentId>:<channel>:group:<id>` or `agent:<agentId>:<channel>:channel:<id>` (pass the full key).
-- Cron jobs use `cron:<job.id>`.
-- Hooks use `hook:<uuid>` unless explicitly set.
-- Node sessions use `node-<nodeId>` unless explicitly set.
+- 主要直接聊天桶始终是字面键 `"main"`（解析为当前代理的主键）。
+- 群组聊天使用 `agent:<agentId>:<channel>:group:<id>` 或 `agent:<agentId>:<channel>:channel:<id>`（传递完整键）。
+- 定时任务使用 `cron:<job.id>`。
+- 钩子使用 `hook:<uuid>`，除非明确设置。
+- 节点会话使用 `node-<nodeId>`，除非明确设置。
 
-`global` and `unknown` are reserved values and are never listed. If `session.scope = "global"`, we alias it to `main` for all tools so callers never see `global`.
+`global` 和 `unknown` 是保留值，永远不会出现在列表中。如果 `session.scope = "global"`，我们将在所有工具中将其别名为 `main`，这样调用者永远不会看到 `global`。
 
 ## sessions_list
 
-List sessions as an array of rows.
+以行数组形式列出会话。
 
-Parameters:
+参数：
 
-- `kinds?: string[]` filter: any of `"main" | "group" | "cron" | "hook" | "node" | "other"`
-- `limit?: number` max rows (default: server default, clamp e.g. 200)
-- `activeMinutes?: number` only sessions updated within N minutes
-- `messageLimit?: number` 0 = no messages (default 0); >0 = include last N messages
+- `kinds?: string[]` 过滤器：任意 `"main" | "group" | "cron" | "hook" | "node" | "other"`
+- `limit?: number` 最大行数（默认：服务器默认，限制例如200）
+- `activeMinutes?: number` 仅返回最近 N 分钟内更新的会话
+- `messageLimit?: number` 0 = 无消息（默认0）；>0 = 包含最近 N 条消息
 
-Behavior:
+行为：
 
-- `messageLimit > 0` fetches `chat.history` per session and includes the last N messages.
-- Tool results are filtered out in list output; use `sessions_history` for tool messages.
-- When running in a **sandboxed** agent session, session tools default to **spawned-only visibility** (see below).
+- 当 `messageLimit > 0`，为每个会话获取 `chat.history`，并包括最近 N 条消息。
+- 工具结果会被过滤出列表输出；使用 `sessions_history` 获取工具消息。
+- 在 **沙箱环境**代理会话中运行时，会话工具默认只显示 **已生成的会话**（见下文）。
 
-Row shape (JSON):
+行结构（JSON）：
 
-- `key`: session key (string)
-- `kind`: `main | group | cron | hook | node | other`
-- `channel`: `whatsapp | telegram | discord | signal | imessage | webchat | internal | unknown`
-- `displayName` (group display label if available)
-- `updatedAt` (ms)
+- `key`：会话键（字符串）
+- `kind`：`main | group | cron | hook | node | other`
+- `channel`：`whatsapp | telegram | discord | signal | imessage | webchat | internal | unknown`
+- `displayName`（如果有，群组显示标签）
+- `updatedAt`（毫秒）
 - `sessionId`
-- `model`, `contextTokens`, `totalTokens`
-- `thinkingLevel`, `verboseLevel`, `systemSent`, `abortedLastRun`
-- `sendPolicy` (session override if set)
-- `lastChannel`, `lastTo`
-- `deliveryContext` (normalized `{ channel, to, accountId }` when available)
-- `transcriptPath` (best-effort path derived from store dir + sessionId)
-- `messages?` (only when `messageLimit > 0`)
+- `model`、`contextTokens`、`totalTokens`
+- `thinkingLevel`、`verboseLevel`、`systemSent`、`abortedLastRun`
+- `sendPolicy`（如果设置，表示会话覆盖）
+- `lastChannel`、`lastTo`
+- `deliveryContext`（当可用时，归一化的 `{ channel, to, accountId }`）
+- `transcriptPath`（从存储目录 + sessionId 最佳推断路径）
+- `messages?`（仅当 `messageLimit > 0` 时）
 
 ## sessions_history
 
-Fetch transcript for one session.
+获取单个会话的聊天记录。
 
-Parameters:
+参数：
 
-- `sessionKey` (required; accepts session key or `sessionId` from `sessions_list`)
-- `limit?: number` max messages (server clamps)
-- `includeTools?: boolean` (default false)
+- `sessionKey`（必需；接受会话键或 `sessions_list` 返回的 `sessionId`）
+- `limit?: number` 最大消息数（服务器限制）
+- `includeTools?: boolean`（默认 false）
 
-Behavior:
+行为：
 
-- `includeTools=false` filters `role: "toolResult"` messages.
-- Returns messages array in the raw transcript format.
-- When given a `sessionId`, OpenClaw resolves it to the corresponding session key (missing ids error).
+- `includeTools=false` 时，过滤掉 `role: "toolResult"` 消息。
+- 返回消息数组，格式为原始聊天记录格式。
+- 如果传入 `sessionId`，OpenClaw 会将其解析为对应的会话键（缺失ID会报错）。
 
 ## sessions_send
 
-Send a message into another session.
+向另一个会话发送消息。
 
-Parameters:
+参数：
 
-- `sessionKey` (required; accepts session key or `sessionId` from `sessions_list`)
-- `message` (required)
-- `timeoutSeconds?: number` (default >0; 0 = fire-and-forget)
+- `sessionKey`（必需；接受会话键或 `sessions_list` 返回的 `sessionId`）
+- `message`（必需）
+- `timeoutSeconds?: number`（默认 >0；0 表示发送即忘）
 
-Behavior:
+行为：
 
-- `timeoutSeconds = 0`: enqueue and return `{ runId, status: "accepted" }`.
-- `timeoutSeconds > 0`: wait up to N seconds for completion, then return `{ runId, status: "ok", reply }`.
-- If wait times out: `{ runId, status: "timeout", error }`. Run continues; call `sessions_history` later.
-- If the run fails: `{ runId, status: "error", error }`.
-- Announce delivery runs after the primary run completes and is best-effort; `status: "ok"` does not guarantee the announce was delivered.
-- Waits via gateway `agent.wait` (server-side) so reconnects don't drop the wait.
-- Agent-to-agent message context is injected for the primary run.
-- Inter-session messages are persisted with `message.provenance.kind = "inter_session"` so transcript readers can distinguish routed agent instructions from external user input.
-- After the primary run completes, OpenClaw runs a **reply-back loop**:
-  - Round 2+ alternates between requester and target agents.
-  - Reply exactly `REPLY_SKIP` to stop the ping‑pong.
-  - Max turns is `session.agentToAgent.maxPingPongTurns` (0–5, default 5).
-- Once the loop ends, OpenClaw runs the **agent‑to‑agent announce step** (target agent only):
-  - Reply exactly `ANNOUNCE_SKIP` to stay silent.
-  - Any other reply is sent to the target channel.
-  - Announce step includes the original request + round‑1 reply + latest ping‑pong reply.
+- `timeoutSeconds = 0`：入队并立即返回 `{ runId, status: "accepted" }`。
+- `timeoutSeconds > 0`：最多等待 N 秒完成，然后返回 `{ runId, status: "ok", reply }`。
+- 如果等待超时：返回 `{ runId, status: "timeout", error }`。运行继续；稍后调用 `sessions_history` 查询。
+- 如果运行失败：返回 `{ runId, status: "error", error }`。
+- 主要运行完成后进行公告（announce）运行，属于尽力而为；`status: "ok"` 不保证公告已送达。
+- 通过网关 `agent.wait` 等待（服务器端），以保证断线重连不丢失等待。
+- 主运行注入了代理间消息上下文。
+- 跨会话消息持久化时，`message.provenance.kind = "inter_session"`，使聊天记录阅读者能区分路由代理指令和外部用户输入。
+- 主运行完成后，OpenClaw 开启 **回复循环**：
+  - 第2轮及以后在请求方和目标代理间轮流。
+  - 回复精确为 `REPLY_SKIP` 可停止回合。
+  - 最大回合数为 `session.agentToAgent.maxPingPongTurns`（0–5，默认5）。
+- 循环结束后，OpenClaw 启动 **代理间公告阶段**（仅目标代理）：
+  - 若回复精确为 `ANNOUNCE_SKIP` 则保持静默。
+  - 其他回复发往目标频道。
+  - 公告步骤包含原始请求 + 第1轮回复 + 最新回合回复。
 
-## Channel Field
+## channel 字段
 
-- For groups, `channel` is the channel recorded on the session entry.
-- For direct chats, `channel` maps from `lastChannel`.
-- For cron/hook/node, `channel` is `internal`.
-- If missing, `channel` is `unknown`.
+- 群组聊天，`channel` 为会话条目记录的频道。
+- 直接聊天，`channel` 映射自 `lastChannel`。
+- 定时任务/钩子/节点，`channel` 为 `internal`。
+- 若缺失，`channel` 为 `unknown`。
 
-## Security / Send Policy
+## 安全 / 发送策略
 
-Policy-based blocking by channel/chat type (not per session id).
+基于策略的阻止，按频道/聊天类型（非单会话ID）控制。
 
 ```json
 {
@@ -131,93 +131,93 @@ Policy-based blocking by channel/chat type (not per session id).
 }
 ```
 
-Runtime override (per session entry):
+运行时覆盖（每会话条目）：
 
-- `sendPolicy: "allow" | "deny"` (unset = inherit config)
-- Settable via `sessions.patch` or owner-only `/send on|off|inherit` (standalone message).
+- `sendPolicy: "allow" | "deny"`（未设置时继承配置）
+- 可通过 `sessions.patch` 或仅限拥有者的 `/send on|off|inherit`（独立消息）设置。
 
-Enforcement points:
+执行点：
 
-- `chat.send` / `agent` (gateway)
-- auto-reply delivery logic
+- `chat.send` / `agent`（网关）
+- 自动回复投递逻辑
 
 ## sessions_spawn
 
-Spawn a sub-agent run in an isolated session and announce the result back to the requester chat channel.
+在隔离会话中启动子代理运行，并将结果公告回请求者聊天频道。
 
-Parameters:
+参数：
 
-- `task` (required)
-- `label?` (optional; used for logs/UI)
-- `agentId?` (optional; spawn under another agent id if allowed)
-- `model?` (optional; overrides the sub-agent model; invalid values error)
-- `thinking?` (optional; overrides thinking level for the sub-agent run)
-- `runTimeoutSeconds?` (defaults to `agents.defaults.subagents.runTimeoutSeconds` when set, otherwise `0`; when set, aborts the sub-agent run after N seconds)
-- `thread?` (default false; request thread-bound routing for this spawn when supported by the channel/plugin)
-- `mode?` (`run|session`; defaults to `run`, but defaults to `session` when `thread=true`; `mode="session"` requires `thread=true`)
-- `cleanup?` (`delete|keep`, default `keep`)
-- `sandbox?` (`inherit|require`, default `inherit`; `require` rejects spawn unless the target child runtime is sandboxed)
-- `attachments?` (optional array of inline files; subagent runtime only, ACP rejects). Each entry: `{ name, content, encoding?: "utf8" | "base64", mimeType? }`. Files are materialized into the child workspace at `.openclaw/attachments/<uuid>/`. Returns a receipt with sha256 per file.
-- `attachAs?` (optional; `{ mountPath? }` hint reserved for future mount implementations)
+- `task`（必需）
+- `label?`（可选，用于日志/UI）
+- `agentId?`（可选，如允许则可以在另一个代理ID下启动）
+- `model?`（可选，覆盖子代理模型；无效值报错）
+- `thinking?`（可选，覆盖子代理运行的思考等级）
+- `runTimeoutSeconds?`（设置时默认为 `agents.defaults.subagents.runTimeoutSeconds`，否则为 `0`；设置则在 N 秒后中止子代理运行）
+- `thread?`（默认 false；请求线程绑定路由，若频道/插件支持）
+- `mode?`（`run|session`；默认 `run`，但当 `thread=true` 时默认 `session`；`mode="session"` 需要 `thread=true`）
+- `cleanup?`（`delete|keep`，默认 `keep`）
+- `sandbox?`（`inherit|require`，默认 `inherit`；`require` 拒绝启动目标非沙箱运行）
+- `attachments?`（可选的内联文件数组；仅子代理运行有效，ACP 拒绝）。每条目：`{ name, content, encoding?: "utf8" | "base64", mimeType? }`。文件会在子工作区 `.openclaw/attachments/<uuid>/` 中实化。每文件返回 sha256 收据。
+- `attachAs?`（可选；保留未来挂载用法的 `{ mountPath? }` 提示）
 
-Allowlist:
+白名单：
 
-- `agents.list[].subagents.allowAgents`: list of agent ids allowed via `agentId` (`["*"]` to allow any). Default: only the requester agent.
-- Sandbox inheritance guard: if the requester session is sandboxed, `sessions_spawn` rejects targets that would run unsandboxed.
+- `agents.list[].subagents.allowAgents`：允许通过 `agentId` 启动的代理ID列表（`["*"]` 表示允许任何）。默认仅允许请求者代理。
+- 沙箱继承保护：请求会话为沙箱环境时，`sessions_spawn` 拒绝启动非沙箱目标。
 
-Discovery:
+发现：
 
-- Use `agents_list` to discover which agent ids are allowed for `sessions_spawn`.
+- 使用 `agents_list` 查询哪些代理ID允许 `sessions_spawn`。
 
-Behavior:
+行为：
 
-- Starts a new `agent:<agentId>:subagent:<uuid>` session with `deliver: false`.
-- Sub-agents default to the full tool set **minus session tools** (configurable via `tools.subagents.tools`).
-- Sub-agents are not allowed to call `sessions_spawn` (no sub-agent → sub-agent spawning).
-- Always non-blocking: returns `{ status: "accepted", runId, childSessionKey }` immediately.
-- With `thread=true`, channel plugins can bind delivery/routing to a thread target (Discord support is controlled by `session.threadBindings.*` and `channels.discord.threadBindings.*`).
-- After completion, OpenClaw runs a sub-agent **announce step** and posts the result to the requester chat channel.
-  - If the assistant final reply is empty, the latest `toolResult` from sub-agent history is included as `Result`.
-- Reply exactly `ANNOUNCE_SKIP` during the announce step to stay silent.
-- Announce replies are normalized to `Status`/`Result`/`Notes`; `Status` comes from runtime outcome (not model text).
-- Sub-agent sessions are auto-archived after `agents.defaults.subagents.archiveAfterMinutes` (default: 60).
-- Announce replies include a stats line (runtime, tokens, sessionKey/sessionId, transcript path, and optional cost).
+- 启动新会话：`agent:<agentId>:subagent:<uuid>`，`deliver: false`。
+- 子代理默认拥有完整工具集，**不含会话工具**（可配置于 `tools.subagents.tools`）。
+- 子代理不可调用 `sessions_spawn`（禁止子代理再生成子代理）。
+- 永远非阻塞：立即返回 `{ status: "accepted", runId, childSessionKey }`。
+- `thread=true` 时，频道插件可绑定投递/路由至线程目标（Discord 支持由 `session.threadBindings.*` 和 `channels.discord.threadBindings.*` 控制）。
+- 完成后，OpenClaw 执行子代理 **公告步骤**，并将结果发布至请求者聊天频道。
+  - 若助手最终回复为空，则包含子代理历史中最新的 `toolResult` 作为 `Result`。
+- 在公告步骤中回复精确 `ANNOUNCE_SKIP` 保持静默。
+- 公告回复规范化为 `Status`/`Result`/`Notes`；`Status` 来源于运行结果（非模型文本）。
+- 子代理会话会在 `agents.defaults.subagents.archiveAfterMinutes`（默认60分钟）后自动归档。
+- 公告回复包含统计行（运行时间，令牌数，会话键/ID，聊天记录路径及可选成本）。
 
-## Sandbox Session Visibility
+## 沙箱会话可见性
 
-Session tools can be scoped to reduce cross-session access.
+会话工具可设置作用范围以减少跨会话访问。
 
-Default behavior:
+默认行为：
 
-- `tools.sessions.visibility` defaults to `tree` (current session + spawned subagent sessions).
-- For sandboxed sessions, `agents.defaults.sandbox.sessionToolsVisibility` can hard-clamp visibility.
+- `tools.sessions.visibility` 默认值为 `tree`（当前会话 + 其生成的子代理会话）。
+- 沙箱会话中，`agents.defaults.sandbox.sessionToolsVisibility` 可强制限制可见性。
 
-Config:
+配置示例：
 
 ```json5
 {
   tools: {
     sessions: {
       // "self" | "tree" | "agent" | "all"
-      // default: "tree"
+      // 默认: "tree"
       visibility: "tree",
     },
   },
   agents: {
     defaults: {
       sandbox: {
-        // default: "spawned"
-        sessionToolsVisibility: "spawned", // or "all"
+        // 默认: "spawned"
+        sessionToolsVisibility: "spawned", // 或 "all"
       },
     },
   },
 }
 ```
 
-Notes:
+说明：
 
-- `self`: only the current session key.
-- `tree`: current session + sessions spawned by the current session.
-- `agent`: any session belonging to the current agent id.
-- `all`: any session (cross-agent access still requires `tools.agentToAgent`).
-- When a session is sandboxed and `sessionToolsVisibility="spawned"`, OpenClaw clamps visibility to `tree` even if you set `tools.sessions.visibility="all"`.
+- `self`：仅当前会话键可见。
+- `tree`：当前会话 + 当前会话生成的会话。
+- `agent`：当前代理ID所属的所有会话。
+- `all`：任何会话（跨代理访问仍需 `tools.agentToAgent` 权限）。
+- 当会话位于沙箱且 `sessionToolsVisibility="spawned"` 时，即使设置 `tools.sessions.visibility="all"`，OpenClaw 也会强制将可见性限制为 `tree`。

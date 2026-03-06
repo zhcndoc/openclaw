@@ -1,252 +1,252 @@
 ---
-summary: "OpenClaw on Oracle Cloud (Always Free ARM)"
+summary: "Oracle 云上的 OpenClaw（永久免费 ARM）"
 read_when:
-  - Setting up OpenClaw on Oracle Cloud
-  - Looking for low-cost VPS hosting for OpenClaw
-  - Want 24/7 OpenClaw on a small server
-title: "Oracle Cloud"
+  - 在 Oracle 云上设置 OpenClaw
+  - 寻找低成本 VPS 托管运行 OpenClaw
+  - 想要在小型服务器上 24/7 运行 OpenClaw
+title: "Oracle 云"
 ---
 
-# OpenClaw on Oracle Cloud (OCI)
+# Oracle 云上的 OpenClaw (OCI)
 
-## Goal
+## 目标
 
-Run a persistent OpenClaw Gateway on Oracle Cloud's **Always Free** ARM tier.
+在 Oracle 云的 **永久免费** ARM 级别上运行持久化的 OpenClaw 网关。
 
-Oracle’s free tier can be a great fit for OpenClaw (especially if you already have an OCI account), but it comes with tradeoffs:
+Oracle 的免费套餐非常适合运行 OpenClaw（尤其是如果你已经拥有 OCI 账号），但存在一些权衡：
 
-- ARM architecture (most things work, but some binaries may be x86-only)
-- Capacity and signup can be finicky
+- ARM 架构（大多数程序可用，但部分二进制文件可能仅支持 x86）
+- 容量有限，注册时可能会碰到问题
 
-## Cost Comparison (2026)
+## 成本比较 (2026)
 
-| Provider     | Plan            | Specs                  | Price/mo | Notes                 |
-| ------------ | --------------- | ---------------------- | -------- | --------------------- |
-| Oracle Cloud | Always Free ARM | up to 4 OCPU, 24GB RAM | $0       | ARM, limited capacity |
-| Hetzner      | CX22            | 2 vCPU, 4GB RAM        | ~ $4     | Cheapest paid option  |
-| DigitalOcean | Basic           | 1 vCPU, 1GB RAM        | $6       | Easy UI, good docs    |
-| Vultr        | Cloud Compute   | 1 vCPU, 1GB RAM        | $6       | Many locations        |
-| Linode       | Nanode          | 1 vCPU, 1GB RAM        | $5       | Now part of Akamai    |
+| 提供商       | 方案             | 配置                      | 月价    | 备注                  |
+| ------------ | ---------------- | ------------------------- | ------- | --------------------- |
+| Oracle 云    | 永久免费 ARM     | 高达 4 OCPU，24GB 内存      | $0      | ARM 架构，容量有限     |
+| Hetzner      | CX22             | 2 vCPU，4GB 内存           | 约 $4   | 最便宜的付费选项       |
+| DigitalOcean | 基础版           | 1 vCPU，1GB 内存           | $6      | 界面简洁，文档良好     |
+| Vultr        | 云计算           | 1 vCPU，1GB 内存           | $6      | 多地区可选             |
+| Linode       | Nanode           | 1 vCPU，1GB 内存           | $5      | 现为 Akamai 一部分      |
 
 ---
 
-## Prerequisites
+## 前置条件
 
-- Oracle Cloud account ([signup](https://www.oracle.com/cloud/free/)) — see [community signup guide](https://gist.github.com/rssnyder/51e3cfedd730e7dd5f4a816143b25dbd) if you hit issues
-- Tailscale account (free at [tailscale.com](https://tailscale.com))
-- ~30 minutes
+- Oracle 云账号（[注册](https://www.oracle.com/cloud/free/)） — 如遇到问题，请参见 [社区注册指南](https://gist.github.com/rssnyder/51e3cfedd730e7dd5f4a816143b25dbd)
+- Tailscale 账号（免费，详见 [tailscale.com](https://tailscale.com)）
+- 约 30 分钟时间
 
-## 1) Create an OCI Instance
+## 1) 创建 OCI 实例
 
-1. Log into [Oracle Cloud Console](https://cloud.oracle.com/)
-2. Navigate to **Compute → Instances → Create Instance**
-3. Configure:
-   - **Name:** `openclaw`
-   - **Image:** Ubuntu 24.04 (aarch64)
-   - **Shape:** `VM.Standard.A1.Flex` (Ampere ARM)
-   - **OCPUs:** 2 (or up to 4)
-   - **Memory:** 12 GB (or up to 24 GB)
-   - **Boot volume:** 50 GB (up to 200 GB free)
-   - **SSH key:** Add your public key
-4. Click **Create**
-5. Note the public IP address
+1. 登录 [Oracle 云控制台](https://cloud.oracle.com/)
+2. 进入 **计算 → 实例 → 创建实例**
+3. 配置：
+   - **名称：** `openclaw`
+   - **镜像：** Ubuntu 24.04 (aarch64)
+   - **规格：** `VM.Standard.A1.Flex`（Ampere ARM）
+   - **OCPU 数量：** 2（或最多 4 个）
+   - **内存：** 12 GB（或最多 24 GB）
+   - **启动卷：** 50 GB（最多免费 200 GB）
+   - **SSH 密钥：** 添加你的公钥
+4. 点击 **创建**
+5. 记下公网 IP 地址
 
-**Tip:** If instance creation fails with "Out of capacity", try a different availability domain or retry later. Free tier capacity is limited.
+**提示：** 如果创建失败提示“容量不足”，请尝试更换可用域或稍后重试。免费层容量有限。
 
-## 2) Connect and Update
+## 2) 连接并更新系统
 
 ```bash
-# Connect via public IP
-ssh ubuntu@YOUR_PUBLIC_IP
+# 通过公网 IP 连接
+ssh ubuntu@你的公网IP
 
-# Update system
+# 更新系统
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential
 ```
 
-**Note:** `build-essential` is required for ARM compilation of some dependencies.
+**注意：** `build-essential` 是编译某些 ARM 依赖时必需的。
 
-## 3) Configure User and Hostname
+## 3) 配置用户和主机名
 
 ```bash
-# Set hostname
+# 设置主机名
 sudo hostnamectl set-hostname openclaw
 
-# Set password for ubuntu user
+# 设置 ubuntu 用户密码
 sudo passwd ubuntu
 
-# Enable lingering (keeps user services running after logout)
+# 启用 linger（用户注销后保持服务运行）
 sudo loginctl enable-linger ubuntu
 ```
 
-## 4) Install Tailscale
+## 4) 安装 Tailscale
 
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up --ssh --hostname=openclaw
 ```
 
-This enables Tailscale SSH, so you can connect via `ssh openclaw` from any device on your tailnet — no public IP needed.
+这启用了 Tailscale SSH，允许你从任何 tailnet 设备通过 `ssh openclaw` 连接，无需公网 IP。
 
-Verify:
+验证：
 
 ```bash
 tailscale status
 ```
 
-**From now on, connect via Tailscale:** `ssh ubuntu@openclaw` (or use the Tailscale IP).
+**从此之后，通过 Tailscale 连接：** `ssh ubuntu@openclaw`（或使用 Tailscale IP）。
 
-## 5) Install OpenClaw
+## 5) 安装 OpenClaw
 
 ```bash
 curl -fsSL https://openclaw.ai/install.sh | bash
 source ~/.bashrc
 ```
 
-When prompted "How do you want to hatch your bot?", select **"Do this later"**.
+遇到“你想如何孵化机器人？”时，选择 **“稍后再做”**。
 
-> Note: If you hit ARM-native build issues, start with system packages (e.g. `sudo apt install -y build-essential`) before reaching for Homebrew.
+> 注意：遇到 ARM 原生编译问题时，先尝试安装系统包（如 `sudo apt install -y build-essential`），再考虑 Homebrew。
 
-## 6) Configure Gateway (loopback + token auth) and enable Tailscale Serve
+## 6) 配置网关（环回 + Token 认证）并启用 Tailscale Serve
 
-Use token auth as the default. It’s predictable and avoids needing any “insecure auth” Control UI flags.
+默认使用 Token 认证。可预测且无需开启任何“不安全认证”控制界面选项。
 
 ```bash
-# Keep the Gateway private on the VM
+# 保持网关仅限本机访问
 openclaw config set gateway.bind loopback
 
-# Require auth for the Gateway + Control UI
+# 要求网关及控制界面认证
 openclaw config set gateway.auth.mode token
 openclaw doctor --generate-gateway-token
 
-# Expose over Tailscale Serve (HTTPS + tailnet access)
+# 通过 Tailscale Serve（HTTPS + tailnet 访问）暴露
 openclaw config set gateway.tailscale.mode serve
 openclaw config set gateway.trustedProxies '["127.0.0.1"]'
 
 systemctl --user restart openclaw-gateway
 ```
 
-## 7) Verify
+## 7) 验证
 
 ```bash
-# Check version
+# 查看版本
 openclaw --version
 
-# Check daemon status
+# 查看守护进程状态
 systemctl --user status openclaw-gateway
 
-# Check Tailscale Serve
+# 查看 Tailscale Serve 状态
 tailscale serve status
 
-# Test local response
+# 本地测试响应
 curl http://localhost:18789
 ```
 
-## 8) Lock Down VCN Security
+## 8) 锁定 VCN 安全性
 
-Now that everything is working, lock down the VCN to block all traffic except Tailscale. OCI's Virtual Cloud Network acts as a firewall at the network edge — traffic is blocked before it reaches your instance.
+一切正常后，锁定 VCN，仅允许 Tailscale 流量。OCI 的虚拟云网络是网络边界防火墙——流量在抵达实例前即被阻断。
 
-1. Go to **Networking → Virtual Cloud Networks** in the OCI Console
-2. Click your VCN → **Security Lists** → Default Security List
-3. **Remove** all ingress rules except:
-   - `0.0.0.0/0 UDP 41641` (Tailscale)
-4. Keep default egress rules (allow all outbound)
+1. 在 OCI 控制台打开 **网络 → 虚拟云网络**
+2. 点击你的 VCN → **安全列表** → 默认安全列表
+3. **删除** 除下列外的所有入站规则：
+   - `0.0.0.0/0 UDP 41641`（Tailscale 端口）
+4. 保持默认出站规则（全部允许）
 
-This blocks SSH on port 22, HTTP, HTTPS, and everything else at the network edge. From now on, you can only connect via Tailscale.
+这样会阻断所有 22 端口 SSH、HTTP、HTTPS 及其它流量。以后只能通过 Tailscale 连接。
 
 ---
 
-## Access the Control UI
+## 访问控制界面
 
-From any device on your Tailscale network:
+从任何 Tailscale 网络设备访问：
 
 ```
 https://openclaw.<tailnet-name>.ts.net/
 ```
 
-Replace `<tailnet-name>` with your tailnet name (visible in `tailscale status`).
+将 `<tailnet-name>` 替换为你的 tailnet 名称（可通过 `tailscale status` 查看）。
 
-No SSH tunnel needed. Tailscale provides:
+无需 SSH 隧道。Tailscale 提供：
 
-- HTTPS encryption (automatic certs)
-- Authentication via Tailscale identity
-- Access from any device on your tailnet (laptop, phone, etc.)
+- HTTPS 加密（自动证书）
+- 通过 Tailscale 身份认证
+- 从任何 tailnet 设备（笔记本、手机等）访问
 
 ---
 
-## Security: VCN + Tailscale (recommended baseline)
+## 安全性：VCN + Tailscale（推荐基础）
 
-With the VCN locked down (only UDP 41641 open) and the Gateway bound to loopback, you get strong defense-in-depth: public traffic is blocked at the network edge, and admin access happens over your tailnet.
+结合 VCN 锁定（只开放 UDP 41641）和绑定环回接口的网关，实现深度防御：公开流量在网络边界阻断，管理员访问通过 tailnet 进行。
 
-This setup often removes the _need_ for extra host-based firewall rules purely to stop Internet-wide SSH brute force — but you should still keep the OS updated, run `openclaw security audit`, and verify you aren’t accidentally listening on public interfaces.
+此设置通常不再需要额外主机防火墙规则阻止全网 SSH 暴力破解——但仍建议保持系统更新，运行 `openclaw security audit`，并核查未意外监听公网接口。
 
-### What's Already Protected
+### 已保护的项
 
-| Traditional Step   | Needed?     | Why                                                                          |
-| ------------------ | ----------- | ---------------------------------------------------------------------------- |
-| UFW firewall       | No          | VCN blocks before traffic reaches instance                                   |
-| fail2ban           | No          | No brute force if port 22 blocked at VCN                                     |
-| sshd hardening     | No          | Tailscale SSH doesn't use sshd                                               |
-| Disable root login | No          | Tailscale uses Tailscale identity, not system users                          |
-| SSH key-only auth  | No          | Tailscale authenticates via your tailnet                                     |
-| IPv6 hardening     | Usually not | Depends on your VCN/subnet settings; verify what’s actually assigned/exposed |
+| 传统措施          | 需要吗？   | 说明                                                             |
+| ----------------- | ---------- | ---------------------------------------------------------------- |
+| UFW 防火墙        | 不需要    | VCN 在流量到达实例前阻断                                         |
+| fail2ban          | 不需要    | 22 端口阻断后无暴力破解风险                                     |
+| sshd 强化         | 不需要    | Tailscale SSH 不使用 sshd                                        |
+| 禁用 root 登录    | 不需要    | Tailscale 使用身份认证，不用系统用户                              |
+| 仅 SSH 密钥认证   | 不需要    | Tailscale 通过 tailnet 认证                                      |
+| IPv6 强化         | 通常不需要 | 依赖于 VCN 和子网配置，确认实际分配和暴露内容                    |
 
-### Still Recommended
+### 仍建议执行
 
-- **Credential permissions:** `chmod 700 ~/.openclaw`
-- **Security audit:** `openclaw security audit`
-- **System updates:** `sudo apt update && sudo apt upgrade` regularly
-- **Monitor Tailscale:** Review devices in [Tailscale admin console](https://login.tailscale.com/admin)
+- **凭据权限：** `chmod 700 ~/.openclaw`
+- **安全审计：** `openclaw security audit`
+- **系统更新：** 定期运行 `sudo apt update && sudo apt upgrade`
+- **监控 Tailscale 设备：** 查看 [Tailscale 管理控制台](https://login.tailscale.com/admin)
 
-### Verify Security Posture
+### 验证安全状态
 
 ```bash
-# Confirm no public ports listening
+# 确认无公网端口监听
 sudo ss -tlnp | grep -v '127.0.0.1\|::1'
 
-# Verify Tailscale SSH is active
-tailscale status | grep -q 'offers: ssh' && echo "Tailscale SSH active"
+# 确认 Tailscale SSH 已激活
+tailscale status | grep -q 'offers: ssh' && echo "Tailscale SSH 已激活"
 
-# Optional: disable sshd entirely
+# 可选：完全禁用 sshd
 sudo systemctl disable --now ssh
 ```
 
 ---
 
-## Fallback: SSH Tunnel
+## 备用方案：SSH 隧道
 
-If Tailscale Serve isn't working, use an SSH tunnel:
+若 Tailscale Serve 不可用，使用 SSH 隧道：
 
 ```bash
-# From your local machine (via Tailscale)
+# 在本地（通过 Tailscale）运行
 ssh -L 18789:127.0.0.1:18789 ubuntu@openclaw
 ```
 
-Then open `http://localhost:18789`.
+然后访问 `http://localhost:18789`。
 
 ---
 
-## Troubleshooting
+## 故障排查
 
-### Instance creation fails ("Out of capacity")
+### 实例创建失败（“容量不足”）
 
-Free tier ARM instances are popular. Try:
+ARM 免费实例很受欢迎，尝试：
 
-- Different availability domain
-- Retry during off-peak hours (early morning)
-- Use the "Always Free" filter when selecting shape
+- 切换可用域
+- 在非高峰（凌晨）重试
+- 选择“永久免费”筛选条件创建
 
-### Tailscale won't connect
+### Tailscale 无法连接
 
 ```bash
-# Check status
+# 检查状态
 sudo tailscale status
 
-# Re-authenticate
+# 重新认证
 sudo tailscale up --ssh --hostname=openclaw --reset
 ```
 
-### Gateway won't start
+### 网关未启动
 
 ```bash
 openclaw gateway status
@@ -254,39 +254,39 @@ openclaw doctor --non-interactive
 journalctl --user -u openclaw-gateway -n 50
 ```
 
-### Can't reach Control UI
+### 无法访问控制界面
 
 ```bash
-# Verify Tailscale Serve is running
+# 验证 Tailscale Serve 是否运行
 tailscale serve status
 
-# Check gateway is listening
+# 检查网关监听
 curl http://localhost:18789
 
-# Restart if needed
+# 需要时重启
 systemctl --user restart openclaw-gateway
 ```
 
-### ARM binary issues
+### ARM 二进制文件问题
 
-Some tools may not have ARM builds. Check:
+部分工具可能无 ARM 构建，检查：
 
 ```bash
-uname -m  # Should show aarch64
+uname -m  # 应显示 aarch64
 ```
 
-Most npm packages work fine. For binaries, look for `linux-arm64` or `aarch64` releases.
+大多数 npm 包支持。二进制文件需查找 `linux-arm64` 或 `aarch64` 版本。
 
 ---
 
-## Persistence
+## 持久化
 
-All state lives in:
+所有状态存储在：
 
-- `~/.openclaw/` — config, credentials, session data
-- `~/.openclaw/workspace/` — workspace (SOUL.md, memory, artifacts)
+- `~/.openclaw/` — 配置、凭据、会话数据
+- `~/.openclaw/workspace/` — 工作空间（SOUL.md、内存、工件）
 
-Back up periodically:
+建议定期备份：
 
 ```bash
 tar -czvf openclaw-backup.tar.gz ~/.openclaw ~/.openclaw/workspace
@@ -294,10 +294,10 @@ tar -czvf openclaw-backup.tar.gz ~/.openclaw ~/.openclaw/workspace
 
 ---
 
-## See Also
+## 参考
 
-- [Gateway remote access](/gateway/remote) — other remote access patterns
-- [Tailscale integration](/gateway/tailscale) — full Tailscale docs
-- [Gateway configuration](/gateway/configuration) — all config options
-- [DigitalOcean guide](/platforms/digitalocean) — if you want paid + easier signup
-- [Hetzner guide](/install/hetzner) — Docker-based alternative
+- [网关远程访问](/gateway/remote) — 其它远程访问方式
+- [Tailscale 集成](/gateway/tailscale) — 完整的 Tailscale 文档
+- [网关配置](/gateway/configuration) — 全部配置选项
+- [DigitalOcean 指南](/platforms/digitalocean) — 付费且更易注册的选择
+- [Hetzner 指南](/install/hetzner) — 基于 Docker 的替代方案

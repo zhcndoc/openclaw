@@ -1,28 +1,28 @@
 ---
-summary: "Repository scripts: purpose, scope, and safety notes"
+summary: "仓库脚本：目的、范围及安全注意事项"
 read_when:
-  - Running scripts from the repo
-  - Adding or changing scripts under ./scripts
-title: "Scripts"
+  - 运行仓库中的脚本时
+  - 在 ./scripts 目录下添加或更改脚本时
+title: "脚本"
 ---
 
-# Scripts
+# 脚本
 
-The `scripts/` directory contains helper scripts for local workflows and ops tasks.
-Use these when a task is clearly tied to a script; otherwise prefer the CLI.
+`scripts/` 目录包含用于本地工作流和运维任务的辅助脚本。
+当任务明确依赖于脚本时使用它们；否则优先使用命令行工具（CLI）。
 
-## Conventions
+## 规范
 
-- Scripts are **optional** unless referenced in docs or release checklists.
-- Prefer CLI surfaces when they exist (example: auth monitoring uses `openclaw models status --check`).
-- Assume scripts are host‑specific; read them before running on a new machine.
+- 脚本是**可选的**，除非文档或发布检查清单中有提及。
+- 优先使用已有的 CLI 界面（例如：认证监控使用 `openclaw models status --check`）。
+- 脚本通常是主机特定的；在新机器上运行前请先阅读脚本内容。
 
-## Auth monitoring scripts
+## 认证监控脚本
 
-Auth monitoring scripts are documented here:
+认证监控脚本的文档位于：
 [/automation/auth-monitoring](/automation/auth-monitoring)
 
-## When adding scripts
+## 添加脚本时
 
-- Keep scripts focused and documented.
-- Add a short entry in the relevant doc (or create one if missing).
+- 保持脚本聚焦且附带文档。
+- 在相关文档中添加简短条目（如果缺失则新建一份）。

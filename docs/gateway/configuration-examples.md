@@ -1,19 +1,19 @@
 ---
-summary: "Schema-accurate configuration examples for common OpenClaw setups"
+summary: "常见 OpenClaw 设置的符合 Schema 的配置示例"
 read_when:
-  - Learning how to configure OpenClaw
-  - Looking for configuration examples
-  - Setting up OpenClaw for the first time
-title: "Configuration Examples"
+  - 学习如何配置 OpenClaw
+  - 查找配置示例
+  - 第一次设置 OpenClaw
+title: "配置示例"
 ---
 
-# Configuration Examples
+# 配置示例
 
-Examples below are aligned with the current config schema. For the exhaustive reference and per-field notes, see [Configuration](/gateway/configuration).
+以下示例与当前配置 Schema 保持一致。有关详尽的参考和字段说明，请参见 [配置](/gateway/configuration)。
 
-## Quick start
+## 快速开始
 
-### Absolute minimum
+### 绝对最小配置
 
 ```json5
 {
@@ -22,9 +22,9 @@ Examples below are aligned with the current config schema. For the exhaustive re
 }
 ```
 
-Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
+保存到 `~/.openclaw/openclaw.json`，即可从该号码私信机器人。
 
-### Recommended starter
+### 推荐入门配置
 
 ```json5
 {
@@ -46,13 +46,13 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
 }
 ```
 
-## Expanded example (major options)
+## 扩展示例（主要选项）
 
-> JSON5 lets you use comments and trailing commas. Regular JSON works too.
+> JSON5 允许使用注释和尾随逗号。普通 JSON 也适用。
 
 ```json5
 {
-  // Environment + shell
+  // 环境 + shell
   env: {
     OPENROUTER_API_KEY: "sk-or-...",
     vars: {
@@ -64,7 +64,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Auth profile metadata (secrets live in auth-profiles.json)
+  // 认证配置文件元数据（密钥存储在 auth-profiles.json）
   auth: {
     profiles: {
       "anthropic:me@example.com": {
@@ -83,14 +83,14 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Identity
+  // 身份
   identity: {
     name: "Samantha",
     theme: "helpful sloth",
     emoji: "🦥",
   },
 
-  // Logging
+  // 日志
   logging: {
     level: "info",
     file: "/tmp/openclaw/openclaw.log",
@@ -99,7 +99,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     redactSensitive: "tools",
   },
 
-  // Message formatting
+  // 消息格式
   messages: {
     messagePrefix: "[openclaw]",
     responsePrefix: ">",
@@ -107,7 +107,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     ackReactionScope: "group-mentions",
   },
 
-  // Routing + queue
+  // 路由 + 队列
   routing: {
     groupChat: {
       mentionPatterns: ["@openclaw", "openclaw"],
@@ -130,7 +130,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Tooling
+  // 工具
   tools: {
     media: {
       audio: {
@@ -138,7 +138,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
         maxBytes: 20971520,
         models: [
           { provider: "openai", model: "gpt-4o-mini-transcribe" },
-          // Optional CLI fallback (Whisper binary):
+          // 可选命令行备选（Whisper 二进制）：
           // { type: "cli", command: "whisper", args: ["--model", "base", "{{MediaPath}}"] }
         ],
         timeoutSeconds: 120,
@@ -151,7 +151,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Session behavior
+  // 会话行为
   session: {
     scope: "per-sender",
     reset: {
@@ -169,9 +169,9 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
       pruneAfter: "30d",
       maxEntries: 500,
       rotateBytes: "10mb",
-      resetArchiveRetention: "30d", // duration or false
-      maxDiskBytes: "500mb", // optional
-      highWaterBytes: "400mb", // optional (defaults to 80% of maxDiskBytes)
+      resetArchiveRetention: "30d", // 持续时间或 false
+      maxDiskBytes: "500mb", // 可选
+      highWaterBytes: "400mb", // 可选（默认为 maxDiskBytes 的 80%）
     },
     typingIntervalSeconds: 5,
     sendPolicy: {
@@ -180,7 +180,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Channels
+  // 通道
   channels: {
     whatsapp: {
       dmPolicy: "pairing",
@@ -232,7 +232,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Agent runtime
+  // 代理运行时
   agents: {
     defaults: {
       workspace: "~/.openclaw/workspace",
@@ -273,7 +273,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
         every: "30m",
         model: "anthropic/claude-sonnet-4-5",
         target: "last",
-        directPolicy: "allow", // allow (default) | block
+        directPolicy: "allow", // 允许（默认） | 阻止
         to: "+15555550123",
         prompt: "HEARTBEAT",
         ackMaxChars: 300,
@@ -327,7 +327,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Custom model providers
+  // 自定义模型提供者
   models: {
     mode: "merge",
     providers: {
@@ -353,7 +353,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Cron jobs
+  // 定时任务
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/cron.json",
@@ -365,7 +365,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Webhooks
+  // Webhook
   hooks: {
     enabled: true,
     path: "/hooks",
@@ -408,7 +408,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     },
   },
 
-  // Gateway + networking
+  // 网关 + 网络
   gateway: {
     mode: "local",
     port: 18789,
@@ -445,9 +445,9 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
 }
 ```
 
-## Common patterns
+## 常见模式
 
-### Multi-platform setup
+### 多平台设置
 
 ```json5
 {
@@ -468,23 +468,23 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
 }
 ```
 
-### Secure DM mode (shared inbox / multi-user DMs)
+### 安全的私聊模式（共享收件箱/多用户私聊）
 
-If more than one person can DM your bot (multiple entries in `allowFrom`, pairing approvals for multiple people, or `dmPolicy: "open"`), enable **secure DM mode** so DMs from different senders don’t share one context by default:
+如果有多个人可以私信你的机器人（`allowFrom` 中有多个条目，多个用户配对审批，或者 `dmPolicy: "open"`），请启用**安全的私聊模式**，避免不同发送者的私聊默认共享一个上下文：
 
 ```json5
 {
-  // Secure DM mode (recommended for multi-user or sensitive DM agents)
+  // 安全私聊模式（推荐用于多用户或敏感的私聊代理）
   session: { dmScope: "per-channel-peer" },
 
   channels: {
-    // Example: WhatsApp multi-user inbox
+    // 例：WhatsApp 多用户收件箱
     whatsapp: {
       dmPolicy: "allowlist",
       allowFrom: ["+15555550123", "+15555550124"],
     },
 
-    // Example: Discord multi-user inbox
+    // 例：Discord 多用户收件箱
     discord: {
       enabled: true,
       token: "YOUR_DISCORD_BOT_TOKEN",
@@ -494,10 +494,10 @@ If more than one person can DM your bot (multiple entries in `allowFrom`, pairin
 }
 ```
 
-For Discord/Slack/Google Chat/MS Teams/Mattermost/IRC, sender authorization is ID-first by default.
-Only enable direct mutable name/email/nick matching with each channel's `dangerouslyAllowNameMatching: true` if you explicitly accept that risk.
+对于 Discord/Slack/Google Chat/MS Teams/Mattermost/IRC，发送者授权默认基于 ID。
+仅当你明确接受风险时，才通过每个通道的 `dangerouslyAllowNameMatching: true` 启用基于名称/邮箱/昵称的直接可变匹配。
 
-### OAuth with API key failover
+### OAuth 与 API 密钥备选方案
 
 ```json5
 {
@@ -527,12 +527,11 @@ Only enable direct mutable name/email/nick matching with each channel's `dangero
 }
 ```
 
-### Anthropic setup-token + API key, MiniMax fallback
+### Anthropic setup-token + API 密钥，MiniMax 回退
 
 <Warning>
-Anthropic setup-token usage outside Claude Code has been restricted for some
-users in the past. Treat this as user-choice risk and verify current Anthropic
-terms before depending on subscription auth.
+Anthropic setup-token 在 Claude Code 以外的使用曾被部分用户限制。
+请将其视为用户选择风险，并在依赖订阅认证前核实当前 Anthropic 条款。
 </Warning>
 
 ```json5
@@ -572,7 +571,7 @@ terms before depending on subscription auth.
 }
 ```
 
-### Work bot (restricted access)
+### 工作机器人（受限访问）
 
 ```json5
 {
@@ -597,7 +596,7 @@ terms before depending on subscription auth.
 }
 ```
 
-### Local models only
+### 仅本地模型
 
 ```json5
 {
@@ -629,9 +628,9 @@ terms before depending on subscription auth.
 }
 ```
 
-## Tips
+## 小贴士
 
-- If you set `dmPolicy: "open"`, the matching `allowFrom` list must include `"*"`.
-- Provider IDs differ (phone numbers, user IDs, channel IDs). Use the provider docs to confirm the format.
-- Optional sections to add later: `web`, `browser`, `ui`, `discovery`, `canvasHost`, `talk`, `signal`, `imessage`.
-- See [Providers](/providers) and [Troubleshooting](/gateway/troubleshooting) for deeper setup notes.
+- 如果设置了 `dmPolicy: "open"`，对应的 `allowFrom` 列表必须包含 `"*"`。
+- 提供者 ID 格式不同（手机号、用户 ID、频道 ID）。请参考对应提供者文档确认格式。
+- 可选后续添加的部分：`web`、`browser`、`ui`、`discovery`、`canvasHost`、`talk`、`signal`、`imessage`。
+- 请参阅 [Providers](/providers) 和 [Troubleshooting](/gateway/troubleshooting) 获取更深入的设置说明。

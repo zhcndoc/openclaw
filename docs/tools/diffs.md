@@ -1,38 +1,38 @@
 ---
-title: "Diffs"
-summary: "Read-only diff viewer and file renderer for agents (optional plugin tool)"
-description: "Use the optional Diffs plugin to render before and after text or unified patches as a gateway-hosted diff view, a file (PNG or PDF), or both."
+title: "Diffs（差异）"
+summary: "只读差异查看器和文件渲染器，供代理使用（可选插件工具）"
+description: "使用可选的 Diffs 插件，将差异文本或统一补丁渲染为网关托管的差异查看视图、文件（PNG 或 PDF），或两者兼备。"
 read_when:
-  - You want agents to show code or markdown edits as diffs
-  - You want a canvas-ready viewer URL or a rendered diff file
-  - You need controlled, temporary diff artifacts with secure defaults
+  - 你希望代理显示代码或 Markdown 修改的差异
+  - 你需要画布就绪的查看器 URL 或渲染的差异文件
+  - 你需要受控、临时的差异工件，并有安全的默认设置
 ---
 
-# Diffs
+# Diffs（差异）
 
-`diffs` is an optional plugin tool with short built-in system guidance and a companion skill that turns change content into a read-only diff artifact for agents.
+`diffs` 是一个可选插件工具，带有简短的内置系统指导和一个配套技能，将变更内容转换为代理使用的只读差异工件。
 
-It accepts either:
+它接收以下两种输入之一：
 
-- `before` and `after` text
-- a unified `patch`
+- `before` 和 `after` 文本
+- 统一 `patch` 补丁
 
-It can return:
+它可以返回：
 
-- a gateway viewer URL for canvas presentation
-- a rendered file path (PNG or PDF) for message delivery
-- both outputs in one call
+- 用于画布展示的网关查看器 URL
+- 用于消息传递的渲染文件路径（PNG 或 PDF）
+- 一次调用同时返回以上两者
 
-When enabled, the plugin prepends concise usage guidance into system-prompt space and also exposes a detailed skill for cases where the agent needs fuller instructions.
+启用后，插件会在系统提示空间中预置简明的使用说明，同时还提供详细的技能指导，供代理需要更完整的指令时使用。
 
-## Quick start
+## 快速上手
 
-1. Enable the plugin.
-2. Call `diffs` with `mode: "view"` for canvas-first flows.
-3. Call `diffs` with `mode: "file"` for chat file delivery flows.
-4. Call `diffs` with `mode: "both"` when you need both artifacts.
+1. 启用插件。
+2. 在画布优先的流程中，调用 `diffs` 并设置 `mode: "view"`。
+3. 在聊天文件传递流程中，调用 `diffs` 并设置 `mode: "file"`。
+4. 当需要同时获得两种工件时，调用 `diffs` 并设置 `mode: "both"`。
 
-## Enable the plugin
+## 启用插件
 
 ```json5
 {
@@ -46,9 +46,9 @@ When enabled, the plugin prepends concise usage guidance into system-prompt spac
 }
 ```
 
-## Disable built-in system guidance
+## 禁用内置系统指导
 
-If you want to keep the `diffs` tool enabled but disable its built-in system-prompt guidance, set `plugins.entries.diffs.hooks.allowPromptInjection` to `false`:
+如果你想保持 `diffs` 工具启用，但禁用内置的系统提示指导，设置 `plugins.entries.diffs.hooks.allowPromptInjection` 为 `false`：
 
 ```json5
 {
@@ -65,22 +65,22 @@ If you want to keep the `diffs` tool enabled but disable its built-in system-pro
 }
 ```
 
-This blocks the diffs plugin's `before_prompt_build` hook while keeping the plugin, tool, and companion skill available.
+这会阻止 diffs 插件的 `before_prompt_build` 钩子执行，但仍保留插件、工具和配套技能可用。
 
-If you want to disable both the guidance and the tool, disable the plugin instead.
+如果你想同时禁用指导和工具，则应禁用插件本身。
 
-## Typical agent workflow
+## 典型代理工作流程
 
-1. Agent calls `diffs`.
-2. Agent reads `details` fields.
-3. Agent either:
-   - opens `details.viewerUrl` with `canvas present`
-   - sends `details.filePath` with `message` using `path` or `filePath`
-   - does both
+1. 代理调用 `diffs`。
+2. 代理读取返回的 `details` 字段。
+3. 代理根据需要：
+   - 使用 `canvas present` 打开 `details.viewerUrl`
+   - 通过消息将 `details.filePath` 发送出去，使用键名是 `path` 或 `filePath`
+   - 或者同时执行以上两个操作
 
-## Input examples
+## 输入示例
 
-Before and after:
+前后文本对比示例：
 
 ```json
 {
@@ -91,7 +91,7 @@ Before and after:
 }
 ```
 
-Patch:
+补丁示例：
 
 ```json
 {
@@ -100,47 +100,47 @@ Patch:
 }
 ```
 
-## Tool input reference
+## 工具输入参考
 
-All fields are optional unless noted:
+所有字段均为可选，除非另有说明：
 
-- `before` (`string`): original text. Required with `after` when `patch` is omitted.
-- `after` (`string`): updated text. Required with `before` when `patch` is omitted.
-- `patch` (`string`): unified diff text. Mutually exclusive with `before` and `after`.
-- `path` (`string`): display filename for before and after mode.
-- `lang` (`string`): language override hint for before and after mode.
-- `title` (`string`): viewer title override.
-- `mode` (`"view" | "file" | "both"`): output mode. Defaults to plugin default `defaults.mode`.
-- `theme` (`"light" | "dark"`): viewer theme. Defaults to plugin default `defaults.theme`.
-- `layout` (`"unified" | "split"`): diff layout. Defaults to plugin default `defaults.layout`.
-- `expandUnchanged` (`boolean`): expand unchanged sections when full context is available. Per-call option only (not a plugin default key).
-- `fileFormat` (`"png" | "pdf"`): rendered file format. Defaults to plugin default `defaults.fileFormat`.
-- `fileQuality` (`"standard" | "hq" | "print"`): quality preset for PNG or PDF rendering.
-- `fileScale` (`number`): device scale override (`1`-`4`).
-- `fileMaxWidth` (`number`): max render width in CSS pixels (`640`-`2400`).
-- `ttlSeconds` (`number`): viewer artifact TTL in seconds. Default 1800, max 21600.
-- `baseUrl` (`string`): viewer URL origin override. Must be `http` or `https`, no query/hash.
+- `before`（`string`）：原始文本。当未提供 `patch` 时，必须与 `after` 一起提供。
+- `after`（`string`）：更新后的文本。当未提供 `patch` 时，必须与 `before` 一起提供。
+- `patch`（`string`）：统一差异文本。与 `before` 和 `after` 互斥。
+- `path`（`string`）：前后文本模式下的显示文件名。
+- `lang`（`string`）：前后文本模式下的语言覆盖提示。
+- `title`（`string`）：查看器标题覆盖。
+- `mode`（`"view" | "file" | "both"`）：输出模式。默认为插件默认 `defaults.mode`。
+- `theme`（`"light" | "dark"`）：查看器主题。默认为插件默认 `defaults.theme`。
+- `layout`（`"unified" | "split"`）：差异布局。默认为插件默认 `defaults.layout`。
+- `expandUnchanged`（`boolean`）：在完整上下文可用时，展开未修改部分。仅限单次调用选项（非插件默认键）。
+- `fileFormat`（`"png" | "pdf"`）：渲染文件格式。默认为插件默认 `defaults.fileFormat`。
+- `fileQuality`（`"standard" | "hq" | "print"`）：PNG 或 PDF 渲染的质量预设。
+- `fileScale`（`number`）：设备缩放覆盖（范围 1-4）。
+- `fileMaxWidth`（`number`）：最大渲染宽度，CSS 像素（范围 640-2400）。
+- `ttlSeconds`（`number`）：查看器工件有效期（秒）。默认 1800，最大 21600。
+- `baseUrl`（`string`）：查看器 URL 源覆盖。必须为 `http` 或 `https`，不允许查询和哈希。
 
-Validation and limits:
+校验和限制：
 
-- `before` and `after` each max 512 KiB.
-- `patch` max 2 MiB.
-- `path` max 2048 bytes.
-- `lang` max 128 bytes.
-- `title` max 1024 bytes.
-- Patch complexity cap: max 128 files and 120000 total lines.
-- `patch` and `before` or `after` together are rejected.
-- Rendered file safety limits (apply to PNG and PDF):
-  - `fileQuality: "standard"`: max 8 MP (8,000,000 rendered pixels).
-  - `fileQuality: "hq"`: max 14 MP (14,000,000 rendered pixels).
-  - `fileQuality: "print"`: max 24 MP (24,000,000 rendered pixels).
-  - PDF also has a max of 50 pages.
+- `before` 和 `after` 字段最大各 512 KiB。
+- `patch` 最大 2 MiB。
+- `path` 最大 2048 字节。
+- `lang` 最大 128 字节。
+- `title` 最大 1024 字节。
+- 补丁复杂度限制：最多 128 个文件，120000 行总数。
+- 不允许同时提交 `patch` 与 `before` 或 `after`。
+- 渲染文件安全限制（PNG 和 PDF 通用）：
+  - `fileQuality: "standard"`：最大 8 百万像素（8,000,000 渲染像素）。
+  - `fileQuality: "hq"`：最大 14 百万像素。
+  - `fileQuality: "print"`：最大 24 百万像素。
+  - PDF 最大页数 50 页。
 
-## Output details contract
+## 输出详情约定
 
-The tool returns structured metadata under `details`.
+工具返回结构化元数据于 `details` 字段。
 
-Shared fields for modes that create a viewer:
+生成查看器的模式共享字段：
 
 - `artifactId`
 - `viewerUrl`
@@ -151,33 +151,33 @@ Shared fields for modes that create a viewer:
 - `fileCount`
 - `mode`
 
-File fields when PNG or PDF is rendered:
+渲染 PNG 或 PDF 时的文件相关字段：
 
 - `filePath`
-- `path` (same value as `filePath`, for message tool compatibility)
+- `path`（与 `filePath` 值相同，兼容消息工具）
 - `fileBytes`
 - `fileFormat`
 - `fileQuality`
 - `fileScale`
 - `fileMaxWidth`
 
-Mode behavior summary:
+模式行为总结：
 
-- `mode: "view"`: viewer fields only.
-- `mode: "file"`: file fields only, no viewer artifact.
-- `mode: "both"`: viewer fields plus file fields. If file rendering fails, viewer still returns with `fileError`.
+- `mode: "view"`：仅返回查看器相关字段。
+- `mode: "file"`：仅返回文件相关字段，不生成查看器工件。
+- `mode: "both"`：返回查看器和文件字段。如果文件渲染失败，仍返回查看器且带有 `fileError`。
 
-## Collapsed unchanged sections
+## 折叠的未修改部分
 
-- The viewer can show rows like `N unmodified lines`.
-- Expand controls on those rows are conditional and not guaranteed for every input kind.
-- Expand controls appear when the rendered diff has expandable context data, which is typical for before and after input.
-- For many unified patch inputs, omitted context bodies are not available in the parsed patch hunks, so the row can appear without expand controls. This is expected behavior.
-- `expandUnchanged` applies only when expandable context exists.
+- 查看器可显示类似 `N unmodified lines`（N 行未修改）的行。
+- 这些行上的展开控制是条件性的，并非每种输入类型都保证出现。
+- 当渲染的差异包含可展开的上下文数据时，通常会出现展开按钮，这在使用前后文本输入时很常见。
+- 许多统一补丁输入中，被省略的上下文不在解析后的补丁分块里，因此这类行不会显示展开按钮，这是预期行为。
+- `expandUnchanged` 选项仅在有可展开上下文时生效。
 
-## Plugin defaults
+## 插件默认配置
 
-Set plugin-wide defaults in `~/.openclaw/openclaw.json`:
+在 `~/.openclaw/openclaw.json` 中设置全插件默认值：
 
 ```json5
 {
@@ -209,7 +209,7 @@ Set plugin-wide defaults in `~/.openclaw/openclaw.json`:
 }
 ```
 
-Supported defaults:
+支持的默认配置项：
 
 - `fontFamily`
 - `fontSize`
@@ -226,15 +226,15 @@ Supported defaults:
 - `fileMaxWidth`
 - `mode`
 
-Explicit tool parameters override these defaults.
+显示传入参数优先于默认值。
 
-## Security config
+## 安全配置
 
-- `security.allowRemoteViewer` (`boolean`, default `false`)
-  - `false`: non-loopback requests to viewer routes are denied.
-  - `true`: remote viewers are allowed if tokenized path is valid.
+- `security.allowRemoteViewer`（`boolean`，默认 `false`）
+  - `false`：查看器路由非本地请求被拒绝。
+  - `true`：只要令牌路径有效，允许远程访问查看器。
 
-Example:
+示例：
 
 ```json5
 {
@@ -253,131 +253,131 @@ Example:
 }
 ```
 
-## Artifact lifecycle and storage
+## 工件生命周期和存储
 
-- Artifacts are stored under the temp subfolder: `$TMPDIR/openclaw-diffs`.
-- Viewer artifact metadata contains:
-  - random artifact ID (20 hex chars)
-  - random token (48 hex chars)
-  - `createdAt` and `expiresAt`
-  - stored `viewer.html` path
-- Default viewer TTL is 30 minutes when not specified.
-- Maximum accepted viewer TTL is 6 hours.
-- Cleanup runs opportunistically after artifact creation.
-- Expired artifacts are deleted.
-- Fallback cleanup removes stale folders older than 24 hours when metadata is missing.
+- 工件存储于临时子目录：`$TMPDIR/openclaw-diffs`。
+- 查看器工件元数据包含：
+  - 随机工件 ID（20 个十六进制字符）
+  - 随机令牌（48 个十六进制字符）
+  - `createdAt` 和 `expiresAt` 时间戳
+  - 存储的 `viewer.html` 路径
+- 查看器默认 TTL 为 30 分钟（未指定时）。
+- 最大允许查看器 TTL 为 6 小时。
+- 清理任务在工件创建后机会性执行。
+- 过期工件会被删除。
+- 备选清理会删除缺失元数据且超过 24 小时的陈旧文件夹。
 
-## Viewer URL and network behavior
+## 查看器 URL 和网络行为
 
-Viewer route:
+查看器路由：
 
 - `/plugins/diffs/view/{artifactId}/{token}`
 
-Viewer assets:
+查看器资源：
 
 - `/plugins/diffs/assets/viewer.js`
 - `/plugins/diffs/assets/viewer-runtime.js`
 
-URL construction behavior:
+URL 构建逻辑：
 
-- If `baseUrl` is provided, it is used after strict validation.
-- Without `baseUrl`, viewer URL defaults to loopback `127.0.0.1`.
-- If gateway bind mode is `custom` and `gateway.customBindHost` is set, that host is used.
+- 如果提供了 `baseUrl`，经严格验证后使用。
+- 否则查看器 URL 默认为本地回环地址 `127.0.0.1`。
+- 当网关绑定模式为 `custom` 且设置了 `gateway.customBindHost` 时，使用该主机。
 
-`baseUrl` rules:
+`baseUrl` 规则：
 
-- Must be `http://` or `https://`.
-- Query and hash are rejected.
-- Origin plus optional base path is allowed.
+- 必须以 `http://` 或 `https://` 开头。
+- 不允许查询字符串和哈希。
+- 允许源地址加上可选的基础路径。
 
-## Security model
+## 安全模型
 
-Viewer hardening:
+查看器强化措施：
 
-- Loopback-only by default.
-- Tokenized viewer paths with strict ID and token validation.
-- Viewer response CSP:
+- 默认为只监听本地回环。
+- 查看器路径加令牌访问，严格验证 ID 和令牌。
+- 查看器响应的内容安全策略（CSP）：
   - `default-src 'none'`
-  - scripts and assets only from self
-  - no outbound `connect-src`
-- Remote miss throttling when remote access is enabled:
-  - 40 failures per 60 seconds
-  - 60 second lockout (`429 Too Many Requests`)
+  - 脚本和资源仅限自源
+  - 禁止外发的 `connect-src`
+- 远程访问启用时的访问失败限速：
+  - 每 60 秒允许 40 次失败
+  - 持续 60 秒的锁定（返回 `429 Too Many Requests`）
 
-File rendering hardening:
+文件渲染强化：
 
-- Screenshot browser request routing is deny-by-default.
-- Only local viewer assets from `http://127.0.0.1/plugins/diffs/assets/*` are allowed.
-- External network requests are blocked.
+- 截图浏览器请求默认拒绝。
+- 仅允许加载本地查看器资源：`http://127.0.0.1/plugins/diffs/assets/*`。
+- 阻止外部网络请求。
 
-## Browser requirements for file mode
+## 文件模式的浏览器要求
 
-`mode: "file"` and `mode: "both"` need a Chromium-compatible browser.
+`mode: "file"` 和 `mode: "both"` 需要兼容 Chromium 的浏览器。
 
-Resolution order:
+查找顺序：
 
-1. `browser.executablePath` in OpenClaw config.
-2. Environment variables:
+1. OpenClaw 配置中的 `browser.executablePath`。
+2. 环境变量：
    - `OPENCLAW_BROWSER_EXECUTABLE_PATH`
    - `BROWSER_EXECUTABLE_PATH`
    - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`
-3. Platform command/path discovery fallback.
+3. 平台命令路径查找回退。
 
-Common failure text:
+常见失败提示：
 
 - `Diff PNG/PDF rendering requires a Chromium-compatible browser...`
 
-Fix by installing Chrome, Chromium, Edge, or Brave, or setting one of the executable path options above.
+解决方法：安装 Chrome、Chromium、Edge 或 Brave，或设置上述可执行路径。
 
-## Troubleshooting
+## 故障排除
 
-Input validation errors:
+输入校验错误：
 
 - `Provide patch or both before and after text.`
-  - Include both `before` and `after`, or provide `patch`.
+  - 需要同时提供 `before` 和 `after`，或提供 `patch`。
 - `Provide either patch or before/after input, not both.`
-  - Do not mix input modes.
+  - 不得混用输入模式。
 - `Invalid baseUrl: ...`
-  - Use `http(s)` origin with optional path, no query/hash.
+  - 请使用支持的 `http(s)` 源，不带查询和哈希。
 - `{field} exceeds maximum size (...)`
-  - Reduce payload size.
-- Large patch rejection
-  - Reduce patch file count or total lines.
+  - 减小有效负载大小。
+- 大补丁被拒绝
+  - 减少补丁文件数量或总行数。
 
-Viewer accessibility issues:
+查看器访问问题：
 
-- Viewer URL resolves to `127.0.0.1` by default.
-- For remote access scenarios, either:
-  - pass `baseUrl` per tool call, or
-  - use `gateway.bind=custom` and `gateway.customBindHost`
-- Enable `security.allowRemoteViewer` only when you intend external viewer access.
+- 查看器 URL 默认解析为 `127.0.0.1`。
+- 远程访问时，必须：
+  - 每次调用传入 `baseUrl`，或者
+  - 使用 `gateway.bind=custom` 和 `gateway.customBindHost` 设置
+- 仅当需要远程访问时才启用 `security.allowRemoteViewer`。
 
-Unmodified-lines row has no expand button:
+未修改行无法展开：
 
-- This can happen for patch input when the patch does not carry expandable context.
-- This is expected and does not indicate a viewer failure.
+- 补丁输入时，若补丁不包含可展开上下文，这种情况常见。
+- 属于预期行为，不是查看器故障。
 
-Artifact not found:
+工件未找到：
 
-- Artifact expired due TTL.
-- Token or path changed.
-- Cleanup removed stale data.
+- 因 TTL 到期被删除。
+- 令牌或路径发生更改。
+- 清理任务删除了陈旧数据。
 
-## Operational guidance
+## 运行建议
 
-- Prefer `mode: "view"` for local interactive reviews in canvas.
-- Prefer `mode: "file"` for outbound chat channels that need an attachment.
-- Keep `allowRemoteViewer` disabled unless your deployment requires remote viewer URLs.
-- Set explicit short `ttlSeconds` for sensitive diffs.
-- Avoid sending secrets in diff input when not required.
-- If your channel compresses images aggressively (for example Telegram or WhatsApp), prefer PDF output (`fileFormat: "pdf"`).
+- 本地互动审阅优先使用 `mode: "view"`。
+- 需要发送附件的外发聊天渠道优先使用 `mode: "file"`。
+- 除非需要远程查看器 URL，建议关闭 `allowRemoteViewer`。
+- 对敏感差异设置短期的 `ttlSeconds`。
+- 避免在不必要时通过差异输入发送机密信息。
+- 若通道强制压缩图片（如 Telegram、WhatsApp），建议使用 PDF 输出（`fileFormat: "pdf"`）。
 
-Diff rendering engine:
+差异渲染引擎：
 
-- Powered by [Diffs](https://diffs.com).
+- 由 [Diffs](https://diffs.com) 提供技术支持。
 
-## Related docs
+## 相关文档
 
-- [Tools overview](/tools)
-- [Plugins](/tools/plugin)
-- [Browser](/tools/browser)
+- [工具概览](/tools)
+- [插件](/tools/plugin)
+- [浏览器](/tools/browser)

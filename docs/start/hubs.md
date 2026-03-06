@@ -1,194 +1,194 @@
 ---
-summary: "Hubs that link to every OpenClaw doc"
+summary: "链接到所有 OpenClaw 文档的中心枢纽"
 read_when:
-  - You want a complete map of the documentation
-title: "Docs Hubs"
+  - 您想要获取文档的完整地图时
+title: "文档中心枢纽"
 ---
 
-# Docs hubs
+# 文档中心枢纽
 
 <Note>
-If you are new to OpenClaw, start with [Getting Started](/start/getting-started).
+如果您是 OpenClaw 新手，请从 [入门指南](/start/getting-started) 开始。
 </Note>
 
-Use these hubs to discover every page, including deep dives and reference docs that don’t appear in the left nav.
+使用这些枢纽来发现每一个页面，包括左侧导航栏中未显示的深入讲解和参考文档。
 
-## Start here
+## 从这里开始
 
-- [Index](/)
-- [Getting Started](/start/getting-started)
-- [Quick start](/start/quickstart)
-- [Onboarding](/start/onboarding)
-- [Wizard](/start/wizard)
-- [Setup](/start/setup)
-- [Dashboard (local Gateway)](http://127.0.0.1:18789/)
-- [Help](/help)
-- [Docs directory](/start/docs-directory)
-- [Configuration](/gateway/configuration)
-- [Configuration examples](/gateway/configuration-examples)
-- [OpenClaw assistant](/start/openclaw)
-- [Showcase](/start/showcase)
-- [Lore](/start/lore)
+- [目录](/)
+- [入门指南](/start/getting-started)
+- [快速开始](/start/quickstart)
+- [入职引导](/start/onboarding)
+- [向导](/start/wizard)
+- [设置](/start/setup)
+- [仪表盘（本地网关）](http://127.0.0.1:18789/)
+- [帮助](/help)
+- [文档目录](/start/docs-directory)
+- [配置](/gateway/configuration)
+- [配置示例](/gateway/configuration-examples)
+- [OpenClaw 助手](/start/openclaw)
+- [展示](/start/showcase)
+- [背景知识](/start/lore)
 
-## Installation + updates
+## 安装 + 更新
 
 - [Docker](/install/docker)
 - [Nix](/install/nix)
-- [Updating / rollback](/install/updating)
-- [Bun workflow (experimental)](/install/bun)
+- [更新 / 回滚](/install/updating)
+- [Bun 工作流（实验性）](/install/bun)
 
-## Core concepts
+## 核心概念
 
-- [Architecture](/concepts/architecture)
-- [Features](/concepts/features)
-- [Network hub](/network)
-- [Agent runtime](/concepts/agent)
-- [Agent workspace](/concepts/agent-workspace)
-- [Memory](/concepts/memory)
-- [Agent loop](/concepts/agent-loop)
-- [Streaming + chunking](/concepts/streaming)
-- [Multi-agent routing](/concepts/multi-agent)
-- [Compaction](/concepts/compaction)
-- [Sessions](/concepts/session)
-- [Session pruning](/concepts/session-pruning)
-- [Session tools](/concepts/session-tool)
-- [Queue](/concepts/queue)
-- [Slash commands](/tools/slash-commands)
-- [RPC adapters](/reference/rpc)
-- [TypeBox schemas](/concepts/typebox)
-- [Timezone handling](/concepts/timezone)
-- [Presence](/concepts/presence)
-- [Discovery + transports](/gateway/discovery)
+- [架构](/concepts/architecture)
+- [特性](/concepts/features)
+- [网络中心](/network)
+- [Agent 运行时](/concepts/agent)
+- [Agent 工作区](/concepts/agent-workspace)
+- [内存](/concepts/memory)
+- [Agent 循环](/concepts/agent-loop)
+- [流式传输 + 分块](/concepts/streaming)
+- [多 Agent 路由](/concepts/multi-agent)
+- [压缩](/concepts/compaction)
+- [会话](/concepts/session)
+- [会话修剪](/concepts/session-pruning)
+- [会话工具](/concepts/session-tool)
+- [队列](/concepts/queue)
+- [斜杠命令](/tools/slash-commands)
+- [RPC 适配器](/reference/rpc)
+- [TypeBox 模式](/concepts/typebox)
+- [时区处理](/concepts/timezone)
+- [存在](/concepts/presence)
+- [发现 + 传输](/gateway/discovery)
 - [Bonjour](/gateway/bonjour)
-- [Channel routing](/channels/channel-routing)
-- [Groups](/channels/groups)
-- [Group messages](/channels/group-messages)
-- [Model failover](/concepts/model-failover)
+- [频道路由](/channels/channel-routing)
+- [群组](/channels/groups)
+- [群组消息](/channels/group-messages)
+- [模型故障切换](/concepts/model-failover)
 - [OAuth](/concepts/oauth)
 
-## Providers + ingress
+## 提供者 + 入口
 
-- [Chat channels hub](/channels)
-- [Model providers hub](/providers/models)
+- [聊天频道中心](/channels)
+- [模型提供者中心](/providers/models)
 - [WhatsApp](/channels/whatsapp)
 - [Telegram](/channels/telegram)
 - [Slack](/channels/slack)
 - [Discord](/channels/discord)
-- [Mattermost](/channels/mattermost) (plugin)
+- [Mattermost](/channels/mattermost)（插件）
 - [Signal](/channels/signal)
-- [BlueBubbles (iMessage)](/channels/bluebubbles)
-- [iMessage (legacy)](/channels/imessage)
-- [Location parsing](/channels/location)
+- [BlueBubbles（iMessage）](/channels/bluebubbles)
+- [iMessage（旧版）](/channels/imessage)
+- [位置解析](/channels/location)
 - [WebChat](/web/webchat)
-- [Webhooks](/automation/webhook)
-- [Gmail Pub/Sub](/automation/gmail-pubsub)
+- [Webhook](/automation/webhook)
+- [Gmail 发布/订阅](/automation/gmail-pubsub)
 
-## Gateway + operations
+## 网关 + 运营
 
-- [Gateway runbook](/gateway)
-- [Network model](/gateway/network-model)
-- [Gateway pairing](/gateway/pairing)
-- [Gateway lock](/gateway/gateway-lock)
-- [Background process](/gateway/background-process)
-- [Health](/gateway/health)
-- [Heartbeat](/gateway/heartbeat)
-- [Doctor](/gateway/doctor)
-- [Logging](/gateway/logging)
-- [Sandboxing](/gateway/sandboxing)
-- [Dashboard](/web/dashboard)
-- [Control UI](/web/control-ui)
-- [Remote access](/gateway/remote)
-- [Remote gateway README](/gateway/remote-gateway-readme)
+- [网关运行手册](/gateway)
+- [网络模型](/gateway/network-model)
+- [网关配对](/gateway/pairing)
+- [网关锁](/gateway/gateway-lock)
+- [后台进程](/gateway/background-process)
+- [健康状态](/gateway/health)
+- [心跳](/gateway/heartbeat)
+- [诊断工具](/gateway/doctor)
+- [日志](/gateway/logging)
+- [沙箱环境](/gateway/sandboxing)
+- [仪表盘](/web/dashboard)
+- [控制界面](/web/control-ui)
+- [远程访问](/gateway/remote)
+- [远程网关说明](/gateway/remote-gateway-readme)
 - [Tailscale](/gateway/tailscale)
-- [Security](/gateway/security)
-- [Troubleshooting](/gateway/troubleshooting)
+- [安全](/gateway/security)
+- [故障排除](/gateway/troubleshooting)
 
-## Tools + automation
+## 工具 + 自动化
 
-- [Tools surface](/tools)
+- [工具总览](/tools)
 - [OpenProse](/prose)
-- [CLI reference](/cli)
-- [Exec tool](/tools/exec)
-- [PDF tool](/tools/pdf)
-- [Elevated mode](/tools/elevated)
-- [Cron jobs](/automation/cron-jobs)
-- [Cron vs Heartbeat](/automation/cron-vs-heartbeat)
-- [Thinking + verbose](/tools/thinking)
-- [Models](/concepts/models)
-- [Sub-agents](/tools/subagents)
-- [Agent send CLI](/tools/agent-send)
-- [Terminal UI](/web/tui)
-- [Browser control](/tools/browser)
-- [Browser (Linux troubleshooting)](/tools/browser-linux-troubleshooting)
-- [Polls](/automation/poll)
+- [CLI 参考](/cli)
+- [Exec 工具](/tools/exec)
+- [PDF 工具](/tools/pdf)
+- [提升模式](/tools/elevated)
+- [定时任务](/automation/cron-jobs)
+- [定时任务与心跳对比](/automation/cron-vs-heartbeat)
+- [思考 + 详细](/tools/thinking)
+- [模型](/concepts/models)
+- [子代理](/tools/subagents)
+- [Agent 发送 CLI](/tools/agent-send)
+- [终端界面](/web/tui)
+- [浏览器控制](/tools/browser)
+- [浏览器（Linux 故障排除）](/tools/browser-linux-troubleshooting)
+- [投票](/automation/poll)
 
-## Nodes, media, voice
+## 节点、多媒体、语音
 
-- [Nodes overview](/nodes)
-- [Camera](/nodes/camera)
-- [Images](/nodes/images)
-- [Audio](/nodes/audio)
-- [Location command](/nodes/location-command)
-- [Voice wake](/nodes/voicewake)
-- [Talk mode](/nodes/talk)
+- [节点总览](/nodes)
+- [摄像头](/nodes/camera)
+- [图片](/nodes/images)
+- [音频](/nodes/audio)
+- [位置命令](/nodes/location-command)
+- [语音唤醒](/nodes/voicewake)
+- [对话模式](/nodes/talk)
 
-## Platforms
+## 平台
 
-- [Platforms overview](/platforms)
+- [平台总览](/platforms)
 - [macOS](/platforms/macos)
 - [iOS](/platforms/ios)
 - [Android](/platforms/android)
-- [Windows (WSL2)](/platforms/windows)
+- [Windows（WSL2）](/platforms/windows)
 - [Linux](/platforms/linux)
-- [Web surfaces](/web)
+- [网页界面](/web)
 
-## macOS companion app (advanced)
+## macOS 伴侣应用（高级）
 
-- [macOS dev setup](/platforms/mac/dev-setup)
-- [macOS menu bar](/platforms/mac/menu-bar)
-- [macOS voice wake](/platforms/mac/voicewake)
-- [macOS voice overlay](/platforms/mac/voice-overlay)
+- [macOS 开发环境搭建](/platforms/mac/dev-setup)
+- [macOS 菜单栏](/platforms/mac/menu-bar)
+- [macOS 语音唤醒](/platforms/mac/voicewake)
+- [macOS 语音覆盖](/platforms/mac/voice-overlay)
 - [macOS WebChat](/platforms/mac/webchat)
-- [macOS Canvas](/platforms/mac/canvas)
-- [macOS child process](/platforms/mac/child-process)
-- [macOS health](/platforms/mac/health)
-- [macOS icon](/platforms/mac/icon)
-- [macOS logging](/platforms/mac/logging)
-- [macOS permissions](/platforms/mac/permissions)
-- [macOS remote](/platforms/mac/remote)
-- [macOS signing](/platforms/mac/signing)
-- [macOS release](/platforms/mac/release)
-- [macOS gateway (launchd)](/platforms/mac/bundled-gateway)
+- [macOS 画布](/platforms/mac/canvas)
+- [macOS 子进程](/platforms/mac/child-process)
+- [macOS 健康状态](/platforms/mac/health)
+- [macOS 图标](/platforms/mac/icon)
+- [macOS 日志](/platforms/mac/logging)
+- [macOS 权限](/platforms/mac/permissions)
+- [macOS 远程](/platforms/mac/remote)
+- [macOS 签名](/platforms/mac/signing)
+- [macOS 发布](/platforms/mac/release)
+- [macOS 网关（launchd）](/platforms/mac/bundled-gateway)
 - [macOS XPC](/platforms/mac/xpc)
-- [macOS skills](/platforms/mac/skills)
-- [macOS Peekaboo](/platforms/mac/peekaboo)
+- [macOS 技能](/platforms/mac/skills)
+- [macOS 捉迷藏](/platforms/mac/peekaboo)
 
-## Workspace + templates
+## 工作区 + 模板
 
-- [Skills](/tools/skills)
+- [技能](/tools/skills)
 - [ClawHub](/tools/clawhub)
-- [Skills config](/tools/skills-config)
-- [Default AGENTS](/reference/AGENTS.default)
-- [Templates: AGENTS](/reference/templates/AGENTS)
-- [Templates: BOOTSTRAP](/reference/templates/BOOTSTRAP)
-- [Templates: HEARTBEAT](/reference/templates/HEARTBEAT)
-- [Templates: IDENTITY](/reference/templates/IDENTITY)
-- [Templates: SOUL](/reference/templates/SOUL)
-- [Templates: TOOLS](/reference/templates/TOOLS)
-- [Templates: USER](/reference/templates/USER)
+- [技能配置](/tools/skills-config)
+- [默认 AGENTS](/reference/AGENTS.default)
+- [模板：AGENTS](/reference/templates/AGENTS)
+- [模板：BOOTSTRAP](/reference/templates/BOOTSTRAP)
+- [模板：HEARTBEAT](/reference/templates/HEARTBEAT)
+- [模板：IDENTITY](/reference/templates/IDENTITY)
+- [模板：SOUL](/reference/templates/SOUL)
+- [模板：TOOLS](/reference/templates/TOOLS)
+- [模板：USER](/reference/templates/USER)
 
-## Experiments (exploratory)
+## 实验（探索性）
 
-- [Onboarding config protocol](/experiments/onboarding-config-protocol)
-- [Research: memory](/experiments/research/memory)
-- [Model config exploration](/experiments/proposals/model-config)
+- [入职配置协议](/experiments/onboarding-config-protocol)
+- [研究：内存](/experiments/research/memory)
+- [模型配置探索](/experiments/proposals/model-config)
 
-## Project
+## 项目
 
-- [Credits](/reference/credits)
+- [鸣谢](/reference/credits)
 
-## Testing + release
+## 测试 + 发布
 
-- [Testing](/reference/test)
-- [Release checklist](/reference/RELEASING)
-- [Device models](/reference/device-models)
+- [测试](/reference/test)
+- [发布清单](/reference/RELEASING)
+- [设备模型](/reference/device-models)

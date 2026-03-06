@@ -1,22 +1,22 @@
 ---
-summary: "CLI reference for `openclaw approvals` (exec approvals for gateway or node hosts)"
+summary: "针对 `openclaw approvals` 的 CLI 参考（管理网关或节点主机的 exec approvals）"
 read_when:
-  - You want to edit exec approvals from the CLI
-  - You need to manage allowlists on gateway or node hosts
+  - 你想通过 CLI 编辑 exec approvals
+  - 你需要管理网关或节点主机上的允许列表
 title: "approvals"
 ---
 
 # `openclaw approvals`
 
-Manage exec approvals for the **local host**, **gateway host**, or a **node host**.
-By default, commands target the local approvals file on disk. Use `--gateway` to target the gateway, or `--node` to target a specific node.
+管理**本地主机**、**网关主机**或**节点主机**的 exec approvals。
+默认情况下，命令操作的是磁盘上的本地 approvals 文件。使用 `--gateway` 以操作网关，或使用 `--node` 以操作特定节点。
 
-Related:
+相关内容：
 
-- Exec approvals: [Exec approvals](/tools/exec-approvals)
-- Nodes: [Nodes](/nodes)
+- Exec approvals：[Exec approvals](/tools/exec-approvals)
+- 节点：[Nodes](/nodes)
 
-## Common commands
+## 常用命令
 
 ```bash
 openclaw approvals get
@@ -24,7 +24,7 @@ openclaw approvals get --node <id|name|ip>
 openclaw approvals get --gateway
 ```
 
-## Replace approvals from a file
+## 从文件替换 approvals
 
 ```bash
 openclaw approvals set --file ./exec-approvals.json
@@ -32,7 +32,7 @@ openclaw approvals set --node <id|name|ip> --file ./exec-approvals.json
 openclaw approvals set --gateway --file ./exec-approvals.json
 ```
 
-## Allowlist helpers
+## 允许列表辅助命令
 
 ```bash
 openclaw approvals allowlist add "~/Projects/**/bin/rg"
@@ -42,9 +42,9 @@ openclaw approvals allowlist add --agent "*" "/usr/bin/uname"
 openclaw approvals allowlist remove "~/Projects/**/bin/rg"
 ```
 
-## Notes
+## 说明
 
-- `--node` uses the same resolver as `openclaw nodes` (id, name, ip, or id prefix).
-- `--agent` defaults to `"*"`, which applies to all agents.
-- The node host must advertise `system.execApprovals.get/set` (macOS app or headless node host).
-- Approvals files are stored per host at `~/.openclaw/exec-approvals.json`.
+- `--node` 使用与 `openclaw nodes` 相同的解析器（支持 id、name、ip 或 id 前缀）。
+- `--agent` 默认值为 `"*"`，适用于所有 agent。
+- 节点主机必须支持 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。
+- approvals 文件存储于每台主机的 `~/.openclaw/exec-approvals.json` 路径下。

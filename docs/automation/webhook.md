@@ -1,16 +1,16 @@
 ---
-summary: "Webhook ingress for wake and isolated agent runs"
+summary: "用于唤醒和独立代理运行的Webhook入口"
 read_when:
-  - Adding or changing webhook endpoints
-  - Wiring external systems into OpenClaw
+  - 添加或更改Webhook端点时
+  - 将外部系统连接到OpenClaw时
 title: "Webhooks"
 ---
 
 # Webhooks
 
-Gateway can expose a small HTTP webhook endpoint for external triggers.
+Gateway可以为外部触发器暴露一个小型HTTP webhook端点。
 
-## Enable
+## 启用
 
 ```json5
 {
@@ -18,48 +18,48 @@ Gateway can expose a small HTTP webhook endpoint for external triggers.
     enabled: true,
     token: "shared-secret",
     path: "/hooks",
-    // Optional: restrict explicit `agentId` routing to this allowlist.
-    // Omit or include "*" to allow any agent.
-    // Set [] to deny all explicit `agentId` routing.
+    // 可选：限制显式的`agentId`路由到此白名单。
+    // 省略或包含"*"以允许任何代理。
+    // 设置[]表示拒绝所有显式的`agentId`路由。
     allowedAgentIds: ["hooks", "main"],
   },
 }
 ```
 
-Notes:
+说明：
 
-- `hooks.token` is required when `hooks.enabled=true`.
-- `hooks.path` defaults to `/hooks`.
+- 当`hooks.enabled=true`时，`hooks.token`是必需的。
+- `hooks.path`默认为`/hooks`。
 
-## Auth
+## 认证
 
-Every request must include the hook token. Prefer headers:
+每个请求必须包含hook令牌。优先使用请求头：
 
-- `Authorization: Bearer <token>` (recommended)
+- `Authorization: Bearer <token>`（推荐）
 - `x-openclaw-token: <token>`
-- Query-string tokens are rejected (`?token=...` returns `400`).
+- 不接受查询字符串中的令牌（`?token=...`会返回`400`错误）。
 
-## Endpoints
+## 端点
 
 ### `POST /hooks/wake`
 
-Payload:
+请求体：
 
 ```json
 { "text": "System line", "mode": "now" }
 ```
 
-- `text` **required** (string): The description of the event (e.g., "New email received").
-- `mode` optional (`now` | `next-heartbeat`): Whether to trigger an immediate heartbeat (default `now`) or wait for the next periodic check.
+- `text` **必填**（字符串）：事件描述（例如，“收到新邮件”）。
+- `mode` 可选（`now` | `next-heartbeat`）：是立即触发心跳（默认`now`），还是等待下一次周期性检查。
 
-Effect:
+效果：
 
-- Enqueues a system event for the **main** session
-- If `mode=now`, triggers an immediate heartbeat
+- 将系统事件入队到**主**会话
+- 如果`mode=now`，则触发立即心跳
 
 ### `POST /hooks/agent`
 
-Payload:
+请求体：
 
 ```json
 {
@@ -77,32 +77,32 @@ Payload:
 }
 ```
 
-- `message` **required** (string): The prompt or message for the agent to process.
-- `name` optional (string): Human-readable name for the hook (e.g., "GitHub"), used as a prefix in session summaries.
-- `agentId` optional (string): Route this hook to a specific agent. Unknown IDs fall back to the default agent. When set, the hook runs using the resolved agent's workspace and configuration.
-- `sessionKey` optional (string): The key used to identify the agent's session. By default this field is rejected unless `hooks.allowRequestSessionKey=true`.
-- `wakeMode` optional (`now` | `next-heartbeat`): Whether to trigger an immediate heartbeat (default `now`) or wait for the next periodic check.
-- `deliver` optional (boolean): If `true`, the agent's response will be sent to the messaging channel. Defaults to `true`. Responses that are only heartbeat acknowledgments are automatically skipped.
-- `channel` optional (string): The messaging channel for delivery. One of: `last`, `whatsapp`, `telegram`, `discord`, `slack`, `mattermost` (plugin), `signal`, `imessage`, `msteams`. Defaults to `last`.
-- `to` optional (string): The recipient identifier for the channel (e.g., phone number for WhatsApp/Signal, chat ID for Telegram, channel ID for Discord/Slack/Mattermost (plugin), conversation ID for MS Teams). Defaults to the last recipient in the main session.
-- `model` optional (string): Model override (e.g., `anthropic/claude-3-5-sonnet` or an alias). Must be in the allowed model list if restricted.
-- `thinking` optional (string): Thinking level override (e.g., `low`, `medium`, `high`).
-- `timeoutSeconds` optional (number): Maximum duration for the agent run in seconds.
+- `message` **必填**（字符串）：代理需要处理的提示或消息。
+- `name` 可选（字符串）：hook的人类可读名称（例如，“GitHub”），用于会话摘要的前缀。
+- `agentId` 可选（字符串）：将此hook路由到指定代理。未知ID将回退到默认代理。设置后，hook将在解析出的代理的工作空间和配置下运行。
+- `sessionKey` 可选（字符串）：用于识别代理会话的键。默认情况下此字段会被拒绝，除非设置`hooks.allowRequestSessionKey=true`。
+- `wakeMode` 可选（`now` | `next-heartbeat`）：是立即触发心跳（默认`now`），还是等待下一次周期性检查。
+- `deliver` 可选（布尔）：如果为`true`，代理的响应将发送到消息通道。默认为`true`。只有心跳确认的响应会被自动跳过。
+- `channel` 可选（字符串）：消息投递通道。选项包括：`last`、`whatsapp`、`telegram`、`discord`、`slack`、`mattermost`（插件）、`signal`、`imessage`、`msteams`。默认为`last`。
+- `to` 可选（字符串）：通道的接收者标识（例如，WhatsApp/Signal的电话号码，Telegram的聊天ID，Discord/Slack/Mattermost（插件）的频道ID，MS Teams的会话ID）。默认为主会话中的最后一个接收者。
+- `model` 可选（字符串）：模型覆盖（例如`anthropic/claude-3-5-sonnet`或别名）。如果有限制，必须包含在允许模型列表中。
+- `thinking` 可选（字符串）：思考级别覆盖（例如`low`、`medium`、`high`）。
+- `timeoutSeconds` 可选（数字）：代理运行的最大持续时间（秒）。
 
-Effect:
+效果：
 
-- Runs an **isolated** agent turn (own session key)
-- Always posts a summary into the **main** session
-- If `wakeMode=now`, triggers an immediate heartbeat
+- 运行一个**独立**代理行动（独立会话键）
+- 始终将摘要发布到**主**会话
+- 如果`wakeMode=now`，触发立即心跳
 
-## Session key policy (breaking change)
+## 会话键策略（破坏性变更）
 
-`/hooks/agent` payload `sessionKey` overrides are disabled by default.
+`/hooks/agent`请求体中的`sessionKey`覆盖默认禁用。
 
-- Recommended: set a fixed `hooks.defaultSessionKey` and keep request overrides off.
-- Optional: allow request overrides only when needed, and restrict prefixes.
+- 推荐做法：设置固定的`hooks.defaultSessionKey`并禁用请求覆盖。
+- 可选：仅在必要时允许请求覆盖，并限制前缀。
 
-Recommended config:
+推荐配置：
 
 ```json5
 {
@@ -116,7 +116,7 @@ Recommended config:
 }
 ```
 
-Compatibility config (legacy behavior):
+兼容性配置（旧行为）：
 
 ```json5
 {
@@ -124,48 +124,46 @@ Compatibility config (legacy behavior):
     enabled: true,
     token: "${OPENCLAW_HOOKS_TOKEN}",
     allowRequestSessionKey: true,
-    allowedSessionKeyPrefixes: ["hook:"], // strongly recommended
+    allowedSessionKeyPrefixes: ["hook:"], // 强烈推荐
   },
 }
 ```
 
-### `POST /hooks/<name>` (mapped)
+### `POST /hooks/<name>`（映射）
 
-Custom hook names are resolved via `hooks.mappings` (see configuration). A mapping can
-turn arbitrary payloads into `wake` or `agent` actions, with optional templates or
-code transforms.
+自定义hook名称通过`hooks.mappings`解析（查看配置）。映射可以将任意请求体转换为`wake`或`agent`动作，支持可选的模板或代码转换。
 
-Mapping options (summary):
+映射选项摘要：
 
-- `hooks.presets: ["gmail"]` enables the built-in Gmail mapping.
-- `hooks.mappings` lets you define `match`, `action`, and templates in config.
-- `hooks.transformsDir` + `transform.module` loads a JS/TS module for custom logic.
-  - `hooks.transformsDir` (if set) must stay within the transforms root under your OpenClaw config directory (typically `~/.openclaw/hooks/transforms`).
-  - `transform.module` must resolve within the effective transforms directory (traversal/escape paths are rejected).
-- Use `match.source` to keep a generic ingest endpoint (payload-driven routing).
-- TS transforms require a TS loader (e.g. `bun` or `tsx`) or precompiled `.js` at runtime.
-- Set `deliver: true` + `channel`/`to` on mappings to route replies to a chat surface
-  (`channel` defaults to `last` and falls back to WhatsApp).
-- `agentId` routes the hook to a specific agent; unknown IDs fall back to the default agent.
-- `hooks.allowedAgentIds` restricts explicit `agentId` routing. Omit it (or include `*`) to allow any agent. Set `[]` to deny explicit `agentId` routing.
-- `hooks.defaultSessionKey` sets the default session for hook agent runs when no explicit key is provided.
-- `hooks.allowRequestSessionKey` controls whether `/hooks/agent` payloads may set `sessionKey` (default: `false`).
-- `hooks.allowedSessionKeyPrefixes` optionally restricts explicit `sessionKey` values from request payloads and mappings.
-- `allowUnsafeExternalContent: true` disables the external content safety wrapper for that hook
-  (dangerous; only for trusted internal sources).
-- `openclaw webhooks gmail setup` writes `hooks.gmail` config for `openclaw webhooks gmail run`.
-  See [Gmail Pub/Sub](/automation/gmail-pubsub) for the full Gmail watch flow.
+- `hooks.presets: ["gmail"]`启用内置的Gmail映射。
+- `hooks.mappings`允许在配置中定义`match`、`action`和模板。
+- `hooks.transformsDir` + `transform.module`加载JS/TS模块用于自定义逻辑。
+  - `hooks.transformsDir`（如果设置）必须位于OpenClaw配置目录下的转换根目录内（通常是`~/.openclaw/hooks/transforms`）。
+  - `transform.module`必须能在有效的转换目录中解析（禁止路径逃逸）。
+- 使用`match.source`保持通用摄取端点（基于负载的路由）。
+- TS转换需要TS加载器（如`bun`或`tsx`）或运行时预编译的`.js`文件。
+- 在映射上设置`deliver: true` + `channel`/`to`以将回复路由到聊天界面
+  （`channel`默认`last`，备选WhatsApp）。
+- `agentId`将hook路由到指定代理；未知ID回退默认代理。
+- `hooks.allowedAgentIds`限制显式的`agentId`路由。省略（或包含`*`）则允许任何代理。设置`[]`拒绝显式`agentId`路由。
+- `hooks.defaultSessionKey`为未提供显式键时，设置hook代理运行的默认会话键。
+- `hooks.allowRequestSessionKey`控制`/hooks/agent`请求体是否可设置`sessionKey`（默认：`false`）。
+- `hooks.allowedSessionKeyPrefixes`可选限制请求体和映射中的显式`sessionKey`值。
+- `allowUnsafeExternalContent: true`禁用该hook的外部内容安全包装器
+  （危险，仅限受信任的内部来源）。
+- `openclaw webhooks gmail setup`为`openclaw webhooks gmail run`写入`hooks.gmail`配置。
+  详见 [Gmail Pub/Sub](/automation/gmail-pubsub) 获取完整的Gmail监听流程。
 
-## Responses
+## 响应
 
-- `200` for `/hooks/wake`
-- `200` for `/hooks/agent` (async run accepted)
-- `401` on auth failure
-- `429` after repeated auth failures from the same client (check `Retry-After`)
-- `400` on invalid payload
-- `413` on oversized payloads
+- `/hooks/wake`返回`200`
+- `/hooks/agent`返回`200`（异步运行已接受）
+- 认证失败时返回`401`
+- 同一客户端多次认证失败后返回`429`（查看`Retry-After`）
+- 请求体无效时返回`400`
+- 请求体过大时返回`413`
 
-## Examples
+## 示例
 
 ```bash
 curl -X POST http://127.0.0.1:18789/hooks/wake \
@@ -181,9 +179,9 @@ curl -X POST http://127.0.0.1:18789/hooks/agent \
   -d '{"message":"Summarize inbox","name":"Email","wakeMode":"next-heartbeat"}'
 ```
 
-### Use a different model
+### 使用不同的模型
 
-Add `model` to the agent payload (or mapping) to override the model for that run:
+在代理请求体（或映射）中添加`model`，以覆盖该运行的模型：
 
 ```bash
 curl -X POST http://127.0.0.1:18789/hooks/agent \
@@ -192,7 +190,7 @@ curl -X POST http://127.0.0.1:18789/hooks/agent \
   -d '{"message":"Summarize inbox","name":"Email","model":"openai/gpt-5.2-mini"}'
 ```
 
-If you enforce `agents.defaults.models`, make sure the override model is included there.
+如果您启用了`agents.defaults.models`限制，请确保覆盖模型包含在其中。
 
 ```bash
 curl -X POST http://127.0.0.1:18789/hooks/gmail \
@@ -201,15 +199,15 @@ curl -X POST http://127.0.0.1:18789/hooks/gmail \
   -d '{"source":"gmail","messages":[{"from":"Ada","subject":"Hello","snippet":"Hi"}]}'
 ```
 
-## Security
+## 安全性
 
-- Keep hook endpoints behind loopback, tailnet, or trusted reverse proxy.
-- Use a dedicated hook token; do not reuse gateway auth tokens.
-- Repeated auth failures are rate-limited per client address to slow brute-force attempts.
-- If you use multi-agent routing, set `hooks.allowedAgentIds` to limit explicit `agentId` selection.
-- Keep `hooks.allowRequestSessionKey=false` unless you require caller-selected sessions.
-- If you enable request `sessionKey`, restrict `hooks.allowedSessionKeyPrefixes` (for example, `["hook:"]`).
-- Avoid including sensitive raw payloads in webhook logs.
-- Hook payloads are treated as untrusted and wrapped with safety boundaries by default.
-  If you must disable this for a specific hook, set `allowUnsafeExternalContent: true`
-  in that hook's mapping (dangerous).
+- 将hook端点放置于回环地址、tailnet或受信任的反向代理之后。
+- 使用专用hook令牌；不要重用gateway的认证令牌。
+- 针对同一客户端地址的多次认证失败会进行速率限制，以阻止暴力破解尝试。
+- 若使用多代理路由，设置`hooks.allowedAgentIds`以限制显式的`agentId`选择。
+- 除非需要调用方自行选择会话，保持`hooks.allowRequestSessionKey=false`。
+- 如果启用了请求中的`sessionKey`，请限制`hooks.allowedSessionKeyPrefixes`（例如`["hook:"]`）。
+- 避免在webhook日志中包含敏感的原始请求体。
+- 默认情况下，hook请求体被视为不受信任，并加以安全边界包装。
+  如果必须为特定hook禁用此功能，设置该hook映射中的`allowUnsafeExternalContent: true`
+  （危险操作）。

@@ -1,38 +1,36 @@
 ---
-summary: "Cron jobs + wakeups for the Gateway scheduler"
+summary: "网关调度器的 Cron 作业 + 唤醒"
 read_when:
-  - Scheduling background jobs or wakeups
-  - Wiring automation that should run with or alongside heartbeats
-  - Deciding between heartbeat and cron for scheduled tasks
-title: "Cron Jobs"
+  - 调度后台作业或唤醒事件
+  - 配置应与心跳一起或并行运行的自动化流程
+  - 在心跳与 cron 之间选择调度任务时
+title: "Cron 作业"
 ---
 
-# Cron jobs (Gateway scheduler)
+# Cron 作业（网关调度器）
 
-> **Cron vs Heartbeat?** See [Cron vs Heartbeat](/automation/cron-vs-heartbeat) for guidance on when to use each.
+> **Cron 与心跳的区别？** 请参见 [Cron vs Heartbeat](/automation/cron-vs-heartbeat) 以获取何时使用的指导。
 
-Cron is the Gateway’s built-in scheduler. It persists jobs, wakes the agent at
-the right time, and can optionally deliver output back to a chat.
+Cron 是网关内置的调度器。它会持久化作业，准时唤醒代理，并且可以选择将输出发送回聊天。
 
-If you want _“run this every morning”_ or _“poke the agent in 20 minutes”_,
-cron is the mechanism.
+如果你想要实现“每天早上运行”或“20 分钟后唤醒代理”，cron 是实现的机制。
 
-Troubleshooting: [/automation/troubleshooting](/automation/troubleshooting)
+故障排查：[/automation/troubleshooting](/automation/troubleshooting)
 
 ## TL;DR
 
-- Cron runs **inside the Gateway** (not inside the model).
-- Jobs persist under `~/.openclaw/cron/` so restarts don’t lose schedules.
-- Two execution styles:
-  - **Main session**: enqueue a system event, then run on the next heartbeat.
-  - **Isolated**: run a dedicated agent turn in `cron:<jobId>`, with delivery (announce by default or none).
-- Wakeups are first-class: a job can request “wake now” vs “next heartbeat”.
-- Webhook posting is per job via `delivery.mode = "webhook"` + `delivery.to = "<url>"`.
-- Legacy fallback remains for stored jobs with `notify: true` when `cron.webhook` is set, migrate those jobs to webhook delivery mode.
+- Cron 运行在 **网关内部**（而非模型内部）。
+- 作业持久化于 `~/.openclaw/cron/`，重启不会丢失计划。
+- 提供两种执行方式：
+  - **主会话**：排入系统事件队列，然后在下一次心跳执行。
+  - **隔离执行**：在 `cron:<jobId>` 中运行专门的代理回合，默认或无公告方式发送结果。
+- 唤醒是首要功能：作业可以请求“立即唤醒”或“下一次心跳”。
+- Webhook 发布按作业独立配置，使用 `delivery.mode = "webhook"` + `delivery.to = "<url>"`。
+- 保留对配置了 `cron.webhook` 且存储了 `notify: true` 作业的旧版兼容，建议迁移到 webhook 交付模式。
 
-## Quick start (actionable)
+## 快速开始（可操作示例）
 
-Create a one-shot reminder, verify it exists, and run it immediately:
+创建一个一次性提醒，确认其存在，并立即运行：
 
 ```bash
 openclaw cron add \
@@ -48,7 +46,7 @@ openclaw cron run <job-id>
 openclaw cron runs --id <job-id>
 ```
 
-Schedule a recurring isolated job with delivery:
+调度一个带有交付的周期性隔离作业：
 
 ```bash
 openclaw cron add \
@@ -62,229 +60,214 @@ openclaw cron add \
   --to "channel:C1234567890"
 ```
 
-## Tool-call equivalents (Gateway cron tool)
+## 工具调用等效（网关 cron 工具）
 
-For the canonical JSON shapes and examples, see [JSON schema for tool calls](/automation/cron-jobs#json-schema-for-tool-calls).
+有关规范的 JSON 结构和示例，请参见 [工具调用的 JSON 架构](/automation/cron-jobs#json-schema-for-tool-calls)。
 
-## Where cron jobs are stored
+## Cron 作业存储位置
 
-Cron jobs are persisted on the Gateway host at `~/.openclaw/cron/jobs.json` by default.
-The Gateway loads the file into memory and writes it back on changes, so manual edits
-are only safe when the Gateway is stopped. Prefer `openclaw cron add/edit` or the cron
-tool call API for changes.
+Cron 作业默认持久化于网关主机的 `~/.openclaw/cron/jobs.json`。
+网关启动时加载此文件至内存，变更时写回文件，因此仅在网关停止时手动编辑文件才安全。
+更推荐使用 `openclaw cron add/edit` 或 cron 工具调用 API 进行操作。
 
-## Beginner-friendly overview
+## 面向初学者的概述
 
-Think of a cron job as: **when** to run + **what** to do.
+将 cron 作业理解为：**何时运行** + **做什么** 。
 
-1. **Choose a schedule**
-   - One-shot reminder → `schedule.kind = "at"` (CLI: `--at`)
-   - Repeating job → `schedule.kind = "every"` or `schedule.kind = "cron"`
-   - If your ISO timestamp omits a timezone, it is treated as **UTC**.
+1. **选择调度时间**
+   - 一次性提醒 → `schedule.kind = "at"` （CLI 为 `--at`）
+   - 重复作业 → `schedule.kind = "every"` 或 `schedule.kind = "cron"`
+   - 如果 ISO 时间戳未包含时区，则默认视为 **UTC**。
 
-2. **Choose where it runs**
-   - `sessionTarget: "main"` → run during the next heartbeat with main context.
-   - `sessionTarget: "isolated"` → run a dedicated agent turn in `cron:<jobId>`.
+2. **选择运行位置**
+   - `sessionTarget: "main"` → 在下次心跳期间于主会话上下文执行。
+   - `sessionTarget: "isolated"` → 在专用的 `cron:<jobId>` 会话中运行代理回合。
 
-3. **Choose the payload**
-   - Main session → `payload.kind = "systemEvent"`
-   - Isolated session → `payload.kind = "agentTurn"`
+3. **选择运行负载**
+   - 主会话 → `payload.kind = "systemEvent"`
+   - 隔离会话 → `payload.kind = "agentTurn"`
 
-Optional: one-shot jobs (`schedule.kind = "at"`) delete after success by default. Set
-`deleteAfterRun: false` to keep them (they will disable after success).
+可选：一次性作业（`schedule.kind = "at"`）默认成功后删除。设置 `deleteAfterRun: false` 可保留（成功后自动禁用）。
 
-## Concepts
+## 概念
 
-### Jobs
+### 作业
 
-A cron job is a stored record with:
+Cron 作业是一个存储记录，包含：
 
-- a **schedule** (when it should run),
-- a **payload** (what it should do),
-- optional **delivery mode** (`announce`, `webhook`, or `none`).
-- optional **agent binding** (`agentId`): run the job under a specific agent; if
-  missing or unknown, the gateway falls back to the default agent.
+- 一个 **调度计划**（何时执行），
+- 一个 **负载**（做什么），
+- 可选的 **交付模式**（`announce`、`webhook` 或 `none`）。
+- 可选的 **代理绑定**（`agentId`）：在指定代理下运行作业；若缺失或未知，网关回退为默认代理。
 
-Jobs are identified by a stable `jobId` (used by CLI/Gateway APIs).
-In agent tool calls, `jobId` is canonical; legacy `id` is accepted for compatibility.
-One-shot jobs auto-delete after success by default; set `deleteAfterRun: false` to keep them.
+作业由稳定的 `jobId` 标识（CLI/网关 API 使用）。
+代理工具调用中，`jobId` 为规范字段；为兼容接受旧字段 `id`。
+一次性作业默认成功后自删除；设置 `deleteAfterRun: false` 可保留。
 
-### Schedules
+### 调度计划
 
-Cron supports three schedule kinds:
+Cron 支持三种调度方式：
 
-- `at`: one-shot timestamp via `schedule.at` (ISO 8601).
-- `every`: fixed interval (ms).
-- `cron`: 5-field cron expression (or 6-field with seconds) with optional IANA timezone.
+- `at`：一次性时间点，使用 `schedule.at` （ISO 8601 格式）。
+- `every`：固定间隔（毫秒）。
+- `cron`：5 字段 cron 表达式（或带秒的 6 字段）及可选 IANA 时区。
 
-Cron expressions use `croner`. If a timezone is omitted, the Gateway host’s
-local timezone is used.
+Cron 表达式使用 `croner` 解析。若未指定时区，则使用网关主机本地时区。
 
-To reduce top-of-hour load spikes across many gateways, OpenClaw applies a
-deterministic per-job stagger window of up to 5 minutes for recurring
-top-of-hour expressions (for example `0 * * * *`, `0 */2 * * *`). Fixed-hour
-expressions such as `0 7 * * *` remain exact.
+为减少大量网关在整点负载峰值，OpenClaw 在重复整点表达式（如 `0 * * * *`、`0 */2 * * *`）上应用了最多 5 分钟的确定性错峰窗口。
+固定小时表达式如 `0 7 * * *` 保持精确。
 
-For any cron schedule, you can set an explicit stagger window with `schedule.staggerMs`
-(`0` keeps exact timing). CLI shortcuts:
+对任意 cron 计划，可设置显式错峰窗口 `schedule.staggerMs` （`0` 表示精确时间）。
+CLI 快捷方式：
 
-- `--stagger 30s` (or `1m`, `5m`) to set an explicit stagger window.
-- `--exact` to force `staggerMs = 0`.
+- `--stagger 30s`（或 `1m`、`5m`）设置显式错峰窗口。
+- `--exact` 强制 `staggerMs = 0`。
 
-### Main vs isolated execution
+### 主会话与隔离执行
 
-#### Main session jobs (system events)
+#### 主会话作业（系统事件）
 
-Main jobs enqueue a system event and optionally wake the heartbeat runner.
-They must use `payload.kind = "systemEvent"`.
+主会话作业将系统事件排队，且可唤醒心跳执行。
+必须使用 `payload.kind = "systemEvent"`。
 
-- `wakeMode: "now"` (default): event triggers an immediate heartbeat run.
-- `wakeMode: "next-heartbeat"`: event waits for the next scheduled heartbeat.
+- `wakeMode: "now"`（默认）：事件触发立即心跳执行。
+- `wakeMode: "next-heartbeat"`：事件等待下次预定的心跳。
 
-This is the best fit when you want the normal heartbeat prompt + main-session context.
-See [Heartbeat](/gateway/heartbeat).
+当你需要正常的心跳提示和主会话上下文时，这种方式最合适。
+详见 [Heartbeat](/gateway/heartbeat)。
 
-#### Isolated jobs (dedicated cron sessions)
+#### 隔离作业（专用 cron 会话）
 
-Isolated jobs run a dedicated agent turn in session `cron:<jobId>`.
+隔离作业在 `cron:<jobId>` 会话中运行专用代理回合。
 
-Key behaviors:
+主要特点：
 
-- Prompt is prefixed with `[cron:<jobId> <job name>]` for traceability.
-- Each run starts a **fresh session id** (no prior conversation carry-over).
-- Default behavior: if `delivery` is omitted, isolated jobs announce a summary (`delivery.mode = "announce"`).
-- `delivery.mode` chooses what happens:
-  - `announce`: deliver a summary to the target channel and post a brief summary to the main session.
-  - `webhook`: POST the finished event payload to `delivery.to` when the finished event includes a summary.
-  - `none`: internal only (no delivery, no main-session summary).
-- `wakeMode` controls when the main-session summary posts:
-  - `now`: immediate heartbeat.
-  - `next-heartbeat`: waits for the next scheduled heartbeat.
+- 提示文本带前缀 `[cron:<jobId> <job name>]` 便于追踪。
+- 每次运行使用全新会话 ID（不会继承先前对话）。
+- 默认行为：若无 `delivery` 配置，隔离作业会公告摘要（即 `delivery.mode = "announce"`）。
+- `delivery.mode` 决定交付行为：
+  - `announce`：将摘要发送至目标频道，并同时向主会话发布简要摘要。
+  - `webhook`：若完成事件包含摘要，则 POST 负载到 `delivery.to` 指定的 URL。
+  - `none`：仅内部运行，无交付，无主会话摘要。
+- `wakeMode` 控制主会话摘要发布时间：
+  - `now`：立即触发心跳。
+  - `next-heartbeat`：等待下次心跳执行。
 
-Use isolated jobs for noisy, frequent, or "background chores" that shouldn't spam
-your main chat history.
+隔离作业适用于噪声大、频繁执行或“后台杂务”，避免干扰主聊天记录。
 
-### Payload shapes (what runs)
+### 负载结构（运行内容）
 
-Two payload kinds are supported:
+支持两种负载类型：
 
-- `systemEvent`: main-session only, routed through the heartbeat prompt.
-- `agentTurn`: isolated-session only, runs a dedicated agent turn.
+- `systemEvent`：仅主会话，路由到心跳提示。
+- `agentTurn`：仅隔离会话，运行专用代理回合。
 
-Common `agentTurn` fields:
+`agentTurn` 常用字段：
 
-- `message`: required text prompt.
-- `model` / `thinking`: optional overrides (see below).
-- `timeoutSeconds`: optional timeout override.
-- `lightContext`: optional lightweight bootstrap mode for jobs that do not need workspace bootstrap file injection.
+- `message`：必需，文本提示。
+- `model` / `thinking`：可选覆盖（见下文）。
+- `timeoutSeconds`：可选超时覆盖。
+- `lightContext`：轻量级引导模式，适用于不需要工作空间引导文件注入的作业。
 
-Delivery config:
+交付配置：
 
-- `delivery.mode`: `none` | `announce` | `webhook`.
-- `delivery.channel`: `last` or a specific channel.
-- `delivery.to`: channel-specific target (announce) or webhook URL (webhook mode).
-- `delivery.bestEffort`: avoid failing the job if announce delivery fails.
+- `delivery.mode`：`none`｜`announce`｜`webhook`。
+- `delivery.channel`：`last` 或具体频道。
+- `delivery.to`：频道特定目标（公告）或 webhook URL（webhook 模式）。
+- `delivery.bestEffort`：公告失败时避免导致作业失败。
 
-Announce delivery suppresses messaging tool sends for the run; use `delivery.channel`/`delivery.to`
-to target the chat instead. When `delivery.mode = "none"`, no summary is posted to the main session.
+公告交付抑制本次执行的消息工具发送；使用 `delivery.channel` / `delivery.to` 指定的聊天发送。
+当 `delivery.mode = "none"` 时，不向主会话发布摘要。
 
-If `delivery` is omitted for isolated jobs, OpenClaw defaults to `announce`.
+隔离作业若未指定 `delivery`，OpenClaw 默认为 `announce`。
 
-#### Announce delivery flow
+#### 公告交付流程
 
-When `delivery.mode = "announce"`, cron delivers directly via the outbound channel adapters.
-The main agent is not spun up to craft or forward the message.
+当 `delivery.mode = "announce"` 时，cron 通过出站频道适配器直接发送。
+不会启动主代理制作或转发消息。
 
-Behavior details:
+具体行为：
 
-- Content: delivery uses the isolated run's outbound payloads (text/media) with normal chunking and
-  channel formatting.
-- Heartbeat-only responses (`HEARTBEAT_OK` with no real content) are not delivered.
-- If the isolated run already sent a message to the same target via the message tool, delivery is
-  skipped to avoid duplicates.
-- Missing or invalid delivery targets fail the job unless `delivery.bestEffort = true`.
-- A short summary is posted to the main session only when `delivery.mode = "announce"`.
-- The main-session summary respects `wakeMode`: `now` triggers an immediate heartbeat and
-  `next-heartbeat` waits for the next scheduled heartbeat.
+- 内容：使用隔离执行的出站负载（文本/媒体），带正常分块及频道格式化。
+- 心跳专用响应（`HEARTBEAT_OK` 无实际内容）不交付。
+- 若隔离执行已用消息工具向同目标发送消息，则跳过交付避免重复。
+- 缺失或无效交付目标时作业失败，除非 `delivery.bestEffort = true`。
+- 仅 `delivery.mode = "announce"` 会向主会话发布简短摘要。
+- 主会话摘要受 `wakeMode` 控制：`now` 触发立即心跳，`next-heartbeat` 等待下次心跳。
 
-#### Webhook delivery flow
+#### Webhook 交付流程
 
-When `delivery.mode = "webhook"`, cron posts the finished event payload to `delivery.to` when the finished event includes a summary.
+当 `delivery.mode = "webhook"` 时，完成事件包含摘要时，cron 将该事件负载 POST 至 `delivery.to`。
 
-Behavior details:
+具体行为：
 
-- The endpoint must be a valid HTTP(S) URL.
-- No channel delivery is attempted in webhook mode.
-- No main-session summary is posted in webhook mode.
-- If `cron.webhookToken` is set, auth header is `Authorization: Bearer <cron.webhookToken>`.
-- Deprecated fallback: stored legacy jobs with `notify: true` still post to `cron.webhook` (if configured), with a warning so you can migrate to `delivery.mode = "webhook"`.
+- 端点必须是有效的 HTTP(S) URL。
+- webhook 模式不尝试频道交付。
+- webhook 模式不发布主会话摘要。
+- 如设置了 `cron.webhookToken`，则授权头为 `Authorization: Bearer <cron.webhookToken>`。
+- 旧版兼容：存储的通知作业带 `notify: true` 仍会推送到 `cron.webhook`（若配置），伴随警告，建议迁移至 `delivery.mode = "webhook"`。
 
-### Model and thinking overrides
+### 模型及思考级别覆盖
 
-Isolated jobs (`agentTurn`) can override the model and thinking level:
+隔离作业 (`agentTurn`) 可覆盖模型及思考级别：
 
-- `model`: Provider/model string (e.g., `anthropic/claude-sonnet-4-20250514`) or alias (e.g., `opus`)
-- `thinking`: Thinking level (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`; GPT-5.2 + Codex models only)
+- `model`：提供商/模型字符串（例如 `anthropic/claude-sonnet-4-20250514`）或别名（如 `opus`）
+- `thinking`：思考级别（`off`、`minimal`、`low`、`medium`、`high`、`xhigh`；仅 GPT-5.2 + Codex 模型支持）
 
-Note: You can set `model` on main-session jobs too, but it changes the shared main
-session model. We recommend model overrides only for isolated jobs to avoid
-unexpected context shifts.
+注意：你也可以设置主会话作业的 `model`，但这会更改共享的主会话模型。我们建议仅对隔离作业使用模型覆盖，避免意外上下文切换。
 
-Resolution priority:
+覆盖优先级：
 
-1. Job payload override (highest)
-2. Hook-specific defaults (e.g., `hooks.gmail.model`)
-3. Agent config default
+1. 作业负载覆盖（最高）
+2. 钩子专属默认（例如 `hooks.gmail.model`）
+3. 代理配置默认
 
-### Lightweight bootstrap context
+### 轻量级引导上下文
 
-Isolated jobs (`agentTurn`) can set `lightContext: true` to run with lightweight bootstrap context.
+隔离作业 (`agentTurn`) 可以设置 `lightContext: true` 以使用轻量级引导上下文。
 
-- Use this for scheduled chores that do not need workspace bootstrap file injection.
-- In practice, the embedded runtime runs with `bootstrapContextMode: "lightweight"`, which keeps cron bootstrap context empty on purpose.
-- CLI equivalents: `openclaw cron add --light-context ...` and `openclaw cron edit --light-context`.
+- 适用于不需要工作空间引导文件注入的定时杂务。
+- 实际上，嵌入式运行时以 `bootstrapContextMode: "lightweight"` 运行，故意保持 cron 引导上下文为空。
+- CLI 等效：`openclaw cron add --light-context ...` 和 `openclaw cron edit --light-context`。
 
-### Delivery (channel + target)
+### 交付（频道 + 目标）
 
-Isolated jobs can deliver output to a channel via the top-level `delivery` config:
+隔离作业可通过顶层 `delivery` 配置将输出发送至频道：
 
-- `delivery.mode`: `announce` (channel delivery), `webhook` (HTTP POST), or `none`.
-- `delivery.channel`: `whatsapp` / `telegram` / `discord` / `slack` / `mattermost` (plugin) / `signal` / `imessage` / `last`.
-- `delivery.to`: channel-specific recipient target.
+- `delivery.mode`：`announce`（频道交付）、`webhook`（HTTP POST）或 `none`
+- `delivery.channel`：`whatsapp` / `telegram` / `discord` / `slack` / `mattermost`（插件）/ `signal` / `imessage` / `last`
+- `delivery.to`：频道特定接收目标
 
-`announce` delivery is only valid for isolated jobs (`sessionTarget: "isolated"`).
-`webhook` delivery is valid for both main and isolated jobs.
+`announce` 交付仅对隔离作业有效 (`sessionTarget: "isolated"`)。
+`webhook` 交付对主会话和隔离作业均有效。
 
-If `delivery.channel` or `delivery.to` is omitted, cron can fall back to the main session’s
-“last route” (the last place the agent replied).
+若未指定 `delivery.channel` 或 `delivery.to`，cron 会回退使用主会话的“最后路由”（代理最后回复的目标）。
 
-Target format reminders:
+目标格式提示：
 
-- Slack/Discord/Mattermost (plugin) targets should use explicit prefixes (e.g. `channel:<id>`, `user:<id>`) to avoid ambiguity.
-- Telegram topics should use the `:topic:` form (see below).
+- Slack/Discord/Mattermost（插件）目标需使用明确前缀（如 `channel:<id>`、`user:<id>`）以避免歧义。
+- Telegram 主题应使用 `:topic:` 形式（见下文）。
 
-#### Telegram delivery targets (topics / forum threads)
+#### Telegram 交付目标（主题/论坛线程）
 
-Telegram supports forum topics via `message_thread_id`. For cron delivery, you can encode
-the topic/thread into the `to` field:
+Telegram 支持通过 `message_thread_id` 发送论坛主题。Cron 交付时，可将主题/线程编码入 `to` 字段：
 
-- `-1001234567890` (chat id only)
-- `-1001234567890:topic:123` (preferred: explicit topic marker)
-- `-1001234567890:123` (shorthand: numeric suffix)
+- `-1001234567890`（仅聊天 ID）
+- `-1001234567890:topic:123`（首选：明确主题标记）
+- `-1001234567890:123`（简写：数字后缀）
 
-Prefixed targets like `telegram:...` / `telegram:group:...` are also accepted:
+也接受带前缀的目标，如 `telegram:...` / `telegram:group:...`：
 
 - `telegram:group:-1001234567890:topic:123`
 
-## JSON schema for tool calls
+## 工具调用的 JSON 架构
 
-Use these shapes when calling Gateway `cron.*` tools directly (agent tool calls or RPC).
-CLI flags accept human durations like `20m`, but tool calls should use an ISO 8601 string
-for `schedule.at` and milliseconds for `schedule.everyMs`.
+当直接调用网关 `cron.*` 工具时使用这些结构（代理工具调用或 RPC）。
+CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8601 字符串（用于 `schedule.at`）和毫秒数（用于 `schedule.everyMs`）。
 
-### cron.add params
+### cron.add 参数示例
 
-One-shot, main session job (system event):
+一次性主会话作业（系统事件）：
 
 ```json
 {
@@ -297,7 +280,7 @@ One-shot, main session job (system event):
 }
 ```
 
-Recurring, isolated job with delivery:
+周期性隔离作业（带交付）：
 
 ```json
 {
@@ -319,17 +302,16 @@ Recurring, isolated job with delivery:
 }
 ```
 
-Notes:
+说明：
 
-- `schedule.kind`: `at` (`at`), `every` (`everyMs`), or `cron` (`expr`, optional `tz`).
-- `schedule.at` accepts ISO 8601 (timezone optional; treated as UTC when omitted).
-- `everyMs` is milliseconds.
-- `sessionTarget` must be `"main"` or `"isolated"` and must match `payload.kind`.
-- Optional fields: `agentId`, `description`, `enabled`, `deleteAfterRun` (defaults to true for `at`),
-  `delivery`.
-- `wakeMode` defaults to `"now"` when omitted.
+- `schedule.kind`：`at`（带 `at`）、`every`（带 `everyMs`）、或 `cron`（带 `expr` 和可选 `tz`）。
+- `schedule.at` 接受 ISO 8601 格式（时区可选，不指定时视为 UTC）。
+- `everyMs` 为毫秒。
+- `sessionTarget` 必须是 `"main"` 或 `"isolated"`，且与 `payload.kind` 匹配。
+- 可选字段：`agentId`、`description`、`enabled`、`deleteAfterRun`（`at` 默认 true）、`delivery`。
+- `wakeMode` 省略时默认 `"now"`。
 
-### cron.update params
+### cron.update 参数示例
 
 ```json
 {
@@ -341,12 +323,12 @@ Notes:
 }
 ```
 
-Notes:
+说明：
 
-- `jobId` is canonical; `id` is accepted for compatibility.
-- Use `agentId: null` in the patch to clear an agent binding.
+- `jobId` 为规范字段，兼容接受 `id`。
+- 使用 `agentId: null` 清除代理绑定。
 
-### cron.run and cron.remove params
+### cron.run 和 cron.remove 参数示例
 
 ```json
 { "jobId": "job-123", "mode": "force" }
@@ -356,128 +338,127 @@ Notes:
 { "jobId": "job-123" }
 ```
 
-## Storage & history
+## 存储与历史
 
-- Job store: `~/.openclaw/cron/jobs.json` (Gateway-managed JSON).
-- Run history: `~/.openclaw/cron/runs/<jobId>.jsonl` (JSONL, auto-pruned by size and line count).
-- Isolated cron run sessions in `sessions.json` are pruned by `cron.sessionRetention` (default `24h`; set `false` to disable).
-- Override store path: `cron.store` in config.
+- 作业存储：`~/.openclaw/cron/jobs.json`（网关管理的 JSON 文件）
+- 运行历史：`~/.openclaw/cron/runs/<jobId>.jsonl`（JSONL 文件，自动按大小和行数修剪）
+- 隔离 cron 运行会话存储于 `sessions.json`，由 `cron.sessionRetention` 配置修剪（默认 `24h`，设置为 `false` 禁用）
+- 覆盖存储路径：配置项 `cron.store`
 
-## Retry policy
+## 重试策略
 
-When a job fails, OpenClaw classifies errors as **transient** (retryable) or **permanent** (disable immediately).
+当作业失败时，OpenClaw 将错误分为**临时错误**（可重试）和**永久错误**（立即禁用）。
 
-### Transient errors (retried)
+### 临时错误（重试）
 
-- Rate limit (429, too many requests, resource exhausted)
-- Network errors (timeout, ECONNRESET, fetch failed, socket)
-- Server errors (5xx)
-- Cloudflare-related errors
+- 速率限制（429、请求过多、资源耗尽）
+- 网络错误（超时、ECONNRESET、fetch 失败、套接字错误）
+- 服务器错误（5xx）
+- Cloudflare 相关错误
 
-### Permanent errors (no retry)
+### 永久错误（不重试）
 
-- Auth failures (invalid API key, unauthorized)
-- Config or validation errors
-- Other non-transient errors
+- 认证失败（无效 API 密钥、未授权）
+- 配置或校验错误
+- 其他非临时错误
 
-### Default behavior (no config)
+### 默认行为（无配置时）
 
-**One-shot jobs (`schedule.kind: "at"`):**
+**一次性作业（`schedule.kind: "at"`）：**
 
-- On transient error: retry up to 3 times with exponential backoff (30s → 1m → 5m).
-- On permanent error: disable immediately.
-- On success or skip: disable (or delete if `deleteAfterRun: true`).
+- 临时错误：最多重试 3 次，使用指数退避（30 秒 → 1 分钟 → 5 分钟）。
+- 永久错误：立即禁用作业。
+- 成功或跳过：禁用作业（如果 `deleteAfterRun: true` 则删除）。
 
-**Recurring jobs (`cron` / `every`):**
+**周期性作业（`cron` / `every`）：**
 
-- On any error: apply exponential backoff (30s → 1m → 5m → 15m → 60m) before the next scheduled run.
-- Job stays enabled; backoff resets after the next successful run.
+- 任何错误：应用指数退避 （30 秒 → 1 分钟 → 5 分钟 → 15 分钟 → 60 分钟）后再执行下次计划。
+- 作业保持启用状态；下次成功执行后重置退避计数。
 
-Configure `cron.retry` to override these defaults (see [Configuration](/automation/cron-jobs#configuration)).
+通过配置 `cron.retry` 可以覆盖默认策略（详见 [配置](/automation/cron-jobs#configuration)）。
 
-## Configuration
+## 配置示例
 
 ```json5
 {
   cron: {
-    enabled: true, // default true
+    enabled: true, // 默认 true
     store: "~/.openclaw/cron/jobs.json",
-    maxConcurrentRuns: 1, // default 1
-    // Optional: override retry policy for one-shot jobs
+    maxConcurrentRuns: 1, // 默认 1
+    // 可选：覆盖一次性作业重试策略
     retry: {
       maxAttempts: 3,
       backoffMs: [60000, 120000, 300000],
       retryOn: ["rate_limit", "network", "server_error"],
     },
-    webhook: "https://example.invalid/legacy", // deprecated fallback for stored notify:true jobs
-    webhookToken: "replace-with-dedicated-webhook-token", // optional bearer token for webhook mode
-    sessionRetention: "24h", // duration string or false
+    webhook: "https://example.invalid/legacy", // 已弃用，用于旧有配置了 notify:true 的作业
+    webhookToken: "replace-with-dedicated-webhook-token", // webhook 模式的可选 Bearer 令牌
+    sessionRetention: "24h", // 时长字符串或 false
     runLog: {
-      maxBytes: "2mb", // default 2_000_000 bytes
-      keepLines: 2000, // default 2000
+      maxBytes: "2mb", // 默认 2_000_000 字节
+      keepLines: 2000, // 默认 2000 行
     },
   },
 }
 ```
 
-Run-log pruning behavior:
+运行日志修剪行为：
 
-- `cron.runLog.maxBytes`: max run-log file size before pruning.
-- `cron.runLog.keepLines`: when pruning, keep only the newest N lines.
-- Both apply to `cron/runs/<jobId>.jsonl` files.
+- `cron.runLog.maxBytes`：日志文件最大尺寸限制
+- `cron.runLog.keepLines`：修剪时保留最新行数
+- 均适用于 `cron/runs/<jobId>.jsonl` 文件
 
-Webhook behavior:
+Webhook 行为：
 
-- Preferred: set `delivery.mode: "webhook"` with `delivery.to: "https://..."` per job.
-- Webhook URLs must be valid `http://` or `https://` URLs.
-- When posted, payload is the cron finished event JSON.
-- If `cron.webhookToken` is set, auth header is `Authorization: Bearer <cron.webhookToken>`.
-- If `cron.webhookToken` is not set, no `Authorization` header is sent.
-- Deprecated fallback: stored legacy jobs with `notify: true` still use `cron.webhook` when present.
+- 推荐：按作业设置 `delivery.mode: "webhook"` 且 `delivery.to: "https://..."`。
+- Webhook URL 必须是有效的 `http://` 或 `https://`。
+- POST 负载为 cron 完成事件 JSON。
+- 若配置 `cron.webhookToken`，则授权头为 `Authorization: Bearer <cron.webhookToken>`。
+- 未配置 `cron.webhookToken` 时不发送授权头。
+- 旧版兼容：配置 `cron.webhook` 时，带 `notify: true` 的存储老作业仍使用该 Webhook。
 
-Disable cron entirely:
+禁用 cron：
 
-- `cron.enabled: false` (config)
-- `OPENCLAW_SKIP_CRON=1` (env)
+- 配置中设置 `cron.enabled: false`
+- 环境变量 `OPENCLAW_SKIP_CRON=1`
 
-## Maintenance
+## 维护
 
-Cron has two built-in maintenance paths: isolated run-session retention and run-log pruning.
+Cron 提供两条内置维护路径：隔离运行会话保留与运行日志修剪。
 
-### Defaults
+### 默认配置
 
-- `cron.sessionRetention`: `24h` (set `false` to disable run-session pruning)
-- `cron.runLog.maxBytes`: `2_000_000` bytes
-- `cron.runLog.keepLines`: `2000`
+- `cron.sessionRetention`：`24h`（设为 false 禁用隔离会话修剪）
+- `cron.runLog.maxBytes`：`2_000_000` 字节
+- `cron.runLog.keepLines`：`2000`
 
-### How it works
+### 工作原理
 
-- Isolated runs create session entries (`...:cron:<jobId>:run:<uuid>`) and transcript files.
-- The reaper removes expired run-session entries older than `cron.sessionRetention`.
-- For removed run sessions no longer referenced by the session store, OpenClaw archives transcript files and purges old deleted archives on the same retention window.
-- After each run append, `cron/runs/<jobId>.jsonl` is size-checked:
-  - if file size exceeds `runLog.maxBytes`, it is trimmed to the newest `runLog.keepLines` lines.
+- 隔离运行会创建会话条目（`...:cron:<jobId>:run:<uuid>`）及交互记录文件。
+- 清理进程移除超过 `cron.sessionRetention` 的过期运行会话条目。
+- 对于已移除且不再被会话存储引用的运行条目，OpenClaw 将归档交互记录，并在相同保留周期内清理旧归档。
+- 每次追加运行日志后，若文件超出 `runLog.maxBytes`，修剪为最新 `runLog.keepLines` 行。
 
-### Performance caveat for high volume schedulers
+### 高频调度性能提醒
 
-High-frequency cron setups can generate large run-session and run-log footprints. Maintenance is built in, but loose limits can still create avoidable IO and cleanup work.
+高频率的 cron 配置可能生成大量运行会话和日志，导致较大 IO 负担，维护虽已内置，但松散限制仍会带来不必要的资源消耗。
 
-What to watch:
+注意事项：
 
-- long `cron.sessionRetention` windows with many isolated runs
-- high `cron.runLog.keepLines` combined with large `runLog.maxBytes`
-- many noisy recurring jobs writing to the same `cron/runs/<jobId>.jsonl`
+- 长时间 `cron.sessionRetention` 配合大量隔离运行
+- 高 `cron.runLog.keepLines` 与大 `runLog.maxBytes` 组合
+- 许多高频繁噪声作业写入同一运行日志
 
-What to do:
+建议：
 
-- keep `cron.sessionRetention` as short as your debugging/audit needs allow
-- keep run logs bounded with moderate `runLog.maxBytes` and `runLog.keepLines`
-- move noisy background jobs to isolated mode with delivery rules that avoid unnecessary chatter
-- review growth periodically with `openclaw cron runs` and adjust retention before logs become large
+- 将 `cron.sessionRetention` 设为符合调试/审计最低需求的最短值
+- 通过中等大小的 `runLog.maxBytes` 和 `runLog.keepLines` 限制日志大小
+- 将噪声大的后台任务转为隔离模式且配置合理交付规则，避免频繁聊天干扰
+- 定期使用 `openclaw cron runs` 审核增长情况，并适时调整保留策略
 
-### Customize examples
+### 自定义示例
 
-Keep run sessions for a week and allow bigger run logs:
+保留运行会话一周并扩大运行日志容量：
 
 ```json5
 {
@@ -491,7 +472,7 @@ Keep run sessions for a week and allow bigger run logs:
 }
 ```
 
-Disable isolated run-session pruning but keep run-log pruning:
+禁用隔离运行会话修剪但保留日志修剪：
 
 ```json5
 {
@@ -505,7 +486,7 @@ Disable isolated run-session pruning but keep run-log pruning:
 }
 ```
 
-Tune for high-volume cron usage (example):
+针对高负载使用调优（示例）：
 
 ```json5
 {
@@ -519,9 +500,9 @@ Tune for high-volume cron usage (example):
 }
 ```
 
-## CLI quickstart
+## CLI 快速入门
 
-One-shot reminder (UTC ISO, auto-delete after success):
+一次性提醒（UTC ISO，成功后自动删除）：
 
 ```bash
 openclaw cron add \
@@ -533,7 +514,7 @@ openclaw cron add \
   --delete-after-run
 ```
 
-One-shot reminder (main session, wake immediately):
+一次性提醒（主会话，立即唤醒）：
 
 ```bash
 openclaw cron add \
@@ -544,7 +525,7 @@ openclaw cron add \
   --wake now
 ```
 
-Recurring isolated job (announce to WhatsApp):
+周期性隔离作业（公告至 WhatsApp）：
 
 ```bash
 openclaw cron add \
@@ -558,7 +539,7 @@ openclaw cron add \
   --to "+15551234567"
 ```
 
-Recurring cron job with explicit 30-second stagger:
+周期性作业，显式 30 秒错峰：
 
 ```bash
 openclaw cron add \
@@ -571,7 +552,7 @@ openclaw cron add \
   --announce
 ```
 
-Recurring isolated job (deliver to a Telegram topic):
+周期性隔离作业（发送至 Telegram 主题）：
 
 ```bash
 openclaw cron add \
@@ -585,7 +566,7 @@ openclaw cron add \
   --to "-1001234567890:topic:123"
 ```
 
-Isolated job with model and thinking override:
+隔离作业，模型和思考级别覆盖：
 
 ```bash
 openclaw cron add \
@@ -601,25 +582,25 @@ openclaw cron add \
   --to "+15551234567"
 ```
 
-Agent selection (multi-agent setups):
+代理选择（多代理环境）：
 
 ```bash
-# Pin a job to agent "ops" (falls back to default if that agent is missing)
+# 将作业绑定给代理 "ops"（若该代理缺失则回退默认）
 openclaw cron add --name "Ops sweep" --cron "0 6 * * *" --session isolated --message "Check ops queue" --agent ops
 
-# Switch or clear the agent on an existing job
+# 切换或清除已有作业代理
 openclaw cron edit <jobId> --agent ops
 openclaw cron edit <jobId> --clear-agent
 ```
 
-Manual run (force is the default, use `--due` to only run when due):
+手动运行（默认强制，使用 `--due` 可仅在到期时运行）：
 
 ```bash
 openclaw cron run <jobId>
 openclaw cron run <jobId> --due
 ```
 
-Edit an existing job (patch fields):
+编辑现有作业（补丁字段）：
 
 ```bash
 openclaw cron edit <jobId> \
@@ -628,54 +609,53 @@ openclaw cron edit <jobId> \
   --thinking low
 ```
 
-Force an existing cron job to run exactly on schedule (no stagger):
+强制现有作业精确按计划执行（无错峰）：
 
 ```bash
 openclaw cron edit <jobId> --exact
 ```
 
-Run history:
+运行历史查看：
 
 ```bash
 openclaw cron runs --id <jobId> --limit 50
 ```
 
-Immediate system event without creating a job:
+立即触发系统事件（不创建作业）：
 
 ```bash
 openclaw system event --mode now --text "Next heartbeat: check battery."
 ```
 
-## Gateway API surface
+## 网关 API 接口
 
 - `cron.list`, `cron.status`, `cron.add`, `cron.update`, `cron.remove`
-- `cron.run` (force or due), `cron.runs`
-  For immediate system events without a job, use [`openclaw system event`](/cli/system).
+- `cron.run`（强制或到期），`cron.runs`
+  若需立即触发无作业的系统事件，使用 [`openclaw system event`](/cli/system)。
 
-## Troubleshooting
+## 故障排查
 
-### “Nothing runs”
+### “什么都不运行”
 
-- Check cron is enabled: `cron.enabled` and `OPENCLAW_SKIP_CRON`.
-- Check the Gateway is running continuously (cron runs inside the Gateway process).
-- For `cron` schedules: confirm timezone (`--tz`) vs the host timezone.
+- 检查 cron 是否启用：`cron.enabled` 配置和环境变量 `OPENCLAW_SKIP_CRON`。
+- 确认网关持续运行（cron 是网关进程内运行）。
+- 对 `cron` 计划，确认时区（`--tz`）与主机时区是否匹配。
 
-### A recurring job keeps delaying after failures
+### 周期性作业失败后持续延迟
 
-- OpenClaw applies exponential retry backoff for recurring jobs after consecutive errors:
-  30s, 1m, 5m, 15m, then 60m between retries.
-- Backoff resets automatically after the next successful run.
-- One-shot (`at`) jobs retry transient errors (rate limit, network, server_error) up to 3 times with backoff; permanent errors disable immediately. See [Retry policy](/automation/cron-jobs#retry-policy).
+- OpenClaw 对周期性作业连续错误应用指数退避重试：30 秒、1 分钟、5 分钟、15 分钟、60 分钟。
+- 在下次成功运行后重置退避。
+- 一次性（`at`）作业对临时错误（速率限制、网络、服务器错误）最多重试 3 次，永久错误立即禁用。详见 [重试策略](/automation/cron-jobs#retry-policy)。
 
-### Telegram delivers to the wrong place
+### Telegram 发送到错误位置
 
-- For forum topics, use `-100…:topic:<id>` so it’s explicit and unambiguous.
-- If you see `telegram:...` prefixes in logs or stored “last route” targets, that’s normal;
-  cron delivery accepts them and still parses topic IDs correctly.
+- 论坛主题推荐使用明确格式：`-100…:topic:<id>`。
+- 日志或存储的“最后路由”中带 `telegram:...` 前缀是正常的；
+  cron 交付支持该格式且能正确解析主题 ID。
 
-### Subagent announce delivery retries
+### 子代理公告交付重试
 
-- When a subagent run completes, the gateway announces the result to the requester session.
-- If the announce flow returns `false` (e.g. requester session is busy), the gateway retries up to 3 times with tracking via `announceRetryCount`.
-- Announces older than 5 minutes past `endedAt` are force-expired to prevent stale entries from looping indefinitely.
-- If you see repeated announce deliveries in logs, check the subagent registry for entries with high `announceRetryCount` values.
+- 子代理执行完成后，网关会向请求者会话公告结果。
+- 如果公告流程返回 `false`（例如请求者会话繁忙），网关会最多重试 3 次，并通过 `announceRetryCount` 跟踪。
+- 超过结束时间 5 分钟的公告强制过期，防止陈旧条目无限循环。
+- 若日志中见到重复公告交付，检查子代理注册表中的高重试计数条目。

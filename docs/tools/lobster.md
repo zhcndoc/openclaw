@@ -1,46 +1,46 @@
 ---
-title: Lobster
-summary: "Typed workflow runtime for OpenClaw with resumable approval gates."
-description: Typed workflow runtime for OpenClaw — composable pipelines with approval gates.
+title: Lobster（龙虾）
+summary: “用于 OpenClaw 的类型化工作流运行时，支持可恢复的审批关卡。”
+description: OpenClaw 的类型化工作流运行时 —— 支持组合流水线与审批关卡。
 read_when:
-  - You want deterministic multi-step workflows with explicit approvals
-  - You need to resume a workflow without re-running earlier steps
+  - 您需要具有显式审批的确定性多步骤工作流
+  - 您需要在不中断早期步骤的情况下恢复工作流
 ---
 
-# Lobster
+# Lobster（龙虾）
 
-Lobster is a workflow shell that lets OpenClaw run multi-step tool sequences as a single, deterministic operation with explicit approval checkpoints.
+Lobster 是一个工作流外壳，允许 OpenClaw 以单次确定性操作运行多步骤工具序列，并带有显式的审批检查点。
 
-## Hook
+## 钩子
 
-Your assistant can build the tools that manage itself. Ask for a workflow, and 30 minutes later you have a CLI plus pipelines that run as one call. Lobster is the missing piece: deterministic pipelines, explicit approvals, and resumable state.
+您的助手可以构建管理自身的工具。请求一个工作流，30分钟后即可获得一个命令行工具及作为一次调用运行的流水线。Lobster 是缺失的那一块：确定性流水线、显式审批和支持恢复的状态。
 
-## Why
+## 为什么需要它
 
-Today, complex workflows require many back-and-forth tool calls. Each call costs tokens, and the LLM has to orchestrate every step. Lobster moves that orchestration into a typed runtime:
+如今，复杂工作流需要多次反复调用工具。每次调用都消耗令牌，且大语言模型必须协调每一步。Lobster 将这种协调移入类型化运行时：
 
-- **One call instead of many**: OpenClaw runs one Lobster tool call and gets a structured result.
-- **Approvals built in**: Side effects (send email, post comment) halt the workflow until explicitly approved.
-- **Resumable**: Halted workflows return a token; approve and resume without re-running everything.
+- **一次调用，替代多次**：OpenClaw 运行一次 Lobster 工具调用并获得结构化结果。
+- **内置审批**：副作用（发送邮件、发布评论）会暂停工作流，直到明确批准。
+- **支持恢复**：暂停的工作流返回令牌，批准后可恢复，且无需重跑所有步骤。
 
-## Why a DSL instead of plain programs?
+## 为什么要用 DSL 而非普通程序？
 
-Lobster is intentionally small. The goal is not "a new language," it's a predictable, AI-friendly pipeline spec with first-class approvals and resume tokens.
+Lobster 有意保持小巧。目标不是“新语言”，而是支持一流审批和恢复令牌的可预测、AI 友好的流水线规范。
 
-- **Approve/resume is built in**: A normal program can prompt a human, but it can’t _pause and resume_ with a durable token without you inventing that runtime yourself.
-- **Determinism + auditability**: Pipelines are data, so they’re easy to log, diff, replay, and review.
-- **Constrained surface for AI**: A tiny grammar + JSON piping reduces “creative” code paths and makes validation realistic.
-- **Safety policy baked in**: Timeouts, output caps, sandbox checks, and allowlists are enforced by the runtime, not each script.
-- **Still programmable**: Each step can call any CLI or script. If you want JS/TS, generate `.lobster` files from code.
+- **审批/恢复内置**：普通程序可以提示人工，但无法用持久令牌_暂停并恢复_，除非自己发明运行时。
+- **确定性 + 审计性**：流水线是数据，方便日志记录、差异对比、重放和审查。
+- **限制 AI 作用面**：极简语法 + JSON 管道，减少“创意”编程路径，令验证更现实。
+- **安全策略内置**：运行时强制执行超时、输出限制、沙箱检查和允许列表，而非每个脚本单独处理。
+- **仍可编程**：每一步均可调用任意命令行或脚本。如需 JS/TS，可从代码生成 `.lobster` 文件。
 
-## How it works
+## 工作原理
 
-OpenClaw launches the local `lobster` CLI in **tool mode** and parses a JSON envelope from stdout.
-If the pipeline pauses for approval, the tool returns a `resumeToken` so you can continue later.
+OpenClaw 以 **工具模式** 启动本地 `lobster` CLI，解析其 stdout 中的 JSON 信封。  
+如果流水线暂停等待审批，工具返回 `resumeToken`，之后可用其继续执行。
 
-## Pattern: small CLI + JSON pipes + approvals
+## 模式：小型 CLI + JSON 管道 + 审批
 
-Build tiny commands that speak JSON, then chain them into a single Lobster call. (Example command names below — swap in your own.)
+构建支持 JSON 的小型命令，然后将它们串联为单次 Lobster 调用。（下面是示例命令名，可用自身替换）
 
 ```bash
 inbox list --json
@@ -56,7 +56,7 @@ inbox apply --json
 }
 ```
 
-If the pipeline requests approval, resume with the token:
+若流水线请求审批，使用令牌继续：
 
 ```json
 {
@@ -66,22 +66,20 @@ If the pipeline requests approval, resume with the token:
 }
 ```
 
-AI triggers the workflow; Lobster executes the steps. Approval gates keep side effects explicit and auditable.
+AI 触发工作流；Lobster 执行步骤。审批关卡使副作用显式且可审计。
 
-Example: map input items into tool calls:
+示例：将输入项映射为工具调用：
 
 ```bash
 gog.gmail.search --query 'newer_than:1d' \
   | openclaw.invoke --tool message --action send --each --item-key message --args-json '{"provider":"telegram","to":"..."}'
 ```
 
-## JSON-only LLM steps (llm-task)
+## 仅 JSON 的 LLM 步骤（llm-task）
 
-For workflows that need a **structured LLM step**, enable the optional
-`llm-task` plugin tool and call it from Lobster. This keeps the workflow
-deterministic while still letting you classify/summarize/draft with a model.
+对于需要**结构化 LLM 步骤**的工作流，可启用可选 `llm-task` 插件工具，并由 Lobster 调用。它保持工作流的确定性，同时允许用模型进行分类/摘要/起草。
 
-Enable the tool:
+启用该工具：
 
 ```json
 {
@@ -101,7 +99,7 @@ Enable the tool:
 }
 ```
 
-Use it in a pipeline:
+在流水线中使用：
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
@@ -119,11 +117,11 @@ openclaw.invoke --tool llm-task --action json --args-json '{
 }'
 ```
 
-See [LLM Task](/tools/llm-task) for details and configuration options.
+详情及配置选项见 [LLM Task](/tools/llm-task)。
 
-## Workflow files (.lobster)
+## 工作流文件（.lobster）
 
-Lobster can run YAML/JSON workflow files with `name`, `args`, `steps`, `env`, `condition`, and `approval` fields. In OpenClaw tool calls, set `pipeline` to the file path.
+Lobster 可运行带有 `name`、`args`、`steps`、`env`、`condition` 和 `approval` 字段的 YAML/JSON 工作流文件。OpenClaw 工具调用时，将 `pipeline` 设为文件路径。
 
 ```yaml
 name: inbox-triage
@@ -146,20 +144,20 @@ steps:
     condition: $approve.approved
 ```
 
-Notes:
+说明：
 
-- `stdin: $step.stdout` and `stdin: $step.json` pass a prior step’s output.
-- `condition` (or `when`) can gate steps on `$step.approved`.
+- `stdin: $step.stdout` 和 `stdin: $step.json` 传递前一步的输出。
+- `condition`（或 `when`）用于根据 `$step.approved` 控制步骤执行。
 
-## Install Lobster
+## 安装 Lobster
 
-Install the Lobster CLI on the **same host** that runs the OpenClaw Gateway (see the [Lobster repo](https://github.com/openclaw/lobster)), and ensure `lobster` is on `PATH`.
+在运行 OpenClaw 网关的**同一主机**上安装 Lobster CLI（详见 [Lobster 仓库](https://github.com/openclaw/lobster)），并确保 `lobster` 在 `PATH` 中。
 
-## Enable the tool
+## 启用该工具
 
-Lobster is an **optional** plugin tool (not enabled by default).
+Lobster 是一个**可选**插件工具（默认未启用）。
 
-Recommended (additive, safe):
+推荐（安全且可叠加）：
 
 ```json
 {
@@ -169,7 +167,7 @@ Recommended (additive, safe):
 }
 ```
 
-Or per-agent:
+或针对单个代理：
 
 ```json
 {
@@ -186,28 +184,26 @@ Or per-agent:
 }
 ```
 
-Avoid using `tools.allow: ["lobster"]` unless you intend to run in restrictive allowlist mode.
+除非打算使用严格允许列表模式，否则避免使用 `tools.allow: ["lobster"]`。
 
-Note: allowlists are opt-in for optional plugins. If your allowlist only names
-plugin tools (like `lobster`), OpenClaw keeps core tools enabled. To restrict core
-tools, include the core tools or groups you want in the allowlist too.
+注意：允许列表为可选插件而非核心工具开启。若您的允许列表仅包含插件工具（如 `lobster`），OpenClaw 会保持核心工具启用。要限制核心工具，请在允许列表中也包含所需核心工具或组。
 
-## Example: Email triage
+## 示例：邮件分诊
 
-Without Lobster:
+无 Lobster：
 
 ```
-User: "Check my email and draft replies"
-→ openclaw calls gmail.list
-→ LLM summarizes
-→ User: "draft replies to #2 and #5"
-→ LLM drafts
-→ User: "send #2"
-→ openclaw calls gmail.send
-(repeat daily, no memory of what was triaged)
+用户：“帮我检查邮件并起草回复”
+→ openclaw 调用 gmail.list
+→ LLM 总结
+→ 用户：“帮我起草 #2 和 #5 的回复”
+→ LLM 起草
+→ 用户：“发送 #2”
+→ openclaw 调用 gmail.send
+（每天重复，无分诊记忆）
 ```
 
-With Lobster:
+有 Lobster：
 
 ```json
 {
@@ -217,23 +213,23 @@ With Lobster:
 }
 ```
 
-Returns a JSON envelope (truncated):
+返回 JSON 信封（节选）：
 
 ```json
 {
   "ok": true,
   "status": "needs_approval",
-  "output": [{ "summary": "5 need replies, 2 need action" }],
+  "output": [{ "summary": "5 需回复，2 需操作" }],
   "requiresApproval": {
     "type": "approval_request",
-    "prompt": "Send 2 draft replies?",
+    "prompt": "发送 2 封草稿回复？",
     "items": [],
     "resumeToken": "..."
   }
 }
 ```
 
-User approves → resume:
+用户批准 → 继续：
 
 ```json
 {
@@ -243,13 +239,13 @@ User approves → resume:
 }
 ```
 
-One workflow. Deterministic. Safe.
+一次工作流。确定性。安全。
 
-## Tool parameters
+## 工具参数
 
 ### `run`
 
-Run a pipeline in tool mode.
+以工具模式运行流水线。
 
 ```json
 {
@@ -261,7 +257,7 @@ Run a pipeline in tool mode.
 }
 ```
 
-Run a workflow file with args:
+运行含参数的工作流文件：
 
 ```json
 {
@@ -273,7 +269,7 @@ Run a workflow file with args:
 
 ### `resume`
 
-Continue a halted workflow after approval.
+审批后继续暂停的工作流。
 
 ```json
 {
@@ -283,58 +279,58 @@ Continue a halted workflow after approval.
 }
 ```
 
-### Optional inputs
+### 可选输入
 
-- `cwd`: Relative working directory for the pipeline (must stay within the current process working directory).
-- `timeoutMs`: Kill the subprocess if it exceeds this duration (default: 20000).
-- `maxStdoutBytes`: Kill the subprocess if stdout exceeds this size (default: 512000).
-- `argsJson`: JSON string passed to `lobster run --args-json` (workflow files only).
+- `cwd`：流水线的相对工作目录（必须位于当前进程工作目录内）。
+- `timeoutMs`：超时杀掉子进程（默认：20000）。
+- `maxStdoutBytes`：子进程 stdout 超过此大小时杀掉（默认：512000）。
+- `argsJson`：传递给 `lobster run --args-json` 的 JSON 字符串（仅限工作流文件）。
 
-## Output envelope
+## 输出信封
 
-Lobster returns a JSON envelope with one of three statuses:
+Lobster 返回带有三种状态之一的 JSON 信封：
 
-- `ok` → finished successfully
-- `needs_approval` → paused; `requiresApproval.resumeToken` is required to resume
-- `cancelled` → explicitly denied or cancelled
+- `ok` → 成功结束
+- `needs_approval` → 暂停；需使用 `requiresApproval.resumeToken` 恢复
+- `cancelled` → 明确拒绝或取消
 
-The tool surfaces the envelope in both `content` (pretty JSON) and `details` (raw object).
+工具在 `content`（美化 JSON）和 `details`（原始对象）中都展示该信封。
 
-## Approvals
+## 审批
 
-If `requiresApproval` is present, inspect the prompt and decide:
+若存在 `requiresApproval`，请查看提示并决定：
 
-- `approve: true` → resume and continue side effects
-- `approve: false` → cancel and finalize the workflow
+- `approve: true` → 恢复并继续副作用
+- `approve: false` → 取消并结束工作流
 
-Use `approve --preview-from-stdin --limit N` to attach a JSON preview to approval requests without custom jq/heredoc glue. Resume tokens are now compact: Lobster stores workflow resume state under its state dir and hands back a small token key.
+使用 `approve --preview-from-stdin --limit N` 可以将 JSON 预览附加到审批请求，无需自定义 jq 或 heredoc。恢复令牌体积紧凑：Lobster 在其状态目录下存储恢复状态，仅返回简短令牌键。
 
 ## OpenProse
 
-OpenProse pairs well with Lobster: use `/prose` to orchestrate multi-agent prep, then run a Lobster pipeline for deterministic approvals. If a Prose program needs Lobster, allow the `lobster` tool for sub-agents via `tools.subagents.tools`. See [OpenProse](/prose).
+OpenProse 与 Lobster 配合良好：用 `/prose` 协调多代理预处理，再运行 Lobster 流水线实现确定性审批。若 Prose 程序需调用 Lobster，须通过 `tools.subagents.tools` 允许子代理使用 `lobster` 工具。详见 [OpenProse](/prose)。
 
-## Safety
+## 安全性
 
-- **Local subprocess only** — no network calls from the plugin itself.
-- **No secrets** — Lobster doesn't manage OAuth; it calls OpenClaw tools that do.
-- **Sandbox-aware** — disabled when the tool context is sandboxed.
-- **Hardened** — fixed executable name (`lobster`) on `PATH`; timeouts and output caps enforced.
+- **仅本地子进程** — 插件本身不发起网络调用。
+- **不管理密钥** — Lobster 不管理 OAuth，调用的都是做此事的 OpenClaw 工具。
+- **沙箱感知** — 当工具上下文受沙箱限制时禁用。
+- **加固** — 固定可执行名 (`lobster`) 在 `PATH` 中；强制超时和输出限制。
 
-## Troubleshooting
+## 故障排查
 
-- **`lobster subprocess timed out`** → increase `timeoutMs`, or split a long pipeline.
-- **`lobster output exceeded maxStdoutBytes`** → raise `maxStdoutBytes` or reduce output size.
-- **`lobster returned invalid JSON`** → ensure the pipeline runs in tool mode and prints only JSON.
-- **`lobster failed (code …)`** → run the same pipeline in a terminal to inspect stderr.
+- **`lobster subprocess timed out`** → 增加 `timeoutMs`，或拆分长流水线。
+- **`lobster output exceeded maxStdoutBytes`** → 提高 `maxStdoutBytes` 或减少输出量。
+- **`lobster returned invalid JSON`** → 确认流水线在工具模式下运行，仅输出 JSON。
+- **`lobster failed (code …)`** → 在终端运行同一流水线，查看 stderr。
 
-## Learn more
+## 进一步了解
 
-- [Plugins](/tools/plugin)
-- [Plugin tool authoring](/plugins/agent-tools)
+- [插件](/tools/plugin)
+- [插件工具开发](/plugins/agent-tools)
 
-## Case study: community workflows
+## 案例研究：社区工作流
 
-One public example: a “second brain” CLI + Lobster pipelines that manage three Markdown vaults (personal, partner, shared). The CLI emits JSON for stats, inbox listings, and stale scans; Lobster chains those commands into workflows like `weekly-review`, `inbox-triage`, `memory-consolidation`, and `shared-task-sync`, each with approval gates. AI handles judgment (categorization) when available and falls back to deterministic rules when not.
+一个公开例子：“第二大脑” CLI + Lobster 流水线，管理三个 Markdown 知识库（个人、伙伴、共享）。CLI 生成统计、收件箱列表和过期扫描的 JSON；Lobster 组合这些命令形成如 `weekly-review`、`inbox-triage`、`memory-consolidation` 和 `shared-task-sync` 等工作流，每个都有审批关卡。AI 负责判定（分类）时介入，无 AI 时则退用确定性规则。
 
-- Thread: [https://x.com/plattenschieber/status/2014508656335770033](https://x.com/plattenschieber/status/2014508656335770033)
-- Repo: [https://github.com/bloomedai/brain-cli](https://github.com/bloomedai/brain-cli)
+- 讨论串：[https://x.com/plattenschieber/status/2014508656335770033](https://x.com/plattenschieber/status/2014508656335770033)
+- 仓库：[https://github.com/bloomedai/brain-cli](https://github.com/bloomedai/brain-cli)

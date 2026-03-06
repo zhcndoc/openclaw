@@ -1,58 +1,57 @@
 ---
-summary: "Voice Call plugin: outbound + inbound calls via Twilio/Telnyx/Plivo (plugin install + config + CLI)"
+summary: "语音通话插件：通过 Twilio/Telnyx/Plivo 实现外拨和接听（插件安装 + 配置 + CLI）"
 read_when:
-  - You want to place an outbound voice call from OpenClaw
-  - You are configuring or developing the voice-call plugin
-title: "Voice Call Plugin"
+  - 您想从 OpenClaw 发起外拨语音通话
+  - 您正在配置或开发语音通话插件
+title: "语音通话插件"
 ---
 
-# Voice Call (plugin)
+# 语音通话（插件）
 
-Voice calls for OpenClaw via a plugin. Supports outbound notifications and
-multi-turn conversations with inbound policies.
+OpenClaw 的语音通话插件。支持外拨通知和带入站策略的多轮对话。
 
-Current providers:
+当前支持的服务提供商：
 
-- `twilio` (Programmable Voice + Media Streams)
-- `telnyx` (Call Control v2)
-- `plivo` (Voice API + XML transfer + GetInput speech)
-- `mock` (dev/no network)
+- `twilio`（可编程语音 + 媒体流）
+- `telnyx`（呼叫控制 v2）
+- `plivo`（语音 API + XML 转接 + GetInput 语音识别）
+- `mock`（开发用/无网络）
 
-Quick mental model:
+简要思路：
 
-- Install plugin
-- Restart Gateway
-- Configure under `plugins.entries.voice-call.config`
-- Use `openclaw voicecall ...` or the `voice_call` tool
+- 安装插件
+- 重启网关
+- 在 `plugins.entries.voice-call.config` 下配置
+- 使用 `openclaw voicecall ...` 或 `voice_call` 工具
 
-## Where it runs (local vs remote)
+## 运行位置（本地 vs 远程）
 
-The Voice Call plugin runs **inside the Gateway process**.
+语音通话插件**运行在网关进程内部**。
 
-If you use a remote Gateway, install/configure the plugin on the **machine running the Gateway**, then restart the Gateway to load it.
+如果使用远程网关，请在**运行网关的机器上**安装/配置插件，然后重启网关以加载插件。
 
-## Install
+## 安装
 
-### Option A: install from npm (recommended)
+### 选项 A：通过 npm 安装（推荐）
 
 ```bash
 openclaw plugins install @openclaw/voice-call
 ```
 
-Restart the Gateway afterwards.
+安装后请重启网关。
 
-### Option B: install from a local folder (dev, no copying)
+### 选项 B：从本地文件夹安装（开发用，无需复制）
 
 ```bash
 openclaw plugins install ./extensions/voice-call
 cd ./extensions/voice-call && pnpm install
 ```
 
-Restart the Gateway afterwards.
+安装后请重启网关。
 
-## Config
+## 配置
 
-Set config under `plugins.entries.voice-call.config`:
+在 `plugins.entries.voice-call.config` 下设置配置项：
 
 ```json5
 {
@@ -61,7 +60,7 @@ Set config under `plugins.entries.voice-call.config`:
       "voice-call": {
         enabled: true,
         config: {
-          provider: "twilio", // or "telnyx" | "plivo" | "mock"
+          provider: "twilio", // 或 "telnyx" | "plivo" | "mock"
           fromNumber: "+15550001234",
           toNumber: "+15550005678",
 
@@ -73,8 +72,8 @@ Set config under `plugins.entries.voice-call.config`:
           telnyx: {
             apiKey: "...",
             connectionId: "...",
-            // Telnyx webhook public key from the Telnyx Mission Control Portal
-            // (Base64 string; can also be set via TELNYX_PUBLIC_KEY).
+            // 来自 Telnyx Mission Control 门户的 Telnyx webhook 公钥
+            // （Base64 字符串；也可通过环境变量 TELNYX_PUBLIC_KEY 设置）。
             publicKey: "...",
           },
 
@@ -83,19 +82,19 @@ Set config under `plugins.entries.voice-call.config`:
             authToken: "...",
           },
 
-          // Webhook server
+          // Webhook 服务器
           serve: {
             port: 3334,
             path: "/voice/webhook",
           },
 
-          // Webhook security (recommended for tunnels/proxies)
+          // Webhook 安全（建议用于隧道/代理）
           webhookSecurity: {
             allowedHosts: ["voice.example.com"],
             trustedProxyIPs: ["100.64.0.1"],
           },
 
-          // Public exposure (pick one)
+          // 公开访问（任选其一）
           // publicUrl: "https://example.ngrok.app/voice/webhook",
           // tunnel: { provider: "ngrok" },
           // tailscale: { mode: "funnel", path: "/voice/webhook" }
@@ -119,35 +118,32 @@ Set config under `plugins.entries.voice-call.config`:
 }
 ```
 
-Notes:
+说明：
 
-- Twilio/Telnyx require a **publicly reachable** webhook URL.
-- Plivo requires a **publicly reachable** webhook URL.
-- `mock` is a local dev provider (no network calls).
-- Telnyx requires `telnyx.publicKey` (or `TELNYX_PUBLIC_KEY`) unless `skipSignatureVerification` is true.
-- `skipSignatureVerification` is for local testing only.
-- If you use ngrok free tier, set `publicUrl` to the exact ngrok URL; signature verification is always enforced.
-- `tunnel.allowNgrokFreeTierLoopbackBypass: true` allows Twilio webhooks with invalid signatures **only** when `tunnel.provider="ngrok"` and `serve.bind` is loopback (ngrok local agent). Use for local dev only.
-- Ngrok free tier URLs can change or add interstitial behavior; if `publicUrl` drifts, Twilio signatures will fail. For production, prefer a stable domain or Tailscale funnel.
-- Streaming security defaults:
-  - `streaming.preStartTimeoutMs` closes sockets that never send a valid `start` frame.
-  - `streaming.maxPendingConnections` caps total unauthenticated pre-start sockets.
-  - `streaming.maxPendingConnectionsPerIp` caps unauthenticated pre-start sockets per source IP.
-  - `streaming.maxConnections` caps total open media stream sockets (pending + active).
+- Twilio/Telnyx 需要**公开可访问**的 webhook URL。
+- Plivo 也需要**公开可访问**的 webhook URL。
+- `mock` 是本地开发用提供商（无网络调用）。
+- Telnyx 需要 `telnyx.publicKey`（或环境变量 `TELNYX_PUBLIC_KEY`），除非设置了 `skipSignatureVerification` 为 true。
+- `skipSignatureVerification` 仅用于本地测试。
+- 使用 ngrok 免费版时，请将 `publicUrl` 设置为准确的 ngrok URL；签名验证始终强制启用。
+- 设置 `tunnel.allowNgrokFreeTierLoopbackBypass: true` 可允许 Twilio webhook 带无效签名，仅当 `tunnel.provider="ngrok"` 且 `serve.bind` 为回环地址（ngrok 本地代理）时有效，仅限本地开发使用。
+- ngrok 免费版 URL 可能变化或加入中间页；若 `publicUrl` 发生变化，Twilio 签名会验证失败。生产环境建议使用稳定域名或 Tailscale 漏斗。
+- 流媒体安全默认：
+  - `streaming.preStartTimeoutMs` 会关闭从未发送有效 `start` 帧的连接套接字。
+  - `streaming.maxPendingConnections` 限制总未认证的预启动套接字数。
+  - `streaming.maxPendingConnectionsPerIp` 限制每个源 IP 的未认证预启动套接字。
+  - `streaming.maxConnections` 限制总媒体流套接字（预启动 + 活跃）。
 
-## Stale call reaper
+## 过期通话清理器
 
-Use `staleCallReaperSeconds` to end calls that never receive a terminal webhook
-(for example, notify-mode calls that never complete). The default is `0`
-(disabled).
+使用 `staleCallReaperSeconds` 结束从未收到终止 webhook 的通话（例如，通知模式中未完成的通话）。默认值为 `0`（禁用）。
 
-Recommended ranges:
+推荐范围：
 
-- **Production:** `120`–`300` seconds for notify-style flows.
-- Keep this value **higher than `maxDurationSeconds`** so normal calls can
-  finish. A good starting point is `maxDurationSeconds + 30–60` seconds.
+- **生产环境**：通知型流程建议设置为 `120`–`300` 秒。
+- 保持此值**高于 `maxDurationSeconds`**，以便正常通话能完成。推荐起始值为 `maxDurationSeconds + 30–60` 秒。
 
-Example:
+示例：
 
 ```json5
 {
@@ -164,26 +160,21 @@ Example:
 }
 ```
 
-## Webhook Security
+## Webhook 安全
 
-When a proxy or tunnel sits in front of the Gateway, the plugin reconstructs the
-public URL for signature verification. These options control which forwarded
-headers are trusted.
+当代理或隧道位于网关之前时，插件会重建用于签名验证的公共 URL。以下选项控制信任哪些转发头。
 
-`webhookSecurity.allowedHosts` allowlists hosts from forwarding headers.
+`webhookSecurity.allowedHosts` 允许通过头中的主机名白名单。
 
-`webhookSecurity.trustForwardingHeaders` trusts forwarded headers without an allowlist.
+`webhookSecurity.trustForwardingHeaders` 在无白名单时信任转发头。
 
-`webhookSecurity.trustedProxyIPs` only trusts forwarded headers when the request
-remote IP matches the list.
+`webhookSecurity.trustedProxyIPs` 仅当请求远程 IP 位于列表时信任转发头。
 
-Webhook replay protection is enabled for Twilio and Plivo. Replayed valid webhook
-requests are acknowledged but skipped for side effects.
+Twilio 和 Plivo 已启用 webhook 重放保护。重放的有效 webhook 请求会被确认但跳过副作用执行。
 
-Twilio conversation turns include a per-turn token in `<Gather>` callbacks, so
-stale/replayed speech callbacks cannot satisfy a newer pending transcript turn.
+Twilio 会话转轮在 `<Gather>` 回调中包含每轮的令牌，因此过期或重放的语音回调无法满足较新的待处理转录。
 
-Example with a stable public host:
+使用稳定公网主机的示例：
 
 ```json5
 {
@@ -202,11 +193,9 @@ Example with a stable public host:
 }
 ```
 
-## TTS for calls
+## 通话的 TTS
 
-Voice Call uses the core `messages.tts` configuration (OpenAI or ElevenLabs) for
-streaming speech on calls. You can override it under the plugin config with the
-**same shape** — it deep‑merges with `messages.tts`.
+语音通话使用核心的 `messages.tts` 配置（OpenAI 或 ElevenLabs）执行流式语音合成。您可以在插件配置下覆盖，**且配置结构相同** — 会与 `messages.tts` 深度合并。
 
 ```json5
 {
@@ -220,14 +209,14 @@ streaming speech on calls. You can override it under the plugin config with the
 }
 ```
 
-Notes:
+说明：
 
-- **Edge TTS is ignored for voice calls** (telephony audio needs PCM; Edge output is unreliable).
-- Core TTS is used when Twilio media streaming is enabled; otherwise calls fall back to provider native voices.
+- **Edge TTS 被忽略**，因为语音电话音频需 PCM 格式；Edge 输出不稳定。
+- 启用 Twilio 媒体流时使用核心 TTS，否则通话回退至服务提供商原生语音。
 
-### More examples
+### 更多示例
 
-Use core TTS only (no override):
+仅使用核心 TTS（无覆盖）：
 
 ```json5
 {
@@ -240,7 +229,7 @@ Use core TTS only (no override):
 }
 ```
 
-Override to ElevenLabs just for calls (keep core default elsewhere):
+仅对通话覆盖为 ElevenLabs（其他场景保留核心默认）：
 
 ```json5
 {
@@ -263,7 +252,7 @@ Override to ElevenLabs just for calls (keep core default elsewhere):
 }
 ```
 
-Override only the OpenAI model for calls (deep‑merge example):
+仅对通话覆盖 OpenAI 模型（深度合并示例）：
 
 ```json5
 {
@@ -284,54 +273,54 @@ Override only the OpenAI model for calls (deep‑merge example):
 }
 ```
 
-## Inbound calls
+## 入站调用
 
-Inbound policy defaults to `disabled`. To enable inbound calls, set:
+入站策略默认禁用。启用入站通话，设置：
 
 ```json5
 {
   inboundPolicy: "allowlist",
   allowFrom: ["+15550001234"],
-  inboundGreeting: "Hello! How can I help?",
+  inboundGreeting: "您好！我能帮您什么？",
 }
 ```
 
-Auto-responses use the agent system. Tune with:
+自动回复使用代理系统。相关调优项：
 
 - `responseModel`
 - `responseSystemPrompt`
 - `responseTimeoutMs`
 
-## CLI
+## 命令行界面（CLI）
 
 ```bash
-openclaw voicecall call --to "+15555550123" --message "Hello from OpenClaw"
-openclaw voicecall continue --call-id <id> --message "Any questions?"
-openclaw voicecall speak --call-id <id> --message "One moment"
+openclaw voicecall call --to "+15555550123" --message "来自 OpenClaw 的问候"
+openclaw voicecall continue --call-id <id> --message "有什么问题吗？"
+openclaw voicecall speak --call-id <id> --message "请稍等"
 openclaw voicecall end --call-id <id>
 openclaw voicecall status --call-id <id>
 openclaw voicecall tail
 openclaw voicecall expose --mode funnel
 ```
 
-## Agent tool
+## 代理工具
 
-Tool name: `voice_call`
+工具名称：`voice_call`
 
-Actions:
+动作：
 
-- `initiate_call` (message, to?, mode?)
-- `continue_call` (callId, message)
-- `speak_to_user` (callId, message)
-- `end_call` (callId)
-- `get_status` (callId)
+- `initiate_call`（message, to?，mode?）
+- `continue_call`（callId，message）
+- `speak_to_user`（callId，message）
+- `end_call`（callId）
+- `get_status`（callId）
 
-This repo ships a matching skill doc at `skills/voice-call/SKILL.md`.
+本仓库附带匹配的技能文档，位于 `skills/voice-call/SKILL.md`。
 
-## Gateway RPC
+## 网关 RPC
 
-- `voicecall.initiate` (`to?`, `message`, `mode?`)
-- `voicecall.continue` (`callId`, `message`)
-- `voicecall.speak` (`callId`, `message`)
-- `voicecall.end` (`callId`)
-- `voicecall.status` (`callId`)
+- `voicecall.initiate`（`to?`, `message`, `mode?`）
+- `voicecall.continue`（`callId`, `message`）
+- `voicecall.speak`（`callId`, `message`）
+- `voicecall.end`（`callId`）
+- `voicecall.status`（`callId`）

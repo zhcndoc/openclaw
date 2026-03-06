@@ -1,88 +1,87 @@
 ---
-summary: "Inbound image/audio/video understanding (optional) with provider + CLI fallbacks"
+summary: "入站图像/音频/视频理解（可选），支持提供商 + CLI 回退"
 read_when:
-  - Designing or refactoring media understanding
-  - Tuning inbound audio/video/image preprocessing
-title: "Media Understanding"
+  - 设计或重构媒体理解
+  - 调优入站音频/视频/图像预处理
+title: "媒体理解"
 ---
 
-# Media Understanding (Inbound) — 2026-01-17
+# 媒体理解（入站）— 2026-01-17
 
-OpenClaw can **summarize inbound media** (image/audio/video) before the reply pipeline runs. It auto‑detects when local tools or provider keys are available, and can be disabled or customized. If understanding is off, models still receive the original files/URLs as usual.
+OpenClaw 可以在回复管道运行前**总结入站媒体**（图像/音频/视频）。它能自动检测本地工具或提供商密钥是否可用，并可禁用或自定义。如果关闭理解功能，模型仍会按惯例接收原始文件/URL。
 
-## Goals
+## 目标
 
-- Optional: pre‑digest inbound media into short text for faster routing + better command parsing.
-- Preserve original media delivery to the model (always).
-- Support **provider APIs** and **CLI fallbacks**.
-- Allow multiple models with ordered fallback (error/size/timeout).
+- 可选：预先将入站媒体提炼成简短文本，以实现更快的路由和更好的命令解析。
+- 保留原始媒体传递给模型（始终如此）。
+- 支持**提供商 API**和**CLI 回退**。
+- 允许多个模型按顺序回退（错误/大小限制/超时）。
 
-## High‑level behavior
+## 高层行为
 
-1. Collect inbound attachments (`MediaPaths`, `MediaUrls`, `MediaTypes`).
-2. For each enabled capability (image/audio/video), select attachments per policy (default: **first**).
-3. Choose the first eligible model entry (size + capability + auth).
-4. If a model fails or the media is too large, **fall back to the next entry**.
-5. On success:
-   - `Body` becomes `[Image]`, `[Audio]`, or `[Video]` block.
-   - Audio sets `{{Transcript}}`; command parsing uses caption text when present,
-     otherwise the transcript.
-   - Captions are preserved as `User text:` inside the block.
+1. 收集入站附件（`MediaPaths`、`MediaUrls`、`MediaTypes`）。
+2. 对每种启用的功能（图像/音频/视频），按策略选择附件（默认：**第一个**）。
+3. 选择第一个符合条件的模型条目（大小+功能+授权）。
+4. 如果模型失败或媒体过大，**回退到下一个条目**。
+5. 成功时：
+   - `Body` 变为 `[Image]`、`[Audio]` 或 `[Video]` 块。
+   - 音频设置 `{{Transcript}}`；命令解析优先使用存在的字幕文本，否则使用转录文本。
+   - 字幕作为 `User text:` 保存在块内。
 
-If understanding fails or is disabled, **the reply flow continues** with the original body + attachments.
+如果理解失败或被禁用，**回复流程继续**，使用原始正文 + 附件。
 
-## Config overview
+## 配置概览
 
-`tools.media` supports **shared models** plus per‑capability overrides:
+`tools.media` 支持**共享模型**以及按功能覆盖：
 
-- `tools.media.models`: shared model list (use `capabilities` to gate).
-- `tools.media.image` / `tools.media.audio` / `tools.media.video`:
-  - defaults (`prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`)
-  - provider overrides (`baseUrl`, `headers`, `providerOptions`)
-  - Deepgram audio options via `tools.media.audio.providerOptions.deepgram`
-  - audio transcript echo controls (`echoTranscript`, default `false`; `echoFormat`)
-  - optional **per‑capability `models` list** (preferred before shared models)
-  - `attachments` policy (`mode`, `maxAttachments`, `prefer`)
-  - `scope` (optional gating by channel/chatType/session key)
-- `tools.media.concurrency`: max concurrent capability runs (default **2**).
+- `tools.media.models`：共享模型列表（使用 `capabilities` 限定）。
+- `tools.media.image` / `tools.media.audio` / `tools.media.video`：
+  - 默认（`prompt`，`maxChars`，`maxBytes`，`timeoutSeconds`，`language`）
+  - 提供商覆盖（`baseUrl`，`headers`，`providerOptions`）
+  - 通过 `tools.media.audio.providerOptions.deepgram` 配置 Deepgram 音频选项
+  - 音频转录回显控制（`echoTranscript`，默认 `false`；`echoFormat`）
+  - 可选**每功能独立的 `models` 列表**（优先于共享模型）
+  - `attachments` 策略（`mode`，`maxAttachments`，`prefer`）
+  - `scope`（可选：按频道/聊天类型/会话键限流）
+- `tools.media.concurrency`：最大并发功能运行数（默认为 **2**）。
 
 ```json5
 {
   tools: {
     media: {
       models: [
-        /* shared list */
+        /* 共享列表 */
       ],
       image: {
-        /* optional overrides */
+        /* 可选覆盖 */
       },
       audio: {
-        /* optional overrides */
+        /* 可选覆盖 */
         echoTranscript: true,
         echoFormat: '📝 "{transcript}"',
       },
       video: {
-        /* optional overrides */
+        /* 可选覆盖 */
       },
     },
   },
 }
 ```
 
-### Model entries
+### 模型条目
 
-Each `models[]` entry can be **provider** or **CLI**:
+每个 `models[]` 条目可以是**提供商**或**CLI**：
 
 ```json5
 {
-  type: "provider", // default if omitted
+  type: "provider", // 省略时默认为提供商
   provider: "openai",
   model: "gpt-5.2",
-  prompt: "Describe the image in <= 500 chars.",
+  prompt: "用不超过 500 字描述图像。",
   maxChars: 500,
   maxBytes: 10485760,
   timeoutSeconds: 60,
-  capabilities: ["image"], // optional, used for multi‑modal entries
+  capabilities: ["image"], // 可选，用于多模态条目
   profile: "vision-profile",
   preferredProfile: "vision-fallback",
 }
@@ -97,7 +96,7 @@ Each `models[]` entry can be **provider** or **CLI**:
     "gemini-3-flash",
     "--allowed-tools",
     "read_file",
-    "Read the media at {{MediaPath}} and describe it in <= {{MaxChars}} characters.",
+    "读取 {{MediaPath}} 的媒体并用不超过 {{MaxChars}} 字描述。",
   ],
   maxChars: 500,
   maxBytes: 52428800,
@@ -106,49 +105,46 @@ Each `models[]` entry can be **provider** or **CLI**:
 }
 ```
 
-CLI templates can also use:
+CLI 模板还可以使用：
 
-- `{{MediaDir}}` (directory containing the media file)
-- `{{OutputDir}}` (scratch dir created for this run)
-- `{{OutputBase}}` (scratch file base path, no extension)
+- `{{MediaDir}}`（包含媒体文件的文件夹）
+- `{{OutputDir}}`（为本次运行创建的临时文件夹）
+- `{{OutputBase}}`（临时文件基本路径，无扩展名）
 
-## Defaults and limits
+## 默认值和限制
 
-Recommended defaults:
+推荐默认值：
 
-- `maxChars`: **500** for image/video (short, command‑friendly)
-- `maxChars`: **unset** for audio (full transcript unless you set a limit)
-- `maxBytes`:
-  - image: **10MB**
-  - audio: **20MB**
-  - video: **50MB**
+- `maxChars`：图像/视频为 **500**（简短、易于命令解析）
+- `maxChars`：音频未设置（默认为完整转录，除非你设置限制）
+- `maxBytes`：
+  - 图像：**10MB**
+  - 音频：**20MB**
+  - 视频：**50MB**
 
-Rules:
+规则：
 
-- If media exceeds `maxBytes`, that model is skipped and the **next model is tried**.
-- Audio files smaller than **1024 bytes** are treated as empty/corrupt and skipped before provider/CLI transcription.
-- If the model returns more than `maxChars`, output is trimmed.
-- `prompt` defaults to simple “Describe the {media}.” plus the `maxChars` guidance (image/video only).
-- If `<capability>.enabled: true` but no models are configured, OpenClaw tries the
-  **active reply model** when its provider supports the capability.
+- 如果媒体超过 `maxBytes`，跳过该模型，**尝试下一个模型**。
+- 小于 **1024 字节** 的音频文件视为空文件/损坏，转录前跳过。
+- 模型返回超过 `maxChars` 文本时，输出被裁剪。
+- `prompt` 默认为简单的“描述 {media}。”并加上 `maxChars` 限制说明（仅图像/视频）。
+- 如果 `<capability>.enabled: true` 但无模型配置，OpenClaw 会尝试当前激活的回复模型（若其提供商支持该功能）。
 
-### Auto-detect media understanding (default)
+### 媒体理解自动检测（默认）
 
-If `tools.media.<capability>.enabled` is **not** set to `false` and you haven’t
-configured models, OpenClaw auto-detects in this order and **stops at the first
-working option**:
+若未将 `tools.media.<capability>.enabled` 设置为 `false` 且无模型配置，OpenClaw 按以下顺序自动检测，**遇到首个可用方案即停止**：
 
-1. **Local CLIs** (audio only; if installed)
-   - `sherpa-onnx-offline` (requires `SHERPA_ONNX_MODEL_DIR` with encoder/decoder/joiner/tokens)
-   - `whisper-cli` (`whisper-cpp`; uses `WHISPER_CPP_MODEL` or the bundled tiny model)
-   - `whisper` (Python CLI; downloads models automatically)
-2. **Gemini CLI** (`gemini`) using `read_many_files`
-3. **Provider keys**
-   - Audio: OpenAI → Groq → Deepgram → Google
-   - Image: OpenAI → Anthropic → Google → MiniMax
-   - Video: Google
+1. **本地 CLI**（音频仅限；安装时启用）
+   - `sherpa-onnx-offline`（需 `SHERPA_ONNX_MODEL_DIR`，包含编码器/解码器/连接器/令牌）
+   - `whisper-cli`（`whisper-cpp`，使用 `WHISPER_CPP_MODEL` 或内置 tiny 模型）
+   - `whisper`（Python CLI，自动下载模型）
+2. **Gemini CLI**（`gemini`），使用 `read_many_files`
+3. **提供商密钥**
+   - 音频：OpenAI → Groq → Deepgram → Google
+   - 图像：OpenAI → Anthropic → Google → MiniMax
+   - 视频：Google
 
-To disable auto-detection, set:
+要禁用自动检测，请设置：
 
 ```json5
 {
@@ -162,64 +158,61 @@ To disable auto-detection, set:
 }
 ```
 
-Note: Binary detection is best-effort across macOS/Linux/Windows; ensure the CLI is on `PATH` (we expand `~`), or set an explicit CLI model with a full command path.
+注意：二进制检测在 macOS/Linux/Windows 上均尽力而为；确保 CLI 在 `PATH` 中（支持展开 `~`），或设置带完整命令路径的显式 CLI 模型。
 
-### Proxy environment support (provider models)
+### 代理环境支持（提供商模型）
 
-When provider-based **audio** and **video** media understanding is enabled, OpenClaw
-honors standard outbound proxy environment variables for provider HTTP calls:
+当启用基于提供商的**音频**和**视频**媒体理解时，OpenClaw 尊重以下标准代理环境变量用于 HTTP 调用：
 
 - `HTTPS_PROXY`
 - `HTTP_PROXY`
 - `https_proxy`
 - `http_proxy`
 
-If no proxy env vars are set, media understanding uses direct egress.
-If the proxy value is malformed, OpenClaw logs a warning and falls back to direct
-fetch.
+若无代理环境变量设置，则媒体理解直连外网。
+如代理值格式错误，OpenClaw 记录警告并回退至直连。
 
-## Capabilities (optional)
+## 功能支持（可选）
 
-If you set `capabilities`, the entry only runs for those media types. For shared
-lists, OpenClaw can infer defaults:
+如果设置 `capabilities`，该条目只适用于列出的媒体类型。对于共享列表，OpenClaw 能推断默认值：
 
-- `openai`, `anthropic`, `minimax`: **image**
-- `google` (Gemini API): **image + audio + video**
-- `groq`: **audio**
-- `deepgram`: **audio**
+- `openai`、`anthropic`、`minimax`：**图像**
+- `google`（Gemini API）：**图像 + 音频 + 视频**
+- `groq`：**音频**
+- `deepgram`：**音频**
 
-For CLI entries, **set `capabilities` explicitly** to avoid surprising matches.
-If you omit `capabilities`, the entry is eligible for the list it appears in.
+对于 CLI 条目，请**显式设置 `capabilities`**，避免意外匹配。
+未设置 `capabilities` 时，条目适用于其所在列表。
 
-## Provider support matrix (OpenClaw integrations)
+## 提供商支持矩阵（OpenClaw 集成）
 
-| Capability | Provider integration                             | Notes                                                     |
-| ---------- | ------------------------------------------------ | --------------------------------------------------------- |
-| Image      | OpenAI / Anthropic / Google / others via `pi-ai` | Any image-capable model in the registry works.            |
-| Audio      | OpenAI, Groq, Deepgram, Google, Mistral          | Provider transcription (Whisper/Deepgram/Gemini/Voxtral). |
-| Video      | Google (Gemini API)                              | Provider video understanding.                             |
+| 功能       | 提供商集成                                 | 备注                                |
+| ---------- | ------------------------------------------ | --------------------------------- |
+| 图像       | OpenAI / Anthropic / Google / 通过 `pi-ai` | 任何注册表中的图像能力模型皆可用   |
+| 音频       | OpenAI、Groq、Deepgram、Google、Mistral   | 提供商转录（Whisper/Deepgram/Gemini/Voxtral） |
+| 视频       | Google（Gemini API）                       | 提供商视频理解                     |
 
-## Model selection guidance
+## 模型选择指南
 
-- Prefer the strongest latest-generation model available for each media capability when quality and safety matter.
-- For tool-enabled agents handling untrusted inputs, avoid older/weaker media models.
-- Keep at least one fallback per capability for availability (quality model + faster/cheaper model).
-- CLI fallbacks (`whisper-cli`, `whisper`, `gemini`) are useful when provider APIs are unavailable.
-- `parakeet-mlx` note: with `--output-dir`, OpenClaw reads `<output-dir>/<media-basename>.txt` when output format is `txt` (or unspecified); non-`txt` formats fall back to stdout.
+- 对质量和安全要求高时，优先选择各媒体功能中最新一代的最强模型。
+- 对于处理不可信输入的工具启用型代理，避免使用较旧/较弱的媒体模型。
+- 保留每功能至少一个回退模型以保障可用性（优质模型 + 更快/更便宜模型）。
+- 当提供商 API 不可用时，CLI 回退（`whisper-cli`、`whisper`、`gemini`）非常有用。
+- `parakeet-mlx` 注意：使用 `--output-dir`，OpenClaw 会读取 `<output-dir>/<media-basename>.txt`（output 格式为文本或未指定时）；非文本格式回退到标准输出。
 
-## Attachment policy
+## 附件策略
 
-Per‑capability `attachments` controls which attachments are processed:
+按功能设置 `attachments` 控制处理哪些附件：
 
-- `mode`: `first` (default) or `all`
-- `maxAttachments`: cap the number processed (default **1**)
-- `prefer`: `first`, `last`, `path`, `url`
+- `mode`：`first`（默认）或 `all`
+- `maxAttachments`：最大处理数（默认 **1**）
+- `prefer`：`first`、`last`、`path`、`url`
 
-When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
+当 `mode: "all"` 时，输出标签格式如 `[Image 1/2]`、`[Audio 2/2]` 等。
 
-## Config examples
+## 配置示例
 
-### 1) Shared models list + overrides
+### 1) 共享模型列表 + 覆盖
 
 ```json5
 {
@@ -240,7 +233,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
             "gemini-3-flash",
             "--allowed-tools",
             "read_file",
-            "Read the media at {{MediaPath}} and describe it in <= {{MaxChars}} characters.",
+            "读取 {{MediaPath}} 的媒体并用不超过 {{MaxChars}} 字描述。",
           ],
           capabilities: ["image", "video"],
         },
@@ -256,7 +249,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
 }
 ```
 
-### 2) Audio + Video only (image off)
+### 2) 仅音频 + 视频（关闭图像）
 
 ```json5
 {
@@ -286,7 +279,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
               "gemini-3-flash",
               "--allowed-tools",
               "read_file",
-              "Read the media at {{MediaPath}} and describe it in <= {{MaxChars}} characters.",
+              "读取 {{MediaPath}} 的媒体并用不超过 {{MaxChars}} 字描述。",
             ],
           },
         ],
@@ -296,7 +289,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
 }
 ```
 
-### 3) Optional image understanding
+### 3) 可选图像理解
 
 ```json5
 {
@@ -317,7 +310,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
               "gemini-3-flash",
               "--allowed-tools",
               "read_file",
-              "Read the media at {{MediaPath}} and describe it in <= {{MaxChars}} characters.",
+              "读取 {{MediaPath}} 的媒体并用不超过 {{MaxChars}} 字描述。",
             ],
           },
         ],
@@ -327,7 +320,7 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
 }
 ```
 
-### 4) Multi‑modal single entry (explicit capabilities)
+### 4) 多模态单条目（显式功能）
 
 ```json5
 {
@@ -365,23 +358,23 @@ When `mode: "all"`, outputs are labeled `[Image 1/2]`, `[Audio 2/2]`, etc.
 }
 ```
 
-## Status output
+## 状态输出
 
-When media understanding runs, `/status` includes a short summary line:
+媒体理解运行时，`/status` 包含简短汇总行：
 
 ```
 📎 Media: image ok (openai/gpt-5.2) · audio skipped (maxBytes)
 ```
 
-This shows per‑capability outcomes and the chosen provider/model when applicable.
+显示各功能结果及选用的提供商/模型（当前可用时）。
 
-## Notes
+## 注意事项
 
-- Understanding is **best‑effort**. Errors do not block replies.
-- Attachments are still passed to models even when understanding is disabled.
-- Use `scope` to limit where understanding runs (e.g. only DMs).
+- 理解为**尽力而为**。错误不会阻塞回复。
+- 即便关闭理解，附件依然传递给模型。
+- 使用 `scope` 限定理解范围（例如只对私聊启用）。
 
-## Related docs
+## 相关文档
 
-- [Configuration](/gateway/configuration)
-- [Image & Media Support](/nodes/images)
+- [配置](/gateway/configuration)
+- [图像与媒体支持](/nodes/images)

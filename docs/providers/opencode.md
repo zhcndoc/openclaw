@@ -1,26 +1,26 @@
 ---
-summary: "Use OpenCode Zen (curated models) with OpenClaw"
+summary: "使用 OpenCode Zen（精选模型）搭配 OpenClaw"
 read_when:
-  - You want OpenCode Zen for model access
-  - You want a curated list of coding-friendly models
+  - 你想使用 OpenCode Zen 访问模型
+  - 你想要一个精选的适合编码的模型列表
 title: "OpenCode Zen"
 ---
 
 # OpenCode Zen
 
-OpenCode Zen is a **curated list of models** recommended by the OpenCode team for coding agents.
-It is an optional, hosted model access path that uses an API key and the `opencode` provider.
-Zen is currently in beta.
+OpenCode Zen 是 OpenCode 团队推荐的**精选模型列表**，适用于编码代理。
+这是一条可选的托管模型访问路径，使用 API 密钥和 `opencode` 提供者。
+Zen 目前处于测试阶段。
 
-## CLI setup
+## CLI 设置
 
 ```bash
 openclaw onboard --auth-choice opencode-zen
-# or non-interactive
+# 或非交互式
 openclaw onboard --opencode-zen-api-key "$OPENCODE_API_KEY"
 ```
 
-## Config snippet
+## 配置片段
 
 ```json5
 {
@@ -29,8 +29,8 @@ openclaw onboard --opencode-zen-api-key "$OPENCODE_API_KEY"
 }
 ```
 
-## Notes
+## 备注
 
-- `OPENCODE_ZEN_API_KEY` is also supported.
-- You sign in to Zen, add billing details, and copy your API key.
-- OpenCode Zen bills per request; check the OpenCode dashboard for details.
+- 也支持使用 `OPENCODE_ZEN_API_KEY`。
+- 你需要登录 Zen，添加计费信息，然后复制你的 API 密钥。
+- OpenCode Zen 按请求计费；详细信息请查看 OpenCode 仪表盘。

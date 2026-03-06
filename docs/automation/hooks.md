@@ -1,111 +1,110 @@
 ---
-summary: "Hooks: event-driven automation for commands and lifecycle events"
+summary: "Hooks：针对命令和生命周期事件的事件驱动自动化"
 read_when:
-  - You want event-driven automation for /new, /reset, /stop, and agent lifecycle events
-  - You want to build, install, or debug hooks
+  - 您需要针对 /new、/reset、/stop 以及代理生命周期事件的事件驱动自动化
+  - 您想要构建、安装或调试 hooks
 title: "Hooks"
 ---
 
 # Hooks
 
-Hooks provide an extensible event-driven system for automating actions in response to agent commands and events. Hooks are automatically discovered from directories and can be managed via CLI commands, similar to how skills work in OpenClaw.
+Hooks 提供了一个可扩展的事件驱动系统，用于响应代理命令和事件来自动执行操作。Hooks 会从指定目录中自动发现，并且可以通过 CLI 命令进行管理，工作方式类似于 OpenClaw 中的技能（skills）。
 
-## Getting Oriented
+## 入门导览
 
-Hooks are small scripts that run when something happens. There are two kinds:
+Hooks 是在某些事件发生时运行的小脚本。主要有两种类型：
 
-- **Hooks** (this page): run inside the Gateway when agent events fire, like `/new`, `/reset`, `/stop`, or lifecycle events.
-- **Webhooks**: external HTTP webhooks that let other systems trigger work in OpenClaw. See [Webhook Hooks](/automation/webhook) or use `openclaw webhooks` for Gmail helper commands.
+- **Hooks**（本页内容）：当代理事件触发时，在网关内部运行，例如 `/new`、`/reset`、`/stop` 或生命周期事件。
+- **Webhooks**：外部 HTTP webhook，允许其他系统触发 OpenClaw 中的工作。参见 [Webhook Hooks](/automation/webhook) 或使用 `openclaw webhooks` 获取 Gmail 辅助命令。
 
-Hooks can also be bundled inside plugins; see [Plugins](/tools/plugin#plugin-hooks).
+Hooks 也可以打包在插件中；详见 [插件](/tools/plugin#plugin-hooks)。
 
-Common uses:
+常见用途：
 
-- Save a memory snapshot when you reset a session
-- Keep an audit trail of commands for troubleshooting or compliance
-- Trigger follow-up automation when a session starts or ends
-- Write files into the agent workspace or call external APIs when events fire
+- 在重置会话时保存内存快照
+- 记录命令审计跟踪以便排错或合规
+- 会话开始或结束时触发后续自动化
+- 事件触发时写入代理工作区文件或调用外部 API
 
-If you can write a small TypeScript function, you can write a hook. Hooks are discovered automatically, and you enable or disable them via the CLI.
+只要您会写一个小的 TypeScript 函数，就可以编写 hook。Hooks 会自动发现，通过 CLI 可启用或禁用。
 
-## Overview
+## 概览
 
-The hooks system allows you to:
+Hooks 系统允许您：
 
-- Save session context to memory when `/new` is issued
-- Log all commands for auditing
-- Trigger custom automations on agent lifecycle events
-- Extend OpenClaw's behavior without modifying core code
+- 在执行 `/new` 时保存会话上下文到内存
+- 记录所有命令以便审计
+- 在代理生命周期事件时触发自定义自动化
+- 无需修改核心代码即可扩展 OpenClaw 行为
 
-## Getting Started
+## 快速开始
 
-### Bundled Hooks
+### 内置 Hooks
 
-OpenClaw ships with four bundled hooks that are automatically discovered:
+OpenClaw 自带四个自动发现的内置 hooks：
 
-- **💾 session-memory**: Saves session context to your agent workspace (default `~/.openclaw/workspace/memory/`) when you issue `/new`
-- **📎 bootstrap-extra-files**: Injects additional workspace bootstrap files from configured glob/path patterns during `agent:bootstrap`
-- **📝 command-logger**: Logs all command events to `~/.openclaw/logs/commands.log`
-- **🚀 boot-md**: Runs `BOOT.md` when the gateway starts (requires internal hooks enabled)
+- **💾 session-memory**：当执行 `/new` 时将会话上下文保存到代理工作区（默认目录 `~/.openclaw/workspace/memory/`）
+- **📎 bootstrap-extra-files**：在 `agent:bootstrap` 期间，从配置的 glob/path 模式注入额外的工作区启动文件
+- **📝 command-logger**：将所有命令事件记录到 `~/.openclaw/logs/commands.log`
+- **🚀 boot-md**：网关启动时运行 `BOOT.md`（需启用内部 hooks）
 
-List available hooks:
+列出可用 hooks：
 
 ```bash
 openclaw hooks list
 ```
 
-Enable a hook:
+启用 hook：
 
 ```bash
 openclaw hooks enable session-memory
 ```
 
-Check hook status:
+检查 hook 状态：
 
 ```bash
 openclaw hooks check
 ```
 
-Get detailed information:
+获取详细信息：
 
 ```bash
 openclaw hooks info session-memory
 ```
 
-### Onboarding
+### 上手引导
 
-During onboarding (`openclaw onboard`), you'll be prompted to enable recommended hooks. The wizard automatically discovers eligible hooks and presents them for selection.
+在执行 `openclaw onboard` 期间，系统会提示您启用推荐的 hooks。向导自动发现匹配的 hooks 并供您选择。
 
-## Hook Discovery
+## Hook 发现机制
 
-Hooks are automatically discovered from three directories (in order of precedence):
+Hooks 会自动从三个目录中发现（优先级按顺序）：
 
-1. **Workspace hooks**: `<workspace>/hooks/` (per-agent, highest precedence)
-2. **Managed hooks**: `~/.openclaw/hooks/` (user-installed, shared across workspaces)
-3. **Bundled hooks**: `<openclaw>/dist/hooks/bundled/` (shipped with OpenClaw)
+1. **工作区 hooks**：`<workspace>/hooks/`（每代理独有，优先级最高）
+2. **管理 hooks**：`~/.openclaw/hooks/`（用户安装的，跨工作区共享）
+3. **内置 hooks**：`<openclaw>/dist/hooks/bundled/`（OpenClaw 自带）
 
-Managed hook directories can be either a **single hook** or a **hook pack** (package directory).
+管理 hooks 目录可以是**单个 hook**或**hook 包**（包目录）。
 
-Each hook is a directory containing:
+每个 hook 为一个目录，包含：
 
 ```
 my-hook/
-├── HOOK.md          # Metadata + documentation
-└── handler.ts       # Handler implementation
+├── HOOK.md          # 元数据和文档
+└── handler.ts       # 处理器实现
 ```
 
-## Hook Packs (npm/archives)
+## Hook 包（npm/归档）
 
-Hook packs are standard npm packages that export one or more hooks via `openclaw.hooks` in
-`package.json`. Install them with:
+Hook 包是标准的 npm 包，通过 `package.json` 中的 `openclaw.hooks` 字段导出一个或多个 hooks。安装命令：
 
 ```bash
 openclaw hooks install <path-or-spec>
 ```
 
-Npm specs are registry-only (package name + optional version/tag). Git/URL/file specs are rejected.
+npm 规范仅支持注册表格式（包名 + 可选版本/标签）。不接受 git/url/file 格式。
 
-Example `package.json`:
+示例 `package.json`：
 
 ```json
 {
@@ -117,175 +116,169 @@ Example `package.json`:
 }
 ```
 
-Each entry points to a hook directory containing `HOOK.md` and `handler.ts` (or `index.ts`).
-Hook packs can ship dependencies; they will be installed under `~/.openclaw/hooks/<id>`.
-Each `openclaw.hooks` entry must stay inside the package directory after symlink
-resolution; entries that escape are rejected.
+每个条目指向含有 `HOOK.md` 和 `handler.ts`（或 `index.ts`）的 hook 目录。Hook 包可包含依赖，安装后放置于 `~/.openclaw/hooks/<id>` 下。每个 `openclaw.hooks` 条目必须解析后的路径位于包目录内，超出将被拒绝。
 
-Security note: `openclaw hooks install` installs dependencies with `npm install --ignore-scripts`
-(no lifecycle scripts). Keep hook pack dependency trees "pure JS/TS" and avoid packages that rely
-on `postinstall` builds.
+安全提示：`openclaw hooks install` 使用 `npm install --ignore-scripts` 安装依赖（不执行生命周期脚本）。保持 hook 包依赖树为“纯 JS/TS”，避免依赖使用 `postinstall` 构建的包。
 
-## Hook Structure
+## Hook 结构
 
-### HOOK.md Format
+### HOOK.md 格式
 
-The `HOOK.md` file contains metadata in YAML frontmatter plus Markdown documentation:
+`HOOK.md` 文件包含 YAML Frontmatter 的元数据和 Markdown 文档：
 
 ```markdown
 ---
 name: my-hook
-description: "Short description of what this hook does"
+description: "此 hook 的简短描述"
 homepage: https://docs.openclaw.ai/automation/hooks#my-hook
 metadata:
   { "openclaw": { "emoji": "🔗", "events": ["command:new"], "requires": { "bins": ["node"] } } }
 ---
 
-# My Hook
+# 我的 Hook
 
-Detailed documentation goes here...
+详细文档内容...
 
-## What It Does
+## 功能描述
 
-- Listens for `/new` commands
-- Performs some action
-- Logs the result
+- 监听 `/new` 命令
+- 执行一些操作
+- 记录结果
 
-## Requirements
+## 需求
 
-- Node.js must be installed
+- 需安装 Node.js
 
-## Configuration
+## 配置
 
-No configuration needed.
+无需配置。
 ```
 
-### Metadata Fields
+### 元数据字段
 
-The `metadata.openclaw` object supports:
+`metadata.openclaw` 对象支持：
 
-- **`emoji`**: Display emoji for CLI (e.g., `"💾"`)
-- **`events`**: Array of events to listen for (e.g., `["command:new", "command:reset"]`)
-- **`export`**: Named export to use (defaults to `"default"`)
-- **`homepage`**: Documentation URL
-- **`requires`**: Optional requirements
-  - **`bins`**: Required binaries on PATH (e.g., `["git", "node"]`)
-  - **`anyBins`**: At least one of these binaries must be present
-  - **`env`**: Required environment variables
-  - **`config`**: Required config paths (e.g., `["workspace.dir"]`)
-  - **`os`**: Required platforms (e.g., `["darwin", "linux"]`)
-- **`always`**: Bypass eligibility checks (boolean)
-- **`install`**: Installation methods (for bundled hooks: `[{"id":"bundled","kind":"bundled"}]`)
+- **`emoji`**：CLI 显示的表情符号（例：`"💾"`）
+- **`events`**：监听的事件数组（例：`["command:new", "command:reset"]`）
+- **`export`**：使用的命名导出（默认 `"default"`）
+- **`homepage`**：文档 URL
+- **`requires`**：可选需求
+  - **`bins`**：必须在 PATH 中的二进制程序（例：`["git", "node"]`）
+  - **`anyBins`**：至少存在的二进制之一
+  - **`env`**：必须存在的环境变量
+  - **`config`**：必须配置的路径（例：`["workspace.dir"]`）
+  - **`os`**：支持的平台（例：`["darwin", "linux"]`）
+- **`always`**：跳过资格检查（布尔值）
+- **`install`**：安装方式（内置 hooks 为 `[{"id":"bundled","kind":"bundled"}]`）
 
-### Handler Implementation
+### 处理器实现
 
-The `handler.ts` file exports a `HookHandler` function:
+`handler.ts` 文件导出一个 `HookHandler` 函数：
 
 ```typescript
 const myHandler = async (event) => {
-  // Only trigger on 'new' command
+  // 仅在 'new' 命令时触发
   if (event.type !== "command" || event.action !== "new") {
     return;
   }
 
-  console.log(`[my-hook] New command triggered`);
-  console.log(`  Session: ${event.sessionKey}`);
-  console.log(`  Timestamp: ${event.timestamp.toISOString()}`);
+  console.log(`[my-hook] 新命令触发`);
+  console.log(`  会话：${event.sessionKey}`);
+  console.log(`  时间戳：${event.timestamp.toISOString()}`);
 
-  // Your custom logic here
+  // 您的自定义逻辑写这里
 
-  // Optionally send message to user
-  event.messages.push("✨ My hook executed!");
+  // 可选地发送消息给用户
+  event.messages.push("✨ 我的 hook 已执行！");
 };
 
 export default myHandler;
 ```
 
-#### Event Context
+#### 事件上下文
 
-Each event includes:
+每个事件包含：
 
 ```typescript
 {
   type: 'command' | 'session' | 'agent' | 'gateway' | 'message',
-  action: string,              // e.g., 'new', 'reset', 'stop', 'received', 'sent'
-  sessionKey: string,          // Session identifier
-  timestamp: Date,             // When the event occurred
-  messages: string[],          // Push messages here to send to user
+  action: string,              // 例：'new', 'reset', 'stop', 'received', 'sent'
+  sessionKey: string,          // 会话标识符
+  timestamp: Date,             // 事件发生时间
+  messages: string[],          // 向此数组推送消息以发送给用户
   context: {
-    // Command events:
+    // 命令事件：
     sessionEntry?: SessionEntry,
     sessionId?: string,
     sessionFile?: string,
-    commandSource?: string,    // e.g., 'whatsapp', 'telegram'
+    commandSource?: string,    // 例如 'whatsapp', 'telegram'
     senderId?: string,
     workspaceDir?: string,
     bootstrapFiles?: WorkspaceBootstrapFile[],
     cfg?: OpenClawConfig,
-    // Message events (see Message Events section for full details):
-    from?: string,             // message:received
-    to?: string,               // message:sent
+    // 消息事件（详见消息事件章节）：
+    from?: string,             // message:received 来源
+    to?: string,               // message:sent 目的地
     content?: string,
     channelId?: string,
-    success?: boolean,         // message:sent
+    success?: boolean,         // message:sent 是否成功
   }
 }
 ```
 
-## Event Types
+## 事件类型
 
-### Command Events
+### 命令事件
 
-Triggered when agent commands are issued:
+代理命令发出时触发：
 
-- **`command`**: All command events (general listener)
-- **`command:new`**: When `/new` command is issued
-- **`command:reset`**: When `/reset` command is issued
-- **`command:stop`**: When `/stop` command is issued
+- **`command`**：所有命令事件（通用侦听）
+- **`command:new`**：发出 `/new` 命令时
+- **`command:reset`**：发出 `/reset` 命令时
+- **`command:stop`**：发出 `/stop` 命令时
 
-### Session Events
+### 会话事件
 
-- **`session:compact:before`**: Right before compaction summarizes history
-- **`session:compact:after`**: After compaction completes with summary metadata
+- **`session:compact:before`**：压缩历史摘要之前
+- **`session:compact:after`**：压缩完成，含摘要元数据
 
-Internal hook payloads emit these as `type: "session"` with `action: "compact:before"` / `action: "compact:after"`; listeners subscribe with the combined keys above.
-Specific handler registration uses the literal key format `${type}:${action}`. For these events, register `session:compact:before` and `session:compact:after`.
+内部 hook 通过 `type: "session"`，`action: "compact:before"`/`compact:after` 发送以上事件，订阅时使用复合键。使用时注册 `session:compact:before` 和 `session:compact:after`。
 
-### Agent Events
+### 代理事件
 
-- **`agent:bootstrap`**: Before workspace bootstrap files are injected (hooks may mutate `context.bootstrapFiles`)
+- **`agent:bootstrap`**：在注入工作区 bootstrap 文件之前（hooks 可变更 `context.bootstrapFiles`）
 
-### Gateway Events
+### 网关事件
 
-Triggered when the gateway starts:
+网关启动时触发：
 
-- **`gateway:startup`**: After channels start and hooks are loaded
+- **`gateway:startup`**：频道启动及 hooks 加载后
 
-### Message Events
+### 消息事件
 
-Triggered when messages are received or sent:
+收发消息时触发：
 
-- **`message`**: All message events (general listener)
-- **`message:received`**: When an inbound message is received from any channel. Fires early in processing before media understanding. Content may contain raw placeholders like `<media:audio>` for media attachments that haven't been processed yet.
-- **`message:transcribed`**: When a message has been fully processed, including audio transcription and link understanding. At this point, `transcript` contains the full transcript text for audio messages. Use this hook when you need access to transcribed audio content.
-- **`message:preprocessed`**: Fires for every message after all media + link understanding completes, giving hooks access to the fully enriched body (transcripts, image descriptions, link summaries) before the agent sees it.
-- **`message:sent`**: When an outbound message is successfully sent
+- **`message`**：所有消息事件（通用监听）
+- **`message:received`**：收取任一渠道入站消息。触发时处于早期处理，媒体还未解析，内容可能包含 `<media:audio>` 等原始占位符。
+- **`message:transcribed`**：消息已全解析（包含音频转录和链接理解）。可通过 `transcript` 获取音频转录文本。需要使用音频转录内容时使用此 hook。
+- **`message:preprocessed`**：所有媒体和链接解析完毕后触发，提供最终的丰富内容（转录、图片描述、链接摘要），在代理看到消息之前。
+- **`message:sent`**：出站消息发送成功时
 
-#### Message Event Context
+#### 消息事件上下文
 
-Message events include rich context about the message:
+消息事件包含丰富上下文：
 
 ```typescript
-// message:received context
+// message:received 上下文
 {
-  from: string,           // Sender identifier (phone number, user ID, etc.)
-  content: string,        // Message content
-  timestamp?: number,     // Unix timestamp when received
-  channelId: string,      // Channel (e.g., "whatsapp", "telegram", "discord")
-  accountId?: string,     // Provider account ID for multi-account setups
-  conversationId?: string, // Chat/conversation ID
-  messageId?: string,     // Message ID from the provider
-  metadata?: {            // Additional provider-specific data
+  from: string,           // 发送者标识（手机号、用户 ID 等）
+  content: string,        // 消息内容
+  timestamp?: number,     // UNIX 时间戳
+  channelId: string,      // 渠道（如 "whatsapp"、"telegram"、"discord"）
+  accountId?: string,     // 多账户提供商账号 ID
+  conversationId?: string,// 会话 ID
+  messageId?: string,     // 提供商消息 ID
+  metadata?: {            // 额外提供商特定数据
     to?: string,
     provider?: string,
     surface?: string,
@@ -297,36 +290,36 @@ Message events include rich context about the message:
   }
 }
 
-// message:sent context
+// message:sent 上下文
 {
-  to: string,             // Recipient identifier
-  content: string,        // Message content that was sent
-  success: boolean,       // Whether the send succeeded
-  error?: string,         // Error message if sending failed
-  channelId: string,      // Channel (e.g., "whatsapp", "telegram", "discord")
-  accountId?: string,     // Provider account ID
-  conversationId?: string, // Chat/conversation ID
-  messageId?: string,     // Message ID returned by the provider
-  isGroup?: boolean,      // Whether this outbound message belongs to a group/channel context
-  groupId?: string,       // Group/channel identifier for correlation with message:received
+  to: string,             // 接收者标识
+  content: string,        // 发送的消息内容
+  success: boolean,       // 是否发送成功
+  error?: string,         // 失败时的错误信息
+  channelId: string,      // 渠道
+  accountId?: string,
+  conversationId?: string,
+  messageId?: string,
+  isGroup?: boolean,      // 是否群组/频道消息
+  groupId?: string,       // 群组/频道 ID，用于与 message:received 关联
 }
 
-// message:transcribed context
+// message:transcribed 上下文
 {
-  body?: string,          // Raw inbound body before enrichment
-  bodyForAgent?: string,  // Enriched body visible to the agent
-  transcript: string,     // Audio transcript text
-  channelId: string,      // Channel (e.g., "telegram", "whatsapp")
+  body?: string,          // 富处理前的原始消息体
+  bodyForAgent?: string,  // 代理可见的丰富消息体
+  transcript: string,     // 音频转录文本
+  channelId: string,
   conversationId?: string,
   messageId?: string,
 }
 
-// message:preprocessed context
+// message:preprocessed 上下文
 {
-  body?: string,          // Raw inbound body
-  bodyForAgent?: string,  // Final enriched body after media/link understanding
-  transcript?: string,    // Transcript when audio was present
-  channelId: string,      // Channel (e.g., "telegram", "whatsapp")
+  body?: string,
+  bodyForAgent?: string,
+  transcript?: string,
+  channelId: string,
   conversationId?: string,
   messageId?: string,
   isGroup?: boolean,
@@ -334,7 +327,7 @@ Message events include rich context about the message:
 }
 ```
 
-#### Example: Message Logger Hook
+#### 示例：消息记录器 Hook
 
 ```typescript
 const isMessageReceivedEvent = (event: { type: string; action: string }) =>
@@ -343,66 +336,66 @@ const isMessageSentEvent = (event: { type: string; action: string }) =>
   event.type === "message" && event.action === "sent";
 
 const handler = async (event) => {
-  if (isMessageReceivedEvent(event as { type: string; action: string })) {
-    console.log(`[message-logger] Received from ${event.context.from}: ${event.context.content}`);
-  } else if (isMessageSentEvent(event as { type: string; action: string })) {
-    console.log(`[message-logger] Sent to ${event.context.to}: ${event.context.content}`);
+  if (isMessageReceivedEvent(event)) {
+    console.log(`[message-logger] 收到自 ${event.context.from}: ${event.context.content}`);
+  } else if (isMessageSentEvent(event)) {
+    console.log(`[message-logger] 发送到 ${event.context.to}: ${event.context.content}`);
   }
 };
 
 export default handler;
 ```
 
-### Tool Result Hooks (Plugin API)
+### 工具结果 Hooks（插件 API）
 
-These hooks are not event-stream listeners; they let plugins synchronously adjust tool results before OpenClaw persists them.
+这类 hooks 不是事件流监听器，而是让插件同步修改工具结果，在 OpenClaw 持久化到会话之前。
 
-- **`tool_result_persist`**: transform tool results before they are written to the session transcript. Must be synchronous; return the updated tool result payload or `undefined` to keep it as-is. See [Agent Loop](/concepts/agent-loop).
+- **`tool_result_persist`**：修改工具结果，必须是同步函数；返回更新后的结果或 `undefined` 保持不变。详见 [Agent Loop](/concepts/agent-loop)。
 
-### Plugin Hook Events
+### 插件 Hook 事件
 
-Compaction lifecycle hooks exposed through the plugin hook runner:
+压缩生命周期钩子，通过插件 hook 运行器暴露：
 
-- **`before_compaction`**: Runs before compaction with count/token metadata
-- **`after_compaction`**: Runs after compaction with compaction summary metadata
+- **`before_compaction`**：压缩前，带计数与 token 元数据
+- **`after_compaction`**：压缩后，含压缩摘要元数据
 
-### Future Events
+### 未来事件
 
-Planned event types:
+计划支持的事件类型：
 
-- **`session:start`**: When a new session begins
-- **`session:end`**: When a session ends
-- **`agent:error`**: When an agent encounters an error
+- **`session:start`**：新会话开始时
+- **`session:end`**：会话结束时
+- **`agent:error`**：代理遇到错误时
 
-## Creating Custom Hooks
+## 创建自定义 Hooks
 
-### 1. Choose Location
+### 1. 选择位置
 
-- **Workspace hooks** (`<workspace>/hooks/`): Per-agent, highest precedence
-- **Managed hooks** (`~/.openclaw/hooks/`): Shared across workspaces
+- **工作区 hooks**（`<workspace>/hooks/`）：每代理独享，优先级最高
+- **管理 hooks**（`~/.openclaw/hooks/`）：跨工作区共享
 
-### 2. Create Directory Structure
+### 2. 创建目录结构
 
 ```bash
 mkdir -p ~/.openclaw/hooks/my-hook
 cd ~/.openclaw/hooks/my-hook
 ```
 
-### 3. Create HOOK.md
+### 3. 创建 HOOK.md
 
 ```markdown
 ---
 name: my-hook
-description: "Does something useful"
+description: "执行一些有用操作"
 metadata: { "openclaw": { "emoji": "🎯", "events": ["command:new"] } }
 ---
 
-# My Custom Hook
+# 我的自定义 Hook
 
-This hook does something useful when you issue `/new`.
+当你执行 `/new` 时，本 hook 会做一些有用的事情。
 ```
 
-### 4. Create handler.ts
+### 4. 创建 handler.ts
 
 ```typescript
 const handler = async (event) => {
@@ -410,31 +403,31 @@ const handler = async (event) => {
     return;
   }
 
-  console.log("[my-hook] Running!");
-  // Your logic here
+  console.log("[my-hook] 运行中！");
+  // 您的逻辑写这里
 };
 
 export default handler;
 ```
 
-### 5. Enable and Test
+### 5. 启用并测试
 
 ```bash
-# Verify hook is discovered
+# 确认 hook 是否被发现
 openclaw hooks list
 
-# Enable it
+# 启用 hook
 openclaw hooks enable my-hook
 
-# Restart your gateway process (menu bar app restart on macOS, or restart your dev process)
+# 重启网关进程（macOS 菜单栏 App 重启，或您的开发进程重启）
 
-# Trigger the event
-# Send /new via your messaging channel
+# 触发事件
+# 通过消息渠道发送 /new
 ```
 
-## Configuration
+## 配置
 
-### New Config Format (Recommended)
+### 新配置格式（推荐）
 
 ```json
 {
@@ -450,9 +443,7 @@ openclaw hooks enable my-hook
 }
 ```
 
-### Per-Hook Configuration
-
-Hooks can have custom configuration:
+### 针对某个 Hook 的配置
 
 ```json
 {
@@ -472,9 +463,9 @@ Hooks can have custom configuration:
 }
 ```
 
-### Extra Directories
+### 额外目录加载
 
-Load hooks from additional directories:
+从其他目录加载 hooks：
 
 ```json
 {
@@ -489,9 +480,9 @@ Load hooks from additional directories:
 }
 ```
 
-### Legacy Config Format (Still Supported)
+### 旧配置格式（仍支持）
 
-The old config format still works for backwards compatibility:
+旧格式为兼容性保留，依然有效：
 
 ```json
 {
@@ -510,94 +501,94 @@ The old config format still works for backwards compatibility:
 }
 ```
 
-Note: `module` must be a workspace-relative path. Absolute paths and traversal outside the workspace are rejected.
+注意：`module` 必须为工作区内相对路径。绝对路径和跳出工作区目录均被拒绝。
 
-**Migration**: Use the new discovery-based system for new hooks. Legacy handlers are loaded after directory-based hooks.
+**迁移建议**：新 hook 使用基于发现机制。旧 handler 会在目录钩子后加载。
 
-## CLI Commands
+## CLI 命令
 
-### List Hooks
+### 列出 Hooks
 
 ```bash
-# List all hooks
+# 列出所有 hooks
 openclaw hooks list
 
-# Show only eligible hooks
+# 只显示合格的 hooks
 openclaw hooks list --eligible
 
-# Verbose output (show missing requirements)
+# 详细显示（包括缺失的依赖）
 openclaw hooks list --verbose
 
-# JSON output
+# JSON 输出
 openclaw hooks list --json
 ```
 
-### Hook Information
+### 查看 Hook 信息
 
 ```bash
-# Show detailed info about a hook
+# 查看某个 hook 的详细信息
 openclaw hooks info session-memory
 
-# JSON output
+# JSON 输出
 openclaw hooks info session-memory --json
 ```
 
-### Check Eligibility
+### 检查条件
 
 ```bash
-# Show eligibility summary
+# 显示合格性摘要
 openclaw hooks check
 
-# JSON output
+# JSON 输出
 openclaw hooks check --json
 ```
 
-### Enable/Disable
+### 启用 / 禁用
 
 ```bash
-# Enable a hook
+# 启用 hook
 openclaw hooks enable session-memory
 
-# Disable a hook
+# 禁用 hook
 openclaw hooks disable command-logger
 ```
 
-## Bundled hook reference
+## 内置 Hook 参考
 
 ### session-memory
 
-Saves session context to memory when you issue `/new`.
+执行 `/new` 时保存会话上下文到内存。
 
-**Events**: `command:new`
+**事件**：`command:new`
 
-**Requirements**: `workspace.dir` must be configured
+**需求**：必须配置 `workspace.dir`
 
-**Output**: `<workspace>/memory/YYYY-MM-DD-slug.md` (defaults to `~/.openclaw/workspace`)
+**输出**：`<workspace>/memory/YYYY-MM-DD-slug.md`（默认 `~/.openclaw/workspace`）
 
-**What it does**:
+**功能说明**：
 
-1. Uses the pre-reset session entry to locate the correct transcript
-2. Extracts the last 15 lines of conversation
-3. Uses LLM to generate a descriptive filename slug
-4. Saves session metadata to a dated memory file
+1. 利用重置前的会话条目定位对应的会话记录
+2. 抽取最后 15 行对话
+3. 通过 LLM 生成描述性文件名 slug
+4. 将会话元数据保存为日期命名的 memory 文件
 
-**Example output**:
+**示例输出**：
 
 ```markdown
-# Session: 2026-01-16 14:30:00 UTC
+# 会话：2026-01-16 14:30:00 UTC
 
-- **Session Key**: agent:main:main
-- **Session ID**: abc123def456
-- **Source**: telegram
+- **会话键**: agent:main:main
+- **会话 ID**: abc123def456
+- **来源**: telegram
 ```
 
-**Filename examples**:
+**文件名示例**：
 
 - `2026-01-16-vendor-pitch.md`
 - `2026-01-16-api-design.md`
-- `2026-01-16-1430.md` (fallback timestamp if slug generation fails)
+- `2026-01-16-1430.md`（slug 生成失败时回退的时间戳名）
 
-**Enable**:
+**启用命令**：
 
 ```bash
 openclaw hooks enable session-memory
@@ -605,15 +596,15 @@ openclaw hooks enable session-memory
 
 ### bootstrap-extra-files
 
-Injects additional bootstrap files (for example monorepo-local `AGENTS.md` / `TOOLS.md`) during `agent:bootstrap`.
+在 `agent:bootstrap` 阶段注入额外的启动文件（例如 monorepo 本地的 `AGENTS.md` / `TOOLS.md`）。
 
-**Events**: `agent:bootstrap`
+**事件**：`agent:bootstrap`
 
-**Requirements**: `workspace.dir` must be configured
+**需求**：必须配置 `workspace.dir`
 
-**Output**: No files written; bootstrap context is modified in-memory only.
+**输出**：不写文件，仅修改内存中的启动上下文
 
-**Config**:
+**配置示例**：
 
 ```json
 {
@@ -631,14 +622,14 @@ Injects additional bootstrap files (for example monorepo-local `AGENTS.md` / `TO
 }
 ```
 
-**Notes**:
+**注意事项**：
 
-- Paths are resolved relative to workspace.
-- Files must stay inside workspace (realpath-checked).
-- Only recognized bootstrap basenames are loaded.
-- Subagent allowlist is preserved (`AGENTS.md` and `TOOLS.md` only).
+- 路径相对于工作区解析
+- 文件必须位于工作区内（经过实际路径验证）
+- 仅加载认可的启动文件名
+- 子代理白名单仍生效（仅 `AGENTS.md` 和 `TOOLS.md`）
 
-**Enable**:
+**启用命令**：
 
 ```bash
 openclaw hooks enable bootstrap-extra-files
@@ -646,41 +637,41 @@ openclaw hooks enable bootstrap-extra-files
 
 ### command-logger
 
-Logs all command events to a centralized audit file.
+将所有命令事件记录到集中审计文件。
 
-**Events**: `command`
+**事件**：`command`
 
-**Requirements**: None
+**需求**：无
 
-**Output**: `~/.openclaw/logs/commands.log`
+**输出**：`~/.openclaw/logs/commands.log`
 
-**What it does**:
+**功能说明**：
 
-1. Captures event details (command action, timestamp, session key, sender ID, source)
-2. Appends to log file in JSONL format
-3. Runs silently in the background
+1. 捕获事件细节（命令动作、时间戳、会话键、发送者 ID、来源）
+2. 以 JSONL 格式追加到日志文件
+3. 静默且后台运行
 
-**Example log entries**:
+**示例日志条目**：
 
 ```jsonl
 {"timestamp":"2026-01-16T14:30:00.000Z","action":"new","sessionKey":"agent:main:main","senderId":"+1234567890","source":"telegram"}
 {"timestamp":"2026-01-16T15:45:22.000Z","action":"stop","sessionKey":"agent:main:main","senderId":"user@example.com","source":"whatsapp"}
 ```
 
-**View logs**:
+**查看日志命令**：
 
 ```bash
-# View recent commands
+# 查看最近 20 条命令
 tail -n 20 ~/.openclaw/logs/commands.log
 
-# Pretty-print with jq
+# 用 jq 美化输出
 cat ~/.openclaw/logs/commands.log | jq .
 
-# Filter by action
+# 根据动作过滤
 grep '"action":"new"' ~/.openclaw/logs/commands.log | jq .
 ```
 
-**Enable**:
+**启用命令**：
 
 ```bash
 openclaw hooks enable command-logger
@@ -688,93 +679,91 @@ openclaw hooks enable command-logger
 
 ### boot-md
 
-Runs `BOOT.md` when the gateway starts (after channels start).
-Internal hooks must be enabled for this to run.
+网关启动时（频道启动后）执行 `BOOT.md`。需启用内部 hooks。
 
-**Events**: `gateway:startup`
+**事件**：`gateway:startup`
 
-**Requirements**: `workspace.dir` must be configured
+**需求**：必须配置 `workspace.dir`
 
-**What it does**:
+**功能说明**：
 
-1. Reads `BOOT.md` from your workspace
-2. Runs the instructions via the agent runner
-3. Sends any requested outbound messages via the message tool
+1. 从工作区读取 `BOOT.md`
+2. 通过代理运行器执行指令
+3. 使用消息工具发送请求的出站消息
 
-**Enable**:
+**启用命令**：
 
 ```bash
 openclaw hooks enable boot-md
 ```
 
-## Best Practices
+## 最佳实践
 
-### Keep Handlers Fast
+### 保持处理器快速
 
-Hooks run during command processing. Keep them lightweight:
+Hooks 在命令处理中执行，保持轻量：
 
 ```typescript
-// ✓ Good - async work, returns immediately
+// ✓ 好示例 - 异步执行，立即返回
 const handler: HookHandler = async (event) => {
-  void processInBackground(event); // Fire and forget
+  void processInBackground(event); // 触发后不等待
 };
 
-// ✗ Bad - blocks command processing
+// ✗ 差示例 - 阻塞命令处理
 const handler: HookHandler = async (event) => {
   await slowDatabaseQuery(event);
   await evenSlowerAPICall(event);
 };
 ```
 
-### Handle Errors Gracefully
+### 优雅处理错误
 
-Always wrap risky operations:
+确保包裹高风险操作：
 
 ```typescript
 const handler: HookHandler = async (event) => {
   try {
     await riskyOperation(event);
   } catch (err) {
-    console.error("[my-handler] Failed:", err instanceof Error ? err.message : String(err));
-    // Don't throw - let other handlers run
+    console.error("[my-handler] 失败:", err instanceof Error ? err.message : String(err));
+    // 不抛出异常，以继续让其他处理器运行
   }
 };
 ```
 
-### Filter Events Early
+### 提前过滤事件
 
-Return early if the event isn't relevant:
+事件不相关时尽早返回：
 
 ```typescript
 const handler: HookHandler = async (event) => {
-  // Only handle 'new' commands
   if (event.type !== "command" || event.action !== "new") {
     return;
   }
 
-  // Your logic here
+  // 处理逻辑
 };
 ```
 
-### Use Specific Event Keys
+### 指定精确事件键
 
-Specify exact events in metadata when possible:
-
-```yaml
-metadata: { "openclaw": { "events": ["command:new"] } } # Specific
-```
-
-Rather than:
+元数据中尽量指定具体事件：
 
 ```yaml
-metadata: { "openclaw": { "events": ["command"] } } # General - more overhead
+metadata: { "openclaw": { "events": ["command:new"] } } # 精确
 ```
 
-## Debugging
+避免：
 
-### Enable Hook Logging
+```yaml
+metadata: { "openclaw": { "events": ["command"] } } # 泛用，带来额外开销
+```
 
-The gateway logs hook loading at startup:
+## 调试
+
+### 启用 Hook 日志
+
+网关启动时显示 hook 加载日志：
 
 ```
 Registered hook: session-memory -> command:new
@@ -783,52 +772,52 @@ Registered hook: command-logger -> command
 Registered hook: boot-md -> gateway:startup
 ```
 
-### Check Discovery
+### 检查发现情况
 
-List all discovered hooks:
+列出所有发现的 hooks：
 
 ```bash
 openclaw hooks list --verbose
 ```
 
-### Check Registration
+### 检查注册
 
-In your handler, log when it's called:
+在处理器中打印调用日志：
 
 ```typescript
 const handler: HookHandler = async (event) => {
-  console.log("[my-handler] Triggered:", event.type, event.action);
-  // Your logic
+  console.log("[my-handler] 触发:", event.type, event.action);
+  // 逻辑
 };
 ```
 
-### Verify Eligibility
+### 校验资格
 
-Check why a hook isn't eligible:
+查看不合格原因：
 
 ```bash
 openclaw hooks info my-hook
 ```
 
-Look for missing requirements in the output.
+查看输出中的缺失依赖。
 
-## Testing
+## 测试
 
-### Gateway Logs
+### 监控网关日志
 
-Monitor gateway logs to see hook execution:
+观察 hook 执行情况：
 
 ```bash
 # macOS
 ./scripts/clawlog.sh -f
 
-# Other platforms
+# 其他平台
 tail -f ~/.openclaw/gateway.log
 ```
 
-### Test Hooks Directly
+### 独立测试 Hooks
 
-Test your handlers in isolation:
+直接测试处理器：
 
 ```typescript
 import { test } from "vitest";
@@ -846,126 +835,126 @@ test("my handler works", async () => {
 
   await myHandler(event);
 
-  // Assert side effects
+  // 断言副作用
 });
 ```
 
-## Architecture
+## 架构
 
-### Core Components
+### 核心组件
 
-- **`src/hooks/types.ts`**: Type definitions
-- **`src/hooks/workspace.ts`**: Directory scanning and loading
-- **`src/hooks/frontmatter.ts`**: HOOK.md metadata parsing
-- **`src/hooks/config.ts`**: Eligibility checking
-- **`src/hooks/hooks-status.ts`**: Status reporting
-- **`src/hooks/loader.ts`**: Dynamic module loader
-- **`src/cli/hooks-cli.ts`**: CLI commands
-- **`src/gateway/server-startup.ts`**: Loads hooks at gateway start
-- **`src/auto-reply/reply/commands-core.ts`**: Triggers command events
+- **`src/hooks/types.ts`**：类型定义
+- **`src/hooks/workspace.ts`**：目录扫描与加载
+- **`src/hooks/frontmatter.ts`**：HOOK.md 元数据解析
+- **`src/hooks/config.ts`**：资格检查
+- **`src/hooks/hooks-status.ts`**：状态报告
+- **`src/hooks/loader.ts`**：动态模块加载器
+- **`src/cli/hooks-cli.ts`**：CLI 命令
+- **`src/gateway/server-startup.ts`**：网关启动时加载 hooks
+- **`src/auto-reply/reply/commands-core.ts`**：触发命令事件
 
-### Discovery Flow
-
-```
-Gateway startup
-    ↓
-Scan directories (workspace → managed → bundled)
-    ↓
-Parse HOOK.md files
-    ↓
-Check eligibility (bins, env, config, os)
-    ↓
-Load handlers from eligible hooks
-    ↓
-Register handlers for events
-```
-
-### Event Flow
+### 发现流程
 
 ```
-User sends /new
+网关启动
     ↓
-Command validation
+扫描目录（工作区 → 管理 → 内置）
     ↓
-Create hook event
+解析 HOOK.md 文件
     ↓
-Trigger hook (all registered handlers)
+检查资格（bins、env、config、os）
     ↓
-Command processing continues
+加载合格的处理器
     ↓
-Session reset
+为事件注册处理器
 ```
 
-## Troubleshooting
+### 事件流程
 
-### Hook Not Discovered
+```
+用户发送 /new 命令
+    ↓
+命令验证
+    ↓
+创建 hook 事件
+    ↓
+触发 hook（所有注册处理器）
+    ↓
+继续命令处理
+    ↓
+会话重置
+```
 
-1. Check directory structure:
+## 故障排查
+
+### Hook 未被发现
+
+1. 检查目录结构：
 
    ```bash
    ls -la ~/.openclaw/hooks/my-hook/
-   # Should show: HOOK.md, handler.ts
+   # 应包含 HOOK.md，handler.ts
    ```
 
-2. Verify HOOK.md format:
+2. 验证 HOOK.md 格式：
 
    ```bash
    cat ~/.openclaw/hooks/my-hook/HOOK.md
-   # Should have YAML frontmatter with name and metadata
+   # 应包含 YAML frontmatter 和 name、metadata
    ```
 
-3. List all discovered hooks:
+3. 列出所有已发现的 hook：
 
    ```bash
    openclaw hooks list
    ```
 
-### Hook Not Eligible
+### Hook 不合格
 
-Check requirements:
+检查需求：
 
 ```bash
 openclaw hooks info my-hook
 ```
 
-Look for missing:
+关注缺失的：
 
-- Binaries (check PATH)
-- Environment variables
-- Config values
-- OS compatibility
+- 二进制程序（检查 PATH）
+- 环境变量
+- 配置
+- OS 兼容性
 
-### Hook Not Executing
+### Hook 不执行
 
-1. Verify hook is enabled:
+1. 确认 hook 已启用：
 
    ```bash
    openclaw hooks list
-   # Should show ✓ next to enabled hooks
+   # 已启用的 hook 左侧显示 ✓
    ```
 
-2. Restart your gateway process so hooks reload.
+2. 重启网关进程以重新加载 hook。
 
-3. Check gateway logs for errors:
+3. 查看网关日志是否有错误：
 
    ```bash
    ./scripts/clawlog.sh | grep hook
    ```
 
-### Handler Errors
+### 处理器错误
 
-Check for TypeScript/import errors:
+检查 TypeScript 或导入错误：
 
 ```bash
-# Test import directly
+# 直接测试导入
 node -e "import('./path/to/handler.ts').then(console.log)"
 ```
 
-## Migration Guide
+## 迁移指南
 
-### From Legacy Config to Discovery
+### 从旧配置迁移到发现机制
 
-**Before**:
+**旧配置示例**：
 
 ```json
 {
@@ -983,30 +972,30 @@ node -e "import('./path/to/handler.ts').then(console.log)"
 }
 ```
 
-**After**:
+**迁移步骤**：
 
-1. Create hook directory:
+1. 创建 hook 目录：
 
    ```bash
    mkdir -p ~/.openclaw/hooks/my-hook
    mv ./hooks/handlers/my-handler.ts ~/.openclaw/hooks/my-hook/handler.ts
    ```
 
-2. Create HOOK.md:
+2. 创建 HOOK.md：
 
    ```markdown
    ---
    name: my-hook
-   description: "My custom hook"
+   description: "我的自定义 hook"
    metadata: { "openclaw": { "emoji": "🎯", "events": ["command:new"] } }
    ---
 
-   # My Hook
+   # 我的 Hook
 
-   Does something useful.
+   执行一些有用的操作。
    ```
 
-3. Update config:
+3. 更新配置：
 
    ```json
    {
@@ -1021,24 +1010,24 @@ node -e "import('./path/to/handler.ts').then(console.log)"
    }
    ```
 
-4. Verify and restart your gateway process:
+4. 验证并重启网关：
 
    ```bash
    openclaw hooks list
-   # Should show: 🎯 my-hook ✓
+   # 应显示：🎯 my-hook ✓
    ```
 
-**Benefits of migration**:
+**迁移优势**：
 
-- Automatic discovery
-- CLI management
-- Eligibility checking
-- Better documentation
-- Consistent structure
+- 自动发现
+- CLI 管理
+- 资格检查
+- 更好的文档支持
+- 结构一致
 
-## See Also
+## 相关链接
 
-- [CLI Reference: hooks](/cli/hooks)
-- [Bundled Hooks README](https://github.com/openclaw/openclaw/tree/main/src/hooks/bundled)
+- [CLI 参考：hooks](/cli/hooks)
+- [内置 Hooks README](https://github.com/openclaw/openclaw/tree/main/src/hooks/bundled)
 - [Webhook Hooks](/automation/webhook)
-- [Configuration](/gateway/configuration#hooks)
+- [配置说明](/gateway/configuration#hooks)

@@ -1,47 +1,47 @@
 ---
-summary: "Manual logins for browser automation + X/Twitter posting"
+summary: "浏览器自动化的手动登录 + X/Twitter 发布"
 read_when:
-  - You need to log into sites for browser automation
-  - You want to post updates to X/Twitter
-title: "Browser Login"
+  - 你需要登录网站以进行浏览器自动化
+  - 你想发布更新到 X/Twitter
+title: "浏览器登录"
 ---
 
-# Browser login + X/Twitter posting
+# 浏览器登录 + X/Twitter 发布
 
-## Manual login (recommended)
+## 手动登录（推荐）
 
-When a site requires login, **sign in manually** in the **host** browser profile (the openclaw browser).
+当网站需要登录时，请在 **host** 浏览器配置文件（openclaw 浏览器）中**手动登录**。
 
-Do **not** give the model your credentials. Automated logins often trigger anti‑bot defenses and can lock the account.
+**不要**将你的凭据提供给模型。自动登录通常会触发反机器人防护，可能导致账户被锁。
 
-Back to the main browser docs: [Browser](/tools/browser).
+回到主浏览器文档：[浏览器](/tools/browser)。
 
-## Which Chrome profile is used?
+## 使用哪个 Chrome 配置文件？
 
-OpenClaw controls a **dedicated Chrome profile** (named `openclaw`, orange‑tinted UI). This is separate from your daily browser profile.
+OpenClaw 控制着一个**专用 Chrome 配置文件**（名为 `openclaw`，界面带橙色调）。这个配置文件独立于你日常使用的浏览器配置文件。
 
-Two easy ways to access it:
+有两种简单方式访问它：
 
-1. **Ask the agent to open the browser** and then log in yourself.
-2. **Open it via CLI**:
+1. **让代理打开浏览器**，然后你自己登录。
+2. **通过命令行启动**：
 
 ```bash
 openclaw browser start
 openclaw browser open https://x.com
 ```
 
-If you have multiple profiles, pass `--browser-profile <name>` (the default is `openclaw`).
+如果你有多个配置文件，使用 `--browser-profile <name>` 参数（默认是 `openclaw`）。
 
-## X/Twitter: recommended flow
+## X/Twitter：推荐流程
 
-- **Read/search/threads:** use the **host** browser (manual login).
-- **Post updates:** use the **host** browser (manual login).
+- **阅读/搜索/查看讨论线程：** 使用 **host** 浏览器（手动登录）。
+- **发布更新：** 使用 **host** 浏览器（手动登录）。
 
-## Sandboxing + host browser access
+## 沙箱环境 + host 浏览器访问
 
-Sandboxed browser sessions are **more likely** to trigger bot detection. For X/Twitter (and other strict sites), prefer the **host** browser.
+沙箱浏览器会话更容易触发机器人检测。对于 X/Twitter（及其他严格的网站），建议使用 **host** 浏览器。
 
-If the agent is sandboxed, the browser tool defaults to the sandbox. To allow host control:
+如果代理在沙箱内，浏览器工具默认使用沙箱。要允许控制 host 浏览器：
 
 ```json5
 {
@@ -58,10 +58,10 @@ If the agent is sandboxed, the browser tool defaults to the sandbox. To allow ho
 }
 ```
 
-Then target the host browser:
+然后目标定位到 host 浏览器：
 
 ```bash
 openclaw browser open https://x.com --browser-profile openclaw --target host
 ```
 
-Or disable sandboxing for the agent that posts updates.
+或者为发布更新的代理禁用沙箱。
