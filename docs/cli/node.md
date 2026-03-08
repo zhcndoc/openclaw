@@ -53,6 +53,16 @@ openclaw node run --host <gateway-host> --port 18789
 - `--node-id <id>`：覆盖节点 id（会清除配对令牌）
 - `--display-name <name>`：覆盖节点显示名称
 
+## Gateway 认证用于节点主机
+
+`openclaw node run` 和 `openclaw node install` 会从配置或环境变量中解析 Gateway 认证（节点命令没有 `--token` / `--password` 参数）：
+
+- 优先检查 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
+- 然后回退到本地配置：`gateway.auth.token` / `gateway.auth.password`。
+- 在本地模式下，如果未设置 `gateway.auth.*`，`gateway.remote.token` / `gateway.remote.password` 也可作为回退。
+- 在 `gateway.mode=remote` 时，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）可根据远程优先规则使用。
+- 旧版环境变量 `CLAWDBOT_GATEWAY_*` 不参与节点主机认证解析。
+
 ## 服务（后台）
 
 将无头节点主机安装为用户服务。

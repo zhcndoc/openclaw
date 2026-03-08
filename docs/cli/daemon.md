@@ -41,6 +41,7 @@ openclaw daemon uninstall
 备注：
 
 - `status` 会在可能的情况下解析配置的认证 SecretRefs 以进行探测认证。
+- 在 Linux systemd 安装中，`status` 的令牌偏移检测包含来自 `Environment=` 和 `EnvironmentFile=` 单元文件的来源。
 - 当令牌认证需要令牌且 `gateway.auth.token` 由 SecretRef 管理时，`install` 会验证该 SecretRef 是否可解析，但不会将解析出的令牌持久化到服务环境元数据中。
 - 如果令牌认证需要令牌且配置的令牌 SecretRef 无法解析，安装将失败。
 - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且未设置 `gateway.auth.mode`，则安装将在明确设置模式之前被阻止。

@@ -804,7 +804,7 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 ```yaml
 channels:
   telegram:
-    proxy: socks5://user:pass@proxy-host:1080
+    proxy: socks5://<user>:<password>@proxy-host:1080
 ```
 
     - Node 22+ 默认 `autoSelectFamily=true`（WSL2 除外），`dnsResultOrder=ipv4first`。

@@ -24,12 +24,12 @@ openclaw models set <model-or-alias>
 openclaw models scan
 ```
 
-`openclaw models status` 显示解析后的默认模型/回退模型及认证概览。
-当提供商使用快照可用时，OAuth/令牌状态部分包含提供商使用头信息。
-添加 `--probe` 以对每个配置的提供商配置文件执行实时认证探测。
-探测是实际请求（可能消耗令牌并触发速率限制）。
-使用 `--agent <id>` 检查配置代理的模型/认证状态。若省略，
-命令使用 `OPENCLAW_AGENT_DIR` 或 `PI_CODING_AGENT_DIR`（如果已设置），
+`openclaw models status` 显示解析后的默认模型/回退模型及认证概览。  
+当提供商使用快照可用时，OAuth/令牌状态部分包含提供商使用头信息。  
+添加 `--probe` 以对每个配置的提供商配置文件执行实时认证探测。  
+探测是实际请求（可能消耗令牌并触发速率限制）。  
+使用 `--agent <id>` 检查配置代理的模型/认证状态。若省略，  
+命令使用 `OPENCLAW_AGENT_DIR` 或 `PI_CODING_AGENT_DIR`（如果已设置），  
 否则使用配置的默认代理。
 
 注意事项：
@@ -37,6 +37,7 @@ openclaw models scan
 - `models set <model-or-alias>` 支持 `provider/model` 格式或别名。
 - 模型引用通过第一个 `/` 分割解析。如果模型 ID 包含 `/`（OpenRouter 风格），需包含提供商前缀（例如：`openrouter/moonshotai/kimi-k2`）。
 - 如果省略提供商，OpenClaw 将输入视为别名或**默认提供商**的模型（仅当模型 ID 中无 `/` 时有效）。
+- `models status` 可能在认证输出中显示 `marker(<value>)`，表示非秘密占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`qwen-oauth`、`ollama-local`），而不是将其遮蔽为秘密。
 
 ### `models status`
 
@@ -69,7 +70,7 @@ openclaw models auth setup-token
 openclaw models auth paste-token
 ```
 
-`models auth login` 运行提供商插件的认证流程（OAuth/API 密钥）。
+`models auth login` 运行提供商插件的认证流程（OAuth/API 密钥）。  
 使用 `openclaw plugins list` 查看已安装的提供商。
 
 注意事项：

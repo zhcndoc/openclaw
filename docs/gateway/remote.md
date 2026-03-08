@@ -19,7 +19,7 @@ title: "远程访问"
 
 ## 常见的 VPN/tailnet 配置（Agent 所在的位置）
 
-将 **Gateway 主机** 看作“Agent 所在之处”，它负责管理会话、认证配置、通道和状态。
+将 **Gateway 主机** 看作“Agent 所在之处”，它负责管理会话、认证配置、通道和状态。  
 你的笔记本/桌面（以及节点）连接到该主机。
 
 ### 1) 在你的 tailnet 中的常驻 Gateway（VPS 或家庭服务器）
@@ -79,8 +79,8 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 - `openclaw health` 和 `openclaw status --deep` 通过 `ws://127.0.0.1:18789` 访问远程 Gateway。
 - `openclaw gateway {status,health,send,agent,call}` 也可以通过 `--url` 指定此转发 URL。
 
-注意：将 `18789` 替换为你配置的 `gateway.port`（或者使用 `--port`/`OPENCLAW_GATEWAY_PORT`）。
-注意：传入 `--url` 时，CLI 不会回退到配置或环境凭证。
+注意：将 `18789` 替换为你配置的 `gateway.port`（或者使用 `--port`/`OPENCLAW_GATEWAY_PORT`）。  
+注意：传入 `--url` 时，CLI 不会回退到配置或环境凭证。  
 需要显式包含 `--token` 或 `--password`，否则会报错。
 
 ## CLI 远程默认值
@@ -103,16 +103,19 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 
 ## 凭证优先级
 
-Gateway 调用/探测凭证解析遵循统一规则：
+Gateway credential resolution follows one shared contract across call/probe/status paths, Discord exec-approval monitoring, and node-host connections:
 
-- 显式凭证 (`--token`, `--password` 或工具中的 `gatewayToken`) 优先。
+- 显式凭证（`--token`、`--password` 或工具中的 `gatewayToken`）总在接受显式认证的调用路径上占优。
+- URL 覆盖安全性：
+  - CLI URL 覆盖（`--url`）永远不会复用隐式配置/环境凭证。
+  - 环境变量 URL 覆盖（`OPENCLAW_GATEWAY_URL`）只可能使用环境凭证（`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
 - 本地模式默认：
-  - token: `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token` -> `gateway.remote.token`
-  - password: `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.auth.password` -> `gateway.remote.password`
+  - token：`OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token` -> `gateway.remote.token`
+  - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.auth.password` -> `gateway.remote.password`
 - 远程模式默认：
-  - token: `gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
-  - password: `OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
-- 远程探测/状态检查的 token 严格默认：仅使用 `gateway.remote.token`（无本地 token 回退），以远程模式为目标时生效。
+  - token：`gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
+  - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
+- 远程探测/状态检查的 token 严格默认：仅使用 `gateway.remote.token`（无本地 token 回退），在远程模式目标时生效。
 - 旧环境变量 `CLAWDBOT_GATEWAY_*` 仅为兼容调用路径使用；探测/状态/认证解析只使用 `OPENCLAW_GATEWAY_*`。
 
 ## 通过 SSH 使用 Chat UI
@@ -133,7 +136,7 @@ macOS 菜单栏应用可端到端驱动相同配置（远程状态检查、WebCh
 简而言之：**保持 Gateway 仅绑定回环接口**，除非你确定需要绑定其它接口。
 
 - **回环 + SSH/Tailscale Serve** 是最安全的默认配置（无公网暴露）。
-- 明文 `ws://` 默认仅可在回环访问。若在受信任的私有网络使用，
+- 明文 `ws://` 默认仅可在回环访问。若在受信任的私有网络使用，  
   可在客户端进程设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` 作为破窗措施。
 - 非回环绑定（`lan`/`tailnet`/`custom`，或回环不可用时的 `auto`）必须启用认证 token/密码。
 - `gateway.remote.token` / `.password` 是客户端凭证来源，**不会单独配置服务器端认证**。

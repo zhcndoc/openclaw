@@ -364,7 +364,7 @@ pnpm openclaw onboard
   openclaw gateway --tailscale serve
   ```
 
-  然后访问 `https://<magicdns>/`。若 `gateway.auth.allowTailscale` 为 `true`，身份验证头自动满足控制 UI/WebSocket ，无需 Token（HTTP 接口仍需 Token/密码）。
+  然后访问 `https://<magicdns>/`。若 `gateway.auth.allowTailscale` 为 `true`，身份验证头自动满足控制 UI/WebSocket， 无需 Token（HTTP 接口仍需 Token/密码）。
 
 - **Tailnet 绑定**：运行
 

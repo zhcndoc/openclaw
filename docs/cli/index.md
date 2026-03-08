@@ -774,10 +774,11 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 
 - `gateway status` 默认使用服务解析的端口及配置探测 Gateway RPC，可用 `--url/--token/--password` 覆盖。
 - `gateway status` 支持 `--no-probe`、`--deep` 和 `--json` 用于脚本化。
-- `gateway status` 可检测旧版及额外网关服务（`--deep` 启用系统级扫描）。按配置文件名称区分，视为一流服务，不标记为“额外”。
-- `gateway status` 打印 CLI 使用的配置路径及服务环境中使用的配置路径，以及解析的探测目标 URL。
-- `gateway install|uninstall|start|stop|restart` 支持 `--json` 用于脚本化（默认输出易读）。
-- `gateway install` 默认为 Node 运行时；bun **不推荐**（存在 WhatsApp/Telegram 缺陷）。
+- `gateway status` 还会显示检测到的旧版或额外的网关服务（`--deep` 启用系统级扫描）。以配置文件名称命名的 OpenClaw 服务被视为一流服务，不标记为“额外”。
+- `gateway status` 会打印 CLI 使用的配置路径与服务环境中使用的配置路径，以及解析后的探测目标 URL。
+- 在 Linux systemd 安装环境中，状态令牌漂移检查包含 `Environment=` 和 `EnvironmentFile=` 单元源。
+- `gateway install|uninstall|start|stop|restart` 支持 `--json` 用于脚本化（默认输出仍为人类可读）。
+- `gateway install` 默认使用 Node 运行时；强烈不推荐使用 bun（存在 WhatsApp/Telegram 缺陷）。
 - `gateway install` 支持选项：`--port`、`--runtime`、`--token`、`--force`、`--json`。
 
 ### `logs`
@@ -802,7 +803,9 @@ openclaw logs --no-color
 ### `gateway <subcommand>`
 
 网关 CLI 辅助工具（RPC 子命令可用 `--url`、`--token`、`--password`、`--timeout`、`--expect-final`）。
+
 若传入 `--url`，CLI 不自动读取配置或环境凭证。
+
 必须显式包含 `--token` 或 `--password`，否则报错。
 
 子命令：
@@ -871,6 +874,7 @@ openclaw models status
 - `--probe-max-tokens <n>`
 
 始终包含认证总览及认证存储中配置文件的 OAuth 到期状态。
+
 `--probe` 会发起实时请求（可能消耗令牌并遭遇限流）。
 
 ### `models set <model>`
@@ -1004,6 +1008,11 @@ openclaw models status
 - `node uninstall`
 - `node stop`
 - `node restart`
+
+认证说明：
+
+- `node` 从环境变量/配置中解析网关认证（不支持 `--token`/`--password` 标志）：依次为 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`，然后是 `gateway.auth.*`，支持通过 `gateway.remote.*` 远程模式。
+- 旧版 `CLAWDBOT_GATEWAY_*` 环境变量故意不用于节点主机的认证解析。
 
 ## 节点集群
 

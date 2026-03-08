@@ -1,50 +1,50 @@
 ---
-title: "Configuration Reference"
-description: "Complete field-by-field reference for ~/.openclaw/openclaw.json"
-summary: "Complete reference for every OpenClaw config key, defaults, and channel settings"
+title: "配置参考"
+description: "完整字段级参考，适用于 ~/.openclaw/openclaw.json"
+summary: "每个 OpenClaw 配置键、默认值和频道设置的完整参考"
 read_when:
-  - You need exact field-level config semantics or defaults
-  - You are validating channel, model, gateway, or tool config blocks
+  - 需要准确的字段级配置语义或默认值
+  - 正在验证频道、模型、网关或工具配置块
 ---
 
-# Configuration Reference
+# 配置参考
 
-Every field available in `~/.openclaw/openclaw.json`. For a task-oriented overview, see [Configuration](/gateway/configuration).
+列出 `~/.openclaw/openclaw.json` 中可用的所有字段。有关面向任务的概览，请参见 [配置](/gateway/configuration)。
 
-Config format is **JSON5** (comments + trailing commas allowed). All fields are optional — OpenClaw uses safe defaults when omitted.
+配置格式为 **JSON5**（支持注释和尾逗号）。所有字段均为可选 — 省略时 OpenClaw 使用安全默认值。
 
 ---
 
-## Channels
+## 频道（Channels）
 
-Each channel starts automatically when its config section exists (unless `enabled: false`).
+只要存在频道配置段，频道会自动启动（除非设置了 `enabled: false`）。
 
-### DM and group access
+### 私信和群组访问策略
 
-All channels support DM policies and group policies:
+所有频道支持私信策略和群组策略：
 
-| DM policy           | Behavior                                                        |
-| ------------------- | --------------------------------------------------------------- |
-| `pairing` (default) | Unknown senders get a one-time pairing code; owner must approve |
-| `allowlist`         | Only senders in `allowFrom` (or paired allow store)             |
-| `open`              | Allow all inbound DMs (requires `allowFrom: ["*"]`)             |
-| `disabled`          | Ignore all inbound DMs                                          |
+| 私信策略（DM policy）   | 行为说明                                                          |
+| ---------------------- | --------------------------------------------------------------- |
+| `pairing`（默认）       | 未知发送者需一次性配对码；拥有者必须批准                            |
+| `allowlist`             | 仅允许 `allowFrom` 中的发送者（或配对的 Allow Store）             |
+| `open`                  | 允许所有入站私信（需 `allowFrom: ["*"]`）                         |
+| `disabled`              | 忽略所有入站私信                                                  |
 
-| Group policy          | Behavior                                               |
-| --------------------- | ------------------------------------------------------ |
-| `allowlist` (default) | Only groups matching the configured allowlist          |
-| `open`                | Bypass group allowlists (mention-gating still applies) |
-| `disabled`            | Block all group/room messages                          |
+| 群组策略（Group policy） | 行为说明                                                      |
+| ---------------------- | ------------------------------------------------------------- |
+| `allowlist`（默认）     | 仅允许匹配配置允许列表的群组                                   |
+| `open`                  | 绕过群组允许列表（提及门控仍然生效）                          |
+| `disabled`              | 阻止所有群组/房间消息                                         |
 
 <Note>
-`channels.defaults.groupPolicy` sets the default when a provider's `groupPolicy` is unset.
-Pairing codes expire after 1 hour. Pending DM pairing requests are capped at **3 per channel**.
-If a provider block is missing entirely (`channels.<provider>` absent), runtime group policy falls back to `allowlist` (fail-closed) with a startup warning.
+`channels.defaults.groupPolicy` 设置提供商未设置 `groupPolicy` 时的默认值。  
+配对码1小时后过期。每个频道最多挂起 **3 条** 私信配对请求。  
+如果完全缺少提供商块（`channels.<provider>` 不存在），运行时群组策略会回退到 `allowlist`（失败即关闭）并输出启动警告。
 </Note>
 
-### Channel model overrides
+### 频道模型覆盖
 
-Use `channels.modelByChannel` to pin specific channel IDs to a model. Values accept `provider/model` or configured model aliases. The channel mapping applies when a session does not already have a model override (for example, set via `/model`).
+使用 `channels.modelByChannel` 将特定频道 ID 绑定到模型。值接受 `provider/model` 或配置的模型别名。当会话尚未已有模型覆盖时应用此映射（例如，通过 `/model` 设置）。
 
 ```json5
 {
@@ -65,9 +65,9 @@ Use `channels.modelByChannel` to pin specific channel IDs to a model. Values acc
 }
 ```
 
-### Channel defaults and heartbeat
+### 频道默认值与心跳检测
 
-Use `channels.defaults` for shared group-policy and heartbeat behavior across providers:
+使用 `channels.defaults` 配置跨提供商共享的群组策略和心跳行为：
 
 ```json5
 {
@@ -84,14 +84,14 @@ Use `channels.defaults` for shared group-policy and heartbeat behavior across pr
 }
 ```
 
-- `channels.defaults.groupPolicy`: fallback group policy when a provider-level `groupPolicy` is unset.
-- `channels.defaults.heartbeat.showOk`: include healthy channel statuses in heartbeat output.
-- `channels.defaults.heartbeat.showAlerts`: include degraded/error statuses in heartbeat output.
-- `channels.defaults.heartbeat.useIndicator`: render compact indicator-style heartbeat output.
+- `channels.defaults.groupPolicy`：提供商级别未设置时的群组策略回退值。  
+- `channels.defaults.heartbeat.showOk`：在心跳输出包含健康的频道状态。  
+- `channels.defaults.heartbeat.showAlerts`：在心跳输出包含降级/错误状态。  
+- `channels.defaults.heartbeat.useIndicator`：使用紧凑指示器样式渲染心跳输出。
 
 ### WhatsApp
 
-WhatsApp runs through the gateway's web channel (Baileys Web). It starts automatically when a linked session exists.
+WhatsApp 通过网关的 web 频道（Baileys Web）运行，且当存在已关联会话时自动启动。
 
 ```json5
 {
@@ -102,7 +102,7 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
       textChunkLimit: 4000,
       chunkMode: "length", // length | newline
       mediaMaxMb: 50,
-      sendReadReceipts: true, // blue ticks (false in self-chat mode)
+      sendReadReceipts: true, // 蓝色双勾（自聊模式为 false）
       groups: {
         "*": { requireMention: true },
       },
@@ -124,7 +124,7 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-<Accordion title="Multi-account WhatsApp">
+<Accordion title="多账号 WhatsApp">
 
 ```json5
 {
@@ -142,10 +142,10 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-- Outbound commands default to account `default` if present; otherwise the first configured account id (sorted).
-- Optional `channels.whatsapp.defaultAccount` overrides that fallback default account selection when it matches a configured account id.
-- Legacy single-account Baileys auth dir is migrated by `openclaw doctor` into `whatsapp/default`.
-- Per-account overrides: `channels.whatsapp.accounts.<id>.sendReadReceipts`, `channels.whatsapp.accounts.<id>.dmPolicy`, `channels.whatsapp.accounts.<id>.allowFrom`.
+- 出站命令默认使用 `default` 账号（若存在），否则使用第一个配置的账号 ID（排序后的）。  
+- 可选 `channels.whatsapp.defaultAccount` 在匹配配置账号 ID 时覆盖默认账号选择。  
+- 旧版单账号 Baileys 授权目录由 `openclaw doctor` 迁移到 `whatsapp/default`。  
+- 支持 per-account 覆盖：`channels.whatsapp.accounts.<id>.sendReadReceipts`、`dmPolicy`、`allowFrom`。
 
 </Accordion>
 
@@ -183,7 +183,7 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
       streaming: "partial", // off | partial | block | progress (default: off)
       actions: { reactions: true, sendMessage: true },
       reactionNotifications: "own", // off | own | all
-      mediaMaxMb: 5,
+      mediaMaxMb: 100,
       retry: {
         attempts: 3,
         minDelayMs: 400,
@@ -203,13 +203,13 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-- Bot token: `channels.telegram.botToken` or `channels.telegram.tokenFile`, with `TELEGRAM_BOT_TOKEN` as fallback for the default account.
-- Optional `channels.telegram.defaultAccount` overrides default account selection when it matches a configured account id.
-- In multi-account setups (2+ account ids), set an explicit default (`channels.telegram.defaultAccount` or `channels.telegram.accounts.default`) to avoid fallback routing; `openclaw doctor` warns when this is missing or invalid.
-- `configWrites: false` blocks Telegram-initiated config writes (supergroup ID migrations, `/config set|unset`).
-- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for forum topics (use canonical `chatId:topic:topicId` in `match.peer.id`). Field semantics are shared in [ACP Agents](/tools/acp-agents#channel-specific-settings).
-- Telegram stream previews use `sendMessage` + `editMessageText` (works in direct and group chats).
-- Retry policy: see [Retry policy](/concepts/retry).
+- 机器人 Token 支持 `channels.telegram.botToken` 或 `channels.telegram.tokenFile`，默认账号环境变量优先使用 `TELEGRAM_BOT_TOKEN`。  
+- 可选 `channels.telegram.defaultAccount` 在匹配账号 ID 时覆盖默认账号选择。  
+- 多账号（2 个或以上）场景中应设置显式默认账号（通过 `channels.telegram.defaultAccount` 或 `channels.telegram.accounts.default`），否则 `openclaw doctor` 会警告缺失或无效设置。  
+- `configWrites: false` 阻止 Telegram 发起的配置写入（超群 ID 迁移、`/config set|unset`）。  
+- 顶级 `bindings[]` 中 `type: "acp"` 用于配置论坛主题的持久 ACP 绑定（`match.peer.id` 使用规范 `chatId:topic:topicId`）。字段语义详见 [ACP Agents](/tools/acp-agents#channel-specific-settings)。  
+- Telegram 流式预览使用 `sendMessage` + `editMessageText`，适用于私聊和群组聊天。  
+- 重试策略详见 [Retry policy](/concepts/retry)。
 
 ### Discord
 
@@ -303,28 +303,32 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-- Token: `channels.discord.token`, with `DISCORD_BOT_TOKEN` as fallback for the default account.
-- Optional `channels.discord.defaultAccount` overrides default account selection when it matches a configured account id.
-- Use `user:<id>` (DM) or `channel:<id>` (guild channel) for delivery targets; bare numeric IDs are rejected.
-- Guild slugs are lowercase with spaces replaced by `-`; channel keys use the slugged name (no `#`). Prefer guild IDs.
-- Bot-authored messages are ignored by default. `allowBots: true` enables them; use `allowBots: "mentions"` to only accept bot messages that mention the bot (own messages still filtered).
-- `channels.discord.guilds.<id>.ignoreOtherMentions` (and channel overrides) drops messages that mention another user or role but not the bot (excluding @everyone/@here).
-- `maxLinesPerMessage` (default 17) splits tall messages even when under 2000 chars.
-- `channels.discord.threadBindings` controls Discord thread-bound routing:
-  - `enabled`: Discord override for thread-bound session features (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`, and bound delivery/routing)
-  - `idleHours`: Discord override for inactivity auto-unfocus in hours (`0` disables)
-  - `maxAgeHours`: Discord override for hard max age in hours (`0` disables)
-  - `spawnSubagentSessions`: opt-in switch for `sessions_spawn({ thread: true })` auto thread creation/binding
-- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for channels and threads (use channel/thread id in `match.peer.id`). Field semantics are shared in [ACP Agents](/tools/acp-agents#channel-specific-settings).
-- `channels.discord.ui.components.accentColor` sets the accent color for Discord components v2 containers.
-- `channels.discord.voice` enables Discord voice channel conversations and optional auto-join + TTS overrides.
-- `channels.discord.voice.daveEncryption` and `channels.discord.voice.decryptionFailureTolerance` pass through to `@discordjs/voice` DAVE options (`true` and `24` by default).
-- OpenClaw additionally attempts voice receive recovery by leaving/rejoining a voice session after repeated decrypt failures.
-- `channels.discord.streaming` is the canonical stream mode key. Legacy `streamMode` and boolean `streaming` values are auto-migrated.
-- `channels.discord.autoPresence` maps runtime availability to bot presence (healthy => online, degraded => idle, exhausted => dnd) and allows optional status text overrides.
-- `channels.discord.dangerouslyAllowNameMatching` re-enables mutable name/tag matching (break-glass compatibility mode).
+- Token：使用 `channels.discord.token`，默认账号环境变量 `DISCORD_BOT_TOKEN` 作为回退。  
+- 可选 `channels.discord.defaultAccount` 在匹配账号 ID 时覆盖默认账号选择。  
+- 使用 `user:<id>`（私聊）或 `channel:<id>`（公会频道）指定投递目标，不允许裸数字 ID。  
+- 公会（Guild）别名为小写，空格替换为 `-`；频道键使用别名，不带 `#`。推荐使用公会 ID 进行匹配。  
+- 默认忽略机器人作者消息。设置 `allowBots: true` 开启；`allowBots: "mentions"` 只允许带机器人的消息（自身消息仍被过滤）。  
+- `channels.discord.guilds.<id>.ignoreOtherMentions`（及频道覆盖）丢弃只提及其他用户/角色但未提及机器人的消息（排除 @everyone/@here）。  
+- `maxLinesPerMessage`（默认 17）在消息字符低于 2000 时，也会切分过高的消息。  
+- `channels.discord.threadBindings` 控制 Discord 线程绑定会话功能：  
+  - `enabled`：启用线程绑定功能（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 及绑定投递/路由）  
+  - `idleHours`：线程非活跃自动取消聚焦时间（小时，`0` 禁用）  
+  - `maxAgeHours`：线程最大寿命（小时，`0` 禁用）  
+  - `spawnSubagentSessions`：是否开启 `sessions_spawn({ thread: true })` 自动线程创建绑定  
+- 顶级 `bindings[]` 中 `type: "acp"` 用于配置频道及线程的持久 ACP 绑定（`match.peer.id` 使用频道/线程 ID）。字段语义见 [ACP Agents](/tools/acp-agents#channel-specific-settings)。  
+- `channels.discord.ui.components.accentColor` 设置 Discord 组件 v2 容器的强调色。  
+- `channels.discord.voice` 启用语音频道会话和可选自动加入及 TTS 覆盖。  
+- `channels.discord.voice.daveEncryption` 和 `decryptionFailureTolerance` 传递给 `@discordjs/voice` 的 DAVE 选项（默认 `true` 和 `24`）。  
+- OpenClaw 额外尝试通过离开和重新加入语音频道以恢复语音接收，防止多次解密失败。  
+- `channels.discord.streaming` 是官方的流模式键，旧版 `streamMode` 和布尔 `streaming` 值会自动迁移。  
+- `channels.discord.autoPresence` 将运行时可用性映射为机器人状态（健康 → 在线，降级 → 空闲，耗尽 → 勿扰）并支持自定义状态文本。  
+- `channels.discord.dangerouslyAllowNameMatching` 重新启用可变名称/标签匹配（破戒模式）。  
 
-**Reaction notification modes:** `off` (none), `own` (bot's messages, default), `all` (all messages), `allowlist` (from `guilds.<id>.users` on all messages).
+**反应通知模式：**  
+- `off`（无）  
+- `own`（仅接受机器人自发消息，默认）  
+- `all`（所有消息）  
+- `allowlist`（仅 `guilds.<id>.users` 内用户在所有消息）
 
 ### Google Chat
 
@@ -355,11 +359,11 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-- Service account JSON: inline (`serviceAccount`) or file-based (`serviceAccountFile`).
-- Service account SecretRef is also supported (`serviceAccountRef`).
-- Env fallbacks: `GOOGLE_CHAT_SERVICE_ACCOUNT` or `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`.
-- Use `spaces/<spaceId>` or `users/<userId>` for delivery targets.
-- `channels.googlechat.dangerouslyAllowNameMatching` re-enables mutable email principal matching (break-glass compatibility mode).
+- 服务账户 JSON 可内联（`serviceAccount`）或文件形式（`serviceAccountFile`）。  
+- 支持 SecretRef 形式的服务账户（`serviceAccountRef`）。  
+- 环境变量回退：`GOOGLE_CHAT_SERVICE_ACCOUNT` 或 `GOOGLE_CHAT_SERVICE_ACCOUNT_FILE`。  
+- 目标 ID 使用 `spaces/<spaceId>` 或 `users/<userId>` 格式。  
+- `channels.googlechat.dangerouslyAllowNameMatching` 重新启用可变邮件身份匹配（破戒模式）。
 
 ### Slack
 
@@ -417,30 +421,36 @@ WhatsApp runs through the gateway's web channel (Baileys Web). It starts automat
 }
 ```
 
-- **Socket mode** requires both `botToken` and `appToken` (`SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` for default account env fallback).
-- **HTTP mode** requires `botToken` plus `signingSecret` (at root or per-account).
-- `configWrites: false` blocks Slack-initiated config writes.
-- Optional `channels.slack.defaultAccount` overrides default account selection when it matches a configured account id.
-- `channels.slack.streaming` is the canonical stream mode key. Legacy `streamMode` and boolean `streaming` values are auto-migrated.
-- Use `user:<id>` (DM) or `channel:<id>` for delivery targets.
+- **Socket 模式** 需同时配置 `botToken` 和 `appToken`（默认账号环境变量回退为 `SLACK_BOT_TOKEN` 和 `SLACK_APP_TOKEN`）。  
+- **HTTP 模式** 需 `botToken` 及 `signingSecret`（根级或每账号）。  
+- `configWrites: false` 阻止 Slack 发起的配置写入。  
+- 可选 `channels.slack.defaultAccount` 在匹配账号 ID 时覆盖默认账号选择。  
+- `channels.slack.streaming` 为官方流模式键，旧版 `streamMode` 和布尔 `streaming` 会自动迁移。  
+- 使用 `user:<id>`（私聊）或 `channel:<id>` 指定投递目标。  
 
-**Reaction notification modes:** `off`, `own` (default), `all`, `allowlist` (from `reactionAllowlist`).
+**反应通知模式：**  
+- `off`  
+- `own`（默认）  
+- `all`  
+- `allowlist`（由 `reactionAllowlist` 指定）
 
-**Thread session isolation:** `thread.historyScope` is per-thread (default) or shared across channel. `thread.inheritParent` copies parent channel transcript to new threads.
+**线程会话隔离：**  
+- `thread.historyScope` 可设置为线程内（默认）或频道共享  
+- `thread.inheritParent` 将父频道对话复制到新线程  
 
-- `typingReaction` adds a temporary reaction to the inbound Slack message while a reply is running, then removes it on completion. Use a Slack emoji shortcode such as `"hourglass_flowing_sand"`.
+- `typingReaction` 会在回复运行期间给入站消息添加反应，完成后移除。使用 Slack 表情代码，如 `"hourglass_flowing_sand"`。
 
-| Action group | Default | Notes                  |
-| ------------ | ------- | ---------------------- |
-| reactions    | enabled | React + list reactions |
-| messages     | enabled | Read/send/edit/delete  |
-| pins         | enabled | Pin/unpin/list         |
-| memberInfo   | enabled | Member info            |
-| emojiList    | enabled | Custom emoji list      |
+| 动作组       | 默认    | 说明                      |
+| ------------ | ------- | ------------------------- |
+| reactions    | 启用    | 添加与列举反应            |
+| messages     | 启用    | 读/发/编辑/删除消息       |
+| pins         | 启用    | 固定/取消固定/列表        |
+| memberInfo   | 启用    | 成员信息                  |
+| emojiList    | 启用    | 自定义表情列表            |
 
 ### Mattermost
 
-Mattermost ships as a plugin: `openclaw plugins install @openclaw/mattermost`.
+Mattermost 作为插件提供：`openclaw plugins install @openclaw/mattermost`。
 
 ```json5
 {
@@ -456,7 +466,7 @@ Mattermost ships as a plugin: `openclaw plugins install @openclaw/mattermost`.
         native: true, // opt-in
         nativeSkills: true,
         callbackPath: "/api/channels/mattermost/command",
-        // Optional explicit URL for reverse-proxy/public deployments
+        // 反向代理/公网部署的可选显式 URL
         callbackUrl: "https://gateway.example.com/api/channels/mattermost/command",
       },
       textChunkLimit: 4000,
@@ -466,18 +476,19 @@ Mattermost ships as a plugin: `openclaw plugins install @openclaw/mattermost`.
 }
 ```
 
-Chat modes: `oncall` (respond on @-mention, default), `onmessage` (every message), `onchar` (messages starting with trigger prefix).
+聊天模式：  
+- `oncall`（默认，响应被 @ 提及）  
+- `onmessage`（响应每条消息）  
+- `onchar`（触发前缀开头的消息）
 
-When Mattermost native commands are enabled:
+开启 Mattermost 原生日志后：
 
-- `commands.callbackPath` must be a path (for example `/api/channels/mattermost/command`), not a full URL.
-- `commands.callbackUrl` must resolve to the OpenClaw gateway endpoint and be reachable from the Mattermost server.
-- For private/tailnet/internal callback hosts, Mattermost may require
-  `ServiceSettings.AllowedUntrustedInternalConnections` to include the callback host/domain.
-  Use host/domain values, not full URLs.
-- `channels.mattermost.configWrites`: allow or deny Mattermost-initiated config writes.
-- `channels.mattermost.requireMention`: require `@mention` before replying in channels.
-- Optional `channels.mattermost.defaultAccount` overrides default account selection when it matches a configured account id.
+- `commands.callbackPath` 必须为路径，不可为完整 URL。  
+- `commands.callbackUrl` 必须可达且指向 OpenClaw 网关终端。  
+- 私有/内网回调主机，Mattermost 可能需配置 `ServiceSettings.AllowedUntrustedInternalConnections`，只需包含主机/域名而非完整 URL。  
+- `channels.mattermost.configWrites`：允许或拒绝 Mattermost 发起的配置写入。  
+- `channels.mattermost.requireMention`：在频道中回复前强制需 @ 机器人。  
+- 可选 `channels.mattermost.defaultAccount` 在匹配账号时覆盖默认账号选择。
 
 ### Signal
 
@@ -486,7 +497,7 @@ When Mattermost native commands are enabled:
   channels: {
     signal: {
       enabled: true,
-      account: "+15555550123", // optional account binding
+      account: "+15555550123", // 可选账号绑定
       dmPolicy: "pairing",
       allowFrom: ["+15551234567", "uuid:123e4567-e89b-12d3-a456-426614174000"],
       configWrites: true,
@@ -498,15 +509,19 @@ When Mattermost native commands are enabled:
 }
 ```
 
-**Reaction notification modes:** `off`, `own` (default), `all`, `allowlist` (from `reactionAllowlist`).
+**反应通知模式：**  
+- `off`  
+- `own`（默认）  
+- `all`  
+- `allowlist`（由 `reactionAllowlist` 指定）
 
-- `channels.signal.account`: pin channel startup to a specific Signal account identity.
-- `channels.signal.configWrites`: allow or deny Signal-initiated config writes.
-- Optional `channels.signal.defaultAccount` overrides default account selection when it matches a configured account id.
+- `channels.signal.account`：指定启动绑定的 Signal 账号身份。  
+- `channels.signal.configWrites`：允许或拒绝 Signal 发起的配置写入。  
+- 可选 `channels.signal.defaultAccount` 覆盖默认账号选择。
 
 ### BlueBubbles
 
-BlueBubbles is the recommended iMessage path (plugin-backed, configured under `channels.bluebubbles`).
+BlueBubbles 是推荐的 iMessage 路径（基于插件，配置于 `channels.bluebubbles` 下）。
 
 ```json5
 {
@@ -514,20 +529,19 @@ BlueBubbles is the recommended iMessage path (plugin-backed, configured under `c
     bluebubbles: {
       enabled: true,
       dmPolicy: "pairing",
-      // serverUrl, password, webhookPath, group controls, and advanced actions:
-      // see /channels/bluebubbles
+      // serverUrl、password、webhookPath、群组控制及高级操作详见 /channels/bluebubbles
     },
   },
 }
 ```
 
-- Core key paths covered here: `channels.bluebubbles`, `channels.bluebubbles.dmPolicy`.
-- Optional `channels.bluebubbles.defaultAccount` overrides default account selection when it matches a configured account id.
-- Full BlueBubbles channel configuration is documented in [BlueBubbles](/channels/bluebubbles).
+- 核心路径涵盖：`channels.bluebubbles`，`channels.bluebubbles.dmPolicy`。  
+- 可选 `channels.bluebubbles.defaultAccount` 覆盖默认账号选择。  
+- 详细 BlueBubbles 配置文档参见 [BlueBubbles](/channels/bluebubbles)。
 
 ### iMessage
 
-OpenClaw spawns `imsg rpc` (JSON-RPC over stdio). No daemon or port required.
+OpenClaw 使用 `imsg rpc`（基于 stdio 的 JSON-RPC）进行通讯，无需守护进程或端口。
 
 ```json5
 {
@@ -551,16 +565,15 @@ OpenClaw spawns `imsg rpc` (JSON-RPC over stdio). No daemon or port required.
 }
 ```
 
-- Optional `channels.imessage.defaultAccount` overrides default account selection when it matches a configured account id.
+- 可选 `channels.imessage.defaultAccount` 覆盖默认账号选择。  
+- 需要完整磁盘访问权限以访问 Messages 数据库。  
+- 优先使用 `chat_id:<id>` 目标。使用命令 `imsg chats --limit 20` 列出聊天。  
+- `cliPath` 可指向 SSH 包装器；设置 `remoteHost`（`host` 或 `user@host`）用于 SCP 附件抓取。  
+- `attachmentRoots` 和 `remoteAttachmentRoots` 限制入站附件路径（默认为 `/Users/*/Library/Messages/Attachments`）。  
+- SCP 使用严格主机密钥检测，确保 Relay 主机密钥存在于 `~/.ssh/known_hosts`。  
+- `channels.imessage.configWrites`：允许或阻止 iMessage 发起的配置写入。
 
-- Requires Full Disk Access to the Messages DB.
-- Prefer `chat_id:<id>` targets. Use `imsg chats --limit 20` to list chats.
-- `cliPath` can point to an SSH wrapper; set `remoteHost` (`host` or `user@host`) for SCP attachment fetching.
-- `attachmentRoots` and `remoteAttachmentRoots` restrict inbound attachment paths (default: `/Users/*/Library/Messages/Attachments`).
-- SCP uses strict host-key checking, so ensure the relay host key already exists in `~/.ssh/known_hosts`.
-- `channels.imessage.configWrites`: allow or deny iMessage-initiated config writes.
-
-<Accordion title="iMessage SSH wrapper example">
+<Accordion title="iMessage SSH 包装器示例">
 
 ```bash
 #!/usr/bin/env bash
@@ -571,7 +584,7 @@ exec ssh -T gateway-host imsg "$@"
 
 ### Microsoft Teams
 
-Microsoft Teams is extension-backed and configured under `channels.msteams`.
+Microsoft Teams 通过扩展支持，配置于 `channels.msteams`。
 
 ```json5
 {
@@ -579,19 +592,18 @@ Microsoft Teams is extension-backed and configured under `channels.msteams`.
     msteams: {
       enabled: true,
       configWrites: true,
-      // appId, appPassword, tenantId, webhook, team/channel policies:
-      // see /channels/msteams
+      // appId、appPassword、tenantId、webhook、团队/频道策略详见 /channels/msteams
     },
   },
 }
 ```
 
-- Core key paths covered here: `channels.msteams`, `channels.msteams.configWrites`.
-- Full Teams config (credentials, webhook, DM/group policy, per-team/per-channel overrides) is documented in [Microsoft Teams](/channels/msteams).
+- 核心路径涵盖：`channels.msteams`，`channels.msteams.configWrites`。  
+- 详细 Teams 配置（凭据、webhook、私信/群组策略、分队/频道覆盖）详见 [Microsoft Teams](/channels/msteams)。
 
 ### IRC
 
-IRC is extension-backed and configured under `channels.irc`.
+IRC 通过扩展支持，配置于 `channels.irc`。
 
 ```json5
 {
@@ -612,13 +624,13 @@ IRC is extension-backed and configured under `channels.irc`.
 }
 ```
 
-- Core key paths covered here: `channels.irc`, `channels.irc.dmPolicy`, `channels.irc.configWrites`, `channels.irc.nickserv.*`.
-- Optional `channels.irc.defaultAccount` overrides default account selection when it matches a configured account id.
-- Full IRC channel configuration (host/port/TLS/channels/allowlists/mention gating) is documented in [IRC](/channels/irc).
+- 核心路径涵盖：`channels.irc`、`channels.irc.dmPolicy`、`channels.irc.configWrites`、`channels.irc.nickserv.*`。  
+- 可选 `channels.irc.defaultAccount` 覆盖默认账号选择。  
+- 完整 IRC 频道配置（主机/端口/TLS/频道/允许列表/提及门控）详见 [IRC](/channels/irc)。
 
-### Multi-account (all channels)
+### 多账号（适用于所有频道）
 
-Run multiple accounts per channel (each with its own `accountId`):
+每个频道运行多个账号（每个账号有各自的 `accountId`）：
 
 ```json5
 {
@@ -639,28 +651,28 @@ Run multiple accounts per channel (each with its own `accountId`):
 }
 ```
 
-- `default` is used when `accountId` is omitted (CLI + routing).
-- Env tokens only apply to the **default** account.
-- Base channel settings apply to all accounts unless overridden per account.
-- Use `bindings[].match.accountId` to route each account to a different agent.
-- If you add a non-default account via `openclaw channels add` (or channel onboarding) while still on a single-account top-level channel config, OpenClaw moves account-scoped top-level single-account values into `channels.<channel>.accounts.default` first so the original account keeps working.
-- Existing channel-only bindings (no `accountId`) keep matching the default account; account-scoped bindings remain optional.
-- `openclaw doctor --fix` also repairs mixed shapes by moving account-scoped top-level single-account values into `accounts.default` when named accounts exist but `default` is missing.
+- 省略 `accountId` 时使用 `default` 账号（CLI + 路由）。  
+- 环境变量 Token 仅适用于 **默认** 账号。  
+- 基础频道设置对所有账号生效，除非单独账号覆盖。  
+- 使用 `bindings[].match.accountId` 将不同账号路由至不同代理。  
+- 若通过 `openclaw channels add` 添加非默认账号（或频道导入）且仍为单账号顶级配置，OpenClaw 会自动先将顶层单账号值迁移到 `channels.<channel>.accounts.default`，保持原账号正常。  
+- 已存频道级绑定（无 `accountId`）继续匹配默认账号；账号级绑定为可选。  
+- `openclaw doctor --fix` 可修复混合形态，将顶层单账号值迁移到 `accounts.default`（当存在命名账号但缺少默认账号时）。
 
-### Other extension channels
+### 其他扩展频道
 
-Many extension channels are configured as `channels.<id>` and documented in their dedicated channel pages (for example Feishu, Matrix, LINE, Nostr, Zalo, Nextcloud Talk, Synology Chat, and Twitch).
-See the full channel index: [Channels](/channels).
+许多扩展频道以 `channels.<id>` 配置并在专门频道页文档中说明（如飞书、Matrix、LINE、Nostr、Zalo、Nextcloud Talk、Synology Chat、Twitch 等）。  
+完整频道索引参见：[Channels](/channels)。
 
-### Group chat mention gating
+### 群聊提及门控
 
-Group messages default to **require mention** (metadata mention or regex patterns). Applies to WhatsApp, Telegram, Discord, Google Chat, and iMessage group chats.
+群组消息默认要求 **提及**（元数据提及或正则模式），适用 WhatsApp、Telegram、Discord、Google Chat 和 iMessage 群聊。
 
-**Mention types:**
+**提及类型：**
 
-- **Metadata mentions**: Native platform @-mentions. Ignored in WhatsApp self-chat mode.
-- **Text patterns**: Regex patterns in `agents.list[].groupChat.mentionPatterns`. Always checked.
-- Mention gating is enforced only when detection is possible (native mentions or at least one pattern).
+- **元数据提及**：原生平台 @ 提及。WhatsApp 自聊模式下忽略。  
+- **文本模式**：在 `agents.list[].groupChat.mentionPatterns` 中配置的正则表达式，始终检查。  
+- 仅当检测可用（存在原生提及或至少一个模式）时才执行提及门控。
 
 ```json5
 {
@@ -673,9 +685,9 @@ Group messages default to **require mention** (metadata mention or regex pattern
 }
 ```
 
-`messages.groupChat.historyLimit` sets the global default. Channels can override with `channels.<channel>.historyLimit` (or per-account). Set `0` to disable.
+`messages.groupChat.historyLimit` 设定全局默认。频道可覆盖为 `channels.<channel>.historyLimit`（或按账号）。设置为 `0` 禁用。
 
-#### DM history limits
+#### 私信历史限制
 
 ```json5
 {
@@ -690,13 +702,12 @@ Group messages default to **require mention** (metadata mention or regex pattern
 }
 ```
 
-Resolution: per-DM override → provider default → no limit (all retained).
+解析顺序：按单私信覆盖 → 提供商默认 → 无限制（全部保留）。  
+支持频道：`telegram`、`whatsapp`、`discord`、`slack`、`signal`、`imessage`、`msteams`。
 
-Supported: `telegram`, `whatsapp`, `discord`, `slack`, `signal`, `imessage`, `msteams`.
+#### 自聊模式
 
-#### Self-chat mode
-
-Include your own number in `allowFrom` to enable self-chat mode (ignores native @-mentions, only responds to text patterns):
+名称列入 `allowFrom` 以启用自聊模式（忽略原生 @ 提及，仅对文本模式响应）：
 
 ```json5
 {
@@ -717,18 +728,18 @@ Include your own number in `allowFrom` to enable self-chat mode (ignores native 
 }
 ```
 
-### Commands (chat command handling)
+### 命令（聊天命令处理）
 
 ```json5
 {
   commands: {
-    native: "auto", // register native commands when supported
-    text: true, // parse /commands in chat messages
-    bash: false, // allow ! (alias: /bash)
+    native: "auto", // 支持时注册原生命令
+    text: true, // 解析聊天中的 /commands
+    bash: false, // 允许 ! （别名：/bash）
     bashForegroundMs: 2000,
-    config: false, // allow /config
-    debug: false, // allow /debug
-    restart: false, // allow /restart + gateway restart tool
+    config: false, // 允许 /config
+    debug: false, // 允许 /debug
+    restart: false, // 允许 /restart + 网关重启工具
     allowFrom: {
       "*": ["user1"],
       discord: ["user:123"],
@@ -738,27 +749,27 @@ Include your own number in `allowFrom` to enable self-chat mode (ignores native 
 }
 ```
 
-<Accordion title="Command details">
+<Accordion title="命令详解">
 
-- Text commands must be **standalone** messages with leading `/`.
-- `native: "auto"` turns on native commands for Discord/Telegram, leaves Slack off.
-- Override per channel: `channels.discord.commands.native` (bool or `"auto"`). `false` clears previously registered commands.
-- `channels.telegram.customCommands` adds extra Telegram bot menu entries.
-- `bash: true` enables `! <cmd>` for host shell. Requires `tools.elevated.enabled` and sender in `tools.elevated.allowFrom.<channel>`.
-- `config: true` enables `/config` (reads/writes `openclaw.json`).
-- `channels.<provider>.configWrites` gates config mutations per channel (default: true).
-- `allowFrom` is per-provider. When set, it is the **only** authorization source (channel allowlists/pairing and `useAccessGroups` are ignored).
-- `useAccessGroups: false` allows commands to bypass access-group policies when `allowFrom` is not set.
+- 文本命令必须为 **独立** 消息且以 `/` 开头。  
+- `native: "auto"` 为 Discord/Telegram 开启原生命令，保持 Slack 关闭。  
+- 按频道覆盖：`channels.discord.commands.native`（布尔或 `"auto"`）设置。`false` 清除先前注册的命令。  
+- `channels.telegram.customCommands` 可添加额外的 Telegram 机器人菜单项。  
+- `bash: true` 启用主机 shell 的 `! <cmd>`，需 `tools.elevated.enabled` 且发送者在 `tools.elevated.allowFrom.<channel>`。  
+- `config: true` 允许 `/config`（读写 `openclaw.json`）。对于网关 `chat.send` 客户端，持久 `/config set|unset` 写入需要 `operator.admin`，只读 `/config show` 对写权限普通操作员开放。  
+- `channels.<provider>.configWrites` 按频道限制配置更改（默认开启）。  
+- `allowFrom` 是每提供商设定，设置时仅用此授权源（忽略频道允许列表/配对及 `useAccessGroups`）。  
+- `useAccessGroups: false` 允许命令跳过访问组策略（当未设置 `allowFrom` 时）。
 
 </Accordion>
 
 ---
 
-## Agent defaults
+## 代理默认值（Agent defaults）
 
 ### `agents.defaults.workspace`
 
-Default: `~/.openclaw/workspace`.
+默认: `~/.openclaw/workspace`。
 
 ```json5
 {
@@ -768,7 +779,7 @@ Default: `~/.openclaw/workspace`.
 
 ### `agents.defaults.repoRoot`
 
-Optional repository root shown in the system prompt's Runtime line. If unset, OpenClaw auto-detects by walking upward from the workspace.
+可选仓库根路径，显示于系统提示的 Runtime 行。未设置时 OpenClaw 自动向上查找。
 
 ```json5
 {
@@ -778,7 +789,7 @@ Optional repository root shown in the system prompt's Runtime line. If unset, Op
 
 ### `agents.defaults.skipBootstrap`
 
-Disables automatic creation of workspace bootstrap files (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`).
+禁用自动创建工作区引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`）。
 
 ```json5
 {
@@ -788,7 +799,7 @@ Disables automatic creation of workspace bootstrap files (`AGENTS.md`, `SOUL.md`
 
 ### `agents.defaults.bootstrapMaxChars`
 
-Max characters per workspace bootstrap file before truncation. Default: `20000`.
+单个工作区引导文件最大字符数，超过则截断。默认：20000。
 
 ```json5
 {
@@ -798,7 +809,7 @@ Max characters per workspace bootstrap file before truncation. Default: `20000`.
 
 ### `agents.defaults.bootstrapTotalMaxChars`
 
-Max total characters injected across all workspace bootstrap files. Default: `150000`.
+所有引导文件总注入最大字符数。默认：150000。
 
 ```json5
 {
@@ -808,12 +819,11 @@ Max total characters injected across all workspace bootstrap files. Default: `15
 
 ### `agents.defaults.bootstrapPromptTruncationWarning`
 
-Controls agent-visible warning text when bootstrap context is truncated.
-Default: `"once"`.
+引导上下文截断时注入的代理可见警告文本。默认：`"once"`。
 
-- `"off"`: never inject warning text into the system prompt.
-- `"once"`: inject warning once per unique truncation signature (recommended).
-- `"always"`: inject warning on every run when truncation exists.
+- `"off"`：不注入警告文本。  
+- `"once"`：每个唯一截断签名注入一次（推荐）。  
+- `"always"`：只要存在截断，每次运行均注入。
 
 ```json5
 {
@@ -823,11 +833,9 @@ Default: `"once"`.
 
 ### `agents.defaults.imageMaxDimensionPx`
 
-Max pixel size for the longest image side in transcript/tool image blocks before provider calls.
-Default: `1200`.
+工具图像块最长边最大像素尺寸。默认 1200。
 
-Lower values usually reduce vision-token usage and request payload size for screenshot-heavy runs.
-Higher values preserve more visual detail.
+较低值通常减少视觉令牌与请求大小，适合截图密集场景。较高值保留更多细节。
 
 ```json5
 {
@@ -837,7 +845,7 @@ Higher values preserve more visual detail.
 
 ### `agents.defaults.userTimezone`
 
-Timezone for system prompt context (not message timestamps). Falls back to host timezone.
+系统提示上下文时区（非消息时间戳）。回退到主机时区。
 
 ```json5
 {
@@ -847,7 +855,7 @@ Timezone for system prompt context (not message timestamps). Falls back to host 
 
 ### `agents.defaults.timeFormat`
 
-Time format in system prompt. Default: `auto` (OS preference).
+系统提示时间格式。默认 `auto`（操作系统偏好）。
 
 ```json5
 {
@@ -891,43 +899,37 @@ Time format in system prompt. Default: `auto` (OS preference).
 }
 ```
 
-- `model`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - String form sets only the primary model.
-  - Object form sets primary plus ordered failover models.
-- `imageModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the `image` tool path as its vision-model config.
-  - Also used as fallback routing when the selected/default model cannot accept image input.
-- `pdfModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
-  - Used by the `pdf` tool for model routing.
-  - If omitted, the PDF tool falls back to `imageModel`, then to best-effort provider defaults.
-- `pdfMaxBytesMb`: default PDF size limit for the `pdf` tool when `maxBytesMb` is not passed at call time.
-- `pdfMaxPages`: default maximum pages considered by extraction fallback mode in the `pdf` tool.
-- `model.primary`: format `provider/model` (e.g. `anthropic/claude-opus-4-6`). If you omit the provider, OpenClaw assumes `anthropic` (deprecated).
-- `models`: the configured model catalog and allowlist for `/model`. Each entry can include `alias` (shortcut) and `params` (provider-specific, for example `temperature`, `maxTokens`, `cacheRetention`, `context1m`).
-- `params` merge precedence (config): `agents.defaults.models["provider/model"].params` is the base, then `agents.list[].params` (matching agent id) overrides by key.
-- Config writers that mutate these fields (for example `/models set`, `/models set-image`, and fallback add/remove commands) save canonical object form and preserve existing fallback lists when possible.
-- `maxConcurrent`: max parallel agent runs across sessions (each session still serialized). Default: 1.
+- `model` 支持字符串（`"provider/model"`）或对象（`{ primary, fallbacks }`）。字符串形式仅设主模型，对象形式设置主模型及有序后备模型。  
+- `imageModel` 同 `model` 格式，用于 `image` 工具路径及默认后备（选定模型无法接收图像输入时）。  
+- `pdfModel` 同 `model` 格式，用于 `pdf` 工具模型路由。缺省时 `pdf` 工具回退为 `imageModel`，再到尽力而为的提供商默认。  
+- `pdfMaxBytesMb`：`pdf` 工具默认 PDF 尺寸限制（当调用时未传 `maxBytesMb`），默认 10MB。  
+- `pdfMaxPages`：`pdf` 工具提取回退模式默认最大页数，默认 20。  
+- `model.primary` 格式为 `provider/model` （如 `anthropic/claude-opus-4-6`），省略提供商时默认假设为 `anthropic`（已弃用）。  
+- `models`：模型目录和 `/model` 允许列表。可包含 `alias`（快捷名）和 `params`（提供商特定参数，如温度 `temperature`、最大令牌 `maxTokens`、缓存时长等）。  
+- 参数合并优先级：`agents.defaults.models["provider/model"].params` 为基础，`agents.list[].params`（匹配代理 ID）覆盖同名键。  
+- 配置写入器（如 `/models set`、`/models set-image`、后备增删命令）存储规范对象形式，尽可能保留已存在后备列表。  
+- `maxConcurrent`：运行中代理最大并行数（每会话仍序列化）。默认 1。
 
-**Built-in alias shorthands** (only apply when the model is in `agents.defaults.models`):
+**内置别名快捷键**（仅当模型存在于 `agents.defaults.models` 中时生效）：
 
-| Alias          | Model                           |
-| -------------- | ------------------------------- |
-| `opus`         | `anthropic/claude-opus-4-6`     |
-| `sonnet`       | `anthropic/claude-sonnet-4-5`   |
-| `gpt`          | `openai/gpt-5.2`                |
-| `gpt-mini`     | `openai/gpt-5-mini`             |
-| `gemini`       | `google/gemini-3-pro-preview`   |
-| `gemini-flash` | `google/gemini-3-flash-preview` |
+| 别名          | 模型                           |
+| ------------- | ------------------------------ |
+| `opus`        | `anthropic/claude-opus-4-6`    |
+| `sonnet`      | `anthropic/claude-sonnet-4-5`  |
+| `gpt`         | `openai/gpt-5.2`               |
+| `gpt-mini`    | `openai/gpt-5-mini`            |
+| `gemini`      | `google/gemini-3-pro-preview`  |
+| `gemini-flash`| `google/gemini-3-flash-preview`|
 
-Your configured aliases always win over defaults.
+您配置的别名总是优先于默认。
 
-Z.AI GLM-4.x models automatically enable thinking mode unless you set `--thinking off` or define `agents.defaults.models["zai/<model>"].params.thinking` yourself.
-Z.AI models enable `tool_stream` by default for tool call streaming. Set `agents.defaults.models["zai/<model>"].params.tool_stream` to `false` to disable it.
-Anthropic Claude 4.6 models default to `adaptive` thinking when no explicit thinking level is set.
+Z.AI GLM-4.x 模型自动启用思考模式，除非设置了 `--thinking off` 或定义了 `agents.defaults.models["zai/<model>"].params.thinking`。  
+Z.AI 模型默认启用工具调用流式（`tool_stream`）。设置为 `false` 可禁用。  
+Anthropic Claude 4.6 模型默认为 `adaptive` 思考模式（无显式思考等级时）。
 
 ### `agents.defaults.cliBackends`
 
-Optional CLI backends for text-only fallback runs (no tool calls). Useful as a backup when API providers fail.
+CLI 后端，备选文本模式落地（禁用工具调用）。为 API 失效时的备份方案。
 
 ```json5
 {
@@ -955,27 +957,27 @@ Optional CLI backends for text-only fallback runs (no tool calls). Useful as a b
 }
 ```
 
-- CLI backends are text-first; tools are always disabled.
-- Sessions supported when `sessionArg` is set.
-- Image pass-through supported when `imageArg` accepts file paths.
+- CLI 后端主攻文本，永不启用工具。  
+- 支持会话时需配置 `sessionArg`。  
+- 支持图像传递时需配置 `imageArg`（接收文件路径）。
 
 ### `agents.defaults.heartbeat`
 
-Periodic heartbeat runs.
+周期心跳运行。
 
 ```json5
 {
   agents: {
     defaults: {
       heartbeat: {
-        every: "30m", // 0m disables
+        every: "30m", // 0m 禁用
         model: "openai/gpt-5.2-mini",
         includeReasoning: false,
-        lightContext: false, // default: false; true keeps only HEARTBEAT.md from workspace bootstrap files
+        lightContext: false, // false 默认值，true 保留唯一 HEARTBEAT.md
         session: "main",
         to: "+15555550123",
-        directPolicy: "allow", // allow (default) | block
-        target: "none", // default: none | options: last | whatsapp | telegram | discord | ...
+        directPolicy: "allow", // allow (默认) | block
+        target: "none", // 默认为 none；可选 last | whatsapp | telegram | discord | ...
         prompt: "Read HEARTBEAT.md if it exists...",
         ackMaxChars: 300,
         suppressToolErrorWarnings: false,
@@ -985,12 +987,12 @@ Periodic heartbeat runs.
 }
 ```
 
-- `every`: duration string (ms/s/m/h). Default: `30m`.
-- `suppressToolErrorWarnings`: when true, suppresses tool error warning payloads during heartbeat runs.
-- `directPolicy`: direct/DM delivery policy. `allow` (default) permits direct-target delivery. `block` suppresses direct-target delivery and emits `reason=dm-blocked`.
-- `lightContext`: when true, heartbeat runs use lightweight bootstrap context and keep only `HEARTBEAT.md` from workspace bootstrap files.
-- Per-agent: set `agents.list[].heartbeat`. When any agent defines `heartbeat`, **only those agents** run heartbeats.
-- Heartbeats run full agent turns — shorter intervals burn more tokens.
+- `every`：时间间隔字符串（毫秒/秒/分/小时）。默认 `30m`。  
+- `suppressToolErrorWarnings`：为真时自动屏蔽工具错误告警。  
+- `directPolicy`：私信投递策略。`allow` 允许，`block` 阻止私信并输出 `reason=dm-blocked`。  
+- `lightContext`：为真时心跳仅用轻量引导上下文，仅保留 HEARTBEAT.md。  
+- 可在代理中设置 `agents.list[].heartbeat`，若任一代理配置，只有这些代理运行心跳。  
+- 心跳为完整代理回合——越频繁消耗令牌越多。
 
 ### `agents.defaults.compaction`
 
@@ -1002,7 +1004,8 @@ Periodic heartbeat runs.
         mode: "safeguard", // default | safeguard
         reserveTokensFloor: 24000,
         identifierPolicy: "strict", // strict | off | custom
-        identifierInstructions: "Preserve deployment IDs, ticket IDs, and host:port pairs exactly.", // used when identifierPolicy=custom
+        identifierInstructions: "Preserve deployment IDs, ticket IDs, and host:port pairs exactly.", // identifierPolicy=custom 时使用
+        postCompactionSections: ["Session Startup", "Red Lines"], // [] 禁用重注入
         memoryFlush: {
           enabled: true,
           softThresholdTokens: 6000,
@@ -1015,14 +1018,15 @@ Periodic heartbeat runs.
 }
 ```
 
-- `mode`: `default` or `safeguard` (chunked summarization for long histories). See [Compaction](/concepts/compaction).
-- `identifierPolicy`: `strict` (default), `off`, or `custom`. `strict` prepends built-in opaque identifier retention guidance during compaction summarization.
-- `identifierInstructions`: optional custom identifier-preservation text used when `identifierPolicy=custom`.
-- `memoryFlush`: silent agentic turn before auto-compaction to store durable memories. Skipped when workspace is read-only.
+- `mode`：`default` 或 `safeguard`（长历史的分块摘要），详见 [Compaction](/concepts/compaction)。  
+- `identifierPolicy`：`strict`（默认）／`off`／`custom`，`strict` 会在摘要中加内建不可见标识保留指导。  
+- `identifierInstructions`：自定义标识符保留文本，`identifierPolicy=custom` 时使用。  
+- `postCompactionSections`：压缩后重新注入的 AGENTS.md 章节名称，默认为 `["Session Startup", "Red Lines"]`；设置为空数组可禁用。有默认回退接受老版本 `Every Session` / `Safety` 标题。  
+- `memoryFlush`：自动压缩前的隐式代理操作以存储持久记忆。工作区只读时跳过。
 
 ### `agents.defaults.contextPruning`
 
-Prunes **old tool results** from in-memory context before sending to the LLM. Does **not** modify session history on disk.
+在发送给 LLM 前从内存上下文中剪裁 **旧工具结果**，不改变磁盘上保存的会话历史。
 
 ```json5
 {
@@ -1030,7 +1034,7 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
     defaults: {
       contextPruning: {
         mode: "cache-ttl", // off | cache-ttl
-        ttl: "1h", // duration (ms/s/m/h), default unit: minutes
+        ttl: "1h", // 时间段（ms/s/m/h），默认单位为分钟
         keepLastAssistants: 3,
         softTrimRatio: 0.3,
         hardClearRatio: 0.5,
@@ -1044,27 +1048,24 @@ Prunes **old tool results** from in-memory context before sending to the LLM. Do
 }
 ```
 
-<Accordion title="cache-ttl mode behavior">
+<Accordion title="cache-ttl 模式行为">
 
-- `mode: "cache-ttl"` enables pruning passes.
-- `ttl` controls how often pruning can run again (after the last cache touch).
-- Pruning soft-trims oversized tool results first, then hard-clears older tool results if needed.
+- `mode: "cache-ttl"` 启用剪裁流程。  
+- `ttl` 控制剪裁允许的最短间隔（上次缓存访问之后）。  
+- 剪裁先执行软剪裁，超长工具结果保留开头和结尾，中间插入 `...`。  
+- 软剪裁后仍超限的会进行硬清理，替换为占位符。  
 
-**Soft-trim** keeps beginning + end and inserts `...` in the middle.
+注意：
 
-**Hard-clear** replaces the entire tool result with the placeholder.
-
-Notes:
-
-- Image blocks are never trimmed/cleared.
-- Ratios are character-based (approximate), not exact token counts.
-- If fewer than `keepLastAssistants` assistant messages exist, pruning is skipped.
+- 图像块不执行剪裁。  
+- 比例基于字符，大致估算，非精确令牌计数。  
+- 不足 `keepLastAssistants` 个助手消息，则跳过剪裁。
 
 </Accordion>
 
-See [Session Pruning](/concepts/session-pruning) for behavior details.
+详见 [Session Pruning](/concepts/session-pruning)。
 
-### Block streaming
+### 分块流式
 
 ```json5
 {
@@ -1074,19 +1075,19 @@ See [Session Pruning](/concepts/session-pruning) for behavior details.
       blockStreamingBreak: "text_end", // text_end | message_end
       blockStreamingChunk: { minChars: 800, maxChars: 1200 },
       blockStreamingCoalesce: { idleMs: 1000 },
-      humanDelay: { mode: "natural" }, // off | natural | custom (use minMs/maxMs)
+      humanDelay: { mode: "natural" }, // off | natural | custom（使用 minMs/maxMs）
     },
   },
 }
 ```
 
-- Non-Telegram channels require explicit `*.blockStreaming: true` to enable block replies.
-- Channel overrides: `channels.<channel>.blockStreamingCoalesce` (and per-account variants). Signal/Slack/Discord/Google Chat default `minChars: 1500`.
-- `humanDelay`: randomized pause between block replies. `natural` = 800–2500ms. Per-agent override: `agents.list[].humanDelay`.
+- 非 Telegram 频道需显式设置 `*.blockStreaming: true` 才启用块回复。  
+- 频道覆盖：`channels.<channel>.blockStreamingCoalesce`（及账号变体）内。Signal/Slack/Discord/Google Chat 默认 `minChars` 为 1500。  
+- `humanDelay` 为块回复间随机延迟，`natural` 范围 800–2500ms。代理覆盖使用 `agents.list[].humanDelay`。
 
-See [Streaming](/concepts/streaming) for behavior + chunking details.
+详见 [Streaming](/concepts/streaming)。
 
-### Typing indicators
+### 输入指示器（Typing indicators）
 
 ```json5
 {
@@ -1099,14 +1100,14 @@ See [Streaming](/concepts/streaming) for behavior + chunking details.
 }
 ```
 
-- Defaults: `instant` for direct chats/mentions, `message` for unmentioned group chats.
-- Per-session overrides: `session.typingMode`, `session.typingIntervalSeconds`.
+- 默认：私聊/提及时为 `instant`，未提及的群聊为 `message`。  
+- 会话覆盖：`session.typingMode`，`session.typingIntervalSeconds`。
 
-See [Typing Indicators](/concepts/typing-indicators).
+详见 [Typing Indicators](/concepts/typing-indicators)。
 
 ### `agents.defaults.sandbox`
 
-Optional **Docker sandboxing** for the embedded agent. See [Sandboxing](/gateway/sandboxing) for the full guide.
+用于内嵌代理的可选 **Docker 沙箱**，详见 [Sandboxing](/gateway/sandboxing)。
 
 ```json5
 {
@@ -1186,77 +1187,48 @@ Optional **Docker sandboxing** for the embedded agent. See [Sandboxing](/gateway
 }
 ```
 
-<Accordion title="Sandbox details">
+<Accordion title="沙箱细节">
 
-**Workspace access:**
+**工作区访问权限：**
 
-- `none`: per-scope sandbox workspace under `~/.openclaw/sandboxes`
-- `ro`: sandbox workspace at `/workspace`, agent workspace mounted read-only at `/agent`
-- `rw`: agent workspace mounted read/write at `/workspace`
+- `none`：每作用域沙箱工作区在`~/.openclaw/sandboxes`下  
+- `ro`：沙箱工作区挂载到 `/workspace`，代理工作区只读挂载到 `/agent`  
+- `rw`：代理工作区读写挂载到 `/workspace`
 
-**Scope:**
+**作用域：**
 
-- `session`: per-session container + workspace
-- `agent`: one container + workspace per agent (default)
-- `shared`: shared container and workspace (no cross-session isolation)
+- `session`：每会话容器与工作区  
+- `agent`：每代理单一容器与工作区（默认）  
+- `shared`：共享容器与工作区（无跨会话隔离）
 
-**`setupCommand`** runs once after container creation (via `sh -lc`). Needs network egress, writable root, root user.
+**`setupCommand`** 在容器创建后运行一次（通过 `sh -lc`），需网络、可写根目录、root 权限。
 
-**Containers default to `network: "none"`** — set to `"bridge"` (or a custom bridge network) if the agent needs outbound access.
-`"host"` is blocked. `"container:<id>"` is blocked by default unless you explicitly set
-`sandbox.docker.dangerouslyAllowContainerNamespaceJoin: true` (break-glass).
+容器默认为 `network: "none"`，需出口访问时设置为 `"bridge"` 或自定义桥接网络。`"host"` 与 `"container:<id>"` 默认被禁用，除非显式开启 `sandbox.docker.dangerouslyAllowContainerNamespaceJoin: true`（破戒模式）。
 
-**Inbound attachments** are staged into `media/inbound/*` in the active workspace.
+**入站附件** 会节录到活动工作区的 `media/inbound/*`。
 
-**`docker.binds`** mounts additional host directories; global and per-agent binds are merged.
+**`docker.binds`** 额外挂载主机目录，支持全局及代理单独合并。
 
-**Sandboxed browser** (`sandbox.browser.enabled`): Chromium + CDP in a container. noVNC URL injected into system prompt. Does not require `browser.enabled` in `openclaw.json`.
-noVNC observer access uses VNC auth by default and OpenClaw emits a short-lived token URL (instead of exposing the password in the shared URL).
+**沙箱浏览器**（`sandbox.browser.enabled`）：容器中的 Chromium + CDP，无需 `browser.enabled`。  
+noVNC 使用 VNC 认证，OpenClaw 生成短期令牌 URL，避免密码泄露。
 
-- `allowHostControl: false` (default) blocks sandboxed sessions from targeting the host browser.
-- `network` defaults to `openclaw-sandbox-browser` (dedicated bridge network). Set to `bridge` only when you explicitly want global bridge connectivity.
-- `cdpSourceRange` optionally restricts CDP ingress at the container edge to a CIDR range (for example `172.21.0.1/32`).
-- `sandbox.browser.binds` mounts additional host directories into the sandbox browser container only. When set (including `[]`), it replaces `docker.binds` for the browser container.
-- Launch defaults are defined in `scripts/sandbox-browser-entrypoint.sh` and tuned for container hosts:
-  - `--remote-debugging-address=127.0.0.1`
-  - `--remote-debugging-port=<derived from OPENCLAW_BROWSER_CDP_PORT>`
-  - `--user-data-dir=${HOME}/.chrome`
-  - `--no-first-run`
-  - `--no-default-browser-check`
-  - `--disable-3d-apis`
-  - `--disable-gpu`
-  - `--disable-software-rasterizer`
-  - `--disable-dev-shm-usage`
-  - `--disable-background-networking`
-  - `--disable-features=TranslateUI`
-  - `--disable-breakpad`
-  - `--disable-crash-reporter`
-  - `--renderer-process-limit=2`
-  - `--no-zygote`
-  - `--metrics-recording-only`
-  - `--disable-extensions` (default enabled)
-  - `--disable-3d-apis`, `--disable-software-rasterizer`, and `--disable-gpu` are
-    enabled by default and can be disabled with
-    `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` if WebGL/3D usage requires it.
-  - `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0` re-enables extensions if your workflow
-    depends on them.
-  - `--renderer-process-limit=2` can be changed with
-    `OPENCLAW_BROWSER_RENDERER_PROCESS_LIMIT=<N>`; set `0` to use Chromium's
-    default process limit.
-  - plus `--no-sandbox` and `--disable-setuid-sandbox` when `noSandbox` is enabled.
-  - Defaults are the container image baseline; use a custom browser image with a custom
-    entrypoint to change container defaults.
+- `allowHostControl: false`（默认）阻止沙箱会话控制主机浏览器。  
+- `network` 默认独立桥接网络 `openclaw-sandbox-browser`。明确想使用全局桥时设置为 `bridge`。  
+- `cdpSourceRange` 可限制 CDP 容器入站为指定 CIDR（如 `172.21.0.1/32`）。  
+- `sandbox.browser.binds` 仅挂载额外路径到浏览器容器，若设置（包括空数组），覆盖 docker.binds。  
+- 启动默认参阅 `scripts/sandbox-browser-entrypoint.sh`：含远程调试地址/端口、用户数据目录、禁用首次运行、无 GPU、多种安全禁用等。  
+- 只需通过自定义镜像与入口点修改容器启动默认。
 
 </Accordion>
 
-Build images:
+镜像构建：
 
 ```bash
-scripts/sandbox-setup.sh           # main sandbox image
-scripts/sandbox-browser-setup.sh   # optional browser image
+scripts/sandbox-setup.sh           # 主沙箱镜像
+scripts/sandbox-browser-setup.sh   # 可选浏览器镜像
 ```
 
-### `agents.list` (per-agent overrides)
+### `agents.list`（单个代理覆盖）
 
 ```json5
 {
@@ -1268,8 +1240,8 @@ scripts/sandbox-browser-setup.sh   # optional browser image
         name: "Main Agent",
         workspace: "~/.openclaw/workspace",
         agentDir: "~/.openclaw/agents/main/agent",
-        model: "anthropic/claude-opus-4-6", // or { primary, fallbacks }
-        params: { cacheRetention: "none" }, // overrides matching defaults.models params by key
+        model: "anthropic/claude-opus-4-6", // 或 { primary, fallbacks }
+        params: { cacheRetention: "none" }, // 按键覆盖匹配的默认模型参数
         identity: {
           name: "Samantha",
           theme: "helpful sloth",
@@ -1300,21 +1272,21 @@ scripts/sandbox-browser-setup.sh   # optional browser image
 }
 ```
 
-- `id`: stable agent id (required).
-- `default`: when multiple are set, first wins (warning logged). If none set, first list entry is default.
-- `model`: string form overrides `primary` only; object form `{ primary, fallbacks }` overrides both (`[]` disables global fallbacks). Cron jobs that only override `primary` still inherit default fallbacks unless you set `fallbacks: []`.
-- `params`: per-agent stream params merged over the selected model entry in `agents.defaults.models`. Use this for agent-specific overrides like `cacheRetention`, `temperature`, or `maxTokens` without duplicating the whole model catalog.
-- `runtime`: optional per-agent runtime descriptor. Use `type: "acp"` with `runtime.acp` defaults (`agent`, `backend`, `mode`, `cwd`) when the agent should default to ACP harness sessions.
-- `identity.avatar`: workspace-relative path, `http(s)` URL, or `data:` URI.
-- `identity` derives defaults: `ackReaction` from `emoji`, `mentionPatterns` from `name`/`emoji`.
-- `subagents.allowAgents`: allowlist of agent ids for `sessions_spawn` (`["*"]` = any; default: same agent only).
-- Sandbox inheritance guard: if the requester session is sandboxed, `sessions_spawn` rejects targets that would run unsandboxed.
+- `id`：稳定代理 ID（必填）。  
+- `default`：多设置时首个为默认（记录警告），未设置则第一个默认。  
+- `model`：字符串覆盖仅主模型；对象形式 `{ primary, fallbacks }` 全覆盖（空数组禁用全局后备）。仅覆盖主模型的定时任务仍继承默认后备，除非设置 `fallbacks: []`。  
+- `params`：代理专用参数覆盖，合并至默认模型目录中对应项。用于如缓存生存、温度、最大令牌等无须复制全模型目录的配置。  
+- `runtime`：可选代理运行时描述符。`type: "acp"` 搭配 `runtime.acp`（默认字段：`agent`、`backend`、`mode`、`cwd`），用于默认 ACP 会话。  
+- `identity.avatar` 支持工作区相对路径、`http(s)` URL 或 `data:` URI。  
+- `identity` 派生默认值：`ackReaction`（来自 emoji）、`mentionPatterns`（来自 name/emoji）。  
+- `subagents.allowAgents`：子代理白名单（默认仅同代理）。  
+- 沙箱继承保护：请求会话沙箱时，`sessions_spawn` 拒绝非沙箱目标。
 
 ---
 
-## Multi-agent routing
+## 多代理路由
 
-Run multiple isolated agents inside one Gateway. See [Multi-Agent](/concepts/multi-agent).
+单个网关内运行多个独立代理。详见 [Multi-Agent](/concepts/multi-agent)。
 
 ```json5
 {
@@ -1331,31 +1303,31 @@ Run multiple isolated agents inside one Gateway. See [Multi-Agent](/concepts/mul
 }
 ```
 
-### Binding match fields
+### 绑定匹配字段
 
-- `type` (optional): `route` for normal routing (missing type defaults to route), `acp` for persistent ACP conversation bindings.
-- `match.channel` (required)
-- `match.accountId` (optional; `*` = any account; omitted = default account)
-- `match.peer` (optional; `{ kind: direct|group|channel, id }`)
-- `match.guildId` / `match.teamId` (optional; channel-specific)
-- `acp` (optional; only for `type: "acp"`): `{ mode, label, cwd, backend }`
+- `type`（可选）：`route`（默认）或 `acp`（持久 ACP 会话绑定）  
+- `match.channel`（必填）  
+- `match.accountId`（可选；`*` 任意账号，省略为默认账号）  
+- `match.peer`（可选；格式 `{ kind: direct|group|channel, id }`）  
+- `match.guildId` / `match.teamId`（可选；频道专用）  
+- `acp`（可选，仅限 `type: "acp"`）：含 `mode`、`label`、`cwd`、`backend`
 
-**Deterministic match order:**
+**确定性匹配顺序：**
 
-1. `match.peer`
-2. `match.guildId`
-3. `match.teamId`
-4. `match.accountId` (exact, no peer/guild/team)
-5. `match.accountId: "*"` (channel-wide)
-6. Default agent
+1. `match.peer`  
+2. `match.guildId`  
+3. `match.teamId`  
+4. `match.accountId`（精确，无 peer/guild/team）  
+5. `match.accountId: "*"`（频道全局）  
+6. 默认代理
 
-Within each tier, the first matching `bindings` entry wins.
+相同层级按 `bindings` 顺序首个匹配生效。
 
-For `type: "acp"` entries, OpenClaw resolves by exact conversation identity (`match.channel` + account + `match.peer.id`) and does not use the route binding tier order above.
+`type: "acp"` 区别匹配，按精确会话身份（频道 + 账号 + peer ID）匹配，无路由绑定层级顺序。
 
-### Per-agent access profiles
+### 代理访问配置
 
-<Accordion title="Full access (no sandbox)">
+<Accordion title="完全访问（无沙箱）">
 
 ```json5
 {
@@ -1373,7 +1345,7 @@ For `type: "acp"` entries, OpenClaw resolves by exact conversation identity (`ma
 
 </Accordion>
 
-<Accordion title="Read-only tools + workspace">
+<Accordion title="只读工具 + 工作区">
 
 ```json5
 {
@@ -1402,7 +1374,7 @@ For `type: "acp"` entries, OpenClaw resolves by exact conversation identity (`ma
 
 </Accordion>
 
-<Accordion title="No filesystem access (messaging only)">
+<Accordion title="无文件系统访问（仅消息）">
 
 ```json5
 {
@@ -1448,11 +1420,11 @@ For `type: "acp"` entries, OpenClaw resolves by exact conversation identity (`ma
 
 </Accordion>
 
-See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for precedence details.
+详见 [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools)。
 
 ---
 
-## Session
+## 会话（Session）
 
 ```json5
 {
@@ -1474,22 +1446,22 @@ See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for preceden
     },
     resetTriggers: ["/new", "/reset"],
     store: "~/.openclaw/agents/{agentId}/sessions/sessions.json",
-    parentForkMaxTokens: 100000, // skip parent-thread fork above this token count (0 disables)
+    parentForkMaxTokens: 100000, // 超过此令牌数跳过父线程 fork（0 禁用）
     maintenance: {
       mode: "warn", // warn | enforce
       pruneAfter: "30d",
       maxEntries: 500,
       rotateBytes: "10mb",
-      resetArchiveRetention: "30d", // duration or false
-      maxDiskBytes: "500mb", // optional hard budget
-      highWaterBytes: "400mb", // optional cleanup target
+      resetArchiveRetention: "30d", // 持久时间或 false
+      maxDiskBytes: "500mb", // 可选硬预算
+      highWaterBytes: "400mb", // 可选清理目标
     },
     threadBindings: {
       enabled: true,
-      idleHours: 24, // default inactivity auto-unfocus in hours (`0` disables)
-      maxAgeHours: 0, // default hard max age in hours (`0` disables)
+      idleHours: 24, // 默认非活跃自动取消聚焦小时数（0 禁用）
+      maxAgeHours: 0, // 默认最大存活小时数（0 禁用）
     },
-    mainKey: "main", // legacy (runtime always uses "main")
+    mainKey: "main", // 兼容字段（运行时恒使用 "main"）
     agentToAgent: { maxPingPongTurns: 5 },
     sendPolicy: {
       rules: [{ action: "deny", match: { channel: "discord", chatType: "group" } }],
@@ -1499,44 +1471,42 @@ See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for preceden
 }
 ```
 
-<Accordion title="Session field details">
+<Accordion title="会话字段详解">
 
-- **`dmScope`**: how DMs are grouped.
-  - `main`: all DMs share the main session.
-  - `per-peer`: isolate by sender id across channels.
-  - `per-channel-peer`: isolate per channel + sender (recommended for multi-user inboxes).
-  - `per-account-channel-peer`: isolate per account + channel + sender (recommended for multi-account).
-- **`identityLinks`**: map canonical ids to provider-prefixed peers for cross-channel session sharing.
-- **`reset`**: primary reset policy. `daily` resets at `atHour` local time; `idle` resets after `idleMinutes`. When both configured, whichever expires first wins.
-- **`resetByType`**: per-type overrides (`direct`, `group`, `thread`). Legacy `dm` accepted as alias for `direct`.
-- **`parentForkMaxTokens`**: max parent-session `totalTokens` allowed when creating a forked thread session (default `100000`).
-  - If parent `totalTokens` is above this value, OpenClaw starts a fresh thread session instead of inheriting parent transcript history.
-  - Set `0` to disable this guard and always allow parent forking.
-- **`mainKey`**: legacy field. Runtime now always uses `"main"` for the main direct-chat bucket.
-- **`sendPolicy`**: match by `channel`, `chatType` (`direct|group|channel`, with legacy `dm` alias), `keyPrefix`, or `rawKeyPrefix`. First deny wins.
-- **`maintenance`**: session-store cleanup + retention controls.
-  - `mode`: `warn` emits warnings only; `enforce` applies cleanup.
-  - `pruneAfter`: age cutoff for stale entries (default `30d`).
-  - `maxEntries`: maximum number of entries in `sessions.json` (default `500`).
-  - `rotateBytes`: rotate `sessions.json` when it exceeds this size (default `10mb`).
-  - `resetArchiveRetention`: retention for `*.reset.<timestamp>` transcript archives. Defaults to `pruneAfter`; set `false` to disable.
-  - `maxDiskBytes`: optional sessions-directory disk budget. In `warn` mode it logs warnings; in `enforce` mode it removes oldest artifacts/sessions first.
-  - `highWaterBytes`: optional target after budget cleanup. Defaults to `80%` of `maxDiskBytes`.
-- **`threadBindings`**: global defaults for thread-bound session features.
-  - `enabled`: master default switch (providers can override; Discord uses `channels.discord.threadBindings.enabled`)
-  - `idleHours`: default inactivity auto-unfocus in hours (`0` disables; providers can override)
-  - `maxAgeHours`: default hard max age in hours (`0` disables; providers can override)
+- **`dmScope`**：私信分组方式  
+  - `main`：所有私信共享主会话  
+  - `per-peer`：按发送者跨频道隔离  
+  - `per-channel-peer`：按频道+发送者隔离（推荐用于多用户收件箱）  
+  - `per-account-channel-peer`：账号+频道+发送者隔离（推荐多账号场景）  
+- **`identityLinks`**：映射规范 ID 到带提供商前缀的对端，用于跨频道共享会话。  
+- **`reset`**：主重置策略。`daily` 于本地时间 `atHour` 重置，`idle` 在空闲超时后重置。两者并存时，先触发者生效。  
+- **`resetByType`**：基于消息类型的重置覆盖（`direct` 支持旧别名 `dm`）。  
+- **`parentForkMaxTokens`**：fork 线程时父会话总令牌数上限（默认 100000）。超过则启新线程，不继承历史。0 禁用。  
+- **`mainKey`**：兼容字段，运行时均用 `"main"` 作为主私聊键。  
+- **`sendPolicy`**：基于 `channel`、`chatType`（`direct|group|channel`，旧别名 `dm`）、`keyPrefix`、`rawKeyPrefix` 匹配规则，首个拒绝生效。  
+- **`maintenance`**：会话存储清理与保留  
+  - `mode`: `warn`（仅报警）或 `enforce`（执行清理）  
+  - `pruneAfter`：陈旧条目剪裁时长（默认 30 天）  
+  - `maxEntries`：`sessions.json` 最大条目数（默认 500）  
+  - `rotateBytes`：`sessions.json` 超限轮转大小（默认 10MB）  
+  - `resetArchiveRetention`：重置档案保留，默认跟随 `pruneAfter`，可设置 `false` 禁用  
+  - `maxDiskBytes`：会话目录硬盘空间预算，`warn` 模式仅告警，`enforce` 模式删除最老文件  
+  - `highWaterBytes`：预算清理后目标水位，默认取最大值 80%  
+- **`threadBindings`**：线程绑定会话功能全局默认，提供商可覆盖  
+  - `enabled`：主开关  
+  - `idleHours`：非活跃自动取消聚焦时间（0 禁用）  
+  - `maxAgeHours`：最大存活时间（0 禁用）
 
 </Accordion>
 
 ---
 
-## Messages
+## 消息（Messages）
 
 ```json5
 {
   messages: {
-    responsePrefix: "🦞", // or "auto"
+    responsePrefix: "🦞", // 或 "auto"
     ackReaction: "👀",
     ackReactionScope: "group-mentions", // group-mentions | group-all | direct | all
     removeAckAfterReply: false,
@@ -1551,7 +1521,7 @@ See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for preceden
       },
     },
     inbound: {
-      debounceMs: 2000, // 0 disables
+      debounceMs: 2000, // 0 禁用
       byChannel: {
         whatsapp: 5000,
         slack: 1500,
@@ -1561,37 +1531,37 @@ See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for preceden
 }
 ```
 
-### Response prefix
+### 回复前缀
 
-Per-channel/account overrides: `channels.<channel>.responsePrefix`, `channels.<channel>.accounts.<id>.responsePrefix`.
+支持频道或账号覆盖：`channels.<channel>.responsePrefix`，`channels.<channel>.accounts.<id>.responsePrefix`。
 
-Resolution (most specific wins): account → channel → global. `""` disables and stops cascade. `"auto"` derives `[{identity.name}]`.
+解析顺序（最长优先）：账号 → 频道 → 全局。设为空字符串禁用且阻止继续回退。设置为 `"auto"` 解析为 `[{identity.name}]`。
 
-**Template variables:**
+**模板变量：**
 
-| Variable          | Description            | Example                     |
-| ----------------- | ---------------------- | --------------------------- |
-| `{model}`         | Short model name       | `claude-opus-4-6`           |
-| `{modelFull}`     | Full model identifier  | `anthropic/claude-opus-4-6` |
-| `{provider}`      | Provider name          | `anthropic`                 |
-| `{thinkingLevel}` | Current thinking level | `high`, `low`, `off`        |
-| `{identity.name}` | Agent identity name    | (same as `"auto"`)          |
+| 变量               | 说明                     | 示例                           |
+| ------------------ | ------------------------ | ------------------------------ |
+| `{model}`          | 短模型名                 | `claude-opus-4-6`              |
+| `{modelFull}`      | 完整模型标识             | `anthropic/claude-opus-4-6`    |
+| `{provider}`       | 提供商名                 | `anthropic`                    |
+| `{thinkingLevel}`  | 当前思考等级             | `high`、`low`、`off`          |
+| `{identity.name}`  | 代理身份名称             | 同 `"auto"`                   |
 
-Variables are case-insensitive. `{think}` is an alias for `{thinkingLevel}`.
+变量不区分大小写，`{think}` 是 `{thinkingLevel}` 的别名。
 
-### Ack reaction
+### 确认反应
 
-- Defaults to active agent's `identity.emoji`, otherwise `"👀"`. Set `""` to disable.
-- Per-channel overrides: `channels.<channel>.ackReaction`, `channels.<channel>.accounts.<id>.ackReaction`.
-- Resolution order: account → channel → `messages.ackReaction` → identity fallback.
-- Scope: `group-mentions` (default), `group-all`, `direct`, `all`.
-- `removeAckAfterReply`: removes ack after reply (Slack/Discord/Telegram/Google Chat only).
+- 默认为活动代理的 `identity.emoji`，否则为 `"👀"`，设为空字符串关闭。  
+- 频道覆盖：`channels.<channel>.ackReaction`，`channels.<channel>.accounts.<id>.ackReaction`  
+- 解析顺序：账号 → 频道 → `messages.ackReaction` → 身份默认  
+- 范围：`group-mentions`（默认）、`group-all`、`direct`、`all`  
+- `removeAckAfterReply`：回复后移除确认反应（支持 Slack/Discord/Telegram/Google Chat）
 
-### Inbound debounce
+### 入站防抖
 
-Batches rapid text-only messages from the same sender into a single agent turn. Media/attachments flush immediately. Control commands bypass debouncing.
+对同一发送者的快速文本消息进行聚合，合并为单次代理回合。媒体/附件即时刷新。控制命令绕过防抖。
 
-### TTS (text-to-speech)
+### TTS（文本转语音）
 
 ```json5
 {
@@ -1632,18 +1602,18 @@ Batches rapid text-only messages from the same sender into a single agent turn. 
 }
 ```
 
-- `auto` controls auto-TTS. `/tts off|always|inbound|tagged` overrides per session.
-- `summaryModel` overrides `agents.defaults.model.primary` for auto-summary.
-- `modelOverrides` is enabled by default; `modelOverrides.allowProvider` defaults to `false` (opt-in).
-- API keys fall back to `ELEVENLABS_API_KEY`/`XI_API_KEY` and `OPENAI_API_KEY`.
-- `openai.baseUrl` overrides the OpenAI TTS endpoint. Resolution order is config, then `OPENAI_TTS_BASE_URL`, then `https://api.openai.com/v1`.
-- When `openai.baseUrl` points to a non-OpenAI endpoint, OpenClaw treats it as an OpenAI-compatible TTS server and relaxes model/voice validation.
+- `auto` 控制自动 TTS，支持 `/tts off|always|inbound|tagged` 会话覆盖。  
+- `summaryModel` 覆盖默认 `agents.defaults.model.primary` 以启用自动摘要。  
+- `modelOverrides` 默认开启，`modelOverrides.allowProvider` 默认为 `false`，需手动启用。  
+- API Key 支持回退到环境变量 `ELEVENLABS_API_KEY`/`XI_API_KEY` 和 `OPENAI_API_KEY`。  
+- `openai.baseUrl` 覆盖 OpenAI TTS 端点，解析顺序为配置 -> `OPENAI_TTS_BASE_URL` 环境变量 -> 默认地址。  
+- 指定非 OpenAI 地址时，OpenClaw 做 OpenAI 兼容接口调用，放宽模型与语音验证。
 
 ---
 
-## Talk
+## 对话（Talk）
 
-Defaults for Talk mode (macOS/iOS/Android).
+macOS/iOS/Android Talk 模式默认值。
 
 ```json5
 {
@@ -1661,46 +1631,46 @@ Defaults for Talk mode (macOS/iOS/Android).
 }
 ```
 
-- Voice IDs fall back to `ELEVENLABS_VOICE_ID` or `SAG_VOICE_ID`.
-- `apiKey` and `providers.*.apiKey` accept plaintext strings or SecretRef objects.
-- `ELEVENLABS_API_KEY` fallback applies only when no Talk API key is configured.
-- `voiceAliases` lets Talk directives use friendly names.
+- Voice ID 支持回退至 `ELEVENLABS_VOICE_ID` 或 `SAG_VOICE_ID`。  
+- 支持明文字符串或 SecretRef 对象作为 `apiKey` 及提供商密钥。  
+- 仅当无 Talk API Key 时回退 `ELEVENLABS_API_KEY`。  
+- `voiceAliases` 允许 Talk 指令使用别名。
 
 ---
 
-## Tools
+## 工具（Tools）
 
-### Tool profiles
+### 工具配置档（Profiles）
 
-`tools.profile` sets a base allowlist before `tools.allow`/`tools.deny`:
+`tools.profile` 用于在 `tools.allow` / `tools.deny` 前设定基础允许列表。
 
-Local onboarding defaults new local configs to `tools.profile: "messaging"` when unset (existing explicit profiles are preserved).
+本地导入未配置时默认 `tools.profile: "coding"`，已有显式配置不覆盖。
 
-| Profile     | Includes                                                                                  |
-| ----------- | ----------------------------------------------------------------------------------------- |
-| `minimal`   | `session_status` only                                                                     |
-| `coding`    | `group:fs`, `group:runtime`, `group:sessions`, `group:memory`, `image`                    |
-| `messaging` | `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status` |
-| `full`      | No restriction (same as unset)                                                            |
+| 配置档        | 包含工具                                                   |
+| ------------- | ---------------------------------------------------------- |
+| `minimal`     | 仅 `session_status`                                        |
+| `coding`      | `group:fs`、`group:runtime`、`group:sessions`、`group:memory`、`image` |
+| `messaging`   | `group:messaging`，`sessions_list`，`sessions_history`，`sessions_send`，`session_status` |
+| `full`        | 无限制（与不设置相同）                                     |
 
-### Tool groups
+### 工具组
 
-| Group              | Tools                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| `group:runtime`    | `exec`, `process` (`bash` is accepted as an alias for `exec`)                            |
-| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                   |
-| `group:sessions`   | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `session_status` |
-| `group:memory`     | `memory_search`, `memory_get`                                                            |
-| `group:web`        | `web_search`, `web_fetch`                                                                |
-| `group:ui`         | `browser`, `canvas`                                                                      |
-| `group:automation` | `cron`, `gateway`                                                                        |
-| `group:messaging`  | `message`                                                                                |
-| `group:nodes`      | `nodes`                                                                                  |
-| `group:openclaw`   | All built-in tools (excludes provider plugins)                                           |
+| 组名              | 工具列表                                                   |
+| ----------------- | ---------------------------------------------------------- |
+| `group:runtime`   | `exec`、`process`（`bash` 视为 `exec` 别名）              |
+| `group:fs`        | `read`、`write`、`edit`、`apply_patch`                     |
+| `group:sessions`  | `sessions_list`、`sessions_history`、`sessions_send`、`sessions_spawn`、`session_status` |
+| `group:memory`    | `memory_search`、`memory_get`                              |
+| `group:web`       | `web_search`、`web_fetch`                                  |
+| `group:ui`        | `browser`、`canvas`                                        |
+| `group:automation`| `cron`、`gateway`                                          |
+| `group:messaging` | `message`                                                 |
+| `group:nodes`     | `nodes`                                                    |
+| `group:openclaw`  | 所有内置工具（不含提供商插件）                             |
 
 ### `tools.allow` / `tools.deny`
 
-Global tool allow/deny policy (deny wins). Case-insensitive, supports `*` wildcards. Applied even when Docker sandbox is off.
+全局工具允许/拒绝策略（拒绝优先）。大小写不敏感，支持通配符 `*`。沙箱关闭时照常应用。
 
 ```json5
 {
@@ -1710,7 +1680,7 @@ Global tool allow/deny policy (deny wins). Case-insensitive, supports `*` wildca
 
 ### `tools.byProvider`
 
-Further restrict tools for specific providers or models. Order: base profile → provider profile → allow/deny.
+可针对特定提供商或模型限制工具。顺序为基础配置档 → 提供商配置档 → 允许/拒绝。
 
 ```json5
 {
@@ -1726,7 +1696,7 @@ Further restrict tools for specific providers or models. Order: base profile →
 
 ### `tools.elevated`
 
-Controls elevated (host) exec access:
+控制提升权限（主机执行）访问：
 
 ```json5
 {
@@ -1742,9 +1712,9 @@ Controls elevated (host) exec access:
 }
 ```
 
-- Per-agent override (`agents.list[].tools.elevated`) can only further restrict.
-- `/elevated on|off|ask|full` stores state per session; inline directives apply to single message.
-- Elevated `exec` runs on the host, bypasses sandboxing.
+- 代理单独覆盖（`agents.list[].tools.elevated`）只能限制权限。  
+- `/elevated on|off|ask|full` 按会话存储状态；内联指令仅针对单条消息。  
+- 提升权限的 `exec` 运行主机，绕过沙箱。
 
 ### `tools.exec`
 
@@ -1768,8 +1738,7 @@ Controls elevated (host) exec access:
 
 ### `tools.loopDetection`
 
-Tool-loop safety checks are **disabled by default**. Set `enabled: true` to activate detection.
-Settings can be defined globally in `tools.loopDetection` and overridden per-agent at `agents.list[].tools.loopDetection`.
+默认关闭工具调用循环检测。设置 `enabled: true` 激活。支持全局（`tools.loopDetection`）及代理级覆盖（`agents.list[].tools.loopDetection`）。
 
 ```json5
 {
@@ -1790,14 +1759,14 @@ Settings can be defined globally in `tools.loopDetection` and overridden per-age
 }
 ```
 
-- `historySize`: max tool-call history retained for loop analysis.
-- `warningThreshold`: repeating no-progress pattern threshold for warnings.
-- `criticalThreshold`: higher repeating threshold for blocking critical loops.
-- `globalCircuitBreakerThreshold`: hard stop threshold for any no-progress run.
-- `detectors.genericRepeat`: warn on repeated same-tool/same-args calls.
-- `detectors.knownPollNoProgress`: warn/block on known poll tools (`process.poll`, `command_status`, etc.).
-- `detectors.pingPong`: warn/block on alternating no-progress pair patterns.
-- If `warningThreshold >= criticalThreshold` or `criticalThreshold >= globalCircuitBreakerThreshold`, validation fails.
+- `historySize`：保留的工具调用历史最大条数。  
+- `warningThreshold`：检测到重复无进展模式时触发警告阈值。  
+- `criticalThreshold`：更高级别重复模式触发关键循环阻断。  
+- `globalCircuitBreakerThreshold`：硬停阈值，任何无进展运行停止。  
+- `detectors.genericRepeat`：警告同工具同参数重复调用。  
+- `detectors.knownPollNoProgress`：警告/阻断已知无进展轮询工具。  
+- `detectors.pingPong`：警告/阻断交替无进展对称模式。  
+- `warningThreshold` 必须小于 `criticalThreshold`，后者小于 `globalCircuitBreakerThreshold`，否则配置校验失败。
 
 ### `tools.web`
 
@@ -1807,7 +1776,7 @@ Settings can be defined globally in `tools.loopDetection` and overridden per-age
     web: {
       search: {
         enabled: true,
-        apiKey: "brave_api_key", // or BRAVE_API_KEY env
+        apiKey: "brave_api_key", // 或环境变量 BRAVE_API_KEY
         maxResults: 5,
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
@@ -1827,7 +1796,7 @@ Settings can be defined globally in `tools.loopDetection` and overridden per-age
 
 ### `tools.media`
 
-Configures inbound media understanding (image/audio/video):
+配置入站媒体理解（图片/音频/视频）：
 
 ```json5
 {
@@ -1856,26 +1825,23 @@ Configures inbound media understanding (image/audio/video):
 }
 ```
 
-<Accordion title="Media model entry fields">
+<Accordion title="媒体模型条目字段">
 
-**Provider entry** (`type: "provider"` or omitted):
+**提供商条目**（`type: "provider"` 或省略）：  
+- `provider`：API 提供商 ID（如 `openai`、`anthropic`、`google`/`gemini`、`groq` 等）  
+- `model`：模型 ID 覆盖  
+- `profile` / `preferredProfile`：`auth-profiles.json` 中的认证配置档
 
-- `provider`: API provider id (`openai`, `anthropic`, `google`/`gemini`, `groq`, etc.)
-- `model`: model id override
-- `profile` / `preferredProfile`: `auth-profiles.json` profile selection
+**CLI 条目** (`type: "cli"`)：  
+- `command`：执行命令  
+- `args`：含模板参数支持（例如 `{{MediaPath}}`、`{{Prompt}}`、`{{MaxChars}}`）
 
-**CLI entry** (`type: "cli"`):
+**通用字段**：  
+- `capabilities`（可选）：支持列表（`image`、`audio`、`video`），默认：`openai`/`anthropic`/`minimax` → 图像，`google`→ 图/音/视，`groq`→音频。  
+- `prompt`、`maxChars`、`maxBytes`、`timeoutSeconds`、`language` 等字段可覆盖。  
+- 失败时自动切换到下一个条目。
 
-- `command`: executable to run
-- `args`: templated args (supports `{{MediaPath}}`, `{{Prompt}}`, `{{MaxChars}}`, etc.)
-
-**Common fields:**
-
-- `capabilities`: optional list (`image`, `audio`, `video`). Defaults: `openai`/`anthropic`/`minimax` → image, `google` → image+audio+video, `groq` → audio.
-- `prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`: per-entry overrides.
-- Failures fall back to the next entry.
-
-Provider auth follows standard order: `auth-profiles.json` → env vars → `models.providers.*.apiKey`.
+提供商认证遵循标准顺序：`auth-profiles.json` → 环境变量 → `models.providers.*.apiKey`。
 
 </Accordion>
 
@@ -1894,9 +1860,9 @@ Provider auth follows standard order: `auth-profiles.json` → env vars → `mod
 
 ### `tools.sessions`
 
-Controls which sessions can be targeted by the session tools (`sessions_list`, `sessions_history`, `sessions_send`).
+控制哪些会话可由会话工具目标调用（`sessions_list`、`sessions_history`、`sessions_send`）。
 
-Default: `tree` (current session + sessions spawned by it, such as subagents).
+默认值为 `"tree"`（当前会话及其派生会话，如子代理）。
 
 ```json5
 {
@@ -1909,42 +1875,41 @@ Default: `tree` (current session + sessions spawned by it, such as subagents).
 }
 ```
 
-Notes:
-
-- `self`: only the current session key.
-- `tree`: current session + sessions spawned by the current session (subagents).
-- `agent`: any session belonging to the current agent id (can include other users if you run per-sender sessions under the same agent id).
-- `all`: any session. Cross-agent targeting still requires `tools.agentToAgent`.
-- Sandbox clamp: when the current session is sandboxed and `agents.defaults.sandbox.sessionToolsVisibility="spawned"`, visibility is forced to `tree` even if `tools.sessions.visibility="all"`.
+说明：  
+- `self`：仅当前会话。  
+- `tree`：当前会话及其派生（子代理）会话。  
+- `agent`：所属当前代理的任意会话（多用户共用代理时可能包含其他用户会话）。  
+- `all`：任意会话。跨代理目标仍需 `tools.agentToAgent`。  
+- 沙箱约束：当前会话为沙箱状态且 `agents.defaults.sandbox.sessionToolsVisibility="spawned"`，则强制为 `tree`，覆盖任何配置。
 
 ### `tools.sessions_spawn`
 
-Controls inline attachment support for `sessions_spawn`.
+控制 `sessions_spawn` 的内联附件支持。
 
 ```json5
 {
   tools: {
     sessions_spawn: {
       attachments: {
-        enabled: false, // opt-in: set true to allow inline file attachments
-        maxTotalBytes: 5242880, // 5 MB total across all files
+        enabled: false, // opt-in 允许内联文件附件
+        maxTotalBytes: 5242880, // 5MB 总容量
         maxFiles: 50,
-        maxFileBytes: 1048576, // 1 MB per file
-        retainOnSessionKeep: false, // keep attachments when cleanup="keep"
+        maxFileBytes: 1048576, // 单文件最大 1MB
+        retainOnSessionKeep: false, // cleanup="keep" 时保留附件
       },
     },
   },
 }
 ```
 
-Notes:
+说明：
 
-- Attachments are only supported for `runtime: "subagent"`. ACP runtime rejects them.
-- Files are materialized into the child workspace at `.openclaw/attachments/<uuid>/` with a `.manifest.json`.
-- Attachment content is automatically redacted from transcript persistence.
-- Base64 inputs are validated with strict alphabet/padding checks and a pre-decode size guard.
-- File permissions are `0700` for directories and `0600` for files.
-- Cleanup follows the `cleanup` policy: `delete` always removes attachments; `keep` retains them only when `retainOnSessionKeep: true`.
+- 附件仅支持 `runtime: "subagent"`，ACP 运行时拒绝。  
+- 文件物化在子工作区的 `.openclaw/attachments/<uuid>/`，含 `.manifest.json`。  
+- 自动从转录中脱敏附件内容。  
+- Base64 输入严格验证字母表和填充，预防过大解码。  
+- 目录权限为 `0700`，文件权限为 `0600`。  
+- 清理遵循 `cleanup` 策略：`delete` 始终删除，`keep` 仅当 `retainOnSessionKeep: true` 时保留。
 
 ### `tools.subagents`
 
@@ -1963,20 +1928,20 @@ Notes:
 }
 ```
 
-- `model`: default model for spawned sub-agents. If omitted, sub-agents inherit the caller's model.
-- `runTimeoutSeconds`: default timeout (seconds) for `sessions_spawn` when the tool call omits `runTimeoutSeconds`. `0` means no timeout.
-- Per-subagent tool policy: `tools.subagents.tools.allow` / `tools.subagents.tools.deny`.
+- `model`：子代理默认模型，缺省时继承调用者模型。  
+- `runTimeoutSeconds`：调用时未传超时时默认秒数，0 表示无超时。  
+- 子代理工具策略可用 `tools.subagents.tools.allow` / `tools.subagents.tools.deny` 调整。
 
 ---
 
-## Custom providers and base URLs
+## 自定义提供商和基础 URL
 
-OpenClaw uses the pi-coding-agent model catalog. Add custom providers via `models.providers` in config or `~/.openclaw/agents/<agentId>/agent/models.json`.
+OpenClaw 使用 pi-coding-agent 模型目录。可通过配置 `models.providers` 或代理目录下 `models.json` 添加自定义提供商。
 
 ```json5
 {
   models: {
-    mode: "merge", // merge (default) | replace
+    mode: "merge", // merge（默认）| replace
     providers: {
       "custom-proxy": {
         baseUrl: "http://localhost:4000/v1",
@@ -1999,38 +1964,40 @@ OpenClaw uses the pi-coding-agent model catalog. Add custom providers via `model
 }
 ```
 
-- Use `authHeader: true` + `headers` for custom auth needs.
-- Override agent config root with `OPENCLAW_AGENT_DIR` (or `PI_CODING_AGENT_DIR`).
-- Merge precedence for matching provider IDs:
-  - Non-empty agent `models.json` `apiKey`/`baseUrl` win.
-  - Empty or missing agent `apiKey`/`baseUrl` fall back to `models.providers` in config.
-  - Matching model `contextWindow`/`maxTokens` use the higher value between explicit config and implicit catalog values.
-  - Use `models.mode: "replace"` when you want config to fully rewrite `models.json`.
+- 可设置 `authHeader: true` 并配置 `headers` 以满足自定义认证需求。  
+- 通过环境变量 `OPENCLAW_AGENT_DIR`（或 `PI_CODING_AGENT_DIR`）覆盖代理配置根目录。  
+- 相同提供商 ID 的合并优先级：  
+  - 非空代理 `models.json` 中的 `baseUrl` 优先。  
+  - 非空代理 `apiKey` 仅当提供商未由当前配置/认证配置文件的 SecretRef 管理时生效。  
+  - SecretRef 管理的 `apiKey` 从源标记（环境变量或文件/外部命令）刷新，不保存明文。  
+  - 空或缺失代理 `apiKey`/`baseUrl` 回退为配置中 `models.providers`。  
+  - 相同模型的 `contextWindow`/`maxTokens` 取显式配置和隐式目录的较大值。  
+- 使用 `models.mode: "replace"` 完全替换 `models.json`。
 
-### Provider field details
+### 提供商字段详解
 
-- `models.mode`: provider catalog behavior (`merge` or `replace`).
-- `models.providers`: custom provider map keyed by provider id.
-- `models.providers.*.api`: request adapter (`openai-completions`, `openai-responses`, `anthropic-messages`, `google-generative-ai`, etc).
-- `models.providers.*.apiKey`: provider credential (prefer SecretRef/env substitution).
-- `models.providers.*.auth`: auth strategy (`api-key`, `token`, `oauth`, `aws-sdk`).
-- `models.providers.*.injectNumCtxForOpenAICompat`: for Ollama + `openai-completions`, inject `options.num_ctx` into requests (default: `true`).
-- `models.providers.*.authHeader`: force credential transport in the `Authorization` header when required.
-- `models.providers.*.baseUrl`: upstream API base URL.
-- `models.providers.*.headers`: extra static headers for proxy/tenant routing.
-- `models.providers.*.models`: explicit provider model catalog entries.
-- `models.providers.*.models.*.compat.supportsDeveloperRole`: optional compatibility hint. For `api: "openai-completions"` with a non-empty non-native `baseUrl` (host not `api.openai.com`), OpenClaw forces this to `false` at runtime. Empty/omitted `baseUrl` keeps default OpenAI behavior.
-- `models.bedrockDiscovery`: Bedrock auto-discovery settings root.
-- `models.bedrockDiscovery.enabled`: turn discovery polling on/off.
-- `models.bedrockDiscovery.region`: AWS region for discovery.
-- `models.bedrockDiscovery.providerFilter`: optional provider-id filter for targeted discovery.
-- `models.bedrockDiscovery.refreshInterval`: polling interval for discovery refresh.
-- `models.bedrockDiscovery.defaultContextWindow`: fallback context window for discovered models.
-- `models.bedrockDiscovery.defaultMaxTokens`: fallback max output tokens for discovered models.
+- `models.mode`：提供商目录行为（`merge` 或 `replace`）。  
+- `models.providers`：自定义提供商映射，键为提供商 ID。  
+- `models.providers.*.api`：请求适配器（如 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai` 等）。  
+- `models.providers.*.apiKey`：凭证（推荐 SecretRef/env 解析）。  
+- `models.providers.*.auth`：认证策略（`api-key`、`token`、`oauth`、`aws-sdk`）。  
+- `models.providers.*.injectNumCtxForOpenAICompat`：V Ollama + `openai-completions` 注入 `options.num_ctx` 请求（默认 `true`）。  
+- `models.providers.*.authHeader`：强制使用 `Authorization` 头传递凭证。  
+- `models.providers.*.baseUrl`：上游 API 基础 URL。  
+- `models.providers.*.headers`：附加静态头，用于代理或租户路由。  
+- `models.providers.*.models`：明确提供商模型条目。  
+- `models.providers.*.models.*.compat.supportsDeveloperRole`：兼容性提示。对于拥有非空且非官方 `baseUrl`（非 `api.openai.com`）的 `openai-completions`，运行时强制为 `false`，空或缺省 `baseUrl` 保持默认 OpenAI 行为。  
+- `models.bedrockDiscovery`：Bedrock 自动发现配置根。  
+- `models.bedrockDiscovery.enabled`：启用或禁用发现轮询。  
+- `models.bedrockDiscovery.region`：AWS 区域。  
+- `models.bedrockDiscovery.providerFilter`：可选提供商过滤。  
+- `models.bedrockDiscovery.refreshInterval`：刷新间隔。  
+- `models.bedrockDiscovery.defaultContextWindow`：发现模型默认上下文窗口。  
+- `models.bedrockDiscovery.defaultMaxTokens`：发现模型默认输出令牌数。
 
-### Provider examples
+### 提供商示例
 
-<Accordion title="Cerebras (GLM 4.6 / 4.7)">
+<Accordion title="Cerebras（GLM 4.6 / 4.7）">
 
 ```json5
 {
@@ -2064,7 +2031,7 @@ OpenClaw uses the pi-coding-agent model catalog. Add custom providers via `model
 }
 ```
 
-Use `cerebras/zai-glm-4.7` for Cerebras; `zai/glm-4.7` for Z.AI direct.
+使用 `cerebras/zai-glm-4.7` 调用 Cerebras；使用 `zai/glm-4.7` 调用 Z.AI。
 
 </Accordion>
 
@@ -2081,11 +2048,11 @@ Use `cerebras/zai-glm-4.7` for Cerebras; `zai/glm-4.7` for Z.AI direct.
 }
 ```
 
-Set `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`). Shortcut: `openclaw onboard --auth-choice opencode-zen`.
+设置 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`）。快捷方式：`openclaw onboard --auth-choice opencode-zen`。
 
 </Accordion>
 
-<Accordion title="Z.AI (GLM-4.7)">
+<Accordion title="Z.AI（GLM-4.7）">
 
 ```json5
 {
@@ -2098,15 +2065,15 @@ Set `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`). Shortcut: `openclaw onboard 
 }
 ```
 
-Set `ZAI_API_KEY`. `z.ai/*` and `z-ai/*` are accepted aliases. Shortcut: `openclaw onboard --auth-choice zai-api-key`.
+设置 `ZAI_API_KEY`。接受 `z.ai/*` 和 `z-ai/*` 别名。快捷方式：`openclaw onboard --auth-choice zai-api-key`。
 
-- General endpoint: `https://api.z.ai/api/paas/v4`
-- Coding endpoint (default): `https://api.z.ai/api/coding/paas/v4`
-- For the general endpoint, define a custom provider with the base URL override.
+- 通用端点：https://api.z.ai/api/paas/v4  
+- 编码端点（默认）：https://api.z.ai/api/coding/paas/v4  
+- 通用端点需要自定义提供商配置 base URL。
 
 </Accordion>
 
-<Accordion title="Moonshot AI (Kimi)">
+<Accordion title="Moonshot AI（Kimi）">
 
 ```json5
 {
@@ -2141,7 +2108,7 @@ Set `ZAI_API_KEY`. `z.ai/*` and `z-ai/*` are accepted aliases. Shortcut: `opencl
 }
 ```
 
-For the China endpoint: `baseUrl: "https://api.moonshot.cn/v1"` or `openclaw onboard --auth-choice moonshot-api-key-cn`.
+中国端点可用：`baseUrl: "https://api.moonshot.cn/v1"` 或 `openclaw onboard --auth-choice moonshot-api-key-cn`。
 
 </Accordion>
 
@@ -2159,11 +2126,11 @@ For the China endpoint: `baseUrl: "https://api.moonshot.cn/v1"` or `openclaw onb
 }
 ```
 
-Anthropic-compatible, built-in provider. Shortcut: `openclaw onboard --auth-choice kimi-code-api-key`.
+Anthropic 兼容内置提供商。快捷方式：`openclaw onboard --auth-choice kimi-code-api-key`。
 
 </Accordion>
 
-<Accordion title="Synthetic (Anthropic-compatible)">
+<Accordion title="Synthetic（Anthropic 兼容）">
 
 ```json5
 {
@@ -2198,11 +2165,11 @@ Anthropic-compatible, built-in provider. Shortcut: `openclaw onboard --auth-choi
 }
 ```
 
-Base URL should omit `/v1` (Anthropic client appends it). Shortcut: `openclaw onboard --auth-choice synthetic-api-key`.
+Base URL 应省略 `/v1`（Anthropic 客户端自动添加）。快捷方式：`openclaw onboard --auth-choice synthetic-api-key`。
 
 </Accordion>
 
-<Accordion title="MiniMax M2.5 (direct)">
+<Accordion title="MiniMax M2.5（直接调用）">
 
 ```json5
 {
@@ -2238,19 +2205,19 @@ Base URL should omit `/v1` (Anthropic client appends it). Shortcut: `openclaw on
 }
 ```
 
-Set `MINIMAX_API_KEY`. Shortcut: `openclaw onboard --auth-choice minimax-api`.
+设置 `MINIMAX_API_KEY`。快捷方式：`openclaw onboard --auth-choice minimax-api`。
 
 </Accordion>
 
-<Accordion title="Local models (LM Studio)">
+<Accordion title="本地模型（LM Studio）">
 
-See [Local Models](/gateway/local-models). TL;DR: run MiniMax M2.5 via LM Studio Responses API on serious hardware; keep hosted models merged for fallback.
+详见 [Local Models](/gateway/local-models)。简要：在高性能硬件上通过 LM Studio Responses API 使用 MiniMax M2.5，保持托管模型用作回退。
 
 </Accordion>
 
 ---
 
-## Skills
+## 技能（Skills）
 
 ```json5
 {
@@ -2265,7 +2232,7 @@ See [Local Models](/gateway/local-models). TL;DR: run MiniMax M2.5 via LM Studio
     },
     entries: {
       "nano-banana-pro": {
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // or plaintext string
+        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或明文
         env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
       },
       peekaboo: { enabled: true },
@@ -2275,13 +2242,13 @@ See [Local Models](/gateway/local-models). TL;DR: run MiniMax M2.5 via LM Studio
 }
 ```
 
-- `allowBundled`: optional allowlist for bundled skills only (managed/workspace skills unaffected).
-- `entries.<skillKey>.enabled: false` disables a skill even if bundled/installed.
-- `entries.<skillKey>.apiKey`: convenience for skills declaring a primary env var (plaintext string or SecretRef object).
+- `allowBundled`：仅允许打包技能白名单（管理/工作区技能无影响）。  
+- `entries.<skillKey>.enabled: false` 可禁用技能。  
+- `entries.<skillKey>.apiKey` 可简化绑定主力环境变量（明文或 SecretRef）。
 
 ---
 
-## Plugins
+## 插件（Plugins）
 
 ```json5
 {
@@ -2305,23 +2272,22 @@ See [Local Models](/gateway/local-models). TL;DR: run MiniMax M2.5 via LM Studio
 }
 ```
 
-- Loaded from `~/.openclaw/extensions`, `<workspace>/.openclaw/extensions`, plus `plugins.load.paths`.
-- **Config changes require a gateway restart.**
-- `allow`: optional allowlist (only listed plugins load). `deny` wins.
-- `plugins.entries.<id>.apiKey`: plugin-level API key convenience field (when supported by the plugin).
-- `plugins.entries.<id>.env`: plugin-scoped env var map.
-- `plugins.entries.<id>.hooks.allowPromptInjection`: when `false`, core blocks `before_prompt_build` and ignores prompt-mutating fields from legacy `before_agent_start`, while preserving legacy `modelOverride` and `providerOverride`.
-- `plugins.entries.<id>.config`: plugin-defined config object (validated by plugin schema).
-- `plugins.slots.memory`: pick the active memory plugin id, or `"none"` to disable memory plugins.
-- `plugins.installs`: CLI-managed install metadata used by `openclaw plugins update`.
-  - Includes `source`, `spec`, `sourcePath`, `installPath`, `version`, `resolvedName`, `resolvedVersion`, `resolvedSpec`, `integrity`, `shasum`, `resolvedAt`, `installedAt`.
-  - Treat `plugins.installs.*` as managed state; prefer CLI commands over manual edits.
+- 从 `~/.openclaw/extensions`、`<workspace>/.openclaw/extensions` 及 `plugins.load.paths` 加载。  
+- **配置变更需重启网关。**  
+- `allow`：可选允许列表，仅加载列出插件。`deny` 优先。  
+- `plugins.entries.<id>.apiKey`：插件级 API Key 方便字段（若支持）。  
+- `plugins.entries.<id>.env`：插件范围环境变量映射。  
+- `plugins.entries.<id>.hooks.allowPromptInjection` 为 `false` 时，核心阻止 `before_prompt_build`，忽略遗留的 `before_agent_start` 中修改提示相关字段，保留遗留的 `modelOverride` 和 `providerOverride`。  
+- `plugins.entries.<id>.config`：插件定义的配置对象（插件架构验证）。  
+- `plugins.slots.memory`：选中当前激活内存插件 ID，`"none"` 禁用内存插件。  
+- `plugins.slots.contextEngine`：选择当前激活上下文引擎插件 ID，默认 `"legacy"`，除非安装并选择其他引擎。  
+- `plugins.installs`：CLI 管理的安装元数据，用于 `openclaw plugins update`，含 `source`、`spec`、`sourcePath`、`installPath`、`version`、`resolvedName`、`resolvedVersion`、`resolvedSpec`、`integrity`、`shasum`、`resolvedAt`、`installedAt`。视为托管状态，Prefer 使用 CLI 命令代替编辑。
 
-See [Plugins](/tools/plugin).
+详见 [Plugins](/tools/plugin)。
 
 ---
 
-## Browser
+## 浏览器（Browser）
 
 ```json5
 {
@@ -2330,8 +2296,8 @@ See [Plugins](/tools/plugin).
     evaluateEnabled: true,
     defaultProfile: "chrome",
     ssrfPolicy: {
-      dangerouslyAllowPrivateNetwork: true, // default trusted-network mode
-      // allowPrivateNetwork: true, // legacy alias
+      dangerouslyAllowPrivateNetwork: true, // 默认受信任网络模式
+      // allowPrivateNetwork: true, // 旧别名
       // hostnameAllowlist: ["*.example.com", "example.com"],
       // allowedHostnames: ["localhost"],
     },
@@ -2350,16 +2316,13 @@ See [Plugins](/tools/plugin).
 }
 ```
 
-- `evaluateEnabled: false` disables `act:evaluate` and `wait --fn`.
-- `ssrfPolicy.dangerouslyAllowPrivateNetwork` defaults to `true` when unset (trusted-network model).
-- Set `ssrfPolicy.dangerouslyAllowPrivateNetwork: false` for strict public-only browser navigation.
-- `ssrfPolicy.allowPrivateNetwork` remains supported as a legacy alias.
-- In strict mode, use `ssrfPolicy.hostnameAllowlist` and `ssrfPolicy.allowedHostnames` for explicit exceptions.
-- Remote profiles are attach-only (start/stop/reset disabled).
-- Auto-detect order: default browser if Chromium-based → Chrome → Brave → Edge → Chromium → Chrome Canary.
-- Control service: loopback only (port derived from `gateway.port`, default `18791`).
-- `extraArgs` appends extra launch flags to local Chromium startup (for example
-  `--disable-gpu`, window sizing, or debug flags).
+- `evaluateEnabled: false` 禁用 `act:evaluate` 和 `wait --fn`。  
+- 默认 `ssrfPolicy.dangerouslyAllowPrivateNetwork` 为 `true`（受信任网络模型）。  
+- 严格模式下，设为 `false` 并使用 `hostnameAllowlist` 和 `allowedHostnames` 显式例外。  
+- 远程配置文件仅支持附加，禁用启动/停止/重置。  
+- 自动检测顺序：默认 Chromium 系浏览器 → Chrome → Brave → Edge → Chromium → Chrome Canary。  
+- 控制服务仅限回环（端口默认 `18791`，取自 `gateway.port`）。  
+- `extraArgs` 追加额外启动参数用于本地 Chromium（如禁用 GPU、窗口尺寸、调试参数等）。
 
 ---
 
@@ -2371,18 +2334,18 @@ See [Plugins](/tools/plugin).
     seamColor: "#FF4500",
     assistant: {
       name: "OpenClaw",
-      avatar: "CB", // emoji, short text, image URL, or data URI
+      avatar: "CB", // emoji、简短文字、图片 URL 或 data URI
     },
   },
 }
 ```
 
-- `seamColor`: accent color for native app UI chrome (Talk Mode bubble tint, etc.).
-- `assistant`: Control UI identity override. Falls back to active agent identity.
+- `seamColor`：本机应用 UI 主题强调色（Talk 模式气泡染色等）。  
+- `assistant`：控制 UI 代理身份覆盖，回退至活动代理 `identity`。
 
 ---
 
-## Gateway
+## 网关（Gateway）
 
 ```json5
 {
@@ -2393,8 +2356,8 @@ See [Plugins](/tools/plugin).
     auth: {
       mode: "token", // none | token | password | trusted-proxy
       token: "your-token",
-      // password: "your-password", // or OPENCLAW_GATEWAY_PASSWORD
-      // trustedProxy: { userHeader: "x-forwarded-user" }, // for mode=trusted-proxy; see /gateway/trusted-proxy-auth
+      // password: "your-password", // 或环境变量 OPENCLAW_GATEWAY_PASSWORD
+      // trustedProxy: { userHeader: "x-forwarded-user" }, // mode=trusted-proxy 专用；详见 /gateway/trusted-proxy-auth
       allowTailscale: true,
       rateLimit: {
         maxAttempts: 10,
@@ -2411,8 +2374,8 @@ See [Plugins](/tools/plugin).
       enabled: true,
       basePath: "/openclaw",
       // root: "dist/control-ui",
-      // allowedOrigins: ["https://control.example.com"], // required for non-loopback Control UI
-      // dangerouslyAllowHostHeaderOriginFallback: false, // dangerous Host-header origin fallback mode
+      // allowedOrigins: ["https://control.example.com"], // 非回环 Control UI 必填
+      // dangerouslyAllowHostHeaderOriginFallback: false, // 危险 Host-header 源回退
       // allowInsecureAuth: false,
       // dangerouslyDisableDeviceAuth: false,
     },
@@ -2423,61 +2386,62 @@ See [Plugins](/tools/plugin).
       // password: "your-password",
     },
     trustedProxies: ["10.0.0.1"],
-    // Optional. Default false.
+    // 可选，默认 false
     allowRealIpFallback: false,
     tools: {
-      // Additional /tools/invoke HTTP denies
+      // 额外HTTP /tools/invoke 拒绝列表
       deny: ["browser"],
-      // Remove tools from the default HTTP deny list
+      // 从默认 HTTP 拒绝列表去除工具
       allow: ["gateway"],
     },
   },
 }
 ```
 
-<Accordion title="Gateway field details">
+<Accordion title="网关字段详解">
 
-- `mode`: `local` (run gateway) or `remote` (connect to remote gateway). Gateway refuses to start unless `local`.
-- `port`: single multiplexed port for WS + HTTP. Precedence: `--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`.
-- `bind`: `auto`, `loopback` (default), `lan` (`0.0.0.0`), `tailnet` (Tailscale IP only), or `custom`.
-- **Legacy bind aliases**: use bind mode values in `gateway.bind` (`auto`, `loopback`, `lan`, `tailnet`, `custom`), not host aliases (`0.0.0.0`, `127.0.0.1`, `localhost`, `::`, `::1`).
-- **Docker note**: the default `loopback` bind listens on `127.0.0.1` inside the container. With Docker bridge networking (`-p 18789:18789`), traffic arrives on `eth0`, so the gateway is unreachable. Use `--network host`, or set `bind: "lan"` (or `bind: "custom"` with `customBindHost: "0.0.0.0"`) to listen on all interfaces.
-- **Auth**: required by default. Non-loopback binds require a shared token/password. Onboarding wizard generates a token by default.
-- If both `gateway.auth.token` and `gateway.auth.password` are configured (including SecretRefs), set `gateway.auth.mode` explicitly to `token` or `password`. Startup and service install/repair flows fail when both are configured and mode is unset.
-- `gateway.auth.mode: "none"`: explicit no-auth mode. Use only for trusted local loopback setups; this is intentionally not offered by onboarding prompts.
-- `gateway.auth.mode: "trusted-proxy"`: delegate auth to an identity-aware reverse proxy and trust identity headers from `gateway.trustedProxies` (see [Trusted Proxy Auth](/gateway/trusted-proxy-auth)).
-- `gateway.auth.allowTailscale`: when `true`, Tailscale Serve identity headers can satisfy Control UI/WebSocket auth (verified via `tailscale whois`); HTTP API endpoints still require token/password auth. This tokenless flow assumes the gateway host is trusted. Defaults to `true` when `tailscale.mode = "serve"`.
-- `gateway.auth.rateLimit`: optional failed-auth limiter. Applies per client IP and per auth scope (shared-secret and device-token are tracked independently). Blocked attempts return `429` + `Retry-After`.
-  - `gateway.auth.rateLimit.exemptLoopback` defaults to `true`; set `false` when you intentionally want localhost traffic rate-limited too (for test setups or strict proxy deployments).
-- Browser-origin WS auth attempts are always throttled with loopback exemption disabled (defense-in-depth against browser-based localhost brute force).
-- `tailscale.mode`: `serve` (tailnet only, loopback bind) or `funnel` (public, requires auth).
-- `controlUi.allowedOrigins`: explicit browser-origin allowlist for Gateway WebSocket connects. Required when browser clients are expected from non-loopback origins.
-- `controlUi.dangerouslyAllowHostHeaderOriginFallback`: dangerous mode that enables Host-header origin fallback for deployments that intentionally rely on Host-header origin policy.
-- `remote.transport`: `ssh` (default) or `direct` (ws/wss). For `direct`, `remote.url` must be `ws://` or `wss://`.
-- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`: client-side break-glass override that allows plaintext `ws://` to trusted private-network IPs; default remains loopback-only for plaintext.
-- `gateway.remote.token` / `.password` are remote-client credential fields. They do not configure gateway auth by themselves.
-- Local gateway call paths can use `gateway.remote.*` as fallback when `gateway.auth.*` is unset.
-- `trustedProxies`: reverse proxy IPs that terminate TLS. Only list proxies you control.
-- `allowRealIpFallback`: when `true`, the gateway accepts `X-Real-IP` if `X-Forwarded-For` is missing. Default `false` for fail-closed behavior.
-- `gateway.tools.deny`: extra tool names blocked for HTTP `POST /tools/invoke` (extends default deny list).
-- `gateway.tools.allow`: remove tool names from the default HTTP deny list.
+- `mode`：`local`（运行网关）或 `remote`（连接远程网关）。非 `local` 模式拒绝启动。  
+- `port`：WS + HTTP 单端口，优先级 `--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > 18789。  
+- `bind`：支持 `auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（Tailscale IP）或 `custom`。  
+- **兼容绑定别名**：使用 `gateway.bind` 下的值（auto、loopback、lan、tailnet、custom），不建议使用主机别名（如 0.0.0.0、127.0.0.1 等）。  
+- **Docker注意**：默认绑定回环为容器内的 127.0.0.1；桥接模式下流量入 eth0，网关不可达。需使用 `--network host` 或设置为 `lan`（或自定义绑定 `0.0.0.0`）监听所有接口。  
+- **认证**：默认必须。非回环需共享令牌/密码。引导流程默认生成令牌。  
+- 若同时配置 `gateway.auth.token` 和 `gateway.auth.password`（包含 SecretRef），必须显式设置 `gateway.auth.mode`。不设置时启动及安装修复失败。  
+- `gateway.auth.mode: "none"`：显式拒绝认证，仅用于受信任本地回环，不推荐。  
+- `gateway.auth.mode: "trusted-proxy"`：委托给身份感知反向代理认证，且信任 `gateway.trustedProxies` 代理 IP。详见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)。  
+- `gateway.auth.allowTailscale`：为真时，支持 Tailscale Serve 身份头免令牌认证（通过 `tailscale whois` 验证），但 HTTP API 仍需令牌/密码。默认启用（`tailscale.mode="serve"` 时）。
+
+- `gateway.auth.rateLimit`：失败认证限制器，按客户端 IP 和认证范围分开限流（共享秘密和设备令牌分开追踪），阻断返回 `429` + `Retry-After`。  
+  - `exemptLoopback` 默认为真，设为假可限制本地主机流量（测试或严格代理场景）。  
+- 浏览器来源 WebSocket 认证尝试强制限流，无本地环回例外（防止系统内浏览器 localhost 暴力破解）。  
+- `tailscale.mode`：`serve`（仅尾网，回环绑定）或 `funnel`（公网，需要认证）。  
+- `controlUi.allowedOrigins`：浏览器来源允许清单，非回环客户端必填。  
+- `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，启用 Host 头来源回退。  
+- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。`direct` 时 URL 必须为 `ws://` 或 `wss://`。  
+- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`：客户端破戒选项，允许向受信任私网 IP 使用明文 `ws://`。默认仅支持回环。  
+- `gateway.remote.token` / `password`：远程客户端认证字段，本身不配置网关认证。  
+- 本地网关调用路径在未设置 `gateway.auth.*` 时可回退使用 `gateway.remote.*`。  
+- `trustedProxies`：反向代理 TLS 终端 IP 列表，务必只列出自己控制的代理。  
+- `allowRealIpFallback`：为真时，缺少 `X-Forwarded-For` 时启用 `X-Real-IP`，默认假确保失败即关闭。  
+- `gateway.tools.deny`：HTTP `POST /tools/invoke` 额外拒绝扩展工具列表。  
+- `gateway.tools.allow`：从默认 HTTP 拒绝列表去除工具。
 
 </Accordion>
 
-### OpenAI-compatible endpoints
+### OpenAI 兼容端点
 
-- Chat Completions: disabled by default. Enable with `gateway.http.endpoints.chatCompletions.enabled: true`.
-- Responses API: `gateway.http.endpoints.responses.enabled`.
-- Responses URL-input hardening:
-  - `gateway.http.endpoints.responses.maxUrlParts`
-  - `gateway.http.endpoints.responses.files.urlAllowlist`
-  - `gateway.http.endpoints.responses.images.urlAllowlist`
-- Optional response hardening header:
-  - `gateway.http.securityHeaders.strictTransportSecurity` (set only for HTTPS origins you control; see [Trusted Proxy Auth](/gateway/trusted-proxy-auth#tls-termination-and-hsts))
+- 聊天补全：默认禁用。启用需 `gateway.http.endpoints.chatCompletions.enabled: true`。  
+- Responses API：`gateway.http.endpoints.responses.enabled`。  
+- Responses URL 输入安全强化：  
+  - `gateway.http.endpoints.responses.maxUrlParts`  
+  - `gateway.http.endpoints.responses.files.urlAllowlist`  
+  - `gateway.http.endpoints.responses.images.urlAllowlist`  
+- 可选强化头信息：  
+  - `gateway.http.securityHeaders.strictTransportSecurity`（仅针对受控 HTTPS 源，详见[Trusted Proxy Auth](/gateway/trusted-proxy-auth#tls-termination-and-hsts)）
 
-### Multi-instance isolation
+### 多实例隔离
 
-Run multiple gateways on one host with unique ports and state dirs:
+单主机运行多个网关，使用唯一端口和状态目录：
 
 ```bash
 OPENCLAW_CONFIG_PATH=~/.openclaw/a.json \
@@ -2485,13 +2449,15 @@ OPENCLAW_STATE_DIR=~/.openclaw-a \
 openclaw gateway --port 19001
 ```
 
-Convenience flags: `--dev` (uses `~/.openclaw-dev` + port `19001`), `--profile <name>` (uses `~/.openclaw-<name>`).
+便捷参数：  
+- `--dev` 使用 `~/.openclaw-dev` 目录及端口 `19001`  
+- `--profile <name>` 使用 `~/.openclaw-<name>` 目录。
 
-See [Multiple Gateways](/gateway/multiple-gateways).
+详见 [Multiple Gateways](/gateway/multiple-gateways)。
 
 ---
 
-## Hooks
+## 钩子（Hooks）
 
 ```json5
 {
@@ -2524,33 +2490,33 @@ See [Multiple Gateways](/gateway/multiple-gateways).
 }
 ```
 
-Auth: `Authorization: Bearer <token>` or `x-openclaw-token: <token>`.
+认证：`Authorization: Bearer <token>` 或 `x-openclaw-token: <token>`。
 
-**Endpoints:**
+**端点：**
 
-- `POST /hooks/wake` → `{ text, mode?: "now"|"next-heartbeat" }`
-- `POST /hooks/agent` → `{ message, name?, agentId?, sessionKey?, wakeMode?, deliver?, channel?, to?, model?, thinking?, timeoutSeconds? }`
-  - `sessionKey` from request payload is accepted only when `hooks.allowRequestSessionKey=true` (default: `false`).
-- `POST /hooks/<name>` → resolved via `hooks.mappings`
+- `POST /hooks/wake` → `{ text, mode?: "now"|"next-heartbeat" }`  
+- `POST /hooks/agent` → `{ message, name?, agentId?, sessionKey?, wakeMode?, deliver?, channel?, to?, model?, thinking?, timeoutSeconds? }`  
+  - 默认不接受调用方传递的 `sessionKey`，除非 `hooks.allowRequestSessionKey=true`。  
+- `POST /hooks/<name>` → 通过 `hooks.mappings` 解析
 
-<Accordion title="Mapping details">
+<Accordion title="映射细节">
 
-- `match.path` matches sub-path after `/hooks` (e.g. `/hooks/gmail` → `gmail`).
-- `match.source` matches a payload field for generic paths.
-- Templates like `{{messages[0].subject}}` read from the payload.
-- `transform` can point to a JS/TS module returning a hook action.
-  - `transform.module` must be a relative path and stays within `hooks.transformsDir` (absolute paths and traversal are rejected).
-- `agentId` routes to a specific agent; unknown IDs fall back to default.
-- `allowedAgentIds`: restricts explicit routing (`*` or omitted = allow all, `[]` = deny all).
-- `defaultSessionKey`: optional fixed session key for hook agent runs without explicit `sessionKey`.
-- `allowRequestSessionKey`: allow `/hooks/agent` callers to set `sessionKey` (default: `false`).
-- `allowedSessionKeyPrefixes`: optional prefix allowlist for explicit `sessionKey` values (request + mapping), e.g. `["hook:"]`.
-- `deliver: true` sends final reply to a channel; `channel` defaults to `last`.
-- `model` overrides LLM for this hook run (must be allowed if model catalog is set).
+- `match.path` 匹配 `/hooks` 之后的子路径（如 `/hooks/gmail` 对应 `gmail`）。  
+- `match.source` 可匹配通用路径的负载字段。  
+- 模板支持 JSON 路径引用（如 `{{messages[0].subject}}`）。  
+- `transform` 指向 JS/TS 模块返回钩子动作。  
+  - 必须为相对路径且位于 `hooks.transformsDir` 内，绝对路径和越界引用被拒绝。  
+- `agentId` 路由至指定代理，未知 ID 回退默认。  
+- `allowedAgentIds` 限制显式路由，`*` 或省略表示全部允许，空数组表示禁用全部。  
+- `defaultSessionKey`：无明确 `sessionKey` 时的固定会话键。  
+- `allowRequestSessionKey`：允许 `/hooks/agent` 调用方设置自定义 `sessionKey`。默认 `false`。  
+- `allowedSessionKeyPrefixes`：允许的 `sessionKey` 前缀列表，作用于请求和映射。示例 `["hook:"]`。  
+- `deliver: true` 表示将最终回复发送至频道，默认频道为 `last`。  
+- `model` 覆盖 LLM，用于当前钩子运行（若模型目录受限，需已允许）。
 
 </Accordion>
 
-### Gmail integration
+### Gmail 集成
 
 ```json5
 {
@@ -2573,41 +2539,41 @@ Auth: `Authorization: Bearer <token>` or `x-openclaw-token: <token>`.
 }
 ```
 
-- Gateway auto-starts `gog gmail watch serve` on boot when configured. Set `OPENCLAW_SKIP_GMAIL_WATCHER=1` to disable.
-- Don't run a separate `gog gmail watch serve` alongside the Gateway.
+- 配置后网关启动时自动触发 `gog gmail watch serve`，设置环境变量 `OPENCLAW_SKIP_GMAIL_WATCHER=1` 可禁用。  
+- 请勿单独运行 `gog gmail watch serve`。
 
 ---
 
-## Canvas host
+## 画布主机（Canvas host）
 
 ```json5
 {
   canvasHost: {
     root: "~/.openclaw/workspace/canvas",
     liveReload: true,
-    // enabled: false, // or OPENCLAW_SKIP_CANVAS_HOST=1
+    // enabled: false, // 或环境变量 OPENCLAW_SKIP_CANVAS_HOST=1
   },
 }
 ```
 
-- Serves agent-editable HTML/CSS/JS and A2UI over HTTP under the Gateway port:
-  - `http://<gateway-host>:<gateway.port>/__openclaw__/canvas/`
-  - `http://<gateway-host>:<gateway.port>/__openclaw__/a2ui/`
-- Local-only: keep `gateway.bind: "loopback"` (default).
-- Non-loopback binds: canvas routes require Gateway auth (token/password/trusted-proxy), same as other Gateway HTTP surfaces.
-- Node WebViews typically don't send auth headers; after a node is paired and connected, the Gateway advertises node-scoped capability URLs for canvas/A2UI access.
-- Capability URLs are bound to the active node WS session and expire quickly. IP-based fallback is not used.
-- Injects live-reload client into served HTML.
-- Auto-creates starter `index.html` when empty.
-- Also serves A2UI at `/__openclaw__/a2ui/`.
-- Changes require a gateway restart.
-- Disable live reload for large directories or `EMFILE` errors.
+- 在网关端口通过 HTTP 发布代理可编辑 HTML/CSS/JS 和 A2UI：  
+  - `http://<gateway-host>:<gateway.port>/__openclaw__/canvas/`  
+  - `http://<gateway-host>:<gateway.port>/__openclaw__/a2ui/`  
+- 仅本地访问：保持 `gateway.bind: "loopback"`（默认）。  
+- 非回环绑定时，画布路由需网关认证（令牌/密码/信任代理）。  
+- 节点 WebViews 通常不发送认证头；配对连接后，网关广播节点作用域能力 URL 供画布和 A2UI 访问。  
+- 能力 URL 绑定当前活动节点 WebSocket 会话，短时过期，无 IP 降级。  
+- 提供热重载客户端脚本注入。  
+- 空内容时自动创建启动文件 `index.html`。  
+- 同时提供 A2UI 界面。  
+- 修改配置需重启网关。  
+- 大目录或出现 `EMFILE` 时建议关闭热重载。
 
 ---
 
-## Discovery
+## 发现（Discovery）
 
-### mDNS (Bonjour)
+### mDNS（Bonjour）
 
 ```json5
 {
@@ -2619,11 +2585,11 @@ Auth: `Authorization: Bearer <token>` or `x-openclaw-token: <token>`.
 }
 ```
 
-- `minimal` (default): omit `cliPath` + `sshPort` from TXT records.
-- `full`: include `cliPath` + `sshPort`.
-- Hostname defaults to `openclaw`. Override with `OPENCLAW_MDNS_HOSTNAME`.
+- `minimal`（默认）：TXT 记录省略 `cliPath` 和 `sshPort`。  
+- `full`：包括 `cliPath` 和 `sshPort`。  
+- 主机名默认 `openclaw`，可用 `OPENCLAW_MDNS_HOSTNAME` 覆盖。
 
-### Wide-area (DNS-SD)
+### 广域网 DNS-SD
 
 ```json5
 {
@@ -2633,15 +2599,15 @@ Auth: `Authorization: Bearer <token>` or `x-openclaw-token: <token>`.
 }
 ```
 
-Writes a unicast DNS-SD zone under `~/.openclaw/dns/`. For cross-network discovery, pair with a DNS server (CoreDNS recommended) + Tailscale split DNS.
+在 `~/.openclaw/dns/` 下写入单播 DNS-SD 区域。跨网络发现时搭配 DNS 服务器（推荐 CoreDNS）及 Tailscale 分割 DNS。
 
-Setup: `openclaw dns setup --apply`.
+配置命令：`openclaw dns setup --apply`。
 
 ---
 
-## Environment
+## 环境变量（Environment）
 
-### `env` (inline env vars)
+### `env`（内联环境变量）
 
 ```json5
 {
@@ -2658,14 +2624,14 @@ Setup: `openclaw dns setup --apply`.
 }
 ```
 
-- Inline env vars are only applied if the process env is missing the key.
-- `.env` files: CWD `.env` + `~/.openclaw/.env` (neither overrides existing vars).
-- `shellEnv`: imports missing expected keys from your login shell profile.
-- See [Environment](/help/environment) for full precedence.
+- 内联环境变量仅应用于进程环境未设置对应键时。  
+- `.env` 文件：搜索 CWD 和 `~/.openclaw/.env`，且不覆盖已有环境变量。  
+- `shellEnv`：从登录 Shell 配置中导入缺失的预期键。  
+- 详见 [Environment](/help/environment) 。
 
-### Env var substitution
+### 环境变量替换
 
-Reference env vars in any config string with `${VAR_NAME}`:
+配置字符串中可用 `${VAR_NAME}` 形式引用环境变量：
 
 ```json5
 {
@@ -2675,45 +2641,45 @@ Reference env vars in any config string with `${VAR_NAME}`:
 }
 ```
 
-- Only uppercase names matched: `[A-Z_][A-Z0-9_]*`.
-- Missing/empty vars throw an error at config load.
-- Escape with `$${VAR}` for a literal `${VAR}`.
-- Works with `$include`.
+- 仅匹配大写字母数字和下划线的变量名（正则 `[A-Z_][A-Z0-9_]*`）。  
+- 缺失或空变量加载失败。  
+- 使用 `$${VAR}` 转义，输出 `${VAR}`。  
+- 支持与 `$include` 配合使用。
 
 ---
 
-## Secrets
+## 密钥（Secrets）
 
-Secret refs are additive: plaintext values still work.
+密钥引用与明文可兼容。
 
 ### `SecretRef`
 
-Use one object shape:
+格式示例：
 
 ```json5
 { source: "env" | "file" | "exec", provider: "default", id: "..." }
 ```
 
-Validation:
+校验规则：
 
-- `provider` pattern: `^[a-z][a-z0-9_-]{0,63}$`
-- `source: "env"` id pattern: `^[A-Z][A-Z0-9_]{0,127}$`
-- `source: "file"` id: absolute JSON pointer (for example `"/providers/openai/apiKey"`)
-- `source: "exec"` id pattern: `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$`
+- `provider` 仅允许小写字母、数字、下划线、短横，长度不超过 64。  
+- `source: "env"` 时，`id` 为大写字母数字下划线串，最长 128。  
+- `source: "file"` 时，`id` 为绝对 JSON 指针。  
+- `source: "exec"` 时，`id` 由数字字母、点、冒号、斜杠、连字符组成，最长 256。
 
-### Supported credential surface
+### 支持的凭证面
 
-- Canonical matrix: [SecretRef Credential Surface](/reference/secretref-credential-surface)
-- `secrets apply` targets supported `openclaw.json` credential paths.
-- `auth-profiles.json` refs are included in runtime resolution and audit coverage.
+- 参见 [SecretRef Credential Surface](/reference/secretref-credential-surface)。  
+- `secrets apply` 支持针对 `openclaw.json` 凭证路径。  
+- `auth-profiles.json` 引用包含在运行时解析与审计内。
 
-### Secret providers config
+### 密钥提供商配置
 
 ```json5
 {
   secrets: {
     providers: {
-      default: { source: "env" }, // optional explicit env provider
+      default: { source: "env" }, // 可选显式 env 提供商
       filemain: {
         source: "file",
         path: "~/.openclaw/secrets.json",
@@ -2735,19 +2701,18 @@ Validation:
 }
 ```
 
-Notes:
+说明：
 
-- `file` provider supports `mode: "json"` and `mode: "singleValue"` (`id` must be `"value"` in singleValue mode).
-- `exec` provider requires an absolute `command` path and uses protocol payloads on stdin/stdout.
-- By default, symlink command paths are rejected. Set `allowSymlinkCommand: true` to allow symlink paths while validating the resolved target path.
-- If `trustedDirs` is configured, the trusted-dir check applies to the resolved target path.
-- `exec` child environment is minimal by default; pass required variables explicitly with `passEnv`.
-- Secret refs are resolved at activation time into an in-memory snapshot, then request paths read the snapshot only.
-- Active-surface filtering applies during activation: unresolved refs on enabled surfaces fail startup/reload, while inactive surfaces are skipped with diagnostics.
+- `file` 支持 `mode: "json"` 和 `mode: "singleValue"`（单值模式下 `id` 必须为 `"value"`）。  
+- `exec` 需绝对 `command` 路径，使用 stdin/stdout 交互协议。  
+- 默认拒绝符号链接命令路径。设置 `allowSymlinkCommand: true` 可允许，且对解析路径做信任目录检查。  
+- `exec` 子环境默认精简，需使用 `passEnv` 明确传递变量。  
+- SecretRef 解析于激活时制作内存快照，后续请求只读快照。  
+- 启用面过滤：激活时未解析密钥失败，非活动面则忽略并诊断。
 
 ---
 
-## Auth storage
+## 认证存储（Auth storage）
 
 ```json5
 {
@@ -2763,16 +2728,16 @@ Notes:
 }
 ```
 
-- Per-agent profiles are stored at `<agentDir>/auth-profiles.json`.
-- `auth-profiles.json` supports value-level refs (`keyRef` for `api_key`, `tokenRef` for `token`).
-- Static runtime credentials come from in-memory resolved snapshots; legacy static `auth.json` entries are scrubbed when discovered.
-- Legacy OAuth imports from `~/.openclaw/credentials/oauth.json`.
-- See [OAuth](/concepts/oauth).
-- Secrets runtime behavior and `audit/configure/apply` tooling: [Secrets Management](/gateway/secrets).
+- 代理认证档存于 `<agentDir>/auth-profiles.json`。  
+- 支持值级别引用（`keyRef` 用于 `api_key`，`tokenRef` 用于 `token`）。  
+- 静态运行时凭证来自内存快照，发现到的遗留静态 `auth.json` 条目会被剔除。  
+- OAuth 旧数据导入自 `~/.openclaw/credentials/oauth.json`。  
+- 详见 [OAuth](/concepts/oauth)。  
+- 秘钥运行时行为及 `audit/configure/apply` 工具详见 [Secrets Management](/gateway/secrets)。
 
 ---
 
-## Logging
+## 日志记录（Logging）
 
 ```json5
 {
@@ -2787,9 +2752,9 @@ Notes:
 }
 ```
 
-- Default log file: `/tmp/openclaw/openclaw-YYYY-MM-DD.log`.
-- Set `logging.file` for a stable path.
-- `consoleLevel` bumps to `debug` when `--verbose`.
+- 默认日志文件为 `/tmp/openclaw/openclaw-YYYY-MM-DD.log`。  
+- 可通过 `logging.file` 配置固定路径。  
+- `consoleLevel` 在 `--verbose` 时提升为 `debug`。
 
 ---
 
@@ -2805,17 +2770,17 @@ Notes:
 }
 ```
 
-- `cli.banner.taglineMode` controls banner tagline style:
-  - `"random"` (default): rotating funny/seasonal taglines.
-  - `"default"`: fixed neutral tagline (`All your chats, one OpenClaw.`).
-  - `"off"`: no tagline text (banner title/version still shown).
-- To hide the entire banner (not just taglines), set env `OPENCLAW_HIDE_BANNER=1`.
+- `cli.banner.taglineMode` 控制横幅标语样式：  
+  - `"random"`（默认）：循环显示有趣/季节性标语。  
+  - `"default"`：固定中性标语（`All your chats, one OpenClaw.`）。  
+  - `"off"`：无标语文本，仅显示标题与版本。  
+- 如需隐藏整条横幅（非仅标语），设置环境变量 `OPENCLAW_HIDE_BANNER=1`。
 
 ---
 
-## Wizard
+## 向导（Wizard）
 
-Metadata written by CLI wizards (`onboard`, `configure`, `doctor`):
+CLI 向导（`onboard`、`configure`、`doctor`）写入的元数据：
 
 ```json5
 {
@@ -2831,7 +2796,7 @@ Metadata written by CLI wizards (`onboard`, `configure`, `doctor`):
 
 ---
 
-## Identity
+## 身份（Identity）
 
 ```json5
 {
@@ -2851,19 +2816,19 @@ Metadata written by CLI wizards (`onboard`, `configure`, `doctor`):
 }
 ```
 
-Written by the macOS onboarding assistant. Derives defaults:
+由 macOS 引导助手写入，派生默认值：
 
-- `messages.ackReaction` from `identity.emoji` (falls back to 👀)
-- `mentionPatterns` from `identity.name`/`identity.emoji`
-- `avatar` accepts: workspace-relative path, `http(s)` URL, or `data:` URI
+- `messages.ackReaction` 来自 `identity.emoji`（默认 👀）  
+- `mentionPatterns` 来自 `identity.name`/`identity.emoji`  
+- `avatar` 支持工作区相对路径、`http(s)` URL 或 `data:` URI
 
 ---
 
-## Bridge (legacy, removed)
+## 桥接（Bridge，遗留，已移除）
 
-Current builds no longer include the TCP bridge. Nodes connect over the Gateway WebSocket. `bridge.*` keys are no longer part of the config schema (validation fails until removed; `openclaw doctor --fix` can strip unknown keys).
+当前版本不再包含 TCP 桥接。节点通过网关 WebSocket 连接。配置中 `bridge.*` 不再认可，验证失败直到删除，可使用 `openclaw doctor --fix` 清除未知键。
 
-<Accordion title="Legacy bridge config (historical reference)">
+<Accordion title="遗留桥接配置（历史参考）">
 
 ```json
 {
@@ -2883,66 +2848,66 @@ Current builds no longer include the TCP bridge. Nodes connect over the Gateway 
 
 ---
 
-## Cron
+## 定时任务（Cron）
 
 ```json5
 {
   cron: {
     enabled: true,
     maxConcurrentRuns: 2,
-    webhook: "https://example.invalid/legacy", // deprecated fallback for stored notify:true jobs
-    webhookToken: "replace-with-dedicated-token", // optional bearer token for outbound webhook auth
-    sessionRetention: "24h", // duration string or false
+    webhook: "https://example.invalid/legacy", // 过时备用，用于遗留 notify:true 任务
+    webhookToken: "replace-with-dedicated-token", // 出站 Webhook 认证 Bearer Token（可选）
+    sessionRetention: "24h", // 会话保存时间，时长字符串或 false
     runLog: {
-      maxBytes: "2mb", // default 2_000_000 bytes
-      keepLines: 2000, // default 2000
+      maxBytes: "2mb", // 单次运行日志最大字节数，默认 2,000,000
+      keepLines: 2000, // 日志剪裁后保留最新行数，默认 2000
     },
   },
 }
 ```
 
-- `sessionRetention`: how long to keep completed isolated cron run sessions before pruning from `sessions.json`. Also controls cleanup of archived deleted cron transcripts. Default: `24h`; set `false` to disable.
-- `runLog.maxBytes`: max size per run log file (`cron/runs/<jobId>.jsonl`) before pruning. Default: `2_000_000` bytes.
-- `runLog.keepLines`: newest lines retained when run-log pruning is triggered. Default: `2000`.
-- `webhookToken`: bearer token used for cron webhook POST delivery (`delivery.mode = "webhook"`), if omitted no auth header is sent.
-- `webhook`: deprecated legacy fallback webhook URL (http/https) used only for stored jobs that still have `notify: true`.
+- `sessionRetention`：完成的隔离定时任务会话保存期限，同时控制删除存档的清理。默认 24小时，设置 `false` 禁用。  
+- `runLog.maxBytes`：单次运行日志文件大小限制，触发剪裁。默认 2MB。  
+- `runLog.keepLines`：剪裁后保留的最新日志行数。默认 2000。  
+- `webhookToken`：用于出站定时任务 Webhook POST 认证，若未设置则不发送认证头。  
+- `webhook`：弃用的旧后备 Webhook（Http/HTTPS），仅用于遗留带 `notify: true` 的任务。
 
-See [Cron Jobs](/automation/cron-jobs).
-
----
-
-## Media model template variables
-
-Template placeholders expanded in `tools.media.models[].args`:
-
-| Variable           | Description                                       |
-| ------------------ | ------------------------------------------------- |
-| `{{Body}}`         | Full inbound message body                         |
-| `{{RawBody}}`      | Raw body (no history/sender wrappers)             |
-| `{{BodyStripped}}` | Body with group mentions stripped                 |
-| `{{From}}`         | Sender identifier                                 |
-| `{{To}}`           | Destination identifier                            |
-| `{{MessageSid}}`   | Channel message id                                |
-| `{{SessionId}}`    | Current session UUID                              |
-| `{{IsNewSession}}` | `"true"` when new session created                 |
-| `{{MediaUrl}}`     | Inbound media pseudo-URL                          |
-| `{{MediaPath}}`    | Local media path                                  |
-| `{{MediaType}}`    | Media type (image/audio/document/…)               |
-| `{{Transcript}}`   | Audio transcript                                  |
-| `{{Prompt}}`       | Resolved media prompt for CLI entries             |
-| `{{MaxChars}}`     | Resolved max output chars for CLI entries         |
-| `{{ChatType}}`     | `"direct"` or `"group"`                           |
-| `{{GroupSubject}}` | Group subject (best effort)                       |
-| `{{GroupMembers}}` | Group members preview (best effort)               |
-| `{{SenderName}}`   | Sender display name (best effort)                 |
-| `{{SenderE164}}`   | Sender phone number (best effort)                 |
-| `{{Provider}}`     | Provider hint (whatsapp, telegram, discord, etc.) |
+详见 [Cron Jobs](/automation/cron-jobs)。
 
 ---
 
-## Config includes (`$include`)
+## 媒体模型模板变量
 
-Split config into multiple files:
+用于 `tools.media.models[].args` 的模板占位符：
+
+| 变量                | 说明                                |
+| ------------------- | ----------------------------------- |
+| `{{Body}}`          | 完整入站消息正文                   |
+| `{{RawBody}}`       | 原始正文（无历史/发送者包装）     |
+| `{{BodyStripped}}`  | 去除群组提及的正文                 |
+| `{{From}}`          | 发送者标识                         |
+| `{{To}}`            | 目标标识                         |
+| `{{MessageSid}}`    | 频道消息 ID                       |
+| `{{SessionId}}`     | 当前会话 UUID                    |
+| `{{IsNewSession}}`  | 新建会话时为字符串 `"true"`       |
+| `{{MediaUrl}}`      | 入站媒体伪 URL                   |
+| `{{MediaPath}}`     | 本地媒体路径                     |
+| `{{MediaType}}`     | 媒体类型（image/audio/document/...） |
+| `{{Transcript}}`    | 音频转录                        |
+| `{{Prompt}}`        | CLI 条目解析后的媒体提示         |
+| `{{MaxChars}}`      | CLI 条目解析的最大输出字符数     |
+| `{{ChatType}}`      | `"direct"` 或 `"group"`          |
+| `{{GroupSubject}}`  | 群组主题（尽力）                 |
+| `{{GroupMembers}}`  | 群组成员预览（尽力）             |
+| `{{SenderName}}`    | 发送者显示名（尽力）             |
+| `{{SenderE164}}`    | 发送者电话号码（尽力）             |
+| `{{Provider}}`      | 提供商提示（whatsapp，telegram，discord 等） |
+
+---
+
+## 配置包含（`$include`）
+
+将配置拆分为多个文件：
 
 ```json5
 // ~/.openclaw/openclaw.json
@@ -2955,15 +2920,15 @@ Split config into multiple files:
 }
 ```
 
-**Merge behavior:**
+**合并规则：**
 
-- Single file: replaces the containing object.
-- Array of files: deep-merged in order (later overrides earlier).
-- Sibling keys: merged after includes (override included values).
-- Nested includes: up to 10 levels deep.
-- Paths: resolved relative to the including file, but must stay inside the top-level config directory (`dirname` of `openclaw.json`). Absolute/`../` forms are allowed only when they still resolve inside that boundary.
-- Errors: clear messages for missing files, parse errors, and circular includes.
+- 单个文件时完全替换所在对象。  
+- 文件数组时按顺序深度合并，后者覆盖前者。  
+- 同级键合并在包含后，覆盖包含文件值。  
+- 支持最多 10 级嵌套。  
+- 路径相对包含文件解析，且必须位于顶级配置目录（`openclaw.json` 的目录）内。允许绝对及 `../` 路径，但最终不可越界。  
+- 缺失文件、解析错误或循环包含均有清晰错误提示。
 
 ---
 
-_Related: [Configuration](/gateway/configuration) · [Configuration Examples](/gateway/configuration-examples) · [Doctor](/gateway/doctor)_
+_相关链接：[配置](/gateway/configuration) · [配置示例](/gateway/configuration-examples) · [诊断工具](/gateway/doctor)_

@@ -220,7 +220,7 @@ http://localhost:5173/?gatewayUrl=ws://<gateway-host>:18789
 可选一次性认证（如需）：
 
 ```text
-http://localhost:5173/?gatewayUrl=wss://<gateway-host>:18789&token=<gateway-token>
+http://localhost:5173/?gatewayUrl=wss://<gateway-host>:18789#token=<gateway-token>
 ```
 
 注意：

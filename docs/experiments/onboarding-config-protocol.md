@@ -24,6 +24,7 @@ title: "入职和配置协议"
 - `wizard.status` 参数：`{ sessionId }`
 - `config.schema` 参数：`{}`
 - `config.schema.lookup` 参数：`{ path }`
+  - `path` 接受标准配置段加上以斜杠分隔的插件 ID，例如 `plugins.entries.pack/one.config`。
 
 响应（形态）
 

@@ -153,6 +153,8 @@ title: "上下文"
 
 文档： [会话](/concepts/session)、[压缩](/concepts/compaction)、[会话修剪](/concepts/session-pruning)。
 
+默认情况下，OpenClaw 使用内置的 `legacy` 上下文引擎来进行组装和压缩。如果你安装了提供 `kind: "context-engine"` 的插件并通过 `plugins.slots.contextEngine` 选择它，OpenClaw 会将上下文组装、`/compact` 以及相关的子代理上下文生命周期钩子委托给该引擎。
+
 ## `/context` 实际报告什么
 
 `/context` 优先显示最新的 **运行时构建** 系统提示报告（如果存在）：

@@ -23,6 +23,7 @@ title: "SecretRef 凭证范围"
 [//]: # "secretref-supported-list-start"
 
 - `models.providers.*.apiKey`
+- `models.providers.*.headers.*`
 - `skills.entries.*.apiKey`
 - `agents.defaults.memorySearch.remote.apiKey`
 - `agents.list[].memorySearch.remote.apiKey`
@@ -95,12 +96,13 @@ title: "SecretRef 凭证范围"
 
 备注：
 
-- 认证配置文件计划目标需要 `agentId`。
-- 计划条目目标为 `profiles.*.key` / `profiles.*.token` 并写入同级引用（`keyRef` / `tokenRef`）。
-- 认证配置文件引用包括在运行时解析及审计覆盖中。
+- Auth-profile 计划目标需要 `agentId`。
+- 计划条目目标为 `profiles.*.key` / `profiles.*.token` 并写入同级引用 (`keyRef` / `tokenRef`)。
+- 认证配置文件引用包含在运行时解析和审计覆盖中。
+- 对于 SecretRef 管理的模型提供者，生成的 `agents/*/agent/models.json` 条目对 `apiKey`/header 部分保留非秘密标记（不解析秘密值）。
 - 关于网络搜索：
-  - 在显式提供者模式下（设置了 `tools.web.search.provider`），仅启用所选提供者的密钥。
-  - 在自动模式下（未设置 `tools.web.search.provider`），`tools.web.search.apiKey` 及提供者特定密钥均有效。
+  - 在显式提供者模式（设置了 `tools.web.search.provider`）下，仅启用选定提供者的密钥。
+  - 在自动模式（未设置 `tools.web.search.provider`）下，`tools.web.search.apiKey` 及提供者特定密钥均有效。
 
 ## 不支持的凭证
 

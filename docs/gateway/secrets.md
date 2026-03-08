@@ -176,8 +176,8 @@ OpenClaw 支持可叠加的 SecretRefs，使支持的凭证无需以明文形式
 
 响应负载（标准输出）：
 
-```json
-{ "protocolVersion": 1, "values": { "providers/openai/apiKey": "sk-..." } }
+```jsonc
+{ "protocolVersion": 1, "values": { "providers/openai/apiKey": "<openai-api-key>" } } // pragma: allowlist secret
 ```
 
 可选的每个 ID 错误：
@@ -369,10 +369,15 @@ openclaw secrets audit --check
 
 发现包括：
 
-- 以明文存储的值（`openclaw.json`、`auth-profiles.json`、`.env`）
+- 以明文存储的值（`openclaw.json`、`auth-profiles.json`、`.env` 及生成的 `agents/*/agent/models.json`）
+- 在生成的 `models.json` 条目中遗留的以明文敏感提供者头部信息
 - 未解析的引用
 - 优先级遮蔽（`auth-profiles.json` 优先于 `openclaw.json` 引用）
 - 旧遗留（`auth.json`，OAuth 提醒）
+
+头部遗留说明：
+
+- 敏感提供者头部检测基于名称启发式（常见的认证/凭证头部名和片段，如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
 
 ### `secrets configure`
 

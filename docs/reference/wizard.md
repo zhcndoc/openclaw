@@ -89,6 +89,12 @@ sidebarTitle: "向导参考"
     - [iMessage](/channels/imessage)：遗留 `imsg` CLI 路径 + 数据库访问。
     - DM 安全性：默认为配对。第一次 DM 发送验证码；可通过 `openclaw pairing approve <channel> <code>` 批准，或使用允许列表。
   </Step>
+  <Step title="Web search">
+    - 选择搜索提供商：Perplexity、Brave、Gemini、Grok 或 Kimi（或跳过）。
+    - 粘贴你的 API 密钥（快速入门会自动从环境变量或现有配置中检测密钥）。
+    - 使用 `--skip-search` 跳过。
+    - 以后配置：`openclaw configure --section web`。
+  </Step>
   <Step title="守护进程安装">
     - macOS：LaunchAgent
       - 需登录用户会话；无头环境请使用自定义 LaunchDaemon（不随发行包）。
@@ -265,7 +271,7 @@ openclaw agents add work \
 
 - `agents.defaults.workspace`
 - `agents.defaults.model` / `models.providers`（如果选择 Minimax）
-- `tools.profile`（本地入门默认是 `"messaging"`，已有显式值保留）
+- `tools.profile`（本地入门默认是 `"coding"`，已有显式值保留）
 - `gateway.*`（模式、绑定、认证、tailscale）
 - `session.dmScope`（行为细节见：[CLI 入门参考](/start/wizard-cli-reference#outputs-and-internals)）
 - `channels.telegram.botToken`，`channels.discord.token`，`channels.signal.*`，`channels.imessage.*`

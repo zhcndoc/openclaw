@@ -78,7 +78,7 @@ openclaw gateway run
 - `--timeout <ms>`：超时/预算时间（各命令可能不同）。
 - `--expect-final`：等待“最终”响应（用于代理调用）。
 
-注意：当指定了 `--url` 后，CLI 不会 fallback 至配置或环境变量中的凭据。
+注意：当指定了 `--url` 后，CLI 不会 fallback 至配置或环境变量中的凭据。  
 必须显式传入 `--token` 或 `--password`。缺少显式凭据会导致错误。
 
 ### `gateway health`
@@ -107,8 +107,9 @@ openclaw gateway status --json
 
 说明：
 
-- `gateway status` 会尝试解析配置的认证 SecretRef 用于探测认证。
-- 如该命令路径中所需的认证 SecretRef 未被解析，探测认证可能失败；请显式提供 `--token` / `--password` 或先解析 SecretRef 源。
+- `gateway status` 会尝试解析配置的认证 SecretRef 用于探测认证。  
+- 如该命令路径中所需的认证 SecretRef 未被解析，探测认证可能失败；请显式提供 `--token` / `--password` 或先解析 SecretRef 源。  
+- 在 Linux systemd 安装中，服务认证漂移检查会读取单元文件中的 `Environment=` 和 `EnvironmentFile=` 值（包括 `%h`、带引号的路径、多文件和可选的 `-` 文件）。
 
 ### `gateway probe`
 

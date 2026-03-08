@@ -8,8 +8,8 @@ title: "插件清单"
 
 # 插件清单（openclaw.plugin.json）
 
-每个插件**必须**在**插件根目录**中提供一个 `openclaw.plugin.json` 文件。
-OpenClaw 使用此清单在**不执行插件代码**的情况下验证配置。
+每个插件**必须**在**插件根目录**中提供一个 `openclaw.plugin.json` 文件。  
+OpenClaw 使用此清单在**不执行插件代码**的情况下验证配置。  
 缺失或无效的清单将被视为插件错误，并阻止配置验证。
 
 查看完整插件系统指南：[插件](/tools/plugin)。
@@ -60,4 +60,7 @@ OpenClaw 使用此清单在**不执行插件代码**的情况下验证配置。
 
 - 清单**对所有插件都是必需的**，包括本地文件系统加载的插件。
 - 运行时仍会单独加载插件模块；清单仅用于发现和验证。
+- 排他插件类型通过 `plugins.slots.*` 选择。  
+  - `kind: "memory"` 通过 `plugins.slots.memory` 选择。  
+  - `kind: "context-engine"` 通过 `plugins.slots.contextEngine` 选择（默认：内置 `legacy`）。  
 - 如果你的插件依赖本地模块，请记录构建步骤和任何包管理器的允许列表要求（例如，pnpm 的 `allow-build-scripts` - `pnpm rebuild <package>`）。

@@ -75,8 +75,10 @@ openclaw node run --host 127.0.0.1 --port 18790 --display-name "构建节点"
 
 备注：
 
-- 令牌来自网关配置中的 `gateway.auth.token`（位于网关主机的 `~/.openclaw/openclaw.json`）。
-- `openclaw node run` 读取环境变量 `OPENCLAW_GATEWAY_TOKEN` 用于身份验证。
+- `openclaw node run` 支持令牌或密码认证。
+- 建议使用环境变量：`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
+- 配置文件回退选项为：`gateway.auth.token` / `gateway.auth.password`；远程模式还支持 `gateway.remote.token` / `gateway.remote.password`。
+- 旧版环境变量 `CLAWDBOT_GATEWAY_*` 在节点主机认证解析时故意被忽略。
 
 ### 启动节点主机（服务）
 

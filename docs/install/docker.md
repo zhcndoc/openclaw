@@ -58,11 +58,12 @@ Docker 是 **可选的**。仅当您需要容器化的网关或验证 Docker 流
 
 - `OPENCLAW_IMAGE` — 使用远程镜像代替本地构建（例如 `ghcr.io/openclaw/openclaw:latest`）
 - `OPENCLAW_DOCKER_APT_PACKAGES` — 构建期间安装额外的 apt 软件包
+- `OPENCLAW_EXTENSIONS` — 构建时预安装扩展依赖（空格分隔的扩展名，例如 `diagnostics-otel matrix`）
 - `OPENCLAW_EXTRA_MOUNTS` — 添加额外的主机绑定挂载
 - `OPENCLAW_HOME_VOLUME` — 使用命名卷持久化 `/home/node`
 - `OPENCLAW_SANDBOX` — 选择启用 Docker 网关沙箱引导，仅当值明确为 `1`、`true`、`yes`、`on` 时启用
 - `OPENCLAW_INSTALL_DOCKER_CLI` — 本地镜像构建时的构建参数传递（`1` 表示在镜像中安装 Docker CLI）。当本地构建且 `OPENCLAW_SANDBOX=1` 时，`docker-setup.sh` 会自动设置
-- `OPENCLAW_DOCKER_SOCKET` — 覆盖 Docker 套接字路径（默认使用 `DOCKER_HOST=unix://...` 或 `/var/run/docker.sock`）
+- `OPENCLAW_DOCKER_SOCKET` — 覆盖 Docker 套接字路径（默认使用 `DOCKER_HOST=unix://...` 路径，否则 `/var/run/docker.sock`）
 - `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` — 破窗措施：允许 CLI/入门客户端路径使用可信私有网络内的 `ws://` 目标（默认仅限 loopback）
 - `OPENCLAW_BROWSER_DISABLE_GRAPHICS_FLAGS=0` — 禁用容器浏览器强化标志 `--disable-3d-apis`, `--disable-software-rasterizer`, `--disable-gpu`，当您需要 WebGL/3D 兼容性时使用
 - `OPENCLAW_BROWSER_DISABLE_EXTENSIONS=0` — 当浏览器流程需要扩展时，保持扩展启用（默认沙箱浏览器中禁用扩展）
@@ -149,7 +150,7 @@ CLI 将配置和工作区写入主机：
 Docker 镜像现已发布 OCI 基础镜像注解（sha256 为示例）：
 
 - `org.opencontainers.image.base.name=docker.io/library/node:22-bookworm`
-- `org.opencontainers.image.base.digest=sha256:cd7bcd2e7a1e6f72052feb023c7f6b722205d3fcab7bbcbd2d1bfdab10b1e935`
+- `org.opencontainers.image.base.digest=sha256:6d735b4d33660225271fda0a412802746658c3a1b975507b2803ed299609760a`
 - `org.opencontainers.image.source=https://github.com/openclaw/openclaw`
 - `org.opencontainers.image.url=https://openclaw.ai`
 - `org.opencontainers.image.documentation=https://docs.openclaw.ai/install/docker`
@@ -278,6 +279,27 @@ export OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg build-essential"
 - 支持空格分隔的 apt 包名列表。
 - 修改后需重新运行 setup 脚本以重建镜像。
 
+### 预安装扩展依赖（可选）
+
+带有自己 `package.json` 的扩展（如 `diagnostics-otel`、`matrix`、`msteams`）首次加载时会安装 npm 依赖。若想将这些依赖烘焙进镜像，请在运行 `docker-setup.sh` 前设置 `OPENCLAW_EXTENSIONS`：
+
+```bash
+export OPENCLAW_EXTENSIONS="diagnostics-otel matrix"
+./docker-setup.sh
+```
+
+或直接构建时：
+
+```bash
+docker build --build-arg OPENCLAW_EXTENSIONS="diagnostics-otel matrix" .
+```
+
+注意事项：
+
+- 该参数接受空格分隔的扩展目录名（位于 `extensions/` 下）。
+- 仅影响含有 `package.json` 的扩展；无 `package.json` 的轻量插件忽略。
+- 更改 `OPENCLAW_EXTENSIONS` 需重新运行 `docker-setup.sh` 重建镜像。
+
 ### 高级用户 / 全功能容器（可选）
 
 默认 Docker 镜像为 **安全优先**，以非 root 用户 `node` 运行。这样攻击面较小，但限制如下：
@@ -398,6 +420,9 @@ curl -fsS http://127.0.0.1:18789/readyz
 ```
 
 别名：`/health` 和 `/ready`。
+
+`/healthz` 是用于检测“网关进程是否启动”的浅层存活探针。  
+`/readyz` 在启动宽限期内保持就绪状态，只有在宽限期后，若所需管理的频道仍然断开连接，或者之后断开，才返回 `503`。
 
 Docker 镜像内置 `HEALTHCHECK`，后台定期 ping `/healthz`，Docker 通过检测 OpenClaw 响应性维护容器状态。若多次失败，Docker 标记容器为 `unhealthy`，容器编排系统（Docker Compose 重启策略、Swarm、Kubernetes 等）可自动重启或替换。
 

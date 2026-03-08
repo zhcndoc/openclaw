@@ -192,7 +192,7 @@ openclaw hooks install <npm-spec> --pin
 
 从本地文件夹/归档或 npm 安装钩子包。
 
-npm 规格仅限 **注册表**（包名 + 可选版本/标签），不支持 Git/URL/文件规格。本地依赖安装为安全起见会带上 `--ignore-scripts` 参数。
+npm 规格仅限 **注册表**（包名 + 可选版本/标签），不支持 Git/URL/文件规格。出于安全考虑，本地依赖安装会带上 `--ignore-scripts` 参数。
 
 **操作说明：**
 

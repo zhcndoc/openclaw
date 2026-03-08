@@ -164,7 +164,7 @@ tools: [{ type: "function", function: { name, description?, parameters? } }]
 }
 ```
 
-支持的 MIME 类型（当前）：`image/jpeg`、`image/png`、`image/gif`、`image/webp`。
+支持的 MIME 类型（当前）：`image/jpeg`、`image/png`、`image/gif`、`image/webp`、`image/heic`、`image/heif`。
 
 最大尺寸（当前）：10MB。
 
@@ -190,7 +190,7 @@ tools: [{ type: "function", function: { name, description?, parameters? } }]
 
 当前行为说明：
 
-- 文件内容解码后会添加进**系统提示**，而非用户消息，
+- 文件内容解码后会添加进**系统提示**，而非用户消息，  
   因此内容是瞬时的（不会写入会话历史）。
 - PDF 会被解析成文本。如果文本内容很少，将把前几页转为光栅图像传给模型。
 
@@ -243,7 +243,14 @@ URL 拉取默认：
           images: {
             allowUrl: true,
             urlAllowlist: ["images.example.com"],
-            allowedMimes: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+            allowedMimes: [
+              "image/jpeg",
+              "image/png",
+              "image/gif",
+              "image/webp",
+              "image/heic",
+              "image/heif",
+            ],
             maxBytes: 10485760,
             maxRedirects: 3,
             timeoutMs: 10000,
@@ -269,12 +276,13 @@ URL 拉取默认：
 - `images.maxBytes`: 10MB
 - `images.maxRedirects`: 3
 - `images.timeoutMs`: 10秒
+- HEIC/HEIF `input_image` 源被接受，且在传递给提供方前转换成 JPEG 格式。
 
 安全提示：
 
 - URL 允许列表在拉取和重定向跳转时都会生效。
 - 允许某个主机名不能绕过私有/内部 IP 阻断。
-- 对于暴露于互联网的 Gateway，除了应用层保护，还应使用网络出口控制。
+- 对于暴露于互联网的 Gateway，除了应用层保护，还应使用网络出口控制。  
   详情见 [安全](/gateway/security)。
 
 ## 流式传输（SSE）

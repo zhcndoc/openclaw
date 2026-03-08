@@ -37,16 +37,16 @@ title: "macOS 发布"
 # APP_BUILD 必须是数值型且单调，便于 Sparkle 比较。
 # 默认省略时从 APP_VERSION 自动推导。
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.2 \
+APP_VERSION=2026.3.7 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
 scripts/package-mac-app.sh
 
-# 压缩用于发布（包含资源派生分支，支持 Sparkle 差分更新）
-ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.2.zip
+# Zip for distribution (includes resource forks for Sparkle delta support)
+ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.7.zip
 
-# 可选：生成样式化 DMG 以便用户拖拽安装至 /Applications
-scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.2.dmg
+# Optional: also build a styled DMG for humans (drag to /Applications)
+scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.7.dmg
 
 # 推荐：生成并公证+钉扎 zip 与 DMG
 # 首次创建钥匙串配置文件：
@@ -54,13 +54,13 @@ scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.2.dmg
 #     --apple-id "<apple-id>" --team-id "<team-id>" --password "<应用专用密码>"
 NOTARIZE=1 NOTARYTOOL_PROFILE=openclaw-notary \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.2 \
+APP_VERSION=2026.3.7 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
-# 可选：发布时附带 dSYM
-ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.2.dSYM.zip
+# Optional: ship dSYM alongside the release
+ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.7.dSYM.zip
 ```
 
 ## Appcast 条目
@@ -68,7 +68,7 @@ ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenCl
 使用发布说明生成器，使 Sparkle 展示格式化 HTML 说明：
 
 ```bash
-SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.2.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
+SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.7.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
 ```
 
 该命令基于 `CHANGELOG.md`（通过 [`scripts/changelog-to-html.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/changelog-to-html.sh)）生成 HTML 发布说明，并内嵌至 appcast 条目中。
@@ -76,7 +76,7 @@ SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh di
 
 ## 发布与校验
 
-- 上传 `OpenClaw-2026.3.2.zip`（及 `OpenClaw-2026.3.2.dSYM.zip`）至对应 tag 为 `v2026.3.2` 的 GitHub Release。
+- 上传 `OpenClaw-2026.3.7.zip`（及 `OpenClaw-2026.3.7.dSYM.zip`）至对应 tag 为 `v2026.3.7` 的 GitHub Release。
 - 确认 appcast 原始 URL 与内嵌源匹配：`https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
 - 基本校验：
   - `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回 200。

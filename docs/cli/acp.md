@@ -178,6 +178,10 @@ openclaw acp --session agent:qa:bug-123
 
 - 某些系统下，`--token` 和 `--password` 可能会在本地进程列表中可见。
 - 优先使用 `--token-file`/`--password-file` 或环境变量（`OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_GATEWAY_PASSWORD`）。
+- Gateway 认证解析遵循与其他 Gateway 客户端共享的约定：
+  - 本地模式：环境变量（`OPENCLAW_GATEWAY_*`）-> `gateway.auth.*` -> `gateway.remote.*` （当 `gateway.auth.*` 未设置时回退）
+  - 远程模式：`gateway.remote.*` 及其根据远程优先级规则的环境变量/配置回退
+  - `--url` 是覆盖安全的，不复用隐式的配置/环境凭据；请显式传入 `--token`/`--password`（或文件变体）
 - ACP 运行时后端子进程会收到环境变量 `OPENCLAW_SHELL=acp`，可用于上下文相关的 shell/profile 规则。
 - `openclaw acp client` 命令会在启动的桥接进程中设置 `OPENCLAW_SHELL=acp-client`。
 

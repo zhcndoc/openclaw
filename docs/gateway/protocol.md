@@ -70,7 +70,11 @@ title: "网关协议"
   "type": "res",
   "id": "…",
   "ok": true,
-  "payload": { "type": "hello-ok", "protocol": 3, "policy": { "tickIntervalMs": 15000 } }
+  "payload": {
+    "type": "hello-ok",
+    "protocol": 3,
+    "policy": { "tickIntervalMs": 15000 }
+  }
 }
 ```
 
@@ -105,7 +109,12 @@ title: "网关协议"
     "role": "node",
     "scopes": [],
     "caps": ["camera", "canvas", "screen", "location", "voice"],
-    "commands": ["camera.snap", "canvas.navigate", "screen.record", "location.get"],
+    "commands": [
+      "camera.snap",
+      "canvas.navigate",
+      "screen.record",
+      "location.get"
+    ],
     "permissions": { "camera.capture": true, "screen.record": false },
     "auth": { "token": "…" },
     "locale": "en-US",
@@ -145,6 +154,8 @@ title: "网关协议"
 - `operator.admin`
 - `operator.approvals`
 - `operator.pairing`
+
+方法权限范围只是第一道门槛。一些通过 `chat.send` 访问的斜杠命令，在命令级别上会施加更严格的检查。例如，持久化的 `/config set` 和 `/config unset` 写操作需要 `operator.admin` 权限。
 
 ### 能力/命令/权限（node）
 
@@ -208,14 +219,14 @@ title: "网关协议"
 
 常见迁移失败：
 
-| 消息                         | details.code                     | details.reason           | 含义                                               |
-| ---------------------------- | ------------------------------- | ----------------------- | -------------------------------------------------- |
-| `device nonce required`       | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端省略了 `device.nonce`（或发送为空）。       |
-| `device nonce mismatch`       | `DEVICE_AUTH_NONCE_MISMATCH`     | `device-nonce-mismatch`  | 客户端使用过期或错误的 nonce 签名。               |
-| `device signature invalid`    | `DEVICE_AUTH_SIGNATURE_INVALID`  | `device-signature`       | 签名负载不匹配 v2 负载。                          |
-| `device signature expired`    | `DEVICE_AUTH_SIGNATURE_EXPIRED`  | `device-signature-stale` | 签名时间戳超出允许的偏差范围。                   |
-| `device identity mismatch`    | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                     |
-| `device public key invalid`   | `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式或规范化失败。                              |
+| 消息                        | details.code                     | details.reason           | 含义                                        |
+| --------------------------- | -------------------------------- | ------------------------ | ------------------------------------------- |
+| `device nonce required`     | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端省略了 `device.nonce`（或发送为空）。 |
+| `device nonce mismatch`     | `DEVICE_AUTH_NONCE_MISMATCH`     | `device-nonce-mismatch`  | 客户端使用过期或错误的 nonce 签名。         |
+| `device signature invalid`  | `DEVICE_AUTH_SIGNATURE_INVALID`  | `device-signature`       | 签名负载不匹配 v2 负载。                    |
+| `device signature expired`  | `DEVICE_AUTH_SIGNATURE_EXPIRED`  | `device-signature-stale` | 签名时间戳超出允许的偏差范围。              |
+| `device identity mismatch`  | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。              |
+| `device public key invalid` | `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式或规范化失败。                      |
 
 迁移目标：
 

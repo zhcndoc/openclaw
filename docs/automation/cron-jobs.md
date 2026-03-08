@@ -352,6 +352,7 @@ CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8
 ### 临时错误（重试）
 
 - 速率限制（429、请求过多、资源耗尽）
+- 提供商过载（例如 Anthropic `529 overloaded_error`，过载回退摘要）
 - 网络错误（超时、ECONNRESET、fetch 失败、套接字错误）
 - 服务器错误（5xx）
 - Cloudflare 相关错误
@@ -389,7 +390,7 @@ CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8
     retry: {
       maxAttempts: 3,
       backoffMs: [60000, 120000, 300000],
-      retryOn: ["rate_limit", "network", "server_error"],
+      retryOn: ["rate_limit", "overloaded", "network", "server_error"],
     },
     webhook: "https://example.invalid/legacy", // 已弃用，用于旧有配置了 notify:true 的作业
     webhookToken: "replace-with-dedicated-webhook-token", // webhook 模式的可选 Bearer 令牌
@@ -643,7 +644,8 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 
 ### 周期性作业失败后持续延迟
 
-- OpenClaw 对周期性作业连续错误应用指数退避重试：30 秒、1 分钟、5 分钟、15 分钟、60 分钟。
+- OpenClaw 对周期性作业连续错误应用指数退避重试：
+  30 秒、1 分钟、5 分钟、15 分钟、60 分钟。
 - 在下次成功运行后重置退避。
 - 一次性（`at`）作业对临时错误（速率限制、网络、服务器错误）最多重试 3 次，永久错误立即禁用。详见 [重试策略](/automation/cron-jobs#retry-policy)。
 

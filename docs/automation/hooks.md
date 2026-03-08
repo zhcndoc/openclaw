@@ -102,7 +102,9 @@ Hook 包是标准的 npm 包，通过 `package.json` 中的 `openclaw.hooks` 字
 openclaw hooks install <path-or-spec>
 ```
 
-npm 规范仅支持注册表格式（包名 + 可选版本/标签）。不接受 git/url/file 格式。
+Npm 规范仅支持注册表格式（包名 + 可选版本/标签）。不接受 git/url/file 格式。
+
+裸规格和 `@latest` 会走稳定线路。如果 npm 解析到预发布版本，OpenClaw 会停止并要求您显式通过预发布标签（如 `@beta`、`@rc`）或精确预发布版本进行选择。
 
 示例 `package.json`：
 

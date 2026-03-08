@@ -62,7 +62,12 @@ openclaw secrets reload --json
 - 明文秘密存储
 - 未解析的引用
 - 优先级漂移（`auth-profiles.json` 中凭据覆盖了 `openclaw.json` 中的引用）
+- 生成的 `agents/*/agent/models.json` 遗留（提供者 `apiKey` 值和敏感的提供者请求头）
 - 遗留残留（遗留认证存储条目、OAuth 提醒）
+
+头部残留说明：
+
+- 敏感提供者请求头检测基于名称启发式（常见认证/凭据请求头名和片段，如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
 
 ```bash
 openclaw secrets audit
@@ -78,7 +83,7 @@ openclaw secrets audit --json
 报告结构重点：
 
 - `status`：`clean | findings | unresolved`
-- `summary`：`plaintextCount`, `unresolvedRefCount`, `shadowedRefCount`, `legacyResidueCount`
+- `summary`：`plaintextCount`、`unresolvedRefCount`、`shadowedRefCount`、`legacyResidueCount`
 - 发现代码：
   - `PLAINTEXT_FOUND`
   - `REF_UNRESOLVED`
