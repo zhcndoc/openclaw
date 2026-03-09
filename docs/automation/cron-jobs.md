@@ -601,6 +601,8 @@ openclaw cron run <jobId>
 openclaw cron run <jobId> --due
 ```
 
+`cron.run` 现已在作业排队触发时确认完成状态，而非等待作业执行结束。成功排队响应格式为 `{ ok: true, enqueued: true, runId }`。若作业已运行或 `--due` 参数检测不到到期任务，响应为 `{ ok: true, ran: false, reason }`。你可以使用 `openclaw cron runs --id <jobId>` 或网关方法 `cron.runs` 来查看最终完成的执行记录。
+
 编辑现有作业（补丁字段）：
 
 ```bash

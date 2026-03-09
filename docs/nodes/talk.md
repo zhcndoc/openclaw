@@ -56,6 +56,7 @@ title: "对话模式"
     modelId: "eleven_v3",
     outputFormat: "mp3_44100_128",
     apiKey: "elevenlabs_api_key",
+    silenceTimeoutMs: 1500,
     interruptOnSpeech: true,
   },
 }
@@ -64,6 +65,7 @@ title: "对话模式"
 默认值：
 
 - `interruptOnSpeech`：true
+- `silenceTimeoutMs`: 当未设置时，Talk 会在发送转录之前保持平台默认的暂停窗口（macOS 和 Android 为 700 毫秒，iOS 为 900 毫秒）。
 - `voiceId`：回退使用 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（或 API key 可用时第一个 ElevenLabs 语音）
 - `modelId`：未设置时默认 `eleven_v3`
 - `apiKey`：回退使用 `ELEVENLABS_API_KEY`（或可用时的 gateway shell 配置）

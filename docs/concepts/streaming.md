@@ -109,11 +109,11 @@ OpenClaw 有两个独立的流式传输层：
 
 ### 频道映射
 
-| 频道      | `off` | `partial` | `block` | `progress`        |
-| --------- | ----- | --------- | ------- | ----------------- |
-| Telegram  | ✅    | ✅        | ✅      | 映射为 `partial`  |
-| Discord   | ✅    | ✅        | ✅      | 映射为 `partial`  |
-| Slack     | ✅    | ✅        | ✅      | ✅                |
+| 频道     | `off` | `partial` | `block` | `progress`       |
+| -------- | ----- | --------- | ------- | ---------------- |
+| Telegram | ✅    | ✅        | ✅      | 映射为 `partial` |
+| Discord  | ✅    | ✅        | ✅      | 映射为 `partial` |
+| Slack    | ✅    | ✅        | ✅      | ✅               |
 
 Slack 特有：
 
@@ -129,7 +129,7 @@ Slack 特有：
 
 Telegram：
 
-- 在私聊时使用 Bot API 的 `sendMessageDraft`（如果可用），群组/主题使用 `sendMessage` + `editMessageText` 实现预览更新。
+- 在私信和群组/话题中使用 `sendMessage` + `editMessageText` 进行预览更新。
 - 明确启用 Telegram 区块流式时，跳过预览流式（避免双重流式）。
 - `/reasoning stream` 可将推理写入预览。
 

@@ -88,8 +88,8 @@ flowchart LR
   <Card title="网页控制界面" icon="monitor">
     浏览器仪表盘，管理聊天、配置、会话和节点。
   </Card>
-  <Card title="移动节点" icon="smartphone">
-    配对 iOS 和 Android 节点，实现 Canvas、摄像头/屏幕和语音支持的工作流。
+  <Card title="Mobile nodes" icon="smartphone">
+    为 Canvas、摄像头和语音功能工作流程配对 iOS 和 Android 节点。
   </Card>
 </Columns>
 
@@ -163,8 +163,8 @@ flowchart LR
   <Card title="渠道" href="/channels/telegram" icon="message-square">
     WhatsApp、Telegram、Discord 等渠道的专门设置。
   </Card>
-  <Card title="节点" href="/nodes" icon="smartphone">
-    iOS 和 Android 节点，支持配对、Canvas、摄像头/屏幕及设备操作。
+  <Card title="Nodes" href="/nodes" icon="smartphone">
+    iOS 和 Android 节点支持配对、画布、摄像头和设备操作。
   </Card>
   <Card title="帮助" href="/help" icon="life-buoy">
     常见解决方案和故障排查起点。

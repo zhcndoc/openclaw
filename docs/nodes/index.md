@@ -209,26 +209,25 @@ openclaw nodes camera clip --node <idOrNameOrIp> --duration 3000 --no-audio
 
 ## 屏幕录制（节点）
 
-节点支持 `screen.record`（mp4）。示例：
+支持的节点公开 `screen.record`（mp4）。示例：
 
 ```bash
 openclaw nodes screen record --node <idOrNameOrIp> --duration 10s --fps 10
 openclaw nodes screen record --node <idOrNameOrIp> --duration 10s --fps 10 --no-audio
 ```
 
-备注：
+注意事项：
 
-- `screen.record` 需要节点应用处于前台。
-- Android 录制前会显示系统屏幕捕获提示。
-- 屏幕录制限制为 `<= 60s`。
-- `--no-audio` 禁用麦克风录音（iOS/Android 支持；macOS 使用系统声音录制）。
-- 多屏环境可用 `--screen <索引>` 选择显示屏。
+- `screen.record` 的可用性取决于节点平台。
+- 屏幕录制时间限制为 `<= 60秒`。
+- `--no-audio` 在支持的平台上禁用麦克风采集。
+- 当有多个屏幕可用时，使用 `--screen <index>` 选择显示器。
 
 ## 位置（节点）
 
-节点在启用定位服务时支持 `location.get`。
+当设置中启用位置时，节点会暴露 `location.get`。
 
-CLI 辅助：
+CLI 助手：
 
 ```bash
 openclaw nodes location get --node <idOrNameOrIp>
@@ -268,7 +267,6 @@ Android 节点启用相应权限后，可以提供更多命令分组：
 - `contacts.search`、`contacts.add`
 - `calendar.events`、`calendar.add`
 - `motion.activity`、`motion.pedometer`
-- `app.update`
 
 示例调用：
 
@@ -280,8 +278,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command photos.latest --params '{"
 
 备注：
 
-- 运动命令受可用传感器能力限制。
-- `app.update` 受权限和节点运行时策略限制。
+- 运动指令受可用传感器的能力限制。
 
 ## 系统命令（节点主机 / Mac 节点）
 

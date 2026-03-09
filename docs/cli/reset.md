@@ -11,7 +11,10 @@ title: "reset"
 重置本地配置/状态（保留已安装的 CLI）。
 
 ```bash
+openclaw backup create
 openclaw reset
 openclaw reset --dry-run
 openclaw reset --scope config+creds+sessions --yes --non-interactive
 ```
+
+如果您想在删除本地状态之前创建一个可恢复的快照，先运行 `openclaw backup create`。

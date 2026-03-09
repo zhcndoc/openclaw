@@ -69,18 +69,23 @@ OpenClaw 可以从以下位置获取凭证：
 - `memorySearch.provider = "voyage"` → Voyage 嵌入
 - `memorySearch.provider = "mistral"` → Mistral 嵌入
 - `memorySearch.provider = "ollama"` → Ollama 嵌入（本地/自托管；通常无托管 API 计费）
-- 本地嵌入失败时可选回退至远程提供商
+- 本地嵌入失败时可选回退到远程提供商
 
-也可以保持本地：`memorySearch.provider = "local"`（无 API 使用）。
+您也可以使用 `memorySearch.provider = "local"` 保持本地，无需调用 API。
 
-详情见 [Memory](/concepts/memory)。
+见 [Memory](/concepts/memory)。
 
-### 4) 网络搜索工具（Brave / Perplexity 通过 OpenRouter）
+### 4) Web 搜索工具
 
-`web_search` 使用 API 密钥，可能产生使用费用：
+`web_search` 使用 API 密钥并可能产生费用，具体取决于您的提供商：
 
 - **Brave 搜索 API**：`BRAVE_API_KEY` 或 `tools.web.search.apiKey`
-- **Perplexity**（通过 OpenRouter）：`PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`
+- **Gemini（谷歌搜索）**：`GEMINI_API_KEY`
+- **Grok（xAI）**：`XAI_API_KEY`
+- **Kimi（月射）**：`KIMI_API_KEY` 或 `MOONSHOT_API_KEY`
+- **Perplexity 搜索 API**：`PERPLEXITY_API_KEY`
+
+**Brave 搜索免费额度：** 每个 Brave 计划包括每月 5 美元的循环免费额度。搜索计划费用为每 1000 次请求 5 美元，因此免费额度覆盖每月 1000 次请求无费用。在 Brave 仪表板设置您的使用限制，以避免意外费用。
 
 详情见 [Web tools](/tools/web)。
 

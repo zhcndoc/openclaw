@@ -147,10 +147,10 @@ CLI 将配置和工作区写入主机：
 
 - `node:22-bookworm`
 
-Docker 镜像现已发布 OCI 基础镜像注解（sha256 为示例）：
+Docker 镜像现在发布 OCI 基础镜像注释（sha256 是一个示例，并指向该标签的固定多架构清单列表）：
 
 - `org.opencontainers.image.base.name=docker.io/library/node:22-bookworm`
-- `org.opencontainers.image.base.digest=sha256:6d735b4d33660225271fda0a412802746658c3a1b975507b2803ed299609760a`
+- `org.opencontainers.image.base.digest=sha256:b501c082306a4f528bc4038cbf2fbb58095d583d0419a259b2114b5ac53d12e9`
 - `org.opencontainers.image.source=https://github.com/openclaw/openclaw`
 - `org.opencontainers.image.url=https://openclaw.ai`
 - `org.opencontainers.image.documentation=https://docs.openclaw.ai/install/docker`
@@ -637,7 +637,6 @@ scripts/sandbox-browser-setup.sh
 - 可选 `agents.defaults.sandbox.browser.cdpSourceRange` 按 CIDR 限制内网 CDP 入口（如 `172.21.0.1/32`）。
 - noVNC 观察者默认密码保护，OpenClaw 提供短时令牌 URL，密码存在 URL 片段中，避免在查询参数暴露。
 - 浏览器容器默认启动参数较保守，适合共享或容器环境，包括：
-
   - `--remote-debugging-address=127.0.0.1`
   - `--remote-debugging-port=<基于 OPENCLAW_BROWSER_CDP_PORT 的端口>`
   - `--user-data-dir=${HOME}/.chrome`

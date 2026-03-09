@@ -46,7 +46,8 @@ openclaw gateway run
 - `--bind <loopback|lan|tailnet|auto|custom>`：监听绑定模式。
 - `--auth <token|password>`：认证模式覆盖。
 - `--token <token>`：token 覆盖（同时设置进程环境变量 `OPENCLAW_GATEWAY_TOKEN`）。
-- `--password <password>`：密码覆盖（同时设置进程环境变量 `OPENCLAW_GATEWAY_PASSWORD`）。
+- `--password <password>`：密码覆盖。警告：内联密码可能会暴露于本地进程列表中。
+- `--password-file <path>`：从文件读取网关密码。
 - `--tailscale <off|serve|funnel>`：通过 Tailscale 曝露网关。
 - `--tailscale-reset-on-exit`：关闭时重置 Tailscale 服务/漏斗配置。
 - `--allow-unconfigured`：允许无 `gateway.mode=local` 配置启动网关。
@@ -170,6 +171,7 @@ openclaw gateway uninstall
 - `gateway install` 支持 `--port`, `--runtime`, `--token`, `--force`, `--json` 参数。
 - 当令牌认证需令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证 SecretRef 是否可解析，但不会将解析出的令牌持久化入服务环境元数据。
 - 如果令牌认证需令牌且配置的令牌 SecretRef 未解析，安装将失败，而不是持久化回退的明文。
+- 对于密码认证的 `gateway run`，建议使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file` 或基于 SecretRef 的 `gateway.auth.password`，而不是内联 `--password`。
 - 在推断认证模式下，仅设置环境变量 `OPENCLAW_GATEWAY_PASSWORD`/`CLAWDBOT_GATEWAY_PASSWORD` 不会放宽安装时的令牌要求；安装托管服务时请使用持久配置（`gateway.auth.password` 或配置环境变量）。
 - 若同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，但未设置 `gateway.auth.mode`，安装时将被阻止，需显式设置模式。
 - 生命周期命令接受 `--json` 以支持脚本自动化。

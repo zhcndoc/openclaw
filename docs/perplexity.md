@@ -1,40 +1,37 @@
 ---
-summary: "Perplexity Search API setup for web_search"
+summary: "Perplexity 搜索 API 及 Sonar/OpenRouter 对 web_search 的兼容性"
 read_when:
-  - You want to use Perplexity Search for web search
-  - You need PERPLEXITY_API_KEY setup
-title: "Perplexity Search"
+  - 您想使用 Perplexity 搜索进行网页搜索
+  - 您需要设置 PERPLEXITY_API_KEY 或 OPENROUTER_API_KEY
+title: "Perplexity 搜索"
 ---
 
-# Perplexity Search API
+# Perplexity 搜索 API
 
-OpenClaw uses Perplexity Search API for the `web_search` tool when `provider: "perplexity"` is set.
-Perplexity Search returns structured results (title, URL, snippet) for fast research.
+OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。  
+它返回包含 `title`（标题）、`url`（链接）和 `snippet`（摘要）字段的结构化结果。
 
-## Getting a Perplexity API key
+为了兼容，OpenClaw 也支持传统的 Perplexity Sonar/OpenRouter 配置。  
+如果您使用 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中使用以 `sk-or-...` 开头的密钥，或设置了 `tools.web.search.perplexity.baseUrl` / `model`，则该提供者会切换到聊天补全路径，返回带有引用的 AI 合成答案，而非结构化的搜索 API 结果。
 
-1. Create a Perplexity account at <https://www.perplexity.ai/settings/api>
-2. Generate an API key in the dashboard
-3. Store the key in config (recommended) or set `PERPLEXITY_API_KEY` in the Gateway environment.
+## 获取 Perplexity API 密钥
 
-## Config example
+1. 在 <https://www.perplexity.ai/settings/api> 创建 Perplexity 账号  
+2. 在仪表盘生成 API 密钥  
+3. 将密钥存储于配置文件中，或在 Gateway 环境变量中设置 `PERPLEXITY_API_KEY`  
 
-```json5
-{
-  tools: {
-    web: {
-      search: {
-        provider: "perplexity",
-        perplexity: {
-          apiKey: "pplx-...",
-        },
-      },
-    },
-  },
-}
-```
+## OpenRouter 兼容性
 
-## Switching from Brave
+如果您之前已经使用 OpenRouter 来调用 Perplexity Sonar，保持 `provider: "perplexity"`，并在 Gateway 环境变量中设置 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中存储一个以 `sk-or-...` 开头的密钥。
+
+可选的传统配置项包括：
+
+- `tools.web.search.perplexity.baseUrl`  
+- `tools.web.search.perplexity.model`  
+
+## 配置示例
+
+### 原生 Perplexity 搜索 API
 
 ```json5
 {
@@ -51,66 +48,89 @@ Perplexity Search returns structured results (title, URL, snippet) for fast rese
 }
 ```
 
-## Where to set the key (recommended)
+### OpenRouter / Sonar 兼容配置
 
-**Recommended:** run `openclaw configure --section web`. It stores the key in
-`~/.openclaw/openclaw.json` under `tools.web.search.perplexity.apiKey`.
+```json5
+{
+  tools: {
+    web: {
+      search: {
+        provider: "perplexity",
+        perplexity: {
+          apiKey: "<openrouter-api-key>",
+          baseUrl: "https://openrouter.ai/api/v1",
+          model: "perplexity/sonar-pro",
+        },
+      },
+    },
+  },
+}
+```
 
-**Environment alternative:** set `PERPLEXITY_API_KEY` in the Gateway process
-environment. For a gateway install, put it in `~/.openclaw/.env` (or your
-service environment). See [Env vars](/help/faq#how-does-openclaw-load-environment-variables).
+## 在哪里设置密钥
 
-## Tool parameters
+**通过配置：** 运行 `openclaw configure --section web`。该命令会将密钥保存至  
+`~/.openclaw/openclaw.json` 中的 `tools.web.search.perplexity.apiKey`。
 
-| Parameter             | Description                                          |
-| --------------------- | ---------------------------------------------------- |
-| `query`               | Search query (required)                              |
-| `count`               | Number of results to return (1-10, default: 5)       |
-| `country`             | 2-letter ISO country code (e.g., "US", "DE")         |
-| `language`            | ISO 639-1 language code (e.g., "en", "de", "fr")     |
-| `freshness`           | Time filter: `day` (24h), `week`, `month`, or `year` |
-| `date_after`          | Only results published after this date (YYYY-MM-DD)  |
-| `date_before`         | Only results published before this date (YYYY-MM-DD) |
-| `domain_filter`       | Domain allowlist/denylist array (max 20)             |
-| `max_tokens`          | Total content budget (default: 25000, max: 1000000)  |
-| `max_tokens_per_page` | Per-page token limit (default: 2048)                 |
+**通过环境变量：** 在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
+对于 Gateway 安装，可写入 `~/.openclaw/.env`（或您的服务环境中）。参见[环境变量](/help/faq#how-does-openclaw-load-environment-variables)。
 
-**Examples:**
+## 工具参数
+
+以下参数适用于原生 Perplexity 搜索 API 路径。
+
+| 参数                    | 描述                                                     |
+| ----------------------- | -------------------------------------------------------- |
+| `query`                 | 搜索查询（必填）                                         |
+| `count`                 | 返回结果数量（1-10，默认 5）                             |
+| `country`               | 两位 ISO 国家代码（例如 "US", "DE"）                    |
+| `language`              | ISO 639-1 语言代码（例如 "en", "de", "fr"）             |
+| `freshness`             | 时间过滤：`day` (24 小时), `week`, `month`, 或 `year`   |
+| `date_after`            | 只返回发布日期在此日期之后的结果（格式：YYYY-MM-DD）     |
+| `date_before`           | 只返回发布日期在此日期之前的结果（格式：YYYY-MM-DD）     |
+| `domain_filter`         | 域名允许列表/拒绝列表数组（最多 20 个）                   |
+| `max_tokens`            | 内容总 token 预算（默认 25000，最大 1000000）             |
+| `max_tokens_per_page`   | 单页 token 限制（默认 2048）                             |
+
+对于传统 Sonar/OpenRouter 兼容路径，仅支持 `query` 和 `freshness`。  
+搜索 API 独有的过滤参数如 `country`、`language`、`date_after`、`date_before`、`domain_filter`、`max_tokens` 和 `max_tokens_per_page` 会返回明确的错误。
+
+**示例：**
 
 ```javascript
-// Country and language-specific search
+// 针对特定国家和语言的搜索
 await web_search({
   query: "renewable energy",
   country: "DE",
   language: "de",
 });
 
-// Recent results (past week)
+// 近期结果（过去一周）
 await web_search({
   query: "AI news",
   freshness: "week",
 });
 
-// Date range search
+// 日期范围搜索
 await web_search({
   query: "AI developments",
   date_after: "2024-01-01",
   date_before: "2024-06-30",
 });
 
-// Domain filtering (allowlist)
+// 域名过滤（允许列表）
 await web_search({
   query: "climate research",
   domain_filter: ["nature.com", "science.org", ".edu"],
 });
 
-// Domain filtering (denylist - prefix with -)
+// 域名过滤（拒绝列表，前缀加 -）
 await web_search({
   query: "product reviews",
   domain_filter: ["-reddit.com", "-pinterest.com"],
 });
 
-// More content extraction
+// 更多内容提取
 await web_search({
   query: "detailed AI research",
   max_tokens: 50000,
@@ -118,16 +138,17 @@ await web_search({
 });
 ```
 
-### Domain filter rules
+### 域名过滤规则
 
-- Maximum 20 domains per filter
-- Cannot mix allowlist and denylist in the same request
-- Use `-` prefix for denylist entries (e.g., `["-reddit.com"]`)
+- 每次请求最多允许 20 个域名  
+- 不可在同一次请求中混合使用允许列表和拒绝列表  
+- 拒绝列表条目前加 `-` 前缀（例如 `["-reddit.com"]`）  
 
-## Notes
+## 注意事项
 
-- Perplexity Search API returns structured web search results (title, URL, snippet)
-- Results are cached for 15 minutes by default (configurable via `cacheTtlMinutes`)
+- Perplexity 搜索 API 返回结构化网页搜索结果（`title`、`url`、`snippet`）  
+- 使用 OpenRouter 或显式设置 `baseUrl` / `model` 会将 Perplexity 切换回 Sonar 聊天补全以保证兼容  
+- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）  
 
-See [Web tools](/tools/web) for the full web_search configuration.
-See [Perplexity Search API docs](https://docs.perplexity.ai/docs/search/quickstart) for more details.
+详见 [Web 工具](/tools/web) 获取完整的 web_search 配置说明。  
+更多详情参见 [Perplexity 搜索 API 文档](https://docs.perplexity.ai/docs/search/quickstart) 。

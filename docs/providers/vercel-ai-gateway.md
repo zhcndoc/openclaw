@@ -13,6 +13,7 @@ read_when:
 - 提供者: `vercel-ai-gateway`
 - 认证: `AI_GATEWAY_API_KEY`
 - API: 兼容 Anthropic 消息格式
+- OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此 `/models vercel-ai-gateway` 包含当前的模型引用，例如 `vercel-ai-gateway/openai/gpt-5.4`。
 
 ## 快速开始
 

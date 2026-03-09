@@ -12,18 +12,14 @@ title: 飞书
 
 ---
 
-## 必需插件
+## 捆绑插件
 
-安装飞书插件：
+Feishu 随当前的 OpenClaw 版本一起捆绑发布，因此无需单独安装插件。
+
+如果您使用的是较旧的版本或自定义安装且未包含捆绑的 Feishu，请手动安装：
 
 ```bash
 openclaw plugins install @openclaw/feishu
-```
-
-本地检出（在从 git 仓库运行时）：
-
-```bash
-openclaw plugins install ./extensions/feishu
 ```
 
 ---
@@ -123,7 +119,11 @@ Lark（国际版）租户请使用 [https://open.larksuite.com/app](https://open
       "im:message:send_as_bot",
       "im:resource"
     ],
-    "user": ["aily:file:read", "aily:file:write", "im:chat.access_event.bot_p2p_chat:read"]
+    "user": [
+      "aily:file:read",
+      "aily:file:write",
+      "im:chat.access_event.bot_p2p_chat:read"
+    ]
   }
 }
 ```
@@ -429,7 +429,7 @@ openclaw pairing list feishu
 
 ## 常用命令
 
-| 命令       | 说明           |
+| 命令      | 说明           |
 | --------- | -------------- |
 | `/status` | 显示机器人状态 |
 | `/reset`  | 重置会话       |
@@ -439,10 +439,10 @@ openclaw pairing list feishu
 
 ## 网关管理命令
 
-| 命令                      | 说明                 |
-| ------------------------- | -------------------- |
+| 命令                       | 说明                 |
+| -------------------------- | -------------------- |
 | `openclaw gateway status`  | 显示网关状态         |
-| `openclaw gateway install` | 安装/启动网关服务     |
+| `openclaw gateway install` | 安装/启动网关服务    |
 | `openclaw gateway stop`    | 停止网关服务         |
 | `openclaw gateway restart` | 重启网关服务         |
 | `openclaw logs --follow`   | 查看网关日志实时输出 |
@@ -595,40 +595,40 @@ openclaw pairing list feishu
 
 主要选项：
 
-| 设置                                            | 说明                              | 默认      |
-| ------------------------------------------------ | --------------------------------- | --------- |
-| `channels.feishu.enabled`                        | 启用/禁用通道                    | `true`    |
-| `channels.feishu.domain`                         | API 域名（`feishu` 或 `lark`）  | `feishu`  |
-| `channels.feishu.connectionMode`                 | 事件传输模式                    | `websocket` |
-| `channels.feishu.defaultAccount`                 | 出站路由默认账户 ID             | `default` |
-| `channels.feishu.verificationToken`              | webhook 模式所需                 | -         |
-| `channels.feishu.webhookPath`                     | webhook 路由路径                | `/feishu/events` |
-| `channels.feishu.webhookHost`                     | webhook 绑定主机                | `127.0.0.1` |
-| `channels.feishu.webhookPort`                     | webhook 绑定端口                | `3000`    |
-| `channels.feishu.accounts.<id>.appId`             | 应用 ID                         | -         |
-| `channels.feishu.accounts.<id>.appSecret`         | 应用密钥                       | -         |
-| `channels.feishu.accounts.<id>.domain`             | 单账户 API 域名覆盖             | `feishu`  |
-| `channels.feishu.dmPolicy`                        | 私信策略                       | `pairing` |
-| `channels.feishu.allowFrom`                       | 私信白名单（open_id列表）        | -         |
-| `channels.feishu.groupPolicy`                     | 群聊策略                       | `open`    |
-| `channels.feishu.groupAllowFrom`                  | 群聊白名单                     | -         |
-| `channels.feishu.groups.<chat_id>.requireMention` | 是否需要 @提及                 | `true`   |
-| `channels.feishu.groups.<chat_id>.enabled`        | 是否启用群组                   | `true`   |
-| `channels.feishu.textChunkLimit`                  | 消息分块大小                   | `2000`   |
-| `channels.feishu.mediaMaxMb`                       | 多媒体大小限制                 | `30`     |
-| `channels.feishu.streaming`                        | 启用流式卡片输出               | `true`   |
-| `channels.feishu.blockStreaming`                   | 启用区块流式输出               | `true`   |
+| 设置                                              | 说明                           | 默认             |
+| ------------------------------------------------- | ------------------------------ | ---------------- |
+| `channels.feishu.enabled`                         | 启用/禁用通道                  | `true`           |
+| `channels.feishu.domain`                          | API 域名（`feishu` 或 `lark`） | `feishu`         |
+| `channels.feishu.connectionMode`                  | 事件传输模式                   | `websocket`      |
+| `channels.feishu.defaultAccount`                  | 出站路由默认账户 ID            | `default`        |
+| `channels.feishu.verificationToken`               | webhook 模式所需               | -                |
+| `channels.feishu.webhookPath`                     | webhook 路由路径               | `/feishu/events` |
+| `channels.feishu.webhookHost`                     | webhook 绑定主机               | `127.0.0.1`      |
+| `channels.feishu.webhookPort`                     | webhook 绑定端口               | `3000`           |
+| `channels.feishu.accounts.<id>.appId`             | 应用 ID                        | -                |
+| `channels.feishu.accounts.<id>.appSecret`         | 应用密钥                       | -                |
+| `channels.feishu.accounts.<id>.domain`            | 单账户 API 域名覆盖            | `feishu`         |
+| `channels.feishu.dmPolicy`                        | 私信策略                       | `pairing`        |
+| `channels.feishu.allowFrom`                       | 私信白名单（open_id列表）      | -                |
+| `channels.feishu.groupPolicy`                     | 群聊策略                       | `open`           |
+| `channels.feishu.groupAllowFrom`                  | 群聊白名单                     | -                |
+| `channels.feishu.groups.<chat_id>.requireMention` | 是否需要 @提及                 | `true`           |
+| `channels.feishu.groups.<chat_id>.enabled`        | 是否启用群组                   | `true`           |
+| `channels.feishu.textChunkLimit`                  | 消息分块大小                   | `2000`           |
+| `channels.feishu.mediaMaxMb`                      | 多媒体大小限制                 | `30`             |
+| `channels.feishu.streaming`                       | 启用流式卡片输出               | `true`           |
+| `channels.feishu.blockStreaming`                  | 启用区块流式输出               | `true`           |
 
 ---
 
 ## dmPolicy 说明
 
-| 值             | 行为                                       |
-| ------------- | ------------------------------------------ |
-| `"pairing"`   | **默认。** 未知用户需配对码并批准          |
-| `"allowlist"` | 仅允许 `allowFrom` 中用户私聊               |
-| `"open"`      | 允许所有用户（`allowFrom` 需包含 `"*"`）   |
-| `"disabled"`  | 禁用私聊                                  |
+| 值            | 行为                                     |
+| ------------- | ---------------------------------------- |
+| `"pairing"`   | **默认。** 未知用户需配对码并批准        |
+| `"allowlist"` | 仅允许 `allowFrom` 中用户私聊            |
+| `"open"`      | 允许所有用户（`allowFrom` 需包含 `"*"`） |
+| `"disabled"`  | 禁用私聊                                 |
 
 ---
 

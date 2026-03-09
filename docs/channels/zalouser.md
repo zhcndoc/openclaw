@@ -86,10 +86,13 @@ openclaw directory groups list --channel zalouser --query "work"
 - 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。未设置时可通过 `channels.defaults.groupPolicy` 覆盖默认值。
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
-  - `channels.zalouser.groups`（键为群组 ID 或名称）
+  - `channels.zalouser.groups`（键为群组 ID 或名称；控制允许的群组）
+  - `channels.zalouser.groupAllowFrom`（控制允许群组内哪些发送者可以触发机器人）
 - 屏蔽所有群组：`channels.zalouser.groupPolicy = "disabled"`。
 - 配置向导可提示设置群组允许列表。
 - 启动时，OpenClaw 会解析允许列表中的群组/用户名为 ID 并记录映射；无法解析的条目保持原样。
+- 若未设置 `groupAllowFrom`，运行时群组发送者检查回退到 `allowFrom`。
+- 发送者检查适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
 
 示例：
 
@@ -98,6 +101,7 @@ openclaw directory groups list --channel zalouser --query "work"
   channels: {
     zalouser: {
       groupPolicy: "allowlist",
+      groupAllowFrom: ["1471383327500481391"],
       groups: {
         "123456789": { allow: true },
         "Work Chat": { allow: true },
@@ -112,6 +116,9 @@ openclaw directory groups list --channel zalouser --query "work"
 - `channels.zalouser.groups.<group>.requireMention` 控制群组回复是否需要提及。
 - 解析顺序：精确群 ID/名称 -> 规范化群别名 -> `*` -> 默认（`true`）。
 - 此规则适用于允许列表群组及开放群组模式。
+- 授权的控制命令（例如 `/new`）可以绕过提及门控。
+- 当群组消息因需要提及时被跳过，OpenClaw 会将其存为待处理的群聊历史，并在下一条处理的群消息时包含。
+- 群组历史限制默认是 `messages.groupChat.historyLimit`（回退值为 `50`）。可通过 `channels.zalouser.historyLimit` 针对账号单独覆盖。
 
 示例：
 
@@ -164,7 +171,7 @@ openclaw directory groups list --channel zalouser --query "work"
 
 **允许列表/群组名称未解析：**
 
-- 在 `allowFrom`/`groups` 中使用数字 ID，或精确好友/群组名称。
+- 在 `allowFrom`/`groupAllowFrom`/`groups` 中使用数字 ID，或精确好友/群组名称。
 
 **从旧版基于 CLI 的设置升级：**
 

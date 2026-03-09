@@ -27,7 +27,7 @@ MiniMax 在 M2.5 中突出了以下改进：
 
 - **速度：** `MiniMax-M2.5-highspeed` 是 MiniMax 文档中的官方高速等级。
 - **费用：** MiniMax 价格中高速版的输入费用相同，输出费用更高。
-- **兼容性：** OpenClaw 仍支持旧版的 `MiniMax-M2.5-Lightning` 配置，但新建设置建议使用 `MiniMax-M2.5-highspeed`。
+- **当前模型ID：**使用 `MiniMax-M2.5` 或 `MiniMax-M2.5-highspeed`。
 
 ## 选择一种配置方式
 
@@ -77,7 +77,12 @@ openclaw onboard --auth-choice minimax-portal
             name: "MiniMax M2.5",
             reasoning: true,
             input: ["text"],
-            cost: { input: 0.3, output: 1.2, cacheRead: 0.03, cacheWrite: 0.12 },
+            cost: {
+              input: 0.3,
+              output: 1.2,
+              cacheRead: 0.03,
+              cacheWrite: 0.12,
+            },
             contextWindow: 200000,
             maxTokens: 8192,
           },
@@ -86,7 +91,12 @@ openclaw onboard --auth-choice minimax-portal
             name: "MiniMax M2.5 高速版",
             reasoning: true,
             input: ["text"],
-            cost: { input: 0.3, output: 1.2, cacheRead: 0.03, cacheWrite: 0.12 },
+            cost: {
+              input: 0.3,
+              output: 1.2,
+              cacheRead: 0.03,
+              cacheWrite: 0.12,
+            },
             contextWindow: 200000,
             maxTokens: 8192,
           },
@@ -200,7 +210,6 @@ openclaw onboard --auth-choice minimax-portal
 
 - `minimax/MiniMax-M2.5`
 - `minimax/MiniMax-M2.5-highspeed`
-- `minimax/MiniMax-M2.5-Lightning`（旧版）
 
 然后重新确认：
 

@@ -19,68 +19,71 @@ title: "macOS 发布"
     - `APP_STORE_CONNECT_API_KEY_P8`，`APP_STORE_CONNECT_KEY_ID`，`APP_STORE_CONNECT_ISSUER_ID`
     - `echo "$APP_STORE_CONNECT_API_KEY_P8" | sed 's/\\n/\n/g' > /tmp/openclaw-notary.p8`
     - `xcrun notarytool store-credentials "openclaw-notary" --key /tmp/openclaw-notary.p8 --key-id "$APP_STORE_CONNECT_KEY_ID" --issuer "$APP_STORE_CONNECT_ISSUER_ID"`
-- 安装 `pnpm` 依赖（`pnpm install --config.node-linker=hoisted`）。
-- Sparkle 工具通过 SwiftPM 自动获取，位于 `apps/macos/.build/artifacts/sparkle/Sparkle/bin/`（含 `sign_update`、`generate_appcast` 等）。
+- 已安装 `pnpm` 依赖（`pnpm install --config.node-linker=hoisted`）。
+- Sparkle 工具通过 SwiftPM 自动下载，位于 `apps/macos/.build/artifacts/sparkle/Sparkle/bin/`（包含 `sign_update`、`generate_appcast` 等工具）。
 
 ## 构建与打包
 
 注意事项：
 
-- `APP_BUILD` 对应 `CFBundleVersion` 和 `sparkle:version`；应保持数值型且单调（无 `-beta`），否则 Sparkle 视作相同版本。
-- 若省略 `APP_BUILD`，`scripts/package-mac-app.sh` 会根据 `APP_VERSION` 自动推导出 Sparkle 兼容的默认值（格式形如 `YYYYMMDDNN`：稳定版默认 `90`，预发布版根据后缀派生），并以该值与 git 提交数中的较大者为准。
-- 若发布工程需要指定的单调版本号，仍可显式覆盖 `APP_BUILD`。
-- 默认为当前架构（`$(uname -m)`）。构建发布/通用包时，设置 `BUILD_ARCHS="arm64 x86_64"`（或 `BUILD_ARCHS=all`）。
-- 发行制品请使用 `scripts/package-mac-dist.sh`（包含 zip + DMG + 公证）。本地/开发打包用 `scripts/package-mac-app.sh`。
+- `APP_BUILD` 映射到 `CFBundleVersion`/`sparkle:version`；必须保持数值型且单调递增（不可包含 `-beta`），否则 Sparkle 视为版本相同。
+- 若未指定 `APP_BUILD`，`scripts/package-mac-app.sh` 会基于 `APP_VERSION` 自动派生一个 Sparkle 兼容的默认值（格式为 `YYYYMMDDNN`：稳定版本默认为 `90`，预发布版根据后缀派生流水号），并取其与 Git 提交计数中较大的值。
+- 发布过程中仍可显式覆盖 `APP_BUILD`，适用于需要特定单调数值的情况。
+- 对于 `BUILD_CONFIG=release`，`scripts/package-mac-app.sh` 默认构建通用架构（`arm64 x86_64`），可通过 `BUILD_ARCHS=arm64` 或 `BUILD_ARCHS=x86_64` 覆盖。调试/开发构建（`BUILD_CONFIG=debug`）默认仅构建当前架构（`$(uname -m)`）。
+- 发布版本使用 `scripts/package-mac-dist.sh` 生成发行包（zip + DMG + 公证）。本地/开发版本使用 `scripts/package-mac-app.sh` 打包。
 
 ```bash
-# 从仓库根目录执行；设置发布 ID 以启用 Sparkle 源。
-# APP_BUILD 必须是数值型且单调，便于 Sparkle 比较。
-# 默认省略时从 APP_VERSION 自动推导。
+# 从仓库根目录执行；设置发布 ID 以启用 Sparkle feed。
+# 此命令构建无公证的发布制品。
+# APP_BUILD 必须是数值型且单调递增，供 Sparkle 比较。
+# 略过时默认基于 APP_VERSION 自动派生。
+SKIP_NOTARIZE=1 \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.7 \
+APP_VERSION=2026.3.8 \
 BUILD_CONFIG=release \
-SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
-scripts/package-mac-app.sh
+SIGN_IDENTITY="Developer ID Application: <Developer Name> (<TEAMID>)" \
+scripts/package-mac-dist.sh
 
-# Zip for distribution (includes resource forks for Sparkle delta support)
-ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.7.zip
+# `package-mac-dist.sh` 已创建 zip 和 DMG。
+# 若直接使用 `package-mac-app.sh` 生成应用包，则需手动创建压缩文件：
+# 若此步骤需要公证/钉扎，请使用下方 NOTARIZE 命令。
+ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.8.zip
 
-# Optional: also build a styled DMG for humans (drag to /Applications)
-scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.7.dmg
+# 可选：生成供用户拖拽安装的风格化 DMG
+scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.8.dmg
 
-# 推荐：生成并公证+钉扎 zip 与 DMG
-# 首次创建钥匙串配置文件：
+# 推荐：生成并进行公证+钉扎的 zip 与 DMG
+# 首次需创建钥匙串配置：
 #   xcrun notarytool store-credentials "openclaw-notary" \
 #     --apple-id "<apple-id>" --team-id "<team-id>" --password "<应用专用密码>"
 NOTARIZE=1 NOTARYTOOL_PROFILE=openclaw-notary \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.7 \
+APP_VERSION=2026.3.8 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
-# Optional: ship dSYM alongside the release
-ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.7.dSYM.zip
+# 可选：随发行包一并发布 dSYM 符号文件
+ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.8.dSYM.zip
 ```
 
 ## Appcast 条目
 
-使用发布说明生成器，使 Sparkle 展示格式化 HTML 说明：
+使用发布说明生成器，让 Sparkle 显示格式化的 HTML 说明：
 
 ```bash
-SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.7.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
+SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.8.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
 ```
 
-该命令基于 `CHANGELOG.md`（通过 [`scripts/changelog-to-html.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/changelog-to-html.sh)）生成 HTML 发布说明，并内嵌至 appcast 条目中。
-发布时，将更新后的 `appcast.xml` 与发行制品（zip + dSYM）一并提交。
+该命令基于 `CHANGELOG.md`（通过 [`scripts/changelog-to-html.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/changelog-to-html.sh)）将发布说明转换为 HTML，并嵌入 appcast 条目中。发布时，将更新好的 `appcast.xml` 与发行制品（zip + dSYM）一并上传。
 
 ## 发布与校验
 
-- 上传 `OpenClaw-2026.3.7.zip`（及 `OpenClaw-2026.3.7.dSYM.zip`）至对应 tag 为 `v2026.3.7` 的 GitHub Release。
-- 确认 appcast 原始 URL 与内嵌源匹配：`https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
-- 基本校验：
-  - `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回 200。
-  - `curl -I <enclosure url>` 上传资源后返回 200。
-  - 在先前公开版本中，从关于面板执行“检查更新…”，确认 Sparkle 成功安装新版本。
-
-完成定义：已发布签名应用与 appcast，更新流程从旧版本正常，发布制品已附加至 GitHub Release。
+- 将 `OpenClaw-2026.3.8.zip` （及 `OpenClaw-2026.3.8.dSYM.zip`）上传至 GitHub 发布页对应 tag `v2026.3.8`。
+- 确保原始 appcast URL 与生成的 Feed 一致： `https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
+- 完整性检查：
+  - `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回状态码 200。
+  - `curl -I <enclosure url>`（发布资产 URL）在上传后返回 200。
+  - 在先前公开的版本中，选择“关于”选项卡的“检查更新...”，确认 Sparkle 可以顺利完成升级。
+  
+验收标准：签名的应用及 appcast XML 已发布，更新流程可从旧版本正常升级，且发布产物附加在 GitHub Release 中。

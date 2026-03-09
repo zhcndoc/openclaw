@@ -1,25 +1,25 @@
 ---
-title: "Pi Development Workflow"
-summary: "Developer workflow for Pi integration: build, test, and live validation"
+title: "Pi 开发工作流程"
+summary: "Pi 集成的开发者工作流程：构建、测试和实时验证"
 read_when:
-  - Working on Pi integration code or tests
-  - Running Pi-specific lint, typecheck, and live test flows
+  - 开发 Pi 集成代码或测试时
+  - 运行 Pi 专用的 lint、类型检查和实时测试流程时
 ---
 
-# Pi Development Workflow
+# Pi 开发工作流程
 
-This guide summarizes a sane workflow for working on the pi integration in OpenClaw.
+本指南总结了在 OpenClaw 中进行 pi 集成开发的合理工作流程。
 
-## Type Checking and Linting
+## 类型检查和代码风格检查
 
-- Type check and build: `pnpm build`
-- Lint: `pnpm lint`
-- Format check: `pnpm format`
-- Full gate before pushing: `pnpm lint && pnpm build && pnpm test`
+- 类型检查并构建：`pnpm build`
+- 代码风格检查：`pnpm lint`
+- 格式检查：`pnpm format`
+- 提交前完整检查流程：`pnpm lint && pnpm build && pnpm test`
 
-## Running Pi Tests
+## 运行 Pi 测试
 
-Run the Pi-focused test set directly with Vitest:
+使用 Vitest 直接运行针对 Pi 的测试集：
 
 ```bash
 pnpm test -- \
@@ -31,13 +31,13 @@ pnpm test -- \
   "src/agents/pi-extensions/**/*.test.ts"
 ```
 
-To include the live provider exercise:
+若需包含实时提供者的测试：
 
 ```bash
 OPENCLAW_LIVE_TEST=1 pnpm test -- src/agents/pi-embedded-runner-extraparams.live.test.ts
 ```
 
-This covers the main Pi unit suites:
+涵盖了主要的 Pi 单元测试套件：
 
 - `src/agents/pi-*.test.ts`
 - `src/agents/pi-embedded-*.test.ts`
@@ -46,35 +46,35 @@ This covers the main Pi unit suites:
 - `src/agents/pi-tool-definition-adapter.test.ts`
 - `src/agents/pi-extensions/*.test.ts`
 
-## Manual Testing
+## 手动测试
 
-Recommended flow:
+推荐流程：
 
-- Run the gateway in dev mode:
+- 以开发模式运行网关：
   - `pnpm gateway:dev`
-- Trigger the agent directly:
+- 直接触发 agent：
   - `pnpm openclaw agent --message "Hello" --thinking low`
-- Use the TUI for interactive debugging:
+- 使用 TUI 进行交互式调试：
   - `pnpm tui`
 
-For tool call behavior, prompt for a `read` or `exec` action so you can see tool streaming and payload handling.
+对于工具调用行为，系统会提示选择 `read` 或 `exec` 操作，以便观察工具的流式数据和载荷处理。
 
-## Clean Slate Reset
+## 清理重置
 
-State lives under the OpenClaw state directory. Default is `~/.openclaw`. If `OPENCLAW_STATE_DIR` is set, use that directory instead.
+状态数据位于 OpenClaw 状态目录下，默认路径为 `~/.openclaw`。如果配置了 `OPENCLAW_STATE_DIR`，则使用该目录。
 
-To reset everything:
+要重置所有内容：
 
-- `openclaw.json` for config
-- `credentials/` for auth profiles and tokens
-- `agents/<agentId>/sessions/` for agent session history
-- `agents/<agentId>/sessions.json` for the session index
-- `sessions/` if legacy paths exist
-- `workspace/` if you want a blank workspace
+- `openclaw.json`（配置文件）
+- `credentials/`（认证配置文件和令牌）
+- `agents/<agentId>/sessions/`（agent 会话历史）
+- `agents/<agentId>/sessions.json`（会话索引）
+- `sessions/`（若存在遗留路径）
+- `workspace/`（若需要全新工作区）
 
-If you only want to reset sessions, delete `agents/<agentId>/sessions/` and `agents/<agentId>/sessions.json` for that agent. Keep `credentials/` if you do not want to reauthenticate.
+若仅需重置会话，删除该 agent 的 `agents/<agentId>/sessions/` 和 `agents/<agentId>/sessions.json` 即可。如不想重新认证，请保留 `credentials/`。
 
-## References
+## 参考资料
 
 - [https://docs.openclaw.ai/testing](https://docs.openclaw.ai/testing)
 - [https://docs.openclaw.ai/start/getting-started](https://docs.openclaw.ai/start/getting-started)

@@ -22,6 +22,8 @@ title: "cron"
 
 注意：循环作业在连续错误后采用指数递减重试间隔（30秒 → 1分钟 → 5分钟 → 15分钟 → 60分钟），然后在下一次成功运行后恢复正常调度。
 
+注意：`openclaw cron run` 命令在手动运行排队后即刻返回。成功响应包含 `{ ok: true, enqueued: true, runId }`；使用 `openclaw cron runs --id <job-id>` 跟踪最终结果。
+
 注意：保留和修剪由配置控制：
 
 - `cron.sessionRetention`（默认 `24h`）修剪已完成的孤立运行会话。

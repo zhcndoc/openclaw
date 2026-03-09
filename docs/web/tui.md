@@ -122,6 +122,12 @@ openclaw tui --url ws://<host>:<port> --token <gateway-token>
 - Ctrl+O 切换收起/展开视图。
 - 工具运行时，内容会流式更新在同一卡片中。
 
+## 终端颜色
+
+- TUI 会将助手正文保持为终端的默认前景色，因此无论是深色还是浅色终端都能保持可读性。
+- 如果你的终端使用浅色背景且自动检测不准确，请在启动 `openclaw tui` 前设置 `OPENCLAW_THEME=light`。
+- 如果想强制使用原始的深色调色板，请设置 `OPENCLAW_THEME=dark`。
+
 ## 历史与流式
 
 - 连接时加载最新历史（默认 200 条消息）。

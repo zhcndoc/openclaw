@@ -260,50 +260,50 @@ OPENCLAW_LIVE_CLI_BACKEND=1 \
 注意：
 
 - `google/...` 使用 Gemini API（API 密钥）。
-- `google-antigravity/...` 使用 Antigravity OAuth 桥（类似 Cloud Code Assist 代理端点）。
-- `google-gemini-cli/...` 使用你机器上的本地 Gemini CLI（二者认证和工具链细节不同）。
-- Gemini API 与 Gemini CLI 区别：
-  - API：OpenClaw 经 HTTP 调用 Google 托管的 Gemini API（API 密钥 / 档案认证）；这就是大多数人所说的“Gemini”。
-  - CLI：OpenClaw 调用本地 `gemini` 可执行文件；它有自己的认证，且行为可能不同（流式 / 工具支持 / 版本偏差）。
+- `google-antigravity/...` 使用 Antigravity OAuth 桥接（类似 Cloud Code Assist 的代理端点）。
+- `google-gemini-cli/...` 使用本地 Gemini CLI（独立的认证和工具特性）。
+- Gemini API 与 Gemini CLI 的区别：
+  - API：OpenClaw 通过 HTTP 调用 Google 托管的 Gemini API（API 密钥/配置文件认证）；这是多数用户理解的“Gemini”。
+  - CLI：OpenClaw 调用本地 `gemini` 二进制；拥有独自认证方式，行为可能不同（流式/工具支持/版本差异）。
 
-## 实况：模型矩阵（覆盖内容）
+## 实况：模型矩阵（覆盖范围）
 
-没有固定的“CI 模型列表”（实况测试是选择性的），但以下是**推荐**在开发机常规覆盖的带密钥模型。
+无固定“CI 模型列表”（实况为选择性开启），但以下为**推荐**定期在开发机器上用密钥覆盖的模型。
 
-### 现代冒烟套件（工具调用 + 图片）
+### 现代冒烟集（工具调用 + 图像）
 
-这是预期保持工作的“常见模型”运行集合：
+这是一组我们期望持续有效的“常用模型”：
 
 - OpenAI（非 Codex）：`openai/gpt-5.2`（可选：`openai/gpt-5.1`）
 - OpenAI Codex：`openai-codex/gpt-5.4`
 - Anthropic：`anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-5`）
-- Google（Gemini API）：`google/gemini-3-pro-preview` 和 `google/gemini-3-flash-preview`（避免旧 Gemini 2.x 模型）
+- Google（Gemini API）：`google/gemini-3.1-pro-preview` 和 `google/gemini-3-flash-preview`（避免旧 Gemini 2.x 模型）
 - Google（Antigravity）：`google-antigravity/claude-opus-4-6-thinking` 和 `google-antigravity/gemini-3-flash`
 - Z.AI（GLM）：`zai/glm-4.7`
 - MiniMax：`minimax/minimax-m2.5`
 
-运行带工具 + 图片的网关冒烟：
+运行带工具+图片的网关冒烟：
 
-```bash
-OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.4,anthropic/claude-opus-4-6,google/gemini-3-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,zai/glm-4.7,minimax/minimax-m2.5" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts
+```
+OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.4,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,zai/glm-4.7,minimax/minimax-m2.5" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts
 ```
 
-### 基线：工具调用（读 + 可选执行）
+### 基线：工具调用（Read + 可选 Exec）
 
-每个提供商系列至少选一个：
+每个提供商家族至少选一个：
 
 - OpenAI：`openai/gpt-5.2`（或 `openai/gpt-5-mini`）
 - Anthropic：`anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-5`）
-- Google：`google/gemini-3-flash-preview`（或 `google/gemini-3-pro-preview`）
+- Google：`google/gemini-3-flash-preview`（或 `google/gemini-3.1-pro-preview`）
 - Z.AI（GLM）：`zai/glm-4.7`
 - MiniMax：`minimax/minimax-m2.5`
 
 可选额外覆盖（锦上添花）：
 
 - xAI：`xai/grok-4`（或最新可用）
-- Mistral：`mistral/`…（选一个你启用的“支持工具”模型）
-- Cerebras：`cerebras/`…（如有权限）
-- LM Studio：`lmstudio/`…（本地；工具调用取决于 API 模式）
+- Mistral：`mistral/` ……（选择你启用的“支持工具”模型）
+- Cerebras：`cerebras/` ……（如果有权限）
+- LM Studio：`lmstudio/` ……（本地；工具调用取决于 API 模式）
 
 ### 视觉：图像发送（附件 → 多模态消息）
 
@@ -311,31 +311,31 @@ OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.4,anthropic/clau
 
 ### 聚合器 / 替代网关
 
-如果你有启用的密钥，我们也支持通过以下方式测试：
+如果你有可用密钥，也支持通过以下方式测试：
 
 - OpenRouter：`openrouter/...`（数百模型；使用 `openclaw models scan` 查找支持工具+图片的候选）
 - OpenCode Zen：`opencode/...`（通过 `OPENCODE_API_KEY` / `OPENCODE_ZEN_API_KEY` 认证）
 
-更多可纳入实况矩阵的提供商（如果拥有凭据/配置）：
+更多可纳入实况矩阵的提供商（若有凭据/配置）：
 
 - 内置：`openai`、`openai-codex`、`anthropic`、`google`、`google-vertex`、`google-antigravity`、`google-gemini-cli`、`zai`、`openrouter`、`opencode`、`xai`、`groq`、`cerebras`、`mistral`、`github-copilot`
 - 通过 `models.providers`（定制端点）：`minimax`（云/API）、任意 OpenAI/Anthropic 兼容代理（LM Studio、vLLM、LiteLLM 等）
 
-提示：不要试图在文档中硬编码“所有模型”。权威列表就是你机器上 `discoverModels(...)` 返回的和可用密钥所涵盖的。
+提示：不要试图在文档里硬编码“所有模型”，权威列表即你机器上 `discoverModels(...)` 返回的范围及你具备的有效密钥所涵盖的模型。
 
 ## 凭据（切勿提交）
 
 实况测试发现凭据的方式与 CLI 一致。实际意义：
 
 - 如果 CLI 生效，实况测试也应能找到同样的密钥。
-- 若实况测试提示“无凭据”，请按调试 `openclaw models list` / 模型选择的方式排查。
+- 若实况测试提示“无凭据”，请根据调试 `openclaw models list` / 模型选择的方式排查。
 
 凭据位置：
 
-- 档案存储：`~/.openclaw/credentials/`（首选；测试中指的“档案密钥”）
+- 档案存储：`~/.openclaw/credentials/`（首选；测试中称为“档案密钥”）
 - 配置文件：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`）
 
-若你依赖环境变量密钥（例如在 `~/.profile` 中导出），请在 `source ~/.profile` 后运行本地测试，或者使用下面的 Docker 运行器（它们可以将 `~/.profile` 挂载进容器）。
+若依赖环境变量密钥（例如 `~/.profile` 导出），请先 `source ~/.profile` 再运行本地测试，或使用下面的 Docker 运行器（它们可以挂载 `~/.profile` 进容器）。
 
 ## Deepgram 实况（音频转录）
 
@@ -348,20 +348,22 @@ OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.4,anthropic/clau
 - 启用：`BYTEPLUS_API_KEY=... BYTEPLUS_LIVE_TEST=1 pnpm test:live src/agents/byteplus.live.test.ts`
 - 可选模型覆盖：`BYTEPLUS_CODING_MODEL=ark-code-latest`
 
-## Docker 运行器（可选“仅限 Linux”检查）
+## Docker 运行器（可选“Linux工作环境”检查）
 
-这些在仓库 Docker 镜像内运行 `pnpm test:live`，挂载你的本地配置目录和工作区（并在挂载时调用 `~/.profile`）：
+这些会在 repo 的 Docker 镜像中运行 `pnpm test:live`，挂载你的本地配置目录和工作区（如果挂载会调用 `~/.profile`）：
 
 - 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
 - 网关 + 开发代理：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 入职向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
+- 入门向导（TTY，全流程脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
 - 网关网络（两个容器，WS 认证 + 健康检查）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- 插件（自定义扩展加载 + 注册表冒烟）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
+- 插件（自定义扩展加载 + 注册中心冒烟）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
+
+live-model Docker 运行器也会只读绑定当前检出代码，并将其暂存到容器内临时工作目录。这让运行时镜像保持精简，同时对精准本地源码/配置运行 Vitest。
 
 手动 ACP 明文线程冒烟（非 CI）：
 
 - `bun scripts/dev/discord-acp-plain-language-smoke.ts --channel <discord-channel-id> ...`
-- 保留此脚本以供回归/调试工作流，将来可能再次用于 ACP 线程路由验证，请勿删除。
+- 保留此脚本供回归/调试流程，未来可能再次用于 ACP 线程路由验证，勿删。
 
 实用环境变量：
 

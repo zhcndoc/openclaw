@@ -24,6 +24,36 @@ title: "压缩"
 在你的 `openclaw.json` 中使用 `agents.defaults.compaction` 设置来配置压缩行为（模式、目标 token 数等）。  
 压缩摘要默认会保留不透明标识符（`identifierPolicy: "strict"`）。你可以用 `identifierPolicy: "off"` 来关闭，或者用 `identifierPolicy: "custom"` 并配合 `identifierInstructions` 提供自定义文本覆盖。
 
+你也可以通过 `agents.defaults.compaction.model` 可选地指定一个不同的模型来执行压缩总结。这对于你的主模型是本地或较小模型，而你希望用更强大的模型来生成压缩摘要非常有用。覆盖项接受任何 `provider/model-id` 字符串：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "model": "openrouter/anthropic/claude-sonnet-4-5"
+      }
+    }
+  }
+}
+```
+
+这也适用于本地模型，例如一个专用于总结的第二 Ollama 模型或经过微调的压缩专家：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "model": "ollama/llama3.1:8b"
+      }
+    }
+  }
+}
+```
+
+如果未设置，压缩将使用代理的主要模型。
+
 ## 自动压缩（默认开启）
 
 当会话接近或超出模型上下文窗口时，OpenClaw 会触发自动压缩，并可能使用压缩后的上下文重试原始请求。

@@ -585,12 +585,10 @@ Set-PSDebug -Trace 0
 两个常见问题：
 
 1. npm 错误提示找不到 git：
-
    - 安装 **Git for Windows** 并确保 `git` 在 PATH 中。
    - 关闭重开 PowerShell，重跑安装。
 
 2. 安装后 `openclaw` 命令未识别：
-
    - npm 全局 bin 文件夹不在 PATH。
    - 执行：
 
@@ -974,11 +972,726 @@ brew install <formula>
 npm→git 示例：
 
 ```bash
-git clone https://github.com/openclaw/openclaw.git
-cd openclaw
-pnpm install
-pnpm build
-openclaw doctor
+openclaw reset
+```
+
+Non-interactive full reset:
+
+```bash
+openclaw reset --scope full --yes --non-interactive
+```
+
+Then re-run onboarding:
+
+```bash
+openclaw onboard --install-daemon
+```
+
+Notes:
+
+- The onboarding wizard also offers **Reset** if it sees an existing config. See [Wizard](/start/wizard).
+- If you used profiles (`--profile` / `OPENCLAW_PROFILE`), reset each state dir (defaults are `~/.openclaw-<profile>`).
+- Dev reset: `openclaw gateway --dev --reset` (dev-only; wipes dev config + credentials + sessions + workspace).
+
+### Im getting context too large errors how do I reset or compact
+
+Use one of these:
+
+- **Compact** (keeps the conversation but summarizes older turns):
+
+  ```
+  /compact
+  ```
+
+  or `/compact <instructions>` to guide the summary.
+
+- **Reset** (fresh session ID for the same chat key):
+
+  ```
+  /new
+  /reset
+  ```
+
+If it keeps happening:
+
+- Enable or tune **session pruning** (`agents.defaults.contextPruning`) to trim old tool output.
+- Use a model with a larger context window.
+
+Docs: [Compaction](/concepts/compaction), [Session pruning](/concepts/session-pruning), [Session management](/concepts/session).
+
+### Why am I seeing "LLM request rejected: messages.content.tool_use.input field required"?
+
+This is a provider validation error: the model emitted a `tool_use` block without the required
+`input`. It usually means the session history is stale or corrupted (often after long threads
+or a tool/schema change).
+
+Fix: start a fresh session with `/new` (standalone message).
+
+### Why am I getting heartbeat messages every 30 minutes
+
+Heartbeats run every **30m** by default. Tune or disable them:
+
+```json5
+{
+  agents: {
+    defaults: {
+      heartbeat: {
+        every: "2h", // or "0m" to disable
+      },
+    },
+  },
+}
+```
+
+If `HEARTBEAT.md` exists but is effectively empty (only blank lines and markdown
+headers like `# Heading`), OpenClaw skips the heartbeat run to save API calls.
+If the file is missing, the heartbeat still runs and the model decides what to do.
+
+Per-agent overrides use `agents.list[].heartbeat`. Docs: [Heartbeat](/gateway/heartbeat).
+
+### Do I need to add a bot account to a WhatsApp group
+
+No. OpenClaw runs on **your own account**, so if you're in the group, OpenClaw can see it.
+By default, group replies are blocked until you allow senders (`groupPolicy: "allowlist"`).
+
+If you want only **you** to be able to trigger group replies:
+
+```json5
+{
+  channels: {
+    whatsapp: {
+      groupPolicy: "allowlist",
+      groupAllowFrom: ["+15551234567"],
+    },
+  },
+}
+```
+
+### How do I get the JID of a WhatsApp group
+
+Option 1 (fastest): tail logs and send a test message in the group:
+
+```bash
+openclaw logs --follow --json
+```
+
+Look for `chatId` (or `from`) ending in `@g.us`, like:
+`1234567890-1234567890@g.us`.
+
+Option 2 (if already configured/allowlisted): list groups from config:
+
+```bash
+openclaw directory groups list --channel whatsapp
+```
+
+Docs: [WhatsApp](/channels/whatsapp), [Directory](/cli/directory), [Logs](/cli/logs).
+
+### Why doesn't OpenClaw reply in a group
+
+Two common causes:
+
+- Mention gating is on (default). You must @mention the bot (or match `mentionPatterns`).
+- You configured `channels.whatsapp.groups` without `"*"` and the group isn't allowlisted.
+
+See [Groups](/channels/groups) and [Group messages](/channels/group-messages).
+
+### Do groups/threads share context with DMs
+
+Direct chats collapse to the main session by default. Groups/channels have their own session keys, and Telegram topics / Discord threads are separate sessions. See [Groups](/channels/groups) and [Group messages](/channels/group-messages).
+
+### How many workspaces and agents can I create
+
+No hard limits. Dozens (even hundreds) are fine, but watch for:
+
+- **Disk growth:** sessions + transcripts live under `~/.openclaw/agents/<agentId>/sessions/`.
+- **Token cost:** more agents means more concurrent model usage.
+- **Ops overhead:** per-agent auth profiles, workspaces, and channel routing.
+
+Tips:
+
+- Keep one **active** workspace per agent (`agents.defaults.workspace`).
+- Prune old sessions (delete JSONL or store entries) if disk grows.
+- Use `openclaw doctor` to spot stray workspaces and profile mismatches.
+
+### Can I run multiple bots or chats at the same time Slack and how should I set that up
+
+Yes. Use **Multi-Agent Routing** to run multiple isolated agents and route inbound messages by
+channel/account/peer. Slack is supported as a channel and can be bound to specific agents.
+
+Browser access is powerful but not "do anything a human can" - anti-bot, CAPTCHAs, and MFA can
+still block automation. For the most reliable browser control, use the Chrome extension relay
+on the machine that runs the browser (and keep the Gateway anywhere).
+
+Best-practice setup:
+
+- Always-on Gateway host (VPS/Mac mini).
+- One agent per role (bindings).
+- Slack channel(s) bound to those agents.
+- Local browser via extension relay (or a node) when needed.
+
+Docs: [Multi-Agent Routing](/concepts/multi-agent), [Slack](/channels/slack),
+[Browser](/tools/browser), [Chrome extension](/tools/chrome-extension), [Nodes](/nodes).
+
+## Models: defaults, selection, aliases, switching
+
+### What is the default model
+
+OpenClaw's default model is whatever you set as:
+
+```
+agents.defaults.model.primary
+```
+
+Models are referenced as `provider/model` (example: `anthropic/claude-opus-4-6`). If you omit the provider, OpenClaw currently assumes `anthropic` as a temporary deprecation fallback - but you should still **explicitly** set `provider/model`.
+
+### What model do you recommend
+
+**Recommended default:** use the strongest latest-generation model available in your provider stack.
+**For tool-enabled or untrusted-input agents:** prioritize model strength over cost.
+**For routine/low-stakes chat:** use cheaper fallback models and route by agent role.
+
+MiniMax M2.5 has its own docs: [MiniMax](/providers/minimax) and
+[Local models](/gateway/local-models).
+
+Rule of thumb: use the **best model you can afford** for high-stakes work, and a cheaper
+model for routine chat or summaries. You can route models per agent and use sub-agents to
+parallelize long tasks (each sub-agent consumes tokens). See [Models](/concepts/models) and
+[Sub-agents](/tools/subagents).
+
+Strong warning: weaker/over-quantized models are more vulnerable to prompt
+injection and unsafe behavior. See [Security](/gateway/security).
+
+More context: [Models](/concepts/models).
+
+### Can I use selfhosted models llamacpp vLLM Ollama
+
+Yes. If your local server exposes an OpenAI-compatible API, you can point a
+custom provider at it. Ollama is supported directly and is the easiest path.
+
+Security note: smaller or heavily quantized models are more vulnerable to prompt
+injection. We strongly recommend **large models** for any bot that can use tools.
+If you still want small models, enable sandboxing and strict tool allowlists.
+
+Docs: [Ollama](/providers/ollama), [Local models](/gateway/local-models),
+[Model providers](/concepts/model-providers), [Security](/gateway/security),
+[Sandboxing](/gateway/sandboxing).
+
+### How do I switch models without wiping my config
+
+Use **model commands** or edit only the **model** fields. Avoid full config replaces.
+
+Safe options:
+
+- `/model` in chat (quick, per-session)
+- `openclaw models set ...` (updates just model config)
+- `openclaw configure --section model` (interactive)
+- edit `agents.defaults.model` in `~/.openclaw/openclaw.json`
+
+Avoid `config.apply` with a partial object unless you intend to replace the whole config.
+If you did overwrite config, restore from backup or re-run `openclaw doctor` to repair.
+
+Docs: [Models](/concepts/models), [Configure](/cli/configure), [Config](/cli/config), [Doctor](/gateway/doctor).
+
+### What do OpenClaw, Flawd, and Krill use for models
+
+- These deployments can differ and may change over time; there is no fixed provider recommendation.
+- Check the current runtime setting on each gateway with `openclaw models status`.
+- For security-sensitive/tool-enabled agents, use the strongest latest-generation model available.
+
+### How do I switch models on the fly without restarting
+
+Use the `/model` command as a standalone message:
+
+```
+/model sonnet
+/model haiku
+/model opus
+/model gpt
+/model gpt-mini
+/model gemini
+/model gemini-flash
+```
+
+You can list available models with `/model`, `/model list`, or `/model status`.
+
+`/model` (and `/model list`) shows a compact, numbered picker. Select by number:
+
+```
+/model 3
+```
+
+You can also force a specific auth profile for the provider (per session):
+
+```
+/model opus@anthropic:default
+/model opus@anthropic:work
+```
+
+Tip: `/model status` shows which agent is active, which `auth-profiles.json` file is being used, and which auth profile will be tried next.
+It also shows the configured provider endpoint (`baseUrl`) and API mode (`api`) when available.
+
+**How do I unpin a profile I set with profile**
+
+Re-run `/model` **without** the `@profile` suffix:
+
+```
+/model anthropic/claude-opus-4-6
+```
+
+If you want to return to the default, pick it from `/model` (or send `/model <default provider/model>`).
+Use `/model status` to confirm which auth profile is active.
+
+### Can I use GPT 5.2 for daily tasks and Codex 5.3 for coding
+
+Yes. Set one as default and switch as needed:
+
+- **Quick switch (per session):** `/model gpt-5.2` for daily tasks, `/model openai-codex/gpt-5.4` for coding with Codex OAuth.
+- **Default + switch:** set `agents.defaults.model.primary` to `openai/gpt-5.2`, then switch to `openai-codex/gpt-5.4` when coding (or the other way around).
+- **Sub-agents:** route coding tasks to sub-agents with a different default model.
+
+See [Models](/concepts/models) and [Slash commands](/tools/slash-commands).
+
+### Why do I see Model is not allowed and then no reply
+
+If `agents.defaults.models` is set, it becomes the **allowlist** for `/model` and any
+session overrides. Choosing a model that isn't in that list returns:
+
+```
+Model "provider/model" is not allowed. Use /model to list available models.
+```
+
+That error is returned **instead of** a normal reply. Fix: add the model to
+`agents.defaults.models`, remove the allowlist, or pick a model from `/model list`.
+
+### Why do I see Unknown model minimaxMiniMaxM25
+
+This means the **provider isn't configured** (no MiniMax provider config or auth
+profile was found), so the model can't be resolved. A fix for this detection is
+in **2026.1.12** (unreleased at the time of writing).
+
+Fix checklist:
+
+1. Upgrade to **2026.1.12** (or run from source `main`), then restart the gateway.
+2. Make sure MiniMax is configured (wizard or JSON), or that a MiniMax API key
+   exists in env/auth profiles so the provider can be injected.
+3. Use the exact model id (case-sensitive): `minimax/MiniMax-M2.5` or
+   `minimax/MiniMax-M2.5-highspeed` (legacy: `minimax/MiniMax-M2.5-Lightning`).
+4. Run:
+
+   ```bash
+   openclaw models list
+   ```
+
+   and pick from the list (or `/model list` in chat).
+
+See [MiniMax](/providers/minimax) and [Models](/concepts/models).
+
+### Can I use MiniMax as my default and OpenAI for complex tasks
+
+Yes. Use **MiniMax as the default** and switch models **per session** when needed.
+Fallbacks are for **errors**, not "hard tasks," so use `/model` or a separate agent.
+
+**Option A: switch per session**
+
+```json5
+{
+  env: { MINIMAX_API_KEY: "sk-...", OPENAI_API_KEY: "sk-..." },
+  agents: {
+    defaults: {
+      model: { primary: "minimax/MiniMax-M2.5" },
+      models: {
+        "minimax/MiniMax-M2.5": { alias: "minimax" },
+        "openai/gpt-5.2": { alias: "gpt" },
+      },
+    },
+  },
+}
+```
+
+Then:
+
+```
+/model gpt
+```
+
+**Option B: separate agents**
+
+- Agent A default: MiniMax
+- Agent B default: OpenAI
+- Route by agent or use `/agent` to switch
+
+Docs: [Models](/concepts/models), [Multi-Agent Routing](/concepts/multi-agent), [MiniMax](/providers/minimax), [OpenAI](/providers/openai).
+
+### Are opus sonnet gpt builtin shortcuts
+
+Yes. OpenClaw ships a few default shorthands (only applied when the model exists in `agents.defaults.models`):
+
+- `opus` → `anthropic/claude-opus-4-6`
+- `sonnet` → `anthropic/claude-sonnet-4-5`
+- `gpt` → `openai/gpt-5.2`
+- `gpt-mini` → `openai/gpt-5-mini`
+- `gemini` → `google/gemini-3-pro-preview`
+- `gemini-flash` → `google/gemini-3-flash-preview`
+
+If you set your own alias with the same name, your value wins.
+
+### How do I defineoverride model shortcuts aliases
+
+Aliases come from `agents.defaults.models.<modelId>.alias`. Example:
+
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "anthropic/claude-opus-4-6" },
+      models: {
+        "anthropic/claude-opus-4-6": { alias: "opus" },
+        "anthropic/claude-sonnet-4-5": { alias: "sonnet" },
+        "anthropic/claude-haiku-4-5": { alias: "haiku" },
+      },
+    },
+  },
+}
+```
+
+Then `/model sonnet` (or `/<alias>` when supported) resolves to that model ID.
+
+### How do I add models from other providers like OpenRouter or ZAI
+
+OpenRouter (pay-per-token; many models):
+
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "openrouter/anthropic/claude-sonnet-4-5" },
+      models: { "openrouter/anthropic/claude-sonnet-4-5": {} },
+    },
+  },
+  env: { OPENROUTER_API_KEY: "sk-or-..." },
+}
+```
+
+Z.AI (GLM models):
+
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "zai/glm-5" },
+      models: { "zai/glm-5": {} },
+    },
+  },
+  env: { ZAI_API_KEY: "..." },
+}
+```
+
+If you reference a provider/model but the required provider key is missing, you'll get a runtime auth error (e.g. `No API key found for provider "zai"`).
+
+**No API key found for provider after adding a new agent**
+
+This usually means the **new agent** has an empty auth store. Auth is per-agent and
+stored in:
+
+```
+~/.openclaw/agents/<agentId>/agent/auth-profiles.json
+```
+
+Fix options:
+
+- Run `openclaw agents add <id>` and configure auth during the wizard.
+- Or copy `auth-profiles.json` from the main agent's `agentDir` into the new agent's `agentDir`.
+
+Do **not** reuse `agentDir` across agents; it causes auth/session collisions.
+
+## Model failover and "All models failed"
+
+### How does failover work
+
+Failover happens in two stages:
+
+1. **Auth profile rotation** within the same provider.
+2. **Model fallback** to the next model in `agents.defaults.model.fallbacks`.
+
+Cooldowns apply to failing profiles (exponential backoff), so OpenClaw can keep responding even when a provider is rate-limited or temporarily failing.
+
+### What does this error mean
+
+```
+No credentials found for profile "anthropic:default"
+```
+
+It means the system attempted to use the auth profile ID `anthropic:default`, but could not find credentials for it in the expected auth store.
+
+### Fix checklist for No credentials found for profile anthropicdefault
+
+- **Confirm where auth profiles live** (new vs legacy paths)
+  - Current: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+  - Legacy: `~/.openclaw/agent/*` (migrated by `openclaw doctor`)
+- **Confirm your env var is loaded by the Gateway**
+  - If you set `ANTHROPIC_API_KEY` in your shell but run the Gateway via systemd/launchd, it may not inherit it. Put it in `~/.openclaw/.env` or enable `env.shellEnv`.
+- **Make sure you're editing the correct agent**
+  - Multi-agent setups mean there can be multiple `auth-profiles.json` files.
+- **Sanity-check model/auth status**
+  - Use `openclaw models status` to see configured models and whether providers are authenticated.
+
+**Fix checklist for No credentials found for profile anthropic**
+
+This means the run is pinned to an Anthropic auth profile, but the Gateway
+can't find it in its auth store.
+
+- **Use a setup-token**
+  - Run `claude setup-token`, then paste it with `openclaw models auth setup-token --provider anthropic`.
+  - If the token was created on another machine, use `openclaw models auth paste-token --provider anthropic`.
+- **If you want to use an API key instead**
+  - Put `ANTHROPIC_API_KEY` in `~/.openclaw/.env` on the **gateway host**.
+  - Clear any pinned order that forces a missing profile:
+
+    ```bash
+    openclaw models auth order clear --provider anthropic
+    ```
+
+- **Confirm you're running commands on the gateway host**
+  - In remote mode, auth profiles live on the gateway machine, not your laptop.
+
+### Why did it also try Google Gemini and fail
+
+If your model config includes Google Gemini as a fallback (or you switched to a Gemini shorthand), OpenClaw will try it during model fallback. If you haven't configured Google credentials, you'll see `No API key found for provider "google"`.
+
+Fix: either provide Google auth, or remove/avoid Google models in `agents.defaults.model.fallbacks` / aliases so fallback doesn't route there.
+
+**LLM request rejected message thinking signature required google antigravity**
+
+Cause: the session history contains **thinking blocks without signatures** (often from
+an aborted/partial stream). Google Antigravity requires signatures for thinking blocks.
+
+Fix: OpenClaw now strips unsigned thinking blocks for Google Antigravity Claude. If it still appears, start a **new session** or set `/thinking off` for that agent.
+
+## Auth profiles: what they are and how to manage them
+
+Related: [/concepts/oauth](/concepts/oauth) (OAuth flows, token storage, multi-account patterns)
+
+### What is an auth profile
+
+An auth profile is a named credential record (OAuth or API key) tied to a provider. Profiles live in:
+
+```
+~/.openclaw/agents/<agentId>/agent/auth-profiles.json
+```
+
+### What are typical profile IDs
+
+OpenClaw uses provider-prefixed IDs like:
+
+- `anthropic:default` (common when no email identity exists)
+- `anthropic:<email>` for OAuth identities
+- custom IDs you choose (e.g. `anthropic:work`)
+
+### Can I control which auth profile is tried first
+
+Yes. Config supports optional metadata for profiles and an ordering per provider (`auth.order.<provider>`). This does **not** store secrets; it maps IDs to provider/mode and sets rotation order.
+
+OpenClaw may temporarily skip a profile if it's in a short **cooldown** (rate limits/timeouts/auth failures) or a longer **disabled** state (billing/insufficient credits). To inspect this, run `openclaw models status --json` and check `auth.unusableProfiles`. Tuning: `auth.cooldowns.billingBackoffHours*`.
+
+You can also set a **per-agent** order override (stored in that agent's `auth-profiles.json`) via the CLI:
+
+```bash
+# Defaults to the configured default agent (omit --agent)
+openclaw models auth order get --provider anthropic
+
+# Lock rotation to a single profile (only try this one)
+openclaw models auth order set --provider anthropic anthropic:default
+
+# Or set an explicit order (fallback within provider)
+openclaw models auth order set --provider anthropic anthropic:work anthropic:default
+
+# Clear override (fall back to config auth.order / round-robin)
+openclaw models auth order clear --provider anthropic
+```
+
+To target a specific agent:
+
+```bash
+openclaw models auth order set --provider anthropic --agent main anthropic:default
+```
+
+### OAuth vs API key what's the difference
+
+OpenClaw supports both:
+
+- **OAuth** often leverages subscription access (where applicable).
+- **API keys** use pay-per-token billing.
+
+The wizard explicitly supports Anthropic setup-token and OpenAI Codex OAuth and can store API keys for you.
+
+## Gateway: ports, "already running", and remote mode
+
+### What port does the Gateway use
+
+`gateway.port` controls the single multiplexed port for WebSocket + HTTP (Control UI, hooks, etc.).
+
+Precedence:
+
+```
+--port > OPENCLAW_GATEWAY_PORT > gateway.port > default 18789
+```
+
+### Why does openclaw gateway status say Runtime running but RPC probe failed
+
+Because "running" is the **supervisor's** view (launchd/systemd/schtasks). The RPC probe is the CLI actually connecting to the gateway WebSocket and calling `status`.
+
+Use `openclaw gateway status` and trust these lines:
+
+- `Probe target:` (the URL the probe actually used)
+- `Listening:` (what's actually bound on the port)
+- `Last gateway error:` (common root cause when the process is alive but the port isn't listening)
+
+### Why does openclaw gateway status show Config cli and Config service different
+
+You're editing one config file while the service is running another (often a `--profile` / `OPENCLAW_STATE_DIR` mismatch).
+
+Fix:
+
+```bash
+openclaw gateway install --force
+```
+
+Run that from the same `--profile` / environment you want the service to use.
+
+### What does another gateway instance is already listening mean
+
+OpenClaw enforces a runtime lock by binding the WebSocket listener immediately on startup (default `ws://127.0.0.1:18789`). If the bind fails with `EADDRINUSE`, it throws `GatewayLockError` indicating another instance is already listening.
+
+Fix: stop the other instance, free the port, or run with `openclaw gateway --port <port>`.
+
+### How do I run OpenClaw in remote mode client connects to a Gateway elsewhere
+
+Set `gateway.mode: "remote"` and point to a remote WebSocket URL, optionally with a token/password:
+
+```json5
+{
+  gateway: {
+    mode: "remote",
+    remote: {
+      url: "ws://gateway.tailnet:18789",
+      token: "your-token",
+      password: "your-password",
+    },
+  },
+}
+```
+
+Notes:
+
+- `openclaw gateway` only starts when `gateway.mode` is `local` (or you pass the override flag).
+- The macOS app watches the config file and switches modes live when these values change.
+
+### The Control UI says unauthorized or keeps reconnecting What now
+
+Your gateway is running with auth enabled (`gateway.auth.*`), but the UI is not sending the matching token/password.
+
+Facts (from code):
+
+- The Control UI keeps the token in memory for the current tab; it no longer persists gateway tokens in browser localStorage.
+
+Fix:
+
+- Fastest: `openclaw dashboard` (prints + copies the dashboard URL, tries to open; shows SSH hint if headless).
+- If you don't have a token yet: `openclaw doctor --generate-gateway-token`.
+- If remote, tunnel first: `ssh -N -L 18789:127.0.0.1:18789 user@host` then open `http://127.0.0.1:18789/`.
+- Set `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`) on the gateway host.
+- In the Control UI settings, paste the same token.
+- Still stuck? Run `openclaw status --all` and follow [Troubleshooting](/gateway/troubleshooting). See [Dashboard](/web/dashboard) for auth details.
+
+### I set gatewaybind tailnet but it can't bind nothing listens
+
+`tailnet` bind picks a Tailscale IP from your network interfaces (100.64.0.0/10). If the machine isn't on Tailscale (or the interface is down), there's nothing to bind to.
+
+Fix:
+
+- Start Tailscale on that host (so it has a 100.x address), or
+- Switch to `gateway.bind: "loopback"` / `"lan"`.
+
+Note: `tailnet` is explicit. `auto` prefers loopback; use `gateway.bind: "tailnet"` when you want a tailnet-only bind.
+
+### Can I run multiple Gateways on the same host
+
+Usually no - one Gateway can run multiple messaging channels and agents. Use multiple Gateways only when you need redundancy (ex: rescue bot) or hard isolation.
+
+Yes, but you must isolate:
+
+- `OPENCLAW_CONFIG_PATH` (per-instance config)
+- `OPENCLAW_STATE_DIR` (per-instance state)
+- `agents.defaults.workspace` (workspace isolation)
+- `gateway.port` (unique ports)
+
+Quick setup (recommended):
+
+- Use `openclaw --profile <name> …` per instance (auto-creates `~/.openclaw-<name>`).
+- Set a unique `gateway.port` in each profile config (or pass `--port` for manual runs).
+- Install a per-profile service: `openclaw --profile <name> gateway install`.
+
+Profiles also suffix service names (`ai.openclaw.<profile>`; legacy `com.openclaw.*`, `openclaw-gateway-<profile>.service`, `OpenClaw Gateway (<profile>)`).
+Full guide: [Multiple gateways](/gateway/multiple-gateways).
+
+### What does invalid handshake code 1008 mean
+
+The Gateway is a **WebSocket server**, and it expects the very first message to
+be a `connect` frame. If it receives anything else, it closes the connection
+with **code 1008** (policy violation).
+
+Common causes:
+
+- You opened the **HTTP** URL in a browser (`http://...`) instead of a WS client.
+- You used the wrong port or path.
+- A proxy or tunnel stripped auth headers or sent a non-Gateway request.
+
+Quick fixes:
+
+1. Use the WS URL: `ws://<host>:18789` (or `wss://...` if HTTPS).
+2. Don't open the WS port in a normal browser tab.
+3. If auth is on, include the token/password in the `connect` frame.
+
+If you're using the CLI or TUI, the URL should look like:
+
+```
+openclaw tui --url ws://<host>:18789 --token <token>
+```
+
+Protocol details: [Gateway protocol](/gateway/protocol).
+
+## Logging and debugging
+
+### Where are logs
+
+File logs (structured):
+
+```
+/tmp/openclaw/openclaw-YYYY-MM-DD.log
+```
+
+You can set a stable path via `logging.file`. File log level is controlled by `logging.level`. Console verbosity is controlled by `--verbose` and `logging.consoleLevel`.
+
+Fastest log tail:
+
+```bash
+openclaw logs --follow
+```
+
+Service/supervisor logs (when the gateway runs via launchd/systemd):
+
+- macOS: `$OPENCLAW_STATE_DIR/logs/gateway.log` and `gateway.err.log` (default: `~/.openclaw/logs/...`; profiles use `~/.openclaw-<profile>/logs/...`)
+- Linux: `journalctl --user -u openclaw-gateway[-<profile>].service -n 200 --no-pager`
+- Windows: `schtasks /Query /TN "OpenClaw Gateway (<profile>)" /V /FO LIST`
+
+See [Troubleshooting](/gateway/troubleshooting#log-locations) for more.
+
+### How do I start/stop/restart the Gateway service
+
+Use the gateway helpers:
+
+```bash
+openclaw gateway status
 openclaw gateway restart
 ```
 

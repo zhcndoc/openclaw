@@ -159,6 +159,7 @@ openclaw browser create-profile \
 
 - 保持 Gateway 和节点主机在同一 tailnet 内，避免将中继端口暴露给局域网或公共互联网。
 - 有意对节点配对；若不希望远程控制可禁用浏览器代理路由（`gateway.nodes.browser.mode="off"`）。
+- 除非你有真正的跨命名空间需求，否则请将中继保持在回环模式。对于 WSL2 或类似的分主机设置，将 `browser.relayBindHost` 设置为明确的绑定地址，如 `0.0.0.0`，然后通过网关认证、节点配对和私有网络来限制访问。
 
 ## “扩展路径”工作原理
 

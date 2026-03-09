@@ -11,7 +11,10 @@ title: "卸载"
 卸载网关服务 + 本地数据（命令行工具本身保持不变）。
 
 ```bash
+openclaw backup create
 openclaw uninstall
 openclaw uninstall --all --yes
 openclaw uninstall --dry-run
 ```
+
+如果您想在移除状态或工作区之前保存一个可恢复的快照，请先运行 `openclaw backup create`。
