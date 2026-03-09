@@ -1,0 +1,6 @@
+{
+  "app_dir": "/",
+  "install_command": "echo",
+  "build_command": "echo",
+  "start_command": "npm i -g mint && cd /src/docs && mint dev"
+}
