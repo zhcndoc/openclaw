@@ -83,6 +83,8 @@ https://gateway-host/line/webhook
 }
 ```
 
+`tokenFile` 和 `secretFile` 必须指向普通文件。符号链接会被拒绝。
+
 多账户配置：
 
 ```json5

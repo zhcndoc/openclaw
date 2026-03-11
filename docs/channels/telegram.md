@@ -177,6 +177,31 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 }
 ```
 
+    Example: allow only specific users inside one specific group:
+
+```json5
+{
+  channels: {
+    telegram: {
+      groups: {
+        "-1001234567890": {
+          requireMention: true,
+          allowFrom: ["8734062810", "745123456"],
+        },
+      },
+    },
+  },
+}
+```
+
+    <Warning>
+      Common mistake: `groupAllowFrom` is not a Telegram group allowlist.
+
+      - Put negative Telegram group or supergroup chat IDs like `-1001234567890` under `channels.telegram.groups`.
+      - Put Telegram user IDs like `8734062810` under `groupAllowFrom` when you want to limit which people inside an allowed group can trigger the bot.
+      - Use `groupAllowFrom: ["*"]` only when you want any member of an allowed group to be able to talk to the bot.
+    </Warning>
+
   </Tab>
 
   <Tab title="@提及行为">
@@ -412,6 +437,8 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     - `channels.telegram.actions.sticker`（默认禁用）
 
     注意：`edit` 和 `topic-create` 默认启用，暂无独立开关。
+
+    运行时发送使用活动配置/密钥快照（启动/重载），动作路径发送时不进行即席 SecretRef 重解析。
 
     反应移除语义见：[反应工具](/tools/reactions)。
 
@@ -760,6 +787,34 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
     - `channels.telegram.actions.sendMessage=false` 禁止所有出站 Telegram 消息，包括投票
     - `channels.telegram.actions.poll=false` 禁止创建 Telegram 投票，但允许普通发送
+
+  </Accordion>
+
+  <Accordion title="Exec approvals in Telegram">
+    Telegram supports exec approvals in approver DMs and can optionally post approval prompts in the originating chat or topic.
+
+    Config path:
+
+    - `channels.telegram.execApprovals.enabled`
+    - `channels.telegram.execApprovals.approvers`
+    - `channels.telegram.execApprovals.target` (`dm` | `channel` | `both`, default: `dm`)
+    - `agentFilter`, `sessionFilter`
+
+    Approvers must be numeric Telegram user IDs. When `enabled` is false or `approvers` is empty, Telegram does not act as an exec approval client. Approval requests fall back to other configured approval routes or the exec approval fallback policy.
+
+    Delivery rules:
+
+    - `target: "dm"` sends approval prompts only to configured approver DMs
+    - `target: "channel"` sends the prompt back to the originating Telegram chat/topic
+    - `target: "both"` sends to approver DMs and the originating chat/topic
+
+    Only configured approvers can approve or deny. Non-approvers cannot use `/approve` and cannot use Telegram approval buttons.
+
+    Channel delivery shows the command text in the chat, so only enable `channel` or `both` in trusted groups/topics. When the prompt lands in a forum topic, OpenClaw preserves the topic for both the approval prompt and the post-approval follow-up.
+
+    Inline approval buttons also depend on `channels.telegram.capabilities.inlineButtons` allowing the target surface (`dm`, `group`, or `all`).
+
+    Related docs: [Exec approvals](/tools/exec-approvals)
 
   </Accordion>
 </AccordionGroup>

@@ -134,9 +134,10 @@ flowchart TD
 
     常见日志特征：
 
-    - `device identity required` → HTTP/非安全上下文无法完成设备认证。
-    - `unauthorized` / 重新连接循环 → 令牌/密码错误或认证模式不匹配。
-    - `gateway connect failed:` → UI 目标 URL/端口错误或网关无法访问。
+    - `device identity required` → HTTP/非安全环境无法完成设备认证。
+    - `AUTH_TOKEN_MISMATCH` 并带有重试提示（`canRetryWithDeviceToken=true`）→ 可能会自动进行一次受信任设备令牌的重试。
+    - 重复出现 `unauthorized`，即使已重试 → 令牌/密码错误、认证模式不匹配，或配对设备令牌已过期。
+    - `gateway connect failed:` → UI 正在连接错误的 URL/端口，或网关无法访问。
 
     深入页面：
 

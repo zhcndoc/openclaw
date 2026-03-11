@@ -53,12 +53,12 @@ OpenClaw 应该执行的操作：
 
 当需要外部 harness 运行时使用 ACP；需要 OpenClaw 原生委托运行时使用子代理。
 
-| 区域          | ACP 会话                                | 子代理运行                           |
-| ------------- | ------------------------------------- | ---------------------------------- |
-| 运行时       | ACP 后端插件（例如 acpx）              | OpenClaw 原生子代理运行时           |
-| 会话键       | `agent:<agentId>:acp:<uuid>`          | `agent:<agentId>:subagent:<uuid>`  |
-| 主要命令     | `/acp ...`                            | `/subagents ...`                   |
-| 启动工具     | `sessions_spawn`，`runtime:"acp"`      | `sessions_spawn`（默认运行时）      |
+| 区域     | ACP 会话                          | 子代理运行                        |
+| -------- | --------------------------------- | --------------------------------- |
+| 运行时   | ACP 后端插件（例如 acpx）         | OpenClaw 原生子代理运行时         |
+| 会话键   | `agent:<agentId>:acp:<uuid>`      | `agent:<agentId>:subagent:<uuid>` |
+| 主要命令 | `/acp ...`                        | `/subagents ...`                  |
+| 启动工具 | `sessions_spawn`，`runtime:"acp"` | `sessions_spawn`（默认运行时）    |
 
 另见 [子代理](/tools/subagents)。
 
@@ -227,41 +227,102 @@ ACP 绑定会话的覆盖优先级：
 
 说明：
 
-- `runtime` 默认是 `subagent`，需要显式指定 `runtime: "acp"` 来使用 ACP 会话。
-- 如果省略 `agentId`，OpenClaw 在配置了时会使用 `acp.defaultAgent`。
-- `mode: "session"` 需要 `thread: true` 以维持持久绑定对话。
+- `runtime` 默认为 `subagent`，所以必须显式设置 `runtime: "acp"` 来启用 ACP 会话。
+- 如果遗漏 `agentId`，OpenClaw 将使用配置中的 `acp.defaultAgent`。
+- `mode: "session"` 需要 `thread: true` 以保持持久绑定的对话。
 
 接口详情：
 
 - `task`（必需）：发送给 ACP 会话的初始提示。
-- `runtime`（ACP 必需）：必须是 `"acp"`。
-- `agentId`（可选）：ACP 目标 harness ID。若无则使用 `acp.defaultAgent`（若配置）。
-- `thread`（可选，默认 `false`）：请求线程绑定流程（支持的情况下）。
+- `runtime`（ACP 必填）：必须是 `"acp"`。
+- `agentId`（可选）：ACP 目标 harness ID。若未指定，使用 `acp.defaultAgent`（若设定）。
+- `thread`（可选，默认 `false`）：请求在线程绑定流程中运行（若支持）。
 - `mode`（可选）：`run`（一次性）或 `session`（持久）。
   - 默认是 `run`
-  - 当 `thread: true` 且未指定 mode，OpenClaw 可能默认持久行为
-  - `mode: "session"` 强制要求 `thread: true`
-- `cwd`（可选）：请求的运行时工作目录（由后端/运行时策略校验）。
-- `label`（可选）：面向操作者显示的会话标签。
-- `streamTo`（可选）：`"parent"` 会以系统事件的形式将初始 ACP 运行进度摘要流回请求会话。
-  - 若可用，接受的响应包括 `streamLogPath` 指向会话作用域 JSONL 日志（`<sessionId>.acp-stream.jsonl`），可用于跟踪全程转发历史。
+  - 若 `thread: true` 且未注明，OpenClaw 根据运行时路径可能默认持久化行为
+  - `mode: "session"` 需要 `thread: true`
+- `cwd`（可选）：请求运行时工作目录（由后端/运行时策略验证）。
+- `label`（可选）：操作员界面展示的标签，显示于会话标题或横幅。
+- `resumeSessionId`（可选）：恢复现有 ACP 会话而非创建新会话。代理会通过 `session/load` 回放对话历史。必须与 `runtime: "acp"` 一起使用。
+- `streamTo`（可选）："parent" 会将初始 ACP 运行进度摘要作为系统事件流回请求者会话。
+  - 可用时，响应包含 `streamLogPath` 指向会话范围内的 JSONL 日志（格式 `<sessionId>.acp-stream.jsonl`），你可以跟踪完全转发的历史。
+
+### 恢复现有会话
+
+使用 `resumeSessionId` 继续先前的 ACP 会话而不是启动新的。代理通过 `session/load` 回放历史，以完整上下文继续对话。
+
+```json
+{
+  "task": "继续上次进度 —— 修复剩余测试失败",
+  "runtime": "acp",
+  "agentId": "codex",
+  "resumeSessionId": "<previous-session-id>"
+}
+```
+
+常见用例：
+
+- 从笔记本切换到手机继续 Codex 会话，指示代理接续之前的上下文
+- 从交互式 CLI 续接一个编码会话，转为无头通过代理运行
+- 恢复被网关重启或闲置超时中断的工作
+
+说明：
+
+- `resumeSessionId` 需要 `runtime: "acp"`，与子代理运行时不兼容，会返回错误。
+- 恢复会话时，`thread` 和 `mode` 正常生效，且 `mode: "session"` 仍要求 `thread: true`。
+- 目标代理须支持 `session/load`（Codex 和 Claude Code 已支持）。
+- 找不到指定的会话 ID 会导致启动失败并返回明确错误，不会静默退回到新会话。
+
+### 操作员冒烟测试
+
+网关部署后，想快速测试 ACP `spawn` 端到端正常工作，而不仅是单元测试通过时，可执行此操作：
+
+推荐流程：
+
+1. 核实目标主机上部署的网关版本/提交。
+2. 确认部署源码包含 ACP 相关代码（例如 `src/gateway/sessions-patch.ts` 中的 `subagent:* or acp:* sessions`）。
+3. 打开一个临时 ACPX 桥接会话连接到活跃代理（例：`razor(main)` 在 `jpclawhq`）。
+4. 请求该代理调用 `sessions_spawn`，参数：
+   - `runtime: "acp"`
+   - `agentId: "codex"`
+   - `mode: "run"`
+   - `task`: `Reply with exactly LIVE-ACP-SPAWN-OK`
+5. 验证代理返回：
+   - `accepted=yes`
+   - 实际存在的 `childSessionKey`
+   - 无校验错误
+6. 清理临时 ACLX 桥接会话。
+
+给活跃代理的示例提示：
+
+```text
+使用 sessions_spawn 工具，runtime: "acp"，agentId: "codex"，mode: "run"。
+任务为：“Reply with exactly LIVE-ACP-SPAWN-OK”。
+然后仅报告：accepted=<yes/no>; childSessionKey=<值或无>; error=<具体错误文本或无>。
+```
+
+说明：
+
+- 冒烟测试保持 `mode: "run"`，除非特意测试线程绑定的持久 ACP 会话。
+- 基础测试不必使用 `streamTo: "parent"`，该路径依赖请求者/会话能力，是独立集成检测。
+- 线程绑定且 `mode: "session"` 的测试建议用真实 Discord 线程或 Telegram 话题进行更深入的集成。
 
 ## 沙盒兼容性
 
-ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
+ACP 会话当前在主机运行时执行，不在 OpenClaw 沙盒内。
 
 当前限制：
 
-- 如果请求会话是沙盒，会阻止 ACP 启动。
-  - 错误：`Sandboxed sessions cannot spawn ACP sessions because runtime="acp" runs on the host. Use runtime="subagent" from sandboxed sessions.`
-- 使用 `sessions_spawn` 并且 `runtime: "acp"` 不支持 `sandbox: "require"`。
-  - 错误：`sessions_spawn sandbox="require" is unsupported for runtime="acp" because ACP sessions run outside the sandbox. Use runtime="subagent" or sandbox="inherit".`
+- 请求者会话如被沙盒限制，ACP spawn 调用被阻止（无论 `sessions_spawn({ runtime: "acp" })` 还是 `/acp spawn`）。
+  - 错误信息：`Sandboxed sessions cannot spawn ACP sessions because runtime="acp" runs on the host. Use runtime="subagent" from sandboxed sessions.`
+- 使用 `runtime: "acp"` 的 `sessions_spawn` 不支持 `sandbox: "require"`。
+  - 错误信息：`sessions_spawn sandbox="require" is unsupported for runtime="acp" because ACP sessions run outside the sandbox. Use runtime="subagent" or sandbox="inherit".`
 
-需要沙盒执行时请使用 `runtime: "subagent"`。
+需要使用沙盒环境时，请改用 `runtime: "subagent"`。
 
 ### 通过 `/acp` 命令
 
-当需要时，可通过聊天显式操作使用 `/acp spawn`。
+亦可通过聊天命令显式启动 ACP 会话。
 
 ```text
 /acp spawn codex --mode persistent --thread auto
@@ -280,39 +341,39 @@ ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
 
 ## 会话目标解析
 
-大部分 `/acp` 操作支持可选的会话目标（`session-key`、`session-id` 或 `session-label`）。
+大多数 `/acp` 操作支持可选的会话目标（`session-key`、`session-id` 或 `session-label`）。
 
 解析顺序：
 
 1. 显式目标参数（或 `/acp steer` 的 `--session`）
-   - 尝试键
-   - 然后 UUID 形态的会话 ID
-   - 再然后标签
-2. 当前线程绑定（如果本对话/线程绑定了 ACP 会话）
-3. 当前请求者的会话回退
+   - 尝试以键值匹配
+   - 若非键，则尝试 UUID 格式的会话 ID
+   - 再尝试标签匹配
+2. 当前线程绑定的 ACP 会话（若本会话/线程绑定 ACP）
+3. 当前请求者的会话回退集
 
-若无法解析目标，OpenClaw 返回明确错误（`Unable to resolve session target: ...`）。
+无法解析时，OpenClaw 会返回明确错误（`Unable to resolve session target: ...`）。
 
 ## 线程启动模式
 
-`/acp spawn` 支持 `--thread auto|here|off`。
+`/acp spawn` 支持参数 `--thread auto|here|off`。
 
-| 模式   | 行为说明                                                                                              |
-| ------ | --------------------------------------------------------------------------------------------------- |
-| `auto` | 在线程内激活时：绑定该线程。在线程外：支持时创建/绑定子线程。                                       |
-| `here` | 需要当前激活线程；若不在任何线程，则失败。                                                           |
-| `off`  | 不绑定。会话启动时不绑定任何线程。                                                                   |
+| 模式   | 行为说明                                                         |
+| ------ | ---------------------------------------------------------------- |
+| `auto` | 在线程内激活时绑定该线程；在外部激活且支持时创建/绑定子线程。    |
+| `here` | 只允许当前激活线程；非线程环境使用会失败。                      |
+| `off`  | 不绑定线程；启动时不关联任何线程。                              |
 
 说明：
 
-- 在不支持线程绑定的环境中，默认行为实际等同于 `off`。
-- 线程绑定启动需频道策略支持：
+- 不支持线程绑定的环境中，默认等同于 `off`。
+- 线程绑定启动需频道适配器策略支持：
   - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
   - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
 
 ## ACP 控制命令
 
-可用命令群：
+可用命令集包括：
 
 - `/acp spawn`
 - `/acp cancel`
@@ -330,42 +391,42 @@ ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
 - `/acp doctor`
 - `/acp install`
 
-`/acp status` 展示生效的运行时选项，还会显示运行时和后端级别的会话标识（可用时）。
+`/acp status` 可显示生效的运行时选项，还显示运行时及后端级别的会话标识（如可用）。
 
-部分控制依赖后端能力。若后端不支持某控制，OpenClaw 会返回明确的“不支持控制”错误。
+部分控制依赖后端能力，若后端不支持某项控制，OpenClaw 会返回明确的“不支持控制”错误。
 
 ## ACP 命令速查表
 
-| 命令                | 作用说明                                              | 示例                                                          |
-| -------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
-| `/acp spawn`         | 创建 ACP 会话；可选线程绑定。                         | `/acp spawn codex --mode persistent --thread auto --cwd /repo` |
-| `/acp cancel`        | 取消目标会话正在进行的回合。                          | `/acp cancel agent:codex:acp:<uuid>`                           |
-| `/acp steer`         | 发送指导指令给正在运行的会话。                        | `/acp steer --session support inbox prioritize failing tests`  |
-| `/acp close`         | 关闭会话并解除线程绑定。                              | `/acp close`                                                   |
-| `/acp status`        | 显示后端、模式、状态、运行时选项及能力。              | `/acp status`                                                  |
-| `/acp set-mode`      | 设置目标会话的运行模式。                              | `/acp set-mode plan`                                           |
-| `/acp set`           | 通用运行时配置选项写入。                              | `/acp set model openai/gpt-5.2`                                |
-| `/acp cwd`           | 设置运行时工作目录覆盖。                              | `/acp cwd /Users/user/Projects/repo`                           |
-| `/acp permissions`   | 设置审批策略配置文件。                                | `/acp permissions strict`                                      |
-| `/acp timeout`       | 设置运行时超时时间（秒）。                            | `/acp timeout 120`                                             |
-| `/acp model`         | 设置运行时模型覆盖。                                   | `/acp model anthropic/claude-opus-4-5`                         |
-| `/acp reset-options` | 移除会话运行时选项覆盖。                              | `/acp reset-options`                                           |
-| `/acp sessions`      | 列出存储中的近期 ACP 会话。                           | `/acp sessions`                                                |
-| `/acp doctor`        | 后端健康状况，能力，及可行修复方案。                   | `/acp doctor`                                                  |
-| `/acp install`       | 打印确定性的安装和启用步骤。                          | `/acp install`                                                 |
+| 命令                 | 作用说明                                  | 示例                                                           |
+| -------------------- | ----------------------------------------- | -------------------------------------------------------------- |
+| `/acp spawn`         | 创建 ACP 会话；可选线程绑定。              | `/acp spawn codex --mode persistent --thread auto --cwd /repo` |
+| `/acp cancel`        | 取消目标会话当前回合。                    | `/acp cancel agent:codex:acp:<uuid>`                           |
+| `/acp steer`         | 发送指导指令给正在运行的会话。             | `/acp steer --session support inbox prioritize failing tests`  |
+| `/acp close`         | 关闭会话并解除线程绑定。                   | `/acp close`                                                   |
+| `/acp status`        | 显示后端、模式、状态、运行时选项及能力。   | `/acp status`                                                  |
+| `/acp set-mode`      | 设置目标会话的运行模式。                   | `/acp set-mode plan`                                           |
+| `/acp set`           | 通用运行时配置写入。                      | `/acp set model openai/gpt-5.2`                                |
+| `/acp cwd`           | 设置运行时工作目录覆盖。                   | `/acp cwd /Users/user/Projects/repo`                           |
+| `/acp permissions`   | 设置审批策略配置文件。                     | `/acp permissions strict`                                      |
+| `/acp timeout`       | 设置运行时超时时间（秒）。                 | `/acp timeout 120`                                             |
+| `/acp model`         | 设置运行时模型覆盖。                       | `/acp model anthropic/claude-opus-4-5`                         |
+| `/acp reset-options` | 清除会话运行时所有选项覆盖。               | `/acp reset-options`                                           |
+| `/acp sessions`      | 列出存储中的近期 ACP 会话。                | `/acp sessions`                                                |
+| `/acp doctor`        | 后端健康状态，能力及可行修复方案。          | `/acp doctor`                                                  |
+| `/acp install`       | 打印确定性的安装和启用步骤。               | `/acp install`                                                 |
 
 ## 运行时选项映射
 
-`/acp` 既有便利命令也支持通用设置。
+`/acp` 除了便捷命令，也支持通用设置写入。
 
-等价操作：
+等价关系：
 
 - `/acp model <id>` 映射到运行时配置键 `model`。
-- `/acp permissions <profile>` 映射到运行时配置键 `approval_policy`。
-- `/acp timeout <seconds>` 映射到运行时配置键 `timeout`。
-- `/acp cwd <path>` 直接更新运行时 cwd 覆盖。
-- `/acp set <key> <value>` 是通用路径。
-  - 特殊情况：`key=cwd` 使用 cwd 覆盖路径。
+- `/acp permissions <profile>` 映射到 `approval_policy`。
+- `/acp timeout <seconds>` 映射到 `timeout`。
+- `/acp cwd <路径>` 更新运行时的 cwd 覆盖。
+- `/acp set <key> <value>` 通用路径。
+  - 特殊情形：若 `key=cwd`，使用 cwd 覆盖更新。
 - `/acp reset-options` 清除目标会话所有运行时覆盖。
 
 ## 当前 acpx harness 支持
@@ -379,9 +440,9 @@ ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
 - `gemini`
 - `kimi`
 
-当 OpenClaw 使用 acpx 后端时，除非你在 acpx 配置中定义了自定义代理别名，否则建议使用这些值作为 `agentId`。
+当 OpenClaw 使用 acpx 后端时，除非你在 acpx 配置中定义了自定义代理别名，否则建议将这些用作 `agentId`。
 
-直接使用 acpx CLI 也可以通过 `--agent <command>` 指向任意适配器，但那个是 acpx CLI 功能（非 OpenClaw 常规的 `agentId` 路径）。
+直接使用 acpx CLI 也可通过 `--agent <command>` 指向任意适配器，但这是 acpx CLI 功能（非 OpenClaw 标准 `agentId` 路径）。
 
 ## 必需配置
 
@@ -391,7 +452,7 @@ ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
 {
   acp: {
     enabled: true,
-    // 可选。默认 true；设置 false 可暂停 ACP 分派但保留 /acp 控制。
+    // 可选。默认 true；设置 false 可暂停 ACP 分派但保持 /acp 控制功能。
     dispatch: { enabled: true },
     backend: "acpx",
     defaultAgent: "codex",
@@ -430,7 +491,7 @@ ACP 会话当前在主机运行时运行，而非在 OpenClaw 沙盒内。
 }
 ```
 
-如线程绑定 ACP 启动失败，先检查适配器功能开关：
+若线程绑定 ACP 启动失败，请先检查适配器功能开关：
 
 - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
 
@@ -451,7 +512,7 @@ openclaw config set plugins.entries.acpx.enabled true
 openclaw plugins install ./extensions/acpx
 ```
 
-然后验证后端健康状况：
+然后验证后端健康：
 
 ```text
 /acp doctor
@@ -461,14 +522,14 @@ openclaw plugins install ./extensions/acpx
 
 默认情况下，acpx 插件（发布名为 `@openclaw/acpx`）使用插件本地固定二进制：
 
-1. 命令默认是 `extensions/acpx/node_modules/.bin/acpx`。
-2. 期望版本默认是扩展固定版本。
+1. 命令默认为 `extensions/acpx/node_modules/.bin/acpx`。
+2. 期望版本默认为扩展固定版本。
 3. 启动时注册 ACP 后端为未就绪状态。
-4. 后台保证任务验证 `acpx --version`。
-5. 如果插件本地二进制缺失或版本不匹配，会执行：
+4. 后台异步执行 `acpx --version` 以验证。
+5. 若插件本地二进制缺失或版本不符，会运行：
    `npm install --omit=dev --no-save acpx@<pinned>` 并重新验证。
 
-你可以在插件配置中覆盖命令和版本：
+你可通过插件配置覆盖命令与版本：
 
 ```json
 {
@@ -488,36 +549,36 @@ openclaw plugins install ./extensions/acpx
 
 说明：
 
-- `command` 支持绝对路径、相对路径或命令名（如 `acpx`）。
+- `command` 可填写绝对路径、相对路径或命令名（如 `acpx`）。
 - 相对路径从 OpenClaw 工作区目录解析。
-- `expectedVersion: "any"` 禁用严格的版本匹配。
-- 若 `command` 指向自定义二进制/路径，插件本地自动安装被禁用。
-- OpenClaw 启动时不会阻塞，后台会执行健康检查。
+- 设置 `expectedVersion: "any"` 可禁用严格版本匹配。
+- 若 `command` 指向自定义二进制或路径，插件本地自动安装功能将被禁用。
+- OpenClaw 启动时不阻塞，后台进行健康检测。
 
 另见 [插件](/tools/plugin)。
 
 ## 权限配置
 
-ACP 会话以非交互方式运行——没有 TTY 来审批文件写入和 shell 执行的权限提示。acpx 插件提供两个配置键控制权限行为：
+ACP 会话是非交互运行——没有 TTY 来审批文件写入和 shell 执行的权限提示。acpx 插件提供两个配置键控制权限行为：
 
 ### `permissionMode`
 
-控制 harness 代理可在无提示下执行的操作。
+控制 harness 代理可在无提示情况下执行的权限范围。
 
-| 值             | 行为说明                                                |
-| -------------- | -------------------------------------------------------- |
-| `approve-all`  | 自动批准所有文件写入和 shell 命令。                      |
-| `approve-reads`| 仅自动批准读取；写入和执行需提示。                        |
-| `deny-all`     | 拒绝所有权限提示。                                       |
+| 值              | 行为说明                             |
+| --------------- | ----------------------------------- |
+| `approve-all`   | 自动批准所有文件写入和 Shell 命令。 |
+| `approve-reads` | 仅自动批准读取，写入和执行需提示。  |
+| `deny-all`      | 拒绝所有权限提示。                   |
 
 ### `nonInteractivePermissions`
 
-控制当本应提示权限但无交互 TTY 可用时的处理（ACP 会话始终如此）。
+控制当应给出权限提示但无交互 TTY 可用时如何处理（ACP 会话始终如此）。
 
-| 值      | 行为说明                                                    |
-| ------- | ------------------------------------------------------------ |
-| `fail`  | 中止会话并报 `AcpRuntimeError`。**（默认）**                |
-| `deny`  | 静默拒绝权限并继续（优雅降级）。                            |
+| 值     | 行为说明                                    |
+| ------ | -------------------------------------------- |
+| `fail` | 中止会话并抛出 `AcpRuntimeError`。（默认） |
+| `deny` | 静默拒绝权限申请并继续（优雅降级）。        |
 
 ### 配置示例
 
@@ -528,27 +589,28 @@ openclaw config set plugins.entries.acpx.config.permissionMode approve-all
 openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
 ```
 
-修改后需重启网关。
+修改后请重启网关。
 
-> **重要提示：** OpenClaw 当前默认是 `permissionMode=approve-reads` 和 `nonInteractivePermissions=fail`。在非交互的 ACP 会话中，任何触发写入或执行权限提示的操作都可能因无交互环境而报错 `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
+> **重要提示：** OpenClaw 当前默认配置为 `permissionMode=approve-reads` 和 `nonInteractivePermissions=fail`。在非交互 ACP 会话中，任何触发写入或执行权限提示的操作都会因无交互环境导致错误：
+> `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
 >
-> 如果需要限制权限，请设置 `nonInteractivePermissions=deny`，以便会话优雅降级而非崩溃。
+> 若需限制权限，请设 `nonInteractivePermissions=deny` 让会话能优雅降级而非崩溃。
 
 ## 故障排查
 
-| 症状                                                     | 可能原因                                               | 解决方案                                                                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `ACP runtime backend is not configured`                 | 后端插件缺失或未启用。                                 | 安装并启用后端插件，然后运行 `/acp doctor`。                                                                 |
-| `ACP is disabled by policy (acp.enabled=false)`         | ACP 全局禁用。                                         | 设置 `acp.enabled=true`。                                                                                      |
-| `ACP dispatch is disabled by policy (acp.dispatch.enabled=false)` | 正常线程消息分派禁用。                               | 设置 `acp.dispatch.enabled=true`。                                                                             |
-| `ACP agent "<id>" is not allowed by policy`             | 代理不在允许列表中。                                   | 使用被允许的 `agentId` 或更新 `acp.allowedAgents`。                                                           |
-| `Unable to resolve session target: ...`                 | 键/ID/标签令牌错误。                                   | 运行 `/acp sessions`，复制正确的键/标签，重试。                                                               |
-| `--thread here requires running /acp spawn inside an active ... thread` | 在非线程环境使用了 `--thread here`。               | 移动到目标线程或使用 `--thread auto`/`off`。                                                                  |
-| `Only <user-id> can rebind this thread.`                 | 另一个用户拥有该线程绑定权限。                         | 以拥有者身份重新绑定，或使用不同线程。                                                                         |
-| `Thread bindings are unavailable for <channel>.`         | 适配器不支持线程绑定能力。                             | 使用 `--thread off` 或切换到支持的适配器/频道。                                                                |
-| `Sandboxed sessions cannot spawn ACP sessions ...`       | ACP 运行时在主机端；请求会话在沙盒内。                 | 从沙盒会话使用 `runtime="subagent"`，或从非沙盒会话运行 ACP spawn。                                           |
-| `sessions_spawn sandbox="require" is unsupported for runtime="acp" ...` | 选用了针对 ACP 运行时不支持的 `sandbox="require"`。 | 对于强制沙盒，应使用 `runtime="subagent"`，或从非沙盒会话使用 ACP 并设置 `sandbox="inherit"`。                 |
-| 缺少绑定会话的 ACP 元数据                                 | 稀旧或已删除的 ACP 会话元数据。                         | 使用 `/acp spawn` 重新创建，然后绑定/聚焦线程。                                                               |
-| `AcpRuntimeError: Permission prompt unavailable in non-interactive mode` | `permissionMode` 阻止了非交互 ACP 会话中的写入/执行。 | 设置 `plugins.entries.acpx.config.permissionMode` 为 `approve-all` 并重启网关。详见[权限配置](#权限配置)。             |
-| ACP 会话很早失败且输出少                                 | 权限提示被 `permissionMode`/`nonInteractivePermissions` 阻塞。 | 检查网关日志中是否有 `AcpRuntimeError`。完全权限设置为 `permissionMode=approve-all`；优雅降级设置为 `nonInteractivePermissions=deny`。 |
-| ACP 会话完成后无限期停顿                                 | harness 进程已退出但 ACP 会话未报告完成。               | 使用 `ps aux | grep acpx` 监控并手动杀死僵死进程。                                                             |
+| 症状                                                                     | 可能原因                                               | 解决方案                                                                                                                              |
+| ------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACP runtime backend is not configured`                                  | 后端插件缺失或未启用。                                 | 安装并启用后端插件，然后运行 `/acp doctor`。                                                                                        |
+| `ACP is disabled by policy (acp.enabled=false)`                          | ACP 全局禁用。                                         | 设置 `acp.enabled=true`。                                                                                                             |
+| `ACP dispatch is disabled by policy (acp.dispatch.enabled=false)`        | 正常线程消息分派被禁用。                              | 设置 `acp.dispatch.enabled=true`。                                                                                                    |
+| `ACP agent "<id>" is not allowed by policy`                              | 代理未在允许列表中。                                   | 使用允许的 `agentId` 或更新 `acp.allowedAgents`。                                                                                     |
+| `Unable to resolve session target: ...`                                  | 键/ID/标签错误或不匹配。                              | 运行 `/acp sessions`，复制正确的键或标签，再重试。                                                                                     |
+| `--thread here requires running /acp spawn inside an active ... thread`  | 在非线程环境使用了 `--thread here`。                   | 移动到目标线程或改用 `--thread auto` / `off`。                                                                                        |
+| `Only <user-id> can rebind this thread.`                                 | 该线程绑定被其他用户拥有权限。                        | 以拥有者身份重新绑定，或切换线程。                                                                                                    |
+| `Thread bindings are unavailable for <channel>.`                         | 频道适配器不支持线程绑定。                            | 使用 `--thread off` 或更换支持线程绑定的适配器/频道。                                                                                  |
+| `Sandboxed sessions cannot spawn ACP sessions ...`                       | ACP 运行时在主机端；请求会话处于沙盒内。              | 沙盒会话请使用 `runtime="subagent"`，或从非沙盒会话运行 ACP spawn。                                                                   |
+| `sessions_spawn sandbox="require" is unsupported for runtime="acp" ...`  | 针对 ACP 运行时不支持 `sandbox="require"`。           | 使用 `runtime="subagent"` 配合强制沙盒，或非沙盒会话用 ACP 并设置 `sandbox="inherit"`。                                               |
+| 缺少绑定会话的 ACP 元数据                                                | ACP 会话元数据过旧或已被删除。                        | 使用 `/acp spawn` 重新创建会话，再绑定或聚焦线程。                                                                                     |
+| `AcpRuntimeError: Permission prompt unavailable in non-interactive mode` | `permissionMode` 阻止了非交互 ACP 会话中的写入/执行。 | 设置插件配置 `plugins.entries.acpx.config.permissionMode` 为 `approve-all` 并重启网关。详见[权限配置](#权限配置)。                     |
+| ACP 会话早期失败且输出有限                                              | 权限提示被 `permissionMode` 或 `nonInteractivePermissions` 阻塞。 | 查看网关日志中是否有 `AcpRuntimeError`。设完全权限为 `permissionMode=approve-all`，优雅降级为 `nonInteractivePermissions=deny`。    |
+| ACP 会话完成后无限期停顿                                                 | harness 进程已退出，ACP 会话却未报告完成。            | 使用 `ps aux | grep acpx` 监控并手动杀死僵死的进程。                                                                                   |

@@ -114,7 +114,7 @@ openclaw plugins install ./extensions/nextcloud-talk
 - `channels.nextcloud-talk.enabled`：启用/禁用该频道。
 - `channels.nextcloud-talk.baseUrl`：Nextcloud 实例 URL。
 - `channels.nextcloud-talk.botSecret`：机器人共享密钥。
-- `channels.nextcloud-talk.botSecretFile`：密钥文件路径。
+- `channels.nextcloud-talk.botSecretFile`：密钥文件路径，符号链接不被允许。
 - `channels.nextcloud-talk.apiUser`：用于群组查询的 API 用户（用于私信检测）。
 - `channels.nextcloud-talk.apiPassword`：群组查询的 API 或应用密码。
 - `channels.nextcloud-talk.apiPasswordFile`：API 密码文件路径。

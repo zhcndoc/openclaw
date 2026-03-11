@@ -39,18 +39,18 @@ title: "macOS 发布"
 # 略过时默认基于 APP_VERSION 自动派生。
 SKIP_NOTARIZE=1 \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.8 \
+APP_VERSION=2026.3.9 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <Developer Name> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
-# `package-mac-dist.sh` 已创建 zip 和 DMG。
-# 若直接使用 `package-mac-app.sh` 生成应用包，则需手动创建压缩文件：
-# 若此步骤需要公证/钉扎，请使用下方 NOTARIZE 命令。
-ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.8.zip
+# `package-mac-dist.sh` 已自动生成 zip 和 DMG。
+# 如果直接使用 `package-mac-app.sh`，需手动创建：
+# 如果希望在此步骤进行公证/钉扎，请使用下面的 NOTARIZE 命令。
+ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.9.zip
 
-# 可选：生成供用户拖拽安装的风格化 DMG
-scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.8.dmg
+# 可选：构建一个带样式的 DMG 给用户（拖动到 /Applications）
+scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.9.dmg
 
 # 推荐：生成并进行公证+钉扎的 zip 与 DMG
 # 首次需创建钥匙串配置：
@@ -58,13 +58,13 @@ scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.8.dmg
 #     --apple-id "<apple-id>" --team-id "<team-id>" --password "<应用专用密码>"
 NOTARIZE=1 NOTARYTOOL_PROFILE=openclaw-notary \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.8 \
+APP_VERSION=2026.3.9 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
-# 可选：随发行包一并发布 dSYM 符号文件
-ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.8.dSYM.zip
+# 可选：发布时附带 dSYM 文件
+ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.9.dSYM.zip
 ```
 
 ## Appcast 条目
@@ -72,18 +72,18 @@ ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenCl
 使用发布说明生成器，让 Sparkle 显示格式化的 HTML 说明：
 
 ```bash
-SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.8.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
+SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.9.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
 ```
 
 该命令基于 `CHANGELOG.md`（通过 [`scripts/changelog-to-html.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/changelog-to-html.sh)）将发布说明转换为 HTML，并嵌入 appcast 条目中。发布时，将更新好的 `appcast.xml` 与发行制品（zip + dSYM）一并上传。
 
 ## 发布与校验
 
-- 将 `OpenClaw-2026.3.8.zip` （及 `OpenClaw-2026.3.8.dSYM.zip`）上传至 GitHub 发布页对应 tag `v2026.3.8`。
-- 确保原始 appcast URL 与生成的 Feed 一致： `https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
-- 完整性检查：
-  - `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回状态码 200。
-  - `curl -I <enclosure url>`（发布资产 URL）在上传后返回 200。
-  - 在先前公开的版本中，选择“关于”选项卡的“检查更新...”，确认 Sparkle 可以顺利完成升级。
-  
-验收标准：签名的应用及 appcast XML 已发布，更新流程可从旧版本正常升级，且发布产物附加在 GitHub Release 中。
+- 将 `OpenClaw-2026.3.9.zip`（及 `OpenClaw-2026.3.9.dSYM.zip`）上传至对应标签 `v2026.3.9` 的 GitHub Release。
+- 确保 raw appcast URL 与发布的 feed 一致：`https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
+- 校验：
+  - 执行 `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回 200。
+  - 资源上传后，`curl -I <enclosure url>` 返回 200。
+  - 在先前的公开版本中，在“关于”标签页使用“检查更新...”功能，确认 Sparkle 能顺利安装新版本。
+
+完成定义：签名的应用与 appcast 已发布，更新流程从以前安装的版本正常工作，发布资产已附加至 GitHub Release。

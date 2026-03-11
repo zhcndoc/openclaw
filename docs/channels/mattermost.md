@@ -148,7 +148,14 @@ Mattermost 自动响应私聊消息。频道行为由 `chatmode` 控制：
 - `user:<id>` 表示私聊  
 - `@username` 表示私聊（通过 Mattermost API 解析）
 
-纯 ID 默认当作频道处理。
+裸 ID（如 `64ifufp...`）在 Mattermost 是**模糊不清**的（用户 ID 与频道 ID 不易区分）。
+
+OpenClaw 采用**用户优先**的解析方式：
+
+- 若存在该 ID 的用户（`GET /api/v4/users/<id>` 成功），OpenClaw 会通过 `/api/v4/channels/direct` 解析并发送**私聊**。  
+- 否则，该 ID 被当作**频道 ID**处理。
+
+若需要确定的行为，请始终使用明确前缀（`user:<id>` / `channel:<id>`）。
 
 ## 反应表情（消息工具）
 

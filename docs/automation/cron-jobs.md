@@ -27,6 +27,7 @@ Cron 是网关内置的调度器。它会持久化作业，准时唤醒代理，
 - 唤醒是首要功能：作业可以请求“立即唤醒”或“下一次心跳”。
 - Webhook 发布按作业独立配置，使用 `delivery.mode = "webhook"` + `delivery.to = "<url>"`。
 - 保留对配置了 `cron.webhook` 且存储了 `notify: true` 作业的旧版兼容，建议迁移到 webhook 交付模式。
+- 升级时，`openclaw doctor --fix` 可在调度器接触之前规范化旧版 cron 存储字段。
 
 ## 快速开始（可操作示例）
 
@@ -66,8 +67,8 @@ openclaw cron add \
 
 ## Cron 作业存储位置
 
-Cron 作业默认持久化于网关主机的 `~/.openclaw/cron/jobs.json`。
-网关启动时加载此文件至内存，变更时写回文件，因此仅在网关停止时手动编辑文件才安全。
+Cron 作业默认持久化于网关主机的 `~/.openclaw/cron/jobs.json`。  
+网关启动时加载此文件至内存，变更时写回文件，因此仅在网关停止时手动编辑文件才安全。  
 更推荐使用 `openclaw cron add/edit` 或 cron 工具调用 API 进行操作。
 
 ## 面向初学者的概述
@@ -100,8 +101,8 @@ Cron 作业是一个存储记录，包含：
 - 可选的 **交付模式**（`announce`、`webhook` 或 `none`）。
 - 可选的 **代理绑定**（`agentId`）：在指定代理下运行作业；若缺失或未知，网关回退为默认代理。
 
-作业由稳定的 `jobId` 标识（CLI/网关 API 使用）。
-代理工具调用中，`jobId` 为规范字段；为兼容接受旧字段 `id`。
+作业由稳定的 `jobId` 标识（CLI/网关 API 使用）。  
+代理工具调用中，`jobId` 为规范字段；为兼容接受旧字段 `id`。  
 一次性作业默认成功后自删除；设置 `deleteAfterRun: false` 可保留。
 
 ### 调度计划
@@ -114,10 +115,10 @@ Cron 支持三种调度方式：
 
 Cron 表达式使用 `croner` 解析。若未指定时区，则使用网关主机本地时区。
 
-为减少大量网关在整点负载峰值，OpenClaw 在重复整点表达式（如 `0 * * * *`、`0 */2 * * *`）上应用了最多 5 分钟的确定性错峰窗口。
+为减少大量网关在整点负载峰值，OpenClaw 在重复整点表达式（如 `0 * * * *`、`0 */2 * * *`）上应用了最多 5 分钟的确定性错峰窗口。  
 固定小时表达式如 `0 7 * * *` 保持精确。
 
-对任意 cron 计划，可设置显式错峰窗口 `schedule.staggerMs` （`0` 表示精确时间）。
+对任意 cron 计划，可设置显式错峰窗口 `schedule.staggerMs` （`0` 表示精确时间）。  
 CLI 快捷方式：
 
 - `--stagger 30s`（或 `1m`、`5m`）设置显式错峰窗口。
@@ -127,13 +128,13 @@ CLI 快捷方式：
 
 #### 主会话作业（系统事件）
 
-主会话作业将系统事件排队，且可唤醒心跳执行。
+主会话作业将系统事件排队，且可唤醒心跳执行。  
 必须使用 `payload.kind = "systemEvent"`。
 
 - `wakeMode: "now"`（默认）：事件触发立即心跳执行。
 - `wakeMode: "next-heartbeat"`：事件等待下次预定的心跳。
 
-当你需要正常的心跳提示和主会话上下文时，这种方式最合适。
+当你需要正常的心跳提示和主会话上下文时，这种方式最合适。  
 详见 [Heartbeat](/gateway/heartbeat)。
 
 #### 隔离作业（专用 cron 会话）
@@ -176,14 +177,14 @@ CLI 快捷方式：
 - `delivery.to`：频道特定目标（公告）或 webhook URL（webhook 模式）。
 - `delivery.bestEffort`：公告失败时避免导致作业失败。
 
-公告交付抑制本次执行的消息工具发送；使用 `delivery.channel` / `delivery.to` 指定的聊天发送。
+公告交付抑制本次执行的消息工具发送；使用 `delivery.channel` / `delivery.to` 指定的聊天发送。  
 当 `delivery.mode = "none"` 时，不向主会话发布摘要。
 
 隔离作业若未指定 `delivery`，OpenClaw 默认为 `announce`。
 
 #### 公告交付流程
 
-当 `delivery.mode = "announce"` 时，cron 通过出站频道适配器直接发送。
+当 `delivery.mode = "announce"` 时，cron 通过出站频道适配器直接发送。  
 不会启动主代理制作或转发消息。
 
 具体行为：
@@ -238,14 +239,15 @@ CLI 快捷方式：
 - `delivery.channel`：`whatsapp` / `telegram` / `discord` / `slack` / `mattermost`（插件）/ `signal` / `imessage` / `last`
 - `delivery.to`：频道特定接收目标
 
-`announce` 交付仅对隔离作业有效 (`sessionTarget: "isolated"`)。
+`announce` 交付仅对隔离作业有效 (`sessionTarget: "isolated"`)。  
 `webhook` 交付对主会话和隔离作业均有效。
 
 若未指定 `delivery.channel` 或 `delivery.to`，cron 会回退使用主会话的“最后路由”（代理最后回复的目标）。
 
 目标格式提示：
 
-- Slack/Discord/Mattermost（插件）目标需使用明确前缀（如 `channel:<id>`、`user:<id>`）以避免歧义。
+- Slack/Discord/Mattermost（插件）目标需使用明确前缀（如 `channel:<id>`、`user:<id>`）以避免歧义。  
+  Mattermost 裸 26 字符 ID 会优先识别为用户（若存在则为 DM，否则为频道）— 想要确定路由请显式使用 `user:<id>` 或 `channel:<id>`。  
 - Telegram 主题应使用 `:topic:` 形式（见下文）。
 
 #### Telegram 交付目标（主题/论坛线程）
@@ -262,7 +264,7 @@ Telegram 支持通过 `message_thread_id` 发送论坛主题。Cron 交付时，
 
 ## 工具调用的 JSON 架构
 
-当直接调用网关 `cron.*` 工具时使用这些结构（代理工具调用或 RPC）。
+当直接调用网关 `cron.*` 工具时使用这些结构（代理工具调用或 RPC）。  
 CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8601 字符串（用于 `schedule.at`）和毫秒数（用于 `schedule.everyMs`）。
 
 ### cron.add 参数示例
@@ -633,7 +635,7 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 ## 网关 API 接口
 
 - `cron.list`, `cron.status`, `cron.add`, `cron.update`, `cron.remove`
-- `cron.run`（强制或到期），`cron.runs`
+- `cron.run`（强制或到期），`cron.runs`  
   若需立即触发无作业的系统事件，使用 [`openclaw system event`](/cli/system)。
 
 ## 故障排查
@@ -646,7 +648,7 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 
 ### 周期性作业失败后持续延迟
 
-- OpenClaw 对周期性作业连续错误应用指数退避重试：
+- OpenClaw 对周期性作业连续错误应用指数退避重试：  
   30 秒、1 分钟、5 分钟、15 分钟、60 分钟。
 - 在下次成功运行后重置退避。
 - 一次性（`at`）作业对临时错误（速率限制、网络、服务器错误）最多重试 3 次，永久错误立即禁用。详见 [重试策略](/automation/cron-jobs#retry-policy)。
@@ -654,7 +656,7 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 ### Telegram 发送到错误位置
 
 - 论坛主题推荐使用明确格式：`-100…:topic:<id>`。
-- 日志或存储的“最后路由”中带 `telegram:...` 前缀是正常的；
+- 日志或存储的“最后路由”中带 `telegram:...` 前缀是正常的；  
   cron 交付支持该格式且能正确解析主题 ID。
 
 ### 子代理公告交付重试

@@ -168,6 +168,8 @@ openclaw pairing approve discord <CODE>
 
 <Note>
 令牌解析是账户感知的。配置中的令牌优先于环境变量回退。`DISCORD_BOT_TOKEN` 仅用于默认账户。
+
+对于高级外呼（消息工具/渠道操作），每次呼叫都会使用一个明确的 `token`。账户策略/重试设置仍然来自活动运行时快照中所选的账户。
 </Note>
 
 ## 推荐：设置公会工作区
@@ -970,12 +972,12 @@ Discord 消息操作包括消息发送、频道管理、审核、在线状态及
 
 默认门控行为：
 
-| 操作组                                                                                                                                                             | 默认  |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| reactions, messages, threads, pins, polls, search, memberInfo, roleInfo, channelInfo, channels, voiceStatus, events, stickers, emojiUploads, stickerUploads, permissions | 启用  |
-| roles                                                                                                                                                            | 禁用  |
-| moderation                                                                                                                                                       | 禁用  |
-| presence                                                                                                                                                        | 禁用  |
+| 操作组                                                                                                                                                                   | 默认 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| reactions, messages, threads, pins, polls, search, memberInfo, roleInfo, channelInfo, channels, voiceStatus, events, stickers, emojiUploads, stickerUploads, permissions | 启用 |
+| roles                                                                                                                                                                    | 禁用 |
+| moderation                                                                                                                                                               | 禁用 |
+| presence                                                                                                                                                                 | 禁用 |
 
 ## Components v2 UI
 

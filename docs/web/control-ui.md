@@ -26,10 +26,9 @@ title: "控制界面"
 认证信息在 WebSocket 握手阶段通过以下方式提供：
 
 - `connect.params.auth.token`
-- `connect.params.auth.password`
-  
-仪表盘设置面板允许你存储令牌；密码不会被持久保存。
-入门向导默认生成一个网关令牌，首次连接时将其粘贴到这里。
+- `connect.params.auth.password`  
+  控制面板设置面板为当前浏览器标签页会话和所选网关 URL 保留一个令牌；密码不会被持久化。  
+  入门向导默认生成了一个网关令牌，因此首次连接时请将其粘贴到此处。
 
 ## 设备配对（首次连接）
 
@@ -166,7 +165,11 @@ OpenClaw **阻止无设备身份的控制界面连接**。
 }
 ```
 
-`allowInsecureAuth` 不会绕过控制界面设备身份或配对检查。
+`allowInsecureAuth` 是一个本地兼容性开关：
+
+- 它允许本地 localhost 控制界面会话在非安全 HTTP 环境下无设备身份继续运行。
+- 它不会绕过配对检查。
+- 它不会放宽远程（非 localhost）设备身份要求。
 
 **仅紧急用：**
 
@@ -225,16 +228,16 @@ http://localhost:5173/?gatewayUrl=wss://<gateway-host>:18789#token=<gateway-toke
 
 注意：
 
-- `gatewayUrl` 会在加载后保存到 localStorage，并从 URL 移除。
-- `token` 也存 localStorage；`password` 仅保存在内存。
-- 当设置了 `gatewayUrl`，UI 不再使用配置或环境的认证凭证。
-  需要显式提供 `token`（或 `password`）。缺少显式凭证视为错误。
-- 当网关使用 TLS（Tailscale Serve、HTTPS 代理等）时，请使用 `wss://`。
-- 只有顶层窗口（非嵌入）可接受 `gatewayUrl` 以防止点击劫持。
-- 非 loopback 部署必须显式设置 `gateway.controlUi.allowedOrigins`
-  （完整来源），包括远程开发设置。
-- 设置 `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 可启用
-  Host 头来源回退模式，但此模式极不安全。
+- `gatewayUrl` 会在加载后存储到 localStorage 并从 URL 中移除。
+- `token` 从 URL 片段读取，存储在 sessionStorage 中，用于当前浏览器标签页会话和选定网关 URL，且从 URL 中移除；不会存储在 localStorage。
+- `password` 仅保存在内存中。
+- 当设置了 `gatewayUrl`，UI 不会回退到配置或环境凭据。
+  需要显式提供 `token`（或 `password`）。未提供为错误。
+- 当网关位于 TLS 后（如 Tailscale Serve、HTTPS 代理等），请使用 `wss://`。
+- 仅顶层窗口（非嵌套iframe）接受 `gatewayUrl`，防止点击劫持。
+- 非回环地址的控制界面部署必须显式设置 `gateway.controlUi.allowedOrigins`
+  （完整来源），包括远程开发场景。
+- 设置 `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 启用 Host-header 来源回退模式，但这是一种危险的安全模式。
 
 示例：
 

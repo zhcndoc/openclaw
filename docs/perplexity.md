@@ -16,9 +16,9 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ## 获取 Perplexity API 密钥
 
-1. 在 <https://www.perplexity.ai/settings/api> 创建 Perplexity 账号  
-2. 在仪表盘生成 API 密钥  
-3. 将密钥存储于配置文件中，或在 Gateway 环境变量中设置 `PERPLEXITY_API_KEY`  
+1. 在 <https://www.perplexity.ai/settings/api> 创建 Perplexity 账号
+2. 在仪表盘生成 API 密钥
+3. 将密钥存储于配置文件中，或在 Gateway 环境变量中设置 `PERPLEXITY_API_KEY`
 
 ## OpenRouter 兼容性
 
@@ -26,8 +26,8 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 可选的传统配置项包括：
 
-- `tools.web.search.perplexity.baseUrl`  
-- `tools.web.search.perplexity.model`  
+- `tools.web.search.perplexity.baseUrl`
+- `tools.web.search.perplexity.model`
 
 ## 配置示例
 
@@ -69,28 +69,30 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ## 在哪里设置密钥
 
-**通过配置：** 运行 `openclaw configure --section web`。该命令会将密钥保存至  
-`~/.openclaw/openclaw.json` 中的 `tools.web.search.perplexity.apiKey`。
+**通过配置：**运行 `openclaw configure --section web`。它会将密钥存储在  
+`~/.openclaw/openclaw.json` 的 `tools.web.search.perplexity.apiKey` 字段。该字段也接受 SecretRef 对象。
 
-**通过环境变量：** 在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
-对于 Gateway 安装，可写入 `~/.openclaw/.env`（或您的服务环境中）。参见[环境变量](/help/faq#how-does-openclaw-load-environment-variables)。
+**通过环境变量：**在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
+对于网关安装，将其放入 `~/.openclaw/.env`（或您的服务环境）。详见 [环境变量](/help/faq#how-does-openclaw-load-environment-variables)。
+
+如果配置了 `provider: "perplexity"` 并且 Perplexity 密钥 SecretRef 未解析且无环境变量后备，启动/重载将快速失败。
 
 ## 工具参数
 
-以下参数适用于原生 Perplexity 搜索 API 路径。
+这些参数适用于原生 Perplexity 搜索 API 路径。
 
-| 参数                    | 描述                                                     |
-| ----------------------- | -------------------------------------------------------- |
-| `query`                 | 搜索查询（必填）                                         |
-| `count`                 | 返回结果数量（1-10，默认 5）                             |
-| `country`               | 两位 ISO 国家代码（例如 "US", "DE"）                    |
-| `language`              | ISO 639-1 语言代码（例如 "en", "de", "fr"）             |
-| `freshness`             | 时间过滤：`day` (24 小时), `week`, `month`, 或 `year`   |
-| `date_after`            | 只返回发布日期在此日期之后的结果（格式：YYYY-MM-DD）     |
-| `date_before`           | 只返回发布日期在此日期之前的结果（格式：YYYY-MM-DD）     |
-| `domain_filter`         | 域名允许列表/拒绝列表数组（最多 20 个）                   |
-| `max_tokens`            | 内容总 token 预算（默认 25000，最大 1000000）             |
-| `max_tokens_per_page`   | 单页 token 限制（默认 2048）                             |
+| 参数                  | 描述                                                   |
+| --------------------- | ------------------------------------------------------ |
+| `query`               | 搜索查询（必填）                                       |
+| `count`               | 返回结果数量（1-10，默认：5）                          |
+| `country`             | 两字母 ISO 国家代码（如 "US", "DE"）                   |
+| `language`            | ISO 639-1 语言代码（如 "en", "de", "fr"）              |
+| `freshness`           | 时间筛选：`day`（24小时）、`week`、`month`、`year`    |
+| `date_after`          | 只返回该日期之后发布的结果（格式 YYYY-MM-DD）          |
+| `date_before`         | 只返回该日期之前发布的结果（格式 YYYY-MM-DD）          |
+| `domain_filter`       | 域名允许列表/拒绝列表数组（最多 20 个）                 |
+| `max_tokens`          | 内容总令牌预算（默认：25000，最大：1000000）            |
+| `max_tokens_per_page` | 每页令牌限制（默认：2048）                              |
 
 对于传统 Sonar/OpenRouter 兼容路径，仅支持 `query` 和 `freshness`。  
 搜索 API 独有的过滤参数如 `country`、`language`、`date_after`、`date_before`、`domain_filter`、`max_tokens` 和 `max_tokens_per_page` 会返回明确的错误。
@@ -140,15 +142,15 @@ await web_search({
 
 ### 域名过滤规则
 
-- 每次请求最多允许 20 个域名  
-- 不可在同一次请求中混合使用允许列表和拒绝列表  
-- 拒绝列表条目前加 `-` 前缀（例如 `["-reddit.com"]`）  
+- 每次请求最多允许 20 个域名
+- 不可在同一次请求中混合使用允许列表和拒绝列表
+- 拒绝列表条目前加 `-` 前缀（例如 `["-reddit.com"]`）
 
 ## 注意事项
 
-- Perplexity 搜索 API 返回结构化网页搜索结果（`title`、`url`、`snippet`）  
-- 使用 OpenRouter 或显式设置 `baseUrl` / `model` 会将 Perplexity 切换回 Sonar 聊天补全以保证兼容  
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）  
+- Perplexity 搜索 API 返回结构化网页搜索结果（`title`、`url`、`snippet`）
+- 使用 OpenRouter 或显式设置 `baseUrl` / `model` 会将 Perplexity 切换回 Sonar 聊天补全以保证兼容
+- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）
 
 详见 [Web 工具](/tools/web) 获取完整的 web_search 配置说明。  
 更多详情参见 [Perplexity 搜索 API 文档](https://docs.perplexity.ai/docs/search/quickstart) 。

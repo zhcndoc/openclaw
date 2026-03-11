@@ -122,21 +122,21 @@ openclaw health
   - 会话：`~/.openclaw/agents/<agentId>/sessions/`
   - 日志：`/tmp/openclaw/`
 
-## 凭证存储映射
+## Credential storage map
 
-调试认证或备份时请参考：
+Use this when debugging auth or deciding what to back up:
 
-- **WhatsApp：** `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram 机器人令牌：** 配置文件/环境变量 或 `channels.telegram.tokenFile`
-- **Discord 机器人令牌：** 配置文件/环境变量 或 SecretRef（环境变量/文件/执行提供者）
-- **Slack 令牌：** 配置文件/环境变量（`channels.slack.*`）
-- **配对允许列表：**
-  - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账号）
-  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账号）
-- **模型认证配置文件：** `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **文件支持的秘密载荷（可选）：** `~/.openclaw/secrets.json`
-- **旧版 OAuth 导入：** `~/.openclaw/credentials/oauth.json`
-  详细信息见：[安全性](/gateway/security#credential-storage-map)。
+- **WhatsApp**: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
+- **Telegram bot token**: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
+- **Discord bot token**: config/env or SecretRef (env/file/exec providers)
+- **Slack tokens**: config/env (`channels.slack.*`)
+- **Pairing allowlists**:
+  - `~/.openclaw/credentials/<channel>-allowFrom.json` (default account)
+  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json` (non-default accounts)
+- **Model auth profiles**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- **File-backed secrets payload (optional)**: `~/.openclaw/secrets.json`
+- **Legacy OAuth import**: `~/.openclaw/credentials/oauth.json`
+  More detail: [Security](/gateway/security#credential-storage-map).
 
 ## 更新（不破坏现有设置）
 

@@ -169,13 +169,13 @@ shell 链接（`&&`、`||`、`;`）允许的前提是每个顶层语句段均满
 
 ### 安全二进制与允许列表对比
 
-| 主题              | `tools.exec.safeBins`                                     | 允许列表 (`exec-approvals.json`)                              |
-| ----------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
-| 目标              | 自动允许范围窄的 stdin 过滤器                             | 显式信任特定可执行文件                                       |
-| 匹配类型          | 可执行文件名称 + 安全二进制 argv 策略                     | 解析后的可执行文件路径 glob 模式                              |
-| 参数范围          | 受安全档案和字面令牌规则限制                              | 仅路径匹配，参数责任自负                                     |
-| 典型示例          | `jq`、`head`、`tail`、`wc`                                | `python3`、`node`、`ffmpeg`、自定义 CLI                      |
-| 最佳用例          | 管道内低风险文本转换                                     | 任何有更广行为或副作用的工具                                  |
+| 主题     | `tools.exec.safeBins`                 | 允许列表 (`exec-approvals.json`)        |
+| -------- | ------------------------------------- | --------------------------------------- |
+| 目标     | 自动允许范围窄的 stdin 过滤器         | 显式信任特定可执行文件                  |
+| 匹配类型 | 可执行文件名称 + 安全二进制 argv 策略 | 解析后的可执行文件路径 glob 模式        |
+| 参数范围 | 受安全档案和字面令牌规则限制          | 仅路径匹配，参数责任自负                |
+| 典型示例 | `jq`、`head`、`tail`、`wc`            | `python3`、`node`、`ffmpeg`、自定义 CLI |
+| 最佳用例 | 管道内低风险文本转换                  | 任何有更广行为或副作用的工具            |
 
 配置位置：
 
@@ -266,6 +266,29 @@ CLI：`openclaw approvals` 支持对网关或节点的编辑（详见[审批 CLI
 /approve <id> allow-always
 /approve <id> deny
 ```
+
+### 内置聊天审批客户端
+
+Discord 和 Telegram 也可以作为显式的执行审批客户端，支持频道级别配置。
+
+- Discord：`channels.discord.execApprovals.*`
+- Telegram：`channels.telegram.execApprovals.*`
+
+这些客户端为可选启用。如果某频道未启用 exec 审批，OpenClaw 不会仅因会话发生在那里而将该频道视为审批通道。
+
+共有行为：
+
+- 只有配置的审批者可以批准或拒绝
+- 请求者无需为审批者
+- 开启频道投递时，审批提示包含命令文本
+- 如果无操作 UI 或配置的审批客户端能够接受请求，提示将回退至 `askFallback`
+
+Telegram 默认发送审批通知至审批者私信（`target: "dm"`）。你可以切换为 `channel` 或 `both`，让审批提示也出现在原始 Telegram 聊天/主题中。对于 Telegram 论坛主题，OpenClaw 会保留审批提示和审批后续消息的主题。
+
+详见：
+
+- [Discord](/channels/discord#exec-approvals-in-discord)
+- [Telegram](/channels/telegram#exec-approvals-in-telegram)
 
 ### macOS IPC 流程
 

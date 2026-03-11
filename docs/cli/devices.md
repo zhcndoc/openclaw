@@ -90,3 +90,40 @@ openclaw devices revoke --device <deviceId> --role node
 - 这些命令需要 `operator.pairing`（或 `operator.admin`）权限作用域。
 - `devices clear` 命令必须使用 `--yes` 参数以防误操作。
 - 若本地回环接口无配对作用域（且未显式传入 `--url`），`list` 和 `approve` 命令可以使用本地配对回退机制。
+
+## 令牌漂移恢复检查清单
+
+当控制界面或其他客户端持续出现 `AUTH_TOKEN_MISMATCH` 或 `AUTH_DEVICE_TOKEN_MISMATCH` 错误时，请使用此方法：
+
+1. 确认当前网关令牌来源：
+
+```bash
+openclaw config get gateway.auth.token
+```
+
+2. 列出已配对设备并确定受影响的设备 ID：
+
+```bash
+openclaw devices list
+```
+
+3. 为受影响设备轮换运营者令牌：
+
+```bash
+openclaw devices rotate --device <deviceId> --role operator
+```
+
+4. 如果轮换不足以解决问题，移除旧配对并重新批准：
+
+```bash
+openclaw devices remove <deviceId>
+openclaw devices list
+openclaw devices approve <requestId>
+```
+
+5. 使用当前共享的令牌或密码重试客户端连接。
+
+相关链接：
+
+- [控制台身份验证故障排除](/web/dashboard#if-you-see-unauthorized-1008)
+- [网关故障排除](/gateway/troubleshooting#dashboard-control-ui-connectivity)

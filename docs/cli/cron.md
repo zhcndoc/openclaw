@@ -29,6 +29,11 @@ title: "cron"
 - `cron.sessionRetention`（默认 `24h`）修剪已完成的孤立运行会话。
 - `cron.runLog.maxBytes` + `cron.runLog.keepLines` 修剪 `~/.openclaw/cron/runs/<jobId>.jsonl` 文件。
 
+升级提示：如果您有早于当前投递/存储格式的旧版 cron 作业，请运行
+`openclaw doctor --fix`。Doctor 现在会规范化遗留的 cron 字段（`jobId`、`schedule.cron`、
+顶层投递字段、payload 中的 `provider` 投递别名），并将简单的
+`notify: true` webhook 回退作业迁移为明确的 webhook 投递（当配置了 `cron.webhook` 时）。
+
 ## 常用编辑操作
 
 在不更改消息内容的情况下更新发送设置：

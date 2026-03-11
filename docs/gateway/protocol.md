@@ -200,46 +200,57 @@ title: "网关协议"
 
 ## 认证
 
-- 如果设置了 `OPENCLAW_GATEWAY_TOKEN`（或 `--token`），`connect.params.auth.token` 必须匹配，否则套接字连接将关闭。
-- 配对后，网关会签发一个针对连接角色和权限范围的**设备令牌**。该令牌会在 `hello-ok.auth.deviceToken` 中返回，客户端应持久保存以供未来连接使用。
-- 设备令牌可通过 `device.token.rotate` 和 `device.token.revoke` 进行轮换和撤销（需 `operator.pairing` 权限范围）。
+- 如果设置了 `OPENCLAW_GATEWAY_TOKEN`（或 `--token`），`connect.params.auth.token`  
+  必须匹配，否则 socket 将被关闭。
+- 配对后，网关会颁发一个针对连接角色 + 权限范围的**设备令牌**。该令牌会在 `hello-ok.auth.deviceToken` 中返回，客户端应持久保存以供将来连接使用。
+- 设备令牌可通过 `device.token.rotate` 和 `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 权限范围）。
+- 认证失败会包含 `error.details.code` 及恢复提示：
+  - `error.details.canRetryWithDeviceToken`（布尔值）
+  - `error.details.recommendedNextStep`（选项：`retry_with_device_token`、`update_auth_configuration`、`update_auth_credentials`、`wait_then_retry`、`review_auth_configuration`）
+- 客户端对 `AUTH_TOKEN_MISMATCH` 的行为：
+  - 信任客户端可尝试用缓存的每设备令牌进行一次有限重试。
+  - 若重试失败，客户端应停止自动重连循环并提示操作员采取措施。
 
 ## 设备身份 + 配对
 
-- 节点应包含稳定的设备身份（`device.id`），该身份来源于密钥对指纹。
-- 网关针对设备 + 角色发放令牌。
+- 节点应包含一个稳定的设备身份（`device.id`），该身份源自密钥对指纹。
+- 网关为每个设备 + 角色颁发令牌。
 - 新设备 ID 需要配对审批，除非启用了本地自动审批。
-- **本地** 连接包含回环地址和网关主机自有的 tailnet 地址（因此同机 tailnet 绑定仍能自动批准）。
-- 所有 WS 客户端在 `connect` 时必须包含 `device` 身份（操作员和节点均需）。控制 UI 仅在启用 `gateway.controlUi.dangerouslyDisableDeviceAuth` 破窗模式时可省略。
-- 所有连接必须使用服务器提供的 `connect.challenge` nonce 进行签名。
+- **本地**连接包括回环地址和网关主机自身的 tailnet 地址（因此同一主机的 tailnet 绑定仍可自动审批）。
+- 所有 WS 客户端在 `connect` 时必须包含 `device` 身份（operator + node）。
+  控制 UI 仅在以下模式中可省略：
+  - `gateway.controlUi.allowInsecureAuth=true`，仅限 localhost 不安全 HTTP 兼容。
+  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true`（破窗操作，严重的安全降级）。
+- 所有连接必须签署服务器提供的 `connect.challenge` nonce。
 
 ### 设备认证迁移诊断
 
-对于仍采用预挑战签名行为的旧客户端，`connect` 现在会在 `error.details.code` 下返回 `DEVICE_AUTH_*` 详细代码，且有稳定的 `error.details.reason`。
+对于仍使用旧版预挑战签名行为的遗留客户端，`connect` 现在会返回  
+位于 `error.details.code` 中的 `DEVICE_AUTH_*` 详细代码及稳定的 `error.details.reason`。
 
 常见迁移失败：
 
-| 消息                        | details.code                     | details.reason           | 含义                                        |
-| --------------------------- | -------------------------------- | ------------------------ | ------------------------------------------- |
-| `device nonce required`     | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端省略了 `device.nonce`（或发送为空）。 |
-| `device nonce mismatch`     | `DEVICE_AUTH_NONCE_MISMATCH`     | `device-nonce-mismatch`  | 客户端使用过期或错误的 nonce 签名。         |
-| `device signature invalid`  | `DEVICE_AUTH_SIGNATURE_INVALID`  | `device-signature`       | 签名负载不匹配 v2 负载。                    |
-| `device signature expired`  | `DEVICE_AUTH_SIGNATURE_EXPIRED`  | `device-signature-stale` | 签名时间戳超出允许的偏差范围。              |
-| `device identity mismatch`  | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。              |
-| `device public key invalid` | `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式或规范化失败。                      |
+| 消息                       | details.code                     | details.reason           | 含义                                               |
+| -------------------------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
+| `device nonce required`    | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端未提供 `device.nonce`（或发送空值）。       |
+| `device nonce mismatch`    | `DEVICE_AUTH_NONCE_MISMATCH`     | `device-nonce-mismatch`  | 客户端用过期或错误的 nonce 签名。                  |
+| `device signature invalid` | `DEVICE_AUTH_SIGNATURE_INVALID`  | `device-signature`       | 签名负载与 v2 负载不匹配。                         |
+| `device signature expired` | `DEVICE_AUTH_SIGNATURE_EXPIRED`  | `device-signature-stale` | 签名时间戳超出允许偏差范围。                       |
+| `device identity mismatch` | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                      |
+| `device public key invalid`| `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式或规范化失败。                             |
 
 迁移目标：
 
 - 始终等待 `connect.challenge`。
 - 签名包含服务器 nonce 的 v2 负载。
 - 在 `connect.params.device.nonce` 中发送相同的 nonce。
-- 推荐签名负载是 `v3`，它除了设备/客户端/角色/权限/令牌/nonce 字段外，还绑定了 `platform` 和 `deviceFamily`。
-- 为保持兼容性，旧的 `v2` 签名仍被接受，但配对设备元数据绑定仍控制重连时的命令策略。
+- 推荐的签名负载为 `v3`，除设备/客户端/角色/权限/令牌/nonce 字段外，还绑定位于 `platform` 和 `deviceFamily`。
+- 为保证兼容，旧的 `v2` 签名仍被接受，但配对设备元数据绑定用于控制重连时命令策略。
 
 ## TLS + 绑定
 
 - WS 连接支持 TLS。
-- 客户端可选择绑定网关证书指纹（见 `gateway.tls` 配置及 `gateway.remote.tlsFingerprint` 或 CLI `--tls-fingerprint`）。
+- 客户端可选择绑定网关证书指纹（见 `gateway.tls` 配置及 `gateway.remote.tlsFingerprint` 或 CLI 的 `--tls-fingerprint` 参数）。
 
 ## 范围
 

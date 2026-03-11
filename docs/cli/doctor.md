@@ -28,6 +28,7 @@ openclaw doctor --deep
 - 交互式提示（如钥匙串/OAuth 修复）仅在标准输入为 TTY 且未设置 `--non-interactive` 时运行。无头运行（如定时任务、Telegram、无终端）将跳过提示。
 - `--fix`（`--repair` 的别名）会备份配置至 `~/.openclaw/openclaw.json.bak`，并删除未知配置键，且会列出每个被移除项。
 - 状态完整性检查现已检测会话目录中的孤立转录文件，并可将其归档为 `.deleted.<timestamp>`，以安全回收空间。
+- doctor 还会扫描 `~/.openclaw/cron/jobs.json`（或 `cron.store`）中遗留的定时任务格式，并且可在调度器运行时自动规范化之前直接重写它们。
 - doctor 包含内存搜索准备状态检测，缺少嵌入凭据时会建议运行 `openclaw configure --section model`。
 - 如果启用了沙箱模式但 Docker 不可用，doctor 会报告高威胁警告并给出修复建议（安装 Docker 或执行 `openclaw config set agents.defaults.sandbox.mode off`）。
 
