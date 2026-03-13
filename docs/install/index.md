@@ -13,7 +13,7 @@ title: "安装"
 
 ## 系统要求
 
-- **[Node 22+](/install/node)** （如果缺失，[安装脚本](#install-methods)会自动安装）
+- **[Node 24（推荐）](/install/node)**（Node 22 LTS，当前版本为 `22.16+`，仍支持以保证兼容性；如果缺失，[安装脚本](#install-methods)会自动安装 Node 24）
 - macOS、Linux 或 Windows
 - 仅当你从源码构建时需要 `pnpm`
 
@@ -70,7 +70,7 @@ title: "安装"
   </Accordion>
 
   <Accordion title="npm / pnpm" icon="package">
-    如果你已经有 Node 22+ 并且想自己管理安装：
+    如果你已经自己管理 Node，我们推荐 Node 24。OpenClaw 仍支持 Node 22 LTS（当前版本 `22.16+`），以保证兼容性：
 
     <Tabs>
       <Tab title="npm">

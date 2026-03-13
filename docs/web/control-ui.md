@@ -69,7 +69,7 @@ openclaw devices approve <requestId>
 - 流式工具调用 + 聊天中实时工具结果卡片（代理事件）
 - 频道：WhatsApp/Telegram/Discord/Slack + 插件频道（Mattermost 等）状态、二维码登录、每频道配置 (`channels.status`, `web.login.*`, `config.patch`)
 - 实例：在线列表及刷新 (`system-presence`)
-- 会话：列表 + 每会话思考/详细信息重写 (`sessions.list`, `sessions.patch`)
+- 会话：列表 + 每会话思考/快速/详细/推理重写 (`sessions.list`, `sessions.patch`)
 - 定时任务：列表 / 新增 / 编辑 / 运行 / 启用 / 禁用 + 运行历史 (`cron.*`)
 - 技能：状态，启用/禁用，安装，API 密钥更新 (`skills.*`)
 - 节点：列表 + 权限 (`node.list`)

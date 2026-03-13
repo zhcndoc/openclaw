@@ -225,6 +225,63 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
 
   </Accordion>
 
+  <Accordion title="Enable relay-backed push for official iOS builds">
+    Relay-backed push 是在 `openclaw.json` 中配置的。
+
+    在 gateway 配置中设置：
+
+    ```json5
+    {
+      gateway: {
+        push: {
+          apns: {
+            relay: {
+              baseUrl: "https://relay.example.com",
+              // 可选。默认值：10000
+              timeoutMs: 10000,
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    CLI 等效命令：
+
+    ```bash
+    openclaw config set gateway.push.apns.relay.baseUrl https://relay.example.com
+    ```
+
+    作用：
+
+    - 允许网关通过外部 relay 发送 `push.test`、唤醒提示和重新连接唤醒。
+    - 使用配对 iOS 应用转发的基于注册范围的发送授权。网关无需部署范围的 relay 令牌。
+    - 将每个 relay 支持的注册绑定到 iOS 应用配对的网关身份，防止其他网关重复使用已存注册。
+    - 保持本地/手动 iOS 版本使用直接 APNs。relay 支持的发送仅应用于通过 relay 注册的官方发布版本。
+    - 必须匹配官方/TestFlight iOS 构建内置的 relay 基础 URL，确保注册和发送流量到达同一 relay 部署。
+
+    端到端流程：
+
+    1. 安装使用相同 relay 基础 URL 编译的官方/TestFlight iOS 版本。
+    2. 在网关配置 `gateway.push.apns.relay.baseUrl`。
+    3. 配对 iOS 应用与网关，允许节点和操作者会话连接。
+    4. iOS 应用获取网关身份，使用 App Attest 和应用收据注册 relay，然后将 relay 支持的 `push.apns.register` 有效负载发布给配对的网关。
+    5. 网关存储 relay 句柄和发送授权，用于 `push.test`、唤醒提示和重新连接唤醒。
+
+    操作注意事项：
+
+    - 若将 iOS 应用切换到不同网关，需重新连接应用以发布绑定新网关的 relay 注册。
+    - 若发布指向不同 relay 部署的新 iOS 版本，应用会刷新缓存的 relay 注册而非复用旧 relay 来源。
+
+    兼容性说明：
+
+    - `OPENCLAW_APNS_RELAY_BASE_URL` 和 `OPENCLAW_APNS_RELAY_TIMEOUT_MS` 仍作为临时环境变量覆盖有效。
+    - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` 仍为本地回环开发逃生通道，配置中不要持久保存 HTTP relay URL。
+
+    详见 [iOS 应用](/platforms/ios#relay-backed-push-for-official-builds) 了解端到端流程，及 [身份验证和信任流程](/platforms/ios#authentication-and-trust-flow) 了解 relay 安全模型。
+
+  </Accordion>
+
   <Accordion title="设置心跳（周期性签到）">
     ```json5
     {

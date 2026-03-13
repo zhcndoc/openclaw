@@ -35,7 +35,7 @@ sidebarTitle: "向导参考"
       - 当模型未设置或为 `openai/*` 时，将设置 `agents.defaults.model` 为 `openai-codex/gpt-5.2`。
     - **OpenAI API 密钥**：如果存在环境变量 `OPENAI_API_KEY` 则使用，否则提示输入密钥，随后存储至身份验证配置文件。
     - **xAI (Grok) API 密钥**：提示输入 `XAI_API_KEY` 并配置 xAI 为模型提供者。
-    - **OpenCode Zen（多模型代理）**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取）。
+    - **OpenCode**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取），并允许选择 Zen 或 Go 目录。
     - **API 密钥**：为你存储密钥。
     - **Vercel AI Gateway（多模型代理）**：提示输入 `AI_GATEWAY_API_KEY`。
     - 更多详情见：[Vercel AI Gateway](/providers/vercel-ai-gateway)
@@ -223,7 +223,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="OpenCode Zen 示例">
+  <Accordion title="OpenCode 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -232,6 +232,7 @@ openclaw onboard --non-interactive \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
+    Swap to `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"` for the Go catalog.
   </Accordion>
 </AccordionGroup>
 

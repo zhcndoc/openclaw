@@ -51,7 +51,7 @@ openclaw onboard
 
 模型引用会被规范化为小写。提供商别名如 `z.ai/*` 规范为 `zai/*`。
 
-提供商配置示例（包含 OpenCode Zen）见[/gateway/configuration](/gateway/configuration#opencode-zen-multi-model-proxy)。
+提供商配置示例（包含 OpenCode）见[/gateway/configuration](/gateway/configuration#opencode)。
 
 ## “模型不被允许”以及回复停止的原因
 
@@ -190,10 +190,16 @@ openclaw models status
 
 ## 模型注册表（`models.json`）
 
-自定义提供商配置在 `models.providers` 中写入代理目录下的 `models.json`（默认路径为 `~/.openclaw/agents/<agentId>/models.json`）。默认情况下此文件会被合并，除非 `models.mode` 设置为 `replace`。
+自定义提供商配置在 `models.providers` 中写入代理目录下的 `models.json`（默认路径为 `~/.openclaw/agents/<agentId>/agent/models.json`）。默认情况下此文件会被合并，除非 `models.mode` 设置为 `replace`。
 
 匹配提供商 ID 的合并模式优先级：
 
-- 代理目录中已有的非空 `apiKey`/`baseUrl` 优先保留。
-- 代理目录中为空或缺失的 `apiKey`/`baseUrl` 会使用配置中 `models.providers` 的值。
-- 其他提供商字段从配置和规范化目录数据刷新。
+- 代理目录中已有的非空 `baseUrl` 会优先保留。
+- 代理目录中已有的非空 `apiKey` 仅在当前配置/认证配置上下文中该提供商未被 SecretRef 管理时优先保留。
+- SecretRef 管理的提供商 `apiKey` 值会从源标记刷新（环境变量引用的为 `ENV_VAR_NAME`，文件/执行引用的为 `secretref-managed`），而不是持久化解析后的密钥。
+- SecretRef 管理的提供商头信息值也会从源标记刷新（环境变量引用的为 `secretref-env:ENV_VAR_NAME`，文件/执行引用的为 `secretref-managed`）。
+- 代理目录中 `apiKey`/`baseUrl` 为空或缺失时会回退使用配置中的 `models.providers`。
+- 其他提供商字段会从配置和规范化目录数据中刷新。
+
+标记的持久化以源为准：OpenClaw 会从活动的源配置快照（解析前）写入标记，而非解析后的运行时密钥值。
+此规则适用于 OpenClaw 重新生成 `models.json` 的所有场合，包括命令驱动的路径如 `openclaw agent`。

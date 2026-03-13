@@ -103,18 +103,19 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 
 ## 凭证优先级
 
-Gateway credential resolution follows one shared contract across call/probe/status paths, Discord exec-approval monitoring, and node-host connections:
+Gateway credential resolution follows one shared contract across call/probe/status paths and Discord exec-approval monitoring. Node-host uses the same base contract with one local-mode exception (it intentionally ignores `gateway.remote.*`):
 
 - 显式凭证（`--token`、`--password` 或工具中的 `gatewayToken`）总在接受显式认证的调用路径上占优。
 - URL 覆盖安全性：
   - CLI URL 覆盖（`--url`）永远不会复用隐式配置/环境凭证。
   - 环境变量 URL 覆盖（`OPENCLAW_GATEWAY_URL`）只可能使用环境凭证（`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
 - 本地模式默认：
-  - token：`OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token` -> `gateway.remote.token`
-  - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.auth.password` -> `gateway.remote.password`
+  - token：`OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token` -> `gateway.remote.token`（仅当本地认证 token 输入未设置时适用远程回退）
+  - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.auth.password` -> `gateway.remote.password`（仅当本地认证密码输入未设置时适用远程回退）
 - 远程模式默认：
   - token：`gateway.remote.token` -> `OPENCLAW_GATEWAY_TOKEN` -> `gateway.auth.token`
   - password：`OPENCLAW_GATEWAY_PASSWORD` -> `gateway.remote.password` -> `gateway.auth.password`
+- 节点主机本地模式例外：忽略 `gateway.remote.token` / `gateway.remote.password`。
 - 远程探测/状态检查的 token 严格默认：仅使用 `gateway.remote.token`（无本地 token 回退），在远程模式目标时生效。
 - 旧环境变量 `CLAWDBOT_GATEWAY_*` 仅为兼容调用路径使用；探测/状态/认证解析只使用 `OPENCLAW_GATEWAY_*`。
 
@@ -138,9 +139,10 @@ macOS 菜单栏应用可端到端驱动相同配置（远程状态检查、WebCh
 - **回环 + SSH/Tailscale Serve** 是最安全的默认配置（无公网暴露）。
 - 明文 `ws://` 默认仅可在回环访问。若在受信任的私有网络使用，  
   可在客户端进程设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` 作为破窗措施。
-- 非回环绑定（`lan`/`tailnet`/`custom`，或回环不可用时的 `auto`）必须启用认证 token/密码。
+- **非回环绑定**（`lan`/`tailnet`/`custom`，或回环不可用时的 `auto`）必须启用认证 token/密码。
 - `gateway.remote.token` / `.password` 是客户端凭证来源，**不会单独配置服务器端认证**。
 - 本地调用路径未设置 `gateway.auth.*` 时，可回退到 `gateway.remote.*`。
+- 如果通过 SecretRef 明确配置了 `gateway.auth.token` / `gateway.auth.password` 且未解析成功，则解析失败将以关闭方式处理（无远程回退掩盖）。
 - `gateway.remote.tlsFingerprint` 用于使用 `wss://` 时固定远程 TLS 证书。
 - **Tailscale Serve** 可通过身份验证头验证控制 UI/WebSocket 流量（当 `gateway.auth.allowTailscale: true` 时）；HTTP API 端点仍需 token/密码认证。此无 token 流程假设网关主机是可信的。如果想全部使用 token/密码，设置其为 `false`。
 - 浏览器控制如同操作者访问：仅限 tailnet + 有意节点配对。

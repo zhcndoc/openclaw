@@ -195,16 +195,18 @@ openclaw channels add
 }
 ```
 
-如果使用 `connectionMode: "webhook"`，需要设置 `verificationToken`。默认飞书 webhook 服务器绑定到 `127.0.0.1`，若需不同绑定地址，请设置 `webhookHost`。
+如果使用 `connectionMode: "webhook"`，需要同时设置 `verificationToken` 和 `encryptKey`。飞书 webhook 服务器默认绑定到 `127.0.0.1`，仅当您确实需要不同的绑定地址时，才设置 `webhookHost`。
 
-#### 验证 Token（Webhook 模式）
+#### 验证 Token 和加密密钥（Webhook 模式）
 
-Webhook 模式下，配置 `channels.feishu.verificationToken`。获取方法：
+Webhook 模式下，在配置中同时设置 `channels.feishu.verificationToken` 和 `channels.feishu.encryptKey`。获取方法：
 
-1. 登录飞书开放平台，打开您的应用
-2. 进入 **开发配置** → **事件与回调**
-3. 打开 **加密策略** 标签页
-4. 复制 **Verification Token**
+1. 登录飞书开放平台，打开您的应用  
+2. 进入 **开发配置** → **事件与回调**  
+3. 打开 **加密策略** 标签页  
+4. 复制 **Verification Token** 和 **Encrypt Key**  
+
+下图展示了 **Verification Token** 的位置，**Encrypt Key** 位于同一 **加密策略** 部分。
 
 ![验证 Token 位置](../images/feishu-verification-token.png)
 
@@ -595,29 +597,30 @@ openclaw pairing list feishu
 
 主要选项：
 
-| 设置                                              | 说明                           | 默认             |
-| ------------------------------------------------- | ------------------------------ | ---------------- |
-| `channels.feishu.enabled`                         | 启用/禁用通道                  | `true`           |
-| `channels.feishu.domain`                          | API 域名（`feishu` 或 `lark`） | `feishu`         |
-| `channels.feishu.connectionMode`                  | 事件传输模式                   | `websocket`      |
-| `channels.feishu.defaultAccount`                  | 出站路由默认账户 ID            | `default`        |
-| `channels.feishu.verificationToken`               | webhook 模式所需               | -                |
-| `channels.feishu.webhookPath`                     | webhook 路由路径               | `/feishu/events` |
-| `channels.feishu.webhookHost`                     | webhook 绑定主机               | `127.0.0.1`      |
-| `channels.feishu.webhookPort`                     | webhook 绑定端口               | `3000`           |
-| `channels.feishu.accounts.<id>.appId`             | 应用 ID                        | -                |
-| `channels.feishu.accounts.<id>.appSecret`         | 应用密钥                       | -                |
-| `channels.feishu.accounts.<id>.domain`            | 单账户 API 域名覆盖            | `feishu`         |
-| `channels.feishu.dmPolicy`                        | 私信策略                       | `pairing`        |
-| `channels.feishu.allowFrom`                       | 私信白名单（open_id列表）      | -                |
-| `channels.feishu.groupPolicy`                     | 群聊策略                       | `open`           |
-| `channels.feishu.groupAllowFrom`                  | 群聊白名单                     | -                |
-| `channels.feishu.groups.<chat_id>.requireMention` | 是否需要 @提及                 | `true`           |
-| `channels.feishu.groups.<chat_id>.enabled`        | 是否启用群组                   | `true`           |
-| `channels.feishu.textChunkLimit`                  | 消息分块大小                   | `2000`           |
-| `channels.feishu.mediaMaxMb`                      | 多媒体大小限制                 | `30`             |
-| `channels.feishu.streaming`                       | 启用流式卡片输出               | `true`           |
-| `channels.feishu.blockStreaming`                  | 启用区块流式输出               | `true`           |
+| 设置                                              | 说明                               | 默认             |
+| ------------------------------------------------- | ---------------------------------- | ---------------- |
+| `channels.feishu.enabled`                         | 启用/禁用通道                      | `true`           |
+| `channels.feishu.domain`                          | API 域名（`feishu` 或 `lark`）     | `feishu`         |
+| `channels.feishu.connectionMode`                  | 事件传输模式                       | `websocket`      |
+| `channels.feishu.defaultAccount`                  | 出站路由默认账户 ID                | `default`        |
+| `channels.feishu.verificationToken`               | webhook 模式所需                   | -                |
+| `channels.feishu.encryptKey`                      | webhook 模式所需                   | -                |
+| `channels.feishu.webhookPath`                     | webhook 路由路径                   | `/feishu/events` |
+| `channels.feishu.webhookHost`                     | webhook 绑定主机                   | `127.0.0.1`      |
+| `channels.feishu.webhookPort`                     | webhook 绑定端口                   | `3000`           |
+| `channels.feishu.accounts.<id>.appId`             | 应用 ID                           | -                |
+| `channels.feishu.accounts.<id>.appSecret`         | 应用密钥                         | -                |
+| `channels.feishu.accounts.<id>.domain`            | 单账户 API 域名覆盖                | `feishu`         |
+| `channels.feishu.dmPolicy`                        | 私信策略                         | `pairing`        |
+| `channels.feishu.allowFrom`                       | 私信白名单（open_id列表）          | -                |
+| `channels.feishu.groupPolicy`                     | 群聊策略                         | `open`           |
+| `channels.feishu.groupAllowFrom`                  | 群聊白名单                       | -                |
+| `channels.feishu.groups.<chat_id>.requireMention` | 是否需要 @提及                   | `true`           |
+| `channels.feishu.groups.<chat_id>.enabled`        | 是否启用群组                     | `true`           |
+| `channels.feishu.textChunkLimit`                  | 消息分块大小                     | `2000`           |
+| `channels.feishu.mediaMaxMb`                      | 多媒体大小限制                   | `30`             |
+| `channels.feishu.streaming`                       | 启用流式卡片输出                 | `true`           |
+| `channels.feishu.blockStreaming`                  | 启用区块流式输出                 | `true`           |
 
 ---
 

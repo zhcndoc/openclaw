@@ -81,7 +81,7 @@ scripts/e2e/onboard-docker.sh
 
 ## QR 导入冒烟测试（Docker）
 
-确保 `qrcode-terminal` 在 Node 22+ 的 Docker 中能正常加载：
+确保 `qrcode-terminal` 能在支持的 Docker Node 运行环境中加载（默认 Node 24，兼容 Node 22）：
 
 ```bash
 pnpm test:docker:qr

@@ -69,8 +69,10 @@ title: "SecretRef 凭证范围"
 - `channels.bluebubbles.password`
 - `channels.bluebubbles.accounts.*.password`
 - `channels.feishu.appSecret`
+- `channels.feishu.encryptKey`
 - `channels.feishu.verificationToken`
 - `channels.feishu.accounts.*.appSecret`
+- `channels.feishu.accounts.*.encryptKey`
 - `channels.feishu.accounts.*.verificationToken`
 - `channels.msteams.appPassword`
 - `channels.mattermost.botToken`
@@ -101,6 +103,7 @@ title: "SecretRef 凭证范围"
 - 计划条目针对 `profiles.*.key` / `profiles.*.token` 并写入同级引用 (`keyRef` / `tokenRef`)。
 - Auth-profile 引用包含在运行时解析和审计覆盖范围内。
 - 对于 SecretRef 管理的模型提供者，生成的 `agents/*/agent/models.json` 条目持久化非秘密标记（而非解析出的秘密值）用于 `apiKey` / 头信息表面。
+- 标记持久化以源头配置为准：OpenClaw 从活动的源配置快照（解析前）写入标记，而非从解析后的运行时秘密值写入。
 - 对于网页搜索：
   - 在显式提供者模式（设置了 `tools.web.search.provider`）下，仅所选提供者的密钥有效。
   - 在自动模式（未设置 `tools.web.search.provider`）下，仅按照优先级解析的第一个提供者密钥有效。

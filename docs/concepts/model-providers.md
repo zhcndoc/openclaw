@@ -46,6 +46,8 @@ OpenClaw 自带 pi-ai 目录。这些提供商无需配置 `models.providers`；
 - 可通过 `agents.defaults.models["openai/<model>"].params.transport` 覆盖单个模型传输方式（`"sse"`、`"websocket"` 或 `"auto"`）  
 - OpenAI 响应 WebSocket 预热默认启用，通过 `params.openaiWsWarmup` 设置（`true`/`false`）  
 - 可通过 `agents.defaults.models["openai/<model>"].params.serviceTier` 启用 OpenAI 优先级处理  
+- 可通过 `agents.defaults.models["<provider>/<model>"].params.fastMode` 为单个模型启用 OpenAI 快速模式  
+- `openai/gpt-5.3-codex-spark` 在 OpenClaw 中有意被屏蔽，因为实时 OpenAI API 拒绝该模型；Spark 仅作为 Codex 使用
 
 ```json5
 {
@@ -60,8 +62,9 @@ OpenClaw 自带 pi-ai 目录。这些提供商无需配置 `models.providers`；
 - 可选轮换：`ANTHROPIC_API_KEYS`、`ANTHROPIC_API_KEY_1`、`ANTHROPIC_API_KEY_2` 及 `OPENCLAW_LIVE_ANTHROPIC_KEY`（单个覆盖）  
 - 示例模型：`anthropic/claude-opus-4-6`  
 - CLI：`openclaw onboard --auth-choice token`（粘贴 setup-token）或 `openclaw models auth paste-token --provider anthropic`  
+- 直连 API-key 模型支持共享的 `/fast` 开关和 `params.fastMode`；OpenClaw 将其映射为 Anthropic 的 `service_tier`（`auto` 或 `standard_only`）  
 - 策略说明：setup-token 支持是为技术兼容；Anthropic 以前曾阻止部分订阅在 Claude Code 以外的使用。请核查当前 Anthropic 条款，并根据风险承受能力决策。  
-- 建议：Anthropic API 密钥认证是更安全、推荐的方式，优于订阅 setup-token 认证。  
+- 建议：Anthropic API 密钥认证是更安全、推荐的方式，优于订阅 setup-token 认证。
 
 ```json5
 {
@@ -77,7 +80,9 @@ OpenClaw 自带 pi-ai 目录。这些提供商无需配置 `models.providers`；
 - CLI：`openclaw onboard --auth-choice openai-codex` 或 `openclaw models auth login --provider openai-codex`  
 - 默认传输为 `auto`（优先 WebSocket，失败时降级 SSE）  
 - 可通过 `agents.defaults.models["openai-codex/<model>"].params.transport` 覆盖单个模型传输方式（`"sse"`、`"websocket"` 或 `"auto"`）  
-- 策略说明：OpenAI Codex OAuth 明确支持外部工具/工作流，如 OpenClaw。  
+- 共享与直连 `openai/*` 相同的 `/fast` 开关与 `params.fastMode` 配置  
+- 当 Codex OAuth 目录暴露时，`openai-codex/gpt-5.3-codex-spark` 仍可用；但依赖授权  
+- 策略说明：OpenAI Codex OAuth 明确支持外部工具/工作流，如 OpenClaw。
 
 ```json5
 {
@@ -85,12 +90,13 @@ OpenClaw 自带 pi-ai 目录。这些提供商无需配置 `models.providers`；
 }
 ```
 
-### OpenCode Zen
+### OpenCode
 
-- 提供商：`opencode`  
 - 认证：`OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`）  
-- 示例模型：`opencode/claude-opus-4-6`  
-- CLI：`openclaw onboard --auth-choice opencode-zen`  
+- Zen 运行时提供商：`opencode`  
+- Go 运行时提供商：`opencode-go`  
+- 示例模型：`opencode/claude-opus-4-6`、`opencode-go/kimi-k2.5`  
+- CLI：`openclaw onboard --auth-choice opencode-zen` 或 `openclaw onboard --auth-choice opencode-go`
 
 ```json5
 {
@@ -103,8 +109,8 @@ OpenClaw 自带 pi-ai 目录。这些提供商无需配置 `models.providers`；
 - 提供商：`google`  
 - 认证：`GEMINI_API_KEY`  
 - 可选轮换：`GEMINI_API_KEYS`、`GEMINI_API_KEY_1`、`GEMINI_API_KEY_2`、`GOOGLE_API_KEY` 备用及 `OPENCLAW_LIVE_GEMINI_KEY`（单个覆盖）  
-- 示例模型：`google/gemini-3.1-pro-preview`、`google/gemini-3-flash-preview`、`google/gemini-3.1-flash-lite-preview`  
-- 兼容性说明：旧版 OpenClaw 配置使用 `google/gemini-3.1-flash-preview` 会被规范化为 `google/gemini-3-flash-preview`，裸露的 `google/gemini-3.1-flash-lite` 会被规范化为 `google/gemini-3.1-flash-lite-preview`  
+- 示例模型：`google/gemini-3.1-pro-preview`、`google/gemini-3-flash-preview`  
+- 兼容性说明：旧版 OpenClaw 配置使用 `google/gemini-3.1-flash-preview` 会被规范化为 `google/gemini-3-flash-preview`  
 - CLI：`openclaw onboard --auth-choice gemini-api-key`
 
 ### Google Vertex、Antigravity 和 Gemini CLI
@@ -348,12 +354,12 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 
 ### Ollama
 
-Ollama 是本地 LLM 运行时，提供 OpenAI 兼容 API：
+Ollama 是打包提供的插件，使用 Ollama 的原生 API：
 
 - 提供商：`ollama`  
 - 认证：无需（本地服务器）  
 - 示例模型：`ollama/llama3.3`  
-- 安装：[https://ollama.ai](https://ollama.ai)  
+- 安装：[https://ollama.com/download](https://ollama.com/download)
 
 ```bash
 # 安装 Ollama，随后拉取模型：
@@ -368,11 +374,11 @@ ollama pull llama3.3
 }
 ```
 
-Ollama 会自动检测本地的 `http://127.0.0.1:11434/v1` 服务，详情见 [/providers/ollama](/providers/ollama) 获取模型推荐和自定义配置说明。
+Ollama 在本地 `http://127.0.0.1:11434` 被自动检测，需启用 `OLLAMA_API_KEY`，捆绑插件可直接将 Ollama 添加到 `openclaw onboard` 和模型选择器中。详见 [/providers/ollama](/providers/ollama) 获取上手、本地/云模式及自定义配置说明。
 
 ### vLLM
 
-vLLM 是本地（或自托管）OpenAI 兼容服务器：
+vLLM 是打包提供的本地/自托管 OpenAI 兼容服务器插件：
 
 - 提供商：`vllm`  
 - 认证：可选（取决于服务器）  
@@ -395,6 +401,32 @@ export VLLM_API_KEY="vllm-local"
 ```
 
 详情见 [/providers/vllm](/providers/vllm)。
+
+### SGLang
+
+SGLang 是打包提供的快速自托管 OpenAI 兼容服务器插件：
+
+- 提供商：`sglang`
+- 认证：可选（取决于服务器）
+- 默认基础 URL：`http://127.0.0.1:30000/v1`
+
+要启用本地自动发现（服务器不强制认证时，任意值均可）：
+
+```bash
+export SGLANG_API_KEY="sglang-local"
+```
+
+然后设置一个模型（替换为 `/v1/models` 返回的某个 ID）：
+
+```json5
+{
+  agents: {
+    defaults: { model: { primary: "sglang/your-model-id" } },
+  },
+}
+```
+
+详情见 [/providers/sglang](/providers/sglang)。
 
 ### 本地代理（LM Studio、vLLM、LiteLLM 等）
 

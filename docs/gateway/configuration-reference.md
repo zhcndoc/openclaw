@@ -2004,9 +2004,11 @@ OpenClaw 使用 pi-coding-agent 模型目录。可通过配置 `models.providers
   - 非空代理 `models.json` 中的 `baseUrl` 优先。
   - 非空代理 `apiKey` 仅当提供商未由当前配置/认证配置文件的 SecretRef 管理时生效。
   - SecretRef 管理的 `apiKey` 从源标记（环境变量或文件/外部命令）刷新，不保存明文。
+  - SecretRef 管理的提供商头部值同样从源标记刷新（环境变量形式为 `secretref-env:ENV_VAR_NAME`，文件/执行形式为 `secretref-managed`）。
   - 空或缺失代理 `apiKey`/`baseUrl` 回退为配置中 `models.providers`。
   - 相同模型的 `contextWindow`/`maxTokens` 取显式配置和隐式目录的较大值。
-- 使用 `models.mode: "replace"` 完全替换 `models.json`。
+  - 使用 `models.mode: "replace"` 可完全替换 `models.json`。
+  - 标记持久化以源配置快照为准（解析前），而非运行时解析的秘密值。
 
 ### 提供商字段详解
 
@@ -2069,7 +2071,7 @@ OpenClaw 使用 pi-coding-agent 模型目录。可通过配置 `models.providers
 
 </Accordion>
 
-<Accordion title="OpenCode Zen">
+<Accordion title="OpenCode">
 
 ```json5
 {
@@ -2082,7 +2084,7 @@ OpenClaw 使用 pi-coding-agent 模型目录。可通过配置 `models.providers
 }
 ```
 
-设置 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`）。快捷方式：`openclaw onboard --auth-choice opencode-zen`。
+设置 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`）。Zen 目录使用 `opencode/...` 引用，Go 目录使用 `opencode-go/...` 引用。快捷方式：`openclaw onboard --auth-choice opencode-zen` 或 `openclaw onboard --auth-choice opencode-go`。
 
 </Accordion>
 
@@ -2188,7 +2190,7 @@ Anthropic 兼容内置提供商。快捷方式：`openclaw onboard --auth-choice
           {
             id: "hf:MiniMaxAI/MiniMax-M2.5",
             name: "MiniMax M2.5",
-            reasoning: false,
+            reasoning: true,
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 192000,
@@ -2228,7 +2230,7 @@ Base URL 应省略 `/v1`（Anthropic 客户端自动添加）。快捷方式：`
           {
             id: "MiniMax-M2.5",
             name: "MiniMax M2.5",
-            reasoning: false,
+            reasoning: true,
             input: ["text"],
             cost: { input: 15, output: 60, cacheRead: 2, cacheWrite: 10 },
             contextWindow: 200000,
@@ -2432,37 +2434,50 @@ Base URL 应省略 `/v1`（Anthropic 客户端自动添加）。快捷方式：`
       // 从默认 HTTP 拒绝列表去除工具
       allow: ["gateway"],
     },
+    push: {
+      apns: {
+        relay: {
+          baseUrl: "https://relay.example.com",
+          timeoutMs: 10000,
+        },
+      },
+    },
   },
 }
 ```
 
 <Accordion title="网关字段详解">
 
-- `mode`：`local`（运行网关）或 `remote`（连接远程网关）。非 `local` 模式拒绝启动。
-- `port`：WS + HTTP 单端口，优先级 `--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > 18789。
-- `bind`：支持 `auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（Tailscale IP）或 `custom`。
-- **兼容绑定别名**：使用 `gateway.bind` 下的值（auto、loopback、lan、tailnet、custom），不建议使用主机别名（如 0.0.0.0、127.0.0.1 等）。
-- **Docker注意**：默认绑定回环为容器内的 127.0.0.1；桥接模式下流量入 eth0，网关不可达。需使用 `--network host` 或设置为 `lan`（或自定义绑定 `0.0.0.0`）监听所有接口。
-- **认证**：默认必须。非回环需共享令牌/密码。引导流程默认生成令牌。
-- 若同时配置 `gateway.auth.token` 和 `gateway.auth.password`（包含 SecretRef），必须显式设置 `gateway.auth.mode`。不设置时启动及安装修复失败。
-- `gateway.auth.mode: "none"`：显式拒绝认证，仅用于受信任本地回环，不推荐。
-- `gateway.auth.mode: "trusted-proxy"`：委托给身份感知反向代理认证，且信任 `gateway.trustedProxies` 代理 IP。详见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)。
-- `gateway.auth.allowTailscale`：为真时，支持 Tailscale Serve 身份头免令牌认证（通过 `tailscale whois` 验证），但 HTTP API 仍需令牌/密码。默认启用（`tailscale.mode="serve"` 时）。
-
-- `gateway.auth.rateLimit`：失败认证限制器，按客户端 IP 和认证范围分开限流（共享秘密和设备令牌分开追踪），阻断返回 `429` + `Retry-After`。
-  - `exemptLoopback` 默认为真，设为假可限制本地主机流量（测试或严格代理场景）。
-- 浏览器来源 WebSocket 认证尝试强制限流，无本地环回例外（防止系统内浏览器 localhost 暴力破解）。
-- `tailscale.mode`：`serve`（仅尾网，回环绑定）或 `funnel`（公网，需要认证）。
-- `controlUi.allowedOrigins`：浏览器来源允许清单，非回环客户端必填。
-- `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，启用 Host 头来源回退。
-- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。`direct` 时 URL 必须为 `ws://` 或 `wss://`。
-- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`：客户端破戒选项，允许向受信任私网 IP 使用明文 `ws://`。默认仅支持回环。
-- `gateway.remote.token` / `password`：远程客户端认证字段，本身不配置网关认证。
-- 本地网关调用路径在未设置 `gateway.auth.*` 时可回退使用 `gateway.remote.*`。
-- `trustedProxies`：反向代理 TLS 终端 IP 列表，务必只列出自己控制的代理。
-- `allowRealIpFallback`：为真时，缺少 `X-Forwarded-For` 时启用 `X-Real-IP`，默认假确保失败即关闭。
-- `gateway.tools.deny`：HTTP `POST /tools/invoke` 额外拒绝扩展工具列表。
-- `gateway.tools.allow`：从默认 HTTP 拒绝列表去除工具。
+- `mode`：`local`（运行网关）或 `remote`（连接远程网关）。除非为 `local`，否则网关拒绝启动。
+- `port`：WS 和 HTTP 共用单端口。优先级：`--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`。
+- `bind`：支持 `auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（仅限 Tailscale IP）或 `custom`。
+- **兼容绑定别名**：使用 `gateway.bind` 下的绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），而非主机别名（如 `0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
+- **Docker 注意**：默认的 `loopback` 绑定在容器内监听 `127.0.0.1`。使用 Docker 桥接网络（`-p 18789:18789`）时，流量到达 `eth0`，网关不可达。需使用 `--network host`，或设置 `bind: "lan"`（或 `bind: "custom"` 并将 `customBindHost` 设为 `"0.0.0.0"`）监听所有接口。
+- **认证**：默认必需。非回环绑定需共享令牌/密码。引导向导默认生成令牌。
+- 若同时配置了带 SecretRef 的 `gateway.auth.token` 和 `gateway.auth.password`，必须显式设置 `gateway.auth.mode`（`token` 或 `password`）。若两者都配置但未设模式，启动及服务安装/修复流程会失败。
+- `gateway.auth.mode: "none"`：显式无认证模式。仅用于受信任的本地回环环境；引导流程中故意不提供此选项。
+- `gateway.auth.mode: "trusted-proxy"`：委托给身份感知反向代理，并信任来自 `gateway.trustedProxies` 的身份头（详见 [受信任代理认证](/gateway/trusted-proxy-auth)）。
+- `gateway.auth.allowTailscale`：设为 `true` 时，Tailscale Serve 身份头可满足 Control UI/WebSocket 认证（通过 `tailscale whois` 验证）；HTTP API 端点仍需令牌/密码认证。此无令牌流程假定网关主机是受信任的。`tailscale.mode = "serve"` 时默认启用。
+- `gateway.auth.rateLimit`：可选的失败认证限制器。按客户端 IP 和认证范围独立限流（共享秘密和设备令牌独立追踪）。被阻止请求返回 `429` 和 `Retry-After`。
+  - `gateway.auth.rateLimit.exemptLoopback` 默认 `true`；若需要对本地主机流量限流（测试或严格代理场景），可设为 `false`。
+- 浏览器来源的 WS 认证尝试始终限流，且无本地回环例外（防止浏览器基于本地主机进行暴力破解，为深度防御措施）。
+- `tailscale.mode`：`serve`（仅限尾网，回环绑定）或 `funnel`（公网，需认证）。
+- `controlUi.allowedOrigins`：Gateway WebSocket 连接的显式浏览器来源允许清单。期望非回环来源浏览器客户端时必填。
+- `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，启用 Host 头来源回退，适用于依赖 Host 头来源策略的部署。
+- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。`direct` 时，`remote.url` 必须为 `ws://` 或 `wss://`。
+- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`：客户端破戒选项，允许向受信任的私网 IP 使用明文 `ws://`；默认仅允许回环明文。
+- `gateway.remote.token` / `.password`：远程客户端凭据字段，不单独用于配置网关认证。
+- `gateway.push.apns.relay.baseUrl`：官方/TestFlight iOS 构建发布基于中继的注册后使用的外部 APNs 中继的基础 HTTPS URL。此 URL 必须与 iOS 构建中编译的中继 URL 匹配。
+- `gateway.push.apns.relay.timeoutMs`：网关到中继的发送超时，单位毫秒。默认 `10000`。
+- 基于中继的注册委托给特定网关身份。配对 iOS 应用获取 `gateway.identity.get`，包含该身份用于中继注册，并转发限定注册范围的发送授权给网关。其他网关无法重用存储的注册信息。
+- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`：上述中继配置的临时环境变量覆盖。
+- `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`：开发用逃生阀，允许回环 HTTP 中继 URL。生产环境中继应使用 HTTPS。
+- 本地网关调用路径仅在未设置 `gateway.auth.*` 时可回退使用 `gateway.remote.*`。
+- 若通过 SecretRef 显式配置的 `gateway.auth.token`/`gateway.auth.password`未解析成功，解析失败将关闭访问（不允许远程回退隐藏）。
+- `trustedProxies`：终止 TLS 的反向代理 IP 列表。务必仅列出自己控制的代理。
+- `allowRealIpFallback`：为 `true` 时，缺少 `X-Forwarded-For` 时接受 `X-Real-IP`。默认 `false`，保证失败关闭行为。
+- `gateway.tools.deny`：HTTP `POST /tools/invoke` 额外禁止的工具列表（扩展默认拒绝列表）。
+- `gateway.tools.allow`：从默认 HTTP 拒绝列表中移除工具名称。
 
 </Accordion>
 

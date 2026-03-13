@@ -67,8 +67,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
   <Step title="检测操作系统">
     支持 macOS 和 Linux（包括 WSL）。检测到 macOS 时，如缺少 Homebrew，则安装 Homebrew。
   </Step>
-  <Step title="确保 Node.js 22+">
-    检查 Node 版本，必要时安装 Node 22（macOS 使用 Homebrew，Linux 使用 NodeSource 设置脚本 apt/dnf/yum）。
+  <Step title="确保默认使用 Node.js 24">
+    检查 Node 版本，必要时安装 Node 24（macOS 使用 Homebrew，Linux 使用 NodeSource 设置脚本 apt/dnf/yum）。OpenClaw 仍支持 Node 22 LTS，目前为 `22.16+`，以保证兼容性。
   </Step>
   <Step title="确保 Git">
     如缺少 Git，则进行安装。
@@ -172,7 +172,7 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
 
 <Steps>
   <Step title="安装本地 Node 运行时">
-    下载 Node 压缩包（默认 `22.22.0`）到 `<prefix>/tools/node-v<version>` 并校验 SHA-256。
+    下载固定版本的支持 Node 压缩包（当前默认 `22.22.0`）到 `<prefix>/tools/node-v<version>` 并校验 SHA-256。
   </Step>
   <Step title="确保 Git">
     如缺少 Git，尝试在 Linux 上通过 apt/dnf/yum，macOS 上通过 Homebrew 安装。
@@ -248,8 +248,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
   <Step title="确保 PowerShell + Windows 环境">
     需要 PowerShell 5 及以上版本。
   </Step>
-  <Step title="确保 Node.js 22+">
-    如缺少 Node，尝试先通过 winget 安装，再尝试 Chocolatey，最后尝试 Scoop。
+  <Step title="确保默认使用 Node.js 24">
+    如缺少 Node，尝试先通过 winget 安装，再尝试 Chocolatey，最后尝试 Scoop。 Node 22 LTS，目前为 `22.16+`，仍然支持以保证兼容性。
   </Step>
   <Step title="安装 OpenClaw">
     - 通过 `npm` 方法（默认）：使用选定 `-Tag` 的全局 npm 安装

@@ -417,6 +417,9 @@ ACP 会话当前在主机运行时执行，不在 OpenClaw 沙盒内。
 
 ## 运行时选项映射
 
+`/acp sessions` 读取当前绑定或请求者会话的存储。接受 `session-key`、`session-id` 或 `session-label` 令牌的命令通过网关会话发现解析目标，包括自定义每个代理的 `session.store` 根目录。
+
+
 `/acp` 除了便捷命令，也支持通用设置写入。
 
 等价关系：

@@ -52,6 +52,14 @@ openclaw nodes describe --node <节点ID或名称或IP>
 
 ### 启动节点主机（前台）
 
+审批说明：
+
+- 具审批支持的节点执行绑定精确的请求上下文。
+- 对于直接的 shell/运行时文件执行，OpenClaw 也会尽最大努力绑定一个具体的本地文件操作数，并在该文件执行前发生变化时拒绝运行。
+- 如果 OpenClaw 无法为解释器/运行时命令准确定位一个具体的本地文件，则会拒绝审批支持的执行，而不是假装完全覆盖运行时。对于更广泛的解释器语义，请使用沙箱、独立主机或明确的可信白名单/完整工作流。
+
+### 启动节点主机（前台）
+
 在节点机器上：
 
 ```bash
@@ -77,7 +85,10 @@ openclaw node run --host 127.0.0.1 --port 18790 --display-name "构建节点"
 
 - `openclaw node run` 支持令牌或密码认证。
 - 建议使用环境变量：`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
-- 配置文件回退选项为：`gateway.auth.token` / `gateway.auth.password`；远程模式还支持 `gateway.remote.token` / `gateway.remote.password`。
+- 配置文件回退选项为：`gateway.auth.token` / `gateway.auth.password`。
+- 在本地模式下，节点主机会故意忽略 `gateway.remote.token` / `gateway.remote.password`。
+- 在远程模式下，`gateway.remote.token` / `gateway.remote.password` 按远程优先规则生效。
+- 如果配置了活动的本地 `gateway.auth.*` SecretRefs 但未解析，节点主机认证将安全失败。
 - 旧版环境变量 `CLAWDBOT_GATEWAY_*` 在节点主机认证解析时故意被忽略。
 
 ### 启动节点主机（服务）

@@ -9,7 +9,9 @@ read_when:
 
 # Release Checklist (npm + macOS)
 
-使用仓库根目录下的 `pnpm`（Node 22+）。在打标签/发布前保持工作区干净。
+Use `pnpm` from the repo root with Node 24 by default. Node 22 LTS, currently `22.16+`, remains supported for compatibility. Keep the working tree clean before tagging/publishing.
+
+默认使用仓库根目录下的 `pnpm`，Node 版本为 24 。Node 22 LTS（当前为 `22.16+`）仍然支持以保证兼容性。请在打标签/发布前保持工作区干净。
 
 ## 操作触发
 

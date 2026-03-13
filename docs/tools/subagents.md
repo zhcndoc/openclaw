@@ -178,6 +178,7 @@ title: "子代理"
 
 ### 按深度的工具权限策略
 
+- 角色和控制范围在派生时写入会话元数据。这避免了扁平或恢复的会话密钥意外地重新获得编排者权限。
 - **深度 1（编排者，`maxSpawnDepth >= 2`）**：拥有 `sessions_spawn`、`subagents`、`sessions_list`、`sessions_history`，以便管理其子节点。其他会话/系统工具禁用。
 - **深度 1（叶子，`maxSpawnDepth == 1`）**：无会话工具（当前默认行为）。
 - **深度 2（叶子工作者）**：无会话工具，`sessions_spawn` 始终禁用，无法继续派生。

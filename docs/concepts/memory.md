@@ -215,10 +215,47 @@ agents: {
 
 注意：
 
-- 路径可为绝对或相对于工作区。
-- 目录会递归扫描 `.md` 文件。
-- 仅索引 Markdown 文件。
-- 忽略符号链接（文件或目录）。
+- 路径可为绝对或相对于工作区。  
+- 目录会递归扫描 `.md` 文件。  
+- 默认仅索引 Markdown 文件。  
+- 如果 `memorySearch.multimodal.enabled = true`，OpenClaw 还会仅在 `extraPaths` 下索引支持的图像/音频文件。默认的内存根目录（`MEMORY.md`、`memory.md`、`memory/**/*.md`）依然仅限 Markdown。  
+- 忽略符号链接（文件或目录）。  
+
+### 多模态内存文件（Gemini 图片 + 音频）
+
+使用 Gemini 嵌入 2 时，OpenClaw 可以从 `memorySearch.extraPaths` 索引图像和音频文件：
+
+```json5
+agents: {
+  defaults: {
+    memorySearch: {
+      provider: "gemini",
+      model: "gemini-embedding-2-preview",
+      extraPaths: ["assets/reference", "voice-notes"],
+      multimodal: {
+        enabled: true,
+        modalities: ["image", "audio"], // 或 ["all"]
+        maxFileBytes: 10000000
+      },
+      remote: {
+        apiKey: "YOUR_GEMINI_API_KEY"
+      }
+    }
+  }
+}
+```
+
+说明：
+
+- 多模态内存当前仅支持 `gemini-embedding-2-preview`。  
+- 多模态索引仅应用于通过 `memorySearch.extraPaths` 发现的文件。  
+- 当前支持的模态包括：图像和音频。  
+- 启用多模态内存时，`memorySearch.fallback` 必须保持为 `"none"`。  
+- 匹配的图像/音频文件字节会在索引时上传到配置的 Gemini 嵌入端点。  
+- 支持的图像扩展名：`.jpg`、`.jpeg`、`.png`、`.webp`、`.gif`、`.heic`、`.heif`。  
+- 支持的音频扩展名：`.mp3`、`.wav`、`.ogg`、`.opus`、`.m4a`、`.aac`、`.flac`。  
+- 搜索查询仍是文本，但 Gemini 可将文本查询与已索引的图像/音频嵌入进行比较。  
+- `memory_get` 依然仅读取 Markdown；二进制文件可搜索但不会作为原始文件内容返回。  
 
 ### Gemini 嵌入（原生）
 
@@ -240,9 +277,31 @@ agents: {
 
 注意：
 
-- `remote.baseUrl` 可选（默认 Gemini API 基础地址）。
-- `remote.headers` 支持添加额外请求头。
-- 默认模型为 `gemini-embedding-001`。
+- `remote.baseUrl` 可选（默认为 Gemini API 基础地址）。  
+- `remote.headers` 允许添加额外请求头。  
+- 默认模型为 `gemini-embedding-001`。  
+- 也支持 `gemini-embedding-2-preview`：拥有 8192 令牌限制和可配置维度（768 / 1536 / 3072，默认 3072）。  
+
+#### Gemini 嵌入 2（预览）
+
+```json5
+agents: {
+  defaults: {
+    memorySearch: {
+      provider: "gemini",
+      model: "gemini-embedding-2-preview",
+      outputDimensionality: 3072,  // 可选：768、1536 或 3072（默认）
+      remote: {
+        apiKey: "YOUR_GEMINI_API_KEY"
+      }
+    }
+  }
+}
+```
+
+> **⚠️ 需要重新索引：** 从 `gemini-embedding-001`（768 维）  
+> 切换到 `gemini-embedding-2-preview`（3072 维）会改变向量大小。  
+> 同样，如果更改 `outputDimensionality` 为 768、1536 或 3072，OpenClaw 在检测到模型或维度变化时会自动重新索引。  
 
 若需使用**自定义 OpenAI 兼容端点**（如 OpenRouter、vLLM 或代理），可配合 OpenAI 提供者使用 `remote` 配置：
 

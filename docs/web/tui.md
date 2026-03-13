@@ -37,7 +37,7 @@ openclaw tui --url ws://<host>:<port> --token <gateway-token>
 - 头部：连接 URL、当前代理、当前会话。
 - 聊天记录：用户消息、助理回复、系统通知、工具卡片。
 - 状态行：连接/运行状态（连接中、运行中、流式传输、空闲、错误）。
-- 页脚：连接状态 + 代理 + 会话 + 模型 + 思考/详细/推理 + 令牌计数 + 发送。
+- 页脚：连接状态 + 代理 + 会话 + 模型 + 思考/快速/详细/推理 + 令牌计数 + 发送。
 - 输入框：带自动补全的文本编辑器。
 
 ## 概念模型：代理 + 会话
@@ -92,6 +92,7 @@ openclaw tui --url ws://<host>:<port> --token <gateway-token>
 会话控制：
 
 - `/think <off|minimal|low|medium|high>`
+- `/fast <status|on|off>`
 - `/verbose <on|full|off>`
 - `/reasoning <on|off|stream>`
 - `/usage <off|tokens|full>`

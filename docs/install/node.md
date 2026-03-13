@@ -9,7 +9,7 @@ read_when:
 
 # Node.js
 
-OpenClaw 需要 **Node 22 或更高版本**。[安装脚本](/install#install-methods) 会自动检测并安装 Node —— 本页适用于您希望自行安装 Node 并确保一切配置正确（版本、PATH、全局安装）时的情况。
+OpenClaw 需要 **Node 22.16 或更高版本**。**Node 24 是默认且推荐的运行环境**，适用于安装、持续集成和发布工作流程。Node 22 仍通过活跃的长期支持（LTS）版本得到支持。[安装脚本](/install#install-methods) 会自动检测并安装 Node —— 本页适用于您希望自行安装 Node 并确保一切配置正确（版本、PATH、全局安装）时的情况。
 
 ## 检查您的版本
 
@@ -17,7 +17,7 @@ OpenClaw 需要 **Node 22 或更高版本**。[安装脚本](/install#install-me
 node -v
 ```
 
-如果输出 `v22.x.x` 或更高版本，说明符合要求。如果未安装 Node 或版本太旧，请从下方选择安装方法。
+如果输出为 `v24.x.x` 或更高版本，表示你正在使用推荐的默认版本。如果输出为 `v22.16.x` 或更高版本，表示你正在使用受支持的 Node 22 LTS 版本，但我们仍建议在方便时升级到 Node 24。如果未安装 Node 或版本太旧，请从下方选择安装方法。
 
 ## 安装 Node
 
@@ -36,7 +36,7 @@ node -v
     **Ubuntu / Debian：**
 
     ```bash
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
     sudo apt-get install -y nodejs
     ```
 
@@ -77,8 +77,8 @@ node -v
 以 fnm 为例：
 
 ```bash
-fnm install 22
-fnm use 22
+fnm install 24
+fnm use 24
 ```
 
   <Warning>

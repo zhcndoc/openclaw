@@ -104,6 +104,7 @@ gog.gmail.search --query 'newer_than:1d' \
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
   "prompt": "Given the input email, return intent and draft.",
+  "thinking": "低",
   "input": { "subject": "Hello", "body": "Can you help?" },
   "schema": {
     "type": "object",

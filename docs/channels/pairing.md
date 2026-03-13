@@ -71,7 +71,7 @@ openclaw pairing approve telegram <代码>
 设置代码是一个 base64 编码的 JSON，有：
 
 - `url`：网关 WebSocket URL（`ws://...` 或 `wss://...`）
-- `token`：短期有效的配对令牌
+- `bootstrapToken`：用于初始配对握手的短期单设备引导令牌  
 
 设置代码有效期内请像对待密码一样保护。
 

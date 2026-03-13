@@ -59,8 +59,9 @@ openclaw node run --host <gateway-host> --port 18789
 
 - 优先检查 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
 - 然后回退到本地配置：`gateway.auth.token` / `gateway.auth.password`。
-- 在本地模式下，如果未设置 `gateway.auth.*`，`gateway.remote.token` / `gateway.remote.password` 也可作为回退。
-- 在 `gateway.mode=remote` 时，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）可根据远程优先规则使用。
+- 在本地模式下，节点主机不会继承 `gateway.remote.token` / `gateway.remote.password`。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置且未能解析，节点认证将严格失败（不会通过远程回退掩盖此失败）。
+- 在 `gateway.mode=remote` 时，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也可根据远程优先规则使用。
 - 旧版环境变量 `CLAWDBOT_GATEWAY_*` 不参与节点主机认证解析。
 
 ## 服务（后台）

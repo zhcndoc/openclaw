@@ -115,11 +115,11 @@ gcloud services enable compute.googleapis.com
 
 **机器类型：**
 
-| 类型       | 规格                | 费用              | 备注                          |
-| ---------- | ------------------- | ----------------- | ----------------------------- |
-| e2-medium  | 2 vCPU，4GB 内存    | 约 25 美元/月     | 本地 Docker 构建最稳定选择    |
-| e2-small   | 2 vCPU，2GB 内存    | 约 12 美元/月     | Docker 构建的最低推荐         |
-| e2-micro   | 2 vCPU（共享），1GB | 免费等级适用      | Docker 构建经常因内存不足失败 |
+| 类型      | 规格                | 费用          | 备注                          |
+| --------- | ------------------- | ------------- | ----------------------------- |
+| e2-medium | 2 vCPU，4GB 内存    | 约 25 美元/月 | 本地 Docker 构建最稳定选择    |
+| e2-small  | 2 vCPU，2GB 内存    | 约 12 美元/月 | Docker 构建的最低推荐         |
+| e2-micro  | 2 vCPU（共享），1GB | 免费等级适用  | Docker 构建经常因内存不足失败 |
 
 **命令行：**
 
@@ -307,7 +307,7 @@ services:
 **示例 Dockerfile**
 
 ```dockerfile
-FROM node:22-bookworm
+FROM node:24-bookworm
 
 RUN apt-get update && apt-get install -y socat && rm -rf /var/lib/apt/lists/*
 
@@ -428,18 +428,18 @@ docker compose run --rm openclaw-cli devices approve <requestId>
 OpenClaw 运行在 Docker 中，但 Docker 不是状态的权威存储。
 所有长久状态必须能在重启、重建和重启后生存。
 
-| 组件               | 位置                               | 持久化机制           | 备注                             |
-| ------------------ | --------------------------------- | -------------------- | -------------------------------- |
-| Gateway 配置       | `/home/node/.openclaw/`            | 宿主机挂载卷         | 包含 `openclaw.json` 和令牌      |
-| 模型认证配置       | `/home/node/.openclaw/`            | 宿主机挂载卷         | OAuth 令牌，API 密钥             |
-| 技能配置           | `/home/node/.openclaw/skills/`     | 宿主机挂载卷         | 技能级别状态                    |
-| Agent 工作区       | `/home/node/.openclaw/workspace/`  | 宿主机挂载卷         | 代码与 Agent 产物               |
-| WhatsApp 会话      | `/home/node/.openclaw/`            | 宿主机挂载卷         | 保留二维码登录                   |
-| Gmail 密钥环       | `/home/node/.openclaw/`            | 宿主机卷 + 密码      | 需要 `GOG_KEYRING_PASSWORD`      |
-| 外部二进制文件     | `/usr/local/bin/`                  | Docker 镜像构建时打包 | 必须在构建时烘焙                |
-| Node 运行时        | 容器文件系统                      | Docker 镜像          | 每次镜像构建重建                |
-| 操作系统软件包     | 容器文件系统                      | Docker 镜像          | 不要在运行时安装                 |
-| Docker 容器        | 临时环境                         | 可重启                 | 可安全销毁                      |
+| 组件           | 位置                              | 持久化机制            | 备注                        |
+| -------------- | --------------------------------- | --------------------- | --------------------------- |
+| Gateway 配置   | `/home/node/.openclaw/`           | 宿主机挂载卷          | 包含 `openclaw.json` 和令牌 |
+| 模型认证配置   | `/home/node/.openclaw/`           | 宿主机挂载卷          | OAuth 令牌，API 密钥        |
+| 技能配置       | `/home/node/.openclaw/skills/`    | 宿主机挂载卷          | 技能级别状态                |
+| Agent 工作区   | `/home/node/.openclaw/workspace/` | 宿主机挂载卷          | 代码与 Agent 产物           |
+| WhatsApp 会话  | `/home/node/.openclaw/`           | 宿主机挂载卷          | 保留二维码登录              |
+| Gmail 密钥环   | `/home/node/.openclaw/`           | 宿主机卷 + 密码       | 需要 `GOG_KEYRING_PASSWORD` |
+| 外部二进制文件 | `/usr/local/bin/`                 | Docker 镜像构建时打包 | 必须在构建时烘焙            |
+| Node 运行时    | 容器文件系统                      | Docker 镜像           | 每次镜像构建重建            |
+| 操作系统软件包 | 容器文件系统                      | Docker 镜像           | 不要在运行时安装            |
+| Docker 容器    | 临时环境                          | 可重启                | 可安全销毁                  |
 
 ---
 

@@ -145,12 +145,12 @@ CLI 将配置和工作区写入主机：
 
 主 Docker 镜像当前使用：
 
-- `node:22-bookworm`
+- `node:24-bookworm`
 
 Docker 镜像现在发布 OCI 基础镜像注释（sha256 是一个示例，并指向该标签的固定多架构清单列表）：
 
-- `org.opencontainers.image.base.name=docker.io/library/node:22-bookworm`
-- `org.opencontainers.image.base.digest=sha256:b501c082306a4f528bc4038cbf2fbb58095d583d0419a259b2114b5ac53d12e9`
+- `org.opencontainers.image.base.name=docker.io/library/node:24-bookworm`
+- `org.opencontainers.image.base.digest=sha256:3a09aa6354567619221ef6c45a5051b671f953f0a1924d1f819ffb236e520e6b`
 - `org.opencontainers.image.source=https://github.com/openclaw/openclaw`
 - `org.opencontainers.image.url=https://openclaw.ai`
 - `org.opencontainers.image.documentation=https://docs.openclaw.ai/install/docker`
@@ -355,7 +355,7 @@ sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
 优化 Dockerfile 层次顺序，缓存依赖层，避免若无锁文件变更重复运行 `pnpm install`：
 
 ```dockerfile
-FROM node:22-bookworm
+FROM node:24-bookworm
 
 # 安装 Bun（构建脚本依赖）
 RUN curl -fsSL https://bun.sh/install | bash

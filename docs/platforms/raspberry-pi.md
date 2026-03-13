@@ -76,15 +76,16 @@ sudo apt install -y git curl build-essential
 sudo timedatectl set-timezone America/Chicago  # 换成你的时区
 ```
 
-## 4) 安装 Node.js 22（ARM64）
+## 4) 安装 Node.js 24（ARM64）
 
 ```bash
 # 通过 NodeSource 安装 Node.js
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # 验证安装
-node --version  # 应显示 v22.x.x
+node --version  # 应显示 v24.x.x
+```
 npm --version
 ```
 
@@ -153,29 +154,31 @@ sudo systemctl status openclaw
 journalctl -u openclaw -f
 ```
 
-## 9) 访问仪表盘
+## 9) 访问 OpenClaw 仪表盘
 
-由于 Pi 无头，使用 SSH 隧道：
+将 `user@gateway-host` 替换为你的 Pi 用户名和主机名或 IP 地址。
 
-```bash
-# 在你的笔记本/台式机上
-ssh -L 18789:localhost:18789 user@gateway-host
-
-# 然后浏览器打开
-open http://localhost:18789
-```
-
-或使用 Tailscale 实现持续访问：
+在你的电脑上，让 Pi 打印一个新的仪表盘 URL：
 
 ```bash
-# 在 Pi 上
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
-
-# 更新配置
-openclaw config set gateway.bind tailnet
-sudo systemctl restart openclaw
+ssh user@gateway-host 'openclaw dashboard --no-open'
 ```
+
+该命令会打印 `Dashboard URL:`。根据 `gateway.auth.token` 的配置，URL 可能是普通的 `http://127.0.0.1:18789/` 链接，或包含 `#token=...` 的链接。
+
+在你电脑的另一个终端中，创建 SSH 隧道：
+
+```bash
+ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
+```
+```
+
+Then open the printed Dashboard URL in your local browser.
+
+If the UI asks for auth, paste the token from `gateway.auth.token`
+(or `OPENCLAW_GATEWAY_TOKEN`) into Control UI settings.
+
+For always-on remote access, see [Tailscale](/gateway/tailscale).
 
 ---
 

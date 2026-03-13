@@ -337,7 +337,7 @@ openclaw [--dev] [--profile <name>] <command>
 - `--non-interactive`
 - `--mode <local|remote>`
 - `--flow <quickstart|advanced|manual>`（manual 是 advanced 的别名）
-- `--auth-choice <setup-token|token|chutes|openai-codex|openai-api-key|openrouter-api-key|ai-gateway-api-key|moonshot-api-key|moonshot-api-key-cn|kimi-code-api-key|synthetic-api-key|venice-api-key|gemini-api-key|zai-api-key|mistral-api-key|apiKey|minimax-api|minimax-api-lightning|opencode-zen|custom-api-key|skip>`
+- `--auth-choice <setup-token|token|chutes|openai-codex|openai-api-key|openrouter-api-key|ai-gateway-api-key|moonshot-api-key|moonshot-api-key-cn|kimi-code-api-key|synthetic-api-key|venice-api-key|gemini-api-key|zai-api-key|mistral-api-key|apiKey|minimax-api|minimax-api-lightning|opencode-zen|opencode-go|custom-api-key|skip>`
 - `--token-provider <id>`（非交互模式，配合 `--auth-choice token` 使用）
 - `--token <token>`（非交互模式，配合 `--auth-choice token` 使用）
 - `--token-profile-id <id>`（非交互模式，默认 `<provider>:manual`）
@@ -354,6 +354,7 @@ openclaw [--dev] [--profile <name>] <command>
 - `--zai-api-key <key>`
 - `--minimax-api-key <key>`
 - `--opencode-zen-api-key <key>`
+- `--opencode-go-api-key <key>`
 - `--custom-base-url <url>`（非交互模式，配合 `--auth-choice custom-api-key` 使用）
 - `--custom-model-id <id>`（非交互模式，配合 `--auth-choice custom-api-key` 使用）
 - `--custom-api-key <key>`（非交互模式，可选，配合 `--auth-choice custom-api-key` 使用；省略时回退至环境变量 `CUSTOM_API_KEY`）
@@ -1016,7 +1017,7 @@ openclaw models status
 
 认证说明：
 
-- `node` 从环境变量/配置中解析网关认证（不支持 `--token`/`--password` 标志）：依次为 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`，然后是 `gateway.auth.*`，支持通过 `gateway.remote.*` 远程模式。
+- `node` 从环境变量/配置中解析网关认证（不支持 `--token`/`--password` 标志）：依次为 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`，然后是 `gateway.auth.*`。本地模式下，节点主机故意忽略 `gateway.remote.*`；启用 `gateway.mode=remote` 时，`gateway.remote.*` 按远程优先级规则参与认证解析。
 - 旧版 `CLAWDBOT_GATEWAY_*` 环境变量故意不用于节点主机的认证解析。
 
 ## 节点集群

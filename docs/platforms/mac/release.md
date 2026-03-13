@@ -39,7 +39,7 @@ title: "macOS 发布"
 # 略过时默认基于 APP_VERSION 自动派生。
 SKIP_NOTARIZE=1 \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.9 \
+APP_VERSION=2026.3.12 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <Developer Name> (<TEAMID>)" \
 scripts/package-mac-dist.sh
@@ -47,10 +47,10 @@ scripts/package-mac-dist.sh
 # `package-mac-dist.sh` 已自动生成 zip 和 DMG。
 # 如果直接使用 `package-mac-app.sh`，需手动创建：
 # 如果希望在此步骤进行公证/钉扎，请使用下面的 NOTARIZE 命令。
-ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.9.zip
+ditto -c -k --sequesterRsrc --keepParent dist/OpenClaw.app dist/OpenClaw-2026.3.12.zip
 
 # 可选：构建一个带样式的 DMG 给用户（拖动到 /Applications）
-scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.9.dmg
+scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.12.dmg
 
 # 推荐：生成并进行公证+钉扎的 zip 与 DMG
 # 首次需创建钥匙串配置：
@@ -58,13 +58,13 @@ scripts/create-dmg.sh dist/OpenClaw.app dist/OpenClaw-2026.3.9.dmg
 #     --apple-id "<apple-id>" --team-id "<team-id>" --password "<应用专用密码>"
 NOTARIZE=1 NOTARYTOOL_PROFILE=openclaw-notary \
 BUNDLE_ID=ai.openclaw.mac \
-APP_VERSION=2026.3.9 \
+APP_VERSION=2026.3.12 \
 BUILD_CONFIG=release \
 SIGN_IDENTITY="Developer ID Application: <开发者名称> (<TEAMID>)" \
 scripts/package-mac-dist.sh
 
 # 可选：发布时附带 dSYM 文件
-ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.9.dSYM.zip
+ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenClaw-2026.3.12.dSYM.zip
 ```
 
 ## Appcast 条目
@@ -72,14 +72,14 @@ ditto -c -k --keepParent apps/macos/.build/release/OpenClaw.app.dSYM dist/OpenCl
 使用发布说明生成器，让 Sparkle 显示格式化的 HTML 说明：
 
 ```bash
-SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.9.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
+SPARKLE_PRIVATE_KEY_FILE=/path/to/ed25519-private-key scripts/make_appcast.sh dist/OpenClaw-2026.3.12.zip https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml
 ```
 
 该命令基于 `CHANGELOG.md`（通过 [`scripts/changelog-to-html.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/changelog-to-html.sh)）将发布说明转换为 HTML，并嵌入 appcast 条目中。发布时，将更新好的 `appcast.xml` 与发行制品（zip + dSYM）一并上传。
 
 ## 发布与校验
 
-- 将 `OpenClaw-2026.3.9.zip`（及 `OpenClaw-2026.3.9.dSYM.zip`）上传至对应标签 `v2026.3.9` 的 GitHub Release。
+- 将 `OpenClaw-2026.3.12.zip`（及 `OpenClaw-2026.3.12.dSYM.zip`）上传至对应标签 `v2026.3.12` 的 GitHub Release。
 - 确保 raw appcast URL 与发布的 feed 一致：`https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`。
 - 校验：
   - 执行 `curl -I https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml` 返回 200。

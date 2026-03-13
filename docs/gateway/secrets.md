@@ -45,10 +45,9 @@ SecretRefs 仅在有效活跃表面验证。
   - `gateway.mode=remote`
   - 配置了 `gateway.remote.url`
   - `gateway.tailscale.mode` 是 `serve` 或 `funnel`
-  
-  在无上述远程表面的本地模式下：
-  - 当令牌认证有效且未配置环境/认证令牌时，`gateway.remote.token` 是活动的。
-  - 当密码认证有效且未配置环境/认证密码时，`gateway.remote.password` 是活动的。
+  - 在无上述远程表面的本地模式下：
+    - 当令牌认证有效且未配置环境/认证令牌时，`gateway.remote.token` 是活动的。
+    - 当密码认证有效且未配置环境/认证密码时，`gateway.remote.password` 是活动的。
 - 当设置了 `OPENCLAW_GATEWAY_TOKEN`（或 `CLAWDBOT_GATEWAY_TOKEN`）时，`gateway.auth.token` SecretRef 对启动时认证解析为非活动，因为环境变量令牌优先使用。
 
 ## 网关认证表面诊断

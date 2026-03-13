@@ -130,6 +130,7 @@ openclaw onboard --non-interactive \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
+    Swap to `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"` for the Go catalog.
   </Accordion>
   <Accordion title="自定义提供商示例">
     ```bash

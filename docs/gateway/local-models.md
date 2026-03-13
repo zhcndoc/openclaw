@@ -11,7 +11,10 @@ title: "本地模型"
 
 本地运行是可行的，但 OpenClaw 期望有大上下文和强防御以抵抗提示注入。小显卡会截断上下文并泄露安全性。目标要高：**≥2 台满负荷的 Mac Studio 或等效 GPU 设备（约 3 万美元以上）**。单个 **24 GB** GPU 仅适用于更轻量的提示，且延迟较高。请使用你能运行的 **最大 / 全尺寸模型变体**；激进量化或“小”检查点会提高提示注入风险（参见 [安全](/gateway/security)）。
 
-## 推荐方案：LM Studio + MiniMax M2.5（Responses API，完整版）
+## 推荐方案：LM Studio + MiniMax M2.5（Responses API，完整版）  
+如果您想要最简便的本地设置，可以从 [Ollama](/providers/ollama) 和 `openclaw onboard` 开始。本页是针对更高端本地环境和自定义 OpenAI 兼容本地服务器的专业指南。
+
+## 推荐方案：LM Studio + MiniMax M2.5（Responses API，完整版）  
 
 目前最佳本地方案。在 LM Studio 中加载 MiniMax M2.5，启用本地服务器（默认 `http://127.0.0.1:1234`），并使用 Responses API 保持推理与最终文本分离。
 

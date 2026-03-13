@@ -86,11 +86,13 @@ openclaw directory groups list --channel zalouser --query "work"
 - 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。未设置时可通过 `channels.defaults.groupPolicy` 覆盖默认值。
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
-  - `channels.zalouser.groups`（键为群组 ID 或名称；控制允许的群组）
+  - `channels.zalouser.groups`（键应该是稳定的群组 ID；启动时会尽可能将名称解析为 ID）
   - `channels.zalouser.groupAllowFrom`（控制允许群组内哪些发送者可以触发机器人）
 - 屏蔽所有群组：`channels.zalouser.groupPolicy = "disabled"`。
 - 配置向导可提示设置群组允许列表。
-- 启动时，OpenClaw 会解析允许列表中的群组/用户名为 ID 并记录映射；无法解析的条目保持原样。
+- 启动时，OpenClaw 会解析允许列表中的群组/用户名为 ID 并记录映射。
+- 群组允许列表匹配默认仅限 ID；未解析的名称会被忽略认证，除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`。
+- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种紧急兼容模式，重新启用可变群组名匹配。
 - 若未设置 `groupAllowFrom`，运行时群组发送者检查回退到 `allowFrom`。
 - 发送者检查适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
 

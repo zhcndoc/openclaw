@@ -17,7 +17,7 @@ openclaw qr
 openclaw qr --setup-code-only
 openclaw qr --json
 openclaw qr --remote
-openclaw qr --url wss://gateway.example/ws --token '<token>'
+openclaw qr --url wss://gateway.example/ws
 ```
 
 ## 选项
@@ -25,8 +25,8 @@ openclaw qr --url wss://gateway.example/ws --token '<token>'
 - `--remote`：使用配置中的 `gateway.remote.url` 以及远程令牌/密码
 - `--url <url>`：覆盖负载中使用的网关 URL
 - `--public-url <url>`：覆盖负载中使用的公网 URL
-- `--token <token>`：覆盖负载中使用的网关令牌
-- `--password <password>`：覆盖负载中使用的网关密码
+- `--token <token>`：覆盖启动流程认证所用的网关令牌
+- `--password <password>`：覆盖启动流程认证所用的网关密码
 - `--setup-code-only`：仅打印设置码
 - `--no-ascii`：跳过 ASCII 二维码渲染
 - `--json`：输出 JSON（包含 `setupCode`、`gatewayUrl`、`auth`、`urlSource`）
@@ -34,6 +34,7 @@ openclaw qr --url wss://gateway.example/ws --token '<token>'
 ## 备注
 
 - `--token` 和 `--password` 不能同时使用。
+- 设置码本身现在携带一个不透明的短期有效 `bootstrapToken`，而非共享的网关令牌/密码。
 - 使用 `--remote` 时，如果配置中有效的远程凭据以 SecretRefs 形式存在，且没有传入 `--token` 或 `--password`，命令会从活动的网关快照中解析它们。若网关不可用，则命令会快速失败。
 - 不使用 `--remote` 时，在没有 CLI 认证覆盖的情况下会解析本地网关的认证 SecretRefs：
   - 当令牌认证可用时（明确指定 `gateway.auth.mode="token"` 或推断的模式中没有密码来源优先），解析 `gateway.auth.token`。

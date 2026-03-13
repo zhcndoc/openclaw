@@ -66,8 +66,8 @@ ssh root@YOUR_DROPLET_IP
 # 更新系统
 apt update && apt upgrade -y
 
-# 安装 Node.js 22
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# 安装 Node.js 24
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs
 
 # 安装 OpenClaw

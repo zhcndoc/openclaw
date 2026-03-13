@@ -279,7 +279,7 @@ OpenClaw 默认会在调用 LLM 之前，从内存上下文中修剪 **旧的工
 - `openclaw status` — 显示存储路径及近期会话。
 - `openclaw sessions --json` — 导出所有条目（可用 `--active <分钟数>` 过滤）。
 - `openclaw gateway call sessions.list --params '{}'` — 从运行中的网关获取会话（远程访问需 `--url` / `--token`）。
-- 在聊天中单独发送 `/status` 查看代理是否在线，会话上下文使用情况，当前思考/详细模式切换及 WhatsApp Web 凭证刷新时间（便于判断是否需重新关联）。
+- 在聊天中单独发送 `/status` 查看代理是否在线，会话上下文使用情况，当前思考/快速/详细模式切换及 WhatsApp Web 凭证刷新时间（便于判断是否需重新关联）。
 - 发送 `/context list` 或 `/context detail` 查看系统提示和注入的工作区文件内容（及最大上下文贡献者）。
 - 发送 `/stop`（或单独中止指令，如 `stop`、`stop action`、`stop run`、`stop openclaw`）以中止当前运行，清除该会话的待办后续消息，并停止所有由该会话派生的子代理运行（回复中会显示停止计数）。
 - 发送 `/compact`（可附加指令）作为独立消息，汇总老旧上下文并释放窗口空间。详情见 [/concepts/compaction](/concepts/compaction)。

@@ -72,10 +72,13 @@ title: "LLM 任务"
 - `schema`（对象，可选的 JSON Schema）
 - `provider`（字符串，可选）
 - `model`（字符串，可选）
+- `thinking`（字符串，可选）
 - `authProfileId`（字符串，可选）
 - `temperature`（数字，可选）
 - `maxTokens`（数字，可选）
 - `timeoutMs`（数字，可选）
+
+`thinking` 支持标准的 OpenClaw 推理预设，例如 `low` 或 `medium`。
 
 ## 输出
 
@@ -86,6 +89,7 @@ title: "LLM 任务"
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
   "prompt": "Given the input email, return intent and draft.",
+  "thinking": "low",
   "input": {
     "subject": "Hello",
     "body": "Can you help?"

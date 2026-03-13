@@ -56,12 +56,12 @@ cat ~/.openclaw/openclaw.json
 
 ## 它的功能（摘要）
 
-- 可选的预更新（仅交互模式）用于 git 安装（fetch/rebase/build）。
+- 可选的预更新（仅交互模式）用于 git 安装。
 - UI 协议新鲜度检查（当协议模式更新时重建控制 UI）。
 - 健康检查 + 重启提示。
 - 技能状态总结（符合条件/缺失/阻塞）。
 - 配置规范化以处理旧值。
-- OpenCode Zen 提供者覆盖警告（`models.providers.opencode`）。
+- OpenCode Zen 提供者覆盖警告（`models.providers.opencode` / `models.providers.opencode-go`）。
 - 旧版磁盘状态迁移（sessions/agent 目录/WhatsApp 认证）。
 - 旧版定时任务存储迁移（`jobId`、`schedule.cron`、顶层 delivery/payload 字段，payload 中的 `provider`，简单 `notify: true` webhook 兼容任务）。
 - 状态完整性和权限检查（sessions、转录、状态目录）。
@@ -129,7 +129,7 @@ Doctor 还对多账户频道的默认账户设置提供警告：
 
 ### 2b) OpenCode Zen 提供者覆盖
 
-如果您手动添加了 `models.providers.opencode`（或 `opencode-zen`），该配置会覆盖来自 `@mariozechner/pi-ai` 的内置 OpenCode Zen 目录，可能导致所有模型统一使用同一 API 或成本归零。Doctor 会警告您移除该覆盖，从而恢复每模型的 API 路由和费用结算。
+如果您手动添加了 `models.providers.opencode`、`opencode-zen` 或 `opencode-go`，该配置会覆盖来自 `@mariozechner/pi-ai` 的内置 OpenCode 目录，可能导致所有模型统一使用错误的 API 或成本归零。Doctor 会警告您移除该覆盖，从而恢复每模型的 API 路由和费用结算。
 
 ### 3) 旧版状态迁移（磁盘结构）
 

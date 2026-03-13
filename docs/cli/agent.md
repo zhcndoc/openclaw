@@ -25,4 +25,5 @@ openclaw agent --agent ops --message "Generate report" --deliver --reply-channel
 
 ## 说明
 
-- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的提供者凭据会作为非秘密标记（例如环境变量名或 `secretref-managed`）被持久化，而非解析成秘密明文。
+- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的提供者凭据会作为非秘密标记（例如环境变量名，`secretref-env:ENV_VAR_NAME`，或 `secretref-managed`）被持久化，而非解析成秘密明文。  
+- 标记写入以源头为准：OpenClaw 持久化来自活动源配置快照的标记，而非来自解析后的运行时秘密值。  

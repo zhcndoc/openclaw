@@ -312,11 +312,15 @@ OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.4,anthropic/clau
 ### 聚合器 / 替代网关
 
 如果你有可用密钥，也支持通过以下方式测试：
+- OpenRouter: `openrouter/...`（上百种模型；使用 `openclaw models scan` 查找支持工具和图像的候选模型）
+- OpenCode: `opencode/...` 用于 Zen，`opencode-go/...` 用于 Go（通过 `OPENCODE_API_KEY` / `OPENCODE_ZEN_API_KEY` 进行认证）
 
 - OpenRouter：`openrouter/...`（数百模型；使用 `openclaw models scan` 查找支持工具+图片的候选）
 - OpenCode Zen：`opencode/...`（通过 `OPENCODE_API_KEY` / `OPENCODE_ZEN_API_KEY` 认证）
 
 更多可纳入实况矩阵的提供商（若有凭据/配置）：
+- 内置支持：`openai`、`openai-codex`、`anthropic`、`google`、`google-vertex`、`google-antigravity`、`google-gemini-cli`、`zai`、`openrouter`、`opencode`、`opencode-go`、`xai`、`groq`、`cerebras`、`mistral`、`github-copilot`
+- 通过 `models.providers`（自定义端点）：`minimax`（云/API），以及任何兼容 OpenAI/Anthropic 的代理（如 LM Studio、vLLM、LiteLLM 等）
 
 - 内置：`openai`、`openai-codex`、`anthropic`、`google`、`google-vertex`、`google-antigravity`、`google-gemini-cli`、`zai`、`openrouter`、`opencode`、`xai`、`groq`、`cerebras`、`mistral`、`github-copilot`
 - 通过 `models.providers`（定制端点）：`minimax`（云/API）、任意 OpenAI/Anthropic 兼容代理（LM Studio、vLLM、LiteLLM 等）

@@ -42,6 +42,21 @@ title: "思考等级"
 
 - **嵌入式 Pi**：解析后的等级会传递给进程内的 Pi 代理运行时。
 
+## 快速模式 (/fast)
+
+- 等级：`on|off`。
+- 仅指令消息切换会话的快速模式覆盖，并回复“快速模式已启用。”或“快速模式已禁用。”。
+- 发送 `/fast`（或 `/fast status`）且无模式参数可查看当前有效的快速模式状态。
+- OpenClaw 按以下顺序解析快速模式：
+  1. 行内/仅指令 `/fast on|off`
+  2. 会话覆盖
+  3. 每模型配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
+  4. 兜底：`off`
+- 对于 `openai/*`，快速模式应用 OpenAI 快速配置文件：支持时设置 `service_tier=priority`，同时降低推理力度和文本详尽度。
+- 对于 `openai-codex/*`，快速模式在 Codex 响应上应用相同的低延迟配置。OpenClaw 在两个授权路径间共用一个 `/fast` 切换。
+- 对于直接的 `anthropic/*` API-key 请求，快速模式映射到 Anthropic 服务层级：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
+- Anthropic 快速模式仅限 API-key。OpenClaw 会跳过 Claude 设置令牌 / OAuth 授权和非 Anthropic 代理基础 URL 的 Anthropic 服务层级注入。
+
 ## 详细日志指令 (/verbose 或 /v)
 
 - 等级：`on`（最小详细） | `full` | `off`（默认）。

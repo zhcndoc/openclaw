@@ -44,6 +44,34 @@ openclaw onboard --anthropic-api-key "$ANTHROPIC_API_KEY"
   - [自适应思考](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
   - [扩展思考](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
 
+## Fast 模式（Anthropic API）
+
+OpenClaw 共享的 `/fast` 切换也支持直接使用 Anthropic API 密钥的流量。
+
+- `/fast on` 映射为 `service_tier: "auto"`
+- `/fast off` 映射为 `service_tier: "standard_only"`
+- 配置默认值：
+
+```json5
+{
+  agents: {
+    defaults: {
+      models: {
+        "anthropic/claude-sonnet-4-5": {
+          params: { fastMode: true },
+        },
+      },
+    },
+  },
+}
+```
+
+重要限制：
+
+- 仅限 **API 密钥**。Anthropic 的 setup-token / OAuth 认证不支持 OpenClaw 快速模式的层级注入。
+- OpenClaw 仅对直接请求 `api.anthropic.com` 注入 Anthropic 服务层级。如果你通过代理或网关路由 `anthropic/*`，则 `/fast` 不会修改 `service_tier`。
+- Anthropic 会在响应的 `usage.service_tier` 中报告实际使用的层级。对于没有优先层级容量的账户，即使设置了 `service_tier: "auto"`，也可能默认使用 `standard`。
+
 ## 提示缓存（Anthropic API）
 
 OpenClaw 支持 Anthropic 的提示缓存功能。此功能**仅限 API**；订阅授权不支持缓存设置。

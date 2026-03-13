@@ -14,7 +14,7 @@ title: "斜杠命令"
 相关的系统有两个：
 
 - **命令**：独立的 `/...` 消息。
-- **指令（Directives）**：包括 `/think`、`/verbose`、`/reasoning`、`/elevated`、`/exec`、`/model`、`/queue`。
+- **指令（Directives）**：包括 `/think`、`/fast`、`/verbose`、`/reasoning`、`/elevated`、`/exec`、`/model`、`/queue`。
   - 指令在模型看到消息之前会被剥离。
   - 在普通聊天消息中（非指令唯一消息），它们被视为“内联提示”，**不会**持久化会话设置。
   - 在指令唯一消息（消息仅包含指令）中，它们会持久化到会话并回复确认。
@@ -98,6 +98,7 @@ title: "斜杠命令"
 - `/send on|off|inherit`（仅限所有者）
 - `/reset` 或 `/new [model]`（可选模型提示；其余作为消息体转发）
 - `/think <off|minimal|low|medium|high|xhigh>`（模型/供应商动态选择；别名：`/thinking`、`/t`）
+- `/fast status|on|off`（不带参数时显示当前有效的快速模式状态）
 - `/verbose on|full|off`（别名：`/v`）
 - `/reasoning on|off|stream`（别名：`/reason`；开启时发送带前缀 `Reasoning:` 的独立消息；`stream` = 仅 Telegram 草稿）
 - `/elevated on|off|ask|full`（别名：`/elev`；`full` 跳过 exec 审批）
@@ -126,6 +127,7 @@ title: "斜杠命令"
 - Discord 线程绑定命令（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`）需要启用有效的线程绑定（`session.threadBindings.enabled` 和/或 `channels.discord.threadBindings.enabled`）。
 - ACP 命令参考及运行时行为见：[ACP 代理](/tools/acp-agents)。
 - `/verbose` 用于调试和额外可视化，正常使用建议**关闭**。
+- `/fast on|off` 支持会话覆盖。使用会话 UI 的 `inherit` 选项可清除覆盖并回退到配置默认。
 - 工具失败摘要仍在相关时显示，详细失败文本仅在 `/verbose` 为 `on` 或 `full` 时包含。
 - `/reasoning`（及 `/verbose`）在群组环境中风险较高：可能泄露未预期的内部推理或工具输出。建议保持关闭，特别是在群聊中。
 - **快速路径：** 来自白名单发送者的纯命令消息会立即处理（绕过队列和模型）。

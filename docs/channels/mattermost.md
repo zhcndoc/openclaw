@@ -124,6 +124,32 @@ Mattermost 自动响应私聊消息。频道行为由 `chatmode` 控制：
 - `onchar` 模式仍然响应明确的 @提及。  
 - 旧配置中仍可使用 `channels.mattermost.requireMention`，但推荐使用 `chatmode`。
 
+## 线程和会话
+
+使用 `channels.mattermost.replyToMode` 来控制频道和群组回复是否保留在主频道，或者在触发的帖子下开始一个线程。
+
+- `off`（默认）：只有当入站帖子已经在一个线程中时才回复线程。
+- `first`：对于顶级频道/群组帖子，在该帖子下启动一个线程，并将对话路由到线程范围的会话中。
+- `all`：目前在 Mattermost 中与 `first` 的行为相同。
+- 直接消息忽略此设置，保持非线程式。
+
+配置示例：
+
+```json5
+{
+  channels: {
+    mattermost: {
+      replyToMode: "all",
+    },
+  },
+}
+```
+
+注意：
+
+- 线程范围的会话使用触发帖子的 ID 作为线程根。
+- 由于一旦 Mattermost 有了线程根，后续的消息块和媒体都会继续在同一个线程中，所以 `first` 和 `all` 目前是等价的。
+
 ## 访问控制（私聊）
 
 - 默认值：`channels.mattermost.dmPolicy = "pairing"`（未知发送者会收到配对码）。  

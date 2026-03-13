@@ -1047,9 +1047,10 @@ $OPENCLAW_CONFIG_PATH
 
 注意：
 
-- `gateway.remote.token` / `.password` 本身不启用本地 Gateway 认证。
-- 本地调用路径中，若没配置 `gateway.auth.*`，可用 `gateway.remote.*` 作为回退。
-- 控制 UI 通过 `connect.params.auth.token` 认证（存于应用/UI 设置），避免将令牌放入 URL。
+- `gateway.remote.token` / `.password` 本身并不会启用本地 Gateway 认证。
+- 本地调用路径只有在未配置 `gateway.auth.*` 时，才可用 `gateway.remote.*` 作为回退方案。
+- 如果通过 SecretRef 明确配置了 `gateway.auth.token` / `gateway.auth.password`，但未能解析，则会失败且关闭访问（不会用远程回退掩盖错误）。
+- 控制 UI 通过 `connect.params.auth.token` 进行认证（存储于应用/UI 设置中）。避免将令牌放入 URL 中。
 
 ### 为什么本地访问现在也需要令牌？
 
@@ -1513,7 +1514,21 @@ MiniMax M2.5 模型详见：[MiniMax](/providers/minimax) 和 [本地模型](/ga
 
 ### 可以使用自托管模型 llamacpp vLLM Ollama 吗？
 
-可以。如果你的本地服务器对外提供 OpenAI 兼容 API，能让自定义提供商指向它。Ollama 支持直接集成，最简单。
+可以。Ollama 是本地模型的最简单路径。
+
+快速安装步骤：
+
+1. 从 `https://ollama.com/download` 安装 Ollama
+2. 拉取本地模型，例如 `ollama pull glm-4.7-flash`
+3. 如果你还想使用 Ollama 云端，运行 `ollama signin`
+4. 运行 `openclaw onboard` 并选择 `Ollama`
+5. 选择 `Local` 或 `Cloud + Local`
+
+注意：
+
+- `Cloud + Local` 让你同时拥有 Ollama 云端模型和本地 Ollama 模型
+- 云端模型如 `kimi-k2.5:cloud` 无需本地拉取
+- 手动切换可用 `openclaw models list` 和 `openclaw models set ollama/<model>`
 
 安全提示：体积小或重量化模型更易受提示注入攻击。强烈建议**大型模型**用以支持带工具的机器人。若坚持小模型，务必启用沙箱和严格工具白名单。
 
