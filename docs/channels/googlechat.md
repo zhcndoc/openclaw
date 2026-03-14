@@ -138,25 +138,25 @@ your-domain.com {
 
 ## 工作原理
 
-1. Google Chat 向网关发送 webhook POST，请求头中带有 `Authorization: Bearer <token>`。
-   - OpenClaw 会在存在该头时，先验证 bearer 令牌后才读取/解析完整 webhook 内容。
-   - 支持带有 `authorizationEventObject.systemIdToken` 的 Google Workspace 附加组件请求，使用更严格的预认证体大小限制。
-2. OpenClaw 检查 token，验证其是否匹配配置的 `audienceType` + `audience`：
-   - `audienceType: "app-url"` → 受众为你的 HTTPS webhook URL。
-   - `audienceType: "project-number"` → 受众为云项目编号。
+1. Google Chat 向网关发送 webhook POST 请求。每个请求都包含一个 `Authorization: Bearer <token>` 头。
+   - 当头部存在时，OpenClaw 在读取/解析完整 webhook 内容之前验证 bearer 认证。
+   - Google Workspace 插件请求携带 `authorizationEventObject.systemIdToken` 的请求支持更严格的预认证体预算。
+2. OpenClaw 根据配置的 `audienceType` + `audience` 验证令牌：
+   - `audienceType: "app-url"` → 受众是你的 HTTPS webhook URL。
+   - `audienceType: "project-number"` → 受众是 Cloud 项目编号。
 3. 消息按空间路由：
-   - 私聊使用会话键 `agent:<agentId>:googlechat:dm:<spaceId>`。
-   - 群聊空间使用会话键 `agent:<agentId>:googlechat:group:<spaceId>`。
-4. 私聊默认需配对。未知发送者收到配对码；使用命令批准配对：  
-   `openclaw pairing approve googlechat <code>`
-5. 群组空间默认需要@提及。若需要通过机器人的用户名检测提及，可配置 `botUser`。
+   - 私聊使用会话键 `agent:<agentId>:googlechat:direct:<spaceId>`。
+   - 群组空间使用会话键 `agent:<agentId>:googlechat:group:<spaceId>`。
+4. 私聊默认需要配对。未知发件人会收到配对码；通过以下命令批准：
+   - `openclaw pairing approve googlechat <code>`
+5. 群组空间默认需要@提及。若需提及检测使用应用用户名，则配置 `botUser`。
 
 ## 标识符（Targets）
 
 用于消息投递和允许列表：
 
 - 私聊：`users/<userId>`（推荐）。
-- 原始邮箱 `name@example.com` 是可变的，只在启用 `channels.googlechat.dangerouslyAllowNameMatching: true` 时用于直接允许列表匹配。
+- 原始邮箱 `name@example.com` 是可变的，仅在启用 `channels.googlechat.dangerouslyAllowNameMatching: true` 时用于直接允许列表匹配。
 - 已废弃：`users/<email>` 被视为用户 ID，不作为邮箱允许列表。
 - 空间：`spaces/<spaceId>`。
 

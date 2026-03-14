@@ -193,9 +193,11 @@ openclaw channels status --probe
 
 群组：
 
-- `channels.signal.groupPolicy` 可选 `open | allowlist | disabled`。
-- `channels.signal.groupAllowFrom` 控制当使用 `allowlist` 时谁能触发群组消息。
-- 运行时注意：如果完全未配置 `channels.signal`，运行时会默认用 `groupPolicy="allowlist"` 做群组权限检查（即使设置了 `channels.defaults.groupPolicy`）。
+- `channels.signal.groupPolicy = open | allowlist | disabled`。
+- `channels.signal.groupAllowFrom` 控制在 `allowlist` 模式下谁可以在群组中触发。
+- `channels.signal.groups["<group-id>" | "*"]` 可针对群组覆盖行为，包括 `requireMention`、`tools` 和 `toolsBySender`。
+- 多账户配置中可用 `channels.signal.accounts.<id>.groups` 进行每账户覆盖。
+- 运行时注：如果完全缺少 `channels.signal`，运行时对群组检查会回退到 `groupPolicy="allowlist"`（即便设置了 `channels.defaults.groupPolicy`）。
 
 ## 工作原理（行为）
 
@@ -297,26 +299,28 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 
 提供方选项：
 
-- `channels.signal.enabled`：启用/禁用通道启动。
-- `channels.signal.account`：机器人账户的 E.164 号码。
-- `channels.signal.cliPath`：`signal-cli` 路径。
-- `channels.signal.httpUrl`：完整守护进程 URL（覆盖 host/port）。
-- `channels.signal.httpHost`、`channels.signal.httpPort`：守护进程监听地址（默认 127.0.0.1:8080）。
-- `channels.signal.autoStart`：自动启动守护进程（无 `httpUrl` 默认 true）。
-- `channels.signal.startupTimeoutMs`：启动等待超时，单位毫秒（最大 120000）。
-- `channels.signal.receiveMode`：`on-start | manual`。
-- `channels.signal.ignoreAttachments`：跳过附件下载。
-- `channels.signal.ignoreStories`：忽略守护进程的故事（Story）消息。
-- `channels.signal.sendReadReceipts`：转发已读回执。
-- `channels.signal.dmPolicy`：`pairing | allowlist | open | disabled`（默认 `pairing`）。
-- `channels.signal.allowFrom`：私信允许列表（E.164 或 `uuid:<id>`），`open` 模式需要 `"*"`。Signal 无用户名，使用手机号/UUID。
-- `channels.signal.groupPolicy`：`open | allowlist | disabled`（默认 `allowlist`）。
-- `channels.signal.groupAllowFrom`：群组消息发送者允许列表。
-- `channels.signal.historyLimit`：最大群组消息上下文数，0 表示禁用。
-- `channels.signal.dmHistoryLimit`：私信历史限制，单位用户对话轮数。可对用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
-- `channels.signal.textChunkLimit`：出站消息拆分大小（字符数）。
-- `channels.signal.chunkMode`：`length`（默认）或 `newline`，先按空行拆分再按长度拆分。
-- `channels.signal.mediaMaxMb`：收发媒体大小限制（MB）。
+- `channels.signal.enabled`: 启用/禁用通道启动。
+- `channels.signal.account`: 机器人账户的 E.164 号码。
+- `channels.signal.cliPath`: `signal-cli` 路径。
+- `channels.signal.httpUrl`: 全守护进程 URL（覆盖 host/port）。
+- `channels.signal.httpHost`, `channels.signal.httpPort`: 守护进程绑定（默认 127.0.0.1:8080）。
+- `channels.signal.autoStart`: 自动启动守护进程（未设置 `httpUrl` 时默认 true）。
+- `channels.signal.startupTimeoutMs`: 启动等待超时（毫秒，最大 120000）。
+- `channels.signal.receiveMode`: `on-start | manual`。
+- `channels.signal.ignoreAttachments`: 跳过附件下载。
+- `channels.signal.ignoreStories`: 忽略守护进程的 stories。
+- `channels.signal.sendReadReceipts`: 转发已读回执。
+- `channels.signal.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。
+- `channels.signal.allowFrom`: 私信允许列表（E.164 或 `uuid:<id>`）。`open` 需用 `"*"`。Signal 无用户名；使用电话或 UUID ID。
+- `channels.signal.groupPolicy`: `open | allowlist | disabled`（默认：allowlist）。
+- `channels.signal.groupAllowFrom`: 群组发信者允许列表。
+- `channels.signal.groups`: 针对 Signal 群组 ID（或 `"*"`）的覆盖，支持字段：`requireMention`、`tools`、`toolsBySender`。
+- `channels.signal.accounts.<id>.groups`: 多账户配置中每个账户的群组覆盖版本。
+- `channels.signal.historyLimit`: 包含为上下文的最大群组消息数（0 关闭）。
+- `channels.signal.dmHistoryLimit`: 私信历史上下文限制（用户轮数）。用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
+- `channels.signal.textChunkLimit`: 出站拆分大小（字符数）。
+- `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）拆分再按长度拆分。
+- `channels.signal.mediaMaxMb`: 媒体大小上限（MB，入站和出站）。
 
 相关全局选项：
 

@@ -282,77 +282,20 @@ services:
 
 ---
 
-## 10）将必要的二进制文件打包进镜像（关键步骤）
+## 10) Shared Docker VM runtime steps
 
-在运行中的容器里安装二进制文件是陷阱。
-运行时安装的内容重启后会丢失。
+Use the shared runtime guide for the common Docker host flow:
 
-所有技能所需的外部二进制文件，必须在镜像构建时安装。
-
-下面示例只展示三个常见的二进制：
-
-- `gog`：Gmail 访问工具
-- `goplaces`：Google 地点查询工具
-- `wacli`：WhatsApp 命令行工具
-
-这只是示例，不是完整列表。
-你可用相同模式安装任意多二进制。
-
-如果后续新增技能依赖额外二进制，需：
-
-1. 更新 Dockerfile
-2. 重新构建镜像
-3. 重启容器
-
-**示例 Dockerfile**
-
-```dockerfile
-FROM node:24-bookworm
-
-RUN apt-get update && apt-get install -y socat && rm -rf /var/lib/apt/lists/*
-
-# 示例二进制 1：Gmail CLI
-RUN curl -L https://github.com/steipete/gog/releases/latest/download/gog_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/gog
-
-# 示例二进制 2：Google Places CLI
-RUN curl -L https://github.com/steipete/goplaces/releases/latest/download/goplaces_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/goplaces
-
-# 示例二进制 3：WhatsApp CLI
-RUN curl -L https://github.com/steipete/wacli/releases/latest/download/wacli_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/wacli
-
-# 可在此处继续添加所需二进制，模式相同
-
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY ui/package.json ./ui/package.json
-COPY scripts ./scripts
-
-RUN corepack enable
-RUN pnpm install --frozen-lockfile
-
-COPY . .
-RUN pnpm build
-RUN pnpm ui:install
-RUN pnpm ui:build
-
-ENV NODE_ENV=production
-
-CMD ["node","dist/index.js"]
-```
+- [Bake required binaries into the image](/install/docker-vm-runtime#bake-required-binaries-into-the-image)
+- [Build and launch](/install/docker-vm-runtime#build-and-launch)
+- [What persists where](/install/docker-vm-runtime#what-persists-where)
+- [Updates](/install/docker-vm-runtime#updates)
 
 ---
 
-## 11）构建并启动容器
+## 11) GCP-specific launch notes
 
-```bash
-docker compose build
-docker compose up -d openclaw-gateway
-```
-
-如果在 `pnpm install --frozen-lockfile` 阶段构建失败，显示 `Killed` / `exit code 137`，说明虚拟机内存不足。请至少使用 `e2-small`，推荐 `e2-medium` 以保证首次构建稳定。
+On GCP, if build fails with `Killed` or `exit code 137` during `pnpm install --frozen-lockfile`, the VM is out of memory. Use `e2-small` minimum, or `e2-medium` for more reliable first builds.
 
 当绑定到局域网 (`OPENCLAW_GATEWAY_BIND=lan`) 时，继续前请先配置可信浏览器来源：
 
@@ -362,39 +305,7 @@ docker compose run --rm openclaw-cli config set gateway.controlUi.allowedOrigins
 
 如果你修改了端口号，请将此处的 `18789` 替换为你的端口。
 
-验证二进制文件：
-
-```bash
-docker compose exec openclaw-gateway which gog
-docker compose exec openclaw-gateway which goplaces
-docker compose exec openclaw-gateway which wacli
-```
-
-期望结果：
-
-```
-/usr/local/bin/gog
-/usr/local/bin/goplaces
-/usr/local/bin/wacli
-```
-
----
-
-## 12）验证 Gateway
-
-```bash
-docker compose logs -f openclaw-gateway
-```
-
-成功启动示例信息：
-
-```
-[gateway] listening on ws://0.0.0.0:18789
-```
-
----
-
-## 13）从你的笔记本访问
+## 12) Access from your laptop
 
 建立 SSH 隧道转发 Gateway 端口：
 
@@ -421,38 +332,8 @@ docker compose run --rm openclaw-cli devices list
 docker compose run --rm openclaw-cli devices approve <requestId>
 ```
 
----
-
-## 持久化状态存放在哪里（权威来源）
-
-OpenClaw 运行在 Docker 中，但 Docker 不是状态的权威存储。
-所有长久状态必须能在重启、重建和重启后生存。
-
-| 组件           | 位置                              | 持久化机制            | 备注                        |
-| -------------- | --------------------------------- | --------------------- | --------------------------- |
-| Gateway 配置   | `/home/node/.openclaw/`           | 宿主机挂载卷          | 包含 `openclaw.json` 和令牌 |
-| 模型认证配置   | `/home/node/.openclaw/`           | 宿主机挂载卷          | OAuth 令牌，API 密钥        |
-| 技能配置       | `/home/node/.openclaw/skills/`    | 宿主机挂载卷          | 技能级别状态                |
-| Agent 工作区   | `/home/node/.openclaw/workspace/` | 宿主机挂载卷          | 代码与 Agent 产物           |
-| WhatsApp 会话  | `/home/node/.openclaw/`           | 宿主机挂载卷          | 保留二维码登录              |
-| Gmail 密钥环   | `/home/node/.openclaw/`           | 宿主机卷 + 密码       | 需要 `GOG_KEYRING_PASSWORD` |
-| 外部二进制文件 | `/usr/local/bin/`                 | Docker 镜像构建时打包 | 必须在构建时烘焙            |
-| Node 运行时    | 容器文件系统                      | Docker 镜像           | 每次镜像构建重建            |
-| 操作系统软件包 | 容器文件系统                      | Docker 镜像           | 不要在运行时安装            |
-| Docker 容器    | 临时环境                          | 可重启                | 可安全销毁                  |
-
----
-
-## 更新
-
-更新虚拟机上的 OpenClaw：
-
-```bash
-cd ~/openclaw
-git pull
-docker compose build
-docker compose up -d
-```
+Need the shared persistence and update reference again?
+See [Docker VM Runtime](/install/docker-vm-runtime#what-persists-where) and [Docker VM Runtime updates](/install/docker-vm-runtime#updates).
 
 ---
 

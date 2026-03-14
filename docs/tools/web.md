@@ -65,8 +65,11 @@ OpenClaw 提供两个轻量级的网络工具：
 2. 在控制面板选择 **Search** 计划并生成 API 密钥。
 3. 运行 `openclaw configure --section web` 将密钥存入配置，或在环境中设置 `BRAVE_API_KEY`。
 
-每个 Brave 计划包含 **5 美元/月免费额度**（自动续订）。Search 计划费用为每 1000 次请求 5 美元，因此免费额度覆盖 1000 次查询/月。请在 Brave 控制面板设置使用限额，避免意外扣费。详情见
-[Brave API 门户](https://brave.com/search/api/) 的最新计划及价格。
+Each Brave plan includes **\$5/month in free credit** (renewing). The Search
+plan costs \$5 per 1,000 requests, so the credit covers 1,000 queries/month. Set
+your usage limit in the Brave dashboard to avoid unexpected charges. See the
+[Brave API portal](https://brave.com/search/api/) for current plans and
+pricing.
 
 ### Perplexity Search
 

@@ -72,9 +72,9 @@ await web_search({
 
 ## 注意事项
 
-- OpenClaw 使用 Brave **Search** 计划。如果你有旧版订阅（如原免费的每月 2,000 次查询计划），该订阅仍有效，但不包含诸如 LLM 上下文或更高速率限制等新功能。
-- 每个 Brave 计划包含每月 **5 美元的免费额度**（自动续订）。Search 计划费用为每 1,000 次请求 5 美元，因此该额度覆盖每月 1,000 次查询。请在 Brave 控制面板中设置使用上限，避免产生意外费用。当前计划详情请参见 [Brave API 门户](https://brave.com/search/api/)。
-- Search 计划包括 LLM 上下文端点和 AI 推理权利。存储结果以训练或调整模型需持有带有明确存储权利的计划。详见 Brave [服务条款](https://api-dashboard.search.brave.com/terms-of-service)。
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）。
+- OpenClaw 使用 Brave **Search** 计划。如果你有旧版订阅（例如原始的免费计划，每月 2,000 次查询），它仍然有效，但不包括如 LLM 上下文或更高请求限制等新功能。
+- 每个 Brave 计划包含 **每月 5 美元的免费额度**（可续订）。Search 计划费用是每 1,000 次请求 5 美元，因此该额度覆盖每月 1,000 次查询。在 Brave 控制面板中设置使用限制以避免意外收费。当前计划详情请参见 [Brave API 门户](https://brave.com/search/api/)。
+- Search 计划包含 LLM 上下文端点和 AI 推理权限。存储结果以训练或调整模型需要拥有明确存储权限的计划。详见 Brave [服务条款](https://api-dashboard.search.brave.com/terms-of-service)。
+- 默认结果缓存时间为 15 分钟（通过 `cacheTtlMinutes` 可配置）。
 
 完整的 web_search 配置请参见 [Web tools](/tools/web)。

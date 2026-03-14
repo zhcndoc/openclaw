@@ -43,7 +43,19 @@ openclaw onboard --non-interactive \
 
 `--custom-api-key` 在非交互模式下是可选的，若省略，入门程序会检查环境变量 `CUSTOM_API_KEY`。
 
-将提供商密钥作为引用存储，而非纯文本：
+Non-interactive Ollama:
+
+```bash
+openclaw onboard --non-interactive \
+  --auth-choice ollama \
+  --custom-base-url "http://ollama-host:11434" \
+  --custom-model-id "qwen3.5:27b" \
+  --accept-risk
+```
+
+`--custom-base-url` 默认为 `http://127.0.0.1:11434`。`--custom-model-id` 是可选的；如果省略，入门程序将使用 Ollama 的推荐默认值。像 `kimi-k2.5:cloud` 这样的云端模型 ID 也适用。
+
+以引用形式存储提供商密钥而非纯文本：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -53,13 +65,13 @@ openclaw onboard --non-interactive \
 ```
 
 使用 `--secret-input-mode ref` 时，入门向导会写入环境支持的引用而不是纯文本密钥。
-对于认证配置文件支持的提供商，写入 `keyRef` 条目；对于自定义提供商，则写入 `models.providers.<id>.apiKey` 作为环境引用（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。
+对于认证配置文件支持的提供商，会写入 `keyRef` 条目；对于自定义提供商，则会写入 `models.providers.<id>.apiKey` 作为环境引用（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。
 
 非交互式 `ref` 模式约定：
 
 - 在入门过程环境中设置提供商所需的环境变量（例如 `OPENAI_API_KEY`）。
 - 不要传递内联密钥标志（例如 `--openai-api-key`），除非该环境变量也已设置。
-- 如果传递内联密钥标志但缺少必需的环境变量，入门会快速失败并提供指导。
+- 如果传递了内联密钥标志但缺少必需的环境变量，入门程序会快速失败并提供指导。
 
 非交互式模式下的网关令牌选项：
 
@@ -83,14 +95,21 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-交互式入门引用模式行为：
+非交互式本地网关健康检查：
+
+- 除非传入 `--skip-health`，入门程序会等待可访问的本地网关后才成功退出。
+- `--install-daemon` 会优先启动受管的网关安装路径。没有它时，必须已经有本地网关在运行，例如 `openclaw gateway run`。
+- 如果只想在自动化中写入配置/工作区/启动文件，可以使用 `--skip-health`。
+- 在原生 Windows 上，`--install-daemon` 会先尝试使用计划任务，如果任务创建失败，则回退到每用户启动文件夹登录项。
+
+交互式入门中引用模式的行为：
 
 - 当出现提示时选择 **使用密钥引用**。
 - 之后选择以下其中之一：
   - 环境变量
   - 已配置的密钥提供者（`file` 或 `exec`）
 - 入门会在保存引用前做快速的预校验。
-  - 若校验失败，入门会显示错误并允许重试。
+  - 如果校验失败，入门会显示错误并允许重试。
 
 非交互式 Z.AI 端点选择：
 

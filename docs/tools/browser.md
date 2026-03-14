@@ -41,8 +41,9 @@ openclaw browser --browser-profile openclaw snapshot
 
 ## 配置文件：`openclaw` vs `chrome`
 
-- `openclaw`：托管的、隔离的浏览器（不需要扩展）。
-- `chrome`：通过扩展中继连接您的**系统浏览器**（需要在标签页安装 OpenClaw 扩展）。
+- `openclaw`: 托管的、隔离的浏览器（无需扩展）。
+- `chrome`: 通过扩展中继到您的**系统浏览器**（需要附加 OpenClaw 扩展到标签页）。
+- `existing-session`: 正式的 Chrome MCP 附加运行中的 Chrome 配置文件。
 
 如果您希望默认使用托管模式，请设置 `browser.defaultProfile: "openclaw"`。
 
@@ -72,6 +73,12 @@ openclaw browser --browser-profile openclaw snapshot
     profiles: {
       openclaw: { cdpPort: 18800, color: "#FF4500" },
       work: { cdpPort: 18801, color: "#0066CC" },
+      chromeLive: {
+        cdpPort: 18802,
+        driver: "existing-session",
+        attachOnly: true,
+        color: "#00AA00",
+      },
       remote: { cdpUrl: "http://10.0.0.42:9222", color: "#00AA00" },
     },
   },
@@ -80,24 +87,25 @@ openclaw browser --browser-profile openclaw snapshot
 
 备注：
 
-- 浏览器控制服务绑定在环回接口端口，端口从 `gateway.port` 派生（默认：`18791`，即网关端口 + 2），中继使用下一个端口（`18792`）。
-- 如果覆盖了网关端口（`gateway.port` 或环境变量 `OPENCLAW_GATEWAY_PORT`），浏览器端口也会相应调整。
+- 浏览器控制服务绑定到环回地址，端口基于 `gateway.port` 计算（默认：`18791`，即网关端口 + 2）。中继使用下一个端口（`18792`）。
+- 如果重写了网关端口（`gateway.port` 或 `OPENCLAW_GATEWAY_PORT`），浏览器端口会跟着调整以保持同一“系列”。
 - 未设置时，`cdpUrl` 默认为中继端口。
-- `remoteCdpTimeoutMs` 用于远程（非环回）CDP 连接检查的超时。
-- `remoteCdpHandshakeTimeoutMs` 用于远程 CDP WebSocket 握手的超时。
-- 浏览器导航/打开标签页在导航前进行 SSRF 保护，导航后对最终 `http(s)` URL 尽力重新检查。
-- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认是 `true`（信任网络模式），设置为 `false` 可严格限制为仅公共网络访问。
-- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧别名保留兼容。
-- `attachOnly: true` 表示“永不启动本地浏览器；仅在浏览器已运行时附加”。
-- `color` 和每个配置文件的 `color` 用于染色浏览器 UI，方便区分当前激活配置。
-- 默认配置文件是 `openclaw`（OpenClaw 管理的独立浏览器），使用 `defaultProfile: "chrome"` 切换到 Chrome 扩展中继。
-- 自动检测顺序：系统默认 Chromium 浏览器；否则依次 Chrome → Brave → Edge → Chromium → Chrome Canary。
-- 本地 `openclaw` 配置文件会自动分配 `cdpPort` / `cdpUrl`，只有远程 CDP 需要手动设置。
+- `remoteCdpTimeoutMs` 用于远程（非环回）CDP 可达性检查的 HTTP 超时。
+- `remoteCdpHandshakeTimeoutMs` 用于远程 CDP WebSocket 握手超时。
+- 浏览器导航或打开标签页操作在导航前受 SSRF 保护，导航结束后会尽力重新验证最终的 `http(s)` URL。
+- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认为 `true`（信任网络模式）。如需严格公共网络访问，请设为 `false`。
+- `browser.ssrfPolicy.allowPrivateNetwork` 作为兼容旧别名仍被支持。
+- `attachOnly: true` 表示“从不启动本地浏览器，仅尝试连接已运行的浏览器”。
+- `color` 和每个配置文件的 `color` 用于给浏览器 UI 添加颜色提示，方便区分当前使用的配置。
+- 默认配置文件是 `openclaw`（OpenClaw 管理的独立浏览器）。使用 `defaultProfile: "chrome"` 可以选择 Chrome 扩展中继。
+- 自动检测顺序：基于 Chromium 的系统默认浏览器；否则依次选择 Chrome → Brave → Edge → Chromium → Chrome Canary。
+- 本地 `openclaw` 配置文件自动分配 `cdpPort` / `cdpUrl`，仅远程 CDP 需手动设置。
+- `driver: "existing-session"` 使用 Chrome DevTools MCP 而非原生 CDP。该驱动不应设置 `cdpUrl`。
 
 ## 使用 Brave（或其他基于 Chromium 的浏览器）
 
 如果您的 **系统默认** 浏览器是基于 Chromium（Chrome/Brave/Edge 等），OpenClaw 会自动使用它。  
-可通过设置 `browser.executablePath` 来覆盖自动检测：
+您也可以通过设置 `browser.executablePath` 来覆盖自动检测：
 
 CLI 示例：
 
@@ -237,18 +245,20 @@ OpenClaw 会在调用 `/json/*` 端点及连接 CDP WebSocket 时保留认证信
 
 OpenClaw 支持多个命名配置文件（路由配置）。配置文件类型包括：
 
-- **openclaw 管理**：专用 Chromium 浏览器实例，拥有独立用户数据目录及 CDP 端口。
-- **远程**：指向运行在其他机器上的 Chromium 浏览器的 CDP URL。
-- **扩展中继**：通过本地中继 + Chrome 扩展，用现有 Chrome 标签控制。
+- **openclaw-managed**：带有自己用户数据目录及 CDP 端口的独立 Chromium 浏览器实例
+- **remote**：显式的 CDP URL（远程运行的 Chromium 浏览器）
+- **extension relay**：通过本地中继 + Chrome 扩展控制现有的 Chrome 标签页
+- **existing session**：通过 Chrome DevTools MCP 自动连接的现有 Chrome 配置文件
 
 默认：
 
-- 如果缺失，自动创建 `openclaw` 配置文件。
-- 内置 `chrome` 配置文件用于 Chrome 扩展中继（默认指向 `http://127.0.0.1:18792`）。
-- 本地 CDP 端口默认为 **18800–18899** 范围内分配。
-- 删除配置文件时，相应的本地数据目录会被移至回收站。
+- 如果缺失，会自动创建 `openclaw` 配置文件。
+- `chrome` 配置文件内置用于 Chrome 扩展中继（默认指向 `http://127.0.0.1:18792`）。
+- existing-session 配置文件需手动创建，参数 `--driver existing-session`。
+- 本地 CDP 端口默认分配范围为 **18800–18899**。
+- 删除配置文件时会把本地数据目录移到废纸篓。
 
-所有控制端点支持使用 `?profile=<name>`，CLI 使用 `--browser-profile`。
+所有控制端点均支持使用 `?profile=<name>`，CLI 使用 `--browser-profile`。
 
 ## Chrome 扩展中继（使用现有 Chrome）
 
@@ -302,9 +312,65 @@ openclaw browser create-profile \
 
 说明：
 
-- 此模式依赖 Playwright-on-CDP 提供大多数操作支持（截图/快照/动作）。
-- 点击扩展图标再次可断开连接。
-- 默认保持中继仅环回监听。如需跨网络命名空间访问（例如 WSL2 中的网关，Windows 上的 Chrome），设置 `browser.relayBindHost` 为明确绑定地址如 `0.0.0.0`，并保证网络私密并认证。
+- 本模式大部分操作（截图/快照/操作）依赖 Playwright-on-CDP。
+- 可通过再次点击扩展图标来断开连接。
+
+## Chrome existing-session via MCP
+
+OpenClaw 也可以通过官方 Chrome DevTools MCP 服务器附加到运行中的 Chrome 配置文件，重用当前浏览器会话和登录状态。
+
+官方背景与设置参考：
+
+- [Chrome for Developers: 使用 Chrome DevTools MCP 调试浏览器会话](https://developer.chrome.com/blog/chrome-devtools-mcp-debug-your-browser-session)
+- [Chrome DevTools MCP README](https://github.com/ChromeDevTools/chrome-devtools-mcp)
+
+创建配置文件：
+
+```bash
+openclaw browser create-profile \
+  --name chrome-live \
+  --driver existing-session \
+  --color "#00AA00"
+```
+
+然后在 Chrome 中：
+
+1. 打开 `chrome://inspect/#remote-debugging`
+2. 启用远程调试
+3. 保持 Chrome 运行，并在 OpenClaw 附加时接受连接提示
+
+实时附加测试：
+
+```bash
+openclaw browser --browser-profile chrome-live start
+openclaw browser --browser-profile chrome-live status
+openclaw browser --browser-profile chrome-live tabs
+openclaw browser --browser-profile chrome-live snapshot --format ai
+```
+
+成功表现：
+
+- `status` 显示 `driver: existing-session`
+- `status` 显示 `running: true`
+- `tabs` 列出当前打开的 Chrome 标签页
+- `snapshot` 返回所选活动标签页的引用
+
+附加失败排查点：
+
+- Chrome 版本为 `144+`
+- 远程调试在 `chrome://inspect/#remote-debugging` 中已启用
+- Chrome 显示并接受了附加许可提示
+- 网关或节点宿主可以执行 `npx chrome-devtools-mcp@latest --autoConnect`
+
+说明：
+
+- 该方案风险高于隔离的 `openclaw` 配置，因为它可操作您已登录的浏览器会话。
+- OpenClaw 不会为此驱动启动 Chrome，仅附加到已运行会话。
+- OpenClaw 使用官方 Chrome DevTools MCP 的 `--autoConnect` 流程，而非旧版的远程调试端口流程。
+- existing-session 支持页面截图和快照中的 `--ref` 元素捕获，但不支持 CSS `--element` 选择器。
+- existing-session 的 `wait --url` 支持精确匹配、子串和全局模式，`wait --load networkidle` 尚不支持。
+- 某些功能仍需扩展中继或托管浏览器路径支持，如 PDF 导出和下载拦截。
+- 默认让中继绑定环回地址。如果需从不同网络命名空间访问（例如 WSL2 中的网关，Windows 上的 Chrome），可设置 `browser.relayBindHost` 为明确地址如 `0.0.0.0`，同时保持网络私有且认证。
 
 WSL2 / 跨命名空间示例：
 

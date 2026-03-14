@@ -185,21 +185,21 @@ OpenClaw 默认会在调用 LLM 之前，从内存上下文中修剪 **旧的工
 
 ## 传输 → 会话键映射
 
-- 单聊依照 `session.dmScope`（默认 `main`）：
-  - `main`：`agent:<agentId>:<mainKey>`（跨设备/频道连续性）。
-    - 多个电话号码和频道可以映射到同一个代理主键，作为进入同一会话的不同传输渠道。
-  - `per-peer`：`agent:<agentId>:dm:<peerId>`。
-  - `per-channel-peer`：`agent:<agentId>:<channel>:dm:<peerId>`。
-  - `per-account-channel-peer`：`agent:<agentId>:<channel>:<accountId>:dm:<peerId>`（accountId 默认为 `default`）。
-  - 如果 `session.identityLinks` 匹配带提供方前缀的对端 ID（如 `telegram:123`），则用规范键替换 `<peerId>`，实现跨频道会话共享。
-- 群聊隔离状态：`agent:<agentId>:<channel>:group:<id>`（房间/频道用 `agent:<agentId>:<channel>:channel:<id>`）。
-  - Telegram 论坛主题通过附加 `:topic:<threadId>` 区分。
-  - 仍支持旧版 `group:<id>` 键名用于迁移。
-- 入站上下文可能仍用 `group:<id>`，频道从 `Provider` 推断并规范为 `agent:<agentId>:<channel>:group:<id>` 形式。
-- 其他来源：
-  - 定时任务：`cron:<job.id>`
-  - Webhook：`hook:<uuid>`（除非由 webhook 明确设置）
-  - 节点运行：`node-<nodeId>`
+- Direct chats follow `session.dmScope` (default `main`).
+  - `main`: `agent:<agentId>:<mainKey>` (continuity across devices/channels).
+    - Multiple phone numbers and channels can map to the same agent main key; they act as transports into one conversation.
+  - `per-peer`: `agent:<agentId>:direct:<peerId>`.
+  - `per-channel-peer`: `agent:<agentId>:<channel>:direct:<peerId>`.
+  - `per-account-channel-peer`: `agent:<agentId>:<channel>:<accountId>:direct:<peerId>` (accountId defaults to `default`).
+  - If `session.identityLinks` matches a provider-prefixed peer id (for example `telegram:123`), the canonical key replaces `<peerId>` so the same person shares a session across channels.
+- Group chats isolate state: `agent:<agentId>:<channel>:group:<id>` (rooms/channels use `agent:<agentId>:<channel>:channel:<id>`).
+  - Telegram forum topics append `:topic:<threadId>` to the group id for isolation.
+  - Legacy `group:<id>` keys are still recognized for migration.
+- Inbound contexts may still use `group:<id>`; the channel is inferred from `Provider` and normalized to the canonical `agent:<agentId>:<channel>:group:<id>` form.
+- Other sources:
+  - Cron jobs: `cron:<job.id>`
+  - Webhooks: `hook:<uuid>` (unless explicitly set by the hook)
+  - Node runs: `node-<nodeId>`
 
 ## 生命周期
 
@@ -224,7 +224,7 @@ OpenClaw 默认会在调用 LLM 之前，从内存上下文中修剪 **旧的工
       rules: [
         { action: "deny", match: { channel: "discord", chatType: "group" } },
         { action: "deny", match: { keyPrefix: "cron:" } },
-        // 匹配原始会话键（包含 `agent:<id>:` 前缀）。
+        // Matches raw session keys (with `agent:<id>:` prefix).
         { action: "deny", match: { rawKeyPrefix: "agent:main:discord:" } },
       ],
       default: "allow",

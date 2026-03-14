@@ -1,226 +1,97 @@
 ---
 role: experimental
 summary: |
-  Homeric register for OpenProse—an epic/heroic alternative keyword set.
-  Heroes, trials, fates, and glory. For benchmarking against the functional register.
+  OpenProse 的荷马体注册表——一个史诗/英雄式的替代关键词集。
+  英雄、考验、命运与荣耀。用于与函数式注册表的基准测试。
 status: draft
 requires: prose.md
 ---
 
-# OpenProse Homeric Register
+# OpenProse 荷马体注册表
 
-> **This is a skin layer.** It requires `prose.md` to be loaded first. All execution semantics, state management, and VM behavior are defined there. This file only provides keyword translations.
+> **这是一个界面层。** 它要求先加载 `prose.md`。所有执行语义、状态管理和虚拟机行为都在那里定义。此文件仅提供关键词翻译。
 
-An alternative register for OpenProse that draws from Greek epic poetry—the Iliad, the Odyssey, and the heroic tradition. Programs become quests. Agents become heroes. Outputs become glory won.
+OpenProse 的另一种注册表，汲取自希腊史诗《伊利亚特》、《奥德赛》及英雄传统。程序变成了探险。代理变成了英雄。输出变成了赢得的荣耀。
 
-## How to Use
+## 使用方法
 
-1. Load `prose.md` first (execution semantics)
-2. Load this file (keyword translations)
-3. When parsing `.prose` files, accept Homeric keywords as aliases for functional keywords
-4. All execution behavior remains identical—only surface syntax changes
+1. 先加载 `prose.md`（执行语义）
+2. 加载本文件（关键词翻译）
+3. 解析 `.prose` 文件时，接受荷马体关键词作为函数式关键词的别名
+4. 所有执行行为保持不变——仅表层语法变化
 
-> **Design constraint:** Still aims to be "structured but self-evident" per the language tenets—just self-evident through an epic lens.
-
----
-
-## Complete Translation Map
-
-### Core Constructs
-
-| Functional | Homeric | Reference                     |
-| ---------- | ------- | ----------------------------- |
-| `agent`    | `hero`  | The one who acts, who strives |
-| `session`  | `trial` | Each task is a labor, a test  |
-| `parallel` | `host`  | An army moving as one         |
-| `block`    | `book`  | A division of the epic        |
-
-### Composition & Binding
-
-| Functional | Homeric   | Reference                              |
-| ---------- | --------- | -------------------------------------- |
-| `use`      | `invoke`  | "Sing, O Muse..." — calling upon       |
-| `input`    | `omen`    | Signs from the gods, the given portent |
-| `output`   | `glory`   | Kleos — the glory won, what endures    |
-| `let`      | `decree`  | Fate declared, spoken into being       |
-| `const`    | `fate`    | Moira — unchangeable destiny           |
-| `context`  | `tidings` | News carried by herald or messenger    |
-
-### Control Flow
-
-| Functional | Homeric            | Reference                                |
-| ---------- | ------------------ | ---------------------------------------- |
-| `repeat N` | `N labors`         | The labors of Heracles                   |
-| `for...in` | `for each...among` | Among the host                           |
-| `loop`     | `ordeal`           | Repeated trial, suffering that continues |
-| `until`    | `until`            | Unchanged                                |
-| `while`    | `while`            | Unchanged                                |
-| `choice`   | `crossroads`       | Where fates diverge                      |
-| `option`   | `path`             | One road of many                         |
-| `if`       | `should`           | Epic conditional                         |
-| `elif`     | `or should`        | Continued conditional                    |
-| `else`     | `otherwise`        | The alternative fate                     |
-
-### Error Handling
-
-| Functional | Homeric            | Reference                    |
-| ---------- | ------------------ | ---------------------------- |
-| `try`      | `venture`          | Setting forth on the journey |
-| `catch`    | `should ruin come` | Até — divine ruin, disaster  |
-| `finally`  | `in the end`       | The inevitable conclusion    |
-| `throw`    | `lament`           | The hero's cry of anguish    |
-| `retry`    | `persist`          | Enduring, trying again       |
-
-### Session Properties
-
-| Functional | Homeric  | Reference           |
-| ---------- | -------- | ------------------- |
-| `prompt`   | `charge` | The quest given     |
-| `model`    | `muse`   | Which muse inspires |
-
-### Unchanged
-
-These keywords already work or are too functional to replace sensibly:
-
-- `**...**` discretion markers — already work
-- `until`, `while` — already work
-- `map`, `filter`, `reduce`, `pmap` — pipeline operators
-- `max` — constraint modifier
-- `as` — aliasing
-- Model names: `sonnet`, `opus`, `haiku` — already poetic
+> **设计约束：** 仍然旨在符合语言原则中的“结构化且不言自明”——只是通过史诗视角实现不言自明。
 
 ---
 
-## Side-by-Side Comparison
+## 完整翻译映射
 
-### Simple Program
+### 核心结构
 
-```prose
-# Functional
-use "@alice/research" as research
-input topic: "What to investigate"
+| 函数式     | 荷马体    | 参考                                   |
+| ---------- | --------- | ------------------------------------- |
+| `agent`    | `hero`    | 行动者，奋斗者                         |
+| `session`  | `trial`   | 每个任务都是一场劳作，一次考验          |
+| `parallel` | `host`    | 如军队般齐心协力                       |
+| `block`    | `book`    | 史诗的章节划分                         |
 
-agent helper:
-  model: sonnet
+### 组成与绑定
 
-let findings = session: helper
-  prompt: "Research {topic}"
+| 函数式     | 荷马体     | 参考                                 |
+| ---------- | ---------- | ------------------------------------ |
+| `use`      | `invoke`   | “歌咏吧，缪斯……”——祈求启示         |
+| `input`    | `omen`     | 神祇的预兆，先验的征兆                 |
+| `output`   | `glory`    | 克勒俄斯——赢得的荣耀，永恒的名声        |
+| `let`      | `decree`   | 宣告的命运，被说出而成                  |
+| `const`    | `fate`     | 莫伊拉——不可更改的命数                 |
+| `context`  | `tidings`  | 由使者或预言者传达的消息                |
 
-output summary = session "Summarize"
-  context: findings
-```
+### 控制流程
 
-```prose
-# Homeric
-invoke "@alice/research" as research
-omen topic: "What to investigate"
+| 函数式      | 荷马体                | 参考                                  |
+| ----------- | --------------------- | ------------------------------------- |
+| `repeat N`  | `N labors`            | 赫拉克勒斯的十二项劳作               |
+| `for...in`  | `for each...among`    | 在主力军当中                         |
+| `loop`      | `ordeal`              | 重复的考验，持续的苦难                 |
+| `until`     | `until`               | 保持不变                            |
+| `while`     | `while`               | 保持不变                            |
+| `choice`    | `crossroads`          | 命运交汇之处                        |
+| `option`    | `path`                | 多路中的一条路                      |
+| `if`        | `should`              | 史诗中的条件判断                    |
+| `elif`      | `or should`           | 继续的条件判断                    |
+| `else`      | `otherwise`           | 另一条命运                        |
 
-hero helper:
-  muse: sonnet
+### 错误处理
 
-decree findings = trial: helper
-  charge: "Research {topic}"
+| 函数式    | 荷马体               | 参考                           |
+| --------- | -------------------- | ------------------------------ |
+| `try`     | `venture`            | 启程踏上旅途                   |
+| `catch`   | `should ruin come`   | 阿忒——神罚，灾难               |
+| `finally` | `in the end`         | 不可避免的结局                 |
+| `throw`   | `lament`             | 英雄的悲叹                     |
+| `retry`   | `persist`            | 坚持不懈，再次尝试             |
 
-glory summary = trial "Summarize"
-  tidings: findings
-```
+### 会话属性
 
-### Parallel Execution
+| 函数式   | 荷马体      | 参考                |
+| -------- | ----------- | ------------------- |
+| `prompt` | `charge`    | 被赋予的任务          |
+| `model`  | `muse`      | 哪位缪斯激励着你      |
 
-```prose
-# Functional
-parallel:
-  security = session "Check security"
-  perf = session "Check performance"
-  style = session "Check style"
+### 共享附录
 
-session "Synthesize review"
-  context: { security, perf, style }
-```
+使用 [shared-appendix.md](./shared-appendix.md) 获取未改变的关键词和常见比较模式。
 
-```prose
-# Homeric
-host:
-  security = trial "Check security"
-  perf = trial "Check performance"
-  style = trial "Check style"
+推荐的荷马体重写目标：
 
-trial "Synthesize review"
-  tidings: { security, perf, style }
-```
-
-### Loop with Condition
-
-```prose
-# Functional
-loop until **the code is bug-free** (max: 5):
-  session "Find and fix bugs"
-```
-
-```prose
-# Homeric
-ordeal until **the code is bug-free** (max: 5):
-  trial "Find and fix bugs"
-```
-
-### Error Handling
+- `session` 示例 -> `trial`
+- `parallel` 示例 -> `host`
+- `loop` 示例 -> `ordeal`
+- `try/catch/finally` 示例 -> `venture` / `should ruin come` / `in the end`
+- `choice` 示例 -> `crossroads` / `path`
 
 ```prose
-# Functional
-try:
-  session "Risky operation"
-catch as err:
-  session "Handle error"
-    context: err
-finally:
-  session "Cleanup"
-```
-
-```prose
-# Homeric
-venture:
-  trial "Risky operation"
-should ruin come as err:
-  trial "Handle error"
-    tidings: err
-in the end:
-  trial "Cleanup"
-```
-
-### Choice Block
-
-```prose
-# Functional
-choice **the severity level**:
-  option "Critical":
-    session "Escalate immediately"
-  option "Minor":
-    session "Log for later"
-```
-
-```prose
-# Homeric
-crossroads **the severity level**:
-  path "Critical":
-    trial "Escalate immediately"
-  path "Minor":
-    trial "Log for later"
-```
-
-### Conditionals
-
-```prose
-# Functional
-if **has security issues**:
-  session "Fix security"
-elif **has performance issues**:
-  session "Optimize"
-else:
-  session "Approve"
-```
-
-```prose
-# Homeric
+# 荷马体
 should **has security issues**:
   trial "Fix security"
 or should **has performance issues**:
@@ -229,10 +100,10 @@ otherwise:
   trial "Approve"
 ```
 
-### Reusable Blocks
+### 可复用块
 
 ```prose
-# Functional
+# 函数式
 block review(topic):
   session "Research {topic}"
   session "Analyze {topic}"
@@ -241,7 +112,7 @@ do review("quantum computing")
 ```
 
 ```prose
-# Homeric
+# 荷马体
 book review(topic):
   trial "Research {topic}"
   trial "Analyze {topic}"
@@ -249,98 +120,98 @@ book review(topic):
 do review("quantum computing")
 ```
 
-### Fixed Iteration
+### 固定迭代
 
 ```prose
-# Functional
+# 函数式
 repeat 12:
   session "Complete task"
 ```
 
 ```prose
-# Homeric
+# 荷马体
 12 labors:
   trial "Complete task"
 ```
 
-### Immutable Binding
+### 不可变绑定
 
 ```prose
-# Functional
+# 函数式
 const config = { model: "opus", retries: 3 }
 ```
 
 ```prose
-# Homeric
+# 荷马体
 fate config = { muse: "opus", persist: 3 }
 ```
 
 ---
 
-## The Case For Homeric
+## 采用荷马体的理由
 
-1. **Universal recognition.** Greek epics are foundational to Western literature.
-2. **Heroic framing.** Transforms mundane tasks into glorious trials.
-3. **Natural fit.** Heroes face trials, receive tidings, win glory—maps cleanly to agent/session/output.
-4. **Gravitas.** When you want programs to feel epic and consequential.
-5. **Fate vs decree.** `const` as `fate` (unchangeable) vs `let` as `decree` (declared but mutable) is intuitive.
+1. **普遍认可。** 希腊史诗是西方文学的基石。
+2. **英雄框架。** 将平凡任务转化为光荣的考验。
+3. **自然贴合。** 英雄面对考验，接收消息，赢得荣耀——与 agent/session/output 映射清晰。
+4. **庄重感。** 适合想让程序显得史诗般重要的场景。
+5. **命运与宣告。** `const` 作为 `fate`（不可更改），`let` 作为 `decree`（可声明可变）直观易懂。
 
-## The Case Against Homeric
+## 反对荷马体的理由
 
-1. **Grandiosity mismatch.** "12 labors" for a simple loop may feel overblown.
-2. **Western-centric.** Greek epic tradition is culturally specific.
-3. **Limited vocabulary.** Fewer distinctive terms than Borges or folk.
-4. **Potentially silly.** Heroic language for mundane tasks risks bathos.
-
----
-
-## Key Homeric Concepts
-
-| Term   | Meaning                             | Used for                           |
-| ------ | ----------------------------------- | ---------------------------------- |
-| Kleos  | Glory, fame that outlives you       | `output` → `glory`                 |
-| Moira  | Fate, one's allotted portion        | `const` → `fate`                   |
-| Até    | Divine ruin, blindness sent by gods | `catch` → `should ruin come`       |
-| Nostos | The return journey                  | (not used, but could be `finally`) |
-| Xenia  | Guest-friendship, hospitality       | (not used)                         |
-| Muse   | Divine inspiration                  | `model` → `muse`                   |
+1. **夸张不当。** 简单的循环用“十二劳作”表达可能显得夸张。
+2. **西方中心。** 希腊史诗传统具有文化特异性。
+3. **词汇有限。** 较博尔赫斯或民间传统的词汇特色少。
+4. **潜在滑稽。** 英雄式语言用于日常任务可能产生喜剧效果。
 
 ---
 
-## Alternatives Considered
+## 关键荷马概念
 
-### For `hero` (agent)
-
-| Keyword    | Rejected because                       |
-| ---------- | -------------------------------------- |
-| `champion` | More medieval than Homeric             |
-| `warrior`  | Too martial, not all tasks are battles |
-| `wanderer` | Too passive                            |
-
-### For `trial` (session)
-
-| Keyword | Rejected because                        |
-| ------- | --------------------------------------- |
-| `labor` | Good but reserved for `repeat N labors` |
-| `quest` | More medieval/RPG                       |
-| `task`  | Too plain                               |
-
-### For `host` (parallel)
-
-| Keyword   | Rejected because               |
-| --------- | ------------------------------ |
-| `army`    | Too specifically martial       |
-| `fleet`   | Only works for naval metaphors |
-| `phalanx` | Too technical                  |
+| 术语    | 含义                                    | 用途                             |
+| ------- | ------------------------------------- | ------------------------------- |
+| Kleos   | 荣耀，超越生死的名声                    | `output` → `glory`              |
+| Moira   | 命运，分配的份额                        | `const` → `fate`                |
+| Até     | 神罚，神授的盲目                        | `catch` → `should ruin come`   |
+| Nostos  | 归乡旅程                              | （未用，但可用作 `finally`）   |
+| Xenia   | 宾客友情，款待                          | （未使用）                      |
+| Muse    | 神圣的灵感                            | `model` → `muse`                |
 
 ---
 
-## Verdict
+## 备选方案考量
 
-Preserved for benchmarking. The Homeric register offers gravitas and heroic framing. Best suited for:
+### `hero`（agent）的替代词
 
-- Programs that feel like epic undertakings
-- Users who enjoy classical references
-- Contexts where "glory" as output feels appropriate
+| 关键词      | 拒绝理由                            |
+| ----------- | ---------------------------------- |
+| `champion`  | 更倾向中世纪风格，非荷马体                |
+| `warrior`   | 过于军事化，不是所有任务都是战斗             |
+| `wanderer`  | 过于被动                           |
 
-May cause unintentional bathos when applied to mundane tasks.
+### `trial`（session）的替代词
+
+| 关键词   | 拒绝理由                            |
+| -------- | ---------------------------------- |
+| `labor`  | 好词，但限定用在 `repeat N labors` 上     |
+| `quest`  | 更偏中世纪/角色扮演风格                   |
+| `task`   | 过于平凡                          |
+
+### `host`（parallel）的替代词
+
+| 关键词     | 拒绝理由                    |
+| ---------- | --------------------------- |
+| `army`    | 过于军事化                    |
+| `fleet`   | 仅适用于海军隐喻              |
+| `phalanx` | 过于专业技术化                |
+
+---
+
+## 结论
+
+为基准测试保留。荷马体注册表带来庄重感与英雄框架。最适合：
+
+- 感受如史诗般重大项目的程序
+- 喜爱古典文化引用的用户
+- 输出“荣耀”感觉合适的场景
+
+用于平凡任务时，可能导致无意的滑稽和矫揉造作。

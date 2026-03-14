@@ -9,15 +9,15 @@ title: "测试"
 
 - 完整测试套件（套件，实时，Docker）：[测试](/help/testing)
 
-- `pnpm test:force`：终止任何占用默认控制端口的遗留网关进程，然后使用隔离的网关端口运行完整的 Vitest 测试套件，避免服务器测试与正在运行的实例冲突。当之前的网关运行导致端口 18789 被占用时使用此命令。
-- `pnpm test:coverage`：使用 V8 覆盖率运行单元测试套件（通过 `vitest.unit.config.ts`）。全局阈值为 70% 的行/分支/函数/语句覆盖率。覆盖率排除了集成密集的入口点（CLI 连接、网关/电报桥接、webchat 静态服务器），以保持目标集中在可单元测试的逻辑上。
-- Node 24 及以上版本运行 `pnpm test`：OpenClaw 会自动禁用 Vitest 的 `vmForks`，改用 `forks` 以避免 `ERR_VM_MODULE_LINK_FAILURE` / `module is already linked` 错误。可以通过设置 `OPENCLAW_TEST_VM_FORKS=0|1` 来强制更改行为。
-- `pnpm test`：默认运行快速的核心单元测试路径，以获得快速的本地反馈。
-- `pnpm test:channels`：运行以通道为主的测试套件。
-- `pnpm test:extensions`：运行扩展/插件测试套件。
-- 网关集成：通过 `OPENCLAW_TEST_INCLUDE_GATEWAY=1 pnpm test` 或 `pnpm test:gateway` 进行选择。
-- `pnpm test:e2e`：运行网关端到端冒烟测试（多实例 WS/HTTP/节点配对）。默认使用 `vitest.e2e.config.ts` 中的 `vmForks` + 自适应工作线程；可通过 `OPENCLAW_E2E_WORKERS=<n>` 调整，并设置 `OPENCLAW_E2E_VERBOSE=1` 打印详细日志。
-- `pnpm test:live`：运行提供商实时测试（minimax/zai）。需要 API 密钥和设置 `LIVE=1`（或提供商特定的 `*_LIVE_TEST=1`）才能取消跳过。
+- `pnpm test:force`：终止任何占用默认控制端口的残留网关进程，然后使用独立的网关端口运行完整的 Vitest 测试套件，防止服务器测试与正在运行的实例冲突。当之前的网关运行导致端口 18789 被占用时使用此命令。
+- `pnpm test:coverage`：运行带 V8 覆盖率的单元测试套件（通过 `vitest.unit.config.ts`）。全局阈值为 70% 的行／分支／函数／语句覆盖率。覆盖范围排除集成密集的入口点（CLI 接线、网关／Telegram 桥接、Webchat 静态服务器），以保持目标集中在可单元测试的逻辑上。
+- 在 Node 22、23 和 24 上，`pnpm test` 默认使用 Vitest 的 `vmForks` 以加快启动速度。Node 25+ 则回退到 `forks`，直到重新验证。可以通过设置 `OPENCLAW_TEST_VM_FORKS=0|1` 强制指定行为。
+- `pnpm test`：默认运行快速的核心单元测试，用于快速本地反馈。
+- `pnpm test:channels`：运行频道密集的测试套件。
+- `pnpm test:extensions`：运行扩展／插件测试套件。
+- 网关集成：通过 `OPENCLAW_TEST_INCLUDE_GATEWAY=1 pnpm test` 或 `pnpm test:gateway` 选择性启用。
+- `pnpm test:e2e`：运行网关端到端冒烟测试（多实例 WS/HTTP/节点配对）。默认使用 `vitest.e2e.config.ts` 中的 `vmForks` + 自适应工作线程；可通过 `OPENCLAW_E2E_WORKERS=<n>` 调整，并设置 `OPENCLAW_E2E_VERBOSE=1` 开启详细日志。
+- `pnpm test:live`：运行提供者实时测试（minimax/zai）。需要 API 密钥和 `LIVE=1`（或提供者特定的 `*_LIVE_TEST=1`）以取消跳过测试。
 
 ## 本地 PR 网关
 

@@ -16,9 +16,9 @@ sidebarTitle: "CLI 参考"
 
 本地模式（默认）引导你完成：
 
-- 模型和认证设置（OpenAI Code 订阅 OAuth，Anthropic API key 或 setup token，以及 MiniMax、GLM、Moonshot 和 AI Gateway 选项）
-- 工作空间位置和启动文件
-- 网关设置（端口、绑定地址、认证、tailscale）
+- 模型和认证设置（OpenAI Code 订阅 OAuth，Anthropic API key 或 setup token，以及 MiniMax、GLM、Ollama、Moonshot 和 AI Gateway 选项）
+- 工作空间位置及初始化文件
+- 网关设置（端口、绑定、认证、tailscale）
 - 通道和提供商（Telegram、WhatsApp、Discord、Google Chat、Mattermost 插件、Signal）
 - 守护进程安装（LaunchAgent 或 systemd 用户单元）
 - 健康检查
@@ -175,9 +175,14 @@ sidebarTitle: "CLI 参考"
     提示输入 `SYNTHETIC_API_KEY`。  
     详情见：[Synthetic](/providers/synthetic)。  
   </Accordion>
-  <Accordion title="Moonshot 和 Kimi Coding">
-    Moonshot（Kimi K2）和 Kimi Coding 配置自动写入。  
-    详情见：[Moonshot AI（Kimi 与 Kimi Coding）](/providers/moonshot)。  
+  <Accordion title="Ollama (Cloud and local open models)">
+    提示输入基础 URL（默认 `http://127.0.0.1:11434`），然后提供云 + 本地或本地模式选择。  
+    自动发现可用模型并推荐默认。  
+    详情见：[Ollama](/providers/ollama)。  
+  </Accordion>
+  <Accordion title="Moonshot and Kimi Coding">
+    Moonshot (Kimi K2) 和 Kimi Coding 配置自动写入。  
+    详情见：[Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)。  
   </Accordion>
   <Accordion title="自定义提供商">
     兼容 OpenAI 和 Anthropic 端点。  

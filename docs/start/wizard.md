@@ -105,8 +105,11 @@ CLI 的 `--reset` 默认重置配置、凭据和会话；使用 `--reset-scope f
 
 ## 完整参考
 
-有关详细步骤分解、非交互脚本、Signal 设置、RPC API 和向导写入的完整配置字段列表，  
-请参阅 [向导参考](/reference/wizard)。
+有关详细的逐步分解和配置输出，请参阅  
+[CLI 入门参考](/start/wizard-cli-reference)。  
+有关非交互示例，请参阅 [CLI 自动化](/start/wizard-cli-automation)。  
+有关更深入的技术参考，包括 RPC 详情，请参阅  
+[向导参考](/reference/wizard)。
 
 ## 相关文档
 

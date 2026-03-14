@@ -202,107 +202,20 @@ services:
 
 ---
 
-## 7) 将所需二进制文件打包进镜像（关键）
+## 7) Shared Docker VM runtime steps
 
-在运行容器中安装二进制文件是陷阱。  
-运行时安装的内容重启后会丢失。
+Use the shared runtime guide for the common Docker host flow:
 
-所有技能所需的外部二进制都必须在镜像构建时安装。
-
-下面示例只展示三个常用二进制：
-
-- 用于 Gmail 访问的 `gog`
-- 用于 Google Places 的 `goplaces`
-- 用于 WhatsApp 的 `wacli`
-
-仅为示例，不是完整列表。  
-你可以用相同方式安装任意数量的二进制文件。
-
-以后新增依赖额外二进制的技能须：
-
-1. 更新 Dockerfile  
-2. 重新构建镜像  
-3. 重启容器
-
-**示例 Dockerfile**
-
-```dockerfile
-FROM node:24-bookworm
-
-RUN apt-get update && apt-get install -y socat && rm -rf /var/lib/apt/lists/*
-
-# 示例二进制 1：Gmail CLI
-RUN curl -L https://github.com/steipete/gog/releases/latest/download/gog_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/gog
-
-# 示例二进制 2：Google Places CLI
-RUN curl -L https://github.com/steipete/goplaces/releases/latest/download/goplaces_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/goplaces
-
-# 示例二进制 3：WhatsApp CLI
-RUN curl -L https://github.com/steipete/wacli/releases/latest/download/wacli_Linux_x86_64.tar.gz \
-  | tar -xz -C /usr/local/bin && chmod +x /usr/local/bin/wacli
-
-# 其他二进制请按此模式添加
-
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY ui/package.json ./ui/package.json
-COPY scripts ./scripts
-
-RUN corepack enable
-RUN pnpm install --frozen-lockfile
-
-COPY . .
-RUN pnpm build
-RUN pnpm ui:install
-RUN pnpm ui:build
-
-ENV NODE_ENV=production
-
-CMD ["node","dist/index.js"]
-```
+- [Bake required binaries into the image](/install/docker-vm-runtime#bake-required-binaries-into-the-image)
+- [Build and launch](/install/docker-vm-runtime#build-and-launch)
+- [What persists where](/install/docker-vm-runtime#what-persists-where)
+- [Updates](/install/docker-vm-runtime#updates)
 
 ---
 
-## 8) 构建并启动
+## 8) Hetzner-specific access
 
-```bash
-docker compose build
-docker compose up -d openclaw-gateway
-```
-
-验证二进制：
-
-```bash
-docker compose exec openclaw-gateway which gog
-docker compose exec openclaw-gateway which goplaces
-docker compose exec openclaw-gateway which wacli
-```
-
-预期输出：
-
-```
-/usr/local/bin/gog
-/usr/local/bin/goplaces
-/usr/local/bin/wacli
-```
-
----
-
-## 9) 验证 Gateway
-
-```bash
-docker compose logs -f openclaw-gateway
-```
-
-成功示例：
-
-```
-[gateway] listening on ws://0.0.0.0:18789
-```
-
-从你的笔记本执行：
+After the shared build and launch steps, tunnel from your laptop:
 
 ```bash
 ssh -N -L 18789:127.0.0.1:18789 root@YOUR_VPS_IP
@@ -316,25 +229,7 @@ ssh -N -L 18789:127.0.0.1:18789 root@YOUR_VPS_IP
 
 ---
 
-## 各部分持久化位置（事实来源）
-
-OpenClaw 在 Docker 中运行，但 Docker 不是事实来源。  
-所有持久状态必须能在重启、重建和重启后保留。
-
-| 组件                 | 位置                             | 持久化机制           | 备注                            |
-| ------------------- | -------------------------------- | -------------------- | ------------------------------- |
-| Gateway 配置         | `/home/node/.openclaw/`           | 主机卷挂载           | 包含 `openclaw.json`、令牌     |
-| 模型认证配置         | `/home/node/.openclaw/`           | 主机卷挂载           | OAuth 令牌、API 密钥            |
-| 技能配置             | `/home/node/.openclaw/skills/`    | 主机卷挂载           | 单技能级别状态                  |
-| 代理工作空间         | `/home/node/.openclaw/workspace/` | 主机卷挂载           | 代码和代理产物                  |
-| WhatsApp 会话        | `/home/node/.openclaw/`           | 主机卷挂载           | 保留二维码登录                  |
-| Gmail 密钥环         | `/home/node/.openclaw/`           | 主机卷 + 密码        | 需 `GOG_KEYRING_PASSWORD`       |
-| 外部二进制文件       | `/usr/local/bin/`                 | Docker 镜像          | 必须在构建时内置                |
-| Node 运行时          | 容器文件系统                      | Docker 镜像          | 每次构建镜像时重建              |
-| 操作系统包           | 容器文件系统                      | Docker 镜像          | 禁止运行时安装                  |
-| Docker 容器          | 短暂                             | 可重启               | 可安全销毁                    |
-
----
+The shared persistence map lives in [Docker VM Runtime](/install/docker-vm-runtime#what-persists-where).
 
 ## 基础设施即代码（Terraform）
 

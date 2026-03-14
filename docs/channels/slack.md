@@ -169,15 +169,15 @@ openclaw gateway
     - `allowlist`
     - `disabled`
 
-    频道白名单配置在 `channels.slack.channels` 下。
+    频道白名单存放于 `channels.slack.channels`，应使用稳定的频道 ID。
 
     运行时提示：若完全缺少 `channels.slack` 配置（仅环境变量设置），运行时默认使用 `groupPolicy="allowlist"` 并发出警告（即使设置了 `channels.defaults.groupPolicy`）。
 
     名称/ID 解析：
 
-    - 各频道和私信白名单条目在启动时基于令牌权限解析
-    - 未能解析的条目保持原配置
-    - 默认的入站授权匹配以 ID 优先；若需要直接按用户名/别名匹配，需设置 `channels.slack.dangerouslyAllowNameMatching: true`
+    - 频道白名单条目和私信白名单条目在启动时在令牌权限允许的情况下解析
+    - 未解析的频道名称条目将保持配置状态，但默认在路由中忽略
+    - 入站授权和频道路由默认优先 ID；直接用户名/别名匹配需启用 `channels.slack.dangerouslyAllowNameMatching: true`
 
   </Tab>
 
@@ -190,7 +190,7 @@ openclaw gateway
     - 正则提及模式（`agents.list[].groupChat.mentionPatterns`；回退到 `messages.groupChat.mentionPatterns`）
     - 隐式回复给机器人线程行为
 
-    每频道控制项（`channels.slack.channels.<id|name>`）：
+    频道级别控制（`channels.slack.channels.<id>`；名称仅通过启动时解析或 `dangerouslyAllowNameMatching` 支持）：
 
     - `requireMention`
     - `users`（白名单）
@@ -218,7 +218,56 @@ openclaw gateway
   - 若编码后选项超出 Slack 限制，回退至按钮模式
 - 斜线命令的长选项参数菜单，在提交前采用确认对话框。
 
-斜线命令默认配置：
+## 交互式回复
+
+Slack 可以渲染代理作者的交互式回复控件，但默认此功能关闭。
+
+全局启用：
+
+```json5
+{
+  channels: {
+    slack: {
+      capabilities: {
+        interactiveReplies: true,
+      },
+    },
+  },
+}
+```
+
+或仅为某个 Slack 账户启用：
+
+```json5
+{
+  channels: {
+    slack: {
+      accounts: {
+        ops: {
+          capabilities: {
+            interactiveReplies: true,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+启用后，代理可以发出 Slack 专用回复指令：
+
+- `[[slack_buttons: Approve:approve, Reject:reject]]`
+- `[[slack_select: Choose a target | Canary:canary, Production:production]]`
+
+这些指令编译为 Slack Block Kit 并将点击或选择路由回现有 Slack 交互事件路径。
+
+注意：
+
+- 这是 Slack 特定的 UI，其他渠道不会将 Slack Block Kit 指令转为自己的按钮系统。
+- 交互回调值为 OpenClaw 生成的不透明令牌，不是原代理作者的值。
+- 若生成的交互块超过 Slack Block Kit 限制，OpenClaw 将回退为原始文本回复，避免发送无效的块载荷。
+
+默认斜线命令设置：
 
 - `enabled: false`
 - `name: "openclaw"`

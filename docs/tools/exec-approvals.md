@@ -227,10 +227,17 @@ CLI：`openclaw approvals` 支持对网关或节点的编辑（详见[审批 CLI
 
 基于审批的解释器/运行时运行采用刻意保守的策略：
 
-- 始终绑定精确的 argv/cwd/env 上下文。  
-- 对于直接的 shell 脚本和直接运行时文件形式，尽最大努力绑定一个具体的本地文件快照。  
-- 如果 OpenClaw 无法为解释器/运行时命令明确识别一个具体的本地文件（例如包脚本、eval 表达式、运行时特定的加载链或存在歧义的多文件形式），则拒绝基于审批的执行，而非声称拥有其未具备的语义覆盖。  
-- 对于这类工作流程，建议采用沙箱、单独的主机边界，或显式可信的允许列表/完整工作流，由操作者接受更广泛的运行时语义。
+- Exact argv/cwd/env context is always bound.
+- Direct shell script and direct runtime file forms are best-effort bound to one concrete local
+  file snapshot.
+- Common package-manager wrapper forms that still resolve to one direct local file (for example
+  `pnpm exec`, `pnpm node`, `npm exec`, `npx`) are unwrapped before binding.
+- If OpenClaw cannot identify exactly one concrete local file for an interpreter/runtime command
+  (for example package scripts, eval forms, runtime-specific loader chains, or ambiguous multi-file
+  forms), approval-backed execution is denied instead of claiming semantic coverage it does not
+  have.
+- For those workflows, prefer sandboxing, a separate host boundary, or an explicit trusted
+  allowlist/full workflow where the operator accepts the broader runtime semantics.
 
 需要审批时，执行工具会立即返回审批 id。使用此 id 关联后续系统事件（`执行完成` / `执行拒绝`）。若超时无决策，则请求视为审批超时并作为拒绝原因。  
 

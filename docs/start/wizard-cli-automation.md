@@ -130,7 +130,18 @@ openclaw onboard --non-interactive \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
-    Swap to `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"` for the Go catalog.
+    对于 Go 目录，请切换到 `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"`。
+  </Accordion>
+  <Accordion title="Ollama 示例">
+    ```bash
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice ollama \
+      --custom-model-id "qwen3.5:27b" \
+      --accept-risk \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
   </Accordion>
   <Accordion title="自定义提供商示例">
     ```bash

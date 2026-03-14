@@ -177,7 +177,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 }
 ```
 
-    Example: allow only specific users inside one specific group:
+    示例：仅允许特定用户在指定群组内发言：
 
 ```json5
 {
@@ -195,11 +195,11 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 ```
 
     <Warning>
-      Common mistake: `groupAllowFrom` is not a Telegram group allowlist.
+      常见误区：`groupAllowFrom` 不是 Telegram 群组白名单。
 
-      - Put negative Telegram group or supergroup chat IDs like `-1001234567890` under `channels.telegram.groups`.
-      - Put Telegram user IDs like `8734062810` under `groupAllowFrom` when you want to limit which people inside an allowed group can trigger the bot.
-      - Use `groupAllowFrom: ["*"]` only when you want any member of an allowed group to be able to talk to the bot.
+      - 将负数的 Telegram 群组或超级群聊 ID（如 `-1001234567890`）放在 `channels.telegram.groups` 下。
+      - 想限制允许群组内哪些人可以触发机器人时，将 Telegram 用户 ID（如 `8734062810`）放在 `groupAllowFrom`。
+      - 只有想允许群组中任意成员能够与机器人交互时，才使用 `groupAllowFrom: ["*"]`。
     </Warning>
 
   </Tab>
@@ -338,7 +338,8 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     常见配置失败：
 
-    - `setMyCommands failed` 通常因出站 DNS/HTTPS 访问 `api.telegram.org` 被阻止。
+    - `setMyCommands failed` 报 `BOT_COMMANDS_TOO_MUCH` 意味着 Telegram 菜单在截断后仍溢出；需减少插件/技能/自定义命令或禁用 `channels.telegram.commands.native`。
+    - 网络/拉取错误通常表明出站 DNS/HTTPS 访问 `api.telegram.org` 被阻断。
 
     ### 设备配对命令（`device-pair` 插件）
 
@@ -843,9 +844,10 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
   <Accordion title="命令部分或全部失效">
 
-    - 授权发送者身份（配对及/或数字 `allowFrom`）
-    - 即使群组策略为 `open`，命令仍须授权
-    - `setMyCommands failed` 通常是 DNS/HTTPS 访问 `api.telegram.org` 被阻止导致
+    - authorize your sender identity (pairing and/or numeric `allowFrom`)
+    - command authorization still applies even when group policy is `open`
+    - `setMyCommands failed` with `BOT_COMMANDS_TOO_MUCH` means the native menu has too many entries; reduce plugin/skill/custom commands or disable native menus
+    - `setMyCommands failed` with network/fetch errors usually indicates DNS/HTTPS reachability issues to `api.telegram.org`
 
   </Accordion>
 

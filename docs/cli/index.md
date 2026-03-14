@@ -336,13 +336,13 @@ openclaw [--dev] [--profile <name>] <command>
 - `--reset-scope <config|config+creds+sessions|full>`（默认 `config+creds+sessions`；`full` 将同时移除工作空间）
 - `--non-interactive`
 - `--mode <local|remote>`
-- `--flow <quickstart|advanced|manual>`（manual 是 advanced 的别名）
-- `--auth-choice <setup-token|token|chutes|openai-codex|openai-api-key|openrouter-api-key|ai-gateway-api-key|moonshot-api-key|moonshot-api-key-cn|kimi-code-api-key|synthetic-api-key|venice-api-key|gemini-api-key|zai-api-key|mistral-api-key|apiKey|minimax-api|minimax-api-lightning|opencode-zen|opencode-go|custom-api-key|skip>`
-- `--token-provider <id>`（非交互模式，配合 `--auth-choice token` 使用）
-- `--token <token>`（非交互模式，配合 `--auth-choice token` 使用）
-- `--token-profile-id <id>`（非交互模式，默认 `<provider>:manual`）
-- `--token-expires-in <duration>`（非交互模式，例如 `365d`、`12h`）
-- `--secret-input-mode <plaintext|ref>`（默认 `plaintext`；使用 `ref` 时存储提供者默认环境变量引用而非明文密钥）
+- `--flow <quickstart|advanced|manual>` (manual 是 advanced 的别名)
+- `--auth-choice <setup-token|token|chutes|openai-codex|openai-api-key|openrouter-api-key|ollama|ai-gateway-api-key|moonshot-api-key|moonshot-api-key-cn|kimi-code-api-key|synthetic-api-key|venice-api-key|gemini-api-key|zai-api-key|mistral-api-key|apiKey|minimax-api|minimax-api-lightning|opencode-zen|opencode-go|custom-api-key|skip>`
+- `--token-provider <id>` (非交互模式；与 `--auth-choice token` 一起使用)
+- `--token <token>` (非交互模式；与 `--auth-choice token` 一起使用)
+- `--token-profile-id <id>` (非交互模式；默认：`<provider>:manual`)
+- `--token-expires-in <duration>` (非交互模式；例如 `365d`, `12h`)
+- `--secret-input-mode <plaintext|ref>` (默认 `plaintext`；使用 `ref` 来存储提供者默认的环境变量引用而非明文密钥)
 - `--anthropic-api-key <key>`
 - `--openai-api-key <key>`
 - `--mistral-api-key <key>`
@@ -355,11 +355,11 @@ openclaw [--dev] [--profile <name>] <command>
 - `--minimax-api-key <key>`
 - `--opencode-zen-api-key <key>`
 - `--opencode-go-api-key <key>`
-- `--custom-base-url <url>`（非交互模式，配合 `--auth-choice custom-api-key` 使用）
-- `--custom-model-id <id>`（非交互模式，配合 `--auth-choice custom-api-key` 使用）
-- `--custom-api-key <key>`（非交互模式，可选，配合 `--auth-choice custom-api-key` 使用；省略时回退至环境变量 `CUSTOM_API_KEY`）
-- `--custom-provider-id <id>`（非交互模式，可选，用户自定义提供者 ID）
-- `--custom-compatibility <openai|anthropic>`（非交互模式，可选，默认 `openai`）
+- `--custom-base-url <url>` (非交互模式；与 `--auth-choice custom-api-key` 或 `--auth-choice ollama` 一起使用)
+- `--custom-model-id <id>` (非交互模式；与 `--auth-choice custom-api-key` 或 `--auth-choice ollama` 一起使用)
+- `--custom-api-key <key>` (非交互模式；可选；与 `--auth-choice custom-api-key` 一起使用；省略时回退到 `CUSTOM_API_KEY`)
+- `--custom-provider-id <id>` (非交互模式；可选的自定义提供者 ID)
+- `--custom-compatibility <openai|anthropic>` (非交互模式；可选；默认 `openai`)
 - `--gateway-port <port>`
 - `--gateway-bind <loopback|lan|tailnet|auto|custom>`
 - `--gateway-auth <token|password>`
@@ -549,7 +549,7 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 示例：
 
 - `openclaw message send --target +15555550123 --message "Hi"`
-- `openclaw message poll --channel discord --target channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
+- `openclaw message poll --channel discord --target channel:123 --poll-question "零食？" --poll-option Pizza --poll-option Sushi`
 
 ### `agent`
 
@@ -670,14 +670,14 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 
 - `/status`（提供简短使用信息）
 - `openclaw status --usage`（打印完整提供商详情）
-- macOS 菜单栏（上下文中的“Usage”小节）
+- macOS 菜单栏（上下文中的“使用”小节）
 
 备注：
 
 - 数据直接来源于提供者使用端点（无估算）。
 - 支持提供者：Anthropic、GitHub Copilot、OpenAI Codex OAuth，以及启用时的 Gemini CLI/Antigravity。
 - 若无匹配凭证，隐藏使用信息。
-- 详情见 [Usage tracking](/concepts/usage-tracking)。
+- 详情见 [使用跟踪](/concepts/usage-tracking)。
 
 ### `health`
 

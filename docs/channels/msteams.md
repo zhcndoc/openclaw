@@ -112,11 +112,12 @@ openclaw plugins install ./extensions/msteams
 
 **Teams + 频道白名单**
 
-- 通过 `channels.msteams.teams` 列出团队和频道来限定群组/频道回复范围。
-- 键可以是团队 ID 或名称；频道键能是会话 ID 或名称。
-- 在 `groupPolicy="allowlist"` 且存在 teams 白名单时，仅接受列表中的团队/频道（需要 @提及）。
-- 配置向导可接受 Team/Channel 条目并为您存储。
-- 启动时，OpenClaw 会尝试根据 Graph 权限将团队/频道及用户白名单的名称解析成 ID，并打印映射，未解析的条目保持原样。
+- Scope group/channel replies by listing teams and channels under `channels.msteams.teams`.
+- Keys should use stable team IDs and channel conversation IDs.
+- When `groupPolicy="allowlist"` and a teams allowlist is present, only listed teams/channels are accepted (mention‑gated).
+- The configure wizard accepts `Team/Channel` entries and stores them for you.
+- On startup, OpenClaw resolves team/channel and user allowlist names to IDs (when Graph permissions allow)
+  and logs the mapping; unresolved team/channel names are kept as typed but ignored for routing by default unless `channels.msteams.dangerouslyAllowNameMatching: true` is enabled.
 
 示例：
 
@@ -449,34 +450,34 @@ Teams Markdown 比 Slack 或 Discord 受限：
 
 关键配置项（详见 `/gateway/configuration` 共享频道模式）：
 
-- `channels.msteams.enabled`：启用/禁用频道。
-- `channels.msteams.appId`、`appPassword`、`tenantId`：机器人凭据。
+- `channels.msteams.enabled`: 启用/禁用该频道。
+- `channels.msteams.appId`, `channels.msteams.appPassword`, `channels.msteams.tenantId`: 机器人凭证。
 - `channels.msteams.webhook.port`（默认 `3978`）
 - `channels.msteams.webhook.path`（默认 `/api/messages`）
-- `channels.msteams.dmPolicy`：`pairing | allowlist | open | disabled`（默认：pairing）
-- `channels.msteams.allowFrom`：私聊白名单（建议使用 AAD 对象 ID）。向导在有 Graph 权限时可解析名称。
-- `channels.msteams.dangerouslyAllowNameMatching`：开关，开启则启用可变 UPN/显示名匹配（不安全）。
-- `channels.msteams.textChunkLimit`：发送文本的块大小。
-- `channels.msteams.chunkMode`：`length`（默认）或 `newline`，先按空行分段后再按长度拆分。
-- `channels.msteams.mediaAllowHosts`：允许下载附件的域名白名单（默认为 Microsoft/Teams 域）。
-- `channels.msteams.mediaAuthAllowHosts`：附件重试时附加 Authorization 请求头的白名单（默认包含 Graph + Bot Framework 域）。
-- `channels.msteams.requireMention`：频道/群组是否要求 @提及（默认 true）。
-- `channels.msteams.replyStyle`：回复风格，`thread | top-level`（详见[回复风格：线程 vs 帖子](#reply-style-threads-vs-posts)）。
-- `channels.msteams.teams.<teamId>.replyStyle`：团队级覆盖。
-- `channels.msteams.teams.<teamId>.requireMention`：团队级覆盖。
-- `channels.msteams.teams.<teamId>.tools`：团队默认工具策略覆盖（`allow`/`deny`/`alsoAllow`），频道没覆盖时使用。
-- `channels.msteams.teams.<teamId>.toolsBySender`：团队按发送者的工具策略覆盖（支持`"*"`通配符）。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`：频道级覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`：频道级覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`：频道工具策略覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`：频道按发送者的工具策略覆盖（支持`"*"`通配符）。
-- `toolsBySender` 键应使用前缀：  
-  `id:`、`e164:`、`username:`、`name:`（旧版未带前缀的键仅映射到 `id:`）。
-- `channels.msteams.sharePointSiteId`：群聊/频道中发送文件所需的 SharePoint 站点 ID（详见[群聊中发送文件](#sending-files-in-group-chats)）。
+- `channels.msteams.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）
+- `channels.msteams.allowFrom`: 私聊允许列表（推荐 AAD 对象 ID）。安装向导在有 Graph 访问时会将名称解析为 ID。
+- `channels.msteams.dangerouslyAllowNameMatching`: 紧急开关，重新启用可变的 UPN/显示名匹配及直接团队/频道名称路由。
+- `channels.msteams.textChunkLimit`: 发送文本分块大小。
+- `channels.msteams.chunkMode`: `length`（默认）或 `newline`，先按空白行分割（段落边界）后再按长度分割。
+- `channels.msteams.mediaAllowHosts`: 入站附件允许的主机名白名单（默认为 Microsoft/Teams 域）。
+- `channels.msteams.mediaAuthAllowHosts`: 重试媒体请求时附加 Authorization 头的主机名白名单（默认为 Graph + Bot Framework 域）。
+- `channels.msteams.requireMention`: 频道/群组中是否强制 @提及（默认 true）。
+- `channels.msteams.replyStyle`: `thread | top-level`（详见 [回复风格](#reply-style-threads-vs-posts)）。
+- `channels.msteams.teams.<teamId>.replyStyle`: 按团队覆盖设置。
+- `channels.msteams.teams.<teamId>.requireMention`: 按团队覆盖设置。
+- `channels.msteams.teams.<teamId>.tools`: 默认的团队级工具策略覆盖（`allow`/`deny`/`alsoAllow`），在无频道覆盖时使用。
+- `channels.msteams.teams.<teamId>.toolsBySender`: 默认团队级别按发送者的工具策略覆盖（支持 `"*"` 通配符）。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`: 按频道覆盖设置。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`: 按频道覆盖设置。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`: 按频道工具策略覆盖（`allow`/`deny`/`alsoAllow`）。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`: 按频道按发送者的工具策略覆盖（支持 `"*"` 通配符）。
+- `toolsBySender` 的 key 应使用显式前缀：
+  `id:`, `e164:`, `username:`, `name:`（遗留不带前缀的 key 仍映射到 `id:`）。
+- `channels.msteams.sharePointSiteId`: 群聊及频道文件上传的 SharePoint 站点 ID（详见 [群聊中发送文件](#sending-files-in-group-chats)）。
 
 ## 路由及会话
 
-- 会话键符合标准代理格式（详见 [/concepts/session](/concepts/session)）：
+- 会话键遵循标准代理格式（详见 [/concepts/session](/concepts/session)）：
   - 私聊共用主会话：`agent:<agentId>:<mainKey>`
   - 频道/群组消息按会话 ID 区分：  
     - `agent:<agentId>:msteams:channel:<conversationId>`  
@@ -486,10 +487,10 @@ Teams Markdown 比 Slack 或 Discord 受限：
 
 Teams 最近推出两种频道 UI 样式，数据模型相同：
 
-| 样式            | 描述                                      | 推荐设置 `replyStyle`  |
-| --------------- | ----------------------------------------- | ---------------------- |
-| **帖子**（经典） | 消息以卡片形式出现，下方有线程回复         | `thread`（默认）       |
-| **线程**（Slack 式） | 消息线性流动，更像 Slack                  | `top-level`            |
+| 样式            | 描述                                       | 推荐设置 `replyStyle`  |
+| --------------- | ------------------------------------------ | ---------------------- |
+| **帖子**（经典） | 消息以卡片形式出现，下方有线程回复        | `thread`（默认）       |
+| **线程**（Slack 式） | 消息线性流动，更像 Slack                 | `top-level`            |
 
 **问题：** Teams API 不支持查询频道使用哪种 UI 样式。选错 `replyStyle` 会导致：
 

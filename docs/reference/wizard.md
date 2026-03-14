@@ -27,33 +27,35 @@ sidebarTitle: "向导参考"
       - 完全重置（也移除工作区）
   </Step>
   <Step title="模型/认证">
-    - **Anthropic API 密钥**：如果存在环境变量 `ANTHROPIC_API_KEY` 则使用，否则提示输入密钥，随后保存供守护进程使用。
-    - **Anthropic OAuth（Claude Code CLI）**：在 macOS 上，向导检查钥匙串中名为 "Claude Code-credentials" 的条目（请选择“始终允许”，以免 launchd 启动阻塞）；在 Linux/Windows 上如果存在 `~/.claude/.credentials.json` 会复用它。
-    - **Anthropic 令牌（粘贴 setup-token）**：在任意主机运行 `claude setup-token`，然后粘贴令牌（可自定义名称，留空为默认）。
-    - **OpenAI Code（Codex）订阅（Codex CLI）**：如果存在 `~/.codex/auth.json`，向导可以重复使用它。
-    - **OpenAI Code（Codex）订阅（OAuth）**：浏览器流程；粘贴 `code#state`。
-      - 当模型未设置或为 `openai/*` 时，将设置 `agents.defaults.model` 为 `openai-codex/gpt-5.2`。
-    - **OpenAI API 密钥**：如果存在环境变量 `OPENAI_API_KEY` 则使用，否则提示输入密钥，随后存储至身份验证配置文件。
-    - **xAI (Grok) API 密钥**：提示输入 `XAI_API_KEY` 并配置 xAI 为模型提供者。
-    - **OpenCode**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取），并允许选择 Zen 或 Go 目录。
-    - **API 密钥**：为你存储密钥。
+    - **Anthropic API key**：如果存在则使用 `ANTHROPIC_API_KEY`，否则提示输入并保存供守护进程使用。
+    - **Anthropic OAuth (Claude Code CLI)**：macOS 上向导会检查钥匙串项目 "Claude Code-credentials"（选择“始终允许”，以免启动时被阻止）；Linux/Windows 则复用 `~/.claude/.credentials.json`（如果存在）。
+    - **Anthropic token (粘贴 setup-token)**：在任意机器运行 `claude setup-token`，然后粘贴令牌（可命名；留空为默认）。
+    - **OpenAI Code (Codex) 订阅 (Codex CLI)**：如果存在 `~/.codex/auth.json`，向导可复用该文件。
+    - **OpenAI Code (Codex) 订阅 (OAuth)**：浏览器流程；粘贴 `code#state`。
+      - 当模型未设置或为 `openai/*` 时设置 `agents.defaults.model` 为 `openai-codex/gpt-5.2`。
+    - **OpenAI API key**：如果存在则使用 `OPENAI_API_KEY`，否则提示输入并存储于认证配置档中。
+    - **xAI (Grok) API key**：提示输入 `XAI_API_KEY` 并配置 xAI 作为模型提供商。
+    - **OpenCode**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取），并让你选择 Zen 或 Go 目录。
+    - **Ollama**：提示 Ollama 基础 URL，提供 **云 + 本地** 或 **本地** 模式，发现可用模型，并根据需要自动拉取选定的本地模型。
+    - 更多详情：[Ollama](/providers/ollama)
+    - **API key**：为你存储密钥。
     - **Vercel AI Gateway（多模型代理）**：提示输入 `AI_GATEWAY_API_KEY`。
-    - 更多详情见：[Vercel AI Gateway](/providers/vercel-ai-gateway)
-    - **Cloudflare AI Gateway**：提示输入账号 ID、网关 ID 及 `CLOUDFLARE_AI_GATEWAY_API_KEY`。
-    - 更多详情见：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
+    - 更多详情：[Vercel AI Gateway](/providers/vercel-ai-gateway)
+    - **Cloudflare AI Gateway**：提示输入账户 ID、网关 ID 及 `CLOUDFLARE_AI_GATEWAY_API_KEY`。
+    - 更多详情：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
     - **MiniMax M2.5**：配置自动写入。
-    - 更多详情见：[MiniMax](/providers/minimax)
-    - **Synthetic（Anthropic 兼容）**：提示输入 `SYNTHETIC_API_KEY`。
-    - 更多详情见：[Synthetic](/providers/synthetic)
-    - **Moonshot（Kimi K2）**：配置自动写入。
+    - 更多详情：[MiniMax](/providers/minimax)
+    - **Synthetic（兼容 Anthropic）**：提示输入 `SYNTHETIC_API_KEY`。
+    - 更多详情：[Synthetic](/providers/synthetic)
+    - **Moonshot (Kimi K2)**：配置自动写入。
     - **Kimi Coding**：配置自动写入。
-    - 更多详情见：[Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
+    - 更多详情：[Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
     - **跳过**：尚未配置认证。
-    - 从检测到的选项中选择默认模型（或手动输入提供商/模型）。为了最佳质量与更低的提示注入风险，请选择你提供商堆栈中最强大最新一代的模型。
-    - 向导运行模型检查，如果配置的模型未知或缺少认证则发出警告。
-    - API 密钥存储模式默认使用明文的身份认证配置文件值。使用 `--secret-input-mode ref` 可改为存储基于环境的引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）。
-    - OAuth 凭据存储于 `~/.openclaw/credentials/oauth.json`；身份认证配置文件存储于 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（包含 API 密钥 + OAuth）。
-    - 更多详情见：[/concepts/oauth](/concepts/oauth)
+    - 从检测到的选项中选择默认模型（或手动输入提供商/模型）。为获得最佳质量及降低提示注入风险，请选择提供商堆栈中最强的最新一代模型。
+    - 向导会运行模型检查，如果配置的模型未知或缺少认证，会发出警告。
+    - API 密钥存储模式默认为纯文本认证配置档值。使用 `--secret-input-mode ref` 可改为存储由环境变量支持的引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）。
+    - OAuth 认证信息存于 `~/.openclaw/credentials/oauth.json`；认证配置档存于 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (包含 API 密钥 + OAuth)。
+    - 更多详情：[/concepts/oauth](/concepts/oauth)
     <Note>
     无头/服务器提示：在有浏览器的机器上完成 OAuth，之后将 `~/.openclaw/credentials/oauth.json`（或 `$OPENCLAW_STATE_DIR/credentials/oauth.json`）复制到网关主机。
     </Note>
@@ -65,16 +67,16 @@ sidebarTitle: "向导参考"
   </Step>
   <Step title="网关">
     - 端口、绑定地址、认证模式、tailscale 暴露。
-    - 认证建议：即使是环回（loopback）也保持**Token**模式，这样本地 WS 客户端也必须认证。
-    - 在令牌模式下，交互式入门提供：
+    - 认证建议：即使是环回（loopback）也保持**令牌**模式，这样本地 WS 客户端也必须认证。
+    - 令牌模式下，交互式入门提供：
       - **生成/存储明文令牌**（默认）
       - **使用 SecretRef**（需选择）
-      - 快速入门复用现有的跨 `env`、`file` 和 `exec` 提供商的 `gateway.auth.token` SecretRef 以进行探针/仪表盘引导。
-      - 如果该 SecretRef 配置了但无法解析，入门会及早失败并给出明确的修复提示，而不是运行时静默降级认证。
-    - 在密码模式下，交互式入门也支持明文或 SecretRef 存储。
+      - 快速入门时复用现有的跨 `env`、`file` 和 `exec` 提供商的 `gateway.auth.token` SecretRef 用于探针/仪表盘引导。
+      - 如果该 SecretRef 配置了但无法解析，入门会早期失败并给出明确修复提示，而不是运行时静默降级认证。
+    - 密码模式下，交互式入门也支持明文或 SecretRef 存储。
     - 非交互式令牌 SecretRef 路径参数：`--gateway-token-ref-env <环境变量名>`。
-      - 需确保入门进程环境中该环境变量非空。
-      - 不能与 `--gateway-token` 一起使用。
+      - 需保证入门进程环境中该环境变量非空。
+      - 不能与 `--gateway-token` 同时使用。
     - 只有在你完全信任所有本地进程时才禁用认证。
     - 非环回绑定仍需认证。
   </Step>
@@ -89,7 +91,7 @@ sidebarTitle: "向导参考"
     - [iMessage](/channels/imessage)：遗留 `imsg` CLI 路径 + 数据库访问。
     - DM 安全性：默认为配对。第一次 DM 发送验证码；可通过 `openclaw pairing approve <channel> <code>` 批准，或使用允许列表。
   </Step>
-  <Step title="Web search">
+  <Step title="网页搜索">
     - 选择搜索提供商：Perplexity、Brave、Gemini、Grok 或 Kimi（或跳过）。
     - 粘贴你的 API 密钥（快速入门会自动从环境变量或现有配置中检测密钥）。
     - 使用 `--skip-search` 跳过。
@@ -160,81 +162,8 @@ openclaw onboard --non-interactive \
 `--json` 不意味着非交互模式。脚本应使用 `--non-interactive`（和 `--workspace`）。
 </Note>
 
-<AccordionGroup>
-  <Accordion title="Gemini 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice gemini-api-key \
-      --gemini-api-key "$GEMINI_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="Z.AI 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice zai-api-key \
-      --zai-api-key "$ZAI_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="Vercel AI Gateway 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice ai-gateway-api-key \
-      --ai-gateway-api-key "$AI_GATEWAY_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="Cloudflare AI Gateway 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice cloudflare-ai-gateway-api-key \
-      --cloudflare-ai-gateway-account-id "your-account-id" \
-      --cloudflare-ai-gateway-gateway-id "your-gateway-id" \
-      --cloudflare-ai-gateway-api-key "$CLOUDFLARE_AI_GATEWAY_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="Moonshot 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice moonshot-api-key \
-      --moonshot-api-key "$MOONSHOT_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="Synthetic 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice synthetic-api-key \
-      --synthetic-api-key "$SYNTHETIC_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-  </Accordion>
-  <Accordion title="OpenCode 示例">
-    ```bash
-    openclaw onboard --non-interactive \
-      --mode local \
-      --auth-choice opencode-zen \
-      --opencode-zen-api-key "$OPENCODE_API_KEY" \
-      --gateway-port 18789 \
-      --gateway-bind loopback
-    ```
-    Swap to `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"` for the Go catalog.
-  </Accordion>
-</AccordionGroup>
+Provider-specific command examples live in [CLI Automation](/start/wizard-cli-automation#provider-specific-examples).
+Use this reference page for flag semantics and step ordering.
 
 ### 添加代理（非交互）
 

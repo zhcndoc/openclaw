@@ -1,223 +1,94 @@
 ---
 role: experimental
 summary: |
-  Arabian Nights register for OpenProse—a narrative/nested alternative keyword set.
-  Djinns, tales within tales, wishes, and oaths. For benchmarking against the functional register.
+  阿拉伯之夜语域用于 OpenProse —— 一套叙述性/嵌套的替代关键词集。
+  精灵、故事中的故事、愿望与誓言。用于针对功能性语域的基准测试。
 status: draft
 requires: prose.md
 ---
 
-# OpenProse Arabian Nights Register
+# OpenProse 阿拉伯之夜语域
 
-> **This is a skin layer.** It requires `prose.md` to be loaded first. All execution semantics, state management, and VM behavior are defined there. This file only provides keyword translations.
+> **这是一层皮肤层。** 需要先加载 `prose.md`。所有执行语义、状态管理和虚拟机行为都在那里定义。本文件仅提供关键词翻译。
 
-An alternative register for OpenProse that draws from One Thousand and One Nights. Programs become tales told by Scheherazade. Recursion becomes stories within stories. Agents become djinns bound to serve.
+OpenProse 的一个替代语域，取材自《一千零一夜》。程序变成了谢赫拉萨德讲述的故事。递归变成故事中的故事。代理变成被束缚服务的精灵。
 
-## How to Use
+## 使用方法
 
-1. Load `prose.md` first (execution semantics)
-2. Load this file (keyword translations)
-3. When parsing `.prose` files, accept Arabian Nights keywords as aliases for functional keywords
-4. All execution behavior remains identical—only surface syntax changes
+1. 先加载 `prose.md`（执行语义）
+2. 加载本文件（关键词翻译）
+3. 解析 `.prose` 文件时，接受阿拉伯之夜关键词作为功能性关键词的别名
+4. 所有执行行为保持不变——仅表层语法有所变化
 
-> **Design constraint:** Still aims to be "structured but self-evident" per the language tenets—just self-evident through a storytelling lens.
-
----
-
-## Complete Translation Map
-
-### Core Constructs
-
-| Functional | Nights   | Reference                             |
-| ---------- | -------- | ------------------------------------- |
-| `agent`    | `djinn`  | Spirit bound to serve, grants wishes  |
-| `session`  | `tale`   | A story told, a narrative unit        |
-| `parallel` | `bazaar` | Many voices, many stalls, all at once |
-| `block`    | `frame`  | A story that contains other stories   |
-
-### Composition & Binding
-
-| Functional | Nights    | Reference                        |
-| ---------- | --------- | -------------------------------- |
-| `use`      | `conjure` | Summoning from elsewhere         |
-| `input`    | `wish`    | What is asked of the djinn       |
-| `output`   | `gift`    | What is granted in return        |
-| `let`      | `name`    | Naming has power (same as folk)  |
-| `const`    | `oath`    | Unbreakable vow, sealed          |
-| `context`  | `scroll`  | What is written and passed along |
-
-### Control Flow
-
-| Functional | Nights             | Reference                            |
-| ---------- | ------------------ | ------------------------------------ |
-| `repeat N` | `N nights`         | "For a thousand and one nights..."   |
-| `for...in` | `for each...among` | Among the merchants, among the tales |
-| `loop`     | `telling`          | The telling continues                |
-| `until`    | `until`            | Unchanged                            |
-| `while`    | `while`            | Unchanged                            |
-| `choice`   | `crossroads`       | Where the story forks                |
-| `option`   | `path`             | One way the story could go           |
-| `if`       | `should`           | Narrative conditional                |
-| `elif`     | `or should`        | Continued conditional                |
-| `else`     | `otherwise`        | The other telling                    |
-
-### Error Handling
-
-| Functional | Nights                     | Reference                  |
-| ---------- | -------------------------- | -------------------------- |
-| `try`      | `venture`                  | Setting out on the journey |
-| `catch`    | `should misfortune strike` | The tale turns dark        |
-| `finally`  | `and so it was`            | The inevitable ending      |
-| `throw`    | `curse`                    | Ill fate pronounced        |
-| `retry`    | `persist`                  | The hero tries again       |
-
-### Session Properties
-
-| Functional | Nights    | Reference                      |
-| ---------- | --------- | ------------------------------ |
-| `prompt`   | `command` | What is commanded of the djinn |
-| `model`    | `spirit`  | Which spirit answers           |
-
-### Unchanged
-
-These keywords already work or are too functional to replace sensibly:
-
-- `**...**` discretion markers — already work
-- `until`, `while` — already work
-- `map`, `filter`, `reduce`, `pmap` — pipeline operators
-- `max` — constraint modifier
-- `as` — aliasing
-- Model names: `sonnet`, `opus`, `haiku` — already poetic
+> **设计约束：** 仍然旨在符合语言原则中的“结构化但自明”，只是通过讲故事的视角使其自明。
 
 ---
 
-## Side-by-Side Comparison
+## 完整翻译映射表
 
-### Simple Program
+### 核心结构
 
-```prose
-# Functional
-use "@alice/research" as research
-input topic: "What to investigate"
+| 功能性    | 阿拉伯之夜 | 参考                              |
+| --------- | -------- | --------------------------------- |
+| `agent`   | `djinn`  | 被束缚服务的灵体，赐予愿望       |
+| `session` | `tale`   | 讲述的故事，叙述单元             |
+| `parallel`| `bazaar` | 众声喧哗，摊位众多，万象齐聚     |
+| `block`   | `frame`  | 包含其他故事的故事               |
 
-agent helper:
-  model: sonnet
+### 组合与绑定
 
-let findings = session: helper
-  prompt: "Research {topic}"
+| 功能性    | 阿拉伯之夜    | 参考                       |
+| --------- | ------------ | -------------------------- |
+| `use`     | `conjure`    | 从他处召唤                 |
+| `input`   | `wish`       | 向精灵请求之物             |
+| `output`  | `gift`       | 精灵所赐之物               |
+| `let`     | `name`       | 命名即赋予力量（同民间说法）|
+| `const`   | `oath`       | 不可违背的誓言，已封印     |
+| `context` | `scroll`     | 被书写并传递的内容         |
 
-output summary = session "Summarize"
-  context: findings
-```
+### 控制流
 
-```prose
-# Nights
-conjure "@alice/research" as research
-wish topic: "What to investigate"
+| 功能性      | 阿拉伯之夜           | 参考                          |
+| ----------- | -------------------- | ----------------------------- |
+| `repeat N`  | `N nights`           | “千零一夜……”                |
+| `for...in`  | `for each...among`   | 商贩之间，故事之间            |
+| `loop`      | `telling`            | 讲述继续                     |
+| `until`     | `until`              | 保持不变                     |
+| `while`     | `while`              | 保持不变                     |
+| `choice`    | `crossroads`         | 故事叉路                     |
+| `option`    | `path`               | 故事可能走向之一             |
+| `if`        | `should`             | 叙述条件                     |
+| `elif`      | `or should`          | 继续条件                     |
+| `else`      | `otherwise`          | 另一个说辞                   |
 
-djinn helper:
-  spirit: sonnet
+### 错误处理
 
-name findings = tale: helper
-  command: "Research {topic}"
+| 功能性      | 阿拉伯之夜                 | 参考                      |
+| ----------- | -------------------------- | ------------------------- |
+| `try`       | `venture`                  | 启程，踏上征程            |
+| `catch`     | `should misfortune strike` | 故事变得黑暗              |
+| `finally`   | `and so it was`            | 不可避免的结局            |
+| `throw`     | `curse`                    | 下恶咒                    |
+| `retry`     | `persist`                  | 英雄再次尝试              |
 
-gift summary = tale "Summarize"
-  scroll: findings
-```
+### 会话属性
 
-### Parallel Execution
+| 功能性    | 阿拉伯之夜 | 参考                      |
+| --------- | ---------- | ------------------------- |
+| `prompt`  | `command`  | 对精灵的命令              |
+| `model`   | `spirit`   | 哪个灵体答复              |
 
-```prose
-# Functional
-parallel:
-  security = session "Check security"
-  perf = session "Check performance"
-  style = session "Check style"
+### 共享附录
 
-session "Synthesize review"
-  context: { security, perf, style }
-```
+未改变的关键词和通用比较模式请参阅 [shared-appendix.md](./shared-appendix.md)。
 
-```prose
-# Nights
-bazaar:
-  security = tale "Check security"
-  perf = tale "Check performance"
-  style = tale "Check style"
+推荐的阿拉伯之夜重写示例：
 
-tale "Synthesize review"
-  scroll: { security, perf, style }
-```
-
-### Loop with Condition
-
-```prose
-# Functional
-loop until **the code is bug-free** (max: 5):
-  session "Find and fix bugs"
-```
-
-```prose
-# Nights
-telling until **the code is bug-free** (max: 5):
-  tale "Find and fix bugs"
-```
-
-### Error Handling
-
-```prose
-# Functional
-try:
-  session "Risky operation"
-catch as err:
-  session "Handle error"
-    context: err
-finally:
-  session "Cleanup"
-```
-
-```prose
-# Nights
-venture:
-  tale "Risky operation"
-should misfortune strike as err:
-  tale "Handle error"
-    scroll: err
-and so it was:
-  tale "Cleanup"
-```
-
-### Choice Block
-
-```prose
-# Functional
-choice **the severity level**:
-  option "Critical":
-    session "Escalate immediately"
-  option "Minor":
-    session "Log for later"
-```
-
-```prose
-# Nights
-crossroads **the severity level**:
-  path "Critical":
-    tale "Escalate immediately"
-  path "Minor":
-    tale "Log for later"
-```
-
-### Conditionals
-
-```prose
-# Functional
-if **has security issues**:
-  session "Fix security"
-elif **has performance issues**:
-  session "Optimize"
-else:
-  session "Approve"
-```
+- `session` 示例 -> `tale`
+- `parallel` 示例 -> `bazaar`
+- `loop` 示例 -> `telling`
+- `try/catch/finally` 示例 -> `venture` / `should misfortune strike` / `and so it was`
+- `choice` 示例 -> `crossroads` / `path`
 
 ```prose
 # Nights
@@ -229,7 +100,7 @@ otherwise:
   tale "Approve"
 ```
 
-### Reusable Blocks (Frame Stories)
+### 可复用区块（嵌套故事）
 
 ```prose
 # Functional
@@ -249,7 +120,7 @@ frame review(topic):
 tell review("quantum computing")
 ```
 
-### Fixed Iteration
+### 固定迭代
 
 ```prose
 # Functional
@@ -263,7 +134,7 @@ repeat 1001:
   tale "Tell a story"
 ```
 
-### Immutable Binding
+### 不可变绑定
 
 ```prose
 # Functional
@@ -277,82 +148,82 @@ oath config = { spirit: "opus", persist: 3 }
 
 ---
 
-## The Case For Arabian Nights
+## 支持阿拉伯之夜语域的理由
 
-1. **Frame narrative is recursion.** Stories within stories maps perfectly to nested program calls.
-2. **Djinn/wish/gift.** The agent/input/output mapping is extremely clean.
-3. **Rich tradition.** One Thousand and One Nights is globally known.
-4. **Bazaar for parallel.** Many merchants, many stalls, all active at once—vivid metaphor.
-5. **Oath for const.** An unbreakable vow is a perfect metaphor for immutability.
-6. **"1001 nights"** as a loop count is delightful.
+1. **嵌套叙事即递归。** 故事中的故事完美对应嵌套程序调用。
+2. **精灵/愿望/馈赠。** 代理/输入/输出映射极为清晰。
+3. **丰富传统。** 《一千零一夜》家喻户晓。
+4. **“Bazaar” 代指 parallel。** 众多商贩和摊位，同时活跃的生动隐喻。
+5. **“Oath” 代表 const。** 不可违背的誓言是不可变性的绝佳隐喻。
+6. **“1001 nights”** 作为循环次数的设计非常巧妙。
 
-## The Case Against Arabian Nights
+## 反对阿拉伯之夜语域的理由
 
-1. **Cultural sensitivity.** Must be handled respectfully, avoiding Orientalist tropes.
-2. **"Djinn" pronunciation.** Users unfamiliar may be uncertain (jinn? djinn? genie?).
-3. **Some mappings feel forced.** "Bazaar" for parallel is vivid but not obvious.
-4. **"Should misfortune strike"** is long for `catch`.
-
----
-
-## Key Arabian Nights Concepts
-
-| Term         | Meaning                                 | Used for              |
-| ------------ | --------------------------------------- | --------------------- |
-| Scheherazade | The narrator who tells tales to survive | (the program author)  |
-| Djinn        | Supernatural spirit, bound to serve     | `agent` → `djinn`     |
-| Frame story  | A story that contains other stories     | `block` → `frame`     |
-| Wish         | What is asked of the djinn              | `input` → `wish`      |
-| Oath         | Unbreakable promise                     | `const` → `oath`      |
-| Bazaar       | Marketplace, many vendors               | `parallel` → `bazaar` |
+1. **文化敏感度。** 需尊重文化，避免东方主义刻板印象。
+2. **“Djinn” 发音。** 对不熟悉者可能不确定发音（jinn？djinn？genie？）。
+3. **部分映射较牵强。** “Bazaar” 作为 parallel 生动但不直观。
+4. **“Should misfortune strike”** 作为 `catch` 较长。
 
 ---
 
-## Alternatives Considered
+## 关键的阿拉伯之夜概念
 
-### For `djinn` (agent)
+| 术语          | 含义                               | 用途                   |
+| ------------- | ---------------------------------- | ---------------------- |
+| Scheherazade  | 为了生存讲述故事的叙述者            | （程序作者）           |
+| Djinn         | 被束缚服务的超自然灵体              | `agent` → `djinn`      |
+| Frame story   | 包含其他故事的故事                   | `block` → `frame`      |
+| Wish          | 向精灵请求的内容                     | `input` → `wish`       |
+| Oath          | 不可违背的承诺                      | `const` → `oath`       |
+| Bazaar        | 市场，众多商贩                     | `parallel` → `bazaar`  |
 
-| Keyword    | Rejected because                   |
+---
+
+## 备选考虑
+
+### `djinn`（agent）
+
+| 关键词    | 被拒绝原因                    |
+| --------- | ----------------------------- |
+| `genie`   | 迪士尼联想，不够文学化        |
+| `spirit`  | 已用于 `model`               |
+| `ifrit`   | 太专一（一种 djinn 类型）     |
+| `narrator`| 太元叙述，Scheherazade 是用户 |
+
+### `tale`（session）
+
+| 关键词     | 被拒原因                    |
+| ---------- | --------------------------- |
+| `story`    | 不错，但 `tale` 更文学化     |
+| `night`    | 预留给 `repeat N nights`    |
+| `chapter`  | 更偏西方小说用语            |
+
+### `bazaar`（parallel）
+
+| 关键词     | 被拒原因                            |
 | ---------- | ---------------------------------- |
-| `genie`    | Disney connotation, less literary  |
-| `spirit`   | Used for `model`                   |
-| `ifrit`    | Too specific (a type of djinn)     |
-| `narrator` | Too meta, Scheherazade is the user |
+| `caravan`  | 顺序含义（一个接一个）             |
+| `chorus`   | 希腊文化，不合传统                  |
+| `souk`     | 知名度不够                        |
 
-### For `tale` (session)
+### `scroll`（context）
 
-| Keyword   | Rejected because                    |
-| --------- | ----------------------------------- |
-| `story`   | Good but `tale` feels more literary |
-| `night`   | Reserved for `repeat N nights`      |
-| `chapter` | More Western/novelistic             |
-
-### For `bazaar` (parallel)
-
-| Keyword   | Rejected because                           |
-| --------- | ------------------------------------------ |
-| `caravan` | Sequential connotation (one after another) |
-| `chorus`  | Greek, wrong tradition                     |
-| `souk`    | Less widely known                          |
-
-### For `scroll` (context)
-
-| Keyword   | Rejected because   |
-| --------- | ------------------ |
-| `letter`  | Too small/personal |
-| `tome`    | Too large          |
-| `message` | Too plain          |
+| 关键词     | 被拒原因        |
+| ---------- | --------------- |
+| `letter`   | 太小/太私人     |
+| `tome`     | 太大            |
+| `message`  | 太普通          |
 
 ---
 
-## Verdict
+## 结论
 
-Preserved for benchmarking. The Arabian Nights register offers a storytelling frame that maps naturally to recursive, nested programs. The djinn/wish/gift trio is particularly elegant.
+保留用于基准测试。阿拉伯之夜语域提供了一个自然映射递归、嵌套程序的叙述框架。精灵/愿望/馈赠三元组特别优雅。
 
-Best suited for:
+最适合：
 
-- Programs with deep nesting (stories within stories)
-- Workflows that feel like granting wishes
-- Users who enjoy narrative framing
+- 深度嵌套（故事中的故事）程序
+- 形同实现愿望的工作流
+- 喜欢叙事框架的用户
 
-The `frame` keyword for reusable blocks is especially apt—Scheherazade's frame story containing a thousand tales.
+特别适合 reusable block 的 `frame` 关键词——谢赫拉萨德的框架故事包含千百个故事。

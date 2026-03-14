@@ -13,6 +13,10 @@ OpenClaw Chrome 扩展允许 agent 控制你**现有的 Chrome 标签页**（你
 
 附加/分离通过**单个 Chrome 工具栏按钮**完成。
 
+如果你想使用 Chrome 官方的 DevTools MCP 附加流程而不是 OpenClaw 扩展中继，请改用 `existing-session` 浏览器配置文件。详见  
+[Browser](/tools/browser#chrome-existing-session-via-mcp)。有关 Chrome 官方设置文档，请参阅 [Chrome for Developers: Use Chrome DevTools MCP with your browser session](https://developer.chrome.com/blog/chrome-devtools-mcp-debug-your-browser-session)  
+和 [Chrome DevTools MCP README](https://github.com/ChromeDevTools/chrome-devtools-mcp)。
+
 ## 它是什么（概念）
 
 包含三部分：

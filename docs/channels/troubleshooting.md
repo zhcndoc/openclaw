@@ -44,12 +44,13 @@ openclaw channels status --probe
 
 ### Telegram 故障特征
 
-| 症状                           | 最快检查                                      | 修复                                                       |
-| ------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
-| `/start` 后无有效回复流程       | `openclaw pairing list telegram`               | 批准配对或更改 DM 策略。                                   |
-| 机器人在线但群组保持沉默        | 验证提及需求和机器人隐私模式                    | 禁用隐私模式以允许群组可见，或提及机器人。                |
-| 发送失败伴网络错误              | 检查日志中的 Telegram API 调用失败              | 修复 `api.telegram.org` 的 DNS/IPv6/代理路由。            |
-| 升级后被白名单阻拦              | `openclaw security audit` 和配置白名单         | 运行 `openclaw doctor --fix` 或用数字发送者 ID 替换 `@username`。 |
+| 症状                             | 最快检查                                   | 修复                                                                         |
+| -------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
+| `/start` 但无可用回复流程         | `openclaw pairing list telegram`          | 批准配对或更改 DM 策略。                                                    |
+| 机器人在线但群组保持静默          | 验证提及要求和机器人隐私模式               | 关闭隐私模式以便群组可见或提及机器人。                                    |
+| 发送失败伴随网络错误              | 检查日志中 Telegram API 调用失败           | 修复 DNS/IPv6/代理路由至 `api.telegram.org`。                               |
+| 启动时 `setMyCommands` 被拒绝     | 检查日志中 `BOT_COMMANDS_TOO_MUCH`          | 减少插件/技能/自定义 Telegram 命令或禁用原生菜单。                         |
+| 升级后允许名单阻止你               | `openclaw security audit` 和配置允许名单    | 运行 `openclaw doctor --fix` 或用数字发件人 ID 替换 `@username`。          |
 
 完整故障排查：[/channels/telegram#troubleshooting](/channels/telegram#troubleshooting)
 

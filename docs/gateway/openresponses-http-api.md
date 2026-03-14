@@ -17,76 +17,16 @@ OpenClaw 的 Gateway 可以提供一个兼容 OpenResponses 的 `POST /v1/respon
 
 底层，所有请求都作为普通 Gateway 代理运行（与执行 `openclaw agent` 相同代码路径），因此路由/权限/配置与您的 Gateway 保持一致。
 
-## 认证
+## 认证、安全和路由
 
-使用 Gateway 的认证配置。发送 bearer token：
+操作行为与 [OpenAI Chat Completions](/gateway/openai-http-api) 相匹配：
 
-- `Authorization: Bearer <token>`
+- 使用 `Authorization: Bearer <token>` 以及普通 Gateway 认证配置
+- 将该端点视为 Gateway 实例的完全操作权限
+- 选择带有 `model: "openclaw:<agentId>"`、`model: "agent:<agentId>"` 或 `x-openclaw-agent-id` 的代理
+- 使用 `x-openclaw-session-key` 进行显式会话路由
 
-说明：
-
-- 当 `gateway.auth.mode="token"` 时，使用 `gateway.auth.token` （或环境变量 `OPENCLAW_GATEWAY_TOKEN`）。
-- 当 `gateway.auth.mode="password"` 时，使用 `gateway.auth.password` （或环境变量 `OPENCLAW_GATEWAY_PASSWORD`）。
-- 如果配置了 `gateway.auth.rateLimit` 且认证失败次数过多，端点将返回 `429` 并带有 `Retry-After`。
-
-## 安全边界（重要）
-
-将此端点视为 Gateway 实例的 **完全操作员访问** 接口。
-
-- 此处的 HTTP bearer 认证不是狭义的单用户权限模型。
-- 有效的 Gateway 令牌/密码用于此端点时，应视作拥有者/操作员凭证。
-- 请求通过与受信操作员操作相同的控制平面代理路径执行。
-- 如果目标代理策略允许敏感工具，该端点可以调用这些工具。
-- 应将此端点仅限于环回接口、Tailnet 或私有入口，切勿直接暴露于公网。
-
-参阅 [安全](/gateway/security) 及 [远程访问](/gateway/remote)。
-
-## 选择代理
-
-无须自定义头部：在 OpenResponses 的 `model` 字段中编码代理 ID：
-
-- `model: "openclaw:<agentId>"` （示例：`"openclaw:main"`、`"openclaw:beta"`）
-- `model: "agent:<agentId>"`（别名）
-
-或通过 Header 直接指定 OpenClaw 代理：
-
-- `x-openclaw-agent-id: <agentId>` （默认：`main`）
-
-高级用法：
-
-- `x-openclaw-session-key: <sessionKey>` 用于完全控制会话路由。
-
-## 启用该端点
-
-设置 `gateway.http.endpoints.responses.enabled` 为 `true`：
-
-```json5
-{
-  gateway: {
-    http: {
-      endpoints: {
-        responses: { enabled: true },
-      },
-    },
-  },
-}
-```
-
-## 禁用该端点
-
-设置 `gateway.http.endpoints.responses.enabled` 为 `false`：
-
-```json5
-{
-  gateway: {
-    http: {
-      endpoints: {
-        responses: { enabled: false },
-      },
-    },
-  },
-}
-```
+通过 `gateway.http.endpoints.responses.enabled` 启用或禁用此端点。
 
 ## 会话行为
 
