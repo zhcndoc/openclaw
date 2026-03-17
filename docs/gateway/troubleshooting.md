@@ -285,21 +285,20 @@ openclaw doctor
 
 检查：
 
-- 浏览器可执行文件路径有效。  
-- CDP 配置文件可访问。  
-- `"chrome"` 个人资料的扩展中继标签是否已连接。
+- 浏览器可执行文件路径有效性。  
+- CDP 配置文件可达性。  
+- 针对 `existing-session` / `user` 配置文件，检查本地 Chrome 是否可用。
 
 常见表现：
 
 - `Failed to start Chrome CDP on port` → 浏览器进程启动失败。  
-- `browser.executablePath not found` → 配置路径无效。  
-- `Chrome extension relay is running, but no tab is connected` → 扩展中继未附着。  
+- `browser.executablePath not found` → 配置的路径无效。  
+- `No Chrome tabs found for profile="user"` → Chrome MCP 附加配置文件没有打开的本地 Chrome 标签。  
 - `Browser attachOnly is enabled ... not reachable` → 附加专用配置文件无可达目标。
 
 相关：
 
 - [/tools/browser-linux-troubleshooting](/tools/browser-linux-troubleshooting)  
-- [/tools/chrome-extension](/tools/chrome-extension)  
 - [/tools/browser](/tools/browser)
 
 ## 升级后突然出错

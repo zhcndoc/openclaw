@@ -1,15 +1,15 @@
 ---
-summary: "CLI 入门向导：网关、工作区、频道和技能的引导设置"
+summary: "CLI 入门：为网关、工作区、频道和技能的引导设置"
 read_when:
-  - 运行或配置入门向导时
+  - 运行或配置 CLI 入门
   - 设置新机器时
-title: "入门向导（CLI）"
+title: "入门（CLI）"
 sidebarTitle: "入门：CLI"
 ---
 
-# 入门向导（CLI）
+# 入门（CLI）
 
-入门向导是建议在 macOS、Linux 或 Windows（通过 WSL2；强烈推荐）上设置 OpenClaw 的**推荐**方式。  
+CLI 入门是**推荐**的方式，用于在 macOS、Linux 或 Windows（通过 WSL2；强烈推荐）上设置 OpenClaw。  
 它在一个引导流程中配置本地网关或远程网关连接，以及频道、技能和工作区默认设置。
 
 ```bash
@@ -32,30 +32,30 @@ openclaw agents add <name>
 </Note>
 
 <Tip>
-入门向导包含一个网络搜索步骤，您可以选择提供商（Perplexity、Brave、Gemini、Grok 或 Kimi）并粘贴您的 API 密钥，以便代理使用 `web_search`。您也可以稍后通过 `openclaw configure --section web` 配置。文档：[Web 工具](/tools/web)。
+CLI 入门包括一个网络搜索步骤，您可以选择提供商（Perplexity、Brave、Gemini、Grok 或 Kimi），并粘贴您的 API 密钥，使代理能够使用 `web_search`。您也可以稍后使用 `openclaw configure --section web` 进行配置。文档：[Web tools](/tools/web)。
 </Tip>
 
 ## 快速开始与高级
 
-向导以 **快速开始**（默认）或 **高级**（完全控制）启动。
+入门从 **快速开始**（默认）与 **高级**（完全控制）开始。
 
 <Tabs>
   <Tab title="快速开始（默认）">
     - 本地网关（回环）
     - 工作区默认（或现有工作区）
     - 网关端口 **18789**
-    - 网关认证 **Token**（自动生成，即使是回环）
-    - 新本地设置的工具策略默认：`tools.profile: "coding"`（保留现有显式配置文件）
-    - 私聊隔离默认：本地入门在未设置时写入 `session.dmScope: "per-channel-peer"`。详情：[CLI 入门参考](/start/wizard-cli-reference#outputs-and-internals)
+    - 网关认证 **令牌**（自动生成，即使是回环）
+    - 新本地设置工具策略默认：`tools.profile: "coding"`（保留已有显式配置）
+    - DM 隔离默认：本地入门在未设置时写入 `session.dmScope: "per-channel-peer"`。详情见：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)
     - Tailscale 暴露 **关闭**
-    - Telegram + WhatsApp 私聊默认为 **允许列表**（系统会提示输入你的手机号）
+    - Telegram 和 WhatsApp 私信默认启用 **白名单**（将提示输入手机号）
   </Tab>
   <Tab title="高级（完全控制）">
     - 显示每一步配置（模式、工作区、网关、频道、守护进程、技能）。
   </Tab>
 </Tabs>
 
-## 向导配置内容
+## 入门配置内容
 
 **本地模式（默认）** 将引导完成以下步骤：
 
@@ -78,18 +78,18 @@ openclaw agents add <name>
 7. **技能** — 安装推荐技能及可选依赖。  
 
 <Note>
-重新运行向导**不会**清除任何内容，除非你显式选择 **重置**（或传入 `--reset`）。  
-CLI 的 `--reset` 默认重置配置、凭据和会话；使用 `--reset-scope full` 可包括工作区。  
-如果配置无效或包含旧版键，向导会提示先运行 `openclaw doctor`。  
+重新运行入门不会擦除任何内容，除非您显式选择 **重置**（或传入 `--reset`）。  
+CLI 的 `--reset` 默认重置配置、凭证和会话；使用 `--reset-scope full` 包含工作区。  
+如果配置无效或包含遗留键，入门会提示先运行 `openclaw doctor`。
 </Note>
 
-**远程模式** 仅配置本地客户端连接远端网关。  
+**远程模式** 仅配置本地客户端连接远程网关。  
 它**不会**在远程主机上安装或更改任何内容。
 
 ## 添加其他代理
 
-使用 `openclaw agents add <name>` 创建带有自己工作区、会话和认证配置的独立代理。  
-未使用 `--workspace` 运行时启动向导。
+使用 `openclaw agents add <name>` 创建一个带有独立工作区、会话和认证配置的单独代理。  
+不带 `--workspace` 运行时启动入门。
 
 它设置：
 
@@ -99,17 +99,17 @@ CLI 的 `--reset` 默认重置配置、凭据和会话；使用 `--reset-scope f
 
 注意：
 
-- 默认工作区路径为 `~/.openclaw/workspace-<agentId>`。  
-- 添加 `bindings` 用于路由入站消息（向导中可完成）。  
-- 非交互标志：`--model`、`--agent-dir`、`--bind`、`--non-interactive`。  
+- 默认工作区路径为 `~/.openclaw/workspace-<agentId>`。
+- 添加 `bindings` 来路由入站消息（入门可以完成此操作）。
+- 非交互标志有：`--model`、`--agent-dir`、`--bind`、`--non-interactive`。
 
 ## 完整参考
 
-有关详细的逐步分解和配置输出，请参阅  
-[CLI 入门参考](/start/wizard-cli-reference)。  
-有关非交互示例，请参阅 [CLI 自动化](/start/wizard-cli-automation)。  
-有关更深入的技术参考，包括 RPC 详情，请参阅  
-[向导参考](/reference/wizard)。
+详细的逐步拆解及配置输出，请参见  
+[CLI 设置参考](/start/wizard-cli-reference)。  
+非交互示例，请参见 [CLI 自动化](/start/wizard-cli-automation)。  
+更深入的技术参考及 RPC 详情，请参见  
+[入门参考](/reference/wizard)。
 
 ## 相关文档
 

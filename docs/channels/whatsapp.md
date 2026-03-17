@@ -76,7 +76,7 @@ openclaw pairing approve whatsapp <CODE>
 </Steps>
 
 <Note>
-OpenClaw 推荐在可能的情况下使用独立号码运行 WhatsApp。（渠道元数据和引导流程针对该设置进行了优化，但也支持个人号码设置。）
+OpenClaw 建议尽可能使用独立号码运行 WhatsApp。（渠道元数据和设置流程针对该配置进行了优化，但也支持个人号码设置。）
 </Note>
 
 ## 部署模式

@@ -1,16 +1,16 @@
 ---
-summary: "CLI 上线流程、认证/模型设置、输出及内部机制的完整参考"
+summary: "CLI 设置流程、认证/模型设置、输出和内部机制的完整参考"
 read_when:
   - 你需要了解 openclaw 上线的详细行为
   - 你正在调试上线结果或集成上线客户端
-title: "CLI 上线参考"
+title: "CLI 设置参考"
 sidebarTitle: "CLI 参考"
 ---
 
-# CLI 上线参考
+# CLI 设置参考
 
-本页为 `openclaw onboard` 的完整参考。  
-简短指南请参见 [上线向导（CLI）](/start/wizard)。
+本页是 `openclaw onboard` 的完整参考。  
+简易指南请参见 [上线 (CLI)](/start/wizard)。
 
 ## 向导功能说明
 
@@ -48,18 +48,18 @@ sidebarTitle: "CLI 参考"
     - 初始化所需的首次启动工作空间文件。  
     - 工作空间布局见：[代理工作空间](/concepts/agent-workspace)。  
   </Step>
-  <Step title="网关">
-    - 询问端口、绑定地址、认证模式和 tailscale 访问设置。  
-    - 建议：即使用于回环，也启用令牌认证，以保证本地 WS 客户端必须认证。  
-    - 令牌模式下，交互式上线提供：  
+  <Step title="Gateway">
+    - 提示端口、绑定、认证模式及 tailscale 暴露设置。  
+    - 推荐：即使是回环也开启令牌认证，确保本地 WS 客户端需认证。  
+    - 令牌模式下，交互式设置提供：  
       - **生成/存储明文令牌**（默认）  
-      - **使用 SecretRef**（可选接入）  
-    - 密码模式下，交互式上线同样支持明文或 SecretRef 存储。  
+      - **使用 SecretRef**（可选）  
+    - 密码模式下，交互式设置也支持明文或 SecretRef 存储。  
     - 非交互式令牌 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。  
-      - 需要上线流程环境中该环境变量非空。  
-      - 不能与 `--gateway-token` 同时使用。  
-    - 仅当你完全信任每个本地进程时，才可禁用认证。  
-    - 非回环绑定地址仍需认证。  
+      - 需在上线流程环境中存在非空环境变量。  
+      - 不能与 `--gateway-token` 一起使用。  
+    - 仅在完全信任所有本地进程时才禁用认证。  
+    - 非回环绑定仍然需要认证。  
   </Step>
   <Step title="通道">
     - [WhatsApp](/channels/whatsapp)：可选二维码登录  
@@ -216,25 +216,25 @@ sidebarTitle: "CLI 参考"
 
 凭据存储模式：
 
-- 默认上线行为将 API key 以明文存储于认证配置文件中。  
-- 传入 `--secret-input-mode ref` 可启用引用模式，代替明文存储。  
-  在交互式上线中，你可选择：  
+- 默认上线行为将 API keys 以明文值存储在认证配置档中。  
+- `--secret-input-mode ref` 启用引用模式替代明文密钥存储。  
+  交互式设置中，你可以选择：  
   - 环境变量引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）  
-  - 已配置的提供商引用（`file` 或 `exec`），带提供商别名和 id  
-- 交互式引用模式会先快速运行预验证后才保存。  
-  - 环境变量引用：验证名称有效且上线流程环境该变量非空。  
-  - 提供商引用：验证提供商配置并解析请求的 id。  
-  - 若预验证失败，向导显示错误并允许重试。  
-- 非交互式模式下，`--secret-input-mode ref` 仅支持环境变量引用。  
-  - 需在上线流程环境设置对应环境变量。  
-  - 内联键参数（如 `--openai-api-key`）要求该环境变量必须设置，否则快速失败。  
-  - 自定义提供商的非交互式引用模式将 `models.providers.<id>.apiKey` 设为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。  
-  - 在自定义提供商场景中，`--custom-api-key` 需要设置 `CUSTOM_API_KEY`，否则快速失败。  
-- 网关认证支持交互式中明文和 SecretRef 两种选择：  
+  - 已配置提供商引用（`file` 或 `exec`），带提供商别名及 id  
+- 交互式引用模式在保存前会进行快速预检：  
+  - 环境变量引用：验证变量名称和当前上线环境中非空值。  
+  - 提供商引用：校验提供商配置并解析请求的 id。  
+  - 若预检失败，上线会显示错误并允许重试。  
+- 非交互式模式中，`--secret-input-mode ref` 仅支持环境变量：  
+  - 在上线流程环境中设置相应的提供商环境变量。  
+  - 命令内联密钥标志（如 `--openai-api-key`）需该环境变量已设定，否则上线快速失败。  
+  - 对自定义提供商，非交互式 `ref` 模式将 `models.providers.<id>.apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。  
+  - 该自定义提供商情况下，`--custom-api-key` 需 `CUSTOM_API_KEY` 已设，否则上线快速失败。  
+- 网关认证凭据在交互式设置中支持明文和 SecretRef 两种选择：  
   - 令牌模式：**生成/存储明文令牌**（默认）或 **使用 SecretRef**。  
   - 密码模式：明文或 SecretRef。  
 - 非交互式令牌 SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。  
-- 现有明文设置继续兼容使用。  
+- 现有的明文设置继续正常工作。  
 
 <Note>
 无头及服务器提示：请在具备浏览器的机器上完成 OAuth，然后复制  
@@ -266,7 +266,7 @@ WhatsApp 凭据存储于 `~/.openclaw/credentials/whatsapp/<accountId>/`。
 会话存储于 `~/.openclaw/agents/<agentId>/sessions/`。  
 
 <Note>
-部分通道以插件形式交付。上线时选中，向导会提示先安装插件（npm 或本地路径）再配置通道。  
+部分通道以插件形式提供。设置时选择该通道，向导会提示先安装插件（npm 或本地路径），然后再配置通道。  
 </Note>
 
 网关向导 RPC：
@@ -289,6 +289,6 @@ Signal 设置行为：
 
 ## 相关文档
 
-- 上线中心：[上线向导（CLI）](/start/wizard)  
-- 自动化和脚本：[CLI 自动化](/start/wizard-cli-automation)  
+- 上线中心：[上线 (CLI)](/start/wizard)  
+- 自动化与脚本：[CLI 自动化](/start/wizard-cli-automation)  
 - 命令参考：[`openclaw onboard`](/cli/onboard)

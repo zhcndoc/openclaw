@@ -32,8 +32,8 @@ title: "安装"
 </Warning>
 
 <AccordionGroup>
-  <Accordion title="安装脚本" icon="rocket" defaultOpen>
-    下载 CLI，通过 npm 全局安装并启动引导向导。
+  <Accordion title="Installer script" icon="rocket" defaultOpen>
+    下载 CLI，通过 npm 全局安装并启动引导。
 
     <Tabs>
       <Tab title="macOS / Linux / WSL2">
@@ -101,6 +101,16 @@ title: "安装"
         </Note>
       </Tab>
     </Tabs>
+
+    Want the current GitHub `main` head with a package-manager install?
+
+    ```bash
+    npm install -g github:openclaw/openclaw#main
+    ```
+
+    ```bash
+    pnpm add -g github:openclaw/openclaw#main
+    ```
 
   </Accordion>
 

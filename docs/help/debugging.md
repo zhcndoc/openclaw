@@ -39,10 +39,12 @@ pnpm gateway:watch
 映射为：
 
 ```bash
-node --watch-path src --watch-path tsconfig.json --watch-path package.json --watch-preserve-output scripts/run-node.mjs gateway --force
+node scripts/watch-node.mjs gateway --force
 ```
 
-在 `gateway:watch` 后添加任何 gateway CLI 标志，会在每次重启时传递。
+监听器会在 `src/` 下与构建相关的文件、扩展源文件、扩展的 `package.json` 和 `openclaw.plugin.json` 元数据、`tsconfig.json`、`package.json` 和 `tsdown.config.ts` 发生变动时重启。扩展元数据更改会重启 gateway，但不强制 `tsdown` 重建；源代码和配置变更仍会先重建 `dist`。
+
+在 `gateway:watch` 后添加任何 gateway CLI 标志，它们将在每次重启时传递。
 
 ## 开发配置文件 + 开发网关（--dev）
 

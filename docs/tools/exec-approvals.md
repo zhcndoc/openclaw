@@ -138,13 +138,14 @@ macOS 拆分：
 
 安全二进制禁止的标志：
 
-<!-- SAFE_BIN_DENIED_FLAGS:START -->
+[//]: # "SAFE_BIN_DENIED_FLAGS:START"
 
-- `grep`：`--dereference-recursive`、`--directories`、`--exclude-from`、`--file`、`--recursive`、`-R`、`-d`、`-f`、`-r`
-- `jq`：`--argfile`、`--from-file`、`--library-path`、`--rawfile`、`--slurpfile`、`-L`、`-f`
-- `sort`：`--compress-program`、`--files0-from`、`--output`、`--random-source`、`--temporary-directory`、`-T`、`-o`
-- `wc`：`--files0-from`
-<!-- SAFE_BIN_DENIED_FLAGS:END -->
+- `grep`: `--dereference-recursive`, `--directories`, `--exclude-from`, `--file`, `--recursive`, `-R`, `-d`, `-f`, `-r`
+- `jq`: `--argfile`, `--from-file`, `--library-path`, `--rawfile`, `--slurpfile`, `-L`, `-f`
+- `sort`: `--compress-program`, `--files0-from`, `--output`, `--random-source`, `--temporary-directory`, `-T`, `-o`
+- `wc`: `--files0-from`
+
+[//]: # "SAFE_BIN_DENIED_FLAGS:END"
 
 安全二进制执行时强制将 argv 标记视为**字面文本**（无文件名扩展，无环境变量扩展），防止诸如 `*` 或 `$HOME/...` 被用来偷渡文件读取。
 

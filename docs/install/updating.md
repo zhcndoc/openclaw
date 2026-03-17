@@ -20,8 +20,8 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 
 注意：
 
-- 如果不想再次运行入门向导，添加 `--no-onboard` 参数。
-- 对于**源码安装**，使用：
+- Add `--no-onboard` 如果你不想再次运行引导流程。
+- 对于 **源码安装**，使用：
 
   ```bash
   curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --no-onboard
@@ -63,7 +63,25 @@ openclaw update --channel dev
 openclaw update --channel stable
 ```
 
-使用 `--tag <dist-tag|version>` 可指定单次安装的标签或版本。
+Use `--tag <dist-tag|version|spec>` 用于一次性的包目标覆盖。
+
+对于当前 GitHub `main` 主分支，通过包管理器安装：
+
+```bash
+openclaw update --tag main
+```
+
+手动等效命令：
+
+```bash
+npm i -g github:openclaw/openclaw#main
+```
+
+```bash
+pnpm add -g github:openclaw/openclaw#main
+```
+
+你也可以传递明确的包规范给 `--tag` 进行一次性更新（例如 GitHub 引用或 tarball URL）。
 
 请参阅 [开发通道](/install/development-channels) 了解通道语义和发布说明。
 

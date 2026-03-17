@@ -36,13 +36,13 @@ services:
       - key: PORT
         value: "8080"
       - key: SETUP_PASSWORD
-        sync: false # 部署时提示输入
+        sync: false # Prompt for input during deployment
       - key: OPENCLAW_STATE_DIR
         value: /data/.openclaw
       - key: OPENCLAW_WORKSPACE_DIR
         value: /data/workspace
       - key: OPENCLAW_GATEWAY_TOKEN
-        generateValue: true # 自动生成安全令牌
+        generateValue: true # Automatically generate a secure token
     disk:
       name: openclaw-data
       mountPath: /data
@@ -71,7 +71,7 @@ Blueprint 默认使用 `starter` 计划。如需使用免费套餐，请在您 F
 
 ## 部署后
 
-### 完成设置向导
+### Complete web setup
 
 1. 访问 `https://<your-service>.onrender.com/setup`
 2. 输入您的 `SETUP_PASSWORD`

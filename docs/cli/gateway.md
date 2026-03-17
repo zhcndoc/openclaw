@@ -95,22 +95,26 @@ openclaw gateway health --url ws://127.0.0.1:18789
 ```bash
 openclaw gateway status
 openclaw gateway status --json
+openclaw gateway status --require-rpc
 ```
 
 参数：
 
-- `--url <url>`：覆盖探测 URL。
-- `--token <token>`：探测时的令牌认证。
-- `--password <password>`：探测时的密码认证。
-- `--timeout <ms>`：探测超时（默认 `10000` 毫秒）。
-- `--no-probe`：跳过 RPC 探测，仅显示服务状态。
-- `--deep`：扫描系统级服务。
+- `--url <url>`: 覆盖探测 URL。
+- `--token <token>`: 探测的令牌认证。
+- `--password <password>`: 探测的密码认证。
+- `--timeout <ms>`: 探测超时（默认 `10000`）。
+- `--no-probe`: 跳过 RPC 探测（仅查看服务状态）。
+- `--deep`: 也扫描系统级服务。
+- `--require-rpc`: RPC 探测失败时返回非零退出状态。不可与 `--no-probe` 同时使用。
 
 说明：
 
-- `gateway status` 会尝试解析配置的认证 SecretRef 用于探测认证。  
-- 如该命令路径中所需的认证 SecretRef 未被解析，探测认证可能失败；请显式提供 `--token` / `--password` 或先解析 SecretRef 源。  
-- 在 Linux systemd 安装中，服务认证漂移检查会读取单元文件中的 `Environment=` 和 `EnvironmentFile=` 值（包括 `%h`、带引号的路径、多文件和可选的 `-` 文件）。
+- `gateway status` 会在可能的情况下解析配置的认证 SecretRefs 以进行探测认证。
+- 若命令路径中必需的认证 SecretRef 未解析，`gateway status --json` 在探测连接或认证失败时报告 `rpc.authWarning`；可显式传入 `--token`/`--password` 或先解析秘密源。
+- 探测成功时，未解析的认证引用警告会被抑制以避免误报。
+- 在脚本和自动化中使用 `--require-rpc`，当单纯监听服务不足以确认状态时，需要确保 Gateway RPC 本身正常。
+- 在 Linux systemd 安装中，服务认证漂移检查会读取单元中的 `Environment=` 和 `EnvironmentFile=` 值（包括 `%h`、带引号路径、多文件及可选的 `-` 文件）。
 
 ### `gateway probe`
 
@@ -126,9 +130,26 @@ openclaw gateway probe
 openclaw gateway probe --json
 ```
 
-#### 远程 SSH（Mac 应用同等功能）
+解释：
 
-macOS 应用中的“远程 SSH”模式使用本地端口映射，使得远程网关（可能只绑定环回）可通过 `ws://127.0.0.1:<端口>` 访问。
+- `Reachable: yes` 表示至少一个目标接受了 WebSocket 连接。
+- `RPC: ok` 表示详细的 RPC 调用（`health`/`status`/`system-presence`/`config.get`）也成功。
+- `RPC: limited - missing scope: operator.read` 表示连接成功但详细 RPC 受限于作用域。此状态被报告为 **降级** 的可达性，而非完全失败。
+- 仅当所有探测目标均不可达时，退出码非零。
+
+JSON 说明 (`--json`)：
+
+- 顶层：
+  - `ok`：至少有一个目标可达。
+  - `degraded`：至少一个目标详细 RPC 受限。
+- 按目标（`targets[].connect`）：
+  - `ok`：连接后可达性及降级分类。
+  - `rpcOk`：详细 RPC 调用成功。
+  - `scopeLimited`：由于缺少 operator 作用域导致详细 RPC 失败。
+
+#### 通过 SSH 远程（与 Mac 应用一致）
+
+macOS 应用中的“远程 SSH”模式使用本地端口转发，使得远程网关（可能只绑定环回地址）可通过 `ws://127.0.0.1:<端口>` 访问。
 
 CLI 等价命令：
 
@@ -138,7 +159,7 @@ openclaw gateway probe --ssh user@gateway-host
 
 参数：
 
-- `--ssh <target>`：格式为 `user@host` 或 `user@host:port`（端口默认为 22）。
+- `--ssh <target>`：格式为 `user@host` 或 `user@host:port`（端口默认 22）。
 - `--ssh-identity <path>`：SSH 身份文件路径。
 - `--ssh-auto`：自动选择第一个发现的网关主机作为 SSH 目标（仅限 LAN/WAB）。
 

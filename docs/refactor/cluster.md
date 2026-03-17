@@ -1,20 +1,20 @@
 ---
-summary: "Refactor clusters with highest LOC reduction potential"
+summary: "重构具有最高 LOC 减少潜力的集群"
 read_when:
-  - You want to reduce total LOC without changing behavior
-  - You are choosing the next dedupe or extraction pass
-title: "Refactor Cluster Backlog"
+  - 您想在不改变行为的情况下减少总代码行数（LOC）
+  - 您正在选择下一步的去重或提取过程
+title: "重构集群待办事项"
 ---
 
-# Refactor Cluster Backlog
+# 重构集群待办事项
 
-Ranked by likely LOC reduction, safety, and breadth.
+按可能的 LOC 减少、安全性和广度排序。
 
-## 1. Channel plugin config and security scaffolding
+## 1. 通道插件配置和安全脚手架
 
-Highest-value cluster.
+价值最高的集群。
 
-Repeated shapes across many channel plugins:
+许多通道插件中重复的结构：
 
 - `config.listAccountIds`
 - `config.resolveAccount`
@@ -24,7 +24,7 @@ Repeated shapes across many channel plugins:
 - `config.describeAccount`
 - `security.resolveDmPolicy`
 
-Strong examples:
+典型示例：
 
 - `extensions/telegram/src/channel.ts`
 - `extensions/googlechat/src/channel.ts`
@@ -35,31 +35,31 @@ Strong examples:
 - `extensions/signal/src/channel.ts`
 - `extensions/mattermost/src/channel.ts`
 
-Likely extraction shape:
+可能的提取结构：
 
 - `buildChannelConfigAdapter(...)`
 - `buildMultiAccountConfigAdapter(...)`
 - `buildDmSecurityAdapter(...)`
 
-Expected savings:
+预期节省：
 
-- ~250-450 LOC
+- 约 250-450 行代码
 
-Risk:
+风险：
 
-- Medium. Each channel has slightly different `isConfigured`, warnings, and normalization.
+- 中等。每个通道的 `isConfigured`、警告和归一化略有不同。
 
-## 2. Extension runtime singleton boilerplate
+## 2. 扩展运行时单例样板代码
 
-Very safe.
+非常安全。
 
-Nearly every extension has the same runtime holder:
+几乎每个扩展都有相同的运行时持有者：
 
 - `let runtime: PluginRuntime | null = null`
 - `setXRuntime`
 - `getXRuntime`
 
-Strong examples:
+典型示例：
 
 - `extensions/telegram/src/runtime.ts`
 - `extensions/matrix/src/runtime.ts`
@@ -69,81 +69,81 @@ Strong examples:
 - `extensions/imessage/src/runtime.ts`
 - `extensions/twitch/src/runtime.ts`
 
-Special-case variants:
+特殊情况变体：
 
 - `extensions/bluebubbles/src/runtime.ts`
 - `extensions/line/src/runtime.ts`
 - `extensions/synology-chat/src/runtime.ts`
 
-Likely extraction shape:
+可能的提取结构：
 
 - `createPluginRuntimeStore<T>(errorMessage)`
 
-Expected savings:
+预期节省：
 
-- ~180-260 LOC
+- 约 180-260 行代码
 
-Risk:
+风险：
 
-- Low
+- 低
 
-## 3. Onboarding prompt and config-patch steps
+## 3. 设置提示和配置补丁步骤
 
-Large surface area.
+范围广泛。
 
-Many onboarding files repeat:
+许多设置文件重复：
 
-- resolve account id
-- prompt allowlist entries
-- merge allowFrom
-- set DM policy
-- prompt secrets
-- patch top-level vs account-scoped config
+- 解析账户 ID
+- 提示允许列表条目
+- 合并 allowFrom
+- 设置 DM 策略
+- 提示机密信息
+- 补丁顶层与账户范围的配置差异
 
-Strong examples:
+典型示例：
 
-- `extensions/bluebubbles/src/onboarding.ts`
-- `extensions/googlechat/src/onboarding.ts`
-- `extensions/msteams/src/onboarding.ts`
-- `extensions/zalo/src/onboarding.ts`
-- `extensions/zalouser/src/onboarding.ts`
-- `extensions/nextcloud-talk/src/onboarding.ts`
-- `extensions/matrix/src/onboarding.ts`
-- `extensions/irc/src/onboarding.ts`
+- `extensions/bluebubbles/src/setup-surface.ts`
+- `extensions/googlechat/src/setup-surface.ts`
+- `extensions/msteams/src/setup-surface.ts`
+- `extensions/zalo/src/setup-surface.ts`
+- `extensions/zalouser/src/setup-surface.ts`
+- `extensions/nextcloud-talk/src/setup-surface.ts`
+- `extensions/matrix/src/setup-surface.ts`
+- `extensions/irc/src/setup-surface.ts`
 
-Existing helper seam:
+已有辅助接口：
 
-- `src/channels/plugins/onboarding/helpers.ts`
+- `src/channels/plugins/setup-wizard-helpers.ts`
 
-Likely extraction shape:
+可能的提取结构：
 
 - `promptAllowFromList(...)`
 - `buildDmPolicyAdapter(...)`
 - `applyScopedAccountPatch(...)`
 - `promptSecretFields(...)`
 
-Expected savings:
+预期节省：
 
-- ~300-600 LOC
+- 约 300-600 行代码
 
-Risk:
+风险：
 
-- Medium. Easy to over-generalize; keep helpers narrow and composable.
+- 中等。容易过度泛化；保持辅助函数狭小且可组合。
 
-## 4. Multi-account config-schema fragments
+## 4. 多账户配置模式片段
 
-Repeated schema fragments across extensions.
+扩展中重复的模式片段。
 
-Common patterns:
+常见模式：
 
 - `const allowFromEntry = z.union([z.string(), z.number()])`
-- account schema plus:
+- 账户模式加：
   - `accounts: z.object({}).catchall(accountSchema).optional()`
   - `defaultAccount: z.string().optional()`
-- repeated DM/group fields
-- repeated markdown/tool policy fields
+- 重复的 DM/群组字段
+- 重复的 markdown/工具策略字段
 
-Strong examples:
+典型示例：
 
 - `extensions/bluebubbles/src/config-schema.ts`
 - `extensions/zalo/src/config-schema.ts`
@@ -151,35 +151,35 @@ Strong examples:
 - `extensions/matrix/src/config-schema.ts`
 - `extensions/nostr/src/config-schema.ts`
 
-Likely extraction shape:
+可能的提取结构：
 
 - `AllowFromEntrySchema`
 - `buildMultiAccountChannelSchema(accountSchema)`
 - `buildCommonDmGroupFields(...)`
 
-Expected savings:
+预期节省：
 
-- ~120-220 LOC
+- 约 120-220 行代码
 
-Risk:
+风险：
 
-- Low to medium. Some schemas are simple, some are special.
+- 低到中等。有些模式简单，有些较特殊。
 
-## 5. Webhook and monitor lifecycle startup
+## 5. Webhook 和监控生命周期启动
 
-Good medium-value cluster.
+中等价值的良好集群。
 
-Repeated `startAccount` / monitor setup patterns:
+重复的 `startAccount` / 监控设置模式：
 
-- resolve account
-- compute webhook path
-- log startup
-- start monitor
-- wait for abort
-- cleanup
-- status sink updates
+- 解析账户
+- 计算 webhook 路径
+- 记录启动日志
+- 启动监控
+- 等待中止事件
+- 清理
+- 状态接收器更新
 
-Strong examples:
+典型示例：
 
 - `extensions/googlechat/src/channel.ts`
 - `extensions/bluebubbles/src/channel.ts`
@@ -187,113 +187,113 @@ Strong examples:
 - `extensions/telegram/src/channel.ts`
 - `extensions/nextcloud-talk/src/channel.ts`
 
-Existing helper seam:
+已有辅助接口：
 
 - `src/plugin-sdk/channel-lifecycle.ts`
 
-Likely extraction shape:
+可能的提取结构：
 
-- helper for account monitor lifecycle
-- helper for webhook-backed account startup
+- 用于账户监控生命周期的辅助函数
+- 用于基于 webhook 的账户启动的辅助函数
 
-Expected savings:
+预期节省：
 
-- ~150-300 LOC
+- 约 150-300 行代码
 
-Risk:
+风险：
 
-- Medium to high. Transport details diverge quickly.
+- 中到高。传输细节差异迅速。
 
-## 6. Small exact-clone cleanup
+## 6. 小型完全克隆清理
 
-Low-risk cleanup bucket.
+低风险的清理类别。
 
-Examples:
+示例：
 
-- duplicated gateway argv detection:
+- 重复的网关 argv 检测：
   - `src/infra/gateway-lock.ts`
   - `src/cli/daemon-cli/lifecycle.ts`
-- duplicated port diagnostics rendering:
+- 重复的端口诊断渲染：
   - `src/cli/daemon-cli/restart-health.ts`
-- duplicated session-key construction:
+- 重复的会话密钥构造：
   - `src/web/auto-reply/monitor/broadcast.ts`
 
-Expected savings:
+预期节省：
 
-- ~30-60 LOC
+- 约 30-60 行代码
 
-Risk:
+风险：
 
-- Low
+- 低
 
-## Test clusters
+## 测试集群
 
-### LINE webhook event fixtures
+### LINE webhook 事件夹具
 
-Strong examples:
+典型示例：
 
 - `src/line/bot-handlers.test.ts`
 
-Likely extraction:
+可能的提取：
 
 - `makeLineEvent(...)`
 - `runLineEvent(...)`
 - `makeLineAccount(...)`
 
-Expected savings:
+预期节省：
 
-- ~120-180 LOC
+- 约 120-180 行代码
 
-### Telegram native command auth matrix
+### Telegram 原生命令权限矩阵
 
-Strong examples:
+典型示例：
 
 - `src/telegram/bot-native-commands.group-auth.test.ts`
 - `src/telegram/bot-native-commands.plugin-auth.test.ts`
 
-Likely extraction:
+可能的提取：
 
-- forum context builder
-- denied-message assertion helper
-- table-driven auth cases
+- 论坛上下文构建器
+- 拒绝消息断言辅助函数
+- 表驱动的权限用例
 
-Expected savings:
+预期节省：
 
-- ~80-140 LOC
+- 约 80-140 行代码
 
-### Zalo lifecycle setup
+### Zalo 生命周期设置
 
-Strong examples:
+典型示例：
 
 - `extensions/zalo/src/monitor.lifecycle.test.ts`
 
-Likely extraction:
+可能的提取：
 
-- shared monitor setup harness
+- 共享的监控设置工具
 
-Expected savings:
+预期节省：
 
-- ~50-90 LOC
+- 约 50-90 行代码
 
-### Brave llm-context unsupported-option tests
+### Brave llm-context 不支持选项测试
 
-Strong examples:
+典型示例：
 
 - `src/agents/tools/web-tools.enabled-defaults.test.ts`
 
-Likely extraction:
+可能的提取：
 
-- `it.each(...)` matrix
+- `it.each(...)` 矩阵
 
-Expected savings:
+预期节省：
 
-- ~30-50 LOC
+- 约 30-50 行代码
 
-## Suggested order
+## 建议顺序
 
-1. Runtime singleton boilerplate
-2. Small exact-clone cleanup
-3. Config and security builder extraction
-4. Test-helper extraction
-5. Onboarding step extraction
-6. Monitor lifecycle helper extraction
+1. 运行时单例样板代码
+2. 小型完全克隆清理
+3. 配置和安全构建器提取
+4. 测试辅助提取
+5. 入门步骤提取
+6. 监控生命周期辅助提取

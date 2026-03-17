@@ -19,15 +19,17 @@ Cron 是网关内置的调度器。它会持久化作业，准时唤醒代理，
 
 ## TL;DR
 
-- Cron 运行在 **网关内部**（而非模型内部）。
-- 作业持久化于 `~/.openclaw/cron/`，重启不会丢失计划。
-- 提供两种执行方式：
-  - **主会话**：排入系统事件队列，然后在下一次心跳执行。
-  - **隔离执行**：在 `cron:<jobId>` 中运行专门的代理回合，默认或无公告方式发送结果。
-- 唤醒是首要功能：作业可以请求“立即唤醒”或“下一次心跳”。
-- Webhook 发布按作业独立配置，使用 `delivery.mode = "webhook"` + `delivery.to = "<url>"`。
-- 保留对配置了 `cron.webhook` 且存储了 `notify: true` 作业的旧版兼容，建议迁移到 webhook 交付模式。
-- 升级时，`openclaw doctor --fix` 可在调度器接触之前规范化旧版 cron 存储字段。
+- Cron runs **inside the Gateway** (not inside the model).
+- Jobs persist under `~/.openclaw/cron/` so restarts don’t lose schedules.
+- Two execution styles:
+  - **Main session**: enqueue a system event, then run on the next heartbeat.
+  - **Isolated**: run a dedicated agent turn in `cron:<jobId>` or a custom session, with delivery (announce by default or none).
+  - **Current session**: bind to the session where the cron is created (`sessionTarget: "current"`).
+  - **Custom session**: run in a persistent named session (`sessionTarget: "session:custom-id"`).
+- Wakeups are first-class: a job can request “wake now” vs “next heartbeat”.
+- Webhook posting is per job via `delivery.mode = "webhook"` + `delivery.to = "<url>"`.
+- Legacy fallback remains for stored jobs with `notify: true` when `cron.webhook` is set, migrate those jobs to webhook delivery mode.
+- For upgrades, `openclaw doctor --fix` can normalize legacy cron store fields before the scheduler touches them.
 
 ## 快速开始（可操作示例）
 
@@ -81,10 +83,18 @@ Cron 作业默认持久化于网关主机的 `~/.openclaw/cron/jobs.json`。
    - 如果 ISO 时间戳未包含时区，则默认视为 **UTC**。
 
 2. **选择运行位置**
-   - `sessionTarget: "main"` → 在下次心跳期间于主会话上下文执行。
-   - `sessionTarget: "isolated"` → 在专用的 `cron:<jobId>` 会话中运行代理回合。
+   - `sessionTarget: "main"` → 在下一次心跳期间使用主上下文运行。
+   - `sessionTarget: "isolated"` → 在 `cron:<jobId>` 中运行专用代理回合。
+   - `sessionTarget: "current"` → 绑定到当前会话（创建时解析为 `session:<sessionKey>`）。
+   - `sessionTarget: "session:custom-id"` → 在持久命名会话中运行，跨多次执行维持上下文。
 
-3. **选择运行负载**
+   默认行为（未改变）：
+   - `systemEvent` 负载默认使用 `main`
+   - `agentTurn` 负载默认使用 `isolated`
+
+   若要使用当前会话绑定，请显式设置 `sessionTarget: "current"`。
+
+3. **选择负载**
    - 主会话 → `payload.kind = "systemEvent"`
    - 隔离会话 → `payload.kind = "agentTurn"`
 
@@ -139,20 +149,21 @@ CLI 快捷方式：
 
 #### 隔离作业（专用 cron 会话）
 
-隔离作业在 `cron:<jobId>` 会话中运行专用代理回合。
+Isolated jobs run a dedicated agent turn in session `cron:<jobId>` or a custom session.
 
 主要特点：
 
-- 提示文本带前缀 `[cron:<jobId> <job name>]` 便于追踪。
-- 每次运行使用全新会话 ID（不会继承先前对话）。
-- 默认行为：若无 `delivery` 配置，隔离作业会公告摘要（即 `delivery.mode = "announce"`）。
-- `delivery.mode` 决定交付行为：
-  - `announce`：将摘要发送至目标频道，并同时向主会话发布简要摘要。
-  - `webhook`：若完成事件包含摘要，则 POST 负载到 `delivery.to` 指定的 URL。
-  - `none`：仅内部运行，无交付，无主会话摘要。
+- 提示前缀为 `[cron:<jobId> <job name>]` 以便追踪。
+- 每次运行启动一个**全新会话 ID**（不带先前对话上下文），除非使用自定义会话。
+- 自定义会话（`session:xxx`）跨多次运行持久化上下文，支持类似每日站会等基于历史的工作流。
+- 默认行为：若省略 `delivery`，隔离作业默认为公告模式（`delivery.mode = "announce"`）。
+- `delivery.mode` 定义处理方式：
+  - `announce`：将摘要发送至目标频道，并在主会话发布简短摘要。
+  - `webhook`：当完成事件包含摘要时，向 `delivery.to` 执行 POST。
+  - `none`：仅内部处理（无交付，无主会话摘要）。
 - `wakeMode` 控制主会话摘要发布时间：
-  - `now`：立即触发心跳。
-  - `next-heartbeat`：等待下次心跳执行。
+  - `now`：立即心跳。
+  - `next-heartbeat`：等待下一次心跳。
 
 隔离作业适用于噪声大、频繁执行或“后台杂务”，避免干扰主聊天记录。
 
@@ -304,14 +315,45 @@ CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8
 }
 ```
 
-说明：
+Recurring job bound to current session (auto-resolved at creation):
 
-- `schedule.kind`：`at`（带 `at`）、`every`（带 `everyMs`）、或 `cron`（带 `expr` 和可选 `tz`）。
-- `schedule.at` 接受 ISO 8601 格式（时区可选，不指定时视为 UTC）。
-- `everyMs` 为毫秒。
-- `sessionTarget` 必须是 `"main"` 或 `"isolated"`，且与 `payload.kind` 匹配。
-- 可选字段：`agentId`、`description`、`enabled`、`deleteAfterRun`（`at` 默认 true）、`delivery`。
-- `wakeMode` 省略时默认 `"now"`。
+```json
+{
+  "name": "Daily standup",
+  "schedule": { "kind": "cron", "expr": "0 9 * * *" },
+  "sessionTarget": "current",
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Summarize yesterday's progress."
+  }
+}
+```
+
+Recurring job in a custom persistent session:
+
+```json
+{
+  "name": "Project monitor",
+  "schedule": { "kind": "every", "everyMs": 300000 },
+  "sessionTarget": "session:project-alpha-monitor",
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Check project status and update the running log."
+  }
+}
+```
+
+Notes:
+
+- `schedule.kind`: `at` (`at`), `every` (`everyMs`), or `cron` (`expr`, optional `tz`).
+- `schedule.at` accepts ISO 8601 (timezone optional; treated as UTC when omitted).
+- `everyMs` is milliseconds.
+- `sessionTarget`: `"main"`, `"isolated"`, `"current"`, or `"session:<custom-id>"`.
+- `"current"` is resolved to `"session:<sessionKey>"` at creation time.
+- Custom sessions (`session:xxx`) maintain persistent context across runs.
+- Optional fields: `agentId`, `description`, `enabled`, `deleteAfterRun` (defaults to true for `at`),
+  `delivery`.
+- `wakeMode` defaults to `"now"` when omitted.
 
 ### cron.update 参数示例
 

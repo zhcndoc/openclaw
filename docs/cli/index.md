@@ -282,9 +282,10 @@ openclaw [--dev] [--profile <name>] <command>
 
 管理扩展及其配置：
 
-- `openclaw plugins list` — 发现插件（使用 `--json` 获取机器友好输出）。
-- `openclaw plugins info <id>` — 显示插件详情。
-- `openclaw plugins install <path|.tgz|npm-spec>` — 安装插件（或添加插件路径到 `plugins.load.paths`）。
+- `openclaw plugins list` — 发现插件（使用 `--json` 以机器可读输出）。
+- `openclaw plugins info <id>` — 显示插件详细信息。
+- `openclaw plugins install <path|.tgz|npm-spec|plugin@marketplace>` — 安装插件（或添加插件路径到 `plugins.load.paths`）。
+- `openclaw plugins marketplace list <marketplace>` — 安装前列出市场条目。
 - `openclaw plugins enable <id>` / `disable <id>` — 切换 `plugins.entries.<id>.enabled`。
 - `openclaw plugins doctor` — 报告插件加载错误。
 
@@ -316,27 +317,27 @@ openclaw [--dev] [--profile <name>] <command>
 
 选项：
 
-- `--workspace <dir>`：代理工作空间路径（默认 `~/.openclaw/workspace`）。
-- `--wizard`：运行引导向导。
-- `--non-interactive`：无交互运行向导。
-- `--mode <local|remote>`：向导模式。
-- `--remote-url <url>`：远程 Gateway URL。
-- `--remote-token <token>`：远程 Gateway 令牌。
+- `--workspace <dir>`: agent 工作空间路径（默认为 `~/.openclaw/workspace`）。
+- `--wizard`: 运行引导向导。
+- `--non-interactive`: 无提示运行引导。
+- `--mode <local|remote>`: 引导模式。
+- `--remote-url <url>`: 远程 Gateway URL。
+- `--remote-token <token>`: 远程 Gateway 令牌。
 
-当存在任一向导相关标志（`--non-interactive`、`--mode`、`--remote-url`、`--remote-token`）时，向导会自动运行。
+当存在任何引导相关标志（`--non-interactive`、`--mode`、`--remote-url`、`--remote-token`）时，引导自动运行。
 
 ### `onboard`
 
-交互式向导，配置网关、工作空间及技能。
+用于网关、工作空间及技能的交互式引导。
 
 选项：
 
 - `--workspace <dir>`
-- `--reset`（在向导运行前重置配置、凭证和会话）
-- `--reset-scope <config|config+creds+sessions|full>`（默认 `config+creds+sessions`；`full` 将同时移除工作空间）
+- `--reset` (引导前重置配置 + 凭据 + 会话)
+- `--reset-scope <config|config+creds+sessions|full>` (默认 `config+creds+sessions`；`full` 还会删除工作空间)
 - `--non-interactive`
 - `--mode <local|remote>`
-- `--flow <quickstart|advanced|manual>` (manual 是 advanced 的别名)
+- `--flow <quickstart|advanced|manual>` (`manual` 是 `advanced` 的别名)
 - `--auth-choice <setup-token|token|chutes|openai-codex|openai-api-key|openrouter-api-key|ollama|ai-gateway-api-key|moonshot-api-key|moonshot-api-key-cn|kimi-code-api-key|synthetic-api-key|venice-api-key|gemini-api-key|zai-api-key|mistral-api-key|apiKey|minimax-api|minimax-api-lightning|opencode-zen|opencode-go|custom-api-key|skip>`
 - `--token-provider <id>` (非交互模式；与 `--auth-choice token` 一起使用)
 - `--token <token>` (非交互模式；与 `--auth-choice token` 一起使用)
@@ -674,9 +675,9 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 
 备注：
 
-- 数据直接来源于提供者使用端点（无估算）。
-- 支持提供者：Anthropic、GitHub Copilot、OpenAI Codex OAuth，以及启用时的 Gemini CLI/Antigravity。
-- 若无匹配凭证，隐藏使用信息。
+- 数据直接来自提供商使用端点（无估算）。
+- 提供商包括：Anthropic、GitHub Copilot、OpenAI Codex OAuth，以及通过内置 `google` 插件和 Antigravity 配置的 Gemini CLI。
+- 若无匹配凭证，则使用信息隐藏。
 - 详情见 [使用跟踪](/concepts/usage-tracking)。
 
 ### `health`
@@ -778,14 +779,15 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 
 备注：
 
-- `gateway status` 默认使用服务解析的端口及配置探测 Gateway RPC，可用 `--url/--token/--password` 覆盖。
-- `gateway status` 支持 `--no-probe`、`--deep` 和 `--json` 用于脚本化。
-- `gateway status` 还会显示检测到的旧版或额外的网关服务（`--deep` 启用系统级扫描）。以配置文件名称命名的 OpenClaw 服务被视为一流服务，不标记为“额外”。
-- `gateway status` 会打印 CLI 使用的配置路径与服务环境中使用的配置路径，以及解析后的探测目标 URL。
-- 在 Linux systemd 安装环境中，状态令牌漂移检查包含 `Environment=` 和 `EnvironmentFile=` 单元源。
-- `gateway install|uninstall|start|stop|restart` 支持 `--json` 用于脚本化（默认输出仍为人类可读）。
-- `gateway install` 默认使用 Node 运行时；强烈不推荐使用 bun（存在 WhatsApp/Telegram 缺陷）。
-- `gateway install` 支持选项：`--port`、`--runtime`、`--token`、`--force`、`--json`。
+- `gateway status` 默认使用服务解析的端口/配置探测 Gateway RPC（可通过 `--url/--token/--password` 覆盖）。
+- `gateway status` 支持 `--no-probe`、`--deep`、`--require-rpc` 和 `--json`，适合脚本使用。
+- `gateway status` 能检测并显示旧版或额外的网关服务（`--deep` 添加系统级扫描）。以配置文件命名的 OpenClaw 服务被视为正式，不会标记为“额外”。
+- `gateway status` 显示 CLI 使用的配置路径与服务可能使用的配置路径（服务环境），以及解析后的探测目标 URL。
+- 若当前命令路径中网关认证的 SecretRefs 解析失败，`gateway status --json` 仅在探测连接/认证失败时报告 `rpc.authWarning`（探测成功时隐藏警告）。
+- Linux systemd 安装的状态令牌漂移检查涵盖 `Environment=` 和 `EnvironmentFile=` 单元来源。
+- `gateway install|uninstall|start|stop|restart` 支持 `--json` 以便脚本操作（默认输出对人友好）。
+- `gateway install` 默认使用 Node 运行时；不推荐使用 bun（WhatsApp/Telegram 存在问题）。
+- `gateway install` 选项包括：`--port`、`--runtime`、`--token`、`--force`、`--json`。
 
 ### `logs`
 
@@ -793,8 +795,8 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 
 备注：
 
-- TTY 会话显示彩色结构化视图；非 TTY 回退纯文本输出。
-- `--json` 产生以行为单位的 JSON（每行为一个日志事件）。
+- TTY 会话显示彩色结构化视图；非 TTY 则回退为纯文本输出。
+- `--json` 产生按行分割的 JSON（每行为一个日志事件）。
 
 示例：
 
@@ -808,7 +810,7 @@ openclaw logs --no-color
 
 ### `gateway <subcommand>`
 
-网关 CLI 辅助工具（RPC 子命令可用 `--url`、`--token`、`--password`、`--timeout`、`--expect-final`）。
+网关 CLI 辅助工具（RPC 子命令可使用 `--url`、`--token`、`--password`、`--timeout`、`--expect-final`）。
 
 若传入 `--url`，CLI 不自动读取配置或环境凭证。
 

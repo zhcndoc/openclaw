@@ -28,9 +28,9 @@ openclaw plugins install @openclaw/feishu
 
 添加飞书通道有两种方式：
 
-### 方法一：配置向导（推荐）
+### Method 1: onboarding (recommended)
 
-如果刚安装了 OpenClaw，运行向导：
+If you just installed OpenClaw, run onboarding:
 
 ```bash
 openclaw onboard
@@ -534,7 +534,76 @@ openclaw pairing list feishu
 
 将 `streaming` 设置为 `false` 则等待完整回复后一次发送。
 
-### 多智能体路由
+### ACP sessions
+
+Feishu supports ACP for:
+
+- DMs
+- group topic conversations
+
+Feishu ACP is text-command driven. There are no native slash-command menus, so use `/acp ...` messages directly in the conversation.
+
+#### Persistent ACP bindings
+
+Use top-level typed ACP bindings to pin a Feishu DM or topic conversation to a persistent ACP session.
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "codex",
+        runtime: {
+          type: "acp",
+          acp: {
+            agent: "codex",
+            backend: "acpx",
+            mode: "persistent",
+            cwd: "/workspace/openclaw",
+          },
+        },
+      },
+    ],
+  },
+  bindings: [
+    {
+      type: "acp",
+      agentId: "codex",
+      match: {
+        channel: "feishu",
+        accountId: "default",
+        peer: { kind: "direct", id: "ou_1234567890" },
+      },
+    },
+    {
+      type: "acp",
+      agentId: "codex",
+      match: {
+        channel: "feishu",
+        accountId: "default",
+        peer: { kind: "group", id: "oc_group_chat:topic:om_topic_root" },
+      },
+      acp: { label: "codex-feishu-topic" },
+    },
+  ],
+}
+```
+
+#### Thread-bound ACP spawn from chat
+
+In a Feishu DM or topic conversation, you can spawn and bind an ACP session in place:
+
+```text
+/acp spawn codex --thread here
+```
+
+Notes:
+
+- `--thread here` works for DMs and Feishu topics.
+- Follow-up messages in the bound DM/topic route directly to that ACP session.
+- v1 does not target generic non-topic group chats.
+
+### Multi-agent routing
 
 使用 `bindings` 将飞书私聊或群聊路由到不同智能体。
 
@@ -640,17 +709,41 @@ openclaw pairing list feishu
 ### 接收
 
 - ✅ 文字
-- ✅ 富文本（帖子）
+- ✅ 富文本（post）
 - ✅ 图片
 - ✅ 文件
-- ✅ 语音
-- ✅ 视频
-- ✅ 贴纸
+- ✅ 音频
+- ✅ 视频/媒体
+- ✅ 表情包
 
 ### 发送
 
 - ✅ 文字
 - ✅ 图片
 - ✅ 文件
-- ✅ 语音
-- ⚠️ 富文本（部分支持）
+- ✅ 音频
+- ✅ 视频/媒体
+- ✅ 交互式卡片
+- ⚠️ 富文本（post 样式格式及卡片，不支持任意飞书创作功能）
+
+### 线程及回复
+
+- ✅ 行内回复
+- ✅ 飞书支持的主题线程回复（reply_in_thread）
+- ✅ 媒体回复回复线程/主题消息时保持线程信息
+
+## 运行时操作接口
+
+飞书当前暴露以下运行时操作：
+
+- `send`
+- `read`
+- `edit`
+- `thread-reply`
+- `pin`
+- `list-pins`
+- `unpin`
+- `member-info`
+- `channel-info`
+- `channel-list`
+- 配置启用反应时的 `react` 和 `reactions`

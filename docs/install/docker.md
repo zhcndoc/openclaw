@@ -48,8 +48,8 @@ Docker 是 **可选的**。仅当您需要容器化的网关或验证 Docker 流
 
 该脚本会：
 
-- 在本地构建网关镜像（如果设置了 `OPENCLAW_IMAGE`，则拉取远程镜像）
-- 运行入门向导
+- 构建本地网关镜像（如果设置了 `OPENCLAW_IMAGE`，则拉取远程镜像）
+- 运行入门引导
 - 打印可选的提供商设置提示
 - 通过 Docker Compose 启动网关
 - 生成网关令牌并写入 `.env`
@@ -630,13 +630,14 @@ scripts/sandbox-browser-setup.sh
 
 注意事项：
 
-- 带界面（Xvfb）减少了被机器人检测拦截，相比无头更稳定。
-- 仍可通过设置 `agents.defaults.sandbox.browser.headless=true` 使用无头模式。
-- 不需完整桌面环境（GNOME），Xvfb 提供显示支持。
-- 浏览器容器默认使用专用 Docker 网络 `openclaw-sandbox-browser`，而非通用 `bridge`。
-- 可选 `agents.defaults.sandbox.browser.cdpSourceRange` 按 CIDR 限制内网 CDP 入口（如 `172.21.0.1/32`）。
-- noVNC 观察者默认密码保护，OpenClaw 提供短时令牌 URL，密码存在 URL 片段中，避免在查询参数暴露。
-- 浏览器容器默认启动参数较保守，适合共享或容器环境，包括：
+- Docker and other headless/container browser flows stay on raw CDP. Chrome MCP `existing-session` is for host-local Chrome, not container takeover.
+- Headful (Xvfb) reduces bot blocking vs headless.
+- Headless can still be used by setting `agents.defaults.sandbox.browser.headless=true`.
+- No full desktop environment (GNOME) is needed; Xvfb provides the display.
+- Browser containers default to a dedicated Docker network (`openclaw-sandbox-browser`) instead of global `bridge`.
+- Optional `agents.defaults.sandbox.browser.cdpSourceRange` restricts container-edge CDP ingress by CIDR (for example `172.21.0.1/32`).
+- noVNC observer access is password-protected by default; OpenClaw provides a short-lived observer token URL that serves a local bootstrap page and keeps the password in URL fragment (instead of URL query).
+- Browser container startup defaults are conservative for shared/container workloads, including:
   - `--remote-debugging-address=127.0.0.1`
   - `--remote-debugging-port=<基于 OPENCLAW_BROWSER_CDP_PORT 的端口>`
   - `--user-data-dir=${HOME}/.chrome`

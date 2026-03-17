@@ -27,7 +27,8 @@ openclaw plugins install @openclaw/matrix
 openclaw plugins install ./extensions/matrix
 ```
 
-如果你在配置或初始引导时选择了 Matrix，并检测到 git 代码库，OpenClaw 会自动提供本地安装路径。
+If you choose Matrix during setup and a git checkout is detected,
+OpenClaw will offer the local install path automatically.
 
 详情见：[插件](/tools/plugin)
 
@@ -61,12 +62,13 @@ openclaw plugins install ./extensions/matrix
 
 4. 配置凭据：
    - 环境变量：`MATRIX_HOMESERVER`，`MATRIX_ACCESS_TOKEN`（或 `MATRIX_USER_ID` + `MATRIX_PASSWORD`）
-   - 或在配置中设置：`channels.matrix.*`
-   - 如果两者同时设置，配置优先。
-   - 有访问令牌时，用户 ID 会通过 `/whoami` 自动获取。
-   - 设置时，`channels.matrix.userId` 应是完整的 Matrix ID（例如：`@bot:example.org`）。
-5. 重启网关（或完成初始引导）。
-6. 使用任何 Matrix 客户端（Element、Beeper 等；见 [https://matrix.org/ecosystem/clients/](https://matrix.org/ecosystem/clients/)）开始与机器人私信或邀请它到房间。Beeper 需要端到端加密，所以请设置 `channels.matrix.encryption: true` 并验证设备。
+   - 或配置文件中的：`channels.matrix.*`
+   - 两者同时设置时，配置文件优先。
+   - 使用访问令牌时，用户 ID 会通过 `/whoami` 自动获取。
+   - 设置时，`channels.matrix.userId` 应为完整的 Matrix ID（例如：`@bot:example.org`）。
+5. 重启网关（或完成设置）。
+6. 使用任何 Matrix 客户端（Element、Beeper 等，参见 [https://matrix.org/ecosystem/clients/](https://matrix.org/ecosystem/clients/)）开始与机器人私信或邀请机器人加入房间。
+   Beeper 需要 E2EE，需设置 `channels.matrix.encryption: true` 并验证设备。
 
 最小配置（访问令牌，自动获取用户 ID）：
 
@@ -105,12 +107,12 @@ openclaw plugins install ./extensions/matrix
 
 启用方式：`channels.matrix.encryption: true`
 
-- 如果能加载加密模块，自动解密加密房间。
-- 发往加密房间的多媒体会自动加密。
+- 如果能够加载加密模块，自动解密加密房间消息。
+- 发送至加密房间的多媒体内容会自动加密。
 - 首次连接时，OpenClaw 会请求你其它会话设备进行验证。
-- 在另一个 Matrix 客户端（Element 等）验证设备以启用密钥共享。
+- 在另一个 Matrix 客户端（如 Element）验证设备以启用密钥共享。
 - 如果加密模块加载失败则禁用 E2EE，加密房间无法解密；OpenClaw 会记录警告。
-- 遇到缺失加密模块错误（例如 `@matrix-org/matrix-sdk-crypto-nodejs-*`），请允许 `@matrix-org/matrix-sdk-crypto-nodejs` 的构建脚本运行，并执行 `pnpm rebuild @matrix-org/matrix-sdk-crypto-nodejs` 或运行 `node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js` 下载二进制文件。
+- 遇到缺少加密模块错误（例如 `@matrix-org/matrix-sdk-crypto-nodejs-*`），请允许 `@matrix-org/matrix-sdk-crypto-nodejs` 的构建脚本运行，并执行 `pnpm rebuild @matrix-org/matrix-sdk-crypto-nodejs` 或运行 `node node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js` 以下载二进制文件。
 
 加密状态存储在
 
@@ -118,10 +120,10 @@ openclaw plugins install ./extensions/matrix
 
 （SQLite 数据库）内。同步状态存储于同目录下的 `bot-storage.json`。
 
-如果访问令牌（设备）更改，会创建新存储，机器人必须重新验证以访问加密房间内容。
+如果访问令牌（设备）更改，会创建新存储，机器人必须重新验证才能访问加密房间内容。
 
 **设备验证：**  
-启用 E2EE 后，机器人在启动时会请求其它会话验证。请打开 Element（或其他客户端），批准验证请求，建立信任关系。验证成功后，机器人可在加密房间解密消息。
+启用 E2EE 后，机器人启动时会请求其它会话验证。请打开 Element（或其他客户端），批准验证请求，建立信任关系。验证成功后，机器人可以在加密房间内解密消息。
 
 ## 多账号支持
 

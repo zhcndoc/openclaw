@@ -1,9 +1,9 @@
 ---
-summary: "`openclaw browser` 的命令行参考（配置文件、标签页、动作、扩展中继）"
+summary: "`openclaw browser` 的命令行参考（配置文件、标签页、操作、Chrome MCP 和 CDP）"
 read_when:
-  - 你使用 `openclaw browser` 并想要常见任务的示例
+  - 你使用 `openclaw browser` 并想查看常见任务示例
   - 你想通过节点主机控制运行在另一台机器上的浏览器
-  - 你想使用 Chrome 扩展中继（通过工具栏按钮附加/分离）
+  - 你想通过 Chrome MCP 附加到本地已登录的 Chrome
 title: "browser"
 ---
 
@@ -14,7 +14,6 @@ title: "browser"
 相关链接：
 
 - 浏览器工具 + API：[Browser tool](/tools/browser)
-- Chrome 扩展中继：[Chrome extension](/tools/chrome-extension)
 
 ## 常用参数
 
@@ -27,7 +26,7 @@ title: "browser"
 ## 快速开始（本地）
 
 ```bash
-openclaw browser --browser-profile chrome tabs
+openclaw browser profiles
 openclaw browser --browser-profile openclaw start
 openclaw browser --browser-profile openclaw open https://example.com
 openclaw browser --browser-profile openclaw snapshot
@@ -37,12 +36,14 @@ openclaw browser --browser-profile openclaw snapshot
 
 配置文件是有名称的浏览器路由配置。实践中：
 
-- `openclaw`：启动/附加到一个专用的由 OpenClaw 管理的 Chrome 实例（隔离的用户数据目录）。
-- `chrome`：通过 Chrome 扩展中继控制你已有的 Chrome 标签页。
+- `openclaw`：启动或附加到由 OpenClaw 管理的专用 Chrome 实例（隔离的用户数据目录）。
+- `user`：通过 Chrome DevTools MCP 控制你现有的已登录 Chrome 会话。
+- 自定义 CDP 配置文件：指向本地或远程的 CDP 端点。
 
 ```bash
 openclaw browser profiles
 openclaw browser create-profile --name work --color "#FF5A36"
+openclaw browser create-profile --name chrome-live --driver existing-session
 openclaw browser delete-profile --name work
 ```
 
@@ -83,20 +84,18 @@ openclaw browser click <ref>
 openclaw browser type <ref> "hello"
 ```
 
-## Chrome 扩展中继（通过工具栏按钮附加）
+## 通过 MCP 控制现有 Chrome
 
-此模式允许代理控制你手动附加的已有 Chrome 标签页（不自动附加）。
-
-将解压的扩展安装到一个稳定路径：
+使用内置的 `user` 配置文件，或创建你自己的 `existing-session` 配置文件：
 
 ```bash
-openclaw browser extension install
-openclaw browser extension path
+openclaw browser --browser-profile user tabs
+openclaw browser create-profile --name chrome-live --driver existing-session
+openclaw browser create-profile --name brave-live --driver existing-session --user-data-dir "~/Library/Application Support/BraveSoftware/Brave-Browser"
+openclaw browser --browser-profile chrome-live tabs
 ```
 
-然后打开 Chrome → `chrome://extensions` → 启用“开发者模式” → “加载已解压的扩展程序” → 选择输出的文件夹。
-
-完整指南：[Chrome extension](/tools/chrome-extension)
+此路径只适用于主机。对于 Docker、无头服务器、Browserless 或其他远程设置，请使用 CDP 配置文件。
 
 ## 远程浏览器控制（节点主机代理）
 

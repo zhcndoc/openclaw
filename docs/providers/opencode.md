@@ -17,7 +17,7 @@ OpenCode 在 OpenClaw 中提供了两个托管目录：
 
 ## CLI 设置
 
-### Zen catalog
+### Zen 目录
 
 ```bash
 openclaw onboard --auth-choice opencode-zen
@@ -57,6 +57,6 @@ openclaw onboard --opencode-go-api-key "$OPENCODE_API_KEY"
 ## 备注
 
 - 也支持使用 `OPENCODE_ZEN_API_KEY`。
-- 在入门过程中输入一个 OpenCode 密钥后，会存储两个运行时提供者的凭据。
-- 你需要登录 OpenCode，添加计费信息，然后复制你的 API 密钥。
-- 计费和目录可用性都由 OpenCode 仪表盘管理。
+- 设置过程中输入一个 OpenCode 密钥，会为两个运行时提供者存储凭据。
+- 你需要登录 OpenCode，添加计费详情，并复制你的 API 密钥。
+- 计费和目录可用性由 OpenCode 控制面板管理。

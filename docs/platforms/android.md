@@ -161,6 +161,7 @@ Canvas 命令（仅前台）：
   - `device.status`，`device.info`，`device.permissions`，`device.health`
   - `notifications.list`，`notifications.actions`
   - `photos.latest`
-  - `contacts.search`，`contacts.add`
-  - `calendar.events`，`calendar.add`
-  - `motion.activity`，`motion.pedometer`
+  - `contacts.search`, `contacts.add`
+  - `calendar.events`, `calendar.add`
+  - `callLog.search`
+  - `motion.activity`, `motion.pedometer`

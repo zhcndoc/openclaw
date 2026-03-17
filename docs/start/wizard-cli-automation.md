@@ -32,7 +32,8 @@ openclaw onboard --non-interactive \
 
 添加 `--json` 可获得机器可读的摘要。
 
-使用 `--secret-input-mode ref` 可在认证配置中存储基于环境变量的引用，而非明文值。入职向导流程支持在环境变量引用和配置的提供商引用（`file` 或 `exec`）间交互式选择。
+Use `--secret-input-mode ref` to store env-backed refs in auth profiles instead of plaintext values.
+Interactive selection between env refs and configured provider refs (`file` or `exec`) is available in the onboarding flow.
 
 在非交互的 `ref` 模式下，提供商环境变量必须在进程环境中设置。未设置匹配的环境变量时，传递内联的密钥标志会立即失败。
 
@@ -207,6 +208,6 @@ openclaw agents add work \
 
 ## 相关文档
 
-- 入职中心：[入职向导 (CLI)](/start/wizard)
-- 完整参考：[CLI 入职参考](/start/wizard-cli-reference)
-- 命令参考：[`openclaw onboard`](/cli/onboard)
+- Onboarding hub: [Onboarding (CLI)](/start/wizard)
+- Full reference: [CLI Setup Reference](/start/wizard-cli-reference)
+- Command reference: [`openclaw onboard`](/cli/onboard)

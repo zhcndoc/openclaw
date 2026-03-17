@@ -126,7 +126,7 @@ launchctl load ~/Library/LaunchAgents/com.user.poke-messages.plist
 
 ## 引导配置
 
-BlueBubbles 可在交互式设置向导中找到：
+BlueBubbles 可在交互式引导中使用：
 
 ```
 openclaw onboard

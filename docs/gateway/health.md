@@ -24,11 +24,20 @@ title: "健康检查"
 - 会话存储：`ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json`（路径可在配置中覆盖）。会话数量和最近接收者可通过 `status` 查看。
 - 重新关联流程：当日志出现状态码 409–515 或 `loggedOut` 时，执行 `openclaw channels logout && openclaw channels login --verbose`。 （注意：配对后状态 515 时，二维码登录流程会自动重启一次。）
 
-## 出现故障时
+## Health monitor config
+
+- `gateway.channelHealthCheckMinutes`: 网关检查频道健康的频率。默认值：`5`。设置为 `0` 以全局禁用健康监控重启。
+- `gateway.channelStaleEventThresholdMinutes`: 在频道连接闲置多久后，健康监控认为频道过时并重启它。默认值：`30`。保持该值大于或等于 `gateway.channelHealthCheckMinutes`。
+- `gateway.channelMaxRestartsPerHour`: 单频道/账号每小时健康监控重启次数的滚动上限。默认值：`10`。
+- `channels.<provider>.healthMonitor.enabled`: 禁用特定频道的健康监控重启，但保留全局监控启用。
+- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`: 多账户覆盖设置，优先于频道级设置。
+- 这些每频道的覆盖适用于目前已暴露的内置频道监控：Discord、Google Chat、iMessage、Microsoft Teams、Signal、Slack、Telegram 和 WhatsApp。
+
+## 当出现问题时
 
 - `logged out` 或状态码 409–515 → 使用 `openclaw channels logout` 然后 `openclaw channels login` 重新关联。
 - 网关不可达 → 启动网关：`openclaw gateway --port 18789`（如果端口被占用，请使用 `--force`）。
-- 没有收到入站消息 → 确认关联的电话号码在线且发送者被允许（`channels.whatsapp.allowFrom`）；对于群聊，确认白名单和@规则匹配（`channels.whatsapp.groups`，`agents.list[].groupChat.mentionPatterns`）。
+- 没有收到入站消息 → 确认关联的电话号码在线且发送者被允许（`channels.whatsapp.allowFrom`）；对于群聊，确认白名单和 @ 规则匹配（`channels.whatsapp.groups`，`agents.list[].groupChat.mentionPatterns`）。
 
 ## 专用“健康”命令
 

@@ -33,7 +33,8 @@ openclaw plugins install @openclaw/msteams
 openclaw plugins install ./extensions/msteams
 ```
 
-若配置/首次使用时选择 Teams，并检测到 git 检出，OpenClaw 会自动提供本地安装路径。
+If you choose Teams during setup and a git checkout is detected,
+OpenClaw will offer the local install path automatically.
 
 详情参见：[插件](/tools/plugin)
 
@@ -112,12 +113,11 @@ openclaw plugins install ./extensions/msteams
 
 **Teams + 频道白名单**
 
-- Scope group/channel replies by listing teams and channels under `channels.msteams.teams`.
-- Keys should use stable team IDs and channel conversation IDs.
-- When `groupPolicy="allowlist"` and a teams allowlist is present, only listed teams/channels are accepted (mention‑gated).
-- The configure wizard accepts `Team/Channel` entries and stores them for you.
-- On startup, OpenClaw resolves team/channel and user allowlist names to IDs (when Graph permissions allow)
-  and logs the mapping; unresolved team/channel names are kept as typed but ignored for routing by default unless `channels.msteams.dangerouslyAllowNameMatching: true` is enabled.
+- 通过在 `channels.msteams.teams` 下列出团队和频道限制组/频道回复范围。
+- 键应使用稳定的团队 ID 和频道会话 ID。
+- 当 `groupPolicy="allowlist"` 且存在团队白名单时，仅接受列出的团队/频道（需 @提及）。
+- 配置向导接收 `Team/Channel` 条目并为您存储。
+- 启动时，OpenClaw 会根据 Graph 权限解析团队/频道和用户白名单名称到 ID，并记录映射；未解析的团队/频道名称默认为保留原文，但默认不参与路由，除非启用 `channels.msteams.dangerouslyAllowNameMatching: true`。
 
 示例：
 

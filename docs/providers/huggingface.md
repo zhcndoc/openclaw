@@ -62,7 +62,7 @@ GET https://router.huggingface.co/v1/models
 
 （可选：发送 `Authorization: Bearer $HUGGINGFACE_HUB_TOKEN` 或 `$HF_TOKEN` 以获取完整列表；部分端点未认证时返回子集。）返回结果为 OpenAI 风格的 `{ "object": "list", "data": [ { "id": "Qwen/Qwen3-8B", "owned_by": "Qwen", ... }, ... ] }`。
 
-当你配置 Hugging Face API 密钥（通过引导、`HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`），OpenClaw 使用此 GET 接口发现可用的聊天补全模型。在**交互式引导**过程中，输入令牌后会看到一个 **默认 Hugging Face 模型** 下拉框，内容来自该列表（请求失败时用内置目录）。运行时（例如 Gateway 启动时）如检测到密钥，OpenClaw 会再次调用 **GET** `https://router.huggingface.co/v1/models` 刷新模型目录。该列表会与内置目录（包含上下文窗口、费用等元数据）合并。请求失败或无密钥时，仅使用内置目录。
+当你配置 Hugging Face API 密钥（通过引导程序、`HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`）时，OpenClaw 使用此 GET 请求发现可用的聊天补全模型。在 **交互式设置** 中，输入令牌后，你会看到一个从该列表（如果请求失败则为内置目录）填充的 **默认 Hugging Face 模型** 下拉菜单。运行时（如 Gateway 启动时），如果有密钥，OpenClaw 会再次调用 **GET** `https://router.huggingface.co/v1/models` 以刷新目录。该列表与内置目录合并（用于上下文窗口和成本等元数据）。如果请求失败或未设置密钥，仅使用内置目录。
 
 ## 模型名称及可编辑选项
 

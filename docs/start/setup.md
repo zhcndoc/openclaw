@@ -9,8 +9,8 @@ title: "设置"
 # 设置
 
 <Note>
-如果您是第一次设置，请从 [入门指南](/start/getting-started) 开始。
-关于向导的详细信息，请参见 [入职向导](/start/wizard)。
+如果你是第一次设置，请从 [Getting Started](/start/getting-started) 开始。
+有关入职详情，请参阅 [Onboarding (CLI)](/start/wizard)。
 </Note>
 
 最后更新：2026-01-01
@@ -96,13 +96,13 @@ pnpm install
 pnpm gateway:watch
 ```
 
-`gateway:watch` 命令以监听模式运行 Gateway，TypeScript 代码改动时自动重载。
+`gateway:watch` 会在相关源码、配置和打包插件元数据更改时，运行 gateway 的监听模式并重载。
 
 ### 2）让 macOS 应用连接到你运行的 Gateway
 
 在 **OpenClaw.app** 中：
 
-- 连接模式：**本地**
+- 连接模式：**本地**  
   应用将自动连接到配置端口上的运行中 Gateway。
 
 ### 3）验证

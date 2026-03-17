@@ -26,13 +26,13 @@ openclaw logs --follow
 
 良好输出一览：
 
-- `openclaw status` → 显示已配置的频道且无明显认证错误。
-- `openclaw status --all` → 完整报告已生成且可共享。
-- `openclaw gateway probe` → 目标网关可访问。
+- `openclaw status` → 显示配置好的频道且无明显的认证错误。
+- `openclaw status --all` → 完整报告存在且可分享。
+- `openclaw gateway probe` → 预期的网关目标可达（`Reachable: yes`）。`RPC: limited - missing scope: operator.read` 是降级诊断，不是连接失败。
 - `openclaw gateway status` → `Runtime: running` 和 `RPC probe: ok`。
-- `openclaw doctor` → 无阻塞配置/服务错误。
-- `openclaw channels status --probe` → 频道状态显示 `connected` 或 `ready`。
-- `openclaw logs --follow` → 活跃稳定，无重复致命错误。
+- `openclaw doctor` → 无阻塞的配置/服务错误。
+- `openclaw channels status --probe` → 频道报告为 `connected` 或 `ready`。
+- `openclaw logs --follow` → 稳定活动，无重复致命错误。
 
 ## Anthropic 长上下文 429
 
@@ -276,22 +276,21 @@ flowchart TD
 
     良好输出表现为：
 
-    - 浏览器状态显示 `running: true` 和已选择的浏览器/配置文件。
-    - `openclaw` 配置文件启动，或 `chrome` 中继附加了标签页。
+    - 浏览器状态显示 `running: true` 和选定的浏览器/配置。
+    - `openclaw` 启动，或用户能看到本地 Chrome 标签页。
 
     常见日志特征：
 
     - `Failed to start Chrome CDP on port` → 本地浏览器启动失败。
-    - `browser.executablePath not found` → 配置的浏览器二进制路径错误。
-    - `Chrome extension relay is running, but no tab is connected` → 扩展未附加标签页。
-    - `Browser attachOnly is enabled ... not reachable` → 仅附加配置文件无活动 CDP 目标。
+    - `browser.executablePath not found` → 配置的二进制路径错误。
+    - `No Chrome tabs found for profile="user"` → Chrome MCP 附加配置没有打开的本地 Chrome 标签页。
+    - `Browser attachOnly is enabled ... not reachable` → 附加专用配置没有活跃的 CDP 目标。
 
     深入页面：
 
     - [/gateway/troubleshooting#browser-tool-fails](/gateway/troubleshooting#browser-tool-fails)
     - [/tools/browser-linux-troubleshooting](/tools/browser-linux-troubleshooting)
     - [/tools/browser-wsl2-windows-remote-cdp-troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)
-    - [/tools/chrome-extension](/tools/chrome-extension)
 
   </Accordion>
 </AccordionGroup>

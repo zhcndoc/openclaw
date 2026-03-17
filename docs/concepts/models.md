@@ -32,9 +32,9 @@ OpenClaw 按以下顺序选择模型：
 - 回退模型用于成本/延迟敏感任务及低风险聊天。
 - 对于具备工具功能的代理或不受信任的输入，避免使用较旧/较弱模型等级。
 
-## 设置向导（推荐）
+## Onboarding (recommended)
 
-如果不想手动编辑配置，可以运行入门向导：
+If you don’t want to hand-edit config, run onboarding:
 
 ```bash
 openclaw onboard

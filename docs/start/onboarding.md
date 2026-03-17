@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw（macOS 应用）的首次运行引导流程"
+summary: "OpenClaw (macOS 应用) 的首次运行设置流程"
 read_when:
   - 设计 macOS 引导助手时
   - 实现身份验证或身份设置时
@@ -9,8 +9,8 @@ sidebarTitle: "引导：macOS 应用"
 
 # 引导（macOS 应用）
 
-本文档描述了**当前**的首次运行引导流程。目标是打造顺畅的“第 0 天”体验：选择 Gateway 运行位置，连接身份验证，运行向导，并让代理自我初始化。  
-有关引导路径的总体介绍，请参见 [引导概览](/start/onboarding-overview)。
+本文档描述了**当前**的首次运行设置流程。目标是提供顺畅的“第 0 天”体验：选择 Gateway 运行位置、连接身份验证、运行向导，让代理自我引导启动。
+有关入职路径的一般概述，请参见 [入职概述](/start/onboarding-overview)。
 
 <Steps>
 <Step title="批准 macOS 警告">

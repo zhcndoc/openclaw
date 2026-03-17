@@ -113,19 +113,19 @@ openclaw pairing approve telegram <CODE>
     - `open`（需要 `allowFrom` 包含 `"*"`）
     - `disabled`
 
-    `channels.telegram.allowFrom` 只接受数字格式的 Telegram 用户 ID，支持并规范 `telegram:` / `tg:` 前缀。
-    `dmPolicy: "allowlist"` 且 `allowFrom` 为空时将阻止所有私聊，且配置验证会拒绝此项。
-    入门向导支持输入 `@用户名`，并可解析为数字 ID。
-    若升级后配置包含 `@用户名` 的白名单条目，执行 `openclaw doctor --fix` 可尝试解析（需要 Telegram 机器人令牌，非保证成功）。
-    若之前依赖配对存储的白名单文件，`openclaw doctor --fix` 可在白名单流中恢复条目至 `channels.telegram.allowFrom`。
+    `channels.telegram.allowFrom` 接受数字 Telegram 用户 ID。支持并规范 `telegram:` / `tg:` 前缀。
+    当 `dmPolicy` 为 `allowlist` 且 `allowFrom` 为空时，阻止所有私聊，且配置验证时会拒绝。
+    上线时支持输入 `@username` 并解析为数字 ID。
+    若升级且配置中含 `@username` 白名单项，可运行 `openclaw doctor --fix` 尝试解析（尽力而为，需 Telegram 机器人令牌）。
+    若原先依赖配对存储的白名单文件，`openclaw doctor --fix` 可恢复条目至 `channels.telegram.allowFrom` 以支持白名单流程（如 `dmPolicy: "allowlist"` 时尚无显式 ID）。
 
-    推荐一位所有者的机器人配置中使用显式数字 `allowFrom` 的 `dmPolicy: "allowlist"`，保障访问策略在配置中持久。
+    推荐拥有者的机器人配置中使用显式数字 `allowFrom` 和 `dmPolicy: "allowlist"`，确保访问策略在配置中持久保存。
 
     ### 查询你的 Telegram 用户 ID
 
     更安全（无第三方机器人）：
 
-    1. 给机器人发送私聊消息。
+    1. 向机器人发送私聊消息。
     2. 执行 `openclaw logs --follow`。
     3. 查找 `from.id`。
 
@@ -135,7 +135,7 @@ openclaw pairing approve telegram <CODE>
 curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 ```
 
-    第三方工具（较少隐私）：`@userinfobot` 或 `@getidsbot`。
+    第三方工具（隐私性较低）：`@userinfobot` 或 `@getidsbot`。
 
   </Tab>
 
@@ -146,7 +146,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
        - 无 `groups` 配置：
          - 若 `groupPolicy: "open"`：所有群组均可通过群组 ID 检查
          - 若 `groupPolicy: "allowlist"`（默认）：所有群组默认被阻止，需添加 `groups` 条目（或 `"*"`）以放行
-       - 配置了 `groups`：作用为白名单（明确的群组 ID 或 `"*"`）
+       - 配置了 `groups`：作为白名单（明确的群组 ID 或 `"*"`）
 
     2. **允许的群组发送者**（`channels.telegram.groupPolicy`）
        - `open`
@@ -154,7 +154,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
        - `disabled`
 
     `groupAllowFrom` 用于群组发送者过滤。若未设置，回退到 `allowFrom`。
-    `groupAllowFrom` 条目应为数字格式 Telegram 用户 ID（支持并规范 `telegram:` / `tg:` 前缀）。
+    `groupAllowFrom` 条目应为数字格式的 Telegram 用户 ID（支持并规范 `telegram:` / `tg:` 前缀）。
     非数字条目在授权时将被忽略。
     安全边界（2026.2.25 及以后）：群组发送者授权不再继承私聊配对存储的批准。
     配对仍限于私聊。群组请配置 `groupAllowFrom` 或针对各群/主题单独配置 `allowFrom`。
@@ -784,7 +784,12 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
     - `--poll-public`
     - 论坛主题使用 `--thread-id` 或在目标中使用 `:topic:` 语法
 
-    操作权限控制：
+    Telegram send also supports:
+
+    - `--buttons` for inline keyboards when `channels.telegram.capabilities.inlineButtons` allows it
+    - `--force-document` to send outbound images and GIFs as documents instead of compressed photo or animated-media uploads
+
+    Action gating:
 
     - `channels.telegram.actions.sendMessage=false` 禁止所有出站 Telegram 消息，包括投票
     - `channels.telegram.actions.poll=false` 禁止创建 Telegram 投票，但允许普通发送
@@ -844,17 +849,17 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
   <Accordion title="命令部分或全部失效">
 
-    - authorize your sender identity (pairing and/or numeric `allowFrom`)
-    - command authorization still applies even when group policy is `open`
-    - `setMyCommands failed` with `BOT_COMMANDS_TOO_MUCH` means the native menu has too many entries; reduce plugin/skill/custom commands or disable native menus
-    - `setMyCommands failed` with network/fetch errors usually indicates DNS/HTTPS reachability issues to `api.telegram.org`
+    - 授权你的发送者身份（配对和/或数字 `allowFrom`）
+    - 即使群组策略是 `open`，命令授权仍然适用
+    - `setMyCommands failed` 并显示 `BOT_COMMANDS_TOO_MUCH` 表示本地菜单条目过多；需减少插件/技能/自定义命令或禁用本地菜单
+    - `setMyCommands failed` 出现网络/获取错误通常表示对 `api.telegram.org` 的 DNS/HTTPS 可达性问题
 
   </Accordion>
 
   <Accordion title="轮询或网络不稳定">
 
     - Node 22+ 和定制 fetch/proxy 可能因 AbortSignal 类型不匹配导致立即中断。
-    - 一些主机优先解析 `api.telegram.org` 为 IPv6，若 IPv6 出口不稳定，会导致 Telegram API 间歇故障。
+    - 一些主机优先将 `api.telegram.org` 解析为 IPv6，若 IPv6 出口不稳定，会导致 Telegram API 间歇故障。
     - 日志出现 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!` 时，OpenClaw 现会重试视为可恢复网络错误。
     - VPS 主机若出口不稳定，可使用代理配置转发 Telegram API 请求：
 

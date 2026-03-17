@@ -271,25 +271,21 @@ Use this when auditing access or deciding what to back up:
 
 ## Control UI over HTTP
 
-The Control UI needs a **secure context** (HTTPS or localhost) to generate device
-identity. `gateway.controlUi.allowInsecureAuth` is a local compatibility toggle:
+Control UI 需要一个**安全上下文**（HTTPS 或 localhost）来生成设备身份。`gateway.controlUi.allowInsecureAuth` 是一个本地兼容性切换：
 
-- On localhost, it allows Control UI auth without device identity when the page
-  is loaded over non-secure HTTP.
-- It does not bypass pairing checks.
-- It does not relax remote (non-localhost) device identity requirements.
+- 在 localhost 上，如果页面通过非安全 HTTP 加载，它允许 Control UI 在没有设备身份的情况下认证。
+- 它不绕过配对检查。
+- 它不放宽远程（非 localhost）设备身份要求。
 
-Prefer HTTPS (Tailscale Serve) or open the UI on `127.0.0.1`.
+优先使用 HTTPS（Tailscale Serve）或打开 `127.0.0.1` 上的 UI。
 
-For break-glass scenarios only, `gateway.controlUi.dangerouslyDisableDeviceAuth`
-disables device identity checks entirely. This is a severe security downgrade;
-keep it off unless you are actively debugging and can revert quickly.
+仅在紧急情况下，`gateway.controlUi.dangerouslyDisableDeviceAuth` 可完全禁用设备身份检查。这是严重的安全降级；除非你正在主动调试且能快速恢复，否则请勿开启。
 
 `openclaw security audit` 会在此设置开启时提示警告。
 
 ## 不安全或危险选项汇总
 
-`openclaw security audit` 针对以下已知不安全/危险调试开关提示 `config.insecure_or_dangerous_flags`：
+`openclaw security audit` 针对以下已知不安全／危险调试开关提示 `config.insecure_or_dangerous_flags`：
 
 - `gateway.controlUi.allowInsecureAuth=true`
 - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
@@ -721,7 +717,8 @@ nmap -sT -p 1-65535 <公网 IP> --open
 
 网关认证**默认开启**。若无令牌/密码，拒绝 WebSocket 连接（失败关闭）。
 
-引导向导默认生成令牌（即使环回），要求本地客户端认证。
+Onboarding generates a token by default (even for loopback) so
+local clients must authenticate.
 
 设置令牌，确保**所有** WebSocket 客户端需认证：
 
@@ -944,25 +941,24 @@ nmap -sT -p 1-65535 <公网 IP> --open
 
 启用浏览器控制后，模型能驱动真实浏览器。浏览器用户配置文件若含登录信息，模型可访问账户及数据。请将浏览器配置视为**敏感状态**：
 
-- 优先为代理使用专用配置（默认 `openclaw` 配置）。
-- 避免指向个人日常使用配置。
-- 沙箱代理默认禁用主机浏览器控制，除非信任。
-- 浏览器下载视为不可信数据，建议使用隔离下载目录。
-- 若可能，禁用浏览器同步/密码管理器（降低影响范围）。
-- 远程网关环境下，浏览器控制等同于对该配置文件数据的操作员访问权限。
-- 保证网关与节点均为尾网内，仅内部访问控制端口。
-- Chrome 扩展中继的 CDP 端点受认证保护，仅允许 OpenClaw 客户端连接。
-- 不使用时禁用浏览器代理路由（`gateway.nodes.browser.mode="off"`）。
-- Chrome 扩展中继模式**非更安全**，可接管现有标签，等同代理浏览器权限。
+- 优先为代理使用专用配置文件（默认 `openclaw` 配置文件）。
+- 避免让代理使用你的个人日常主用配置文件。
+- 除非你信任沙箱代理，否则保持主机浏览器控制关闭。
+- 将浏览器下载视为不可信输入；优先采用隔离的下载目录。
+- 如果可能，关闭代理配置文件中的浏览器同步/密码管理器（减少潜在影响范围）。
+- 对于远程网关，认为“浏览器控制” 等同于“操作员访问”该配置文件能达到的任何内容。
+- 保持网关和节点主机仅限 tailnet；避免将浏览器控制端口暴露给局域网或公共互联网。
+- 不需要时关闭浏览器代理路由（`gateway.nodes.browser.mode="off"`）。
+- Chrome MCP 已存在会话模式 **并非**“更安全”，它可以以你身份操作该主机 Chrome 配置文件能访问的任何内容。
 
 ### 浏览器 SSRF 策略（默认信任网络）
 
-OpenClaw 浏览器网络策略默认为信任操作员模型：默认允许访问私有/内部地址，除非显式禁用。
+OpenClaw 浏览器网络策略默认为信任操作者模型：默认允许访问私有/内部地址，除非显式禁用。
 
 - 默认：`browser.ssrfPolicy.dangerouslyAllowPrivateNetwork: true`（未设时隐式）。
 - 旧别名：`browser.ssrfPolicy.allowPrivateNetwork` 保持兼容。
 - 严格模式：设为 `false` 阻断私有/内部/特殊网络地址。
-- 严格模式下，使用 `hostnameAllowlist`（如 `*.example.com` 模式）和 `allowedHostnames`（含 `localhost` 等精确例外）明显允许。
+- 严格模式下，使用 `hostnameAllowlist`（如 `*.example.com` 模式）和 `allowedHostnames`（含 `localhost` 等精确例外）明确允许。
 - 导航前与最终 `http(s)` URL 都会尽力检查，减少重定向绕过。
 
 示例严格配置：

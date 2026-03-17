@@ -17,12 +17,13 @@ title: "心跳"
 
 ## 快速开始（初学者）
 
-1. 保持心跳启用（默认是 `30m`，Anthropic OAuth/setup-token 则默认 `1h`），或者设置你自己的频率。
-2. 在代理工作区创建一个小型的 `HEARTBEAT.md` 清单（可选但推荐）。
-3. 决定心跳消息的发送目标（默认是 `target: "none"`；设置为 `target: "last"` 可发送给最后的联系人）。
-4. 可选：启用心跳推理交付以增加透明度。
-5. 可选：如果心跳仅需 `HEARTBEAT.md`，可使用轻量级引导上下文。
-6. 可选：限制心跳仅在活跃时间（本地时间）运行。
+1. 保持心跳启用（默认是 `30m`，Anthropic OAuth/setup-token 则为 `1h`）或设置自己的频率。
+2. 在代理工作区创建一个小的 `HEARTBEAT.md` 检查表（可选，但推荐）。
+3. 决定心跳消息应发送到哪里（默认是 `target: "none"`；设置 `target: "last"` 可发送到最后联系人）。
+4. 可选：启用心跳推理交付以提高透明度。
+5. 可选：如果心跳仅需使用 `HEARTBEAT.md`，则使用轻量启动上下文。
+6. 可选：启用隔离会话，避免每次心跳发送完整对话历史。
+7. 可选：限制心跳仅在活跃时间内运行（本地时间）。
 
 示例配置：
 
@@ -32,9 +33,10 @@ title: "心跳"
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确推送到最后联络人（默认是 "none"）
-        directPolicy: "allow", // 默认：允许直接私信；设置为 "block" 可以禁止
-        lightContext: true, // 可选：仅注入工作区引导文件中的 HEARTBEAT.md
+        target: "last", // 明确推送到最后联系人（默认是 "none"）
+        directPolicy: "allow", // 默认：允许直接/私信目标；设置为 "block" 以抑制
+        lightContext: true, // 可选：只注入来自启动文件的 HEARTBEAT.md
+        isolatedSession: true, // 可选：每次运行都是独立会话（无对话历史）
         // activeHours: { start: "08:00", end: "24:00" },
         // includeReasoning: true, // 可选：也发送单独的 `Reasoning:` 消息
       },
@@ -45,7 +47,7 @@ title: "心跳"
 
 ## 默认配置
 
-- 间隔：`30m`（检测到 Anthropic OAuth/setup-token 认证模式时为 `1h`）。可设置 `agents.defaults.heartbeat.every` 或每个代理的 `agents.list[].heartbeat.every`；使用 `0m` 禁用。
+- 间隔：`30m`（检测到 Anthropic OAuth/setup-token 认证模式时为 `1h`）。可设置 `agents.defaults.heartbeat.every` 或各代理的 `agents.list[].heartbeat.every`；使用 `0m` 禁用。
 - 提示内容（通过 `agents.defaults.heartbeat.prompt` 配置）：
   `如果存在 HEARTBEAT.md（工作区上下文），请阅读并严格遵循。不要推测或重复之前聊天中的旧任务。如果没有需要关注的事项，回复 HEARTBEAT_OK。`
 - 心跳提示作为用户消息**逐字**发送。系统提示包含“Heartbeat”部分，运行时内部会标记。
@@ -78,11 +80,12 @@ title: "心跳"
       heartbeat: {
         every: "30m", // 默认：30 分钟（0m 表示禁用）
         model: "anthropic/claude-opus-4-6",
-        includeReasoning: false, // 默认：false（可选启用时会单独发送 Reasoning: 消息）
-        lightContext: false, // 默认：false；true 仅保持工作区引导文件中的 HEARTBEAT.md
-        target: "last", // 默认：none；选项：last | none | <频道 id>（核心或插件，如 "bluebubbles"）
-        to: "+15551234567", // 可选频道特定覆盖
-        accountId: "ops-bot", // 可选多账户频道 id
+        includeReasoning: false, // 默认：false（可用时发送独立的 Reasoning: 消息）
+        lightContext: false, // 默认：false；true 时只保留来自工作区启动文件的 HEARTBEAT.md
+        isolatedSession: false, // 默认：false；true 时每次心跳使用独立会话（无对话历史）
+        target: "last", // 默认：none；可选：last | none | <频道 id>（核心或插件，例如 "bluebubbles"）
+        to: "+15551234567", // 可选频道特定重写
+        accountId: "ops-bot", // 可选多账户频道ID
         prompt: "如果存在 HEARTBEAT.md（工作区上下文），请阅读并严格遵循。不要推测或重复之前聊天中的旧任务。如果没有需要关注的事项，回复 HEARTBEAT_OK。",
         ackMaxChars: 300, // HEARTBEAT_OK 后允许的最大字符数
       },
@@ -145,7 +148,7 @@ title: "心跳"
         activeHours: {
           start: "09:00",
           end: "22:00",
-          timezone: "America/New_York", // 可选；使用你的 userTimezone（若已设置），否则使用宿主时区
+          timezone: "America/New_York", // 可选；使用你设置的 userTimezone，若未设置则用宿主时区
         },
       },
     },
@@ -195,46 +198,47 @@ title: "心跳"
 
 ### 字段说明
 
-- `every`：心跳间隔（持续时间字符串；默认单位：分钟）。
-- `model`：心跳运行时的模型覆盖（`provider/model` 格式）。
-- `includeReasoning`：启用时，当有推理消息时，也会发送单独的 `Reasoning:` 消息（格式同 `/reasoning on`）。
-- `lightContext`：为 `true` 时，心跳运行只使用轻量引导上下文，保留工作区引导文件中的 `HEARTBEAT.md`。
-- `session`：心跳运行时使用的会话密钥。
+- `every`: 心跳间隔（时长字符串；默认单位分钟）。
+- `model`: 可选模型覆盖，用于心跳运行（`provider/model`）。
+- `includeReasoning`: 启用时，当可用时也发送独立的 `Reasoning:` 消息（格式同 `/reasoning on`）。
+- `lightContext`: 为真时，心跳运行使用轻量启动上下文，只保留工作区启动文件中的 `HEARTBEAT.md`。
+- `isolatedSession`: 为真时，每次心跳运行新会话，无前置对话历史。采用与定时任务相同的隔离模式 `sessionTarget: "isolated"`。大幅减少单次心跳 token 消耗。与 `lightContext: true` 结合使用可最大化节省。交付路由仍使用主会话上下文。
+- `session`: 心跳运行的可选会话键。
   - `main`（默认）：代理主会话。
   - 显式会话键（从 `openclaw sessions --json` 或 [sessions CLI](/cli/sessions) 复制）。
-  - 会话键格式详见 [会话](/concepts/session) 和 [群组](/channels/groups)。
+  - 会话键格式详见 [Sessions](/concepts/session) 和 [Groups](/channels/groups)。
 - `target`：
-  - `last`：发送至最后使用的外部频道。
-  - 明确频道：`whatsapp` / `telegram` / `discord` / `googlechat` / `slack` / `msteams` / `signal` / `imessage`；
-  - `none`（默认）：运行心跳但**不向外部发送消息**。
-- `directPolicy`：控制是否允许直接/私信发送：
-  - `allow`（默认）：允许直接/私信发送心跳消息。
-  - `block`：禁止直接私信发送 (`reason=dm-blocked`)。
-- `to`：可选收件人覆盖（频道特定 ID，例如 WhatsApp 的 E.164 格式，或 Telegram 的聊天 ID）。Telegram 主题/线程格式为 `<chatId>:topic:<messageThreadId>`。
-- `accountId`：多账户频道的账号 ID。若 `target: "last"`，账户 ID 适用于解析出的最后一个频道（若支持账户），否则忽略；若账户 ID 不匹配配置账户，则跳过发送。
-- `prompt`：覆盖默认提示内容（不做合并）。
-- `ackMaxChars`：`HEARTBEAT_OK` 后允许的最大字符数。
-- `suppressToolErrorWarnings`：为 `true` 时，心跳运行期间抑制工具错误警告负载。
-- `activeHours`：限制心跳仅在指定时间窗口运行。对象含 `start`（HH:MM，含起始时分，`00:00` 表示当天开始）、`end`（HH:MM，排除结束时分，`24:00` 允许表示当天结束）和可选的 `timezone`。
-  - 省略或 `"user"`：使用 `agents.defaults.userTimezone`（若设置），否则使用宿主系统时区。
+  - `last`：发送到最后使用的外部频道。
+  - 明确频道：`whatsapp` / `telegram` / `discord` / `googlechat` / `slack` / `msteams` / `signal` / `imessage`。
+  - `none`（默认）：运行心跳但**不外部发送**。
+- `directPolicy`: 控制直接/私信发信行为：
+  - `allow`（默认）：允许直接/私信心跳消息。
+  - `block`：禁止直接/私信发送（`reason=dm-blocked`）。
+- `to`: 可选接收者重写（频道特定 ID，如 WhatsApp 的 E.164 格式或 Telegram 聊天 ID）。Telegram 主题/线程格式 `<chatId>:topic:<messageThreadId>`。
+- `accountId`: 多账户频道的可选账户 ID。`target: "last"` 时，账户 ID 作用于解析出的最近频道（如果支持账户）；否则忽略。账户 ID 不匹配时跳过发送。
+- `prompt`: 覆盖默认提示正文（不合并）。
+- `ackMaxChars`: `HEARTBEAT_OK` 后允许的最大字符数。
+- `suppressToolErrorWarnings`: 为真时，抑制心跳运行中工具错误警告负载。
+- `activeHours`: 限制心跳仅在时间窗口内运行。对象包括 `start`（HH:MM，含；使用 `00:00` 表示日初）、`end`（HH:MM，开；允许 `24:00` 表示日终），及可选 `timezone`。
+  - 省略或 `"user"`：使用 `agents.defaults.userTimezone`（若有），否则使用宿主系统时区。
   - `"local"`：始终使用宿主系统时区。
-  - 任何 IANA 标识符（例如 `America/New_York`）：直接使用；若无效，则退回上述 `"user"` 行为。
-  - `start` 和 `end` 不得相同，否则视作零窗口（总是窗口外）。
-  - 窗口外心跳跳过，直到下一窗口内时刻。
+  - 任意 IANA 标识符（如 `America/New_York`）：直接使用；无效时回退到 `"user"` 行为。
+  - `start` 和 `end` 不可同值，否则被视为零宽度（总不在窗口内）。
+  - 窗口外心跳跳过，直到下一个窗口内时刻。
 
 ## 交付行为
 
-- 心跳默认在代理主会话运行（`agent:<id>:<mainKey>`），当 `session.scope = "global"` 时为 `global`。通过 `session` 可以切换到特定频道会话（Discord/WhatsApp 等）。
+- 心跳默认在代理主会话运行（`agent:<id>:<mainKey>`），`session.scope = "global"` 时为 `global`。通过 `session` 可切换到特定频道会话（Discord/WhatsApp 等）。
 - `session` 只影响运行上下文；消息发送受 `target` 和 `to` 控制。
-- 发送至特定频道/收件人需设置 `target` 和 `to`。在使用 `target: "last"` 时，发送到该会话最后一个外部渠道。
-- 默认为心跳发送允许直接/私信目标。设置 `directPolicy: "block"` 可抑制直接私信发送，但仍运行心跳回合。
-- 如果主队列繁忙，心跳会跳过并稍后重试。
-- 如果 `target` 无法解析到外部发送目标，仍运行回合但不发送外部消息。
-- 仅心跳回复**不会**延长会话活跃时间；最后的 `updatedAt` 时间恢复，空闲超时正常生效。
+- 发送到特定频道/收件人需要设置 `target` 和 `to`。使用 `target: "last"` 时，发送到该会话最后使用的外部频道。
+- 默认允许直接/私信目标发送心跳。设置 `directPolicy: "block"` 可阻止直接私信发送，但仍运行心跳回合。
+- 若主队列繁忙，心跳回合跳过并稍后重试。
+- 若 `target` 无法解析到外部发送目标，仍执行心跳回合但不发送外部消息。
+- 仅心跳回复**不延长**会话活跃时间；最后的 `updatedAt` 时间还原，空闲超时正常生效。
 
 ## 可见性控制
 
-默认情况下，`HEARTBEAT_OK` 确认会被隐藏，警报内容会被显示。你可以针对频道或账户调整：
+默认情况下，`HEARTBEAT_OK` 确认会被隐藏，警报内容显示。你可以针对频道或账户调整：
 
 ```yaml
 channels:
@@ -307,9 +311,9 @@ channels:
 ```md
 # Heartbeat checklist
 
-- 快速检查：收件箱有什么紧急事项吗？
-- 如果是白天，且无待办，发送一个轻量检查。
-- 如果任务被阻塞，写下_缺少什么_，下次询问 Peter。
+- Quick check: Any urgent items in the inbox?
+- If daytime and no pending tasks, send a light check.
+- If a task is blocked, note _what’s missing_ and ask Peter next time.
 ```
 
 ### 代理可以更新 HEARTBEAT.md 吗？
@@ -354,5 +358,10 @@ openclaw system event --text "检查紧急跟进" --mode now
 
 ## 成本意识
 
-心跳运行完整代理回合。更短间隔会消耗更多 tokens。
-保持 `HEARTBEAT.md` 体积小，如果只想做内部状态更新可考虑使用更便宜的 `model` 或 `target: "none"`。
+Heartbeats run full agent turns. Shorter intervals burn more tokens. To reduce cost:
+
+- Use `isolatedSession: true` to avoid sending full conversation history (~100K tokens down to ~2-5K per run).
+- Use `lightContext: true` to limit bootstrap files to just `HEARTBEAT.md`.
+- Set a cheaper `model` (e.g. `ollama/llama3.2:1b`).
+- Keep `HEARTBEAT.md` small.
+- Use `target: "none"` if you only want internal state updates.

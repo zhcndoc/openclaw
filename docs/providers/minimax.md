@@ -38,8 +38,8 @@ MiniMax 在 M2.5 中突出了以下改进：
 启用捆绑的 OAuth 插件并进行身份验证：
 
 ```bash
-openclaw plugins enable minimax-portal-auth  # 如果已启用则跳过
-openclaw gateway restart  # 如果网关已运行则重启
+openclaw plugins enable minimax  # 如果已加载，跳过此步骤。
+openclaw gateway restart  # 如果网关已启动，则重启
 openclaw onboard --auth-choice minimax-portal
 ```
 
@@ -48,7 +48,7 @@ openclaw onboard --auth-choice minimax-portal
 - **Global** - 国际用户（`api.minimax.io`）
 - **CN** - 中国用户（`api.minimaxi.com`）
 
-详情见 [MiniMax OAuth 插件说明](https://github.com/openclaw/openclaw/tree/main/extensions/minimax-portal-auth)。
+见 [MiniMax 插件说明](https://github.com/openclaw/openclaw/tree/main/extensions/minimax) 了解详情。
 
 ### MiniMax M2.5（API 密钥）
 

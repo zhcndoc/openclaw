@@ -25,15 +25,19 @@ openclaw plugins install ./extensions/synology-chat
 
 ## 快速设置
 
-1. 安装并启用 Synology Chat 插件。  
-2. 在 Synology Chat 的集成中：  
-   - 创建一个入站 webhook，复制其 URL。  
-   - 创建一个带有密钥令牌的出站 webhook。  
-3. 将出站 webhook 的 URL 指向你的 OpenClaw 网关：  
-   - 默认是 `https://gateway-host/webhook/synology`。  
-   - 或你自定义的 `channels.synology-chat.webhookPath`。  
-4. 在 OpenClaw 中配置 `channels.synology-chat`。  
-5. 重启网关，并向 Synology Chat 机器人发送私信。
+1. 安装并启用 Synology Chat 插件。
+   - `openclaw onboard` 现在在相同的通道设置列表中显示 Synology Chat，类似于 `openclaw channels add`。
+   - 非交互式设置：`openclaw channels add --channel synology-chat --token <token> --url <incoming-webhook-url>`
+2. 在 Synology Chat 集成中：
+   - 创建一个入站 webhook 并复制其 URL。
+   - 创建一个带有密钥令牌的出站 webhook。
+3. 将出站 webhook URL 指向你的 OpenClaw 网关：
+   - 默认是 `https://gateway-host/webhook/synology`。
+   - 或你的自定义 `channels.synology-chat.webhookPath`。
+4. 在 OpenClaw 完成设置。
+   - 指导式：`openclaw onboard`
+   - 直接操作：`openclaw channels add --channel synology-chat --token <token> --url <incoming-webhook-url>`
+5. 重启网关并向 Synology Chat 机器人发送私信。
 
 最小配置示例：
 

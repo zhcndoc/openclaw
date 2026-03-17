@@ -16,13 +16,13 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ## 获取 Perplexity API 密钥
 
-1. 在 <https://www.perplexity.ai/settings/api> 创建 Perplexity 账号
-2. 在仪表盘生成 API 密钥
-3. 将密钥存储于配置文件中，或在 Gateway 环境变量中设置 `PERPLEXITY_API_KEY`
+1. 在 [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) 创建一个 Perplexity 账号
+2. 在控制面板生成一个 API 密钥
+3. 将密钥存储在配置文件中，或在网关环境变量中设置 `PERPLEXITY_API_KEY`。
 
 ## OpenRouter 兼容性
 
-如果您之前已经使用 OpenRouter 来调用 Perplexity Sonar，保持 `provider: "perplexity"`，并在 Gateway 环境变量中设置 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中存储一个以 `sk-or-...` 开头的密钥。
+如果您之前已经使用 OpenRouter 来调用 Perplexity Sonar，保持 `provider: "perplexity"`，并在网关环境变量中设置 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中存储一个以 `sk-or-...` 开头的密钥。
 
 可选的传统配置项包括：
 
@@ -72,7 +72,7 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 **通过配置：**运行 `openclaw configure --section web`。它会将密钥存储在  
 `~/.openclaw/openclaw.json` 的 `tools.web.search.perplexity.apiKey` 字段。该字段也接受 SecretRef 对象。
 
-**通过环境变量：**在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
+**通过环境变量：**在网关进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
 对于网关安装，将其放入 `~/.openclaw/.env`（或您的服务环境）。详见 [环境变量](/help/faq#how-does-openclaw-load-environment-variables)。
 
 如果配置了 `provider: "perplexity"` 并且 Perplexity 密钥 SecretRef 未解析且无环境变量后备，启动/重载将快速失败。

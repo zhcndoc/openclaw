@@ -21,6 +21,7 @@ openclaw update wizard
 openclaw update --channel beta
 openclaw update --channel dev
 openclaw update --tag beta
+openclaw update --tag main
 openclaw update --dry-run
 openclaw update --no-restart
 openclaw update --json
@@ -29,12 +30,12 @@ openclaw --update
 
 ## 选项
 
-- `--no-restart`: 更新成功后跳过重启 Gateway 服务。
-- `--channel <stable|beta|dev>`: 设置更新频道（同时影响 git 和 npm；会持久化到配置中）。
-- `--tag <dist-tag|version>`: 仅此次更新覆盖 npm 的 dist-tag 或版本。
-- `--dry-run`: 预览计划的更新操作（频道/标签/目标/重启流程），但不写入配置、不安装、不同步插件也不重启。
+- `--no-restart`: 更新成功后跳过重启网关服务。
+- `--channel <stable|beta|dev>`: 设置更新频道（git + npm；持久化在配置中）。
+- `--tag <dist-tag|version|spec>`: 仅本次更新覆盖目标包。对于包安装，`main` 映射到 `github:openclaw/openclaw#main`。
+- `--dry-run`: 预览计划的更新操作（频道/标签/目标/重启流程），不写配置、不安装、不同步插件、不重启。
 - `--json`: 输出机器可读的 `UpdateRunResult` JSON。
-- `--timeout <秒>`: 每步超时（默认 1200 秒）。
+- `--timeout <秒>`: 每个步骤超时时间（默认 1200 秒）。
 
 注意：降级操作需要确认，因为较旧版本可能会破坏配置。
 

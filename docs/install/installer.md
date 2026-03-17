@@ -113,7 +113,12 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
     curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
     ```
   </Tab>
-  <Tab title="演练模式">
+  <Tab title="GitHub main via npm">
+    ```bash
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --version main
+    ```
+  </Tab>
+  <Tab title="Dry run">
     ```bash
     curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --dry-run
     ```
@@ -123,39 +128,39 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
 <AccordionGroup>
   <Accordion title="参数参考">
 
-| 参数                            | 描述                                                         |
-| ------------------------------ | ------------------------------------------------------------ |
-| `--install-method npm\|git`     | 选择安装方式（默认：`npm`）。别名：`--method`                 |
-| `--npm`                        | npm 方式快捷参数                                             |
-| `--git`                        | git 方式快捷参数。别名：`--github`                          |
-| `--version <version\|dist-tag>` | npm 版本或分发标签（默认：`latest`）                        |
-| `--beta`                       | 使用 beta 分发标签（可用时），否则回退到 `latest`            |
-| `--git-dir <path>`             | 源码检出目录（默认：`~/openclaw`）。别名：`--dir`             |
-| `--no-git-update`              | 跳过已有源码检出的 `git pull`                               |
-| `--no-prompt`                  | 禁用交互提示                                                 |
-| `--no-onboard`                 | 跳过引导                                                     |
-| `--onboard`                    | 启用引导                                                    |
-| `--dry-run`                    | 打印操作但不执行更改                                        |
-| `--verbose`                    | 启用调试输出（`set -x`，npm notice-level 日志）              |
-| `--help`                      | 显示用法帮助（`-h`）                                        |
+| Flag                                  | Description                                                |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `--install-method npm\|git`           | 选择安装方法（默认：`npm`）。别名：`--method`              |
+| `--npm`                               | npm 方法快捷方式                                          |
+| `--git`                               | git 方法快捷方式。别名：`--github`                         |
+| `--version <version\|dist-tag\|spec>` | npm 版本、分发标签或包规范（默认：`latest`）               |
+| `--beta`                              | 优先使用 beta 分发标签（若可用），否则回退至 `latest`        |
+| `--git-dir <path>`                    | 源码检出目录（默认：`~/openclaw`）。别名：`--dir`           |
+| `--no-git-update`                     | 跳过已有检出目录的 `git pull`                              |
+| `--no-prompt`                         | 禁用提示                                                  |
+| `--no-onboard`                        | 跳过引导                                                  |
+| `--onboard`                           | 启用引导                                                  |
+| `--dry-run`                           | 打印操作但不执行更改                                      |
+| `--verbose`                           | 启用调试输出（`set -x`，npm 通知级别日志）                |
+| `--help`                              | 显示用法（`-h`）                                         |
 
   </Accordion>
 
   <Accordion title="环境变量参考">
 
-| 变量                                     | 描述                                         |
-| ---------------------------------------- | -------------------------------------------- |
-| `OPENCLAW_INSTALL_METHOD=git\|npm`        | 安装方式                                     |
-| `OPENCLAW_VERSION=latest\|next\|<semver>` | npm 版本或分发标签                           |
-| `OPENCLAW_BETA=0\|1`                     | 是否使用 beta 版本                           |
-| `OPENCLAW_GIT_DIR=<path>`                | 源码检出目录                                 |
-| `OPENCLAW_GIT_UPDATE=0\|1`               | 是否允许 git 更新                            |
-| `OPENCLAW_NO_PROMPT=1`                   | 禁用交互提示                                 |
-| `OPENCLAW_NO_ONBOARD=1`                  | 跳过引导                                     |
-| `OPENCLAW_DRY_RUN=1`                     | 演练模式                                     |
-| `OPENCLAW_VERBOSE=1`                     | 调试模式                                     |
-| `OPENCLAW_NPM_LOGLEVEL=error\|warn\|notice` | npm 日志级别                                |
-| `SHARP_IGNORE_GLOBAL_LIBVIPS=0\|1`        | 控制 sharp/libvips 行为（默认：`1`）       |
+| Variable                                                | Description                                   |
+| ------------------------------------------------------- | --------------------------------------------- |
+| `OPENCLAW_INSTALL_METHOD=git\|npm`                      | 安装方法                                    |
+| `OPENCLAW_VERSION=latest\|next\|main\|<semver>\|<spec>` | npm 版本、分发标签或包规范                   |
+| `OPENCLAW_BETA=0\|1`                                    | 如可用，使用 beta 版本                       |
+| `OPENCLAW_GIT_DIR=<path>`                               | 源码检出目录                                |
+| `OPENCLAW_GIT_UPDATE=0\|1`                              | 是否启用 git 更新                           |
+| `OPENCLAW_NO_PROMPT=1`                                  | 禁用提示                                    |
+| `OPENCLAW_NO_ONBOARD=1`                                 | 跳过引导                                    |
+| `OPENCLAW_DRY_RUN=1`                                    | 演练模式                                    |
+| `OPENCLAW_VERBOSE=1`                                    | 调试模式                                    |
+| `OPENCLAW_NPM_LOGLEVEL=error\|warn\|notice`             | npm 日志级别                               |
+| `SHARP_IGNORE_GLOBAL_LIBVIPS=0\|1`                      | 控制 sharp/libvips 行为（默认：`1`）         |
 
   </Accordion>
 </AccordionGroup>
@@ -273,7 +278,12 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
     & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -InstallMethod git
     ```
   </Tab>
-  <Tab title="自定义 Git 目录">
+  <Tab title="GitHub main via npm">
+    ```powershell
+    & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -Tag main
+    ```
+  </Tab>
+  <Tab title="Custom git directory">
     ```powershell
     & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -InstallMethod git -GitDir "C:\openclaw"
     ```
@@ -296,14 +306,14 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
 <AccordionGroup>
   <Accordion title="参数参考">
 
-| 参数                     | 描述                                                       |
-| ------------------------ | ---------------------------------------------------------- |
-| `-InstallMethod npm\|git` | 安装方式（默认：`npm`）                                    |
-| `-Tag <tag>`             | npm 分发标签（默认：`latest`）                             |
-| `-GitDir <path>`         | 源码检出目录（默认：`%USERPROFILE%\openclaw`）             |
-| `-NoOnboard`             | 跳过引导                                                  |
-| `-NoGitUpdate`           | 跳过执行 `git pull`                                       |
-| `-DryRun`                | 只打印操作，不实际执行                                    |
+| Flag                        | Description                                                |
+| --------------------------- | ---------------------------------------------------------- |
+| `-InstallMethod npm\|git`   | 安装方法（默认：`npm`）                                    |
+| `-Tag <tag\|version\|spec>` | npm 分发标签、版本或包规范（默认：`latest`）              |
+| `-GitDir <path>`            | 源码检出目录（默认：`%USERPROFILE%\openclaw`）             |
+| `-NoOnboard`                | 跳过引导                                                  |
+| `-NoGitUpdate`              | 跳过 `git pull`                                           |
+| `-DryRun`                   | 仅打印操作                                                |
 
   </Accordion>
 

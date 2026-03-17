@@ -25,7 +25,7 @@ Note, selecting 'chromium-browser' instead of 'chromium'
 chromium-browser is already the newest version (2:1snap1-0ubuntu2).
 ```
 
-这不是一个真正的浏览器 — 只是一个包装器。
+这并不是真正的浏览器——它只是一个包装器。
 
 ### 解决方案 1：安装谷歌 Chrome（推荐）
 
@@ -125,17 +125,18 @@ curl -s http://127.0.0.1:18791/tabs
 | `browser.attachOnly`      | 不启动浏览器，仅附加到已存在进程                                    | `false`                                                      |
 | `browser.cdpPort`         | Chrome DevTools 协议端口                                            | `18800`                                                      |
 
-### 问题："Chrome extension relay is running, but no tab is connected"
+### 问题："No Chrome tabs found for profile=\"user\""
 
-你正在使用 `chrome` 方案（扩展中继）。它期望 OpenClaw 浏览器扩展已附加到活动标签页。
+你正在使用 `existing-session` / Chrome MCP 配置文件。OpenClaw 可以看到本地 Chrome，
+但没有可附加的打开标签页。
 
 解决方案：
 
-1. **使用托管浏览器：** `openclaw browser start --browser-profile openclaw`  
-   （或者设置 `browser.defaultProfile: "openclaw"`）。
-2. **使用扩展中继：** 安装扩展，打开一个标签页，然后点击 OpenClaw 扩展图标进行附加。
+1. **使用托管浏览器：** `openclaw browser start --browser-profile openclaw`
+   （或设置 `browser.defaultProfile: "openclaw"`）。
+2. **使用 Chrome MCP：** 确保本地 Chrome 正在运行并且至少有一个打开的标签页，然后用 `--browser-profile user` 重试。
 
 备注：
 
-- `chrome` 方案在可能的情况下使用你系统的默认 Chromium 浏览器。
-- 本地 `openclaw` 方案自动分配 `cdpPort`/`cdpUrl`；远程 CDP 需要自行设置。
+- `user` 是仅限本机的。对于 Linux 服务器、容器或远程主机，推荐使用 CDP 配置文件。
+- 本地的 `openclaw` 配置文件会自动分配 `cdpPort` / `cdpUrl`；仅针对远程 CDP 设置这些。

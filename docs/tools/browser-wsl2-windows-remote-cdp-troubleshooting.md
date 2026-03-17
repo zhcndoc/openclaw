@@ -1,127 +1,126 @@
 ---
-summary: "Troubleshoot WSL2 Gateway + Windows Chrome remote CDP and extension-relay setups in layers"
+summary: "分层排查 WSL2 网关 + Windows 上 Chrome 远程 CDP 问题"
 read_when:
-  - Running OpenClaw Gateway in WSL2 while Chrome lives on Windows
-  - Seeing overlapping browser/control-ui errors across WSL2 and Windows
-  - Deciding between raw remote CDP and the Chrome extension relay in split-host setups
-title: "WSL2 + Windows + remote Chrome CDP troubleshooting"
+  - 在 WSL2 中运行 OpenClaw 网关，同时 Chrome 运行于 Windows 上
+  - 看到浏览器/控制界面在 WSL2 和 Windows 之间出现重叠错误
+  - 在分布式主机设置中，在本地主机 Chrome MCP 和纯远程 CDP 之间做选择
+title: "WSL2 + Windows + 远程 Chrome CDP 排查指南"
 ---
 
-# WSL2 + Windows + remote Chrome CDP troubleshooting
+# WSL2 + Windows + 远程 Chrome CDP 排查指南
 
-This guide covers the common split-host setup where:
+本指南涵盖常见的分布式主机设置，其中：
 
-- OpenClaw Gateway runs inside WSL2
-- Chrome runs on Windows
-- browser control must cross the WSL2/Windows boundary
+- OpenClaw 网关运行在 WSL2 内
+- Chrome 运行在 Windows 上
+- 浏览器控制必须跨越 WSL2/Windows 边界
 
-It also covers the layered failure pattern from [issue #39369](https://github.com/openclaw/openclaw/issues/39369): several independent problems can show up at once, which makes the wrong layer look broken first.
+还包括来自 [issue #39369](https://github.com/openclaw/openclaw/issues/39369) 的分层失败模式：多个独立问题可能同时出现，导致错误的层看起来先坏了。
 
-## Choose the right browser mode first
+## 首先选择正确的浏览器模式
 
-You have two valid patterns:
+你有两种有效模式：
 
-### Option 1: Raw remote CDP
+### 选项 1：从 WSL2 到 Windows 的纯远程 CDP
 
-Use a remote browser profile that points from WSL2 to a Windows Chrome CDP endpoint.
+使用指向 Windows Chrome CDP 端点的远程浏览器配置文件。
 
-Choose this when:
+适用情形：
 
-- you only need browser control
-- you are comfortable exposing Chrome remote debugging to WSL2
-- you do not need the Chrome extension relay
+- 网关保持在 WSL2 内部
+- Chrome 运行在 Windows 上
+- 需要浏览器控制跨越 WSL2/Windows 边界
 
-### Option 2: Chrome extension relay
+### 选项 2：主机本地 Chrome MCP
 
-Use the built-in `chrome` profile plus the OpenClaw Chrome extension.
+仅当网关和 Chrome 运行在同一主机时，使用 `existing-session` / `user`。
 
-Choose this when:
+适用情形：
 
-- you want to attach to an existing Windows Chrome tab with the toolbar button
-- you want extension-based control instead of raw `--remote-debugging-port`
-- the relay itself must be reachable across the WSL2/Windows boundary
+- OpenClaw 和 Chrome 在同一台机器上
+- 你需要本地已登录的浏览器状态
+- 不需要跨主机浏览器传输
 
-If you use the extension relay across namespaces, `browser.relayBindHost` is the important setting introduced in [Browser](/tools/browser) and [Chrome extension](/tools/chrome-extension).
+对于 WSL2 网关 + Windows Chrome，推荐使用纯远程 CDP。Chrome MCP 是主机本地的，不是 WSL2 到 Windows 的桥接。
 
-## Working architecture
+## 工作架构
 
-Reference shape:
+参考结构：
 
-- WSL2 runs the Gateway on `127.0.0.1:18789`
-- Windows opens the Control UI in a normal browser at `http://127.0.0.1:18789/`
-- Windows Chrome exposes a CDP endpoint on port `9222`
-- WSL2 can reach that Windows CDP endpoint
-- OpenClaw points a browser profile at the address that is reachable from WSL2
+- WSL2 在 `127.0.0.1:18789` 运行网关
+- Windows 在正常浏览器中打开控制界面，地址为 `http://127.0.0.1:18789/`
+- Windows Chrome 在端口 `9222` 暴露 CDP 端点
+- WSL2 能够访问该 Windows CDP 端点
+- OpenClaw 指向一个 WSL2 可达的浏览器配置地址
 
-## Why this setup is confusing
+## 为什么这个设置容易让人困惑
 
-Several failures can overlap:
+多个失败可能重叠出现：
 
-- WSL2 cannot reach the Windows CDP endpoint
-- the Control UI is opened from a non-secure origin
-- `gateway.controlUi.allowedOrigins` does not match the page origin
-- token or pairing is missing
-- the browser profile points at the wrong address
-- the extension relay is still loopback-only when you actually need cross-namespace access
+- WSL2 无法访问 Windows CDP 端点
+- 控制界面从非安全源打开
+- `gateway.controlUi.allowedOrigins` 不匹配页面源
+- 缺少令牌或配对信息
+- 浏览器配置指向错误地址
 
-Because of that, fixing one layer can still leave a different error visible.
+因此，修复了某一层错误后，其他错误仍然可能显现。
 
-## Critical rule for the Control UI
+## 控制界面的关键规则
 
-When the UI is opened from Windows, use Windows localhost unless you have a deliberate HTTPS setup.
+当 UI 从 Windows 打开时，使用 Windows 本地主机地址，除非你有明确的 HTTPS 配置。
 
-Use:
+使用：
 
 `http://127.0.0.1:18789/`
 
-Do not default to a LAN IP for the Control UI. Plain HTTP on a LAN or tailnet address can trigger insecure-origin/device-auth behavior that is unrelated to CDP itself. See [Control UI](/web/control-ui).
+不要默认使用局域网 IP 打开控制界面。在局域网或 tailnet 地址上使用纯 HTTP，可能触发与 CDP 本身无关的不安全源/设备认证问题。详见 [控制界面](/web/control-ui)。
 
-## Validate in layers
+## 分层验证
 
-Work top to bottom. Do not skip ahead.
+从上到下排查。不要跳层。
 
-### Layer 1: Verify Chrome is serving CDP on Windows
+### 第1层：确认 Chrome 在 Windows 上正常提供 CDP 服务
 
-Start Chrome on Windows with remote debugging enabled:
+在 Windows 上启动 Chrome，启用远程调试端口：
 
 ```powershell
 chrome.exe --remote-debugging-port=9222
 ```
 
-From Windows, verify Chrome itself first:
+先在 Windows 上确认 Chrome：
 
 ```powershell
 curl http://127.0.0.1:9222/json/version
 curl http://127.0.0.1:9222/json/list
 ```
 
-If this fails on Windows, OpenClaw is not the problem yet.
+如果 Windows 上失败，OpenClaw 还不是问题。
 
-### Layer 2: Verify WSL2 can reach that Windows endpoint
+### 第2层：确认 WSL2 可以访问该 Windows 端点
 
-From WSL2, test the exact address you plan to use in `cdpUrl`:
+在 WSL2 中测试你计划在 `cdpUrl` 使用的准确地址：
 
 ```bash
 curl http://WINDOWS_HOST_OR_IP:9222/json/version
 curl http://WINDOWS_HOST_OR_IP:9222/json/list
 ```
 
-Good result:
+良好结果：
 
-- `/json/version` returns JSON with Browser / Protocol-Version metadata
-- `/json/list` returns JSON (empty array is fine if no pages are open)
+- `/json/version` 返回包含浏览器/协议版本元数据的 JSON
+- `/json/list` 返回 JSON（如果无页面打开，空数组也正常）
 
-If this fails:
+若失败：
 
-- Windows is not exposing the port to WSL2 yet
-- the address is wrong for the WSL2 side
-- firewall / port forwarding / local proxying is still missing
+- Windows 还未向 WSL2 暴露端口
+- WSL2 侧地址错误
+- 防火墙 / 端口转发 / 本地代理配置缺失
 
-Fix that before touching OpenClaw config.
+解决后再修改 OpenClaw 配置。
 
-### Layer 3: Configure the correct browser profile
+### 第3层：配置正确的浏览器配置文件
 
-For raw remote CDP, point OpenClaw at the address that is reachable from WSL2:
+对于纯远程 CDP，将 OpenClaw 指向 WSL2 可达的地址：
 
 ```json5
 {
@@ -139,104 +138,74 @@ For raw remote CDP, point OpenClaw at the address that is reachable from WSL2:
 }
 ```
 
-Notes:
+注意：
 
-- use the WSL2-reachable address, not whatever only works on Windows
-- keep `attachOnly: true` for externally managed browsers
-- test the same URL with `curl` before expecting OpenClaw to succeed
+- 使用 WSL2 可达地址，而不是只对 Windows 可用的地址
+- 对外部管理的浏览器保持 `attachOnly: true`
+- 期望 OpenClaw 成功前，先用 `curl` 测试相同 URL
 
-### Layer 4: If you use the Chrome extension relay instead
+### 第4层：单独验证控制界面层
 
-If the browser machine and the Gateway are separated by a namespace boundary, the relay may need a non-loopback bind address.
-
-Example:
-
-```json5
-{
-  browser: {
-    enabled: true,
-    defaultProfile: "chrome",
-    relayBindHost: "0.0.0.0",
-  },
-}
-```
-
-Use this only when needed:
-
-- default behavior is safer because the relay stays loopback-only
-- `0.0.0.0` expands exposure surface
-- keep Gateway auth, node pairing, and the surrounding network private
-
-If you do not need the extension relay, prefer the raw remote CDP profile above.
-
-### Layer 5: Verify the Control UI layer separately
-
-Open the UI from Windows:
+从 Windows 打开 UI：
 
 `http://127.0.0.1:18789/`
 
-Then verify:
+然后确认：
 
-- the page origin matches what `gateway.controlUi.allowedOrigins` expects
-- token auth or pairing is configured correctly
-- you are not debugging a Control UI auth problem as if it were a browser problem
+- 页面源与 `gateway.controlUi.allowedOrigins` 期望匹配
+- 令牌认证或配对配置正确
+- 你不是把控制界面的认证问题误当成浏览器问题排查
 
-Helpful page:
+参考页面：
 
-- [Control UI](/web/control-ui)
+- [控制界面](/web/control-ui)
 
-### Layer 6: Verify end-to-end browser control
+### 第5层：验证端到端浏览器控制
 
-From WSL2:
+在 WSL2 中执行：
 
 ```bash
 openclaw browser open https://example.com --browser-profile remote
 openclaw browser tabs --browser-profile remote
 ```
 
-For the extension relay:
+良好结果：
 
-```bash
-openclaw browser tabs --browser-profile chrome
-```
+- 标签页在 Windows Chrome 中打开
+- `openclaw browser tabs` 返回目标
+- 后续操作（`snapshot`、`screenshot`、`navigate`）都能使用同一配置正常工作
 
-Good result:
+## 常见误导错误
 
-- the tab opens in Windows Chrome
-- `openclaw browser tabs` returns the target
-- later actions (`snapshot`, `screenshot`, `navigate`) work from the same profile
-
-## Common misleading errors
-
-Treat each message as a layer-specific clue:
+将每条信息视为层级线索：
 
 - `control-ui-insecure-auth`
-  - UI origin / secure-context problem, not a CDP transport problem
+  - UI 来源 / 安全上下文问题，不是 CDP 传输问题
 - `token_missing`
-  - auth configuration problem
+  - 认证配置问题
 - `pairing required`
-  - device approval problem
+  - 设备授权问题
 - `Remote CDP for profile "remote" is not reachable`
-  - WSL2 cannot reach the configured `cdpUrl`
+  - WSL2 无法访问配置的 `cdpUrl`
 - `gateway timeout after 1500ms`
-  - often still CDP reachability or a slow/unreachable remote endpoint
-- `Chrome extension relay is running, but no tab is connected`
-  - extension relay profile selected, but no attached tab exists yet
+  - 常见仍是 CDP 可访问性问题，或者远端端点过慢/不可达
+- `No Chrome tabs found for profile="user"`
+  - 选择了本地主机 Chrome MCP 配置，但无本地主机标签页
 
-## Fast triage checklist
+## 快速排查清单
 
-1. Windows: does `curl http://127.0.0.1:9222/json/version` work?
-2. WSL2: does `curl http://WINDOWS_HOST_OR_IP:9222/json/version` work?
-3. OpenClaw config: does `browser.profiles.<name>.cdpUrl` use that exact WSL2-reachable address?
-4. Control UI: are you opening `http://127.0.0.1:18789/` instead of a LAN IP?
-5. Extension relay only: do you actually need `browser.relayBindHost`, and if so is it set explicitly?
+1. Windows：`curl http://127.0.0.1:9222/json/version` 能否成功？
+2. WSL2：`curl http://WINDOWS_HOST_OR_IP:9222/json/version` 能否成功？
+3. OpenClaw 配置：`browser.profiles.<name>.cdpUrl` 是否用的是 WSL2 可达的地址？
+4. 控制界面：是否打开 `http://127.0.0.1:18789/` 而非局域网 IP？
+5. 是否尝试跨 WSL2 和 Windows 使用 `existing-session`，而非纯远程 CDP？
 
-## Practical takeaway
+## 实用结论
 
-The setup is usually viable. The hard part is that browser transport, Control UI origin security, token/pairing, and extension-relay topology can each fail independently while looking similar from the user side.
+该设置通常是可行的。难点在于浏览器传输、控制界面源安全和令牌/配对可以独立失败，但用户看到的错误表现相似。
 
-When in doubt:
+有疑问时：
 
-- verify the Windows Chrome endpoint locally first
-- verify the same endpoint from WSL2 second
-- only then debug OpenClaw config or Control UI auth
+- 先本地确认 Windows Chrome 端点正常
+- 再从 WSL2 确认相同端点
+- 只有这样，才开始调试 OpenClaw 配置或控制界面认证

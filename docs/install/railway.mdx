@@ -29,15 +29,15 @@ Railway 会：
 
 然后打开：
 
-- `https://<你的-railway-域名>/setup` — 设置向导（密码保护）
-- `https://<你的-railway-域名>/openclaw` — 控制界面
+- `https://<your-railway-domain>/setup` — web setup (password protected)
+- `https://<your-railway-domain>/openclaw` — 控制界面
 
 ## 你将获得
 
 - 托管的 OpenClaw 网关 + 控制界面
-- `/setup` 的网页设置向导（无需终端命令）
-- 通过 Railway 卷（挂载在 `/data`）实现持久存储，配置/凭证/工作区在重新部署时保留
-- `/setup/export` 的备份导出，方便以后迁移到其他平台
+- `/setup` 网页设置（无需终端命令）
+- 通过 Railway 卷（`/data`）实现的持久存储，因此配置/凭据/工作区可在重新部署后保留
+- `/setup/export` 备份导出，便于以后迁移离开 Railway
 
 ## 必需的 Railway 设置
 
@@ -70,24 +70,24 @@ Railway 会：
 3. （可选）添加 Telegram/Discord/Slack 令牌。
 4. 点击 **Run setup**。
 
-如果 Telegram 私信设置为配对模式，设置向导可以批准配对码。
+如果 Telegram 私信设置为配对，网页设置可以批准配对码。
 
 ## 获取聊天令牌
 
 ### Telegram 机器人令牌
 
-1. 在 Telegram 中消息发送给 `@BotFather`
-2. 运行 `/newbot`
-3. 复制令牌（格式类似 `123456789:AA...`）
+1. 在 Telegram 中消息发送给 `@BotFather`  
+2. 运行 `/newbot`  
+3. 复制令牌（格式类似 `123456789:AA...`）  
 4. 粘贴到 `/setup`
 
 ### Discord 机器人令牌
 
-1. 访问 [https://discord.com/developers/applications](https://discord.com/developers/applications)
-2. 点击 **New Application** → 输入名称
-3. 转到 **Bot** → 点击 **Add Bot**
-4. 在 Bot → Privileged Gateway Intents 中启用 **MESSAGE CONTENT INTENT**（必需，否则机器人启动时会崩溃）
-5. 复制 **Bot Token** 并粘贴到 `/setup`
+1. 访问 [https://discord.com/developers/applications](https://discord.com/developers/applications)  
+2. 点击 **New Application** → 输入名称  
+3. 转到 **Bot** → 点击 **Add Bot**  
+4. 在 Bot → Privileged Gateway Intents 中启用 **MESSAGE CONTENT INTENT**（必需，否则机器人启动时会崩溃）  
+5. 复制 **Bot Token** 并粘贴到 `/setup`  
 6. 邀请机器人进入你的服务器（使用 OAuth2 URL Generator，范围包括：`bot`，`applications.commands`）
 
 ## 备份与迁移

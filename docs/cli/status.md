@@ -20,9 +20,10 @@ openclaw status --usage
 说明：
 
 - `--deep` 运行实时探测（WhatsApp Web + Telegram + Discord + Google Chat + Slack + Signal）。
-- 当配置多个代理时，输出包括每个代理的会话存储。
-- 概览包含网关和节点主机服务的安装/运行时状态（如果可用）。
-- 概览包含更新频道和 git SHA（针对源码检出）。
-- 更新信息会在概览中显示；如果有可用更新，状态会提示运行 `openclaw update`（参见 [更新](/install/updating)）。
-- 只读状态界面（`status`、`status --json`、`status --all`）会尽可能解析受支持的 SecretRefs 对应的配置路径。
-- 如果配置了受支持的频道 SecretRef，但在当前命令路径下不可用，状态仍保持只读且报告降级输出而非崩溃。人类可读输出会显示警告，如“命令路径中配置的令牌不可用”；JSON 输出则包含 `secretDiagnostics`。
+- 输出包括当配置多个代理时的每个代理会话存储。
+- 概览包括网关 + 节点主机服务安装/运行时状态（如果可用）。
+- 概览包括更新通道 + git SHA（用于源码检出）。
+- 更新信息显示在概览中；如果有可用更新，状态将提示运行 `openclaw update`（参见[更新](/install/updating)）。
+- 只读状态显示（`status`，`status --json`，`status --all`）在可能的情况下会解析支持的 SecretRef 以获取其目标配置路径。
+- 如果配置了支持的频道 SecretRef 但当前命令路径中不可用，状态保持只读并报告降级输出而不是崩溃。人类可读输出显示警告如“配置的令牌在此命令路径中不可用”，JSON 输出包含 `secretDiagnostics`。
+- 当命令本地 SecretRef 解析成功时，状态倾向于使用已解析的快照，并从最终输出中清除临时“secret unavailable”频道标记。

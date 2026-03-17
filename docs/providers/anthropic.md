@@ -205,7 +205,7 @@ openclaw models auth paste-token --provider anthropic
 ### 命令行配置（setup-token）
 
 ```bash
-# 在引导配置时粘贴 setup-token
+# Paste a setup-token during setup
 openclaw onboard --auth-choice setup-token
 ```
 

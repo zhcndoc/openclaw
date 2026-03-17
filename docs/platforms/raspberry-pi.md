@@ -173,12 +173,11 @@ ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 ```
 ```
 
-Then open the printed Dashboard URL in your local browser.
+然后在本地浏览器中打开打印出的仪表盘 URL。
 
-If the UI asks for auth, paste the token from `gateway.auth.token`
-(or `OPENCLAW_GATEWAY_TOKEN`) into Control UI settings.
+如果界面要求认证，请将 `gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）中的令牌粘贴到控制界面设置中。
 
-For always-on remote access, see [Tailscale](/gateway/tailscale).
+关于持续远程访问，请参见 [Tailscale](/gateway/tailscale)。
 
 ---
 
@@ -320,7 +319,7 @@ uname -m
 
 ## 开机自动启动
 
-引导向导会自动设置，但可通过以下命令确认：
+Onboarding sets this up, but to verify:
 
 ```bash
 # 检查服务是否启用

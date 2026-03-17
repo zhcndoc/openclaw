@@ -41,8 +41,8 @@ Zalo Personal 作为插件发布，不包含在核心安装包中。
 }
 ```
 
-4. 重启网关（或完成入门引导）。
-5. 私信访问默认需要配对；首次联系时批准配对码。
+4. 重启网关（或完成设置）。
+5. 私信访问默认为配对；首次联系时需批准配对码。
 
 ## 这是什么
 
@@ -74,7 +74,7 @@ openclaw directory groups list --channel zalouser --query "work"
 
 `channels.zalouser.dmPolicy` 支持：`pairing | allowlist | open | disabled`（默认：`pairing`）。
 
-`channels.zalouser.allowFrom` 接收用户 ID 或名称。入门时，通过插件内的通讯录查找将名称解析为 ID。
+`channels.zalouser.allowFrom` 支持用户 ID 或名称。在设置期间，名称会通过插件内置的联系人查找解析为 ID。
 
 通过如下命令批准访问：
 
@@ -86,7 +86,7 @@ openclaw directory groups list --channel zalouser --query "work"
 - 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。未设置时可通过 `channels.defaults.groupPolicy` 覆盖默认值。
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
-  - `channels.zalouser.groups`（键应该是稳定的群组 ID；启动时会尽可能将名称解析为 ID）
+  - `channels.zalouser.groups`（键应为稳定的群组 ID；启动时会尽可能将名称解析为 ID）
   - `channels.zalouser.groupAllowFrom`（控制允许群组内哪些发送者可以触发机器人）
 - 屏蔽所有群组：`channels.zalouser.groupPolicy = "disabled"`。
 - 配置向导可提示设置群组允许列表。
@@ -118,9 +118,9 @@ openclaw directory groups list --channel zalouser --query "work"
 - `channels.zalouser.groups.<group>.requireMention` 控制群组回复是否需要提及。
 - 解析顺序：精确群 ID/名称 -> 规范化群别名 -> `*` -> 默认（`true`）。
 - 此规则适用于允许列表群组及开放群组模式。
-- 授权的控制命令（例如 `/new`）可以绕过提及门控。
+- 授权的控制命令（例如 `/new`）可绕过提及门控。
 - 当群组消息因需要提及时被跳过，OpenClaw 会将其存为待处理的群聊历史，并在下一条处理的群消息时包含。
-- 群组历史限制默认是 `messages.groupChat.historyLimit`（回退值为 `50`）。可通过 `channels.zalouser.historyLimit` 针对账号单独覆盖。
+- 群组历史限制默认是 `messages.groupChat.historyLimit`（回退值为 `50`）。可通过 `channels.zalouser.historyLimit` 针对账户单独覆盖。
 
 示例：
 

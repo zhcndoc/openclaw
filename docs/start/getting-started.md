@@ -52,13 +52,13 @@ title: "入门指南"
     </Note>
 
   </Step>
-  <Step title="运行入门向导">
+  <Step title="运行引导">
     ```bash
     openclaw onboard --install-daemon
     ```
 
-    该向导会配置认证、网关设置和可选频道。
-    详情见 [入门向导](/start/wizard) 。
+    引导配置认证、网关设置和可选的频道。
+    详情见 [Onboarding (CLI)](/start/wizard)。
 
   </Step>
   <Step title="检查网关">
@@ -114,8 +114,8 @@ title: "入门指南"
 ## 深入了解
 
 <Columns>
-  <Card title="入门向导（详情）" href="/start/wizard">
-    完整命令行向导参考及高级选项。
+  <Card title="Onboarding (CLI)" href="/start/wizard">
+    完整的 CLI 引导参考和高级选项。
   </Card>
   <Card title="macOS 应用入门" href="/start/onboarding">
     macOS 应用的首次运行流程。

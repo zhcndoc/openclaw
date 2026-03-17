@@ -25,7 +25,8 @@ openclaw plugins install @openclaw/nextcloud-talk
 openclaw plugins install ./extensions/nextcloud-talk
 ```
 
-如果在配置或初次使用时选择 Nextcloud Talk 并检测到 git 本地检出，OpenClaw 会自动提供本地安装路径。
+If you choose Nextcloud Talk during setup and a git checkout is detected,
+OpenClaw will offer the local install path automatically.
 
 详情请见：[插件](/tools/plugin)
 
@@ -38,11 +39,11 @@ openclaw plugins install ./extensions/nextcloud-talk
    ./occ talk:bot:install "OpenClaw" "<shared-secret>" "<webhook-url>" --feature reaction
    ```
 
-3. 在目标群组设置中启用该机器人。
+3. 在目标房间设置中启用机器人。
 4. 配置 OpenClaw：
    - 配置项：`channels.nextcloud-talk.baseUrl` + `channels.nextcloud-talk.botSecret`
-   - 或环境变量：`NEXTCLOUD_TALK_BOT_SECRET`（仅限默认账户）
-5. 重启网关（或完成初始配置引导）。
+   - 或环境变量：`NEXTCLOUD_TALK_BOT_SECRET`（仅默认账户）
+5. 重启网关（或完成设置）。
 
 最简配置示例：
 

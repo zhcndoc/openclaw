@@ -48,8 +48,9 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 
 ## 会话开始（必需）
 
-- 阅读 `SOUL.md`、`USER.md`、`memory.md`，以及 `memory/` 目录下今天和昨天的日志。
-- 在回复前完成以上操作。
+- 读取 `SOUL.md`、`USER.md`，以及 `memory/` 中的今天和昨天的文件。
+- 存在时读取 `MEMORY.md`；仅当 `MEMORY.md` 不存在时备选读取小写的 `memory.md`。
+- 响应之前完成以上步骤。
 
 ## 灵魂文件（必需）
 
@@ -64,11 +65,12 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 
 ## 记忆系统（推荐）
 
-- 每日日志：`memory/YYYY-MM-DD.md`（如无则创建 `memory/` 目录）。
-- 长期记忆：`memory.md` 用于保存持久事实、偏好和决策。
-- 会话开始时阅读今天+昨天及存在的 `memory.md`。
-- 记录：决策、偏好、约束、未完成事项。
-- 除非明确要求，避免记录机密信息。
+- 每日日志：`memory/YYYY-MM-DD.md`（如无则创建 `memory/`）。
+- 长期记忆：`MEMORY.md` 用于存储持久事实、偏好和决策。
+- 小写的 `memory.md` 仅为遗留备选；不要故意同时保留两个根文件。
+- 会话开始时，读取今天 + 昨天 + `MEMORY.md`（如存在），否则为 `memory.md`。
+- 记录：决策、偏好、约束、开放事项。
+- 除非明确要求，尽量避免记录敏感信息。
 
 ## 工具与技能
 

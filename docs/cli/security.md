@@ -19,6 +19,8 @@ title: "security"
 ```bash
 openclaw security audit
 openclaw security audit --deep
+openclaw security audit --deep --password <password>
+openclaw security audit --deep --token <token>
 openclaw security audit --fix
 openclaw security audit --json
 ```
@@ -39,6 +41,12 @@ openclaw security audit --json
 当 `gateway.auth.mode="none"` 导致 Gateway HTTP API 在无共享密钥情况下可访问（包括 `/tools/invoke` 及任意启用的 `/v1/*` 端点）时，会发出警告。  
 以 `dangerous`/`dangerously` 为前缀的设置是明确的越权操作员覆盖选项；单独启用其中之一不代表安全漏洞报告。  
 完整的危险参数清单请参见 [Security](/gateway/security) 中的“不安全或危险标志总结”部分。
+
+SecretRef 行为：
+
+- `security audit` 对其目标路径中的支持 SecretRef 进行只读解析。
+- 如果当前命令路径中 SecretRef 不可用，审计将继续并报告 `secretDiagnostics`（而非崩溃）。
+- `--token` 和 `--password` 仅覆盖该命令调用的深度探测认证；不会重写配置或 SecretRef 映射。
 
 ## JSON 输出
 

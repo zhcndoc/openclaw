@@ -17,11 +17,13 @@ OpenClaw 的内存是**以 Markdown 格式存储于代理工作区**。这些文
 默认工作区布局使用两层内存：
 
 - `memory/YYYY-MM-DD.md`
-  - 每日日志（追加式）。
-  - 会话开始时读取当天和前一天的日志。
+  - 每日日志（仅追加）。
+  - 会话开始时读取当天和昨天的内容。
 - `MEMORY.md`（可选）
-  - 精选的长期记忆。
-  - **仅在主私有会话中加载**（群组上下文绝不加载）。
+  - 策划的长期记忆。
+  - 如果工作区根目录同时存在 `MEMORY.md` 和 `memory.md`，OpenClaw 仅加载 `MEMORY.md`。
+  - 小写的 `memory.md` 仅在缺少 `MEMORY.md` 时作为备用使用。
+  - **只在主私有会话中加载**（群组上下文中从不加载）。
 
 这些文件存放于工作区目录下（`agents.defaults.workspace`，默认 `~/.openclaw/workspace`）。完整布局详见[代理工作区](/concepts/agent-workspace)。
 

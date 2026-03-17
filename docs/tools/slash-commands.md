@@ -68,27 +68,28 @@ title: "斜杠命令"
 - `/help`
 - `/commands`
 - `/skill <name> [input]`（按名称运行技能）
-- `/status`（显示当前状态；包括当前模型供应商的使用情况/配额，如有）
+- `/status`（显示当前状态；包括当前模型供应商的使用/配额（如可用））
 - `/allowlist`（列出/添加/移除白名单条目）
-- `/approve <id> allow-once|allow-always|deny`（解决 exec 审批提示）
-- `/context [list|detail|json]`（解释“上下文”；`detail` 显示按文件、工具、技能和系统提示的详细大小）
-- `/export-session [path]`（别名：`/export`）（导出当前会话为带完整系统提示的 HTML）
+- `/approve <id> allow-once|allow-always|deny`（处理 exec 审批提示）
+- `/context [list|detail|json]`（解释“上下文”；`detail` 显示每文件 + 每工具 + 每技能 + 系统提示大小）
+- `/btw <question>`（针对当前会话提问临时辅助问题，不会改变未来会话上下文；参见 [/tools/btw](/tools/btw)）
+- `/export-session [path]`（别名：`/export`）（导出当前会话为包含完整系统提示的 HTML）
 - `/whoami`（显示你的发送者 ID；别名：`/id`）
-- `/session idle <duration|off>`（管理已聚焦线程绑定的非活跃自动失焦）
-- `/session max-age <duration|off>`（管理已聚焦线程绑定的最大寿命自动失焦）
+- `/session idle <duration|off>`（管理聚焦线程绑定的不活动自动取消聚焦）
+- `/session max-age <duration|off>`（管理聚焦线程绑定的最大存活时间自动取消聚焦）
 - `/subagents list|kill|log|info|send|steer|spawn`（检查、控制或生成当前会话的子代理运行）
 - `/acp spawn|cancel|steer|close|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|sessions`（检查和控制 ACP 运行时会话）
-- `/agents`（列出本会话绑定线程的代理）
+- `/agents`（列出本会话线程绑定的代理）
 - `/focus <target>`（Discord：绑定此线程或新线程到会话/子代理目标）
 - `/unfocus`（Discord：移除当前线程绑定）
-- `/kill <id|#|all>`（立即中止本会话的一个或所有正在运行的子代理；无确认消息）
-- `/steer <id|#> <message>`（立即引导运行中子代理：如可能在运行中，否则中止当前工作并使用引导消息重启）
+- `/kill <id|#|all>`（立即中断一个或所有本会话的运行子代理；无确认消息）
+- `/steer <id|#> <message>`（立即引导运行中的子代理：尽可能在运行中；否则中断当前工作并在引导消息上重启）
 - `/tell <id|#> <message>`（`/steer` 的别名）
-- `/config show|get|set|unset`（持久化配置到磁盘，仅限所有者；需 `commands.config: true`）
+- `/config show|get|set|unset`（将配置持久化到磁盘，仅限所有者；需 `commands.config: true`）
 - `/debug show|set|unset|reset`（运行时覆盖，仅限所有者；需 `commands.debug: true`）
-- `/usage off|tokens|full|cost`（每次响应的使用情况页脚或本地成本摘要）
-- `/tts off|always|inbound|tagged|status|provider|limit|summary|audio`（控制 TTS，详见 [/tts](/tts)）
-  - Discord：原生命令为 `/voice`（Discord 预留 `/tts`）；文本 `/tts` 仍有效。
+- `/usage off|tokens|full|cost`（每次响应的使用信息页脚或本地成本摘要）
+- `/tts off|always|inbound|tagged|status|provider|limit|summary|audio`（控制文本转语音；参见 [/tts](/tts)）
+  - Discord：原生命令为 `/voice`（Discord 保留 `/tts`）；文本 `/tts` 仍可使用。
 - `/stop`
 - `/restart`
 - `/dock-telegram`（别名：`/dock_telegram`）（切换回复到 Telegram）
@@ -98,7 +99,7 @@ title: "斜杠命令"
 - `/send on|off|inherit`（仅限所有者）
 - `/reset` 或 `/new [model]`（可选模型提示；其余作为消息体转发）
 - `/think <off|minimal|low|medium|high|xhigh>`（模型/供应商动态选择；别名：`/thinking`、`/t`）
-- `/fast status|on|off`（不带参数时显示当前有效的快速模式状态）
+- `/fast status|on|off`（无参数时显示当前快速模式状态）
 - `/verbose on|full|off`（别名：`/v`）
 - `/reasoning on|off|stream`（别名：`/reason`；开启时发送带前缀 `Reasoning:` 的独立消息；`stream` = 仅 Telegram 草稿）
 - `/elevated on|off|ask|full`（别名：`/elev`；`full` 跳过 exec 审批）
@@ -109,10 +110,10 @@ title: "斜杠命令"
 
 仅文本命令：
 
-- `/compact [instructions]` (参见 [/concepts/compaction](/concepts/compaction))
-- `! <command>` （仅限主机；一次一个；使用 `!poll` + `!stop` 管理长运行作业）
-- `!poll` （检查输出/状态；接受可选的 `sessionId`；`/bash poll` 也有效）
-- `!stop` （停止正在运行的 bash 作业；接受可选的 `sessionId`；`/bash stop` 也有效）
+- `/compact [instructions]`（参见 [/concepts/compaction](/concepts/compaction)）
+- `! <command>`（仅限主机；一次一个；使用 `!poll` + `!stop` 管理长运行作业）
+- `!poll`（检查输出/状态；接受可选的 `sessionId`；`/bash poll` 也有效）
+- `!stop`（停止正在运行的 bash 作业；接受可选的 `sessionId`；`/bash stop` 也有效）
 
 备注：
 
@@ -140,7 +141,7 @@ title: "斜杠命令"
   - `/skill <name> [input]` 通过名称运行技能（有助于原生命令受限时调用具体技能）。
   - 默认情况下，技能命令作为普通请求转发给模型。
   - 技能可声明 `command-dispatch: tool` 以直接路由到工具（确定性，无需模型）。
-  - 示例：`/prose` （OpenProse 插件）—详见 [OpenProse](/prose)。
+  - 示例：`/prose`（OpenProse 插件）—详见 [OpenProse](/prose)。
 - **原生命令参数：** Discord 使用动态选项自动补全（缺失必需参数时显示按钮菜单）。Telegram 和 Slack 在支持选项且缺少参数时显示按钮菜单。
 
 ## 使用界面（何处显示什么）
@@ -211,11 +212,33 @@ title: "斜杠命令"
 
 ## 界面说明
 
-- **文本命令** 在普通聊天会话中运行（私聊共享 `main`，群组有独立会话）。
-- **原生命令** 使用隔离会话：
+- **文本命令** 在普通聊天会话中运行（私聊共用 `main`，群组拥有各自的会话）。
+- **原生命令** 使用隔离的会话：
   - Discord：`agent:<agentId>:discord:slash:<userId>`
-  - Slack：`agent:<agentId>:slack:slash:<userId>`（前缀可通过 `channels.slack.slashCommand.sessionPrefix` 配置）
+  - Slack：`agent:<agentId>:slack:slash:<userId>`（可通过 `channels.slack.slashCommand.sessionPrefix` 配置前缀）
   - Telegram：`telegram:slash:<userId>`（通过 `CommandTargetSessionKey` 定向到聊天会话）
-- **`/stop`** 针对活动聊天会话，用于中止当前运行。
-- **Slack**：`channels.slack.slashCommand` 仍支持单一 `/openclaw` 样式命令。启用 `commands.native` 后，必须为每个内置命令创建对应 Slack 斜杠命令（与 `/help` 等命令同名）。Slack 命令参数菜单以暂时性 Block Kit 按钮形式显示。
-  - Slack 原生例外：注册 `/agentstatus`（非 `/status`），因 Slack 预留 `/status`。文本 `/status` 在 Slack 消息中仍然有效。
+- **`/stop`** 作用于活动的聊天会话以中断当前执行。
+- **Slack：** 仍支持 `channels.slack.slashCommand` 用于单一的 `/openclaw` 式命令。如果启用 `commands.native`，必须为每个内置命令创建一个 Slack 斜杠命令（同 `/help` 命令名）。Slack 的命令参数菜单通过临时 Block Kit 按钮实现。
+  - Slack 原生例外：注册 `/agentstatus`（非 `/status`），因 Slack 保留 `/status`。文本命令 `/status` 在 Slack 消息中仍有效。
+
+## BTW 辅助问题
+
+`/btw` 是针对当前会话的快速**辅助提问**。
+
+与普通聊天不同：
+
+- 它使用当前会话作为背景上下文，
+- 它作为独立的**无工具**单次调用运行，
+- 不会改变未来会话上下文，
+- 不会写入对话历史，
+- 会作为实时辅助结果传递而非普通助手消息。
+
+这使得 `/btw` 在你需要临时澄清而主任务继续时非常有用。
+
+示例：
+
+```text
+/btw what are we doing right now?
+```
+
+详见 [BTW 辅助问题](/tools/btw) 中的完整行为和客户端交互细节。

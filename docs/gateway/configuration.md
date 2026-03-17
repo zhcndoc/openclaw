@@ -38,7 +38,7 @@ OpenClaw 会从 `~/.openclaw/openclaw.json` 读取一个可选的 <Tooltip tip="
 <Tabs>
   <Tab title="交互式向导">
     ```bash
-    openclaw onboard       # 完整设置向导
+    openclaw onboard       # 完整的入门流程
     openclaw configure     # 配置向导
     ```
   </Tab>
@@ -169,13 +169,43 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
     }
     ```
 
-    - **元数据提及**：原生的 @-提及（WhatsApp 点击@，Telegram @bot 等）
-    - **文本模式**：`mentionPatterns` 中的正则表达式
-    - 详见[完整参考](/gateway/configuration-reference#group-chat-mention-gating)了解渠道覆盖和自聊模式
+    - **Metadata mentions**: 原生@提及（WhatsApp 点按提及、Telegram @bot 等）
+    - **Text patterns**: `mentionPatterns` 中的安全正则表达式模式
+    - 详见 [完整参考](/gateway/configuration-reference#group-chat-mention-gating) 了解每渠道的覆盖以及自聊天模式。
 
   </Accordion>
 
-  <Accordion title="配置会话与重置">
+  <Accordion title="调整网关渠道健康监控">
+    控制网关对长时间无响应渠道的重启频率：
+
+    ```json5
+    {
+      gateway: {
+        channelHealthCheckMinutes: 5,
+        channelStaleEventThresholdMinutes: 30,
+        channelMaxRestartsPerHour: 10,
+      },
+      channels: {
+        telegram: {
+          healthMonitor: { enabled: false },
+          accounts: {
+            alerts: {
+              healthMonitor: { enabled: true },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    - 设置 `gateway.channelHealthCheckMinutes: 0` 以全局禁用健康监控自动重启。
+    - `channelStaleEventThresholdMinutes` 应大于或等于检查间隔。
+    - 通过 `channels.<provider>.healthMonitor.enabled` 或 `channels.<provider>.accounts.<id>.healthMonitor.enabled`，可为单个渠道或账号禁用自动重启，而不影响全局监控。
+    - 详见 [健康检查](/gateway/health) 以进行运行调试，及 [完整参考](/gateway/configuration-reference#gateway) 了解所有字段。
+
+  </Accordion>
+
+  <Accordion title="配置会话和重置">
     会话控制对话连续性和隔离：
 
     ```json5
@@ -225,10 +255,10 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
 
   </Accordion>
 
-  <Accordion title="Enable relay-backed push for official iOS builds">
-    Relay-backed push 是在 `openclaw.json` 中配置的。
+  <Accordion title="启用官方 iOS 构建的 Relay 支持推送">
+    Relay 支持推送配置于 `openclaw.json` 中。
 
-    在 gateway 配置中设置：
+    在网关配置中设置：
 
     ```json5
     {

@@ -35,13 +35,16 @@ SecretRefs 仅在有效活跃表面验证。
 
 非活动表面举例：
 
-- 被禁用的渠道/账户条目。
-- 顶层渠道凭证未被任何启用账户继承。
-- 禁用工具/功能表面。
-- 未被 `tools.web.search.provider` 选中的网页搜索提供者专用密钥。
-  在自动模式（提供者未设置）下，按优先级尝试检测提供者直到解析成功。
-  选定后，未选中的提供者密钥视为非激活直至被选中。
-- `gateway.remote.token` / `gateway.remote.password` SecretRefs 在以下条件之一成立时，被视作活动（且 `gateway.remote.enabled` 不为 `false`）：
+- Disabled channel/account entries.
+- Top-level channel credentials that no enabled account inherits.
+- Disabled tool/feature surfaces.
+- Web search provider-specific keys that are not selected by `tools.web.search.provider`.
+  In auto mode (provider unset), keys are consulted by precedence for provider auto-detection until one resolves.
+  After selection, non-selected provider keys are treated as inactive until selected.
+- Sandbox SSH auth material (`agents.defaults.sandbox.ssh.identityData`,
+  `certificateData`, `knownHostsData`, plus per-agent overrides) is active only
+  when the effective sandbox backend is `ssh` for the default agent or an enabled agent.
+- `gateway.remote.token` / `gateway.remote.password` SecretRefs are active if one of these is true:
   - `gateway.mode=remote`
   - 配置了 `gateway.remote.url`
   - `gateway.tailscale.mode` 是 `serve` 或 `funnel`
@@ -63,9 +66,9 @@ SecretRefs 仅在有效活跃表面验证。
 
 以交互模式运行上线流程并选择 SecretRef 存储时，OpenClaw 在保存前执行预检验证：
 
-- 环境变量引用：验证环境变量名，确认上线期间可见非空值。
-- 提供者引用（`file` 或 `exec`）：验证提供者选择，解析 `id`，检查解析后值类型。
-- 快速重用路径：当 `gateway.auth.token` 已是 SecretRef，界面会在探测/仪表盘启动前解析它（支持 `env`、`file` 和 `exec` 引用），使用同样的快速失败机制。
+- Env refs: validates env var name and confirms a non-empty value is visible during setup.
+- Provider refs (`file` or `exec`): validates provider selection, resolves `id`, and checks resolved value type.
+- Quickstart reuse path: when `gateway.auth.token` is already a SecretRef, onboarding resolves it before probe/dashboard bootstrap (for `env`, `file`, and `exec` refs) using the same fail-fast gate.
 
 若验证失败，上线流程显示错误并允许重试。
 
@@ -293,7 +296,36 @@ SecretRefs 仅在有效活跃表面验证。
 }
 ```
 
-## 支持的凭证表面
+## Sandbox SSH auth material
+
+The core `ssh` sandbox backend also supports SecretRefs for SSH auth material:
+
+```json5
+{
+  agents: {
+    defaults: {
+      sandbox: {
+        mode: "all",
+        backend: "ssh",
+        ssh: {
+          target: "user@gateway-host:22",
+          identityData: { source: "env", provider: "default", id: "SSH_IDENTITY" },
+          certificateData: { source: "env", provider: "default", id: "SSH_CERTIFICATE" },
+          knownHostsData: { source: "env", provider: "default", id: "SSH_KNOWN_HOSTS" },
+        },
+      },
+    },
+  },
+}
+```
+
+运行时行为：
+
+- OpenClaw 在沙箱激活期间解析这些引用，而非在每次 SSH 调用时懒加载。
+- 解析值被写入权限受限的临时文件，并用于生成的 SSH 配置。
+- 如果有效的沙箱后端不是 `ssh`，这些引用保持非激活状态且不阻止启动。
+
+## Supported credential surface
 
 规范支持及不支持的凭证列举详见：
 
@@ -355,8 +387,8 @@ Secret 激活发生于：
 
 主要两种行为：
 
-- 严格命令路径（如 `openclaw memory` 远程内存路径与 `openclaw qr --remote`）从活跃快照读取，必需 SecretRef 不可用时快速失败。
-- 只读命令路径（如 `openclaw status`、`openclaw status --all`、`openclaw channels status`、`openclaw channels resolve` 及只读的 doctor/配置修复流程）优先用活跃快照，命令路径中某 SecretRef 不可用时降级处理而不终止。
+- Strict command paths (for example `openclaw memory` remote-memory paths and `openclaw qr --remote`) read from the active snapshot and fail fast when a required SecretRef is unavailable.
+- Read-only command paths (for example `openclaw status`, `openclaw status --all`, `openclaw channels status`, `openclaw channels resolve`, `openclaw security audit`, and read-only doctor/config repair flows) also prefer the active snapshot, but degrade instead of aborting when a targeted SecretRef is unavailable in that command path.
 
 只读行为：
 

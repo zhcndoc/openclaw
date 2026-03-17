@@ -16,7 +16,7 @@ title: "快速入门"
   <Card title="入门指南" href="/start/getting-started">
     安装 OpenClaw 并在几分钟内运行你的第一个聊天。
   </Card>
-  <Card title="入职向导" href="/start/wizard">
-    完整的 CLI 向导参考和高级选项。
+  <Card title="Onboarding (CLI)" href="/start/wizard">
+    完整的 CLI 入门参考和高级选项。
   </Card>
 </Columns>

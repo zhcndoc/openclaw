@@ -15,12 +15,12 @@ title: "文档中心枢纽"
 
 ## 从这里开始
 
-- [目录](/)
+- [索引](/)
 - [入门指南](/start/getting-started)
 - [快速开始](/start/quickstart)
-- [入职引导](/start/onboarding)
-- [向导](/start/wizard)
-- [设置](/start/setup)
+- [新手引导](/start/onboarding)
+- [新手引导（CLI）](/start/wizard)
+- [安装](/start/setup)
 - [仪表盘（本地网关）](http://127.0.0.1:18789/)
 - [帮助](/help)
 - [文档目录](/start/docs-directory)
@@ -28,7 +28,7 @@ title: "文档中心枢纽"
 - [配置示例](/gateway/configuration-examples)
 - [OpenClaw 助手](/start/openclaw)
 - [展示](/start/showcase)
-- [背景知识](/start/lore)
+- [知识](/start/lore)
 
 ## 安装 + 更新
 
@@ -149,16 +149,15 @@ title: "文档中心枢纽"
 - [macOS 语音唤醒](/platforms/mac/voicewake)
 - [macOS 语音覆盖](/platforms/mac/voice-overlay)
 - [macOS WebChat](/platforms/mac/webchat)
-- [macOS 画布](/platforms/mac/canvas)
-- [macOS 子进程](/platforms/mac/child-process)
-- [macOS 健康状态](/platforms/mac/health)
-- [macOS 图标](/platforms/mac/icon)
-- [macOS 日志](/platforms/mac/logging)
-- [macOS 权限](/platforms/mac/permissions)
-- [macOS 远程](/platforms/mac/remote)
-- [macOS 签名](/platforms/mac/signing)
-- [macOS 发布](/platforms/mac/release)
-- [macOS 网关（launchd）](/platforms/mac/bundled-gateway)
+- [macOS Canvas](/platforms/mac/canvas)
+- [macOS child process](/platforms/mac/child-process)
+- [macOS health](/platforms/mac/health)
+- [macOS icon](/platforms/mac/icon)
+- [macOS logging](/platforms/mac/logging)
+- [macOS permissions](/platforms/mac/permissions)
+- [macOS remote](/platforms/mac/remote)
+- [macOS signing](/platforms/mac/signing)
+- [macOS gateway (launchd)](/platforms/mac/bundled-gateway)
 - [macOS XPC](/platforms/mac/xpc)
 - [macOS 技能](/platforms/mac/skills)
 - [macOS 捉迷藏](/platforms/mac/peekaboo)
@@ -190,5 +189,5 @@ title: "文档中心枢纽"
 ## 测试 + 发布
 
 - [测试](/reference/test)
-- [发布清单](/reference/RELEASING)
+- [发布政策](/reference/RELEASING)
 - [设备模型](/reference/device-models)

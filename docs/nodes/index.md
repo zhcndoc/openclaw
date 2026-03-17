@@ -1,5 +1,5 @@
 ---
-summary: "Nodes：用于 canvas/camera/screen/device/notifications/system 的配对、功能、权限及 CLI 辅助工具"
+summary: "节点：用于 canvas/camera/screen/device/notifications/system 的配对、功能、权限及 CLI 辅助工具"
 read_when:
   - 给 iOS/Android 节点配对到网关时
   - 使用节点的 canvas/camera 作为代理上下文时
@@ -275,9 +275,10 @@ Android 节点启用相应权限后，可以提供更多命令分组：
 - `device.status`、`device.info`、`device.permissions`、`device.health`
 - `notifications.list`、`notifications.actions`
 - `photos.latest`
-- `contacts.search`、`contacts.add`
-- `calendar.events`、`calendar.add`
-- `motion.activity`、`motion.pedometer`
+- `contacts.search`, `contacts.add`
+- `calendar.events`, `calendar.add`
+- `callLog.search`
+- `motion.activity`, `motion.pedometer`
 
 示例调用：
 

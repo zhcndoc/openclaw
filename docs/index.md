@@ -33,8 +33,8 @@ title: "OpenClaw"
   <Card title="快速开始" href="/start/getting-started" icon="rocket">
     安装 OpenClaw，几分钟内启动网关。
   </Card>
-  <Card title="运行向导" href="/start/wizard" icon="sparkles">
-    使用 `openclaw onboard` 和配对流程的引导设置。
+  <Card title="Run Onboarding" href="/start/wizard" icon="sparkles">
+    使用 `openclaw onboard` 和配对流程进行引导设置。
   </Card>
   <Card title="打开控制界面" href="/web/control-ui" icon="layout-dashboard">
     启动浏览器仪表盘，管理聊天、配置和会话。
