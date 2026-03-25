@@ -67,15 +67,39 @@ Gateway 配置重载会监听当前活动配置文件路径（从 profile/state 
 
 ## 运行时模型
 
-- 一个常驻进程，负责路由、控制平面和通道连接。
-- 单端口复用用于：
+- 一个始终运行的进程，用于路由、控制平面和通道连接。
+- 单一多路复用端口用于：
   - WebSocket 控制/RPC
-  - HTTP API（兼容 OpenAI，含 Responses、工具调用）
-  - 控制界面和钩子
-- 默认绑定模式：`loopback`（回环）。
-- 默认需要身份验证（`gateway.auth.token` / `gateway.auth.password`，或环境变量 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
+  - HTTP API，OpenAI 兼容（`/v1/models`、`/v1/embeddings`、`/v1/chat/completions`、`/v1/responses`、`/tools/invoke`）
+  - 控制 UI 和钩子
+- 默认绑定模式：`loopback`。
+- 默认需要认证（`gateway.auth.token` / `gateway.auth.password`，或 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`）。
 
-### 端口与绑定优先级
+## OpenAI 兼容端点
+
+OpenClaw 目前最具效益的兼容层包括：
+
+- `GET /v1/models`
+- `GET /v1/models/{id}`
+- `POST /v1/embeddings`
+- `POST /v1/chat/completions`
+- `POST /v1/responses`
+
+此组端点的重要性：
+
+- 大多数 Open WebUI、LobeChat 和 LibreChat 集成首先探测 `/v1/models`。
+- 许多 RAG 和记忆流水线依赖 `/v1/embeddings`。
+- Agent 原生客户端越来越倾向于使用 `/v1/responses`。
+
+规划说明：
+
+- `/v1/models` 以 Agent 优先：它返回 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>`。
+- `openclaw/default` 是一个稳定的别名，始终映射到配置的默认 Agent。
+- 当你需要覆盖后端提供商/模型时使用 `x-openclaw-model`；否则所选 Agent 的正常模型和嵌入设置将保持控制。
+
+所有这些都在主 Gateway 端口上运行，并使用与其余 Gateway HTTP API 相同的可信操作员认证边界。
+
+### 端口和绑定优先级
 
 | 设置           | 解析顺序                                                     |
 | -------------- | ------------------------------------------------------------ |
@@ -206,7 +230,7 @@ openclaw --dev status
 - 请求格式：`req(method, params)` → 响应 `res(ok/payload|error)`。
 - 常见事件：`connect.challenge`、`agent`、`chat`、`presence`、`tick`、`health`、`heartbeat`、`shutdown`。
 
-代理运行为两阶段：
+代理执行为两阶段：
 
 1. 立即接受确认（`status:"accepted"`）
 2. 最终完成响应（`status:"ok"` 或 `status:"error"`），中间有持续的 `agent` 事件流。

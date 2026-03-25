@@ -345,14 +345,15 @@ CLI 标志接受诸如 `20m` 的人类可读时长，工具调用应使用 ISO 8
 
 说明：
 
-- `schedule.kind`: `at` (`at`)、`every` (`everyMs`) 或 `cron` (`expr`, 可选 `tz`)。
-- `schedule.at` 接受 ISO 8601（可选时区；省略时视为 UTC）。
-- `everyMs` 单位为毫秒。
-- `sessionTarget`: `"main"`、`"isolated"`、`"current"` 或 `"session:<custom-id>"`。
-- `"current"` 在创建时解析为 `"session:<sessionKey>"`。
-- 自定义会话 (`session:xxx`) 在多次运行间保持上下文持久化。
-- 可选字段：`agentId`、`description`、`enabled`、`deleteAfterRun`（`at` 类型默认为 true）、`delivery`。
-- `wakeMode` 省略时默认为 `"now"`。
+- `schedule.kind`: `at` (`at`), `every` (`everyMs`), or `cron` (`expr`, optional `tz`).
+- `schedule.at` accepts ISO 8601. Tool/API values without a timezone are treated as UTC; the CLI also accepts `openclaw cron add|edit --at "<offset-less-iso>" --tz <iana>` for local wall-clock one-shots.
+- `everyMs` is milliseconds.
+- `sessionTarget`: `"main"`, `"isolated"`, `"current"`, or `"session:<custom-id>"`.
+- `"current"` is resolved to `"session:<sessionKey>"` at creation time.
+- Custom sessions (`session:xxx`) maintain persistent context across runs.
+- Optional fields: `agentId`, `description`, `enabled`, `deleteAfterRun` (defaults to true for `at`),
+  `delivery`.
+- `wakeMode` defaults to `"now"` when omitted.
 
 ### cron.update 参数示例
 
@@ -697,7 +698,7 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 ### Telegram 发送到错误位置
 
 - 论坛主题推荐使用明确格式：`-100…:topic:<id>`。
-- 日志或存储的“最后路由”中带 `telegram:...` 前缀是正常的；  
+- 日志或存储的"最后路由"中带 `telegram:...` 前缀是正常的；  
   cron 交付支持该格式且能正确解析主题 ID。
 
 ### 子代理公告交付重试

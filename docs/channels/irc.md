@@ -46,7 +46,7 @@ openclaw gateway run
 
 ## 访问控制
 
-IRC 频道有两道独立的“门”：
+IRC 频道有两道独立的"门"：
 
 1. **频道访问**（`groupPolicy` + `groups`）：机器人是否接受来自频道的消息。
 2. **发送者访问**（`groupAllowFrom` / 每频道的 `groups["#channel"].allowFrom`）：谁被允许在该频道内触发机器人。
@@ -74,7 +74,7 @@ IRC 频道有两道独立的“门”：
 
 示例（允许任何人在 `#tuirc-dev` 与机器人交谈）：
 
-```json55
+```json5
 {
   channels: {
     irc: {
@@ -95,7 +95,7 @@ IRC 频道有两道独立的“门”：
 
 如果你希望机器人在 IRC 频道中**无需提及就回复**，请为该频道禁用提及门控：
 
-```json55
+```json5
 {
   channels: {
     irc: {
@@ -113,7 +113,7 @@ IRC 频道有两道独立的“门”：
 
 或者允许**所有** IRC 频道（无单独频道允许列表）并仍然无需提及就回复：
 
-```json55
+```json5
 {
   channels: {
     irc: {
@@ -133,7 +133,7 @@ IRC 频道有两道独立的“门”：
 
 ### 所有人使用同一套工具
 
-```json55
+```json5
 {
   channels: {
     irc: {
@@ -154,7 +154,7 @@ IRC 频道有两道独立的“门”：
 
 使用 `toolsBySender` 为 `"*"` 应用更严格的策略，为你的昵称设置较宽松的策略：
 
-```json55
+```json5
 {
   channels: {
     irc: {

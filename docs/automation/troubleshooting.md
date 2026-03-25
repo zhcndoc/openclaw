@@ -104,10 +104,10 @@ openclaw logs --follow
 
 简要规则：
 
-- `Config path not found: agents.defaults.userTimezone` 表示该键未设置；心跳将回退使用主机时区（或 `activeHours.timezone`，若已设置）。
-- 未使用 `--tz` 的 cron 以网关主机时区运行。
-- 心跳 `activeHours` 使用配置的时区解析（`user`、`local`，或明确的 IANA 时区）。
-- 无时区的 ISO 时间戳在 cron `at` 调度中视为 UTC。
+- `Config path not found: agents.defaults.userTimezone` 表示该键未设置；心跳将回退到主机时区（如果已设置则使用 `activeHours.timezone`）。
+- 未带 `--tz` 的 Cron 使用网关主机时区。
+- 心跳的 `activeHours` 使用配置的时区解析方式（`user`、`local` 或显式 IANA 时区）。
+- 对于 Cron 的 `at` 调度，除非您在 CLI 中使用了 `--at "<offset-less-iso>" --tz <iana>`，否则将无时区的 ISO 时间戳视为 UTC。
 
 常见表现：
 

@@ -21,12 +21,23 @@ OpenClaw 的 Gateway 可以提供一个兼容 OpenResponses 的 `POST /v1/respon
 
 操作行为与 [OpenAI Chat Completions](/gateway/openai-http-api) 相匹配：
 
-- 使用 `Authorization: Bearer <token>` 以及普通 Gateway 认证配置
-- 将该端点视为 Gateway 实例的完全操作权限
-- 选择带有 `model: "openclaw:<agentId>"`、`model: "agent:<agentId>"` 或 `x-openclaw-agent-id` 的代理
+- 使用 `Authorization: Bearer <token>` 配合正常的 Gateway 认证配置
+- 将该端点视为 gateway 实例的完整操作员访问权限
+- 使用 `model: "openclaw"`、`model: "openclaw/default"`、`model: "openclaw/<agentId>"` 或 `x-openclaw-agent-id` 选择代理
+- 当您想要覆盖所选代理的后端模型时使用 `x-openclaw-model`
 - 使用 `x-openclaw-session-key` 进行显式会话路由
+- 当您需要非默认的合成入口通道上下文时使用 `x-openclaw-message-channel`
 
 通过 `gateway.http.endpoints.responses.enabled` 启用或禁用此端点。
+
+相同的兼容性表层还包括：
+
+- `GET /v1/models`
+- `GET /v1/models/{id}`
+- `POST /v1/embeddings`
+- `POST /v1/chat/completions`
+
+关于代理目标模型、`openclaw/default`、嵌入透传和后端模型覆盖如何协同工作的规范说明，请参阅 [OpenAI Chat Completions](/gateway/openai-http-api#agent-first-model-contract) 和 [模型列表与代理路由](/gateway/openai-http-api#model-list-and-agent-routing)。
 
 ## 会话行为
 
@@ -52,14 +63,17 @@ OpenClaw 的 Gateway 可以提供一个兼容 OpenResponses 的 `POST /v1/respon
 - `reasoning`
 - `metadata`
 - `store`
-- `previous_response_id`
 - `truncation`
 
-## 项（输入）
+支持：
+
+- `previous_response_id`：当请求保持在相同的代理/用户/请求会话范围内时，OpenClaw 会复用之前的响应会话。
+
+## 项目（输入）
 
 ### `message`
 
-角色包含：`system`、`developer`、`user`、`assistant`。
+角色包括：`system`、`developer`、`user`、`assistant`。
 
 - `system` 与 `developer` 内容附加到系统提示中。
 - 最近的 `user` 或 `function_call_output` 项成为“当前消息”。
@@ -77,7 +91,7 @@ OpenClaw 的 Gateway 可以提供一个兼容 OpenResponses 的 `POST /v1/respon
 }
 ```
 
-### `reasoning` 和 `item_reference`
+### `reasoning` 与 `item_reference`
 
 为兼容模式被接受，但生成提示时忽略。
 
@@ -130,8 +144,7 @@ tools: [{ type: "function", function: { name, description?, parameters? } }]
 
 当前行为说明：
 
-- 文件内容解码后会添加进**系统提示**，而非用户消息，  
-  因此内容是瞬时的（不会写入会话历史）。
+- 文件内容解码后会添加进**系统提示**，而非用户消息，因此内容是瞬时的（不会写入会话历史）。
 - PDF 会被解析成文本。如果文本内容很少，将把前几页转为光栅图像传给模型。
 
 PDF 解析使用适合 Node 的 `pdfjs-dist` 旧版构建（不使用 worker）。现代的 PDF.js 构建依赖浏览器 worker/DOM，全局对象，因此不在 Gateway 中使用。
@@ -224,8 +237,7 @@ URL 拉取默认：
 
 - URL 白名单在拉取和重定向跳转时都会生效。
 - 允许某个主机名不能绕过私有/内部 IP 阻断。
-- 对于暴露于互联网的 Gateway，除了应用层保护，还应使用网络出口控制。  
-  详情见 [安全](/gateway/security)。
+- 对于暴露于互联网的 Gateway，除了应用层保护，还应使用网络出口控制。详情见 [安全](/gateway/security)。
 
 ## 流式传输（SSE）
 
