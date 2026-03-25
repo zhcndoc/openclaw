@@ -22,9 +22,10 @@ OpenClaw 按以下顺序选择模型：
 
 相关说明：
 
-- `agents.defaults.models` 是 OpenClaw 可用模型的白名单/目录（含别名）。
-- `agents.defaults.imageModel` 仅在主用模型无法接受图像时使用。
-- 每个代理的默认配置可通过 `agents.list[].model` 及绑定覆盖 `agents.defaults.model`（详见 [/concepts/multi-agent](/concepts/multi-agent)）。
+- `agents.defaults.models` 是 OpenClaw 可以使用的模型的允许列表/目录（加上别名）。
+- `agents.defaults.imageModel` **仅在**主模型无法接受图像时使用。
+- `agents.defaults.imageGenerationModel` 由共享的图像生成能力使用。如果省略，`image_generate` 仍可从兼容的认证支持的图像生成插件推断提供商默认值。如果设置特定提供商/模型，还需配置该提供商的认证/API 密钥。
+- 每个代理的默认值可通过 `agents.list[].model` 加上绑定来覆盖 `agents.defaults.model`（参见 [/concepts/multi-agent](/concepts/multi-agent)）。
 
 ## 快速模型策略
 
@@ -32,9 +33,9 @@ OpenClaw 按以下顺序选择模型：
 - 回退模型用于成本/延迟敏感任务及低风险聊天。
 - 对于具备工具功能的代理或不受信任的输入，避免使用较旧/较弱模型等级。
 
-## Onboarding (recommended)
+## Onboarding（推荐）
 
-If you don’t want to hand-edit config, run onboarding:
+如果不想手动编辑配置，请运行入门向导：
 
 ```bash
 openclaw onboard
@@ -46,14 +47,15 @@ openclaw onboard
 
 - `agents.defaults.model.primary` 和 `agents.defaults.model.fallbacks`
 - `agents.defaults.imageModel.primary` 和 `agents.defaults.imageModel.fallbacks`
-- `agents.defaults.models`（白名单 + 别名 + 提供商参数）
-- `models.providers`（自定义提供商，写入 `models.json`）
+- `agents.defaults.imageGenerationModel.primary` 和 `agents.defaults.imageGenerationModel.fallbacks`
+- `agents.defaults.models`（允许列表 + 别名 + 提供商参数）
+- `models.providers`（写入 `models.json` 的自定义提供商）
 
 模型引用会被规范化为小写。提供商别名如 `z.ai/*` 规范为 `zai/*`。
 
-提供商配置示例（包含 OpenCode）见[/gateway/configuration](/gateway/configuration#opencode)。
+提供商配置示例（包括 OpenCode）位于 [/providers/opencode](/providers/opencode)。
 
-## “模型不被允许”以及回复停止的原因
+## "Model is not allowed"（以及回复为何停止）
 
 如果设置了 `agents.defaults.models`，它将作为 `/model` 和会话覆盖的**白名单**。当用户选择的模型不在此白名单内时，OpenClaw 会返回：
 
@@ -61,7 +63,7 @@ openclaw onboard
 模型 "provider/model" 不允许。使用 /model 列出可用模型。
 ```
 
-此情景发生在正常回复生成之前，因此消息可能感觉像是“未响应”。解决方式是：
+此情景发生在正常回复生成之前，因此消息可能感觉像是"未响应"。解决方式是：
 
 - 将该模型添加至 `agents.defaults.models`，
 - 或清除白名单（移除 `agents.defaults.models`），
@@ -72,9 +74,9 @@ openclaw onboard
 ```json5
 {
   agent: {
-    model: { primary: "anthropic/claude-sonnet-4-5" },
+    model: { primary: "anthropic/claude-sonnet-4-6" },
     models: {
-      "anthropic/claude-sonnet-4-5": { alias: "Sonnet" },
+      "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
       "anthropic/claude-opus-4-6": { alias: "Opus" },
     },
   },

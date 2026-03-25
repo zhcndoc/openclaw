@@ -9,7 +9,7 @@ read_when:
 
 # Node.js
 
-OpenClaw 需要 **Node 22.16 或更高版本**。**Node 24 是默认且推荐的运行环境**，适用于安装、持续集成和发布工作流程。Node 22 仍通过活跃的长期支持（LTS）版本得到支持。[安装脚本](/install#install-methods) 会自动检测并安装 Node —— 本页适用于您希望自行安装 Node 并确保一切配置正确（版本、PATH、全局安装）时的情况。
+OpenClaw requires **Node 22.16 or newer**. **Node 24 is the default and recommended runtime** for installs, CI, and release workflows. Node 22 remains supported via the active LTS line. The [installer script](/install#alternative-install-methods) will detect and install Node automatically — this page is for when you want to set up Node yourself and make sure everything is wired up correctly (versions, PATH, global installs).
 
 ## 检查您的版本
 

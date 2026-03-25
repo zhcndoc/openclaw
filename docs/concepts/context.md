@@ -116,7 +116,7 @@ title: "上下文"
 
 截断时，运行时可在项目上下文下注入一个提示警告块。通过 `agents.defaults.bootstrapPromptTruncationWarning` 配置（`off`、`once`、`always`，默认 `once`）。
 
-## 技能：注入内容与按需加载
+## 技能：注入 vs 按需加载
 
 系统提示包含一个紧凑的 **技能列表**（名称 + 描述 + 位置），这张列表有真实的开销。
 
@@ -131,7 +131,7 @@ title: "上下文"
 
 `/context detail` 会分解最大的工具 schema，帮你看清主要开销来源。
 
-## 命令、指令与“内联快捷方式”
+## 命令、指令和"内联快捷方式"
 
 斜杠命令由 Gateway 处理。有几种不同行为：
 
@@ -139,7 +139,7 @@ title: "上下文"
 - **指令**：如 `/think`、`/verbose`、`/reasoning`、`/elevated`、`/model`、`/queue` 会在模型看到消息前被剥离。
   - 只有指令的消息会持久化会话设置。
   - 正常消息中的内联指令作为单条消息提示。
-- **内联快捷方式**（仅白名单发送者）：正常消息中的某些 `/...` 令牌可立即运行（示例：“hey /status”），且在模型看到剩余文本前被剥离。
+- **内联快捷方式**（仅白名单发送者）：正常消息中的某些 `/...` 令牌可立即运行（示例："hey /status"），且在模型看到剩余文本前被剥离。
 
 详情见：[斜杠命令](/tools/slash-commands)。
 
@@ -153,7 +153,7 @@ title: "上下文"
 
 文档： [会话](/concepts/session)、[压缩](/concepts/compaction)、[会话修剪](/concepts/session-pruning)。
 
-默认情况下，OpenClaw 使用内置的 `legacy` 上下文引擎来进行组装和压缩。如果你安装了提供 `kind: "context-engine"` 的插件并通过 `plugins.slots.contextEngine` 选择它，OpenClaw 会将上下文组装、`/compact` 以及相关的子代理上下文生命周期钩子委托给该引擎。
+默认情况下，OpenClaw 使用内置的 `legacy` 上下文引擎进行组装和压缩。如果你安装了提供 `kind: "context-engine"` 的插件，并通过 `plugins.slots.contextEngine` 选择它，OpenClaw 会将上下文组装、`/compact` 以及相关的子代理上下文生命周期钩子委托给该引擎。`ownsCompaction: false` 不会自动回退到 `legacy` 引擎；活动引擎仍需正确实现 `compact()`。详见[上下文引擎](/concepts/context-engine)了解完整的可插拔接口、生命周期钩子和配置。
 
 ## `/context` 实际报告什么
 

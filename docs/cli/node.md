@@ -26,7 +26,9 @@ title: "node"
 
 如果节点上的 `browser.enabled` 未被禁用，节点主机会自动发布浏览器代理。这样代理可以在该节点上使用浏览器自动化，无需额外配置。
 
-如需要可在节点关闭它：
+默认情况下，代理会暴露节点的普通浏览器配置文件界面。如果你设置了 `nodeHost.browserProxy.allowProfiles`，代理将变为限制性：未列入允许列表的配置文件定位将被拒绝，且持久化配置文件的创建/删除路由会被代理阻止。
+
+如有需要，可在节点上禁用它：
 
 ```json5
 {
@@ -57,12 +59,12 @@ openclaw node run --host <gateway-host> --port 18789
 
 `openclaw node run` 和 `openclaw node install` 会从配置或环境变量中解析 Gateway 认证（节点命令没有 `--token` / `--password` 参数）：
 
-- 优先检查 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
-- 然后回退到本地配置：`gateway.auth.token` / `gateway.auth.password`。
-- 在本地模式下，节点主机不会继承 `gateway.remote.token` / `gateway.remote.password`。
-- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置且未能解析，节点认证将严格失败（不会通过远程回退掩盖此失败）。
-- 在 `gateway.mode=remote` 时，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也可根据远程优先规则使用。
-- 旧版环境变量 `CLAWDBOT_GATEWAY_*` 不参与节点主机认证解析。
+- `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD` 会首先被检查。
+- 然后是本地配置回退：`gateway.auth.token` / `gateway.auth.password`。
+- 在本地模式下，节点主机有意不继承 `gateway.remote.token` / `gateway.remote.password`。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析，节点认证解析将失败关闭（无远程回退掩码）。
+- 在 `gateway.mode=remote` 模式下，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也符合远程优先级规则。
+- 节点主机认证解析仅识别 `OPENCLAW_GATEWAY_*` 环境变量。
 
 ## 服务（后台）
 
@@ -74,12 +76,8 @@ openclaw node install --host <gateway-host> --port 18789
 
 选项：
 
-- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
-- `--tls`：使用 TLS 连接网关
-- `--tls-fingerprint <sha256>`：预期的 TLS 证书指纹（sha256）
-- `--node-id <id>`：覆盖节点 id（会清除配对令牌）
-- `--display-name <name>`：覆盖节点显示名称
+与 run 相同，外加：
+
 - `--runtime <runtime>`：服务运行时（`node` 或 `bun`）
 - `--force`：已安装时重新安装/覆盖
 
@@ -98,16 +96,16 @@ openclaw node uninstall
 
 ## 配对
 
-首次连接会在 Gateway 上创建一个待处理的设备配对请求（`role: node`）。
-通过以下命令批准：
+首次连接会在 Gateway 上创建一个待处理的设备配对请求（`role: node`）。通过以下命令批准：
 
 ```bash
 openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-节点主机会将其节点 id、令牌、显示名称和 Gateway 连接信息存储在
-`~/.openclaw/node.json`。
+如果节点使用更改后的认证详情（角色/作用域/公钥）重试配对，之前的待处理请求将被取代，并创建新的 `requestId`。批准前请再次运行 `openclaw devices list`。
+
+节点主机将其节点 id、令牌、显示名称和网关连接信息存储在 `~/.openclaw/node.json` 中。
 
 ## 执行批准
 

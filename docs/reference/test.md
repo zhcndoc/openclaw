@@ -9,15 +9,23 @@ title: "测试"
 
 - 完整测试套件（套件，实时，Docker）：[测试](/help/testing)
 
-- `pnpm test:force`：终止任何占用默认控制端口的残留网关进程，然后使用独立的网关端口运行完整的 Vitest 测试套件，防止服务器测试与正在运行的实例冲突。当之前的网关运行导致端口 18789 被占用时使用此命令。
-- `pnpm test:coverage`：运行带 V8 覆盖率的单元测试套件（通过 `vitest.unit.config.ts`）。全局阈值为 70% 的行／分支／函数／语句覆盖率。覆盖范围排除集成密集的入口点（CLI 接线、网关／Telegram 桥接、Webchat 静态服务器），以保持目标集中在可单元测试的逻辑上。
-- 在 Node 22、23 和 24 上，`pnpm test` 默认使用 Vitest 的 `vmForks` 以加快启动速度。Node 25+ 则回退到 `forks`，直到重新验证。可以通过设置 `OPENCLAW_TEST_VM_FORKS=0|1` 强制指定行为。
-- `pnpm test`：默认运行快速的核心单元测试，用于快速本地反馈。
-- `pnpm test:channels`：运行频道密集的测试套件。
-- `pnpm test:extensions`：运行扩展／插件测试套件。
-- 网关集成：通过 `OPENCLAW_TEST_INCLUDE_GATEWAY=1 pnpm test` 或 `pnpm test:gateway` 选择性启用。
-- `pnpm test:e2e`：运行网关端到端冒烟测试（多实例 WS/HTTP/节点配对）。默认使用 `vitest.e2e.config.ts` 中的 `vmForks` + 自适应工作线程；可通过 `OPENCLAW_E2E_WORKERS=<n>` 调整，并设置 `OPENCLAW_E2E_VERBOSE=1` 开启详细日志。
-- `pnpm test:live`：运行提供者实时测试（minimax/zai）。需要 API 密钥和 `LIVE=1`（或提供者特定的 `*_LIVE_TEST=1`）以取消跳过测试。
+- `pnpm test:force`: Kills any lingering gateway process holding the default control port, then runs the full Vitest suite with an isolated gateway port so server tests don’t collide with a running instance. Use this when a prior gateway run left port 18789 occupied.
+- `pnpm test:coverage`: Runs the unit suite with V8 coverage (via `vitest.unit.config.ts`). Global thresholds are 70% lines/branches/functions/statements. Coverage excludes integration-heavy entrypoints (CLI wiring, gateway/telegram bridges, webchat static server) to keep the target focused on unit-testable logic.
+- `pnpm test:coverage:changed`: Runs unit coverage only for files changed since `origin/main`.
+- `pnpm test:changed`: runs the wrapper with `--changed origin/main`. The base Vitest config treats the wrapper manifests/config files as `forceRerunTriggers` so scheduler changes still rerun broadly when needed.
+- `pnpm test`: runs the full wrapper. It keeps only a small behavioral override manifest in git, then uses a checked-in timing snapshot to peel the heaviest measured unit files into dedicated lanes.
+- Unit files default to `threads` in the wrapper; keep fork-only exceptions documented in `test/fixtures/test-parallel.behavior.json`.
+- `pnpm test:channels` now defaults to `threads` via `vitest.channels.config.ts`; the March 22, 2026 direct full-suite control run passed clean without channel-specific fork exceptions.
+- `pnpm test:extensions` runs through the wrapper and keeps documented extension fork-only exceptions in `test/fixtures/test-parallel.behavior.json`; the shared extension lane still defaults to `threads`.
+- `pnpm test:extensions`: runs extension/plugin suites.
+- `pnpm test:perf:imports`: enables Vitest import-duration + import-breakdown reporting for the wrapper.
+- `pnpm test:perf:imports:changed`: same import profiling, but only for files changed since `origin/main`.
+- `pnpm test:perf:profile:main`: writes a CPU profile for the Vitest main thread (`.artifacts/vitest-main-profile`).
+- `pnpm test:perf:profile:runner`: writes CPU + heap profiles for the unit runner (`.artifacts/vitest-runner-profile`).
+- `pnpm test:perf:update-timings`: refreshes the checked-in slow-file timing snapshot used by `scripts/test-parallel.mjs`.
+- Gateway integration: opt-in via `OPENCLAW_TEST_INCLUDE_GATEWAY=1 pnpm test` or `pnpm test:gateway`.
+- `pnpm test:e2e`: Runs gateway end-to-end smoke tests (multi-instance WS/HTTP/node pairing). Defaults to `forks` + adaptive workers in `vitest.e2e.config.ts`; tune with `OPENCLAW_E2E_WORKERS=<n>` and set `OPENCLAW_E2E_VERBOSE=1` for verbose logs.
+- `pnpm test:live`: Runs provider live tests (minimax/zai). Requires API keys and `LIVE=1` (or provider-specific `*_LIVE_TEST=1`) to unskip.
 
 ## 本地 PR 网关
 
@@ -31,6 +39,7 @@ title: "测试"
 如果 `pnpm test` 在负载较高的主机上不稳定，先重新运行一次再判断为回归，然后用 `pnpm vitest run <path/to/test>` 进行隔离。对于内存受限的主机，请使用：
 
 - `OPENCLAW_TEST_PROFILE=low OPENCLAW_TEST_SERIAL_GATEWAY=1 pnpm test`
+- `OPENCLAW_VITEST_FS_MODULE_CACHE=0 pnpm test:changed`
 
 ## 模型延迟基准测试（本地密钥）
 

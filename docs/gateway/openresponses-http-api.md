@@ -140,11 +140,13 @@ URL 拉取默认：
 
 - `files.allowUrl`: `true`
 - `images.allowUrl`: `true`
-- `maxUrlParts`: `8` （每请求基于 URL 的 `input_file` + `input_image` 总数限制）
-- 请求有保护机制（DNS 解析、私有 IP 阻断、重定向限制、超时限制）。
-- 每个输入类型支持可选的主机名允入白名单（`files.urlAllowlist`、`images.urlAllowlist`）。
-  - 精确主机名示例：`"cdn.example.com"`
-  - 通配符子域示例：`"*.assets.example.com"`（不匹配顶级域名）
+- `maxUrlParts`: `8` (每个请求基于 URL 的 `input_file` + `input_image` 部分总数)
+- 请求受保护（DNS 解析、私有 IP 阻断、重定向限制、超时）。
+- 每种输入类型支持可选的主机名白名单（`files.urlAllowlist`、`images.urlAllowlist`）。
+  - 精确主机：`"cdn.example.com"`
+  - 通配符子域：`"*.assets.example.com"`（不匹配根域）
+  - 空或未设置的白名单表示没有主机名白名单限制。
+- 要完全禁用基于 URL 的拉取，请设置 `files.allowUrl: false` 和/或 `images.allowUrl: false`。
 
 ## 文件与图片限制（配置）
 
@@ -220,7 +222,7 @@ URL 拉取默认：
 
 安全提示：
 
-- URL 允许列表在拉取和重定向跳转时都会生效。
+- URL 白名单在拉取和重定向跳转时都会生效。
 - 允许某个主机名不能绕过私有/内部 IP 阻断。
 - 对于暴露于互联网的 Gateway，除了应用层保护，还应使用网络出口控制。  
   详情见 [安全](/gateway/security)。

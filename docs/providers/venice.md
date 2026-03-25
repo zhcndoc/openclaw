@@ -124,7 +124,7 @@ openclaw models list | grep venice
 
 ## 可用模型（共 41 个）
 
-### 私密模型（26 个）— 完全私密，无日志
+### Private Models (26) - Fully Private, No Logging
 
 | 模型 ID                        | 名称                              | 上下文（token） | 特性                       |
 | ------------------------------ | --------------------------------- | --------------- | -------------------------- |
@@ -155,7 +155,7 @@ openclaw models list | grep venice
 | `minimax-m21`                 | MiniMax M2.1                  | 198k            | 推理                       |
 | `minimax-m25`                 | MiniMax M2.5                  | 198k            | 推理                       |
 
-### 匿名模型（15 个） — 通过 Venice 代理
+### Anonymized Models (15) - Via Venice Proxy
 
 | 模型 ID                     | 名称                           | 上下文（token） | 特性                       |
 | --------------------------- | ------------------------------ | --------------- | -------------------------- |

@@ -1,9 +1,9 @@
 ---
 summary: "OpenClaw 症状优先故障排查中心"
 read_when:
-  - OpenClaw 无法正常工作时，需要最快的解决路径
-  - 希望在深入查看详细运行手册前进行初步分诊流程
-title: "故障排查"
+  - OpenClaw 无法工作且您需要最快的修复路径
+  - 您希望在深入详细运行手册之前进行分诊流程
+title: "通用故障排查"
 ---
 
 # 故障排查
@@ -46,9 +46,9 @@ openclaw logs --follow
 
 插件包修复步骤：
 
-1. 在 `package.json` 中添加 `openclaw.extensions`。
-2. 指定入口文件为构建后的运行时代码文件（通常为 `./dist/index.js`）。
-3. 重新发布插件并再次运行 `openclaw plugins install <npm-spec>`。
+1. 将 `openclaw.extensions` 添加到 `package.json`。
+2. 将入口指向构建后的运行时文件（通常为 `./dist/index.js`）。
+3. 重新发布插件并再次运行 `openclaw plugins install <package>`。
 
 示例：
 
@@ -62,7 +62,7 @@ openclaw logs --follow
 }
 ```
 
-参考文档：[/tools/plugin#distribution-npm](/tools/plugin#distribution-npm)
+参考：[插件架构](/plugins/architecture)
 
 ## 决策树
 

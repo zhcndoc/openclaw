@@ -1,9 +1,9 @@
 ---
 summary: "`openclaw hooks` CLI 参考（代理钩子）"
 read_when:
-  - 你想管理代理钩子
-  - 你想安装或更新钩子
-title: "钩子"
+  - 您想管理代理钩子
+  - 您想检查钩子可用性或启用工作区钩子
+title: "hooks"
 ---
 
 # `openclaw hooks`
@@ -12,8 +12,8 @@ title: "钩子"
 
 相关内容：
 
-- 钩子：[Hooks](/automation/hooks)
-- 插件钩子：[Plugins](/tools/plugin#plugin-hooks)
+- Hooks: [Hooks](/automation/hooks)
+- Plugin hooks: [Plugin hooks](/plugins/architecture#provider-runtime-hooks)
 
 ## 列出所有钩子
 
@@ -21,7 +21,7 @@ title: "钩子"
 openclaw hooks list
 ```
 
-列出工作区、管理和捆绑目录中所有发现的钩子。
+列出所有发现的钩子，包括工作区、托管、额外和捆绑目录中的钩子。
 
 **选项：**
 
@@ -36,9 +36,9 @@ Hooks (4/4 ready)
 
 Ready:
   🚀 boot-md ✓ - 在网关启动时运行 BOOT.md
-  📎 bootstrap-extra-files ✓ - 代理启动时注入额外的工作区引导文件
+  📎 bootstrap-extra-files ✓ - 在代理引导期间注入额外的工作区引导文件
   📝 command-logger ✓ - 将所有命令事件记录到集中审计文件
-  💾 session-memory ✓ - 在执行 /new 命令时保存会话上下文到内存
+  💾 session-memory ✓ - 当发出 /new 或 /reset 命令时将会话上下文保存到内存
 ```
 
 **示例（详细模式）：**
@@ -84,14 +84,14 @@ openclaw hooks info session-memory
 ```
 💾 session-memory ✓ Ready
 
-在执行 /new 命令时保存会话上下文到内存
+当发出 /new 或 /reset 命令时将会话上下文保存到内存
 
-详情：
-  来源: openclaw-bundled
-  路径: /path/to/openclaw/hooks/bundled/session-memory/HOOK.md
-  处理程序: /path/to/openclaw/hooks/bundled/session-memory/handler.ts
-  主页: https://docs.openclaw.ai/automation/hooks#session-memory
-  事件: command:new
+Details:
+  Source: openclaw-bundled
+  Path: /path/to/openclaw/hooks/bundled/session-memory/HOOK.md
+  Handler: /path/to/openclaw/hooks/bundled/session-memory/handler.ts
+  Homepage: https://docs.openclaw.ai/automation/hooks#session-memory
+  Events: command:new, command:reset
 
 要求：
   配置: ✓ workspace.dir
@@ -103,7 +103,7 @@ openclaw hooks info session-memory
 openclaw hooks check
 ```
 
-显示钩子合格状态摘要（已准备/未准备数量）。
+显示钩子合格状态摘要（就绪与未就绪的数量）。
 
 **选项：**
 
@@ -127,7 +127,7 @@ openclaw hooks enable <name>
 
 通过将钩子添加到配置文件（`~/.openclaw/config.json`）启用特定钩子。
 
-**注意：** 由插件管理的钩子在 `openclaw hooks list` 中显示为 `plugin:<id>`，无法通过此命令启用/禁用。需启用/禁用对应插件。
+**注意：** 工作区钩子默认禁用，直到在此处或配置中启用。由插件管理的钩子在 `openclaw hooks list` 中显示为 `plugin:<id>`，无法在此处启用/禁用。请改为启用/禁用插件。
 
 **参数：**
 
@@ -147,13 +147,15 @@ openclaw hooks enable session-memory
 
 **操作说明：**
 
-- 检查钩子是否存在且符合条件
+- 验证钩子是否存在且符合条件
 - 在配置中更新 `hooks.internal.entries.<name>.enabled = true`
 - 将配置保存至磁盘
 
+如果钩子来自 `<workspace>/hooks/`，在网关加载它之前需要此选择加入步骤。
+
 **启用后：**
 
-- 重启网关以重新加载钩子（macOS 菜单栏应用重启，或在开发中重启网关进程）
+- 重启网关以重新加载钩子（重启 macOS 菜单栏应用，或在开发中重启网关进程）
 
 ## 禁用钩子
 
@@ -183,14 +185,17 @@ openclaw hooks disable command-logger
 
 - 重启网关以重新加载钩子
 
-## 安装钩子
+## 安装钩子包
 
 ```bash
-openclaw hooks install <path-or-spec>
-openclaw hooks install <npm-spec> --pin
+openclaw plugins install <package>        # 先从 ClawHub，再从 npm
+openclaw plugins install <package> --pin  # 固定版本
+openclaw plugins install <path>           # 本地路径
 ```
 
-从本地文件夹/归档或 npm 安装钩子包。
+通过统一的插件安装程序安装钩子包。
+
+`openclaw hooks install` 仍可作为兼容性别名使用，但会打印弃用警告并转发到 `openclaw plugins install`。
 
 npm 规格仅限 **注册表**（包名 + 可选版本/标签），不支持 Git/URL/文件规格。出于安全考虑，本地依赖安装会带上 `--ignore-scripts` 参数。
 
@@ -211,26 +216,30 @@ npm 规格仅限 **注册表**（包名 + 可选版本/标签），不支持 Git
 
 ```bash
 # 本地目录
-openclaw hooks install ./my-hook-pack
+openclaw plugins install ./my-hook-pack
 
 # 本地归档
-openclaw hooks install ./my-hook-pack.zip
+openclaw plugins install ./my-hook-pack.zip
 
 # NPM 包
-openclaw hooks install @openclaw/my-hook-pack
+openclaw plugins install @openclaw/my-hook-pack
 
-# 链接本地目录（不复制）
-openclaw hooks install -l ./my-hook-pack
+# 链接本地目录而不复制
+openclaw plugins install -l ./my-hook-pack
 ```
 
-## 更新钩子
+链接的钩子包被视为来自操作员配置目录的托管钩子，而非工作区钩子。
+
+## 更新钩子包
 
 ```bash
-openclaw hooks update <id>
-openclaw hooks update --all
+openclaw plugins update <id>
+openclaw plugins update --all
 ```
 
-更新已安装的钩子包（仅限 npm 安装的）。
+通过统一的插件更新程序更新跟踪的基于 npm 的钩子包。
+
+`openclaw hooks update` 仍可作为兼容性别名使用，但会打印弃用警告并转发到 `openclaw plugins update`。
 
 **选项：**
 
@@ -243,7 +252,7 @@ openclaw hooks update --all
 
 ### session-memory
 
-在执行 `/new` 时保存会话上下文到内存。
+当您发出 `/new` 或 `/reset` 时将会话上下文保存到内存。
 
 **启用：**
 

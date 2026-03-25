@@ -75,6 +75,25 @@ title: "会话工具"
 - 返回消息数组，格式为原始聊天记录格式。
 - 如果传入 `sessionId`，OpenClaw 会将其解析为对应的会话键（缺失ID会报错）。
 
+## 网关会话历史和实时转录 API
+
+Control UI 和网关客户端可以直接使用底层历史和实时转录接口。
+
+HTTP:
+
+- `GET /sessions/{sessionKey}/history`
+- 查询参数：`limit`、`cursor`、`includeTools=1`、`follow=1`
+- 未知会话返回 HTTP `404`，`error.type = "not_found"`
+- `follow=1` 将响应升级为 SSE 流，用于接收该会话的转录更新
+
+WebSocket:
+
+- `sessions.subscribe` 订阅客户端可见的所有会话生命周期和转录事件
+- `sessions.messages.subscribe { key }` 仅订阅单个会话的 `session.message` 事件
+- `sessions.messages.unsubscribe { key }` 移除该定向转录订阅
+- `session.message` 携带追加的转录消息以及可用的实时使用元数据
+- `sessions.changed` 发出 `phase: "message"` 用于转录追加，以便会话列表可以刷新计数器和预览
+
 ## sessions_send
 
 向另一个会话发送消息。
@@ -143,31 +162,40 @@ title: "会话工具"
 
 ## sessions_spawn
 
-在隔离会话中启动子代理运行，并将结果公告回请求者聊天频道。
+启动一个独立的委托会话。
+
+- 默认运行时：OpenClaw 子代理（`runtime: "subagent"`）。
+- ACP 工具会话使用 `runtime: "acp"`，并遵循 ACP 特定的目标定位/策略规则。
+- 除非另有说明，本节聚焦于子代理行为。有关 ACP 特定行为，请参阅 [ACP Agents](/tools/acp-agents)。
 
 参数：
 
 - `task`（必需）
-- `label?`（可选，用于日志/UI）
-- `agentId?`（可选，如允许则可以在另一个代理ID下启动）
-- `model?`（可选，覆盖子代理模型；无效值报错）
-- `thinking?`（可选，覆盖子代理运行的思考等级）
-- `runTimeoutSeconds?`（设置时默认为 `agents.defaults.subagents.runTimeoutSeconds`，否则为 `0`；设置则在 N 秒后中止子代理运行）
-- `thread?`（默认 false；请求线程绑定路由，若频道/插件支持）
-- `mode?`（`run|session`；默认 `run`，但当 `thread=true` 时默认 `session`；`mode="session"` 需要 `thread=true`）
+- `runtime?`（`subagent|acp`；默认 `subagent`）
+- `label?`（可选；用于日志/UI）
+- `agentId?`（可选）
+  - `runtime: "subagent"`：如果 `subagents.allowAgents` 允许，目标为另一个 OpenClaw 代理 ID
+  - `runtime: "acp"`：如果 `acp.allowedAgents` 允许，目标为 ACP 工具 ID
+- `model?`（可选；覆盖子代理模型；无效值报错）
+- `thinking?`（可选；覆盖子代理运行的思考级别）
+- `runTimeoutSeconds?`（设置时默认 `agents.defaults.subagents.runTimeoutSeconds`，否则 `0`；设置后 N 秒后中止子代理运行）
+- `thread?`（默认 false；当频道/插件支持时，请求此生成绑定线程路由）
+- `mode?`（`run|session`；默认 `run`，但 `thread=true` 时默认 `session`；`mode="session"` 要求 `thread=true`）
 - `cleanup?`（`delete|keep`，默认 `keep`）
-- `sandbox?`（`inherit|require`，默认 `inherit`；`require` 拒绝启动目标非沙箱运行）
-- `attachments?`（可选的内联文件数组；仅子代理运行有效，ACP 拒绝）。每条目：`{ name, content, encoding?: "utf8" | "base64", mimeType? }`。文件会在子工作区 `.openclaw/attachments/<uuid>/` 中实化。每文件返回 sha256 收据。
-- `attachAs?`（可选；保留未来挂载用法的 `{ mountPath? }` 提示）
+- `sandbox?`（`inherit|require`，默认 `inherit`；`require` 会在目标子运行时未沙箱化时拒绝生成）
+- `attachments?`（可选内联文件数组；仅子代理运行时，ACP 拒绝）。每项：`{ name, content, encoding?: "utf8" | "base64", mimeType? }`。文件物化为子工作区 `.openclaw/attachments/<uuid>/`。返回每项文件的 sha256 收据。
+- `attachAs?`（可选；`{ mountPath? }` 提示保留用于未来挂载实现）
 
 白名单：
 
-- `agents.list[].subagents.allowAgents`：允许通过 `agentId` 启动的代理ID列表（`["*"]` 表示允许任何）。默认仅允许请求者代理。
-- 沙箱继承保护：请求会话为沙箱环境时，`sessions_spawn` 拒绝启动非沙箱目标。
+- `runtime: "subagent"`：`agents.list[].subagents.allowAgents` 控制通过 `agentId` 允许哪些 OpenClaw 代理 ID（`["*"]` 允许任意）。默认：仅请求代理自身。
+- `runtime: "acp"`：`acp.allowedAgents` 控制允许哪些 ACP 工具 ID。这与 `subagents.allowAgents` 是独立的策略。
+- 沙箱继承守卫：如果请求会话已沙箱化，`sessions_spawn` 会拒绝将在非沙箱环境中运行的目标。
 
 发现：
 
-- 使用 `agents_list` 查询哪些代理ID允许 `sessions_spawn`。
+- 使用 `agents_list` 发现 `runtime: "subagent"` 的允许目标。
+- 对于 `runtime: "acp"`，使用配置的 ACP 工具 ID 和 `acp.allowedAgents`；`agents_list` 不列出 ACP 工具目标。
 
 行为：
 

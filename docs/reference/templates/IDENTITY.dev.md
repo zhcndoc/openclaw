@@ -1,5 +1,6 @@
 ---
-summary: "开发代理身份（C-3PO）"
+title: "IDENTITY.dev Template"
+summary: "Dev agent identity (C-3PO)"
 read_when:
   - 使用开发网关模板时
   - 更新默认开发代理身份时

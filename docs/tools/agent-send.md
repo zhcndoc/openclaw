@@ -1,51 +1,100 @@
 ---
-summary: "直接运行 `openclaw agent` CLI（可选投递）"
+summary: "Run agent turns from the CLI and optionally deliver replies to channels"
 read_when:
-  - 添加或修改 agent CLI 入口点
-title: "Agent 发送"
+  - You want to trigger agent runs from scripts or the command line
+  - You need to deliver agent replies to a chat channel programmatically
+title: "Agent Send"
 ---
 
-# `openclaw agent`（直接运行 agent）
+# Agent Send
 
-`openclaw agent` 运行单个 agent 回合，无需入站聊天消息。默认情况下，它 **通过 Gateway** 运行；添加 `--local` 可强制使用当前机器上的嵌入式运行时。
+`openclaw agent` runs a single agent turn from the command line without needing
+an inbound chat message. Use it for scripted workflows, testing, and
+programmatic delivery.
+
+## Quick start
+
+<Steps>
+  <Step title="Run a simple agent turn">
+    ```bash
+    openclaw agent --message "What is the weather today?"
+    ```
+
+    This sends the message through the Gateway and prints the reply.
+
+  </Step>
+
+  <Step title="Target a specific agent or session">
+    ```bash
+    # Target a specific agent
+    openclaw agent --agent ops --message "Summarize logs"
+
+    # Target a phone number (derives session key)
+    openclaw agent --to +15555550123 --message "Status update"
+
+    # Reuse an existing session
+    openclaw agent --session-id abc123 --message "Continue the task"
+    ```
+
+  </Step>
+
+  <Step title="Deliver the reply to a channel">
+    ```bash
+    # Deliver to WhatsApp (default channel)
+    openclaw agent --to +15555550123 --message "Report ready" --deliver
+
+    # Deliver to Slack
+    openclaw agent --agent ops --message "Generate report" \
+      --deliver --reply-channel slack --reply-to "#reports"
+    ```
+
+  </Step>
+</Steps>
+
+## Flags
+
+| Flag                          | Description                                                 |
+| ----------------------------- | ----------------------------------------------------------- |
+| `--message \<text\>`          | Message to send (required)                                  |
+| `--to \<dest\>`               | Derive session key from a target (phone, chat id)           |
+| `--agent \<id\>`              | Target a configured agent (uses its `main` session)         |
+| `--session-id \<id\>`         | Reuse an existing session by id                             |
+| `--local`                     | Force local embedded runtime (skip Gateway)                 |
+| `--deliver`                   | Send the reply to a chat channel                            |
+| `--channel \<name\>`          | Delivery channel (whatsapp, telegram, discord, slack, etc.) |
+| `--reply-to \<target\>`       | Delivery target override                                    |
+| `--reply-channel \<name\>`    | Delivery channel override                                   |
+| `--reply-account \<id\>`      | Delivery account id override                                |
+| `--thinking \<level\>`        | Set thinking level (off, minimal, low, medium, high, xhigh) |
+| `--verbose \<on\|full\|off\>` | Set verbose level                                           |
+| `--timeout \<seconds\>`       | Override agent timeout                                      |
+| `--json`                      | Output structured JSON                                      |
 
 ## 行为
 
-- 必需参数：`--message <文本>`
-- 会话选择：
-  - `--to <目标>` 从目标推导会话密钥（群组/频道保持隔离；私聊合并为 `main`），**或者**
-  - `--session-id <id>` 复用已有会话 ID，**或者**
-  - `--agent <id>` 直接指定配置好的 agent（使用该 agent 的 `main` 会话密钥）
-- 运行与普通入站回复相同的嵌入式 agent 运行时。
-- 思考/详细标记会保留到会话存储中。
-- 输出：
-  - 默认：打印回复文本（加上 `MEDIA:<url>` 行）
-  - `--json`：打印结构化负载及元数据
-- 可选通过 `--deliver` + `--channel` 将回复投递到频道（目标格式匹配 `openclaw message --target`）。
-- 使用 `--reply-channel`/`--reply-to`/`--reply-account` 覆盖投递目标，而不改变会话。
-
-如果 Gateway 不可达，CLI 会 **回退** 到嵌入式本地运行。
+- By default, the CLI goes **through the Gateway**. Add `--local` to force the
+  embedded runtime on the current machine.
+- If the Gateway is unreachable, the CLI **falls back** to the local embedded run.
+- Session selection: `--to` derives the session key (group/channel targets
+  preserve isolation; direct chats collapse to `main`).
+- Thinking and verbose flags persist into the session store.
+- Output: plain text by default, or `--json` for structured payload + metadata.
 
 ## 示例
 
 ```bash
-openclaw agent --to +15555550123 --message "status update"
-openclaw agent --agent ops --message "Summarize logs"
-openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium
+# Simple turn with JSON output
 openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json
-openclaw agent --to +15555550123 --message "Summon reply" --deliver
-openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"
+
+# Turn with thinking level
+openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium
+
+# Deliver to a different channel than the session
+openclaw agent --agent ops --message "Alert" --deliver --reply-channel telegram --reply-to "@admin"
 ```
 
-## 参数
+## Related
 
-- `--local`：本地运行（需要在 shell 中配置模型提供者 API 密钥）
-- `--deliver`：将回复发送到选定频道
-- `--channel`：投递频道（`whatsapp|telegram|discord|googlechat|slack|signal|imessage`，默认：`whatsapp`）
-- `--reply-to`：投递目标覆盖
-- `--reply-channel`：投递频道覆盖
-- `--reply-account`：投递账户 ID 覆盖
-- `--thinking <off|minimal|low|medium|high|xhigh>`：持久化思考等级（仅限 GPT-5.2 + Codex 模型）
-- `--verbose <on|full|off>`：持久化详细等级
-- `--timeout <秒>`：覆盖 agent 超时设置
-- `--json`：输出结构化 JSON
+- [Agent CLI reference](/cli/agent)
+- [Sub-agents](/tools/subagents) — background sub-agent spawning
+- [Sessions](/concepts/session) — how session keys work

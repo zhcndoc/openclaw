@@ -22,7 +22,7 @@ title: "OpenClaw"
     />
 </p>
 
-> _“去角质！去角质！”_ — 一只太空龙虾，大概是说的
+> _“去角质！去角质！”_ — 一只太空龙虾，大概是这么说的
 
 <p align="center">
   <strong>支持 WhatsApp、Telegram、Discord、iMessage 等多渠道的任意操作系统 AI 代理网关。</strong><br />
@@ -33,7 +33,7 @@ title: "OpenClaw"
   <Card title="快速开始" href="/start/getting-started" icon="rocket">
     安装 OpenClaw，几分钟内启动网关。
   </Card>
-  <Card title="Run Onboarding" href="/start/wizard" icon="sparkles">
+  <Card title="运行引导流程" href="/start/wizard" icon="sparkles">
     使用 `openclaw onboard` 和配对流程进行引导设置。
   </Card>
   <Card title="打开控制界面" href="/web/control-ui" icon="layout-dashboard">
@@ -88,7 +88,7 @@ flowchart LR
   <Card title="网页控制界面" icon="monitor">
     浏览器仪表盘，管理聊天、配置、会话和节点。
   </Card>
-  <Card title="Mobile nodes" icon="smartphone">
+  <Card title="移动端节点" icon="smartphone">
     为 Canvas、摄像头和语音功能工作流程配对 iOS 和 Android 节点。
   </Card>
 </Columns>
@@ -106,15 +106,19 @@ flowchart LR
     openclaw onboard --install-daemon
     ```
   </Step>
-  <Step title="配对 WhatsApp 并启动网关">
+  <Step title="开始聊天">
+    在浏览器中打开控制界面并发送消息：
+
     ```bash
-    openclaw channels login
-    openclaw gateway --port 18789
+    openclaw dashboard
     ```
+
+    或连接一个渠道（[Telegram](/channels/telegram) 最快）并从手机聊天。
+
   </Step>
 </Steps>
 
-需要完整安装和开发环境？参见 [快速开始](/start/quickstart)。
+需要完整的安装和开发设置？请参阅 [入门指南](/start/getting-started)。
 
 ## 仪表盘
 
@@ -163,7 +167,7 @@ flowchart LR
   <Card title="渠道" href="/channels/telegram" icon="message-square">
     WhatsApp、Telegram、Discord 等渠道的专门设置。
   </Card>
-  <Card title="Nodes" href="/nodes" icon="smartphone">
+  <Card title="节点" href="/nodes" icon="smartphone">
     iOS 和 Android 节点支持配对、画布、摄像头和设备操作。
   </Card>
   <Card title="帮助" href="/help" icon="life-buoy">

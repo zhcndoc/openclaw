@@ -1,8 +1,8 @@
 ---
 summary: "Mac 应用中的语音唤醒和按键通话模式及路由详情"
 read_when:
-  - 正在处理语音唤醒或按键通话路径时
-title: "语音唤醒"
+  - Working on voice wake or PTT pathways
+title: "Voice Wake (macOS)"
 ---
 
 # 语音唤醒 & 按键通话

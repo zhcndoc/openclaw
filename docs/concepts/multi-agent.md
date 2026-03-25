@@ -9,7 +9,7 @@ status: active
 
 目标：在一个运行中的 Gateway 中实现多个**隔离的**代理（独立工作区 + `agentDir` + 会话），以及多个频道账户（例如两个 WhatsApp）。入站消息通过绑定路由到指定代理。
 
-## 什么是“一个代理”？
+## What is "one agent"?
 
 **代理** 是一个完全独立的智能体，拥有自己的：
 
@@ -377,7 +377,7 @@ openclaw channels login --channel whatsapp --account biz
         id: "chat",
         name: "日常",
         workspace: "~/.openclaw/workspace-chat",
-        model: "anthropic/claude-sonnet-4-5",
+        model: "anthropic/claude-sonnet-4-6",
       },
       {
         id: "opus",
@@ -411,7 +411,7 @@ openclaw channels login --channel whatsapp --account biz
         id: "chat",
         name: "日常",
         workspace: "~/.openclaw/workspace-chat",
-        model: "anthropic/claude-sonnet-4-5",
+        model: "anthropic/claude-sonnet-4-6",
       },
       {
         id: "opus",
@@ -487,7 +487,7 @@ openclaw channels login --channel whatsapp --account biz
 
 ## 每代理沙箱及工具配置
 
-自 v2026.1.6 起，每个代理可设定独立沙箱和工具限制：
+每个代理可以拥有自己的沙箱和工具限制：
 
 ```js
 {

@@ -1,32 +1,33 @@
 ---
 title: IRC
-description: 将 OpenClaw 连接到 IRC 频道和私信。
 summary: "IRC 插件设置、访问控制和故障排除"
 read_when:
   - 你想要将 OpenClaw 连接到 IRC 频道或私信
   - 你正在配置 IRC 允许列表、群组策略或提及门控
 ---
 
-当你想让 OpenClaw 加入经典频道（`#room`）和私信时，使用 IRC。
-IRC 作为扩展插件附带，但在主配置的 `channels.irc` 下配置。
+# IRC
+
+当你希望在经典频道（`#room`）和私信中使用 OpenClaw 时，请使用 IRC。
+IRC 作为扩展插件提供，但它在主配置中的 `channels.irc` 下进行配置。
 
 ## 快速开始
 
 1. 在 `~/.openclaw/openclaw.json` 中启用 IRC 配置。
 2. 至少设置以下内容：
 
-```json
+```json5
 {
-  "channels": {
-    "irc": {
-      "enabled": true,
-      "host": "irc.libera.chat",
-      "port": 6697,
-      "tls": true,
-      "nick": "openclaw-bot",
-      "channels": ["#openclaw"]
-    }
-  }
+  channels: {
+    irc: {
+      enabled: true,
+      host: "irc.libera.chat",
+      port: 6697,
+      tls: true,
+      nick: "openclaw-bot",
+      channels: ["#openclaw"],
+    },
+  },
 }
 ```
 
@@ -73,7 +74,7 @@ IRC 频道有两道独立的“门”：
 
 示例（允许任何人在 `#tuirc-dev` 与机器人交谈）：
 
-```json5
+```json55
 {
   channels: {
     irc: {
@@ -94,7 +95,7 @@ IRC 频道有两道独立的“门”：
 
 如果你希望机器人在 IRC 频道中**无需提及就回复**，请为该频道禁用提及门控：
 
-```json5
+```json55
 {
   channels: {
     irc: {
@@ -112,7 +113,7 @@ IRC 频道有两道独立的“门”：
 
 或者允许**所有** IRC 频道（无单独频道允许列表）并仍然无需提及就回复：
 
-```json5
+```json55
 {
   channels: {
     irc: {
@@ -132,7 +133,7 @@ IRC 频道有两道独立的“门”：
 
 ### 所有人使用同一套工具
 
-```json5
+```json55
 {
   channels: {
     irc: {
@@ -153,7 +154,7 @@ IRC 频道有两道独立的“门”：
 
 使用 `toolsBySender` 为 `"*"` 应用更严格的策略，为你的昵称设置较宽松的策略：
 
-```json5
+```json55
 {
   channels: {
     irc: {
@@ -188,32 +189,32 @@ IRC 频道有两道独立的“门”：
 
 连接后使用 NickServ 认证：
 
-```json
+```json5
 {
-  "channels": {
-    "irc": {
-      "nickserv": {
-        "enabled": true,
-        "service": "NickServ",
-        "password": "your-nickserv-password"
-      }
-    }
-  }
+  channels: {
+    irc: {
+      nickserv: {
+        enabled: true,
+        service: "NickServ",
+        password: "your-nickserv-password",
+      },
+    },
+  },
 }
 ```
 
 可选的连接时一次性注册：
 
-```json
+```json5
 {
-  "channels": {
-    "irc": {
-      "nickserv": {
-        "register": true,
-        "registerEmail": "bot@example.com"
-      }
-    }
-  }
+  channels: {
+    irc: {
+      nickserv: {
+        register: true,
+        registerEmail: "bot@example.com",
+      },
+    },
+  },
 }
 ```
 

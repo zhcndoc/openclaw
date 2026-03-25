@@ -8,29 +8,28 @@ title: "入门指南"
 
 # 入门指南
 
-目标：以最少的设置，从零开始实现第一个可用的聊天。
+Install OpenClaw, run onboarding, and chat with your AI assistant — all in
+about 5 minutes. By the end you will have a running Gateway, configured auth,
+and a working chat session.
 
-<Info>
-最快的聊天方式：打开控制面板（无需设置频道）。运行 `openclaw dashboard`
-并在浏览器中聊天，或打开 <http://127.0.0.1:18789/>，访问
-<Tooltip headline="网关主机" tip="运行 OpenClaw 网关服务的机器。">网关主机</Tooltip>。
-文档：[控制面板](/web/dashboard) 和 [控制 UI](/web/control-ui)。
-</Info>
+## What you need
 
-## 先决条件
-
-- 推荐使用 Node 24（Node 22 LTS，当前版本为 `22.16+`，仍支持以保持兼容性）
+- **Node.js** — Node 24 recommended (Node 22.16+ also supported)
+- **An API key** from a model provider (Anthropic, OpenAI, Google, etc.) — onboarding will prompt you
 
 <Tip>
-如果不确定，可以用 `node --version` 查看你的 Node 版本。
+Check your Node version with `node --version`.
+**Windows users:** both native Windows and WSL2 are supported. WSL2 is more
+stable and recommended for the full experience. See [Windows](/platforms/windows).
+Need to install Node? See [Node setup](/install/node).
 </Tip>
 
-## 快速设置（命令行）
+## Quick setup
 
 <Steps>
-  <Step title="安装 OpenClaw（推荐）">
+  <Step title="Install OpenClaw">
     <Tabs>
-      <Tab title="macOS/Linux">
+      <Tab title="macOS / Linux">
         ```bash
         curl -fsSL https://openclaw.ai/install.sh | bash
         ```
@@ -48,7 +47,7 @@ title: "入门指南"
     </Tabs>
 
     <Note>
-    其他安装方法及要求请见：[安装](/install)。
+    Other install methods (Docker, Nix, npm): [Install](/install).
     </Note>
 
   </Step>
@@ -57,79 +56,61 @@ title: "入门指南"
     openclaw onboard --install-daemon
     ```
 
-    引导配置认证、网关设置和可选的频道。
-    详情见 [Onboarding (CLI)](/start/wizard)。
+    The wizard walks you through choosing a model provider, setting an API key,
+    and configuring the Gateway. It takes about 2 minutes.
+
+    See [Onboarding (CLI)](/start/wizard) for the full reference.
 
   </Step>
-  <Step title="检查网关">
-    如果你安装了服务，应该已在运行：
-
+  <Step title="Verify the Gateway is running">
     ```bash
     openclaw gateway status
     ```
 
+    You should see the Gateway listening on port 18789.
+
   </Step>
-  <Step title="打开控制 UI">
+  <Step title="Open the dashboard">
     ```bash
     openclaw dashboard
     ```
+
+    This opens the Control UI in your browser. If it loads, everything is working.
+
+  </Step>
+  <Step title="Send your first message">
+    Type a message in the Control UI chat and you should get an AI reply.
+
+    Want to chat from your phone instead? The fastest channel to set up is
+    [Telegram](/channels/telegram) (just a bot token). See [Channels](/channels)
+    for all options.
+
   </Step>
 </Steps>
 
-<Check>
-如果控制 UI 加载成功，说明你的网关已准备就绪。
-</Check>
-
-## 可选检查和附加功能
-
-<AccordionGroup>
-  <Accordion title="前台运行网关">
-    适合快速测试或故障排查。
-
-    ```bash
-    openclaw gateway --port 18789
-    ```
-
-  </Accordion>
-  <Accordion title="发送测试消息">
-    需要配置好的频道。
-
-    ```bash
-    openclaw message send --target +15555550123 --message "Hello from OpenClaw"
-    ```
-
-  </Accordion>
-</AccordionGroup>
-
-## 有用的环境变量
-
-如果你以服务账号运行 OpenClaw 或想自定义配置/状态存放位置：
-
-- `OPENCLAW_HOME` 设置用于内部路径解析的主目录。
-- `OPENCLAW_STATE_DIR` 覆盖状态目录。
-- `OPENCLAW_CONFIG_PATH` 覆盖配置文件路径。
-
-完整环境变量参考：[环境变量](/help/environment)。
-
-## 深入了解
+## What to do next
 
 <Columns>
-  <Card title="Onboarding (CLI)" href="/start/wizard">
-    完整的 CLI 引导参考和高级选项。
+  <Card title="Connect a channel" href="/channels" icon="message-square">
+    WhatsApp, Telegram, Discord, iMessage, and more.
   </Card>
-  <Card title="macOS 应用入门" href="/start/onboarding">
-    macOS 应用的首次运行流程。
+  <Card title="Pairing and safety" href="/channels/pairing" icon="shield">
+    Control who can message your agent.
+  </Card>
+  <Card title="Configure the Gateway" href="/gateway/configuration" icon="settings">
+    Models, tools, sandbox, and advanced settings.
+  </Card>
+  <Card title="Browse tools" href="/tools" icon="wrench">
+    Browser, exec, web search, skills, and plugins.
   </Card>
 </Columns>
 
-## 你将拥有
+<Accordion title="Advanced: environment variables">
+  If you run OpenClaw as a service account or want custom paths:
 
-- 正在运行的网关
-- 配置好的认证
-- 控制 UI 访问权限或已连接的频道
+- `OPENCLAW_HOME` — home directory for internal path resolution
+- `OPENCLAW_STATE_DIR` — override the state directory
+- `OPENCLAW_CONFIG_PATH` — override the config file path
 
-## 下一步
-
-- DM 安全和审批：[配对](/channels/pairing)
-- 连接更多频道：[频道](/channels)
-- 高级工作流及源码安装：[设置](/start/setup)
+Full reference: [Environment variables](/help/environment).
+</Accordion>

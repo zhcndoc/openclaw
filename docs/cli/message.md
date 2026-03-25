@@ -8,8 +8,8 @@ title: "message"
 
 # `openclaw message`
 
-用于发送消息和执行频道操作的单一出站命令
-（支持 Discord/Google Chat/Slack/Mattermost（插件）/Telegram/WhatsApp/Signal/iMessage/MS Teams）。
+单一出站命令，用于发送消息和频道操作
+（Discord/Google Chat/Slack/Mattermost（插件）/Telegram/WhatsApp/Signal/iMessage/Microsoft Teams）。
 
 ## 用法
 
@@ -27,13 +27,13 @@ openclaw message <子命令> [标志]
 
 - WhatsApp: E.164 或群组 JID
 - Telegram: 聊天 ID 或 `@username`
-- Discord: `channel:<id>` 或 `user:<id>`（或 `<@id>` 提及；纯数字 ID 会被视为频道）
+- Discord: `channel:<id>` 或 `user:<id>`（或 `<@id>` 提及；纯数字 ID 被视为频道）
 - Google Chat: `spaces/<spaceId>` 或 `users/<userId>`
-- Slack: `channel:<id>` 或 `user:<id>`（支持纯频道 ID）
-- Mattermost（插件）：`channel:<id>`、`user:<id>` 或 `@username`（纯 ID 会被视为频道）
-- Signal: `+E.164`、`group:<id>`、`signal:+E.164`、`signal:group:<id>`，或 `username:<name>`/`u:<name>`
-- iMessage: 句柄，`chat_id:<id>`，`chat_guid:<guid>`，或 `chat_identifier:<id>`
-- MS Teams: 会话 ID (`19:...@thread.tacv2`)、`conversation:<id>` 或 `user:<aad-object-id>`
+- Slack: `channel:<id>` 或 `user:<id>`（接受纯频道 ID）
+- Mattermost (plugin): `channel:<id>`、`user:<id>` 或 `@username`（裸 ID 被视为频道）
+- Signal: `+E.164`、`group:<id>`、`signal:+E.164`、`signal:group:<id>` 或 `username:<name>`/`u:<name>`
+- iMessage: handle、`chat_id:<id>`、`chat_guid:<guid>` 或 `chat_identifier:<id>`
+- Microsoft Teams: 对话 ID (`19:...@thread.tacv2`) 或 `conversation:<id>` 或 `user:<aad-object-id>`
 
 名称查找：
 
@@ -50,26 +50,36 @@ openclaw message <子命令> [标志]
 - `--dry-run`
 - `--verbose`
 
+## SecretRef 行为
+
+- `openclaw message` 在执行选定的操作之前解析受支持的频道 SecretRef。
+- 解析范围尽可能限定在当前活动操作目标：
+  - 设置了 `--channel`（或从带前缀的目标如 `discord:...` 推断出）时为频道作用域
+  - 设置了 `--account` 时为账户作用域（频道全局变量 + 所选账户表面）
+  - 省略 `--account` 时，OpenClaw 不会强制使用 `default` 账户 SecretRef 作用域
+- 未解析的无关频道 SecretRef 不会阻止定向消息操作。
+- 如果所选频道/账户的 SecretRef 未解析，该命令会针对该操作失败关闭。
+
 ## 操作
 
 ### 核心操作
 
 - `send`
-  - 频道：WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost (插件)/Signal/iMessage/MS Teams
-  - 必需：`--target`，加上 `--message` 或 `--media`
-  - 可选：`--media`，`--reply-to`，`--thread-id`，`--gif-playback`
-  - 仅 Telegram：`--buttons`（需要 `channels.telegram.capabilities.inlineButtons` 允许）
-  - 仅 Telegram：`--force-document`（将图片和 GIF 作为文件发送以避免 Telegram 压缩）
+  - 频道：WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage/Microsoft Teams
+  - 必需：`--target`，以及 `--message` 或 `--media`
+  - 可选：`--media`、`--reply-to`、`--thread-id`、`--gif-playback`
+  - 仅 Telegram：`--buttons`（需要 `channels.telegram.capabilities.inlineButtons` 才能允许）
+  - 仅 Telegram：`--force-document`（以文档形式发送图片和 GIF 以避免 Telegram 压缩）
   - 仅 Telegram：`--thread-id`（论坛主题 ID）
-  - 仅 Slack：`--thread-id`（线程时间戳；`--reply-to` 也使用该字段）
+  - 仅 Slack：`--thread-id`（讨论串时间戳；`--reply-to` 使用相同字段）
   - 仅 WhatsApp：`--gif-playback`
 
 - `poll`
-  - 频道：WhatsApp/Telegram/Discord/Matrix/MS Teams
+  - 频道：WhatsApp/Telegram/Discord/Matrix/Microsoft Teams
   - 必需：`--target`、`--poll-question`、`--poll-option`（可重复）
   - 可选：`--poll-multi`
-  - 仅 Discord：`--poll-duration-hours`，`--silent`，`--message`
-  - 仅 Telegram：`--poll-duration-seconds`（5-600 秒），`--silent`，`--poll-anonymous` / `--poll-public`，`--thread-id`
+  - 仅 Discord：`--poll-duration-hours`、`--silent`、`--message`
+  - 仅 Telegram：`--poll-duration-seconds`（5-600）、`--silent`、`--poll-anonymous` / `--poll-public`、`--thread-id`
 
 - `react`
   - 频道：Discord/Google Chat/Slack/Telegram/WhatsApp/Signal
@@ -260,7 +270,7 @@ openclaw message send --channel telegram --target @mychat --message "Choose:" \
   --buttons '[ [{"text":"Yes","callback_data":"cmd:yes"}], [{"text":"No","callback_data":"cmd:no"}] ]'
 ```
 
-Send a Telegram image as a document to avoid compression:
+以文档形式发送 Telegram 图片以避免压缩：
 
 ```bash
 openclaw message send --channel telegram --target @mychat \

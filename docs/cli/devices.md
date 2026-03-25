@@ -21,6 +21,8 @@ openclaw devices list
 openclaw devices list --json
 ```
 
+待处理请求的输出来包含请求的角色和作用域，以便在批准前进行审查。
+
 ### `openclaw devices remove <deviceId>`
 
 移除一个已配对的设备条目。
@@ -43,6 +45,8 @@ openclaw devices clear --yes --pending --json
 ### `openclaw devices approve [requestId] [--latest]`
 
 批准一个待处理的设备配对请求。如果省略 `requestId`，OpenClaw 会自动批准最新的待处理请求。
+
+注意：如果设备在更改认证详情（角色/作用域/公钥）后重试配对，OpenClaw 会取代之前的待处理条目并签发新的 `requestId`。在批准前立即运行 `openclaw devices list` 以使用当前 ID。
 
 ```
 openclaw devices approve

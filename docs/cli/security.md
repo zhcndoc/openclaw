@@ -25,22 +25,22 @@ openclaw security audit --fix
 openclaw security audit --json
 ```
 
-当多个 DM 发送者共享主会话时，审计会发出警告，并推荐启用 **安全 DM 模式**：`session.dmScope="per-channel-peer"` （或针对多账户频道使用 `per-account-channel-peer`）以实现共享收件箱的安全加固。  
-这适用于合作/共享收件箱的强化。由相互不信任或敌对操作者共享的单一 Gateway 并非推荐设置；请采用分割信任边界的方案，如使用多个 Gateway（或不同的操作系统用户/主机）。  
-当配置提示可能存在共享用户入口（例如开放的 DM/群组策略、配置的群组目标，或通配符发送者规则）时，审计还会发出 `security.trust_model.multi_user_heuristic` 警告，提醒您默认情况下 OpenClaw 是个人助理信任模型。  
-对于有意的共享用户环境，审计建议将所有会话沙盒化，使文件系统访问仅限于工作区，并避免在该运行时运行个人/私密身份或凭据。  
-当使用小模型（`<=300B`）且未进行沙盒隔离并启用网页/浏览器工具时，也会发出警告。  
-对于 webhook 入口，若未设置 `hooks.defaultSessionKey`、启用请求的 `sessionKey` 覆盖，或启用覆盖但未设置 `hooks.allowedSessionKeyPrefixes`，都会发出警告。  
-当配置了沙盒 Docker 设置但沙盒模式关闭时，或当 `gateway.nodes.denyCommands` 使用无效的类模式/未知条目（仅支持精确节点命令名匹配，不支持 shell 文本过滤）、`gateway.nodes.allowCommands` 明确启用危险节点命令、全局 `tools.profile="minimal"` 被代理工具配置覆盖、开放群组暴露运行时/文件系统工具且无沙盒/工作区保护、安装的扩展插件工具在宽松工具策略下可访问时，都会发出警告。  
-此外，还会标记 `gateway.allowRealIpFallback=true`（若代理配置错误存在头部伪造风险）及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录存在元数据泄漏风险）。  
-当沙盒浏览器使用 Docker `bridge` 网络且未设置 `sandbox.browser.cdpSourceRange` 时，会发出警告。  
-也会标记危险的沙盒 Docker 网络模式（包括 `host` 和 `container:*` 命名空间连接）。  
-当现有沙盒浏览器 Docker 容器缺少或存在陈旧的哈希标签（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`）时，建议运行 `openclaw sandbox recreate --browser --all`。  
-当基于 npm 的插件/钩子安装记录未固定版本、缺少完整性元数据，或与当前安装包版本不一致时，也会发出警告。  
-当频道允许列表依赖可变的名称/电子邮件/标签而非稳定 ID（适用于 Discord、Slack、Google Chat、MS Teams、Mattermost、IRC 作用域）时，会发出警告。  
-当 `gateway.auth.mode="none"` 导致 Gateway HTTP API 在无共享密钥情况下可访问（包括 `/tools/invoke` 及任意启用的 `/v1/*` 端点）时，会发出警告。  
-以 `dangerous`/`dangerously` 为前缀的设置是明确的越权操作员覆盖选项；单独启用其中之一不代表安全漏洞报告。  
-完整的危险参数清单请参见 [Security](/gateway/security) 中的“不安全或危险标志总结”部分。
+当多个 DM 发送者共享主会话时，审计会发出警告，并建议为共享收件箱启用 **安全 DM 模式**：`session.dmScope="per-channel-peer"`（对于多账户频道则为 `per-account-channel-peer`）。
+这用于协同/共享收件箱的加固。由互不信任/对抗性的操作员共享的单个 Gateway 并非推荐配置；应使用独立的 Gateway（或独立的 OS 用户/主机）来分割信任边界。
+当配置暗示可能存在共享用户入口时（例如开放的 DM/群组策略、已配置的群组目标或通配符发送者规则），它还会触发 `security.trust_model.multi_user_heuristic`，并提醒您 OpenClaw 默认采用个人助手信任模型。
+对于故意的共享用户设置，审计指南要求对所有会话进行沙箱隔离，将文件系统访问限制在工作空间范围内，并确保个人/私密身份或凭据不会出现在该运行时中。
+当小型模型（`<=300B`）在未启用沙箱且启用了 Web/浏览器工具的情况下使用时，它也会发出警告。
+对于 Webhook 入口，当 `hooks.token` 复用 Gateway 令牌、当 `hooks.defaultSessionKey` 未设置、当 `hooks.allowedAgentIds` 不受限制、当请求 `sessionKey` 覆盖被启用，以及当覆盖被启用但未设置 `hooks.allowedSessionKeyPrefixes` 时，它会发出警告。
+当沙箱 Docker 设置已配置但沙箱模式处于关闭状态时，当 `gateway.nodes.denyCommands` 使用了无效的模式类/未知条目（仅匹配精确的节点命令名称，而非 Shell 文本过滤）时，当 `gateway.nodes.allowCommands` 显式启用危险的节点命令时，当全局 `tools.profile="minimal"` 被 Agent 工具配置文件覆盖时，当开放群组在未设置沙箱/工作空间防护的情况下暴露运行时/文件系统工具时，以及当已安装的扩展插件工具可能在宽松的工具策略下被访问到时，它也会发出警告。
+它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置错误，存在请求头欺骗风险）和 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录的元数据泄露）。
+当沙箱浏览器使用 Docker `bridge` 网络但未设置 `sandbox.browser.cdpSourceRange` 时，它也会发出警告。
+它还会标记危险的沙箱 Docker 网络模式（包括 `host` 和 `container:*` 命名空间加入）。
+当现有的沙箱浏览器 Docker 容器缺少/过时的哈希标签时（例如缺少 `openclaw.browserConfigEpoch` 的迁移前容器），它也会发出警告，并建议运行 `openclaw sandbox recreate --browser --all`。
+当基于 npm 的插件/钩子安装记录未固定、缺少完整性元数据或与当前安装的软件包版本不一致时，它也会发出警告。
+当频道允许列表依赖于可变的名称/电子邮件/标签而非稳定的 ID 时（适用于 Discord、Slack、Google Chat、Microsoft Teams、Mattermost、IRC 的作用域），它会发出警告。
+当 `gateway.auth.mode="none"` 导致 Gateway HTTP API 可以在没有共享密钥的情况下被访问时（包括 `/tools/invoke` 以及任何已启用的 `/v1/*` 端点），它会发出警告。
+以 `dangerous`/`dangerously` 为前缀的设置是显式的应急操作员覆盖；单独启用其中一个并不构成本身的安全漏洞报告。
+有关完整的危险参数清单，请参阅 [Security](/gateway/security) 中的"Insecure or dangerous flags summary"部分。
 
 SecretRef 行为：
 

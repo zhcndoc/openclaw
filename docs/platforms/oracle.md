@@ -1,10 +1,10 @@
 ---
 summary: "Oracle 云上的 OpenClaw（永久免费 ARM）"
 read_when:
-  - 在 Oracle 云上设置 OpenClaw
-  - 寻找低成本 VPS 托管运行 OpenClaw
-  - 想要在小型服务器上 24/7 运行 OpenClaw
-title: "Oracle 云"
+  - Setting up OpenClaw on Oracle Cloud
+  - Looking for low-cost VPS hosting for OpenClaw
+  - Want 24/7 OpenClaw on a small server
+title: "Oracle Cloud (Platform)"
 ---
 
 # Oracle 云上的 OpenClaw (OCI)
@@ -180,7 +180,7 @@ https://openclaw.<tailnet-name>.ts.net/
 
 此设置通常不再需要额外主机防火墙规则阻止全网 SSH 暴力破解——但仍建议保持系统更新，运行 `openclaw security audit`，并核查未意外监听公网接口。
 
-### 已保护的项
+### Already protected
 
 | 传统措施          | 需要吗？   | 说明                                                             |
 | ----------------- | ---------- | ---------------------------------------------------------------- |
@@ -236,7 +236,7 @@ ARM 免费实例很受欢迎，尝试：
 - 在非高峰（凌晨）重试
 - 选择“永久免费”筛选条件创建
 
-### Tailscale 无法连接
+### Tailscale will not connect
 
 ```bash
 # 检查状态
@@ -246,7 +246,7 @@ sudo tailscale status
 sudo tailscale up --ssh --hostname=openclaw --reset
 ```
 
-### 网关未启动
+### Gateway will not start
 
 ```bash
 openclaw gateway status
@@ -254,7 +254,7 @@ openclaw doctor --non-interactive
 journalctl --user -u openclaw-gateway -n 50
 ```
 
-### 无法访问控制界面
+### Cannot reach Control UI
 
 ```bash
 # 验证 Tailscale Serve 是否运行

@@ -25,7 +25,7 @@ title: "代理循环"
    - 调用 `runEmbeddedPiAgent`（pi-agent-core 运行时）
    - 如果嵌入式循环未发出生命周期结束/错误事件，则发出 **生命周期结束/错误** 事件
 3. `runEmbeddedPiAgent`：
-   - 通过每个会话和全局队列序列化运行
+   - 通过每个会话和全局走道序列化运行
    - 解析模型 + 认证配置，构建 pi 会话
    - 订阅 pi 事件并流式传输助手/工具增量
    - 强制超时 -> 超时则中止运行
@@ -87,7 +87,7 @@ OpenClaw 有两种钩子系统：
 - **`session_start` / `session_end`**：会话生命周期边界。
 - **`gateway_start` / `gateway_stop`**：网关生命周期事件。
 
-详见 [Plugins](/tools/plugin#plugin-hooks) 的钩子 API 和注册细节。
+See [Plugin hooks](/plugins/architecture#provider-runtime-hooks) for the hook API and registration details.
 
 ## 流式传输 + 部分回复
 

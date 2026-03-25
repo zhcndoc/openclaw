@@ -88,7 +88,7 @@ OpenClaw CLI 输出使用龙虾色调板。
 - `error` (#E23D2D)：错误、失败。
 - `muted` (#8B7F77)：弱化、元数据。
 
-调色板数据源：`src/terminal/palette.ts`（即“lobster seam”）。
+调色板唯一真实来源：`src/terminal/palette.ts`（即"龙虾调色板"）。
 
 ## 命令树
 
@@ -101,6 +101,8 @@ openclaw [--dev] [--profile <name>] <command>
     get
     set
     unset
+    file
+    validate
   completion
   doctor
   dashboard
@@ -111,7 +113,9 @@ openclaw [--dev] [--profile <name>] <command>
     audit
   secrets
     reload
-    migrate
+    audit
+    configure
+    apply
   reset
   uninstall
   update
@@ -130,16 +134,21 @@ openclaw [--dev] [--profile <name>] <command>
     check
   plugins
     list
-    info
+    inspect
     install
+    uninstall
+    update
     enable
     disable
     doctor
+    marketplace list
   memory
     status
     index
     search
   message
+    send
+    broadcast
   agent
   agents
     list
@@ -273,19 +282,19 @@ openclaw [--dev] [--profile <name>] <command>
 
 ## 秘密管理
 
-- `openclaw secrets reload` — 重新解析引用并原子替换运行时快照。
-- `openclaw secrets audit` — 扫描明文遗留、未解决引用以及优先级漂移。
-- `openclaw secrets configure` — 交互式辅助配置提供者和 SecretRef 映射，支持预检/应用。
-- `openclaw secrets apply --from <plan.json>` — 应用之前生成的计划（支持 `--dry-run`）。
+- `openclaw secrets reload` — 重新解析引用并原子性地交换运行时快照。
+- `openclaw secrets audit` — 扫描明文残留、未解析引用和优先级漂移（`--allow-exec` 可在审计期间执行 exec 提供者）。
+- `openclaw secrets configure` — 提供者设置 + SecretRef 映射 + 预检/应用的交互式助手（`--allow-exec` 可在预检和包含 exec 的应用流程中执行 exec 提供者）。
+- `openclaw secrets apply --from <plan.json>` — 应用先前生成的计划（支持 `--dry-run`；使用 `--allow-exec` 允许在 dry-run 和包含 exec 的写入计划中执行 exec 提供者）。
 
 ## 插件
 
 管理扩展及其配置：
 
-- `openclaw plugins list` — 发现插件（使用 `--json` 以机器可读输出）。
-- `openclaw plugins info <id>` — 显示插件详细信息。
-- `openclaw plugins install <path|.tgz|npm-spec|plugin@marketplace>` — 安装插件（或添加插件路径到 `plugins.load.paths`）。
-- `openclaw plugins marketplace list <marketplace>` — 安装前列出市场条目。
+- `openclaw plugins list` — 发现插件（使用 `--json` 输出机器可读格式）。
+- `openclaw plugins inspect <id>` — 显示插件详情（`info` 是别名）。
+- `openclaw plugins install <path|.tgz|npm-spec|plugin@marketplace>` — 安装插件（或将插件路径添加到 `plugins.load.paths`）。
+- `openclaw plugins marketplace list <marketplace>` — 安装前列出应用市场条目。
 - `openclaw plugins enable <id>` / `disable <id>` — 切换 `plugins.entries.<id>.enabled`。
 - `openclaw plugins doctor` — 报告插件加载错误。
 
@@ -391,12 +400,20 @@ openclaw [--dev] [--profile <name>] <command>
 
 子命令：
 
-- `config get <path>`：打印配置值（点或括号路径）。
-- `config set <path> <value>`：设置值（JSON5 或纯文本）。
-- `config unset <path>`：移除配置。
-- `config file`：显示当前配置文件路径。
-- `config validate`：验证当前配置是否符合模式，且不启动网关。
-- `config validate --json`：输出机器可读的 JSON 格式。
+- `config get <path>`: 打印配置值（点/括号路径）。
+- `config set`: 支持四种赋值模式：
+  - 值模式: `config set <path> <value>`（JSON5 或字符串解析）
+  - SecretRef 构建器模式: `config set <path> --ref-provider <provider> --ref-source <source> --ref-id <id>`
+  - 提供者构建器模式: `config set secrets.providers.<alias> --provider-source <env|file|exec> ...`
+  - 批量模式: `config set --batch-json '<json>'` 或 `config set --batch-file <path>`
+- `config set --dry-run`: 验证赋值而不写入 `openclaw.json`（默认跳过 exec SecretRef 检查）。
+- `config set --allow-exec --dry-run`: 选择执行 exec SecretRef dry-run 检查（可能执行提供者命令）。
+- `config set --dry-run --json`: 输出机器可读的 dry-run 结果（检查 + 完整性信号、操作、已检查/跳过的引用、错误）。
+- `config set --strict-json`: 要求对路径/值输入进行 JSON5 解析。在 dry-run 输出模式之外，`--json` 仍是严格解析的传统别名。
+- `config unset <path>`: 移除值。
+- `config file`: 打印活动配置文件路径。
+- `config validate`: 在不启动网关的情况下根据模式验证当前配置。
+- `config validate --json`: 输出机器可读的 JSON 结果。
 
 ### `doctor`
 
@@ -413,7 +430,7 @@ openclaw [--dev] [--profile <name>] <command>
 
 ### `channels`
 
-管理聊天频道账户（WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage/MS Teams）。
+管理聊天频道账户（WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost (plugin)/Signal/iMessage/Microsoft Teams）。
 
 子命令：
 
@@ -474,9 +491,12 @@ openclaw status --deep
 
 子命令：
 
+- `skills search [query...]`：搜索 ClawHub 技能。
+- `skills install <slug>`：将技能从 ClawHub 安装到当前工作空间。
+- `skills update <slug|--all>`：更新已跟踪的 ClawHub 技能。
 - `skills list`：列出技能（无子命令时默认）。
-- `skills info <name>`：查看单个技能详情。
-- `skills check`：已准备与缺失要求概览。
+- `skills info <name>`：显示单个技能的详细信息。
+- `skills check`：就绪与缺失要求的摘要。
 
 选项：
 
@@ -484,7 +504,7 @@ openclaw status --deep
 - `--json`：输出 JSON（无样式）。
 - `-v`, `--verbose`：包含缺失要求详情。
 
-提示：可用 `npx clawhub` 搜索、安装和同步技能。
+提示：使用 `openclaw skills search`、`openclaw skills install` 和 `openclaw skills update` 管理 ClawHub 支持技能。
 
 ### `pairing`
 
@@ -512,7 +532,7 @@ openclaw status --deep
 
 ### `webhooks gmail`
 
-Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automation/gmail-pubsub)。
+Gmail Pub/Sub 钩子设置及运行器。详见 [/automation/gmail-pubsub](/automation/gmail-pubsub)。
 
 子命令：
 
@@ -550,7 +570,7 @@ Gmail Pub/Sub 钩子设置及运行。详见 [/automation/gmail-pubsub](/automat
 示例：
 
 - `openclaw message send --target +15555550123 --message "Hi"`
-- `openclaw message poll --channel discord --target channel:123 --poll-question "零食？" --poll-option Pizza --poll-option Sushi`
+- `openclaw message poll --channel discord --target channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
 
 ### `agent`
 
@@ -996,7 +1016,7 @@ openclaw models status
 - `cron list [--all] [--json]`（默认表格输出；使用 `--json` 获取原始数据）
 - `cron add`（别名：`create`；需带 `--name` 且仅能带一个 `--at` | `--every` | `--cron`，以及一个负载 `--system-event` | `--message`）
 - `cron edit <id>`（补丁修改字段）
-- `cron rm <id>`（别名：`remove`，`delete`）
+- `cron rm <id>`（别名：`remove`、`delete`）
 - `cron enable <id>`
 - `cron disable <id>`
 - `cron runs --id <id> [--limit <n>]`
@@ -1019,8 +1039,8 @@ openclaw models status
 
 认证说明：
 
-- `node` 从环境变量/配置中解析网关认证（不支持 `--token`/`--password` 标志）：依次为 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`，然后是 `gateway.auth.*`。本地模式下，节点主机故意忽略 `gateway.remote.*`；启用 `gateway.mode=remote` 时，`gateway.remote.*` 按远程优先级规则参与认证解析。
-- 旧版 `CLAWDBOT_GATEWAY_*` 环境变量故意不用于节点主机的认证解析。
+- `node` 从环境变量或配置中解析网关认证（无 `--token`/`--password` 标志）：`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`，然后是 `gateway.auth.*`。在本地模式下，节点主机有意忽略 `gateway.remote.*`；在 `gateway.mode=remote` 模式下，`gateway.remote.*` 按照远程优先级规则参与。
+- 节点主机认证解析仅识别 `OPENCLAW_GATEWAY_*` 环境变量。
 
 ## 节点集群
 

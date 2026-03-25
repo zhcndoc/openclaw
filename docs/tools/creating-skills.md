@@ -6,53 +6,112 @@ read_when:
   - 您需要一个基于 SKILL.md 技能的快速入门工作流程
 ---
 
-# 创建自定义技能 🛠
+# Creating Skills
 
-OpenClaw 设计为易于扩展。“技能”是为您的助手添加新功能的主要方式。
+Skills teach the agent how and when to use tools. Each skill is a directory
+containing a `SKILL.md` file with YAML frontmatter and markdown instructions.
 
-## 什么是技能？
+For how skills are loaded and prioritized, see [Skills](/tools/skills).
 
-技能是一个包含 `SKILL.md` 文件（向大语言模型提供指令和工具定义）的目录，并且可选地包含一些脚本或资源。
+## Create your first skill
 
-## 逐步指导：您的第一个技能
+<Steps>
+  <Step title="Create the skill directory">
+    Skills live in your workspace. Create a new folder:
 
-### 1. 创建目录
+    ```bash
+    mkdir -p ~/.openclaw/workspace/skills/hello-world
+    ```
 
-技能存放在您的工作区，通常是 `~/.openclaw/workspace/skills/`。为您的技能创建一个新文件夹：
+  </Step>
 
-```bash
-mkdir -p ~/.openclaw/workspace/skills/hello-world
-```
+  <Step title="Write SKILL.md">
+    Create `SKILL.md` inside that directory. The frontmatter defines metadata,
+    and the markdown body contains instructions for the agent.
 
-### 2. 定义 `SKILL.md`
+    ```markdown
+    ---
+    name: hello_world
+    description: A simple skill that says hello.
+    ---
 
-在该目录中创建一个 `SKILL.md` 文件。此文件使用 YAML 头部块定义元数据，使用 Markdown 撰写指令。
+    # Hello World Skill
 
-```markdown
----
-name: hello_world
-description: 一个简单的问候技能。
----
+    When the user asks for a greeting, use the `echo` tool to say
+    "Hello from your custom skill!".
+    ```
 
-# Hello World 技能
+  </Step>
 
-当用户请求问候时，使用 `echo` 工具说 "Hello from your custom skill!"。
-```
+  <Step title="Add tools (optional)">
+    You can define custom tool schemas in the frontmatter or instruct the agent
+    to use existing system tools (like `exec` or `browser`). Skills can also
+    ship inside plugins alongside the tools they document.
 
-### 3. 添加工具（可选）
+  </Step>
 
-您可以在头部块中定义自定义工具，或者指示代理使用现有的系统工具（例如 `bash` 或 `browser`）。
+  <Step title="Load the skill">
+    Start a new session so OpenClaw picks up the skill:
 
-### 4. 刷新 OpenClaw
+    ```bash
+    # From chat
+    /new
 
-让您的代理“刷新技能”或重启网关。OpenClaw 会发现新目录并索引 `SKILL.md` 文件。
+    # Or restart the gateway
+    openclaw gateway restart
+    ```
 
-## 最佳实践
+    Verify the skill loaded:
 
-- **简明扼要**：指示模型 _做什么_，而非如何作为 AI 来做。
-- **安全第一**：若您的技能使用 `bash`，确保提示信息不允许从不可信用户输入注入任意命令。
-- **本地测试**：使用 `openclaw agent --message "use my new skill"` 进行测试。
+    ```bash
+    openclaw skills list
+    ```
 
-## 共享技能
+  </Step>
 
-您也可以浏览并贡献技能到 [ClawHub](https://clawhub.com)。
+  <Step title="Test it">
+    Send a message that should trigger the skill:
+
+    ```bash
+    openclaw agent --message "give me a greeting"
+    ```
+
+    Or just chat with the agent and ask for a greeting.
+
+  </Step>
+</Steps>
+
+## Skill metadata reference
+
+The YAML frontmatter supports these fields:
+
+| Field                               | Required | Description                                 |
+| ----------------------------------- | -------- | ------------------------------------------- |
+| `name`                              | Yes      | Unique identifier (snake_case)              |
+| `description`                       | Yes      | One-line description shown to the agent     |
+| `metadata.openclaw.os`              | No       | OS filter (`["darwin"]`, `["linux"]`, etc.) |
+| `metadata.openclaw.requires.bins`   | No       | Required binaries on PATH                   |
+| `metadata.openclaw.requires.config` | No       | Required config keys                        |
+
+## Best practices
+
+- **Be concise** — instruct the model on _what_ to do, not how to be an AI
+- **Safety first** — if your skill uses `exec`, ensure prompts don't allow arbitrary command injection from untrusted input
+- **Test locally** — use `openclaw agent --message "..."` to test before sharing
+- **Use ClawHub** — browse and contribute skills at [ClawHub](https://clawhub.com)
+
+## Where skills live
+
+| Location                        | Precedence | Scope                 |
+| ------------------------------- | ---------- | --------------------- |
+| `\<workspace\>/skills/`         | Highest    | Per-agent             |
+| `~/.openclaw/skills/`           | Medium     | Shared (all agents)   |
+| Bundled (shipped with OpenClaw) | Lowest     | Global                |
+| `skills.load.extraDirs`         | Lowest     | Custom shared folders |
+
+## Related
+
+- [Skills reference](/tools/skills) — loading, precedence, and gating rules
+- [Skills config](/tools/skills-config) — `skills.*` config schema
+- [ClawHub](/tools/clawhub) — public skill registry
+- [Building Plugins](/plugins/building-plugins) — plugins can ship skills

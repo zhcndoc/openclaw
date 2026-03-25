@@ -15,20 +15,19 @@ title: "文档中心枢纽"
 
 ## 从这里开始
 
-- [索引](/)
-- [入门指南](/start/getting-started)
-- [快速开始](/start/quickstart)
-- [新手引导](/start/onboarding)
-- [新手引导（CLI）](/start/wizard)
-- [安装](/start/setup)
-- [仪表盘（本地网关）](http://127.0.0.1:18789/)
-- [帮助](/help)
-- [文档目录](/start/docs-directory)
-- [配置](/gateway/configuration)
-- [配置示例](/gateway/configuration-examples)
-- [OpenClaw 助手](/start/openclaw)
-- [展示](/start/showcase)
-- [知识](/start/lore)
+- [Index](/)
+- [Getting Started](/start/getting-started)
+- [Onboarding](/start/onboarding)
+- [Onboarding (CLI)](/start/wizard)
+- [Setup](/start/setup)
+- [Dashboard (local Gateway)](http://127.0.0.1:18789/)
+- [Help](/help)
+- [Docs directory](/start/docs-directory)
+- [Configuration](/gateway/configuration)
+- [Configuration examples](/gateway/configuration-examples)
+- [OpenClaw assistant](/start/openclaw)
+- [Showcase](/start/showcase)
+- [Lore](/start/lore)
 
 ## 安装 + 更新
 
@@ -162,7 +161,19 @@ title: "文档中心枢纽"
 - [macOS 技能](/platforms/mac/skills)
 - [macOS 捉迷藏](/platforms/mac/peekaboo)
 
-## 工作区 + 模板
+## Extensions + plugins
+
+- [Plugins overview](/tools/plugin)
+- [Building plugins](/plugins/building-plugins)
+- [Plugin manifest](/plugins/manifest)
+- [Agent tools](/plugins/building-plugins#registering-agent-tools)
+- [Plugin bundles](/plugins/bundles)
+- [Community plugins](/plugins/community)
+- [Capability cookbook](/tools/capability-cookbook)
+- [Voice call plugin](/plugins/voice-call)
+- [Zalo user plugin](/plugins/zalouser)
+
+## Workspace + templates
 
 - [技能](/tools/skills)
 - [ClawHub](/tools/clawhub)
@@ -176,13 +187,7 @@ title: "文档中心枢纽"
 - [模板：TOOLS](/reference/templates/TOOLS)
 - [模板：USER](/reference/templates/USER)
 
-## 实验（探索性）
-
-- [入职配置协议](/experiments/onboarding-config-protocol)
-- [研究：内存](/experiments/research/memory)
-- [模型配置探索](/experiments/proposals/model-config)
-
-## 项目
+## Project
 
 - [鸣谢](/reference/credits)
 

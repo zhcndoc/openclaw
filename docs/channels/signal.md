@@ -99,7 +99,7 @@ title: "Signal"
 }
 ```
 
-多账户支持：使用 `channels.signal.accounts` 配置每个账户及可选名称。详见[`gateway/configuration`](/gateway/configuration#telegramaccounts--discordaccounts--slackaccounts--signalaccounts--imessageaccounts)中共享模式。
+多账户支持：使用 `channels.signal.accounts` 进行每账户配置，并可选择设置 `name`。共享模式请参考 [`gateway/configuration`](/gateway/configuration-reference#multi-account-all-channels)。
 
 ## 设置路径 B：注册专用机器人号码（短信，Linux）
 
@@ -223,7 +223,7 @@ openclaw channels status --probe
 ## 表情反应（消息工具）
 
 - 使用 `message action=react` 发送 Signal 表情反应。
-- 目标可用发送者 E.164 号码或 UUID（使用配对输出中的 `uuid:<id>`；裸 UUID 也可以）。
+- 目标可用发送者 E.164 号码或 UUID（使用配对输出中的 `uuid:<id>`；裸 UUID 也可以)。
 - `messageId` 是被反应消息的 Signal 时间戳。
 - 群组反应需要指定 `targetAuthor` 或 `targetAuthorUuid`。
 

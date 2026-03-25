@@ -1,16 +1,16 @@
 ---
 summary: "日志输出端口、文件日志、WebSocket 日志样式和控制台格式"
 read_when:
-  - 更改日志输出或格式时
+  - 修改日志输出或格式时
   - 调试 CLI 或网关输出时
-title: "日志记录"
+title: "网关日志记录"
 ---
 
 # 日志记录
 
 有关面向用户的概览（CLI + 控制 UI + 配置），请参见 [/logging](/logging)。
 
-OpenClaw 有两个日志“输出端”：
+OpenClaw 有两个日志"输出端"：
 
 - **控制台输出**（你在终端 / 调试 UI 中看到的内容）。
 - **文件日志**（由网关日志记录器写入的 JSON 行格式日志）。
@@ -60,7 +60,7 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace` 并将其写入文件日
 
 网关以两种模式打印 WebSocket 协议日志：
 
-- **普通模式（无 `--verbose`）**：仅打印“重要”的 RPC 结果：
+- **普通模式（无 `--verbose`）**：仅打印"重要"的 RPC 结果：
   - 错误（`ok=false`）
   - 慢调用（默认阈值：`>= 50ms`）
   - 解析错误

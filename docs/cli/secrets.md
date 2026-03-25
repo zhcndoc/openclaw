@@ -13,10 +13,10 @@ title: "secrets"
 
 命令角色：
 
-- `reload`：gateway RPC (`secrets.reload`)，重新解析引用，且仅在完全成功时切换运行时快照（无配置写入）。
-- `audit`：只读扫描配置/认证存储和遗留残留，查找明文、未解析的引用以及优先级漂移。
-- `configure`：交互式计划器，用于提供者设置、目标映射和预检（需 TTY）。
-- `apply`：执行已保存的计划（`--dry-run` 仅验证），然后清理目标明文残留。
+- `reload`: gateway RPC (`secrets.reload`)，仅在完全成功时重新解析引用并交换运行时快照（不写配置）。
+- `audit`: 对配置/认证/生成模型存储和遗留残留进行只读扫描，查找明文、未解析的引用和优先级漂移（除非设置 `--allow-exec`，否则跳过 exec 引用）。
+- `configure`: 用于提供者设置、目标映射和预检的交互式规划器（需要 TTY）。
+- `apply`: 执行保存的计划（`--dry-run` 仅用于验证；dry-run 默认跳过 exec 检查，写入模式拒绝包含 exec 的计划，除非设置 `--allow-exec`），然后清理目标明文残留。
 
 推荐的操作循环：
 
@@ -29,7 +29,9 @@ openclaw secrets audit --check
 openclaw secrets reload
 ```
 
-CI/门控的退出码说明：
+如果你的计划包含 `exec` SecretRefs/提供者，在 dry-run 和写入应用命令上都传递 `--allow-exec`。
+
+CI/门禁的退出码说明：
 
 - `audit --check` 发现问题时返回 `1`。
 - 未解析的引用返回 `2`。
@@ -61,7 +63,7 @@ openclaw secrets reload --json
 
 - 明文秘密存储
 - 未解析的引用
-- 优先级漂移（`auth-profiles.json` 中凭据覆盖了 `openclaw.json` 中的引用）
+- 优先级漂移（`auth-profiles.json` 中的凭据覆盖 `openclaw.json` 中的引用）
 - 生成的 `agents/*/agent/models.json` 遗留（提供者 `apiKey` 值和敏感的提供者请求头）
 - 遗留残留（遗留认证存储条目、OAuth 提醒）
 
@@ -73,17 +75,19 @@ openclaw secrets reload --json
 openclaw secrets audit
 openclaw secrets audit --check
 openclaw secrets audit --json
+openclaw secrets audit --allow-exec
 ```
 
 退出行为：
 
-- `--check` 发现问题时返回非零。
+- `--check` 在存在发现时返回非零。
 - 未解析的引用返回更高优先级的非零代码。
 
 报告结构重点：
 
-- `status`：`clean | findings | unresolved`
-- `summary`：`plaintextCount`、`unresolvedRefCount`、`shadowedRefCount`、`legacyResidueCount`
+- `status`: `clean | findings | unresolved`
+- `resolution`: `refsChecked`, `skippedExecRefs`, `resolvabilityComplete`
+- `summary`: `plaintextCount`, `unresolvedRefCount`, `shadowedRefCount`, `legacyResidueCount`
 - 发现代码：
   - `PLAINTEXT_FOUND`
   - `REF_UNRESOLVED`
@@ -112,24 +116,26 @@ openclaw secrets configure --json
 
 参数：
 
-- `--providers-only`：仅配置 `secrets.providers`，跳过凭据映射。
-- `--skip-provider-setup`：跳过提供者设置，将凭据映射至已存在的提供者。
-- `--agent <id>`：限制 `auth-profiles.json` 目标发现和写入到指定代理存储。
+- `--providers-only`: 仅配置 `secrets.providers`，跳过凭据映射。
+- `--skip-provider-setup`: 跳过提供者设置，将凭据映射到现有提供者。
+- `--agent <id>`: 将 `auth-profiles.json` 目标发现和写入限定到一个代理存储。
+- `--allow-exec`: 允许在预检/应用期间执行 exec SecretRef 检查（可能执行提供者命令）。
 
 说明：
 
 - 需要交互式 TTY。
-- 不可同时使用 `--providers-only` 和 `--skip-provider-setup`。
-- `configure` 目标包括 `openclaw.json` 中含秘密的字段及选定代理范围内的 `auth-profiles.json`。
-- 支持直接在选择流程中创建新的 `auth-profiles.json` 映射。
-- 标准支持表面：[SecretRef 凭据表面](/reference/secretref-credential-surface)。
-- 运行时在应用前执行预检解析。
-- 生成的计划默认启用清理选项（`scrubEnv`、`scrubAuthProfilesForProviderTargets`、`scrubLegacyAuthJson` 均启用）。
-- 应用路径为针对明文值的一次性清理。
-- 未使用 `--apply` 时，在预检后仍会提示“是否立即应用此计划？”。
-- 使用 `--apply`（但无 `--yes`）时，CLI 会额外提示不可逆确认。
+- 不能将 `--providers-only` 与 `--skip-provider-setup` 组合使用。
+- `configure` 针对 `openclaw.json` 中包含秘密的字段以及选定代理范围的 `auth-profiles.json`。
+- `configure` 支持在选择器流中直接创建新的 `auth-profiles.json` 映射。
+- 规范支持的面：[SecretRef 凭据表面](/reference/secretref-credential-surface)。
+- 它在应用前执行预检解析。
+- 如果预检/应用包含 exec 引用，在两个步骤中都保持设置 `--allow-exec`。
+- 生成的计划默认启用清理选项（`scrubEnv`、`scrubAuthProfilesForProviderTargets`、`scrubLegacyAuthJson` 全部启用）。
+- 对于已清理的明文值，应用路径是单向的。
+- 没有 `--apply` 时，CLI 仍会在预检后提示 `Apply this plan now?`。
+- 使用 `--apply`（且没有 `--yes`）时，CLI 会提示额外的不可逆确认。
 
-执行提供者安全注意事项：
+Exec 提供者安全注意事项：
 
 - Homebrew 安装通常将二进制软链接暴露在 `/opt/homebrew/bin/*` 下。
 - 仅在需要受信任的包管理路径时设置 `allowSymlinkCommand: true`，且应配合 `trustedDirs`（例如 `["/opt/homebrew"]`）。
@@ -141,9 +147,18 @@ openclaw secrets configure --json
 
 ```bash
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --allow-exec
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run --allow-exec
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --json
 ```
+
+Exec 行为：
+
+- `--dry-run` 在不写入文件的情况下验证预检。
+- 在 dry-run 中默认跳过 exec SecretRef 检查。
+- 写入模式拒绝包含 exec SecretRefs/提供者的计划，除非设置了 `--allow-exec`。
+- 使用 `--allow-exec` 可在任一模式下选择加入 exec 提供者检查/执行。
 
 计划约定详情（允许的目标路径、验证规则和失败语义）：
 

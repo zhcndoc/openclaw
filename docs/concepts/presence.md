@@ -42,7 +42,7 @@ Presence 条目由多个来源产生并**合并**。
 
 每个 WS 客户端连接时都会发起 `connect` 请求。握手成功后，网关会更新该连接的 presence 条目。
 
-#### 为什么一次性 CLI 命令不会显示
+#### 为何一次性 CLI 命令不会显示
 
 CLI 常用于短暂的一次性命令。为了避免刷屏，`client.mode === "cli"` **不会**被转换为 presence 条目。
 
@@ -58,7 +58,7 @@ CLI 常用于短暂的一次性命令。为了避免刷屏，`client.mode === "c
 
 Presence 条目存储于单一内存映射中：
 
-- 条目以**presence key**为键。
+- 条目以 **presence key** 为键。
 - 最佳键是稳定的 `instanceId`（来自 `connect.client.instanceId`），可抵抗重启影响。
 - 键不区分大小写。
 

@@ -46,7 +46,7 @@ OpenClaw 会从 `~/.openclaw/openclaw.json` 读取一个可选的 <Tooltip tip="
     ```bash
     openclaw config get agents.defaults.workspace
     openclaw config set agents.defaults.heartbeat.every "2h"
-    openclaw config unset tools.web.search.apiKey
+    openclaw config unset plugins.entries.brave.config.webSearch.apiKey
     ```
   </Tab>
   <Tab title="控制面板 UI">
@@ -85,7 +85,7 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
     - [iMessage](/channels/imessage) — `channels.imessage`
     - [Google Chat](/channels/googlechat) — `channels.googlechat`
     - [Mattermost](/channels/mattermost) — `channels.mattermost`
-    - [MS Teams](/channels/msteams) — `channels.msteams`
+    - [Microsoft Teams](/channels/msteams) — `channels.msteams`
 
     所有渠道共享相同的私信（DM）策略模式：
 
@@ -112,11 +112,11 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
       agents: {
         defaults: {
           model: {
-            primary: "anthropic/claude-sonnet-4-5",
+            primary: "anthropic/claude-sonnet-4-6",
             fallbacks: ["openai/gpt-5.2"],
           },
           models: {
-            "anthropic/claude-sonnet-4-5": { alias: "Sonnet" },
+            "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
             "openai/gpt-5.2": { alias: "GPT" },
           },
         },
@@ -251,7 +251,7 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
 
     请先构建镜像：`scripts/sandbox-setup.sh`
 
-    详见[沙箱环境指南](/gateway/sandboxing)及[完整参考](/gateway/configuration-reference#sandbox)了解所有选项。
+    See [Sandboxing](/gateway/sandboxing) for the full guide and [full reference](/gateway/configuration-reference#agentsdefaultssandbox) for all options.
 
   </Accordion>
 
@@ -597,11 +597,11 @@ OpenClaw 会读取父进程的环境变量，以及：
   },
   skills: {
     entries: {
-      "nano-banana-pro": {
+      "image-lab": {
         apiKey: {
           source: "file",
           provider: "filemain",
-          id: "/skills/entries/nano-banana-pro/apiKey",
+          id: "/skills/entries/image-lab/apiKey",
         },
       },
     },

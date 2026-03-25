@@ -46,7 +46,8 @@ https://gateway-host/line/webhook
 
 安全提示：
 
-- LINE 签名验证依赖于请求体（对原始请求体做 HMAC），因此 OpenClaw 会在验证前对请求体施加严格的预认证大小限制和超时。
+- LINE signature verification is body-dependent (HMAC over the raw body), so OpenClaw applies strict pre-auth body limits and timeout before verification.
+- OpenClaw processes webhook events from the verified raw request bytes. Upstream middleware-transformed `req.body` values are ignored for signature-integrity safety.
 
 ## 配置
 
@@ -140,10 +141,10 @@ LINE ID 区分大小写。有效 ID 形式为：
 
 ```json5
 {
-  text: "Here you go",
+  text: "请查收",
   channelData: {
     line: {
-      quickReplies: ["Status", "Help"],
+      quickReplies: ["状态", "帮助"],
       location: {
         title: "办公室",
         address: "123 Main St",
@@ -153,7 +154,7 @@ LINE ID 区分大小写。有效 ID 形式为：
       flexMessage: {
         altText: "状态卡片",
         contents: {
-          /* Flex 负载 */
+          /* Flex 消息内容 */
         },
       },
       templateMessage: {

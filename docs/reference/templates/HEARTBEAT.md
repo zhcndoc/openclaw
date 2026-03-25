@@ -5,8 +5,10 @@ read_when:
   - 手动引导工作区时
 ---
 
-# HEARTBEAT.md
+# HEARTBEAT.md Template
 
-# 保持此文件为空（或仅包含注释）以跳过心跳 API 调用。
+```markdown
+# Keep this file empty (or with only comments) to skip heartbeat API calls.
 
-# 当您希望代理定期检查某些内容时，在此处添加任务。
+# Add tasks below when you want the agent to check something periodically.
+```

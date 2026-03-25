@@ -5,7 +5,7 @@ read_when:
 title: "图片与媒体支持"
 ---
 
-# 图片与媒体支持 — 2025-12-05
+# Image & Media Support (2025-12-05)
 
 WhatsApp 通道通过 **Baileys Web** 运行。本文档记录了当前发送、网关及客服回复的媒体处理规则。
 
@@ -23,15 +23,15 @@ WhatsApp 通道通过 **Baileys Web** 运行。本文档记录了当前发送、
 
 ## WhatsApp Web 通道行为
 
-- 输入支持本地文件路径 **或** HTTP(S) URL。
-- 流程：加载为 Buffer，检测媒体类型，并构建正确的负载：
-  - **图片：** 调整尺寸并重新压缩为 JPEG（最大边长 2048px），目标大小为 `agents.defaults.mediaMaxMb`（默认 5 MB），最多 6 MB。
-  - **音频/语音/视频：** 直通，最大 16 MB；音频作为语音消息发送 (`ptt: true`)。
-  - **文档：** 其他格式，最大 100 MB，文件名可保留（若可用）。
-- WhatsApp GIF 风格播放：发送带 `gifPlayback: true` 的 MP4（CLI 使用 `--gif-playback`），使移动端可循环播放。
-- MIME 类型检测优先依赖魔术字节，然后是头部信息，最后是文件扩展名。
-- 说明文字来自 `--message` 或 `reply.text`，允许为空。
-- 日志记录：非详细模式显示 `↩️`/`✅`；详细模式包含文件大小及来源路径或 URL。
+- Input: local file path **or** HTTP(S) URL.
+- Flow: load into a Buffer, detect media kind, and build the correct payload:
+  - **Images:** resize & recompress to JPEG (max side 2048px) targeting `channels.whatsapp.mediaMaxMb` (default: 50 MB).
+  - **Audio/Voice/Video:** pass-through up to 16 MB; audio is sent as a voice note (`ptt: true`).
+  - **Documents:** anything else, up to 100 MB, with filename preserved when available.
+- WhatsApp GIF-style playback: send an MP4 with `gifPlayback: true` (CLI: `--gif-playback`) so mobile clients loop inline.
+- MIME detection prefers magic bytes, then headers, then file extension.
+- Caption comes from `--message` or `reply.text`; empty caption is allowed.
+- Logging: non-verbose shows `↩️`/`✅`; verbose includes size and source path/URL.
 
 ## 自动回复管道
 
@@ -54,9 +54,9 @@ WhatsApp 通道通过 **Baileys Web** 运行。本文档记录了当前发送、
 
 **出站发送限制（WhatsApp Web 发送）**
 
-- 图片：重新压缩后大约 6 MB 限制。
-- 音频/语音/视频：16 MB 限制；文档：100 MB 限制。
-- 超大或不可读媒体 → 日志明确报错，跳过回复。
+- Images: up to `channels.whatsapp.mediaMaxMb` (default: 50 MB) after recompression.
+- Audio/voice/video: 16 MB cap; documents: 100 MB cap.
+- Oversize or unreadable media → clear error in logs and the reply is skipped.
 
 **媒体理解限制（转录/描述）**
 

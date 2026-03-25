@@ -7,7 +7,7 @@ title: "远程控制"
 
 # 远程 OpenClaw（macOS ⇄ 远程主机）
 
-此流程使 macOS 应用可以作为运行在另一主机（桌面/服务器）上的 OpenClaw 网关的完整远程控制端。它是应用的**通过 SSH 远程**（远程运行）功能。所有功能——健康检查、语音唤醒转发和网页聊天——都复用同一个远程 SSH 配置，位于 _设置 → 通用_ 中。
+This flow lets the macOS app act as a full remote control for an OpenClaw gateway running on another host (desktop/server). It’s the app’s **Remote over SSH** (remote run) feature. All features—health checks, Voice Wake forwarding, and Web Chat—reuse the same remote SSH configuration from _Settings → General_.
 
 ## 模式
 

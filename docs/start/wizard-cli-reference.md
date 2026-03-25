@@ -145,7 +145,9 @@ sidebarTitle: "CLI 参考"
     当模型未设置或为 `openai/*` 时，设置 `agents.defaults.model` 为 `openai-codex/gpt-5.4`。  
   </Accordion>
   <Accordion title="OpenAI API key">
-    若存在 `OPENAI_API_KEY` 则使用，否则提示输入密钥，随后存储于认证配置文件。  
+    Uses `OPENAI_API_KEY` if present or prompts for a key, then stores the credential in auth profiles.
+
+    Sets `agents.defaults.model` to `openai/gpt-5.4` when model is unset, `openai/*`, or `openai-codex/*`.
 
     当模型未设置、为 `openai/*` 或 `openai-codex/*` 时，设置 `agents.defaults.model` 为 `openai/gpt-5.1-codex`。  
   </Accordion>
@@ -167,9 +169,9 @@ sidebarTitle: "CLI 参考"
     提示输入账户 ID、网关 ID 和 `CLOUDFLARE_AI_GATEWAY_API_KEY`。  
     详情见：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)。  
   </Accordion>
-  <Accordion title="MiniMax M2.5">
-    配置自动写入。  
-    详情见：[MiniMax](/providers/minimax)。  
+  <Accordion title="MiniMax">
+    Config is auto-written. Hosted default is `MiniMax-M2.7`; `MiniMax-M2.5` stays available.
+    More detail: [MiniMax](/providers/minimax).
   </Accordion>
   <Accordion title="Synthetic（兼容 Anthropic）">
     提示输入 `SYNTHETIC_API_KEY`。  

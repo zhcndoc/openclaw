@@ -74,6 +74,7 @@ openclaw sandbox explain --json
 
 ```json5
 {
+  // 允许运行时、文件系统、会话和内存工具分组
   tools: {
     sandbox: {
       tools: {
@@ -96,7 +97,7 @@ openclaw sandbox explain --json
 - `group:nodes`：`nodes`
 - `group:openclaw`：所有内建 OpenClaw 工具（不包括提供者插件）
 
-## 提权：仅限执行的“宿主机运行”
+## 提权：仅限执行的"在宿主机上运行"
 
 提权不授予额外工具，只影响 `exec` 操作。
 
@@ -113,9 +114,9 @@ openclaw sandbox explain --json
 
 详见 [提权模式](/tools/elevated)。
 
-## 常见“沙箱监狱”修复
+## 常见的"沙箱监狱"修复
 
-### “工具 X 被沙箱工具策略阻止”
+### "工具 X 被沙箱工具策略阻止"
 
 修复建议（任选其一）：
 
@@ -124,6 +125,12 @@ openclaw sandbox explain --json
   - 从 `tools.sandbox.tools.deny` 中移除（或单 agent 的 `agents.list[].tools.sandbox.tools.deny`）
   - 或添加到 `tools.sandbox.tools.allow`（或单 agent 的允许列表）
 
-### “我以为这是主会话，为什么被沙箱限制了？”
+### "我以为这是主会话，为什么它被沙箱限制了？"
 
-在 `"non-main"` 模式中，分组/频道的 key 不是主会话。请使用主会话的 key（`sandbox explain` 会显示）或者切换模式到 `"off"`。
+在 `"non-main"` 模式下，分组/频道键 _不是_ 主会话。使用主会话键（由 `sandbox explain` 显示）或将模式切换为 `"off"`。
+
+## 参见
+
+- [沙箱机制](/gateway/sandboxing) -- 完整的沙箱参考（模式、范围、后端、镜像）
+- [多代理沙箱与工具](/tools/multi-agent-sandbox-tools) -- 单 agent 覆盖及优先级
+- [提权模式](/tools/elevated)

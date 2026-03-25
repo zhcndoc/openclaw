@@ -24,7 +24,7 @@ title: "技能配置"
       nodeManager: "npm", // npm | pnpm | yarn | bun（Gateway 运行时仍是 Node；不推荐使用 bun）
     },
     entries: {
-      "nano-banana-pro": {
+      "image-lab": {
         enabled: true,
         apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或明文字符串
         env: {
@@ -38,7 +38,20 @@ title: "技能配置"
 }
 ```
 
-## 字段
+For built-in image generation/editing, prefer `agents.defaults.imageGenerationModel`
+plus the core `image_generate` tool. `skills.entries.*` is only for custom or
+third-party skill workflows.
+
+If you select a specific image provider/model, also configure that provider's
+auth/API key. Typical examples: `GEMINI_API_KEY` or `GOOGLE_API_KEY` for
+`google/*`, `OPENAI_API_KEY` for `openai/*`, and `FAL_KEY` for `fal/*`.
+
+Examples:
+
+- Native Nano Banana-style setup: `agents.defaults.imageGenerationModel.primary: "google/gemini-3-pro-image-preview"`
+- Native fal setup: `agents.defaults.imageGenerationModel.primary: "fal/fal-ai/flux/dev"`
+
+## Fields
 
 - `allowBundled`：仅针对**捆绑**技能的可选允许列表。设置后，只有列表中的捆绑技能是可用的（管理/工作区技能不受影响）。
 - `load.extraDirs`：额外的技能目录扫描路径（最低优先级）。

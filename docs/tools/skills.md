@@ -40,18 +40,25 @@ OpenClaw 使用与 **[AgentSkills](https://agentskills.io) 兼容** 的技能文
 
 ## ClawHub（安装 + 同步）
 
-ClawHub 是 OpenClaw 的公共技能注册表，浏览网址：[https://clawhub.com](https://clawhub.com)。可用于发现、安装、更新和备份技能。完整指南见：[ClawHub](/tools/clawhub)。
+ClawHub is the public skills registry for OpenClaw. Browse at
+[https://clawhub.com](https://clawhub.com). Use native `openclaw skills`
+commands to discover/install/update skills, or the separate `clawhub` CLI when
+you need publish/sync workflows.
+Full guide: [ClawHub](/tools/clawhub).
 
 常用流程：
 
-- 在你的工作空间安装技能：
-  - `clawhub install <skill-slug>`
-- 更新所有已安装技能：
-  - `clawhub update --all`
-- 同步（扫描 + 发布更新）：
+- Install a skill into your workspace:
+  - `openclaw skills install <skill-slug>`
+- Update all installed skills:
+  - `openclaw skills update --all`
+- Sync (scan + publish updates):
   - `clawhub sync --all`
 
-默认情况下，`clawhub` 会安装到当前工作目录下的 `./skills`（或回退到配置的 OpenClaw 工作空间）。OpenClaw 下一次会话时会将其识别为 `<workspace>/skills`。
+Native `openclaw skills install` installs into the active workspace `skills/`
+directory. The separate `clawhub` CLI also installs into `./skills` under your
+current working directory (or falls back to the configured OpenClaw workspace).
+OpenClaw picks that up as `<workspace>/skills` on the next session.
 
 ## 安全提示
 
@@ -67,8 +74,8 @@ ClawHub 是 OpenClaw 的公共技能注册表，浏览网址：[https://clawhub.
 
 ```markdown
 ---
-name: nano-banana-pro
-description: 通过 Gemini 3 Pro Image 生成或编辑图像
+name: image-lab
+description: Generate or edit images via a provider-backed image workflow
 ---
 ```
 
@@ -95,8 +102,8 @@ OpenClaw 在加载时根据 `metadata`（单行 JSON）过滤技能：
 
 ```markdown
 ---
-name: nano-banana-pro
-description: 通过 Gemini 3 Pro Image 生成或编辑图像
+name: image-lab
+description: Generate or edit images via a provider-backed image workflow
 metadata:
   {
     "openclaw":
@@ -177,7 +184,7 @@ metadata:
 {
   skills: {
     entries: {
-      "nano-banana-pro": {
+      "image-lab": {
         enabled: true,
         apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或明文字符串
         env: {
@@ -197,7 +204,18 @@ metadata:
 
 注意：若技能名包含连字符，需对键使用引号（JSON5 允许键名带引号）。
 
-配置键默认匹配 **技能名称**。如果技能定义了 `metadata.openclaw.skillKey`，使用该键作为 `skills.entries` 下的配置键。
+If you want stock image generation/editing inside OpenClaw itself, use the core
+`image_generate` tool with `agents.defaults.imageGenerationModel` instead of a
+bundled skill. Skill examples here are for custom or third-party workflows.
+
+For native image analysis, use the `image` tool with `agents.defaults.imageModel`.
+For native image generation/editing, use `image_generate` with
+`agents.defaults.imageGenerationModel`. If you pick `openai/*`, `google/*`,
+`fal/*`, or another provider-specific image model, add that provider's auth/API
+key too.
+
+Config keys match the **skill name** by default. If a skill defines
+`metadata.openclaw.skillKey`, use that key under `skills.entries`.
 
 规则：
 

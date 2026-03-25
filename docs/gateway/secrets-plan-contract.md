@@ -81,6 +81,12 @@ Invalid plan target path for models.providers.apiKey: models.providers.openai.ba
 
 无效计划不会写入任何内容。
 
+## Exec provider 同意行为
+
+- `--dry-run` 默认跳过 exec SecretRef 检查。
+- 包含 exec SecretRefs/providers 的计划在写入模式下会被拒绝，除非设置了 `--allow-exec`。
+- 验证/应用包含 exec 的计划时，在 dry-run 和写入命令中都要传递 `--allow-exec`。
+
 ## 运行时和审计范围说明
 
 - 仅引用的 `auth-profiles.json` 条目（`keyRef`/`tokenRef`）包含在运行时解析和审计范围内。
@@ -94,6 +100,10 @@ openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
 
 # 然后真正应用
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
+
+# 对于包含 exec 的计划，在两种模式下都显式选择加入
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run --allow-exec
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --allow-exec
 ```
 
 如果应用失败并显示无效目标路径消息，请使用 `openclaw secrets configure` 重新生成计划或修正目标路径至上述支持的格式。

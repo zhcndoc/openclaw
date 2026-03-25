@@ -11,7 +11,7 @@ title: "Bonjour 发现"
 OpenClaw 使用 Bonjour（mDNS / DNS-SD）作为**局域网内的便捷方式**来发现  
 活动的网关（WebSocket 端点）。这是尽力而为的机制，**不**替代 SSH 或基于 Tailnet 的连接。
 
-## 通过 Tailscale 的广域 Bonjour（单播 DNS-SD）
+## Wide-area Bonjour (Unicast DNS-SD) over Tailscale
 
 如果节点和网关处于不同网络，组播 mDNS 无法跨越网络边界。您可以通过切换为**单播 DNS-SD**  
 （“广域 Bonjour”）来保持相同的发现用户体验，该服务通过 Tailscale 实现。
@@ -72,9 +72,9 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 - 在 `~/.openclaw/openclaw.json` 中设置 `gateway.bind: "tailnet"`。
 - 重启网关（或重启 macOS 菜单栏应用）。
 
-## 广告的内容
+## 通告的内容
 
-仅网关会广告 `_openclaw-gw._tcp`。
+仅网关会通告 `_openclaw-gw._tcp`。
 
 ## 服务类型
 
@@ -82,7 +82,7 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 
 ## TXT 键（非秘密提示）
 
-网关会广告一些小的非秘密提示，以简化 UI 流程：
+网关会通告一些小的非秘密提示，以简化 UI 流程：
 
 - `role=gateway`
 - `displayName=<友好名称>`
@@ -100,7 +100,7 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 
 - Bonjour/mDNS TXT 记录是**无认证的**。客户端不应将 TXT 视为权威路由。  
 - 客户端应使用解析出的服务端点（SRV + A/AAAA）路由。将 `lanHost`、`tailnetDns`、`gatewayPort` 和 `gatewayTlsSha256` 仅作为提示。  
-- TLS 固定不应允许广告的 `gatewayTlsSha256` 覆盖先前存储的指纹。  
+- TLS 固定不应允许通告的 `gatewayTlsSha256` 覆盖先前存储的指纹。  
 - iOS/Android 节点应将基于发现的直接连接视为**仅限 TLS**，需要用户明确确认首个指纹后才信任。
 
 ## 在 macOS 上调试
@@ -156,11 +156,11 @@ Bonjour/DNS-SD 频繁将服务实例名中的字节转义为十进制 `\DDD` 序
 
 ## 禁用 / 配置
 
-- `OPENCLAW_DISABLE_BONJOUR=1` 禁用广告（旧版：`OPENCLAW_DISABLE_BONJOUR`）。  
+- `OPENCLAW_DISABLE_BONJOUR=1` 禁用通告（旧版：`OPENCLAW_DISABLE_BONJOUR`）。  
 - `gateway.bind` 在 `~/.openclaw/openclaw.json` 中控制网关绑定模式。  
-- `OPENCLAW_SSH_PORT` 覆盖 TXT 中广告的 SSH 端口（旧版：`OPENCLAW_SSH_PORT`）。  
+- `OPENCLAW_SSH_PORT` 覆盖 TXT 中通告的 SSH 端口（旧版：`OPENCLAW_SSH_PORT`）。  
 - `OPENCLAW_TAILNET_DNS` 在 TXT 中发布 MagicDNS 提示（旧版：`OPENCLAW_TAILNET_DNS`）。  
-- `OPENCLAW_CLI_PATH` 覆盖广告的 CLI 路径（旧版：`OPENCLAW_CLI_PATH`）。
+- `OPENCLAW_CLI_PATH` 覆盖通告的 CLI 路径（旧版：`OPENCLAW_CLI_PATH`）。
 
 ## 相关文档
 

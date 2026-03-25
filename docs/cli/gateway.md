@@ -189,13 +189,13 @@ openclaw gateway uninstall
 
 说明：
 
-- `gateway install` 支持 `--port`, `--runtime`, `--token`, `--force`, `--json` 参数。
-- 当令牌认证需令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证 SecretRef 是否可解析，但不会将解析出的令牌持久化入服务环境元数据。
-- 如果令牌认证需令牌且配置的令牌 SecretRef 未解析，安装将失败，而不是持久化回退的明文。
-- 对于密码认证的 `gateway run`，建议使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file` 或基于 SecretRef 的 `gateway.auth.password`，而不是内联 `--password`。
-- 在推断认证模式下，仅设置环境变量 `OPENCLAW_GATEWAY_PASSWORD`/`CLAWDBOT_GATEWAY_PASSWORD` 不会放宽安装时的令牌要求；安装托管服务时请使用持久配置（`gateway.auth.password` 或配置环境变量）。
-- 若同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，但未设置 `gateway.auth.mode`，安装时将被阻止，需显式设置模式。
-- 生命周期命令接受 `--json` 以支持脚本自动化。
+- `gateway install` supports `--port`, `--runtime`, `--token`, `--force`, `--json`.
+- When token auth requires a token and `gateway.auth.token` is SecretRef-managed, `gateway install` validates that the SecretRef is resolvable but does not persist the resolved token into service environment metadata.
+- If token auth requires a token and the configured token SecretRef is unresolved, install fails closed instead of persisting fallback plaintext.
+- For password auth on `gateway run`, prefer `OPENCLAW_GATEWAY_PASSWORD`, `--password-file`, or a SecretRef-backed `gateway.auth.password` over inline `--password`.
+- In inferred auth mode, shell-only `OPENCLAW_GATEWAY_PASSWORD` does not relax install token requirements; use durable config (`gateway.auth.password` or config `env`) when installing a managed service.
+- If both `gateway.auth.token` and `gateway.auth.password` are configured and `gateway.auth.mode` is unset, install is blocked until mode is set explicitly.
+- Lifecycle commands accept `--json` for scripting.
 
 ## 发现网关（Bonjour）
 

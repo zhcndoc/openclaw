@@ -1,9 +1,9 @@
 ---
 summary: "在 DigitalOcean 上运行 OpenClaw（简易付费 VPS 选项）"
 read_when:
-  - 在 DigitalOcean 上设置 OpenClaw
-  - 寻找便宜的 OpenClaw VPS 托管
-title: "DigitalOcean"
+  - Setting up OpenClaw on DigitalOcean
+  - Looking for cheap VPS hosting for OpenClaw
+title: "DigitalOcean (Platform)"
 ---
 
 # 在 DigitalOcean 上运行 OpenClaw
@@ -231,7 +231,7 @@ Oracle Cloud 提供 **Always Free** 的 ARM 实例，性能远超本文任何付
 
 ## 故障排除
 
-### 网关无法启动
+### Gateway will not start
 
 ```bash
 openclaw gateway status

@@ -42,8 +42,8 @@ openclaw models status
 openclaw doctor
 ```
 
-If you’d rather not manage env vars yourself, onboarding can store
-API keys for daemon use: `openclaw onboard`.
+如果您不想自己管理环境变量，onboarding 可以为守护进程存储
+API 密钥：`openclaw onboard`。
 
 详情请见 [帮助](/help) 关于环境继承（`env.shellEnv`、`~/.openclaw/.env`、systemd/launchd）。
 
@@ -128,7 +128,7 @@ openclaw doctor
 
 ### 每会话（聊天命令）
 
-使用 `/model <别名或ID>@<profileId>` 为当前会话固定指定的提供商凭证（示例プロフィールID: `anthropic:default`、`anthropic:work`）。
+使用 `/model <别名或ID>@<profileId>` 为当前会话固定指定的提供商凭证（示例配置文件 ID: `anthropic:default`、`anthropic:work`）。
 
 使用 `/model`（或 `/model list`）获取简洁选择器；使用 `/model status` 获取完整视图（候选 + 下一个认证配置文件，以及配置时的提供商端点详细信息）。
 
@@ -146,7 +146,7 @@ openclaw models auth order clear --provider anthropic
 
 ## 故障排除
 
-### “未找到凭证”
+### "No credentials found"
 
 如果 Anthropic 令牌配置缺失，请在 **网关主机** 上运行 `claude setup-token`，然后重新检查：
 

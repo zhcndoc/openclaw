@@ -138,7 +138,7 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 编辑 `scripts/k8s/manifests/deployment.yaml` 中的 `image` 字段：
 
 ```yaml
-image: ghcr.io/openclaw/openclaw:2026.3.1
+image: ghcr.io/openclaw/openclaw:latest # or pin to a specific version from https://github.com/openclaw/openclaw/releases
 ```
 
 ### 端口转发以外的暴露方式

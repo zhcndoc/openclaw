@@ -1,7 +1,6 @@
 ---
-title: "Diffs（差异）"
-summary: "只读差异查看器和文件渲染器，供代理使用（可选插件工具）"
-description: "使用可选的 Diffs 插件，将差异文本或统一补丁渲染为网关托管的差异查看视图、文件（PNG 或 PDF），或两者兼备。"
+title: "Diffs"
+summary: "Read-only diff viewer and file renderer for agents (optional plugin tool)"
 read_when:
   - 你希望代理显示代码或 Markdown 修改的差异
   - 你需要画布就绪的查看器 URL 或渲染的差异文件
@@ -104,22 +103,23 @@ read_when:
 
 所有字段均为可选，除非另有说明：
 
-- `before`（`string`）：原始文本。当未提供 `patch` 时，必须与 `after` 一起提供。
-- `after`（`string`）：更新后的文本。当未提供 `patch` 时，必须与 `before` 一起提供。
-- `patch`（`string`）：统一差异文本。与 `before` 和 `after` 互斥。
-- `path`（`string`）：前后文本模式下的显示文件名。
-- `lang`（`string`）：前后文本模式下的语言覆盖提示。
-- `title`（`string`）：查看器标题覆盖。
-- `mode`（`"view" | "file" | "both"`）：输出模式。默认为插件默认 `defaults.mode`。
-- `theme`（`"light" | "dark"`）：查看器主题。默认为插件默认 `defaults.theme`。
-- `layout`（`"unified" | "split"`）：差异布局。默认为插件默认 `defaults.layout`。
-- `expandUnchanged`（`boolean`）：在完整上下文可用时，展开未修改部分。仅限单次调用选项（非插件默认键）。
-- `fileFormat`（`"png" | "pdf"`）：渲染文件格式。默认为插件默认 `defaults.fileFormat`。
-- `fileQuality`（`"standard" | "hq" | "print"`）：PNG 或 PDF 渲染的质量预设。
-- `fileScale`（`number`）：设备缩放覆盖（范围 1-4）。
-- `fileMaxWidth`（`number`）：最大渲染宽度，CSS 像素（范围 640-2400）。
-- `ttlSeconds`（`number`）：查看器工件有效期（秒）。默认 1800，最大 21600。
-- `baseUrl`（`string`）：查看器 URL 源覆盖。必须为 `http` 或 `https`，不允许查询和哈希。
+- `before` (`string`): original text. Required with `after` when `patch` is omitted.
+- `after` (`string`): updated text. Required with `before` when `patch` is omitted.
+- `patch` (`string`): unified diff text. Mutually exclusive with `before` and `after`.
+- `path` (`string`): display filename for before and after mode.
+- `lang` (`string`): language override hint for before and after mode.
+- `title` (`string`): viewer title override.
+- `mode` (`"view" | "file" | "both"`): output mode. Defaults to plugin default `defaults.mode`.
+  Deprecated alias: `"image"` behaves like `"file"` and is still accepted for backward compatibility.
+- `theme` (`"light" | "dark"`): viewer theme. Defaults to plugin default `defaults.theme`.
+- `layout` (`"unified" | "split"`): diff layout. Defaults to plugin default `defaults.layout`.
+- `expandUnchanged` (`boolean`): expand unchanged sections when full context is available. Per-call option only (not a plugin default key).
+- `fileFormat` (`"png" | "pdf"`): rendered file format. Defaults to plugin default `defaults.fileFormat`.
+- `fileQuality` (`"standard" | "hq" | "print"`): quality preset for PNG or PDF rendering.
+- `fileScale` (`number`): device scale override (`1`-`4`).
+- `fileMaxWidth` (`number`): max render width in CSS pixels (`640`-`2400`).
+- `ttlSeconds` (`number`): viewer artifact TTL in seconds. Default 1800, max 21600.
+- `baseUrl` (`string`): viewer URL origin override. Must be `http` or `https`, no query/hash.
 
 校验和限制：
 
@@ -150,9 +150,12 @@ read_when:
 - `inputKind`
 - `fileCount`
 - `mode`
+- `context` (`agentId`, `sessionId`, `messageChannel`, `agentAccountId` when available)
 
 渲染 PNG 或 PDF 时的文件相关字段：
 
+- `artifactId`
+- `expiresAt`
 - `filePath`
 - `path`（与 `filePath` 值相同，兼容消息工具）
 - `fileBytes`

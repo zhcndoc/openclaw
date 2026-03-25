@@ -9,39 +9,59 @@ sidebarTitle: "入职概述"
 
 # 入职概述
 
-OpenClaw 支持多种入职路径，具体取决于 Gateway 的运行位置以及你希望如何配置提供者。
+OpenClaw has two onboarding paths. Both configure auth, the Gateway, and
+optional channels — they just differ in how you interact with the setup.
 
-## 选择你的入职路径
+## Which path should I use?
 
-- **适用于 macOS、Linux 和 Windows（通过 WSL2）的 CLI 入职**
-- **适用于 Apple silicon 或 Intel Mac 的 macOS 应用引导式首次运行**
+|                | CLI onboarding                         | macOS app onboarding      |
+| -------------- | -------------------------------------- | ------------------------- |
+| **Platforms**  | macOS, Linux, Windows (native or WSL2) | macOS only                |
+| **Interface**  | Terminal wizard                        | Guided UI in the app      |
+| **Best for**   | Servers, headless, full control        | Desktop Mac, visual setup |
+| **Automation** | `--non-interactive` for scripts        | Manual only               |
+| **Command**    | `openclaw onboard`                     | Launch the app            |
+
+Most users should start with **CLI onboarding** — it works everywhere and gives
+you the most control.
+
+## What onboarding configures
+
+Regardless of which path you choose, onboarding sets up:
+
+1. **Model provider and auth** — API key, OAuth, or setup token for your chosen provider
+2. **Workspace** — directory for agent files, bootstrap templates, and memory
+3. **Gateway** — port, bind address, auth mode
+4. **Channels** (optional) — WhatsApp, Telegram, Discord, and more
+5. **Daemon** (optional) — background service so the Gateway starts automatically
 
 ## CLI 入职
 
-在终端运行入职流程：
+Run in any terminal:
 
 ```bash
 openclaw onboard
 ```
 
-当你想完全控制 Gateway、工作区、频道和技能时，使用 CLI 入职。文档：
+Add `--install-daemon` to also install the background service in one step.
 
-- [入职（CLI）](/start/wizard)
-- [`openclaw onboard` 命令](/cli/onboard)
+Full reference: [Onboarding (CLI)](/start/wizard)
+CLI command docs: [`openclaw onboard`](/cli/onboard)
 
 ## macOS 应用入职
 
-想要在 macOS 上获得全程引导设置时，使用 OpenClaw 应用。文档：
+Open the OpenClaw app. The first-run wizard walks you through the same steps
+with a visual interface.
 
-- [入职（macOS 应用）](/start/onboarding)
+Full reference: [Onboarding (macOS App)](/start/onboarding)
 
-## 自定义提供者
+## Custom or unlisted providers
 
-如果你需要的端点不在列表中，包括暴露标准 OpenAI 或 Anthropic API 的托管提供者，请在 CLI 入职时选择 **自定义提供者**。系统会要求你：
+If your provider is not listed in onboarding, choose **Custom Provider** and
+enter:
 
-- 选择 OpenAI 兼容、Anthropic 兼容，或 **未知**（自动检测）。
-- 输入基础 URL 和 API 密钥（如果提供者需要）。
-- 提供模型 ID 和可选别名。
-- 选择一个端点 ID，以便多个自定义端点可以共存。
+- API compatibility mode (OpenAI-compatible, Anthropic-compatible, or auto-detect)
+- Base URL and API key
+- Model ID and optional alias
 
-详细步骤请参阅上述 CLI 入职文档。
+Multiple custom endpoints can coexist — each gets its own endpoint ID.

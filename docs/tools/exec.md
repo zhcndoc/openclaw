@@ -43,16 +43,17 @@ title: "Exec 工具"
 
 ## 配置
 
-- `tools.exec.notifyOnExit`（默认：true）：后台 exec 会话退出时发送系统事件并请求心跳。
-- `tools.exec.approvalRunningNoticeMs`（默认：10000）：当受批准限制的 exec 运行超过该时间时，发送单次“正在运行”通知（0 禁用）。
-- `tools.exec.host`（默认：`sandbox`）
-- `tools.exec.security`（默认：沙箱为 `deny`，gateway 和 node 为 `allowlist`）
-- `tools.exec.ask`（默认：`on-miss`）
-- `tools.exec.node`（默认：未设置）
-- `tools.exec.pathPrepend`：exec 运行时要在 `PATH` 前添加的目录列表（仅 gateway 和 sandbox）。
-- `tools.exec.safeBins`：仅支持 stdin 安全运行的二进制，不需要明确允许列表。详见[安全二进制](/tools/exec-approvals#safe-bins-stdin-only)。
-- `tools.exec.safeBinTrustedDirs`：对 `safeBins` 路径检查额外信任的显式目录。`PATH` 条目从不自动信任。内置默认 `/bin` 和 `/usr/bin`。
-- `tools.exec.safeBinProfiles`：安全二进制的自定义 argv 策略（如 `minPositional`，`maxPositional`，`allowedValueFlags`，`deniedFlags`）。
+- `tools.exec.notifyOnExit` (default: true): when true, backgrounded exec sessions enqueue a system event and request a heartbeat on exit.
+- `tools.exec.approvalRunningNoticeMs` (default: 10000): emit a single “running” notice when an approval-gated exec runs longer than this (0 disables).
+- `tools.exec.host` (default: `sandbox`)
+- `tools.exec.security` (default: `deny` for sandbox, `allowlist` for gateway + node when unset)
+- `tools.exec.ask` (default: `on-miss`)
+- `tools.exec.node` (default: unset)
+- `tools.exec.strictInlineEval` (default: false): when true, inline interpreter eval forms such as `python -c`, `node -e`, `ruby -e`, `perl -e`, `php -r`, `lua -e`, and `osascript -e` always require explicit approval and are never persisted by `allow-always`.
+- `tools.exec.pathPrepend`: list of directories to prepend to `PATH` for exec runs (gateway + sandbox only).
+- `tools.exec.safeBins`: stdin-only safe binaries that can run without explicit allowlist entries. For behavior details, see [Safe bins](/tools/exec-approvals#safe-bins-stdin-only).
+- `tools.exec.safeBinTrustedDirs`: additional explicit directories trusted for `safeBins` path checks. `PATH` entries are never auto-trusted. Built-in defaults are `/bin` and `/usr/bin`.
+- `tools.exec.safeBinProfiles`: optional custom argv policy per safe bin (`minPositional`, `maxPositional`, `allowedValueFlags`, `deniedFlags`).
 
 示例：
 
@@ -124,8 +125,10 @@ openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
 - `tools.exec.safeBinProfiles`：安全二进制的自定义命令行参数策略。
 - 允许列表：针对可执行路径的显式信任。
 
-不要将 `safeBins` 当作通用允许列表，也不要添加解释器/运行时二进制（如 `python3`、`node`、`ruby`、`bash`）。如需这些，请使用显式允许列表条目并保持批准提示开启。  
-`openclaw security audit` 会在缺少显式配置文件的解释器/运行时 `safeBins` 条目时发出警告，`openclaw doctor --fix` 可生成缺失的自定义 `safeBinProfiles`。
+Do not treat `safeBins` as a generic allowlist, and do not add interpreter/runtime binaries (for example `python3`, `node`, `ruby`, `bash`). If you need those, use explicit allowlist entries and keep approval prompts enabled.
+`openclaw security audit` warns when interpreter/runtime `safeBins` entries are missing explicit profiles, and `openclaw doctor --fix` can scaffold missing custom `safeBinProfiles` entries.
+`openclaw security audit` and `openclaw doctor` also warn when you explicitly add broad-behavior bins such as `jq` back into `safeBins`.
+If you explicitly allowlist interpreters, enable `tools.exec.strictInlineEval` so inline code-eval forms still require a fresh approval.
 
 详见完整策略和示例：[Exec 批准](/tools/exec-approvals#safe-bins-stdin-only) 和 [安全二进制与允许列表区别](/tools/exec-approvals#safe-bins-versus-allowlist)。
 

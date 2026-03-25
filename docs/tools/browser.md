@@ -168,16 +168,19 @@ OpenClaw 会在调用 `/json/*` 端点及连接 CDP WebSocket 时保留认证信
 
 说明：
 
-- 节点宿主通过 **代理命令** 提供本地浏览器控制服务器。
-- 配置文件来自节点自身的 `browser.profiles`（与本地一致）。
-- 若想禁用：
-  - 节点端：设置 `nodeHost.browserProxy.enabled=false`
-  - 网关端：设置 `gateway.nodes.browser.mode="off"`
+- The node host exposes its local browser control server via a **proxy command**.
+- Profiles come from the node’s own `browser.profiles` config (same as local).
+- `nodeHost.browserProxy.allowProfiles` is optional. Leave it empty for the legacy/default behavior: all configured profiles remain reachable through the proxy, including profile create/delete routes.
+- If you set `nodeHost.browserProxy.allowProfiles`, OpenClaw treats it as a least-privilege boundary: only allowlisted profiles can be targeted, and persistent profile create/delete routes are blocked on the proxy surface.
+- Disable if you don’t want it:
+  - On the node: `nodeHost.browserProxy.enabled=false`
+  - On the gateway: `gateway.nodes.browser.mode="off"`
 
 ## Browserless（托管远程 CDP）
 
-[Browserless](https://browserless.io) 是一个托管的 Chromium 服务，提供 HTTPS 上的 CDP 端点。  
-您可以将 OpenClaw 浏览器配置文件指向某 Browserless 区域端点，并使用 API 密钥认证。
+[Browserless](https://browserless.io) is a hosted Chromium service that exposes
+CDP endpoints over HTTPS. You can point an OpenClaw browser profile at a
+Browserless region endpoint and authenticate with your API key.
 
 示例：
 
@@ -531,15 +534,16 @@ docker compose run --rm openclaw-cli \
   - uploads：`/tmp/openclaw/uploads`（备选：`${os.tmpdir()}/openclaw/uploads`）
 - `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入。
 - `snapshot`:
-  - `--format ai`（Playwright 安装时默认）：返回带数字引用的 AI 快照（`aria-ref="<n>"`）。
-  - `--format aria`：返回辅助功能树（无引用，仅查看用）。
-  - `--efficient`（或 `--mode efficient`）：紧凑角色快照预设（交互式 + 紧凑 + 深度限制 + 更低字符数）。
-  - 配置默认（工具/CLI）：设置 `browser.snapshotDefaults.mode: "efficient"` ，未传入模式时使用紧凑模式。
-  - 角色快照参数（`--interactive`、`--compact`、`--depth`、`--selector`）强制角色快照，附带 `ref=e12` 形式标识。
-  - `--frame "<iframe 选择器>"` 限制作用域到 iframe（与 `e12` 等角色引用配合使用）。
-  - `--interactive` 输出扁平且易选的交互元素列表（便于操作驱动）。
-  - `--labels` 附加带叠加引用标签的视口截图（打印 `MEDIA:<路径>`）。
-- `click`/`type`/等需使用从 `snapshot` 返回的 `ref` ，可用数字 `12` 或角色引用 `e12`。故意不支持 CSS 选择器。
+  - `--format ai` (default when Playwright is installed): returns an AI snapshot with numeric refs (`aria-ref="<n>"`).
+  - `--format aria`: returns the accessibility tree (no refs; inspection only).
+  - `--efficient` (or `--mode efficient`): compact role snapshot preset (interactive + compact + depth + lower maxChars).
+  - Config default (tool/CLI only): set `browser.snapshotDefaults.mode: "efficient"` to use efficient snapshots when the caller does not pass a mode (see [Gateway configuration](/gateway/configuration-reference#browser)).
+  - Role snapshot options (`--interactive`, `--compact`, `--depth`, `--selector`) force a role-based snapshot with refs like `ref=e12`.
+  - `--frame "<iframe selector>"` scopes role snapshots to an iframe (pairs with role refs like `e12`).
+  - `--interactive` outputs a flat, easy-to-pick list of interactive elements (best for driving actions).
+  - `--labels` adds a viewport-only screenshot with overlayed ref labels (prints `MEDIA:<path>`).
+- `click`/`type`/etc require a `ref` from `snapshot` (either numeric `12` or role ref `e12`).
+  CSS selectors are intentionally not supported for actions.
 
 ## 快照与引用（refs）
 

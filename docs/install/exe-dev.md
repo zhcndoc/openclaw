@@ -14,11 +14,11 @@ title: "exe.dev"
 
 ## 初学者快速路径
 
-1. 访问 [https://exe.new/openclaw](https://exe.new/openclaw)
-2. 按需填写你的认证密钥/令牌
-3. 点击你的虚拟机旁的“Agent”，等待...
-4. ???
-5. 收益
+1. [https://exe.new/openclaw](https://exe.new/openclaw)
+2. Fill in your auth key/token as needed
+3. Click on "Agent" next to your VM and wait for Shelley to finish provisioning
+4. Open `https://<vm-name>.exe.xyz/` and paste your gateway token to authenticate
+5. Approve any pending device pairing requests with `openclaw devices approve <requestId>`
 
 ## 所需条件
 

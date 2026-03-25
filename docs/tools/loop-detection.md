@@ -1,7 +1,6 @@
 ---
-title: "工具循环检测"
-description: "配置防止重复或卡顿工具调用循环的可选护栏"
-summary: "如何启用和调整检测重复工具调用循环的护栏"
+title: "Tool-loop detection"
+summary: "How to enable and tune guardrails that detect repetitive tool-call loops"
 read_when:
   - 用户报告代理卡在重复工具调用中
   - 您需要调整重复调用保护

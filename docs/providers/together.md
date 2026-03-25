@@ -1,5 +1,6 @@
 ---
-summary: "Together AI 设置（认证 + 模型选择）"
+title: "Together AI"
+summary: "Together AI setup (auth + model selection)"
 read_when:
   - 你想使用 Together AI 与 OpenClaw 结合
   - 你需要 API 密钥环境变量或命令行认证选项

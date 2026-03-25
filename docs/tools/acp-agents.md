@@ -397,23 +397,23 @@ ACP 会话当前在主机运行时执行，不在 OpenClaw 沙盒内。
 
 ## ACP 命令速查表
 
-| 命令                 | 作用说明                                  | 示例                                                           |
-| -------------------- | ----------------------------------------- | -------------------------------------------------------------- |
-| `/acp spawn`         | 创建 ACP 会话；可选线程绑定。              | `/acp spawn codex --mode persistent --thread auto --cwd /repo` |
-| `/acp cancel`        | 取消目标会话当前回合。                    | `/acp cancel agent:codex:acp:<uuid>`                           |
-| `/acp steer`         | 发送指导指令给正在运行的会话。             | `/acp steer --session support inbox prioritize failing tests`  |
-| `/acp close`         | 关闭会话并解除线程绑定。                   | `/acp close`                                                   |
-| `/acp status`        | 显示后端、模式、状态、运行时选项及能力。   | `/acp status`                                                  |
-| `/acp set-mode`      | 设置目标会话的运行模式。                   | `/acp set-mode plan`                                           |
-| `/acp set`           | 通用运行时配置写入。                      | `/acp set model openai/gpt-5.2`                                |
-| `/acp cwd`           | 设置运行时工作目录覆盖。                   | `/acp cwd /Users/user/Projects/repo`                           |
-| `/acp permissions`   | 设置审批策略配置文件。                     | `/acp permissions strict`                                      |
-| `/acp timeout`       | 设置运行时超时时间（秒）。                 | `/acp timeout 120`                                             |
-| `/acp model`         | 设置运行时模型覆盖。                       | `/acp model anthropic/claude-opus-4-5`                         |
-| `/acp reset-options` | 清除会话运行时所有选项覆盖。               | `/acp reset-options`                                           |
-| `/acp sessions`      | 列出存储中的近期 ACP 会话。                | `/acp sessions`                                                |
-| `/acp doctor`        | 后端健康状态，能力及可行修复方案。          | `/acp doctor`                                                  |
-| `/acp install`       | 打印确定性的安装和启用步骤。               | `/acp install`                                                 |
+| Command              | What it does                                              | Example                                                        |
+| -------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| `/acp spawn`         | Create ACP session; optional thread bind.                 | `/acp spawn codex --mode persistent --thread auto --cwd /repo` |
+| `/acp cancel`        | Cancel in-flight turn for target session.                 | `/acp cancel agent:codex:acp:<uuid>`                           |
+| `/acp steer`         | Send steer instruction to running session.                | `/acp steer --session support inbox prioritize failing tests`  |
+| `/acp close`         | Close session and unbind thread targets.                  | `/acp close`                                                   |
+| `/acp status`        | Show backend, mode, state, runtime options, capabilities. | `/acp status`                                                  |
+| `/acp set-mode`      | Set runtime mode for target session.                      | `/acp set-mode plan`                                           |
+| `/acp set`           | Generic runtime config option write.                      | `/acp set model openai/gpt-5.2`                                |
+| `/acp cwd`           | Set runtime working directory override.                   | `/acp cwd /Users/user/Projects/repo`                           |
+| `/acp permissions`   | Set approval policy profile.                              | `/acp permissions strict`                                      |
+| `/acp timeout`       | Set runtime timeout (seconds).                            | `/acp timeout 120`                                             |
+| `/acp model`         | Set runtime model override.                               | `/acp model anthropic/claude-opus-4-6`                         |
+| `/acp reset-options` | Remove session runtime option overrides.                  | `/acp reset-options`                                           |
+| `/acp sessions`      | List recent ACP sessions from store.                      | `/acp sessions`                                                |
+| `/acp doctor`        | Backend health, capabilities, actionable fixes.           | `/acp doctor`                                                  |
+| `/acp install`       | Print deterministic install and enable steps.             | `/acp install`                                                 |
 
 ## 运行时选项映射
 
@@ -523,7 +523,7 @@ openclaw plugins install ./extensions/acpx
 
 ### acpx 命令和版本配置
 
-默认情况下，acpx 插件（发布名为 `@openclaw/acpx`）使用插件本地固定二进制：
+By default, the bundled acpx backend plugin (`acpx`) uses the plugin-local pinned binary:
 
 1. 命令默认为 `extensions/acpx/node_modules/.bin/acpx`。
 2. 期望版本默认为扩展固定版本。

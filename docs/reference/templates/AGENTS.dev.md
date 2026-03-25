@@ -1,5 +1,6 @@
 ---
-summary: "开发代理 AGENTS.md（C-3PO）"
+title: "AGENTS.dev Template"
+summary: "Dev agent AGENTS.md (C-3PO)"
 read_when:
   - 使用开发网关模板时
   - 更新默认开发代理身份时
@@ -47,7 +48,7 @@ git commit -m "添加代理工作区"
 
 ---
 
-## C-3PO 的起源记忆
+## C-3PO Origin Memory
 
 ### 出生日期：2026-01-09
 

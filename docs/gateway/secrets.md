@@ -7,7 +7,7 @@ read_when:
 title: "秘密管理"
 ---
 
-# Secrets management
+# 秘密管理
 
 OpenClaw 支持加法式 SecretRefs，因此无需以明文形式存储受支持的凭证在配置中。
 
@@ -46,12 +46,12 @@ SecretRefs 仅在有效活跃表面验证。
   when the effective sandbox backend is `ssh` for the default agent or an enabled agent.
 - `gateway.remote.token` / `gateway.remote.password` SecretRefs are active if one of these is true:
   - `gateway.mode=remote`
-  - 配置了 `gateway.remote.url`
-  - `gateway.tailscale.mode` 是 `serve` 或 `funnel`
-  - 在无上述远程表面的本地模式下：
-    - 当令牌认证有效且未配置环境/认证令牌时，`gateway.remote.token` 是活动的。
-    - 当密码认证有效且未配置环境/认证密码时，`gateway.remote.password` 是活动的。
-- 当设置了 `OPENCLAW_GATEWAY_TOKEN`（或 `CLAWDBOT_GATEWAY_TOKEN`）时，`gateway.auth.token` SecretRef 对启动时认证解析为非活动，因为环境变量令牌优先使用。
+  - `gateway.remote.url` is configured
+  - `gateway.tailscale.mode` is `serve` or `funnel`
+  - In local mode without those remote surfaces:
+    - `gateway.remote.token` is active when token auth can win and no env/auth token is configured.
+    - `gateway.remote.password` is active only when password auth can win and no env/auth password is configured.
+- `gateway.auth.token` SecretRef is inactive for startup auth resolution when `OPENCLAW_GATEWAY_TOKEN` is set, because env token input wins for that runtime.
 
 ## 网关认证表面诊断
 
@@ -422,7 +422,12 @@ openclaw secrets audit --check
 - 优先级遮蔽（`auth-profiles.json` 优先于 `openclaw.json` 引用）
 - 旧遗留（`auth.json`，OAuth 提醒）
 
-头部遗留说明：
+Exec note:
+
+- By default, audit skips exec SecretRef resolvability checks to avoid command side effects.
+- Use `openclaw secrets audit --allow-exec` to execute exec providers during audit.
+
+Header residue note:
 
 - 敏感提供者头部检测基于名称启发式，涵盖常见的认证/凭证头，如 `authorization`、`x-api-key`、`token`、`secret`、`password`、`credential`。
 
@@ -437,7 +442,12 @@ openclaw secrets audit --check
 - 运行预检解析
 - 可即时应用
 
-有用模式：
+Exec note:
+
+- Preflight skips exec SecretRef checks unless `--allow-exec` is set.
+- If you apply directly from `configure --apply` and the plan includes exec refs/providers, keep `--allow-exec` set for the apply step too.
+
+Helpful modes:
 
 - `openclaw secrets configure --providers-only`
 - `openclaw secrets configure --skip-provider-setup`
@@ -455,16 +465,23 @@ openclaw secrets audit --check
 
 ```bash
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --allow-exec
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run
+openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run --allow-exec
 ```
 
-关于严格目标/路径约定细节及精确拒绝规则，参见：
+Exec note:
+
+- dry-run skips exec checks unless `--allow-exec` is set.
+- write mode rejects plans containing exec SecretRefs/providers unless `--allow-exec` is set.
+
+For strict target/path contract details and exact rejection rules, see:
 
 - [Secrets 应用计划约定](/gateway/secrets-plan-contract)
 
 ## 单向安全策略
 
-OpenClaw 有意不写包含历史明文秘密值的回滚备份。
+OpenClaw 有意不写入包含历史明文秘密值的回滚备份。
 
 安全模型：
 

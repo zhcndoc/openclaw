@@ -28,20 +28,22 @@ OpenClaw 可以通过三种方式使用 **Firecrawl**：
 
 ```json5
 {
-  plugins: {
-    entries: {
-      firecrawl: {
-        enabled: true,
-      },
-    },
-  },
   tools: {
     web: {
       search: {
         provider: "firecrawl",
-        firecrawl: {
-          apiKey: "FIRECRAWL_API_KEY_HERE",
-          baseUrl: "https://api.firecrawl.dev",
+      },
+    },
+  },
+  plugins: {
+    entries: {
+      firecrawl: {
+        enabled: true,
+        config: {
+          webSearch: {
+            apiKey: "FIRECRAWL_API_KEY_HERE",
+            baseUrl: "https://api.firecrawl.dev",
+          },
         },
       },
     },
@@ -134,4 +136,8 @@ OpenClaw 对 Firecrawl 请求总是使用 `proxy: "auto"` 并设置 `storeInCach
 2. Firecrawl（如有配置）
 3. 基础 HTML 清理（最后回退）
 
-完整的网页工具设置请参见 [Web tools](/tools/web)。
+## Related
+
+- [Web Search overview](/tools/web) -- all providers and auto-detection
+- [Web Fetch](/tools/web-fetch) -- web_fetch tool with Firecrawl fallback
+- [Tavily](/tools/tavily) -- search + extract tools

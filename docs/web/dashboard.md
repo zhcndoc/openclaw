@@ -38,7 +38,7 @@ title: "仪表盘"
 - 如果 `gateway.auth.token` 配置为 SecretRef 且在当前 shell 中未解析，`openclaw dashboard` 仍会打印不含令牌的 URL，并给出可执行的认证设置提示。
 - **非 localhost 环境**：可使用 Tailscale Serve（若 `gateway.auth.allowTailscale: true` 则控制界面和 WebSocket 访问免令牌，默认信任网关主机；HTTP API 仍需令牌/密码）、带令牌的 tailnet 绑定或者 SSH 隧道。详见 [Web 界面](/web)。
 
-## 遇到 “unauthorized” / 1008 错误时
+## If you see "unauthorized" / 1008
 
 - 确认网关是否可达（本地：使用 `openclaw status`；远程：通过 SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@host`，然后访问 `http://127.0.0.1:18789/`）。
 - 对于 `AUTH_TOKEN_MISMATCH`，客户端可在网关返回重试提示时使用缓存的设备令牌尝试一次信任重试。若重试后依然认证失败，则需手动处理令牌漂移。

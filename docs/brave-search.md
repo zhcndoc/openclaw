@@ -1,9 +1,9 @@
 ---
 summary: "Brave 搜索 API 用于 web_search 的设置"
 read_when:
-  - 你想使用 Brave 搜索进行 web_search
-  - 你需要 BRAVE_API_KEY 或计划详情
-title: "Brave 搜索"
+  - 当你想要使用 Brave Search 进行 web_search 时
+  - 当你需要 BRAVE_API_KEY 或套餐详情时
+title: "Brave 搜索（旧版路径）"
 ---
 
 # Brave 搜索 API
@@ -20,11 +20,21 @@ OpenClaw 支持 Brave 搜索作为 `web_search` 的网络搜索提供者。
 
 ```json5
 {
+  plugins: {
+    entries: {
+      brave: {
+        config: {
+          webSearch: {
+            apiKey: "BRAVE_API_KEY_HERE",
+          },
+        },
+      },
+    },
+  },
   tools: {
     web: {
       search: {
         provider: "brave",
-        apiKey: "BRAVE_API_KEY_HERE",
         maxResults: 5,
         timeoutSeconds: 30,
       },
@@ -32,6 +42,9 @@ OpenClaw 支持 Brave 搜索作为 `web_search` 的网络搜索提供者。
   },
 }
 ```
+
+Provider-specific Brave 搜索设置现在位于 `plugins.entries.brave.config.webSearch.*` 下。
+旧版 `tools.web.search.apiKey` 仍通过兼容层加载，但它已不再是规范的配置路径。
 
 ## 工具参数
 
@@ -77,4 +90,4 @@ await web_search({
 - Search 计划包含 LLM 上下文端点和 AI 推理权限。存储结果以训练或调整模型需要拥有明确存储权限的计划。详见 Brave [服务条款](https://api-dashboard.search.brave.com/terms-of-service)。
 - 默认结果缓存时间为 15 分钟（通过 `cacheTtlMinutes` 可配置）。
 
-完整的 web_search 配置请参见 [Web tools](/tools/web)。
+完整的 web_search 配置请参见 [Web 工具](/tools/web)。

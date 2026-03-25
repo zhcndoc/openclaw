@@ -9,7 +9,7 @@ title: "本地模型"
 
 # 本地模型
 
-本地运行是可行的，但 OpenClaw 期望有大上下文和强防御以抵抗提示注入。小显卡会截断上下文并泄露安全性。目标要高：**≥2 台满负荷的 Mac Studio 或等效 GPU 设备（约 3 万美元以上）**。单个 **24 GB** GPU 仅适用于更轻量的提示，且延迟较高。请使用你能运行的 **最大 / 全尺寸模型变体**；激进量化或“小”检查点会提高提示注入风险（参见 [安全](/gateway/security)）。
+本地运行是可行的，但 OpenClaw 期望有大上下文和强防御以抵抗提示注入。小显卡会截断上下文并泄露安全性。目标要高：**≥2 台满负荷的 Mac Studio 或等效 GPU 设备（约 3 万美元以上）**。单个 **24 GB** GPU 仅适用于更轻量的提示，且延迟较高。请使用你能运行的 **最大 / 全尺寸模型变体**；激进量化或"小"检查点会提高提示注入风险（参见 [安全](/gateway/security)）。
 
 ## 推荐方案：LM Studio + MiniMax M2.5（Responses API，完整版）  
 如果您想要最简便的本地设置，可以从 [Ollama](/providers/ollama) 和 `openclaw onboard` 开始。本页是针对更高端本地环境和自定义 OpenAI 兼容本地服务器的专业指南。
@@ -56,7 +56,7 @@ title: "本地模型"
 **设置清单**
 
 - 安装 LM Studio：[https://lmstudio.ai](https://lmstudio.ai)
-- 在 LM Studio 中，下载 **可用的最大 MiniMax M2.5 版本**（避免“小型”/高度量化的变体），启动服务器，确认 `http://127.0.0.1:1234/v1/models` 能列出它。
+- 在 LM Studio 中，下载 **可用的最大 MiniMax M2.5 版本**（避免"小型"/高度量化的变体），启动服务器，确认 `http://127.0.0.1:1234/v1/models` 能列出它。
 - 保持模型加载状态；冷启动会增加启动延迟。
 - 如果你的 LM Studio 版本不同，请调整 `contextWindow` 和 `maxTokens`。
 - WhatsApp 使用时，保持使用 Responses API，保证只发送最终文本。
@@ -70,11 +70,11 @@ title: "本地模型"
   agents: {
     defaults: {
       model: {
-        primary: "anthropic/claude-sonnet-4-5",
+        primary: "anthropic/claude-sonnet-4-6",
         fallbacks: ["lmstudio/minimax-m2.5-gs32", "anthropic/claude-opus-4-6"],
       },
       models: {
-        "anthropic/claude-sonnet-4-5": { alias: "Sonnet" },
+        "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
         "lmstudio/minimax-m2.5-gs32": { alias: "MiniMax Local" },
         "anthropic/claude-opus-4-6": { alias: "Opus" },
       },
@@ -148,6 +148,6 @@ vLLM、LiteLLM、OAI-proxy 或自定义网关，只要它们暴露 OpenAI 风格
 ## 故障排查
 
 - Gateway 能否访问代理？使用命令 `curl http://127.0.0.1:1234/v1/models` 测试。
-- LM Studio 模型是否卸载了？重新加载；冷启动常导致“卡住”。
+- LM Studio 模型是否卸载了？重新加载；冷启动常导致"卡住"。
 - 上下文错误？降低 `contextWindow` 或提高服务器限制。
 - 安全性：本地模型跳过服务端过滤；保持代理权限窄且启用压缩，限制提示注入影响范围。

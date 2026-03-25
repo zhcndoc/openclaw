@@ -11,7 +11,7 @@ title: "Peekaboo 桥接"
 
 OpenClaw 可以作为本地、权限感知的 UI 自动化代理托管 **PeekabooBridge**。这让 `peekaboo` 命令行工具可以驱动 UI 自动化，同时复用 macOS 应用的 TCC 权限。
 
-## 这是什么（以及不是什么）
+## What this is (and is not)
 
 - **主机**：OpenClaw.app 可作为 PeekabooBridge 的托管主机。
 - **客户端**：使用 `peekaboo` CLI（无独立的 `openclaw ui ...` 界面）。

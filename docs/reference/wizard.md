@@ -28,36 +28,36 @@ sidebarTitle: "入门参考"
       - 配置 + 凭据 + 会话
       - 完全重置（也移除工作区）
   </Step>
-  <Step title="模型/授权">
-    - **Anthropic API 密钥**：如果存在 `ANTHROPIC_API_KEY`，则使用，否则提示输入密钥，然后保存供守护进程使用。
-    - **Anthropic OAuth (Claude Code CLI)**：macOS 入门检查 Keychain 条目 "Claude Code-credentials"（请选择“始终允许”，以避免 launchd 启动时阻塞）；Linux/Windows 则复用若存在的 `~/.claude/.credentials.json`。
-    - **Anthropic token（粘贴 setup-token）**：在任意机器运行 `claude setup-token`，然后粘贴令牌（可命名；为空时为默认）。
-    - **OpenAI Code (Codex) 订阅 (Codex CLI)**：如果存在 `~/.codex/auth.json`，入门可复用它。
-    - **OpenAI Code (Codex) 订阅 (OAuth)**：浏览器流程，粘贴 `code#state`。
-      - 当模型未设置或为 `openai/*` 时，设置 `agents.defaults.model` 为 `openai-codex/gpt-5.2`。
-    - **OpenAI API 密钥**：如果存在 `OPENAI_API_KEY`，则使用；否则提示输入密钥，然后存入授权配置文件。
-    - **xAI (Grok) API 密钥**：提示输入 `XAI_API_KEY` 并将 xAI 配置为模型提供者。
-    - **OpenCode**：提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`，可在 https://opencode.ai/auth 获取），并让你选择 Zen 或 Go 目录。
-    - **Ollama**：提示输入 Ollama 基础 URL，提供 **云端 + 本地** 或 **仅本地** 模式，发现可用模型，并在需要时自动拉取所选本地模型。
-    - 详细信息：[Ollama](/providers/ollama)
-    - **API 密钥**：为你存储密钥。
-    - **Vercel AI Gateway（多模型代理）**：提示输入 `AI_GATEWAY_API_KEY`。
-    - 详细信息：[Vercel AI Gateway](/providers/vercel-ai-gateway)
-    - **Cloudflare AI Gateway**：提示输入账号 ID、网关 ID 及 `CLOUDFLARE_AI_GATEWAY_API_KEY`。
-    - 详细信息：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
-    - **MiniMax M2.5**：配置会自动写入。
-    - 详细信息：[MiniMax](/providers/minimax)
-    - **Synthetic (兼容 Anthropic)**：提示输入 `SYNTHETIC_API_KEY`。
-    - 详细信息：[Synthetic](/providers/synthetic)
-    - **Moonshot (Kimi K2)**：配置会自动写入。
-    - **Kimi Coding**：配置会自动写入。
-    - 详细信息：[Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
-    - **跳过**：尚未配置授权。
-    - 从检测到的选项中选择默认模型（或手动输入提供者/模型）。为最佳质量和降低提示注入风险，请选择核Stack中最强的最新代模型。
-    - 入门时会执行模型检测，并警告未知模型或缺少授权。
-    - API 密钥存储模式默认为明文授权配置文件值。使用 `--secret-input-mode ref` 则存储环境变量引用（例如 `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`）。
-    - OAuth 凭据存放于 `~/.openclaw/credentials/oauth.json`；授权配置文件存于 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（包含 API 密钥及 OAuth）。
-    - 详情：[/concepts/oauth](/concepts/oauth)
+  <Step title="Model/Auth">
+    - **Anthropic API key**: uses `ANTHROPIC_API_KEY` if present or prompts for a key, then saves it for daemon use.
+    - **Anthropic OAuth (Claude Code CLI)**: on macOS onboarding checks Keychain item "Claude Code-credentials" (choose "Always Allow" so launchd starts don't block); on Linux/Windows it reuses `~/.claude/.credentials.json` if present.
+    - **Anthropic token (paste setup-token)**: run `claude setup-token` on any machine, then paste the token (you can name it; blank = default).
+    - **OpenAI Code (Codex) subscription (Codex CLI)**: if `~/.codex/auth.json` exists, onboarding can reuse it.
+    - **OpenAI Code (Codex) subscription (OAuth)**: browser flow; paste the `code#state`.
+      - Sets `agents.defaults.model` to `openai-codex/gpt-5.2` when model is unset or `openai/*`.
+    - **OpenAI API key**: uses `OPENAI_API_KEY` if present or prompts for a key, then stores it in auth profiles.
+    - **xAI (Grok) API key**: prompts for `XAI_API_KEY` and configures xAI as a model provider.
+    - **OpenCode**: prompts for `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`, get it at https://opencode.ai/auth) and lets you pick the Zen or Go catalog.
+    - **Ollama**: prompts for the Ollama base URL, offers **Cloud + Local** or **Local** mode, discovers available models, and auto-pulls the selected local model when needed.
+    - More detail: [Ollama](/providers/ollama)
+    - **API key**: stores the key for you.
+    - **Vercel AI Gateway (multi-model proxy)**: prompts for `AI_GATEWAY_API_KEY`.
+    - More detail: [Vercel AI Gateway](/providers/vercel-ai-gateway)
+    - **Cloudflare AI Gateway**: prompts for Account ID, Gateway ID, and `CLOUDFLARE_AI_GATEWAY_API_KEY`.
+    - More detail: [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
+    - **MiniMax**: config is auto-written; hosted default is `MiniMax-M2.7` and `MiniMax-M2.5` stays available.
+    - More detail: [MiniMax](/providers/minimax)
+    - **Synthetic (Anthropic-compatible)**: prompts for `SYNTHETIC_API_KEY`.
+    - More detail: [Synthetic](/providers/synthetic)
+    - **Moonshot (Kimi K2)**: config is auto-written.
+    - **Kimi Coding**: config is auto-written.
+    - More detail: [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
+    - **Skip**: no auth configured yet.
+    - Pick a default model from detected options (or enter provider/model manually). For best quality and lower prompt-injection risk, choose the strongest latest-generation model available in your provider stack.
+    - Onboarding runs a model check and warns if the configured model is unknown or missing auth.
+    - API key storage mode defaults to plaintext auth-profile values. Use `--secret-input-mode ref` to store env-backed refs instead (for example `keyRef: { source: "env", provider: "default", id: "OPENAI_API_KEY" }`).
+    - OAuth credentials live in `~/.openclaw/credentials/oauth.json`; auth profiles live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (API keys + OAuth).
+    - More detail: [/concepts/oauth](/concepts/oauth)
     <Note>
     无头/服务器提示：请在有浏览器的机器上完成 OAuth，随后将 `~/.openclaw/credentials/oauth.json`（或 `$OPENCLAW_STATE_DIR/credentials/oauth.json`）复制到网关主机。
     </Note>

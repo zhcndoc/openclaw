@@ -46,7 +46,13 @@ openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-批准后，设备信息将被记住，除非你通过 `openclaw devices revoke --device <id> --role <role>` 撤销它，否则不需要再次批准。令牌轮换与撤销详见 [设备命令行](/cli/devices)。
+If the browser retries pairing with changed auth details (role/scopes/public
+key), the previous pending request is superseded and a new `requestId` is
+created. Re-run `openclaw devices list` before approval.
+
+Once approved, the device is remembered and won't require re-approval unless
+you revoke it with `openclaw devices revoke --device <id> --role <role>`. See
+[Devices CLI](/cli/devices) for token rotation and revocation.
 
 **注意事项：**
 
@@ -228,16 +234,20 @@ http://localhost:5173/?gatewayUrl=wss://<gateway-host>:18789#token=<gateway-toke
 
 注意：
 
-- `gatewayUrl` 会在加载后存储到 localStorage 并从 URL 中移除。
-- `token` 从 URL 片段读取，存储在 sessionStorage 中，用于当前浏览器标签页会话和选定网关 URL，且从 URL 中移除；不会存储在 localStorage。
-- `password` 仅保存在内存中。
-- 当设置了 `gatewayUrl`，UI 不会回退到配置或环境凭据。
-  需要显式提供 `token`（或 `password`）。未提供为错误。
-- 当网关位于 TLS 后（如 Tailscale Serve、HTTPS 代理等），请使用 `wss://`。
-- 仅顶层窗口（非嵌套iframe）接受 `gatewayUrl`，防止点击劫持。
-- 非回环地址的控制界面部署必须显式设置 `gateway.controlUi.allowedOrigins`
-  （完整来源），包括远程开发场景。
-- 设置 `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 启用 Host-header 来源回退模式，但这是一种危险的安全模式。
+- `gatewayUrl` is stored in localStorage after load and removed from the URL.
+- `token` should be passed via the URL fragment (`#token=...`) whenever possible. Fragments are not sent to the server, which avoids request-log and Referer leakage. Legacy `?token=` query params are still imported once for compatibility, but only as a fallback, and are stripped immediately after bootstrap.
+- `password` is kept in memory only.
+- When `gatewayUrl` is set, the UI does not fall back to config or environment credentials.
+  Provide `token` (or `password`) explicitly. Missing explicit credentials is an error.
+- Use `wss://` when the Gateway is behind TLS (Tailscale Serve, HTTPS proxy, etc.).
+- `gatewayUrl` is only accepted in a top-level window (not embedded) to prevent clickjacking.
+- Non-loopback Control UI deployments must set `gateway.controlUi.allowedOrigins`
+  explicitly (full origins). This includes remote dev setups.
+- Do not use `gateway.controlUi.allowedOrigins: ["*"]` except for tightly controlled
+  local testing. It means allow any browser origin, not “match whatever host I am
+  using.”
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` enables
+  Host-header origin fallback mode, but it is a dangerous security mode.
 
 示例：
 

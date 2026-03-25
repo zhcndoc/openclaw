@@ -9,7 +9,7 @@ title: "Android 应用"
 
 # Android 应用（节点）
 
-> **注意：** Android 应用尚未公开发布。源码可在 [OpenClaw 仓库](https://github.com/openclaw/openclaw) 中的 `apps/android` 目录找到。你可以使用 Java 17 和 Android SDK 自行构建（`./gradlew :app:assembleDebug`）。构建说明请参见 [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)。
+> **Note:** The Android app has not been publicly released yet. The source code is available in the [OpenClaw repository](https://github.com/openclaw/openclaw) under `apps/android`. You can build it yourself using Java 17 and the Android SDK (`./gradlew :app:assemblePlayDebug`). See [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md) for build instructions.
 
 ## 支持快照
 
@@ -164,4 +164,5 @@ Canvas 命令（仅前台）：
   - `contacts.search`, `contacts.add`
   - `calendar.events`, `calendar.add`
   - `callLog.search`
+  - `sms.search`
   - `motion.activity`, `motion.pedometer`

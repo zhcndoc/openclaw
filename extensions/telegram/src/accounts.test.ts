@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../../src/config/config.js";
 import * as subsystemModule from "../../../src/logging/subsystem.js";
-import { withEnv } from "../../../src/test-utils/env.js";
+import { withEnv } from "../../../test/helpers/extensions/env.js";
 import {
   listTelegramAccountIds,
   resetMissingDefaultWarnFlag,
@@ -37,7 +37,7 @@ beforeEach(() => {
       warn: warnMock,
       child: () => logger,
     };
-    return logger as ReturnType<typeof subsystemModule.createSubsystemLogger>;
+    return logger as unknown as ReturnType<typeof subsystemModule.createSubsystemLogger>;
   });
 });
 

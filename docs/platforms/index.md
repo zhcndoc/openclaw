@@ -26,9 +26,10 @@ Windows 的原生伴侣应用也在规划中；通过 WSL2 推荐使用网关。
 
 - VPS 集线器: [VPS 托管](/vps)
 - Fly.io: [Fly.io](/install/fly)
-- Hetzner（Docker）: [Hetzner](/install/hetzner)
-- GCP（计算引擎）: [GCP](/install/gcp)
-- exe.dev（虚拟机 + HTTPS 代理）: [exe.dev](/install/exe-dev)
+- Hetzner (Docker): [Hetzner](/install/hetzner)
+- GCP (Compute Engine): [GCP](/install/gcp)
+- Azure (Linux VM): [Azure](/install/azure)
+- exe.dev (VM + HTTPS proxy): [exe.dev](/install/exe-dev)
 
 ## 常用链接
 

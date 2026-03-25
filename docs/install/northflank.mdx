@@ -1,53 +1,40 @@
 ---
-title: 在 Northflank 上部署
+summary: "Deploy OpenClaw on Northflank with one-click template"
+read_when:
+  - Deploying OpenClaw to Northflank
+  - You want a one-click cloud deploy with browser-based Control UI
+title: "Northflank"
 ---
 
-通过一键模板在 Northflank 上部署 OpenClaw，并在浏览器中完成设置。  
-这是最简单的“服务器无终端”方案：Northflank 为你运行网关，  
-你通过 `/setup` 的网页向导进行所有配置。
+Deploy OpenClaw on Northflank with a one-click template and access it through the web Control UI.
+This is the easiest "no terminal on the server" path: Northflank runs the Gateway for you.
 
 ## 如何开始
 
-1. 点击 [部署 OpenClaw](https://northflank.com/stacks/deploy-openclaw) 打开模板。  
-2. 如果还没有账号，先[注册 Northflank 账户](https://app.northflank.com/signup)。  
-3. 点击 **立即部署 OpenClaw**。  
-4. 设置必需的环境变量：`SETUP_PASSWORD`。  
-5. 点击 **部署堆栈** 来构建并运行 OpenClaw 模板。  
-6. 等待部署完成，然后点击 **查看资源**。  
-7. 打开 OpenClaw 服务。  
-8. 访问公开的 OpenClaw URL，完成 `/setup` 处的设置。  
-9. 访问控制界面 `/openclaw`。
+1. Click [Deploy OpenClaw](https://northflank.com/stacks/deploy-openclaw) to open the template.
+2. Create an [account on Northflank](https://app.northflank.com/signup) if you don't already have one.
+3. Click **Deploy OpenClaw now**.
+4. Set the required environment variable: `OPENCLAW_GATEWAY_TOKEN` (use a strong random value).
+5. Click **Deploy stack** to build and run the OpenClaw template.
+6. Wait for the deployment to complete, then click **View resources**.
+7. Open the OpenClaw service.
+8. Open the public OpenClaw URL at `/openclaw` and connect using your `OPENCLAW_GATEWAY_TOKEN`.
 
 ## 你将获得
 
-- 托管的 OpenClaw 网关 + 控制界面
-- `/setup` 处的网页设置向导（无需终端命令）
-- 通过 Northflank 卷 (`/data`) 提供的持久存储，保证配置/凭证/工作区在重新部署后仍然保留
+- Hosted OpenClaw Gateway + Control UI
+- Persistent storage via Northflank Volume (`/data`) so config/credentials/workspace survive redeploys
 
-## 设置流程
+## Connect a channel
 
-1. 访问 `https://<你的-northflank-域名>/setup` 并输入你的 `SETUP_PASSWORD`。  
-2. 选择模型/认证提供者并粘贴你的密钥。  
-3. （可选）添加 Telegram/Discord/Slack 令牌。  
-4. 点击 **运行设置**。  
-5. 打开控制界面，地址为 `https://<你的-northflank-域名>/openclaw`。
+Use the Control UI at `/openclaw` or run `openclaw onboard` via SSH for channel setup instructions:
 
-如果 Telegram 私信设置为配对，网页设置也可以批准配对码。
+- [Telegram](/channels/telegram) (fastest — just a bot token)
+- [Discord](/channels/discord)
+- [All channels](/channels)
 
-## 获取聊天令牌
+## Next steps
 
-### Telegram 机器人令牌
-
-1. 在 Telegram 中给 `@BotFather` 发送消息。  
-2. 运行 `/newbot` 命令。  
-3. 复制令牌（类似 `123456789:AA...`）。  
-4. 粘贴到 `/setup`。
-
-### Discord 机器人令牌
-
-1. 访问 [https://discord.com/developers/applications](https://discord.com/developers/applications)  
-2. 点击 **新建应用** → 输入名称  
-3. 选择 **Bot** → **添加机器人**  
-4. 在 Bot → 特权网关意图中启用 **MESSAGE CONTENT INTENT**（必需，否则机器人启动时崩溃）  
-5. 复制 **机器人令牌** 并粘贴到 `/setup`  
-6. 邀请机器人加入服务器（OAuth2 URL 生成器；权限范围：`bot`，`applications.commands`）
+- Set up messaging channels: [Channels](/channels)
+- Configure the Gateway: [Gateway configuration](/gateway/configuration)
+- Keep OpenClaw up to date: [Updating](/install/updating)

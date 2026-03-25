@@ -6,7 +6,7 @@ read_when:
   - 启用或审核默认技能时
 ---
 
-# AGENTS.md — OpenClaw 个人助手（默认）
+# AGENTS.md - OpenClaw Personal Assistant (default)
 
 ## 第一次运行（推荐）
 

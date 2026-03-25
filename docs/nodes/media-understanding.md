@@ -6,18 +6,22 @@ read_when:
 title: "媒体理解"
 ---
 
-# 媒体理解（入站）— 2026-01-17
+# Media Understanding - Inbound (2026-01-17)
 
 OpenClaw 可以在回复管道运行前**总结入站媒体**（图像/音频/视频）。它能自动检测本地工具或提供商密钥是否可用，并可禁用或自定义。如果关闭理解功能，模型仍会按惯例接收原始文件/URL。
 
-## 目标
+Vendor-specific media behavior is registered by vendor plugins, while OpenClaw
+core owns the shared `tools.media` config, fallback order, and reply-pipeline
+integration.
+
+## Goals
 
 - 可选：预先将入站媒体提炼成简短文本，以实现更快的路由和更好的命令解析。
 - 保留原始媒体传递给模型（始终如此）。
 - 支持**提供商 API**和**CLI 回退**。
 - 允许多个模型按顺序回退（错误/大小限制/超时）。
 
-## 高层行为
+## High-level behavior
 
 1. 收集入站附件（`MediaPaths`、`MediaUrls`、`MediaTypes`）。
 2. 对每种启用的功能（图像/音频/视频），按策略选择附件（默认：**第一个**）。
@@ -176,21 +180,24 @@ CLI 模板还可以使用：
 
 如果设置 `capabilities`，该条目只适用于列出的媒体类型。对于共享列表，OpenClaw 能推断默认值：
 
-- `openai`、`anthropic`、`minimax`：**图像**
-- `google`（Gemini API）：**图像 + 音频 + 视频**
-- `groq`：**音频**
-- `deepgram`：**音频**
+- `openai`, `anthropic`, `minimax`: **image**
+- `moonshot`: **image + video**
+- `google` (Gemini API): **image + audio + video**
+- `mistral`: **audio**
+- `zai`: **image**
+- `groq`: **audio**
+- `deepgram`: **audio**
 
 对于 CLI 条目，请**显式设置 `capabilities`**，避免意外匹配。
 未设置 `capabilities` 时，条目适用于其所在列表。
 
 ## 提供商支持矩阵（OpenClaw 集成）
 
-| 功能       | 提供商集成                                 | 备注                                |
-| ---------- | ------------------------------------------ | --------------------------------- |
-| 图像       | OpenAI / Anthropic / Google / 通过 `pi-ai` | 任何注册表中的图像能力模型皆可用   |
-| 音频       | OpenAI、Groq、Deepgram、Google、Mistral   | 提供商转录（Whisper/Deepgram/Gemini/Voxtral） |
-| 视频       | Google（Gemini API）                       | 提供商视频理解                     |
+| Capability | Provider integration                               | Notes                                                                   |
+| ---------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
+| Image      | OpenAI, Anthropic, Google, MiniMax, Moonshot, Z.AI | Vendor plugins register image support against core media understanding. |
+| Audio      | OpenAI, Groq, Deepgram, Google, Mistral            | Provider transcription (Whisper/Deepgram/Gemini/Voxtral).               |
+| Video      | Google, Moonshot                                   | Provider video understanding via vendor plugins.                        |
 
 ## 模型选择指南
 
@@ -320,7 +327,7 @@ CLI 模板还可以使用：
 }
 ```
 
-### 4) 多模态单条目（显式功能）
+### 4) Multi-modal single entry (explicit capabilities)
 
 ```json5
 {

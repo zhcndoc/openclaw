@@ -123,7 +123,7 @@ OPENCLAW_TWITCH_ACCESS_TOKEN=oauth:abc123...
 
 **为何用用户 ID？** 用户名可更改，容易被仿冒；用户 ID 永久不变。
 
-查询你的 Twitch 用户 ID：[https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/](https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/)
+查找你的 Twitch 用户 ID：[https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/](https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/)（将 Twitch 用户名转换为 ID）
 
 ## 令牌刷新（可选）
 

@@ -1,9 +1,9 @@
 ---
 summary: "Perplexity 搜索 API 及 Sonar/OpenRouter 对 web_search 的兼容性"
 read_when:
-  - 您想使用 Perplexity 搜索进行网页搜索
-  - 您需要设置 PERPLEXITY_API_KEY 或 OPENROUTER_API_KEY
-title: "Perplexity 搜索"
+  - You want to use Perplexity Search for web search
+  - You need PERPLEXITY_API_KEY or OPENROUTER_API_KEY setup
+title: "Perplexity Search (legacy path)"
 ---
 
 # Perplexity 搜索 API
@@ -11,8 +11,8 @@ title: "Perplexity 搜索"
 OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。  
 它返回包含 `title`（标题）、`url`（链接）和 `snippet`（摘要）字段的结构化结果。
 
-为了兼容，OpenClaw 也支持传统的 Perplexity Sonar/OpenRouter 配置。  
-如果您使用 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中使用以 `sk-or-...` 开头的密钥，或设置了 `tools.web.search.perplexity.baseUrl` / `model`，则该提供者会切换到聊天补全路径，返回带有引用的 AI 合成答案，而非结构化的搜索 API 结果。
+For compatibility, OpenClaw also supports legacy Perplexity Sonar/OpenRouter setups.
+If you use `OPENROUTER_API_KEY`, an `sk-or-...` key in `plugins.entries.perplexity.config.webSearch.apiKey`, or set `plugins.entries.perplexity.config.webSearch.baseUrl` / `model`, the provider switches to the chat-completions path and returns AI-synthesized answers with citations instead of structured Search API results.
 
 ## 获取 Perplexity API 密钥
 
@@ -22,12 +22,12 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ## OpenRouter 兼容性
 
-如果您之前已经使用 OpenRouter 来调用 Perplexity Sonar，保持 `provider: "perplexity"`，并在网关环境变量中设置 `OPENROUTER_API_KEY`，或者在 `tools.web.search.perplexity.apiKey` 中存储一个以 `sk-or-...` 开头的密钥。
+If you were already using OpenRouter for Perplexity Sonar, keep `provider: "perplexity"` and set `OPENROUTER_API_KEY` in the Gateway environment, or store an `sk-or-...` key in `plugins.entries.perplexity.config.webSearch.apiKey`.
 
-可选的传统配置项包括：
+Optional compatibility controls:
 
-- `tools.web.search.perplexity.baseUrl`
-- `tools.web.search.perplexity.model`
+- `plugins.entries.perplexity.config.webSearch.baseUrl`
+- `plugins.entries.perplexity.config.webSearch.model`
 
 ## 配置示例
 
@@ -35,13 +35,21 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ```json5
 {
+  plugins: {
+    entries: {
+      perplexity: {
+        config: {
+          webSearch: {
+            apiKey: "pplx-...",
+          },
+        },
+      },
+    },
+  },
   tools: {
     web: {
       search: {
         provider: "perplexity",
-        perplexity: {
-          apiKey: "pplx-...",
-        },
       },
     },
   },
@@ -52,15 +60,23 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ```json5
 {
+  plugins: {
+    entries: {
+      perplexity: {
+        config: {
+          webSearch: {
+            apiKey: "<openrouter-api-key>",
+            baseUrl: "https://openrouter.ai/api/v1",
+            model: "perplexity/sonar-pro",
+          },
+        },
+      },
+    },
+  },
   tools: {
     web: {
       search: {
         provider: "perplexity",
-        perplexity: {
-          apiKey: "<openrouter-api-key>",
-          baseUrl: "https://openrouter.ai/api/v1",
-          model: "perplexity/sonar-pro",
-        },
       },
     },
   },
@@ -69,11 +85,13 @@ OpenClaw 支持 Perplexity 搜索 API，作为 `web_search` 提供者。
 
 ## 在哪里设置密钥
 
-**通过配置：**运行 `openclaw configure --section web`。它会将密钥存储在  
-`~/.openclaw/openclaw.json` 的 `tools.web.search.perplexity.apiKey` 字段。该字段也接受 SecretRef 对象。
+**Via config:** run `openclaw configure --section web`. It stores the key in
+`~/.openclaw/openclaw.json` under `plugins.entries.perplexity.config.webSearch.apiKey`.
+That field also accepts SecretRef objects.
 
-**通过环境变量：**在网关进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。  
-对于网关安装，将其放入 `~/.openclaw/.env`（或您的服务环境）。详见 [环境变量](/help/faq#how-does-openclaw-load-environment-variables)。
+**Via environment:** set `PERPLEXITY_API_KEY` or `OPENROUTER_API_KEY`
+in the Gateway process environment. For a gateway install, put it in
+`~/.openclaw/.env` (or your service environment). See [Env vars](/help/faq#env-vars-and-env-loading).
 
 如果配置了 `provider: "perplexity"` 并且 Perplexity 密钥 SecretRef 未解析且无环境变量后备，启动/重载将快速失败。
 
@@ -148,9 +166,9 @@ await web_search({
 
 ## 注意事项
 
-- Perplexity 搜索 API 返回结构化网页搜索结果（`title`、`url`、`snippet`）
-- 使用 OpenRouter 或显式设置 `baseUrl` / `model` 会将 Perplexity 切换回 Sonar 聊天补全以保证兼容
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）
+- Perplexity Search API returns structured web search results (`title`, `url`, `snippet`)
+- OpenRouter or explicit `plugins.entries.perplexity.config.webSearch.baseUrl` / `model` switches Perplexity back to Sonar chat completions for compatibility
+- Results are cached for 15 minutes by default (configurable via `cacheTtlMinutes`)
 
 详见 [Web 工具](/tools/web) 获取完整的 web_search 配置说明。  
 更多详情参见 [Perplexity 搜索 API 文档](https://docs.perplexity.ai/docs/search/quickstart) 。

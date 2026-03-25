@@ -1,5 +1,6 @@
 ---
-summary: "开发代理用户配置文件（C-3PO）"
+title: "USER.dev Template"
+summary: "Dev agent user profile (C-3PO)"
 read_when:
   - 使用开发网关模板时
   - 更新默认开发代理身份时

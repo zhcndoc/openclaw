@@ -1,7 +1,6 @@
 ---
-title: Lobster（龙虾）
-summary: “用于 OpenClaw 的类型化工作流运行时，支持可恢复的审批关卡。”
-description: OpenClaw 的类型化工作流运行时 —— 支持组合流水线与审批关卡。
+title: Lobster
+summary: "Typed workflow runtime for OpenClaw with resumable approval gates."
 read_when:
   - 您需要具有显式审批的确定性多步骤工作流
   - 您需要在不中断早期步骤的情况下恢复工作流
@@ -326,8 +325,8 @@ OpenProse 与 Lobster 配合良好：用 `/prose` 协调多代理预处理，再
 
 ## 进一步了解
 
-- [插件](/tools/plugin)
-- [插件工具开发](/plugins/agent-tools)
+- [Plugins](/tools/plugin)
+- [Plugin tool authoring](/plugins/building-plugins#registering-agent-tools)
 
 ## 案例研究：社区工作流
 

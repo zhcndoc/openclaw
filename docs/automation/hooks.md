@@ -8,7 +8,7 @@ title: "Hooks"
 
 # Hooks
 
-Hooks 提供了一个可扩展的事件驱动系统，用于响应代理命令和事件来自动执行操作。Hooks 会从指定目录中自动发现，并且可以通过 CLI 命令进行管理，工作方式类似于 OpenClaw 中的技能（skills）。
+Hooks 提供了一个可扩展的事件驱动系统，用于在响应代理命令和事件时自动执行操作。Hooks 会自动从目录中发现，并可通过 `openclaw hooks` 进行查看，而 hook-pack 的安装和更新现在通过 `openclaw plugins` 进行。
 
 ## 入门导览
 
@@ -17,16 +17,16 @@ Hooks 是在某些事件发生时运行的小脚本。主要有两种类型：
 - **Hooks**（本页内容）：当代理事件触发时，在网关内部运行，例如 `/new`、`/reset`、`/stop` 或生命周期事件。
 - **Webhooks**：外部 HTTP webhook，允许其他系统触发 OpenClaw 中的工作。参见 [Webhook Hooks](/automation/webhook) 或使用 `openclaw webhooks` 获取 Gmail 辅助命令。
 
-Hooks 也可以打包在插件中；详见 [插件](/tools/plugin#plugin-hooks)。
+Hooks 也可以捆绑在插件内部；参见 [Plugin hooks](/plugins/architecture#provider-runtime-hooks)。`openclaw hooks list` 会显示独立 hooks 和插件管理的 hooks。
 
 常见用途：
 
 - 在重置会话时保存内存快照
 - 记录命令审计跟踪以便排错或合规
 - 会话开始或结束时触发后续自动化
-- 事件触发时写入代理工作区文件或调用外部 API
+- 在事件触发时写入代理工作区文件或调用外部 API
 
-只要您会写一个小的 TypeScript 函数，就可以编写 hook。Hooks 会自动发现，通过 CLI 可启用或禁用。
+如果您能编写一个小型 TypeScript 函数，您就能编写一个 hook。托管和捆绑的 hooks 是受信任的本地代码。工作区 hooks 会被自动发现，但 OpenClaw 会将它们保持禁用状态，直到您通过 CLI 或配置明确启用。
 
 ## 概览
 
@@ -43,10 +43,10 @@ Hooks 系统允许您：
 
 OpenClaw 自带四个自动发现的内置 hooks：
 
-- **💾 session-memory**：当执行 `/new` 时将会话上下文保存到代理工作区（默认目录 `~/.openclaw/workspace/memory/`）
-- **📎 bootstrap-extra-files**：在 `agent:bootstrap` 期间，从配置的 glob/path 模式注入额外的工作区启动文件
-- **📝 command-logger**：将所有命令事件记录到 `~/.openclaw/logs/commands.log`
-- **🚀 boot-md**：网关启动时运行 `BOOT.md`（需启用内部 hooks）
+- **💾 session-memory**: 当您发出 `/new` 或 `/reset` 命令时，将会话上下文保存到您的代理工作区（默认 `~/.openclaw/workspace/memory/`）
+- **📎 bootstrap-extra-files**: 在 `agent:bootstrap` 期间从配置的 glob/路径模式注入额外的工作区引导文件
+- **📝 command-logger**: 将所有命令事件记录到 `~/.openclaw/logs/commands.log`
+- **🚀 boot-md**: 当网关启动时运行 `BOOT.md`（需要启用内部 hooks）
 
 列出可用 hooks：
 
@@ -74,19 +74,26 @@ openclaw hooks info session-memory
 
 ### 上手引导
 
-在执行 `openclaw onboard` 期间，系统会提示您启用推荐的 hooks。向导自动发现匹配的 hooks 并供您选择。
+在执行 `openclaw onboard` 期间，系统会提示您启用推荐的 hooks。向导会自动发现匹配的 hooks 并供您选择。
 
-## Hook 发现机制
+### 信任边界
 
-Hooks 会自动从三个目录中发现（优先级按顺序）：
+Hooks 在网关进程内部运行。将捆绑的 hooks、托管的 hooks 以及 `hooks.internal.load.extraDirs` 视为受信任的本地代码。在 `<workspace>/hooks/` 下的工作区 hooks 是仓库本地代码，因此 OpenClaw 需要显式的启用步骤才会加载它们。
 
-1. **工作区 hooks**：`<workspace>/hooks/`（每代理独有，优先级最高）
-2. **管理 hooks**：`~/.openclaw/hooks/`（用户安装的，跨工作区共享）
-3. **内置 hooks**：`<openclaw>/dist/hooks/bundled/`（OpenClaw 自带）
+## Hook 发现
 
-管理 hooks 目录可以是**单个 hook**或**hook 包**（包目录）。
+Hooks 会自动从以下目录中发现，按覆盖优先级递增的顺序排列：
 
-每个 hook 为一个目录，包含：
+1. **捆绑的 hooks**：随 OpenClaw 一起提供；对于 npm 安装位于 `<openclaw>/dist/hooks/bundled/`（或对于编译后的二进制文件位于相邻的 `hooks/bundled/`）
+2. **插件 hooks**：安装在插件内部的 hooks（参见 [Plugin hooks](/plugins/architecture#provider-runtime-hooks)）
+3. **托管 hooks**：`~/.openclaw/hooks/`（用户安装，跨工作区共享；可以覆盖捆绑和插件 hooks）。通过 `hooks.internal.load.extraDirs` 配置的**额外 hook 目录**也被视为托管 hooks，并具有相同的覆盖优先级。
+4. **工作区 hooks**：`<workspace>/hooks/`（每个代理，默认禁用，直到显式启用；无法覆盖来自其他源的 hooks）
+
+工作区 hooks 可以为仓库添加新的 hook 名称，但不能覆盖具有相同名称的捆绑、托管或插件提供的 hooks。
+
+托管的 hooks 目录可以是**单个 hook**或**hook 包**（包目录）。
+
+每个 hook 是一个目录，包含：
 
 ```
 my-hook/
@@ -99,7 +106,7 @@ my-hook/
 Hook 包是标准的 npm 包，通过 `package.json` 中的 `openclaw.hooks` 字段导出一个或多个 hooks。安装命令：
 
 ```bash
-openclaw hooks install <path-or-spec>
+openclaw plugins install <path-or-spec>
 ```
 
 Npm 规范仅支持注册表格式（包名 + 可选版本/标签）。不接受 git/url/file 格式。
@@ -118,9 +125,9 @@ Npm 规范仅支持注册表格式（包名 + 可选版本/标签）。不接受
 }
 ```
 
-每个条目指向含有 `HOOK.md` 和 `handler.ts`（或 `index.ts`）的 hook 目录。Hook 包可包含依赖，安装后放置于 `~/.openclaw/hooks/<id>` 下。每个 `openclaw.hooks` 条目必须解析后的路径位于包目录内，超出将被拒绝。
+每个条目指向含有 `HOOK.md` 和 `handler.ts`（或 `index.ts`）的 hook 目录。Hook 包可包含依赖，安装后放置于 `~/.openclaw/hooks/<id>` 下。每个 `openclaw.hooks` 条目解析后的路径必须位于包目录内，超出将被拒绝。
 
-安全提示：`openclaw hooks install` 使用 `npm install --ignore-scripts` 安装依赖（不执行生命周期脚本）。保持 hook 包依赖树为“纯 JS/TS”，避免依赖使用 `postinstall` 构建的包。
+安全说明：`openclaw plugins install` 使用 `npm install --ignore-scripts` 安装 hook-pack 依赖项（无生命周期脚本）。保持 hook 包依赖树为"纯 JS/TS"，并避免依赖 `postinstall` 构建的包。
 
 ## Hook 结构
 
@@ -160,18 +167,18 @@ metadata:
 
 `metadata.openclaw` 对象支持：
 
-- **`emoji`**：CLI 显示的表情符号（例：`"💾"`）
-- **`events`**：监听的事件数组（例：`["command:new", "command:reset"]`）
-- **`export`**：使用的命名导出（默认 `"default"`）
-- **`homepage`**：文档 URL
-- **`requires`**：可选需求
-  - **`bins`**：必须在 PATH 中的二进制程序（例：`["git", "node"]`）
-  - **`anyBins`**：至少存在的二进制之一
-  - **`env`**：必须存在的环境变量
-  - **`config`**：必须配置的路径（例：`["workspace.dir"]`）
-  - **`os`**：支持的平台（例：`["darwin", "linux"]`）
-- **`always`**：跳过资格检查（布尔值）
-- **`install`**：安装方式（内置 hooks 为 `[{"id":"bundled","kind":"bundled"}]`）
+- **`emoji`**: 用于 CLI 的显示表情符号（例如 `"💾"`）
+- **`events`**: 监听的事件数组（例如 `["command:new", "command:reset"]`）
+- **`export`**: 要使用的命名导出（默认为 `"default"`）
+- **`homepage`**: 文档 URL
+- **`os`**: 所需平台（例如 `["darwin", "linux"]`）
+- **`requires`**: 可选要求
+  - **`bins`**: PATH 上需要的二进制文件（例如 `["git", "node"]`）
+  - **`anyBins`**: 这些二进制文件中至少必须存在一个
+  - **`env`**: 需要的环境变量
+  - **`config`**: 需要的配置路径（例如 `["workspace.dir"]`）
+- **`always`**: 绕过资格检查（布尔值）
+- **`install`**: 安装方法（对于捆绑 hooks：`[{"id":"bundled","kind":"bundled"}]`）
 
 ### 处理器实现
 
@@ -184,13 +191,13 @@ const myHandler = async (event) => {
     return;
   }
 
-  console.log(`[my-hook] 新命令触发`);
+  console.log(`[my-hook] 新命令已触发`);
   console.log(`  会话：${event.sessionKey}`);
   console.log(`  时间戳：${event.timestamp.toISOString()}`);
 
-  // 您的自定义逻辑写这里
+  // 在此处编写您的自定义逻辑
 
-  // 可选地发送消息给用户
+  // 可选择向用户发送消息
   event.messages.push("✨ 我的 hook 已执行！");
 };
 
@@ -209,18 +216,20 @@ export default myHandler;
   timestamp: Date,             // 事件发生时间
   messages: string[],          // 向此数组推送消息以发送给用户
   context: {
-    // 命令事件：
-    sessionEntry?: SessionEntry,
-    sessionId?: string,
-    sessionFile?: string,
-    commandSource?: string,    // 例如 'whatsapp', 'telegram'
+    // Command events (command:new, command:reset):
+    sessionEntry?: SessionEntry,       // current session entry
+    previousSessionEntry?: SessionEntry, // pre-reset entry (preferred for session-memory)
+    commandSource?: string,            // e.g., 'whatsapp', 'telegram'
     senderId?: string,
     workspaceDir?: string,
-    bootstrapFiles?: WorkspaceBootstrapFile[],
     cfg?: OpenClawConfig,
-    // 消息事件（详见消息事件章节）：
-    from?: string,             // message:received 来源
-    to?: string,               // message:sent 目的地
+    // Command events (command:stop only):
+    sessionId?: string,
+    // Agent bootstrap events (agent:bootstrap):
+    bootstrapFiles?: WorkspaceBootstrapFile[],
+    // Message events (see Message Events section for full details):
+    from?: string,             // message:received
+    to?: string,               // message:sent
     content?: string,
     channelId?: string,
     success?: boolean,         // message:sent 是否成功
@@ -284,11 +293,13 @@ export default myHandler;
     to?: string,
     provider?: string,
     surface?: string,
-    threadId?: string,
+    threadId?: string | number,
     senderId?: string,
     senderName?: string,
     senderUsername?: string,
     senderE164?: string,
+    guildId?: string,     // Discord guild / server ID
+    channelName?: string, // Channel name (e.g., Discord channel name)
   }
 }
 
@@ -308,22 +319,42 @@ export default myHandler;
 
 // message:transcribed 上下文
 {
-  body?: string,          // 富处理前的原始消息体
-  bodyForAgent?: string,  // 代理可见的丰富消息体
-  transcript: string,     // 音频转录文本
-  channelId: string,
+  from?: string,          // Sender identifier
+  to?: string,            // Recipient identifier
+  body?: string,          // Raw inbound body before enrichment
+  bodyForAgent?: string,  // Enriched body visible to the agent
+  transcript: string,     // Audio transcript text
+  timestamp?: number,     // Unix timestamp when received
+  channelId: string,      // Channel (e.g., "telegram", "whatsapp")
   conversationId?: string,
   messageId?: string,
+  senderId?: string,      // Sender user ID
+  senderName?: string,    // Sender display name
+  senderUsername?: string,
+  provider?: string,      // Provider name
+  surface?: string,       // Surface name
+  mediaPath?: string,     // Path to the media file that was transcribed
+  mediaType?: string,     // MIME type of the media
 }
 
 // message:preprocessed 上下文
 {
-  body?: string,
-  bodyForAgent?: string,
-  transcript?: string,
-  channelId: string,
+  from?: string,          // Sender identifier
+  to?: string,            // Recipient identifier
+  body?: string,          // Raw inbound body
+  bodyForAgent?: string,  // Final enriched body after media/link understanding
+  transcript?: string,    // Transcript when audio was present
+  timestamp?: number,     // Unix timestamp when received
+  channelId: string,      // Channel (e.g., "telegram", "whatsapp")
   conversationId?: string,
   messageId?: string,
+  senderId?: string,      // Sender user ID
+  senderName?: string,    // Sender display name
+  senderUsername?: string,
+  provider?: string,      // Provider name
+  surface?: string,       // Surface name
+  mediaPath?: string,     // Path to the media file
+  mediaType?: string,     // MIME type of the media
   isGroup?: boolean,
   groupId?: string,
 }
@@ -373,8 +404,8 @@ export default handler;
 
 ### 1. 选择位置
 
-- **工作区 hooks**（`<workspace>/hooks/`）：每代理独享，优先级最高
-- **管理 hooks**（`~/.openclaw/hooks/`）：跨工作区共享
+- **Workspace hooks** (`<workspace>/hooks/`): 每个代理独立；可以添加新的 hook 名称，但无法覆盖同名的捆绑、托管或插件 hook
+- **Managed hooks** (`~/.openclaw/hooks/`): 跨工作区共享；可以覆盖捆绑和插件 hook
 
 ### 2. 创建目录结构
 
@@ -467,7 +498,7 @@ openclaw hooks enable my-hook
 
 ### 额外目录加载
 
-从其他目录加载 hooks：
+从额外目录加载 hooks（视为托管 hook，具有相同的覆盖优先级）：
 
 ```json
 {
@@ -559,9 +590,9 @@ openclaw hooks disable command-logger
 
 ### session-memory
 
-执行 `/new` 时保存会话上下文到内存。
+Saves session context to memory when you issue `/new` or `/reset`.
 
-**事件**：`command:new`
+**Events**: `command:new`, `command:reset`
 
 **需求**：必须配置 `workspace.dir`
 
@@ -569,19 +600,24 @@ openclaw hooks disable command-logger
 
 **功能说明**：
 
-1. 利用重置前的会话条目定位对应的会话记录
-2. 抽取最后 15 行对话
-3. 通过 LLM 生成描述性文件名 slug
-4. 将会话元数据保存为日期命名的 memory 文件
+1. Uses the pre-reset session entry to locate the correct transcript
+2. Extracts the last 15 user/assistant messages from the conversation (configurable)
+3. Uses LLM to generate a descriptive filename slug
+4. Saves session metadata to a dated memory file
 
 **示例输出**：
 
 ```markdown
 # 会话：2026-01-16 14:30:00 UTC
 
-- **会话键**: agent:main:main
-- **会话 ID**: abc123def456
-- **来源**: telegram
+- **Session Key**: agent:main:main
+- **Session ID**: abc123def456
+- **Source**: telegram
+
+## Conversation Summary
+
+user: Can you help me design the API?
+assistant: Sure! Let's start with the endpoints...
 ```
 
 **文件名示例**：
@@ -624,12 +660,18 @@ openclaw hooks enable session-memory
 }
 ```
 
-**注意事项**：
+**配置选项**：
 
-- 路径相对于工作区解析
-- 文件必须位于工作区内（经过实际路径验证）
-- 仅加载认可的启动文件名
-- 子代理白名单仍生效（仅 `AGENTS.md` 和 `TOOLS.md`）
+- `paths` (string[]): 从工作区解析的 glob/路径模式。
+- `patterns` (string[]): `paths` 的别名。
+- `files` (string[]): `paths` 的别名。
+
+**注意**：
+
+- Paths are resolved relative to workspace.
+- Files must stay inside workspace (realpath-checked).
+- Only recognized bootstrap basenames are loaded (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, `memory.md`).
+- For subagent/cron sessions a narrower allowlist applies (`AGENTS.md`, `TOOLS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`).
 
 **启用命令**：
 
@@ -860,11 +902,13 @@ test("my handler works", async () => {
 ```
 网关启动
     ↓
-扫描目录（工作区 → 管理 → 内置）
+Scan directories (bundled → plugin → managed + extra dirs → workspace)
     ↓
 解析 HOOK.md 文件
     ↓
-检查资格（bins、env、config、os）
+Sort by override precedence (bundled < plugin < managed < workspace)
+    ↓
+Check eligibility (bins, env, config, os)
     ↓
 加载合格的处理器
     ↓
@@ -1032,4 +1076,4 @@ node -e "import('./path/to/handler.ts').then(console.log)"
 - [CLI 参考：hooks](/cli/hooks)
 - [内置 Hooks README](https://github.com/openclaw/openclaw/tree/main/src/hooks/bundled)
 - [Webhook Hooks](/automation/webhook)
-- [配置说明](/gateway/configuration#hooks)
+- [配置](/gateway/configuration-reference#hooks)

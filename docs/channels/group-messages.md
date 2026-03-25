@@ -11,7 +11,7 @@ title: "群消息"
 
 注意：`agents.list[].groupChat.mentionPatterns` 现已被 Telegram/Discord/Slack/iMessage 共享使用；本文档重点介绍 WhatsApp 特有的行为。对于多代理设置，请为每个代理设置 `agents.list[].groupChat.mentionPatterns`（或使用 `messages.groupChat.mentionPatterns` 作为全局后备）。
 
-## 已实现内容（2025-12-03）
+## 当前实现（2025-12-03）
 
 - 激活模式：`mention`（默认）或 `always`。`mention` 需要被点名（通过 `mentionedJids` 进行真正的 WhatsApp @-提及，安全的正则表达式模式，或文本中任何地方出现机器人的 E.164 号码）。`always` 会在每条消息上唤醒代理，但应仅在能产生有意义的回复时响应，否则返回静默令牌 `NO_REPLY`。默认值可在配置文件中设置（`channels.whatsapp.groups`），并可通过 `/activation` 命令按群覆盖。当配置了 `channels.whatsapp.groups` 时，也同时作为群组允许列表（包括 `"*"` 表示允许全部）。
 - 群策略：`channels.whatsapp.groupPolicy` 控制是否接受群消息（`open|disabled|allowlist`）。`allowlist` 使用 `channels.whatsapp.groupAllowFrom`（回退为显式的 `channels.whatsapp.allowFrom`）。默认是 `allowlist`（阻止所有发送者直到你添加它们）。

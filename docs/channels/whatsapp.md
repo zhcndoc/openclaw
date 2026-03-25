@@ -9,6 +9,20 @@ title: "WhatsApp"
 
 状态：通过 WhatsApp Web（Baileys）实用的生产环境准备就绪。网关拥有关联会话。
 
+## Install (on demand)
+
+- Onboarding (`openclaw onboard`) 和 `openclaw channels add --channel whatsapp`
+  会在您第一次选择它时提示安装 WhatsApp 插件。
+- `openclaw channels login --channel whatsapp` 也会在插件尚不存在时提供安装流程。
+- Dev channel + git checkout：默认为本地插件路径。
+- Stable/Beta：默认为 npm 包 `@openclaw/whatsapp`。
+
+手动安装仍然可用：
+
+```bash
+openclaw plugins install @openclaw/whatsapp
+```
+
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
     默认的私信策略是对未知发送者进行配对。

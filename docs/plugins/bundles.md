@@ -1,273 +1,181 @@
 ---
-summary: "OpenClaw 中 Codex、Claude 和 Cursor 包的统一包格式指南"
+summary: "Install and use Codex, Claude, and Cursor bundles as OpenClaw plugins"
 read_when:
-  - 你想安装或调试一个兼容 Codex、Claude 或 Cursor 的包
-  - 你需要了解 OpenClaw 如何将包内容映射为原生功能
-  - 你在文档中说明包的兼容性或当前支持限制
-title: "插件包"
+  - You want to install a Codex, Claude, or Cursor-compatible bundle
+  - You need to understand how OpenClaw maps bundle content into native features
+  - You are debugging bundle detection or missing capabilities
+title: "Plugin Bundles"
 ---
 
-# 插件包
+# Plugin Bundles
 
-OpenClaw 支持一种共享的外部插件包类别：**包插件（bundle plugins）**。
+OpenClaw can install plugins from three external ecosystems: **Codex**, **Claude**,
+and **Cursor**. These are called **bundles** — content and metadata packs that
+OpenClaw maps into native features like skills, hooks, and MCP tools.
 
-目前，这指的是三个紧密相关的生态系统：
+<Info>
+  Bundles are **not** the same as native OpenClaw plugins. Native plugins run
+  in-process and can register any capability. Bundles are content packs with
+  selective feature mapping and a narrower trust boundary.
+</Info>
 
-- Codex 包
-- Claude 包
-- Cursor 包
+## Why bundles exist
 
-OpenClaw 在 `openclaw plugins list` 中将它们全部显示为 `Format: bundle`。
-详细输出和 `openclaw plugins info <id>` 也显示子类型（`codex`、`claude` 或 `cursor`）。
+Many useful plugins are published in Codex, Claude, or Cursor format. Instead
+of requiring authors to rewrite them as native OpenClaw plugins, OpenClaw
+detects these formats and maps their supported content into the native feature
+set. This means you can install a Claude command pack or a Codex skill bundle
+and use it immediately.
 
-相关内容：
+## Install a bundle
 
-- 插件系统概述：[Plugins](/tools/plugin)
-- CLI 安装/列表流程：[plugins](/cli/plugins)
-- 原生 manifest 规范：[Plugin manifest](/plugins/manifest)
+<Steps>
+  <Step title="Install from a directory, archive, or marketplace">
+    ```bash
+    # Local directory
+    openclaw plugins install ./my-bundle
 
-## 什么是包
+    # Archive
+    openclaw plugins install ./my-bundle.tgz
 
-包是一个**内容/元数据包**，不是原生的 OpenClaw 进程内插件。
+    # Claude marketplace
+    openclaw plugins marketplace list <marketplace-name>
+    openclaw plugins install <plugin-name>@<marketplace-name>
+    ```
 
-目前，OpenClaw **不会**在进程内执行包的运行时代码。
-它会检测已知的包文件，读取元数据，并将支持的包内容映射为原生 OpenClaw 表面，比如技能（skills）、钩子包（hook packs）、MCP 配置和内置 Pi 设置。
+  </Step>
 
-这就是主要的信任边界：
+  <Step title="Verify detection">
+    ```bash
+    openclaw plugins list
+    openclaw plugins inspect <id>
+    ```
 
-- 原生 OpenClaw 插件：运行时模块在进程内执行
-- 包：元数据/内容包，选择性特性映射
+    Bundles show as `Format: bundle` with a subtype of `codex`, `claude`, or `cursor`.
 
-## 共享的包模型
+  </Step>
 
-Codex、Claude 和 Cursor 包足够相似，OpenClaw 将它们视为一个统一标准模型。
+  <Step title="Restart and use">
+    ```bash
+    openclaw gateway restart
+    ```
 
-共同思想：
+    Mapped features (skills, hooks, MCP tools) are available in the next session.
 
-- 一个小型 manifest 文件，或默认目录布局
-- 一个或多个内容根，比如 `skills/` 或 `commands/`
-- 可选的工具/运行时元数据，如 MCP、hooks、agents 或 LSP
-- 以目录或压缩包形式安装，然后在正常插件列表中启用
+  </Step>
+</Steps>
 
-OpenClaw 的常见行为：
+## What OpenClaw maps from bundles
 
-- 检测包的子类型
-- 规范化为一个内部包记录
-- 将支持的部分映射为原生 OpenClaw 功能
-- 报告作为检测到但未连接的能力的未支持部分
-
-实际使用中，大多数用户无需优先考虑厂商特定格式。
-更有用的问题是：OpenClaw 目前映射了哪些包表面？
-
-## 检测顺序
-
-OpenClaw 优先原生 OpenClaw 插件/包布局，再处理包。
-
-实际效果：
-
-- `openclaw.plugin.json` 优先于包检测
-- 包安装时若有有效的 `package.json` + `openclaw.extensions`，采用原生安装路径
-- 若目录含原生和包元数据，OpenClaw 首先视为原生插件
-
-避免了将双格式包部分安装为包，后续又以原生插件加载。
-
-## 当前工作情况
-
-OpenClaw 规范化包元数据为内部包记录，然后将支持的表面映射为现有原生行为。
+Not every bundle feature runs in OpenClaw today. Here is what works and what
+is detected but not yet wired.
 
 ### 当前支持
 
-#### 技能内容
-
-- 包技能根目录视为正常的 OpenClaw 技能根
-- Claude `commands` 根目录视作额外技能根
-- Cursor `.cursor/commands` 根目录视作额外技能根
-
-这意味着 Claude 的 Markdown 命令文件通过正常 OpenClaw 技能加载器工作。
-Cursor 的命令 Markdown 也通过相同路径处理。
-
-#### 钩子包
-
-- 包的钩子根目录**仅**在使用正常 OpenClaw 钩子包布局时工作。当前主要是 Codex 兼容场景：
-  - `HOOK.md`
-  - `handler.ts` 或 `handler.js`
-
-#### 用于 CLI 后端的 MCP
-
-- 启用的包可贡献 MCP 服务器配置
-- 当前运行时布线由 `claude-cli` 后端使用
-- OpenClaw 将包的 MCP 配置合并至后端的 `--mcp-config` 文件
-
-#### 内置 Pi 设置
-
-- Claude 的 `settings.json` 在启用包时导入为默认内置 Pi 设置
-- OpenClaw 在应用前会清理 shell 覆盖键值
-
-被清理的键：
-
-- `shellPath`
-- `shellCommandPrefix`
+| Feature       | How it maps                                                                                          | Applies to     |
+| ------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
+| Skill content | Bundle skill roots load as normal OpenClaw skills                                                    | All formats    |
+| Commands      | `commands/` and `.cursor/commands/` treated as skill roots                                           | Claude, Cursor |
+| Hook packs    | OpenClaw-style `HOOK.md` + `handler.ts` layouts                                                      | Codex          |
+| MCP tools     | Bundle MCP config merged into embedded Pi settings; supported stdio servers launched as subprocesses | All formats    |
+| Settings      | Claude `settings.json` imported as embedded Pi defaults                                              | Claude         |
 
 ### 检测到但未执行
 
-这些表面被检测到，在包能力中显示，也可能出现在诊断/信息输出，但 OpenClaw 目前不执行：
+These are recognized and shown in diagnostics, but OpenClaw does not run them:
 
-- Claude 的 `agents`
-- Claude 的 `hooks.json` 自动化
-- Claude 的 `lspServers`
-- Claude 的 `outputStyles`
-- Cursor 的 `.cursor/agents`
-- Cursor 的 `.cursor/hooks.json`
-- Cursor 的 `.cursor/rules`
-- Cursor `mcpServers` 位于当前映射的运行时路径之外
-- Codex 内联/应用元数据（仅限于能力报告）
+- Claude `agents`, `hooks.json` automation, `lspServers`, `outputStyles`
+- Cursor `.cursor/agents`, `.cursor/hooks.json`, `.cursor/rules`
+- Codex inline/app metadata beyond capability reporting
 
-## 能力报告
+## Bundle formats
 
-`openclaw plugins info <id>` 显示规范化包记录中的包能力。
+<AccordionGroup>
+  <Accordion title="Codex bundles">
+    Markers: `.codex-plugin/plugin.json`
 
-支持的能力默默加载。
-不支持的能力会产生类似以下的警告：
+    Optional content: `skills/`, `hooks/`, `.mcp.json`, `.app.json`
 
-```text
-bundle capability detected but not wired into OpenClaw yet: agents
-```
+    Codex bundles fit OpenClaw best when they use skill roots and OpenClaw-style
+    hook-pack directories (`HOOK.md` + `handler.ts`).
 
-当前例外：
+  </Accordion>
 
-- Claude 的 `commands` 被视为支持，因为它映射为技能
-- Claude 的 `settings` 被视为支持，因为它映射为内置 Pi 设置
-- Cursor 的 `commands` 被视为支持，因为它映射为技能
-- 包的 MCP 被视为支持，只要 OpenClaw 实际导入了它
-- Codex 的 `hooks` 仅在 OpenClaw 钩子包布局中视为支持
+  <Accordion title="Claude bundles">
+    Two detection modes:
 
-## 格式差异
+    - **Manifest-based:** `.claude-plugin/plugin.json`
+    - **Manifestless:** default Claude layout (`skills/`, `commands/`, `agents/`, `hooks/`, `.mcp.json`, `settings.json`)
 
-格式相近，但不是字节完全相同。
-这些是 OpenClaw 中实际有意义的差异。
+    Claude-specific behavior:
 
-### Codex
+    - `commands/` is treated as skill content
+    - `settings.json` is imported into embedded Pi settings (shell override keys are sanitized)
+    - `.mcp.json` exposes supported stdio tools to embedded Pi
+    - `hooks/hooks.json` is detected but not executed
+    - Custom component paths in the manifest are additive (they extend defaults, not replace them)
 
-典型标识：
+  </Accordion>
 
-- `.codex-plugin/plugin.json`
-- 可选 `skills/`
-- 可选 `hooks/`
-- 可选 `.mcp.json`
-- 可选 `.app.json`
+  <Accordion title="Cursor bundles">
+    Markers: `.cursor-plugin/plugin.json`
 
-Codex 包在使用技能根和 OpenClaw 风格钩子包目录时与 OpenClaw 最匹配。
+    Optional content: `skills/`, `.cursor/commands/`, `.cursor/agents/`, `.cursor/rules/`, `.cursor/hooks.json`, `.mcp.json`
 
-### Claude
+    - `.cursor/commands/` is treated as skill content
+    - `.cursor/rules/`, `.cursor/agents/`, and `.cursor/hooks.json` are detect-only
 
-OpenClaw 支持两种：
+  </Accordion>
+</AccordionGroup>
 
-- 基于 manifest 的 Claude 包：`.claude-plugin/plugin.json`
-- 无 manifest 的 Claude 包，使用默认 Claude 布局
+## Detection precedence
 
-OpenClaw 识别的默认 Claude 布局标识：
+OpenClaw checks for native plugin format first:
 
-- `skills/`
-- `commands/`
-- `agents/`
-- `hooks/hooks.json`
-- `.mcp.json`
-- `.lsp.json`
-- `settings.json`
+1. `openclaw.plugin.json` or valid `package.json` with `openclaw.extensions` — treated as **native plugin**
+2. Bundle markers (`.codex-plugin/`, `.claude-plugin/`, or default Claude/Cursor layout) — treated as **bundle**
 
-Claude 特定说明：
+If a directory contains both, OpenClaw uses the native path. This prevents
+dual-format packages from being partially installed as bundles.
 
-- `commands/` 视为技能内容
-- `settings.json` 导入为内置 Pi 设置
-- `hooks/hooks.json` 被检测到，但不作为 Claude 自动化执行
+## Security
 
-### Cursor
+Bundles have a narrower trust boundary than native plugins:
 
-典型标识：
+- OpenClaw does **not** load arbitrary bundle runtime modules in-process
+- Skills and hook-pack paths must stay inside the plugin root (boundary-checked)
+- Settings files are read with the same boundary checks
+- Supported stdio MCP servers may be launched as subprocesses
 
-- `.cursor-plugin/plugin.json`
-- 可选 `skills/`
-- 可选 `.cursor/commands/`
-- 可选 `.cursor/agents/`
-- 可选 `.cursor/rules/`
-- 可选 `.cursor/hooks.json`
-- 可选 `.mcp.json`
-
-Cursor 特定说明：
-
-- `.cursor/commands/` 视为技能内容
-- `.cursor/rules/`、`.cursor/agents/` 和 `.cursor/hooks.json` 目前仅检测
-
-## Claude 自定义路径
-
-Claude 包的 manifest 可以声明自定义组件路径。OpenClaw 视这些路径为**附加的**，不会替换默认路径。
-
-当前支持的自定义路径键：
-
-- `skills`
-- `commands`
-- `agents`
-- `hooks`
-- `mcpServers`
-- `lspServers`
-- `outputStyles`
-
-示例：
-
-- 默认 `commands/` 加上 manifest `commands: "extra-commands"` =>
-  OpenClaw 会扫描两个目录
-- 默认 `skills/` 加上 manifest `skills: ["team-skills"]` =>
-  OpenClaw 会扫描两个目录
-
-## 安全模型
-
-包的支持刻意比原生插件支持更严格。
-
-当前行为：
-
-- 通过边界检查读取插件根目录内文件进行包发现
-- 技能和钩子包路径必须位于插件根目录内
-- 读取包设置文件时做相同边界检查
-- OpenClaw 不在进程内执行任意包运行时代码
-
-这使得包支持默认比原生插件模块更安全，但你仍应将第三方包视为对其公开功能的可信内容。
-
-## 安装示例
-
-```bash
-openclaw plugins install ./my-codex-bundle
-openclaw plugins install ./my-claude-bundle
-openclaw plugins install ./my-cursor-bundle
-openclaw plugins install ./my-bundle.tgz
-openclaw plugins marketplace list <marketplace-name>
-openclaw plugins install <plugin-name>@<marketplace-name>
-openclaw plugins info my-bundle
-```
-
-如果目录是原生 OpenClaw 插件/包，原生安装路径仍优先。
-
-对于 Claude 市场名称，OpenClaw 会读取本地 Claude 知名市场注册表 `~/.claude/plugins/known_marketplaces.json`。
-市场条目可以解析为兼容包的目录/压缩包，或原生插件源；解析后，仍遵循正常安装规则。
+This makes bundles safer by default, but you should still treat third-party
+bundles as trusted content for the features they do expose.
 
 ## 故障排查
 
-### 发现包但能力不运行
+<AccordionGroup>
+  <Accordion title="Bundle is detected but capabilities do not run">
+    Run `openclaw plugins inspect <id>`. If a capability is listed but marked as
+    not wired, that is a product limit — not a broken install.
+  </Accordion>
 
-检查 `openclaw plugins info <id>`。
+  <Accordion title="Claude command files do not appear">
+    Make sure the bundle is enabled and the markdown files are inside a detected
+    `commands/` or `skills/` root.
+  </Accordion>
 
-如果能力列出但 OpenClaw 说尚未连接，这是真实的产品限制，而非安装失败。
+  <Accordion title="Claude settings do not apply">
+    Only embedded Pi settings from `settings.json` are supported. OpenClaw does
+    not treat bundle settings as raw config patches.
+  </Accordion>
 
-### Claude 命令文件不出现
+  <Accordion title="Claude hooks do not execute">
+    `hooks/hooks.json` is detect-only. If you need runnable hooks, use the
+    OpenClaw hook-pack layout or ship a native plugin.
+  </Accordion>
+</AccordionGroup>
 
-确保启用了该包，且 Markdown 文件在检测到的 `commands` 根目录或 `skills` 根目录内。
+## Related
 
-### Claude 设置不生效
-
-当前支持仅限于从 `settings.json` 导入的内置 Pi 设置。
-OpenClaw 不将包设置视为原生 OpenClaw 配置补丁。
-
-### Claude 钩子不执行
-
-`hooks/hooks.json` 目前仅检测，不执行。
-
-若需可运行的包钩子，推荐使用 Codex 钩子根的正常 OpenClaw 钩子包布局，或发布原生 OpenClaw 插件。
+- [Install and Configure Plugins](/tools/plugin)
+- [Building Plugins](/plugins/building-plugins) — create a native plugin
+- [Plugin Manifest](/plugins/manifest) — native manifest schema

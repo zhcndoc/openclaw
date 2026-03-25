@@ -8,7 +8,7 @@ title: "目录"
 
 # `openclaw directory`
 
-支持目录查找的频道的目录查询（联系人/用户，群组，以及“我”）。
+支持目录查找的频道的目录查询（联系人/用户，群组，以及"我"）。
 
 ## 通用选项
 
@@ -38,9 +38,9 @@ openclaw message send --channel slack --target user:U012ABCDEF --message "hello"
 - Matrix（插件）：`user:@user:server`、`room:!roomId:server` 或 `#alias:server`
 - Microsoft Teams（插件）：`user:<id>` 和 `conversation:<id>`
 - Zalo（插件）：用户 ID（Bot API）
-- Zalo Personal / `zalouser`（插件）：来自 `zca` 的线程 ID（私聊/群聊）（“我”、“好友列表”、“群组列表”）
+- Zalo Personal / `zalouser`（插件）：来自 `zca` 的线程 ID（私聊/群聊）（"我"、"好友列表"、"群组列表"）
 
-## 自我（“我”）
+## Self（"我"）
 
 ```bash
 openclaw directory self --channel zalouser

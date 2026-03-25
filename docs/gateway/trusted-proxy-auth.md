@@ -1,4 +1,5 @@
 ---
+title: "受信任代理认证"
 summary: "将网关认证委托给受信任的反向代理（Pomerium、Caddy、nginx + OAuth）"
 read_when:
   - 在身份感知代理后运行 OpenClaw

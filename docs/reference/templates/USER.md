@@ -1,5 +1,6 @@
 ---
-summary: "用户档案记录"
+title: "USER Template"
+summary: "User profile record"
 read_when:
   - 手动启动工作区时
 ---

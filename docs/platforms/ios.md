@@ -42,7 +42,11 @@ openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-4. 验证连接状态：
+If the app retries pairing with changed auth details (role/scopes/public key),
+the previous pending request is superseded and a new `requestId` is created.
+Run `openclaw devices list` again before approval.
+
+4. Verify connection:
 
 ```bash
 openclaw nodes status

@@ -97,7 +97,7 @@ xcrun swift --version
 openclaw gateway status
 openclaw gateway stop
 
-# 如果是非 LaunchAgent 运行（开发模式 / 手动运行），查找监听端口的进程：
+# If you're not using a LaunchAgent (dev mode / manual runs), find the listener:
 lsof -nP -iTCP:18789 -sTCP:LISTEN
 ```
 

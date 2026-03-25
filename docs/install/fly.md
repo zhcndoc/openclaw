@@ -1,7 +1,6 @@
 ---
 title: Fly.io
-description: 在 Fly.io 上部署 OpenClaw
-summary: "逐步指导如何在 Fly.io 上部署 OpenClaw，实现持久存储和 HTTPS"
+summary: "Step-by-step Fly.io deployment for OpenClaw with persistent storage and HTTPS"
 read_when:
   - 在 Fly.io 上部署 OpenClaw
   - 设置 Fly 卷、秘密和首次运行配置
@@ -25,222 +24,228 @@ read_when:
 3. 使用 `fly deploy` 部署
 4. SSH 登录创建配置或使用控制界面
 
-## 1) 创建 Fly 应用
+<Steps>
+  <Step title="Create the Fly app">
+    ```bash
+    # Clone the repo
+    git clone https://github.com/openclaw/openclaw.git
+    cd openclaw
 
-```bash
-# 克隆仓库
-git clone https://github.com/openclaw/openclaw.git
-cd openclaw
+    # Create a new Fly app (pick your own name)
+    fly apps create my-openclaw
 
-# 创建新的 Fly 应用（自行命名）
-fly apps create my-openclaw
+    # Create a persistent volume (1GB is usually enough)
+    fly volumes create openclaw_data --size 1 --region iad
+    ```
 
-# 创建持久化卷（通常 1GB 足够）
-fly volumes create openclaw_data --size 1 --region iad
-```
+    **Tip:** Choose a region close to you. Common options: `lhr` (London), `iad` (Virginia), `sjc` (San Jose).
 
-**提示:** 选择离你较近的区域。常用选项：`lhr`（伦敦）、`iad`（弗吉尼亚）、`sjc`（圣何塞）。
+  </Step>
 
-## 2) 配置 fly.toml
+  <Step title="Configure fly.toml">
+    Edit `fly.toml` to match your app name and requirements.
 
-编辑 `fly.toml`，使其匹配你的应用名称和需求。
+    **Security note:** The default config exposes a public URL. For a hardened deployment with no public IP, see [Private Deployment](#private-deployment-hardened) or use `fly.private.toml`.
 
-**安全提示:** 默认配置会暴露公网 URL。如需无公网 IP 的加固部署，请参见[私有部署](#private-deployment-hardened)或使用 `fly.private.toml`。
+    ```toml
+    app = "my-openclaw"  # Your app name
+    primary_region = "iad"
 
-```toml
-app = "my-openclaw"  # 你的应用名
-primary_region = "iad"
+    [build]
+      dockerfile = "Dockerfile"
 
-[build]
-  dockerfile = "Dockerfile"
+    [env]
+      NODE_ENV = "production"
+      OPENCLAW_PREFER_PNPM = "1"
+      OPENCLAW_STATE_DIR = "/data"
+      NODE_OPTIONS = "--max-old-space-size=1536"
 
-[env]
-  NODE_ENV = "production"
-  OPENCLAW_PREFER_PNPM = "1"
-  OPENCLAW_STATE_DIR = "/data"
-  NODE_OPTIONS = "--max-old-space-size=1536"
+    [processes]
+      app = "node dist/index.js gateway --allow-unconfigured --port 3000 --bind lan"
 
-[processes]
-  app = "node dist/index.js gateway --allow-unconfigured --port 3000 --bind lan"
+    [http_service]
+      internal_port = 3000
+      force_https = true
+      auto_stop_machines = false
+      auto_start_machines = true
+      min_machines_running = 1
+      processes = ["app"]
 
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = false
-  auto_start_machines = true
-  min_machines_running = 1
-  processes = ["app"]
+    [[vm]]
+      size = "shared-cpu-2x"
+      memory = "2048mb"
 
-[[vm]]
-  size = "shared-cpu-2x"
-  memory = "2048mb"
+    [mounts]
+      source = "openclaw_data"
+      destination = "/data"
+    ```
 
-[mounts]
-  source = "openclaw_data"
-  destination = "/data"
-```
+    **Key settings:**
 
-**关键设置说明：**
+    | Setting                        | Why                                                                         |
+    | ------------------------------ | --------------------------------------------------------------------------- |
+    | `--bind lan`                   | Binds to `0.0.0.0` so Fly's proxy can reach the gateway                     |
+    | `--allow-unconfigured`         | Starts without a config file (you'll create one after)                      |
+    | `internal_port = 3000`         | Must match `--port 3000` (or `OPENCLAW_GATEWAY_PORT`) for Fly health checks |
+    | `memory = "2048mb"`            | 512MB is too small; 2GB recommended                                         |
+    | `OPENCLAW_STATE_DIR = "/data"` | Persists state on the volume                                                |
 
-| 设置                          | 原因                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `--bind lan`                   | 绑定到 `0.0.0.0`，使 Fly 的代理能够访问网关                               |
-| `--allow-unconfigured`         | 无配置文件启动（配置将在之后创建）                                        |
-| `internal_port = 3000`         | 必须与 `--port 3000`（或 `OPENCLAW_GATEWAY_PORT`）匹配，用于 Fly 健康检查  |
-| `memory = "2048mb"`            | 512MB 太小；建议 2GB                                                      |
-| `OPENCLAW_STATE_DIR = "/data"` | 将状态持久保存到卷                                                       |
+  </Step>
 
-## 3) 设置秘密
+  <Step title="Set secrets">
+    ```bash
+    # Required: Gateway token (for non-loopback binding)
+    fly secrets set OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 
-```bash
-# 必需：网关令牌（非环回绑定时使用）
-fly secrets set OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+    # Model provider API keys
+    fly secrets set ANTHROPIC_API_KEY=sk-ant-...
 
-# 模型提供商 API 密钥
-fly secrets set ANTHROPIC_API_KEY=sk-ant-...
+    # Optional: Other providers
+    fly secrets set OPENAI_API_KEY=sk-...
+    fly secrets set GOOGLE_API_KEY=...
 
-# 可选：其他提供商
-fly secrets set OPENAI_API_KEY=sk-...
-fly secrets set GOOGLE_API_KEY=...
+    # Channel tokens
+    fly secrets set DISCORD_BOT_TOKEN=MTQ...
+    ```
 
-# 频道令牌
-fly secrets set DISCORD_BOT_TOKEN=MTQ...
-```
+    **Notes:**
 
-**注意事项：**
+    - Non-loopback binds (`--bind lan`) require `OPENCLAW_GATEWAY_TOKEN` for security.
+    - Treat these tokens like passwords.
+    - **Prefer env vars over config file** for all API keys and tokens. This keeps secrets out of `openclaw.json` where they could be accidentally exposed or logged.
 
-- 非环回绑定（`--bind lan`）需要 `OPENCLAW_GATEWAY_TOKEN` 以保证安全
-- 令牌视同密码进行保护
-- **优先使用环境变量而非配置文件**存储所有 API 密钥和令牌，避免它们被意外暴露或日志记录在 `openclaw.json` 中
+  </Step>
 
-## 4) 部署
+  <Step title="Deploy">
+    ```bash
+    fly deploy
+    ```
 
-```bash
-fly deploy
-```
+    First deploy builds the Docker image (~2-3 minutes). Subsequent deploys are faster.
 
-首次部署会构建 Docker 镜像（约 2-3 分钟），后续部署更快。
+    After deployment, verify:
 
-部署后，检查状态：
+    ```bash
+    fly status
+    fly logs
+    ```
 
-```bash
-fly status
-fly logs
-```
+    You should see:
 
-应见到：
+    ```
+    [gateway] listening on ws://0.0.0.0:3000 (PID xxx)
+    [discord] logged in to discord as xxx
+    ```
 
-```
-[gateway] listening on ws://0.0.0.0:3000 (PID xxx)
-[discord] logged in to discord as xxx
-```
+  </Step>
 
-## 5) 创建配置文件
+  <Step title="Create config file">
+    SSH into the machine to create a proper config:
 
-SSH 登录机器并创建合适的配置：
+    ```bash
+    fly ssh console
+    ```
 
-```bash
-fly ssh console
-```
+    Create the config directory and file:
 
-创建配置目录及文件：
-
-```bash
-mkdir -p /data
-cat > /data/openclaw.json << 'EOF'
-{
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "anthropic/claude-opus-4-6",
-        "fallbacks": ["anthropic/claude-sonnet-4-5", "openai/gpt-4o"]
-      },
-      "maxConcurrent": 4
-    },
-    "list": [
-      {
-        "id": "main",
-        "default": true
-      }
-    ]
-  },
-  "auth": {
-    "profiles": {
-      "anthropic:default": { "mode": "token", "provider": "anthropic" },
-      "openai:default": { "mode": "token", "provider": "openai" }
-    }
-  },
-  "bindings": [
+    ```bash
+    mkdir -p /data
+    cat > /data/openclaw.json << 'EOF'
     {
-      "agentId": "main",
-      "match": { "channel": "discord" }
-    }
-  ],
-  "channels": {
-    "discord": {
-      "enabled": true,
-      "groupPolicy": "allowlist",
-      "guilds": {
-        "YOUR_GUILD_ID": {
-          "channels": { "general": { "allow": true } },
-          "requireMention": false
+      "agents": {
+        "defaults": {
+          "model": {
+            "primary": "anthropic/claude-opus-4-6",
+            "fallbacks": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o"]
+          },
+          "maxConcurrent": 4
+        },
+        "list": [
+          {
+            "id": "main",
+            "default": true
+          }
+        ]
+      },
+      "auth": {
+        "profiles": {
+          "anthropic:default": { "mode": "token", "provider": "anthropic" },
+          "openai:default": { "mode": "token", "provider": "openai" }
         }
-      }
+      },
+      "bindings": [
+        {
+          "agentId": "main",
+          "match": { "channel": "discord" }
+        }
+      ],
+      "channels": {
+        "discord": {
+          "enabled": true,
+          "groupPolicy": "allowlist",
+          "guilds": {
+            "YOUR_GUILD_ID": {
+              "channels": { "general": { "allow": true } },
+              "requireMention": false
+            }
+          }
+        }
+      },
+      "gateway": {
+        "mode": "local",
+        "bind": "auto"
+      },
+      "meta": {}
     }
-  },
-  "gateway": {
-    "mode": "local",
-    "bind": "auto"
-  },
-  "meta": {
-    "lastTouchedVersion": "2026.1.29"
-  }
-}
-EOF
-```
+    EOF
+    ```
 
-**注意:** 设置了 `OPENCLAW_STATE_DIR=/data` 后，配置路径是 `/data/openclaw.json`。
+    **Note:** With `OPENCLAW_STATE_DIR=/data`, the config path is `/data/openclaw.json`.
 
-**注意:** Discord 令牌可通过：
+    **Note:** The Discord token can come from either:
 
-- 环境变量：`DISCORD_BOT_TOKEN`（推荐用于秘密）
-- 配置文件：`channels.discord.token`
+    - Environment variable: `DISCORD_BOT_TOKEN` (recommended for secrets)
+    - Config file: `channels.discord.token`
 
-如果使用环境变量，无需在配置中添加令牌，网关会自动读取 `DISCORD_BOT_TOKEN`。
+    If using env var, no need to add token to config. The gateway reads `DISCORD_BOT_TOKEN` automatically.
 
-重启机器使配置生效：
+    Restart to apply:
 
-```bash
-exit
-fly machine restart <machine-id>
-```
+    ```bash
+    exit
+    fly machine restart <machine-id>
+    ```
 
-## 6) 访问网关
+  </Step>
 
-### 控制界面
+  <Step title="Access the Gateway">
+    ### Control UI
 
-在浏览器打开：
+    Open in browser:
 
-```bash
-fly open
-```
+    ```bash
+    fly open
+    ```
 
-或访问 `https://my-openclaw.fly.dev/`
+    Or visit `https://my-openclaw.fly.dev/`
 
-粘贴你的网关令牌（即 `OPENCLAW_GATEWAY_TOKEN`）以登录验证。
+    Paste your gateway token (the one from `OPENCLAW_GATEWAY_TOKEN`) to authenticate.
 
-### 日志
+    ### Logs
 
-```bash
-fly logs              # 实时日志
-fly logs --no-tail    # 最近日志
-```
+    ```bash
+    fly logs              # Live logs
+    fly logs --no-tail    # Recent logs
+    ```
 
-### SSH 控制台
+    ### SSH Console
 
-```bash
-fly ssh console
-```
+    ```bash
+    fly ssh console
+    ```
+
+  </Step>
+</Steps>
 
 ## 故障排查
 
@@ -442,22 +447,22 @@ fly ssh console -a my-openclaw
 
 示例使用 ngrok 的语音通话配置：
 
-```json
+```json5
 {
-  "plugins": {
-    "entries": {
+  plugins: {
+    entries: {
       "voice-call": {
-        "enabled": true,
-        "config": {
-          "provider": "twilio",
-          "tunnel": { "provider": "ngrok" },
-          "webhookSecurity": {
-            "allowedHosts": ["example.ngrok.app"]
-          }
-        }
-      }
-    }
-  }
+        enabled: true,
+        config: {
+          provider: "twilio",
+          tunnel: { provider: "ngrok" },
+          webhookSecurity: {
+            allowedHosts: ["example.ngrok.app"],
+          },
+        },
+      },
+    },
+  },
 }
 ```
 
@@ -487,4 +492,10 @@ ngrok 隧道在容器内部运行，提供了公共 webhook URL，但不暴露 F
 - 约 10-15 美元/月，依使用情况而定
 - 免费套餐含部分额度
 
-详情见 [Fly.io 价格](https://fly.io/docs/about/pricing/)。
+See [Fly.io pricing](https://fly.io/docs/about/pricing/) for details.
+
+## Next steps
+
+- Set up messaging channels: [Channels](/channels)
+- Configure the Gateway: [Gateway configuration](/gateway/configuration)
+- Keep OpenClaw up to date: [Updating](/install/updating)

@@ -1,9 +1,9 @@
 ---
 summary: "macOS 技能设置界面和基于网关的状态"
 read_when:
-  - 更新 macOS 技能设置界面
-  - 更改技能的访问控制或安装行为
-title: "技能"
+  - Updating the macOS Skills settings UI
+  - Changing skills gating or install behavior
+title: "Skills (macOS)"
 ---
 
 # 技能 (macOS)

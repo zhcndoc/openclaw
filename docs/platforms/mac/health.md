@@ -1,8 +1,8 @@
 ---
 summary: "macOS 应用如何报告网关/Baileys 健康状态"
 read_when:
-  - 调试 mac 应用健康指标时
-title: "健康检查"
+  - Debugging mac app health indicators
+title: "Health Checks (macOS)"
 ---
 
 # macOS 上的健康检查

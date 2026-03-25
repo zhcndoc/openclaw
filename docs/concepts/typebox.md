@@ -9,7 +9,7 @@ title: "TypeBox"
 
 最后更新：2026-01-10
 
-TypeBox 是一个以 TypeScript 为优先的模式库。我们用它来定义 **网关 WebSocket 协议**（握手、请求/响应、服务器事件）。这些模式驱动着 **运行时验证**、**JSON Schema 导出**，以及 macOS 应用的 **Swift 代码生成**。唯一真实来源；其余一切均为生成。
+TypeBox 是一个以 TypeScript 为优先的模式库。我们用它来定义 **网关 WebSocket 协议**（握手、请求/响应、服务器事件）。这些模式驱动着 **运行时验证**、**JSON Schema 导出**，以及 macOS 应用的 **Swift 代码生成**。它是唯一真实来源；其余一切均为生成。
 
 如果你想了解更高层次的协议上下文，可以从 [网关架构](/concepts/architecture) 开始。
 
@@ -176,7 +176,7 @@ ws.on("message", (data) => {
 });
 ```
 
-## 实际示例：端到端添加方法
+## 完整示例：端到端添加一个方法
 
 示例：添加一个新的 `system.echo` 请求，返回 `{ ok: true, text }`。
 

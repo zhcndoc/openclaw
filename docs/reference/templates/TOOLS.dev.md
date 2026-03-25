@@ -1,5 +1,6 @@
 ---
-summary: "开发代理工具笔记 (C-3PO)"
+title: "TOOLS.dev Template"
+summary: "Dev agent tools notes (C-3PO)"
 read_when:
   - 使用开发网关模板时
   - 更新默认开发代理身份时

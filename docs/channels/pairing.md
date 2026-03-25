@@ -9,7 +9,7 @@ title: "配对"
 
 # 配对
 
-“配对”是 OpenClaw 的**所有者显式批准**步骤。
+"配对"是 OpenClaw 的**所有者显式批准**步骤。
 它用于两个场景：
 
 1. **私信配对**（谁被允许与机器人聊天）
@@ -33,10 +33,10 @@ title: "配对"
 
 ```bash
 openclaw pairing list telegram
-openclaw pairing approve telegram <代码>
+openclaw pairing approve telegram <code>
 ```
 
-支持的频道：`telegram`、`whatsapp`、`signal`、`imessage`、`discord`、`slack`、`feishu`。
+支持的频道：`bluebubbles`、`discord`、`feishu`、`googlechat`、`imessage`、`irc`、`line`、`matrix`、`mattermost`、`msteams`、`nextcloud-talk`、`nostr`、`signal`、`slack`、`synology-chat`、`telegram`、`twitch`、`whatsapp`、`zalo`、`zalouser`。
 
 ### 状态存储位置
 
@@ -62,11 +62,11 @@ openclaw pairing approve telegram <代码>
 
 如果你使用 `device-pair` 插件，可以完全通过 Telegram 进行首次设备配对：
 
-1. 在 Telegram 里向机器人发送指令：`/pair`
-2. 机器人回复两条消息：一条说明信息，一条单独的**设置代码**消息（方便在 Telegram 中复制粘贴）。
-3. 在手机上打开 OpenClaw iOS 应用 → 设置 → 网关。
+1. 在 Telegram 中，向你的机器人发送消息：`/pair`
+2. 机器人回复两条消息：一条指令消息和一条单独的**设置代码**消息（在 Telegram 中便于复制/粘贴）。
+3. 在你的手机上，打开 OpenClaw iOS 应用 → 设置 → 网关。
 4. 粘贴设置代码并连接。
-5. 回到 Telegram，输入：`/pair approve`
+5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和作用域），然后批准。
 
 设置代码是一个 base64 编码的 JSON，有：
 
@@ -79,9 +79,11 @@ openclaw pairing approve telegram <代码>
 
 ```bash
 openclaw devices list
-openclaw devices approve <请求Id>
-openclaw devices reject <请求Id>
+openclaw devices approve <requestId>
+openclaw devices reject <requestId>
 ```
+
+如果同一设备使用不同的认证详情重试（例如不同的角色/作用域/公钥），之前的待处理请求将被取代并创建新的 `requestId`。
 
 ### 节点配对状态存储
 

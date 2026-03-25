@@ -13,9 +13,7 @@ title: "设置"
 有关入职详情，请参阅 [Onboarding (CLI)](/start/wizard)。
 </Note>
 
-最后更新：2026-01-01
-
-## 简要说明（TL;DR）
+## TL;DR
 
 - **个性化内容放在仓库外：** `~/.openclaw/workspace`（工作区）+ `~/.openclaw/openclaw.json`（配置）。
 - **稳定工作流：** 安装 macOS 应用；让它运行捆绑的 Gateway。
@@ -23,11 +21,11 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- Node `>=22`
+- Node 24 recommended (Node 22 LTS, currently `22.16+`, still supported)
 - `pnpm`
 - Docker（可选，仅用于容器化设置/端到端测试 — 参见 [Docker](/install/docker)）
 
-## 个性化策略（避免更新破坏设置）
+## Tailoring strategy (so updates do not hurt)
 
 如果你想要“100% 量身定制”且便于更新，请将你的定制内容保存在：
 

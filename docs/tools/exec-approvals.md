@@ -97,7 +97,26 @@ macOS 拆分：
 - **allowlist**：仅在允许列表匹配时允许。
 - **full**：允许。
 
-## 允许列表（按代理）
+### Inline interpreter eval hardening (`tools.exec.strictInlineEval`)
+
+When `tools.exec.strictInlineEval=true`, OpenClaw treats inline code-eval forms as approval-only even if the interpreter binary itself is allowlisted.
+
+Examples:
+
+- `python -c`
+- `node -e`, `node --eval`, `node -p`
+- `ruby -e`
+- `perl -e`, `perl -E`
+- `php -r`
+- `lua -e`
+- `osascript -e`
+
+This is defense-in-depth for interpreter loaders that do not map cleanly to one stable file operand. In strict mode:
+
+- these commands still need explicit approval;
+- `allow-always` does not persist new allowlist entries for them automatically.
+
+## Allowlist (per agent)
 
 允许列表是**按代理**区分的。如存在多个代理，可在 macOS 应用中切换编辑的代理。匹配模式是**不区分大小写的 glob 模式**。模式应解析为**二进制可执行路径**（仅有文件名的条目会被忽略）。遗留的 `agents.default` 条目会在加载时迁移至 `agents.main`。
 
@@ -126,17 +145,24 @@ macOS 拆分：
 
 ## 安全二进制（仅限 stdin）
 
-`tools.exec.safeBins` 定义了一小组**仅处理标准输入**的安全二进制（例如 `jq`），它们可以在允许列表模式下运行，且无需显式允许列表条目。安全二进制拒绝位置文件参数和路径类标记，因此只能操作传入数据流。请将其视为流式过滤器的快速路，不是通用信任列表。
-
-请**不要**将解释器或运行时二进制（如 `python3`、`node`、`ruby`、`bash`、`sh`、`zsh`）添加到 `safeBins` 中。如果命令设计上可以执行代码、调用子命令或读取文件，请优先采用显式允许列表条目并保持开启审批提示。
-
-自定义安全二进制必须在 `tools.exec.safeBinProfiles.<bin>` 中定义明确的配置档。验证仅基于 argv 结构（不检查主机文件系统），防止允许/拒绝差异导致文件存在性预言功能。
-
-默认安全二进制禁止文件相关选项（例如 `sort -o`、`sort --output`、`sort --files0-from`、`sort --compress-program`、`sort --random-source`、`sort --temporary-directory`/`-T`、`wc --files0-from`、`jq -f/--from-file`、`grep -f/--file`）。
-
-另外，安全二进制对破坏仅 stdin 模式的选项（如 `sort -o/--output/--compress-program` 和 grep 递归标记）施加显式的每二进制标志策略。长选项在安全模式下采用失败关闭策略，未知标志及模糊缩写均被拒绝。
-
-安全二进制禁止的标志：
+`tools.exec.safeBins` defines a small list of **stdin-only** binaries (for example `cut`)
+that can run in allowlist mode **without** explicit allowlist entries. Safe bins reject
+positional file args and path-like tokens, so they can only operate on the incoming stream.
+Treat this as a narrow fast-path for stream filters, not a general trust list.
+Do **not** add interpreter or runtime binaries (for example `python3`, `node`, `ruby`, `bash`, `sh`, `zsh`) to `safeBins`.
+If a command can evaluate code, execute subcommands, or read files by design, prefer explicit allowlist entries and keep approval prompts enabled.
+Custom safe bins must define an explicit profile in `tools.exec.safeBinProfiles.<bin>`.
+Validation is deterministic from argv shape only (no host filesystem existence checks), which
+prevents file-existence oracle behavior from allow/deny differences.
+File-oriented options are denied for default safe bins (for example `sort -o`, `sort --output`,
+`sort --files0-from`, `sort --compress-program`, `sort --random-source`,
+`sort --temporary-directory`/`-T`, `wc --files0-from`, `jq -f/--from-file`,
+`grep -f/--file`).
+Safe bins also enforce explicit per-binary flag policy for options that break stdin-only
+behavior (for example `sort -o/--output/--compress-program` and grep recursive flags).
+Long options are validated fail-closed in safe-bin mode: unknown flags and ambiguous
+abbreviations are rejected.
+Denied flags by safe-bin profile:
 
 [//]: # "SAFE_BIN_DENIED_FLAGS:START"
 
@@ -149,15 +175,41 @@ macOS 拆分：
 
 安全二进制执行时强制将 argv 标记视为**字面文本**（无文件名扩展，无环境变量扩展），防止诸如 `*` 或 `$HOME/...` 被用来偷渡文件读取。
 
-安全二进制必须来自受信任的二进制目录（系统默认加可选的 `tools.exec.safeBinTrustedDirs`）。`PATH` 条目从不自动信任。
+Shell chaining (`&&`, `||`, `;`) is allowed when every top-level segment satisfies the allowlist
+(including safe bins or skill auto-allow). Redirections remain unsupported in allowlist mode.
+Command substitution (`$()` / backticks) is rejected during allowlist parsing, including inside
+double quotes; use single quotes if you need literal `$()` text.
+On macOS companion-app approvals, raw shell text containing shell control or expansion syntax
+(`&&`, `||`, `;`, `|`, `` ` ``, `$`, `<`, `>`, `(`, `)`) is treated as an allowlist miss unless
+the shell binary itself is allowlisted.
+For shell wrappers (`bash|sh|zsh ... -c/-lc`), request-scoped env overrides are reduced to a
+small explicit allowlist (`TERM`, `LANG`, `LC_*`, `COLORTERM`, `NO_COLOR`, `FORCE_COLOR`).
+For allow-always decisions in allowlist mode, known dispatch wrappers
+(`env`, `nice`, `nohup`, `stdbuf`, `timeout`) persist inner executable paths instead of wrapper
+paths. Shell multiplexers (`busybox`, `toybox`) are also unwrapped for shell applets (`sh`, `ash`,
+etc.) so inner executables are persisted instead of multiplexer binaries. If a wrapper or
+multiplexer cannot be safely unwrapped, no allowlist entry is persisted automatically.
+If you allowlist interpreters like `python3` or `node`, prefer `tools.exec.strictInlineEval=true` so inline eval still requires an explicit approval.
 
-默认受信安全二进制目录非常精简：`/bin`，`/usr/bin`。
+Default safe bins:
+
+[//]: # "SAFE_BIN_DEFAULTS:START"
+
+`cut`, `uniq`, `head`, `tail`, `tr`, `wc`
+
+[//]: # "SAFE_BIN_DEFAULTS:END"
 
 如果安全二进制位于包管理器或用户路径（例如 `/opt/homebrew/bin`、`/usr/local/bin`、`/opt/local/bin`、`/snap/bin`），请显式添加到 `tools.exec.safeBinTrustedDirs`。
 
 允许列表模式下不自动支持 shell 链接和重定向。
 
-shell 链接（`&&`、`||`、`;`）允许的前提是每个顶层语句段均满足允许列表（包括安全二进制或技能自动允许）。允许列表模式下不支持重定向。解析期间拒绝命令替换（`$()` / 反引号），即使在双引号中需要文字 `$()` 时，使用单引号包裹。
+| Topic            | `tools.exec.safeBins`                                  | Allowlist (`exec-approvals.json`)                            |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| Goal             | Auto-allow narrow stdin filters                        | Explicitly trust specific executables                        |
+| Match type       | Executable name + safe-bin argv policy                 | Resolved executable path glob pattern                        |
+| Argument scope   | Restricted by safe-bin profile and literal-token rules | Path match only; arguments are otherwise your responsibility |
+| Typical examples | `head`, `tail`, `tr`, `wc`                             | `jq`, `python3`, `node`, `ffmpeg`, custom CLIs               |
+| Best use         | Low-risk text transforms in pipelines                  | Any tool with broader behavior or side effects               |
 
 在 macOS 伴侣应用审批时，包含 shell 控制或扩展语法（`&&`、`||`、`;`、`|`、`` ` ``、`$`、`<`、`>`、`(`、`)`）的原始 shell 文本会被视为不匹配允许列表，除非 shell 可执行文件本身被允许。
 
@@ -210,7 +262,11 @@ shell 链接（`&&`、`||`、`;`）允许的前提是每个顶层语句段均满
 }
 ```
 
-## 控制 UI 编辑
+If you explicitly opt `jq` into `safeBins`, OpenClaw still rejects the `env` builtin in safe-bin
+mode so `jq -n env` cannot dump the host process environment without an explicit allowlist path
+or approval prompt.
+
+## Control UI editing
 
 通过 **控制 UI → 节点 → 执行审批** 面板编辑默认值、按代理覆盖和允许列表。选择作用域（默认或某代理），调整策略，添加/删除允许列表模式，点击**保存**。UI 会显示每个模式的**上次使用**元数据，方便列表整理。
 

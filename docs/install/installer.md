@@ -176,8 +176,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
 ### 流程（install-cli.sh）
 
 <Steps>
-  <Step title="安装本地 Node 运行时">
-    下载固定版本的支持 Node 压缩包（当前默认 `22.22.0`）到 `<prefix>/tools/node-v<version>` 并校验 SHA-256。
+  <Step title="Install local Node runtime">
+    Downloads a pinned supported Node LTS tarball (the version is embedded in the script and updated independently) to `<prefix>/tools/node-v<version>` and verifies SHA-256.
   </Step>
   <Step title="确保 Git">
     如缺少 Git，尝试在 Linux 上通过 apt/dnf/yum，macOS 上通过 Homebrew 安装。

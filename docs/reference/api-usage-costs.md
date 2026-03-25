@@ -79,11 +79,13 @@ OpenClaw 可以从以下位置获取凭证：
 
 `web_search` 使用 API 密钥并可能产生费用，具体取决于您的提供商：
 
-- **Brave Search API**: `BRAVE_API_KEY` or `tools.web.search.apiKey`
-- **Gemini (Google Search)**: `GEMINI_API_KEY` or `tools.web.search.gemini.apiKey`
-- **Grok (xAI)**: `XAI_API_KEY` or `tools.web.search.grok.apiKey`
-- **Kimi (Moonshot)**: `KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `tools.web.search.kimi.apiKey`
-- **Perplexity Search API**: `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, or `tools.web.search.perplexity.apiKey`
+- **Brave Search API**: `BRAVE_API_KEY` or `plugins.entries.brave.config.webSearch.apiKey`
+- **Gemini (Google Search)**: `GEMINI_API_KEY` or `plugins.entries.google.config.webSearch.apiKey`
+- **Grok (xAI)**: `XAI_API_KEY` or `plugins.entries.xai.config.webSearch.apiKey`
+- **Kimi (Moonshot)**: `KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `plugins.entries.moonshot.config.webSearch.apiKey`
+- **Perplexity Search API**: `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, or `plugins.entries.perplexity.config.webSearch.apiKey`
+
+Legacy `tools.web.search.*` provider paths still load through the temporary compatibility shim, but they are no longer the recommended config surface.
 
 **Brave Search 免费额度：** 每个 Brave 计划包含每月 5 美元的可续订免费额度。搜索计划每 1,000 次请求收费 5 美元，因此该额度涵盖每月 1,000 次请求免收费。请在 Brave 仪表板中设置使用限制，以避免意外收费。
 

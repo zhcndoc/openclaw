@@ -1,20 +1,22 @@
 ---
-summary: "Windows (WSL2) 支持 + 伴侣应用状态"
+summary: "Windows support: native and WSL2 install paths, daemon, and current caveats"
 read_when:
-  - 在 Windows 上安装 OpenClaw
-  - 查询 Windows 伴侣应用状态
-title: "Windows (WSL2)"
+  - Installing OpenClaw on Windows
+  - Choosing between native Windows and WSL2
+  - Looking for Windows companion app status
+title: "Windows"
 ---
 
-# Windows (WSL2)
+# Windows
 
-推荐通过 **WSL2**（推荐使用 Ubuntu）在 Windows 上运行 OpenClaw。  
-CLI 和网关运行在 Linux 内部，这既保持了运行时的一致性，也使工具兼容性更好（Node/Bun/pnpm，Linux 二进制文件，技能支持）。  
-原生 Windows 可能会更棘手。WSL2 给你完整的 Linux 体验——只需一条命令安装：`wsl --install`。
+OpenClaw supports both **native Windows** and **WSL2**. WSL2 is the more
+stable path and recommended for the full experience — the CLI, Gateway, and
+tooling run inside Linux with full compatibility. Native Windows works for
+core CLI and Gateway use, with some caveats noted below.
 
 计划推出原生 Windows 伴侣应用。
 
-## 安装（WSL2）
+## WSL2 (recommended)
 
 - [快速入门](/start/getting-started)（在 WSL 内使用）
 - [安装与更新](/install/updating)

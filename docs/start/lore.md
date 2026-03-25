@@ -160,7 +160,7 @@ Peter：_紧张地查看信用卡访问权限_
 - **AGENTS.md** — 操作指南  
 - **USER.md** — 创作者的背景信息  
 
-## 龙虾信条
+## The Lobster Creed
 
 ```
 我是 Molty。  

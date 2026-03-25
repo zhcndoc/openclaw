@@ -7,10 +7,6 @@ title: "群组"
 
 # 群组
 
-OpenClaw 在各种平台上的群聊行为保持一致：WhatsApp、Telegram、Discord、Slack、Signal、iMessage、Microsoft Teams、Zalo。
-
-## 新手介绍（2分钟）
-
 OpenClaw “运行” 在你自己的消息账户上。没有独立的 WhatsApp 机器人用户。  
 如果**你**在某个群组里，OpenClaw 就能看到该群组并在那里回复。
 
@@ -24,7 +20,7 @@ OpenClaw “运行” 在你自己的消息账户上。没有独立的 WhatsApp 
 > 简单总结
 >
 > - **私聊访问**由 `*.allowFrom` 控制。  
-> - **群聊访问**由 `*.groupPolicy` + 白名单 (`*.groups`, `*.groupAllowFrom`) 控制。  
+> - **群聊访问**由 `groupPolicy` + 白名单 (`*.groups`, `*.groupAllowFrom`) 控制。  
 > - **回复触发**由提及门控控制（`requireMention`，`/activation`）。
 
 快速流程（群消息的处理流程）：
@@ -116,9 +112,9 @@ requireMention? 是 -> 是否被提及？否 -> 仅存为上下文
 
 相关资源：
 
-- 配置键与默认值：[网关配置](/gateway/configuration#agentsdefaultssandbox)  
-- 工具被阻原因调试：[沙箱 vs 工具策略 vs 提升](/gateway/sandbox-vs-tool-policy-vs-elevated)  
-- 挂载点详情：[沙箱机制](/gateway/sandboxing#custom-bind-mounts)
+- 配置键与默认值：[网关配置](/gateway/configuration-reference#agentsdefaultssandbox)
+- 调试工具被阻止的原因：[沙箱 vs 工具策略 vs 提升权限](/gateway/sandbox-vs-tool-policy-vs-elevated)
+- 绑定挂载详情：[沙箱](/gateway/sandboxing#custom-bind-mounts)
 
 ## 显示标签
 
@@ -289,8 +285,8 @@ requireMention? 是 -> 是否被提及？否 -> 仅存为上下文
 
 备注：
 
-- 群组/频道工具限制是在全局/代理工具策略基础上叠加执行（禁止规则依旧优先）。  
-- 某些渠道的房间/频道结构不同（如 Discord 的 `guilds.*.channels.*`、Slack 的 `channels.*`、MS Teams 的 `teams.*.channels.*`）。
+- Group/channel tool restrictions are applied in addition to global/agent tool policy (deny still wins).
+- Some channels use different nesting for rooms/channels (e.g., Discord `guilds.*.channels.*`, Slack `channels.*`, Microsoft Teams `teams.*.channels.*`).
 
 ## 群组白名单
 

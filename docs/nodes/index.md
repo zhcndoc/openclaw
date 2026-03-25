@@ -35,7 +35,11 @@ openclaw nodes status
 openclaw nodes describe --node <节点ID或名称或IP>
 ```
 
-备注：
+If a node retries with changed auth details (role/scopes/public key), the prior
+pending request is superseded and a new `requestId` is created. Re-run
+`openclaw devices list` before approving.
+
+Notes:
 
 - `nodes status` 当设备配对角色包含 `node` 时，会标记节点为 **已配对**。
 - `node.pair.*`（CLI：`openclaw nodes pending/approve/reject`）是网关拥有的独立节点配对存储；它**不**是 WebSocket `connect` 握手的关卡。
@@ -83,13 +87,13 @@ openclaw node run --host 127.0.0.1 --port 18790 --display-name "构建节点"
 
 备注：
 
-- `openclaw node run` 支持令牌或密码认证。
-- 建议使用环境变量：`OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`。
-- 配置文件回退选项为：`gateway.auth.token` / `gateway.auth.password`。
-- 在本地模式下，节点主机会故意忽略 `gateway.remote.token` / `gateway.remote.password`。
-- 在远程模式下，`gateway.remote.token` / `gateway.remote.password` 按远程优先规则生效。
-- 如果配置了活动的本地 `gateway.auth.*` SecretRefs 但未解析，节点主机认证将安全失败。
-- 旧版环境变量 `CLAWDBOT_GATEWAY_*` 在节点主机认证解析时故意被忽略。
+- `openclaw node run` supports token or password auth.
+- Env vars are preferred: `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`.
+- Config fallback is `gateway.auth.token` / `gateway.auth.password`.
+- In local mode, node host intentionally ignores `gateway.remote.token` / `gateway.remote.password`.
+- In remote mode, `gateway.remote.token` / `gateway.remote.password` are eligible per remote precedence rules.
+- If active local `gateway.auth.*` SecretRefs are configured but unresolved, node-host auth fails closed.
+- Node-host auth resolution only honors `OPENCLAW_GATEWAY_*` env vars.
 
 ### 启动节点主机（服务）
 
@@ -108,7 +112,10 @@ openclaw devices approve <请求ID>
 openclaw nodes status
 ```
 
-命名选项：
+If the node retries with changed auth details, re-run `openclaw devices list`
+and approve the current `requestId`.
+
+Naming options:
 
 - 在 `openclaw node run` / `openclaw node install` 使用 `--display-name`（保存在节点的 `~/.openclaw/node.json` 中）。
 - 使用 `openclaw nodes rename --node <id|name|ip> --name "构建节点"`（网关覆盖）。
@@ -278,6 +285,7 @@ Android 节点启用相应权限后，可以提供更多命令分组：
 - `contacts.search`, `contacts.add`
 - `calendar.events`, `calendar.add`
 - `callLog.search`
+- `sms.search`
 - `motion.activity`, `motion.pedometer`
 
 示例调用：

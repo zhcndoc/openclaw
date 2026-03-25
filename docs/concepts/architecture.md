@@ -1,13 +1,11 @@
 ---
-summary: "WebSocket 网关架构、组件和客户端流程"
+summary: "WebSocket Gateway 架构、组件和客户端流程"
 read_when:
   - 参与网关协议、客户端或传输开发时
 title: "网关架构"
 ---
 
 # 网关架构
-
-最后更新：2026-01-22
 
 ## 概述
 

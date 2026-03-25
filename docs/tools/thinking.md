@@ -26,10 +26,11 @@ title: "思考等级"
 
 ## 解析优先级顺序
 
-1. 消息内联指令（仅应用于本消息）。
-2. 会话覆盖（通过发送仅含指令的消息设置）。
-3. 全局默认值（配置中 `agents.defaults.thinkingDefault`）。
-4. 兜底：Anthropic Claude 4.6 模型为 `adaptive`，其它支持推理的模型为 `low`，否则为 `off`。
+1. Inline directive on the message (applies only to that message).
+2. Session override (set by sending a directive-only message).
+3. Per-agent default (`agents.list[].thinkingDefault` in config).
+4. Global default (`agents.defaults.thinkingDefault` in config).
+5. Fallback: `adaptive` for Anthropic Claude 4.6 models, `low` for other reasoning-capable models, `off` otherwise.
 
 ## 设置会话默认值
 
@@ -44,18 +45,19 @@ title: "思考等级"
 
 ## 快速模式 (/fast)
 
-- 等级：`on|off`。
-- 仅指令消息切换会话的快速模式覆盖，并回复“快速模式已启用。”或“快速模式已禁用。”。
-- 发送 `/fast`（或 `/fast status`）且无模式参数可查看当前有效的快速模式状态。
-- OpenClaw 按以下顺序解析快速模式：
-  1. 行内/仅指令 `/fast on|off`
-  2. 会话覆盖
-  3. 每模型配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
-  4. 兜底：`off`
-- 对于 `openai/*`，快速模式应用 OpenAI 快速配置文件：支持时设置 `service_tier=priority`，同时降低推理力度和文本详尽度。
-- 对于 `openai-codex/*`，快速模式在 Codex 响应上应用相同的低延迟配置。OpenClaw 在两个授权路径间共用一个 `/fast` 切换。
-- 对于直接的 `anthropic/*` API-key 请求，快速模式映射到 Anthropic 服务层级：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
-- Anthropic 快速模式仅限 API-key。OpenClaw 会跳过 Claude 设置令牌 / OAuth 授权和非 Anthropic 代理基础 URL 的 Anthropic 服务层级注入。
+- Levels: `on|off`.
+- Directive-only message toggles a session fast-mode override and replies `Fast mode enabled.` / `Fast mode disabled.`.
+- Send `/fast` (or `/fast status`) with no mode to see the current effective fast-mode state.
+- OpenClaw resolves fast mode in this order:
+  1. Inline/directive-only `/fast on|off`
+  2. Session override
+  3. Per-agent default (`agents.list[].fastModeDefault`)
+  4. Per-model config: `agents.defaults.models["<provider>/<model>"].params.fastMode`
+  5. Fallback: `off`
+- For `openai/*`, fast mode applies the OpenAI fast profile: `service_tier=priority` when supported, plus low reasoning effort and low text verbosity.
+- For `openai-codex/*`, fast mode applies the same low-latency profile on Codex Responses. OpenClaw keeps one shared `/fast` toggle across both auth paths.
+- For direct `anthropic/*` API-key requests, fast mode maps to Anthropic service tiers: `/fast on` sets `service_tier=auto`, `/fast off` sets `service_tier=standard_only`.
+- Anthropic fast mode is API-key only. OpenClaw skips Anthropic service-tier injection for Claude setup-token / OAuth auth and for non-Anthropic proxy base URLs.
 
 ## 详细日志指令 (/verbose 或 /v)
 
@@ -70,12 +72,13 @@ title: "思考等级"
 
 ## 推理可见性 (/reasoning)
 
-- 等级：`on | off | stream`。
-- 仅含指令的消息切换是否在回复中显示思考块。
-- 启用时，推理作为**独立消息**发送，前缀为 `Reasoning:`。
-- `stream`（仅 Telegram）：在回复生成时将推理内容流式发送至 Telegram 草稿区，发送最终答案时不附带推理。
-- 别名：`/reason`。
-- 发送 `/reasoning`（或 `/reasoning:`）无参数时查看当前推理等级。
+- Levels: `on|off|stream`.
+- Directive-only message toggles whether thinking blocks are shown in replies.
+- When enabled, reasoning is sent as a **separate message** prefixed with `Reasoning:`.
+- `stream` (Telegram only): streams reasoning into the Telegram draft bubble while the reply is generating, then sends the final answer without reasoning.
+- Alias: `/reason`.
+- Send `/reasoning` (or `/reasoning:`) with no argument to see the current reasoning level.
+- Resolution order: inline directive, then session override, then per-agent default (`agents.list[].reasoningDefault`), then fallback (`off`).
 
 ## 相关
 

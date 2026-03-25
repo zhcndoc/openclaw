@@ -32,6 +32,13 @@ title: "SecretRef 凭证范围"
 - `messages.tts.elevenlabs.apiKey`
 - `messages.tts.openai.apiKey`
 - `tools.web.fetch.firecrawl.apiKey`
+- `plugins.entries.brave.config.webSearch.apiKey`
+- `plugins.entries.google.config.webSearch.apiKey`
+- `plugins.entries.xai.config.webSearch.apiKey`
+- `plugins.entries.moonshot.config.webSearch.apiKey`
+- `plugins.entries.perplexity.config.webSearch.apiKey`
+- `plugins.entries.firecrawl.config.webSearch.apiKey`
+- `plugins.entries.tavily.config.webSearch.apiKey`
 - `tools.web.search.apiKey`
 - `tools.web.search.gemini.apiKey`
 - `tools.web.search.grok.apiKey`
@@ -99,15 +106,16 @@ title: "SecretRef 凭证范围"
 
 备注：
 
-- Auth-profile 计划目标需要 `agentId`。
-- 计划条目针对 `profiles.*.key` / `profiles.*.token` 并写入同级引用 (`keyRef` / `tokenRef`)。
-- Auth-profile 引用包含在运行时解析和审计覆盖范围内。
-- 对于 SecretRef 管理的模型提供者，生成的 `agents/*/agent/models.json` 条目持久化非秘密标记（而非解析出的秘密值）用于 `apiKey` / 头信息表面。
-- 标记持久化以源头配置为准：OpenClaw 从活动的源配置快照（解析前）写入标记，而非从解析后的运行时秘密值写入。
-- 对于网页搜索：
-  - 在显式提供者模式（设置了 `tools.web.search.provider`）下，仅所选提供者的密钥有效。
-  - 在自动模式（未设置 `tools.web.search.provider`）下，仅按照优先级解析的第一个提供者密钥有效。
-  - 在自动模式下，未被选中的提供者引用视为非激活状态，直到被选中。
+- Auth-profile plan targets require `agentId`.
+- Plan entries target `profiles.*.key` / `profiles.*.token` and write sibling refs (`keyRef` / `tokenRef`).
+- Auth-profile refs are included in runtime resolution and audit coverage.
+- For SecretRef-managed model providers, generated `agents/*/agent/models.json` entries persist non-secret markers (not resolved secret values) for `apiKey`/header surfaces.
+- Marker persistence is source-authoritative: OpenClaw writes markers from the active source config snapshot (pre-resolution), not from resolved runtime secret values.
+- For web search:
+  - In explicit provider mode (`tools.web.search.provider` set), only the selected provider key is active.
+  - In auto mode (`tools.web.search.provider` unset), only the first provider key that resolves by precedence is active.
+  - In auto mode, non-selected provider refs are treated as inactive until selected.
+  - Legacy `tools.web.search.*` provider paths still resolve during the compatibility window, but the canonical SecretRef surface is `plugins.entries.<plugin>.config.webSearch.*`.
 
 ## 不支持的凭证
 

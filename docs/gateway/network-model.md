@@ -5,7 +5,9 @@ read_when:
 title: "网络模型"
 ---
 
-大多数操作通过网关（`openclaw gateway`）进行，这是一个拥有通道连接和 WebSocket 控制平面的单个长时间运行的进程。
+# 网络模型
+
+大多数操作都流经网关（`openclaw gateway`），这是一个长期运行的单一进程，拥有通道连接和 WebSocket 控制平面。
 
 ## 核心规则
 

@@ -1,23 +1,64 @@
 ---
-summary: "跨频道共享的反应语义"
+summary: "Reaction tool semantics across all supported channels"
 read_when:
-  - 在任何频道处理反应时
-title: "反应"
+  - Working on reactions in any channel
+  - Understanding how emoji reactions differ across platforms
+title: "Reactions"
 ---
 
-# 反应工具
+# Reactions
 
-跨频道共享的反应语义：
+The agent can add and remove emoji reactions on messages using the `message`
+tool with the `react` action. Reaction behavior varies by channel.
 
-- 添加反应时，必须指定 `emoji`。
-- `emoji=""` 在支持的情况下移除机器人的反应。
-- `remove: true` 在支持的情况下移除指定的 emoji（需要 `emoji` 参数）。
+## How it works
 
-频道说明：
+```json
+{
+  "action": "react",
+  "messageId": "msg-123",
+  "emoji": "thumbsup"
+}
+```
 
-- **Discord/Slack**：空的 `emoji` 会移除消息上所有机器人的反应；`remove: true` 仅移除该特定 emoji。
-- **Google Chat**：空的 `emoji` 会移除应用在消息上的所有反应；`remove: true` 仅移除该特定 emoji。
-- **Telegram**：空的 `emoji` 会移除机器人的反应；`remove: true` 也会移除反应，但工具验证时仍需要非空的 `emoji`。
-- **WhatsApp**：空的 `emoji` 会移除机器人的反应；`remove: true` 映射为空的 emoji（仍然需要 `emoji` 参数）。
-- **Zalo 个人号（`zalouser`）**：需要非空的 `emoji`；`remove: true` 移除该特定 emoji 反应。
-- **Signal**：启用 `channels.signal.reactionNotifications` 时，入站反应通知会触发系统事件。
+- `emoji` is required when adding a reaction.
+- Set `emoji` to an empty string (`""`) to remove the bot's reaction(s).
+- Set `remove: true` to remove a specific emoji (requires non-empty `emoji`).
+
+## Channel behavior
+
+<AccordionGroup>
+  <Accordion title="Discord and Slack">
+    - Empty `emoji` removes all of the bot's reactions on the message.
+    - `remove: true` removes just the specified emoji.
+  </Accordion>
+
+  <Accordion title="Google Chat">
+    - Empty `emoji` removes the app's reactions on the message.
+    - `remove: true` removes just the specified emoji.
+  </Accordion>
+
+  <Accordion title="Telegram">
+    - Empty `emoji` removes the bot's reactions.
+    - `remove: true` also removes reactions but still requires a non-empty `emoji` for tool validation.
+  </Accordion>
+
+  <Accordion title="WhatsApp">
+    - Empty `emoji` removes the bot reaction.
+    - `remove: true` maps to empty emoji internally (still requires `emoji` in the tool call).
+  </Accordion>
+
+  <Accordion title="Zalo Personal (zalouser)">
+    - Requires non-empty `emoji`.
+    - `remove: true` removes that specific emoji reaction.
+  </Accordion>
+
+  <Accordion title="Signal">
+    - Inbound reaction notifications are controlled by `channels.signal.reactionNotifications`: `"off"` disables them, `"own"` (default) emits events when users react to bot messages, and `"all"` emits events for all reactions.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+- [Agent Send](/tools/agent-send) — the `message` tool that includes `react`
+- [Channels](/channels) — channel-specific configuration

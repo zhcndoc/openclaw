@@ -28,9 +28,9 @@ openclaw plugins install @openclaw/feishu
 
 添加飞书通道有两种方式：
 
-### Method 1: onboarding (recommended)
+### 方法一：引导安装（推荐）
 
-If you just installed OpenClaw, run onboarding:
+如果您刚刚安装 OpenClaw，请运行引导程序：
 
 ```bash
 openclaw onboard
@@ -187,7 +187,7 @@ openclaw channels add
         main: {
           appId: "cli_xxx",
           appSecret: "xxx",
-          botName: "我的 AI 助手",
+          name: "My AI assistant",
         },
       },
     },
@@ -496,12 +496,12 @@ openclaw pairing list feishu
         main: {
           appId: "cli_xxx",
           appSecret: "xxx",
-          botName: "主机器人",
+          name: "Primary bot",
         },
         backup: {
           appId: "cli_yyy",
           appSecret: "yyy",
-          botName: "备用机器人",
+          name: "Backup bot",
           enabled: false,
         },
       },
@@ -534,18 +534,18 @@ openclaw pairing list feishu
 
 将 `streaming` 设置为 `false` 则等待完整回复后一次发送。
 
-### ACP sessions
+### ACP 会话
 
-Feishu supports ACP for:
+飞书支持以下场景的 ACP：
 
-- DMs
-- group topic conversations
+- 私信
+- 群话题会话
 
-Feishu ACP is text-command driven. There are no native slash-command menus, so use `/acp ...` messages directly in the conversation.
+飞书 ACP 采用文本命令驱动。没有原生斜杠命令菜单，因此直接在会话中使用 `/acp ...` 消息。
 
-#### Persistent ACP bindings
+#### 持久化 ACP 绑定
 
-Use top-level typed ACP bindings to pin a Feishu DM or topic conversation to a persistent ACP session.
+使用顶层类型化 ACP 绑定将飞书私信或话题会话固定到持久化 ACP 会话。
 
 ```json5
 {
@@ -589,21 +589,21 @@ Use top-level typed ACP bindings to pin a Feishu DM or topic conversation to a p
 }
 ```
 
-#### Thread-bound ACP spawn from chat
+#### 从聊天中生成线程绑定的 ACP
 
-In a Feishu DM or topic conversation, you can spawn and bind an ACP session in place:
+在飞书私信或话题会话中，您可以在原地生成并绑定 ACP 会话：
 
 ```text
 /acp spawn codex --thread here
 ```
 
-Notes:
+注意：
 
-- `--thread here` works for DMs and Feishu topics.
-- Follow-up messages in the bound DM/topic route directly to that ACP session.
-- v1 does not target generic non-topic group chats.
+- `--thread here` 适用于私信和飞书话题。
+- 绑定后，私信/话题中的后续消息将直接路由到该 ACP 会话。
+- v1 不支持非话题的普通群聊。
 
-### Multi-agent routing
+### 多智能体路由
 
 使用 `bindings` 将飞书私聊或群聊路由到不同智能体。
 

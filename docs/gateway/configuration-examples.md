@@ -35,7 +35,7 @@ title: "配置示例"
   },
   agent: {
     workspace: "~/.openclaw/workspace",
-    model: { primary: "anthropic/claude-sonnet-4-5" },
+    model: { primary: "anthropic/claude-sonnet-4-6" },
   },
   channels: {
     whatsapp: {
@@ -238,15 +238,15 @@ title: "配置示例"
       workspace: "~/.openclaw/workspace",
       userTimezone: "America/Chicago",
       model: {
-        primary: "anthropic/claude-sonnet-4-5",
+        primary: "anthropic/claude-sonnet-4-6",
         fallbacks: ["anthropic/claude-opus-4-6", "openai/gpt-5.2"],
       },
       imageModel: {
-        primary: "openrouter/anthropic/claude-sonnet-4-5",
+        primary: "openrouter/anthropic/claude-sonnet-4-6",
       },
       models: {
         "anthropic/claude-opus-4-6": { alias: "opus" },
-        "anthropic/claude-sonnet-4-5": { alias: "sonnet" },
+        "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
         "openai/gpt-5.2": { alias: "gpt" },
       },
       thinkingDefault: "low",
@@ -271,7 +271,7 @@ title: "配置示例"
       maxConcurrent: 3,
       heartbeat: {
         every: "30m",
-        model: "anthropic/claude-sonnet-4-5",
+        model: "anthropic/claude-sonnet-4-6",
         target: "last",
         directPolicy: "allow", // 允许（默认） | 阻止
         to: "+15555550123",
@@ -303,6 +303,20 @@ title: "配置示例"
         },
       },
     },
+    list: [
+      {
+        id: "main",
+        default: true,
+        thinkingDefault: "high", // 每代理思维覆盖
+        reasoningDefault: "on", // 每推理想法可见性
+        fastModeDefault: false, // 每代理快速模式
+      },
+      {
+        id: "quick",
+        fastModeDefault: true, // 此代理始终快速运行
+        thinkingDefault: "off",
+      },
+    ],
   },
 
   tools: {
@@ -434,7 +448,7 @@ title: "配置示例"
       nodeManager: "npm",
     },
     entries: {
-      "nano-banana-pro": {
+      "image-lab": {
         enabled: true,
         apiKey: "GEMINI_KEY_HERE",
         env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
@@ -494,8 +508,8 @@ title: "配置示例"
 }
 ```
 
-对于 Discord/Slack/Google Chat/MS Teams/Mattermost/IRC，发送者授权默认基于 ID。
-仅当你明确接受风险时，才通过每个通道的 `dangerouslyAllowNameMatching: true` 启用基于名称/邮箱/昵称的直接可变匹配。
+对于 Discord/Slack/Google Chat/Microsoft Teams/Mattermost/IRC，发送者授权默认优先使用 ID。
+只有在您明确接受该风险的情况下，才为各通道启用 `dangerouslyAllowNameMatching: true` 以允许直接匹配可变的名称/邮箱/昵称。
 
 ### OAuth 与 API 密钥备选方案
 
@@ -520,7 +534,7 @@ title: "配置示例"
   agent: {
     workspace: "~/.openclaw/workspace",
     model: {
-      primary: "anthropic/claude-sonnet-4-5",
+      primary: "anthropic/claude-sonnet-4-6",
       fallbacks: ["anthropic/claude-opus-4-6"],
     },
   },
@@ -565,7 +579,7 @@ Anthropic setup-token 在 Claude Code 以外的使用曾被部分用户限制。
     workspace: "~/.openclaw/workspace",
     model: {
       primary: "anthropic/claude-opus-4-6",
-      fallbacks: ["minimax/MiniMax-M2.5"],
+      fallbacks: ["minimax/MiniMax-M2.7"],
     },
   },
 }

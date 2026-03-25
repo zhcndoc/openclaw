@@ -73,13 +73,14 @@ openclaw plugins install ./extensions/synology-chat
 
 ## 私信策略与访问控制
 
-- 推荐默认使用 `dmPolicy: "allowlist"`。  
-- `allowedUserIds` 接受 Synology 用户 ID 列表（数组或逗号分隔字符串）。  
-- 在 `allowlist` 模式下，`allowedUserIds` 为空被视为配置错误，webhook 路由不会启动（可用 `dmPolicy: "open"` 开启所有访问）。  
-- `dmPolicy: "open"` 允许任何发送者。  
-- `dmPolicy: "disabled"` 禁止私信。  
-- 可使用以下命令管理配对授权：  
-  - `openclaw pairing list synology-chat`  
+- `dmPolicy: "allowlist"` 是推荐的默认设置。
+- `allowedUserIds` 接受 Synology 用户 ID 的列表（或逗号分隔的字符串）。
+- 在 `allowlist` 模式下，空的 `allowedUserIds` 列表被视为配置错误，webhook 路由将不会启动（使用 `dmPolicy: "open"` 允许所有用户）。
+- `dmPolicy: "open"` 允许任何发送者。
+- `dmPolicy: "disabled"` 阻止私信。
+- 回复接收者绑定默认保持在稳定的数字 `user_id` 上。`channels.synology-chat.dangerouslyAllowNameMatching: true` 是应急兼容模式，可重新启用可变的用户名/昵称查找以进行回复投递。
+- 配对审批适用于：
+  - `openclaw pairing list synology-chat`
   - `openclaw pairing approve synology-chat <CODE>`
 
 ## 出站发送
@@ -97,10 +98,15 @@ openclaw message send --channel synology-chat --target synology-chat:123456 --te
 
 ## 多账户支持
 
-支持在 `channels.synology-chat.accounts` 下配置多个 Synology Chat 账户。  
-每个账户可以覆盖 token、入站 URL、webhook 路径、私信策略及限制。
-
-示例：
+在 `channels.synology-chat.accounts` 下支持多个 Synology Chat 账户。
+每个账户可以覆盖令牌、入站 URL、webhook 路径、私信策略和限制。
+私信会话按账户和用户隔离，因此两个不同 Synology 账户上相同的数字 `user_id`
+不共享对话状态。
+为每个启用的账户指定不同的 `webhookPath`。OpenClaw 现在拒绝重复的精确路径，
+并拒绝启动在多账户设置中仅继承共享 webhook 路径的命名账户。
+如果你故意需要为命名账户使用传统继承，请在该账户或 `channels.synology-chat` 处设置
+`dangerouslyAllowInheritedWebhookPath: true`，
+但重复的精确路径仍会被拒绝（故障关闭）。建议使用明确的每账户路径。
 
 ```json5
 {
@@ -127,7 +133,9 @@ openclaw message send --channel synology-chat --target synology-chat:123456 --te
 
 ## 安全注意事项
 
-- 保密 `token`，如泄露请及时更换。  
-- 除非完全信任自签名的本地 NAS 证书，否则保持 `allowInsecureSsl: false`。  
-- 入站 webhook 请求会通过令牌验证且对发送者进行限流。  
-- 生产环境中推荐使用 `dmPolicy: "allowlist"`。
+- 保持 `token` 机密，如果泄露请轮换。
+- 保持 `allowInsecureSsl: false`，除非你明确信任自签名的本地 NAS 证书。
+- 入站 webhook 请求经过令牌验证并按发送者限速。
+- 生产环境建议使用 `dmPolicy: "allowlist"`。
+- 保持 `dangerouslyAllowNameMatching` 关闭，除非你明确需要基于旧版用户名的回复投递。
+- 保持 `dangerouslyAllowInheritedWebhookPath` 关闭，除非你明确接受多账户设置中的共享路径路由风险。

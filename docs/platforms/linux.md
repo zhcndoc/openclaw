@@ -21,7 +21,7 @@ Gateway 在 Linux 上完全支持。**推荐使用 Node 作为运行时**。
 4. 从你的笔记本运行：`ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
 5. 打开 `http://127.0.0.1:18789/` 并粘贴你的令牌
 
-VPS 详细步骤指南：[exe.dev](/install/exe-dev)
+Full Linux server guide: [Linux Server](/vps). Step-by-step VPS example: [exe.dev](/install/exe-dev)
 
 ## 安装
 

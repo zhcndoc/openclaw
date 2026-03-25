@@ -184,7 +184,34 @@ OpenClaw 采用**用户优先**的解析方式：
 
 若需要确定的行为，请始终使用明确前缀（`user:<id>` / `channel:<id>`）。
 
-## 反应表情（消息工具）
+## 私聊频道重试
+
+当 OpenClaw 向 Mattermost 私聊目标发送消息且需要先解析直聊频道时，默认会重试短暂的直聊频道创建失败。
+
+使用 `channels.mattermost.dmChannelRetry` 在全局调整 Mattermost 插件的该行为，或在 `channels.mattermost.accounts.<id>.dmChannelRetry` 下为单个账号设置。
+
+```json5
+{
+  channels: {
+    mattermost: {
+      dmChannelRetry: {
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 10000,
+        timeoutMs: 30000,
+      },
+    },
+  },
+}
+```
+
+注意：
+
+- 仅适用于私聊频道创建（`/api/v4/channels/direct`），不适用于所有 Mattermost API 调用。
+- 重试适用于短暂故障，如速率限制、5xx 响应以及网络或超时错误。
+- 除 `429` 外的 4xx 客户端错误被视为永久性错误，不会重试。
+
+## 表情回应（消息工具）
 
 - 使用 `message action=react` 且 `channel=mattermost`。  
 - `messageId` 是 Mattermost 消息帖 ID。  
@@ -313,15 +340,20 @@ Python 示例：
 ```python
 import hmac, hashlib, json
 
+# 从机器人令牌派生密钥：
 secret = hmac.new(
     b"openclaw-mattermost-interactions",
     bot_token.encode(), hashlib.sha256
 ).hexdigest()
 
+# 构造上下文（不含 _token）：
 ctx = {"action_id": "mybutton01", "action": "approve"}
+# 使用排序键和无空格序列化：
 payload = json.dumps(ctx, sort_keys=True, separators=(",", ":"))
+# 生成令牌：
 token = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
+# 将令牌加入上下文：
 context = {**ctx, "_token": token}
 ```
 

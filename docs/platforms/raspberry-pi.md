@@ -1,10 +1,10 @@
 ---
 summary: "在树莓派上运行 OpenClaw（实惠的自托管方案）"
 read_when:
-  - 在树莓派上设置 OpenClaw
-  - 在 ARM 设备上运行 OpenClaw
-  - 构建廉价的全天候个人 AI
-title: "树莓派"
+  - Setting up OpenClaw on a Raspberry Pi
+  - Running OpenClaw on ARM devices
+  - Building a cheap always-on personal AI
+title: "Raspberry Pi (Platform)"
 ---
 
 # 在树莓派上运行 OpenClaw
@@ -33,7 +33,7 @@ title: "树莓派"
 **最低配置：**1GB 内存，1 核心，500MB 硬盘  
 **推荐配置：**2GB+ 内存，64位操作系统，16GB+ SD 卡（或 USB SSD）
 
-## 你需要准备的物品
+## What you need
 
 - Raspberry Pi 4 或 5（建议2GB及以上内存）
 - MicroSD 卡（16GB及以上）或 USB SSD（性能更好）
@@ -352,7 +352,7 @@ free -h
 - 禁用不需要的服务：`sudo systemctl disable cups bluetooth avahi-daemon`
 - 检查 CPU 是否降频节流：`vcgencmd get_throttled`（结果应为 `0x0`）
 
-### 服务无法启动
+### Service will not start
 
 ```bash
 # 查看日志

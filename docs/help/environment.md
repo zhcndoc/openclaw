@@ -1,7 +1,7 @@
 ---
-summary: "OpenClaw 加载环境变量及优先级顺序"
+summary: "OpenClaw 环境变量的加载来源及优先级顺序"
 read_when:
-  - 你需要知道加载了哪些环境变量，以及它们的加载顺序
+  - 你需要了解加载了哪些环境变量及其加载顺序
   - 你正在调试 Gateway 中缺失的 API 密钥
   - 你正在编写提供商认证或部署环境的文档
 title: "环境变量"
@@ -13,17 +13,17 @@ OpenClaw 从多个来源拉取环境变量。规则是 **绝不覆盖已有值**
 
 ## 优先级（从高到低）
 
-1. **进程环境**（Gateway 进程从父 shell/守护进程继承的环境变量）。
-2. **当前工作目录下的 `.env` 文件**（dotenv 默认；不覆盖已有值）。
-3. **全局 `.env` 文件**，位于 `~/.openclaw/.env` （即 `$OPENCLAW_STATE_DIR/.env`；不覆盖已有值）。
-4. 配置文件 `env` 块，在 `~/.openclaw/openclaw.json` 中（仅在缺失时应用）。
-5. 可选的登录 shell 导入（通过 `env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1` 启用），仅为缺失的预期键导入。
+1. **进程环境**（Gateway 进程从父级 shell/守护进程继承的环境变量）。
+2. **当前工作目录下的 `.env` 文件**（dotenv 默认行为；不覆盖已有值）。
+3. **`~/.openclaw/.env` 处的全局 `.env` 文件**（即 `$OPENCLAW_STATE_DIR/.env`；不覆盖已有值）。
+4. 配置文件中的 `env` 块，位于 `~/.openclaw/openclaw.json`（仅在缺失时应用）。
+5. 可选的登录 shell 导入（通过 `env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1` 启用），仅导入缺失的预期键。
 
-如果配置文件完全缺失，则跳过第 4 步；但如果启用，仍会执行 shell 导入。
+如果配置文件完全缺失，则跳过第 4 步；但如果启用，仍执行 shell 导入。
 
-## 配置文件中 `env` 块
+## 配置文件中的 `env` 块
 
-有两种等效方式设置内联环境变量（均不覆盖已有值）：
+有两种等效方式可设置内联环境变量（均不覆盖已有值）：
 
 ```json5
 {
@@ -51,7 +51,7 @@ OpenClaw 从多个来源拉取环境变量。规则是 **绝不覆盖已有值**
 }
 ```
 
-对应的环境变量等价设置：
+对应的环境变量等效设置：
 
 - `OPENCLAW_LOAD_SHELL_ENV=1`
 - `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`
@@ -60,18 +60,18 @@ OpenClaw 从多个来源拉取环境变量。规则是 **绝不覆盖已有值**
 
 OpenClaw 还会向子进程注入上下文标记：
 
-- `OPENCLAW_SHELL=exec`：对通过 `exec` 工具运行的命令设置。
-- `OPENCLAW_SHELL=acp`：对 ACP 运行时后台进程（例如 `acpx`）的生成设置。
-- `OPENCLAW_SHELL=acp-client`：对 `openclaw acp client` 在生成 ACP 桥接进程时设置。
-- `OPENCLAW_SHELL=tui-local`：对本地 TUI 中的 `!` shell 命令设置。
+- `OPENCLAW_SHELL=exec`：针对通过 `exec` 工具运行的命令设置。
+- `OPENCLAW_SHELL=acp`：针对 ACP 运行时的后台进程（例如 `acpx`）生成时设置。
+- `OPENCLAW_SHELL=acp-client`：针对 `openclaw acp client` 在生成 ACP 桥接进程时设置。
+- `OPENCLAW_SHELL=tui-local`：针对本地 TUI 中的 `!` shell 命令设置。
 
-这些是运行时标记（不需要用户配置），可用于 shell/profile 逻辑中应用特定上下文规则。
+这些是运行时标记（不需要用户配置），可在 shell/profile 逻辑中使用以应用特定上下文规则。
 
 ## UI 环境变量
 
-- `OPENCLAW_THEME=light`：当你的终端背景为浅色时，强制使用浅色 TUI 配色方案。
+- `OPENCLAW_THEME=light`：当终端背景为浅色时，强制使用浅色 TUI 配色方案。
 - `OPENCLAW_THEME=dark`：强制使用深色 TUI 配色方案。
-- `COLORFGBG`：如果你的终端导出该变量，OpenClaw 会使用背景颜色提示自动选择 TUI 配色方案。
+- `COLORFGBG`：如果终端导出此变量，OpenClaw 会使用背景颜色提示自动选择 TUI 配色方案。
 
 ## 配置中的环境变量替换
 
@@ -89,16 +89,16 @@ OpenClaw 还会向子进程注入上下文标记：
 }
 ```
 
-完整细节请参见 [配置：配置中的环境变量替换](/gateway/configuration#env-var-substitution-in-config)。
+更多详情参见 [配置：环境变量替换](/gateway/configuration-reference#env-var-substitution)。
 
 ## Secret 引用与 `${ENV}` 字符串
 
 OpenClaw 支持两种基于环境变量的模式：
 
 - 配置值中的 `${VAR}` 字符串替换。
-- 支持秘密引用的字段中使用 SecretRef 对象（`{ source: "env", provider: "default", id: "VAR" }`）。
+- 在支持秘密引用的字段中使用 SecretRef 对象（`{ source: "env", provider: "default", id: "VAR" }`）。
 
-两者均在激活时从进程环境解析。SecretRef 的详细说明见 [秘密管理](/gateway/secrets)。
+两者均在激活时从进程环境解析。SecretRef 的详细说明参见 [秘密管理](/gateway/secrets)。
 
 ## 与路径相关的环境变量
 
@@ -132,7 +132,30 @@ OpenClaw 支持两种基于环境变量的模式：
 
 `OPENCLAW_HOME` 也可以设置为波浪号路径（如 `~/svc`），会在使用前用 `$HOME` 展开。
 
-## 相关内容
+## nvm 用户：web_fetch TLS 故障
+
+如果 Node.js 是通过 **nvm** 安装的（而非系统包管理器），内置的 `fetch()` 会使用
+nvm 捆绑的 CA 证书存储，可能缺少现代根 CA（ISRG Root X1/X2 用于 Let's Encrypt，
+DigiCert Global Root G2 等）。这会导致 `web_fetch` 在访问大多数 HTTPS 站点时失败，报错 `"fetch failed"`。
+
+在 Linux 上，OpenClaw 会自动检测 nvm 并在实际启动环境中应用修复：
+
+- `openclaw gateway install` 将 `NODE_EXTRA_CA_CERTS` 写入 systemd 服务环境
+- `openclaw` CLI 入口点会在 Node 启动前以设置了 `NODE_EXTRA_CA_CERTS` 的环境重新执行自身
+
+**手动修复（适用于旧版本或直接 `node ...` 启动）：**
+
+在启动 OpenClaw 前导出该变量：
+
+```bash
+export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+openclaw gateway run
+```
+
+不要仅依赖写入 `~/.openclaw/.env` 来设置此变量；Node 在进程启动时读取
+`NODE_EXTRA_CA_CERTS`。
+
+## 相关链接
 
 - [Gateway 配置](/gateway/configuration)
 - [FAQ：环境变量和 .env 加载](/help/faq#env-vars-and-env-loading)
