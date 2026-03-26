@@ -396,23 +396,25 @@ openclaw [--dev] [--profile <name>] <command>
 
 ### `config`
 
-非交互式配置工具（get/set/unset/file/validate）。无子命令时运行 `openclaw config` 将启动向导。
+Non-interactive config helpers (get/set/unset/file/schema/validate). Running `openclaw config` with no
+subcommand launches the wizard.
 
 子命令：
 
-- `config get <path>`: 打印配置值（点/括号路径）。
+- `config get <path>`: 打印配置值（点号/方括号路径）。
 - `config set`: 支持四种赋值模式：
-  - 值模式: `config set <path> <value>`（JSON5 或字符串解析）
-  - SecretRef 构建器模式: `config set <path> --ref-provider <provider> --ref-source <source> --ref-id <id>`
-  - 提供者构建器模式: `config set secrets.providers.<alias> --provider-source <env|file|exec> ...`
-  - 批量模式: `config set --batch-json '<json>'` 或 `config set --batch-file <path>`
-- `config set --dry-run`: 验证赋值而不写入 `openclaw.json`（默认跳过 exec SecretRef 检查）。
-- `config set --allow-exec --dry-run`: 选择执行 exec SecretRef dry-run 检查（可能执行提供者命令）。
-- `config set --dry-run --json`: 输出机器可读的 dry-run 结果（检查 + 完整性信号、操作、已检查/跳过的引用、错误）。
-- `config set --strict-json`: 要求对路径/值输入进行 JSON5 解析。在 dry-run 输出模式之外，`--json` 仍是严格解析的传统别名。
-- `config unset <path>`: 移除值。
-- `config file`: 打印活动配置文件路径。
-- `config validate`: 在不启动网关的情况下根据模式验证当前配置。
+  - 值模式：`config set <path> <value>`（JSON5 或字符串解析）
+  - SecretRef 构建器模式：`config set <path> --ref-provider <provider> --ref-source <source> --ref-id <id>`
+  - 提供者构建器模式：`config set secrets.providers.<alias> --provider-source <env|file|exec> ...`
+  - 批处理模式：`config set --batch-json '<json>'` 或 `config set --batch-file <path>`
+- `config set --dry-run`: 在不写入 `openclaw.json` 的情况下验证赋值（默认跳过 exec SecretRef 检查）。
+- `config set --allow-exec --dry-run`: 允许执行 exec SecretRef 的 dry-run 检查（可能会执行提供者命令）。
+- `config set --dry-run --json`: 输出机器可读的 dry-run 结果（检查 + 完整性信号、操作、已检查/已跳过的引用、错误）。
+- `config set --strict-json`: 对路径/值输入强制使用 JSON5 解析。`--json` 在 dry-run 输出模式之外仍是严格解析的旧别名。
+- `config unset <path>`: 删除一个值。
+- `config file`: 打印当前活动配置文件路径。
+- `config schema`: 打印 `openclaw.json` 的生成 JSON Schema。
+- `config validate`: 在不启动网关的情况下，根据 schema 验证当前配置。
 - `config validate --json`: 输出机器可读的 JSON 结果。
 
 ### `doctor`

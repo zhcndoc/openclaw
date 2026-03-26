@@ -87,7 +87,14 @@ OpenClaw 有两种钩子系统：
 - **`session_start` / `session_end`**：会话生命周期边界。
 - **`gateway_start` / `gateway_stop`**：网关生命周期事件。
 
-See [Plugin hooks](/plugins/architecture#provider-runtime-hooks) for the hook API and registration details.
+外发/工具守卫的 Hook 决策规则：
+
+- `before_tool_call`：`{ block: true }` 是终态，会停止低优先级处理器。
+- `before_tool_call`：`{ block: false }` 是空操作，不会清除先前的 block。
+- `message_sending`：`{ cancel: true }` 是终态，会停止低优先级处理器。
+- `message_sending`：`{ cancel: false }` 是空操作，不会清除先前的 cancel。
+
+关于 Hook API 和注册细节，参见 [插件钩子](/plugins/architecture#provider-runtime-hooks)。
 
 ## 流式传输 + 部分回复
 

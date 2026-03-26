@@ -178,10 +178,14 @@ title: "网关协议"
 
 ### 操作员辅助方法
 
-- 操作员可调用 `tools.catalog`（需 `operator.read`）以获取代理的运行时工具目录。响应包含工具分组和出处元数据：
-  - `source`: `core` 或 `plugin`
-  - `pluginId`: 当 `source="plugin"` 时，指插件拥有者
-  - `optional`: 插件工具是否为可选
+- 操作员可调用 `tools.catalog`（`operator.read`）获取某个代理的运行时工具目录。响应包含分组工具及来源元数据：
+  - `source`：`core` 或 `plugin`
+  - `pluginId`：当 `source="plugin"` 时的插件所有者
+  - `optional`：该插件工具是否可选
+- 操作员可调用 `tools.effective`（`operator.read`）获取某个会话的运行时有效工具清单。
+  - 需要 `sessionKey`。
+  - 网关会从会话的服务端派生受信任的运行时上下文，而不是接受调用方提供的 auth 或投递上下文。
+  - 响应以会话为作用域，并反映当前活动会话现在可用的内容，包括 core、plugin 和 channel 工具。
 
 ## 执行审批
 
@@ -233,9 +237,9 @@ title: "网关协议"
 | 消息                       | details.code                     | details.reason           | 含义                                               |
 | -------------------------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
 | `device nonce required`    | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端未提供 `device.nonce`（或发送空值）。       |
-| `device nonce mismatch`    | `DEVICE_AUTH_NONCE_MISMATCH`     | `device-nonce-mismatch`  | 客户端用过期或错误的 nonce 签名。                  |
+| `device nonce mismatch`    | `DEVICE_AUTH_NONCE_MISMATCH`    | `device-nonce-mismatch`  | 客户端用过期或错误的 nonce 签名。                  |
 | `device signature invalid` | `DEVICE_AUTH_SIGNATURE_INVALID`  | `device-signature`       | 签名负载与 v2 负载不匹配。                         |
-| `device signature expired` | `DEVICE_AUTH_SIGNATURE_EXPIRED`  | `device-signature-stale` | 签名时间戳超出允许偏差范围。                       |
+| `device signature expired` | `DEVICE_AUTH_SIGNATURE_EXPIRED` | `device-signature-stale` | 签名时间戳超出允许偏差范围。                       |
 | `device identity mismatch` | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                      |
 | `device public key invalid`| `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式或规范化失败。                             |
 

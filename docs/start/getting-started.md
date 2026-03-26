@@ -8,26 +8,26 @@ title: "入门指南"
 
 # 入门指南
 
-Install OpenClaw, run onboarding, and chat with your AI assistant — all in
-about 5 minutes. By the end you will have a running Gateway, configured auth,
-and a working chat session.
+安装 OpenClaw，运行引导流程，并与你的 AI 助手聊天——全部只需
+大约 5 分钟。到最后，你将拥有一个正在运行的 Gateway、已配置的认证，
+以及一个可用的聊天会话。
 
-## What you need
+## 你需要什么
 
-- **Node.js** — Node 24 recommended (Node 22.16+ also supported)
-- **An API key** from a model provider (Anthropic, OpenAI, Google, etc.) — onboarding will prompt you
+- **Node.js** — 推荐 Node 24（也支持 Node 22.14+）
+- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——引导流程会提示你
 
 <Tip>
-Check your Node version with `node --version`.
-**Windows users:** both native Windows and WSL2 are supported. WSL2 is more
-stable and recommended for the full experience. See [Windows](/platforms/windows).
-Need to install Node? See [Node setup](/install/node).
+使用 `node --version` 检查你的 Node 版本。
+**Windows 用户：** 原生 Windows 和 WSL2 都受支持。WSL2 更加
+稳定，推荐用于完整体验。参见 [Windows](/platforms/windows)。
+需要安装 Node？参见 [Node setup](/install/node)。
 </Tip>
 
-## Quick setup
+## 快速设置
 
 <Steps>
-  <Step title="Install OpenClaw">
+  <Step title="安装 OpenClaw">
     <Tabs>
       <Tab title="macOS / Linux">
         ```bash
@@ -47,7 +47,7 @@ Need to install Node? See [Node setup](/install/node).
     </Tabs>
 
     <Note>
-    Other install methods (Docker, Nix, npm): [Install](/install).
+    其他安装方式（Docker、Nix、npm）：[安装](/install)。
     </Note>
 
   </Step>
@@ -56,61 +56,61 @@ Need to install Node? See [Node setup](/install/node).
     openclaw onboard --install-daemon
     ```
 
-    The wizard walks you through choosing a model provider, setting an API key,
-    and configuring the Gateway. It takes about 2 minutes.
+    向导将引导你选择模型提供商、设置 API 密钥，
+    并配置 Gateway。大约需要 2 分钟。
 
-    See [Onboarding (CLI)](/start/wizard) for the full reference.
+    完整参考请见 [引导流程（CLI）](/start/wizard)。
 
   </Step>
-  <Step title="Verify the Gateway is running">
+  <Step title="验证 Gateway 是否正在运行">
     ```bash
     openclaw gateway status
     ```
 
-    You should see the Gateway listening on port 18789.
+    你应该会看到 Gateway 正在 18789 端口上监听。
 
   </Step>
-  <Step title="Open the dashboard">
+  <Step title="打开仪表板">
     ```bash
     openclaw dashboard
     ```
 
-    This opens the Control UI in your browser. If it loads, everything is working.
+    这会在你的浏览器中打开 Control UI。如果能加载出来，一切都正常。
 
   </Step>
-  <Step title="Send your first message">
-    Type a message in the Control UI chat and you should get an AI reply.
+  <Step title="发送你的第一条消息">
+    在 Control UI 的聊天中输入一条消息，你应该会收到 AI 的回复。
 
-    Want to chat from your phone instead? The fastest channel to set up is
-    [Telegram](/channels/telegram) (just a bot token). See [Channels](/channels)
-    for all options.
+    想改为从手机聊天？最快的设置渠道是
+    [Telegram](/channels/telegram)（只需一个 bot token）。查看 [Channels](/channels)
+    了解所有选项。
 
   </Step>
 </Steps>
 
-## What to do next
+## 接下来做什么
 
 <Columns>
-  <Card title="Connect a channel" href="/channels" icon="message-square">
-    WhatsApp, Telegram, Discord, iMessage, and more.
+  <Card title="连接一个渠道" href="/channels" icon="message-square">
+    WhatsApp、Telegram、Discord、iMessage 等等。
   </Card>
-  <Card title="Pairing and safety" href="/channels/pairing" icon="shield">
-    Control who can message your agent.
+  <Card title="配对与安全" href="/channels/pairing" icon="shield">
+    控制谁可以给你的代理发消息。
   </Card>
-  <Card title="Configure the Gateway" href="/gateway/configuration" icon="settings">
-    Models, tools, sandbox, and advanced settings.
+  <Card title="配置 Gateway" href="/gateway/configuration" icon="settings">
+    模型、工具、沙箱和高级设置。
   </Card>
-  <Card title="Browse tools" href="/tools" icon="wrench">
-    Browser, exec, web search, skills, and plugins.
+  <Card title="浏览工具" href="/tools" icon="wrench">
+    浏览器、exec、网页搜索、技能和插件。
   </Card>
 </Columns>
 
-<Accordion title="Advanced: environment variables">
-  If you run OpenClaw as a service account or want custom paths:
+<Accordion title="高级：环境变量">
+  如果你将 OpenClaw 作为服务账号运行，或希望使用自定义路径：
 
-- `OPENCLAW_HOME` — home directory for internal path resolution
-- `OPENCLAW_STATE_DIR` — override the state directory
-- `OPENCLAW_CONFIG_PATH` — override the config file path
+- `OPENCLAW_HOME` — 用于内部路径解析的主目录
+- `OPENCLAW_STATE_DIR` — 覆盖状态目录
+- `OPENCLAW_CONFIG_PATH` — 覆盖配置文件路径
 
-Full reference: [Environment variables](/help/environment).
+完整参考：[环境变量](/help/environment)。
 </Accordion>

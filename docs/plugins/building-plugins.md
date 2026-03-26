@@ -1,50 +1,48 @@
 ---
-title: "Building Plugins"
-sidebarTitle: "Getting Started"
-summary: "Create your first OpenClaw plugin in minutes"
+title: "构建插件"
+sidebarTitle: "快速开始"
+summary: "在几分钟内创建你的第一个 OpenClaw 插件"
 read_when:
-  - You want to create a new OpenClaw plugin
-  - You need a quick-start for plugin development
-  - You are adding a new channel, provider, tool, or other capability to OpenClaw
+  - 你想创建一个新的 OpenClaw 插件
+  - 你需要一个插件开发的快速入门
+  - 你正在为 OpenClaw 添加新的通道、提供者、工具或其他能力
 ---
 
-# Building Plugins
+# 构建插件
 
-Plugins extend OpenClaw with new capabilities: channels, model providers, speech,
-image generation, web search, agent tools, or any combination.
+插件通过新能力扩展 OpenClaw：通道、模型提供者、语音、图像生成、网页搜索、代理工具，或这些能力的任意组合。
 
-You do not need to add your plugin to the OpenClaw repository. Publish to
-[ClawHub](/tools/clawhub) or npm and users install with
-`openclaw plugins install <package-name>`. OpenClaw tries ClawHub first and
-falls back to npm automatically.
+你不需要把插件添加到 OpenClaw 仓库。发布到
+[ClawHub](/tools/clawhub) 或 npm，用户可以通过
+`openclaw plugins install <package-name>` 安装。OpenClaw 会先尝试 ClawHub，
+然后自动回退到 npm。
 
-## Prerequisites
+## 前置条件
 
-- Node >= 22 and a package manager (npm or pnpm)
-- Familiarity with TypeScript (ESM)
-- For in-repo plugins: repository cloned and `pnpm install` done
+- Node >= 22 和一个包管理器（npm 或 pnpm）
+- 熟悉 TypeScript（ESM）
+- 对于仓库内插件：已克隆仓库并完成 `pnpm install`
 
-## What kind of plugin?
+## 这是什么类型的插件？
 
 <CardGroup cols={3}>
-  <Card title="Channel plugin" icon="messages-square" href="/plugins/sdk-channel-plugins">
-    Connect OpenClaw to a messaging platform (Discord, IRC, etc.)
+  <Card title="通道插件" icon="messages-square" href="/plugins/sdk-channel-plugins">
+    将 OpenClaw 连接到一个消息平台（Discord、IRC 等）
   </Card>
-  <Card title="Provider plugin" icon="cpu" href="/plugins/sdk-provider-plugins">
-    Add a model provider (LLM, proxy, or custom endpoint)
+  <Card title="提供者插件" icon="cpu" href="/plugins/sdk-provider-plugins">
+    添加一个模型提供者（LLM、代理或自定义端点）
   </Card>
-  <Card title="Tool / hook plugin" icon="wrench">
-    Register agent tools, event hooks, or services — continue below
+  <Card title="工具 / 钩子插件" icon="wrench">
+    注册代理工具、事件钩子或服务 —— 继续向下阅读
   </Card>
 </CardGroup>
 
-## Quick start: tool plugin
+## 快速开始：工具插件
 
-This walkthrough creates a minimal plugin that registers an agent tool. Channel
-and provider plugins have dedicated guides linked above.
+本教程将创建一个最小插件，用于注册一个代理工具。通道和提供者插件有上面链接的专门指南。
 
 <Steps>
-  <Step title="Create the package and manifest">
+  <Step title="创建包和清单">
     <CodeGroup>
     ```json package.json
     {
@@ -60,8 +58,8 @@ and provider plugins have dedicated guides linked above.
     ```json openclaw.plugin.json
     {
       "id": "my-plugin",
-      "name": "My Plugin",
-      "description": "Adds a custom tool to OpenClaw",
+      "name": "我的插件",
+      "description": "为 OpenClaw 添加一个自定义工具",
       "configSchema": {
         "type": "object",
         "additionalProperties": false
@@ -70,12 +68,12 @@ and provider plugins have dedicated guides linked above.
     ```
     </CodeGroup>
 
-    Every plugin needs a manifest, even with no config. See
-    [Manifest](/plugins/manifest) for the full schema.
+    每个插件都需要一个清单，即使没有配置也是如此。完整 schema 请参见
+    [清单](/plugins/manifest)。
 
   </Step>
 
-  <Step title="Write the entry point">
+  <Step title="编写入口点">
 
     ```typescript
     // index.ts
@@ -84,12 +82,12 @@ and provider plugins have dedicated guides linked above.
 
     export default definePluginEntry({
       id: "my-plugin",
-      name: "My Plugin",
-      description: "Adds a custom tool to OpenClaw",
+      name: "我的插件",
+      description: "为 OpenClaw 添加一个自定义工具",
       register(api) {
         api.registerTool({
           name: "my_tool",
-          description: "Do a thing",
+          description: "执行某件事",
           parameters: Type.Object({ input: Type.String() }),
           async execute(_id, params) {
             return { content: [{ type: "text", text: `Got: ${params.input}` }] };
@@ -99,23 +97,23 @@ and provider plugins have dedicated guides linked above.
     });
     ```
 
-    `definePluginEntry` is for non-channel plugins. For channels, use
-    `defineChannelPluginEntry` — see [Channel Plugins](/plugins/sdk-channel-plugins).
-    For full entry point options, see [Entry Points](/plugins/sdk-entrypoints).
+    `definePluginEntry` 用于非通道插件。对于通道，请使用
+    `defineChannelPluginEntry` —— 参见 [通道插件](/plugins/sdk-channel-plugins)。
+    关于完整的入口点选项，请参见 [入口点](/plugins/sdk-entrypoints)。
 
   </Step>
 
-  <Step title="Test and publish">
+  <Step title="测试并发布">
 
-    **External plugins:** publish to [ClawHub](/tools/clawhub) or npm, then install:
+    **外部插件：** 发布到 [ClawHub](/tools/clawhub) 或 npm，然后安装：
 
     ```bash
     openclaw plugins install @myorg/openclaw-my-plugin
     ```
 
-    OpenClaw checks ClawHub first, then falls back to npm.
+    OpenClaw 会先检查 ClawHub，然后回退到 npm。
 
-    **In-repo plugins:** place under `extensions/` — automatically discovered.
+    **仓库内插件：** 放在 `extensions/` 下 —— 会被自动发现。
 
     ```bash
     pnpm test -- extensions/my-plugin/
@@ -124,48 +122,56 @@ and provider plugins have dedicated guides linked above.
   </Step>
 </Steps>
 
-## Plugin capabilities
+## 插件能力
 
-A single plugin can register any number of capabilities via the `api` object:
+单个插件可以通过 `api` 对象注册任意数量的能力：
 
-| Capability           | Registration method                           | Detailed guide                                                                  |
-| -------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
-| Text inference (LLM) | `api.registerProvider(...)`                   | [Provider Plugins](/plugins/sdk-provider-plugins)                               |
-| Channel / messaging  | `api.registerChannel(...)`                    | [Channel Plugins](/plugins/sdk-channel-plugins)                                 |
-| Speech (TTS/STT)     | `api.registerSpeechProvider(...)`             | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| Media understanding  | `api.registerMediaUnderstandingProvider(...)` | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| Image generation     | `api.registerImageGenerationProvider(...)`    | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| Web search           | `api.registerWebSearchProvider(...)`          | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| Agent tools          | `api.registerTool(...)`                       | Below                                                                           |
-| Custom commands      | `api.registerCommand(...)`                    | [Entry Points](/plugins/sdk-entrypoints)                                        |
-| Event hooks          | `api.registerHook(...)`                       | [Entry Points](/plugins/sdk-entrypoints)                                        |
-| HTTP routes          | `api.registerHttpRoute(...)`                  | [Internals](/plugins/architecture#gateway-http-routes)                          |
-| CLI subcommands      | `api.registerCli(...)`                        | [Entry Points](/plugins/sdk-entrypoints)                                        |
+| 能力                 | 注册方法                                       | 详细指南                                                                      |
+| -------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| 文本推理（LLM）      | `api.registerProvider(...)`                    | [提供者插件](/plugins/sdk-provider-plugins)                                   |
+| 通道 / 消息传递      | `api.registerChannel(...)`                     | [通道插件](/plugins/sdk-channel-plugins)                                      |
+| 语音（TTS/STT）      | `api.registerSpeechProvider(...)`              | [提供者插件](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities)    |
+| 媒体理解             | `api.registerMediaUnderstandingProvider(...)`  | [提供者插件](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities)    |
+| 图像生成             | `api.registerImageGenerationProvider(...)`     | [提供者插件](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities)    |
+| 网页搜索             | `api.registerWebSearchProvider(...)`           | [提供者插件](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities)    |
+| 代理工具             | `api.registerTool(...)`                        | 见下文                                                                         |
+| 自定义命令           | `api.registerCommand(...)`                     | [入口点](/plugins/sdk-entrypoints)                                             |
+| 事件钩子             | `api.registerHook(...)`                        | [入口点](/plugins/sdk-entrypoints)                                             |
+| HTTP 路由             | `api.registerHttpRoute(...)`                   | [内部机制](/plugins/architecture#gateway-http-routes)                         |
+| CLI 子命令           | `api.registerCli(...)`                         | [入口点](/plugins/sdk-entrypoints)                                             |
 
-For the full registration API, see [SDK Overview](/plugins/sdk-overview#registration-api).
+完整的注册 API 请参见 [SDK 概览](/plugins/sdk-overview#registration-api)。
 
-## Registering agent tools
+需要牢记的钩子守卫语义：
 
-Tools are typed functions the LLM can call. They can be required (always
-available) or optional (user opt-in):
+- `before_tool_call`：`{ block: true }` 是终态，会停止低优先级处理器。
+- `before_tool_call`：`{ block: false }` 视为没有决定。
+- `message_sending`：`{ cancel: true }` 是终态，会停止低优先级处理器。
+- `message_sending`：`{ cancel: false }` 视为没有决定。
+
+详情请参见 [SDK 概览中的钩子决策语义](/plugins/sdk-overview#hook-decision-semantics)。
+
+## 注册代理工具
+
+工具是 LLM 可以调用的类型化函数。它们可以是必需的（始终可用），也可以是可选的（由用户选择启用）：
 
 ```typescript
 register(api) {
-  // Required tool — always available
+  // 必需工具 — 始终可用
   api.registerTool({
     name: "my_tool",
-    description: "Do a thing",
+    description: "执行某件事",
     parameters: Type.Object({ input: Type.String() }),
     async execute(_id, params) {
       return { content: [{ type: "text", text: params.input }] };
     },
   });
 
-  // Optional tool — user must add to allowlist
+  // 可选工具 — 用户必须将其加入允许列表
   api.registerTool(
     {
       name: "workflow_tool",
-      description: "Run a workflow",
+      description: "运行一个工作流",
       parameters: Type.Object({ pipeline: Type.String() }),
       async execute(_id, params) {
         return { content: [{ type: "text", text: params.pipeline }] };
@@ -176,7 +182,7 @@ register(api) {
 }
 ```
 
-Users enable optional tools in config:
+用户在配置中启用可选工具：
 
 ```json5
 {
@@ -184,56 +190,56 @@ Users enable optional tools in config:
 }
 ```
 
-- Tool names must not clash with core tools (conflicts are skipped)
-- Use `optional: true` for tools with side effects or extra binary requirements
-- Users can enable all tools from a plugin by adding the plugin id to `tools.allow`
+- 工具名称不得与核心工具冲突（冲突项会被跳过）
+- 对于具有副作用或额外二进制依赖要求的工具，请使用 `optional: true`
+- 用户可以通过将插件 id 添加到 `tools.allow` 来启用某个插件中的所有工具
 
-## Import conventions
+## 导入约定
 
-Always import from focused `openclaw/plugin-sdk/<subpath>` paths:
+始终从专门的 `openclaw/plugin-sdk/<subpath>` 路径导入：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 
-// Wrong: monolithic root (deprecated, will be removed)
+// 错误：单体根导入（已弃用，将被移除）
 import { ... } from "openclaw/plugin-sdk";
 ```
 
-For the full subpath reference, see [SDK Overview](/plugins/sdk-overview).
+完整的子路径参考请参见 [SDK 概览](/plugins/sdk-overview)。
 
-Within your plugin, use local barrel files (`api.ts`, `runtime-api.ts`) for
-internal imports — never import your own plugin through its SDK path.
+在你的插件内部，使用本地的 barrel 文件（`api.ts`、`runtime-api.ts`）进行
+内部导入 —— 绝不要通过自己的 SDK 路径导入自己的插件。
 
-## Pre-submission checklist
+## 提交前检查清单
 
-<Check>**package.json** has correct `openclaw` metadata</Check>
-<Check>**openclaw.plugin.json** manifest is present and valid</Check>
-<Check>Entry point uses `defineChannelPluginEntry` or `definePluginEntry`</Check>
-<Check>All imports use focused `plugin-sdk/<subpath>` paths</Check>
-<Check>Internal imports use local modules, not SDK self-imports</Check>
-<Check>Tests pass (`pnpm test -- extensions/my-plugin/`)</Check>
-<Check>`pnpm check` passes (in-repo plugins)</Check>
+<Check>**package.json** 具有正确的 `openclaw` 元数据</Check>
+<Check>**openclaw.plugin.json** 清单已存在且有效</Check>
+<Check>入口点使用 `defineChannelPluginEntry` 或 `definePluginEntry`</Check>
+<Check>所有导入都使用专门的 `plugin-sdk/<subpath>` 路径</Check>
+<Check>内部导入使用本地模块，而不是 SDK 自身导入</Check>
+<Check>测试通过（`pnpm test -- extensions/my-plugin/`）</Check>
+<Check>`pnpm check` 通过（仓库内插件）</Check>
 
-## Next steps
+## 下一步
 
 <CardGroup cols={2}>
-  <Card title="Channel Plugins" icon="messages-square" href="/plugins/sdk-channel-plugins">
-    Build a messaging channel plugin
+  <Card title="通道插件" icon="messages-square" href="/plugins/sdk-channel-plugins">
+    构建一个消息通道插件
   </Card>
-  <Card title="Provider Plugins" icon="cpu" href="/plugins/sdk-provider-plugins">
-    Build a model provider plugin
+  <Card title="提供者插件" icon="cpu" href="/plugins/sdk-provider-plugins">
+    构建一个模型提供者插件
   </Card>
-  <Card title="SDK Overview" icon="book-open" href="/plugins/sdk-overview">
-    Import map and registration API reference
+  <Card title="SDK 概览" icon="book-open" href="/plugins/sdk-overview">
+    导入映射和注册 API 参考
   </Card>
-  <Card title="Runtime Helpers" icon="settings" href="/plugins/sdk-runtime">
-    TTS, search, subagent via api.runtime
+  <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
+    通过 api.runtime 提供 TTS、搜索、子代理
   </Card>
-  <Card title="Testing" icon="test-tubes" href="/plugins/sdk-testing">
-    Test utilities and patterns
+  <Card title="测试" icon="test-tubes" href="/plugins/sdk-testing">
+    测试工具和模式
   </Card>
-  <Card title="Plugin Manifest" icon="file-json" href="/plugins/manifest">
-    Full manifest schema reference
+  <Card title="插件清单" icon="file-json" href="/plugins/manifest">
+    完整的清单 schema 参考
   </Card>
 </CardGroup>

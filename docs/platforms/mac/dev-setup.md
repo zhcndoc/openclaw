@@ -13,8 +13,8 @@ title: "macOS 开发环境配置"
 
 在构建应用之前，请确保已安装以下内容：
 
-1. **Xcode 26.2+**：用于 Swift 开发。  
-2. **Node.js 24+ 和 pnpm**：推荐用于网关、CLI 以及打包脚本。目前的 LTS 版本是 22（即 `22.16+`），仍然支持以保持兼容性。  
+1. **Xcode 26.2+**: Swift 开发所需。
+2. **Node.js 24 & pnpm**: 推荐用于网关、CLI 和打包脚本。Node 22 LTS（当前为 `22.14+`）仍受支持以保持兼容性。
 
 ## 1. 安装依赖
 
@@ -97,7 +97,7 @@ xcrun swift --version
 openclaw gateway status
 openclaw gateway stop
 
-# If you're not using a LaunchAgent (dev mode / manual runs), find the listener:
+# 如果您没有使用 LaunchAgent（开发模式 / 手动运行），请查找监听器：
 lsof -nP -iTCP:18789 -sTCP:LISTEN
 ```
 

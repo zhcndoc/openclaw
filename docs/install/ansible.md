@@ -45,12 +45,12 @@ curl -fsSL https://raw.githubusercontent.com/openclaw/openclaw-ansible/main/inst
 
 Ansible 剧本将安装并配置：
 
-1. **Tailscale** -- 用于安全远程访问的网状 VPN
-2. **UFW 防火墙** -- 仅开放 SSH + Tailscale 端口
+1. **Tailscale** -- 用于安全远程访问的 mesh VPN
+2. **UFW firewall** -- 仅开放 SSH + Tailscale 端口
 3. **Docker CE + Compose V2** -- 用于智能体沙盒
-4. **Node.js 24 + pnpm** -- 运行时依赖项（Node 22 LTS，当前 `22.16+`，仍受支持）
-5. **OpenClaw** -- 主机运行，非容器化
-6. **Systemd 服务** -- 开机自动启动并附带安全加固
+4. **Node.js 24 + pnpm** -- 运行时依赖（Node 22 LTS，目前 `22.14+` 仍受支持）
+5. **OpenClaw** -- 基于主机运行，而非容器化
+6. **Systemd service** -- 自动启动并进行安全加固
 
 <Note>
 网关在主机上直接运行（不在 Docker 中），但智能体沙盒使用 Docker 进行隔离。详情请参见 [沙盒](/gateway/sandboxing)。

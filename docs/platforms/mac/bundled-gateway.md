@@ -16,7 +16,7 @@ OpenClaw.app 不再内置 Node/Bun 或网关运行时。macOS 应用程序
 
 ## 安装 CLI（本地模式必需）
 
-Node 24 是 Mac 上的默认运行时。Node 22 LTS，目前为 `22.16+`，仍然为了兼容性而可用。然后全局安装 `openclaw`：
+Mac 上默认运行时是 Node 24。Node 22 LTS，目前为 `22.14+`，为了兼容性仍然可用。然后全局安装 `openclaw`：
 
 ```bash
 npm install -g openclaw@<version>

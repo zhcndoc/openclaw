@@ -168,7 +168,7 @@ metadata:
 `metadata.openclaw` 对象支持：
 
 - **`emoji`**: 用于 CLI 的显示表情符号（例如 `"💾"`）
-- **`events`**: 监听的事件数组（例如 `["command:new", "command:reset"]`）
+- **`events`**: 监听的事件数组（例如 `["command:new", "command:reset"]`)
 - **`export`**: 要使用的命名导出（默认为 `"default"`）
 - **`homepage`**: 文档 URL
 - **`os`**: 所需平台（例如 `["darwin", "linux"]`）
@@ -216,18 +216,18 @@ export default myHandler;
   timestamp: Date,             // 事件发生时间
   messages: string[],          // 向此数组推送消息以发送给用户
   context: {
-    // Command events (command:new, command:reset):
-    sessionEntry?: SessionEntry,       // current session entry
-    previousSessionEntry?: SessionEntry, // pre-reset entry (preferred for session-memory)
-    commandSource?: string,            // e.g., 'whatsapp', 'telegram'
+    // 命令事件 (command:new, command:reset):
+    sessionEntry?: SessionEntry,       // 当前会话条目
+    previousSessionEntry?: SessionEntry, // 重置前条目（session-memory 首选）
+    commandSource?: string,            // 例如 'whatsapp', 'telegram'
     senderId?: string,
     workspaceDir?: string,
     cfg?: OpenClawConfig,
-    // Command events (command:stop only):
+    // 命令事件（仅 command:stop）:
     sessionId?: string,
-    // Agent bootstrap events (agent:bootstrap):
+    // 代理引导事件 (agent:bootstrap):
     bootstrapFiles?: WorkspaceBootstrapFile[],
-    // Message events (see Message Events section for full details):
+    // 消息事件（完整细节见 Message Events 章节）:
     from?: string,             // message:received
     to?: string,               // message:sent
     content?: string,
@@ -264,6 +264,68 @@ export default myHandler;
 网关启动时触发：
 
 - **`gateway:startup`**：频道启动及 hooks 加载后
+
+### Session Patch 事件
+
+当会话属性被修改时触发：
+
+- **`session:patch`**：当会话被更新时
+
+#### 会话事件上下文
+
+会话事件包含关于会话及其更改的丰富上下文：
+
+```typescript
+{
+  sessionEntry: SessionEntry, // 完整更新后的会话条目
+  patch: {                    // 补丁对象（仅包含已更改字段）
+    // 会话标识与标签
+    label?: string | null,           // 人类可读的会话标签
+
+    // AI 模型配置
+    model?: string | null,           // 模型覆盖（例如 "claude-opus-4-5"）
+    thinkingLevel?: string | null,   // 思考级别（"off"|"low"|"med"|"high"）
+    verboseLevel?: string | null,    // 详细输出级别
+    reasoningLevel?: string | null,  // 推理模式覆盖
+    elevatedLevel?: string | null,   // 提升模式覆盖
+    responseUsage?: "off" | "tokens" | "full" | null, // 使用情况显示模式
+
+    // 工具执行设置
+    execHost?: string | null,        // Exec host (sandbox|gateway|node)
+    execSecurity?: string | null,    // 安全模式 (deny|allowlist|full)
+    execAsk?: string | null,         // 审批模式 (off|on-miss|always)
+    execNode?: string | null,        // 当 host=node 时的节点 ID
+
+    // 子代理协调
+    spawnedBy?: string | null,       // 父会话 key（用于子代理）
+    spawnDepth?: number | null,      // 嵌套深度（0 = 根）
+
+    // 通信策略
+    sendPolicy?: "allow" | "deny" | null,          // 消息发送策略
+    groupActivation?: "mention" | "always" | null, // 群聊激活方式
+  },
+  cfg: OpenClawConfig            // 当前网关配置
+}
+```
+
+**安全说明：** 只有特权客户端（包括 Control UI）才能触发 `session:patch` 事件。标准 WebChat 客户端被阻止修改会话（见 PR #20800），因此该 hook 不会从这些连接触发。
+
+完整类型定义请参见 `src/gateway/protocol/schema/sessions.ts` 中的 `SessionsPatchParamsSchema`。
+
+#### 示例：Session Patch Logger Hook
+
+```typescript
+const handler = async (event) => {
+  if (event.type !== "session" || event.action !== "patch") {
+    return;
+  }
+  const { patch } = event.context;
+  console.log(`[session-patch] 会话已更新：${event.sessionKey}`);
+  console.log(`[session-patch] 变更：`, patch);
+};
+
+export default handler;
+```
 
 ### 消息事件
 
@@ -590,7 +652,7 @@ openclaw hooks disable command-logger
 
 ### session-memory
 
-Saves session context to memory when you issue `/new` or `/reset`.
+当你发出 `/new` 或 `/reset` 时，将会话上下文保存到内存中。
 
 **Events**: `command:new`, `command:reset`
 
@@ -600,10 +662,10 @@ Saves session context to memory when you issue `/new` or `/reset`.
 
 **功能说明**：
 
-1. Uses the pre-reset session entry to locate the correct transcript
-2. Extracts the last 15 user/assistant messages from the conversation (configurable)
-3. Uses LLM to generate a descriptive filename slug
-4. Saves session metadata to a dated memory file
+1. 使用重置前的会话条目定位正确的转录内容
+2. 从对话中提取最后 15 条用户/助手消息（可配置）
+3. 使用 LLM 生成描述性的文件名 slug
+4. 将会话元数据保存到按日期命名的内存文件中
 
 **示例输出**：
 
@@ -614,7 +676,7 @@ Saves session context to memory when you issue `/new` or `/reset`.
 - **Session ID**: abc123def456
 - **Source**: telegram
 
-## Conversation Summary
+## 对话摘要
 
 user: Can you help me design the API?
 assistant: Sure! Let's start with the endpoints...
@@ -668,10 +730,10 @@ openclaw hooks enable session-memory
 
 **注意**：
 
-- Paths are resolved relative to workspace.
-- Files must stay inside workspace (realpath-checked).
-- Only recognized bootstrap basenames are loaded (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, `MEMORY.md`, `memory.md`).
-- For subagent/cron sessions a narrower allowlist applies (`AGENTS.md`, `TOOLS.md`, `SOUL.md`, `IDENTITY.md`, `USER.md`).
+- 路径会相对于工作区进行解析。
+- 文件必须位于工作区内（会检查 realpath）。
+- 仅加载被识别的 bootstrap 基名（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`、`MEMORY.md`、`memory.md`）。
+- 对于 subagent/cron 会话，适用更窄的允许列表（`AGENTS.md`、`TOOLS.md`、`SOUL.md`、`IDENTITY.md`、`USER.md`）。
 
 **启用命令**：
 
@@ -902,13 +964,13 @@ test("my handler works", async () => {
 ```
 网关启动
     ↓
-Scan directories (bundled → plugin → managed + extra dirs → workspace)
+扫描目录（bundled → plugin → managed + extra dirs → workspace）
     ↓
 解析 HOOK.md 文件
     ↓
-Sort by override precedence (bundled < plugin < managed < workspace)
+按覆盖优先级排序（bundled < plugin < managed < workspace）
     ↓
-Check eligibility (bins, env, config, os)
+检查合格性（bins、env、config、os）
     ↓
 加载合格的处理器
     ↓
@@ -968,7 +1030,7 @@ openclaw hooks info my-hook
 - 二进制程序（检查 PATH）
 - 环境变量
 - 配置
-- OS 兼容性
+- 操作系统兼容性
 
 ### Hook 不执行
 

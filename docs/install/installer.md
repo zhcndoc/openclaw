@@ -67,8 +67,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
   <Step title="检测操作系统">
     支持 macOS 和 Linux（包括 WSL）。检测到 macOS 时，如缺少 Homebrew，则安装 Homebrew。
   </Step>
-  <Step title="确保默认使用 Node.js 24">
-    检查 Node 版本，必要时安装 Node 24（macOS 使用 Homebrew，Linux 使用 NodeSource 设置脚本 apt/dnf/yum）。OpenClaw 仍支持 Node 22 LTS，目前为 `22.16+`，以保证兼容性。
+  <Step title="默认确保 Node.js 24">
+    检查 Node 版本，如有需要则安装 Node 24（macOS 上通过 Homebrew，Linux 上通过 NodeSource 的 apt/dnf/yum 安装脚本）。OpenClaw 仍支持 Node 22 LTS，目前为 `22.14+`，以保证兼容性。
   </Step>
   <Step title="确保 Git">
     如缺少 Git，则进行安装。
@@ -176,8 +176,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
 ### 流程（install-cli.sh）
 
 <Steps>
-  <Step title="Install local Node runtime">
-    Downloads a pinned supported Node LTS tarball (the version is embedded in the script and updated independently) to `<prefix>/tools/node-v<version>` and verifies SHA-256.
+  <Step title="安装本地 Node 运行时">
+    下载一个固定的受支持 Node LTS tarball（版本内嵌在脚本中并独立更新）到 `<prefix>/tools/node-v<version>`，并验证 SHA-256。
   </Step>
   <Step title="确保 Git">
     如缺少 Git，尝试在 Linux 上通过 apt/dnf/yum，macOS 上通过 Homebrew 安装。
@@ -253,8 +253,8 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
   <Step title="确保 PowerShell + Windows 环境">
     需要 PowerShell 5 及以上版本。
   </Step>
-  <Step title="确保默认使用 Node.js 24">
-    如缺少 Node，尝试先通过 winget 安装，再尝试 Chocolatey，最后尝试 Scoop。 Node 22 LTS，目前为 `22.16+`，仍然支持以保证兼容性。
+  <Step title="默认确保 Node.js 24">
+    如缺少 Node，则尝试依次通过 winget、Chocolatey、Scoop 安装。为了兼容性，仍支持 Node 22 LTS，目前为 `22.14+`。
   </Step>
   <Step title="安装 OpenClaw">
     - 通过 `npm` 方法（默认）：使用选定 `-Tag` 的全局 npm 安装
@@ -283,7 +283,7 @@ OpenClaw 提供了三个安装脚本，由 `openclaw.ai` 提供。
     & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -Tag main
     ```
   </Tab>
-  <Tab title="Custom git directory">
+  <Tab title="自定义 git 目录">
     ```powershell
     & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -InstallMethod git -GitDir "C:\openclaw"
     ```

@@ -47,25 +47,25 @@ title: "斜杠命令"
 }
 ```
 
-- `commands.text` (default `true`) enables parsing `/...` in chat messages.
-  - On surfaces without native commands (WhatsApp/WebChat/Signal/iMessage/Google Chat/Microsoft Teams), text commands still work even if you set this to `false`.
-- `commands.native` (default `"auto"`) registers native commands.
-  - Auto: on for Discord/Telegram; off for Slack (until you add slash commands); ignored for providers without native support.
-  - Set `channels.discord.commands.native`, `channels.telegram.commands.native`, or `channels.slack.commands.native` to override per provider (bool or `"auto"`).
-  - `false` clears previously registered commands on Discord/Telegram at startup. Slack commands are managed in the Slack app and are not removed automatically.
-- `commands.nativeSkills` (default `"auto"`) registers **skill** commands natively when supported.
-  - Auto: on for Discord/Telegram; off for Slack (Slack requires creating a slash command per skill).
-  - Set `channels.discord.commands.nativeSkills`, `channels.telegram.commands.nativeSkills`, or `channels.slack.commands.nativeSkills` to override per provider (bool or `"auto"`).
-- `commands.bash` (default `false`) enables `! <cmd>` to run host shell commands (`/bash <cmd>` is an alias; requires `tools.elevated` allowlists).
-- `commands.bashForegroundMs` (default `2000`) controls how long bash waits before switching to background mode (`0` backgrounds immediately).
-- `commands.config` (default `false`) enables `/config` (reads/writes `openclaw.json`).
-- `commands.mcp` (default `false`) enables `/mcp` (reads/writes OpenClaw-managed MCP config under `mcp.servers`).
-- `commands.plugins` (default `false`) enables `/plugins` (plugin discovery/status plus install + enable/disable controls).
-- `commands.debug` (default `false`) enables `/debug` (runtime-only overrides).
-- `commands.allowFrom` (optional) sets a per-provider allowlist for command authorization. When configured, it is the
-  only authorization source for commands and directives (channel allowlists/pairing and `commands.useAccessGroups`
-  are ignored). Use `"*"` for a global default; provider-specific keys override it.
-- `commands.useAccessGroups` (default `true`) enforces allowlists/policies for commands when `commands.allowFrom` is not set.
+- `commands.text`（默认 `true`）启用在聊天消息中解析 `/...`。
+  - 在没有原生命令的平台上（WhatsApp/WebChat/Signal/iMessage/Google Chat/Microsoft Teams），即使将其设为 `false`，文本命令仍然可用。
+- `commands.native`（默认 `"auto"`）注册原生命令。
+  - 自动：Discord/Telegram 开启；Slack 关闭（直到你添加斜杠命令）；对于不支持原生命令的提供商则忽略。
+  - 可设置 `channels.discord.commands.native`、`channels.telegram.commands.native` 或 `channels.slack.commands.native`，按提供商覆盖（布尔值或 `"auto"`）。
+  - `false` 会在启动时清除 Discord/Telegram 上之前注册的命令。Slack 命令由 Slack 应用管理，不会被自动移除。
+- `commands.nativeSkills`（默认 `"auto"`）在支持时以原生方式注册**技能**命令。
+  - 自动：Discord/Telegram 开启；Slack 关闭（Slack 需要为每个技能创建一个斜杠命令）。
+  - 可设置 `channels.discord.commands.nativeSkills`、`channels.telegram.commands.nativeSkills` 或 `channels.slack.commands.nativeSkills`，按提供商覆盖（布尔值或 `"auto"`）。
+- `commands.bash`（默认 `false`）启用 `! <cmd>` 来运行主机 shell 命令（`/bash <cmd>` 是别名；需要 `tools.elevated` 白名单）。
+- `commands.bashForegroundMs`（默认 `2000`）控制 bash 在切换到后台模式前等待多长时间（`0` 表示立即转入后台）。
+- `commands.config`（默认 `false`）启用 `/config`（读写 `openclaw.json`）。
+- `commands.mcp`（默认 `false`）启用 `/mcp`（读写 OpenClaw 管理的 `mcp.servers` 下的 MCP 配置）。
+- `commands.plugins`（默认 `false`）启用 `/plugins`（插件发现/状态，以及安装 + 启用/禁用控制）。
+- `commands.debug`（默认 `false`）启用 `/debug`（仅运行时覆盖）。
+- `commands.allowFrom`（可选）为命令授权设置按提供商划分的白名单。配置后，它是命令和指令的
+  唯一授权来源（频道白名单/配对以及 `commands.useAccessGroups`
+  会被忽略）。使用 `"*"` 作为全局默认值；按提供商的键会覆盖它。
+- `commands.useAccessGroups`（默认 `true`）在未设置 `commands.allowFrom` 时，对命令强制执行白名单/策略。
 
 ## 命令列表
 
@@ -73,34 +73,35 @@ title: "斜杠命令"
 
 - `/help`
 - `/commands`
-- `/skill <name> [input]` (run a skill by name)
-- `/status` (show current status; includes provider usage/quota for the current model provider when available)
-- `/allowlist` (list/add/remove allowlist entries)
-- `/approve <id> allow-once|allow-always|deny` (resolve exec approval prompts)
-- `/context [list|detail|json]` (explain “context”; `detail` shows per-file + per-tool + per-skill + system prompt size)
-- `/btw <question>` (ask an ephemeral side question about the current session without changing future session context; see [/tools/btw](/tools/btw))
-- `/export-session [path]` (alias: `/export`) (export current session to HTML with full system prompt)
-- `/whoami` (show your sender id; alias: `/id`)
-- `/session idle <duration|off>` (manage inactivity auto-unfocus for focused thread bindings)
-- `/session max-age <duration|off>` (manage hard max-age auto-unfocus for focused thread bindings)
-- `/subagents list|kill|log|info|send|steer|spawn` (inspect, control, or spawn sub-agent runs for the current session)
-- `/acp spawn|cancel|steer|close|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|sessions` (inspect and control ACP runtime sessions)
-- `/agents` (list thread-bound agents for this session)
-- `/focus <target>` (Discord: bind this thread, or a new thread, to a session/subagent target)
-- `/unfocus` (Discord: remove the current thread binding)
-- `/kill <id|#|all>` (immediately abort one or all running sub-agents for this session; no confirmation message)
-- `/steer <id|#> <message>` (steer a running sub-agent immediately: in-run when possible, otherwise abort current work and restart on the steer message)
-- `/tell <id|#> <message>` (alias for `/steer`)
-- `/config show|get|set|unset` (persist config to disk, owner-only; requires `commands.config: true`)
-- `/mcp show|get|set|unset` (manage OpenClaw MCP server config, owner-only; requires `commands.mcp: true`)
-- `/plugins list|show|get|install|enable|disable` (inspect discovered plugins, install new ones, and toggle enablement; owner-only for writes; requires `commands.plugins: true`)
-  - `/plugin` is an alias for `/plugins`.
-  - `/plugin install <spec>` accepts the same plugin specs as `openclaw plugins install`: local path/archive, npm package, or `clawhub:<pkg>`.
-  - Enable/disable writes still reply with a restart hint. On a watched foreground gateway, OpenClaw may perform that restart automatically right after the write.
-- `/debug show|set|unset|reset` (runtime overrides, owner-only; requires `commands.debug: true`)
-- `/usage off|tokens|full|cost` (per-response usage footer or local cost summary)
-- `/tts off|always|inbound|tagged|status|provider|limit|summary|audio` (control TTS; see [/tts](/tools/tts))
-  - Discord: native command is `/voice` (Discord reserves `/tts`); text `/tts` still works.
+- `/tools [compact|verbose]`（显示当前代理此刻可用的工具；`verbose` 会附加说明）
+- `/skill <name> [input]`（按名称运行一个技能）
+- `/status`（显示当前状态；在可用时包含当前模型提供商的使用情况/配额）
+- `/allowlist`（列出/添加/移除白名单条目）
+- `/approve <id> allow-once|allow-always|deny`（处理 exec 审批提示）
+- `/context [list|detail|json]`（解释“上下文”；`detail` 会显示每个文件 + 每个工具 + 每个技能 + 系统提示词大小）
+- `/btw <question>`（就当前会话提一个临时的旁支问题，而不改变未来的会话上下文；参见 [/tools/btw](/tools/btw)）
+- `/export-session [path]`（别名：`/export`）（将当前会话导出为包含完整系统提示词的 HTML）
+- `/whoami`（显示你的发送者 ID；别名：`/id`）
+- `/session idle <duration|off>`（管理聚焦线程绑定的不活跃自动失焦）
+- `/session max-age <duration|off>`（管理聚焦线程绑定的硬性最大时长自动失焦）
+- `/subagents list|kill|log|info|send|steer|spawn`（检查、控制或为当前会话生成子代理运行）
+- `/acp spawn|cancel|steer|close|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|sessions`（检查并控制 ACP 运行时会话）
+- `/agents`（列出此会话中与线程绑定的代理）
+- `/focus <target>`（Discord：将此线程，或一个新线程，绑定到某个会话/子代理目标）
+- `/unfocus`（Discord：移除当前线程绑定）
+- `/kill <id|#|all>`（立即中止此会话中一个或所有正在运行的子代理；不会发送确认消息）
+- `/steer <id|#> <message>`（立即引导一个正在运行的子代理：可在运行中引导；否则中止当前工作并使用引导消息重启）
+- `/tell <id|#> <message>`（`/steer` 的别名）
+- `/config show|get|set|unset`（将配置持久化到磁盘，仅所有者可用；需要 `commands.config: true`）
+- `/mcp show|get|set|unset`（管理 OpenClaw MCP 服务器配置，仅所有者可用；需要 `commands.mcp: true`）
+- `/plugins list|show|get|install|enable|disable`（检查发现的插件、安装新插件，并切换启用状态；写操作仅所有者可用；需要 `commands.plugins: true`）
+  - `/plugin` 是 `/plugins` 的别名。
+  - `/plugin install <spec>` 接受与 `openclaw plugins install` 相同的插件规格：本地路径/压缩包、npm 包，或 `clawhub:<pkg>`。
+  - 启用/禁用写操作仍会回复重启提示。在受监控的前台网关上，OpenClaw 可能会在写入后立即自动执行该重启。
+- `/debug show|set|unset|reset`（运行时覆盖，仅所有者可用；需要 `commands.debug: true`）
+- `/usage off|tokens|full|cost`（每次响应的使用信息页脚或本地成本摘要）
+- `/tts off|always|inbound|tagged|status|provider|limit|summary|audio`（控制 TTS；参见 [/tools/tts](/tools/tts)）
+  - Discord：原生命令是 `/voice`（Discord 保留了 `/tts`）；文本 `/tts` 仍然可用。
 - `/stop`
 - `/restart`
 - `/dock-telegram`（别名：`/dock_telegram`）（切换回复到 Telegram）
@@ -155,7 +156,19 @@ title: "斜杠命令"
   - 示例：`/prose`（OpenProse 插件）—详见 [OpenProse](/prose)。
 - **原生命令参数：** Discord 使用动态选项自动补全（缺失必需参数时显示按钮菜单）。Telegram 和 Slack 在支持选项且缺少参数时显示按钮菜单。
 
-## 使用界面（何处显示什么）
+## `/tools`
+
+`/tools` 回答的是一个运行时问题，而不是配置问题：**这个代理在当前对话中现在能用什么**。
+
+- 默认的 `/tools` 是简洁模式，适合快速浏览。
+- `/tools verbose` 会添加简短说明。
+- 支持参数的原生命令界面提供与 `compact|verbose` 相同的模式切换。
+- 结果以会话为作用域，因此更换代理、频道、线程、发送者授权或模型都可能改变输出。
+- `/tools` 包括运行时实际可达的工具，包括核心工具、已连接的插件工具以及频道拥有的工具。
+
+对于配置文件和覆盖编辑，请使用 Control UI 的 Tools 面板或配置/目录界面，而不要把 `/tools` 当作静态目录。
+
+## 使用情况展示位置（显示在哪里）
 
 - **供应商使用情况/配额**（例如：“Claude 剩余 80%”）会显示在当前模型供应商启用使用跟踪时的 `/status` 中。
 - **每次响应的令牌/成本** 受 `/usage off|tokens|full` 控制（附加于正常回复）。
@@ -200,7 +213,7 @@ title: "斜杠命令"
 备注：
 
 - 覆盖立即应用于新的配置读取，但**不写入** `openclaw.json`。
-- 使用 `/debug reset` 清除所有覆盖，回复磁盘配置。
+- 使用 `/debug reset` 清除所有覆盖，恢复磁盘配置。
 
 ## 配置更新
 
@@ -221,11 +234,11 @@ title: "斜杠命令"
 - 写入前执行配置验证，无效修改将被拒绝。
 - `/config` 更改会在重启后持久生效。
 
-## MCP updates
+## MCP 更新
 
-`/mcp` writes OpenClaw-managed MCP server definitions under `mcp.servers`. Owner-only. Disabled by default; enable with `commands.mcp: true`.
+`/mcp` 会将 OpenClaw 管理的 MCP 服务器定义写入 `mcp.servers`。仅限所有者。默认禁用；启用需 `commands.mcp: true`。
 
-Examples:
+示例：
 
 ```text
 /mcp show
@@ -234,16 +247,16 @@ Examples:
 /mcp unset context7
 ```
 
-Notes:
+备注：
 
-- `/mcp` stores config in OpenClaw config, not Pi-owned project settings.
-- Runtime adapters decide which transports are actually executable.
+- `/mcp` 将配置存储在 OpenClaw 配置中，而不是 Pi 拥有的项目设置中。
+- 运行时适配器决定哪些传输方式实际上可执行。
 
-## Plugin updates
+## 插件更新
 
-`/plugins` lets operators inspect discovered plugins and toggle enablement in config. Read-only flows can use `/plugin` as an alias. Disabled by default; enable with `commands.plugins: true`.
+`/plugins` 允许操作员检查已发现的插件，并在配置中切换启用状态。只读流程可以使用 `/plugin` 作为别名。默认禁用；需启用 `commands.plugins: true`。
 
-Examples:
+示例：
 
 ```text
 /plugins
@@ -253,13 +266,13 @@ Examples:
 /plugins disable context7
 ```
 
-Notes:
+备注：
 
-- `/plugins list` and `/plugins show` use real plugin discovery against the current workspace plus on-disk config.
-- `/plugins enable|disable` updates plugin config only; it does not install or uninstall plugins.
-- After enable/disable changes, restart the gateway to apply them.
+- `/plugins list` 和 `/plugins show` 使用针对当前工作区以及磁盘配置的真实插件发现。
+- `/plugins enable|disable` 仅更新插件配置；不会安装或卸载插件。
+- 启用/禁用更改后，重启网关以应用它们。
 
-## Surface notes
+## 表面说明
 
 - **文本命令** 在普通聊天会话中运行（私聊共用 `main`，群组拥有各自的会话）。
 - **原生命令** 使用隔离的会话：
@@ -268,7 +281,7 @@ Notes:
   - Telegram：`telegram:slash:<userId>`（通过 `CommandTargetSessionKey` 定向到聊天会话）
 - **`/stop`** 作用于活动的聊天会话以中断当前执行。
 - **Slack：** 仍支持 `channels.slack.slashCommand` 用于单一的 `/openclaw` 式命令。如果启用 `commands.native`，必须为每个内置命令创建一个 Slack 斜杠命令（同 `/help` 命令名）。Slack 的命令参数菜单通过临时 Block Kit 按钮实现。
-  - Slack 原生例外：注册 `/agentstatus`（非 `/status`），因 Slack 保留 `/status`。文本命令 `/status` 在 Slack 消息中仍有效。
+  - Slack 原生命令例外：注册 `/agentstatus`（非 `/status`），因为 Slack 保留了 `/status`。文本命令 `/status` 在 Slack 消息中仍然有效。
 
 ## BTW 辅助问题
 

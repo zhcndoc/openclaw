@@ -9,7 +9,7 @@ read_when:
 
 # Node.js
 
-OpenClaw requires **Node 22.16 or newer**. **Node 24 is the default and recommended runtime** for installs, CI, and release workflows. Node 22 remains supported via the active LTS line. The [installer script](/install#alternative-install-methods) will detect and install Node automatically — this page is for when you want to set up Node yourself and make sure everything is wired up correctly (versions, PATH, global installs).
+OpenClaw 要求 **Node 22.14 或更新版本**。**Node 24 是安装、CI 和发布工作流的默认且推荐运行时**。Node 22 仍可通过当前 LTS 线路获得支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——本页适用于您希望自行设置 Node，并确保一切配置正确（版本、PATH、全局安装）时。
 
 ## 检查您的版本
 
@@ -17,7 +17,7 @@ OpenClaw requires **Node 22.16 or newer**. **Node 24 is the default and recommen
 node -v
 ```
 
-如果输出为 `v24.x.x` 或更高版本，表示你正在使用推荐的默认版本。如果输出为 `v22.16.x` 或更高版本，表示你正在使用受支持的 Node 22 LTS 版本，但我们仍建议在方便时升级到 Node 24。如果未安装 Node 或版本太旧，请从下方选择安装方法。
+如果输出 `v24.x.x` 或更高版本，说明您使用的是推荐的默认版本。如果输出 `v22.14.x` 或更高版本，说明您使用的是受支持的 Node 22 LTS 路线，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或版本过旧，请选择下面的一种安装方式。
 
 ## 安装 Node
 

@@ -1,51 +1,51 @@
 ---
-summary: "Install, configure, and manage OpenClaw plugins"
+summary: "安装、配置和管理 OpenClaw 插件"
 read_when:
-  - Installing or configuring plugins
-  - Understanding plugin discovery and load rules
-  - Working with Codex/Claude-compatible plugin bundles
-title: "Plugins"
-sidebarTitle: "Install and Configure"
+  - 安装或配置插件时
+  - 了解插件发现和加载规则时
+  - 使用兼容 Codex/Claude 的插件包时
+title: "插件"
+sidebarTitle: "安装与配置"
 ---
 
-# Plugins
+# 插件
 
-Plugins extend OpenClaw with new capabilities: channels, model providers, tools,
-skills, speech, image generation, and more. Some plugins are **core** (shipped
-with OpenClaw), others are **external** (published on npm by the community).
+插件为 OpenClaw 扩展新能力：频道、模型提供方、工具、
+技能、语音、图像生成等。其中一些插件是**核心**插件（随 OpenClaw 一起发布），
+另一些是**外部**插件（由社区发布到 npm）。
 
-## Quick start
+## 快速开始
 
 <Steps>
-  <Step title="See what is loaded">
+  <Step title="查看已加载内容">
     ```bash
     openclaw plugins list
     ```
   </Step>
 
-  <Step title="Install a plugin">
+  <Step title="安装插件">
     ```bash
-    # From npm
+    # 从 npm 安装
     openclaw plugins install @openclaw/voice-call
 
-    # From a local directory or archive
+    # 从本地目录或归档文件安装
     openclaw plugins install ./my-plugin
     openclaw plugins install ./my-plugin.tgz
     ```
 
   </Step>
 
-  <Step title="Restart the Gateway">
+  <Step title="重启 Gateway">
     ```bash
     openclaw gateway restart
     ```
 
-    Then configure under `plugins.entries.\<id\>.config` in your config file.
+    然后在配置文件中的 `plugins.entries.\<id\>.config` 下进行配置。
 
   </Step>
 </Steps>
 
-If you prefer chat-native control, enable `commands.plugins: true` and use:
+如果你更喜欢在聊天中直接控制，可以启用 `commands.plugins: true` 并使用：
 
 ```text
 /plugin install clawhub:@openclaw/voice-call
@@ -53,29 +53,29 @@ If you prefer chat-native control, enable `commands.plugins: true` and use:
 /plugin enable voice-call
 ```
 
-The install path uses the same resolver as the CLI: local path/archive, explicit
-`clawhub:<pkg>`, or bare package spec (ClawHub first, then npm fallback).
+安装路径使用与 CLI 相同的解析器：本地路径/归档文件、显式
+`clawhub:<pkg>`，或裸包规格（先 ClawHub，再回退到 npm）。
 
-## Plugin types
+## 插件类型
 
-OpenClaw recognizes two plugin formats:
+OpenClaw 识别两种插件格式：
 
-| Format     | How it works                                                       | Examples                                               |
-| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
-| **Native** | `openclaw.plugin.json` + runtime module; executes in-process       | Official plugins, community npm packages               |
-| **Bundle** | Codex/Claude/Cursor-compatible layout; mapped to OpenClaw features | `.codex-plugin/`, `.claude-plugin/`, `.cursor-plugin/` |
+| 格式       | 工作方式                                                     | 示例                                                   |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| **原生**   | `openclaw.plugin.json` + 运行时模块；在进程内执行            | 官方插件、社区 npm 包                                  |
+| **Bundle** | 兼容 Codex/Claude/Cursor 的布局；映射到 OpenClaw 功能       | `.codex-plugin/`、`.claude-plugin/`、`.cursor-plugin/` |
 
-Both show up under `openclaw plugins list`. See [Plugin Bundles](/plugins/bundles) for bundle details.
+两者都会显示在 `openclaw plugins list` 中。有关 bundle 的详细信息，请参见 [插件 Bundles](/plugins/bundles)。
 
-If you are writing a native plugin, start with [Building Plugins](/plugins/building-plugins)
-and the [Plugin SDK Overview](/plugins/sdk-overview).
+如果你正在编写原生插件，请从 [构建插件](/plugins/building-plugins)
+和 [插件 SDK 概览](/plugins/sdk-overview) 开始。
 
-## Official plugins
+## 官方插件
 
-### Installable (npm)
+### 可安装（npm）
 
-| Plugin          | Package                | Docs                                 |
-| --------------- | ---------------------- | ------------------------------------ |
+| 插件             | 包                      | 文档                                 |
+| ---------------- | ----------------------- | ------------------------------------ |
 | Matrix          | `@openclaw/matrix`     | [Matrix](/channels/matrix)           |
 | Microsoft Teams | `@openclaw/msteams`    | [Microsoft Teams](/channels/msteams) |
 | Nostr           | `@openclaw/nostr`      | [Nostr](/channels/nostr)             |
@@ -83,10 +83,10 @@ and the [Plugin SDK Overview](/plugins/sdk-overview).
 | Zalo            | `@openclaw/zalo`       | [Zalo](/channels/zalo)               |
 | Zalo Personal   | `@openclaw/zalouser`   | [Zalo Personal](/plugins/zalouser)   |
 
-### Core (shipped with OpenClaw)
+### 核心（随 OpenClaw 一起发布）
 
 <AccordionGroup>
-  <Accordion title="Model providers (enabled by default)">
+  <Accordion title="模型提供方（默认启用）">
     `anthropic`, `byteplus`, `cloudflare-ai-gateway`, `github-copilot`, `google`,
     `huggingface`, `kilocode`, `kimi-coding`, `minimax`, `mistral`, `modelstudio`,
     `moonshot`, `nvidia`, `openai`, `opencode`, `opencode-go`, `openrouter`,
@@ -94,23 +94,23 @@ and the [Plugin SDK Overview](/plugins/sdk-overview).
     `vercel-ai-gateway`, `volcengine`, `xiaomi`, `zai`
   </Accordion>
 
-  <Accordion title="Memory plugins">
-    - `memory-core` — bundled memory search (default via `plugins.slots.memory`)
-    - `memory-lancedb` — install-on-demand long-term memory with auto-recall/capture (set `plugins.slots.memory = "memory-lancedb"`)
+  <Accordion title="内存插件">
+    - `memory-core` — 内置内存搜索（通过 `plugins.slots.memory` 默认启用）
+    - `memory-lancedb` — 按需安装的长期记忆，带自动回忆/捕获（设置 `plugins.slots.memory = "memory-lancedb"`）
   </Accordion>
 
-  <Accordion title="Speech providers (enabled by default)">
+  <Accordion title="语音提供方（默认启用）">
     `elevenlabs`, `microsoft`
   </Accordion>
 
-  <Accordion title="Other">
-    - `copilot-proxy` — VS Code Copilot Proxy bridge (disabled by default)
+  <Accordion title="其他">
+    - `copilot-proxy` — VS Code Copilot Proxy 桥接（默认禁用）
   </Accordion>
 </AccordionGroup>
 
-Looking for third-party plugins? See [Community Plugins](/plugins/community).
+在找第三方插件吗？请参见 [社区插件](/plugins/community)。
 
-## Configuration
+## 配置
 
 ```json5
 {
@@ -126,102 +126,102 @@ Looking for third-party plugins? See [Community Plugins](/plugins/community).
 }
 ```
 
-| Field            | Description                                               |
-| ---------------- | --------------------------------------------------------- |
-| `enabled`        | Master toggle (default: `true`)                           |
-| `allow`          | Plugin allowlist (optional)                               |
-| `deny`           | Plugin denylist (optional; deny wins)                     |
-| `load.paths`     | Extra plugin files/directories                            |
-| `slots`          | Exclusive slot selectors (e.g. `memory`, `contextEngine`) |
-| `entries.\<id\>` | Per-plugin toggles + config                               |
+| 字段              | 说明                                                  |
+| ----------------- | ----------------------------------------------------- |
+| `enabled`        | 总开关（默认：`true`）                                |
+| `allow`          | 插件允许列表（可选）                                  |
+| `deny`          | 插件拒绝列表（可选；拒绝优先）                        |
+| `load.paths`     | 额外的插件文件/目录                                  |
+| `slots`          | 独占槽选择器（例如 `memory`、`contextEngine`）        |
+| `entries.\<id\>` | 每个插件的开关 + 配置                                |
 
-Config changes **require a gateway restart**. If the Gateway is running with config
-watch + in-process restart enabled (the default `openclaw gateway` path), that
-restart is usually performed automatically a moment after the config write lands.
+配置更改**需要重启 Gateway**。如果 Gateway 以配置
+监视 + 进程内重启的方式运行（默认的 `openclaw gateway` 路径），那么该
+重启通常会在配置写入落地后片刻自动执行。
 
-<Accordion title="Plugin states: disabled vs missing vs invalid">
-  - **Disabled**: plugin exists but enablement rules turned it off. Config is preserved.
-  - **Missing**: config references a plugin id that discovery did not find.
-  - **Invalid**: plugin exists but its config does not match the declared schema.
+<Accordion title="插件状态：已禁用 vs 缺失 vs 无效">
+  - **已禁用**：插件存在，但启用规则将其关闭。配置会被保留。
+  - **缺失**：配置引用了一个发现过程中未找到的插件 id。
+  - **无效**：插件存在，但其配置与声明的 schema 不匹配。
 </Accordion>
 
-## Discovery and precedence
+## 发现与优先级
 
-OpenClaw scans for plugins in this order (first match wins):
+OpenClaw 按以下顺序扫描插件（先匹配者优先）：
 
 <Steps>
-  <Step title="Config paths">
-    `plugins.load.paths` — explicit file or directory paths.
+  <Step title="配置路径">
+    `plugins.load.paths` — 显式文件或目录路径。
   </Step>
 
-  <Step title="Workspace extensions">
-    `\<workspace\>/.openclaw/extensions/*.ts` and `\<workspace\>/.openclaw/extensions/*/index.ts`.
+  <Step title="工作区扩展">
+    `\<workspace\>/.openclaw/extensions/*.ts` 和 `\<workspace\>/.openclaw/extensions/*/index.ts`。
   </Step>
 
-  <Step title="Global extensions">
-    `~/.openclaw/extensions/*.ts` and `~/.openclaw/extensions/*/index.ts`.
+  <Step title="全局扩展">
+    `~/.openclaw/extensions/*.ts` 和 `~/.openclaw/extensions/*/index.ts`。
   </Step>
 
-  <Step title="Bundled plugins">
-    Shipped with OpenClaw. Many are enabled by default (model providers, speech).
-    Others require explicit enablement.
+  <Step title="捆绑插件">
+    随 OpenClaw 一起发布。许多默认启用（模型提供方、语音）。
+    其他则需要显式启用。
   </Step>
 </Steps>
 
-### Enablement rules
+### 启用规则
 
-- `plugins.enabled: false` disables all plugins
-- `plugins.deny` always wins over allow
-- `plugins.entries.\<id\>.enabled: false` disables that plugin
-- Workspace-origin plugins are **disabled by default** (must be explicitly enabled)
-- Bundled plugins follow the built-in default-on set unless overridden
-- Exclusive slots can force-enable the selected plugin for that slot
+- `plugins.enabled: false` 会禁用所有插件
+- `plugins.deny` 始终优先于 allow
+- `plugins.entries.\<id\>.enabled: false` 会禁用该插件
+- 工作区来源的插件**默认禁用**（必须显式启用）
+- 捆绑插件遵循内置的默认开启集合，除非被覆盖
+- 独占槽可以强制启用该槽所选中的插件
 
 ## 插件槽（独占分类）
 
-Some categories are exclusive (only one active at a time):
+某些类别是独占的（同一时间只能激活一个）：
 
 ```json5
 {
   plugins: {
     slots: {
-      memory: "memory-core", // or "none" to disable
-      contextEngine: "legacy", // or a plugin id
+      memory: "memory-core", // 或 "none" 以禁用
+      contextEngine: "legacy", // 或一个插件 id
     },
   },
 }
 ```
 
-| Slot            | What it controls      | Default             |
+| 槽              | 控制内容              | 默认值              |
 | --------------- | --------------------- | ------------------- |
-| `memory`        | Active memory plugin  | `memory-core`       |
-| `contextEngine` | Active context engine | `legacy` (built-in) |
+| `memory`        | 当前生效的内存插件    | `memory-core`       |
+| `contextEngine` | 当前生效的上下文引擎  | `legacy`（内置）    |
 
-## CLI reference
+## CLI 参考
 
 ```bash
-openclaw plugins list                    # compact inventory
-openclaw plugins inspect <id>            # deep detail
-openclaw plugins inspect <id> --json     # machine-readable
-openclaw plugins status                  # operational summary
-openclaw plugins doctor                  # diagnostics
+openclaw plugins list                    # 简洁清单
+openclaw plugins inspect <id>            # 深度详情
+openclaw plugins inspect <id> --json     # 机器可读
+openclaw plugins status                  # 运行状态摘要
+openclaw plugins doctor                  # 诊断
 
-openclaw plugins install <package>        # install (ClawHub first, then npm)
-openclaw plugins install clawhub:<pkg>   # install from ClawHub only
-openclaw plugins install <path>          # install from local path
-openclaw plugins install -l <path>       # link (no copy) for dev
-openclaw plugins update <id>             # update one plugin
-openclaw plugins update --all            # update all
+openclaw plugins install <package>        # 安装（先 ClawHub，再 npm）
+openclaw plugins install clawhub:<pkg>   # 仅从 ClawHub 安装
+openclaw plugins install <path>          # 从本地路径安装
+openclaw plugins install -l <path>       # 链接（不复制），用于开发
+openclaw plugins update <id>             # 更新一个插件
+openclaw plugins update --all            # 更新全部
 
 openclaw plugins enable <id>
 openclaw plugins disable <id>
 ```
 
-See [`openclaw plugins` CLI reference](/cli/plugins) for full details.
+查看完整详情，请参见 [`openclaw plugins` CLI 参考](/cli/plugins)。
 
-## Plugin API overview
+## 插件 API 概览
 
-Plugins export either a function or an object with `register(api)`:
+插件可以导出一个函数，或导出一个带有 `register(api)` 的对象：
 
 ```typescript
 export default definePluginEntry({
@@ -241,28 +241,37 @@ export default definePluginEntry({
 });
 ```
 
-Common registration methods:
+常见注册方法：
 
-| Method                               | What it registers    |
+| 方法                                 | 注册内容             |
 | ------------------------------------ | -------------------- |
-| `registerProvider`                   | Model provider (LLM) |
-| `registerChannel`                    | Chat channel         |
-| `registerTool`                       | Agent tool           |
-| `registerHook` / `on(...)`           | Lifecycle hooks      |
-| `registerSpeechProvider`             | Text-to-speech / STT |
-| `registerMediaUnderstandingProvider` | Image/audio analysis |
-| `registerImageGenerationProvider`    | Image generation     |
-| `registerWebSearchProvider`          | Web search           |
-| `registerHttpRoute`                  | HTTP endpoint        |
-| `registerCommand` / `registerCli`    | CLI commands         |
-| `registerContextEngine`              | Context engine       |
-| `registerService`                    | Background service   |
+| `registerProvider`                   | 模型提供方（LLM）    |
+| `registerChannel`                    | 聊天频道             |
+| `registerTool`                       | Agent 工具           |
+| `registerHook` / `on(...)`           | 生命周期钩子         |
+| `registerSpeechProvider`             | 文本转语音 / STT     |
+| `registerMediaUnderstandingProvider` | 图像/音频分析        |
+| `registerImageGenerationProvider`    | 图像生成             |
+| `registerWebSearchProvider`          | Web 搜索             |
+| `registerHttpRoute`                  | HTTP 端点            |
+| `registerCommand` / `registerCli`    | CLI 命令             |
+| `registerContextEngine`              | 上下文引擎           |
+| `registerService`                    | 后台服务             |
 
-## Related
+类型化生命周期钩子的守卫行为：
 
-- [Building Plugins](/plugins/building-plugins) — create your own plugin
-- [Plugin Bundles](/plugins/bundles) — Codex/Claude/Cursor bundle compatibility
-- [Plugin Manifest](/plugins/manifest) — manifest schema
-- [Registering Tools](/plugins/building-plugins#registering-agent-tools) — add agent tools in a plugin
-- [Plugin Internals](/plugins/architecture) — capability model and load pipeline
-- [Community Plugins](/plugins/community) — third-party listings
+- `before_tool_call`: `{ block: true }` 是终态；会跳过低优先级处理器。
+- `before_tool_call`: `{ block: false }` 是空操作，不会清除先前的 block。
+- `message_sending`: `{ cancel: true }` 是终态；会跳过低优先级处理器。
+- `message_sending`: `{ cancel: false }` 是空操作，不会清除先前的 cancel。
+
+有关完整的类型化钩子行为，请参见 [SDK 概览](/plugins/sdk-overview#hook-decision-semantics)。
+
+## 相关内容
+
+- [构建插件](/plugins/building-plugins) — 创建你自己的插件
+- [插件 Bundles](/plugins/bundles) — 兼容 Codex/Claude/Cursor 的 bundle
+- [插件清单](/plugins/manifest) — manifest schema
+- [注册工具](/plugins/building-plugins#registering-agent-tools) — 在插件中添加 agent 工具
+- [插件内部机制](/plugins/architecture) — 能力模型和加载流水线
+- [社区插件](/plugins/community) — 第三方列表

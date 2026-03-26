@@ -21,11 +21,11 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- Node 24 recommended (Node 22 LTS, currently `22.16+`, still supported)
+- Node 24 推荐（当前仍支持 Node 22 LTS，`22.14+`）
 - `pnpm`
 - Docker（可选，仅用于容器化设置/端到端测试 — 参见 [Docker](/install/docker)）
 
-## Tailoring strategy (so updates do not hurt)
+## 定制策略（避免更新影响）
 
 如果你想要“100% 量身定制”且便于更新，请将你的定制内容保存在：
 
@@ -120,21 +120,21 @@ openclaw health
   - 会话：`~/.openclaw/agents/<agentId>/sessions/`
   - 日志：`/tmp/openclaw/`
 
-## Credential storage map
+## 凭证存储映射
 
-Use this when debugging auth or deciding what to back up:
+调试认证问题，或决定要备份什么时可参考此处：
 
-- **WhatsApp**: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram bot token**: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
-- **Discord bot token**: config/env or SecretRef (env/file/exec providers)
-- **Slack tokens**: config/env (`channels.slack.*`)
-- **Pairing allowlists**:
-  - `~/.openclaw/credentials/<channel>-allowFrom.json` (default account)
-  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json` (non-default accounts)
-- **Model auth profiles**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **File-backed secrets payload (optional)**: `~/.openclaw/secrets.json`
-- **Legacy OAuth import**: `~/.openclaw/credentials/oauth.json`
-  More detail: [Security](/gateway/security#credential-storage-map).
+- **WhatsApp**：`~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
+- **Telegram bot token**：配置/环境变量或 `channels.telegram.tokenFile`（仅支持普通文件；拒绝符号链接）
+- **Discord bot token**：配置/环境变量或 SecretRef（env/file/exec 提供器）
+- **Slack tokens**：配置/环境变量（`channels.slack.*`）
+- **配对允许名单**：
+  - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账号）
+  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账号）
+- **模型认证配置文件**：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- **文件后端密钥载荷（可选）**：`~/.openclaw/secrets.json`
+- **旧版 OAuth 导入**：`~/.openclaw/credentials/oauth.json`
+  更多细节： [安全](/gateway/security#credential-storage-map)。
 
 ## 更新（不破坏现有设置）
 

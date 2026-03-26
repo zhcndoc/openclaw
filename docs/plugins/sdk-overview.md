@@ -1,197 +1,201 @@
 ---
-title: "Plugin SDK Overview"
-sidebarTitle: "SDK Overview"
-summary: "Import map, registration API reference, and SDK architecture"
+title: "插件 SDK 概览"
+sidebarTitle: "SDK 概览"
+summary: "导入映射、注册 API 参考以及 SDK 架构"
 read_when:
-  - You need to know which SDK subpath to import from
-  - You want a reference for all registration methods on OpenClawPluginApi
-  - You are looking up a specific SDK export
+  - 你需要知道应该从哪个 SDK 子路径导入
+  - 你想查看 OpenClawPluginApi 上所有注册方法的参考
+  - 你正在查找某个特定的 SDK 导出
 ---
 
-# Plugin SDK Overview
+# 插件 SDK 概览
 
-The plugin SDK is the typed contract between plugins and core. This page is the
-reference for **what to import** and **what you can register**.
+插件 SDK 是插件与核心之间的类型化契约。本页是关于**导入什么**以及**可以注册什么**的参考。
 
 <Tip>
-  **Looking for a how-to guide?**
-  - First plugin? Start with [Getting Started](/plugins/building-plugins)
-  - Channel plugin? See [Channel Plugins](/plugins/sdk-channel-plugins)
-  - Provider plugin? See [Provider Plugins](/plugins/sdk-provider-plugins)
+  **在找操作指南？**
+  - 第一个插件？从 [Getting Started](/plugins/building-plugins) 开始
+  - Channel 插件？查看 [Channel Plugins](/plugins/sdk-channel-plugins)
+  - Provider 插件？查看 [Provider Plugins](/plugins/sdk-provider-plugins)
 </Tip>
 
-## Import convention
+## 导入约定
 
-Always import from a specific subpath:
+始终从特定子路径导入：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
 ```
 
-Each subpath is a small, self-contained module. This keeps startup fast and
-prevents circular dependency issues.
+每个子路径都是一个小型、独立的模块。这可以保持启动速度快，并防止循环依赖问题。
 
-## Subpath reference
+## 子路径参考
 
-The most commonly used subpaths, grouped by purpose. The full list of 100+
-subpaths is in `scripts/lib/plugin-sdk-entrypoints.json`.
+按用途分组的最常用子路径。完整的 100+ 个子路径列表在 `scripts/lib/plugin-sdk-entrypoints.json` 中。
 
-### Plugin entry
+### 插件入口
 
-| Subpath                   | Key exports                                                                                                                            |
+| 子路径                    | 关键导出                                                                                                                            |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `plugin-sdk/plugin-entry` | `definePluginEntry`                                                                                                                    |
 | `plugin-sdk/core`         | `defineChannelPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase`, `defineSetupPluginEntry`, `buildChannelConfigSchema` |
 
 <AccordionGroup>
-  <Accordion title="Channel subpaths">
-    | Subpath | Key exports |
+  <Accordion title="Channel 子路径">
+    | 子路径 | 关键导出 |
     | --- | --- |
     | `plugin-sdk/channel-setup` | `createOptionalChannelSetupSurface` |
     | `plugin-sdk/channel-pairing` | `createChannelPairingController` |
     | `plugin-sdk/channel-reply-pipeline` | `createChannelReplyPipeline` |
     | `plugin-sdk/channel-config-helpers` | `createHybridChannelConfigAdapter` |
-    | `plugin-sdk/channel-config-schema` | Channel config schema types |
+    | `plugin-sdk/channel-config-schema` | Channel 配置 schema 类型 |
     | `plugin-sdk/channel-policy` | `resolveChannelGroupRequireMention` |
     | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink` |
-    | `plugin-sdk/channel-inbound` | Debounce, mention matching, envelope helpers |
-    | `plugin-sdk/channel-send-result` | Reply result types |
+    | `plugin-sdk/channel-inbound` | 防抖、提及匹配、封装辅助函数 |
+    | `plugin-sdk/channel-send-result` | 回复结果类型 |
     | `plugin-sdk/channel-actions` | `createMessageToolButtonsSchema`, `createMessageToolCardSchema` |
-    | `plugin-sdk/channel-targets` | Target parsing/matching helpers |
-    | `plugin-sdk/channel-contract` | Channel contract types |
-    | `plugin-sdk/channel-feedback` | Feedback/reaction wiring |
+    | `plugin-sdk/channel-targets` | 目标解析/匹配辅助函数 |
+    | `plugin-sdk/channel-contract` | Channel 契约类型 |
+    | `plugin-sdk/channel-feedback` | 反馈/反应联动 |
   </Accordion>
 
-  <Accordion title="Provider subpaths">
-    | Subpath | Key exports |
+  <Accordion title="Provider 子路径">
+    | 子路径 | 关键导出 |
     | --- | --- |
     | `plugin-sdk/provider-auth` | `createProviderApiKeyAuthMethod`, `ensureApiKeyFromOptionEnvOrPrompt`, `upsertAuthProfile` |
     | `plugin-sdk/provider-models` | `normalizeModelCompat` |
-    | `plugin-sdk/provider-catalog` | Catalog type re-exports |
-    | `plugin-sdk/provider-usage` | `fetchClaudeUsage` and similar |
-    | `plugin-sdk/provider-stream` | Stream wrapper types |
-    | `plugin-sdk/provider-onboard` | Onboarding config patch helpers |
+    | `plugin-sdk/provider-catalog` | Catalog 类型重新导出 |
+    | `plugin-sdk/provider-usage` | `fetchClaudeUsage` 等 |
+    | `plugin-sdk/provider-stream` | 流包装器类型 |
+    | `plugin-sdk/provider-onboard` | 入门配置补丁辅助函数 |
   </Accordion>
 
-  <Accordion title="Auth and security subpaths">
-    | Subpath | Key exports |
+  <Accordion title="认证与安全子路径">
+    | 子路径 | 关键导出 |
     | --- | --- |
     | `plugin-sdk/command-auth` | `resolveControlCommandGate` |
     | `plugin-sdk/allow-from` | `formatAllowFromLowercase` |
-    | `plugin-sdk/secret-input` | Secret input parsing helpers |
-    | `plugin-sdk/webhook-ingress` | Webhook request/target helpers |
+    | `plugin-sdk/secret-input` | 密钥输入解析辅助函数 |
+    | `plugin-sdk/webhook-ingress` | Webhook 请求/目标辅助函数 |
   </Accordion>
 
-  <Accordion title="Runtime and storage subpaths">
-    | Subpath | Key exports |
+  <Accordion title="运行时与存储子路径">
+    | 子路径 | 关键导出 |
     | --- | --- |
     | `plugin-sdk/runtime-store` | `createPluginRuntimeStore` |
-    | `plugin-sdk/config-runtime` | Config load/write helpers |
-    | `plugin-sdk/infra-runtime` | System event/heartbeat helpers |
-    | `plugin-sdk/agent-runtime` | Agent dir/identity/workspace helpers |
-    | `plugin-sdk/directory-runtime` | Config-backed directory query/dedup |
+    | `plugin-sdk/config-runtime` | 配置加载/写入辅助函数 |
+    | `plugin-sdk/infra-runtime` | 系统事件/心跳辅助函数 |
+    | `plugin-sdk/agent-runtime` | Agent 目录/身份/工作区辅助函数 |
+    | `plugin-sdk/directory-runtime` | 基于配置的目录查询/去重 |
     | `plugin-sdk/keyed-async-queue` | `KeyedAsyncQueue` |
   </Accordion>
 
-  <Accordion title="Capability and testing subpaths">
-    | Subpath | Key exports |
+  <Accordion title="能力与测试子路径">
+    | 子路径 | 关键导出 |
     | --- | --- |
-    | `plugin-sdk/image-generation` | Image generation provider types |
-    | `plugin-sdk/media-understanding` | Media understanding provider types |
-    | `plugin-sdk/speech` | Speech provider types |
+    | `plugin-sdk/image-generation` | 图像生成 provider 类型 |
+    | `plugin-sdk/media-understanding` | 媒体理解 provider 类型 |
+    | `plugin-sdk/speech` | 语音 provider 类型 |
     | `plugin-sdk/testing` | `installCommonResolveTargetErrorCases`, `shouldAckReaction` |
   </Accordion>
 </AccordionGroup>
 
-## Registration API
+## 注册 API
 
-The `register(api)` callback receives an `OpenClawPluginApi` object with these
-methods:
+`register(api)` 回调会接收一个 `OpenClawPluginApi` 对象，其中包含以下
+方法：
 
-### Capability registration
+### 能力注册
 
-| Method                                        | What it registers              |
-| --------------------------------------------- | ------------------------------ |
-| `api.registerProvider(...)`                   | Text inference (LLM)           |
-| `api.registerChannel(...)`                    | Messaging channel              |
-| `api.registerSpeechProvider(...)`             | Text-to-speech / STT synthesis |
-| `api.registerMediaUnderstandingProvider(...)` | Image/audio/video analysis     |
-| `api.registerImageGenerationProvider(...)`    | Image generation               |
-| `api.registerWebSearchProvider(...)`          | Web search                     |
+| 方法                                        | 注册内容                       |
+| ------------------------------------------- | ------------------------------ |
+| `api.registerProvider(...)`                   | 文本推理（LLM）                |
+| `api.registerChannel(...)`                    | 消息通道                       |
+| `api.registerSpeechProvider(...)`             | 文本转语音 / STT 合成          |
+| `api.registerMediaUnderstandingProvider(...)` | 图像/音频/视频分析              |
+| `api.registerImageGenerationProvider(...)`    | 图像生成                       |
+| `api.registerWebSearchProvider(...)`          | 网页搜索                       |
 
-### Tools and commands
+### 工具与命令
 
-| Method                          | What it registers                             |
+| 方法                          | 注册内容                             |
 | ------------------------------- | --------------------------------------------- |
-| `api.registerTool(tool, opts?)` | Agent tool (required or `{ optional: true }`) |
-| `api.registerCommand(def)`      | Custom command (bypasses the LLM)             |
+| `api.registerTool(tool, opts?)` | Agent 工具（必需或 `{ optional: true }`） |
+| `api.registerCommand(def)`      | 自定义命令（绕过 LLM）               |
 
-### Infrastructure
+### 基础设施
 
-| Method                                         | What it registers     |
+| 方法                                         | 注册内容              |
 | ---------------------------------------------- | --------------------- |
-| `api.registerHook(events, handler, opts?)`     | Event hook            |
-| `api.registerHttpRoute(params)`                | Gateway HTTP endpoint |
-| `api.registerGatewayMethod(name, handler)`     | Gateway RPC method    |
-| `api.registerCli(registrar, opts?)`            | CLI subcommand        |
-| `api.registerService(service)`                 | Background service    |
-| `api.registerInteractiveHandler(registration)` | Interactive handler   |
+| `api.registerHook(events, handler, opts?)`     | 事件钩子            |
+| `api.registerHttpRoute(params)`                | 网关 HTTP 端点      |
+| `api.registerGatewayMethod(name, handler)`     | 网关 RPC 方法       |
+| `api.registerCli(registrar, opts?)`            | CLI 子命令          |
+| `api.registerService(service)`                 | 后台服务            |
+| `api.registerInteractiveHandler(registration)` | 交互式处理器        |
 
-### Exclusive slots
+### 独占槽位
 
-| Method                                     | What it registers                     |
+| 方法                                     | 注册内容                     |
 | ------------------------------------------ | ------------------------------------- |
-| `api.registerContextEngine(id, factory)`   | Context engine (one active at a time) |
-| `api.registerMemoryPromptSection(builder)` | Memory prompt section builder         |
+| `api.registerContextEngine(id, factory)`   | 上下文引擎（同一时间只能激活一个） |
+| `api.registerMemoryPromptSection(builder)` | 记忆提示词分区构建器         |
 
-### Events and lifecycle
+### 事件与生命周期
 
-| Method                                       | What it does                  |
+| 方法                                       | 作用                  |
 | -------------------------------------------- | ----------------------------- |
-| `api.on(hookName, handler, opts?)`           | Typed lifecycle hook          |
-| `api.onConversationBindingResolved(handler)` | Conversation binding callback |
+| `api.on(hookName, handler, opts?)`           | 类型化生命周期钩子          |
+| `api.onConversationBindingResolved(handler)` | 会话绑定回调                |
 
-### API object fields
+### 钩子决策语义
 
-| Field                    | Type                      | Description                                               |
+- `before_tool_call`：返回 `{ block: true }` 为终止性决策。一旦任一处理器设置了它，低优先级处理器会被跳过。
+- `before_tool_call`：返回 `{ block: false }` 会被视为没有决策（与省略 `block` 相同），而不是覆盖。
+- `message_sending`：返回 `{ cancel: true }` 为终止性决策。一旦任一处理器设置了它，低优先级处理器会被跳过。
+- `message_sending`：返回 `{ cancel: false }` 会被视为没有决策（与省略 `cancel` 相同），而不是覆盖。
+
+### API 对象字段
+
+| 字段                    | 类型                      | 描述                                               |
 | ------------------------ | ------------------------- | --------------------------------------------------------- |
-| `api.id`                 | `string`                  | Plugin id                                                 |
-| `api.name`               | `string`                  | Display name                                              |
-| `api.version`            | `string?`                 | Plugin version (optional)                                 |
-| `api.description`        | `string?`                 | Plugin description (optional)                             |
-| `api.source`             | `string`                  | Plugin source path                                        |
-| `api.rootDir`            | `string?`                 | Plugin root directory (optional)                          |
-| `api.config`             | `OpenClawConfig`          | Current config snapshot                                   |
-| `api.pluginConfig`       | `Record<string, unknown>` | Plugin-specific config from `plugins.entries.<id>.config` |
-| `api.runtime`            | `PluginRuntime`           | [Runtime helpers](/plugins/sdk-runtime)                   |
-| `api.logger`             | `PluginLogger`            | Scoped logger (`debug`, `info`, `warn`, `error`)          |
-| `api.registrationMode`   | `PluginRegistrationMode`  | `"full"`, `"setup-only"`, or `"setup-runtime"`            |
-| `api.resolvePath(input)` | `(string) => string`      | Resolve path relative to plugin root                      |
+| `api.id`                 | `string`                  | 插件 id                                             |
+| `api.name`               | `string`                  | 显示名称                                            |
+| `api.version`            | `string?`                 | 插件版本（可选）                                     |
+| `api.description`        | `string?`                 | 插件描述（可选）                                     |
+| `api.source`             | `string`                  | 插件源路径                                           |
+| `api.rootDir`            | `string?`                 | 插件根目录（可选）                                    |
+| `api.config`             | `OpenClawConfig`          | 当前配置快照                                         |
+| `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件专属配置 |
+| `api.runtime`            | `PluginRuntime`           | [运行时辅助](/plugins/sdk-runtime)                   |
+| `api.logger`             | `PluginLogger`            | 作用域日志器（`debug`、`info`、`warn`、`error`）     |
+| `api.registrationMode`   | `PluginRegistrationMode`  | `"full"`、`"setup-only"` 或 `"setup-runtime"`       |
+| `api.resolvePath(input)` | `(string) => string`      | 解析相对于插件根目录的路径                        |
 
-## Internal module convention
+## 内部模块约定
 
-Within your plugin, use local barrel files for internal imports:
+在你的插件内部，使用本地 barrel 文件来处理内部导入：
 
 ```
 my-plugin/
-  api.ts            # Public exports for external consumers
-  runtime-api.ts    # Internal-only runtime exports
-  index.ts          # Plugin entry point
-  setup-entry.ts    # Lightweight setup-only entry (optional)
+  api.ts            # 面向外部消费者的公共导出
+  runtime-api.ts    # 仅供内部使用的运行时导出
+  index.ts          # 插件入口点
+  setup-entry.ts    # 轻量级仅 setup 入口（可选）
 ```
 
 <Warning>
-  Never import your own plugin through `openclaw/plugin-sdk/<your-plugin>`
-  from production code. Route internal imports through `./api.ts` or
-  `./runtime-api.ts`. The SDK path is the external contract only.
+  切勿在生产代码中通过 `openclaw/plugin-sdk/<your-plugin>`
+  导入你自己的插件。请将内部导入通过 `./api.ts` 或
+  `./runtime-api.ts` 路由。SDK 路径仅是外部契约。
 </Warning>
 
-## Related
+## 相关内容
 
-- [Entry Points](/plugins/sdk-entrypoints) — `definePluginEntry` and `defineChannelPluginEntry` options
-- [Runtime Helpers](/plugins/sdk-runtime) — full `api.runtime` namespace reference
-- [Setup and Config](/plugins/sdk-setup) — packaging, manifests, config schemas
-- [Testing](/plugins/sdk-testing) — test utilities and lint rules
-- [SDK Migration](/plugins/sdk-migration) — migrating from deprecated surfaces
-- [Plugin Internals](/plugins/architecture) — deep architecture and capability model
+- [入口点](/plugins/sdk-entrypoints) — `definePluginEntry` 和 `defineChannelPluginEntry` 选项
+- [运行时帮助函数](/plugins/sdk-runtime) — `api.runtime` 命名空间完整参考
+- [设置与配置](/plugins/sdk-setup) — 打包、清单、配置模式
+- [测试](/plugins/sdk-testing) — 测试工具和 lint 规则
+- [SDK 迁移](/plugins/sdk-migration) — 从已弃用接口迁移
+- [插件内部机制](/plugins/architecture) — 深层架构和能力模型

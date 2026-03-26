@@ -41,7 +41,7 @@ Bun 是一个可选的本地运行时，用于直接运行 TypeScript（`bun run
 
 Bun 会阻止依赖的生命周期脚本，除非显式信任。对于本仓库，通常被阻止的脚本并非必需：
 
-- `@whiskeysockets/baileys` `preinstall` -- 检查 Node 主版本 >= 20（OpenClaw 默认使用 Node 24，仍支持 Node 22 LTS，当前为 `22.16+`）
+- `@whiskeysockets/baileys` `preinstall` -- 检查 Node 主版本是否 >= 20（OpenClaw 默认使用 Node 24，同时仍支持 Node 22 LTS，目前为 `22.14+`）
 - `protobufjs` `postinstall` -- 发出关于不兼容版本方案的警告（无构建产物）
 
 如果你遇到运行时问题需要这些脚本，请显式信任它们：
