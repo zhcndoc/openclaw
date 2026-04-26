@@ -1,16 +1,16 @@
 ---
-summary: "CLI reference for `openclaw qr` (generate mobile pairing QR + setup code)"
+summary: "openclaw qr 的 CLI 参考（生成移动配对二维码 + 设置代码）"
 read_when:
-  - You want to pair a mobile node app with a gateway quickly
-  - You need setup-code output for remote/manual sharing
+  - 你想快速将移动节点应用与网关配对
+  - 你需要用于远程/手动共享的设置代码输出
 title: "QR"
 ---
 
 # `openclaw qr`
 
-Generate a mobile pairing QR and setup code from your current Gateway configuration.
+根据当前的网关配置生成移动配对二维码和设置代码。
 
-## Usage
+## 用法
 
 ```bash
 openclaw qr
@@ -20,34 +20,33 @@ openclaw qr --remote
 openclaw qr --url wss://gateway.example/ws
 ```
 
-## Options
+## 选项
 
-- `--remote`: prefer `gateway.remote.url`; if it is unset, `gateway.tailscale.mode=serve|funnel` can still provide the remote public URL
-- `--url <url>`: override gateway URL used in payload
-- `--public-url <url>`: override public URL used in payload
-- `--token <token>`: override which gateway token the bootstrap flow authenticates against
-- `--password <password>`: override which gateway password the bootstrap flow authenticates against
-- `--setup-code-only`: print only setup code
-- `--no-ascii`: skip ASCII QR rendering
-- `--json`: emit JSON (`setupCode`, `gatewayUrl`, `auth`, `urlSource`)
+- `--remote`: 优先使用 `gateway.remote.url`；如果未设置，`gateway.tailscale.mode=serve|funnel` 仍可提供远程公共 URL
+- `--url <url>`: 覆盖 payload 中使用的网关 URL
+- `--public-url <url>`: 覆盖 payload 中使用的公共 URL
+- `--token <token>`: 覆盖引导流程进行身份验证所使用的网关令牌
+- `--password <password>`: 覆盖引导流程进行身份验证所使用的网关密码
+- `--setup-code-only`: 仅打印设置代码
+- `--no-ascii`: 跳过 ASCII 二维码渲染
+- `--json`: 输出 JSON (`setupCode`, `gatewayUrl`, `auth`, `urlSource`)
 
-## Notes
+## 备注
 
-- `--token` and `--password` are mutually exclusive.
-- The setup code itself now carries an opaque short-lived `bootstrapToken`, not the shared gateway token/password.
-- In the built-in node/operator bootstrap flow, the primary node token still lands with `scopes: []`.
-- If bootstrap handoff also issues an operator token, it stays bounded to the bootstrap allowlist: `operator.approvals`, `operator.read`, `operator.talk.secrets`, `operator.write`.
-- Bootstrap scope checks are role-prefixed. That operator allowlist only satisfies operator requests; non-operator roles still need scopes under their own role prefix.
-- Mobile pairing fails closed for Tailscale/public `ws://` gateway URLs. Private LAN `ws://` remains supported, but Tailscale/public mobile routes should use Tailscale Serve/Funnel or a `wss://` gateway URL.
-- With `--remote`, OpenClaw requires either `gateway.remote.url` or
-  `gateway.tailscale.mode=serve|funnel`.
-- With `--remote`, if effectively active remote credentials are configured as SecretRefs and you do not pass `--token` or `--password`, the command resolves them from the active gateway snapshot. If gateway is unavailable, the command fails fast.
-- Without `--remote`, local gateway auth SecretRefs are resolved when no CLI auth override is passed:
-  - `gateway.auth.token` resolves when token auth can win (explicit `gateway.auth.mode="token"` or inferred mode where no password source wins).
-  - `gateway.auth.password` resolves when password auth can win (explicit `gateway.auth.mode="password"` or inferred mode with no winning token from auth/env).
-- If both `gateway.auth.token` and `gateway.auth.password` are configured (including SecretRefs) and `gateway.auth.mode` is unset, setup-code resolution fails until mode is set explicitly.
-- Gateway version skew note: this command path requires a gateway that supports `secrets.resolve`; older gateways return an unknown-method error.
-- After scanning, approve device pairing with:
+- `--token` 和 `--password` 互斥。
+- 设置代码本身现在携带一个不透明的短期 `bootstrapToken`，而不是共享的网关令牌/密码。
+- 在内置的节点/操作员引导流程中，主节点令牌仍然具有 `scopes: []`。
+- 如果引导移交也颁发了操作员令牌，它仍受限于引导允许列表：`operator.approvals`, `operator.read`, `operator.talk.secrets`, `operator.write`。
+- 引导范围检查带有角色前缀。该操作员允许列表仅满足操作员请求；非操作员角色仍需要其自身角色前缀下的范围。
+- 对于 Tailscale/公共 `ws://` 网关 URL，移动配对会失败关闭。私人局域网 `ws://` 仍受支持，但 Tailscale/公共移动路由应使用 Tailscale Serve/Funnel 或 `wss://` 网关 URL。
+- 使用 `--remote` 时，OpenClaw 需要 `gateway.remote.url` 或 `gateway.tailscale.mode=serve|funnel`。
+- 使用 `--remote` 时，如果有效激活的远程凭证配置为 SecretRefs 且您未传递 `--token` 或 `--password`，命令将从活动网关快照中解析它们。如果网关不可用，命令将快速失败。
+- 不使用 `--remote` 时，当未传递 CLI 身份验证覆盖时，本地网关身份验证 SecretRefs 会被解析：
+  - `gateway.auth.token` 在令牌身份验证可以胜出时解析（显式 `gateway.auth.mode="token"` 或推断模式下没有密码源胜出）。
+  - `gateway.auth.password` 在密码身份验证可以胜出时解析（显式 `gateway.auth.mode="password"` 或推断模式下没有来自身份验证/环境的胜出令牌）。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRefs）且 `gateway.auth.mode` 未设置，则设置代码解析将失败，直到显式设置模式。
+- 网关版本差异说明：此命令路径需要支持 `secrets.resolve` 的网关；旧版网关将返回未知方法错误。
+- 扫描后，使用以下命令批准设备配对：
   - `openclaw devices list`
   - `openclaw devices approve <requestId>`
 

@@ -1,17 +1,17 @@
 ---
-summary: "Deploy OpenClaw on Northflank with one-click template"
+summary: "在 Northflank 上通过一键模板部署 OpenClaw"
 read_when:
-  - Deploying OpenClaw to Northflank
-  - You want a one-click cloud deploy with browser-based Control UI
+  - 将 OpenClaw 部署到 Northflank
+  - 你想要一个基于浏览器 Control UI 的一键云部署
 title: "Northflank"
 ---
 
 # Northflank
 
-Deploy OpenClaw on Northflank with a one-click template and access it through the web Control UI.
-This is the easiest "no terminal on the server" path: Northflank runs the Gateway for you.
+使用一键模板在 Northflank 上部署 OpenClaw，并通过网页 Control UI 访问它。
+这是最简单的“服务器上没有终端”的部署方式：Northflank 会为你运行 Gateway。
 
-## How to get started
+## 如何开始
 
 1. Click [Deploy OpenClaw](https://northflank.com/stacks/deploy-openclaw) to open the template.
 2. Create an [account on Northflank](https://app.northflank.com/signup) if you don't already have one.
@@ -22,23 +22,23 @@ This is the easiest "no terminal on the server" path: Northflank runs the Gatewa
 7. Open the OpenClaw service.
 8. Open the public OpenClaw URL at `/openclaw` and connect using the configured shared secret. This template uses `OPENCLAW_GATEWAY_TOKEN` by default; if you replace it with password auth, use that password instead.
 
-## What you get
+## 你将获得
 
-- Hosted OpenClaw Gateway + Control UI
-- Persistent storage via Northflank Volume (`/data`) so `openclaw.json`,
-  per-agent `auth-profiles.json`, channel/provider state, sessions, and
-  workspace survive redeploys
+- 托管的 OpenClaw Gateway + Control UI
+- 通过 Northflank Volume（`/data`）提供持久化存储，因此 `openclaw.json`、
+  每个代理的 `auth-profiles.json`、channel/provider 状态、sessions，以及
+  workspace 都会在重新部署后保留
 
-## Connect a channel
+## 连接 channel
 
-Use the Control UI at `/openclaw` or run `openclaw onboard` via SSH for channel setup instructions:
+使用 `/openclaw` 处的 Control UI，或通过 SSH 运行 `openclaw onboard` 以获取 channel 设置说明：
 
-- [Telegram](/channels/telegram) (fastest — just a bot token)
+- [Telegram](/channels/telegram)（最快——只需要一个 bot token）
 - [Discord](/channels/discord)
-- [All channels](/channels)
+- [所有 channels](/channels)
 
-## Next steps
+## 下一步
 
-- Set up messaging channels: [Channels](/channels)
-- Configure the Gateway: [Gateway configuration](/gateway/configuration)
-- Keep OpenClaw up to date: [Updating](/install/updating)
+- 设置消息 channels：[Channels](/channels)
+- 配置 Gateway：[Gateway configuration](/gateway/configuration)
+- 保持 OpenClaw 为最新版本：[Updating](/install/updating)

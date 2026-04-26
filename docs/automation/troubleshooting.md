@@ -1,12 +1,12 @@
 ---
-summary: "Redirect to /automation/cron-jobs"
-title: "Automation troubleshooting"
+summary: "重定向到 /automation/cron-jobs"
+title: "自动化故障排除"
 ---
 
-This page moved to [Scheduled Tasks](/automation/cron-jobs#troubleshooting). See [Scheduled Tasks](/automation/cron-jobs#troubleshooting) for troubleshooting documentation.
+此页面已移动到 [计划任务](/automation/cron-jobs#troubleshooting)。有关故障排除文档，请参阅 [计划任务](/automation/cron-jobs#troubleshooting)。
 
-## Related
+## 相关内容
 
-- [Hooks](/automation/hooks)
-- [Background tasks](/automation/tasks)
-- [Gateway troubleshooting](/gateway/troubleshooting)
+- [钩子](/automation/hooks)
+- [后台任务](/automation/tasks)
+- [网关故障排除](/gateway/troubleshooting)

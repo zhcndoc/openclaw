@@ -1,36 +1,34 @@
 ---
-summary: "Zalo bot support status, capabilities, and configuration"
+summary: "Zalo 机器人支持状态、功能和配置"
 read_when:
-  - Working on Zalo features or webhooks
+  - 正在处理 Zalo 功能或 webhook
 title: "Zalo"
 ---
 
-Status: experimental. DMs are supported. The [Capabilities](#capabilities) section below reflects current Marketplace-bot behavior.
+状态：实验性。支持私信。下面的 [功能能力](#capabilities) 部分反映当前 Marketplace 机器人行为。
 
-## Bundled plugin
+## 捆绑插件
 
-Zalo ships as a bundled plugin in current OpenClaw releases, so normal packaged
-builds do not need a separate install.
+Zalo 作为捆绑插件包含在当前的 OpenClaw 版本中，因此正常的打包构建无需单独安装。
 
-If you are on an older build or a custom install that excludes Zalo, install it
-manually:
+如果您使用的是较旧的版本或排除了 Zalo 的自定义安装，请手动安装：
 
-- Install via CLI: `openclaw plugins install @openclaw/zalo`
-- Or from a source checkout: `openclaw plugins install ./path/to/local/zalo-plugin`
-- Details: [Plugins](/tools/plugin)
+- 通过 CLI 安装：`openclaw plugins install @openclaw/zalo`
+- 或从源代码检出安装：`openclaw plugins install ./path/to/local/zalo-plugin`
+- 详情：[插件](/tools/plugin)
 
-## Quick setup (beginner)
+## 快速设置（初学者）
 
-1. Ensure the Zalo plugin is available.
-   - Current packaged OpenClaw releases already bundle it.
-   - Older/custom installs can add it manually with the commands above.
-2. Set the token:
-   - Env: `ZALO_BOT_TOKEN=...`
-   - Or config: `channels.zalo.accounts.default.botToken: "..."`.
-3. Restart the gateway (or finish setup).
-4. DM access is pairing by default; approve the pairing code on first contact.
+1. 确保 Zalo 插件可用。
+   - 当前的打包 OpenClaw 版本已捆绑它。
+   - 较旧/自定义安装可以使用上述命令手动添加。
+2. 设置令牌：
+   - 环境变量：`ZALO_BOT_TOKEN=...`
+   - 或配置：`channels.zalo.accounts.default.botToken: "..."`。
+3. 重启网关（或完成设置）。
+4. 私信访问默认为配对；首次联系时批准配对码。
 
-Minimal config:
+最简配置：
 
 ```json5
 {
@@ -48,30 +46,30 @@ Minimal config:
 }
 ```
 
-## What it is
+## 它是什么
 
-Zalo is a Vietnam-focused messaging app; its Bot API lets the Gateway run a bot for 1:1 conversations.
-It is a good fit for support or notifications where you want deterministic routing back to Zalo.
+Zalo 是一个面向越南的消息应用，其机器人 API 允许网关运行机器人进行一对一对话。
+非常适合需要确定性路由回 Zalo 的支持或通知场景。
 
-This page reflects current OpenClaw behavior for **Zalo Bot Creator / Marketplace bots**.
-**Zalo Official Account (OA) bots** are a different Zalo product surface and may behave differently.
+此页面反映当前 OpenClaw 对**Zalo 机器人创建者/Marketplace 机器人**的行为。
+**Zalo 官方账号 (OA) 机器人**是另一种 Zalo 产品，行为可能不同。
 
-- A Zalo Bot API channel owned by the Gateway.
-- Deterministic routing: replies go back to Zalo; the model never chooses channels.
-- DMs share the agent's main session.
-- The [Capabilities](#capabilities) section below shows current Marketplace-bot support.
+- 由网关拥有的 Zalo 机器人 API 通道。
+- 确定性路由：回复回到 Zalo；模型从不选择通道。
+- 私信共享代理的主会话。
+- 下面的 [功能能力](#capabilities) 部分展示当前 Marketplace 机器人的支持。
 
-## Setup (fast path)
+## 设置（快速路径）
 
-### 1) Create a bot token (Zalo Bot Platform)
+### 1）创建机器人令牌（Zalo 机器人平台）
 
-1. Go to [https://bot.zaloplatforms.com](https://bot.zaloplatforms.com) and sign in.
-2. Create a new bot and configure its settings.
-3. Copy the full bot token (typically `numeric_id:secret`). For Marketplace bots, the usable runtime token may appear in the bot's welcome message after creation.
+1. 访问 [https://bot.zaloplatforms.com](https://bot.zaloplatforms.com) 并登录。
+2. 创建新机器人并配置其设置。
+3. 复制完整机器人令牌（通常为 `numeric_id:secret`）。对于 Marketplace 机器人，可以在创建后的欢迎消息中看到可用的运行时令牌。
 
-### 2) Configure the token (env or config)
+### 2）配置令牌（环境变量或配置）
 
-Example:
+示例：
 
 ```json5
 {
@@ -89,164 +87,164 @@ Example:
 }
 ```
 
-If you later move to a Zalo bot surface where groups are available, you can add group-specific config such as `groupPolicy` and `groupAllowFrom` explicitly. For current Marketplace-bot behavior, see [Capabilities](#capabilities).
+如果以后切换到支持群组的 Zalo 机器人表面，可以显式添加群组相关配置，如 `groupPolicy` 和 `groupAllowFrom`。当前 Marketplace 机器人行为详见 [功能能力](#capabilities)。
 
-Env option: `ZALO_BOT_TOKEN=...` (works for the default account only).
+环境变量选项：`ZALO_BOT_TOKEN=...`（仅适用于默认账户）。
 
-Multi-account support: use `channels.zalo.accounts` with per-account tokens and optional `name`.
+多账户支持：使用 `channels.zalo.accounts` 为每个账户配置令牌和可选的 `name`。
 
-3. Restart the gateway. Zalo starts when a token is resolved (env or config).
-4. DM access defaults to pairing. Approve the code when the bot is first contacted.
+3. 重启网关。令牌解析后（来自环境变量或配置），Zalo 即启动。
+4. 私信默认使用配对。首次被机器人联系时批准配对码。
 
-## How it works (behavior)
+## 工作原理（行为）
 
-- Inbound messages are normalized into the shared channel envelope with media placeholders.
-- Replies always route back to the same Zalo chat.
-- Long-polling by default; webhook mode available with `channels.zalo.webhookUrl`.
+- 入站消息被标准化为共享通道的信封形式，并带媒体占位符。
+- 回复总是路由回相同的 Zalo 聊天。
+- 默认长轮询；支持通过 `channels.zalo.webhookUrl` 使用 webhook 模式。
 
-## Limits
+## 限制
 
-- Outbound text is chunked to 2000 characters (Zalo API limit).
-- Media downloads/uploads are capped by `channels.zalo.mediaMaxMb` (default 5).
-- Streaming is blocked by default due to the 2000 char limit making streaming less useful.
+- 出站文本拆分为最多 2000 字符块（Zalo API 限制）。
+- 媒体下载/上传受限于 `channels.zalo.mediaMaxMb`（默认 5MB）。
+- 由于 2000 字符限制，默认阻止流式传输，流式传输用途有限。
 
-## Access control (DMs)
+## 访问控制（私信）
 
-### DM access
+### 私信访问
 
-- Default: `channels.zalo.dmPolicy = "pairing"`. Unknown senders receive a pairing code; messages are ignored until approved (codes expire after 1 hour).
-- Approve via:
+- 默认：`channels.zalo.dmPolicy = "pairing"`。未知发送者会收到配对码；未批准前消息被忽略（配对码 1 小时后过期）。
+- 通过以下命令批准：
   - `openclaw pairing list zalo`
   - `openclaw pairing approve zalo <CODE>`
-- Pairing is the default token exchange. Details: [Pairing](/channels/pairing)
-- `channels.zalo.allowFrom` accepts numeric user IDs (no username lookup available).
+- 配对为默认令牌交换方式。详情请见：[配对](/channels/pairing)
+- `channels.zalo.allowFrom` 接受数字用户 ID（无用户名查找）。
 
-## Access control (Groups)
+## 访问控制（群组）
 
-For **Zalo Bot Creator / Marketplace bots**, group support was not available in practice because the bot could not be added to a group at all.
+对于 **Zalo 机器人创建者/Marketplace 机器人**，实际上不支持群组，因为机器人根本无法被添加进群组。
 
-That means the group-related config keys below exist in the schema, but were not usable for Marketplace bots:
+这意味着下面的群组相关配置键在架构中存在，但对 Marketplace 机器人不可用：
 
-- `channels.zalo.groupPolicy` controls group inbound handling: `open | allowlist | disabled`.
-- `channels.zalo.groupAllowFrom` restricts which sender IDs can trigger the bot in groups.
-- If `groupAllowFrom` is unset, Zalo falls back to `allowFrom` for sender checks.
-- Runtime note: if `channels.zalo` is missing entirely, runtime still falls back to `groupPolicy="allowlist"` for safety.
+- `channels.zalo.groupPolicy` 控制群组入站处理：`open | allowlist | disabled`。
+- `channels.zalo.groupAllowFrom` 限制哪些发送者 ID 可在群组中触发机器人。
+- 若未设置 `groupAllowFrom`，Zalo 将回退到使用 `allowFrom` 进行发送者检查。
+- 运行时注意：如果完全缺失 `channels.zalo`，运行时仍安全地回退到 `groupPolicy="allowlist"`。
 
-The group policy values (when group access is available on your bot surface) are:
+当群组访问可用时，其群组策略值为：
 
-- `groupPolicy: "disabled"` — blocks all group messages.
-- `groupPolicy: "open"` — allows any group member (mention-gated).
-- `groupPolicy: "allowlist"` — fail-closed default; only allowed senders are accepted.
+- `groupPolicy: "disabled"` — 阻止所有群组消息。
+- `groupPolicy: "open"` — 允许任何群组成员（需提及机器人）。
+- `groupPolicy: "allowlist"` — 默认失败关闭；只接受允许的发送者。
 
-If you are using a different Zalo bot product surface and have verified working group behavior, document that separately rather than assuming it matches the Marketplace-bot flow.
+如果你使用的是不同的 Zalo 机器人产品，并且确认群组行为正常，请单独记录，不要假设与 Marketplace 机器人流程相同。
 
-## Long-polling vs webhook
+## 长轮询 vs webhook
 
-- Default: long-polling (no public URL required).
-- Webhook mode: set `channels.zalo.webhookUrl` and `channels.zalo.webhookSecret`.
-  - The webhook secret must be 8-256 characters.
-  - Webhook URL must use HTTPS.
-  - Zalo sends events with `X-Bot-Api-Secret-Token` header for verification.
-  - Gateway HTTP handles webhook requests at `channels.zalo.webhookPath` (defaults to the webhook URL path).
-  - Requests must use `Content-Type: application/json` (or `+json` media types).
-  - Duplicate events (`event_name + message_id`) are ignored for a short replay window.
-  - Burst traffic is rate-limited per path/source and may return HTTP 429.
+- 默认：长轮询（无需公开 URL）。
+- webhook 模式：配置 `channels.zalo.webhookUrl` 和 `channels.zalo.webhookSecret`。
+  - webhook 密钥必须为 8-256 字符。
+  - webhook URL 必须是 HTTPS。
+  - Zalo 使用 `X-Bot-Api-Secret-Token` 头部发送事件以供验证。
+  - 网关 HTTP 服务器在 `channels.zalo.webhookPath` 路径（默认与 webhook URL 路径相同）处理 webhook 请求。
+  - 请求必须使用 `Content-Type: application/json`（或 `+json` 媒体类型）。
+  - 重复事件（`event_name + message_id`）在短暂重放窗口内被忽略。
+  - 突发流量受路径/来源限制，可能返回 HTTP 429。
 
-**Note:** getUpdates (polling) and webhook are mutually exclusive per Zalo API docs.
+**注意：** 根据 Zalo API 文档，getUpdates（轮询）和 webhook 是互斥的。
 
-## Supported message types
+## 支持的消息类型
 
-For a quick support snapshot, see [Capabilities](#capabilities). The notes below add detail where the behavior needs extra context.
+快速支持快照见 [功能能力](#capabilities)。以下注释补充了需额外说明的行为。
 
-- **Text messages**: Full support with 2000 character chunking.
-- **Plain URLs in text**: Behave like normal text input.
-- **Link previews / rich link cards**: See the Marketplace-bot status in [Capabilities](#capabilities); they did not reliably trigger a reply.
-- **Image messages**: See the Marketplace-bot status in [Capabilities](#capabilities); inbound image handling was unreliable (typing indicator without a final reply).
-- **Stickers**: See the Marketplace-bot status in [Capabilities](#capabilities).
-- **Voice notes / audio files / video / generic file attachments**: See the Marketplace-bot status in [Capabilities](#capabilities).
-- **Unsupported types**: Logged (for example, messages from protected users).
+- **文本消息**：完全支持，支持 2000 字符拆分。
+- **文本中的纯 URL**：表现如普通文本输入。
+- **链接预览 / 富链接卡片**：见 [功能能力](#capabilities) 中的 Marketplace 机器人状态；未稳定触发回复。
+- **图片消息**：见 [功能能力](#capabilities)；入站图片处理不可靠（显示输入指示，但无最终回复）。
+- **贴纸**：见 [功能能力](#capabilities)。
+- **语音消息 / 音频文件 / 视频 / 通用文件附件**：见 [功能能力](#capabilities)。
+- **不支持类型**：记录日志（例如来自受保护用户的消息）。
 
-## Capabilities
+## 功能能力
 
-This table summarizes current **Zalo Bot Creator / Marketplace bot** behavior in OpenClaw.
+本表总结了当前 OpenClaw 对 **Zalo 机器人创建者/Marketplace 机器人** 行为。
 
-| Feature                     | Status                                  |
-| --------------------------- | --------------------------------------- |
-| Direct messages             | ✅ Supported                            |
-| Groups                      | ❌ Not available for Marketplace bots   |
-| Media (inbound images)      | ⚠️ Limited / verify in your environment |
-| Media (outbound images)     | ⚠️ Not re-tested for Marketplace bots   |
-| Plain URLs in text          | ✅ Supported                            |
-| Link previews               | ⚠️ Unreliable for Marketplace bots      |
-| Reactions                   | ❌ Not supported                        |
-| Stickers                    | ⚠️ No agent reply for Marketplace bots  |
-| Voice notes / audio / video | ⚠️ No agent reply for Marketplace bots  |
-| File attachments            | ⚠️ No agent reply for Marketplace bots  |
-| Threads                     | ❌ Not supported                        |
-| Polls                       | ❌ Not supported                        |
-| Native commands             | ❌ Not supported                        |
-| Streaming                   | ⚠️ Blocked (2000 char limit)            |
+| 功能                       | 状态                                      |
+| -------------------------- | ---------------------------------------- |
+| 私信                       | ✅ 支持                                  |
+| 群组                       | ❌ Marketplace 机器人不可用               |
+| 媒体（入站图片）           | ⚠️ 有限 / 请在你的环境中验证               |
+| 媒体（出站图片）           | ⚠️ Marketplace 机器人未重新测试           |
+| 文本中的纯 URL             | ✅ 支持                                  |
+| 链接预览                   | ⚠️ Marketplace 机器人不稳定                |
+| 反应                       | ❌ 不支持                                |
+| 贴纸                       | ⚠️ Marketplace 机器人无代理回复            |
+| 语音 / 音频 / 视频          | ⚠️ Marketplace 机器人无代理回复            |
+| 文件附件                   | ⚠️ Marketplace 机器人无代理回复            |
+| 线程                       | ❌ 不支持                                |
+| 投票                       | ❌ 不支持                                |
+| 原生命令                   | ❌ 不支持                                |
+| 流式传输                   | ⚠️ 阻止（2000 字符限制）                   |
 
-## Delivery targets (CLI/cron)
+## 发送目标（CLI/定时任务）
 
-- Use a chat id as the target.
-- Example: `openclaw message send --channel zalo --target 123456789 --message "hi"`.
+- 使用聊天 ID 作为目标。
+- 示例：`openclaw message send --channel zalo --target 123456789 --message "hi"`。
 
-## Troubleshooting
+## 故障排除
 
-**Bot doesn't respond:**
+**机器人不响应：**
 
-- Check that the token is valid: `openclaw channels status --probe`
-- Verify the sender is approved (pairing or allowFrom)
-- Check gateway logs: `openclaw logs --follow`
+- 检查令牌是否有效：`openclaw channels status --probe`
+- 确认发送者已获批准（配对或白名单）
+- 查看网关日志：`openclaw logs --follow`
 
-**Webhook not receiving events:**
+**Webhook 未接收到事件：**
 
-- Ensure webhook URL uses HTTPS
-- Verify secret token is 8-256 characters
-- Confirm the gateway HTTP endpoint is reachable on the configured path
-- Check that getUpdates polling is not running (they're mutually exclusive)
+- 确保 webhook URL 使用 HTTPS
+- 确认密钥长度为 8-256 字符
+- 确认网关 HTTP 端点在配置路径上可访问
+- 确认未同时运行 getUpdates 轮询（两者互斥）
 
-## Configuration reference (Zalo)
+## 配置参考（Zalo）
 
-Full configuration: [Configuration](/gateway/configuration)
+完整配置请见：[配置](/gateway/configuration)
 
-The flat top-level keys (`channels.zalo.botToken`, `channels.zalo.dmPolicy`, and similar) are a legacy single-account shorthand. Prefer `channels.zalo.accounts.<id>.*` for new configs. Both forms are still documented here because they exist in the schema.
+扁平顶级键（`channels.zalo.botToken`、`channels.zalo.dmPolicy` 等）为遗留的单账户简写。新配置推荐使用 `channels.zalo.accounts.<id>.*`。两种形式均在此文档中说明，因为架构中存在。
 
-Provider options:
+提供者选项：
 
-- `channels.zalo.enabled`: enable/disable channel startup.
-- `channels.zalo.botToken`: bot token from Zalo Bot Platform.
-- `channels.zalo.tokenFile`: read token from a regular file path. Symlinks are rejected.
-- `channels.zalo.dmPolicy`: `pairing | allowlist | open | disabled` (default: pairing).
-- `channels.zalo.allowFrom`: DM allowlist (user IDs). `open` requires `"*"`. The wizard will ask for numeric IDs.
-- `channels.zalo.groupPolicy`: `open | allowlist | disabled` (default: allowlist). Present in config; see [Capabilities](#capabilities) and [Access control (Groups)](#access-control-groups) for current Marketplace-bot behavior.
-- `channels.zalo.groupAllowFrom`: group sender allowlist (user IDs). Falls back to `allowFrom` when unset.
-- `channels.zalo.mediaMaxMb`: inbound/outbound media cap (MB, default 5).
-- `channels.zalo.webhookUrl`: enable webhook mode (HTTPS required).
-- `channels.zalo.webhookSecret`: webhook secret (8-256 chars).
-- `channels.zalo.webhookPath`: webhook path on the gateway HTTP server.
-- `channels.zalo.proxy`: proxy URL for API requests.
+- `channels.zalo.enabled`：启用/禁用通道启动。
+- `channels.zalo.botToken`：来自 Zalo 机器人平台的令牌。
+- `channels.zalo.tokenFile`：从普通文件路径读取令牌。拒绝符号链接。
+- `channels.zalo.dmPolicy`：`pairing | allowlist | open | disabled`（默认：pairing）。
+- `channels.zalo.allowFrom`：私信白名单（用户 ID）。`open` 需使用 `"*"`。向导将请求数字 ID。
+- `channels.zalo.groupPolicy`：`open | allowlist | disabled`（默认：allowlist）。配置中存在；见 [功能能力](#capabilities) 和 [访问控制（群组）](#access-control-groups) 了解当前 Marketplace 机器人行为。
+- `channels.zalo.groupAllowFrom`：群组发送者白名单（用户 ID）。未设置时回退到 `allowFrom`。
+- `channels.zalo.mediaMaxMb`：入站/出站媒体大小限制（MB，默认 5）。
+- `channels.zalo.webhookUrl`：启用 webhook 模式（需 HTTPS）。
+- `channels.zalo.webhookSecret`：webhook 密钥（8-256 字符）。
+- `channels.zalo.webhookPath`：网关 HTTP 服务器上的 webhook 路径。
+- `channels.zalo.proxy`：API 请求代理 URL。
 
-Multi-account options:
+多账户选项：
 
-- `channels.zalo.accounts.<id>.botToken`: per-account token.
-- `channels.zalo.accounts.<id>.tokenFile`: per-account regular token file. Symlinks are rejected.
-- `channels.zalo.accounts.<id>.name`: display name.
-- `channels.zalo.accounts.<id>.enabled`: enable/disable account.
-- `channels.zalo.accounts.<id>.dmPolicy`: per-account DM policy.
-- `channels.zalo.accounts.<id>.allowFrom`: per-account allowlist.
-- `channels.zalo.accounts.<id>.groupPolicy`: per-account group policy. Present in config; see [Capabilities](#capabilities) and [Access control (Groups)](#access-control-groups) for current Marketplace-bot behavior.
-- `channels.zalo.accounts.<id>.groupAllowFrom`: per-account group sender allowlist.
-- `channels.zalo.accounts.<id>.webhookUrl`: per-account webhook URL.
-- `channels.zalo.accounts.<id>.webhookSecret`: per-account webhook secret.
-- `channels.zalo.accounts.<id>.webhookPath`: per-account webhook path.
-- `channels.zalo.accounts.<id>.proxy`: per-account proxy URL.
+- `channels.zalo.accounts.<id>.botToken`: 每个账户的令牌。
+- `channels.zalo.accounts.<id>.tokenFile`: 每个账户的普通令牌文件。拒绝符号链接。
+- `channels.zalo.accounts.<id>.name`: 显示名称。
+- `channels.zalo.accounts.<id>.enabled`: 启用/禁用账户。
+- `channels.zalo.accounts.<id>.dmPolicy`: 每个账户的私信策略。
+- `channels.zalo.accounts.<id>.allowFrom`: 每个账户的白名单。
+- `channels.zalo.accounts.<id>.groupPolicy`: 每个账户的群组策略。配置中存在；见 [功能能力](#capabilities) 和 [访问控制（群组）](#access-control-groups) 了解当前 Marketplace 机器人行为。
+- `channels.zalo.accounts.<id>.groupAllowFrom`: 每个账户的群组发送者白名单。
+- `channels.zalo.accounts.<id>.webhookUrl`: 每个账户的 webhook URL。
+- `channels.zalo.accounts.<id>.webhookSecret`: 每个账户的 webhook 密钥。
+- `channels.zalo.accounts.<id>.webhookPath`: 每个账户的 webhook 路径。
+- `channels.zalo.accounts.<id>.proxy`: 每个账户的代理 URL。
 
-## Related
+## 相关
 
-- [Channels Overview](/channels) — all supported channels
-- [Pairing](/channels/pairing) — DM authentication and pairing flow
-- [Groups](/channels/groups) — group chat behavior and mention gating
-- [Channel Routing](/channels/channel-routing) — session routing for messages
-- [Security](/gateway/security) — access model and hardening
+- [渠道概览](/channels) — 所有支持的渠道
+- [配对](/channels/pairing) — 私信认证和配对流程
+- [群组](/channels/groups) — 群聊行为和提及限制
+- [渠道路由](/channels/channel-routing) — 消息的会话路由
+- [安全](/gateway/security) — 访问模型和加固

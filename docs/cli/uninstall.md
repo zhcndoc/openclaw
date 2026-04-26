@@ -1,27 +1,27 @@
 ---
-summary: "CLI reference for `openclaw uninstall` (remove gateway service + local data)"
+summary: "`openclaw uninstall` 的命令行参考（移除网关服务 + 本地数据）"
 read_when:
-  - You want to remove the gateway service and/or local state
-  - You want a dry-run first
-title: "Uninstall"
+  - 你想移除网关服务和/或本地状态
+  - 你想先进行一次 dry-run
+title: "卸载"
 ---
 
 # `openclaw uninstall`
 
-Uninstall the gateway service + local data (CLI remains).
+卸载网关服务 + 本地数据（命令行工具本身保持不变）。
 
-Options:
+选项：
 
-- `--service`: remove the gateway service
-- `--state`: remove state and config
-- `--workspace`: remove workspace directories
-- `--app`: remove the macOS app
-- `--all`: remove service, state, workspace, and app
-- `--yes`: skip confirmation prompts
-- `--non-interactive`: disable prompts; requires `--yes`
-- `--dry-run`: print actions without removing files
+- `--service`: 移除网关服务
+- `--state`: 移除状态和配置
+- `--workspace`: 移除工作区目录
+- `--app`: 移除 macOS 应用
+- `--all`: 移除服务、状态、工作区和应用
+- `--yes`: 跳过确认提示
+- `--non-interactive`: 禁用提示；需要 `--yes`
+- `--dry-run`: 打印操作而不删除文件
 
-Examples:
+示例：
 
 ```bash
 openclaw backup create
@@ -32,11 +32,11 @@ openclaw uninstall --all --yes
 openclaw uninstall --dry-run
 ```
 
-Notes:
+注意：
 
-- Run `openclaw backup create` first if you want a restorable snapshot before removing state or workspaces.
-- `--all` is shorthand for removing service, state, workspace, and app together.
-- `--non-interactive` requires `--yes`.
+- 如果你想在移除状态或工作区之前保留可恢复的快照，请先运行 `openclaw backup create`。
+- `--all` 是一次性移除服务、状态、工作区和应用的简写。
+- `--non-interactive` 需要 `--yes`。
 
 ## Related
 

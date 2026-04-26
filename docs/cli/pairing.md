@@ -1,19 +1,19 @@
 ---
-summary: "CLI reference for `openclaw pairing` (approve/list pairing requests)"
+summary: "`openclaw pairing` 的命令行参考（审批/列出配对请求）"
 read_when:
-  - You’re using pairing-mode DMs and need to approve senders
+  - 你正在使用配对模式私信，并且需要批准发送者
 title: "Pairing"
 ---
 
 # `openclaw pairing`
 
-Approve or inspect DM pairing requests (for channels that support pairing).
+审批或查看私信配对请求（适用于支持配对的频道）。
 
-Related:
+相关内容：
 
-- Pairing flow: [Pairing](/channels/pairing)
+- 配对流程：[配对](/channels/pairing)
 
-## Commands
+## 命令
 
 ```bash
 openclaw pairing list telegram
@@ -27,42 +27,42 @@ openclaw pairing approve --channel telegram --account work <code> --notify
 
 ## `pairing list`
 
-List pending pairing requests for one channel.
+列出单个频道的待处理配对请求。
 
-Options:
+选项：
 
-- `[channel]`: positional channel id
-- `--channel <channel>`: explicit channel id
-- `--account <accountId>`: account id for multi-account channels
-- `--json`: machine-readable output
+- `[channel]`：位置参数频道 ID
+- `--channel <channel>`：显式频道 ID
+- `--account <accountId>`：多账户频道的账户 ID
+- `--json`：机器可读输出
 
-Notes:
+注意：
 
-- If multiple pairing-capable channels are configured, you must provide a channel either positionally or with `--channel`.
-- Extension channels are allowed as long as the channel id is valid.
+- 如果配置了多个支持配对的频道，你必须通过位置参数或 `--channel` 提供频道。
+- 只要频道 ID 有效，允许使用扩展频道。
 
 ## `pairing approve`
 
-Approve a pending pairing code and allow that sender.
+批准待处理的配对代码并允许该发送者。
 
-Usage:
+用法：
 
 - `openclaw pairing approve <channel> <code>`
 - `openclaw pairing approve --channel <channel> <code>`
-- `openclaw pairing approve <code>` when exactly one pairing-capable channel is configured
+- `openclaw pairing approve <code>`（当仅配置了一个支持配对的频道时）
 
-Options:
+选项：
 
-- `--channel <channel>`: explicit channel id
-- `--account <accountId>`: account id for multi-account channels
-- `--notify`: send a confirmation back to the requester on the same channel
+- `--channel <channel>`：显式频道 ID
+- `--account <accountId>`：多账户频道的账户 ID
+- `--notify`：在同一频道向请求者发送确认回复
 
-## Notes
+## 注意
 
-- Channel input: pass it positionally (`pairing list telegram`) or with `--channel <channel>`.
-- `pairing list` supports `--account <accountId>` for multi-account channels.
-- `pairing approve` supports `--account <accountId>` and `--notify`.
-- If only one pairing-capable channel is configured, `pairing approve <code>` is allowed.
+- 频道输入：通过位置参数传入（`pairing list telegram`）或使用 `--channel <channel>`。
+- `pairing list` 支持多账户频道的 `--account <accountId>`。
+- `pairing approve` 支持 `--account <accountId>` 和 `--notify`。
+- 如果只配置了一个支持配对的频道，则允许使用 `pairing approve <code>`。
 
 ## Related
 

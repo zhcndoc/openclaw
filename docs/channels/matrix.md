@@ -1,85 +1,83 @@
 ---
-summary: "Matrix support status, setup, and configuration examples"
+summary: "Matrix 支持状态、设置和配置示例"
 read_when:
-  - Setting up Matrix in OpenClaw
-  - Configuring Matrix E2EE and verification
+  - 在 OpenClaw 中设置 Matrix
+  - 配置 Matrix E2EE 和验证
 title: "Matrix"
 ---
 
-Matrix is a bundled channel plugin for OpenClaw.
-It uses the official `matrix-js-sdk` and supports DMs, rooms, threads, media, reactions, polls, location, and E2EE.
+Matrix 是 OpenClaw 的一个内置频道插件。
+它使用官方的 `matrix-js-sdk`，并支持 DM、房间、线程、媒体、反应、投票、位置以及 E2EE。
 
-## Bundled plugin
+## 内置插件
 
-Matrix ships as a bundled plugin in current OpenClaw releases, so normal
-packaged builds do not need a separate install.
+Matrix 作为内置插件随当前的 OpenClaw 版本发布，因此正常的打包构建不需要单独安装。
 
-If you are on an older build or a custom install that excludes Matrix, install
-it manually:
+如果您使用的是旧版本或排除了 Matrix 的自定义安装，请手动安装：
 
-Install from npm:
+从 npm 安装：
 
 ```bash
 openclaw plugins install @openclaw/matrix
 ```
 
-Install from a local checkout:
+从本地 checkout 安装：
 
 ```bash
 openclaw plugins install ./path/to/local/matrix-plugin
 ```
 
-See [Plugins](/tools/plugin) for plugin behavior and install rules.
+参见 [插件](/tools/plugin) 了解插件行为和安装规则。
 
-## Setup
+## 设置步骤
 
-1. Ensure the Matrix plugin is available.
-   - Current packaged OpenClaw releases already bundle it.
-   - Older/custom installs can add it manually with the commands above.
-2. Create a Matrix account on your homeserver.
-3. Configure `channels.matrix` with either:
-   - `homeserver` + `accessToken`, or
-   - `homeserver` + `userId` + `password`.
-4. Restart the gateway.
-5. Start a DM with the bot or invite it to a room.
-   - Fresh Matrix invites only work when `channels.matrix.autoJoin` allows them.
+1. 确保 Matrix 插件可用。
+   - 当前打包的 OpenClaw 版本已捆绑它。
+   - 旧版本/自定义安装可以使用上述命令手动添加。
+2. 在您的 homeserver 上创建 Matrix 账户。
+3. 配置 `channels.matrix`，使用：
+   - `homeserver` + `accessToken`，或
+   - `homeserver` + `userId` + `password`。
+4. 重启网关。
+5. 与机器人开始私信或邀请它加入房间。
+   - 新的 Matrix 邀请仅在 `channels.matrix.autoJoin` 允许时生效。
 
-Interactive setup paths:
+交互式设置路径：
 
 ```bash
 openclaw channels add
 openclaw configure --section channels
 ```
 
-The Matrix wizard asks for:
+Matrix 向导会询问：
 
 - homeserver URL
-- auth method: access token or password
-- user ID (password auth only)
-- optional device name
-- whether to enable E2EE
-- whether to configure room access and invite auto-join
+- 认证方式：访问令牌或密码
+- 用户 ID（仅密码认证）
+- 可选的设备名称
+- 是否启用 E2EE
+- 是否配置房间访问和邀请自动加入
 
-Key wizard behaviors:
+关键向导行为：
 
-- If Matrix auth env vars already exist and that account does not already have auth saved in config, the wizard offers an env shortcut to keep auth in env vars.
-- Account names are normalized to the account ID. For example, `Ops Bot` becomes `ops-bot`.
-- DM allowlist entries accept `@user:server` directly; display names only work when live directory lookup finds one exact match.
-- Room allowlist entries accept room IDs and aliases directly. Prefer `!room:server` or `#alias:server`; unresolved names are ignored at runtime by allowlist resolution.
-- In invite auto-join allowlist mode, use only stable invite targets: `!roomId:server`, `#alias:server`, or `*`. Plain room names are rejected.
-- To resolve room names before saving, use `openclaw channels resolve --channel matrix "Project Room"`.
+- 如果 Matrix 认证环境变量已存在且该账户尚未在配置中保存认证，向导会提供将认证保留在环境变量中的快捷方式。
+- 账户名称会标准化为账户 ID。例如，`Ops Bot` 变为 `ops-bot`。
+- DM 白名单条目直接接受 `@user:server`；显示名称仅在实时目录查找找到完全匹配时才有效。
+- 房间白名单条目直接接受房间 ID 和别名。优先使用 `!room:server` 或 `#alias:server`；运行时白名单解析会忽略未解析的名称。
+- 在邀请自动加入白名单模式下，仅使用稳定的邀请目标：`!roomId:server`、`#alias:server` 或 `*`。纯房间名称会被拒绝。
+- 要在保存前解析房间名称，请使用 `openclaw channels resolve --channel matrix "Project Room"`。
 
 <Warning>
-`channels.matrix.autoJoin` defaults to `off`.
+`channels.matrix.autoJoin` 默认为 `off`。
 
-If you leave it unset, the bot will not join invited rooms or fresh DM-style invites, so it will not appear in new groups or invited DMs unless you join manually first.
+如果您不设置它，机器人将不会加入被邀请的房间或新的私信式邀请，因此除非您先手动加入，否则它不会出现在新群组或被邀请的私信中。
 
-Set `autoJoin: "allowlist"` together with `autoJoinAllowlist` to restrict which invites it accepts, or set `autoJoin: "always"` if you want it to join every invite.
+将 `autoJoin: "allowlist"` 与 `autoJoinAllowlist` 一起设置以限制它接受的邀请，或者如果您希望它加入每个邀请，则设置 `autoJoin: "always"`。
 
-In `allowlist` mode, `autoJoinAllowlist` only accepts `!roomId:server`, `#alias:server`, or `*`.
+在 `allowlist` 模式下，`autoJoinAllowlist` 仅接受 `!roomId:server`、`#alias:server` 或 `*`。
 </Warning>
 
-Allowlist example:
+允许列表示例：
 
 ```json5
 {
@@ -97,7 +95,7 @@ Allowlist example:
 }
 ```
 
-Join every invite:
+加入每个邀请：
 
 ```json5
 {
@@ -109,7 +107,7 @@ Join every invite:
 }
 ```
 
-Minimal token-based setup:
+最小化基于令牌的设置：
 
 ```json5
 {
@@ -124,7 +122,7 @@ Minimal token-based setup:
 }
 ```
 
-Password-based setup (token is cached after login):
+基于密码的设置（登录后缓存令牌）：
 
 ```json5
 {
@@ -133,18 +131,18 @@ Password-based setup (token is cached after login):
       enabled: true,
       homeserver: "https://matrix.example.org",
       userId: "@bot:example.org",
-      password: "replace-me", // pragma: allowlist secret
+      password: "replace-me", // 允许列表机密
       deviceName: "OpenClaw Gateway",
     },
   },
 }
 ```
 
-Matrix stores cached credentials in `~/.openclaw/credentials/matrix/`.
-The default account uses `credentials.json`; named accounts use `credentials-<account>.json`.
-When cached credentials exist there, OpenClaw treats Matrix as configured for setup, doctor, and channel-status discovery even if current auth is not set directly in config.
+Matrix 会将缓存的凭据存储在 `~/.openclaw/credentials/matrix/` 中。
+默认账户使用 `credentials.json`；命名账户使用 `credentials-<account>.json`。
+当那里存在缓存的凭据时，即使当前配置中未直接设置认证信息，OpenClaw 也会将矩阵视为已配置，用于设置、诊断和通道状态发现。
 
-Environment variable equivalents (used when the config key is not set):
+环境变量对应项（当配置键未设置时使用）：
 
 - `MATRIX_HOMESERVER`
 - `MATRIX_ACCESS_TOKEN`
@@ -153,7 +151,7 @@ Environment variable equivalents (used when the config key is not set):
 - `MATRIX_DEVICE_ID`
 - `MATRIX_DEVICE_NAME`
 
-For non-default accounts, use account-scoped env vars:
+对于非默认账户，使用账户范围的环境变量：
 
 - `MATRIX_<ACCOUNT_ID>_HOMESERVER`
 - `MATRIX_<ACCOUNT_ID>_ACCESS_TOKEN`
@@ -162,26 +160,26 @@ For non-default accounts, use account-scoped env vars:
 - `MATRIX_<ACCOUNT_ID>_DEVICE_ID`
 - `MATRIX_<ACCOUNT_ID>_DEVICE_NAME`
 
-Example for account `ops`:
+账户 `ops` 的示例：
 
 - `MATRIX_OPS_HOMESERVER`
 - `MATRIX_OPS_ACCESS_TOKEN`
 
-For normalized account ID `ops-bot`, use:
+对于规范化后的账户 ID `ops-bot`，使用：
 
 - `MATRIX_OPS_X2D_BOT_HOMESERVER`
 - `MATRIX_OPS_X2D_BOT_ACCESS_TOKEN`
 
-Matrix escapes punctuation in account IDs to keep scoped env vars collision-free.
-For example, `-` becomes `_X2D_`, so `ops-prod` maps to `MATRIX_OPS_X2D_PROD_*`.
+Matrix 会转义账户 ID 中的标点符号，以保持作用域环境变量无冲突。
+例如，`-` 变为 `_X2D_`，所以 `ops-prod` 映射为 `MATRIX_OPS_X2D_PROD_*`。
 
-The interactive wizard only offers the env-var shortcut when those auth env vars are already present and the selected account does not already have Matrix auth saved in config.
+仅当这些认证环境变量已存在且所选账户配置中尚未保存矩阵认证时，交互式向导才会提供环境变量快捷方式。
 
-`MATRIX_HOMESERVER` cannot be set from a workspace `.env`; see [Workspace `.env` files](/gateway/security).
+`MATRIX_HOMESERVER` 不能从工作区 `.env` 中设置；请参见 [Workspace `.env` files](/gateway/security)。
 
 ## Configuration example
 
-This is a practical baseline config with DM pairing, room allowlist, and E2EE enabled:
+这是一个包含私信配对、房间允许列表和启用 E2EE 的实用基线配置：
 
 ```json5
 {
@@ -216,17 +214,13 @@ This is a practical baseline config with DM pairing, room allowlist, and E2EE en
 }
 ```
 
-`autoJoin` applies to all Matrix invites, including DM-style invites. OpenClaw cannot reliably
-classify an invited room as a DM or group at invite time, so all invites go through `autoJoin`
-first. `dm.policy` applies after the bot has joined and the room is classified as a DM.
+`autoJoin` 适用于所有 Matrix 邀请，包括私信式邀请。OpenClaw 无法可靠地在邀请时分类受邀房间是私信还是群组，因此所有邀请都会先经过 `autoJoin`。`dm.policy` 在机器人加入并将房间分类为私信后应用。
 
-## Streaming previews
+## 流式预览
 
-Matrix reply streaming is opt-in.
+矩阵回复流式传输是可选的。
 
-Set `channels.matrix.streaming` to `"partial"` when you want OpenClaw to send a single live preview
-reply, edit that preview in place while the model is generating text, and then finalize it when the
-reply is done:
+当您希望 OpenClaw 发送单个实时预览回复，在模型生成文本时原地编辑该预览，然后在回复完成后最终确定它时，将 `channels.matrix.streaming` 设置为 `"partial"`：
 
 ```json5
 {
@@ -238,32 +232,32 @@ reply is done:
 }
 ```
 
-- `streaming: "off"` is the default. OpenClaw waits for the final reply and sends it once.
-- `streaming: "partial"` creates one editable preview message for the current assistant block using normal Matrix text messages. This preserves Matrix's legacy preview-first notification behavior, so stock clients may notify on the first streamed preview text instead of the finished block.
-- `streaming: "quiet"` creates one editable quiet preview notice for the current assistant block. Use this only when you also configure recipient push rules for finalized preview edits.
-- `blockStreaming: true` enables separate Matrix progress messages. With preview streaming enabled, Matrix keeps the live draft for the current block and preserves completed blocks as separate messages.
-- When preview streaming is on and `blockStreaming` is off, Matrix edits the live draft in place and finalizes that same event when the block or turn finishes.
-- If the preview no longer fits in one Matrix event, OpenClaw stops preview streaming and falls back to normal final delivery.
-- Media replies still send attachments normally. If a stale preview can no longer be reused safely, OpenClaw redacts it before sending the final media reply.
-- Preview edits cost extra Matrix API calls. Leave streaming off if you want the most conservative rate-limit behavior.
+- `streaming: "off"` 是默认值。OpenClaw 等待最终回复并一次性发送。
+- `streaming: "partial"` 为当前助手块创建一个可编辑的预览消息，使用正常矩阵文本消息。这保留了矩阵传统的预览优先通知行为，因此原生客户端可能会在第一个流式预览文本而不是完成的块上发出通知。
+- `streaming: "quiet"` 为当前助手块创建一个可编辑的静默预览通知。仅当您还为最终确定的预览编辑配置了接收者推送规则时才使用此选项。
+- `blockStreaming: true` 启用单独的矩阵进度消息。启用预览流式传输时，矩阵会保留当前块的实时草稿，并将完成的块保留为单独的消息。
+- 当预览流式传输开启且 `blockStreaming` 关闭时，矩阵会原地编辑实时草稿，并在块或回合完成时最终确定该事件。
+- 如果预览不再适合一个矩阵事件，OpenClaw 将停止预览流式传输并回退到正常最终交付。
+- 媒体回复仍然正常发送附件。如果过时的预览无法再安全重用，OpenClaw 会在发送最终媒体回复之前将其移除。
+- 预览编辑需要额外的矩阵 API 调用。如果您希望最保守的速率限制行为，请关闭流式传输。
 
-`blockStreaming` does not enable draft previews by itself.
-Use `streaming: "partial"` or `streaming: "quiet"` for preview edits; then add `blockStreaming: true` only if you also want completed assistant blocks to remain visible as separate progress messages.
+`blockStreaming` 本身不会启用草稿预览。
+使用 `streaming: "partial"` 或 `streaming: "quiet"` 进行预览编辑；仅当您还希望完成的助手块作为单独的进度消息保持可见时，才添加 `blockStreaming: true`。
 
-If you need stock Matrix notifications without custom push rules, use `streaming: "partial"` for preview-first behavior or leave `streaming` off for final-only delivery. With `streaming: "off"`:
+如果您需要原生矩阵通知而不使用自定义推送规则，请使用 `streaming: "partial"` 以实现预览优先行为，或关闭 `streaming` 以仅进行最终交付。使用 `streaming: "off"` 时：
 
-- `blockStreaming: true` sends each finished block as a normal notifying Matrix message.
-- `blockStreaming: false` sends only the final completed reply as a normal notifying Matrix message.
+- `blockStreaming: true` 将每个完成的块作为正常的通知矩阵消息发送。
+- `blockStreaming: false` 仅将最终完成的回复作为正常的通知矩阵消息发送。
 
-### Self-hosted push rules for quiet finalized previews
+### 用于静默最终预览的自托管推送规则
 
-Quiet streaming (`streaming: "quiet"`) only notifies recipients once a block or turn is finalized — a per-user push rule has to match the finalized preview marker. See [Matrix push rules for quiet previews](/channels/matrix-push-rules) for the full setup (recipient token, pusher check, rule install, per-homeserver notes).
+Quiet streaming (`streaming: "quiet"`) 仅在块或回合最终确定后通知接收者——每个用户的推送规则都必须匹配最终确定的预览标记。完整设置请参见 [Matrix push rules for quiet previews](/channels/matrix-push-rules)（接收者令牌、pusher 检查、规则安装、各 homeserver 注意事项）。
 
 ## Bot-to-bot rooms
 
-By default, Matrix messages from other configured OpenClaw Matrix accounts are ignored.
+默认情况下，来自其他已配置 OpenClaw Matrix 账户的 Matrix 消息将被忽略。
 
-Use `allowBots` when you intentionally want inter-agent Matrix traffic:
+当您有意想要机器人间的 Matrix 流量时，请使用 `allowBots`：
 
 ```json5
 {
@@ -280,19 +274,19 @@ Use `allowBots` when you intentionally want inter-agent Matrix traffic:
 }
 ```
 
-- `allowBots: true` accepts messages from other configured Matrix bot accounts in allowed rooms and DMs.
-- `allowBots: "mentions"` accepts those messages only when they visibly mention this bot in rooms. DMs are still allowed.
-- `groups.<room>.allowBots` overrides the account-level setting for one room.
-- OpenClaw still ignores messages from the same Matrix user ID to avoid self-reply loops.
-- Matrix does not expose a native bot flag here; OpenClaw treats "bot-authored" as "sent by another configured Matrix account on this OpenClaw gateway".
+- `allowBots: true` 在允许的房间和私信中接受来自其他已配置 Matrix 机器人账户的消息。
+- `allowBots: "mentions"` 仅在消息在房间中明确提及此机器人时接受这些消息。私信仍然允许。
+- `groups.<room>.allowBots` 会覆盖账户级别的设置以针对特定房间。
+- OpenClaw 仍会忽略来自同一 Matrix 用户 ID 的消息以避免自回复循环。
+- Matrix 在此处没有公开原生的机器人标志；OpenClaw 将"机器人创作"定义为"由此 OpenClaw 网关上另一个已配置的 Matrix 账户发送"。
 
-Use strict room allowlists and mention requirements when enabling bot-to-bot traffic in shared rooms.
+在共享房间中启用机器人对机器人流量时，请使用严格的房间允许列表和提及要求。
 
-## Encryption and verification
+## 加密与验证
 
-In encrypted (E2EE) rooms, outbound image events use `thumbnail_file` so image previews are encrypted alongside the full attachment. Unencrypted rooms still use plain `thumbnail_url`. No configuration is needed — the plugin detects E2EE state automatically.
+在启用端到端加密（E2EE）的聊天室中，外发图片事件使用 `thumbnail_file`，因此图片预览会与完整附件一起被加密。未加密的聊天室仍使用普通的 `thumbnail_url`。无需进行配置——插件会自动检测 E2EE 状态。
 
-Enable encryption:
+启用加密：
 
 ```json5
 {
@@ -308,109 +302,102 @@ Enable encryption:
 }
 ```
 
-Verification commands (all take `--verbose` for diagnostics and `--json` for machine-readable output):
+验证命令（所有命令都接受 `--verbose` 用于诊断，`--json` 用于机器可读输出）：
 
 ```bash
 openclaw matrix verify status
 ```
 
-Verbose status (full diagnostics):
+详细状态（完整诊断）：
 
 ```bash
 openclaw matrix verify status --verbose
 ```
 
-Include the stored recovery key in machine-readable output:
+在机器可读输出中包含存储的恢复密钥：
 
 ```bash
 openclaw matrix verify status --include-recovery-key --json
 ```
 
-Bootstrap cross-signing and verification state:
+引导交叉签名和验证状态：
 
 ```bash
 openclaw matrix verify bootstrap
 ```
 
-Verbose bootstrap diagnostics:
+详细引导诊断：
 
 ```bash
 openclaw matrix verify bootstrap --verbose
 ```
 
-Force a fresh cross-signing identity reset before bootstrapping:
+在引导前强制重置交叉签名身份：
 
 ```bash
 openclaw matrix verify bootstrap --force-reset-cross-signing
 ```
 
-Verify this device with a recovery key:
+使用恢复密钥验证此设备：
 
 ```bash
 openclaw matrix verify device "<your-recovery-key>"
 ```
 
-This command reports three separate states:
+此命令报告三个独立状态：
 
-- `Recovery key accepted`: Matrix accepted the recovery key for secret storage or device trust.
-- `Backup usable`: room-key backup can be loaded with trusted recovery material.
-- `Device verified by owner`: the current OpenClaw device has full Matrix cross-signing identity trust.
+- `Recovery key accepted`：Matrix 已接受用于密钥存储或设备信任的恢复密钥。
+- `Backup usable`：可以使用受信任的恢复材料加载房间密钥备份。
+- `Device verified by owner`：当前 OpenClaw 设备具有完整的 Matrix 交叉签名身份信任。
 
-`Signed by owner` in verbose or JSON output is diagnostic only. OpenClaw does not
-treat that as sufficient unless `Cross-signing verified` is also `yes`.
+详细或 JSON 输出中的 `Signed by owner` 仅用于诊断。OpenClaw 不会
+仅凭这一点就将其视为足够，除非 `Cross-signing verified` 也是 `yes`。
 
-The command still exits non-zero when full Matrix identity trust is incomplete,
-even if the recovery key can unlock backup material. In that case, complete
-self-verification from another Matrix client:
+即使恢复密钥可以解锁备份材料，只要完整的 Matrix 身份信任不完整，
+该命令仍会以非零状态退出。在这种情况下，请从另一个 Matrix 客户端完成
+自我验证：
 
 ```bash
 openclaw matrix verify self
 ```
 
-Accept the request in another Matrix client, compare the SAS emoji or decimals,
-and type `yes` only when they match. The command waits for Matrix to report
-`Cross-signing verified: yes` before it exits successfully.
+在另一个 Matrix 客户端中接受请求，比较 SAS 表情符号或数字，
+并且仅在它们匹配时输入 `yes`。命令会等待 Matrix 报告
+`Cross-signing verified: yes` 后再成功退出。
 
-Use `verify bootstrap --force-reset-cross-signing` only when you intentionally
-want to replace the current cross-signing identity.
+仅在您有意想要替换当前交叉签名身份时，才使用 `verify bootstrap --force-reset-cross-signing`。
 
-Verbose device verification details:
+详细设备验证信息：
 
 ```bash
 openclaw matrix verify device "<your-recovery-key>" --verbose
 ```
 
-Check room-key backup health:
+检查房间密钥备份健康状况：
 
 ```bash
 openclaw matrix verify backup status
 ```
 
-Verbose backup health diagnostics:
+详细备份健康诊断：
 
 ```bash
 openclaw matrix verify backup status --verbose
 ```
 
-Restore room keys from server backup:
+从服务器备份恢复房间密钥：
 
 ```bash
 openclaw matrix verify backup restore
 ```
 
-If the backup key is not already loaded on disk, pass the Matrix recovery key:
-
-```bash
-openclaw matrix verify backup restore --recovery-key "<your-recovery-key>"
-```
-
-Interactive self-verification flow:
+交互式自我验证流程：
 
 ```bash
 openclaw matrix verify self
 ```
 
-For lower-level or inbound verification requests, use:
+对于更低级别或入站验证请求，请使用：
 
 ```bash
 openclaw matrix verify accept <id>
@@ -419,28 +406,26 @@ openclaw matrix verify sas <id>
 openclaw matrix verify confirm-sas <id>
 ```
 
-Use `openclaw matrix verify cancel <id>` to cancel a request.
+使用 `openclaw matrix verify cancel <id>` 取消请求。
 
-Verbose restore diagnostics:
+详细恢复诊断：
 
 ```bash
 openclaw matrix verify backup restore --verbose
 ```
 
-Delete the current server backup and create a fresh backup baseline. If the stored
-backup key cannot be loaded cleanly, this reset can also recreate secret storage so
-future cold starts can load the new backup key:
+删除当前的服务器备份并创建一个新的备份基线。如果存储的备份密钥无法干净地加载，此重置还可以重新创建秘密存储，以便未来的冷启动可以加载新的备份密钥：
 
 ```bash
 openclaw matrix verify backup reset --yes
 ```
 
-All `verify` commands are concise by default (including quiet internal SDK logging) and show detailed diagnostics only with `--verbose`.
-Use `--json` for full machine-readable output when scripting.
+默认情况下，所有 `verify` 命令都很简洁（包括安静的内部 SDK 日志记录），仅在使用 `--verbose` 时显示详细诊断。
+在脚本编写时使用 `--json` 获取完整的机器可读输出。
 
-In multi-account setups, Matrix CLI commands use the implicit Matrix default account unless you pass `--account <id>`.
-If you configure multiple named accounts, set `channels.matrix.defaultAccount` first or those implicit CLI operations will stop and ask you to choose an account explicitly.
-Use `--account` whenever you want verification or device operations to target a named account explicitly:
+在多账户设置中，除非您传递 `--account <id>`，否则 Matrix CLI 命令使用隐式的 Matrix 默认账户。
+如果您配置了多个命名账户，请先设置 `channels.matrix.defaultAccount`，否则这些隐式 CLI 操作将停止并要求您明确选择一个账户。
+当您希望验证或设备操作明确针对命名账户时，请使用 `--account`：
 
 ```bash
 openclaw matrix verify status --account assistant
@@ -448,36 +433,36 @@ openclaw matrix verify backup restore --account assistant
 openclaw matrix devices list --account assistant
 ```
 
-When encryption is disabled or unavailable for a named account, Matrix warnings and verification errors point at that account's config key, for example `channels.matrix.accounts.assistant.encryption`.
+当加密被禁用或对命名账户不可用时，Matrix 警告和验证错误会指向该账户的配置键，例如 `channels.matrix.accounts.assistant.encryption`。
 
 <AccordionGroup>
   <Accordion title="What verified means">
-    OpenClaw treats a device as verified only when your own cross-signing identity signs it. `verify status --verbose` exposes three trust signals:
+    只有当您自己的交叉签名身份为其签名时，OpenClaw 才将设备视为已验证。`verify status --verbose` 会显示三个信任信号：
 
-    - `Locally trusted`: trusted by this client only
-    - `Cross-signing verified`: the SDK reports verification via cross-signing
-    - `Signed by owner`: signed by your own self-signing key
+    - `Locally trusted`：仅由此客户端信任
+    - `Cross-signing verified`：SDK 报告已通过交叉签名验证
+    - `Signed by owner`：由您自己的自签名密钥签名
 
-    `Verified by owner` becomes `yes` only when cross-signing verification is present.
-    Local trust or an owner signature by itself is not enough for OpenClaw to treat
-    the device as fully verified.
+    只有在存在交叉签名验证时，`Verified by owner` 才会变为 `yes`。
+    仅靠本地信任或所有者签名不足以让 OpenClaw 将
+    该设备视为完全已验证。
 
   </Accordion>
 
   <Accordion title="What bootstrap does">
-    `verify bootstrap` is the repair and setup command for encrypted accounts. In order, it:
+    `verify bootstrap` 是用于加密账户的修复和设置命令。其执行顺序为：
 
-    - bootstraps secret storage, reusing an existing recovery key when possible
-    - bootstraps cross-signing and uploads missing public cross-signing keys
-    - marks and cross-signs the current device
-    - creates a server-side room-key backup if one does not already exist
+    - 引导秘密存储，尽可能重用现有恢复密钥
+    - 引导交叉签名并上传缺失的公开交叉签名密钥
+    - 标记并对当前设备进行交叉签名
+    - 如果服务器端房间密钥备份不存在，则创建一个
 
-    If the homeserver requires UIA to upload cross-signing keys, OpenClaw tries no-auth first, then `m.login.dummy`, then `m.login.password` (requires `channels.matrix.password`). Use `--force-reset-cross-signing` only when intentionally discarding the current identity.
+    如果 homeserver 需要 UIA 才能上传交叉签名密钥，OpenClaw 会先尝试无认证，然后尝试 `m.login.dummy`，再尝试 `m.login.password`（需要 `channels.matrix.password`）。仅在有意放弃当前身份时使用 `--force-reset-cross-signing`。
 
   </Accordion>
 
   <Accordion title="Fresh backup baseline">
-    If you want to keep future encrypted messages working and accept losing unrecoverable old history:
+    如果您希望让未来的加密消息继续工作，并接受丢失无法恢复的旧历史：
 
 ```bash
 openclaw matrix verify backup reset --yes
@@ -485,60 +470,30 @@ openclaw matrix verify backup status --verbose
 openclaw matrix verify status
 ```
 
-    Add `--account <id>` to target a named account. This can also recreate secret storage if the current backup secret cannot be loaded safely.
-    Add `--rotate-recovery-key` only when you intentionally want the old recovery
-    key to stop unlocking the fresh backup baseline.
+    添加 `--account <id>` 以针对命名账户。这也可以在当前备份密钥无法安全加载时重新创建秘密存储。
 
   </Accordion>
 
   <Accordion title="Startup behavior">
-    With `encryption: true`, `startupVerification` defaults to `"if-unverified"`. On startup an unverified device requests self-verification in another Matrix client, skipping duplicates and applying a cooldown. Tune with `startupVerificationCooldownHours` or disable with `startupVerification: "off"`.
+    在启用 `encryption: true` 时，`startupVerification` 的默认值为 `"if-unverified"`。启动时，未验证的设备会在另一个 Matrix 客户端中请求自我验证，跳过重复项并应用冷却时间。可通过 `startupVerificationCooldownHours` 调整，或使用 `startupVerification: "off"` 关闭。
 
-    Startup also runs a conservative crypto bootstrap pass that reuses the current secret storage and cross-signing identity. If bootstrap state is broken, OpenClaw attempts a guarded repair even without `channels.matrix.password`; if the homeserver requires password UIA, startup logs a warning and stays non-fatal. Already-owner-signed devices are preserved.
+    启动时还会运行一次保守的加密引导流程，它会重用当前的秘密存储和交叉签名身份。如果引导状态损坏，即使没有 `channels.matrix.password`，OpenClaw 也会尝试进行受保护的修复；如果 homeserver 需要密码 UIA，启动时会记录警告但不会致命退出。已经由所有者签名的设备会被保留。
 
-    See [Matrix migration](/install/migrating-matrix) for the full upgrade flow.
+    完整升级流程请参见 [Matrix migration](/install/migrating-matrix)。
 
   </Accordion>
 
   <Accordion title="Verification notices">
-    Matrix posts verification lifecycle notices into the strict DM verification room as `m.notice` messages: request, ready (with "Verify by emoji" guidance), start/completion, and SAS (emoji/decimal) details when available.
+    Matrix 会将验证生命周期通知作为 `m.notice` 消息发布到严格的 DM 验证房间中：请求、就绪（带有“按表情符号验证”指导）、开始/完成，以及可用时的 SAS（表情符号/数字）详情。
 
-    Incoming requests from another Matrix client are tracked and auto-accepted. For self-verification, OpenClaw starts the SAS flow automatically and confirms its own side once emoji verification is available — you still need to compare and confirm "They match" in your Matrix client.
+    来自另一个 Matrix 客户端的传入请求会被跟踪并自动接受。对于自我验证，OpenClaw 会自动启动 SAS 流程，并在可用表情符号验证后确认自身这一侧——您仍需要在 Matrix 客户端中比较并确认 “They match”。
 
-    Verification system notices are not forwarded to the agent chat pipeline.
-
-  </Accordion>
-
-  <Accordion title="Deleted or invalid Matrix device">
-    If `verify status` says the current device is no longer listed on the
-    homeserver, create a new OpenClaw Matrix device. For password login:
-
-```bash
-openclaw matrix account add \
-  --account assistant \
-  --homeserver https://matrix.example.org \
-  --user-id '@assistant:example.org' \
-  --password '<password>' \
-  --device-name OpenClaw-Gateway
-```
-
-    For token auth, create a fresh access token in your Matrix client or admin UI,
-    then update OpenClaw:
-
-```bash
-openclaw matrix account add \
-  --account assistant \
-  --homeserver https://matrix.example.org \
-  --access-token '<token>'
-```
-
-    Replace `assistant` with the account ID from the failed command, or omit
-    `--account` for the default account.
+    验证系统通知不会转发到代理聊天管道。
 
   </Accordion>
 
   <Accordion title="Device hygiene">
-    Old OpenClaw-managed devices can accumulate. List and prune:
+    旧的由 OpenClaw 管理的设备可能会累积。列出并清理：
 
 ```bash
 openclaw matrix devices list
@@ -548,65 +503,65 @@ openclaw matrix devices prune-stale
   </Accordion>
 
   <Accordion title="Crypto store">
-    Matrix E2EE uses the official `matrix-js-sdk` Rust crypto path with `fake-indexeddb` as the IndexedDB shim. Crypto state persists to `crypto-idb-snapshot.json` (restrictive file permissions).
+    Matrix E2EE 使用官方 `matrix-js-sdk` 的 Rust 加密路径，并以 `fake-indexeddb` 作为 IndexedDB 的 shim。加密状态会持久化到 `crypto-idb-snapshot.json`（严格的文件权限）。
 
-    Encrypted runtime state lives under `~/.openclaw/matrix/accounts/<account>/<homeserver>__<user>/<token-hash>/` and includes the sync store, crypto store, recovery key, IDB snapshot, thread bindings, and startup verification state. When the token changes but the account identity stays the same, OpenClaw reuses the best existing root so prior state remains visible.
+    加密运行时状态保存在 `~/.openclaw/matrix/accounts/<account>/<homeserver>__<user>/<token-hash>/` 下，包括同步存储、加密存储、恢复密钥、IDB 快照、线程绑定以及启动验证状态。当令牌更改但账户身份保持不变时，OpenClaw 会重用最佳现有根目录，以便之前的状态仍然可见。
 
   </Accordion>
 </AccordionGroup>
 
-## Profile management
+## 资料管理
 
-Update the Matrix self-profile for the selected account with:
+使用以下命令更新所选账户的 Matrix 自我资料：
 
 ```bash
 openclaw matrix profile set --name "OpenClaw Assistant"
 openclaw matrix profile set --avatar-url https://cdn.example.org/avatar.png
 ```
 
-Add `--account <id>` when you want to target a named Matrix account explicitly.
+当您想明确指定某个命名的 Matrix 账户时，请添加 `--account <id>`。
 
-Matrix accepts `mxc://` avatar URLs directly. When you pass an `http://` or `https://` avatar URL, OpenClaw uploads it to Matrix first and stores the resolved `mxc://` URL back into `channels.matrix.avatarUrl` (or the selected account override).
+Matrix 直接接受 `mxc://` 头像 URL。 当您传入 `http://` 或 `https://` 头像 URL 时，OpenClaw 会先将其上传到 Matrix，并把解析后的 `mxc://` URL 存回 `channels.matrix.avatarUrl`（或所选账户覆盖项）中。
 
-## Threads
+## 线程
 
-Matrix supports native Matrix threads for both automatic replies and message-tool sends.
+矩阵支持原生矩阵线程，用于自动回复和消息工具发送。
 
-- `dm.sessionScope: "per-user"` (default) keeps Matrix DM routing sender-scoped, so multiple DM rooms can share one session when they resolve to the same peer.
-- `dm.sessionScope: "per-room"` isolates each Matrix DM room into its own session key while still using normal DM auth and allowlist checks.
-- Explicit Matrix conversation bindings still win over `dm.sessionScope`, so bound rooms and threads keep their chosen target session.
-- `threadReplies: "off"` keeps replies top-level and keeps inbound threaded messages on the parent session.
-- `threadReplies: "inbound"` replies inside a thread only when the inbound message was already in that thread.
-- `threadReplies: "always"` keeps room replies in a thread rooted at the triggering message and routes that conversation through the matching thread-scoped session from the first triggering message.
-- `dm.threadReplies` overrides the top-level setting for DMs only. For example, you can keep room threads isolated while keeping DMs flat.
-- Inbound threaded messages include the thread root message as extra agent context.
-- Message-tool sends auto-inherit the current Matrix thread when the target is the same room, or the same DM user target, unless an explicit `threadId` is provided.
-- Same-session DM user-target reuse only kicks in when the current session metadata proves the same DM peer on the same Matrix account; otherwise OpenClaw falls back to normal user-scoped routing.
-- When OpenClaw sees a Matrix DM room collide with another DM room on the same shared Matrix DM session, it posts a one-time `m.notice` in that room with the `/focus` escape hatch when thread bindings are enabled and the `dm.sessionScope` hint.
-- Runtime thread bindings are supported for Matrix. `/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`, and thread-bound `/acp spawn` work in Matrix rooms and DMs.
-- Top-level Matrix room/DM `/focus` creates a new Matrix thread and binds it to the target session when `threadBindings.spawnSubagentSessions=true`.
-- Running `/focus` or `/acp spawn --thread here` inside an existing Matrix thread binds that current thread instead.
+- `dm.sessionScope: "per-user"`（默认）会让 Matrix 私信路由保持按发送者分组，因此多个私信房间在解析到同一个对端时可以共享一个会话。
+- `dm.sessionScope: "per-room"` 会将每个 Matrix 私信房间隔离到各自的会话键中，同时仍然使用正常的私信认证和允许列表检查。
+- 显式的 Matrix 对话绑定仍然优先于 `dm.sessionScope`，因此已绑定的房间和线程会保留它们选定的目标会话。
+- `threadReplies: "off"` 会让回复保持为顶层，并让入站线程消息保留在父会话上。
+- `threadReplies: "inbound"` 仅当入站消息已经位于该线程中时，才在该线程内回复。
+- `threadReplies: "always"` 会让房间回复保持在以触发消息为根的线程中，并通过从第一个触发消息开始匹配的线程作用域会话来路由该对话。
+- `dm.threadReplies` 会覆盖仅适用于私信的顶层设置。例如，您可以让房间线程保持隔离，同时让私信保持平铺。
+- 入站线程消息会将线程根消息作为额外的代理上下文。
+- 消息工具发送会自动继承当前 Matrix 线程，只要目标是同一个房间，或同一个私信用户目标，除非显式提供了 `threadId`。
+- 只有当当前会话元数据证明同一 Matrix 账户上的同一私信对端时，才会启用相同会话的私信用户目标复用；否则 OpenClaw 会回退到正常的按用户路由。
+- 当 OpenClaw 发现某个 Matrix 私信房间与同一共享 Matrix 私信会话上的另一个私信房间冲突时，如果已启用线程绑定并且提供了 `dm.sessionScope` 提示，它会在该房间中发布一次性的 `m.notice`，并提供 `/focus` 逃生口。
+- Matrix 支持运行时线程绑定。`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 和线程绑定的 `/acp spawn` 都可在 Matrix 房间和私信中使用。
+- 在顶层 Matrix 房间/私信中使用 `/focus` 会创建一个新的 Matrix 线程，并在 `threadBindings.spawnSubagentSessions=true` 时将其绑定到目标会话。
+- 在现有 Matrix 线程内部运行 `/focus` 或 `/acp spawn --thread here` 时，则会改为绑定当前线程。
 
-## ACP conversation bindings
+## ACP 对话绑定
 
-Matrix rooms, DMs, and existing Matrix threads can be turned into durable ACP workspaces without changing the chat surface.
+Matrix 房间、私信和现有的 Matrix 线程可以转变为持久的 ACP 工作区，而无需更改聊天界面。
 
-Fast operator flow:
+快速操作员流程：
 
-- Run `/acp spawn codex --bind here` inside the Matrix DM, room, or existing thread you want to keep using.
-- In a top-level Matrix DM or room, the current DM/room stays the chat surface and future messages route to the spawned ACP session.
-- Inside an existing Matrix thread, `--bind here` binds that current thread in place.
-- `/new` and `/reset` reset the same bound ACP session in place.
-- `/acp close` closes the ACP session and removes the binding.
+- 在您想要继续使用的 Matrix 私信、房间或现有线程中运行 `/acp spawn codex --bind here`。
+- 在顶层 Matrix 私信或房间中，当前的私信/房间保持为聊天界面，未来的消息将路由到生成的 ACP 会话。
+- 在现有的 Matrix 线程内部，`--bind here` 会将该当前线程就地绑定。
+- `/new` 和 `/reset` 就地重置同一个绑定的 ACP 会话。
+- `/acp close` 关闭 ACP 会话并移除绑定。
 
-Notes:
+注意：
 
-- `--bind here` does not create a child Matrix thread.
-- `threadBindings.spawnAcpSessions` is only required for `/acp spawn --thread auto|here`, where OpenClaw needs to create or bind a child Matrix thread.
+- `--bind here` 不会创建子 Matrix 线程。
+- `threadBindings.spawnAcpSessions` 仅用于 `/acp spawn --thread auto|here`，此时 OpenClaw 需要创建或绑定子 Matrix 线程。
 
-### Thread binding config
+### 线程绑定配置
 
-Matrix inherits global defaults from `session.threadBindings`, and also supports per-channel overrides:
+Matrix 继承来自 `session.threadBindings` 的全局默认值，并支持每个频道的覆盖：
 
 - `threadBindings.enabled`
 - `threadBindings.idleHours`
@@ -614,66 +569,66 @@ Matrix inherits global defaults from `session.threadBindings`, and also supports
 - `threadBindings.spawnSubagentSessions`
 - `threadBindings.spawnAcpSessions`
 
-Matrix thread-bound spawn flags are opt-in:
+Matrix 线程绑定生成标志是可选的：
 
-- Set `threadBindings.spawnSubagentSessions: true` to allow top-level `/focus` to create and bind new Matrix threads.
-- Set `threadBindings.spawnAcpSessions: true` to allow `/acp spawn --thread auto|here` to bind ACP sessions to Matrix threads.
+- 设置 `threadBindings.spawnSubagentSessions: true` 以允许顶层 `/focus` 创建并绑定新的 Matrix 线程。
+- 设置 `threadBindings.spawnAcpSessions: true` 以允许 `/acp spawn --thread auto|here` 将 ACP 会话绑定到 Matrix 线程。
 
-## Reactions
+## 反应
 
-Matrix supports outbound reaction actions, inbound reaction notifications, and inbound ack reactions.
+Matrix 支持出站反应操作、入站反应通知和入站确认反应。
 
-- Outbound reaction tooling is gated by `channels["matrix"].actions.reactions`.
-- `react` adds a reaction to a specific Matrix event.
-- `reactions` lists the current reaction summary for a specific Matrix event.
-- `emoji=""` removes the bot account's own reactions on that event.
-- `remove: true` removes only the specified emoji reaction from the bot account.
+- 出站反应工具由 `channels["matrix"].actions.reactions` 控制。
+- `react` 向特定 Matrix 事件添加反应。
+- `reactions` 列出特定 Matrix 事件的当前反应摘要。
+- `emoji=""` 移除机器人账户自己在该事件上的反应。
+- `remove: true` 仅从机器人账户移除指定的表情符号反应。
 
-Ack reactions use the standard OpenClaw resolution order:
+确认反应用标准的 OpenClaw 解析顺序：
 
 - `channels["matrix"].accounts.<accountId>.ackReaction`
 - `channels["matrix"].ackReaction`
 - `messages.ackReaction`
-- agent identity emoji fallback
+- 代理身份表情符号回退
 
-Ack reaction scope resolves in this order:
+确认反应范围按以下顺序解析：
 
 - `channels["matrix"].accounts.<accountId>.ackReactionScope`
 - `channels["matrix"].ackReactionScope`
 - `messages.ackReactionScope`
 
-Reaction notification mode resolves in this order:
+反应通知模式按以下顺序解析：
 
 - `channels["matrix"].accounts.<accountId>.reactionNotifications`
 - `channels["matrix"].reactionNotifications`
-- default: `own`
+- 默认：`own`
 
-Behavior:
+行为：
 
-- `reactionNotifications: "own"` forwards added `m.reaction` events when they target bot-authored Matrix messages.
-- `reactionNotifications: "off"` disables reaction system events.
-- Reaction removals are not synthesized into system events because Matrix surfaces those as redactions, not as standalone `m.reaction` removals.
+- `reactionNotifications: "own"` 会转发添加的 `m.reaction` 事件，当它们针对机器人创建的 Matrix 消息时。
+- `reactionNotifications: "off"` 会禁用反应系统事件。
+- 反应移除不会被合成为系统事件，因为 Matrix 将其显示为 redaction，而不是独立的 `m.reaction` 移除。
 
-## History context
+## 历史上下文
 
-- `channels.matrix.historyLimit` controls how many recent room messages are included as `InboundHistory` when a Matrix room message triggers the agent. Falls back to `messages.groupChat.historyLimit`; if both are unset, the effective default is `0`. Set `0` to disable.
-- Matrix room history is room-only. DMs keep using normal session history.
-- Matrix room history is pending-only: OpenClaw buffers room messages that did not trigger a reply yet, then snapshots that window when a mention or other trigger arrives.
-- The current trigger message is not included in `InboundHistory`; it stays in the main inbound body for that turn.
-- Retries of the same Matrix event reuse the original history snapshot instead of drifting forward to newer room messages.
+- `channels.matrix.historyLimit` 控制当 Matrix 房间消息触发代理时，包含在 `InboundHistory` 中的最近房间消息数量。如果未设置则回退到 `messages.groupChat.historyLimit`；若两者均未设置，则有效默认值为 `0`。设置为 `0` 可禁用此功能。
+- Matrix 房间历史记录仅限房间内部使用。私信仍使用常规会话历史记录。
+- Matrix 房间历史记录为待处理状态：OpenClaw 会暂存尚未触发回复的房间消息，然后在提及或其他触发器到达时对该窗口进行快照。
+- 当前触发消息不会包含在 `InboundHistory` 中；它保留在该轮次的主入站正文中。
+- 对同一 Matrix 事件的重复尝试会重用原始历史快照，而不会向前漂移至更新的房间消息。
 
-## Context visibility
+## 上下文可见性
 
-Matrix supports the shared `contextVisibility` control for supplemental room context such as fetched reply text, thread roots, and pending history.
+Matrix 支持共享的 `contextVisibility` 控制，用于补充房间上下文，例如获取的回复文本、线程根和待处理历史记录。
 
-- `contextVisibility: "all"` is the default. Supplemental context is kept as received.
-- `contextVisibility: "allowlist"` filters supplemental context to senders allowed by the active room/user allowlist checks.
-- `contextVisibility: "allowlist_quote"` behaves like `allowlist`, but still keeps one explicit quoted reply.
+- `contextVisibility: "all"` 是默认值。补充上下文按接收原样保留。
+- `contextVisibility: "allowlist"` 将补充上下文过滤为活动房间/用户允许列表检查允许的发送者。
+- `contextVisibility: "allowlist_quote"` 行为类似于 `allowlist`，但仍保留一个显式的引用回复。
 
-This setting affects supplemental context visibility, not whether the inbound message itself can trigger a reply.
-Trigger authorization still comes from `groupPolicy`, `groups`, `groupAllowFrom`, and DM policy settings.
+此设置影响补充上下文的可见性，不影响入站消息本身是否可以触发回复。  
+触发授权仍然来自 `groupPolicy`、`groups`、`groupAllowFrom` 和私信策略设置。
 
-## DM and room policy
+## DM 和房间策略
 
 ```json5
 {
@@ -696,90 +651,90 @@ Trigger authorization still comes from `groupPolicy`, `groups`, `groupAllowFrom`
 }
 ```
 
-See [Groups](/channels/groups) for mention-gating and allowlist behavior.
+有关提及门控和允许列表行为，请参阅 [群组](/channels/groups)。
 
-Pairing example for Matrix DMs:
+Matrix 私信配对示例：
 
 ```bash
 openclaw pairing list matrix
 openclaw pairing approve matrix <CODE>
 ```
 
-If an unapproved Matrix user keeps messaging you before approval, OpenClaw reuses the same pending pairing code and may send a reminder reply again after a short cooldown instead of minting a new code.
+如果未批准的 Matrix 用户在批准前持续向您发送消息，OpenClaw 会重复使用相同的待处理配对代码，并可能在短暂冷却期后再次发送提醒回复，而不是生成新代码。
 
-See [Pairing](/channels/pairing) for the shared DM pairing flow and storage layout.
+有关共享私信配对流程和存储布局，请参阅 [配对](/channels/pairing)。
 
-## Direct room repair
+## 直接房间修复
 
-If direct-message state gets out of sync, OpenClaw can end up with stale `m.direct` mappings that point at old solo rooms instead of the live DM. Inspect the current mapping for a peer with:
+如果私信状态不同步，OpenClaw 可能会产生过时的 `m.direct` 映射，指向旧的单人房间而非实时私信。使用以下命令检查与某用户的当前映射：
 
 ```bash
 openclaw matrix direct inspect --user-id @alice:example.org
 ```
 
-Repair it with:
+使用以下命令修复：
 
 ```bash
 openclaw matrix direct repair --user-id @alice:example.org
 ```
 
-The repair flow:
+修复流程：
 
-- prefers a strict 1:1 DM that is already mapped in `m.direct`
-- falls back to any currently joined strict 1:1 DM with that user
-- creates a fresh direct room and rewrites `m.direct` if no healthy DM exists
+- 优先选择已在 `m.direct` 中映射的严格 1:1 私信
+- 若无映射，则回退到与该用户当前加入的任何严格 1:1 私信
+- 若无健康私信存在，则创建新的直接房间并重写 `m.direct`
 
-The repair flow does not delete old rooms automatically. It only picks the healthy DM and updates the mapping so new Matrix sends, verification notices, and other direct-message flows target the right room again.
+修复流程不会自动删除旧房间。它只会选择健康的私信并更新映射，使新的 Matrix 发送、验证通知和其他私信流程重新定位到正确的房间。
 
-## Exec approvals
+## 执行审批
 
-Matrix can act as a native approval client for a Matrix account. The native
-DM/channel routing knobs still live under exec approval config:
+Matrix 可以作为 Matrix 账户的原生审批客户端。原生  
+私信/频道路由控件仍位于执行审批配置下：
 
 - `channels.matrix.execApprovals.enabled`
-- `channels.matrix.execApprovals.approvers` (optional; falls back to `channels.matrix.dm.allowFrom`)
-- `channels.matrix.execApprovals.target` (`dm` | `channel` | `both`, default: `dm`)
+- `channels.matrix.execApprovals.approvers`（可选；回退到 `channels.matrix.dm.allowFrom`）
+- `channels.matrix.execApprovals.target`（`dm` | `channel` | `both`，默认：`dm`）
 - `channels.matrix.execApprovals.agentFilter`
 - `channels.matrix.execApprovals.sessionFilter`
 
-Approvers must be Matrix user IDs such as `@owner:example.org`. Matrix auto-enables native approvals when `enabled` is unset or `"auto"` and at least one approver can be resolved. Exec approvals use `execApprovals.approvers` first and can fall back to `channels.matrix.dm.allowFrom`. Plugin approvals authorize through `channels.matrix.dm.allowFrom`. Set `enabled: false` to disable Matrix as a native approval client explicitly. Approval requests otherwise fall back to other configured approval routes or the approval fallback policy.
+审批人必须是 Matrix 用户 ID，例如 `@owner:example.org`。当 `enabled` 未设置或为 `"auto"` 且至少可以解析一个审批人时，Matrix 会自动启用原生审批。执行审批优先使用 `execApprovals.approvers`，并可以回退到 `channels.matrix.dm.allowFrom`。插件审批通过 `channels.matrix.dm.allowFrom` 授权。设置 `enabled: false` 以明确禁用 Matrix 作为原生审批客户端。否则，审批请求将回退到其他配置的审批路由或审批回退策略。
 
-Matrix native routing supports both approval kinds:
+Matrix 原生路由支持两种审批类型：
 
-- `channels.matrix.execApprovals.*` controls the native DM/channel fanout mode for Matrix approval prompts.
-- Exec approvals use the exec approver set from `execApprovals.approvers` or `channels.matrix.dm.allowFrom`.
-- Plugin approvals use the Matrix DM allowlist from `channels.matrix.dm.allowFrom`.
-- Matrix reaction shortcuts and message updates apply to both exec and plugin approvals.
+- `channels.matrix.execApprovals.*` 控制 Matrix 审批提示的原生私信/频道扇出模式。
+- 执行审批使用从 `execApprovals.approvers` 或 `channels.matrix.dm.allowFrom` 获取的执行审批人集合。
+- 插件审批使用来自 `channels.matrix.dm.allowFrom` 的 Matrix 私信允许列表。
+- Matrix 反应快捷方式和消息更新适用于执行和插件审批。
 
-Delivery rules:
+交付规则：
 
-- `target: "dm"` sends approval prompts to approver DMs
-- `target: "channel"` sends the prompt back to the originating Matrix room or DM
-- `target: "both"` sends to approver DMs and the originating Matrix room or DM
+- `target: "dm"` 将审批提示发送给审批人私信
+- `target: "channel"` 将提示发送回发起的 Matrix 房间或私信
+- `target: "both"` 发送给审批人私信和发起的 Matrix 房间或私信
 
-Matrix approval prompts seed reaction shortcuts on the primary approval message:
+Matrix 审批提示在主审批消息上种子化反应快捷方式：
 
-- `✅` = allow once
-- `❌` = deny
-- `♾️` = allow always when that decision is allowed by the effective exec policy
+- `✅` = 允许一次
+- `❌` = 拒绝
+- `♾️` = 当有效执行策略允许该决定时始终允许
 
-Approvers can react on that message or use the fallback slash commands: `/approve <id> allow-once`, `/approve <id> allow-always`, or `/approve <id> deny`.
+审批人可以在该消息上反应或使用回退斜杠命令：`/approve <id> allow-once`、`/approve <id> allow-always` 或 `/approve <id> deny`。
 
-Only resolved approvers can approve or deny. For exec approvals, channel delivery includes the command text, so only enable `channel` or `both` in trusted rooms.
+只有已解析的审批人才能批准或拒绝。对于执行审批，频道交付包括命令文本，因此仅在受信任的房间中启用 `channel` 或 `both`。
 
-Per-account override:
+每账户覆盖：
 
 - `channels.matrix.accounts.<account>.execApprovals`
 
-Related docs: [Exec approvals](/tools/exec-approvals)
+相关文档：[执行审批](/tools/exec-approvals)
 
-## Slash commands
+## Slash 命令
 
-Matrix slash commands (for example `/new`, `/reset`, `/model`) work directly in DMs. In rooms, OpenClaw also recognizes slash commands that are prefixed with the bot's own Matrix mention, so `@bot:server /new` triggers the command path without needing a custom mention regex. This keeps the bot responsive to room-style `@mention /command` posts that Element and similar clients emit when a user tab-completes the bot before typing the command.
+Matrix slash commands（例如 `/new`、`/reset`、`/model`）可直接在私信中使用。在房间中，OpenClaw 还会识别以机器人自身 Matrix 提及为前缀的 slash 命令，因此 `@bot:server /new` 会触发命令路径，而不需要自定义提及正则表达式。这使机器人能够响应 Element 和类似客户端在用户通过 Tab 补全机器人后输入命令时发出的房间风格 `@mention /command` 消息。
 
-Authorization rules still apply: command senders must satisfy DM or room allowlist/owner policies just like plain messages.
+授权规则仍然适用：命令发送者必须满足私信或房间的允许列表/所有者策略，就像普通消息一样。
 
-## Multi-account
+## 多账户
 
 ```json5
 {
@@ -809,25 +764,25 @@ Authorization rules still apply: command senders must satisfy DM or room allowli
 }
 ```
 
-Top-level `channels.matrix` values act as defaults for named accounts unless an account overrides them.
-You can scope inherited room entries to one Matrix account with `groups.<room>.account`.
-Entries without `account` stay shared across all Matrix accounts, and entries with `account: "default"` still work when the default account is configured directly on top-level `channels.matrix.*`.
-Partial shared auth defaults do not create a separate implicit default account by themselves. OpenClaw only synthesizes the top-level `default` account when that default has fresh auth (`homeserver` plus `accessToken`, or `homeserver` plus `userId` and `password`); named accounts can still stay discoverable from `homeserver` plus `userId` when cached credentials satisfy auth later.
-If Matrix already has exactly one named account, or `defaultAccount` points at an existing named account key, single-account-to-multi-account repair/setup promotion preserves that account instead of creating a fresh `accounts.default` entry. Only Matrix auth/bootstrap keys move into that promoted account; shared delivery-policy keys stay at the top level.
-Set `defaultAccount` when you want OpenClaw to prefer one named Matrix account for implicit routing, probing, and CLI operations.
-If multiple Matrix accounts are configured and one account id is `default`, OpenClaw uses that account implicitly even when `defaultAccount` is unset.
-If you configure multiple named accounts, set `defaultAccount` or pass `--account <id>` for CLI commands that rely on implicit account selection.
-Pass `--account <id>` to `openclaw matrix verify ...` and `openclaw matrix devices ...` when you want to override that implicit selection for one command.
+顶层 `channels.matrix` 的值会作为命名账户的默认值，除非某个账户进行了覆盖。  
+您可以使用 `groups.<room>.account` 将继承的房间条目限定到一个 Matrix 账户。  
+没有 `account` 的条目会在所有 Matrix 账户之间共享，而带有 `account: "default"` 的条目在默认账户直接配置在顶层 `channels.matrix.*` 时仍然有效。  
+部分共享认证默认值本身不会创建单独的隐式默认账户。OpenClaw 只有在该默认项具备新的认证信息（`homeserver` 加 `accessToken`，或 `homeserver` 加 `userId` 和 `password`）时，才会合成顶层 `default` 账户；当缓存凭据稍后满足认证条件时，命名账户仍可通过 `homeserver` 加 `userId` 保持可发现。  
+如果 Matrix 已经恰好有一个命名账户，或者 `defaultAccount` 指向一个已存在的命名账户键，那么单账户到多账户的修复/设置提升会保留该账户，而不是创建新的 `accounts.default` 条目。只有 Matrix 认证/启动键会移动到该提升后的账户中；共享投递策略键仍保留在顶层。  
+当您希望 OpenClaw 在隐式路由、探测和 CLI 操作中优先使用某个命名的 Matrix 账户时，请设置 `defaultAccount`。  
+如果配置了多个 Matrix 账户且其中一个账户 id 为 `default`，即使未设置 `defaultAccount`，OpenClaw 也会隐式使用该账户。  
+如果您配置了多个命名账户，而需要依赖隐式账户选择的 CLI 命令，请设置 `defaultAccount` 或传入 `--account <id>`。  
+当您希望为 `openclaw matrix verify ...` 和 `openclaw matrix devices ...` 覆盖该隐式选择时，请传入 `--account <id>`。
 
-See [Configuration reference](/gateway/config-channels#multi-account-all-channels) for the shared multi-account pattern.
+参见 [配置参考](/gateway/config-channels#multi-account-all-channels) 了解共享多账户模式。
 
-## Private/LAN homeservers
+## 私有/LAN homeserver
 
-By default, OpenClaw blocks private/internal Matrix homeservers for SSRF protection unless you
-explicitly opt in per account.
+默认情况下，OpenClaw 出于 SSRF 保护会阻止私有/内部 Matrix homeserver，除非您
+为每个账户明确选择加入。
 
-If your homeserver runs on localhost, a LAN/Tailscale IP, or an internal hostname, enable
-`network.dangerouslyAllowPrivateNetwork` for that Matrix account:
+如果您的 homeserver 运行在 localhost、LAN/Tailscale IP 或内部主机名上，请为该 Matrix 账户启用
+`network.dangerouslyAllowPrivateNetwork`：
 
 ```json5
 {
@@ -843,7 +798,7 @@ If your homeserver runs on localhost, a LAN/Tailscale IP, or an internal hostnam
 }
 ```
 
-CLI setup example:
+CLI 设置示例：
 
 ```bash
 openclaw matrix account add \
@@ -853,12 +808,12 @@ openclaw matrix account add \
   --access-token syt_ops_xxx
 ```
 
-This opt-in only allows trusted private/internal targets. Public cleartext homeservers such as
-`http://matrix.example.org:8008` remain blocked. Prefer `https://` whenever possible.
+此选择加入仅允许受信任的私有/内部目标。公共纯文本 homeserver 如
+`http://matrix.example.org:8008` 仍然被阻止。尽可能优先使用 `https://`。
 
-## Proxying Matrix traffic
+## 代理 Matrix 流量
 
-If your Matrix deployment needs an explicit outbound HTTP(S) proxy, set `channels.matrix.proxy`:
+如果您的 Matrix 部署需要显式的出站 HTTP(S) 代理，请设置 `channels.matrix.proxy`：
 
 ```json5
 {
@@ -872,91 +827,86 @@ If your Matrix deployment needs an explicit outbound HTTP(S) proxy, set `channel
 }
 ```
 
-Named accounts can override the top-level default with `channels.matrix.accounts.<id>.proxy`.
-OpenClaw uses the same proxy setting for runtime Matrix traffic and account status probes.
+命名账户可以使用 `channels.matrix.accounts.<id>.proxy` 覆盖顶层默认值。
+OpenClaw 对运行时 Matrix 流量和账户状态探测使用相同的代理设置。
 
-## Target resolution
+## 目标解析
 
-Matrix accepts these target forms anywhere OpenClaw asks you for a room or user target:
+Matrix 接受以下目标形式，适用于 OpenClaw 要求您提供房间或用户目标的任何位置：
 
-- Users: `@user:server`, `user:@user:server`, or `matrix:user:@user:server`
-- Rooms: `!room:server`, `room:!room:server`, or `matrix:room:!room:server`
-- Aliases: `#alias:server`, `channel:#alias:server`, or `matrix:channel:#alias:server`
+- 用户：`@user:server`、`user:@user:server` 或 `matrix:user:@user:server`
+- 房间：`!room:server`、`room:!room:server` 或 `matrix:room:!room:server`
+- 别名：`#alias:server`、`channel:#alias:server` 或 `matrix:channel:#alias:server`
 
-Matrix room IDs are case-sensitive. Use the exact room ID casing from Matrix
-when configuring explicit delivery targets, cron jobs, bindings, or allowlists.
-OpenClaw keeps internal session keys canonical for storage, so those lowercase
-keys are not a reliable source for Matrix delivery IDs.
+实时目录查找使用已登录的 Matrix 账户：
 
-Live directory lookup uses the logged-in Matrix account:
+- 用户查找查询该 homeserver 上的 Matrix 用户目录。
+- 房间查找直接接受明确的房间 ID 和别名，然后回退到搜索该账户加入的房间名称。
+- 加入房间名称查找是尽力而为的。如果房间名称无法解析为 ID 或别名，它将在运行时的允许列表解析中被忽略。
 
-- User lookups query the Matrix user directory on that homeserver.
-- Room lookups accept explicit room IDs and aliases directly, then fall back to searching joined room names for that account.
-- Joined-room name lookup is best-effort. If a room name cannot be resolved to an ID or alias, it is ignored by runtime allowlist resolution.
+## 配置参考
 
-## Configuration reference
+- `enabled`: 启用或禁用该频道。
+- `name`: 账户的可选标签。
+- `defaultAccount`: 配置了多个 Matrix 账户时的首选账户 ID。
+- `homeserver`: homeserver URL，例如 `https://matrix.example.org`。
+- `network.dangerouslyAllowPrivateNetwork`: 允许此 Matrix 账户连接到私有/内部 homeserver。当 homeserver 解析到 `localhost`、LAN/Tailscale IP 或内部主机（例如 `matrix-synapse`）时请启用此项。
+- `proxy`: Matrix 流量的可选 HTTP(S) 代理 URL。命名账户可以用各自的 `proxy` 覆盖顶层默认值。
+- `userId`: 完整的 Matrix 用户 ID，例如 `@bot:example.org`。
+- `accessToken`: 基于令牌的认证访问令牌。`channels.matrix.accessToken` 和 `channels.matrix.accounts.<id>.accessToken` 支持明文值和 SecretRef 值，适用于 env/file/exec 提供者。参见 [Secrets Management](/gateway/secrets)。
+- `password`: 基于密码登录的密码。支持明文值和 SecretRef 值。
+- `deviceId`: 显式的 Matrix 设备 ID。
+- `deviceName`: 密码登录时的设备显示名称。
+- `avatarUrl`: 用于资料同步和 `profile set` 更新的已存储自头像 URL。
+- `initialSyncLimit`: 启动同步期间获取的最大事件数量。
+- `encryption`: 启用 E2EE。
+- `allowlistOnly`: 当为 `true` 时，将 `open` 房间策略升级为 `allowlist`，并强制所有活动的 DM 策略（除 `disabled` 外，包括 `pairing` 和 `open`）变为 `allowlist`。不影响 `disabled` 策略。
+- `allowBots`: 允许来自其他已配置 OpenClaw Matrix 账户的消息（`true` 或 `"mentions"`）。
+- `groupPolicy`: `open`、`allowlist` 或 `disabled`。
+- `contextVisibility`: 补充性的房间上下文可见性模式（`all`、`allowlist`、`allowlist_quote`）。
+- `groupAllowFrom`: 房间流量的用户 ID 允许列表。完整的 Matrix 用户 ID 最安全；精确目录匹配会在启动时以及允许列表在监控运行期间变更时解析。无法解析的名称会被忽略。
+- `historyLimit`: 作为群聊历史上下文包含的最多房间消息数。回退到 `messages.groupChat.historyLimit`；如果两者都未设置，生效的默认值为 `0`。设为 `0` 可禁用。
+- `replyToMode`: `off`、`first`、`all` 或 `batched`。
+- `markdown`: 可选的出站 Matrix 文本 Markdown 渲染配置。
+- `streaming`: `off`（默认）、`"partial"`、`"quiet"`、`true` 或 `false`。`"partial"` 和 `true` 启用先预览后草稿更新，并使用普通 Matrix 文本消息。`"quiet"` 使用不通知的预览通知，适用于自托管 push-rule 设置。`false` 等同于 `off`。
+- `blockStreaming`: 当草稿预览流式传输处于活动状态时，`true` 会为已完成的 assistant block 启用单独的进度消息。
+- `threadReplies`: `off`、`inbound` 或 `always`。
+- `threadBindings`: 用于线程绑定会话路由和生命周期的按频道覆盖。
+- `startupVerification`: 启动时自动自我验证请求模式（`if-unverified`、`off`）。
+- `startupVerificationCooldownHours`: 重试自动启动验证请求前的冷却时间。
+- `textChunkLimit`: 出站消息分块字符数上限（适用于 `chunkMode` 为 `length` 时）。
+- `chunkMode`: `length` 按字符数拆分消息；`newline` 按换行边界拆分。
+- `responsePrefix`: 可选字符串，添加到该频道所有出站回复前缀。
+- `ackReaction`: 该频道/账户的可选确认表情覆盖。
+- `ackReactionScope`: 可选确认表情作用域覆盖（`group-mentions`、`group-all`、`direct`、`all`、`none`、`off`）。
+- `reactionNotifications`: 入站表情通知模式（`own`、`off`）。
+- `mediaMaxMb`: 出站发送和入站媒体处理的媒体大小上限（MB）。
+- `autoJoin`: 邀请自动加入策略（`always`、`allowlist`、`off`）。默认：`off`。适用于所有 Matrix 邀请，包括 DM 风格邀请。
+- `autoJoinAllowlist`: 当 `autoJoin` 为 `allowlist` 时允许的房间/别名。别名条目会在邀请处理期间解析为房间 ID；OpenClaw 不信任被邀请房间声称的别名状态。
+- `dm`: DM 策略块（`enabled`、`policy`、`allowFrom`、`sessionScope`、`threadReplies`）。
+- `dm.policy`: 在 OpenClaw 已加入房间并将其分类为 DM 后，控制 DM 访问权限。它不会改变邀请是否自动加入。
+- `dm.allowFrom`: DM 流量的用户 ID 允许列表。完整的 Matrix 用户 ID 最安全；精确目录匹配会在启动时以及允许列表在监控运行期间变更时解析。无法解析的名称会被忽略。
+- `dm.sessionScope`: `per-user`（默认）或 `per-room`。当您希望每个 Matrix DM 房间即使对端相同也保留独立上下文时，请使用 `per-room`。
+- `dm.threadReplies`: 仅 DM 的线程策略覆盖（`off`、`inbound`、`always`）。它会覆盖顶层 `threadReplies` 设置，并同时影响 DM 中的回复位置和会话隔离。
+- `execApprovals`: Matrix 原生的 exec 审批投递（`enabled`、`approvers`、`target`、`agentFilter`、`sessionFilter`）。
+- `execApprovals.approvers`: 允许批准 exec 请求的 Matrix 用户 ID。当 `dm.allowFrom` 已经识别出审批人时此项可选。
+- `execApprovals.target`: `dm | channel | both`（默认：`dm`）。
+- `accounts`: 按账户命名的覆盖项。顶层 `channels.matrix` 值作为这些条目的默认值。
+- `groups`: 按房间的策略映射。优先使用房间 ID 或别名；无法解析的房间名称在运行时会被忽略。会话/群组身份在解析后使用稳定的房间 ID。
+- `groups.<room>.account`: 在多账户设置中，将一个继承的房间条目限制为特定的 Matrix 账户。
+- `groups.<room>.allowBots`: 房间级的已配置机器人发送者覆盖（`true` 或 `"mentions"`）。
+- `groups.<room>.users`: 每个房间的发送者允许列表。
+- `groups.<room>.tools`: 每个房间的工具允许/拒绝覆盖。
+- `groups.<room>.autoReply`: 房间级提及门控覆盖。`true` 会禁用该房间的提及要求；`false` 会将其重新强制开启。
+- `groups.<room>.skills`: 可选的房间级技能过滤器。
+- `groups.<room>.systemPrompt`: 可选的房间级系统提示片段。
+- `rooms`: `groups` 的旧别名。
+- `actions`: 按动作的工具门控（`messages`、`reactions`、`pins`、`profile`、`memberInfo`、`channelInfo`、`verification`）。
 
-- `enabled`: enable or disable the channel.
-- `name`: optional label for the account.
-- `defaultAccount`: preferred account ID when multiple Matrix accounts are configured.
-- `homeserver`: homeserver URL, for example `https://matrix.example.org`.
-- `network.dangerouslyAllowPrivateNetwork`: allow this Matrix account to connect to private/internal homeservers. Enable this when the homeserver resolves to `localhost`, a LAN/Tailscale IP, or an internal host such as `matrix-synapse`.
-- `proxy`: optional HTTP(S) proxy URL for Matrix traffic. Named accounts can override the top-level default with their own `proxy`.
-- `userId`: full Matrix user ID, for example `@bot:example.org`.
-- `accessToken`: access token for token-based auth. Plaintext values and SecretRef values are supported for `channels.matrix.accessToken` and `channels.matrix.accounts.<id>.accessToken` across env/file/exec providers. See [Secrets Management](/gateway/secrets).
-- `password`: password for password-based login. Plaintext values and SecretRef values are supported.
-- `deviceId`: explicit Matrix device ID.
-- `deviceName`: device display name for password login.
-- `avatarUrl`: stored self-avatar URL for profile sync and `profile set` updates.
-- `initialSyncLimit`: maximum number of events fetched during startup sync.
-- `encryption`: enable E2EE.
-- `allowlistOnly`: when `true`, upgrades `open` room policy to `allowlist`, and forces all active DM policies except `disabled` (including `pairing` and `open`) to `allowlist`. Does not affect `disabled` policies.
-- `allowBots`: allow messages from other configured OpenClaw Matrix accounts (`true` or `"mentions"`).
-- `groupPolicy`: `open`, `allowlist`, or `disabled`.
-- `contextVisibility`: supplemental room-context visibility mode (`all`, `allowlist`, `allowlist_quote`).
-- `groupAllowFrom`: allowlist of user IDs for room traffic. Full Matrix user IDs are safest; exact directory matches are resolved at startup and when the allowlist changes while the monitor is running. Unresolved names are ignored.
-- `historyLimit`: max room messages to include as group history context. Falls back to `messages.groupChat.historyLimit`; if both are unset, the effective default is `0`. Set `0` to disable.
-- `replyToMode`: `off`, `first`, `all`, or `batched`.
-- `markdown`: optional Markdown rendering configuration for outbound Matrix text.
-- `streaming`: `off` (default), `"partial"`, `"quiet"`, `true`, or `false`. `"partial"` and `true` enable preview-first draft updates with normal Matrix text messages. `"quiet"` uses non-notifying preview notices for self-hosted push-rule setups. `false` is equivalent to `"off"`.
-- `blockStreaming`: `true` enables separate progress messages for completed assistant blocks while draft preview streaming is active.
-- `threadReplies`: `off`, `inbound`, or `always`.
-- `threadBindings`: per-channel overrides for thread-bound session routing and lifecycle.
-- `startupVerification`: automatic self-verification request mode on startup (`if-unverified`, `off`).
-- `startupVerificationCooldownHours`: cooldown before retrying automatic startup verification requests.
-- `textChunkLimit`: outbound message chunk size in characters (applies when `chunkMode` is `length`).
-- `chunkMode`: `length` splits messages by character count; `newline` splits at line boundaries.
-- `responsePrefix`: optional string prepended to all outbound replies for this channel.
-- `ackReaction`: optional ack reaction override for this channel/account.
-- `ackReactionScope`: optional ack reaction scope override (`group-mentions`, `group-all`, `direct`, `all`, `none`, `off`).
-- `reactionNotifications`: inbound reaction notification mode (`own`, `off`).
-- `mediaMaxMb`: media size cap in MB for outbound sends and inbound media processing.
-- `autoJoin`: invite auto-join policy (`always`, `allowlist`, `off`). Default: `off`. Applies to all Matrix invites, including DM-style invites.
-- `autoJoinAllowlist`: rooms/aliases allowed when `autoJoin` is `allowlist`. Alias entries are resolved to room IDs during invite handling; OpenClaw does not trust alias state claimed by the invited room.
-- `dm`: DM policy block (`enabled`, `policy`, `allowFrom`, `sessionScope`, `threadReplies`).
-- `dm.policy`: controls DM access after OpenClaw has joined the room and classified it as a DM. It does not change whether an invite is auto-joined.
-- `dm.allowFrom`: allowlist of user IDs for DM traffic. Full Matrix user IDs are safest; exact directory matches are resolved at startup and when the allowlist changes while the monitor is running. Unresolved names are ignored.
-- `dm.sessionScope`: `per-user` (default) or `per-room`. Use `per-room` when you want each Matrix DM room to keep separate context even if the peer is the same.
-- `dm.threadReplies`: DM-only thread policy override (`off`, `inbound`, `always`). It overrides the top-level `threadReplies` setting for both reply placement and session isolation in DMs.
-- `execApprovals`: Matrix-native exec approval delivery (`enabled`, `approvers`, `target`, `agentFilter`, `sessionFilter`).
-- `execApprovals.approvers`: Matrix user IDs allowed to approve exec requests. Optional when `dm.allowFrom` already identifies the approvers.
-- `execApprovals.target`: `dm | channel | both` (default: `dm`).
-- `accounts`: named per-account overrides. Top-level `channels.matrix` values act as defaults for these entries.
-- `groups`: per-room policy map. Prefer room IDs or aliases; unresolved room names are ignored at runtime. Session/group identity uses the stable room ID after resolution.
-- `groups.<room>.account`: restrict one inherited room entry to a specific Matrix account in multi-account setups.
-- `groups.<room>.allowBots`: room-level override for configured-bot senders (`true` or `"mentions"`).
-- `groups.<room>.users`: per-room sender allowlist.
-- `groups.<room>.tools`: per-room tool allow/deny overrides.
-- `groups.<room>.autoReply`: room-level mention-gating override. `true` disables mention requirements for that room; `false` forces them back on.
-- `groups.<room>.skills`: optional room-level skill filter.
-- `groups.<room>.systemPrompt`: optional room-level system prompt snippet.
-- `rooms`: legacy alias for `groups`.
-- `actions`: per-action tool gating (`messages`, `reactions`, `pins`, `profile`, `memberInfo`, `channelInfo`, `verification`).
+## 相关内容
 
-## Related
-
-- [Channels Overview](/channels) — all supported channels
-- [Pairing](/channels/pairing) — DM authentication and pairing flow
-- [Groups](/channels/groups) — group chat behavior and mention gating
-- [Channel Routing](/channels/channel-routing) — session routing for messages
-- [Security](/gateway/security) — access model and hardening
+- [频道概览](/channels) — 所有支持的频道
+- [配对](/channels/pairing) — 私信认证和配对流程
+- [群组](/channels/groups) — 群聊行为和提及门控
+- [频道路由](/channels/channel-routing) — 消息的会话路由
+- [安全性](/gateway/security) — 访问模型和加固

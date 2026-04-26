@@ -1,54 +1,49 @@
 ---
-summary: "How the mac app embeds the gateway WebChat and how to debug it"
+summary: "mac 应用如何嵌入网关 WebChat 及如何调试"
 read_when:
-  - Debugging mac WebChat view or loopback port
-title: "WebChat (macOS)"
+  - 调试 mac WebChat 视图或回环端口
+title: "WebChat（macOS）"
 ---
 
-The macOS menu bar app embeds the WebChat UI as a native SwiftUI view. It
-connects to the Gateway and defaults to the **main session** for the selected
-agent (with a session switcher for other sessions).
+macOS 菜单栏应用将 WebChat UI 作为原生 SwiftUI 视图嵌入。它连接到 Gateway，并且默认使用所选 agent 的**主会话**（其他会话可通过会话切换器切换）。
 
-- **Local mode**: connects directly to the local Gateway WebSocket.
-- **Remote mode**: forwards the Gateway control port over SSH and uses that
-  tunnel as the data plane.
+- **本地模式**：直接连接本地网关 WebSocket。
+- **远程模式**：通过 SSH 转发网关控制端口，并使用该通道作为数据平面。
 
-## Launch & debugging
+## 启动与调试
 
-- Manual: Lobster menu → “Open Chat”.
-- Auto‑open for testing:
+- 手动：Lobster 菜单 → “打开聊天”。
+- 自动打开用于测试：
 
   ```bash
   dist/OpenClaw.app/Contents/MacOS/OpenClaw --webchat
   ```
 
-- Logs: `./scripts/clawlog.sh` (subsystem `ai.openclaw`, category `WebChatSwiftUI`).
+- 日志：`./scripts/clawlog.sh`（子系统 `ai.openclaw`，类别 `WebChatSwiftUI`）。
 
-## How it is wired
+## 工作原理
 
-- Data plane: Gateway WS methods `chat.history`, `chat.send`, `chat.abort`,
-  `chat.inject` and events `chat`, `agent`, `presence`, `tick`, `health`.
-- `chat.history` returns display-normalized transcript rows: inline directive
-  tags are stripped from visible text, plain-text tool-call XML payloads
-  (including `<tool_call>...</tool_call>`,
-  `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`,
-  `<function_calls>...</function_calls>`, and truncated tool-call blocks) and
-  leaked ASCII/full-width model control tokens are stripped, pure
-  silent-token assistant rows such as exact `NO_REPLY` / `no_reply` are
-  omitted, and oversized rows can be replaced with placeholders.
-- Session: defaults to the primary session (`main`, or `global` when scope is
-  global). The UI can switch between sessions.
-- Onboarding uses a dedicated session to keep first‑run setup separate.
+- 数据平面：Gateway WS 方法 `chat.history`、`chat.send`、`chat.abort`、
+  `chat.inject` 以及事件 `chat`、`agent`、`presence`、`tick`、`health`。
+- `chat.history` 返回经过显示规范化的转录行：会从可见文本中移除行内指令
+  标签，移除纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、
+  `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
+  `<function_calls>...</function_calls>`，以及截断的工具调用块）和泄漏的 ASCII/全角模型控制 token；纯
+  静默 token 的 assistant 行（如完全匹配的 `NO_REPLY` / `no_reply`）会被
+  省略，超大的行可能会被占位符替换。
+- 会话：默认使用主会话（`main`，如果作用域为 global，则为 `global`）。
+  UI 可以在不同会话之间切换。
+- 首次引导会使用专用会话，以保持首次运行设置的独立性。
 
-## Security surface
+## 安全面
 
-- Remote mode forwards only the Gateway WebSocket control port over SSH.
+- 远程模式仅通过 SSH 转发网关 WebSocket 控制端口。
 
-## Known limitations
+## 已知限制
 
-- The UI is optimized for chat sessions (not a full browser sandbox).
+- UI 针对聊天会话进行了优化（不是完整的浏览器沙箱）。
 
-## Related
+## 相关内容
 
 - [WebChat](/web/webchat)
 - [macOS app](/platforms/macos)

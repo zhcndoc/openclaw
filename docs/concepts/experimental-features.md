@@ -1,50 +1,40 @@
 ---
-summary: "What experimental flags mean in OpenClaw and which ones are currently documented"
-title: "Experimental features"
+summary: "OpenClaw 中实验性标志的含义，以及当前记录了哪些标志"
+title: "实验性功能"
 read_when:
-  - You see an `.experimental` config key and want to know whether it is stable
-  - You want to try preview runtime features without confusing them with normal defaults
-  - You want one place to find the currently documented experimental flags
+  - 你看到一个 `.experimental` 配置键，并想知道它是否稳定
+  - 你想尝试预览版运行时功能，但又不想把它们和普通默认值混淆
+  - 你想在一个地方查看当前文档化的实验性标志
 ---
 
-Experimental features in OpenClaw are **opt-in preview surfaces**. They are
-behind explicit flags because they still need real-world mileage before they
-deserve a stable default or a long-lived public contract.
+OpenClaw 中的实验性功能是**可选启用的预览面**。它们之所以被明确标志出来，是因为在获得长期稳定的公开契约之前，还需要更多真实场景中的使用检验。
 
-Treat them differently from normal config:
+对待它们时，要和普通配置区分开来：
 
-- Keep them **off by default** unless the related doc tells you to try one.
-- Expect **shape and behavior to change** faster than stable config.
-- Prefer the stable path first when one already exists.
-- If you are rolling OpenClaw out broadly, test experimental flags in a smaller
-  environment before baking them into a shared baseline.
+- 除非相关文档明确建议尝试，否则默认**关闭**。
+- 预期它们的**结构和行为**会比稳定配置变化更快。
+- 如果已经有稳定路径，优先使用稳定路径。
+- 如果要大规模推广 OpenClaw，先在较小环境里测试实验性标志，再把它纳入共享基线。
 
-## Currently documented flags
+## 当前文档化的标志
 
-| Surface                  | Key                                                       | Use it when                                                                                                    | More                                                                                          |
+| 面向 | 键 | 适用场景 | 详情 |
 | ------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Local model runtime      | `agents.defaults.experimental.localModelLean`             | A smaller or stricter local backend chokes on OpenClaw's full default tool surface                             | [Local Models](/gateway/local-models)                                                         |
-| Memory search            | `agents.defaults.memorySearch.experimental.sessionMemory` | You want `memory_search` to index prior session transcripts and accept the extra storage/indexing cost         | [Memory configuration reference](/reference/memory-config#session-memory-search-experimental) |
-| Structured planning tool | `tools.experimental.planTool`                             | You want the structured `update_plan` tool exposed for multi-step work tracking in compatible runtimes and UIs | [Gateway configuration reference](/gateway/config-tools#toolsexperimental)                    |
+| 本地模型运行时      | `agents.defaults.experimental.localModelLean`             | 较小或更严格的本地后端无法承载 OpenClaw 的完整默认工具面                                                     | [本地模型](/gateway/local-models)                                                         |
+| 内存搜索            | `agents.defaults.memorySearch.experimental.sessionMemory` | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本         | [内存配置参考](/reference/memory-config#session-memory-search-experimental) |
+| 结构化规划工具 | `tools.experimental.planTool`                             | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步工作跟踪 | [网关配置参考](/gateway/config-tools#toolsexperimental)                    |
 
-## Local model lean mode
+## 本地模型轻量模式
 
-`agents.defaults.experimental.localModelLean: true` is a pressure-release valve
-for weaker local-model setups. It trims heavyweight default tools like
-`browser`, `cron`, and `message` so the prompt shape is smaller and less brittle
-for small-context or stricter OpenAI-compatible backends.
+`agents.defaults.experimental.localModelLean: true` 是给较弱本地模型环境准备的泄压阀。它会裁掉 `browser`、`cron` 和 `message` 这类重量级默认工具，让提示形状更小，也更不容易在小上下文或更严格的 OpenAI 兼容后端中失稳。
 
-That is intentionally **not** the normal path. If your backend handles the full
-runtime cleanly, leave this off.
+这**不是**默认路径。如果你的后端能稳定处理完整运行时，就保持关闭。
 
-## Experimental does not mean hidden
+## 实验性不等于隐藏
 
-If a feature is experimental, OpenClaw should say so plainly in docs and in the
-config path itself. What it should **not** do is smuggle preview behavior into a
-stable-looking default knob and pretend that is normal. That's how config
-surfaces get messy.
+如果一个功能是实验性的，OpenClaw 应该在文档和配置路径本身里明确说明。它**不应该**做的是把预览行为偷偷塞进一个看起来稳定的默认开关里，然后假装那是正常行为。那样只会让配置表面变得混乱。
 
-## Related
+## 相关内容
 
-- [Features](/concepts/features)
-- [Release channels](/install/development-channels)
+- [功能](/concepts/features)
+- [发布通道](/install/development-channels)

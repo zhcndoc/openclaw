@@ -1,28 +1,27 @@
 ---
-summary: "Use OpenRouter's unified API to access many models in OpenClaw"
+summary: "使用 OpenRouter 的统一 API 访问 OpenClaw 中的多个模型"
 read_when:
-  - You want a single API key for many LLMs
-  - You want to run models via OpenRouter in OpenClaw
-  - You want to use OpenRouter for image generation
+  - 你希望为许多 LLM 使用一个 API 密钥
+  - 你希望在 OpenClaw 中通过 OpenRouter 运行模型
+  - 你希望使用 OpenRouter 进行图像生成
 title: "OpenRouter"
 ---
 
-OpenRouter provides a **unified API** that routes requests to many models behind a single
-endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switching the base URL.
+OpenRouter 提供了一个 **统一 API**，可通过单个端点和 API 密钥将请求路由到多个模型。它兼容 OpenAI，因此只需切换基础 URL，大多数 OpenAI SDK 都可以使用。
 
-## Getting started
+## 开始使用
 
 <Steps>
-  <Step title="Get your API key">
-    Create an API key at [openrouter.ai/keys](https://openrouter.ai/keys).
+  <Step title="获取您的 API 密钥">
+    在 [openrouter.ai/keys](https://openrouter.ai/keys) 创建一个 API 密钥。
   </Step>
-  <Step title="Run onboarding">
+  <Step title="运行初始化">
     ```bash
     openclaw onboard --auth-choice openrouter-api-key
     ```
   </Step>
-  <Step title="(Optional) Switch to a specific model">
-    Onboarding defaults to `openrouter/auto`. Pick a concrete model later:
+  <Step title="（可选）切换到特定模型">
+    初始化默认为 `openrouter/auto`。稍后选择一个具体模型：
 
     ```bash
     openclaw models set openrouter/<provider>/<model>
@@ -31,7 +30,7 @@ endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switc
   </Step>
 </Steps>
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -44,25 +43,24 @@ endpoint and API key. It is OpenAI-compatible, so most OpenAI SDKs work by switc
 }
 ```
 
-## Model references
+## 模型引用
 
 <Note>
-Model refs follow the pattern `openrouter/<provider>/<model>`. For the full list of
-available providers and models, see [/concepts/model-providers](/concepts/model-providers).
+模型引用遵循 `openrouter/<provider>/<model>` 模式。有关可用提供商和模型的完整列表，请参阅 [/concepts/model-providers](/concepts/model-providers)。
 </Note>
 
 Bundled fallback examples:
 
 | Model ref                            | Notes                         |
 | ------------------------------------ | ----------------------------- |
-| `openrouter/auto`                    | OpenRouter automatic routing  |
-| `openrouter/moonshotai/kimi-k2.6`    | Kimi K2.6 via MoonshotAI      |
-| `openrouter/openrouter/healer-alpha` | OpenRouter Healer Alpha route |
-| `openrouter/openrouter/hunter-alpha` | OpenRouter Hunter Alpha route |
+| `openrouter/auto`                    | OpenRouter 自动路由  |
+| `openrouter/moonshotai/kimi-k2.6`    | 通过 MoonshotAI 提供的 Kimi K2.6      |
+| `openrouter/openrouter/healer-alpha` | OpenRouter Healer Alpha 路由 |
+| `openrouter/openrouter/hunter-alpha` | OpenRouter Hunter Alpha 路由 |
 
-## Image generation
+## 图像生成
 
-OpenRouter can also back the `image_generate` tool. Use an OpenRouter image model under `agents.defaults.imageGenerationModel`:
+OpenRouter 也可以支持 `image_generate` 工具。在 `agents.defaults.imageGenerationModel` 下使用 OpenRouter 图像模型：
 
 ```json5
 {
@@ -71,99 +69,72 @@ OpenRouter can also back the `image_generate` tool. Use an OpenRouter image mode
     defaults: {
       imageGenerationModel: {
         primary: "openrouter/google/gemini-3.1-flash-image-preview",
-        timeoutMs: 180_000,
       },
     },
   },
 }
 ```
 
-OpenClaw sends image requests to OpenRouter's chat completions image API with `modalities: ["image", "text"]`. Gemini image models receive supported `aspectRatio` and `resolution` hints through OpenRouter's `image_config`. Use `agents.defaults.imageGenerationModel.timeoutMs` for slower OpenRouter image models; the `image_generate` tool's per-call `timeoutMs` parameter still wins.
+OpenClaw 会将图像请求发送到 OpenRouter 的 chat completions 图像 API，并使用 `modalities: ["image", "text"]`。Gemini 图像模型会通过 OpenRouter 的 `image_config` 接收受支持的 `aspectRatio` 和 `resolution` 提示。
 
-## Text-to-speech
+## 身份验证和请求头
 
-OpenRouter can also be used as a TTS provider through its OpenAI-compatible
-`/audio/speech` endpoint.
+OpenRouter 在底层使用带有您的 API 密钥的 Bearer token。
 
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "openrouter",
-      providers: {
-        openrouter: {
-          model: "hexgrad/kokoro-82m",
-          voice: "af_alloy",
-          responseFormat: "mp3",
-        },
-      },
-    },
-  },
-}
-```
+在真实的 OpenRouter 请求（`https://openrouter.ai/api/v1`）中，OpenClaw 还会添加
+OpenRouter 文档中记录的应用归属请求头：
 
-If `messages.tts.providers.openrouter.apiKey` is omitted, TTS reuses
-`models.providers.openrouter.apiKey`, then `OPENROUTER_API_KEY`.
-
-## Authentication and headers
-
-OpenRouter uses a Bearer token with your API key under the hood.
-
-On real OpenRouter requests (`https://openrouter.ai/api/v1`), OpenClaw also adds
-OpenRouter's documented app-attribution headers:
-
-| Header                    | Value                 |
+| 请求头                    | 值                 |
 | ------------------------- | --------------------- |
 | `HTTP-Referer`            | `https://openclaw.ai` |
 | `X-OpenRouter-Title`      | `OpenClaw`            |
 | `X-OpenRouter-Categories` | `cli-agent`           |
 
 <Warning>
-If you repoint the OpenRouter provider at some other proxy or base URL, OpenClaw
-does **not** inject those OpenRouter-specific headers or Anthropic cache markers.
+如果您将 OpenRouter 提供商重定向到其他代理或基础 URL，OpenClaw
+**不会**注入那些 OpenRouter 特定的请求头或 Anthropic 缓存标记。
 </Warning>
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Anthropic cache markers">
-    On verified OpenRouter routes, Anthropic model refs keep the
-    OpenRouter-specific Anthropic `cache_control` markers that OpenClaw uses for
-    better prompt-cache reuse on system/developer prompt blocks.
+  <Accordion title="Anthropic 缓存标记">
+    在已验证的 OpenRouter 路由上，Anthropic 模型引用会保留
+    OpenRouter 特定的 Anthropic `cache_control` 标记，OpenClaw 利用这些标记在
+    系统/开发者提示块上实现更好的提示缓存复用。
   </Accordion>
 
-  <Accordion title="Thinking / reasoning injection">
-    On supported non-`auto` routes, OpenClaw maps the selected thinking level to
-    OpenRouter proxy reasoning payloads. Unsupported model hints and
-    `openrouter/auto` skip that reasoning injection.
+  <Accordion title="思考 / 推理注入">
+    在支持的非 `auto` 路由上，OpenClaw 将选定的思考级别映射到
+    OpenRouter 代理推理负载。不支持的模型提示和
+    `openrouter/auto` 会跳过该推理注入。
   </Accordion>
 
-  <Accordion title="OpenAI-only request shaping">
-    OpenRouter still runs through the proxy-style OpenAI-compatible path, so
-    native OpenAI-only request shaping such as `serviceTier`, Responses `store`,
-    OpenAI reasoning-compat payloads, and prompt-cache hints is not forwarded.
+  <Accordion title="仅 OpenAI 的请求调整">
+    OpenRouter 仍然通过代理风格的 OpenAI 兼容路径运行，因此
+    原生仅 OpenAI 的请求调整（如 `serviceTier`、Responses `store`、
+    OpenAI 推理兼容负载和提示缓存提示）不会被转发。
   </Accordion>
 
-  <Accordion title="Gemini-backed routes">
-    Gemini-backed OpenRouter refs stay on the proxy-Gemini path: OpenClaw keeps
-    Gemini thought-signature sanitation there, but does not enable native Gemini
-    replay validation or bootstrap rewrites.
+  <Accordion title="基于 Gemini 的路由">
+    基于 Gemini 的 OpenRouter 引用保持在代理 -Gemini 路径上：OpenClaw 在那里保留
+    Gemini 思考签名清理，但不启用原生 Gemini
+    重放验证或引导重写。
   </Accordion>
 
-  <Accordion title="Provider routing metadata">
-    If you pass OpenRouter provider routing under model params, OpenClaw forwards
-    it as OpenRouter routing metadata before the shared stream wrappers run.
+  <Accordion title="提供商路由元数据">
+    如果您在模型参数下传递 OpenRouter 提供商路由，OpenClaw 会转发
+    它作为 OpenRouter 路由元数据，在共享流包装器运行之前处理。
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full config reference for agents, models, and providers.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    代理、模型和提供商的完整配置参考。
   </Card>
 </CardGroup>

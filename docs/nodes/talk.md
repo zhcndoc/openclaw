@@ -1,117 +1,96 @@
 ---
-summary: "Talk mode: continuous speech conversations with configured TTS providers"
+summary: "对话模式：与 ElevenLabs TTS 进行持续语音对话"
 read_when:
-  - Implementing Talk mode on macOS/iOS/Android
-  - Changing voice/TTS/interrupt behavior
-title: "Talk mode"
+  - 实现 macOS/iOS/Android 上的对话模式
+  - 更改语音/TTS/中断行为
+title: "对话模式"
 ---
 
-Talk mode is a continuous voice conversation loop:
+对话模式是一个持续的语音对话循环：
 
-1. Listen for speech
-2. Send transcript to the model (main session, chat.send)
-3. Wait for the response
-4. Speak it via the configured Talk provider (`talk.speak`)
+1. 监听语音
+2. 将转录文本发送给模型（主会话，chat.send）
+3. 等待回复
+4. 通过已配置的对话提供方（`talk.speak`）进行朗读
 
-## Behavior (macOS)
+## 行为（macOS）
 
-- **Always-on overlay** while Talk mode is enabled.
-- **Listening → Thinking → Speaking** phase transitions.
-- On a **short pause** (silence window), the current transcript is sent.
-- Replies are **written to WebChat** (same as typing).
-- **Interrupt on speech** (default on): if the user starts talking while the assistant is speaking, we stop playback and note the interruption timestamp for the next prompt.
+- 启用对话模式时，**始终显示覆盖层**。
+- 包含 **监听 → 思考 → 讲话** 阶段转换。
+- 在 **短暂停顿**（静默窗口）时，发送当前转录文本。
+- 回复被 **写入 WebChat**（同于输入）。
+- **检测语音中断**（默认开启）：用户在助理讲话时开始说话，我们会停止播放并记录中断时间戳用于下次提示。
 
-## Voice directives in replies
+## 回复中的语音指令
 
-The assistant may prefix its reply with a **single JSON line** to control voice:
+助理可能会在回复前以一行 **JSON 格式** 前缀来控制语音：
 
 ```json
 { "voice": "<voice-id>", "once": true }
 ```
 
-Rules:
+规则：
 
-- First non-empty line only.
-- Unknown keys are ignored.
-- `once: true` applies to the current reply only.
-- Without `once`, the voice becomes the new default for Talk mode.
-- The JSON line is stripped before TTS playback.
+- 仅限第一条非空行。
+- 未知键将被忽略。
+- `once: true` 仅应用于当前回复。
+- 无 `once` 时，语音设置将成为对话模式的新默认。
+- 该 JSON 行会在 TTS 播放前被移除。
 
-Supported keys:
+支持的键：
 
 - `voice` / `voice_id` / `voiceId`
 - `model` / `model_id` / `modelId`
-- `speed`, `rate` (WPM), `stability`, `similarity`, `style`, `speakerBoost`
-- `seed`, `normalize`, `lang`, `output_format`, `latency_tier`
+- `speed`，`rate`（词/分钟），`stability`，`similarity`，`style`，`speakerBoost`
+- `seed`，`normalize`，`lang`，`output_format`，`latency_tier`
 - `once`
 
-## Config (`~/.openclaw/openclaw.json`)
+## 配置（`~/.openclaw/openclaw.json`）
 
 ```json5
 {
   talk: {
-    provider: "elevenlabs",
-    providers: {
-      elevenlabs: {
-        voiceId: "elevenlabs_voice_id",
-        modelId: "eleven_v3",
-        outputFormat: "mp3_44100_128",
-        apiKey: "elevenlabs_api_key",
-      },
-      mlx: {
-        modelId: "mlx-community/Soprano-80M-bf16",
-      },
-      system: {},
-    },
-    speechLocale: "ru-RU",
+    voiceId: "elevenlabs_voice_id",
+    modelId: "eleven_v3",
+    outputFormat: "mp3_44100_128",
+    apiKey: "elevenlabs_api_key",
     silenceTimeoutMs: 1500,
     interruptOnSpeech: true,
   },
 }
 ```
 
-Defaults:
+默认值：
 
-- `interruptOnSpeech`: true
-- `silenceTimeoutMs`: when unset, Talk keeps the platform default pause window before sending the transcript (`700 ms on macOS and Android, 900 ms on iOS`)
-- `provider`: selects the active Talk provider. Use `elevenlabs`, `mlx`, or `system` for the macOS-local playback paths.
-- `providers.<provider>.voiceId`: falls back to `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID` for ElevenLabs (or first ElevenLabs voice when API key is available).
-- `providers.elevenlabs.modelId`: defaults to `eleven_v3` when unset.
-- `providers.mlx.modelId`: defaults to `mlx-community/Soprano-80M-bf16` when unset.
-- `providers.elevenlabs.apiKey`: falls back to `ELEVENLABS_API_KEY` (or gateway shell profile if available).
-- `speechLocale`: optional BCP 47 locale id for on-device Talk speech recognition on iOS/macOS. Leave unset to use the device default.
-- `outputFormat`: defaults to `pcm_44100` on macOS/iOS and `pcm_24000` on Android (set `mp3_*` to force MP3 streaming)
+- `interruptOnSpeech`：true
+- `silenceTimeoutMs`: 当未设置时，Talk 会在发送转录之前保持平台默认的暂停窗口（macOS 和 Android 为 700 毫秒，iOS 为 900 毫秒）。
+- `voiceId`：回退使用 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（或 API key 可用时第一个 ElevenLabs 语音）
+- `modelId`：未设置时默认 `eleven_v3`
+- `apiKey`：回退使用 `ELEVENLABS_API_KEY`（或可用时的 gateway shell 配置）
+- `outputFormat`：macOS/iOS 默认 `pcm_44100`，Android 默认 `pcm_24000`（设置为 `mp3_*` 可强制使用 MP3 流）
 
-## macOS UI
+## macOS 界面
 
-- Menu bar toggle: **Talk**
-- Config tab: **Talk Mode** group (voice id + interrupt toggle)
-- Overlay:
-  - **Listening**: cloud pulses with mic level
-  - **Thinking**: sinking animation
-  - **Speaking**: radiating rings
-  - Click cloud: stop speaking
-  - Click X: exit Talk mode
+- 菜单栏切换项：**对话**
+- 配置页签：**对话模式** 分组（语音 ID + 中断开关）
+- 覆盖层：
+  - **监听**：云朵随麦克风音量闪动
+  - **思考**：下沉动画
+  - **讲话**：辐射环动画
+  - 点击云朵：停止讲话
+  - 点击 X：退出对话模式
 
-## Android UI
+## 注意事项
 
-- Voice tab toggle: **Talk**
-- Manual **Mic** and **Talk** are mutually exclusive runtime capture modes.
-- Manual Mic stops when the app leaves the foreground or the user leaves the Voice tab.
-- Talk Mode keeps running until toggled off or the Android node disconnects, and uses Android's microphone foreground-service type while active.
+- 需要 Speech + Microphone 权限。
+- 使用 `chat.send` 针对会话密钥 `main`。
+- 网关通过 `talk.speak` 并使用当前活动的 Talk 提供方来解析播放。仅当该 RPC 不可用时，Android 才回退到本地系统 TTS。
+- `eleven_v3` 的 `stability` 会被验证为 `0.0`、`0.5` 或 `1.0`；其他模型接受 `0..1`。
+- 设置 `latency_tier` 时会被验证为 `0..4`。
+- Android 支持 `pcm_16000`、`pcm_22050`、`pcm_24000` 和 `pcm_44100` 输出格式，以实现低延迟 AudioTrack 流式播放。
 
-## Notes
+## 相关
 
-- Requires Speech + Microphone permissions.
-- Uses `chat.send` against session key `main`.
-- The gateway resolves Talk playback through `talk.speak` using the active Talk provider. Android falls back to local system TTS only when that RPC is unavailable.
-- macOS local MLX playback uses the bundled `openclaw-mlx-tts` helper when present, or an executable on `PATH`. Set `OPENCLAW_MLX_TTS_BIN` to point at a custom helper binary during development.
-- `stability` for `eleven_v3` is validated to `0.0`, `0.5`, or `1.0`; other models accept `0..1`.
-- `latency_tier` is validated to `0..4` when set.
-- Android supports `pcm_16000`, `pcm_22050`, `pcm_24000`, and `pcm_44100` output formats for low-latency AudioTrack streaming.
-
-## Related
-
-- [Voice wake](/nodes/voicewake)
-- [Audio and voice notes](/nodes/audio)
-- [Media understanding](/nodes/media-understanding)
+- [语音唤醒](/nodes/voicewake)
+- [音频和语音笔记](/nodes/audio)
+- [媒体理解](/nodes/media-understanding)

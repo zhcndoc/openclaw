@@ -1,23 +1,20 @@
 ---
-summary: "api.runtime -- the injected runtime helpers available to plugins"
-title: "Plugin runtime helpers"
-sidebarTitle: "Runtime helpers"
+summary: "api.runtime -- 插件可用的注入式运行时助手"
+title: "插件运行时助手"
+sidebarTitle: "运行时助手"
 read_when:
-  - You need to call core helpers from a plugin (TTS, STT, image gen, web search, subagent, nodes)
-  - You want to understand what api.runtime exposes
-  - You are accessing config, agent, or media helpers from plugin code
+  - 你需要从插件中调用核心助手（TTS、STT、图像生成、网络搜索、子代理、节点）
+  - 你想了解 api.runtime 暴露了什么
+  - 你正在从插件代码中访问配置、代理或媒体助手
 ---
 
-Reference for the `api.runtime` object injected into every plugin during registration. Use these helpers instead of importing host internals directly.
+`api.runtime` 对象的参考文档，该对象会在注册期间注入到每个插件中。请使用这些助手，而不是直接导入宿主内部实现。
 
-<CardGroup cols={2}>
-  <Card title="Channel plugins" href="/plugins/sdk-channel-plugins">
-    Step-by-step guide that uses these helpers in context for channel plugins.
-  </Card>
-  <Card title="Provider plugins" href="/plugins/sdk-provider-plugins">
-    Step-by-step guide that uses these helpers in context for provider plugins.
-  </Card>
-</CardGroup>
+<Tip>
+  **寻找逐步指南？** 查看 [频道插件](/plugins/sdk-channel-plugins)
+  或 [提供商插件](/plugins/sdk-provider-plugins) 获取逐步指南
+  这些指南展示了上下文中的这些助手。
+</Tip>
 
 ```typescript
 register(api) {
@@ -25,451 +22,429 @@ register(api) {
 }
 ```
 
-## Runtime namespaces
-
-<AccordionGroup>
-  <Accordion title="api.runtime.agent">
-    Agent identity, directories, and session management.
-
-    ```typescript
-    // Resolve the agent's working directory
-    const agentDir = api.runtime.agent.resolveAgentDir(cfg);
-
-    // Resolve agent workspace
-    const workspaceDir = api.runtime.agent.resolveAgentWorkspaceDir(cfg);
-
-    // Get agent identity
-    const identity = api.runtime.agent.resolveAgentIdentity(cfg);
-
-    // Get default thinking level
-    const thinking = api.runtime.agent.resolveThinkingDefault(cfg, provider, model);
-
-    // Get agent timeout
-    const timeoutMs = api.runtime.agent.resolveAgentTimeoutMs(cfg);
-
-    // Ensure workspace exists
-    await api.runtime.agent.ensureAgentWorkspace(cfg);
-
-    // Run an embedded agent turn
-    const agentDir = api.runtime.agent.resolveAgentDir(cfg);
-    const result = await api.runtime.agent.runEmbeddedAgent({
-      sessionId: "my-plugin:task-1",
-      runId: crypto.randomUUID(),
-      sessionFile: path.join(agentDir, "sessions", "my-plugin-task-1.jsonl"),
-      workspaceDir: api.runtime.agent.resolveAgentWorkspaceDir(cfg),
-      prompt: "Summarize the latest changes",
-      timeoutMs: api.runtime.agent.resolveAgentTimeoutMs(cfg),
-    });
-    ```
-
-    `runEmbeddedAgent(...)` is the neutral helper for starting a normal OpenClaw agent turn from plugin code. It uses the same provider/model resolution and agent-harness selection as channel-triggered replies.
-
-    `runEmbeddedPiAgent(...)` remains as a compatibility alias.
-
-    **Session store helpers** are under `api.runtime.agent.session`:
-
-    ```typescript
-    const storePath = api.runtime.agent.session.resolveStorePath(cfg);
-    const store = api.runtime.agent.session.loadSessionStore(cfg);
-    await api.runtime.agent.session.saveSessionStore(cfg, store);
-    const filePath = api.runtime.agent.session.resolveSessionFilePath(cfg, sessionId);
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.agent.defaults">
-    Default model and provider constants:
-
-    ```typescript
-    const model = api.runtime.agent.defaults.model; // e.g. "anthropic/claude-sonnet-4-6"
-    const provider = api.runtime.agent.defaults.provider; // e.g. "anthropic"
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.subagent">
-    Launch and manage background subagent runs.
-
-    ```typescript
-    // Start a subagent run
-    const { runId } = await api.runtime.subagent.run({
-      sessionKey: "agent:main:subagent:search-helper",
-      message: "Expand this query into focused follow-up searches.",
-      provider: "openai", // optional override
-      model: "gpt-4.1-mini", // optional override
-      deliver: false,
-    });
-
-    // Wait for completion
-    const result = await api.runtime.subagent.waitForRun({ runId, timeoutMs: 30000 });
-
-    // Read session messages
-    const { messages } = await api.runtime.subagent.getSessionMessages({
-      sessionKey: "agent:main:subagent:search-helper",
-      limit: 10,
-    });
-
-    // Delete a session
-    await api.runtime.subagent.deleteSession({
-      sessionKey: "agent:main:subagent:search-helper",
-    });
-    ```
-
-    <Warning>
-    Model overrides (`provider`/`model`) require operator opt-in via `plugins.entries.<id>.subagent.allowModelOverride: true` in config. Untrusted plugins can still run subagents, but override requests are rejected.
-    </Warning>
-
-  </Accordion>
-  <Accordion title="api.runtime.nodes">
-    List connected nodes and invoke a node-host command from Gateway-loaded plugin code or from plugin CLI commands. Use this when a plugin owns local work on a paired device, for example a browser or audio bridge on another Mac.
-
-    ```typescript
-    const { nodes } = await api.runtime.nodes.list({ connected: true });
-
-    const result = await api.runtime.nodes.invoke({
-      nodeId: "mac-studio",
-      command: "my-plugin.command",
-      params: { action: "start" },
-      timeoutMs: 30000,
-    });
-    ```
-
-    Inside the Gateway this runtime is in-process. In plugin CLI commands it calls the configured Gateway over RPC, so commands such as `openclaw googlemeet recover-tab` can inspect paired nodes from the terminal. Node commands still go through normal Gateway node pairing, command allowlists, and node-local command handling.
-
-  </Accordion>
-  <Accordion title="api.runtime.taskFlow">
-    Bind a Task Flow runtime to an existing OpenClaw session key or trusted tool context, then create and manage Task Flows without passing an owner on every call.
-
-    ```typescript
-    const taskFlow = api.runtime.taskFlow.fromToolContext(ctx);
-
-    const created = taskFlow.createManaged({
-      controllerId: "my-plugin/review-batch",
-      goal: "Review new pull requests",
-    });
-
-    const child = taskFlow.runTask({
-      flowId: created.flowId,
-      runtime: "acp",
-      childSessionKey: "agent:main:subagent:reviewer",
-      task: "Review PR #123",
-      status: "running",
-      startedAt: Date.now(),
-    });
-
-    const waiting = taskFlow.setWaiting({
-      flowId: created.flowId,
-      expectedRevision: created.revision,
-      currentStep: "await-human-reply",
-      waitJson: { kind: "reply", channel: "telegram" },
-    });
-    ```
-
-    Use `bindSession({ sessionKey, requesterOrigin })` when you already have a trusted OpenClaw session key from your own binding layer. Do not bind from raw user input.
-
-  </Accordion>
-  <Accordion title="api.runtime.tts">
-    Text-to-speech synthesis.
-
-    ```typescript
-    // Standard TTS
-    const clip = await api.runtime.tts.textToSpeech({
-      text: "Hello from OpenClaw",
-      cfg: api.config,
-    });
-
-    // Telephony-optimized TTS
-    const telephonyClip = await api.runtime.tts.textToSpeechTelephony({
-      text: "Hello from OpenClaw",
-      cfg: api.config,
-    });
-
-    // List available voices
-    const voices = await api.runtime.tts.listVoices({
-      provider: "elevenlabs",
-      cfg: api.config,
-    });
-    ```
-
-    Uses core `messages.tts` configuration and provider selection. Returns PCM audio buffer + sample rate.
-
-  </Accordion>
-  <Accordion title="api.runtime.mediaUnderstanding">
-    Image, audio, and video analysis.
-
-    ```typescript
-    // Describe an image
-    const image = await api.runtime.mediaUnderstanding.describeImageFile({
-      filePath: "/tmp/inbound-photo.jpg",
-      cfg: api.config,
-      agentDir: "/tmp/agent",
-    });
-
-    // Transcribe audio
-    const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
-      filePath: "/tmp/inbound-audio.ogg",
-      cfg: api.config,
-      mime: "audio/ogg", // optional, for when MIME cannot be inferred
-    });
-
-    // Describe a video
-    const video = await api.runtime.mediaUnderstanding.describeVideoFile({
-      filePath: "/tmp/inbound-video.mp4",
-      cfg: api.config,
-    });
-
-    // Generic file analysis
-    const result = await api.runtime.mediaUnderstanding.runFile({
-      filePath: "/tmp/inbound-file.pdf",
-      cfg: api.config,
-    });
-    ```
-
-    Returns `{ text: undefined }` when no output is produced (e.g. skipped input).
-
-    <Info>
-    `api.runtime.stt.transcribeAudioFile(...)` remains as a compatibility alias for `api.runtime.mediaUnderstanding.transcribeAudioFile(...)`.
-    </Info>
-
-  </Accordion>
-  <Accordion title="api.runtime.imageGeneration">
-    Image generation.
-
-    ```typescript
-    const result = await api.runtime.imageGeneration.generate({
-      prompt: "A robot painting a sunset",
-      cfg: api.config,
-    });
-
-    const providers = api.runtime.imageGeneration.listProviders({ cfg: api.config });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.webSearch">
-    Web search.
-
-    ```typescript
-    const providers = api.runtime.webSearch.listProviders({ config: api.config });
-
-    const result = await api.runtime.webSearch.search({
-      config: api.config,
-      args: { query: "OpenClaw plugin SDK", count: 5 },
-    });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.media">
-    Low-level media utilities.
-
-    ```typescript
-    const webMedia = await api.runtime.media.loadWebMedia(url);
-    const mime = await api.runtime.media.detectMime(buffer);
-    const kind = api.runtime.media.mediaKindFromMime("image/jpeg"); // "image"
-    const isVoice = api.runtime.media.isVoiceCompatibleAudio(filePath);
-    const metadata = await api.runtime.media.getImageMetadata(filePath);
-    const resized = await api.runtime.media.resizeToJpeg(buffer, { maxWidth: 800 });
-    const terminalQr = await api.runtime.media.renderQrTerminal("https://openclaw.ai");
-    const pngQr = await api.runtime.media.renderQrPngBase64("https://openclaw.ai", {
-      scale: 6, // 1-12
-      marginModules: 4, // 0-16
-    });
-    const pngQrDataUrl = await api.runtime.media.renderQrPngDataUrl("https://openclaw.ai");
-    const tmpRoot = resolvePreferredOpenClawTmpDir();
-    const pngQrFile = await api.runtime.media.writeQrPngTempFile("https://openclaw.ai", {
-      tmpRoot,
-      dirPrefix: "my-plugin-qr-",
-      fileName: "qr.png",
-    });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.config">
-    Config load and write.
-
-    ```typescript
-    const cfg = await api.runtime.config.loadConfig();
-    await api.runtime.config.writeConfigFile(cfg);
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.system">
-    System-level utilities.
-
-    ```typescript
-    await api.runtime.system.enqueueSystemEvent(event);
-    api.runtime.system.requestHeartbeatNow();
-    const output = await api.runtime.system.runCommandWithTimeout(cmd, args, opts);
-    const hint = api.runtime.system.formatNativeDependencyHint(pkg);
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.events">
-    Event subscriptions.
-
-    ```typescript
-    api.runtime.events.onAgentEvent((event) => {
-      /* ... */
-    });
-    api.runtime.events.onSessionTranscriptUpdate((update) => {
-      /* ... */
-    });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.logging">
-    Logging.
-
-    ```typescript
-    const verbose = api.runtime.logging.shouldLogVerbose();
-    const childLogger = api.runtime.logging.getChildLogger({ plugin: "my-plugin" }, { level: "debug" });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.modelAuth">
-    Model and provider auth resolution.
-
-    ```typescript
-    const auth = await api.runtime.modelAuth.getApiKeyForModel({ model, cfg });
-    const providerAuth = await api.runtime.modelAuth.resolveApiKeyForProvider({
-      provider: "openai",
-      cfg,
-    });
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.state">
-    State directory resolution.
-
-    ```typescript
-    const stateDir = api.runtime.state.resolveStateDir();
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.tools">
-    Memory tool factories and CLI.
-
-    ```typescript
-    const getTool = api.runtime.tools.createMemoryGetTool(/* ... */);
-    const searchTool = api.runtime.tools.createMemorySearchTool(/* ... */);
-    api.runtime.tools.registerMemoryCli(/* ... */);
-    ```
-
-  </Accordion>
-  <Accordion title="api.runtime.channel">
-    Channel-specific runtime helpers (available when a channel plugin is loaded).
-
-    `api.runtime.channel.mentions` is the shared inbound mention-policy surface for bundled channel plugins that use runtime injection:
-
-    ```typescript
-    const mentionMatch = api.runtime.channel.mentions.matchesMentionWithExplicit(text, {
-      mentionRegexes,
-      mentionPatterns,
-    });
-
-    const decision = api.runtime.channel.mentions.resolveInboundMentionDecision({
-      facts: {
-        canDetectMention: true,
-        wasMentioned: mentionMatch.matched,
-        implicitMentionKinds: api.runtime.channel.mentions.implicitMentionKindWhen(
-          "reply_to_bot",
-          isReplyToBot,
-        ),
-      },
-      policy: {
-        isGroup,
-        requireMention,
-        allowTextCommands,
-        hasControlCommand,
-        commandAuthorized,
-      },
-    });
-    ```
-
-    Available mention helpers:
-
-    - `buildMentionRegexes`
-    - `matchesMentionPatterns`
-    - `matchesMentionWithExplicit`
-    - `implicitMentionKindWhen`
-    - `resolveInboundMentionDecision`
-
-    `api.runtime.channel.mentions` intentionally does not expose the older `resolveMentionGating*` compatibility helpers. Prefer the normalized `{ facts, policy }` path.
-
-  </Accordion>
-</AccordionGroup>
-
-## Storing runtime references
-
-Use `createPluginRuntimeStore` to store the runtime reference for use outside the `register` callback:
-
-<Steps>
-  <Step title="Create the store">
-    ```typescript
-    import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
-    import type { PluginRuntime } from "openclaw/plugin-sdk/runtime-store";
-
-    const store = createPluginRuntimeStore<PluginRuntime>({
-      pluginId: "my-plugin",
-      errorMessage: "my-plugin runtime not initialized",
-    });
-    ```
-
-  </Step>
-  <Step title="Wire into the entry point">
-    ```typescript
-    export default defineChannelPluginEntry({
-      id: "my-plugin",
-      name: "My Plugin",
-      description: "Example",
-      plugin: myPlugin,
-      setRuntime: store.setRuntime,
-    });
-    ```
-  </Step>
-  <Step title="Access from other files">
-    ```typescript
-    export function getRuntime() {
-      return store.getRuntime(); // throws if not initialized
-    }
-
-    export function tryGetRuntime() {
-      return store.tryGetRuntime(); // returns null if not initialized
-    }
-    ```
-
-  </Step>
-</Steps>
-
-<Note>
-Prefer `pluginId` for the runtime-store identity. The lower-level `key` form is for uncommon cases where one plugin intentionally needs more than one runtime slot.
-</Note>
-
-## Other top-level `api` fields
-
-Beyond `api.runtime`, the API object also provides:
-
-<ParamField path="api.id" type="string">
-  Plugin id.
-</ParamField>
-<ParamField path="api.name" type="string">
-  Plugin display name.
-</ParamField>
-<ParamField path="api.config" type="OpenClawConfig">
-  Current config snapshot (active in-memory runtime snapshot when available).
-</ParamField>
-<ParamField path="api.pluginConfig" type="Record<string, unknown>">
-  Plugin-specific config from `plugins.entries.<id>.config`.
-</ParamField>
-<ParamField path="api.logger" type="PluginLogger">
-  Scoped logger (`debug`, `info`, `warn`, `error`).
-</ParamField>
-<ParamField path="api.registrationMode" type="PluginRegistrationMode">
-  Current load mode; `"setup-runtime"` is the lightweight pre-full-entry startup/setup window.
-</ParamField>
-<ParamField path="api.resolvePath(input)" type="(string) => string">
-  Resolve a path relative to the plugin root.
-</ParamField>
-
-## Related
-
-- [Plugin internals](/plugins/architecture) — capability model and registry
-- [SDK entry points](/plugins/sdk-entrypoints) — `definePluginEntry` options
-- [SDK overview](/plugins/sdk-overview) — subpath reference
+## 运行时命名空间
+
+### `api.runtime.agent`
+
+代理身份、目录和会话管理。
+
+```typescript
+// 解析代理的工作目录
+const agentDir = api.runtime.agent.resolveAgentDir(cfg);
+
+// 解析代理工作区
+const workspaceDir = api.runtime.agent.resolveAgentWorkspaceDir(cfg);
+
+// 获取代理身份
+const identity = api.runtime.agent.resolveAgentIdentity(cfg);
+
+// 获取默认思考级别
+const thinking = api.runtime.agent.resolveThinkingDefault(cfg, provider, model);
+
+// 获取代理超时时间
+const timeoutMs = api.runtime.agent.resolveAgentTimeoutMs(cfg);
+
+// 确保工作区存在
+await api.runtime.agent.ensureAgentWorkspace(cfg);
+
+// 运行一个嵌入式代理回合
+const agentDir = api.runtime.agent.resolveAgentDir(cfg);
+const result = await api.runtime.agent.runEmbeddedAgent({
+  sessionId: "my-plugin:task-1",
+  runId: crypto.randomUUID(),
+  sessionFile: path.join(agentDir, "sessions", "my-plugin-task-1.jsonl"),
+  workspaceDir: api.runtime.agent.resolveAgentWorkspaceDir(cfg),
+  prompt: "总结最新更改",
+  timeoutMs: api.runtime.agent.resolveAgentTimeoutMs(cfg),
+});
+```
+
+`runEmbeddedAgent(...)` 是从插件代码启动标准 OpenClaw 代理回合的中立助手。它使用与频道触发回复相同的提供商/模型解析和代理框架选择。
+
+`runEmbeddedPiAgent(...)` 保留作为兼容性别名。
+
+`**会话存储助手**` 位于 `api.runtime.agent.session` 下：
+
+```typescript
+const storePath = api.runtime.agent.session.resolveStorePath(cfg);
+const store = api.runtime.agent.session.loadSessionStore(cfg);
+await api.runtime.agent.session.saveSessionStore(cfg, store);
+const filePath = api.runtime.agent.session.resolveSessionFilePath(cfg, sessionId);
+```
+
+### `api.runtime.agent.defaults`
+
+默认模型和提供商常量：
+
+```typescript
+const model = api.runtime.agent.defaults.model; // 例如 "anthropic/claude-sonnet-4-6"
+const provider = api.runtime.agent.defaults.provider; // 例如 "anthropic"
+```
+
+### `api.runtime.subagent`
+
+启动和管理后台子代理运行。
+
+```typescript
+// 启动子代理运行
+const { runId } = await api.runtime.subagent.run({
+  sessionKey: "agent:main:subagent:search-helper",
+  message: "将此查询扩展为聚焦的后续搜索。",
+  provider: "openai", // 可选覆盖
+  model: "gpt-4.1-mini", // 可选覆盖
+  deliver: false,
+});
+
+// 等待完成
+const result = await api.runtime.subagent.waitForRun({ runId, timeoutMs: 30000 });
+
+// 读取会话消息
+const { messages } = await api.runtime.subagent.getSessionMessages({
+  sessionKey: "agent:main:subagent:search-helper",
+  limit: 10,
+});
+
+// 删除会话
+await api.runtime.subagent.deleteSession({
+  sessionKey: "agent:main:subagent:search-helper",
+});
+```
+
+<Warning>
+  模型覆盖（`provider`/`model`）需要操作员通过
+  配置中的 `plugins.entries.<id>.subagent.allowModelOverride: true` 选择加入。
+  不受信任的插件仍然可以运行子代理，但覆盖请求会被拒绝。
+</Warning>
+
+### `api.runtime.nodes`
+
+列出已连接的节点，并从 Gateway 加载的插件代码中调用节点主机命令。当插件在配对设备上拥有本地工作时使用，例如另一台 Mac 上的浏览器或音频桥接。
+
+```typescript
+const { nodes } = await api.runtime.nodes.list({ connected: true });
+
+const result = await api.runtime.nodes.invoke({
+  nodeId: "mac-studio",
+  command: "my-plugin.command",
+  params: { action: "start" },
+  timeoutMs: 30000,
+});
+```
+
+此运行时仅在 Gateway 内可用。节点命令仍然通过正常的 Gateway 节点配对、命令允许列表和节点本地命令处理流程。
+
+### `api.runtime.taskFlow`
+
+将任务流运行时绑定到现有的 OpenClaw 会话密钥或受信任的工具上下文，然后创建和管理任务流，而无需在每次调用时传递所有者。
+
+```typescript
+const taskFlow = api.runtime.taskFlow.fromToolContext(ctx);
+
+const created = taskFlow.createManaged({
+  controllerId: "my-plugin/review-batch",
+  goal: "Review new pull requests",
+});
+
+const child = taskFlow.runTask({
+  flowId: created.flowId,
+  runtime: "acp",
+  childSessionKey: "agent:main:subagent:reviewer",
+  task: "Review PR #123",
+  status: "running",
+  startedAt: Date.now(),
+});
+
+const waiting = taskFlow.setWaiting({
+  flowId: created.flowId,
+  expectedRevision: created.revision,
+  currentStep: "await-human-reply",
+  waitJson: { kind: "reply", channel: "telegram" },
+});
+```
+
+当您从自己的绑定层拥有受信任的 OpenClaw 会话密钥时，使用 `bindSession({ sessionKey, requesterOrigin })`。不要从原始用户输入绑定。
+
+### `api.runtime.tts`
+
+文本转语音合成。
+
+```typescript
+// 标准 TTS
+const clip = await api.runtime.tts.textToSpeech({
+  text: "Hello from OpenClaw",
+  cfg: api.config,
+});
+
+// 针对电话优化的 TTS
+const telephonyClip = await api.runtime.tts.textToSpeechTelephony({
+  text: "Hello from OpenClaw",
+  cfg: api.config,
+});
+
+// 列出可用声音
+const voices = await api.runtime.tts.listVoices({
+  provider: "elevenlabs",
+  cfg: api.config,
+});
+```
+
+使用核心 `messages.tts` 配置和提供商选择。返回 PCM 音频
+缓冲区 + 采样率。
+
+### `api.runtime.mediaUnderstanding`
+
+图像、音频和视频分析。
+
+```typescript
+// 描述图像
+const image = await api.runtime.mediaUnderstanding.describeImageFile({
+  filePath: "/tmp/inbound-photo.jpg",
+  cfg: api.config,
+  agentDir: "/tmp/agent",
+});
+
+// 转录音频
+const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
+  filePath: "/tmp/inbound-audio.ogg",
+  cfg: api.config,
+  mime: "audio/ogg", // 可选，用于无法推断 MIME 时
+});
+
+// 描述视频
+const video = await api.runtime.mediaUnderstanding.describeVideoFile({
+  filePath: "/tmp/inbound-video.mp4",
+  cfg: api.config,
+});
+
+// 通用文件分析
+const result = await api.runtime.mediaUnderstanding.runFile({
+  filePath: "/tmp/inbound-file.pdf",
+  cfg: api.config,
+});
+```
+
+当未产生输出时返回 `{ text: undefined }`（例如跳过的输入）。
+
+<Info>
+  `api.runtime.stt.transcribeAudioFile(...)` 仍然作为
+  `api.runtime.mediaUnderstanding.transcribeAudioFile(...)` 的兼容性别名保留。
+</Info>
+
+### `api.runtime.imageGeneration`
+
+图像生成。
+
+```typescript
+const result = await api.runtime.imageGeneration.generate({
+  prompt: "A robot painting a sunset",
+  cfg: api.config,
+});
+
+const providers = api.runtime.imageGeneration.listProviders({ cfg: api.config });
+```
+
+### `api.runtime.webSearch`
+
+网络搜索。
+
+```typescript
+const providers = api.runtime.webSearch.listProviders({ config: api.config });
+
+const result = await api.runtime.webSearch.search({
+  config: api.config,
+  args: { query: "OpenClaw plugin SDK", count: 5 },
+});
+```
+
+### `api.runtime.media`
+
+底层媒体实用工具。
+
+```typescript
+const webMedia = await api.runtime.media.loadWebMedia(url);
+const mime = await api.runtime.media.detectMime(buffer);
+const kind = api.runtime.media.mediaKindFromMime("image/jpeg"); // "image"
+const isVoice = api.runtime.media.isVoiceCompatibleAudio(filePath);
+const metadata = await api.runtime.media.getImageMetadata(filePath);
+const resized = await api.runtime.media.resizeToJpeg(buffer, { maxWidth: 800 });
+const terminalQr = await api.runtime.media.renderQrTerminal("https://openclaw.ai");
+const pngQr = await api.runtime.media.renderQrPngBase64("https://openclaw.ai", {
+  scale: 6, // 1-12
+  marginModules: 4, // 0-16
+});
+const pngQrDataUrl = await api.runtime.media.renderQrPngDataUrl("https://openclaw.ai");
+const tmpRoot = resolvePreferredOpenClawTmpDir();
+const pngQrFile = await api.runtime.media.writeQrPngTempFile("https://openclaw.ai", {
+  tmpRoot,
+  dirPrefix: "my-plugin-qr-",
+  fileName: "qr.png",
+});
+```
+
+### `api.runtime.config`
+
+配置加载和写入。
+
+```typescript
+const cfg = await api.runtime.config.loadConfig();
+await api.runtime.config.writeConfigFile(cfg);
+```
+
+### `api.runtime.system`
+
+系统级实用工具。
+
+```typescript
+await api.runtime.system.enqueueSystemEvent(event);
+api.runtime.system.requestHeartbeatNow();
+const output = await api.runtime.system.runCommandWithTimeout(cmd, args, opts);
+const hint = api.runtime.system.formatNativeDependencyHint(pkg);
+```
+
+### `api.runtime.events`
+
+事件订阅。
+
+```typescript
+api.runtime.events.onAgentEvent((event) => {
+  /* ... */
+});
+api.runtime.events.onSessionTranscriptUpdate((update) => {
+  /* ... */
+});
+```
+
+### `api.runtime.logging`
+
+日志记录。
+
+```typescript
+const verbose = api.runtime.logging.shouldLogVerbose();
+const childLogger = api.runtime.logging.getChildLogger({ plugin: "my-plugin" }, { level: "debug" });
+```
+
+### `api.runtime.modelAuth`
+
+模型和提供商身份验证解析。
+
+```typescript
+const auth = await api.runtime.modelAuth.getApiKeyForModel({ model, cfg });
+const providerAuth = await api.runtime.modelAuth.resolveApiKeyForProvider({
+  provider: "openai",
+  cfg,
+});
+```
+
+### `api.runtime.state`
+
+状态目录解析。
+
+```typescript
+const stateDir = api.runtime.state.resolveStateDir();
+```
+
+### `api.runtime.tools`
+
+记忆工具工厂和 CLI。
+
+```typescript
+const getTool = api.runtime.tools.createMemoryGetTool(/* ... */);
+const searchTool = api.runtime.tools.createMemorySearchTool(/* ... */);
+api.runtime.tools.registerMemoryCli(/* ... */);
+```
+
+### `api.runtime.channel`
+
+特定于频道的运行时助手（当加载频道插件时可用）。
+
+`api.runtime.channel.mentions` 是使用运行时注入的捆绑频道插件的共享入站提及策略接口：
+
+```typescript
+const mentionMatch = api.runtime.channel.mentions.matchesMentionWithExplicit(text, {
+  mentionRegexes,
+  mentionPatterns,
+});
+
+const decision = api.runtime.channel.mentions.resolveInboundMentionDecision({
+  facts: {
+    canDetectMention: true,
+    wasMentioned: mentionMatch.matched,
+    implicitMentionKinds: api.runtime.channel.mentions.implicitMentionKindWhen(
+      "reply_to_bot",
+      isReplyToBot,
+    ),
+  },
+  policy: {
+    isGroup,
+    requireMention,
+    allowTextCommands,
+    hasControlCommand,
+    commandAuthorized,
+  },
+});
+```
+
+可用的提及助手：
+
+- `buildMentionRegexes`
+- `matchesMentionPatterns`
+- `matchesMentionWithExplicit`
+- `implicitMentionKindWhen`
+- `resolveInboundMentionDecision`
+
+`api.runtime.channel.mentions` 故意不公开旧的 `resolveMentionGating*` 兼容助手。优先使用归一化的 `{ facts, policy }` 路径。
+
+## 存储运行时引用
+
+使用 `createPluginRuntimeStore` 存储运行时引用，以便在
+`register` 回调之外使用：
+
+```typescript
+import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
+import type { PluginRuntime } from "openclaw/plugin-sdk/runtime-store";
+
+const store = createPluginRuntimeStore<PluginRuntime>({
+  pluginId: "my-plugin",
+  errorMessage: "my-plugin runtime not initialized",
+});
+
+// 在你的入口点
+export default defineChannelPluginEntry({
+  id: "my-plugin",
+  name: "My Plugin",
+  description: "Example",
+  plugin: myPlugin,
+  setRuntime: store.setRuntime,
+});
+
+// 在其他文件中
+export function getRuntime() {
+  return store.getRuntime(); // 如果未初始化则抛出
+}
+
+export function tryGetRuntime() {
+  return store.tryGetRuntime(); // 如果未初始化则返回 null
+}
+```
+
+在运行时存储标识中优先使用 `pluginId`。较低层级的 `key` 形式适用于少数情况下某个插件有意需要多个运行时槽位。
+
+## 其他顶级 `api` 字段
+
+除了 `api.runtime`，API 对象还提供：
+
+| 字段                    | 类型                      | 描述                                                                                 |
+| ------------------------ | ------------------------- | ----------------------------------------------------------------------------------- |
+| `api.id`                 | `string`                  | 插件 ID                                                                             |
+| `api.name`               | `string`                  | 插件显示名称                                                                        |
+| `api.config`             | `OpenClawConfig`          | 当前配置快照（可用时为活动内存运行时快照）                                          |
+| `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件特定配置                                    |
+| `api.logger`             | `PluginLogger`            | 作用域日志记录器（`debug`、`info`、`warn`、`error`）                                 |
+| `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是轻量级预完整条目启动/设置窗口                     |
+| `api.resolvePath(input)` | `(string) => string`      | 解析相对于插件根目录的路径                                                          |
+
+## 相关内容
+
+- [SDK 概述](/plugins/sdk-overview) -- 子路径参考
+- [SDK 入口点](/plugins/sdk-entrypoints) -- `definePluginEntry` 选项
+- [插件内部结构](/plugins/architecture) -- 能力模型和注册表

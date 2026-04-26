@@ -1,46 +1,44 @@
 ---
-summary: "Use OpenCode Zen and Go catalogs with OpenClaw"
+summary: "使用 OpenCode Zen 和 Go 目录搭配 OpenClaw"
 read_when:
-  - You want OpenCode-hosted model access
-  - You want to pick between the Zen and Go catalogs
+  - 你想使用 OpenCode 托管的模型访问
+  - 你想在 Zen 和 Go 目录中进行选择
 title: "OpenCode"
 ---
 
-OpenCode exposes two hosted catalogs in OpenClaw:
+OpenCode 在 OpenClaw 中提供两个托管目录：
 
-| Catalog | Prefix            | Runtime provider |
+| 目录 | Prefix            | 运行时提供者 |
 | ------- | ----------------- | ---------------- |
 | **Zen** | `opencode/...`    | `opencode`       |
 | **Go**  | `opencode-go/...` | `opencode-go`    |
 
-Both catalogs use the same OpenCode API key. OpenClaw keeps the runtime provider ids
-split so upstream per-model routing stays correct, but onboarding and docs treat them
-as one OpenCode setup.
+两个目录都使用相同的 OpenCode API 密钥。OpenClaw 保持运行时提供者 ID 的分离，以确保上游的逐模型路由保持正确，但入门和文档将它们视为一个 OpenCode 设置。
 
-## Getting started
+## 入门指南
 
 <Tabs>
-  <Tab title="Zen catalog">
-    **Best for:** the curated OpenCode multi-model proxy (Claude, GPT, Gemini).
+  <Tab title="Zen 目录">
+    **最适合：** 精选的 OpenCode 多模型代理（Claude、GPT、Gemini）。
 
     <Steps>
-      <Step title="Run onboarding">
+      <Step title="运行初始化">
         ```bash
         openclaw onboard --auth-choice opencode-zen
         ```
 
-        Or pass the key directly:
+        或直接传递密钥：
 
         ```bash
         openclaw onboard --opencode-zen-api-key "$OPENCODE_API_KEY"
         ```
       </Step>
-      <Step title="Set a Zen model as the default">
+      <Step title="将 Zen 模型设置为默认">
         ```bash
         openclaw config set agents.defaults.model.primary "opencode/claude-opus-4-6"
         ```
       </Step>
-      <Step title="Verify models are available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider opencode
         ```
@@ -49,27 +47,27 @@ as one OpenCode setup.
 
   </Tab>
 
-  <Tab title="Go catalog">
-    **Best for:** the OpenCode-hosted Kimi, GLM, and MiniMax lineup.
+  <Tab title="Go 目录">
+    **最适合：** OpenCode 托管的 Kimi、GLM 和 MiniMax 系列。
 
     <Steps>
-      <Step title="Run onboarding">
+      <Step title="运行初始化">
         ```bash
         openclaw onboard --auth-choice opencode-go
         ```
 
-        Or pass the key directly:
+        或直接传递密钥：
 
         ```bash
         openclaw onboard --opencode-go-api-key "$OPENCODE_API_KEY"
         ```
       </Step>
-      <Step title="Set a Go model as the default">
+      <Step title="将 Go 模型设置为默认">
         ```bash
-        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.6"
+        openclaw config set agents.defaults.model.primary "opencode-go/kimi-k2.5"
         ```
       </Step>
-      <Step title="Verify models are available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider opencode-go
         ```
@@ -79,7 +77,7 @@ as one OpenCode setup.
   </Tab>
 </Tabs>
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -88,62 +86,58 @@ as one OpenCode setup.
 }
 ```
 
-## Built-in catalogs
+## 内置目录
 
 ### Zen
 
-| Property         | Value                                                                   |
+| 属性         | 值                                                                   |
 | ---------------- | ----------------------------------------------------------------------- |
-| Runtime provider | `opencode`                                                              |
-| Example models   | `opencode/claude-opus-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3-pro` |
+| 运行时提供者 | `opencode`                                                              |
+| 示例模型   | `opencode/claude-opus-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3-pro` |
 
 ### Go
 
-| Property         | Value                                                                    |
+| 属性         | 值                                                                    |
 | ---------------- | ------------------------------------------------------------------------ |
-| Runtime provider | `opencode-go`                                                            |
-| Example models   | `opencode-go/kimi-k2.6`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
+| 运行时提供者 | `opencode-go`                                                            |
+| 示例模型   | `opencode-go/kimi-k2.5`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="API key aliases">
-    `OPENCODE_ZEN_API_KEY` is also supported as an alias for `OPENCODE_API_KEY`.
+  <Accordion title="API 密钥别名">
+    `OPENCODE_ZEN_API_KEY` 也支持作为 `OPENCODE_API_KEY` 的别名。
   </Accordion>
 
-  <Accordion title="Shared credentials">
-    Entering one OpenCode key during setup stores credentials for both runtime
-    providers. You do not need to onboard each catalog separately.
+  <Accordion title="共享凭据">
+    在设置期间输入一个 OpenCode 密钥即可存储两个运行时提供者的凭据。您不需要分别对每个目录进行初始化。
   </Accordion>
 
-  <Accordion title="Billing and dashboard">
-    You sign in to OpenCode, add billing details, and copy your API key. Billing
-    and catalog availability are managed from the OpenCode dashboard.
+  <Accordion title="计费和仪表板">
+    您登录 OpenCode，添加计费详细信息，然后复制您的 API 密钥。计费和目录可用性均在 OpenCode 仪表板中管理。
   </Accordion>
 
-  <Accordion title="Gemini replay behavior">
-    Gemini-backed OpenCode refs stay on the proxy-Gemini path, so OpenClaw keeps
-    Gemini thought-signature sanitation there without enabling native Gemini
-    replay validation or bootstrap rewrites.
+  <Accordion title="Gemini 重放行为">
+    基于 Gemini 的 OpenCode 引用保留在代理 -Gemini 路径上，因此 OpenClaw 在那里保持 Gemini 思维签名清理，而无需启用原生 Gemini 重放验证或引导重写。
   </Accordion>
 
-  <Accordion title="Non-Gemini replay behavior">
-    Non-Gemini OpenCode refs keep the minimal OpenAI-compatible replay policy.
+  <Accordion title="非 Gemini 重放行为">
+    非 Gemini 的 OpenCode 引用保持最小的 OpenAI 兼容重放策略。
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-Entering one OpenCode key during setup stores credentials for both the Zen and
-Go runtime providers, so you only need to onboard once.
+在设置期间输入一个 OpenCode 密钥即可存储 Zen 和
+Go 运行时提供者的凭据，因此您只需初始化一次。
 </Tip>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供者、模型引用和故障转移行为。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full config reference for agents, models, and providers.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    代理、模型和提供者的完整配置参考。
   </Card>
 </CardGroup>

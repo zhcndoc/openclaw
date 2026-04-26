@@ -1,163 +1,161 @@
 ---
-summary: "Background memory consolidation with light, deep, and REM phases plus a Dream Diary"
-title: "Dreaming"
-sidebarTitle: "Dreaming"
+summary: "带有浅睡、深睡和 REM 阶段以及梦境日记的后台记忆巩固"
+title: "做梦"
 read_when:
-  - You want memory promotion to run automatically
-  - You want to understand what each dreaming phase does
-  - You want to tune consolidation without polluting MEMORY.md
+  - 你希望记忆提升自动运行
+  - 你想了解每个梦境阶段的作用
+  - 你想调整巩固过程而不污染 MEMORY.md
 ---
 
-Dreaming is the background memory consolidation system in `memory-core`. It helps OpenClaw move strong short-term signals into durable memory while keeping the process explainable and reviewable.
+Dreaming 是 `memory-core` 中的后台记忆巩固系统。  
+它帮助 OpenClaw 将强烈的短期信号迁移到持久记忆中，同时保持整个过程可解释、可审查。
 
-<Note>
-Dreaming is **opt-in** and disabled by default.
-</Note>
+Dreaming 是**可选启用**的，默认情况下处于禁用状态。
 
-## What dreaming writes
+## Dreaming 写入的内容
 
-Dreaming keeps two kinds of output:
+Dreaming 保留两种输出：
 
-- **Machine state** in `memory/.dreams/` (recall store, phase signals, ingestion checkpoints, locks).
-- **Human-readable output** in `DREAMS.md` (or existing `dreams.md`) and optional phase report files under `memory/dreaming/<phase>/YYYY-MM-DD.md`.
+- **机器状态**位于 `memory/.dreams/`（回忆存储、阶段信号、摄入检查点、锁）。
+- **人类可读输出**位于 `DREAMS.md`（或现有的 `dreams.md`）以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下的可选阶段报告文件。
 
-Long-term promotion still writes only to `MEMORY.md`.
+长期提升仍然只写入 `MEMORY.md`。
 
-## Phase model
+## 阶段模型
 
-Dreaming uses three cooperative phases:
+Dreaming 使用三个协作阶段：
 
-| Phase | Purpose                                   | Durable write     |
+| 阶段 | 目的 | 持久写入 |
 | ----- | ----------------------------------------- | ----------------- |
-| Light | Sort and stage recent short-term material | No                |
-| Deep  | Score and promote durable candidates      | Yes (`MEMORY.md`) |
-| REM   | Reflect on themes and recurring ideas     | No                |
+| 浅睡 | 排序和暂存近期短期材料 | 否 |
+| 深睡 | 评分并提升持久候选项 | 是（`MEMORY.md`） |
+| REM | 反思主题和重复想法 | 否 |
 
-These phases are internal implementation details, not separate user-configured "modes."
+这些阶段是内部实现细节，不是单独的用户配置
+“模式”。
 
-<AccordionGroup>
-  <Accordion title="Light phase">
-    Light phase ingests recent daily memory signals and recall traces, dedupes them, and stages candidate lines.
+### 浅睡阶段
 
-    - Reads from short-term recall state, recent daily memory files, and redacted session transcripts when available.
-    - Writes a managed `## Light Sleep` block when storage includes inline output.
-    - Records reinforcement signals for later deep ranking.
-    - Never writes to `MEMORY.md`.
+浅睡阶段摄入近期的每日记忆信号和回忆轨迹，对其进行去重，  
+并暂存候选行。
 
-  </Accordion>
-  <Accordion title="Deep phase">
-    Deep phase decides what becomes long-term memory.
+- 从短期回忆状态、最近的每日记忆文件以及可用的脱敏会话记录中读取。
+- 当存储包含内联输出时，写入一个受管理的 `## Light Sleep` 块。
+- 记录用于后续深度排名的强化信号。
+- 永不写入 `MEMORY.md`。
 
-    - Ranks candidates using weighted scoring and threshold gates.
-    - Requires `minScore`, `minRecallCount`, and `minUniqueQueries` to pass.
-    - Rehydrates snippets from live daily files before writing, so stale/deleted snippets are skipped.
-    - Appends promoted entries to `MEMORY.md`.
-    - Writes a `## Deep Sleep` summary into `DREAMS.md` and optionally writes `memory/dreaming/deep/YYYY-MM-DD.md`.
+### 深睡阶段
 
-  </Accordion>
-  <Accordion title="REM phase">
-    REM phase extracts patterns and reflective signals.
+深睡阶段决定什么成为长期记忆。
 
-    - Builds theme and reflection summaries from recent short-term traces.
-    - Writes a managed `## REM Sleep` block when storage includes inline output.
-    - Records REM reinforcement signals used by deep ranking.
-    - Never writes to `MEMORY.md`.
+- 使用加权评分和阈值门限对候选项进行排名。
+- 需要通过 `minScore`、`minRecallCount` 和 `minUniqueQueries`。
+- 在写入之前从实时每日文件重新加载片段，因此跳过过时/已删除的片段。
+- 将提升的条目追加到 `MEMORY.md`。
+- 将 `## Deep Sleep` 摘要写入 `DREAMS.md`，并可选地写入 `memory/dreaming/deep/YYYY-MM-DD.md`。
 
-  </Accordion>
-</AccordionGroup>
+### REM 阶段
 
-## Session transcript ingestion
+REM 阶段提取模式和反思信号。
 
-Dreaming can ingest redacted session transcripts into the dreaming corpus. When transcripts are available, they are fed into the light phase alongside daily memory signals and recall traces. Personal and sensitive content is redacted before ingestion.
+- 从近期短期轨迹构建主题和反思摘要。
+- 当存储包含内联输出时，写入一个受管理的 `## REM Sleep` 块。
+- 记录深睡排名使用的 REM 强化信号。
+- 从不写入 `MEMORY.md`。
 
-## Dream Diary
+## 会话记录摄取
 
-Dreaming also keeps a narrative **Dream Diary** in `DREAMS.md`. After each phase has enough material, `memory-core` runs a best-effort background subagent turn (using the default runtime model) and appends a short diary entry.
+Dreaming 可以摄取脱敏的会话记录到梦境语料库中。当  
+会话记录可用时，会将其输入到浅睡阶段，与每日记忆信号和回忆轨迹一起处理。  
+个人和敏感内容在摄取前会进行脱敏处理。
 
-<Note>
-This diary is for human reading in the Dreams UI, not a promotion source. Dreaming-generated diary/report artifacts are excluded from short-term promotion. Only grounded memory snippets are eligible to promote into `MEMORY.md`.
-</Note>
+## 梦境日记
 
-There is also a grounded historical backfill lane for review and recovery work:
+Dreaming 还在 `DREAMS.md` 中保留一个叙事性的**梦境日记**。  
+在每个阶段拥有足够材料后，`memory-core` 运行一个尽最大努力的后台  
+子代理回合（使用默认运行时模型），并追加一个简短的日记条目。
 
-<AccordionGroup>
-  <Accordion title="Backfill commands">
-    - `memory rem-harness --path ... --grounded` previews grounded diary output from historical `YYYY-MM-DD.md` notes.
-    - `memory rem-backfill --path ...` writes reversible grounded diary entries into `DREAMS.md`.
-    - `memory rem-backfill --path ... --stage-short-term` stages grounded durable candidates into the same short-term evidence store the normal deep phase already uses.
-    - `memory rem-backfill --rollback` and `--rollback-short-term` remove those staged backfill artifacts without touching ordinary diary entries or live short-term recall.
-  </Accordion>
-</AccordionGroup>
+本日记供人类在 Dreams UI 中阅读，**不是**推广来源。  
+Dreaming 生成的日记/报告工件不会被纳入短期推广。  
+只有有依据的记忆片段才有资格被推广到 `MEMORY.md`。
 
-The Control UI exposes the same diary backfill/reset flow so you can inspect results in the Dreams scene before deciding whether the grounded candidates deserve promotion. The Scene also shows a distinct grounded lane so you can see which staged short-term entries came from historical replay, which promoted items were grounded-led, and clear only grounded-only staged entries without touching ordinary live short-term state.
+还有一个用于审查和恢复工作的有依据的历史回填通道：
 
-## Deep ranking signals
+- `memory rem-harness --path ... --grounded` 预览来自历史 `YYYY-MM-DD.md` 笔记的有依据的日记输出。
+- `memory rem-backfill --path ...` 将可逆转的有依据日记条目写入 `DREAMS.md`。
+- `memory rem-backfill --path ... --stage-short-term` 将有依据的持久候选项暂存到与正常深度阶段相同的短期证据存储中。
+- `memory rem-backfill --rollback` 和 `--rollback-short-term` 移除那些暂存的回填工件，而不影响普通的日记条目或实时的短期回忆。
 
-Deep ranking uses six weighted base signals plus phase reinforcement:
+控制界面提供了相同的日记回填/重置流程，以便你可以在 Dreams 场景中检查结果，再决定是否将有依据的候选条目提升。场景还展示了一个独立的有依据通道，让你看到哪些暂存的短期条目来自历史回放，哪些提升项是由有依据引导的，并可以清除仅由有依据引导的暂存条目，而不影响正常的实时短期状态。
 
-| Signal              | Weight | Description                                       |
+## 深度排名信号
+
+深度排名使用六个加权基础信号加上阶段强化：
+
+| 信号 | 权重 | 描述 |
 | ------------------- | ------ | ------------------------------------------------- |
-| Frequency           | 0.24   | How many short-term signals the entry accumulated |
-| Relevance           | 0.30   | Average retrieval quality for the entry           |
-| Query diversity     | 0.15   | Distinct query/day contexts that surfaced it      |
-| Recency             | 0.15   | Time-decayed freshness score                      |
-| Consolidation       | 0.10   | Multi-day recurrence strength                     |
-| Conceptual richness | 0.06   | Concept-tag density from snippet/path             |
+| 频率 | 0.24 | 条目积累多少短期信号 |
+| 相关性 | 0.30 | 条目的平均检索质量 |
+| 查询多样性 | 0.15 | 浮现该条目的不同查询/日期上下文 |
+| 近期性 | 0.15 | 时间衰减的新鲜度评分 |
+| 巩固性 | 0.10 | 多日重复强度 |
+| 概念丰富度 | 0.06 | 来自片段/路径的概念标签密度 |
 
-Light and REM phase hits add a small recency-decayed boost from `memory/.dreams/phase-signals.json`.
+浅睡和 REM 阶段命中会从  
+`memory/.dreams/phase-signals.json` 添加一个小的近期性衰减提升。
 
-## Scheduling
+## 调度
 
-When enabled, `memory-core` auto-manages one cron job for a full dreaming sweep. Each sweep runs phases in order: light → REM → deep.
+启用后，`memory-core` 自动管理一个用于完整梦境  
+扫描的 cron 作业。每次扫描按顺序运行阶段：light -> REM -> deep。
 
-Default cadence behavior:
+默认节奏行为：
 
-| Setting              | Default     |
+| 设置 | 默认值 |
 | -------------------- | ----------- |
 | `dreaming.frequency` | `0 3 * * *` |
 
-## Quick start
+## 快速开始
 
-<Tabs>
-  <Tab title="Enable dreaming">
-    ```json
-    {
-      "plugins": {
-        "entries": {
-          "memory-core": {
-            "config": {
-              "dreaming": {
-                "enabled": true
-              }
-            }
+启用 dreaming：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "memory-core": {
+        "config": {
+          "dreaming": {
+            "enabled": true
           }
         }
       }
     }
-    ```
-  </Tab>
-  <Tab title="Custom sweep cadence">
-    ```json
-    {
-      "plugins": {
-        "entries": {
-          "memory-core": {
-            "config": {
-              "dreaming": {
-                "enabled": true,
-                "timezone": "America/Los_Angeles",
-                "frequency": "0 */6 * * *"
-              }
-            }
+  }
+}
+```
+
+使用自定义扫描节奏启用 dreaming：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "memory-core": {
+        "config": {
+          "dreaming": {
+            "enabled": true,
+            "timezone": "America/Los_Angeles",
+            "frequency": "0 */6 * * *"
           }
         }
       }
     }
-    ```
-  </Tab>
-</Tabs>
+  }
+}
+```
 
-## Slash command
+## 斜杠命令
 
 ```
 /dreaming status
@@ -166,69 +164,62 @@ Default cadence behavior:
 /dreaming help
 ```
 
-## CLI workflow
+## CLI 工作流
 
-<Tabs>
-  <Tab title="Promotion preview / apply">
-    ```bash
-    openclaw memory promote
-    openclaw memory promote --apply
-    openclaw memory promote --limit 5
-    openclaw memory status --deep
-    ```
+使用 CLI 提升进行预览或手动应用：
 
-    Manual `memory promote` uses deep-phase thresholds by default unless overridden with CLI flags.
+```bash
+openclaw memory promote
+openclaw memory promote --apply
+openclaw memory promote --limit 5
+openclaw memory status --deep
+```
 
-  </Tab>
-  <Tab title="Explain promotion">
-    Explain why a specific candidate would or would not promote:
+手动 `memory promote` 默认使用深睡阶段阈值，除非被  
+CLI 标志覆盖。
 
-    ```bash
-    openclaw memory promote-explain "router vlan"
-    openclaw memory promote-explain "router vlan" --json
-    ```
+解释特定候选项为何会被提升或不会被提升：
 
-  </Tab>
-  <Tab title="REM harness preview">
-    Preview REM reflections, candidate truths, and deep promotion output without writing anything:
+```bash
+openclaw memory promote-explain "router vlan"
+openclaw memory promote-explain "router vlan" --json
+```
 
-    ```bash
-    openclaw memory rem-harness
-    openclaw memory rem-harness --json
-    ```
+预览 REM 反思、候选真理和深度提升输出，而不写入任何内容：
 
-  </Tab>
-</Tabs>
+```bash
+openclaw memory rem-harness
+openclaw memory rem-harness --json
+```
 
-## Key defaults
+## 关键默认值
 
-All settings live under `plugins.entries.memory-core.config.dreaming`.
+所有设置都位于 `plugins.entries.memory-core.config.dreaming` 下。
 
-<ParamField path="enabled" type="boolean" default="false">
-  Enable or disable the dreaming sweep.
-</ParamField>
-<ParamField path="frequency" type="string" default="0 3 * * *">
-  Cron cadence for the full dreaming sweep.
-</ParamField>
+| 键 | 默认值 |
+| ----------- | ----------- |
+| `enabled` | `false` |
+| `frequency` | `0 3 * * *` |
 
-<Note>
-Phase policy, thresholds, and storage behavior are internal implementation details (not user-facing config). See [Memory configuration reference](/reference/memory-config#dreaming) for the full key list.
-</Note>
+阶段策略、阈值和存储行为是内部实现  
+细节（非用户面向配置）。
 
-## Dreams UI
+完整键列表请参见 [记忆配置参考](/reference/memory-config#dreaming)。
 
-When enabled, the Gateway **Dreams** tab shows:
+## Dreams 界面
 
-- current dreaming enabled state
-- phase-level status and managed-sweep presence
-- short-term, grounded, signal, and promoted-today counts
-- next scheduled run timing
-- a distinct grounded Scene lane for staged historical replay entries
-- an expandable Dream Diary reader backed by `doctor.memory.dreamDiary`
+启用后，网关 **Dreams** 标签页显示：
+
+- 当前 dreaming 是否启用
+- 各阶段状态以及是否存在受管理的 sweep
+- short-term、grounded、signal 和今日 promoted 的计数
+- 下一次计划运行时间
+- 一个单独的 grounded Scene lane，用于暂存的历史重放条目
+- 一个可展开的 Dream Diary 阅读器，由 `doctor.memory.dreamDiary` 提供数据
 
 ## Related
 
 - [Memory](/concepts/memory)
-- [Memory CLI](/cli/memory)
-- [Memory configuration reference](/reference/memory-config)
-- [Memory search](/concepts/memory-search)
+- [Memory Search](/concepts/memory-search)
+- [memory CLI](/cli/memory)
+- [记忆配置参考](/reference/memory-config)

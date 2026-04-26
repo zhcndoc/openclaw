@@ -1,65 +1,65 @@
 ---
-summary: "Host OpenClaw on a DigitalOcean Droplet"
+summary: "在 DigitalOcean Droplet 上托管 OpenClaw"
 read_when:
-  - Setting up OpenClaw on DigitalOcean
-  - Looking for a simple paid VPS for OpenClaw
+  - 在 DigitalOcean 上设置 OpenClaw
+  - 寻找适合 OpenClaw 的简单付费 VPS
 title: "DigitalOcean"
 ---
 
-Run a persistent OpenClaw Gateway on a DigitalOcean Droplet.
+在 DigitalOcean Droplet 上运行一个持久的 OpenClaw Gateway。
 
-## Prerequisites
+## 前提条件
 
-- DigitalOcean account ([signup](https://cloud.digitalocean.com/registrations/new))
-- SSH key pair (or willingness to use password auth)
-- About 20 minutes
+- DigitalOcean 账号 ([注册](https://cloud.digitalocean.com/registrations/new))
+- SSH 密钥对（或愿意使用密码认证）
+- 大约 20 分钟
 
-## Setup
+## 设置
 
 <Steps>
-  <Step title="Create a Droplet">
+  <Step title="创建 Droplet">
     <Warning>
-    Use a clean base image (Ubuntu 24.04 LTS). Avoid third-party Marketplace 1-click images unless you have reviewed their startup scripts and firewall defaults.
+    使用干净的基础镜像（Ubuntu 24.04 LTS）。除非你已经检查过第三方 Marketplace 一键镜像的启动脚本和防火墙默认设置，否则请避免使用它们。
     </Warning>
 
-    1. Log into [DigitalOcean](https://cloud.digitalocean.com/).
-    2. Click **Create > Droplets**.
-    3. Choose:
-       - **Region:** Closest to you
+    1. 登录 [DigitalOcean](https://cloud.digitalocean.com/)。
+    2. 点击 **Create > Droplets**。
+    3. 选择：
+       - **Region:** 离你最近的区域
        - **Image:** Ubuntu 24.04 LTS
        - **Size:** Basic, Regular, 1 vCPU / 1 GB RAM / 25 GB SSD
-       - **Authentication:** SSH key (recommended) or password
-    4. Click **Create Droplet** and note the IP address.
+       - **Authentication:** SSH key（推荐）或密码
+    4. 点击 **Create Droplet** 并记下 IP 地址。
 
   </Step>
 
-  <Step title="Connect and install">
+  <Step title="连接并安装">
     ```bash
     ssh root@YOUR_DROPLET_IP
 
     apt update && apt upgrade -y
 
-    # Install Node.js 24
+    # 安装 Node.js 24
     curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
     apt install -y nodejs
 
-    # Install OpenClaw
+    # 安装 OpenClaw
     curl -fsSL https://openclaw.ai/install.sh | bash
     openclaw --version
     ```
 
   </Step>
 
-  <Step title="Run onboarding">
+  <Step title="运行 onboarding">
     ```bash
     openclaw onboard --install-daemon
     ```
 
-    The wizard walks you through model auth, channel setup, gateway token generation, and daemon installation (systemd).
+    向导会引导你完成模型认证、频道设置、gateway token 生成以及守护进程安装（systemd）。
 
   </Step>
 
-  <Step title="Add swap (recommended for 1 GB Droplets)">
+  <Step title="添加 swap（推荐用于 1 GB Droplet）">
     ```bash
     fallocate -l 2G /swapfile
     chmod 600 /swapfile
@@ -69,7 +69,7 @@ Run a persistent OpenClaw Gateway on a DigitalOcean Droplet.
     ```
   </Step>
 
-  <Step title="Verify the gateway">
+  <Step title="验证 gateway">
     ```bash
     openclaw status
     systemctl --user status openclaw-gateway.service
@@ -77,19 +77,19 @@ Run a persistent OpenClaw Gateway on a DigitalOcean Droplet.
     ```
   </Step>
 
-  <Step title="Access the Control UI">
-    The gateway binds to loopback by default. Pick one of these options.
+  <Step title="访问控制界面">
+    gateway 默认绑定到回环地址。请选择以下选项之一。
 
-    **Option A: SSH tunnel (simplest)**
+    **选项 A：SSH 隧道（最简单）**
 
     ```bash
-    # From your local machine
+    # 从你的本地机器执行
     ssh -L 18789:localhost:18789 root@YOUR_DROPLET_IP
     ```
 
-    Then open `http://localhost:18789`.
+    然后打开 `http://localhost:18789`。
 
-    **Option B: Tailscale Serve**
+    **选项 B：Tailscale Serve**
 
     ```bash
     curl -fsSL https://tailscale.com/install.sh | sh
@@ -98,35 +98,35 @@ Run a persistent OpenClaw Gateway on a DigitalOcean Droplet.
     openclaw gateway restart
     ```
 
-    Then open `https://<magicdns>/` from any device on your tailnet.
+    然后在你的 tailnet 中的任意设备上打开 `https://<magicdns>/`。
 
-    **Option C: Tailnet bind (no Serve)**
+    **选项 C：Tailnet 绑定（不使用 Serve）**
 
     ```bash
     openclaw config set gateway.bind tailnet
     openclaw gateway restart
     ```
 
-    Then open `http://<tailscale-ip>:18789` (token required).
+    然后打开 `http://<tailscale-ip>:18789`（需要 token）。
 
   </Step>
 </Steps>
 
-## Troubleshooting
+## 故障排除
 
-**Gateway will not start** -- Run `openclaw doctor --non-interactive` and check logs with `journalctl --user -u openclaw-gateway.service -n 50`.
+**Gateway 无法启动** -- 运行 `openclaw doctor --non-interactive`，并使用 `journalctl --user -u openclaw-gateway.service -n 50` 检查日志。
 
-**Port already in use** -- Run `lsof -i :18789` to find the process, then stop it.
+**端口已被占用** -- 运行 `lsof -i :18789` 找出进程，然后停止它。
 
-**Out of memory** -- Verify swap is active with `free -h`. If still hitting OOM, use API-based models (Claude, GPT) rather than local models, or upgrade to a 2 GB Droplet.
+**内存不足** -- 使用 `free -h` 验证 swap 是否已激活。如果仍然遇到 OOM，请使用基于 API 的模型（Claude、GPT）而不是本地模型，或者升级到 2 GB Droplet。
 
-## Next steps
+## 下一步
 
-- [Channels](/channels) -- connect Telegram, WhatsApp, Discord, and more
-- [Gateway configuration](/gateway/configuration) -- all config options
-- [Updating](/install/updating) -- keep OpenClaw up to date
+- [Channels](/channels) -- 连接 Telegram、WhatsApp、Discord 等
+- [Gateway configuration](/gateway/configuration) -- 所有配置选项
+- [Updating](/install/updating) -- 保持 OpenClaw 为最新版本
 
-## Related
+## 相关内容
 
 - [Install overview](/install)
 - [Fly.io](/install/fly)

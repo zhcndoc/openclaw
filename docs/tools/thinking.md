@@ -1,124 +1,124 @@
 ---
-summary: "Directive syntax for /think, /fast, /verbose, /trace, and reasoning visibility"
+summary: "/think、/fast、/verbose、/trace 指令语法及推理可见性"
 read_when:
-  - Adjusting thinking, fast-mode, or verbose directive parsing or defaults
-title: "Thinking levels"
+  - 调整思考、快速模式或详细指令的解析或默认值
+title: "思考等级"
 ---
 
-## What it does
+## 它的作用
 
-- Inline directive in any inbound body: `/t <level>`, `/think:<level>`, or `/thinking <level>`.
-- Levels (aliases): `off | minimal | low | medium | high | xhigh | adaptive | max`
-  - minimal → “think”
-  - low → “think hard”
-  - medium → “think harder”
-  - high → “ultrathink” (max budget)
-  - xhigh → “ultrathink+” (GPT-5.2+ and Codex models, plus Anthropic Claude Opus 4.7 effort)
+- 任意传入正文中的内联指令：`/t <level>`、`/think:<level>`，或 `/thinking <level>`。
+- 等级（别名）：`off | minimal | low | medium | high | xhigh | adaptive | max`
+  - minimal → “思考”
+  - low → “深入思考”
+  - medium → “更深入思考”
+  - high → “超深度思考” (max budget)
+  - xhigh → “超深度思考+” (GPT-5.2+ and Codex models, plus Anthropic Claude Opus 4.7 effort)
   - adaptive → provider-managed adaptive thinking (supported for Claude 4.6 on Anthropic/Bedrock, Anthropic Claude Opus 4.7, and Google Gemini dynamic thinking)
   - max → provider max reasoning (currently Anthropic Claude Opus 4.7)
-  - `x-high`, `x_high`, `extra-high`, `extra high`, and `extra_high` map to `xhigh`.
-  - `highest` maps to `high`.
-- Provider notes:
-  - Thinking menus and pickers are provider-profile driven. Provider plugins declare the exact level set for the selected model, including labels such as binary `on`.
-  - `adaptive`, `xhigh`, and `max` are only advertised for provider/model profiles that support them. Typed directives for unsupported levels are rejected with that model's valid options.
-  - Existing stored unsupported levels are remapped by provider profile rank. `adaptive` falls back to `medium` on non-adaptive models, while `xhigh` and `max` fall back to the largest supported non-off level for the selected model.
-  - Anthropic Claude 4.6 models default to `adaptive` when no explicit thinking level is set.
-  - Anthropic Claude Opus 4.7 does not default to adaptive thinking. Its API effort default remains provider-owned unless you explicitly set a thinking level.
-  - Anthropic Claude Opus 4.7 maps `/think xhigh` to adaptive thinking plus `output_config.effort: "xhigh"`, because `/think` is a thinking directive and `xhigh` is the Opus 4.7 effort setting.
-  - Anthropic Claude Opus 4.7 also exposes `/think max`; it maps to the same provider-owned max effort path.
-  - OpenAI GPT models map `/think` through model-specific Responses API effort support. `/think off` sends `reasoning.effort: "none"` only when the target model supports it; otherwise OpenClaw omits the disabled reasoning payload instead of sending an unsupported value.
-  - Google Gemini maps `/think adaptive` to Gemini's provider-owned dynamic thinking. Gemini 3 requests omit a fixed `thinkingLevel`, while Gemini 2.5 requests send `thinkingBudget: -1`; fixed levels still map to the closest Gemini `thinkingLevel` or budget for that model family.
-  - MiniMax (`minimax/*`) on the Anthropic-compatible streaming path defaults to `thinking: { type: "disabled" }` unless you explicitly set thinking in model params or request params. This avoids leaked `reasoning_content` deltas from MiniMax's non-native Anthropic stream format.
-  - Z.AI (`zai/*`) only supports binary thinking (`on`/`off`). Any non-`off` level is treated as `on` (mapped to `low`).
-  - Moonshot (`moonshot/*`) maps `/think off` to `thinking: { type: "disabled" }` and any non-`off` level to `thinking: { type: "enabled" }`. When thinking is enabled, Moonshot only accepts `tool_choice` `auto|none`; OpenClaw normalizes incompatible values to `auto`.
+  - `x-high`, `x_high`, `extra-high`, `extra high`, and `extra_high` 映射为 `xhigh`。
+  - `highest` 映射为 `high`。
+- 提供方说明：
+  - 思考菜单和选择器由提供方配置文件驱动。提供方插件会为所选模型声明精确的等级集合，包括诸如二元 `on` 之类的标签。
+  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的提供方/模型配置文件中展示。对不支持等级的类型化指令会被拒绝，并返回该模型有效的选项。
+  - 现有已存储但不受支持的等级会按提供方配置文件的等级顺序重新映射。`adaptive` 在非自适应模型上回退到 `medium`，而 `xhigh` 和 `max` 会回退到所选模型支持的最大非 `off` 等级。
+  - Anthropic Claude 4.6 模型在未明确设置思考等级时默认使用 `adaptive`。
+  - Anthropic Claude Opus 4.7 不默认使用自适应思考。其 API effort 默认值仍由提供方控制，除非你显式设置思考等级。
+  - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
+  - Anthropic Claude Opus 4.7 也支持 `/think max`；它会映射到相同的由提供方控制的 max effort 路径。
+  - OpenAI GPT 模型通过模型特定的 Responses API effort 支持来映射 `/think`。`/think off` 仅在目标模型支持时发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略被禁用的 reasoning 负载，而不是发送不受支持的值。
+  - Google Gemini 将 `/think adaptive` 映射为 Gemini 由提供方控制的动态思考。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定等级仍会映射到该模型家族中最接近的 Gemini `thinkingLevel` 或 budget。
+  - MiniMax（`minimax/*`）在兼容 Anthropic 的流式路径上默认使用 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置思考。这可避免从 MiniMax 非原生 Anthropic 流格式中泄漏 `reasoning_content` 增量。
+  - Z.AI（`zai/*`）仅支持二元思考（`on`/`off`）。任何非 `off` 等级都会被视为 `on`（映射为 `low`）。
+  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 等级映射为 `thinking: { type: "enabled" }`。启用思考时，Moonshot 仅接受 `tool_choice` 为 `auto|none`；OpenClaw 会将不兼容的值规范化为 `auto`。
 
-## Resolution order
+## 解析优先级顺序
 
-1. Inline directive on the message (applies only to that message).
-2. Session override (set by sending a directive-only message).
-3. Per-agent default (`agents.list[].thinkingDefault` in config).
-4. Global default (`agents.defaults.thinkingDefault` in config).
-5. Fallback: provider-declared default when available; otherwise reasoning-capable models resolve to `medium` or the nearest supported non-`off` level for that model, and non-reasoning models stay `off`.
+1. 消息中的内联指令（仅应用于该消息）。
+2. 会话覆盖（通过发送仅含指令的消息设置）。
+3. 每个代理的默认值（配置中的 `agents.list[].thinkingDefault`）。
+4. 全局默认值（配置中的 `agents.defaults.thinkingDefault`）。
+5. 回退：在可用时采用提供方声明的默认值；否则，具备推理能力的模型会解析为 `medium` 或该模型支持的最接近的非 `off` 等级，而不具备推理能力的模型保持 `off`。
 
-## Setting a session default
+## 设置会话默认值
 
-- Send a message that is **only** the directive (whitespace allowed), e.g. `/think:medium` or `/t high`.
-- That sticks for the current session (per-sender by default); cleared by `/think:off` or session idle reset.
-- Confirmation reply is sent (`Thinking level set to high.` / `Thinking disabled.`). If the level is invalid (e.g. `/thinking big`), the command is rejected with a hint and the session state is left unchanged.
-- Send `/think` (or `/think:`) with no argument to see the current thinking level.
+- 发送一条仅包含指令的消息（允许包含空白），例如 `/think:medium` 或 `/t high`。
+- 该设置在当前会话中生效（默认按发送者区分）；可通过发送 `/think:off` 或会话空闲重置来清除。
+- 会收到确认回复（如 `思考等级设置为 high.` / `思考已禁用.`）。如果等级无效（例如 `/thinking big`），指令会被拒绝并提示，且会话状态保持不变。
+- 发送 `/think`（或 `/think:`）且不带参数时，可查看当前思考等级。
 
-## Application by agent
+## 代理应用
 
-- **Embedded Pi**: the resolved level is passed to the in-process Pi agent runtime.
+- **嵌入式 Pi**：解析后的等级会传递给进程内的 Pi 代理运行时。
 
-## Fast mode (/fast)
+## 快速模式 (/fast)
 
-- Levels: `on|off`.
-- Directive-only message toggles a session fast-mode override and replies `Fast mode enabled.` / `Fast mode disabled.`.
-- Send `/fast` (or `/fast status`) with no mode to see the current effective fast-mode state.
-- OpenClaw resolves fast mode in this order:
-  1. Inline/directive-only `/fast on|off`
-  2. Session override
-  3. Per-agent default (`agents.list[].fastModeDefault`)
-  4. Per-model config: `agents.defaults.models["<provider>/<model>"].params.fastMode`
-  5. Fallback: `off`
-- For `openai/*`, fast mode maps to OpenAI priority processing by sending `service_tier=priority` on supported Responses requests.
-- For `openai-codex/*`, fast mode sends the same `service_tier=priority` flag on Codex Responses. OpenClaw keeps one shared `/fast` toggle across both auth paths.
-- For direct public `anthropic/*` requests, including OAuth-authenticated traffic sent to `api.anthropic.com`, fast mode maps to Anthropic service tiers: `/fast on` sets `service_tier=auto`, `/fast off` sets `service_tier=standard_only`.
-- For `minimax/*` on the Anthropic-compatible path, `/fast on` (or `params.fastMode: true`) rewrites `MiniMax-M2.7` to `MiniMax-M2.7-highspeed`.
-- Explicit Anthropic `serviceTier` / `service_tier` model params override the fast-mode default when both are set. OpenClaw still skips Anthropic service-tier injection for non-Anthropic proxy base URLs.
-- `/status` shows `Fast` only when fast mode is enabled.
+- 等级：`on|off`。
+- 仅含指令的消息会切换会话快速模式覆盖，并回复 `Fast mode enabled.` / `Fast mode disabled.`。
+- 发送不带模式的 `/fast`（或 `/fast status`）可查看当前生效的快速模式状态。
+- OpenClaw 按以下顺序解析快速模式：
+  1. 内联/仅指令 `/fast on|off`
+  2. 会话覆盖
+  3. 每个代理的默认值（`agents.list[].fastModeDefault`）
+  4. 每个模型配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
+  5. 回退：`off`
+- 对于 `openai/*`，快速模式通过在受支持的 Responses 请求中发送 `service_tier=priority` 映射到 OpenAI 优先处理。
+- 对于 `openai-codex/*`，快速模式在 Codex Responses 中发送相同的 `service_tier=priority` 标志。OpenClaw 在这两条认证路径之间保留一个共享的 `/fast` 开关。
+- 对于直接公共的 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，快速模式映射到 Anthropic service tiers：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
+- 对于 `minimax/*` 在兼容 Anthropic 的路径上，`/fast on`（或 `params.fastMode: true`）会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+- 当二者都设置时，显式的 Anthropic `serviceTier` / `service_tier` 模型参数会覆盖快速模式默认值。OpenClaw 仍会对非 Anthropic 代理基础 URL 跳过 Anthropic service tier 注入。
+- 仅当快速模式启用时，`/status` 才会显示 `Fast`。
 
-## Verbose directives (/verbose or /v)
+## 详细日志指令 (/verbose 或 /v)
 
-- Levels: `on` (minimal) | `full` | `off` (default).
-- Directive-only message toggles session verbose and replies `Verbose logging enabled.` / `Verbose logging disabled.`; invalid levels return a hint without changing state.
-- `/verbose off` stores an explicit session override; clear it via the Sessions UI by choosing `inherit`.
-- Inline directive affects only that message; session/global defaults apply otherwise.
-- Send `/verbose` (or `/verbose:`) with no argument to see the current verbose level.
-- When verbose is on, agents that emit structured tool results (Pi, other JSON agents) send each tool call back as its own metadata-only message, prefixed with `<emoji> <tool-name>: <arg>` when available (path/command). These tool summaries are sent as soon as each tool starts (separate bubbles), not as streaming deltas.
-- Tool failure summaries remain visible in normal mode, but raw error detail suffixes are hidden unless verbose is `on` or `full`.
-- When verbose is `full`, tool outputs are also forwarded after completion (separate bubble, truncated to a safe length). If you toggle `/verbose on|full|off` while a run is in-flight, subsequent tool bubbles honor the new setting.
+- 等级：`on`（最小详细） | `full` | `off`（默认）。
+- 仅含指令的消息会切换会话详细日志状态，并回复 `详细日志已启用。` / `详细日志已禁用。`；无效等级会返回提示且不改变状态。
+- `/verbose off` 会存储显式的会话覆盖；可通过 Sessions UI 选择 `inherit` 来清除。
+- 内联指令仅影响当前消息；否则应用会话/全局默认。
+- 发送 `/verbose`（或 `/verbose:`）且不带参数时查看当前详细等级。
+- 详细日志开启时，发出结构化工具结果的代理（Pi 及其他 JSON 代理）会将每个工具调用作为单独仅元数据消息发送，带有前缀 `<emoji> <tool-name>: <arg>`（如果可用，显示路径/命令）。这些工具摘要在工具启动时即发送（单独气泡），非流式增量。
+- 工具失败摘要在常规模式下可见，但原始错误详细信息后缀仅在详细等级为 `on` 或 `full` 时显示。
+- 详细等级为 `full` 时，工具输出完成后也会转发（单独气泡，截断至安全长度）。如果在运行中切换 `/verbose on|full|off`，后续工具气泡将遵循新的设置。
 
-## Plugin trace directives (/trace)
+## 插件跟踪指令 (/trace)
 
-- Levels: `on` | `off` (default).
-- Directive-only message toggles session plugin trace output and replies `Plugin trace enabled.` / `Plugin trace disabled.`.
-- Inline directive affects only that message; session/global defaults apply otherwise.
-- Send `/trace` (or `/trace:`) with no argument to see the current trace level.
-- `/trace` is narrower than `/verbose`: it only exposes plugin-owned trace/debug lines such as Active Memory debug summaries.
-- Trace lines can appear in `/status` and as a follow-up diagnostic message after the normal assistant reply.
+- 等级：`on` | `off`（默认）。
+- 仅含指令的消息会切换会话插件跟踪输出并回复 `插件跟踪已启用.` / `插件跟踪已禁用.`。
+- 内联指令仅影响该消息；否则应用会话/全局默认。
+- 发送 `/trace`（或 `/trace:`）且不带参数可查看当前跟踪等级。
+- `/trace` 比 `/verbose` 范围更窄：它仅公开插件拥有的跟踪/调试行，例如主动内存调试摘要。
+- 跟踪行可出现在 `/status` 中，以及正常助手回复后的后续诊断消息中。
 
-## Reasoning visibility (/reasoning)
+## 推理可见性 (/reasoning)
 
-- Levels: `on|off|stream`.
-- Directive-only message toggles whether thinking blocks are shown in replies.
-- When enabled, reasoning is sent as a **separate message** prefixed with `Reasoning:`.
-- `stream` (Telegram only): streams reasoning into the Telegram draft bubble while the reply is generating, then sends the final answer without reasoning.
-- Alias: `/reason`.
-- Send `/reasoning` (or `/reasoning:`) with no argument to see the current reasoning level.
-- Resolution order: inline directive, then session override, then per-agent default (`agents.list[].reasoningDefault`), then fallback (`off`).
+- 等级：`on|off|stream`。
+- 仅包含指令的消息会切换是否在回复中显示思考块。
+- 启用时，推理内容作为**单独的消息**发送，前缀为 `推理：`。
+- `stream`（仅限 Telegram）：在生成回复时将推理内容流式传输到 Telegram 草稿气泡，然后发送不含推理的最终答案。
+- 别名：`/reason`。
+- 发送不带参数的 `/reasoning`（或 `/reasoning:`）以查看当前推理等级。
+- 解析顺序：内联指令，然后是会话覆盖，然后是每个代理的默认值 (`agents.list[].reasoningDefault`)，最后是回退 (`off`)。
 
-## Related
+## 相关
 
-- Elevated mode docs live in [Elevated mode](/tools/elevated).
+- 提升模式文档存放于 [提升模式](/tools/elevated) 。
 
-## Heartbeats
+## 心跳
 
-- Heartbeat probe body is the configured heartbeat prompt (default: `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`). Inline directives in a heartbeat message apply as usual (but avoid changing session defaults from heartbeats).
-- Heartbeat delivery defaults to the final payload only. To also send the separate `Reasoning:` message (when available), set `agents.defaults.heartbeat.includeReasoning: true` or per-agent `agents.list[].heartbeat.includeReasoning: true`.
+- 心跳探测消息正文为配置的心跳提示（默认：`如果存在则阅读 HEARTBEAT.md（工作区上下文）。严格遵守。不要推断或重复先前聊天中的旧任务。如果没有需要注意的事项，回复 HEARTBEAT_OK.`）。心跳消息中的内联指令正常生效（但避免通过心跳更改会话默认）。
+- 心跳默认只发送最终负载。若需同时发送独立的 `推理：` 消息（如果存在），可设置 `agents.defaults.heartbeat.includeReasoning: true` 或特定代理的 `agents.list[].heartbeat.includeReasoning: true`。
 
-## Web chat UI
+## Web 聊天界面
 
-- The web chat thinking selector mirrors the session's stored level from the inbound session store/config when the page loads.
-- Picking another level writes the session override immediately via `sessions.patch`; it does not wait for the next send and it is not a one-shot `thinkingOnce` override.
-- The first option is always `Default (<resolved level>)`, where the resolved default comes from the active session model's provider thinking profile plus the same fallback logic that `/status` and `session_status` use.
-- The picker uses `thinkingLevels` returned by the gateway session row/defaults, with `thinkingOptions` kept as a legacy label list. The browser UI does not keep its own provider regex list; plugins own model-specific level sets.
-- `/think:<level>` still works and updates the same stored session level, so chat directives and the picker stay in sync.
+- Web 聊天的思考选择器在页面加载时会镜像传入会话存储/配置中的会话存储等级。
+- 选择其他等级会通过 `sessions.patch` 立即写入会话覆盖；它不会等到下一次发送，也不是一次性的 `thinkingOnce` 覆盖。
+- 第一个选项始终是 `Default (<resolved level>)`，其中解析后的默认值来自活动会话模型的提供方思考配置文件，以及 `/status` 和 `session_status` 使用的相同回退逻辑。
+- 选择器使用网关会话行/默认值返回的 `thinkingLevels`，而 `thinkingOptions` 仅保留为旧版标签列表。浏览器 UI 不维护自己的提供方正则列表；插件负责模型特定的等级集合。
+- `/think:<level>` 仍然有效，并会更新同一个已存储的会话等级，因此聊天指令和选择器会保持同步。
 
-## Provider profiles
+## 提供方配置文件
 
-- Provider plugins can expose `resolveThinkingProfile(ctx)` to define the model's supported levels and default.
-- Each profile level has a stored canonical `id` (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `adaptive`, or `max`) and may include a display `label`. Binary providers use `{ id: "low", label: "on" }`.
-- Published legacy hooks (`supportsXHighThinking`, `isBinaryThinking`, and `resolveDefaultThinkingLevel`) remain as compatibility adapters, but new custom level sets should use `resolveThinkingProfile`.
-- Gateway rows/defaults expose `thinkingLevels`, `thinkingOptions`, and `thinkingDefault` so ACP/chat clients render the same profile ids and labels that runtime validation uses.
+- 提供方插件可以暴露 `resolveThinkingProfile(ctx)` 来定义模型支持的等级和默认值。
+- 每个配置文件等级都有一个已存储的规范 `id`（`off`、`minimal`、`low`、`medium`、`high`、`xhigh`、`adaptive` 或 `max`），并且可能包含显示 `label`。二元提供方使用 `{ id: "low", label: "on" }`。
+- 已发布的旧版钩子（`supportsXHighThinking`、`isBinaryThinking` 和 `resolveDefaultThinkingLevel`）仍作为兼容适配器保留，但新的自定义等级集合应使用 `resolveThinkingProfile`。
+- 网关行/默认值会公开 `thinkingLevels`、`thinkingOptions` 和 `thinkingDefault`，以便 ACP/聊天客户端渲染与运行时验证使用的相同配置文件 id 和标签。

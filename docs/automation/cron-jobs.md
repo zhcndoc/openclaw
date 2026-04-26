@@ -1,209 +1,173 @@
 ---
-summary: "Scheduled jobs, webhooks, and Gmail PubSub triggers for the Gateway scheduler"
+summary: "Gateway 调度器的计划任务、Webhooks 和 Gmail PubSub 触发器"
 read_when:
   - Scheduling background jobs or wakeups
   - Wiring external triggers (webhooks, Gmail) into OpenClaw
   - Deciding between heartbeat and cron for scheduled tasks
 title: "Scheduled tasks"
-sidebarTitle: "Scheduled tasks"
 ---
 
-Cron is the Gateway's built-in scheduler. It persists jobs, wakes the agent at the right time, and can deliver output back to a chat channel or webhook endpoint.
+Cron 是 Gateway 内置的调度器。它会持久化任务，在正确的时间唤醒代理，并且可以将输出返回到聊天频道或 webhook 端点。
 
-## Quick start
+## 快速开始
 
-<Steps>
-  <Step title="Add a one-shot reminder">
-    ```bash
-    openclaw cron add \
-      --name "Reminder" \
-      --at "2026-02-01T16:00:00Z" \
-      --session main \
-      --system-event "Reminder: check the cron docs draft" \
-      --wake now \
-      --delete-after-run
-    ```
-  </Step>
-  <Step title="Check your jobs">
-    ```bash
-    openclaw cron list
-    openclaw cron show <job-id>
-    ```
-  </Step>
-  <Step title="See run history">
-    ```bash
-    openclaw cron runs --id <job-id>
-    ```
-  </Step>
-</Steps>
+```bash
+# 添加一次性提醒
+openclaw cron add \
+  --name "Reminder" \
+  --at "2026-02-01T16:00:00Z" \
+  --session main \
+  --system-event "Reminder: check the cron docs draft" \
+  --wake now \
+  --delete-after-run
 
-## How cron works
+# 检查你的任务
+openclaw cron list
+openclaw cron show <job-id>
 
-- Cron runs **inside the Gateway** process (not inside the model).
-- Job definitions persist at `~/.openclaw/cron/jobs.json` so restarts do not lose schedules.
-- Runtime execution state persists next to it in `~/.openclaw/cron/jobs-state.json`. If you track cron definitions in git, track `jobs.json` and gitignore `jobs-state.json`.
-- After the split, older OpenClaw versions can read `jobs.json` but may treat jobs as fresh because runtime fields now live in `jobs-state.json`.
-- All cron executions create [background task](/automation/tasks) records.
-- One-shot jobs (`--at`) auto-delete after success by default.
-- Isolated cron runs best-effort close tracked browser tabs/processes for their `cron:<jobId>` session when the run completes, so detached browser automation does not leave orphaned processes behind.
-- Isolated cron runs also guard against stale acknowledgement replies. If the first result is just an interim status update (`on it`, `pulling everything together`, and similar hints) and no descendant subagent run is still responsible for the final answer, OpenClaw re-prompts once for the actual result before delivery.
+# 查看运行历史
+openclaw cron runs --id <job-id>
+```
+
+## Cron 如何工作
+
+- Cron 运行在 **Gateway** 进程内部（而不是在模型内部）。
+- 任务定义持久化在 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
+- 运行时执行状态持久化在其旁边的 `~/.openclaw/cron/jobs-state.json` 中。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
+- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会将任务视为新任务，因为运行时字段现在位于 `jobs-state.json` 中。
+- 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
+- 一次性任务（`--at`）在成功后默认自动删除。
+- 隔离的 cron 运行会在运行完成时尽力关闭其 `cron:<jobId>` 会话下跟踪到的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤立进程。
+- 隔离的 cron 运行还会防止过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 之类的提示），并且没有仍然负责最终答案的后代子代理运行，OpenClaw 会在交付前再次提示一次以获取实际结果。
 
 <a id="maintenance"></a>
 
-<Note>
-Task reconciliation for cron is runtime-owned first, durable-history-backed second: an active cron task stays live while the cron runtime still tracks that job as running, even if an old child session row still exists. Once the runtime stops owning the job and the 5-minute grace window expires, maintenance checks persisted run logs and job state for the matching `cron:<jobId>:<startedAt>` run. If that durable history shows a terminal result, the task ledger is finalized from it; otherwise Gateway-owned maintenance can mark the task `lost`. Offline CLI audit can recover from durable history, but it does not treat its own empty in-process active-job set as proof that a Gateway-owned cron run is gone.
-</Note>
+Cron 的任务协调由运行时拥有：只要 Cron 运行时仍将该任务跟踪为运行中，活动的 Cron 任务就会保持存活，即使旧的子会话行仍然存在。一旦运行时不再拥有该任务且 5 分钟宽限期窗口过期，维护程序可以将任务标记为 `lost`。
 
-## Schedule types
+## 调度类型
 
-| Kind    | CLI flag  | Description                                             |
+| 类型    | CLI 标志  | 描述                                             |
 | ------- | --------- | ------------------------------------------------------- |
-| `at`    | `--at`    | One-shot timestamp (ISO 8601 or relative like `20m`)    |
-| `every` | `--every` | Fixed interval                                          |
-| `cron`  | `--cron`  | 5-field or 6-field cron expression with optional `--tz` |
+| `at`    | `--at`    | 一次性时间戳（ISO 8601 或相对时间如 `20m`）    |
+| `every` | `--every` | 固定间隔                                          |
+| `cron`  | `--cron`  | 5 字段或 6 字段 cron 表达式，带可选 `--tz` |
 
-Timestamps without a timezone are treated as UTC. Add `--tz America/New_York` for local wall-clock scheduling.
+不带时区的时间戳被视为 UTC。添加 `--tz America/New_York` 以进行本地挂钟调度。
 
-Recurring top-of-hour expressions are automatically staggered by up to 5 minutes to reduce load spikes. Use `--exact` to force precise timing or `--stagger 30s` for an explicit window.
+重复的整点表达式会自动错峰最多 5 分钟，以减少负载峰值。使用 `--exact` 强制精确计时，或使用 `--stagger 30s` 指定窗口。
 
-### Day-of-month and day-of-week use OR logic
+### 月份日期和星期日期使用“或”逻辑
 
-Cron expressions are parsed by [croner](https://github.com/Hexagon/croner). When both the day-of-month and day-of-week fields are non-wildcard, croner matches when **either** field matches — not both. This is standard Vixie cron behavior.
+Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月份日期和星期日期字段都不是通配符时，croner 在 **任一** 字段匹配时匹配——而不是两者都匹配。这是标准的 Vixie cron 行为。
 
 ```
-# Intended: "9 AM on the 15th, only if it's a Monday"
-# Actual:   "9 AM on every 15th, AND 9 AM on every Monday"
+# 意图："15 日上午 9 点，且仅限周一"
+# 实际："每月 15 日上午 9 点，以及每周一上午 9 点"
 0 9 15 * 1
 ```
 
-This fires ~5–6 times per month instead of 0–1 times per month. OpenClaw uses Croner's default OR behavior here. To require both conditions, use Croner's `+` day-of-week modifier (`0 9 15 * +1`) or schedule on one field and guard the other in your job's prompt or command.
+这会导致每月触发约 5–6 次，而不是每月 0–1 次。OpenClaw 在此处使用 Croner 的默认“或”行为。若要同时满足两个条件，请使用 Croner 的 `+` 星期修饰符（`0 9 15 * +1`）或在任务的提示或命令中在一个字段上调度并守卫另一个字段。
 
-## Execution styles
+## 执行风格
 
-| Style           | `--session` value   | Runs in                  | Best for                        |
+| 风格           | `--session` 值   | 运行于                  | 最适合                        |
 | --------------- | ------------------- | ------------------------ | ------------------------------- |
-| Main session    | `main`              | Next heartbeat turn      | Reminders, system events        |
-| Isolated        | `isolated`          | Dedicated `cron:<jobId>` | Reports, background chores      |
-| Current session | `current`           | Bound at creation time   | Context-aware recurring work    |
-| Custom session  | `session:custom-id` | Persistent named session | Workflows that build on history |
+| 主会话    | `main`              | 下一次心跳轮次      | 提醒、系统事件        |
+| 隔离        | `isolated`          | 专用 `cron:<jobId>` | 报告、后台杂务      |
+| 当前会话 | `current`           | 创建时绑定   | 感知上下文的重复工作    |
+| 自定义会话  | `session:custom-id` | 持久化命名会话 | 基于历史构建的工作流 |
 
-<AccordionGroup>
-  <Accordion title="Main session vs isolated vs custom">
-    **Main session** jobs enqueue a system event and optionally wake the heartbeat (`--wake now` or `--wake next-heartbeat`). Those system events do not extend daily/idle reset freshness for the target session. **Isolated** jobs run a dedicated agent turn with a fresh session. **Custom sessions** (`session:xxx`) persist context across runs, enabling workflows like daily standups that build on previous summaries.
-  </Accordion>
-  <Accordion title="What 'fresh session' means for isolated jobs">
-    For isolated jobs, "fresh session" means a new transcript/session id for each run. OpenClaw may carry safe preferences such as thinking/fast/verbose settings, labels, and explicit user-selected model/auth overrides, but it does not inherit ambient conversation context from an older cron row: channel/group routing, send or queue policy, elevation, origin, or ACP runtime binding. Use `current` or `session:<id>` when a recurring job should deliberately build on the same conversation context.
-  </Accordion>
-  <Accordion title="Runtime cleanup">
-    For isolated jobs, runtime teardown now includes best-effort browser cleanup for that cron session. Cleanup failures are ignored so the actual cron result still wins.
+**主会话** 任务将系统事件入队并可选地唤醒心跳（`--wake now` 或 `--wake next-heartbeat`）。**隔离** 任务使用新会话运行专用的代理轮次。**自定义会话**（`session:xxx`）在运行之间持久化上下文，启用如基于先前摘要构建的每日站会等工作流。
 
-    Isolated cron runs also dispose any bundled MCP runtime instances created for the job through the shared runtime-cleanup path. This matches how main-session and custom-session MCP clients are torn down, so isolated cron jobs do not leak stdio child processes or long-lived MCP connections across runs.
+对于隔离任务，运行时销毁现在包括对该 cron 会话的尽力浏览器清理。清理失败会被忽略，因此实际的 cron 结果仍然生效。
 
-  </Accordion>
-  <Accordion title="Subagent and Discord delivery">
-    When isolated cron runs orchestrate subagents, delivery also prefers the final descendant output over stale parent interim text. If descendants are still running, OpenClaw suppresses that partial parent update instead of announcing it.
+隔离的 cron 运行还会通过共享的运行时清理路径处理为该任务创建的任何捆绑 MCP 运行时实例。这与主会话和自定义会话 MCP 客户端的销毁方式一致，因此隔离的 cron 任务不会在运行之间泄漏 stdio 子进程或长期存在的 MCP 连接。
 
-    For text-only Discord announce targets, OpenClaw sends the canonical final assistant text once instead of replaying both streamed/intermediate text payloads and the final answer. Media and structured Discord payloads are still delivered as separate payloads so attachments and components are not dropped.
+当隔离的 cron 运行协调子代理时，交付也会优先选择最终的后代输出，而不是过时的父级中间文本。如果后代仍在运行，OpenClaw 会抑制该部分父级更新，而不是直接发布它。
 
-  </Accordion>
-</AccordionGroup>
+### 隔离任务的负载选项
 
-### Payload options for isolated jobs
+- `--message`: 提示文本（隔离任务必需）
+- `--model` / `--thinking`: 模型和思考级别覆盖
+- `--light-context`: 跳过工作区引导文件注入
+- `--tools exec,read`: 限制任务可以使用的工具
 
-<ParamField path="--message" type="string" required>
-  Prompt text (required for isolated).
-</ParamField>
-<ParamField path="--model" type="string">
-  Model override; uses the selected allowed model for the job.
-</ParamField>
-<ParamField path="--thinking" type="string">
-  Thinking level override.
-</ParamField>
-<ParamField path="--light-context" type="boolean">
-  Skip workspace bootstrap file injection.
-</ParamField>
-<ParamField path="--tools" type="string">
-  Restrict which tools the job can use, for example `--tools exec,read`.
-</ParamField>
+`--model` 使用该任务选定的允许模型。如果请求的模型不被允许，cron 会记录警告并回退到任务的代理/默认模型选择。配置的回退链仍然适用，但没有明确每任务回退列表的普通模型覆盖不再将代理主模型作为隐藏的额外重试目标附加。
 
-`--model` uses the selected allowed model for that job. If the requested model is not allowed, cron logs a warning and falls back to the job's agent/default model selection instead. Configured fallback chains still apply, but a plain model override with no explicit per-job fallback list no longer appends the agent primary as a hidden extra retry target.
+隔离任务的模型选择优先级为：
 
-Model-selection precedence for isolated jobs is:
+1. Gmail hook 模型覆盖（当运行来自 Gmail 且该覆盖被允许时）
+2. 每任务负载 `model`
+3. 存储的 cron 会话模型覆盖
+4. 代理/默认模型选择
 
-1. Gmail hook model override (when the run came from Gmail and that override is allowed)
-2. Per-job payload `model`
-3. User-selected stored cron session model override
-4. Agent/default model selection
+快速模式也遵循解析后的实时选择。如果选定的模型配置包含 `params.fastMode`，隔离 cron 默认使用该设置。存储的会话 `fastMode` 覆盖在任何方向上仍优先于配置。
 
-Fast mode follows the resolved live selection too. If the selected model config has `params.fastMode`, isolated cron uses that by default. A stored session `fastMode` override still wins over config in either direction.
+如果隔离运行遇到实时模型切换交接，cron 会使用切换后的提供商/模型重试，并在重试前持久化该实时选择。当切换也携带新的认证配置文件时，cron 也会持久化该认证配置文件覆盖。重试是有界的：在初始尝试加上 2 次切换重试后，cron 会中止而不是无限循环。
 
-If an isolated run hits a live model-switch handoff, cron retries with the switched provider/model and persists that live selection for the active run before retrying. When the switch also carries a new auth profile, cron persists that auth profile override for the active run too. Retries are bounded: after the initial attempt plus 2 switch retries, cron aborts instead of looping forever.
-
-## Delivery and output
+## 交付与输出
 
 | Mode       | What happens                                                        |
 | ---------- | ------------------------------------------------------------------- |
-| `announce` | Fallback-deliver final text to the target if the agent did not send |
-| `webhook`  | POST finished event payload to a URL                                |
-| `none`     | No runner fallback delivery                                         |
+| `announce` | 如果代理未发送，回退交付最终文本到目标位置 |
+| `webhook`  | 将完成事件载荷 POST 到一个 URL                                  |
+| `none`     | 无运行器回退交付                                                 |
 
-Use `--announce --channel telegram --to "-1001234567890"` for channel delivery. For Telegram forum topics, use `-1001234567890:topic:123`. Slack/Discord/Mattermost targets should use explicit prefixes (`channel:<id>`, `user:<id>`). Matrix room IDs are case-sensitive; use the exact room ID or `room:!room:server` form from Matrix.
+使用 `--announce --channel telegram --to "-1001234567890"` 进行频道交付。对于 Telegram 论坛主题，使用 `-1001234567890:topic:123`。Slack/Discord/Mattermost 目标应使用明确的前缀（`channel:<id>`, `user:<id>`）。
 
-For isolated jobs, chat delivery is shared. If a chat route is available, the agent can use the `message` tool even when the job uses `--no-deliver`. If the agent sends to the configured/current target, OpenClaw skips the fallback announce. Otherwise `announce`, `webhook`, and `none` only control what the runner does with the final reply after the agent turn.
+对于隔离任务，聊天交付是共享的。如果存在聊天路由，即使任务使用 `--no-deliver`，代理也可以使用 `message` 工具。如果代理发送到了配置的/当前目标，OpenClaw 会跳过回退 announce。否则，`announce`、`webhook` 和 `none` 只控制运行器在代理轮次结束后如何处理最终回复。
 
-When an agent creates an isolated reminder from an active chat, OpenClaw stores the preserved live delivery target for the fallback announce route. Internal session keys may be lowercase; provider delivery targets are not reconstructed from those keys when current chat context is available.
+失败通知遵循单独的目标路径：
 
-Failure notifications follow a separate destination path:
+- `cron.failureDestination` 设置失败通知的全局默认值。
+- `job.delivery.failureDestination` 覆盖每任务的该设置。
+- 如果均未设置且任务已经通过 `announce` 交付，失败通知现在回退到该主通知目标。
+- `delivery.failureDestination` 仅在 `sessionTarget="isolated"` 任务上支持，除非主交付模式是 `webhook`。
 
-- `cron.failureDestination` sets a global default for failure notifications.
-- `job.delivery.failureDestination` overrides that per job.
-- If neither is set and the job already delivers via `announce`, failure notifications now fall back to that primary announce target.
-- `delivery.failureDestination` is only supported on `sessionTarget="isolated"` jobs unless the primary delivery mode is `webhook`.
+## CLI 示例
 
-## CLI examples
+一次性提醒（主会话）：
 
-<Tabs>
-  <Tab title="One-shot reminder">
-    ```bash
-    openclaw cron add \
-      --name "Calendar check" \
-      --at "20m" \
-      --session main \
-      --system-event "Next heartbeat: check calendar." \
-      --wake now
-    ```
-  </Tab>
-  <Tab title="Recurring isolated job">
-    ```bash
-    openclaw cron add \
-      --name "Morning brief" \
-      --cron "0 7 * * *" \
-      --tz "America/Los_Angeles" \
-      --session isolated \
-      --message "Summarize overnight updates." \
-      --announce \
-      --channel slack \
-      --to "channel:C1234567890"
-    ```
-  </Tab>
-  <Tab title="Model and thinking override">
-    ```bash
-    openclaw cron add \
-      --name "Deep analysis" \
-      --cron "0 6 * * 1" \
-      --tz "America/Los_Angeles" \
-      --session isolated \
-      --message "Weekly deep analysis of project progress." \
-      --model "opus" \
-      --thinking high \
-      --announce
-    ```
-  </Tab>
-</Tabs>
+```bash
+openclaw cron add \
+  --name "Calendar check" \
+  --at "20m" \
+  --session main \
+  --system-event "Next heartbeat: check calendar." \
+  --wake now
+```
+
+带交付的重复隔离任务：
+
+```bash
+openclaw cron add \
+  --name "Morning brief" \
+  --cron "0 7 * * *" \
+  --tz "America/Los_Angeles" \
+  --session isolated \
+  --message "Summarize overnight updates." \
+  --announce \
+  --channel slack \
+  --to "channel:C1234567890"
+```
+
+带模型和思考覆盖的隔离任务：
+
+```bash
+openclaw cron add \
+  --name "Deep analysis" \
+  --cron "0 6 * * 1" \
+  --tz "America/Los_Angeles" \
+  --session isolated \
+  --message "Weekly deep analysis of project progress." \
+  --model "opus" \
+  --thinking high \
+  --announce
+```
 
 ## Webhooks
 
-Gateway can expose HTTP webhook endpoints for external triggers. Enable in config:
+Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用：
 
 ```json5
 {
@@ -215,115 +179,103 @@ Gateway can expose HTTP webhook endpoints for external triggers. Enable in confi
 }
 ```
 
-### Authentication
+### 认证
 
-Every request must include the hook token via header:
+每个请求必须通过头部包含 hook token：
 
-- `Authorization: Bearer <token>` (recommended)
+- `Authorization: Bearer <token>`（推荐）
 - `x-openclaw-token: <token>`
 
-Query-string tokens are rejected.
+查询字符串 token 会被拒绝。
 
-<AccordionGroup>
-  <Accordion title="POST /hooks/wake">
-    Enqueue a system event for the main session:
+### POST /hooks/wake
 
-    ```bash
-    curl -X POST http://127.0.0.1:18789/hooks/wake \
-      -H 'Authorization: Bearer SECRET' \
-      -H 'Content-Type: application/json' \
-      -d '{"text":"New email received","mode":"now"}'
-    ```
+为主会话入队一个系统事件：
 
-    <ParamField path="text" type="string" required>
-      Event description.
-    </ParamField>
-    <ParamField path="mode" type="string" default="now">
-      `now` or `next-heartbeat`.
-    </ParamField>
+```bash
+curl -X POST http://127.0.0.1:18789/hooks/wake \
+  -H 'Authorization: Bearer SECRET' \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"New email received","mode":"now"}'
+```
 
-  </Accordion>
-  <Accordion title="POST /hooks/agent">
-    Run an isolated agent turn:
+- `text`（必需）：事件描述
+- `mode`（可选）：`now`（默认）或 `next-heartbeat`
 
-    ```bash
-    curl -X POST http://127.0.0.1:18789/hooks/agent \
-      -H 'Authorization: Bearer SECRET' \
-      -H 'Content-Type: application/json' \
-      -d '{"message":"Summarize inbox","name":"Email","model":"openai/gpt-5.4"}'
-    ```
+### POST /hooks/agent
 
-    Fields: `message` (required), `name`, `agentId`, `wakeMode`, `deliver`, `channel`, `to`, `model`, `thinking`, `timeoutSeconds`.
+运行隔离的代理轮次：
 
-  </Accordion>
-  <Accordion title="Mapped hooks (POST /hooks/<name>)">
-    Custom hook names are resolved via `hooks.mappings` in config. Mappings can transform arbitrary payloads into `wake` or `agent` actions with templates or code transforms.
-  </Accordion>
-</AccordionGroup>
+```bash
+curl -X POST http://127.0.0.1:18789/hooks/agent \
+  -H 'Authorization: Bearer SECRET' \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Summarize inbox","name":"Email","model":"openai/gpt-5.4"}'
+```
 
-<Warning>
-Keep hook endpoints behind loopback, tailnet, or trusted reverse proxy.
+字段：`message`（必需）、`name`、`agentId`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`thinking`、`timeoutSeconds`。
 
-- Use a dedicated hook token; do not reuse gateway auth tokens.
-- Keep `hooks.path` on a dedicated subpath; `/` is rejected.
-- Set `hooks.allowedAgentIds` to limit explicit `agentId` routing.
-- Keep `hooks.allowRequestSessionKey=false` unless you require caller-selected sessions.
-- If you enable `hooks.allowRequestSessionKey`, also set `hooks.allowedSessionKeyPrefixes` to constrain allowed session key shapes.
-- Hook payloads are wrapped with safety boundaries by default.
-  </Warning>
+### 映射 Hooks (POST /hooks/\<name\>)
 
-## Gmail PubSub integration
+自定义 hook 名称通过配置中的 `hooks.mappings` 解析。映射可以使用模板或代码转换将任意负载转换为 `wake` 或 `agent` 操作。
 
-Wire Gmail inbox triggers to OpenClaw via Google PubSub.
+### 安全性
 
-<Note>
-**Prerequisites:** `gcloud` CLI, `gog` (gogcli), OpenClaw hooks enabled, Tailscale for the public HTTPS endpoint.
-</Note>
+- 将 hook 端点保持在环回、tailnet 或受信任的反向代理之后。
+- 使用专用的 hook token；不要复用 gateway auth token。
+- 将 `hooks.path` 保持在专用的子路径上；`/` 会被拒绝。
+- 设置 `hooks.allowedAgentIds` 以限制明确的 `agentId` 路由。
+- 保持 `hooks.allowRequestSessionKey=false`，除非你需要调用者选择的会话。
+- 如果启用 `hooks.allowRequestSessionKey`，还要设置 `hooks.allowedSessionKeyPrefixes` 以约束允许的会话密钥形状。
+- Hook 负载默认包裹有安全边界。
 
-### Wizard setup (recommended)
+## Gmail PubSub 集成
+
+通过 Google PubSub 将 Gmail 收件箱触发器连接到 OpenClaw。
+
+**先决条件**：`gcloud` CLI、`gog` (gogcli)、OpenClaw hooks 启用、用于公共 HTTPS 端点的 Tailscale。
+
+### 向导设置（推荐）
 
 ```bash
 openclaw webhooks gmail setup --account openclaw@gmail.com
 ```
 
-This writes `hooks.gmail` config, enables the Gmail preset, and uses Tailscale Funnel for the push endpoint.
+这会写入 `hooks.gmail` 配置，启用 Gmail 预设，并使用 Tailscale Funnel 作为推送端点。
 
-### Gateway auto-start
+### Gateway 自动启动
 
-When `hooks.enabled=true` and `hooks.gmail.account` is set, the Gateway starts `gog gmail watch serve` on boot and auto-renews the watch. Set `OPENCLAW_SKIP_GMAIL_WATCHER=1` to opt out.
+当 `hooks.enabled=true` 且设置了 `hooks.gmail.account` 时，Gateway 会在启动时启动 `gog gmail watch serve` 并自动续订监视。设置 `OPENCLAW_SKIP_GMAIL_WATCHER=1` 以退出。
 
-### Manual one-time setup
+### 手动一次性设置
 
-<Steps>
-  <Step title="Select the GCP project">
-    Select the GCP project that owns the OAuth client used by `gog`:
+1. 选择拥有 `gog` 使用的 OAuth 客户端的 GCP 项目：
 
-    ```bash
-    gcloud auth login
-    gcloud config set project <project-id>
-    gcloud services enable gmail.googleapis.com pubsub.googleapis.com
-    ```
+```bash
+gcloud auth login
+gcloud config set project <project-id>
+gcloud services enable gmail.googleapis.com pubsub.googleapis.com
+```
 
-  </Step>
-  <Step title="Create topic and grant Gmail push access">
-    ```bash
-    gcloud pubsub topics create gog-gmail-watch
-    gcloud pubsub topics add-iam-policy-binding gog-gmail-watch \
-      --member=serviceAccount:gmail-api-push@system.gserviceaccount.com \
-      --role=roles/pubsub.publisher
-    ```
-  </Step>
-  <Step title="Start the watch">
-    ```bash
-    gog gmail watch start \
-      --account openclaw@gmail.com \
-      --label INBOX \
-      --topic projects/<project-id>/topics/gog-gmail-watch
-    ```
-  </Step>
-</Steps>
+2. 创建主题并授予 Gmail 推送权限：
 
-### Gmail model override
+```bash
+gcloud pubsub topics create gog-gmail-watch
+gcloud pubsub topics add-iam-policy-binding gog-gmail-watch \
+  --member=serviceAccount:gmail-api-push@system.gserviceaccount.com \
+  --role=roles/pubsub.publisher
+```
+
+3. 启动监视：
+
+```bash
+gog gmail watch start \
+  --account openclaw@gmail.com \
+  --label INBOX \
+  --topic projects/<project-id>/topics/gog-gmail-watch
+```
+
+### Gmail 模型覆盖
 
 ```json5
 {
@@ -336,45 +288,43 @@ When `hooks.enabled=true` and `hooks.gmail.account` is set, the Gateway starts `
 }
 ```
 
-## Managing jobs
+## 管理任务
 
 ```bash
-# List all jobs
+# 列出所有任务
 openclaw cron list
 
-# Show one job, including resolved delivery route
+# 查看一个任务，包括解析后的交付路由
 openclaw cron show <jobId>
 
-# Edit a job
+# 编辑任务
 openclaw cron edit <jobId> --message "Updated prompt" --model "opus"
 
-# Force run a job now
+# 立即强制运行任务
 openclaw cron run <jobId>
 
-# Run only if due
+# 仅在到期时运行
 openclaw cron run <jobId> --due
 
-# View run history
+# 查看运行历史
 openclaw cron runs --id <jobId> --limit 50
 
-# Delete a job
+# 删除任务
 openclaw cron remove <jobId>
 
-# Agent selection (multi-agent setups)
+# 代理选择（多代理设置）
 openclaw cron add --name "Ops sweep" --cron "0 6 * * *" --session isolated --message "Check ops queue" --agent ops
 openclaw cron edit <jobId> --clear-agent
 ```
 
-<Note>
-Model override note:
+模型覆盖说明：
 
-- `openclaw cron add|edit --model ...` changes the job's selected model.
-- If the model is allowed, that exact provider/model reaches the isolated agent run.
-- If it is not allowed, cron warns and falls back to the job's agent/default model selection.
-- Configured fallback chains still apply, but a plain `--model` override with no explicit per-job fallback list no longer falls through to the agent primary as a silent extra retry target.
-  </Note>
+- `openclaw cron add|edit --model ...` 更改任务所选的模型。
+- 如果模型被允许，该确切的服务提供商/模型将到达隔离的代理运行。
+- 如果不允许，cron 会警告并回退到任务的代理/默认模型选择。
+- 配置的回退链仍然适用，但普通的 `--model` 覆盖（没有明确的每任务回退列表）不再无声地回退到代理主模型作为额外的重试目标。
 
-## Configuration
+## 配置
 
 ```json5
 {
@@ -394,25 +344,19 @@ Model override note:
 }
 ```
 
-The runtime state sidecar is derived from `cron.store`: a `.json` store such as `~/clawd/cron/jobs.json` uses `~/clawd/cron/jobs-state.json`, while a store path without a `.json` suffix appends `-state.json`.
+运行时状态旁车文件由 `cron.store` 派生：像 `~/clawd/cron/jobs.json` 这样的 `.json` 存储会使用 `~/clawd/cron/jobs-state.json`，而不带 `.json` 后缀的存储路径会追加 `-state.json`。
 
-Disable cron: `cron.enabled: false` or `OPENCLAW_SKIP_CRON=1`.
+禁用 cron：`cron.enabled: false` 或 `OPENCLAW_SKIP_CRON=1`。
 
-<AccordionGroup>
-  <Accordion title="Retry behavior">
-    **One-shot retry**: transient errors (rate limit, overload, network, server error) retry up to 3 times with exponential backoff. Permanent errors disable immediately.
+**一次性重试**：瞬时错误（速率限制、过载、网络、服务器错误）最多重试 3 次，采用指数退避。永久错误立即禁用。
 
-    **Recurring retry**: exponential backoff (30s to 60m) between retries. Backoff resets after the next successful run.
+**周期性重试**：重试之间采用指数退避（30 秒到 60 分钟）。下次成功运行后退避重置。
 
-  </Accordion>
-  <Accordion title="Maintenance">
-    `cron.sessionRetention` (default `24h`) prunes isolated run-session entries. `cron.runLog.maxBytes` / `cron.runLog.keepLines` auto-prune run-log files.
-  </Accordion>
-</AccordionGroup>
+**维护**：`cron.sessionRetention`（默认 `24h`）清理隔离的运行会话条目。`cron.runLog.maxBytes` / `cron.runLog.keepLines` 自动清理运行日志文件。
 
-## Troubleshooting
+## 故障排查
 
-### Command ladder
+### 命令阶梯
 
 ```bash
 openclaw status
@@ -425,36 +369,30 @@ openclaw logs --follow
 openclaw doctor
 ```
 
-<AccordionGroup>
-  <Accordion title="Cron not firing">
-    - Check `cron.enabled` and `OPENCLAW_SKIP_CRON` env var.
-    - Confirm the Gateway is running continuously.
-    - For `cron` schedules, verify timezone (`--tz`) vs the host timezone.
-    - `reason: not-due` in run output means manual run was checked with `openclaw cron run <jobId> --due` and the job was not due yet.
-  </Accordion>
-  <Accordion title="Cron fired but no delivery">
-    - Delivery mode `none` means no runner fallback send is expected. The agent can still send directly with the `message` tool when a chat route is available.
-    - Delivery target missing/invalid (`channel`/`to`) means outbound was skipped.
-    - For Matrix, copied or legacy jobs with lowercased `delivery.to` room IDs can fail because Matrix room IDs are case-sensitive. Edit the job to the exact `!room:server` or `room:!room:server` value from Matrix.
-    - Channel auth errors (`unauthorized`, `Forbidden`) mean delivery was blocked by credentials.
-    - If the isolated run returns only the silent token (`NO_REPLY` / `no_reply`), OpenClaw suppresses direct outbound delivery and also suppresses the fallback queued summary path, so nothing is posted back to chat.
-    - If the agent should message the user itself, check that the job has a usable route (`channel: "last"` with a previous chat, or an explicit channel/target).
-  </Accordion>
-  <Accordion title="Cron or heartbeat appears to prevent /new-style rollover">
-    - Daily and idle reset freshness is not based on `updatedAt`; see [Session management](/concepts/session#session-lifecycle).
-    - Cron wakeups, heartbeat runs, exec notifications, and gateway bookkeeping may update the session row for routing/status, but they do not extend `sessionStartedAt` or `lastInteractionAt`.
-    - For legacy rows created before those fields existed, OpenClaw can recover `sessionStartedAt` from the transcript JSONL session header when the file is still available. Legacy idle rows without `lastInteractionAt` use that recovered start time as their idle baseline.
-  </Accordion>
-  <Accordion title="Timezone gotchas">
-    - Cron without `--tz` uses the gateway host timezone.
-    - `at` schedules without timezone are treated as UTC.
-    - Heartbeat `activeHours` uses configured timezone resolution.
-  </Accordion>
-</AccordionGroup>
+### Cron 未触发
 
-## Related
+- 检查 `cron.enabled` 和 `OPENCLAW_SKIP_CRON` 环境变量。
+- 确认网关正在持续运行。
+- 对于 `cron` 计划，验证时区（`--tz`）与主机时区是否一致。
+- 运行输出中的 `reason: not-due` 意味着手动运行已通过 `openclaw cron run <jobId> --due` 检查，且任务尚未到期。
 
-- [Automation & Tasks](/automation) — all automation mechanisms at a glance
-- [Background Tasks](/automation/tasks) — task ledger for cron executions
-- [Heartbeat](/gateway/heartbeat) — periodic main-session turns
-- [Timezone](/concepts/timezone) — timezone configuration
+### Cron 已触发但无交付
+
+- Delivery mode `none` 表示不期望有 runner fallback 发送。只要存在可用的聊天路由，agent 仍然可以使用 `message` 工具直接发送。
+- 目标交付缺失/无效（`channel`/`to`）意味着已跳过外发。
+- 渠道认证错误（`unauthorized`、`Forbidden`）表示交付被凭据阻止。
+- 如果隔离运行只返回静默 token（`NO_REPLY` / `no_reply`），OpenClaw 会抑制直接外发，也会抑制备用的排队摘要路径，因此不会向聊天中发布任何内容。
+- 如果 agent 需要自行向用户发送消息，请检查该任务是否具有可用路由（`channel: "last"` 且此前有聊天记录，或显式的 channel/target）。
+
+### 时区陷阱
+
+- 不带 `--tz` 的 Cron 使用网关主机时区。
+- 不带时区的 `at` 计划被视为 UTC。
+- 心跳 `activeHours` 使用配置的时区解析。
+
+## 相关内容
+
+- [自动化与任务](/automation) — 所有自动化机制一览
+- [后台任务](/automation/tasks) — cron 执行的任务记录
+- [心跳](/gateway/heartbeat) — 定期主会话轮换
+- [时区](/concepts/timezone) — 时区配置

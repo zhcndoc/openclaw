@@ -1,52 +1,42 @@
 ---
-summary: "Rich output shortcode protocol for embeds, media, audio hints, and replies"
+summary: "用于嵌入、媒体、音频提示和回复的富输出短代码协议"
 read_when:
-  - Changing assistant output rendering in the Control UI
-  - Debugging `[embed ...]`, `MEDIA:`, reply, or audio presentation directives
-title: "Rich output protocol"
+  - 更改 Control UI 中的助手输出渲染时
+  - 调试 `[embed ...]`、`MEDIA:`、回复或音频呈现指令时
+title: "富输出协议"
 ---
 
-Assistant output can carry a small set of delivery/render directives:
+助手输出可以携带一小组交付/渲染指令：
 
-- `MEDIA:` for attachment delivery
-- `[[audio_as_voice]]` for audio presentation hints
-- `[[reply_to_current]]` / `[[reply_to:<id>]]` for reply metadata
-- `[embed ...]` for Control UI rich rendering
+- `MEDIA:` 用于附件交付
+- `[[audio_as_voice]]` 用于音频呈现提示
+- `[[reply_to_current]]` / `[[reply_to:<id>]]` 用于回复元数据
+- `[embed ...]` 用于 Control UI 富渲染
 
-Remote `MEDIA:` attachments must be public `https:` URLs. Plain `http:`,
-loopback, link-local, private, and internal hostnames are ignored as attachment
-directives; server-side media fetchers still enforce their own network guards.
-
-These directives are separate. `MEDIA:` and reply/voice tags remain delivery metadata; `[embed ...]` is the web-only rich render path.
-Trusted tool-result media uses the same `MEDIA:` / `[[audio_as_voice]]` parser before delivery, so text tool outputs can still mark an audio attachment as a voice note.
-
-When block streaming is enabled, `MEDIA:` remains single-delivery metadata for a
-turn. If the same media URL is sent in a streamed block and repeated in the final
-assistant payload, OpenClaw delivers the attachment once and strips the duplicate
-from the final payload.
+这些指令是独立的。`MEDIA:` 和回复/语音标签保留为交付元数据；`[embed ...]` 是仅限 Web 的富渲染路径。
 
 ## `[embed ...]`
 
-`[embed ...]` is the only agent-facing rich render syntax for the Control UI.
+`[embed ...]` 是 Control UI 唯一面向代理的富渲染语法。
 
-Self-closing example:
+自闭合示例：
 
 ```text
-[embed ref="cv_123" title="Status" /]
+[embed ref="cv_123" title="状态" /]
 ```
 
-Rules:
+规则：
 
-- `[view ...]` is no longer valid for new output.
-- Embed shortcodes render in the assistant message surface only.
-- Only URL-backed embeds are rendered. Use `ref="..."` or `url="..."`.
-- Block-form inline HTML embed shortcodes are not rendered.
-- The web UI strips the shortcode from visible text and renders the embed inline.
-- `MEDIA:` is not an embed alias and should not be used for rich embed rendering.
+- `[view ...]` 不再适用于新输出。
+- Embed 短代码仅在助手消息表面渲染。
+- 仅渲染基于 URL 的 embed。使用 `ref="..."` 或 `url="..."`。
+- 块形式内联 HTML embed 短代码不会被渲染。
+- Web UI 会从可见文本中剥离短代码并内联渲染 embed。
+- `MEDIA:` 不是 embed 别名，不应被用于富 embed 渲染。
 
-## Stored rendering shape
+## 存储渲染结构
 
-The normalized/stored assistant content block is a structured `canvas` item:
+标准化/存储的助手内容块是一个结构化的 `canvas` 项：
 
 ```json
 {
@@ -57,15 +47,15 @@ The normalized/stored assistant content block is a structured `canvas` item:
     "render": "url",
     "viewId": "cv_123",
     "url": "/__openclaw__/canvas/documents/cv_123/index.html",
-    "title": "Status",
+    "title": "状态",
     "preferredHeight": 320
   }
 }
 ```
 
-Stored/rendered rich blocks use this `canvas` shape directly. `present_view` is not recognized.
+已存储/已渲染的富块直接使用这种 `canvas` 结构。`present_view` 无法识别。
 
-## Related
+## 相关
 
 - [RPC adapters](/reference/rpc)
 - [Typebox](/concepts/typebox)

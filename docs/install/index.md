@@ -1,21 +1,21 @@
 ---
-summary: "Install OpenClaw — installer script, npm/pnpm/bun, from source, Docker, and more"
+summary: "安装 OpenClaw — 安装脚本、npm/pnpm/bun、从源码、Docker 等"
 read_when:
-  - You need an install method other than the Getting Started quickstart
-  - You want to deploy to a cloud platform
-  - You need to update, migrate, or uninstall
-title: "Install"
+  - 你需要除快速入门外的其他安装方法
+  - 你想要部署到云平台
+  - 你需要更新、迁移或卸载
+title: "安装"
 ---
 
-## System requirements
+## 系统要求
 
-- **Node 24** (recommended) or Node 22.14+ — the installer script handles this automatically
-- **macOS, Linux, or Windows** — both native Windows and WSL2 are supported; WSL2 is more stable. See [Windows](/platforms/windows).
-- `pnpm` is only needed if you build from source
+- **Node 24**（推荐）或 Node 22.14+ — 安装器脚本会自动处理这一点
+- **macOS、Linux 或 Windows** — 原生 Windows 和 WSL2 均受支持；WSL2 更稳定。参见 [Windows](/platforms/windows)。
+- 只有在你从源码构建时才需要 `pnpm`
 
-## Recommended: installer script
+## 推荐：安装脚本
 
-The fastest way to install. It detects your OS, installs Node if needed, installs OpenClaw, and launches onboarding.
+最快的安装方式。它会检测你的操作系统，必要时安装 Node，安装 OpenClaw，并启动引导流程。
 
 <Tabs>
   <Tab title="macOS / Linux / WSL2">
@@ -30,7 +30,7 @@ The fastest way to install. It detects your OS, installs Node if needed, install
   </Tab>
 </Tabs>
 
-To install without running onboarding:
+如需安装但不运行引导流程：
 
 <Tabs>
   <Tab title="macOS / Linux / WSL2">
@@ -45,29 +45,24 @@ To install without running onboarding:
   </Tab>
 </Tabs>
 
-For all flags and CI/automation options, see [Installer internals](/install/installer).
+有关所有标志以及 CI/自动化选项，请参阅 [安装器内部](/install/installer)。
 
-## Alternative install methods
+## 其他安装方式
 
-### Local prefix installer (`install-cli.sh`)
+### 本地前缀安装器（`install-cli.sh`）
 
-Use this when you want OpenClaw and Node kept under a local prefix such as
-`~/.openclaw`, without depending on a system-wide Node install:
+当你希望在本地前缀下保留 OpenClaw 和 Node，例如
+`~/.openclaw`，而不依赖全局系统范围的 Node 安装时请使用：
 
 ```bash
 curl -fsSL https://openclaw.ai/install-cli.sh | bash
 ```
 
-It supports npm installs by default, plus git-checkout installs under the same
-prefix flow. Full reference: [Installer internals](/install/installer#install-clish).
+默认支持 npm 安装，并且也支持在相同前缀流程下进行 git-checkout 安装。完整参考： [安装器内部](/install/installer#install-clish).
 
-Already installed? Switch between package and git installs with
-`openclaw update --channel dev` and `openclaw update --channel stable`. See
-[Updating](/install/updating#switch-between-npm-and-git-installs).
+### npm、pnpm 或 bun
 
-### npm, pnpm, or bun
-
-If you already manage Node yourself:
+如果你已经自行管理 Node：
 
 <Tabs>
   <Tab title="npm">
@@ -84,7 +79,7 @@ If you already manage Node yourself:
     ```
 
     <Note>
-    pnpm requires explicit approval for packages with build scripts. Run `pnpm approve-builds -g` after the first install.
+    pnpm 需要对带有构建脚本的包进行显式批准。首次安装后请运行 `pnpm approve-builds -g`。
     </Note>
 
   </Tab>
@@ -95,14 +90,14 @@ If you already manage Node yourself:
     ```
 
     <Note>
-    Bun is supported for the global CLI install path. For the Gateway runtime, Node remains the recommended daemon runtime.
+    Bun 支持用于全局 CLI 安装路径。对于 Gateway 运行时，Node 仍然是推荐的守护进程运行时。
     </Note>
 
   </Tab>
 </Tabs>
 
-<Accordion title="Troubleshooting: sharp build errors (npm)">
-  If `sharp` fails due to a globally installed libvips:
+<Accordion title="疑难解答：sharp 构建错误（npm）">
+  如果由于全局安装的 libvips 导致 `sharp` 失败：
 
 ```bash
 SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install -g openclaw@latest
@@ -110,9 +105,9 @@ SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install -g openclaw@latest
 
 </Accordion>
 
-### From source
+### 从源码安装
 
-For contributors or anyone who wants to run from a local checkout:
+适用于贡献者或任何想从本地检出版本运行的人：
 
 ```bash
 git clone https://github.com/openclaw/openclaw.git
@@ -122,55 +117,55 @@ pnpm link --global
 openclaw onboard --install-daemon
 ```
 
-Or skip the link and use `pnpm openclaw ...` from inside the repo. See [Setup](/start/setup) for full development workflows.
+或者跳过 link，直接在仓库内使用 `pnpm openclaw ...`。完整开发工作流请参见 [设置](/start/setup)。
 
-### Install from GitHub main
+### 从 GitHub main 安装
 
 ```bash
 npm install -g github:openclaw/openclaw#main
 ```
 
-### Containers and package managers
+### 容器和包管理器
 
 <CardGroup cols={2}>
   <Card title="Docker" href="/install/docker" icon="container">
-    Containerized or headless deployments.
+    容器化或无头部署。
   </Card>
   <Card title="Podman" href="/install/podman" icon="container">
-    Rootless container alternative to Docker.
+    Docker 的无根容器替代方案。
   </Card>
   <Card title="Nix" href="/install/nix" icon="snowflake">
-    Declarative install via Nix flake.
+    通过 Nix flake 进行声明式安装。
   </Card>
   <Card title="Ansible" href="/install/ansible" icon="server">
-    Automated fleet provisioning.
+    自动化集群配置。
   </Card>
   <Card title="Bun" href="/install/bun" icon="zap">
-    CLI-only usage via the Bun runtime.
+    仅通过 Bun 运行时使用 CLI。
   </Card>
 </CardGroup>
 
-## Verify the install
+## 验证安装
 
 ```bash
-openclaw --version      # confirm the CLI is available
-openclaw doctor         # check for config issues
-openclaw gateway status # verify the Gateway is running
+openclaw --version      # 确认 CLI 可用
+openclaw doctor         # 检查配置问题
+openclaw gateway status # 验证 Gateway 正在运行
 ```
 
-If you want managed startup after install:
+如果你想在安装后进行托管式启动：
 
-- macOS: LaunchAgent via `openclaw onboard --install-daemon` or `openclaw gateway install`
-- Linux/WSL2: systemd user service via the same commands
-- Native Windows: Scheduled Task first, with a per-user Startup-folder login item fallback if task creation is denied
+- macOS: 通过 `openclaw onboard --install-daemon` 或 `openclaw gateway install` 设置 LaunchAgent
+- Linux/WSL2: 通过相同命令设置 systemd 用户服务
+- 原生 Windows: 首先使用计划任务（Scheduled Task）；如果拒绝创建任务，则作为后备方案使用每用户的“启动文件夹”登录项
 
-## Hosting and deployment
+## 托管和部署
 
-Deploy OpenClaw on a cloud server or VPS:
+将 OpenClaw 部署到云服务器或 VPS：
 
 <CardGroup cols={3}>
-  <Card title="VPS" href="/vps">Any Linux VPS</Card>
-  <Card title="Docker VM" href="/install/docker-vm-runtime">Shared Docker steps</Card>
+  <Card title="VPS" href="/vps">任何 Linux VPS</Card>
+  <Card title="Docker VM" href="/install/docker-vm-runtime">共享的 Docker 步骤</Card>
   <Card title="Kubernetes" href="/install/kubernetes">K8s</Card>
   <Card title="Fly.io" href="/install/fly">Fly.io</Card>
   <Card title="Hetzner" href="/install/hetzner">Hetzner</Card>
@@ -181,34 +176,34 @@ Deploy OpenClaw on a cloud server or VPS:
   <Card title="Northflank" href="/install/northflank">Northflank</Card>
 </CardGroup>
 
-## Update, migrate, or uninstall
+## 更新、迁移或卸载
 
 <CardGroup cols={3}>
-  <Card title="Updating" href="/install/updating" icon="refresh-cw">
-    Keep OpenClaw up to date.
+  <Card title="更新" href="/install/updating" icon="refresh-cw">
+    保持 OpenClaw 最新。
   </Card>
-  <Card title="Migrating" href="/install/migrating" icon="arrow-right">
-    Move to a new machine.
+  <Card title="迁移" href="/install/migrating" icon="arrow-right">
+    迁移到新机器。
   </Card>
-  <Card title="Uninstall" href="/install/uninstall" icon="trash-2">
-    Remove OpenClaw completely.
+  <Card title="卸载" href="/install/uninstall" icon="trash-2">
+    完全移除 OpenClaw。
   </Card>
 </CardGroup>
 
-## Troubleshooting: `openclaw` not found
+## 疑难解答：找不到 `openclaw`
 
-If the install succeeded but `openclaw` is not found in your terminal:
+如果安装成功，但在终端中找不到 `openclaw`：
 
 ```bash
-node -v           # Node installed?
-npm prefix -g     # Where are global packages?
-echo "$PATH"      # Is the global bin dir in PATH?
+node -v           # Node 已安装？
+npm prefix -g     # 全局包在哪？
+echo "$PATH"      # 全局 bin 目录是否在 PATH 中？
 ```
 
-If `$(npm prefix -g)/bin` is not in your `$PATH`, add it to your shell startup file (`~/.zshrc` or `~/.bashrc`):
+如果 `$(npm prefix -g)/bin` 不在你的 `$PATH` 中，请将其添加到你的 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）：
 
 ```bash
 export PATH="$(npm prefix -g)/bin:$PATH"
 ```
 
-Then open a new terminal. See [Node setup](/install/node) for more details.
+然后打开一个新的终端。更多详情请参见 [Node 设置](/install/node)。

@@ -1,41 +1,39 @@
 ---
-summary: "SearXNG web search -- self-hosted, key-free meta-search provider"
+summary: "SearXNG 网络搜索 -- 自托管、免密钥的元搜索提供商"
 read_when:
-  - You want a self-hosted web search provider
-  - You want to use SearXNG for web_search
-  - You need a privacy-focused or air-gapped search option
-title: "SearXNG search"
+  - 你想要一个自托管的网络搜索提供商
+  - 你想在 web_search 中使用 SearXNG
+  - 你需要一个注重隐私或空气隔离的搜索选项
+title: "SearXNG 搜索"
 ---
 
-OpenClaw supports [SearXNG](https://docs.searxng.org/) as a **self-hosted,
-key-free** `web_search` provider. SearXNG is an open-source meta-search engine
-that aggregates results from Google, Bing, DuckDuckGo, and other sources.
+OpenClaw 支持 [SearXNG](https://docs.searxng.org/) 作为一个 **自托管、免密钥** 的 `web_search` 提供商。SearXNG 是一个开源元搜索引擎，可聚合来自 Google、Bing、DuckDuckGo 以及其他来源的结果。
 
-Advantages:
+优点：
 
-- **Free and unlimited** -- no API key or commercial subscription required
-- **Privacy / air-gap** -- queries never leave your network
-- **Works anywhere** -- no region restrictions on commercial search APIs
+- **免费且无限制** -- 无需 API 密钥或商业订阅
+- **隐私 / 空气隔离** -- 查询永远不会离开你的网络
+- **适用于任何地方** -- 不受商业搜索 API 的地域限制
 
-## Setup
+## 设置
 
 <Steps>
-  <Step title="Run a SearXNG instance">
+  <Step title="运行一个 SearXNG 实例">
     ```bash
     docker run -d -p 8888:8080 searxng/searxng
     ```
 
-    Or use any existing SearXNG deployment you have access to. See the
-    [SearXNG documentation](https://docs.searxng.org/) for production setup.
+    或使用你可以访问的任何现有 SearXNG 部署。有关生产环境设置，请参阅
+    [SearXNG 文档](https://docs.searxng.org/)。
 
   </Step>
-  <Step title="Configure">
+  <Step title="配置">
     ```bash
     openclaw configure --section web
-    # Select "searxng" as the provider
+    # 选择 "searxng" 作为提供商
     ```
 
-    Or set the env var and let auto-detection find it:
+    或设置环境变量并让自动检测找到它：
 
     ```bash
     export SEARXNG_BASE_URL="http://localhost:8888"
@@ -44,7 +42,7 @@ Advantages:
   </Step>
 </Steps>
 
-## Config
+## 配置
 
 ```json5
 {
@@ -58,7 +56,7 @@ Advantages:
 }
 ```
 
-Plugin-level settings for the SearXNG instance:
+SearXNG 实例的插件级设置：
 
 ```json5
 {
@@ -68,8 +66,8 @@ Plugin-level settings for the SearXNG instance:
         config: {
           webSearch: {
             baseUrl: "http://localhost:8888",
-            categories: "general,news", // optional
-            language: "en", // optional
+            categories: "general,news", // 可选
+            language: "en", // 可选
           },
         },
       },
@@ -78,53 +76,49 @@ Plugin-level settings for the SearXNG instance:
 }
 ```
 
-The `baseUrl` field also accepts SecretRef objects.
+`baseUrl` 字段也接受 SecretRef 对象。
 
-Transport rules:
+传输规则：
 
-- `https://` works for public or private SearXNG hosts
-- `http://` is only accepted for trusted private-network or loopback hosts
-- public SearXNG hosts must use `https://`
+- `https://` 适用于公共或私有的 SearXNG 主机
+- `http://` 仅接受受信任的私有网络或回环主机
+- 公共 SearXNG 主机必须使用 `https://`
 
-## Environment variable
+## 环境变量
 
-Set `SEARXNG_BASE_URL` as an alternative to config:
+将 `SEARXNG_BASE_URL` 设为配置的替代方案：
 
 ```bash
 export SEARXNG_BASE_URL="http://localhost:8888"
 ```
 
-When `SEARXNG_BASE_URL` is set and no explicit provider is configured, auto-detection
-picks SearXNG automatically (at the lowest priority -- any API-backed provider with a
-key wins first).
+当设置了 `SEARXNG_BASE_URL` 且未显式配置提供商时，自动检测会自动选择 SearXNG（优先级最低 -- 任何已配置密钥的 API 驱动提供商会优先命中）。
 
-## Plugin config reference
+## 插件配置参考
 
-| Field        | Description                                                        |
-| ------------ | ------------------------------------------------------------------ |
-| `baseUrl`    | Base URL of your SearXNG instance (required)                       |
-| `categories` | Comma-separated categories such as `general`, `news`, or `science` |
-| `language`   | Language code for results such as `en`, `de`, or `fr`              |
+| 字段         | 描述                                                         |
+| ------------ | ------------------------------------------------------------ |
+| `baseUrl`    | 你的 SearXNG 实例的基础 URL（必需）                          |
+| `categories` | 以逗号分隔的分类，例如 `general`、`news` 或 `science`       |
+| `language`   | 结果所使用的语言代码，例如 `en`、`de` 或 `fr`               |
 
-## Notes
+## 注意事项
 
-- **JSON API** -- uses SearXNG's native `format=json` endpoint, not HTML scraping
-- **No API key** -- works with any SearXNG instance out of the box
-- **Base URL validation** -- `baseUrl` must be a valid `http://` or `https://`
-  URL; public hosts must use `https://`
-- **Auto-detection order** -- SearXNG is checked last (order 200) in
-  auto-detection. API-backed providers with configured keys run first, then
-  DuckDuckGo (order 100), then Ollama Web Search (order 110)
-- **Self-hosted** -- you control the instance, queries, and upstream search engines
-- **Categories** default to `general` when not configured
+- **JSON API** -- 使用 SearXNG 原生的 `format=json` 端点，而不是 HTML 抓取
+- **无需 API 密钥** -- 开箱即用，适用于任何 SearXNG 实例
+- **基础 URL 验证** -- `baseUrl` 必须是有效的 `http://` 或 `https://`
+  URL；公共主机必须使用 `https://`
+- **自动检测顺序** -- SearXNG 在自动检测中最后检查（顺序 200）。首先运行的是已配置密钥的 API 驱动提供商，然后是 DuckDuckGo（顺序 100），再然后是 Ollama Web Search（顺序 110）
+- **自托管** -- 你可以控制实例、查询以及上游搜索引擎
+- **Categories** 未配置时默认为 `general`
 
 <Tip>
-  For SearXNG JSON API to work, make sure your SearXNG instance has the `json`
-  format enabled in its `settings.yml` under `search.formats`.
+  要使 SearXNG JSON API 正常工作，请确保你的 SearXNG 实例已在 `settings.yml` 的 `search.formats` 下启用 `json`
+  格式。
 </Tip>
 
-## Related
+## 相关内容
 
-- [Web Search overview](/tools/web) -- all providers and auto-detection
-- [DuckDuckGo Search](/tools/duckduckgo-search) -- another key-free fallback
-- [Brave Search](/tools/brave-search) -- structured results with free tier
+- [Web Search 概览](/tools/web) -- 所有提供商和自动检测
+- [DuckDuckGo Search](/tools/duckduckgo-search) -- 另一种免密钥回退方案
+- [Brave Search](/tools/brave-search) -- 带免费额度的结构化结果

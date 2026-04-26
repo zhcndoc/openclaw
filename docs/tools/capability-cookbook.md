@@ -1,55 +1,51 @@
 ---
-summary: "Contributor guide for adding a new shared capability to the OpenClaw plugin system"
+summary: "向 OpenClaw 插件系统添加新共享能力的贡献者指南"
 read_when:
-  - Adding a new core capability and plugin registration surface
-  - Deciding whether code belongs in core, a vendor plugin, or a feature plugin
-  - Wiring a new runtime helper for channels or tools
-title: "Adding capabilities (contributor guide)"
-sidebarTitle: "Adding Capabilities"
+  - 添加新的核心能力和插件注册入口时
+  - 决定代码应归属核心、供应商插件还是功能插件时
+  - 为渠道或工具接入新的运行时助手时
+title: "添加能力（贡献者指南）"
+sidebarTitle: "添加能力"
 ---
 
 <Info>
-  This is a **contributor guide** for OpenClaw core developers. If you are
-  building an external plugin, see [Building Plugins](/plugins/building-plugins)
-  instead.
+  这是面向 OpenClaw 核心开发人员的**贡献者指南**。如果您正在
+  构建外部插件，请参阅 [构建插件](/plugins/building-plugins)
+  代替。
 </Info>
 
-Use this when OpenClaw needs a new domain such as image generation, video
-generation, or some future vendor-backed feature area.
+当 OpenClaw 需要新的领域（如图像生成、视频生成或某些未来供应商支持的功能区域）时使用此指南。
 
-The rule:
+规则：
 
-- plugin = ownership boundary
-- capability = shared core contract
+- 插件 = 所有权边界
+- 能力 = 共享核心契约
 
-That means you should not start by wiring a vendor directly into a channel or a
-tool. Start by defining the capability.
+这意味着您不应该一开始就将供应商直接连接到渠道或工具。首先定义能力。
 
-## When to create a capability
+## 何时创建能力
 
-Create a new capability when all of these are true:
+当所有以下条件都满足时，创建新能力：
 
-1. more than one vendor could plausibly implement it
-2. channels, tools, or feature plugins should consume it without caring about
-   the vendor
-3. core needs to own fallback, policy, config, or delivery behavior
+1. 不止一个供应商可以合理地实现它
+2. 渠道、工具或功能插件应该使用它而无需关心供应商
+3. 核心需要拥有回退、策略、配置或交付行为
 
-If the work is vendor-only and no shared contract exists yet, stop and define
-the contract first.
+如果工作仅针对供应商且尚不存在共享契约，请停下来先定义契约。
 
-## The standard sequence
+## 标准序列
 
-1. Define the typed core contract.
-2. Add plugin registration for that contract.
-3. Add a shared runtime helper.
-4. Wire one real vendor plugin as proof.
-5. Move feature/channel consumers onto the runtime helper.
-6. Add contract tests.
-7. Document the operator-facing config and ownership model.
+1. 定义类型化的核心契约。
+2. 为该契约添加插件注册。
+3. 添加共享运行时助手。
+4. 接入一个真实的供应商插件作为证明。
+5. 将功能/渠道消费者移至运行时助手。
+6. 添加契约测试。
+7. 记录面向操作员的配置和所有权模型。
 
-## What goes where
+## 内容归属
 
-Core:
+核心：
 
 - request/response types
 - provider registry + resolution
@@ -57,17 +53,17 @@ Core:
 - config schema plus propagated `title` / `description` docs metadata on nested object, wildcard, array-item, and composition nodes
 - runtime helper surface
 
-Vendor plugin:
+供应商插件：
 
-- vendor API calls
-- vendor auth handling
-- vendor-specific request normalization
-- registration of the capability implementation
+- 供应商 API 调用
+- 供应商身份验证处理
+- 供应商特定的请求规范化
+- 能力实现的注册
 
-Feature/channel plugin:
+功能/渠道插件：
 
-- calls `api.runtime.*` or the matching `plugin-sdk/*-runtime` helper
-- never calls a vendor implementation directly
+- 调用 `api.runtime.*` 或匹配的 `plugin-sdk/*-runtime` 助手
+- 绝不直接调用供应商实现
 
 ## Provider and harness seams
 
@@ -90,7 +86,7 @@ Keep both seams narrow:
 
 ## File checklist
 
-For a new capability, expect to touch these areas:
+对于新能力，预计会涉及以下区域：
 
 - `src/<capability>/types.ts`
 - `src/<capability>/...registry/runtime.ts`
@@ -102,12 +98,12 @@ For a new capability, expect to touch these areas:
 - `src/plugins/runtime/index.ts`
 - `src/plugin-sdk/<capability>.ts`
 - `src/plugin-sdk/<capability>-runtime.ts`
-- one or more bundled plugin packages
-- config/docs/tests
+- 一个或多个捆绑插件包
+- 配置/文档/测试
 
-## Example: image generation
+## 示例：图像生成
 
-Image generation follows the standard shape:
+图像生成遵循标准形状：
 
 1. core defines `ImageGenerationProvider`
 2. core exposes `registerImageGenerationProvider(...)`
@@ -115,28 +111,27 @@ Image generation follows the standard shape:
 4. the `openai`, `google`, `fal`, and `minimax` plugins register vendor-backed implementations
 5. future vendors can register the same contract without changing channels/tools
 
-The config key is separate from vision-analysis routing:
+配置键与视觉分析路由分开：
 
-- `agents.defaults.imageModel` = analyze images
-- `agents.defaults.imageGenerationModel` = generate images
+- `agents.defaults.imageModel` = 分析图像
+- `agents.defaults.imageGenerationModel` = 生成图像
 
-Keep those separate so fallback and policy remain explicit.
+保持这些分开，以便回退和策略保持明确。
 
-## Review checklist
+## 审查清单
 
-Before shipping a new capability, verify:
+在发布新能力之前，验证：
 
-- no channel/tool imports vendor code directly
-- the runtime helper is the shared path
-- at least one contract test asserts bundled ownership
-- config docs name the new model/config key
-- plugin docs explain the ownership boundary
+- 没有渠道/工具直接导入供应商代码
+- 运行时助手是共享路径
+- 至少有一个契约测试断言捆绑所有权
+- 配置文档命名新的模型/配置键
+- 插件文档解释所有权边界
 
-If a PR skips the capability layer and hardcodes vendor behavior into a
-channel/tool, send it back and define the contract first.
+如果 PR 跳过能力层并将供应商行为硬编码到渠道/工具中，请退回并先定义契约。
 
-## Related
+## 相关内容
 
-- [Plugin](/tools/plugin)
-- [Creating skills](/tools/creating-skills)
-- [Tools and plugins](/tools)
+- [插件](/tools/plugin)
+- [创建技能](/tools/creating-skills)
+- [工具和插件](/tools)

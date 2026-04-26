@@ -1,151 +1,116 @@
 ---
-summary: "CLI reference for `openclaw cron` (schedule and run background jobs)"
+summary: "`openclaw cron` 的 CLI 参考（调度和运行后台作业）"
 read_when:
-  - You want scheduled jobs and wakeups
-  - You’re debugging cron execution and logs
+  - 你想要计划任务和唤醒
+  - 你正在调试 cron 执行和日志
 title: "Cron"
 ---
 
 # `openclaw cron`
 
-Manage cron jobs for the Gateway scheduler.
+管理网关调度器的 cron 作业。
 
-Related:
+相关内容：
 
-- Cron jobs: [Cron jobs](/automation/cron-jobs)
+- Cron 作业：[Cron 作业](/automation/cron-jobs)
 
-Tip: run `openclaw cron --help` for the full command surface.
+提示：运行 `openclaw cron --help` 获取完整命令信息。
 
-Note: `openclaw cron list` and `openclaw cron show <job-id>` preview the
-resolved delivery route. For `channel: "last"`, the preview shows whether the
-route resolved from the main/current session or will fail closed.
+注意：`openclaw cron list` 和 `openclaw cron show <job-id>` 会预览
+解析后的交付路由。对于 `channel: "last"`，预览会显示路由是从
+主/当前会话解析得到，还是会在关闭状态下失败。
 
-Note: isolated `cron add` jobs default to `--announce` delivery. Use `--no-deliver` to keep
-output internal. `--deliver` remains as a deprecated alias for `--announce`.
+注意：孤立的 `cron add` 作业默认使用 `--announce` 交付。使用 `--no-deliver` 可保持
+输出内部。`--deliver` 仍然是 `--announce` 的弃用别名。
 
-Note: isolated cron chat delivery is shared. `--announce` is runner fallback
-delivery for the final reply; `--no-deliver` disables that fallback but does
-not remove the agent's `message` tool when a chat route is available.
+注意：孤立 cron 的聊天交付是共享的。`--announce` 是运行器对最终回复的回退
+交付；`--no-deliver` 会禁用该回退，但在可用聊天路由时不会移除代理的
+`message` 工具。
 
-Note: one-shot (`--at`) jobs delete after success by default. Use `--keep-after-run` to keep them.
+注意：一次性（`--at`）作业默认在成功后删除。使用 `--keep-after-run` 来保留它们。
 
-Note: `--session` supports `main`, `isolated`, `current`, and `session:<id>`.
-Use `current` to bind to the active session at creation time, or `session:<id>` for
-an explicit persistent session key.
+注意：`--session` 支持 `main`、`isolated`、`current` 和 `session:<id>`。使用 `current` 在创建时绑定到活动会话，或使用 `session:<id>` 指定明确的持久会话键。
 
-Note: `--session isolated` creates a fresh transcript/session id for each run.
-Safe preferences and explicit user-selected model/auth overrides can carry, but
-ambient conversation context does not: channel/group routing, send/queue policy,
-elevation, origin, and ACP runtime binding are reset for the new isolated run.
+注意：对于一次性 CLI 作业，无偏移量的 `--at` 日期时间被视为 UTC，除非您同时传递 `--tz <iana>`，这将把该本地时钟时间解释为给定时区中的时间。
 
-Note: for one-shot CLI jobs, offset-less `--at` datetimes are treated as UTC unless you also pass
-`--tz <iana>`, which interprets that local wall-clock time in the given timezone.
+注意：重复作业现在在连续错误后使用指数退避重试（30 秒 → 1 分钟 → 5 分钟 → 15 分钟 → 60 分钟），然后在下次成功运行后恢复正常计划。
 
-Note: recurring jobs now use exponential retry backoff after consecutive errors (30s → 1m → 5m → 15m → 60m), then return to normal schedule after the next successful run.
+注意：`openclaw cron run` 命令在手动运行排队后即刻返回。成功响应包含 `{ ok: true, enqueued: true, runId }`；使用 `openclaw cron runs --id <job-id>` 跟踪最终结果。
 
-Note: `openclaw cron run` now returns as soon as the manual run is queued for execution. Successful responses include `{ ok: true, enqueued: true, runId }`; use `openclaw cron runs --id <job-id>` to follow the eventual outcome.
+注意：`openclaw cron run <job-id>` 默认强制运行。使用 `--due` 保留旧的“仅到期时运行”行为。
 
-Note: `openclaw cron run <job-id>` force-runs by default. Use `--due` to keep the
-older "only run if due" behavior.
+注意：孤立 cron 轮次抑制过时的仅确认回复。如果第一个结果只是临时状态更新，且没有后代子代理运行负责最终答案，cron 会在交付前重新提示一次以获取真实结果。
 
-Note: isolated cron turns suppress stale acknowledgement-only replies. If the
-first result is just an interim status update and no descendant subagent run is
-responsible for the eventual answer, cron re-prompts once for the real result
-before delivery.
+注意：如果孤立 cron 运行仅返回静默令牌（`NO_REPLY` / `no_reply`），cron 会抑制直接出站交付以及回退排队摘要路径，因此不会有任何内容发布回聊天。
 
-Note: if an isolated cron run returns only the silent token (`NO_REPLY` /
-`no_reply`), cron suppresses direct outbound delivery and the fallback queued
-summary path as well, so nothing is posted back to chat.
+注意：`cron add|edit --model ...` 使用该选定的允许模型用于作业。如果模型不被允许，cron 会警告并回退到作业的代理/默认模型选择。配置的回退链仍然适用，但没有明确每作业回退列表的单纯模型覆盖不再将代理主模型作为隐藏的额外重试目标附加。
 
-Note: `cron add|edit --model ...` uses that selected allowed model for the job.
-If the model is not allowed, cron warns and falls back to the job's agent/default
-model selection instead. Configured fallback chains still apply, but a plain
-model override with no explicit per-job fallback list no longer appends the
-agent primary as a hidden extra retry target.
+注意：孤立 cron 模型优先级首先是 Gmail-hook 覆盖，然后是每作业 `--model`，接着是任何存储的 cron 会话模型覆盖，最后是正常的代理/默认选择。
 
-Note: isolated cron model precedence is Gmail-hook override first, then per-job
-`--model`, then any user-selected stored cron-session model override, then the
-normal agent/default selection.
+注意：孤立 cron 快速模式遵循解析后的实时模型选择。模型配置 `params.fastMode` 默认适用，但存储的会话 `fastMode` 覆盖仍优先于配置。
 
-Note: isolated cron fast mode follows the resolved live model selection. Model
-config `params.fastMode` applies by default, but a stored session `fastMode`
-override still wins over config.
+注意：如果孤立运行抛出 `LiveSessionModelSwitchError`，cron 会在重试前持久化切换后的 provider/model（以及切换后的 auth profile 覆盖，如果存在）。外部重试循环限制在初始尝试后的 2 次切换重试，然后中止而不是无限循环。
 
-Note: if an isolated run throws `LiveSessionModelSwitchError`, cron persists the
-switched provider/model (and switched auth profile override when present) for
-the active run before retrying. The outer retry loop is bounded to 2 switch
-retries after the initial attempt, then aborts instead of looping forever.
+注意：失败通知首先使用 `delivery.failureDestination`，然后是全局 `cron.failureDestination`，最后在没有配置明确失败目的地时回退到作业的主要宣布目标。
 
-Note: failure notifications use `delivery.failureDestination` first, then
-global `cron.failureDestination`, and finally fall back to the job's primary
-announce target when no explicit failure destination is configured.
+注意：保留/修剪在配置中控制：
 
-Note: retention/pruning is controlled in config:
+- `cron.sessionRetention`（默认 `24h`）修剪已完成的孤立运行会话。
+- `cron.runLog.maxBytes` + `cron.runLog.keepLines` 修剪 `~/.openclaw/cron/runs/<jobId>.jsonl` 文件。
 
-- `cron.sessionRetention` (default `24h`) prunes completed isolated run sessions.
-- `cron.runLog.maxBytes` + `cron.runLog.keepLines` prune `~/.openclaw/cron/runs/<jobId>.jsonl`.
+升级注意：如果您有当前交付/存储格式之前的旧 cron 作业，请运行 `openclaw doctor --fix`。Doctor 现在规范化遗留 cron 字段（`jobId`、`schedule.cron`、顶层交付字段包括遗留 `threadId`、负载 `provider` 交付别名），并在配置了 `cron.webhook` 时将简单的 `notify: true` webhook 回退作业迁移到显式 webhook 交付。
 
-Upgrade note: if you have older cron jobs from before the current delivery/store format, run
-`openclaw doctor --fix`. Doctor now normalizes legacy cron fields (`jobId`, `schedule.cron`,
-top-level delivery fields including legacy `threadId`, payload `provider` delivery aliases) and migrates simple
-`notify: true` webhook fallback jobs to explicit webhook delivery when `cron.webhook` is
-configured.
+## 常用编辑操作
 
-## Common edits
-
-Update delivery settings without changing the message:
+在不更改消息内容的情况下更新发送设置：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel telegram --to "123456789"
 ```
 
-Disable delivery for an isolated job:
+禁用孤立作业的发送功能：
 
 ```bash
 openclaw cron edit <job-id> --no-deliver
 ```
 
-Enable lightweight bootstrap context for an isolated job:
+为孤立作业启用轻量级引导上下文：
 
 ```bash
 openclaw cron edit <job-id> --light-context
 ```
 
-Announce to a specific channel:
+向指定频道宣布：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
 ```
 
-Create an isolated job with lightweight bootstrap context:
+创建带轻量级引导上下文的孤立作业：
 
 ```bash
 openclaw cron add \
-  --name "Lightweight morning brief" \
+  --name "轻量级晨间简报" \
   --cron "0 7 * * *" \
   --session isolated \
-  --message "Summarize overnight updates." \
+  --message "请总结昨夜的更新。" \
   --light-context \
   --no-deliver
 ```
 
-`--light-context` applies to isolated agent-turn jobs only. For cron runs, lightweight mode keeps bootstrap context empty instead of injecting the full workspace bootstrap set.
+`--light-context` 仅适用于孤立代理轮次作业。对于 cron 运行，轻量级模式保持引导上下文为空，而不是注入完整的工作区引导集。
 
-Delivery ownership note:
+交付所有权注意：
 
-- Isolated cron chat delivery is shared. The agent can send directly with the
-  `message` tool when a chat route is available.
-- `announce` fallback-delivers the final reply only when the agent did not send
-  directly to the resolved target. `webhook` posts the finished payload to a URL.
-  `none` disables runner fallback delivery.
-- Reminders created from an active chat preserve the live chat delivery target
-  for fallback announce delivery. Internal session keys may be lowercase; do not
-  use them as a source of truth for case-sensitive provider IDs such as Matrix
-  room IDs.
+- 孤立 cron 聊天交付是共享的。代理在可用聊天路由时可以使用
+  `message` 工具直接发送。
+- `announce` 仅在代理未直接发送到解析后的目标时，才会将最终回复作为回退
+  交付。`webhook` 会将完成的负载发布到 URL。
+  `none` 会禁用运行器回退交付。
 
-## Common admin commands
+## 常用管理命令
 
-Manual run:
+手动运行：
 
 ```bash
 openclaw cron list
@@ -155,10 +120,10 @@ openclaw cron run <job-id> --due
 openclaw cron runs --id <job-id> --limit 50
 ```
 
-`cron runs` entries include delivery diagnostics with the intended cron target,
-the resolved target, message-tool sends, fallback use, and delivered state.
+`cron runs` 条目包含交付诊断信息，包括预期的 cron 目标、
+解析后的目标、message-tool 发送、回退使用情况以及已交付状态。
 
-Agent/session retargeting:
+代理/会话重定向：
 
 ```bash
 openclaw cron edit <job-id> --agent ops
@@ -167,7 +132,7 @@ openclaw cron edit <job-id> --session current
 openclaw cron edit <job-id> --session "session:daily-brief"
 ```
 
-Delivery tweaks:
+交付调整：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
@@ -176,15 +141,15 @@ openclaw cron edit <job-id> --no-best-effort-deliver
 openclaw cron edit <job-id> --no-deliver
 ```
 
-Failure-delivery note:
+失败交付注意：
 
-- `delivery.failureDestination` is supported for isolated jobs.
-- Main-session jobs may only use `delivery.failureDestination` when primary
-  delivery mode is `webhook`.
-- If you do not set any failure destination and the job already announces to a
-  channel, failure notifications reuse that same announce target.
+- `delivery.failureDestination` 支持孤立作业。
+- 主会话作业仅在主要
+  交付模式为 `webhook` 时才能使用 `delivery.failureDestination`。
+- 如果您未设置任何失败目的地，且作业已公告到某个
+  频道，则失败通知会复用同一个公告目标。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Scheduled tasks](/automation/cron-jobs)
+- [CLI 参考](/cli)
+- [计划任务](/automation/cron-jobs)

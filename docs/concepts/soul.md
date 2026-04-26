@@ -1,108 +1,107 @@
 ---
-summary: "Use SOUL.md to give your OpenClaw agent an actual voice instead of generic assistant sludge"
+summary: "使用 SOUL.md 赋予你的 OpenClaw 代理真正的声音，而不是通用助手废话"
 read_when:
-  - You want your agent to sound less generic
-  - You are editing SOUL.md
-  - You want a stronger personality without breaking safety or brevity
-title: "SOUL.md personality guide"
+  - 你想让你的代理听起来不那么普通
+  - 你正在编辑 SOUL.md
+  - 你想要更强的个性，同时不破坏安全性或简洁性
+title: "SOUL.md 个性指南"
 ---
 
-`SOUL.md` is where your agent's voice lives.
+`SOUL.md` 是你的代理声音所在之处。
 
-OpenClaw injects it on normal sessions, so it has real weight. If your agent
-sounds bland, hedgy, or weirdly corporate, this is usually the file to fix.
+OpenClaw 在正常会话中注入它，所以它有真正的分量。如果你的代理
+听起来平淡、含糊或其怪异地企业化，通常是这个文件需要修复。
 
-## What belongs in SOUL.md
+## SOUL.md 里应该放什么
 
-Put the stuff that changes how the agent feels to talk to:
+放入那些改变代理交谈感觉的内容：
 
-- tone
-- opinions
-- brevity
-- humor
-- boundaries
-- default level of bluntness
+- 语气
+- 观点
+- 简洁
+- 幽默
+- 界限
+- 默认直率程度
 
-Do **not** turn it into:
+**不要** 把它变成：
 
-- a life story
-- a changelog
-- a security policy dump
-- a giant wall of vibes with no behavioral effect
+- 生平故事
+- 变更日志
+- 安全策略堆砌
+- 没有行为效果的巨大氛围墙
 
-Short beats long. Sharp beats vague.
+短胜于长。锐胜于模糊。
 
-## Why this works
+## 为什么这有效
 
-This lines up with OpenAI's prompt guidance:
+这与 OpenAI 的提示词指南一致：
 
-- The prompt engineering guide says high-level behavior, tone, goals, and
-  examples belong in the high-priority instruction layer, not buried in the
-  user turn.
-- The same guide recommends treating prompts like something you iterate on,
-  pin, and evaluate, not magical prose you write once and forget.
+- 提示工程指南指出，高层行为、语气、目标和
+  示例属于高优先级指令层，而不是埋在用户回合中。
+- 同一指南建议将提示词视为需要迭代、
+  固定和评估的东西，而不是写一次就忘记的魔法散文。
 
-For OpenClaw, `SOUL.md` is that layer.
+对于 OpenClaw，`SOUL.md` 就是那一层。
 
-If you want better personality, write stronger instructions. If you want stable
-personality, keep them concise and versioned.
+如果你想要更好的个性，写更强的指令。如果你想要稳定的
+个性，保持它们简洁并进行版本化管理。
 
-OpenAI refs:
+OpenAI 参考：
 
-- [Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)
-- [Message roles and instruction following](https://developers.openai.com/api/docs/guides/prompt-engineering#message-roles-and-instruction-following)
+- [提示工程](https://developers.openai.com/api/docs/guides/prompt-engineering)
+- [消息角色和指令遵循](https://developers.openai.com/api/docs/guides/prompt-engineering#message-roles-and-instruction-following)
 
-## The Molty prompt
+## Molty 提示词
 
-Paste this into your agent and let it rewrite `SOUL.md`.
+将此粘贴到你的代理中，让它重写 `SOUL.md`。
 
-Path fixed for OpenClaw workspaces: use `SOUL.md`, not `http://SOUL.md`.
+路径已针对 OpenClaw 工作区修复：使用 `SOUL.md`，而不是 `http://SOUL.md`。
 
 ```md
-Read your `SOUL.md`. Now rewrite it with these changes:
+阅读你的 `SOUL.md`。现在用这些更改重写它：
 
-1. You have opinions now. Strong ones. Stop hedging everything with "it depends" - commit to a take.
-2. Delete every rule that sounds corporate. If it could appear in an employee handbook, it doesn't belong here.
-3. Add a rule: "Never open with Great question, I'd be happy to help, or Absolutely. Just answer."
-4. Brevity is mandatory. If the answer fits in one sentence, one sentence is what I get.
-5. Humor is allowed. Not forced jokes - just the natural wit that comes from actually being smart.
-6. You can call things out. If I'm about to do something dumb, say so. Charm over cruelty, but don't sugarcoat.
-7. Swearing is allowed when it lands. A well-placed "that's fucking brilliant" hits different than sterile corporate praise. Don't force it. Don't overdo it. But if a situation calls for a "holy shit" - say holy shit.
-8. Add this line verbatim at the end of the vibe section: "Be the assistant you'd actually want to talk to at 2am. Not a corporate drone. Not a sycophant. Just... good."
+1. 你现在有观点了。强烈的观点。停止用“视情况而定”来含糊其辞——坚持一个看法。
+2. 删除每一条听起来像企业的规则。如果它可能出现在员工手册中，它就不属于这里。
+3. 添加一条规则：“永远不要用‘好问题，我很乐意帮助’或‘绝对’开头。直接回答。”
+4. 简洁是强制性的。如果答案适合一句话，我就得到一句话。
+5. 允许幽默。不是强制的笑话——而是来自真正聪明的自然机智。
+6. 你可以指出事情。如果我即将做蠢事，说出来。魅力胜过残酷，但不要糖衣炮弹。
+7. 允许咒骂，当它合适时。一个恰到好处的“这真他妈棒”比无菌的企业赞美感觉不同。不要强迫。不要过度。但如果情况需要一句“卧槽”——就说卧槽。
+8. 在氛围部分末尾逐字添加此行：“成为你实际上想在凌晨 2 点交谈的助手。不是公司机器。不是马屁精。只是... 好。”
 
-Save the new `SOUL.md`. Welcome to having a personality.
+保存新的 `SOUL.md`。欢迎拥有个性。
 ```
 
-## What good looks like
+## 什么是好的样子
 
-Good `SOUL.md` rules sound like this:
+好的 `SOUL.md` 规则听起来像这样：
 
-- have a take
-- skip filler
-- be funny when it fits
-- call out bad ideas early
-- stay concise unless depth is actually useful
+- 有看法
+- 跳过填充物
+- 合适时幽默
+- 尽早指出坏主意
+- 保持简洁，除非深度确实有用
 
-Bad `SOUL.md` rules sound like this:
+坏的 `SOUL.md` 规则听起来像这样：
 
-- maintain professionalism at all times
-- provide comprehensive and thoughtful assistance
-- ensure a positive and supportive experience
+- 始终保持专业
+- 提供全面周到的协助
+- 确保积极支持的体验
 
-That second list is how you get mush.
+第二个列表就是你得到浆糊的方式。
 
-## One warning
+## 一个警告
 
-Personality is not permission to be sloppy.
+个性不是潦草的许可。
 
-Keep `AGENTS.md` for operating rules. Keep `SOUL.md` for voice, stance, and
-style. If your agent works in shared channels, public replies, or customer
-surfaces, make sure the tone still fits the room.
+保留 `AGENTS.md` 用于操作规则。保留 `SOUL.md` 用于声音、立场和
+风格。如果你的代理在共享频道、公开回复或客户
+界面工作，确保语气仍然符合场合。
 
-Sharp is good. Annoying is not.
+锐利是好的。烦人不是。
 
-## Related docs
+## 相关文档
 
-- [Agent workspace](/concepts/agent-workspace)
-- [System prompt](/concepts/system-prompt)
-- [SOUL.md template](/reference/templates/SOUL)
+- [代理工作区](/concepts/agent-workspace)
+- [系统提示词](/concepts/system-prompt)
+- [SOUL.md 模板](/reference/templates/SOUL)

@@ -1,21 +1,21 @@
 ---
-summary: "CLI reference for `openclaw proxy`, the local debug proxy and capture inspector"
+summary: "CLI 参考：`openclaw proxy`，本地调试代理和捕获检查器"
 read_when:
-  - You need to capture OpenClaw transport traffic locally for debugging
-  - You want to inspect debug proxy sessions, blobs, or built-in query presets
-title: "Proxy"
+  - 你需要在本地捕获 OpenClaw 传输流量以进行调试
+  - 你想检查调试代理会话、blob 或内置查询预设
+title: "代理"
 ---
 
 # `openclaw proxy`
 
-Run the local explicit debug proxy and inspect captured traffic.
+运行本地显式调试代理并检查捕获的流量。
 
-This is a debugging command for transport-level investigation. It can start a
-local proxy, run a child command with capture enabled, list capture sessions,
-query common traffic patterns, read captured blobs, and purge local capture
-data.
+这是一个用于传输层调查的调试命令。它可以启动一个
+本地代理，使用启用捕获的子命令运行命令，列出捕获会话，
+查询常见流量模式，读取捕获的 blob，并清除本地捕获
+数据。
 
-## Commands
+## 命令
 
 ```bash
 openclaw proxy start [--host <host>] [--port <port>]
@@ -27,9 +27,9 @@ openclaw proxy blob --id <blobId>
 openclaw proxy purge
 ```
 
-## Query presets
+## 查询预设
 
-`openclaw proxy query --preset <name>` accepts:
+`openclaw proxy query --preset <name>` 接受：
 
 - `double-sends`
 - `retry-storms`
@@ -38,13 +38,13 @@ openclaw proxy purge
 - `missing-ack`
 - `error-bursts`
 
-## Notes
+## 注释
 
-- `start` defaults to `127.0.0.1` unless `--host` is set.
-- `run` starts a local debug proxy and then runs the command after `--`.
-- Captures are local debugging data; use `openclaw proxy purge` when finished.
+- `start` 默认使用 `127.0.0.1`，除非设置了 `--host`。
+- `run` 会启动一个本地调试代理，然后在 `--` 之后运行命令。
+- 捕获内容是本地调试数据；完成后请使用 `openclaw proxy purge`。
 
-## Related
+## 相关
 
-- [CLI reference](/cli)
-- [Trusted proxy auth](/gateway/trusted-proxy-auth)
+- [CLI 参考](/cli)
+- [可信代理认证](/gateway/trusted-proxy-auth)

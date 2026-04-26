@@ -1,49 +1,49 @@
 ---
-summary: "Location command for nodes (location.get), permission modes, and Android foreground behavior"
+summary: "节点的位置命令（location.get）、权限模式及 Android 前台行为"
 read_when:
-  - Adding location node support or permissions UI
-  - Designing Android location permissions or foreground behavior
-title: "Location command"
+  - 添加位置节点支持或权限 UI
+  - 设计 Android 位置权限或前台行为
+title: "位置命令"
 ---
 
 ## TL;DR
 
-- `location.get` is a node command (via `node.invoke`).
-- Off by default.
-- Android app settings use a selector: Off / While Using.
-- Separate toggle: Precise Location.
+- `location.get` 是一个节点命令（通过 `node.invoke` 调用）。
+- 默认关闭。
+- Android 应用设置使用选择器：关闭 / 使用时。
+- 单独开关：精确位置。
 
-## Why a selector (not just a switch)
+## 为什么用选择器（而不仅是开关）
 
-OS permissions are multi-level. We can expose a selector in-app, but the OS still decides the actual grant.
+操作系统权限是多级的。我们可以在应用内暴露选择器，但实际授权由操作系统决定。
 
-- iOS/macOS may expose **While Using** or **Always** in system prompts/Settings.
-- Android app currently supports foreground location only.
-- Precise location is a separate grant (iOS 14+ “Precise”, Android “fine” vs “coarse”).
+- iOS/macOS 可能在系统提示/设置中暴露“使用期间”或“始终”。
+- Android 应用当前只支持前台位置权限。
+- 精确位置是单独授权项（iOS 14+ 的“精确”，Android 的“精确版”与“粗略版”）。
 
-Selector in UI drives our requested mode; actual grant lives in OS settings.
+UI 中的选择器驱动我们请求的模式；实际授权存于系统设置。
 
-## Settings model
+## 设置模型
 
-Per node device:
+每个节点设备：
 
-- `location.enabledMode`: `off | whileUsing`
-- `location.preciseEnabled`: bool
+- `location.enabledMode`：`off | whileUsing`
+- `location.preciseEnabled`：布尔值
 
-UI behavior:
+UI 行为：
 
-- Selecting `whileUsing` requests foreground permission.
-- If OS denies requested level, revert to the highest granted level and show status.
+- 选中 `whileUsing` 会请求前台权限。
+- 若操作系统拒绝请求级别，则回退到最高已授权级别并显示状态。
 
-## Permissions mapping (node.permissions)
+## 权限映射（node.permissions）
 
-Optional. macOS node reports `location` via the permissions map; iOS/Android may omit it.
+可选。macOS 节点通过权限映射报告 `location`；iOS/Android 可能省略。
 
-## Command: `location.get`
+## 命令：`location.get`
 
-Called via `node.invoke`.
+通过 `node.invoke` 调用。
 
-Params (suggested):
+参数（建议）：
 
 ```json
 {
@@ -53,7 +53,7 @@ Params (suggested):
 }
 ```
 
-Response payload:
+响应负载：
 
 ```json
 {
@@ -69,31 +69,31 @@ Response payload:
 }
 ```
 
-Errors (stable codes):
+错误（稳定代码）：
 
-- `LOCATION_DISABLED`: selector is off.
-- `LOCATION_PERMISSION_REQUIRED`: permission missing for requested mode.
-- `LOCATION_BACKGROUND_UNAVAILABLE`: app is backgrounded but only While Using allowed.
-- `LOCATION_TIMEOUT`: no fix in time.
-- `LOCATION_UNAVAILABLE`: system failure / no providers.
+- `LOCATION_DISABLED`：选择器关闭。
+- `LOCATION_PERMISSION_REQUIRED`：缺少请求模式的权限。
+- `LOCATION_BACKGROUND_UNAVAILABLE`：应用处于后台但只允许“使用期间”。
+- `LOCATION_TIMEOUT`：超时无定位。
+- `LOCATION_UNAVAILABLE`：系统故障/无提供者。
 
-## Background behavior
+## 后台行为
 
-- Android app denies `location.get` while backgrounded.
-- Keep OpenClaw open when requesting location on Android.
-- Other node platforms may differ.
+- Android 应用后台时拒绝 `location.get` 调用。
+- Android 请求位置时保持 OpenClaw 处于打开状态。
+- 其他节点平台可能不同。
 
-## Model/tooling integration
+## 模型/工具集成
 
-- Tool surface: `nodes` tool adds `location_get` action (node required).
-- CLI: `openclaw nodes location get --node <id>`.
-- Agent guidelines: only call when user enabled location and understands the scope.
+- 工具界面：`nodes` 工具添加 `location_get` 动作（需指定节点）。
+- CLI：`openclaw nodes location get --node <id>`。
+- 代理指南：仅当用户启用位置且理解权限范围时调用。
 
-## UX copy (suggested)
+## 用户体验文案（建议）
 
-- Off: “Location sharing is disabled.”
-- While Using: “Only when OpenClaw is open.”
-- Precise: “Use precise GPS location. Toggle off to share approximate location.”
+- Off: “位置共享已关闭。”
+- While Using: “仅在 OpenClaw 打开时。”
+- Precise: “使用精确 GPS 位置。关闭后共享大致位置。”
 
 ## Related
 

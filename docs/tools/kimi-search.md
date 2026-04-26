@@ -1,23 +1,22 @@
 ---
-summary: "Kimi web search via Moonshot web search"
+summary: "通过 Moonshot 网页搜索使用 Kimi"
 read_when:
-  - You want to use Kimi for web_search
-  - You need a KIMI_API_KEY or MOONSHOT_API_KEY
-title: "Kimi search"
+  - 你想使用 Kimi 进行 web_search
+  - 你需要 KIMI_API_KEY 或 MOONSHOT_API_KEY
+title: "Kimi 搜索"
 ---
 
-OpenClaw supports Kimi as a `web_search` provider, using Moonshot web search
-to produce AI-synthesized answers with citations.
+OpenClaw 支持将 Kimi 作为 `web_search` 提供商，使用 Moonshot 网页搜索
+生成带引用的 AI 综合答案。
 
-## Get an API key
+## 获取 API 密钥
 
 <Steps>
-  <Step title="Create a key">
-    Get an API key from [Moonshot AI](https://platform.moonshot.cn/).
+  <Step title="创建密钥">
+    从 [Moonshot AI](https://platform.moonshot.cn/) 获取 API 密钥。
   </Step>
-  <Step title="Store the key">
-    Set `KIMI_API_KEY` or `MOONSHOT_API_KEY` in the Gateway environment, or
-    configure via:
+  <Step title="存储密钥">
+    在 Gateway 环境中设置 `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`，或通过以下方式配置：
 
     ```bash
     openclaw configure --section web
@@ -26,15 +25,15 @@ to produce AI-synthesized answers with citations.
   </Step>
 </Steps>
 
-When you choose **Kimi** during `openclaw onboard` or
-`openclaw configure --section web`, OpenClaw can also ask for:
+当你在 `openclaw onboard` 或
+`openclaw configure --section web` 期间选择 **Kimi** 时，OpenClaw 还会询问：
 
-- the Moonshot API region:
+- Moonshot API 区域：
   - `https://api.moonshot.ai/v1`
   - `https://api.moonshot.cn/v1`
-- the default Kimi web-search model (defaults to `kimi-k2.6`)
+- 默认的 Kimi web-search 模型（默认为 `kimi-k2.6`）
 
-## Config
+## 配置
 
 ```json5
 {
@@ -43,7 +42,7 @@ When you choose **Kimi** during `openclaw onboard` or
       moonshot: {
         config: {
           webSearch: {
-            apiKey: "sk-...", // optional if KIMI_API_KEY or MOONSHOT_API_KEY is set
+            apiKey: "sk-...", // 如果设置了 KIMI_API_KEY 或 MOONSHOT_API_KEY，则为可选项
             baseUrl: "https://api.moonshot.ai/v1",
             model: "kimi-k2.6",
           },
@@ -61,36 +60,35 @@ When you choose **Kimi** during `openclaw onboard` or
 }
 ```
 
-If you use the China API host for chat (`models.providers.moonshot.baseUrl`:
-`https://api.moonshot.cn/v1`), OpenClaw reuses that same host for Kimi
-`web_search` when `tools.web.search.kimi.baseUrl` is omitted, so keys from
-[platform.moonshot.cn](https://platform.moonshot.cn/) do not hit the
-international endpoint by mistake (which often returns HTTP 401). Override
-with `tools.web.search.kimi.baseUrl` when you need a different search base URL.
+如果你在聊天中使用中国区 API 主机（`models.providers.moonshot.baseUrl`：
+`https://api.moonshot.cn/v1`），当省略 `tools.web.search.kimi.baseUrl` 时，OpenClaw 会为 Kimi
+`web_search` 复用同一个主机，因此来自
+[platform.moonshot.cn](https://platform.moonshot.cn/) 的密钥不会意外命中
+国际端点（这通常会返回 HTTP 401）。当你需要不同的搜索基础 URL 时，请使用
+`tools.web.search.kimi.baseUrl` 覆盖。
 
-**Environment alternative:** set `KIMI_API_KEY` or `MOONSHOT_API_KEY` in the
-Gateway environment. For a gateway install, put it in `~/.openclaw/.env`.
+**环境替代方案：** 在 Gateway 环境中设置 `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`。对于 gateway 安装，请将其放入 `~/.openclaw/.env`。
 
-If you omit `baseUrl`, OpenClaw defaults to `https://api.moonshot.ai/v1`.
-If you omit `model`, OpenClaw defaults to `kimi-k2.6`.
+如果你省略 `baseUrl`，OpenClaw 默认使用 `https://api.moonshot.ai/v1`。
+如果你省略 `model`，OpenClaw 默认使用 `kimi-k2.6`。
 
-## How it works
+## 工作原理
 
-Kimi uses Moonshot web search to synthesize answers with inline citations,
-similar to Gemini and Grok's grounded response approach.
+Kimi 使用 Moonshot 网页搜索来综合答案，并在文内添加引用，
+类似于 Gemini 和 Grok 的基于事实支撑的响应方式。
 
-## Supported parameters
+## 支持的参数
 
-Kimi search supports `query`.
+Kimi 搜索支持 `query`。
 
-`count` is accepted for shared `web_search` compatibility, but Kimi still
-returns one synthesized answer with citations rather than an N-result list.
+`count` 可用于共享 `web_search` 兼容性，但 Kimi 仍然
+返回带引用的单个综合答案，而不是 N 条结果列表。
 
-Provider-specific filters are not currently supported.
+目前不支持提供商特定的过滤器。
 
-## Related
+## 相关内容
 
-- [Web Search overview](/tools/web) -- all providers and auto-detection
-- [Moonshot AI](/providers/moonshot) -- Moonshot model + Kimi Coding provider docs
-- [Gemini Search](/tools/gemini-search) -- AI-synthesized answers via Google grounding
-- [Grok Search](/tools/grok-search) -- AI-synthesized answers via xAI grounding
+- [Web Search overview](/tools/web) -- 所有提供商与自动检测
+- [Moonshot AI](/providers/moonshot) -- Moonshot 模型 + Kimi Coding 提供商文档
+- [Gemini Search](/tools/gemini-search) -- 通过 Google grounding 生成 AI 综合答案
+- [Grok Search](/tools/grok-search) -- 通过 xAI grounding 生成 AI 综合答案

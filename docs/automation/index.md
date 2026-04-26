@@ -1,118 +1,118 @@
 ---
-summary: "Overview of automation mechanisms: tasks, cron, hooks, standing orders, and Task Flow"
+summary: "自动化机制概述：任务、定时任务、钩子、常设指令和任务流"
 read_when:
-  - Deciding how to automate work with OpenClaw
-  - Choosing between heartbeat, cron, hooks, and standing orders
-  - Looking for the right automation entry point
-title: "Automation & tasks"
+  - 决定如何使用 OpenClaw 自动化工作
+  - 在心跳、cron、钩子和常设指令之间进行选择
+  - 寻找合适的自动化入口点
+title: "自动化与任务"
 ---
 
-OpenClaw runs work in the background through tasks, scheduled jobs, event hooks, and standing instructions. This page helps you choose the right mechanism and understand how they fit together.
+OpenClaw 通过任务、计划作业、事件钩子和常设指令在后台执行工作。本页将帮助您选择合适的机制，并了解它们如何协同工作。
 
-## Quick decision guide
+## 快速决策指南
 
 ```mermaid
 flowchart TD
-    START([What do you need?]) --> Q1{Schedule work?}
-    START --> Q2{Track detached work?}
-    START --> Q3{Orchestrate multi-step flows?}
-    START --> Q4{React to lifecycle events?}
-    START --> Q5{Give the agent persistent instructions?}
+    START([你需要什么？]) --> Q1{计划工作？}
+    START --> Q2{跟踪独立工作？}
+    START --> Q3{编排多步骤流程？}
+    START --> Q4{响应生命周期事件？}
+    START --> Q5{给代理持久指令？}
 
-    Q1 -->|Yes| Q1a{Exact timing or flexible?}
-    Q1a -->|Exact| CRON["Scheduled Tasks (Cron)"]
-    Q1a -->|Flexible| HEARTBEAT[Heartbeat]
+    Q1 -->|是| Q1a{精确时间还是灵活？}
+    Q1a -->|精确| CRON["计划任务 (Cron)"]
+    Q1a -->|灵活| HEARTBEAT[心跳]
 
-    Q2 -->|Yes| TASKS[Background Tasks]
-    Q3 -->|Yes| FLOW[Task Flow]
-    Q4 -->|Yes| HOOKS[Hooks]
-    Q5 -->|Yes| SO[Standing Orders]
+    Q2 -->|是| TASKS[后台任务]
+    Q3 -->|是| FLOW[任务流]
+    Q4 -->|是| HOOKS[钩子]
+    Q5 -->|是| SO[常设指令]
 ```
 
-| Use case                                | Recommended            | Why                                              |
+| 用例 | 推荐 | 原因 |
 | --------------------------------------- | ---------------------- | ------------------------------------------------ |
-| Send daily report at 9 AM sharp         | Scheduled Tasks (Cron) | Exact timing, isolated execution                 |
-| Remind me in 20 minutes                 | Scheduled Tasks (Cron) | One-shot with precise timing (`--at`)            |
-| Run weekly deep analysis                | Scheduled Tasks (Cron) | Standalone task, can use different model         |
-| Check inbox every 30 min                | Heartbeat              | Batches with other checks, context-aware         |
-| Monitor calendar for upcoming events    | Heartbeat              | Natural fit for periodic awareness               |
-| Inspect status of a subagent or ACP run | Background Tasks       | Tasks ledger tracks all detached work            |
-| Audit what ran and when                 | Background Tasks       | `openclaw tasks list` and `openclaw tasks audit` |
-| Multi-step research then summarize      | Task Flow              | Durable orchestration with revision tracking     |
-| Run a script on session reset           | Hooks                  | Event-driven, fires on lifecycle events          |
-| Execute code on every tool call         | Plugin hooks           | In-process hooks can intercept tool calls        |
-| Always check compliance before replying | Standing Orders        | Injected into every session automatically        |
+| 在上午 9 点整发送每日报告         | 计划任务 (Cron) | 精确时间，隔离执行                 |
+| 20 分钟后提醒我                 | 计划任务 (Cron) | 一次性且时间精确（`--at`）            |
+| 每周运行深度分析                | 计划任务 (Cron) | 独立任务，可使用不同模型         |
+| 每 30 分钟检查收件箱                | 心跳              | 与其他检查批处理，感知上下文         |
+| 监控日历中的即将到来的事件    | 心跳              | 周期性感知的自然适配               |
+| 检查子代理或 ACP 运行状态 | 后台任务       | 任务账簿跟踪所有分离的工作            |
+| 审计何时运行了什么                 | 后台任务       | `openclaw tasks list` 和 `openclaw tasks audit` |
+| 先进行多步骤研究再总结      | 任务流              | 具有修订跟踪的持久编排     |
+| 在会话重置时运行脚本         | 钩子                  | 事件驱动，在生命周期事件上触发          |
+| 在每次工具调用时执行代码         | 插件钩子           | 进程内钩子可拦截工具调用        |
+| 始终在回复前检查合规性 | 常设指令        | 自动注入到每个会话中       |
 
-### Scheduled Tasks (Cron) vs Heartbeat
+### 计划任务 (Cron) vs 心跳
 
-| Dimension       | Scheduled Tasks (Cron)              | Heartbeat                             |
+| 维度 | 计划任务 (Cron) | 心跳 |
 | --------------- | ----------------------------------- | ------------------------------------- |
-| Timing          | Exact (cron expressions, one-shot)  | Approximate (default every 30 min)    |
-| Session context | Fresh (isolated) or shared          | Full main-session context             |
-| Task records    | Always created                      | Never created                         |
-| Delivery        | Channel, webhook, or silent         | Inline in main session                |
-| Best for        | Reports, reminders, background jobs | Inbox checks, calendar, notifications |
+| 时间 | 精确 (cron 表达式，一次性) | 近似 (默认每 30 分钟) |
+| 会话上下文 | 全新 (隔离) 或共享 | 完整主会话上下文 |
+| 任务记录 | 始终创建 | 从不创建 |
+| 交付 | 渠道、webhook 或静默 | 主会话内联 |
+| 最适合 | 报告、提醒、后台作业 | 收件箱检查、日历、通知 |
 
-Use Scheduled Tasks (Cron) when you need precise timing or isolated execution. Use Heartbeat when the work benefits from full session context and approximate timing is fine.
+当您需要精确时间或隔离执行时，请使用计划任务 (Cron)。当工作受益于完整会话上下文且可以接受近似时间时，请使用心跳。
 
-## Core concepts
+## 核心概念
 
-### Scheduled tasks (cron)
+### 计划任务 (cron)
 
-Cron is the Gateway's built-in scheduler for precise timing. It persists jobs, wakes the agent at the right time, and can deliver output to a chat channel or webhook endpoint. Supports one-shot reminders, recurring expressions, and inbound webhook triggers.
+Cron 是 Gateway 内置的精确时间调度器。它持久化作业，在正确时间唤醒代理，并可以将输出交付到聊天渠道或 webhook 端点。支持一次性提醒、重复表达式和入站 webhook 触发。
 
-See [Scheduled Tasks](/automation/cron-jobs).
+参见 [计划任务](/automation/cron-jobs)。
 
-### Tasks
+### 任务
 
-The background task ledger tracks all detached work: ACP runs, subagent spawns, isolated cron executions, and CLI operations. Tasks are records, not schedulers. Use `openclaw tasks list` and `openclaw tasks audit` to inspect them.
+后台任务账簿跟踪所有独立工作：ACP 运行、子代理生成、隔离的 cron 执行和 CLI 操作。任务是记录，而不是调度器。使用 `openclaw tasks list` 和 `openclaw tasks audit` 来检查它们。
 
-See [Background Tasks](/automation/tasks).
+参见 [后台任务](/automation/tasks)。
 
-### Task Flow
+### 任务流
 
-Task Flow is the flow orchestration substrate above background tasks. It manages durable multi-step flows with managed and mirrored sync modes, revision tracking, and `openclaw tasks flow list|show|cancel` for inspection.
+任务流是后台任务之上的流程编排基底。它管理具有管理和镜像同步模式、修订跟踪的持久多步骤流程，并使用 `openclaw tasks flow list|show|cancel` 进行检查。
 
-See [Task Flow](/automation/taskflow).
+参见 [任务流](/automation/taskflow)。
 
-### Standing orders
+### 常设指令
 
-Standing orders grant the agent permanent operating authority for defined programs. They live in workspace files (typically `AGENTS.md`) and are injected into every session. Combine with cron for time-based enforcement.
+常设指令授予代理定义程序的永久操作权限。它们存在于工作区文件中（通常是 `AGENTS.md`），并注入到每个会话中。与 cron 结合以实现基于时间的执行。
 
-See [Standing Orders](/automation/standing-orders).
+参见 [常设指令](/automation/standing-orders)。
 
-### Hooks
+### 钩子
 
-Internal hooks are event-driven scripts triggered by agent lifecycle events
-(`/new`, `/reset`, `/stop`), session compaction, gateway startup, and message
-flow. They are automatically discovered from directories and can be managed
-with `openclaw hooks`. For in-process tool-call interception, use
-[Plugin hooks](/plugins/hooks).
+内部钩子是由代理生命周期事件
+(`/new`, `/reset`, `/stop`)、会话压缩、Gateway 启动和消息
+流触发的事件驱动脚本。它们会从目录中自动发现，并可通过
+`openclaw hooks` 进行管理。对于进程内工具调用拦截，请使用
+[插件钩子](/plugins/hooks)。
 
-See [Hooks](/automation/hooks).
+参见 [钩子](/automation/hooks)。
 
-### Heartbeat
+### 心跳
 
-Heartbeat is a periodic main-session turn (default every 30 minutes). It batches multiple checks (inbox, calendar, notifications) in one agent turn with full session context. Heartbeat turns do not create task records and do not extend daily/idle session reset freshness. Use `HEARTBEAT.md` for a small checklist, or a `tasks:` block when you want due-only periodic checks inside heartbeat itself. Empty heartbeat files skip as `empty-heartbeat-file`; due-only task mode skips as `no-tasks-due`.
+心跳是定期的主会话轮次（默认每 30 分钟）。它在一个代理轮次中批处理多个检查（收件箱、日历、通知），并具有完整会话上下文。心跳轮次不创建任务记录。使用 `HEARTBEAT.md` 作为小型检查列表，或者当您想要在心跳本身内部进行仅到期周期性检查时使用 `tasks:` 块。空心跳文件会跳过并返回 `empty-heartbeat-file`；仅到期任务模式会跳过并返回 `no-tasks-due`。
 
-See [Heartbeat](/gateway/heartbeat).
+参见 [心跳](/gateway/heartbeat)。
 
-## How they work together
+## 它们如何协同工作
 
-- **Cron** handles precise schedules (daily reports, weekly reviews) and one-shot reminders. All cron executions create task records.
-- **Heartbeat** handles routine monitoring (inbox, calendar, notifications) in one batched turn every 30 minutes.
-- **Hooks** react to specific events (session resets, compaction, message flow) with custom scripts. Plugin hooks cover tool calls.
-- **Standing orders** give the agent persistent context and authority boundaries.
-- **Task Flow** coordinates multi-step flows above individual tasks.
-- **Tasks** automatically track all detached work so you can inspect and audit it.
+- **Cron** 处理精确计划（每日报告、每周回顾）和一次性提醒。所有 cron 执行都会创建任务记录。
+- **Heartbeart** 处理常规监控（收件箱、日历、通知），每 30 分钟在一次批处理轮次中完成。
+- **钩子** 通过自定义脚本响应特定事件（会话重置、压缩、消息流）。插件钩子覆盖工具调用。
+- **常设指令** 为代理提供持久上下文和权限边界。
+- **任务流** 在单个任务之上协调多步骤流程。
+- **任务** 自动跟踪所有分离的工作，以便您可以检查和审计。
 
-## Related
+## 相关内容
 
-- [Scheduled Tasks](/automation/cron-jobs) — precise scheduling and one-shot reminders
-- [Background Tasks](/automation/tasks) — task ledger for all detached work
-- [Task Flow](/automation/taskflow) — durable multi-step flow orchestration
-- [Hooks](/automation/hooks) — event-driven lifecycle scripts
-- [Plugin hooks](/plugins/hooks) — in-process tool, prompt, message, and lifecycle hooks
-- [Standing Orders](/automation/standing-orders) — persistent agent instructions
-- [Heartbeat](/gateway/heartbeat) — periodic main-session turns
-- [Configuration Reference](/gateway/configuration-reference) — all config keys
+- [计划任务](/automation/cron-jobs) — 精确调度和一次性提醒
+- [后台任务](/automation/tasks) — 所有分离工作的任务账簿
+- [任务流](/automation/taskflow) — 持久多步骤流程编排
+- [钩子](/automation/hooks) — 事件驱动的生命周期脚本
+- [插件钩子](/plugins/hooks) — 进程内工具、提示、消息和生命周期钩子
+- [常设指令](/automation/standing-orders) — 持久代理指令
+- [心跳](/gateway/heartbeat) — 周期性的主会话轮次
+- [配置参考](/gateway/configuration-reference) — 所有配置键

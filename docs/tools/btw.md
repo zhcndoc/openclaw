@@ -1,123 +1,112 @@
 ---
-summary: "Ephemeral side questions with /btw"
+summary: "使用 /btw 的临时附带问题"
 read_when:
-  - You want to ask a quick side question about the current session
-  - You are implementing or debugging BTW behavior across clients
-title: "BTW side questions"
+  - 你想就当前会话提出一个快速的附带问题
+  - 你正在跨客户端实现或调试 BTW 行为
+title: "BTW 附带问题"
 ---
 
-`/btw` lets you ask a quick side question about the **current session** without
-turning that question into normal conversation history.
+`/btw` 允许你在**当前会话**中提出一个快速的附带问题，而不会
+把这个问题变成正常的对话历史。
 
-It is modeled after Claude Code's `/btw` behavior, but adapted to OpenClaw's
-Gateway and multi-channel architecture.
+它借鉴了 Claude Code 的 `/btw` 行为，但适配了 OpenClaw 的 Gateway 和多渠道架构。
 
-## What it does
+## 它的作用
 
-When you send:
+当你发送：
 
 ```text
 /btw what changed?
 ```
 
-OpenClaw:
+OpenClaw 会：
 
-1. snapshots the current session context,
-2. runs a separate **tool-less** model call,
-3. answers only the side question,
-4. leaves the main run alone,
-5. does **not** write the BTW question or answer to session history,
-6. emits the answer as a **live side result** rather than a normal assistant message.
+1. 快照当前会话上下文，
+2. 运行一次独立的**无工具**模型调用，
+3. 仅回答这个附带问题，
+4. 不影响主流程，
+5. **不**将 BTW 的问题或答案写入会话历史，
+6. 以**实时附带结果**而非正常助手消息的形式输出答案。
 
-The important mental model is:
+重要的心智模型是：
 
-- same session context
-- separate one-shot side query
-- no tool calls
-- no future context pollution
-- no transcript persistence
+- 相同的会话上下文
+- 独立的一次性附带查询
+- 无工具调用
+- 不污染未来上下文
+- 不持久保存转录内容
 
-## What it does not do
+## 它不会做什么
 
-`/btw` does **not**:
+`/btw` **不会**：
 
-- create a new durable session,
-- continue the unfinished main task,
-- run tools or agent tool loops,
-- write BTW question/answer data to transcript history,
-- appear in `chat.history`,
-- survive a reload.
+- 创建新的持久会话，
+- 继续未完成的主任务，
+- 运行工具或代理工具循环，
+- 将 BTW 问题/答案数据写入转录历史，
+- 出现在 `chat.history` 中，
+- 经得起刷新（reload）。
 
-It is intentionally **ephemeral**.
+它是刻意设计为**短暂的**。
 
-## How context works
+## 上下文工作原理
 
-BTW uses the current session as **background context only**.
+BTW 仅将当前会话作为**背景上下文**。
 
-If the main run is currently active, OpenClaw snapshots the current message
-state and includes the in-flight main prompt as background context, while
-explicitly telling the model:
+如果主流程正在进行，OpenClaw 会快照当前消息状态，并将进行中的主提示作为背景上下文包含进来，同时明确告诉模型：
 
-- answer only the side question,
-- do not resume or complete the unfinished main task,
-- do not emit tool calls or pseudo-tool calls.
+- 仅回答附带问题，
+- 不要恢复或完成未完成的主任务，
+- 不要发出工具调用或伪工具调用。
 
-That keeps BTW isolated from the main run while still making it aware of what
-the session is about.
+这保持了 BTW 与主流程的隔离，同时让它了解会话内容。
 
-## Delivery model
+## 传递模型
 
-BTW is **not** delivered as a normal assistant transcript message.
+BTW **不会**作为正常的助手转录消息传递。
 
-At the Gateway protocol level:
+在 Gateway 协议层面：
 
-- normal assistant chat uses the `chat` event
-- BTW uses the `chat.side_result` event
+- 正常助手聊天使用 `chat` 事件
+- BTW 使用 `chat.side_result` 事件
 
-This separation is intentional. If BTW reused the normal `chat` event path,
-clients would treat it like regular conversation history.
+这种区分是有意为之。如果 BTW 重用正常的 `chat` 事件路径，客户端会将其当做常规对话历史处理。
 
-Because BTW uses a separate live event and is not replayed from
-`chat.history`, it disappears after reload.
+由于 BTW 使用独立的实时事件且不从 `chat.history` 回放，它在刷新后会消失。
 
-## Surface behavior
+## 表面行为
 
 ### TUI
 
-In TUI, BTW is rendered inline in the current session view, but it remains
-ephemeral:
+在 TUI 中，BTW 会以内嵌方式渲染在当前会话视图，但它保持短暂性：
 
-- visibly distinct from a normal assistant reply
-- dismissible with `Enter` or `Esc`
-- not replayed on reload
+- 视觉上与正常助手回复明显区别
+- 可以通过 `Enter` 或 `Esc` 关闭
+- 刷新时不会回放
 
-### External channels
+### 外部渠道
 
-On channels like Telegram, WhatsApp, and Discord, BTW is delivered as a
-clearly labeled one-off reply because those surfaces do not have a local
-ephemeral overlay concept.
+在 Telegram、WhatsApp 和 Discord 等渠道，BTW 作为一次性明确标记的回复发送，因为这些渠道没有本地短暂叠加层概念。
 
-The answer is still treated as a side result, not normal session history.
+答案仍被视作附带结果，不算正常会话历史。
 
-### Control UI / web
+### 控制 UI / 网页端
 
-The Gateway emits BTW correctly as `chat.side_result`, and BTW is not included
-in `chat.history`, so the persistence contract is already correct for web.
+Gateway 正确地以 `chat.side_result` 发出 BTW，且 BTW 不包含在 `chat.history` 中，因此在网页端其持久性约定已经正确。
 
-The current Control UI still needs a dedicated `chat.side_result` consumer to
-render BTW live in the browser. Until that client-side support lands, BTW is a
-Gateway-level feature with full TUI and external-channel behavior, but not yet
-a complete browser UX.
+当前控制 UI 仍需专门的 `chat.side_result` 消费器，才能在浏览器中实时渲染 BTW。在客户端支持上线之前，BTW 是一个 Gateway 级功能，具备完整的 TUI 和外部渠道行为，但尚未成为完整的浏览器用户体验。
 
-## When to use BTW
+## 何时使用 BTW
 
-Use `/btw` when you want:
+当你想要：
 
-- a quick clarification about the current work,
-- a factual side answer while a long run is still in progress,
-- a temporary answer that should not become part of future session context.
+- 对当前工作做快速澄清，
+- 在长时间运行仍在进行时，获取事实性附带答案，
+- 临时答案且不应成为未来会话上下文一部分，
 
-Examples:
+时使用 `/btw`。
+
+示例：
 
 ```text
 /btw what file are we editing?
@@ -126,15 +115,14 @@ Examples:
 /btw what is 17 * 19?
 ```
 
-## When not to use BTW
+## 何时不使用 BTW
 
-Do not use `/btw` when you want the answer to become part of the session's
-future working context.
+如果你希望答案成为会话未来工作上下文的一部分，就不要使用 `/btw`。
 
-In that case, ask normally in the main session instead of using BTW.
+应该在主会话中正常提问，而不是使用 BTW。
 
-## Related
+## 相关内容
 
-- [Slash commands](/tools/slash-commands)
-- [Thinking Levels](/tools/thinking)
-- [Session](/concepts/session)
+- [斜杠命令](/tools/slash-commands)
+- [思考层级](/tools/thinking)
+- [会话](/concepts/session)

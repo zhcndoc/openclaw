@@ -1,12 +1,12 @@
 ---
-summary: "Redirect to /automation/cron-jobs"
+summary: "重定向至 /automation/cron-jobs"
 title: "Webhooks"
 ---
 
-This page moved to [Scheduled Tasks](/automation/cron-jobs#webhooks). See [Scheduled Tasks](/automation/cron-jobs#webhooks) for webhook documentation.
+此页面已移动到 [Scheduled Tasks](/automation/cron-jobs#webhooks)。有关 webhook 文档，请参阅 [Scheduled Tasks](/automation/cron-jobs#webhooks)。
 
-## Related
+## 相关内容
 
-- [Poll](/automation/poll)
+- [轮询](/automation/poll)
 - [Gmail PubSub](/automation/gmail-pubsub)
 - [Hooks](/automation/hooks)

@@ -1,54 +1,54 @@
 ---
-summary: "Use Vydra image, video, and speech in OpenClaw"
+summary: "在 OpenClaw 中使用 Vydra 图像、视频和语音"
 read_when:
-  - You want Vydra media generation in OpenClaw
-  - You need Vydra API key setup guidance
+  - 您希望在 OpenClaw 中使用 Vydra 媒体生成
+  - 您需要 Vydra API 密钥设置指导
 title: "Vydra"
 ---
 
-The bundled Vydra plugin adds:
+捆绑的 Vydra 插件添加了：
 
-- Image generation via `vydra/grok-imagine`
-- Video generation via `vydra/veo3` and `vydra/kling`
-- Speech synthesis via Vydra's ElevenLabs-backed TTS route
+- 通过 `vydra/grok-imagine` 生成图像
+- 通过 `vydra/veo3` 和 `vydra/kling` 生成视频
+- 通过 Vydra 基于 ElevenLabs 的 TTS 路由进行语音合成
 
-OpenClaw uses the same `VYDRA_API_KEY` for all three capabilities.
+OpenClaw 对所有这三种功能使用相同的 `VYDRA_API_KEY`。
 
 <Warning>
-Use `https://www.vydra.ai/api/v1` as the base URL.
+使用 `https://www.vydra.ai/api/v1` 作为基础 URL。
 
-Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some HTTP clients drop `Authorization` on that cross-host redirect, which turns a valid API key into a misleading auth failure. The bundled plugin uses the `www` base URL directly to avoid that.
+Vydra 的主机 (`https://vydra.ai/api/v1`) 目前会重定向到 `www`。某些 HTTP 客户端在这种跨主机重定向时会丢弃 `Authorization` 头，导致有效的 API 密钥变成令人困惑的认证失败。捆绑的插件直接使用 `www` 基础 URL 以避免这种情况。
 </Warning>
 
-## Setup
+## 设置
 
 <Steps>
-  <Step title="Run interactive onboarding">
+  <Step title="运行交互式引导">
     ```bash
     openclaw onboard --auth-choice vydra-api-key
     ```
 
-    Or set the env var directly:
+    或直接设置环境变量：
 
     ```bash
     export VYDRA_API_KEY="vydra_live_..."
     ```
 
   </Step>
-  <Step title="Choose a default capability">
-    Pick one or more of the capabilities below (image, video, or speech) and apply the matching configuration.
+  <Step title="选择默认功能">
+    选择以下一种或多种功能（图像、视频或语音），并应用匹配的配置。
   </Step>
 </Steps>
 
-## Capabilities
+## 功能
 
 <AccordionGroup>
-  <Accordion title="Image generation">
-    Default image model:
+  <Accordion title="图像生成">
+    默认图像模型：
 
     - `vydra/grok-imagine`
 
-    Set it as the default image provider:
+    将其设置为默认图像提供商：
 
     ```json5
     {
@@ -62,21 +62,21 @@ Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some
     }
     ```
 
-    Current bundled support is text-to-image only. Vydra's hosted edit routes expect remote image URLs, and OpenClaw does not add a Vydra-specific upload bridge in the bundled plugin yet.
+    当前捆绑支持仅限文生图。Vydra 的托管编辑路由需要远程图像 URL，而 OpenClaw 尚未在捆绑插件中添加 Vydra 特定的上传桥接。
 
     <Note>
-    See [Image Generation](/tools/image-generation) for shared tool parameters, provider selection, and failover behavior.
+    请参阅 [图像生成](/tools/image-generation) 了解共享工具参数、提供商选择和故障转移行为。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Video generation">
-    Registered video models:
+  <Accordion title="视频生成">
+    已注册的视频模型：
 
-    - `vydra/veo3` for text-to-video
-    - `vydra/kling` for image-to-video
+    - `vydra/veo3` 用于文生视频
+    - `vydra/kling` 用于图生视频
 
-    Set Vydra as the default video provider:
+    将 Vydra 设置为默认视频提供商：
 
     ```json5
     {
@@ -90,21 +90,21 @@ Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some
     }
     ```
 
-    Notes:
+    注意：
 
-    - `vydra/veo3` is bundled as text-to-video only.
-    - `vydra/kling` currently requires a remote image URL reference. Local file uploads are rejected up front.
-    - Vydra's current `kling` HTTP route has been inconsistent about whether it requires `image_url` or `video_url`; the bundled provider maps the same remote image URL into both fields.
-    - The bundled plugin stays conservative and does not forward undocumented style knobs such as aspect ratio, resolution, watermark, or generated audio.
+    - `vydra/veo3` 捆绑为仅文生视频。
+    - `vydra/kling` 目前需要远程图像 URL 引用。本地文件上传会被直接拒绝。
+    - Vydra 当前的 `kling` HTTP 路由对于需要 `image_url` 还是 `video_url` 一直不一致；捆绑的提供商将相同的远程图像 URL 映射到这两个字段。
+    - 捆绑的插件保持保守，不转发未记录的风格参数，如纵横比、分辨率、水印或生成的音频。
 
     <Note>
-    See [Video Generation](/tools/video-generation) for shared tool parameters, provider selection, and failover behavior.
+    请参阅 [视频生成](/tools/video-generation) 了解共享工具参数、提供商选择和故障转移行为。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Video live tests">
-    Provider-specific live coverage:
+  <Accordion title="视频实时测试">
+    提供商特定的实时覆盖范围：
 
     ```bash
     OPENCLAW_LIVE_TEST=1 \
@@ -112,12 +112,12 @@ Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some
     pnpm test:live -- extensions/vydra/vydra.live.test.ts
     ```
 
-    The bundled Vydra live file now covers:
+    捆绑的 Vydra 实时文件现在涵盖：
 
-    - `vydra/veo3` text-to-video
-    - `vydra/kling` image-to-video using a remote image URL
+    - `vydra/veo3` 文生视频
+    - `vydra/kling` 使用远程图像 URL 的图生视频
 
-    Override the remote image fixture when needed:
+    必要时覆盖远程图像测试素材：
 
     ```bash
     export OPENCLAW_LIVE_VYDRA_KLING_IMAGE_URL="https://example.com/reference.png"
@@ -125,8 +125,8 @@ Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some
 
   </Accordion>
 
-  <Accordion title="Speech synthesis">
-    Set Vydra as the speech provider:
+  <Accordion title="语音合成">
+    将 Vydra 设置为语音提供商：
 
     ```json5
     {
@@ -144,29 +144,29 @@ Vydra's apex host (`https://vydra.ai/api/v1`) currently redirects to `www`. Some
     }
     ```
 
-    Defaults:
+    默认值：
 
-    - Model: `elevenlabs/tts`
-    - Voice id: `21m00Tcm4TlvDq8ikWAM`
+    - 模型：`elevenlabs/tts`
+    - 语音 ID: `21m00Tcm4TlvDq8ikWAM`
 
-    The bundled plugin currently exposes one known-good default voice and returns MP3 audio files.
+    捆绑的插件目前公开一个已知良好的默认语音，并返回 MP3 音频文件。
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Provider directory" href="/providers/index" icon="list">
-    Browse all available providers.
+  <Card title="提供商目录" href="/providers/index" icon="list">
+    浏览所有可用提供商。
   </Card>
-  <Card title="Image generation" href="/tools/image-generation" icon="image">
-    Shared image tool parameters and provider selection.
+  <Card title="图像生成" href="/tools/image-generation" icon="image">
+    共享图像工具参数和提供商选择。
   </Card>
-  <Card title="Video generation" href="/tools/video-generation" icon="video">
-    Shared video tool parameters and provider selection.
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    共享视频工具参数和提供商选择。
   </Card>
-  <Card title="Configuration reference" href="/gateway/config-agents#agent-defaults" icon="gear">
-    Agent defaults and model configuration.
+  <Card title="配置参考" href="/gateway/config-agents#agent-defaults" icon="gear">
+    Agent 默认值和模型配置。
   </Card>
 </CardGroup>

@@ -1,19 +1,19 @@
 ---
-summary: "CLI reference for `openclaw webhooks` (webhook helpers + Gmail Pub/Sub)"
+summary: "`openclaw webhooks` 的 CLI 参考（Webhook 辅助工具 + Gmail Pub/Sub）"
 read_when:
-  - You want to wire Gmail Pub/Sub events into OpenClaw
-  - You want webhook helper commands
+  - 你想将 Gmail Pub/Sub 事件接入 OpenClaw
+  - 你想使用 webhook 辅助命令
 title: "Webhooks"
 ---
 
 # `openclaw webhooks`
 
-Webhook helpers and integrations (Gmail Pub/Sub, webhook helpers).
+Webhook 辅助工具和集成（Gmail Pub/Sub，webhook 辅助工具）。
 
-Related:
+相关内容：
 
-- Webhooks: [Webhooks](/automation/cron-jobs#webhooks)
-- Gmail Pub/Sub: [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
+- Webhooks：[Webhooks](/automation/cron-jobs#webhooks)
+- Gmail Pub/Sub：[Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
 
 ## Gmail
 
@@ -24,13 +24,13 @@ openclaw webhooks gmail run
 
 ### `webhooks gmail setup`
 
-Configure Gmail watch, Pub/Sub, and OpenClaw webhook delivery.
+配置 Gmail 监控、Pub/Sub 和 OpenClaw webhook 投递。
 
-Required:
+必需：
 
 - `--account <email>`
 
-Options:
+选项：
 
 - `--project <id>`
 - `--topic <name>`
@@ -51,7 +51,7 @@ Options:
 - `--push-endpoint <url>`
 - `--json`
 
-Examples:
+示例：
 
 ```bash
 openclaw webhooks gmail setup --account you@example.com
@@ -61,9 +61,9 @@ openclaw webhooks gmail setup --account you@example.com --hook-url https://gatew
 
 ### `webhooks gmail run`
 
-Run `gog watch serve` plus the watch auto-renew loop.
+运行 `gog watch serve` 以及监控自动续期循环。
 
-Options:
+选项：
 
 - `--account <email>`
 - `--topic <topic>`
@@ -82,15 +82,15 @@ Options:
 - `--tailscale-path <path>`
 - `--tailscale-target <target>`
 
-Example:
+示例：
 
 ```bash
 openclaw webhooks gmail run --account you@example.com
 ```
 
-See [Gmail Pub/Sub documentation](/automation/cron-jobs#gmail-pubsub-integration) for the end-to-end setup flow and operational details.
+有关端到端设置流程和运行细节，请参阅 [Gmail Pub/Sub 文档](/automation/cron-jobs#gmail-pubsub-integration)。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Webhook automation](/automation/webhook)
+- [CLI 参考](/cli)
+- [Webhook 自动化](/automation/webhook)

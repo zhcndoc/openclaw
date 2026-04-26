@@ -1,79 +1,79 @@
 ---
-summary: "OpenClaw capabilities across channels, routing, media, and UX."
+summary: "OpenClaw 在渠道、路由、媒体和用户体验方面的功能。"
 read_when:
-  - You want a full list of what OpenClaw supports
-title: "Features"
+  - 您想要一份 OpenClaw 支持功能的完整列表
+title: "功能"
 ---
 
-## Highlights
+## 亮点
 
 <Columns>
-  <Card title="Channels" icon="message-square" href="/channels">
-    Discord, iMessage, Signal, Slack, Telegram, WhatsApp, WebChat, and more with a single Gateway.
+  <Card title="渠道" icon="message-square" href="/channels">
+    Discord、iMessage、Signal、Slack、Telegram、WhatsApp、WebChat 等，只需一个 Gateway。
   </Card>
-  <Card title="Plugins" icon="plug" href="/tools/plugin">
-    Bundled plugins add Matrix, Nextcloud Talk, Nostr, Twitch, Zalo, and more without separate installs in normal current releases.
+  <Card title="插件" icon="plug" href="/tools/plugin">
+    捆绑插件可在正常的当前版本中无需单独安装即可添加 Matrix、Nextcloud Talk、Nostr、Twitch、Zalo 等更多渠道。
   </Card>
-  <Card title="Routing" icon="route" href="/concepts/multi-agent">
-    Multi-agent routing with isolated sessions.
+  <Card title="路由" icon="route" href="/concepts/multi-agent">
+    具有隔离会话的多代理路由。
   </Card>
-  <Card title="Media" icon="image" href="/nodes/images">
-    Images, audio, video, documents, and image/video generation.
+  <Card title="媒体" icon="image" href="/nodes/images">
+    图片、音频、视频、文档，以及图像/视频生成。
   </Card>
-  <Card title="Apps and UI" icon="monitor" href="/web/control-ui">
-    Web Control UI and macOS companion app.
+  <Card title="应用和 UI" icon="monitor" href="/web/control-ui">
+    Web 控制 UI 和 macOS 伴生应用。
   </Card>
-  <Card title="Mobile nodes" icon="smartphone" href="/nodes">
-    iOS and Android nodes with pairing, voice/chat, and rich device commands.
+  <Card title="移动节点" icon="smartphone" href="/nodes">
+    支持配对、语音/聊天以及丰富设备命令的 iOS 和 Android 节点。
   </Card>
 </Columns>
 
-## Full list
+## 完整列表
 
-**Channels:**
+**渠道：**
 
-- Built-in channels include Discord, Google Chat, iMessage (legacy), IRC, Signal, Slack, Telegram, WebChat, and WhatsApp
-- Bundled plugin channels include BlueBubbles for iMessage, Feishu, LINE, Matrix, Mattermost, Microsoft Teams, Nextcloud Talk, Nostr, QQ Bot, Synology Chat, Tlon, Twitch, Zalo, and Zalo Personal
-- Optional separately installed channel plugins include Voice Call and third-party packages such as WeChat
-- Third-party channel plugins can extend the Gateway further, such as WeChat
-- Group chat support with mention-based activation
-- DM safety with allowlists and pairing
+- 内置渠道包括 Discord、Google Chat、iMessage（旧版）、IRC、Signal、Slack、Telegram、WebChat 和 WhatsApp
+- 捆绑插件渠道包括用于 iMessage 的 BlueBubbles、Feishu、LINE、Matrix、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Synology Chat、Tlon、Twitch、Zalo 和 Zalo Personal
+- 可选单独安装的渠道插件包括语音通话以及第三方包（如微信）
+- 第三方渠道插件可以进一步扩展网关，例如微信
+- 支持群聊，基于提及激活
+- 私信安全，支持白名单和配对
 
-**Agent:**
+**代理：**
 
-- Embedded agent runtime with tool streaming
-- Multi-agent routing with isolated sessions per workspace or sender
-- Sessions: direct chats collapse into shared `main`; groups are isolated
-- Streaming and chunking for long responses
+- 嵌入式代理运行时，支持工具流式传输
+- 多代理路由，按工作区或发送者隔离会话
+- 会话：直接聊天合并到共享的 `main`；群组相互隔离
+- 长响应支持流式传输和分块
 
-**Auth and providers:**
+**认证和提供商：**
 
-- 35+ model providers (Anthropic, OpenAI, Google, and more)
-- Subscription auth via OAuth (e.g. OpenAI Codex)
-- Custom and self-hosted provider support (vLLM, SGLang, Ollama, and any OpenAI-compatible or Anthropic-compatible endpoint)
+- 35+ 模型提供商（Anthropic、OpenAI、Google 等）
+- 通过 OAuth 进行订阅认证（例如 OpenAI Codex）
+- 支持自定义和自托管提供商（vLLM、SGLang、Ollama，以及任何兼容 OpenAI 或 Anthropic 的端点）
 
-**Media:**
+**媒体：**
 
-- Images, audio, video, and documents in and out
-- Shared image generation and video generation capability surfaces
-- Voice note transcription
-- Text-to-speech with multiple providers
+- 支持图片、音频、视频和文档的输入输出
+- 共享图片生成和视频生成功能界面
+- 语音笔记转录
+- 支持多种提供商的文本转语音
 
-**Apps and interfaces:**
+**应用和界面：**
 
-- WebChat and browser Control UI
-- macOS menu bar companion app
-- iOS node with pairing, Canvas, camera, screen recording, location, and voice
-- Android node with pairing, chat, voice, Canvas, camera, and device commands
+- WebChat 和浏览器控制界面
+- macOS 菜单栏伴生应用
+- iOS 节点，支持配对、Canvas、相机、屏幕录制、位置和语音
+- Android 节点，支持配对、聊天、语音、Canvas、相机和设备命令
 
-**Tools and automation:**
+**工具和自动化：**
 
 - Browser automation, exec, sandboxing
 - Web search (Brave, DuckDuckGo, Exa, Firecrawl, Gemini, Grok, Kimi, MiniMax Search, Ollama Web Search, Perplexity, SearXNG, Tavily)
 - Cron jobs and heartbeat scheduling
 - Skills, plugins, and workflow pipelines (Lobster)
 
-## Related
+## 相关
 
 - [Experimental features](/concepts/experimental-features)
 - [Agent runtime](/concepts/agent)

@@ -1,39 +1,39 @@
 ---
-summary: "CLI backends: local AI CLI fallback with optional MCP tool bridge"
+summary: "CLI 后端：本地 AI CLI 后备方案，带有可选的 MCP 工具桥接"
 read_when:
-  - You want a reliable fallback when API providers fail
-  - You are running Codex CLI or other local AI CLIs and want to reuse them
-  - You want to understand the MCP loopback bridge for CLI backend tool access
-title: "CLI backends"
+  - 你想要在 API 提供商失败时获得可靠的后备方案
+  - 你正在运行 Codex CLI 或其他本地 AI CLI，并希望复用它们
+  - 你想了解用于 CLI 后端工具访问的 MCP 环回桥接
+title: "CLI 后端"
 ---
 
 OpenClaw can run **local AI CLIs** as a **text-only fallback** when API providers are down,
 rate-limited, or temporarily misbehaving. This is intentionally conservative:
 
-- **OpenClaw tools are not injected directly**, but backends with `bundleMcp: true`
-  can receive gateway tools via a loopback MCP bridge.
-- **JSONL streaming** for CLIs that support it.
-- **Sessions are supported** (so follow-up turns stay coherent).
-- **Images can be passed through** if the CLI accepts image paths.
+- **OpenClaw 工具不会直接注入**，但带有 `bundleMcp: true` 的后端
+  可以通过环回 MCP 桥接接收网关工具。
+- **JSONL 流式传输**，适用于支持它的 CLIs。
+- **支持会话**（因此后续对话保持一致性）。
+- **图片可以透传**，如果 CLI 接受图片路径。
 
-This is designed as a **safety net** rather than a primary path. Use it when you
-want “always works” text responses without relying on external APIs.
+这被设计为一个 **安全网**，而不是主要路径。当你
+想要“始终可用”的文本响应而不依赖外部 API 时使用它。
 
-If you want a full harness runtime with ACP session controls, background tasks,
-thread/conversation binding, and persistent external coding sessions, use
-[ACP Agents](/tools/acp-agents) instead. CLI backends are not ACP.
+如果你想要一个带有 ACP 会话控制、后台任务、
+线程/对话绑定和持久化外部编码会话的完整 harness 运行时，请改用
+[ACP Agents](/tools/acp-agents)。CLI 后端不是 ACP。
 
-## Beginner-friendly quick start
+## 初学者快速入门
 
-You can use Codex CLI **without any config** (the bundled OpenAI plugin
-registers a default backend):
+你可以 **无需任何配置** 使用 Codex CLI（捆绑的 OpenAI 插件
+注册了一个默认后端）：
 
 ```bash
 openclaw agent --message "hi" --model codex-cli/gpt-5.5
 ```
 
-If your gateway runs under launchd/systemd and PATH is minimal, add just the
-command path:
+如果你的网关在 launchd/systemd 下运行且 PATH 最小化，只需添加
+命令路径：
 
 ```json5
 {
@@ -49,16 +49,15 @@ command path:
 }
 ```
 
-That’s it. No keys, no extra auth config needed beyond the CLI itself.
+就是这样。除了 CLI 本身之外，不需要密钥，也不需要额外的认证配置。
 
-If you use a bundled CLI backend as the **primary message provider** on a
-gateway host, OpenClaw now auto-loads the owning bundled plugin when your config
-explicitly references that backend in a model ref or under
-`agents.defaults.cliBackends`.
+如果你在网关主机上将捆绑的 CLI 后端用作 **主要消息提供商**，
+当你的配置在模型引用中或 `agents.defaults.cliBackends` 下显式引用该后端时，
+OpenClaw 现在会自动加载拥有的捆绑插件。
 
-## Using it as a fallback
+## 将其用作后备方案
 
-Add a CLI backend to your fallback list so it only runs when primary models fail:
+将 CLI 后端添加到你的后备列表中，这样它仅在主要模型失败时运行：
 
 ```json5
 {
@@ -77,28 +76,28 @@ Add a CLI backend to your fallback list so it only runs when primary models fail
 }
 ```
 
-Notes:
+注意：
 
-- If you use `agents.defaults.models` (allowlist), you must include your CLI backend models there too.
-- If the primary provider fails (auth, rate limits, timeouts), OpenClaw will
-  try the CLI backend next.
+- 如果你使用 `agents.defaults.models`（允许列表），你也必须在那里包含你的 CLI 后端模型。
+- 如果主要提供商失败（认证、速率限制、超时），OpenClaw 将
+  接下来尝试 CLI 后端。
 
-## Configuration overview
+## 配置概览
 
-All CLI backends live under:
+所有 CLI 后端位于：
 
 ```
 agents.defaults.cliBackends
 ```
 
-Each entry is keyed by a **provider id** (e.g. `codex-cli`, `my-cli`).
-The provider id becomes the left side of your model ref:
+每个条目由 **提供商 id** 键控（例如 `codex-cli`、`my-cli`）。
+提供商 id 成为模型引用的左侧：
 
 ```
 <provider>/<model>
 ```
 
-### Example configuration
+### 配置示例
 
 ```json5
 {
@@ -122,9 +121,7 @@ The provider id becomes the left side of your model ref:
           sessionMode: "existing",
           sessionIdFields: ["session_id", "conversation_id"],
           systemPromptArg: "--system",
-          // For CLIs with a dedicated prompt-file flag:
-          // systemPromptFileArg: "--system-file",
-          // Codex-style CLIs can point at a prompt file instead:
+          // Codex 风格的 CLI 可以指向提示文件代替：
           // systemPromptFileConfigArg: "-c",
           // systemPromptFileConfigKey: "model_instructions_file",
           systemPromptWhen: "first",
@@ -138,48 +135,30 @@ The provider id becomes the left side of your model ref:
 }
 ```
 
-## How it works
+## 工作原理
 
-1. **Selects a backend** based on the provider prefix (`codex-cli/...`).
-2. **Builds a system prompt** using the same OpenClaw prompt + workspace context.
-3. **Executes the CLI** with a session id (if supported) so history stays consistent.
-   The bundled `claude-cli` backend keeps a Claude stdio process alive per
-   OpenClaw session and sends follow-up turns over stream-json stdin.
-4. **Parses output** (JSON or plain text) and returns the final text.
-5. **Persists session ids** per backend, so follow-ups reuse the same CLI session.
+1. **根据提供商前缀选择后端**（`codex-cli/...`）。
+2. **使用相同的 OpenClaw 提示词 + 工作区上下文构建系统提示**。
+3. **执行 CLI**，并带上会话 id（如果支持），以便历史保持一致。
+   捆绑的 `claude-cli` 后端会为每个 OpenClaw 会话保持一个 Claude stdio 进程处于活动状态，
+   并通过 stream-json stdin 发送后续轮次。
+4. **解析输出**（JSON 或纯文本）并返回最终文本。
+5. **按后端持久化会话 id**，以便后续请求复用同一个 CLI 会话。
 
 <Note>
-The bundled Anthropic `claude-cli` backend is supported again. Anthropic staff
-told us OpenClaw-style Claude CLI usage is allowed again, so OpenClaw treats
-`claude -p` usage as sanctioned for this integration unless Anthropic publishes
-a new policy.
+捆绑的 Anthropic `claude-cli` 后端再次得到支持。Anthropic 工作人员
+告诉我们 OpenClaw 风格的 Claude CLI 使用再次被允许，因此 OpenClaw 将
+`claude -p` 的使用视为此集成的许可用法，除非 Anthropic 发布
+新政策。
 </Note>
 
-The bundled OpenAI `codex-cli` backend passes OpenClaw's system prompt through
-Codex's `model_instructions_file` config override (`-c
-model_instructions_file="..."`). Codex does not expose a Claude-style
-`--append-system-prompt` flag, so OpenClaw writes the assembled prompt to a
-temporary file for each fresh Codex CLI session.
+捆绑的 OpenAI `codex-cli` 后端通过 Codex 的 `model_instructions_file` 配置覆盖（`-c model_instructions_file="..."`）传递 OpenClaw 的系统提示。Codex 没有公开类似 Claude 的 `--append-system-prompt` 标志，因此 OpenClaw 会将组装好的提示写入每个全新 Codex CLI 会话的临时文件中。
 
-The bundled Anthropic `claude-cli` backend receives the OpenClaw skills snapshot
-two ways: the compact OpenClaw skills catalog in the appended system prompt, and
-a temporary Claude Code plugin passed with `--plugin-dir`. The plugin contains
-only the eligible skills for that agent/session, so Claude Code's native skill
-resolver sees the same filtered set that OpenClaw would otherwise advertise in
-the prompt. Skill env/API key overrides are still applied by OpenClaw to the
-child process environment for the run.
+捆绑的 Anthropic `claude-cli` 后端通过两种方式接收 OpenClaw 技能快照：附加系统提示中的紧凑 OpenClaw 技能目录，以及通过 `--plugin-dir` 传递的临时 Claude Code 插件。该插件仅包含该代理/会话符合条件的技能，因此 Claude Code 的原生技能解析器看到的过滤集与 OpenClaw 否则会在提示中宣传的集相同。技能 env/API 密钥覆盖仍由 OpenClaw 应用于运行的子进程环境。
 
-Claude CLI also has its own noninteractive permission mode. OpenClaw maps that
-to the existing exec policy instead of adding Claude-specific config: when the
-effective requested exec policy is YOLO (`tools.exec.security: "full"` and
-`tools.exec.ask: "off"`), OpenClaw adds `--permission-mode bypassPermissions`.
-Per-agent `agents.list[].tools.exec` settings override global `tools.exec` for
-that agent. To force a different Claude mode, set explicit raw backend args
-such as `--permission-mode default` or `--permission-mode acceptEdits` under
-`agents.defaults.cliBackends.claude-cli.args` and matching `resumeArgs`.
+Claude CLI 还有自己的非交互式权限模式。OpenClaw 将其映射到现有的 exec 策略，而不是添加 Claude 特定配置：当有效请求的 exec 策略为 YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）时，OpenClaw 会添加 `--permission-mode bypassPermissions`。每个代理的 `agents.list[].tools.exec` 设置会覆盖该代理的全局 `tools.exec`。若要强制使用不同的 Claude 模式，可在 `agents.defaults.cliBackends.claude-cli.args` 以及匹配的 `resumeArgs` 下设置显式原始后端参数，例如 `--permission-mode default` 或 `--permission-mode acceptEdits`。
 
-Before OpenClaw can use the bundled `claude-cli` backend, Claude Code itself
-must already be logged in on the same host:
+在 OpenClaw 能使用捆绑的 `claude-cli` 后端之前，Claude Code 本身必须已经在同一主机上登录：
 
 ```bash
 claude auth login
@@ -187,75 +166,70 @@ claude auth status --text
 openclaw models auth login --provider anthropic --method cli --set-default
 ```
 
-Use `agents.defaults.cliBackends.claude-cli.command` only when the `claude`
-binary is not already on `PATH`.
+仅当 `claude` 二进制文件不在 `PATH` 上时，才使用 `agents.defaults.cliBackends.claude-cli.command`。
 
-## Sessions
+## 会话
 
-- If the CLI supports sessions, set `sessionArg` (e.g. `--session-id`) or
-  `sessionArgs` (placeholder `{sessionId}`) when the ID needs to be inserted
-  into multiple flags.
-- If the CLI uses a **resume subcommand** with different flags, set
-  `resumeArgs` (replaces `args` when resuming) and optionally `resumeOutput`
-  (for non-JSON resumes).
-- `sessionMode`:
-  - `always`: always send a session id (new UUID if none stored).
-  - `existing`: only send a session id if one was stored before.
-  - `none`: never send a session id.
-- `claude-cli` defaults to `liveSession: "claude-stdio"`, `output: "jsonl"`,
-  and `input: "stdin"` so follow-up turns reuse the live Claude process while
-  it is active. Warm stdio is the default now, including for custom configs
-  that omit transport fields. If the Gateway restarts or the idle process
-  exits, OpenClaw resumes from the stored Claude session id. Stored session
-  ids are verified against an existing readable project transcript before
-  resume, so phantom bindings are cleared with `reason=transcript-missing`
-  instead of silently starting a fresh Claude CLI session under `--resume`.
-- Stored CLI sessions are provider-owned continuity. The implicit daily session
-  reset does not cut them; `/reset` and explicit `session.reset` policies still
-  do.
+- 如果 CLI 支持会话，请设置 `sessionArg`（例如 `--session-id`）或
+  `sessionArgs`（在需要将 ID 插入多个标志时使用占位符 `{sessionId}`）。
+- 如果 CLI 使用带不同标志的 **resume 子命令**，请设置 `resumeArgs`
+  （恢复时替代 `args`），并可选设置 `resumeOutput`
+  （用于非 JSON 恢复）。
+- `sessionMode`：
+  - `always`：始终发送会话 id（如果没有存储则使用新的 UUID）。
+  - `existing`：仅在之前已存储会话 id 时发送。
+  - `none`：从不发送会话 id。
+- `claude-cli` 默认使用 `liveSession: "claude-stdio"`、`output: "jsonl"`，
+  以及 `input: "stdin"`，因此后续轮次会在活动期间复用同一个 Claude 进程。
+  现在默认使用预热 stdio，包括省略传输字段的自定义配置。
+  如果 Gateway 重启或空闲进程退出，OpenClaw 会从存储的 Claude 会话 id 继续。
+  存储的会话 id 在恢复前会针对现有可读的项目转录记录进行验证，因此幽灵绑定会以 `reason=transcript-missing`
+  被清除，而不是在 `--resume` 下静默启动一个新的 Claude CLI 会话。
+- 存储的 CLI 会话是提供商拥有的连续性。隐式的每日会话
+  重置不会中断它们；`/reset` 和显式的 `session.reset` 策略仍然会。
 
-Serialization notes:
+序列化说明：
 
-- `serialize: true` keeps same-lane runs ordered.
-- Most CLIs serialize on one provider lane.
-- OpenClaw drops stored CLI session reuse when the selected auth identity changes,
-  including a changed auth profile id, static API key, static token, or OAuth
-  account identity when the CLI exposes one. OAuth access and refresh token
-  rotation does not cut the stored CLI session. If a CLI does not expose a
-  stable OAuth account id, OpenClaw lets that CLI enforce resume permissions.
+- `serialize: true` 保持同一通道的运行有序。
+- 大多数 CLI 会在一个提供商通道上序列化。
+- 当所选认证身份发生变化时，OpenClaw 会放弃已存储的 CLI 会话复用，
+  包括更改后的认证配置文件 id、静态 API key、静态 token，
+  或 CLI 暴露的 OAuth 账户身份。OAuth 访问令牌和刷新令牌
+  轮换不会切断已存储的 CLI 会话。如果 CLI 不暴露稳定的 OAuth 账户 id，
+  OpenClaw 会让该 CLI 自行强制执行恢复权限。
 
-## Images (pass-through)
+## 图片（透传）
 
-If your CLI accepts image paths, set `imageArg`:
+如果你的 CLI 接受图片路径，设置 `imageArg`：
 
 ```json5
 imageArg: "--image",
 imageMode: "repeat"
 ```
 
-OpenClaw will write base64 images to temp files. If `imageArg` is set, those
-paths are passed as CLI args. If `imageArg` is missing, OpenClaw appends the
-file paths to the prompt (path injection), which is enough for CLIs that auto-
-load local files from plain paths.
+OpenClaw 会将 base64 图片写入临时文件。如果设置了 `imageArg`，这些
+路径将作为 CLI 参数传递。如果缺少 `imageArg`，OpenClaw 会将
+文件路径附加到提示中（路径注入），这对于自动
+从纯路径加载本地文件的 CLIs 来说已经足够。
 
-## Inputs / outputs
+## 输入 / 输出
 
-- `output: "json"` (default) tries to parse JSON and extract text + session id.
-- For Gemini CLI JSON output, OpenClaw reads reply text from `response` and
-  usage from `stats` when `usage` is missing or empty.
-- `output: "jsonl"` parses JSONL streams (for example Codex CLI `--json`) and extracts the final agent message plus session
-  identifiers when present.
-- `output: "text"` treats stdout as the final response.
+- `output: "json"`（默认）尝试解析 JSON 并提取文本 + 会话 id。
+- 对于 Gemini CLI JSON 输出，当 `usage` 缺失或为空时，OpenClaw 从
+  `response` 读取回复文本，从 `stats` 读取用量。
+- `output: "jsonl"` 解析 JSONL 流（例如 Codex CLI `--json`）并在存在时提取最终代理消息加上会话
+  标识符。
+- `output: "text"` 将 stdout 视为最终响应。
 
-Input modes:
+输入模式：
 
-- `input: "arg"` (default) passes the prompt as the last CLI arg.
-- `input: "stdin"` sends the prompt via stdin.
-- If the prompt is very long and `maxPromptArgChars` is set, stdin is used.
+- `input: "arg"`（默认）将提示作为最后一个 CLI 参数传递。
+- `input: "stdin"` 通过 stdin 发送提示。
+- 如果提示非常长且设置了 `maxPromptArgChars`，则使用 stdin。
 
-## Defaults (plugin-owned)
+## 默认值（插件拥有）
 
-The bundled OpenAI plugin also registers a default for `codex-cli`:
+捆绑的 OpenAI 插件也为 `codex-cli` 注册了一个默认值：
 
 - `command: "codex"`
 - `args: ["exec","--json","--color","never","--sandbox","workspace-write","--skip-git-repo-check"]`
@@ -266,7 +240,7 @@ The bundled OpenAI plugin also registers a default for `codex-cli`:
 - `imageArg: "--image"`
 - `sessionMode: "existing"`
 
-The bundled Google plugin also registers a default for `google-gemini-cli`:
+捆绑的 Google 插件也为 `google-gemini-cli` 注册了一个默认值：
 
 - `command: "gemini"`
 - `args: ["--output-format", "json", "--prompt", "{prompt}"]`
@@ -277,32 +251,31 @@ The bundled Google plugin also registers a default for `google-gemini-cli`:
 - `sessionMode: "existing"`
 - `sessionIdFields: ["session_id", "sessionId"]`
 
-Prerequisite: the local Gemini CLI must be installed and available as
-`gemini` on `PATH` (`brew install gemini-cli` or
-`npm install -g @google/gemini-cli`).
+前提条件：本地 Gemini CLI 必须安装并在 `PATH` 上可用为
+`gemini`（`brew install gemini-cli` 或
+`npm install -g @google/gemini-cli`）。
 
-Gemini CLI JSON notes:
+Gemini CLI JSON 说明：
 
-- Reply text is read from the JSON `response` field.
-- Usage falls back to `stats` when `usage` is absent or empty.
-- `stats.cached` is normalized into OpenClaw `cacheRead`.
-- If `stats.input` is missing, OpenClaw derives input tokens from
-  `stats.input_tokens - stats.cached`.
+- 回复文本从 JSON `response` 字段读取。
+- 当 `usage` 缺失或为空时，用量回退到 `stats`。
+- `stats.cached` 被标准化为 OpenClaw `cacheRead`。
+- 如果 `stats.input` 缺失，OpenClaw 从
+  `stats.input_tokens - stats.cached` 推导输入令牌。
 
-Override only if needed (common: absolute `command` path).
+仅在需要时覆盖（常见：绝对 `command` 路径）。
 
-## Plugin-owned defaults
+## 插件拥有的默认值
 
-CLI backend defaults are now part of the plugin surface:
+CLI 后端默认值现在是插件表面的一部分：
 
-- Plugins register them with `api.registerCliBackend(...)`.
-- The backend `id` becomes the provider prefix in model refs.
-- User config in `agents.defaults.cliBackends.<id>` still overrides the plugin default.
-- Backend-specific config cleanup stays plugin-owned through the optional
-  `normalizeConfig` hook.
+- 插件使用 `api.registerCliBackend(...)` 注册它们。
+- 后端 `id` 成为模型引用中的提供商前缀。
+- `agents.defaults.cliBackends.<id>` 中的用户配置仍然覆盖插件默认值。
+- 后端特定的配置清理通过可选的
+  `normalizeConfig` 钩子保持插件拥有。
 
-Plugins that need tiny prompt/message compatibility shims can declare
-bidirectional text transforms without replacing a provider or CLI backend:
+需要微小提示/消息兼容性填充的插件可以声明双向文本转换，而无需替换提供商或 CLI 后端：
 
 ```typescript
 api.registerTextTransforms({
@@ -319,65 +292,55 @@ api.registerTextTransforms({
 });
 ```
 
-`input` rewrites the system prompt and user prompt passed to the CLI. `output`
-rewrites streamed assistant deltas and parsed final text before OpenClaw handles
-its own control markers and channel delivery.
+`input` 重写传递给 CLI 的系统提示和用户提示。`output` 在 OpenClaw 处理其自己的控制标记和通道交付之前，重写流式助手增量和解析后的最终文本。
 
-For CLIs that emit Claude Code stream-json compatible JSONL, set
-`jsonlDialect: "claude-stream-json"` on that backend's config.
+对于发出兼容 Claude Code stream-json JSONL 的 CLI，在该后端的配置上设置 `jsonlDialect: "claude-stream-json"`。
 
-## Bundle MCP overlays
+## 捆绑 MCP 覆盖
 
-CLI backends do **not** receive OpenClaw tool calls directly, but a backend can
-opt into a generated MCP config overlay with `bundleMcp: true`.
+CLI 后端 **不直接** 接收 OpenClaw 工具调用，但后端可以通过 `bundleMcp: true` 选择加入
+生成的 MCP 配置覆盖。
 
-Current bundled behavior:
+当前捆绑行为：
 
-- `claude-cli`: generated strict MCP config file
-- `codex-cli`: inline config overrides for `mcp_servers`; the generated
-  OpenClaw loopback server is marked with Codex's per-server tool approval mode
-  so MCP calls cannot stall on local approval prompts
-- `google-gemini-cli`: generated Gemini system settings file
+- `claude-cli`: 生成的严格 MCP 配置文件
+- `codex-cli`: `mcp_servers` 的内联配置覆盖；生成的
+  OpenClaw 环回服务器会被标记为 Codex 的按服务器工具审批模式，
+  因此 MCP 调用不会因本地审批提示而停滞
+- `google-gemini-cli`: 生成的 Gemini 系统设置文件
 
-When bundle MCP is enabled, OpenClaw:
+当启用 bundle MCP 时，OpenClaw：
 
-- spawns a loopback HTTP MCP server that exposes gateway tools to the CLI process
-- authenticates the bridge with a per-session token (`OPENCLAW_MCP_TOKEN`)
-- scopes tool access to the current session, account, and channel context
-- loads enabled bundle-MCP servers for the current workspace
-- merges them with any existing backend MCP config/settings shape
-- rewrites the launch config using the backend-owned integration mode from the owning extension
+- 生成一个环回 HTTP MCP 服务器，将网关工具暴露给 CLI 进程
+- 使用每个会话的令牌 (`OPENCLAW_MCP_TOKEN`) 对桥接进行身份验证
+- 将工具访问范围限定为当前会话、账户和频道上下文
+- 为当前工作区加载已启用的 bundle-MCP 服务器
+- 将它们与任何现有的后端 MCP 配置/设置形状合并
+- 使用所属扩展的后端拥有的集成模式重写启动配置
 
-If no MCP servers are enabled, OpenClaw still injects a strict config when a
-backend opts into bundle MCP so background runs stay isolated.
+如果没有启用 MCP 服务器，当后端
+选择加入 bundle MCP 时，OpenClaw 仍然注入严格配置，以便后台运行保持隔离。
 
-Session-scoped bundled MCP runtimes are cached for reuse within a session, then
-reaped after `mcp.sessionIdleTtlMs` milliseconds of idle time (default 10
-minutes; set `0` to disable). One-shot embedded runs such as auth probes,
-slug generation, and active-memory recall request cleanup at run end so stdio
-children and Streamable HTTP/SSE streams do not outlive the run.
+## 限制
 
-## Limitations
+- **无直接 OpenClaw 工具调用。** OpenClaw 不将工具调用注入到
+  CLI 后端协议中。后端仅在选择加入
+  `bundleMcp: true` 时看到网关工具。
+- **流式传输是后端特定的。** 一些后端流式传输 JSONL；其他缓冲
+  直到退出。
+- **结构化输出** 依赖于 CLI 的 JSON 格式。
+- **Codex CLI 会话** 通过文本输出恢复（无 JSONL），这比初始 `--json` 运行结构更少。OpenClaw 会话仍然正常
+  工作。
 
-- **No direct OpenClaw tool calls.** OpenClaw does not inject tool calls into
-  the CLI backend protocol. Backends only see gateway tools when they opt into
-  `bundleMcp: true`.
-- **Streaming is backend-specific.** Some backends stream JSONL; others buffer
-  until exit.
-- **Structured outputs** depend on the CLI’s JSON format.
-- **Codex CLI sessions** resume via text output (no JSONL), which is less
-  structured than the initial `--json` run. OpenClaw sessions still work
-  normally.
+## 故障排除
 
-## Troubleshooting
+- **未找到 CLI**：将 `command` 设置为完整路径。
+- **模型名称错误**：使用 `modelAliases` 将 `provider/model` → CLI model 进行映射。
+- **没有会话连续性**：确保已设置 `sessionArg`，并且 `sessionMode` 不是
+  `none`（Codex CLI 当前无法使用 JSON 输出恢复会话）。
+- **图片被忽略**：设置 `imageArg`（并确认 CLI 支持文件路径）。
 
-- **CLI not found**: set `command` to a full path.
-- **Wrong model name**: use `modelAliases` to map `provider/model` → CLI model.
-- **No session continuity**: ensure `sessionArg` is set and `sessionMode` is not
-  `none` (Codex CLI currently cannot resume with JSON output).
-- **Images ignored**: set `imageArg` (and verify CLI supports file paths).
-
-## Related
+## 相关内容
 
 - [Gateway runbook](/gateway)
-- [Local models](/gateway/local-models)
+- [本地模型](/gateway/local-models)

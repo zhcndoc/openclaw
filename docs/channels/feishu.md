@@ -1,32 +1,32 @@
 ---
-summary: "Feishu bot overview, features, and configuration"
+summary: "飞书机器人概览、功能及配置"
 read_when:
-  - You want to connect a Feishu/Lark bot
-  - You are configuring the Feishu channel
-title: Feishu
+  - 您想连接飞书/Lark 机器人时
+  - 您正在配置飞书通道时
+title: 飞书
 ---
 
-# Feishu / Lark
+# 飞书 / Lark
 
-Feishu/Lark is an all-in-one collaboration platform where teams chat, share documents, manage calendars, and get work done together.
+飞书/Lark 是一个一体化协作平台，团队可以在其中聊天、共享文档、管理日历并一起完成工作。
 
-**Status:** production-ready for bot DMs + group chats. WebSocket is the default mode; webhook mode is optional.
+**状态：** 机器人私信与群聊生产就绪。WebSocket 为默认模式；Webhook 模式为可选。
 
 ---
 
-## Quick start
+## 快速开始
 
-> **Requires OpenClaw 2026.4.25 or above.** Run `openclaw --version` to check. Upgrade with `openclaw update`.
+> **需要 OpenClaw 2026.4.24 或更高版本。** 运行 `openclaw --version` 检查。使用 `openclaw update` 升级。
 
 <Steps>
-  <Step title="Run the channel setup wizard">
+  <Step title="运行通道设置向导">
   ```bash
   openclaw channels login --channel feishu
   ```
-  Scan the QR code with your Feishu/Lark mobile app to create a Feishu/Lark bot automatically.
+  使用飞书/Lark 移动应用扫描二维码以自动创建机器人。
   </Step>
   
-  <Step title="After setup completes, restart the gateway to apply the changes">
+  <Step title="设置完成后，重启网关以应用更改">
   ```bash
   openclaw gateway restart
   ```
@@ -35,47 +35,47 @@ Feishu/Lark is an all-in-one collaboration platform where teams chat, share docu
 
 ---
 
-## Access control
+## 访问控制
 
-### Direct messages
+### 私信
 
-Configure `dmPolicy` to control who can DM the bot:
+配置 `dmPolicy` 以控制谁可以向机器人发送私信：
 
-- `"pairing"` — unknown users receive a pairing code; approve via CLI
-- `"allowlist"` — only users listed in `allowFrom` can chat (default: bot owner only)
-- `"open"` — allow all users
-- `"disabled"` — disable all DMs
+- `"pairing"` — 未知用户会收到配对码；通过 CLI 批准
+- `"allowlist"` — 仅允许 `allowFrom` 中列出的用户聊天（默认为仅机器人所有者）
+- `"open"` — 允许所有用户
+- `"disabled"` — 禁用所有私信
 
-**Approve a pairing request:**
+**批准配对请求：**
 
 ```bash
 openclaw pairing list feishu
 openclaw pairing approve feishu <CODE>
 ```
 
-### Group chats
+### 群聊
 
-**Group policy** (`channels.feishu.groupPolicy`):
+**群策略** (`channels.feishu.groupPolicy`)：
 
-| Value         | Behavior                                   |
-| ------------- | ------------------------------------------ |
-| `"open"`      | Respond to all messages in groups          |
-| `"allowlist"` | Only respond to groups in `groupAllowFrom` |
-| `"disabled"`  | Disable all group messages                 |
+| 值         | 行为                                   |
+| ---------- | -------------------------------------- |
+| `"open"`      | 响应群聊中的所有消息          |
+| `"allowlist"` | 仅响应 `groupAllowFrom` 中的群组 |
+| `"disabled"`  | 禁用所有群消息                |
 
-Default: `allowlist`
+默认值：`allowlist`
 
-**Mention requirement** (`channels.feishu.requireMention`):
+**提及要求** (`channels.feishu.requireMention`)：
 
-- `true` — require @mention (default)
-- `false` — respond without @mention
-- Per-group override: `channels.feishu.groups.<chat_id>.requireMention`
+- `true` — 需要 @提及（默认）
+- `false` — 无需 @提及即可响应
+- 每个群组可单独覆盖：`channels.feishu.groups.<chat_id>.requireMention`
 
 ---
 
-## Group configuration examples
+## 群聊配置示例
 
-### Allow all groups, no @mention required
+### 允许所有群组，无需 @提及
 
 ```json5
 {
@@ -87,7 +87,7 @@ Default: `allowlist`
 }
 ```
 
-### Allow all groups, still require @mention
+### 允许所有群组，仍需 @提及
 
 ```json5
 {
@@ -100,21 +100,21 @@ Default: `allowlist`
 }
 ```
 
-### Allow specific groups only
+### 仅允许特定群组
 
 ```json5
 {
   channels: {
     feishu: {
       groupPolicy: "allowlist",
-      // Group IDs look like: oc_xxx
+      // 群组 ID 格式如：oc_xxx
       groupAllowFrom: ["oc_xxx", "oc_yyy"],
     },
   },
 }
 ```
 
-### Restrict senders within a group
+### 限制群组内的发送者
 
 ```json5
 {
@@ -124,7 +124,7 @@ Default: `allowlist`
       groupAllowFrom: ["oc_xxx"],
       groups: {
         oc_xxx: {
-          // User open_ids look like: ou_xxx
+          // 用户 open_id 格式如：ou_xxx
           allowFrom: ["ou_user1", "ou_user2"],
         },
       },
@@ -137,23 +137,23 @@ Default: `allowlist`
 
 <a id="get-groupuser-ids"></a>
 
-## Get group/user IDs
+## 获取群组/用户 ID
 
-### Group IDs (`chat_id`, format: `oc_xxx`)
+### 群组 ID (`chat_id`，格式：`oc_xxx`)
 
-Open the group in Feishu/Lark, click the menu icon in the top-right corner, and go to **Settings**. The group ID (`chat_id`) is listed on the settings page.
+在飞书/Lark 中打开群组，点击右上角菜单图标，进入 **设置**。群组 ID (`chat_id`) 显示在设置页面。
 
-![Get Group ID](/images/feishu-get-group-id.png)
+![获取群组 ID](/images/feishu-get-group-id.png)
 
-### User IDs (`open_id`, format: `ou_xxx`)
+### 用户 ID (`open_id`，格式：`ou_xxx`)
 
-Start the gateway, send a DM to the bot, then check the logs:
+启动网关，向机器人发送私信，然后查看日志：
 
 ```bash
 openclaw logs --follow
 ```
 
-Look for `open_id` in the log output. You can also check pending pairing requests:
+在日志中查找 `open_id`。你也可以检查待处理的配对请求：
 
 ```bash
 openclaw pairing list feishu
@@ -161,47 +161,47 @@ openclaw pairing list feishu
 
 ---
 
-## Common commands
+## 常用命令
 
-| Command   | Description                 |
-| --------- | --------------------------- |
-| `/status` | Show bot status             |
-| `/reset`  | Reset the current session   |
-| `/model`  | Show or switch the AI model |
+| 命令       | 描述                     |
+| ---------- | ------------------------ |
+| `/status`  | 显示机器人状态           |
+| `/reset`   | 重置当前会话             |
+| `/model`   | 显示或切换 AI 模型       |
 
-> Feishu/Lark does not support native slash-command menus, so send these as plain text messages.
-
----
-
-## Troubleshooting
-
-### Bot does not respond in group chats
-
-1. Ensure the bot is added to the group
-2. Ensure you @mention the bot (required by default)
-3. Verify `groupPolicy` is not `"disabled"`
-4. Check logs: `openclaw logs --follow`
-
-### Bot does not receive messages
-
-1. Ensure the bot is published and approved in Feishu Open Platform / Lark Developer
-2. Ensure event subscription includes `im.message.receive_v1`
-3. Ensure **persistent connection** (WebSocket) is selected
-4. Ensure all required permission scopes are granted
-5. Ensure the gateway is running: `openclaw gateway status`
-6. Check logs: `openclaw logs --follow`
-
-### App Secret leaked
-
-1. Reset the App Secret in Feishu Open Platform / Lark Developer
-2. Update the value in your config
-3. Restart the gateway: `openclaw gateway restart`
+> 飞书/Lark 不支持原生命令菜单，因此请以纯文本消息形式发送这些命令。
 
 ---
 
-## Advanced configuration
+## 故障排除
 
-### Multiple accounts
+### 机器人在群聊中无响应
+
+1. 确保机器人已加入群组
+2. 确保你 @提及了机器人（默认必需）
+3. 验证 `groupPolicy` 未设置为 `"disabled"`
+4. 检查日志：`openclaw logs --follow`
+
+### 机器人未接收到消息
+
+1. 确保机器人已在飞书开放平台/Lark 开发者平台发布并获得批准
+2. 确保事件订阅包含 `im.message.receive_v1`
+3. 确保选择 **持久连接**（WebSocket）
+4. 确保已授予所有必需的权限范围
+5. 确保网关正在运行：`openclaw gateway status`
+6. 检查日志：`openclaw logs --follow`
+
+### App Secret 泄露
+
+1. 在飞书开放平台/Lark 开发者平台重置 App Secret
+2. 在配置中更新该值
+3. 重启网关：`openclaw gateway restart`
+
+---
+
+## 高级配置
+
+### 多账户配置
 
 ```json5
 {
@@ -212,17 +212,12 @@ openclaw pairing list feishu
         main: {
           appId: "cli_xxx",
           appSecret: "xxx",
-          name: "Primary bot",
-          tts: {
-            providers: {
-              openai: { voice: "shimmer" },
-            },
-          },
+          name: "主机器人",
         },
         backup: {
           appId: "cli_yyy",
           appSecret: "yyy",
-          name: "Backup bot",
+          name: "备用机器人",
           enabled: false,
         },
       },
@@ -231,40 +226,36 @@ openclaw pairing list feishu
 }
 ```
 
-`defaultAccount` controls which account is used when outbound APIs do not specify an `accountId`.
-`accounts.<id>.tts` uses the same shape as `messages.tts` and deep-merges over
-global TTS config, so multi-bot Feishu setups can keep shared provider
-credentials globally while overriding only voice, model, persona, or auto mode
-per account.
+`defaultAccount` 控制在外出 API 未指定 `accountId` 时使用哪个账户。
 
-### Message limits
+### 消息限制
 
-- `textChunkLimit` — outbound text chunk size (default: `2000` chars)
-- `mediaMaxMb` — media upload/download limit (default: `30` MB)
+- `textChunkLimit` — 外发文本分块大小（默认：`2000` 字符）
+- `mediaMaxMb` — 媒体上传/下载限制（默认：`30` MB）
 
-### Streaming
+### 流式输出
 
-Feishu/Lark supports streaming replies via interactive cards. When enabled, the bot updates the card in real time as it generates text.
+飞书/Lark 支持通过交互式卡片进行流式回复。启用后，机器人会在生成文本时实时更新卡片。
 
 ```json5
 {
   channels: {
     feishu: {
-      streaming: true, // enable streaming card output (default: true)
-      blockStreaming: true, // enable block-level streaming (default: true)
+      streaming: true, // 启用流式卡片输出（默认：true）
+      blockStreaming: true, // 启用块级流式输出（默认：true）
     },
   },
 }
 ```
 
-Set `streaming: false` to send the complete reply in one message.
+将 `streaming` 设为 `false` 可一次性发送完整回复。
 
-### Quota optimization
+### 配额优化
 
-Reduce the number of Feishu/Lark API calls with two optional flags:
+通过以下两个可选标志减少飞书/Lark API 调用次数：
 
-- `typingIndicator` (default `true`): set `false` to skip typing reaction calls
-- `resolveSenderNames` (default `true`): set `false` to skip sender profile lookups
+- `typingIndicator`（默认 `true`）：设为 `false` 以跳过打字反应调用
+- `resolveSenderNames`（默认 `true`）：设为 `false` 以跳过发送者资料查询
 
 ```json5
 {
@@ -277,11 +268,11 @@ Reduce the number of Feishu/Lark API calls with two optional flags:
 }
 ```
 
-### ACP sessions
+### ACP 会话
 
-Feishu/Lark supports ACP for DMs and group thread messages. Feishu/Lark ACP is text-command driven — there are no native slash-command menus, so use `/acp ...` messages directly in the conversation.
+飞书/Lark 支持用于私信和群组线程消息的 ACP。飞书/Lark 的 ACP 是基于文本命令驱动的——没有原生命令菜单，因此直接在对话中使用 `/acp ...` 消息即可。
 
-#### Persistent ACP binding
+#### 持久化 ACP 绑定
 
 ```json5
 {
@@ -325,19 +316,19 @@ Feishu/Lark supports ACP for DMs and group thread messages. Feishu/Lark ACP is t
 }
 ```
 
-#### Spawn ACP from chat
+#### 从聊天中启动 ACP
 
-In a Feishu/Lark DM or thread:
+在飞书/Lark 私信或线程中：
 
 ```text
 /acp spawn codex --thread here
 ```
 
-`--thread here` works for DMs and Feishu/Lark thread messages. Follow-up messages in the bound conversation route directly to that ACP session.
+`--thread here` 适用于私信和飞书/Lark 线程消息。绑定会话中的后续消息将直接路由到该 ACP 会话。
 
-### Multi-agent routing
+### 多智能体路由
 
-Use `bindings` to route Feishu/Lark DMs or groups to different agents.
+使用 `bindings` 将飞书/Lark 私信或群组路由到不同智能体。
 
 ```json5
 {
@@ -367,108 +358,84 @@ Use `bindings` to route Feishu/Lark DMs or groups to different agents.
 }
 ```
 
-Routing fields:
+路由字段：
 
 - `match.channel`: `"feishu"`
-- `match.peer.kind`: `"direct"` (DM) or `"group"` (group chat)
-- `match.peer.id`: user Open ID (`ou_xxx`) or group ID (`oc_xxx`)
+- `match.peer.kind`: `"direct"`（私信）或 `"group"`（群组聊天）
+- `match.peer.id`: 用户 Open ID（`ou_xxx`）或群组 ID（`oc_xxx`）
 
-See [Get group/user IDs](#get-groupuser-ids) for lookup tips.
-
----
-
-## Configuration reference
-
-Full configuration: [Gateway configuration](/gateway/configuration)
-
-| Setting                                           | Description                                | Default          |
-| ------------------------------------------------- | ------------------------------------------ | ---------------- |
-| `channels.feishu.enabled`                         | Enable/disable the channel                 | `true`           |
-| `channels.feishu.domain`                          | API domain (`feishu` or `lark`)            | `feishu`         |
-| `channels.feishu.connectionMode`                  | Event transport (`websocket` or `webhook`) | `websocket`      |
-| `channels.feishu.defaultAccount`                  | Default account for outbound routing       | `default`        |
-| `channels.feishu.verificationToken`               | Required for webhook mode                  | —                |
-| `channels.feishu.encryptKey`                      | Required for webhook mode                  | —                |
-| `channels.feishu.webhookPath`                     | Webhook route path                         | `/feishu/events` |
-| `channels.feishu.webhookHost`                     | Webhook bind host                          | `127.0.0.1`      |
-| `channels.feishu.webhookPort`                     | Webhook bind port                          | `3000`           |
-| `channels.feishu.accounts.<id>.appId`             | App ID                                     | —                |
-| `channels.feishu.accounts.<id>.appSecret`         | App Secret                                 | —                |
-| `channels.feishu.accounts.<id>.domain`            | Per-account domain override                | `feishu`         |
-| `channels.feishu.accounts.<id>.tts`               | Per-account TTS override                   | `messages.tts`   |
-| `channels.feishu.dmPolicy`                        | DM policy                                  | `allowlist`      |
-| `channels.feishu.allowFrom`                       | DM allowlist (open_id list)                | [BotOwnerId]     |
-| `channels.feishu.groupPolicy`                     | Group policy                               | `allowlist`      |
-| `channels.feishu.groupAllowFrom`                  | Group allowlist                            | —                |
-| `channels.feishu.requireMention`                  | Require @mention in groups                 | `true`           |
-| `channels.feishu.groups.<chat_id>.requireMention` | Per-group @mention override                | inherited        |
-| `channels.feishu.groups.<chat_id>.enabled`        | Enable/disable a specific group            | `true`           |
-| `channels.feishu.textChunkLimit`                  | Message chunk size                         | `2000`           |
-| `channels.feishu.mediaMaxMb`                      | Media size limit                           | `30`             |
-| `channels.feishu.streaming`                       | Streaming card output                      | `true`           |
-| `channels.feishu.blockStreaming`                  | Block-level streaming                      | `true`           |
-| `channels.feishu.typingIndicator`                 | Send typing reactions                      | `true`           |
-| `channels.feishu.resolveSenderNames`              | Resolve sender display names               | `true`           |
+请参见[获取群组/用户 ID](#get-groupuser-ids)了解查询方法。
 
 ---
 
-## Supported message types
+## 配置参考
 
-### Receive
+完整配置请参考：[网关配置](/gateway/configuration)
 
-- ✅ Text
-- ✅ Rich text (post)
-- ✅ Images
-- ✅ Files
-- ✅ Audio
-- ✅ Video/media
-- ✅ Stickers
-
-Inbound Feishu/Lark audio messages are normalized as media placeholders instead
-of raw `file_key` JSON. When `tools.media.audio` is configured, OpenClaw
-downloads the voice-note resource and runs shared audio transcription before the
-agent turn, so the agent receives the spoken transcript. If Feishu includes
-transcript text directly in the audio payload, that text is used without another
-ASR call. Without an audio transcription provider, the agent still receives a
-`<media:audio>` placeholder plus the saved attachment, not the raw Feishu
-resource payload.
-
-### Send
-
-- ✅ Text
-- ✅ Images
-- ✅ Files
-- ✅ Audio
-- ✅ Video/media
-- ✅ Interactive cards (including streaming updates)
-- ⚠️ Rich text (post-style formatting; doesn't support full Feishu/Lark authoring capabilities)
-
-Native Feishu/Lark audio bubbles use the Feishu `audio` message type and require
-Ogg/Opus upload media (`file_type: "opus"`). Existing `.opus` and `.ogg` media
-is sent directly as native audio. MP3/WAV/M4A and other likely audio formats are
-transcoded to 48kHz Ogg/Opus with `ffmpeg` only when the reply requests voice
-delivery (`audioAsVoice` / message tool `asVoice`, including TTS voice-note
-replies). Ordinary MP3 attachments stay regular files. If `ffmpeg` is missing or
-conversion fails, OpenClaw falls back to a file attachment and logs the reason.
-
-### Threads and replies
-
-- ✅ Inline replies
-- ✅ Thread replies
-- ✅ Media replies stay thread-aware when replying to a thread message
-
-For `groupSessionScope: "group_topic"` and `"group_topic_sender"`, native
-Feishu/Lark topic groups use the event `thread_id` (`omt_*`) as the canonical
-topic session key. Normal group replies that OpenClaw turns into threads keep
-using the reply root message ID (`om_*`) so the first turn and follow-up turn
-stay in the same session.
+| 设置                                           | 描述                                | 默认值          |
+| ---------------------------------------------- | ----------------------------------- | --------------- |
+| `channels.feishu.enabled`                      | 启用/禁用通道                       | `true`          |
+| `channels.feishu.domain`                       | API 域（`feishu` 或 `lark`）        | `feishu`        |
+| `channels.feishu.connectionMode`               | 事件传输（`websocket` 或 `webhook`）| `websocket`     |
+| `channels.feishu.defaultAccount`               | 外发路由的默认账户                  | `default`       |
+| `channels.feishu.verificationToken`            | Webhook 模式必需                    | —               |
+| `channels.feishu.encryptKey`                   | Webhook 模式必需                    | —               |
+| `channels.feishu.webhookPath`                  | Webhook 路由路径                    | `/feishu/events` |
+| `channels.feishu.webhookHost`                  | Webhook 绑定主机                    | `127.0.0.1`     |
+| `channels.feishu.webhookPort`                  | Webhook 绑定端口                    | `3000`          |
+| `channels.feishu.accounts.<id>.appId`          | 应用 ID                             | —               |
+| `channels.feishu.accounts.<id>.appSecret`      | 应用密钥                            | —               |
+| `channels.feishu.accounts.<id>.domain`         | 每账户域覆盖                        | `feishu`        |
+| `channels.feishu.dmPolicy`                     | 私信策略                            | `allowlist`     |
+| `channels.feishu.allowFrom`                    | 私信允许列表（open_id 列表）        | [BotOwnerId]    |
+| `channels.feishu.groupPolicy`                  | 群组策略                            | `allowlist`     |
+| `channels.feishu.groupAllowFrom`               | 群组允许列表                        | —               |
+| `channels.feishu.requireMention`               | 群组中需要 @提及                   | `true`          |
+| `channels.feishu.groups.<chat_id>.requireMention` | 每群组 @提及覆盖                 | 继承            |
+| `channels.feishu.groups.<chat_id>.enabled`     | 启用/禁用特定群组                   | `true`          |
+| `channels.feishu.textChunkLimit`               | 消息分块大小                        | `2000`          |
+| `channels.feishu.mediaMaxMb`                   | 媒体大小限制                        | `30`            |
+| `channels.feishu.streaming`                    | 流式卡片输出                        | `true`          |
+| `channels.feishu.blockStreaming`               | 块级流式输出                        | `true`          |
+| `channels.feishu.typingIndicator`              | 发送打字反应                        | `true`          |
+| `channels.feishu.resolveSenderNames`           | 解析发送者显示名称                  | `true`          |
 
 ---
 
-## Related
+## 支持的消息类型
 
-- [Channels Overview](/channels) — all supported channels
-- [Pairing](/channels/pairing) — DM authentication and pairing flow
-- [Groups](/channels/groups) — group chat behavior and mention gating
-- [Channel Routing](/channels/channel-routing) — session routing for messages
-- [Security](/gateway/security) — access model and hardening
+### 接收
+
+- ✅ 文字
+- ✅ 富文本（post）
+- ✅ 图片
+- ✅ 文件
+- ✅ 音频
+- ✅ 视频/媒体
+- ✅ 表情包
+
+### 发送
+
+- ✅ 文本
+- ✅ 图片
+- ✅ 文件
+- ✅ 音频
+- ✅ 视频/媒体
+- ✅ 交互式卡片（包括流式更新）
+- ⚠️ 富文本（post 风格格式；不支持完整的飞书/Lark 创作能力）
+
+### 线程及回复
+
+- ✅ 内联回复
+- ✅ 线程回复
+- ✅ 回复媒体在回复线程消息时会保持线程感知
+
+---
+
+## 相关内容
+
+- [渠道概览](/channels) — 所有支持的渠道
+- [配对](/channels/pairing) — 私聊认证与配对流程
+- [群组](/channels/groups) — 群聊行为与提及限制
+- [渠道路由](/channels/channel-routing) — 消息会话路由
+- [安全](/gateway/security) — 访问模型与加固

@@ -1,33 +1,32 @@
 ---
-summary: "CLI reference for `openclaw tui` (Gateway-backed or local embedded terminal UI)"
+summary: "openclaw tui 的 CLI 参考（基于 Gateway 或本地嵌入式终端 UI）"
 read_when:
-  - You want a terminal UI for the Gateway (remote-friendly)
-  - You want to pass url/token/session from scripts
-  - You want to run the TUI in local embedded mode without a Gateway
-  - You want to use openclaw chat or openclaw tui --local
+  - 你想为 Gateway 提供一个终端 UI（适合远程使用）
+  - 你想从脚本中传递 url/token/session
+  - 你想在没有 Gateway 的情况下在本地嵌入式模式中运行 TUI
+  - 你想使用 openclaw chat 或 openclaw tui --local
 title: "TUI"
 ---
 
 # `openclaw tui`
 
-Open the terminal UI connected to the Gateway, or run it in local embedded
-mode.
+打开连接到 Gateway 的终端 UI，或在本地嵌入式模式下运行。
 
-Related:
+相关：
 
-- TUI guide: [TUI](/web/tui)
+- TUI 指南：[TUI](/web/tui)
 
-Notes:
+注意：
 
-- `chat` and `terminal` are aliases for `openclaw tui --local`.
-- `--local` cannot be combined with `--url`, `--token`, or `--password`.
-- `tui` resolves configured gateway auth SecretRefs for token/password auth when possible (`env`/`file`/`exec` providers).
-- When launched from inside a configured agent workspace directory, TUI auto-selects that agent for the session key default (unless `--session` is explicitly `agent:<id>:...`).
-- Local mode uses the embedded agent runtime directly. Most local tools work, but Gateway-only features are unavailable.
-- Local mode adds `/auth [provider]` inside the TUI command surface.
-- Plugin approval gates still apply in local mode. Tools that require approval prompt for a decision in the terminal; nothing is silently auto-approved because the Gateway is not involved.
+- `chat` and `terminal` 是 `openclaw tui --local` 的别名。
+- `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
+- 在可能的情况下，`tui` 会为 token/password 认证解析已配置的 gateway auth SecretRefs（`env`/`file`/`exec` 提供程序）。
+- 当从已配置的 agent 工作区目录内部启动时，TUI 会自动为会话 key 默认选择该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
+- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具都可用，但仅限 Gateway 的功能不可用。
+- 本地模式会在 TUI 命令界面中添加 `/auth [provider]`。
+- 插件审批门控在本地模式下仍然适用。需要审批的工具会在终端中提示你做出决定；不会因为没有 Gateway 参与就静默自动批准。
 
-## Examples
+## 示例
 
 ```bash
 openclaw chat
@@ -35,26 +34,22 @@ openclaw tui --local
 openclaw tui
 openclaw tui --url ws://127.0.0.1:18789 --token <token>
 openclaw tui --session main --deliver
-openclaw chat --message "Compare my config to the docs and tell me what to fix"
-# when run inside an agent workspace, infers that agent automatically
+openclaw chat --message "将我的配置与文档进行比较，并告诉我需要修复什么"
+# 当在 agent 工作区内运行时，会自动推断该 agent
 openclaw tui --session bugfix
 ```
 
-## Config repair loop
+## 配置修复循环
 
-Use local mode when the current config already validates and you want the
-embedded agent to inspect it, compare it against the docs, and help repair it
-from the same terminal:
+当当前配置已经通过验证，并且你希望嵌入式 agent 检查它、将其与文档对比，并帮助你在同一终端中修复它时，请使用本地模式：
 
-If `openclaw config validate` is already failing, use `openclaw configure` or
-`openclaw doctor --fix` first. `openclaw chat` does not bypass the invalid-
-config guard.
+如果 `openclaw config validate` 已经失败，请先使用 `openclaw configure` 或 `openclaw doctor --fix`。`openclaw chat` 不会绕过无效配置保护。
 
 ```bash
 openclaw chat
 ```
 
-Then inside the TUI:
+然后在 TUI 中：
 
 ```text
 !openclaw config file
@@ -63,8 +58,8 @@ Then inside the TUI:
 !openclaw doctor
 ```
 
-Apply targeted fixes with `openclaw config set` or `openclaw configure`, then
-rerun `openclaw config validate`. See [TUI](/web/tui) and [Config](/cli/config).
+使用 `openclaw config set` 或 `openclaw configure` 应用有针对性的修复，然后
+重新运行 `openclaw config validate`。参见 [TUI](/web/tui) 和 [Config](/cli/config)。
 
 ## Related
 

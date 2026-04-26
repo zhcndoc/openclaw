@@ -1,23 +1,19 @@
 ---
-summary: "Plugin hooks: intercept agent, tool, message, session, and Gateway lifecycle events"
-title: "Plugin hooks"
+summary: "插件钩子：拦截 agent、工具、消息、会话和 Gateway 生命周期事件"
+title: "插件钩子"
 read_when:
-  - You are building a plugin that needs before_tool_call, before_agent_reply, message hooks, or lifecycle hooks
-  - You need to block, rewrite, or require approval for tool calls from a plugin
-  - You are deciding between internal hooks and plugin hooks
+  - 你正在构建一个需要 before_tool_call、before_agent_reply、消息钩子或生命周期钩子的插件
+  - 你需要阻止、重写或要求对插件发起的工具调用进行批准
+  - 你正在在内部钩子和插件钩子之间做选择
 ---
 
-Plugin hooks are in-process extension points for OpenClaw plugins. Use them
-when a plugin needs to inspect or change agent runs, tool calls, message flow,
-session lifecycle, subagent routing, installs, or Gateway startup.
+插件钩子是 OpenClaw 插件的进程内扩展点。当插件需要检查或修改 agent 运行、工具调用、消息流、会话生命周期、子 agent 路由、安装或 Gateway 启动时，请使用它们。
 
-Use [internal hooks](/automation/hooks) instead when you want a small
-operator-installed `HOOK.md` script for command and Gateway events such as
-`/new`, `/reset`, `/stop`, `agent:bootstrap`, or `gateway:startup`.
+当你想要一个由操作员安装的、用于命令和 Gateway 事件的简短 `HOOK.md` 脚本，例如 `/new`、`/reset`、`/stop`、`agent:bootstrap` 或 `gateway:startup` 时，请改用 [内部钩子](/automation/hooks)。
 
-## Quick start
+## 快速开始
 
-Register typed plugin hooks with `api.on(...)` from your plugin entry:
+使用插件入口中的 `api.on(...)` 注册类型化插件钩子：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -35,8 +31,8 @@ export default definePluginEntry({
 
         return {
           requireApproval: {
-            title: "Run web search",
-            description: `Allow search query: ${String(event.params.query ?? "")}`,
+            title: "运行网页搜索",
+            description: `允许搜索查询：${String(event.params.query ?? "")}`,
             severity: "info",
             timeoutMs: 60_000,
             timeoutBehavior: "deny",
@@ -49,73 +45,67 @@ export default definePluginEntry({
 });
 ```
 
-Hook handlers run sequentially in descending `priority`. Same-priority hooks
-keep registration order.
+钩子处理器按 `priority` 降序顺序依次运行。相同优先级的钩子会保持注册顺序。
 
-## Hook catalog
+## 钩子目录
 
-Hooks are grouped by the surface they extend. Names in **bold** accept a
-decision result (block, cancel, override, or require approval); all others are
-observation-only.
+钩子按其扩展的作用域分组。**粗体**中的名称接受决策结果（阻止、取消、覆盖或要求批准）；其他全部为仅观察。
 
-**Agent turn**
+**Agent 回合**
 
-- `before_model_resolve` — override provider or model before session messages load
-- `before_prompt_build` — add dynamic context or system-prompt text before the model call
-- `before_agent_start` — compatibility-only combined phase; prefer the two hooks above
-- **`before_agent_reply`** — short-circuit the model turn with a synthetic reply or silence
-- **`before_agent_finalize`** — inspect the natural final answer and request one more model pass
-- `agent_end` — observe final messages, success state, and run duration
+- `before_model_resolve` — 在会话消息加载之前覆盖提供方或模型
+- `before_prompt_build` — 在模型调用之前添加动态上下文或系统提示文本
+- `before_agent_start` — 仅用于兼容的组合阶段；优先使用上面的两个钩子
+- **`before_agent_reply`** — 通过合成回复或静默来短路模型回合
+- `agent_end` — 观察最终消息、成功状态和运行时长
 
-**Conversation observation**
+**对话观察**
 
-- `model_call_started` / `model_call_ended` — observe sanitized provider/model call metadata, timing, outcome, and bounded request-id hashes without prompt or response content
-- `llm_input` — observe provider input (system prompt, prompt, history)
-- `llm_output` — observe provider output
+- `llm_input` — 观察提供方输入（系统提示、提示词、历史记录）
+- `llm_output` — 观察提供方输出
 
-**Tools**
+**工具**
 
-- **`before_tool_call`** — rewrite tool params, block execution, or require approval
-- `after_tool_call` — observe tool results, errors, and duration
-- **`tool_result_persist`** — rewrite the assistant message produced from a tool result
-- **`before_message_write`** — inspect or block an in-progress message write (rare)
+- **`before_tool_call`** — 重写工具参数、阻止执行或要求批准
+- `after_tool_call` — 观察工具结果、错误和持续时间
+- **`tool_result_persist`** — 重写由工具结果生成的助手消息
+- **`before_message_write`** — 检查或阻止正在进行的消息写入（少见）
 
-**Messages and delivery**
+**消息与投递**
 
-- **`inbound_claim`** — claim an inbound message before agent routing (synthetic replies)
-- `message_received` — observe inbound content, sender, thread, and metadata
-- **`message_sending`** — rewrite outbound content or cancel delivery
-- `message_sent` — observe outbound delivery success or failure
-- **`before_dispatch`** — inspect or rewrite an outbound dispatch before channel handoff
-- **`reply_dispatch`** — participate in the final reply-dispatch pipeline
+- **`inbound_claim`** — 在 agent 路由之前认领传入消息（合成回复）
+- `message_received` — 观察传入内容、发送者、线程和元数据
+- **`message_sending`** — 重写发出的内容或取消投递
+- `message_sent` — 观察发出投递的成功或失败
+- **`before_dispatch`** — 在通道移交之前检查或重写发出的调度
+- **`reply_dispatch`** — 参与最终的回复投递管道
 
-**Sessions and compaction**
+**会话与压缩**
 
-- `session_start` / `session_end` — track session lifecycle boundaries
-- `before_compaction` / `after_compaction` — observe or annotate compaction cycles
-- `before_reset` — observe session-reset events (`/reset`, programmatic resets)
+- `session_start` / `session_end` — 跟踪会话生命周期边界
+- `before_compaction` / `after_compaction` — 观察或注释压缩周期
+- `before_reset` — 观察会话重置事件（`/reset`、程序化重置）
 
-**Subagents**
+**子 agent**
 
-- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` — coordinate subagent routing and completion delivery
+- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` — 协调子 agent 路由和完成投递
 
-**Lifecycle**
+**生命周期**
 
-- `gateway_start` / `gateway_stop` — start or stop plugin-owned services with the Gateway
-- **`before_install`** — inspect skill or plugin install scans and optionally block
+- `gateway_start` / `gateway_stop` — 随 Gateway 启动或停止插件拥有的服务
+- **`before_install`** — 检查技能或插件安装扫描，并可选择阻止
 
-## Tool call policy
+## 工具调用策略
 
-`before_tool_call` receives:
+`before_tool_call` 接收：
 
 - `event.toolName`
 - `event.params`
-- optional `event.runId`
-- optional `event.toolCallId`
-- context fields such as `ctx.agentId`, `ctx.sessionKey`, `ctx.sessionId`,
-  `ctx.runId`, `ctx.jobId` (set on cron-driven runs), and diagnostic `ctx.trace`
+- 可选的 `event.runId`
+- 可选的 `event.toolCallId`
+- 以及诸如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId` 和诊断信息 `ctx.trace` 等上下文字段
 
-It can return:
+它可以返回：
 
 ```typescript
 type BeforeToolCallResult = {
@@ -136,69 +126,27 @@ type BeforeToolCallResult = {
 };
 ```
 
-Rules:
+规则：
 
-- `block: true` is terminal and skips lower-priority handlers.
-- `block: false` is treated as no decision.
-- `params` rewrites the tool parameters for execution.
-- `requireApproval` pauses the agent run and asks the user through plugin
-  approvals. The `/approve` command can approve both exec and plugin approvals.
-- A lower-priority `block: true` can still block after a higher-priority hook
-  requested approval.
-- `onResolution` receives the resolved approval decision — `allow-once`,
-  `allow-always`, `deny`, `timeout`, or `cancelled`.
+- `block: true` 是终态，并会跳过更低优先级的处理器。
+- `block: false` 会被视为没有决策。
+- `params` 会重写用于执行的工具参数。
+- `requireApproval` 会暂停 agent 运行，并通过插件审批请求用户。`/approve` 命令可以批准 exec 和插件审批。
+- 低优先级的 `block: true` 仍然可以在高优先级钩子请求批准后阻止执行。
+- `onResolution` 会接收已解析的批准决策——`allow-once`、`allow-always`、`deny`、`timeout` 或 `cancelled`。
 
-### Tool result persistence
+## 提示词和模型钩子
 
-Tool results can include structured `details` for UI rendering, diagnostics,
-media routing, or plugin-owned metadata. Treat `details` as runtime metadata,
-not prompt content:
+新插件请使用按阶段划分的钩子：
 
-- OpenClaw strips `toolResult.details` before provider replay and compaction
-  input so metadata does not become model context.
-- Persisted session entries keep only bounded `details`. Oversized details are
-  replaced with a compact summary and `persistedDetailsTruncated: true`.
-- `tool_result_persist` and `before_message_write` run before the final
-  persistence cap. Hooks should still keep returned `details` small and avoid
-  placing prompt-relevant text only in `details`; put model-visible tool output
-  in `content`.
+- `before_model_resolve`：仅接收当前提示词和附件元数据。返回 `providerOverride` 或 `modelOverride`。
+- `before_prompt_build`：接收当前提示词和会话消息。返回 `prependContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`。
 
-## Prompt and model hooks
+`before_agent_start` 仍保留用于兼容。请优先使用上面的显式钩子，这样你的插件就不会依赖旧的组合阶段。
 
-Use the phase-specific hooks for new plugins:
+当 OpenClaw 能够识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。相同的值也可在 `ctx.runId` 上获取。
 
-- `before_model_resolve`: receives only the current prompt and attachment
-  metadata. Return `providerOverride` or `modelOverride`.
-- `before_prompt_build`: receives the current prompt and session messages.
-  Return `prependContext`, `systemPrompt`, `prependSystemContext`, or
-  `appendSystemContext`.
-
-`before_agent_start` remains for compatibility. Prefer the explicit hooks above
-so your plugin does not depend on a legacy combined phase.
-
-`before_agent_start` and `agent_end` include `event.runId` when OpenClaw can
-identify the active run. The same value is also available on `ctx.runId`.
-Cron-driven runs also expose `ctx.jobId` (the originating cron job id) so
-plugin hooks can scope metrics, side effects, or state to a specific scheduled
-job.
-
-Use `model_call_started` and `model_call_ended` for provider-call telemetry
-that should not receive raw prompts, history, responses, headers, request
-bodies, or provider request IDs. These hooks include stable metadata such as
-`runId`, `callId`, `provider`, `model`, optional `api`/`transport`, terminal
-`durationMs`/`outcome`, and `upstreamRequestIdHash` when OpenClaw can derive a
-bounded provider request-id hash.
-
-`before_agent_finalize` runs only when a harness is about to accept a natural
-final assistant answer. It is not the `/stop` cancellation path and does not
-run when the user aborts a turn. Return `{ action: "revise", reason }` to ask
-the harness for one more model pass before finalization, `{ action:
-"finalize", reason? }` to force finalization, or omit a result to continue.
-Codex native `Stop` hooks are relayed into this hook as OpenClaw
-`before_agent_finalize` decisions.
-
-Non-bundled plugins that need `llm_input`, `llm_output`,
-`before_agent_finalize`, or `agent_end` must set:
+需要 `llm_input`、`llm_output` 或 `agent_end` 的未打包插件必须设置：
 
 ```json
 {
@@ -214,82 +162,53 @@ Non-bundled plugins that need `llm_input`, `llm_output`,
 }
 ```
 
-Prompt-mutating hooks can be disabled per plugin with
-`plugins.entries.<id>.hooks.allowPromptInjection=false`.
+可以通过 `plugins.entries.<id>.hooks.allowPromptInjection=false` 为每个插件禁用提示词修改类钩子。
 
-## Message hooks
+## 消息钩子
 
-Use message hooks for channel-level routing and delivery policy:
+使用消息钩子进行通道级路由和投递策略控制：
 
-- `message_received`: observe inbound content, sender, `threadId`, `messageId`,
-  `senderId`, optional run/session correlation, and metadata.
-- `message_sending`: rewrite `content` or return `{ cancel: true }`.
-- `message_sent`: observe final success or failure.
+- `message_received`：观察传入内容、发送者、`threadId`、`messageId`、`senderId`、可选的运行/会话关联以及元数据。
+- `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
+- `message_sent`：观察最终成功或失败。
 
-For audio-only TTS replies, `content` may contain the hidden spoken transcript
-even when the channel payload has no visible text/caption. Rewriting that
-`content` updates the hook-visible transcript only; it is not rendered as a
-media caption.
+当可用时，消息钩子上下文会暴露稳定的关联字段：`ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、`ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。在读取旧版元数据之前，请优先使用这些一等字段。
 
-Message hook contexts expose stable correlation fields when available:
-`ctx.sessionKey`, `ctx.runId`, `ctx.messageId`, `ctx.senderId`, `ctx.trace`,
-`ctx.traceId`, `ctx.spanId`, `ctx.parentSpanId`, and `ctx.callDepth`. Prefer
-these first-class fields before reading legacy metadata.
+在使用特定通道元数据之前，请优先使用类型化的 `threadId` 和 `replyToId` 字段。
 
-Prefer typed `threadId` and `replyToId` fields before using channel-specific
-metadata.
+决策规则：
 
-Decision rules:
+- `message_sending` 中的 `cancel: true` 是终态。
+- `message_sending` 中的 `cancel: false` 会被视为没有决策。
+- 被重写的 `content` 会继续传递给更低优先级的钩子，除非后续钩子取消投递。
 
-- `message_sending` with `cancel: true` is terminal.
-- `message_sending` with `cancel: false` is treated as no decision.
-- Rewritten `content` continues to lower-priority hooks unless a later hook
-  cancels delivery.
+## 安装钩子
 
-## Install hooks
+`before_install` 会在内置的技能和插件安装扫描之后运行。返回额外的发现结果或 `{ block: true, blockReason }` 以停止安装。
 
-`before_install` runs after the built-in scan for skill and plugin installs.
-Return additional findings or `{ block: true, blockReason }` to stop the
-install.
+`block: true` 是终态。`block: false` 会被视为没有决策。
 
-`block: true` is terminal. `block: false` is treated as no decision.
+## Gateway 生命周期
 
-## Gateway lifecycle
+为需要由 Gateway 拥有状态的插件服务使用 `gateway_start`。上下文会暴露 `ctx.config`、`ctx.workspaceDir` 以及用于 cron 检查和更新的 `ctx.getCron?.()`。使用 `gateway_stop` 清理长时间运行的资源。
 
-Use `gateway_start` for plugin services that need Gateway-owned state. The
-context exposes `ctx.config`, `ctx.workspaceDir`, and `ctx.getCron?.()` for
-cron inspection and updates. Use `gateway_stop` to clean up long-running
-resources.
+不要依赖内部的 `gateway:startup` 钩子来实现插件拥有的运行时服务。
 
-Do not rely on the internal `gateway:startup` hook for plugin-owned runtime
-services.
+## 即将弃用的内容
 
-## Upcoming deprecations
+有少数与钩子相关的接口已弃用，但仍受支持。请在下一个主要版本发布前迁移：
 
-A few hook-adjacent surfaces are deprecated but still supported. Migrate
-before the next major release:
+- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见 [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`before_agent_start`** 仍保留用于兼容。新插件应使用 `before_model_resolve` 和 `before_prompt_build`，而不是这个组合阶段。
+- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的 `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` / `timeout` / `cancelled`），而不是自由形式的 `string`。
 
-- **Plaintext channel envelopes** in `inbound_claim` and `message_received`
-  handlers. Read `BodyForAgent` and the structured user-context blocks
-  instead of parsing flat envelope text. See
-  [Plaintext channel envelopes → BodyForAgent](/plugins/sdk-migration#active-deprecations).
-- **`before_agent_start`** remains for compatibility. New plugins should use
-  `before_model_resolve` and `before_prompt_build` instead of the combined
-  phase.
-- **`onResolution` in `before_tool_call`** now uses the typed
-  `PluginApprovalResolution` union (`allow-once` / `allow-always` / `deny` /
-  `timeout` / `cancelled`) instead of a free-form `string`.
+完整列表——内存能力注册、提供方思考配置文件、外部认证提供方、提供方发现类型、任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见 [插件 SDK 迁移 → 当前弃用项](/plugins/sdk-migration#active-deprecations)。
 
-For the full list — memory capability registration, provider thinking
-profile, external auth providers, provider discovery types, task runtime
-accessors, and the `command-auth` → `command-status` rename — see
-[Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations).
+## 相关内容
 
-## Related
-
-- [Plugin SDK migration](/plugins/sdk-migration) — active deprecations and removal timeline
-- [Building plugins](/plugins/building-plugins)
-- [Plugin SDK overview](/plugins/sdk-overview)
-- [Plugin entry points](/plugins/sdk-entrypoints)
-- [Internal hooks](/automation/hooks)
-- [Plugin architecture internals](/plugins/architecture-internals)
+- [插件 SDK 迁移](/plugins/sdk-migration) — 当前弃用项和移除时间线
+- [构建插件](/plugins/building-plugins)
+- [插件 SDK 概览](/plugins/sdk-overview)
+- [插件入口点](/plugins/sdk-entrypoints)
+- [内部钩子](/automation/hooks)
+- [插件架构内部](/plugins/architecture-internals)

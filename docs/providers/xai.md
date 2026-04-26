@@ -1,28 +1,28 @@
 ---
-summary: "Use xAI Grok models in OpenClaw"
+summary: "在 OpenClaw 中使用 xAI Grok 模型"
 read_when:
-  - You want to use Grok models in OpenClaw
-  - You are configuring xAI auth or model ids
+  - 你想在 OpenClaw 中使用 Grok 模型
+  - 你正在配置 xAI 认证或模型 ID
 title: "xAI"
 ---
 
-OpenClaw ships a bundled `xai` provider plugin for Grok models.
+OpenClaw 随附一个打包的 `xai` 提供者插件，用于 Grok 模型。
 
-## Getting started
+## 入门指南
 
 <Steps>
-  <Step title="Create an API key">
-    Create an API key in the [xAI console](https://console.x.ai/).
+  <Step title="创建 API 密钥">
+    在 [xAI 控制台](https://console.x.ai/) 中创建 API 密钥。
   </Step>
-  <Step title="Set your API key">
-    Set `XAI_API_KEY`, or run:
+  <Step title="设置 API 密钥">
+    设置 `XAI_API_KEY`，或运行：
 
     ```bash
     openclaw onboard --auth-choice xai-api-key
     ```
 
   </Step>
-  <Step title="Pick a model">
+  <Step title="选择模型">
     ```json5
     {
       agents: { defaults: { model: { primary: "xai/grok-4" } } },
@@ -32,19 +32,19 @@ OpenClaw ships a bundled `xai` provider plugin for Grok models.
 </Steps>
 
 <Note>
-OpenClaw uses the xAI Responses API as the bundled xAI transport. The same
-`XAI_API_KEY` can also power Grok-backed `web_search`, first-class `x_search`,
-and remote `code_execution`.
-If you store an xAI key under `plugins.entries.xai.config.webSearch.apiKey`,
-the bundled xAI model provider reuses that key as a fallback too.
-`code_execution` tuning lives under `plugins.entries.xai.config.codeExecution`.
+OpenClaw 使用 xAI Responses API 作为打包的 xAI 传输层。同一个
+`XAI_API_KEY` 也可以支持由 Grok 支持的 `web_search`、一流的 `x_search`
+和远程 `code_execution`。
+如果您将 xAI 密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
+打包的 xAI 模型提供者也会将该密钥作为备用密钥重用。
+`code_execution` 调整位于 `plugins.entries.xai.config.codeExecution` 下。
 </Note>
 
-## Built-in catalog
+## 内置目录
 
-OpenClaw includes these xAI model families out of the box:
+OpenClaw 开箱即用地包含以下 xAI 模型系列：
 
-| Family         | Model ids                                                                |
+| 系列           | 模型 ID                                                                |
 | -------------- | ------------------------------------------------------------------------ |
 | Grok 3         | `grok-3`, `grok-3-fast`, `grok-3-mini`, `grok-3-mini-fast`               |
 | Grok 4         | `grok-4`, `grok-4-0709`                                                  |
@@ -53,73 +53,70 @@ OpenClaw includes these xAI model families out of the box:
 | Grok 4.20 Beta | `grok-4.20-beta-latest-reasoning`, `grok-4.20-beta-latest-non-reasoning` |
 | Grok Code      | `grok-code-fast-1`                                                       |
 
-The plugin also forward-resolves newer `grok-4*` and `grok-code-fast*` ids when
-they follow the same API shape.
+当它们遵循相同的 API 形状时，该插件还会向前解析更新的 `grok-4*` 和 `grok-code-fast*` ID。
 
 <Tip>
-`grok-4-fast`, `grok-4-1-fast`, and the `grok-4.20-beta-*` variants are the
-current image-capable Grok refs in the bundled catalog.
+`grok-4-fast`、`grok-4-1-fast` 和 `grok-4.20-beta-*` 变体是
+打包目录中当前支持图像的 Grok 引用。
 </Tip>
 
-## OpenClaw feature coverage
+## OpenClaw 功能覆盖
 
-The bundled plugin maps xAI's current public API surface onto OpenClaw's shared
-provider and tool contracts. Capabilities that don't fit the shared contract
-(for example streaming TTS and realtime voice) are not exposed — see the table
-below.
+打包的插件将 xAI 当前的公共 API 表面映射到 OpenClaw 的共享
+提供者和工具契约上。不符合共享契约的功能
+（例如流式 TTS 和实时语音）不会暴露出来——请参见下表。
 
-| xAI capability             | OpenClaw surface                          | Status                                                              |
-| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
-| Chat / Responses           | `xai/<model>` model provider              | Yes                                                                 |
-| Server-side web search     | `web_search` provider `grok`              | Yes                                                                 |
-| Server-side X search       | `x_search` tool                           | Yes                                                                 |
-| Server-side code execution | `code_execution` tool                     | Yes                                                                 |
-| Images                     | `image_generate`                          | Yes                                                                 |
-| Videos                     | `video_generate`                          | Yes                                                                 |
-| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | Yes                                                                 |
-| Streaming TTS              | —                                         | Not exposed; OpenClaw's TTS contract returns complete audio buffers |
-| Batch speech-to-text       | `tools.media.audio` / media understanding | Yes                                                                 |
-| Streaming speech-to-text   | Voice Call `streaming.provider: "xai"`    | Yes                                                                 |
-| Realtime voice             | —                                         | Not exposed yet; different session/WebSocket contract               |
-| Files / batches            | Generic model API compatibility only      | Not a first-class OpenClaw tool                                     |
+| xAI 功能                  | OpenClaw 表面                          | 状态                                                              |
+| ------------------------ | -------------------------------------- | ------------------------------------------------------------------- |
+| 聊天 / Responses         | `xai/<model>` 模型提供者              | 是                                                                 |
+| 服务端 web 搜索          | `web_search` 提供者 `grok`            | 是                                                                 |
+| 服务端 X 搜索             | `x_search` 工具                           | 是                                                                 |
+| 服务端代码执行            | `code_execution` 工具                     | 是                                                                 |
+| 图像                     | `image_generate`                          | 是                                                                 |
+| 视频                     | `video_generate`                          | 是                                                                 |
+| 批量文本转语音            | `messages.tts.provider: "xai"` / `tts`    | 是                                                                 |
+| 流式 TTS                 | —                                         | 未公开；OpenClaw 的 TTS 契约返回完整音频缓冲区 |
+| 批量语音转文本            | `tools.media.audio` / 媒体理解          | 是                                                                 |
+| 流式语音转文本            | Voice Call `streaming.provider: "xai"`    | 是                                                                 |
+| 实时语音                  | —                                         | 目前未公开；需要不同的会话/WebSocket 契约               |
+| 文件 / 批处理             | 仅通用模型 API 兼容性                     | 不是 OpenClaw 的一等工具                                     |
 
 <Note>
-OpenClaw uses xAI's REST image/video/TTS/STT APIs for media generation,
-speech, and batch transcription, xAI's streaming STT WebSocket for live
-voice-call transcription, and the Responses API for model, search, and
-code-execution tools. Features that need different OpenClaw contracts, such as
-Realtime voice sessions, are documented here as upstream capabilities rather
-than hidden plugin behavior.
+OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 进行媒体生成、
+语音和批量转写，使用 xAI 的流式 STT WebSocket 进行实时
+语音通话转写，并使用 Responses API 处理模型、搜索和
+代码执行工具。需要不同 OpenClaw 契约的功能，例如
+实时语音会话，在这里作为上游能力进行记录，而不是作为隐藏的插件行为。
 </Note>
 
-### Fast-mode mappings
+### 快速模式映射
 
-`/fast on` or `agents.defaults.models["xai/<model>"].params.fastMode: true`
-rewrites native xAI requests as follows:
+`/fast on` 或 `agents.defaults.models["xai/<model>"].params.fastMode: true`
+会将原生 xAI 请求重写如下：
 
-| Source model  | Fast-mode target   |
+| 源模型        | 快速模式目标     |
 | ------------- | ------------------ |
 | `grok-3`      | `grok-3-fast`      |
 | `grok-3-mini` | `grok-3-mini-fast` |
 | `grok-4`      | `grok-4-fast`      |
 | `grok-4-0709` | `grok-4-fast`      |
 
-### Legacy compatibility aliases
+### 旧版兼容别名
 
-Legacy aliases still normalize to the canonical bundled ids:
+旧版别名仍会规范化为规范的打包 ID：
 
-| Legacy alias              | Canonical id                          |
+| 旧版别名              | 规范 ID                          |
 | ------------------------- | ------------------------------------- |
 | `grok-4-fast-reasoning`   | `grok-4-fast`                         |
 | `grok-4-1-fast-reasoning` | `grok-4-1-fast`                       |
 | `grok-4.20-reasoning`     | `grok-4.20-beta-latest-reasoning`     |
 | `grok-4.20-non-reasoning` | `grok-4.20-beta-latest-non-reasoning` |
 
-## Features
+## 功能
 
 <AccordionGroup>
-  <Accordion title="Web search">
-    The bundled `grok` web-search provider uses `XAI_API_KEY` too:
+  <Accordion title="Web 搜索">
+    打包的 `grok` web-search 提供者也使用 `XAI_API_KEY`：
 
     ```bash
     openclaw config set tools.web.search.provider grok
@@ -127,27 +124,23 @@ Legacy aliases still normalize to the canonical bundled ids:
 
   </Accordion>
 
-  <Accordion title="Video generation">
-    The bundled `xai` plugin registers video generation through the shared
-    `video_generate` tool.
+  <Accordion title="视频生成">
+    打包的 `xai` 插件通过共享的
+    `video_generate` 工具注册视频生成。
 
-    - Default video model: `xai/grok-imagine-video`
-    - Modes: text-to-video, image-to-video, reference-image generation, remote
-      video edit, and remote video extension
-    - Aspect ratios: `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `3:2`, `2:3`
-    - Resolutions: `480P`, `720P`
-    - Duration: 1-15 seconds for generation/image-to-video, 1-10 seconds when
-      using `reference_image` roles, 2-10 seconds for extension
-    - Reference-image generation: set `imageRoles` to `reference_image` for
-      every supplied image; xAI accepts up to 7 such images
+    - 默认视频模型：`xai/grok-imagine-video`
+    - 模式：文本转视频、图像转视频、远程视频编辑和远程视频
+      扩展
+    - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`
+    - 分辨率：`480P`、`720P`
+    - 时长：生成/图像转视频为 1-15 秒，扩展为 2-10 秒
 
     <Warning>
-    Local video buffers are not accepted. Use remote `http(s)` URLs for
-    video edit/extend inputs. Image-to-video accepts local image buffers because
-    OpenClaw can encode those as data URLs for xAI.
+    不接受本地视频缓冲区。视频编辑/扩展输入请使用远程 `http(s)` URL。图像转视频接受本地图像缓冲区，因为
+    OpenClaw 可以将其编码为供 xAI 使用的数据 URL。
     </Warning>
 
-    To use xAI as the default video provider:
+    要将 xAI 用作默认视频提供者：
 
     ```json5
     {
@@ -162,30 +155,30 @@ Legacy aliases still normalize to the canonical bundled ids:
     ```
 
     <Note>
-    See [Video Generation](/tools/video-generation) for shared tool parameters,
-    provider selection, and failover behavior.
+    请参阅 [视频生成](/tools/video-generation) 以了解共享工具参数、
+    提供者选择和故障转移行为。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Image generation">
-    The bundled `xai` plugin registers image generation through the shared
-    `image_generate` tool.
+  <Accordion title="图像生成">
+    打包的 `xai` 插件通过共享的
+    `image_generate` 工具注册图像生成。
 
-    - Default image model: `xai/grok-imagine-image`
-    - Additional model: `xai/grok-imagine-image-pro`
-    - Modes: text-to-image and reference-image edit
-    - Reference inputs: one `image` or up to five `images`
-    - Aspect ratios: `1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `2:3`, `3:2`
-    - Resolutions: `1K`, `2K`
-    - Count: up to 4 images
+    - 默认图像模型：`xai/grok-imagine-image`
+    - 附加模型：`xai/grok-imagine-image-pro`
+    - 模式：文本转图像和参考图像编辑
+    - 参考输入：1 张 `image` 或最多 5 张 `images`
+    - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`2:3`、`3:2`
+    - 分辨率：`1K`、`2K`
+    - 数量：最多 4 张图像
 
-    OpenClaw asks xAI for `b64_json` image responses so generated media can be
-    stored and delivered through the normal channel attachment path. Local
-    reference images are converted to data URLs; remote `http(s)` references are
-    passed through.
+    OpenClaw 会向 xAI 请求 `b64_json` 图像响应，以便生成的媒体可以
+    通过常规频道附件路径存储和传递。本地
+    参考图像会转换为数据 URL；远程 `http(s)` 参考会被
+    原样传递。
 
-    To use xAI as the default image provider:
+    要将 xAI 用作默认图像提供者：
 
     ```json5
     {
@@ -200,26 +193,25 @@ Legacy aliases still normalize to the canonical bundled ids:
     ```
 
     <Note>
-    xAI also documents `quality`, `mask`, `user`, and additional native ratios
-    such as `1:2`, `2:1`, `9:20`, and `20:9`. OpenClaw forwards only the
-    shared cross-provider image controls today; unsupported native-only knobs
-    are intentionally not exposed through `image_generate`.
+    xAI 还记录了 `quality`、`mask`、`user` 以及额外的原生比例，
+    例如 `1:2`、`2:1`、`9:20` 和 `20:9`。OpenClaw 目前只转发
+    共享的跨提供者图像控制项；不支持的仅原生控制项会有意不通过 `image_generate` 暴露。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Text-to-speech">
-    The bundled `xai` plugin registers text-to-speech through the shared `tts`
-    provider surface.
+  <Accordion title="文本转语音">
+    打包的 `xai` 插件通过共享的 `tts`
+    提供者表面注册文本转语音。
 
-    - Voices: `eve`, `ara`, `rex`, `sal`, `leo`, `una`
-    - Default voice: `eve`
-    - Formats: `mp3`, `wav`, `pcm`, `mulaw`, `alaw`
-    - Language: BCP-47 code or `auto`
-    - Speed: provider-native speed override
-    - Native Opus voice-note format is not supported
+    - 语音：`eve`、`ara`、`rex`、`sal`、`leo`、`una`
+    - 默认语音：`eve`
+    - 格式：`mp3`、`wav`、`pcm`、`mulaw`、`alaw`
+    - 语言：BCP-47 代码或 `auto`
+    - 速度：提供者原生速度覆盖
+    - 不支持原生 Opus 语音笔记格式
 
-    To use xAI as the default TTS provider:
+    要将 xAI 用作默认 TTS 提供者：
 
     ```json5
     {
@@ -237,25 +229,24 @@ Legacy aliases still normalize to the canonical bundled ids:
     ```
 
     <Note>
-    OpenClaw uses xAI's batch `/v1/tts` endpoint. xAI also offers streaming TTS
-    over WebSocket, but the OpenClaw speech provider contract currently expects
-    a complete audio buffer before reply delivery.
+    OpenClaw 使用 xAI 的批量 `/v1/tts` 端点。xAI 也通过 WebSocket
+    提供流式 TTS，但 OpenClaw 的语音提供者契约当前要求在返回前
+    先获得完整音频缓冲区。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Speech-to-text">
-    The bundled `xai` plugin registers batch speech-to-text through OpenClaw's
-    media-understanding transcription surface.
+  <Accordion title="语音转文本">
+    打包的 `xai` 插件通过 OpenClaw 的
+    媒体理解转写表面注册批量语音转文本。
 
-    - Default model: `grok-stt`
-    - Endpoint: xAI REST `/v1/stt`
-    - Input path: multipart audio file upload
-    - Supported by OpenClaw wherever inbound audio transcription uses
-      `tools.media.audio`, including Discord voice-channel segments and
-      channel audio attachments
+    - 默认模型：`grok-stt`
+    - 端点：xAI REST `/v1/stt`
+    - 输入路径：multipart 音频文件上传
+    - 在 OpenClaw 任何使用 `tools.media.audio` 进行入站音频转写的场景中均受支持，
+      包括 Discord 语音频道片段和频道音频附件
 
-    To force xAI for inbound audio transcription:
+    要强制入站音频转写使用 xAI：
 
     ```json5
     {
@@ -275,25 +266,24 @@ Legacy aliases still normalize to the canonical bundled ids:
     }
     ```
 
-    Language can be supplied through the shared audio media config or per-call
-    transcription request. Prompt hints are accepted by the shared OpenClaw
-    surface, but the xAI REST STT integration only forwards file, model, and
-    language because those map cleanly to the current public xAI endpoint.
+    语言可以通过共享音频媒体配置或按调用
+    转写请求提供。共享 OpenClaw 表面接受提示信息，
+    但 xAI REST STT 集成只转发文件、模型和
+    语言，因为这些与当前公开的 xAI 端点能够良好匹配。
 
   </Accordion>
 
-  <Accordion title="Streaming speech-to-text">
-    The bundled `xai` plugin also registers a realtime transcription provider
-    for live voice-call audio.
+  <Accordion title="流式语音转文本">
+    打包的 `xai` 插件还会为实时语音通话音频注册一个实时转写提供者。
 
-    - Endpoint: xAI WebSocket `wss://api.x.ai/v1/stt`
-    - Default encoding: `mulaw`
-    - Default sample rate: `8000`
-    - Default endpointing: `800ms`
-    - Interim transcripts: enabled by default
+    - 端点：xAI WebSocket `wss://api.x.ai/v1/stt`
+    - 默认编码：`mulaw`
+    - 默认采样率：`8000`
+    - 默认端点化：`800ms`
+    - 中间转写：默认启用
 
-    Voice Call's Twilio media stream sends G.711 µ-law audio frames, so the
-    xAI provider can forward those frames directly without transcoding:
+    Voice Call 的 Twilio 媒体流发送 G.711 µ-law 音频帧，因此
+    xAI 提供者可以直接转发这些帧而无需转码：
 
     ```json5
     {
@@ -319,33 +309,33 @@ Legacy aliases still normalize to the canonical bundled ids:
     }
     ```
 
-    Provider-owned config lives under
-    `plugins.entries.voice-call.config.streaming.providers.xai`. Supported
-    keys are `apiKey`, `baseUrl`, `sampleRate`, `encoding` (`pcm`, `mulaw`, or
-    `alaw`), `interimResults`, `endpointingMs`, and `language`.
+    提供者自有配置位于
+    `plugins.entries.voice-call.config.streaming.providers.xai` 下。支持的
+    键为 `apiKey`、`baseUrl`、`sampleRate`、`encoding`（`pcm`、`mulaw` 或
+    `alaw`）、`interimResults`、`endpointingMs` 和 `language`。
 
     <Note>
-    This streaming provider is for Voice Call's realtime transcription path.
-    Discord voice currently records short segments and uses the batch
-    `tools.media.audio` transcription path instead.
+    这个流式提供者用于 Voice Call 的实时转写路径。
+    Discord 语音目前会录制短片段，并改用批量
+    `tools.media.audio` 转写路径。
     </Note>
 
   </Accordion>
 
-  <Accordion title="x_search configuration">
-    The bundled xAI plugin exposes `x_search` as an OpenClaw tool for searching
-    X (formerly Twitter) content via Grok.
+  <Accordion title="x_search 配置">
+    打包的 xAI 插件将 `x_search` 作为 OpenClaw 工具公开，用于通过 Grok 搜索
+    X（原 Twitter）内容。
 
-    Config path: `plugins.entries.xai.config.xSearch`
+    配置路径：`plugins.entries.xai.config.xSearch`
 
-    | Key                | Type    | Default            | Description                          |
+    | 键                | 类型    | 默认值            | 描述                          |
     | ------------------ | ------- | ------------------ | ------------------------------------ |
-    | `enabled`          | boolean | —                  | Enable or disable x_search           |
-    | `model`            | string  | `grok-4-1-fast`    | Model used for x_search requests     |
-    | `inlineCitations`  | boolean | —                  | Include inline citations in results  |
-    | `maxTurns`         | number  | —                  | Maximum conversation turns           |
-    | `timeoutSeconds`   | number  | —                  | Request timeout in seconds           |
-    | `cacheTtlMinutes`  | number  | —                  | Cache time-to-live in minutes        |
+    | `enabled`          | boolean | —                  | 启用或禁用 x_search           |
+    | `model`            | string  | `grok-4-1-fast`    | 用于 x_search 请求的模型     |
+    | `inlineCitations`  | boolean | —                  | 在结果中包含行内引用  |
+    | `maxTurns`         | number  | —                  | 最大对话轮次           |
+    | `timeoutSeconds`   | number  | —                  | 请求超时（秒）           |
+    | `cacheTtlMinutes`  | number  | —                  | 缓存生存时间（分钟）        |
 
     ```json5
     {
@@ -367,21 +357,21 @@ Legacy aliases still normalize to the canonical bundled ids:
 
   </Accordion>
 
-  <Accordion title="Code execution configuration">
-    The bundled xAI plugin exposes `code_execution` as an OpenClaw tool for
-    remote code execution in xAI's sandbox environment.
+  <Accordion title="代码执行配置">
+    打包的 xAI 插件将 `code_execution` 暴露为 OpenClaw 工具，用于
+    在 xAI 的沙盒环境中进行远程代码执行。
 
-    Config path: `plugins.entries.xai.config.codeExecution`
+    配置路径：`plugins.entries.xai.config.codeExecution`
 
-    | Key               | Type    | Default            | Description                              |
+    | 键               | 类型    | 默认值            | 描述                              |
     | ----------------- | ------- | ------------------ | ---------------------------------------- |
-    | `enabled`         | boolean | `true` (if key available) | Enable or disable code execution  |
-    | `model`           | string  | `grok-4-1-fast`    | Model used for code execution requests   |
-    | `maxTurns`        | number  | —                  | Maximum conversation turns               |
-    | `timeoutSeconds`  | number  | —                  | Request timeout in seconds               |
+    | `enabled`         | boolean | `true` (如果该键可用) | 启用或禁用代码执行  |
+    | `model`           | string  | `grok-4-1-fast`    | 用于代码执行请求的模型   |
+    | `maxTurns`        | number  | —                  | 最大对话轮次               |
+    | `timeoutSeconds`  | number  | —                  | 请求超时（秒）               |
 
     <Note>
-    This is remote xAI sandbox execution, not local [`exec`](/tools/exec).
+    这是远程 xAI 沙盒执行，而非本地 [`exec`](/tools/exec)。
     </Note>
 
     ```json5
@@ -403,43 +393,34 @@ Legacy aliases still normalize to the canonical bundled ids:
 
   </Accordion>
 
-  <Accordion title="Known limits">
-    - Auth is API-key only today. There is no xAI OAuth or device-code flow in
-      OpenClaw yet.
-    - `grok-4.20-multi-agent-experimental-beta-0304` is not supported on the
-      normal xAI provider path because it requires a different upstream API
-      surface than the standard OpenClaw xAI transport.
-    - xAI Realtime voice is not registered as an OpenClaw provider yet. It
-      needs a different bidirectional voice session contract than batch STT or
-      streaming transcription.
-    - xAI image `quality`, image `mask`, and extra native-only aspect ratios are
-      not exposed until the shared `image_generate` tool has corresponding
-      cross-provider controls.
+  <Accordion title="已知限制">
+    - 目前仅支持 API 密钥认证。OpenClaw 目前还不支持 xAI OAuth 或设备码流程。
+    - `grok-4.20-multi-agent-experimental-beta-0304` 不支持在常规 xAI 提供者路径上使用，因为它需要不同于标准 OpenClaw xAI 传输层的上游 API 表面。
+    - xAI Realtime 语音尚未注册为 OpenClaw 提供者。它需要与批量 STT 或流式转写不同的双向语音会话契约。
+    - xAI 图像的 `quality`、图像 `mask` 以及额外的仅原生宽高比，在共享 `image_generate` 工具具备相应的跨提供者控制项之前不会暴露。
   </Accordion>
 
-  <Accordion title="Advanced notes">
-    - OpenClaw applies xAI-specific tool-schema and tool-call compatibility fixes
-      automatically on the shared runner path.
-    - Native xAI requests default `tool_stream: true`. Set
-      `agents.defaults.models["xai/<model>"].params.tool_stream` to `false` to
-      disable it.
-    - The bundled xAI wrapper strips unsupported strict tool-schema flags and
-      reasoning payload keys before sending native xAI requests.
-    - `web_search`, `x_search`, and `code_execution` are exposed as OpenClaw
-      tools. OpenClaw enables the specific xAI built-in it needs inside each tool
-      request instead of attaching all native tools to every chat turn.
-    - `x_search` and `code_execution` are owned by the bundled xAI plugin rather
-      than hardcoded into the core model runtime.
-    - `code_execution` is remote xAI sandbox execution, not local
-      [`exec`](/tools/exec).
+  <Accordion title="高级说明">
+    - OpenClaw 会在共享运行器路径上自动应用 xAI 特定的工具模式和工具调用兼容性修复。
+    - 原生 xAI 请求默认 `tool_stream: true`。将
+      `agents.defaults.models["xai/<model>"].params.tool_stream` 设置为 `false` 以
+      禁用它。
+    - 打包的 xAI 包装器在发送原生 xAI 请求之前会剥离不支持的严格工具模式标志和
+      推理负载键。
+    - `web_search`、`x_search` 和 `code_execution` 作为 OpenClaw
+      工具暴露。OpenClaw 在每个工具请求内部启用所需的特定 xAI 内置功能，而不是将所有原生工具附加到每个聊天轮次。
+    - `x_search` 和 `code_execution` 归属于打包的 xAI 插件，而不是
+      硬编码到核心模型运行时中。
+    - `code_execution` 是远程 xAI 沙盒执行，而非本地
+      [`exec`](/tools/exec)。
   </Accordion>
 </AccordionGroup>
 
-## Live testing
+## 实时测试
 
-The xAI media paths are covered by unit tests and opt-in live suites. The live
-commands load secrets from your login shell, including `~/.profile`, before
-probing `XAI_API_KEY`.
+xAI 媒体路径已由单元测试和可选的实时测试套件覆盖。实时
+命令会在探测 `XAI_API_KEY` 之前，从你的登录 shell 中加载密钥，
+包括 `~/.profile`。
 
 ```bash
 pnpm test extensions/xai
@@ -447,25 +428,23 @@ OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 pnpm test:live -- extensions/xai
 OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 OPENCLAW_LIVE_IMAGE_GENERATION_PROVIDERS=xai pnpm test:live -- test/image-generation.runtime.live.test.ts
 ```
 
-The provider-specific live file synthesizes normal TTS, telephony-friendly PCM
-TTS, transcribes audio through xAI batch STT, streams the same PCM through xAI
-realtime STT, generates text-to-image output, and edits a reference image. The
-shared image live file verifies the same xAI provider through OpenClaw's
-runtime selection, fallback, normalization, and media attachment path.
+按提供者划分的实时文件会合成常规 TTS、适合电话系统的 PCM TTS，通过 xAI 批量 STT 转写音频，通过 xAI
+实时 STT 流式传输相同的 PCM，生成文本转图像输出，并编辑参考图像。共享的图像实时文件通过 OpenClaw 的
+运行时选择、回退、规范化和媒体附件路径验证同一个 xAI 提供者。
 
-## Related
+## 相关
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供者、模型引用和故障转移行为。
   </Card>
-  <Card title="Video generation" href="/tools/video-generation" icon="video">
-    Shared video tool parameters and provider selection.
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    共享视频工具参数和提供者选择。
   </Card>
-  <Card title="All providers" href="/providers/index" icon="grid-2">
-    The broader provider overview.
+  <Card title="所有提供者" href="/providers/index" icon="grid-2">
+    更广泛的提供者概述。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
-    Common issues and fixes.
+  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
+    常见问题和修复。
   </Card>
 </CardGroup>

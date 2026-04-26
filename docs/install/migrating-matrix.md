@@ -1,357 +1,345 @@
 ---
-summary: "How OpenClaw upgrades the previous Matrix plugin in place, including encrypted-state recovery limits and manual recovery steps."
+summary: "OpenClaw 如何就地升级之前的 Matrix 插件，包括加密状态恢复限制和手动恢复步骤。"
 read_when:
-  - Upgrading an existing Matrix installation
-  - Migrating encrypted Matrix history and device state
-title: "Matrix migration"
+  - 升级现有的 Matrix 安装
+  - 迁移加密的 Matrix 历史记录和设备状态
+title: "Matrix 迁移"
 ---
 
-This page covers upgrades from the previous public `matrix` plugin to the current implementation.
+本页介绍从之前公开的 `matrix` 插件升级到当前实现的方法。
 
-For most users, the upgrade is in place:
+对于大多数用户，升级是就地进行的：
 
-- the plugin stays `@openclaw/matrix`
-- the channel stays `matrix`
-- your config stays under `channels.matrix`
-- cached credentials stay under `~/.openclaw/credentials/matrix/`
-- runtime state stays under `~/.openclaw/matrix/`
+- 插件保持为 `@openclaw/matrix`
+- 通道保持为 `matrix`
+- 你的配置保持在 `channels.matrix` 下
+- 缓存的凭据保持在 `~/.openclaw/credentials/matrix/` 下
+- 运行时状态保持在 `~/.openclaw/matrix/` 下
 
-You do not need to rename config keys or reinstall the plugin under a new name.
+你不需要重命名配置键或以新名称重新安装插件。
 
-## What the migration does automatically
+## 迁移自动执行的操作
 
-When the gateway starts, and when you run [`openclaw doctor --fix`](/gateway/doctor), OpenClaw tries to repair old Matrix state automatically.
-Before any actionable Matrix migration step mutates on-disk state, OpenClaw creates or reuses a focused recovery snapshot.
+当网关启动时，以及当你运行 [`openclaw doctor --fix`](/gateway/doctor) 时，OpenClaw 会尝试自动修复旧的 Matrix 状态。
+在任何可操作的 Matrix 迁移步骤改变磁盘状态之前，OpenClaw 会创建或重用一个聚焦的恢复快照。
 
-When you use `openclaw update`, the exact trigger depends on how OpenClaw is installed:
+当你使用 `openclaw update` 时，确切触发取决于 OpenClaw 的安装方式：
 
-- source installs run `openclaw doctor --fix` during the update flow, then restart the gateway by default
-- package-manager installs update the package, run a non-interactive doctor pass, then rely on the default gateway restart so startup can finish Matrix migration
-- if you use `openclaw update --no-restart`, startup-backed Matrix migration is deferred until you later run `openclaw doctor --fix` and restart the gateway
+- 源码安装会在更新流程中运行 `openclaw doctor --fix`，然后默认重启网关
+- 包管理器安装会更新包，运行非交互式的 doctor 检查，然后依赖默认的网关重启以便启动完成 Matrix 迁移
+- 如果你使用 `openclaw update --no-restart`，启动后端的 Matrix 迁移将推迟到你稍后运行 `openclaw doctor --fix` 并重启网关时
 
-Automatic migration covers:
+自动迁移涵盖：
 
-- creating or reusing a pre-migration snapshot under `~/Backups/openclaw-migrations/`
-- reusing your cached Matrix credentials
-- keeping the same account selection and `channels.matrix` config
-- moving the oldest flat Matrix sync store into the current account-scoped location
-- moving the oldest flat Matrix crypto store into the current account-scoped location when the target account can be resolved safely
-- extracting a previously saved Matrix room-key backup decryption key from the old rust crypto store, when that key exists locally
-- reusing the most complete existing token-hash storage root for the same Matrix account, homeserver, and user when the access token changes later
-- scanning sibling token-hash storage roots for pending encrypted-state restore metadata when the Matrix access token changed but the account/device identity stayed the same
-- restoring backed-up room keys into the new crypto store on the next Matrix startup
+- 在 `~/Backups/openclaw-migrations/` 下创建或重用迁移前快照
+- 重用你缓存的 Matrix 凭据
+- 保持相同的账户选择和 `channels.matrix` 配置
+- 将最旧的扁平 Matrix 同步存储移动到当前账户作用域位置
+- 当目标账户可以安全解析时，将最旧的扁平 Matrix 加密存储移动到当前账户作用域位置
+- 当该密钥本地存在时，从旧的 rust 加密存储中提取之前保存的 Matrix 房间密钥备份解密密钥
+- 当访问令牌稍后更改时，重用同一 Matrix 账户、homeserver 和用户的最完整的现有令牌哈希存储根
+- 当 Matrix 访问令牌更改但账户/设备身份保持不变时，扫描兄弟令牌哈希存储根以查找待处理的加密状态恢复元数据
+- 在下次 Matrix 启动时将备份的房间密钥恢复到新的加密存储中
 
-Snapshot details:
+快照详情：
 
-- OpenClaw writes a marker file at `~/.openclaw/matrix/migration-snapshot.json` after a successful snapshot so later startup and repair passes can reuse the same archive.
-- These automatic Matrix migration snapshots back up config + state only (`includeWorkspace: false`).
-- If Matrix only has warning-only migration state, for example because `userId` or `accessToken` is still missing, OpenClaw does not create the snapshot yet because no Matrix mutation is actionable.
-- If the snapshot step fails, OpenClaw skips Matrix migration for that run instead of mutating state without a recovery point.
+- OpenClaw 在成功快照后在 `~/.openclaw/matrix/migration-snapshot.json` 写入标记文件，以便后来的启动和修复通行证可以重用相同的归档。
+- 这些自动 Matrix 迁移快照仅备份配置 + 状态（`includeWorkspace: false`）。
+- 如果 Matrix 仅有警告级迁移状态，例如因为 `userId` 或 `accessToken` 仍然缺失，OpenClaw 尚不会创建快照，因为没有可操作的 Matrix 变更。
+- 如果快照步骤失败，OpenClaw 会跳过该次运行的 Matrix 迁移，而不是在没有恢复点的情况下改变状态。
 
-About multi-account upgrades:
+关于多账户升级：
 
-- the oldest flat Matrix store (`~/.openclaw/matrix/bot-storage.json` and `~/.openclaw/matrix/crypto/`) came from a single-store layout, so OpenClaw can only migrate it into one resolved Matrix account target
-- already account-scoped legacy Matrix stores are detected and prepared per configured Matrix account
+- 最旧的扁平 Matrix 存储（`~/.openclaw/matrix/bot-storage.json` 和 `~/.openclaw/matrix/crypto/`）来自单存储布局，因此 OpenClaw 只能将其迁移到一个已解析的 Matrix 账户目标
+- 已账户作用域的旧版 Matrix 存储会被检测并按配置的 Matrix 账户准备
 
-## What the migration cannot do automatically
+## 迁移无法自动执行的操作
 
-The previous public Matrix plugin did **not** automatically create Matrix room-key backups. It persisted local crypto state and requested device verification, but it did not guarantee that your room keys were backed up to the homeserver.
+之前的公共 Matrix 插件**不**会自动创建 Matrix 房间密钥备份。它持久化本地加密状态并请求设备验证，但不保证你的房间密钥已备份到 homeserver。
 
-That means some encrypted installs can only be migrated partially.
+这意味着某些加密安装只能部分迁移。
 
-OpenClaw cannot automatically recover:
+OpenClaw 无法自动恢复：
 
-- local-only room keys that were never backed up
-- encrypted state when the target Matrix account cannot be resolved yet because `homeserver`, `userId`, or `accessToken` are still unavailable
-- automatic migration of one shared flat Matrix store when multiple Matrix accounts are configured but `channels.matrix.defaultAccount` is not set
-- custom plugin path installs that are pinned to a repo path instead of the standard Matrix package
-- a missing recovery key when the old store had backed-up keys but did not keep the decryption key locally
+- 从未备份的仅本地房间密钥
+- 当目标 Matrix 账户尚无法解析时的加密状态，因为 `homeserver`、`userId` 或 `accessToken` 仍不可用
+- 当配置了多个 Matrix 账户但未设置 `channels.matrix.defaultAccount` 时，一个共享扁平 Matrix 存储的自动迁移
+- 固定到仓库路径而不是标准 Matrix 包的自定义插件路径安装
+- 当旧存储有备份密钥但未本地保留解密密钥时的缺失恢复密钥
 
-Current warning scope:
+当前警告范围：
 
-- custom Matrix plugin path installs are surfaced by both gateway startup and `openclaw doctor`
+- 自定义 Matrix 插件路径安装会通过网关启动和 `openclaw doctor` 显示
 
-If your old installation had local-only encrypted history that was never backed up, some older encrypted messages may remain unreadable after the upgrade.
+如果你的旧安装拥有从未备份的仅本地加密历史，升级后一些旧的加密消息可能仍然不可读。
 
-## Recommended upgrade flow
+## 推荐的升级流程
 
-1. Update OpenClaw and the Matrix plugin normally.
-   Prefer plain `openclaw update` without `--no-restart` so startup can finish the Matrix migration immediately.
-2. Run:
+1. 正常更新 OpenClaw 和 Matrix 插件。
+   首选 plain `openclaw update` 不带 `--no-restart`，以便启动可以立即完成 Matrix 迁移。
+2. 运行：
 
    ```bash
    openclaw doctor --fix
    ```
 
-   If Matrix has actionable migration work, doctor will create or reuse the pre-migration snapshot first and print the archive path.
+   如果 Matrix 有可操作的迁移工作，doctor 将首先创建或重用迁移前快照并打印归档路径。
 
-3. Start or restart the gateway.
-4. Check current verification and backup state:
+3. 启动或重启网关。
+4. 检查当前验证和备份状态：
 
    ```bash
    openclaw matrix verify status
    openclaw matrix verify backup status
    ```
 
-5. Put the recovery key for the Matrix account you are repairing in an account-specific environment variable. For a single default account, `MATRIX_RECOVERY_KEY` is fine. For multiple accounts, use one variable per account, for example `MATRIX_RECOVERY_KEY_ASSISTANT`, and add `--account assistant` to the command.
-
-6. If OpenClaw tells you a recovery key is needed, run the command for the matching account:
+5. 如果 OpenClaw 告诉你需要恢复密钥，运行：
 
    ```bash
-   printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin
-   printf '%s\n' "$MATRIX_RECOVERY_KEY_ASSISTANT" | openclaw matrix verify backup restore --recovery-key-stdin --account assistant
+   openclaw matrix verify backup restore --recovery-key "<your-recovery-key>"
    ```
 
-7. If this device is still unverified, run the command for the matching account:
+6. 如果此设备仍未验证，运行：
 
    ```bash
-   printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin
-   printf '%s\n' "$MATRIX_RECOVERY_KEY_ASSISTANT" | openclaw matrix verify device --recovery-key-stdin --account assistant
+   openclaw matrix verify device "<your-recovery-key>"
    ```
 
-   If the recovery key is accepted and backup is usable, but `Cross-signing verified`
-   is still `no`, complete self-verification from another Matrix client:
+   如果恢复密钥被接受且备份可用，但 `Cross-signing verified`
+   仍然是 `no`，请从另一个 Matrix 客户端完成自我验证：
 
    ```bash
    openclaw matrix verify self
    ```
 
-   Accept the request in another Matrix client, compare the emoji or decimals,
-   and type `yes` only when they match. The command exits successfully only
-   after `Cross-signing verified` becomes `yes`.
+   在另一个 Matrix 客户端中接受请求，比较表情符号或数字，
+   只有在它们匹配时才输入 `yes`。该命令仅在
+   `Cross-signing verified` 变为 `yes` 后才会成功退出。
 
-8. If you are intentionally abandoning unrecoverable old history and want a fresh backup baseline for future messages, run:
+7. If you are intentionally abandoning unrecoverable old history and want a fresh backup baseline for future messages, run:
 
    ```bash
    openclaw matrix verify backup reset --yes
    ```
 
-9. If no server-side key backup exists yet, create one for future recoveries:
+8. 如果尚不存在服务器端密钥备份，为未来恢复创建一个：
 
    ```bash
    openclaw matrix verify bootstrap
    ```
 
-## How encrypted migration works
+## 加密迁移的工作原理
 
-Encrypted migration is a two-stage process:
+加密迁移是一个两阶段过程：
 
-1. Startup or `openclaw doctor --fix` creates or reuses the pre-migration snapshot if encrypted migration is actionable.
-2. Startup or `openclaw doctor --fix` inspects the old Matrix crypto store through the active Matrix plugin install.
-3. If a backup decryption key is found, OpenClaw writes it into the new recovery-key flow and marks room-key restore as pending.
-4. On the next Matrix startup, OpenClaw restores backed-up room keys into the new crypto store automatically.
+1. 启动或 `openclaw doctor --fix` 如果加密迁移可操作，则创建或重用迁移前快照。
+2. 启动或 `openclaw doctor --fix` 通过活动的 Matrix 插件安装检查旧的 Matrix 加密存储。
+3. 如果找到备份解密密钥，OpenClaw 将其写入新的恢复密钥流程并标记房间密钥恢复为待处理。
+4. 在下次 Matrix 启动时，OpenClaw 自动将备份的房间密钥恢复到新的加密存储中。
 
-If the old store reports room keys that were never backed up, OpenClaw warns instead of pretending recovery succeeded.
+如果旧存储报告从未备份过的房间密钥，OpenClaw 会警告而不是假装恢复成功。
 
-## Common messages and what they mean
+## 常见消息及其含义
 
-### Upgrade and detection messages
+### 升级和检测消息
 
 `Matrix plugin upgraded in place.`
 
-- Meaning: the old on-disk Matrix state was detected and migrated into the current layout.
-- What to do: nothing unless the same output also includes warnings.
+- 含义：检测到旧的磁盘上 Matrix 状态并迁移到当前布局。
+- 操作：除非同一输出还包含警告，否则无需操作。
 
 `Matrix migration snapshot created before applying Matrix upgrades.`
 
-- Meaning: OpenClaw created a recovery archive before mutating Matrix state.
-- What to do: keep the printed archive path until you confirm migration succeeded.
+- 含义：OpenClaw 在改变 Matrix 状态之前创建了恢复归档。
+- 操作：保留打印的归档路径，直到你确认迁移成功。
 
 `Matrix migration snapshot reused before applying Matrix upgrades.`
 
-- Meaning: OpenClaw found an existing Matrix migration snapshot marker and reused that archive instead of creating a duplicate backup.
-- What to do: keep the printed archive path until you confirm migration succeeded.
+- 含义：OpenClaw 找到现有的 Matrix 迁移快照标记并重用该归档，而不是创建重复备份。
+- 操作：保留打印的归档路径，直到你确认迁移成功。
 
 `Legacy Matrix state detected at ... but channels.matrix is not configured yet.`
 
-- Meaning: old Matrix state exists, but OpenClaw cannot map it to a current Matrix account because Matrix is not configured.
-- What to do: configure `channels.matrix`, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：存在旧的 Matrix 状态，但 OpenClaw 无法将其映射到当前 Matrix 账户，因为 Matrix 尚未配置。
+- 操作：配置 `channels.matrix`，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Legacy Matrix state detected at ... but the new account-scoped target could not be resolved yet (need homeserver, userId, and access token for channels.matrix...).`
 
-- Meaning: OpenClaw found old state, but it still cannot determine the exact current account/device root.
-- What to do: start the gateway once with a working Matrix login, or rerun `openclaw doctor --fix` after cached credentials exist.
+- 含义：OpenClaw 找到了旧状态，但仍无法确定确切的当前账户/设备根。
+- 操作：使用有效的 Matrix 登录启动网关一次，或在缓存凭据存在后重新运行 `openclaw doctor --fix`。
 
 `Legacy Matrix state detected at ... but multiple Matrix accounts are configured and channels.matrix.defaultAccount is not set.`
 
-- Meaning: OpenClaw found one shared flat Matrix store, but it refuses to guess which named Matrix account should receive it.
-- What to do: set `channels.matrix.defaultAccount` to the intended account, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 找到了一个共享扁平 Matrix 存储，但拒绝猜测哪个命名的 Matrix 账户应该接收它。
+- 操作：将 `channels.matrix.defaultAccount` 设置为预期账户，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Matrix legacy sync store not migrated because the target already exists (...)`
 
-- Meaning: the new account-scoped location already has a sync or crypto store, so OpenClaw did not overwrite it automatically.
-- What to do: verify that the current account is the correct one before manually removing or moving the conflicting target.
+- 含义：新的账户作用域位置已经有一个同步或加密存储，因此 OpenClaw 没有自动覆盖它。
+- 操作：在手动删除或移动冲突目标之前，验证当前账户是否正确。
 
 `Failed migrating Matrix legacy sync store (...)` or `Failed migrating Matrix legacy crypto store (...)`
 
-- Meaning: OpenClaw tried to move old Matrix state but the filesystem operation failed.
-- What to do: inspect filesystem permissions and disk state, then rerun `openclaw doctor --fix`.
+- 含义：OpenClaw 尝试移动旧的 Matrix 状态但文件系统操作失败。
+- 操作：检查文件系统权限和磁盘状态，然后重新运行 `openclaw doctor --fix`。
 
 `Legacy Matrix encrypted state detected at ... but channels.matrix is not configured yet.`
 
-- Meaning: OpenClaw found an old encrypted Matrix store, but there is no current Matrix config to attach it to.
-- What to do: configure `channels.matrix`, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 找到了旧的加密 Matrix 存储，但没有当前的 Matrix 配置可附加。
+- 操作：配置 `channels.matrix`，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Legacy Matrix encrypted state detected at ... but the account-scoped target could not be resolved yet (need homeserver, userId, and access token for channels.matrix...).`
 
-- Meaning: the encrypted store exists, but OpenClaw cannot safely decide which current account/device it belongs to.
-- What to do: start the gateway once with a working Matrix login, or rerun `openclaw doctor --fix` after cached credentials are available.
+- 含义：加密存储存在，但 OpenClaw 无法安全地决定它属于哪个当前账户/设备。
+- 操作：使用有效的 Matrix 登录启动网关一次，或在缓存凭据可用后重新运行 `openclaw doctor --fix`。
 
 `Legacy Matrix encrypted state detected at ... but multiple Matrix accounts are configured and channels.matrix.defaultAccount is not set.`
 
-- Meaning: OpenClaw found one shared flat legacy crypto store, but it refuses to guess which named Matrix account should receive it.
-- What to do: set `channels.matrix.defaultAccount` to the intended account, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 找到了一个共享扁平旧版加密存储，但拒绝猜测哪个命名的 Matrix 账户应该接收它。
+- 操作：将 `channels.matrix.defaultAccount` 设置为预期账户，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Matrix migration warnings are present, but no on-disk Matrix mutation is actionable yet. No pre-migration snapshot was needed.`
 
-- Meaning: OpenClaw detected old Matrix state, but the migration is still blocked on missing identity or credential data.
-- What to do: finish Matrix login or config setup, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 检测到旧的 Matrix 状态，但迁移仍因缺少身份或凭据数据而被阻止。
+- 操作：完成 Matrix 登录或配置设置，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Legacy Matrix encrypted state was detected, but the Matrix plugin helper is unavailable. Install or repair @openclaw/matrix so OpenClaw can inspect the old rust crypto store before upgrading.`
 
-- Meaning: OpenClaw found old encrypted Matrix state, but it could not load the helper entrypoint from the Matrix plugin that normally inspects that store.
-- What to do: reinstall or repair the Matrix plugin (`openclaw plugins install @openclaw/matrix`, or `openclaw plugins install ./path/to/local/matrix-plugin` for a repo checkout), then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 找到了旧的加密 Matrix 状态，但无法从通常检查该存储的 Matrix 插件加载帮助器入口点。
+- 操作：重新安装或修复 Matrix 插件（`openclaw plugins install @openclaw/matrix`，或对于仓库检出使用 `openclaw plugins install ./path/to/local/matrix-plugin`），然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Matrix plugin helper path is unsafe: ... Reinstall @openclaw/matrix and try again.`
 
-- Meaning: OpenClaw found a helper file path that escapes the plugin root or fails plugin boundary checks, so it refused to import it.
-- What to do: reinstall the Matrix plugin from a trusted path, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 发现了一个转义插件根或失败插件边界检查的帮助器文件路径，因此拒绝导入它。
+- 操作：从可信路径重新安装 Matrix 插件，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `- Failed creating a Matrix migration snapshot before repair: ...`
 
 `- Skipping Matrix migration changes for now. Resolve the snapshot failure, then rerun "openclaw doctor --fix".`
 
-- Meaning: OpenClaw refused to mutate Matrix state because it could not create the recovery snapshot first.
-- What to do: resolve the backup error, then rerun `openclaw doctor --fix` or restart the gateway.
+- 含义：OpenClaw 拒绝改变 Matrix 状态，因为它无法首先创建恢复快照。
+- 操作：解决备份错误，然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Failed migrating legacy Matrix client storage: ...`
 
-- Meaning: the Matrix client-side fallback found old flat storage, but the move failed. OpenClaw now aborts that fallback instead of silently starting with a fresh store.
-- What to do: inspect filesystem permissions or conflicts, keep the old state intact, and retry after fixing the error.
+- 含义：Matrix 客户端侧回退找到了旧的扁平存储，但移动失败。OpenClaw 现在中止该回退，而不是静默地使用新存储启动。
+- 操作：检查文件系统权限或冲突，保持旧状态完好，并在修复错误后重试。
 
 `Matrix is installed from a custom path: ...`
 
-- Meaning: Matrix is pinned to a path install, so mainline updates do not automatically replace it with the repo's standard Matrix package.
-- What to do: reinstall with `openclaw plugins install @openclaw/matrix` when you want to return to the default Matrix plugin.
+- 含义：Matrix 固定到路径安装，因此主线更新不会自动将其替换为仓库的标准 Matrix 包。
+- 操作：当你想返回默认 Matrix 插件时使用 `openclaw plugins install @openclaw/matrix` 重新安装。
 
-### Encrypted-state recovery messages
+### 加密状态恢复消息
 
 `matrix: restored X/Y room key(s) from legacy encrypted-state backup`
 
-- Meaning: backed-up room keys were restored successfully into the new crypto store.
-- What to do: usually nothing.
+- 含义：备份的房间密钥已成功恢复到新的加密存储中。
+- 操作：通常无需操作。
 
 `matrix: N legacy local-only room key(s) were never backed up and could not be restored automatically`
 
-- Meaning: some old room keys existed only in the old local store and had never been uploaded to Matrix backup.
-- What to do: expect some old encrypted history to remain unavailable unless you can recover those keys manually from another verified client.
+- 含义：一些旧房间密钥仅存在于旧的本地存储中，且从未上传到 Matrix 备份。
+- 操作：除非你能从另一个已验证客户端手动恢复这些密钥，否则预计一些旧的加密历史将仍然不可用。
 
-`Legacy Matrix encrypted state for account "..." has backed-up room keys, but no local backup decryption key was found. Ask the operator to run "openclaw matrix verify backup restore --recovery-key-stdin" after upgrade if they have the recovery key.`
+`Legacy Matrix encrypted state for account "..." has backed-up room keys, but no local backup decryption key was found. Ask the operator to run "openclaw matrix verify backup restore --recovery-key <key>" after upgrade if they have the recovery key.`
 
-- Meaning: backup exists, but OpenClaw could not recover the recovery key automatically.
-- What to do: run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin`.
+- 含义：备份存在，但 OpenClaw 无法自动恢复恢复密钥。
+- 操作：运行 `openclaw matrix verify backup restore --recovery-key "<your-recovery-key>"`。
 
 `Failed inspecting legacy Matrix encrypted state for account "..." (...): ...`
 
-- Meaning: OpenClaw found the old encrypted store, but it could not inspect it safely enough to prepare recovery.
-- What to do: rerun `openclaw doctor --fix`. If it repeats, keep the old state directory intact and recover using another verified Matrix client plus `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin`.
+- 含义：OpenClaw 找到了旧的加密存储，但无法足够安全地检查它以准备恢复。
+- 操作：重新运行 `openclaw doctor --fix`。如果重复出现，保持旧状态目录完好，并使用另一个已验证的 Matrix 客户端加上 `openclaw matrix verify backup restore --recovery-key "<your-recovery-key>"` 进行恢复。
 
 `Legacy Matrix backup key was found for account "...", but .../recovery-key.json already contains a different recovery key. Leaving the existing file unchanged.`
 
-- Meaning: OpenClaw detected a backup key conflict and refused to overwrite the current recovery-key file automatically.
-- What to do: verify which recovery key is correct before retrying any restore command.
+- 含义：OpenClaw 检测到备份密钥冲突并拒绝自动覆盖当前的恢复密钥文件。
+- 操作：在重试任何恢复命令之前验证哪个恢复密钥是正确的。
 
 `Legacy Matrix encrypted state for account "..." cannot be fully converted automatically because the old rust crypto store does not expose all local room keys for export.`
 
-- Meaning: this is the hard limit of the old storage format.
-- What to do: backed-up keys can still be restored, but local-only encrypted history may remain unavailable.
+- 含义：这是旧存储格式的硬性限制。
+- 操作：备份的密钥仍然可以恢复，但仅本地的加密历史可能仍然不可用。
 
 `matrix: failed restoring room keys from legacy encrypted-state backup: ...`
 
-- Meaning: the new plugin attempted restore but Matrix returned an error.
-- What to do: run `openclaw matrix verify backup status`, then retry with `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin` if needed.
+- 含义：新插件尝试恢复但 Matrix 返回了错误。
+- 操作：运行 `openclaw matrix verify backup status`，然后在需要时使用 `openclaw matrix verify backup restore --recovery-key "<your-recovery-key>"` 重试。
 
-### Manual recovery messages
+### 手动恢复消息
 
 `Backup key is not loaded on this device. Run 'openclaw matrix verify backup restore' to load it and restore old room keys.`
 
-- Meaning: OpenClaw knows you should have a backup key, but it is not active on this device.
-- What to do: run `openclaw matrix verify backup restore`, or set `MATRIX_RECOVERY_KEY` and run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin` if needed.
+- 含义：OpenClaw 知道你应该有一个备份密钥，但它在此设备上未激活。
+- 操作：运行 `openclaw matrix verify backup restore`，或在需要时传递 `--recovery-key`。
 
-`Store a recovery key with 'openclaw matrix verify device --recovery-key-stdin', then run 'openclaw matrix verify backup restore'.`
+`Store a recovery key with 'openclaw matrix verify device <key>', then run 'openclaw matrix verify backup restore'.`
 
-- Meaning: this device does not currently have the recovery key stored.
-- What to do: set `MATRIX_RECOVERY_KEY`, run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin`, then restore the backup.
+- 含义：此设备当前未存储恢复密钥。
+- 操作：首先使用你的恢复密钥验证设备，然后恢复备份。
 
-`Backup key mismatch on this device. Re-run 'openclaw matrix verify device --recovery-key-stdin' with the matching recovery key.`
+`Backup key mismatch on this device. Re-run 'openclaw matrix verify device <key>' with the matching recovery key.`
 
-- Meaning: the stored key does not match the active Matrix backup.
-- What to do: set `MATRIX_RECOVERY_KEY` to the correct key and run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin`.
+- 含义：存储的密钥与活动的 Matrix 备份不匹配。
+- 操作：使用正确的密钥重新运行 `openclaw matrix verify device "<your-recovery-key>"`。
 
-If you accept losing unrecoverable old encrypted history, you can instead reset the
-current backup baseline with `openclaw matrix verify backup reset --yes`. When the
-stored backup secret is broken, that reset may also recreate secret storage so the
-new backup key can load correctly after restart.
+如果你接受放弃不可恢复的旧加密历史，你可以改为使用 `openclaw matrix verify backup reset --yes` 重置
+当前备份基线。当存储的备份密钥已损坏时，该重置也可能重新创建密钥存储，
+以便新的备份密钥在重启后可以正确加载。
 
-`Backup trust chain is not verified on this device. Re-run 'openclaw matrix verify device --recovery-key-stdin'.`
+`Backup trust chain is not verified on this device. Re-run 'openclaw matrix verify device <key>'.`
 
-- Meaning: the backup exists, but this device does not trust the cross-signing chain strongly enough yet.
-- What to do: set `MATRIX_RECOVERY_KEY` and run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin`.
+- 含义：备份存在，但此设备尚不足以信任交叉签名链。
+- 操作：重新运行 `openclaw matrix verify device "<your-recovery-key>"`。
 
 `Matrix recovery key is required`
 
-- Meaning: you tried a recovery step without supplying a recovery key when one was required.
-- What to do: rerun the command with `--recovery-key-stdin`, for example `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin`.
+- 含义：你在需要恢复密钥时尝试恢复步骤而未提供恢复密钥。
+- 操作：使用你的恢复密钥重新运行命令。
 
 `Invalid Matrix recovery key: ...`
 
-- Meaning: the provided key could not be parsed or did not match the expected format.
-- What to do: retry with the exact recovery key from your Matrix client or recovery-key file.
+- 含义：提供的密钥无法解析或不符合预期格式。
+- 操作：使用来自你的 Matrix 客户端或恢复密钥文件的确切恢复密钥重试。
 
 `Matrix recovery key was applied, but this device still lacks full Matrix identity trust.`
 
-- Meaning: OpenClaw could apply the recovery key, but Matrix still has not
-  established full cross-signing identity trust for this device. Check the
-  command output for `Recovery key accepted`, `Backup usable`,
-  `Cross-signing verified`, and `Device verified by owner`.
-- What to do: run `openclaw matrix verify self`, accept the request in another
-  Matrix client, compare the SAS, and type `yes` only when it matches. The
-  command waits for full Matrix identity trust before reporting success. Use
-  `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify bootstrap --recovery-key-stdin --force-reset-cross-signing`
-  only when you intentionally want to replace the current cross-signing identity.
+- 含义：OpenClaw 可以应用恢复密钥，但 Matrix 仍未为此设备建立完整的交叉签名身份信任。请检查命令输出中的 `Recovery key accepted`、`Backup usable`、`Cross-signing verified` 和 `Device verified by owner`。
+- 操作：运行 `openclaw matrix verify self`，在另一个 Matrix 客户端中接受请求，比较 SAS，并且只有在匹配时才输入 `yes`。该命令会等待完整的 Matrix 身份信任后再报告成功。仅当你有意替换当前交叉签名身份时，才使用 `openclaw matrix verify bootstrap --recovery-key "<your-recovery-key>" --force-reset-cross-signing`。
 
 `Matrix key backup is not active on this device after loading from secret storage.`
 
-- Meaning: secret storage did not produce an active backup session on this device.
-- What to do: verify the device first, then recheck with `openclaw matrix verify backup status`.
+- 含义：秘密存储未在此设备上产生活动的备份会话。
+- 操作：首先验证设备，然后使用 `openclaw matrix verify backup status` 重新检查。
 
-`Matrix crypto backend cannot load backup keys from secret storage. Verify this device with 'openclaw matrix verify device --recovery-key-stdin' first.`
+`Matrix crypto backend cannot load backup keys from secret storage. Verify this device with 'openclaw matrix verify device <key>' first.`
 
-- Meaning: this device cannot restore from secret storage until device verification is complete.
-- What to do: run `printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin` first.
+- 含义：在完成设备验证之前，此设备无法从秘密存储恢复。
+- 操作：首先运行 `openclaw matrix verify device "<your-recovery-key>"`。
 
-### Custom plugin install messages
+### 自定义插件安装消息
 
 `Matrix is installed from a custom path that no longer exists: ...`
 
-- Meaning: your plugin install record points at a local path that is gone.
-- What to do: reinstall with `openclaw plugins install @openclaw/matrix`, or if you are running from a repo checkout, `openclaw plugins install ./path/to/local/matrix-plugin`.
+- 含义：你的插件安装记录指向一个已消失的本地路径。
+- 操作：使用 `openclaw plugins install @openclaw/matrix` 重新安装，或者如果你从仓库检出运行，使用 `openclaw plugins install ./path/to/local/matrix-plugin`。
 
-## If encrypted history still does not come back
+## 如果加密历史记录仍然无法恢复
 
-Run these checks in order:
+按顺序运行以下检查：
 
 ```bash
 openclaw matrix verify status --verbose
 openclaw matrix verify backup status --verbose
-printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify backup restore --recovery-key-stdin --verbose
+openclaw matrix verify backup restore --recovery-key "<your-recovery-key>" --verbose
 ```
 
-If the backup restores successfully but some old rooms are still missing history, those missing keys were probably never backed up by the previous plugin.
+如果备份成功恢复，但某些旧房间仍然缺少历史记录，那么这些缺失的密钥可能从未被之前的插件备份过。
 
-## If you want to start fresh for future messages
+## 如果您想为未来的消息重新开始
 
-If you accept losing unrecoverable old encrypted history and only want a clean backup baseline going forward, run these commands in order:
+如果您接受丢失无法恢复的旧加密历史记录，并且只希望从现在开始建立一个干净的备份基线，请按顺序运行以下命令：
 
 ```bash
 openclaw matrix verify backup reset --yes
@@ -359,11 +347,11 @@ openclaw matrix verify backup status --verbose
 openclaw matrix verify status
 ```
 
-If the device is still unverified after that, finish verification from your Matrix client by comparing the SAS emoji or decimal codes and confirming that they match.
+如果此后设备仍未验证，请在您的 Matrix 客户端中通过比较 SAS 表情符号或十进制代码来完成验证，并确认它们匹配。
 
-## Related pages
+## 相关页面
 
 - [Matrix](/channels/matrix)
-- [Doctor](/gateway/doctor)
-- [Migrating](/install/migrating)
-- [Plugins](/tools/plugin)
+- [诊断](/gateway/doctor)
+- [迁移](/install/migrating)
+- [插件](/tools/plugin)

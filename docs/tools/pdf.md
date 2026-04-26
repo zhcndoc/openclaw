@@ -1,122 +1,114 @@
 ---
-summary: "Analyze one or more PDF documents with native provider support and extraction fallback"
-title: "PDF tool"
+summary: "分析一个或多个 PDF 文档，支持原生提供商模式和提取回退模式"
+title: "PDF 工具"
 read_when:
-  - You want to analyze PDFs from agents
-  - You need exact pdf tool parameters and limits
-  - You are debugging native PDF mode vs extraction fallback
+  - 你想分析来自代理的 PDF
+  - 你需要准确的 PDF 工具参数和限制
+  - 你正在调试原生 PDF 模式与提取回退模式
 ---
 
-`pdf` analyzes one or more PDF documents and returns text.
+`pdf` 会分析一个或多个 PDF 文档并返回文本。
 
-Quick behavior:
+快速行为概述：
 
-- Native provider mode for Anthropic and Google model providers.
-- Extraction fallback mode for other providers (extract text first, then page images when needed).
-- Supports single (`pdf`) or multi (`pdfs`) input, max 10 PDFs per call.
+- Anthropic 和 Google 模型提供商的原生提供商模式。
+- 其他提供商使用提取回退模式（先提取文本，再在需要时提取页面图像）。
+- 支持单个（`pdf`）或多个（`pdfs`）输入，单次最多 10 个 PDF。
 
-## Availability
+## 可用性
 
-The tool is only registered when OpenClaw can resolve a PDF-capable model config for the agent:
+只有当 OpenClaw 能解析出支持 PDF 的模型配置时，该工具才会被注册：
 
 1. `agents.defaults.pdfModel`
-2. fallback to `agents.defaults.imageModel`
-3. fallback to the agent's resolved session/default model
-4. if native-PDF providers are auth-backed, prefer them ahead of generic image fallback candidates
+2. 回退到 `agents.defaults.imageModel`
+3. 回退到该代理解析后的会话/默认模型
+4. 如果原生 PDF 提供商有基于认证的配置，则优先于通用图像回退候选项
 
-If no usable model can be resolved, the `pdf` tool is not exposed.
+如果无法解析出可用模型，`pdf` 工具将不会被暴露。
 
-Availability notes:
+可用性说明：
 
-- The fallback chain is auth-aware. A configured `provider/model` only counts if
-  OpenClaw can actually authenticate that provider for the agent.
-- Native PDF providers are currently **Anthropic** and **Google**.
-- If the resolved session/default provider already has a configured vision/PDF
-  model, the PDF tool reuses that before falling back to other auth-backed
-  providers.
+- 回退链是感知认证的。只有当 OpenClaw 能为该代理实际认证该提供商时，已配置的 `provider/model` 才算有效。
+- 原生 PDF 提供商目前是 **Anthropic** 和 **Google**。
+- 如果解析后的会话/默认提供商已经配置了 vision/PDF 模型，PDF 工具会先复用它，然后再回退到其他基于认证的提供商。
 
-## Input reference
+## 输入参考
 
 <ParamField path="pdf" type="string">
-One PDF path or URL.
+一个 PDF 路径或 URL。
 </ParamField>
 
 <ParamField path="pdfs" type="string[]">
-Multiple PDF paths or URLs, up to 10 total.
+多个 PDF 路径或 URL，最多总计 10 个。
 </ParamField>
 
-<ParamField path="prompt" type="string" default="Analyze this PDF document.">
-Analysis prompt.
+<ParamField path="prompt" type="string" default="分析此 PDF 文档。">
+分析提示词。
 </ParamField>
 
 <ParamField path="pages" type="string">
-Page filter like `1-5` or `1,3,7-9`.
+页面过滤器，例如 `1-5` 或 `1,3,7-9`。
 </ParamField>
 
 <ParamField path="model" type="string">
-Optional model override in `provider/model` form.
+可选的模型覆盖，格式为 `provider/model`。
 </ParamField>
 
 <ParamField path="maxBytesMb" type="number">
-Per-PDF size cap in MB. Defaults to `agents.defaults.pdfMaxBytesMb` or `10`.
+每个 PDF 的大小上限，单位为 MB。默认值为 `agents.defaults.pdfMaxBytesMb` 或 `10`。
 </ParamField>
 
-Input notes:
+输入说明：
 
-- `pdf` and `pdfs` are merged and deduplicated before loading.
-- If no PDF input is provided, the tool errors.
-- `pages` is parsed as 1-based page numbers, deduped, sorted, and clamped to the configured max pages.
-- `maxBytesMb` defaults to `agents.defaults.pdfMaxBytesMb` or `10`.
+- `pdf` 与 `pdfs` 会合并并去重后加载。
+- 如果未提供任何 PDF 输入，该工具会报错。
+- `pages` 按 1 起始页码解析，去重、排序，并限制在配置最大页数内。
+- `maxBytesMb` 默认为 `agents.defaults.pdfMaxBytesMb`，若无则为 `10`。
 
-## Supported PDF references
+## 支持的 PDF 引用
 
-- local file path (including `~` expansion)
+- 本地文件路径（支持 `~` 目录展开）
 - `file://` URL
-- `http://` and `https://` URL
-- OpenClaw-managed inbound refs such as `media://inbound/<id>`
+- `http://` 和 `https://` URL
+- OpenClaw 管理的入站引用，例如 `media://inbound/<id>`
 
-Reference notes:
+引用说明：
 
-- Other URI schemes (for example `ftp://`) are rejected with `unsupported_pdf_reference`.
-- In sandbox mode, remote `http(s)` URLs are rejected.
-- With workspace-only file policy enabled, local file paths outside allowed roots are rejected.
-- Managed inbound refs and replayed paths under OpenClaw's inbound media store are allowed with workspace-only file policy.
+- 其他 URI 方案（例如 `ftp://`）会以 `unsupported_pdf_reference` 拒绝。
+- 在沙盒模式下，远程 `http(s)` URL 会被拒绝。
+- 启用仅工作区文件策略时，允许根目录之外的本地文件路径会被拒绝。
+- 在仅工作区文件策略下，允许 OpenClaw 入站媒体存储中的管理入站引用和回放路径。
 
-## Execution modes
+## 执行模式
 
-### Native provider mode
+### 原生提供商模式
 
-Native mode is used for provider `anthropic` and `google`.
-The tool sends raw PDF bytes directly to provider APIs.
+原生模式用于提供商 `anthropic` 和 `google`。
+该工具直接向提供商 API 发送原始 PDF 字节。
 
-Native mode limits:
+原生模式限制：
 
-- `pages` is not supported. If set, the tool returns an error.
-- Multi-PDF input is supported; each PDF is sent as a native document block /
-  inline PDF part before the prompt.
+- 不支持 `pages`。如果设置了该参数，工具将返回错误。
+- 支持多 PDF 输入；每个 PDF 会在提示词之前以原生文档块 / 内联 PDF 部分发送。
 
-### Extraction fallback mode
+### 提取回退模式
 
-Fallback mode is used for non-native providers.
+非原生提供商使用回退模式。
 
-Flow:
+流程：
 
-1. Extract text from selected pages (up to `agents.defaults.pdfMaxPages`, default `20`).
-2. If extracted text length is below `200` chars, render selected pages to PNG images and include them.
-3. Send extracted content plus prompt to the selected model.
+1. 从选定页面提取文本（最多 `agents.defaults.pdfMaxPages`，默认 20 页）。
+2. 如果提取文本长度少于 200 字符，则将选定页面渲染为 PNG 图片并包含其中。
+3. 将提取内容加提示发送到选定模型。
 
-Fallback details:
+回退细节：
 
-- Page image extraction uses a pixel budget of `4,000,000`.
-- If the target model does not support image input and there is no extractable text, the tool errors.
-- If text extraction succeeds but image extraction would require vision on a
-  text-only model, OpenClaw drops the rendered images and continues with the
-  extracted text.
-- Extraction fallback uses the bundled `document-extract` plugin. The plugin owns
-  `pdfjs-dist`; `@napi-rs/canvas` is used only when image rendering fallback is
-  available.
+- 页面图像提取使用的像素预算为 `4,000,000`。
+- 如果目标模型不支持图像输入且没有可提取文本，工具会报错。
+- 如果文本提取成功，但图像提取在纯文本模型上需要视觉能力，OpenClaw 会丢弃渲染图像并继续使用提取文本。
+- 提取回退使用内置的 `document-extract` 插件。该插件负责 `pdfjs-dist`；`@napi-rs/canvas` 仅在图像渲染回退可用时使用。
 
-## Config
+## 配置
 
 ```json5
 {
@@ -133,63 +125,63 @@ Fallback details:
 }
 ```
 
-See [Configuration Reference](/gateway/configuration-reference) for full field details.
+完整字段说明见 [配置参考](/gateway/configuration-reference)。
 
-## Output details
+## 输出详情
 
-The tool returns text in `content[0].text` and structured metadata in `details`.
+工具将文本放在 `content[0].text`，结构化元数据在 `details`。
 
-Common `details` fields:
+常见 `details` 字段：
 
-- `model`: resolved model ref (`provider/model`)
-- `native`: `true` for native provider mode, `false` for fallback
-- `attempts`: fallback attempts that failed before success
+- `model`：解析后的模型引用（`provider/model`）
+- `native`：原生提供商模式为 `true`，回退模式为 `false`
+- `attempts`：回退过程中失败的尝试次数
 
-Path fields:
+路径字段：
 
-- single PDF input: `details.pdf`
-- multiple PDF inputs: `details.pdfs[]` with `pdf` entries
-- sandbox path rewrite metadata (when applicable): `rewrittenFrom`
+- 单个 PDF 输入时为 `details.pdf`
+- 多个 PDF 输入时为 `details.pdfs[]`，每项含 `pdf` 条目
+- 沙盒路径重写元数据（若适用）：`rewrittenFrom`
 
-## Error behavior
+## 错误行为
 
-- Missing PDF input: throws `pdf required: provide a path or URL to a PDF document`
-- Too many PDFs: returns structured error in `details.error = "too_many_pdfs"`
-- Unsupported reference scheme: returns `details.error = "unsupported_pdf_reference"`
-- Native mode with `pages`: throws clear `pages is not supported with native PDF providers` error
+- 缺少 PDF 输入：抛出 `需要 pdf：提供 PDF 文档的路径或 URL`
+- PDF 数量过多：`details.error = "too_many_pdfs"` 结构化错误
+- 不支持的引用方案：`details.error = "unsupported_pdf_reference"`
+- 原生模式带 `pages` 参数：抛出明确错误 `原生 PDF 提供商不支持 pages 参数`
 
-## Examples
+## 示例
 
-Single PDF:
+单个 PDF：
 
 ```json
 {
   "pdf": "/tmp/report.pdf",
-  "prompt": "Summarize this report in 5 bullets"
+  "prompt": "用 5 条要点总结该报告"
 }
 ```
 
-Multiple PDFs:
+多个 PDF：
 
 ```json
 {
   "pdfs": ["/tmp/q1.pdf", "/tmp/q2.pdf"],
-  "prompt": "Compare risks and timeline changes across both documents"
+  "prompt": "比较两个文档中的风险及时间线变化"
 }
 ```
 
-Page-filtered fallback model:
+页面过滤的回退模型：
 
 ```json
 {
   "pdf": "https://example.com/report.pdf",
   "pages": "1-3,7",
   "model": "openai/gpt-5.4-mini",
-  "prompt": "Extract only customer-impacting incidents"
+  "prompt": "仅提取会影响客户的事件"
 }
 ```
 
-## Related
+## 相关内容
 
-- [Tools Overview](/tools) — all available agent tools
-- [Configuration Reference](/gateway/config-agents#agent-defaults) — pdfMaxBytesMb and pdfMaxPages config
+- [Tools Overview](/tools) — 所有可用的代理工具
+- [Configuration Reference](/gateway/config-agents#agent-defaults) — pdfMaxBytesMb 和 pdfMaxPages 配置

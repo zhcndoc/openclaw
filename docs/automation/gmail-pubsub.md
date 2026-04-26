@@ -1,11 +1,11 @@
 ---
-summary: "Redirect to /automation/cron-jobs"
+summary: "重定向至 /automation/cron-jobs"
 title: "Gmail PubSub"
 ---
 
-This page moved to [Scheduled Tasks](/automation/cron-jobs#gmail-pubsub-integration). See [Scheduled Tasks](/automation/cron-jobs#gmail-pubsub-integration) for Gmail PubSub documentation.
+此页面已移动到 [计划任务](/automation/cron-jobs#gmail-pubsub-integration)。有关 Gmail PubSub 文档，请参阅 [计划任务](/automation/cron-jobs#gmail-pubsub-integration)。
 
-## Related
+## 相关
 
 - [Webhook](/automation/webhook)
-- [Automation troubleshooting](/automation/troubleshooting)
+- [自动化故障排查](/automation/troubleshooting)

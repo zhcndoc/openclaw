@@ -1,69 +1,69 @@
 ---
-summary: "Experimental capture of reusable procedures as workspace skills with review, approval, quarantine, and hot skill refresh"
-title: "Skill workshop plugin"
+summary: "将可复用流程的实验性捕获作为工作区技能，并进行审阅、批准、隔离和热刷新"
+title: "技能工作坊插件"
 read_when:
-  - You want agents to turn corrections or reusable procedures into workspace skills
-  - You are configuring procedural skill memory
-  - You are debugging skill_workshop tool behavior
-  - You are deciding whether to enable automatic skill creation
+  - 你希望代理将修正或可复用流程转化为工作区技能
+  - 你正在配置流程性技能记忆
+  - 你正在调试 skill_workshop 工具行为
+  - 你正在决定是否启用自动创建技能
 ---
 
-Skill Workshop is **experimental**. It is disabled by default, its capture
-heuristics and reviewer prompts may change between releases, and automatic
-writes should be used only in trusted workspaces after reviewing pending-mode
-output first.
+Skill Workshop 是**实验性**的。它默认处于禁用状态，其捕获
+启发式规则和审阅者提示词可能会在不同版本之间发生变化，而且自动
+写入只应在受信任的工作区中使用，并且应先查看待处理模式的
+输出。
 
-Skill Workshop is procedural memory for workspace skills. It lets an agent turn
-reusable workflows, user corrections, hard-won fixes, and recurring pitfalls
-into `SKILL.md` files under:
+Skill Workshop 是工作区技能的流程性记忆。它允许代理将
+可复用的工作流、用户修正、来之不易的修复，以及反复出现的陷阱
+转换为位于以下路径下的 `SKILL.md` 文件：
 
 ```text
 <workspace>/skills/<skill-name>/SKILL.md
 ```
 
-This is different from long-term memory:
+这与长期记忆不同：
 
-- **Memory** stores facts, preferences, entities, and past context.
-- **Skills** store reusable procedures the agent should follow on future tasks.
-- **Skill Workshop** is the bridge from a useful turn to a durable workspace
-  skill, with safety checks and optional approval.
+- **记忆** 存储事实、偏好、实体和过去的上下文。
+- **技能** 存储代理在未来任务中应遵循的可复用流程。
+- **Skill Workshop** 是从一次有用的执行过程到持久化工作区
+  技能的桥梁，带有安全检查和可选审批。
 
-Skill Workshop is useful when the agent learns a procedure such as:
+Skill Workshop 适用于代理学习如下流程时：
 
-- how to validate externally sourced animated GIF assets
-- how to replace screenshot assets and verify dimensions
-- how to run a repo-specific QA scenario
-- how to debug a recurring provider failure
-- how to repair a stale local workflow note
+- 如何验证外部来源的动画 GIF 资源
+- 如何替换截图资源并验证尺寸
+- 如何运行特定仓库的 QA 场景
+- 如何调试重复出现的提供方失败
+- 如何修复过时的本地工作流笔记
 
-It is not intended for:
+它不适用于：
 
-- facts like “the user likes blue”
-- broad autobiographical memory
-- raw transcript archiving
-- secrets, credentials, or hidden prompt text
-- one-off instructions that will not repeat
+- 像“用户喜欢蓝色”这样的事实
+- 广泛的自传式记忆
+- 原始对话记录归档
+- 秘密、凭证或隐藏提示文本
+- 不会重复的一次性指令
 
 ## Default state
 
-The bundled plugin is **experimental** and **disabled by default** unless it is
-explicitly enabled in `plugins.entries.skill-workshop`.
+内置插件是**实验性**的，并且默认**禁用**，除非在
+`plugins.entries.skill-workshop` 中显式启用。
 
-The plugin manifest does not set `enabledByDefault: true`. The `enabled: true`
-default inside the plugin config schema applies only after the plugin entry has
-already been selected and loaded.
+插件清单不会设置 `enabledByDefault: true`。插件配置 schema 中的
+`enabled: true` 默认值，仅在插件条目
+已经被选中并加载之后才生效。
 
-Experimental means:
+实验性意味着：
 
-- the plugin is supported enough for opt-in testing and dogfooding
-- proposal storage, reviewer thresholds, and capture heuristics can evolve
-- pending approval is the recommended starting mode
-- auto apply is for trusted personal/workspace setups, not shared or hostile
-  input-heavy environments
+- 该插件已经足够支持自愿试用和内部自用
+- 提案存储、审阅阈值和捕获启发式规则可能会演进
+- 待批准模式是推荐的起始模式
+- 自动应用适用于受信任的个人/工作区配置，不适用于共享或敌对的
+  高输入量环境
 
-## Enable
+## 启用
 
-Minimal safe config:
+最小安全配置：
 
 ```json5
 {
@@ -82,14 +82,14 @@ Minimal safe config:
 }
 ```
 
-With this config:
+使用此配置时：
 
-- the `skill_workshop` tool is available
-- explicit reusable corrections are queued as pending proposals
-- threshold-based reviewer passes can propose skill updates
-- no skill file is written until a pending proposal is applied
+- `skill_workshop` 工具可用
+- 显式的可复用修正会排队为待处理提案
+- 基于阈值的审阅流程可以提议技能更新
+- 在应用待处理提案之前，不会写入任何技能文件
 
-Use automatic writes only in trusted workspaces:
+仅在受信任的工作区中使用自动写入：
 
 ```json5
 {
@@ -108,27 +108,27 @@ Use automatic writes only in trusted workspaces:
 }
 ```
 
-`approvalPolicy: "auto"` still uses the same scanner and quarantine path. It
-does not apply proposals with critical findings.
+`approvalPolicy: "auto"` 仍然使用相同的扫描器和隔离路径。它
+不会应用带有严重问题的提案。
 
-## Configuration
+## 配置
 
-| Key                  | Default     | Range / values                              | Meaning                                                              |
+| 键                  | 默认值      | 范围 / 值                                   | 含义                                                                 |
 | -------------------- | ----------- | ------------------------------------------- | -------------------------------------------------------------------- |
-| `enabled`            | `true`      | boolean                                     | Enables the plugin after the plugin entry is loaded.                 |
-| `autoCapture`        | `true`      | boolean                                     | Enables post-turn capture/review on successful agent turns.          |
-| `approvalPolicy`     | `"pending"` | `"pending"`, `"auto"`                       | Queue proposals or write safe proposals automatically.               |
-| `reviewMode`         | `"hybrid"`  | `"off"`, `"heuristic"`, `"llm"`, `"hybrid"` | Chooses explicit correction capture, LLM reviewer, both, or neither. |
-| `reviewInterval`     | `15`        | `1..200`                                    | Run reviewer after this many successful turns.                       |
-| `reviewMinToolCalls` | `8`         | `1..500`                                    | Run reviewer after this many observed tool calls.                    |
-| `reviewTimeoutMs`    | `45000`     | `5000..180000`                              | Timeout for the embedded reviewer run.                               |
-| `maxPending`         | `50`        | `1..200`                                    | Max pending/quarantined proposals kept per workspace.                |
-| `maxSkillBytes`      | `40000`     | `1024..200000`                              | Max generated skill/support file size.                               |
+| `enabled`            | `true`      | boolean                                     | 在插件条目加载后启用插件。                                           |
+| `autoCapture`        | `true`      | boolean                                     | 在代理成功完成轮次后启用后处理捕获/审阅。                             |
+| `approvalPolicy`     | `"pending"` | `"pending"`, `"auto"`                       | 排队提案或自动写入安全提案。                                         |
+| `reviewMode`         | `"hybrid"`  | `"off"`, `"heuristic"`, `"llm"`, `"hybrid"` | 选择显式修正捕获、LLM 审阅者、两者都用或都不用。                      |
+| `reviewInterval`     | `15`        | `1..200`                                    | 在经过这么多次成功轮次后运行审阅者。                                   |
+| `reviewMinToolCalls` | `8`         | `1..500`                                    | 在观察到这么多次工具调用后运行审阅者。                                 |
+| `reviewTimeoutMs`    | `45000`     | `5000..180000`                              | 内嵌审阅运行的超时时间。                                              |
+| `maxPending`         | `50`        | `1..200`                                    | 每个工作区保留的待处理/隔离提案上限。                                  |
+| `maxSkillBytes`      | `40000`     | `1024..200000`                              | 生成的技能/支持文件最大大小。                                         |
 
-Recommended profiles:
+推荐配置：
 
 ```json5
-// Conservative: explicit tool use only, no automatic capture.
+// 保守模式：仅显式工具使用，不自动捕获。
 {
   autoCapture: false,
   approvalPolicy: "pending",
@@ -137,7 +137,7 @@ Recommended profiles:
 ```
 
 ```json5
-// Review-first: capture automatically, but require approval.
+// 先审阅模式：自动捕获，但需要批准。
 {
   autoCapture: true,
   approvalPolicy: "pending",
@@ -146,7 +146,7 @@ Recommended profiles:
 ```
 
 ```json5
-// Trusted automation: write safe proposals immediately.
+// 受信任自动化：立即写入安全提案。
 {
   autoCapture: true,
   approvalPolicy: "auto",
@@ -155,7 +155,7 @@ Recommended profiles:
 ```
 
 ```json5
-// Low-cost: no reviewer LLM call, only explicit correction phrases.
+// 低成本：不调用审阅者 LLM，仅使用显式修正短语。
 {
   autoCapture: true,
   approvalPolicy: "pending",
@@ -165,19 +165,19 @@ Recommended profiles:
 
 ## Capture paths
 
-Skill Workshop has three capture paths.
+Skill Workshop 有三种捕获路径。
 
 ### Tool suggestions
 
-The model can call `skill_workshop` directly when it sees a reusable procedure
-or when the user asks it to save/update a skill.
+当模型看到可复用流程，或用户要求保存/更新技能时，
+可以直接调用 `skill_workshop`。
 
-This is the most explicit path and works even with `autoCapture: false`.
+这是最显式的路径，即使在 `autoCapture: false` 时也可工作。
 
 ### Heuristic capture
 
-When `autoCapture` is enabled and `reviewMode` is `heuristic` or `hybrid`, the
-plugin scans successful turns for explicit user correction phrases:
+当启用 `autoCapture` 且 `reviewMode` 为 `heuristic` 或 `hybrid` 时，
+插件会扫描成功轮次中的显式用户修正短语：
 
 - `next time`
 - `from now on`
@@ -187,92 +187,91 @@ plugin scans successful turns for explicit user correction phrases:
 - `prefer ... when/for/instead/use`
 - `when asked`
 
-The heuristic creates a proposal from the latest matching user instruction. It
-uses topic hints to choose skill names for common workflows:
+该启发式规则会从最新匹配的用户指令生成提案。它使用主题提示
+为常见工作流选择技能名称：
 
-- animated GIF tasks -> `animated-gif-workflow`
-- screenshot or asset tasks -> `screenshot-asset-workflow`
-- QA or scenario tasks -> `qa-scenario-workflow`
-- GitHub PR tasks -> `github-pr-workflow`
-- fallback -> `learned-workflows`
+- 动画 GIF 任务 -> `animated-gif-workflow`
+- 截图或资源任务 -> `screenshot-asset-workflow`
+- QA 或场景任务 -> `qa-scenario-workflow`
+- GitHub PR 任务 -> `github-pr-workflow`
+- 回退 -> `learned-workflows`
 
-Heuristic capture is intentionally narrow. It is for clear corrections and
-repeatable process notes, not for general transcript summarization.
+启发式捕获的范围故意很窄。它用于清晰的修正和
+可重复的流程笔记，而不是一般性的对话摘要。
 
 ### LLM reviewer
 
-When `autoCapture` is enabled and `reviewMode` is `llm` or `hybrid`, the plugin
-runs a compact embedded reviewer after thresholds are reached.
+当启用 `autoCapture` 且 `reviewMode` 为 `llm` 或 `hybrid` 时，
+插件会在达到阈值后运行一个精简的嵌入式审阅者。
 
-The reviewer receives:
+审阅者接收：
 
-- the recent transcript text, capped to the last 12,000 characters
-- up to 12 existing workspace skills
-- up to 2,000 characters from each existing skill
-- JSON-only instructions
+- 最近的对话文本，最多截取最后 12,000 个字符
+- 最多 12 个现有工作区技能
+- 每个现有技能最多 2,000 个字符
+- 仅 JSON 的指令
 
-The reviewer has no tools:
+审阅者没有工具：
 
 - `disableTools: true`
 - `toolsAllow: []`
 - `disableMessageTool: true`
 
-The reviewer returns either `{ "action": "none" }` or one proposal. The `action` field is `create`, `append`, or `replace` — prefer `append`/`replace` when a relevant skill already exists; use `create` only when no existing skill fits.
+审阅者返回 `{ "action": "none" }` 或一个提案。`action` 字段可以是 `create`、`append` 或 `replace`——当相关技能已存在时优先使用 `append`/`replace`；仅当没有现有技能适配时才使用 `create`。
 
-Example `create`:
+示例 `create`：
 
 ```json
 {
   "action": "create",
   "skillName": "media-asset-qa",
-  "title": "Media Asset QA",
-  "reason": "Reusable animated media acceptance workflow",
-  "description": "Validate externally sourced animated media before product use.",
-  "body": "## Workflow\n\n- Verify true animation.\n- Record attribution.\n- Store a local approved copy.\n- Verify in product UI before final reply."
+  "title": "媒体资源 QA",
+  "reason": "可复用的动画媒体验收工作流",
+  "description": "在产品使用前验证外部来源的动画媒体。",
+  "body": "## 工作流\n\n- 验证确实为动画。\n- 记录归属信息。\n- 存储本地已批准副本。\n- 在最终回复前于产品 UI 中验证。"
 }
 ```
 
-`append` adds `section` + `body`. `replace` swaps `oldText` for `newText` in the named skill.
+`append` 会添加 `section` + `body`。`replace` 会在命名技能中将 `oldText` 替换为 `newText`。
 
 ## Proposal lifecycle
 
-Every generated update becomes a proposal with:
+每个生成的更新都会成为一个提案，包含：
 
 - `id`
 - `createdAt`
 - `updatedAt`
 - `workspaceDir`
-- optional `agentId`
-- optional `sessionId`
+- 可选的 `agentId`
+- 可选的 `sessionId`
 - `skillName`
 - `title`
 - `reason`
-- `source`: `tool`, `agent_end`, or `reviewer`
+- `source`: `tool`、`agent_end` 或 `reviewer`
 - `status`
 - `change`
-- optional `scanFindings`
-- optional `quarantineReason`
+- 可选的 `scanFindings`
+- 可选的 `quarantineReason`
 
-Proposal statuses:
+提案状态：
 
-- `pending` - waiting for approval
-- `applied` - written to `<workspace>/skills`
-- `rejected` - rejected by operator/model
-- `quarantined` - blocked by critical scanner findings
+- `pending` - 等待批准
+- `applied` - 已写入 `<workspace>/skills`
+- `rejected` - 被操作员/模型拒绝
+- `quarantined` - 被严重扫描结果阻止
 
-State is stored per workspace under the Gateway state directory:
+状态按工作区存储在 Gateway 状态目录下：
 
 ```text
 <stateDir>/skill-workshop/<workspace-hash>.json
 ```
 
-Pending and quarantined proposals are deduplicated by skill name and change
-payload. The store keeps the newest pending/quarantined proposals up to
-`maxPending`.
+待处理和隔离提案会按技能名称和变更负载去重。存储会保留
+最新的待处理/隔离提案，最多不超过 `maxPending`。
 
 ## Tool reference
 
-The plugin registers one agent tool:
+该插件注册一个代理工具：
 
 ```text
 skill_workshop
@@ -280,13 +279,13 @@ skill_workshop
 
 ### `status`
 
-Count proposals by state for the active workspace.
+统计当前工作区中各状态的提案数量。
 
 ```json
 { "action": "status" }
 ```
 
-Result shape:
+结果结构：
 
 ```json
 {
@@ -300,19 +299,19 @@ Result shape:
 
 ### `list_pending`
 
-List pending proposals.
+列出待处理提案。
 
 ```json
 { "action": "list_pending" }
 ```
 
-To list another status:
+要列出其他状态：
 
 ```json
 { "action": "list_pending", "status": "applied" }
 ```
 
-Valid `status` values:
+有效的 `status` 值：
 
 - `pending`
 - `applied`
@@ -321,18 +320,18 @@ Valid `status` values:
 
 ### `list_quarantine`
 
-List quarantined proposals.
+列出已隔离提案。
 
 ```json
 { "action": "list_quarantine" }
 ```
 
-Use this when automatic capture appears to do nothing and the logs mention
-`skill-workshop: quarantined <skill>`.
+当自动捕获看起来没有任何作用，并且日志中提到
+`skill-workshop: quarantined <skill>` 时，请使用此命令。
 
 ### `inspect`
 
-Fetch a proposal by id.
+按 id 获取一个提案。
 
 ```json
 {
@@ -343,70 +342,70 @@ Fetch a proposal by id.
 
 ### `suggest`
 
-Create a proposal. With `approvalPolicy: "pending"` (default), this queues instead of writing.
+创建一个提案。使用 `approvalPolicy: "pending"`（默认）时，会将其排队而不是写入。
 
 ```json
 {
   "action": "suggest",
   "skillName": "animated-gif-workflow",
-  "title": "Animated GIF Workflow",
-  "reason": "User established reusable GIF validation rules.",
-  "description": "Validate animated GIF assets before using them.",
-  "body": "## Workflow\n\n- Verify the URL resolves to image/gif.\n- Confirm it has multiple frames.\n- Record attribution and license.\n- Avoid hotlinking when a local asset is needed."
+  "title": "动画 GIF 工作流",
+  "reason": "用户建立了可复用的 GIF 验证规则。",
+  "description": "在使用动画 GIF 资产前进行验证。",
+  "body": "## 工作流\n\n- 验证 URL 是否解析为 image/gif。\n- 确认它包含多个帧。\n- 记录归属与许可。\n- 在需要本地资源时避免热链。"
 }
 ```
 
 <AccordionGroup>
-  <Accordion title="Force a safe write (apply: true)">
+  <Accordion title="强制安全写入（apply: true）">
 
 ```json
 {
   "action": "suggest",
   "apply": true,
   "skillName": "animated-gif-workflow",
-  "description": "Validate animated GIF assets before using them.",
-  "body": "## Workflow\n\n- Verify true animation.\n- Record attribution."
+  "description": "在使用动画 GIF 资产前进行验证。",
+  "body": "## 工作流\n\n- 验证确实为动画。\n- 记录归属信息。"
 }
 ```
 
   </Accordion>
 
-  <Accordion title="Force pending under auto policy (apply: false)">
+  <Accordion title="在自动策略下强制进入待处理（apply: false）">
 
 ```json
 {
   "action": "suggest",
   "apply": false,
   "skillName": "screenshot-asset-workflow",
-  "description": "Screenshot replacement workflow.",
-  "body": "## Workflow\n\n- Verify dimensions.\n- Optimize the PNG.\n- Run the relevant gate."
+  "description": "截图替换工作流。",
+  "body": "## 工作流\n\n- 验证尺寸。\n- 优化 PNG。\n- 运行相关门禁。"
 }
 ```
 
   </Accordion>
 
-  <Accordion title="Append to a named section">
+  <Accordion title="追加到指定部分">
 
 ```json
 {
   "action": "suggest",
   "skillName": "qa-scenario-workflow",
   "section": "Workflow",
-  "description": "QA scenario workflow.",
-  "body": "- For media QA, verify generated assets render and pass final assertions."
+  "description": "QA 场景工作流。",
+  "body": "- 对于媒体 QA，验证生成的资源可正确渲染并通过最终断言。"
 }
 ```
 
   </Accordion>
 
-  <Accordion title="Replace exact text">
+  <Accordion title="替换精确文本">
 
 ```json
 {
   "action": "suggest",
   "skillName": "github-pr-workflow",
-  "oldText": "- Check the PR.",
-  "newText": "- Check unresolved review threads, CI status, linked issues, and changed files before deciding."
+  "oldText": "- 检查 PR。",
+  "newText": "- 在决定前检查未解决的审阅线程、CI 状态、关联问题和变更文件。"
 }
 ```
 
@@ -415,7 +414,7 @@ Create a proposal. With `approvalPolicy: "pending"` (default), this queues inste
 
 ### `apply`
 
-Apply a pending proposal.
+应用一个待处理提案。
 
 ```json
 {
@@ -424,7 +423,7 @@ Apply a pending proposal.
 }
 ```
 
-`apply` refuses quarantined proposals:
+`apply` 会拒绝已隔离的提案：
 
 ```text
 quarantined proposal cannot be applied
@@ -432,7 +431,7 @@ quarantined proposal cannot be applied
 
 ### `reject`
 
-Mark a proposal rejected.
+将一个提案标记为已拒绝。
 
 ```json
 {
@@ -443,214 +442,207 @@ Mark a proposal rejected.
 
 ### `write_support_file`
 
-Write a supporting file inside an existing or proposed skill directory.
+在现有或提议中的技能目录内写入一个支持文件。
 
-Allowed top-level support directories:
+允许的顶级支持目录：
 
 - `references/`
 - `templates/`
 - `scripts/`
 - `assets/`
 
-Example:
+示例：
 
 ```json
 {
   "action": "write_support_file",
   "skillName": "release-workflow",
   "relativePath": "references/checklist.md",
-  "body": "# Release Checklist\n\n- Run release docs.\n- Verify changelog.\n"
+  "body": "# 发布检查清单\n\n- 运行发布文档。\n- 验证更新日志。\n"
 }
 ```
 
-Support files are workspace-scoped, path-checked, byte-limited by
-`maxSkillBytes`, scanned, and written atomically.
+支持文件按工作区范围管理，会进行路径检查，受 `maxSkillBytes`
+字节限制，经过扫描，并以原子方式写入。
 
 ## Skill writes
 
-Skill Workshop writes only under:
+Skill Workshop 仅会写入以下路径下：
 
 ```text
 <workspace>/skills/<normalized-skill-name>/
 ```
 
-Skill names are normalized:
+技能名称会被标准化为：
 
-- lowercased
-- non `[a-z0-9_-]` runs become `-`
-- leading/trailing non-alphanumerics are removed
-- max length is 80 characters
-- final name must match `[a-z0-9][a-z0-9_-]{1,79}`
+- 转为小写
+- 非 `[a-z0-9_-]` 的连续字符会替换为 `-`
+- 去除首尾非字母数字字符
+- 最大长度为 80 个字符
+- 最终名称必须匹配 `[a-z0-9][a-z0-9_-]{1,79}`
 
-For `create`:
+对于 `create`：
 
-- if the skill does not exist, Skill Workshop writes a new `SKILL.md`
-- if it already exists, Skill Workshop appends the body to `## Workflow`
+- 如果技能不存在，Skill Workshop 会写入一个新的 `SKILL.md`
+- 如果它已存在，Skill Workshop 会将正文追加到 `## Workflow`
 
-For `append`:
+对于 `append`：
 
-- if the skill exists, Skill Workshop appends to the requested section
-- if it does not exist, Skill Workshop creates a minimal skill then appends
+- 如果技能存在，Skill Workshop 会追加到请求的部分
+- 如果它不存在，Skill Workshop 会先创建一个最小技能，然后再追加
 
-For `replace`:
+对于 `replace`：
 
-- the skill must already exist
-- `oldText` must be present exactly
-- only the first exact match is replaced
+- 技能必须已存在
+- `oldText` 必须精确存在
+- 只会替换第一个精确匹配项
 
-All writes are atomic and refresh the in-memory skills snapshot immediately, so
-the new or updated skill can become visible without a Gateway restart.
+所有写入都是原子的，并且会立即刷新内存中的技能快照，因此
+新的或更新后的技能无需 Gateway 重启就可能变得可见。
 
 ## Safety model
 
-Skill Workshop has a safety scanner on generated `SKILL.md` content and support
-files.
+Skill Workshop 会对生成的 `SKILL.md` 内容和支持文件运行安全扫描器。
 
-Critical findings quarantine proposals:
+关键问题会将提案隔离：
 
-| Rule id                                | Blocks content that...                                                |
-| -------------------------------------- | --------------------------------------------------------------------- |
-| `prompt-injection-ignore-instructions` | tells the agent to ignore prior/higher instructions                   |
-| `prompt-injection-system`              | references system prompts, developer messages, or hidden instructions |
-| `prompt-injection-tool`                | encourages bypassing tool permission/approval                         |
-| `shell-pipe-to-shell`                  | includes `curl`/`wget` piped into `sh`, `bash`, or `zsh`              |
-| `secret-exfiltration`                  | appears to send env/process env data over the network                 |
+| 规则 ID                               | 会阻止包含以下内容：                                         |
+| -------------------------------------- | ------------------------------------------------------------ |
+| `prompt-injection-ignore-instructions` | 指示代理忽略先前/更高优先级指令                               |
+| `prompt-injection-system`              | 提及系统提示、开发者消息或隐藏指令                             |
+| `prompt-injection-tool`                | 鼓励绕过工具权限/审批                                         |
+| `shell-pipe-to-shell`                  | 包含将 `curl`/`wget` 通过管道传递给 `sh`、`bash` 或 `zsh`      |
+| `secret-exfiltration`                  | 看起来会通过网络发送环境变量/进程环境数据                     |
 
-Warn findings are retained but do not block by themselves:
+警告类问题会保留，但不会单独阻止：
 
-| Rule id              | Warns on...                      |
-| -------------------- | -------------------------------- |
-| `destructive-delete` | broad `rm -rf` style commands    |
-| `unsafe-permissions` | `chmod 777` style permission use |
+| 规则 ID              | 警告内容为...                      |
+| -------------------- | ---------------------------------- |
+| `destructive-delete` | 广泛的 `rm -rf` 类命令              |
+| `unsafe-permissions` | `chmod 777` 类权限使用             |
 
-Quarantined proposals:
+被隔离的提案：
 
-- keep `scanFindings`
-- keep `quarantineReason`
-- appear in `list_quarantine`
-- cannot be applied through `apply`
+- 保留 `scanFindings`
+- 保留 `quarantineReason`
+- 出现在 `list_quarantine` 中
+- 不能通过 `apply` 应用
 
-To recover from a quarantined proposal, create a new safe proposal with the
-unsafe content removed. Do not edit the store JSON by hand.
+要从被隔离的提案中恢复，请创建一个新的安全提案，并移除不安全内容。不要手动编辑 store JSON。
 
-## Prompt guidance
+## 提示指引
 
-When enabled, Skill Workshop injects a short prompt section that tells the agent
-to use `skill_workshop` for durable procedural memory.
+启用后，Skill Workshop 会注入一小段提示，告诉代理使用 `skill_workshop` 来保存持久化的过程性记忆。
 
-The guidance emphasizes:
+该指导强调：
 
-- procedures, not facts/preferences
-- user corrections
-- non-obvious successful procedures
-- recurring pitfalls
-- stale/thin/wrong skill repair through append/replace
-- saving reusable procedure after long tool loops or hard fixes
-- short imperative skill text
-- no transcript dumps
+- 流程，而不是事实/偏好
+- 用户纠正
+- 非显而易见的成功流程
+- 反复出现的陷阱
+- 通过 append/replace 修复陈旧、稀薄或错误的技能
+- 在长工具循环或棘手修复后保存可复用流程
+- 简短的祈使式技能文本
+- 不要转储对话记录
 
-The write mode text changes with `approvalPolicy`:
+写入模式文本会随着 `approvalPolicy` 而变化：
 
-- pending mode: queue suggestions; apply only after explicit approval
-- auto mode: apply safe workspace-skill updates when clearly reusable
+- pending 模式：排队建议；仅在明确批准后应用
+- auto 模式：当工作区技能明显可复用时，自动应用安全的更新
 
-## Costs and runtime behavior
+## 成本和运行时行为
 
-Heuristic capture does not call a model.
+启发式捕获不会调用模型。
 
-LLM review uses an embedded run on the active/default agent model. It is
-threshold-based so it does not run on every turn by default.
+LLM 审核使用活动/默认代理模型上的内嵌运行。它基于阈值，因此默认不会在每一轮都运行。
 
-The reviewer:
+审核器：
 
-- uses the same configured provider/model context when available
-- falls back to runtime agent defaults
-- has `reviewTimeoutMs`
-- uses lightweight bootstrap context
-- has no tools
-- writes nothing directly
-- can only emit a proposal that goes through the normal scanner and
-  approval/quarantine path
+- 在可用时使用相同配置的 provider/model 上下文
+- 回退到运行时代理默认值
+- 具有 `reviewTimeoutMs`
+- 使用轻量级启动上下文
+- 没有工具
+- 不会直接写入任何内容
+- 只能发出一个会经过正常扫描器和审批/隔离流程的提案
 
-If the reviewer fails, times out, or returns invalid JSON, the plugin logs a
-warning/debug message and skips that review pass.
+如果审核器失败、超时或返回无效 JSON，插件会记录警告/调试消息，并跳过该次审核。
 
-## Operating patterns
+## 操作模式
 
-Use Skill Workshop when the user says:
+当用户说以下内容时使用 Skill Workshop：
 
-- “next time, do X”
-- “from now on, prefer Y”
-- “make sure to verify Z”
-- “save this as a workflow”
-- “this took a while; remember the process”
-- “update the local skill for this”
+- “下次，做 X”
+- “从现在开始，优先 Y”
+- “一定要验证 Z”
+- “把这个保存为工作流程”
+- “这个花了很久；记住这个过程”
+- “更新这个本地技能”
 
-Good skill text:
+好的技能文本：
 
 ```markdown
-## Workflow
+## 工作流
 
-- Verify the GIF URL resolves to `image/gif`.
-- Confirm the file has multiple frames.
-- Record source URL, license, and attribution.
-- Store a local copy when the asset will ship with the product.
-- Verify the local asset renders in the target UI before final reply.
+- 验证 GIF URL 能解析为 `image/gif`。
+- 确认文件有多个帧。
+- 记录源 URL、许可证和署名。
+- 当资源会随产品一起交付时，保存本地副本。
+- 在最终回复前验证本地资源能在目标 UI 中渲染。
 ```
 
-Poor skill text:
+不好的技能文本：
 
 ```markdown
-The user asked about a GIF and I searched two websites. Then one was blocked by
-Cloudflare. The final answer said to check attribution.
+用户问了一个 GIF，我搜索了两个网站。然后其中一个被 Cloudflare 拦截了。最终答案说要检查署名。
 ```
 
-Reasons the poor version should not be saved:
+不应保存不佳版本的原因：
 
-- transcript-shaped
-- not imperative
-- includes noisy one-off details
-- does not tell the next agent what to do
+- 具有对话记录形态
+- 不是祈使句
+- 包含噪声性的单次细节
+- 没有告诉下一位代理应该怎么做
 
-## Debugging
+## 调试
 
-Check whether the plugin is loaded:
+检查插件是否已加载：
 
 ```bash
 openclaw plugins list --enabled
 ```
 
-Check proposal counts from an agent/tool context:
+从代理/工具上下文检查提案数量：
 
 ```json
 { "action": "status" }
 ```
 
-Inspect pending proposals:
+查看待处理提案：
 
 ```json
 { "action": "list_pending" }
 ```
 
-Inspect quarantined proposals:
+查看被隔离的提案：
 
 ```json
 { "action": "list_quarantine" }
 ```
 
-Common symptoms:
+常见症状：
 
-| Symptom                               | Likely cause                                                                        | Check                                                                |
-| ------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Tool is unavailable                   | Plugin entry is not enabled                                                         | `plugins.entries.skill-workshop.enabled` and `openclaw plugins list` |
-| No automatic proposal appears         | `autoCapture: false`, `reviewMode: "off"`, or thresholds not met                    | Config, proposal status, Gateway logs                                |
-| Heuristic did not capture             | User wording did not match correction patterns                                      | Use explicit `skill_workshop.suggest` or enable LLM reviewer         |
-| Reviewer did not create a proposal    | Reviewer returned `none`, invalid JSON, or timed out                                | Gateway logs, `reviewTimeoutMs`, thresholds                          |
-| Proposal is not applied               | `approvalPolicy: "pending"`                                                         | `list_pending`, then `apply`                                         |
-| Proposal disappeared from pending     | Duplicate proposal reused, max pending pruning, or was applied/rejected/quarantined | `status`, `list_pending` with status filters, `list_quarantine`      |
-| Skill file exists but model misses it | Skill snapshot not refreshed or skill gating excludes it                            | `openclaw skills` status and workspace skill eligibility             |
+| 症状                                  | 可能原因                                                                         | 检查                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 工具不可用                            | 插件条目未启用                                                                   | `plugins.entries.skill-workshop.enabled` 和 `openclaw plugins list` |
+| 没有自动提案出现                      | `autoCapture: false`、`reviewMode: "off"`，或未达到阈值                          | 配置、提案状态、Gateway 日志                                          |
+| 启发式未捕获                          | 用户措辞不符合纠正模式                                                           | 使用明确的 `skill_workshop.suggest` 或启用 LLM 审核器               |
+| 审核器未创建提案                      | 审核器返回 `none`、无效 JSON，或超时                                             | Gateway 日志、`reviewTimeoutMs`、阈值                                 |
+| 提案未被应用                          | `approvalPolicy: "pending"`                                                      | `list_pending`，然后 `apply`                                          |
+| 提案从待处理中消失                    | 重复提案被复用、超过待处理上限被修剪，或已被应用/拒绝/隔离                    | `status`、带状态过滤的 `list_pending`、`list_quarantine`            |
+| 技能文件存在但模型看不到              | 技能快照未刷新，或技能门控将其排除                                               | `openclaw skills` 状态和工作区技能可用性                              |
 
-Relevant logs:
+相关日志：
 
 - `skill-workshop: queued <skill>`
 - `skill-workshop: applied <skill>`
@@ -659,15 +651,15 @@ Relevant logs:
 - `skill-workshop: reviewer skipped: ...`
 - `skill-workshop: reviewer found no update`
 
-## QA scenarios
+## QA 场景
 
-Repo-backed QA scenarios:
+基于仓库的 QA 场景：
 
 - `qa/scenarios/plugins/skill-workshop-animated-gif-autocreate.md`
 - `qa/scenarios/plugins/skill-workshop-pending-approval.md`
 - `qa/scenarios/plugins/skill-workshop-reviewer-autonomous.md`
 
-Run the deterministic coverage:
+运行确定性覆盖：
 
 ```bash
 pnpm openclaw qa suite \
@@ -676,7 +668,7 @@ pnpm openclaw qa suite \
   --concurrency 1
 ```
 
-Run reviewer coverage:
+运行审核器覆盖：
 
 ```bash
 pnpm openclaw qa suite \
@@ -684,24 +676,23 @@ pnpm openclaw qa suite \
   --concurrency 1
 ```
 
-The reviewer scenario is intentionally separate because it enables
-`reviewMode: "llm"` and exercises the embedded reviewer pass.
+审核器场景被刻意单独分离，因为它启用了
+`reviewMode: "llm"` 并会执行内嵌审核器流程。
 
-## When not to enable auto apply
+## 何时不要启用自动应用
 
-Avoid `approvalPolicy: "auto"` when:
+在以下情况下避免使用 `approvalPolicy: "auto"`：
 
-- the workspace contains sensitive procedures
-- the agent is working on untrusted input
-- skills are shared across a broad team
-- you are still tuning prompts or scanner rules
-- the model frequently handles hostile web/email content
+- 工作区包含敏感流程
+- 代理正在处理不受信任的输入
+- 技能会在更大的团队范围内共享
+- 你仍在调试提示词或扫描规则
+- 模型经常处理恶意网页/邮件内容
 
-Use pending mode first. Switch to auto mode only after reviewing the kind of
-skills the agent proposes in that workspace.
+请先使用 pending 模式。只有在审查了该工作区中代理提议的技能类型之后，才切换到 auto 模式。
 
-## Related docs
+## 相关文档
 
-- [Skills](/tools/skills)
-- [Plugins](/tools/plugin)
-- [Testing](/reference/test)
+- [技能](/tools/skills)
+- [插件](/tools/plugin)
+- [测试](/reference/test)

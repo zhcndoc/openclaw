@@ -1,110 +1,77 @@
 ---
-summary: "How OpenClaw manages conversation sessions"
+summary: "OpenClaw 如何管理对话会话"
 read_when:
-  - You want to understand session routing and isolation
-  - You want to configure DM scope for multi-user setups
-  - You are debugging daily or idle session resets
-title: "Session management"
+  - 您想了解会话路由与隔离
+  - 您想为多用户设置配置 DM 作用域
+title: "会话管理"
 ---
 
-OpenClaw organizes conversations into **sessions**. Each message is routed to a
-session based on where it came from -- DMs, group chats, cron jobs, etc.
+OpenClaw 将对话组织为 **会话**。每条消息都会根据其来源路由到一个
+会话中——私信、群聊、定时任务等。
 
-## How messages are routed
+## 消息如何路由
 
-| Source          | Behavior                  |
+| 来源          | 行为                  |
 | --------------- | ------------------------- |
-| Direct messages | Shared session by default |
-| Group chats     | Isolated per group        |
-| Rooms/channels  | Isolated per room         |
-| Cron jobs       | Fresh session per run     |
-| Webhooks        | Isolated per hook         |
+| 私信 | 默认共享会话 |
+| 群聊 | 每组隔离 |
+| 房间/频道 | 每房间隔离 |
+| 定时任务 | 每次运行新建会话 |
+| Webhook | 每个 hook 隔离 |
 
-## DM isolation
+## 私信隔离
 
-By default, all DMs share one session for continuity. This is fine for
-single-user setups.
+默认情况下，所有私信共享一个会话以保持连续性。这对于单用户设置没问题。
 
 <Warning>
-If multiple people can message your agent, enable DM isolation. Without it, all
-users share the same conversation context -- Alice's private messages would be
-visible to Bob.
+如果多人可以给你的代理发消息，请启用私信隔离。否则，所有用户共享相同的对话上下文——Alice 的私信将对 Bob 可见。
 </Warning>
 
-**The fix:**
+**解决方法：**
 
 ```json5
 {
   session: {
-    dmScope: "per-channel-peer", // isolate by channel + sender
+    dmScope: "per-channel-peer", // 按频道 + 发送者隔离
   },
 }
 ```
 
-Other options:
+其他选项：
 
-- `main` (default) -- all DMs share one session.
-- `per-peer` -- isolate by sender (across channels).
-- `per-channel-peer` -- isolate by channel + sender (recommended).
-- `per-account-channel-peer` -- isolate by account + channel + sender.
+- `main`（默认）-- 所有私信共享一个会话。
+- `per-peer` -- 按发送者隔离（跨频道）。
+- `per-channel-peer` -- 按频道 + 发送者隔离（推荐）。
+- `per-account-channel-peer` -- 按账户 + 频道 + 发送者隔离。
 
 <Tip>
-If the same person contacts you from multiple channels, use
-`session.identityLinks` to link their identities so they share one session.
+如果同一个人从多个频道联系你，使用 `session.identityLinks` 链接他们的身份，以便他们共享一个会话。
 </Tip>
 
-Verify your setup with `openclaw security audit`.
+使用 `openclaw security audit` 验证你的设置。
 
-## Session lifecycle
+## 会话生命周期
 
-Sessions are reused until they expire:
+会话会被复用直到过期：
 
-- **Daily reset** (default) -- new session at 4:00 AM local time on the gateway
-  host. Daily freshness is based on when the current `sessionId` started, not
-  on later metadata writes.
-- **Idle reset** (optional) -- new session after a period of inactivity. Set
-  `session.reset.idleMinutes`. Idle freshness is based on the last real
-  user/channel interaction, so heartbeat, cron, and exec system events do not
-  keep the session alive.
-- **Manual reset** -- type `/new` or `/reset` in chat. `/new <model>` also
-  switches the model.
+- **每日重置**（默认）-- 网关主机本地时间凌晨 4:00 新建会话。
+- **空闲重置**（可选）-- 一段时间无活动后新建会话。设置 `session.reset.idleMinutes`。
+- **手动重置** -- 在聊天中输入 `/new` 或 `/reset`。`/new <model>` 也会切换模型。
 
-When both daily and idle resets are configured, whichever expires first wins.
-Heartbeat, cron, exec, and other system-event turns may write session metadata,
-but those writes do not extend daily or idle reset freshness. When a reset
-rolls the session, queued system-event notices for the old session are
-discarded so stale background updates are not prepended to the first prompt in
-the new session.
+当同时配置了每日和空闲重置时，谁先过期就执行谁。
 
-Sessions with an active provider-owned CLI session are not cut by the implicit
-daily default. Use `/reset` or configure `session.reset` explicitly when those
-sessions should expire on a timer.
+如果存在由提供方拥有的活跃 CLI 会话，隐式的每日默认重置不会将其切断。若这些会话应按计时器过期，请使用 `/reset` 或显式配置 `session.reset`。
 
-## Where state lives
+## 状态存储位置
 
-All session state is owned by the **gateway**. UI clients query the gateway for
-session data.
+所有会话状态由 **网关** 拥有。UI 客户端向网关查询会话数据。
 
-- **Store:** `~/.openclaw/agents/<agentId>/sessions/sessions.json`
-- **Transcripts:** `~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl`
+- **存储：** `~/.openclaw/agents/<agentId>/sessions/sessions.json`
+- **对话记录：** `~/.openclaw/agents/<agentId>/sessions/<sessionId>.jsonl`
 
-`sessions.json` keeps separate lifecycle timestamps:
+## 会话维护
 
-- `sessionStartedAt`: when the current `sessionId` began; daily reset uses this.
-- `lastInteractionAt`: last user/channel interaction that extends idle lifetime.
-- `updatedAt`: last store-row mutation; useful for listing and pruning, but not
-  authoritative for daily/idle reset freshness.
-
-Older rows without `sessionStartedAt` are resolved from the transcript JSONL
-session header when available. If an older row also lacks `lastInteractionAt`,
-idle freshness falls back to that session start time, not to later bookkeeping
-writes.
-
-## Session maintenance
-
-OpenClaw automatically bounds session storage over time. By default, it runs
-in `warn` mode (reports what would be cleaned). Set `session.maintenance.mode`
-to `"enforce"` for automatic cleanup:
+OpenClaw 会自动限制会话存储随时间增长。默认情况下，它以 `warn` 模式运行（报告将要清理的内容）。将 `session.maintenance.mode` 设置为 `"enforce"` 以进行自动清理：
 
 ```json5
 {
@@ -118,27 +85,27 @@ to `"enforce"` for automatic cleanup:
 }
 ```
 
-Preview with `openclaw sessions cleanup --dry-run`.
+使用 `openclaw sessions cleanup --dry-run` 预览。
 
-## Inspecting sessions
+## 检查会话
 
-- `openclaw status` -- session store path and recent activity.
-- `openclaw sessions --json` -- all sessions (filter with `--active <minutes>`).
-- `/status` in chat -- context usage, model, and toggles.
-- `/context list` -- what is in the system prompt.
+- `openclaw status` -- 会话存储路径和最近活动。
+- `openclaw sessions --json` -- 所有会话（使用 `--active <minutes>` 过滤）。
+- 聊天中的 `/status` -- 上下文使用情况、模型和开关。
+- `/context list` -- 系统提示词中的内容。
 
-## Further reading
+## 进一步阅读
 
-- [Session Pruning](/concepts/session-pruning) -- trimming tool results
-- [Compaction](/concepts/compaction) -- summarizing long conversations
-- [Session Tools](/concepts/session-tool) -- agent tools for cross-session work
+- [Session Pruning](/concepts/session-pruning) -- 修剪工具结果
+- [Compaction](/concepts/compaction) -- 总结长对话
+- [Session Tools](/concepts/session-tool) -- 用于跨会话工作的代理工具
 - [Session Management Deep Dive](/reference/session-management-compaction) --
-  store schema, transcripts, send policy, origin metadata, and advanced config
-- [Multi-Agent](/concepts/multi-agent) — routing and session isolation across agents
-- [Background Tasks](/automation/tasks) — how detached work creates task records with session references
-- [Channel Routing](/channels/channel-routing) — how inbound messages are routed to sessions
+  存储模式、转录、发送策略、来源元数据和高级配置
+- [Multi-Agent](/concepts/multi-agent) — 跨代理的路由与会话隔离
+- [Background Tasks](/automation/tasks) — 分离工作的任务如何创建带有会话引用的任务记录
+- [Channel Routing](/channels/channel-routing) — 入站消息如何路由到会话
 
-## Related
+## 相关
 
 - [Session pruning](/concepts/session-pruning)
 - [Session tools](/concepts/session-tool)

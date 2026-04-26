@@ -1,64 +1,62 @@
 ---
-summary: "CLI reference for `openclaw agent` (send one agent turn via the Gateway)"
+summary: "`openclaw agent` 的命令行参考（通过网关发送一个代理回合）"
 read_when:
-  - You want to run one agent turn from scripts (optionally deliver reply)
+  - 你想从脚本中运行一个代理回合（可选地传递回复）
 title: "Agent"
 ---
 
 # `openclaw agent`
 
-Run an agent turn via the Gateway (use `--local` for embedded).
-Use `--agent <id>` to target a configured agent directly.
+通过网关运行一个代理回合（使用 `--local` 进行嵌入式运行）。
+使用 `--agent <id>` 直接指定已配置的代理。
 
-Pass at least one session selector:
+至少传递一个会话选择器：
 
 - `--to <dest>`
 - `--session-id <id>`
 - `--agent <id>`
 
-Related:
+相关：
 
-- Agent send tool: [Agent send](/tools/agent-send)
+- 代理发送工具：[代理发送](/tools/agent-send)
 
-## Options
+## 选项
 
-- `-m, --message <text>`: required message body
-- `-t, --to <dest>`: recipient used to derive the session key
-- `--session-id <id>`: explicit session id
-- `--agent <id>`: agent id; overrides routing bindings
-- `--thinking <level>`: agent thinking level (`off`, `minimal`, `low`, `medium`, `high`, plus provider-supported custom levels such as `xhigh`, `adaptive`, or `max`)
-- `--verbose <on|off>`: persist verbose level for the session
-- `--channel <channel>`: delivery channel; omit to use the main session channel
-- `--reply-to <target>`: delivery target override
-- `--reply-channel <channel>`: delivery channel override
-- `--reply-account <id>`: delivery account override
-- `--local`: run the embedded agent directly (after plugin registry preload)
-- `--deliver`: send the reply back to the selected channel/target
-- `--timeout <seconds>`: override agent timeout (default 600 or config value)
-- `--json`: output JSON
+- `-m, --message <text>`: 必需的消息正文
+- `-t, --to <dest>`: 用于推导会话密钥的收件人
+- `--session-id <id>`: 显式会话 ID
+- `--agent <id>`: 代理 ID；覆盖路由绑定
+- `--thinking <level>`: 代理思考级别（`off`、`minimal`、`low`、`medium`、`high`，以及提供者支持的自定义级别，例如 `xhigh`、`adaptive` 或 `max`）
+- `--verbose <on|off>`: 为会话持久化详细级别
+- `--channel <channel>`: 传递渠道；省略则使用主会话渠道
+- `--reply-to <target>`: 传递目标覆盖
+- `--reply-channel <channel>`: 传递渠道覆盖
+- `--reply-account <id>`: 传递账号覆盖
+- `--local`: 直接运行嵌入式代理（在插件注册表预加载之后）
+- `--deliver`: 将回复发送回所选渠道/目标
+- `--timeout <seconds>`: 覆盖代理超时（默认 600 或配置值）
+- `--json`: 输出 JSON
 
-## Examples
+## 示例
 
 ```bash
-openclaw agent --to +15555550123 --message "status update" --deliver
-openclaw agent --agent ops --message "Summarize logs"
-openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium
-openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json
-openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"
-openclaw agent --agent ops --message "Run locally" --local
+openclaw agent --to +15555550123 --message "状态更新" --deliver
+openclaw agent --agent ops --message "总结日志"
+openclaw agent --session-id 1234 --message "总结收件箱" --thinking medium
+openclaw agent --to +15555550123 --message "追踪日志" --verbose on --json
+openclaw agent --agent ops --message "生成报告" --deliver --reply-channel slack --reply-to "#reports"
+openclaw agent --agent ops --message "本地运行" --local
 ```
 
-## Notes
+## 说明
 
-- Gateway mode falls back to the embedded agent when the Gateway request fails. Use `--local` to force embedded execution up front.
-- `--local` still preloads the plugin registry first, so plugin-provided providers, tools, and channels stay available during embedded runs.
-- Each `openclaw agent` invocation is treated as a one-shot run. Bundled or user-configured MCP servers opened for that run are retired after the reply, even when the command uses the Gateway path, so stdio MCP child processes do not stay alive between scripted invocations.
-- `--channel`, `--reply-channel`, and `--reply-account` affect reply delivery, not session routing.
-- `--json` keeps stdout reserved for the JSON response. Gateway, plugin, and embedded-fallback diagnostics are routed to stderr so scripts can parse stdout directly.
-- When this command triggers `models.json` regeneration, SecretRef-managed provider credentials are persisted as non-secret markers (for example env var names, `secretref-env:ENV_VAR_NAME`, or `secretref-managed`), not resolved secret plaintext.
-- Marker writes are source-authoritative: OpenClaw persists markers from the active source config snapshot, not from resolved runtime secret values.
+- 当 Gateway 模式请求失败时，会回退到嵌入式代理。使用 `--local` 可预先强制执行嵌入式模式。
+- `--local` 仍会先预加载插件注册表，因此插件提供的提供者、工具和渠道在嵌入式运行期间仍可用。
+- `--channel`、`--reply-channel` 和 `--reply-account` 影响回复投递，而不是会话路由。
+- 当此命令触发 `models.json` 重新生成时，受 SecretRef 管理的提供者凭据会以非密钥标记形式持久化（例如环境变量名、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不会解析为密文明文。
+- 标记写入以源为准：OpenClaw 持久化的是来自活动源配置快照的标记，而不是来自已解析的运行时密钥值。
 
-## Related
+## 相关
 
-- [CLI reference](/cli)
-- [Agent runtime](/concepts/agent)
+- [CLI 参考](/cli)
+- [代理运行时](/concepts/agent)

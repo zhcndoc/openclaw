@@ -1,80 +1,57 @@
 ---
-summary: "Host exec approvals: policy knobs, allowlists, and the YOLO/strict workflow"
+summary: "执行审批、允许列表和沙箱逃逸提示"
 read_when:
-  - Configuring exec approvals or allowlists
-  - Implementing exec approval UX in the macOS app
-  - Reviewing sandbox-escape prompts and their implications
-title: "Exec approvals"
-sidebarTitle: "Exec approvals"
+  - 配置执行审批或允许列表
+  - 在 macOS 应用中实现执行审批 UX
+  - 审查沙箱逃逸提示及其影响
+title: "执行审批"
 ---
 
-Exec approvals are the **companion app / node host guardrail** for letting
-a sandboxed agent run commands on a real host (`gateway` or `node`). A
-safety interlock: commands are allowed only when policy + allowlist +
-(optional) user approval all agree. Exec approvals stack **on top of**
-tool policy and elevated gating (unless elevated is set to `full`, which
-skips approvals).
+执行审批是**伴生应用 / 节点主机护栏**，用于让一个被沙箱化的代理在真实主机（`gateway` 或 `node`）上运行命令。这是一个安全联锁：只有当策略 + 允许列表 +（可选）用户审批都一致时，命令才会被允许。执行审批是在工具策略和提升式门控之上再叠加一层**保护**（除非 elevated 设置为 `full`，此时会跳过审批）。
 
 <Note>
-Effective policy is the **stricter** of `tools.exec.*` and approvals
-defaults; if an approvals field is omitted, the `tools.exec` value is
-used. Host exec also uses local approvals state on that machine — a
-host-local `ask: "always"` in `~/.openclaw/exec-approvals.json` keeps
-prompting even if session or config defaults request `ask: "on-miss"`.
+生效策略取 `tools.exec.*` 与审批默认值中的**更严格者**；如果某个审批字段被省略，则使用 `tools.exec` 的值。主机执行还会使用该机器上的本地审批状态——`~/.openclaw/exec-approvals.json` 中主机本地的 `ask: "always"` 即使会话或配置默认值要求 `ask: "on-miss"`，也仍会持续提示。
 </Note>
 
-## Inspecting the effective policy
+## 检查生效策略
 
-| Command                                                          | What it shows                                                                          |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `openclaw approvals get` / `--gateway` / `--node <id\|name\|ip>` | Requested policy, host policy sources, and the effective result.                       |
-| `openclaw exec-policy show`                                      | Local-machine merged view.                                                             |
-| `openclaw exec-policy set` / `preset`                            | Synchronize the local requested policy with the local host approvals file in one step. |
+- `openclaw approvals get`, `... --gateway`, `... --node <id|name|ip>` — 显示请求的策略、主机策略来源以及生效结果。
+- `openclaw exec-policy show` — 本地机器的合并视图。
+- `openclaw exec-policy set|preset` — 一步将本地请求策略与本地主机审批文件同步。
 
-When a local scope requests `host=node`, `exec-policy show` reports that
-scope as node-managed at runtime instead of pretending the local
-approvals file is the source of truth.
+当本地作用域请求 `host=node` 时，`exec-policy show` 会在运行时将该作用域报告为由节点托管，而不是假装本地审批文件才是真正的权威来源。
 
-If the companion app UI is **not available**, any request that would
-normally prompt is resolved by the **ask fallback** (default: `deny`).
+如果伴生应用 UI **不可用**，任何通常会触发提示的请求都会由**ask 回退**来解决（默认：拒绝）。
 
 <Tip>
-Native chat approval clients can seed channel-specific affordances on the
-pending approval message. For example, Matrix seeds reaction shortcuts
-(`✅` allow once, `❌` deny, `♾️` allow always) while still leaving
-`/approve ...` commands in the message as a fallback.
+原生聊天审批客户端可以在待审批消息上为通道注入特定快捷操作。例如，Matrix 会注入反应快捷方式（`✅` 允许一次、`❌` 拒绝、`♾️` 永久允许），同时仍保留消息中的 `/approve ...` 命令作为回退。
 </Tip>
 
-## Where it applies
+## 适用范围
 
-Exec approvals are enforced locally on the execution host:
+执行审批在执行主机本地强制执行：
 
-- **Gateway host** → `openclaw` process on the gateway machine.
-- **Node host** → node runner (macOS companion app or headless node host).
+- **gateway 主机** → 网关机器上的 `openclaw` 进程
+- **node 主机** → 节点运行器（macOS 伴生应用或无头节点主机）
 
-### Trust model
+- 通过网关认证的调用者是该网关的受信操作者。  
+- 配对节点将该受信操作者的能力扩展到节点主机。  
+- 执行审批减少了意外执行的风险，但并非基于单用户认证边界的控制。  
+- 经审批的节点主机运行绑定标准执行上下文：标准的当前工作目录（cwd）、精确的 argv、env 绑定（如有）以及固定的可执行文件路径（适用时）。  
+- 对于 shell 脚本和直接调用解释器/运行时文件的情况，OpenClaw 还尝试绑定一个具体的本地文件操作数。如果该绑定文件在审批后、执行前发生变化，则拒绝运行，而非执行发生偏移的内容。  
+- 这种文件绑定是出于最大努力的考虑，而非每个解释器/运行时加载路径的完整语义模型。如果审批模式无法准确识别绑定一个具体的本地文件，则拒绝发放基于审批的运行，而非假装实现了完整覆盖。  
 
-- Gateway-authenticated callers are trusted operators for that Gateway.
-- Paired nodes extend that trusted operator capability onto the node host.
-- Exec approvals reduce accidental execution risk, but are **not** a per-user auth boundary.
-- Approved node-host runs bind canonical execution context: canonical cwd, exact argv, env binding when present, and pinned executable path when applicable.
-- For shell scripts and direct interpreter/runtime file invocations, OpenClaw also tries to bind one concrete local file operand. If that bound file changes after approval but before execution, the run is denied instead of executing drifted content.
-- File binding is intentionally best-effort, **not** a complete semantic model of every interpreter/runtime loader path. If approval mode cannot identify exactly one concrete local file to bind, it refuses to mint an approval-backed run instead of pretending full coverage.
+macOS 拆分：
 
-### macOS split
+- **节点主机服务** 通过本地 IPC 转发 `system.run` 到**macOS 应用**。
+- **macOS 应用** 执行审批并在 UI 上下文中执行命令。
 
-- The **node host service** forwards `system.run` to the **macOS app** over local IPC.
-- The **macOS app** enforces approvals and executes the command in UI context.
+## 设置和存储
 
-## Settings and storage
+审批信息存储在执行主机本地的 JSON 文件中：
+`~/.openclaw/exec-approvals.json`
 
-Approvals live in a local JSON file on the execution host:
-
-```text
-~/.openclaw/exec-approvals.json
-```
-
-Example schema:
+示例 schema：
 
 ```json
 {
@@ -109,137 +86,69 @@ Example schema:
 }
 ```
 
-## Policy knobs
+## 无审批 "YOLO" 模式
 
-### `exec.security`
+如果希望主机执行在没有审批提示的情况下运行，必须打开**两个**策略层：
 
-<ParamField path="security" type='"deny" | "allowlist" | "full"'>
-  - `deny` — block all host exec requests.
-  - `allowlist` — allow only allowlisted commands.
-  - `full` — allow everything (equivalent to elevated).
-</ParamField>
+- OpenClaw 配置中的请求执行策略（`tools.exec.*`）
+- `~/.openclaw/exec-approvals.json` 中的主机本地审批策略
 
-### `exec.ask`
+除非明确收紧，否则这现在是默认主机行为：
 
-<ParamField path="ask" type='"off" | "on-miss" | "always"'>
-  - `off` — never prompt.
-  - `on-miss` — prompt only when the allowlist does not match.
-  - `always` — prompt on every command. `allow-always` durable trust does **not** suppress prompts when effective ask mode is `always`.
-</ParamField>
+- `tools.exec.security`: `gateway`/`node` 上为 `full`
+- `tools.exec.ask`: `off`
+- 主机 `askFallback`: `full`
 
-### `askFallback`
+重要区别：
 
-<ParamField path="askFallback" type='"deny" | "allowlist" | "full"'>
-  Resolution when a prompt is required but no UI is reachable.
+- `tools.exec.host=auto` 选择执行运行位置：可用时在沙箱中，否则在网关上。
+- YOLO 选择主机执行如何被审批：`security=full` 加上 `ask=off`。
+- 暴露自身非交互权限模式的 CLI 后端可以遵循此策略。
+  当 OpenClaw 请求的执行策略为 YOLO 时，Claude CLI 会添加 `--permission-mode bypassPermissions`。可通过在 `agents.defaults.cliBackends.claude-cli.args` / `resumeArgs` 下使用显式 Claude 参数覆盖该后端行为，例如
+  `--permission-mode default`、`acceptEdits` 或 `bypassPermissions`。
+- 在 YOLO 模式下，OpenClaw 不会在已配置的主机执行策略之上再额外添加一层启发式的命令混淆审批门或脚本预检拒绝层。
+- `auto` 不会让网关路由成为沙箱会话中的自由覆盖。每次调用请求 `host=node` 都允许从 `auto` 发起，而只有在没有活跃沙箱运行时时，`host=gateway` 才允许从 `auto` 发起。如果你想要稳定的非 auto 默认值，请设置 `tools.exec.host` 或显式使用 `/exec host=...`。
 
-- `deny` — block.
-- `allowlist` — allow only if allowlist matches.
-- `full` — allow.
-  </ParamField>
+如果希望更保守的设置，请将任一策略层收紧回 `allowlist`/`on-miss` 或 `deny`。
 
-### `tools.exec.strictInlineEval`
+持久化网关主机"永不提示"设置：
 
-<ParamField path="strictInlineEval" type="boolean">
-  When `true`, OpenClaw treats inline code-eval forms as approval-only
-  even if the interpreter binary itself is allowlisted. Defense-in-depth
-  for interpreter loaders that do not map cleanly to one stable file
-  operand.
-</ParamField>
+```bash
+openclaw config set tools.exec.host gateway
+openclaw config set tools.exec.security full
+openclaw config set tools.exec.ask off
+openclaw gateway restart
+```
 
-Examples that strict mode catches:
+然后设置主机审批文件以匹配：
 
-- `python -c`
-- `node -e`, `node --eval`, `node -p`
-- `ruby -e`
-- `perl -e`, `perl -E`
-- `php -r`
-- `lua -e`
-- `osascript -e`
+```bash
+openclaw approvals set --stdin <<'EOF'
+{
+  version: 1,
+  defaults: {
+    security: "full",
+    ask: "off",
+    askFallback: "full"
+  }
+}
+EOF
+```
 
-In strict mode these commands still need explicit approval, and
-`allow-always` does not persist new allowlist entries for them
-automatically.
-
-## YOLO mode (no-approval)
-
-If you want host exec to run without approval prompts, you must open
-**both** policy layers — requested exec policy in OpenClaw config
-(`tools.exec.*`) **and** host-local approvals policy in
-`~/.openclaw/exec-approvals.json`.
-
-YOLO is the default host behavior unless you tighten it explicitly:
-
-| Layer                 | YOLO setting               |
-| --------------------- | -------------------------- |
-| `tools.exec.security` | `full` on `gateway`/`node` |
-| `tools.exec.ask`      | `off`                      |
-| Host `askFallback`    | `full`                     |
-
-<Warning>
-**Important distinctions:**
-
-- `tools.exec.host=auto` chooses **where** exec runs: sandbox when available, otherwise gateway.
-- YOLO chooses **how** host exec is approved: `security=full` plus `ask=off`.
-- In YOLO mode, OpenClaw does **not** add a separate heuristic command-obfuscation approval gate or script-preflight rejection layer on top of the configured host exec policy.
-- `auto` does not make gateway routing a free override from a sandboxed session. A per-call `host=node` request is allowed from `auto`; `host=gateway` is only allowed from `auto` when no sandbox runtime is active. For a stable non-auto default, set `tools.exec.host` or use `/exec host=...` explicitly.
-  </Warning>
-
-CLI-backed providers that expose their own noninteractive permission mode
-can follow this policy. Claude CLI adds
-`--permission-mode bypassPermissions` when OpenClaw's requested exec
-policy is YOLO. Override that backend behavior with explicit Claude args
-under `agents.defaults.cliBackends.claude-cli.args` / `resumeArgs` —
-for example `--permission-mode default`, `acceptEdits`, or
-`bypassPermissions`.
-
-If you want a more conservative setup, tighten either layer back to
-`allowlist` / `on-miss` or `deny`.
-
-### Persistent gateway-host "never prompt" setup
-
-<Steps>
-  <Step title="Set the requested config policy">
-    ```bash
-    openclaw config set tools.exec.host gateway
-    openclaw config set tools.exec.security full
-    openclaw config set tools.exec.ask off
-    openclaw gateway restart
-    ```
-  </Step>
-  <Step title="Match the host approvals file">
-    ```bash
-    openclaw approvals set --stdin <<'EOF'
-    {
-      version: 1,
-      defaults: {
-        security: "full",
-        ask: "off",
-        askFallback: "full"
-      }
-    }
-    EOF
-    ```
-  </Step>
-</Steps>
-
-### Local shortcut
+当前机器上相同网关主机策略的本地快捷方式：
 
 ```bash
 openclaw exec-policy preset yolo
 ```
 
-That local shortcut updates both:
+该本地快捷方式会同时更新：
 
-- Local `tools.exec.host/security/ask`.
-- Local `~/.openclaw/exec-approvals.json` defaults.
+- 本地 `tools.exec.host/security/ask`
+- 本地 `~/.openclaw/exec-approvals.json` 默认值
 
-It is intentionally local-only. To change gateway-host or node-host
-approvals remotely, use `openclaw approvals set --gateway` or
-`openclaw approvals set --node <id|name|ip>`.
+它故意设计为仅限本地。如果您需要远程更改网关主机或节点主机审批，请继续使用 `openclaw approvals set --gateway` 或 `openclaw approvals set --node <id|name|ip>`。
 
-### Node host
-
-For a node host, apply the same approvals file on that node instead:
+对于节点主机，请在该节点上应用相同的审批文件：
 
 ```bash
 openclaw approvals set --node <id|name|ip> --stdin <<'EOF'
@@ -254,160 +163,162 @@ openclaw approvals set --node <id|name|ip> --stdin <<'EOF'
 EOF
 ```
 
-<Note>
-**Local-only limitations:**
+重要的仅限本地限制：
 
-- `openclaw exec-policy` does not synchronize node approvals.
-- `openclaw exec-policy set --host node` is rejected.
-- Node exec approvals are fetched from the node at runtime, so node-targeted updates must use `openclaw approvals --node ...`.
-  </Note>
+- `openclaw exec-policy` 不同步节点审批
+- `openclaw exec-policy set --host node` 被拒绝
+- 节点执行审批在运行时从节点获取，因此针对节点的更新必须使用 `openclaw approvals --node ...`
 
-### Session-only shortcut
+仅限会话的快捷方式：
 
-- `/exec security=full ask=off` changes only the current session.
-- `/elevated full` is a break-glass shortcut that also skips exec approvals for that session.
+- `/exec security=full ask=off` 仅更改当前会话。
+- `/elevated full` 是一个应急快捷方式，也会跳过该会话的执行审批。
 
-If the host approvals file stays stricter than config, the stricter host
-policy still wins.
+如果主机审批文件比配置更严格，更严格的主机策略仍然胜出。
 
-## Allowlist (per agent)
+## 策略旋钮
 
-Allowlists are **per agent**. If multiple agents exist, switch which agent
-you are editing in the macOS app. Patterns are glob matches.
+### 安全性（`exec.security`）
 
-Patterns can be resolved binary path globs or bare command-name globs.
-Bare names match only commands invoked through `PATH`, so `rg` can match
-`/opt/homebrew/bin/rg` when the command is `rg`, but **not** `./rg` or
-`/tmp/rg`. Use a path glob when you want to trust one specific binary
-location.
+- **deny**：阻止所有主机执行请求。
+- **allowlist**：仅允许允许列表中的命令。
+- **full**：允许所有命令（等同于权限提升模式）。
 
-Legacy `agents.default` entries are migrated to `agents.main` on load.
-Shell chains such as `echo ok && pwd` still need every top-level segment
-to satisfy allowlist rules.
+### 提示（`exec.ask`）
 
-Examples:
+- **off**：永不提示。
+- **on-miss**：仅当允许列表不匹配时提示。
+- **always**：每个命令都提示。
+- `allow-always` 持久信任在有效询问模式为 `always` 时不会抑制提示。
 
-- `rg`
+### 提示回退（`askFallback`）
+
+当需要提示但 UI 不可达时，回退决策：
+
+- **deny**：阻止。
+- **allowlist**：仅在允许列表匹配时允许。
+- **full**：允许。
+
+### 内联解释器评估强化（`tools.exec.strictInlineEval`）
+
+当 `tools.exec.strictInlineEval=true` 时，即使解释器二进制文件本身已在允许列表中，OpenClaw 也将内联代码评估形式视为仅需审批。
+
+示例：
+
+- `python -c`
+- `node -e`, `node --eval`, `node -p`
+- `ruby -e`
+- `perl -e`, `perl -E`
+- `php -r`
+- `lua -e`
+- `osascript -e`
+
+这是针对无法清晰映射到单一稳定文件操作数的解释器加载器的纵深防御。在严格模式下：
+
+- 这些命令仍然需要显式审批；
+- `allow-always` 不会自动为它们持久化新的允许列表条目。
+
+## 允许列表（按代理）
+
+允许列表是**按代理**的。如果存在多个代理，请在 macOS 应用中切换要编辑的代理。模式是**不区分大小写的 glob 匹配**。
+模式应解析为**二进制路径**（仅基名条目将被忽略）。
+遗留的 `agents.default` 条目在加载时迁移到 `agents.main`。
+诸如 `echo ok && pwd` 的 shell 链式连接仍需要每个顶级段满足允许列表规则。
+
+示例：
+
 - `~/Projects/**/bin/peekaboo`
 - `~/.local/bin/*`
 - `/opt/homebrew/bin/rg`
 
-Each allowlist entry tracks:
+每条允许列表记录包含：
 
-| Field              | Meaning                          |
-| ------------------ | -------------------------------- |
-| `id`               | Stable UUID used for UI identity |
-| `lastUsedAt`       | Last-used timestamp              |
-| `lastUsedCommand`  | Last command that matched        |
-| `lastResolvedPath` | Last resolved binary path        |
+- **id**：用于 UI 身份识别的稳定 UUID（可选）
+- **上次使用时间** 时间戳
+- **上次使用的命令**
+- **上次解析的路径**
 
-## Auto-allow skill CLIs
+## 自动允许技能 CLI
 
-When **Auto-allow skill CLIs** is enabled, executables referenced by
-known skills are treated as allowlisted on nodes (macOS node or headless
-node host). This uses `skills.bins` over the Gateway RPC to fetch the
-skill bin list. Disable this if you want strict manual allowlists.
+启用**自动允许技能 CLI**后，已知技能引用的可执行文件将被视为节点上的允许列表命令（macOS 节点或无头节点主机）。该功能通过 Gateway RPC 的 `skills.bins` 获取技能二进制列表。如果需要严格的手动允许列表，请禁用此选项。
 
-<Warning>
-- This is an **implicit convenience allowlist**, separate from manual path allowlist entries.
-- It is intended for trusted operator environments where Gateway and node are in the same trust boundary.
-- If you require strict explicit trust, keep `autoAllowSkills: false` and use manual path allowlist entries only.
-</Warning>
+重要信任说明：
 
-## Safe bins and approval forwarding
+- 该功能是一种**隐式便捷的允许列表**，与手动路径允许列表条目分开。
+- 适用于 Gateway 和节点位于相同信任边界的受信操作环境。
+- 如果需要严格的显式信任，保持 `autoAllowSkills: false`，只使用手动路径允许列表。
 
-For safe bins (the stdin-only fast-path), interpreter binding details, and
-how to forward approval prompts to Slack/Discord/Telegram (or run them as
-native approval clients), see
-[Exec approvals — advanced](/tools/exec-approvals-advanced).
+## 安全二进制文件和审批转发
 
-## Control UI editing
+对于安全二进制文件（仅 stdin 的快速路径）、解释器绑定细节，以及如何将审批提示转发到 Slack/Discord/Telegram（或将它们作为原生审批客户端运行），请参见 [执行审批 — 高级](/tools/exec-approvals-advanced)。
 
-Use the **Control UI → Nodes → Exec approvals** card to edit defaults,
-per-agent overrides, and allowlists. Pick a scope (Defaults or an agent),
-tweak the policy, add/remove allowlist patterns, then **Save**. The UI
-shows last-used metadata per pattern so you can keep the list tidy.
+<!-- moved to /tools/exec-approvals-advanced -->
 
-The target selector chooses **Gateway** (local approvals) or a **Node**.
-Nodes must advertise `system.execApprovals.get/set` (macOS app or
-headless node host). If a node does not advertise exec approvals yet,
-edit its local `~/.openclaw/exec-approvals.json` directly.
+## 控制 UI 编辑
 
-CLI: `openclaw approvals` supports gateway or node editing — see
-[Approvals CLI](/cli/approvals).
+通过 **控制 UI → 节点 → 执行审批** 面板编辑默认值、按代理覆盖和允许列表。选择作用域（默认或某代理），调整策略，添加/删除允许列表模式，点击**保存**。UI 会显示每个模式的**上次使用**元数据，方便列表整理。
 
-## Approval flow
+目标选择器可选 **Gateway**（本地审批）或某 **节点**。节点必须声明支持 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。如果节点未支持审批，可以直接编辑其本地 `~/.openclaw/exec-approvals.json` 文件。
 
-When a prompt is required, the gateway broadcasts
-`exec.approval.requested` to operator clients. The Control UI and macOS
-app resolve it via `exec.approval.resolve`, then the gateway forwards the
-approved request to the node host.
+CLI：`openclaw approvals` 支持对网关或节点的编辑（详见 [审批 CLI](/cli/approvals)）。
 
-For `host=node`, approval requests include a canonical `systemRunPlan`
-payload. The gateway uses that plan as the authoritative
-command/cwd/session context when forwarding approved `system.run`
-requests.
+## 审批流程
 
-That matters for async approval latency:
+当需要提示时，网关向操作客户端广播 `exec.approval.requested`。控制 UI 与 macOS 应用通过 `exec.approval.resolve` 解决请求，随后网关将获批请求转发至节点主机。
 
-- The node exec path prepares one canonical plan up front.
-- The approval record stores that plan and its binding metadata.
-- Once approved, the final forwarded `system.run` call reuses the stored plan instead of trusting later caller edits.
-- If the caller changes `command`, `rawCommand`, `cwd`, `agentId`, or `sessionKey` after the approval request was created, the gateway rejects the forwarded run as an approval mismatch.
+对于 `host=node`，审批请求包含规范的 `systemRunPlan` 负载。网关使用该计划作为转发获批 `system.run` 请求的权威命令/工作目录/会话上下文。
 
-## System events
+这对异步审批延迟很重要：
 
-Exec lifecycle is surfaced as system messages:
+- 节点执行路径会预先准备一个规范计划
+- 审批记录存储该计划及其绑定元数据
+- 一旦批准，最终转发的 `system.run` 调用会重用存储的计划，而不是信任后续调用者的编辑
+- 如果调用者在创建审批请求后更改了 `command`、`rawCommand`、`cwd`、`agentId` 或 `sessionKey`，网关会因审批不匹配而拒绝转发的运行
 
-- `Exec running` (only if the command exceeds the running notice threshold).
-- `Exec finished`.
-- `Exec denied`.
+## 系统事件
 
-These are posted to the agent's session after the node reports the event.
-Gateway-host exec approvals emit the same lifecycle events when the
-command finishes (and optionally when running longer than the threshold).
-Approval-gated execs reuse the approval id as the `runId` in these
-messages for easy correlation.
+执行生命周期以系统消息形式展现：
 
-## Denied approval behavior
+- `执行中`（仅当命令运行时间超过阈值时）
+- `执行完成`
+- `执行被拒绝`
 
-When an async exec approval is denied, OpenClaw prevents the agent from
-reusing output from any earlier run of the same command in the session.
-The denial reason is passed with explicit guidance that no command output
-is available, which stops the agent from claiming there is new output or
-repeating the denied command with stale results from a prior successful
-run.
+这些消息在节点报告事件后，发布到代理的会话中。网关主机执行审批在命令结束时（和可选的运行超过阈值时）发出相同生命周期事件。
 
-## Implications
+## 拒绝审批行为
 
-- **`full`** is powerful; prefer allowlists when possible.
-- **`ask`** keeps you in the loop while still allowing fast approvals.
-- Per-agent allowlists prevent one agent's approvals from leaking into others.
-- Approvals only apply to host exec requests from **authorized senders**. Unauthorized senders cannot issue `/exec`.
-- `/exec security=full` is a session-level convenience for authorized operators and skips approvals by design. To hard-block host exec, set approvals security to `deny` or deny the `exec` tool via tool policy.
+当异步执行审批被拒绝时，OpenClaw 会防止代理重用会话中同一命令任何早期运行的输出。拒绝原因会附带明确指导，说明没有命令输出可用，从而阻止代理声称有新输出或使用先前成功运行的过时结果重复被拒绝的命令。
 
-## Related
+## 影响及建议
+
+- **full** 很强大；在可能时优先使用允许列表。
+- **ask** 会让你持续知情，同时仍允许快速审批。
+- 按代理的允许列表可防止一个代理的审批泄漏到其他代理中。
+- 审批只适用于来自**已授权发送者**的主机执行请求。未授权发送者不能发起 `/exec`。
+- `/exec security=full` 是授权操作者在会话级别的便捷方式，并且按设计会跳过审批。若要强制阻止主机执行，请将审批安全性设为 `deny`，或通过工具策略拒绝 `exec` 工具。
+
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Exec approvals — advanced" href="/tools/exec-approvals-advanced" icon="gear">
-    Safe bins, interpreter binding, and approval forwarding to chat.
+  <Card title="执行审批 — 高级" href="/tools/exec-approvals-advanced" icon="gear">
+    安全二进制文件、解释器绑定以及审批转发到聊天。
   </Card>
-  <Card title="Exec tool" href="/tools/exec" icon="terminal">
-    Shell command execution tool.
+  <Card title="Exec 工具" href="/tools/exec" icon="terminal">
+    Shell 命令执行工具。
   </Card>
-  <Card title="Elevated mode" href="/tools/elevated" icon="shield-exclamation">
-    Break-glass path that also skips approvals.
+  <Card title="提升模式" href="/tools/elevated" icon="shield-exclamation">
+    也会跳过审批的应急路径。
   </Card>
-  <Card title="Sandboxing" href="/gateway/sandboxing" icon="box">
-    Sandbox modes and workspace access.
+  <Card title="沙箱化" href="/gateway/sandboxing" icon="box">
+    沙箱模式和工作区访问。
   </Card>
-  <Card title="Security" href="/gateway/security" icon="lock">
-    Security model and hardening.
+  <Card title="安全性" href="/gateway/security" icon="lock">
+    安全模型和加固。
   </Card>
-  <Card title="Sandbox vs tool policy vs elevated" href="/gateway/sandbox-vs-tool-policy-vs-elevated" icon="sliders">
-    When to reach for each control.
+  <Card title="沙箱 vs 工具策略 vs 提升模式" href="/gateway/sandbox-vs-tool-policy-vs-elevated" icon="sliders">
+    何时使用各个控制项。
   </Card>
-  <Card title="Skills" href="/tools/skills" icon="sparkles">
-    Skill-backed auto-allow behavior.
+  <Card title="技能" href="/tools/skills" icon="sparkles">
+    基于技能的自动允许行为。
   </Card>
 </CardGroup>

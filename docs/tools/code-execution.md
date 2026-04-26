@@ -1,37 +1,37 @@
 ---
-summary: "code_execution -- run sandboxed remote Python analysis with xAI"
+summary: "code_execution -- 使用 xAI 运行沙箱化的远程 Python 分析"
 read_when:
-  - You want to enable or configure code_execution
-  - You want remote analysis without local shell access
-  - You want to combine x_search or web_search with remote Python analysis
-title: "Code execution"
+  - 你想启用或配置 code_execution
+  - 你想要远程分析而不需要本地 shell 访问
+  - 你想将 x_search 或 web_search 与远程 Python 分析结合使用
+title: "代码执行"
 ---
 
-`code_execution` runs sandboxed remote Python analysis on xAI's Responses API.
-This is different from local [`exec`](/tools/exec):
+`code_execution` 在 xAI 的 Responses API 上运行沙箱化的远程 Python 分析。
+这与本地 [`exec`](/tools/exec) 不同：
 
-- `exec` runs shell commands on your machine or node
-- `code_execution` runs Python in xAI's remote sandbox
+- `exec` 在你的机器或节点上运行 shell 命令
+- `code_execution` 在 xAI 的远程沙箱中运行 Python
 
-Use `code_execution` for:
+使用 `code_execution` 来进行：
 
-- calculations
-- tabulation
-- quick statistics
-- chart-style analysis
-- analyzing data returned by `x_search` or `web_search`
+- 计算
+- 制表
+- 快速统计
+- 图表式分析
+- 分析 `x_search` 或 `web_search` 返回的数据
 
-Do **not** use it when you need local files, your shell, your repo, or paired
-devices. Use [`exec`](/tools/exec) for that.
+当你需要本地文件、你的 shell、你的仓库或配对设备时，**不要**使用它。
+为此请使用 [`exec`](/tools/exec)。
 
-## Setup
+## 设置
 
-You need an xAI API key. Any of these work:
+你需要一个 xAI API 密钥。以下任一均可：
 
 - `XAI_API_KEY`
 - `plugins.entries.xai.config.webSearch.apiKey`
 
-Example:
+示例：
 
 ```json5
 {
@@ -55,36 +55,35 @@ Example:
 }
 ```
 
-## How To Use It
+## 如何使用
 
-Ask naturally and make the analysis intent explicit:
+自然地提问并明确分析意图：
 
 ```text
-Use code_execution to calculate the 7-day moving average for these numbers: ...
+使用 code_execution 计算这些数字的 7 日移动平均数：...
 ```
 
 ```text
-Use x_search to find posts mentioning OpenClaw this week, then use code_execution to count them by day.
+使用 x_search 查找本周提及 OpenClaw 的帖子，然后使用 code_execution 按天统计数量。
 ```
 
 ```text
-Use web_search to gather the latest AI benchmark numbers, then use code_execution to compare percent changes.
+使用 web_search 收集最新的 AI 基准数据，然后使用 code_execution 比较百分比变化。
 ```
 
-The tool takes a single `task` parameter internally, so the agent should send
-the full analysis request and any inline data in one prompt.
+该工具内部接受单个 `task` 参数，因此代理应在一个提示中发送完整的分析请求和任何内联数据。
 
-## Limits
+## 限制
 
-- This is remote xAI execution, not local process execution.
-- It should be treated as ephemeral analysis, not a persistent notebook.
-- Do not assume access to local files or your workspace.
-- For fresh X data, use [`x_search`](/tools/web#x_search) first.
+- 这是远程 xAI 执行，而非本地进程执行。
+- 应将其视为临时分析，而非持久化笔记本。
+- 不要假设可以访问本地文件或你的工作区。
+- 对于最新的 X 数据，请先使用 [`x_search`](/tools/web#x_search)。
 
-## Related
+## 相关内容
 
-- [Exec tool](/tools/exec)
-- [Exec approvals](/tools/exec-approvals)
-- [apply_patch tool](/tools/apply-patch)
-- [Web tools](/tools/web)
+- [Exec 工具](/tools/exec)
+- [Exec 审批](/tools/exec-approvals)
+- [apply_patch 工具](/tools/apply-patch)
+- [Web 工具](/tools/web)
 - [xAI](/providers/xai)

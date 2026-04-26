@@ -1,133 +1,133 @@
 ---
-summary: "Investigation notes for duplicate async exec completion injection"
+summary: "重复 async exec 完成注入的调查笔记"
 read_when:
-  - Debugging repeated node exec completion events
-  - Working on heartbeat/system-event dedupe
-title: "Async exec duplicate completion investigation"
+  - 调试重复的 node exec 完成事件
+  - 处理 heartbeat/system-event 去重
+title: "Async exec 重复完成调查"
 ---
 
-## Scope
+## 范围
 
 - Session: `agent:main:telegram:group:-1003774691294:topic:1`
-- Symptom: the same async exec completion for session/run `keen-nexus` was recorded twice in LCM as user turns.
-- Goal: identify whether this is most likely duplicate session injection or plain outbound delivery retry.
+- 症状：同一个 session/run `keen-nexus` 的 async exec 完成在 LCM 中被记录了两次，作为 user turns。
+- 目标：判断这更可能是重复的 session 注入，还是普通的 outbound delivery 重试。
 
-## Conclusion
+## 结论
 
-Most likely this is **duplicate session injection**, not a pure outbound delivery retry.
+最可能的是 **重复的 session 注入**，而不是纯粹的 outbound delivery 重试。
 
-The strongest gateway-side gap is in the **node exec completion path**:
+最强的 gateway 侧缺口在 **node exec 完成路径**：
 
-1. A node-side exec finish emits `exec.finished` with the full `runId`.
-2. Gateway `server-node-events` converts that into a system event and requests a heartbeat.
-3. The heartbeat run injects the drained system event block into the agent prompt.
-4. The embedded runner persists that prompt as a new user turn in the session transcript.
+1. node 侧 exec 结束会发出带完整 `runId` 的 `exec.finished`。
+2. Gateway `server-node-events` 将其转换为 system event，并请求 heartbeat。
+3. heartbeat 运行将已排空的 system event block 注入 agent prompt。
+4. 嵌入式 runner 将该 prompt 持久化为 session transcript 中新的 user turn。
 
-If the same `exec.finished` reaches the gateway twice for the same `runId` for any reason (replay, reconnect duplicate, upstream resend, duplicated producer), OpenClaw currently has **no idempotency check keyed by `runId`/`contextKey`** on this path. The second copy will become a second user message with the same content.
+如果同一个 `exec.finished` 因为任何原因（重放、重连重复、上游重复发送、重复 producer）对同一个 `runId` 到达 gateway 两次，OpenClaw 目前在这条路径上**没有基于 `runId`/`contextKey` 的幂等检查**。第二份会变成第二条相同内容的 user message。
 
-## Exact Code Path
+## 精确代码路径
 
-### 1. Producer: node exec completion event
+### 1. Producer：node exec 完成事件
 
 - `src/node-host/invoke.ts:340-360`
-  - `sendExecFinishedEvent(...)` emits `node.event` with event `exec.finished`.
-  - Payload includes `sessionKey` and full `runId`.
+  - `sendExecFinishedEvent(...)` 发出 `event` 为 `exec.finished` 的 `node.event`。
+  - payload 包含 `sessionKey` 和完整 `runId`。
 
-### 2. Gateway event ingestion
+### 2. Gateway 事件接入
 
 - `src/gateway/server-node-events.ts:574-640`
-  - Handles `exec.finished`.
-  - Builds text:
+  - 处理 `exec.finished`。
+  - 构建文本：
     - `Exec finished (node=..., id=<runId>, code ...)`
-  - Enqueues it via:
+  - 通过以下方式入队：
     - `enqueueSystemEvent(text, { sessionKey, contextKey: runId ? \`exec:${runId}\` : "exec", trusted: false })`
-  - Immediately requests a wake:
+  - 立刻请求唤醒：
     - `requestHeartbeatNow(scopedHeartbeatWakeOptions(sessionKey, { reason: "exec-event" }))`
 
-### 3. System event dedupe weakness
+### 3. System event 去重薄弱点
 
 - `src/infra/system-events.ts:90-115`
-  - `enqueueSystemEvent(...)` only suppresses **consecutive duplicate text**:
+  - `enqueueSystemEvent(...)` 只抑制 **连续重复文本**：
     - `if (entry.lastText === cleaned) return false`
-  - It stores `contextKey`, but does **not** use `contextKey` for idempotency.
-  - After drain, duplicate suppression resets.
+  - 它保存了 `contextKey`，但**没有**使用 `contextKey` 做幂等判断。
+  - drain 之后，重复抑制会重置。
 
-This means a replayed `exec.finished` with the same `runId` can be accepted again later, even though the code already had a stable idempotency candidate (`exec:<runId>`).
+这意味着，带有相同 `runId` 的 replayed `exec.finished` 之后仍然可以再次被接受，即使代码里已经有一个稳定的幂等候选项（`exec:<runId>`）。
 
-### 4. Wake handling is not the primary duplicator
+### 4. Wake 处理不是主要重复源
 
 - `src/infra/heartbeat-wake.ts:79-117`
-  - Wakes are coalesced by `(agentId, sessionKey)`.
-  - Duplicate wake requests for the same target collapse to one pending wake entry.
+  - wake 会按 `(agentId, sessionKey)` 合并。
+  - 对同一目标的重复 wake 请求会折叠为一个待处理 wake 条目。
 
-This makes **duplicate wake handling alone** a weaker explanation than duplicate event ingestion.
+这使得 **仅靠重复 wake 处理** 的解释弱于重复事件接入。
 
-### 5. Heartbeat consumes the event and turns it into prompt input
+### 5. Heartbeat 消费事件并将其变成 prompt 输入
 
 - `src/infra/heartbeat-runner.ts:535-574`
-  - Preflight peeks pending system events and classifies exec-event runs.
+  - 预检会查看 pending system events，并对 exec-event runs 分类。
 - `src/auto-reply/reply/session-system-events.ts:86-90`
-  - `drainFormattedSystemEvents(...)` drains the queue for the session.
+  - `drainFormattedSystemEvents(...)` 会清空该 session 的队列。
 - `src/auto-reply/reply/get-reply-run.ts:400-427`
-  - The drained system event block is prepended into the agent prompt body.
+  - 排空后的 system event block 会被预置到 agent prompt body 中。
 
-### 6. Transcript injection point
+### 6. Transcript 注入点
 
 - `src/agents/pi-embedded-runner/run/attempt.ts:2000-2017`
-  - `activeSession.prompt(effectivePrompt)` submits the full prompt to the embedded PI session.
-  - That is the point where the completion-derived prompt becomes a persisted user turn.
+  - `activeSession.prompt(effectivePrompt)` 将完整 prompt 提交给 embedded PI session。
+  - 这就是 completion 派生出的 prompt 变成持久化 user turn 的位置。
 
-So once the same system event is rebuilt into the prompt twice, duplicate LCM user messages are expected.
+因此，一旦同一个 system event 被两次重建进 prompt，就会出现重复的 LCM user messages。
 
-## Why plain outbound delivery retry is less likely
+## 为什么纯 outbound delivery 重试不太可能
 
-There is a real outbound failure path in the heartbeat runner:
+heartbeat runner 中确实存在真实的 outbound failure 路径：
 
 - `src/infra/heartbeat-runner.ts:1194-1242`
-  - The reply is generated first.
-  - Outbound delivery happens later via `deliverOutboundPayloads(...)`.
-  - Failure there returns `{ status: "failed" }`.
+  - 先生成 reply。
+  - 后续再通过 `deliverOutboundPayloads(...)` 进行 outbound delivery。
+  - 这里失败会返回 `{ status: "failed" }`。
 
-However, for the same system event queue entry, this alone is **not sufficient** to explain the duplicate user turns:
+不过，针对同一个 system event 队列项，这**不足以**解释重复的 user turns：
 
 - `src/auto-reply/reply/session-system-events.ts:86-90`
-  - The system event queue is already drained before outbound delivery.
+  - system event 队列在 outbound delivery 之前就已经被 drain 了。
 
-So a channel send retry by itself would not recreate the exact same queued event. It could explain missing/failed external delivery, but not by itself a second identical session user message.
+所以，仅靠 channel send retry 本身不会重新创建同一个已排队事件。它可以解释外部交付缺失/失败，但不能单独解释第二条相同的 session user message。
 
-## Secondary, lower-confidence possibility
+## 次要、低置信度的可能性
 
-There is a full-run retry loop in the agent runner:
+agent runner 中存在完整 run 重试循环：
 
 - `src/auto-reply/reply/agent-runner-execution.ts:741-1473`
-  - Certain transient failures can retry the whole run and resubmit the same `commandBody`.
+  - 某些瞬时失败会重试整个 run，并重新提交相同的 `commandBody`。
 
-That can duplicate a persisted user prompt **within the same reply execution** if the prompt was already appended before the retry condition triggered.
+如果在重试条件触发前 prompt 已经被追加，这可能会在**同一次 reply 执行**中重复持久化一个 user prompt。
 
-I rank this lower than duplicate `exec.finished` ingestion because:
+我把它排在重复 `exec.finished` 接入之后，原因是：
 
-- the observed gap was around 51 seconds, which looks more like a second wake/turn than an in-process retry;
-- the report already mentions repeated message send failures, which points more toward a separate later turn than an immediate model/runtime retry.
+- 观察到的间隔约为 51 秒，看起来更像第二次 wake/turn，而不是进程内重试；
+- 报告已经提到重复的消息发送失败，这更像是一个独立的后续 turn，而不是立即的 model/runtime 重试。
 
-## Root Cause Hypothesis
+## 根因假设
 
-Highest-confidence hypothesis:
+最高置信度假设：
 
-- The `keen-nexus` completion came through the **node exec event path**.
-- The same `exec.finished` was delivered to `server-node-events` twice.
-- Gateway accepted both because `enqueueSystemEvent(...)` does not dedupe by `contextKey` / `runId`.
-- Each accepted event triggered a heartbeat and was injected as a user turn into the PI transcript.
+- `keen-nexus` 的 completion 经过了 **node exec event 路径**。
+- 同一个 `exec.finished` 被两次送达 `server-node-events`。
+- Gateway 接受了两次，因为 `enqueueSystemEvent(...)` 没有按 `contextKey` / `runId` 去重。
+- 每次接受都会触发 heartbeat，并作为 user turn 注入 PI transcript。
 
-## Proposed Tiny Surgical Fix
+## 建议的最小外科式修复
 
-If a fix is wanted, the smallest high-value change is:
+如果要修复，最小且高价值的改动是：
 
-- make exec/system-event idempotency honor `contextKey` for a short horizon, at least for exact `(sessionKey, contextKey, text)` repeats;
-- or add a dedicated dedupe in `server-node-events` for `exec.finished` keyed by `(sessionKey, runId, event kind)`.
+- 让 exec/system-event 幂等性在短时间窗口内尊重 `contextKey`，至少对精确的 `(sessionKey, contextKey, text)` 重复进行处理；
+- 或者在 `server-node-events` 里为 `exec.finished` 增加专门的去重，按 `(sessionKey, runId, event kind)` 键控。
 
-That would directly block replayed `exec.finished` duplicates before they become session turns.
+这样可以在 replayed `exec.finished` 变成 session turn 之前直接拦截它们。
 
-## Related
+## 相关
 
-- [Exec tool](/tools/exec)
-- [Session management](/concepts/session)
+- [Exec 工具](/tools/exec)
+- [Session 管理](/concepts/session)

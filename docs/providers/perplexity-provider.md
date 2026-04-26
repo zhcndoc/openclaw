@@ -1,124 +1,108 @@
 ---
-summary: "Perplexity web search provider setup (API key, search modes, filtering)"
+summary: "Perplexity 网页搜索提供商设置（API 密钥、搜索模式、过滤）"
 title: "Perplexity"
 read_when:
-  - You want to configure Perplexity as a web search provider
-  - You need the Perplexity API key or OpenRouter proxy setup
+  - 你想将 Perplexity 配置为网页搜索提供商
+  - 你需要 Perplexity API 密钥或 OpenRouter 代理设置
 ---
 
-The Perplexity plugin provides web search capabilities through the Perplexity
-Search API or Perplexity Sonar via OpenRouter.
+Perplexity 插件通过 Perplexity Search API 或通过 OpenRouter 的 Perplexity Sonar 提供网页搜索功能。
 
 <Note>
-This page covers the Perplexity **provider** setup. For the Perplexity
-**tool** (how the agent uses it), see [Perplexity tool](/tools/perplexity-search).
+本页涵盖 Perplexity **提供商**设置。关于 Perplexity **工具**（代理如何使用它），请参阅 [Perplexity 工具](/tools/perplexity-search)。
 </Note>
 
-| Property    | Value                                                                  |
+| 属性    | 值                                                                  |
 | ----------- | ---------------------------------------------------------------------- |
-| Type        | Web search provider (not a model provider)                             |
-| Auth        | `PERPLEXITY_API_KEY` (direct) or `OPENROUTER_API_KEY` (via OpenRouter) |
-| Config path | `plugins.entries.perplexity.config.webSearch.apiKey`                   |
+| 类型        | 网页搜索提供商（非模型提供商）                             |
+| 认证        | `PERPLEXITY_API_KEY`（直接）或 `OPENROUTER_API_KEY`（通过 OpenRouter） |
+| 配置路径 | `plugins.entries.perplexity.config.webSearch.apiKey`                   |
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Set the API key">
-    Run the interactive web-search configuration flow:
+  <Step title="设置 API 密钥">
+    运行交互式网页搜索配置流程：
 
     ```bash
     openclaw configure --section web
     ```
 
-    Or set the key directly:
+    或直接设置密钥：
 
     ```bash
     openclaw config set plugins.entries.perplexity.config.webSearch.apiKey "pplx-xxxxxxxxxxxx"
     ```
 
   </Step>
-  <Step title="Start searching">
-    The agent will automatically use Perplexity for web searches once the key is
-    configured. No additional steps are required.
+  <Step title="开始搜索">
+    配置密钥后，代理将自动使用 Perplexity 进行网页搜索。无需额外步骤。
   </Step>
 </Steps>
 
-## Search modes
+## 搜索模式
 
-The plugin auto-selects the transport based on API key prefix:
+插件根据 API 密钥前缀自动选择传输方式：
 
 <Tabs>
-  <Tab title="Native Perplexity API (pplx-)">
-    When your key starts with `pplx-`, OpenClaw uses the native Perplexity Search
-    API. This transport returns structured results and supports domain, language,
-    and date filters (see filtering options below).
+  <Tab title="原生 Perplexity API (pplx-)">
+    当你的密钥以 `pplx-` 开头时，OpenClaw 使用原生 Perplexity Search API。此传输方式返回结构化结果并支持域名、语言和日期过滤（见下方过滤选项）。
   </Tab>
   <Tab title="OpenRouter / Sonar (sk-or-)">
-    When your key starts with `sk-or-`, OpenClaw routes through OpenRouter using
-    the Perplexity Sonar model. This transport returns AI-synthesized answers with
-    citations.
+    当你的密钥以 `sk-or-` 开头时，OpenClaw 通过 OpenRouter 使用 Perplexity Sonar 模型路由。此传输方式返回带有引用的 AI 综合答案。
   </Tab>
 </Tabs>
 
-| Key prefix | Transport                    | Features                                         |
+| 密钥前缀 | 传输方式                    | 功能                                         |
 | ---------- | ---------------------------- | ------------------------------------------------ |
-| `pplx-`    | Native Perplexity Search API | Structured results, domain/language/date filters |
-| `sk-or-`   | OpenRouter (Sonar)           | AI-synthesized answers with citations            |
+| `pplx-`    | 原生 Perplexity Search API | 结构化结果，域名/语言/日期过滤 |
+| `sk-or-`   | OpenRouter (Sonar)           | 带有引用的 AI 综合答案            |
 
-## Native API filtering
+## 原生 API 过滤
 
 <Note>
-Filtering options are only available when using the native Perplexity API
-(`pplx-` key). OpenRouter/Sonar searches do not support these parameters.
+过滤选项仅在使用原生 Perplexity API（`pplx-` 密钥）时可用。OpenRouter/Sonar 搜索不支持这些参数。
 </Note>
 
-When using the native Perplexity API, searches support the following filters:
+使用原生 Perplexity API 时，搜索支持以下过滤条件：
 
-| Filter         | Description                            | Example                             |
+| 过滤条件         | 描述                            | 示例                             |
 | -------------- | -------------------------------------- | ----------------------------------- |
-| Country        | 2-letter country code                  | `us`, `de`, `jp`                    |
-| Language       | ISO 639-1 language code                | `en`, `fr`, `zh`                    |
-| Date range     | Recency window                         | `day`, `week`, `month`, `year`      |
-| Domain filters | Allowlist or denylist (max 20 domains) | `example.com`                       |
-| Content budget | Token limits per response / per page   | `max_tokens`, `max_tokens_per_page` |
+| 国家        | 2 字母国家代码                  | `us`, `de`, `jp`                    |
+| 语言       | ISO 639-1 语言代码                | `en`, `fr`, `zh`                    |
+| 日期范围     | 近期窗口                         | `day`, `week`, `month`, `year`      |
+| 域名过滤 | 白名单或黑名单（最多 20 个域名） | `example.com`                       |
+| 内容预算 | 每个响应/每页的 Token 限制   | `max_tokens`, `max_tokens_per_page` |
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Environment variable for daemon processes">
-    If the OpenClaw Gateway runs as a daemon (launchd/systemd), make sure
-    `PERPLEXITY_API_KEY` is available to that process.
+  <Accordion title="守护进程的环境变量">
+    如果 OpenClaw Gateway 作为守护进程运行（launchd/systemd），请确保该进程可以使用 `PERPLEXITY_API_KEY`。
 
     <Warning>
-    A key set only in `~/.profile` will not be visible to a launchd/systemd
-    daemon unless that environment is explicitly imported. Set the key in
-    `~/.openclaw/.env` or via `env.shellEnv` to ensure the gateway process can
-    read it.
+    仅在 `~/.profile` 中设置的密钥对 launchd/systemd 守护进程不可见，除非显式导入该环境。请在 `~/.openclaw/.env` 中设置密钥或通过 `env.shellEnv` 设置，以确保网关进程可以读取它。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="OpenRouter proxy setup">
-    If you prefer to route Perplexity searches through OpenRouter, set an
-    `OPENROUTER_API_KEY` (prefix `sk-or-`) instead of a native Perplexity key.
-    OpenClaw will detect the prefix and switch to the Sonar transport
-    automatically.
+  <Accordion title="OpenRouter 代理设置">
+    如果你希望通过 OpenRouter 路由 Perplexity 搜索，请设置 `OPENROUTER_API_KEY`（前缀 `sk-or-`）而不是原生 Perplexity 密钥。OpenClaw 将检测前缀并自动切换到 Sonar 传输方式。
 
     <Tip>
-    The OpenRouter transport is useful if you already have an OpenRouter account
-    and want consolidated billing across multiple providers.
+    如果你已经拥有 OpenRouter 账户并希望跨多个提供商统一计费，则 OpenRouter 传输方式很有用。
     </Tip>
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Perplexity search tool" href="/tools/perplexity-search" icon="magnifying-glass">
-    How the agent invokes Perplexity searches and interprets results.
+  <Card title="Perplexity 搜索工具" href="/tools/perplexity-search" icon="magnifying-glass">
+    代理如何调用 Perplexity 搜索并解释结果。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full configuration reference including plugin entries.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    包括插件条目在内的完整配置参考。
   </Card>
 </CardGroup>

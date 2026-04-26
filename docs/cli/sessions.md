@@ -1,13 +1,13 @@
 ---
-summary: "CLI reference for `openclaw sessions` (list stored sessions + usage)"
+summary: "`openclaw sessions` 的命令行参考（列出存储的会话 + 用法）"
 read_when:
-  - You want to list stored sessions and see recent activity
-title: "Sessions"
+  - 你想列出已存储的会话并查看最近活动
+title: "会话"
 ---
 
 # `openclaw sessions`
 
-List stored conversation sessions.
+列出存储的对话会话。
 
 ```bash
 openclaw sessions
@@ -18,23 +18,19 @@ openclaw sessions --verbose
 openclaw sessions --json
 ```
 
-Scope selection:
+范围选择：
 
-- default: configured default agent store
-- `--verbose`: verbose logging
-- `--agent <id>`: one configured agent store
-- `--all-agents`: aggregate all configured agent stores
-- `--store <path>`: explicit store path (cannot be combined with `--agent` or `--all-agents`)
+- default: 配置的默认代理存储
+- `--verbose`: 详细日志
+- `--agent <id>`: 一个配置的代理存储
+- `--all-agents`: 聚合所有配置的代理存储
+- `--store <path>`: 显式存储路径（不能与 `--agent` 或 `--all-agents` 组合）
 
-`openclaw sessions --all-agents` reads configured agent stores. Gateway and ACP
-session discovery are broader: they also include disk-only stores found under
-the default `agents/` root or a templated `session.store` root. Those
-discovered stores must resolve to regular `sessions.json` files inside the
-agent root; symlinks and out-of-root paths are skipped.
+`openclaw sessions --all-agents` 读取配置的代理存储。网关和 ACP 会话发现范围更广：它们还包括在默认的 `agents/` 根目录或模板化的 `session.store` 根目录下找到的仅磁盘存储。这些被发现的存储必须解析为代理根目录内的常规 `sessions.json` 文件；符号链接和根目录外的路径会被跳过。
 
-JSON examples:
+JSON 示例：
 
-`openclaw sessions --all-agents --json`:
+`openclaw sessions --all-agents --json`：
 
 ```json
 {
@@ -53,9 +49,9 @@ JSON examples:
 }
 ```
 
-## Cleanup maintenance
+## 清理维护
 
-Run maintenance now (instead of waiting for the next write cycle):
+立即运行维护（而不是等待下一次写入周期）：
 
 ```bash
 openclaw sessions cleanup --dry-run
@@ -66,21 +62,21 @@ openclaw sessions cleanup --enforce --active-key "agent:main:telegram:direct:123
 openclaw sessions cleanup --json
 ```
 
-`openclaw sessions cleanup` uses `session.maintenance` settings from config:
+`openclaw sessions cleanup` 使用配置中的 `session.maintenance` 设置：
 
-- Scope note: `openclaw sessions cleanup` maintains session stores/transcripts only. It does not prune cron run logs (`cron/runs/<jobId>.jsonl`), which are managed by `cron.runLog.maxBytes` and `cron.runLog.keepLines` in [Cron configuration](/automation/cron-jobs#configuration) and explained in [Cron maintenance](/automation/cron-jobs#maintenance).
+- 范围说明：`openclaw sessions cleanup` 仅维护会话存储和对话记录。它不会清理定时任务运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [定时任务配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [定时任务维护](/automation/cron-jobs#maintenance) 中有详细说明。
 
-- `--dry-run`: preview how many entries would be pruned/capped without writing.
-  - In text mode, dry-run prints a per-session action table (`Action`, `Key`, `Age`, `Model`, `Flags`) so you can see what would be kept vs removed.
-- `--enforce`: apply maintenance even when `session.maintenance.mode` is `warn`.
-- `--fix-missing`: remove entries whose transcript files are missing, even if they would not normally age/count out yet.
-- `--active-key <key>`: protect a specific active key from disk-budget eviction.
-- `--agent <id>`: run cleanup for one configured agent store.
-- `--all-agents`: run cleanup for all configured agent stores.
-- `--store <path>`: run against a specific `sessions.json` file.
-- `--json`: print a JSON summary. With `--all-agents`, output includes one summary per store.
+- `--dry-run`: 预览将修剪/限制多少条目而不写入。
+  - 在文本模式下，dry-run 打印每个会话的操作表（`Action`, `Key`, `Age`, `Model`, `Flags`），以便您可以查看哪些将被保留与移除。
+- `--enforce`: 即使 `session.maintenance.mode` 为 `warn` 也应用维护。
+- `--fix-missing`: 移除转录文件缺失的条目，即使它们通常尚未达到老化/计数移除条件。
+- `--active-key <key>`: 保护特定活动密钥免受磁盘预算驱逐。
+- `--agent <id>`: 对一个配置的代理存储运行清理。
+- `--all-agents`: 对所有配置的代理存储运行清理。
+- `--store <path>`: 针对特定的 `sessions.json` 文件运行。
+- `--json`: 打印 JSON 摘要。使用 `--all-agents` 时，输出包含每个存储的一个摘要。
 
-`openclaw sessions cleanup --all-agents --dry-run --json`:
+`openclaw sessions cleanup --all-agents --dry-run --json`：
 
 ```json
 {
@@ -108,11 +104,11 @@ openclaw sessions cleanup --json
 }
 ```
 
-Related:
+相关内容：
 
-- Session config: [Configuration reference](/gateway/config-agents#session)
+- 会话配置: [配置参考](/gateway/config-agents#session)
 
-## Related
+## 相关
 
-- [CLI reference](/cli)
-- [Session management](/concepts/session)
+- [CLI 参考](/cli)
+- [会话管理](/concepts/session)

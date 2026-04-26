@@ -1,99 +1,58 @@
 ---
-summary: "Use Xiaomi MiMo models with OpenClaw"
+summary: "在 OpenClaw 中使用 Xiaomi MiMo 模型"
 read_when:
-  - You want Xiaomi MiMo models in OpenClaw
-  - You need XIAOMI_API_KEY setup
+  - 你想在 OpenClaw 中使用 Xiaomi MiMo 模型
+  - 你需要设置 XIAOMI_API_KEY
 title: "Xiaomi MiMo"
 ---
 
-Xiaomi MiMo is the API platform for **MiMo** models. OpenClaw uses the Xiaomi
-OpenAI-compatible endpoint with API-key authentication.
+Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 使用带有 API 密钥认证的 Xiaomi 兼容 OpenAI 的端点。
 
-| Property | Value                           |
+| 属性 | 值 |
 | -------- | ------------------------------- |
-| Provider | `xiaomi`                        |
-| Auth     | `XIAOMI_API_KEY`                |
-| API      | OpenAI-compatible               |
-| Base URL | `https://api.xiaomimimo.com/v1` |
+| 提供商 | `xiaomi` |
+| 认证 | `XIAOMI_API_KEY` |
+| API | 兼容 OpenAI |
+| 基础 URL | `https://api.xiaomimimo.com/v1` |
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Get an API key">
-    Create an API key in the [Xiaomi MiMo console](https://platform.xiaomimimo.com/#/console/api-keys).
+  <Step title="获取 API 密钥">
+    在 [Xiaomi MiMo 控制台](https://platform.xiaomimimo.com/#/console/api-keys) 中创建 API 密钥。
   </Step>
-  <Step title="Run onboarding">
+  <Step title="运行引导">
     ```bash
     openclaw onboard --auth-choice xiaomi-api-key
     ```
 
-    Or pass the key directly:
+    或直接传递密钥：
 
     ```bash
     openclaw onboard --auth-choice xiaomi-api-key --xiaomi-api-key "$XIAOMI_API_KEY"
     ```
 
   </Step>
-  <Step title="Verify the model is available">
+  <Step title="验证模型是否可用">
     ```bash
     openclaw models list --provider xiaomi
     ```
   </Step>
 </Steps>
 
-## Built-in catalog
+## 内置目录
 
-| Model ref              | Input       | Context   | Max output | Reasoning | Notes         |
+| 模型引用 | 输入 | 上下文 | 最大输出 | 推理 | 备注 |
 | ---------------------- | ----------- | --------- | ---------- | --------- | ------------- |
-| `xiaomi/mimo-v2-flash` | text        | 262,144   | 8,192      | No        | Default model |
-| `xiaomi/mimo-v2-pro`   | text        | 1,048,576 | 32,000     | Yes       | Large context |
-| `xiaomi/mimo-v2-omni`  | text, image | 262,144   | 32,000     | Yes       | Multimodal    |
+| `xiaomi/mimo-v2-flash` | 文本 | 262,144 | 8,192 | 否 | 默认模型 |
+| `xiaomi/mimo-v2-pro` | 文本 | 1,048,576 | 32,000 | 是 | 大上下文 |
+| `xiaomi/mimo-v2-omni` | 文本，图像 | 262,144 | 32,000 | 是 | 多模态 |
 
 <Tip>
-The default model ref is `xiaomi/mimo-v2-flash`. The provider is injected automatically when `XIAOMI_API_KEY` is set or an auth profile exists.
+默认模型引用是 `xiaomi/mimo-v2-flash`。当设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，提供商会自动注入。
 </Tip>
 
-## Text-to-speech
-
-The bundled `xiaomi` plugin also registers Xiaomi MiMo as a speech provider for
-`messages.tts`. It calls Xiaomi's chat-completions TTS contract with the text as
-an `assistant` message and optional style guidance as a `user` message.
-
-| Property | Value                                    |
-| -------- | ---------------------------------------- |
-| TTS id   | `xiaomi` (`mimo` alias)                  |
-| Auth     | `XIAOMI_API_KEY`                         |
-| API      | `POST /v1/chat/completions` with `audio` |
-| Default  | `mimo-v2.5-tts`, voice `mimo_default`    |
-| Output   | MP3 by default; WAV when configured      |
-
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "xiaomi",
-      providers: {
-        xiaomi: {
-          apiKey: "xiaomi_api_key",
-          model: "mimo-v2.5-tts",
-          voice: "mimo_default",
-          format: "mp3",
-          style: "Bright, natural, conversational tone.",
-        },
-      },
-    },
-  },
-}
-```
-
-Supported built-in voices include `mimo_default`, `default_zh`, `default_en`,
-`Mia`, `Chloe`, `Milo`, and `Dean`. `mimo-v2-tts` is supported for older MiMo
-TTS accounts; the default uses the current MiMo-V2.5 TTS model. For voice-note
-targets such as Feishu and Telegram, OpenClaw transcodes Xiaomi output to 48kHz
-Opus with `ffmpeg` before delivery.
-
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -142,42 +101,42 @@ Opus with `ffmpeg` before delivery.
 ```
 
 <AccordionGroup>
-  <Accordion title="Auto-injection behavior">
-    The `xiaomi` provider is injected automatically when `XIAOMI_API_KEY` is set in your environment or an auth profile exists. You do not need to manually configure the provider unless you want to override model metadata or the base URL.
+  <Accordion title="自动注入行为">
+    当你的环境中设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，`xiaomi` 提供商会自动注入。除非你想覆盖模型元数据或基础 URL，否则无需手动配置提供商。
   </Accordion>
 
-  <Accordion title="Model details">
-    - **mimo-v2-flash** — lightweight and fast, ideal for general-purpose text tasks. No reasoning support.
-    - **mimo-v2-pro** — supports reasoning with a 1M token context window for long-document workloads.
-    - **mimo-v2-omni** — reasoning-enabled multimodal model that accepts both text and image inputs.
+  <Accordion title="模型详情">
+    - **mimo-v2-flash** — 轻量且快速，适合通用文本任务。不支持推理。
+    - **mimo-v2-pro** — 支持推理，拥有 1M token 上下文窗口，适合长文档工作负载。
+    - **mimo-v2-omni** — 支持推理的多模态模型，接受文本和图像输入。
 
     <Note>
-    All models use the `xiaomi/` prefix (for example `xiaomi/mimo-v2-pro`).
+    所有模型都使用 `xiaomi/` 前缀（例如 `xiaomi/mimo-v2-pro`）。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Troubleshooting">
-    - If models do not appear, confirm `XIAOMI_API_KEY` is set and valid.
-    - When the Gateway runs as a daemon, ensure the key is available to that process (for example in `~/.openclaw/.env` or via `env.shellEnv`).
+  <Accordion title="故障排除">
+    - 如果模型未出现，请确认 `XIAOMI_API_KEY` 已设置且有效。
+    - 当 Gateway 作为守护进程运行时，确保该进程可以使用密钥（例如在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 
     <Warning>
-    Keys set only in your interactive shell are not visible to daemon-managed gateway processes. Use `~/.openclaw/.env` or `env.shellEnv` config for persistent availability.
+    仅在交互式 shell 中设置的密钥对守护进程管理的 gateway 进程不可见。请使用 `~/.openclaw/.env` 或 `env.shellEnv` 配置以确保持久可用。
     </Warning>
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full OpenClaw configuration reference.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    OpenClaw 完整配置参考。
   </Card>
-  <Card title="Xiaomi MiMo console" href="https://platform.xiaomimimo.com" icon="arrow-up-right-from-square">
-    Xiaomi MiMo dashboard and API key management.
+  <Card title="Xiaomi MiMo 控制台" href="https://platform.xiaomimimo.com" icon="arrow-up-right-from-square">
+    Xiaomi MiMo 仪表板和 API 密钥管理。
   </Card>
 </CardGroup>

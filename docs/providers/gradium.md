@@ -1,24 +1,24 @@
 ---
-summary: "Use Gradium text-to-speech in OpenClaw"
+summary: "在 OpenClaw 中使用 Gradium 文本转语音"
 read_when:
-  - You want Gradium for text-to-speech
-  - You need Gradium API key or voice configuration
+  - 你想使用 Gradium 进行文本转语音
+  - 你需要 Gradium API 密钥或语音配置
 title: "Gradium"
 ---
 
-Gradium is a bundled text-to-speech provider for OpenClaw. It can generate normal audio replies, voice-note-compatible Opus output, and 8 kHz u-law audio for telephony surfaces.
+Gradium 是 OpenClaw 的一个内置文本转语音提供商。它可以生成普通音频回复、兼容语音消息的 Opus 输出，以及用于电话场景的 8 kHz u-law 音频。
 
-## Setup
+## 设置
 
-Create a Gradium API key, then expose it to OpenClaw:
+创建一个 Gradium API 密钥，然后将其暴露给 OpenClaw：
 
 ```bash
 export GRADIUM_API_KEY="gsk_..."
 ```
 
-You can also store the key in config under `messages.tts.providers.gradium.apiKey`.
+你也可以在配置中将密钥存储到 `messages.tts.providers.gradium.apiKey` 下。
 
-## Config
+## 配置
 
 ```json5
 {
@@ -38,9 +38,9 @@ You can also store the key in config under `messages.tts.providers.gradium.apiKe
 }
 ```
 
-## Voices
+## 语音
 
-| Name      | Voice ID           |
+| 名称      | 语音 ID            |
 | --------- | ------------------ |
 | Emma      | `YTpq7expH9539ERJ` |
 | Kent      | `LFZvm12tW_z0xfGo` |
@@ -50,15 +50,15 @@ You can also store the key in config under `messages.tts.providers.gradium.apiKe
 | John      | `KWJiFWu2O9nMPYcR` |
 | Arthur    | `3jUdJyOi9pgbxBTK` |
 
-Default voice: Emma.
+默认语音：Emma。
 
-## Output
+## 输出
 
-- Audio-file replies use WAV.
-- Voice-note replies use Opus and are marked voice-compatible.
-- Telephony synthesis uses `ulaw_8000` at 8 kHz.
+- 音频文件回复使用 WAV。
+- 语音消息回复使用 Opus，并标记为兼容语音。
+- 电话合成使用 8 kHz 的 `ulaw_8000`。
 
-## Related
+## 相关内容
 
-- [Text-to-Speech](/tools/tts)
-- [Media Overview](/tools/media-overview)
+- [文本转语音](/tools/tts)
+- [媒体概览](/tools/media-overview)

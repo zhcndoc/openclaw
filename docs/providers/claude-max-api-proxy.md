@@ -1,71 +1,69 @@
 ---
-summary: "Community proxy to expose Claude subscription credentials as an OpenAI-compatible endpoint"
+summary: "社区代理，将 Claude 订阅凭证以 OpenAI 兼容端点方式暴露"
 read_when:
-  - You want to use Claude Max subscription with OpenAI-compatible tools
-  - You want a local API server that wraps Claude Code CLI
-  - You want to evaluate subscription-based vs API-key-based Anthropic access
-title: "Claude Max API proxy"
+  - 你想将 Claude Max 订阅与 OpenAI 兼容工具一起使用
+  - 你想要一个封装了 Claude Code CLI 的本地 API 服务器
+  - 你想评估基于订阅的 Anthropic 访问与基于 API 密钥的 Anthropic 访问
+title: "Claude Max API 代理"
 ---
 
-**claude-max-api-proxy** is a community tool that exposes your Claude Max/Pro subscription as an OpenAI-compatible API endpoint. This allows you to use your subscription with any tool that supports the OpenAI API format.
+**claude-max-api-proxy** 是一个社区工具，它将你的 Claude Max/Pro 订阅以 OpenAI 兼容的 API 端点形式暴露出来。这样你就可以在任何支持 OpenAI API 格式的工具中使用你的订阅。
 
 <Warning>
-This path is technical compatibility only. Anthropic has blocked some subscription
-usage outside Claude Code in the past. You must decide for yourself whether to use
-it and verify Anthropic's current terms before relying on it.
+此方案仅提供技术兼容性。Anthropic 过去曾阻止部分订阅在 Claude Code 之外使用。你需要自行判断是否使用，并在依赖该方案前确认 Anthropic 当前的条款。
 </Warning>
 
-## Why use this?
+## 为什么使用这个？
 
-| Approach                | Cost                                                | Best For                                   |
-| ----------------------- | --------------------------------------------------- | ------------------------------------------ |
-| Anthropic API           | Pay per token (~$15/M input, $75/M output for Opus) | Production apps, high volume               |
-| Claude Max subscription | $200/month flat                                     | Personal use, development, unlimited usage |
+| 方案                 | 费用                                               | 适用场景                                    |
+| -------------------- | ------------------------------------------------- | ------------------------------------------- |
+| Anthropic API        | 按 token 计费（Opus 约 15 美元/百万输入，75 美元/百万输出） | 生产环境应用，高流量                         |
+| Claude Max 订阅套餐  | 每月 200 美元固定费用                              | 个人使用，开发，无限制使用                   |
 
-If you have a Claude Max subscription and want to use it with OpenAI-compatible tools, this proxy may reduce cost for some workflows. API keys remain the clearer policy path for production use.
+如果你有 Claude Max 订阅并想通过 OpenAI 兼容工具使用，本代理可以在某些工作流中降低成本。生产环境仍推荐使用 API 密钥，以符合更清晰的政策要求。
 
-## How it works
+## 工作原理
 
 ```
-Your App → claude-max-api-proxy → Claude Code CLI → Anthropic (via subscription)
-     (OpenAI format)              (converts format)      (uses your login)
+你的应用 → claude-max-api-proxy → Claude Code CLI → Anthropic（通过订阅登陆）
+     （OpenAI 格式）           （格式转换）                 （使用你的登陆）
 ```
 
-The proxy:
+代理：
 
-1. Accepts OpenAI-format requests at `http://localhost:3456/v1/chat/completions`
-2. Converts them to Claude Code CLI commands
-3. Returns responses in OpenAI format (streaming supported)
+1. 在 `http://localhost:3456/v1/chat/completions` 接受 OpenAI 格式请求
+2. 转换为 Claude Code CLI 命令
+3. 以 OpenAI 格式返回响应（支持流式）
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Install the proxy">
-    Requires Node.js 20+ and Claude Code CLI.
+  <Step title="安装代理">
+    需要 Node.js 20+ 和 Claude Code CLI。
 
     ```bash
     npm install -g claude-max-api-proxy
 
-    # Verify Claude CLI is authenticated
+    # 验证 Claude CLI 已认证
     claude --version
     ```
 
   </Step>
-  <Step title="Start the server">
+  <Step title="启动服务器">
     ```bash
     claude-max-api
-    # Server runs at http://localhost:3456
+    # 服务器运行于 http://localhost:3456
     ```
   </Step>
-  <Step title="Test the proxy">
+  <Step title="测试代理">
     ```bash
-    # Health check
+    # 健康检查
     curl http://localhost:3456/health
 
-    # List models
+    # 列出模型
     curl http://localhost:3456/v1/models
 
-    # Chat completion
+    # 聊天补全
     curl http://localhost:3456/v1/chat/completions \
       -H "Content-Type: application/json" \
       -d '{
@@ -75,8 +73,8 @@ The proxy:
     ```
 
   </Step>
-  <Step title="Configure OpenClaw">
-    Point OpenClaw at the proxy as a custom OpenAI-compatible endpoint:
+  <Step title="配置 OpenClaw">
+    将 OpenClaw 指向代理作为自定义 OpenAI 兼容端点：
 
     ```json5
     {
@@ -95,31 +93,30 @@ The proxy:
   </Step>
 </Steps>
 
-## Built-in catalog
+## 内置目录
 
-| Model ID          | Maps To         |
-| ----------------- | --------------- |
-| `claude-opus-4`   | Claude Opus 4   |
-| `claude-sonnet-4` | Claude Sonnet 4 |
-| `claude-haiku-4`  | Claude Haiku 4  |
+| 模型 ID            | 映射到           |
+| ------------------ | ---------------- |
+| `claude-opus-4`    | Claude Opus 4    |
+| `claude-sonnet-4`  | Claude Sonnet 4  |
+| `claude-haiku-4`   | Claude Haiku 4   |
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Proxy-style OpenAI-compatible notes">
-    This path uses the same proxy-style OpenAI-compatible route as other custom
-    `/v1` backends:
+  <Accordion title="代理式 OpenAI 兼容说明">
+    此路径使用与其他自定义 `/v1` 后端相同的代理式 OpenAI 兼容路由：
 
-    - Native OpenAI-only request shaping does not apply
-    - No `service_tier`, no Responses `store`, no prompt-cache hints, and no
-      OpenAI reasoning-compat payload shaping
-    - Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`)
-      are not injected on the proxy URL
+    - 原生仅 OpenAI 的请求塑造不适用
+    - 无 `service_tier`，无 Responses `store`，无 prompt-cache 提示，且无
+      OpenAI reasoning-compat 负载塑造
+    - 隐藏的 OpenClaw 归属头（`originator`, `version`, `User-Agent`）
+      不会注入到代理 URL 中
 
   </Accordion>
 
-  <Accordion title="Auto-start on macOS with LaunchAgent">
-    Create a LaunchAgent to run the proxy automatically:
+  <Accordion title="在 macOS 上使用 LaunchAgent 自动启动">
+    创建一个 LaunchAgent 以自动运行代理：
 
     ```bash
     cat > ~/Library/LaunchAgents/com.claude-max-api.plist << 'EOF'
@@ -153,36 +150,36 @@ The proxy:
   </Accordion>
 </AccordionGroup>
 
-## Links
+## 链接
 
 - **npm:** [https://www.npmjs.com/package/claude-max-api-proxy](https://www.npmjs.com/package/claude-max-api-proxy)
 - **GitHub:** [https://github.com/atalovesyou/claude-max-api-proxy](https://github.com/atalovesyou/claude-max-api-proxy)
-- **Issues:** [https://github.com/atalovesyou/claude-max-api-proxy/issues](https://github.com/atalovesyou/claude-max-api-proxy/issues)
+- **问题反馈:** [https://github.com/atalovesyou/claude-max-api-proxy/issues](https://github.com/atalovesyou/claude-max-api-proxy/issues)
 
-## Notes
+## 注意事项
 
-- This is a **community tool**, not officially supported by Anthropic or OpenClaw
-- Requires an active Claude Max/Pro subscription with Claude Code CLI authenticated
-- The proxy runs locally and does not send data to any third-party servers
-- Streaming responses are fully supported
+- 这是一个**社区工具**，非 Anthropic 或 OpenClaw 官方支持
+- 需要一个活跃的 Claude Max/Pro 订阅，并已通过 Claude Code CLI 认证
+- 代理运行于本地，不会将数据传送给任何第三方服务器
+- 完全支持流式响应
 
 <Note>
-For native Anthropic integration with Claude CLI or API keys, see [Anthropic provider](/providers/anthropic). For OpenAI/Codex subscriptions, see [OpenAI provider](/providers/openai).
+对于与 Claude CLI 或 API 密钥的原生 Anthropic 集成，请参阅 [Anthropic 提供商](/providers/anthropic)。对于 OpenAI/Codex 订阅，请参阅 [OpenAI 提供商](/providers/openai)。
 </Note>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Anthropic provider" href="/providers/anthropic" icon="bolt">
-    Native OpenClaw integration with Claude CLI or API keys.
+  <Card title="Anthropic 提供商" href="/providers/anthropic" icon="bolt">
+    与 Claude CLI 或 API 密钥的原生 OpenClaw 集成。
   </Card>
-  <Card title="OpenAI provider" href="/providers/openai" icon="robot">
-    For OpenAI/Codex subscriptions.
+  <Card title="OpenAI 提供商" href="/providers/openai" icon="robot">
+    适用于 OpenAI/Codex 订阅。
   </Card>
   <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Overview of all providers, model refs, and failover behavior.
+    所有提供商、模型引用和故障转移行为概览。
   </Card>
-  <Card title="Configuration" href="/gateway/configuration" icon="gear">
-    Full config reference.
+  <Card title="配置" href="/gateway/configuration" icon="gear">
+    完整配置参考。
   </Card>
 </CardGroup>

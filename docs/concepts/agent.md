@@ -1,136 +1,111 @@
 ---
-summary: "Agent runtime, workspace contract, and session bootstrap"
+summary: "代理运行时、工作区契约和会话引导"
 read_when:
   - Changing agent runtime, workspace bootstrap, or session behavior
 title: "Agent runtime"
 ---
 
-OpenClaw runs a **single embedded agent runtime** — one agent process per
-Gateway, with its own workspace, bootstrap files, and session store. This page
-covers that runtime contract: what the workspace must contain, which files get
-injected, and how sessions bootstrap against it.
+OpenClaw 运行一个 **单一嵌入式代理运行时**——每个 Gateway 对应一个代理进程，拥有各自的工作区、引导文件和会话存储。此页介绍该运行时契约：工作区必须包含什么、会注入哪些文件，以及会话如何据此完成引导。
 
-## Workspace (required)
+## 工作区（必填）
 
-OpenClaw uses a single agent workspace directory (`agents.defaults.workspace`) as the agent’s **only** working directory (`cwd`) for tools and context.
+OpenClaw 使用单一代理工作区目录（`agents.defaults.workspace`）作为代理工具和上下文的**唯一**工作目录（`cwd`）。
 
-Recommended: use `openclaw setup` to create `~/.openclaw/openclaw.json` if missing and initialize the workspace files.
+推荐：如果缺失，使用 `openclaw setup` 创建 `~/.openclaw/openclaw.json` 并初始化工作区文件。
 
-Full workspace layout + backup guide: [Agent workspace](/concepts/agent-workspace)
+完整工作区布局 + 备份指南：[代理工作区](/concepts/agent-workspace)
 
-If `agents.defaults.sandbox` is enabled, non-main sessions can override this with
-per-session workspaces under `agents.defaults.sandbox.workspaceRoot` (see
-[Gateway configuration](/gateway/configuration)).
+如果启用了 `agents.defaults.sandbox`，非主会话可以通过每会话工作区覆盖此设置，路径为 `agents.defaults.sandbox.workspaceRoot`（详见 [网关配置](/gateway/configuration)）。
 
-## Bootstrap files (injected)
+## 引导文件（注入）
 
-Inside `agents.defaults.workspace`, OpenClaw expects these user-editable files:
+在 `agents.defaults.workspace` 中，OpenClaw 期望以下用户可编辑文件：
 
-- `AGENTS.md` — operating instructions + “memory”
-- `SOUL.md` — persona, boundaries, tone
-- `TOOLS.md` — user-maintained tool notes (e.g. `imsg`, `sag`, conventions)
-- `BOOTSTRAP.md` — one-time first-run ritual (deleted after completion)
-- `IDENTITY.md` — agent name/vibe/emoji
-- `USER.md` — user profile + preferred address
+- `AGENTS.md` — 操作说明 + “记忆”
+- `SOUL.md` — 角色设定、边界、语气
+- `TOOLS.md` — 用户维护的工具说明（如 `imsg`、`sag`、约定等）
+- `BOOTSTRAP.md` — 一次性首次运行仪式（完成后删除）
+- `IDENTITY.md` — 代理名称/风格/表情符号
+- `USER.md` — 用户档案 + 首选称呼
 
-On the first turn of a new session, OpenClaw injects the contents of these files directly into the agent context.
+新会话的首次轮次，OpenClaw 会将这些文件的内容直接注入代理上下文。
 
-Blank files are skipped. Large files are trimmed and truncated with a marker so prompts stay lean (read the file for full content).
+空白文件将被跳过。大型文件会被裁剪并以标记符截断，以保持提示精简（完整内容请查看文件）。
 
-If a file is missing, OpenClaw injects a single “missing file” marker line (and `openclaw setup` will create a safe default template).
+如果文件缺失，OpenClaw 会注入一行“缺失文件”标记（`openclaw setup` 会创建安全默认模板）。
 
-`BOOTSTRAP.md` is only created for a **brand new workspace** (no other bootstrap files present). If you delete it after completing the ritual, it should not be recreated on later restarts.
+`BOOTSTRAP.md` 仅为**全新工作区**创建（不存在其他引导文件时）。完成仪式后删除，后续重启时不会重新创建。
 
-To disable bootstrap file creation entirely (for pre-seeded workspaces), set:
+如需完全禁止创建引导文件（适用于预设工作区），请设置：
 
 ```json5
 { agents: { defaults: { skipBootstrap: true } } }
 ```
 
-## Built-in tools
+## 内置工具
 
-Core tools (read/exec/edit/write and related system tools) are always available,
-subject to tool policy. `apply_patch` is optional and gated by
-`tools.exec.applyPatch`. `TOOLS.md` does **not** control which tools exist; it’s
-guidance for how _you_ want them used.
+核心工具（读取/执行/编辑/写入及相关系统工具）始终可用，受工具策略限制。`apply_patch` 是可选的，由 `tools.exec.applyPatch` 控制。`TOOLS.md` **不控制**工具是否存在；它是指导你如何使用工具的说明。
 
-## Skills
+## 技能
 
-OpenClaw loads skills from these locations (highest precedence first):
+OpenClaw 从以下位置加载技能（优先级从高到低）：
 
-- Workspace: `<workspace>/skills`
-- Project agent skills: `<workspace>/.agents/skills`
-- Personal agent skills: `~/.agents/skills`
-- Managed/local: `~/.openclaw/skills`
-- Bundled (shipped with the install)
-- Extra skill folders: `skills.load.extraDirs`
+- 工作区：`<workspace>/skills`
+- 项目代理技能：`<workspace>/.agents/skills`
+- 个人代理技能：`~/.agents/skills`
+- 托管/本地：`~/.openclaw/skills`
+- 捆绑包（随安装附带）
+- 额外技能文件夹：`skills.load.extraDirs`
 
-Skills can be gated by config/env (see `skills` in [Gateway configuration](/gateway/configuration)).
+技能可以通过配置或环境变量进行控制（详见 [网关配置](/gateway/configuration) 中的 `skills`）。
 
-## Runtime boundaries
+## 运行时边界
 
-The embedded agent runtime is built on the Pi agent core (models, tools, and
-prompt pipeline). Session management, discovery, tool wiring, and channel
-delivery are OpenClaw-owned layers on top of that core.
+嵌入式代理运行时构建于 Pi 代理核心（模型、工具和提示管道）之上。会话管理、发现、工具连接和渠道投递是 OpenClaw 在该核心之上拥有的层。
 
-## Sessions
+## 会话
 
-Session transcripts are stored as JSONL at:
+会话记录以 JSONL 格式存储于：
 
 - `~/.openclaw/agents/<agentId>/sessions/<SessionId>.jsonl`
 
-The session ID is stable and chosen by OpenClaw.
-Legacy session folders from other tools are not read.
+会话 ID 是稳定的，由 OpenClaw 选择。
+不读取来自其他工具的遗留会话文件夹。
 
-## Steering while streaming
+## 流式传输时的引导
 
-When queue mode is `steer`, inbound messages are injected into the current run.
-Queued steering is delivered **after the current assistant turn finishes
-executing its tool calls**, before the next LLM call. Steering no longer skips
-remaining tool calls from the current assistant message; it injects the queued
-message at the next model boundary instead.
+当队列模式为 `steer` 时，收到的消息会被注入当前运行中。排队的引导在**当前助手轮次完成其工具调用执行后**、下一次 LLM 调用前递送。引导不再跳过当前助手消息中剩余的工具调用；它会在下一个模型边界处注入排队的消息。
 
-When queue mode is `followup` or `collect`, inbound messages are held until the
-current turn ends, then a new agent turn starts with the queued payloads. See
-[Queue](/concepts/queue) for mode + debounce/cap behavior.
+当队列模式为 `followup` 或 `collect`，收到的消息会被延迟处理，等当前轮次结束后再启动一个新的代理轮次。详情见 [队列](/concepts/queue) 中模式及去抖/容量行为。
 
-Block streaming sends completed assistant blocks as soon as they finish; it is
-**off by default** (`agents.defaults.blockStreamingDefault: "off"`).
-Tune the boundary via `agents.defaults.blockStreamingBreak` (`text_end` vs `message_end`; defaults to text_end).
-Control soft block chunking with `agents.defaults.blockStreamingChunk` (defaults to
-800–1200 chars; prefers paragraph breaks, then newlines; sentences last).
-Coalesce streamed chunks with `agents.defaults.blockStreamingCoalesce` to reduce
-single-line spam (idle-based merging before send). Non-Telegram channels require
-explicit `*.blockStreaming: true` to enable block replies.
-Verbose tool summaries are emitted at tool start (no debounce); Control UI
-streams tool output via agent events when available.
-More details: [Streaming + chunking](/concepts/streaming).
+块级流式会在助手块完成后立即发送；默认**关闭**（`agents.defaults.blockStreamingDefault: "off"`）。
+通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` 和 `message_end`，默认 `text_end`）。
+用 `agents.defaults.blockStreamingChunk` 控制软块分割（默认 800–1200 个字符；优先段落分割，再换行，最后句子）。
+使用 `agents.defaults.blockStreamingCoalesce` 合并流块，以减少单行刷屏（发送前基于空闲合并）。非 Telegram 渠道需显式设置 `*.blockStreaming: true` 才能启用块回复。
+详细工具摘要在工具启动时发送（无去抖）；控制界面在可用时通过代理事件流式输出工具结果。
+更多细节：[流式传输 + 分块](/concepts/streaming)。
 
-## Model refs
+## 模型引用
 
-Model refs in config (for example `agents.defaults.model` and `agents.defaults.models`) are parsed by splitting on the **first** `/`.
+配置中的模型引用（如 `agents.defaults.model` 和 `agents.defaults.models`）通过第一次出现的 `/` 分割解析。
 
-- Use `provider/model` when configuring models.
-- If the model ID itself contains `/` (OpenRouter-style), include the provider prefix (example: `openrouter/moonshotai/kimi-k2`).
-- If you omit the provider, OpenClaw tries an alias first, then a unique
-  configured-provider match for that exact model id, and only then falls back
-  to the configured default provider. If that provider no longer exposes the
-  configured default model, OpenClaw falls back to the first configured
-  provider/model instead of surfacing a stale removed-provider default.
+- 配置模型时使用 `provider/model`。
+- 如果模型 ID 本身包含 `/`（OpenRouter 风格），请包含提供者前缀（示例：`openrouter/moonshotai/kimi-k2`）。
+- 如果省略提供者，OpenClaw 会先尝试别名，然后查找该确切模型 ID 的唯一配置提供者匹配项，最后才回退到配置的默认提供者。如果该提供者不再暴露配置的默认模型，OpenClaw 会回退到第一个配置的提供者/模型，而不是显示一个过时的已移除提供者默认值。
 
-## Configuration (minimal)
+## 配置（最简）
 
-At minimum, set:
+至少设置：
 
 - `agents.defaults.workspace`
-- `channels.whatsapp.allowFrom` (strongly recommended)
+- `channels.whatsapp.allowFrom`（强烈推荐）
 
 ---
 
-_Next: [Group Chats](/channels/group-messages)_ 🦞
+_下一步：[群聊](/channels/group-messages)_ 🦞
 
-## Related
+## 相关
 
-- [Agent workspace](/concepts/agent-workspace)
-- [Multi-agent routing](/concepts/multi-agent)
-- [Session management](/concepts/session)
+- [代理工作区](/concepts/agent-workspace)
+- [多代理路由](/concepts/multi-agent)
+- [会话管理](/concepts/session)

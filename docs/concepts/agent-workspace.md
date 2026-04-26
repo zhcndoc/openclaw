@@ -1,27 +1,23 @@
 ---
-summary: "Agent workspace: location, layout, and backup strategy"
+summary: "代理工作区：位置、布局和备份策略"
 read_when:
-  - You need to explain the agent workspace or its file layout
-  - You want to back up or migrate an agent workspace
+  - 你需要解释代理工作区或其文件布局
+  - 你想备份或迁移代理工作区
 title: "Agent workspace"
-sidebarTitle: "Agent workspace"
 ---
 
-The workspace is the agent's home. It is the only working directory used for file tools and for workspace context. Keep it private and treat it as memory.
+工作区是代理的主目录。它是文件工具以及工作区上下文所使用的唯一工作目录。请保持其私密，并将其视为记忆。
 
-This is separate from `~/.openclaw/`, which stores config, credentials, and sessions.
+这与存储配置、凭据和会话的 `~/.openclaw/` 目录是分开的。
 
-<Warning>
-The workspace is the **default cwd**, not a hard sandbox. Tools resolve relative paths against the workspace, but absolute paths can still reach elsewhere on the host unless sandboxing is enabled. If you need isolation, use [`agents.defaults.sandbox`](/gateway/sandboxing) (and/or per-agent sandbox config).
+**重要提示：** 工作区是**默认的当前工作目录 (cwd)**，而不是严格的沙箱。工具会相对于工作区解析相对路径，但绝对路径仍然可以访问主机上的其他位置，除非启用了沙箱隔离。如果你需要隔离，请使用 [`agents.defaults.sandbox`](/gateway/sandboxing)（和/或每个代理的沙箱配置）。启用沙箱且 `workspaceAccess` 不为 `"rw"` 时，工具将在 `~/.openclaw/sandboxes` 下的沙箱工作区内运行，而非主机工作区。
 
-When sandboxing is enabled and `workspaceAccess` is not `"rw"`, tools operate inside a sandbox workspace under `~/.openclaw/sandboxes`, not your host workspace.
-</Warning>
+## 默认位置
 
-## Default location
-
-- Default: `~/.openclaw/workspace`
-- If `OPENCLAW_PROFILE` is set and not `"default"`, the default becomes `~/.openclaw/workspace-<profile>`.
-- Override in `~/.openclaw/openclaw.json`:
+- 默认路径：`~/.openclaw/workspace`
+- 如果设置了 `OPENCLAW_PROFILE` 且不为 `"default"`，默认路径变为
+  `~/.openclaw/workspace-<profile>`。
+- 可在 `~/.openclaw/openclaw.json` 中覆盖：
 
 ```json5
 {
@@ -33,163 +29,169 @@ When sandboxing is enabled and `workspaceAccess` is not `"rw"`, tools operate in
 }
 ```
 
-`openclaw onboard`, `openclaw configure`, or `openclaw setup` will create the workspace and seed the bootstrap files if they are missing.
+`openclaw onboard`、`openclaw configure` 或 `openclaw setup` 会在缺失时创建工作区并初始化启动文件。
+沙箱初始化复制仅接受常规的工作区内文件；解析到工作区外部的符号链接/硬链接别名会被忽略。
 
-<Note>
-Sandbox seed copies only accept regular in-workspace files; symlink/hardlink aliases that resolve outside the source workspace are ignored.
-</Note>
-
-If you already manage the workspace files yourself, you can disable bootstrap file creation:
+如果你已经自行管理工作区文件，可以禁用启动文件创建：
 
 ```json5
 { agents: { defaults: { skipBootstrap: true } } }
 ```
 
-## Extra workspace folders
+## 额外的工作区文件夹
 
-Older installs may have created `~/openclaw`. Keeping multiple workspace directories around can cause confusing auth or state drift, because only one workspace is active at a time.
+旧版本安装可能创建了 `~/openclaw`。保留多个工作区目录可能导致认证混乱或状态漂移，因为一次只能激活一个工作区。
 
-<Note>
-**Recommendation:** keep a single active workspace. If you no longer use the extra folders, archive or move them to Trash (for example `trash ~/openclaw`). If you intentionally keep multiple workspaces, make sure `agents.defaults.workspace` points to the active one.
+**建议：** 保持单个活动工作区。如果不再使用额外文件夹，归档或移动到废纸篓（例如 `trash ~/openclaw`）。
+如果你有意保留多个工作区，请确保
+`agents.defaults.workspace` 指向当前激活的工作区。
 
-`openclaw doctor` warns when it detects extra workspace directories.
-</Note>
+`openclaw doctor` 会在检测到额外工作区目录时发出警告。
 
-## Workspace file map
+## 工作区文件映射（每个文件的意义）
 
-These are the standard files OpenClaw expects inside the workspace:
+以下是 OpenClaw 期望工作区内包含的标准文件：
 
-<AccordionGroup>
-  <Accordion title="AGENTS.md — operating instructions">
-    Operating instructions for the agent and how it should use memory. Loaded at the start of every session. Good place for rules, priorities, and "how to behave" details.
-  </Accordion>
-  <Accordion title="SOUL.md — persona and tone">
-    Persona, tone, and boundaries. Loaded every session. Guide: [SOUL.md personality guide](/concepts/soul).
-  </Accordion>
-  <Accordion title="USER.md — who the user is">
-    Who the user is and how to address them. Loaded every session.
-  </Accordion>
-  <Accordion title="IDENTITY.md — name, vibe, emoji">
-    The agent's name, vibe, and emoji. Created/updated during the bootstrap ritual.
-  </Accordion>
-  <Accordion title="TOOLS.md — local tool conventions">
-    Notes about your local tools and conventions. Does not control tool availability; it is only guidance.
-  </Accordion>
-  <Accordion title="HEARTBEAT.md — heartbeat checklist">
-    Optional tiny checklist for heartbeat runs. Keep it short to avoid token burn.
-  </Accordion>
-  <Accordion title="BOOT.md — startup checklist">
-    Optional startup checklist run automatically on gateway restart (when [internal hooks](/automation/hooks) are enabled). Keep it short; use the message tool for outbound sends.
-  </Accordion>
-  <Accordion title="BOOTSTRAP.md — first-run ritual">
-    One-time first-run ritual. Only created for a brand-new workspace. Delete it after the ritual is complete.
-  </Accordion>
-  <Accordion title="memory/YYYY-MM-DD.md — daily memory log">
-    Daily memory log (one file per day). Recommended to read today + yesterday on session start.
-  </Accordion>
-  <Accordion title="MEMORY.md — curated long-term memory (optional)">
-    Curated long-term memory. Only load in the main, private session (not shared/group contexts). See [Memory](/concepts/memory) for the workflow and automatic memory flush.
-  </Accordion>
-  <Accordion title="skills/ — workspace skills (optional)">
-    Workspace-specific skills. Highest-precedence skill location for that workspace. Overrides project agent skills, personal agent skills, managed skills, bundled skills, and `skills.load.extraDirs` when names collide.
-  </Accordion>
-  <Accordion title="canvas/ — Canvas UI files (optional)">
-    Canvas UI files for node displays (for example `canvas/index.html`).
-  </Accordion>
-</AccordionGroup>
+- `AGENTS.md`
+  - 代理的操作说明及其如何使用记忆。
+  - 每次会话开始时加载。
+  - 适合放规则、优先级和“如何表现”的细节。
 
-<Note>
-If any bootstrap file is missing, OpenClaw injects a "missing file" marker into the session and continues. Large bootstrap files are truncated when injected; adjust limits with `agents.defaults.bootstrapMaxChars` (default: 12000) and `agents.defaults.bootstrapTotalMaxChars` (default: 60000). `openclaw setup` can recreate missing defaults without overwriting existing files.
-</Note>
+- `SOUL.md`
+  - 人设、语气和边界。
+  - 每次会话加载。
+  - 指南：[SOUL.md 人格指南](/concepts/soul)
 
-## What is NOT in the workspace
+- `USER.md`
+  - 用户身份及如何称呼用户。
+  - 每次会话加载。
 
-These live under `~/.openclaw/` and should NOT be committed to the workspace repo:
+- `IDENTITY.md`
+  - 代理名字、氛围及表情符号。
+  - 在启动仪式中创建/更新。
 
-- `~/.openclaw/openclaw.json` (config)
-- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (model auth profiles: OAuth + API keys)
-- `~/.openclaw/credentials/` (channel/provider state plus legacy OAuth import data)
-- `~/.openclaw/agents/<agentId>/sessions/` (session transcripts + metadata)
-- `~/.openclaw/skills/` (managed skills)
+- `TOOLS.md`
+  - 关于本地工具和约定的备注。
+  - 不控制工具可用性，仅提供指导。
 
-If you need to migrate sessions or config, copy them separately and keep them out of version control.
+- `HEARTBEAT.md`
+  - 可选的短小心跳运行清单。
+  - 保持简短以避免消耗过多令牌。
 
-## Git backup (recommended, private)
+- `BOOT.md`
+  - 启动时自动运行的可选启动检查清单（当启用 [内部钩子](/automation/hooks) 时）。
+  - 保持简短；出站发送请使用消息工具。
 
-Treat the workspace as private memory. Put it in a **private** git repo so it is backed up and recoverable.
+- `BOOTSTRAP.md`
+  - 一次性首次运行仪式。
+  - 仅为全新工作区创建。
+  - 仪式完成后请删除。
 
-Run these steps on the machine where the Gateway runs (that is where the workspace lives).
+- `memory/YYYY-MM-DD.md`
+  - 每日记忆日志（每日一个文件）。
+  - 建议在会话开始时读取当天和前一天的文件。
 
-<Steps>
-  <Step title="Initialize the repo">
-    If git is installed, brand-new workspaces are initialized automatically. If this workspace is not already a repo, run:
+- `MEMORY.md`（可选）
+  - 精选的长期记忆。
+  - 仅在主私有会话中加载（非共享/群组上下文）。
 
-    ```bash
-    cd ~/.openclaw/workspace
-    git init
-    git add AGENTS.md SOUL.md TOOLS.md IDENTITY.md USER.md HEARTBEAT.md memory/
-    git commit -m "Add agent workspace"
-    ```
+参见 [记忆](/concepts/memory) 了解工作流和自动记忆刷新。
 
-  </Step>
-  <Step title="Add a private remote">
-    <Tabs>
-      <Tab title="GitHub web UI">
-        1. Create a new **private** repository on GitHub.
-        2. Do not initialize with a README (avoids merge conflicts).
-        3. Copy the HTTPS remote URL.
-        4. Add the remote and push:
+- `skills/`（可选）
+  - 工作区特定的技能。
+  - 该工作区最高优先级的技能位置。
+  - 当名称冲突时，覆盖项目代理技能、个人代理技能、托管技能、捆绑技能和 `skills.load.extraDirs`。
 
-        ```bash
-        git branch -M main
-        git remote add origin <https-url>
-        git push -u origin main
-        ```
-      </Tab>
-      <Tab title="GitHub CLI (gh)">
-        ```bash
-        gh auth login
-        gh repo create openclaw-workspace --private --source . --remote origin --push
-        ```
-      </Tab>
-      <Tab title="GitLab web UI">
-        1. Create a new **private** repository on GitLab.
-        2. Do not initialize with a README (avoids merge conflicts).
-        3. Copy the HTTPS remote URL.
-        4. Add the remote and push:
+- `canvas/`（可选）
+  - 用于节点显示的画布 UI 文件（例如 `canvas/index.html`）。
 
-        ```bash
-        git branch -M main
-        git remote add origin <https-url>
-        git push -u origin main
-        ```
-      </Tab>
-    </Tabs>
+如果缺少任何启动文件，OpenClaw 会向会话注入一个“缺失文件”标记并继续。较大的启动文件在注入时会被截断；可通过 `agents.defaults.bootstrapMaxChars`（默认：12000）和 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）调整限制。
+`openclaw setup` 可以在不覆盖现有文件的情况下重新创建缺失的默认文件。
 
-  </Step>
-  <Step title="Ongoing updates">
-    ```bash
-    git status
-    git add .
-    git commit -m "Update memory"
-    git push
-    ```
-  </Step>
-</Steps>
+## 工作区中不包含的内容
 
-## Do not commit secrets
+以下内容存放于 `~/.openclaw/`，不应提交到工作区仓库：
 
-<Warning>
-Even in a private repo, avoid storing secrets in the workspace:
+- `~/.openclaw/openclaw.json` (配置)
+- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (模型认证配置文件：OAuth + API 密钥)
+- `~/.openclaw/credentials/` (渠道/提供者状态以及旧版 OAuth 导入数据)
+- `~/.openclaw/agents/<agentId>/sessions/` (会话记录 + 元数据)
+- `~/.openclaw/skills/` (托管技能)
 
-- API keys, OAuth tokens, passwords, or private credentials.
-- Anything under `~/.openclaw/`.
-- Raw dumps of chats or sensitive attachments.
+如果需要迁移会话或配置，请单独复制，且不要纳入版本控制。
 
-If you must store sensitive references, use placeholders and keep the real secret elsewhere (password manager, environment variables, or `~/.openclaw/`).
-</Warning>
+## Git 备份（推荐，私密）
 
-Suggested `.gitignore` starter:
+将工作区视为私密记忆。将其放入**私有** git 仓库，以便备份和恢复。
+
+在运行 Gateway 的机器上执行以下步骤（工作区所在位置）。
+
+### 1) 初始化仓库
+
+如果已安装 git，全新工作区会自动初始化。如果此工作区尚未是仓库，请运行：
+
+```bash
+cd ~/.openclaw/workspace
+git init
+git add AGENTS.md SOUL.md TOOLS.md IDENTITY.md USER.md HEARTBEAT.md memory/
+git commit -m "Add agent workspace"
+```
+
+### 2) 添加私有远程仓库（适合初学者选项）
+
+选项 A：GitHub 网页 UI
+
+1. 在 GitHub 上创建一个新的**私有**仓库。
+2. 不要初始化 README（避免合并冲突）。
+3. 复制 HTTPS 远程 URL。
+4. 添加远程并推送：
+
+```bash
+git branch -M main
+git remote add origin <https-url>
+git push -u origin main
+```
+
+选项 B：GitHub CLI (`gh`)
+
+```bash
+gh auth login
+gh repo create openclaw-workspace --private --source . --remote origin --push
+```
+
+选项 C：GitLab 网页 UI
+
+1. 在 GitLab 上创建一个新的**私有**仓库。
+2. 不要初始化 README（避免合并冲突）。
+3. 复制 HTTPS 远程 URL。
+4. 添加远程并推送：
+
+```bash
+git branch -M main
+git remote add origin <https-url>
+git push -u origin main
+```
+
+### 3) 持续更新
+
+```bash
+git status
+git add .
+git commit -m "Update memory"
+git push
+```
+
+## 不要提交秘密信息
+
+即使在私有仓库中，也应避免将秘密信息存储在工作区：
+
+- API 密钥、OAuth 令牌、密码或私密凭据。
+- `~/.openclaw/` 目录下的内容。
+- 聊天内容原始转储或敏感附件。
+
+如果必须存储敏感引用，请使用占位符，并将真实密钥保存在其他地方（密码管理器、环境变量或 `~/.openclaw/`）。
+
+建议的 `.gitignore` 起始文件：
 
 ```gitignore
 .DS_Store
@@ -199,31 +201,21 @@ Suggested `.gitignore` starter:
 **/secrets*
 ```
 
-## Moving the workspace to a new machine
+## 将工作区迁移到新机器
 
-<Steps>
-  <Step title="Clone the repo">
-    Clone the repo to the desired path (default `~/.openclaw/workspace`).
-  </Step>
-  <Step title="Update config">
-    Set `agents.defaults.workspace` to that path in `~/.openclaw/openclaw.json`.
-  </Step>
-  <Step title="Seed missing files">
-    Run `openclaw setup --workspace <path>` to seed any missing files.
-  </Step>
-  <Step title="Copy sessions (optional)">
-    If you need sessions, copy `~/.openclaw/agents/<agentId>/sessions/` from the old machine separately.
-  </Step>
-</Steps>
+1. 克隆仓库到目标路径（默认 `~/.openclaw/workspace`）。
+2. 在 `~/.openclaw/openclaw.json` 中将 `agents.defaults.workspace` 设置为该路径。
+3. 运行 `openclaw setup --workspace <path>`，以初始化缺失文件。
+4. 若需要会话，单独复制旧机器的 `~/.openclaw/agents/<agentId>/sessions/`。
 
-## Advanced notes
+## 高级说明
 
-- Multi-agent routing can use different workspaces per agent. See [Channel routing](/channels/channel-routing) for routing configuration.
-- If `agents.defaults.sandbox` is enabled, non-main sessions can use per-session sandbox workspaces under `agents.defaults.sandbox.workspaceRoot`.
+- 多代理路由可以为每个代理使用不同的工作区。有关路由配置，请参阅 [渠道路由](/channels/channel-routing)。
+- 如果启用了 `agents.defaults.sandbox`，非主会话可以使用 `agents.defaults.sandbox.workspaceRoot` 下的每会话沙箱工作区。
 
-## Related
+## 相关内容
 
-- [Heartbeat](/gateway/heartbeat) — HEARTBEAT.md workspace file
-- [Sandboxing](/gateway/sandboxing) — workspace access in sandboxed environments
-- [Session](/concepts/session) — session storage paths
-- [Standing orders](/automation/standing-orders) — persistent instructions in workspace files
+- [常驻指令](/automation/standing-orders) — 工作区文件中的持久指令
+- [心跳](/gateway/heartbeat) — HEARTBEAT.md 工作区文件
+- [会话](/concepts/session) — 会话存储路径
+- [沙箱隔离](/gateway/sandboxing) — 沙箱环境中的工作区访问

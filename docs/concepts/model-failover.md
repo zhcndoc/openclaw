@@ -1,49 +1,40 @@
 ---
-summary: "How OpenClaw rotates auth profiles and falls back across models"
+summary: "OpenClaw 如何轮换认证配置文件及在模型间回退"
 read_when:
-  - Diagnosing auth profile rotation, cooldowns, or model fallback behavior
-  - Updating failover rules for auth profiles or models
-  - Understanding how session model overrides interact with fallback retries
-title: "Model failover"
-sidebarTitle: "Model failover"
+  - 诊断认证配置文件轮换、冷却时间或模型回退行为
+  - 更新认证配置文件或模型的故障切换规则
+  - 了解会话模型覆盖如何与回退重试交互
+title: "模型故障切换"
 ---
 
-OpenClaw handles failures in two stages:
+OpenClaw 分两个阶段处理失败：
 
-1. **Auth profile rotation** within the current provider.
-2. **Model fallback** to the next model in `agents.defaults.model.fallbacks`.
+1. 当前提供商内的**认证配置文件轮换**。
+2. 向 `agents.defaults.model.fallbacks` 中的下一个模型进行**模型回退**。
 
-This doc explains the runtime rules and the data that backs them.
+本文档解释了运行时规则及其支持的数据。
 
-## Runtime flow
+## 运行时流程
 
-For a normal text run, OpenClaw evaluates candidates in this order:
+对于正常的文本运行，OpenClaw 按以下顺序评估候选项：
 
-<Steps>
-  <Step title="Resolve session state">
-    Resolve the active session model and auth-profile preference.
-  </Step>
-  <Step title="Build candidate chain">
-    Build the model candidate chain from the currently selected session model, then `agents.defaults.model.fallbacks` in order, ending with the configured primary when the run started from an override.
-  </Step>
-  <Step title="Try the current provider">
-    Try the current provider with auth-profile rotation/cooldown rules.
-  </Step>
-  <Step title="Advance on failover-worthy errors">
-    If that provider is exhausted with a failover-worthy error, move to the next model candidate.
-  </Step>
-  <Step title="Persist fallback override">
-    Persist the selected fallback override before the retry starts so other session readers see the same provider/model the runner is about to use.
-  </Step>
-  <Step title="Roll back narrowly on failure">
-    If the fallback candidate fails, roll back only the fallback-owned session override fields when they still match that failed candidate.
-  </Step>
-  <Step title="Throw FallbackSummaryError if exhausted">
-    If every candidate fails, throw a `FallbackSummaryError` with per-attempt detail and the soonest cooldown expiry when one is known.
-  </Step>
-</Steps>
+1. 当前选定的会话模型。
+2. 按顺序配置 `agents.defaults.model.fallbacks`。
+3. 当运行从覆盖开始时，最后配置的主模型。
 
-This is intentionally narrower than "save and restore the whole session". The reply runner only persists the model-selection fields it owns for fallback:
+在每个候选项内部，OpenClaw 在前进到下一个模型候选项之前尝试认证配置文件故障切换。
+
+高层序列：
+
+1. 解析活动会话模型和认证配置文件偏好。
+2. 构建模型候选链。
+3. 使用认证配置文件轮换/冷却规则尝试当前提供商。
+4. 如果该提供商因值得故障切换的错误而耗尽，移动到下一个模型候选项。
+5. 在重试开始前持久化选定的回退覆盖，以便其他会话读取者看到运行器即将使用的相同提供商/模型。
+6. 如果回退候选项失败，仅回滚仍匹配该失败候选项的回退拥有会话覆盖字段。
+7. 如果每个候选项都失败，抛出 `FallbackSummaryError`，包含每次尝试的详情以及已知的最早冷却过期时间。
+
+这故意比“保存并恢复整个会话”更窄。回复运行器仅持久化它拥有的模型选择字段用于回退：
 
 - `providerOverride`
 - `modelOverride`
@@ -51,112 +42,99 @@ This is intentionally narrower than "save and restore the whole session". The re
 - `authProfileOverrideSource`
 - `authProfileOverrideCompactionCount`
 
-That prevents a failed fallback retry from overwriting newer unrelated session mutations such as manual `/model` changes or session rotation updates that happened while the attempt was running.
+这防止失败的回退重试覆盖更新的无关会话变更，例如手动 `/model` 更改或在尝试运行期间发生的会话轮换更新。
 
-## Auth storage (keys + OAuth)
+## 认证存储（密钥 + OAuth）
 
-OpenClaw uses **auth profiles** for both API keys and OAuth tokens.
+OpenClaw 使用**认证配置文件**管理 API 密钥和 OAuth 令牌。
 
-- Secrets live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (legacy: `~/.openclaw/agent/auth-profiles.json`).
-- Runtime auth-routing state lives in `~/.openclaw/agents/<agentId>/agent/auth-state.json`.
-- Config `auth.profiles` / `auth.order` are **metadata + routing only** (no secrets).
-- Legacy import-only OAuth file: `~/.openclaw/credentials/oauth.json` (imported into `auth-profiles.json` on first use).
+- 密钥存储在 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（旧版：`~/.openclaw/agent/auth-profiles.json`）。
+- 运行时认证路由状态存储在 `~/.openclaw/agents/<agentId>/agent/auth-state.json`。
+- 配置 `auth.profiles` / `auth.order` 仅用于**元数据 + 路由**（不含密钥）。
+- 仅用于导入的旧版 OAuth 文件：`~/.openclaw/credentials/oauth.json`（首次使用时导入到 `auth-profiles.json`）。
 
-More detail: [OAuth](/concepts/oauth)
+更多详情见：[/concepts/oauth](/concepts/oauth)
 
-Credential types:
+凭证类型：
 
 - `type: "api_key"` → `{ provider, key }`
-- `type: "oauth"` → `{ provider, access, refresh, expires, email? }` (+ `projectId`/`enterpriseUrl` for some providers)
+- `type: "oauth"` → `{ provider, access, refresh, expires, email? }`（部分提供商还包含 `projectId`/`enterpriseUrl`）
 
-## Profile IDs
+## 配置文件 ID
 
-OAuth logins create distinct profiles so multiple accounts can coexist.
+OAuth 登录会创建不同的配置文件，允许多个账户共存。
 
-- Default: `provider:default` when no email is available.
-- OAuth with email: `provider:<email>` (for example `google-antigravity:user@gmail.com`).
+- 默认情况：无邮箱时为 `provider:default`。
+- 有邮箱的 OAuth：`provider:<email>`（例如 `google-antigravity:user@gmail.com`）。
 
-Profiles live in `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` under `profiles`.
+配置文件存储在 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` 的 `profiles` 下。
 
-## Rotation order
+## 轮换顺序
 
-When a provider has multiple profiles, OpenClaw chooses an order like this:
+当一个提供商有多个配置文件时，OpenClaw 按如下顺序选择：
 
-<Steps>
-  <Step title="Explicit config">
-    `auth.order[provider]` (if set).
-  </Step>
-  <Step title="Configured profiles">
-    `auth.profiles` filtered by provider.
-  </Step>
-  <Step title="Stored profiles">
-    Entries in `auth-profiles.json` for the provider.
-  </Step>
-</Steps>
+1. **显式配置**：`auth.order[provider]`（如果设置了）。
+2. **配置文件列表**：过滤 `auth.profiles` 中该提供商的配置文件。
+3. **存储配置文件**：`auth-profiles.json` 中该提供商的条目。
 
-If no explicit order is configured, OpenClaw uses a round‑robin order:
+如果没有显式顺序配置，OpenClaw 使用轮询顺序：
 
-- **Primary key:** profile type (**OAuth before API keys**).
-- **Secondary key:** `usageStats.lastUsed` (oldest first, within each type).
-- **Cooldown/disabled profiles** are moved to the end, ordered by soonest expiry.
+- **主键**：配置文件类型（**OAuth 优先于 API 密钥**）。
+- **次键**：`usageStats.lastUsed`（每类型内最久未使用优先）。
+- **冷却/禁用配置文件** 会被移动到末尾，按最早过期排序。
 
-### Session stickiness (cache-friendly)
+### 会话粘性（缓存友好）
 
-OpenClaw **pins the chosen auth profile per session** to keep provider caches warm. It does **not** rotate on every request. The pinned profile is reused until:
+OpenClaw **在每个会话内固定选择的认证配置文件**，以保持提供商缓存活跃。
+不会在每次请求时轮换。固定的配置文件会一直被复用，直到：
 
-- the session is reset (`/new` / `/reset`)
-- a compaction completes (compaction count increments)
-- the profile is in cooldown/disabled
+- 会话被重置（`/new` / `/reset`）
+- 压缩完成（压缩计数加一）
+- 配置文件处于冷却或禁用状态
 
-Manual selection via `/model …@<profileId>` sets a **user override** for that session and is not auto-rotated until a new session starts.
+通过 `/model …@<profileId>` 手动选择可为该会话设置**用户覆盖**，
+在新会话启动前不会自动轮换。
 
-<Note>
-Auto-pinned profiles (selected by the session router) are treated as a **preference**: they are tried first, but OpenClaw may rotate to another profile on rate limits/timeouts. User-pinned profiles stay locked to that profile; if it fails and model fallbacks are configured, OpenClaw moves to the next model instead of switching profiles.
-</Note>
+自动固定的配置文件（由会话路由器选择）被视作**偏好**：
+它们优先尝试，但在遇到速率限制或超时时，OpenClaw 会切换到其他配置文件。
+用户固定的配置文件保持锁定；若失败且配置了模型回退，
+OpenClaw 会转向下一个模型，而非切换配置文件。
 
-### Why OAuth can "look lost"
+### 为何 OAuth 可能"看似丢失"
 
-If you have both an OAuth profile and an API key profile for the same provider, round‑robin can switch between them across messages unless pinned. To force a single profile:
+如果对同一提供商既有 OAuth 配置文件又有 API 密钥配置文件，轮询会在消息间切换，除非固定。要强制使用单个配置文件：
 
-- Pin with `auth.order[provider] = ["provider:profileId"]`, or
-- Use a per-session override via `/model …` with a profile override (when supported by your UI/chat surface).
+- 通过 `auth.order[provider] = ["provider:profileId"]` 固定，或
+- 通过支持的 UI/聊天界面使用 `/model …` 的会话覆盖设置配置文件。
 
-## Cooldowns
+## 冷却时间
 
-When a profile fails due to auth/rate-limit errors (or a timeout that looks like rate limiting), OpenClaw marks it in cooldown and moves to the next profile.
+当配置文件因认证/速率限制错误（或看起来像速率限制的超时）失败时，OpenClaw 将其标记为冷却并移动到下一个配置文件。该速率限制桶比单纯的 `429` 更宽泛：它还包括提供商消息，如 `Too many concurrent requests`、`ThrottlingException`、`concurrency limit reached`、`workers_ai ... quota limit exceeded`、`throttled`、`resource exhausted`，以及周期性使用窗口限制，如 `weekly/monthly limit reached`。
+格式/无效请求错误（例如 Cloud Code Assist 工具调用 ID 验证失败）被视为值得故障切换并使用相同的冷却。
+OpenAI 兼容的停止原因错误，如 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error` 被分类为超时/故障切换信号。
+提供商范围的通用服务器文本在源匹配已知瞬态模式时也可能落入该超时桶。例如，Anthropic bare `An unknown error occurred` 和 JSON `api_error` 负载，带有瞬态服务器文本如 `internal server error`、`unknown error, 520`、`upstream error` 或 `backend error` 被视为值得故障切换的超时。OpenRouter 特定的通用上游文本，如 bare `Provider returned error` 仅在提供商上下文实际上是 OpenRouter 时才被视为超时。通用内部回退文本如 `LLM request failed with an unknown error.` 保持保守，本身不触发故障切换。
 
-<AccordionGroup>
-  <Accordion title="What lands in the rate-limit / timeout bucket">
-    That rate-limit bucket is broader than plain `429`: it also includes provider messages such as `Too many concurrent requests`, `ThrottlingException`, `concurrency limit reached`, `workers_ai ... quota limit exceeded`, `throttled`, `resource exhausted`, and periodic usage-window limits such as `weekly/monthly limit reached`.
+Some provider SDKs may otherwise sleep for a long `Retry-After` window before
+returning control to OpenClaw. For Stainless-based SDKs such as Anthropic and
+OpenAI, OpenClaw caps SDK-internal `retry-after-ms` / `retry-after` waits at 60
+seconds by default and surfaces longer retryable responses immediately so this
+failover path can run. Tune or disable the cap with
+`OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS`; see [/concepts/retry](/concepts/retry).
 
-    Format/invalid-request errors (for example Cloud Code Assist tool call ID validation failures) are treated as failover-worthy and use the same cooldowns. OpenAI-compatible stop-reason errors such as `Unhandled stop reason: error`, `stop reason: error`, and `reason: error` are classified as timeout/failover signals.
+速率限制冷却也可以限定于模型范围：
 
-    Generic server text can also land in that timeout bucket when the source matches a known transient pattern. For example, the bare pi-ai stream-wrapper message `An unknown error occurred` is treated as failover-worthy for every provider because pi-ai emits it when provider streams end with `stopReason: "aborted"` or `stopReason: "error"` without specific details. JSON `api_error` payloads with transient server text such as `internal server error`, `unknown error, 520`, `upstream error`, or `backend error` are also treated as failover-worthy timeouts.
+- OpenClaw 在已知失败模型 id 时为速率限制失败记录 `cooldownModel`。
+- 当冷却范围限定于不同模型时，同一提供商上的兄弟模型仍可被尝试。
+- 计费/禁用窗口仍然跨模型阻止整个配置文件。
 
-    OpenRouter-specific generic upstream text such as bare `Provider returned error` is treated as timeout only when the provider context is actually OpenRouter. Generic internal fallback text such as `LLM request failed with an unknown error.` stays conservative and does not trigger failover by itself.
+冷却时间采用指数退避：
 
-  </Accordion>
-  <Accordion title="SDK retry-after caps">
-    Some provider SDKs may otherwise sleep for a long `Retry-After` window before returning control to OpenClaw. For Stainless-based SDKs such as Anthropic and OpenAI, OpenClaw caps SDK-internal `retry-after-ms` / `retry-after` waits at 60 seconds by default and surfaces longer retryable responses immediately so this failover path can run. Tune or disable the cap with `OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS`; see [Retry behavior](/concepts/retry).
-  </Accordion>
-  <Accordion title="Model-scoped cooldowns">
-    Rate-limit cooldowns can also be model-scoped:
+- 1 分钟
+- 5 分钟
+- 25 分钟
+- 1 小时（上限）
 
-    - OpenClaw records `cooldownModel` for rate-limit failures when the failing model id is known.
-    - A sibling model on the same provider can still be tried when the cooldown is scoped to a different model.
-    - Billing/disabled windows still block the whole profile across models.
-
-  </Accordion>
-</AccordionGroup>
-
-Cooldowns use exponential backoff:
-
-- 1 minute
-- 5 minutes
-- 25 minutes
-- 1 hour (cap)
-
-State is stored in `auth-state.json` under `usageStats`:
+状态存储在 `auth-state.json` 的 `usageStats` 下：
 
 ```json
 {
@@ -170,17 +148,14 @@ State is stored in `auth-state.json` under `usageStats`:
 }
 ```
 
-## Billing disables
+## 计费禁用
 
-Billing/credit failures (for example "insufficient credits" / "credit balance too low") are treated as failover-worthy, but they're usually not transient. Instead of a short cooldown, OpenClaw marks the profile as **disabled** (with a longer backoff) and rotates to the next profile/provider.
+计费/余额失败（如"余额不足"/"余额太低"）视为可切换失败，但通常非暂时性。
+OpenClaw 不进行短暂冷却，而是将配置文件标记为**禁用**（长时间退避），并切换到下一个配置文件或提供商。
 
-<Note>
-Not every billing-shaped response is `402`, and not every HTTP `402` lands here. OpenClaw keeps explicit billing text in the billing lane even when a provider returns `401` or `403` instead, but provider-specific matchers stay scoped to the provider that owns them (for example OpenRouter `403 Key limit exceeded`).
+并非每个计费形状的响应都是 `402`，并非每个 HTTP `402` 都落在此处。即使提供商返回 `401` 或 `403`，OpenClaw 也将显式计费文本保留在计费通道中，但提供商特定的匹配器仍限定于拥有它们的提供商（例如 OpenRouter `403 Key limit exceeded`）。同时，临时 `402` 使用窗口和组织/工作区支出限制错误在消息看起来可重试时被分类为 `rate_limit`（例如 `weekly usage limit exhausted`、`daily limit reached, resets tomorrow` 或 `organization spending limit exceeded`）。这些保持在短冷却/故障切换路径上，而不是长计费禁用路径。
 
-Meanwhile temporary `402` usage-window and organization/workspace spend-limit errors are classified as `rate_limit` when the message looks retryable (for example `weekly usage limit exhausted`, `daily limit reached, resets tomorrow`, or `organization spending limit exceeded`). Those stay on the short cooldown/failover path instead of the long billing-disable path.
-</Note>
-
-State is stored in `auth-state.json`:
+状态存储在 `auth-state.json` 中：
 
 ```json
 {
@@ -193,121 +168,105 @@ State is stored in `auth-state.json`:
 }
 ```
 
-Defaults:
+默认规则：
 
-- Billing backoff starts at **5 hours**, doubles per billing failure, and caps at **24 hours**.
-- Backoff counters reset if the profile hasn't failed for **24 hours** (configurable).
-- Overloaded retries allow **1 same-provider profile rotation** before model fallback.
-- Overloaded retries use **0 ms backoff** by default.
+- 计费退避起始时间为 **5 小时**，每次计费失败翻倍，上限为 **24 小时**。
+- 如果配置文件在 **24 小时** 内未失败，则退避计数器重置（可配置）。
+- 过载重试允许在模型回退前进行 **1 次同一提供商的配置文件轮换**。
+- 过载重试默认使用 **0 毫秒退避**。
 
-## Model fallback
+## 模型回退
 
-If all profiles for a provider fail, OpenClaw moves to the next model in `agents.defaults.model.fallbacks`. This applies to auth failures, rate limits, and timeouts that exhausted profile rotation (other errors do not advance fallback).
+如果某提供商的所有配置文件均失败，OpenClaw 会切换到
+`agents.defaults.model.fallbacks` 中的下一个模型。
+此规则适用于认证失败、速率限制和使用尽所有配置文件后的超时（其他错误不触发模型回退）。
 
-Overloaded and rate-limit errors are handled more aggressively than billing cooldowns. By default, OpenClaw allows one same-provider auth-profile retry, then switches to the next configured model fallback without waiting. Provider-busy signals such as `ModelNotReadyException` land in that overloaded bucket. Tune this with `auth.cooldowns.overloadedProfileRotations`, `auth.cooldowns.overloadedBackoffMs`, and `auth.cooldowns.rateLimitedProfileRotations`.
+过载和速率限制错误比计费冷却处理得更积极。默认情况下，OpenClaw 允许一次同一提供商认证配置文件重试，然后切换到下一个配置模型回退而不等待。提供商繁忙信号如 `ModelNotReadyException` 落入该过载桶。使用 `auth.cooldowns.overloadedProfileRotations`、`auth.cooldowns.overloadedBackoffMs` 和 `auth.cooldowns.rateLimitedProfileRotations` 调整此行为。
 
-When a run starts with a model override (hooks or CLI), fallbacks still end at `agents.defaults.model.primary` after trying any configured fallbacks.
+当运行以模型覆盖开始时（hooks 或 CLI），回退在尝试任何配置的回退后仍结束于
+`agents.defaults.model.primary`。
 
-### Candidate chain rules
+### 候选链规则
 
-OpenClaw builds the candidate list from the currently requested `provider/model` plus configured fallbacks.
+OpenClaw 从当前请求的 `provider/model` 加上配置的回退构建候选列表。
 
-<AccordionGroup>
-  <Accordion title="Rules">
-    - The requested model is always first.
-    - Explicit configured fallbacks are deduplicated but not filtered by the model allowlist. They are treated as explicit operator intent.
-    - If the current run is already on a configured fallback in the same provider family, OpenClaw keeps using the full configured chain.
-    - If the current run is on a different provider than config and that current model is not already part of the configured fallback chain, OpenClaw does not append unrelated configured fallbacks from another provider.
-    - When the run started from an override, the configured primary is appended at the end so the chain can settle back onto the normal default once earlier candidates are exhausted.
-  </Accordion>
-</AccordionGroup>
+规则：
 
-### Which errors advance fallback
+- 请求的模型始终排在第一位。
+- 显式配置的回退被去重但不按模型允许列表过滤。它们被视作显式操作员意图。
+- 如果当前运行已经在同一提供商家族中的配置回退上，OpenClaw 继续使用完整的配置链。
+- 如果当前运行在与配置不同的提供商上，且该当前模型尚未成为配置回退链的一部分，OpenClaw 不会附加来自另一提供商的无关配置回退。
+- 当运行从覆盖开始时，配置的主模型附加在末尾，以便一旦早期候选项耗尽，链可以稳定回正常默认值。
 
-<Tabs>
-  <Tab title="Continues on">
-    - auth failures
-    - rate limits and cooldown exhaustion
-    - overloaded/provider-busy errors
-    - timeout-shaped failover errors
-    - billing disables
-    - `LiveSessionModelSwitchError`, which is normalized into a failover path so a stale persisted model does not create an outer retry loop
-    - other unrecognized errors when there are still remaining candidates
-  </Tab>
-  <Tab title="Does not continue on">
-    - explicit aborts that are not timeout/failover-shaped
-    - context overflow errors that should stay inside compaction/retry logic (for example `request_too_large`, `INVALID_ARGUMENT: input exceeds the maximum number of tokens`, `input token count exceeds the maximum number of input tokens`, `The input is too long for the model`, or `ollama error: context length exceeded`)
-    - a final unknown error when there are no candidates left
-  </Tab>
-</Tabs>
+### 哪些错误推进回退
 
-### Cooldown skip vs probe behavior
+模型回退继续在以下情况发生：
 
-When every auth profile for a provider is already in cooldown, OpenClaw does not automatically skip that provider forever. It makes a per-candidate decision:
+- 认证失败
+- 速率限制和冷却耗尽
+- 过载/提供商繁忙错误
+- 超时形状的故障切换错误
+- 计费禁用
+- `LiveSessionModelSwitchError`，被标准化为故障切换路径，以便过时的持久化模型不会创建外部重试循环
+- 当仍有剩余候选项时的其他未识别错误
 
-<AccordionGroup>
-  <Accordion title="Per-candidate decisions">
-    - Persistent auth failures skip the whole provider immediately.
-    - Billing disables usually skip, but the primary candidate can still be probed on a throttle so recovery is possible without restarting.
-    - The primary candidate may be probed near cooldown expiry, with a per-provider throttle.
-    - Same-provider fallback siblings can be attempted despite cooldown when the failure looks transient (`rate_limit`, `overloaded`, or unknown). This is especially relevant when a rate limit is model-scoped and a sibling model may still recover immediately.
-    - Transient cooldown probes are limited to one per provider per fallback run so a single provider does not stall cross-provider fallback.
-  </Accordion>
-</AccordionGroup>
+模型回退不在以下情况继续：
 
-## Session overrides and live model switching
+- 非超时/故障切换形状的显式中止
+- 应保持在压缩/重试逻辑内的上下文溢出错误（例如 `request_too_large`、`INVALID_ARGUMENT: input exceeds the maximum number of tokens`、`input token count exceeds the maximum number of input tokens`、`The input is too long for the model` 或 `ollama error: context length exceeded`）
+- 当没有剩余候选项时的最终未知错误
 
-Session model changes are shared state. The active runner, `/model` command, compaction/session updates, and live-session reconciliation all read or write parts of the same session entry.
+### 冷却跳过与探测行为
 
-That means fallback retries have to coordinate with live model switching:
+当提供商的每个认证配置文件都已处于冷却状态时，OpenClaw 不会自动永远跳过该提供商。它做出每个候选项的决定：
 
-- Only explicit user-driven model changes mark a pending live switch. That includes `/model`, `session_status(model=...)`, and `sessions.patch`.
-- System-driven model changes such as fallback rotation, heartbeat overrides, or compaction never mark a pending live switch on their own.
-- Before a fallback retry starts, the reply runner persists the selected fallback override fields to the session entry.
-- Live-session reconciliation prefers persisted session overrides over stale runtime model fields.
-- If the fallback attempt fails, the runner rolls back only the override fields it wrote, and only if they still match that failed candidate.
+- 持久认证失败立即跳过整个提供商。
+- 计费禁用通常跳过，但主候选项仍可在节流时被探测，以便无需重启即可恢复。
+- 主候选项可能在冷却过期附近被探测，带有每提供商节流。
+- 同一提供商回退兄弟项尽管有冷却也可被尝试，当失败看起来是瞬态时（`rate_limit`、`overloaded` 或未知）。当速率限制是模型范围且兄弟模型可能立即恢复时，这尤其相关。
+- 瞬态冷却探测限制为每个提供商每次回退运行一次，以便单个提供商不会停滞跨提供商回退。
 
-This prevents the classic race:
+## 会话覆盖和实时模型切换
 
-<Steps>
-  <Step title="Primary fails">
-    The selected primary model fails.
-  </Step>
-  <Step title="Fallback chosen in memory">
-    Fallback candidate is chosen in memory.
-  </Step>
-  <Step title="Session store still says old primary">
-    Session store still reflects the old primary.
-  </Step>
-  <Step title="Live reconciliation reads stale state">
-    Live-session reconciliation reads the stale session state.
-  </Step>
-  <Step title="Retry snapped back">
-    The retry gets snapped back to the old model before the fallback attempt starts.
-  </Step>
-</Steps>
+会话模型更改是共享状态。活动运行器、`/model` 命令、压缩/会话更新和实时会话协调都会读取或写入同一会话条目的部分内容。
 
-The persisted fallback override closes that window, and the narrow rollback keeps newer manual or runtime session changes intact.
+这意味着回退重试必须与实时模型切换协调：
 
-## Observability and failure summaries
+- 只有明确的用户驱动模型更改才会标记待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
+- 系统驱动的模型更改（例如回退轮换、心跳覆盖或压缩）永远不会自行标记待处理的实时切换。
+- 在回退重试开始之前，回复运行器会将选定的回退覆盖字段持久化到会话条目中。
+- 实时会话协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
+- 如果回退尝试失败，运行器仅回滚它写入的覆盖字段，且仅当它们仍与该失败的候选项匹配时。
 
-`runWithModelFallback(...)` records per-attempt details that feed logs and user-facing cooldown messaging:
+这防止了经典的竞态条件：
 
-- provider/model attempted
-- reason (`rate_limit`, `overloaded`, `billing`, `auth`, `model_not_found`, and similar failover reasons)
-- optional status/code
-- human-readable error summary
+1. 主模型失败。
+2. 在内存中选择回退候选项。
+3. 会话存储仍显示旧的主模型。
+4. 实时会话协调读取过时的会话状态。
+5. 重试在回退尝试开始之前被弹回旧模型。
 
-When every candidate fails, OpenClaw throws `FallbackSummaryError`. The outer reply runner can use that to build a more specific message such as "all models are temporarily rate-limited" and include the soonest cooldown expiry when one is known.
+持久化的回退覆盖关闭了该窗口，而窄范围回滚保持较新的手动或运行时会话更改完好无损。
 
-That cooldown summary is model-aware:
+## 可观察性和故障摘要
 
-- unrelated model-scoped rate limits are ignored for the attempted provider/model chain
-- if the remaining block is a matching model-scoped rate limit, OpenClaw reports the last matching expiry that still blocks that model
+`runWithModelFallback(...)` 记录每次尝试的详细信息，用于提供日志和面向用户的冷却消息：
 
-## Related config
+- 尝试的提供商/模型
+- 原因（`rate_limit`、`overloaded`、`billing`、`auth`、`model_not_found` 以及类似的故障转移原因）
+- 可选的状态/代码
+- 人类可读的错误摘要
 
-See [Gateway configuration](/gateway/configuration) for:
+当每个候选项都失败时，OpenClaw 抛出 `FallbackSummaryError`。外部回复运行器可以使用它来构建更具体的消息，例如“所有模型暂时受到速率限制”，并在已知时包含最早的冷却过期时间。
+
+该冷却摘要是模型感知的：
+
+- 对于尝试的提供商/模型链，不相关的模型范围速率限制将被忽略
+- 如果剩余的阻断是匹配的模型范围速率限制，OpenClaw 报告仍阻止该模型的最后一个匹配过期时间
+
+## 相关配置
+
+请参阅 [Gateway 配置](/gateway/configuration) 了解：
 
 - `auth.profiles` / `auth.order`
 - `auth.cooldowns.billingBackoffHours` / `auth.cooldowns.billingBackoffHoursByProvider`
@@ -315,6 +274,6 @@ See [Gateway configuration](/gateway/configuration) for:
 - `auth.cooldowns.overloadedProfileRotations` / `auth.cooldowns.overloadedBackoffMs`
 - `auth.cooldowns.rateLimitedProfileRotations`
 - `agents.defaults.model.primary` / `agents.defaults.model.fallbacks`
-- `agents.defaults.imageModel` routing
+- `agents.defaults.imageModel` 路由相关配置
 
-See [Models](/concepts/models) for the broader model selection and fallback overview.
+请参阅 [模型](/concepts/models) 了解更广泛的模型选择与回退概览。

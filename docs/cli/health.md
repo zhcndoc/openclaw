@@ -1,22 +1,22 @@
 ---
-summary: "CLI reference for `openclaw health` (gateway health snapshot via RPC)"
+summary: "`openclaw health` 的 CLI 参考（通过 RPC 获取网关健康快照）"
 read_when:
-  - You want to quickly check the running Gateway’s health
+  - 你想快速检查正在运行的 Gateway 的健康状态
 title: "Health"
 ---
 
 # `openclaw health`
 
-Fetch health from the running Gateway.
+获取正在运行的网关的健康状态。
 
-Options:
+选项：
 
-- `--json`: machine-readable output
-- `--timeout <ms>`: connection timeout in milliseconds (default `10000`)
-- `--verbose`: verbose logging
-- `--debug`: alias for `--verbose`
+- `--json`: 机器可读的输出
+- `--timeout <ms>`: 连接超时时间（毫秒）（默认 `10000`）
+- `--verbose`: 详细日志
+- `--debug`: `--verbose` 的别名
 
-Examples:
+示例：
 
 ```bash
 openclaw health
@@ -26,16 +26,16 @@ openclaw health --verbose
 openclaw health --debug
 ```
 
-Notes:
+说明：
 
-- Default `openclaw health` asks the running gateway for its health snapshot. When the
-  gateway already has a fresh cached snapshot, it can return that cached payload and
-  refresh in the background.
-- `--verbose` forces a live probe, prints gateway connection details, and expands the
-  human-readable output across all configured accounts and agents.
-- Output includes per-agent session stores when multiple agents are configured.
+- 默认情况下，`openclaw health` 会向正在运行的网关请求其健康快照。当
+  网关已经拥有最新的缓存快照时，它可以返回该缓存载荷，并在后台
+  刷新。
+- `--verbose` 会强制执行一次实时探测，打印网关连接详情，并将
+  人类可读的输出扩展到所有已配置的账户和代理。
+- 当配置了多个代理时，输出会包含每个代理的会话存储。
 
-## Related
+## 相关
 
 - [CLI reference](/cli)
 - [Gateway health](/gateway/health)

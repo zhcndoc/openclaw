@@ -1,24 +1,22 @@
 ---
-summary: "CLI reference for `openclaw voicecall` (voice-call plugin command surface)"
+summary: "`openclaw voicecall` 的 CLI 参考（语音通话插件命令界面）"
 read_when:
-  - You use the voice-call plugin and want the CLI entry points
-  - You want quick examples for `voicecall setup|smoke|call|continue|dtmf|status|tail|expose`
+  - 你正在使用语音通话插件并想查看 CLI 入口
+  - 你想快速查看 `voicecall call|continue|dtmf|status|tail|expose` 的示例
 title: "Voicecall"
 ---
 
 # `openclaw voicecall`
 
-`voicecall` is a plugin-provided command. It only appears if the voice-call plugin is installed and enabled.
+`voicecall` 是一个由插件提供的命令。仅当语音通话插件已安装并启用时才会出现。
 
-Primary doc:
+主要文档：
 
-- Voice-call plugin: [Voice Call](/plugins/voice-call)
+- 语音通话插件：[语音通话](/plugins/voice-call)
 
-## Common commands
+## 常用命令
 
 ```bash
-openclaw voicecall setup
-openclaw voicecall smoke
 openclaw voicecall status --call-id <id>
 openclaw voicecall call --to "+15555550123" --message "Hello" --mode notify
 openclaw voicecall continue --call-id <id> --message "Any questions?"
@@ -26,26 +24,7 @@ openclaw voicecall dtmf --call-id <id> --digits "ww123456#"
 openclaw voicecall end --call-id <id>
 ```
 
-`setup` prints human-readable readiness checks by default. Use `--json` for
-scripts:
-
-```bash
-openclaw voicecall setup --json
-```
-
-For external providers (`twilio`, `telnyx`, `plivo`), setup must resolve a public
-webhook URL from `publicUrl`, a tunnel, or Tailscale exposure. A loopback/private
-serve fallback is rejected because carriers cannot reach it.
-
-`smoke` runs the same readiness checks. It will not place a real phone call
-unless both `--to` and `--yes` are present:
-
-```bash
-openclaw voicecall smoke --to "+15555550123"        # dry run
-openclaw voicecall smoke --to "+15555550123" --yes  # live notify call
-```
-
-## Exposing webhooks (Tailscale)
+## 暴露 Webhook（Tailscale）
 
 ```bash
 openclaw voicecall expose --mode serve
@@ -53,9 +32,9 @@ openclaw voicecall expose --mode funnel
 openclaw voicecall expose --mode off
 ```
 
-Security note: only expose the webhook endpoint to networks you trust. Prefer Tailscale Serve over Funnel when possible.
+安全提示：仅将 webhook 端点暴露给你信任的网络。尽可能优先使用 Tailscale Serve，而不是 Funnel。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Voice call plugin](/plugins/voice-call)
+- [CLI 参考](/cli)
+- [语音通话插件](/plugins/voice-call)

@@ -1,16 +1,16 @@
 ---
-summary: "Symptom first troubleshooting hub for OpenClaw"
+summary: "OpenClaw 症状优先故障排查中心"
 read_when:
   - OpenClaw is not working and you need the fastest path to a fix
   - You want a triage flow before diving into deep runbooks
-title: "General troubleshooting"
+title: "通用故障排查"
 ---
 
-If you only have 2 minutes, use this page as a triage front door.
+如果您只有 2 分钟，请将此页面作为分诊入口。
 
-## First 60 seconds
+## 前 60 秒
 
-Run this exact ladder in order:
+按顺序运行以下命令：
 
 ```bash
 openclaw status
@@ -22,51 +22,42 @@ openclaw channels status --probe
 openclaw logs --follow
 ```
 
-Good output in one line:
+良好输出一览：
 
-- `openclaw status` → shows configured channels and no obvious auth errors.
-- `openclaw status --all` → full report is present and shareable.
-- `openclaw gateway probe` → expected gateway target is reachable (`Reachable: yes`). `Capability: ...` tells you what auth level the probe could prove, and `Read probe: limited - missing scope: operator.read` is degraded diagnostics, not a connect failure.
-- `openclaw gateway status` → `Runtime: running`, `Connectivity probe: ok`, and a plausible `Capability: ...` line. Use `--require-rpc` if you need read-scope RPC proof too.
-- `openclaw doctor` → no blocking config/service errors.
-- `openclaw channels status --probe` → reachable gateway returns live per-account
-  transport state plus probe/audit results such as `works` or `audit ok`; if the
-  gateway is unreachable, the command falls back to config-only summaries.
-- `openclaw logs --follow` → steady activity, no repeating fatal errors.
+- `openclaw status` → 显示已配置的频道且没有明显的认证错误。
+- `openclaw status --all` → 提供完整报告并且可共享。
+- `openclaw gateway probe` → 预期的网关目标可达（`Reachable: yes`）。`Capability: ...` 会告诉您该探测能证明的认证级别，而 `Read probe: limited - missing scope: operator.read` 表示诊断降级，而不是连接失败。
+- `openclaw gateway status` → `Runtime: running`、`Connectivity probe: ok`，以及合理的 `Capability: ...` 行。如果您还需要读范围的 RPC 证明，请使用 `--require-rpc`。
+- `openclaw doctor` → 没有阻塞性的配置/服务错误。
+- `openclaw channels status --probe` → 可达的网关会返回按账户的实时传输状态以及诸如 `works` 或 `audit ok` 的探测/审计结果；如果网关不可达，该命令会回退为仅配置摘要。
+- `openclaw logs --follow` → 持续有活动，没有重复的致命错误。
 
-## Anthropic long context 429
+## Anthropic 长上下文 429
 
-If you see:
-`HTTP 429: rate_limit_error: Extra usage is required for long context requests`,
-go to [/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context](/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context).
+如果看到：
+`HTTP 429: rate_limit_error: Extra usage is required for long context requests`，
+请访问 [/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context](/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context)。
 
-## Local OpenAI-compatible backend works directly but fails in OpenClaw
+## 本地 OpenAI 兼容后端直接工作但在 OpenClaw 中失败
 
-If your local or self-hosted `/v1` backend answers small direct
-`/v1/chat/completions` probes but fails on `openclaw infer model run` or normal
-agent turns:
+如果您的本地或自托管 `/v1` 后端能响应小的直接 `/v1/chat/completions` 探测，但在 `openclaw infer model run` 或正常代理回合中失败：
 
-1. If the error mentions `messages[].content` expecting a string, set
-   `models.providers.<provider>.models[].compat.requiresStringContent: true`.
-2. If the backend still fails only on OpenClaw agent turns, set
-   `models.providers.<provider>.models[].compat.supportsTools: false` and retry.
-3. If tiny direct calls still work but larger OpenClaw prompts crash the
-   backend, treat the remaining issue as an upstream model/server limitation and
-   continue in the deep runbook:
+1. 如果错误提到 `messages[].content` 需要字符串，请设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
+2. 如果后端仍然仅在 OpenClaw 代理回合中失败，请设置 `models.providers.<provider>.models[].compat.supportsTools: false` 并重试。
+3. 如果微小的直接调用仍然有效，但更大的 OpenClaw 提示导致后端崩溃，请将剩余问题视为上游模型/服务器限制，并继续查看深度运行手册：
    [/gateway/troubleshooting#local-openai-compatible-backend-passes-direct-probes-but-agent-runs-fail](/gateway/troubleshooting#local-openai-compatible-backend-passes-direct-probes-but-agent-runs-fail)
 
-## Plugin install fails with missing openclaw extensions
+## 插件安装失败，缺少 openclaw 扩展
 
-If install fails with `package.json missing openclaw.extensions`, the plugin package
-is using an old shape that OpenClaw no longer accepts.
+若安装失败并提示 `package.json missing openclaw.extensions`，说明插件包使用了 OpenClaw 已不再接受的旧格式。
 
-Fix in the plugin package:
+插件包修复步骤：
 
-1. Add `openclaw.extensions` to `package.json`.
-2. Point entries at built runtime files (usually `./dist/index.js`).
-3. Republish the plugin and run `openclaw plugins install <package>` again.
+1. 将 `openclaw.extensions` 添加到 `package.json`。
+2. 将入口指向构建后的运行时文件（通常为 `./dist/index.js`）。
+3. 重新发布插件并再次运行 `openclaw plugins install <package>`。
 
-Example:
+示例：
 
 ```json
 {
@@ -78,32 +69,32 @@ Example:
 }
 ```
 
-Reference: [Plugin architecture](/plugins/architecture)
+参考：[插件架构](/plugins/architecture)
 
-## Decision tree
+## 决策树
 
 ```mermaid
 flowchart TD
-  A[OpenClaw is not working] --> B{What breaks first}
-  B --> C[No replies]
-  B --> D[Dashboard or Control UI will not connect]
-  B --> E[Gateway will not start or service not running]
-  B --> F[Channel connects but messages do not flow]
-  B --> G[Cron or heartbeat did not fire or did not deliver]
-  B --> H[Node is paired but camera canvas screen exec fails]
-  B --> I[Browser tool fails]
+  A[OpenClaw 无法工作] --> B{最先发生故障的是？}
+  B --> C[无响应]
+  B --> D[仪表盘或控制界面无法连接]
+  B --> E[网关无法启动或服务未运行]
+  B --> F[频道连接成功但消息未流通]
+  B --> G[Cron 或心跳未触发或未发送]
+  B --> H[节点已配对但摄像头画布屏幕执行失败]
+  B --> I[浏览器工具失败]
 
-  C --> C1[/No replies section/]
-  D --> D1[/Control UI section/]
-  E --> E1[/Gateway section/]
-  F --> F1[/Channel flow section/]
-  G --> G1[/Automation section/]
-  H --> H1[/Node tools section/]
-  I --> I1[/Browser section/]
+  C --> C1[/无响应部分/]
+  D --> D1[/控制界面部分/]
+  E --> E1[/网关部分/]
+  F --> F1[/频道流部分/]
+  G --> G1[/自动化部分/]
+  H --> H1[/节点工具部分/]
+  I --> I1[/浏览器部分/]
 ```
 
 <AccordionGroup>
-  <Accordion title="No replies">
+  <Accordion title="无响应">
     ```bash
     openclaw status
     openclaw gateway status
@@ -112,21 +103,21 @@ flowchart TD
     openclaw logs --follow
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
     - `Runtime: running`
     - `Connectivity probe: ok`
     - `Capability: read-only`, `write-capable`, or `admin-capable`
-    - Your channel shows transport connected and, where supported, `works` or `audit ok` in `channels status --probe`
-    - Sender appears approved (or DM policy is open/allowlist)
+    - 您的频道显示传输已连接，并且在支持时，`channels status --probe` 中显示 `works` 或 `audit ok`
+    - 发送者显示已批准（或 DM 策略为开放/允许列表）
 
-    Common log signatures:
+    常见日志特征：
 
-    - `drop guild message (mention required` → mention gating blocked the message in Discord.
-    - `pairing request` → sender is unapproved and waiting for DM pairing approval.
-    - `blocked` / `allowlist` in channel logs → sender, room, or group is filtered.
+    - `drop guild message (mention required` → Discord 中的提及限制阻止了消息。
+    - `pairing request` → 发送者未批准，正在等待私信配对批准。
+    - 频道日志中出现 `blocked` / `allowlist` → 发送者、房间或组被过滤。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#no-replies](/gateway/troubleshooting#no-replies)
     - [/channels/troubleshooting](/channels/troubleshooting)
@@ -134,7 +125,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Dashboard or Control UI will not connect">
+  <Accordion title="仪表盘或控制界面无法连接">
     ```bash
     openclaw status
     openclaw gateway status
@@ -143,32 +134,25 @@ flowchart TD
     openclaw channels status --probe
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
-    - `Dashboard: http://...` is shown in `openclaw gateway status`
+    - `openclaw gateway status` 中显示 `Dashboard: http://...`
     - `Connectivity probe: ok`
     - `Capability: read-only`, `write-capable`, or `admin-capable`
-    - No auth loop in logs
+    - 日志中没有认证循环
 
-    Common log signatures:
+    常见日志特征：
 
-    - `device identity required` → HTTP/non-secure context cannot complete device auth.
-    - `origin not allowed` → browser `Origin` is not allowed for the Control UI
-      gateway target.
-    - `AUTH_TOKEN_MISMATCH` with retry hints (`canRetryWithDeviceToken=true`) → one trusted device-token retry may occur automatically.
-    - That cached-token retry reuses the cached scope set stored with the paired
-      device token. Explicit `deviceToken` / explicit `scopes` callers keep
-      their requested scope set instead.
-    - On the async Tailscale Serve Control UI path, failed attempts for the same
-      `{scope, ip}` are serialized before the limiter records the failure, so a
-      second concurrent bad retry can already show `retry later`.
-    - `too many failed authentication attempts (retry later)` from a localhost
-      browser origin → repeated failures from that same `Origin` are temporarily
-      locked out; another localhost origin uses a separate bucket.
-    - repeated `unauthorized` after that retry → wrong token/password, auth mode mismatch, or stale paired device token.
-    - `gateway connect failed:` → UI is targeting the wrong URL/port or unreachable gateway.
+    - `device identity required` → HTTP/非安全上下文无法完成设备认证。
+    - `origin not allowed` → 浏览器 `Origin` 不被允许用于控制界面网关目标。
+    - 带有重试提示（`canRetryWithDeviceToken=true`）的 `AUTH_TOKEN_MISMATCH` → 可能会自动发生一次受信设备令牌重试。
+    - 该缓存令牌重试会重复使用与配对设备令牌一起存储的缓存范围集。显式 `deviceToken` / 显式 `scopes` 调用者保留其请求的范围集。
+    - 在异步 Tailscale Serve 控制界面路径上，相同 `{scope, ip}` 的失败尝试在限制器记录失败之前会被序列化，因此第二个并发错误重试可能已经显示 `retry later`。
+    - 来自 localhost 浏览器起源的 `too many failed authentication attempts (retry later)` → 来自同一 `Origin` 的重复失败会被临时锁定；另一个 localhost 起源使用单独的桶。
+    - 该重试后的重复 `unauthorized` → 错误的令牌/密码、认证模式不匹配，或过期的配对设备令牌。
+    - `gateway connect failed:` → UI 目标 URL/端口错误或网关不可访问。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#dashboard-control-ui-connectivity](/gateway/troubleshooting#dashboard-control-ui-connectivity)
     - [/web/control-ui](/web/control-ui)
@@ -176,7 +160,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Gateway will not start or service installed but not running">
+  <Accordion title="网关无法启动或服务已安装但未运行">
     ```bash
     openclaw status
     openclaw gateway status
@@ -185,20 +169,20 @@ flowchart TD
     openclaw channels status --probe
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
     - `Service: ... (loaded)`
     - `Runtime: running`
     - `Connectivity probe: ok`
     - `Capability: read-only`, `write-capable`, or `admin-capable`
 
-    Common log signatures:
+    常见日志特征：
 
-    - `Gateway start blocked: set gateway.mode=local` or `existing config is missing gateway.mode` → gateway mode is remote, or the config file is missing the local-mode stamp and should be repaired.
-    - `refusing to bind gateway ... without auth` → non-loopback bind without a valid gateway auth path (token/password, or trusted-proxy where configured).
-    - `another gateway instance is already listening` or `EADDRINUSE` → port already taken.
+    - `Gateway start blocked: set gateway.mode=local` 或 `existing config is missing gateway.mode` → 网关模式是远程的，或者配置文件缺少本地模式标记，应修复。
+    - `refusing to bind gateway ... without auth` → 非环回绑定没有有效的网关认证路径（令牌/密码，或配置的受信代理）。
+    - `another gateway instance is already listening` 或 `EADDRINUSE` → 端口已被占用。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#gateway-service-not-running](/gateway/troubleshooting#gateway-service-not-running)
     - [/gateway/background-process](/gateway/background-process)
@@ -206,7 +190,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Channel connects but messages do not flow">
+  <Accordion title="频道连接成功但消息未流通">
     ```bash
     openclaw status
     openclaw gateway status
@@ -215,26 +199,26 @@ flowchart TD
     openclaw channels status --probe
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
-    - Channel transport is connected.
-    - Pairing/allowlist checks pass.
-    - Mentions are detected where required.
+    - 频道传输已连接。
+    - 配对/白名单检查通过。
+    - 在需要时检测到提及。
 
-    Common log signatures:
+    常见日志特征：
 
-    - `mention required` → group mention gating blocked processing.
-    - `pairing` / `pending` → DM sender is not approved yet.
-    - `not_in_channel`, `missing_scope`, `Forbidden`, `401/403` → channel permission token issue.
+    - `mention required` → 群组提及限制阻止了消息处理。
+    - `pairing` / `pending` → 私信发送者尚未批准。
+    - `not_in_channel`、`missing_scope`、`Forbidden`、`401/403` → 频道权限令牌问题。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#channel-connected-messages-not-flowing](/gateway/troubleshooting#channel-connected-messages-not-flowing)
     - [/channels/troubleshooting](/channels/troubleshooting)
 
   </Accordion>
 
-  <Accordion title="Cron or heartbeat did not fire or did not deliver">
+  <Accordion title="Cron 或心跳未触发或未发送">
     ```bash
     openclaw status
     openclaw gateway status
@@ -244,23 +228,23 @@ flowchart TD
     openclaw logs --follow
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
-    - `cron.status` shows enabled with a next wake.
-    - `cron runs` shows recent `ok` entries.
-    - Heartbeat is enabled and not outside active hours.
+    - `cron.status` 显示启用且有下次唤醒时间。
+    - `cron runs` 显示最近有 `ok` 条目。
+    - 心跳已启用且未处于非活跃时间段。
 
-    Common log signatures:
+    常见日志特征：
 
-    - `cron: scheduler disabled; jobs will not run automatically` → cron is disabled.
-    - `heartbeat skipped` with `reason=quiet-hours` → outside configured active hours.
-    - `heartbeat skipped` with `reason=empty-heartbeat-file` → `HEARTBEAT.md` exists but only contains blank/header-only scaffolding.
-    - `heartbeat skipped` with `reason=no-tasks-due` → `HEARTBEAT.md` task mode is active but none of the task intervals are due yet.
-    - `heartbeat skipped` with `reason=alerts-disabled` → all heartbeat visibility is disabled (`showOk`, `showAlerts`, and `useIndicator` are all off).
-    - `requests-in-flight` → main lane busy; heartbeat wake was deferred.
-    - `unknown accountId` → heartbeat delivery target account does not exist.
+    - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
+    - `heartbeat skipped` with `reason=quiet-hours` → 在配置的活动时间之外。
+    - `heartbeat skipped` with `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在但仅包含空白/仅标题的框架。
+    - `heartbeat skipped` with `reason=no-tasks-due` → `HEARTBEAT.md` 任务模式已激活，但没有任何任务间隔到期。
+    - `heartbeat skipped` with `reason=alerts-disabled` → 所有心跳可见性已禁用（`showOk`、`showAlerts` 和 `useIndicator` 均为 off）。
+    - `requests-in-flight` → 主通道繁忙；心跳唤醒已延迟。
+    - `unknown accountId` → 心跳交付目标账户不存在。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#cron-and-heartbeat-delivery](/gateway/troubleshooting#cron-and-heartbeat-delivery)
     - [/automation/cron-jobs#troubleshooting](/automation/cron-jobs#troubleshooting)
@@ -268,7 +252,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Node is paired but tool fails camera canvas screen exec">
+  <Accordion title="节点已配对但工具执行摄像头画布屏幕失败">
     ```bash
     openclaw status
     openclaw gateway status
@@ -277,20 +261,20 @@ flowchart TD
     openclaw logs --follow
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
-    - Node is listed as connected and paired for role `node`.
-    - Capability exists for the command you are invoking.
-    - Permission state is granted for the tool.
+    - 节点显示为已连接且已为 `node` 角色配对。
+    - 您正在调用的命令具备相应能力。
+    - 该工具的权限状态已授予。
 
-    Common log signatures:
+    常见日志特征：
 
-    - `NODE_BACKGROUND_UNAVAILABLE` → bring node app to foreground.
-    - `*_PERMISSION_REQUIRED` → OS permission was denied/missing.
-    - `SYSTEM_RUN_DENIED: approval required` → exec approval is pending.
-    - `SYSTEM_RUN_DENIED: allowlist miss` → command not on exec allowlist.
+    - `NODE_BACKGROUND_UNAVAILABLE` → 将节点应用置于前台。
+    - `*_PERMISSION_REQUIRED` → 操作系统权限被拒绝或缺失。
+    - `SYSTEM_RUN_DENIED: approval required` → 正在等待执行批准。
+    - `SYSTEM_RUN_DENIED: allowlist miss` → 命令不在执行允许列表中。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#node-paired-tool-fails](/gateway/troubleshooting#node-paired-tool-fails)
     - [/nodes/troubleshooting](/nodes/troubleshooting)
@@ -298,7 +282,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Exec suddenly asks for approval">
+  <Accordion title="Exec 突然要求批准">
     ```bash
     openclaw config get tools.exec.host
     openclaw config get tools.exec.security
@@ -306,16 +290,16 @@ flowchart TD
     openclaw gateway restart
     ```
 
-    What changed:
+    发生了什么变化：
 
-    - If `tools.exec.host` is unset, the default is `auto`.
-    - `host=auto` resolves to `sandbox` when a sandbox runtime is active, `gateway` otherwise.
-    - `host=auto` is routing only; the no-prompt "YOLO" behavior comes from `security=full` plus `ask=off` on gateway/node.
-    - On `gateway` and `node`, unset `tools.exec.security` defaults to `full`.
-    - Unset `tools.exec.ask` defaults to `off`.
-    - Result: if you are seeing approvals, some host-local or per-session policy tightened exec away from the current defaults.
+    - 如果 `tools.exec.host` 未设置，默认值为 `auto`。
+    - `host=auto` 在沙盒运行时激活时解析为 `sandbox`，否则为 `gateway`。
+    - `host=auto` 只负责路由；无提示的 “YOLO” 行为来自网关/节点上的 `security=full` 加 `ask=off`。
+    - 在 `gateway` 和 `node` 上，未设置的 `tools.exec.security` 默认值为 `full`。
+    - 未设置的 `tools.exec.ask` 默认值为 `off`。
+    - 结果：如果您看到审批提示，说明某些主机本地或按会话策略已将 exec 权限收紧，不再使用当前默认值。
 
-    Restore current default no-approval behavior:
+    恢复当前默认的无需批准行为：
 
     ```bash
     openclaw config set tools.exec.host gateway
@@ -324,19 +308,19 @@ flowchart TD
     openclaw gateway restart
     ```
 
-    Safer alternatives:
+    更安全的替代方案：
 
-    - Set only `tools.exec.host=gateway` if you just want stable host routing.
-    - Use `security=allowlist` with `ask=on-miss` if you want host exec but still want review on allowlist misses.
-    - Enable sandbox mode if you want `host=auto` to resolve back to `sandbox`.
+    - 如果您只想要稳定的主机路由，仅设置 `tools.exec.host=gateway`。
+    - 如果您希望使用主机 exec，但仍希望在未命中允许列表时进行审查，请使用 `security=allowlist` 搭配 `ask=on-miss`。
+    - 如果您希望 `host=auto` 重新解析为 `sandbox`，请启用沙盒模式。
 
-    Common log signatures:
+    常见日志特征：
 
-    - `Approval required.` → command is waiting on `/approve ...`.
-    - `SYSTEM_RUN_DENIED: approval required` → node-host exec approval is pending.
-    - `exec host=sandbox requires a sandbox runtime for this session` → implicit/explicit sandbox selection but sandbox mode is off.
+    - `Approval required.` → 命令正在等待 `/approve ...`。
+    - `SYSTEM_RUN_DENIED: approval required` → 节点主机 exec 正在等待批准。
+    - `exec host=sandbox requires a sandbox runtime for this session` → 隐式/显式选择了沙盒，但沙盒模式已关闭。
 
-    Deep pages:
+    深入页面：
 
     - [/tools/exec](/tools/exec)
     - [/tools/exec-approvals](/tools/exec-approvals)
@@ -344,7 +328,7 @@ flowchart TD
 
   </Accordion>
 
-  <Accordion title="Browser tool fails">
+  <Accordion title="浏览器工具失败">
     ```bash
     openclaw status
     openclaw gateway status
@@ -353,24 +337,24 @@ flowchart TD
     openclaw doctor
     ```
 
-    Good output looks like:
+    良好输出表现为：
 
-    - Browser status shows `running: true` and a chosen browser/profile.
-    - `openclaw` starts, or `user` can see local Chrome tabs.
+    - 浏览器状态显示 `running: true` 以及已选择的浏览器/配置文件。
+    - `openclaw` 已启动，或者 `user` 可以看到本地 Chrome 标签页。
 
-    Common log signatures:
+    常见日志特征：
 
-    - `unknown command "browser"` or `unknown command 'browser'` → `plugins.allow` is set and does not include `browser`.
-    - `Failed to start Chrome CDP on port` → local browser launch failed.
-    - `browser.executablePath not found` → configured binary path is wrong.
-    - `browser.cdpUrl must be http(s) or ws(s)` → the configured CDP URL uses an unsupported scheme.
-    - `browser.cdpUrl has invalid port` → the configured CDP URL has a bad or out-of-range port.
-    - `No Chrome tabs found for profile="user"` → the Chrome MCP attach profile has no open local Chrome tabs.
-    - `Remote CDP for profile "<name>" is not reachable` → the configured remote CDP endpoint is not reachable from this host.
-    - `Browser attachOnly is enabled ... not reachable` or `Browser attachOnly is enabled and CDP websocket ... is not reachable` → attach-only profile has no live CDP target.
-    - stale viewport / dark-mode / locale / offline overrides on attach-only or remote CDP profiles → run `openclaw browser stop --browser-profile <name>` to close the active control session and release emulation state without restarting the gateway.
+    - `unknown command "browser"` 或 `unknown command 'browser'` → `plugins.allow` 已设置，但不包含 `browser`。
+    - `Failed to start Chrome CDP on port` → 本地浏览器启动失败。
+    - `browser.executablePath not found` → 配置的二进制路径错误。
+    - `browser.cdpUrl must be http(s) or ws(s)` → 配置的 CDP URL 使用了不受支持的协议。
+    - `browser.cdpUrl has invalid port` → 配置的 CDP URL 端口无效或超出范围。
+    - `No Chrome tabs found for profile="user"` → Chrome MCP 附加配置文件没有打开的本地 Chrome 标签页。
+    - `Remote CDP for profile "<name>" is not reachable` → 配置的远程 CDP 端点从此主机无法访问。
+    - `Browser attachOnly is enabled ... not reachable` 或 `Browser attachOnly is enabled and CDP websocket ... is not reachable` → 仅附加配置文件没有可用的 CDP 目标。
+    - 附加式或远程 CDP 配置文件上存在过时的视口/深色模式/区域设置/离线覆盖 → 运行 `openclaw browser stop --browser-profile <name>` 以关闭当前控制会话，并释放仿真状态，而无需重启网关。
 
-    Deep pages:
+    深入页面：
 
     - [/gateway/troubleshooting#browser-tool-fails](/gateway/troubleshooting#browser-tool-fails)
     - [/tools/browser#missing-browser-command-or-tool](/tools/browser#missing-browser-command-or-tool)
@@ -381,10 +365,10 @@ flowchart TD
 
 </AccordionGroup>
 
-## Related
+## 相关内容
 
-- [FAQ](/help/faq) — frequently asked questions
-- [Gateway Troubleshooting](/gateway/troubleshooting) — gateway-specific issues
-- [Doctor](/gateway/doctor) — automated health checks and repairs
-- [Channel Troubleshooting](/channels/troubleshooting) — channel connectivity issues
-- [Automation Troubleshooting](/automation/cron-jobs#troubleshooting) — cron and heartbeat issues
+- [常见问题](/help/faq) — 常见问题
+- [网关故障排除](/gateway/troubleshooting) — 网关特定问题
+- [诊断工具](/gateway/doctor) — 自动健康检查与修复
+- [通道故障排除](/channels/troubleshooting) — 通道连接问题
+- [自动化故障排除](/automation/cron-jobs#troubleshooting) — cron 和心跳问题

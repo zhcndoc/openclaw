@@ -1,82 +1,77 @@
 ---
-summary: "Loopback WebChat static host and Gateway WS usage for chat UI"
+summary: "Loopback WebChat 静态主机和 Gateway WS 用于聊天 UI"
 read_when:
-  - Debugging or configuring WebChat access
+  - 调试或配置 WebChat 访问时
 title: "WebChat"
 ---
 
-Status: the macOS/iOS SwiftUI chat UI talks directly to the Gateway WebSocket.
+状态：macOS/iOS SwiftUI 聊天 UI 直接与 Gateway WebSocket 通信。
 
-## What it is
+## 它是什么
 
-- A native chat UI for the gateway (no embedded browser and no local static server).
-- Uses the same sessions and routing rules as other channels.
-- Deterministic routing: replies always go back to WebChat.
+- 网关的原生聊天 UI（无嵌入浏览器且无本地静态服务器）。
+- 使用与其他渠道相同的会话和路由规则。
+- 确定性路由：回复总是返回到 WebChat。
 
-## Quick start
+## 快速开始
 
-1. Start the gateway.
-2. Open the WebChat UI (macOS/iOS app) or the Control UI chat tab.
-3. Ensure a valid gateway auth path is configured (shared-secret by default,
-   even on loopback).
+1. 启动网关。
+2. 打开 WebChat UI（macOS/iOS 应用）或 Control UI 的聊天选项卡。
+3. 确保已配置有效的网关身份验证路径（默认使用共享密钥，
+   即使在 loopback 上也是如此）。
 
-## How it works (behavior)
+## 工作原理（行为）
 
-- The UI connects to the Gateway WebSocket and uses `chat.history`, `chat.send`, and `chat.inject`.
-- `chat.history` is bounded for stability: Gateway may truncate long text fields, omit heavy metadata, and replace oversized entries with `[chat.history omitted: message too large]`.
-- `chat.history` is also display-normalized: runtime-only OpenClaw context,
-  inbound envelope wrappers, inline delivery directive tags
-  such as `[[reply_to_*]]` and `[[audio_as_voice]]`, plain-text tool-call XML
-  payloads (including `<tool_call>...</tool_call>`,
-  `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`,
-  `<function_calls>...</function_calls>`, and truncated tool-call blocks), and
-  leaked ASCII/full-width model control tokens are stripped from visible text,
-  and assistant entries whose whole visible text is only the exact silent
-  token `NO_REPLY` / `no_reply` are omitted.
-- Reasoning-flagged reply payloads (`isReasoning: true`) are excluded from WebChat assistant content, transcript replay text, and audio content blocks, so thinking-only payloads do not surface as visible assistant messages or playable audio.
-- `chat.inject` appends an assistant note directly to the transcript and broadcasts it to the UI (no agent run).
-- Aborted runs can keep partial assistant output visible in the UI.
-- Gateway persists aborted partial assistant text into transcript history when buffered output exists, and marks those entries with abort metadata.
-- History is always fetched from the gateway (no local file watching).
-- If the gateway is unreachable, WebChat is read-only.
+- UI 连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send` 和 `chat.inject`。
+- `chat.history` 具有稳定性边界：Gateway 可能会截断较长的文本字段、省略较重的元数据，并将超大的条目替换为 `[chat.history omitted: message too large]`。
+- `chat.history` 也会进行显示归一化：运行时专用的 OpenClaw 上下文、
+  入站信封包装器、内联传递指令标签
+  例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
+  载荷（包括 `<tool_call>...</tool_call>`、
+  `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
+  `<function_calls>...</function_calls>`，以及被截断的工具调用块），
+  以及泄漏的 ASCII/全角模型控制 token 都会从可见文本中移除，
+  并且其全部可见文本仅为精确静默
+  token `NO_REPLY` / `no_reply` 的 assistant 条目会被省略。
+- `chat.inject` 会直接向会话记录追加一条 assistant 注释，并将其广播到 UI（不触发代理运行）。
+- 被中止的运行可能会让部分 assistant 输出在 UI 中保持可见。
+- 当存在已缓冲输出时，Gateway 会将中止的部分 assistant 文本持久化到会话记录历史中，并为这些条目标记中止元数据。
+- 历史始终从网关获取（不进行本地文件监视）。
+- 如果网关不可达，WebChat 将变为只读。
 
-## Control UI agents tools panel
+## Control UI 代理工具面板
 
-- The Control UI `/agents` Tools panel has two separate views:
-  - **Available Right Now** uses `tools.effective(sessionKey=...)` and shows what the current
-    session can actually use at runtime, including core, plugin, and channel-owned tools.
-  - **Tool Configuration** uses `tools.catalog` and stays focused on profiles, overrides, and
-    catalog semantics.
-- Runtime availability is session-scoped. Switching sessions on the same agent can change the
-  **Available Right Now** list.
-- The config editor does not imply runtime availability; effective access still follows policy
-  precedence (`allow`/`deny`, per-agent and provider/channel overrides).
+- Control UI 的 `/agents` 工具面板有两个独立视图：
+  - **当前可用** 使用 `tools.effective(sessionKey=...)`，显示当前会话在运行时实际可用的工具，包括核心、插件和渠道拥有的工具。
+  - **工具配置** 使用 `tools.catalog`，重点关注配置文件、覆盖以及目录语义。
+- 运行时可用性按会话范围生效。在同一代理上切换会话可能会改变 **当前可用** 列表。
+- 配置编辑器并不意味着运行时可用性；有效访问仍遵循策略优先级（`allow`/`deny`，按代理以及提供方/渠道覆盖）。
 
-## Remote use
+## 远程使用
 
-- Remote mode tunnels the gateway WebSocket over SSH/Tailscale.
-- You do not need to run a separate WebChat server.
+- 远程模式通过 SSH/Tailscale 隧道传输网关 WebSocket。
+- 无需运行独立的 WebChat 服务器。
 
-## Configuration reference (WebChat)
+## 配置参考（WebChat）
 
-Full configuration: [Configuration](/gateway/configuration)
+完整配置：[配置](/gateway/configuration)
 
-WebChat options:
+WebChat 选项：
 
-- `gateway.webchat.chatHistoryMaxChars`: maximum character count for text fields in `chat.history` responses. When a transcript entry exceeds this limit, Gateway truncates long text fields and may replace oversized messages with a placeholder. Per-request `maxChars` can also be sent by the client to override this default for a single `chat.history` call.
+- `gateway.webchat.chatHistoryMaxChars`：`chat.history` 响应中文本字段的最大字符数。当某个会话条目超过此限制时，Gateway 会截断较长的文本字段，并可能用占位符替换超大的消息。客户端还可以发送每次请求的 `maxChars` 来覆盖单次 `chat.history` 调用的此默认值。
 
-Related global options:
+相关全局选项：
 
-- `gateway.port`, `gateway.bind`: WebSocket host/port.
-- `gateway.auth.mode`, `gateway.auth.token`, `gateway.auth.password`:
-  shared-secret WebSocket auth.
-- `gateway.auth.allowTailscale`: browser Control UI chat tab can use Tailscale
-  Serve identity headers when enabled.
-- `gateway.auth.mode: "trusted-proxy"`: reverse-proxy auth for browser clients behind an identity-aware **non-loopback** proxy source (see [Trusted Proxy Auth](/gateway/trusted-proxy-auth)).
-- `gateway.remote.url`, `gateway.remote.token`, `gateway.remote.password`: remote gateway target.
-- `session.*`: session storage and main key defaults.
+- `gateway.port`, `gateway.bind`：WebSocket 主机/端口。
+- `gateway.auth.mode`, `gateway.auth.token`, `gateway.auth.password`：
+  共享密钥 WebSocket 身份验证。
+- `gateway.auth.allowTailscale`：启用后，浏览器 Control UI 聊天选项卡可以使用 Tailscale
+  Serve 身份标头。
+- `gateway.auth.mode: "trusted-proxy"`：用于位于身份感知的 **非 loopback** 代理源之后的浏览器客户端的反向代理身份验证（参见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)）。
+- `gateway.remote.url`, `gateway.remote.token`, `gateway.remote.password`：远程网关目标。
+- `session.*`：会话存储和主密钥默认值。
 
-## Related
+## 相关内容
 
 - [Control UI](/web/control-ui)
 - [Dashboard](/web/dashboard)

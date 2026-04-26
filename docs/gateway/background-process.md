@@ -1,96 +1,89 @@
 ---
-summary: "Background exec execution and process management"
+summary: "后台 exec 执行和进程管理"
 read_when:
-  - Adding or modifying background exec behavior
-  - Debugging long-running exec tasks
-title: "Background exec and process tool"
+  - 添加或修改后台 exec 行为
+  - 调试长时间运行的 exec 任务
+title: "后台 exec 和进程工具"
 ---
 
-# Background Exec + Process Tool
+# 后台 Exec + 进程工具
 
-OpenClaw runs shell commands through the `exec` tool and keeps long‑running tasks in memory. The `process` tool manages those background sessions.
+OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任务保留在内存中。`process` 工具管理这些后台会话。
 
-## exec tool
+## exec 工具
 
-Key parameters:
+关键参数：
 
-- `command` (required)
-- `yieldMs` (default 10000): auto‑background after this delay
-- `background` (bool): background immediately
-- `timeout` (seconds, default 1800): kill the process after this timeout
-- `elevated` (bool): run outside the sandbox if elevated mode is enabled/allowed (`gateway` by default, or `node` when the exec target is `node`)
-- Need a real TTY? Set `pty: true`.
+- `command`（必填）
+- `yieldMs`（默认 10000）：延迟此时间后自动转入后台
+- `background`（布尔值）：立即转入后台
+- `timeout`（秒，默认 1800）：超时后终止进程
+- `elevated`（布尔值）：如果启用/允许提升模式，则在沙箱外运行（默认为 `gateway`，当 exec 目标为 `node` 时为 `node`）
+- 需要真实的 TTY？设置 `pty: true`。
 - `workdir`, `env`
 
-Behavior:
+行为：
 
-- Foreground runs return output directly.
-- When backgrounded (explicit or timeout), the tool returns `status: "running"` + `sessionId` and a short tail.
-- Output is kept in memory until the session is polled or cleared.
-- If the `process` tool is disallowed, `exec` runs synchronously and ignores `yieldMs`/`background`.
-- Spawned exec commands receive `OPENCLAW_SHELL=exec` for context-aware shell/profile rules.
-- For long-running work that starts now, start it once and rely on automatic
-  completion wake when it is enabled and the command emits output or fails.
-- If automatic completion wake is unavailable, or you need quiet-success
-  confirmation for a command that exited cleanly without output, use `process`
-  to confirm completion.
-- Do not emulate reminders or delayed follow-ups with `sleep` loops or repeated
-  polling; use cron for future work.
+- 前台运行直接返回输出。
+- 当转入后台时（显式或超时），工具返回 `status: "running"` + `sessionId` 以及简短的尾部输出。
+- 输出保留在内存中，直到会话被轮询或清除。
+- 如果 `process` 工具被禁止，`exec` 将同步运行并忽略 `yieldMs`/`background`。
+- 生成的 exec 命令会接收 `OPENCLAW_SHELL=exec` 以用于上下文感知的 shell/profile 规则。
+- 对于现在开始运行的长时间任务，启动一次即可，当启用自动完成唤醒且命令发出输出或失败时依赖该机制。
+- 如果自动完成唤醒不可用，或者你需要确认一个无输出且正常退出的命令是否成功，请使用 `process` 来确认完成。
+- 不要使用 `sleep` 循环或重复轮询来模拟提醒或延迟跟进；对于未来的工作请使用 cron。
 
-## Child process bridging
+## 子进程桥接
 
-When spawning long-running child processes outside the exec/process tools (for example, CLI respawns or gateway helpers), attach the child-process bridge helper so termination signals are forwarded and listeners are detached on exit/error. This avoids orphaned processes on systemd and keeps shutdown behavior consistent across platforms.
+当在 exec/process 工具之外启动长时间运行的子进程（例如 CLI 重启或网关辅助），请附加子进程桥接辅助程序，以便转发终止信号并在退出/错误时分离监听器。这避免了 systemd 上的孤儿进程，并保持跨平台的一致关闭行为。
 
-Environment overrides:
+环境重写变量：
 
-- `PI_BASH_YIELD_MS`: default yield (ms)
-- `PI_BASH_MAX_OUTPUT_CHARS`: in‑memory output cap (chars)
-- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: pending stdout/stderr cap per stream (chars)
-- `PI_BASH_JOB_TTL_MS`: TTL for finished sessions (ms, bounded to 1m–3h)
+- `PI_BASH_YIELD_MS`：默认延迟（毫秒）
+- `PI_BASH_MAX_OUTPUT_CHARS`：内存中输出上限（字符数）
+- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`：每个流待处理 stdout/stderr 上限（字符数）
+- `PI_BASH_JOB_TTL_MS`：已完成会话的 TTL（毫秒，限定在 1 分钟到 3 小时之间）
 
-Config (preferred):
+配置（推荐）：
 
-- `tools.exec.backgroundMs` (default 10000)
-- `tools.exec.timeoutSec` (default 1800)
-- `tools.exec.cleanupMs` (default 1800000)
-- `tools.exec.notifyOnExit` (default true): enqueue a system event + request heartbeat when a backgrounded exec exits.
-- `tools.exec.notifyOnExitEmptySuccess` (default false): when true, also enqueue completion events for successful backgrounded runs that produced no output.
+- `tools.exec.backgroundMs`（默认 10000）
+- `tools.exec.timeoutSec`（默认 1800）
+- `tools.exec.cleanupMs`（默认 1800000）
+- `tools.exec.notifyOnExit`（默认 true）：后台 exec 退出时入队系统事件 + 请求心跳。
+- `tools.exec.notifyOnExitEmptySuccess`（默认 false）：为 true 时，对无输出的成功后台运行也入队完成事件。
 
-## process tool
+## process 工具
 
-Actions:
+操作：
 
-- `list`: running + finished sessions
-- `poll`: drain new output for a session (also reports exit status)
-- `log`: read the aggregated output (supports `offset` + `limit`)
-- `write`: send stdin (`data`, optional `eof`)
-- `send-keys`: send explicit key tokens or bytes to a PTY-backed session
-- `submit`: send Enter / carriage return to a PTY-backed session
-- `paste`: send literal text, optionally wrapped in bracketed paste mode
-- `kill`: terminate a background session
-- `clear`: remove a finished session from memory
-- `remove`: kill if running, otherwise clear if finished
+- `list`：运行中 + 已完成的会话
+- `poll`：获取会话的新输出（也报告退出状态）
+- `log`：读取聚合输出（支持 `offset` + `limit`）
+- `write`：发送 stdin（`data`，可选 `eof`）
+- `send-keys`：向基于 PTY 的会话发送明确的键令牌或字节
+- `submit`：向基于 PTY 的会话发送 Enter / 回车
+- `paste`：发送字面文本，可选包裹在括号粘贴模式中
+- `kill`：终止后台会话
+- `clear`：从内存中移除已完成的会话
+- `remove`：如果运行中则终止，否则如果已完成则清除
 
-Notes:
+备注：
 
-- Only backgrounded sessions are listed/persisted in memory.
-- Sessions are lost on process restart (no disk persistence).
-- Session logs are only saved to chat history if you run `process poll/log` and the tool result is recorded.
-- `process` is scoped per agent; it only sees sessions started by that agent.
-- Use `poll` / `log` for status, logs, quiet-success confirmation, or
-  completion confirmation when automatic completion wake is unavailable.
-- Use `write` / `send-keys` / `submit` / `paste` / `kill` when you need input
-  or intervention.
-- `process list` includes a derived `name` (command verb + target) for quick scans.
-- `process log` uses line-based `offset`/`limit`.
-- When both `offset` and `limit` are omitted, it returns the last 200 lines and includes a paging hint.
-- When `offset` is provided and `limit` is omitted, it returns from `offset` to the end (not capped to 200).
-- Polling is for on-demand status, not wait-loop scheduling. If the work should
-  happen later, use cron instead.
+- 只有转入后台的会话才会被列出/持久化在内存中。
+- 进程重启时会话丢失（无磁盘持久化）。
+- 会话日志仅在你运行 `process poll/log` 且工具结果被记录时才会保存到聊天历史中。
+- `process` 按代理作用域；它只能看到由该代理启动的会话。
+- 当自动完成唤醒不可用时，使用 `poll` / `log` 获取状态、日志、静默成功确认或完成确认。
+- 当你需要输入或干预时使用 `write` / `send-keys` / `submit` / `paste` / `kill`。
+- `process list` 包含一个派生的 `name`（命令动词 + 目标）以便快速扫描。
+- `process log` 使用基于行的 `offset`/`limit`。
+- 当 `offset` 和 `limit` 都省略时，它返回最后 200 行并包含分页提示。
+- 当提供了 `offset` 但省略 `limit` 时，它返回从 `offset` 到结尾的内容（不限制为 200）。
+- 轮询用于按需状态查询，而非等待循环调度。如果工作应该稍后发生，请使用 cron。
 
-## Examples
+## 示例
 
-Run a long task and poll later:
+运行一个长任务，稍后轮询：
 
 ```json
 { "tool": "exec", "command": "sleep 5 && echo done", "yieldMs": 1000 }
@@ -100,37 +93,37 @@ Run a long task and poll later:
 { "tool": "process", "action": "poll", "sessionId": "<id>" }
 ```
 
-Start immediately in background:
+立即在后台启动：
 
 ```json
 { "tool": "exec", "command": "npm run build", "background": true }
 ```
 
-Send stdin:
+发送标准输入：
 
 ```json
 { "tool": "process", "action": "write", "sessionId": "<id>", "data": "y\n" }
 ```
 
-Send PTY keys:
+发送 PTY 按键：
 
 ```json
 { "tool": "process", "action": "send-keys", "sessionId": "<id>", "keys": ["C-c"] }
 ```
 
-Submit current line:
+提交当前行：
 
 ```json
 { "tool": "process", "action": "submit", "sessionId": "<id>" }
 ```
 
-Paste literal text:
+粘贴字面文本：
 
 ```json
 { "tool": "process", "action": "paste", "sessionId": "<id>", "text": "line1\nline2\n" }
 ```
 
-## Related
+## 相关链接
 
-- [Exec tool](/tools/exec)
-- [Exec approvals](/tools/exec-approvals)
+- [Exec 工具](/tools/exec)
+- [Exec 审批](/tools/exec-approvals)

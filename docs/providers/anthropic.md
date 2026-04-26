@@ -1,24 +1,24 @@
 ---
-summary: "Use Anthropic Claude via API keys or Claude CLI in OpenClaw"
+summary: "通过 API 密钥或 Claude CLI 在 OpenClaw 中使用 Anthropic Claude"
 read_when:
-  - You want to use Anthropic models in OpenClaw
+  - 您想在 OpenClaw 中使用 Anthropic 模型
 title: "Anthropic"
 ---
 
-Anthropic builds the **Claude** model family. OpenClaw supports two auth routes:
+Anthropic 构建了 **Claude** 模型家族。OpenClaw 支持两种认证方式：
 
-- **API key** — direct Anthropic API access with usage-based billing (`anthropic/*` models)
-- **Claude CLI** — reuse an existing Claude CLI login on the same host
+- **API 密钥** — 直接使用 Anthropic API 访问，按用量计费（`anthropic/*` 模型）
+- **Claude CLI** — 在同一主机上复用现有的 Claude CLI 登录
 
 <Warning>
-Anthropic staff told us OpenClaw-style Claude CLI usage is allowed again, so
-OpenClaw treats Claude CLI reuse and `claude -p` usage as sanctioned unless
-Anthropic publishes a new policy.
+Anthropic 工作人员告诉我们，OpenClaw 风格的 Claude CLI 使用方式再次被允许，因此
+OpenClaw 将 Claude CLI 复用和 `claude -p` 使用视为获准行为，除非
+Anthropic 发布新政策。
 
-For long-lived gateway hosts, Anthropic API keys are still the clearest and
-most predictable production path.
+对于长期运行的网关主机，Anthropic API 密钥仍然是最清晰且
+最可预测的生产路径。
 
-Anthropic's current public docs:
+Anthropic 当前的公开文档：
 
 - [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
 - [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview)
@@ -27,36 +27,36 @@ Anthropic's current public docs:
 
 </Warning>
 
-## Getting started
+## 入门指南
 
 <Tabs>
-  <Tab title="API key">
-    **Best for:** standard API access and usage-based billing.
+  <Tab title="API 密钥">
+    **最适合：** 标准 API 访问和按用量计费。
 
     <Steps>
-      <Step title="Get your API key">
-        Create an API key in the [Anthropic Console](https://console.anthropic.com/).
+      <Step title="获取您的 API 密钥">
+        在 [Anthropic 控制台](https://console.anthropic.com/) 中创建 API 密钥。
       </Step>
-      <Step title="Run onboarding">
+      <Step title="运行引导配置">
         ```bash
         openclaw onboard
-        # choose: Anthropic API key
+        # 选择：Anthropic API 密钥
         ```
 
-        Or pass the key directly:
+        或直接传递密钥：
 
         ```bash
         openclaw onboard --anthropic-api-key "$ANTHROPIC_API_KEY"
         ```
       </Step>
-      <Step title="Verify the model is available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider anthropic
         ```
       </Step>
     </Steps>
 
-    ### Config example
+    ### 配置示例
 
     ```json5
     {
@@ -68,25 +68,25 @@ Anthropic's current public docs:
   </Tab>
 
   <Tab title="Claude CLI">
-    **Best for:** reusing an existing Claude CLI login without a separate API key.
+    **最适合：** 复用现有的 Claude CLI 登录，无需单独的 API 密钥。
 
     <Steps>
-      <Step title="Ensure Claude CLI is installed and logged in">
-        Verify with:
+      <Step title="确保已安装并登录 Claude CLI">
+        验证方式：
 
         ```bash
         claude --version
         ```
       </Step>
-      <Step title="Run onboarding">
+      <Step title="运行引导配置">
         ```bash
         openclaw onboard
-        # choose: Claude CLI
+        # 选择：Claude CLI
         ```
 
-        OpenClaw detects and reuses the existing Claude CLI credentials.
+        OpenClaw 会检测并复用现有的 Claude CLI 凭据。
       </Step>
-      <Step title="Verify the model is available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider anthropic
         ```
@@ -94,40 +94,21 @@ Anthropic's current public docs:
     </Steps>
 
     <Note>
-    Setup and runtime details for the Claude CLI backend are in [CLI Backends](/gateway/cli-backends).
+    Claude CLI 后端的设置和运行时详情见 [CLI 后端](/gateway/cli-backends)。
     </Note>
 
-    ### Config example
-
-    Prefer the canonical Anthropic model ref plus a CLI runtime override:
-
-    ```json5
-    {
-      agents: {
-        defaults: {
-          model: { primary: "anthropic/claude-opus-4-7" },
-          agentRuntime: { id: "claude-cli" },
-        },
-      },
-    }
-    ```
-
-    Legacy `claude-cli/claude-opus-4-7` model refs still work for
-    compatibility, but new config should keep provider/model selection as
-    `anthropic/*` and put the execution backend in `agentRuntime.id`.
-
     <Tip>
-    If you want the clearest billing path, use an Anthropic API key instead. OpenClaw also supports subscription-style options from [OpenAI Codex](/providers/openai), [Qwen Cloud](/providers/qwen), [MiniMax](/providers/minimax), and [Z.AI / GLM](/providers/glm).
+    如果您想要最清晰的计费路径，请改用 Anthropic API 密钥。OpenClaw 还支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/glm) 的订阅式选项。
     </Tip>
 
   </Tab>
 </Tabs>
 
-## Thinking defaults (Claude 4.6)
+## 思维默认值（Claude 4.6）
 
-Claude 4.6 models default to `adaptive` thinking in OpenClaw when no explicit thinking level is set.
+当未设置明确的思维级别时，Claude 4.6 模型在 OpenClaw 中默认为 `adaptive` 思维。
 
-Override per-message with `/think:<level>` or in model params:
+可通过 `/think:<level>` 每条消息覆盖，或在模型参数中覆盖：
 
 ```json5
 {
@@ -144,20 +125,20 @@ Override per-message with `/think:<level>` or in model params:
 ```
 
 <Note>
-Related Anthropic docs:
-- [Adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
-- [Extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
+相关 Anthropic 文档：
+- [自适应思维](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
+- [扩展思维](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
 </Note>
 
-## Prompt caching
+## 提示词缓存
 
-OpenClaw supports Anthropic's prompt caching feature for API-key auth.
+OpenClaw 支持 API 密钥认证的 Anthropic 提示词缓存功能。
 
-| Value               | Cache duration | Description                            |
+| 值               | 缓存持续时间 | 描述                            |
 | ------------------- | -------------- | -------------------------------------- |
-| `"short"` (default) | 5 minutes      | Applied automatically for API-key auth |
-| `"long"`            | 1 hour         | Extended cache                         |
-| `"none"`            | No caching     | Disable prompt caching                 |
+| `"short"`（默认） | 5 分钟      | API 密钥认证自动应用 |
+| `"long"`            | 1 小时         | 扩展缓存                         |
+| `"none"`            | 无缓存     | 禁用提示词缓存                 |
 
 ```json5
 {
@@ -174,8 +155,8 @@ OpenClaw supports Anthropic's prompt caching feature for API-key auth.
 ```
 
 <AccordionGroup>
-  <Accordion title="Per-agent cache overrides">
-    Use model-level params as your baseline, then override specific agents via `agents.list[].params`:
+  <Accordion title="每代理缓存覆盖">
+    使用模型级参数作为基线，然后通过 `agents.list[].params` 覆盖特定代理：
 
     ```json5
     {
@@ -196,29 +177,29 @@ OpenClaw supports Anthropic's prompt caching feature for API-key auth.
     }
     ```
 
-    Config merge order:
+    配置合并顺序：
 
     1. `agents.defaults.models["provider/model"].params`
-    2. `agents.list[].params` (matching `id`, overrides by key)
+    2. `agents.list[].params`（匹配 `id`，按键覆盖）
 
-    This lets one agent keep a long-lived cache while another agent on the same model disables caching for bursty/low-reuse traffic.
+    这允许一个代理保持长期缓存，而同一模型上的另一个代理为突发/低复用流量禁用缓存。
 
   </Accordion>
 
-  <Accordion title="Bedrock Claude notes">
-    - Anthropic Claude models on Bedrock (`amazon-bedrock/*anthropic.claude*`) accept `cacheRetention` pass-through when configured.
-    - Non-Anthropic Bedrock models are forced to `cacheRetention: "none"` at runtime.
-    - API-key smart defaults also seed `cacheRetention: "short"` for Claude-on-Bedrock refs when no explicit value is set.
+  <Accordion title="Bedrock Claude 注意事项">
+    - Bedrock 上的 Anthropic Claude 模型（`amazon-bedrock/*anthropic.claude*`）在配置时接受 `cacheRetention` 透传。
+    - 非 Anthropic Bedrock 模型在运行时被强制设为 `cacheRetention: "none"`。
+    - 当未设置显式值时，API 密钥智能默认值也会为 Bedrock 上的 Claude 引用种子 `cacheRetention: "short"`。
   </Accordion>
 </AccordionGroup>
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Fast mode">
-    OpenClaw's shared `/fast` toggle supports direct Anthropic traffic (API-key and OAuth to `api.anthropic.com`).
+  <Accordion title="快速模式">
+    OpenClaw 的共享 `/fast` 开关支持直接 Anthropic 流量（指向 `api.anthropic.com` 的 API 密钥和 OAuth）。
 
-    | Command | Maps to |
+    | 命令 | 映射为 |
     |---------|---------|
     | `/fast on` | `service_tier: "auto"` |
     | `/fast off` | `service_tier: "standard_only"` |
@@ -238,30 +219,30 @@ OpenClaw supports Anthropic's prompt caching feature for API-key auth.
     ```
 
     <Note>
-    - Only injected for direct `api.anthropic.com` requests. Proxy routes leave `service_tier` untouched.
-    - Explicit `serviceTier` or `service_tier` params override `/fast` when both are set.
-    - On accounts without Priority Tier capacity, `service_tier: "auto"` may resolve to `standard`.
+    - 仅注入到直接 `api.anthropic.com` 请求中。代理路由保持 `service_tier` 不变。
+    - 当两者都设置时，显式的 `serviceTier` 或 `service_tier` 参数会覆盖 `/fast`。
+    - 在没有优先层级容量的账户上，`service_tier: "auto"` 可能解析为 `standard`。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Media understanding (image and PDF)">
-    The bundled Anthropic plugin registers image and PDF understanding. OpenClaw
-    auto-resolves media capabilities from the configured Anthropic auth — no
-    additional config is needed.
+  <Accordion title="媒体理解（图像和 PDF）">
+    捆绑的 Anthropic 插件注册了图像和 PDF 理解功能。OpenClaw
+    从配置的 Anthropic 认证自动解析媒体能力 — 无需
+    额外配置。
 
-    | Property       | Value                |
+    | 属性       | 值                |
     | -------------- | -------------------- |
-    | Default model  | `claude-opus-4-6`    |
-    | Supported input | Images, PDF documents |
+    | 默认模型  | `claude-opus-4-6`    |
+    | 支持的输入 | 图像、PDF 文档 |
 
-    When an image or PDF is attached to a conversation, OpenClaw automatically
-    routes it through the Anthropic media understanding provider.
+    当图像或 PDF 附加到对话时，OpenClaw 自动
+    通过 Anthropic 媒体理解提供商路由它。
 
   </Accordion>
 
-  <Accordion title="1M context window (beta)">
-    Anthropic's 1M context window is beta-gated. Enable it per model:
+  <Accordion title="1M 上下文窗口（beta）">
+    Anthropic 的 1M 上下文窗口处于 beta 限制中。按模型启用：
 
     ```json5
     {
@@ -277,61 +258,57 @@ OpenClaw supports Anthropic's prompt caching feature for API-key auth.
     }
     ```
 
-    OpenClaw maps this to `anthropic-beta: context-1m-2025-08-07` on requests.
-
-    `params.context1m: true` also applies to the Claude CLI backend
-    (`claude-cli/*`) for eligible Opus and Sonnet models, expanding the runtime
-    context window for those CLI sessions to match the direct-API behavior.
+    OpenClaw 在请求中将其映射为 `anthropic-beta: context-1m-2025-08-07`。
 
     <Warning>
-    Requires long-context access on your Anthropic credential. Legacy token auth (`sk-ant-oat-*`) is rejected for 1M context requests — OpenClaw logs a warning and falls back to the standard context window.
+    需要您的 Anthropic 凭据具有长上下文访问权限。旧版令牌认证（`sk-ant-oat-*`）会被 1M 上下文请求拒绝 — OpenClaw 将记录警告并回退到标准上下文窗口。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 1M context">
-    `anthropic/claude-opus-4.7` and its `claude-cli` variant have a 1M context
-    window by default — no `params.context1m: true` needed.
+  <Accordion title="Claude Opus 4.7 1M 上下文">
+    `anthropic/claude-opus-4.7` 及其 `claude-cli` 变体默认具有 1M 上下文
+    窗口 — 无需 `params.context1m: true`。
   </Accordion>
 </AccordionGroup>
 
-## Troubleshooting
+## 故障排除
 
 <AccordionGroup>
-  <Accordion title="401 errors / token suddenly invalid">
-    Anthropic token auth expires and can be revoked. For new setups, use an Anthropic API key instead.
+  <Accordion title="401 错误 / 令牌突然失效">
+    Anthropic 令牌认证会过期且可被撤销。对于新配置，请改用 Anthropic API 密钥。
   </Accordion>
 
-  <Accordion title='No API key found for provider "anthropic"'>
-    Anthropic auth is **per agent** — new agents do not inherit the main agent's keys. Re-run onboarding for that agent (or configure an API key on the gateway host), then verify with `openclaw models status`.
+  <Accordion title='未找到提供方 "anthropic" 的 API 密钥'>
+    Anthropic 认证是**按代理**生效的——新代理不会继承主代理的密钥。请为该代理重新运行引导配置（或在网关主机上配置 API 密钥），然后使用 `openclaw models status` 验证。
   </Accordion>
 
-  <Accordion title='No credentials found for profile "anthropic:default"'>
-    Run `openclaw models status` to see which auth profile is active. Re-run onboarding, or configure an API key for that profile path.
+  <Accordion title='未找到配置文件 "anthropic:default" 的凭据'>
+    运行 `openclaw models status` 查看哪个认证配置文件处于活动状态。重新运行引导配置，或为该配置文件路径配置 API 密钥。
   </Accordion>
 
-  <Accordion title="No available auth profile (all in cooldown)">
-    Check `openclaw models status --json` for `auth.unusableProfiles`. Anthropic rate-limit cooldowns can be model-scoped, so a sibling Anthropic model may still be usable. Add another Anthropic profile or wait for cooldown.
+  <Accordion title="无可用认证配置文件（全部处于冷却期）">
+    检查 `openclaw models status --json` 中的 `auth.unusableProfiles`。Anthropic 速率限制冷却可能是模型范围的，因此同族的 Anthropic 模型可能仍可用。添加另一个 Anthropic 配置文件或等待冷却。
   </Accordion>
 </AccordionGroup>
 
 <Note>
-More help: [Troubleshooting](/help/troubleshooting) and [FAQ](/help/faq).
+更多帮助：[故障排除](/help/troubleshooting) 和 [FAQ](/help/faq)。
 </Note>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="CLI backends" href="/gateway/cli-backends" icon="terminal">
-    Claude CLI backend setup and runtime details.
+  <Card title="CLI 后端" href="/gateway/cli-backends" icon="terminal">
+    Claude CLI 后端设置和运行时详情。
   </Card>
-  <Card title="Prompt caching" href="/reference/prompt-caching" icon="database">
-    How prompt caching works across providers.
+  <Card title="提示词缓存" href="/reference/prompt-caching" icon="database">
+    提示词缓存如何在各提供商间工作。
   </Card>
-  <Card title="OAuth and auth" href="/gateway/authentication" icon="key">
-    Auth details and credential reuse rules.
+  <Card title="OAuth 和认证" href="/gateway/authentication" icon="key">
+    认证详情和凭据复用规则。
   </Card>
 </CardGroup>

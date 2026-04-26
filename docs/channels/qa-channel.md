@@ -1,35 +1,33 @@
 ---
-summary: "Synthetic Slack-class channel plugin for deterministic OpenClaw QA scenarios"
-title: "QA channel"
+summary: "面向确定性 OpenClaw QA 场景的合成 Slack 类通道插件"
+title: "QA 通道"
 read_when:
-  - You are wiring the synthetic QA transport into a local or CI test run
-  - You need the bundled qa-channel config surface
-  - You are iterating on end-to-end QA automation
+  - 您正在将合成 QA 传输接入本地或 CI 测试运行
+  - 您需要捆绑的 qa-channel 配置界面
+  - 您正在迭代端到端 QA 自动化
 ---
 
-`qa-channel` is a bundled synthetic message transport for automated OpenClaw QA.
+`qa-channel` 是一个用于自动化 OpenClaw QA 的捆绑式合成消息传输。
 
-It is not a production channel. It exists to exercise the same channel plugin
-boundary used by real transports while keeping state deterministic and fully
-inspectable.
+它不是一个生产通道。它的存在是为了演练真实传输所使用的相同通道插件边界，同时保持状态确定性且完全可检查。
 
-## What it does today
+## 它目前的功能
 
-- Slack-class target grammar:
+- Slack 类目标语法：
   - `dm:<user>`
   - `channel:<room>`
   - `thread:<room>/<thread>`
-- HTTP-backed synthetic bus for:
-  - inbound message injection
-  - outbound transcript capture
-  - thread creation
-  - reactions
-  - edits
-  - deletes
-  - search and read actions
-- Bundled host-side self-check runner that writes a Markdown report
+- 基于 HTTP 的合成总线，用于：
+  - 入站消息注入
+  - 出站转录捕获
+  - 线程创建
+  - 反应
+  - 编辑
+  - 删除
+  - 搜索和读取操作
+- 捆绑的主机端自检运行器，写入 Markdown 报告
 
-## Config
+## 配置
 
 ```json
 {
@@ -45,7 +43,7 @@ inspectable.
 }
 ```
 
-Supported account keys:
+支持的账户键：
 
 - `baseUrl`
 - `botUserId`
@@ -58,55 +56,50 @@ Supported account keys:
 - `actions.search`
 - `actions.threads`
 
-## Runner
+## 运行器
 
-Current vertical slice:
+当前垂直切片：
 
 ```bash
 pnpm qa:e2e
 ```
 
-This now routes through the bundled `qa-lab` extension. It starts the in-repo
-QA bus, boots the bundled `qa-channel` runtime slice, runs a deterministic
-self-check, and writes a Markdown report under `.artifacts/qa-e2e/`.
+现在它通过捆绑的 `qa-lab` 扩展进行路由。它启动仓库内的 QA 总线，引导捆绑的 `qa-channel` 运行时切片，运行确定性自检，并在 `.artifacts/qa-e2e/` 下写入 Markdown 报告。
 
-Private debugger UI:
+私有调试器 UI：
 
 ```bash
 pnpm qa:lab:up
 ```
 
-That one command builds the QA site, starts the Docker-backed gateway + QA Lab
-stack, and prints the QA Lab URL. From that site you can pick scenarios, choose
-the model lane, launch individual runs, and watch results live.
+该命令构建 QA 站点，启动基于 Docker 的网关 + QA Lab 堆栈，并打印 QA Lab URL。从该站点您可以挑选场景，选择模型通道，启动独立运行，并实时观看结果。
 
-Full repo-backed QA suite:
+完整仓库支持的 QA 套件：
 
 ```bash
 pnpm openclaw qa suite
 ```
 
-That launches the private QA debugger at a local URL, separate from the
-shipped Control UI bundle.
+这将在本地 URL 启动私有 QA 调试器，与发布的控制 UI 捆绑包分开。
 
-## Scope
+## 范围
 
-Current scope is intentionally narrow:
+当前范围故意设定得较窄：
 
-- bus + plugin transport
-- threaded routing grammar
-- channel-owned message actions
-- Markdown reporting
-- Docker-backed QA site with run controls
+- 总线 + 插件传输
+- 线程化路由语法
+- 通道拥有的消息操作
+- Markdown 报告
+- 带有运行控制的基于 Docker 的 QA 站点
 
-Follow-up work will add:
+后续工作将添加：
 
 - provider/model matrix execution
 - richer scenario discovery
 - OpenClaw-native orchestration later
 
-## Related
+## 相关内容
 
-- [Pairing](/channels/pairing)
-- [Groups](/channels/groups)
-- [Channels overview](/channels)
+- [配对](/channels/pairing)
+- [群组](/channels/groups)
+- [通道概览](/channels)

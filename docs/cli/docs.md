@@ -1,19 +1,19 @@
 ---
-summary: "CLI reference for `openclaw docs` (search the live docs index)"
+summary: "`openclaw docs` 的命令行参考（搜索实时文档索引）"
 read_when:
-  - You want to search the live OpenClaw docs from the terminal
-title: "Docs"
+  - 你想从终端搜索实时的 OpenClaw 文档
+title: "文档"
 ---
 
 # `openclaw docs`
 
-Search the live docs index.
+搜索实时文档索引。
 
-Arguments:
+参数：
 
-- `[query...]`: search terms to send to the live docs index
+- `[query...]`: 发送到实时文档索引的搜索词
 
-Examples:
+示例：
 
 ```bash
 openclaw docs
@@ -22,11 +22,11 @@ openclaw docs sandbox allowHostControl
 openclaw docs gateway token secretref
 ```
 
-Notes:
+说明：
 
-- With no query, `openclaw docs` opens the live docs search entrypoint.
-- Multi-word queries are passed through as one search request.
+- 不带查询时，`openclaw docs` 会打开实时文档搜索入口。
+- 多词查询会作为一次搜索请求原样传递。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)

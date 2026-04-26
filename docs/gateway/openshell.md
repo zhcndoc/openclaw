@@ -1,31 +1,27 @@
 ---
-summary: "Use OpenShell as a managed sandbox backend for OpenClaw agents"
+summary: "将 OpenShell 作为 OpenClaw 代理的托管沙盒后端"
 title: OpenShell
 read_when:
-  - You want cloud-managed sandboxes instead of local Docker
-  - You are setting up the OpenShell plugin
-  - You need to choose between mirror and remote workspace modes
+  - 你想要云托管沙盒而非本地 Docker
+  - 你正在设置 OpenShell 插件
+  - 你需要在 mirror 和 remote 工作区模式之间做出选择
 ---
 
-OpenShell is a managed sandbox backend for OpenClaw. Instead of running Docker
-containers locally, OpenClaw delegates sandbox lifecycle to the `openshell` CLI,
-which provisions remote environments with SSH-based command execution.
+OpenShell 是 OpenClaw 的托管沙盒后端。OpenClaw 不会在本地运行 Docker
+容器，而是将沙盒生命周期委托给 `openshell` CLI，
+由它通过基于 SSH 的命令执行来提供远程环境。
 
-The OpenShell plugin reuses the same core SSH transport and remote filesystem
-bridge as the generic [SSH backend](/gateway/sandboxing#ssh-backend). It adds
-OpenShell-specific lifecycle (`sandbox create/get/delete`, `sandbox ssh-config`)
-and an optional `mirror` workspace mode.
+OpenShell 插件复用了与通用 [SSH 后端](/gateway/sandboxing#ssh-backend) 相同的核心 SSH 传输和远程文件系统桥接。它添加了 OpenShell 特定的生命周期管理（`sandbox create/get/delete`、`sandbox ssh-config`）以及可选的 `mirror` 工作区模式。
 
-## Prerequisites
+## 先决条件
 
-- The `openshell` CLI installed and on `PATH` (or set a custom path via
-  `plugins.entries.openshell.config.command`)
-- An OpenShell account with sandbox access
-- OpenClaw Gateway running on the host
+- 已安装 `openshell` CLI 并在 `PATH` 中（或通过 `plugins.entries.openshell.config.command` 设置自定义路径）
+- 具有沙盒访问权限的 OpenShell 账户
+- 在主机上运行的 OpenClaw Gateway
 
-## Quick start
+## 快速开始
 
-1. Enable the plugin and set the sandbox backend:
+1. 启用插件并设置沙盒后端：
 
 ```json5
 {
@@ -53,103 +49,92 @@ and an optional `mirror` workspace mode.
 }
 ```
 
-2. Restart the Gateway. On the next agent turn, OpenClaw creates an OpenShell
-   sandbox and routes tool execution through it.
+2. 重启 Gateway。在下一次代理回合时，OpenClaw 会创建一个 OpenShell 沙盒并通过它路由工具执行。
 
-3. Verify:
+3. 验证：
 
 ```bash
+# 列出所有沙盒运行时（Docker + OpenShell）
 openclaw sandbox list
+# 检查有效策略
 openclaw sandbox explain
 ```
 
-## Workspace modes
+## 工作区模式
 
-This is the most important decision when using OpenShell.
+这是使用 OpenShell 时最重要的决定。
 
 ### `mirror`
 
-Use `plugins.entries.openshell.config.mode: "mirror"` when you want the **local
-workspace to stay canonical**.
+当你希望**本地工作区保持权威**时，使用 `plugins.entries.openshell.config.mode: "mirror"`。
 
-Behavior:
+行为：
 
-- Before `exec`, OpenClaw syncs the local workspace into the OpenShell sandbox.
-- After `exec`, OpenClaw syncs the remote workspace back to the local workspace.
-- File tools still operate through the sandbox bridge, but the local workspace
-  remains the source of truth between turns.
+- 在执行 `exec` 之前，OpenClaw 会将本地工作区同步到 OpenShell 沙盒中。
+- 在执行 `exec` 之后，OpenClaw 会将远程工作区同步回本地工作区。
+- 文件工具仍然通过沙盒桥接操作，但本地工作区在回合之间保持为真相来源。
 
-Best for:
+最适合：
 
-- You edit files locally outside OpenClaw and want those changes visible in the
-  sandbox automatically.
-- You want the OpenShell sandbox to behave as much like the Docker backend as
-  possible.
-- You want the host workspace to reflect sandbox writes after each exec turn.
+- 你在 OpenClaw 外部本地编辑文件，并希望这些更改在沙盒中自动可见。
+- 你希望 OpenShell 沙盒的行为尽可能类似于 Docker 后端。
+- 你希望主工作区在每个执行回合后反映沙盒的写入。
 
-Tradeoff: extra sync cost before and after each exec.
+权衡：每次执行前后的额外同步开销。
 
 ### `remote`
 
-Use `plugins.entries.openshell.config.mode: "remote"` when you want the
-**OpenShell workspace to become canonical**.
+当你希望 **OpenShell 工作区成为权威**时，使用 `plugins.entries.openshell.config.mode: "remote"`。
 
-Behavior:
+行为：
 
-- When the sandbox is first created, OpenClaw seeds the remote workspace from
-  the local workspace once.
-- After that, `exec`, `read`, `write`, `edit`, and `apply_patch` operate
-  directly against the remote OpenShell workspace.
-- OpenClaw does **not** sync remote changes back into the local workspace.
-- Prompt-time media reads still work because file and media tools read through
-  the sandbox bridge.
+- 当沙盒首次创建时，OpenClaw 会从本地工作区一次性初始化远程工作区。
+- 之后，`exec`、`read`、`write`、`edit` 和 `apply_patch` 直接针对远程 OpenShell 工作区操作。
+- OpenClaw**不会**将远程更改同步回本地工作区。
+- 提示时的媒体读取仍然有效，因为文件和媒体工具通过沙盒桥接读取。
 
-Best for:
+最适合：
 
-- The sandbox should live primarily on the remote side.
-- You want lower per-turn sync overhead.
-- You do not want host-local edits to silently overwrite remote sandbox state.
+- 沙盒应主要存在于远程端。
+- 你希望每回合的同步开销更低。
+- 你不希望主机本地的编辑静默覆盖远程沙盒状态。
 
-Important: if you edit files on the host outside OpenClaw after the initial seed,
-the remote sandbox does **not** see those changes. Use
-`openclaw sandbox recreate` to re-seed.
+重要提示：如果在初始初始化后你在 OpenClaw 外部的主机上编辑文件，远程沙盒**不会**看到这些更改。使用 `openclaw sandbox recreate` 重新初始化。
 
-### Choosing a mode
+### 选择模式
 
-|                          | `mirror`                   | `remote`                  |
+| | `mirror` | `remote` |
 | ------------------------ | -------------------------- | ------------------------- |
-| **Canonical workspace**  | Local host                 | Remote OpenShell          |
-| **Sync direction**       | Bidirectional (each exec)  | One-time seed             |
-| **Per-turn overhead**    | Higher (upload + download) | Lower (direct remote ops) |
-| **Local edits visible?** | Yes, on next exec          | No, until recreate        |
-| **Best for**             | Development workflows      | Long-running agents, CI   |
+| **权威工作区** | 本地主机 | 远程 OpenShell |
+| **同步方向** | 双向（每次执行） | 一次性初始化 |
+| **每回合开销** | 较高（上传 + 下载） | 较低（直接远程操作） |
+| **本地编辑可见？** | 是，下次执行时 | 否，直到重新创建 |
+| **最适合** | 开发工作流 | 长时间运行的代理、CI |
 
-## Configuration reference
+## 配置参考
 
-All OpenShell config lives under `plugins.entries.openshell.config`:
+所有 OpenShell 配置位于 `plugins.entries.openshell.config` 下：
 
-| Key                       | Type                     | Default       | Description                                           |
+| 键 | 类型 | 默认值 | 描述 |
 | ------------------------- | ------------------------ | ------------- | ----------------------------------------------------- |
-| `mode`                    | `"mirror"` or `"remote"` | `"mirror"`    | Workspace sync mode                                   |
-| `command`                 | `string`                 | `"openshell"` | Path or name of the `openshell` CLI                   |
-| `from`                    | `string`                 | `"openclaw"`  | Sandbox source for first-time create                  |
-| `gateway`                 | `string`                 | —             | OpenShell gateway name (`--gateway`)                  |
-| `gatewayEndpoint`         | `string`                 | —             | OpenShell gateway endpoint URL (`--gateway-endpoint`) |
-| `policy`                  | `string`                 | —             | OpenShell policy ID for sandbox creation              |
-| `providers`               | `string[]`               | `[]`          | Provider names to attach when sandbox is created      |
-| `gpu`                     | `boolean`                | `false`       | Request GPU resources                                 |
-| `autoProviders`           | `boolean`                | `true`        | Pass `--auto-providers` during sandbox create         |
-| `remoteWorkspaceDir`      | `string`                 | `"/sandbox"`  | Primary writable workspace inside the sandbox         |
-| `remoteAgentWorkspaceDir` | `string`                 | `"/agent"`    | Agent workspace mount path (for read-only access)     |
-| `timeoutSeconds`          | `number`                 | `120`         | Timeout for `openshell` CLI operations                |
+| `mode` | `"mirror"` 或 `"remote"` | `"mirror"` | 工作区同步模式 |
+| `command` | `string` | `"openshell"` | `openshell` CLI 的路径或名称 |
+| `from` | `string` | `"openclaw"` | 首次创建时的沙盒源 |
+| `gateway` | `string` | — | OpenShell 网关名称（`--gateway`） |
+| `gatewayEndpoint` | `string` | — | OpenShell 网关端点 URL（`--gateway-endpoint`） |
+| `policy` | `string` | — | 沙盒创建的 OpenShell 策略 ID |
+| `providers` | `string[]` | `[]` | 沙盒创建时要附加的提供程序名称 |
+| `gpu` | `boolean` | `false` | 请求 GPU 资源 |
+| `autoProviders` | `boolean` | `true` | 在沙盒创建期间传递 `--auto-providers` |
+| `remoteWorkspaceDir` | `string` | `"/sandbox"` | 沙盒内的主可写工作区 |
+| `remoteAgentWorkspaceDir` | `string` | `"/agent"` | 代理工作区挂载路径（用于只读访问） |
+| `timeoutSeconds` | `number` | `120` | `openshell` CLI 操作的超时时间 |
 
-Sandbox-level settings (`mode`, `scope`, `workspaceAccess`) are configured under
-`agents.defaults.sandbox` as with any backend. See
-[Sandboxing](/gateway/sandboxing) for the full matrix.
+沙盒级设置（`mode`、`scope`、`workspaceAccess`）与其他后端一样，在 `agents.defaults.sandbox` 下配置。参见 [沙盒](/gateway/sandboxing) 获取完整矩阵。
 
-## Examples
+## 示例
 
-### Minimal remote setup
+### 最小化远程设置
 
 ```json5
 {
@@ -175,7 +160,7 @@ Sandbox-level settings (`mode`, `scope`, `workspaceAccess`) are configured under
 }
 ```
 
-### Mirror mode with GPU
+### 带 GPU 的 Mirror 模式
 
 ```json5
 {
@@ -206,7 +191,7 @@ Sandbox-level settings (`mode`, `scope`, `workspaceAccess`) are configured under
 }
 ```
 
-### Per-agent OpenShell with custom gateway
+### 使用自定义网关的每代理 OpenShell
 
 ```json5
 {
@@ -243,31 +228,28 @@ Sandbox-level settings (`mode`, `scope`, `workspaceAccess`) are configured under
 }
 ```
 
-## Lifecycle management
+## 生命周期管理
 
-OpenShell sandboxes are managed through the normal sandbox CLI:
+OpenShell 沙盒通过常规沙盒 CLI 进行管理：
 
 ```bash
-# List all sandbox runtimes (Docker + OpenShell)
+# 列出所有沙盒运行时（Docker + OpenShell）
 openclaw sandbox list
 
-# Inspect effective policy
+# 检查有效策略
 openclaw sandbox explain
 
-# Recreate (deletes remote workspace, re-seeds on next use)
+# 重新创建（删除远程工作区，下次使用时重新初始化）
 openclaw sandbox recreate --all
 ```
 
-For `remote` mode, **recreate is especially important**: it deletes the canonical
-remote workspace for that scope. The next use seeds a fresh remote workspace from
-the local workspace.
+对于 `remote` 模式，**重新创建尤为重要**：它会删除该范围的权威远程工作区。下次使用时会从本地工作区初始化一个全新的远程工作区。
 
-For `mirror` mode, recreate mainly resets the remote execution environment because
-the local workspace remains canonical.
+对于 `mirror` 模式，重新创建主要重置远程执行环境，因为本地工作区保持权威。
 
-### When to recreate
+### 何时重新创建
 
-Recreate after changing any of these:
+在更改以下任何一项后重新创建：
 
 - `agents.defaults.sandbox.backend`
 - `plugins.entries.openshell.config.from`
@@ -278,34 +260,27 @@ Recreate after changing any of these:
 openclaw sandbox recreate --all
 ```
 
-## Security hardening
+## 安全加固
 
-OpenShell pins the workspace root fd and rechecks sandbox identity before each
-read, so symlink swaps or a remounted workspace cannot redirect reads out of
-the intended remote workspace.
+OpenShell 会固定工作区根目录的文件描述符，并在每次读取前重新检查沙盒身份，因此符号链接替换或重新挂载的工作区都无法将读取重定向到预期的远程工作区之外。
 
-## Current limitations
+## 当前限制
 
-- Sandbox browser is not supported on the OpenShell backend.
-- `sandbox.docker.binds` does not apply to OpenShell.
-- Docker-specific runtime knobs under `sandbox.docker.*` apply only to the Docker
-  backend.
+- OpenShell 后端不支持沙盒浏览器。
+- `sandbox.docker.binds` 不适用于 OpenShell。
+- `sandbox.docker.*` 下的 Docker 特定运行时参数仅适用于 Docker 后端。
 
-## How it works
+## 工作原理
 
-1. OpenClaw calls `openshell sandbox create` (with `--from`, `--gateway`,
-   `--policy`, `--providers`, `--gpu` flags as configured).
-2. OpenClaw calls `openshell sandbox ssh-config <name>` to get SSH connection
-   details for the sandbox.
-3. Core writes the SSH config to a temp file and opens an SSH session using the
-   same remote filesystem bridge as the generic SSH backend.
-4. In `mirror` mode: sync local to remote before exec, run, sync back after exec.
-5. In `remote` mode: seed once on create, then operate directly on the remote
-   workspace.
+1. OpenClaw 调用 `openshell sandbox create`（根据配置带有 `--from`、`--gateway`、`--policy`、`--providers`、`--gpu` 标志）。
+2. OpenClaw 调用 `openshell sandbox ssh-config <name>` 以获取沙盒的 SSH 连接详情。
+3. Core 将 SSH 配置写入临时文件，并使用与通用 SSH 后端相同的远程文件系统桥接打开 SSH 会话。
+4. 在 `mirror` 模式下：执行前将本地同步到远程，运行，执行后同步回本地。
+5. 在 `remote` 模式下：创建时初始化一次，然后直接在远程工作区上操作。
 
-## Related
+## 相关内容
 
-- [Sandboxing](/gateway/sandboxing) -- modes, scopes, and backend comparison
-- [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) -- debugging blocked tools
-- [Multi-Agent Sandbox and Tools](/tools/multi-agent-sandbox-tools) -- per-agent overrides
-- [Sandbox CLI](/cli/sandbox) -- `openclaw sandbox` commands
+- [沙盒](/gateway/sandboxing) -- 模式、范围和后端比较
+- [沙盒 vs 工具策略 vs 提权](/gateway/sandbox-vs-tool-policy-vs-elevated) -- 调试被阻止的工具
+- [多代理沙盒和工具](/tools/multi-agent-sandbox-tools) -- 每代理覆盖
+- [沙盒 CLI](/cli/sandbox) -- `openclaw sandbox` 命令

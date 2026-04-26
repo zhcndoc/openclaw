@@ -1,34 +1,30 @@
 ---
-summary: "File logs, console output, CLI tailing, and the Control UI Logs tab"
+summary: "日志概述：文件日志、控制台输出、CLI 实时查看和控制界面"
 read_when:
-  - You need a beginner-friendly overview of OpenClaw logging
-  - You want to configure log levels, formats, or redaction
-  - You are troubleshooting and need to find logs quickly
-title: "Logging"
+  - 你需要一个适合初学者的日志概览
+  - 你想配置日志级别或格式
+  - 你正在排查问题并需要快速找到日志
+title: "日志概览"
 ---
 
-OpenClaw has two main log surfaces:
+# 日志
 
-- **File logs** (JSON lines) written by the Gateway.
-- **Console output** shown in terminals and the Gateway Debug UI.
+OpenClaw 有两个主要的日志展示位置：
 
-The Control UI **Logs** tab tails the gateway file log. This page explains where
-logs live, how to read them, and how to configure log levels and formats.
+- **文件日志**（JSON 行），由 Gateway 写入。
+- **控制台输出**，显示在终端和 Gateway 调试 UI 中。
 
-## Where logs live
+控制界面的 **日志** 标签会实时跟踪 gateway 文件日志。本页说明日志存放位置、如何阅读，以及如何配置日志级别和格式。
 
-By default, the Gateway writes a rolling log file under:
+## 日志存放位置
+
+默认情况下，Gateway 会写入滚动日志文件，位置如下：
 
 `/tmp/openclaw/openclaw-YYYY-MM-DD.log`
 
-The date uses the gateway host's local timezone.
+日期使用 Gateway 主机的本地时区。
 
-Each file rotates when it reaches `logging.maxFileBytes` (default: 100 MB).
-OpenClaw keeps up to five numbered archives beside the active file, such as
-`openclaw-YYYY-MM-DD.1.log`, and keeps writing to a fresh active log instead of
-suppressing diagnostics.
-
-You can override this in `~/.openclaw/openclaw.json`:
+你可以在 `~/.openclaw/openclaw.json` 中覆盖此路径：
 
 ```json
 {
@@ -38,91 +34,85 @@ You can override this in `~/.openclaw/openclaw.json`:
 }
 ```
 
-## How to read logs
+## 如何读取日志
 
-### CLI: live tail (recommended)
+### CLI：实时查看（推荐）
 
-Use the CLI to tail the gateway log file via RPC:
+使用 CLI 通过 RPC 实时查看 Gateway 日志文件：
 
 ```bash
 openclaw logs --follow
 ```
 
-Useful current options:
+当前可用的选项：
 
-- `--local-time`: render timestamps in your local timezone
-- `--url <url>` / `--token <token>` / `--timeout <ms>`: standard Gateway RPC flags
-- `--expect-final`: agent-backed RPC final-response wait flag (accepted here via the shared client layer)
+- `--local-time`：使用你本地时区渲染时间戳
+- `--url <url>` / `--token <token>` / `--timeout <ms>`：标准 Gateway RPC 标志
+- `--expect-final`：基于 agent 的 RPC 最终响应等待标志（通过共享客户端层在此处接受）
 
-Output modes:
+输出模式：
 
-- **TTY sessions**: pretty, colorized, structured log lines.
-- **Non-TTY sessions**: plain text.
-- `--json`: line-delimited JSON (one log event per line).
-- `--plain`: force plain text in TTY sessions.
-- `--no-color`: disable ANSI colors.
+- **TTY 会话**：美观，带颜色，结构化的日志行。
+- **非 TTY 会话**：纯文本。
+- `--json`：行分隔的 JSON（每行一个日志事件）。
+- `--plain`：TTY 会话强制输出纯文本。
+- `--no-color`：禁用 ANSI 颜色。
 
-When you pass an explicit `--url`, the CLI does not auto-apply config or
-environment credentials; include `--token` yourself if the target Gateway
-requires auth.
+当你显式传入 `--url` 时，CLI 不会自动应用配置或环境凭据；如果目标 Gateway 需要认证，请自行加上 `--token`。
 
-In JSON mode, the CLI emits `type`-tagged objects:
+在 JSON 模式下，CLI 会输出带 `type` 标记的对象：
 
-- `meta`: stream metadata (file, cursor, size)
-- `log`: parsed log entry
-- `notice`: truncation / rotation hints
-- `raw`: unparsed log line
+- `meta`：流元数据（文件、光标、大小）
+- `log`：解析后的日志条目
+- `notice`：截断 / 轮换提示
+- `raw`：未解析的日志行
 
-If the local loopback Gateway asks for pairing, `openclaw logs` falls back to
-the configured local log file automatically. Explicit `--url` targets do not
-use this fallback.
+如果本地回环 Gateway 要求配对，`openclaw logs` 会自动回退到已配置的本地日志文件。显式 `--url` 目标不会使用此回退机制。
 
-If the Gateway is unreachable, the CLI prints a short hint to run:
+如果 Gateway 无法访问，CLI 会打印一个简短提示，建议运行：
 
 ```bash
 openclaw doctor
 ```
 
-### Control UI (web)
+### 控制界面（网页）
 
-The Control UI’s **Logs** tab tails the same file using `logs.tail`.
-See [/web/control-ui](/web/control-ui) for how to open it.
+控制界面的 **日志** 标签使用 `logs.tail` 实时查看同一日志文件。详情见 [/web/control-ui](/web/control-ui)。
 
-### Channel-only logs
+### 仅频道日志
 
-To filter channel activity (WhatsApp/Telegram/etc), use:
+要过滤频道活动（WhatsApp/Telegram 等），可使用：
 
 ```bash
 openclaw channels logs --channel whatsapp
 ```
 
-## Log formats
+## 日志格式
 
-### File logs (JSONL)
+### 文件日志（JSONL）
 
-Each line in the log file is a JSON object. The CLI and Control UI parse these
-entries to render structured output (time, level, subsystem, message).
+日志文件中的每一行都是一个 JSON 对象。CLI 和控制界面会解析这些条目来渲染结构化输出（时间、级别、子系统、信息）。
 
-### Console output
+### 控制台输出
 
-Console logs are **TTY-aware** and formatted for readability:
+控制台日志针对 TTY 环境进行格式化，便于阅读：
 
-- Subsystem prefixes (e.g. `gateway/channels/whatsapp`)
-- Level coloring (info/warn/error)
-- Optional compact or JSON mode
+- 子系统前缀（例如 `gateway/channels/whatsapp`）
+- 级别着色（info/warn/error）
+- 可选的紧凑格式或 JSON 模式
 
-Console formatting is controlled by `logging.consoleStyle`.
+控制台格式由 `logging.consoleStyle` 控制。
 
-### Gateway WebSocket logs
+### Gateway WebSocket 日志
 
-`openclaw gateway` also has WebSocket protocol logging for RPC traffic:
+`openclaw gateway` 也有用于 RPC 流量的 WebSocket 协议日志：
 
-- normal mode: only interesting results (errors, parse errors, slow calls)
-- `--verbose`: all request/response traffic
-- `--ws-log auto|compact|full`: pick the verbose rendering style
-- `--compact`: alias for `--ws-log compact`
+- 正常模式：仅显示有意义的结果（错误、解析错误、慢调用）
+- `--verbose`：显示所有请求/响应流量
+- `--ws-log auto|compact|full`：选择详细渲染样式
+- `--compact`：`--ws-log compact` 的别名
 
-Examples:
+示例：
 
 ```bash
 openclaw gateway
@@ -130,9 +120,9 @@ openclaw gateway --verbose --ws-log compact
 openclaw gateway --verbose --ws-log full
 ```
 
-## Configuring logging
+## 配置日志
 
-All logging configuration lives under `logging` in `~/.openclaw/openclaw.json`.
+所有日志配置都位于 `~/.openclaw/openclaw.json` 的 `logging` 下。
 
 ```json
 {
@@ -147,75 +137,239 @@ All logging configuration lives under `logging` in `~/.openclaw/openclaw.json`.
 }
 ```
 
-### Log levels
+### 日志级别
 
-- `logging.level`: **file logs** (JSONL) level.
-- `logging.consoleLevel`: **console** verbosity level.
+- `logging.level`：**文件日志**（JSONL）级别。
+- `logging.consoleLevel`：**控制台**详细级别。
 
-You can override both via the **`OPENCLAW_LOG_LEVEL`** environment variable (e.g. `OPENCLAW_LOG_LEVEL=debug`). The env var takes precedence over the config file, so you can raise verbosity for a single run without editing `openclaw.json`. You can also pass the global CLI option **`--log-level <level>`** (for example, `openclaw --log-level debug gateway run`), which overrides the environment variable for that command.
+两者均可通过环境变量 **`OPENCLAW_LOG_LEVEL`** 覆盖（如 `OPENCLAW_LOG_LEVEL=debug`）。环境变量优先于配置文件，方便单次提高日志详细度，无需编辑配置。你也可以通过全局 CLI 选项 **`--log-level <level>`**（例如 `openclaw --log-level debug gateway run`）覆盖环境变量，仅针对当前命令。
 
-`--verbose` only affects console output and WS log verbosity; it does not change
-file log levels.
+`--verbose` 只影响控制台输出和 WS 日志详细程度；它不会改变文件日志级别。
 
-### Console styles
+### 控制台样式
 
-`logging.consoleStyle`:
+`logging.consoleStyle` 可配置为：
 
-- `pretty`: human-friendly, colored, with timestamps.
-- `compact`: tighter output (best for long sessions).
-- `json`: JSON per line (for log processors).
+- `pretty`：人类友好，带颜色和时间戳。
+- `compact`：更紧凑输出（适合长时间会话）。
+- `json`：每行 JSON（用于日志处理器）。
 
-### Redaction
+### 脱敏
 
-Tool summaries can redact sensitive tokens before they hit the console:
+工具概要能在日志输出到控制台前脱敏敏感令牌：
 
-- `logging.redactSensitive`: `off` | `tools` (default: `tools`)
-- `logging.redactPatterns`: list of regex strings to override the default set
+- `logging.redactSensitive`：`off` | `tools`（默认：`tools`）
+- `logging.redactPatterns`：覆盖默认脱敏规则的正则表达式列表
 
-Redaction applies at the logging sinks for **console output**, **stderr-routed
-console diagnostics**, and **file logs**. File logs stay JSONL, but matching
-secret values are masked before the line is written to disk.
+脱敏仅影响**控制台输出**，不修改文件日志。
 
-## Diagnostics and OpenTelemetry
+## 诊断 + OpenTelemetry
 
-Diagnostics are structured, machine-readable events for model runs and
-message-flow telemetry (webhooks, queueing, session state). They do **not**
-replace logs — they feed metrics, traces, and exporters. Events are emitted
-in-process whether or not you export them.
+诊断是针对模型运行及消息流遥测（Webhook、队列、会话状态）的结构化、机器可读事件。诊断不替代日志，而是用于提供指标、跟踪和其他导出。
 
-Two adjacent surfaces:
+诊断事件在进程内发出，导出器仅在诊断和导出插件启用时附加。
 
-- **OpenTelemetry export** — send metrics, traces, and logs over OTLP/HTTP to
-  any OpenTelemetry-compatible collector or backend (Grafana, Datadog,
-  Honeycomb, New Relic, Tempo, etc.). Full configuration, signal catalog,
-  metric/span names, env vars, and privacy model live on a dedicated page:
-  [OpenTelemetry export](/gateway/opentelemetry).
-- **Diagnostics flags** — targeted debug-log flags that route extra logs to
-  `logging.file` without raising `logging.level`. Flags are case-insensitive
-  and support wildcards (`telegram.*`, `*`). Configure under `diagnostics.flags`
-  or via the `OPENCLAW_DIAGNOSTICS=...` env override. Full guide:
-  [Diagnostics flags](/diagnostics/flags).
+### OpenTelemetry 与 OTLP
 
-To enable diagnostics events for plugins or custom sinks without OTLP export:
+- **OpenTelemetry (OTel)**：包括跟踪、指标和日志的数据模型及 SDK。
+- **OTLP**：用于将 OTel 数据导出到收集器/后台的传输协议。
+- OpenClaw 当前通过 **OTLP/HTTP（protobuf）** 导出。
 
-```json5
+### 导出信号
+
+- **指标**：计数器与直方图（令牌使用、消息流、排队）。
+- **跟踪**：模型使用及 Webhook/消息处理跨度。
+- **日志**：启用 `diagnostics.otel.logs` 时通过 OTLP 导出。日志量可能较大，留意 `logging.level` 和导出过滤器。
+
+### 诊断事件目录
+
+模型使用：
+
+- `model.usage`：令牌、成本、持续时间、上下文、提供商/模型/频道、会话 ID。
+
+消息流：
+
+- `webhook.received`：各频道的 webhook 收到。
+- `webhook.processed`：webhook 处理完成及耗时。
+- `webhook.error`：webhook 处理错误。
+- `message.queued`：消息入队待处理。
+- `message.processed`：结果、耗时及可选错误。
+
+队列与会话：
+
+- `queue.lane.enqueue`：命令队列通道入队与深度。
+- `queue.lane.dequeue`：命令队列通道出队与等待时间。
+- `session.state`：会话状态变更及原因。
+- `session.stuck`：会话卡住警告及时长。
+- `run.attempt`：运行重试/尝试元数据。
+- `diagnostic.heartbeat`：聚合计数器（webhook/队列/会话）。
+
+### 启用诊断（无导出器）
+
+如果你需要诊断事件供插件或自定义接收端使用，可开启：
+
+```json
 {
-  diagnostics: { enabled: true },
+  "diagnostics": {
+    "enabled": true
+  }
 }
 ```
 
-For OTLP export to a collector, see [OpenTelemetry export](/gateway/opentelemetry).
+### 诊断标志（针对日志）
 
-## Troubleshooting tips
+通过标志开启额外的有针对性的调试日志，无需提高通用 `logging.level`。标志不区分大小写，支持通配符（如 `telegram.*` 或 `*`）。
 
-- **Gateway not reachable?** Run `openclaw doctor` first.
-- **Logs empty?** Check that the Gateway is running and writing to the file path
-  in `logging.file`.
-- **Need more detail?** Set `logging.level` to `debug` or `trace` and retry.
+```json
+{
+  "diagnostics": {
+    "flags": ["telegram.http"]
+  }
+}
+```
 
-## Related
+环境变量覆盖（一次性使用）：
 
-- [OpenTelemetry export](/gateway/opentelemetry) — OTLP/HTTP export, metric/span catalog, privacy model
-- [Diagnostics flags](/diagnostics/flags) — targeted debug-log flags
-- [Gateway logging internals](/gateway/logging) — WS log styles, subsystem prefixes, and console capture
-- [Configuration reference](/gateway/configuration-reference#diagnostics) — full `diagnostics.*` field reference
+```
+OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload
+```
+
+备注：
+
+- 标志日志写入标准日志文件（同 `logging.file`）。
+- 输出仍会遵循 `logging.redactSensitive` 脱敏规则。
+- 完整指南见：[/diagnostics/flags](/diagnostics/flags)。
+
+### 导出到 OpenTelemetry
+
+诊断可通过 `diagnostics-otel` 插件导出（OTLP/HTTP），支持任何接受 OTLP/HTTP 的 OpenTelemetry 收集器/后台。
+
+```json
+{
+  "plugins": {
+    "allow": ["diagnostics-otel"],
+    "entries": {
+      "diagnostics-otel": {
+        "enabled": true
+      }
+    }
+  },
+  "diagnostics": {
+    "enabled": true,
+    "otel": {
+      "enabled": true,
+      "endpoint": "http://otel-collector:4318",
+      "protocol": "http/protobuf",
+      "serviceName": "openclaw-gateway",
+      "traces": true,
+      "metrics": true,
+      "logs": true,
+      "sampleRate": 0.2,
+      "flushIntervalMs": 60000,
+      "captureContent": {
+        "enabled": false,
+        "inputMessages": false,
+        "outputMessages": false,
+        "toolInputs": false,
+        "toolOutputs": false,
+        "systemPrompt": false
+      }
+    }
+  }
+}
+```
+
+备注：
+
+- 你也可以使用 `openclaw plugins enable diagnostics-otel` 启用该插件。
+- `protocol` 目前仅支持 `http/protobuf`。`grpc` 会被忽略。
+- 指标包括令牌使用量、成本、上下文大小、运行时长，以及消息流计数器/直方图（webhook、排队、会话状态、队列深度/等待时间）。
+- 可通过 `traces` / `metrics` 切换跟踪/指标（默认：开启）。启用后，跟踪包括模型使用跨度以及 webhook/消息处理跨度。
+- 默认不会导出原始模型/工具内容。仅当你的收集器和保留策略已批准提示词、响应、工具或系统提示文本时，才使用 `diagnostics.otel.captureContent`。
+- 当你的收集器需要认证时，请设置 `headers`。
+- 支持的环境变量：`OTEL_EXPORTER_OTLP_ENDPOINT`、`OTEL_SERVICE_NAME`、`OTEL_EXPORTER_OTLP_PROTOCOL`。
+
+### 导出指标（名称及类型）
+
+模型使用：
+
+- `openclaw.tokens`（计数器，属性：`openclaw.token`，`openclaw.channel`，`openclaw.provider`，`openclaw.model`）
+- `openclaw.cost.usd`（计数器，属性：`openclaw.channel`，`openclaw.provider`，`openclaw.model`）
+- `openclaw.run.duration_ms`（直方图，属性：`openclaw.channel`，`openclaw.provider`，`openclaw.model`）
+- `openclaw.context.tokens`（直方图，属性：`openclaw.context`，`openclaw.channel`，`openclaw.provider`，`openclaw.model`）
+
+消息流：
+
+- `openclaw.webhook.received`（计数器，属性：`openclaw.channel`，`openclaw.webhook`）
+- `openclaw.webhook.error`（计数器，属性：`openclaw.channel`，`openclaw.webhook`）
+- `openclaw.webhook.duration_ms`（直方图，属性：`openclaw.channel`，`openclaw.webhook`）
+- `openclaw.message.queued`（计数器，属性：`openclaw.channel`，`openclaw.source`）
+- `openclaw.message.processed`（计数器，属性：`openclaw.channel`，`openclaw.outcome`）
+- `openclaw.message.duration_ms`（直方图，属性：`openclaw.channel`，`openclaw.outcome`）
+
+队列与会话：
+
+- `openclaw.queue.lane.enqueue`（计数器，属性：`openclaw.lane`）
+- `openclaw.queue.lane.dequeue`（计数器，属性：`openclaw.lane`）
+- `openclaw.queue.depth`（直方图，属性：`openclaw.lane` 或 `openclaw.channel=heartbeat`）
+- `openclaw.queue.wait_ms`（直方图，属性：`openclaw.lane`）
+- `openclaw.session.state`（计数器，属性：`openclaw.state`，`openclaw.reason`）
+- `openclaw.session.stuck`（计数器，属性：`openclaw.state`）
+- `openclaw.session.stuck_age_ms`（直方图，属性：`openclaw.state`）
+- `openclaw.run.attempt`（计数器，属性：`openclaw.attempt`）
+
+### 导出跨度（名称及关键属性）
+
+- `openclaw.model.usage`
+  - `openclaw.channel`, `openclaw.provider`, `openclaw.model`
+  - `openclaw.tokens.*` (input/output/cache_read/cache_write/total)
+- `openclaw.run`
+  - `openclaw.outcome`, `openclaw.channel`, `openclaw.provider`,
+    `openclaw.model`, `openclaw.errorCategory`
+- `openclaw.model.call`
+  - `gen_ai.system`, `gen_ai.request.model`, `gen_ai.operation.name`,
+    `openclaw.provider`, `openclaw.model`, `openclaw.api`,
+    `openclaw.transport`
+- `openclaw.tool.execution`
+  - `gen_ai.tool.name`, `openclaw.toolName`, `openclaw.errorCategory`,
+    `openclaw.tool.params.*`
+- `openclaw.webhook.processed`
+  - `openclaw.channel`，`openclaw.webhook`，`openclaw.chatId`
+- `openclaw.webhook.error`
+  - `openclaw.channel`，`openclaw.webhook`，`openclaw.chatId`，`openclaw.error`
+- `openclaw.message.processed`
+  - `openclaw.channel`, `openclaw.outcome`, `openclaw.chatId`,
+    `openclaw.messageId`, `openclaw.reason`
+- `openclaw.session.stuck`
+  - `openclaw.state`, `openclaw.ageMs`, `openclaw.queueDepth`
+
+当内容捕获明确启用时，模型/工具跨度也可以包含受限的、已脱敏的 `openclaw.content.*` 属性，针对你选择启用的具体内容类别。
+
+### 采样与刷新
+
+- 跟踪采样率：`diagnostics.otel.sampleRate`（0.0–1.0，仅根跨度）。
+- 指标导出间隔：`diagnostics.otel.flushIntervalMs`（至少 1000 毫秒）。
+
+### 协议说明
+
+- OTLP/HTTP 端点可通过 `diagnostics.otel.endpoint` 或环境变量 `OTEL_EXPORTER_OTLP_ENDPOINT` 设置。
+- 如果端点已经包含 `/v1/traces` 或 `/v1/metrics`，则直接使用。
+- 如果端点已经包含 `/v1/logs`，则用于日志。
+- `diagnostics.otel.logs` 启用 OTLP 日志导出，导出主日志输出。
+
+### 日志导出行为
+
+- OTLP 日志使用与 `logging.file` 写入相同的结构化记录。
+- 遵守 `logging.level`（文件日志级别）。控制台脱敏不影响 OTLP 日志。
+- 高流量安装建议使用 OTLP 收集器进行采样和过滤。
+
+## 排查提示
+
+- **无法连接 Gateway？** 首先运行 `openclaw doctor`。
+- **日志为空？** 检查 Gateway 是否正在运行并写入 `logging.file` 中指定的文件路径。
+- **需要更多详情？** 将 `logging.level` 设置为 `debug` 或 `trace` 并重试。
+
+## 相关内容
+
+- [Gateway 日志内部机制](/gateway/logging) — WS 日志样式、子系统前缀和控制台捕获
+- [诊断](/gateway/configuration-reference#diagnostics) — OpenTelemetry 导出和缓存跟踪配置

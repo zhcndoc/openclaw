@@ -1,56 +1,41 @@
 ---
-summary: "Fix Chrome/Brave/Edge/Chromium CDP startup issues for OpenClaw browser control on Linux"
-read_when: "Browser control fails on Linux, especially with snap Chromium"
-title: "Browser troubleshooting"
+summary: "修复 Linux 上 OpenClaw 浏览器控制的 Chrome/Brave/Edge/Chromium CDP 启动问题"
+read_when: "在 Linux 上浏览器控制失败时，尤其是使用 snap Chromium 时"
+title: "浏览器故障排查"
 ---
 
-## Problem: "Failed to start Chrome CDP on port 18800"
+## 问题："在端口 18800 上启动 Chrome CDP 失败"
 
-OpenClaw's browser control server fails to launch Chrome/Brave/Edge/Chromium with the error:
+OpenClaw 的浏览器控制服务器启动 Chrome/Brave/Edge/Chromium 失败，报错：
 
 ```
 {"error":"Error: Failed to start Chrome CDP on port 18800 for profile \"openclaw\"."}
 ```
 
-### Root Cause
+### 根本原因
 
-On Ubuntu (and many Linux distros), the default Chromium installation is a **snap package**. Snap's AppArmor confinement interferes with how OpenClaw spawns and monitors the browser process.
+在 Ubuntu（及许多 Linux 发行版）上，默认的 Chromium 安装是一个 **snap 包**。Snap 的 AppArmor 限制会干扰 OpenClaw 启动和监控浏览器进程的方式。
 
-The `apt install chromium` command installs a stub package that redirects to snap:
+`apt install chromium` 命令安装的是一个重定向到 snap 的存根包：
 
 ```
 Note, selecting 'chromium-browser' instead of 'chromium'
 chromium-browser is already the newest version (2:1snap1-0ubuntu2).
 ```
 
-This is NOT a real browser - it's just a wrapper.
+这并不是真正的浏览器——它只是一个包装器。
 
-Other common Linux launch failures:
+### 解决方案 1：安装谷歌 Chrome（推荐）
 
-- `The profile appears to be in use by another Chromium process` means Chrome
-  found stale `Singleton*` lock files in the managed profile directory. OpenClaw
-  removes those locks and retries once when the lock points at a dead or
-  different-host process.
-- `Missing X server or $DISPLAY` means a visible browser was explicitly
-  requested on a host without a desktop session. By default, local managed
-  profiles now fall back to headless mode on Linux when `DISPLAY` and
-  `WAYLAND_DISPLAY` are both unset. If you set `OPENCLAW_BROWSER_HEADLESS=0`,
-  `browser.headless: false`, or `browser.profiles.<name>.headless: false`,
-  remove that headed override, set `OPENCLAW_BROWSER_HEADLESS=1`, start `Xvfb`,
-  run `openclaw browser start --headless` for a one-shot managed launch, or run
-  OpenClaw in a real desktop session.
-
-### Solution 1: Install Google Chrome (Recommended)
-
-Install the official Google Chrome `.deb` package, which is not sandboxed by snap:
+安装官方的 Google Chrome `.deb` 包，它不是通过 snap 进行沙箱限制的：
 
 ```bash
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo dpkg -i google-chrome-stable_current_amd64.deb
-sudo apt --fix-broken install -y  # if there are dependency errors
+sudo apt --fix-broken install -y  # 如果有依赖错误
 ```
 
-Then update your OpenClaw config (`~/.openclaw/openclaw.json`):
+然后更新你的 OpenClaw 配置文件（`~/.openclaw/openclaw.json`）：
 
 ```json
 {
@@ -63,11 +48,11 @@ Then update your OpenClaw config (`~/.openclaw/openclaw.json`):
 }
 ```
 
-### Solution 2: Use Snap Chromium with Attach-Only Mode
+### 解决方案 2：使用 Snap Chromium 的仅附加模式
 
-If you must use snap Chromium, configure OpenClaw to attach to a manually-started browser:
+如果必须使用 snap Chromium，配置 OpenClaw 以附加到手动启动的浏览器：
 
-1. Update config:
+1. 更新配置：
 
 ```json
 {
@@ -80,7 +65,7 @@ If you must use snap Chromium, configure OpenClaw to attach to a manually-starte
 }
 ```
 
-2. Start Chromium manually:
+2. 手动启动 Chromium：
 
 ```bash
 chromium-browser --headless --no-sandbox --disable-gpu \
@@ -89,12 +74,12 @@ chromium-browser --headless --no-sandbox --disable-gpu \
   about:blank &
 ```
 
-3. Optionally create a systemd user service to auto-start Chrome:
+3. 可选地创建 systemd 用户服务自动启动 Chrome：
 
 ```ini
 # ~/.config/systemd/user/openclaw-browser.service
 [Unit]
-Description=OpenClaw Browser (Chrome CDP)
+Description=OpenClaw 浏览器 (Chrome CDP)
 After=network.target
 
 [Service]
@@ -106,55 +91,50 @@ RestartSec=5
 WantedBy=default.target
 ```
 
-Enable with: `systemctl --user enable --now openclaw-browser.service`
+启用：
 
-### Verifying the Browser Works
+```bash
+systemctl --user enable --now openclaw-browser.service
+```
 
-Check status:
+### 验证浏览器是否正常工作
+
+查看状态：
 
 ```bash
 curl -s http://127.0.0.1:18791/ | jq '{running, pid, chosenBrowser}'
 ```
 
-Test browsing:
+测试浏览：
 
 ```bash
 curl -s -X POST http://127.0.0.1:18791/start
 curl -s http://127.0.0.1:18791/tabs
 ```
 
-### Config Reference
+### 配置参考
 
-| Option                           | Description                                                          | Default                                                     |
-| -------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `browser.enabled`                | Enable browser control                                               | `true`                                                      |
-| `browser.executablePath`         | Path to a Chromium-based browser binary (Chrome/Brave/Edge/Chromium) | auto-detected (prefers default browser when Chromium-based) |
-| `browser.headless`               | Run without GUI                                                      | `false`                                                     |
-| `OPENCLAW_BROWSER_HEADLESS`      | Per-process override for local managed browser headless mode         | unset                                                       |
-| `browser.noSandbox`              | Add `--no-sandbox` flag (needed for some Linux setups)               | `false`                                                     |
-| `browser.attachOnly`             | Don't launch browser, only attach to existing                        | `false`                                                     |
-| `browser.cdpPort`                | Chrome DevTools Protocol port                                        | `18800`                                                     |
-| `browser.localLaunchTimeoutMs`   | Local managed Chrome discovery timeout                               | `15000`                                                     |
-| `browser.localCdpReadyTimeoutMs` | Local managed post-launch CDP readiness timeout                      | `8000`                                                      |
+| 选项                      | 描述                                                                 | 默认值                                                       |
+| ------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `browser.enabled`         | 启用浏览器控制                                                       | `true`                                                       |
+| `browser.executablePath`  | 指定 Chromium 内核浏览器（Chrome/Brave/Edge/Chromium）的可执行文件路径 | 自动检测（优先使用基于 Chromium 的默认浏览器）               |
+| `browser.headless`        | 无界面模式运行                                                      | `false`                                                      |
+| `browser.noSandbox`       | 添加 `--no-sandbox` 参数（某些 Linux 环境需要）                      | `false`                                                      |
+| `browser.attachOnly`      | 不启动浏览器，仅附加到已存在进程                                    | `false`                                                      |
+| `browser.cdpPort`         | Chrome DevTools 协议端口                                            | `18800`                                                      |
 
-On Raspberry Pi, older VPS hosts, or slow storage, raise
-`browser.localLaunchTimeoutMs` when Chrome needs more time to expose its CDP HTTP
-endpoint. Raise `browser.localCdpReadyTimeoutMs` when launch succeeds but
-`openclaw browser start` still reports `not reachable after start`. Values must
-be positive integers up to `120000` ms; invalid config values are rejected.
+### 问题："未找到 profile=\"user\" 的 Chrome 标签页"
 
-### Problem: "No Chrome tabs found for profile=\"user\""
+你正在使用 `existing-session` / Chrome MCP 配置文件。OpenClaw 可以看到本地 Chrome，
+但没有可附加的打开标签页。
 
-You're using an `existing-session` / Chrome MCP profile. OpenClaw can see local Chrome,
-but there are no open tabs available to attach to.
+解决方案：
 
-Fix options:
+1. **使用托管浏览器：** `openclaw browser start --browser-profile openclaw`
+   （或设置 `browser.defaultProfile: "openclaw"`）。
+2. **使用 Chrome MCP：** 确保本地 Chrome 正在运行并且至少有一个打开的标签页，然后用 `--browser-profile user` 重试。
 
-1. **Use the managed browser:** `openclaw browser start --browser-profile openclaw`
-   (or set `browser.defaultProfile: "openclaw"`).
-2. **Use Chrome MCP:** make sure local Chrome is running with at least one open tab, then retry with `--browser-profile user`.
-
-Notes:
+备注：
 
 - `user` is host-only. For Linux servers, containers, or remote hosts, prefer CDP profiles.
 - `user` / other `existing-session` profiles keep the current Chrome MCP limits:
@@ -166,8 +146,8 @@ Notes:
   Use HTTP(S) for `/json/version` discovery, or WS(S) when your browser
   service gives you a direct DevTools socket URL.
 
-## Related
+## 相关内容
 
-- [Browser](/tools/browser)
-- [Browser login](/tools/browser-login)
-- [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)
+- [浏览器](/tools/browser)
+- [浏览器登录](/tools/browser-login)
+- [浏览器 WSL2 故障排查](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

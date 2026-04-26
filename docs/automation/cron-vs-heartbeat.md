@@ -1,11 +1,11 @@
 ---
-summary: "Redirect to /automation"
-title: "Cron vs heartbeat"
+summary: "重定向到 /automation"
+title: "Cron 与 heartbeat"
 ---
 
-This page moved to [Automation & Tasks](/automation). See [Automation & Tasks](/automation) for the decision guide comparing cron and heartbeat.
+此页面已移动到 [Automation & Tasks](/automation)。请参阅 [Automation & Tasks](/automation)，了解比较 cron 和 heartbeat 的决策指南。
 
-## Related
+## 相关
 
-- [Scheduled tasks](/automation/cron-jobs)
-- [Background tasks](/automation/tasks)
+- [计划任务](/automation/cron-jobs)
+- [后台任务](/automation/tasks)

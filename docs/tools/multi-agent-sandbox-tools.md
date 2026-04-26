@@ -1,178 +1,177 @@
 ---
-summary: "Per-agent sandbox + tool restrictions, precedence, and examples"
-title: "Multi-agent sandbox and tools"
-sidebarTitle: "Multi-agent sandbox and tools"
-read_when: "You want per-agent sandboxing or per-agent tool allow/deny policies in a multi-agent gateway."
+summary: “每个代理的沙箱 + 工具限制、优先级和示例”
+title: 多代理沙箱与工具
+read_when: “你希望在多代理网关中为每个代理单独设置沙箱或工具允许/拒绝策略。”
 status: active
 ---
 
-Each agent in a multi-agent setup can override the global sandbox and tool policy. This page covers per-agent configuration, precedence rules, and examples.
+# 多代理沙箱与工具配置
 
-<CardGroup cols={3}>
-  <Card title="Sandboxing" href="/gateway/sandboxing">
-    Backends and modes — full sandbox reference.
-  </Card>
-  <Card title="Sandbox vs tool policy vs elevated" href="/gateway/sandbox-vs-tool-policy-vs-elevated">
-    Debug "why is this blocked?"
-  </Card>
-  <Card title="Elevated mode" href="/tools/elevated">
-    Elevated exec for trusted senders.
-  </Card>
-</CardGroup>
+多代理设置中的每个代理都可以覆盖全局沙箱和工具策略。本文介绍按代理配置、优先级规则和示例。
 
-<Warning>
-Auth is per-agent: each agent reads from its own `agentDir` auth store at `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`. Credentials are **not** shared between agents. Never reuse `agentDir` across agents. If you want to share creds, copy `auth-profiles.json` into the other agent's `agentDir`.
-</Warning>
+- **沙箱后端和模式**：见 [Sandboxing](/gateway/sandboxing)。
+- **调试被阻止的工具**：见 [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) 和 `openclaw sandbox explain`。
+- **提升权限执行**：见 [Elevated Mode](/tools/elevated)。
+
+认证按代理隔离：每个代理都从自己的 `agentDir` 认证存储中读取，路径为
+`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`。
+凭据**不会**在代理之间共享。切勿在不同代理之间复用 `agentDir`。
+如果你想共享凭据，请将 `auth-profiles.json` 复制到另一个代理的 `agentDir` 中。
 
 ---
 
-## Configuration examples
+## 配置示例
 
-<AccordionGroup>
-  <Accordion title="Example 1: Personal + restricted family agent">
-    ```json
-    {
-      "agents": {
-        "list": [
-          {
-            "id": "main",
-            "default": true,
-            "name": "Personal Assistant",
-            "workspace": "~/.openclaw/workspace",
-            "sandbox": { "mode": "off" }
-          },
-          {
-            "id": "family",
-            "name": "Family Bot",
-            "workspace": "~/.openclaw/workspace-family",
-            "sandbox": {
-              "mode": "all",
-              "scope": "agent"
-            },
-            "tools": {
-              "allow": ["read"],
-              "deny": ["exec", "write", "edit", "apply_patch", "process", "browser"]
-            }
-          }
-        ]
+### 示例 1：个人 + 限制型家庭代理
+
+```json
+{
+  "agents": {
+    "list": [
+      {
+        "id": "main",
+        "default": true,
+        "name": "个人助手",
+        "workspace": "~/.openclaw/workspace",
+        "sandbox": { "mode": "off" }
       },
-      "bindings": [
-        {
-          "agentId": "family",
-          "match": {
-            "provider": "whatsapp",
-            "accountId": "*",
-            "peer": {
-              "kind": "group",
-              "id": "120363424282127706@g.us"
-            }
-          }
-        }
-      ]
-    }
-    ```
-
-    **Result:**
-
-    - `main` agent: runs on host, full tool access.
-    - `family` agent: runs in Docker (one container per agent), only `read` tool.
-
-  </Accordion>
-  <Accordion title="Example 2: Work agent with shared sandbox">
-    ```json
-    {
-      "agents": {
-        "list": [
-          {
-            "id": "personal",
-            "workspace": "~/.openclaw/workspace-personal",
-            "sandbox": { "mode": "off" }
-          },
-          {
-            "id": "work",
-            "workspace": "~/.openclaw/workspace-work",
-            "sandbox": {
-              "mode": "all",
-              "scope": "shared",
-              "workspaceRoot": "/tmp/work-sandboxes"
-            },
-            "tools": {
-              "allow": ["read", "write", "apply_patch", "exec"],
-              "deny": ["browser", "gateway", "discord"]
-            }
-          }
-        ]
-      }
-    }
-    ```
-  </Accordion>
-  <Accordion title="Example 2b: Global coding profile + messaging-only agent">
-    ```json
-    {
-      "tools": { "profile": "coding" },
-      "agents": {
-        "list": [
-          {
-            "id": "support",
-            "tools": { "profile": "messaging", "allow": ["slack"] }
-          }
-        ]
-      }
-    }
-    ```
-
-    **Result:**
-
-    - default agents get coding tools.
-    - `support` agent is messaging-only (+ Slack tool).
-
-  </Accordion>
-  <Accordion title="Example 3: Different sandbox modes per agent">
-    ```json
-    {
-      "agents": {
-        "defaults": {
-          "sandbox": {
-            "mode": "non-main",
-            "scope": "session"
-          }
+      {
+        "id": "family",
+        "name": "家庭机器人",
+        "workspace": "~/.openclaw/workspace-family",
+        "sandbox": {
+          "mode": "all",
+          "scope": "agent"
         },
-        "list": [
-          {
-            "id": "main",
-            "workspace": "~/.openclaw/workspace",
-            "sandbox": {
-              "mode": "off"
-            }
-          },
-          {
-            "id": "public",
-            "workspace": "~/.openclaw/workspace-public",
-            "sandbox": {
-              "mode": "all",
-              "scope": "agent"
-            },
-            "tools": {
-              "allow": ["read"],
-              "deny": ["exec", "write", "edit", "apply_patch"]
-            }
-          }
-        ]
+        "tools": {
+          "allow": ["read"],
+          "deny": ["exec", "write", "edit", "apply_patch", "process", "browser"]
+        }
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "agentId": "family",
+      "match": {
+        "provider": "whatsapp",
+        "accountId": "*",
+        "peer": {
+          "kind": "group",
+          "id": "120363424282127706@g.us"
+        }
       }
     }
-    ```
-  </Accordion>
-</AccordionGroup>
+  ]
+}
+```
+
+**结果：**
+
+- `main` 代理：在主机运行，拥有完整工具访问权限
+- `family` 代理：在 Docker 中运行（每个代理一个容器），仅允许使用 `read` 工具
 
 ---
 
-## Configuration precedence
+### 示例 2：工作代理使用共享沙箱
 
-When both global (`agents.defaults.*`) and agent-specific (`agents.list[].*`) configs exist:
+```json
+{
+  "agents": {
+    "list": [
+      {
+        "id": "personal",
+        "workspace": "~/.openclaw/workspace-personal",
+        "sandbox": { "mode": "off" }
+      },
+      {
+        "id": "work",
+        "workspace": "~/.openclaw/workspace-work",
+        "sandbox": {
+          "mode": "all",
+          "scope": "shared",
+          "workspaceRoot": "/tmp/work-sandboxes"
+        },
+        "tools": {
+          "allow": ["read", "write", "apply_patch", "exec"],
+          "deny": ["browser", "gateway", "discord"]
+        }
+      }
+    ]
+  }
+}
+```
 
-### Sandbox config
+---
 
-Agent-specific settings override global:
+### 示例 2b：全局编码配置 + 仅消息代理
+
+```json
+{
+  "tools": { "profile": "coding" },
+  "agents": {
+    "list": [
+      {
+        "id": "support",
+        "tools": { "profile": "messaging", "allow": ["slack"] }
+      }
+    ]
+  }
+}
+```
+
+**结果：**
+
+- 默认代理使用编码工具集
+- `support` 代理仅限消息工具（含 Slack）
+
+---
+
+### 示例 3：不同代理不同沙箱模式
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "non-main", // 全局默认
+        "scope": "session"
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "workspace": "~/.openclaw/workspace",
+        "sandbox": {
+          "mode": "off" // 覆盖：main 始终不沙箱化
+        }
+      },
+      {
+        "id": "public",
+        "workspace": "~/.openclaw/workspace-public",
+        "sandbox": {
+          "mode": "all", // 覆盖：public 始终沙箱化
+          "scope": "agent"
+        },
+        "tools": {
+          "allow": ["read"],
+          "deny": ["exec", "write", "edit", "apply_patch"]
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 配置优先级
+
+当全局 (`agents.defaults.*`) 和特定代理 (`agents.list[].*`) 配置同时存在时：
+
+### 沙箱配置
+
+代理特定设置优先覆盖全局：
 
 ```
 agents.list[].sandbox.mode > agents.defaults.sandbox.mode
@@ -184,210 +183,193 @@ agents.list[].sandbox.browser.* > agents.defaults.sandbox.browser.*
 agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 ```
 
-<Note>
-`agents.list[].sandbox.{docker,browser,prune}.*` overrides `agents.defaults.sandbox.{docker,browser,prune}.*` for that agent (ignored when sandbox scope resolves to `"shared"`).
-</Note>
+**注意：**
 
-### Tool restrictions
+- `agents.list[].sandbox.{docker,browser,prune}.*` 会覆盖对应的全局设置（当沙箱作用域为 `"shared"` 时忽略）。
 
-The filtering order is:
+### 工具限制
 
-<Steps>
-  <Step title="Tool profile">
-    `tools.profile` or `agents.list[].tools.profile`.
-  </Step>
-  <Step title="Provider tool profile">
-    `tools.byProvider[provider].profile` or `agents.list[].tools.byProvider[provider].profile`.
-  </Step>
-  <Step title="Global tool policy">
-    `tools.allow` / `tools.deny`.
-  </Step>
-  <Step title="Provider tool policy">
-    `tools.byProvider[provider].allow/deny`.
-  </Step>
-  <Step title="Agent-specific tool policy">
-    `agents.list[].tools.allow/deny`.
-  </Step>
-  <Step title="Agent provider policy">
-    `agents.list[].tools.byProvider[provider].allow/deny`.
-  </Step>
-  <Step title="Sandbox tool policy">
-    `tools.sandbox.tools` or `agents.list[].tools.sandbox.tools`.
-  </Step>
-  <Step title="Subagent tool policy">
-    `tools.subagents.tools`, if applicable.
-  </Step>
-</Steps>
+过滤顺序为：
 
-<AccordionGroup>
-  <Accordion title="Precedence rules">
-    - Each level can further restrict tools, but cannot grant back denied tools from earlier levels.
-    - If `agents.list[].tools.sandbox.tools` is set, it replaces `tools.sandbox.tools` for that agent.
-    - If `agents.list[].tools.profile` is set, it overrides `tools.profile` for that agent.
-    - Provider tool keys accept either `provider` (e.g. `google-antigravity`) or `provider/model` (e.g. `openai/gpt-5.4`).
-  </Accordion>
-  <Accordion title="Empty allowlist behavior">
-    If any explicit allowlist in that chain leaves the run with no callable tools, OpenClaw stops before submitting the prompt to the model. This is intentional: an agent configured with a missing tool such as `agents.list[].tools.allow: ["query_db"]` should fail loudly until the plugin that registers `query_db` is enabled, not continue as a text-only agent.
-  </Accordion>
-</AccordionGroup>
+1. **工具配置文件** (`tools.profile` 或 `agents.list[].tools.profile`)
+2. **供应商工具配置文件** (`tools.byProvider[provider].profile` 或 `agents.list[].tools.byProvider[provider].profile`)
+3. **全局工具策略** (`tools.allow` / `tools.deny`)
+4. **供应商工具策略** (`tools.byProvider[provider].allow/deny`)
+5. **代理专属工具策略** (`agents.list[].tools.allow/deny`)
+6. **代理供应商工具策略** (`agents.list[].tools.byProvider[provider].allow/deny`)
+7. **沙箱工具策略** (`tools.sandbox.tools` 或 `agents.list[].tools.sandbox.tools`)
+8. **子代理工具策略**（`tools.subagents.tools`，如适用）
 
-Tool policies support `group:*` shorthands that expand to multiple tools. See [Tool groups](/gateway/sandbox-vs-tool-policy-vs-elevated#tool-groups-shorthands) for the full list.
+每一层都可以进一步限制工具，但不能恢复前面层级中已被拒绝的工具。
+如果设置了 `agents.list[].tools.sandbox.tools`，它会替换该代理的 `tools.sandbox.tools`。
+如果设置了 `agents.list[].tools.profile`，它会覆盖该代理的 `tools.profile`。
+供应商工具键可以接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
 
-Per-agent elevated overrides (`agents.list[].tools.elevated`) can further restrict elevated exec for specific agents. See [Elevated mode](/tools/elevated) for details.
+如果该链路中的任何显式允许列表最终让本次运行没有任何可调用工具，
+OpenClaw 会在将提示提交给模型之前停止。这是有意为之：
+配置了缺失工具（例如
+`agents.list[].tools.allow: ["query_db"]`）的代理应当在注册 `query_db` 的插件未启用时直接报错，
+而不是继续作为纯文本代理运行。
+
+工具策略支持 `group:*` 简写，会展开为多个工具。完整列表见 [Tool groups](/gateway/sandbox-vs-tool-policy-vs-elevated#tool-groups-shorthands)。
+
+按代理的提升权限覆盖（`agents.list[].tools.elevated`）可以进一步限制特定代理的提升执行。详情见 [Elevated Mode](/tools/elevated)。
 
 ---
 
-## Migration from single agent
+## 从单代理迁移
 
-<Tabs>
-  <Tab title="Before (single agent)">
-    ```json
-    {
-      "agents": {
-        "defaults": {
-          "workspace": "~/.openclaw/workspace",
-          "sandbox": {
-            "mode": "non-main"
-          }
-        }
-      },
+**之前（单代理）：**
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "sandbox": {
+        "mode": "non-main"
+      }
+    }
+  },
+  "tools": {
+    "sandbox": {
       "tools": {
-        "sandbox": {
-          "tools": {
-            "allow": ["read", "write", "apply_patch", "exec"],
-            "deny": []
-          }
-        }
+        "allow": ["read", "write", "apply_patch", "exec"],
+        "deny": []
       }
     }
-    ```
-  </Tab>
-  <Tab title="After (multi-agent)">
-    ```json
-    {
-      "agents": {
-        "list": [
-          {
-            "id": "main",
-            "default": true,
-            "workspace": "~/.openclaw/workspace",
-            "sandbox": { "mode": "off" }
-          }
-        ]
-      }
-    }
-    ```
-  </Tab>
-</Tabs>
+  }
+}
+```
 
-<Note>
-Legacy `agent.*` configs are migrated by `openclaw doctor`; prefer `agents.defaults` + `agents.list` going forward.
-</Note>
+**之后（多代理不同配置）：**
+
+```json
+{
+  "agents": {
+    "list": [
+      {
+        "id": "main",
+        "default": true,
+        "workspace": "~/.openclaw/workspace",
+        "sandbox": { "mode": "off" }
+      }
+    ]
+  }
+}
+```
+
+旧式 `agent.*` 配置由 `openclaw doctor` 迁移；今后推荐使用 `agents.defaults` + `agents.list`。
 
 ---
 
-## Tool restriction examples
+## 工具限制示例
 
-<Tabs>
-  <Tab title="Read-only agent">
-    ```json
-    {
-      "tools": {
-        "allow": ["read"],
-        "deny": ["exec", "write", "edit", "apply_patch", "process"]
-      }
-    }
-    ```
-  </Tab>
-  <Tab title="Safe execution (no file modifications)">
-    ```json
-    {
-      "tools": {
-        "allow": ["read", "exec", "process"],
-        "deny": ["write", "edit", "apply_patch", "browser", "gateway"]
-      }
-    }
-    ```
-  </Tab>
-  <Tab title="Communication-only">
-    ```json
-    {
-      "tools": {
-        "sessions": { "visibility": "tree" },
-        "allow": ["sessions_list", "sessions_send", "sessions_history", "session_status"],
-        "deny": ["exec", "write", "edit", "apply_patch", "read", "browser"]
-      }
-    }
-    ```
+### 只读代理
 
-    `sessions_history` in this profile still returns a bounded, sanitized recall view rather than a raw transcript dump. Assistant recall strips thinking tags, `<relevant-memories>` scaffolding, plain-text tool-call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks), downgraded tool-call scaffolding, leaked ASCII/full-width model control tokens, and malformed MiniMax tool-call XML before redaction/truncation.
+```json
+{
+  "tools": {
+    "allow": ["read"],
+    "deny": ["exec", "write", "edit", "apply_patch", "process"]
+  }
+}
+```
 
-  </Tab>
-</Tabs>
+### 安全执行代理（不修改文件）
 
----
+```json
+{
+  "tools": {
+    "allow": ["read", "exec", "process"],
+    "deny": ["write", "edit", "apply_patch", "browser", "gateway"]
+  }
+}
+```
 
-## Common pitfall: "non-main"
+### 仅通讯代理
 
-<Warning>
-`agents.defaults.sandbox.mode: "non-main"` is based on `session.mainKey` (default `"main"`), not the agent id. Group/channel sessions always get their own keys, so they are treated as non-main and will be sandboxed. If you want an agent to never sandbox, set `agents.list[].sandbox.mode: "off"`.
-</Warning>
+```json
+{
+  "tools": {
+    "sessions": { "visibility": "tree" },
+    "allow": ["sessions_list", "sessions_send", "sessions_history", "session_status"],
+    "deny": ["exec", "write", "edit", "apply_patch", "read", "browser"]
+  }
+}
+```
+
+此配置中的 `sessions_history` 仍会返回一个有边界、经过清理的回忆视图，而不是原始转录内容。Assistant 回忆会移除思考标签、
+`<relevant-memories>` 脚手架、纯文本工具调用 XML 载荷
+（包括 `<tool_call>...</tool_call>`、
+`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
+`<function_calls>...</function_calls>` 以及被截断的工具调用块）、
+降级的工具调用脚手架、泄露的 ASCII/全角模型控制
+token，以及格式错误的 MiniMax 工具调用 XML，然后再进行脱敏/截断。
 
 ---
 
-## Testing
+## 常见陷阱：“non-main”
 
-After configuring multi-agent sandbox and tools:
-
-<Steps>
-  <Step title="Check agent resolution">
-    ```bash
-    openclaw agents list --bindings
-    ```
-  </Step>
-  <Step title="Verify sandbox containers">
-    ```bash
-    docker ps --filter "name=openclaw-sbx-"
-    ```
-  </Step>
-  <Step title="Test tool restrictions">
-    - Send a message requiring restricted tools.
-    - Verify the agent cannot use denied tools.
-  </Step>
-  <Step title="Monitor logs">
-    ```bash
-    tail -f "${OPENCLAW_STATE_DIR:-$HOME/.openclaw}/logs/gateway.log" | grep -E "routing|sandbox|tools"
-    ```
-  </Step>
-</Steps>
+`agents.defaults.sandbox.mode: "non-main"` 基于 `session.mainKey`（默认是 `"main"`），
+而非代理 ID。群组/频道会话会始终有自己独立的键，因此被视为非主，会被沙箱化。
+若想让某个代理从不沙箱化，请设置 `agents.list[].sandbox.mode: "off"`。
 
 ---
 
-## Troubleshooting
+## 测试
 
-<AccordionGroup>
-  <Accordion title="Agent not sandboxed despite `mode: 'all'`">
-    - Check if there's a global `agents.defaults.sandbox.mode` that overrides it.
-    - Agent-specific config takes precedence, so set `agents.list[].sandbox.mode: "all"`.
-  </Accordion>
-  <Accordion title="Tools still available despite deny list">
-    - Check tool filtering order: global → agent → sandbox → subagent.
-    - Each level can only further restrict, not grant back.
-    - Verify with logs: `[tools] filtering tools for agent:${agentId}`.
-  </Accordion>
-  <Accordion title="Container not isolated per agent">
-    - Set `scope: "agent"` in agent-specific sandbox config.
-    - Default is `"session"` which creates one container per session.
-  </Accordion>
-</AccordionGroup>
+配置多代理沙箱与工具后：
+
+1. **检查代理解析：**
+
+   ```exec
+   openclaw agents list --bindings
+   ```
+
+2. **验证沙箱容器：**
+
+   ```exec
+   docker ps --filter "name=openclaw-sbx-"
+   ```
+
+3. **测试工具限制：**
+   - 发送需受限工具的消息
+   - 验证代理无法使用被拒绝的工具
+
+4. **监视日志：**
+
+   ```exec
+   tail -f "${OPENCLAW_STATE_DIR:-$HOME/.openclaw}/logs/gateway.log" | grep -E "routing|sandbox|tools"
+   ```
 
 ---
 
-## Related
+## 故障排查
 
-- [Elevated mode](/tools/elevated)
-- [Multi-agent routing](/concepts/multi-agent)
-- [Sandbox configuration](/gateway/config-agents#agentsdefaultssandbox)
-- [Sandbox vs tool policy vs elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) — debugging "why is this blocked?"
-- [Sandboxing](/gateway/sandboxing) — full sandbox reference (modes, scopes, backends, images)
-- [Session management](/concepts/session)
+### 代理未沙箱化，尽管 `mode: "all"`
+
+- 检查是否有全局的 `agents.defaults.sandbox.mode` 覆盖了设置
+- 代理特定配置优先，请设置 `agents.list[].sandbox.mode: "all"`
+
+### 尽管有拒绝列表，工具仍可用
+
+- 检查工具过滤顺序：全局 → 代理 → 沙箱 → 子代理
+- 各层级只能进一步限制，不能恢复之前已拒绝工具
+- 查看日志验证：`[tools] filtering tools for agent:${agentId}`
+
+### 容器未按代理隔离
+
+- 在代理特定沙箱配置中设置 `scope: "agent"`
+- 默认是 `"session"`，每个会话创建一个容器
+
+---
+
+## 相关内容
+
+- [Sandboxing](/gateway/sandboxing) -- 完整沙箱参考（模式、作用域、后端、镜像）
+- [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) -- 调试“为什么被阻止？”
+- [Elevated Mode](/tools/elevated)
+- [Multi-Agent Routing](/concepts/multi-agent)
+- [Sandbox Configuration](/gateway/config-agents#agentsdefaultssandbox)
+- [Session Management](/concepts/session)

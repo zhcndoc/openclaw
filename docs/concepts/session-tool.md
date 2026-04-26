@@ -1,108 +1,92 @@
 ---
-summary: "Agent tools for cross-session status, recall, messaging, and sub-agent orchestration"
+summary: "用于跨会话状态、回忆、消息传递和子智能体编排的智能体工具"
 read_when:
-  - You want to understand what session tools the agent has
-  - You want to configure cross-session access or sub-agent spawning
-  - You want to inspect status or control spawned sub-agents
-title: "Session tools"
+  - 你想了解智能体有哪些会话工具
+  - 你想配置跨会话访问或生成子智能体
+  - 你想检查状态或控制已生成的子智能体
+title: "会话工具"
 ---
 
-OpenClaw gives agents tools to work across sessions, inspect status, and
-orchestrate sub-agents.
+OpenClaw 为智能体提供了跨会话工作、检查状态以及编排子智能体的工具。
 
-## Available tools
+## 可用工具
 
-| Tool               | What it does                                                                |
+| 工具               | 功能                                                                |
 | ------------------ | --------------------------------------------------------------------------- |
-| `sessions_list`    | List sessions with optional filters (kind, label, agent, recency, preview)  |
-| `sessions_history` | Read the transcript of a specific session                                   |
-| `sessions_send`    | Send a message to another session and optionally wait                       |
-| `sessions_spawn`   | Spawn an isolated sub-agent session for background work                     |
-| `sessions_yield`   | End the current turn and wait for follow-up sub-agent results               |
-| `subagents`        | List, steer, or kill spawned sub-agents for this session                    |
-| `session_status`   | Show a `/status`-style card and optionally set a per-session model override |
+| `sessions_list`    | 列出会话，可带可选过滤条件（类型、标签、智能体、最近程度、预览） |
+| `sessions_history` | 读取特定会话的转录记录                                   |
+| `sessions_send`    | 向另一个会话发送消息，并可选择等待回复                       |
+| `sessions_spawn`   | 为后台工作生成一个隔离的子智能体会话                     |
+| `sessions_yield`               | 结束当前回合并等待后续子智能体结果               |
+| `subagents`        | 列出、引导或终止为此会话生成的子智能体                    |
+| `session_status`   | 显示一个类似 `/status` 的卡片，并可选择设置每会话模型覆盖 |
 
-## Listing and reading sessions
+## 列出和读取会话
 
-`sessions_list` returns sessions with their key, agentId, kind, channel, model,
-token counts, and timestamps. Filter by kind (`main`, `group`, `cron`, `hook`,
-`node`), exact `label`, exact `agentId`, search text, or recency
-(`activeMinutes`). When you need mailbox-style triage, it can also ask for a
-visibility-scoped derived title, a last-message preview snippet, or bounded
-recent messages on each row. Derived titles and previews are produced only for
-sessions the caller can already see under the configured session tool
-visibility policy, so unrelated sessions stay hidden.
+`sessions_list` 返回会话及其 key、agentId、kind、channel、model、
+token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、
+`node`）、精确 `label`、精确 `agentId`、搜索文本或最近程度
+（`activeMinutes`）进行过滤。当你需要类似邮箱的分拣时，它还可以请求一个
+按可见性范围限定的派生标题、最后一条消息预览片段，或每行受限的
+最近消息。派生标题和预览仅针对调用方在已配置的会话工具
+可见性策略下已经能够看到的会话生成，因此无关会话仍然保持隐藏。
 
-`sessions_history` fetches the conversation transcript for a specific session.
-By default, tool results are excluded -- pass `includeTools: true` to see them.
-The returned view is intentionally bounded and safety-filtered:
+`sessions_history` 获取特定会话的对话转录记录。
+默认情况下，工具结果被排除——传递 `includeTools: true` 以查看它们。
+返回的视图有意受限并经过安全过滤：
 
-- assistant text is normalized before recall:
-  - thinking tags are stripped
-  - `<relevant-memories>` / `<relevant_memories>` scaffolding blocks are stripped
-  - plain-text tool-call XML payload blocks such as `<tool_call>...</tool_call>`,
-    `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, and
-    `<function_calls>...</function_calls>` are stripped, including truncated
-    payloads that never close cleanly
-  - downgraded tool-call/result scaffolding such as `[Tool Call: ...]`,
-    `[Tool Result ...]`, and `[Historical context ...]` is stripped
-  - leaked model control tokens such as `<|assistant|>`, other ASCII
-    `<|...|>` tokens, and full-width `<｜...｜>` variants are stripped
-  - malformed MiniMax tool-call XML such as `<invoke ...>` /
-    `</minimax:tool_call>` is stripped
-- credential/token-like text is redacted before it is returned
-- long text blocks are truncated
-- very large histories can drop older rows or replace an oversized row with
-  `[sessions_history omitted: message too large]`
-- the tool reports summary flags such as `truncated`, `droppedMessages`,
-  `contentTruncated`, `contentRedacted`, and `bytes`
+- 助手文本在回忆前被标准化：
+  - 思考标签被剥离
+  - `<relevant-memories>` / `<relevant_memories>` 脚手架块被剥离
+  - 纯文本工具调用 XML 负载块（如 `<tool_call>...</tool_call>`、
+    `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>` 和
+    `<function_calls>...</function_calls>`）被剥离，包括截断
+    且从未正常关闭的负载
+  - 降级的工具调用/结果脚手架（如 `[Tool Call: ...]`、
+    `[Tool Result ...]` 和 `[Historical context ...]`）被剥离
+  - 泄露的模型控制令牌（如 `<|assistant|>`、其他 ASCII
+    `<|...|>` 令牌和全角 `<｜...｜>` 变体）被剥离
+  - 格式错误的 MiniMax 工具调用 XML（如 `<invoke ...>` /
+    `</minimax:tool_call>`）被剥离
+- 凭据/令牌类文本在返回前被编辑
+- 长文本块被截断
+- 非常大的历史记录可能会丢弃较旧的行或用
+  `[sessions_history omitted: message too large]` 替换过大的行
+- 该工具报告摘要标志，如 `truncated`、`droppedMessages`、
+  `contentTruncated`、`contentRedacted` 和 `bytes`
 
-Both tools accept either a **session key** (like `"main"`) or a **session ID**
-from a previous list call.
+这两个工具都接受 **会话 key**（如 `"main"`）或来自先前列表调用的 **会话 ID**。
 
-If you need the exact byte-for-byte transcript, inspect the transcript file on
-disk instead of treating `sessions_history` as a raw dump.
+如果你需要精确的逐字节转录记录，请检查磁盘上的转录文件，而不是将 `sessions_history` 视为原始转储。
 
-## Sending cross-session messages
+## 发送跨会话消息
 
-`sessions_send` delivers a message to another session and optionally waits for
-the response:
+`sessions_send` 将消息传递给另一个会话并可选等待响应：
 
-- **Fire-and-forget:** set `timeoutSeconds: 0` to enqueue and return
-  immediately.
-- **Wait for reply:** set a timeout and get the response inline.
+- **发后即忘：** 设置 `timeoutSeconds: 0` 以入队并立即返回。
+- **等待回复：** 设置超时并内联获取响应。
 
-After the target responds, OpenClaw can run a **reply-back loop** where the
-agents alternate messages (up to 5 turns). The target agent can reply
-`REPLY_SKIP` to stop early.
+目标响应后，OpenClaw 可以运行一个 **回复循环**，智能体交替发送消息（最多 5 轮）。目标智能体可以回复 `REPLY_SKIP` 以提前停止。
 
-## Status and orchestration helpers
+## 状态和编排助手
 
-`session_status` is the lightweight `/status`-equivalent tool for the current
-or another visible session. It reports usage, time, model/runtime state, and
-linked background-task context when present. Like `/status`, it can backfill
-sparse token/cache counters from the latest transcript usage entry, and
-`model=default` clears a per-session override.
+`session_status` 是当前或另一个可见会话的轻量级 `/status` 等效工具。它报告使用情况、时间、模型/运行时状态，以及存在时链接的后台任务上下文。像 `/status` 一样，它可以从最新的转录使用条目回填稀疏的令牌/缓存计数器，并且 `model=default` 清除每会话覆盖。
 
-`sessions_yield` intentionally ends the current turn so the next message can be
-the follow-up event you are waiting for. Use it after spawning sub-agents when
-you want completion results to arrive as the next message instead of building
-poll loops.
+`sessions_yield` 有意结束当前回合，以便下一条消息可以是你等待的后续事件。在生成子智能体后使用它，当你希望完成结果作为下一条消息到达而不是构建轮询循环时。
 
-`subagents` is the control-plane helper for already spawned OpenClaw
-sub-agents. It supports:
+`subagents` 是已生成的 OpenClaw 子智能体的控制平面助手。它支持：
 
-- `action: "list"` to inspect active/recent runs
-- `action: "steer"` to send follow-up guidance to a running child
-- `action: "kill"` to stop one child or `all`
+- `action: "list"` 检查活跃/最近的运行
+- `action: "steer"` 向运行中的子项发送后续指导
+- `action: "kill"` 停止一个子项或 `all`
 
-## Spawning sub-agents
+## 生成子智能体
 
-`sessions_spawn` creates an isolated session for a background task by default.
-It is always non-blocking -- it returns immediately with a `runId` and
-`childSessionKey`.
+`sessions_spawn` 默认会为后台任务创建一个隔离会话。
+它始终是非阻塞的——它会立即返回 `runId` 和
+`childSessionKey`。
 
-Key options:
+关键选项：
 
 - `runtime: "subagent"` (default) or `"acp"` for external harness agents.
 - `model` and `thinking` overrides for the child session.
@@ -111,42 +95,36 @@ Key options:
 - `context: "fork"` for native sub-agents when the child needs the current
   requester transcript; omit it or use `context: "isolated"` for a clean child.
 
-Default leaf sub-agents do not get session tools. When
-`maxSpawnDepth >= 2`, depth-1 orchestrator sub-agents additionally receive
-`sessions_spawn`, `subagents`, `sessions_list`, and `sessions_history` so they
-can manage their own children. Leaf runs still do not get recursive
-orchestration tools.
+默认叶子的子智能体不会获得会话工具。当
+`maxSpawnDepth >= 2` 时，depth-1 编排器子智能体还会接收
+`sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们可以管理自己的子项。叶子运行仍然不会获得递归
+编排工具。
 
-After completion, an announce step posts the result to the requester's channel.
-Completion delivery preserves bound thread/topic routing when available, and if
-the completion origin only identifies a channel OpenClaw can still reuse the
-requester session's stored route (`lastChannel` / `lastTo`) for direct
-delivery.
+完成后，宣布步骤将结果发布到请求者的频道。完成交付在可用时保留绑定的线程/主题路由，如果完成来源仅识别一个频道，OpenClaw 仍然可以重用请求者会话的存储路由（`lastChannel` / `lastTo`）进行直接交付。
 
-For ACP-specific behavior, see [ACP Agents](/tools/acp-agents).
+有关 ACP 特定行为，请参阅 [ACP 智能体](/tools/acp-agents)。
 
-## Visibility
+## 可见性
 
-Session tools are scoped to limit what the agent can see:
+会话工具的作用域限制了智能体可以看到的内容：
 
-| Level   | Scope                                    |
+| 级别   | 范围                                    |
 | ------- | ---------------------------------------- |
-| `self`  | Only the current session                 |
-| `tree`  | Current session + spawned sub-agents     |
-| `agent` | All sessions for this agent              |
-| `all`   | All sessions (cross-agent if configured) |
+| `self`  | 仅当前会话                               |
+| `tree`  | 当前会话 + 派生的子智能体                |
+| `agent` | 此智能体的所有会话                       |
+| `all`   | 所有会话（如果配置了跨智能体）           |
 
-Default is `tree`. Sandboxed sessions are clamped to `tree` regardless of
-config.
+默认为 `tree`。沙箱会话无论配置如何都被限制为 `tree`。
 
-## Further reading
+## 进一步阅读
 
-- [Session Management](/concepts/session) -- routing, lifecycle, maintenance
-- [ACP Agents](/tools/acp-agents) -- external harness spawning
-- [Multi-agent](/concepts/multi-agent) -- multi-agent architecture
-- [Gateway Configuration](/gateway/configuration) -- session tool config knobs
+- [Session Management](/concepts/session) -- 路由、生命周期、维护
+- [ACP Agents](/tools/acp-agents) -- 外部宿主生成
+- [Multi-agent](/concepts/multi-agent) -- 多智能体架构
+- [Gateway Configuration](/gateway/configuration) -- 会话工具配置选项
 
-## Related
+## 相关
 
 - [Session management](/concepts/session)
 - [Session pruning](/concepts/session-pruning)

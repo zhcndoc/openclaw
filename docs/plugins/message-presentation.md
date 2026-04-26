@@ -1,33 +1,32 @@
 ---
-summary: "Semantic message cards, buttons, selects, fallback text, and delivery hints for channel plugins"
-title: "Message presentation"
+summary: "语义化消息卡片、按钮、选择器、回退文本以及频道插件的投递提示"
+title: "消息呈现"
 read_when:
-  - Adding or modifying message card, button, or select rendering
-  - Building a channel plugin that supports rich outbound messages
-  - Changing message tool presentation or delivery capabilities
-  - Debugging provider-specific card/block/component rendering regressions
+  - 添加或修改消息卡片、按钮或选择器的渲染
+  - 构建支持富出站消息的频道插件
+  - 更改消息工具的呈现或投递能力
+  - 调试特定提供方的卡片/块/组件渲染回归问题
 ---
 
-Message presentation is OpenClaw's shared contract for rich outbound chat UI.
-It lets agents, CLI commands, approval flows, and plugins describe the message
-intent once, while each channel plugin renders the best native shape it can.
+消息呈现是 OpenClaw 针对富出站聊天 UI 的共享契约。
+它允许代理、CLI 命令、审批流程和插件一次性描述消息意图，而各频道插件再尽可能渲染出最佳的原生形态。
 
-Use presentation for portable message UI:
+在可移植的消息 UI 中使用呈现能力：
 
-- text sections
-- small context/footer text
-- dividers
-- buttons
-- select menus
-- card title and tone
+- 文本区块
+- 简短的上下文/页脚文本
+- 分隔线
+- 按钮
+- 选择菜单
+- 卡片标题和语气
 
-Do not add new provider-native fields such as Discord `components`, Slack
-`blocks`, Telegram `buttons`, Teams `card`, or Feishu `card` to the shared
-message tool. Those are renderer outputs owned by the channel plugin.
+不要在共享消息工具中添加新的提供方原生字段，例如 Discord 的 `components`、Slack
+的 `blocks`、Telegram 的 `buttons`、Teams 的 `card` 或 Feishu 的 `card`。
+这些属于频道插件所有的渲染输出。
 
-## Contract
+## 契约
 
-Plugin authors import the public contract from:
+插件作者从以下位置导入公共契约：
 
 ```ts
 import type {
@@ -36,7 +35,7 @@ import type {
 } from "openclaw/plugin-sdk/interactive-runtime";
 ```
 
-Shape:
+结构：
 
 ```ts
 type MessagePresentation = {
@@ -75,86 +74,83 @@ type ReplyPayloadDelivery = {
 };
 ```
 
-Button semantics:
+按钮语义：
 
-- `value` is an application action value routed back through the channel's
-  existing interaction path when the channel supports clickable controls.
-- `url` is a link button. It can exist without `value`.
-- `label` is required and is also used in text fallback.
-- `style` is advisory. Renderers should map unsupported styles to a safe
-  default, not fail the send.
+- `value` 是应用动作值；当频道支持可点击控件时，它会通过该频道现有的交互路径路由回去。
+- `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
+- `label` 是必需项，也会用于文本回退。
+- `style` 只是建议。渲染器应将不支持的样式映射为安全默认值，而不是发送失败。
 
-Select semantics:
+选择器语义：
 
-- `options[].value` is the selected application value.
-- `placeholder` is advisory and may be ignored by channels without native
-  select support.
-- If a channel does not support selects, fallback text lists the labels.
+- `options[].value` 是被选中的应用值。
+- `placeholder` 只是建议项，某些不支持原生选择器的频道可以忽略它。
+- 如果频道不支持选择器，回退文本会列出这些标签。
 
-## Producer Examples
+## 生产者示例
 
-Simple card:
+简单卡片：
 
 ```json
 {
-  "title": "Deploy approval",
+  "title": "部署审批",
   "tone": "warning",
   "blocks": [
-    { "type": "text", "text": "Canary is ready to promote." },
-    { "type": "context", "text": "Build 1234, staging passed." },
+    { "type": "text", "text": "金丝雀版本已准备好推进。" },
+    { "type": "context", "text": "构建 1234，staging 已通过。" },
     {
       "type": "buttons",
       "buttons": [
-        { "label": "Approve", "value": "deploy:approve", "style": "success" },
-        { "label": "Decline", "value": "deploy:decline", "style": "danger" }
+        { "label": "批准", "value": "deploy:approve", "style": "success" },
+        { "label": "拒绝", "value": "deploy:decline", "style": "danger" }
       ]
     }
   ]
 }
 ```
 
-URL-only link button:
+仅 URL 链接按钮：
 
 ```json
 {
   "blocks": [
-    { "type": "text", "text": "Release notes are ready." },
+    { "type": "text", "text": "发布说明已准备好。" },
     {
       "type": "buttons",
-      "buttons": [{ "label": "Open notes", "url": "https://example.com/release" }]
+      "buttons": [{ "label": "打开说明", "url": "https://example.com/release" }]
     }
   ]
 }
 ```
 
-Select menu:
+选择菜单：
 
 ```json
 {
-  "title": "Choose environment",
+  "title": "选择环境",
   "blocks": [
     {
       "type": "select",
-      "placeholder": "Environment",
+      "placeholder": "环境",
       "options": [
-        { "label": "Canary", "value": "env:canary" },
-        { "label": "Production", "value": "env:prod" }
+        { "label": "金丝雀", "value": "env:canary" },
+        { "label": "生产环境", "value": "env:prod" }
       ]
     }
   ]
 }
 ```
 
-CLI send:
+CLI 发送：
 
 ```bash
 openclaw message send --channel slack \
   --target channel:C123 \
-  --message "Deploy approval" \
-  --presentation '{"title":"Deploy approval","tone":"warning","blocks":[{"type":"text","text":"Canary is ready."},{"type":"buttons","buttons":[{"label":"Approve","value":"deploy:approve","style":"success"},{"label":"Decline","value":"deploy:decline","style":"danger"}]}]}'
+  --message "部署审批" \
+  --presentation '{"title":"部署审批","tone":"warning","blocks":[{"type":"text","text":"金丝雀版本已准备好。"},{"type":"buttons","buttons":[{"label":"批准","value":"deploy:approve","style":"success"},{"label":"拒绝","value":"deploy:decline","style":"danger"}]}]}'
 ```
 
-Pinned delivery:
+置顶投递：
 
 ```bash
 openclaw message send --channel telegram \
@@ -163,7 +159,7 @@ openclaw message send --channel telegram \
   --pin
 ```
 
-Pinned delivery with explicit JSON:
+带显式 JSON 的置顶投递：
 
 ```json
 {
@@ -175,9 +171,9 @@ Pinned delivery with explicit JSON:
 }
 ```
 
-## Renderer Contract
+## 渲染器契约
 
-Channel plugins declare render support on their outbound adapter:
+频道插件在其出站适配器上声明渲染支持：
 
 ```ts
 const adapter: ChannelOutboundAdapter = {
@@ -201,88 +197,82 @@ const adapter: ChannelOutboundAdapter = {
 };
 ```
 
-Capability fields are intentionally simple booleans. They describe what the
-renderer can make interactive, not every native platform limit. Renderers still
-own platform-specific limits such as maximum button count, block count, and
-card size.
+能力字段刻意设计为简单的布尔值。它们描述的是渲染器能使哪些内容具备交互性，
+而不是枚举所有原生平台限制。渲染器仍然负责平台特定限制，例如最大按钮数、区块数和卡片尺寸。
 
-## Core Render Flow
+## 核心渲染流程
 
-When a `ReplyPayload` or message action includes `presentation`, core:
+当 `ReplyPayload` 或消息动作包含 `presentation` 时，核心会：
 
-1. Normalizes the presentation payload.
-2. Resolves the target channel's outbound adapter.
-3. Reads `presentationCapabilities`.
-4. Calls `renderPresentation` when the adapter can render the payload.
-5. Falls back to conservative text when the adapter is absent or cannot render.
-6. Sends the resulting payload through the normal channel delivery path.
-7. Applies delivery metadata such as `delivery.pin` after the first successful
-   sent message.
+1. 规范化呈现负载。
+2. 解析目标频道的出站适配器。
+3. 读取 `presentationCapabilities`。
+4. 当适配器可以渲染该负载时调用 `renderPresentation`。
+5. 当适配器不存在或无法渲染时回退到保守文本。
+6. 通过正常的频道投递路径发送生成的负载。
+7. 在首条成功发送的消息之后应用诸如 `delivery.pin` 之类的投递元数据。
 
-Core owns fallback behavior so producers can stay channel-agnostic. Channel
-plugins own native rendering and interaction handling.
+核心负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
 
-## Degradation Rules
+## 降级规则
 
-Presentation must be safe to send on limited channels.
+呈现内容必须能够安全地发送到受限频道。
 
-Fallback text includes:
+回退文本包括：
 
-- `title` as the first line
-- `text` blocks as normal paragraphs
-- `context` blocks as compact context lines
-- `divider` blocks as a visual separator
-- button labels, including URLs for link buttons
-- select option labels
+- `title` 作为第一行
+- `text` 区块作为普通段落
+- `context` 区块作为紧凑的上下文行
+- `divider` 区块作为视觉分隔符
+- 按钮标签，包括链接按钮的 URL
+- 选择项标签
 
-Unsupported native controls should degrade rather than fail the whole send.
-Examples:
+不支持的原生控件应该降级，而不是让整个发送失败。
+例如：
 
-- Telegram with inline buttons disabled sends text fallback.
-- A channel without select support lists select options as text.
-- A URL-only button becomes either a native link button or a fallback URL line.
-- Optional pin failures do not fail the delivered message.
+- 禁用内联按钮的 Telegram 会发送文本回退。
+- 不支持选择器的频道会把选项以文本形式列出。
+- 仅 URL 按钮会变成原生链接按钮，或者回退为 URL 行。
+- 可选的置顶失败不会导致已发送消息失败。
 
-The main exception is `delivery.pin.required: true`; if pinning is requested as
-required and the channel cannot pin the sent message, delivery reports failure.
+主要例外是 `delivery.pin.required: true`；如果请求置顶并且将其设为必需，而频道无法置顶已发送消息，则投递会报告失败。
 
-## Provider Mapping
+## 提供方映射
 
-Current bundled renderers:
+当前内置渲染器：
 
-| Channel         | Native render target                | Notes                                                                                                                                             |
-| --------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discord         | Components and component containers | Preserves legacy `channelData.discord.components` for existing provider-native payload producers, but new shared sends should use `presentation`. |
-| Slack           | Block Kit                           | Preserves legacy `channelData.slack.blocks` for existing provider-native payload producers, but new shared sends should use `presentation`.       |
-| Telegram        | Text plus inline keyboards          | Buttons/selects require inline button capability for the target surface; otherwise text fallback is used.                                         |
-| Mattermost      | Text plus interactive props         | Other blocks degrade to text.                                                                                                                     |
-| Microsoft Teams | Adaptive Cards                      | Plain `message` text is included with the card when both are provided.                                                                            |
-| Feishu          | Interactive cards                   | Card header can use `title`; body avoids duplicating that title.                                                                                  |
-| Plain channels  | Text fallback                       | Channels without a renderer still get readable output.                                                                                            |
+| 频道            | 原生渲染目标                      | 说明                                                                                                                                              |
+| --------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Discord         | 组件和组件容器                     | 为已有的提供方原生负载生产者保留旧的 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                        |
+| Slack           | Block Kit                         | 为已有的提供方原生负载生产者保留旧的 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                             |
+| Telegram        | 文本加内联键盘                     | 按钮/选择器需要目标表面支持内联按钮；否则使用文本回退。                                                                                           |
+| Mattermost      | 文本加交互属性                     | 其他区块会降级为文本。                                                                                                                             |
+| Microsoft Teams | 自适应卡片                        | 当同时提供时，普通 `message` 文本会与卡片一起包含。                                                                                                 |
+| Feishu          | 交互式卡片                        | 卡片头部可以使用 `title`；正文会避免重复该标题。                                                                                                    |
+| Plain channels  | 文本回退                          | 没有渲染器的频道仍然会得到可读输出。                                                                                                               |
 
-Provider-native payload compatibility is a transition affordance for existing
-reply producers. It is not a reason to add new shared native fields.
+提供方原生负载兼容性是为现有回复生产者提供的迁移过渡能力。
+这不是添加新的共享原生字段的理由。
 
 ## Presentation vs InteractiveReply
 
-`InteractiveReply` is the older internal subset used by approval and interaction
-helpers. It supports:
+`InteractiveReply` 是较早的内部子集，用于审批和交互辅助工具。
+它支持：
 
-- text
-- buttons
-- selects
+- 文本
+- 按钮
+- 选择器
 
-`MessagePresentation` is the canonical shared send contract. It adds:
+`MessagePresentation` 是规范化的共享发送契约。它增加了：
 
-- title
-- tone
-- context
-- divider
-- URL-only buttons
-- generic delivery metadata through `ReplyPayload.delivery`
+- 标题
+- 语气
+- 上下文
+- 分隔线
+- 仅 URL 按钮
+- 通过 `ReplyPayload.delivery` 提供通用投递元数据
 
-Use helpers from `openclaw/plugin-sdk/interactive-runtime` when bridging older
-code:
+在桥接旧代码时，使用 `openclaw/plugin-sdk/interactive-runtime` 中的辅助函数：
 
 ```ts
 import {
@@ -293,42 +283,36 @@ import {
 } from "openclaw/plugin-sdk/interactive-runtime";
 ```
 
-New code should accept or produce `MessagePresentation` directly.
+新代码应直接接收或生成 `MessagePresentation`。
 
-## Delivery Pin
+## 投递置顶
 
-Pinning is delivery behavior, not presentation. Use `delivery.pin` instead of
-provider-native fields such as `channelData.telegram.pin`.
+置顶是投递行为，不是呈现行为。应使用 `delivery.pin`，而不是诸如
+`channelData.telegram.pin` 之类的提供方原生字段。
 
-Semantics:
+语义：
 
-- `pin: true` pins the first successfully delivered message.
-- `pin.notify` defaults to `false`.
-- `pin.required` defaults to `false`.
-- Optional pin failures degrade and leave the sent message intact.
-- Required pin failures fail delivery.
-- Chunked messages pin the first delivered chunk, not the tail chunk.
+- `pin: true` 会置顶第一条成功投递的消息。
+- `pin.notify` 默认值为 `false`。
+- `pin.required` 默认值为 `false`。
+- 可选的置顶失败会降级，但不会影响已发送消息本身。
+- 必需的置顶失败会导致投递失败。
+- 分块消息会置顶第一条成功投递的分块，而不是尾部分块。
 
-Manual `pin`, `unpin`, and `pins` message actions still exist for existing
-messages where the provider supports those operations.
+对于已有消息，当提供方支持这些操作时，手动 `pin`、`unpin` 和 `pins` 消息动作仍然存在。
 
-## Plugin Author Checklist
+## 插件作者检查清单
 
-- Declare `presentation` from `describeMessageTool(...)` when the channel can
-  render or safely degrade semantic presentation.
-- Add `presentationCapabilities` to the runtime outbound adapter.
-- Implement `renderPresentation` in runtime code, not control-plane plugin
-  setup code.
-- Keep native UI libraries out of hot setup/catalog paths.
-- Preserve platform limits in the renderer and tests.
-- Add fallback tests for unsupported buttons, selects, URL buttons, title/text
-  duplication, and mixed `message` plus `presentation` sends.
-- Add delivery pin support through `deliveryCapabilities.pin` and
-  `pinDeliveredMessage` only when the provider can pin the sent message id.
-- Do not expose new provider-native card/block/component/button fields through
-  the shared message action schema.
+- 当频道可以渲染或安全降级语义化展示时，从 `describeMessageTool(...)` 声明 `presentation`。
+- 在运行时出站适配器中添加 `presentationCapabilities`。
+- 在运行时代码中实现 `renderPresentation`，而不是在控制平面插件初始化代码中实现。
+- 将原生 UI 库排除在热初始化/目录路径之外。
+- 在渲染器和测试中保留平台限制。
+- 为不支持的按钮、选择框、URL 按钮、标题/文本重复，以及 `message` 与 `presentation` 混合发送，添加回退测试。
+- 仅当提供方能够固定已发送消息 id 时，通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加送达置顶支持。
+- 不要通过共享消息动作 schema 暴露新的提供方原生卡片/块/组件/按钮字段。
 
-## Related Docs
+## 相关文档
 
 - [Message CLI](/cli/message)
 - [Plugin SDK Overview](/plugins/sdk-overview)

@@ -1,34 +1,34 @@
 ---
-summary: "Inbound channel location parsing (Telegram/WhatsApp/Matrix) and context fields"
+summary: "入站频道位置解析（Telegram/WhatsApp/Matrix）及上下文字段"
 read_when:
-  - Adding or modifying channel location parsing
-  - Using location context fields in agent prompts or tools
-title: "Channel location parsing"
+  - 添加或修改频道位置解析
+  - 在 agent 提示词或工具中使用位置上下文字段
+title: "频道位置解析"
 ---
 
-OpenClaw normalizes shared locations from chat channels into:
+OpenClaw 将聊天频道中共享的位置规范化为：
 
-- terse coordinate text appended to the inbound body, and
-- structured fields in the auto-reply context payload. Channel-provided labels, addresses, and captions/comments are rendered into the prompt by the shared untrusted metadata JSON block, not inline in the user body.
+- 追加到入站正文末尾的简洁坐标文本，以及
+- 自动回复上下文负载中的结构化字段。频道提供的标签、地址和标题/评论会通过共享的不受信任元数据 JSON 块渲染到提示词中，而不是内联到用户正文里。
 
-Currently supported:
+当前支持：
 
-- **Telegram** (location pins + venues + live locations)
-- **WhatsApp** (locationMessage + liveLocationMessage)
-- **Matrix** (`m.location` with `geo_uri`)
+- **Telegram**（位置标记 + 场所 + 实时位置）
+- **WhatsApp**（locationMessage + liveLocationMessage）
+- **Matrix**（带有 `geo_uri` 的 `m.location`）
 
-## Text formatting
+## 文本格式
 
-Locations are rendered as friendly lines without brackets:
+位置以友好文本行形式渲染，不带括号：
 
-- Pin:
+- 标记：
   - `📍 48.858844, 2.294351 ±12m`
-- Named place:
+- 命名地点：
   - `📍 48.858844, 2.294351 ±12m`
-- Live share:
-  - `🛰 Live location: 48.858844, 2.294351 ±12m`
+- 实时共享：
+  - `🛰 实时位置：48.858844, 2.294351 ±12m`
 
-If the channel includes a label, address, or caption/comment, it is preserved in the context payload and appears in the prompt as fenced untrusted JSON:
+如果频道包含标签、地址或标题/评论，它会保留在上下文负载中，并以带围栏的不受信任 JSON 形式出现在提示词里：
 
 ````text
 Location (untrusted metadata):
@@ -43,9 +43,9 @@ Location (untrusted metadata):
 ```
 ````
 
-## Context fields
+## 上下文字段
 
-When a location is present, these fields are added to `ctx`:
+存在位置信息时，以下字段会添加到 `ctx` 中：
 
 - `LocationLat` (number)
 - `LocationLon` (number)
@@ -56,16 +56,16 @@ When a location is present, these fields are added to `ctx`:
 - `LocationIsLive` (boolean)
 - `LocationCaption` (string; optional)
 
-The prompt renderer treats `LocationName`, `LocationAddress`, and `LocationCaption` as untrusted metadata and serializes them through the same bounded JSON path used for other channel context.
+提示词渲染器会将 `LocationName`、`LocationAddress` 和 `LocationCaption` 视为不受信任的元数据，并通过与其他频道上下文相同的受限 JSON 路径进行序列化。
 
-## Channel notes
+## 频道说明
 
-- **Telegram**: venues map to `LocationName/LocationAddress`; live locations use `live_period`.
-- **WhatsApp**: `locationMessage.comment` and `liveLocationMessage.caption` populate `LocationCaption`.
-- **Matrix**: `geo_uri` is parsed as a pin location; altitude is ignored and `LocationIsLive` is always false.
+- **Telegram**：venue 会映射到 `LocationName/LocationAddress`；实时位置使用 `live_period`。
+- **WhatsApp**：`locationMessage.comment` 和 `liveLocationMessage.caption` 会填充 `LocationCaption`。
+- **Matrix**：`geo_uri` 会被解析为标记位置；海拔会被忽略，且 `LocationIsLive` 始终为 false。
 
-## Related
+## 相关
 
-- [Location command (nodes)](/nodes/location-command)
-- [Camera capture](/nodes/camera)
-- [Media understanding](/nodes/media-understanding)
+- [位置命令（节点）](/nodes/location-command)
+- [摄像头拍摄](/nodes/camera)
+- [媒体理解](/nodes/media-understanding)

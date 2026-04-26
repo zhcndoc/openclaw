@@ -1,61 +1,58 @@
 ---
-summary: "Use Qwen Cloud via OpenClaw's bundled qwen provider"
+summary: "通过 OpenClaw 捆绑的 qwen 提供程序使用通义千问云"
 read_when:
-  - You want to use Qwen with OpenClaw
-  - You previously used Qwen OAuth
-title: "Qwen"
+  - 您想将通义千问与 OpenClaw 一起使用
+  - 您之前使用过通义千问 OAuth
+title: "通义千问"
 ---
 
 <Warning>
 
-**Qwen OAuth has been removed.** The free-tier OAuth integration
-(`qwen-portal`) that used `portal.qwen.ai` endpoints is no longer available.
-See [Issue #49557](https://github.com/openclaw/openclaw/issues/49557) for
-background.
+**通义千问 OAuth 已被移除。** 免费层级的 OAuth 集成
+(`qwen-portal`) 使用 `portal.qwen.ai` 端点的服务已不再可用。
+请参阅 [问题 #49557](https://github.com/openclaw/openclaw/issues/49557) 了解
+背景信息。
 
 </Warning>
 
-OpenClaw now treats Qwen as a first-class bundled provider with canonical id
-`qwen`. The bundled provider targets the Qwen Cloud / Alibaba DashScope and
-Coding Plan endpoints and keeps legacy `modelstudio` ids working as a
-compatibility alias.
+OpenClaw 现在将通义千问视为具有规范 ID `qwen` 的一级捆绑提供程序。该捆绑提供程序针对通义千问云 / 阿里云 DashScope 和 Coding Plan 端点，并将遗留的 `modelstudio` ID 作为兼容性别名保留。
 
-- Provider: `qwen`
-- Preferred env var: `QWEN_API_KEY`
-- Also accepted for compatibility: `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY`
-- API style: OpenAI-compatible
+- 提供程序：`qwen`
+- 首选环境变量：`QWEN_API_KEY`
+- 也接受用于兼容性：`MODELSTUDIO_API_KEY`、`DASHSCOPE_API_KEY`
+- API 样式：与 OpenAI 兼容
 
 <Tip>
-If you want `qwen3.6-plus`, prefer the **Standard (pay-as-you-go)** endpoint.
-Coding Plan support can lag behind the public catalog.
+如果您想要 `qwen3.6-plus`，请优先选择 **标准（按量付费）** 端点。
+Coding Plan 支持可能滞后于公共目录。
 </Tip>
 
-## Getting started
+## 开始使用
 
-Choose your plan type and follow the setup steps.
+选择您的计划类型并按照设置步骤操作。
 
 <Tabs>
-  <Tab title="Coding Plan (subscription)">
-    **Best for:** subscription-based access through the Qwen Coding Plan.
+  <Tab title="Coding Plan（订阅）">
+    **最适合：** 通过通义千问 Coding Plan 基于订阅访问。
 
     <Steps>
-      <Step title="Get your API key">
-        Create or copy an API key from [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys).
+      <Step title="获取 API 密钥">
+        从 [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys) 创建或复制 API 密钥。
       </Step>
-      <Step title="Run onboarding">
-        For the **Global** endpoint:
+      <Step title="运行入职引导">
+        对于 **全球** 端点：
 
         ```bash
         openclaw onboard --auth-choice qwen-api-key
         ```
 
-        For the **China** endpoint:
+        对于 **中国** 端点：
 
         ```bash
         openclaw onboard --auth-choice qwen-api-key-cn
         ```
       </Step>
-      <Step title="Set a default model">
+      <Step title="设置默认模型">
         ```json5
         {
           agents: {
@@ -66,7 +63,7 @@ Choose your plan type and follow the setup steps.
         }
         ```
       </Step>
-      <Step title="Verify the model is available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider qwen
         ```
@@ -74,34 +71,32 @@ Choose your plan type and follow the setup steps.
     </Steps>
 
     <Note>
-    Legacy `modelstudio-*` auth-choice ids and `modelstudio/...` model refs still
-    work as compatibility aliases, but new setup flows should prefer the canonical
-    `qwen-*` auth-choice ids and `qwen/...` model refs.
+    遗留的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍作为兼容性别名工作，但新的设置流程应优先使用规范的 `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。
     </Note>
 
   </Tab>
 
-  <Tab title="Standard (pay-as-you-go)">
-    **Best for:** pay-as-you-go access through the Standard Model Studio endpoint, including models like `qwen3.6-plus` that may not be available on the Coding Plan.
+  <Tab title="标准（按量付费）">
+    **最适合：** 通过标准 Model Studio 端点按量付费访问，包括可能在 Coding Plan 上不可用的模型（如 `qwen3.6-plus`）。
 
     <Steps>
-      <Step title="Get your API key">
-        Create or copy an API key from [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys).
+      <Step title="获取 API 密钥">
+        从 [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys) 创建或复制 API 密钥。
       </Step>
-      <Step title="Run onboarding">
-        For the **Global** endpoint:
+      <Step title="运行入职引导">
+        对于 **全球** 端点：
 
         ```bash
         openclaw onboard --auth-choice qwen-standard-api-key
         ```
 
-        For the **China** endpoint:
+        对于 **中国** 端点：
 
         ```bash
         openclaw onboard --auth-choice qwen-standard-api-key-cn
         ```
       </Step>
-      <Step title="Set a default model">
+      <Step title="设置默认模型">
         ```json5
         {
           agents: {
@@ -112,7 +107,7 @@ Choose your plan type and follow the setup steps.
         }
         ```
       </Step>
-      <Step title="Verify the model is available">
+      <Step title="验证模型是否可用">
         ```bash
         openclaw models list --provider qwen
         ```
@@ -120,64 +115,56 @@ Choose your plan type and follow the setup steps.
     </Steps>
 
     <Note>
-    Legacy `modelstudio-*` auth-choice ids and `modelstudio/...` model refs still
-    work as compatibility aliases, but new setup flows should prefer the canonical
-    `qwen-*` auth-choice ids and `qwen/...` model refs.
+    遗留的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍作为兼容性别名工作，但新的设置流程应优先使用规范的 `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。
     </Note>
 
   </Tab>
 </Tabs>
 
-## Plan types and endpoints
+## 计划类型和端点
 
-| Plan                       | Region | Auth choice                | Endpoint                                         |
-| -------------------------- | ------ | -------------------------- | ------------------------------------------------ |
-| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
-| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
-| Coding Plan (subscription) | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`               |
-| Coding Plan (subscription) | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`          |
+| 计划                | 区域 | 认证选择                   | 端点                                             |
+| ------------------- | ---- | -------------------------- | ------------------------------------------------ |
+| 标准（按量付费）    | 中国 | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
+| 标准（按量付费）    | 全球 | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
+| Coding Plan（订阅） | 中国 | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`               |
+| Coding Plan（订阅） | 全球 | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`          |
 
-The provider auto-selects the endpoint based on your auth choice. Canonical
-choices use the `qwen-*` family; `modelstudio-*` remains compatibility-only.
-You can override with a custom `baseUrl` in config.
+提供程序会根据您的认证选择自动选择端点。规范选择使用 `qwen-*` 系列；`modelstudio-*` 仅保留兼容性支持。您可以在配置中通过自定义 `baseUrl` 覆盖。
 
 <Tip>
-**Manage keys:** [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys) |
-**Docs:** [docs.qwencloud.com](https://docs.qwencloud.com/developer-guides/getting-started/introduction)
+**管理密钥：** [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys) |
+**文档：** [docs.qwencloud.com](https://docs.qwencloud.com/developer-guides/getting-started/introduction)
 </Tip>
 
-## Built-in catalog
+## 内置目录
 
-OpenClaw currently ships this bundled Qwen catalog. The configured catalog is
-endpoint-aware: Coding Plan configs omit models that are only known to work on
-the Standard endpoint.
+OpenClaw 当前包含以下捆绑式通义千问目录。配置的目录是端点感知的：Coding Plan 配置会省略仅在标准端点上已知可用的模型。
 
-| Model ref                   | Input       | Context   | Notes                                              |
-| --------------------------- | ----------- | --------- | -------------------------------------------------- |
-| `qwen/qwen3.5-plus`         | text, image | 1,000,000 | Default model                                      |
-| `qwen/qwen3.6-plus`         | text, image | 1,000,000 | Prefer Standard endpoints when you need this model |
-| `qwen/qwen3-max-2026-01-23` | text        | 262,144   | Qwen Max line                                      |
-| `qwen/qwen3-coder-next`     | text        | 262,144   | Coding                                             |
-| `qwen/qwen3-coder-plus`     | text        | 1,000,000 | Coding                                             |
-| `qwen/MiniMax-M2.5`         | text        | 1,000,000 | Reasoning enabled                                  |
-| `qwen/glm-5`                | text        | 202,752   | GLM                                                |
-| `qwen/glm-4.7`              | text        | 202,752   | GLM                                                |
-| `qwen/kimi-k2.5`            | text, image | 262,144   | Moonshot AI via Alibaba                            |
+| 模型引用                    | 输入       | 上下文    | 说明                            |
+| --------------------------- | ---------- | --------- | ------------------------------- |
+| `qwen/qwen3.5-plus`         | 文本、图像 | 1,000,000 | 默认模型                        |
+| `qwen/qwen3.6-plus`         | 文本、图像 | 1,000,000 | 需要此模型时优先选择标准端点    |
+| `qwen/qwen3-max-2026-01-23` | 文本       | 262,144   | 通义千问 Max 系列                   |
+| `qwen/qwen3-coder-next`     | 文本       | 262,144   | 代码生成                        |
+| `qwen/qwen3-coder-plus`     | 文本       | 1,000,000 | 代码生成                        |
+| `qwen/MiniMax-M2.5`         | 文本       | 1,000,000 | 启用推理功能                    |
+| `qwen/glm-5`                | 文本       | 202,752   | GLM 系列                        |
+| `qwen/glm-4.7`              | 文本       | 202,752   | GLM 系列                        |
+| `qwen/kimi-k2.5`            | 文本、图像 | 262,144   | 通过阿里云提供的 Moonshot AI |
 
 <Note>
-Availability can still vary by endpoint and billing plan even when a model is
-present in the bundled catalog.
+即使模型存在于捆绑目录中，可用性仍可能因端点和计费计划而异。
 </Note>
 
-## Multimodal add-ons
+## 多模态附加功能
 
-The `qwen` plugin also exposes multimodal capabilities on the **Standard**
-DashScope endpoints (not the Coding Plan endpoints):
+`qwen` 插件还在 **标准** DashScope 端点上公开多模态能力（而非 Coding Plan 端点）：
 
-- **Video understanding** via `qwen-vl-max-latest`
-- **Wan video generation** via `wan2.6-t2v` (default), `wan2.6-i2v`, `wan2.6-r2v`, `wan2.6-r2v-flash`, `wan2.7-r2v`
+- 通过 `qwen-vl-max-latest` 进行 **视频理解**
+- 通过 `wan2.6-t2v` (默认), `wan2.6-i2v`, `wan2.6-r2v`, `wan2.6-r2v-flash`, `wan2.7-r2v` 进行 **万相视频生成**
 
-To use Qwen as the default video provider:
+要将通义千问用作默认视频提供程序：
 
 ```json5
 {
@@ -190,87 +177,71 @@ To use Qwen as the default video provider:
 ```
 
 <Note>
-See [Video Generation](/tools/video-generation) for shared tool parameters, provider selection, and failover behavior.
+请参阅 [视频生成](/tools/video-generation) 了解共享工具参数、提供程序选择和故障转移行为。
 </Note>
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Image and video understanding">
-    The bundled Qwen plugin registers media understanding for images and video
-    on the **Standard** DashScope endpoints (not the Coding Plan endpoints).
+  <Accordion title="图像和视频理解">
+    捆绑的通义千问插件在 **标准** DashScope 端点（而非 Coding Plan 端点）上注册了图像和视频的媒体理解功能。
 
-    | Property      | Value                 |
+    | 属性      | 值                 |
     | ------------- | --------------------- |
-    | Model         | `qwen-vl-max-latest`  |
-    | Supported input | Images, video       |
+    | 模型         | `qwen-vl-max-latest`  |
+    | 支持的输入 | 图像，视频       |
 
-    Media understanding is auto-resolved from the configured Qwen auth — no
-    additional config is needed. Ensure you are using a Standard (pay-as-you-go)
-    endpoint for media understanding support.
+    媒体理解从配置的通义千问认证自动解析 — 无需额外配置。确保您使用的是标准（按量付费）端点以获得媒体理解支持。
 
   </Accordion>
 
-  <Accordion title="Qwen 3.6 Plus availability">
-    `qwen3.6-plus` is available on the Standard (pay-as-you-go) Model Studio
-    endpoints:
+  <Accordion title="通义千问 3.6 Plus 可用性">
+    `qwen3.6-plus` 在标准（按量付费）Model Studio 端点上可用：
 
-    - China: `dashscope.aliyuncs.com/compatible-mode/v1`
-    - Global: `dashscope-intl.aliyuncs.com/compatible-mode/v1`
+    - 中国：`dashscope.aliyuncs.com/compatible-mode/v1`
+    - 全球：`dashscope-intl.aliyuncs.com/compatible-mode/v1`
 
-    If the Coding Plan endpoints return an "unsupported model" error for
-    `qwen3.6-plus`, switch to Standard (pay-as-you-go) instead of the Coding Plan
-    endpoint/key pair.
+    如果 Coding Plan 端点返回 "unsupported model" 错误对于 `qwen3.6-plus`，请切换到标准（按量付费）而不是 Coding Plan 端点/密钥对。
 
   </Accordion>
 
   <Accordion title="Capability plan">
-    The `qwen` plugin is being positioned as the vendor home for the full Qwen
-    Cloud surface, not just coding/text models.
+    `qwen` 插件正被定位为完整 Qwen
+    Cloud 表面的厂商主页，而不仅仅是编码/文本模型。
 
-    - **Text/chat models:** bundled now
-    - **Tool calling, structured output, thinking:** inherited from the OpenAI-compatible transport
-    - **Image generation:** planned at the provider-plugin layer
-    - **Image/video understanding:** bundled now on the Standard endpoint
-    - **Speech/audio:** planned at the provider-plugin layer
-    - **Memory embeddings/reranking:** planned through the embedding adapter surface
-    - **Video generation:** bundled now through the shared video-generation capability
-
-  </Accordion>
-
-  <Accordion title="Video generation details">
-    For video generation, OpenClaw maps the configured Qwen region to the matching
-    DashScope AIGC host before submitting the job:
-
-    - Global/Intl: `https://dashscope-intl.aliyuncs.com`
-    - China: `https://dashscope.aliyuncs.com`
-
-    That means a normal `models.providers.qwen.baseUrl` pointing at either the
-    Coding Plan or Standard Qwen hosts still keeps video generation on the correct
-    regional DashScope video endpoint.
-
-    Current bundled Qwen video-generation limits:
-
-    - Up to **1** output video per request
-    - Up to **1** input image
-    - Up to **4** input videos
-    - Up to **10 seconds** duration
-    - Supports `size`, `aspectRatio`, `resolution`, `audio`, and `watermark`
-    - Reference image/video mode currently requires **remote http(s) URLs**. Local
-      file paths are rejected up front because the DashScope video endpoint does not
-      accept uploaded local buffers for those references.
+    - **文本/聊天模型：** 现已捆绑
+    - **工具调用、结构化输出、思考：** 继承自 OpenAI 兼容传输
+    - **图像生成：** 计划在提供程序插件层
+    - **图像/视频理解：** 现已在标准端点捆绑
+    - **语音/音频：** 计划在提供程序插件层
+    - **记忆嵌入/重排序：** 计划通过嵌入适配器表面
+    - **视频生成：** 现已通过共享视频生成能力捆绑
 
   </Accordion>
 
-  <Accordion title="Streaming usage compatibility">
-    Native Model Studio endpoints advertise streaming usage compatibility on the
-    shared `openai-completions` transport. OpenClaw keys that off endpoint
-    capabilities now, so DashScope-compatible custom provider ids targeting the
-    same native hosts inherit the same streaming-usage behavior instead of
-    requiring the built-in `qwen` provider id specifically.
+  <Accordion title="视频生成详情">
+    对于视频生成，OpenClaw 在提交作业前将配置的通义千问区域映射到匹配的 DashScope AIGC 主机：
 
-    Native-streaming usage compatibility applies to both the Coding Plan hosts and
-    the Standard DashScope-compatible hosts:
+    - 全球/国际：`https://dashscope-intl.aliyuncs.com`
+    - 中国：`https://dashscope.aliyuncs.com`
+
+    这意味着正常的 `models.providers.qwen.baseUrl` 指向 Coding Plan 或标准通义千问主机仍会将视频生成保持在正确的区域 DashScope 视频端点上。
+
+    当前捆绑的通义千问视频生成限制：
+
+    - 每个请求最多 **1** 个输出视频
+    - 最多 **1** 个输入图像
+    - 最多 **4** 个输入视频
+    - 最多 **10 秒** 时长
+    - 支持 `size`, `aspectRatio`, `resolution`, `audio`, 和 `watermark`
+    - 参考图像/视频模式目前需要 **远程 http(s) URLs**。本地文件路径会被直接拒绝，因为 DashScope 视频端点不接受上传的本地缓冲区用于这些引用。
+
+  </Accordion>
+
+  <Accordion title="流式使用兼容性">
+    原生 Model Studio 端点在共享 `openai-completions` 传输上宣传流式使用兼容性。OpenClaw 现在利用端点功能，因此针对相同原生主机的 DashScope 兼容自定义提供程序 ID 继承相同的流式使用行为，而不是专门需要内置的 `qwen` 提供程序 ID。
+
+    原生流式使用兼容性适用于 Coding Plan 主机和标准 DashScope 兼容主机：
 
     - `https://coding.dashscope.aliyuncs.com/v1`
     - `https://coding-intl.dashscope.aliyuncs.com/v1`
@@ -279,35 +250,32 @@ See [Video Generation](/tools/video-generation) for shared tool parameters, prov
 
   </Accordion>
 
-  <Accordion title="Multimodal endpoint regions">
-    Multimodal surfaces (video understanding and Wan video generation) use the
-    **Standard** DashScope endpoints, not the Coding Plan endpoints:
+  <Accordion title="多模态端点区域">
+    多模态表面（视频理解和万相视频生成）使用 **标准** DashScope 端点，而非 Coding Plan 端点：
 
-    - Global/Intl Standard base URL: `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
-    - China Standard base URL: `https://dashscope.aliyuncs.com/compatible-mode/v1`
+    - 全球/国际标准基础 URL：`https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+    - 中国标准基础 URL：`https://dashscope.aliyuncs.com/compatible-mode/v1`
 
   </Accordion>
 
-  <Accordion title="Environment and daemon setup">
-    If the Gateway runs as a daemon (launchd/systemd), make sure `QWEN_API_KEY` is
-    available to that process (for example, in `~/.openclaw/.env` or via
-    `env.shellEnv`).
+  <Accordion title="环境和守护进程设置">
+    如果网关作为守护进程运行 (launchd/systemd)，确保 `QWEN_API_KEY` 对该进程可用（例如，在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Video generation" href="/tools/video-generation" icon="video">
-    Shared video tool parameters and provider selection.
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    共享视频工具参数和提供商选择。
   </Card>
-  <Card title="Alibaba (ModelStudio)" href="/providers/alibaba" icon="cloud">
-    Legacy ModelStudio provider and migration notes.
+  <Card title="阿里巴巴 (ModelStudio)" href="/providers/alibaba" icon="cloud">
+    旧版 ModelStudio 提供商和迁移说明。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
-    General troubleshooting and FAQ.
+  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
+    常规故障排除和常见问题解答。
   </Card>
 </CardGroup>

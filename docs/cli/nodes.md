@@ -1,26 +1,26 @@
 ---
-summary: "CLI reference for `openclaw nodes` (status, pairing, invoke, camera/canvas/screen)"
+summary: "openclaw nodes 的 CLI 参考（状态、配对、调用、摄像头/画布/屏幕）"
 read_when:
-  - You’re managing paired nodes (cameras, screen, canvas)
-  - You need to approve requests or invoke node commands
+  - 您正在管理已配对的节点（摄像头、屏幕、画布）
+  - 您需要批准请求或调用节点命令
 title: "Nodes"
 ---
 
 # `openclaw nodes`
 
-Manage paired nodes (devices) and invoke node capabilities.
+管理已配对节点（设备）并调用节点功能。
 
-Related:
+相关链接：
 
-- Nodes overview: [Nodes](/nodes)
-- Camera: [Camera nodes](/nodes/camera)
-- Images: [Image nodes](/nodes/images)
+- 节点概览：[节点](/nodes)
+- 摄像头：[摄像头节点](/nodes/camera)
+- 图像：[图像节点](/nodes/images)
 
-Common options:
+常用选项：
 
-- `--url`, `--token`, `--timeout`, `--json`
+- `--url`，`--token`，`--timeout`，`--json`
 
-## Common commands
+## 常用命令
 
 ```bash
 openclaw nodes list
@@ -35,40 +35,35 @@ openclaw nodes status --connected
 openclaw nodes status --last-connected 24h
 ```
 
-`nodes list` prints pending/paired tables. Paired rows include the most recent connect age (Last Connect).
-Use `--connected` to only show currently-connected nodes. Use `--last-connected <duration>` to
-filter to nodes that connected within a duration (e.g. `24h`, `7d`).
+`nodes list` 会打印未处理/已配对的表格。已配对行包括最近一次连接时间（Last Connect）。
+使用 `--connected` 仅显示当前连接的节点。使用 `--last-connected <duration>` 筛选在指定时长内连接过的节点（例如 `24h`，`7d`）。
 
-Approval note:
+审批说明：
 
-- `openclaw nodes pending` only needs pairing scope.
-- `gateway.nodes.pairing.autoApproveCidrs` can skip the pending step only for
-  explicitly trusted, first-time `role: node` device pairing. It is off by
-  default and does not approve upgrades.
-- `openclaw nodes approve <requestId>` inherits extra scope requirements from the
-  pending request:
-  - commandless request: pairing only
-  - non-exec node commands: pairing + write
-  - `system.run` / `system.run.prepare` / `system.which`: pairing + admin
+- `openclaw nodes pending` 仅需配对权限。
+- `openclaw nodes approve <requestId>` 继承自待处理请求的额外权限要求：
+  - 无命令请求：仅配对
+  - 非 exec 节点命令：配对 + 写入
+  - `system.run` / `system.run.prepare` / `system.which`：配对 + 管理员
 
-## Invoke
+## 调用
 
 ```bash
 openclaw nodes invoke --node <id|name|ip> --command <command> --params <json>
 ```
 
-Invoke flags:
+调用标志：
 
-- `--params <json>`: JSON object string (default `{}`).
-- `--invoke-timeout <ms>`: node invoke timeout (default `15000`).
-- `--idempotency-key <key>`: optional idempotency key.
-- `system.run` and `system.run.prepare` are blocked here; use the `exec` tool with `host=node` for shell execution.
+- `--params <json>`：JSON 对象字符串（默认 `{}`）。
+- `--invoke-timeout <ms>`：节点调用超时（默认 `15000`）。
+- `--idempotency-key <key>`：可选的幂等键。
+- `system.run` 和 `system.run.prepare` 在此处被阻止；请使用 `exec` 工具配合 `host=node` 进行 Shell 执行。
 
-For shell execution on a node, use the `exec` tool with `host=node` instead of `openclaw nodes run`.
-The `nodes` CLI is now capability-focused: direct RPC via `nodes invoke`, plus pairing, camera,
-screen, location, canvas, and notifications.
+在节点上执行 shell 时，请使用带有 `host=node` 的 `exec` 工具，而不是 `openclaw nodes run`。
+`nodes` CLI 现在以能力为中心：通过 `nodes invoke` 进行直接 RPC，以及配对、摄像头、
+屏幕、位置、画布和通知。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Nodes](/nodes)
+- [CLI 参考](/cli)
+- [节点](/nodes)

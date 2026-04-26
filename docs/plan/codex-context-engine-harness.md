@@ -1,91 +1,87 @@
 ---
 title: "Codex Harness Context Engine Port"
-summary: "Specification for making the bundled Codex app-server harness honor OpenClaw context-engine plugins"
+summary: "为让捆绑的 Codex app-server harness 遵守 OpenClaw context-engine 插件的规范"
 read_when:
-  - You are wiring context-engine lifecycle behavior into the Codex harness
-  - You need lossless-claw or another context-engine plugin to work with codex/* embedded harness sessions
-  - You are comparing embedded PI and Codex app-server context behavior
+  - 你正在将 context-engine 生命周期行为接入 Codex harness
+  - 你需要 lossless-claw 或其他 context-engine 插件与 codex/* 内嵌 harness 会话协同工作
+  - 你正在比较内嵌 PI 与 Codex app-server 的 context 行为
 ---
 
 ## Status
 
-Draft implementation specification.
+草案实现规范。
 
 ## Goal
 
-Make the bundled Codex app-server harness honor the same OpenClaw context-engine
-lifecycle contract that embedded PI turns already honor.
+使捆绑的 Codex app-server harness 遵守与内嵌 PI 回合已遵守的相同 OpenClaw context-engine
+生命周期契约。
 
-A session using `agents.defaults.embeddedHarness.runtime: "codex"` or a
-`codex/*` model should still let the selected context-engine plugin, such as
-`lossless-claw`, control context assembly, post-turn ingest, maintenance, and
-OpenClaw-level compaction policy as far as the Codex app-server boundary allows.
+使用 `agents.defaults.embeddedHarness.runtime: "codex"` 或
+`codex/*` 模型的会话，仍应让所选的 context-engine 插件（例如
+`lossless-claw`）在 Codex app-server 边界允许的范围内，控制上下文组装、回合后摄取、维护以及
+OpenClaw 级别的压缩策略。
 
 ## Non-goals
 
-- Do not reimplement Codex app-server internals.
-- Do not make Codex native thread compaction produce a lossless-claw summary.
-- Do not require non-Codex models to use the Codex harness.
-- Do not change ACP/acpx session behavior. This specification is for the
-  non-ACP embedded agent harness path only.
-- Do not make third-party plugins register Codex app-server extension factories;
-  the existing bundled-plugin trust boundary remains unchanged.
+- 不重新实现 Codex app-server 内部机制。
+- 不让 Codex 原生线程压缩生成 lossless-claw 摘要。
+- 不要求非 Codex 模型使用 Codex harness。
+- 不更改 ACP/acpx 会话行为。本规范仅适用于
+  非 ACP 的内嵌 agent harness 路径。
+- 不要求第三方插件注册 Codex app-server 扩展工厂；
+  现有的捆绑插件信任边界保持不变。
 
 ## Current architecture
 
-The embedded run loop resolves the configured context engine once per run before
-selecting a concrete low-level harness:
+内嵌运行循环会在选择具体的底层 harness 之前，按每次运行解析一次已配置的 context engine：
 
 - `src/agents/pi-embedded-runner/run.ts`
-  - initializes context-engine plugins
-  - calls `resolveContextEngine(params.config)`
-  - passes `contextEngine` and `contextTokenBudget` into
+  - 初始化 context-engine 插件
+  - 调用 `resolveContextEngine(params.config)`
+  - 将 `contextEngine` 和 `contextTokenBudget` 传入
     `runEmbeddedAttemptWithBackend(...)`
 
-`runEmbeddedAttemptWithBackend(...)` delegates to the selected agent harness:
+`runEmbeddedAttemptWithBackend(...)` 会委托给所选的 agent harness：
 
 - `src/agents/pi-embedded-runner/run/backend.ts`
 - `src/agents/harness/selection.ts`
 
-The Codex app-server harness is registered by the bundled Codex plugin:
+Codex app-server harness 由捆绑的 Codex 插件注册：
 
 - `extensions/codex/index.ts`
 - `extensions/codex/harness.ts`
 
-The Codex harness implementation receives the same `EmbeddedRunAttemptParams`
-as PI-backed attempts:
+Codex harness 实现接收与 PI-backed 尝试相同的
+`EmbeddedRunAttemptParams`：
 
 - `extensions/codex/src/app-server/run-attempt.ts`
 
-That means the required hook point is in OpenClaw-controlled code. The external
-boundary is the Codex app-server protocol itself: OpenClaw can control what it
-sends to `thread/start`, `thread/resume`, and `turn/start`, and can observe
-notifications, but it cannot change Codex's internal thread store or native
-compactor.
+这意味着所需的挂钩点位于 OpenClaw 控制的代码中。外部边界是 Codex app-server 协议本身：OpenClaw 可以控制它向
+`thread/start`、`thread/resume` 和 `turn/start` 发送什么，也可以观察通知，
+但不能改变 Codex 的内部线程存储或原生压缩器。
 
 ## Current gap
 
-Embedded PI attempts call the context-engine lifecycle directly:
+内嵌 PI 尝试会直接调用 context-engine 生命周期：
 
-- bootstrap/maintenance before the attempt
-- assemble before the model call
-- afterTurn or ingest after the attempt
-- maintenance after a successful turn
-- context-engine compaction for engines that own compaction
+- 在尝试前进行 bootstrap/maintenance
+- 在模型调用前进行 assemble
+- 在尝试后进行 afterTurn 或 ingest
+- 在成功回合后进行 maintenance
+- 对拥有压缩职责的 engine 执行 context-engine compaction
 
-Relevant PI code:
+相关 PI 代码：
 
 - `src/agents/pi-embedded-runner/run/attempt.ts`
 - `src/agents/pi-embedded-runner/run/attempt.context-engine-helpers.ts`
 - `src/agents/pi-embedded-runner/context-engine-maintenance.ts`
 
-Codex app-server attempts currently run generic agent-harness hooks and mirror
-the transcript, but do not call `params.contextEngine.bootstrap`,
-`params.contextEngine.assemble`, `params.contextEngine.afterTurn`,
-`params.contextEngine.ingestBatch`, `params.contextEngine.ingest`, or
-`params.contextEngine.maintain`.
+而 Codex app-server 尝试当前只运行通用 agent-harness 钩子并镜像转录内容，但不会调用
+`params.contextEngine.bootstrap`、`params.contextEngine.assemble`、`params.contextEngine.afterTurn`、
+`params.contextEngine.ingestBatch`、`params.contextEngine.ingest` 或
+`params.contextEngine.maintain`。
 
-Relevant Codex code:
+相关 Codex 代码：
 
 - `extensions/codex/src/app-server/run-attempt.ts`
 - `extensions/codex/src/app-server/thread-lifecycle.ts`
@@ -94,98 +90,85 @@ Relevant Codex code:
 
 ## Desired behavior
 
-For Codex harness turns, OpenClaw should preserve this lifecycle:
+对于 Codex harness 的回合，OpenClaw 应保留如下生命周期：
 
-1. Read the mirrored OpenClaw session transcript.
-2. Bootstrap the active context engine when a previous session file exists.
-3. Run bootstrap maintenance when available.
-4. Assemble context using the active context engine.
-5. Convert the assembled context into Codex-compatible inputs.
-6. Start or resume the Codex thread with developer instructions that include any
-   context-engine `systemPromptAddition`.
-7. Start the Codex turn with the assembled user-facing prompt.
-8. Mirror the Codex result back into the OpenClaw transcript.
-9. Call `afterTurn` if implemented, otherwise `ingestBatch`/`ingest`, using the
-   mirrored transcript snapshot.
-10. Run turn maintenance after successful non-aborted turns.
-11. Preserve Codex native compaction signals and OpenClaw compaction hooks.
+1. 读取镜像化的 OpenClaw 会话转录。
+2. 当存在先前的会话文件时，bootstrap 当前 context engine。
+3. 在可用时运行 bootstrap maintenance。
+4. 使用当前 context engine 组装上下文。
+5. 将组装后的上下文转换为与 Codex 兼容的输入。
+6. 使用包含任何 context-engine `systemPromptAddition` 的开发者指令，启动或恢复 Codex 线程。
+7. 使用组装后的面向用户提示启动 Codex 回合。
+8. 将 Codex 结果镜像回 OpenClaw 转录。
+9. 如果实现了 `afterTurn`，则调用它；否则调用 `ingestBatch`/`ingest`，并使用镜像后的转录快照。
+10. 在成功且未中止的回合后运行 turn maintenance。
+11. 保留 Codex 原生压缩信号和 OpenClaw 压缩钩子。
 
 ## Design constraints
 
 ### Codex app-server remains canonical for native thread state
 
-Codex owns its native thread and any internal extended history. OpenClaw should
-not try to mutate the app-server's internal history except through supported
-protocol calls.
+Codex 拥有其原生线程以及任何内部扩展历史。OpenClaw 不应尝试通过受支持协议调用之外的方式去修改 app-server 的内部历史。
 
-OpenClaw's transcript mirror remains the source for OpenClaw features:
+OpenClaw 的转录镜像仍是 OpenClaw 功能的数据源：
 
-- chat history
-- search
-- `/new` and `/reset` bookkeeping
-- future model or harness switching
-- context-engine plugin state
+- 聊天历史
+- 搜索
+- `/new` 和 `/reset` 记账
+- 未来的模型或 harness 切换
+- context-engine 插件状态
 
 ### Context engine assembly must be projected into Codex inputs
 
-The context-engine interface returns OpenClaw `AgentMessage[]`, not a Codex
-thread patch. Codex app-server `turn/start` accepts a current user input, while
-`thread/start` and `thread/resume` accept developer instructions.
+context-engine 接口返回的是 OpenClaw `AgentMessage[]`，而不是 Codex 线程补丁。Codex app-server `turn/start` 接受当前用户输入，而 `thread/start` 和 `thread/resume` 接受开发者指令。
 
-Therefore the implementation needs a projection layer. The safe first version
-should avoid pretending it can replace Codex internal history. It should inject
-assembled context as deterministic prompt/developer-instruction material around
-the current turn.
+因此实现需要一个投影层。安全的第一版应避免假装自己可以替换 Codex 内部历史。它应将组装后的上下文作为确定性的提示/开发者指令材料注入到当前回合周围。
 
 ### Prompt-cache stability matters
 
-For engines like lossless-claw, the assembled context should be deterministic
-for unchanged inputs. Do not add timestamps, random ids, or nondeterministic
-ordering to generated context text.
+对于像 lossless-claw 这样的 engine，组装后的上下文应在输入不变时保持确定性。不要在生成的上下文文本中添加时间戳、随机 id，或非确定性的排序。
 
 ### PI fallback semantics do not change
 
-Harness selection remains as-is:
+harness 选择保持不变：
 
-- `runtime: "pi"` forces PI
-- `runtime: "codex"` selects the registered Codex harness
-- `runtime: "auto"` lets plugin harnesses claim supported providers
-- `fallback: "none"` disables PI fallback when no plugin harness matches
+- `runtime: "pi"` 强制使用 PI
+- `runtime: "codex"` 选择已注册的 Codex harness
+- `runtime: "auto"` 允许插件 harness 声明支持的 provider
+- `fallback: "none"` 在没有插件 harness 匹配时禁用 PI 回退
 
-This work changes what happens after the Codex harness is selected.
+此项工作只改变在选择了 Codex harness 之后发生的行为。
 
 ## Implementation plan
 
-### 1. Export or relocate reusable context-engine attempt helpers
+### 1. 导出或移动可复用的 context-engine 尝试辅助函数
 
-Today the reusable lifecycle helpers live under the PI runner:
+目前可复用的生命周期辅助函数位于 PI runner 下：
 
 - `src/agents/pi-embedded-runner/run/attempt.context-engine-helpers.ts`
 - `src/agents/pi-embedded-runner/run/attempt.prompt-helpers.ts`
 - `src/agents/pi-embedded-runner/context-engine-maintenance.ts`
 
-Codex should not import from an implementation path whose name implies PI if we
-can avoid it.
+如果可避免，Codex 不应从一个名字暗示 PI 的实现路径导入。
 
-Create a harness-neutral module, for example:
+创建一个与 harness 无关的模块，例如：
 
 - `src/agents/harness/context-engine-lifecycle.ts`
 
-Move or re-export:
+移动或重新导出：
 
 - `runAttemptContextEngineBootstrap`
 - `assembleAttemptContextEngine`
 - `finalizeAttemptContextEngineTurn`
 - `buildAfterTurnRuntimeContext`
 - `buildAfterTurnRuntimeContextFromUsage`
-- a small wrapper around `runContextEngineMaintenance`
+- 一个围绕 `runContextEngineMaintenance` 的小包装器
 
-Keep PI imports working either by re-exporting from the old files or updating PI
-call sites in the same PR.
+通过从旧文件重新导出或在同一 PR 中更新 PI 调用点，保持 PI 导入可用。
 
-The neutral helper names should not mention PI.
+这些中性辅助函数名不应提及 PI。
 
-Suggested names:
+建议名称：
 
 - `bootstrapHarnessContextEngine`
 - `assembleHarnessContextEngine`
@@ -193,23 +176,21 @@ Suggested names:
 - `buildHarnessContextEngineRuntimeContext`
 - `runHarnessContextEngineMaintenance`
 
-### 2. Add a Codex context projection helper
+### 2. 添加 Codex context 投影辅助函数
 
-Add a new module:
+添加一个新模块：
 
 - `extensions/codex/src/app-server/context-engine-projection.ts`
 
-Responsibilities:
+职责：
 
-- Accept the assembled `AgentMessage[]`, original mirrored history, and current
-  prompt.
-- Determine which context belongs in developer instructions vs current user
-  input.
-- Preserve the current user prompt as the final actionable request.
-- Render prior messages in a stable, explicit format.
-- Avoid volatile metadata.
+- 接受组装后的 `AgentMessage[]`、原始镜像历史和当前提示。
+- 判断哪些 context 应进入开发者指令，哪些应进入当前用户输入。
+- 保留当前用户提示作为最终可执行请求。
+- 以稳定、明确的格式渲染先前消息。
+- 避免易变元数据。
 
-Proposed API:
+建议 API：
 
 ```ts
 export type CodexContextProjection = {
@@ -227,18 +208,18 @@ export function projectContextEngineAssemblyForCodex(params: {
 }): CodexContextProjection;
 ```
 
-Recommended first projection:
+推荐的首版投影：
 
-- Put `systemPromptAddition` into developer instructions.
-- Put the assembled transcript context before the current prompt in `promptText`.
-- Label it clearly as OpenClaw assembled context.
-- Keep current prompt last.
-- Exclude duplicate current user prompt if it already appears at the tail.
+- 将 `systemPromptAddition` 放入开发者指令。
+- 将组装后的转录上下文放在 `promptText` 中当前提示之前。
+- 清楚标注其为 OpenClaw 组装的上下文。
+- 保留当前提示在最后。
+- 如果当前用户提示已经出现在尾部，则排除重复项。
 
-Example prompt shape:
+示例 prompt 形状：
 
 ```text
-OpenClaw assembled context for this turn:
+OpenClaw 为本回合组装的上下文：
 
 <conversation_context>
 [user]
@@ -248,28 +229,24 @@ OpenClaw assembled context for this turn:
 ...
 </conversation_context>
 
-Current user request:
+当前用户请求：
 ...
 ```
 
-This is less elegant than native Codex history surgery, but it is implementable
-inside OpenClaw and preserves context-engine semantics.
+这不如原生 Codex 历史操作优雅，但它可以在 OpenClaw 内实现，并保留 context-engine 语义。
 
-Future improvement: if Codex app-server exposes a protocol for replacing or
-supplementing thread history, swap this projection layer to use that API.
+未来改进：如果 Codex app-server 暴露了用于替换或补充线程历史的协议，则将此投影层切换为使用该 API。
 
-### 3. Wire bootstrap before Codex thread startup
+### 3. 在 Codex thread 启动前接入 bootstrap
 
-In `extensions/codex/src/app-server/run-attempt.ts`:
+在 `extensions/codex/src/app-server/run-attempt.ts` 中：
 
-- Read mirrored session history as today.
-- Determine whether the session file existed before this run. Prefer a helper
-  that checks `fs.stat(params.sessionFile)` before mirroring writes.
-- Open a `SessionManager` or use a narrow session manager adapter if the helper
-  requires it.
-- Call the neutral bootstrap helper when `params.contextEngine` exists.
+- 像现在一样读取镜像的会话历史。
+- 确定会话文件在本次运行前是否存在。优先使用一个辅助函数，在镜像写入前检查 `fs.stat(params.sessionFile)`。
+- 如辅助函数需要，则打开 `SessionManager` 或使用一个窄化的 session manager 适配器。
+- 当 `params.contextEngine` 存在时，调用中性的 bootstrap 辅助函数。
 
-Pseudo-flow:
+伪流程：
 
 ```ts
 const hadSessionFile = await fileExists(params.sessionFile);
@@ -289,24 +266,20 @@ await bootstrapHarnessContextEngine({
 });
 ```
 
-Use the same `sessionKey` convention as the Codex tool bridge and transcript
-mirror. Today Codex computes `sandboxSessionKey` from `params.sessionKey` or
-`params.sessionId`; use that consistently unless there is a reason to preserve
-raw `params.sessionKey`.
+使用与 Codex 工具桥和转录镜像相同的 `sessionKey` 约定。目前 Codex 会根据 `params.sessionKey` 或 `params.sessionId` 计算 `sandboxSessionKey`；除非有理由保留原始 `params.sessionKey`，否则应始终如一地使用它。
 
-### 4. Wire assemble before `thread/start` / `thread/resume` and `turn/start`
+### 4. 在 `thread/start` / `thread/resume` 和 `turn/start` 前接入 assemble
 
-In `runCodexAppServerAttempt`:
+在 `runCodexAppServerAttempt` 中：
 
-1. Build dynamic tools first, so the context engine sees the actual available
-   tool names.
-2. Read mirrored session history.
-3. Run context-engine `assemble(...)` when `params.contextEngine` exists.
-4. Project the assembled result into:
-   - developer instruction addition
-   - prompt text for `turn/start`
+1. 先构建动态工具，以便 context engine 能看到实际可用的工具名。
+2. 读取镜像的会话历史。
+3. 当 `params.contextEngine` 存在时运行 context-engine `assemble(...)`。
+4. 将组装结果投影为：
+   - 开发者指令补充
+   - `turn/start` 的 prompt 文本
 
-The existing hook call:
+现有的钩子调用：
 
 ```ts
 resolveAgentHarnessBeforePromptBuildResult({
@@ -317,59 +290,50 @@ resolveAgentHarnessBeforePromptBuildResult({
 });
 ```
 
-should become context-aware:
+应变为 context-aware：
 
-1. compute base developer instructions with `buildDeveloperInstructions(params)`
-2. apply context-engine assembly/projection
-3. run `before_prompt_build` with the projected prompt/developer instructions
+1. 使用 `buildDeveloperInstructions(params)` 计算基础开发者指令
+2. 应用 context-engine 的 assembly/projection
+3. 运行 `before_prompt_build`，输入投影后的 prompt / 开发者指令
 
-This order lets generic prompt hooks see the same prompt Codex will receive. If
-we need strict PI parity, run context-engine assembly before hook composition,
-because PI applies context-engine `systemPromptAddition` to the final system
-prompt after its prompt pipeline. The important invariant is that both context
-engine and hooks get a deterministic, documented order.
+这个顺序能让通用 prompt 钩子看到 Codex 实际将接收的同一份 prompt。若需要严格 PI 对齐，则应在钩子组合之前运行 context-engine assemble，因为 PI 会在其 prompt 管线之后，将 context-engine 的 `systemPromptAddition` 应用到最终 system prompt。关键不变量是：context engine 和钩子都应获得确定且有文档记录的顺序。
 
-Recommended order for first implementation:
+首个实现建议顺序：
 
 1. `buildDeveloperInstructions(params)`
 2. context-engine `assemble()`
-3. append/prepend `systemPromptAddition` to developer instructions
-4. project assembled messages into prompt text
+3. 将 `systemPromptAddition` 追加/前置到开发者指令
+4. 将组装后的消息投影为 prompt 文本
 5. `resolveAgentHarnessBeforePromptBuildResult(...)`
-6. pass final developer instructions to `startOrResumeThread(...)`
-7. pass final prompt text to `buildTurnStartParams(...)`
+6. 将最终开发者指令传给 `startOrResumeThread(...)`
+7. 将最终 prompt 文本传给 `buildTurnStartParams(...)`
 
-The spec should be encoded in tests so future changes do not reorder it by
-accident.
+本规范应写入测试，以便未来更改不会意外重新排序。
 
-### 5. Preserve prompt-cache stable formatting
+### 5. 保持 prompt-cache 稳定格式
 
-The projection helper must produce byte-stable output for identical inputs:
+投影辅助函数必须针对相同输入产生字节级稳定输出：
 
-- stable message order
-- stable role labels
-- no generated timestamps
-- no object key order leakage
-- no random delimiters
-- no per-run ids
+- 稳定的消息顺序
+- 稳定的角色标签
+- 不生成时间戳
+- 不泄露对象键顺序
+- 不使用每次运行不同的 id
+- 不使用随机分隔符
 
-Use fixed delimiters and explicit sections.
+使用固定分隔符和明确区块。
 
-### 6. Wire post-turn after transcript mirroring
+### 6. 在转录镜像之后接入 post-turn
 
-Codex's `CodexAppServerEventProjector` builds a local `messagesSnapshot` for the
-current turn. `mirrorTranscriptBestEffort(...)` writes that snapshot into the
-OpenClaw transcript mirror.
+Codex 的 `CodexAppServerEventProjector` 会为当前回合构建一个本地 `messagesSnapshot`。
+`mirrorTranscriptBestEffort(...)` 会将该快照写入 OpenClaw 的转录镜像。
 
-After mirroring succeeds or fails, call the context-engine finalizer with the
-best available message snapshot:
+在镜像成功或失败之后，都使用可获得的最佳消息快照调用 context-engine finalizer：
 
-- Prefer full mirrored session context after the write, because `afterTurn`
-  expects the session snapshot, not only the current turn.
-- Fall back to `historyMessages + result.messagesSnapshot` if the session file
-  cannot be reopened.
+- 优先在写入后使用完整的镜像会话上下文，因为 `afterTurn` 需要的是会话快照，而不仅是当前回合。
+- 如果无法重新打开会话文件，则退回到 `historyMessages + result.messagesSnapshot`。
 
-Pseudo-flow:
+伪流程：
 
 ```ts
 const prePromptMessageCount = historyMessages.length;
@@ -402,164 +366,142 @@ await finalizeHarnessContextEngineTurn({
 });
 ```
 
-If mirroring fails, still call `afterTurn` with the fallback snapshot, but log
-that the context engine is ingesting from fallback turn data.
+如果镜像失败，仍然要使用回退快照调用 `afterTurn`，但应记录 context engine 正在从回退的回合数据摄取。
 
-### 7. Normalize usage and prompt-cache runtime context
+### 7. 标准化 usage 和 prompt-cache 运行时上下文
 
-Codex results include normalized usage from app-server token notifications when
-available. Pass that usage into the context-engine runtime context.
+Codex 结果在可用时会包含来自 app-server token 通知的标准化 usage。将该 usage 传入 context-engine 运行时上下文。
 
-If Codex app-server eventually exposes cache read/write details, map them into
-`ContextEnginePromptCacheInfo`. Until then, omit `promptCache` rather than
-inventing zeros.
+如果 Codex app-server 将来暴露缓存读/写细节，则将其映射到 `ContextEnginePromptCacheInfo`。在此之前，不要凭空填入 0，而应省略 `promptCache`。
 
-### 8. Compaction policy
+### 8. 压缩策略
 
-There are two compaction systems:
+存在两套压缩系统：
 
 1. OpenClaw context-engine `compact()`
-2. Codex app-server native `thread/compact/start`
+2. Codex app-server 原生 `thread/compact/start`
 
-Do not silently conflate them.
+不要悄悄将它们混为一谈。
 
-#### `/compact` and explicit OpenClaw compaction
+#### `/compact` 和显式 OpenClaw 压缩
 
-When the selected context engine has `info.ownsCompaction === true`, explicit
-OpenClaw compaction should prefer the context engine's `compact()` result for
-the OpenClaw transcript mirror and plugin state.
+当所选 context engine 的 `info.ownsCompaction === true` 时，显式 OpenClaw 压缩应优先使用 context engine 的 `compact()` 结果来处理 OpenClaw 转录镜像和插件状态。
 
-When the selected Codex harness has a native thread binding, we may additionally
-request Codex native compaction to keep the app-server thread healthy, but this
-must be reported as a separate backend action in details.
+当所选 Codex harness 拥有原生线程绑定时，也可以额外请求 Codex 原生压缩，以保持 app-server 线程健康，但这必须在 details 中作为单独的后端动作报告。
 
-Recommended behavior:
+建议行为：
 
-- If `contextEngine.info.ownsCompaction === true`:
-  - call context-engine `compact()` first
-  - then best-effort call Codex native compaction when a thread binding exists
-  - return the context-engine result as the primary result
-  - include Codex native compaction status in `details.codexNativeCompaction`
-- If the active context engine does not own compaction:
-  - preserve current Codex native compaction behavior
+- 如果 `contextEngine.info.ownsCompaction === true`：
+  - 先调用 context-engine `compact()`
+  - 然后在存在线程绑定时尽最大努力调用 Codex 原生压缩
+  - 将 context-engine 结果作为主要结果返回
+  - 在 `details.codexNativeCompaction` 中包含 Codex 原生压缩状态
+- 如果活动 context engine 不拥有压缩职责：
+  - 保留当前 Codex 原生压缩行为
 
-This likely requires changing `extensions/codex/src/app-server/compact.ts` or
-wrapping it from the generic compaction path, depending on where
-`maybeCompactAgentHarnessSession(...)` is invoked.
+这很可能需要修改 `extensions/codex/src/app-server/compact.ts`，或者从通用压缩路径对其进行包装，具体取决于
+`maybeCompactAgentHarnessSession(...)` 的调用位置。
 
-#### In-turn Codex native contextCompaction events
+#### 回合内 Codex 原生 contextCompaction 事件
 
-Codex may emit `contextCompaction` item events during a turn. Keep the current
-before/after compaction hook emission in `event-projector.ts`, but do not treat
-that as a completed context-engine compaction.
+Codex 可能在回合期间发出 `contextCompaction` item 事件。保持当前在 `event-projector.ts` 中的前/后压缩钩子发射，但不要将其视为已完成的 context-engine 压缩。
 
-For engines that own compaction, emit an explicit diagnostic when Codex performs
-native compaction anyway:
+对于拥有压缩职责的 engine，如果 Codex 仍然执行原生压缩，请发出明确的诊断：
 
-- stream/event name: existing `compaction` stream is acceptable
-- details: `{ backend: "codex-app-server", ownsCompaction: true }`
+- stream/event 名称：现有的 `compaction` stream 即可
+- details：`{ backend: "codex-app-server", ownsCompaction: true }`
 
-This makes the split auditable.
+这样可以让职责拆分可审计。
 
-### 9. Session reset and binding behavior
+### 9. 会话重置与绑定行为
 
-The existing Codex harness `reset(...)` clears the Codex app-server binding from
-the OpenClaw session file. Preserve that behavior.
+现有的 Codex harness `reset(...)` 会从 OpenClaw 会话文件中清除 Codex app-server 绑定。请保留该行为。
 
-Also ensure context-engine state cleanup continues to happen through existing
-OpenClaw session lifecycle paths. Do not add Codex-specific cleanup unless the
-context-engine lifecycle currently misses reset/delete events for all harnesses.
+同时确保 context-engine 状态清理继续通过现有的 OpenClaw 会话生命周期路径进行。除非当前 context-engine 生命周期对所有 harness 都遗漏了 reset/delete 事件，否则不要添加 Codex 特定清理。
 
-### 10. Error handling
+### 10. 错误处理
 
-Follow PI semantics:
+遵循 PI 语义：
 
-- bootstrap failures warn and continue
-- assemble failures warn and fall back to unassembled pipeline messages/prompt
-- afterTurn/ingest failures warn and mark post-turn finalization unsuccessful
-- maintenance runs only after successful, non-aborted, non-yield turns
-- compaction errors should not be retried as fresh prompts
+- bootstrap 失败：发出警告并继续
+- assemble 失败：发出警告并回退到未组装的管线消息 / prompt
+- afterTurn/ingest 失败：发出警告并将回合后最终化标记为不成功
+- maintenance 仅在成功、未中止、未 yield 的回合后运行
+- 压缩错误不应作为新的 prompt 重试
 
-Codex-specific additions:
+Codex 特定补充：
 
-- If context projection fails, warn and fall back to the original prompt.
-- If transcript mirror fails, still attempt context-engine finalization with
-  fallback messages.
-- If Codex native compaction fails after context-engine compaction succeeds,
-  do not fail the whole OpenClaw compaction when the context engine is primary.
+- 如果 context 投影失败，发出警告并回退到原始 prompt。
+- 如果转录镜像失败，仍尝试使用回退消息进行 context-engine 最终化。
+- 如果在 context-engine 压缩成功后 Codex 原生压缩失败，当 context engine 是主路径时，不要让整个 OpenClaw 压缩失败。
 
-## Test plan
+## 测试计划
 
-### Unit tests
+### 单元测试
 
-Add tests under `extensions/codex/src/app-server`:
+在 `extensions/codex/src/app-server` 下添加测试：
 
 1. `run-attempt.context-engine.test.ts`
-   - Codex calls `bootstrap` when a session file exists.
-   - Codex calls `assemble` with mirrored messages, token budget, tool names,
-     citations mode, model id, and prompt.
-   - `systemPromptAddition` is included in developer instructions.
-   - Assembled messages are projected into the prompt before current request.
-   - Codex calls `afterTurn` after transcript mirroring.
-   - Without `afterTurn`, Codex calls `ingestBatch` or per-message `ingest`.
-   - Turn maintenance runs after successful turns.
-   - Turn maintenance does not run on prompt error, abort, or yield abort.
+   - 当会话文件存在时，Codex 调用 `bootstrap`。
+   - Codex 使用镜像消息、token 预算、工具名称、引用模式、模型 id 和 prompt 调用 `assemble`。
+   - `systemPromptAddition` 会包含在开发者指令中。
+   - 组装后的消息会在当前请求之前投影到 prompt 中。
+   - Codex 在转录镜像之后调用 `afterTurn`。
+   - 在没有 `afterTurn` 的情况下，Codex 调用 `ingestBatch` 或按消息逐条调用 `ingest`。
+   - 成功回合后会运行回合维护。
+   - 在 prompt 错误、abort 或 yield abort 时不会运行回合维护。
 
 2. `context-engine-projection.test.ts`
-   - stable output for identical inputs
-   - no duplicate current prompt when assembled history includes it
-   - handles empty history
-   - preserves role order
-   - includes system prompt addition only in developer instructions
+   - 相同输入应有稳定输出
+   - 当组装后的历史中已包含当前 prompt 时，不应重复当前 prompt
+   - 处理空历史
+   - 保持角色顺序
+   - 仅在开发者指令中包含系统 prompt 附加内容
 
 3. `compact.context-engine.test.ts`
-   - owning context engine primary result wins
-   - Codex native compaction status appears in details when also attempted
-   - Codex native failure does not fail owning context-engine compaction
-   - non-owning context engine preserves current native compaction behavior
+   - 所属 context engine 的主要结果获胜
+   - 当 Codex 原生压缩也被尝试时，Codex 原生压缩状态会出现在详情中
+   - Codex 原生失败不会导致所属 context-engine 压缩失败
+   - 非所属 context engine 保留当前原生压缩行为
 
-### Existing tests to update
+### 需要更新的现有测试
 
-- `extensions/codex/src/app-server/run-attempt.test.ts` if present, otherwise
-  nearest Codex app-server run tests.
-- `extensions/codex/src/app-server/event-projector.test.ts` only if compaction
-  event details change.
-- `src/agents/harness/selection.test.ts` should not need changes unless config
-  behavior changes; it should remain stable.
-- PI context-engine tests should continue to pass unchanged.
+- `extensions/codex/src/app-server/run-attempt.test.ts`，如果存在；否则更新最近的 Codex app-server 运行测试。
+- 仅当压缩事件详情发生变化时，更新 `extensions/codex/src/app-server/event-projector.test.ts`。
+- `src/agents/harness/selection.test.ts` 通常不需要修改，除非配置行为发生变化；它应保持稳定。
+- PI context-engine 测试应继续保持不变并通过。
 
-### Integration / live tests
+### 集成 / 线上测试
 
-Add or extend live Codex harness smoke tests:
+添加或扩展 Codex harness 的冒烟线上测试：
 
-- configure `plugins.slots.contextEngine` to a test engine
-- configure `agents.defaults.model` to a `codex/*` model
-- configure `agents.defaults.embeddedHarness.runtime = "codex"`
-- assert test engine observed:
+- 将 `plugins.slots.contextEngine` 配置为测试引擎
+- 将 `agents.defaults.model` 配置为 `codex/*` 模型
+- 将 `agents.defaults.embeddedHarness.runtime` 配置为 `"codex"`
+- 断言测试引擎观察到了：
   - bootstrap
   - assemble
-  - afterTurn or ingest
+  - afterTurn 或 ingest
   - maintenance
 
-Avoid requiring lossless-claw in OpenClaw core tests. Use a small in-repo fake
-context engine plugin.
+避免在 OpenClaw 核心测试中依赖 lossless-claw。使用一个小型、仓库内的伪 context engine 插件。
 
-## Observability
+## 可观测性
 
-Add debug logs around Codex context-engine lifecycle calls:
+为 Codex context-engine 生命周期调用添加调试日志：
 
 - `codex context engine bootstrap started/completed/failed`
 - `codex context engine assemble applied`
 - `codex context engine finalize completed/failed`
-- `codex context engine maintenance skipped` with reason
+- `codex context engine maintenance skipped` 并附带原因
 - `codex native compaction completed alongside context-engine compaction`
 
-Avoid logging full prompts or transcript contents.
+避免记录完整 prompt 或转录内容。
 
-Add structured fields where useful:
+在合适的地方添加结构化字段：
 
 - `sessionId`
-- `sessionKey` redacted or omitted according to existing logging practice
+- `sessionKey`，按现有日志实践进行脱敏或省略
 - `engineId`
 - `threadId`
 - `turnId`
@@ -567,58 +509,42 @@ Add structured fields where useful:
 - `estimatedTokens`
 - `hasSystemPromptAddition`
 
-## Migration / compatibility
+## 迁移 / 兼容性
 
-This should be backward-compatible:
+这应该保持向后兼容：
 
-- If no context engine is configured, legacy context engine behavior should be
-  equivalent to today's Codex harness behavior.
-- If context-engine `assemble` fails, Codex should continue with the original
-  prompt path.
-- Existing Codex thread bindings should remain valid.
-- Dynamic tool fingerprinting should not include context-engine output; otherwise
-  every context change could force a new Codex thread. Only the tool catalog
-  should affect the dynamic tool fingerprint.
+- 如果未配置 context engine，传统的 context engine 行为应与当前 Codex harness 行为等价。
+- 如果 context-engine `assemble` 失败，Codex 应继续使用原始 prompt 路径。
+- 现有的 Codex thread 绑定应继续有效。
+- 动态工具指纹不应包含 context-engine 输出；否则每次 context 变化都可能强制创建新的 Codex thread。只有工具目录应影响动态工具指纹。
 
-## Open questions
+## 未决问题
 
-1. Should assembled context be injected entirely into the user prompt, entirely
-   into developer instructions, or split?
+1. 组装后的上下文应该完全注入到 user prompt 中、完全注入到 developer instructions 中，还是拆分注入？
 
-   Recommendation: split. Put `systemPromptAddition` in developer instructions;
-   put assembled transcript context in the user prompt wrapper. This best matches
-   the current Codex protocol without mutating native thread history.
+   建议：拆分。将 `systemPromptAddition` 放入 developer instructions；将组装后的转录上下文放入 user prompt 包装中。这最符合当前 Codex 协议，同时不修改原生 thread 历史。
 
-2. Should Codex native compaction be disabled when a context engine owns
-   compaction?
+2. 当 context engine 负责压缩时，是否应禁用 Codex 原生压缩？
 
-   Recommendation: no, not initially. Codex native compaction may still be
-   necessary to keep the app-server thread alive. But it must be reported as
-   native Codex compaction, not as context-engine compaction.
+   建议：不应，至少当前不应。Codex 原生压缩可能仍然是维持 app-server thread 存活所必需的。但它必须被报告为原生 Codex 压缩，而不是 context-engine 压缩。
 
-3. Should `before_prompt_build` run before or after context-engine assembly?
+3. `before_prompt_build` 应该在 context-engine assembly 之前还是之后运行？
 
-   Recommendation: after context-engine projection for Codex, so generic harness
-   hooks see the actual prompt/developer instructions Codex will receive. If PI
-   parity requires the opposite, encode the chosen order in tests and document it
-   here.
+   建议：对 Codex 来说在 context-engine projection 之后运行，这样通用 harness 钩子看到的是 Codex 实际将接收的 prompt/developer instructions。如果 PI 对等性要求相反，则把所选顺序编码到测试中并在此处记录。
 
-4. Can Codex app-server accept a future structured context/history override?
+4. Codex app-server 未来是否可以接受结构化的 context/history 覆盖？
 
-   Unknown. If it can, replace the text projection layer with that protocol and
-   keep the lifecycle calls unchanged.
+   未知。如果可以，则用该协议替换文本投影层，并保持生命周期调用不变。
 
-## Acceptance criteria
+## 验收标准
 
-- A `codex/*` embedded harness turn invokes the selected context engine's
-  assemble lifecycle.
-- A context-engine `systemPromptAddition` affects Codex developer instructions.
-- Assembled context affects the Codex turn input deterministically.
-- Successful Codex turns call `afterTurn` or ingest fallback.
-- Successful Codex turns run context-engine turn maintenance.
-- Failed/aborted/yield-aborted turns do not run turn maintenance.
-- Context-engine-owned compaction remains primary for OpenClaw/plugin state.
-- Codex native compaction remains auditable as native Codex behavior.
-- Existing PI context-engine behavior is unchanged.
-- Existing Codex harness behavior is unchanged when no non-legacy context engine
-  is selected or when assembly fails.
+- 一个 `codex/*` embedded harness 回合会调用所选 context engine 的 assemble 生命周期。
+- context-engine 的 `systemPromptAddition` 会影响 Codex 开发者指令。
+- 组装后的上下文会以确定性方式影响 Codex 回合输入。
+- 成功的 Codex 回合会调用 `afterTurn` 或 ingest 回退。
+- 成功的 Codex 回合会运行 context-engine 的回合维护。
+- 失败 / 中止 / yield-aborted 的回合不会运行回合维护。
+- 由 context-engine 负责的压缩对 OpenClaw / 插件状态仍然是主路径。
+- Codex 原生压缩仍可作为原生 Codex 行为被审计。
+- 现有 PI context-engine 行为保持不变。
+- 当未选择非传统的 context engine，或 assembly 失败时，现有 Codex harness 行为保持不变。

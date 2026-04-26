@@ -1,56 +1,56 @@
 ---
-summary: "Repository scripts: purpose, scope, and safety notes"
+summary: "仓库脚本：目的、范围及安全注意事项"
 read_when:
-  - Running scripts from the repo
-  - Adding or changing scripts under ./scripts
-title: "Scripts"
+  - 运行仓库中的脚本时
+  - 在 ./scripts 目录下添加或更改脚本时
+title: "脚本"
 ---
 
-The `scripts/` directory contains helper scripts for local workflows and ops tasks.
-Use these when a task is clearly tied to a script; otherwise prefer the CLI.
+`scripts/` 目录包含用于本地工作流和运维任务的辅助脚本。
+当任务明确与某个脚本相关时请使用这些脚本；否则优先使用 CLI。
 
-## Conventions
+## 规范
 
-- Scripts are **optional** unless referenced in docs or release checklists.
-- Prefer CLI surfaces when they exist (example: auth monitoring uses `openclaw models status --check`).
-- Assume scripts are host‑specific; read them before running on a new machine.
+- 脚本是**可选的**，除非文档或发布检查清单中有提及。
+- 优先使用已有的 CLI 界面（例如：认证监控使用 `openclaw models status --check`）。
+- 脚本通常是主机特定的；在新机器上运行前请先阅读脚本内容。
 
-## Auth monitoring scripts
+## 认证监控脚本
 
-Auth monitoring is covered in [Authentication](/gateway/authentication). The scripts under `scripts/` are optional extras for systemd/Termux phone workflows.
+认证监控在[认证](/gateway/authentication)中涵盖。`scripts/` 下的脚本是针对 systemd/Termux 手机工作流的可选附加组件。
 
-## GitHub read helper
+## GitHub 读取助手
 
-Use `scripts/gh-read` when you want `gh` to use a GitHub App installation token for repo-scoped read calls while leaving normal `gh` on your personal login for write actions.
+当你希望 `gh` 使用 GitHub App 安装令牌进行仓库范围的读取调用，同时将正常的 `gh` 保留在你的个人登录状态下用于写入操作时，请使用 `scripts/gh-read`。
 
-Required env:
+所需环境变量：
 
 - `OPENCLAW_GH_READ_APP_ID`
 - `OPENCLAW_GH_READ_PRIVATE_KEY_FILE`
 
-Optional env:
+可选环境变量：
 
-- `OPENCLAW_GH_READ_INSTALLATION_ID` when you want to skip repo-based installation lookup
-- `OPENCLAW_GH_READ_PERMISSIONS` as a comma-separated override for the read permission subset to request
+- `OPENCLAW_GH_READ_INSTALLATION_ID`：当你希望跳过基于仓库的安装查找时
+- `OPENCLAW_GH_READ_PERMISSIONS`：作为以逗号分隔的覆盖，用于请求读取权限子集
 
-Repo resolution order:
+仓库解析顺序：
 
 - `gh ... -R owner/repo`
 - `GH_REPO`
 - `git remote origin`
 
-Examples:
+示例：
 
 - `scripts/gh-read pr view 123`
 - `scripts/gh-read run list -R openclaw/openclaw`
 - `scripts/gh-read api repos/openclaw/openclaw/pulls/123`
 
-## When adding scripts
+## 添加脚本时
 
 - Keep scripts focused and documented.
-- Add a short entry in the relevant doc (or create one if missing).
+- 在相关文档中添加一条简短条目（如果缺少则创建一个）。
 
-## Related
+## 相关内容
 
 - [Testing](/help/testing)
 - [Testing live](/help/testing-live)

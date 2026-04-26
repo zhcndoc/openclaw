@@ -1,66 +1,61 @@
 ---
-summary: "Health check commands and gateway health monitoring"
+summary: "健康检查命令和网关健康监控"
 read_when:
-  - Diagnosing channel connectivity or gateway health
-  - Understanding health check CLI commands and options
-title: "Health checks"
+  - 诊断频道连接或网关健康状态
+  - 了解健康检查 CLI 命令和选项
+title: "健康检查"
 ---
 
-Short guide to verify channel connectivity without guessing.
+用于在不猜测的情况下验证频道连接的简要指南。
 
-## Quick checks
+## 快速检查
 
-- `openclaw status` — local summary: gateway reachability/mode, update hint, linked channel auth age, sessions + recent activity.
-- `openclaw status --all` — full local diagnosis (read-only, color, safe to paste for debugging).
-- `openclaw status --deep` — asks the running gateway for a live health probe (`health` with `probe:true`), including per-account channel probes when supported.
-- `openclaw health` — asks the running gateway for its health snapshot (WS-only; no direct channel sockets from the CLI).
-- `openclaw health --verbose` — forces a live health probe and prints gateway connection details.
-- `openclaw health --json` — machine-readable health snapshot output.
-- Send `/status` as a standalone message in WhatsApp/WebChat to get a status reply without invoking the agent.
-- Logs: tail `/tmp/openclaw/openclaw-*.log` and filter for `web-heartbeat`, `web-reconnect`, `web-auto-reply`, `web-inbound`.
+- `openclaw status` — 本地摘要：网关可达性/模式，更新提示，关联频道认证时长，会话 + 最近活动。
+- `openclaw status --all` — 完整本地诊断（只读，彩色，可安全粘贴用于调试）。
+- `openclaw status --deep` — 向运行中的网关请求实时健康探测（`health` 带 `probe:true`），支持时包括每账户频道探测。
+- `openclaw health` — 向运行中的网关请求其健康快照（仅 WS；CLI 无直接频道套接字）。
+- `openclaw health --verbose` — 强制实时健康探测并打印网关连接详情。
+- `openclaw health --json` — 机器可读的健康快照输出。
+- 在 WhatsApp/WebChat 中发送 `/status` 作为独立消息，以获取状态回复而不调用代理。
+- 日志：tail `/tmp/openclaw/openclaw-*.log` 并过滤 `web-heartbeat`, `web-reconnect`, `web-auto-reply`, `web-inbound`。
 
-## Deep diagnostics
+## 深度诊断
 
-- Creds on disk: `ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json` (mtime should be recent).
-- Session store: `ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json` (path can be overridden in config). Count and recent recipients are surfaced via `status`.
-- Relink flow: `openclaw channels logout && openclaw channels login --verbose` when status codes 409–515 or `loggedOut` appear in logs. (Note: the QR login flow auto-restarts once for status 515 after pairing.)
-- Diagnostics are enabled by default. The gateway records operational facts unless `diagnostics.enabled: false` is set. Memory events record RSS/heap byte counts, threshold pressure, and growth pressure. Oversized-payload events record what was rejected, truncated, or chunked, plus sizes and limits when available. They do not record the message text, attachment contents, webhook body, raw request or response body, tokens, cookies, or secret values. The same heartbeat starts the bounded stability recorder, which is available through `openclaw gateway stability` or the `diagnostics.stability` Gateway RPC. Fatal Gateway exits, shutdown timeouts, and restart startup failures persist the latest recorder snapshot under `~/.openclaw/logs/stability/` when events exist; inspect the newest saved bundle with `openclaw gateway stability --bundle latest`.
-- For bug reports, run `openclaw gateway diagnostics export` and attach the generated zip. The export combines a Markdown summary, the newest stability bundle, sanitized log metadata, sanitized Gateway status/health snapshots, and config shape. It is meant to be shared: chat text, webhook bodies, tool outputs, credentials, cookies, account/message identifiers, and secret values are omitted or redacted. See [Diagnostics Export](/gateway/diagnostics).
+- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应该是最近的）。
+- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json`（路径可在配置中覆盖）。计数和最近收件人会通过 `status` 显示。
+- 重新关联流程：当日志中出现状态码 409–515 或 `loggedOut` 时，运行 `openclaw channels logout && openclaw channels login --verbose`。（注意：二维码登录流程在配对后会针对状态 515 自动重启一次。）
+- 诊断默认启用。除非设置 `diagnostics.enabled: false`，网关会记录运行事实。内存事件会记录 RSS/heap 字节数、阈值压力和增长压力。超大负载事件会记录被拒绝、被截断或被分块的内容，以及在可用时的大小和限制。它们不会记录消息文本、附件内容、webhook 正文、原始请求或响应正文、令牌、cookie 或密钥值。相同的心跳还会启动有界稳定性记录器，可通过 `openclaw gateway stability` 或 `diagnostics.stability` Gateway RPC 获取。当存在事件时，致命的 Gateway 退出、关闭超时以及重启启动失败会将最新记录器快照持久化到 `~/.openclaw/logs/stability/`；可使用 `openclaw gateway stability --bundle latest` 检查最新保存的 bundle。
+- 对于 bug 报告，运行 `openclaw gateway diagnostics export` 并附加生成的 zip。导出内容包括 Markdown 摘要、最新的稳定性 bundle、已清理的日志元数据、已清理的 Gateway 状态/健康快照以及配置结构。它的设计目的是便于共享：会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符和密钥值。参见 [Diagnostics Export](/gateway/diagnostics)。
 
-## Health monitor config
+## 健康监控配置
 
-- `gateway.channelHealthCheckMinutes`: how often the gateway checks channel health. Default: `5`. Set `0` to disable health-monitor restarts globally.
-- `gateway.channelStaleEventThresholdMinutes`: how long a connected channel can stay idle before the health monitor treats it as stale and restarts it. Default: `30`. Keep this greater than or equal to `gateway.channelHealthCheckMinutes`.
-- `gateway.channelMaxRestartsPerHour`: rolling one-hour cap for health-monitor restarts per channel/account. Default: `10`.
-- `channels.<provider>.healthMonitor.enabled`: disable health-monitor restarts for a specific channel while leaving global monitoring enabled.
-- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`: multi-account override that wins over the channel-level setting.
-- These per-channel overrides apply to the built-in channel monitors that expose them today: Discord, Google Chat, iMessage, Microsoft Teams, Signal, Slack, Telegram, and WhatsApp.
+- `gateway.channelHealthCheckMinutes`：网关检查频道健康的频率。默认值：`5`。设置为 `0` 以全局禁用健康监控重启。
+- `gateway.channelStaleEventThresholdMinutes`：在频道连接闲置多久后，健康监控认为频道过时并重启它。默认值：`30`。保持该值大于或等于 `gateway.channelHealthCheckMinutes`。
+- `gateway.channelMaxRestartsPerHour`：单频道/账号每小时健康监控重启次数的滚动上限。默认值：`10`。
+- `channels.<provider>.healthMonitor.enabled`：禁用特定频道的健康监控重启，但保留全局监控启用。
+- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户覆盖设置，优先于频道级设置。
+- 这些每频道的覆盖适用于目前已暴露的内置频道监控：Discord、Google Chat、iMessage、Microsoft Teams、Signal、Slack、Telegram 和 WhatsApp。
 
-## When something fails
+## 当出现问题时
 
-- `logged out` or status 409–515 → relink with `openclaw channels logout` then `openclaw channels login`.
-- Gateway unreachable → start it: `openclaw gateway --port 18789` (use `--force` if the port is busy).
-- No inbound messages → confirm linked phone is online and the sender is allowed (`channels.whatsapp.allowFrom`); for group chats, ensure allowlist + mention rules match (`channels.whatsapp.groups`, `agents.list[].groupChat.mentionPatterns`).
+- `logged out` 或状态码 409–515 → 使用 `openclaw channels logout` 然后 `openclaw channels login` 重新关联。
+- 网关不可达 → 启动网关：`openclaw gateway --port 18789`（如果端口被占用，请使用 `--force`）。
+- 没有收到入站消息 → 确认关联的电话号码在线且发送者被允许（`channels.whatsapp.allowFrom`）；对于群聊，确认白名单和 @ 规则匹配（`channels.whatsapp.groups`，`agents.list[].groupChat.mentionPatterns`）。
 
-## Dedicated "health" command
+## 专用“健康”命令
 
-`openclaw health` asks the running gateway for its health snapshot (no direct channel
-sockets from the CLI). By default it can return a fresh cached gateway snapshot; the
-gateway then refreshes that cache in the background. `openclaw health --verbose` forces
-a live probe instead. The command reports linked creds/auth age when available,
-per-channel probe summaries, session-store summary, and a probe duration. It exits
-non-zero if the gateway is unreachable or the probe fails/timeouts.
+`openclaw health` 向运行中的网关请求其健康快照（CLI 无直接频道套接字）。默认情况下，它可以返回新鲜的缓存网关快照；然后网关在后台刷新该缓存。`openclaw health --verbose` 则强制进行实时探测。该命令在可用时报告关联的凭据/认证时长、每频道探测摘要、会话存储摘要以及探测持续时间。如果网关不可达或探测失败/超时，则以非零状态退出。
 
-Options:
+选项：
 
-- `--json`: machine-readable JSON output
-- `--timeout <ms>`: override the default 10s probe timeout
-- `--verbose`: force a live probe and print gateway connection details
-- `--debug`: alias for `--verbose`
+- `--json`: 机器可读的 JSON 输出
+- `--timeout <ms>`: 覆盖默认的 10 秒探测超时
+- `--verbose`: 强制实时探测并打印网关连接详情
+- `--debug`: `--verbose` 的别名
 
-The health snapshot includes: `ok` (boolean), `ts` (timestamp), `durationMs` (probe time), per-channel status, agent availability, and session-store summary.
+健康快照包括：`ok`（布尔值）、`ts`（时间戳）、`durationMs`（探测耗时）、每频道状态、代理可用性以及会话存储摘要。
 
-## Related
+## 相关内容
 
 - [Gateway runbook](/gateway)
 - [Diagnostics export](/gateway/diagnostics)

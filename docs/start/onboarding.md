@@ -1,95 +1,88 @@
 ---
-summary: "First-run setup flow for OpenClaw (macOS app)"
+summary: "OpenClaw（macOS 应用）的首次运行设置流程"
 read_when:
-  - Designing the macOS onboarding assistant
-  - Implementing auth or identity setup
-title: "Onboarding (macOS app)"
-sidebarTitle: "Onboarding: macOS App"
+  - 设计 macOS 引导助手
+  - 实现身份验证或身份设置
+title: "引导（macOS 应用）"
+sidebarTitle: "引导：macOS 应用"
 ---
 
-This doc describes the **current** first‑run setup flow. The goal is a
-smooth “day 0” experience: pick where the Gateway runs, connect auth, run the
-wizard, and let the agent bootstrap itself.
-For a general overview of onboarding paths, see [Onboarding Overview](/start/onboarding-overview).
+本文档描述了**当前**的首次运行设置流程。目标是提供顺畅的“第 0 天”体验：选择 Gateway 的运行位置，连接身份验证，运行向导，并让代理自行启动并完成初始化。
+有关引导路径的一般概述，请参阅 [引导概览](/start/onboarding-overview)。
 
 <Steps>
-<Step title="Approve macOS warning">
+<Step title="批准 macOS 警告">
 <Frame>
 <img src="/assets/macos-onboarding/01-macos-warning.jpeg" alt="" />
 </Frame>
 </Step>
-<Step title="Approve find local networks">
+<Step title="批准查找本地网络">
 <Frame>
 <img src="/assets/macos-onboarding/02-local-networks.jpeg" alt="" />
 </Frame>
 </Step>
-<Step title="Welcome and security notice">
-<Frame caption="Read the security notice displayed and decide accordingly">
+<Step title="欢迎及安全通知">
+<Frame caption="阅读显示的安全通知并据此决定">
 <img src="/assets/macos-onboarding/03-security-notice.png" alt="" />
 </Frame>
 
-Security trust model:
+安全信任模型：
 
-- By default, OpenClaw is a personal agent: one trusted operator boundary.
-- Shared/multi-user setups require lock-down (split trust boundaries, keep tool access minimal, and follow [Security](/gateway/security)).
-- Local onboarding now defaults new configs to `tools.profile: "coding"` so fresh local setups keep filesystem/runtime tools without forcing the unrestricted `full` profile.
-- If hooks/webhooks or other untrusted content feeds are enabled, use a strong modern model tier and keep strict tool policy/sandboxing.
+- 默认情况下，OpenClaw 是个人代理：一个受信任的操作边界。
+- 共享/多用户配置需要锁定措施（拆分信任边界，保持工具访问最小化，并遵循[安全](/gateway/security)）。
+- 本地引导现在默认新配置为 `tools.profile: "coding"`，因此新的本地配置保持文件系统/运行时工具而不强制使用不受限的 `full` 配置文件。
+- 如果启用了 hooks/webhooks 或其他不受信内容源，请使用强大的现代模型层，并保持严格的工具策略/沙箱限制。
 
 </Step>
-<Step title="Local vs Remote">
+<Step title="本地 vs 远程">
 <Frame>
 <img src="/assets/macos-onboarding/04-choose-gateway.png" alt="" />
 </Frame>
 
-Where does the **Gateway** run?
+**Gateway** 运行在哪？
 
-- **This Mac (Local only):** onboarding can configure auth and write credentials
-  locally.
-- **Remote (over SSH/Tailnet):** onboarding does **not** configure local auth;
-  credentials must exist on the gateway host.
-- **Configure later:** skip setup and leave the app unconfigured.
+- **本机（仅本地）：** 引导可以配置身份验证并在本地写入凭据。
+- **远程（通过 SSH/Tailnet）：** 引导不会配置本地身份验证；凭据必须存在于 Gateway 主机上。
+- **稍后配置：** 跳过设置，保持应用未配置状态。
 
 <Tip>
-**Gateway auth tip:**
+**Gateway 身份验证提示：**
 
-- The wizard now generates a **token** even for loopback, so local WS clients must authenticate.
-- If you disable auth, any local process can connect; use that only on fully trusted machines.
-- Use a **token** for multi‑machine access or non‑loopback binds.
+- 向导现会生成**令牌**，即使是环回地址，故本地 WS 客户端也必须认证。
+- 如果禁用身份验证，任何本地进程均可连接；仅在完全信任的机器上使用此选项。
+- 多机器访问或非环回绑定时，使用**令牌**。
 
 </Tip>
 </Step>
-<Step title="Permissions">
-<Frame caption="Choose what permissions do you want to give OpenClaw">
+<Step title="权限">
+<Frame caption="选择您希望授予 OpenClaw 的权限">
 <img src="/assets/macos-onboarding/05-permissions.png" alt="" />
 </Frame>
 
-Onboarding requests TCC permissions needed for:
+引导请求的 TCC 权限包括：
 
-- Automation (AppleScript)
-- Notifications
-- Accessibility
-- Screen Recording
-- Microphone
-- Speech Recognition
-- Camera
-- Location
+- 自动化（AppleScript）
+- 通知
+- 辅助功能
+- 屏幕录制
+- 麦克风
+- 语音识别
+- 摄像头
+- 定位
 
 </Step>
 <Step title="CLI">
-  <Info>This step is optional</Info>
-  The app can install the global `openclaw` CLI via npm, pnpm, or bun.
-  It prefers npm first, then pnpm, then bun if that is the only detected
-  package manager. For the Gateway runtime, Node remains the recommended path.
+  <Info>此步骤为可选</Info>
+  应用可以通过 npm、pnpm 或 bun 安装全局 `openclaw` CLI。
+  它会优先使用 npm，其次是 pnpm；如果检测到的唯一包管理器是 bun，则使用 bun。对于 Gateway 运行时，Node 仍然是推荐路径。
 </Step>
-<Step title="Onboarding Chat (dedicated session)">
-  After setup, the app opens a dedicated onboarding chat session so the agent can
-  introduce itself and guide next steps. This keeps first‑run guidance separate
-  from your normal conversation. See [Bootstrapping](/start/bootstrapping) for
-  what happens on the gateway host during the first agent run.
+<Step title="引导聊天（专用会话）">
+  设置完成后，应用将打开专用引导聊天会话，代理可自我介绍并引导后续步骤。这样首次运行指导与您的正常对话分开。  
+  参见 [引导启动](/start/bootstrapping) 查看代理首次运行时 Gateway 主机上的操作。
 </Step>
 </Steps>
 
-## Related
+## 相关内容
 
-- [Onboarding overview](/start/onboarding-overview)
-- [Getting started](/start/getting-started)
+- [引导概览](/start/onboarding-overview)
+- [开始使用](/start/getting-started)

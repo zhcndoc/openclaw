@@ -1,85 +1,85 @@
-# Tweakcn Custom Theme Import Design
+# Tweakcn 自定义主题导入设计
 
-Status: approved in terminal on 2026-04-22
+状态：已于 2026-04-22 在终端中批准
 
-## Summary
+## 概要
 
-Add exactly one browser-local custom Control UI theme slot that can be imported from a tweakcn share link. The existing built-in theme families remain `claw`, `knot`, and `dash`. The new `custom` family behaves like a normal OpenClaw theme family and supports `light`, `dark`, and `system` mode when the imported tweakcn payload includes both light and dark token sets.
+新增且仅新增一个浏览器本地的自定义 Control UI 主题槽位，该槽位可以从 tweakcn 分享链接导入。现有内置主题家族保持为 `claw`、`knot` 和 `dash`。当导入的 tweakcn 载荷同时包含明暗两套 token 集时，新的 `custom` 家族会像普通的 OpenClaw 主题家族一样工作，并支持 `light`、`dark` 和 `system` 模式。
 
-The imported theme is stored only in the current browser profile with the rest of the Control UI settings. It is not written to gateway config and does not sync across devices or browsers.
+导入的主题仅存储在当前浏览器配置文件中，与 Control UI 的其余设置一起保存。它不会写入 gateway 配置，也不会在设备或浏览器之间同步。
 
-## Problem
+## 问题
 
-The Control UI theme system is currently closed over three hard-coded theme families:
+当前 Control UI 主题系统被闭合在三个硬编码主题家族之内：
 
 - `ui/src/ui/theme.ts`
 - `ui/src/ui/views/config.ts`
 - `ui/src/styles/base.css`
 
-Users can switch among built-in families and mode variants, but they cannot bring in a theme from tweakcn without editing repo CSS. The requested outcome is smaller than a general theming system: keep the three built-ins and add one user-controlled imported slot that can be replaced from a tweakcn link.
+用户可以在内置家族和模式变体之间切换，但不能在不编辑仓库 CSS 的情况下引入来自 tweakcn 的主题。这里需要的结果比通用主题系统更小：保留三个内置主题，并增加一个用户可控制的导入槽位，该槽位可以通过 tweakcn 链接替换。
 
-## Goals
+## 目标
 
-- Keep the existing built-in theme families unchanged.
-- Add exactly one imported custom slot, not a theme library.
-- Accept a tweakcn share link or a direct `https://tweakcn.com/r/themes/{id}` URL.
-- Persist the imported theme in browser local storage only.
-- Make the imported slot work with existing `light`, `dark`, and `system` mode controls.
-- Keep failure behavior safe: a bad import never breaks the active UI theme.
+- 保持现有内置主题家族不变。
+- 只添加一个导入的自定义槽位，不做主题库。
+- 接受 tweakcn 分享链接或直接的 `https://tweakcn.com/r/themes/{id}` URL。
+- 仅将导入主题持久化到浏览器本地存储中。
+- 让导入槽位与现有 `light`、`dark` 和 `system` 模式控制协同工作。
+- 保持失败行为安全：错误导入绝不会破坏当前激活的 UI 主题。
 
-## Non goals
+## 非目标
 
-- No multi-theme library or browser-local list of imports.
-- No gateway-side persistence or cross-device sync.
-- No arbitrary CSS editor or raw theme JSON editor.
-- No automatic loading of remote font assets from tweakcn.
-- No attempt to support tweakcn payloads that only expose one mode.
-- No repo-wide theming refactor beyond the seams required for the Control UI.
+- 不做多主题库，也不做浏览器本地的导入列表。
+- 不做 gateway 侧持久化或跨设备同步。
+- 不做任意 CSS 编辑器或原始主题 JSON 编辑器。
+- 不自动加载来自 tweakcn 的远程字体资源。
+- 不尝试支持只暴露单一模式的 tweakcn 载荷。
+- 不做超出 Control UI 所需接缝范围之外的全仓库主题重构。
 
-## User decisions already made
+## 已作出的用户决定
 
-- Keep the three built-in themes.
-- Add one tweakcn-powered import slot.
-- Store the imported theme in the browser, not gateway config.
-- Support `light`, `dark`, and `system` for the imported slot.
-- Overwriting the custom slot with the next import is the intended behavior.
+- 保留三个内置主题。
+- 增加一个由 tweakcn 驱动的导入槽位。
+- 将导入主题存储在浏览器中，而不是 gateway 配置中。
+- 为导入槽位支持 `light`、`dark` 和 `system`。
+- 允许用下一次导入覆盖自定义槽位，这也是预期行为。
 
-## Recommended approach
+## 推荐方案
 
-Add a fourth theme family id, `custom`, to the Control UI theme model. The `custom` family becomes selectable only when a valid tweakcn import is present. The imported payload is normalized into an OpenClaw-specific custom theme record and stored in browser local storage with the rest of the UI settings.
+在 Control UI 主题模型中新增第四个主题家族 id，`custom`。只有在存在有效的 tweakcn 导入时，`custom` 家族才可被选中。导入载荷会被规范化为 OpenClaw 特定的自定义主题记录，并与其他 UI 设置一起存储在浏览器本地存储中。
 
-At runtime, OpenClaw renders a managed `<style>` tag that defines the resolved custom CSS variable blocks:
+运行时，OpenClaw 会渲染一个受管理的 `<style>` 标签，用于定义已解析的自定义 CSS 变量块：
 
 ```css
 :root[data-theme="custom"] { ... }
 :root[data-theme="custom-light"] { ... }
 ```
 
-This keeps custom theme variables scoped to the `custom` family and avoids leaking inline CSS variables into the built-in families.
+这样可以将自定义主题变量限定在 `custom` 家族内，并避免将内联 CSS 变量泄漏到内置家族中。
 
-## Architecture
+## 架构
 
-### Theme model
+### 主题模型
 
-Update `ui/src/ui/theme.ts`:
+更新 `ui/src/ui/theme.ts`：
 
-- Extend `ThemeName` to include `custom`.
-- Extend `ResolvedTheme` to include `custom` and `custom-light`.
-- Extend `VALID_THEME_NAMES`.
-- Update `resolveTheme()` so `custom` mirrors the existing family behavior:
+- 将 `ThemeName` 扩展为包含 `custom`。
+- 将 `ResolvedTheme` 扩展为包含 `custom` 和 `custom-light`。
+- 扩展 `VALID_THEME_NAMES`。
+- 更新 `resolveTheme()`，使 `custom` 复用现有家族行为：
   - `custom + dark` -> `custom`
   - `custom + light` -> `custom-light`
-  - `custom + system` -> `custom` or `custom-light` based on OS preference
+  - `custom + system` -> 基于系统偏好返回 `custom` 或 `custom-light`
 
-No legacy aliases are added for `custom`.
+不为 `custom` 添加任何旧别名。
 
-### Persistence model
+### 持久化模型
 
-Extend `UiSettings` persistence in `ui/src/ui/storage.ts` with one optional custom-theme payload:
+在 `ui/src/ui/storage.ts` 中为 `UiSettings` 持久化扩展一个可选的自定义主题载荷：
 
 - `customTheme?: ImportedCustomTheme`
 
-Recommended stored shape:
+推荐存储结构：
 
 ```ts
 type ImportedCustomTheme = {
@@ -92,80 +92,80 @@ type ImportedCustomTheme = {
 };
 ```
 
-Notes:
+说明：
 
-- `sourceUrl` stores the original user input after normalization.
-- `themeId` is the tweakcn theme id extracted from the URL.
-- `label` is the tweakcn `name` field when present, else `Custom`.
-- `light` and `dark` are already normalized OpenClaw token maps, not raw tweakcn payloads.
-- The imported payload lives beside other browser-local settings and is serialized in the same local-storage document.
-- If stored custom-theme data is missing or invalid on load, ignore the payload and fall back to `theme: "claw"` when the persisted family was `custom`.
+- `sourceUrl` 存储用户归一化后的原始输入。
+- `themeId` 是从 URL 中提取的 tweakcn theme id。
+- `label` 在存在时取 tweakcn 的 `name` 字段，否则为 `Custom`。
+- `light` 和 `dark` 已经是规范化后的 OpenClaw token 映射，而不是原始 tweakcn 载荷。
+- 导入载荷与其他浏览器本地设置一同存放，并序列化到同一个本地存储文档中。
+- 如果加载时存储的自定义主题数据缺失或无效，则忽略该载荷；若持久化的家族为 `custom`，则回退到 `theme: "claw"`。
 
-### Runtime application
+### 运行时应用
 
-Add a narrow custom-theme stylesheet manager in the Control UI runtime, owned near `ui/src/ui/app-settings.ts` and `ui/src/ui/theme.ts`.
+在 Control UI 运行时新增一个窄范围的自定义主题样式管理器，归属位置接近 `ui/src/ui/app-settings.ts` 和 `ui/src/ui/theme.ts`。
 
-Responsibilities:
+职责：
 
-- Create or update one stable `<style id="openclaw-custom-theme">` tag in `document.head`.
-- Emit CSS only when a valid custom theme payload exists.
-- Remove the style tag content when the payload is cleared.
-- Keep built-in family CSS in `ui/src/styles/base.css`; do not splice imported tokens into the checked-in stylesheet.
+- 在 `document.head` 中创建或更新一个稳定的 `<style id="openclaw-custom-theme">` 标签。
+- 仅在存在有效的自定义主题载荷时输出 CSS。
+- 在载荷被清除时移除样式标签内容。
+- 将内置家族 CSS 保持在 `ui/src/styles/base.css` 中；不要把导入 token 拼接进已提交的样式表。
 
-This manager runs whenever settings are loaded, saved, imported, or cleared.
+当设置被加载、保存、导入或清除时，这个管理器都会运行。
 
-### Light-mode selectors
+### 明亮模式选择器
 
-Implementation should prefer `data-theme-mode="light"` for cross-family light styling rather than special-casing `custom-light`. If an existing selector is pinned to `data-theme="light"` and needs to apply to every light family, broaden it as part of this work.
+实现时应优先使用 `data-theme-mode="light"` 来做跨家族的明亮样式，而不是对 `custom-light` 进行特殊处理。如果某个现有选择器固定为 `data-theme="light"`，并且需要作用于所有明亮家族，则应在本次工作中将其扩宽。
 
-## Import UX
+## 导入体验
 
-Update `ui/src/ui/views/config.ts` in the `Appearance` section:
+更新 `ui/src/ui/views/config.ts` 中的 `Appearance` 部分：
 
-- Add a `Custom` theme card beside `Claw`, `Knot`, and `Dash`.
-- Show the card as disabled when no imported custom theme exists.
-- Add an import panel under the theme grid with:
-  - one text input for a tweakcn share link or `/r/themes/{id}` URL
-  - one `Import` button
-  - one `Replace` path when a custom payload already exists
-  - one `Clear` action when a custom payload already exists
-- Show the imported theme label and source host when a payload exists.
-- If the active theme is `custom`, importing a replacement applies immediately.
-- If the active theme is not `custom`, importing only stores the new payload until the user selects the `Custom` card.
+- 在 `Claw`、`Knot` 和 `Dash` 旁边添加一个 `Custom` 主题卡片。
+- 当不存在已导入的自定义主题时，将该卡片显示为禁用状态。
+- 在主题网格下方添加一个导入面板，其中包含：
+  - 一个用于 tweakcn 分享链接或 `/r/themes/{id}` URL 的文本输入框
+  - 一个 `Import` 按钮
+  - 当已存在自定义载荷时的 `Replace` 路径
+  - 当已存在自定义载荷时的 `Clear` 操作
+- 当存在载荷时，显示导入主题标签和来源主机。
+- 如果当前激活主题是 `custom`，导入替换内容后会立即生效。
+- 如果当前激活主题不是 `custom`，则导入只会先保存新的载荷，直到用户选择 `Custom` 卡片。
 
-The quick settings theme picker in `ui/src/ui/views/config-quick.ts` should also show `Custom` only when a payload exists.
+`ui/src/ui/views/config-quick.ts` 中的快速设置主题选择器也应只在存在载荷时显示 `Custom`。
 
-## URL parsing and remote fetch
+## URL 解析与远程获取
 
-The browser import path accepts:
+浏览器导入路径接受：
 
 - `https://tweakcn.com/themes/{id}`
 - `https://tweakcn.com/r/themes/{id}`
 
-Implementation should normalize both forms to:
+实现时应将两种形式归一化为：
 
 - `https://tweakcn.com/r/themes/{id}`
 
-The browser then fetches the normalized `/r/themes/{id}` endpoint directly.
+然后浏览器直接获取归一化后的 `/r/themes/{id}` 端点。
 
-Use a narrow schema validator for the external payload. A zod schema is preferred because this is an untrusted external boundary.
+外部载荷应使用严格的 schema 校验。由于这是不受信任的外部边界，推荐使用 zod schema。
 
-Required remote fields:
+必需的远程字段：
 
-- top-level `name` as optional string
-- `cssVars.theme` as optional object
-- `cssVars.light` as object
-- `cssVars.dark` as object
+- 顶层 `name`，可选字符串
+- `cssVars.theme`，可选对象
+- `cssVars.light`，对象
+- `cssVars.dark`，对象
 
-If either `cssVars.light` or `cssVars.dark` is missing, reject the import. This is deliberate: the approved product behavior is full mode support, not best-effort synthesis of a missing side.
+如果 `cssVars.light` 或 `cssVars.dark` 任意一个缺失，则拒绝导入。这个约束是有意为之：已批准的产品行为要求完整的模式支持，而不是对缺失侧进行尽力合成。
 
-## Token mapping
+## Token 映射
 
-Do not mirror tweakcn variables blindly. Normalize a bounded subset into OpenClaw tokens and derive the rest in a helper.
+不要机械地镜像 tweakcn 变量。应将一个受限子集规范化为 OpenClaw token，并在辅助函数中推导其余部分。
 
-### Tokens imported directly
+### 直接导入的 token
 
-From each tweakcn mode block:
+从每个 tweakcn 模式块中导入：
 
 - `background`
 - `foreground`
@@ -188,16 +188,16 @@ From each tweakcn mode block:
 - `ring`
 - `radius`
 
-From shared `cssVars.theme` when present:
+从共享的 `cssVars.theme` 中导入（如果存在）：
 
 - `font-sans`
 - `font-mono`
 
-If a mode block overrides `font-sans`, `font-mono`, or `radius`, the mode-local value wins.
+如果某个模式块覆盖了 `font-sans`、`font-mono` 或 `radius`，则以该模式本地值为准。
 
-### Tokens derived for OpenClaw
+### 为 OpenClaw 推导的 token
 
-The importer derives OpenClaw-only variables from the imported base colors:
+导入器会基于导入的基础颜色推导 OpenClaw 专用变量：
 
 - `--bg-accent`
 - `--bg-elevated`
@@ -225,14 +225,14 @@ The importer derives OpenClaw-only variables from the imported base colors:
 - `--danger-muted`
 - `--danger-subtle`
 
-Derivation rules live in a pure helper so they can be tested independently. Exact color-mixing formulas are an implementation detail, but the helper must satisfy two constraints:
+推导规则应放在一个纯辅助函数中，以便单独测试。精确的颜色混合公式属于实现细节，但该辅助函数必须满足两个约束：
 
-- preserve readable contrast close to the imported theme intent
-- produce stable output for the same imported payload
+- 保持可读性对比度，尽量接近导入主题的意图
+- 对相同的导入载荷产生稳定输出
 
-### Tokens ignored in v1
+### 在 v1 中忽略的 token
 
-These tweakcn tokens are intentionally ignored in the first version:
+以下 tweakcn token 在第一版中会被有意忽略：
 
 - `chart-*`
 - `sidebar-*`
@@ -242,34 +242,34 @@ These tweakcn tokens are intentionally ignored in the first version:
 - `letter-spacing`
 - `spacing`
 
-This keeps the scope on the tokens the current Control UI actually needs.
+这样可以将范围限制在当前 Control UI 实际需要的 token 上。
 
-### Fonts
+### 字体
 
-Font stack strings are imported if present, but OpenClaw does not load remote font assets in v1. If the imported stack references fonts that are unavailable in the browser, normal fallback behavior applies.
+如果存在则导入字体栈字符串，但 OpenClaw 在 v1 中不会加载远程字体资源。如果导入的字体栈引用了浏览器中不可用的字体，则按正常回退行为处理。
 
-## Failure behavior
+## 失败行为
 
-Bad imports must fail closed.
+错误导入必须以关闭式失败。
 
-- Invalid URL format: show inline validation error, do not fetch.
-- Unsupported host or path shape: show inline validation error, do not fetch.
-- Network failure, non-OK response, or malformed JSON: show inline error, keep current stored payload untouched.
-- Schema failure or missing light/dark blocks: show inline error, keep current stored payload untouched.
-- Clear action:
-  - removes the stored custom payload
-  - removes the managed custom style tag content
-  - if `custom` is active, switches theme family back to `claw`
-- Invalid stored custom payload on first load:
-  - ignore the stored payload
-  - do not emit custom CSS
-  - if persisted theme family was `custom`, fall back to `claw`
+- 无效的 URL 格式：显示行内校验错误，不执行获取。
+- 不支持的主机或路径形状：显示行内校验错误，不执行获取。
+- 网络失败、非 OK 响应或 JSON 格式错误：显示行内错误，保持当前已存储载荷不变。
+- schema 失败或缺少 light/dark 块：显示行内错误，保持当前已存储载荷不变。
+- Clear 操作：
+  - 移除已存储的自定义载荷
+  - 移除受管理的自定义样式标签内容
+  - 如果当前激活的是 `custom`，则将主题家族切回 `claw`
+- 首次加载时存储的自定义载荷无效：
+  - 忽略已存储载荷
+  - 不输出自定义 CSS
+  - 如果持久化的主题家族是 `custom`，则回退到 `claw`
 
-At no point should a failed import leave the active document with partial custom CSS variables applied.
+任何时候，失败的导入都不应让当前文档残留部分应用的自定义 CSS 变量。
 
-## Files expected to change in implementation
+## 实现中预期修改的文件
 
-Primary files:
+主要文件：
 
 - `ui/src/ui/theme.ts`
 - `ui/src/ui/storage.ts`
@@ -278,40 +278,40 @@ Primary files:
 - `ui/src/ui/views/config-quick.ts`
 - `ui/src/styles/base.css`
 
-Likely new helpers:
+可能新增的辅助文件：
 
 - `ui/src/ui/custom-theme.ts`
 - `ui/src/ui/custom-theme-import.ts`
 
-Tests:
+测试：
 
 - `ui/src/ui/app-settings.test.ts`
 - `ui/src/ui/storage.node.test.ts`
 - `ui/src/ui/views/config.browser.test.ts`
-- new focused tests for URL parsing and payload normalization
+- 新增针对 URL 解析和载荷规范化的定向测试
 
-## Testing
+## 测试
 
-Minimum implementation coverage:
+最低实现覆盖范围：
 
-- parse share-link URL into tweakcn theme id
-- normalize `/themes/{id}` and `/r/themes/{id}` into the fetch URL
-- reject unsupported hosts and malformed ids
-- validate tweakcn payload shape
-- map a valid tweakcn payload into normalized OpenClaw light and dark token maps
-- load and save the custom payload in browser-local settings
-- resolve `custom` for `light`, `dark`, and `system`
-- disable `Custom` selection when no payload exists
-- apply imported theme immediately when `custom` is already active
-- fall back to `claw` when the active custom theme is cleared
+- 将 share-link URL 解析为 tweakcn theme id
+- 将 `/themes/{id}` 和 `/r/themes/{id}` 规范化为 fetch URL
+- 拒绝不支持的主机和格式错误的 id
+- 验证 tweakcn payload 的形状
+- 将有效的 tweakcn payload 映射为规范化的 OpenClaw 浅色和深色 token maps
+- 在浏览器本地设置中加载和保存自定义 payload
+- 为 `light`、`dark` 和 `system` 解析 `custom`
+- 当不存在 payload 时禁用 `Custom` 选项
+- 当 `custom` 已经处于激活状态时，立即应用导入的主题
+- 当当前自定义主题被清除时，回退到 `claw`
 
-Manual verification target:
+手动验证目标：
 
-- import a known tweakcn theme from Settings
-- switch among `light`, `dark`, and `system`
-- switch between `custom` and the built-in families
-- reload the page and confirm the imported custom theme persists locally
+- 从 Settings 导入一个已知的 tweakcn 主题
+- 在 `light`、`dark` 和 `system` 之间切换
+- 在 `custom` 和内置主题族之间切换
+- 重新加载页面并确认导入的自定义主题仍然保存在本地
 
-## Rollout notes
+## 发布说明
 
-This feature is intentionally small. If users later ask for multiple imported themes, rename, export, or cross-device sync, treat that as a follow-on design. Do not pre-build a theme library abstraction in this implementation.
+此功能刻意保持较小范围。如果用户之后提出需要多个导入主题、重命名、导出或跨设备同步，请将其视为后续设计。不要在此实现中预先构建主题库抽象。

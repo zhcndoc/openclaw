@@ -1,15 +1,15 @@
 ---
-summary: "Redirects to Building Plugins (registering tools section)"
+summary: "重定向到构建插件（注册工具部分）"
 read_when:
-  - Legacy link to agent-tools
-title: "Registering tools"
+  - 指向 agent-tools 的旧链接
+title: "注册工具"
 ---
 
-# Registering Tools in Plugins
+# 在插件中注册工具
 
-This page has moved. See [Building Plugins: Registering agent tools](/plugins/building-plugins#registering-agent-tools).
+此页面已移动。请参见 [构建插件：注册 agent 工具](/plugins/building-plugins#registering-agent-tools)。
 
-## Related
+## 相关内容
 
-- [Building plugins](/plugins/building-plugins)
-- [Plugin SDK setup](/plugins/sdk-setup)
+- [构建插件](/plugins/building-plugins)
+- [插件 SDK 设置](/plugins/sdk-setup)

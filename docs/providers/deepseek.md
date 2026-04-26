@@ -1,41 +1,41 @@
 ---
-summary: "DeepSeek setup (auth + model selection)"
+summary: "DeepSeek 设置（认证 + 模型选择）"
 title: "DeepSeek"
 read_when:
-  - You want to use DeepSeek with OpenClaw
-  - You need the API key env var or CLI auth choice
+  - 您希望将 DeepSeek 与 OpenClaw 配合使用
+  - 您需要 API 密钥环境变量或 CLI 认证选项
 ---
 
-[DeepSeek](https://www.deepseek.com) provides powerful AI models with an OpenAI-compatible API.
+[DeepSeek](https://www.deepseek.com) 提供强大的 AI 模型，并支持 OpenAI 兼容的 API。
 
-| Property | Value                      |
+| 属性     | 值                         |
 | -------- | -------------------------- |
-| Provider | `deepseek`                 |
-| Auth     | `DEEPSEEK_API_KEY`         |
-| API      | OpenAI-compatible          |
-| Base URL | `https://api.deepseek.com` |
+| 提供商   | `deepseek`                 |
+| 认证     | `DEEPSEEK_API_KEY`         |
+| API      | OpenAI 兼容                |
+| 基础 URL | `https://api.deepseek.com` |
 
-## Getting started
+## 入门指南
 
 <Steps>
-  <Step title="Get your API key">
-    Create an API key at [platform.deepseek.com](https://platform.deepseek.com/api_keys).
+  <Step title="获取您的 API 密钥">
+    在 [platform.deepseek.com](https://platform.deepseek.com/api_keys) 创建 API 密钥。
   </Step>
-  <Step title="Run onboarding">
+  <Step title="运行引导流程">
     ```bash
     openclaw onboard --auth-choice deepseek-api-key
     ```
 
-    This will prompt for your API key and set `deepseek/deepseek-v4-flash` as the default model.
+    这将提示您输入 API 密钥，并将 `deepseek/deepseek-v4-flash` 设为默认模型。
 
   </Step>
-  <Step title="Verify models are available">
+  <Step title="验证模型可用性">
     ```bash
     openclaw models list --provider deepseek
     ```
 
-    To inspect the bundled static catalog without requiring a running Gateway,
-    use:
+    要在不启动 Gateway 的情况下查看内置静态目录，
+    请使用：
 
     ```bash
     openclaw models list --all --provider deepseek
@@ -45,8 +45,8 @@ read_when:
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="Non-interactive setup">
-    For scripted or headless installations, pass all flags directly:
+  <Accordion title="非交互式设置">
+    对于脚本化或无头安装，直接传递所有标志：
 
     ```bash
     openclaw onboard --non-interactive \
@@ -61,54 +61,46 @@ read_when:
 </AccordionGroup>
 
 <Warning>
-If the Gateway runs as a daemon (launchd/systemd), make sure `DEEPSEEK_API_KEY`
-is available to that process (for example, in `~/.openclaw/.env` or via
-`env.shellEnv`).
+如果 Gateway 作为守护进程运行（launchd/systemd），请确保该进程可以使用 `DEEPSEEK_API_KEY`
+（例如，在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 </Warning>
 
-## Built-in catalog
+## 内置目录
 
 | Model ref                    | Name              | Input | Context   | Max output | Notes                                      |
 | ---------------------------- | ----------------- | ----- | --------- | ---------- | ------------------------------------------ |
-| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | Default model; V4 thinking-capable surface |
-| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | V4 thinking-capable surface                |
-| `deepseek/deepseek-chat`     | DeepSeek Chat     | text  | 131,072   | 8,192      | DeepSeek V3.2 non-thinking surface         |
-| `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 131,072   | 65,536     | Reasoning-enabled V3.2 surface             |
+| `deepseek/deepseek-v4-flash` | DeepSeek V4 Flash | text  | 1,000,000 | 384,000    | 默认模型；具备 V4 thinking 能力的接口         |
+| `deepseek/deepseek-v4-pro`   | DeepSeek V4 Pro   | text  | 1,000,000 | 384,000    | 具备 V4 thinking 能力的接口                  |
+| `deepseek/deepseek-chat`     | DeepSeek Chat     | text  | 131,072   | 8,192      | DeepSeek V3.2 non-thinking 接口             |
+| `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 131,072   | 65,536     | 支持推理的 V3.2 接口                        |
 
 <Tip>
-V4 models support DeepSeek's `thinking` control. OpenClaw also replays
-DeepSeek `reasoning_content` on follow-up turns so thinking sessions with tool
-calls can continue.
+V4 模型支持 DeepSeek 的 `thinking` 控制。OpenClaw 还会在后续轮次中重放
+DeepSeek 的 `reasoning_content`，因此带有工具调用的思考会话可以继续进行。
 </Tip>
 
-## Thinking and tools
+## Thinking 和工具
 
-DeepSeek V4 thinking sessions have a stricter replay contract than most
-OpenAI-compatible providers: when a thinking-enabled assistant message includes
-tool calls, DeepSeek expects the prior assistant `reasoning_content` to be sent
-back on the follow-up request. OpenClaw handles this inside the DeepSeek plugin,
-so normal multi-turn tool use works with `deepseek/deepseek-v4-flash` and
-`deepseek/deepseek-v4-pro`.
+DeepSeek V4 thinking 会话的重放契约比大多数
+OpenAI 兼容提供商更严格：当启用了 thinking 的 assistant 消息包含
+工具调用时，DeepSeek 期望将先前 assistant 的 `reasoning_content` 在
+后续请求中一并发送回去。OpenClaw 会在 DeepSeek 插件内部处理这一点，
+因此使用 `deepseek/deepseek-v4-flash` 和
+`deepseek/deepseek-v4-pro` 时，正常的多轮工具使用可以正常工作。
 
-If you switch an existing session from another OpenAI-compatible provider to a
-DeepSeek V4 model, older assistant tool-call turns may not have native
-DeepSeek `reasoning_content`. OpenClaw fills that missing field for DeepSeek V4
-thinking requests so the provider can accept the replayed tool-call history
-without requiring `/new`.
+当在 OpenClaw 中禁用 thinking 时（包括 UI 中选择 **None**），
+OpenClaw 会发送 DeepSeek `thinking: { type: "disabled" }`，并从
+发出的历史记录中移除已重放的 `reasoning_content`。这使得禁用 thinking 的
+会话保持在 DeepSeek 的非 thinking 路径上。
 
-When thinking is disabled in OpenClaw (including the UI **None** selection),
-OpenClaw sends DeepSeek `thinking: { type: "disabled" }` and strips replayed
-`reasoning_content` from the outgoing history. This keeps disabled-thinking
-sessions on the non-thinking DeepSeek path.
+默认快速路径请使用 `deepseek/deepseek-v4-flash`。当您希望使用更强大的 V4 模型，
+并且可以接受更高的成本或延迟时，请使用
+`deepseek/deepseek-v4-pro`。
 
-Use `deepseek/deepseek-v4-flash` for the default fast path. Use
-`deepseek/deepseek-v4-pro` when you want the stronger V4 model and can accept
-higher cost or latency.
+## 实时测试
 
-## Live testing
-
-The direct live model suite includes DeepSeek V4 in the modern model set. To
-run only the DeepSeek V4 direct-model checks:
+直接实时模型套件包含现代模型集合中的 DeepSeek V4。若要
+仅运行 DeepSeek V4 直接模型检查：
 
 ```bash
 OPENCLAW_LIVE_PROVIDERS=deepseek \
@@ -116,10 +108,10 @@ OPENCLAW_LIVE_MODELS="deepseek/deepseek-v4-flash,deepseek/deepseek-v4-pro" \
 pnpm test:live src/agents/models.profiles.live.test.ts
 ```
 
-That live check verifies both V4 models can complete and that thinking/tool
-follow-up turns preserve the replay payload DeepSeek requires.
+该实时检查会验证两个 V4 模型都能完成，以及 thinking/tool
+后续轮次会保留 DeepSeek 所需的重放负载。
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -132,13 +124,13 @@ follow-up turns preserve the replay payload DeepSeek requires.
 }
 ```
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full config reference for agents, models, and providers.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    代理、模型和提供商的完整配置参考。
   </Card>
 </CardGroup>

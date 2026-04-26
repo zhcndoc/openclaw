@@ -1,14 +1,14 @@
 ---
-summary: "CLI reference for `openclaw status` (diagnostics, probes, usage snapshots)"
+summary: "`openclaw status` 的 CLI 参考（诊断、探测、使用快照）"
 read_when:
-  - You want a quick diagnosis of channel health + recent session recipients
-  - You want a pasteable “all” status for debugging
-title: "Status"
+  - 你想快速诊断频道健康状况 + 最近的会话接收者
+  - 你想要一份可直接粘贴的“all”状态用于调试
+title: "状态"
 ---
 
 # `openclaw status`
 
-Diagnostics for channels + sessions.
+频道和会话的诊断。
 
 ```bash
 openclaw status
@@ -17,25 +17,25 @@ openclaw status --deep
 openclaw status --usage
 ```
 
-Notes:
+说明：
 
-- `--deep` runs live probes (WhatsApp Web + Telegram + Discord + Slack + Signal).
-- `--usage` prints normalized provider usage windows as `X% left`.
-- Session status output separates `Execution:` from `Runtime:`. `Execution` is the sandbox path (`direct`, `docker/*`), while `Runtime` tells you whether the session is using `OpenClaw Pi Default`, `OpenAI Codex`, a CLI backend, or an ACP backend such as `codex (acp/acpx)`. See [Agent runtimes](/concepts/agent-runtimes) for the provider/model/runtime distinction.
-- MiniMax's raw `usage_percent` / `usagePercent` fields are remaining quota, so OpenClaw inverts them before display; count-based fields win when present. `model_remains` responses prefer the chat-model entry, derive the window label from timestamps when needed, and include the model name in the plan label.
-- When the current session snapshot is sparse, `/status` can backfill token and cache counters from the most recent transcript usage log. Existing nonzero live values still win over transcript fallback values.
-- Transcript fallback can also recover the active runtime model label when the live session entry is missing it. If that transcript model differs from the selected model, status resolves the context window against the recovered runtime model instead of the selected one.
-- For prompt-size accounting, transcript fallback prefers the larger prompt-oriented total when session metadata is missing or smaller, so custom-provider sessions do not collapse to `0` token displays.
-- Output includes per-agent session stores when multiple agents are configured.
-- Overview includes Gateway + node host service install/runtime status when available.
-- Overview includes update channel + git SHA (for source checkouts).
-- Update info surfaces in the Overview; if an update is available, status prints a hint to run `openclaw update` (see [Updating](/install/updating)).
-- Read-only status surfaces (`status`, `status --json`, `status --all`) resolve supported SecretRefs for their targeted config paths when possible.
-- If a supported channel SecretRef is configured but unavailable in the current command path, status stays read-only and reports degraded output instead of crashing. Human output shows warnings such as “configured token unavailable in this command path”, and JSON output includes `secretDiagnostics`.
-- When command-local SecretRef resolution succeeds, status prefers the resolved snapshot and clears transient “secret unavailable” channel markers from the final output.
-- `status --all` includes a Secrets overview row and a diagnosis section that summarizes secret diagnostics (truncated for readability) without stopping report generation.
+- `--deep` 运行实时探测（WhatsApp Web + Telegram + Discord + Slack + Signal）。
+- `--usage` 以 `X% left` 的形式打印归一化后的提供方使用窗口。
+- 会话状态输出会将 `Execution:` 与 `Runtime:` 分开。`Execution` 是沙箱路径（`direct`、`docker/*`），而 `Runtime` 则说明会话正在使用 `OpenClaw Pi Default`、`OpenAI Codex`、CLI 后端，或诸如 `codex (acp/acpx)` 之类的 ACP 后端。有关提供方/模型/运行时的区别，请参见 [Agent runtimes](/concepts/agent-runtimes)。
+- MiniMax 的原始 `usage_percent` / `usagePercent` 字段表示剩余额度，因此 OpenClaw 在显示前会将其取反；如果存在按计数字段，则以其为准。`model_remains` 响应优先使用 chat-model 条目，必要时根据时间戳推导窗口标签，并在计划标签中包含模型名称。
+- 当当前会话快照较为稀疏时，`/status` 可以从最近的 transcript usage 日志中回填 token 和 cache 计数器。现有的非零实时值仍然优先于 transcript 回退值。
+- transcript 回退也可以在实时会话条目缺少时恢复活动运行时模型标签。如果该 transcript 模型与所选模型不同，状态会改为基于恢复出的运行时模型来解析上下文窗口，而不是基于所选模型。
+- 对于提示词大小统计，当会话元数据缺失或更小时，transcript 回退会优先选择更大的、面向 prompt 的总量，因此自定义提供方会话不会显示为 `0` token。
+- 当配置了多个 agent 时，输出会包含每个 agent 的会话存储。
+- 概览会在可用时包含 Gateway + 节点主机服务的安装/运行时状态。
+- 概览会包含更新通道 + git SHA（适用于源码检出）。
+- 更新信息会显示在 Overview 中；如果有可用更新，状态会提示运行 `openclaw update`（参见 [Updating](/install/updating)）。
+- 只读状态表面（`status`、`status --json`、`status --all`）会在可能的情况下为其目标配置路径解析受支持的 SecretRef。
+- 如果已配置受支持的频道 SecretRef，但在当前命令路径中不可用，状态仍保持只读，并报告降级输出而不是崩溃。人工输出会显示诸如“configured token unavailable in this command path”之类的警告，而 JSON 输出会包含 `secretDiagnostics`。
+- 当命令本地的 SecretRef 解析成功时，状态会优先使用已解析的快照，并清除最终输出中的临时“secret unavailable”频道标记。
+- `status --all` 会包含一个 Secrets 概览行，以及一个总结 secret diagnostics 的诊断部分（为便于阅读会截断），且不会中止报告生成。
 
-## Related
+## 相关
 
 - [CLI reference](/cli)
 - [Doctor](/gateway/doctor)

@@ -1,77 +1,76 @@
 ---
-summary: "Linux support + companion app status"
+summary: "Linux 支持 + 伴侣应用状态"
 read_when:
-  - Looking for Linux companion app status
-  - Planning platform coverage or contributions
-  - Debugging Linux OOM kills or exit 137 on a VPS or container
-title: "Linux app"
+  - 寻找 Linux 伴侣应用状态
+  - 规划平台覆盖范围或参与贡献
+  - 调试 Linux OOM 杀死或 VPS/容器中的 exit 137
+title: "Linux 应用"
 ---
 
-The Gateway is fully supported on Linux. **Node is the recommended runtime**.
-Bun is not recommended for the Gateway (WhatsApp/Telegram bugs).
+Gateway 在 Linux 上获得全面支持。**推荐使用 Node 作为运行时**。
+不建议在 Gateway 中使用 Bun（存在 WhatsApp/Telegram 错误）。
 
-Native Linux companion apps are planned. Contributions are welcome if you want to help build one.
+计划开发原生 Linux 伴侣应用。如果你想帮助开发，欢迎贡献代码。
 
-## Beginner quick path (VPS)
+## 初学者快速路径（VPS）
 
-1. Install Node 24 (recommended; Node 22 LTS, currently `22.14+`, still works for compatibility)
+1. 安装 Node 24（推荐；Node 22 LTS，目前 `22.14+`，也可用于兼容性）
 2. `npm i -g openclaw@latest`
 3. `openclaw onboard --install-daemon`
-4. From your laptop: `ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
-5. Open `http://127.0.0.1:18789/` and authenticate with the configured shared secret (token by default; password if you set `gateway.auth.mode: "password"`)
+4. 从你的笔记本电脑执行：`ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`
+5. 打开 `http://127.0.0.1:18789/`，并使用已配置的共享密钥进行身份验证（默认是 token；如果你设置了 `gateway.auth.mode: "password"`，则使用密码）
 
-Full Linux server guide: [Linux Server](/vps). Step-by-step VPS example: [exe.dev](/install/exe-dev)
+完整的 Linux 服务器指南：[Linux Server](/vps)。分步 VPS 示例：[exe.dev](/install/exe-dev)
 
-## Install
+## 安装
 
-- [Getting Started](/start/getting-started)
-- [Install & updates](/install/updating)
-- Optional flows: [Bun (experimental)](/install/bun), [Nix](/install/nix), [Docker](/install/docker)
+- [入门指南](/start/getting-started)
+- [安装与更新](/install/updating)
+- 可选流程：[Bun（实验性）](/install/bun)、[Nix](/install/nix)、[Docker](/install/docker)
 
 ## Gateway
 
-- [Gateway runbook](/gateway)
-- [Configuration](/gateway/configuration)
+- [Gateway 运行手册](/gateway)
+- [配置](/gateway/configuration)
 
-## Gateway service install (CLI)
+## Gateway 服务安装（CLI）
 
-Use one of these:
+使用以下命令之一：
 
 ```
 openclaw onboard --install-daemon
 ```
 
-Or:
+或者：
 
 ```
 openclaw gateway install
 ```
 
-Or:
+或者：
 
 ```
 openclaw configure
 ```
 
-Select **Gateway service** when prompted.
+提示时选择 **Gateway 服务**。
 
-Repair/migrate:
+修复/迁移：
 
 ```
 openclaw doctor
 ```
 
-## System control (systemd user unit)
+## 系统控制（systemd 用户单元）
 
-OpenClaw installs a systemd **user** service by default. Use a **system**
-service for shared or always-on servers. `openclaw gateway install` and
-`openclaw onboard --install-daemon` already render the current canonical unit
-for you; write one by hand only when you need a custom system/service-manager
-setup. The full service guidance lives in the [Gateway runbook](/gateway).
+OpenClaw 默认安装一个 systemd **用户**服务。对于共享或始终在线的服务器，请使用 **系统**服务。`openclaw gateway install` 和
+`openclaw onboard --install-daemon` 已经为你渲染了当前的标准单元；
+仅在需要自定义 system/service-manager
+设置时才手动编写。完整的服务指南见 [Gateway runbook](/gateway)。
 
-Minimal setup:
+最简设置：
 
-Create `~/.config/systemd/user/openclaw-gateway[-<profile>].service`:
+创建 `~/.config/systemd/user/openclaw-gateway[-<profile>].service`：
 
 ```
 [Unit]
@@ -92,50 +91,40 @@ KillMode=control-group
 WantedBy=default.target
 ```
 
-Enable it:
+启用它：
 
 ```
 systemctl --user enable --now openclaw-gateway[-<profile>].service
 ```
 
-## Memory pressure and OOM kills
+## 内存压力和 OOM 杀死
 
-On Linux, the kernel chooses an OOM victim when a host, VM, or container cgroup
-runs out of memory. The Gateway can be a poor victim because it owns long-lived
-sessions and channel connections. OpenClaw therefore biases transient child
-processes to be killed before the Gateway when possible.
+在 Linux 上，当主机、虚拟机或容器 cgroup 的内存耗尽时，内核会选择一个 OOM 受害者。Gateway 可能不是一个合适的受害者，因为它持有长期运行的会话和通道连接。因此，OpenClaw 会在可能的情况下倾向于先终止临时子进程，而不是 Gateway。
 
-For eligible Linux child spawns, OpenClaw starts the child through a short
-`/bin/sh` wrapper that raises the child's own `oom_score_adj` to `1000`, then
-`exec`s the real command. This is an unprivileged operation because the child is
-only increasing its own OOM kill likelihood.
+对于符合条件的 Linux 子进程启动，OpenClaw 会通过一个简短的 `/bin/sh` 包装器启动子进程，将子进程自身的 `oom_score_adj` 提升到 `1000`，然后 `exec` 真实命令。这是一种无需特权的操作，因为子进程只是提高了自己被 OOM 杀死的可能性。
 
-Covered child process surfaces include:
+覆盖的子进程表面包括：
 
-- supervisor-managed command children,
-- PTY shell children,
-- MCP stdio server children,
-- OpenClaw-launched browser/Chrome processes.
+- 由 supervisor 管理的命令子进程，
+- PTY shell 子进程，
+- MCP stdio 服务器子进程，
+- OpenClaw 启动的浏览器/Chrome 进程。
 
-The wrapper is Linux-only and is skipped when `/bin/sh` is unavailable. It is
-also skipped if the child env sets `OPENCLAW_CHILD_OOM_SCORE_ADJ=0`, `false`,
-`no`, or `off`.
+该包装器仅适用于 Linux，并且在 `/bin/sh` 不可用时会跳过。如果子进程环境设置了 `OPENCLAW_CHILD_OOM_SCORE_ADJ=0`、`false`、
+`no` 或 `off`，也会跳过。
 
-To verify a child process:
+验证子进程：
 
 ```bash
 cat /proc/<child-pid>/oom_score_adj
 ```
 
-Expected value for covered children is `1000`. The Gateway process should keep
-its normal score, usually `0`.
+受覆盖子进程的预期值是 `1000`。Gateway 进程应保持其正常分数，通常为 `0`。
 
-This does not replace normal memory tuning. If a VPS or container repeatedly
-kills children, increase the memory limit, reduce concurrency, or add stronger
-resource controls such as systemd `MemoryMax=` or container-level memory limits.
+这不能替代正常的内存调优。如果 VPS 或容器反复杀死子进程，请提高内存限制、降低并发，或添加更强的资源控制，例如 systemd `MemoryMax=` 或容器级内存限制。
 
-## Related
+## 相关内容
 
-- [Install overview](/install)
-- [Linux server](/vps)
+- [安装概览](/install)
+- [Linux 服务器](/vps)
 - [Raspberry Pi](/platforms/raspberry-pi)

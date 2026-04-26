@@ -1,48 +1,37 @@
 ---
-summary: "How OpenClaw summarizes long conversations to stay within model limits"
+summary: "OpenClaw 如何总结长对话以保持在模型限制内"
 read_when:
-  - You want to understand auto-compaction and /compact
-  - You are debugging long sessions hitting context limits
-title: "Compaction"
+  - 你想了解自动压缩和 /compact
+  - 你正在调试长会话触及上下文限制的问题
+title: "压缩"
 ---
 
-Every model has a context window -- the maximum number of tokens it can process.
-When a conversation approaches that limit, OpenClaw **compacts** older messages
-into a summary so the chat can continue.
+每个模型都有一个上下文窗口——它可以处理的最大 token 数量。
+当对话接近该限制时，OpenClaw 会将较早的消息**压缩**成一个摘要，
+这样聊天就可以继续进行。
 
-## How it works
+## 工作原理
 
-1. Older conversation turns are summarized into a compact entry.
-2. The summary is saved in the session transcript.
-3. Recent messages are kept intact.
+1. 旧的对话回合被总结为一个紧凑的条目。
+2. 摘要保存在会话记录中。
+3. 最近的消息保持完整。
 
-When OpenClaw splits history into compaction chunks, it keeps assistant tool
-calls paired with their matching `toolResult` entries. If a split point lands
-inside a tool block, OpenClaw moves the boundary so the pair stays together and
-the current unsummarized tail is preserved.
+当 OpenClaw 将会话历史分割为压缩块时，它会将助手工具调用与其匹配的 `toolResult` 条目保持配对。如果分割点落在工具块内部，OpenClaw 会移动边界以使配对保持在一起，并保留当前未总结的尾部。
 
-The full conversation history stays on disk. Compaction only changes what the
-model sees on the next turn.
+完整的对话历史保留在磁盘上。压缩仅更改模型在下一轮中看到的内容。
 
-## Auto-compaction
+## 自动压缩
 
-Auto-compaction is on by default. It runs when the session nears the context
-limit, or when the model returns a context-overflow error (in which case
-OpenClaw compacts and retries). Typical overflow signatures include
-`request_too_large`, `context length exceeded`, `input exceeds the maximum
-number of tokens`, `input token count exceeds the maximum number of input
-tokens`, `input is too long for the model`, and `ollama error: context length
-exceeded`.
+自动压缩默认开启。当会话接近上下文限制时，或者当模型返回上下文溢出错误时（此时 OpenClaw 会压缩并重试），它会运行。典型的溢出签名包括 `request_too_large`、`context length exceeded`、`input exceeds the maximum number of tokens`、`input token count exceeds the maximum number of input tokens`、`input is too long for the model` 和 `ollama error: context length exceeded`。
 
 <Info>
-Before compacting, OpenClaw automatically reminds the agent to save important
-notes to [memory](/concepts/memory) files. This prevents context loss.
+在压缩之前，OpenClaw 会自动提醒代理将重要笔记保存到 [内存](/concepts/memory) 文件中。这可以防止上下文丢失。
 </Info>
 
-Use the `agents.defaults.compaction` setting in your `openclaw.json` to configure compaction behavior (mode, target tokens, etc.).
-Compaction summarization preserves opaque identifiers by default (`identifierPolicy: "strict"`). You can override this with `identifierPolicy: "off"` or provide custom text with `identifierPolicy: "custom"` and `identifierInstructions`.
+在 `openclaw.json` 中使用 `agents.defaults.compaction` 设置来配置压缩行为（模式、目标令牌数等）。
+压缩摘要默认保留不透明标识符（`identifierPolicy: "strict"`）。您可以使用 `identifierPolicy: "off"` 覆盖此设置，或使用 `identifierPolicy: "custom"` 和 `identifierInstructions` 提供自定义文本。
 
-You can optionally specify a different model for compaction summarization via `agents.defaults.compaction.model`. This is useful when your primary model is a local or small model and you want compaction summaries produced by a more capable model. The override accepts any `provider/model-id` string:
+您可以选择通过 `agents.defaults.compaction.model` 为压缩摘要指定不同的模型。当您的主模型是本地或小型模型，并且您希望由更强大的模型生成压缩摘要时，这非常有用。覆盖接受任何 `provider/model-id` 字符串：
 
 ```json
 {
@@ -56,7 +45,7 @@ You can optionally specify a different model for compaction summarization via `a
 }
 ```
 
-This also works with local models, for example a second Ollama model dedicated to summarization or a fine-tuned compaction specialist:
+这也适用于本地模型，例如专门用于摘要的第二个 Ollama 模型或经过微调的压缩专家：
 
 ```json
 {
@@ -70,13 +59,13 @@ This also works with local models, for example a second Ollama model dedicated t
 }
 ```
 
-When unset, compaction uses the agent’s primary model.
+如果未设置，压缩将使用代理的主模型。
 
-## Pluggable compaction providers
+## 可插拔压缩提供程序
 
-Plugins can register a custom compaction provider via `registerCompactionProvider()` on the plugin API. When a provider is registered and configured, OpenClaw delegates summarization to it instead of the built-in LLM pipeline.
+插件可以通过插件 API 上的 `registerCompactionProvider()` 注册自定义压缩提供程序。当注册并配置了提供程序时，OpenClaw 会将摘要委托给它，而不是使用内置的 LLM 管道。
 
-To use a registered provider, set the provider id in your config:
+要使用已注册的提供程序，请在配置中设置提供程序 ID：
 
 ```json
 {
@@ -90,38 +79,29 @@ To use a registered provider, set the provider id in your config:
 }
 ```
 
-Setting a `provider` automatically forces `mode: "safeguard"`. Providers receive the same compaction instructions and identifier-preservation policy as the built-in path, and OpenClaw still preserves recent-turn and split-turn suffix context after provider output. If the provider fails or returns an empty result, OpenClaw falls back to built-in LLM summarization.
+设置 `provider` 会自动强制 `mode: "safeguard"`。提供程序接收与内置路径相同的压缩指令和标识符保留策略，OpenClaw 仍会在提供程序输出后保留最近回合和分割回合后缀上下文。如果提供程序失败或返回空结果，OpenClaw 将回退到内置 LLM 摘要。
 
-## Auto-compaction (default on)
+## 自动压缩（默认开启）
 
-When a session nears or exceeds the model’s context window, OpenClaw triggers auto-compaction and may retry the original request using the compacted context.
+当会话接近或超过模型的上下文窗口时，OpenClaw 会触发自动压缩，并可能使用压缩后的上下文重试原始请求。
 
-You’ll see:
+您将看到：
+- 详细模式中的 `🧹 Auto-compaction complete`
+- `/status` 显示 `🧹 Compactions: <count>`
 
-- `🧹 Auto-compaction complete` in verbose mode
-- `/status` showing `🧹 Compactions: <count>`
+在压缩之前，OpenClaw 可以运行一个**静默内存刷新**回合，将持久笔记存储到磁盘。有关详细信息和配置，请参阅 [内存](/concepts/memory)。
 
-Before compaction, OpenClaw can run a **silent memory flush** turn to store
-durable notes to disk. See [Memory](/concepts/memory) for details and config.
+## 手动压缩
 
-## Manual compaction
-
-Type `/compact` in any chat to force a compaction. Add instructions to guide
-the summary:
+在任何聊天中输入 `/compact` 以强制压缩。添加指令以指导摘要：
 
 ```
 /compact Focus on the API design decisions
 ```
 
-When `agents.defaults.compaction.keepRecentTokens` is set, manual compaction
-honors that Pi cut-point and keeps the recent tail in rebuilt context. Without
-an explicit keep budget, manual compaction behaves as a hard checkpoint and
-continues from the new summary alone.
+## 使用不同的模型
 
-## Using a different model
-
-By default, compaction uses your agent's primary model. You can use a more
-capable model for better summaries:
+默认情况下，压缩使用代理的主模型。您可以使用更强大的模型来获得更好的摘要：
 
 ```json5
 {
@@ -135,10 +115,9 @@ capable model for better summaries:
 }
 ```
 
-## Compaction notices
+## 压缩通知
 
-By default, compaction runs silently. To show brief notices when compaction
-starts and when it completes, enable `notifyUser`:
+默认情况下，压缩会静默运行。要在压缩开始和完成时显示简短通知，请启用 `notifyUser`：
 
 ```json5
 {
@@ -152,39 +131,31 @@ starts and when it completes, enable `notifyUser`:
 }
 ```
 
-When enabled, the user sees short status messages around each compaction run
-(for example, "Compacting context..." and "Compaction complete").
+启用后，用户会在每次压缩运行前后看到简短状态消息（例如，“正在压缩上下文...” 和 “压缩完成”）。
 
-## Compaction vs pruning
+## 压缩与修剪
 
-|                  | Compaction                    | Pruning                          |
+|                  | 压缩                    | 修剪                          |
 | ---------------- | ----------------------------- | -------------------------------- |
-| **What it does** | Summarizes older conversation | Trims old tool results           |
-| **Saved?**       | Yes (in session transcript)   | No (in-memory only, per request) |
-| **Scope**        | Entire conversation           | Tool results only                |
+| **作用** | 总结旧对话 | 修剪旧工具结果           |
+| **已保存？**       | 是（在会话记录中）   | 否（仅在内存中，每个请求） |
+| **范围**        | 整个对话           | 仅工具结果                |
 
-[Session pruning](/concepts/session-pruning) is a lighter-weight complement that
-trims tool output without summarizing.
+[会话修剪](/concepts/session-pruning) 是一个更轻量级的补充，它修剪工具输出而不进行总结。
 
-## Troubleshooting
+## 故障排除
 
-**Compacting too often?** The model's context window may be small, or tool
-outputs may be large. Try enabling
-[session pruning](/concepts/session-pruning).
+**压缩太频繁？** 模型的上下文窗口可能较小，或者工具输出可能较大。尝试启用 [会话修剪](/concepts/session-pruning)。
 
-**Context feels stale after compaction?** Use `/compact Focus on <topic>` to
-guide the summary, or enable the [memory flush](/concepts/memory) so notes
-survive.
+**压缩后上下文感觉过时？** 使用 `/compact Focus on <topic>` 来指导摘要，或者启用 [内存刷新](/concepts/memory) 以便笔记保留。
 
-**Need a clean slate?** `/new` starts a fresh session without compacting.
+**需要重新开始？** `/new` 开始一个新会话而不进行压缩。
 
-For advanced configuration (reserve tokens, identifier preservation, custom
-context engines, OpenAI server-side compaction), see the
-[Session Management Deep Dive](/reference/session-management-compaction).
+对于高级配置（保留令牌、标识符保留、自定义上下文引擎、OpenAI 服务器端压缩），请参阅 [会话管理深入探讨](/reference/session-management-compaction)。
 
-## Related
+## 相关内容
 
-- [Session](/concepts/session) — session management and lifecycle
-- [Session Pruning](/concepts/session-pruning) — trimming tool results
-- [Context](/concepts/context) — how context is built for agent turns
-- [Hooks](/automation/hooks) — compaction lifecycle hooks (before_compaction, after_compaction)
+- [会话](/concepts/session) — 会话管理和生命周期
+- [会话修剪](/concepts/session-pruning) — 修剪工具结果
+- [上下文](/concepts/context) — 如何为代理回合构建上下文
+- [钩子](/automation/hooks) — 压缩生命周期钩子 (before_compaction, after_compaction)

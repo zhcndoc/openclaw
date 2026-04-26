@@ -1,42 +1,42 @@
 ---
-summary: "Fireworks setup (auth + model selection)"
+summary: "Fireworks 设置（认证 + 模型选择）"
 title: "Fireworks"
 read_when:
-  - You want to use Fireworks with OpenClaw
-  - You need the Fireworks API key env var or default model id
+  - 你想在 OpenClaw 中使用 Fireworks
+  - 你需要 Fireworks API 密钥环境变量或默认模型 ID
 ---
 
-[Fireworks](https://fireworks.ai) exposes open-weight and routed models through an OpenAI-compatible API. OpenClaw includes a bundled Fireworks provider plugin.
+[Fireworks](https://fireworks.ai) 通过兼容 OpenAI 的 API 提供开放权重模型和路由模型。OpenClaw 包含一个内置的 Fireworks 提供者插件。
 
-| Property      | Value                                                  |
+| 属性      | 值                                                  |
 | ------------- | ------------------------------------------------------ |
-| Provider      | `fireworks`                                            |
-| Auth          | `FIREWORKS_API_KEY`                                    |
-| API           | OpenAI-compatible chat/completions                     |
-| Base URL      | `https://api.fireworks.ai/inference/v1`                |
-| Default model | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` |
+| 提供者      | `fireworks`                                            |
+| 认证          | `FIREWORKS_API_KEY`                                    |
+| API           | 兼容 OpenAI 的 chat/completions                     |
+| 基础 URL      | `https://api.fireworks.ai/inference/v1`                |
+| 默认模型 | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` |
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Set up Fireworks auth through onboarding">
+  <Step title="通过引导设置 Fireworks 认证">
     ```bash
     openclaw onboard --auth-choice fireworks-api-key
     ```
 
-    This stores your Fireworks key in OpenClaw config and sets the Fire Pass starter model as the default.
+    这会将你的 Fireworks 密钥存储在 OpenClaw 配置中，并将 Fire Pass 入门模型设置为默认值。
 
   </Step>
-  <Step title="Verify the model is available">
+  <Step title="验证模型是否可用">
     ```bash
     openclaw models list --provider fireworks
     ```
   </Step>
 </Steps>
 
-## Non-interactive example
+## 非交互式示例
 
-For scripted or CI setups, pass all values on the command line:
+对于脚本或 CI 设置，在命令行上传递所有值：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -47,20 +47,20 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-## Built-in catalog
+## 内置目录
 
 | Model ref                                              | Name                        | Input      | Context | Max output | Notes                                                                                                                                               |
 | ------------------------------------------------------ | --------------------------- | ---------- | ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6                   | text,image | 262,144 | 262,144    | Latest Kimi model on Fireworks. Thinking is disabled for Fireworks K2.6 requests; route through Moonshot directly if you need Kimi thinking output. |
-| `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` | Kimi K2.5 Turbo (Fire Pass) | text,image | 256,000 | 256,000    | Default bundled starter model on Fireworks                                                                                                          |
+| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6                   | text,image | 262,144 | 262,144    | Fireworks 上最新的 Kimi 模型。对于 Fireworks K2.6 请求，思考功能已禁用；如果你需要 Kimi 的思考输出，请直接通过 Moonshot 路由。 |
+| `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` | Kimi K2.5 Turbo (Fire Pass) | text,image | 256,000 | 256,000    | Fireworks 上默认捆绑的入门模型                                                                                                          |
 
 <Tip>
-If Fireworks publishes a newer model such as a fresh Qwen or Gemma release, you can switch to it directly by using its Fireworks model id without waiting for a bundled catalog update.
+如果 Fireworks 发布了更新的模型（例如新发布的 Qwen 或 Gemma），你可以直接使用其 Fireworks 模型 ID 切换到该模型，无需等待捆绑目录更新。
 </Tip>
 
-## Custom Fireworks model ids
+## 自定义 Fireworks 模型 ID
 
-OpenClaw accepts dynamic Fireworks model ids too. Use the exact model or router id shown by Fireworks and prefix it with `fireworks/`.
+OpenClaw 也接受动态 Fireworks 模型 ID。使用 Fireworks 显示的确切模型或路由 ID，并在其前面加上 `fireworks/` 前缀。
 
 ```json5
 {
@@ -75,33 +75,33 @@ OpenClaw accepts dynamic Fireworks model ids too. Use the exact model or router 
 ```
 
 <AccordionGroup>
-  <Accordion title="How model id prefixing works">
-    Every Fireworks model ref in OpenClaw starts with `fireworks/` followed by the exact id or router path from the Fireworks platform. For example:
+  <Accordion title="模型 ID 前缀工作原理">
+    OpenClaw 中的每个 Fireworks 模型引用都以 `fireworks/` 开头，后跟来自 Fireworks 平台的确切 ID 或路由路径。例如：
 
-    - Router model: `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo`
-    - Direct model: `fireworks/accounts/fireworks/models/<model-name>`
+    - 路由模型：`fireworks/accounts/fireworks/routers/kimi-k2p5-turbo`
+    - 直接模型：`fireworks/accounts/fireworks/models/<model-name>`
 
-    OpenClaw strips the `fireworks/` prefix when building the API request and sends the remaining path to the Fireworks endpoint.
+    OpenClaw 在构建 API 请求时会剥离 `fireworks/` 前缀，并将剩余路径发送到 Fireworks 端点。
 
   </Accordion>
 
-  <Accordion title="Environment note">
-    If the Gateway runs outside your interactive shell, make sure `FIREWORKS_API_KEY` is available to that process too.
+  <Accordion title="环境说明">
+    如果 Gateway 在交互式 shell 之外运行，请确保 `FIREWORKS_API_KEY` 对该进程也可用。
 
     <Warning>
-    A key sitting only in `~/.profile` will not help a launchd/systemd daemon unless that environment is imported there as well. Set the key in `~/.openclaw/.env` or via `env.shellEnv` to ensure the gateway process can read it.
+    仅位于 `~/.profile` 中的密钥对 launchd/systemd 守护进程没有帮助，除非该环境也被导入到那里。请将密钥设置在 `~/.openclaw/.env` 中或通过 `env.shellEnv` 设置，以确保 gateway 进程可以读取它。
     </Warning>
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供者、模型引用和故障转移行为。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
-    General troubleshooting and FAQ.
+  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
+    常规故障排除和常见问题解答。
   </Card>
 </CardGroup>

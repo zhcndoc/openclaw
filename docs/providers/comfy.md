@@ -1,48 +1,48 @@
 ---
-summary: "ComfyUI workflow image, video, and music generation setup in OpenClaw"
+summary: "ComfyUI 工作流图像、视频和音乐生成在 OpenClaw 中的设置"
 title: "ComfyUI"
 read_when:
-  - You want to use local ComfyUI workflows with OpenClaw
-  - You want to use Comfy Cloud with image, video, or music workflows
-  - You need the bundled comfy plugin config keys
+  - 你想在 OpenClaw 中使用本地 ComfyUI 工作流
+  - 你想使用 Comfy Cloud 进行图像、视频或音乐工作流
+  - 你需要捆绑的 comfy 插件配置键
 ---
 
-OpenClaw ships a bundled `comfy` plugin for workflow-driven ComfyUI runs. The plugin is entirely workflow-driven, so OpenClaw does not try to map generic `size`, `aspectRatio`, `resolution`, `durationSeconds`, or TTS-style controls onto your graph.
+OpenClaw 随附了一个捆绑的 `comfy` 插件，用于基于工作流的 ComfyUI 运行。该插件完全由工作流驱动，因此 OpenClaw 不会尝试将通用的 `size`、`aspectRatio`、`resolution`、`durationSeconds` 或类似 TTS 的控制项映射到您的图中。
 
-| Property        | Detail                                                                           |
+| 属性            | 详情                                                                           |
 | --------------- | -------------------------------------------------------------------------------- |
 | Provider        | `comfy`                                                                          |
 | Models          | `comfy/workflow`                                                                 |
-| Shared surfaces | `image_generate`, `video_generate`, `music_generate`                             |
-| Auth            | None for local ComfyUI; `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` for Comfy Cloud |
-| API             | ComfyUI `/prompt` / `/history` / `/view` and Comfy Cloud `/api/*`                |
+| 共享接口        | `image_generate`, `video_generate`, `music_generate`                             |
+| 认证            | 本地 ComfyUI 无需；Comfy Cloud 需要 `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
+| API             | ComfyUI `/prompt` / `/history` / `/view` 和 Comfy Cloud `/api/*`                |
 
-## What it supports
+## 支持的功能
 
-- Image generation from a workflow JSON
-- Image editing with 1 uploaded reference image
-- Video generation from a workflow JSON
-- Video generation with 1 uploaded reference image
-- Music or audio generation through the shared `music_generate` tool
-- Output download from a configured node or all matching output nodes
+- 从工作流 JSON 生成图像
+- 使用 1 张上传的参考图像进行图像编辑
+- 从工作流 JSON 生成视频
+- 使用 1 张上传的参考图像生成视频
+- 通过共享的 `music_generate` 工具生成音乐或音频
+- 从配置的节点或所有匹配的输出节点下载输出
 
-## Getting started
+## 快速开始
 
-Choose between running ComfyUI on your own machine or using Comfy Cloud.
+选择在您自己的机器上运行 ComfyUI 或使用 Comfy Cloud。
 
 <Tabs>
-  <Tab title="Local">
-    **Best for:** running your own ComfyUI instance on your machine or LAN.
+  <Tab title="本地">
+    **最适合：** 在您自己的机器或局域网上运行您自己的 ComfyUI 实例。
 
     <Steps>
-      <Step title="Start ComfyUI locally">
-        Make sure your local ComfyUI instance is running (defaults to `http://127.0.0.1:8188`).
+      <Step title="本地启动 ComfyUI">
+        确保您的本地 ComfyUI 实例正在运行（默认为 `http://127.0.0.1:8188`）。
       </Step>
-      <Step title="Prepare your workflow JSON">
-        Export or create a ComfyUI workflow JSON file. Note the node IDs for the prompt input node and the output node you want OpenClaw to read from.
+      <Step title="准备您的工作流 JSON">
+        导出或创建 ComfyUI 工作流 JSON 文件。注意提示输入节点以及您希望 OpenClaw 读取的输出节点的节点 ID。
       </Step>
-      <Step title="Configure the provider">
-        Set `mode: "local"` and point at your workflow file. Here is a minimal image example:
+      <Step title="配置提供者">
+        设置 `mode: "local"` 并指向您的工作流文件。这是一个最小的图像示例：
 
         ```json5
         {
@@ -64,8 +64,8 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
         }
         ```
       </Step>
-      <Step title="Set the default model">
-        Point OpenClaw at the `comfy/workflow` model for the capability you configured:
+      <Step title="设置默认模型">
+        将 OpenClaw 指向您配置的功能的 `comfy/workflow` 模型：
 
         ```json5
         {
@@ -79,7 +79,7 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
         }
         ```
       </Step>
-      <Step title="Verify">
+      <Step title="验证">
         ```bash
         openclaw models list --provider comfy
         ```
@@ -89,31 +89,31 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
   </Tab>
 
   <Tab title="Comfy Cloud">
-    **Best for:** running workflows on Comfy Cloud without managing local GPU resources.
+    **最适合：** 在 Comfy Cloud 上运行工作流，无需管理本地 GPU 资源。
 
     <Steps>
-      <Step title="Get an API key">
-        Sign up at [comfy.org](https://comfy.org) and generate an API key from your account dashboard.
+      <Step title="获取 API 密钥">
+        在 [comfy.org](https://comfy.org) 注册并从您的账户仪表板生成 API 密钥。
       </Step>
-      <Step title="Set the API key">
-        Provide your key through one of these methods:
+      <Step title="设置 API 密钥">
+        通过以下方法之一提供您的密钥：
 
         ```bash
-        # Environment variable (preferred)
+        # 环境变量（首选）
         export COMFY_API_KEY="your-key"
 
-        # Alternative environment variable
+        # 备用环境变量
         export COMFY_CLOUD_API_KEY="your-key"
 
-        # Or inline in config
+        # 或直接内联到配置中
         openclaw config set plugins.entries.comfy.config.apiKey "your-key"
         ```
       </Step>
-      <Step title="Prepare your workflow JSON">
-        Export or create a ComfyUI workflow JSON file. Note the node IDs for the prompt input node and the output node.
+      <Step title="准备您的工作流 JSON">
+        导出或创建 ComfyUI 工作流 JSON 文件。注意提示输入节点和输出节点的节点 ID。
       </Step>
-      <Step title="Configure the provider">
-        Set `mode: "cloud"` and point at your workflow file:
+      <Step title="配置提供者">
+        设置 `mode: "cloud"` 并指向您的工作流文件：
 
         ```json5
         {
@@ -135,10 +135,10 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
         ```
 
         <Tip>
-        Cloud mode defaults `baseUrl` to `https://cloud.comfy.org`. You only need to set `baseUrl` if you use a custom cloud endpoint.
+        云模式默认将 `baseUrl` 设置为 `https://cloud.comfy.org`。仅当您使用自定义云端点时才需要设置 `baseUrl`。
         </Tip>
       </Step>
-      <Step title="Set the default model">
+      <Step title="设置默认模型">
         ```json5
         {
           agents: {
@@ -151,7 +151,7 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
         }
         ```
       </Step>
-      <Step title="Verify">
+      <Step title="验证">
         ```bash
         openclaw models list --provider comfy
         ```
@@ -161,9 +161,9 @@ Choose between running ComfyUI on your own machine or using Comfy Cloud.
   </Tab>
 </Tabs>
 
-## Configuration
+## 配置
 
-Comfy supports shared top-level connection settings plus per-capability workflow sections (`image`, `video`, `music`):
+Comfy 支持共享的顶层连接设置以及每个功能的工作流部分（`image`、`video`、`music`）：
 
 ```json5
 {
@@ -195,40 +195,40 @@ Comfy supports shared top-level connection settings plus per-capability workflow
 }
 ```
 
-### Shared keys
+### 共享键
 
-| Key                   | Type                   | Description                                                                           |
+| 键                    | 类型                   | 描述                                                                           |
 | --------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
-| `mode`                | `"local"` or `"cloud"` | Connection mode.                                                                      |
-| `baseUrl`             | string                 | Defaults to `http://127.0.0.1:8188` for local or `https://cloud.comfy.org` for cloud. |
-| `apiKey`              | string                 | Optional inline key, alternative to `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` env vars. |
-| `allowPrivateNetwork` | boolean                | Allow a private/LAN `baseUrl` in cloud mode.                                          |
+| `mode`                | `"local"` 或 `"cloud"` | 连接模式。                                                                      |
+| `baseUrl`             | string                 | 本地默认为 `http://127.0.0.1:8188`，云默认为 `https://cloud.comfy.org`。 |
+| `apiKey`              | string                 | 可选的内联密钥，作为 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量的替代。 |
+| `allowPrivateNetwork` | boolean                | 允许在云模式中使用私有/局域网 `baseUrl`。                                          |
 
-### Per-capability keys
+### 每个功能的键
 
-These keys apply inside the `image`, `video`, or `music` sections:
+这些键适用于 `image`、`video` 或 `music` 部分内部：
 
-| Key                          | Required | Default  | Description                                                                  |
+| 键                           | 必需 | 默认  | 描述                                                                  |
 | ---------------------------- | -------- | -------- | ---------------------------------------------------------------------------- |
-| `workflow` or `workflowPath` | Yes      | --       | Path to the ComfyUI workflow JSON file.                                      |
-| `promptNodeId`               | Yes      | --       | Node ID that receives the text prompt.                                       |
-| `promptInputName`            | No       | `"text"` | Input name on the prompt node.                                               |
-| `outputNodeId`               | No       | --       | Node ID to read output from. If omitted, all matching output nodes are used. |
-| `pollIntervalMs`             | No       | --       | Polling interval in milliseconds for job completion.                         |
-| `timeoutMs`                  | No       | --       | Timeout in milliseconds for the workflow run.                                |
+| `workflow` 或 `workflowPath` | 是      | --       | ComfyUI 工作流 JSON 文件的路径。                                      |
+| `promptNodeId`               | 是      | --       | 接收文本提示的节点 ID。                                       |
+| `promptInputName`            | 否       | `"text"` | 提示节点上的输入名称。                                               |
+| `outputNodeId`               | 否       | --       | 读取输出的节点 ID。如果省略，将使用所有匹配的输出节点。 |
+| `pollIntervalMs`             | 否       | --       | 作业完成的轮询间隔（毫秒）。                         |
+| `timeoutMs`                  | 否       | --       | 工作流运行的超时时间（毫秒）。                                |
 
-The `image` and `video` sections also support:
+`image` 和 `video` 部分还支持：
 
-| Key                   | Required                             | Default   | Description                                         |
+| 键                    | 必需                             | 默认   | 描述                                         |
 | --------------------- | ------------------------------------ | --------- | --------------------------------------------------- |
-| `inputImageNodeId`    | Yes (when passing a reference image) | --        | Node ID that receives the uploaded reference image. |
-| `inputImageInputName` | No                                   | `"image"` | Input name on the image node.                       |
+| `inputImageNodeId`    | 是（当传递参考图像时） | --        | 接收上传参考图像的节点 ID。 |
+| `inputImageInputName` | 否                                   | `"image"` | 图像节点上的输入名称。                       |
 
-## Workflow details
+## 工作流详情
 
 <AccordionGroup>
-  <Accordion title="Image workflows">
-    Set the default image model to `comfy/workflow`:
+  <Accordion title="图像工作流">
+    将默认图像模型设置为 `comfy/workflow`：
 
     ```json5
     {
@@ -242,9 +242,9 @@ The `image` and `video` sections also support:
     }
     ```
 
-    **Reference-image editing example:**
+    **参考图像编辑示例：**
 
-    To enable image editing with an uploaded reference image, add `inputImageNodeId` to your image config:
+    要启用带有上传参考图像的图像编辑，请将 `inputImageNodeId` 添加到您的图像配置中：
 
     ```json5
     {
@@ -268,8 +268,8 @@ The `image` and `video` sections also support:
 
   </Accordion>
 
-  <Accordion title="Video workflows">
-    Set the default video model to `comfy/workflow`:
+  <Accordion title="视频工作流">
+    将默认视频模型设置为 `comfy/workflow`：
 
     ```json5
     {
@@ -283,27 +283,27 @@ The `image` and `video` sections also support:
     }
     ```
 
-    Comfy video workflows support text-to-video and image-to-video through the configured graph.
+    Comfy 视频工作流通过配置的图支持文生视频和图生视频。
 
     <Note>
-    OpenClaw does not pass input videos into Comfy workflows. Only text prompts and single reference images are supported as inputs.
+    OpenClaw 不会将输入视频传递到 Comfy 工作流中。仅支持文本提示和单个参考图像作为输入。
     </Note>
 
   </Accordion>
 
-  <Accordion title="Music workflows">
-    The bundled plugin registers a music-generation provider for workflow-defined audio or music outputs, surfaced through the shared `music_generate` tool:
+  <Accordion title="音乐工作流">
+    捆绑的插件注册了一个用于工作流定义的音频或音乐输出的音乐生成提供者，通过共享的 `music_generate` 工具展示：
 
     ```text
     /tool music_generate prompt="Warm ambient synth loop with soft tape texture"
     ```
 
-    Use the `music` config section to point at your audio workflow JSON and output node.
+    使用 `music` 配置部分指向您的音频工作流 JSON 和输出节点。
 
   </Accordion>
 
-  <Accordion title="Backward compatibility">
-    Existing top-level image config (without the nested `image` section) still works:
+  <Accordion title="向后兼容性">
+    现有的顶层图像配置（没有嵌套的 `image` 部分）仍然有效：
 
     ```json5
     {
@@ -321,40 +321,40 @@ The `image` and `video` sections also support:
     }
     ```
 
-    OpenClaw treats that legacy shape as the image workflow config. You do not need to migrate immediately, but the nested `image` / `video` / `music` sections are recommended for new setups.
+    OpenClaw 将该旧版结构视为图像工作流配置。您不需要立即迁移，但建议新设置使用嵌套的 `image` / `video` / `music` 部分。
 
     <Tip>
-    If you only use image generation, the legacy flat config and the new nested `image` section are functionally equivalent.
+    如果您只使用图像生成，旧版平面配置和新的嵌套 `image` 部分在功能上是等效的。
     </Tip>
 
   </Accordion>
 
-  <Accordion title="Live tests">
-    Opt-in live coverage exists for the bundled plugin:
+  <Accordion title="实时测试">
+    捆绑插件存在选择加入的实时覆盖：
 
     ```bash
     OPENCLAW_LIVE_TEST=1 COMFY_LIVE_TEST=1 pnpm test:live -- extensions/comfy/comfy.live.test.ts
     ```
 
-    The live test skips individual image, video, or music cases unless the matching Comfy workflow section is configured.
+    除非配置了匹配的 Comfy 工作流部分，否则实时测试会跳过单独的图像、视频或音乐用例。
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Image Generation" href="/tools/image-generation" icon="image">
-    Image generation tool configuration and usage.
+  <Card title="图像生成" href="/tools/image-generation" icon="image">
+    图像生成工具配置和使用。
   </Card>
-  <Card title="Video Generation" href="/tools/video-generation" icon="video">
-    Video generation tool configuration and usage.
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    视频生成工具配置和使用。
   </Card>
-  <Card title="Music Generation" href="/tools/music-generation" icon="music">
-    Music and audio generation tool setup.
+  <Card title="音乐生成" href="/tools/music-generation" icon="music">
+    音乐和音频生成工具设置。
   </Card>
-  <Card title="Provider Directory" href="/providers/index" icon="layers">
-    Overview of all providers and model refs.
+  <Card title="提供者目录" href="/providers/index" icon="layers">
+    所有提供者和模型引用的概述。
   </Card>
   <Card title="Configuration reference" href="/gateway/config-agents#agent-defaults" icon="gear">
     Full config reference including agent defaults.

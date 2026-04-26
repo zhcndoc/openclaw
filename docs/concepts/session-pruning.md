@@ -1,72 +1,54 @@
 ---
-summary: "Trimming old tool results to keep context lean and caching efficient"
-title: "Session pruning"
+summary: "修剪旧的工具结果，以保持上下文精简并提高缓存效率"
+title: "会话修剪"
 read_when:
-  - You want to reduce context growth from tool outputs
-  - You want to understand Anthropic prompt cache optimization
+  - 您希望减少工具输出导致的上下文增长
+  - 您希望了解 Anthropic 提示词缓存优化
 ---
 
-Session pruning trims **old tool results** from the context before each LLM
-call. It reduces context bloat from accumulated tool outputs (exec results, file
-reads, search results) without rewriting normal conversation text.
+会话修剪会在每次 LLM 调用之前，从上下文中修剪掉**旧的工具结果**。它通过删除累积的工具输出（执行结果、文件读取、搜索结果）来减少上下文膨胀，而不会重写正常的对话文本。
 
 <Info>
-Pruning is in-memory only -- it does not modify the on-disk session transcript.
-Your full history is always preserved.
+修剪仅在内存中进行 -- 它不会修改磁盘上的会话记录。
+您的完整历史记录始终保留。
 </Info>
 
-## Why it matters
+## 为何重要
 
-Long sessions accumulate tool output that inflates the context window. This
-increases cost and can force [compaction](/concepts/compaction) sooner than
-necessary.
+长会话会累积工具输出，从而膨胀上下文窗口。这会增加成本，并可能迫使 [压缩](/concepts/compaction) 比必要时更早发生。
 
-Pruning is especially valuable for **Anthropic prompt caching**. After the cache
-TTL expires, the next request re-caches the full prompt. Pruning reduces the
-cache-write size, directly lowering cost.
+修剪对于 **Anthropic 提示词缓存** 尤其有价值。缓存 TTL 过期后，下一个请求将重新缓存完整提示词。修剪减少了缓存写入大小，直接降低了成本。
 
-## How it works
+## 工作原理
 
-1. Wait for the cache TTL to expire (default 5 minutes).
-2. Find old tool results for normal pruning (conversation text is left alone).
-3. **Soft-trim** oversized results -- keep the head and tail, insert `...`.
-4. **Hard-clear** the rest -- replace with a placeholder.
-5. Reset the TTL so follow-up requests reuse the fresh cache.
+1. 等待缓存 TTL 过期（默认 5 分钟）。
+2. 查找旧工具结果进行正常修剪（对话文本保持不变）。
+3. **软修剪**过大的结果 -- 保留头部和尾部，插入 `...`。
+4. **硬清除**其余部分 -- 替换为占位符。
+5. 重置 TTL，以便后续请求复用新鲜缓存。
 
-## Legacy image cleanup
+## 遗留图像清理
 
-OpenClaw also builds a separate idempotent replay view for sessions that
-persist raw image blocks or prompt-hydration media markers in history.
+OpenClaw 还会对历史中持久化了原始图像块的较旧遗留会话运行单独的幂等清理。
 
-- It preserves the **3 most recent completed turns** byte-for-byte so prompt
-  cache prefixes for recent follow-ups stay stable.
-- In the replay view, older already-processed image blocks from `user` or
-  `toolResult` history can be replaced with
-  `[image data removed - already processed by model]`.
-- Older textual media references such as `[media attached: ...]`,
-  `[Image: source: ...]`, and `media://inbound/...` can be replaced with
-  `[media reference removed - already processed by model]`. Current-turn
-  attachment markers stay intact so vision models can still hydrate fresh
-  images.
-- The raw session transcript is not rewritten, so history viewers can still
-  render the original message entries and their images.
-- This is separate from normal cache-TTL pruning. It exists to stop repeated
-  image payloads or stale media refs from busting prompt caches on later turns.
+- 它逐字节保留**最近 3 个已完成的回合**，以便最近后续请求的提示词缓存前缀保持稳定。
+- `user` 或 `toolResult` 历史中较旧的已处理图像块可以替换为 `[image data removed - already processed by model]`。
+- 这与正常的缓存 TTL 修剪分开。它的存在是为了阻止重复的图像负载在后续回合中破坏提示词缓存。
 
-## Smart defaults
+## 智能默认值
 
-OpenClaw auto-enables pruning for Anthropic profiles:
+OpenClaw 为 Anthropic 配置文件自动启用修剪：
 
-| Profile type                                            | Pruning enabled | Heartbeat |
-| ------------------------------------------------------- | --------------- | --------- |
-| Anthropic OAuth/token auth (including Claude CLI reuse) | Yes             | 1 hour    |
-| API key                                                 | Yes             | 30 min    |
+| 配置文件类型                                            | 修剪已启用 | 心跳    |
+| ------------------------------------------------------- | ---------- | ------- |
+| Anthropic OAuth/token 认证（包括 Claude CLI 复用）      | 是         | 1 小时  |
+| API 密钥                                                | 是         | 30 分钟 |
 
-If you set explicit values, OpenClaw does not override them.
+如果您设置了显式值，OpenClaw 不会覆盖它们。
 
-## Enable or disable
+## 启用或禁用
 
-Pruning is off by default for non-Anthropic providers. To enable:
+对于非 Anthropic 提供商，修剪默认关闭。要启用：
 
 ```json5
 {
@@ -78,26 +60,25 @@ Pruning is off by default for non-Anthropic providers. To enable:
 }
 ```
 
-To disable: set `mode: "off"`.
+要禁用：设置 `mode: "off"`。
 
-## Pruning vs compaction
+## 修剪 vs 压缩
 
-|            | Pruning            | Compaction              |
-| ---------- | ------------------ | ----------------------- |
-| **What**   | Trims tool results | Summarizes conversation |
-| **Saved?** | No (per-request)   | Yes (in transcript)     |
-| **Scope**  | Tool results only  | Entire conversation     |
+|            | 修剪             | 压缩                |
+| ---------- | ---------------- | ------------------- |
+| **内容**   | 修剪工具结果     | 总结对话            |
+| **已保存？** | 否（每请求）     | 是（在记录中）      |
+| **范围**   | 仅工具结果       | 整个对话            |
 
-They complement each other -- pruning keeps tool output lean between
-compaction cycles.
+它们相辅相成 -- 修剪在压缩周期之间保持工具输出精简。
 
-## Further reading
+## 进一步阅读
 
-- [Compaction](/concepts/compaction) -- summarization-based context reduction
-- [Gateway Configuration](/gateway/configuration) -- all pruning config knobs
+- [Compaction](/concepts/compaction) -- 基于总结的上下文减少
+- [Gateway Configuration](/gateway/configuration) -- 所有修剪配置选项
   (`contextPruning.*`)
 
-## Related
+## 相关内容
 
 - [Session management](/concepts/session)
 - [Session tools](/concepts/session-tool)

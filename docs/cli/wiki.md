@@ -1,34 +1,34 @@
 ---
-summary: "CLI reference for `openclaw wiki` (memory-wiki vault status, search, compile, lint, apply, bridge, and Obsidian helpers)"
+summary: "openclaw wiki 的命令行参考（内存知识库状态、搜索、编译、检查、应用、桥接及 Obsidian 助手）"
 read_when:
-  - You want to use the memory-wiki CLI
-  - You are documenting or changing `openclaw wiki`
+  - 您想使用 memory-wiki CLI
+  - 您正在编写或修改 `openclaw wiki`
 title: "Wiki"
 ---
 
 # `openclaw wiki`
 
-Inspect and maintain the `memory-wiki` vault.
+检查和维护 `memory-wiki` 知识库。
 
-Provided by the bundled `memory-wiki` plugin.
+由捆绑的 `memory-wiki` 插件提供。
 
-Related:
+相关资源：
 
-- [Memory Wiki plugin](/plugins/memory-wiki)
-- [Memory Overview](/concepts/memory)
-- [CLI: memory](/cli/memory)
+- [Memory Wiki 插件](/plugins/memory-wiki)
+- [Memory 概览](/concepts/memory)
+- [CLI：memory](/cli/memory)
 
-## What it is for
+## 用途说明
 
-Use `openclaw wiki` when you want a compiled knowledge vault with:
+当您希望拥有一个已编译的知识库，并具备以下功能时，请使用 `openclaw wiki`：
 
-- wiki-native search and page reads
-- provenance-rich syntheses
-- contradiction and freshness reports
-- bridge imports from the active memory plugin
-- optional Obsidian CLI helpers
+- 原生维基式搜索与页面阅读
+- 来源丰富的综合摘要
+- 矛盾点与内容新鲜度报告
+- 从活跃记忆插件导入桥接数据
+- 可选的 Obsidian CLI 辅助工具
 
-## Common commands
+## 常用命令
 
 ```bash
 openclaw wiki status
@@ -59,84 +59,81 @@ openclaw wiki obsidian command workspace:quick-switcher
 openclaw wiki obsidian daily
 ```
 
-## Commands
+## 命令详解
 
 ### `wiki status`
 
-Inspect current vault mode, health, and Obsidian CLI availability.
+检查当前知识库模式、健康状况以及 Obsidian CLI 的可用性。
 
-Use this first when you are unsure whether the vault is initialized, bridge mode
-is healthy, or Obsidian integration is available.
+当您不确定知识库是否已初始化、桥接模式是否正常，或 Obsidian 集成是否可用时，请首先使用此命令。
 
 ### `wiki doctor`
 
-Run wiki health checks and surface configuration or vault problems.
+运行知识库健康检查，并报告配置或知识库中的问题。
 
-Typical issues include:
+常见问题包括：
 
-- bridge mode enabled without public memory artifacts
-- invalid or missing vault layout
-- missing external Obsidian CLI when Obsidian mode is expected
+- 启用了桥接模式但未设置公开的记忆工件
+- 知识库布局无效或缺失
+- 预期使用 Obsidian 模式时缺少外部 Obsidian CLI
 
 ### `wiki init`
 
-Create the wiki vault layout and starter pages.
+创建知识库的初始结构并生成起始页面。
 
-This initializes the root structure, including top-level indexes and cache
-directories.
+这将初始化根目录结构，包括顶级索引和缓存目录。
 
 ### `wiki ingest <path-or-url>`
 
-Import content into the wiki source layer.
+将内容导入到知识库源层。
 
-Notes:
+注意事项：
 
-- URL ingest is controlled by `ingest.allowUrlIngest`
-- imported source pages keep provenance in frontmatter
-- auto-compile can run after ingest when enabled
+- URL 导入受 `ingest.allowUrlIngest` 控制
+- 导入的源页面在 frontmatter 中保留来源信息
+- 启用后可在导入完成后自动运行编译
 
 ### `wiki compile`
 
-Rebuild indexes, related blocks, dashboards, and compiled digests.
+重建索引、关联块、仪表板以及编译后的摘要。
 
-This writes stable machine-facing artifacts under:
+这会在以下位置写入稳定的机器可读工件：
 
 - `.openclaw-wiki/cache/agent-digest.json`
 - `.openclaw-wiki/cache/claims.jsonl`
 
-If `render.createDashboards` is enabled, compile also refreshes report pages.
+如果启用了 `render.createDashboards`，编译还会刷新报告页面。
 
 ### `wiki lint`
 
-Lint the vault and report:
+检查知识库并报告：
 
-- structural issues
-- provenance gaps
-- contradictions
-- open questions
-- low-confidence pages/claims
-- stale pages/claims
+- 结构性问题
+- 来源信息缺失
+- 矛盾点
+- 待解决问题
+- 低置信度的页面/声明
+- 过时的页面/声明
 
-Run this after meaningful wiki updates.
+在进行有意义的知识库更新后请运行此命令。
 
 ### `wiki search <query>`
 
-Search wiki content.
+搜索知识库内容。
 
-Behavior depends on config:
+行为取决于配置：
 
-- `search.backend`: `shared` or `local`
-- `search.corpus`: `wiki`, `memory`, or `all`
+- `search.backend`: `shared` 或 `local`
+- `search.corpus`: `wiki`, `memory`, 或 `all`
 
-Use `wiki search` when you want wiki-specific ranking or provenance details.
-For one broad shared recall pass, prefer `openclaw memory search` when the
-active memory plugin exposes shared search.
+当您需要维基特定的排序或来源详情时，请使用 `wiki search`。
+如需一次广泛的共享检索，当活跃记忆插件支持共享搜索时，建议优先使用 `openclaw memory search`。
 
 ### `wiki get <lookup>`
 
-Read a wiki page by id or relative path.
+通过 ID 或相对路径读取知识库页面。
 
-Examples:
+示例：
 
 ```bash
 openclaw wiki get entity.alpha
@@ -145,40 +142,37 @@ openclaw wiki get syntheses/alpha-summary.md --from 1 --lines 80
 
 ### `wiki apply`
 
-Apply narrow mutations without freeform page surgery.
+在不进行自由格式页面编辑的前提下，执行窄范围修改。
 
-Supported flows include:
+支持的流程包括：
 
-- create/update a synthesis page
-- update page metadata
-- attach source ids
-- add questions
-- add contradictions
-- update confidence/status
-- write structured claims
+- 创建/更新综合摘要页面
+- 更新页面元数据
+- 附加来源 ID
+- 添加问题
+- 添加矛盾点
+- 更新置信度/状态
+- 写入结构化声明
 
-This command exists so the wiki can evolve safely without manually editing
-managed blocks.
+此命令的存在是为了让知识库能够在不手动编辑管理区块的情况下安全演进。
 
 ### `wiki bridge import`
 
-Import public memory artifacts from the active memory plugin into bridge-backed
-source pages.
+从活跃记忆插件导入公开的记忆工件到桥接支持的源页面。
 
-Use this in `bridge` mode when you want the latest exported memory artifacts
-pulled into the wiki vault.
+在 `bridge` 模式下，当您希望将最新的导出的记忆工件拉取到知识库中时使用此命令。
 
 ### `wiki unsafe-local import`
 
-Import from explicitly configured local paths in `unsafe-local` mode.
+在 `unsafe-local` 模式下，从明确配置的本地路径导入。
 
-This is intentionally experimental and same-machine only.
+此功能有意设计为实验性的，且仅限同一台机器上使用。
 
 ### `wiki obsidian ...`
 
-Obsidian helper commands for vaults running in Obsidian-friendly mode.
+用于运行在 Obsidian 友好模式下的知识库的帮助命令。
 
-Subcommands:
+子命令包括：
 
 - `status`
 - `search`
@@ -186,22 +180,19 @@ Subcommands:
 - `command`
 - `daily`
 
-These require the official `obsidian` CLI on `PATH` when
-`obsidian.useOfficialCli` is enabled.
+当 `obsidian.useOfficialCli` 启用时，这些命令需要官方 `obsidian` CLI 位于 `PATH` 中。
 
-## Practical usage guidance
+## 实用操作指导
 
-- Use `wiki search` + `wiki get` when provenance and page identity matter.
-- Use `wiki apply` instead of hand-editing managed generated sections.
-- Use `wiki lint` before trusting contradictory or low-confidence content.
-- Use `wiki compile` after bulk imports or source changes when you want fresh
-  dashboards and compiled digests immediately.
-- Use `wiki bridge import` when bridge mode depends on newly exported memory
-  artifacts.
+- 当来源信息和页面身份很重要时，请使用 `wiki search` + `wiki get`。
+- 不要手动编辑生成的区块，而是使用 `wiki apply`。
+- 在信任矛盾或低置信度内容之前，请先运行 `wiki lint`。
+- 在批量导入或源变更后，如果您希望立即获得新的仪表板和编译摘要，请使用 `wiki compile`。
+- 当桥接模式依赖于新导出的记忆工件时，请使用 `wiki bridge import`。
 
-## Configuration tie-ins
+## 配置关联
 
-`openclaw wiki` behavior is shaped by:
+`openclaw wiki` 的行为由以下配置决定：
 
 - `plugins.entries.memory-wiki.config.vaultMode`
 - `plugins.entries.memory-wiki.config.search.backend`
@@ -211,9 +202,9 @@ These require the official `obsidian` CLI on `PATH` when
 - `plugins.entries.memory-wiki.config.render.*`
 - `plugins.entries.memory-wiki.config.context.includeCompiledDigestPrompt`
 
-See [Memory Wiki plugin](/plugins/memory-wiki) for the full config model.
+请参阅 [Memory Wiki 插件](/plugins/memory-wiki) 了解完整的配置模型。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)
 - [Memory wiki](/plugins/memory-wiki)

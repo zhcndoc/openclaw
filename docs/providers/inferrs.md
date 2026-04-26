@@ -1,23 +1,20 @@
 ---
-summary: "Run OpenClaw through inferrs (OpenAI-compatible local server)"
+summary: "通过 inferrs（OpenAI 兼容的本地服务器）运行 OpenClaw"
 read_when:
-  - You want to run OpenClaw against a local inferrs server
-  - You are serving Gemma or another model through inferrs
-  - You need the exact OpenClaw compat flags for inferrs
+  - 你想使用本地 inferrs 服务器运行 OpenClaw
+  - 你正在通过 inferrs 提供 Gemma 或其他模型
+  - 你需要 inferrs 的准确 OpenClaw 兼容标志
 title: "Inferrs"
 ---
 
-[inferrs](https://github.com/ericcurtin/inferrs) can serve local models behind an
-OpenAI-compatible `/v1` API. OpenClaw works with `inferrs` through the generic
-`openai-completions` path.
+[inferrs](https://github.com/ericcurtin/inferrs) 可以通过兼容 OpenAI 的 `/v1` API 提供本地模型。OpenClaw 通过通用的 `openai-completions` 路径与 `inferrs` 配合工作。
 
-`inferrs` is currently best treated as a custom self-hosted OpenAI-compatible
-backend, not a dedicated OpenClaw provider plugin.
+目前，最好将 `inferrs` 视为自定义的自托管 OpenAI 兼容后端，而不是专用的 OpenClaw 提供商插件。
 
-## Getting started
+## 开始使用
 
 <Steps>
-  <Step title="Start inferrs with a model">
+  <Step title="启动带有模型的 inferrs">
     ```bash
     inferrs serve google/gemma-4-E2B-it \
       --host 127.0.0.1 \
@@ -25,20 +22,20 @@ backend, not a dedicated OpenClaw provider plugin.
       --device metal
     ```
   </Step>
-  <Step title="Verify the server is reachable">
+  <Step title="验证服务器是否可访问">
     ```bash
     curl http://127.0.0.1:8080/health
     curl http://127.0.0.1:8080/v1/models
     ```
   </Step>
-  <Step title="Add an OpenClaw provider entry">
-    Add an explicit provider entry and point your default model at it. See the full config example below.
+  <Step title="添加 OpenClaw 提供商条目">
+    添加一个明确的提供商条目并将您的默认模型指向它。请参阅下面的完整配置示例。
   </Step>
 </Steps>
 
-## Full config example
+## 完整配置示例
 
-This example uses Gemma 4 on a local `inferrs` server.
+此示例使用本地 `inferrs` 服务器上的 Gemma 4。
 
 ```json5
 {
@@ -79,21 +76,20 @@ This example uses Gemma 4 on a local `inferrs` server.
 }
 ```
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Why requiresStringContent matters">
-    Some `inferrs` Chat Completions routes accept only string
-    `messages[].content`, not structured content-part arrays.
+  <Accordion title="为什么 requiresStringContent 很重要">
+    某些 `inferrs` Chat Completions 路由仅接受字符串 `messages[].content`，而不接受结构化的 content-part 数组。
 
     <Warning>
-    If OpenClaw runs fail with an error like:
+    如果 OpenClaw 运行失败并出现如下错误：
 
     ```text
     messages[1].content: invalid type: sequence, expected a string
     ```
 
-    set `compat.requiresStringContent: true` in your model entry.
+    在您的模型条目中设置 `compat.requiresStringContent: true`。
     </Warning>
 
     ```json5
@@ -102,17 +98,14 @@ This example uses Gemma 4 on a local `inferrs` server.
     }
     ```
 
-    OpenClaw will flatten pure text content parts into plain strings before sending
-    the request.
+    OpenClaw 将在发送请求之前将纯文本内容部分扁平化为普通字符串。
 
   </Accordion>
 
-  <Accordion title="Gemma and tool-schema caveat">
-    Some current `inferrs` + Gemma combinations accept small direct
-    `/v1/chat/completions` requests but still fail on full OpenClaw agent-runtime
-    turns.
+  <Accordion title="Gemma 和 tool-schema 注意事项">
+    某些当前的 `inferrs` + Gemma 组合接受小型直接 `/v1/chat/completions` 请求，但在完整的 OpenClaw agent-runtime 回合上仍然失败。
 
-    If that happens, try this first:
+    如果发生这种情况，请先尝试此操作：
 
     ```json5
     compat: {
@@ -121,88 +114,76 @@ This example uses Gemma 4 on a local `inferrs` server.
     }
     ```
 
-    That disables OpenClaw's tool schema surface for the model and can reduce prompt
-    pressure on stricter local backends.
+    这将禁用该模型的 OpenClaw 工具 schema 表面，并可以减少对更严格的本地后端的提示压力。
 
-    If tiny direct requests still work but normal OpenClaw agent turns continue to
-    crash inside `inferrs`, the remaining issue is usually upstream model/server
-    behavior rather than OpenClaw's transport layer.
+    如果微型直接请求仍然有效但正常的 OpenClaw agent 回合继续在 `inferrs` 内部崩溃，剩余的问题通常是上游模型/服务器行为而不是 OpenClaw 的传输层。
 
   </Accordion>
 
-  <Accordion title="Manual smoke test">
-    Once configured, test both layers:
+  <Accordion title="手动冒烟测试">
+    配置完成后，测试两层：
 
     ```bash
     curl http://127.0.0.1:8080/v1/chat/completions \
       -H 'content-type: application/json' \
-      -d '{"model":"google/gemma-4-E2B-it","messages":[{"role":"user","content":"What is 2 + 2?"}],"stream":false}'
+      -d '{"model":"google/gemma-4-E2B-it","messages":[{"role":"user","content":"2 + 2 是多少？"}],"stream":false}'
     ```
 
     ```bash
     openclaw infer model run \
       --model inferrs/google/gemma-4-E2B-it \
-      --prompt "What is 2 + 2? Reply with one short sentence." \
+      --prompt "2 + 2 是多少？请用一句简短的话回答。" \
       --json
     ```
 
-    If the first command works but the second fails, check the troubleshooting section below.
+    如果第一个命令有效但第二个失败，请检查下面的故障排除部分。
 
   </Accordion>
 
-  <Accordion title="Proxy-style behavior">
-    `inferrs` is treated as a proxy-style OpenAI-compatible `/v1` backend, not a
-    native OpenAI endpoint.
+  <Accordion title="代理式行为">
+    `inferrs` 被视为代理式 OpenAI 兼容 `/v1` 后端，而不是原生 OpenAI 端点。
 
-    - Native OpenAI-only request shaping does not apply here
-    - No `service_tier`, no Responses `store`, no prompt-cache hints, and no
-      OpenAI reasoning-compat payload shaping
-    - Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`)
-      are not injected on custom `inferrs` base URLs
+    - 原生仅限 OpenAI 的请求塑造不适用于此处
+    - 无 `service_tier`，无 Responses `store`，无提示缓存提示，且无 OpenAI 推理兼容 payload 塑造
+    - 隐藏的 OpenClaw 归属头（`originator`, `version`, `User-Agent`）不会注入到自定义 `inferrs` base URLs 上
 
   </Accordion>
 </AccordionGroup>
 
-## Troubleshooting
+## 故障排除
 
 <AccordionGroup>
-  <Accordion title="curl /v1/models fails">
-    `inferrs` is not running, not reachable, or not bound to the expected
-    host/port. Make sure the server is started and listening on the address you
-    configured.
+  <Accordion title="curl /v1/models 失败">
+    `inferrs` 未运行、不可访问或未绑定到预期的主机/端口。确保服务器已启动并在您配置的地址上监听。
   </Accordion>
 
-  <Accordion title="messages[].content expected a string">
-    Set `compat.requiresStringContent: true` in the model entry. See the
-    `requiresStringContent` section above for details.
+  <Accordion title="messages[].content 期望为字符串">
+    在模型条目中设置 `compat.requiresStringContent: true`。有关详细信息，请参阅上面的 `requiresStringContent` 部分。
   </Accordion>
 
-  <Accordion title="Direct /v1/chat/completions calls pass but openclaw infer model run fails">
-    Try setting `compat.supportsTools: false` to disable the tool schema surface.
-    See the Gemma tool-schema caveat above.
+  <Accordion title="直接 /v1/chat/completions 调用通过但 openclaw infer model run 失败">
+    尝试设置 `compat.supportsTools: false` 以禁用工具 schema 表面。请参阅上面的 Gemma tool-schema 注意事项。
   </Accordion>
 
-  <Accordion title="inferrs still crashes on larger agent turns">
-    If OpenClaw no longer gets schema errors but `inferrs` still crashes on larger
-    agent turns, treat it as an upstream `inferrs` or model limitation. Reduce
-    prompt pressure or switch to a different local backend or model.
+  <Accordion title="inferrs 在较大的 agent 回合上仍然崩溃">
+    如果 OpenClaw 不再出现 schema 错误但 `inferrs` 在较大的 agent 回合上仍然崩溃，请将其视为上游 `inferrs` 或模型限制。减少提示压力或切换到不同的本地后端或模型。
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-For general help, see [Troubleshooting](/help/troubleshooting) and [FAQ](/help/faq).
+对于一般帮助，请参阅 [故障排除](/help/troubleshooting) 和 [常见问题](/help/faq)。
 </Tip>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Local models" href="/gateway/local-models" icon="server">
-    Running OpenClaw against local model servers.
+  <Card title="本地模型" href="/gateway/local-models" icon="server">
+    针对本地模型服务器运行 OpenClaw。
   </Card>
-  <Card title="Gateway troubleshooting" href="/gateway/troubleshooting#local-openai-compatible-backend-passes-direct-probes-but-agent-runs-fail" icon="wrench">
-    Debugging local OpenAI-compatible backends that pass probes but fail agent runs.
+  <Card title="网关故障排除" href="/gateway/troubleshooting#local-openai-compatible-backend-passes-direct-probes-but-agent-runs-fail" icon="wrench">
+    调试通过探测但 agent 运行失败的本地 OpenAI 兼容后端。
   </Card>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Overview of all providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    所有提供商、模型引用和故障切换行为概览。
   </Card>
 </CardGroup>

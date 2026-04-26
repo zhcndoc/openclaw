@@ -1,24 +1,24 @@
 ---
-summary: "Run OpenClaw with LM Studio"
+summary: "使用 LM Studio 运行 OpenClaw"
 read_when:
-  - You want to run OpenClaw with open source models via LM Studio
-  - You want to set up and configure LM Studio
+  - 您希望使用 LM Studio 通过开源模型运行 OpenClaw
+  - 您希望设置并配置 LM Studio
 title: "LM Studio"
 ---
 
-LM Studio is a friendly yet powerful app for running open-weight models on your own hardware. It lets you run llama.cpp (GGUF) or MLX models (Apple Silicon). Comes in a GUI package or headless daemon (`llmster`). For product and setup docs, see [lmstudio.ai](https://lmstudio.ai/).
+LM Studio 是一款友好且强大的应用程序，可在您自己的硬件上运行开放权重模型。它支持运行 llama.cpp（GGUF）或 MLX 模型（Apple Silicon）。提供 GUI 版本或无头守护进程（`llmster`）。有关产品和设置文档，请参阅 [lmstudio.ai](https://lmstudio.ai/)。
 
-## Quick start
+## 快速开始
 
-1. Install LM Studio (desktop) or `llmster` (headless), then start the local server:
+1. 安装 LM Studio（桌面版）或 `llmster`（无头模式），然后启动本地服务器：
 
 ```bash
 curl -fsSL https://lmstudio.ai/install.sh | bash
 ```
 
-2. Start the server
+2. 启动服务器
 
-Make sure you either start the desktop app or run the daemon using the following command:
+请确保您已启动桌面应用程序，或使用以下命令运行守护进程：
 
 ```bash
 lms daemon up
@@ -28,43 +28,47 @@ lms daemon up
 lms server start --port 1234
 ```
 
-If you are using the app, make sure you have JIT enabled for a smooth experience. Learn more in the [LM Studio JIT and TTL guide](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict).
+如果您使用的是桌面应用程序，请确保已启用 JIT 以获得流畅体验。有关更多信息，请参考 [LM Studio JIT 和 TTL 指南](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict)。
 
-3. OpenClaw requires an LM Studio token value. Set `LM_API_TOKEN`:
+3. OpenClaw 需要 LM Studio 的令牌值。请设置 `LM_API_TOKEN`：
 
 ```bash
 export LM_API_TOKEN="your-lm-studio-api-token"
 ```
 
-If LM Studio authentication is disabled, use any non-empty token value:
+如果 LM Studio 身份验证已禁用，请使用任意非空令牌值：
 
 ```bash
 export LM_API_TOKEN="placeholder-key"
 ```
 
-For LM Studio auth setup details, see [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication).
+有关 LM Studio 身份验证设置的详细信息，请参考 [LM Studio 身份验证](https://lmstudio.ai/docs/developer/core/authentication)。
 
-4. Run onboarding and choose `LM Studio`:
+4. 运行引导流程并选择 `LM Studio`：
 
 ```bash
 openclaw onboard
 ```
 
-5. In onboarding, use the `Default model` prompt to pick your LM Studio model.
+5. 在引导流程中，使用 `Default model` 提示选择您的 LM Studio 模型。
 
-You can also set or change it later:
+您也可以稍后设置或更改它：
 
 ```bash
 openclaw models set lmstudio/qwen/qwen3.5-9b
 ```
 
-LM Studio model keys follow a `author/model-name` format (e.g. `qwen/qwen3.5-9b`). OpenClaw
-model refs prepend the provider name: `lmstudio/qwen/qwen3.5-9b`. You can find the exact key for
-a model by running `curl http://localhost:1234/api/v1/models` and looking at the `key` field.
+LM Studio 的模型键遵循 `作者/模型名称` 格式（例如 `qwen/qwen3.5-9b`）。OpenClaw 模型引用会加上提供者前缀：`lmstudio/qwen/qwen3.5-9b`。您可以通过运行以下命令查找模型的精确键：
 
-## Non-interactive onboarding
+```bash
+curl http://localhost:1234/api/v1/models
+```
 
-Use non-interactive onboarding when you want to script setup (CI, provisioning, remote bootstrap):
+并查看 `key` 字段。
+
+## 非交互式引导
+
+当您希望脚本化设置（CI、配置、远程引导）时，请使用非交互式引导：
 
 ```bash
 openclaw onboard \
@@ -73,7 +77,7 @@ openclaw onboard \
   --auth-choice lmstudio
 ```
 
-Or specify base URL or model with API key:
+或者指定基础 URL 或模型与 API 密钥：
 
 ```bash
 openclaw onboard \
@@ -85,28 +89,24 @@ openclaw onboard \
   --custom-model-id qwen/qwen3.5-9b
 ```
 
-`--custom-model-id` takes the model key as returned by LM Studio (e.g. `qwen/qwen3.5-9b`), without
-the `lmstudio/` provider prefix.
+`--custom-model-id` 接收 LM Studio 返回的模型键（例如 `qwen/qwen3.5-9b`），不包含 `lmstudio/` 提供者前缀。
 
-Non-interactive onboarding requires `--lmstudio-api-key` (or `LM_API_TOKEN` in env).
-For unauthenticated LM Studio servers, any non-empty token value works.
+非交互式引导需要 `--lmstudio-api-key`（或环境变量中的 `LM_API_TOKEN`）。
+对于未启用身份验证的 LM Studio 服务器，任何非空令牌值均可使用。
 
-`--custom-api-key` remains supported for compatibility, but `--lmstudio-api-key` is preferred for LM Studio.
+`--custom-api-key` 仍受支持以保持兼容性，但建议对 LM Studio 使用 `--lmstudio-api-key`。
 
-This writes `models.providers.lmstudio`, sets the default model to
-`lmstudio/<custom-model-id>`, and writes the `lmstudio:default` auth profile.
+这将写入 `models.providers.lmstudio`，设置默认模型为 `lmstudio/<custom-model-id>`，并写入 `lmstudio:default` 身份验证配置。
 
-Interactive setup can prompt for an optional preferred load context length and applies it across the discovered LM Studio models it saves into config.
+交互式设置可以提示选择可选的期望上下文长度，并将其应用于保存到配置中的所有已发现的 LM Studio 模型。
 
-## Configuration
+## 配置
 
-### Streaming usage compatibility
+### 流式使用兼容性
 
-LM Studio is streaming-usage compatible. When it does not emit an OpenAI-shaped
-`usage` object, OpenClaw recovers token counts from llama.cpp-style
-`timings.prompt_n` / `timings.predicted_n` metadata instead.
+LM Studio 兼容流式使用。当它不发出 OpenAI 形式的 `usage` 对象时，OpenClaw 会根据 llama.cpp 风格的 `timings.prompt_n` / `timings.predicted_n` 元数据恢复令牌计数。
 
-Same behavior applies to these OpenAI-compatible local backends:
+相同的行为也适用于以下 OpenAI 兼容的本地后端：
 
 - vLLM
 - SGLang
@@ -116,7 +116,7 @@ Same behavior applies to these OpenAI-compatible local backends:
 - TabbyAPI
 - text-generation-webui
 
-### Explicit configuration
+### 显式配置
 
 ```json5
 {
@@ -143,37 +143,37 @@ Same behavior applies to these OpenAI-compatible local backends:
 }
 ```
 
-## Troubleshooting
+## 故障排除
 
-### LM Studio not detected
+### 未检测到 LM Studio
 
-Make sure LM Studio is running and that you set `LM_API_TOKEN` (for unauthenticated servers, any non-empty token value works):
+请确保 LM Studio 正在运行，并已设置 `LM_API_TOKEN`（对于未启用身份验证的服务器，任何非空令牌值均可使用）：
 
 ```bash
-# Start via desktop app, or headless:
+# 通过桌面应用或无头模式启动：
 lms server start --port 1234
 ```
 
-Verify the API is accessible:
+验证 API 是否可访问：
 
 ```bash
 curl http://localhost:1234/api/v1/models
 ```
 
-### Authentication errors (HTTP 401)
+### 身份验证错误（HTTP 401）
 
-If setup reports HTTP 401, verify your API key:
+如果引导流程报告 HTTP 401，请验证您的 API 密钥：
 
-- Check that `LM_API_TOKEN` matches the key configured in LM Studio.
-- For LM Studio auth setup details, see [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication).
-- If your server does not require authentication, use any non-empty token value for `LM_API_TOKEN`.
+- 检查 `LM_API_TOKEN` 是否与 LM Studio 中配置的密钥匹配。
+- 有关 LM Studio 身份验证设置的详细信息，请参考 [LM Studio 身份验证](https://lmstudio.ai/docs/developer/core/authentication)。
+- 如果服务器不需要身份验证，请为 `LM_API_TOKEN` 使用任意非空令牌值。
 
-### Just-in-time model loading
+### 即时模型加载
 
-LM Studio supports just-in-time (JIT) model loading, where models are loaded on first request. Make sure you have this enabled to avoid 'Model not loaded' errors.
+LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加载。请确保已启用此功能，以避免出现“模型未加载”错误。
 
-## Related
+## 相关内容
 
-- [Model selection](/concepts/model-providers)
+- [模型选择](/concepts/model-providers)
 - [Ollama](/providers/ollama)
-- [Local models](/gateway/local-models)
+- [本地模型](/gateway/local-models)

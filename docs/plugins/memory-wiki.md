@@ -1,107 +1,95 @@
 ---
-summary: "memory-wiki: compiled knowledge vault with provenance, claims, dashboards, and bridge mode"
+summary: "memory-wiki：带有出处、声明、仪表板和桥接模式的编译知识库"
 read_when:
-  - You want persistent knowledge beyond plain MEMORY.md notes
-  - You are configuring the bundled memory-wiki plugin
-  - You want to understand wiki_search, wiki_get, or bridge mode
+  - 您希望获得超越普通 MEMORY.md 笔记的持久化知识
+  - 您正在配置捆绑的 memory-wiki 插件
+  - 您想了解 wiki_search、wiki_get 或桥接模式
 title: "Memory wiki"
 ---
 
-`memory-wiki` is a bundled plugin that turns durable memory into a compiled
-knowledge vault.
+`memory-wiki` 是一个捆绑插件，它将持久化记忆转化为一个编译后的
+知识保险库。
 
-It does **not** replace the active memory plugin. The active memory plugin still
-owns recall, promotion, indexing, and dreaming. `memory-wiki` sits beside it
-and compiles durable knowledge into a navigable wiki with deterministic pages,
-structured claims, provenance, dashboards, and machine-readable digests.
+它**不会**取代活跃的记忆插件。活跃的记忆插件仍然负责回忆、推广、索引和梦境。`memory-wiki` 则与之并列，将持久化知识编译成具有确定性页面、结构化声明、出处、仪表板和机器可读摘要的可导航维基。
 
-Use it when you want memory to behave more like a maintained knowledge layer and
-less like a pile of Markdown files.
+当您希望记忆更像一个维护中的知识层，而不是 Markdown 文件的堆叠时，请使用它。
 
-## What it adds
+## 它增加了什么
 
-- A dedicated wiki vault with deterministic page layout
-- Structured claim and evidence metadata, not just prose
-- Page-level provenance, confidence, contradictions, and open questions
-- Compiled digests for agent/runtime consumers
-- Wiki-native search/get/apply/lint tools
-- Optional bridge mode that imports public artifacts from the active memory plugin
-- Optional Obsidian-friendly render mode and CLI integration
+- 一个专用的维基库，具有确定性的页面布局
+- 结构化的声明和证据元数据，而不仅仅是散文
+- 页面级别的出处、置信度、矛盾点和开放问题
+- 供代理/运行时消费者使用的编译摘要
+- 原生维基搜索/获取/应用/检查工具
+- 可选的桥接模式，用于从活跃记忆插件导入公共工件
+- 可选的 Obsidian 友好渲染模式和 CLI 集成
 
-## How it fits with memory
+## 它与记忆的关系
 
-Think of the split like this:
+可以这样理解这种分层：
 
-| Layer                                                   | Owns                                                                                       |
+| 层级                                                   | 拥有                                                                                       |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Active memory plugin (`memory-core`, QMD, Honcho, etc.) | Recall, semantic search, promotion, dreaming, memory runtime                               |
-| `memory-wiki`                                           | Compiled wiki pages, provenance-rich syntheses, dashboards, wiki-specific search/get/apply |
+| 活跃记忆插件 (`memory-core`, QMD, Honcho 等) | 回忆、语义搜索、推广、梦境、记忆运行时                               |
+| `memory-wiki`                                           | 编译的维基页面、出处丰富的综合、仪表板、维基特定的搜索/获取/应用 |
 
-If the active memory plugin exposes shared recall artifacts, OpenClaw can search
-both layers in one pass with `memory_search corpus=all`.
+如果活跃记忆插件公开了共享回忆工件，OpenClaw 可以通过 `memory_search corpus=all` 在一次传递中同时搜索两个层级。
 
-When you need wiki-specific ranking, provenance, or direct page access, use the
-wiki-native tools instead.
+当您需要在维基特定排名、出处或直接页面访问时，请使用维基原生工具。
 
-## Recommended hybrid pattern
+## 推荐的混合模式
 
-A strong default for local-first setups is:
+对于本地优先设置，一个强大的默认方案是：
 
-- QMD as the active memory backend for recall and broad semantic search
-- `memory-wiki` in `bridge` mode for durable synthesized knowledge pages
+- 使用 QMD 作为活跃记忆后端，用于回忆和广泛的语义搜索
+- 使用 `bridge` 模式的 `memory-wiki` 用于持久的综合知识页面
 
-That split works well because each layer stays focused:
+这种划分效果很好，因为每一层都保持专注：
 
-- QMD keeps raw notes, session exports, and extra collections searchable
-- `memory-wiki` compiles stable entities, claims, dashboards, and source pages
+- QMD 保持原始笔记、会话导出和额外集合可搜索
+- `memory-wiki` 编译稳定的实体、声明、仪表板和来源页面
 
-Practical rule:
+实用规则：
 
-- use `memory_search` when you want one broad recall pass across memory
-- use `wiki_search` and `wiki_get` when you want provenance-aware wiki results
-- use `memory_search corpus=all` when you want shared search to span both layers
+- 当您想要对记忆进行一次广泛的回忆传递时，使用 `memory_search`
+- 当您想要感知出处的维基结果时，使用 `wiki_search` 和 `wiki_get`
+- 当您想要共享搜索跨越两个层级时，使用 `memory_search corpus=all`
 
-If bridge mode reports zero exported artifacts, the active memory plugin is not
-currently exposing public bridge inputs yet. Run `openclaw wiki doctor` first,
-then confirm the active memory plugin supports public artifacts.
+如果桥接模式报告零导出的工件，则活跃记忆插件当前尚未公开公共桥接输入。首先运行 `openclaw wiki doctor`，然后确认活跃记忆插件支持公共工件。
 
-## Vault modes
+## 库模式
 
-`memory-wiki` supports three vault modes:
+`memory-wiki` 支持三种库模式：
 
-### `isolated`
+### 隔离模式 (isolated)
 
-Own vault, own sources, no dependency on `memory-core`.
+独立的库，独立来源，不依赖 `memory-core`。
 
-Use this when you want the wiki to be its own curated knowledge store.
+当您希望维基成为自己策划的知识存储时使用此模式。
 
-### `bridge`
+### 桥接模式 (bridge)
 
-Reads public memory artifacts and memory events from the active memory plugin
-through public plugin SDK seams.
+通过公共插件 SDK 接缝从活跃记忆插件读取公共记忆工件和记忆事件。
 
-Use this when you want the wiki to compile and organize the memory plugin's
-exported artifacts without reaching into private plugin internals.
+当您希望维基编译并组织记忆插件导出的工件，而不触及私有插件内部时使用此模式。
 
-Bridge mode can index:
+桥接模式可以索引：
 
-- exported memory artifacts
-- dream reports
-- daily notes
-- memory root files
-- memory event logs
+- 导出的记忆工件
+- 梦境报告
+- 每日笔记
+- 记忆根文件
+- 记忆事件日志
 
-### `unsafe-local`
+### 不安全本地模式 (unsafe-local)
 
-Explicit same-machine escape hatch for local private paths.
+显式的本地私有路径逃逸舱口。
 
-This mode is intentionally experimental and non-portable. Use it only when you
-understand the trust boundary and specifically need local filesystem access that
-bridge mode cannot provide.
+此模式有意为实验性且不可移植。仅在您了解信任边界并特别需要桥接模式无法提供的本地文件系统访问时使用。
 
-## Vault layout
+## 库布局
 
-The plugin initializes a vault like this:
+插件初始化如下库：
 
 ```text
 <vault>/
@@ -119,21 +107,21 @@ The plugin initializes a vault like this:
   .openclaw-wiki/
 ```
 
-Managed content stays inside generated blocks. Human note blocks are preserved.
+管理内容保留在生成的块内。人类笔记块被保留。
 
-The main page groups are:
+主要页面分组包括：
 
-- `sources/` for imported raw material and bridge-backed pages
-- `entities/` for durable things, people, systems, projects, and objects
-- `concepts/` for ideas, abstractions, patterns, and policies
-- `syntheses/` for compiled summaries and maintained rollups
-- `reports/` for generated dashboards
+- `sources/` 用于导入的原始材料和桥接支持的页面
+- `entities/` 用于持久化的事物、人、系统、项目和对象
+- `concepts/` 用于想法、抽象、模式和策略
+- `syntheses/` 用于编译的摘要和维护的汇总
+- `reports/` 用于生成的仪表板
 
-## Structured claims and evidence
+## 结构化声明和证据
 
-Pages can carry structured `claims` frontmatter, not just freeform text.
+页面可以携带结构化的 `claims` frontmatter，而不仅仅是自由文本。
 
-Each claim can include:
+每个声明可以包含：
 
 - `id`
 - `text`
@@ -142,7 +130,7 @@ Each claim can include:
 - `evidence[]`
 - `updatedAt`
 
-Evidence entries can include:
+证据条目可以包含：
 
 - `sourceId`
 - `path`
@@ -151,33 +139,29 @@ Evidence entries can include:
 - `note`
 - `updatedAt`
 
-This is what makes the wiki act more like a belief layer than a passive note
-dump. Claims can be tracked, scored, contested, and resolved back to sources.
+这使得维基更像一个信念层而不是被动笔记堆。声明可以被跟踪、评分、质疑和解决回来源。
 
-## Compile pipeline
+## 编译管道
 
-The compile step reads wiki pages, normalizes summaries, and emits stable
-machine-facing artifacts under:
+编译步骤读取维基页面，标准化摘要，并在以下位置发出稳定的面向机器的工件：
 
 - `.openclaw-wiki/cache/agent-digest.json`
 - `.openclaw-wiki/cache/claims.jsonl`
 
-These digests exist so agents and runtime code do not have to scrape Markdown
-pages.
+这些摘要的存在是为了让代理和运行时代码不必刮削 Markdown 页面。
 
-Compiled output also powers:
+编译输出还驱动：
 
-- first-pass wiki indexing for search/get flows
-- claim-id lookup back to owning pages
-- compact prompt supplements
-- report/dashboard generation
+- 搜索/获取流程的首次维基索引
+- 声明 ID 查找回拥有页面
+- 紧凑的提示补充
+- 报告/仪表板生成
 
-## Dashboards and health reports
+## 仪表板和健康报告
 
-When `render.createDashboards` is enabled, compile maintains dashboards under
-`reports/`.
+当启用 `render.createDashboards` 时，编译会在 `reports/` 下维护仪表板。
 
-Built-in reports include:
+内置报告包括：
 
 - `reports/open-questions.md`
 - `reports/contradictions.md`
@@ -185,44 +169,43 @@ Built-in reports include:
 - `reports/claim-health.md`
 - `reports/stale-pages.md`
 
-These reports track things like:
+这些报告跟踪诸如：
 
-- contradiction note clusters
-- competing claim clusters
-- claims missing structured evidence
-- low-confidence pages and claims
-- stale or unknown freshness
-- pages with unresolved questions
+- 矛盾注释集群
+- 竞争性声明集群
+- 缺少结构化证据的声明
+- 低置信度页面和声明
+- 陈旧或未知的新鲜度
+- 有未解决问题页面的内容
 
-## Search and retrieval
+## 搜索和检索
 
-`memory-wiki` supports two search backends:
+`memory-wiki` 支持两种搜索后端：
 
-- `shared`: use the shared memory search flow when available
-- `local`: search the wiki locally
+- `shared`：当可用时使用共享记忆搜索流程
+- `local`：本地搜索维基
 
-It also supports three corpora:
+它还支持三个语料库：
 
 - `wiki`
 - `memory`
 - `all`
 
-Important behavior:
+重要行为：
 
-- `wiki_search` and `wiki_get` use compiled digests as a first pass when possible
-- claim ids can resolve back to the owning page
-- contested/stale/fresh claims influence ranking
-- provenance labels can survive into results
+- `wiki_search` 和 `wiki_get` 尽可能使用编译摘要作为首次传递
+- 声明 ID 可以解析回拥有页面
+- 有争议/陈旧/新鲜的声明会影响排名
+- 出处标签可以存活到结果中
 
-Practical rule:
+实用规则：
 
-- use `memory_search corpus=all` for one broad recall pass
-- use `wiki_search` + `wiki_get` when you care about wiki-specific ranking,
-  provenance, or page-level belief structure
+- 使用 `memory_search corpus=all` 进行广泛的回忆传递
+- 当您需要维基特定排名、出处或页面级信念结构时，使用 `wiki_search` + `wiki_get`
 
-## Agent tools
+## 代理工具
 
-The plugin registers these tools:
+插件注册了这些工具：
 
 - `wiki_status`
 - `wiki_search`
@@ -230,37 +213,33 @@ The plugin registers these tools:
 - `wiki_apply`
 - `wiki_lint`
 
-What they do:
+它们的作用：
 
-- `wiki_status`: current vault mode, health, Obsidian CLI availability
-- `wiki_search`: search wiki pages and, when configured, shared memory corpora
-- `wiki_get`: read a wiki page by id/path or fall back to shared memory corpus
-- `wiki_apply`: narrow synthesis/metadata mutations without freeform page surgery
-- `wiki_lint`: structural checks, provenance gaps, contradictions, open questions
+- `wiki_status`：当前库模式、健康状况、Obsidian CLI 可用性
+- `wiki_search`：搜索维基页面，当配置时，也搜索共享记忆语料库
+- `wiki_get`：通过 ID/路径读取维基页面，或回退到共享记忆语料库
+- `wiki_apply`：窄合成/元数据突变，无需自由形式页面手术
+- `wiki_lint`：结构检查、出处差距、矛盾、开放问题
 
-The plugin also registers a non-exclusive memory corpus supplement, so shared
-`memory_search` and `memory_get` can reach the wiki when the active memory
-plugin supports corpus selection.
+插件还注册了一个非独占的记忆语料库补充，因此共享的 `memory_search` 和 `memory_get` 可以在活跃记忆插件支持语料库选择时访问维基。
 
-## Prompt and context behavior
+## 提示和上下文行为
 
-When `context.includeCompiledDigestPrompt` is enabled, memory prompt sections
-append a compact compiled snapshot from `agent-digest.json`.
+当启用 `context.includeCompiledDigestPrompt` 时，记忆提示部分会附加来自 `agent-digest.json` 的紧凑编译快照。
 
-That snapshot is intentionally small and high-signal:
+该快照有意小而高信号：
 
-- top pages only
-- top claims only
-- contradiction count
-- question count
-- confidence/freshness qualifiers
+- 仅顶级页面
+- 仅顶级声明
+- 矛盾计数
+- 问题计数
+- 置信度/新鲜度限定符
 
-This is opt-in because it changes prompt shape and is mainly useful for context
-engines or legacy prompt assembly that explicitly consume memory supplements.
+这是可选的，因为它会改变提示形状，并且主要对明确消费记忆补充的上下文引擎或遗留提示组装有用。
 
-## Configuration
+## 配置
 
-Put config under `plugins.entries.memory-wiki.config`:
+在 `plugins.entries.memory-wiki.config` 下放置配置：
 
 ```json5
 {
@@ -312,22 +291,21 @@ Put config under `plugins.entries.memory-wiki.config`:
 }
 ```
 
-Key toggles:
+关键切换：
 
-- `vaultMode`: `isolated`, `bridge`, `unsafe-local`
-- `vault.renderMode`: `native` or `obsidian`
-- `bridge.readMemoryArtifacts`: import active memory plugin public artifacts
-- `bridge.followMemoryEvents`: include event logs in bridge mode
-- `search.backend`: `shared` or `local`
-- `search.corpus`: `wiki`, `memory`, or `all`
-- `context.includeCompiledDigestPrompt`: append compact digest snapshot to memory prompt sections
-- `render.createBacklinks`: generate deterministic related blocks
-- `render.createDashboards`: generate dashboard pages
+- `vaultMode`：`isolated`、`bridge`、`unsafe-local`
+- `vault.renderMode`：`native` 或 `obsidian`
+- `bridge.readMemoryArtifacts`：导入活跃记忆插件的公共工件
+- `bridge.followMemoryEvents`：在桥接模式下包含事件日志
+- `search.backend`：`shared` 或 `local`
+- `search.corpus`：`wiki`、`memory` 或 `all`
+- `context.includeCompiledDigestPrompt`：将紧凑摘要快照附加到记忆提示部分
+- `render.createBacklinks`：生成确定性的相关块
+- `render.createDashboards`：生成仪表板页面
 
-### Example: QMD + bridge mode
+### 示例：QMD + 桥接模式
 
-Use this when you want QMD for recall and `memory-wiki` for a maintained
-knowledge layer:
+当您希望使用 QMD 进行回忆并使用 `memory-wiki` 维护知识层时使用此配置：
 
 ```json5
 {
@@ -359,15 +337,15 @@ knowledge layer:
 }
 ```
 
-This keeps:
+这将保持：
 
-- QMD in charge of active memory recall
-- `memory-wiki` focused on compiled pages and dashboards
-- prompt shape unchanged until you intentionally enable compiled digest prompts
+- QMD 负责活跃记忆回忆
+- `memory-wiki` 专注于编译页面和仪表板
+- 提示形状保持不变，直到您有意启用编译摘要提示
 
-## CLI
+## 命令行界面 (CLI)
 
-`memory-wiki` also exposes a top-level CLI surface:
+`memory-wiki` 还暴露了一个顶级 CLI 表面：
 
 ```bash
 openclaw wiki status
@@ -383,36 +361,35 @@ openclaw wiki bridge import
 openclaw wiki obsidian status
 ```
 
-See [CLI: wiki](/cli/wiki) for the full command reference.
+有关完整命令参考，请参见 [CLI: wiki](/cli/wiki)。
 
-## Obsidian support
+## Obsidian 支持
 
-When `vault.renderMode` is `obsidian`, the plugin writes Obsidian-friendly
-Markdown and can optionally use the official `obsidian` CLI.
+当 `vault.renderMode` 为 `obsidian` 时，插件会写入 Obsidian 友好的 Markdown，并可以选择使用官方的 `obsidian` CLI。
 
-Supported workflows include:
+支持的工作流包括：
 
-- status probing
-- vault search
-- opening a page
-- invoking an Obsidian command
-- jumping to the daily note
+- 状态探测
+- 库搜索
+- 打开页面
+- 调用 Obsidian 命令
+- 跳转到每日笔记
 
-This is optional. The wiki still works in native mode without Obsidian.
+这是可选的。维基在没有 Obsidian 的情况下仍可在原生模式下工作。
 
-## Recommended workflow
+## 推荐工作流
 
-1. Keep your active memory plugin for recall/promotion/dreaming.
-2. Enable `memory-wiki`.
-3. Start with `isolated` mode unless you explicitly want bridge mode.
-4. Use `wiki_search` / `wiki_get` when provenance matters.
-5. Use `wiki_apply` for narrow syntheses or metadata updates.
-6. Run `wiki_lint` after meaningful changes.
-7. Turn on dashboards if you want stale/contradiction visibility.
+1. 保持您的活跃记忆插件用于回忆/推广/梦境。
+2. 启用 `memory-wiki`。
+3. 除非您明确想要桥接模式，否则从 `isolated` 模式开始。
+4. 当出处重要时使用 `wiki_search` / `wiki_get`。
+5. 对于窄合成或元数据更新，使用 `wiki_apply`。
+6. 在重大更改后运行 `wiki_lint`。
+7. 如果您需要陈旧/矛盾可见性，请开启仪表板。
 
-## Related docs
+## 相关文档
 
-- [Memory Overview](/concepts/memory)
-- [CLI: memory](/cli/memory)
+- [内存概览](/concepts/memory)
+- [CLI: 内存](/cli/memory)
 - [CLI: wiki](/cli/wiki)
-- [Plugin SDK overview](/plugins/sdk-overview)
+- [插件 SDK 概览](/plugins/sdk-overview)

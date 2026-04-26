@@ -1,42 +1,34 @@
 ---
-summary: "CLI reference for `openclaw node` (headless node host)"
+summary: "`openclaw node` 的 CLI 参考（无头节点主机）"
 read_when:
-  - Running the headless node host
-  - Pairing a non-macOS node for system.run
+  - 运行无头节点主机
+  - 为 system.run 配对非 macOS 节点
 title: "Node"
 ---
 
 # `openclaw node`
 
-Run a **headless node host** that connects to the Gateway WebSocket and exposes
-`system.run` / `system.which` on this machine.
+运行一个**无头节点主机**，该主机连接到 Gateway WebSocket，并在此机器上暴露 `system.run` / `system.which`。
 
-## Why use a node host?
+## 为什么使用节点主机？
 
-Use a node host when you want agents to **run commands on other machines** in your
-network without installing a full macOS companion app there.
+当你希望代理在网络中的其他机器上**运行命令**，但不想在那些机器上安装完整的 macOS 伴随应用时，可以使用节点主机。
 
-Common use cases:
+常见用例：
 
-- Run commands on remote Linux/Windows boxes (build servers, lab machines, NAS).
-- Keep exec **sandboxed** on the gateway, but delegate approved runs to other hosts.
-- Provide a lightweight, headless execution target for automation or CI nodes.
+- 在远程 Linux/Windows 机器上运行命令（构建服务器、实验室机器、网络附加存储 NAS）。
+- 将 exec **沙箱化** 保持在网关上，但将获批的执行委托给其他主机。
+- 为自动化或 CI 节点提供轻量级、无头的执行目标。
 
-Execution is still guarded by **exec approvals** and per‑agent allowlists on the
-node host, so you can keep command access scoped and explicit.
+执行仍然受**执行批准**和节点主机上的每代理允许列表保护，确保命令访问范围清晰明确。
 
-## Browser proxy (zero-config)
+## 浏览器代理（零配置）
 
-Node hosts automatically advertise a browser proxy if `browser.enabled` is not
-disabled on the node. This lets the agent use browser automation on that node
-without extra configuration.
+如果节点上的 `browser.enabled` 未被禁用，节点主机会自动发布浏览器代理。这样代理可以在该节点上使用浏览器自动化，无需额外配置。
 
-By default, the proxy exposes the node's normal browser profile surface. If you
-set `nodeHost.browserProxy.allowProfiles`, the proxy becomes restrictive:
-non-allowlisted profile targeting is rejected, and persistent profile
-create/delete routes are blocked through the proxy.
+默认情况下，代理会暴露节点的普通浏览器配置文件界面。如果你设置了 `nodeHost.browserProxy.allowProfiles`，代理将变为限制性：未列入允许列表的配置文件定位将被拒绝，且持久化配置文件的创建/删除路由会被代理阻止。
 
-Disable it on the node if needed:
+如有需要，可在节点上禁用它：
 
 ```json5
 {
@@ -48,128 +40,88 @@ Disable it on the node if needed:
 }
 ```
 
-## Run (foreground)
+## 运行（前台）
 
 ```bash
 openclaw node run --host <gateway-host> --port 18789
 ```
 
-Options:
+选项：
 
-- `--host <host>`: Gateway WebSocket host (default: `127.0.0.1`)
-- `--port <port>`: Gateway WebSocket port (default: `18789`)
-- `--tls`: Use TLS for the gateway connection
-- `--tls-fingerprint <sha256>`: Expected TLS certificate fingerprint (sha256)
-- `--node-id <id>`: Override node id (clears pairing token)
-- `--display-name <name>`: Override the node display name
+- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
+- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
+- `--tls`：使用 TLS 连接网关
+- `--tls-fingerprint <sha256>`：预期的 TLS 证书指纹（sha256）
+- `--node-id <id>`：覆盖节点 id（会清除配对令牌）
+- `--display-name <name>`：覆盖节点显示名称
 
-## Gateway auth for node host
+## Gateway 认证用于节点主机
 
-`openclaw node run` and `openclaw node install` resolve gateway auth from config/env (no `--token`/`--password` flags on node commands):
+`openclaw node run` 和 `openclaw node install` 会从配置或环境变量中解析 Gateway 认证（节点命令没有 `--token` / `--password` 参数）：
 
-- `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD` are checked first.
-- Then local config fallback: `gateway.auth.token` / `gateway.auth.password`.
-- In local mode, node host intentionally does not inherit `gateway.remote.token` / `gateway.remote.password`.
-- If `gateway.auth.token` / `gateway.auth.password` is explicitly configured via SecretRef and unresolved, node auth resolution fails closed (no remote fallback masking).
-- In `gateway.mode=remote`, remote client fields (`gateway.remote.token` / `gateway.remote.password`) are also eligible per remote precedence rules.
-- Node host auth resolution only honors `OPENCLAW_GATEWAY_*` env vars.
+- `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD` 会首先被检查。
+- 然后是本地配置回退：`gateway.auth.token` / `gateway.auth.password`。
+- 在本地模式下，节点主机有意不继承 `gateway.remote.token` / `gateway.remote.password`。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析，节点认证解析将失败关闭（无远程回退掩码）。
+- 在 `gateway.mode=remote` 模式下，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也符合远程优先级规则。
+- 节点主机认证解析仅识别 `OPENCLAW_GATEWAY_*` 环境变量。
 
-For a node connecting to a non-loopback `ws://` Gateway on a trusted private
-network, set `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`. Without it, node startup
-fails closed and asks you to use `wss://`, an SSH tunnel, or Tailscale.
-This is a process-environment opt-in, not an `openclaw.json` config key.
-`openclaw node install` persists it into the supervised node service when it is
-present in the install command environment.
+对于连接到受信任私有网络中非回环 `ws://` Gateway 的节点，请设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。否则，节点启动将失败关闭，并要求你使用 `wss://`、SSH 隧道或 Tailscale。
+这是一个进程环境的显式启用项，不是 `openclaw.json` 配置键。
+`openclaw node install` 会在安装命令环境中存在该变量时，将其持久化到受监督的节点服务中。
 
 ## Service (background)
 
-Install a headless node host as a user service.
+将无头节点主机安装为用户服务。
 
 ```bash
 openclaw node install --host <gateway-host> --port 18789
 ```
 
-Options:
+选项：
 
-- `--host <host>`: Gateway WebSocket host (default: `127.0.0.1`)
-- `--port <port>`: Gateway WebSocket port (default: `18789`)
-- `--tls`: Use TLS for the gateway connection
-- `--tls-fingerprint <sha256>`: Expected TLS certificate fingerprint (sha256)
-- `--node-id <id>`: Override node id (clears pairing token)
-- `--display-name <name>`: Override the node display name
-- `--runtime <runtime>`: Service runtime (`node` or `bun`)
-- `--force`: Reinstall/overwrite if already installed
+与 run 相同，外加：
 
-Manage the service:
+- `--runtime <runtime>`：服务运行时（`node` 或 `bun`）
+- `--force`：已安装时重新安装/覆盖
+
+管理服务：
 
 ```bash
 openclaw node status
-openclaw node start
 openclaw node stop
 openclaw node restart
 openclaw node uninstall
 ```
 
-Use `openclaw node run` for a foreground node host (no service).
+使用 `openclaw node run` 启动前台节点主机（非服务）。
 
-Service commands accept `--json` for machine-readable output.
+服务命令支持 `--json` 参数以输出机器可读格式。
 
-The node host retries Gateway restart and network closes in-process. If the
-Gateway reports a terminal token/password/bootstrap auth pause, the node host
-logs the close detail and exits non-zero so launchd/systemd can restart it with
-fresh config and credentials. Pairing-required pauses stay in the foreground
-flow so the pending request can be approved.
+## 配对
 
-## Pairing
-
-The first connection creates a pending device pairing request (`role: node`) on the Gateway.
-Approve it via:
+首次连接会在 Gateway 上创建一个待处理的设备配对请求（`role: node`）。通过以下命令批准：
 
 ```bash
 openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-On tightly controlled node networks, the Gateway operator can explicitly opt in
-to auto-approving first-time node pairing from trusted CIDRs:
+如果节点使用更改后的认证详情（角色/作用域/公钥）重试配对，之前的待处理请求将被取代，并创建新的 `requestId`。批准前请再次运行 `openclaw devices list`。
 
-```json5
-{
-  gateway: {
-    nodes: {
-      pairing: {
-        autoApproveCidrs: ["192.168.1.0/24"],
-      },
-    },
-  },
-}
-```
+节点主机将其节点 id、令牌、显示名称和网关连接信息存储在 `~/.openclaw/node.json` 中。
 
-This is disabled by default. It only applies to fresh `role: node` pairing with
-no requested scopes. Operator/browser clients, Control UI, WebChat, and role,
-scope, metadata, or public-key upgrades still require manual approval.
+## 执行批准
 
-If the node retries pairing with changed auth details (role/scopes/public key),
-the previous pending request is superseded and a new `requestId` is created.
-Run `openclaw devices list` again before approval.
-
-The node host stores its node id, token, display name, and gateway connection info in
-`~/.openclaw/node.json`.
-
-## Exec approvals
-
-`system.run` is gated by local exec approvals:
+`system.run` 受本地执行批准限制：
 
 - `~/.openclaw/exec-approvals.json`
-- [Exec approvals](/tools/exec-approvals)
-- `openclaw approvals --node <id|name|ip>` (edit from the Gateway)
+- [执行批准](/tools/exec-approvals)
+- `openclaw approvals --node <id|name|ip>` (从网关编辑)
 
-For approved async node exec, OpenClaw prepares a canonical `systemRunPlan`
-before prompting. The later approved `system.run` forward reuses that stored
-plan, so edits to command/cwd/session fields after the approval request was
-created are rejected instead of changing what the node executes.
+对于已批准的异步节点执行，OpenClaw 会在提示前准备一个规范化的 `systemRunPlan`。随后已批准的 `system.run` 转发会重用该已存储的计划，因此在批准请求创建后对 command/cwd/session 字段的编辑将被拒绝，而不会改变节点实际执行的内容。
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Nodes](/nodes)
+- [CLI 参考](/cli)
+- [节点](/nodes)

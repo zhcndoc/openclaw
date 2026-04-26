@@ -1,220 +1,116 @@
 ---
-summary: "How OpenClaw separates model providers, models, channels, and agent runtimes"
-title: "Agent runtimes"
+summary: "OpenClaw 如何区分模型提供方、模型、渠道和代理运行时"
+title: "代理运行时"
 read_when:
-  - You are choosing between PI, Codex, ACP, or another native agent runtime
-  - You are confused by provider/model/runtime labels in status or config
-  - You are documenting support parity for a native harness
+  - 你在 PI、Codex、ACP 或其他原生代理运行时之间做选择
+  - 你对状态或配置中的 provider/model/runtime 标签感到困惑
+  - 你正在为原生 harness 编写支持一致性文档
 ---
 
-An **agent runtime** is the component that owns one prepared model loop: it
-receives the prompt, drives model output, handles native tool calls, and returns
-the finished turn to OpenClaw.
+**代理运行时** 是拥有一个已准备好的模型循环的组件：它接收提示，驱动模型输出，处理原生工具调用，并将完成的一轮返回给 OpenClaw。
 
-Runtimes are easy to confuse with providers because both show up near model
-configuration. They are different layers:
+运行时很容易与提供方混淆，因为它们都会出现在模型配置附近。它们是不同层：
 
-| Layer         | Examples                              | What it means                                                       |
-| ------------- | ------------------------------------- | ------------------------------------------------------------------- |
-| Provider      | `openai`, `anthropic`, `openai-codex` | How OpenClaw authenticates, discovers models, and names model refs. |
-| Model         | `gpt-5.5`, `claude-opus-4-6`          | The model selected for the agent turn.                              |
-| Agent runtime | `pi`, `codex`, `claude-cli`           | The low level loop or backend that executes the prepared turn.      |
-| Channel       | Telegram, Discord, Slack, WhatsApp    | Where messages enter and leave OpenClaw.                            |
+| 层级          | 示例                                   | 含义                                                             |
+| ------------- | -------------------------------------- | ---------------------------------------------------------------- |
+| 提供方        | `openai`, `anthropic`, `openai-codex` | OpenClaw 如何进行认证、发现模型，以及命名模型引用。             |
+| 模型          | `gpt-5.5`, `claude-opus-4-6`          | 为代理回合选择的模型。                                           |
+| 代理运行时    | `pi`, `codex`, 由 ACP 支持的运行时     | 执行已准备好回合的底层循环。                                     |
+| 渠道          | Telegram, Discord, Slack, WhatsApp    | 消息进入和离开 OpenClaw 的位置。                                |
 
-You will also see the word **harness** in code. A harness is the implementation
-that provides an agent runtime. For example, the bundled Codex harness
-implements the `codex` runtime. Public config uses `agentRuntime.id`; `openclaw
-doctor --fix` rewrites older runtime-policy keys to that shape.
+你还会在代码和配置中看到 **harness** 这个词。harness 是提供代理运行时的实现。例如，随附的 Codex harness 实现了 `codex` 运行时。为了兼容，配置键仍然命名为 `embeddedHarness`，但面向用户的文档和状态输出通常应该使用 runtime。
 
-There are two runtime families:
-
-- **Embedded harnesses** run inside OpenClaw's prepared agent loop. Today this
-  is the built-in `pi` runtime plus registered plugin harnesses such as
-  `codex`.
-- **CLI backends** run a local CLI process while keeping the model ref
-  canonical. For example, `anthropic/claude-opus-4-7` with
-  `agentRuntime.id: "claude-cli"` means "select the Anthropic model, execute
-  through Claude CLI." `claude-cli` is not an embedded harness id and must not
-  be passed to AgentHarness selection.
-
-## Three things named Codex
-
-Most confusion comes from three different surfaces sharing the Codex name:
-
-| Surface                                              | OpenClaw name/config                 | What it does                                                                                        |
-| ---------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Codex OAuth provider route                           | `openai-codex/*` model refs          | Uses ChatGPT/Codex subscription OAuth through the normal OpenClaw PI runner.                        |
-| Native Codex app-server runtime                      | `agentRuntime.id: "codex"`           | Runs the embedded agent turn through the bundled Codex app-server harness.                          |
-| Codex ACP adapter                                    | `runtime: "acp"`, `agentId: "codex"` | Runs Codex through the external ACP/acpx control plane. Use only when ACP/acpx is explicitly asked. |
-| Native Codex chat-control command set                | `/codex ...`                         | Binds, resumes, steers, stops, and inspects Codex app-server threads from chat.                     |
-| OpenAI Platform API route for GPT/Codex-style models | `openai/*` model refs                | Uses OpenAI API-key auth unless a runtime override, such as `runtime: "codex"`, runs the turn.      |
-
-Those surfaces are intentionally independent. Enabling the `codex` plugin makes
-the native app-server features available; it does not rewrite
-`openai-codex/*` into `openai/*`, does not change existing sessions, and does
-not make ACP the Codex default. Selecting `openai-codex/*` means "use the Codex
-OAuth provider route" unless you separately force a runtime.
-
-The common Codex setup uses the `openai` provider with the `codex` runtime:
+常见的 Codex 配置使用 `openai` 提供方和 `codex` 运行时：
 
 ```json5
 {
   agents: {
     defaults: {
       model: "openai/gpt-5.5",
-      agentRuntime: {
-        id: "codex",
+      embeddedHarness: {
+        runtime: "codex",
       },
     },
   },
 }
 ```
 
-That means OpenClaw selects an OpenAI model ref, then asks the Codex app-server
-runtime to run the embedded agent turn. It does not mean the channel, model
-provider catalog, or OpenClaw session store becomes Codex.
+这意味着 OpenClaw 先选择一个 OpenAI 模型引用，然后让 Codex app-server 运行时来执行嵌入式代理回合。它并不意味着渠道、模型提供方目录或 OpenClaw 会话存储会变成 Codex。
 
-When the bundled `codex` plugin is enabled, natural-language Codex control
-should use the native `/codex` command surface (`/codex bind`, `/codex threads`,
-`/codex resume`, `/codex steer`, `/codex stop`) instead of ACP. Use ACP for
-Codex only when the user explicitly asks for ACP/acpx or is testing the ACP
-adapter path. Claude Code, Gemini CLI, OpenCode, Cursor, and similar external
-harnesses still use ACP.
+## 运行时所有权
 
-This is the agent-facing decision tree:
+不同运行时拥有循环的不同部分。
 
-1. If the user asks for **Codex bind/control/thread/resume/steer/stop**, use the
-   native `/codex` command surface when the bundled `codex` plugin is enabled.
-2. If the user asks for **Codex as the embedded runtime**, use
-   `openai/<model>` with `agentRuntime.id: "codex"`.
-3. If the user asks for **Codex OAuth/subscription auth on the normal OpenClaw
-   runner**, use `openai-codex/<model>` and leave the runtime as PI.
-4. If the user explicitly says **ACP**, **acpx**, or **Codex ACP adapter**, use
-   ACP with `runtime: "acp"` and `agentId: "codex"`.
-5. If the request is for **Claude Code, Gemini CLI, OpenCode, Cursor, Droid, or
-   another external harness**, use ACP/acpx, not the native sub-agent runtime.
-
-| You mean...                             | Use...                                       |
-| --------------------------------------- | -------------------------------------------- |
-| Codex app-server chat/thread control    | `/codex ...` from the bundled `codex` plugin |
-| Codex app-server embedded agent runtime | `agentRuntime.id: "codex"`                   |
-| OpenAI Codex OAuth on the PI runner     | `openai-codex/*` model refs                  |
-| Claude Code or other external harness   | ACP/acpx                                     |
-
-For the OpenAI-family prefix split, see [OpenAI](/providers/openai) and
-[Model providers](/concepts/model-providers). For the Codex runtime support
-contract, see [Codex harness](/plugins/codex-harness#v1-support-contract).
-
-## Runtime ownership
-
-Different runtimes own different amounts of the loop.
-
-| Surface                     | OpenClaw PI embedded                    | Codex app-server                                                            |
+| 表面                        | OpenClaw PI 嵌入式                      | Codex app-server                                                            |
 | --------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| Model loop owner            | OpenClaw through the PI embedded runner | Codex app-server                                                            |
-| Canonical thread state      | OpenClaw transcript                     | Codex thread, plus OpenClaw transcript mirror                               |
-| OpenClaw dynamic tools      | Native OpenClaw tool loop               | Bridged through the Codex adapter                                           |
-| Native shell and file tools | PI/OpenClaw path                        | Codex-native tools, bridged through native hooks where supported            |
-| Context engine              | Native OpenClaw context assembly        | OpenClaw projects assembled context into the Codex turn                     |
-| Compaction                  | OpenClaw or selected context engine     | Codex-native compaction, with OpenClaw notifications and mirror maintenance |
-| Channel delivery            | OpenClaw                                | OpenClaw                                                                    |
+| 模型循环所有者              | 通过 PI 嵌入式运行器的 OpenClaw        | Codex app-server                                                            |
+| 规范线程状态                | OpenClaw 转录记录                       | Codex 线程，以及 OpenClaw 转录镜像                                           |
+| OpenClaw 动态工具           | 原生 OpenClaw 工具循环                   | 通过 Codex 适配器桥接                                                       |
+| 原生 shell 和文件工具       | PI/OpenClaw 路径                        | Codex 原生工具，在受支持时通过原生钩子桥接                                   |
+| 上下文引擎                  | 原生 OpenClaw 上下文组装                | OpenClaw 将项目上下文组装到 Codex 回合中                                     |
+| 压缩                        | OpenClaw 或所选上下文引擎               | Codex 原生压缩，并带有 OpenClaw 通知和镜像维护                               |
+| 渠道投递                    | OpenClaw                                | OpenClaw                                                                    |
 
-This ownership split is the main design rule:
+这种所有权划分是主要设计原则：
 
-- If OpenClaw owns the surface, OpenClaw can provide normal plugin hook behavior.
-- If the native runtime owns the surface, OpenClaw needs runtime events or native hooks.
-- If the native runtime owns canonical thread state, OpenClaw should mirror and project context, not rewrite unsupported internals.
+- 如果 OpenClaw 拥有该表面，OpenClaw 就可以提供正常的插件钩子行为。
+- 如果原生运行时拥有该表面，OpenClaw 就需要运行时事件或原生钩子。
+- 如果原生运行时拥有规范线程状态，OpenClaw 应该镜像并投影上下文，而不是重写不受支持的内部结构。
 
-## Runtime selection
+## 运行时选择
 
-OpenClaw chooses an embedded runtime after provider and model resolution:
+OpenClaw 在完成提供方和模型解析后选择嵌入式运行时：
 
-1. A session's recorded runtime wins. Config changes do not hot-switch an
-   existing transcript to a different native thread system.
-2. `OPENCLAW_AGENT_RUNTIME=<id>` forces that runtime for new or reset sessions.
-3. `agents.defaults.agentRuntime.id` or `agents.list[].agentRuntime.id` can set
-   `auto`, `pi`, a registered embedded harness id such as `codex`, or a
-   supported CLI backend alias such as `claude-cli`.
-4. In `auto` mode, registered plugin runtimes can claim supported provider/model
-   pairs.
-5. If no runtime claims a turn in `auto` mode and `fallback: "pi"` is set
-   (the default), OpenClaw uses PI as the compatibility fallback. Set
-   `fallback: "none"` to make unmatched `auto`-mode selection fail instead.
+1. 会话中已记录的运行时优先。配置变更不会把现有转录热切换到另一个原生线程系统。
+2. `OPENCLAW_AGENT_RUNTIME=<id>` 会为新会话或重置后的会话强制使用该运行时。
+3. `agents.defaults.embeddedHarness.runtime` 或
+   `agents.list[].embeddedHarness.runtime` 可以设置为 `auto`、`pi`，或已注册的
+   运行时 id，例如 `codex`。
+4. 在 `auto` 模式下，已注册的插件运行时可以声明其支持的提供方/模型
+   组合。
+5. 如果在 `auto` 模式下没有运行时声明某个回合，并且设置了
+   `fallback: "pi"`（默认值），OpenClaw 会使用 PI 作为兼容性回退。设置
+   `fallback: "none"` 则会让未匹配的 `auto` 模式选择直接失败。
 
-Explicit plugin runtimes fail closed by default. For example,
-`runtime: "codex"` means Codex or a clear selection error unless you set
-`fallback: "pi"` in the same override scope. A runtime override does not inherit
-a broader fallback setting, so an agent-level `runtime: "codex"` is not silently
-routed back to PI just because defaults used `fallback: "pi"`.
+显式插件运行时默认会在失败时关闭。例如，
+`runtime: "codex"` 表示 Codex，或者在没有清晰选择时返回错误，除非你在
+相同的覆盖作用域中设置了 `fallback: "pi"`。
 
-CLI backend aliases are different from embedded harness ids. The preferred
-Claude CLI form is:
+## 兼容性契约
 
-```json5
-{
-  agents: {
-    defaults: {
-      model: "anthropic/claude-opus-4-7",
-      agentRuntime: { id: "claude-cli" },
-    },
-  },
-}
-```
+当某个运行时不是 PI 时，它应该说明 OpenClaw 暴露的哪些表面是受支持的。
+运行时文档可使用如下结构：
 
-Legacy refs such as `claude-cli/claude-opus-4-7` remain supported for
-compatibility, but new config should keep the provider/model canonical and put
-the execution backend in `agentRuntime.id`.
+| 问题                                   | 重要原因                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 谁拥有模型循环？                       | 决定重试、工具继续执行以及最终答案决策发生在何处。                                            |
+| 谁拥有规范线程历史？                   | 决定 OpenClaw 是否可以编辑历史，还是只能镜像它。                                              |
+| OpenClaw 动态工具是否可用？            | 消息、会话、cron 和 OpenClaw 拥有的工具都依赖这一点。                                         |
+| 动态工具钩子是否可用？                 | 插件期望围绕 OpenClaw 拥有的工具使用 `before_tool_call`、`after_tool_call` 和中间件。        |
+| 原生工具钩子是否可用？                 | shell、patch 和运行时拥有的工具需要原生钩子支持来实现策略和观察。                              |
+| 上下文引擎生命周期是否运行？           | 内存和上下文插件依赖 assemble、ingest、after-turn 和 compaction 生命周期。                   |
+| 暴露了哪些压缩数据？                   | 有些插件只需要通知，而另一些需要保留/丢弃元数据。                                              |
+| 明确不支持什么？                       | 用户不应假设在原生运行时拥有更多状态时仍与 PI 等价。                                          |
 
-`auto` mode is intentionally conservative. Plugin runtimes can claim
-provider/model pairs they understand, but the Codex plugin does not claim the
-`openai-codex` provider in `auto` mode. That keeps
-`openai-codex/*` as the explicit PI Codex OAuth route and avoids silently
-moving subscription-auth configs onto the native app-server harness.
+Codex 运行时支持契约记录在
+[Codex harness](/plugins/codex-harness#v1-support-contract) 中。
 
-If `openclaw doctor` warns that the `codex` plugin is enabled while
-`openai-codex/*` still routes through PI, treat that as a diagnosis, not a
-migration. Keep the config unchanged when PI Codex OAuth is what you want.
-Switch to `openai/<model>` plus `agentRuntime.id: "codex"` only when you want native
-Codex app-server execution.
+## 状态标签
 
-## Compatibility contract
+状态输出可能同时显示 `Execution` 和 `Runtime` 标签。应将它们理解为
+诊断信息，而不是提供方名称。
 
-When a runtime is not PI, it should document what OpenClaw surfaces it supports.
-Use this shape for runtime docs:
+- 像 `openai/gpt-5.5` 这样的模型引用告诉你所选的提供方/模型。
+- 像 `codex` 这样的运行时 id 告诉你正在执行该回合的循环。
+- 像 Telegram 或 Discord 这样的渠道标签告诉你对话发生在哪里。
 
-| Question                               | Why it matters                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Who owns the model loop?               | Determines where retries, tool continuation, and final answer decisions happen.                   |
-| Who owns canonical thread history?     | Determines whether OpenClaw can edit history or only mirror it.                                   |
-| Do OpenClaw dynamic tools work?        | Messaging, sessions, cron, and OpenClaw-owned tools rely on this.                                 |
-| Do dynamic tool hooks work?            | Plugins expect `before_tool_call`, `after_tool_call`, and middleware around OpenClaw-owned tools. |
-| Do native tool hooks work?             | Shell, patch, and runtime-owned tools need native hook support for policy and observation.        |
-| Does the context engine lifecycle run? | Memory and context plugins depend on assemble, ingest, after-turn, and compaction lifecycle.      |
-| What compaction data is exposed?       | Some plugins only need notifications, while others need kept/dropped metadata.                    |
-| What is intentionally unsupported?     | Users should not assume PI equivalence where the native runtime owns more state.                  |
+如果在更改运行时配置后某个会话仍显示 PI，请使用 `/new` 开始一个新会话，
+或用 `/reset` 清除当前会话。现有会话会保留其记录的运行时，因此转录不会
+通过两个不兼容的原生会话系统重新播放。
 
-The Codex runtime support contract is documented in
-[Codex harness](/plugins/codex-harness#v1-support-contract).
-
-## Status labels
-
-Status output may show both `Execution` and `Runtime` labels. Read them as
-diagnostics, not as provider names.
-
-- A model ref such as `openai/gpt-5.5` tells you the selected provider/model.
-- A runtime id such as `codex` tells you which loop is executing the turn.
-- A channel label such as Telegram or Discord tells you where the conversation is happening.
-
-If a session still shows PI after changing runtime config, start a new session
-with `/new` or clear the current one with `/reset`. Existing sessions keep their
-recorded runtime so a transcript is not replayed through two incompatible native
-session systems.
-
-## Related
+## 相关内容
 
 - [Codex harness](/plugins/codex-harness)
-- [OpenAI](/providers/openai)
-- [Agent harness plugins](/plugins/sdk-agent-harness)
-- [Agent loop](/concepts/agent-loop)
-- [Models](/concepts/models)
-- [Status](/cli/status)
+- [代理 harness 插件](/plugins/sdk-agent-harness)
+- [代理循环](/concepts/agent-loop)
+- [模型](/concepts/models)

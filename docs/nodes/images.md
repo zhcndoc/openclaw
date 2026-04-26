@@ -1,78 +1,78 @@
 ---
-summary: "Image and media handling rules for send, gateway, and agent replies"
+summary: "发送、网关和客服回复的图片及媒体处理规则"
 read_when:
   - Modifying media pipeline or attachments
-title: "Image and media support"
+title: "图片和媒体支持"
 ---
 
-# Image & Media Support (2025-12-05)
+# 图片与媒体支持 (2025-12-05)
 
-The WhatsApp channel runs via **Baileys Web**. This document captures the current media handling rules for send, gateway, and agent replies.
+WhatsApp 通道通过 **Baileys Web** 运行。本文档记录了当前发送、网关及客服回复的媒体处理规则。
 
-## Goals
+## 目标
 
-- Send media with optional captions via `openclaw message send --media`.
-- Allow auto-replies from the web inbox to include media alongside text.
-- Keep per-type limits sane and predictable.
+- 通过 `openclaw message send --media` 发送带可选文字说明的媒体。
+- 允许网页收件箱中的自动回复包含文字和媒体。
+- 保持各类型限制合理且可预测。
 
-## CLI Surface
+## CLI 接口
 
-- `openclaw message send --media <path-or-url> [--message <caption>]`
-  - `--media` optional; caption can be empty for media-only sends.
-  - `--dry-run` prints the resolved payload; `--json` emits `{ channel, to, messageId, mediaUrl, caption }`.
+- `openclaw message send --media <路径或URL> [--message <说明>]`
+  - `--media` 可选；说明可留空实现仅发送媒体。
+  - `--dry-run` 打印解析后的负载；`--json` 输出 `{ channel, to, messageId, mediaUrl, caption }`。
 
-## WhatsApp Web channel behavior
+## WhatsApp Web 通道行为
 
-- Input: local file path **or** HTTP(S) URL.
-- Flow: load into a Buffer, detect media kind, and build the correct payload:
-  - **Images:** resize & recompress to JPEG (max side 2048px) targeting `channels.whatsapp.mediaMaxMb` (default: 50 MB).
-  - **Audio/Voice/Video:** pass-through up to 16 MB; audio is sent as a voice note (`ptt: true`).
-  - **Documents:** anything else, up to 100 MB, with filename preserved when available.
-- WhatsApp GIF-style playback: send an MP4 with `gifPlayback: true` (CLI: `--gif-playback`) so mobile clients loop inline.
-- MIME detection prefers magic bytes, then headers, then file extension.
-- Caption comes from `--message` or `reply.text`; empty caption is allowed.
-- Logging: non-verbose shows `↩️`/`✅`; verbose includes size and source path/URL.
+- 输入：本地文件路径 **或** HTTP(S) URL。
+- 流程：加载到 Buffer 中，检测媒体类型，并构建正确的负载：
+  - **图片：** 调整大小并重新压缩为 JPEG（最长边 2048px），目标为 `channels.whatsapp.mediaMaxMb`（默认：50 MB）。
+  - **音频/语音/视频：** 直接传递，最大 16 MB；音频作为语音笔记发送（`ptt: true`）。
+  - **文档：** 其他任何类型，最大 100 MB，且在可用时保留文件名。
+- WhatsApp GIF 风格播放：发送带 `gifPlayback: true` 的 MP4（CLI：`--gif-playback`），使移动客户端以内联方式循环播放。
+- MIME 检测优先使用魔数，其次是头信息，再次是文件扩展名。
+- 说明文字来自 `--message` 或 `reply.text`；允许为空。
+- 日志：非详细模式显示 `↩️`/`✅`；详细模式包含大小和来源路径/URL。
 
-## Auto-Reply Pipeline
+## 自动回复管道
 
-- `getReplyFromConfig` returns `{ text?, mediaUrl?, mediaUrls? }`.
-- When media is present, the web sender resolves local paths or URLs using the same pipeline as `openclaw message send`.
-- Multiple media entries are sent sequentially if provided.
+- `getReplyFromConfig` 返回 `{ text?, mediaUrl?, mediaUrls? }`。
+- 媒体存在时，网页发送端使用与 `openclaw message send` 相同的流程解析本地路径或 URL。
+- 多个媒体条目顺序发送。
 
-## Inbound Media to Commands (Pi)
+## 命令的入站媒体（Pi）
 
-- When inbound web messages include media, OpenClaw downloads to a temp file and exposes templating variables:
-  - `{{MediaUrl}}` pseudo-URL for the inbound media.
-  - `{{MediaPath}}` local temp path written before running the command.
-- When a per-session Docker sandbox is enabled, inbound media is copied into the sandbox workspace and `MediaPath`/`MediaUrl` are rewritten to a relative path like `media/inbound/<filename>`.
-- Media understanding (if configured via `tools.media.*` or shared `tools.media.models`) runs before templating and can insert `[Image]`, `[Audio]`, and `[Video]` blocks into `Body`.
-  - Audio sets `{{Transcript}}` and uses the transcript for command parsing so slash commands still work.
-  - Video and image descriptions preserve any caption text for command parsing.
-  - If the active primary image model already supports vision natively, OpenClaw skips the `[Image]` summary block and passes the original image to the model instead.
-- By default only the first matching image/audio/video attachment is processed; set `tools.media.<cap>.attachments` to process multiple attachments.
+- 当入站网页消息包含媒体时，OpenClaw 会下载到临时文件，并暴露以下模板变量：
+  - `{{MediaUrl}}` 入站媒体的伪 URL。
+  - `{{MediaPath}}` 在运行命令前写入的本地临时路径。
+- 当启用每会话 Docker 沙箱时，入站媒体会被复制到沙箱工作区，并且 `MediaPath`/`MediaUrl` 会被重写为类似 `media/inbound/<filename>` 的相对路径。
+- 媒体理解（如果通过 `tools.media.*` 或共享的 `tools.media.models` 配置）会在模板渲染之前运行，并可在 `Body` 中插入 `[Image]`、`[Audio]` 和 `[Video]` 块。
+  - 音频会设置 `{{Transcript}}`，并在命令解析中使用该转录文本，因此斜杠命令仍可正常工作。
+  - 视频和图片描述会保留任何说明文字以供命令解析。
+  - 如果当前主图像模型已经原生支持视觉能力，OpenClaw 会跳过 `[Image]` 摘要块，并改为将原始图像传递给模型。
+- 默认情况下，仅处理第一个匹配的图片/音频/视频附件；设置 `tools.media.<cap>.attachments` 可处理多个附件。
 
-## Limits & Errors
+## 限制与错误
 
-**Outbound send caps (WhatsApp web send)**
+**出站发送限制（WhatsApp Web 发送）**
 
-- Images: up to `channels.whatsapp.mediaMaxMb` (default: 50 MB) after recompression.
-- Audio/voice/video: 16 MB cap; documents: 100 MB cap.
-- Oversize or unreadable media → clear error in logs and the reply is skipped.
+- 图片：重新压缩后最大为 `channels.whatsapp.mediaMaxMb`（默认：50 MB）。
+- 音频/语音/视频：上限 16 MB；文档：上限 100 MB。
+- 超大或无法读取的媒体 → 在日志中显示清晰错误，并跳过回复。
 
-**Media understanding caps (transcription/description)**
+**媒体理解限制（转录/描述）**
 
-- Image default: 10 MB (`tools.media.image.maxBytes`).
-- Audio default: 20 MB (`tools.media.audio.maxBytes`).
-- Video default: 50 MB (`tools.media.video.maxBytes`).
-- Oversize media skips understanding, but replies still go through with the original body.
+- 图片默认：10 MB（`tools.media.image.maxBytes`）。
+- 音频默认：20 MB（`tools.media.audio.maxBytes`）。
+- 视频默认：50 MB（`tools.media.video.maxBytes`）。
+- 超大媒体会跳过理解，但原始正文仍会正常回复。
 
-## Notes for Tests
+## 测试注意事项
 
-- Cover send + reply flows for image/audio/document cases.
-- Validate recompression for images (size bound) and voice-note flag for audio.
-- Ensure multi-media replies fan out as sequential sends.
+- 覆盖图片/音频/文档场景下的发送与回复流程。
+- 验证图片重新压缩（大小上限）和音频的语音笔记标志。
+- 确保多媒体回复按顺序拆分发送。
 
-## Related
+## 相关
 
 - [Camera capture](/nodes/camera)
 - [Media understanding](/nodes/media-understanding)

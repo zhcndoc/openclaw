@@ -1,102 +1,102 @@
 ---
-summary: "Expose an OpenAI-compatible /v1/chat/completions HTTP endpoint from the Gateway"
+summary: "从 Gateway 暴露一个兼容 OpenAI 的 /v1/chat/completions HTTP 端点"
 read_when:
-  - Integrating tools that expect OpenAI Chat Completions
-title: "OpenAI chat completions"
+  - 集成期望 OpenAI Chat Completions 的工具
+title: "OpenAI 聊天补全"
 ---
 
-OpenClaw’s Gateway can serve a small OpenAI-compatible Chat Completions endpoint.
+OpenClaw’s Gateway 可以提供一个小型的 OpenAI 兼容 Chat Completions 端点。
 
-This endpoint is **disabled by default**. Enable it in config first.
+该端点**默认是禁用的**，请先在配置中启用。
 
 - `POST /v1/chat/completions`
-- Same port as the Gateway (WS + HTTP multiplex): `http://<gateway-host>:<port>/v1/chat/completions`
+- 与 Gateway 使用相同端口（WS + HTTP 复用）：`http://<gateway-host>:<port>/v1/chat/completions`
 
-When the Gateway’s OpenAI-compatible HTTP surface is enabled, it also serves:
+当 Gateway 的 OpenAI 兼容 HTTP 接口启用时，它还会提供：
 
 - `GET /v1/models`
 - `GET /v1/models/{id}`
 - `POST /v1/embeddings`
 - `POST /v1/responses`
 
-Under the hood, requests are executed as a normal Gateway agent run (same codepath as `openclaw agent`), so routing/permissions/config match your Gateway.
+在底层，请求作为正常的 Gateway 代理运行执行（与 `openclaw agent` 使用相同的代码路径），因此路由/权限/配置与您的 Gateway 保持一致。
 
-## Authentication
+## 身份验证
 
-Uses the Gateway auth configuration.
+使用 Gateway 认证配置。
 
-Common HTTP auth paths:
+常见 HTTP 认证路径：
 
-- shared-secret auth (`gateway.auth.mode="token"` or `"password"`):
+- 共享密钥认证（`gateway.auth.mode="token"` 或 `"password"`）：
   `Authorization: Bearer <token-or-password>`
-- trusted identity-bearing HTTP auth (`gateway.auth.mode="trusted-proxy"`):
-  route through the configured identity-aware proxy and let it inject the
-  required identity headers
-- private-ingress open auth (`gateway.auth.mode="none"`):
-  no auth header required
+- 受信任的携带身份 HTTP 认证（`gateway.auth.mode="trusted-proxy"`）：
+  通过配置的身份感知代理进行路由，并让其注入
+  所需的身份请求头
+- 私有入口开放认证（`gateway.auth.mode="none"`）：
+  无需认证请求头
 
-Notes:
+注意事项：
 
-- When `gateway.auth.mode="token"`, use `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`).
-- When `gateway.auth.mode="password"`, use `gateway.auth.password` (or `OPENCLAW_GATEWAY_PASSWORD`).
-- When `gateway.auth.mode="trusted-proxy"`, the HTTP request must come from a
-  configured non-loopback trusted proxy source; same-host loopback proxies do
-  not satisfy this mode.
-- If `gateway.auth.rateLimit` is configured and too many auth failures occur, the endpoint returns `429` with `Retry-After`.
+- 当 `gateway.auth.mode="token"` 时，使用 `gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）。
+- 当 `gateway.auth.mode="password"` 时，使用 `gateway.auth.password`（或 `OPENCLAW_GATEWAY_PASSWORD`）。
+- 当 `gateway.auth.mode="trusted-proxy"` 时，HTTP 请求必须来自
+  配置的非回环受信任代理源；同主机回环代理不
+  满足此模式。
+- 如果配置了 `gateway.auth.rateLimit` 且发生过多认证失败，端点将返回 `429` 并带有 `Retry-After`。
 
-## Security boundary (important)
+## 安全边界（重要）
 
-Treat this endpoint as a **full operator-access** surface for the gateway instance.
+请将此端点视为 Gateway 实例的**完全操作员访问**接口。
 
-- HTTP bearer auth here is not a narrow per-user scope model.
-- A valid Gateway token/password for this endpoint should be treated like an owner/operator credential.
-- Requests run through the same control-plane agent path as trusted operator actions.
-- There is no separate non-owner/per-user tool boundary on this endpoint; once a caller passes Gateway auth here, OpenClaw treats that caller as a trusted operator for this gateway.
-- For shared-secret auth modes (`token` and `password`), the endpoint restores the normal full operator defaults even if the caller sends a narrower `x-openclaw-scopes` header.
-- Trusted identity-bearing HTTP modes (for example trusted proxy auth or `gateway.auth.mode="none"`) honor `x-openclaw-scopes` when present and otherwise fall back to the normal operator default scope set.
-- If the target agent policy allows sensitive tools, this endpoint can use them.
-- Keep this endpoint on loopback/tailnet/private ingress only; do not expose it directly to the public internet.
+- 此处的 HTTP bearer 认证并非狭窄的每用户范围模型。
+- 此端点的有效 Gateway token/password 应被视为所有者/操作员凭证。
+- 请求通过与受信任操作员操作相同的控制平面代理路径运行。
+- 此端点上没有单独的非所有者/每用户工具边界；一旦调用者通过此处的 Gateway 认证，OpenClaw 即将该调用者视为此 gateway 的受信任操作员。
+- 对于共享密钥认证模式（`token` 和 `password`），即使调用者发送了较窄的 `x-openclaw-scopes` 请求头，端点也会恢复正常的完整操作员默认值。
+- 受信任的携带身份 HTTP 模式（例如受信任代理认证或 `gateway.auth.mode="none"`）在存在时尊重 `x-openclaw-scopes`，否则回退到正常的操作员默认范围集。
+- 如果目标代理策略允许敏感工具，此端点可以使用它们。
+- 仅将此端点保留在回环/tailnet/私有入口上；不要将其直接暴露给公共互联网。
 
-Auth matrix:
+认证矩阵：
 
-- `gateway.auth.mode="token"` or `"password"` + `Authorization: Bearer ...`
-  - proves possession of the shared gateway operator secret
-  - ignores narrower `x-openclaw-scopes`
-  - restores the full default operator scope set:
+- `gateway.auth.mode="token"` 或 `"password"` + `Authorization: Bearer ...`
+  - 证明拥有共享 gateway 操作员密钥
+  - 忽略较窄的 `x-openclaw-scopes`
+  - 恢复完整的默认操作员范围集：
     `operator.admin`, `operator.approvals`, `operator.pairing`,
     `operator.read`, `operator.talk.secrets`, `operator.write`
-  - treats chat turns on this endpoint as owner-sender turns
-- trusted identity-bearing HTTP modes (for example trusted proxy auth, or `gateway.auth.mode="none"` on private ingress)
-  - authenticate some outer trusted identity or deployment boundary
-  - honor `x-openclaw-scopes` when the header is present
-  - fall back to the normal operator default scope set when the header is absent
-  - only lose owner semantics when the caller explicitly narrows scopes and omits `operator.admin`
+  - 将此端点上的聊天回合视为所有者发送者回合
+- 受信任的携带身份 HTTP 模式（例如受信任代理认证，或私有入口上的 `gateway.auth.mode="none"`）
+  - 认证某些外部受信任身份或部署边界
+  - 当该请求头存在时尊重 `x-openclaw-scopes`
+  - 当该请求头缺失时回退到正常的操作员默认范围集
+  - 仅当调用者明确缩小范围并省略 `operator.admin` 时才失去所有者语义
 
-See [Security](/gateway/security) and [Remote access](/gateway/remote).
+参见 [安全](/gateway/security) 和 [远程访问](/gateway/remote)。
 
-## Agent-first model contract
+## 以代理为先的模型约定
 
-OpenClaw treats the OpenAI `model` field as an **agent target**, not a raw provider model id.
+OpenClaw 将 OpenAI 的 `model` 字段视为**代理目标**，而不是原始的提供商模型 ID。
 
-- `model: "openclaw"` routes to the configured default agent.
-- `model: "openclaw/default"` also routes to the configured default agent.
-- `model: "openclaw/<agentId>"` routes to a specific agent.
+- `model: "openclaw"` 路由到配置的默认代理。
+- `model: "openclaw/default"` 也路由到配置的默认代理。
+- `model: "openclaw/<agentId>"` 路由到特定代理。
 
-Optional request headers:
+可选请求头：
 
-- `x-openclaw-model: <provider/model-or-bare-id>` overrides the backend model for the selected agent.
-- `x-openclaw-agent-id: <agentId>` remains supported as a compatibility override.
-- `x-openclaw-session-key: <sessionKey>` fully controls session routing.
-- `x-openclaw-message-channel: <channel>` sets the synthetic ingress channel context for channel-aware prompts and policies.
+- `x-openclaw-model: <provider/model-or-bare-id>` 覆盖所选代理的后端模型。
+- `x-openclaw-agent-id: <agentId>` 仍作为兼容性覆盖保留支持。
+- `x-openclaw-session-key: <sessionKey>` 完全控制会话路由。
+- `x-openclaw-message-channel: <channel>` 为通道感知的提示和策略设置合成入口通道上下文。
 
-Compatibility aliases still accepted:
+仍接受的兼容性别名：
 
 - `model: "openclaw:<agentId>"`
 - `model: "agent:<agentId>"`
 
-## Enabling the endpoint
+## 启用端点
 
-Set `gateway.http.endpoints.chatCompletions.enabled` to `true`:
+设置 `gateway.http.endpoints.chatCompletions.enabled` 为 `true`：
 
 ```json5
 {
@@ -110,9 +110,9 @@ Set `gateway.http.endpoints.chatCompletions.enabled` to `true`:
 }
 ```
 
-## Disabling the endpoint
+## 禁用端点
 
-Set `gateway.http.endpoints.chatCompletions.enabled` to `false`:
+设置 `gateway.http.endpoints.chatCompletions.enabled` 为 `false`：
 
 ```json5
 {
@@ -126,98 +126,98 @@ Set `gateway.http.endpoints.chatCompletions.enabled` to `false`:
 }
 ```
 
-## Session behavior
+## 会话行为
 
-By default the endpoint is **stateless per request** (a new session key is generated each call).
+默认情况下，该端点**每次请求无状态**（每次调用生成新的会话密钥）。
 
-If the request includes an OpenAI `user` string, the Gateway derives a stable session key from it, so repeated calls can share an agent session.
+如果请求中包含 OpenAI 的 `user` 字符串，Gateway 会派生一个稳定的会话密钥，从而使重复调用可以共享代理会话。
 
-## Why this surface matters
+## 为什么此接口很重要
 
-This is the highest-leverage compatibility set for self-hosted frontends and tooling:
+这是自托管前端和工具的最高杠杆兼容性集合：
 
-- Most Open WebUI, LobeChat, and LibreChat setups expect `/v1/models`.
-- Many RAG systems expect `/v1/embeddings`.
-- Existing OpenAI chat clients can usually start with `/v1/chat/completions`.
-- More agent-native clients increasingly prefer `/v1/responses`.
+- 大多数 Open WebUI、LobeChat 和 LibreChat 设置都期望 `/v1/models`。
+- 许多 RAG 系统期望 `/v1/embeddings`。
+- 现有的 OpenAI 聊天客户端通常可以从 `/v1/chat/completions` 开始。
+- 越来越多的原生代理客户端更倾向于 `/v1/responses`。
 
-## Model list and agent routing
+## 模型列表与代理路由
 
 <AccordionGroup>
-  <Accordion title="What does `/v1/models` return?">
-    An OpenClaw agent-target list.
+  <Accordion title="`/v1/models` 返回什么？">
+    一个 OpenClaw 代理目标列表。
 
-    The returned ids are `openclaw`, `openclaw/default`, and `openclaw/<agentId>` entries.
-    Use them directly as OpenAI `model` values.
-
-  </Accordion>
-  <Accordion title="Does `/v1/models` list agents or sub-agents?">
-    It lists top-level agent targets, not backend provider models and not sub-agents.
-
-    Sub-agents remain internal execution topology. They do not appear as pseudo-models.
+    返回的 ID 是 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>` 条目。
+    直接将它们用作 OpenAI `model` 的值。
 
   </Accordion>
-  <Accordion title="Why is `openclaw/default` included?">
-    `openclaw/default` is the stable alias for the configured default agent.
+  <Accordion title="`/v1/models` 列出的是代理还是子代理？">
+    它列出的是顶级代理目标，而不是后端提供商模型，也不是子代理。
 
-    That means clients can keep using one predictable id even if the real default agent id changes between environments.
+    子代理保持内部执行拓扑。它们不会作为伪模型出现。
 
   </Accordion>
-  <Accordion title="How do I override the backend model?">
-    Use `x-openclaw-model`.
+  <Accordion title="为什么包含 `openclaw/default`？">
+    `openclaw/default` 是配置默认代理的稳定别名。
 
-    Examples:
+    这意味着即使实际默认代理 ID 在不同环境之间发生变化，客户端也可以继续使用一个可预测的 ID。
+
+  </Accordion>
+  <Accordion title="如何覆盖后端模型？">
+    使用 `x-openclaw-model`。
+
+    示例：
     `x-openclaw-model: openai/gpt-5.4`
     `x-openclaw-model: gpt-5.5`
 
-    If you omit it, the selected agent runs with its normal configured model choice.
+    如果省略，所选代理将使用其正常配置的模型选择运行。
 
   </Accordion>
-  <Accordion title="How do embeddings fit this contract?">
-    `/v1/embeddings` uses the same agent-target `model` ids.
+  <Accordion title="嵌入如何适应此约定？">
+    `/v1/embeddings` 使用相同的代理目标 `model` ID。
 
-    Use `model: "openclaw/default"` or `model: "openclaw/<agentId>"`.
-    When you need a specific embedding model, send it in `x-openclaw-model`.
-    Without that header, the request passes through to the selected agent's normal embedding setup.
+    使用 `model: "openclaw/default"` 或 `model: "openclaw/<agentId>"`。
+    当您需要特定的嵌入模型时，在 `x-openclaw-model` 中发送。
+    如果没有该请求头，请求将通过到所选代理的正常嵌入设置。
 
   </Accordion>
 </AccordionGroup>
 
-## Streaming (SSE)
+## 流式传输（SSE）
 
-Set `stream: true` to receive Server-Sent Events (SSE):
+设置 `stream: true` 以接收服务器发送事件（SSE）：
 
 - `Content-Type: text/event-stream`
-- Each event line is `data: <json>`
-- Stream ends with `data: [DONE]`
+- 每条事件行格式为 `data: <json>`
+- 流结束时发送 `data: [DONE]`
 
-## Open WebUI quick setup
+## Open WebUI 快速设置
 
-For a basic Open WebUI connection:
+对于基本的 Open WebUI 连接：
 
-- Base URL: `http://127.0.0.1:18789/v1`
-- Docker on macOS base URL: `http://host.docker.internal:18789/v1`
-- API key: your Gateway bearer token
-- Model: `openclaw/default`
+- 基础 URL: `http://127.0.0.1:18789/v1`
+- macOS 上的 Docker 基础 URL: `http://host.docker.internal:18789/v1`
+- API 密钥：您的 Gateway bearer token
+- 模型：`openclaw/default`
 
-Expected behavior:
+预期行为：
 
-- `GET /v1/models` should list `openclaw/default`
-- Open WebUI should use `openclaw/default` as the chat model id
-- If you want a specific backend provider/model for that agent, set the agent's normal default model or send `x-openclaw-model`
+- `GET /v1/models` 应列出 `openclaw/default`
+- Open WebUI 应将 `openclaw/default` 作为聊天模型 ID 使用
+- 如果您希望该代理使用特定的后端提供商/模型，请设置该代理的正常默认模型，或发送 `x-openclaw-model`
 
-Quick smoke:
+快速探测：
 
 ```bash
 curl -sS http://127.0.0.1:18789/v1/models \
   -H 'Authorization: Bearer YOUR_TOKEN'
 ```
 
-If that returns `openclaw/default`, most Open WebUI setups can connect with the same base URL and token.
+如果返回 `openclaw/default`，那么大多数 Open WebUI 设置都可以使用相同的基础 URL 和 token 连接。
 
-## Examples
+## 示例
 
-Non-streaming:
+非流式：
 
 ```bash
 curl -sS http://127.0.0.1:18789/v1/chat/completions \
@@ -229,7 +229,7 @@ curl -sS http://127.0.0.1:18789/v1/chat/completions \
   }'
 ```
 
-Streaming:
+流式：
 
 ```bash
 curl -N http://127.0.0.1:18789/v1/chat/completions \
@@ -243,21 +243,21 @@ curl -N http://127.0.0.1:18789/v1/chat/completions \
   }'
 ```
 
-List models:
+列出模型：
 
 ```bash
 curl -sS http://127.0.0.1:18789/v1/models \
   -H 'Authorization: Bearer YOUR_TOKEN'
 ```
 
-Fetch one model:
+获取单个模型：
 
 ```bash
 curl -sS http://127.0.0.1:18789/v1/models/openclaw%2Fdefault \
   -H 'Authorization: Bearer YOUR_TOKEN'
 ```
 
-Create embeddings:
+创建嵌入：
 
 ```bash
 curl -sS http://127.0.0.1:18789/v1/embeddings \
@@ -270,14 +270,14 @@ curl -sS http://127.0.0.1:18789/v1/embeddings \
   }'
 ```
 
-Notes:
+注意事项：
 
-- `/v1/models` returns OpenClaw agent targets, not raw provider catalogs.
-- `openclaw/default` is always present so one stable id works across environments.
-- Backend provider/model overrides belong in `x-openclaw-model`, not the OpenAI `model` field.
-- `/v1/embeddings` supports `input` as a string or array of strings.
+- `/v1/models` 返回 OpenClaw 代理目标，而不是原始提供商目录。
+- `openclaw/default` 始终存在，因此同一个稳定 id 可以在不同环境中通用。
+- 后端提供商/模型覆盖应放在 `x-openclaw-model` 中，而不是 OpenAI 的 `model` 字段里。
+- `/v1/embeddings` 支持 `input` 为字符串或字符串数组。
 
-## Related
+## 相关内容
 
-- [Configuration reference](/gateway/configuration-reference)
+- [配置参考](/gateway/configuration-reference)
 - [OpenAI](/providers/openai)

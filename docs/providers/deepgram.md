@@ -1,41 +1,42 @@
 ---
-summary: "Deepgram transcription for inbound voice notes"
+summary: "Deepgram 用于来访语音笔记的转录"
 read_when:
-  - You want Deepgram speech-to-text for audio attachments
-  - You want Deepgram streaming transcription for Voice Call
-  - You need a quick Deepgram config example
+  - 您希望为音频附件使用 Deepgram 语音转文本
+  - 您希望为语音通话使用 Deepgram 流式转录
+  - 您需要一个快速的 Deepgram 配置示例
 title: "Deepgram"
 ---
 
-Deepgram is a speech-to-text API. In OpenClaw it is used for inbound
-audio/voice-note transcription through `tools.media.audio` and for Voice Call
-streaming STT through `plugins.entries.voice-call.config.streaming`.
+Deepgram 是一个语音转文本 API。在 OpenClaw 中，它通过 `tools.media.audio` 用于入站
+音频/语音笔记转录，并通过 `plugins.entries.voice-call.config.streaming` 用于语音通话
+流式 STT。
 
-For batch transcription, OpenClaw uploads the complete audio file to Deepgram
-and injects the transcript into the reply pipeline (`{{Transcript}}` +
-`[Audio]` block). For Voice Call streaming, OpenClaw forwards live G.711
-u-law frames over Deepgram's WebSocket `listen` endpoint and emits partial or
-final transcripts as Deepgram returns them.
+对于批量转录，OpenClaw 会将完整音频文件上传到 Deepgram，
+并将转录文本注入回复流程（`{{Transcript}}` +
+`[Audio]` 块）。对于语音通话流式处理，OpenClaw 会通过 Deepgram 的 WebSocket `listen`
+端点转发实时 G.711
+u-law 帧，并在 Deepgram 返回时发出部分或
+最终转录结果。
 
-| Detail        | Value                                                      |
+| 详情          | 值                                                         |
 | ------------- | ---------------------------------------------------------- |
-| Website       | [deepgram.com](https://deepgram.com)                       |
-| Docs          | [developers.deepgram.com](https://developers.deepgram.com) |
-| Auth          | `DEEPGRAM_API_KEY`                                         |
-| Default model | `nova-3`                                                   |
+| 网站          | [deepgram.com](https://deepgram.com)                       |
+| 文档          | [developers.deepgram.com](https://developers.deepgram.com) |
+| 认证          | `DEEPGRAM_API_KEY`                                         |
+| 默认模型      | `nova-3`                                                   |
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Set your API key">
-    Add your Deepgram API key to the environment:
+  <Step title="设置 API 密钥">
+    将您的 Deepgram API 密钥添加到环境变量：
 
     ```
     DEEPGRAM_API_KEY=dg_...
     ```
 
   </Step>
-  <Step title="Enable the audio provider">
+  <Step title="启用音频提供商">
     ```json5
     {
       tools: {
@@ -49,24 +50,23 @@ final transcripts as Deepgram returns them.
     }
     ```
   </Step>
-  <Step title="Send a voice note">
-    Send an audio message through any connected channel. OpenClaw transcribes it
-    via Deepgram and injects the transcript into the reply pipeline.
+  <Step title="发送语音笔记">
+    通过任何已连接的渠道发送音频消息。OpenClaw 将通过 Deepgram 转录它，并将转录文本注入回复流程。
   </Step>
 </Steps>
 
-## Configuration options
+## 配置选项
 
-| Option            | Path                                                         | Description                           |
+| 选项            | 路径                                                         | 描述                                  |
 | ----------------- | ------------------------------------------------------------ | ------------------------------------- |
-| `model`           | `tools.media.audio.models[].model`                           | Deepgram model id (default: `nova-3`) |
-| `language`        | `tools.media.audio.models[].language`                        | Language hint (optional)              |
-| `detect_language` | `tools.media.audio.providerOptions.deepgram.detect_language` | Enable language detection (optional)  |
-| `punctuate`       | `tools.media.audio.providerOptions.deepgram.punctuate`       | Enable punctuation (optional)         |
-| `smart_format`    | `tools.media.audio.providerOptions.deepgram.smart_format`    | Enable smart formatting (optional)    |
+| `model`           | `tools.media.audio.models[].model`                           | Deepgram 模型 id（默认：`nova-3`）    |
+| `language`        | `tools.media.audio.models[].language`                        | 语言提示（可选）                      |
+| `detect_language` | `tools.media.audio.providerOptions.deepgram.detect_language` | 启用语言检测（可选）                  |
+| `punctuate`       | `tools.media.audio.providerOptions.deepgram.punctuate`       | 启用标点符号（可选）                  |
+| `smart_format`    | `tools.media.audio.providerOptions.deepgram.smart_format`    | 启用智能格式化（可选）                |
 
 <Tabs>
-  <Tab title="With language hint">
+  <Tab title="带语言提示">
     ```json5
     {
       tools: {
@@ -80,7 +80,7 @@ final transcripts as Deepgram returns them.
     }
     ```
   </Tab>
-  <Tab title="With Deepgram options">
+  <Tab title="带 Deepgram 选项">
     ```json5
     {
       tools: {
@@ -105,14 +105,13 @@ final transcripts as Deepgram returns them.
 
 ## Voice Call streaming STT
 
-The bundled `deepgram` plugin also registers a realtime transcription provider
-for the Voice Call plugin.
+内置的 `deepgram` 插件还会为 Voice Call 插件注册一个实时转录提供商。
 
-| Setting         | Config path                                                             | Default                          |
+| 设置            | 配置路径                                                            | 默认值                           |
 | --------------- | ----------------------------------------------------------------------- | -------------------------------- |
-| API key         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | Falls back to `DEEPGRAM_API_KEY` |
+| API key         | `plugins.entries.voice-call.config.streaming.providers.deepgram.apiKey` | 回退到 `DEEPGRAM_API_KEY`        |
 | Model           | `...deepgram.model`                                                     | `nova-3`                         |
-| Language        | `...deepgram.language`                                                  | (unset)                          |
+| Language        | `...deepgram.language`                                                  | （未设置）                       |
 | Encoding        | `...deepgram.encoding`                                                  | `mulaw`                          |
 | Sample rate     | `...deepgram.sampleRate`                                                | `8000`                           |
 | Endpointing     | `...deepgram.endpointingMs`                                             | `800`                            |
@@ -144,41 +143,39 @@ for the Voice Call plugin.
 ```
 
 <Note>
-Voice Call receives telephony audio as 8 kHz G.711 u-law. The Deepgram
-streaming provider defaults to `encoding: "mulaw"` and `sampleRate: 8000`, so
-Twilio media frames can be forwarded directly.
+Voice Call 接收的电话音频为 8 kHz G.711 u-law。Deepgram
+流式提供商默认使用 `encoding: "mulaw"` 和 `sampleRate: 8000`，因此
+Twilio 媒体帧可以直接转发。
 </Note>
 
 ## Notes
 
 <AccordionGroup>
-  <Accordion title="Authentication">
-    Authentication follows the standard provider auth order. `DEEPGRAM_API_KEY` is
-    the simplest path.
+  <Accordion title="认证">
+    认证遵循标准的提供商认证顺序。`DEEPGRAM_API_KEY` 是最简单的路径。
   </Accordion>
-  <Accordion title="Proxy and custom endpoints">
-    Override endpoints or headers with `tools.media.audio.baseUrl` and
-    `tools.media.audio.headers` when using a proxy.
+  <Accordion title="代理和自定义端点">
+    使用代理时，可以通过 `tools.media.audio.baseUrl` 和
+    `tools.media.audio.headers` 覆盖端点或标头。
   </Accordion>
-  <Accordion title="Output behavior">
-    Output follows the same audio rules as other providers (size caps, timeouts,
-    transcript injection).
+  <Accordion title="输出行为">
+    输出遵循与其他提供商相同的音频规则（大小限制、超时、转录注入）。
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
   <Card title="Media tools" href="/tools/media-overview" icon="photo-film">
-    Audio, image, and video processing pipeline overview.
+    音频、图像和视频处理流水线概览。
   </Card>
   <Card title="Configuration" href="/gateway/configuration" icon="gear">
-    Full config reference including media tool settings.
+    包括媒体工具设置在内的完整配置参考。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
-    Common issues and debugging steps.
+  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
+    常见问题和调试步骤。
   </Card>
-  <Card title="FAQ" href="/help/faq" icon="circle-question">
-    Frequently asked questions about OpenClaw setup.
+  <Card title="常见问题" href="/help/faq" icon="circle-question">
+    关于 OpenClaw 设置的常见问题。
   </Card>
 </CardGroup>

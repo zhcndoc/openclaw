@@ -1,24 +1,24 @@
 ---
-summary: "CLI reference for `openclaw secrets` (reload, audit, configure, apply)"
+summary: "`openclaw secrets` 的 CLI 参考（reload、audit、configure、apply）"
 read_when:
-  - Re-resolving secret refs at runtime
-  - Auditing plaintext residues and unresolved refs
-  - Configuring SecretRefs and applying one-way scrub changes
+  - 在运行时重新解析 secret 引用
+  - 审计明文残留和未解析的引用
+  - 配置 SecretRef 并应用单向清理更改
 title: "Secrets"
 ---
 
 # `openclaw secrets`
 
-Use `openclaw secrets` to manage SecretRefs and keep the active runtime snapshot healthy.
+使用 `openclaw secrets` 来管理 SecretRef 并维护活跃的运行时快照健康状态。
 
-Command roles:
+命令角色：
 
-- `reload`: gateway RPC (`secrets.reload`) that re-resolves refs and swaps runtime snapshot only on full success (no config writes).
-- `audit`: read-only scan of configuration/auth/generated-model stores and legacy residues for plaintext, unresolved refs, and precedence drift (exec refs are skipped unless `--allow-exec` is set).
-- `configure`: interactive planner for provider setup, target mapping, and preflight (TTY required).
-- `apply`: execute a saved plan (`--dry-run` for validation only; dry-run skips exec checks by default, and write mode rejects exec-containing plans unless `--allow-exec` is set), then scrub targeted plaintext residues.
+- `reload`: gateway RPC (`secrets.reload`)，仅在完全成功时重新解析引用并交换运行时快照（不写配置）。
+- `audit`: 对配置/认证/生成模型存储和遗留残留进行只读扫描，查找明文、未解析的引用和优先级漂移（除非设置 `--allow-exec`，否则跳过 exec 引用）。
+- `configure`: 用于提供者设置、目标映射和预检的交互式规划器（需要 TTY）。
+- `apply`: 执行保存的计划（`--dry-run` 仅用于验证；dry-run 默认跳过 exec 检查，写入模式拒绝包含 exec 的计划，除非设置 `--allow-exec`），然后清理目标明文残留。
 
-Recommended operator loop:
+推荐的操作循环：
 
 ```bash
 openclaw secrets audit --check
@@ -29,22 +29,22 @@ openclaw secrets audit --check
 openclaw secrets reload
 ```
 
-If your plan includes `exec` SecretRefs/providers, pass `--allow-exec` on both dry-run and write apply commands.
+如果你的计划包含 `exec` SecretRefs/提供者，在 dry-run 和写入应用命令上都传递 `--allow-exec`。
 
-Exit code note for CI/gates:
+CI/门禁的退出码说明：
 
-- `audit --check` returns `1` on findings.
-- unresolved refs return `2`.
+- `audit --check` 发现问题时返回 `1`。
+- 未解析的引用返回 `2`。
 
-Related:
+相关内容：
 
-- Secrets guide: [Secrets Management](/gateway/secrets)
-- Credential surface: [SecretRef Credential Surface](/reference/secretref-credential-surface)
-- Security guide: [Security](/gateway/security)
+- Secrets 指南：[Secrets 管理](/gateway/secrets)
+- 凭据表面：[SecretRef 凭据表面](/reference/secretref-credential-surface)
+- 安全指南：[安全](/gateway/security)
 
-## Reload runtime snapshot
+## 重新加载运行时快照
 
-Re-resolve secret refs and atomically swap runtime snapshot.
+重新解析 secret 引用，原子地替换运行时快照。
 
 ```bash
 openclaw secrets reload
@@ -52,32 +52,32 @@ openclaw secrets reload --json
 openclaw secrets reload --url ws://127.0.0.1:18789 --token <token>
 ```
 
-Notes:
+说明：
 
-- Uses gateway RPC method `secrets.reload`.
-- If resolution fails, gateway keeps last-known-good snapshot and returns an error (no partial activation).
-- JSON response includes `warningCount`.
+- 使用 gateway RPC 方法 `secrets.reload`。
+- 若解析失败，gateway 保留上一个已知良好快照并返回错误（不进行部分激活）。
+- JSON 响应包含 `warningCount`。
 
-Options:
+选项：
 
 - `--url <url>`
 - `--token <token>`
 - `--timeout <ms>`
 - `--json`
 
-## Audit
+## 审计
 
-Scan OpenClaw state for:
+扫描 OpenClaw 状态，查找：
 
-- plaintext secret storage
-- unresolved refs
-- precedence drift (`auth-profiles.json` credentials shadowing `openclaw.json` refs)
-- generated `agents/*/agent/models.json` residues (provider `apiKey` values and sensitive provider headers)
-- legacy residues (legacy auth store entries, OAuth reminders)
+- 明文秘密存储
+- 未解析的引用
+- 优先级漂移（`auth-profiles.json` 中的凭据覆盖 `openclaw.json` 中的引用）
+- 生成的 `agents/*/agent/models.json` 遗留（提供者 `apiKey` 值和敏感的提供者请求头）
+- 遗留残留（遗留认证存储条目、OAuth 提醒）
 
-Header residue note:
+头部残留说明：
 
-- Sensitive provider header detection is name-heuristic based (common auth/credential header names and fragments such as `authorization`, `x-api-key`, `token`, `secret`, `password`, and `credential`).
+- 敏感提供者请求头检测基于名称启发式（常见认证/凭据请求头名和片段，如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
 
 ```bash
 openclaw secrets audit
@@ -86,25 +86,25 @@ openclaw secrets audit --json
 openclaw secrets audit --allow-exec
 ```
 
-Exit behavior:
+退出行为：
 
-- `--check` exits non-zero on findings.
-- unresolved refs exit with higher-priority non-zero code.
+- `--check` 在存在发现时返回非零。
+- 未解析的引用返回更高优先级的非零代码。
 
-Report shape highlights:
+报告结构重点：
 
 - `status`: `clean | findings | unresolved`
 - `resolution`: `refsChecked`, `skippedExecRefs`, `resolvabilityComplete`
 - `summary`: `plaintextCount`, `unresolvedRefCount`, `shadowedRefCount`, `legacyResidueCount`
-- finding codes:
+- 发现代码：
   - `PLAINTEXT_FOUND`
   - `REF_UNRESOLVED`
   - `REF_SHADOWED`
   - `LEGACY_RESIDUE`
 
-## Configure (interactive helper)
+## 配置（交互辅助）
 
-Build provider and SecretRef changes interactively, run preflight, and optionally apply:
+交互式构建提供者和 SecretRef 变更，运行预检，并可选择应用：
 
 ```bash
 openclaw secrets configure
@@ -116,43 +116,43 @@ openclaw secrets configure --agent ops
 openclaw secrets configure --json
 ```
 
-Flow:
+流程：
 
-- Provider setup first (`add/edit/remove` for `secrets.providers` aliases).
-- Credential mapping second (select fields and assign `{source, provider, id}` refs).
-- Preflight and optional apply last.
+- 首先是提供者设置（对 `secrets.providers` 别名执行 `add/edit/remove`）。
+- 其次是凭据映射（选择字段并分配 `{source, provider, id}` 引用）。
+- 最后是预检和可选的应用。
 
-Flags:
+参数：
 
-- `--providers-only`: configure `secrets.providers` only, skip credential mapping.
-- `--skip-provider-setup`: skip provider setup and map credentials to existing providers.
-- `--agent <id>`: scope `auth-profiles.json` target discovery and writes to one agent store.
-- `--allow-exec`: allow exec SecretRef checks during preflight/apply (may execute provider commands).
+- `--providers-only`: 仅配置 `secrets.providers`，跳过凭据映射。
+- `--skip-provider-setup`: 跳过提供者设置，将凭据映射到现有提供者。
+- `--agent <id>`: 将 `auth-profiles.json` 目标发现和写入限定到一个代理存储。
+- `--allow-exec`: 允许在预检/应用期间执行 exec SecretRef 检查（可能执行提供者命令）。
 
-Notes:
+说明：
 
-- Requires an interactive TTY.
-- You cannot combine `--providers-only` with `--skip-provider-setup`.
-- `configure` targets secret-bearing fields in `openclaw.json` plus `auth-profiles.json` for the selected agent scope.
-- `configure` supports creating new `auth-profiles.json` mappings directly in the picker flow.
-- Canonical supported surface: [SecretRef Credential Surface](/reference/secretref-credential-surface).
-- It performs preflight resolution before apply.
-- If preflight/apply includes exec refs, keep `--allow-exec` set for both steps.
-- Generated plans default to scrub options (`scrubEnv`, `scrubAuthProfilesForProviderTargets`, `scrubLegacyAuthJson` all enabled).
-- Apply path is one-way for scrubbed plaintext values.
-- Without `--apply`, CLI still prompts `Apply this plan now?` after preflight.
-- With `--apply` (and no `--yes`), CLI prompts an extra irreversible confirmation.
-- `--json` prints the plan + preflight report, but the command still requires an interactive TTY.
+- 需要交互式 TTY。
+- 你不能将 `--providers-only` 与 `--skip-provider-setup` 结合使用。
+- `configure` 针对 `openclaw.json` 中包含秘密的字段以及所选代理范围内的 `auth-profiles.json`。
+- `configure` 支持在选择器流程中直接创建新的 `auth-profiles.json` 映射。
+- 标准支持表面：[SecretRef 凭据表面](/reference/secretref-credential-surface)。
+- 它在应用前执行预检解析。
+- 如果预检/应用包含 exec 引用，请在两个步骤中都设置 `--allow-exec`。
+- 生成的计划默认启用清理选项（`scrubEnv`、`scrubAuthProfilesForProviderTargets`、`scrubLegacyAuthJson` 均启用）。
+- 对于已清理的明文值，应用路径是单向的。
+- 如果没有 `--apply`，CLI 在预检后仍会提示 `立即应用此计划？`。
+- 使用 `--apply`（且无 `--yes`）时，CLI 会提示额外的不可逆确认。
+- `--json` 打印计划 + 预检报告，但命令仍需要交互式 TTY。
 
-Exec provider safety note:
+Exec 提供者安全注意事项：
 
-- Homebrew installs often expose symlinked binaries under `/opt/homebrew/bin/*`.
-- Set `allowSymlinkCommand: true` only when needed for trusted package-manager paths, and pair it with `trustedDirs` (for example `["/opt/homebrew"]`).
-- On Windows, if ACL verification is unavailable for a provider path, OpenClaw fails closed. For trusted paths only, set `allowInsecurePath: true` on that provider to bypass path security checks.
+- Homebrew 安装通常将二进制软链接暴露在 `/opt/homebrew/bin/*` 下。
+- 仅在需要受信任的包管理路径时设置 `allowSymlinkCommand: true`，且应配合 `trustedDirs`（例如 `["/opt/homebrew"]`）。
+- 在 Windows 上，如果无法对提供者路径进行 ACL 验证，OpenClaw 会严格拒绝。仅对受信任路径，设置 `allowInsecurePath: true` 可绕过路径安全检查。
 
-## Apply a saved plan
+## 应用已保存的计划
 
-Apply or preflight a plan generated previously:
+应用或预检已生成的计划：
 
 ```bash
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json
@@ -162,31 +162,31 @@ openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --dry-run --allow-
 openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --json
 ```
 
-Exec behavior:
+Exec 行为：
 
-- `--dry-run` validates preflight without writing files.
-- exec SecretRef checks are skipped by default in dry-run.
-- write mode rejects plans that contain exec SecretRefs/providers unless `--allow-exec` is set.
-- Use `--allow-exec` to opt in to exec provider checks/execution in either mode.
+- `--dry-run` 在不写入文件的情况下验证预检。
+- 在 dry-run 中默认跳过 exec SecretRef 检查。
+- 写入模式拒绝包含 exec SecretRefs/提供者的计划，除非设置了 `--allow-exec`。
+- 使用 `--allow-exec` 可在任一模式下选择加入 exec 提供者检查/执行。
 
-Plan contract details (allowed target paths, validation rules, and failure semantics):
+计划约定详情（允许的目标路径、验证规则和失败语义）：
 
-- [Secrets Apply Plan Contract](/gateway/secrets-plan-contract)
+- [Secrets 应用计划约定](/gateway/secrets-plan-contract)
 
-What `apply` may update:
+`apply` 可能更新的内容：
 
-- `openclaw.json` (SecretRef targets + provider upserts/deletes)
-- `auth-profiles.json` (provider-target scrubbing)
-- legacy `auth.json` residues
-- `~/.openclaw/.env` known secret keys whose values were migrated
+- `openclaw.json`（SecretRef 目标 + 提供者增删）
+- `auth-profiles.json`（针对提供者目标的清理）
+- 旧版 `auth.json` 残留
+- `~/.openclaw/.env` 中已迁移的已知秘密键值
 
-## Why no rollback backups
+## 为什么不做回滚备份
 
-`secrets apply` intentionally does not write rollback backups containing old plaintext values.
+`secrets apply` 故意不写入包含旧明文值的回滚备份。
 
-Safety comes from strict preflight + atomic-ish apply with best-effort in-memory restore on failure.
+安全保障来自严格的预检 + 原子式应用，并在失败时尽力内存恢复。
 
-## Example
+## 示例
 
 ```bash
 openclaw secrets audit --check
@@ -194,9 +194,9 @@ openclaw secrets configure
 openclaw secrets audit --check
 ```
 
-If `audit --check` still reports plaintext findings, update the remaining reported target paths and rerun audit.
+如果 `audit --check` 仍报告明文发现，请更新剩余报告的目标路径并重新运行审计。
 
-## Related
+## 相关内容
 
 - [CLI reference](/cli)
 - [Secrets management](/gateway/secrets)

@@ -1,35 +1,33 @@
 ---
-summary: "Security considerations and threat model for running an AI gateway with shell access"
+summary: "运行带有 shell 访问权限的 AI 网关的安全注意事项和威胁模型"
 read_when:
-  - Adding features that widen access or automation
-title: "Security"
+  - 添加扩大访问权限或自动化的功能时
+title: "安全"
 ---
 
 <Warning>
-  **Personal assistant trust model.** This guidance assumes one trusted
-  operator boundary per gateway (single-user, personal-assistant model).
-  OpenClaw is **not** a hostile multi-tenant security boundary for multiple
-  adversarial users sharing one agent or gateway. If you need mixed-trust or
-  adversarial-user operation, split trust boundaries (separate gateway +
-  credentials, ideally separate OS users or hosts).
+  **个人助理信任模型。** 本指南假设每个网关只有一个受信任的
+  操作员边界（单用户、个人助理模型）。OpenClaw **不是** 面向多个
+  对抗性用户共享一个代理或网关的恶意多租户安全边界。如果你需要混合信任或
+  对抗用户操作，请拆分信任边界（独立网关 + 凭据，理想情况下使用独立的操作系统用户或主机）。
 </Warning>
 
-## Scope first: personal assistant security model
+## 先看范围：个人助理安全模型
 
-OpenClaw security guidance assumes a **personal assistant** deployment: one trusted operator boundary, potentially many agents.
+OpenClaw 的安全指导假设为**个人助理**部署：一个受信任的操作员边界，可能包含多个代理。
 
-- Supported security posture: one user/trust boundary per gateway (prefer one OS user/host/VPS per boundary).
-- Not a supported security boundary: one shared gateway/agent used by mutually untrusted or adversarial users.
-- If adversarial-user isolation is required, split by trust boundary (separate gateway + credentials, and ideally separate OS users/hosts).
-- If multiple untrusted users can message one tool-enabled agent, treat them as sharing the same delegated tool authority for that agent.
+- 支持的安全姿态：每个网关一个用户/信任边界（优选每个边界使用单独的操作系统用户/主机/VPS）。
+- 不支持的安全边界：多个相互不信任或对抗用户共用一个网关/代理。
+- 如果需要对抗用户隔离，请按信任边界分割（独立网关 + 凭据，且理想情况下分离操作系统用户/主机）。
+- 技术上可在一台机器上运行多个网关，但这不是多用户隔离的推荐基线。
+- 推荐默认：每台机器/主机（或 VPS）运行一个用户，每个用户运行一个网关，网关内可有一个或多个代理。
+- 多用户使用 OpenClaw 时，建议为每用户各自配置一个 VPS/主机。
 
-This page explains hardening **within that model**. It does not claim hostile multi-tenant isolation on one shared gateway.
+## 快速检查：`openclaw security audit`
 
-## Quick check: `openclaw security audit`
+另见：[形式化验证（安全模型）](/security/formal-verification)
 
-See also: [Formal Verification (Security Models)](/security/formal-verification)
-
-Run this regularly (especially after changing config or exposing network surfaces):
+请定期执行（尤其是在更改配置或暴露网络面后）：
 
 ```bash
 openclaw security audit
@@ -38,121 +36,96 @@ openclaw security audit --fix
 openclaw security audit --json
 ```
 
-`security audit --fix` stays intentionally narrow: it flips common open group
-policies to allowlists, restores `logging.redactSensitive: "tools"`, tightens
-state/config/include-file permissions, and uses Windows ACL resets instead of
-POSIX `chmod` when running on Windows.
+`security audit --fix` 保持有意狭窄：它将常见的开放组策略翻转为允许列表，恢复 `logging.redactSensitive: "tools"`，收紧状态/配置/包含文件权限，并在 Windows 上运行时使用 Windows ACL 重置而不是 POSIX `chmod`。
 
-It flags common footguns (Gateway auth exposure, browser control exposure, elevated allowlists, filesystem permissions, permissive exec approvals, and open-channel tool exposure).
+它标记常见陷阱（网关认证暴露、浏览器控制暴露、提升的允许列表、文件系统权限、宽松的执行审批和开放渠道工具暴露）。
 
-OpenClaw is both a product and an experiment: you’re wiring frontier-model behavior into real messaging surfaces and real tools. **There is no “perfectly secure” setup.** The goal is to be deliberate about:
+OpenClaw 既是产品也是实验：你将前沿模型行为接入真实消息界面和真实工具。**不存在"完美安全"的设置。**目标是明确控制：
 
-- who can talk to your bot
-- where the bot is allowed to act
-- what the bot can touch
+- 谁能与你的机器人对话
+- 机器人在哪些范围可以行动
+- 机器人能够访问什么
 
-Start with the smallest access that still works, then widen it as you gain confidence.
+从最小可用权限开始，随着信心增加逐步放宽。
 
-### Deployment and host trust
+### 部署和主机信任
 
-OpenClaw assumes the host and config boundary are trusted:
+OpenClaw 假设主机和配置边界是受信任的：
 
-- If someone can modify Gateway host state/config (`~/.openclaw`, including `openclaw.json`), treat them as a trusted operator.
-- Running one Gateway for multiple mutually untrusted/adversarial operators is **not a recommended setup**.
-- For mixed-trust teams, split trust boundaries with separate gateways (or at minimum separate OS users/hosts).
-- Recommended default: one user per machine/host (or VPS), one gateway for that user, and one or more agents in that gateway.
-- Inside one Gateway instance, authenticated operator access is a trusted control-plane role, not a per-user tenant role.
-- Session identifiers (`sessionKey`, session IDs, labels) are routing selectors, not authorization tokens.
-- If several people can message one tool-enabled agent, each of them can steer that same permission set. Per-user session/memory isolation helps privacy, but does not convert a shared agent into per-user host authorization.
+- 如果有人可以修改网关主机状态/配置（`~/.openclaw`，包括 `openclaw.json`），将其视为受信任的操作员。
+- 为多个相互不信任/对抗的操作员运行一个网关 **不是推荐的设置**。
+- 对于混合信任团队，请使用独立网关（或至少分离操作系统用户/主机）分割信任边界。
+- 推荐默认：每台机器/主机（或 VPS）一个用户，该用户一个网关，该网关内一个或多个代理。
+- 在一个网关实例内，认证的操作员访问是受信任的控制平面角色，而非每用户租户角色。
+- 会话标识符（`sessionKey`，会话 ID，标签）是路由选择器，而非授权令牌。
+- 如果几个人可以给同一个启用工具的代理发消息，他们每个人都可以操控该权限集。每用户会话/内存隔离有助于隐私，但不会将共享代理转换为每用户主机授权。
 
-### Shared Slack workspace: real risk
+### 共享 Slack 工作区：真实风险
 
-If "everyone in Slack can message the bot," the core risk is delegated tool authority:
+若"Slack 中所有人均可给机器人发消息"，核心风险是委托工具权限：
 
-- any allowed sender can induce tool calls (`exec`, browser, network/file tools) within the agent's policy;
-- prompt/content injection from one sender can cause actions that affect shared state, devices, or outputs;
-- if one shared agent has sensitive credentials/files, any allowed sender can potentially drive exfiltration via tool usage.
+- 任何允许的发送者都能根据代理策略触发工具调用（`exec`、浏览器、网络/文件工具）；
+- 一人发起的提示/内容注入可导致影响共享状态、设备或输出的操作；
+- 若共有代理含敏感凭据/文件，任一允许发信人均可通过工具使用触发泄露。
 
-Use separate agents/gateways with minimal tools for team workflows; keep personal-data agents private.
+团队工作流请使用分离的代理/网关和最小化工具；个人数据代理须保持私密。
 
-### Company-shared agent: acceptable pattern
+### 公司共享代理：可接受模式
 
-This is acceptable when everyone using that agent is in the same trust boundary (for example one company team) and the agent is strictly business-scoped.
+当使用代理的所有人均处于同一信任边界（如公司团队），且代理仅限业务范围时，可接受此模式。
 
-- run it on a dedicated machine/VM/container;
-- use a dedicated OS user + dedicated browser/profile/accounts for that runtime;
-- do not sign that runtime into personal Apple/Google accounts or personal password-manager/browser profiles.
+- 运行在专用机器/虚拟机/容器；
+- 使用专用操作系统用户 + 专用浏览器/配置文件/账号；
+- 不要在该运行时登录个人 Apple/Google 账户或个人密码管理器/浏览器配置。
 
-If you mix personal and company identities on the same runtime, you collapse the separation and increase personal-data exposure risk.
+混合个人和公司身份会破坏隔离，提升个人数据暴露风险。
 
-## Gateway and node trust concept
+## 网关和节点信任概念
 
-Treat Gateway and node as one operator trust domain, with different roles:
+将网关和节点视为一个操作员信任域，不同角色分工：
 
-- **Gateway** is the control plane and policy surface (`gateway.auth`, tool policy, routing).
-- **Node** is remote execution surface paired to that Gateway (commands, device actions, host-local capabilities).
-- A caller authenticated to the Gateway is trusted at Gateway scope. After pairing, node actions are trusted operator actions on that node.
-- Direct loopback backend clients authenticated with the shared gateway
-  token/password can make internal control-plane RPCs without presenting a user
-  device identity. This is not a remote or browser pairing bypass: network
-  clients, node clients, device-token clients, and explicit device identities
-  still go through pairing and scope-upgrade enforcement.
-- `sessionKey` is routing/context selection, not per-user auth.
-- Exec approvals (allowlist + ask) are guardrails for operator intent, not hostile multi-tenant isolation.
-- OpenClaw's product default for trusted single-operator setups is that host exec on `gateway`/`node` is allowed without approval prompts (`security="full"`, `ask="off"` unless you tighten it). That default is intentional UX, not a vulnerability by itself.
-- Exec approvals bind exact request context and best-effort direct local file operands; they do not semantically model every runtime/interpreter loader path. Use sandboxing and host isolation for strong boundaries.
+- **网关**是控制平面和策略表面（`gateway.auth`，工具策略，路由）。
+- **节点**是配对到该网关的远程执行表面（命令、设备操作、主机本地能力）。
+- 经过网关认证的调用者在网关范围内是受信任的。配对后，节点操作是该节点上的受信任操作员操作。
+- `sessionKey` 是路由/上下文选择，而非每用户认证。
+- 执行审批（允许列表 + 询问）是操作员意图的护栏，而非敌对多租户隔离。
+- OpenClaw 针对受信任单操作员设置的产品默认值是允许在 `gateway`/`node` 上进行主机执行而无需审批提示（`security="full"`, `ask="off"` 除非你收紧它）。该默认值是有意为之的用户体验，本身不是漏洞。
+- 执行审批绑定精确的请求上下文和尽力的直接本地文件操作数；它们不在语义上建模每个运行时/解释器加载器路径。使用沙箱化和主机隔离来实现强边界。
 
-If you need hostile-user isolation, split trust boundaries by OS user/host and run separate gateways.
+需要恶意用户隔离时，请按操作系统用户/主机分割信任边界，运行独立网关。
 
-## Trust boundary matrix
+## 信任边界矩阵
 
-Use this as the quick model when triaging risk:
+风险排查时可参考此快速模型：
 
-| Boundary or control                                       | What it means                                     | Common misread                                                                |
+| 边界或控制                                              | 含义                                              | 常见误读                                                                    |
 | --------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `gateway.auth` (token/password/trusted-proxy/device auth) | Authenticates callers to gateway APIs             | "Needs per-message signatures on every frame to be secure"                    |
-| `sessionKey`                                              | Routing key for context/session selection         | "Session key is a user auth boundary"                                         |
-| Prompt/content guardrails                                 | Reduce model abuse risk                           | "Prompt injection alone proves auth bypass"                                   |
-| `canvas.eval` / browser evaluate                          | Intentional operator capability when enabled      | "Any JS eval primitive is automatically a vuln in this trust model"           |
-| Local TUI `!` shell                                       | Explicit operator-triggered local execution       | "Local shell convenience command is remote injection"                         |
-| Node pairing and node commands                            | Operator-level remote execution on paired devices | "Remote device control should be treated as untrusted user access by default" |
-| `gateway.nodes.pairing.autoApproveCidrs`                  | Opt-in trusted-network node enrollment policy     | "A disabled-by-default allowlist is an automatic pairing vulnerability"       |
+| `gateway.auth` (token/password/trusted-proxy/device auth) | 认证调用者访问网关 API             | "需要每帧每条消息签名才安全"                    |
+| `sessionKey`                                              | 上下文/会话选择的路由键         | "会话键是用户认证边界"                                         |
+| 提示/内容护栏                                 | 降低模型滥用风险                           | "仅提示注入证明认证绕过"                                   |
+| `canvas.eval` / browser evaluate                          | 启用时为有意操作员能力      | "此信任模型中任何 JS eval 原语自动视为漏洞"           |
+| Local TUI `!` shell                                       | 明确操作员触发的本地执行       | "本地 shell 便利命令是远程注入"                         |
+| 节点配对和节点命令                            | 配对设备上的操作员级远程执行 | "默认应将远程设备控制视为不可信用户访问"           |
 
-## Not vulnerabilities by design
+## 设计上非漏洞
 
-<Accordion title="Common findings that are out of scope">
+<Accordion title="常见的、超出范围的发现">
 
-These patterns get reported often and are usually closed as no-action unless
-a real boundary bypass is demonstrated:
+这些模式经常被报告，通常会被关闭为无需处理，除非证明了真实的边界绕过：
 
-- Prompt-injection-only chains without a policy, auth, or sandbox bypass.
-- Claims that assume hostile multi-tenant operation on one shared host or
-  config.
-- Claims that classify normal operator read-path access (for example
-  `sessions.list` / `sessions.preview` / `chat.history`) as IDOR in a
-  shared-gateway setup.
-- Localhost-only deployment findings (for example HSTS on a loopback-only
-  gateway).
-- Discord inbound webhook signature findings for inbound paths that do not
-  exist in this repo.
-- Reports that treat node pairing metadata as a hidden second per-command
-  approval layer for `system.run`, when the real execution boundary is still
-  the gateway's global node command policy plus the node's own exec
-  approvals.
-- Reports that treat configured `gateway.nodes.pairing.autoApproveCidrs` as a
-  vulnerability by itself. This setting is disabled by default, requires
-  explicit CIDR/IP entries, only applies to first-time `role: node` pairing with
-  no requested scopes, and does not auto-approve operator/browser/Control UI,
-  WebChat, role upgrades, scope upgrades, metadata changes, public-key changes,
-  or same-host loopback trusted-proxy header paths.
-- "Missing per-user authorization" findings that treat `sessionKey` as an
-  auth token.
+- 仅凭提示注入的链路，没有策略、认证或沙箱绕过。
+- 依赖假设在一个共享主机或配置上进行敌对多租户操作的主张。
+- 将正常操作员读取路径访问（例如 `sessions.list` / `sessions.preview` / `chat.history`）在共享网关设置中归类为 IDOR 的主张。
+- 仅限 localhost 的部署发现（例如仅绑定回环地址的网关上的 HSTS）。
+- 对仓库中不存在的入站路径，报告 Discord 入站 webhook 签名问题。
+- 将节点配对元数据视为 `system.run` 的隐藏第二层逐命令审批，而真实执行边界仍然只是网关的全局节点命令策略加上节点自身的执行审批。
+- 将 `sessionKey` 视为认证令牌的“缺少每用户授权”类发现。
 
 </Accordion>
 
-## Hardened baseline in 60 seconds
+## 60 秒加固基线
 
-Use this baseline first, then selectively re-enable tools per trusted agent:
+先使用此基线，再对受信代理按需开启工具：
 
 ```json5
 {
@@ -166,136 +139,134 @@ Use this baseline first, then selectively re-enable tools per trusted agent:
   },
   tools: {
     profile: "messaging",
-    deny: ["group:automation", "group:runtime", "group:fs", "sessions_spawn", "sessions_send"],
+    deny: [
+      "group:automation",
+      "group:runtime",
+      "group:fs",
+      "sessions_spawn",
+      "sessions_send",
+    ],
     fs: { workspaceOnly: true },
     exec: { security: "deny", ask: "always" },
     elevated: { enabled: false },
   },
   channels: {
-    whatsapp: { dmPolicy: "pairing", groups: { "*": { requireMention: true } } },
+    whatsapp: {
+      dmPolicy: "pairing",
+      groups: { "*": { requireMention: true } },
+    },
   },
 }
 ```
 
-This keeps the Gateway local-only, isolates DMs, and disables control-plane/runtime tools by default.
+此举使网关仅限本地、隔离私信，并默认禁用控制平面/运行时工具。
 
-## Shared inbox quick rule
+## 共享收件箱快速规则
 
-If more than one person can DM your bot:
+若多人可私信你的机器人：
 
-- Set `session.dmScope: "per-channel-peer"` (or `"per-account-channel-peer"` for multi-account channels).
-- Keep `dmPolicy: "pairing"` or strict allowlists.
-- Never combine shared DMs with broad tool access.
-- This hardens cooperative/shared inboxes, but is not designed as hostile co-tenant isolation when users share host/config write access.
+- 设置 `session.dmScope: "per-channel-peer"`（或多账号渠道的 `"per-account-channel-peer"`）。
+- 保持 `dmPolicy: "pairing"` 或严格的允许列表。
+- 绝不要将共享私信与广泛的工具访问结合。
+- 这可加强协作/共享收件箱的安全，但在用户共享主机/配置写入访问权时，并非设计为敌对共租户隔离。
 
-## Context visibility model
+## 上下文可见性模型
 
-OpenClaw separates two concepts:
+OpenClaw 分离了两个概念：
 
-- **Trigger authorization**: who can trigger the agent (`dmPolicy`, `groupPolicy`, allowlists, mention gates).
-- **Context visibility**: what supplemental context is injected into model input (reply body, quoted text, thread history, forwarded metadata).
+- **触发授权**：谁可以触发代理（`dmPolicy`, `groupPolicy`, 允许列表，提及门槛）。
+- **上下文可见性**：什么补充上下文被注入到模型输入中（回复正文、引用文本、线程历史、转发元数据）。
 
-Allowlists gate triggers and command authorization. The `contextVisibility` setting controls how supplemental context (quoted replies, thread roots, fetched history) is filtered:
+允许列表控制触发器和命令授权。`contextVisibility` 设置控制如何过滤补充上下文（引用回复、线程根、获取的历史）：
 
-- `contextVisibility: "all"` (default) keeps supplemental context as received.
-- `contextVisibility: "allowlist"` filters supplemental context to senders allowed by the active allowlist checks.
-- `contextVisibility: "allowlist_quote"` behaves like `allowlist`, but still keeps one explicit quoted reply.
+- `contextVisibility: "all"`（默认）保留接收到的补充上下文。
+- `contextVisibility: "allowlist"` 将补充上下文过滤为活动允许列表检查允许的发送者。
+- `contextVisibility: "allowlist_quote"` 行为类似 `allowlist`，但仍保留一个明确的引用回复。
 
-Set `contextVisibility` per channel or per room/conversation. See [Group Chats](/channels/groups#context-visibility-and-allowlists) for setup details.
+按渠道或每房间/对话设置 `contextVisibility`。详见 [群聊](/channels/groups#context-visibility-and-allowlists) 获取设置详情。
 
-Advisory triage guidance:
+公告分类指导：
 
-- Claims that only show "model can see quoted or historical text from non-allowlisted senders" are hardening findings addressable with `contextVisibility`, not auth or sandbox boundary bypasses by themselves.
-- To be security-impacting, reports still need a demonstrated trust-boundary bypass (auth, policy, sandbox, approval, or another documented boundary).
+- 仅显示“模型可以看到来自非允许列表发送者的引用或历史文本”的声明是可通过 `contextVisibility` 解决的加固发现，本身不是认证或沙箱边界绕过。
+- 要具有安全影响，报告仍需证明信任边界绕过（认证、策略、沙箱、审批或另一个记录的边界）。
 
-## What the audit checks (high level)
+## 审计检查内容（高层）
 
-- **Inbound access** (DM policies, group policies, allowlists): can strangers trigger the bot?
-- **Tool blast radius** (elevated tools + open rooms): could prompt injection turn into shell/file/network actions?
-- **Exec approval drift** (`security=full`, `autoAllowSkills`, interpreter allowlists without `strictInlineEval`): are host-exec guardrails still doing what you think they are?
-  - `security="full"` is a broad posture warning, not proof of a bug. It is the chosen default for trusted personal-assistant setups; tighten it only when your threat model needs approval or allowlist guardrails.
-- **Network exposure** (Gateway bind/auth, Tailscale Serve/Funnel, weak/short auth tokens).
-- **Browser control exposure** (remote nodes, relay ports, remote CDP endpoints).
-- **Local disk hygiene** (permissions, symlinks, config includes, “synced folder” paths).
-- **Plugins** (plugins load without an explicit allowlist).
-- **Policy drift/misconfig** (sandbox docker settings configured but sandbox mode off; ineffective `gateway.nodes.denyCommands` patterns because matching is exact command-name only (for example `system.run`) and does not inspect shell text; dangerous `gateway.nodes.allowCommands` entries; global `tools.profile="minimal"` overridden by per-agent profiles; plugin-owned tools reachable under permissive tool policy).
-- **Runtime expectation drift** (for example assuming implicit exec still means `sandbox` when `tools.exec.host` now defaults to `auto`, or explicitly setting `tools.exec.host="sandbox"` while sandbox mode is off).
-- **Model hygiene** (warn when configured models look legacy; not a hard block).
+- **入站访问**（DM 策略、群组策略、允许列表）：陌生人能否触发机器人？
+- **工具爆炸半径**（提升权限工具 + 开放房间）：提示注入能否转化为 shell/文件/网络操作？
+- **执行审批漂移**（`security=full`、`autoAllowSkills`、未启用 `strictInlineEval` 的解释器允许列表）：主机执行护栏是否仍按预期工作？
+  - `security="full"` 是一个宽泛的姿态警告，而不是漏洞证明。它是受信任个人助理设置下的默认选择；只有在你的威胁模型需要审批或允许列表护栏时才收紧它。
+- **网络暴露**（网关绑定/认证、Tailscale Serve/Funnel、弱/短认证令牌）。
+- **浏览器控制暴露**（远程节点、中继端口、远程 CDP 端点）。
+- **本地磁盘卫生**（权限、符号链接、配置包含文件、“同步文件夹”路径）。
+- **插件**（插件在没有显式允许列表的情况下加载）。
+- **策略漂移/配置错误**（已配置沙箱 docker 设置但沙箱模式关闭；`gateway.nodes.denyCommands` 匹配模式无效，因为匹配仅限精确命令名（例如 `system.run`），不会检查 shell 文本；危险的 `gateway.nodes.allowCommands` 条目；全局 `tools.profile="minimal"` 被每代理配置覆盖；在宽松工具策略下可访问插件拥有的工具）。
+- **运行时预期漂移**（例如假设隐式执行仍意味着 `sandbox`，但 `tools.exec.host` 现在默认为 `auto`，或在沙箱模式关闭时显式设置 `tools.exec.host="sandbox"`）。
+- **模型卫生**（当配置模型看起来是旧版时发出警告；不是硬性阻止）。
 
-If you run `--deep`, OpenClaw also attempts a best-effort live Gateway probe.
+若运行 `--deep`，OpenClaw 还会尝试尽力实时网关探测。
 
-## Credential storage map
+## 凭据存储映射
 
-Use this when auditing access or deciding what to back up:
+审计访问或决定备份内容时使用：
 
-- **WhatsApp**: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram bot token**: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
-- **Discord bot token**: config/env or SecretRef (env/file/exec providers)
-- **Slack tokens**: config/env (`channels.slack.*`)
-- **Pairing allowlists**:
-  - `~/.openclaw/credentials/<channel>-allowFrom.json` (default account)
-  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json` (non-default accounts)
-- **Model auth profiles**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **File-backed secrets payload (optional)**: `~/.openclaw/secrets.json`
-- **Legacy OAuth import**: `~/.openclaw/credentials/oauth.json`
+- **WhatsApp**：`~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
+- **Telegram 机器人令牌**：配置/环境变量或 `channels.telegram.tokenFile`（仅限常规文件；拒绝符号链接）
+- **Discord 机器人令牌**：配置/环境变量或 SecretRef（环境/文件/执行提供者）
+- **Slack 令牌**：配置/环境变量（`channels.slack.*`）
+- **配对允许列表**：
+  - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账号）
+  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账号）
+- **模型认证配置文件**：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- **文件支持的秘密载荷（可选）**：`~/.openclaw/secrets.json`
+- **遗留 OAuth 导入**：`~/.openclaw/credentials/oauth.json`
 
-## Security audit checklist
+## 安全审计清单
 
-When the audit prints findings, treat this as a priority order:
+审计报告问题时，优先处理顺序：
 
-1. **Anything “open” + tools enabled**: lock down DMs/groups first (pairing/allowlists), then tighten tool policy/sandboxing.
-2. **Public network exposure** (LAN bind, Funnel, missing auth): fix immediately.
-3. **Browser control remote exposure**: treat it like operator access (tailnet-only, pair nodes deliberately, avoid public exposure).
-4. **Permissions**: make sure state/config/credentials/auth are not group/world-readable.
-5. **Plugins**: only load what you explicitly trust.
-6. **Model choice**: prefer modern, instruction-hardened models for any bot with tools.
+1. **任何“开放”且启用工具**：先锁定私信/群组（配对/允许列表），再收紧工具策略/沙箱。
+2. **公共网络暴露**（LAN 绑定、Funnel、缺少认证）：立即修复。
+3. **浏览器控制远程暴露**：将其视为操作员访问（仅 tailnet，谨慎配对节点，避免公开暴露）。
+4. **权限**：确保状态/配置/凭据/认证不可被组/全局读取。
+5. **插件**：仅加载你明确信任的内容。
+6. **模型选择**：对于任何带工具的机器人，优先使用现代、具备指令加固的模型。
 
-## Security audit glossary
+## 安全审计术语表
 
-Each audit finding is keyed by a structured `checkId` (for example
-`gateway.bind_no_auth` or `tools.exec.security_full_configured`). Common
-critical severity classes:
+每条审计发现都通过结构化 `checkId` 标识（例如 `gateway.bind_no_auth` 或 `tools.exec.security_full_configured`）。常见的高严重性类别：
 
-- `fs.*` — filesystem permissions on state, config, credentials, auth profiles.
-- `gateway.*` — bind mode, auth, Tailscale, Control UI, trusted-proxy setup.
-- `hooks.*`, `browser.*`, `sandbox.*`, `tools.exec.*` — per-surface hardening.
-- `plugins.*`, `skills.*` — plugin/skill supply chain and scan findings.
-- `security.exposure.*` — cross-cutting checks where access policy meets tool blast radius.
+- `fs.*` — 状态、配置、凭据、认证配置文件的文件系统权限。
+- `gateway.*` — 绑定模式、认证、Tailscale、控制 UI、受信任代理设置。
+- `hooks.*`, `browser.*`, `sandbox.*`, `tools.exec.*` — 各表面的加固。
+- `plugins.*`, `skills.*` — 插件/技能供应链和扫描结果。
+- `security.exposure.*` — 访问策略与工具爆炸半径交汇的横切检查。
 
-See the full catalog with severity levels, fix keys, and auto-fix support at
-[Security audit checks](/gateway/security/audit-checks).
+查看完整目录、严重级别、修复键和自动修复支持，请访问
+[安全审计检查](/gateway/security/audit-checks)。
 
-## Control UI over HTTP
+## 通过 HTTP 控制 UI
 
-The Control UI needs a **secure context** (HTTPS or localhost) to generate device
-identity. `gateway.controlUi.allowInsecureAuth` is a local compatibility toggle:
+控制 UI 需要一个**安全上下文**（HTTPS 或 localhost）来生成设备身份。`gateway.controlUi.allowInsecureAuth` 是一个本地兼容性开关：
 
-- On localhost, it allows Control UI auth without device identity when the page
-  is loaded over non-secure HTTP.
-- It does not bypass pairing checks.
-- It does not relax remote (non-localhost) device identity requirements.
+- 在 localhost 上，如果页面通过非安全 HTTP 加载，它允许控制 UI 在没有设备身份的情况下认证。
+- 它不绕过配对检查。
+- 它不放宽远程（非 localhost）设备身份要求。
 
-Prefer HTTPS (Tailscale Serve) or open the UI on `127.0.0.1`.
+优先使用 HTTPS（Tailscale Serve）或在 `127.0.0.1` 上打开 UI。
 
-For break-glass scenarios only, `gateway.controlUi.dangerouslyDisableDeviceAuth`
-disables device identity checks entirely. This is a severe security downgrade;
-keep it off unless you are actively debugging and can revert quickly.
+仅在紧急情况下，`gateway.controlUi.dangerouslyDisableDeviceAuth` 可完全禁用设备身份检查。这是严重的安全降级；除非你正在主动调试且能快速恢复，否则请勿开启。
 
-Separate from those dangerous flags, successful `gateway.auth.mode: "trusted-proxy"`
-can admit **operator** Control UI sessions without device identity. That is an
-intentional auth-mode behavior, not an `allowInsecureAuth` shortcut, and it still
-does not extend to node-role Control UI sessions.
+与这些危险标志分开，成功的 `gateway.auth.mode: "trusted-proxy"` 可以在没有设备身份的情况下接纳 **操作员** 控制 UI 会话。这是一种有意的认证模式行为，而不是 `allowInsecureAuth` 的捷径，并且它仍然不扩展到节点角色控制 UI 会话。
 
-`openclaw security audit` warns when this setting is enabled.
+当启用此设置时，`openclaw security audit` 会发出警告。
 
-## Insecure or dangerous flags summary
+## 不安全或危险选项汇总
 
-`openclaw security audit` raises `config.insecure_or_dangerous_flags` when
-known insecure/dangerous debug switches are enabled. Keep these unset in
-production.
+`openclaw security audit` 在启用已知不安全/危险的调试开关时会报告 `config.insecure_or_dangerous_flags`。生产环境中请保持这些选项未设置。
 
 <AccordionGroup>
-  <Accordion title="Flags tracked by the audit today">
+  <Accordion title="当前审计跟踪的标志">
     - `gateway.controlUi.allowInsecureAuth=true`
     - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`
     - `gateway.controlUi.dangerouslyDisableDeviceAuth=true`
@@ -305,31 +276,30 @@ production.
     - `plugins.entries.acpx.config.permissionMode=approve-all`
   </Accordion>
 
-  <Accordion title="All `dangerous*` / `dangerously*` keys in the config schema">
-    Control UI and browser:
+  <Accordion title="配置模式中所有 `dangerous*` / `dangerously*` 键">
+    控制 UI 和浏览器：
 
     - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback`
     - `gateway.controlUi.dangerouslyDisableDeviceAuth`
     - `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`
 
-    Channel name-matching (bundled and plugin channels; also available per
-    `accounts.<accountId>` where applicable):
+    通道名称匹配（内置和插件通道；在适用情况下，`accounts.<accountId>` 下也可用）：
 
     - `channels.discord.dangerouslyAllowNameMatching`
     - `channels.slack.dangerouslyAllowNameMatching`
     - `channels.googlechat.dangerouslyAllowNameMatching`
     - `channels.msteams.dangerouslyAllowNameMatching`
-    - `channels.synology-chat.dangerouslyAllowNameMatching` (plugin channel)
-    - `channels.synology-chat.dangerouslyAllowInheritedWebhookPath` (plugin channel)
-    - `channels.zalouser.dangerouslyAllowNameMatching` (plugin channel)
-    - `channels.irc.dangerouslyAllowNameMatching` (plugin channel)
-    - `channels.mattermost.dangerouslyAllowNameMatching` (plugin channel)
+    - `channels.synology-chat.dangerouslyAllowNameMatching`（插件通道）
+    - `channels.synology-chat.dangerouslyAllowInheritedWebhookPath`（插件通道）
+    - `channels.zalouser.dangerouslyAllowNameMatching`（插件通道）
+    - `channels.irc.dangerouslyAllowNameMatching`（插件通道）
+    - `channels.mattermost.dangerouslyAllowNameMatching`（插件通道）
 
-    Network exposure:
+    网络暴露：
 
-    - `channels.telegram.network.dangerouslyAllowPrivateNetwork` (also per account)
+    - `channels.telegram.network.dangerouslyAllowPrivateNetwork`（也可按账户设置）
 
-    Sandbox Docker (defaults + per-agent):
+    沙箱 Docker（默认值 + 每代理）：
 
     - `agents.defaults.sandbox.docker.dangerouslyAllowReservedContainerTargets`
     - `agents.defaults.sandbox.docker.dangerouslyAllowExternalBindSources`
@@ -338,145 +308,125 @@ production.
   </Accordion>
 </AccordionGroup>
 
-## Reverse proxy configuration
+## 反向代理配置
 
-If you run the Gateway behind a reverse proxy (nginx, Caddy, Traefik, etc.), configure
-`gateway.trustedProxies` for proper forwarded-client IP handling.
+如果您在反向代理（nginx、Caddy、Traefik 等）后面运行网关，请配置 `gateway.trustedProxies` 以正确处理转发的客户端 IP。
 
-When the Gateway detects proxy headers from an address that is **not** in `trustedProxies`, it will **not** treat connections as local clients. If gateway auth is disabled, those connections are rejected. This prevents authentication bypass where proxied connections would otherwise appear to come from localhost and receive automatic trust.
+网关检测到来自非 `trustedProxies` 地址的代理头时，**不会**将连接视为本地客户端。若禁用网关认证，此类连接将被拒绝。此举防止身份验证绕过，避免代理连接被误判为本地主机并自动信任。
 
-`gateway.trustedProxies` also feeds `gateway.auth.mode: "trusted-proxy"`, but that auth mode is stricter:
+`gateway.trustedProxies` 也用于 `gateway.auth.mode: "trusted-proxy"`，但该认证模式更严格：
 
-- trusted-proxy auth **fails closed on loopback-source proxies**
-- same-host loopback reverse proxies can still use `gateway.trustedProxies` for local-client detection and forwarded IP handling
-- for same-host loopback reverse proxies, use token/password auth instead of `gateway.auth.mode: "trusted-proxy"`
+- trusted-proxy 认证 **在环回源代理上默认拒绝**
+- 同一主机的环回反向代理仍然可以使用 `gateway.trustedProxies` 进行本地客户端检测和转发 IP 处理
+- 对于同一主机的环回反向代理，请使用令牌/密码认证，而不是 `gateway.auth.mode: "trusted-proxy"`
 
 ```yaml
 gateway:
   trustedProxies:
-    - "10.0.0.1" # reverse proxy IP
-  # Optional. Default false.
-  # Only enable if your proxy cannot provide X-Forwarded-For.
+    - "10.0.0.1" # 反向代理 IP
+  # 可选。默认 false。
+  # 仅当您的代理无法提供 X-Forwarded-For 时启用。
   allowRealIpFallback: false
   auth:
     mode: password
     password: ${OPENCLAW_GATEWAY_PASSWORD}
 ```
 
-When `trustedProxies` is configured, the Gateway uses `X-Forwarded-For` to determine the client IP. `X-Real-IP` is ignored by default unless `gateway.allowRealIpFallback: true` is explicitly set.
+配置 `trustedProxies` 后，网关使用 `X-Forwarded-For` 确定客户端 IP。默认忽略 `X-Real-IP`，除非显式设置 `gateway.allowRealIpFallback: true`。
 
-Trusted proxy headers do not make node device pairing automatically trusted.
-`gateway.nodes.pairing.autoApproveCidrs` is a separate, disabled-by-default
-operator policy. Even when enabled, loopback-source trusted-proxy header paths
-are excluded from node auto-approval because local callers can forge those
-headers.
-
-Good reverse proxy behavior (overwrite incoming forwarding headers):
+良好反向代理行为（覆盖传入转发头）：
 
 ```nginx
 proxy_set_header X-Forwarded-For $remote_addr;
 proxy_set_header X-Real-IP $remote_addr;
 ```
 
-Bad reverse proxy behavior (append/preserve untrusted forwarding headers):
+不良代理行为（附加/保留不可信转发头）：
 
 ```nginx
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
 
-## HSTS and origin notes
+## HSTS 与来源说明
 
-- OpenClaw gateway is local/loopback first. If you terminate TLS at a reverse proxy, set HSTS on the proxy-facing HTTPS domain there.
-- If the gateway itself terminates HTTPS, you can set `gateway.http.securityHeaders.strictTransportSecurity` to emit the HSTS header from OpenClaw responses.
-- Detailed deployment guidance is in [Trusted Proxy Auth](/gateway/trusted-proxy-auth#tls-termination-and-hsts).
-- For non-loopback Control UI deployments, `gateway.controlUi.allowedOrigins` is required by default.
-- `gateway.controlUi.allowedOrigins: ["*"]` is an explicit allow-all browser-origin policy, not a hardened default. Avoid it outside tightly controlled local testing.
-- Browser-origin auth failures on loopback are still rate-limited even when the
-  general loopback exemption is enabled, but the lockout key is scoped per
-  normalized `Origin` value instead of one shared localhost bucket.
-- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` enables Host-header origin fallback mode; treat it as a dangerous operator-selected policy.
-- Treat DNS rebinding and proxy-host header behavior as deployment hardening concerns; keep `trustedProxies` tight and avoid exposing the gateway directly to the public internet.
+- OpenClaw 网关首选本地/环回。如果您在反向代理处终止 TLS，请在那里的代理面向的 HTTPS 域上设置 HSTS。
+- 如果网关本身终止 HTTPS，您可以设置 `gateway.http.securityHeaders.strictTransportSecurity` 以从 OpenClaw 响应发出 HSTS 头。
+- 详细的部署指南见 [可信代理认证](/gateway/trusted-proxy-auth#tls-termination-and-hsts)。
+- 对于非环回控制 UI 部署，默认需要 `gateway.controlUi.allowedOrigins`。
+- `gateway.controlUi.allowedOrigins: ["*"]` 是显式的允许所有浏览器来源策略，不是安全加固的默认值。避免在严格控制的本地测试之外使用它。
+- 即使启用了常规环回豁免，环回上的浏览器来源认证失败仍然受速率限制，但锁定键的范围是每个标准化的 `Origin` 值，而不是一个共享的 localhost 桶。
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 启用 Host 头来源回退模式；将其视为操作员选择的危险策略。
+- 将 DNS 重绑定和代理主机头行为视为部署加固关注点；保持 `trustedProxies` 紧密，避免将网关直接暴露于公共互联网。
 
-## Local session logs live on disk
+## 本地会话日志存储
 
-OpenClaw stores session transcripts on disk under `~/.openclaw/agents/<agentId>/sessions/*.jsonl`.
-This is required for session continuity and (optionally) session memory indexing, but it also means
-**any process/user with filesystem access can read those logs**. Treat disk access as the trust
-boundary and lock down permissions on `~/.openclaw` (see the audit section below). If you need
-stronger isolation between agents, run them under separate OS users or separate hosts.
+OpenClaw 会话转录存储于磁盘，位置为 `~/.openclaw/agents/<agentId>/sessions/*.jsonl`。
 
-## Node execution (system.run)
+该机制支持会话连续性及（可选）会话记忆索引，但**任何拥有文件系统访问权限的进程/用户都可读取这些日志**。将磁盘访问视为信任边界，必须锁紧 `~/.openclaw` 的权限（详见审计章节）。若需更强隔离，请为代理部署独立操作系统用户或主机。
 
-If a macOS node is paired, the Gateway can invoke `system.run` on that node. This is **remote code execution** on the Mac:
+## 节点执行（system.run）
 
-- Requires node pairing (approval + token).
-- Gateway node pairing is not a per-command approval surface. It establishes node identity/trust and token issuance.
-- The Gateway applies a coarse global node command policy via `gateway.nodes.allowCommands` / `denyCommands`.
-- Controlled on the Mac via **Settings → Exec approvals** (security + ask + allowlist).
-- The per-node `system.run` policy is the node's own exec approvals file (`exec.approvals.node.*`), which can be stricter or looser than the gateway's global command-ID policy.
-- A node running with `security="full"` and `ask="off"` is following the default trusted-operator model. Treat that as expected behavior unless your deployment explicitly requires a tighter approval or allowlist stance.
-- Approval mode binds exact request context and, when possible, one concrete local script/file operand. If OpenClaw cannot identify exactly one direct local file for an interpreter/runtime command, approval-backed execution is denied rather than promising full semantic coverage.
-- For `host=node`, approval-backed runs also store a canonical prepared
-  `systemRunPlan`; later approved forwards reuse that stored plan, and gateway
-  validation rejects caller edits to command/cwd/session context after the
-  approval request was created.
-- If you don’t want remote execution, set security to **deny** and remove node pairing for that Mac.
+- 需要节点配对（批准 + 令牌）。
+- 网关节点配对不是每命令批准表面。它建立节点身份/信任和令牌颁发。
+- 网关通过 `gateway.nodes.allowCommands` / `denyCommands` 应用粗略的全局节点命令策略。
+- 在 Mac 上通过 **设置 → 执行批准** 控制（安全 + 询问 + 白名单）。
+- 每节点 `system.run` 策略是节点自己的执行批准文件（`exec.approvals.node.*`），它可以比网关的全局命令 ID 策略更严格或更宽松。
+- 以 `security="full"` 和 `ask="off"` 运行的节点遵循默认的可信操作员模型。除非您的部署明确要求更严格的批准或白名单立场，否则将其视为预期行为。
+- 批准模式绑定确切的请求上下文，并且在可能时绑定一个具体的本地脚本/文件操作数。如果 OpenClaw 无法为解释器/运行时命令识别恰好一个直接的本地文件，批准支持的执行将被拒绝，而不是承诺完整的语义覆盖。
+- 对于 `host=node`，批准支持的运行还存储规范的准备好的 `systemRunPlan`；后来批准的转发重用该存储的计划，并且网关验证拒绝在批准请求创建后对命令/cwd/会话上下文的调用者编辑。
+- 如果您不想要远程执行，将安全设置为 **deny** 并移除该 Mac 的节点配对。
 
-This distinction matters for triage:
+这种区别对于分类很重要：
 
-- A reconnecting paired node advertising a different command list is not, by itself, a vulnerability if the Gateway global policy and the node's local exec approvals still enforce the actual execution boundary.
-- Reports that treat node pairing metadata as a second hidden per-command approval layer are usually policy/UX confusion, not a security boundary bypass.
+- 如果网关全局策略和节点的本地执行批准仍然强制执行实际的执行边界，重新连接的配对节点宣传不同的命令列表本身并不是漏洞。
+- 将节点配对元数据视为第二个隐藏每命令批准层的报告通常是策略/用户体验混淆，而不是安全边界绕过。
 
-## Dynamic skills (watcher / remote nodes)
+## 动态技能（守护/远程节点）
 
-OpenClaw can refresh the skills list mid-session:
+## 动态技能（守护/远程节点）
 
-- **Skills watcher**: changes to `SKILL.md` can update the skills snapshot on the next agent turn.
-- **Remote nodes**: connecting a macOS node can make macOS-only skills eligible (based on bin probing).
+OpenClaw 可在会话中途刷新技能列表：
 
-Treat skill folders as **trusted code** and restrict who can modify them.
+- **技能守护**：`SKILL.md` 的更改会在下一轮代理转变时更新技能快照。
+- **远程节点**：连接 macOS 节点使 macOS 独有技能生效（基于二进制检测）。
 
-## The threat model
+## 威胁模型
 
-Your AI assistant can:
+## 威胁模型
 
-- Execute arbitrary shell commands
-- Read/write files
-- Access network services
-- Send messages to anyone (if you give it WhatsApp access)
+你的 AI 助手可：
 
-People who message you can:
+- 执行任意 shell 命令
+- 读写文件
+- 访问网络服务
+- 向任何人发送消息（若赋予 WhatsApp 访问）
 
-- Try to trick your AI into doing bad things
-- Social engineer access to your data
-- Probe for infrastructure details
+向你发消息的人可：
 
-## Core concept: access control before intelligence
+- 试图诱使 AI 做不良操作
+- 进行社工以获取数据访问
+- 探查基础设施细节
 
-Most failures here are not fancy exploits — they’re “someone messaged the bot and the bot did what they asked.”
+## 核心概念：智能前的访问控制
 
-OpenClaw’s stance:
+多数失败非复杂漏洞 —— 是"有人发消息，机器人照做"。
 
-- **Identity first:** decide who can talk to the bot (DM pairing / allowlists / explicit “open”).
-- **Scope next:** decide where the bot is allowed to act (group allowlists + mention gating, tools, sandboxing, device permissions).
-- **Model last:** assume the model can be manipulated; design so manipulation has limited blast radius.
+OpenClaw 立场：
 
-## Command authorization model
+- **身份优先：** 决定谁能跟机器人对话（DM 配对/白名单/公开）。
+- **范围其次：** 决定机器人可行动范围（群组白名单 + 提及触发、工具、沙箱、设备权限）。
+- **模型最后：** 假设模型会被操控，设计时限制操控的影响范围。
 
-Slash commands and directives are only honored for **authorized senders**. Authorization is derived from
-channel allowlists/pairing plus `commands.useAccessGroups` (see [Configuration](/gateway/configuration)
-and [Slash commands](/tools/slash-commands)). If a channel allowlist is empty or includes `"*"`,
-commands are effectively open for that channel.
+## 命令授权模型
 
-`/exec` is a session-only convenience for authorized operators. It does **not** write config or
-change other sessions.
+斜杠命令与指令仅针对**授权发送者**生效。授权依据频道白名单/配对及 `commands.useAccessGroups`（参见 [配置](/gateway/configuration) 与 [斜杠命令](/tools/slash-commands)）。若渠道白名单为空或包含 `"*"`，该频道的命令即开放。
 
-## Control plane tools risk
+`/exec` 仅是授权操作员的会话便捷命令，不写配置，也不改动其他会话。
 
-Two built-in tools can make persistent control-plane changes:
+## 控制平面工具风险
 
-- `gateway` can inspect config with `config.schema.lookup` / `config.get`, and can make persistent changes with `config.apply`, `config.patch`, and `update.run`.
-- `cron` can create scheduled jobs that keep running after the original chat/task ends.
+- `gateway` 可以使用 `config.schema.lookup` / `config.get` 检查配置，并可以使用 `config.apply`、`config.patch` 和 `update.run` 进行持久更改。
+- `cron` 可以创建在原始聊天/任务结束后继续运行的计划作业。
 
 The owner-only `gateway` runtime tool still refuses to rewrite
 `tools.exec.ask` or `tools.exec.security`; legacy `tools.bash.*` aliases are
@@ -486,276 +436,249 @@ fail-closed by default: only a narrow set of prompt, model, and mention-gating
 paths are agent-tunable. New sensitive config trees are therefore protected
 unless they are deliberately added to the allowlist.
 
-For any agent/surface that handles untrusted content, deny these by default:
+对于任何处理不受信任内容的代理/表面，默认拒绝这些：
 
 ```json5
 {
   tools: {
+    // 禁止网关配置变更、定时任务创建及会话管理操作
     deny: ["gateway", "cron", "sessions_spawn", "sessions_send"],
   },
 }
 ```
 
-`commands.restart=false` only blocks restart actions. It does not disable `gateway` config/update actions.
+`commands.restart=false` 仅禁止重启动作，不禁用 `gateway` 配置/更新操作。
 
-## Plugins
+## 插件
 
-Plugins run **in-process** with the Gateway. Treat them as trusted code:
+插件与网关**进程内运行**。视为可信代码：
 
-- Only install plugins from sources you trust.
-- Prefer explicit `plugins.allow` allowlists.
-- Review plugin config before enabling.
-- Restart the Gateway after plugin changes.
-- If you install or update plugins (`openclaw plugins install <package>`, `openclaw plugins update <id>`), treat it like running untrusted code:
-  - The install path is the per-plugin directory under the active plugin install root.
-  - OpenClaw runs a built-in dangerous-code scan before install/update. `critical` findings block by default.
-  - OpenClaw uses `npm pack`, then runs a project-local `npm install --omit=dev --ignore-scripts` in that directory. Inherited global npm install settings are ignored so dependencies stay under the plugin install path.
-  - Prefer pinned, exact versions (`@scope/pkg@1.2.3`), and inspect the unpacked code on disk before enabling.
-  - `--dangerously-force-unsafe-install` is break-glass only for built-in scan false positives on plugin install/update flows. It does not bypass plugin `before_install` hook policy blocks and does not bypass scan failures.
-  - Gateway-backed skill dependency installs follow the same dangerous/suspicious split: built-in `critical` findings block unless the caller explicitly sets `dangerouslyForceUnsafeInstall`, while suspicious findings still warn only. `openclaw skills install` remains the separate ClawHub skill download/install flow.
+- 仅从您信任的来源安装插件。
+- 首选显式的 `plugins.allow` 白名单。
+- 启用前审查插件配置。
+- 插件更改后重启网关。
+- 如果您安装或更新插件（`openclaw plugins install <package>`、`openclaw plugins update <id>`），将其视为运行不受信任的代码：
+  - 安装路径是活动插件安装根目录下的每插件目录。
+  - OpenClaw 在安装/更新前运行内置的危险代码扫描。`critical` 发现默认阻止。
+  - OpenClaw 使用该目录中的 `npm pack`，然后运行 `npm install --omit=dev`（npm 生命周期脚本可以在安装期间执行代码）。
+  - 首选固定的确切版本（`@scope/pkg@1.2.3`），并在启用前检查磁盘上解压的代码。
+  - `--dangerously-force-unsafe-install` 仅用于插件安装/更新流程中内置扫描误报的紧急突破。它不绕过插件 `before_install` 钩子策略块，也不绕过扫描失败。
+  - 网关支持的技能依赖安装遵循相同的危险/可疑拆分：除非调用者显式设置 `dangerouslyForceUnsafeInstall`，否则内置 `critical` 发现会阻止，而可疑发现仍然仅警告。`openclaw skills install` 仍然是单独的 ClawHub 技能下载/安装流程。
 
-Details: [Plugins](/tools/plugin)
+详见：[插件](/tools/plugin)
 
-## DM access model: pairing, allowlist, open, disabled
+## DM 访问模型：配对、白名单、公开、禁用
 
-All current DM-capable channels support a DM policy (`dmPolicy` or `*.dm.policy`) that gates inbound DMs **before** the message is processed:
+所有支持 DM 的当前渠道都支持 DM 策略（`dmPolicy` 或 `*.dm.policy`），在消息处理前限定入站 DM：
 
-- `pairing` (default): unknown senders receive a short pairing code and the bot ignores their message until approved. Codes expire after 1 hour; repeated DMs won’t resend a code until a new request is created. Pending requests are capped at **3 per channel** by default.
-- `allowlist`: unknown senders are blocked (no pairing handshake).
-- `open`: allow anyone to DM (public). **Requires** the channel allowlist to include `"*"` (explicit opt-in).
-- `disabled`: ignore inbound DMs entirely.
+- `pairing`（默认）：未知发送者收到短配对码，机器人忽略其消息直到批准。码 1 小时后过期；重复 DM 仅在有新请求时重新发送。默认每频道挂起请求最多 **3 个**。
+- `allowlist`：阻止未知发送者（无配对握手）。
+- `open`：允许任何人 DM（公开）。**需**频道白名单含 `"*"`（明确选择公开）。
+- `disabled`：完全忽略入站 DM。
 
-Approve via CLI:
+CLI 批准流程：
 
 ```bash
+# 列出待处理的配对请求
 openclaw pairing list <channel>
+# 批准特定配对码
 openclaw pairing approve <channel> <code>
 ```
 
-Details + files on disk: [Pairing](/channels/pairing)
+详情及磁盘文件见：[配对](/channels/pairing)
 
-## DM session isolation (multi-user mode)
+## DM 会话隔离（多用户模式）
 
-By default, OpenClaw routes **all DMs into the main session** so your assistant has continuity across devices and channels. If **multiple people** can DM the bot (open DMs or a multi-person allowlist), consider isolating DM sessions:
+默认，OpenClaw 将**所有 DM 路由至主会话**，确保助手在设备及频道间连续性。若**多人**可 DM 机器人（公开 DM 或多用户白名单），建议隔离 DM 会话：
 
 ```json5
 {
+  // 为每个 DM 发送者创建独立会话
   session: { dmScope: "per-channel-peer" },
 }
 ```
 
-This prevents cross-user context leakage while keeping group chats isolated.
+防止跨用户上下文泄露，群聊也将被隔离。
 
-This is a messaging-context boundary, not a host-admin boundary. If users are mutually adversarial and share the same Gateway host/config, run separate gateways per trust boundary instead.
+此为消息上下文边界，非主机管理员边界。用户相互敌意且共享同一网关主机/配置时，请为每信任边界运行独立网关。
 
-### Secure DM mode (recommended)
+### 安全 DM 模式（推荐）
 
-Treat the snippet above as **secure DM mode**:
+视上例为**安全 DM 模式**：
 
-- Default: `session.dmScope: "main"` (all DMs share one session for continuity).
-- Local CLI onboarding default: writes `session.dmScope: "per-channel-peer"` when unset (keeps existing explicit values).
-- Secure DM mode: `session.dmScope: "per-channel-peer"` (each channel+sender pair gets an isolated DM context).
-- Cross-channel peer isolation: `session.dmScope: "per-peer"` (each sender gets one session across all channels of the same type).
+- 默认：`session.dmScope: "main"`（所有 DM 共享一个会话以保持连续性）。
+- 本地 CLI 引导默认：未设置时写入 `session.dmScope: "per-channel-peer"`（保留现有的显式值）。
+- 安全 DM 模式：`session.dmScope: "per-channel-peer"`（每个频道 + 发送者对获得隔离的 DM 上下文）。
+- 跨频道对等隔离：`session.dmScope: "per-peer"`（每个发送者在同一类型的所有频道中获得一个会话）。
 
-If you run multiple accounts on the same channel, use `per-account-channel-peer` instead. If the same person contacts you on multiple channels, use `session.identityLinks` to collapse those DM sessions into one canonical identity. See [Session Management](/concepts/session) and [Configuration](/gateway/configuration).
+同频道多账户使用时，选用 `per-account-channel-peer`。同一人跨多频道通讯时，用 `session.identityLinks` 合并为统一身份。详见 [会话管理](/concepts/session) 与 [配置](/gateway/configuration)。
 
-## Allowlists for DMs and groups
+## DM 和群组白名单
 
-OpenClaw has two separate “who can trigger me?” layers:
+OpenClaw 有两层"谁能触发我？"控制：
 
-- **DM allowlist** (`allowFrom` / `channels.discord.allowFrom` / `channels.slack.allowFrom`; legacy: `channels.discord.dm.allowFrom`, `channels.slack.dm.allowFrom`): who is allowed to talk to the bot in direct messages.
-  - When `dmPolicy="pairing"`, approvals are written to the account-scoped pairing allowlist store under `~/.openclaw/credentials/` (`<channel>-allowFrom.json` for default account, `<channel>-<accountId>-allowFrom.json` for non-default accounts), merged with config allowlists.
-- **Group allowlist** (channel-specific): which groups/channels/guilds the bot will accept messages from at all.
-  - Common patterns:
-    - `channels.whatsapp.groups`, `channels.telegram.groups`, `channels.imessage.groups`: per-group defaults like `requireMention`; when set, it also acts as a group allowlist (include `"*"` to keep allow-all behavior).
-    - `groupPolicy="allowlist"` + `groupAllowFrom`: restrict who can trigger the bot _inside_ a group session (WhatsApp/Telegram/Signal/iMessage/Microsoft Teams).
-    - `channels.discord.guilds` / `channels.slack.channels`: per-surface allowlists + mention defaults.
-  - Group checks run in this order: `groupPolicy`/group allowlists first, mention/reply activation second.
-  - Replying to a bot message (implicit mention) does **not** bypass sender allowlists like `groupAllowFrom`.
-  - **Security note:** treat `dmPolicy="open"` and `groupPolicy="open"` as last-resort settings. They should be barely used; prefer pairing + allowlists unless you fully trust every member of the room.
+- **DM 白名单**（`allowFrom` / `channels.discord.allowFrom` / `channels.slack.allowFrom`；旧版：`channels.discord.dm.allowFrom`、`channels.slack.dm.allowFrom`）：谁可在私聊中对话机器人。
+  - `dmPolicy="pairing"` 时，审批写入账户范围配对白名单存储（`~/.openclaw/credentials/` 下，默认账户为 `<channel>-allowFrom.json`，非默认账户为 `<channel>-<accountId>-allowFrom.json`），与配置白名单合并。
+- **群组白名单**（频道特定）：机器人来自哪些群组/频道/公会消息被接受。
+  - 常用模式：
+    - `channels.whatsapp.groups`、`channels.telegram.groups`、`channels.imessage.groups`：每群组默认如 `requireMention`，设置时也做群组白名单（包含 `"*"` 保留允许所有）。
+    - `groupPolicy="allowlist"` + `groupAllowFrom`：限制群组内哪些人可触发机器人（支持 WhatsApp/Telegram/Signal/iMessage/Microsoft Teams）。
+    - `channels.discord.guilds` / `channels.slack.channels`：渠道特定白名单及提及默认。
+  - 群组检查顺序：先群组策略/白名单，再提及/回复激活。
+  - 回复机器人消息（隐式提及）**不会**绕过发送者白名单如 `groupAllowFrom`。
+  - **安全提示：** `dmPolicy="open"` 与 `groupPolicy="open"` 视为最后手段配置，建议少用；若非全面信任群成员，请优先配对 + 白名单。
 
-Details: [Configuration](/gateway/configuration) and [Groups](/channels/groups)
+详见：[配置](/gateway/configuration) 与 [群组](/channels/groups)
 
-## Prompt injection (what it is, why it matters)
+## 提示注入（定义及重要性）
 
-Prompt injection is when an attacker crafts a message that manipulates the model into doing something unsafe (“ignore your instructions”, “dump your filesystem”, “follow this link and run commands”, etc.).
+提示注入指攻击者故意构造消息，操控模型做不安全操作（如"忽略指令"、"导出文件系统"、"执行链接命令"等）。
 
-Even with strong system prompts, **prompt injection is not solved**. System prompt guardrails are soft guidance only; hard enforcement comes from tool policy, exec approvals, sandboxing, and channel allowlists (and operators can disable these by design). What helps in practice:
+即使有强系统提示，**提示注入仍未解决**。系统提示仅为软约束；硬约束依赖工具策略、执行批准、沙箱与频道白名单（且运营者可关闭）。实际有帮助的措施：
 
-- Keep inbound DMs locked down (pairing/allowlists).
-- Prefer mention gating in groups; avoid “always-on” bots in public rooms.
-- Treat links, attachments, and pasted instructions as hostile by default.
-- Run sensitive tool execution in a sandbox; keep secrets out of the agent’s reachable filesystem.
-- Note: sandboxing is opt-in. If sandbox mode is off, implicit `host=auto` resolves to the gateway host. Explicit `host=sandbox` still fails closed because no sandbox runtime is available. Set `host=gateway` if you want that behavior to be explicit in config.
-- Limit high-risk tools (`exec`, `browser`, `web_fetch`, `web_search`) to trusted agents or explicit allowlists.
-- If you allowlist interpreters (`python`, `node`, `ruby`, `perl`, `php`, `lua`, `osascript`), enable `tools.exec.strictInlineEval` so inline eval forms still need explicit approval.
-- Shell approval analysis also rejects POSIX parameter-expansion forms (`$VAR`, `$?`, `$$`, `$1`, `$@`, `${…}`) inside **unquoted heredocs**, so an allowlisted heredoc body cannot sneak shell expansion past allowlist review as plain text. Quote the heredoc terminator (for example `<<'EOF'`) to opt into literal body semantics; unquoted heredocs that would have expanded variables are rejected.
-- **Model choice matters:** older/smaller/legacy models are significantly less robust against prompt injection and tool misuse. For tool-enabled agents, use the strongest latest-generation, instruction-hardened model available.
+- 保持入站 DM 严格受控（配对/白名单）。
+- 在群组中优先使用提及门控；避免在公共房间中使用“始终在线”的机器人。
+- 默认将链接、附件和粘贴的指令视为恶意内容。
+- 在沙箱中运行敏感工具执行；将密钥保留在代理可访问文件系统之外。
+- 注意：沙箱为可选项。如果沙箱模式关闭，隐式 `host=auto` 会解析为网关主机。显式 `host=sandbox` 仍会失败关闭，因为没有可用的沙箱运行时。如果希望该行为在配置中显式化，请设置 `host=gateway`。
+- 将高风险工具（`exec`、`browser`、`web_fetch`、`web_search`）限制给受信任代理或显式白名单。
+- 如果您对白名单化解释器（`python`、`node`、`ruby`、`perl`、`php`、`lua`、`osascript`），请启用 `tools.exec.strictInlineEval`，使内联 eval 形式仍需显式批准。
+- Shell 批准分析还会拒绝**未引用 heredoc** 中的 POSIX 参数展开形式（`$VAR`、`$?`、`$$`、`$1`、`$@`、`${…}`），因此一个已白名单的 heredoc 正文不能以纯文本形式绕过白名单审查而偷偷进行 shell 展开。请引用 heredoc 终止符（例如 `<<'EOF'`）以选择字面正文语义；会展开变量的未引用 heredoc 会被拒绝。
+- **模型选择很重要：** 较旧/较小/遗留模型对提示注入和工具滥用的抵抗力显著更弱。对于启用工具的代理，请使用当前可用的最强、最新一代、经过指令加固的模型。
 
-Red flags to treat as untrusted:
+危险信号（视为不信任）：
 
-- “Read this file/URL and do exactly what it says.”
-- “Ignore your system prompt or safety rules.”
-- “Reveal your hidden instructions or tool outputs.”
-- “Paste the full contents of ~/.openclaw or your logs.”
+- "读该文件/URL 并按指示执行。"
+- "忽略系统提示或安全规则。"
+- "泄露隐藏指令或工具输出。"
+- "粘贴 `~/.openclaw` 或日志完整内容。"
 
-## External content special-token sanitization
+## 外部内容特殊标记净化
 
-OpenClaw strips common self-hosted LLM chat-template special-token literals from wrapped external content and metadata before they reach the model. Covered marker families include Qwen/ChatML, Llama, Gemma, Mistral, Phi, and GPT-OSS role/turn tokens.
+OpenClaw 会在包装后的外部内容和元数据到达模型之前，剥离其中常见的自托管 LLM 聊天模板特殊标记字面量。受覆盖的标记家族包括 Qwen/ChatML、Llama、Gemma、Mistral、Phi，以及 GPT-OSS 的角色/轮次标记。
 
-Why:
+原因：
 
-- OpenAI-compatible backends that front self-hosted models sometimes preserve special tokens that appear in user text, instead of masking them. An attacker who can write into inbound external content (a fetched page, an email body, a file contents tool output) could otherwise inject a synthetic `assistant` or `system` role boundary and escape the wrapped-content guardrails.
-- Sanitization happens at the external-content wrapping layer, so it applies uniformly across fetch/read tools and inbound channel content rather than being per-provider.
-- Outbound model responses already have a separate sanitizer that strips leaked `<tool_call>`, `<function_calls>`, and similar scaffolding from user-visible replies. The external-content sanitizer is the inbound counterpart.
+- 面向 OpenAI 兼容后端、并前置自托管模型的系统，有时会保留用户文本中出现的特殊标记，而不是将其屏蔽。攻击者如果能写入入站外部内容（抓取页面、邮件正文、文件内容工具输出），就可能注入一个合成的 `assistant` 或 `system` 角色边界，从而绕过包装内容的防护栏。
+- 净化发生在外部内容包装层，因此它对抓取/读取工具和入站通道内容一体适用，而不是按提供方分别处理。
+- 出站模型回复已经有单独的净化器，会从用户可见回复中剥离泄漏的 `<tool_call>`、`<function_calls>` 及类似脚手架。外部内容净化器是其入站对应物。
 
-This does not replace the other hardening on this page — `dmPolicy`, allowlists, exec approvals, sandboxing, and `contextVisibility` still do the primary work. It closes one specific tokenizer-layer bypass against self-hosted stacks that forward user text with special tokens intact.
+这并不能替代本页上的其他加固措施——`dmPolicy`、允许列表、执行审批、沙箱和 `contextVisibility` 仍然承担主要工作。它只是修补了一个针对自托管栈的、由令牌化层转发用户文本且保留特殊标记时可被绕过的特定路径。
 
-## Unsafe external content bypass flags
+## 不安全外部内容绕过标志
 
-OpenClaw includes explicit bypass flags that disable external-content safety wrapping:
+OpenClaw 包含关闭外部内容安全包装的开关：
 
 - `hooks.mappings[].allowUnsafeExternalContent`
 - `hooks.gmail.allowUnsafeExternalContent`
-- Cron payload field `allowUnsafeExternalContent`
+- Cron 任务中 payload 字段 `allowUnsafeExternalContent`
 
-Guidance:
+指导：
 
-- Keep these unset/false in production.
-- Only enable temporarily for tightly scoped debugging.
-- If enabled, isolate that agent (sandbox + minimal tools + dedicated session namespace).
+- 生产环境保持未设置/false。
+- 仅在紧缩调试时短期启用。
+- 启用时请隔离该代理（沙箱 + 最小工具 + 专用会话命名空间）。
 
-Hooks risk note:
+钩子风险提示：
 
-- Hook payloads are untrusted content, even when delivery comes from systems you control (mail/docs/web content can carry prompt injection).
-- Weak model tiers increase this risk. For hook-driven automation, prefer strong modern model tiers and keep tool policy tight (`tools.profile: "messaging"` or stricter), plus sandboxing where possible.
+- 钩子载荷为不信任内容，即便来源受控（邮件/文档/网页内容皆可含提示注入）。
+- 低级模型更易受攻击。钩子驱动自动化推荐使用强大现代模型层，结合紧缩工具策略（`tools.profile: "messaging"` 或更严格） + 沙箱。
 
-### Prompt injection does not require public DMs
+### 提示注入不依赖公开 DM
 
-Even if **only you** can message the bot, prompt injection can still happen via
-any **untrusted content** the bot reads (web search/fetch results, browser pages,
-emails, docs, attachments, pasted logs/code). In other words: the sender is not
-the only threat surface; the **content itself** can carry adversarial instructions.
+即便**仅你**可发消息，提示注入仍可通过任何**不信任内容**触发（网页搜索/抓取结果、浏览器页面、邮件、文档、附件、粘贴日志/代码）。攻击面不限于发信者，**内容自身**可能携带对抗指令。
 
-When tools are enabled, the typical risk is exfiltrating context or triggering
-tool calls. Reduce the blast radius by:
+启用工具时，典型风险为上下文外泄或触发工具调用。缩小影响范围：
 
-- Using a read-only or tool-disabled **reader agent** to summarize untrusted content,
-  then pass the summary to your main agent.
-- Keeping `web_search` / `web_fetch` / `browser` off for tool-enabled agents unless needed.
-- For OpenResponses URL inputs (`input_file` / `input_image`), set tight
-  `gateway.http.endpoints.responses.files.urlAllowlist` and
-  `gateway.http.endpoints.responses.images.urlAllowlist`, and keep `maxUrlParts` low.
-  Empty allowlists are treated as unset; use `files.allowUrl: false` / `images.allowUrl: false`
-  if you want to disable URL fetching entirely.
-- For OpenResponses file inputs, decoded `input_file` text is still injected as
-  **untrusted external content**. Do not rely on file text being trusted just because
-  the Gateway decoded it locally. The injected block still carries explicit
-  `<<<EXTERNAL_UNTRUSTED_CONTENT ...>>>` boundary markers plus `Source: External`
-  metadata, even though this path omits the longer `SECURITY NOTICE:` banner.
-- The same marker-based wrapping is applied when media-understanding extracts text
-  from attached documents before appending that text to the media prompt.
-- Enabling sandboxing and strict tool allowlists for any agent that touches untrusted input.
-- Keeping secrets out of prompts; pass them via env/config on the gateway host instead.
+- 使用只读或禁用工具的 **读取代理** 总结不信任内容，然后将摘要传递给主代理。
+- 除非必要，否则对启用工具的代理保持 `web_search` / `web_fetch` / `browser` 关闭。
+- 对于 OpenResponses URL 输入（`input_file` / `input_image`），设置严格的 `gateway.http.endpoints.responses.files.urlAllowlist` 和 `gateway.http.endpoints.responses.images.urlAllowlist`，并保持 `maxUrlParts` 较低。空白名单视为未设置；如果想完全禁用 URL 获取，请使用 `files.allowUrl: false` / `images.allowUrl: false`。
+- 对于 OpenResponses 文件输入，解码后的 `input_file` 文本仍作为 **不信任外部内容** 注入。不要仅仅因为网关在本地解码了就认为文件文本是可信的。注入块仍带有明确的 `<<<EXTERNAL_UNTRUSTED_CONTENT ...>>>` 边界标记加上 `Source: External` 元数据，即使此路径省略了较长的 `SECURITY NOTICE:` 横幅。
+- 当媒体理解从附加文档中提取文本并将其附加到媒体提示之前，也会应用相同的基于标记的包装。
+- 为任何接触不信任输入的代理启用沙箱和严格的工具白名单。
+- 将秘密保留在提示之外；改为通过网关主机上的 env/config 传递。
 
-### Self-hosted LLM backends
+### 自托管 LLM 后端
 
-OpenAI-compatible self-hosted backends such as vLLM, SGLang, TGI, LM Studio,
-or custom Hugging Face tokenizer stacks can differ from hosted providers in how
-chat-template special tokens are handled. If a backend tokenizes literal strings
-such as `<|im_start|>`, `<|start_header_id|>`, or `<start_of_turn>` as
-structural chat-template tokens inside user content, untrusted text can try to
-forge role boundaries at the tokenizer layer.
+OpenAI 兼容的自托管后端，如 vLLM、SGLang、TGI、LM Studio，或自定义的 Hugging Face tokenizer 栈，在处理聊天模板特殊标记时可能与托管提供方不同。如果后端将诸如 `<|im_start|>`、`<|start_header_id|>` 或 `<start_of_turn>` 这样的字面字符串，在用户内容中当作结构性聊天模板标记进行分词，那么不可信文本就可能试图在 tokenizer 层伪造角色边界。
 
-OpenClaw strips common model-family special-token literals from wrapped
-external content before dispatching it to the model. Keep external-content
-wrapping enabled, and prefer backend settings that split or escape special
-tokens in user-provided content when available. Hosted providers such as OpenAI
-and Anthropic already apply their own request-side sanitization.
+OpenClaw 会在将包装后的外部内容发送给模型之前，剥离常见模型家族的特殊标记字面量。请保持外部内容包装启用，并在可用时优先使用会对用户提供内容中的特殊标记进行拆分或转义的后端设置。OpenAI 和 Anthropic 等托管提供方已经在请求侧应用了自己的净化处理。
 
-### Model strength (security note)
+### 模型强度（安全提示）
 
-Prompt injection resistance is **not** uniform across model tiers. Smaller/cheaper models are generally more susceptible to tool misuse and instruction hijacking, especially under adversarial prompts.
+提示注入防护的效果会随模型等级而不均衡。小型/廉价模型尤其容易受到工具误用和指令劫持的影响，特别是在面对对抗性提示时。
 
 <Warning>
-For tool-enabled agents or agents that read untrusted content, prompt-injection risk with older/smaller models is often too high. Do not run those workloads on weak model tiers.
+对于启用工具或处理不可信内容的代理，旧版/小型模型往往提示注入风险过高。不要在弱模型层级运行这些工作负载。
 </Warning>
 
-Recommendations:
+建议：
 
-- **Use the latest generation, best-tier model** for any bot that can run tools or touch files/networks.
-- **Do not use older/weaker/smaller tiers** for tool-enabled agents or untrusted inboxes; the prompt-injection risk is too high.
-- If you must use a smaller model, **reduce blast radius** (read-only tools, strong sandboxing, minimal filesystem access, strict allowlists).
-- When running small models, **enable sandboxing for all sessions** and **disable web_search/web_fetch/browser** unless inputs are tightly controlled.
-- For chat-only personal assistants with trusted input and no tools, smaller models are usually fine.
+- 任何可以运行工具或访问文件/网络的机器人，均选用最新代、最高层级模型。
+- 不使用旧/弱/小型模型用于启用工具代理或不可信收件箱；注入风险过大。
+- 必用小模型时，**缩小影响范围**（只读工具、强沙箱、最小文件系统访问、严格白名单）。
+- 运行小模型时，**所有会话启用沙箱**并禁用 web_search/web_fetch/browser，除非输入严格控制。
+- 对于仅信任输入且无工具的个人助理，使用小模型通常可接受。
 
-## Reasoning and verbose output in groups
+## 组中的推理和详细输出
 
-`/reasoning`, `/verbose`, and `/trace` can expose internal reasoning, tool
-output, or plugin diagnostics that
-was not meant for a public channel. In group settings, treat them as **debug
-only** and keep them off unless you explicitly need them.
+`/reasoning`、`/verbose` 和 `/trace` 可能会暴露内部推理、工具输出或插件诊断信息，这些信息本不应出现在公共频道中。在群组设置中，将它们视为 **仅调试** 使用，除非明确需要，否则请保持关闭。
 
-Guidance:
+建议：
 
-- Keep `/reasoning`, `/verbose`, and `/trace` disabled in public rooms.
-- If you enable them, do so only in trusted DMs or tightly controlled rooms.
-- Remember: verbose and trace output can include tool args, URLs, plugin diagnostics, and data the model saw.
+- 在公共房间中保持 `/reasoning`、`/verbose` 和 `/trace` 禁用。
+- 如果启用它们，请仅在受信任的 DM 或严格控制的房间中进行。
+- 记住：详细和跟踪输出可能包括工具参数、URL、插件诊断和模型看到的数据。
 
-## Configuration hardening examples
+## 配置加固示例
 
-### File permissions
+### 文件权限
 
-Keep config + state private on the gateway host:
+保持网关主机上的配置和状态私密：
 
-- `~/.openclaw/openclaw.json`: `600` (user read/write only)
-- `~/.openclaw`: `700` (user only)
+- `~/.openclaw/openclaw.json`：权限 600（用户读写）
+- `~/.openclaw` 文件夹权限 700（仅用户）
 
-`openclaw doctor` can warn and offer to tighten these permissions.
+`openclaw doctor` 可提示并协助加固。
 
-### Network exposure (bind, port, firewall)
+### 网络暴露（绑定、端口、防火墙）
 
-The Gateway multiplexes **WebSocket + HTTP** on a single port:
+网关在单端口复用**WebSocket + HTTP**：
 
-- Default: `18789`
-- Config/flags/env: `gateway.port`, `--port`, `OPENCLAW_GATEWAY_PORT`
+- 默认：18789
+- 配置/标志/环境变量：`gateway.port`，`--port`，`OPENCLAW_GATEWAY_PORT`
 
-This HTTP surface includes the Control UI and the canvas host:
+HTTP 面向控制界面及 canvas：
 
-- Control UI (SPA assets) (default base path `/`)
-- Canvas host: `/__openclaw__/canvas/` and `/__openclaw__/a2ui/` (arbitrary HTML/JS; treat as untrusted content)
+- 控制 UI（SPA 资源）默认基路径 `/`
+- Canvas 主机路径：`/__openclaw__/canvas/` & `/__openclaw__/a2ui/`（任意 HTML/JS，应视为不信任内容）
 
-If you load canvas content in a normal browser, treat it like any other untrusted web page:
+使用浏览器打开 canvas 内容须谨慎：
 
-- Don't expose the canvas host to untrusted networks/users.
-- Don't make canvas content share the same origin as privileged web surfaces unless you fully understand the implications.
+- 不暴露 canvas 主机给不信任网络/用户。
+- 切勿使 canvas 内容与特权网页共享同一源，除非充分理解影响。
 
-Bind mode controls where the Gateway listens:
+绑定模式控制网关监听范围：
 
-- `gateway.bind: "loopback"` (default): only local clients can connect.
-- Non-loopback binds (`"lan"`, `"tailnet"`, `"custom"`) expand the attack surface. Only use them with gateway auth (shared token/password or a correctly configured non-loopback trusted proxy) and a real firewall.
+- `gateway.bind: "loopback"` (默认): 仅本地客户端可连接。
+- 非环回绑定（`"lan"`, `"tailnet"`, `"custom"`）会扩大攻击面。仅在配合网关认证（共享令牌/密码或正确配置的非环回可信代理）和真实防火墙时使用。
 
-Rules of thumb:
+经验法则：
 
-- Prefer Tailscale Serve over LAN binds (Serve keeps the Gateway on loopback, and Tailscale handles access).
-- If you must bind to LAN, firewall the port to a tight allowlist of source IPs; do not port-forward it broadly.
-- Never expose the Gateway unauthenticated on `0.0.0.0`.
+- 优先使用 Tailscale Serve 替代 LAN 绑定（Serve 保持网关环回，Tailscale 管理访问）。
+- 必须 LAN 绑定时，防火墙限制端口访问至精确源 IP 白名单；勿广泛端口转发。
+- 绝不在 `0.0.0.0` 上无认证公开网关。
 
-### Docker port publishing with UFW
+### 使用 UFW 发布 Docker 端口
 
-If you run OpenClaw with Docker on a VPS, remember that published container ports
-(`-p HOST:CONTAINER` or Compose `ports:`) are routed through Docker's forwarding
-chains, not only host `INPUT` rules.
+在 VPS 上使用 Docker 时，容器端口映射（`-p HOST:CONTAINER` 或 `ports:`）通过 Docker 转发链而非仅 Host 的 INPUT 规则。
 
-To keep Docker traffic aligned with your firewall policy, enforce rules in
-`DOCKER-USER` (this chain is evaluated before Docker's own accept rules).
-On many modern distros, `iptables`/`ip6tables` use the `iptables-nft` frontend
-and still apply these rules to the nftables backend.
+为令防火墙策略在 Docker 与主机间一致，应在 `DOCKER-USER` 链设置规则（此链在 Docker 自身接受规则前生效）。现代发行版使用 `iptables-nft`，规则同应用于 nftables 后端。
 
-Minimal allowlist example (IPv4):
+IPv4 最简白名单示例：
 
 ```bash
-# /etc/ufw/after.rules (append as its own *filter section)
+# /etc/ufw/after.rules（添加独立的 *filter 部分）
 *filter
 :DOCKER-USER - [0:0]
 -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
@@ -771,38 +694,36 @@ Minimal allowlist example (IPv4):
 COMMIT
 ```
 
-IPv6 has separate tables. Add a matching policy in `/etc/ufw/after6.rules` if
-Docker IPv6 is enabled.
+IPv6 有单独规则，Docker IPv6 启用时相应编辑 `/etc/ufw/after6.rules`。
 
-Avoid hardcoding interface names like `eth0` in docs snippets. Interface names
-vary across VPS images (`ens3`, `enp*`, etc.) and mismatches can accidentally
-skip your deny rule.
+# 避免示例中写死接口名（如 `eth0`），因各 VPS 镜像接口名不同（如 `ens3`、`enp*`），免漏掉拒绝规则。
 
-Quick validation after reload:
+重载后简单验证：
 
 ```bash
 ufw reload
 iptables -S DOCKER-USER
 ip6tables -S DOCKER-USER
-nmap -sT -p 1-65535 <public-ip> --open
+nmap -sT -p 1-65535 <公网 IP> --open
 ```
 
-Expected external ports should be only what you intentionally expose (for most
-setups: SSH + your reverse proxy ports).
+# 外网应仅开放预期端口（常见 SSH + 反向代理端口）。
 
-### mDNS/Bonjour discovery
+### mDNS/Bonjour 发现
 
-The Gateway broadcasts its presence via mDNS (`_openclaw-gw._tcp` on port 5353) for local device discovery. In full mode, this includes TXT records that may expose operational details:
+### 0.4.2) mDNS/Bonjour 发现（信息泄露）
 
-- `cliPath`: full filesystem path to the CLI binary (reveals username and install location)
-- `sshPort`: advertises SSH availability on the host
-- `displayName`, `lanHost`: hostname information
+网关通过 mDNS（`_openclaw-gw._tcp`，端口 5353）广播本机设备发现。全模式会公开 TXT 记录中的运行信息：
 
-**Operational security consideration:** Broadcasting infrastructure details makes reconnaissance easier for anyone on the local network. Even "harmless" info like filesystem paths and SSH availability helps attackers map your environment.
+- `cliPath`：CLI 二进制完整路径（泄漏用户名和安装位置）
+- `sshPort`：SSH 可用端口
+- `displayName`、`lanHost`：主机名信息
 
-**Recommendations:**
+**运营安全考虑：** 广播基础设施详情加剧本地网络侦察。即使是“无害”的路径和 SSH 可用信息，都方便攻击者绘制环境拓扑。
 
-1. **Minimal mode** (default, recommended for exposed gateways): omit sensitive fields from mDNS broadcasts:
+**建议：**
+
+1. **最小模式**（默认，推荐对外网关）：mDNS 广播不含敏感字段：
 
    ```json5
    {
@@ -812,7 +733,7 @@ The Gateway broadcasts its presence via mDNS (`_openclaw-gw._tcp` on port 5353) 
    }
    ```
 
-2. **Disable entirely** if you don't need local device discovery:
+2. **完全关闭**（无需求时）：
 
    ```json5
    {
@@ -822,7 +743,7 @@ The Gateway broadcasts its presence via mDNS (`_openclaw-gw._tcp` on port 5353) 
    }
    ```
 
-3. **Full mode** (opt-in): include `cliPath` + `sshPort` in TXT records:
+3. **全模式**（自愿）：包含 `cliPath` + `sshPort`：
 
    ```json5
    {
@@ -832,19 +753,17 @@ The Gateway broadcasts its presence via mDNS (`_openclaw-gw._tcp` on port 5353) 
    }
    ```
 
-4. **Environment variable** (alternative): set `OPENCLAW_DISABLE_BONJOUR=1` to disable mDNS without config changes.
+4. **环境变量方式**（替代配置）：设置 `OPENCLAW_DISABLE_BONJOUR=1` 禁用 mDNS。
 
-In minimal mode, the Gateway still broadcasts enough for device discovery (`role`, `gatewayPort`, `transport`) but omits `cliPath` and `sshPort`. Apps that need CLI path information can fetch it via the authenticated WebSocket connection instead.
+最小模式下仍广播用于设备发现所需信息（`role`、`gatewayPort`、`transport`），需要 CLI 路径时可通过认证 WebSocket 获取。
 
-### Lock down the Gateway WebSocket (local auth)
+### 锁定网关 WebSocket（本地认证）
 
-Gateway auth is **required by default**. If no valid gateway auth path is configured,
-the Gateway refuses WebSocket connections (fail‑closed).
+默认**需要**网关认证。如果未配置有效的网关认证路径，网关将拒绝 WebSocket 连接（失败关闭）。
 
-Onboarding generates a token by default (even for loopback) so
-local clients must authenticate.
+引导流程默认生成令牌（即使针对回环地址），因此本地客户端必须完成身份验证。
 
-Set a token so **all** WS clients must authenticate:
+设置令牌，确保**所有** WebSocket 客户端需认证：
 
 ```json5
 {
@@ -854,7 +773,7 @@ Set a token so **all** WS clients must authenticate:
 }
 ```
 
-Doctor can generate one for you: `openclaw doctor --generate-gateway-token`.
+医生命令可生成令牌：`openclaw doctor --generate-gateway-token`。
 
 Note: `gateway.remote.token` / `.password` are client credential sources. They
 do **not** protect local WS access by themselves.
@@ -872,7 +791,7 @@ cleartext is accepted for loopback, but private-LAN, link-local, `.local`, and
 dotless hostnames must use TLS unless you explicitly opt into the trusted
 private-network cleartext path.
 
-Local device pairing:
+本地设备配对：
 
 - Device pairing is auto-approved for direct local loopback connects to keep
   same-host clients smooth.
@@ -884,129 +803,107 @@ Local device pairing:
   locality. Metadata-upgrade auto-approval is scoped narrowly. See
   [Gateway pairing](/gateway/pairing) for both rules.
 
-Auth modes:
+认证模式：
 
-- `gateway.auth.mode: "token"`: shared bearer token (recommended for most setups).
-- `gateway.auth.mode: "password"`: password auth (prefer setting via env: `OPENCLAW_GATEWAY_PASSWORD`).
-- `gateway.auth.mode: "trusted-proxy"`: trust an identity-aware reverse proxy to authenticate users and pass identity via headers (see [Trusted Proxy Auth](/gateway/trusted-proxy-auth)).
+- `gateway.auth.mode: "token"`：共享承载令牌（大多数情况推荐）。
+- `gateway.auth.mode: "password"`：口令认证（推荐通过环境变量 `OPENCLAW_GATEWAY_PASSWORD` 设定）。
+- `gateway.auth.mode: "trusted-proxy"`：信任身份感知反向代理进行认证，代理通过头传递身份（参考 [可信代理认证](/gateway/trusted-proxy-auth)）。
 
-Rotation checklist (token/password):
+令牌/密码轮换核查：
 
-1. Generate/set a new secret (`gateway.auth.token` or `OPENCLAW_GATEWAY_PASSWORD`).
-2. Restart the Gateway (or restart the macOS app if it supervises the Gateway).
-3. Update any remote clients (`gateway.remote.token` / `.password` on machines that call into the Gateway).
-4. Verify you can no longer connect with the old credentials.
+1. 生成/设置新密钥（`gateway.auth.token` 或 `OPENCLAW_GATEWAY_PASSWORD`）。
+2. 重启网关（或由 macOS app 守护时重启应用）。
+3. 更新所有远程客户端（`gateway.remote.token` / `.password`）。
+4. 验证旧凭据已不可用。
 
-### Tailscale Serve identity headers
+### Tailscale Serve 身份头
 
-When `gateway.auth.allowTailscale` is `true` (default for Serve), OpenClaw
-accepts Tailscale Serve identity headers (`tailscale-user-login`) for Control
-UI/WebSocket authentication. OpenClaw verifies the identity by resolving the
-`x-forwarded-for` address through the local Tailscale daemon (`tailscale whois`)
-and matching it to the header. This only triggers for requests that hit loopback
-and include `x-forwarded-for`, `x-forwarded-proto`, and `x-forwarded-host` as
-injected by Tailscale.
-For this async identity check path, failed attempts for the same `{scope, ip}`
-are serialized before the limiter records the failure. Concurrent bad retries
-from one Serve client can therefore lock out the second attempt immediately
-instead of racing through as two plain mismatches.
-HTTP API endpoints (for example `/v1/*`, `/tools/invoke`, and `/api/channels/*`)
-do **not** use Tailscale identity-header auth. They still follow the gateway's
-configured HTTP auth mode.
+当 `gateway.auth.allowTailscale` 为 `true`（Serve 默认）时，OpenClaw 接受 Tailscale Serve 身份头（`tailscale-user-login`）用于控制 UI/WebSocket 认证。OpenClaw 通过本地 Tailscale 守护进程（`tailscale whois`）解析 `x-forwarded-for` 地址并与头匹配来验证身份。这仅针对命中环回并包含由 Tailscale 注入的 `x-forwarded-for`、`x-forwarded-proto` 和 `x-forwarded-host` 的请求触发。
+对于此异步身份检查路径，同一 `{scope, ip}` 的失败尝试在限制器记录失败之前会序列化。来自一个 Serve 客户端的并发错误重试因此可以立即锁定第二次尝试，而不是作为两个普通不匹配竞争通过。
+HTTP API 端点（例如 `/v1/*`、`/tools/invoke` 和 `/api/channels/*`）**不**使用 Tailscale 身份头认证。它们仍遵循网关配置的 HTTP 认证模式。
 
-Important boundary note:
+重要边界：
 
-- Gateway HTTP bearer auth is effectively all-or-nothing operator access.
-- Treat credentials that can call `/v1/chat/completions`, `/v1/responses`, or `/api/channels/*` as full-access operator secrets for that gateway.
-- On the OpenAI-compatible HTTP surface, shared-secret bearer auth restores the full default operator scopes (`operator.admin`, `operator.approvals`, `operator.pairing`, `operator.read`, `operator.talk.secrets`, `operator.write`) and owner semantics for agent turns; narrower `x-openclaw-scopes` values do not reduce that shared-secret path.
-- Per-request scope semantics on HTTP only apply when the request comes from an identity-bearing mode such as trusted proxy auth or `gateway.auth.mode="none"` on a private ingress.
-- In those identity-bearing modes, omitting `x-openclaw-scopes` falls back to the normal operator default scope set; send the header explicitly when you want a narrower scope set.
-- `/tools/invoke` follows the same shared-secret rule: token/password bearer auth is treated as full operator access there too, while identity-bearing modes still honor declared scopes.
-- Do not share these credentials with untrusted callers; prefer separate gateways per trust boundary.
+- 网关 HTTP bearer 认证实际上是全有或全无的操作员访问。
+- 将能够调用 `/v1/chat/completions`、`/v1/responses` 或 `/api/channels/*` 的凭据视为该网关的完全访问操作员秘密。
+- 在 OpenAI 兼容的 HTTP 表面上，共享密钥 bearer 认证恢复完整的默认操作员范围（`operator.admin`、`operator.approvals`、`operator.pairing`、`operator.read`、`operator.talk.secrets`、`operator.write`）和代理轮次的拥有者语义；较窄的 `x-openclaw-scopes` 值不会减少该共享密钥路径。
+- HTTP 上的每请求范围语义仅当请求来自承载身份的模式（如可信代理认证或私有入口上的 `gateway.auth.mode="none"`）时才适用。
+- 在这些承载身份的模式中，省略 `x-openclaw-scopes` 会回退到正常的操作员默认范围集；当你想要较窄的范围集时，请显式发送该头。
+- `/tools/invoke` 遵循相同的共享密钥规则：令牌/密码 bearer 认证在那里也被视为完全操作员访问，而承载身份的模式仍尊重声明的范围。
+- 不要与不可信的调用者共享这些凭据；每个信任边界优先使用单独的网关。
 
-**Trust assumption:** tokenless Serve auth assumes the gateway host is trusted.
-Do not treat this as protection against hostile same-host processes. If untrusted
-local code may run on the gateway host, disable `gateway.auth.allowTailscale`
-and require explicit shared-secret auth with `gateway.auth.mode: "token"` or
-`"password"`.
+**信任假设：** 无令牌 Serve 认证假设网关主机是可信的。不要将其视为针对敌对同主机进程的保护。如果不可信的本地代码可能在网关主机上运行，请禁用 `gateway.auth.allowTailscale` 并要求使用 `gateway.auth.mode: "token"` 或 `"password"` 进行显式共享密钥认证。
 
-**Security rule:** do not forward these headers from your own reverse proxy. If
-you terminate TLS or proxy in front of the gateway, disable
-`gateway.auth.allowTailscale` and use shared-secret auth (`gateway.auth.mode:
-"token"` or `"password"`) or [Trusted Proxy Auth](/gateway/trusted-proxy-auth)
-instead.
+**安全规则：** 不要从你自己的反向代理转发这些头。如果你在网关前面终止 TLS 或代理，请禁用 `gateway.auth.allowTailscale` 并使用共享密钥认证（`gateway.auth.mode: "token"` 或 `"password"`）或 [可信代理认证](/gateway/trusted-proxy-auth) 代替。
 
-Trusted proxies:
+可信代理：
 
-- If you terminate TLS in front of the Gateway, set `gateway.trustedProxies` to your proxy IPs.
-- OpenClaw will trust `x-forwarded-for` (or `x-real-ip`) from those IPs to determine the client IP for local pairing checks and HTTP auth/local checks.
-- Ensure your proxy **overwrites** `x-forwarded-for` and blocks direct access to the Gateway port.
+- 若代理终止 TLS，配置 `gateway.trustedProxies` 为代理 IP。
+- OpenClaw 仅从可信代理 IP 信任 `x-forwarded-for`（及 `x-real-ip`）辨识客户端 IP，用于本地配对校验及认证。
+- 确保代理覆盖 `x-forwarded-for` 并阻断直连网关端口。
 
-See [Tailscale](/gateway/tailscale) and [Web overview](/web).
+详情参见 [Tailscale](/gateway/tailscale) 和 [Web 概览](/web)。
 
-### Browser control via node host (recommended)
+### 通过节点主机进行浏览器控制（推荐）
 
-If your Gateway is remote but the browser runs on another machine, run a **node host**
-on the browser machine and let the Gateway proxy browser actions (see [Browser tool](/tools/browser)).
-Treat node pairing like admin access.
+网关若远程，浏览器在别处运行，建议在浏览器主机运行**节点主机**，让网关代理浏览器操作（见 [浏览器工具](/tools/browser)）。
 
-Recommended pattern:
+视节点配对如管理员访问。
 
-- Keep the Gateway and node host on the same tailnet (Tailscale).
-- Pair the node intentionally; disable browser proxy routing if you don’t need it.
+推荐做法：
 
-Avoid:
+- 让网关和节点主机处于同一 tailnet。
+- 故意配对节点；不需要时禁用浏览器代理路由。
 
-- Exposing relay/control ports over LAN or public Internet.
-- Tailscale Funnel for browser control endpoints (public exposure).
+应避免：
 
-### Secrets on disk
+### 磁盘上的秘密
 
-Assume anything under `~/.openclaw/` (or `$OPENCLAW_STATE_DIR/`) may contain secrets or private data:
+假设 `~/.openclaw/`（或 `$OPENCLAW_STATE_DIR/`）内所有内容均含敏感或私人数据：
 
-- `openclaw.json`: config may include tokens (gateway, remote gateway), provider settings, and allowlists.
-- `credentials/**`: channel credentials (example: WhatsApp creds), pairing allowlists, legacy OAuth imports.
-- `agents/<agentId>/agent/auth-profiles.json`: API keys, token profiles, OAuth tokens, and optional `keyRef`/`tokenRef`.
-- `secrets.json` (optional): file-backed secret payload used by `file` SecretRef providers (`secrets.providers`).
-- `agents/<agentId>/agent/auth.json`: legacy compatibility file. Static `api_key` entries are scrubbed when discovered.
-- `agents/<agentId>/sessions/**`: session transcripts (`*.jsonl`) + routing metadata (`sessions.json`) that can contain private messages and tool output.
-- bundled plugin packages: installed plugins (plus their `node_modules/`).
-- `sandboxes/**`: tool sandbox workspaces; can accumulate copies of files you read/write inside the sandbox.
+- `openclaw.json`: 配置可能包含令牌（网关、远程网关）、提供者设置和允许列表。
+- `credentials/**`: 渠道凭证（例如：WhatsApp 凭证）、配对允许列表、遗留 OAuth 导入。
+- `agents/<agentId>/agent/auth-profiles.json`: API 密钥、令牌配置文件、OAuth 令牌，以及可选的 `keyRef`/`tokenRef`。
+- `secrets.json`（可选）：由 `file` SecretRef 提供者（`secrets.providers`）使用的基于文件的秘密负载。
+- `agents/<agentId>/agent/auth.json`: 遗留兼容性文件。发现静态 `api_key` 条目时会被清除。
+- `agents/<agentId>/sessions/**`: 会话转录（`*.jsonl`）+ 路由元数据（`sessions.json`），可能包含私人消息和工具输出。
+- 捆绑插件包：已安装的插件（及其 `node_modules/`）。
+- `sandboxes/**`: 工具沙箱工作区；可能积累你在沙箱内读/写的文件副本。
 
-Hardening tips:
+加固建议：
 
-- Keep permissions tight (`700` on dirs, `600` on files).
-- Use full-disk encryption on the gateway host.
-- Prefer a dedicated OS user account for the Gateway if the host is shared.
+- 维持紧权限（目录 700，文件 600）。
+- 使用全磁盘加密。
+- 若主机多人共享，优先为网关使用专用操作系统用户。
 
-### Workspace `.env` files
+### 工作区 `.env` 文件
 
-OpenClaw loads workspace-local `.env` files for agents and tools, but never lets those files silently override gateway runtime controls.
+OpenClaw 会为代理和工具加载工作区本地的 `.env` 文件，但绝不会让这些文件静默覆盖网关运行时控制。
 
-- Any key that starts with `OPENCLAW_*` is blocked from untrusted workspace `.env` files.
-- Channel endpoint settings for Matrix, Mattermost, IRC, and Synology Chat are also blocked from workspace `.env` overrides, so cloned workspaces cannot redirect bundled connector traffic through local endpoint config. Endpoint env keys (such as `MATRIX_HOMESERVER`, `MATTERMOST_URL`, `IRC_HOST`, `SYNOLOGY_CHAT_INCOMING_URL`) must come from the gateway process environment or `env.shellEnv`, not from a workspace-loaded `.env`.
-- The block is fail-closed: a new runtime-control variable added in a future release cannot be inherited from a checked-in or attacker-supplied `.env`; the key is ignored and the gateway keeps its own value.
-- Trusted process/OS environment variables (the gateway's own shell, launchd/systemd unit, app bundle) still apply — this only constrains `.env` file loading.
+- 任何以 `OPENCLAW_*` 开头的键都会被不受信任的工作区 `.env` 文件阻止。
+- Matrix、Mattermost、IRC 和 Synology Chat 的渠道端点设置也会被工作区 `.env` 覆盖阻止，因此克隆的工作区不能通过本地端点配置重定向捆绑连接器流量。端点环境变量键（例如 `MATRIX_HOMESERVER`、`MATTERMOST_URL`、`IRC_HOST`、`SYNOLOGY_CHAT_INCOMING_URL`）必须来自网关进程环境或 `env.shellEnv`，不能来自工作区加载的 `.env`。
+- 该阻止是失败关闭的：未来版本中新添加的运行时控制变量不能从已提交或攻击者提供的 `.env` 中继承；该键会被忽略，网关保留其自身的值。
+- 受信任的进程/操作系统环境变量（网关自身的 shell、launchd/systemd 单元、app bundle）仍然适用——这仅限制 `.env` 文件加载。
 
-Why: workspace `.env` files frequently live next to agent code, get committed by accident, or get written by tools. Blocking the whole `OPENCLAW_*` prefix means adding a new `OPENCLAW_*` flag later can never regress into silent inheritance from workspace state.
+原因：工作区 `.env` 文件经常与代理代码放在一起、会被误提交，或被工具写入。屏蔽整个 `OPENCLAW_*` 前缀意味着，之后新增任何 `OPENCLAW_*` 标志，也绝不可能因为工作区状态而静默继承，从而退化安全性。
 
-### Logs and transcripts (redaction and retention)
+### 日志与转录（脱敏与保留）
 
-Logs and transcripts can leak sensitive info even when access controls are correct:
+日志与转录可能泄露敏感信息，即使访问控制正确：
 
-- Gateway logs may include tool summaries, errors, and URLs.
-- Session transcripts can include pasted secrets, file contents, command output, and links.
+- 网关日志含工具摘要、错误与 URL。
+- 会话转录含粘贴密钥、文件内容、命令输出和链接。
 
-Recommendations:
+建议：
 
-- Keep tool summary redaction on (`logging.redactSensitive: "tools"`; default).
-- Add custom patterns for your environment via `logging.redactPatterns` (tokens, hostnames, internal URLs).
-- When sharing diagnostics, prefer `openclaw status --all` (pasteable, secrets redacted) over raw logs.
-- Prune old session transcripts and log files if you don’t need long retention.
+- 保持工具摘要脱敏开启（`logging.redactSensitive: "tools"`，默认）。
+- 根据环境添加自定义脱敏模式（`logging.redactPatterns`，如令牌、主机名）。
+- 分享诊断信息时，优选使用 `openclaw status --all`（可粘贴，隐藏秘密）代替原始日志。
+- 若无长周期需求，清理旧会话转录与日志。
 
-Details: [Logging](/gateway/logging)
+详见：[日志](/gateway/logging)
 
-### DMs: pairing by default
+### DM：默认通过配对
 
 ```json5
 {
@@ -1014,7 +911,7 @@ Details: [Logging](/gateway/logging)
 }
 ```
 
-### Groups: require mention everywhere
+### 群组：始终要求提及
 
 ```json
 {
@@ -1036,31 +933,31 @@ Details: [Logging](/gateway/logging)
 }
 ```
 
-In group chats, only respond when explicitly mentioned.
+群组聊天仅在显式提及时响应。
 
-### Separate numbers (WhatsApp, Signal, Telegram)
+### 分离号码（WhatsApp、Signal、Telegram）
 
-For phone-number-based channels, consider running your AI on a separate phone number from your personal one:
+对于基于电话号码的渠道，考虑将你的 AI 运行在与个人号码分离的电话号码上：
 
-- Personal number: Your conversations stay private
-- Bot number: AI handles these, with appropriate boundaries
+- 个人号：保留私人对话
+- 机器人号：AI 处理业务，有适当边界
 
-### Read-only mode (via sandbox and tools)
+### 只读模式（通过沙箱和工具）
 
-You can build a read-only profile by combining:
+你可以通过组合以下方式构建只读配置文件：
 
-- `agents.defaults.sandbox.workspaceAccess: "ro"` (or `"none"` for no workspace access)
-- tool allow/deny lists that block `write`, `edit`, `apply_patch`, `exec`, `process`, etc.
+- `agents.defaults.sandbox.workspaceAccess: "ro"`（或 `"none"` 禁止工作区访问）
+- 阻止 `write`、`edit`、`apply_patch`、`exec`、`process` 等工具的允许/拒绝列表。
 
-Additional hardening options:
+其他加固选项：
 
-- `tools.exec.applyPatch.workspaceOnly: true` (default): ensures `apply_patch` cannot write/delete outside the workspace directory even when sandboxing is off. Set to `false` only if you intentionally want `apply_patch` to touch files outside the workspace.
-- `tools.fs.workspaceOnly: true` (optional): restricts `read`/`write`/`edit`/`apply_patch` paths and native prompt image auto-load paths to the workspace directory (useful if you allow absolute paths today and want a single guardrail).
-- Keep filesystem roots narrow: avoid broad roots like your home directory for agent workspaces/sandbox workspaces. Broad roots can expose sensitive local files (for example state/config under `~/.openclaw`) to filesystem tools.
+- 默认 `tools.exec.applyPatch.workspaceOnly: true`：确保 `apply_patch` 不写工作区外文件，即便不启沙箱。如需覆盖设为 `false`。
+- 可选启用 `tools.fs.workspaceOnly: true`：限制文件路径和图片自动加载至工作区（适合允许绝对路径时做单一防线）。
+- 限制文件系统根路径范围，避免工作区路径过广（如家目录），防止敏感文件暴露给工具。
 
-### Secure baseline (copy/paste)
+### 安全基线（可复制粘贴）
 
-One “safe default” config that keeps the Gateway private, requires DM pairing, and avoids always-on group bots:
+保持网关私密，启用 DM 配对，禁用群组“常开”机器人：
 
 ```json5
 {
@@ -1079,71 +976,65 @@ One “safe default” config that keeps the Gateway private, requires DM pairin
 }
 ```
 
-If you want “safer by default” tool execution too, add a sandbox + deny dangerous tools for any non-owner agent (example below under “Per-agent access profiles”).
+需更安全工具执行可加沙箱并拒绝危险工具（见“按代理访问配置”示例）。
 
-Built-in baseline for chat-driven agent turns: non-owner senders cannot use the `cron` or `gateway` tools.
+默认聊天驱动代理轮转时，非拥有者无法使用 `cron` 或 `gateway` 工具。
 
-## Sandboxing (recommended)
+## 沙箱（推荐）
 
-Dedicated doc: [Sandboxing](/gateway/sandboxing)
+专门文档：[沙箱](/gateway/sandboxing)
 
-Two complementary approaches:
+两种互补方式：
 
-- **Run the full Gateway in Docker** (container boundary): [Docker](/install/docker)
-- **Tool sandbox** (`agents.defaults.sandbox`, host gateway + sandbox-isolated tools; Docker is the default backend): [Sandboxing](/gateway/sandboxing)
+- **在 Docker 中运行完整 Gateway**（容器边界）：[Docker](/install/docker)
+- **工具沙箱**（`agents.defaults.sandbox`，主机 gateway + 沙箱隔离工具；Docker 是默认后端）：[沙箱](/gateway/sandboxing)
 
-Note: to prevent cross-agent access, keep `agents.defaults.sandbox.scope` at `"agent"` (default)
-or `"session"` for stricter per-session isolation. `scope: "shared"` uses a
-single container/workspace.
+注意：避免代理间权限泄漏，`agents.defaults.sandbox.scope` 保持 `"agent"`（默认）或 `"session"`（更严格的会话隔离）。`scope: "shared"` 使用单容器/工作区。
 
-Also consider agent workspace access inside the sandbox:
+还可配置代理对工作区访问控制：
 
-- `agents.defaults.sandbox.workspaceAccess: "none"` (default) keeps the agent workspace off-limits; tools run against a sandbox workspace under `~/.openclaw/sandboxes`
-- `agents.defaults.sandbox.workspaceAccess: "ro"` mounts the agent workspace read-only at `/agent` (disables `write`/`edit`/`apply_patch`)
-- `agents.defaults.sandbox.workspaceAccess: "rw"` mounts the agent workspace read/write at `/workspace`
-- Extra `sandbox.docker.binds` are validated against normalized and canonicalized source paths. Parent-symlink tricks and canonical home aliases still fail closed if they resolve into blocked roots such as `/etc`, `/var/run`, or credential directories under the OS home.
+- `agents.defaults.sandbox.workspaceAccess: "none"`（默认）禁止访问代理工作区；工具在 `~/.openclaw/sandboxes` 下的沙箱工作区中运行
+- `agents.defaults.sandbox.workspaceAccess: "ro"` 将代理工作区以只读方式挂载到 `/agent`（禁用 `write`/`edit`/`apply_patch`）
+- `agents.defaults.sandbox.workspaceAccess: "rw"` 将代理工作区以读写方式挂载到 `/workspace`
+- 额外的 `sandbox.docker.binds` 会针对标准化和规范化的源路径进行验证。如果父级符号链接技巧和规范化的主目录别名解析到被阻止的根目录（如 `/etc`、`/var/run` 或操作系统主目录下的凭据目录），仍然会失败并关闭。
 
-Important: `tools.elevated` is the global baseline escape hatch that runs exec outside the sandbox. The effective host is `gateway` by default, or `node` when the exec target is configured to `node`. Keep `tools.elevated.allowFrom` tight and don’t enable it for strangers. You can further restrict elevated per agent via `agents.list[].tools.elevated`. See [Elevated Mode](/tools/elevated).
+**重要：**`tools.elevated` 是全局基线逃生通道，用于在沙箱外运行 exec。默认有效主机为 `gateway`，当 exec 目标配置为 `node` 时为 `node`。保持 `tools.elevated.allowFrom` 严格，不要为陌生人启用它。你可以通过 `agents.list[].tools.elevated` 进一步限制每个代理的提升权限。参见 [提升模式](/tools/elevated)。
 
-### Sub-agent delegation guardrail
+### 子代理委托防护
 
-If you allow session tools, treat delegated sub-agent runs as another boundary decision:
+允许会话工具时，视子代理调用为额外边界选择：
 
-- Deny `sessions_spawn` unless the agent truly needs delegation.
-- Keep `agents.defaults.subagents.allowAgents` and any per-agent `agents.list[].subagents.allowAgents` overrides restricted to known-safe target agents.
-- For any workflow that must remain sandboxed, call `sessions_spawn` with `sandbox: "require"` (default is `inherit`).
-- `sandbox: "require"` fails fast when the target child runtime is not sandboxed.
+- 除非代理确实需要委托，否则拒绝 `sessions_spawn`。
+- 将 `agents.defaults.subagents.allowAgents` 和任何每个代理的 `agents.list[].subagents.allowAgents` 覆盖限制为已知安全的目标代理。
+- 对于任何必须保持沙箱化的工作流，使用 `sandbox: "require"` 调用 `sessions_spawn`（默认为 `inherit`）。
+- 当目标子运行时未沙箱化时，`sandbox: "require"` 会快速失败。
 
-## Browser control risks
+## 浏览器控制风险
 
-Enabling browser control gives the model the ability to drive a real browser.
-If that browser profile already contains logged-in sessions, the model can
-access those accounts and data. Treat browser profiles as **sensitive state**:
+启用浏览器控制后，模型能驱动真实浏览器。浏览器用户配置文件若含登录信息，模型可访问账户及数据。请将浏览器配置视为**敏感状态**：
 
-- Prefer a dedicated profile for the agent (the default `openclaw` profile).
-- Avoid pointing the agent at your personal daily-driver profile.
-- Keep host browser control disabled for sandboxed agents unless you trust them.
-- The standalone loopback browser control API only honors shared-secret auth
-  (gateway token bearer auth or gateway password). It does not consume
-  trusted-proxy or Tailscale Serve identity headers.
-- Treat browser downloads as untrusted input; prefer an isolated downloads directory.
-- Disable browser sync/password managers in the agent profile if possible (reduces blast radius).
-- For remote gateways, assume “browser control” is equivalent to “operator access” to whatever that profile can reach.
-- Keep the Gateway and node hosts tailnet-only; avoid exposing browser control ports to LAN or public Internet.
-- Disable browser proxy routing when you don’t need it (`gateway.nodes.browser.mode="off"`).
-- Chrome MCP existing-session mode is **not** “safer”; it can act as you in whatever that host Chrome profile can reach.
+- 优先为代理使用专用配置文件（默认的 `openclaw` 配置文件）。
+- 避免将代理指向你的个人日常使用的配置文件。
+- 除非你信任沙箱代理，否则保持主机浏览器控制禁用。
+- 独立的环回浏览器控制 API 仅认可共享密钥认证（网关令牌 bearer 认证或网关密码）。它不使用 trusted-proxy 或 Tailscale Serve 身份头。
+- 将浏览器下载视为不可信输入；优先使用隔离的下载目录。
+- 如果可能，在代理配置文件中禁用浏览器同步/密码管理器（减少爆炸半径）。
+- 对于远程网关，假设“浏览器控制”等同于对该配置文件可访问内容的“操作员访问”。
+- 保持 Gateway 和节点主机仅限 tailnet；避免将浏览器控制端口暴露给局域网或公共互联网。
+- 不需要时禁用浏览器代理路由（`gateway.nodes.browser.mode="off"`）。
+- Chrome MCP 现有会话模式**不**“更安全”；它可以作为你在该主机 Chrome 配置文件可访问的任何地方行事。
 
-### Browser SSRF policy (strict by default)
+### 浏览器 SSRF 策略（默认严格）
 
-OpenClaw’s browser navigation policy is strict by default: private/internal destinations stay blocked unless you explicitly opt in.
+OpenClaw 的浏览器导航策略默认严格：除非你明确选择加入，否则私有/内部目标保持阻止。
 
-- Default: `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` is unset, so browser navigation keeps private/internal/special-use destinations blocked.
-- Legacy alias: `browser.ssrfPolicy.allowPrivateNetwork` is still accepted for compatibility.
-- Opt-in mode: set `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork: true` to allow private/internal/special-use destinations.
-- In strict mode, use `hostnameAllowlist` (patterns like `*.example.com`) and `allowedHostnames` (exact host exceptions, including blocked names like `localhost`) for explicit exceptions.
-- Navigation is checked before request and best-effort re-checked on the final `http(s)` URL after navigation to reduce redirect-based pivots.
+- 默认：`browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 未设置，因此浏览器导航保持阻止私有/内部/特殊用途目标。
+- 遗留别名：`browser.ssrfPolicy.allowPrivateNetwork` 仍被接受以保持兼容性。
+- 选择加入模式：设置 `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork: true` 以允许私有/内部/特殊用途目标。
+- 在严格模式下，使用 `hostnameAllowlist`（如 `*.example.com` 的模式）和 `allowedHostnames`（确切的主机例外，包括被阻止的名称如 `localhost`）进行明确例外。
+- 导航在请求前进行检查，并在导航后的最终 `http(s)` URL 上进行尽力重新检查，以减少基于重定向的透视攻击。
 
-Example strict policy:
+示例严格配置：
 
 ```json5
 {
@@ -1157,20 +1048,17 @@ Example strict policy:
 }
 ```
 
-## Per-agent access profiles (multi-agent)
+## 按代理访问配置（多代理）
 
-With multi-agent routing, each agent can have its own sandbox + tool policy:
-use this to give **full access**, **read-only**, or **no access** per agent.
-See [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) for full details
-and precedence rules.
+多代理路由环境下，每个代理可有独立沙箱和工具策略，可赋予**完全访问**、**只读**或**无访问**。详见 [多代理沙箱与工具](/tools/multi-agent-sandbox-tools) 及优先级规则。
 
-Common use cases:
+常用场景：
 
-- Personal agent: full access, no sandbox
-- Family/work agent: sandboxed + read-only tools
-- Public agent: sandboxed + no filesystem/shell tools
+- 个人代理：完全访问，关闭沙箱
+- 家庭/工作代理：沙箱 + 只读工具
+- 公众代理：沙箱 + 禁用文件系统/shell 工具
 
-### Example: full access (no sandbox)
+### 示例：完全访问（无沙箱）
 
 ```json5
 {
@@ -1186,7 +1074,7 @@ Common use cases:
 }
 ```
 
-### Example: read-only tools + read-only workspace
+### 示例：只读工具 + 工作区只读
 
 ```json5
 {
@@ -1210,7 +1098,7 @@ Common use cases:
 }
 ```
 
-### Example: no filesystem/shell access (provider messaging allowed)
+### 示例：无文件系统/shell 访问（允许提供者消息）
 
 ```json5
 {
@@ -1224,9 +1112,8 @@ Common use cases:
           scope: "agent",
           workspaceAccess: "none",
         },
-        // Session tools can reveal sensitive data from transcripts. By default OpenClaw limits these tools
-        // to the current session + spawned subagent sessions, but you can clamp further if needed.
-        // See `tools.sessions.visibility` in the configuration reference.
+        // 会话工具可能泄露私密信息。默认限制为当前会话及子代理会话，可进一步限制。
+        // 见配置参考中 `tools.sessions.visibility`。
         tools: {
           sessions: { visibility: "tree" }, // self | tree | agent | all
           allow: [
@@ -1263,71 +1150,66 @@ Common use cases:
 
 ## Incident response
 
-If your AI does something bad:
+AI 出状况时：
 
-### Contain
+### 遏制
 
-1. **Stop it:** stop the macOS app (if it supervises the Gateway) or terminate your `openclaw gateway` process.
-2. **Close exposure:** set `gateway.bind: "loopback"` (or disable Tailscale Funnel/Serve) until you understand what happened.
-3. **Freeze access:** switch risky DMs/groups to `dmPolicy: "disabled"` / require mentions, and remove `"*"` allow-all entries if you had them.
+1. **停止其运行：** 停止 macOS 应用（若其守护网关）或终止 `openclaw gateway` 进程。
+2. **关闭暴露：** 设置 `gateway.bind: "loopback"`（或禁用 Tailscale Funnel/Serve），直至排查。
+3. **冻结访问：** 危险的 DM/群组改为 `dmPolicy: "disabled"` / 要求提及，移除 `"*"` 等开放白名单。
 
-### Rotate (assume compromise if secrets leaked)
+### 轮换（若秘密泄漏，视为已失陷）
 
-1. Rotate Gateway auth (`gateway.auth.token` / `OPENCLAW_GATEWAY_PASSWORD`) and restart.
-2. Rotate remote client secrets (`gateway.remote.token` / `.password`) on any machine that can call the Gateway.
-3. Rotate provider/API credentials (WhatsApp creds, Slack/Discord tokens, model/API keys in `auth-profiles.json`, and encrypted secrets payload values when used).
+1. 轮换网关认证（`gateway.auth.token` / `OPENCLAW_GATEWAY_PASSWORD`）并重启。
+2. 轮换任何能调用网关的远程客户端密钥（`gateway.remote.token` / `.password`）。
+3. 轮换提供者/API 凭据（WhatsApp 凭据、Slack/Discord 令牌、`auth-profiles.json` 中的模型/API 密钥、加密秘密载荷等）。
 
-### Audit
+### 审计
 
-1. Check Gateway logs: `/tmp/openclaw/openclaw-YYYY-MM-DD.log` (or `logging.file`).
-2. Review the relevant transcript(s): `~/.openclaw/agents/<agentId>/sessions/*.jsonl`.
-3. Review recent config changes (anything that could have widened access: `gateway.bind`, `gateway.auth`, dm/group policies, `tools.elevated`, plugin changes).
-4. Re-run `openclaw security audit --deep` and confirm critical findings are resolved.
+1. 检查网关日志：`/tmp/openclaw/openclaw-YYYY-MM-DD.log`（或 `logging.file`）。
+2. 审阅相关转录：`~/.openclaw/agents/<agentId>/sessions/*.jsonl`。
+3. 审核近期配置变更（可能扩大访问的：`gateway.bind`、`gateway.auth`、DM/群策略、`tools.elevated`、插件变更）。
+4. 重新运行 `openclaw security audit --deep` 确认未留关键漏洞。
 
-### Collect for a report
+### 收集报告材料
 
-- Timestamp, gateway host OS + OpenClaw version
-- The session transcript(s) + a short log tail (after redacting)
-- What the attacker sent + what the agent did
-- Whether the Gateway was exposed beyond loopback (LAN/Tailscale Funnel/Serve)
+- 时间戳、网关主机 OS + OpenClaw 版本
+- 相关会话转录 + 简短日志片段（脱敏后）
+- 攻击者消息及代理动作
+- 网关是否暴露非环回接口（LAN/Tailscale Funnel/Serve）
 
 ## Secret scanning with detect-secrets
 
-CI runs the `detect-secrets` pre-commit hook in the `secrets` job.
-Pushes to `main` always run an all-files scan. Pull requests use a changed-file
-fast path when a base commit is available, and fall back to an all-files scan
-otherwise. If it fails, there are new candidates not yet in the baseline.
+CI 在 `secrets` 任务中运行 `detect-secrets` pre-commit 钩子。
 
-### If CI fails
+推送到 `main` 分支时总是会进行全文件扫描。拉取请求在有基础提交时会使用变更文件的快速路径，否则会回退到全文件扫描。如果扫描失败，说明有新的候选项尚未加入基线。
 
-1. Reproduce locally:
+### CI 失败时
+
+1. 本地复现：
 
    ```bash
    pre-commit run --all-files detect-secrets
    ```
 
-2. Understand the tools:
-   - `detect-secrets` in pre-commit runs `detect-secrets-hook` with the repo's
-     baseline and excludes.
-   - `detect-secrets audit` opens an interactive review to mark each baseline
-     item as real or false positive.
-3. For real secrets: rotate/remove them, then re-run the scan to update the baseline.
-4. For false positives: run the interactive audit and mark them as false:
+2. 了解这些工具：
+   - 在 pre-commit 中，`detect-secrets` 会使用仓库的基线和排除项运行 `detect-secrets-hook`。
+   - `detect-secrets audit` 会打开一个交互式审查界面，用于将每个基线项标记为真实或误报。
+3. 对于真正的秘密：轮换/删除它们，然后重新运行扫描以更新基线。
+4. 对于误报：运行交互式审核并将它们标记为误报：
 
    ```bash
    detect-secrets audit .secrets.baseline
    ```
 
-5. If you need new excludes, add them to `.detect-secrets.cfg` and regenerate the
-   baseline with matching `--exclude-files` / `--exclude-lines` flags (the config
-   file is reference-only; detect-secrets doesn’t read it automatically).
+5. 若需新增排除规则，编辑 `.detect-secrets.cfg` 并配合 `--exclude-files` / `--exclude-lines` 重新生成基线（配置文件仅参考，detect-secrets 不自动读取）。
 
-Commit the updated `.secrets.baseline` once it reflects the intended state.
+更新后的 `.secrets.baseline` 推送至仓库。
 
 ## Reporting security issues
 
-Found a vulnerability in OpenClaw? Please report responsibly:
+发现 OpenClaw 漏洞？请负责任报告：
 
-1. Email: [security@openclaw.ai](mailto:security@openclaw.ai)
-2. Don't post publicly until fixed
-3. We'll credit you (unless you prefer anonymity)
+1. 邮件：[security@openclaw.ai](mailto:security@openclaw.ai)
+2. 修复前勿公开发布
+3. 我们会致谢你（除非你选择匿名）

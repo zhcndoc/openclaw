@@ -1,21 +1,21 @@
 ---
-summary: "Apply multi-file patches with the apply_patch tool"
+summary: "使用 apply_patch 工具应用多文件补丁"
 read_when:
-  - You need structured file edits across multiple files
-  - You want to document or debug patch-based edits
-title: "apply_patch tool"
+  - 你需要跨多个文件进行结构化文件编辑
+  - 你希望记录或调试基于补丁的编辑
+title: "apply_patch 工具"
 ---
 
-Apply file changes using a structured patch format. This is ideal for multi-file
-or multi-hunk edits where a single `edit` call would be brittle.
+使用结构化补丁格式来应用文件更改。这非常适合多文件
+或多块编辑，因为单次 `edit` 调用可能过于脆弱。
 
-The tool accepts a single `input` string that wraps one or more file operations:
+该工具接受一个包含一个或多个文件操作的单一 `input` 字符串：
 
 ```
 *** Begin Patch
 *** Add File: path/to/file.txt
-+line 1
-+line 2
++第 1 行
++第 2 行
 *** Update File: src/app.ts
 @@
 -old line
@@ -24,23 +24,21 @@ The tool accepts a single `input` string that wraps one or more file operations:
 *** End Patch
 ```
 
-## Parameters
+## 参数
 
-- `input` (required): Full patch contents including `*** Begin Patch` and `*** End Patch`.
+- `input`（必填）：包含 `*** Begin Patch` 和 `*** End Patch` 的完整补丁内容。
 
-## Notes
+## 注意事项
 
-- Patch paths support relative paths (from the workspace directory) and absolute paths.
-- `tools.exec.applyPatch.workspaceOnly` defaults to `true` (workspace-contained). Set it to `false` only if you intentionally want `apply_patch` to write/delete outside the workspace directory.
-- Use `*** Move to:` within an `*** Update File:` hunk to rename files.
-- `*** End of File` marks an EOF-only insert when needed.
-- Available by default for OpenAI and OpenAI Codex models. Set
-  `tools.exec.applyPatch.enabled: false` to disable it.
-- Optionally gate by model via
-  `tools.exec.applyPatch.allowModels`.
-- Config is only under `tools.exec`.
+- Patch 路径支持相对路径（从工作区目录起）和绝对路径。
+- `tools.exec.applyPatch.workspaceOnly` 默认为 `true`（限于工作区内）。仅当您有意希望 `apply_patch` 在工作区目录之外进行写入/删除时，才将其设置为 `false`。
+- 在 `*** Update File:` 块中使用 `*** Move to:` 来重命名文件。
+- `*** End of File` 在需要时标记仅针对文件末尾的插入。
+- 默认适用于 OpenAI 和 OpenAI Codex 模型。设置 `tools.exec.applyPatch.enabled: false` 可禁用它。
+- 可通过 `tools.exec.applyPatch.allowModels` 按模型进行可选限制。
+- 配置仅位于 `tools.exec` 下。
 
-## Example
+## 示例
 
 ```json
 {
@@ -49,7 +47,7 @@ The tool accepts a single `input` string that wraps one or more file operations:
 }
 ```
 
-## Related
+## 相关
 
 - [Diffs](/tools/diffs)
 - [Exec tool](/tools/exec)

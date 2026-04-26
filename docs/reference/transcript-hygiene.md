@@ -1,192 +1,148 @@
 ---
-summary: "Reference: provider-specific transcript sanitization and repair rules"
+summary: "参考：特定提供商的转录清理和修复规则"
 read_when:
-  - You are debugging provider request rejections tied to transcript shape
-  - You are changing transcript sanitization or tool-call repair logic
-  - You are investigating tool-call id mismatches across providers
-title: "Transcript hygiene"
+  - 你在调试与转录形状相关的提供商请求拒绝问题
+  - 你正在更改转录清理或工具调用修复逻辑
+  - 你在调查跨提供商的工具调用 id 不匹配问题
+title: "转录卫生"
 ---
 
-This document describes **provider-specific fixes** applied to transcripts before a run
-(building model context). Most of these are **in-memory** adjustments used to satisfy
-strict provider requirements. A separate session-file repair pass may also rewrite
-stored JSONL before the session is loaded, either by dropping malformed JSONL lines or
-by repairing persisted turns that are syntactically valid but known to be rejected by a
-provider during replay. When a repair occurs, the original file is backed up alongside
-the session file.
+本文档描述了在运行前应用于转录的**特定提供商修复**（构建模型上下文）。这些是为满足严格的提供商要求而使用的**内存中**调整。这些卫生步骤**不会**重写磁盘上的已存储 JSONL 转录；但是，单独的会话文件修复流程可能会通过在会话加载前删除无效行来重写格式错误的 JSONL 文件。当发生修复时，原始文件会与会话文件一同备份。
 
-Scope includes:
+涵盖范围包括：
 
-- Runtime-only prompt context staying out of user-visible transcript turns
-- Tool call id sanitization
-- Tool call input validation
-- Tool result pairing repair
-- Turn validation / ordering
-- Thought signature cleanup
-- Thinking signature cleanup
-- Image payload sanitization
-- User-input provenance tagging (for inter-session routed prompts)
-- Empty assistant error-turn repair for Bedrock Converse replay
+- 仅运行时的提示上下文不出现在用户可见的转录轮次中
+- 工具调用 id 清理
+- 工具调用输入验证
+- 工具结果配对修复
+- 回合验证 / 排序
+- 思维签名清理
+- 图像载荷清理
+- 用户输入来源标记（用于跨会话路由的提示）
 
-If you need transcript storage details, see:
+如果需要转录存储详情，请参阅：
 
-- [Session management deep dive](/reference/session-management-compaction)
+- [/reference/session-management-compaction](/reference/session-management-compaction)
 
 ---
 
-## Global rule: runtime context is not user transcript
+## 全局规则：运行时上下文不是用户转录
 
-Runtime/system context can be added to the model prompt for a turn, but it is
-not end-user-authored content. OpenClaw keeps a separate transcript-facing
-prompt body for Gateway replies, queued followups, ACP, CLI, and embedded Pi
-runs. Stored visible user turns use that transcript body instead of the
-runtime-enriched prompt.
+运行时/系统上下文可以添加到某一轮的模型提示中，但它不是最终用户编写的内容。OpenClaw 为 Gateway 回复、排队的后续操作、ACP、CLI 以及嵌入式 Pi 运行维护了单独的、面向转录的提示正文。已存储的可见用户轮次使用该转录正文，而不是带有运行时增强的提示。
 
-For legacy sessions that already persisted runtime wrappers, Gateway history
-surfaces apply a display projection before returning messages to WebChat,
-TUI, REST, or SSE clients.
+对于已经持久化了运行时包装器的旧会话，Gateway 历史展示在向 WebChat、TUI、REST 或 SSE 客户端返回消息之前会先应用显示投影。
 
 ---
 
 ## Where this runs
 
-All transcript hygiene is centralized in the embedded runner:
+所有转录清理操作均集中在嵌入式运行器中：
 
 - Policy selection: `src/agents/transcript-policy.ts`
 - Sanitization/repair application: `sanitizeSessionHistory` in `src/agents/pi-embedded-runner/replay-history.ts`
 
-The policy uses `provider`, `modelApi`, and `modelId` to decide what to apply.
+该策略根据 `provider`、`modelApi` 和 `modelId` 决定应用哪些规则。
 
-Separate from transcript hygiene, session files are repaired (if needed) before load:
+与转录清理分开的是，在加载前会修复会话文件（如有必要）：
 
-- `repairSessionFileIfNeeded` in `src/agents/session-file-repair.ts`
-- Called from `run/attempt.ts` and `compact.ts` (embedded runner)
-
----
-
-## Global rule: image sanitization
-
-Image payloads are always sanitized to prevent provider-side rejection due to size
-limits (downscale/recompress oversized base64 images).
-
-This also helps control image-driven token pressure for vision-capable models.
-Lower max dimensions generally reduce token usage; higher dimensions preserve detail.
-
-Implementation:
-
-- `sanitizeSessionMessagesImages` in `src/agents/pi-embedded-helpers/images.ts`
-- `sanitizeContentBlocksImages` in `src/agents/tool-images.ts`
-- Max image side is configurable via `agents.defaults.imageMaxDimensionPx` (default: `1200`).
+- `src/agents/session-file-repair.ts` 中的 `repairSessionFileIfNeeded`
+- 由 `run/attempt.ts` 和 `compact.ts`（嵌入式运行器）调用
 
 ---
 
-## Global rule: malformed tool calls
+## 全局规则：图像清理
 
-Assistant tool-call blocks that are missing both `input` and `arguments` are dropped
-before model context is built. This prevents provider rejections from partially
-persisted tool calls (for example, after a rate limit failure).
+图像载荷始终进行清理，以防止因大小限制被提供商拒绝（对超大 base64 图像进行降采样/重新压缩）。
 
-Implementation:
+这也有助于控制具备视觉能力模型的图像驱动令牌压力。较低的最大尺寸通常减少令牌使用；较高尺寸保留细节。
+
+实现：
+
+- `src/agents/pi-embedded-helpers/images.ts` 中的 `sanitizeSessionMessagesImages`
+- `src/agents/tool-images.ts` 中的 `sanitizeContentBlocksImages`
+- 最大图像边长通过 `agents.defaults.imageMaxDimensionPx` 可配置（默认值：`1200`）
+
+---
+
+## 全局规则：格式错误的工具调用
+
+缺失 `input` 和 `arguments` 的助手工具调用块在构建模型上下文前会被丢弃。此举防止提供商因部分保存的工具调用（例如速率限制失败后）而拒绝。
+
+实现：
 
 - `sanitizeToolCallInputs` in `src/agents/session-transcript-repair.ts`
 - Applied in `sanitizeSessionHistory` in `src/agents/pi-embedded-runner/replay-history.ts`
 
 ---
 
-## Global rule: inter-session input provenance
+## 全局规则：跨会话输入来源
 
-When an agent sends a prompt into another session via `sessions_send` (including
-agent-to-agent reply/announce steps), OpenClaw persists the created user turn with:
+当代理通过 `sessions_send` 将提示发送到另一个会话（包括代理间回复/通知步骤）时，OpenClaw 会将创建的用户对话持久化，并附加以下元数据：
 
 - `message.provenance.kind = "inter_session"`
 
-This metadata is written at transcript append time and does not change role
-(`role: "user"` remains for provider compatibility). Transcript readers can use
-this to avoid treating routed internal prompts as end-user-authored instructions.
+此元数据在追加转录时写入，且不改变角色（为保证兼容性，角色仍为 `role: "user"`）。转录读取者可据此避免将路由的内部提示当做最终用户编写的指令。
 
-During context rebuild, OpenClaw also prepends a short `[Inter-session message]`
-marker to those user turns in-memory so the model can distinguish them from
-external end-user instructions.
+在上下文重建时，OpenClaw 还会在内存中为这些用户对话前置一个简短的 `[Inter-session message]` 标记，以便模型区分它们与外部最终用户指令。
 
 ---
 
-## Provider matrix (current behavior)
+## 提供商矩阵（当前行为）
 
 **OpenAI / OpenAI Codex**
 
-- Image sanitization only.
-- Drop orphaned reasoning signatures (standalone reasoning items without a following content block) for OpenAI Responses/Codex transcripts, and drop replayable OpenAI reasoning after a model route switch.
-- No tool call id sanitization.
-- Tool result pairing repair may move real matched outputs and synthesize Codex-style `aborted` outputs for missing tool calls.
-- No turn validation or reordering.
-- Missing OpenAI Responses-family tool outputs are synthesized as `aborted` to match Codex replay normalization.
-- No thought signature stripping.
+- 仅图像清理。
+- 对 OpenAI Responses/Codex 转录，丢弃孤立的推理签名（即没有后续内容块的独立推理项）。
+- 不进行工具调用 ID 清理。
+- 不修复工具结果配对。
+- 不验证或重排序回合。
+- 不生成合成工具结果。
+- 不剥离思维签名。
 
-**Google (Generative AI / Gemini CLI / Antigravity)**
+**Google（生成式 AI / Gemini CLI / Antigravity）**
 
-- Tool call id sanitization: strict alphanumeric.
-- Tool result pairing repair and synthetic tool results.
-- Turn validation (Gemini-style turn alternation).
-- Google turn ordering fixup (prepend a tiny user bootstrap if history starts with assistant).
-- Antigravity Claude: normalize thinking signatures; drop unsigned thinking blocks.
+- 工具调用 ID 清理：严格要求字母数字字符。
+- 工具结果配对修复及合成工具结果生成。
+- 回合验证（Gemini 风格的回合交替）。
+- Google 回合排序修正（若历史以助手开头则前置一个微小用户引导）。
+- Antigravity Claude：规范化思考签名；丢弃无签名思考块。
 
-**Anthropic / Minimax (Anthropic-compatible)**
+**Anthropic / Minimax（兼容 Anthropic）**
 
-- Tool result pairing repair and synthetic tool results.
-- Turn validation (merge consecutive user turns to satisfy strict alternation).
-- Thinking blocks with missing, empty, or blank replay signatures are stripped
-  before provider conversion. If that empties an assistant turn, OpenClaw keeps
-  turn shape with non-empty omitted-reasoning text.
-- Older thinking-only assistant turns that must be stripped are replaced with
-  non-empty omitted-reasoning text so provider adapters do not drop the replay
-  turn.
+- 工具结果配对修复及合成工具结果生成。
+- 回合验证（合并连续用户回合以满足严格轮替）。
 
-**Amazon Bedrock (Converse API)**
+**Mistral（包括基于模型 ID 的检测）**
 
-- Empty assistant stream-error turns are repaired to a non-empty fallback text block
-  before replay. Bedrock Converse rejects assistant messages with `content: []`, so
-  persisted assistant turns with `stopReason: "error"` and empty content are also
-  repaired on disk before load.
-- Claude thinking blocks with missing, empty, or blank replay signatures are
-  stripped before Converse replay. If that empties an assistant turn, OpenClaw
-  keeps turn shape with non-empty omitted-reasoning text.
-- Older thinking-only assistant turns that must be stripped are replaced with
-  non-empty omitted-reasoning text so the Converse replay keeps strict turn shape.
-- Replay filters OpenClaw delivery-mirror and gateway-injected assistant turns.
-- Image sanitization applies through the global rule.
-
-**Mistral (including model-id based detection)**
-
-- Tool call id sanitization: strict9 (alphanumeric length 9).
+- 工具调用 ID 清理：严格9字符字母数字。
 
 **OpenRouter Gemini**
 
-- Thought signature cleanup: strip non-base64 `thought_signature` values (keep base64).
+- 思维签名清理：剥离非 base64 的 `thought_signature` 值（保留 base64）。
 
-**Everything else**
+**其他提供商**
 
-- Image sanitization only.
+- 仅图像清理。
 
 ---
 
-## Historical behavior (pre-2026.1.22)
+## 历史行为（2026.1.22 之前）
 
-Before the 2026.1.22 release, OpenClaw applied multiple layers of transcript hygiene:
+在2026.1.22版本发布之前，OpenClaw 对转录内容应用了多层清理：
 
-- A **transcript-sanitize extension** ran on every context build and could:
-  - Repair tool use/result pairing.
-  - Sanitize tool call ids (including a non-strict mode that preserved `_`/`-`).
-- The runner also performed provider-specific sanitization, which duplicated work.
-- Additional mutations occurred outside the provider policy, including:
-  - Stripping `<final>` tags from assistant text before persistence.
-  - Dropping empty assistant error turns.
-  - Trimming assistant content after tool calls.
+- 一个**转录清理扩展**在每次构建上下文时运行，能够：
+  - 修复工具调用与结果的配对。
+  - 清理工具调用 ID（包括一种非严格模式，允许保留 `_` 和 `-`）。
+- 运行器也执行了特定提供商的清理，与扩展有重复工作。
+- 提供商策略外还有额外变更，包括：
+  - 持久化前从助手文本中剥离 `<final>` 标签。
+  - 丢弃空的助手错误回合。
+  - 工具调用后剪裁助手内容。
 
-This complexity caused cross-provider regressions (notably `openai-responses`
-`call_id|fc_id` pairing). The 2026.1.22 cleanup removed the extension, centralized
-logic in the runner, and made OpenAI **no-touch** beyond image sanitization.
+这种复杂性导致了跨提供商回归问题（尤其是 `openai-responses`
+`call_id|fc_id` 配对）。2026.1.22 的清理移除了该扩展，将逻辑集中到运行器中，并使 OpenAI 除了图像清理之外完全**不做额外处理**。
 
-## Related
+## 相关内容
 
-- [Session management](/concepts/session)
-- [Session pruning](/concepts/session-pruning)
+- [会话管理](/concepts/session)
+- [会话剪裁](/concepts/session-pruning)

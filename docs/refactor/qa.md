@@ -1,139 +1,139 @@
 ---
-summary: "QA refactor plan for scenario catalog and harness consolidation"
+summary: "QA 场景目录与运行器整合的重构计划"
 read_when:
-  - Refactoring QA scenario definitions or qa-lab harness code
-  - Moving QA behavior between markdown scenarios and TypeScript harness logic
-title: "QA refactor"
+  - 重构 QA 场景定义或 qa-lab 运行器代码
+  - 在 markdown 场景与 TypeScript 运行器逻辑之间迁移 QA 行为
+title: "QA 重构"
 ---
 
-Status: foundational migration landed.
+状态：基础迁移已完成。
 
-## Goal
+## 目标
 
-Move OpenClaw QA from a split-definition model to a single source of truth:
+将 OpenClaw QA 从拆分定义模型迁移到单一事实来源：
 
-- scenario metadata
-- prompts sent to the model
-- setup and teardown
-- harness logic
-- assertions and success criteria
-- artifacts and report hints
+- 场景元数据
+- 发送给模型的提示
+- 设置和拆卸
+- 测试工具逻辑
+- 断言和成功标准
+- 工件和报告提示
 
-The desired end state is a generic QA harness that loads powerful scenario definition files instead of hardcoding most behavior in TypeScript.
+期望的最终状态是一个通用的 QA 测试工具，它加载强大的场景定义文件，而不是在 TypeScript 中硬编码大部分行为。
 
-## Current State
+## 当前状态
 
 Primary source of truth now lives in `qa/scenarios/index.md` plus one file per
 scenario under `qa/scenarios/<theme>/*.md`.
 
-Implemented:
+已实现：
 
 - `qa/scenarios/index.md`
-  - canonical QA pack metadata
-  - operator identity
-  - kickoff mission
+  - 权威 QA 包元数据
+  - 操作者身份
+  - 启动任务
 - `qa/scenarios/<theme>/*.md`
-  - one markdown file per scenario
-  - scenario metadata
-  - handler bindings
-  - scenario-specific execution config
+  - 每个场景一个 markdown 文件
+  - 场景元数据
+  - 处理器绑定
+  - 场景特定执行配置
 - `extensions/qa-lab/src/scenario-catalog.ts`
-  - markdown pack parser + zod validation
+  - markdown 包解析器 + zod 验证
 - `extensions/qa-lab/src/qa-agent-bootstrap.ts`
-  - plan rendering from the markdown pack
+  - 从 markdown 包渲染计划
 - `extensions/qa-lab/src/qa-agent-workspace.ts`
-  - seeds generated compatibility files plus `QA_SCENARIOS.md`
+  - 种子生成的兼容性文件以及 `QA_SCENARIOS.md`
 - `extensions/qa-lab/src/suite.ts`
-  - selects executable scenarios through markdown-defined handler bindings
-- QA bus protocol + UI
-  - generic inline attachments for image/video/audio/file rendering
+  - 通过 markdown 定义的处理器绑定选择可执行场景
+- QA 总线协议 + UI
+  - 用于图像/视频/音频/文件渲染的通用内联附件
 
-Remaining split surfaces:
+剩余拆分表面：
 
 - `extensions/qa-lab/src/suite.ts`
-  - still owns most executable custom handler logic
+  - 仍拥有大部分可执行的自定义处理器逻辑
 - `extensions/qa-lab/src/report.ts`
-  - still derives report structure from runtime outputs
+  - 仍从运行时输出派生报告结构
 
-So the source-of-truth split is fixed, but execution is still mostly handler-backed rather than fully declarative.
+因此，事实来源的拆分已修复，但执行仍主要基于处理器，而非完全声明式。
 
-## What The Real Scenario Surface Looks Like
+## 真实场景表面是什么样的
 
-Reading the current suite shows a few distinct scenario classes.
+阅读当前套件显示有几个不同的场景类别。
 
-### Simple interaction
+### 简单交互
 
-- channel baseline
-- DM baseline
-- threaded follow-up
-- model switch
-- approval followthrough
-- reaction/edit/delete
+- 频道基线
+- 私信基线
+- 线程跟进
+- 模型切换
+- 批准跟进
+- 反应/编辑/删除
 
-### Config and runtime mutation
+### 配置和运行时变更
 
-- config patch skill disable
-- config apply restart wake-up
-- config restart capability flip
-- runtime inventory drift check
+- 配置补丁技能禁用
+- 配置应用重启唤醒
+- 配置重启能力翻转
+- 运行时库存漂移检查
 
-### Filesystem and repo assertions
+### 文件系统和仓库断言
 
-- source/docs discovery report
-- build Lobster Invaders
-- generated image artifact lookup
+- 源/文档发现报告
+- 构建 Lobster Invaders
+- 生成的图像工件查找
 
-### Memory orchestration
+### 内存编排
 
-- memory recall
-- memory tools in channel context
-- memory failure fallback
-- session memory ranking
-- thread memory isolation
-- memory dreaming sweep
+- 内存召回
+- 频道上下文中的内存工具
+- 内存失败回退
+- 会话内存排名
+- 线程内存隔离
+- 内存梦想扫描
 
-### Tool and plugin integration
+### 工具和插件集成
 
-- MCP plugin-tools call
-- skill visibility
-- skill hot install
-- native image generation
-- image roundtrip
-- image understanding from attachment
+- MCP 插件工具调用
+- 技能可见性
+- 技能热安装
+- 原生图像生成
+- 图像往返
+- 从附件理解图像
 
-### Multi-turn and multi-actor
+### 多轮和多参与者
 
-- subagent handoff
-- subagent fanout synthesis
-- restart recovery style flows
+- 子代理交接
+- 子代理扇出合成
+- 重启恢复风格流程
 
-These categories matter because they drive DSL requirements. A flat list of prompt + expected text is not enough.
+这些类别很重要，因为它们驱动 DSL 需求。一个扁平的提示 + 预期文本列表是不够的。
 
-## Direction
+## 方向
 
-### Single source of truth
+### 单一事实来源
 
 Use `qa/scenarios/index.md` plus `qa/scenarios/<theme>/*.md` as the authored
 source of truth.
 
-The pack should stay:
+该包应保持：
 
-- human-readable in review
-- machine-parseable
-- rich enough to drive:
-  - suite execution
-  - QA workspace bootstrap
-  - QA Lab UI metadata
-  - docs/discovery prompts
-  - report generation
+- 在审查中人类可读
+- 机器可解析
+- 足够丰富以驱动：
+  - 套件执行
+  - QA 工作区引导
+  - QA Lab UI 元数据
+  - 文档/发现提示
+  - 报告生成
 
-### Preferred authoring format
+### 推荐的编写格式
 
-Use markdown as the top-level format, with structured YAML inside it.
+使用 markdown 作为顶级格式，内部包含结构化 YAML。
 
-Recommended shape:
+推荐形状：
 
-- YAML frontmatter
+- YAML 前置元数据
   - id
   - title
   - surface
@@ -142,32 +142,32 @@ Recommended shape:
   - code refs
   - model/provider overrides
   - prerequisites
-- prose sections
+- 文本部分
   - objective
   - notes
   - debugging hints
-- fenced YAML blocks
+- 围栏 YAML 块
   - setup
   - steps
   - assertions
   - cleanup
 
-This gives:
+这提供：
 
-- better PR readability than giant JSON
-- richer context than pure YAML
-- strict parsing and zod validation
+- 比巨型 JSON 更好的 PR 可读性
+- 比纯 YAML 更丰富的上下文
+- 严格解析和 zod 验证
 
-Raw JSON is acceptable only as an intermediate generated form.
+原始 JSON 仅作为中间生成形式可接受。
 
-## Proposed Scenario File Shape
+## 提议的场景文件形状
 
-Example:
+示例：
 
 ````md
 ---
 id: image-generation-roundtrip
-title: Image generation roundtrip
+title: 图像生成往返
 surface: image
 tags: [media, image, roundtrip]
 models:
@@ -183,11 +183,11 @@ codeRefs:
   - src/gateway/chat-attachments.ts
 ---
 
-# Objective
+# 目标
 
-Verify generated media is reattached on the follow-up turn.
+验证生成的媒体能在后续轮次中重新附加。
 
-# Setup
+# 设置
 
 ```yaml scenario.setup
 - action: config.patch
@@ -200,44 +200,44 @@ Verify generated media is reattached on the follow-up turn.
   key: agent:qa:image-roundtrip
 ```
 
-# Steps
+# 步骤
 
 ```yaml scenario.steps
 - action: agent.send
   session: agent:qa:image-roundtrip
   message: |
-    Image generation check: generate a QA lighthouse image and summarize it in one short sentence.
+    图像生成检查：生成一张 QA 灯塔图像，并用一句话总结。
 - action: artifact.capture
   kind: generated-image
-  promptSnippet: Image generation check
+  promptSnippet: 图像生成检查
   saveAs: lighthouseImage
 - action: agent.send
   session: agent:qa:image-roundtrip
   message: |
-    Roundtrip image inspection check: describe the generated lighthouse attachment in one short sentence.
+    往返图像检查：用一句话描述生成的灯塔附件。
   attachments:
     - fromArtifact: lighthouseImage
 ```
 
-# Expect
+# 预期
 
 ```yaml scenario.expect
 - assert: outbound.textIncludes
   value: lighthouse
 - assert: requestLog.matches
   where:
-    promptIncludes: Roundtrip image inspection check
+    promptIncludes: 往返图像检查
   imageInputCountGte: 1
 - assert: artifact.exists
   ref: lighthouseImage
 ```
 ````
 
-## Runner Capabilities The DSL Must Cover
+## DSL 必须覆盖的测试运行器能力
 
-Based on the current suite, the generic runner needs more than prompt execution.
+基于当前套件，通用运行器需要的不只是提示执行。
 
-### Environment and setup actions
+### 环境和设置操作
 
 - `bus.reset`
 - `gateway.waitHealthy`
@@ -246,14 +246,14 @@ Based on the current suite, the generic runner needs more than prompt execution.
 - `thread.create`
 - `workspace.writeSkill`
 
-### Agent turn actions
+### 代理回合操作
 
 - `agent.send`
 - `agent.wait`
 - `bus.injectInbound`
 - `bus.injectOutbound`
 
-### Config and runtime actions
+### 配置和运行时操作
 
 - `config.get`
 - `config.patch`
@@ -262,7 +262,7 @@ Based on the current suite, the generic runner needs more than prompt execution.
 - `tools.effective`
 - `skills.status`
 
-### File and artifact actions
+### 文件和工件操作
 
 - `file.write`
 - `file.read`
@@ -271,7 +271,7 @@ Based on the current suite, the generic runner needs more than prompt execution.
 - `artifact.captureGeneratedImage`
 - `artifact.capturePath`
 
-### Memory and cron actions
+### 内存和定时操作
 
 - `memory.indexForce`
 - `memory.searchCli`
@@ -281,11 +281,11 @@ Based on the current suite, the generic runner needs more than prompt execution.
 - `cron.waitCompletion`
 - `sessionTranscript.write`
 
-### MCP actions
+### MCP 操作
 
 - `mcp.callTool`
 
-### Assertions
+### 断言
 
 - `outbound.textIncludes`
 - `outbound.inThread`
@@ -301,72 +301,72 @@ Based on the current suite, the generic runner needs more than prompt execution.
 - `cron.managedPresent`
 - `artifact.exists`
 
-## Variables and Artifact References
+## 变量和工件引用
 
-The DSL must support saved outputs and later references.
+DSL 必须支持保存输出和后续引用。
 
-Examples from the current suite:
+当前套件示例：
 
-- create a thread, then reuse `threadId`
-- create a session, then reuse `sessionKey`
-- generate an image, then attach the file on the next turn
-- generate a wake marker string, then assert that it appears later
+- 创建线程，然后重用 `threadId`
+- 创建会话，然后重用 `sessionKey`
+- 生成图像，然后在下一回合附加文件
+- 生成唤醒标记字符串，然后断言它稍后出现
 
-Needed capabilities:
+所需能力：
 
 - `saveAs`
 - `${vars.name}`
 - `${artifacts.name}`
-- typed references for paths, session keys, thread ids, markers, tool outputs
+- 路径、会话键、线程 ID、标记、工具输出的类型化引用
 
-Without variable support, the harness will keep leaking scenario logic back into TypeScript.
+没有变量支持，测试工具将不断将场景逻辑泄漏回 TypeScript。
 
-## What Should Stay As Escape Hatches
+## 什么应该作为逃生舱口
 
-A fully pure declarative runner is not realistic in phase 1.
+在第一阶段，完全纯声明式运行器不现实。
 
-Some scenarios are inherently orchestration-heavy:
+一些场景本质上是编排密集的：
 
-- memory dreaming sweep
-- config apply restart wake-up
-- config restart capability flip
-- generated image artifact resolution by timestamp/path
-- discovery-report evaluation
+- 内存梦想扫描
+- 配置应用重启唤醒
+- 配置重启能力翻转
+- 按时间戳/路径解析生成的图像工件
+- 发现报告评估
 
-These should use explicit custom handlers for now.
+这些应该目前使用显式自定义处理器。
 
-Recommended rule:
+推荐规则：
 
-- 85-90% declarative
-- explicit `customHandler` steps for the hard remainder
-- named and documented custom handlers only
-- no anonymous inline code in the scenario file
+- 85-90% 声明式
+- 对困难剩余部分使用显式 `customHandler` 步骤
+- 仅使用命名和记录的自定义处理器
+- 场景文件中无匿名内联代码
 
-That keeps the generic engine clean while still allowing progress.
+这保持通用引擎清洁，同时仍允许进展。
 
-## Architecture Change
+## 架构变更
 
-### Current
+### 当前
 
-Scenario markdown already is the source of truth for:
+场景 markdown 已经是以下方面的事实来源：
 
-- suite execution
-- workspace bootstrap files
-- QA Lab UI scenario catalog
-- report metadata
-- discovery prompts
+- 套件执行
+- 工作区引导文件
+- QA Lab UI 场景目录
+- 报告元数据
+- 发现提示
 
-Generated compatibility:
+生成的兼容性：
 
-- seeded workspace still includes `QA_KICKOFF_TASK.md`
-- seeded workspace still includes `QA_SCENARIO_PLAN.md`
-- seeded workspace now also includes `QA_SCENARIOS.md`
+- 种子工作区仍包含 `QA_KICKOFF_TASK.md`
+- 种子工作区仍包含 `QA_SCENARIO_PLAN.md`
+- 种子工作区现在也包含 `QA_SCENARIOS.md`
 
-## Refactor Plan
+## 重构计划
 
-### Phase 1: loader and schema
+### 阶段1：加载器和模式
 
-Done.
+完成。
 
 - added `qa/scenarios/index.md`
 - split scenarios into `qa/scenarios/<theme>/*.md`
@@ -375,65 +375,65 @@ Done.
 - switched consumers to the parsed pack
 - removed repo-level `qa/seed-scenarios.json` and `qa/QA_KICKOFF_TASK.md`
 
-### Phase 2: generic engine
+### 阶段2：通用引擎
 
-- split `extensions/qa-lab/src/suite.ts` into:
-  - loader
-  - engine
-  - action registry
-  - assertion registry
-  - custom handlers
-- keep existing helper functions as engine operations
+- 将 `extensions/qa-lab/src/suite.ts` 拆分为：
+  - 加载器
+  - 引擎
+  - 操作注册表
+  - 断言注册表
+  - 自定义处理器
+- 将现有辅助函数保留为引擎操作
 
-Deliverable:
+交付物：
 
-- engine executes simple declarative scenarios
+- 引擎执行简单声明式场景
 
-Start with scenarios that are mostly prompt + wait + assert:
+从大部分是提示 + 等待 + 断言的场景开始：
 
-- threaded follow-up
-- image understanding from attachment
-- skill visibility and invocation
-- channel baseline
+- 线程跟进
+- 从附件理解图像
+- 技能可见性和调用
+- 频道基线
 
-Deliverable:
+交付物：
 
-- first real markdown-defined scenarios shipping through the generic engine
+- 第一批通过通用引擎交付的真实 markdown 定义场景
 
-### Phase 4: migrate medium scenarios
+### 阶段4：迁移中等场景
 
-- image generation roundtrip
-- memory tools in channel context
-- session memory ranking
-- subagent handoff
-- subagent fanout synthesis
+- 图像生成往返
+- 频道上下文中的内存工具
+- 会话内存排名
+- 子代理交接
+- 子代理扇出合成
 
-Deliverable:
+交付物：
 
-- variables, artifacts, tool assertions, request-log assertions proven out
+- 变量、工件、工具断言、请求日志断言得到验证
 
-### Phase 5: keep hard scenarios on custom handlers
+### 阶段5：将困难场景保留在自定义处理器上
 
-- memory dreaming sweep
-- config apply restart wake-up
-- config restart capability flip
-- runtime inventory drift
+- 内存梦想扫描
+- 配置应用重启唤醒
+- 配置重启能力翻转
+- 运行时库存漂移
 
-Deliverable:
+交付物：
 
-- same authoring format, but with explicit custom-step blocks where needed
+- 相同的编写格式，但在需要处使用显式自定义步骤块
 
-### Phase 6: delete hardcoded scenario map
+### 阶段6：删除硬编码场景映射
 
-Once the pack coverage is good enough:
+一旦包覆盖足够好：
 
-- remove most scenario-specific TypeScript branching from `extensions/qa-lab/src/suite.ts`
+- 从 `extensions/qa-lab/src/suite.ts` 中移除大部分场景特定的 TypeScript 分支
 
-## Fake Slack / Rich Media Support
+## 模拟 Slack/富媒体支持
 
-The current QA bus is text-first.
+当前 QA 总线是文本优先。
 
-Relevant files:
+相关文件：
 
 - `extensions/qa-channel/src/protocol.ts`
 - `extensions/qa-lab/src/bus-state.ts`
@@ -441,17 +441,17 @@ Relevant files:
 - `extensions/qa-lab/src/bus-server.ts`
 - `extensions/qa-lab/web/src/ui-render.ts`
 
-Today the QA bus supports:
+当前 QA 总线支持：
 
-- text
-- reactions
-- threads
+- 文本
+- 反应
+- 线程
 
-It does not yet model inline media attachments.
+它尚未建模内联媒体附件。
 
-### Needed transport contract
+### 需要的传输契约
 
-Add a generic QA bus attachment model:
+添加通用 QA 总线附件模型：
 
 ```ts
 type QaBusAttachment = {
@@ -470,71 +470,71 @@ type QaBusAttachment = {
 };
 ```
 
-Then add `attachments?: QaBusAttachment[]` to:
+然后添加 `attachments?: QaBusAttachment[]` 到：
 
 - `QaBusMessage`
 - `QaBusInboundMessageInput`
 - `QaBusOutboundMessageInput`
 
-### Why generic first
+### 为什么先通用
 
-Do not build a Slack-only media model.
+不要构建仅 Slack 的媒体模型。
 
-Instead:
+相反：
 
-- one generic QA transport model
-- multiple renderers on top of it
-  - current QA Lab chat
-  - future fake Slack web
-  - any other fake transport views
+- 一个通用 QA 传输模型
+- 其上的多个渲染器
+  - 当前 QA Lab 聊天
+  - 未来模拟 Slack web
+  - 任何其他模拟传输视图
 
-This prevents duplicate logic and lets media scenarios stay transport-agnostic.
+这防止重复逻辑并让媒体场景保持传输无关。
 
-### UI work needed
+### 需要的 UI 工作
 
-Update the QA UI to render:
+更新 QA UI 以渲染：
 
-- inline image preview
-- inline audio player
-- inline video player
-- file attachment chip
+- 内联图像预览
+- 内联音频播放器
+- 内联视频播放器
+- 文件附件芯片
 
-The current UI can already render threads and reactions, so attachment rendering should layer onto the same message card model.
+当前 UI 已经可以渲染线程和反应，因此附件渲染应层叠到相同的消息卡片模型上。
 
-### Scenario work enabled by media transport
+### 媒体传输启用的场景工作
 
-Once attachments flow through QA bus, we can add richer fake-chat scenarios:
+一旦附件通过 QA 总线流动，我们可以添加更丰富的模拟聊天场景：
 
-- inline image reply in fake Slack
-- audio attachment understanding
-- video attachment understanding
-- mixed attachment ordering
-- thread reply with media retained
+- 模拟 Slack 中的内联图像回复
+- 音频附件理解
+- 视频附件理解
+- 混合附件排序
+- 保留媒体的线程回复
 
-## Recommendation
+## 建议
 
-The next implementation chunk should be:
+接下来的实现步骤应该是：
 
-1. add markdown scenario loader + zod schema
-2. generate the current catalog from markdown
-3. migrate a few simple scenarios first
-4. add generic QA bus attachment support
-5. render inline image in the QA UI
-6. then expand to audio and video
+1. 添加 markdown 场景加载器 + zod 模式
+2. 从 markdown 生成当前目录
+3. 首先迁移几个简单的场景
+4. 添加通用问答总线附件支持
+5. 在问答用户界面中渲染内联图片
+6. 然后扩展到音频和视频
 
-This is the smallest path that proves both goals:
+这是验证两个目标的最小路径：
 
-- generic markdown-defined QA
-- richer fake messaging surfaces
+- 通用的 markdown 定义的问答
+- 更丰富的模拟消息界面
 
-## Open Questions
+## 开放问题
 
-- whether scenario files should allow embedded markdown prompt templates with variable interpolation
-- whether setup/cleanup should be named sections or just ordered action lists
-- whether artifact references should be strongly typed in schema or string-based
-- whether custom handlers should live in one registry or per-surface registries
-- whether the generated JSON compatibility file should remain checked in during migration
+- 是否应允许场景文件包含带有变量插值的嵌入式 markdown 提示模板
+- setup/cleanup 应该是命名分区，还是仅仅是有序动作列表
+- 工件引用在 schema 中是否应该强类型，还是基于字符串
+- 自定义处理器应当存在于单一注册表中，还是按 surface 分别注册
+- 迁移期间，生成的 JSON 兼容文件是否应继续提交到仓库中
 
-## Related
+## 相关
 
-- [QA E2E automation](/concepts/qa-e2e-automation)
+- [QA E2E 自动化](/concepts/qa-e2e-automation)

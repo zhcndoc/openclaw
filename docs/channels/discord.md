@@ -1,100 +1,100 @@
 ---
-summary: "Discord bot support status, capabilities, and configuration"
+summary: "Discord 机器人支持状态、功能和配置"
 read_when:
-  - Working on Discord channel features
+  - 处理 Discord 频道功能时
 title: "Discord"
 ---
 
-Ready for DMs and guild channels via the official Discord gateway.
+准备好通过官方 Discord 网关接收私信和公会频道消息。
 
 <CardGroup cols={3}>
-  <Card title="Pairing" icon="link" href="/channels/pairing">
-    Discord DMs default to pairing mode.
+  <Card title="配对" icon="link" href="/channels/pairing">
+    Discord 私信默认启用配对模式。
   </Card>
-  <Card title="Slash commands" icon="terminal" href="/tools/slash-commands">
-    Native command behavior and command catalog.
+  <Card title="斜线命令" icon="terminal" href="/tools/slash-commands">
+    原生命令行为及命令目录。
   </Card>
-  <Card title="Channel troubleshooting" icon="wrench" href="/channels/troubleshooting">
-    Cross-channel diagnostics and repair flow.
+  <Card title="频道故障排除" icon="wrench" href="/channels/troubleshooting">
+    跨频道诊断与修复流程。
   </Card>
 </CardGroup>
 
-## Quick setup
+## 快速设置
 
-You will need to create a new application with a bot, add the bot to your server, and pair it to OpenClaw. We recommend adding your bot to your own private server. If you don't have one yet, [create one first](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server) (choose **Create My Own > For me and my friends**).
+你需要创建一个新的应用程序和机器人，将机器人添加到服务器，并将其配对到 OpenClaw。建议将机器人添加到你自己的私有服务器。如果还没有服务器，请先 [创建一个](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)（选择**创建我的专属服务器 > 为我和我的朋友**）。
 
 <Steps>
-  <Step title="Create a Discord application and bot">
-    Go to the [Discord Developer Portal](https://discord.com/developers/applications) and click **New Application**. Name it something like "OpenClaw".
+  <Step title="创建 Discord 应用程序和机器人">
+    访问 [Discord 开发者门户](https://discord.com/developers/applications) 并点击 **新应用**。命名为类似"OpenClaw"。
 
-    Click **Bot** on the sidebar. Set the **Username** to whatever you call your OpenClaw agent.
-
-  </Step>
-
-  <Step title="Enable privileged intents">
-    Still on the **Bot** page, scroll down to **Privileged Gateway Intents** and enable:
-
-    - **Message Content Intent** (required)
-    - **Server Members Intent** (recommended; required for role allowlists and name-to-ID matching)
-    - **Presence Intent** (optional; only needed for presence updates)
+    点击侧边栏中的 **机器人**。将 **用户名** 设置为你的 OpenClaw 代理名称。
 
   </Step>
 
-  <Step title="Copy your bot token">
-    Scroll back up on the **Bot** page and click **Reset Token**.
+  <Step title="启用特权 intents">
+    仍在 **机器人** 页面，向下滚动到 **特权网关 Intents** 并启用：
+
+    - **消息内容意图**（必需）
+    - **服务器成员意图**（建议；角色白名单和名称到 ID 匹配所需）
+    - **在线状态意图**（可选；仅在需要在线状态更新时启用）
+
+  </Step>
+
+  <Step title="复制你的机器人令牌">
+    回到 **机器人** 页面顶部，点击 **重置令牌**。
 
     <Note>
-    Despite the name, this generates your first token — nothing is being "reset."
+    尽管命名为“重置”，实际上是生成你的第一个令牌——并没有真正“重置”。
     </Note>
 
-    Copy the token and save it somewhere. This is your **Bot Token** and you will need it shortly.
+    复制令牌并妥善保存。这是你的**机器人令牌**，稍后需要使用。
 
   </Step>
 
-  <Step title="Generate an invite URL and add the bot to your server">
-    Click **OAuth2** on the sidebar. You'll generate an invite URL with the right permissions to add the bot to your server.
+  <Step title="生成邀请链接并将机器人添加到服务器">
+    点击侧边栏的 **OAuth2**。你将生成具备正确权限的邀请链接以添加机器人到服务器。
 
-    Scroll down to **OAuth2 URL Generator** and enable:
+    向下滚动至 **OAuth2 URL 生成器**，启用：
 
     - `bot`
     - `applications.commands`
 
-    A **Bot Permissions** section will appear below. Enable at least:
+    下面会出现 **机器人权限** 部分。至少启用：
 
-    **General Permissions**
-      - View Channels
-    **Text Permissions**
-      - Send Messages
-      - Read Message History
-      - Embed Links
-      - Attach Files
-      - Add Reactions (optional)
+    **通用权限**
+      - 查看频道
+    **文本权限**
+      - 发送消息
+      - 读取消息历史
+      - 嵌入链接
+      - 附加文件
+      - 添加反应（可选）
 
-    This is the baseline set for normal text channels. If you plan to post in Discord threads, including forum or media channel workflows that create or continue a thread, also enable **Send Messages in Threads**.
-    Copy the generated URL at the bottom, paste it into your browser, select your server, and click **Continue** to connect. You should now see your bot in the Discord server.
-
-  </Step>
-
-  <Step title="Enable Developer Mode and collect your IDs">
-    Back in the Discord app, you need to enable Developer Mode so you can copy internal IDs.
-
-    1. Click **User Settings** (gear icon next to your avatar) → **Advanced** → toggle on **Developer Mode**
-    2. Right-click your **server icon** in the sidebar → **Copy Server ID**
-    3. Right-click your **own avatar** → **Copy User ID**
-
-    Save your **Server ID** and **User ID** alongside your Bot Token — you'll send all three to OpenClaw in the next step.
+    这是普通文本频道的基础权限集。如果你计划在 Discord 线程中发帖，包括创建或继续线程的论坛或媒体频道工作流，还需要启用 **在线程中发送消息**。
+    复制底部生成的 URL，粘贴到浏览器中，选择你的服务器，然后点击 **继续** 进行连接。现在你应该能在 Discord 服务器中看到你的机器人了。
 
   </Step>
 
-  <Step title="Allow DMs from server members">
-    For pairing to work, Discord needs to allow your bot to DM you. Right-click your **server icon** → **Privacy Settings** → toggle on **Direct Messages**.
+  <Step title="启用开发者模式并收集 ID">
+    返回 Discord 应用，需启用开发者模式以便复制内部 ID。
 
-    This lets server members (including bots) send you DMs. Keep this enabled if you want to use Discord DMs with OpenClaw. If you only plan to use guild channels, you can disable DMs after pairing.
+    1. 点击 **用户设置**（头像旁齿轮图标）→ **高级** → 打开 **开发者模式**
+    2. 右击侧边栏的**服务器图标**→**复制服务器 ID**
+    3. 右击你的**头像**→**复制用户 ID**
+
+    保存你的**服务器 ID**和**用户 ID**，以及机器人令牌 —— 下一步将发送这三个信息给 OpenClaw。
 
   </Step>
 
-  <Step title="Set your bot token securely (do not send it in chat)">
-    Your Discord bot token is a secret (like a password). Set it on the machine running OpenClaw before messaging your agent.
+  <Step title="允许服务器成员发送私信">
+    为了配对生效，Discord 需要允许机器人给你发私信。右击**服务器图标**→**隐私设置**→启用**私信**。
+
+    这允许服务器成员（包括机器人）向你发送私信。若想用 OpenClaw 的 Discord 私信功能，请保持开启。若只打算使用公会频道，配对完成后可以关闭私信。
+
+  </Step>
+
+  <Step title="安全设置你的机器人令牌（不要在聊天中发送）">
+    你的 Discord 机器人令牌是秘密（如同密码）。在消息发送给你的代理之前，请在运行 OpenClaw 的机器上设置它。
 
 ```bash
 export DISCORD_BOT_TOKEN="YOUR_BOT_TOKEN"
@@ -104,20 +104,20 @@ openclaw config set channels.discord.enabled true --strict-json
 openclaw gateway
 ```
 
-    If OpenClaw is already running as a background service, restart it via the OpenClaw Mac app or by stopping and restarting the `openclaw gateway run` process.
+    如果 OpenClaw 已作为后台服务运行，请通过 OpenClaw Mac 应用重启它，或停止并重新启动 openclaw gateway run 进程。
 
   </Step>
 
-  <Step title="Configure OpenClaw and pair">
+  <Step title="配置 OpenClaw 并配对">
 
     <Tabs>
-      <Tab title="Ask your agent">
-        Chat with your OpenClaw agent on any existing channel (e.g. Telegram) and tell it. If Discord is your first channel, use the CLI / config tab instead.
+      <Tab title="向代理询问">
+        在任何已有频道（如 Telegram）与 OpenClaw 代理聊天并告知。如果 Discord 是你的第一个频道，请使用 CLI / 配置标签页。
 
-        > "I already set my Discord bot token in config. Please finish Discord setup with User ID `<user_id>` and Server ID `<server_id>`."
+        > "我已经在配置中设置了 Discord 机器人令牌。请用用户 ID `<user_id>` 和服务器 ID `<server_id>` 完成 Discord 设置。"
       </Tab>
-      <Tab title="CLI / config">
-        If you prefer file-based config, set:
+      <Tab title="CLI / 配置">
+        如果偏好基于文件的配置，设置：
 
 ```json5
 {
@@ -134,27 +134,27 @@ openclaw gateway
 }
 ```
 
-        Env fallback for the default account:
+        默认账号的环境变量回退：
 
 ```bash
 DISCORD_BOT_TOKEN=...
 ```
 
-        Plaintext `token` values are supported. SecretRef values are also supported for `channels.discord.token` across env/file/exec providers. See [Secrets Management](/gateway/secrets).
+        支持明文 `token` 值。`channels.discord.token` 也支持跨 env/file/exec 提供程序的 SecretRef 值。请参阅 [密钥管理](/gateway/secrets)。
 
       </Tab>
     </Tabs>
 
   </Step>
 
-  <Step title="Approve first DM pairing">
-    Wait until the gateway is running, then DM your bot in Discord. It will respond with a pairing code.
+  <Step title="批准首次私信配对">
+    等待网关运行，然后在 Discord 中私信你的机器人。它会回复一个配对码。
 
     <Tabs>
-      <Tab title="Ask your agent">
-        Send the pairing code to your agent on your existing channel:
+      <Tab title="向代理询问">
+        将配对码发送给你现有频道的代理：
 
-        > "Approve this Discord pairing code: `<CODE>`"
+        > "批准此 Discord 配对码：`<CODE>`"
       </Tab>
       <Tab title="CLI">
 
@@ -166,31 +166,31 @@ openclaw pairing approve discord <CODE>
       </Tab>
     </Tabs>
 
-    Pairing codes expire after 1 hour.
+    配对码 1 小时后过期。
 
-    You should now be able to chat with your agent in Discord via DM.
+    现在你应该可以通过私信在 Discord 与代理聊天了。
 
   </Step>
 </Steps>
 
 <Note>
-Token resolution is account-aware. Config token values win over env fallback. `DISCORD_BOT_TOKEN` is only used for the default account.
-For advanced outbound calls (message tool/channel actions), an explicit per-call `token` is used for that call. This applies to send and read/probe-style actions (for example read/search/fetch/thread/pins/permissions). Account policy/retry settings still come from the selected account in the active runtime snapshot.
+Token 解析是账户感知的。配置中的 token 值优先于环境变量回退。`DISCORD_BOT_TOKEN` 仅用于默认账户。
+对于高级出站调用（消息工具/频道操作），每次调用会使用显式的 `token`。这适用于发送和读取/探测式操作（例如 read/search/fetch/thread/pins/permissions）。账户策略/重试设置仍来自活动运行时快照中选定的账户。
 </Note>
 
-## Recommended: Set up a guild workspace
+## 推荐：设置公会工作区
 
-Once DMs are working, you can set up your Discord server as a full workspace where each channel gets its own agent session with its own context. This is recommended for private servers where it's just you and your bot.
+私信功能正常后，你可以将 Discord 服务器设置为完整工作区，每个频道都有自己的代理会话和上下文。建议在只有你和机器人使用的私有服务器上这样做。
 
 <Steps>
-  <Step title="Add your server to the guild allowlist">
-    This enables your agent to respond in any channel on your server, not just DMs.
+  <Step title="将服务器加入公会白名单">
+    允许你的代理在服务器中任意频道响应，而不仅限私信。
 
     <Tabs>
-      <Tab title="Ask your agent">
-        > "Add my Discord Server ID `<server_id>` to the guild allowlist"
+      <Tab title="向代理询问">
+        > "将我的 Discord 服务器 ID `<server_id>` 添加到公会白名单"
       </Tab>
-      <Tab title="Config">
+      <Tab title="配置">
 
 ```json5
 {
@@ -213,15 +213,15 @@ Once DMs are working, you can set up your Discord server as a full workspace whe
 
   </Step>
 
-  <Step title="Allow responses without @mention">
-    By default, your agent only responds in guild channels when @mentioned. For a private server, you probably want it to respond to every message.
+  <Step title="允许无需 @提及即可响应">
+    默认情况下，代理只有在公会频道被 @提及时才会响应。对私有服务器来说，通常希望它响应每条消息。
 
     <Tabs>
-      <Tab title="Ask your agent">
-        > "Allow my agent to respond on this server without having to be @mentioned"
+      <Tab title="向代理询问">
+        > "允许我的代理在此服务器响应而无需被 @提及"
       </Tab>
-      <Tab title="Config">
-        Set `requireMention: false` in your guild config:
+      <Tab title="配置">
+        在公会配置中将 `requireMention` 设置为 `false`：
 
 ```json5
 {
@@ -242,136 +242,129 @@ Once DMs are working, you can set up your Discord server as a full workspace whe
 
   </Step>
 
-  <Step title="Plan for memory in guild channels">
-    By default, long-term memory (MEMORY.md) only loads in DM sessions. Guild channels do not auto-load MEMORY.md.
+  <Step title="公会频道内的记忆规划">
+    默认情况下，长期记忆（MEMORY.md）只在私信会话加载。公会频道不会自动加载 MEMORY.md。
 
     <Tabs>
-      <Tab title="Ask your agent">
-        > "When I ask questions in Discord channels, use memory_search or memory_get if you need long-term context from MEMORY.md."
+      <Tab title="向代理询问">
+        > "在 Discord 频道提问时，如需长期上下文，请使用 memory_search 或 memory_get 从 MEMORY.md 调用。"
       </Tab>
-      <Tab title="Manual">
-        If you need shared context in every channel, put the stable instructions in `AGENTS.md` or `USER.md` (they are injected for every session). Keep long-term notes in `MEMORY.md` and access them on demand with memory tools.
+      <Tab title="手册">
+        如果希望在每个频道共享上下文，请把稳定指令放在 `AGENTS.md` 或 `USER.md`（它们会注入每个会话）。长期笔记保存在 `MEMORY.md`，通过记忆工具按需访问。
       </Tab>
     </Tabs>
 
   </Step>
 </Steps>
 
-Now create some channels on your Discord server and start chatting. Your agent can see the channel name, and each channel gets its own isolated session — so you can set up `#coding`, `#home`, `#research`, or whatever fits your workflow.
+现在你可以在 Discord 服务器创建频道并开始对话。代理能看到频道名，每个频道拥有独立会话 — 你可以设立 `#coding`、`#home`、`#research` 等，以契合你的工作流程。
 
-## Runtime model
+## 运行时模型
 
-- Gateway owns the Discord connection.
-- Reply routing is deterministic: Discord inbound replies back to Discord.
-- Discord guild/channel metadata is added to the model prompt as untrusted
-  context, not as a user-visible reply prefix. If a model copies that envelope
-  back, OpenClaw strips the copied metadata from outbound replies and from
-  future replay context.
-- By default (`session.dmScope=main`), direct chats share the agent main session (`agent:main:main`).
-- Guild channels are isolated session keys (`agent:<agentId>:discord:channel:<channelId>`).
-- Group DMs are ignored by default (`channels.discord.dm.groupEnabled=false`).
-- Native slash commands run in isolated command sessions (`agent:<agentId>:discord:slash:<userId>`), while still carrying `CommandTargetSessionKey` to the routed conversation session.
-- Text-only cron/heartbeat announce delivery to Discord uses the final
-  assistant-visible answer once. Media and structured component payloads remain
-  multi-message when the agent emits multiple deliverable payloads.
+- 网关拥有 Discord 连接。
+- 回复路由确定：Discord 收到的回复回传到 Discord。
+- 默认 (`session.dmScope=main`)，私信对话共享代理主会话 (`agent:main:main`)。
+- 公会频道为隔离会话键 (`agent:<agentId>:discord:channel:<channelId>`)。
+- 默认忽略群体私信 (`channels.discord.dm.groupEnabled=false`)。
+- 原生斜线命令在隔离的命令会话中运行 (`agent:<agentId>:discord:slash:<userId>`) ，同时携带 `CommandTargetSessionKey` 以路由至对话会话。
 
-## Forum channels
+## 论坛频道
 
-Discord forum and media channels only accept thread posts. OpenClaw supports two ways to create them:
+Discord 论坛及媒体频道只接受主题贴。OpenClaw 支持两种创建方式：
 
-- Send a message to the forum parent (`channel:<forumId>`) to auto-create a thread. The thread title uses the first non-empty line of your message.
-- Use `openclaw message thread create` to create a thread directly. Do not pass `--message-id` for forum channels.
+- 向论坛父频道 (`channel:<forumId>`) 发送消息将自动创建主题。主题标题采用消息的第一行非空内容。
+- 使用 `openclaw message thread create` 直接创建主题。论坛频道请勿传递 `--message-id`。
 
-Example: send to forum parent to create a thread
+示例：向论坛父频道发送消息创建主题
 
 ```bash
 openclaw message send --channel discord --target channel:<forumId> \
-  --message "Topic title\nBody of the post"
+  --message "话题标题\n帖子内容"
 ```
 
-Example: create a forum thread explicitly
+示例：显式创建论坛主题
 
 ```bash
 openclaw message thread create --channel discord --target channel:<forumId> \
-  --thread-name "Topic title" --message "Body of the post"
+  --thread-name "话题标题" --message "帖子内容"
 ```
 
-Forum parents do not accept Discord components. If you need components, send to the thread itself (`channel:<threadId>`).
+论坛父频道不支持 Discord 组件。若需组件，请发到主题本身 (`channel:<threadId>`)。
 
-## Interactive components
+## 交互组件
 
-OpenClaw supports Discord components v2 containers for agent messages. Use the message tool with a `components` payload. Interaction results are routed back to the agent as normal inbound messages and follow the existing Discord `replyToMode` settings.
+OpenClaw 支持 Discord 组件 v2 容器用于代理消息。使用消息工具并传递 `components` 负载。交互结果会作为普通入站消息路由回代理，遵循现有 Discord 的 `replyToMode` 设置。
 
-Supported blocks:
+支持的块类型：
 
-- `text`, `section`, `separator`, `actions`, `media-gallery`, `file`
-- Action rows allow up to 5 buttons or a single select menu
-- Select types: `string`, `user`, `role`, `mentionable`, `channel`
+- `text`，`section`，`separator`，`actions`，`media-gallery`，`file`
+- 操作行可包含最多 5 个按钮或单个选择菜单
+- 选择类型：`string`，`user`，`role`，`mentionable`，`channel`
 
-By default, components are single use. Set `components.reusable=true` to allow buttons, selects, and forms to be used multiple times until they expire.
+默认组件只能单次使用。设置 `components.reusable=true` 允许按钮、选择菜单和表单多次使用直到过期。
 
-To restrict who can click a button, set `allowedUsers` on that button (Discord user IDs, tags, or `*`). When configured, unmatched users receive an ephemeral denial.
+限制点击者可通过在按钮上设置 `allowedUsers`（Discord 用户 ID、标签或 `*`）实现。配置后，非匹配用户会收到临时拒绝提示。
 
 The `/model` and `/models` slash commands open an interactive model picker with provider, model, and compatible runtime dropdowns plus a Submit step. `/models add` is deprecated and now returns a deprecation message instead of registering models from chat. The picker reply is ephemeral and only the invoking user can use it.
 
-File attachments:
+文件附件：
 
-- `file` blocks must point to an attachment reference (`attachment://<filename>`)
-- Provide the attachment via `media`/`path`/`filePath` (single file); use `media-gallery` for multiple files
-- Use `filename` to override the upload name when it should match the attachment reference
+- `file` 块必须指向附件引用 (`attachment://`)
+- 通过 `media`/`path`/`filePath` 提供附件（单文件）；多文件使用 `media-gallery`
+- 使用 `filename` 覆盖上传名以匹配附件引用
 
-Modal forms:
+模态表单：
 
-- Add `components.modal` with up to 5 fields
-- Field types: `text`, `checkbox`, `radio`, `select`, `role-select`, `user-select`
-- OpenClaw adds a trigger button automatically
+- 添加 `components.modal` 允许最多 5 个字段
+- 字段类型：`text`，`checkbox`，`radio`，`select`，`role-select`，`user-select`
+- OpenClaw 会自动添加触发按钮
 
-Example:
+示例：
 
 ```json5
 {
   channel: "discord",
   action: "send",
   to: "channel:123456789012345678",
-  message: "Optional fallback text",
+  message: "可选回退文本",
   components: {
     reusable: true,
-    text: "Choose a path",
+    text: "选择路径",
     blocks: [
       {
         type: "actions",
         buttons: [
           {
-            label: "Approve",
+            label: "批准",
             style: "success",
             allowedUsers: ["123456789012345678"],
           },
-          { label: "Decline", style: "danger" },
+          { label: "拒绝", style: "danger" },
         ],
       },
       {
         type: "actions",
         select: {
           type: "string",
-          placeholder: "Pick an option",
+          placeholder: "选择一个选项",
           options: [
-            { label: "Option A", value: "a" },
-            { label: "Option B", value: "b" },
+            { label: "选项 A", value: "a" },
+            { label: "选项 B", value: "b" },
           ],
         },
       },
     ],
     modal: {
-      title: "Details",
-      triggerLabel: "Open form",
+      title: "详情",
+      triggerLabel: "打开表单",
       fields: [
-        { type: "text", label: "Requester" },
+        { type: "text", label: "请求者" },
         {
           type: "select",
-          label: "Priority",
+          label: "优先级",
           options: [
-            { label: "Low", value: "low" },
-            { label: "High", value: "high" },
+            { label: "低", value: "low" },
+            { label: "高", value: "high" },
           ],
         },
       ],
@@ -380,53 +373,53 @@ Example:
 }
 ```
 
-## Access control and routing
+## 访问控制与路由
 
 <Tabs>
-  <Tab title="DM policy">
-    `channels.discord.dmPolicy` controls DM access (legacy: `channels.discord.dm.policy`):
+  <Tab title="私信策略">
+    `channels.discord.dmPolicy` 控制私信访问（旧名：`channels.discord.dm.policy`）：
 
-    - `pairing` (default)
+    - `pairing`（默认）
     - `allowlist`
-    - `open` (requires `channels.discord.allowFrom` to include `"*"`; legacy: `channels.discord.dm.allowFrom`)
+    - `open`（需要 `channels.discord.allowFrom` 包含 `"*"`；旧名：`channels.discord.dm.allowFrom`）
     - `disabled`
 
-    If DM policy is not open, unknown users are blocked (or prompted for pairing in `pairing` mode).
+    非开放模式下，未知用户被阻止（或在 `pairing` 模式提示配对）。
 
-    Multi-account precedence:
+    多账户优先级：
 
-    - `channels.discord.accounts.default.allowFrom` applies only to the `default` account.
-    - Named accounts inherit `channels.discord.allowFrom` when their own `allowFrom` is unset.
-    - Named accounts do not inherit `channels.discord.accounts.default.allowFrom`.
+    - `channels.discord.accounts.default.allowFrom` 仅适用于默认账户。
+    - 命名账户继承 `channels.discord.allowFrom`，若自身无设置。
+    - 命名账户不继承 `channels.discord.accounts.default.allowFrom`。
 
-    DM target format for delivery:
+    私信目标格式：
 
     - `user:<id>`
-    - `<@id>` mention
+    - `<@id>` 提及格式
 
-    Bare numeric IDs are ambiguous and rejected unless an explicit user/channel target kind is provided.
+    裸数 ID 模糊且被拒，除非显式指定用户或频道目标种类。
 
   </Tab>
 
-  <Tab title="Guild policy">
-    Guild handling is controlled by `channels.discord.groupPolicy`:
+  <Tab title="公会策略">
+    公会处理由 `channels.discord.groupPolicy` 控制：
 
     - `open`
     - `allowlist`
     - `disabled`
 
-    Secure baseline when `channels.discord` exists is `allowlist`.
+    `channels.discord` 存在时安全基线为 `allowlist`。
 
-    `allowlist` behavior:
+    `allowlist` 行为：
 
-    - guild must match `channels.discord.guilds` (`id` preferred, slug accepted)
-    - optional sender allowlists: `users` (stable IDs recommended) and `roles` (role IDs only); if either is configured, senders are allowed when they match `users` OR `roles`
-    - direct name/tag matching is disabled by default; enable `channels.discord.dangerouslyAllowNameMatching: true` only as break-glass compatibility mode
-    - names/tags are supported for `users`, but IDs are safer; `openclaw security audit` warns when name/tag entries are used
-    - if a guild has `channels` configured, non-listed channels are denied
-    - if a guild has no `channels` block, all channels in that allowlisted guild are allowed
+    - 公会必须匹配 `channels.discord.guilds`（首选 id，也支持 slug）
+    - 可选的发送者白名单：`users`（推荐稳定 ID）和 `roles`（仅角色 ID）；任一设定时，发送者需匹配 `users` 或 `roles`
+    - 默认禁用直接名称/标签匹配；仅在紧急兼容模式下启用 `channels.discord.dangerouslyAllowNameMatching: true`
+    - `users` 支持名称/标签匹配，但 ID 更安全；`openclaw security audit` 会警告使用名称/标签
+    - 公会配置有 `channels` 映射时，未列频道不允许
+    - 无频道块时，允许该公会所有频道
 
-    Example:
+    示例：
 
 ```json5
 {
@@ -450,33 +443,33 @@ Example:
 }
 ```
 
-    If you only set `DISCORD_BOT_TOKEN` and do not create a `channels.discord` block, runtime fallback is `groupPolicy="allowlist"` (with a warning in logs), even if `channels.defaults.groupPolicy` is `open`.
+    仅设置 `DISCORD_BOT_TOKEN`，无 `channels.discord` 块时，运行时回退为 `groupPolicy="allowlist"`（日志有警告），即使 `channels.defaults.groupPolicy` 设为 `open`。
 
   </Tab>
 
-  <Tab title="Mentions and group DMs">
-    Guild messages are mention-gated by default.
+  <Tab title="提及与群体私信">
+    默认公会消息需要提及。
 
-    Mention detection includes:
+    提及检测包括：
 
-    - explicit bot mention
-    - configured mention patterns (`agents.list[].groupChat.mentionPatterns`, fallback `messages.groupChat.mentionPatterns`)
-    - implicit reply-to-bot behavior in supported cases
+    - 明确 @机器人
+    - 配置的提及模式（`agents.list[].groupChat.mentionPatterns`，后备 `messages.groupChat.mentionPatterns`）
+    - 支持的情况下隐式回复机器人行为
 
-    `requireMention` is configured per guild/channel (`channels.discord.guilds...`).
-    `ignoreOtherMentions` optionally drops messages that mention another user/role but not the bot (excluding @everyone/@here).
+    `requireMention` 于公会/频道级别配置（`channels.discord.guilds...`）。
+    `ignoreOtherMentions` 可丢弃未 @ 机器人但 @ 其他用户/角色的消息（不包括 @everyone/@here）。
 
-    Group DMs:
+    群体私信：
 
-    - default: ignored (`dm.groupEnabled=false`)
-    - optional allowlist via `dm.groupChannels` (channel IDs or slugs)
+    - 默认忽略 (`dm.groupEnabled=false`)
+    - 可选的群体频道白名单 `dm.groupChannels`（频道 ID 或 slug）
 
   </Tab>
 </Tabs>
 
-### Role-based agent routing
+### 基于角色的代理路由
 
-Use `bindings[].match.roles` to route Discord guild members to different agents by role ID. Role-based bindings accept role IDs only and are evaluated after peer or parent-peer bindings and before guild-only bindings. If a binding also sets other match fields (for example `peer` + `guildId` + `roles`), all configured fields must match.
+使用 `bindings[].match.roles` 按角色 ID 将 Discord 公会成员路由至不同代理。基于角色的绑定仅接受角色 ID，优先级低于 peer 或 parent-peer 绑定，高于仅公会绑定。如果绑定同时设置多个匹配字段（如 `peer` + `guildId` + `roles`），则所有字段须匹配。
 
 ```json5
 {
@@ -502,49 +495,46 @@ Use `bindings[].match.roles` to route Discord guild members to different agents 
 
 ## Native commands and command auth
 
-- `commands.native` defaults to `"auto"` and is enabled for Discord.
-- Per-channel override: `channels.discord.commands.native`.
-- `commands.native=false` explicitly clears previously registered Discord native commands.
-- Native command auth uses the same Discord allowlists/policies as normal message handling.
-- Commands may still be visible in Discord UI for users who are not authorized; execution still enforces OpenClaw auth and returns "not authorized".
+- `commands.native` 默认 `"auto"`，Discord 启用。
+- 可针对频道覆盖：`channels.discord.commands.native`。
+- `commands.native=false` 显式取消注册 Discord 原生命令。
+- 原生命令授权使用与正常消息处理相同的 Discord 白名单/政策。
+- 命令可能在 Discord UI 中对未授权用户仍可见；执行时仍强制 OpenClaw 授权且返回“未授权”消息。
 
-See [Slash commands](/tools/slash-commands) for command catalog and behavior.
+查看 [斜线命令](/tools/slash-commands) 了解命令目录及行为。
 
-Default slash command settings:
+默认斜线命令设置：
 
 - `ephemeral: true`
 
-## Feature details
+## 功能详情
 
 <AccordionGroup>
-  <Accordion title="Reply tags and native replies">
-    Discord supports reply tags in agent output:
+  <Accordion title="回复标签和原生回复">
+    Discord 支持代理输出中的回复标签：
 
     - `[[reply_to_current]]`
     - `[[reply_to:<id>]]`
 
-    Controlled by `channels.discord.replyToMode`:
+    由 `channels.discord.replyToMode` 控制：
 
-    - `off` (default)
+    - `off`（默认）
     - `first`
     - `all`
     - `batched`
 
-    Note: `off` disables implicit reply threading. Explicit `[[reply_to_*]]` tags are still honored.
-    `first` always attaches the implicit native reply reference to the first outbound Discord message for the turn.
-    `batched` only attaches Discord's implicit native reply reference when the
-    inbound turn was a debounced batch of multiple messages. This is useful
-    when you want native replies mainly for ambiguous bursty chats, not every
-    single-message turn.
+    注意：`off` 禁用隐式回复线程。显式的 `[[reply_to_*]]` 标签仍会被遵循。
+    `first` 总是将隐式原生回复引用附加到该轮次的第一条出站 Discord 消息。
+    `batched` 仅当入站轮次是多个消息的去重批次时，才附加 Discord 的隐式原生回复引用。当你主要希望针对模糊的突发聊天使用原生回复，而不是每一轮单消息对话时，这很有用。
 
-    Message IDs are surfaced in context/history so agents can target specific messages.
+    消息 ID 会在上下文/历史中提供，供代理指向特定消息。
 
   </Accordion>
 
   <Accordion title="Live stream preview">
-    OpenClaw can stream draft replies by sending a temporary message and editing it as text arrives. `channels.discord.streaming` takes `off` (default) | `partial` | `block` | `progress`. `progress` maps to `partial` on Discord; `streamMode` is a legacy alias and is auto-migrated.
+    OpenClaw 可以通过发送一条临时消息并在文本到达时编辑它来流式预览草稿回复。`channels.discord.streaming` 可取 `off`（默认）| `partial` | `block` | `progress`。`progress` 在 Discord 上映射为 `partial`；`streamMode` 是旧别名，会自动迁移。
 
-    Default stays `off` because Discord preview edits hit rate limits quickly when multiple bots or gateways share an account.
+    默认保持 `off`，因为当多个机器人或网关共享一个账户时，Discord 预览编辑会很快触发速率限制。
 
 ```json5
 {
@@ -561,28 +551,28 @@ Default slash command settings:
 }
 ```
 
-    - `partial` edits a single preview message as tokens arrive.
-    - `block` emits draft-sized chunks (use `draftChunk` to tune size and breakpoints, clamped to `textChunkLimit`).
-    - Media, error, and explicit-reply finals cancel pending preview edits.
-    - `streaming.preview.toolProgress` (default `true`) controls whether tool/progress updates reuse the preview message.
+    - `partial` 在令牌到达时编辑单条预览消息。
+    - `block` 发送草稿大小的分块（使用 `draftChunk` 调整大小和断点，并会被限制到 `textChunkLimit`）。
+    - 媒体、错误和显式回复最终结果会取消待处理的预览编辑。
+    - `streaming.preview.toolProgress`（默认 `true`）控制工具/进度更新是否复用预览消息。
 
-    Preview streaming is text-only; media replies fall back to normal delivery. When `block` streaming is explicitly enabled, OpenClaw skips the preview stream to avoid double-streaming.
+    预览流仅支持文本；媒体回复会回退到正常投递。当显式启用 `block` 流式传输时，OpenClaw 会跳过预览流以避免重复流式输出。
 
   </Accordion>
 
-  <Accordion title="History, context, and thread behavior">
-    Guild history context:
+  <Accordion title="历史、上下文与线程行为">
+    公会历史上下文：
 
-    - `channels.discord.historyLimit` default `20`
-    - fallback: `messages.groupChat.historyLimit`
-    - `0` disables
+    - `channels.discord.historyLimit` 默认 `20`
+    - 后备：`messages.groupChat.historyLimit`
+    - 设 `0` 以禁用
 
-    DM history controls:
+    私信历史控制：
 
     - `channels.discord.dmHistoryLimit`
     - `channels.discord.dms["<user_id>"].historyLimit`
 
-    Thread behavior:
+    线程行为：
 
     - Discord threads route as channel sessions and inherit parent channel config unless overridden.
     - `channels.discord.thread.inheritParent` (default `false`) opts new auto-threads into seeding from the parent transcript. Per-account overrides live under `channels.discord.accounts.<id>.thread.inheritParent`.
@@ -593,18 +583,18 @@ Default slash command settings:
 
   </Accordion>
 
-  <Accordion title="Thread-bound sessions for subagents">
-    Discord can bind a thread to a session target so follow-up messages in that thread keep routing to the same session (including subagent sessions).
+  <Accordion title="线程绑定会话支持子代理">
+    Discord 可将线程绑定到会话目标，线程内后续消息保留同会话（含子代理会话）。
 
-    Commands:
+    命令：
 
-    - `/focus <target>` bind current/new thread to a subagent/session target
-    - `/unfocus` remove current thread binding
-    - `/agents` show active runs and binding state
-    - `/session idle <duration|off>` inspect/update inactivity auto-unfocus for focused bindings
-    - `/session max-age <duration|off>` inspect/update hard max age for focused bindings
+    - `/focus <target>` 绑定当前/新线程至子代理/会话目标
+    - `/unfocus` 解除当前线程绑定
+    - `/agents` 显示活跃运行及绑定状态
+    - `/session idle <duration|off>` 查看/更新空闲自动取消绑定
+    - `/session max-age <duration|off>` 查看/更新最大绑定时长
 
-    Config:
+    配置：
 
 ```json5
 {
@@ -621,33 +611,33 @@ Default slash command settings:
         enabled: true,
         idleHours: 24,
         maxAgeHours: 0,
-        spawnSubagentSessions: false, // opt-in
+        spawnSubagentSessions: false, // 需选择加入
       },
     },
   },
 }
 ```
 
-    Notes:
+    说明：
 
-    - `session.threadBindings.*` sets global defaults.
-    - `channels.discord.threadBindings.*` overrides Discord behavior.
-    - `spawnSubagentSessions` must be true to auto-create/bind threads for `sessions_spawn({ thread: true })`.
-    - `spawnAcpSessions` must be true to auto-create/bind threads for ACP (`/acp spawn ... --thread ...` or `sessions_spawn({ runtime: "acp", thread: true })`).
-    - If thread bindings are disabled for an account, `/focus` and related thread binding operations are unavailable.
+    - `session.threadBindings.*` 设全局默认值。
+    - `channels.discord.threadBindings.*` 覆盖 Discord 行为。
+    - `spawnSubagentSessions` 必须为 true，才会为 `sessions_spawn({ thread: true })` 自动创建/绑定线程。
+    - `spawnAcpSessions` 必须为 true，才会为 ACP (`/acp spawn ... --thread ...` 或 `sessions_spawn({ runtime: "acp", thread: true })`) 自动创建/绑定线程。
+    - 若账号禁用线程绑定，`/focus` 及相关线程绑定操作不可用。
 
-    See [Sub-agents](/tools/subagents), [ACP Agents](/tools/acp-agents), and [Configuration Reference](/gateway/configuration-reference).
+    详见 [子代理](/tools/subagents)、[ACP 代理](/tools/acp-agents) 和 [配置参考](/gateway/configuration-reference)。
 
   </Accordion>
 
-  <Accordion title="Persistent ACP channel bindings">
-    For stable "always-on" ACP workspaces, configure top-level typed ACP bindings targeting Discord conversations.
+  <Accordion title="持久 ACP 频道绑定">
+    对于稳定“常驻”ACP 工作区，可配置顶层 Typed ACP 绑定目标为 Discord 会话。
 
-    Config path:
+    配置路径：
 
-    - `bindings[]` with `type: "acp"` and `match.channel: "discord"`
+    - `bindings[]`，`type: "acp"`，`match.channel: "discord"`
 
-    Example:
+    示例：
 
 ```json5
 {
@@ -695,51 +685,51 @@ Default slash command settings:
 }
 ```
 
-    Notes:
+    说明：
 
-    - `/acp spawn codex --bind here` binds the current channel or thread in place and keeps future messages on the same ACP session. Thread messages inherit the parent channel binding.
-    - In a bound channel or thread, `/new` and `/reset` reset the same ACP session in place. Temporary thread bindings can override target resolution while active.
-    - `spawnAcpSessions` is only required when OpenClaw needs to create/bind a child thread via `--thread auto|here`.
+    - `/acp spawn codex --bind here` 会就地绑定当前频道或线程，并使后续消息继续使用同一个 ACP 会话。线程消息会继承父频道绑定。
+    - 在已绑定的频道或线程中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话。临时线程绑定在激活时可以覆盖目标解析。
+    - 只有在 OpenClaw 需要通过 `--thread auto|here` 创建/绑定子线程时，才需要 `spawnAcpSessions`。
 
-    See [ACP Agents](/tools/acp-agents) for binding behavior details.
+    详见 [ACP 代理](/tools/acp-agents) 绑定详细行为。
 
   </Accordion>
 
-  <Accordion title="Reaction notifications">
-    Per-guild reaction notification mode:
+  <Accordion title="表情反应通知">
+    按公会配置表情反应通知模式：
 
     - `off`
-    - `own` (default)
+    - `own`（默认）
     - `all`
-    - `allowlist` (uses `guilds.<id>.users`)
+    - `allowlist`（使用 `guilds.<id>.users`）
 
-    Reaction events are turned into system events and attached to the routed Discord session.
+    表情事件转为系统事件，附加至路由的 Discord 会话。
 
   </Accordion>
 
-  <Accordion title="Ack reactions">
-    `ackReaction` sends an acknowledgement emoji while OpenClaw is processing an inbound message.
+  <Accordion title="确认反应">
+    `ackReaction` 在 OpenClaw 处理中入站消息时发送确认表情。
 
-    Resolution order:
+    解析顺序：
 
     - `channels.discord.accounts.<accountId>.ackReaction`
     - `channels.discord.ackReaction`
     - `messages.ackReaction`
-    - agent identity emoji fallback (`agents.list[].identity.emoji`, else "👀")
+    - 代理身份表情回退（`agents.list[].identity.emoji`，否则为 "👀"）
 
-    Notes:
+    说明：
 
-    - Discord accepts unicode emoji or custom emoji names.
-    - Use `""` to disable the reaction for a channel or account.
+    - Discord 支持 Unicode 或自定义表情名。
+    - 用 `""` 禁用指定频道或账户的确认表情。
 
   </Accordion>
 
-  <Accordion title="Config writes">
-    Channel-initiated config writes are enabled by default.
+  <Accordion title="配置写入">
+    默认启用频道发起的配置写入。
 
-    This affects `/config set|unset` flows (when command features are enabled).
+    这影响启用命令功能时的 `/config set|unset` 流程。
 
-    Disable:
+    禁用示例：
 
 ```json5
 {
@@ -753,8 +743,8 @@ Default slash command settings:
 
   </Accordion>
 
-  <Accordion title="Gateway proxy">
-    Route Discord gateway WebSocket traffic and startup REST lookups (application ID + allowlist resolution) through an HTTP(S) proxy with `channels.discord.proxy`.
+  <Accordion title="网关代理">
+    通过 HTTP(S) 代理代理 Discord 网关 WebSocket 流量和启动 REST 查询（应用 ID + 白名单）。
 
 ```json5
 {
@@ -766,7 +756,7 @@ Default slash command settings:
 }
 ```
 
-    Per-account override:
+    可针对单账户覆盖：
 
 ```json5
 {
@@ -784,8 +774,8 @@ Default slash command settings:
 
   </Accordion>
 
-  <Accordion title="PluralKit support">
-    Enable PluralKit resolution to map proxied messages to system member identity:
+  <Accordion title="PluralKit 支持">
+    启用 PluralKit 解析，将代理消息映射至系统成员身份：
 
 ```json5
 {
@@ -793,26 +783,26 @@ Default slash command settings:
     discord: {
       pluralkit: {
         enabled: true,
-        token: "pk_live_...", // optional; needed for private systems
+        token: "pk_live_...", // 可选，私有系统需提供
       },
     },
   },
 }
 ```
 
-    Notes:
+    说明：
 
-    - allowlists can use `pk:<memberId>`
-    - member display names are matched by name/slug only when `channels.discord.dangerouslyAllowNameMatching: true`
-    - lookups use original message ID and are time-window constrained
-    - if lookup fails, proxied messages are treated as bot messages and dropped unless `allowBots=true`
+    - 白名单中可使用 `pk:<memberId>`
+    - 成员显示名仅名称/slug 匹配时需开启 `channels.discord.dangerouslyAllowNameMatching: true`
+    - 通过原始消息 ID 进行查询，受时间窗限制
+    - 查询失败则将代理消息视为机器人消息丢弃，除非 `allowBots=true`
 
   </Accordion>
 
-  <Accordion title="Presence configuration">
-    Presence updates are applied when you set a status or activity field, or when you enable auto presence.
+  <Accordion title="在线状态配置">
+    设置状态或活动字段启用在线状态更新，或者启用自动在线状态。
 
-    Status only example:
+    仅状态示例：
 
 ```json5
 {
@@ -824,26 +814,26 @@ Default slash command settings:
 }
 ```
 
-    Activity example (custom status is the default activity type):
+    活动示例（自定义状态为默认类型）：
 
 ```json5
 {
   channels: {
     discord: {
-      activity: "Focus time",
+      activity: "专注时间",
       activityType: 4,
     },
   },
 }
 ```
 
-    Streaming example:
+    流媒体示例：
 
 ```json5
 {
   channels: {
     discord: {
-      activity: "Live coding",
+      activity: "直播编程",
       activityType: 1,
       activityUrl: "https://twitch.tv/openclaw",
     },
@@ -851,16 +841,16 @@ Default slash command settings:
 }
 ```
 
-    Activity type map:
+    活动类型映射：
 
-    - 0: Playing
-    - 1: Streaming (requires `activityUrl`)
-    - 2: Listening
-    - 3: Watching
-    - 4: Custom (uses the activity text as the status state; emoji is optional)
-    - 5: Competing
+    - 0：游戏中
+    - 1：直播中（需要 `activityUrl`）
+    - 2：听着
+    - 3：观看
+    - 4：自定义（状态使用活动文本，表情可选）
+    - 5：竞赛中
 
-    Auto presence example (runtime health signal):
+    自动在线示例（运行时健康信号）：
 
 ```json5
 {
@@ -870,39 +860,37 @@ Default slash command settings:
         enabled: true,
         intervalMs: 30000,
         minUpdateIntervalMs: 15000,
-        exhaustedText: "token exhausted",
+        exhaustedText: "令牌耗尽",
       },
     },
   },
 }
 ```
 
-    Auto presence maps runtime availability to Discord status: healthy => online, degraded or unknown => idle, exhausted or unavailable => dnd. Optional text overrides:
+    自动在线将运行时可用性映射至 Discord 状态：健康 => 在线，降级或未知 => 闲置，耗尽或不可用 => 请勿打扰。可用文本覆盖：
 
     - `autoPresence.healthyText`
     - `autoPresence.degradedText`
-    - `autoPresence.exhaustedText` (supports `{reason}` placeholder)
+    - `autoPresence.exhaustedText`（支持 `{reason}` 占位符）
 
   </Accordion>
 
-  <Accordion title="Approvals in Discord">
-    Discord supports button-based approval handling in DMs and can optionally post approval prompts in the originating channel.
+  <Accordion title="Discord 中的审批">
+    Discord 支持在私信中基于按钮的审批处理，并可选择在原始频道中发布审批提示。
 
-    Config path:
+    配置路径：
 
     - `channels.discord.execApprovals.enabled`
-    - `channels.discord.execApprovals.approvers` (optional; falls back to `commands.ownerAllowFrom` when possible)
-    - `channels.discord.execApprovals.target` (`dm` | `channel` | `both`, default: `dm`)
+    - `channels.discord.execApprovals.approvers` (可选；可能时回退到 `commands.ownerAllowFrom`)
+    - `channels.discord.execApprovals.target` (`dm` | `channel` | `both`，默认：`dm`)
     - `agentFilter`, `sessionFilter`, `cleanupAfterResolve`
 
-    Discord auto-enables native exec approvals when `enabled` is unset or `"auto"` and at least one approver can be resolved, either from `execApprovals.approvers` or from `commands.ownerAllowFrom`. Discord does not infer exec approvers from channel `allowFrom`, legacy `dm.allowFrom`, or direct-message `defaultTo`. Set `enabled: false` to disable Discord as a native approval client explicitly.
+    当 `enabled` 未设置或为 `"auto"` 且至少可以解析出一个审批者（来自 `execApprovals.approvers` 或 `commands.ownerAllowFrom`）时，Discord 会自动启用原生执行审批。Discord 不会从频道 `allowFrom`、遗留的 `dm.allowFrom` 或直接消息 `defaultTo` 推断执行审批者。设置 `enabled: false` 可显式禁用 Discord 作为原生审批客户端。
 
-    When `target` is `channel` or `both`, the approval prompt is visible in the channel. Only resolved approvers can use the buttons; other users receive an ephemeral denial. Approval prompts include the command text, so only enable channel delivery in trusted channels. If the channel ID cannot be derived from the session key, OpenClaw falls back to DM delivery.
+    当 `target` 为 `channel` 或 `both` 时，审批提示在频道中可见。只有解析出的审批者可以使用按钮；其他用户收到临时拒绝消息。审批提示包含命令文本，因此仅在受信任的频道中启用频道交付。如果无法从会话密钥派生频道 ID，OpenClaw 将回退到 DM 交付。
 
-    Discord also renders the shared approval buttons used by other chat channels. The native Discord adapter mainly adds approver DM routing and channel fanout.
-    When those buttons are present, they are the primary approval UX; OpenClaw
-    should only include a manual `/approve` command when the tool result says
-    chat approvals are unavailable or manual approval is the only path.
+    Discord 还会渲染其他聊天频道使用的共享审批按钮。原生 Discord 适配器主要添加审批者私信路由和频道分发。
+    当这些按钮存在时，它们是主要的审批用户体验；仅当工具结果显示聊天审批不可用或手动审批是唯一途径时，OpenClaw 才应包含手动 `/approve` 命令。
 
     Gateway auth and approval resolution follow the shared Gateway client contract (`plugin:` IDs resolve through `plugin.approval.resolve`; other IDs through `exec.approval.resolve`). Approvals expire after 30 minutes by default.
 
@@ -911,39 +899,39 @@ Default slash command settings:
   </Accordion>
 </AccordionGroup>
 
-## Tools and action gates
+## 工具和操作门控
 
-Discord message actions include messaging, channel admin, moderation, presence, and metadata actions.
+Discord 消息操作包括消息发送、频道管理、审核、在线状态及元数据操作。
 
-Core examples:
+核心示例：
 
-- messaging: `sendMessage`, `readMessages`, `editMessage`, `deleteMessage`, `threadReply`
-- reactions: `react`, `reactions`, `emojiList`
-- moderation: `timeout`, `kick`, `ban`
-- presence: `setPresence`
+- 消息：`sendMessage`，`readMessages`，`editMessage`，`deleteMessage`，`threadReply`
+- 表情：`react`，`reactions`，`emojiList`
+- 审核：`timeout`，`kick`，`ban`
+- 在线状态：`setPresence`
 
 The `event-create` action accepts an optional `image` parameter (URL or local file path) to set the scheduled event cover image.
 
 Action gates live under `channels.discord.actions.*`.
 
-Default gate behavior:
+默认门控行为：
 
-| Action group                                                                                                                                                             | Default  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| reactions, messages, threads, pins, polls, search, memberInfo, roleInfo, channelInfo, channels, voiceStatus, events, stickers, emojiUploads, stickerUploads, permissions | enabled  |
-| roles                                                                                                                                                                    | disabled |
-| moderation                                                                                                                                                               | disabled |
-| presence                                                                                                                                                                 | disabled |
+| 操作组                                                                                                                                                                   | 默认 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| reactions, messages, threads, pins, polls, search, memberInfo, roleInfo, channelInfo, channels, voiceStatus, events, stickers, emojiUploads, stickerUploads, permissions | 启用 |
+| roles                                                                                                                                                                    | 禁用 |
+| moderation                                                                                                                                                               | 禁用 |
+| presence                                                                                                                                                                 | 禁用 |
 
-## Components v2 UI
+## 组件 v2 UI
 
-OpenClaw uses Discord components v2 for exec approvals and cross-context markers. Discord message actions can also accept `components` for custom UI (advanced; requires constructing a component payload via the discord tool), while legacy `embeds` remain available but are not recommended.
+OpenClaw 使用 Discord 组件 v2 进行执行批准和跨上下文标记。Discord 消息操作也可以接受 `components` 用于自定义 UI（高级；需要通过 discord 工具构建组件负载），而传统的 `embeds` 仍然可用但不推荐使用。
 
-- `channels.discord.ui.components.accentColor` sets the accent color used by Discord component containers (hex).
-- Set per account with `channels.discord.accounts.<id>.ui.components.accentColor`.
-- `embeds` are ignored when components v2 are present.
+- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器的强调色（十六进制）。
+- 也可为账号单独设置：`channels.discord.accounts.<id>.ui.components.accentColor`。
+- 存在 components v2 时忽略 `embeds`。
 
-Example:
+示例：
 
 ```json5
 {
@@ -959,30 +947,21 @@ Example:
 }
 ```
 
-## Voice
+## 语音
 
-Discord has two distinct voice surfaces: realtime **voice channels** (continuous conversations) and **voice message attachments** (the waveform preview format). The gateway supports both.
+Discord 有两种不同的语音界面：实时 **语音频道**（持续对话）和 **语音消息附件**（波形预览格式）。网关同时支持两者。
 
-### Voice channels
+### 语音频道
 
-Setup checklist:
+需求：
 
-1. Enable Message Content Intent in the Discord Developer Portal.
-2. Enable Server Members Intent when role/user allowlists are used.
-3. Invite the bot with `bot` and `applications.commands` scopes.
-4. Grant Connect, Speak, Send Messages, and Read Message History in the target voice channel.
-5. Enable native commands (`commands.native` or `channels.discord.commands.native`).
-6. Configure `channels.discord.voice`.
+- 启用原生命令（`commands.native` 或 `channels.discord.commands.native`）。
+- 配置 `channels.discord.voice`。
+- 此机器人需在目标语音频道具备连接及发言权限。
 
-Use `/vc join|leave|status` to control sessions. The command uses the account default agent and follows the same allowlist and group policy rules as other Discord commands.
+使用 `/vc join|leave|status` 控制会话。该命令使用账号默认 agent，并遵循与其他 Discord 命令相同的 allowlist 和组策略规则。
 
-```bash
-/vc join channel:<voice-channel-id>
-/vc status
-/vc leave
-```
-
-Auto-join example:
+自动加入示例：
 
 ```json5
 {
@@ -990,7 +969,6 @@ Auto-join example:
     discord: {
       voice: {
         enabled: true,
-        model: "openai/gpt-5.4-mini",
         autoJoin: [
           {
             guildId: "123456789012345678",
@@ -1001,7 +979,7 @@ Auto-join example:
         decryptionFailureTolerance: 24,
         tts: {
           provider: "openai",
-          openai: { voice: "onyx" },
+          openai: { voice: "alloy" },
         },
       },
     },
@@ -1009,59 +987,47 @@ Auto-join example:
 }
 ```
 
-Notes:
+说明：
 
-- `voice.tts` overrides `messages.tts` for voice playback only.
-- `voice.model` overrides the LLM used for Discord voice channel responses only. Leave it unset to inherit the routed agent model.
-- STT uses `tools.media.audio`; `voice.model` does not affect transcription.
-- Voice transcript turns derive owner status from Discord `allowFrom` (or `dm.allowFrom`); non-owner speakers cannot access owner-only tools (for example `gateway` and `cron`).
-- Voice is enabled by default; set `channels.discord.voice.enabled=false` to disable it.
-- `voice.daveEncryption` and `voice.decryptionFailureTolerance` pass through to `@discordjs/voice` join options.
-- `@discordjs/voice` defaults are `daveEncryption=true` and `decryptionFailureTolerance=24` if unset.
-- OpenClaw also watches receive decrypt failures and auto-recovers by leaving/rejoining the voice channel after repeated failures in a short window.
-- If receive logs repeatedly show `DecryptionFailed(UnencryptedWhenPassthroughDisabled)` after updating, collect a dependency report and logs. The bundled `@discordjs/voice` line includes the upstream padding fix from discord.js PR #11449, which closed discord.js issue #11419.
+- `voice.tts` 仅覆盖语音播放，不影响 `messages.tts`。
+- 语音转录继承 Discord `allowFrom` 的所有者状态（或 `dm.allowFrom`）；非所有者发言者无法访问仅限所有者的工具（如 `gateway` 和 `cron`）。
+- 语音默认启用。设置 `channels.discord.voice.enabled=false` 以禁用。
+- `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 映射至 `@discordjs/voice` 加入选项。
+- 未设置时，`@discordjs/voice` 默认 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
+- OpenClaw 会监控接收解密失败，失败频繁则自动离开/重新加入频道尝试恢复。
+- 若日志反复出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，可能是上游 `@discordjs/voice` 缺陷，详见 [discord.js #11419](https://github.com/discordjs/discord.js/issues/11419)。
 
-Voice channel pipeline:
+### 语音消息
 
-- Discord PCM capture is converted to a WAV temp file.
-- `tools.media.audio` handles STT, for example `openai/gpt-4o-mini-transcribe`.
-- The transcript is sent through normal Discord ingress and routing.
-- `voice.model`, when set, overrides only the response LLM for this voice-channel turn.
-- `voice.tts` is merged over `messages.tts`; the resulting audio is played in the joined channel.
+Discord 语音消息会显示波形预览，并要求 OGG/Opus 音频。OpenClaw 会自动生成波形，但需要网关主机上的 `ffmpeg` 和 `ffprobe` 来检查和转换。
 
-Credentials are resolved per component: LLM route auth for `voice.model`, STT auth for `tools.media.audio`, and TTS auth for `messages.tts`/`voice.tts`.
-
-### Voice messages
-
-Discord voice messages show a waveform preview and require OGG/Opus audio. OpenClaw generates the waveform automatically, but needs `ffmpeg` and `ffprobe` on the gateway host to inspect and convert.
-
-- Provide a **local file path** (URLs are rejected).
-- Omit text content (Discord rejects text + voice message in the same payload).
-- Any audio format is accepted; OpenClaw converts to OGG/Opus as needed.
+- 提供**本地文件路径**（不接受 URL）。
+- 省略文本内容（Discord 会拒绝在同一载荷中同时包含文本和语音消息）。
+- 接受任意音频格式；OpenClaw 会在需要时转换为 OGG/Opus。
 
 ```bash
 message(action="send", channel="discord", target="channel:123", path="/path/to/audio.mp3", asVoice=true)
 ```
 
-## Troubleshooting
+## 故障排除
 
 <AccordionGroup>
-  <Accordion title="Used disallowed intents or bot sees no guild messages">
+  <Accordion title="使用了不允许的 intents 或机器人看不到公会消息">
 
-    - enable Message Content Intent
-    - enable Server Members Intent when you depend on user/member resolution
-    - restart gateway after changing intents
+    - 启用消息内容意图
+    - 依赖用户/成员解析时启用服务器成员意图
+    - 修改 intents 后重启网关
 
   </Accordion>
 
-  <Accordion title="Guild messages blocked unexpectedly">
+  <Accordion title="公会消息被意外阻止">
 
-    - verify `groupPolicy`
-    - verify guild allowlist under `channels.discord.guilds`
-    - if guild `channels` map exists, only listed channels are allowed
-    - verify `requireMention` behavior and mention patterns
+    - 核查 `groupPolicy`
+    - 核查 `channels.discord.guilds` 的公会白名单
+    - 若存在公会 `channels` 映射，仅允许列出频道
+    - 核查 `requireMention` 行为与提及模式
 
-    Useful checks:
+    有用的检查：
 
 ```bash
 openclaw doctor
@@ -1071,35 +1037,35 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="Require mention false but still blocked">
-    Common causes:
+  <Accordion title="`requireMention` 禁用但仍被阻止">
+    常见原因：
 
-    - `groupPolicy="allowlist"` without matching guild/channel allowlist
-    - `requireMention` configured in the wrong place (must be under `channels.discord.guilds` or channel entry)
-    - sender blocked by guild/channel `users` allowlist
+    - `groupPolicy="allowlist"` 且公会/频道白名单未匹配
+    - `requireMention` 配置位置错误（应位于 `channels.discord.guilds` 或频道条目下）
+    - 发送者被公会/频道 `users` 白名单阻止
 
   </Accordion>
 
-  <Accordion title="Long-running handlers time out or duplicate replies">
+  <Accordion title="长时间运行处理程序超时或回复重复">
 
-    Typical logs:
+    常见日志：
 
     - `Listener DiscordMessageListener timed out after 30000ms for event MESSAGE_CREATE`
     - `Slow listener detected ...`
     - `discord inbound worker timed out after ...`
 
-    Listener budget knob:
+    监听器超时配置：
 
-    - single-account: `channels.discord.eventQueue.listenerTimeout`
-    - multi-account: `channels.discord.accounts.<accountId>.eventQueue.listenerTimeout`
+    - 单账户：`channels.discord.eventQueue.listenerTimeout`
+    - 多账户：`channels.discord.accounts.<accountId>.eventQueue.listenerTimeout`
 
-    Worker run timeout knob:
+    工作线程超时配置：
 
-    - single-account: `channels.discord.inboundWorker.runTimeoutMs`
-    - multi-account: `channels.discord.accounts.<accountId>.inboundWorker.runTimeoutMs`
-    - default: `1800000` (30 minutes); set `0` to disable
+    - 单账户：`channels.discord.inboundWorker.runTimeoutMs`
+    - 多账户：`channels.discord.accounts.<accountId>.inboundWorker.runTimeoutMs`
+    - 默认：`1800000`（30 分钟）；设置 `0` 以禁用
 
-    Recommended baseline:
+    推荐基线：
 
 ```json5
 {
@@ -1120,94 +1086,93 @@ openclaw logs --follow
 }
 ```
 
-    Use `eventQueue.listenerTimeout` for slow listener setup and `inboundWorker.runTimeoutMs`
-    only if you want a separate safety valve for queued agent turns.
+    用 `eventQueue.listenerTimeout` 控制监听器响应延迟，用 `inboundWorker.runTimeoutMs` 控制排队代理步长的超时保护。
 
   </Accordion>
 
-  <Accordion title="Permissions audit mismatches">
-    `channels status --probe` permission checks only work for numeric channel IDs.
+  <Accordion title="权限审核不匹配">
+    `channels status --probe` 权限检查仅支持数字频道 ID。
 
-    If you use slug keys, runtime matching can still work, but probe cannot fully verify permissions.
-
-  </Accordion>
-
-  <Accordion title="DM and pairing issues">
-
-    - DM disabled: `channels.discord.dm.enabled=false`
-    - DM policy disabled: `channels.discord.dmPolicy="disabled"` (legacy: `channels.discord.dm.policy`)
-    - awaiting pairing approval in `pairing` mode
+    若使用 slug 作为键，运行时匹配仍可用，但探测功能无法完全验证权限。
 
   </Accordion>
 
-  <Accordion title="Bot to bot loops">
-    By default bot-authored messages are ignored.
+  <Accordion title="私信和配对问题">
 
-    If you set `channels.discord.allowBots=true`, use strict mention and allowlist rules to avoid loop behavior.
-    Prefer `channels.discord.allowBots="mentions"` to only accept bot messages that mention the bot.
+    - 私信被禁用：`channels.discord.dm.enabled=false`
+    - 私信策略禁用：`channels.discord.dmPolicy="disabled"`（旧名：`channels.discord.dm.policy`）
+    - 在 `pairing` 模式等待配对批准
 
   </Accordion>
 
-  <Accordion title="Voice STT drops with DecryptionFailed(...)">
+  <Accordion title="机器人与机器人循环">
+    默认忽略机器人发出的消息。
 
-    - keep OpenClaw current (`openclaw update`) so the Discord voice receive recovery logic is present
-    - confirm `channels.discord.voice.daveEncryption=true` (default)
-    - start from `channels.discord.voice.decryptionFailureTolerance=24` (upstream default) and tune only if needed
-    - watch logs for:
+    若设置 `channels.discord.allowBots=true`，请使用严格提及和白名单规则避免循环行为。
+    推荐使用 `channels.discord.allowBots="mentions"` 仅接受提及机器人的机器人消息。
+
+  </Accordion>
+
+  <Accordion title="语音 STT 出现 DecryptionFailed(...)" >
+
+    - 保持 OpenClaw 更新（`openclaw update`）保证 Discord 语音接收恢复逻辑
+    - 确认 `channels.discord.voice.daveEncryption=true`（默认）
+    - 从 `channels.discord.voice.decryptionFailureTolerance=24`（上游默认）开始调优
+    - 观察日志是否出现：
       - `discord voice: DAVE decrypt failures detected`
       - `discord voice: repeated decrypt failures; attempting rejoin`
-    - if failures continue after automatic rejoin, collect logs and compare against the upstream DAVE receive history in [discord.js #11419](https://github.com/discordjs/discord.js/issues/11419) and [discord.js #11449](https://github.com/discordjs/discord.js/pull/11449)
+    - 若自动重连后仍失败，收集日志并参照 [discord.js #11419](https://github.com/discordjs/discord.js/issues/11419)
 
   </Accordion>
 </AccordionGroup>
 
-## Configuration reference
+## 配置参考
 
-Primary reference: [Configuration reference - Discord](/gateway/config-channels#discord).
+主要参考：[配置参考 - Discord](/gateway/config-channels#discord)。
 
-<Accordion title="High-signal Discord fields">
+<Accordion title="高信号 Discord 字段">
 
-- startup/auth: `enabled`, `token`, `accounts.*`, `allowBots`
-- policy: `groupPolicy`, `dm.*`, `guilds.*`, `guilds.*.channels.*`
-- command: `commands.native`, `commands.useAccessGroups`, `configWrites`, `slashCommand.*`
-- event queue: `eventQueue.listenerTimeout` (listener budget), `eventQueue.maxQueueSize`, `eventQueue.maxConcurrency`
-- inbound worker: `inboundWorker.runTimeoutMs`
-- reply/history: `replyToMode`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
-- delivery: `textChunkLimit`, `chunkMode`, `maxLinesPerMessage`
-- streaming: `streaming` (legacy alias: `streamMode`), `streaming.preview.toolProgress`, `draftChunk`, `blockStreaming`, `blockStreamingCoalesce`
-- media/retry: `mediaMaxMb` (caps outbound Discord uploads, default `100MB`), `retry`
-- actions: `actions.*`
-- presence: `activity`, `status`, `activityType`, `activityUrl`
-- UI: `ui.components.accentColor`
-- features: `threadBindings`, top-level `bindings[]` (`type: "acp"`), `pluralkit`, `execApprovals`, `intents`, `agentComponents`, `heartbeat`, `responsePrefix`
+- 启动/认证：`enabled`, `token`, `accounts.*`, `allowBots`
+- 策略：`groupPolicy`, `dm.*`, `guilds.*`, `guilds.*.channels.*`
+- 命令：`commands.native`, `commands.useAccessGroups`, `configWrites`, `slashCommand.*`
+- 事件队列：`eventQueue.listenerTimeout`（监听器预算），`eventQueue.maxQueueSize`, `eventQueue.maxConcurrency`
+- 入站工作线程：`inboundWorker.runTimeoutMs`
+- 回复/历史：`replyToMode`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- 投递：`textChunkLimit`, `chunkMode`, `maxLinesPerMessage`
+- 流式传输：`streaming`（旧别名：`streamMode`）、`streaming.preview.toolProgress`、`draftChunk`、`blockStreaming`、`blockStreamingCoalesce`
+- 媒体/重试：`mediaMaxMb`（限制出站 Discord 上传，默认 `100MB`）、`retry`
+- 动作：`actions.*`
+- 在线状态：`activity`, `status`, `activityType`, `activityUrl`
+- UI：`ui.components.accentColor`
+- 功能：`threadBindings`、顶层 `bindings[]`（`type: "acp"`）、`pluralkit`、`execApprovals`、`intents`、`agentComponents`、`heartbeat`、`responsePrefix`
 
 </Accordion>
 
-## Safety and operations
+## 安全与运维
 
-- Treat bot tokens as secrets (`DISCORD_BOT_TOKEN` preferred in supervised environments).
-- Grant least-privilege Discord permissions.
-- If command deploy/state is stale, restart gateway and re-check with `openclaw channels status --probe`.
+- 将机器人令牌视为机密（受监督环境推荐使用 `DISCORD_BOT_TOKEN`）。
+- 赋予最小权限的 Discord 权限。
+- 如命令部署或状态信息过期，重启网关并用 `openclaw channels status --probe` 重新检查。
 
-## Related
+## 相关链接
 
 <CardGroup cols={2}>
-  <Card title="Pairing" icon="link" href="/channels/pairing">
-    Pair a Discord user to the gateway.
+  <Card title="配对" icon="link" href="/channels/pairing">
+    将 Discord 用户与网关配对。
   </Card>
-  <Card title="Groups" icon="users" href="/channels/groups">
-    Group chat and allowlist behavior.
+  <Card title="群组" icon="users" href="/channels/groups">
+    群聊和 allowlist 行为。
   </Card>
-  <Card title="Channel routing" icon="route" href="/channels/channel-routing">
-    Route inbound messages to agents.
+  <Card title="频道路由" icon="route" href="/channels/channel-routing">
+    将入站消息路由给 agents。
   </Card>
-  <Card title="Security" icon="shield" href="/gateway/security">
-    Threat model and hardening.
+  <Card title="安全" icon="shield" href="/gateway/security">
+    威胁模型与加固。
   </Card>
-  <Card title="Multi-agent routing" icon="sitemap" href="/concepts/multi-agent">
-    Map guilds and channels to agents.
+  <Card title="多 agent 路由" icon="sitemap" href="/concepts/multi-agent">
+    将公会和频道映射到 agents。
   </Card>
-  <Card title="Slash commands" icon="terminal" href="/tools/slash-commands">
-    Native command behavior.
+  <Card title="斜杠命令" icon="terminal" href="/tools/slash-commands">
+    原生命令行为。
   </Card>
 </CardGroup>

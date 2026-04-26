@@ -1,215 +1,137 @@
 ---
-summary: "Text-to-speech for outbound replies — providers, personas, slash commands, and per-channel output"
+summary: "出站回复的文本转语音（TTS）"
 read_when:
-  - Enabling text-to-speech for replies
-  - Configuring a TTS provider, fallback chain, or persona
-  - Using /tts commands or directives
-title: "Text-to-speech"
-sidebarTitle: "Text to speech (TTS)"
+  - 启用回复的文本转语音
+  - 配置 TTS 提供商或限制
+  - 使用 /tts 命令
+title: "文本转语音"
 ---
 
-OpenClaw can convert outbound replies into audio across **13 speech providers**
-and deliver native voice messages on Feishu, Matrix, Telegram, and WhatsApp,
-audio attachments everywhere else, and PCM/Ulaw streams for telephony and Talk.
+OpenClaw 可以使用 ElevenLabs、Google Gemini、Gradium、Microsoft、MiniMax、OpenAI、Vydra 或 xAI 将出站回复转换为音频。
+它适用于 OpenClaw 能发送音频的任何地方。
 
-## Quick start
+## 支持的服务
 
-<Steps>
-  <Step title="Pick a provider">
-    OpenAI and ElevenLabs are the most reliable hosted options. Microsoft and
-    Local CLI work without an API key. See the [provider matrix](#supported-providers)
-    for the full list.
-  </Step>
-  <Step title="Set the API key">
-    Export the env var for your provider (for example `OPENAI_API_KEY`,
-    `ELEVENLABS_API_KEY`). Microsoft and Local CLI need no key.
-  </Step>
-  <Step title="Enable in config">
-    Set `messages.tts.auto: "always"` and `messages.tts.provider`:
+- **ElevenLabs**（主提供商或备用提供商）
+- **Google Gemini**（主提供商或备用提供商；使用 Gemini API TTS）
+- **Gradium**（主提供商或备用提供商；支持语音笔记和电话输出）
+- **Microsoft**（主提供商或备用提供商；当前内置实现使用 `node-edge-tts`）
+- **MiniMax**（主提供商或备用提供商；使用 T2A v2 API）
+- **OpenAI**（主提供商或备用提供商；也用于摘要）
+- **Vydra**（主提供商或备用提供商；共享图像、视频和语音提供商）
+- **xAI**（主提供商或备用提供商；使用 xAI TTS API）
 
-    ```json5
-    {
-      messages: {
-        tts: {
-          auto: "always",
-          provider: "elevenlabs",
-        },
-      },
-    }
-    ```
+### Microsoft 语音说明
 
-  </Step>
-  <Step title="Try it in chat">
-    `/tts status` shows the current state. `/tts audio Hello from OpenClaw`
-    sends a one-off audio reply.
-  </Step>
-</Steps>
+当前内置的 Microsoft 语音提供商通过 `node-edge-tts` 库使用 Microsoft Edge 的在线
+神经 TTS 服务。这是一个托管服务（非
+本地），使用 Microsoft 端点，并且不需要 API 密钥。
+`node-edge-tts` 暴露了语音配置选项和输出格式，但
+并非所有选项都受该服务支持。使用 `edge` 的旧版配置和指令输入
+仍然有效，并会被规范化为 `microsoft`。
 
-<Note>
-Auto-TTS is **off** by default. When `messages.tts.provider` is unset,
-OpenClaw picks the first configured provider in registry auto-select order.
-</Note>
+由于这条路径是一个没有公开 SLA 或配额的公共 Web 服务，
+请将其视为尽力而为。如果你需要有保障的限制和支持，请使用 OpenAI
+或 ElevenLabs。
 
-## Supported providers
+## 可选密钥
 
-| Provider          | Auth                                                                                                             | Notes                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` (also `AZURE_SPEECH_API_KEY`, `SPEECH_KEY`, `SPEECH_REGION`)          | Native Ogg/Opus voice-note output and telephony.                        |
-| **ElevenLabs**    | `ELEVENLABS_API_KEY` or `XI_API_KEY`                                                                             | Voice cloning, multilingual, deterministic via `seed`.                  |
-| **Google Gemini** | `GEMINI_API_KEY` or `GOOGLE_API_KEY`                                                                             | Gemini API TTS; persona-aware via `promptTemplate: "audio-profile-v1"`. |
-| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | Voice-note and telephony output.                                        |
-| **Inworld**       | `INWORLD_API_KEY`                                                                                                | Streaming TTS API. Native Opus voice-note and PCM telephony.            |
-| **Local CLI**     | none                                                                                                             | Runs a configured local TTS command.                                    |
-| **Microsoft**     | none                                                                                                             | Public Edge neural TTS via `node-edge-tts`. Best-effort, no SLA.        |
-| **MiniMax**       | `MINIMAX_API_KEY` (or Token Plan: `MINIMAX_OAUTH_TOKEN`, `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`)      | T2A v2 API. Defaults to `speech-2.8-hd`.                                |
-| **OpenAI**        | `OPENAI_API_KEY`                                                                                                 | Also used for auto-summary; supports persona `instructions`.            |
-| **OpenRouter**    | `OPENROUTER_API_KEY` (can reuse `models.providers.openrouter.apiKey`)                                            | Default model `hexgrad/kokoro-82m`.                                     |
-| **Volcengine**    | `VOLCENGINE_TTS_API_KEY` or `BYTEPLUS_SEED_SPEECH_API_KEY` (legacy AppID/token: `VOLCENGINE_TTS_APPID`/`_TOKEN`) | BytePlus Seed Speech HTTP API.                                          |
-| **Vydra**         | `VYDRA_API_KEY`                                                                                                  | Shared image, video, and speech provider.                               |
-| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI batch TTS. Native Opus voice-note is **not** supported.             |
-| **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | MiMo TTS through Xiaomi chat completions.                               |
+如果你想使用 OpenAI、ElevenLabs、Google Gemini、Gradium、MiniMax、Vydra 或 xAI：
 
-If multiple providers are configured, the selected one is used first and the
-others are fallback options. Auto-summary uses `summaryModel` (or
-`agents.defaults.model.primary`), so that provider must also be authenticated
-if you keep summaries enabled.
+- `ELEVENLABS_API_KEY`（或 `XI_API_KEY`）
+- `GEMINI_API_KEY`（或 `GOOGLE_API_KEY`）
+- `GRADIUM_API_KEY`
+- `MINIMAX_API_KEY`
+- `OPENAI_API_KEY`
+- `VYDRA_API_KEY`
+- `XAI_API_KEY`
 
-<Warning>
-The bundled **Microsoft** provider uses Microsoft Edge's online neural TTS
-service via `node-edge-tts`. It is a public web service without a published
-SLA or quota — treat it as best-effort. The legacy provider id `edge` is
-normalized to `microsoft` and `openclaw doctor --fix` rewrites persisted
-config; new configs should always use `microsoft`.
-</Warning>
+Microsoft 语音 **不** 需要 API 密钥。
 
-## Configuration
+如果配置了多个提供商，先使用所选提供商，其余作为备用选项。
+自动摘要使用配置的 `summaryModel`（或 `agents.defaults.model.primary`），
+因此如果启用摘要，该提供商也必须完成身份验证。
 
-TTS config lives under `messages.tts` in `~/.openclaw/openclaw.json`. Pick a
-preset and adapt the provider block:
+## 服务链接
 
-<Tabs>
-  <Tab title="Azure Speech">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "azure-speech",
-      providers: {
-        "azure-speech": {
-          apiKey: "${AZURE_SPEECH_KEY}",
-          region: "eastus",
-          voice: "en-US-JennyNeural",
-          lang: "en-US",
-          outputFormat: "audio-24khz-48kbitrate-mono-mp3",
-          voiceNoteOutputFormat: "ogg-24khz-16bit-mono-opus",
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="ElevenLabs">
+- [OpenAI 文本转语音指南](https://platform.openai.com/docs/guides/text-to-speech)
+- [OpenAI 音频 API 参考](https://platform.openai.com/docs/api-reference/audio)
+- [ElevenLabs 文本转语音](https://elevenlabs.io/docs/api-reference/text-to-speech)
+- [ElevenLabs 身份验证](https://elevenlabs.io/docs/api-reference/authentication)
+- [Gradium](/providers/gradium)
+- [MiniMax T2A v2 API](https://platform.minimaxi.com/document/T2A%20V2)
+- [node-edge-tts](https://github.com/SchneeHertz/node-edge-tts)
+- [Microsoft Speech 输出格式](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
+- [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
+
+## 默认是否启用？
+
+否。自动 TTS 默认处于 **关闭** 状态。请在配置中通过
+`messages.tts.auto` 启用，或在本地使用 `/tts on` 启用。
+
+当 `messages.tts.provider` 未设置时，OpenClaw 会选择注册表中自动选择顺序里的第一个已配置语音提供商。
+
+## 配置
+
+TTS 配置位于 `openclaw.json` 中的 `messages.tts` 下。
+完整 schema 见 [网关配置](/gateway/configuration)。
+
+### 最小配置（启用 + 提供商）
+
 ```json5
 {
   messages: {
     tts: {
       auto: "always",
       provider: "elevenlabs",
+    },
+  },
+}
+```
+
+### OpenAI 为主，ElevenLabs 为备份
+
+```json5
+{
+  messages: {
+    tts: {
+      auto: "always",
+      provider: "openai",
+      summaryModel: "openai/gpt-4.1-mini",
+      modelOverrides: {
+        enabled: true,
+      },
       providers: {
+        openai: {
+          apiKey: "openai_api_key",
+          baseUrl: "https://api.openai.com/v1",
+          model: "gpt-4o-mini-tts",
+          voice: "alloy",
+        },
         elevenlabs: {
-          apiKey: "${ELEVENLABS_API_KEY}",
-          model: "eleven_multilingual_v2",
-          voiceId: "EXAVITQu4vr4xnSDxMaL",
+          apiKey: "elevenlabs_api_key",
+          baseUrl: "https://api.elevenlabs.io",
+          voiceId: "voice_id",
+          modelId: "eleven_multilingual_v2",
+          seed: 42,
+          applyTextNormalization: "auto",
+          languageCode: "en",
+          voiceSettings: {
+            stability: 0.5,
+            similarityBoost: 0.75,
+            style: 0.0,
+            useSpeakerBoost: true,
+            speed: 1.0,
+          },
         },
       },
     },
   },
 }
 ```
-  </Tab>
-  <Tab title="Google Gemini">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "google",
-      providers: {
-        google: {
-          apiKey: "${GEMINI_API_KEY}",
-          model: "gemini-3.1-flash-tts-preview",
-          voiceName: "Kore",
-          // Optional natural-language style prompts:
-          // audioProfile: "Speak in a calm, podcast-host tone.",
-          // speakerName: "Alex",
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="Gradium">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "gradium",
-      providers: {
-        gradium: {
-          apiKey: "${GRADIUM_API_KEY}",
-          voiceId: "YTpq7expH9539ERJ",
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="Inworld">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "inworld",
-      providers: {
-        inworld: {
-          apiKey: "${INWORLD_API_KEY}",
-          modelId: "inworld-tts-1.5-max",
-          voiceId: "Sarah",
-          temperature: 0.7,
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="Local CLI">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "tts-local-cli",
-      providers: {
-        "tts-local-cli": {
-          command: "say",
-          args: ["-o", "{{OutputPath}}", "{{Text}}"],
-          outputFormat: "wav",
-          timeoutMs: 120000,
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="Microsoft (no key)">
+
+### Microsoft 为主（无 API 密钥）
+
 ```json5
 {
   messages: {
@@ -222,16 +144,17 @@ preset and adapt the provider block:
           voice: "en-US-MichelleNeural",
           lang: "en-US",
           outputFormat: "audio-24khz-48kbitrate-mono-mp3",
-          rate: "+0%",
-          pitch: "+0%",
+          rate: "+10%",
+          pitch: "-5%",
         },
       },
     },
   },
 }
 ```
-  </Tab>
-  <Tab title="MiniMax">
+
+### MiniMax 为主
+
 ```json5
 {
   messages: {
@@ -240,7 +163,8 @@ preset and adapt the provider block:
       provider: "minimax",
       providers: {
         minimax: {
-          apiKey: "${MINIMAX_API_KEY}",
+          apiKey: "minimax_api_key",
+          baseUrl: "https://api.minimax.io",
           model: "speech-2.8-hd",
           voiceId: "English_expressive_narrator",
           speed: 1.0,
@@ -252,76 +176,31 @@ preset and adapt the provider block:
   },
 }
 ```
-  </Tab>
-  <Tab title="OpenAI + ElevenLabs">
+
+### Google Gemini 作为主提供商
+
 ```json5
 {
   messages: {
     tts: {
       auto: "always",
-      provider: "openai",
-      summaryModel: "openai/gpt-4.1-mini",
-      modelOverrides: { enabled: true },
+      provider: "google",
       providers: {
-        openai: {
-          apiKey: "${OPENAI_API_KEY}",
-          model: "gpt-4o-mini-tts",
-          voice: "alloy",
-        },
-        elevenlabs: {
-          apiKey: "${ELEVENLABS_API_KEY}",
-          model: "eleven_multilingual_v2",
-          voiceId: "EXAVITQu4vr4xnSDxMaL",
-          voiceSettings: { stability: 0.5, similarityBoost: 0.75, style: 0.0, useSpeakerBoost: true, speed: 1.0 },
-          applyTextNormalization: "auto",
-          languageCode: "en",
+        google: {
+          apiKey: "gemini_api_key",
+          model: "gemini-3.1-flash-tts-preview",
+          voiceName: "Kore",
         },
       },
     },
   },
 }
 ```
-  </Tab>
-  <Tab title="OpenRouter">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "openrouter",
-      providers: {
-        openrouter: {
-          apiKey: "${OPENROUTER_API_KEY}",
-          model: "hexgrad/kokoro-82m",
-          voice: "af_alloy",
-          responseFormat: "mp3",
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="Volcengine">
-```json5
-{
-  messages: {
-    tts: {
-      auto: "always",
-      provider: "volcengine",
-      providers: {
-        volcengine: {
-          apiKey: "${VOLCENGINE_TTS_API_KEY}",
-          resourceId: "seed-tts-1.0",
-          voice: "en_female_anna_mars_bigtts",
-        },
-      },
-    },
-  },
-}
-```
-  </Tab>
-  <Tab title="xAI">
+
+Google Gemini TTS 使用 Gemini API key 路径。一个在 Google Cloud Console 中限制为 Gemini API 的 key 也可以在这里使用，它与捆绑的 Google 图像生成 provider 使用的是同一类 key。解析顺序为 `messages.tts.providers.google.apiKey` -> `models.providers.google.apiKey` -> `GEMINI_API_KEY` -> `GOOGLE_API_KEY`。
+
+### xAI 主提供商
+
 ```json5
 {
   messages: {
@@ -330,108 +209,52 @@ preset and adapt the provider block:
       provider: "xai",
       providers: {
         xai: {
-          apiKey: "${XAI_API_KEY}",
+          apiKey: "xai_api_key",
           voiceId: "eve",
           language: "en",
           responseFormat: "mp3",
+          speed: 1.0,
         },
       },
     },
   },
 }
 ```
-  </Tab>
-  <Tab title="Xiaomi MiMo">
+
+xAI TTS 使用与捆绑的 Grok 模型提供商相同的 `XAI_API_KEY` 路径。
+解析顺序为 `messages.tts.providers.xai.apiKey` -> `XAI_API_KEY`。
+当前可用的语音为 `ara`、`eve`、`leo`、`rex`、`sal` 和 `una`；`eve` 是
+默认值。`language` 接受 BCP-47 标签或 `auto`。
+
+### Gradium 主提供商
+
 ```json5
 {
   messages: {
     tts: {
       auto: "always",
-      provider: "xiaomi",
+      provider: "gradium",
       providers: {
-        xiaomi: {
-          apiKey: "${XIAOMI_API_KEY}",
-          model: "mimo-v2.5-tts",
-          voice: "mimo_default",
-          format: "mp3",
+        gradium: {
+          apiKey: "gradium_api_key",
+          baseUrl: "https://api.gradium.ai",
+          voiceId: "YTpq7expH9539ERJ",
         },
       },
     },
   },
 }
 ```
-  </Tab>
-</Tabs>
 
-### Per-agent voice overrides
-
-Use `agents.list[].tts` when one agent should speak with a different provider,
-voice, model, persona, or auto-TTS mode. The agent block deep-merges over
-`messages.tts`, so provider credentials can stay in the global provider config:
+### 禁用 Microsoft 语音
 
 ```json5
 {
   messages: {
     tts: {
-      auto: "always",
-      provider: "elevenlabs",
       providers: {
-        elevenlabs: { apiKey: "${ELEVENLABS_API_KEY}", model: "eleven_multilingual_v2" },
-      },
-    },
-  },
-  agents: {
-    list: [
-      {
-        id: "reader",
-        tts: {
-          providers: {
-            elevenlabs: { voiceId: "EXAVITQu4vr4xnSDxMaL" },
-          },
-        },
-      },
-    ],
-  },
-}
-```
-
-To pin a per-agent persona, set `agents.list[].tts.persona` alongside provider
-config — it overrides the global `messages.tts.persona` for that agent only.
-
-Precedence order for automatic replies, `/tts audio`, `/tts status`, and the
-`tts` agent tool:
-
-1. `messages.tts`
-2. active `agents.list[].tts`
-3. channel override, when the channel supports `channels.<channel>.tts`
-4. account override, when the channel passes `channels.<channel>.accounts.<id>.tts`
-5. local `/tts` preferences for this host
-6. inline `[[tts:...]]` directives when [model overrides](#model-driven-directives) are enabled
-
-Channel and account overrides use the same shape as `messages.tts` and
-deep-merge over the earlier layers, so shared provider credentials can stay in
-`messages.tts` while a channel or bot account changes only voice, model, persona,
-or auto mode:
-
-```json5
-{
-  messages: {
-    tts: {
-      provider: "openai",
-      providers: {
-        openai: { apiKey: "${OPENAI_API_KEY}", model: "gpt-4o-mini-tts" },
-      },
-    },
-  },
-  channels: {
-    feishu: {
-      accounts: {
-        english: {
-          tts: {
-            providers: {
-              openai: { voice: "shimmer" },
-            },
-          },
+        microsoft: {
+          enabled: false,
         },
       },
     },
@@ -439,550 +262,287 @@ or auto mode:
 }
 ```
 
-## Personas
-
-A **persona** is a stable spoken identity that can be applied deterministically
-across providers. It can prefer one provider, define provider-neutral prompt
-intent, and carry provider-specific bindings for voices, models, prompt
-templates, seeds, and voice settings.
-
-### Minimal persona
+### 自定义限制 + prefs 路径
 
 ```json5
 {
   messages: {
     tts: {
       auto: "always",
-      persona: "narrator",
-      personas: {
-        narrator: {
-          label: "Narrator",
-          provider: "elevenlabs",
-          providers: {
-            elevenlabs: { voiceId: "EXAVITQu4vr4xnSDxMaL", modelId: "eleven_multilingual_v2" },
-          },
-        },
-      },
+      maxTextLength: 4000,
+      timeoutMs: 30000,
+      prefsPath: "~/.openclaw/settings/tts.json",
     },
   },
 }
 ```
 
-### Full persona (provider-neutral prompt)
+### 仅在收到入站语音消息后回复音频
+
+```json5
+{
+  messages: {
+    tts: {
+      auto: "inbound",
+    },
+  },
+}
+```
+
+### 为长回复禁用自动摘要
 
 ```json5
 {
   messages: {
     tts: {
       auto: "always",
-      persona: "alfred",
-      personas: {
-        alfred: {
-          label: "Alfred",
-          description: "Dry, warm British butler narrator.",
-          provider: "google",
-          fallbackPolicy: "preserve-persona",
-          prompt: {
-            profile: "A brilliant British butler. Dry, witty, warm, charming, emotionally expressive, never generic.",
-            scene: "A quiet late-night study. Close-mic narration for a trusted operator.",
-            sampleContext: "The speaker is answering a private technical request with concise confidence and dry warmth.",
-            style: "Refined, understated, lightly amused.",
-            accent: "British English.",
-            pacing: "Measured, with short dramatic pauses.",
-            constraints: ["Do not read configuration values aloud.", "Do not explain the persona."],
-          },
-          providers: {
-            google: {
-              model: "gemini-3.1-flash-tts-preview",
-              voiceName: "Algieba",
-              promptTemplate: "audio-profile-v1",
-            },
-            openai: { model: "gpt-4o-mini-tts", voice: "cedar" },
-            elevenlabs: {
-              voiceId: "voice_id",
-              modelId: "eleven_multilingual_v2",
-              seed: 42,
-              voiceSettings: {
-                stability: 0.65,
-                similarityBoost: 0.8,
-                style: 0.25,
-                useSpeakerBoost: true,
-                speed: 0.95,
-              },
-            },
-          },
-        },
-      },
     },
   },
 }
 ```
 
-### Persona resolution
+然后运行：
 
-The active persona is selected deterministically:
+```
+/tts summary off
+```
 
-1. `/tts persona <id>` local preference, if set.
-2. `messages.tts.persona`, if set.
-3. No persona.
+### 字段说明
 
-Provider selection runs explicit-first:
+- `auto`: 自动 TTS 模式（`off`、`always`、`inbound`、`tagged`）。
+  - `inbound` 仅在收到入站语音消息后发送音频。
+  - `tagged` 仅在回复包含 `[[tts:key=value]]` 指令或 `[[tts:text]]...[[/tts:text]]` 块时发送音频。
+- `enabled`: 旧版开关（doctor 会将其迁移到 `auto`）。
+- `mode`: `"final"`（默认）或 `"all"`（包括工具/块回复）。
+- `provider`: 语音提供商 id，例如 `"elevenlabs"`、`"google"`、`"gradium"`、`"microsoft"`、`"minimax"`、`"openai"`、`"vydra"` 或 `"xai"`（备用项自动选择）。
+- 如果 `provider` **未设置**，OpenClaw 会使用注册表自动选择顺序中的第一个已配置语音提供商。
+- 旧版 `provider: "edge"` 仍然有效，并会规范化为 `microsoft`。
+- `summaryModel`: 用于自动摘要的可选低成本模型；默认值为 `agents.defaults.model.primary`。
+  - 接受 `provider/model` 或已配置的模型别名。
+- `modelOverrides`: 允许模型发出 TTS 指令（默认开启）。
+  - `allowProvider` 默认值为 `false`（切换提供商需显式启用）。
+- `providers.<id>`：按语音提供商 id 键控的提供商专有设置。
+- 旧版直接提供商块（`messages.tts.openai`、`messages.tts.elevenlabs`、`messages.tts.microsoft`、`messages.tts.edge`）在加载时会自动迁移到 `messages.tts.providers.<id>`。
+- `maxTextLength`：TTS 输入的硬上限（字符）。超过时 `/tts audio` 会失败。
+- `timeoutMs`：请求超时（ms）。
+- `prefsPath`：覆盖本地 prefs JSON 路径（提供商/限制/摘要）。
+- `apiKey` 值会回退到环境变量（`ELEVENLABS_API_KEY`/`XI_API_KEY`、`GEMINI_API_KEY`/`GOOGLE_API_KEY`、`GRADIUM_API_KEY`、`MINIMAX_API_KEY`、`OPENAI_API_KEY`、`VYDRA_API_KEY`、`XAI_API_KEY`）。
+- `providers.elevenlabs.baseUrl`：覆盖 ElevenLabs API 基础 URL。
+- `providers.openai.baseUrl`：覆盖 OpenAI TTS 端点。
+  - 解析顺序：`messages.tts.providers.openai.baseUrl` -> `OPENAI_TTS_BASE_URL` -> `https://api.openai.com/v1`
+  - 非默认值会被视为兼容 OpenAI 的 TTS 端点，因此会接受自定义模型和语音名称。
+- `providers.elevenlabs.voiceSettings`：
+  - `stability`、`similarityBoost`、`style`：`0..1`
+  - `useSpeakerBoost`：`true|false`
+  - `speed`：`0.5..2.0`（1.0 = 正常）
+- `providers.elevenlabs.applyTextNormalization`：`auto|on|off`
+- `providers.elevenlabs.languageCode`：2 字母 ISO 639-1（例如 `en`、`de`）
+- `providers.elevenlabs.seed`：整数 `0..4294967295`（尽力而为的确定性）
+- `providers.minimax.baseUrl`：覆盖 MiniMax API 基础 URL（默认 `https://api.minimax.io`，环境变量：`MINIMAX_API_HOST`）。
+- `providers.minimax.model`：TTS 模型（默认 `speech-2.8-hd`，环境变量：`MINIMAX_TTS_MODEL`）。
+- `providers.minimax.voiceId`：语音标识符（默认 `English_expressive_narrator`，环境变量：`MINIMAX_TTS_VOICE_ID`）。
+- `providers.minimax.speed`：播放速度 `0.5..2.0`（默认 1.0）。
+- `providers.minimax.vol`：音量 `(0, 10]`（默认 1.0；必须大于 0）。
+- `providers.minimax.pitch`：音高偏移 `-12..12`（默认 0）。
+- `providers.google.model`：Gemini TTS 模型（默认 `gemini-3.1-flash-tts-preview`）。
+- `providers.google.voiceName`：Gemini 预置语音名称（默认 `Kore`；也接受 `voice`）。
+- `providers.google.baseUrl`：覆盖 Gemini API 基础 URL。仅接受 `https://generativelanguage.googleapis.com`。
+  - 如果省略 `messages.tts.providers.google.apiKey`，TTS 可以在回退到环境变量之前复用 `models.providers.google.apiKey`。
+- `providers.gradium.baseUrl`：覆盖 Gradium API 基础 URL（默认 `https://api.gradium.ai`）。
+- `providers.gradium.voiceId`：Gradium 语音标识符（默认 Emma，`YTpq7expH9539ERJ`）。
+- `providers.xai.apiKey`：xAI TTS API 密钥（环境变量：`XAI_API_KEY`）。
+- `providers.xai.baseUrl`：覆盖 xAI TTS 基础 URL（默认 `https://api.x.ai/v1`，环境变量：`XAI_BASE_URL`）。
+- `providers.xai.voiceId`：xAI 语音 id（默认 `eve`；当前可用语音：`ara`、`eve`、`leo`、`rex`、`sal`、`una`）。
+- `providers.xai.language`：BCP-47 语言代码或 `auto`（默认 `en`）。
+- `providers.xai.responseFormat`：`mp3`、`wav`、`pcm`、`mulaw` 或 `alaw`（默认 `mp3`）。
+- `providers.xai.speed`：提供商原生速度覆盖。
+- `providers.microsoft.enabled`：允许使用 Microsoft 语音（默认 `true`；无需 API 密钥）。
+- `providers.microsoft.voice`：Microsoft 神经语音名称（例如 `en-US-MichelleNeural`）。
+- `providers.microsoft.lang`：语言代码（例如 `en-US`）。
+- `providers.microsoft.outputFormat`：Microsoft 输出格式（例如 `audio-24khz-48kbitrate-mono-mp3`）。
+  - 有效值请参见 Microsoft Speech 输出格式；并非所有格式都受内置的 Edge 后端传输支持。
+- `providers.microsoft.rate` / `providers.microsoft.pitch` / `providers.microsoft.volume`：百分比字符串（例如 `+10%`、`-5%`）。
+- `providers.microsoft.saveSubtitles`：在音频文件旁边写入 JSON 字幕。
+- `providers.microsoft.proxy`：Microsoft 语音请求的代理 URL。
+- `providers.microsoft.timeoutMs`：请求超时覆盖（ms）。
+- `edge.*`：同一组 Microsoft 设置的旧版别名。
 
-1. Direct overrides (CLI, gateway, Talk, allowed TTS directives).
-2. `/tts provider <id>` local preference.
-3. Active persona's `provider`.
-4. `messages.tts.provider`.
-5. Registry auto-select.
+## 模型驱动的覆盖（默认开启）
 
-For each provider attempt, OpenClaw merges configs in this order:
+默认情况下，模型 **可以** 为单条回复发出 TTS 指令。
+当 `messages.tts.auto` 为 `tagged` 时，这些指令是触发音频所必需的。
 
-1. `messages.tts.providers.<id>`
-2. `messages.tts.personas.<persona>.providers.<id>`
-3. Trusted request overrides
-4. Allowed model-emitted TTS directive overrides
+启用后，模型可以发出 `[[tts:...]]` 指令来覆盖单条回复的音色，
+还可以使用可选的 `[[tts:text]]...[[/tts:text]]` 块来
+提供表达性标签（如笑声、演唱提示等），这些内容只应出现在
+音频中。
 
-### How providers use persona prompts
+除非 `modelOverrides.allowProvider: true`，否则 `provider=...` 指令会被忽略。
 
-Persona prompt fields (`profile`, `scene`, `sampleContext`, `style`, `accent`,
-`pacing`, `constraints`) are **provider-neutral**. Each provider decides how
-to use them:
+示例回复载荷：
 
-<AccordionGroup>
-  <Accordion title="Google Gemini">
-    Wraps persona prompt fields in a Gemini TTS prompt structure **only when**
-    the effective Google provider config sets `promptTemplate: "audio-profile-v1"`
-    or `personaPrompt`. The older `audioProfile` and `speakerName` fields are
-    still prepended as Google-specific prompt text. Inline audio tags such as
-    `[whispers]` or `[laughs]` inside a `[[tts:text]]` block are preserved
-    inside the Gemini transcript; OpenClaw does not generate these tags.
-  </Accordion>
-  <Accordion title="OpenAI">
-    Maps persona prompt fields to the request `instructions` field **only when**
-    no explicit OpenAI `instructions` is configured. Explicit `instructions`
-    always wins.
-  </Accordion>
-  <Accordion title="Other providers">
-    Use only the provider-specific persona bindings under
-    `personas.<id>.providers.<provider>`. Persona prompt fields are ignored
-    unless the provider implements its own persona-prompt mapping.
-  </Accordion>
-</AccordionGroup>
-
-### Fallback policy
-
-`fallbackPolicy` controls behavior when a persona has **no binding** for the
-attempted provider:
-
-| Policy              | Behavior                                                                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `preserve-persona`  | **Default.** Provider-neutral prompt fields stay available; the provider may use them or ignore them.                                            |
-| `provider-defaults` | Persona is omitted from prompt preparation for that attempt; the provider uses its neutral defaults while fallback to other providers continues. |
-| `fail`              | Skip that provider attempt with `reasonCode: "not_configured"` and `personaBinding: "missing"`. Fallback providers are still tried.              |
-
-The whole TTS request only fails when **every** attempted provider is skipped
-or fails.
-
-## Model-driven directives
-
-By default, the assistant **can** emit `[[tts:...]]` directives to override
-voice, model, or speed for a single reply, plus an optional
-`[[tts:text]]...[[/tts:text]]` block for expressive cues that should appear in
-audio only:
-
-```text
-Here you go.
+```
+给你。
 
 [[tts:voiceId=pMsXgVXv3BLzUgSXRplE model=eleven_v3 speed=1.1]]
-[[tts:text]](laughs) Read the song once more.[[/tts:text]]
+[[tts:text]](laughs) 再读一遍这首歌。[[/tts:text]]
 ```
 
-When `messages.tts.auto` is `"tagged"`, **directives are required** to trigger
-audio. Streaming block delivery strips directives from visible text before the
-channel sees them, even when split across adjacent blocks.
+可用的指令键（启用时）：
 
-`provider=...` is ignored unless `modelOverrides.allowProvider: true`. When a
-reply declares `provider=...`, the other keys in that directive are parsed
-only by that provider; unsupported keys are stripped and reported as TTS
-directive warnings.
-
-**Available directive keys:**
-
-- `provider` (registered provider id; requires `allowProvider: true`)
-- `voice` / `voiceName` / `voice_name` / `google_voice` / `voiceId`
-- `model` / `google_model`
-- `stability`, `similarityBoost`, `style`, `speed`, `useSpeakerBoost`
-- `vol` / `volume` (MiniMax volume, 0–10)
-- `pitch` (MiniMax integer pitch, −12 to 12; fractional values are truncated)
-- `emotion` (Volcengine emotion tag)
-- `applyTextNormalization` (`auto|on|off`)
-- `languageCode` (ISO 639-1)
+- `provider`（已注册的语音提供商 id，例如 `openai`、`elevenlabs`、`google`、`gradium`、`minimax`、`microsoft`、`vydra` 或 `xai`；需要 `allowProvider: true`）
+- `voice`（OpenAI 或 Gradium 音色），`voiceName` / `voice_name` / `google_voice`（Google 音色），或 `voiceId`（ElevenLabs / Gradium / MiniMax / xAI）
+- `model`（OpenAI TTS 模型、ElevenLabs 模型 id 或 MiniMax 模型）或 `google_model`（Google TTS 模型）
+- `stability`、`similarityBoost`、`style`、`speed`、`useSpeakerBoost`
+- `vol` / `volume`（MiniMax 音量，0-10）
+- `pitch`（MiniMax 音高，-12 到 12）
+- `applyTextNormalization`（`auto|on|off`）
+- `languageCode`（ISO 639-1）
 - `seed`
 
-**Disable model overrides entirely:**
+禁用所有模型覆盖：
 
 ```json5
-{ messages: { tts: { modelOverrides: { enabled: false } } } }
+{
+  messages: {
+    tts: {
+      modelOverrides: {
+        enabled: false,
+      },
+    },
+  },
+}
 ```
 
-**Allow provider switching while keeping other knobs configurable:**
+可选允许列表（在保持其他参数可配置的同时启用提供商切换）：
 
 ```json5
-{ messages: { tts: { modelOverrides: { enabled: true, allowProvider: true, allowSeed: false } } } }
+{
+  messages: {
+    tts: {
+      modelOverrides: {
+        enabled: true,
+        allowProvider: true,
+        allowSeed: false,
+      },
+    },
+  },
+}
 ```
 
-## Slash commands
+## 每用户偏好
 
-Single command `/tts`. On Discord, OpenClaw also registers `/voice` because
-`/tts` is a built-in Discord command — text `/tts ...` still works.
+斜杠命令会将本地覆盖写入 `prefsPath`（默认：
+`~/.openclaw/settings/tts.json`，可通过 `OPENCLAW_TTS_PREFS` 或
+`messages.tts.prefsPath` 覆盖）。
 
-```text
-/tts off | on | status
-/tts chat on | off | default
-/tts latest
-/tts provider <id>
-/tts persona <id> | off
-/tts limit <chars>
+存储字段：
+
+- `enabled`
+- `provider`
+- `maxLength`（摘要阈值；默认 1500 字符）
+- `summarize`（默认 `true`）
+
+这些会覆盖该主机上的 `messages.tts.*`。
+
+## 输出格式（固定）
+
+- **飞书 / Matrix / Telegram / WhatsApp**：Opus 语音消息（ElevenLabs 使用 `opus_48000_64`，OpenAI 使用 `opus`）。
+  - 48kHz / 64kbps 是语音消息的较好折中。
+- **其他频道**：MP3（ElevenLabs 使用 `mp3_44100_128`，OpenAI 使用 `mp3`）。
+  - 44.1kHz / 128kbps 是语音清晰度的默认平衡。
+- **MiniMax**：MP3（`speech-2.8-hd` 模型，32kHz 采样率）。原生不支持语音便笺格式；如需保证 Opus 语音消息，请使用 OpenAI 或 ElevenLabs。
+- **Google Gemini**：Gemini API TTS 返回原始 24kHz PCM。OpenClaw 会将其包装为用于音频附件的 WAV，并在 Talk/电话场景中直接返回 PCM。此路径不支持原生 Opus 语音便笺格式。
+- **Gradium**：音频附件使用 WAV，语音便笺目标使用 Opus，电话场景使用 8 kHz 的 `ulaw_8000`。
+- **xAI**：默认使用 MP3；`responseFormat` 可以是 `mp3`、`wav`、`pcm`、`mulaw` 或 `alaw`。OpenClaw 使用 xAI 的批量 REST TTS 端点并返回完整的音频附件；此提供商路径不使用 xAI 的流式 TTS WebSocket。此路径不支持原生 Opus 语音便笺格式。
+- **Microsoft**：使用 `microsoft.outputFormat`（默认 `audio-24khz-48kbitrate-mono-mp3`）。
+  - 随附的传输层接受 `outputFormat`，但并非所有格式都可从服务端获得。
+  - 输出格式值遵循 Microsoft Speech 输出格式（包括 Ogg/WebM Opus）。
+  - Telegram `sendVoice` 接受 OGG/MP3/M4A；如果你需要
+    保证 Opus 语音消息，请使用 OpenAI/ElevenLabs。
+  - 如果配置的 Microsoft 输出格式失败，OpenClaw 会重试 MP3。
+
+OpenAI/ElevenLabs 的输出格式会按频道固定（见上文）。
+
+## Auto-TTS 行为
+
+启用后，OpenClaw 会：
+
+- 如果回复已包含媒体或 `MEDIA:` 指令，则跳过 TTS。
+- 跳过很短的回复（< 10 个字符）。
+- 在启用时使用 `agents.defaults.model.primary`（或 `summaryModel`）对较长回复进行摘要。
+- 将生成的音频附加到回复中。
+
+如果回复超过 `maxLength` 且未开启摘要（或摘要模型没有 API key），则会跳过音频，并发送普通文本回复。
+
+## 流程图
+
+```
+回复 -> 启用 TTS？
+  否  -> 发送文本
+  是 -> 包含媒体 / MEDIA: / 短消息？
+          是 -> 发送文本
+          否  -> 长度 > 限制？
+                   否  -> TTS -> 附加音频
+                   是  -> 启用摘要？
+                            否  -> 发送文本
+                            是  -> 摘要 (summaryModel 或 agents.defaults.model.primary)
+                                      -> TTS -> 附加音频
+```
+
+## Slash 命令用法
+
+这里只有一个命令：`/tts`。
+启用详情请参见 [斜杠命令](/tools/slash-commands)。
+
+Discord 说明：`/tts` 是 Discord 的内置命令，因此 OpenClaw 在那里注册
+`/voice` 作为原生命令。文本形式的 `/tts ...` 仍然可用。
+
+```
+/tts off
+/tts on
+/tts status
+/tts provider openai
+/tts limit 2000
 /tts summary off
-/tts audio <text>
+/tts audio Hello from OpenClaw
 ```
 
-<Note>
-Commands require an authorized sender (allowlist/owner rules apply) and either
-`commands.text` or native command registration must be enabled.
-</Note>
+注意：
 
-Behavior notes:
+- 命令需要授权的发送者（允许列表/所有者规则仍然适用）。
+- 必须启用 `commands.text` 或原生命令注册。
+- 配置 `messages.tts.auto` 接受 `off|always|inbound|tagged`。
+- `/tts on` 将本地 TTS 偏好写入 `always`；`/tts off` 将其写入 `off`。
+- 当你想要 `inbound` 或 `tagged` 默认值时使用配置。
+- `limit` 和 `summary` 存储在本地偏好设置中，而不是主配置中。
+- `/tts audio` 生成一次性音频回复（不会切换开启 TTS）。
+- `/tts status` 包含最新尝试的回退可见性：
+  - 成功回退：`Fallback: <primary> -> <used>` 加上 `Attempts: ...`
+  - 失败：`Error: ...` 加上 `Attempts: ...`
+  - 详细诊断：`Attempt details: provider:outcome(reasonCode) latency`
+- OpenAI 和 ElevenLabs API 失败现在包含解析后的提供商错误详情和请求 ID（当提供商返回时），这些信息会显示在 TTS 错误/日志中。
 
-- `/tts on` writes the local TTS preference to `always`; `/tts off` writes it to `off`.
-- `/tts chat on|off|default` writes a session-scoped auto-TTS override for the current chat.
-- `/tts persona <id>` writes the local persona preference; `/tts persona off` clears it.
-- `/tts latest` reads the latest assistant reply from the current session transcript and sends it as audio once. It stores only a hash of that reply on the session entry to suppress duplicate voice sends.
-- `/tts audio` generates a one-off audio reply (does **not** toggle TTS on).
-- `limit` and `summary` are stored in **local prefs**, not the main config.
-- `/tts status` includes fallback diagnostics for the latest attempt — `Fallback: <primary> -> <used>`, `Attempts: ...`, and per-attempt detail (`provider:outcome(reasonCode) latency`).
-- `/status` shows the active TTS mode plus configured provider, model, voice, and sanitized custom endpoint metadata when TTS is enabled.
+## Agent 工具
 
-## Per-user preferences
+`tts` 工具可将文本转换为语音，并返回一个用于回复投递的音频附件。
+当频道为飞书、Matrix、Telegram 或 WhatsApp 时，音频会作为语音消息投递，而不是文件附件。
+它接受可选的 `channel` 和 `timeoutMs` 字段；`timeoutMs` 是
+每次调用的提供商请求超时时间，单位为毫秒。
 
-Slash commands write local overrides to `prefsPath`. The default is
-`~/.openclaw/settings/tts.json`; override with the `OPENCLAW_TTS_PREFS` env var
-or `messages.tts.prefsPath`.
+## 网关 RPC
 
-| Stored field | Effect                                       |
-| ------------ | -------------------------------------------- |
-| `auto`       | Local auto-TTS override (`always`, `off`, …) |
-| `provider`   | Local primary provider override              |
-| `persona`    | Local persona override                       |
-| `maxLength`  | Summary threshold (default `1500` chars)     |
-| `summarize`  | Summary toggle (default `true`)              |
+网关方法：
 
-These override the effective config from `messages.tts` plus the active
-`agents.list[].tts` block for that host.
+- `tts.status`
+- `tts.enable`
+- `tts.disable`
+- `tts.convert`
+- `tts.setProvider`
+- `tts.providers`
 
-## Output formats (fixed)
+## 相关内容
 
-TTS voice delivery is channel-capability driven. Channel plugins advertise
-whether voice-style TTS should ask providers for a native `voice-note` target or
-keep normal `audio-file` synthesis and only mark compatible output for voice
-delivery.
-
-- **Voice-note capable channels**: voice-note replies prefer Opus (`opus_48000_64` from ElevenLabs, `opus` from OpenAI).
-  - 48kHz / 64kbps is a good voice message tradeoff.
-- **Feishu / WhatsApp**: when a voice-note reply is produced as MP3/WebM/WAV/M4A
-  or another likely audio file, the channel plugin transcodes it to 48kHz
-  Ogg/Opus with `ffmpeg` before sending the native voice message. WhatsApp sends
-  the result through the Baileys `audio` payload with `ptt: true` and
-  `audio/ogg; codecs=opus`. If conversion fails, Feishu receives the original
-  file as an attachment; WhatsApp send fails rather than posting an incompatible
-  PTT payload.
-- **BlueBubbles**: keeps provider synthesis on the normal audio-file path; MP3
-  and CAF outputs are marked for iMessage voice memo delivery.
-- **Other channels**: MP3 (`mp3_44100_128` from ElevenLabs, `mp3` from OpenAI).
-  - 44.1kHz / 128kbps is the default balance for speech clarity.
-- **MiniMax**: MP3 (`speech-2.8-hd` model, 32kHz sample rate) for normal audio attachments. For channel-advertised voice-note targets, OpenClaw transcodes the MiniMax MP3 to 48kHz Opus with `ffmpeg` before delivery when the channel advertises transcoding.
-- **Xiaomi MiMo**: MP3 by default, or WAV when configured. For channel-advertised voice-note targets, OpenClaw transcodes Xiaomi output to 48kHz Opus with `ffmpeg` before delivery when the channel advertises transcoding.
-- **Local CLI**: uses the configured `outputFormat`. Voice-note targets are
-  converted to Ogg/Opus and telephony output is converted to raw 16 kHz mono PCM
-  with `ffmpeg`.
-- **Google Gemini**: Gemini API TTS returns raw 24kHz PCM. OpenClaw wraps it as WAV for audio attachments, transcodes it to 48kHz Opus for voice-note targets, and returns PCM directly for Talk/telephony.
-- **Gradium**: WAV for audio attachments, Opus for voice-note targets, and `ulaw_8000` at 8 kHz for telephony.
-- **Inworld**: MP3 for normal audio attachments, native `OGG_OPUS` for voice-note targets, and raw `PCM` at 22050 Hz for Talk/telephony.
-- **xAI**: MP3 by default; `responseFormat` may be `mp3`, `wav`, `pcm`, `mulaw`, or `alaw`. OpenClaw uses xAI's batch REST TTS endpoint and returns a complete audio attachment; xAI's streaming TTS WebSocket is not used by this provider path. Native Opus voice-note format is not supported by this path.
-- **Microsoft**: uses `microsoft.outputFormat` (default `audio-24khz-48kbitrate-mono-mp3`).
-  - The bundled transport accepts an `outputFormat`, but not all formats are available from the service.
-  - Output format values follow Microsoft Speech output formats (including Ogg/WebM Opus).
-  - Telegram `sendVoice` accepts OGG/MP3/M4A; use OpenAI/ElevenLabs if you need
-    guaranteed Opus voice messages.
-  - If the configured Microsoft output format fails, OpenClaw retries with MP3.
-
-OpenAI/ElevenLabs output formats are fixed per channel (see above).
-
-## Auto-TTS behavior
-
-When `messages.tts.auto` is enabled, OpenClaw:
-
-- Skips TTS if the reply already contains media or a `MEDIA:` directive.
-- Skips very short replies (under 10 chars).
-- Summarizes long replies when summaries are enabled, using
-  `summaryModel` (or `agents.defaults.model.primary`).
-- Attaches the generated audio to the reply.
-- In `mode: "final"`, still sends audio-only TTS for streamed final replies
-  after the text stream completes; the generated media goes through the same
-  channel media normalization as normal reply attachments.
-
-If the reply exceeds `maxLength` and summary is off (or no API key for the
-summary model), audio is skipped and the normal text reply is sent.
-
-```text
-Reply -> TTS enabled?
-  no  -> send text
-  yes -> has media / MEDIA: / short?
-          yes -> send text
-          no  -> length > limit?
-                   no  -> TTS -> attach audio
-                   yes -> summary enabled?
-                            no  -> send text
-                            yes -> summarize -> TTS -> attach audio
-```
-
-## Output formats by channel
-
-| Target                                | Format                                                                                                                                |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Feishu / Matrix / Telegram / WhatsApp | Voice-note replies prefer **Opus** (`opus_48000_64` from ElevenLabs, `opus` from OpenAI). 48 kHz / 64 kbps balances clarity and size. |
-| Other channels                        | **MP3** (`mp3_44100_128` from ElevenLabs, `mp3` from OpenAI). 44.1 kHz / 128 kbps default for speech.                                 |
-| Talk / telephony                      | Provider-native **PCM** (Inworld 22050 Hz, Google 24 kHz), or `ulaw_8000` from Gradium for telephony.                                 |
-
-Per-provider notes:
-
-- **Feishu / WhatsApp transcoding:** When a voice-note reply lands as MP3/WebM/WAV/M4A, the channel plugin transcodes to 48 kHz Ogg/Opus with `ffmpeg`. WhatsApp sends through Baileys with `ptt: true` and `audio/ogg; codecs=opus`. If conversion fails: Feishu falls back to attaching the original file; WhatsApp send fails rather than posting an incompatible PTT payload.
-- **MiniMax / Xiaomi MiMo:** Default MP3 (32 kHz for MiniMax `speech-2.8-hd`); transcoded to 48 kHz Opus for voice-note targets via `ffmpeg`.
-- **Local CLI:** Uses configured `outputFormat`. Voice-note targets are converted to Ogg/Opus and telephony output to raw 16 kHz mono PCM.
-- **Google Gemini:** Returns raw 24 kHz PCM. OpenClaw wraps as WAV for attachments, transcodes to 48 kHz Opus for voice-note targets, returns PCM directly for Talk/telephony.
-- **Inworld:** MP3 attachments, native `OGG_OPUS` voice-note, raw `PCM` 22050 Hz for Talk/telephony.
-- **xAI:** MP3 by default; `responseFormat` may be `mp3|wav|pcm|mulaw|alaw`. Uses xAI's batch REST endpoint — streaming WebSocket TTS is **not** used. Native Opus voice-note format is **not** supported.
-- **Microsoft:** Uses `microsoft.outputFormat` (default `audio-24khz-48kbitrate-mono-mp3`). Telegram `sendVoice` accepts OGG/MP3/M4A; use OpenAI/ElevenLabs if you need guaranteed Opus voice messages. If the configured Microsoft format fails, OpenClaw retries with MP3.
-
-OpenAI and ElevenLabs output formats are fixed per channel as listed above.
-
-## Field reference
-
-<AccordionGroup>
-  <Accordion title="Top-level messages.tts.*">
-    <ParamField path="auto" type='"off" | "always" | "inbound" | "tagged"'>
-      Auto-TTS mode. `inbound` only sends audio after an inbound voice message; `tagged` only sends audio when the reply includes `[[tts:...]]` directives or a `[[tts:text]]` block.
-    </ParamField>
-    <ParamField path="enabled" type="boolean" deprecated>
-      Legacy toggle. `openclaw doctor --fix` migrates this to `auto`.
-    </ParamField>
-    <ParamField path="mode" type='"final" | "all"' default="final">
-      `"all"` includes tool/block replies in addition to final replies.
-    </ParamField>
-    <ParamField path="provider" type="string">
-      Speech provider id. When unset, OpenClaw uses the first configured provider in registry auto-select order. Legacy `provider: "edge"` is rewritten to `"microsoft"` by `openclaw doctor --fix`.
-    </ParamField>
-    <ParamField path="persona" type="string">
-      Active persona id from `personas`. Normalized to lowercase.
-    </ParamField>
-    <ParamField path="personas.<id>" type="object">
-      Stable spoken identity. Fields: `label`, `description`, `provider`, `fallbackPolicy`, `prompt`, `providers.<provider>`. See [Personas](#personas).
-    </ParamField>
-    <ParamField path="summaryModel" type="string">
-      Cheap model for auto-summary; defaults to `agents.defaults.model.primary`. Accepts `provider/model` or a configured model alias.
-    </ParamField>
-    <ParamField path="modelOverrides" type="object">
-      Allow the model to emit TTS directives. `enabled` defaults to `true`; `allowProvider` defaults to `false`.
-    </ParamField>
-    <ParamField path="providers.<id>" type="object">
-      Provider-owned settings keyed by speech provider id. Legacy direct blocks (`messages.tts.openai`, `.elevenlabs`, `.microsoft`, `.edge`) are rewritten by `openclaw doctor --fix`; commit only `messages.tts.providers.<id>`.
-    </ParamField>
-    <ParamField path="maxTextLength" type="number">
-      Hard cap for TTS input characters. `/tts audio` fails if exceeded.
-    </ParamField>
-    <ParamField path="timeoutMs" type="number">
-      Request timeout in milliseconds.
-    </ParamField>
-    <ParamField path="prefsPath" type="string">
-      Override the local prefs JSON path (provider/limit/summary). Default `~/.openclaw/settings/tts.json`.
-    </ParamField>
-  </Accordion>
-
-  <Accordion title="Azure Speech">
-    <ParamField path="apiKey" type="string">Env: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_API_KEY`, or `SPEECH_KEY`.</ParamField>
-    <ParamField path="region" type="string">Azure Speech region (e.g. `eastus`). Env: `AZURE_SPEECH_REGION` or `SPEECH_REGION`.</ParamField>
-    <ParamField path="endpoint" type="string">Optional Azure Speech endpoint override (alias `baseUrl`).</ParamField>
-    <ParamField path="voice" type="string">Azure voice ShortName. Default `en-US-JennyNeural`.</ParamField>
-    <ParamField path="lang" type="string">SSML language code. Default `en-US`.</ParamField>
-    <ParamField path="outputFormat" type="string">Azure `X-Microsoft-OutputFormat` for standard audio. Default `audio-24khz-48kbitrate-mono-mp3`.</ParamField>
-    <ParamField path="voiceNoteOutputFormat" type="string">Azure `X-Microsoft-OutputFormat` for voice-note output. Default `ogg-24khz-16bit-mono-opus`.</ParamField>
-  </Accordion>
-
-  <Accordion title="ElevenLabs">
-    <ParamField path="apiKey" type="string">Falls back to `ELEVENLABS_API_KEY` or `XI_API_KEY`.</ParamField>
-    <ParamField path="model" type="string">Model id (e.g. `eleven_multilingual_v2`, `eleven_v3`).</ParamField>
-    <ParamField path="voiceId" type="string">ElevenLabs voice id.</ParamField>
-    <ParamField path="voiceSettings" type="object">
-      `stability`, `similarityBoost`, `style` (each `0..1`), `useSpeakerBoost` (`true|false`), `speed` (`0.5..2.0`, `1.0` = normal).
-    </ParamField>
-    <ParamField path="applyTextNormalization" type='"auto" | "on" | "off"'>Text normalization mode.</ParamField>
-    <ParamField path="languageCode" type="string">2-letter ISO 639-1 (e.g. `en`, `de`).</ParamField>
-    <ParamField path="seed" type="number">Integer `0..4294967295` for best-effort determinism.</ParamField>
-    <ParamField path="baseUrl" type="string">Override ElevenLabs API base URL.</ParamField>
-  </Accordion>
-
-  <Accordion title="Google Gemini">
-    <ParamField path="apiKey" type="string">Falls back to `GEMINI_API_KEY` / `GOOGLE_API_KEY`. If omitted, TTS can reuse `models.providers.google.apiKey` before env fallback.</ParamField>
-    <ParamField path="model" type="string">Gemini TTS model. Default `gemini-3.1-flash-tts-preview`.</ParamField>
-    <ParamField path="voiceName" type="string">Gemini prebuilt voice name. Default `Kore`. Alias: `voice`.</ParamField>
-    <ParamField path="audioProfile" type="string">Natural-language style prompt prepended before spoken text.</ParamField>
-    <ParamField path="speakerName" type="string">Optional speaker label prepended before spoken text when your prompt uses a named speaker.</ParamField>
-    <ParamField path="promptTemplate" type='"audio-profile-v1"'>Set to `audio-profile-v1` to wrap active persona prompt fields in a deterministic Gemini TTS prompt structure.</ParamField>
-    <ParamField path="personaPrompt" type="string">Google-specific extra persona prompt text appended to the template's Director's Notes.</ParamField>
-    <ParamField path="baseUrl" type="string">Only `https://generativelanguage.googleapis.com` is accepted.</ParamField>
-  </Accordion>
-
-  <Accordion title="Gradium">
-    <ParamField path="apiKey" type="string">Env: `GRADIUM_API_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://api.gradium.ai`.</ParamField>
-    <ParamField path="voiceId" type="string">Default Emma (`YTpq7expH9539ERJ`).</ParamField>
-  </Accordion>
-
-  <Accordion title="Inworld">
-    <ParamField path="apiKey" type="string">Env: `INWORLD_API_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://api.inworld.ai`.</ParamField>
-    <ParamField path="modelId" type="string">Default `inworld-tts-1.5-max`. Also: `inworld-tts-1.5-mini`, `inworld-tts-1-max`, `inworld-tts-1`.</ParamField>
-    <ParamField path="voiceId" type="string">Default `Sarah`.</ParamField>
-    <ParamField path="temperature" type="number">Sampling temperature `0..2`.</ParamField>
-  </Accordion>
-
-  <Accordion title="Local CLI (tts-local-cli)">
-    <ParamField path="command" type="string">Local executable or command string for CLI TTS.</ParamField>
-    <ParamField path="args" type="string[]">Command arguments. Supports `{{Text}}`, `{{OutputPath}}`, `{{OutputDir}}`, `{{OutputBase}}` placeholders.</ParamField>
-    <ParamField path="outputFormat" type='"mp3" | "opus" | "wav"'>Expected CLI output format. Default `mp3` for audio attachments.</ParamField>
-    <ParamField path="timeoutMs" type="number">Command timeout in milliseconds. Default `120000`.</ParamField>
-    <ParamField path="cwd" type="string">Optional command working directory.</ParamField>
-    <ParamField path="env" type="Record<string, string>">Optional environment overrides for the command.</ParamField>
-  </Accordion>
-
-  <Accordion title="Microsoft (no API key)">
-    <ParamField path="enabled" type="boolean" default="true">Allow Microsoft speech usage.</ParamField>
-    <ParamField path="voice" type="string">Microsoft neural voice name (e.g. `en-US-MichelleNeural`).</ParamField>
-    <ParamField path="lang" type="string">Language code (e.g. `en-US`).</ParamField>
-    <ParamField path="outputFormat" type="string">Microsoft output format. Default `audio-24khz-48kbitrate-mono-mp3`. Not all formats are supported by the bundled Edge-backed transport.</ParamField>
-    <ParamField path="rate / pitch / volume" type="string">Percent strings (e.g. `+10%`, `-5%`).</ParamField>
-    <ParamField path="saveSubtitles" type="boolean">Write JSON subtitles alongside the audio file.</ParamField>
-    <ParamField path="proxy" type="string">Proxy URL for Microsoft speech requests.</ParamField>
-    <ParamField path="timeoutMs" type="number">Request timeout override (ms).</ParamField>
-    <ParamField path="edge.*" type="object" deprecated>Legacy alias. Run `openclaw doctor --fix` to rewrite persisted config to `providers.microsoft`.</ParamField>
-  </Accordion>
-
-  <Accordion title="MiniMax">
-    <ParamField path="apiKey" type="string">Falls back to `MINIMAX_API_KEY`. Token Plan auth via `MINIMAX_OAUTH_TOKEN`, `MINIMAX_CODE_PLAN_KEY`, or `MINIMAX_CODING_API_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://api.minimax.io`. Env: `MINIMAX_API_HOST`.</ParamField>
-    <ParamField path="model" type="string">Default `speech-2.8-hd`. Env: `MINIMAX_TTS_MODEL`.</ParamField>
-    <ParamField path="voiceId" type="string">Default `English_expressive_narrator`. Env: `MINIMAX_TTS_VOICE_ID`.</ParamField>
-    <ParamField path="speed" type="number">`0.5..2.0`. Default `1.0`.</ParamField>
-    <ParamField path="vol" type="number">`(0, 10]`. Default `1.0`.</ParamField>
-    <ParamField path="pitch" type="number">Integer `-12..12`. Default `0`. Fractional values are truncated before the request.</ParamField>
-  </Accordion>
-
-  <Accordion title="OpenAI">
-    <ParamField path="apiKey" type="string">Falls back to `OPENAI_API_KEY`.</ParamField>
-    <ParamField path="model" type="string">OpenAI TTS model id (e.g. `gpt-4o-mini-tts`).</ParamField>
-    <ParamField path="voice" type="string">Voice name (e.g. `alloy`, `cedar`).</ParamField>
-    <ParamField path="instructions" type="string">Explicit OpenAI `instructions` field. When set, persona prompt fields are **not** auto-mapped.</ParamField>
-    <ParamField path="baseUrl" type="string">
-      Override the OpenAI TTS endpoint. Resolution order: config → `OPENAI_TTS_BASE_URL` → `https://api.openai.com/v1`. Non-default values are treated as OpenAI-compatible TTS endpoints, so custom model and voice names are accepted.
-    </ParamField>
-  </Accordion>
-
-  <Accordion title="OpenRouter">
-    <ParamField path="apiKey" type="string">Env: `OPENROUTER_API_KEY`. Can reuse `models.providers.openrouter.apiKey`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://openrouter.ai/api/v1`. Legacy `https://openrouter.ai/v1` is normalized.</ParamField>
-    <ParamField path="model" type="string">Default `hexgrad/kokoro-82m`. Alias: `modelId`.</ParamField>
-    <ParamField path="voice" type="string">Default `af_alloy`. Alias: `voiceId`.</ParamField>
-    <ParamField path="responseFormat" type='"mp3" | "pcm"'>Default `mp3`.</ParamField>
-    <ParamField path="speed" type="number">Provider-native speed override.</ParamField>
-  </Accordion>
-
-  <Accordion title="Volcengine (BytePlus Seed Speech)">
-    <ParamField path="apiKey" type="string">Env: `VOLCENGINE_TTS_API_KEY` or `BYTEPLUS_SEED_SPEECH_API_KEY`.</ParamField>
-    <ParamField path="resourceId" type="string">Default `seed-tts-1.0`. Env: `VOLCENGINE_TTS_RESOURCE_ID`. Use `seed-tts-2.0` when your project has TTS 2.0 entitlement.</ParamField>
-    <ParamField path="appKey" type="string">App key header. Default `aGjiRDfUWi`. Env: `VOLCENGINE_TTS_APP_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Override the Seed Speech TTS HTTP endpoint. Env: `VOLCENGINE_TTS_BASE_URL`.</ParamField>
-    <ParamField path="voice" type="string">Voice type. Default `en_female_anna_mars_bigtts`. Env: `VOLCENGINE_TTS_VOICE`.</ParamField>
-    <ParamField path="speedRatio" type="number">Provider-native speed ratio.</ParamField>
-    <ParamField path="emotion" type="string">Provider-native emotion tag.</ParamField>
-    <ParamField path="appId / token / cluster" type="string" deprecated>Legacy Volcengine Speech Console fields. Env: `VOLCENGINE_TTS_APPID`, `VOLCENGINE_TTS_TOKEN`, `VOLCENGINE_TTS_CLUSTER` (default `volcano_tts`).</ParamField>
-  </Accordion>
-
-  <Accordion title="xAI">
-    <ParamField path="apiKey" type="string">Env: `XAI_API_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://api.x.ai/v1`. Env: `XAI_BASE_URL`.</ParamField>
-    <ParamField path="voiceId" type="string">Default `eve`. Live voices: `ara`, `eve`, `leo`, `rex`, `sal`, `una`.</ParamField>
-    <ParamField path="language" type="string">BCP-47 language code or `auto`. Default `en`.</ParamField>
-    <ParamField path="responseFormat" type='"mp3" | "wav" | "pcm" | "mulaw" | "alaw"'>Default `mp3`.</ParamField>
-    <ParamField path="speed" type="number">Provider-native speed override.</ParamField>
-  </Accordion>
-
-  <Accordion title="Xiaomi MiMo">
-    <ParamField path="apiKey" type="string">Env: `XIAOMI_API_KEY`.</ParamField>
-    <ParamField path="baseUrl" type="string">Default `https://api.xiaomimimo.com/v1`. Env: `XIAOMI_BASE_URL`.</ParamField>
-    <ParamField path="model" type="string">Default `mimo-v2.5-tts`. Env: `XIAOMI_TTS_MODEL`. Also supports `mimo-v2-tts`.</ParamField>
-    <ParamField path="voice" type="string">Default `mimo_default`. Env: `XIAOMI_TTS_VOICE`.</ParamField>
-    <ParamField path="format" type='"mp3" | "wav"'>Default `mp3`. Env: `XIAOMI_TTS_FORMAT`.</ParamField>
-    <ParamField path="style" type="string">Optional natural-language style instruction sent as the user message; not spoken.</ParamField>
-  </Accordion>
-</AccordionGroup>
-
-## Agent tool
-
-The `tts` tool converts text to speech and returns an audio attachment for
-reply delivery. On Feishu, Matrix, Telegram, and WhatsApp, the audio is
-delivered as a voice message rather than a file attachment. Feishu and
-WhatsApp can transcode non-Opus TTS output on this path when `ffmpeg` is
-available.
-
-WhatsApp sends audio through Baileys as a PTT voice note (`audio` with
-`ptt: true`) and sends visible text **separately** from PTT audio because
-clients do not consistently render captions on voice notes.
-
-The tool accepts optional `channel` and `timeoutMs` fields; `timeoutMs` is a
-per-call provider request timeout in milliseconds.
-
-## Gateway RPC
-
-| Method            | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| `tts.status`      | Read current TTS state and last attempt. |
-| `tts.enable`      | Set local auto preference to `always`.   |
-| `tts.disable`     | Set local auto preference to `off`.      |
-| `tts.convert`     | One-off text → audio.                    |
-| `tts.setProvider` | Set local provider preference.           |
-| `tts.setPersona`  | Set local persona preference.            |
-| `tts.providers`   | List configured providers and status.    |
-
-## Service links
-
-- [OpenAI text-to-speech guide](https://platform.openai.com/docs/guides/text-to-speech)
-- [OpenAI Audio API reference](https://platform.openai.com/docs/api-reference/audio)
-- [Azure Speech REST text-to-speech](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
-- [Azure Speech provider](/providers/azure-speech)
-- [ElevenLabs Text to Speech](https://elevenlabs.io/docs/api-reference/text-to-speech)
-- [ElevenLabs Authentication](https://elevenlabs.io/docs/api-reference/authentication)
-- [Gradium](/providers/gradium)
-- [Inworld TTS API](https://docs.inworld.ai/tts/tts)
-- [MiniMax T2A v2 API](https://platform.minimaxi.com/document/T2A%20V2)
-- [Volcengine TTS HTTP API](/providers/volcengine#text-to-speech)
-- [Xiaomi MiMo speech synthesis](/providers/xiaomi#text-to-speech)
-- [node-edge-tts](https://github.com/SchneeHertz/node-edge-tts)
-- [Microsoft Speech output formats](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
-- [xAI text to speech](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
-
-## Related
-
-- [Media overview](/tools/media-overview)
-- [Music generation](/tools/music-generation)
-- [Video generation](/tools/video-generation)
-- [Slash commands](/tools/slash-commands)
-- [Voice call plugin](/plugins/voice-call)
+- [媒体概览](/tools/media-overview)
+- [音乐生成](/tools/music-generation)
+- [视频生成](/tools/video-generation)

@@ -1,51 +1,38 @@
 ---
-summary: "CLI reference for `openclaw configure` (interactive configuration prompts)"
+summary: "用于 `openclaw configure` 的 CLI 参考（交互式配置提示）"
 read_when:
-  - You want to tweak credentials, devices, or agent defaults interactively
-title: "Configure"
+  - 您想以交互方式调整凭据、设备或代理默认值
+title: "配置"
 ---
 
 # `openclaw configure`
 
-Interactive prompt to set up credentials, devices, and agent defaults.
+用于设置凭据、设备和代理默认值的交互式提示。
 
-Note: The **Model** section now includes a multi-select for the
-`agents.defaults.models` allowlist (what shows up in `/model` and the model picker).
-Provider-scoped setup choices merge their selected models into the existing
-allowlist instead of replacing unrelated providers already in the config.
-Re-running provider auth from configure preserves an existing
-`agents.defaults.model.primary`; use `openclaw models auth login --provider <id> --set-default`
-or `openclaw models set <model>` when you intentionally want to change the default model.
+注意：**Model** 部分现在包含一个用于 `agents.defaults.models` allowlist 的多选项（即在 `/model` 和模型选择器中显示的内容）。
+按提供商范围的设置选项会将其选择的模型合并到现有 allowlist 中，而不是替换配置中已存在的其他无关提供商。
+重新运行 configure 中的提供商认证会保留现有的 `agents.defaults.model.primary`；当您有意更改默认模型时，请使用 `openclaw models auth login --provider <id> --set-default`
+或 `openclaw models set <model>`。
 
-When configure starts from a provider auth choice, the default-model and
-allowlist pickers prefer that provider automatically. For paired providers such
-as Volcengine/BytePlus, the same preference also matches their coding-plan
-variants (`volcengine-plan/*`, `byteplus-plan/*`). If the preferred-provider
-filter would produce an empty list, configure falls back to the unfiltered
-catalog instead of showing a blank picker.
+当 configure 从提供商认证选择开始时，默认模型和允许列表选择器会自动优先选择该提供商。对于成对的提供商（如 Volcengine/BytePlus），相同的偏好也会匹配其 coding-plan 变体（`volcengine-plan/*`, `byteplus-plan/*`）。如果首选提供商过滤器产生空列表，configure 将回退到未过滤的目录，而不是显示空白选择器。
 
-Tip: `openclaw config` without a subcommand opens the same wizard. Use
-`openclaw config get|set|unset` for non-interactive edits.
+提示：不带子命令的 `openclaw config` 会打开相同的向导。使用 `openclaw config get|set|unset` 进行非交互式编辑。
 
-For web search, `openclaw configure --section web` lets you choose a provider
-and configure its credentials. Some providers also show provider-specific
-follow-up prompts:
+对于 Web 搜索，`openclaw configure --section web` 允许您选择提供商并配置其凭据。某些提供商还会显示特定于提供商的后续提示：
 
-- **Grok** can offer optional `x_search` setup with the same `XAI_API_KEY` and
-  let you pick an `x_search` model.
-- **Kimi** can ask for the Moonshot API region (`api.moonshot.ai` vs
-  `api.moonshot.cn`) and the default Kimi web-search model.
+- **Grok** 可以提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY`，并让您选择 `x_search` 模型。
+- **Kimi** 可能会询问 Moonshot API 区域（`api.moonshot.ai` vs `api.moonshot.cn`）以及默认的 Kimi Web 搜索模型。
 
-Related:
+相关内容：
 
-- Gateway configuration reference: [Configuration](/gateway/configuration)
-- Config CLI: [Config](/cli/config)
+- 网关配置参考：[配置](/gateway/configuration)
+- 配置 CLI：[配置](/cli/config)
 
-## Options
+## 选项
 
-- `--section <section>`: repeatable section filter
+- `--section <section>`: 可重复的部分过滤器
 
-Available sections:
+可用部分：
 
 - `workspace`
 - `model`
@@ -57,15 +44,15 @@ Available sections:
 - `skills`
 - `health`
 
-Notes:
+注意：
 
-- Choosing where the Gateway runs always updates `gateway.mode`. You can select "Continue" without other sections if that is all you need.
-- Channel-oriented services (Slack/Discord/Matrix/Microsoft Teams) prompt for channel/room allowlists during setup. You can enter names or IDs; the wizard resolves names to IDs when possible.
-- If you run the daemon install step, token auth requires a token, and `gateway.auth.token` is SecretRef-managed, configure validates the SecretRef but does not persist resolved plaintext token values into supervisor service environment metadata.
-- If token auth requires a token and the configured token SecretRef is unresolved, configure blocks daemon install with actionable remediation guidance.
-- If both `gateway.auth.token` and `gateway.auth.password` are configured and `gateway.auth.mode` is unset, configure blocks daemon install until mode is set explicitly.
+- 选择网关运行位置时总会更新 `gateway.mode`。如果只需要这一项，可以选择“继续”跳过其他部分。
+- 面向频道的服务（Slack/Discord/Matrix/Microsoft Teams）在设置过程中会提示输入频道/房间允许列表。您可以输入名称或 ID；向导会尽可能将名称解析为 ID。
+- 如果执行守护进程安装步骤，令牌认证需要令牌，而 `gateway.auth.token` 由 SecretRef 管理，配置会验证 SecretRef，但不会将已解析的明文令牌值持久化到 supervisor 服务环境元数据中。
+- 如果令牌认证需要令牌且配置的令牌 SecretRef 未解析，配置会阻止守护进程安装，并提供可执行的修复指导。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且未设置 `gateway.auth.mode`，配置会阻止守护进程安装，直到明确设置认证模式。
 
-## Examples
+## 示例
 
 ```bash
 openclaw configure
@@ -74,7 +61,7 @@ openclaw configure --section model --section channels
 openclaw configure --section gateway --section daemon
 ```
 
-## Related
+## 相关内容
 
 - [CLI reference](/cli)
 - [Configuration](/gateway/configuration)

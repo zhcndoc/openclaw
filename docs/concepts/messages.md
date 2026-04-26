@@ -1,46 +1,41 @@
 ---
-summary: "Message flow, sessions, queueing, and reasoning visibility"
+summary: "消息流、会话、排队和推理可见性"
 read_when:
-  - Explaining how inbound messages become replies
-  - Clarifying sessions, queueing modes, or streaming behavior
-  - Documenting reasoning visibility and usage implications
-title: "Messages"
+  - 解释入站消息如何变成回复
+  - 澄清会话、排队模式或流行为
+  - 记录推理可见性及使用影响
+title: "消息"
 ---
 
-This page ties together how OpenClaw handles inbound messages, sessions, queueing,
-streaming, and reasoning visibility.
+本页将 OpenClaw 如何处理入站消息、会话、排队、流式传输以及推理可见性串联起来说明。
 
-## Message flow (high level)
+## 消息流程（高级）
 
 ```
-Inbound message
-  -> routing/bindings -> session key
-  -> queue (if a run is active)
-  -> agent run (streaming + tools)
-  -> outbound replies (channel limits + chunking)
+入站消息
+  -> 路由/绑定 -> 会话密钥
+  -> 队列（如果有运行活动中）
+  -> 代理运行（流式 + 工具）
+  -> 出站回复（渠道限制 + 分块）
 ```
 
-Key knobs live in configuration:
+关键配置选项位于配置中：
 
-- `messages.*` for prefixes, queueing, and group behavior.
-- `agents.defaults.*` for block streaming and chunking defaults.
-- Channel overrides (`channels.whatsapp.*`, `channels.telegram.*`, etc.) for caps and streaming toggles.
+- `messages.*` 用于前缀、排队和组行为。
+- `agents.defaults.*` 用于块流和分块默认设置。
+- 渠道覆盖（如 `channels.whatsapp.*`、`channels.telegram.*` 等）用于限制和流式切换。
 
-See [Configuration](/gateway/configuration) for full schema.
+查看 [配置](/gateway/configuration) 获取完整架构。
 
-## Inbound dedupe
+## 入站去重
 
-Channels can redeliver the same message after reconnects. OpenClaw keeps a
-short-lived cache keyed by channel/account/peer/session/message id so duplicate
-deliveries do not trigger another agent run.
+渠道在重新连接后可能会重新发送相同消息。OpenClaw 保持一个由渠道/帐户/对等体/会话/消息 ID 组成的短期缓存，避免重复发送触发新的代理运行。
 
-## Inbound debouncing
+## 入站防抖
 
-Rapid consecutive messages from the **same sender** can be batched into a single
-agent turn via `messages.inbound`. Debouncing is scoped per channel + conversation
-and uses the most recent message for reply threading/IDs.
+来自**同一发送者**的快速连续消息可通过 `messages.inbound` 合并为单个代理回合。防抖以渠道 + 会话为范围，使用最近消息进行回复线程/ID 处理。
 
-Config (global default + per-channel overrides):
+配置（全局默认 + 每渠道覆盖）：
 
 ```json5
 {
@@ -57,141 +52,103 @@ Config (global default + per-channel overrides):
 }
 ```
 
-Notes:
+注意：
 
-- Debounce applies to **text-only** messages; media/attachments flush immediately.
-- Control commands bypass debouncing so they remain standalone — **except** when a channel explicitly opts in to same-sender DM coalescing (e.g. [BlueBubbles `coalesceSameSenderDms`](/channels/bluebubbles#coalescing-split-send-dms-command--url-in-one-composition)), where DM commands wait inside the debounce window so a split-send payload can join the same agent turn.
+- 防抖仅适用于**纯文本**消息；媒体/附件会立即刷新。
+- 控制命令会绕过防抖，因此它们仍然作为独立消息处理——**除非**某个渠道明确选择同一发送者 DM 合并（例如 [BlueBubbles `coalesceSameSenderDms`](/channels/bluebubbles#coalescing-split-send-dms-command--url-in-one-composition)），在这种情况下，DM 命令会在防抖窗口内等待，以便拆分发送载荷可以加入同一个代理回合。
 
-## Sessions and devices
+## 会话与设备
 
-Sessions are owned by the gateway, not by clients.
+会话由网关拥有，而非客户端。
 
-- Direct chats collapse into the agent main session key.
-- Groups/channels get their own session keys.
-- The session store and transcripts live on the gateway host.
+- 直接聊天合并为代理主会话密钥。
+- 群组/频道有各自的会话密钥。
+- 会话存储和聊天记录都位于网关主机。
 
-Multiple devices/channels can map to the same session, but history is not fully
-synced back to every client. Recommendation: use one primary device for long
-conversations to avoid divergent context. The Control UI and TUI always show the
-gateway-backed session transcript, so they are the source of truth.
+多个设备/渠道可以映射同一个会话，但历史不会完全同步回每个客户端。建议：长聊使用一个主设备以避免上下文分叉。控制界面（UI）和文本界面（TUI）始终显示网关支持的会话记录，是事实源。
 
-Details: [Session management](/concepts/session).
+详情见：[会话管理](/concepts/session)。
 
-## Tool result metadata
+## 入站消息体和历史上下文
 
-Tool result `content` is the model-visible result. Tool result `details` is
-runtime metadata for UI rendering, diagnostics, media delivery, and plugins.
+OpenClaw 将**提示体**和**命令体**分开：
 
-OpenClaw keeps that boundary explicit:
+- `Body`：发送给代理的提示文本，可能包含渠道信封和可选历史包装。
+- `CommandBody`：原始用户文本，用于指令/命令解析。
+- `RawBody`：`CommandBody` 的旧别名（保留兼容性）。
 
-- `toolResult.details` is stripped before provider replay and compaction input.
-- Persisted session transcripts keep only bounded `details`; oversized metadata
-  is replaced with a compact summary marked `persistedDetailsTruncated: true`.
-- Plugins and tools should put text the model must read in `content`, not only
-  in `details`.
+渠道提供历史时使用共享包装：
 
-## Inbound bodies and history context
+- `[你上次回复后的聊天消息 - 用于上下文]`
+- `[当前消息 - 请回复此消息]`
 
-OpenClaw separates the **prompt body** from the **command body**:
+对于**非直接聊天**（群组/频道/聊天室），**当前消息体**会加上发送者标签（与历史条目样式相同）。这样保持实时和排队/历史消息在代理提示中的一致性。
 
-- `Body`: prompt text sent to the agent. This may include channel envelopes and
-  optional history wrappers.
-- `CommandBody`: raw user text for directive/command parsing.
-- `RawBody`: legacy alias for `CommandBody` (kept for compatibility).
+历史缓存是**待处理的**：包含未触发运行的群组消息（例如仅提及许可的消息），并**排除**已在会话记录中的消息。
 
-When a channel supplies history, it uses a shared wrapper:
+指令去除仅应用于**当前消息**部分，历史保持完整。包装历史消息的频道应将 `CommandBody`（或 `RawBody`）设置为原始消息文本，`Body` 保持为合并提示。历史缓存通过 `messages.groupChat.historyLimit`（全局默认）及渠道覆盖如 `channels.slack.historyLimit` 或 `channels.telegram.accounts.<id>.historyLimit` 配置（设为 `0` 禁用）。
 
-- `[Chat messages since your last reply - for context]`
-- `[Current message - respond to this]`
+## 排队与后续处理
 
-For **non-direct chats** (groups/channels/rooms), the **current message body** is prefixed with the
-sender label (same style used for history entries). This keeps real-time and queued/history
-messages consistent in the agent prompt.
+如果当前已有运行，入站消息可以排队、引导进当前运行，或收集为后续回合。
 
-History buffers are **pending-only**: they include group messages that did _not_
-trigger a run (for example, mention-gated messages) and **exclude** messages
-already in the session transcript.
+- 通过 `messages.queue`（及 `messages.queue.byChannel`）配置。
+- 模式包括：`interrupt`（中断）、`steer`（引导）、`followup`（后续）、`collect`（收集）及其积压变种。
 
-Directive stripping only applies to the **current message** section so history
-remains intact. Channels that wrap history should set `CommandBody` (or
-`RawBody`) to the original message text and keep `Body` as the combined prompt.
-History buffers are configurable via `messages.groupChat.historyLimit` (global
-default) and per-channel overrides like `channels.slack.historyLimit` or
-`channels.telegram.accounts.<id>.historyLimit` (set `0` to disable).
+详情见：[排队](/concepts/queue)。
 
-## Queueing and followups
+## 流式、分块和批处理
 
-If a run is already active, inbound messages can be queued, steered into the
-current run, or collected for a followup turn.
+块流式发送模型产生的部分回复文本块。分块遵守渠道文本限制，避免拆分代码块。
 
-- Configure via `messages.queue` (and `messages.queue.byChannel`).
-- Modes: `interrupt`, `steer`, `followup`, `collect`, plus backlog variants.
+关键设置：
 
-Details: [Queueing](/concepts/queue).
+- `agents.defaults.blockStreamingDefault`（`on|off`，默认关闭）
+- `agents.defaults.blockStreamingBreak`（`text_end|message_end`）
+- `agents.defaults.blockStreamingChunk`（`minChars|maxChars|breakPreference`）
+- `agents.defaults.blockStreamingCoalesce`（基于空闲时间的批处理）
+- `agents.defaults.humanDelay`（块回复间类人延迟）
+- 渠道覆盖：`*.blockStreaming` 和 `*.blockStreamingCoalesce`（非 Telegram 频道须显式设置 `*.blockStreaming: true`）
 
-## Streaming, chunking, and batching
+详情见：[流式 + 分块](/concepts/streaming)。
 
-Block streaming sends partial replies as the model produces text blocks.
-Chunking respects channel text limits and avoids splitting fenced code.
+## 推理可见性和令牌
 
-Key settings:
+OpenClaw 可显示或隐藏模型推理：
 
-- `agents.defaults.blockStreamingDefault` (`on|off`, default off)
-- `agents.defaults.blockStreamingBreak` (`text_end|message_end`)
-- `agents.defaults.blockStreamingChunk` (`minChars|maxChars|breakPreference`)
-- `agents.defaults.blockStreamingCoalesce` (idle-based batching)
-- `agents.defaults.humanDelay` (human-like pause between block replies)
-- Channel overrides: `*.blockStreaming` and `*.blockStreamingCoalesce` (non-Telegram channels require explicit `*.blockStreaming: true`)
+- `/reasoning on|off|stream` 控制推理可见性。
+- 推理内容产生时仍计入令牌使用。
+- Telegram 支持推理流显示在草稿气泡中。
 
-Details: [Streaming + chunking](/concepts/streaming).
+详情见：[思考 + 推理指令](/tools/thinking) 和 [令牌使用](/reference/token-use)。
 
-## Reasoning visibility and tokens
+## 前缀、线程和回复
 
-OpenClaw can expose or hide model reasoning:
+出站消息格式统一在 `messages` 管理：
 
-- `/reasoning on|off|stream` controls visibility.
-- Reasoning content still counts toward token usage when produced by the model.
-- Telegram supports reasoning stream into the draft bubble.
+- `messages.responsePrefix`、`channels.<channel>.responsePrefix` 和 `channels.<channel>.accounts.<id>.responsePrefix`（出站前缀层叠），以及 `channels.whatsapp.messagePrefix`（WhatsApp 入站前缀）
+- 通过 `replyToMode` 和渠道默认设置实现回复线程
 
-Details: [Thinking + reasoning directives](/tools/thinking) and [Token use](/reference/token-use).
+详情：[配置](/gateway/config-agents#messages) 和渠道文档。
 
-## Prefixes, threading, and replies
+## 静默回复
 
-Outbound message formatting is centralized in `messages`:
+精确的静默令牌 `NO_REPLY` / `no_reply` 表示“不要发送用户可见的回复”。
+OpenClaw 会根据会话类型解析该行为：
 
-- `messages.responsePrefix`, `channels.<channel>.responsePrefix`, and `channels.<channel>.accounts.<id>.responsePrefix` (outbound prefix cascade), plus `channels.whatsapp.messagePrefix` (WhatsApp inbound prefix)
-- Reply threading via `replyToMode` and per-channel defaults
+- 直接会话默认不允许静默，并会将裸静默回复改写为简短的可见兜底回复。
+- 群组/频道默认允许静默。
+- 内部编排默认允许静默。
 
-Details: [Configuration](/gateway/config-agents#messages) and channel docs.
+默认值位于 `agents.defaults.silentReply` 和
+`agents.defaults.silentReplyRewrite`；`surfaces.<id>.silentReply` 和
+`surfaces.<id>.silentReplyRewrite` 可按 surface 覆盖它们。
 
-## Silent replies
+当父会话存在一个或多个待处理的已生成子代理运行时，所有 surface 上的裸静默回复都会被丢弃，而不是被改写，因此父会话会保持静默，直到子完成事件交付真实回复。
 
-The exact silent token `NO_REPLY` / `no_reply` means “do not deliver a user-visible reply”.
-When a turn also has pending tool media, such as generated TTS audio, OpenClaw
-strips the silent text but still delivers the media attachment.
-OpenClaw resolves that behavior by conversation type:
+## 相关内容
 
-- Direct conversations disallow silence by default and rewrite a bare silent
-  reply to a short visible fallback.
-- Groups/channels allow silence by default.
-- Internal orchestration allows silence by default.
-
-OpenClaw also uses silent replies for internal runner failures that happen
-before any assistant reply in non-direct chats, so groups/channels do not see
-gateway error boilerplate. Direct chats show compact failure copy by default;
-raw runner details are shown only when `/verbose` is `on` or `full`.
-
-Defaults live under `agents.defaults.silentReply` and
-`agents.defaults.silentReplyRewrite`; `surfaces.<id>.silentReply` and
-`surfaces.<id>.silentReplyRewrite` can override them per surface.
-
-When the parent session has one or more pending spawned subagent runs, bare
-silent replies are dropped on all surfaces instead of being rewritten, so the
-parent stays quiet until the child completion event delivers the real reply.
-
-## Related
-
-- [Streaming](/concepts/streaming) — real-time message delivery
-- [Retry](/concepts/retry) — message delivery retry behavior
-- [Queue](/concepts/queue) — message processing queue
-- [Channels](/channels) — messaging platform integrations
+- [流式传输](/concepts/streaming) — 实时消息交付
+- [重试](/concepts/retry) — 消息交付重试行为
+- [排队](/concepts/queue) — 消息处理队列
+- [渠道](/channels) — 消息平台集成

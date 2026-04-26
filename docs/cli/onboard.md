@@ -1,42 +1,37 @@
 ---
-summary: "CLI reference for `openclaw onboard` (interactive onboarding)"
+summary: "关于 `openclaw onboard`（交互式引导）的 CLI 参考"
 read_when:
-  - You want guided setup for gateway, workspace, auth, channels, and skills
+  - 你需要为网关、工作区、认证、频道和技能进行引导式设置
 title: "Onboard"
 ---
 
 # `openclaw onboard`
 
-Interactive onboarding for local or remote Gateway setup.
+本地或远程网关设置的交互式引导。
 
-## Related guides
+## 相关指南
 
-- CLI onboarding hub: [Onboarding (CLI)](/start/wizard)
-- Onboarding overview: [Onboarding Overview](/start/onboarding-overview)
-- CLI onboarding reference: [CLI Setup Reference](/start/wizard-cli-reference)
-- CLI automation: [CLI Automation](/start/wizard-cli-automation)
-- macOS onboarding: [Onboarding (macOS App)](/start/onboarding)
+- CLI 引导中心：[引导 (CLI)](/start/wizard)
+- 引导概览：[引导概览](/start/onboarding-overview)
+- CLI 引导参考：[CLI 设置参考](/start/wizard-cli-reference)
+- CLI 自动化：[CLI 自动化](/start/wizard-cli-automation)
+- macOS 引导：[引导 (macOS 应用)](/start/onboarding)
 
-## Examples
+## 示例
 
 ```bash
 openclaw onboard
-openclaw onboard --modern
 openclaw onboard --flow quickstart
 openclaw onboard --flow manual
 openclaw onboard --skip-bootstrap
 openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
-`--modern` starts the Crestodian conversational onboarding preview. Without
-`--modern`, `openclaw onboard` keeps the classic onboarding flow.
+对于明文私有网络 `ws://` 目标（仅限受信任网络），请在引导进程环境中设置
+`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
+此客户端传输的紧急开关没有对应的 `openclaw.json` 配置项。
 
-For plaintext private-network `ws://` targets (trusted networks only), set
-`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` in the onboarding process environment.
-There is no `openclaw.json` equivalent for this client-side transport
-break-glass.
-
-Non-interactive custom provider:
+非交互式自定义提供商示例：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -48,9 +43,9 @@ openclaw onboard --non-interactive \
   --custom-compatibility openai
 ```
 
-`--custom-api-key` is optional in non-interactive mode. If omitted, onboarding checks `CUSTOM_API_KEY`.
+`--custom-api-key` 在非交互模式下是可选的，若省略，引导程序会检查环境变量 `CUSTOM_API_KEY`。
 
-LM Studio also supports a provider-specific key flag in non-interactive mode:
+LM Studio 在非交互模式下也支持特定于提供商的密钥标志：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -61,7 +56,7 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-Non-interactive Ollama:
+非交互式 Ollama：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -71,9 +66,9 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-`--custom-base-url` defaults to `http://127.0.0.1:11434`. `--custom-model-id` is optional; if omitted, onboarding uses Ollama's suggested defaults. Cloud model IDs such as `kimi-k2.5:cloud` also work here.
+`--custom-base-url` 默认为 `http://127.0.0.1:11434`。`--custom-model-id` 是可选的；如果省略，引导程序将使用 Ollama 推荐的默认值。像 `kimi-k2.5:cloud` 这样的云端模型 ID 也适用。
 
-Store provider keys as refs instead of plaintext:
+以引用形式存储提供商密钥而非纯文本：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -82,28 +77,28 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-With `--secret-input-mode ref`, onboarding writes env-backed refs instead of plaintext key values.
-For auth-profile backed providers this writes `keyRef` entries; for custom providers this writes `models.providers.<id>.apiKey` as an env ref (for example `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`).
+使用 `--secret-input-mode ref` 时，引导向导会写入环境支持的引用而不是纯文本密钥。
+对于认证配置文件支持的提供商，会写入 `keyRef` 条目；对于自定义提供商，则会写入 `models.providers.<id>.apiKey` 作为环境引用（例如 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`）。
 
-Non-interactive `ref` mode contract:
+非交互式 `ref` 模式约定：
 
-- Set the provider env var in the onboarding process environment (for example `OPENAI_API_KEY`).
-- Do not pass inline key flags (for example `--openai-api-key`) unless that env var is also set.
-- If an inline key flag is passed without the required env var, onboarding fails fast with guidance.
+- 在引导过程环境中设置提供商所需的环境变量（例如 `OPENAI_API_KEY`）。
+- 不要传递内联密钥标志（例如 `--openai-api-key`），除非该环境变量也已设置。
+- 如果传递了内联密钥标志但缺少必需的环境变量，引导程序会快速失败并提供指导。
 
-Gateway token options in non-interactive mode:
+非交互式模式下的网关令牌选项：
 
-- `--gateway-auth token --gateway-token <token>` stores a plaintext token.
-- `--gateway-auth token --gateway-token-ref-env <name>` stores `gateway.auth.token` as an env SecretRef.
-- `--gateway-token` and `--gateway-token-ref-env` are mutually exclusive.
-- `--gateway-token-ref-env` requires a non-empty env var in the onboarding process environment.
-- With `--install-daemon`, when token auth requires a token, SecretRef-managed gateway tokens are validated but not persisted as resolved plaintext in supervisor service environment metadata.
-- With `--install-daemon`, if token mode requires a token and the configured token SecretRef is unresolved, onboarding fails closed with remediation guidance.
-- With `--install-daemon`, if both `gateway.auth.token` and `gateway.auth.password` are configured and `gateway.auth.mode` is unset, onboarding blocks install until mode is set explicitly.
-- Local onboarding writes `gateway.mode="local"` into the config. If a later config file is missing `gateway.mode`, treat that as config damage or an incomplete manual edit, not as a valid local-mode shortcut.
-- `--allow-unconfigured` is a separate gateway runtime escape hatch. It does not mean onboarding may omit `gateway.mode`.
+- `--gateway-auth token --gateway-token <token>` 存储明文令牌。
+- `--gateway-auth token --gateway-token-ref-env <name>` 将 `gateway.auth.token` 存储为环境变量 SecretRef。
+- `--gateway-token` 和 `--gateway-token-ref-env` 互斥。
+- `--gateway-token-ref-env` 要求在引导过程环境中存在非空的环境变量。
+- 使用 `--install-daemon` 时，当令牌认证需要令牌时，由 SecretRef 管理的网关令牌会被验证，但不会作为解析后的明文持久化在监督服务环境元数据中。
+- 使用 `--install-daemon` 时，如果令牌模式需要令牌且配置的令牌 SecretRef 未解析，引导将失败并关闭，并提供修复指导。
+- 使用 `--install-daemon` 时，如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password` 且未设置 `gateway.auth.mode`，引导将阻止安装，直到显式设置模式。
+- 本地引导会将 `gateway.mode="local"` 写入配置。如果后续配置文件缺少 `gateway.mode`，应视为配置损坏或不完整的手动编辑，而不是有效的本地模式快捷方式。
+- `--allow-unconfigured` 是一个独立的网关运行时逃生通道。这并不意味着引导可以省略 `gateway.mode`。
 
-Example:
+示例：
 
 ```bash
 export OPENCLAW_GATEWAY_TOKEN="your-token"
@@ -115,41 +110,41 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-Non-interactive local gateway health:
+非交互式本地网关健康检查：
 
-- Unless you pass `--skip-health`, onboarding waits for a reachable local gateway before it exits successfully.
-- `--install-daemon` starts the managed gateway install path first. Without it, you must already have a local gateway running, for example `openclaw gateway run`.
-- If you only want config/workspace/bootstrap writes in automation, use `--skip-health`.
-- If you manage workspace files yourself, pass `--skip-bootstrap` to set `agents.defaults.skipBootstrap: true` and skip creating `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, and `BOOTSTRAP.md`.
-- On native Windows, `--install-daemon` tries Scheduled Tasks first and falls back to a per-user Startup-folder login item if task creation is denied.
+- 除非你传递 `--skip-health`，否则引导在成功退出前会等待一个可达的本地网关。
+- `--install-daemon` 会先启动受管网关安装流程。若不使用它，你必须已经有一个本地网关在运行，例如 `openclaw gateway run`。
+- 如果你只想在自动化中写入配置/工作区/启动信息，请使用 `--skip-health`。
+- 如果你自己管理工作区文件，请传递 `--skip-bootstrap` 来设置 `agents.defaults.skipBootstrap: true`，并跳过创建 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md` 和 `BOOTSTRAP.md`。
+- 在原生 Windows 上，`--install-daemon` 会先尝试计划任务，如果任务创建被拒绝，则回退到按用户级别的 Startup 文件夹登录项。
 
-Interactive onboarding behavior with reference mode:
+交互式引导中引用模式的行为：
 
-- Choose **Use secret reference** when prompted.
-- Then choose either:
-  - Environment variable
-  - Configured secret provider (`file` or `exec`)
-- Onboarding performs a fast preflight validation before saving the ref.
-  - If validation fails, onboarding shows the error and lets you retry.
+- 当出现提示时选择 **使用密钥引用**。
+- 之后选择以下其中之一：
+  - 环境变量
+  - 已配置的密钥提供者（`file` 或 `exec`）
+- 引导会在保存引用前做快速的预校验。
+  - 如果校验失败，引导会显示错误并允许重试。
 
-Non-interactive Z.AI endpoint choices:
+非交互式 Z.AI 端点选择：
 
-Note: `--auth-choice zai-api-key` now auto-detects the best Z.AI endpoint for your key (prefers the general API with `zai/glm-5.1`).
-If you specifically want the GLM Coding Plan endpoints, pick `zai-coding-global` or `zai-coding-cn`.
+注意：`--auth-choice zai-api-key` 现在会自动检测最适合你密钥的 Z.AI 端点（优先使用通用 API 和 `zai/glm-5.1`）。
+如果你特别想使用 GLM Coding Plan 端点，请选择 `zai-coding-global` 或 `zai-coding-cn`。
 
 ```bash
-# Promptless endpoint selection
+# 无提示端点选择
 openclaw onboard --non-interactive \
   --auth-choice zai-coding-global \
   --zai-api-key "$ZAI_API_KEY"
 
-# Other Z.AI endpoint choices:
+# 其他 Z.AI 端点选择：
 # --auth-choice zai-coding-cn
 # --auth-choice zai-global
 # --auth-choice zai-cn
 ```
 
-Non-interactive Mistral example:
+非交互式 Mistral 示例：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -157,28 +152,20 @@ openclaw onboard --non-interactive \
   --mistral-api-key "$MISTRAL_API_KEY"
 ```
 
-Flow notes:
+流程说明：
 
-- `quickstart`: minimal prompts, auto-generates a gateway token.
-- `manual`: full prompts for port/bind/auth (alias of `advanced`).
-- When an auth choice implies a preferred provider, onboarding prefilters the
-  default-model and allowlist pickers to that provider. For Volcengine and
-  BytePlus, this also matches the coding-plan variants
-  (`volcengine-plan/*`, `byteplus-plan/*`).
-- If the preferred-provider filter yields no loaded models yet, onboarding
-  falls back to the unfiltered catalog instead of leaving the picker empty.
-- In the web-search step, some providers can trigger provider-specific
-  follow-up prompts:
-  - **Grok** can offer optional `x_search` setup with the same `XAI_API_KEY`
-    and an `x_search` model choice.
-  - **Kimi** can ask for the Moonshot API region (`api.moonshot.ai` vs
-    `api.moonshot.cn`) and the default Kimi web-search model.
-- Local onboarding DM scope behavior: [CLI Setup Reference](/start/wizard-cli-reference#outputs-and-internals).
-- Fastest first chat: `openclaw dashboard` (Control UI, no channel setup).
-- Custom Provider: connect any OpenAI or Anthropic compatible endpoint,
-  including hosted providers not listed. Use Unknown to auto-detect.
+- `quickstart`：最少的提示，自动生成网关令牌。
+- `manual`：关于端口/绑定/认证的完整提示（`advanced` 的别名）。
+- 当认证选择暗示了首选提供商时，引导会将默认模型和允许列表选择器预过滤为该提供商。对于火山引擎和 BytePlus，这也匹配编程计划变体（`volcengine-plan/*`, `byteplus-plan/*`）。
+- 如果首选提供商过滤器尚未产生任何加载的模型，引导将回退到未过滤的目录，而不是让选择器为空。
+- 在网页搜索步骤中，某些提供商可能会触发特定于提供商的后续提示：
+  - **Grok** 可以提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY` 和 `x_search` 模型选择。
+  - **Kimi** 可能会询问 Moonshot API 区域（`api.moonshot.ai` 对比 `api.moonshot.cn`）以及默认的 Kimi 网页搜索模型。
+- 本地引导 DM 范围行为：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)。
+- 最快的首次聊天：`openclaw dashboard`（控制 UI，无需频道设置）。
+- 自定义提供商：连接任何 OpenAI 或 Anthropic 兼容的端点，包括未列出的托管提供商。使用 Unknown 自动检测。
 
-## Common follow-up commands
+## 常用后续命令
 
 ```bash
 openclaw configure
@@ -186,5 +173,5 @@ openclaw agents add <name>
 ```
 
 <Note>
-`--json` does not imply non-interactive mode. Use `--non-interactive` for scripts.
+`--json` 并不表示非交互模式。脚本执行请使用 `--non-interactive`。
 </Note>

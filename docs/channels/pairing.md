@@ -1,94 +1,91 @@
 ---
-summary: "Pairing overview: approve who can DM you + which nodes can join"
+summary: "配对概述：批准谁可以私信你 + 哪些节点可以加入"
 read_when:
-  - Setting up DM access control
-  - Pairing a new iOS/Android node
-  - Reviewing OpenClaw security posture
-title: "Pairing"
+  - 设置私信访问控制
+  - 配对新的 iOS/Android 节点
+  - 审查 OpenClaw 安全态势
+title: "配对"
 ---
 
-“Pairing” is OpenClaw’s explicit **owner approval** step.
-It is used in two places:
+“Pairing” 是 OpenClaw 的显式 **所有者批准** 步骤。
+它用于两个地方：
 
-1. **DM pairing** (who is allowed to talk to the bot)
-2. **Node pairing** (which devices/nodes are allowed to join the gateway network)
+1. **私信配对**（谁被允许与机器人聊天）
+2. **节点配对**（哪些设备/节点被允许加入网关网络）
 
-Security context: [Security](/gateway/security)
+安全上下文见：[安全](/gateway/security)
 
-## 1) DM pairing (inbound chat access)
+## 1) 私信配对（入站聊天访问）
 
-When a channel is configured with DM policy `pairing`, unknown senders get a short code and their message is **not processed** until you approve.
+当频道配置了私信策略 `pairing` 时，未知发送者会获得一个短代码，且其消息**不会被处理**，直到你批准。
 
-Default DM policies are documented in: [Security](/gateway/security)
+默认的私信策略见文档：[安全](/gateway/security)
 
-Pairing codes:
+配对代码：
 
-- 8 characters, uppercase, no ambiguous chars (`0O1I`).
-- **Expire after 1 hour**. The bot only sends the pairing message when a new request is created (roughly once per hour per sender).
-- Pending DM pairing requests are capped at **3 per channel** by default; additional requests are ignored until one expires or is approved.
+- 8 个字符，大写，不含易混淆字符（`0O1I`）。
+- **1 小时后过期**。机器人只有在创建新请求时才会发送配对消息（大约每个发送者每小时一次）。
+- 待处理私信配对请求默认限制为**每频道 3 个**；超过后将被忽略，直到有请求过期或被批准。
 
-### Approve a sender
+### 批准发送者
 
 ```bash
 openclaw pairing list telegram
-openclaw pairing approve telegram <CODE>
+openclaw pairing approve telegram <code>
 ```
 
-Supported channels: `bluebubbles`, `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`.
+支持的频道：`bluebubbles`, `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`.
 
-### Where the state lives
+### 状态存储位置
 
-Stored under `~/.openclaw/credentials/`:
+存储路径为 `~/.openclaw/credentials/`：
 
-- Pending requests: `<channel>-pairing.json`
-- Approved allowlist store:
-  - Default account: `<channel>-allowFrom.json`
-  - Non-default account: `<channel>-<accountId>-allowFrom.json`
+- 待处理请求：`<channel>-pairing.json`
+- 已批准的允许列表存储：
+  - 默认账户：`<channel>-allowFrom.json`
+  - 非默认账户：`<channel>-<accountId>-allowFrom.json`
 
-Account scoping behavior:
+账户作用域行为：
 
-- Non-default accounts read/write only their scoped allowlist file.
-- Default account uses the channel-scoped unscoped allowlist file.
+- 非默认账户只读写其作用域内的允许列表文件。
+- 默认账户使用频道作用域的非作用域允许列表文件。
 
-Treat these as sensitive (they gate access to your assistant).
+请将这些视为敏感信息（它们控制对助理的访问权限）。
 
-Important: this store is for DM access. Group authorization is separate.
-Approving a DM pairing code does not automatically allow that sender to run group commands or control the bot in groups. For group access, configure the channel's explicit group allowlists (for example `groupAllowFrom`, `groups`, or per-group/per-topic overrides depending on the channel).
+**重要：** 此存储用于私信访问。群组授权是独立的。
+批准私信配对代码不会自动允许该发送者在群组中运行群组命令或控制机器人。对于群组访问，请配置频道的显式群组允许列表（例如 `groupAllowFrom`、`groups` 或取决于频道的每群组/每主题覆盖）。
 
-## 2) Node device pairing (iOS/Android/macOS/headless nodes)
+## 2) 节点设备配对 (iOS/Android/macOS/无头节点)
 
-Nodes connect to the Gateway as **devices** with `role: node`. The Gateway
-creates a device pairing request that must be approved.
+节点作为 `role: node` 的**设备**连接到网关。网关创建设备配对请求，必须经过批准。
 
-### Pair via Telegram (recommended for iOS)
+### 通过 Telegram 配对（iOS 推荐）
 
-If you use the `device-pair` plugin, you can do first-time device pairing entirely from Telegram:
+如果你使用 `device-pair` 插件，可以完全通过 Telegram 进行首次设备配对：
 
-1. In Telegram, message your bot: `/pair`
-2. The bot replies with two messages: an instruction message and a separate **setup code** message (easy to copy/paste in Telegram).
-3. On your phone, open the OpenClaw iOS app → Settings → Gateway.
-4. Paste the setup code and connect.
-5. Back in Telegram: `/pair pending` (review request IDs, role, and scopes), then approve.
+1. 在 Telegram 中，向你的机器人发送消息：`/pair`
+2. 机器人回复两条消息：一条指令消息和一条单独的**设置代码**消息（在 Telegram 中便于复制/粘贴）。
+3. 在你的手机上，打开 OpenClaw iOS 应用 → 设置 → 网关。
+4. 粘贴设置代码并连接。
+5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和作用域），然后批准。
 
-The setup code is a base64-encoded JSON payload that contains:
+设置代码是一个 base64 编码的 JSON，有：
 
-- `url`: the Gateway WebSocket URL (`ws://...` or `wss://...`)
-- `bootstrapToken`: a short-lived single-device bootstrap token used for the initial pairing handshake
+- `url`：网关 WebSocket URL（`ws://...` 或 `wss://...`）
+- `bootstrapToken`：用于初始配对握手的短期单设备引导令牌  
 
-That bootstrap token carries the built-in pairing bootstrap profile:
+该引导令牌携带内置的配对引导配置文件：
 
-- primary handed-off `node` token stays `scopes: []`
-- any handed-off `operator` token stays bounded to the bootstrap allowlist:
+- 主要移交的 `node` 令牌保持 `scopes: []`
+- 任何移交的 `operator` 令牌仍受限于引导允许列表：
   `operator.approvals`, `operator.read`, `operator.talk.secrets`, `operator.write`
-- bootstrap scope checks are role-prefixed, not one flat scope pool:
-  operator scope entries only satisfy operator requests, and non-operator roles
-  must still request scopes under their own role prefix
-- later token rotation/revocation remains bounded by both the device's approved
-  role contract and the caller session's operator scopes
+- 引导作用域检查是角色前缀的，不是一个扁平的作用域池：
+  operator 作用域条目仅满足 operator 请求，非 operator 角色
+  仍必须在其自己的角色前缀下请求作用域
 
-Treat the setup code like a password while it is valid.
+在设置代码有效期间，请将其视为密码对待。
 
-### Approve a node device
+### 批准节点设备
 
 ```bash
 openclaw devices list
@@ -96,9 +93,7 @@ openclaw devices approve <requestId>
 openclaw devices reject <requestId>
 ```
 
-If the same device retries with different auth details (for example different
-role/scopes/public key), the previous pending request is superseded and a new
-`requestId` is created.
+如果同一设备使用不同的认证详情重试（例如不同的角色/作用域/公钥），之前的待处理请求将被取代并创建新的 `requestId`。
 
 Important: an already paired device does not get broader access silently. If it
 reconnects asking for more scopes or a broader role, OpenClaw keeps the
@@ -106,52 +101,30 @@ existing approval as-is and creates a fresh pending upgrade request. Use
 `openclaw devices list` to compare the currently approved access with the newly
 requested access before you approve.
 
-### Optional trusted-CIDR node auto-approve
-
-Device pairing remains manual by default. For tightly controlled node networks,
-you can opt in to first-time node auto-approval with explicit CIDRs or exact IPs:
-
-```json5
-{
-  gateway: {
-    nodes: {
-      pairing: {
-        autoApproveCidrs: ["192.168.1.0/24"],
-      },
-    },
-  },
-}
-```
-
-This only applies to fresh `role: node` pairing requests with no requested
-scopes. Operator, browser, Control UI, and WebChat clients still require manual
-approval. Role, scope, metadata, and public-key changes still require manual
-approval.
-
 ### Node pairing state storage
 
-Stored under `~/.openclaw/devices/`:
+存储路径为 `~/.openclaw/devices/`：
 
-- `pending.json` (short-lived; pending requests expire)
-- `paired.json` (paired devices + tokens)
+- `pending.json`（短期，待处理请求会过期）
+- `paired.json`（已配对设备 + 令牌）
 
-### Notes
+### 注意事项
 
-- The legacy `node.pair.*` API (CLI: `openclaw nodes pending|approve|reject|rename`) is a
-  separate gateway-owned pairing store. WS nodes still require device pairing.
-- The pairing record is the durable source of truth for approved roles. Active
-  device tokens stay bounded to that approved role set; a stray token entry
-  outside the approved roles does not create new access.
+- 旧版 `node.pair.*` API（CLI: `openclaw nodes pending|approve|reject|rename`）是一个
+  独立的网关拥有的配对存储。WS 节点仍然需要设备配对。
+- 配对记录是批准角色的持久真实来源。活动
+  设备令牌仍受限于该批准角色集；批准角色之外的散乱令牌条目
+  不会创建新的访问权限。
 
-## Related docs
+## 相关文档
 
-- Security model + prompt injection: [Security](/gateway/security)
-- Updating safely (run doctor): [Updating](/install/updating)
-- Channel configs:
-  - Telegram: [Telegram](/channels/telegram)
-  - WhatsApp: [WhatsApp](/channels/whatsapp)
-  - Signal: [Signal](/channels/signal)
-  - BlueBubbles (iMessage): [BlueBubbles](/channels/bluebubbles)
-  - iMessage (legacy): [iMessage](/channels/imessage)
-  - Discord: [Discord](/channels/discord)
-  - Slack: [Slack](/channels/slack)
+- 安全模型 + prompt 注入：[安全](/gateway/security)
+- 安全更新（运行诊断）：[更新](/install/updating)
+- 频道配置：
+  - Telegram：[Telegram](/channels/telegram)
+  - WhatsApp：[WhatsApp](/channels/whatsapp)
+  - Signal：[Signal](/channels/signal)
+  - BlueBubbles (iMessage)：[BlueBubbles](/channels/bluebubbles)
+  - iMessage（旧版）：[iMessage](/channels/imessage)
+  - Discord：[Discord](/channels/discord)
+  - Slack：[Slack](/channels/slack)

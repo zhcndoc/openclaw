@@ -1,50 +1,45 @@
 ---
-summary: "AI-native cross-session memory via the Honcho plugin"
-title: "Honcho memory"
+summary: "通过 Honcho 插件实现 AI 原生的跨会话记忆"
+title: "Honcho 记忆"
 read_when:
-  - You want persistent memory that works across sessions and channels
-  - You want AI-powered recall and user modeling
+  - 你希望拥有跨会话和渠道的持久化记忆
+  - 你希望拥有 AI 驱动的回忆和用户建模
 ---
 
-[Honcho](https://honcho.dev) adds AI-native memory to OpenClaw. It persists
-conversations to a dedicated service and builds user and agent models over time,
-giving your agent cross-session context that goes beyond workspace Markdown
-files.
+[Honcho](https://honcho.dev) 为 OpenClaw 增加了 AI 原生记忆。它会将
+对话持久化到专用服务，并随着时间推移构建用户和代理模型，
+为你的代理提供超越工作区 Markdown
+文件的跨会话上下文。
 
-## What it provides
+## 它提供什么
 
-- **Cross-session memory** -- conversations are persisted after every turn, so
-  context carries across session resets, compaction, and channel switches.
-- **User modeling** -- Honcho maintains a profile for each user (preferences,
-  facts, communication style) and for the agent (personality, learned
-  behaviors).
-- **Semantic search** -- search over observations from past conversations, not
-  just the current session.
-- **Multi-agent awareness** -- parent agents automatically track spawned
-  sub-agents, with parents added as observers in child sessions.
+- **跨会话记忆** -- 每次交互后都会持久化对话，因此上下文可以在会话重置、压缩和渠道切换之间携带。
+- **用户建模** -- Honcho 为每个用户（偏好、事实、沟通风格）和代理（个性、习得行为）维护档案。
+- **语义搜索** -- 搜索过去对话中的观察结果，而不仅仅是当前会话。
+- **多代理感知** -- 父代理自动跟踪生成的子代理，父代理作为观察者添加到子会话中。
 
-## Available tools
+## 可用工具
 
-Honcho registers tools that the agent can use during conversation:
+Honcho 注册了代理在对话期间可以使用的工具：
 
-**Data retrieval (fast, no LLM call):**
+**数据检索（快速，无需调用 LLM）：**
 
-| Tool                        | What it does                                           |
+| 工具                        | 功能                                                   |
 | --------------------------- | ------------------------------------------------------ |
-| `honcho_context`            | Full user representation across sessions               |
-| `honcho_search_conclusions` | Semantic search over stored conclusions                |
-| `honcho_search_messages`    | Find messages across sessions (filter by sender, date) |
-| `honcho_session`            | Current session history and summary                    |
+| `honcho_context`            | 跨会话的完整用户表示               |
+| `honcho_search_conclusions` | 对存储的结论进行语义搜索                |
+| `honcho_search_messages`    | 跨会话查找消息（按发送者、日期过滤） |
+| `honcho_session`            | 当前会话历史和摘要                    |
 
-**Q&A (LLM-powered):**
+**问答（由 LLM 驱动）：**
 
-| Tool         | What it does                                                              |
+| 工具         | 功能                                                              |
 | ------------ | ------------------------------------------------------------------------- |
-| `honcho_ask` | Ask about the user. `depth='quick'` for facts, `'thorough'` for synthesis |
+| `honcho_ask` | 询问关于用户的信息。`depth='quick'` 用于事实，`'thorough'` 用于综合 |
 
-## Getting started
+## 快速开始
 
-Install the plugin and run setup:
+安装插件并运行设置：
 
 ```bash
 openclaw plugins install @honcho-ai/openclaw-honcho
@@ -52,18 +47,15 @@ openclaw honcho setup
 openclaw gateway --force
 ```
 
-The setup command prompts for your API credentials, writes the config, and
-optionally migrates existing workspace memory files.
+设置命令会提示输入你的 API 凭证，写入配置，并可选地迁移现有的工作区记忆文件。
 
 <Info>
-Honcho can run entirely locally (self-hosted) or via the managed API at
-`api.honcho.dev`. No external dependencies are required for the self-hosted
-option.
+Honcho 可以完全本地运行（自托管）或通过 `api.honcho.dev` 的托管 API 运行。自托管选项不需要外部依赖。
 </Info>
 
-## Configuration
+## 配置
 
-Settings live under `plugins.entries["openclaw-honcho"].config`:
+设置位于 `plugins.entries["openclaw-honcho"].config` 下：
 
 ```json5
 {
@@ -71,8 +63,8 @@ Settings live under `plugins.entries["openclaw-honcho"].config`:
     entries: {
       "openclaw-honcho": {
         config: {
-          apiKey: "your-api-key", // omit for self-hosted
-          workspaceId: "openclaw", // memory isolation
+          apiKey: "your-api-key", // 自托管则省略
+          workspaceId: "openclaw", // 记忆隔离
           baseUrl: "https://api.honcho.dev",
         },
       },
@@ -81,61 +73,51 @@ Settings live under `plugins.entries["openclaw-honcho"].config`:
 }
 ```
 
-For self-hosted instances, point `baseUrl` to your local server (for example
-`http://localhost:8000`) and omit the API key.
+对于自托管实例，将 `baseUrl` 指向你的本地服务器（例如 `http://localhost:8000`）并省略 API 密钥。
 
-## Migrating existing memory
+## 迁移现有记忆
 
-If you have existing workspace memory files (`USER.md`, `MEMORY.md`,
-`IDENTITY.md`, `memory/`, `canvas/`), `openclaw honcho setup` detects and
-offers to migrate them.
+如果你现有的工作区记忆文件（`USER.md`、`MEMORY.md`、`IDENTITY.md`、`memory/`、`canvas/`），`openclaw honcho setup` 会检测并提供迁移选项。
 
 <Info>
-Migration is non-destructive -- files are uploaded to Honcho. Originals are
-never deleted or moved.
+迁移是非破坏性的 -- 文件会被上传到 Honcho。原始文件永远不会被删除或移动。
 </Info>
 
-## How it works
+## 工作原理
 
-After every AI turn, the conversation is persisted to Honcho. Both user and
-agent messages are observed, allowing Honcho to build and refine its models over
-time.
+每次 AI 交互后，对话都会持久化到 Honcho。用户和代理消息都会被观察，允许 Honcho 随时间构建和完善其模型。
 
-During conversation, Honcho tools query the service in the `before_prompt_build`
-phase, injecting relevant context before the model sees the prompt. This ensures
-accurate turn boundaries and relevant recall.
+在对话期间，Honcho 工具在 `before_prompt_build` 阶段查询服务，在模型看到提示之前注入相关上下文。这确保了准确的交互边界和相关回忆。
 
-## Honcho vs builtin memory
+## Honcho 与内置记忆对比
 
-|                   | Builtin / QMD                | Honcho                              |
+|                   | 内置 / QMD                | Honcho                              |
 | ----------------- | ---------------------------- | ----------------------------------- |
-| **Storage**       | Workspace Markdown files     | Dedicated service (local or hosted) |
-| **Cross-session** | Via memory files             | Automatic, built-in                 |
-| **User modeling** | Manual (write to MEMORY.md)  | Automatic profiles                  |
-| **Search**        | Vector + keyword (hybrid)    | Semantic over observations          |
-| **Multi-agent**   | Not tracked                  | Parent/child awareness              |
-| **Dependencies**  | None (builtin) or QMD binary | Plugin install                      |
+| **存储**       | 工作区 Markdown 文件     | 专用服务（本地或托管） |
+| **跨会话** | 通过记忆文件             | 自动，内置                 |
+| **用户建模** | 手动（写入 MEMORY.md）  | 自动档案                  |
+| **搜索**        | 向量 + 关键字（混合）    | 对观察结果进行语义搜索          |
+| **多代理**   | 未跟踪                  | 父/子感知              |
+| **依赖**  | 无（内置）或 QMD 二进制 | 插件安装                      |
 
-Honcho and the builtin memory system can work together. When QMD is configured,
-additional tools become available for searching local Markdown files alongside
-Honcho's cross-session memory.
+Honcho 和内置记忆系统可以协同工作。当配置了 QMD 时，额外的工具可用于搜索本地 Markdown 文件以及 Honcho 的跨会话记忆。
 
-## CLI commands
+## CLI 命令
 
 ```bash
-openclaw honcho setup                        # Configure API key and migrate files
-openclaw honcho status                       # Check connection status
-openclaw honcho ask <question>               # Query Honcho about the user
-openclaw honcho search <query> [-k N] [-d D] # Semantic search over memory
+openclaw honcho setup                        # 配置 API 密钥并迁移文件
+openclaw honcho status                       # 检查连接状态
+openclaw honcho ask <question>               # 查询 Honcho 关于用户的信息
+openclaw honcho search <query> [-k N] [-d D] # 对记忆进行语义搜索
 ```
 
-## Further reading
+## 进一步阅读
 
 - [Plugin source code](https://github.com/plastic-labs/openclaw-honcho)
 - [Honcho documentation](https://docs.honcho.dev)
 - [Honcho OpenClaw integration guide](https://docs.honcho.dev/v3/guides/integrations/openclaw)
-- [Memory](/concepts/memory) -- OpenClaw memory overview
-- [Context Engines](/concepts/context-engine) -- how plugin context engines work
+- [Memory](/concepts/memory) -- OpenClaw 记忆概览
+- [Context Engines](/concepts/context-engine) -- 插件上下文引擎如何工作
 
 ## Related
 

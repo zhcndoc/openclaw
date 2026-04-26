@@ -1,13 +1,13 @@
 ---
-summary: "Redirects to the current Building Plugins guide"
-title: "Building plugins (redirect)"
+summary: "重定向到当前的构建插件指南"
+title: "构建插件（重定向）"
 read_when:
-  - Legacy link to building-extensions
+  - 指向 building-extensions 的旧链接
 ---
 
-This page has moved to [Building Plugins](/plugins/building-plugins).
+此页面已移动到 [构建插件](/plugins/building-plugins)。
 
-## Related
+## 相关内容
 
-- [Building plugins](/plugins/building-plugins)
-- [Plugin architecture](/plugins/architecture)
+- [构建插件](/plugins/building-plugins)
+- [插件架构](/plugins/architecture)

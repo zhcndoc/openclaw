@@ -1,96 +1,94 @@
 ---
-summary: "web_fetch tool -- HTTP fetch with readable content extraction"
+summary: "web_fetch 工具 -- HTTP 获取并提取可读内容"
 read_when:
-  - You want to fetch a URL and extract readable content
-  - You need to configure web_fetch or its Firecrawl fallback
-  - You want to understand web_fetch limits and caching
+  - 你想获取一个 URL 并提取可读内容
+  - 你需要配置 web_fetch 或其 Firecrawl 回退
+  - 你想了解 web_fetch 的限制和缓存
 title: "Web fetch"
 sidebarTitle: "Web Fetch"
 ---
 
-The `web_fetch` tool does a plain HTTP GET and extracts readable content
-(HTML to markdown or text). It does **not** execute JavaScript.
+`web_fetch` 工具执行普通的 HTTP GET，并提取可读内容
+（HTML 转 markdown 或文本）。它**不会**执行 JavaScript。
 
-For JS-heavy sites or login-protected pages, use the
-[Web Browser](/tools/browser) instead.
+对于 JavaScript 很重的网站或受登录保护的页面，请改用 [Web Browser](/tools/browser)。
 
-## Quick start
+## 快速开始
 
-`web_fetch` is **enabled by default** -- no configuration needed. The agent can
-call it immediately:
+`web_fetch` **默认启用**，无需配置。代理可以立即调用它：
 
 ```javascript
 await web_fetch({ url: "https://example.com/article" });
 ```
 
-## Tool parameters
+## 工具参数
 
 <ParamField path="url" type="string" required>
-URL to fetch. `http(s)` only.
+要获取的 URL。仅支持 `http(s)`。
 </ParamField>
 
 <ParamField path="extractMode" type="'markdown' | 'text'" default="markdown">
-Output format after main-content extraction.
+主内容提取后的输出格式。
 </ParamField>
 
 <ParamField path="maxChars" type="number">
-Truncate output to this many characters.
+将输出截断为这么多字符。
 </ParamField>
 
-## How it works
+## 工作原理
 
 <Steps>
   <Step title="Fetch">
-    Sends an HTTP GET with a Chrome-like User-Agent and `Accept-Language`
-    header. Blocks private/internal hostnames and re-checks redirects.
+    使用类似 Chrome 的 User-Agent 和 `Accept-Language`
+    请求头发送 HTTP GET。会阻止私有/内部主机名并重新检查重定向。
   </Step>
   <Step title="Extract">
-    Runs Readability (main-content extraction) on the HTML response.
+    在 HTML 响应上运行 Readability（主内容提取）。
   </Step>
   <Step title="Fallback (optional)">
-    If Readability fails and Firecrawl is configured, retries through the
-    Firecrawl API with bot-circumvention mode.
+    如果 Readability 失败且已配置 Firecrawl，则会通过
+    带有反爬绕过模式的 Firecrawl API 重试。
   </Step>
   <Step title="Cache">
-    Results are cached for 15 minutes (configurable) to reduce repeated
-    fetches of the same URL.
+    结果会缓存 15 分钟（可配置），以减少对同一 URL 的重复
+    获取。
   </Step>
 </Steps>
 
-## Config
+## 配置
 
 ```json5
 {
   tools: {
     web: {
       fetch: {
-        enabled: true, // default: true
-        provider: "firecrawl", // optional; omit for auto-detect
-        maxChars: 50000, // max output chars
-        maxCharsCap: 50000, // hard cap for maxChars param
-        maxResponseBytes: 2000000, // max download size before truncation
+        enabled: true, // 默认：true
+        provider: "firecrawl", // 可选；若自动检测则省略
+        maxChars: 50000, // 最大输出字符数
+        maxCharsCap: 50000, // maxChars 参数的硬性上限
+        maxResponseBytes: 2000000, // 截断前的最大下载大小
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
         maxRedirects: 3,
-        readability: true, // use Readability extraction
-        userAgent: "Mozilla/5.0 ...", // override User-Agent
+        readability: true, // 使用 Readability 提取
+        userAgent: "Mozilla/5.0 ...", // 覆盖 User-Agent
       },
     },
   },
 }
 ```
 
-## Firecrawl fallback
+## Firecrawl 回退
 
-If Readability extraction fails, `web_fetch` can fall back to
-[Firecrawl](/tools/firecrawl) for bot-circumvention and better extraction:
+如果 Readability 提取失败，`web_fetch` 可以回退到
+[Firecrawl](/tools/firecrawl)，用于反爬绕过和更好的提取：
 
 ```json5
 {
   tools: {
     web: {
       fetch: {
-        provider: "firecrawl", // optional; omit for auto-detect from available credentials
+        provider: "firecrawl", // 可选；若从可用凭据自动检测则省略
       },
     },
   },
@@ -100,10 +98,10 @@ If Readability extraction fails, `web_fetch` can fall back to
         enabled: true,
         config: {
           webFetch: {
-            apiKey: "fc-...", // optional if FIRECRAWL_API_KEY is set
+            apiKey: "fc-...", // 如果设置了 FIRECRAWL_API_KEY，则为可选
             baseUrl: "https://api.firecrawl.dev",
             onlyMainContent: true,
-            maxAgeMs: 86400000, // cache duration (1 day)
+            maxAgeMs: 86400000, // 缓存时长（1 天）
             timeoutSeconds: 60,
           },
         },
@@ -113,51 +111,51 @@ If Readability extraction fails, `web_fetch` can fall back to
 }
 ```
 
-`plugins.entries.firecrawl.config.webFetch.apiKey` supports SecretRef objects.
-Legacy `tools.web.fetch.firecrawl.*` config is auto-migrated by `openclaw doctor --fix`.
+`plugins.entries.firecrawl.config.webFetch.apiKey` 支持 SecretRef 对象。
+旧版 `tools.web.fetch.firecrawl.*` 配置会由 `openclaw doctor --fix` 自动迁移。
 
 <Note>
-  If Firecrawl is enabled and its SecretRef is unresolved with no
-  `FIRECRAWL_API_KEY` env fallback, gateway startup fails fast.
+  如果已启用 Firecrawl 且其 SecretRef 未解析，并且没有
+  `FIRECRAWL_API_KEY` 环境变量回退，网关启动将快速失败。
 </Note>
 
 <Note>
-  Firecrawl `baseUrl` overrides are locked down: they must use `https://` and
-  the official Firecrawl host (`api.firecrawl.dev`).
+  Firecrawl 的 `baseUrl` 覆盖项被严格限制：它们必须使用 `https://`
+  以及官方 Firecrawl 主机（`api.firecrawl.dev`）。
 </Note>
 
-Current runtime behavior:
+当前运行时行为：
 
-- `tools.web.fetch.provider` selects the fetch fallback provider explicitly.
-- If `provider` is omitted, OpenClaw auto-detects the first ready web-fetch
-  provider from available credentials. Today the bundled provider is Firecrawl.
-- If Readability is disabled, `web_fetch` skips straight to the selected
-  provider fallback. If no provider is available, it fails closed.
+- `tools.web.fetch.provider` 会显式选择获取回退提供方。
+- 如果省略 `provider`，OpenClaw 会根据可用凭据自动检测第一个可用的 web-fetch
+  提供方。当前内置提供方是 Firecrawl。
+- 如果禁用了 Readability，`web_fetch` 会直接跳到选定的
+  提供方回退。如果没有可用提供方，则会关闭式失败。
 
-## Limits and safety
+## 限制与安全
 
-- `maxChars` is clamped to `tools.web.fetch.maxCharsCap`
-- Response body is capped at `maxResponseBytes` before parsing; oversized
-  responses are truncated with a warning
-- Private/internal hostnames are blocked
-- Redirects are checked and limited by `maxRedirects`
-- `web_fetch` is best-effort -- some sites need the [Web Browser](/tools/browser)
+- `maxChars` 会被钳制到 `tools.web.fetch.maxCharsCap`
+- 在解析前，响应正文会被限制为 `maxResponseBytes`；过大的
+  响应会被截断并给出警告
+- 私有/内部主机名会被阻止
+- 重定向会根据 `maxRedirects` 进行检查并限制
+- `web_fetch` 尽力而为——某些站点需要 [Web Browser](/tools/browser)
 
-## Tool profiles
+## 工具配置文件
 
-If you use tool profiles or allowlists, add `web_fetch` or `group:web`:
+如果你使用工具配置文件或允许列表，请添加 `web_fetch` 或 `group:web`：
 
 ```json5
 {
   tools: {
     allow: ["web_fetch"],
-    // or: allow: ["group:web"]  (includes web_fetch, web_search, and x_search)
+    // 或：allow: ["group:web"]  （包含 web_fetch、web_search 和 x_search）
   },
 }
 ```
 
-## Related
+## 相关内容
 
-- [Web Search](/tools/web) -- search the web with multiple providers
-- [Web Browser](/tools/browser) -- full browser automation for JS-heavy sites
-- [Firecrawl](/tools/firecrawl) -- Firecrawl search and scrape tools
+- [Web Search](/tools/web) -- 使用多个提供方搜索网络
+- [Web Browser](/tools/browser) -- 面向 JS 密集型站点的完整浏览器自动化
+- [Firecrawl](/tools/firecrawl) -- Firecrawl 搜索和抓取工具

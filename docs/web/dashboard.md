@@ -1,102 +1,85 @@
 ---
-summary: "Gateway dashboard (Control UI) access and auth"
+summary: "网关仪表盘（控制界面）访问与认证"
 read_when:
-  - Changing dashboard authentication or exposure modes
-title: "Dashboard"
+  - 更改仪表盘认证或暴露模式时
+title: "仪表盘"
 ---
 
-The Gateway dashboard is the browser Control UI served at `/` by default
-(override with `gateway.controlUi.basePath`).
+网关仪表盘是默认由 `/` 提供的浏览器控制界面
+（可通过 `gateway.controlUi.basePath` 覆盖）。
 
-Quick open (local Gateway):
+快速打开（本地网关）：
 
-- [http://127.0.0.1:18789/](http://127.0.0.1:18789/) (or [http://localhost:18789/](http://localhost:18789/))
-- With `gateway.tls.enabled: true`, use `https://127.0.0.1:18789/` and
-  `wss://127.0.0.1:18789` for the WebSocket endpoint.
+- [http://127.0.0.1:18789/](http://127.0.0.1:18789/) （或 [http://localhost:18789/](http://localhost:18789/)）
 
-Key references:
+主要参考：
 
-- [Control UI](/web/control-ui) for usage and UI capabilities.
-- [Tailscale](/gateway/tailscale) for Serve/Funnel automation.
-- [Web surfaces](/web) for bind modes and security notes.
+- [控制界面](/web/control-ui) 了解使用方法和界面功能。
+- [Tailscale](/gateway/tailscale) 用于 Serve/Funnel 自动化。
+- [Web 界面](/web) 了解绑定模式和安全注意事项。
 
-Authentication is enforced at the WebSocket handshake via the configured gateway
-auth path:
+认证在 WebSocket 握手时通过配置的网关认证路径强制执行：
 
 - `connect.params.auth.token`
 - `connect.params.auth.password`
-- Tailscale Serve identity headers when `gateway.auth.allowTailscale: true`
-- trusted-proxy identity headers when `gateway.auth.mode: "trusted-proxy"`
+- 当 `gateway.auth.allowTailscale: true` 时，Tailscale Serve 身份头
+- 当 `gateway.auth.mode: "trusted-proxy"` 时，受信任代理身份头
 
-See `gateway.auth` in [Gateway configuration](/gateway/configuration).
+请参阅 [网关配置](/gateway/configuration) 中的 `gateway.auth`。
 
-Security note: the Control UI is an **admin surface** (chat, config, exec approvals).
-Do not expose it publicly. The UI keeps dashboard URL tokens in sessionStorage
-for the current browser tab session and selected gateway URL, and strips them from the URL after load.
-Prefer localhost, Tailscale Serve, or an SSH tunnel.
+安全提醒：控制界面是一个 **管理员界面** （包含聊天、配置、执行审批等功能）。请勿公开暴露。界面将仪表盘 URL 中的令牌存储在 sessionStorage 中，针对当前浏览器标签页会话和选中的网关 URL，并在加载后移除 URL 中的令牌。优先使用 localhost、Tailscale Serve 或 SSH 隧道方式访问。
 
-## Fast path (recommended)
+## 快速路径（推荐）
 
-- After onboarding, the CLI auto-opens the dashboard and prints a clean (non-tokenized) link.
-- Re-open anytime: `openclaw dashboard` (copies link, opens browser if possible, shows SSH hint if headless).
-- If the UI prompts for shared-secret auth, paste the configured token or
-  password into Control UI settings.
+- 完成引导后，CLI 会自动打开仪表盘并打印一个干净的（不含令牌的）链接。
+- 随时重新打开：`openclaw dashboard`（会复制链接、在可能时打开浏览器，并在无头模式下显示 SSH 提示）。
+- 如果 UI 提示共享密钥认证，请将配置的令牌或
+  密码粘贴到控制界面设置中。
 
-## Auth basics (local vs remote)
+## 认证基础（本地 vs 远程）
 
-- **Localhost**: open `http://127.0.0.1:18789/`.
-- **Gateway TLS**: when `gateway.tls.enabled: true`, dashboard/status links use
-  `https://` and Control UI WebSocket links use `wss://`.
-- **Shared-secret token source**: `gateway.auth.token` (or
-  `OPENCLAW_GATEWAY_TOKEN`); `openclaw dashboard` can pass it via URL fragment
-  for one-time bootstrap, and the Control UI keeps it in sessionStorage for the
-  current browser tab session and selected gateway URL instead of localStorage.
-- If `gateway.auth.token` is SecretRef-managed, `openclaw dashboard`
-  prints/copies/opens a non-tokenized URL by design. This avoids exposing
-  externally managed tokens in shell logs, clipboard history, or browser-launch
-  arguments.
-- If `gateway.auth.token` is configured as a SecretRef and is unresolved in your
-  current shell, `openclaw dashboard` still prints a non-tokenized URL plus
-  actionable auth setup guidance.
-- **Shared-secret password**: use the configured `gateway.auth.password` (or
-  `OPENCLAW_GATEWAY_PASSWORD`). The dashboard does not persist passwords across
-  reloads.
-- **Identity-bearing modes**: Tailscale Serve can satisfy Control UI/WebSocket
-  auth via identity headers when `gateway.auth.allowTailscale: true`, and a
-  non-loopback identity-aware reverse proxy can satisfy
-  `gateway.auth.mode: "trusted-proxy"`. In those modes the dashboard does not
-  need a pasted shared secret for the WebSocket.
-- **Not localhost**: use Tailscale Serve, a non-loopback shared-secret bind, a
-  non-loopback identity-aware reverse proxy with
-  `gateway.auth.mode: "trusted-proxy"`, or an SSH tunnel. HTTP APIs still use
-  shared-secret auth unless you intentionally run private-ingress
-  `gateway.auth.mode: "none"` or trusted-proxy HTTP auth. See
-  [Web surfaces](/web).
+- **本地主机**：打开 `http://127.0.0.1:18789/`。
+- **共享密钥令牌来源**：`gateway.auth.token`（或
+  `OPENCLAW_GATEWAY_TOKEN`）；`openclaw dashboard` 可以通过 URL 片段
+  一次性传递它用于引导，控制界面会将其保存在当前浏览器标签页会话和所选网关 URL 对应的 sessionStorage 中，而不是 localStorage。
+- 如果 `gateway.auth.token` 由 SecretRef 管理，`openclaw dashboard`
+  会按设计打印/复制/打开一个不含令牌的 URL。这可以避免在 shell 日志、剪贴板历史或浏览器启动
+  参数中暴露外部管理的令牌。
+- 如果 `gateway.auth.token` 配置为 SecretRef，且在当前 shell 中未解析，
+  `openclaw dashboard` 仍会打印一个不含令牌的 URL，并附带可操作的认证设置指导。
+- **共享密钥密码**：使用配置的 `gateway.auth.password`（或
+  `OPENCLAW_GATEWAY_PASSWORD`）。仪表盘不会在
+  重新加载之间持久保存密码。
+- **带身份的模式**：当 `gateway.auth.allowTailscale: true` 时，Tailscale Serve 可通过身份头满足控制界面/WebSocket
+  认证；而非 loopback 的具身份感知反向代理可以满足
+  `gateway.auth.mode: "trusted-proxy"`。在这些模式下，仪表盘无需粘贴共享密钥即可用于 WebSocket。
+- **非本地主机**：使用 Tailscale Serve、非 loopback 的共享密钥绑定、
+  配置为 `gateway.auth.mode: "trusted-proxy"` 的非 loopback 具身份感知反向代理，或 SSH 隧道。HTTP API 仍使用共享密钥认证，除非您有意运行私有入口的
+  `gateway.auth.mode: "none"` 或 trusted-proxy HTTP 认证。请参阅
+  [Web 界面](/web)。
 
 <a id="if-you-see-unauthorized-1008"></a>
 
-## If you see "unauthorized" / 1008
+## 如果您看到 "unauthorized" / 1008
 
-- Ensure the gateway is reachable (local: `openclaw status`; remote: SSH tunnel `ssh -N -L 18789:127.0.0.1:18789 user@host` then open `http://127.0.0.1:18789/`).
-- For `AUTH_TOKEN_MISMATCH`, clients may do one trusted retry with a cached device token when the gateway returns retry hints. That cached-token retry reuses the token's cached approved scopes; explicit `deviceToken` / explicit `scopes` callers keep their requested scope set. If auth still fails after that retry, resolve token drift manually.
-- Outside that retry path, connect auth precedence is explicit shared token/password first, then explicit `deviceToken`, then stored device token, then bootstrap token.
-- On the async Tailscale Serve Control UI path, failed attempts for the same
-  `{scope, ip}` are serialized before the failed-auth limiter records them, so
-  the second concurrent bad retry can already show `retry later`.
-- For token drift repair steps, follow [Token drift recovery checklist](/cli/devices#token-drift-recovery-checklist).
-- Retrieve or supply the shared secret from the gateway host:
-  - Token: `openclaw config get gateway.auth.token`
-  - Password: resolve the configured `gateway.auth.password` or
+- 确保网关可达（本地：`openclaw status`；远程：SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@host`，然后打开 `http://127.0.0.1:18789/`）。
+- 对于 `AUTH_TOKEN_MISMATCH`，当网关返回重试提示时，客户端可能会使用缓存的设备令牌进行一次受信任的重试。该缓存令牌重试会重用令牌中缓存的已批准作用域；显式的 `deviceToken` / 显式的 `scopes` 调用者会保留其请求的作用域集合。若在该重试后认证仍失败，请手动修复令牌漂移。
+- 在该重试路径之外，连接认证优先级为：显式共享令牌/密码优先，然后是显式 `deviceToken`，然后是存储的设备令牌，最后是引导令牌。
+- 在异步的 Tailscale Serve 控制界面路径上，相同 `{scope, ip}` 的失败尝试会在失败认证限流器记录之前被串行化，因此第二个并发的错误重试可能已经显示 `retry later`。
+- 有关令牌漂移修复步骤，请参阅 [令牌漂移恢复清单](/cli/devices#token-drift-recovery-checklist)。
+- 从网关主机检索或提供共享密钥：
+  - 令牌：`openclaw config get gateway.auth.token`
+  - 密码：解析已配置的 `gateway.auth.password` 或
     `OPENCLAW_GATEWAY_PASSWORD`
-  - SecretRef-managed token: resolve the external secret provider or export
-    `OPENCLAW_GATEWAY_TOKEN` in this shell, then rerun `openclaw dashboard`
-  - No shared secret configured: `openclaw doctor --generate-gateway-token`
-- In the dashboard settings, paste the token or password into the auth field,
-  then connect.
-- The UI language picker is in **Overview -> Gateway Access -> Language**.
-  It is part of the access card, not the Appearance section.
+  - 由 SecretRef 管理的令牌：解析外部密钥提供方，或在此 shell 中导出
+    `OPENCLAW_GATEWAY_TOKEN`，然后重新运行 `openclaw dashboard`
+  - 未配置共享密钥：`openclaw doctor --generate-gateway-token`
+- 在仪表盘设置中，将令牌或密码粘贴到认证字段中，
+  然后连接。
+- UI 语言选择器位于 **Overview -> Gateway Access -> Language**。
+  它属于访问卡片，而不是外观部分。
 
-## Related
+## 相关内容
 
-- [Control UI](/web/control-ui)
+- [控制界面](/web/control-ui)
 - [WebChat](/web/webchat)

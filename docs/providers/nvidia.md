@@ -1,28 +1,28 @@
 ---
-summary: "Use NVIDIA's OpenAI-compatible API in OpenClaw"
+summary: "在 OpenClaw 中使用 NVIDIA 的 OpenAI 兼容 API"
 read_when:
-  - You want to use open models in OpenClaw for free
-  - You need NVIDIA_API_KEY setup
+  - 你想在 OpenClaw 中免费使用开源模型
+  - 你需要设置 NVIDIA_API_KEY
 title: "NVIDIA"
 ---
 
-NVIDIA provides an OpenAI-compatible API at `https://integrate.api.nvidia.com/v1` for
-open models for free. Authenticate with an API key from
-[build.nvidia.com](https://build.nvidia.com/settings/api-keys).
+NVIDIA 提供了一个 OpenAI 兼容的 API，地址为 `https://integrate.api.nvidia.com/v1`，可免费用于
+开源模型。使用来自
+[build.nvidia.com](https://build.nvidia.com/settings/api-keys) 的 API 密钥进行身份验证。
 
-## Getting started
+## 快速开始
 
 <Steps>
-  <Step title="Get your API key">
-    Create an API key at [build.nvidia.com](https://build.nvidia.com/settings/api-keys).
+  <Step title="获取您的 API 密钥">
+    在 [build.nvidia.com](https://build.nvidia.com/settings/api-keys) 创建 API 密钥。
   </Step>
-  <Step title="Export the key and run onboarding">
+  <Step title="导出密钥并运行初始化">
     ```bash
     export NVIDIA_API_KEY="nvapi-..."
     openclaw onboard --auth-choice skip
     ```
   </Step>
-  <Step title="Set an NVIDIA model">
+  <Step title="设置 NVIDIA 模型">
     ```bash
     openclaw models set nvidia/nvidia/nemotron-3-super-120b-a12b
     ```
@@ -30,11 +30,10 @@ open models for free. Authenticate with an API key from
 </Steps>
 
 <Warning>
-If you pass `--token` instead of the env var, the value lands in shell history and
-`ps` output. Prefer the `NVIDIA_API_KEY` environment variable when possible.
+如果您传递 `--token` 而不是环境变量，该值会出现在 shell 历史和 `ps` 输出中。可能时请优先使用 `NVIDIA_API_KEY` 环境变量。
 </Warning>
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -55,47 +54,42 @@ If you pass `--token` instead of the env var, the value lands in shell history a
 }
 ```
 
-## Built-in catalog
+## 内置目录
 
-| Model ref                                  | Name                         | Context | Max output |
+| 模型引用                                  | 名称                         | 上下文 | 最大输出 |
 | ------------------------------------------ | ---------------------------- | ------- | ---------- |
 | `nvidia/nvidia/nemotron-3-super-120b-a12b` | NVIDIA Nemotron 3 Super 120B | 262,144 | 8,192      |
 | `nvidia/moonshotai/kimi-k2.5`              | Kimi K2.5                    | 262,144 | 8,192      |
 | `nvidia/minimaxai/minimax-m2.5`            | Minimax M2.5                 | 196,608 | 8,192      |
 | `nvidia/z-ai/glm5`                         | GLM 5                        | 202,752 | 8,192      |
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Auto-enable behavior">
-    The provider auto-enables when the `NVIDIA_API_KEY` environment variable is set.
-    No explicit provider config is required beyond the key.
+  <Accordion title="自动启用行为">
+    当设置了 `NVIDIA_API_KEY` 环境变量时，提供程序会自动启用。除了密钥之外，不需要显式的提供程序配置。
   </Accordion>
 
-  <Accordion title="Catalog and pricing">
-    The bundled catalog is static. Costs default to `0` in source since NVIDIA
-    currently offers free API access for the listed models.
+  <Accordion title="目录和定价">
+    捆绑的目录是静态的。由于 NVIDIA 目前为列出的模型提供免费 API 访问，源中的成本默认为 `0`。
   </Accordion>
 
-  <Accordion title="OpenAI-compatible endpoint">
-    NVIDIA uses the standard `/v1` completions endpoint. Any OpenAI-compatible
-    tooling should work out of the box with the NVIDIA base URL.
+  <Accordion title="与 OpenAI 兼容的端点">
+    NVIDIA 使用标准的 `/v1` 补全端点。任何与 OpenAI 兼容的工具都应该可以直接与 NVIDIA 基础 URL 一起使用。
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-NVIDIA models are currently free to use. Check
-[build.nvidia.com](https://build.nvidia.com/) for the latest availability and
-rate-limit details.
+NVIDIA 模型目前可以免费使用。查看 [build.nvidia.com](https://build.nvidia.com/) 以获取最新的可用性和速率限制详情。
 </Tip>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供程序、模型引用和故障转移行为。
   </Card>
-  <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">
-    Full config reference for agents, models, and providers.
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    代理、模型和提供程序的完整配置参考。
   </Card>
 </CardGroup>

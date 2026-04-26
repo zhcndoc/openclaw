@@ -1,30 +1,23 @@
 ---
-summary: "CLI reference for `openclaw plugins` (list, install, marketplace, uninstall, enable/disable, doctor)"
+summary: "`openclaw plugins` 的命令行参考（列表、安装、市场、卸载、启用/禁用、诊断）"
 read_when:
-  - You want to install or manage Gateway plugins or compatible bundles
-  - You want to debug plugin load failures
-title: "Plugins"
-sidebarTitle: "Plugins"
+  - 您想安装或管理 Gateway 插件或兼容包
+  - 您想调试插件加载失败
+title: "插件"
 ---
 
-Manage Gateway plugins, hook packs, and compatible bundles.
+# `openclaw plugins`
 
-<CardGroup cols={2}>
-  <Card title="Plugin system" href="/tools/plugin">
-    End-user guide for installing, enabling, and troubleshooting plugins.
-  </Card>
-  <Card title="Plugin bundles" href="/plugins/bundles">
-    Bundle compatibility model.
-  </Card>
-  <Card title="Plugin manifest" href="/plugins/manifest">
-    Manifest fields and config schema.
-  </Card>
-  <Card title="Security" href="/gateway/security">
-    Security hardening for plugin installs.
-  </Card>
-</CardGroup>
+管理 Gateway 插件、钩子包和兼容包。
 
-## Commands
+相关内容：
+
+- 插件系统：[插件](/tools/plugin)
+- 包兼容性：[插件包](/plugins/bundles)
+- 插件清单 + 模式：[插件清单](/plugins/manifest)
+- 安全加固：[安全性](/gateway/security)
+
+## 命令
 
 ```bash
 openclaw plugins list
@@ -38,8 +31,6 @@ openclaw plugins inspect --all
 openclaw plugins info <id>
 openclaw plugins enable <id>
 openclaw plugins disable <id>
-openclaw plugins registry
-openclaw plugins registry --refresh
 openclaw plugins uninstall <id>
 openclaw plugins doctor
 openclaw plugins update <id-or-npm-spec>
@@ -48,97 +39,77 @@ openclaw plugins marketplace list <marketplace>
 openclaw plugins marketplace list <marketplace> --json
 ```
 
-<Note>
-Bundled plugins ship with OpenClaw. Some are enabled by default (for example bundled model providers, bundled speech providers, and the bundled browser plugin); others require `plugins enable`.
+内置插件随 OpenClaw 一起发布。有些默认启用（例如内置模型提供商、内置语音提供商和内置浏览器插件）；其他需要 `plugins enable`。
 
-Native OpenClaw plugins must ship `openclaw.plugin.json` with an inline JSON Schema (`configSchema`, even if empty). Compatible bundles use their own bundle manifests instead.
+原生 OpenClaw 插件必须随附内嵌 JSON 模式的 `openclaw.plugin.json`（`configSchema`，即使为空）。兼容包使用自己的包清单。
 
-`plugins list` shows `Format: openclaw` or `Format: bundle`. Verbose list/info output also shows the bundle subtype (`codex`, `claude`, or `cursor`) plus detected bundle capabilities.
-</Note>
+`plugins list` 显示 `Format: openclaw` 或 `Format: bundle`。详细列表/信息输出还显示包子类型（`codex`、`claude` 或 `cursor`）及检测到的包能力。
 
-### Install
+### 安装
 
 ```bash
-openclaw plugins install <package>                      # ClawHub first, then npm
-openclaw plugins install clawhub:<package>              # ClawHub only
-openclaw plugins install <package> --force              # overwrite existing install
-openclaw plugins install <package> --pin                # pin version
+openclaw plugins install <package>                      # 优先 ClawHub，然后 npm
+openclaw plugins install clawhub:<package>              # 仅 ClawHub
+openclaw plugins install <package> --force              # 覆盖现有安装
+openclaw plugins install <package> --pin                # 固定版本
 openclaw plugins install <package> --dangerously-force-unsafe-install
-openclaw plugins install <path>                         # local path
-openclaw plugins install <plugin>@<marketplace>         # marketplace
-openclaw plugins install <plugin> --marketplace <name>  # marketplace (explicit)
+openclaw plugins install <path>                         # 本地路径
+openclaw plugins install <plugin>@<marketplace>         # 市场
+openclaw plugins install <plugin> --marketplace <name>  # 市场（显式）
 openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo>
 ```
 
-<Warning>
-Bare package names are checked against ClawHub first, then npm. Treat plugin installs like running code. Prefer pinned versions.
-</Warning>
+裸包名优先检查 ClawHub，然后检查 npm。安全提示：将插件安装视为运行代码。优先使用固定版本。
 
-<AccordionGroup>
-  <Accordion title="Config includes and invalid-config recovery">
-    If your `plugins` section is backed by a single-file `$include`, `plugins install/update/enable/disable/uninstall` write through to that included file and leave `openclaw.json` untouched. Root includes, include arrays, and includes with sibling overrides fail closed instead of flattening. See [Config includes](/gateway/configuration) for the supported shapes.
+如果您的 `plugins` 部分由单文件 `$include` 支持，则 `plugins install/update/enable/disable/uninstall` 会写回该被包含的文件，而保持 `openclaw.json` 不变。根包含、包含数组以及带有同级覆盖项的包含会关闭失败，而不是被展平。有关支持的形状，请参见[配置包含](/gateway/configuration)。
 
-    If config is invalid, `plugins install` normally fails closed and tells you to run `openclaw doctor --fix` first. The only documented exception is a narrow bundled-plugin recovery path for plugins that explicitly opt into `openclaw.install.allowInvalidConfigRecovery`.
+如果配置无效，`plugins install` 通常会关闭失败，并提示您先运行 `openclaw doctor --fix`。唯一记录在案的例外是一个狭窄的内置插件恢复路径，适用于明确选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
 
-  </Accordion>
-  <Accordion title="--force and reinstall vs update">
-    `--force` reuses the existing install target and overwrites an already-installed plugin or hook pack in place. Use it when you are intentionally reinstalling the same id from a new local path, archive, ClawHub package, or npm artifact. For routine upgrades of an already tracked npm plugin, prefer `openclaw plugins update <id-or-npm-spec>`.
+`--force` 会重用现有安装目标，并就地覆盖已安装的插件或钩子包。当您有意从新的本地路径、归档、ClawHub 包或 npm 制品重新安装同一 ID 时，请使用它。对于已跟踪的 npm 插件的常规升级，请优先使用 `openclaw plugins update <id-or-npm-spec>`。
 
-    If you run `plugins install` for a plugin id that is already installed, OpenClaw stops and points you at `plugins update <id-or-npm-spec>` for a normal upgrade, or at `plugins install <package> --force` when you genuinely want to overwrite the current install from a different source.
+如果您对一个已经安装的插件 id 运行 `plugins install`，OpenClaw 会停止并提示您使用 `plugins update <id-or-npm-spec>` 进行常规升级，或者在您确实想从不同来源覆盖当前安装时使用 `plugins install <package> --force`。
 
-  </Accordion>
-  <Accordion title="--pin scope">
-    `--pin` applies to npm installs only. It is not supported with `--marketplace`, because marketplace installs persist marketplace source metadata instead of an npm spec.
-  </Accordion>
-  <Accordion title="--dangerously-force-unsafe-install">
-    `--dangerously-force-unsafe-install` is a break-glass option for false positives in the built-in dangerous-code scanner. It allows the install to continue even when the built-in scanner reports `critical` findings, but it does **not** bypass plugin `before_install` hook policy blocks and does **not** bypass scan failures.
+`--pin` 仅适用于 npm 安装。不支持与 `--marketplace` 一起使用，因为市场安装会保留市场源元数据，而不是 npm 规范。
 
-    This CLI flag applies to plugin install/update flows. Gateway-backed skill dependency installs use the matching `dangerouslyForceUnsafeInstall` request override, while `openclaw skills install` remains a separate ClawHub skill download/install flow.
+`--dangerously-force-unsafe-install` 是针对内置危险代码扫描器误报的紧急选项。即使内置扫描器报告 `critical` 发现，它也允许安装继续，但它**不**绕过插件 `before_install` 钩子策略块，也**不**绕过扫描失败。
 
-  </Accordion>
-  <Accordion title="Hook packs and npm specs">
-    `plugins install` is also the install surface for hook packs that expose `openclaw.hooks` in `package.json`. Use `openclaw hooks` for filtered hook visibility and per-hook enablement, not package installation.
+此 CLI 标志适用于插件安装/更新流程。Gateway 支持的技能依赖安装使用匹配的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍然是单独的 ClawHub 技能下载/安装流程。
 
-    Npm specs are **registry-only** (package name + optional **exact version** or **dist-tag**). Git/URL/file specs and semver ranges are rejected. Dependency installs run project-local with `--ignore-scripts` for safety, even when your shell has global npm install settings.
+`plugins install` 也是在 `package.json` 中暴露 `openclaw.hooks` 的钩子包的安装入口。使用 `openclaw hooks` 进行过滤后的钩子可见性和逐个钩子启用，而不是包安装。
 
-    Bare specs and `@latest` stay on the stable track. If npm resolves either of those to a prerelease, OpenClaw stops and asks you to opt in explicitly with a prerelease tag such as `@beta`/`@rc` or an exact prerelease version such as `@1.2.3-beta.4`.
+Npm 规范仅支持**注册表内**包（包名 + 可选**精确版本**或**发布标签**）。拒绝 Git/URL/文件规范和语义版本范围。依赖安装时默认使用 `--ignore-scripts` 以保障安全。
 
-    If a bare install spec matches a bundled plugin id (for example `diffs`), OpenClaw installs the bundled plugin directly. To install an npm package with the same name, use an explicit scoped spec (for example `@scope/diffs`).
+裸规范和 `@latest` 将保持在稳定版本。如果 npm 解析出其中任一为预发布版本，OpenClaw 会停止操作并要求您显式选择预发布标签，如 `@beta`／`@rc` 或精确的预发布版本，如 `@1.2.3-beta.4`。
 
-  </Accordion>
-  <Accordion title="Archives">
-    Supported archives: `.zip`, `.tgz`, `.tar.gz`, `.tar`. Native OpenClaw plugin archives must contain a valid `openclaw.plugin.json` at the extracted plugin root; archives that only contain `package.json` are rejected before OpenClaw writes install records.
+如果裸安装规范与内置插件 ID（例如 `diffs`）匹配，OpenClaw 会直接安装内置插件。要安装同名 npm 包，请使用显式的作用域规范（例如 `@scope/diffs`）。
 
-    Claude marketplace installs are also supported.
+支持的存档格式：`.zip`、`.tgz`、`.tar.gz`、`.tar`。
 
-  </Accordion>
-</AccordionGroup>
+也支持 Claude 市场安装。
 
-ClawHub installs use an explicit `clawhub:<package>` locator:
+ClawHub 安装使用显式的 `clawhub:<package>` 定位器：
 
 ```bash
 openclaw plugins install clawhub:openclaw-codex-app-server
 openclaw plugins install clawhub:openclaw-codex-app-server@1.2.3
 ```
 
-OpenClaw now also prefers ClawHub for bare npm-safe plugin specs. It only falls back to npm if ClawHub does not have that package or version:
+OpenClaw 现在也优先使用 ClawHub 处理裸 npm 安全插件规范。仅当 ClawHub 没有该包或版本时才回退到 npm：
 
 ```bash
 openclaw plugins install openclaw-codex-app-server
 ```
 
-OpenClaw downloads the package archive from ClawHub, checks the advertised plugin API / minimum gateway compatibility, then installs it through the normal archive path. Recorded installs keep their ClawHub source metadata for later updates.
+OpenClaw 从 ClawHub 下载包归档，检查所宣传的插件 API / 最低 Gateway 兼容性，然后通过常规归档路径安装。已记录的安装会保留其 ClawHub 源元数据以便后续更新。
 
-#### Marketplace shorthand
-
-Use `plugin@marketplace` shorthand when the marketplace name exists in Claude's local registry cache at `~/.claude/plugins/known_marketplaces.json`:
+当市场名称存在于 Claude 的本地注册表缓存 `~/.claude/plugins/known_marketplaces.json` 中时，使用 `plugin@marketplace` 简写：
 
 ```bash
 openclaw plugins marketplace list <marketplace-name>
 openclaw plugins install <plugin-name>@<marketplace-name>
 ```
 
-Use `--marketplace` when you want to pass the marketplace source explicitly:
+当您想明确传递市场源时，使用 `--marketplace`：
 
 ```bash
 openclaw plugins install <plugin-name> --marketplace <marketplace-name>
@@ -147,31 +118,27 @@ openclaw plugins install <plugin-name> --marketplace https://github.com/<owner>/
 openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 ```
 
-<Tabs>
-  <Tab title="Marketplace sources">
-    - a Claude known-marketplace name from `~/.claude/plugins/known_marketplaces.json`
-    - a local marketplace root or `marketplace.json` path
-    - a GitHub repo shorthand such as `owner/repo`
-    - a GitHub repo URL such as `https://github.com/owner/repo`
-    - a git URL
-  </Tab>
-  <Tab title="Remote marketplace rules">
-    For remote marketplaces loaded from GitHub or git, plugin entries must stay inside the cloned marketplace repo. OpenClaw accepts relative path sources from that repo and rejects HTTP(S), absolute-path, git, GitHub, and other non-path plugin sources from remote manifests.
-  </Tab>
-</Tabs>
+市场源可以是：
 
-For local paths and archives, OpenClaw auto-detects:
+- 来自 `~/.claude/plugins/known_marketplaces.json` 的 Claude 已知市场名称
+- 本地市场根目录或 `marketplace.json` 路径
+- GitHub 仓库简写，如 `owner/repo`
+- GitHub 仓库 URL，如 `https://github.com/owner/repo`
+- git URL
 
-- native OpenClaw plugins (`openclaw.plugin.json`)
-- Codex-compatible bundles (`.codex-plugin/plugin.json`)
-- Claude-compatible bundles (`.claude-plugin/plugin.json` or the default Claude component layout)
-- Cursor-compatible bundles (`.cursor-plugin/plugin.json`)
+对于从 GitHub 或 git 加载的远程市场，插件条目必须保留在克隆的市场仓库内。OpenClaw 接受来自该仓库的相对路径源，并拒绝来自远程清单的 HTTP(S)、绝对路径、git、GitHub 和其他非路径插件源。
 
-<Note>
-Compatible bundles install into the normal plugin root and participate in the same list/info/enable/disable flow. Today, bundle skills, Claude command-skills, Claude `settings.json` defaults, Claude `.lsp.json` / manifest-declared `lspServers` defaults, Cursor command-skills, and compatible Codex hook directories are supported; other detected bundle capabilities are shown in diagnostics/info but are not yet wired into runtime execution.
-</Note>
+对于本地路径和归档，OpenClaw 自动检测：
 
-### List
+- 原生 OpenClaw 插件（`openclaw.plugin.json`）
+- Codex 兼容包（`.codex-plugin/plugin.json`）
+- Claude 兼容包（`.claude-plugin/plugin.json` 或默认 Claude 组件布局）
+- Cursor 兼容包（`.cursor-plugin/plugin.json`）
+
+兼容包会安装到正常的插件根目录中，并参与相同的列表/信息/启用/禁用流程。当前支持包技能、Claude 命令技能、Claude `settings.json` 默认值、Claude `.lsp.json` /
+清单声明的 `lspServers` 默认值、Cursor 命令技能，以及兼容的 Codex 钩子目录；其他检测到的包能力会在诊断/信息中显示，但尚未接入运行时执行。
+
+### 列表
 
 ```bash
 openclaw plugins list
@@ -180,51 +147,27 @@ openclaw plugins list --verbose
 openclaw plugins list --json
 ```
 
-<ParamField path="--enabled" type="boolean">
-  Show only enabled plugins.
-</ParamField>
-<ParamField path="--verbose" type="boolean">
-  Switch from the table view to per-plugin detail lines with source/origin/version/activation metadata.
-</ParamField>
-<ParamField path="--json" type="boolean">
-  Machine-readable inventory plus registry diagnostics.
-</ParamField>
+使用 `--enabled` 仅显示已加载的插件。使用 `--verbose` 从表格视图切换到带有源/起源/版本/激活元数据的每个插件详细信息行。使用 `--json` 获取机器可读的清册加上注册表诊断。
 
-<Note>
-`plugins list` reads the persisted local plugin registry first, with a manifest-only derived fallback when the registry is missing or invalid. It is useful for checking whether a plugin is installed, enabled, and visible to cold startup planning, but it is not a live runtime probe of an already-running Gateway process. After changing plugin code, enablement, hook policy, or `plugins.load.paths`, restart the Gateway that serves the channel before expecting new `register(api)` code or hooks to run. For remote/container deployments, verify you are restarting the actual `openclaw gateway run` child, not only a wrapper process.
-</Note>
+`plugins list` 会从当前 CLI 环境和配置中执行发现。它有助于检查插件是否已启用/可加载，但它不是对已运行 Gateway 进程的实时运行时探测。更改插件代码、启用状态、钩子策略或 `plugins.load.paths` 后，在期望新的 `register(api)` 代码或钩子运行之前，请重启为该通道提供服务的 Gateway。对于远程/容器部署，请确认您重启的是实际的 `openclaw gateway run` 子进程，而不仅仅是包装进程。
 
-For bundled plugin work inside a packaged Docker image, bind-mount the plugin
-source directory over the matching packaged source path, such as
-`/app/extensions/synology-chat`. OpenClaw will discover that mounted source
-overlay before `/app/dist/extensions/synology-chat`; a plain copied source
-directory remains inert so normal packaged installs still use compiled dist.
+用于运行时钩子调试：
 
-For runtime hook debugging:
+- `openclaw plugins inspect <id> --json` 显示来自模块加载检查过程的已注册钩子和诊断信息
+- `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway、服务/进程提示、配置路径和 RPC 健康状态
+- 非捆绑的会话钩子（`llm_input`、`llm_output`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`
 
-- `openclaw plugins inspect <id> --json` shows registered hooks and diagnostics from a module-loaded inspection pass.
-- `openclaw gateway status --deep --require-rpc` confirms the reachable Gateway, service/process hints, config path, and RPC health.
-- Non-bundled conversation hooks (`llm_input`, `llm_output`, `before_agent_finalize`, `agent_end`) require `plugins.entries.<id>.hooks.allowConversationAccess=true`.
-
-Use `--link` to avoid copying a local directory (adds to `plugins.load.paths`):
+使用 `--link` 可避免复制本地目录（会将其添加到 `plugins.load.paths`）：
 
 ```bash
 openclaw plugins install -l ./my-plugin
 ```
 
-<Note>
-`--force` is not supported with `--link` because linked installs reuse the source path instead of copying over a managed install target.
+`--force` 不支持与 `--link` 一起使用，因为链接安装会重用源路径，而不是复制托管的安装目标。
 
-Use `--pin` on npm installs to save the resolved exact spec (`name@version`) in the managed plugin index while keeping the default behavior unpinned.
-</Note>
+在 npm 安装上使用 `--pin` 可在 `plugins.installs` 中保存解析后的精确规范（`name@version`），同时保持默认行为未固定。
 
-### Plugin index
-
-Plugin install metadata is machine-managed state, not user config. Installs and updates write it to `plugins/installs.json` under the active OpenClaw state directory. Its top-level `installRecords` map is the durable source of install metadata, including records for broken or missing plugin manifests. The `plugins` array is the manifest-derived cold registry cache. The file includes a do-not-edit warning and is used by `openclaw plugins update`, uninstall, diagnostics, and the cold plugin registry.
-
-When OpenClaw sees shipped legacy `plugins.installs` records in config, it moves them into the plugin index and removes the config key; if either write fails, the config records are kept so the install metadata is not lost.
-
-### Uninstall
+### 卸载
 
 ```bash
 openclaw plugins uninstall <id>
@@ -232,13 +175,13 @@ openclaw plugins uninstall <id> --dry-run
 openclaw plugins uninstall <id> --keep-files
 ```
 
-`uninstall` removes plugin records from `plugins.entries`, the persisted plugin index, plugin allow/deny list entries, and linked `plugins.load.paths` entries when applicable. Unless `--keep-files` is set, uninstall also removes the tracked managed install directory when it is inside OpenClaw's plugin extensions root. For active memory plugins, the memory slot resets to `memory-core`.
+`uninstall` 命令会将插件记录从 `plugins.entries`、`plugins.installs`、插件允许列表，以及链接的 `plugins.load.paths` 条目中删除（如适用）。对于活跃的内存插件，内存槽将重置为 `memory-core`。
 
-<Note>
-`--keep-config` is supported as a deprecated alias for `--keep-files`.
-</Note>
+默认情况下，卸载还会删除活动状态目录插件根目录下的插件安装目录。使用 `--keep-files` 可保留磁盘上的文件。
 
-### Update
+`--keep-config` 支持作为已废弃的 `--keep-files` 别名。
+
+### 更新
 
 ```bash
 openclaw plugins update <id-or-npm-spec>
@@ -248,75 +191,53 @@ openclaw plugins update @openclaw/voice-call@beta
 openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-install
 ```
 
-Updates apply to tracked plugin installs in the managed plugin index and tracked hook-pack installs in `hooks.internal.installs`.
+更新适用于 `plugins.installs` 中的跟踪安装和 `hooks.internal.installs` 中的跟踪钩子包安装。
 
-<AccordionGroup>
-  <Accordion title="Resolving plugin id vs npm spec">
-    When you pass a plugin id, OpenClaw reuses the recorded install spec for that plugin. That means previously stored dist-tags such as `@beta` and exact pinned versions continue to be used on later `update <id>` runs.
+当您传递插件 id 时，OpenClaw 会重用该插件的已记录安装规范。这意味着先前存储的发布标签（如 `@beta`）和精确的固定版本将继续在后续的 `update <id>` 运行中使用。
 
-    For npm installs, you can also pass an explicit npm package spec with a dist-tag or exact version. OpenClaw resolves that package name back to the tracked plugin record, updates that installed plugin, and records the new npm spec for future id-based updates.
+对于 npm 安装，您也可以传递带有发布标签或精确版本的显式 npm 包规范。OpenClaw 会将该包名解析回跟踪的插件记录，更新该已安装插件，并记录新的 npm 规范以便将来基于 id 的更新。
 
-    Passing the npm package name without a version or tag also resolves back to the tracked plugin record. Use this when a plugin was pinned to an exact version and you want to move it back to the registry's default release line.
+如果不带版本或标签直接传递 npm 包名，也会解析回已跟踪的插件记录。当插件被固定到精确版本，而您希望将其切回到注册表的默认发布线时，请使用此方式。
 
-  </Accordion>
-  <Accordion title="Version checks and integrity drift">
-    Before a live npm update, OpenClaw checks the installed package version against the npm registry metadata. If the installed version and recorded artifact identity already match the resolved target, the update is skipped without downloading, reinstalling, or rewriting `openclaw.json`.
+在执行实时 npm 更新之前，OpenClaw 会将已安装包版本与 npm 注册表元数据进行检查。如果已安装版本和已记录的制品标识已与解析目标匹配，则会跳过更新，而不会下载、重新安装或重写 `openclaw.json`。
 
-    When a stored integrity hash exists and the fetched artifact hash changes, OpenClaw treats that as npm artifact drift. The interactive `openclaw plugins update` command prints the expected and actual hashes and asks for confirmation before proceeding. Non-interactive update helpers fail closed unless the caller supplies an explicit continuation policy.
+当存在已保存的完整性哈希且获取到的制品哈希发生变化时，OpenClaw 会将其视为 npm 制品漂移。交互式 `openclaw plugins update` 命令会打印预期哈希和实际哈希，并在继续之前请求确认。非交互式更新辅助工具会关闭失败，除非调用方提供明确的继续策略。
 
-  </Accordion>
-  <Accordion title="--dangerously-force-unsafe-install on update">
-    `--dangerously-force-unsafe-install` is also available on `plugins update` as a break-glass override for built-in dangerous-code scan false positives during plugin updates. It still does not bypass plugin `before_install` policy blocks or scan-failure blocking, and it only applies to plugin updates, not hook-pack updates.
-  </Accordion>
-</AccordionGroup>
+`--dangerously-force-unsafe-install` 也可用于 `plugins update`，作为插件更新期间内置危险代码扫描误报的紧急覆盖。它仍然不绕过插件 `before_install` 策略块或扫描失败阻止，并且仅适用于插件更新，不适用于钩子包更新。
 
-### Inspect
+### 检查
 
 ```bash
 openclaw plugins inspect <id>
 openclaw plugins inspect <id> --json
 ```
 
-Deep introspection for a single plugin. Shows identity, load status, source, registered capabilities, hooks, tools, commands, services, gateway methods, HTTP routes, policy flags, diagnostics, install metadata, bundle capabilities, and any detected MCP or LSP server support.
+对单个插件的深度内省。显示身份、加载状态、源、注册的能力、钩子、工具、命令、服务、Gateway 方法、HTTP 路由、策略标志、诊断、安装元数据、包能力以及任何检测到的 MCP 或 LSP 服务器支持。
 
-Each plugin is classified by what it actually registers at runtime:
+每个插件根据其在运行时实际注册的内容进行分类：
 
-- **plain-capability** — one capability type (e.g. a provider-only plugin)
-- **hybrid-capability** — multiple capability types (e.g. text + speech + images)
-- **hook-only** — only hooks, no capabilities or surfaces
-- **non-capability** — tools/commands/services but no capabilities
+- **plain-capability** — 单一能力类型（例如仅提供程序的插件）
+- **hybrid-capability** — 多种能力类型（例如文本 + 语音 + 图像）
+- **hook-only** — 仅钩子，无能力或表面
+- **non-capability** — 工具/命令/服务但无能力
 
-See [Plugin shapes](/plugins/architecture#plugin-shapes) for more on the capability model.
+有关能力模型的更多信息，请参见 [插件形态](/plugins/architecture#plugin-shapes)。
 
-<Note>
-The `--json` flag outputs a machine-readable report suitable for scripting and auditing. `inspect --all` renders a fleet-wide table with shape, capability kinds, compatibility notices, bundle capabilities, and hook summary columns. `info` is an alias for `inspect`.
-</Note>
+`--json` 标志输出适合脚本编写和审计的机器可读报告。
 
-### Doctor
+`inspect --all` 渲染一个全局表格，包含形态、能力种类、兼容性通知、包能力和钩子摘要列。
+
+`info` 是 `inspect` 的别名。
+
+### 诊断
 
 ```bash
 openclaw plugins doctor
 ```
 
-`doctor` reports plugin load errors, manifest/discovery diagnostics, and compatibility notices. When everything is clean it prints `No plugin issues detected.`
+`doctor` 报告插件加载错误、清单/发现诊断和兼容性通知。当一切正常时，它打印 `No plugin issues detected.`。
 
-For module-shape failures such as missing `register`/`activate` exports, rerun with `OPENCLAW_PLUGIN_LOAD_DEBUG=1` to include a compact export-shape summary in the diagnostic output.
-
-### Registry
-
-```bash
-openclaw plugins registry
-openclaw plugins registry --refresh
-openclaw plugins registry --json
-```
-
-The local plugin registry is OpenClaw's persisted cold read model for installed plugin identity, enablement, source metadata, and contribution ownership. Normal startup, provider owner lookup, channel setup classification, and plugin inventory can read it without importing plugin runtime modules.
-
-Use `plugins registry` to inspect whether the persisted registry is present, current, or stale. Use `--refresh` to rebuild it from the persisted plugin index, config policy, and manifest/package metadata. This is a repair path, not a runtime activation path.
-
-<Warning>
-`OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY=1` is a deprecated break-glass compatibility switch for registry read failures. Prefer `plugins registry --refresh` or `openclaw doctor --fix`; the env fallback is only for emergency startup recovery while the migration rolls out.
-</Warning>
+对于诸如缺少 `register`/`activate` 导出之类的模块形态失败，请使用 `OPENCLAW_PLUGIN_LOAD_DEBUG=1` 重新运行，以便在诊断输出中包含一个简洁的导出形态摘要。
 
 ### Marketplace
 
@@ -325,10 +246,10 @@ openclaw plugins marketplace list <source>
 openclaw plugins marketplace list <source> --json
 ```
 
-Marketplace list accepts a local marketplace path, a `marketplace.json` path, a GitHub shorthand like `owner/repo`, a GitHub repo URL, or a git URL. `--json` prints the resolved source label plus the parsed marketplace manifest and plugin entries.
+Marketplace 列表接受本地市场路径、`marketplace.json` 路径、类似 `owner/repo` 的 GitHub 简写、GitHub 仓库 URL，或 git URL。`--json` 会打印解析后的源标签以及解析后的市场清单和插件条目。
 
-## Related
+## 相关内容
 
-- [Building plugins](/plugins/building-plugins)
-- [CLI reference](/cli)
-- [Community plugins](/plugins/community)
+- [CLI 参考](/cli)
+- [构建插件](/plugins/building-plugins)
+- [社区插件](/plugins/community)

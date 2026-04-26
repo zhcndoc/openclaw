@@ -1,11 +1,11 @@
 ---
-summary: "Redirect to /tools/tts"
-title: "Text-to-speech"
+summary: "重定向到 /tools/tts"
+title: "文本转语音"
 redirect: /tools/tts
 ---
 
-This page has moved to [Text-to-Speech](/tools/tts).
+此页面已移动到 [Text-to-Speech](/tools/tts)。
 
-## Related
+## 相关内容
 
 - [Text-to-speech](/tools/tts)

@@ -1,14 +1,14 @@
 ---
-summary: "CLI reference for `openclaw backup` (create local backup archives)"
+summary: "`openclaw backup` 命令行参考（创建本地备份归档）"
 read_when:
-  - You want a first-class backup archive for local OpenClaw state
-  - You want to preview which paths would be included before reset or uninstall
+  - 你想要一个用于本地 OpenClaw 状态的一级备份归档
+  - 你想在重置或卸载之前预览将包含哪些路径
 title: "Backup"
 ---
 
 # `openclaw backup`
 
-Create a local backup archive for OpenClaw state, config, auth profiles, channel/provider credentials, sessions, and optionally workspaces.
+为 OpenClaw 状态、配置、认证配置文件、渠道/提供者凭证、会话创建本地备份归档，并可选择包含工作区。
 
 ```bash
 openclaw backup create
@@ -20,69 +20,63 @@ openclaw backup create --only-config
 openclaw backup verify ./2026-03-09T00-00-00.000Z-openclaw-backup.tar.gz
 ```
 
-## Notes
+## 注意事项
 
-- The archive includes a `manifest.json` file with the resolved source paths and archive layout.
-- Default output is a timestamped `.tar.gz` archive in the current working directory.
-- If the current working directory is inside a backed-up source tree, OpenClaw falls back to your home directory for the default archive location.
-- Existing archive files are never overwritten.
-- Output paths inside the source state/workspace trees are rejected to avoid self-inclusion.
-- `openclaw backup verify <archive>` validates that the archive contains exactly one root manifest, rejects traversal-style archive paths, and checks that every manifest-declared payload exists in the tarball.
-- `openclaw backup create --verify` runs that validation immediately after writing the archive.
-- `openclaw backup create --only-config` backs up just the active JSON config file.
+- 归档包含一个 `manifest.json` 文件，记录已解析的源路径和归档布局。
+- 默认输出是当前工作目录下带有时间戳的 `.tar.gz` 归档文件。
+- 如果当前工作目录处于备份的源代码树内，OpenClaw 会回退到你的主目录作为默认归档位置。
+- 现有的归档文件不会被覆盖。
+- 排除输出路径在源状态/工作区树内，以避免自我包含。
+- `openclaw backup verify <archive>` 会验证归档仅包含一个根 manifest，拒绝遍历式归档路径，并检查所有 manifest 声明的载荷是否存在于 tar 包中。
+- `openclaw backup create --verify` 会在写入归档后立即执行上述验证。
+- `openclaw backup create --only-config` 只备份当前活动的 JSON 配置文件。
 
-## What gets backed up
+## 备份内容
 
-`openclaw backup create` plans backup sources from your local OpenClaw install:
+`openclaw backup create` 根据你的本地 OpenClaw 安装规划备份来源：
 
-- The state directory returned by OpenClaw's local state resolver, usually `~/.openclaw`
-- The active config file path
-- The resolved `credentials/` directory when it exists outside the state directory
-- Workspace directories discovered from the current config, unless you pass `--no-include-workspace`
+- OpenClaw 本地状态解析器返回的状态目录，通常为 `~/.openclaw`
+- 活动的配置文件路径
+- 当 `credentials/` 目录存在于状态目录之外时解析出的该目录
+- 从当前配置中发现的工作区目录，除非你传递了 `--no-include-workspace`
 
-Model auth profiles are already part of the state directory under
-`agents/<agentId>/agent/auth-profiles.json`, so they are normally covered by the
-state backup entry.
+模型认证配置文件已经是状态目录的一部分，位于 `agents/<agentId>/agent/auth-profiles.json`，因此它们通常被状态备份条目覆盖。
 
-If you use `--only-config`, OpenClaw skips state, credentials-directory, and workspace discovery and archives only the active config file path.
+如果你使用 `--only-config`，OpenClaw 将跳过状态、凭证目录和工作区发现，仅归档活动的配置文件路径。
 
-OpenClaw canonicalizes paths before building the archive. If config, the
-credentials directory, or a workspace already live inside the state directory,
-they are not duplicated as separate top-level backup sources. Missing paths are
-skipped.
+OpenClaw 在构建归档之前会规范化路径。如果配置、凭证目录或工作区已经位于状态目录内，它们不会作为单独的顶层备份源被重复包含。缺失的路径会被跳过。
 
-The archive payload stores file contents from those source trees, and the embedded `manifest.json` records the resolved absolute source paths plus the archive layout used for each asset.
+归档载荷存储来自这些源树的文件内容，嵌入的 `manifest.json` 记录了解析后的绝对源路径以及每个资源所用的归档布局。
 
-## Invalid config behavior
+## 配置无效时的行为
 
-`openclaw backup` intentionally bypasses the normal config preflight so it can still help during recovery. Because workspace discovery depends on a valid config, `openclaw backup create` now fails fast when the config file exists but is invalid and workspace backup is still enabled.
+`openclaw backup` 故意绕过正常的配置预检查，因此在恢复过程中依然可用。由于工作区发现依赖有效配置，当配置文件存在但无效且工作区备份仍启用时，`openclaw backup create` 会快速失败。
 
-If you still want a partial backup in that situation, rerun:
+如果你仍想在这种情况下进行部分备份，请重新运行：
 
 ```bash
 openclaw backup create --no-include-workspace
 ```
 
-That keeps state, config, and the external credentials directory in scope while
-skipping workspace discovery entirely.
+这将使状态、配置和外部凭证目录保持在范围内，同时完全跳过工作区发现。
 
-If you only need a copy of the config file itself, `--only-config` also works when the config is malformed because it does not rely on parsing the config for workspace discovery.
+如果你只需要备份配置文件本身，`--only-config` 也适用，即使配置格式错误，因为它不依赖解析配置进行工作区发现。
 
-## Size and performance
+## 大小和性能
 
-OpenClaw does not enforce a built-in maximum backup size or per-file size limit.
+OpenClaw 不强制内建最大备份大小或单文件大小限制。
 
-Practical limits come from the local machine and destination filesystem:
+实际限制来自本地机器和目标文件系统：
 
-- Available space for the temporary archive write plus the final archive
-- Time to walk large workspace trees and compress them into a `.tar.gz`
-- Time to rescan the archive if you use `openclaw backup create --verify` or run `openclaw backup verify`
-- Filesystem behavior at the destination path. OpenClaw prefers a no-overwrite hard-link publish step and falls back to exclusive copy when hard links are unsupported
+- 临时归档写入和最终归档所需的可用空间
+- 遍历大型工作区树并压缩成 `.tar.gz` 的时间
+- 如果使用 `openclaw backup create --verify` 或执行 `openclaw backup verify`，需要额外时间重新扫描归档
+- 目标路径下的文件系统行为。OpenClaw 优先选择无覆盖的硬链接发布步骤，硬链接不支持则回退到排他复制
 
-Large workspaces are usually the main driver of archive size. If you want a smaller or faster backup, use `--no-include-workspace`.
+大型工作区通常是归档大小的主要驱动因素。如果你想要更小或更快的备份，请使用 `--no-include-workspace`。
 
-For the smallest archive, use `--only-config`.
+要获得最小的归档，请使用 `--only-config`。
 
-## Related
+## 相关内容
 
 - [CLI reference](/cli)

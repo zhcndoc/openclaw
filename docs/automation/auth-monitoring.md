@@ -1,11 +1,11 @@
 ---
-summary: "Redirect to /gateway/authentication"
-title: "Auth monitoring"
+summary: "重定向到 /gateway/authentication"
+title: "认证监控"
 ---
 
-This page moved to [Authentication](/gateway/authentication). See [Authentication](/gateway/authentication) for auth monitoring documentation.
+此页面已移动到 [Authentication](/gateway/authentication)。有关认证监控文档，请参见 [Authentication](/gateway/authentication)。
 
-## Related
+## 相关内容
 
-- [Automation troubleshooting](/automation/troubleshooting)
+- [自动化故障排除](/automation/troubleshooting)
 - [Hooks](/automation/hooks)

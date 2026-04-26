@@ -1,38 +1,24 @@
 ---
-summary: "Setting up ACP agents: acpx harness config, plugin setup, permissions"
+summary: "设置 ACP 代理：acpx 运行框架配置、插件设置、权限"
 read_when:
-  - Installing or configuring the acpx harness for Claude Code / Codex / Gemini CLI
-  - Enabling the plugin-tools or OpenClaw-tools MCP bridge
-  - Configuring ACP permission modes
-title: "ACP agents — setup"
+  - 安装或配置用于 Claude Code / Codex / Gemini CLI 的 acpx 运行框架
+  - 启用 plugin-tools 或 OpenClaw-tools MCP 桥接
+  - 配置 ACP 权限模式
+title: "ACP 代理 — 设置"
 ---
 
-For the overview, operator runbook, and concepts, see [ACP agents](/tools/acp-agents).
+有关概览、操作手册和概念，请参见 [ACP agents](/tools/acp-agents)。
+本页面涵盖 acpx 运行框架配置、用于 MCP 桥接的插件设置以及
+权限配置。
 
-The sections below cover acpx harness config, plugin setup for the MCP bridges, and permission configuration.
+## acpx 运行框架支持（当前）
 
-Use this page only when you are setting up the ACP/acpx route. For native Codex
-app-server runtime config, use [Codex harness](/plugins/codex-harness). For
-OpenAI API keys or Codex OAuth model-provider config, use
-[OpenAI](/providers/openai).
-
-Codex has two OpenClaw routes:
-
-| Route                      | Config/command                                         | Setup page                              |
-| -------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| Native Codex app-server    | `/codex ...`, `agentRuntime.id: "codex"`               | [Codex harness](/plugins/codex-harness) |
-| Explicit Codex ACP adapter | `/acp spawn codex`, `runtime: "acp", agentId: "codex"` | This page                               |
-
-Prefer the native route unless you explicitly need ACP/acpx behavior.
-
-## acpx harness support (current)
-
-Current acpx built-in harness aliases:
+当前 acpx 内置运行框架别名：
 
 - `claude`
 - `codex`
 - `copilot`
-- `cursor` (Cursor CLI: `cursor-agent acp`)
+- `cursor`（Cursor CLI：`cursor-agent acp`）
 - `droid`
 - `gemini`
 - `iflow`
@@ -44,25 +30,20 @@ Current acpx built-in harness aliases:
 - `pi`
 - `qwen`
 
-When OpenClaw uses the acpx backend, prefer these values for `agentId` unless your acpx config defines custom agent aliases.
-If your local Cursor install still exposes ACP as `agent acp`, override the `cursor` agent command in your acpx config instead of changing the built-in default.
+当 OpenClaw 使用 acpx 后端时，除非你的 acpx 配置定义了自定义代理别名，否则优先为 `agentId` 使用这些值。
+如果你的本地 Cursor 安装仍然将 ACP 暴露为 `agent acp`，请在你的 acpx 配置中覆盖 `cursor` 代理命令，而不是更改内置默认值。
 
-Direct acpx CLI usage can also target arbitrary adapters via `--agent <command>`, but that raw escape hatch is an acpx CLI feature (not the normal OpenClaw `agentId` path).
+直接使用 acpx CLI 也可以通过 `--agent <command>` 目标指向任意适配器，但该原始逃逸出口是 acpx CLI 的功能（不是常规 OpenClaw `agentId` 路径）。
 
-Model control is adapter-capability dependent. Codex ACP model refs are
-normalized by OpenClaw before startup. Other harnesses need ACP `models` plus
-`session/set_model` support; if a harness exposes neither that ACP capability
-nor its own startup model flag, OpenClaw/acpx cannot force a model selection.
+## 必需配置
 
-## Required config
-
-Core ACP baseline:
+ACP 核心基线：
 
 ```json5
 {
   acp: {
     enabled: true,
-    // Optional. Default is true; set false to pause ACP dispatch while keeping /acp controls.
+    // 可选。默认值为 true；设置为 false 可在保留 /acp 控件的同时暂停 ACP 分发。
     dispatch: { enabled: true },
     backend: "acpx",
     defaultAgent: "codex",
@@ -94,7 +75,7 @@ Core ACP baseline:
 }
 ```
 
-Thread binding config is channel-adapter specific. Example for Discord:
+线程绑定配置是特定于通道适配器的。Discord 示例：
 
 ```json5
 {
@@ -116,53 +97,50 @@ Thread binding config is channel-adapter specific. Example for Discord:
 }
 ```
 
-If thread-bound ACP spawn does not work, verify the adapter feature flag first:
+如果线程绑定的 ACP 创建不起作用，请先验证适配器功能标志：
 
 - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
 
-Current-conversation binds do not require child-thread creation. They require an active conversation context and a channel adapter that exposes ACP conversation bindings.
+当前会话绑定不需要创建子线程。它们需要一个活跃的会话上下文和一个暴露 ACP 会话绑定的通道适配器。
 
-See [Configuration Reference](/gateway/configuration-reference).
+参见 [Configuration Reference](/gateway/configuration-reference)。
 
-## Plugin setup for acpx backend
+## acpx 后端的插件设置
 
-Fresh installs ship the bundled `acpx` runtime plugin enabled by default, so ACP
-usually works without a manual plugin install step.
+新安装默认会启用捆绑的 `acpx` 运行时插件，因此 ACP
+通常无需手动安装插件步骤即可工作。
 
-Start with:
+先运行：
 
 ```text
 /acp doctor
 ```
 
-If you disabled `acpx`, denied it via `plugins.allow` / `plugins.deny`, or want
-to switch to a local development checkout, use the explicit plugin path:
+如果你禁用了 `acpx`，通过 `plugins.allow` / `plugins.deny` 拒绝了它，或者
+希望切换到本地开发检出版本，请使用显式插件路径：
 
 ```bash
 openclaw plugins install acpx
 openclaw config set plugins.entries.acpx.enabled true
 ```
 
-Local workspace install during development:
+开发期间在本地工作区安装：
 
 ```bash
 openclaw plugins install ./path/to/local/acpx-plugin
 ```
 
-Then verify backend health:
+然后验证后端健康状况：
 
 ```text
 /acp doctor
 ```
 
-### acpx command and version configuration
+### acpx 命令和版本配置
 
-By default, the bundled `acpx` plugin registers the embedded ACP backend without
-spawning an ACP agent during Gateway startup. Run `/acp doctor` for an explicit
-live probe. Set `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=1` only when you need the
-Gateway to probe the configured agent at startup.
+默认情况下，捆绑的 `acpx` 插件使用其插件本地固定二进制文件（插件包内的 `node_modules/.bin/acpx`）。启动时会将后端注册为未就绪，并由后台任务验证 `acpx --version`；如果二进制文件缺失或不匹配，它会运行 `npm install --omit=dev --no-save acpx@<pinned>` 并重新验证。整个过程中网关保持非阻塞。
 
-Override the command or version in plugin config:
+在插件配置中覆盖命令或版本：
 
 ```json
 {
@@ -180,136 +158,130 @@ Override the command or version in plugin config:
 }
 ```
 
-- `command` accepts an absolute path, relative path (resolved from the OpenClaw workspace), or command name.
-- `expectedVersion: "any"` disables strict version matching.
-- Custom `command` paths disable plugin-local auto-install.
+- `command` 接受绝对路径、相对路径（从 OpenClaw 工作区解析）或命令名。
+- `expectedVersion: "any"` 会禁用严格版本匹配。
+- 自定义 `command` 路径会禁用插件本地自动安装。
 
-See [Plugins](/tools/plugin).
+参见 [Plugins](/tools/plugin)。
 
-### Automatic dependency install
+### 自动依赖安装
 
-When you install OpenClaw globally with `npm install -g openclaw`, the acpx
-runtime dependencies (platform-specific binaries) are installed automatically
-via a postinstall hook. If the automatic install fails, the gateway still starts
-normally and reports the missing dependency through `openclaw acp doctor`.
+当你通过 `npm install -g openclaw` 全局安装 OpenClaw 时，acpx
+运行时依赖（特定平台的二进制文件）会通过 postinstall 钩子自动安装。
+如果自动安装失败，网关仍会正常启动，并通过 `openclaw acp doctor` 报告缺失的依赖。
 
-### Plugin tools MCP bridge
+### Plugin tools MCP 桥接
 
-By default, ACPX sessions do **not** expose OpenClaw plugin-registered tools to
-the ACP harness.
+默认情况下，ACPX 会话不会将 OpenClaw 已注册的插件工具暴露给
+ACP 运行框架。
 
-If you want ACP agents such as Codex or Claude Code to call installed
-OpenClaw plugin tools such as memory recall/store, enable the dedicated bridge:
+如果你希望像 Codex 或 Claude Code 这样的 ACP 代理调用已安装的
+OpenClaw 插件工具，例如 memory recall/store，请启用专用桥接：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.pluginToolsMcpBridge true
 ```
 
-What this does:
+其作用如下：
 
-- Injects a built-in MCP server named `openclaw-plugin-tools` into ACPX session
-  bootstrap.
-- Exposes plugin tools already registered by installed and enabled OpenClaw
-  plugins.
-- Keeps the feature explicit and default-off.
+- 将名为 `openclaw-plugin-tools` 的内置 MCP 服务器注入到 ACPX 会话
+  启动过程中。
+- 暴露已安装并启用的 OpenClaw 插件已注册的插件工具。
+- 保持该功能显式启用，默认关闭。
 
-Security and trust notes:
+安全与信任说明：
 
-- This expands the ACP harness tool surface.
-- ACP agents get access only to plugin tools already active in the gateway.
-- Treat this as the same trust boundary as letting those plugins execute in
-  OpenClaw itself.
-- Review installed plugins before enabling it.
+- 这会扩展 ACP 运行框架的工具面。
+- ACP 代理只能访问网关中已激活的插件工具。
+- 请将其视为与允许这些插件在 OpenClaw 本身中执行相同的信任边界。
+- 在启用之前请审查已安装的插件。
 
-Custom `mcpServers` still work as before. The built-in plugin-tools bridge is an
-additional opt-in convenience, not a replacement for generic MCP server config.
+自定义 `mcpServers` 仍可照常使用。内置的 plugin-tools 桥接是一个额外的可选便利功能，而不是通用 MCP 服务器配置的替代品。
 
-### OpenClaw tools MCP bridge
+### OpenClaw tools MCP 桥接
 
-By default, ACPX sessions also do **not** expose built-in OpenClaw tools through
-MCP. Enable the separate core-tools bridge when an ACP agent needs selected
-built-in tools such as `cron`:
+默认情况下，ACPX 会话也不会通过
+MCP 暴露内置的 OpenClaw 工具。在 ACP 代理需要某些
+内置工具（例如 `cron`）时，启用单独的 core-tools 桥接：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 ```
 
-What this does:
+其作用如下：
 
-- Injects a built-in MCP server named `openclaw-tools` into ACPX session
-  bootstrap.
-- Exposes selected built-in OpenClaw tools. The initial server exposes `cron`.
-- Keeps core-tool exposure explicit and default-off.
+- 将名为 `openclaw-tools` 的内置 MCP 服务器注入到 ACPX 会话
+  启动过程中。
+- 暴露选定的内置 OpenClaw 工具。初始服务器暴露 `cron`。
+- 保持核心工具暴露显式启用，默认关闭。
 
-### Runtime timeout configuration
+### 运行时超时配置
 
-The bundled `acpx` plugin defaults embedded runtime turns to a 120-second
-timeout. This gives slower harnesses such as Gemini CLI enough time to complete
-ACP startup and initialization. Override it if your host needs a different
-runtime limit:
+捆绑的 `acpx` 插件默认将嵌入式运行时设置为 120 秒
+超时。这为像 Gemini CLI 这样较慢的运行框架提供了足够时间来完成
+ACP 启动和初始化。如果你的主机需要不同的
+运行时限制，请覆盖它：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.timeoutSeconds 180
 ```
 
-Restart the gateway after changing this value.
+更改此值后请重启网关。
 
-### Health probe agent configuration
+### 健康探测代理配置
 
-When `/acp doctor` or the opt-in startup probe checks the backend, the bundled
-`acpx` plugin probes one harness agent. If `acp.allowedAgents` is set, it
-defaults to the first allowed agent; otherwise it defaults to `codex`. If your
-deployment needs a different ACP agent for health checks, set the probe agent
-explicitly:
+捆绑的 `acpx` 插件在判断
+嵌入式运行时后端是否就绪时，会探测一个运行框架代理。默认值是 `codex`。如果你的部署
+使用不同的默认 ACP 代理，请将探测代理设置为相同的 id：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.probeAgent claude
 ```
 
-Restart the gateway after changing this value.
+更改此值后请重启网关。
 
-## Permission configuration
+## 权限配置
 
-ACP sessions run non-interactively — there is no TTY to approve or deny file-write and shell-exec permission prompts. The acpx plugin provides two config keys that control how permissions are handled:
+ACP 会话以非交互方式运行——没有 TTY 可用于批准或拒绝文件写入和 shell 执行权限提示。acpx 插件提供两个配置键来控制权限的处理方式：
 
-These ACPX harness permissions are separate from OpenClaw exec approvals and separate from CLI-backend vendor bypass flags such as Claude CLI `--permission-mode bypassPermissions`. ACPX `approve-all` is the harness-level break-glass switch for ACP sessions.
+这些 ACPX 运行框架权限与 OpenClaw exec 审批是分开的，也与 CLI 后端供应商绕过标志分开，例如 Claude CLI `--permission-mode bypassPermissions`。ACPX `approve-all` 是 ACP 会话在运行框架级别的紧急开关。
 
 ### `permissionMode`
 
-Controls which operations the harness agent can perform without prompting.
+控制运行框架代理在不提示的情况下可以执行哪些操作。
 
-| Value           | Behavior                                                  |
-| --------------- | --------------------------------------------------------- |
-| `approve-all`   | Auto-approve all file writes and shell commands.          |
-| `approve-reads` | Auto-approve reads only; writes and exec require prompts. |
-| `deny-all`      | Deny all permission prompts.                              |
+| 值              | 行为                                                     |
+| --------------- | -------------------------------------------------------- |
+| `approve-all`   | 自动批准所有文件写入和 shell 命令。                      |
+| `approve-reads` | 仅自动批准读取；写入和执行需要提示。                     |
+| `deny-all`      | 拒绝所有权限提示。                                       |
 
 ### `nonInteractivePermissions`
 
-Controls what happens when a permission prompt would be shown but no interactive TTY is available (which is always the case for ACP sessions).
+控制当本应显示权限提示但没有可用的交互式 TTY 时会发生什么（ACP 会话始终如此）。
 
-| Value  | Behavior                                                          |
-| ------ | ----------------------------------------------------------------- |
-| `fail` | Abort the session with `AcpRuntimeError`. **(default)**           |
-| `deny` | Silently deny the permission and continue (graceful degradation). |
+| 值     | 行为                                                             |
+| ------ | ---------------------------------------------------------------- |
+| `fail` | 使用 `AcpRuntimeError` 中止会话。**（默认）**                    |
+| `deny` | 静默拒绝该权限并继续（优雅降级）。                               |
 
-### Configuration
+### 配置
 
-Set via plugin config:
+通过插件配置设置：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.permissionMode approve-all
 openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
 ```
 
-Restart the gateway after changing these values.
+更改这些值后请重启网关。
 
-> **Important:** OpenClaw currently defaults to `permissionMode=approve-reads` and `nonInteractivePermissions=fail`. In non-interactive ACP sessions, any write or exec that triggers a permission prompt can fail with `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`.
+> **重要：** OpenClaw 当前默认 `permissionMode=approve-reads` 且 `nonInteractivePermissions=fail`。在非交互式 ACP 会话中，任何触发权限提示的写入或执行都可能失败，并显示 `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
 >
-> If you need to restrict permissions, set `nonInteractivePermissions` to `deny` so sessions degrade gracefully instead of crashing.
+> 如果你需要限制权限，请将 `nonInteractivePermissions` 设置为 `deny`，这样会话会优雅降级，而不是崩溃。
 
-## Related
+## 相关内容
 
-- [ACP agents](/tools/acp-agents) — overview, operator runbook, concepts
+- [ACP agents](/tools/acp-agents) — 概览、操作手册、概念
 - [Sub-agents](/tools/subagents)
 - [Multi-agent routing](/concepts/multi-agent)

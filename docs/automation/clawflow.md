@@ -1,12 +1,12 @@
 ---
-summary: "Redirect to Task Flow"
+summary: "重定向至任务流"
 title: "ClawFlow"
 ---
 
-ClawFlow was renamed to [Task Flow](/automation/taskflow). See [Task Flow](/automation/taskflow) for the current documentation.
+ClawFlow 已重命名为 [Task Flow](/automation/taskflow)。有关当前文档，请参见 [Task Flow](/automation/taskflow)。
 
-## Related
+## 相关内容
 
-- [Task flow](/automation/taskflow)
-- [Standing orders](/automation/standing-orders)
+- [任务流](/automation/taskflow)
+- [定期订单](/automation/standing-orders)
 - [Hooks](/automation/hooks)

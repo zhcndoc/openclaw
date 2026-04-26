@@ -1,30 +1,30 @@
 ---
-summary: "CLI reference for `openclaw browser` (lifecycle, profiles, tabs, actions, state, and debugging)"
+summary: "`openclaw browser` 的 CLI 参考（生命周期、配置文件、标签页、动作、状态和调试）"
 read_when:
-  - You use `openclaw browser` and want examples for common tasks
-  - You want to control a browser running on another machine via a node host
-  - You want to attach to your local signed-in Chrome via Chrome MCP
+  - 你使用 `openclaw browser`，并希望查看常见任务示例
+  - 你想通过 node 主机控制运行在另一台机器上的浏览器
+  - 你想通过 Chrome MCP 附加到本地已登录的 Chrome
 title: "Browser"
 ---
 
 # `openclaw browser`
 
-Manage OpenClaw's browser control surface and run browser actions (lifecycle, profiles, tabs, snapshots, screenshots, navigation, input, state emulation, and debugging).
+管理 OpenClaw 的浏览器控制界面并运行浏览器动作（生命周期、配置文件、标签页、快照、截图、导航、输入、状态模拟和调试）。
 
-Related:
+相关链接：
 
-- Browser tool + API: [Browser tool](/tools/browser)
+- 浏览器工具 + API：[Browser 工具](/tools/browser)
 
-## Common flags
+## 常用参数
 
-- `--url <gatewayWsUrl>`: Gateway WebSocket URL (defaults to config).
-- `--token <token>`: Gateway token (if required).
-- `--timeout <ms>`: request timeout (ms).
-- `--expect-final`: wait for a final Gateway response.
-- `--browser-profile <name>`: choose a browser profile (default from config).
-- `--json`: machine-readable output (where supported).
+- `--url <gatewayWsUrl>`: Gateway WebSocket URL（默认取自配置）。
+- `--token <token>`: Gateway 令牌（如果需要）。
+- `--timeout <ms>`: 请求超时（毫秒）。
+- `--expect-final`: 等待最终的 Gateway 响应。
+- `--browser-profile <name>`: 选择浏览器配置文件（默认取自配置）。
+- `--json`: 机器可读输出（支持的情况下）。
 
-## Quick start (local)
+## 快速开始（本地）
 
 ```bash
 openclaw browser profiles
@@ -35,11 +35,11 @@ openclaw browser --browser-profile openclaw snapshot
 
 Agents can run the same readiness check with `browser({ action: "doctor" })`.
 
-## Quick troubleshooting
+## 快速故障排查
 
-If `start` fails with `not reachable after start`, troubleshoot CDP readiness first. If `start` and `tabs` succeed but `open` or `navigate` fails, the browser control plane is healthy and the failure is usually navigation SSRF policy.
+如果 `start` 因 `not reachable after start` 失败，请先排查 CDP 就绪性。如果 `start` 和 `tabs` 成功，但 `open` 或 `navigate` 失败，则浏览器控制平面是健康的，失败通常是导航 SSRF 策略导致的。
 
-Minimal sequence:
+最小序列：
 
 ```bash
 openclaw browser --browser-profile openclaw doctor
@@ -48,45 +48,28 @@ openclaw browser --browser-profile openclaw tabs
 openclaw browser --browser-profile openclaw open https://example.com
 ```
 
-Detailed guidance: [Browser troubleshooting](/tools/browser#cdp-startup-failure-vs-navigation-ssrf-block)
+详细指导：[Browser troubleshooting](/tools/browser#cdp-startup-failure-vs-navigation-ssrf-block)
 
-## Lifecycle
+## 生命周期
 
 ```bash
 openclaw browser status
 openclaw browser doctor
-openclaw browser doctor --deep
 openclaw browser start
-openclaw browser start --headless
 openclaw browser stop
 openclaw browser --browser-profile openclaw reset-profile
 ```
 
-Notes:
+注意：
 
-- `doctor --deep` adds a live snapshot probe. It is useful when basic CDP
-  readiness is green but you want proof that the current tab can be inspected.
-- For `attachOnly` and remote CDP profiles, `openclaw browser stop` closes the
-  active control session and clears temporary emulation overrides even when
-  OpenClaw did not launch the browser process itself.
-- For local managed profiles, `openclaw browser stop` stops the spawned browser
-  process.
-- `openclaw browser start --headless` applies only to that start request and
-  only when OpenClaw launches a local managed browser. It does not rewrite
-  `browser.headless` or profile config, and it is a no-op for an already-running
-  browser.
-- On Linux hosts without `DISPLAY` or `WAYLAND_DISPLAY`, local managed profiles
-  run headless automatically unless `OPENCLAW_BROWSER_HEADLESS=0`,
-  `browser.headless=false`, or `browser.profiles.<name>.headless=false`
-  explicitly requests a visible browser.
+- 对于 `attachOnly` 和远程 CDP 配置文件，`openclaw browser stop` 会关闭活动控制会话并清除临时模拟覆盖，即使 OpenClaw 本身没有启动浏览器进程。
+- 对于本地管理的配置文件，`openclaw browser stop` 会停止生成的浏览器进程。
 
-## If the command is missing
+## 如果命令缺失
 
-If `openclaw browser` is an unknown command, check `plugins.allow` in
-`~/.openclaw/openclaw.json`.
+如果 `openclaw browser` 是未知命令，请检查 `~/.openclaw/openclaw.json` 中的 `plugins.allow`。
 
-When `plugins.allow` is present, the bundled browser plugin must be listed
-explicitly:
+当存在 `plugins.allow` 时，必须明确列出捆绑的浏览器插件：
 
 ```json5
 {
@@ -96,18 +79,17 @@ explicitly:
 }
 ```
 
-`browser.enabled=true` does not restore the CLI subcommand when the plugin
-allowlist excludes `browser`.
+`browser.enabled=true` 在插件允许列表排除 `browser` 时不会恢复 CLI 子命令。
 
-Related: [Browser tool](/tools/browser#missing-browser-command-or-tool)
+相关：[Browser 工具](/tools/browser#missing-browser-command-or-tool)
 
-## Profiles
+## 配置文件
 
-Profiles are named browser routing configs. In practice:
+配置文件是有名称的浏览器路由配置。实践中：
 
-- `openclaw`: launches or attaches to a dedicated OpenClaw-managed Chrome instance (isolated user data dir).
-- `user`: controls your existing signed-in Chrome session via Chrome DevTools MCP.
-- custom CDP profiles: point at a local or remote CDP endpoint.
+- `openclaw`：启动或附加到由 OpenClaw 管理的专用 Chrome 实例（隔离的用户数据目录）。
+- `user`：通过 Chrome DevTools MCP 控制你现有的已登录 Chrome 会话。
+- 自定义 CDP 配置文件：指向本地或远程的 CDP 端点。
 
 ```bash
 openclaw browser profiles
@@ -117,13 +99,13 @@ openclaw browser create-profile --name remote --cdp-url https://browser-host.exa
 openclaw browser delete-profile --name work
 ```
 
-Use a specific profile:
+指定使用某个配置文件：
 
 ```bash
 openclaw browser --browser-profile work tabs
 ```
 
-## Tabs
+## 标签页
 
 ```bash
 openclaw browser tabs
@@ -136,26 +118,21 @@ openclaw browser focus docs
 openclaw browser close t1
 ```
 
-`tabs` returns `suggestedTargetId` first, then the stable `tabId` such as `t1`,
-the optional label, and the raw `targetId`. Agents should pass
-`suggestedTargetId` back into `focus`, `close`, snapshots, and actions. You can
-assign a label with `open --label`, `tab new --label`, or `tab label`; labels,
-tab ids, raw target ids, and unique target-id prefixes are all accepted.
-When Chromium replaces the underlying raw target during a navigation or form
-submit, OpenClaw keeps the stable `tabId`/label attached to the replacement tab
-when it can prove the match. Raw target ids remain volatile; prefer
-`suggestedTargetId`.
+`tabs` 首先返回 `suggestedTargetId`，然后是稳定的 `tabId`，例如 `t1`，
+可选标签，以及原始 `targetId`。Agents 应将 `suggestedTargetId` 传回
+`focus`、`close`、快照和动作中。你可以使用 `open --label`、`tab new --label` 或 `tab label`
+分配标签；标签、tab id、原始 target id，以及唯一的 target-id 前缀都可以接受。
 
-## Snapshot / screenshot / actions
+## 快照 / 截图 / 动作
 
-Snapshot:
+快照：
 
 ```bash
 openclaw browser snapshot
 openclaw browser snapshot --urls
 ```
 
-Screenshot:
+截图：
 
 ```bash
 openclaw browser screenshot
@@ -164,23 +141,21 @@ openclaw browser screenshot --ref e12
 openclaw browser screenshot --labels
 ```
 
-Notes:
+注意：
 
-- `--full-page` is for page captures only; it cannot be combined with `--ref`
-  or `--element`.
-- `existing-session` / `user` profiles support page screenshots and `--ref`
-  screenshots from snapshot output, but not CSS `--element` screenshots.
-- `--labels` overlays current snapshot refs on the screenshot.
-- `snapshot --urls` appends discovered link destinations to AI snapshots so
-  agents can choose direct navigation targets instead of guessing from link
-  text alone.
+- `--full-page` 仅适用于页面捕获；它不能与 `--ref`
+  或 `--element` 一起使用。
+- `existing-session` / `user` 配置文件支持页面截图以及来自快照输出的
+  `--ref` 截图，但不支持 CSS `--element` 截图。
+- `--labels` 会在截图上叠加当前快照 refs。
+- `snapshot --urls` 会将发现的链接目标附加到 AI 快照中，这样
+  agents 就可以选择直接导航目标，而不是仅凭链接文本猜测。
 
-Navigate/click/type (ref-based UI automation):
+导航/点击/输入（基于 ref 的 UI 自动化）：
 
 ```bash
 openclaw browser navigate https://example.com
 openclaw browser click <ref>
-openclaw browser click-coords 120 340
 openclaw browser type <ref> "hello"
 openclaw browser press Enter
 openclaw browser hover <ref>
@@ -192,11 +167,7 @@ openclaw browser wait --text "Done"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref <ref>
 ```
 
-Action responses return the current raw `targetId` after action-triggered page
-replacement when OpenClaw can prove the replacement tab. Scripts should still
-store and pass `suggestedTargetId`/labels for long-lived workflows.
-
-File + dialog helpers:
+文件 + 对话框辅助：
 
 ```bash
 openclaw browser upload /tmp/openclaw/uploads/file.pdf --ref <ref>
@@ -205,14 +176,9 @@ openclaw browser download <ref> report.pdf
 openclaw browser dialog --accept
 ```
 
-Managed Chrome profiles save ordinary click-triggered downloads into the OpenClaw
-downloads directory (`/tmp/openclaw/downloads` by default, or the configured temp
-root). Use `waitfordownload` or `download` when the agent needs to wait for a
-specific file and return its path; those explicit waiters own the next download.
+## 状态和存储
 
-## State and storage
-
-Viewport + emulation:
+视口 + 模拟：
 
 ```bash
 openclaw browser resize 1280 720
@@ -227,7 +193,7 @@ openclaw browser set headers '{"x-test":"1"}'
 openclaw browser set credentials myuser mypass
 ```
 
-Cookies + storage:
+Cookies + 存储：
 
 ```bash
 openclaw browser cookies
@@ -238,7 +204,7 @@ openclaw browser storage local set token abc123
 openclaw browser storage session clear
 ```
 
-## Debugging
+## 调试
 
 ```bash
 openclaw browser console --level error
@@ -251,9 +217,9 @@ openclaw browser trace start
 openclaw browser trace stop --out trace.zip
 ```
 
-## Existing Chrome via MCP
+## 通过 MCP 控制现有 Chrome
 
-Use the built-in `user` profile, or create your own `existing-session` profile:
+使用内置的 `user` 配置文件，或创建你自己的 `existing-session` 配置文件：
 
 ```bash
 openclaw browser --browser-profile user tabs
@@ -262,36 +228,31 @@ openclaw browser create-profile --name brave-live --driver existing-session --us
 openclaw browser --browser-profile chrome-live tabs
 ```
 
-This path is host-only. For Docker, headless servers, Browserless, or other remote setups, use a CDP profile instead.
+此路径只适用于主机。对于 Docker、无头服务器、Browserless 或其他远程设置，请使用 CDP 配置文件。
 
-Current existing-session limits:
+当前 existing-session 限制：
 
-- snapshot-driven actions use refs, not CSS selectors
-- `browser.actionTimeoutMs` defaults supported `act` requests to 60000 ms when
-  callers omit `timeoutMs`; per-call `timeoutMs` still wins.
-- `click` is left-click only
-- `type` does not support `slowly=true`
-- `press` does not support `delayMs`
-- `hover`, `scrollintoview`, `drag`, `select`, `fill`, and `evaluate` reject
-  per-call timeout overrides
-- `select` supports one value only
-- `wait --load networkidle` is not supported
-- file uploads require `--ref` / `--input-ref`, do not support CSS
-  `--element`, and currently support one file at a time
-- dialog hooks do not support `--timeout`
-- screenshots support page captures and `--ref`, but not CSS `--element`
-- `responsebody`, download interception, PDF export, and batch actions still
-  require a managed browser or raw CDP profile
+- 快照驱动的动作使用 refs，而不是 CSS 选择器
+- `click` 仅限左键点击
+- `type` 不支持 `slowly=true`
+- `press` 不支持 `delayMs`
+- `hover`, `scrollintoview`, `drag`, `select`, `fill`, 和 `evaluate` 拒绝每次调用的超时覆盖
+- `select` 仅支持一个值
+- 不支持 `wait --load networkidle`
+- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，且目前一次仅支持一个文件
+- 对话框钩子不支持 `--timeout`
+- 截图支持页面捕获和 `--ref`，但不支持 CSS `--element`
+- `responsebody`、下载拦截、PDF 导出和批量动作仍然需要管理的浏览器或原始 CDP 配置文件
 
-## Remote browser control (node host proxy)
+## 远程浏览器控制（节点主机代理）
 
-If the Gateway runs on a different machine than the browser, run a **node host** on the machine that has Chrome/Brave/Edge/Chromium. The Gateway will proxy browser actions to that node (no separate browser control server required).
+若 Gateway 运行在与浏览器不同的机器上，则在具备 Chrome/Brave/Edge/Chromium 的机器上运行一个**节点主机**。Gateway 会将浏览器操作代理到该节点（无需单独的浏览器控制服务器）。
 
-Use `gateway.nodes.browser.mode` to control auto-routing and `gateway.nodes.browser.node` to pin a specific node if multiple are connected.
+使用 `gateway.nodes.browser.mode` 控制自动路由，使用 `gateway.nodes.browser.node` 固定特定节点（如果连接了多个）。
 
-Security + remote setup: [Browser tool](/tools/browser), [Remote access](/gateway/remote), [Tailscale](/gateway/tailscale), [Security](/gateway/security)
+安全 + 远程设置：[Browser tool](/tools/browser), [Remote access](/gateway/remote), [Tailscale](/gateway/tailscale), [Security](/gateway/security)
 
-## Related
+## 相关
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)
 - [Browser](/tools/browser)

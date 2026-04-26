@@ -1,104 +1,72 @@
 ---
-summary: "What the OpenClaw system prompt contains and how it is assembled"
+summary: "OpenClaw 系统提示包含内容及其如何组装"
 read_when:
-  - Editing system prompt text, tools list, or time/heartbeat sections
-  - Changing workspace bootstrap or skills injection behavior
+  - 编辑系统提示文本、工具列表或时间/心跳部分
+  - 更改工作区引导或技能注入行为
 title: "System prompt"
 ---
 
-OpenClaw builds a custom system prompt for every agent run. The prompt is **OpenClaw-owned** and does not use the pi-coding-agent default prompt.
+OpenClaw 为每次代理运行构建一个自定义系统提示。该提示由 **OpenClaw 拥有**，并且不使用 pi-coding-agent 的默认提示。
 
-The prompt is assembled by OpenClaw and injected into each agent run.
+提示由 OpenClaw 组装并注入到每次代理运行中。
 
-Provider plugins can contribute cache-aware prompt guidance without replacing
-the full OpenClaw-owned prompt. The provider runtime can:
+Provider 插件可以提供缓存感知的提示指导，而无需替换完整的 OpenClaw 拥有提示。Provider 运行时可以：
 
-- replace a small set of named core sections (`interaction_style`,
-  `tool_call_style`, `execution_bias`)
-- inject a **stable prefix** above the prompt cache boundary
-- inject a **dynamic suffix** below the prompt cache boundary
+- 替换少量命名的核心部分（`interaction_style`, `tool_call_style`, `execution_bias`）
+- 在提示缓存边界之上注入一个 **稳定前缀**
+- 在提示缓存边界之下注入一个 **动态后缀**
 
-Use provider-owned contributions for model-family-specific tuning. Keep legacy
-`before_prompt_build` prompt mutation for compatibility or truly global prompt
-changes, not normal provider behavior.
+使用 Provider 拥有的贡献进行模型系列特定的调优。保留遗留的 `before_prompt_build` 提示修改以保持兼容性或进行真正的全局提示更改，而不是正常的 Provider 行为。
 
-The OpenAI GPT-5 family overlay keeps the core execution rule small and adds
-model-specific guidance for persona latching, concise output, tool discipline,
-parallel lookup, deliverable coverage, verification, missing context, and
-terminal-tool hygiene.
+OpenAI GPT-5 系列叠加层会保持核心执行规则较小，并为人格黏附、简洁输出、工具纪律、并行查找、交付物覆盖、验证、缺失上下文以及终端工具卫生添加模型特定指导。
 
 ## Structure
 
-The prompt is intentionally compact and uses fixed sections:
+提示设计得简洁，使用固定的部分：
 
-- **Tooling**: structured-tool source-of-truth reminder plus runtime tool-use guidance.
-- **Execution Bias**: compact follow-through guidance: act in-turn on
-  actionable requests, continue until done or blocked, recover from weak tool
-  results, check mutable state live, and verify before finalizing.
-- **Safety**: short guardrail reminder to avoid power-seeking behavior or bypassing oversight.
-- **Skills** (when available): tells the model how to load skill instructions on demand.
-- **OpenClaw Self-Update**: how to inspect config safely with
-  `config.schema.lookup`, patch config with `config.patch`, replace the full
-  config with `config.apply`, and run `update.run` only on explicit user
-  request. The owner-only `gateway` tool also refuses to rewrite
-  `tools.exec.ask` / `tools.exec.security`, including legacy `tools.bash.*`
-  aliases that normalize to those protected exec paths.
-- **Workspace**: working directory (`agents.defaults.workspace`).
-- **Documentation**: local path to OpenClaw docs (repo or npm package) and when to read them.
-- **Workspace Files (injected)**: indicates bootstrap files are included below.
-- **Sandbox** (when enabled): indicates sandboxed runtime, sandbox paths, and whether elevated exec is available.
-- **Current Date & Time**: user-local time, timezone, and time format.
-- **Reply Tags**: optional reply tag syntax for supported providers.
-- **Heartbeats**: heartbeat prompt and ack behavior, when heartbeats are enabled for the default agent.
-- **Runtime**: host, OS, node, model, repo root (when detected), thinking level (one line).
-- **Reasoning**: current visibility level + /reasoning toggle hint.
+- **工具**: 结构化工具的事实来源提醒，以及运行时工具使用指导。
+- **执行偏差**: 简洁的后续执行指导：对可执行请求立即在当前轮次中行动，持续执行直到完成或受阻，从弱工具结果中恢复，实时检查可变状态，并在最终完成前进行验证。
+- **安全性**: 简短的护栏提醒，避免权力寻求行为或绕过监督。
+- **技能**（可用时）: 告诉模型如何按需加载技能说明。
+- **OpenClaw 自我更新**: 如何使用 `config.schema.lookup` 安全检查配置、用 `config.patch` 打补丁、用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。仅限所有者的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括规范化为这些受保护 exec 路径的旧版 `tools.bash.*` 别名。
+- **工作区**: 工作目录（`agents.defaults.workspace`）。
+- **文档**: OpenClaw 文档的本地路径（repo 或 npm 包）以及何时阅读它们。
+- **工作区文件（已注入）**: 表示下方已包含引导文件。
+- **沙盒**（启用时）: 表示沙盒运行时、沙盒路径，以及是否可用提权执行。
+- **当前日期和时间**: 用户本地时间、时区和时间格式。
+- **回复标签**: 受支持提供方可选的回复标签语法。
+- **心跳**: 在默认代理启用心跳时，心跳提示和确认行为。
+- **运行时**: 主机、操作系统、node、模型、仓库根目录（检测到时）、思考级别（一行）。
+- **推理**: 当前可见性级别 + `/reasoning` 切换提示。
 
-The Tooling section also includes runtime guidance for long-running work:
+Tooling 部分还包括针对长期运行工作的运行时指导：
 
-- use cron for future follow-up (`check back later`, reminders, recurring work)
-  instead of `exec` sleep loops, `yieldMs` delay tricks, or repeated `process`
-  polling
-- use `exec` / `process` only for commands that start now and continue running
-  in the background
-- when automatic completion wake is enabled, start the command once and rely on
-  the push-based wake path when it emits output or fails
-- use `process` for logs, status, input, or intervention when you need to
-  inspect a running command
-- if the task is larger, prefer `sessions_spawn`; sub-agent completion is
-  push-based and auto-announces back to the requester
-- do not poll `subagents list` / `sessions_list` in a loop just to wait for
-  completion
+- 使用 cron 进行后续跟进（`check back later`，提醒，重复性工作），而不是 `exec` 睡眠循环、`yieldMs` 延迟技巧或重复的 `process` 轮询
+- 仅对现在启动并在后台继续运行的命令使用 `exec` / `process`
+- 当启用自动完成唤醒时，启动命令一次，并在其输出或失败时依赖基于推送的唤醒路径
+- 当需要检查运行中的命令时，使用 `process` 获取日志、状态、输入或干预
+- 如果任务较大，首选 `sessions_spawn`；子代理完成是基于推送的，并自动向请求者宣布
+- 不要循环轮询 `subagents list` / `sessions_list` 仅仅为了等待完成
 
-When the experimental `update_plan` tool is enabled, Tooling also tells the
-model to use it only for non-trivial multi-step work, keep exactly one
-`in_progress` step, and avoid repeating the whole plan after each update.
+当实验性的 `update_plan` 工具启用时，Tooling 还告诉模型仅将其用于非平凡的多步工作，保持恰好一个 `in_progress` 步骤，并避免在每次更新后重复整个计划。
 
-Safety guardrails in the system prompt are advisory. They guide model behavior but do not enforce policy. Use tool policy, exec approvals, sandboxing, and channel allowlists for hard enforcement; operators can disable these by design.
+系统提示中的安全护栏是建议性的。它们指导模型行为但不执行政策。使用工具策略、执行批准、沙盒和通道允许列表进行硬执行；操作员可以根据设计禁用这些。
 
-On channels with native approval cards/buttons, the runtime prompt now tells the
-agent to rely on that native approval UI first. It should only include a manual
-`/approve` command when the tool result says chat approvals are unavailable or
-manual approval is the only path.
+在具有原生批准卡片/按钮的通道上，运行时提示现在告诉代理首先依赖该原生批准 UI。仅当工具结果说明聊天批准不可用或手动批准是唯一路径时，才应包含手动 `/approve` 命令。
 
-## Prompt modes
+## 提示模式
 
-OpenClaw can render smaller system prompts for sub-agents. The runtime sets a
-`promptMode` for each run (not a user-facing config):
+OpenClaw 可为子代理渲染较小的系统提示。运行时为每次运行设置一个 `promptMode`（非面向用户的配置）：
 
-- `full` (default): includes all sections above.
-- `minimal`: used for sub-agents; omits **Skills**, **Memory Recall**, **OpenClaw
-  Self-Update**, **Model Aliases**, **User Identity**, **Reply Tags**,
-  **Messaging**, **Silent Replies**, and **Heartbeats**. Tooling, **Safety**,
-  Workspace, Sandbox, Current Date & Time (when known), Runtime, and injected
-  context stay available.
-- `none`: returns only the base identity line.
+- `full`（默认）：包含上述所有部分。
+- `minimal`：用于子代理；省略 **技能**、**记忆回忆**、**OpenClaw 自我更新**、**模型别名**、**用户身份**、**回复标签**、**消息**、**静默回复** 和 **心跳**。仍保留工具、**安全性**、工作区、沙盒、已知时的当前日期和时间、运行时及注入的上下文。
+- `none`：仅返回基本身份行。
 
-When `promptMode=minimal`, extra injected prompts are labeled **Subagent
-Context** instead of **Group Chat Context**.
+当 `promptMode=minimal` 时，额外注入的提示标记为 **子代理上下文**，而非 **群聊上下文**。
 
-## Workspace bootstrap injection
+## 工作区引导注入
 
-Bootstrap files are trimmed and appended under **Project Context** so the model sees identity and profile context without needing explicit reads:
+引导文件会被裁剪并附加在 **项目上下文** 下，让模型无需显式读取即可感知身份和配置上下文：
 
 - `AGENTS.md`
 - `SOUL.md`
@@ -109,19 +77,9 @@ Bootstrap files are trimmed and appended under **Project Context** so the model 
 - `BOOTSTRAP.md` (only on brand-new workspaces)
 - `MEMORY.md` when present
 
-All of these files are **injected into the context window** on every turn unless
-a file-specific gate applies. `HEARTBEAT.md` is omitted on normal runs when
-heartbeats are disabled for the default agent or
-`agents.defaults.heartbeat.includeSystemPromptSection` is false. Keep injected
-files concise — especially `MEMORY.md`, which can grow over time and lead to
-unexpectedly high context usage and more frequent compaction.
+除非应用了特定文件的门控，否则所有这些文件都会在每一轮对话中**注入到上下文窗口**中。当默认代理禁用心跳或 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，`HEARTBEAT.md` 在正常运行中被省略。保持注入文件简洁——尤其是 `MEMORY.md`，它可能会随时间增长，导致意外的高上下文使用和更频繁的压缩。
 
-> **Note:** `memory/*.md` daily files are **not** part of the normal bootstrap
-> Project Context. On ordinary turns they are accessed on demand via the
-> `memory_search` and `memory_get` tools, so they do not count against the
-> context window unless the model explicitly reads them. Bare `/new` and
-> `/reset` turns are the exception: the runtime can prepend recent daily memory
-> as a one-shot startup-context block for that first turn.
+> **注意：** `memory/*.md` 每日文件**不是**正常引导项目上下文的一部分。在普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取它们，否则不计入上下文窗口。纯粹的 `/new` 和 `/reset` 轮次是例外：运行时可以将最近的每日记忆作为一次性启动上下文块前置到第一轮次中。
 
 Large files are truncated with a marker. The max per-file size is controlled by
 `agents.defaults.bootstrapMaxChars` (default: 12000). Total injected bootstrap
@@ -131,45 +89,32 @@ occurs, OpenClaw can inject a warning block in Project Context; control this wit
 `agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`;
 default: `once`).
 
-Sub-agent sessions only inject `AGENTS.md` and `TOOLS.md` (other bootstrap files
-are filtered out to keep the sub-agent context small).
+子代理会话仅注入 `AGENTS.md` 和 `TOOLS.md`（过滤掉其他引导文件以保持子代理上下文精简）。
 
-Internal hooks can intercept this step via `agent:bootstrap` to mutate or replace
-the injected bootstrap files (for example swapping `SOUL.md` for an alternate persona).
+内部钩子可通过 `agent:bootstrap` 拦截此步骤，从而修改或替换注入的引导文件（例如用替代角色的 `SOUL.md` 进行替换）。
 
-If you want to make the agent sound less generic, start with
-[SOUL.md Personality Guide](/concepts/soul).
+如果你想让代理听起来不那么通用，从 [SOUL.md 个性指南](/concepts/soul) 开始。
 
-To inspect how much each injected file contributes (raw vs injected, truncation, plus tool schema overhead), use `/context list` or `/context detail`. See [Context](/concepts/context).
+要检查每个注入文件的贡献量（原始与注入，截断，加上工具模式开销），使用 `/context list` 或 `/context detail`。参见 [上下文](/concepts/context)。
 
-## Time handling
+## 时间处理
 
-The system prompt includes a dedicated **Current Date & Time** section when the
-user timezone is known. To keep the prompt cache-stable, it now only includes
-the **time zone** (no dynamic clock or time format).
+系统提示在已知用户时区时包含专门的 **当前日期和时间** 部分。为保证提示缓存的稳定性，现在仅包含 **时区**（无动态时钟或时间格式）。
 
-Use `session_status` when the agent needs the current time; the status card
-includes a timestamp line. The same tool can optionally set a per-session model
-override (`model=default` clears it).
+当代理需要当前时间时使用 `session_status`；状态卡片包含时间戳行。同一工具可以选择性地设置每会话模型覆盖（`model=default` 清除它）。
 
-Configure with:
+配置参数包括：
 
 - `agents.defaults.userTimezone`
 - `agents.defaults.timeFormat` (`auto` | `12` | `24`)
 
-See [Date & Time](/date-time) for full behavior details.
+详见 [日期和时间](/date-time) 了解完整行为细节。
 
-## Skills
+## 技能
 
-When eligible skills exist, OpenClaw injects a compact **available skills list**
-(`formatSkillsForPrompt`) that includes the **file path** for each skill. The
-prompt instructs the model to use `read` to load the SKILL.md at the listed
-location (workspace, managed, or bundled). If no skills are eligible, the
-Skills section is omitted.
+当存在可用技能时，OpenClaw 注入紧凑的 **可用技能列表**（`formatSkillsForPrompt`），包括每个技能的 **文件路径**。提示指示模型使用 `read` 以加载列出位置（工作区、托管或捆绑）的 SKILL.md 文件。若无可用技能，则省略技能部分。
 
-Eligibility includes skill metadata gates, runtime environment/config checks,
-and the effective agent skill allowlist when `agents.defaults.skills` or
-`agents.list[].skills` is configured.
+资格包括技能元数据门控、运行时环境/配置检查，以及当配置了 `agents.defaults.skills` 或 `agents.list[].skills` 时的有效代理技能允许列表。
 
 Plugin-bundled skills are eligible only when their owning plugin is enabled.
 This lets tool plugins expose deeper operating guides without embedding all of
@@ -185,42 +130,26 @@ that guidance directly in every tool description.
 </available_skills>
 ```
 
-This keeps the base prompt small while still enabling targeted skill usage.
+此设计保持基础提示体积小，同时支持有针对性的技能使用。
 
-The skills list budget is owned by the skills subsystem:
+技能列表预算由 skills 子系统负责：
 
-- Global default: `skills.limits.maxSkillsPromptChars`
-- Per-agent override: `agents.list[].skillsLimits.maxSkillsPromptChars`
+- 全局默认值：`skills.limits.maxSkillsPromptChars`
+- 每个 agent 的覆盖项：`agents.list[].skillsLimits.maxSkillsPromptChars`
 
-Generic bounded runtime excerpts use a different surface:
+通用的有界运行时摘录使用另一套配置面：
 
 - `agents.defaults.contextLimits.*`
 - `agents.list[].contextLimits.*`
 
-That split keeps skills sizing separate from runtime read/injection sizing such
-as `memory_get`, live tool results, and post-compaction AGENTS.md refreshes.
+这种拆分让 skills 的预算与运行时读入/注入预算彼此独立，例如 `memory_get`、实时工具结果，以及压缩后 AGENTS.md 刷新注入等都走运行时那套限制。
 
-## Documentation
+## 文档
 
-The system prompt includes a **Documentation** section. When local docs are available, it
-points to the local OpenClaw docs directory (`docs/` in a Git checkout or the bundled npm
-package docs). If local docs are unavailable, it falls back to
-[https://docs.openclaw.ai](https://docs.openclaw.ai).
+当可用时，系统提示会包含一个 **文档** 部分，指向本地 OpenClaw 文档目录（仓库工作区中的 `docs/` 或捆绑的 npm 包文档），并注明公共镜像、源代码仓库、社区 Discord，以及用于技能发现的 ClawHub（[https://clawhub.ai](https://clawhub.ai)）。提示会指示模型优先查阅本地文档以了解 OpenClaw 的行为、命令、配置或架构，并在可能时自行运行 `openclaw status`（仅在无法访问时才询问用户）。
 
-The same section also includes the OpenClaw source location. Git checkouts expose the local
-source root so the agent can inspect code directly. Package installs include the GitHub
-source URL and tell the agent to review source there whenever the docs are incomplete or
-stale. The prompt also notes the public docs mirror, community Discord, and ClawHub
-([https://clawhub.ai](https://clawhub.ai)) for skills discovery. It tells the model to
-consult docs first for OpenClaw behavior, commands, configuration, or architecture, and to
-run `openclaw status` itself when possible (asking the user only when it lacks access).
-For configuration specifically, it points agents to the `gateway` tool action
-`config.schema.lookup` for exact field-level docs and constraints, then to
-`docs/gateway/configuration.md` and `docs/gateway/configuration-reference.md`
-for broader guidance.
+## 相关
 
-## Related
-
-- [Agent runtime](/concepts/agent)
-- [Agent workspace](/concepts/agent-workspace)
-- [Context engine](/concepts/context-engine)
+- [代理运行时](/concepts/agent)
+- [代理工作区](/concepts/agent-workspace)
+- [上下文引擎](/concepts/context-engine)

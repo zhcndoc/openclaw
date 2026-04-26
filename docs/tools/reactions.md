@@ -1,15 +1,15 @@
 ---
-summary: "Reaction tool semantics across all supported channels"
+summary: "所有支持渠道中的反应工具语义"
 read_when:
-  - Working on reactions in any channel
-  - Understanding how emoji reactions differ across platforms
-title: "Reactions"
+  - 在任何渠道中处理反应时
+  - 了解表情符号反应在不同平台上的差异
+title: "反应"
 ---
 
-The agent can add and remove emoji reactions on messages using the `message`
-tool with the `react` action. Reaction behavior varies by channel.
+代理可以使用带有 `react` 操作的 `message`
+工具对消息添加和移除表情符号反应。反应行为因渠道而异。
 
-## How it works
+## 工作原理
 
 ```json
 {
@@ -19,58 +19,58 @@ tool with the `react` action. Reaction behavior varies by channel.
 }
 ```
 
-- `emoji` is required when adding a reaction.
-- Set `emoji` to an empty string (`""`) to remove the bot's reaction(s).
-- Set `remove: true` to remove a specific emoji (requires non-empty `emoji`).
+- 添加反应时需要 `emoji`。
+- 将 `emoji` 设置为空字符串 (`""`) 以移除机器人的反应。
+- 设置 `remove: true` 以移除特定的表情符号（需要非空的 `emoji`）。
 
-## Channel behavior
+## 渠道行为
 
 <AccordionGroup>
-  <Accordion title="Discord and Slack">
-    - Empty `emoji` removes all of the bot's reactions on the message.
-    - `remove: true` removes just the specified emoji.
+  <Accordion title="Discord 和 Slack">
+    - 空 `emoji` 会移除机器人在该消息上的所有反应。
+    - `remove: true` 仅移除指定的表情符号。
   </Accordion>
 
   <Accordion title="Google Chat">
-    - Empty `emoji` removes the app's reactions on the message.
-    - `remove: true` removes just the specified emoji.
+    - 空 `emoji` 会移除应用在该消息上的反应。
+    - `remove: true` 仅移除指定的表情符号。
   </Accordion>
 
   <Accordion title="Telegram">
-    - Empty `emoji` removes the bot's reactions.
-    - `remove: true` also removes reactions but still requires a non-empty `emoji` for tool validation.
+    - 空 `emoji` 会移除机器人的反应。
+    - `remove: true` 也会移除反应，但仍需要非空的 `emoji` 以便进行工具验证。
   </Accordion>
 
   <Accordion title="WhatsApp">
-    - Empty `emoji` removes the bot reaction.
-    - `remove: true` maps to empty emoji internally (still requires `emoji` in the tool call).
+    - 空 `emoji` 会移除机器人反应。
+    - `remove: true` 在内部映射为空表情符号（工具调用中仍需要 `emoji`）。
   </Accordion>
 
   <Accordion title="Zalo Personal (zalouser)">
-    - Requires non-empty `emoji`.
-    - `remove: true` removes that specific emoji reaction.
+    - 需要非空的 `emoji`。
+    - `remove: true` 移除该特定的表情符号反应。
   </Accordion>
 
   <Accordion title="Feishu/Lark">
-    - Use the `feishu_reaction` tool with actions `add`, `remove`, and `list`.
-    - Add/remove requires `emoji_type`; remove also requires `reaction_id`.
+    - 使用 `feishu_reaction` 工具，操作包括 `add`、`remove` 和 `list`。
+    - 添加/移除需要 `emoji_type`；移除还需要 `reaction_id`。
   </Accordion>
 
   <Accordion title="Signal">
-    - Inbound reaction notifications are controlled by `channels.signal.reactionNotifications`: `"off"` disables them, `"own"` (default) emits events when users react to bot messages, and `"all"` emits events for all reactions.
+    - 传入的反应通知由 `channels.signal.reactionNotifications` 控制：`"off"` 禁用它们，`"own"`（默认）在用户对机器人消息做出反应时发出事件，`"all"` 为所有反应发出事件。
   </Accordion>
 </AccordionGroup>
 
-## Reaction level
+## 反应级别
 
-Per-channel `reactionLevel` config controls how broadly the agent uses reactions. Values are typically `off`, `ack`, `minimal`, or `extensive`.
+每个渠道的 `reactionLevel` 配置控制代理使用反应的广泛程度。值通常为 `off`、`ack`、`minimal` 或 `extensive`。
 
-- [Telegram reactionLevel](/channels/telegram#reaction-notifications) — `channels.telegram.reactionLevel`
-- [WhatsApp reactionLevel](/channels/whatsapp#reaction-level) — `channels.whatsapp.reactionLevel`
+- [Telegram 反应级别](/channels/telegram#reaction-notifications) — `channels.telegram.reactionLevel`
+- [WhatsApp 反应级别](/channels/whatsapp#reaction-level) — `channels.whatsapp.reactionLevel`
 
-Set `reactionLevel` on individual channels to tune how actively the agent reacts to messages on each platform.
+在各个渠道上设置 `reactionLevel` 以调整代理在每个平台上对消息反应的活跃程度。
 
-## Related
+## 相关内容
 
-- [Agent Send](/tools/agent-send) — the `message` tool that includes `react`
-- [Channels](/channels) — channel-specific configuration
+- [代理发送](/tools/agent-send) — 包含 `react` 的 `message` 工具
+- [渠道](/channels) — 特定于渠道的配置

@@ -1,22 +1,21 @@
 ---
-summary: "Model providers (LLMs) supported by OpenClaw"
+summary: "OpenClaw 支持的模型提供商（大型语言模型）"
 read_when:
-  - You want to choose a model provider
-  - You need a quick overview of supported LLM backends
-title: "Provider directory"
+  - 你想选择一个模型提供商
+  - 你需要支持的 LLM 后端的快速概览
+title: "提供商目录"
 ---
 
-# Model Providers
+# 模型提供商
 
-OpenClaw can use many LLM providers. Pick a provider, authenticate, then set the
-default model as `provider/model`.
+OpenClaw 可以使用许多大型语言模型提供商。选择一个提供商，进行身份认证，然后将默认模型设置为 `provider/model`。
 
-Looking for chat channel docs (WhatsApp/Telegram/Discord/Slack/Mattermost (plugin)/etc.)? See [Channels](/channels).
+寻找聊天渠道文档（WhatsApp/Telegram/Discord/Slack/Mattermost（插件）等）？请参见 [频道](/channels)。
 
-## Quick start
+## 快速开始
 
-1. Authenticate with the provider (usually via `openclaw onboard`).
-2. Set the default model:
+1. 与提供商进行身份认证（通常通过 `openclaw onboard`）。
+2. 设置默认模型：
 
 ```json5
 {
@@ -24,15 +23,14 @@ Looking for chat channel docs (WhatsApp/Telegram/Discord/Slack/Mattermost (plugi
 }
 ```
 
-## Provider docs
+## 提供商文档
 
 - [Alibaba Model Studio](/providers/alibaba)
 - [Amazon Bedrock](/providers/bedrock)
 - [Amazon Bedrock Mantle](/providers/bedrock-mantle)
 - [Anthropic (API + Claude CLI)](/providers/anthropic)
 - [Arcee AI (Trinity models)](/providers/arcee)
-- [Azure Speech](/providers/azure-speech)
-- [BytePlus (International)](/concepts/model-providers#byteplus-international)
+- [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Chutes](/providers/chutes)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [ComfyUI](/providers/comfy)
@@ -42,61 +40,59 @@ Looking for chat channel docs (WhatsApp/Telegram/Discord/Slack/Mattermost (plugi
 - [Fireworks](/providers/fireworks)
 - [GitHub Copilot](/providers/github-copilot)
 - [Gradium](/providers/gradium)
-- [GLM models](/providers/glm)
-- [Google (Gemini)](/providers/google)
-- [Groq (LPU inference)](/providers/groq)
-- [Hugging Face (Inference)](/providers/huggingface)
-- [inferrs (local models)](/providers/inferrs)
+- [GLM 模型](/providers/glm)
+- [Google（Gemini）](/providers/google)
+- [Groq（LPU 推理）](/providers/groq)
+- [Hugging Face（推理）](/providers/huggingface)
+- [inferrs（本地模型）](/providers/inferrs)
 - [Kilocode](/providers/kilocode)
-- [LiteLLM (unified gateway)](/providers/litellm)
-- [LM Studio (local models)](/providers/lmstudio)
+- [LiteLLM（统一网关）](/providers/litellm)
+- [LM Studio（本地模型）](/providers/lmstudio)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
-- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
+- [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
 - [NVIDIA](/providers/nvidia)
-- [Ollama (cloud + local models)](/providers/ollama)
-- [OpenAI (API + Codex)](/providers/openai)
+- [Ollama（云 + 本地模型）](/providers/ollama)
+- [OpenAI（API + Codex）](/providers/openai)
 - [OpenCode](/providers/opencode)
 - [OpenCode Go](/providers/opencode-go)
 - [OpenRouter](/providers/openrouter)
-- [Perplexity (web search)](/providers/perplexity-provider)
-- [Qianfan](/providers/qianfan)
-- [Qwen Cloud](/providers/qwen)
+- [Perplexity（网络搜索）](/providers/perplexity-provider)
+- [千帆](/providers/qianfan)
+- [通义千问云](/providers/qwen)
 - [Runway](/providers/runway)
-- [SenseAudio](/providers/senseaudio)
-- [SGLang (local models)](/providers/sglang)
+- [SGLang（本地模型）](/providers/sglang)
 - [StepFun](/providers/stepfun)
 - [Synthetic](/providers/synthetic)
 - [Tencent Cloud (TokenHub)](/providers/tencent)
 - [Together AI](/providers/together)
-- [Venice (Venice AI, privacy-focused)](/providers/venice)
+- [Venice（Venice AI，注重隐私）](/providers/venice)
 - [Vercel AI Gateway](/providers/vercel-ai-gateway)
-- [vLLM (local models)](/providers/vllm)
-- [Volcengine (Doubao)](/providers/volcengine)
+- [vLLM（本地模型）](/providers/vllm)
+- [Volcengine（Doubao）](/providers/volcengine)
 - [Vydra](/providers/vydra)
 - [xAI](/providers/xai)
-- [Xiaomi](/providers/xiaomi)
+- [小米](/providers/xiaomi)
 - [Z.AI](/providers/zai)
 
-## Shared overview pages
+## 共享概览页面
 
-- [Additional bundled variants](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex, Copilot Proxy, and Gemini CLI OAuth
-- [Image Generation](/tools/image-generation) - Shared `image_generate` tool, provider selection, and failover
-- [Music Generation](/tools/music-generation) - Shared `music_generate` tool, provider selection, and failover
-- [Video Generation](/tools/video-generation) - Shared `video_generate` tool, provider selection, and failover
+- [其他捆绑变体](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
+- [图像生成](/tools/image-generation) - 共享 `image_generate` 工具、提供商选择和故障转移
+- [音乐生成](/tools/music-generation) - 共享 `music_generate` 工具、提供商选择和故障转移
+- [视频生成](/tools/video-generation) - 共享 `video_generate` 工具、提供商选择和故障转移
 
-## Transcription providers
+## 转录提供商
 
-- [Deepgram (audio transcription)](/providers/deepgram)
+- [Deepgram（音频转录）](/providers/deepgram)
 - [ElevenLabs](/providers/elevenlabs#speech-to-text)
 - [Mistral](/providers/mistral#audio-transcription-voxtral)
 - [OpenAI](/providers/openai#speech-to-text)
-- [SenseAudio](/providers/senseaudio)
 - [xAI](/providers/xai#speech-to-text)
 
-## Community tools
+## 社区工具
 
-- [Claude Max API Proxy](/providers/claude-max-api-proxy) - Community proxy for Claude subscription credentials (verify Anthropic policy/terms before use)
+- [Claude Max API 代理](/providers/claude-max-api-proxy) - Claude 订阅凭证的社区代理（使用前请确认 Anthropic 策略/条款）
 
-For the full provider catalog (xAI, Groq, Mistral, etc.) and advanced configuration,
-see [Model providers](/concepts/model-providers).
+欲了解完整的提供商目录（xAI、Groq、Mistral 等）及高级配置，
+请参见 [模型提供商](/concepts/model-providers)。

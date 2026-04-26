@@ -1,32 +1,32 @@
 ---
-summary: "Run OpenClaw through LiteLLM Proxy for unified model access and cost tracking"
+summary: "通过 LiteLLM Proxy 运行 OpenClaw，以实现统一模型访问和成本跟踪"
 title: "LiteLLM"
 read_when:
-  - You want to route OpenClaw through a LiteLLM proxy
-  - You need cost tracking, logging, or model routing through LiteLLM
+  - 你想通过 LiteLLM 代理路由 OpenClaw
+  - 你需要通过 LiteLLM 进行成本跟踪、日志记录或模型路由
 ---
 
-[LiteLLM](https://litellm.ai) is an open-source LLM gateway that provides a unified API to 100+ model providers. Route OpenClaw through LiteLLM to get centralized cost tracking, logging, and the flexibility to switch backends without changing your OpenClaw config.
+[LiteLLM](https://litellm.ai) 是一个开源的 LLM 网关，提供面向 100+ 模型提供商的统一 API。通过 LiteLLM 路由 OpenClaw，可获得集中式成本跟踪、日志记录，以及在不更改 OpenClaw 配置的情况下切换后端的灵活性。
 
 <Tip>
-**Why use LiteLLM with OpenClaw?**
+**为什么要在 OpenClaw 中使用 LiteLLM？**
 
-- **Cost tracking** — See exactly what OpenClaw spends across all models
-- **Model routing** — Switch between Claude, GPT-4, Gemini, Bedrock without config changes
-- **Virtual keys** — Create keys with spend limits for OpenClaw
-- **Logging** — Full request/response logs for debugging
-- **Fallbacks** — Automatic failover if your primary provider is down
+- **成本跟踪** —  دقیق查看 OpenClaw 在所有模型上的支出
+- **模型路由** — 在 Claude、GPT-4、Gemini、Bedrock 之间切换，无需修改配置
+- **虚拟密钥** — 为 OpenClaw 创建带有花费限制的密钥
+- **日志记录** — 完整的请求/响应日志，便于调试
+- **回退机制** — 如果你的主提供商宕机，则自动故障转移
 
 </Tip>
 
-## Quick start
+## 快速开始
 
 <Tabs>
-  <Tab title="Onboarding (recommended)">
-    **Best for:** fastest path to a working LiteLLM setup.
+  <Tab title="入门（推荐）">
+    **最适合：** 最快完成 LiteLLM 设置的路径。
 
     <Steps>
-      <Step title="Run onboarding">
+      <Step title="运行入门">
         ```bash
         openclaw onboard --auth-choice litellm-api-key
         ```
@@ -35,39 +35,39 @@ read_when:
 
   </Tab>
 
-  <Tab title="Manual setup">
-    **Best for:** full control over installation and config.
+  <Tab title="手动设置">
+    **最适合：** 完全控制安装和配置。
 
     <Steps>
-      <Step title="Start LiteLLM Proxy">
+      <Step title="启动 LiteLLM 代理">
         ```bash
         pip install 'litellm[proxy]'
         litellm --model claude-opus-4-6
         ```
       </Step>
-      <Step title="Point OpenClaw to LiteLLM">
+      <Step title="将 OpenClaw 指向 LiteLLM">
         ```bash
         export LITELLM_API_KEY="your-litellm-key"
 
         openclaw
         ```
 
-        That's it. OpenClaw now routes through LiteLLM.
+        就这样。OpenClaw 现在通过 LiteLLM 路由。
       </Step>
     </Steps>
 
   </Tab>
 </Tabs>
 
-## Configuration
+## 配置
 
-### Environment variables
+### 环境变量
 
 ```bash
 export LITELLM_API_KEY="sk-litellm-key"
 ```
 
-### Config file
+### 配置文件
 
 ```json5
 {
@@ -106,43 +106,11 @@ export LITELLM_API_KEY="sk-litellm-key"
 }
 ```
 
-## Advanced configuration
-
-### Image generation
-
-LiteLLM can also back the `image_generate` tool through OpenAI-compatible
-`/images/generations` and `/images/edits` routes. Configure a LiteLLM image
-model under `agents.defaults.imageGenerationModel`:
-
-```json5
-{
-  models: {
-    providers: {
-      litellm: {
-        baseUrl: "http://localhost:4000",
-        apiKey: "${LITELLM_API_KEY}",
-      },
-    },
-  },
-  agents: {
-    defaults: {
-      imageGenerationModel: {
-        primary: "litellm/gpt-image-2",
-        timeoutMs: 180_000,
-      },
-    },
-  },
-}
-```
-
-Loopback LiteLLM URLs such as `http://localhost:4000` work without a global
-private-network override. For a LAN-hosted proxy, set
-`models.providers.litellm.request.allowPrivateNetwork: true` because the API key
-will be sent to the configured proxy host.
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Virtual keys">
-    Create a dedicated key for OpenClaw with spend limits:
+  <Accordion title="虚拟密钥">
+    为 OpenClaw 创建一个带有花费限制的专用密钥：
 
     ```bash
     curl -X POST "http://localhost:4000/key/generate" \
@@ -155,12 +123,12 @@ will be sent to the configured proxy host.
       }'
     ```
 
-    Use the generated key as `LITELLM_API_KEY`.
+    使用生成的密钥作为 `LITELLM_API_KEY`。
 
   </Accordion>
 
-  <Accordion title="Model routing">
-    LiteLLM can route model requests to different backends. Configure in your LiteLLM `config.yaml`:
+  <Accordion title="模型路由">
+    LiteLLM 可以将模型请求路由到不同的后端。在您的 LiteLLM `config.yaml` 中配置：
 
     ```yaml
     model_list:
@@ -175,54 +143,50 @@ will be sent to the configured proxy host.
           api_key: os.environ/OPENAI_API_KEY
     ```
 
-    OpenClaw keeps requesting `claude-opus-4-6` — LiteLLM handles the routing.
+    OpenClaw 继续请求 `claude-opus-4-6` — LiteLLM 处理路由。
 
   </Accordion>
 
-  <Accordion title="Viewing usage">
-    Check LiteLLM's dashboard or API:
+  <Accordion title="查看使用情况">
+    检查 LiteLLM 的仪表板或 API：
 
     ```bash
-    # Key info
+    # 密钥信息
     curl "http://localhost:4000/key/info" \
       -H "Authorization: Bearer sk-litellm-key"
 
-    # Spend logs
+    # 花费日志
     curl "http://localhost:4000/spend/logs" \
       -H "Authorization: Bearer $LITELLM_MASTER_KEY"
     ```
 
   </Accordion>
 
-  <Accordion title="Proxy behavior notes">
-    - LiteLLM runs on `http://localhost:4000` by default
-    - OpenClaw connects through LiteLLM's proxy-style OpenAI-compatible `/v1`
-      endpoint
-    - Native OpenAI-only request shaping does not apply through LiteLLM:
-      no `service_tier`, no Responses `store`, no prompt-cache hints, and no
-      OpenAI reasoning-compat payload shaping
-    - Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`)
-      are not injected on custom LiteLLM base URLs
+  <Accordion title="代理行为说明">
+    - LiteLLM 默认运行在 `http://localhost:4000`
+    - OpenClaw 通过 LiteLLM 的代理风格 OpenAI 兼容 `/v1` 端点连接
+    - 原生仅限 OpenAI 的请求塑造通过 LiteLLM 不适用：无 `service_tier`，无 Responses `store`，无 prompt-cache 提示，也无 OpenAI 推理兼容负载塑造
+    - 隐藏的 OpenClaw 归属头（`originator`、`version`、`User-Agent`）不会注入到自定义 LiteLLM 基础 URL 上
   </Accordion>
 </AccordionGroup>
 
 <Note>
-For general provider configuration and failover behavior, see [Model Providers](/concepts/model-providers).
+有关常规提供商配置和故障转移行为，请参阅 [模型提供商](/concepts/model-providers)。
 </Note>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="LiteLLM Docs" href="https://docs.litellm.ai" icon="book">
-    Official LiteLLM documentation and API reference.
+  <Card title="LiteLLM 文档" href="https://docs.litellm.ai" icon="book">
+    官方 LiteLLM 文档和 API 参考。
   </Card>
   <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Overview of all providers, model refs, and failover behavior.
+    所有提供商、模型引用和故障转移行为的概览。
   </Card>
-  <Card title="Configuration" href="/gateway/configuration" icon="gear">
-    Full config reference.
+  <Card title="配置" href="/gateway/configuration" icon="gear">
+    完整配置参考。
   </Card>
-  <Card title="Model selection" href="/concepts/models" icon="brain">
-    How to choose and configure models.
+  <Card title="模型选择" href="/concepts/models" icon="brain">
+    如何选择和配置模型。
   </Card>
 </CardGroup>

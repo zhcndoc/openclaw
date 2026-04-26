@@ -1,26 +1,25 @@
 ---
 summary: "Gemini web search with Google Search grounding"
 read_when:
-  - You want to use Gemini for web_search
-  - You need a GEMINI_API_KEY
-  - You want Google Search grounding
+  - 你想使用 Gemini 进行 web_search
+  - 你需要一个 GEMINI_API_KEY
+  - 你想使用 Google Search grounding
 title: "Gemini search"
 ---
 
-OpenClaw supports Gemini models with built-in
-[Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding),
-which returns AI-synthesized answers backed by live Google Search results with
-citations.
+OpenClaw 支持带内置
+[Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding) 的 Gemini 模型，
+它会返回由实时 Google 搜索结果支持、带有引用的 AI 合成答案。
 
-## Get an API key
+## 获取 API 密钥
 
 <Steps>
-  <Step title="Create a key">
-    Go to [Google AI Studio](https://aistudio.google.com/apikey) and create an
-    API key.
+  <Step title="创建密钥">
+    前往 [Google AI Studio](https://aistudio.google.com/apikey) 并创建一个
+    API key。
   </Step>
-  <Step title="Store the key">
-    Set `GEMINI_API_KEY` in the Gateway environment, or configure via:
+  <Step title="保存密钥">
+    在 Gateway 环境中设置 `GEMINI_API_KEY`，或通过以下方式配置：
 
     ```bash
     openclaw configure --section web
@@ -29,7 +28,7 @@ citations.
   </Step>
 </Steps>
 
-## Config
+## 配置
 
 ```json5
 {
@@ -38,8 +37,8 @@ citations.
       google: {
         config: {
           webSearch: {
-            apiKey: "AIza...", // optional if GEMINI_API_KEY is set
-            model: "gemini-2.5-flash", // default
+            apiKey: "AIza...", // 如果已设置 GEMINI_API_KEY，则为可选项
+            model: "gemini-2.5-flash", // 默认
           },
         },
       },
@@ -55,42 +54,41 @@ citations.
 }
 ```
 
-**Environment alternative:** set `GEMINI_API_KEY` in the Gateway environment.
-For a gateway install, put it in `~/.openclaw/.env`.
+**环境替代方案：**在 Gateway 环境中设置 `GEMINI_API_KEY`。
+对于 gateway 安装，请将其放在 `~/.openclaw/.env` 中。
 
-## How it works
+## 工作原理
 
-Unlike traditional search providers that return a list of links and snippets,
-Gemini uses Google Search grounding to produce AI-synthesized answers with
-inline citations. The results include both the synthesized answer and the source
-URLs.
+与返回链接和摘要列表的传统搜索提供商不同，
+Gemini 使用 Google Search grounding 来生成带有行内引用的 AI 合成答案。结果既包括合成答案，也包括来源
+URL。
 
-- Citation URLs from Gemini grounding are automatically resolved from Google
-  redirect URLs to direct URLs.
-- Redirect resolution uses the SSRF guard path (HEAD + redirect checks +
-  http/https validation) before returning the final citation URL.
-- Redirect resolution uses strict SSRF defaults, so redirects to
-  private/internal targets are blocked.
+- 来自 Gemini grounding 的引用 URL 会自动从 Google
+  重定向 URL 解析为直接 URL。
+- 重定向解析在返回最终引用 URL 之前，会使用 SSRF 防护路径（HEAD + 重定向检查 +
+  http/https 验证）。
+- 重定向解析使用严格的 SSRF 默认设置，因此会阻止重定向到
+  私有/内部目标。
 
-## Supported parameters
+## 支持的参数
 
-Gemini search supports `query`.
+Gemini search 支持 `query`。
 
-`count` is accepted for shared `web_search` compatibility, but Gemini grounding
-still returns one synthesized answer with citations rather than an N-result
-list.
+`count` 会被接受以兼容共享的 `web_search`，但 Gemini grounding
+仍然会返回一个带引用的合成答案，而不是一个 N 条结果的
+列表。
 
-Provider-specific filters like `country`, `language`, `freshness`, and
-`domain_filter` are not supported.
+不支持诸如 `country`、`language`、`freshness` 和
+`domain_filter` 之类的提供商特定筛选器。
 
-## Model selection
+## 模型选择
 
-The default model is `gemini-2.5-flash` (fast and cost-effective). Any Gemini
-model that supports grounding can be used via
-`plugins.entries.google.config.webSearch.model`.
+默认模型是 `gemini-2.5-flash`（速度快且成本低）。任何支持 grounding 的 Gemini
+模型都可以通过
+`plugins.entries.google.config.webSearch.model` 使用。
 
-## Related
+## 相关内容
 
-- [Web Search overview](/tools/web) -- all providers and auto-detection
-- [Brave Search](/tools/brave-search) -- structured results with snippets
-- [Perplexity Search](/tools/perplexity-search) -- structured results + content extraction
+- [Web Search 概览](/tools/web) -- 所有提供商和自动检测
+- [Brave Search](/tools/brave-search) -- 带摘要的结构化结果
+- [Perplexity Search](/tools/perplexity-search) -- 结构化结果 + 内容提取

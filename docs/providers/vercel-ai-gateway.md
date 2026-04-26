@@ -1,41 +1,40 @@
 ---
-summary: "Vercel AI Gateway setup (auth + model selection)"
+summary: "Vercel AI Gateway 设置（认证 + 模型选择）"
 title: "Vercel AI gateway"
 read_when:
-  - You want to use Vercel AI Gateway with OpenClaw
-  - You need the API key env var or CLI auth choice
+  - 您想将 Vercel AI Gateway 与 OpenClaw 一起使用
+  - 您需要 API 密钥环境变量或 CLI 身份验证选项
 ---
 
-The [Vercel AI Gateway](https://vercel.com/ai-gateway) provides a unified API to
-access hundreds of models through a single endpoint.
+[Vercel AI Gateway](https://vercel.com/ai-gateway) 提供了一个统一的 API，可通过单一端点访问数百种模型。
 
-| Property      | Value                            |
+| 属性            | 值                               |
 | ------------- | -------------------------------- |
 | Provider      | `vercel-ai-gateway`              |
 | Auth          | `AI_GATEWAY_API_KEY`             |
-| API           | Anthropic Messages compatible    |
-| Model catalog | Auto-discovered via `/v1/models` |
+| API           | 兼容 Anthropic Messages            |
+| Model catalog | 通过 `/v1/models` 自动发现 |
 
 <Tip>
-OpenClaw auto-discovers the Gateway `/v1/models` catalog, so
-`/models vercel-ai-gateway` includes current model refs such as
-`vercel-ai-gateway/openai/gpt-5.5` and
-`vercel-ai-gateway/moonshotai/kimi-k2.6`.
+OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
+`/models vercel-ai-gateway` 包含当前的模型引用，例如
+`vercel-ai-gateway/openai/gpt-5.5` 和
+`vercel-ai-gateway/moonshotai/kimi-k2.6`。
 </Tip>
 
-## Getting started
+## 入门指南
 
 <Steps>
-  <Step title="Set the API key">
-    Run onboarding and choose the AI Gateway auth option:
+  <Step title="设置 API 密钥">
+    运行入门引导并选择 AI Gateway 身份验证选项：
 
     ```bash
     openclaw onboard --auth-choice ai-gateway-api-key
     ```
 
   </Step>
-  <Step title="Set a default model">
-    Add the model to your OpenClaw config:
+  <Step title="设置默认模型">
+    将模型添加到您的 OpenClaw 配置：
 
     ```json5
     {
@@ -48,16 +47,16 @@ OpenClaw auto-discovers the Gateway `/v1/models` catalog, so
     ```
 
   </Step>
-  <Step title="Verify the model is available">
+  <Step title="验证模型是否可用">
     ```bash
     openclaw models list --provider vercel-ai-gateway
     ```
   </Step>
 </Steps>
 
-## Non-interactive example
+## 非交互示例
 
-For scripted or CI setups, pass all values on the command line:
+对于脚本或 CI 设置，请在命令行上传递所有值：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -66,54 +65,47 @@ openclaw onboard --non-interactive \
   --ai-gateway-api-key "$AI_GATEWAY_API_KEY"
 ```
 
-## Model ID shorthand
+## 模型 ID 简写
 
-OpenClaw accepts Vercel Claude shorthand model refs and normalizes them at
-runtime:
+OpenClaw 接受 Vercel Claude 简写模型引用，并在运行时对其进行规范化：
 
-| Shorthand input                     | Normalized model ref                          |
+| 简写输入                     | 规范化模型引用                          |
 | ----------------------------------- | --------------------------------------------- |
 | `vercel-ai-gateway/claude-opus-4.6` | `vercel-ai-gateway/anthropic/claude-opus-4.6` |
 | `vercel-ai-gateway/opus-4.6`        | `vercel-ai-gateway/anthropic/claude-opus-4-6` |
 
 <Tip>
-You can use either the shorthand or the fully qualified model ref in your
-configuration. OpenClaw resolves the canonical form automatically.
+您可以在配置中使用简写或完全限定的模型引用。OpenClaw 会自动解析规范形式。
 </Tip>
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Environment variable for daemon processes">
-    If the OpenClaw Gateway runs as a daemon (launchd/systemd), make sure
-    `AI_GATEWAY_API_KEY` is available to that process.
+  <Accordion title="守护进程的环境变量">
+    如果 OpenClaw Gateway 作为守护进程（launchd/systemd）运行，请确保
+    `AI_GATEWAY_API_KEY` 对该进程可用。
 
     <Warning>
-    A key set only in `~/.profile` will not be visible to a launchd/systemd
-    daemon unless that environment is explicitly imported. Set the key in
-    `~/.openclaw/.env` or via `env.shellEnv` to ensure the gateway process can
-    read it.
+    仅在 `~/.profile` 中设置的密钥对于 launchd/systemd
+    守护进程不可见，除非显式导入该环境。请在
+    `~/.openclaw/.env` 中设置密钥或通过 `env.shellEnv` 设置，以确保网关进程可以
+    读取它。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="Provider routing">
-    Vercel AI Gateway routes requests to the upstream provider based on the model
-    ref prefix. For example, `vercel-ai-gateway/anthropic/claude-opus-4.6` routes
-    through Anthropic, while `vercel-ai-gateway/openai/gpt-5.5` routes through
-    OpenAI and `vercel-ai-gateway/moonshotai/kimi-k2.6` routes through
-    MoonshotAI. Your single `AI_GATEWAY_API_KEY` handles authentication for all
-    upstream providers.
+  <Accordion title="提供商路由">
+    Vercel AI Gateway 会根据模型引用前缀将请求路由到上游提供商。例如，`vercel-ai-gateway/anthropic/claude-opus-4.6` 会通过 Anthropic 路由，而 `vercel-ai-gateway/openai/gpt-5.5` 会通过 OpenAI 路由，`vercel-ai-gateway/moonshotai/kimi-k2.6` 会通过 MoonshotAI 路由。您的单个 `AI_GATEWAY_API_KEY` 即可处理所有上游提供商的身份验证。
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
-    Choosing providers, model refs, and failover behavior.
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
+    选择提供商、模型引用和故障转移行为。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
-    General troubleshooting and FAQ.
+  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
+    常规故障排除和常见问题解答。
   </Card>
 </CardGroup>

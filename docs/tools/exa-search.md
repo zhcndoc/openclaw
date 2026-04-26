@@ -1,25 +1,25 @@
 ---
-summary: "Exa AI search -- neural and keyword search with content extraction"
+summary: "Exa AI 搜索 -- 神经与关键词搜索，支持内容提取"
 read_when:
-  - You want to use Exa for web_search
-  - You need an EXA_API_KEY
-  - You want neural search or content extraction
-title: "Exa search"
+  - 你想将 Exa 用于 web_search
+  - 你需要一个 EXA_API_KEY
+  - 你想使用神经搜索或内容提取
+title: "Exa 搜索"
 ---
 
-OpenClaw supports [Exa AI](https://exa.ai/) as a `web_search` provider. Exa
-offers neural, keyword, and hybrid search modes with built-in content
-extraction (highlights, text, summaries).
+OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
+提供神经、关键词和混合搜索模式，并内置内容
+提取（高亮、文本、摘要）。
 
-## Get an API key
+## 获取 API 密钥
 
 <Steps>
-  <Step title="Create an account">
-    Sign up at [exa.ai](https://exa.ai/) and generate an API key from your
-    dashboard.
+  <Step title="创建账户">
+    在 [exa.ai](https://exa.ai/) 注册，并从你的
+    控制面板生成 API 密钥。
   </Step>
-  <Step title="Store the key">
-    Set `EXA_API_KEY` in the Gateway environment, or configure via:
+  <Step title="保存密钥">
+    在 Gateway 环境中设置 `EXA_API_KEY`，或者通过以下方式配置：
 
     ```bash
     openclaw configure --section web
@@ -28,7 +28,7 @@ extraction (highlights, text, summaries).
   </Step>
 </Steps>
 
-## Config
+## 配置
 
 ```json5
 {
@@ -37,7 +37,7 @@ extraction (highlights, text, summaries).
       exa: {
         config: {
           webSearch: {
-            apiKey: "exa-...", // optional if EXA_API_KEY is set
+            apiKey: "exa-...", // 如果设置了 EXA_API_KEY，则为可选项
           },
         },
       },
@@ -53,91 +53,91 @@ extraction (highlights, text, summaries).
 }
 ```
 
-**Environment alternative:** set `EXA_API_KEY` in the Gateway environment.
-For a gateway install, put it in `~/.openclaw/.env`.
+**环境替代方案：** 在 Gateway 环境中设置 `EXA_API_KEY`。
+对于 gateway 安装，请将其放在 `~/.openclaw/.env` 中。
 
-## Tool parameters
+## 工具参数
 
 <ParamField path="query" type="string" required>
-Search query.
+搜索查询。
 </ParamField>
 
 <ParamField path="count" type="number">
-Results to return (1–100).
+要返回的结果数量（1–100）。
 </ParamField>
 
 <ParamField path="type" type="'auto' | 'neural' | 'fast' | 'deep' | 'deep-reasoning' | 'instant'">
-Search mode.
+搜索模式。
 </ParamField>
 
 <ParamField path="freshness" type="'day' | 'week' | 'month' | 'year'">
-Time filter.
+时间过滤器。
 </ParamField>
 
 <ParamField path="date_after" type="string">
-Results after this date (`YYYY-MM-DD`).
+此日期之后的结果（`YYYY-MM-DD`）。
 </ParamField>
 
 <ParamField path="date_before" type="string">
-Results before this date (`YYYY-MM-DD`).
+此日期之前的结果（`YYYY-MM-DD`）。
 </ParamField>
 
 <ParamField path="contents" type="object">
-Content extraction options (see below).
+内容提取选项（见下文）。
 </ParamField>
 
-### Content extraction
+### 内容提取
 
-Exa can return extracted content alongside search results. Pass a `contents`
-object to enable:
+Exa 可以在搜索结果旁返回提取的内容。传入一个 `contents`
+对象即可启用：
 
 ```javascript
 await web_search({
   query: "transformer architecture explained",
   type: "neural",
   contents: {
-    text: true, // full page text
-    highlights: { numSentences: 3 }, // key sentences
-    summary: true, // AI summary
+    text: true, // 完整页面文本
+    highlights: { numSentences: 3 }, // 关键句子
+    summary: true, // AI 摘要
   },
 });
 ```
 
-| Contents option | Type                                                                  | Description            |
-| --------------- | --------------------------------------------------------------------- | ---------------------- |
-| `text`          | `boolean \| { maxCharacters }`                                        | Extract full page text |
-| `highlights`    | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | Extract key sentences  |
-| `summary`       | `boolean \| { query }`                                                | AI-generated summary   |
+| 内容选项       | 类型                                                                  | 描述               |
+| ------------- | --------------------------------------------------------------------- | ------------------ |
+| `text`        | `boolean \| { maxCharacters }`                                        | 提取完整页面文本    |
+| `highlights`  | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | 提取关键句子        |
+| `summary`     | `boolean \| { query }`                                                | AI 生成的摘要       |
 
-### Search modes
+### 搜索模式
 
-| Mode             | Description                       |
-| ---------------- | --------------------------------- |
-| `auto`           | Exa picks the best mode (default) |
-| `neural`         | Semantic/meaning-based search     |
-| `fast`           | Quick keyword search              |
-| `deep`           | Thorough deep search              |
-| `deep-reasoning` | Deep search with reasoning        |
-| `instant`        | Fastest results                   |
+| 模式             | 描述                          |
+| ---------------- | ----------------------------- |
+| `auto`           | Exa 选择最佳模式（默认）        |
+| `neural`         | 基于语义/含义的搜索             |
+| `fast`           | 快速关键词搜索                  |
+| `deep`           | 全面的深度搜索                  |
+| `deep-reasoning` | 带推理的深度搜索                |
+| `instant`        | 最快的结果                      |
 
-## Notes
+## 注意事项
 
-- If no `contents` option is provided, Exa defaults to `{ highlights: true }`
-  so results include key sentence excerpts
-- Results preserve `highlightScores` and `summary` fields from the Exa API
-  response when available
-- Result descriptions are resolved from highlights first, then summary, then
-  full text — whichever is available
-- `freshness` and `date_after`/`date_before` cannot be combined — use one
-  time-filter mode
-- Up to 100 results can be returned per query (subject to Exa search-type
-  limits)
-- Results are cached for 15 minutes by default (configurable via
-  `cacheTtlMinutes`)
-- Exa is an official API integration with structured JSON responses
+- 如果未提供 `contents` 选项，Exa 默认使用 `{ highlights: true }`
+  因此结果会包含关键句子摘录
+- 当可用时，结果会保留 Exa API
+  响应中的 `highlightScores` 和 `summary` 字段
+- 结果描述会优先从高亮内容中获取，其次是摘要，然后是
+  完整文本——以可用者为准
+- `freshness` 不能与 `date_after`/`date_before` 组合使用——请使用一种
+  时间过滤模式
+- 每个查询最多可返回 100 条结果（受 Exa 搜索类型
+  限制影响）
+- 结果默认缓存 15 分钟（可通过
+  `cacheTtlMinutes` 配置）
+- Exa 是官方 API 集成，返回结构化 JSON 响应
 
-## Related
+## 相关内容
 
-- [Web Search overview](/tools/web) -- all providers and auto-detection
-- [Brave Search](/tools/brave-search) -- structured results with country/language filters
-- [Perplexity Search](/tools/perplexity-search) -- structured results with domain filtering
+- [Web Search 概览](/tools/web) -- 所有提供方和自动检测
+- [Brave Search](/tools/brave-search) -- 支持国家/语言过滤的结构化结果
+- [Perplexity Search](/tools/perplexity-search) -- 支持域名过滤的结构化结果

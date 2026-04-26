@@ -1,113 +1,112 @@
 ---
-summary: "Android app (node): connection runbook + Connect/Chat/Voice/Canvas command surface"
+summary: "Android 应用（节点）：连接运行手册 + Connect/Chat/Voice/Canvas 命令界面"
 read_when:
-  - Pairing or reconnecting the Android node
-  - Debugging Android gateway discovery or auth
-  - Verifying chat history parity across clients
+  - 配对或重新连接 Android 节点
+  - 调试 Android 网关发现或认证
+  - 验证不同客户端之间的聊天历史一致性
 title: "Android app"
 ---
 
-> **Note:** The Android app has not been publicly released yet. The source code is available in the [OpenClaw repository](https://github.com/openclaw/openclaw) under `apps/android`. You can build it yourself using Java 17 and the Android SDK (`./gradlew :app:assemblePlayDebug`). See [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md) for build instructions.
+> **注意：** Android 应用尚未公开发布。源代码可在 [OpenClaw 仓库](https://github.com/openclaw/openclaw) 的 `apps/android` 下找到。你可以使用 Java 17 和 Android SDK（`./gradlew :app:assemblePlayDebug`）自行构建。构建说明请参见 [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)。
 
-## Support snapshot
+## 支持快照
 
-- Role: companion node app (Android does not host the Gateway).
-- Gateway required: yes (run it on macOS, Linux, or Windows via WSL2).
-- Install: [Getting Started](/start/getting-started) + [Pairing](/channels/pairing).
-- Gateway: [Runbook](/gateway) + [Configuration](/gateway/configuration).
-  - Protocols: [Gateway protocol](/gateway/protocol) (nodes + control plane).
+- 角色：伴随节点应用（Android 不承载网关）。
+- 需要网关：是（运行在 macOS、Linux 或通过 WSL2 的 Windows 上）。
+- 安装：[快速开始](/start/getting-started) + [配对](/channels/pairing)。
+- 网关：[运行手册](/gateway) + [配置](/gateway/configuration)。
+  - 协议：[网关协议](/gateway/protocol)（节点 + 控制面）。
 
-## System control
+## 系统控制
 
-System control (launchd/systemd) lives on the Gateway host. See [Gateway](/gateway).
+系统控制（launchd/systemd）运行在网关主机上。请参见 [网关](/gateway)。
 
-## Connection Runbook
+## 连接运行手册
 
-Android node app ⇄ (mDNS/NSD + WebSocket) ⇄ **Gateway**
+Android 节点应用 ⇄ (mDNS/NSD + WebSocket) ⇄ **网关**
 
-Android connects directly to the Gateway WebSocket and uses device pairing (`role: node`).
+Android 直接连接到网关 WebSocket，并使用设备配对（`role: node`）。
 
-For Tailscale or public hosts, Android requires a secure endpoint:
+对于 Tailscale 或公开主机，Android 需要一个安全端点：
 
-- Preferred: Tailscale Serve / Funnel with `https://<magicdns>` / `wss://<magicdns>`
-- Also supported: any other `wss://` Gateway URL with a real TLS endpoint
-- Cleartext `ws://` remains supported on private LAN addresses / `.local` hosts, plus `localhost`, `127.0.0.1`, and the Android emulator bridge (`10.0.2.2`)
+- 首选：Tailscale Serve / Funnel，使用 `https://<magicdns>` / `wss://<magicdns>`
+- 也支持：任何其他带有真实 TLS 端点的 `wss://` 网关 URL
+- 明文 `ws://` 仍支持私有 LAN 地址 / `.local` 主机，以及 `localhost`、`127.0.0.1` 和 Android 模拟器桥接（`10.0.2.2`）
 
-### Prerequisites
+### 前提条件
 
-- You can run the Gateway on the “master” machine.
-- Android device/emulator can reach the gateway WebSocket:
-  - Same LAN with mDNS/NSD, **or**
-  - Same Tailscale tailnet using Wide-Area Bonjour / unicast DNS-SD (see below), **or**
-  - Manual gateway host/port (fallback)
-- Tailnet/public mobile pairing does **not** use raw tailnet IP `ws://` endpoints. Use Tailscale Serve or another `wss://` URL instead.
-- You can run the CLI (`openclaw`) on the gateway machine (or via SSH).
+- 你可以在“主”机器上运行网关。
+- Android 设备/模拟器可以访问网关 WebSocket：
+  - 同一 LAN，使用 mDNS/NSD，**或**
+  - 同一 Tailscale tailnet，使用 Wide-Area Bonjour / 单播 DNS-SD（见下文），**或**
+  - 手动网关主机/端口（回退方案）
+- tailnet/公开移动配对 **不** 使用原始 tailnet IP `ws://` 端点。请改用 Tailscale Serve 或其他 `wss://` URL。
+- 你可以在网关机器上（或通过 SSH）运行 CLI（`openclaw`）。
 
-### 1) Start the Gateway
+### 1) 启动网关
 
 ```bash
 openclaw gateway --port 18789 --verbose
 ```
 
-Confirm in logs you see something like:
+在日志中确认看到类似：
 
 - `listening on ws://0.0.0.0:18789`
 
-For remote Android access over Tailscale, prefer Serve/Funnel instead of a raw tailnet bind:
+对于通过 Tailscale 的远程 Android 访问，优先使用 Serve/Funnel，而不是原始 tailnet 绑定：
 
 ```bash
 openclaw gateway --tailscale serve
 ```
 
-This gives Android a secure `wss://` / `https://` endpoint. A plain `gateway.bind: "tailnet"` setup is not enough for first-time remote Android pairing unless you also terminate TLS separately.
+这会为 Android 提供一个安全的 `wss://` / `https://` 端点。仅配置 `gateway.bind: "tailnet"` 对首次远程 Android 配对来说还不够，除非你另外单独终止 TLS。
 
-### 2) Verify discovery (optional)
+### 2) 验证发现（可选）
 
-From the gateway machine:
+从网关机器执行：
 
 ```bash
 dns-sd -B _openclaw-gw._tcp local.
 ```
 
-More debugging notes: [Bonjour](/gateway/bonjour).
+更多调试说明请参阅：[Bonjour](/gateway/bonjour)。
 
-If you also configured a wide-area discovery domain, compare against:
+如果你还配置了广域发现域，请对照检查：
 
 ```bash
 openclaw gateway discover --json
 ```
 
-That shows `local.` plus the configured wide-area domain in one pass and uses the resolved
-service endpoint instead of TXT-only hints.
+这会一次性显示 `local.` 以及已配置的广域域名，并使用解析后的服务端点，而不是仅基于 TXT 的提示。
 
-#### Tailnet (Vienna ⇄ London) discovery via unicast DNS-SD
+#### 通过单播 DNS-SD 进行 tailnet（Vienna ⇄ London）发现
 
-Android NSD/mDNS discovery won’t cross networks. If your Android node and the gateway are on different networks but connected via Tailscale, use Wide-Area Bonjour / unicast DNS-SD instead.
+Android NSD/mDNS 发现不会跨网络。如果你的 Android 节点和网关位于不同网络，但通过 Tailscale 连接，请改用 Wide-Area Bonjour / 单播 DNS-SD。
 
-Discovery alone is not sufficient for tailnet/public Android pairing. The discovered route still needs a secure endpoint (`wss://` or Tailscale Serve):
+仅有发现并不足以完成 tailnet/公开 Android 配对。发现到的路由仍然需要一个安全端点（`wss://` 或 Tailscale Serve）：
 
-1. Set up a DNS-SD zone (example `openclaw.internal.`) on the gateway host and publish `_openclaw-gw._tcp` records.
-2. Configure Tailscale split DNS for your chosen domain pointing at that DNS server.
+1. 在网关主机上设置一个 DNS-SD 区域（示例为 `openclaw.internal.`），并发布 `_openclaw-gw._tcp` 记录。
+2. 配置 Tailscale 分割 DNS，使你选择的域名指向该 DNS 服务器。
 
-Details and example CoreDNS config: [Bonjour](/gateway/bonjour).
+详情和 CoreDNS 配置示例请见：[Bonjour](/gateway/bonjour)。
 
-### 3) Connect from Android
+### 3) 从 Android 连接
 
-In the Android app:
+在 Android 应用中：
 
-- The app keeps its gateway connection alive via a **foreground service** (persistent notification).
-- Open the **Connect** tab.
-- Use **Setup Code** or **Manual** mode.
-- If discovery is blocked, use manual host/port in **Advanced controls**. For private LAN hosts, `ws://` still works. For Tailscale/public hosts, turn on TLS and use a `wss://` / Tailscale Serve endpoint.
+- 应用通过 **前台服务**（持久通知）保持与网关的连接。
+- 打开 **Connect** 选项卡。
+- 使用 **Setup Code** 或 **Manual** 模式。
+- 如果发现被阻止，请在 **Advanced controls** 中使用手动主机/端口。对于私有 LAN 主机，`ws://` 仍然可用。对于 Tailscale/公开主机，请开启 TLS 并使用 `wss://` / Tailscale Serve 端点。
 
-After the first successful pairing, Android auto-reconnects on launch:
+首次配对成功后，Android 会在启动时自动重连：
 
-- Manual endpoint (if enabled), otherwise
-- The last discovered gateway (best-effort).
+- 手动端点（如果启用），否则
+- 上一次发现的网关（尽力而为）。
 
-### 4) Approve pairing (CLI)
+### 4) 批准配对（CLI）
 
-On the gateway machine:
+在网关机器上：
 
 ```bash
 openclaw devices list
@@ -115,134 +114,106 @@ openclaw devices approve <requestId>
 openclaw devices reject <requestId>
 ```
 
-Pairing details: [Pairing](/channels/pairing).
+配对详情：[配对](/channels/pairing)。
 
-Optional: if the Android node always connects from a tightly controlled subnet,
-you can opt in to first-time node auto-approval with explicit CIDRs or exact IPs:
+### 5) 验证节点已连接
 
-```json5
-{
-  gateway: {
-    nodes: {
-      pairing: {
-        autoApproveCidrs: ["192.168.1.0/24"],
-      },
-    },
-  },
-}
-```
-
-This is disabled by default. It applies only to fresh `role: node` pairing with
-no requested scopes. Operator/browser pairing and any role, scope, metadata, or
-public-key change still require manual approval.
-
-### 5) Verify the node is connected
-
-- Via nodes status:
+- 通过节点状态：
 
   ```bash
   openclaw nodes status
   ```
 
-- Via Gateway:
+- 通过网关：
 
   ```bash
   openclaw gateway call node.list --params "{}"
   ```
 
-### 6) Chat + history
+### 6) 聊天 + 历史
 
-The Android Chat tab supports session selection (default `main`, plus other existing sessions):
+Android 聊天标签支持会话选择（默认 `main`，还有其他存在的会话）：
 
-- History: `chat.history` (display-normalized; inline directive tags are
-  stripped from visible text, plain-text tool-call XML payloads (including
-  `<tool_call>...</tool_call>`, `<function_call>...</function_call>`,
-  `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and
-  truncated tool-call blocks) and leaked ASCII/full-width model control tokens
-  are stripped, pure silent-token assistant rows such as exact `NO_REPLY` /
-  `no_reply` are omitted, and oversized rows can be replaced with placeholders)
-- Send: `chat.send`
-- Push updates (best-effort): `chat.subscribe` → `event:"chat"`
+- 历史：`chat.history`（显示标准化；内联指令标签会从可见文本中移除，纯文本工具调用 XML 载荷（包括
+  `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、
+  `<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>`，以及
+  被截断的工具调用块）和泄漏的 ASCII/全角模型控制令牌会被移除，纯静默令牌的 assistant 行（如精确的 `NO_REPLY` /
+  `no_reply`）会被省略，过大的行可被占位符替代）
+- 发送：`chat.send`
+- 推送更新（尽力而为）：`chat.subscribe` → `event:"chat"`
 
-### 7) Canvas + camera
+### 7) Canvas + 相机
 
-#### Gateway Canvas Host (recommended for web content)
+#### 网关 Canvas 主机（推荐用于网页内容）
 
-If you want the node to show real HTML/CSS/JS that the agent can edit on disk, point the node at the Gateway canvas host.
+如果你希望节点显示真实的 HTML/CSS/JS，且代理可以在磁盘上编辑，请将节点指向网关的 Canvas 主机。
 
-Note: nodes load canvas from the Gateway HTTP server (same port as `gateway.port`, default `18789`).
+注意：节点从网关的 HTTP 服务器加载 Canvas（端口与 `gateway.port` 相同，默认 `18789`）。
 
-1. Create `~/.openclaw/workspace/canvas/index.html` on the gateway host.
+1. 在网关主机上创建 `~/.openclaw/workspace/canvas/index.html`。
 
-2. Navigate the node to it (LAN):
+2. 让节点导航至该地址（局域网）：
 
 ```bash
 openclaw nodes invoke --node "<Android Node>" --command canvas.navigate --params '{"url":"http://<gateway-hostname>.local:18789/__openclaw__/canvas/"}'
 ```
 
-Tailnet (optional): if both devices are on Tailscale, use a MagicDNS name or tailnet IP instead of `.local`, e.g. `http://<gateway-magicdns>:18789/__openclaw__/canvas/`.
+Tailnet（可选）：如果两台设备都在 Tailscale 网络上，使用 MagicDNS 名称或 tailnet IP 替代 `.local`，如 `http://<gateway-magicdns>:18789/__openclaw__/canvas/`。
 
-This server injects a live-reload client into HTML and reloads on file changes.
-The A2UI host lives at `http://<gateway-host>:18789/__openclaw__/a2ui/`.
+此服务器会在 HTML 中注入实时重载客户端，并在文件更改时自动刷新。
+A2UI 主机位于 `http://<gateway-host>:18789/__openclaw__/a2ui/`。
 
-Canvas commands (foreground only):
+Canvas 命令（仅前台）：
 
-- `canvas.eval`, `canvas.snapshot`, `canvas.navigate` (use `{"url":""}` or `{"url":"/"}` to return to the default scaffold). `canvas.snapshot` returns `{ format, base64 }` (default `format="jpeg"`).
-- A2UI: `canvas.a2ui.push`, `canvas.a2ui.reset` (`canvas.a2ui.pushJSONL` legacy alias)
+- `canvas.eval`、`canvas.snapshot`、`canvas.navigate`（使用 `{"url":""}` 或 `{"url":"/"}` 返回默认框架）。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
+- A2UI：`canvas.a2ui.push`，`canvas.a2ui.reset`（`canvas.a2ui.pushJSONL` 旧别名）
 
-Camera commands (foreground only; permission-gated):
+相机命令（仅前台；需权限）：
 
-- `camera.snap` (jpg)
-- `camera.clip` (mp4)
+- `camera.snap`（jpg）
+- `camera.clip`（mp4）
 
-See [Camera node](/nodes/camera) for parameters and CLI helpers.
+详情及 CLI 辅助见 [Camera node](/nodes/camera)。
 
-### 8) Voice + expanded Android command surface
+### 8) 语音 + 扩展的 Android 命令集
 
-- Voice tab: Android has two explicit capture modes. **Mic** is a manual Voice-tab session that sends each pause as a chat turn and stops when the app leaves the foreground or the user leaves the Voice tab. **Talk** is continuous Talk Mode and keeps listening until toggled off or the node disconnects.
-- Talk Mode promotes the existing foreground service from `dataSync` to `dataSync|microphone` before capture starts, then demotes it when Talk Mode stops. Android 14+ requires the `FOREGROUND_SERVICE_MICROPHONE` declaration, the `RECORD_AUDIO` runtime grant, and the microphone service type at runtime.
-- Spoken replies use `talk.speak` through the configured gateway Talk provider. Local system TTS is used only when `talk.speak` is unavailable.
-- Voice wake remains disabled in the Android UX/runtime.
-- Additional Android command families (availability depends on device + permissions):
-  - `device.status`, `device.info`, `device.permissions`, `device.health`
-  - `notifications.list`, `notifications.actions` (see [Notification forwarding](#notification-forwarding) below)
+- 语音：Android 在 Voice 选项卡中使用单一的麦克风开/关流程，支持转录捕获和 `talk.speak` 播放。仅当 `talk.speak` 不可用时才使用本地系统 TTS。应用离开前台时语音会停止。
+- 语音唤醒/对话模式切换目前已从 Android UX/runtime 中移除。
+- 额外的 Android 命令族（可用性取决于设备 + 权限）：
+  - `device.status`、`device.info`、`device.permissions`、`device.health`
+  - `notifications.list`、`notifications.actions`（见下方 [Notification forwarding](#notification-forwarding)）
   - `photos.latest`
-  - `contacts.search`, `contacts.add`
-  - `calendar.events`, `calendar.add`
+  - `contacts.search`、`contacts.add`
+  - `calendar.events`、`calendar.add`
   - `callLog.search`
   - `sms.search`
-  - `motion.activity`, `motion.pedometer`
+  - `motion.activity`、`motion.pedometer`
 
-## Assistant entrypoints
+## Assistant 入口点
 
-Android supports launching OpenClaw from the system assistant trigger (Google
-Assistant). When configured, holding the home button or saying "Hey Google, ask
-OpenClaw..." opens the app and hands the prompt into the chat composer.
+Android 支持从系统助手触发器（Google Assistant）启动 OpenClaw。配置后，长按主页按钮或说“Hey Google, ask OpenClaw...” 会打开应用，并将提示词输入聊天编写器。
 
-This uses Android **App Actions** metadata declared in the app manifest. No
-extra configuration is needed on the gateway side -- the assistant intent is
-handled entirely by the Android app and forwarded as a normal chat message.
+这使用的是在应用清单中声明的 Android **App Actions** 元数据。网关侧不需要额外配置——助手意图完全由 Android 应用处理，并作为普通聊天消息转发。
 
 <Note>
-App Actions availability depends on the device, Google Play Services version,
-and whether the user has set OpenClaw as the default assistant app.
+App Actions 的可用性取决于设备、Google Play 服务版本，以及用户是否将 OpenClaw 设为默认助手应用。
 </Note>
 
-## Notification forwarding
+## 通知转发
 
-Android can forward device notifications to the gateway as events. Several controls let you scope which notifications are forwarded and when.
+Android 可以将设备通知作为事件转发到网关。若干控制项可让你限定转发哪些通知以及在何时转发。
 
 | Key                              | Type           | Description                                                                                       |
 | -------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
-| `notifications.allowPackages`    | string[]       | Only forward notifications from these package names. If set, all other packages are ignored.      |
-| `notifications.denyPackages`     | string[]       | Never forward notifications from these package names. Applied after `allowPackages`.              |
-| `notifications.quietHours.start` | string (HH:mm) | Start of quiet hours window (local device time). Notifications are suppressed during this window. |
-| `notifications.quietHours.end`   | string (HH:mm) | End of quiet hours window.                                                                        |
-| `notifications.rateLimit`        | number         | Maximum forwarded notifications per package per minute. Excess notifications are dropped.         |
+| `notifications.allowPackages`    | string[]       | 只转发来自这些包名的通知。如果设置了，则会忽略所有其他包。      |
+| `notifications.denyPackages`     | string[]       | 永不转发来自这些包名的通知。在 `allowPackages` 之后应用。              |
+| `notifications.quietHours.start` | string (HH:mm) | 勿扰时段开始时间（设备本地时间）。在此窗口内会静默通知。 |
+| `notifications.quietHours.end`   | string (HH:mm) | 勿扰时段结束时间。                                                                        |
+| `notifications.rateLimit`        | number         | 每个包每分钟最多转发的通知数。超出的通知会被丢弃。         |
 
-The notification picker also uses safer behavior for forwarded notification events, preventing accidental forwarding of sensitive system notifications.
+通知选择器还会对转发的通知事件采用更安全的行为，防止无意转发敏感系统通知。
 
-Example configuration:
+示例配置：
 
 ```json5
 {
@@ -259,11 +230,11 @@ Example configuration:
 ```
 
 <Note>
-Notification forwarding requires the Android Notification Listener permission. The app prompts for this during setup.
+通知转发需要 Android Notification Listener 权限。应用会在设置过程中提示你授予该权限。
 </Note>
 
-## Related
+## 相关内容
 
 - [iOS app](/platforms/ios)
-- [Nodes](/nodes)
-- [Android node troubleshooting](/nodes/troubleshooting)
+- [节点](/nodes)
+- [Android 节点故障排查](/nodes/troubleshooting)
