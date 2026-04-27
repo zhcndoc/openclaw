@@ -419,7 +419,54 @@ Guardian 是原生 Codex 审批审查器。当 Codex 需要离开沙箱、在工
 
 ## 常见配方
 
-使用默认 stdio 传输的本地 Codex：
+## Computer Use
+
+Computer Use 是一个原生于 Codex 的 MCP 插件。OpenClaw 不会捆绑桌面控制应用，也不会自行执行桌面操作；它启用 Codex app-server 插件，在请求时安装已配置的 Codex 市场插件，检查 `computer-use` MCP server 是否可用，然后让 Codex 在 Codex 模式轮次中处理原生 MCP 工具调用。
+
+当你希望 Codex 模式轮次要求使用 Computer Use 时，请设置 `plugins.entries.codex.config.computerUse`：
+
+```json5
+{
+  plugins: {
+    entries: {
+      codex: {
+        enabled: true,
+        config: {
+          computerUse: {
+            autoInstall: true,
+          },
+        },
+      },
+    },
+  },
+  agents: {
+    defaults: {
+      model: "openai/gpt-5.5",
+      embeddedHarness: {
+        runtime: "codex",
+      },
+    },
+  },
+}
+```
+
+在没有 marketplace 字段时，OpenClaw 会请求 Codex app-server 使用其已发现的 marketplaces。在全新的 Codex home 中，app-server 会预置官方精选 marketplace，而 OpenClaw 采用与 Codex 相同的加载方式：在安装期间轮询 `plugin/list`，然后再将 Computer Use 视为不可用。默认的发现等待时间是 60 秒，可通过 `marketplaceDiscoveryTimeoutMs` 进行调整。如果多个已知的 Codex marketplaces 都包含 Computer Use，OpenClaw 会先使用 Codex marketplace 的优先级顺序，然后再对未知的歧义匹配采取关闭式失败。
+
+如果需要一个非默认的 Codex marketplace 来源供 app-server 添加，请使用 `marketplaceSource`；如果本地机器上已经存在一个 marketplace 文件，请使用 `marketplacePath`。如果该 marketplace 已经在 Codex app-server 中注册，请改用 `marketplaceName`。默认值为 `pluginName: "computer-use"` 和 `mcpServerName: "computer-use"`。
+出于安全考虑，turn-start 自动安装只会使用 app-server 已经发现的 marketplaces。若要从已配置的 `marketplaceSource` 或 `marketplacePath` 进行显式安装，请使用 `/codex computer-use install`。
+
+也可以通过命令界面检查或安装相同的设置：
+
+- `/codex computer-use status`
+- `/codex computer-use install`
+- `/codex computer-use install --source <marketplace-source>`
+- `/codex computer-use install --marketplace-path <path>`
+
+Computer Use 仅适用于 macOS，并且在 Codex MCP server 可以控制应用之前，可能需要本地操作系统权限。如果 `computerUse.enabled` 为 true 且 MCP server 不可用，Codex 模式轮次会在线程开始前失败，而不是在没有原生 Computer Use 工具的情况下静默运行。
+
+## 常见配方
+
+本地 Codex，使用默认的 stdio 传输：
 
 ```json5
 {
@@ -455,7 +502,7 @@ Guardian 是原生 Codex 审批审查器。当 Codex 需要离开沙箱、在工
 }
 ```
 
-Guardian 审查的 Codex 审批：
+Guardian 审核的 Codex 审批：
 
 ```json5
 {
@@ -508,19 +555,21 @@ Guardian 审查的 Codex 审批：
 
 常见形式：
 
-- `/codex status` 显示实时的 app-server 连接状态、模型、账户、速率限制、MCP 服务器和技能。
-- `/codex models` 列出实时的 Codex app-server 模型。
-- `/codex threads [filter]` 列出最近的 Codex 线程。
-- `/codex resume <thread-id>` 将当前的 OpenClaw 会话附加到现有的 Codex 线程。
-- `/codex compact` 请求 Codex app-server 压缩附加的线程。
-- `/codex review` 启动附加线程的 Codex 原生审查。
+- `/codex status` 显示实时 app-server 连接性、模型、账户、速率限制、MCP servers 和 skills。
+- `/codex models` 列出实时的 Codex app-server models。
+- `/codex threads [filter]` 列出最近的 Codex threads。
+- `/codex resume <thread-id>` 将当前 OpenClaw 会话附加到一个现有的 Codex thread。
+- `/codex compact` 请求 Codex app-server 压缩已附加的 thread。
+- `/codex review` 为已附加的 thread 启动 Codex 原生 review。
+- `/codex computer-use status` 检查已配置的 Computer Use 插件和 MCP server。
+- `/codex computer-use install` 安装已配置的 Computer Use 插件并重新加载 MCP servers。
 - `/codex account` 显示账户和速率限制状态。
-- `/codex mcp` 列出 Codex app-server MCP 服务器状态。
-- `/codex skills` 列出 Codex app-server 技能。
+- `/codex mcp` 列出 Codex app-server MCP server 状态。
+- `/codex skills` 列出 Codex app-server skills。
 
 `/codex resume` 会写入与 harness 在普通轮次中使用的相同 sidecar 绑定文件。在下一条消息中，OpenClaw 会恢复该 Codex 线程，将当前选定的 OpenClaw 模型传入 app-server，并保持启用扩展历史记录。
 
-命令表面需要 Codex app-server `0.118.0` 或更高版本。如果未来或自定义的 app-server 未暴露该 JSON-RPC 方法，各个控制方法将被报告为 `unsupported by this Codex app-server`。
+命令界面需要 Codex app-server `0.118.0` 或更高版本。如果未来或自定义的 app-server 未暴露该 JSON-RPC 方法，各个控制方法将被报告为 `unsupported by this Codex app-server`。
 
 ## Hook 边界
 
@@ -574,15 +623,15 @@ Codex 运行时 v1 中不支持的内容：
 
 ## 工具、媒体和压缩
 
-Codex harness 仅更改低级嵌入式 agent 执行器。
+Codex harness 仅更改底层嵌入式 agent 执行器。
 
-OpenClaw 仍然构建工具列表并从 harness 接收动态工具结果。文本、图像、视频、音乐、TTS、审批和消息工具输出继续通过正常的 OpenClaw 交付路径。
+OpenClaw 仍然负责构建工具列表，并从 harness 接收动态工具结果。文本、图像、视频、音乐、TTS、审批和消息工具输出将继续通过正常的 OpenClaw 交付路径传递。
 
-当 Codex 将 `_meta.codex_approval_kind` 标记为 `"mcp_tool_call"` 时，Codex MCP 工具审批请求会通过 OpenClaw 的插件审批流程路由。Codex `request_user_input` 提示会发送回发起的聊天，后续排队的跟进消息会回答该原生服务器请求，而不是作为额外上下文来引导。其他 MCP 询问请求仍会关闭失败。
+当 Codex 将 `_meta.codex_approval_kind` 标记为 `"mcp_tool_call"` 时，Codex MCP 工具审批请求会通过 OpenClaw 的插件审批流程进行路由。Codex `request_user_input` 提示会发送回发起该请求的聊天，会话中后续排队的跟进消息会回答该原生服务器请求，而不是作为额外上下文来引导。其他 MCP 询问请求仍会失败并关闭。
 
-当所选模型使用 Codex harness 时，原生线程压缩会委托给 Codex app-server。OpenClaw 会保留一份转录镜像，用于频道历史、搜索、`/new`、`/reset` 以及未来的模型或 harness 切换。该镜像包含用户提示、最终助手文本，以及当 app-server 输出它们时的轻量级 Codex 推理或计划记录。当前，OpenClaw 只记录原生压缩的开始和完成信号。它尚未公开人类可读的压缩摘要，也尚未公开 Codex 在压缩后保留了哪些条目的可审计列表。
+当所选模型使用 Codex harness 时，原生线程压缩会委托给 Codex app-server。OpenClaw 会保留一份转录镜像，用于频道历史、搜索、`/new`、`/reset` 以及未来的模型或 harness 切换。该镜像包含用户提示、最终助手文本，以及当 app-server 输出时生成的轻量级 Codex 推理或计划记录。目前，OpenClaw 只记录原生压缩的开始和完成信号。它尚未公开人类可读的压缩摘要，也尚未公开 Codex 在压缩后保留了哪些条目的可审计列表。
 
-由于 Codex 拥有规范的原生线程，`tool_result_persist` 目前不会重写 Codex 原生工具结果记录。它只在 OpenClaw 正在写入由 OpenClaw 拥有的会话转录工具结果时生效。
+由于 Codex 拥有规范的原生线程，`tool_result_persist` 当前不会重写 Codex 原生工具结果记录。它只会在 OpenClaw 正在写入由 OpenClaw 拥有的会话转录工具结果时生效。
 
 媒体生成不需要 PI。图像、视频、音乐、PDF、TTS 和媒体理解继续使用匹配的提供商/模型设置，例如 `agents.defaults.imageGenerationModel`、`videoGenerationModel`、`pdfModel` 和 `messages.tts`。
 
@@ -590,7 +639,7 @@ OpenClaw 仍然构建工具列表并从 harness 接收动态工具结果。文�
 
 **Codex 未出现在 `/model` 中：** 启用 `plugins.entries.codex.enabled`，选择一个带有 `embeddedHarness.runtime: "codex"` 的 `openai/gpt-*` 模型（或旧版 `codex/*` 引用），并检查 `plugins.allow` 是否排除了 `codex`。
 
-**OpenClaw 使用 PI 而不是 Codex：** 当没有 Codex harness 声明该运行时，`runtime: "auto"` 仍可能将 PI 作为兼容后端使用。测试时将 `embeddedHarness.runtime: "codex"` 设为强制选择 Codex。除非你显式设置 `embeddedHarness.fallback: "pi"`，否则强制的 Codex 运行时现在会失败，而不会回退到 PI。一旦选择了 Codex app-server，其故障会直接显现，而不会有额外的回退配置。
+**OpenClaw 使用 PI 而不是 Codex：** 当没有 Codex harness 声明该运行时，`runtime: "auto"` 仍可能将 PI 作为兼容后端使用。测试时请将 `embeddedHarness.runtime: "codex"` 设为强制选择 Codex。除非你显式设置 `embeddedHarness.fallback: "pi"`，否则强制的 Codex 运行时现在会失败，而不会回退到 PI。一旦选择了 Codex app-server，其故障会直接显现，而不会有额外的回退配置。
 
 **app-server 被拒绝：** 升级 Codex，以便 app-server 握手报告版本 `0.118.0` 或更高版本。
 

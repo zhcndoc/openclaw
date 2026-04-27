@@ -459,7 +459,7 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
   <Accordion title="流式配置">
     OpenClaw 的 Ollama 集成默认使用 **原生 Ollama API**（`/api/chat`），完全支持同时流式传输和工具调用。不需要特殊配置。
 
-    对于原生 `/api/chat` 请求，OpenClaw 还会将思考控制直接转发给 Ollama：`/think off` 和 `openclaw agent --thinking off` 会发送顶层 `think: false`，而非 `off` 的思考级别会发送 `think: true`。
+    对于原生 `/api/chat` 请求，OpenClaw 还会直接将思考控制转发给 Ollama：`/think off` 和 `openclaw agent --thinking off` 会发送顶层 `think: false`，而 `/think low|medium|high` 会发送对应的顶层 `think` 强度字符串。`/think max` 映射到 Ollama 的最高原生强度，即 `think: "high"`。
 
     <Tip>
     如果您需要使用 OpenAI 兼容端点，请参阅上面的“旧版 OpenAI 兼容模式”部分。在该模式下，流式传输和工具调用可能无法同时工作。

@@ -46,7 +46,7 @@ openclaw devices list
 openclaw devices approve <requestId>
 ```
 
-如果浏览器使用更改后的认证详细信息（角色/ scope/公钥）重试配对，之前的待处理请求将被取代，并创建一个新的 `requestId`。批准前请重新运行 `openclaw devices list`。
+如果浏览器使用更改后的认证详细信息（角色/ 作用域/ 公钥）重试配对，之前的待处理请求将被取代，并创建一个新的 `requestId`。批准前请重新运行 `openclaw devices list`。
 
 如果浏览器已经配对，而你将其从只读访问更改为写入/管理员访问，这将被视为一次批准升级，而不是静默重新连接。OpenClaw 会保持旧的批准有效，阻止更宽权限的重新连接，并要求你显式批准新的作用域集合。
 
@@ -77,30 +77,21 @@ openclaw devices approve <requestId>
 
 ## 当前功能
 
-- 通过网关 WS 与模型聊天（`chat.history`、`chat.send`、`chat.abort`、`chat.inject`）
-- 直接通过浏览器使用 WebRTC 与 OpenAI Realtime 对话。网关使用 `talk.realtime.session` 签发一个短生命周期的 Realtime 客户端密钥；浏览器将麦克风音频直接发送到 OpenAI，并将 `openclaw_agent_consult` 工具调用通过 `chat.send` 转发回更大的已配置 OpenClaw 模型。
-- 在聊天中流式显示工具调用 + 实时工具输出卡片（代理事件）
-- 频道：内置以及捆绑/外部插件频道状态、二维码登录和每个频道的配置（`channels.status`、`web.login.*`、`config.patch`）
-- 实例：在线状态列表 + 刷新（`system-presence`）
-- 会话：列表 + 每个会话的模型/思考/快速/详细/跟踪/推理覆盖（`sessions.list`、`sessions.patch`）
-- 梦境：做梦状态、启用/禁用切换，以及 Dream Diary 读取器（`doctor.memory.status`、`doctor.memory.dreamDiary`、`config.patch`）
-- Cron 任务：列表/新增/编辑/运行/启用/禁用 + 运行历史（`cron.*`）
-- 技能：状态、启用/禁用、安装、API 密钥更新（`skills.*`）
-- 节点：列表 + 能力（`node.list`）
-- 执行批准：编辑网关或节点允许列表 + 询问 `exec host=gateway/node` 的策略（`exec.approvals.*`）
-- 配置：查看/编辑 `~/.openclaw/openclaw.json`（`config.get`、`config.set`）
-- 配置：应用 + 带验证的重启（`config.apply`）并唤醒最后活跃的会话
-- 配置写入包含基于 base-hash 的保护，以防止覆盖并发编辑
-- 配置写入（`config.set`/`config.apply`/`config.patch`）还会对提交的配置负载中引用的 refs 进行活动 SecretRef 解析预检；未解析的活动提交 refs 会在写入前被拒绝
-- 配置 schema + 表单渲染（`config.schema` / `config.schema.lookup`，
-  包括字段 `title` / `description`、匹配的 UI 提示、即时子摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，
-  以及在可用时的插件 + 频道 schema）；仅当快照具有安全的原始往返能力时才可使用原始 JSON 编辑器
-- 如果某个快照无法安全地进行原始文本往返，则控制界面会强制使用表单模式并为该快照禁用原始模式
-- 原始 JSON 编辑器中的“重置为已保存”会保留原始编写的形态（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照可以安全往返时，外部编辑在重置后仍会保留
-- 结构化 SecretRef 对象值会在表单文本输入中以只读方式渲染，以防止意外的对象到字符串损坏
-- 调试：状态/健康状况/模型快照 + 事件日志 + 手动 RPC 调用（`status`、`health`、`models.list`）
-- 日志：带过滤/导出的网关文件日志实时尾随（`logs.tail`）
-- 更新：运行包/git 更新 + 重启（`update.run`）并生成重启报告
+<AccordionGroup>
+  <Accordion title="发送与历史语义">
+    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，响应则通过 `chat` 事件流式返回。
+    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件会作为受管媒体存储，并在历史中显示为附件链接。
+    - 使用相同的 `idempotencyKey` 重新发送时，在运行期间返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
+    - `chat.history` 响应的大小受到限制，以保证 UI 安全。当转录条目过大时，网关可能会截断较长的文本字段，省略较重的元数据块，并将超大消息替换为占位符（`[chat.history omitted: message too large]`）。
+    - 助手/生成的图片会作为受管媒体引用持久化，并通过经过认证的网关媒体 URL 重新提供，因此重新加载不依赖于原始 base64 图片负载继续保留在聊天历史响应中。
+    - `chat.history` 还会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄漏的 ASCII/全角模型控制令牌，并省略其整个可见文本仅为精确静默令牌 `NO_REPLY` / `no_reply` 的助手条目。
+    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧的快照，聊天视图会保留本地乐观的用户/助手消息可见；一旦网关历史追上，这些本地消息就会被规范化转录替换。
+    - `chat.inject` 会向会话转录追加一条助手备注，并广播一个 `chat` 事件用于仅 UI 更新（不触发代理运行，也不进行频道投递）。
+    - 聊天标题中的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久的会话覆盖，而不是仅限一次回复的发送选项。
+    - 当新的网关会话使用情况报告显示上下文压力较高时，聊天编写区域会显示上下文提示，并在建议的压缩级别下显示一个压缩按钮，用于执行正常的会话压缩路径。过时的令牌快照会被隐藏，直到网关再次报告新的使用情况。
+  </Accordion>
+  <Accordion title="Talk 模式（浏览器 WebRTC）">
+    Talk 模式使用一个已注册的实时语音提供商，支持浏览器 WebRTC 会话。使用 `talk.provider: "openai"` 以及 `talk.providers.openai.apiKey` 配置 OpenAI，或复用 Voice Call 实时提供商配置。浏览器永远不会收到标准的 OpenAI API 密钥；它只会收到临时的 Realtime 客户端密钥。Google Live 实时语音支持后端 Voice Call 和 Google Meet 桥接，但尚不支持此浏览器 WebRTC 路径。Realtime 会话提示由网关组装；`talk.realtime.session` 不接受调用方提供的指令覆盖。
 
 定时任务面板说明：
 
@@ -122,23 +113,9 @@ openclaw devices approve <requestId>
 - `chat.history` 还会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄漏的 ASCII/全角模型控制令牌，并省略其整个可见文本仅为精确静默令牌 `NO_REPLY` / `no_reply` 的助手条目。
 - `chat.inject` 会向会话转录追加一条助手备注，并广播一个 `chat` 事件用于仅 UI 更新（不触发代理运行，也不进行频道投递）。
 - 聊天标题中的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久的会话覆盖，而不是仅限一次回复的发送选项。
-- 当新的网关会话使用情况报告显示上下文压力较高时，聊天
-  编写区域会显示上下文提示，并在建议的压缩级别下显示一个
-  压缩按钮，用于执行正常的会话压缩路径。过时的令牌
-  快照会被隐藏，直到网关再次报告新鲜的使用情况。
-- Talk 模式使用一个已注册的实时语音提供商，支持浏览器
-  WebRTC 会话。使用 `talk.provider: "openai"` 以及
-  `talk.providers.openai.apiKey` 配置 OpenAI，或复用 Voice Call 实时提供商
-  配置。浏览器永远不会收到标准的 OpenAI API 密钥；它只会收到
-  临时的 Realtime 客户端密钥。Google Live 实时语音支持后端 Voice Call
-  和 Google Meet 桥接，但尚不支持此浏览器
-  WebRTC 路径。Realtime 会话提示由网关组装；
-  `talk.realtime.session` 不接受调用方提供的指令覆盖。
-- 在聊天编写器中，Talk 控件是麦克风听写按钮旁边的波形按钮。
-  当 Talk 开始时，编写器状态行会显示
-  `Connecting Talk...`，然后在音频连接时显示 `Talk live`，或者
-  在实时工具调用通过 `chat.send` 咨询已配置的更大模型时显示
-  `Asking OpenClaw...`。
+- 当新的网关会话使用情况报告显示上下文压力较高时，聊天编写区域会显示上下文提示，并在建议的压缩级别下显示一个压缩按钮，用于执行正常的会话压缩路径。过时的令牌快照会被隐藏，直到网关再次报告新的使用情况。
+- Talk 模式使用一个已注册的实时语音提供商，支持浏览器 WebRTC 会话。使用 `talk.provider: "openai"` 以及 `talk.providers.openai.apiKey` 配置 OpenAI，或复用 Voice Call 实时提供商配置。浏览器永远不会收到标准的 OpenAI API 密钥；它只会收到临时的 Realtime 客户端密钥。Google Live 实时语音支持后端 Voice Call 和 Google Meet 桥接，但尚不支持此浏览器 WebRTC 路径。Realtime 会话提示由网关组装；`talk.realtime.session` 不接受调用方提供的指令覆盖。
+- 在聊天编写器中，Talk 控件是麦克风听写按钮旁边的波形按钮。当 Talk 开始时，编写器状态行会显示 `Connecting Talk...`，然后在音频连接时显示 `Talk live`，或者在实时工具调用通过 `chat.send` 咨询已配置的更大模型时显示 `Asking OpenClaw...`。
 - 停止：
   - 点击 **Stop**（调用 `chat.abort`）
   - 当运行处于活动状态时，正常的后续消息会排队。对排队消息点击 **Steer** 可将该后续消息注入正在运行的轮次。
@@ -188,7 +165,7 @@ openclaw gateway --tailscale serve
 - `https://<magicdns>/`（或你配置的 `gateway.controlUi.basePath`）
 
 默认情况下，当 `gateway.auth.allowTailscale` 为 `true` 时，控制界面/WebSocket Serve 请求可以通过 Tailscale 身份头（`tailscale-user-login`）进行认证。OpenClaw 通过 `tailscale whois` 解析 `x-forwarded-for` 地址并将其与头匹配来验证身份，仅当请求带有 Tailscale 的 `x-forwarded-*` 头击中环回时才接受这些。如果你希望即使对于 Serve 流量也需要明确的共享密钥凭证，设置 `gateway.auth.allowTailscale: false`。然后使用 `gateway.auth.mode: "token"` 或 `"password"`。
-对于该异步 Serve 身份路径，同一客户端 IP 和认证范围的失败认证尝试在速率限制写入之前会序列化。因此，来自同一浏览器的并发不良重试可能在第二个请求上显示 `retry later`，而不是两个简单的不匹配并行竞争。
+对于该异步 Serve 身份路径，同一客户端 IP 和认证范围的失败认证尝试在速率限制写入之前会被串行化。因此，来自同一浏览器的并发不良重试可能在第二个请求上显示 `retry later`，而不是两个简单的不匹配并行竞争。
 无令牌 Serve 认证假设网关主机是受信任的。如果不可信的本地代码可能在该主机上运行，则需要令牌/密码认证。
 
 ### 绑定 Tailnet + 令牌

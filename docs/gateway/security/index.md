@@ -1,7 +1,7 @@
 ---
 summary: "运行带有 shell 访问权限的 AI 网关的安全注意事项和威胁模型"
 read_when:
-  - 添加扩大访问权限或自动化的功能时
+  - 添加扩大访问权限或自动化功能时
 title: "安全"
 ---
 
@@ -896,10 +896,10 @@ OpenClaw 会为代理和工具加载工作区本地的 `.env` 文件，但绝不
 
 建议：
 
-- 保持工具摘要脱敏开启（`logging.redactSensitive: "tools"`，默认）。
-- 根据环境添加自定义脱敏模式（`logging.redactPatterns`，如令牌、主机名）。
-- 分享诊断信息时，优选使用 `openclaw status --all`（可粘贴，隐藏秘密）代替原始日志。
-- 若无长周期需求，清理旧会话转录与日志。
+- 保持日志和转录脱敏开启（`logging.redactSensitive: "tools"`；默认）。
+- 通过 `logging.redactPatterns` 为你的环境添加自定义模式（令牌、主机名、内部 URL）。
+- 分享诊断信息时，优先使用 `openclaw status --all`（可直接粘贴，已脱敏秘密）而不是原始日志。
+- 如果不需要长期保留，请清理旧会话转录和日志文件。
 
 详见：[日志](/gateway/logging)
 
@@ -1148,7 +1148,7 @@ OpenClaw 的浏览器导航策略默认严格：除非你明确选择加入，�
 }
 ```
 
-## Incident response
+## 事件响应
 
 AI 出状况时：
 
@@ -1178,7 +1178,7 @@ AI 出状况时：
 - 攻击者消息及代理动作
 - 网关是否暴露非环回接口（LAN/Tailscale Funnel/Serve）
 
-## Secret scanning with detect-secrets
+## 使用 detect-secrets 进行密钥扫描
 
 CI 在 `secrets` 任务中运行 `detect-secrets` pre-commit 钩子。
 
@@ -1206,7 +1206,7 @@ CI 在 `secrets` 任务中运行 `detect-secrets` pre-commit 钩子。
 
 更新后的 `.secrets.baseline` 推送至仓库。
 
-## Reporting security issues
+## 报告安全问题
 
 发现 OpenClaw 漏洞？请负责任报告：
 

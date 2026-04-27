@@ -93,6 +93,16 @@ openclaw channels logs --channel whatsapp
 
 日志文件中的每一行都是一个 JSON 对象。CLI 和控制界面会解析这些条目来渲染结构化输出（时间、级别、子系统、信息）。
 
+文件日志 JSONL 记录在可用时还包括可由机器过滤的顶层字段：
+
+- `hostname`：gateway 主机名。
+- `message`：展开后的日志消息文本，便于全文搜索。
+- `agent_id`：当日志调用携带 agent 上下文时的当前 agent ID。
+- `session_id`：当日志调用携带会话上下文时的当前会话 ID/键。
+- `channel`：当日志调用携带频道上下文时的当前频道。
+
+OpenClaw 会保留这些字段旁边的原始结构化日志参数，因此读取带编号 tslog 参数键的现有解析器仍可正常工作。
+
 ### 控制台输出
 
 控制台日志针对 TTY 环境进行格式化，便于阅读：
@@ -146,6 +156,23 @@ openclaw gateway --verbose --ws-log full
 
 `--verbose` 只影响控制台输出和 WS 日志详细程度；它不会改变文件日志级别。
 
+### Trace correlation
+
+文件日志是 JSONL。当日志调用携带有效的诊断 trace 上下文时，OpenClaw 会将 trace 字段写为顶层 JSON 键（`traceId`、`spanId`、`parentSpanId`、`traceFlags`），以便外部日志处理器将该行与 OTEL spans 和提供方的 `traceparent` 传播关联起来。
+
+Gateway HTTP 请求和 Gateway WebSocket 帧会建立内部请求 trace 作用域。在该异步作用域内发出的日志和诊断事件，如果未显式传入 trace 上下文，则会继承请求 trace。Agent 运行和模型调用 trace 会成为活动请求 trace 的子级，因此本地日志、诊断快照、OTEL spans 和受信任提供方的 `traceparent` 标头都可以通过 `traceId` 关联，而无需记录原始请求或模型内容。
+
+### 模型调用大小和时序
+
+模型调用诊断会记录有界的请求/响应测量值，而不会捕获原始提示或响应内容：
+
+- `requestPayloadBytes`：最终模型请求负载的 UTF-8 字节大小
+- `responseStreamBytes`：流式模型响应事件的 UTF-8 字节大小
+- `timeToFirstByteMs`：首个流式响应事件到达前的耗时
+- `durationMs`：模型调用总时长
+
+当启用诊断导出时，这些字段可供诊断快照、模型调用插件钩子以及 OTEL 模型调用 spans/metrics 使用。
+
 ### 控制台样式
 
 `logging.consoleStyle` 可配置为：
@@ -156,12 +183,12 @@ openclaw gateway --verbose --ws-log full
 
 ### 脱敏
 
-工具概要能在日志输出到控制台前脱敏敏感令牌：
+OpenClaw 可在敏感令牌到达控制台输出、文件日志、OTLP 日志记录或持久化会话转录文本之前对其进行脱敏：
 
 - `logging.redactSensitive`：`off` | `tools`（默认：`tools`）
 - `logging.redactPatterns`：覆盖默认脱敏规则的正则表达式列表
 
-脱敏仅影响**控制台输出**，不修改文件日志。
+文件日志和会话转录仍保持 JSONL 格式，但匹配到的密钥值会在写入磁盘前被掩码。脱敏为尽力而为：它适用于包含文本的消息内容和日志字符串，而不是每个标识符或二进制负载字段。
 
 ## 诊断 + OpenTelemetry
 

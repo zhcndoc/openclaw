@@ -182,10 +182,14 @@ pnpm test:docker:live-cli-backend:gemini
   - `OPENCLAW_LIVE_ACP_BIND_AGENTS=claude,codex,gemini`
   - `OPENCLAW_LIVE_ACP_BIND_AGENT_COMMAND='npx -y @agentclientprotocol/claude-agent-acp@<version>'`
   - `OPENCLAW_LIVE_ACP_BIND_CODEX_MODEL=gpt-5.2`
+  - `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL=opencode/kimi-k2.6`
+  - `OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1`
+  - `OPENCLAW_LIVE_ACP_BIND_REQUIRE_CRON=1`
   - `OPENCLAW_LIVE_ACP_BIND_PARENT_MODEL=openai/gpt-5.2`
-- 说明：
-  - 该通道使用 gateway `chat.send` 接口，并带有仅限管理员的合成来源路由字段，因此测试可以附加消息通道上下文，而不必假装对外部进行投递。
-  - 当未设置 `OPENCLAW_LIVE_ACP_BIND_AGENT_COMMAND` 时，测试会为所选 ACP harness agent 使用内嵌 `acpx` 插件的内置 agent registry。
+- 注：
+  - 此路径使用 gateway `chat.send` 接口，并带有仅管理员可用的合成来源路由字段，因此测试可以附加消息通道上下文，而无需伪装成外部投递。
+  - 当未设置 `OPENCLAW_LIVE_ACP_BIND_AGENT_COMMAND` 时，测试将为所选 ACP harness agent 使用嵌入式 `acpx` 插件的内置 agent 注册表。
+  - 默认情况下，已绑定会话的 cron MCP 创建是尽力而为，因为外部 ACP harness 可能会在绑定/图像证明通过后取消 MCP 调用；设置 `OPENCLAW_LIVE_ACP_BIND_REQUIRE_CRON=1` 可将该绑定后的 cron 探针设为严格模式。
 
 示例：
 

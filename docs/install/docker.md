@@ -277,11 +277,11 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     Docker 或无头设置中，复制您最终到达的完整重定向 URL 并粘贴回向导中以完成认证。
   </Accordion>
 
-  <Accordion title="基础镜像元数据">
-    主 Docker 镜像使用 `node:24-bookworm` 并发布 OCI 基础镜像
-    注解，包括 `org.opencontainers.image.base.name`、
-    `org.opencontainers.image.source` 等。参见
-    [OCI 镜像注解](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
+  <Accordion title="Base image metadata">
+    主 Docker 运行时镜像使用 `node:24-bookworm-slim`，并发布包括
+    `org.opencontainers.image.base.name`、`org.opencontainers.image.source`
+    等在内的 OCI 基础镜像注解。Node 基础镜像的摘要会通过 Dependabot Docker 基础镜像 PR 进行刷新；发布构建不会运行发行版升级层。参见
+    [OCI image annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
   </Accordion>
 </AccordionGroup>
 

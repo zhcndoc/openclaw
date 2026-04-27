@@ -46,9 +46,9 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace` 并将其写入文件日
 - `logging.consoleLevel`（默认 `info`）
 - `logging.consoleStyle`（`pretty` | `compact` | `json`）
 
-## 工具摘要脱敏
+## 脱敏
 
-详细的工具摘要（例如 `🛠️ Exec: ...`）可以在输出到控制台流之前屏蔽敏感令牌。这仅限于 **工具输出**，不会修改文件日志。
+OpenClaw 可以在日志或转录输出离开进程之前屏蔽敏感令牌。相同的脱敏策略适用于控制台、文件日志、OTLP 日志记录和会话转录文本输出，因此在写入磁盘之前，匹配到的密钥值会在 JSONL 行或消息中被屏蔽。
 
 - `logging.redactSensitive`：`off` | `tools`（默认：`tools`）
 - `logging.redactPatterns`：正则表达式字符串数组（覆盖默认规则）

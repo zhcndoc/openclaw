@@ -55,7 +55,9 @@ openclaw channels remove --channel telegram --delete
 - Tlon 字段：`--ship`, `--url`, `--code`, `--group-channels`, `--dm-allowlist`, `--auto-discover-channels`
 - `--use-env` 用于支持默认账户的环境变量支持认证
 
-当您不带标志运行 `openclaw channels add` 时，交互式向导可能会提示：
+如果在基于标志的添加命令期间需要安装渠道插件，OpenClaw 会使用该渠道的默认安装源，而不会打开交互式插件安装提示。
+
+当你在不带标志的情况下运行 `openclaw channels add` 时，交互式向导可能会提示：
 
 - 每个选定渠道的账户 ID
 - 这些账户的可选显示名称

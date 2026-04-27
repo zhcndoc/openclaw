@@ -139,7 +139,10 @@ Telegram：
 - 明确启用 Telegram 区块流式时，跳过预览流式（避免双重流式）。
 - `/reasoning stream` 可将推理写入预览。
 
-Discord：
+- 使用 `sendMessage` + `editMessageText` 预览更新，覆盖私信和群组/话题。
+- 当预览已显示约一分钟时，发送一条新的最终消息，而不是原地编辑，然后清理预览，使 Telegram 的时间戳反映回复完成时间。
+- 在明确启用 Telegram 区块流式时会跳过预览流式（避免双重流式）。
+- `/reasoning stream` 可将推理写入预览。
 
 Discord:
 

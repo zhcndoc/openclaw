@@ -6,7 +6,7 @@ read_when:
   - 正在验证频道、模型、网关或工具配置块
 ---
 
-Core config reference for `~/.openclaw/openclaw.json`. For a task-oriented overview, see [Configuration](/gateway/configuration).
+`~/.openclaw/openclaw.json` 的核心配置参考。有关面向任务的概览，请参见 [配置](/gateway/configuration)。
 
 本页面涵盖主要的 OpenClaw 配置面，并在子系统拥有独立深入参考时提供链接。它**不会**尝试将所有频道/插件拥有的命令目录或所有深层内存/QMD 旋钮内联到一页中。
 
@@ -28,15 +28,15 @@ Core config reference for `~/.openclaw/openclaw.json`. For a task-oriented overv
 
 ## 频道（Channels）
 
-Per-channel config keys moved to a dedicated page — see
-[Configuration — channels](/gateway/config-channels) for `channels.*`,
-including Slack, Discord, Telegram, WhatsApp, Matrix, iMessage, and other
-bundled channels (auth, access control, multi-account, mention gating).
+每频道配置键已移至专门页面 — 请参见
+[配置 — 频道](/gateway/config-channels) 了解 `channels.*`，
+包括 Slack、Discord、Telegram、WhatsApp、Matrix、iMessage 以及其他
+捆绑频道（认证、访问控制、多账号、提及门控）。
 
 ## 代理默认值、多代理、会话和消息
 
-Moved to a dedicated page — see
-[Configuration — agents](/gateway/config-agents) for:
+已移至专门页面 — 请参见
+[配置 — 代理](/gateway/config-agents) 了解：
 
 - `agents.defaults.*`（工作区、模型、思考、心跳、内存、媒体、技能、沙箱）
 - `multiAgent.*`（多代理路由和绑定）
@@ -47,9 +47,9 @@ Moved to a dedicated page — see
 
 ## 工具和自定义提供方
 
-Tool policy, experimental toggles, provider-backed tool config, and custom
-provider / base-URL setup moved to a dedicated page — see
-[Configuration — tools and custom providers](/gateway/config-tools).
+工具策略、实验性开关、由提供方支持的工具配置，以及自定义
+提供方 / 基础 URL 设置已移至专门页面 — 请参见
+[配置 — 工具和自定义提供方](/gateway/config-tools)。
 
 ## 技能（Skills）
 
@@ -66,7 +66,7 @@ provider / base-URL setup moved to a dedicated page — see
     },
     entries: {
       "image-lab": {
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // or plain string
+        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或纯文本字符串
         env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
       },
       peekaboo: { enabled: true },
@@ -107,32 +107,32 @@ provider / base-URL setup moved to a dedicated page — see
 }
 ```
 
-- Loaded from `~/.openclaw/extensions`, `<workspace>/.openclaw/extensions`, plus `plugins.load.paths`.
-- Discovery accepts native OpenClaw plugins plus compatible Codex bundles and Claude bundles, including manifestless Claude default-layout bundles.
-- **Config changes require a gateway restart.**
-- `allow`: optional allowlist (only listed plugins load). `deny` wins.
-- `plugins.entries.<id>.apiKey`: plugin-level API key convenience field (when supported by the plugin).
-- `plugins.entries.<id>.env`: plugin-scoped env var map.
-- `plugins.entries.<id>.hooks.allowPromptInjection`: when `false`, core blocks `before_prompt_build` and ignores prompt-mutating fields from legacy `before_agent_start`, while preserving legacy `modelOverride` and `providerOverride`. Applies to native plugin hooks and supported bundle-provided hook directories.
-- `plugins.entries.<id>.hooks.allowConversationAccess`: when `true`, trusted non-bundled plugins may read raw conversation content from typed hooks such as `llm_input`, `llm_output`, and `agent_end`.
-- `plugins.entries.<id>.subagent.allowModelOverride`: explicitly trust this plugin to request per-run `provider` and `model` overrides for background subagent runs.
-- `plugins.entries.<id>.subagent.allowedModels`: optional allowlist of canonical `provider/model` targets for trusted subagent overrides. Use `"*"` only when you intentionally want to allow any model.
-- `plugins.entries.<id>.config`: plugin-defined config object (validated by native OpenClaw plugin schema when available).
-- Channel plugin account/runtime settings live under `channels.<id>` and should be described by the owning plugin's manifest `channelConfigs` metadata, not by a central OpenClaw option registry.
-- `plugins.entries.firecrawl.config.webFetch`: Firecrawl web-fetch provider settings.
-  - `apiKey`: Firecrawl API key (accepts SecretRef). Falls back to `plugins.entries.firecrawl.config.webSearch.apiKey`, legacy `tools.web.fetch.firecrawl.apiKey`, or `FIRECRAWL_API_KEY` env var.
-  - `baseUrl`: Firecrawl API base URL (default: `https://api.firecrawl.dev`).
-  - `onlyMainContent`: extract only the main content from pages (default: `true`).
-  - `maxAgeMs`: maximum cache age in milliseconds (default: `172800000` / 2 days).
-  - `timeoutSeconds`: scrape request timeout in seconds (default: `60`).
-- `plugins.entries.xai.config.xSearch`: xAI X Search（Grok 网页搜索）设置。
-  - `enabled`: 启用 X Search 提供方。
-  - `model`: 用于搜索的 Grok 模型（例如 `"grok-4-1-fast"`）。
-- `plugins.entries.memory-core.config.dreaming`: memory dreaming 设置。有关阶段和阈值，请参见 [Dreaming](/concepts/dreaming)。
-  - `enabled`: dreaming 总开关（默认 `false`）。
-  - `frequency`: 每次完整 dreaming 扫描的 cron 频率（默认 `"0 3 * * *"`）。
-  - phase policy and thresholds are implementation details (not user-facing config keys).
-- Full memory config lives in [Memory configuration reference](/reference/memory-config):
+- 从 `~/.openclaw/extensions`、`<workspace>/.openclaw/extensions` 以及 `plugins.load.paths` 加载。
+- 发现机制接受原生 OpenClaw 插件以及兼容的 Codex 捆绑包和 Claude 捆绑包，包括无 manifest 的 Claude 默认布局捆绑包。
+- **配置更改需要重启网关。**
+- `allow`：可选允许列表（仅加载所列插件）。`deny` 优先。
+- `plugins.entries.<id>.apiKey`：插件级 API 密钥便捷字段（当插件支持时）。
+- `plugins.entries.<id>.env`：插件作用域的环境变量映射。
+- `plugins.entries.<id>.hooks.allowPromptInjection`：当为 `false` 时，核心会阻止 `before_prompt_build` 并忽略来自旧版 `before_agent_start` 的提示词变更字段，同时保留旧版 `modelOverride` 和 `providerOverride`。适用于原生插件钩子以及受支持的捆绑包提供的钩子目录。
+- `plugins.entries.<id>.hooks.allowConversationAccess`：当为 `true` 时，受信任的非捆绑插件可从诸如 `llm_input`、`llm_output` 和 `agent_end` 之类的类型化钩子中读取原始对话内容。
+- `plugins.entries.<id>.subagent.allowModelOverride`：显式信任此插件，以请求后台子代理运行的按次 `provider` 和 `model` 覆盖。
+- `plugins.entries.<id>.subagent.allowedModels`：受信任子代理覆盖的规范 `provider/model` 目标的可选允许列表。仅当你有意允许任意模型时才使用 `"*"`.
+- `plugins.entries.<id>.config`：插件定义的配置对象（在可用时由原生 OpenClaw 插件 schema 验证）。
+- 频道插件账户/运行时设置位于 `channels.<id>` 下，应由所属插件的 manifest `channelConfigs` 元数据来描述，而不是由中心化的 OpenClaw 选项注册表来描述。
+- `plugins.entries.firecrawl.config.webFetch`：Firecrawl 网页抓取提供方设置。
+  - `apiKey`：Firecrawl API 密钥（接受 SecretRef）。回退到 `plugins.entries.firecrawl.config.webSearch.apiKey`、旧版 `tools.web.fetch.firecrawl.apiKey`，或 `FIRECRAWL_API_KEY` 环境变量。
+  - `baseUrl`：Firecrawl API 基础 URL（默认：`https://api.firecrawl.dev`）。
+  - `onlyMainContent`：仅从页面中提取主体内容（默认：`true`）。
+  - `maxAgeMs`：缓存最大年龄，单位毫秒（默认：`172800000` / 2 天）。
+  - `timeoutSeconds`：抓取请求超时时间，单位秒（默认：`60`）。
+- `plugins.entries.xai.config.xSearch`：xAI X Search（Grok 网页搜索）设置。
+  - `enabled`：启用 X Search 提供方。
+  - `model`：用于搜索的 Grok 模型（例如 `"grok-4-1-fast"`）。
+- `plugins.entries.memory-core.config.dreaming`：memory dreaming 设置。有关阶段和阈值，请参见 [Dreaming](/concepts/dreaming)。
+  - `enabled`：dreaming 总开关（默认 `false`）。
+  - `frequency`：每次完整 dreaming 扫描的 cron 频率（默认 `"0 3 * * *"`）。
+  - 阶段策略和阈值属于实现细节（不是面向用户的配置键）。
+- 完整的内存配置位于 [内存配置参考](/reference/memory-config)：
   - `agents.defaults.memorySearch.*`
   - `memory.backend`
   - `memory.citations`
@@ -290,50 +290,43 @@ provider / base-URL setup moved to a dedicated page — see
 
 <Accordion title="网关字段详解">
 
-- `mode`: `local` (run gateway) or `remote` (connect to remote gateway). Gateway refuses to start unless `local`.
-- `port`: single multiplexed port for WS + HTTP. Precedence: `--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`.
-- `bind`: `auto`, `loopback` (default), `lan` (`0.0.0.0`), `tailnet` (Tailscale IP only), or `custom`.
-- **Legacy bind aliases**: use bind mode values in `gateway.bind` (`auto`, `loopback`, `lan`, `tailnet`, `custom`), not host aliases (`0.0.0.0`, `127.0.0.1`, `localhost`, `::`, `::1`).
-- **Docker note**: the default `loopback` bind listens on `127.0.0.1` inside the container. With Docker bridge networking (`-p 18789:18789`), traffic arrives on `eth0`, so the gateway is unreachable. Use `--network host`, or set `bind: "lan"` (or `bind: "custom"` with `customBindHost: "0.0.0.0"`) to listen on all interfaces.
-- **Auth**: required by default. Non-loopback binds require gateway auth. In practice that means a shared token/password or an identity-aware reverse proxy with `gateway.auth.mode: "trusted-proxy"`. Onboarding wizard generates a token by default.
-- If both `gateway.auth.token` and `gateway.auth.password` are configured (including SecretRefs), set `gateway.auth.mode` explicitly to `token` or `password`. Startup and service install/repair flows fail when both are configured and mode is unset.
-- `gateway.auth.mode: "none"`: explicit no-auth mode. Use only for trusted local loopback setups; this is intentionally not offered by onboarding prompts.
-- `gateway.auth.mode: "trusted-proxy"`: delegate auth to an identity-aware reverse proxy and trust identity headers from `gateway.trustedProxies` (see [Trusted Proxy Auth](/gateway/trusted-proxy-auth)). This mode expects a **non-loopback** proxy source; same-host loopback reverse proxies do not satisfy trusted-proxy auth.
-- `gateway.auth.allowTailscale`: when `true`, Tailscale Serve identity headers can satisfy Control UI/WebSocket auth (verified via `tailscale whois`). HTTP API endpoints do **not** use that Tailscale header auth; they follow the gateway's normal HTTP auth mode instead. This tokenless flow assumes the gateway host is trusted. Defaults to `true` when `tailscale.mode = "serve"`.
-- `gateway.auth.rateLimit`: optional failed-auth limiter. Applies per client IP and per auth scope (shared-secret and device-token are tracked independently). Blocked attempts return `429` + `Retry-After`.
-  - On the async Tailscale Serve Control UI path, failed attempts for the same `{scope, clientIp}` are serialized before the failure write. Concurrent bad attempts from the same client can therefore trip the limiter on the second request instead of both racing through as plain mismatches.
-  - `gateway.auth.rateLimit.exemptLoopback` defaults to `true`; set `false` when you intentionally want localhost traffic rate-limited too (for test setups or strict proxy deployments).
-- Browser-origin WS auth attempts are always throttled with loopback exemption disabled (defense-in-depth against browser-based localhost brute force).
-- On loopback, those browser-origin lockouts are isolated per normalized `Origin`
-  value, so repeated failures from one localhost origin do not automatically
-  lock out a different origin.
-- `tailscale.mode`: `serve` (tailnet only, loopback bind) or `funnel` (public, requires auth).
-- `controlUi.allowedOrigins`: explicit browser-origin allowlist for Gateway WebSocket connects. Required when browser clients are expected from non-loopback origins.
-- `controlUi.dangerouslyAllowHostHeaderOriginFallback`: dangerous mode that enables Host-header origin fallback for deployments that intentionally rely on Host-header origin policy.
-- `remote.transport`: `ssh` (default) or `direct` (ws/wss). For `direct`, `remote.url` must be `ws://` or `wss://`.
-- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`: client-side process-environment
-  break-glass override that allows plaintext `ws://` to trusted private-network
-  IPs; default remains loopback-only for plaintext. There is no `openclaw.json`
-  equivalent, and browser private-network config such as
-  `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` does not affect Gateway
-  WebSocket clients.
-- `gateway.remote.token` / `.password` are remote-client credential fields. They do not configure gateway auth by themselves.
-- `gateway.push.apns.relay.baseUrl`: base HTTPS URL for the external APNs relay used by official/TestFlight iOS builds after they publish relay-backed registrations to the gateway. This URL must match the relay URL compiled into the iOS build.
-- `gateway.push.apns.relay.timeoutMs`: gateway-to-relay send timeout in milliseconds. Defaults to `10000`.
-- Relay-backed registrations are delegated to a specific gateway identity. The paired iOS app fetches `gateway.identity.get`, includes that identity in the relay registration, and forwards a registration-scoped send grant to the gateway. Another gateway cannot reuse that stored registration.
-- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`: temporary env overrides for the relay config above.
-- `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`: development-only escape hatch for loopback HTTP relay URLs. Production relay URLs should stay on HTTPS.
-- `gateway.channelHealthCheckMinutes`: channel health-monitor interval in minutes. Set `0` to disable health-monitor restarts globally. Default: `5`.
-- `gateway.channelStaleEventThresholdMinutes`: stale-socket threshold in minutes. Keep this greater than or equal to `gateway.channelHealthCheckMinutes`. Default: `30`.
-- `gateway.channelMaxRestartsPerHour`: maximum health-monitor restarts per channel/account in a rolling hour. Default: `10`.
-- `channels.<provider>.healthMonitor.enabled`: per-channel opt-out for health-monitor restarts while keeping the global monitor enabled.
-- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`: per-account override for multi-account channels. When set, it takes precedence over the channel-level override.
-- Local gateway call paths can use `gateway.remote.*` as fallback only when `gateway.auth.*` is unset.
-- If `gateway.auth.token` / `gateway.auth.password` is explicitly configured via SecretRef and unresolved, resolution fails closed (no remote fallback masking).
-- `trustedProxies`: reverse proxy IPs that terminate TLS or inject forwarded-client headers. Only list proxies you control. Loopback entries are still valid for same-host proxy/local-detection setups (for example Tailscale Serve or a local reverse proxy), but they do **not** make loopback requests eligible for `gateway.auth.mode: "trusted-proxy"`.
-- `allowRealIpFallback`: when `true`, the gateway accepts `X-Real-IP` if `X-Forwarded-For` is missing. Default `false` for fail-closed behavior.
-- `gateway.tools.deny`: extra tool names blocked for HTTP `POST /tools/invoke` (extends default deny list).
-- `gateway.tools.allow`: remove tool names from the default HTTP deny list.
+- `mode`: `local`（运行网关）或 `remote`（连接到远程网关）。除非为 `local`，否则网关会拒绝启动。
+- `port`: WS + HTTP 的单一多路复用端口。优先级：`--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`。
+- `bind`: `auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（仅 Tailscale IP），或 `custom`。
+- **旧版 bind 别名**：在 `gateway.bind` 中使用绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），而不是主机别名（`0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
+- **Docker 注意**：默认的 `loopback` 绑定在容器内监听 `127.0.0.1`。使用 Docker bridge 网络（`-p 18789:18789`）时，流量到达 `eth0`，因此网关不可达。请使用 `--network host`，或设置 `bind: "lan"`（或 `bind: "custom"` 并配合 `customBindHost: "0.0.0.0"`）以监听所有接口。
+- **认证**：默认必需。非 loopback 绑定需要网关认证。实际上这意味着共享令牌/密码，或者带身份感知的反向代理并使用 `gateway.auth.mode: "trusted-proxy"`。入门向导默认会生成令牌。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRef），请显式将 `gateway.auth.mode` 设为 `token` 或 `password`。当两者都已配置且 mode 未设置时，启动以及服务安装/修复流程会失败。
+- `gateway.auth.mode: "none"`：显式无认证模式。仅用于受信任的本地 loopback 环境；此模式不会在入门提示中提供。
+- `gateway.auth.mode: "trusted-proxy"`：将认证委托给带身份感知的反向代理，并信任来自 `gateway.trustedProxies` 的身份标头（参见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)）。此模式期望一个**非 loopback** 的代理来源；同主机 loopback 反向代理不满足 trusted-proxy 认证要求。
+- `gateway.auth.allowTailscale`：当为 `true` 时，Tailscale Serve 身份标头可满足 Control UI/WebSocket 认证（通过 `tailscale whois` 验证）。HTTP API 端点**不会**使用该 Tailscale 标头认证；它们改为遵循网关正常的 HTTP 认证模式。此免令牌流程假设网关主机是受信任的。当 `tailscale.mode = "serve"` 时默认为 `true`。
+- `gateway.auth.rateLimit`：可选的认证失败限流器。按客户端 IP 和认证作用域生效（共享密钥和设备令牌分别跟踪）。被阻止的尝试返回 `429` + `Retry-After`。
+  - 在异步 Tailscale Serve Control UI 路径中，同一 `{scope, clientIp}` 的失败尝试会在失败写入前串行化。因此，来自同一客户端的并发错误尝试可能会在第二个请求时触发限流，而不是像普通不匹配那样同时竞争通过。
+  - `gateway.auth.rateLimit.exemptLoopback` 默认是 `true`；当你有意希望 localhost 流量也被限流时，将其设为 `false`（用于测试环境或严格代理部署）。
+- 浏览器来源的 WS 认证尝试始终会被限速，并且禁用 loopback 豁免（针对基于浏览器的 localhost 暴力破解的纵深防御）。
+- 在 loopback 上，这些浏览器来源锁定会按规范化的 `Origin` 值隔离，因此来自一个 localhost origin 的重复失败不会自动锁定另一个 origin。
+- `tailscale.mode`：`serve`（仅 tailnet，loopback 绑定）或 `funnel`（公网，需要认证）。
+- `controlUi.allowedOrigins`：Gateway WebSocket 连接的显式浏览器来源允许列表。当预期浏览器客户端来自非 loopback 来源时必需。
+- `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，启用 Host-header 源回退，适用于有意依赖 Host-header 源策略的部署。
+- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。对于 `direct`，`remote.url` 必须是 `ws://` 或 `wss://`。
+- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`：客户端进程环境变量中的紧急开关，允许明文 `ws://` 连接到受信任的私有网络 IP；默认仍仅对明文开放 loopback。没有 `openclaw.json` 等价项，并且浏览器私有网络配置（如 `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`）不会影响 Gateway WebSocket 客户端。
+- `gateway.remote.token` / `.password` 是远程客户端凭据字段。它们本身不会配置网关认证。
+- `gateway.push.apns.relay.baseUrl`：官方/TestFlight iOS 构建在向网关发布基于中继的注册后，使用的外部 APNs relay 的基础 HTTPS URL。此 URL 必须与编译进 iOS 构建中的 relay URL 匹配。
+- `gateway.push.apns.relay.timeoutMs`：网关到 relay 的发送超时时间，单位毫秒。默认 `10000`。
+- 基于 relay 的注册会委托给特定的网关身份。配对的 iOS 应用会获取 `gateway.identity.get`，将该身份包含在 relay 注册中，并向网关转发一个注册作用域的发送授权。另一台网关不能复用该已存储的注册。
+- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`：上述 relay 配置的临时环境变量覆盖。
+- `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`：仅限开发的跳出开关，允许 loopback HTTP relay URL。生产环境 relay URL 应保持 HTTPS。
+- `gateway.channelHealthCheckMinutes`：频道健康监控间隔，单位分钟。设为 `0` 可全局禁用健康监控重启。默认：`5`。
+- `gateway.channelStaleEventThresholdMinutes`：陈旧套接字阈值，单位分钟。请保持其大于或等于 `gateway.channelHealthCheckMinutes`。默认：`30`。
+- `gateway.channelMaxRestartsPerHour`：每个频道/账户在滚动一小时内允许的健康监控重启最大次数。默认：`10`。
+- `channels.<provider>.healthMonitor.enabled`：按频道选择性关闭健康监控重启，同时保留全局监控启用。
+- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户频道的按账户覆盖。当设置时，其优先级高于频道级覆盖。
+- 本地网关调用路径只有在 `gateway.auth.*` 未设置时，才能将 `gateway.remote.*` 作为回退。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析，解析会失败并关闭（不会被远程回退掩盖）。
+- `trustedProxies`：终止 TLS 或注入转发客户端标头的反向代理 IP。只列出你控制的代理。loopback 条目对于同主机代理/本地检测设置仍然有效（例如 Tailscale Serve 或本地反向代理），但它们**不会**使 loopback 请求具备 `gateway.auth.mode: "trusted-proxy"` 资格。
+- `allowRealIpFallback`：当为 `true` 时，如果缺少 `X-Forwarded-For`，网关接受 `X-Real-IP`。默认 `false`，以保持失败即关闭的行为。
+- `gateway.tools.deny`：为 HTTP `POST /tools/invoke` 阻止的额外工具名称（扩展默认拒绝列表）。
+- `gateway.tools.allow`：从默认 HTTP 拒绝列表中移除工具名称。
 
 </Accordion>
 
@@ -445,7 +438,7 @@ openclaw gateway --port 19001
 ```
 
 认证：`Authorization: Bearer <token>` 或 `x-openclaw-token: <token>`。
-查询字符串钩子令牌将被拒绝。
+查询字符串中的钩子令牌将被拒绝。
 
 验证和安全注意事项：
 
@@ -757,9 +750,10 @@ openclaw gateway --port 19001
 ```
 
 - 默认日志文件：`/tmp/openclaw/openclaw-YYYY-MM-DD.log`。
-- 设置 `logging.file` 以使用稳定路径。
-- 当使用 `--verbose` 时，`consoleLevel` 提升至 `debug`。
-- `maxFileBytes`：写入被抑制前的最大日志文件大小（字节）（正整数；默认：`524288000` = 500 MB）。生产部署请使用外部日志轮转。
+- 设置 `logging.file` 可使用稳定路径。
+- 使用 `--verbose` 时，`consoleLevel` 会提升为 `debug`。
+- `maxFileBytes`：轮转前活动日志文件的最大字节大小（正整数；默认：`104857600` = 100 MB）。OpenClaw 会在活动文件旁保留最多五个带编号的归档文件。
+- `redactSensitive` / `redactPatterns`：对控制台输出、文件日志、OTLP 日志记录以及持久化会话转录文本进行尽力而为的脱敏处理。
 
 ## 诊断（Diagnostics）
 
@@ -802,7 +796,7 @@ openclaw gateway --port 19001
 }
 ```
 
-- `enabled`：仪器输出的总开关（默认：`true`）。
+- `enabled`：仪表输出的总开关（默认：`true`）。
 - `flags`：启用定向日志输出的标志字符串数组（支持通配符，如 `"telegram.*"` 或 `"*"`）。
 - `stuckSessionWarnMs`：当会话保持在处理状态时，触发卡住会话警告的年龄阈值（毫秒）。
 - `otel.enabled`：启用 OpenTelemetry 导出管道（默认：`false`）。

@@ -144,12 +144,14 @@ OpenClaw 建议尽可能使用独立号码运行 WhatsApp。（渠道元数据�
 
 ## 运行时模型
 
-- 网关拥有 WhatsApp socket 和重连循环。
-- 出站发送需要目标账户有一个活跃的 WhatsApp 监听器。
-- 状态和广播聊天被忽略（`@status`, `@broadcast`）。
-- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 将 DM 折叠到代理主会话）。
+- 网关负责管理 WhatsApp socket 和重连循环。
+- 重连看门狗使用的是 WhatsApp Web 传输活动，而不仅仅是入站应用消息量，因此，若链接设备会话保持安静，不会仅因为最近没人发消息就被重启。若传输帧持续到达，但在看门狗窗口内没有处理任何应用消息，较长的应用静默上限仍会强制重连。
+- 出站发送需要目标账户处于活动的 WhatsApp 监听状态。
+- 状态消息和广播聊天会被忽略（`@status`、`@broadcast`）。
+- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DMs 折叠到代理主会话）。
 - 群组会话是隔离的（`agent:<agentId>:whatsapp:group:<jid>`）。
-- WhatsApp Web 传输遵循网关主机上的标准代理环境变量（`HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` / 小写变体）。优先使用主机级代理配置而不是渠道特定的 WhatsApp 代理设置。
+- WhatsApp Web 传输会遵循网关主机上的标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是渠道特定的 WhatsApp 代理设置。
+- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复投递后清除 WhatsApp 的确认反应。
 
 ## 插件钩子和隐私
 
@@ -206,9 +208,9 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
 
     运行时行为详情：
 
-    - pairings are persisted in channel allow-store and merged with configured `allowFrom`
-    - if no allowlist is configured, the linked self number is allowed by default
-    - OpenClaw never auto-pairs outbound `fromMe` DMs (messages you send to yourself from the linked device)
+    - 配对会持久化到渠道允许存储中，并与配置的 `allowFrom` 合并
+    - 如果未配置允许列表，默认允许已关联的自号码
+    - OpenClaw 从不对出站 `fromMe` DMs 自动配对（即您在关联设备上发给自己的消息）
 
   </Tab>
 
@@ -495,7 +497,9 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 对入站回执进行立�
   <Accordion title="已关联但断开连接 / 重连循环">
     症状：已关联账户反复断开或尝试重连。
 
-    解决：
+    静默账户在超过正常消息超时后仍可保持连接；当 WhatsApp Web 传输活动停止、socket 关闭，或应用层活动在更长的安全窗口之外仍保持静默时，watchdog 会重启。
+
+    修复：
 
     ```bash
     openclaw doctor

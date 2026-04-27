@@ -114,12 +114,7 @@ OpenClaw 会转向下一个模型，而非切换配置文件。
 OpenAI 兼容的停止原因错误，如 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error` 被分类为超时/故障切换信号。
 提供商范围的通用服务器文本在源匹配已知瞬态模式时也可能落入该超时桶。例如，Anthropic bare `An unknown error occurred` 和 JSON `api_error` 负载，带有瞬态服务器文本如 `internal server error`、`unknown error, 520`、`upstream error` 或 `backend error` 被视为值得故障切换的超时。OpenRouter 特定的通用上游文本，如 bare `Provider returned error` 仅在提供商上下文实际上是 OpenRouter 时才被视为超时。通用内部回退文本如 `LLM request failed with an unknown error.` 保持保守，本身不触发故障切换。
 
-Some provider SDKs may otherwise sleep for a long `Retry-After` window before
-returning control to OpenClaw. For Stainless-based SDKs such as Anthropic and
-OpenAI, OpenClaw caps SDK-internal `retry-after-ms` / `retry-after` waits at 60
-seconds by default and surfaces longer retryable responses immediately so this
-failover path can run. Tune or disable the cap with
-`OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS`; see [/concepts/retry](/concepts/retry).
+某些提供商 SDK 否则可能会在将控制权交还给 OpenClaw 之前，长时间睡眠于 `Retry-After` 窗口。对于基于 Stainless 的 SDK，例如 Anthropic 和 OpenAI，OpenClaw 默认会将 SDK 内部的 `retry-after-ms` / `retry-after` 等待时间上限设为 60 秒，并立即暴露更长的可重试响应，以便此故障切换路径可以运行。可通过 `OPENCLAW_SDK_RETRY_MAX_WAIT_SECONDS` 调整或禁用该上限；参见 [/concepts/retry](/concepts/retry)。
 
 速率限制冷却也可以限定于模型范围：
 
@@ -220,11 +215,12 @@ OpenClaw 从当前请求的 `provider/model` 加上配置的回退构建候选�
 
 当提供商的每个认证配置文件都已处于冷却状态时，OpenClaw 不会自动永远跳过该提供商。它做出每个候选项的决定：
 
-- 持久认证失败立即跳过整个提供商。
-- 计费禁用通常跳过，但主候选项仍可在节流时被探测，以便无需重启即可恢复。
-- 主候选项可能在冷却过期附近被探测，带有每提供商节流。
-- 同一提供商回退兄弟项尽管有冷却也可被尝试，当失败看起来是瞬态时（`rate_limit`、`overloaded` 或未知）。当速率限制是模型范围且兄弟模型可能立即恢复时，这尤其相关。
-- 瞬态冷却探测限制为每个提供商每次回退运行一次，以便单个提供商不会停滞跨提供商回退。
+- 只有明确的用户驱动模型更改才会标记待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
+- 系统驱动的模型更改，例如回退轮换、心跳覆盖或压缩，绝不会自行标记待处理的实时切换。
+- 在回退重试开始之前，回复运行器会将选定的回退覆盖字段持久化到会话条目中。
+- 实时会话协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
+- 如果实时切换错误指向活动回退链中的后续候选项，OpenClaw 会直接跳转到该选定模型，而不是先遍历无关候选项。
+- 如果回退尝试失败，运行器仅回滚它写入的覆盖字段，且仅当它们仍与该失败的候选项匹配时。
 
 ## 会话覆盖和实时模型切换
 

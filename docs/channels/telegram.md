@@ -285,7 +285,8 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     复杂回复（如媒体负载）退回正常的最终发送并清理预览消息。
 
-    预览流与区块流独立。显式启用区块流时，OpenClaw 跳过预览流避免重复流式。
+    - short DM/group/topic previews: OpenClaw keeps the same preview message and performs a final edit in place
+    - previews older than about one minute: OpenClaw sends the completed reply as a fresh final message and then cleans up the preview, so Telegram's visible timestamp reflects completion time instead of the preview creation time
 
     若原生草稿传输不可用或被拒绝，OpenClaw 自动降级为 `sendMessage` + `editMessageText`。
 
@@ -514,11 +515,11 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     每个主题对应专属会话键：`agent:zu:telegram:group:-1001234567890:topic:3`
 
-    **Persistent ACP topic binding**: Forum topics can pin ACP harness sessions through top-level typed ACP bindings (`bindings[]` with `type: "acp"` and `match.channel: "telegram"`, `peer.kind: "group"`, and a topic-qualified id like `-1001234567890:topic:42`). Currently scoped to forum topics in groups/supergroups. See [ACP Agents](/tools/acp-agents).
+    **Persistent ACP topic binding**: 论坛主题可以通过顶层类型化 ACP 绑定（`bindings[]`，包含 `type: "acp"`、`match.channel: "telegram"`、`peer.kind: "group"`，以及类似 `-1001234567890:topic:42` 的带主题限定 ID）来固定 ACP 执行会话。目前仅适用于群组/超级群组中的论坛主题。参见 [ACP Agents](/tools/acp-agents)。
 
-    **Thread-bound ACP spawn from chat**: `/acp spawn <agent> --thread here|auto` binds the current topic to a new ACP session; follow-ups route there directly. OpenClaw pins the spawn confirmation in-topic. Requires `channels.telegram.threadBindings.spawnAcpSessions=true`.
+    **Thread-bound ACP spawn from chat**: `/acp spawn <agent> --thread here|auto` 会将当前主题绑定到一个新的 ACP 会话；后续跟进会直接路由到那里。OpenClaw 会将 spawn 确认固定在该主题内。需要 `channels.telegram.threadBindings.spawnAcpSessions=true`。
 
-    Template context exposes `MessageThreadId` and `IsForum`. DM chats with `message_thread_id` keep DM routing but use thread-aware session keys.
+    模板上下文暴露 `MessageThreadId` 和 `IsForum`。带 `message_thread_id` 的 DM 聊天仍保持 DM 路由，但会使用感知线程的会话键。
 
   </Accordion>
 
@@ -635,7 +636,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     备注：
 
     - `own` 指用户对机器人发送消息的反应（基于已发送消息缓存的最佳努力）
-    - 反应事件仍受 Telegram 访问控制限制(`dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`)，非授权发件人事件会被丢弃。
+    - 反应事件仍受 Telegram 访问控制限制(`dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`)”，非授权发件人事件会被丢弃。
     - Telegram 不提供反应更新的线程 ID。
       - 非论坛群组路由至群聊会话
       - 论坛群组路由至群组通用主题会话（`:topic:1`），而非具体发起主题

@@ -338,8 +338,7 @@ Telegram 凭据形状：
 
   <Accordion title="嵌入式运行器覆盖">
 
-    - 当你修改消息工具发现输入或压缩运行时
-      上下文时，请保留两个层级的覆盖。
+    - 当你修改消息工具发现输入或压缩运行时上下文时，请保留两个层级的覆盖。
     - 为纯路由与归一化边界添加聚焦的 helper 回归测试。
     - 保持嵌入式运行器集成套件健康：
       `src/agents/pi-embedded-runner/compact.hooks.test.ts`,
@@ -455,7 +454,7 @@ Telegram 凭据形状：
 - `pnpm test:live` 现在默认采用更安静的模式：保留 `[live] ...` 进度输出，但会抑制额外的 `~/.profile` 提示并静音 gateway bootstrap 日志/Bonjour 噪声。如果你想恢复完整启动日志，可设置 `OPENCLAW_LIVE_TEST_QUIET=0`。
 - API key 轮换（按提供商区分）：将 `*_API_KEYS` 设为逗号/分号格式，或使用 `*_API_KEY_1`、`*_API_KEY_2`（例如 `OPENAI_API_KEYS`、`ANTHROPIC_API_KEYS`、`GEMINI_API_KEYS`），或者通过 `OPENCLAW_LIVE_*_KEY` 进行每次 live 的覆盖；测试会在速率限制响应后重试。
 - 进度/心跳输出：
-  - Live suites 现在会向 stderr 输出进度行，因此即使 Vitest 控制台捕获是静默的，较长的 provider 调用也能明显看出正在运行。
+  - Live 套件现在会向 stderr 输出进度行，因此即使 Vitest 控制台捕获是静默的，较长的 provider 调用也能明显看出正在运行。
   - `vitest.live.config.ts` 禁用了 Vitest 的控制台拦截，因此 provider/gateway 进度行会在 live 运行期间立即流式输出。
   - 通过 `OPENCLAW_LIVE_HEARTBEAT_MS` 调整直接模型心跳。
   - 通过 `OPENCLAW_LIVE_GATEWAY_HEARTBEAT_MS` 调整 gateway/probe 心跳。
@@ -475,64 +474,68 @@ harness，以及所有媒体提供商的实况测试（Deepgram、BytePlus、Com
 music、video、media harness）——以及实况运行的凭据处理——请参见
 [测试 — 实况套件](/help/testing-live)。
 
-## Docker 运行器（可选的"在 Linux 中运行"检查）
+## Docker 运行器（可选的“在 Linux 中运行”检查）
 
 这些 Docker 运行器分为两类：
 
-- 实况模型运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只会在仓库 Docker 镜像中运行其匹配的 profile-key 实况文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），挂载你的本地配置目录和工作区（如果挂载了 `~/.profile`，也会 source 它）。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
-- Docker 实况运行器默认采用更小的 smoke 上限，以便完整的 Docker 扫描仍然可行：
+- 实况模型运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只会在仓库 Docker 镜像内运行与其匹配的 profile-key 实况文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录和工作区（如果挂载了 `~/.profile` 也会读取）。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
+- Docker 实况运行器默认采用较小的 smoke 上限，以便完整的 Docker 扫描仍然可行：
   `test:docker:live-models` 默认 `OPENCLAW_LIVE_MAX_MODELS=12`，而
-  `test:docker:live-gateway` 默认 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`，
-  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`，
+  `test:docker:live-gateway` 默认 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`、
+  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`、
   `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000`，以及
-  `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确想要更大的穷尽扫描时，再覆盖这些环境变量。
-- `test:docker:all` 先通过 `test:docker:live-build` 构建一次实况 Docker 镜像，然后在后续的实况 Docker 车道中复用它。它还通过 `test:docker:e2e-build` 构建一次共享的 `scripts/e2e/Dockerfile` 镜像，并在验证已构建应用的 E2E 容器 smoke 运行器中复用它。该聚合使用带权重的本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限确保重型实况、npm 安装和多服务车道不会同时全部启动。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=6`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=8` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。该运行器默认执行 Docker 预检，移除过期的 OpenClaw E2E 容器，每 30 秒打印一次状态，将成功的车道耗时存储在 `.artifacts/docker-tests/lane-timings.json` 中，并使用这些耗时在后续运行中优先启动更长的车道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可以在不构建或运行 Docker 的情况下打印带权重的车道清单。
-- 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
+  `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确想要更大、更穷举的扫描时，再覆盖这些环境变量。
+- `test:docker:all` 会先通过 `test:docker:live-build` 构建一次实况 Docker 镜像，再通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打包成一个 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。裸镜像只是用于 install/update/plugin-dependency 泳道的 Node/Git 运行器；这些泳道会挂载预构建 tarball。功能镜像会将同一个 tarball 安装到 `/app`，用于 built-app 功能泳道。Docker 泳道定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；规划逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 会执行选定的计划。该聚合使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限会避免重型实况、npm-install 和多服务泳道同时启动。默认值是 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=10` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有在 Docker 主机有更多余量时才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。运行器默认会进行 Docker 预检、移除过时的 OpenClaw E2E 容器、每 30 秒打印状态、将成功的泳道耗时存储到 `.artifacts/docker-tests/lane-timings.json`，并在后续运行中根据这些耗时优先启动更长的泳道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可以在不构建或运行 Docker 的情况下打印加权后的泳道清单，或者使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选泳道、包/镜像需求以及凭据的 CI 计划。
+- 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:update-channel-switch`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update` 以及 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
 
 实况模型 Docker 运行器还会只绑定挂载所需的 CLI 认证主目录（或者在运行未缩小范围时挂载所有受支持的主目录），然后在运行前将它们复制到容器主目录中，以便外部 CLI 的 OAuth 可以刷新令牌而不修改宿主机认证存储：
 
 - 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`）
+- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，通过 `pnpm test:docker:live-acp-bind:droid` 和 `pnpm test:docker:live-acp-bind:opencode` 可获得严格的 Droid/OpenCode 覆盖）
 - CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
 - Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- 网关 + 开发代理：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
+- Gateway + 开发代理：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
 - Open WebUI 实况 smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 入门向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- Npm tarball 入门/频道/代理 smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包好的 OpenClaw tarball，默认通过 env-ref onboarding 配置 OpenAI 以及 Telegram，验证 doctor 能修复已激活的插件运行时依赖，并运行一次模拟的 OpenAI 代理轮次。可通过 `OPENCLAW_NPM_ONBOARD_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 切换频道。
-- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 会打包当前树，在隔离的 home 中使用 `bun install -g` 安装它，并验证 `openclaw infer image providers --json` 返回的是内置图像提供商而不是卡住。可通过 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建的 Docker 镜像复制 `dist/`。
-- Installer Docker smoke：`bash scripts/test-install-sh-docker.sh` 在其 root、update 和 direct-npm 容器之间共享一个 npm 缓存。更新 smoke 默认以 npm `latest` 作为稳定基线，再升级到候选 tarball。非 root 安装器检查会保留一个隔离的 npm 缓存，以免 root 拥有的缓存条目掩盖用户本地安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重复运行时复用 root/update/direct-npm 缓存。
-- Install Smoke CI 会跳过重复的 direct-npm 全局更新，使用 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1`；当你需要 direct `npm install -g` 覆盖时，请在本地运行脚本时不要设置该环境变量。
-- 共享工作区 CLI smoke 的删除代理：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建根 Dockerfile 镜像，在隔离的容器 home 中用一个工作区种下两个代理，运行 `agents delete --json`，并验证有效 JSON 以及保留的工作区行为。可复用安装 smoke 镜像：`OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1`。
-- 网关网络（两个容器，WS 认证 + 健康检查）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- OpenAI Responses web_search 最小推理回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）通过 Gateway 运行一个模拟的 OpenAI 服务器，验证 `web_search` 会把 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制提供商 schema 拒绝，并检查原始细节是否出现在 Gateway 日志中。
-- MCP 频道桥接（已种子化的 Gateway + stdio 桥接 + 原始 Claude 通知帧 smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
-- Pi bundle MCP 工具（真实 stdio MCP 服务器 + 内嵌 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
+- 启动向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
+- npm tarball 安装/频道/代理 smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包后的 OpenClaw tarball，默认通过 env-ref onboarding 配置 OpenAI 和 Telegram，验证 doctor 会修复已激活插件的运行时依赖，并运行一次模拟的 OpenAI 代理轮次。可通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 切换频道。
+- 更新频道切换 smoke：`pnpm test:docker:update-channel-switch` 会在 Docker 中全局安装打包后的 OpenClaw tarball，从包 `stable` 切换到 git `dev`，验证持久化后的频道和插件在更新后仍能工作，然后切回包 `stable` 并检查更新状态。
+- 会话运行时上下文 smoke：`pnpm test:docker:session-runtime-context` 验证隐藏的运行时上下文转录持久化，以及 doctor 对受影响的重复 prompt-rewrite 分支的修复。
+- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 会打包当前树，在隔离的 home 中用 `bun install -g` 安装它，并验证 `openclaw infer image providers --json` 返回的是打包内置的 image providers，而不是卡住。可通过 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过主机构建，或通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从构建好的 Docker 镜像复制 `dist/`。
+- 安装器 Docker smoke：`bash scripts/test-install-sh-docker.sh` 会在其 root、update 和 direct-npm 容器之间共享一个 npm 缓存。更新 smoke 默认将 npm `latest` 作为稳定基线，然后再升级到候选 tarball。非 root 安装器检查会保留一个隔离的 npm 缓存，这样 root 拥有的缓存条目不会掩盖用户本地的安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可以在本地重复运行时复用 root/update/direct-npm 缓存。
+- Install Smoke CI 会使用 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；如果需要 direct `npm install -g` 覆盖，请在本地运行脚本时不要设置该环境变量。
+- Agents 删除共享工作区 CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建根 Dockerfile 镜像，在隔离的容器 home 中用一个 workspace 种下两个 agents，运行 `agents delete --json`，并验证返回的是有效 JSON 以及 workspace 保留行为。可通过 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用安装 smoke 镜像。
+- 网关联网（两个容器，WS auth + health）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
+- 浏览器 CDP 快照 smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）会构建源 E2E 镜像和一个 Chromium 层，使用原始 CDP 启动 Chromium，运行 `browser doctor --deep`，并验证 CDP 角色快照覆盖了链接 URL、由光标提升的可点击项、iframe 引用和 frame 元数据。
+- OpenAI Responses `web_search` 最小推理回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）会通过 Gateway 运行一个模拟的 OpenAI 服务器，验证 `web_search` 会把 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制 provider schema 拒绝并检查 Gateway 日志中是否出现原始细节。
+- MCP 频道桥接（已种子化 Gateway + stdio bridge + 原始 Claude 通知帧 smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
+- Pi bundle MCP 工具（真实 stdio MCP server + 嵌入式 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
 - Cron/subagent MCP 清理（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后进行 stdio MCP 子进程拆除）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
-- 插件（安装 smoke + `/plugin` 别名 + Claude-bundle 重启语义）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
-- 插件更新未变更 smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
+- 插件（安装 smoke、ClawHub 安装/卸载、市场更新，以及 Claude-bundle 启用/检查）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
+  设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可跳过 live ClawHub 区块，或通过 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认包。
+- 插件更新未变化 smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
 - 配置重载元数据 smoke：`pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
-- 内置插件运行时依赖：`pnpm test:docker:bundled-channel-deps` 默认会构建一个小型 Docker 运行器镜像，在宿主机上构建并打包 OpenClaw 一次，然后将该 tarball 挂载到每个 Linux 安装场景中。可通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 复用该镜像，通过 `OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD=0` 在本地新鲜构建后跳过宿主机重建，或通过 `OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 指向现有 tarball。完整的 Docker 聚合会先预打包这个 tarball，然后将内置频道检查分片到独立车道中，包括 Telegram、Discord、Slack、飞书、memory-lancedb 和 ACPX 的单独更新车道。当直接运行内置车道时，使用 `OPENCLAW_BUNDLED_CHANNELS=telegram,slack` 缩小频道矩阵，或使用 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_TARGETS=telegram,acpx` 缩小更新场景。该车道还会验证 `channels.<id>.enabled=false` 和 `plugins.entries.<id>.enabled=false` 会抑制 doctor/运行时依赖修复。
-- 在迭代时，通过禁用无关场景来缩小内置插件运行时依赖检查范围，例如：
+- bundled plugin 运行时依赖：`pnpm test:docker:bundled-channel-deps` 默认先构建一个小型 Docker 运行器镜像，在主机上构建并打包一次 OpenClaw，然后将该 tarball 挂载到每个 Linux 安装场景中。可通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 复用镜像，通过 `OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD=0` 在本地新构建后跳过主机重建，或通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 指向已有 tarball。完整的 Docker 聚合会先打包一次该 tarball，然后将 bundled channel 检查分片成独立泳道，包括 Telegram、Discord、Slack、Feishu、memory-lancedb 和 ACPX 的独立更新泳道。运行 bundled 泳道时，可使用 `OPENCLAW_BUNDLED_CHANNELS=telegram,slack` 缩小频道矩阵，或使用 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_TARGETS=telegram,acpx` 缩小更新场景。该泳道还会验证 `channels.<id>.enabled=false` 和 `plugins.entries.<id>.enabled=false` 会抑制 doctor/runtime-dependency 修复。
+- 在迭代时，通过禁用无关场景来缩小 bundled plugin 运行时依赖范围，例如：
   `OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 pnpm test:docker:bundled-channel-deps`。
 
-要手动预构建并复用共享的已构建应用镜像：
+要手动预构建并复用共享功能镜像：
 
 ```bash
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e:local pnpm test:docker:e2e-build
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e:local OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels
+OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local pnpm test:docker:e2e-build
+OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels
 ```
 
 像 `OPENCLAW_GATEWAY_NETWORK_E2E_IMAGE` 这样的套件特定镜像覆盖在设置后仍会优先生效。当 `OPENCLAW_SKIP_DOCKER_BUILD=1` 指向远程共享镜像时，如果该镜像尚未在本地存在，脚本会拉取它。QR 和 installer 的 Docker 测试保留它们各自的 Dockerfile，因为它们验证的是包/安装行为，而不是共享的已构建应用运行时。
 
-实况模型 Docker 运行器还会以只读方式绑定挂载当前检出内容，并将其暂存到容器内的临时工作目录。这在保持运行时镜像精简的同时，仍然可以用你精确的本地源码/配置运行 Vitest。暂存步骤会跳过大型仅本地缓存和应用构建输出，例如 `.pnpm-store`、`.worktrees`、`__openclaw_vitest__`，以及应用本地的 `.build` 或 Gradle 输出目录，这样 Docker 实况运行就不会花几分钟去复制机器特定的产物。
-它们还会设置 `OPENCLAW_SKIP_CHANNELS=1`，以便网关实况探测不会在容器内启动真实的 Telegram/Discord/等频道工作器。
-`test:docker:live-models` 仍然会运行 `pnpm test:live`，因此当你需要缩小或排除该 Docker 车道中的网关实况覆盖范围时，也要透传 `OPENCLAW_LIVE_GATEWAY_*`。
-`test:docker:openwebui` 是一个更高层级的兼容性 smoke：它启动一个启用 OpenAI 兼容 HTTP 端点的 OpenClaw 网关容器，启动一个固定版本的 Open WebUI 容器连接该网关，通过 Open WebUI 完成登录，验证 `/api/models` 暴露 `openclaw/default`，然后通过 Open WebUI 的 `/api/chat/completions` 代理发送一次真实聊天请求。
-第一次运行可能会明显更慢，因为 Docker 可能需要拉取 Open WebUI 镜像，而且 Open WebUI 可能还需要完成自身的冷启动设置。
+实况模型 Docker 运行器还会以只读方式绑定挂载当前检出内容，并将其暂存到容器内的临时工作目录。这在保持运行时镜像精简的同时，仍然可以用你精确的本地源码/配置运行 Vitest。暂存步骤会跳过大型仅本地缓存和应用构建输出，例如 `.pnpm-store`、`.worktrees`、`__openclaw_vitest__`，以及应用本地的 `.build` 或 Gradle 输出目录，这样 Docker 实况运行就不会花几分钟去复制机器特定的产物。  
+它们还会设置 `OPENCLAW_SKIP_CHANNELS=1`，以便网关实况探测不会在容器内启动真实的 Telegram/Discord/等频道工作器。  
+`test:docker:live-models` 仍然会运行 `pnpm test:live`，因此当你需要缩小或排除该 Docker 车道中的网关实况覆盖范围时，也要透传 `OPENCLAW_LIVE_GATEWAY_*`。  
+`test:docker:openwebui` 是一个更高层级的兼容性 smoke：它启动一个启用 OpenAI 兼容 HTTP 端点的 OpenClaw 网关容器，启动一个固定版本的 Open WebUI 容器连接该网关，通过 Open WebUI 完成登录，验证 `/api/models` 暴露 `openclaw/default`，然后通过 Open WebUI 的 `/api/chat/completions` 代理发送一次真实聊天请求。  
+第一次运行可能会明显更慢，因为 Docker 可能需要拉取 Open WebUI 镜像，而且 Open WebUI 可能还需要完成自身的冷启动设置。  
 该车道需要一个可用的实况模型密钥，而 `OPENCLAW_PROFILE_FILE`
-（默认 `~/.profile`）是在 Docker 化运行中提供它的主要方式。
+（默认 `~/.profile`）是在 Docker 化运行中提供它的主要方式。  
 成功运行会打印一个类似 `{ "ok": true, "model":
-"openclaw/default", ... }` 的小型 JSON 载荷。
+"openclaw/default", ... }` 的小型 JSON 载荷。  
 `test:docker:mcp-channels` 被刻意设计为确定性的，并不需要真实的
 Telegram、Discord 或 iMessage 账户。它会启动一个已种子化的 Gateway
 容器，启动第二个容器来运行 `openclaw mcp serve`，然后
@@ -540,15 +543,15 @@ Telegram、Discord 或 iMessage 账户。它会启动一个已种子化的 Gatew
 实况事件队列行为、出站发送路由，以及通过真实 stdio MCP 桥接的
 Claude 风格频道 + 权限通知。通知检查会直接检查原始 stdio MCP 帧，
 因此该 smoke 验证的是桥接实际发出的内容，而不只是某个特定客户端 SDK
-恰好展示的内容。
+恰好展示的内容。  
 `test:docker:pi-bundle-mcp-tools` 是确定性的，并不需要实况
 模型密钥。它会构建仓库 Docker 镜像，在容器内启动一个真实的 stdio MCP 探测服务器，
 通过内嵌的 Pi bundle MCP 运行时实例化该服务器，执行该工具，然后验证
-`coding` 和 `messaging` 会保留 `bundle-mcp` 工具，而 `minimal` 和 `tools.deny: ["bundle-mcp"]` 会将它们过滤掉。
+`coding` 和 `messaging` 会保留 `bundle-mcp` 工具，而 `minimal` 和 `tools.deny: ["bundle-mcp"]` 会将它们过滤掉。  
 `test:docker:cron-mcp-cleanup` 是确定性的，并不需要实况模型
 密钥。它会启动一个已种子化的 Gateway 和一个真实的 stdio MCP 探测服务器，运行一个隔离的 cron 轮次和一次 `/subagents spawn` 单次子代理轮次，然后验证每次运行后 MCP 子进程都会退出。
 
-手动 ACP 明文线程冒烟（非 CI）：
+手动 ACP 明文线程 smoke（非 CI）：
 
 - `bun scripts/dev/discord-acp-plain-language-smoke.ts --channel <discord-channel-id> ...`
 - 保留此脚本供回归/调试流程，未来可能再次用于 ACP 线程路由验证，勿删。
