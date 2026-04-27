@@ -45,7 +45,16 @@ title: "Cron"
 
 注意：`cron add|edit --model ...` 使用该选定的允许模型用于作业。如果模型不被允许，cron 会警告并回退到作业的代理/默认模型选择。配置的回退链仍然适用，但没有明确每作业回退列表的单纯模型覆盖不再将代理主模型作为隐藏的额外重试目标附加。
 
-注意：孤立 cron 模型优先级首先是 Gmail-hook 覆盖，然后是每作业 `--model`，接着是任何存储的 cron 会话模型覆盖，最后是正常的代理/默认选择。
+Note: isolated cron runs treat known denial markers in final output, such as
+`SYSTEM_RUN_DENIED`, `INVALID_REQUEST`, and approval-binding refusal phrases, as
+errors. `cron list` and run history then surface the matched token in the error
+reason instead of reporting a blocked command as `ok`.
+
+Note: `cron add|edit --model ...` uses that selected allowed model for the job.
+If the model is not allowed, cron warns and falls back to the job's agent/default
+model selection instead. Configured fallback chains still apply, but a plain
+model override with no explicit per-job fallback list no longer appends the
+agent primary as a hidden extra retry target.
 
 注意：孤立 cron 快速模式遵循解析后的实时模型选择。模型配置 `params.fastMode` 默认适用，但存储的会话 `fastMode` 覆盖仍优先于配置。
 

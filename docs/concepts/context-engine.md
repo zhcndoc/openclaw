@@ -166,6 +166,8 @@ export default function register(api) {
 - `estimatedTokens`（必需，`number` 类型）— 引擎对组装上下文中总 Token 数的估计。OpenClaw 使用此值进行压缩阈值决策和诊断报告。
 - `systemPromptAddition`（可选，`string` 类型）— 附加到系统提示前。
 
+`compact` 返回一个 `CompactResult`。当压缩会轮换当前转录时，`result.sessionId` 和 `result.sessionFile` 标识下一次重试或下一回合必须使用的后继会话。
+
 可选成员：
 
 | 成员 | 类型 | 用途 |

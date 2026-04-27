@@ -534,8 +534,10 @@ Z.AI 模型默认启用 `tool_stream` 以进行工具调用流式传输。将 `a
         identifierPolicy: "strict", // strict | off | custom
         identifierInstructions: "请精确保留部署 ID、工单 ID 和 host:port 对。", // 当 identifierPolicy=custom 时使用
         postCompactionSections: ["Session Startup", "Red Lines"], // [] disables reinjection
-        model: "openrouter/anthropic/claude-sonnet-4-6", // 仅用于压缩的可选模型覆盖
-        notifyUser: true, // 压缩开始和完成时发送简短通知（默认：false）
+        model: "openrouter/anthropic/claude-sonnet-4-6", // optional compaction-only model override
+        truncateAfterCompaction: true, // rotate to a smaller successor JSONL after compaction
+        maxActiveTranscriptBytes: "20mb", // optional preflight local compaction trigger
+        notifyUser: true, // send brief notices when compaction starts and completes (default: false)
         memoryFlush: {
           enabled: true,
           softThresholdTokens: 6000,
@@ -548,15 +550,18 @@ Z.AI 模型默认启用 `tool_stream` 以进行工具调用流式传输。将 `a
 }
 ```
 
-- `mode`：`default` 或 `safeguard`（用于长历史的分块摘要）。参见 [压缩](/concepts/compaction)。
-- `provider`：已注册压缩提供方插件的 id。设置后，会调用提供方的 `summarize()`，而不是内置 LLM 摘要。失败时回退到内置实现。设置提供方会强制使用 `mode: "safeguard"`。参见 [压缩](/concepts/compaction)。
-- `timeoutSeconds`：OpenClaw 在中止单次压缩操作前允许的最大秒数。默认值：`900`。
-- `identifierPolicy`：`strict`（默认）、`off` 或 `custom`。`strict` 会在压缩摘要期间前置内置的、不可见标识符保留指导。
-- `identifierInstructions`：当 `identifierPolicy=custom` 时使用的可选自定义标识符保留文本。
-- `postCompactionSections`：压缩后可重新注入的可选 AGENTS.md H2/H3 节标题。默认值：`["Session Startup", "Red Lines"]`；设为 `[]` 可禁用重新注入。当未设置或显式设为该默认对时，较旧的 `Every Session`/`Safety` 标题也会作为旧版回退被接受。
-- `model`：仅用于压缩摘要的可选 `provider/model-id` 覆盖。当主会话应保持一个模型，但压缩摘要应在另一个模型上运行时使用此项；若未设置，压缩将使用会话的主模型。
-- `notifyUser`：当为 `true` 时，在压缩开始和完成时向用户发送简短通知（例如，“正在压缩上下文...” 和“压缩完成”）。默认禁用，以保持压缩静默。
-- `memoryFlush`：在自动压缩前进行的静默智能体轮次，用于保存持久性记忆。若工作区为只读则跳过。
+- `mode`: `default` or `safeguard` (chunked summarization for long histories). See [Compaction](/concepts/compaction).
+- `provider`: id of a registered compaction provider plugin. When set, the provider's `summarize()` is called instead of built-in LLM summarization. Falls back to built-in on failure. Setting a provider forces `mode: "safeguard"`. See [Compaction](/concepts/compaction).
+- `timeoutSeconds`: maximum seconds allowed for a single compaction operation before OpenClaw aborts it. Default: `900`.
+- `keepRecentTokens`: Pi cut-point budget for keeping the most recent transcript tail verbatim. Manual `/compact` honors this when explicitly set; otherwise manual compaction is a hard checkpoint.
+- `identifierPolicy`: `strict` (default), `off`, or `custom`. `strict` prepends built-in opaque identifier retention guidance during compaction summarization.
+- `identifierInstructions`: optional custom identifier-preservation text used when `identifierPolicy=custom`.
+- `qualityGuard`: retry-on-malformed-output checks for safeguard summaries. Enabled by default in safeguard mode; set `enabled: false` to skip the audit.
+- `postCompactionSections`: optional AGENTS.md H2/H3 section names to re-inject after compaction. Defaults to `["Session Startup", "Red Lines"]`; set `[]` to disable reinjection. When unset or explicitly set to that default pair, older `Every Session`/`Safety` headings are also accepted as a legacy fallback.
+- `model`: optional `provider/model-id` override for compaction summarization only. Use this when the main session should keep one model but compaction summaries should run on another; when unset, compaction uses the session's primary model.
+- `maxActiveTranscriptBytes`: optional byte threshold (`number` or strings like `"20mb"`) that triggers normal local compaction before a run when the active JSONL grows past the threshold. Requires `truncateAfterCompaction` so successful compaction can rotate to a smaller successor transcript. Disabled when unset or `0`.
+- `notifyUser`: when `true`, sends brief notices to the user when compaction starts and when it completes (for example, "Compacting context..." and "Compaction complete"). Disabled by default to keep compaction silent.
+- `memoryFlush`: silent agentic turn before auto-compaction to store durable memories. Skipped when workspace is read-only.
 
 ### `agents.defaults.contextPruning`
 

@@ -36,6 +36,18 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 
 添加 `--no-onboard` 以跳过入门设置。对于源码安装，传递 `--install-method git --no-onboard`。
 
+如果 `openclaw update` 在 npm 包安装阶段之后失败，请重新运行安装程序。安装程序不会调用旧的更新器；它会直接执行全局包安装，并且可以恢复部分更新的 npm 安装。
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm
+```
+
+要将恢复固定到特定版本或 dist-tag，请添加 `--version`：
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm --version <version-or-dist-tag>
+```
+
 ## 备选方案：手动使用 npm、pnpm 或 bun
 
 ```bash

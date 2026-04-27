@@ -307,10 +307,58 @@ openclaw gateway restart
 openclaw gateway uninstall
 ```
 
-命令选项：
+### 使用包装器安装
 
-- `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
-- `gateway install`: `--port`, `--runtime <node|bun>`, `--token`, `--force`, `--json`
+当受管服务必须通过另一个可执行文件启动时，请使用 `--wrapper`，例如机密管理器封装器或 run-as 辅助程序。包装器接收正常的 Gateway 参数，并负责最终使用这些参数 exec `openclaw` 或 Node。
+
+```bash
+cat > ~/.local/bin/openclaw-doppler <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+exec doppler run --project my-project --config production -- openclaw "$@"
+EOF
+chmod +x ~/.local/bin/openclaw-doppler
+
+openclaw gateway install --wrapper ~/.local/bin/openclaw-doppler --force
+openclaw gateway restart
+```
+
+您也可以通过环境变量设置包装器。`gateway install` 会验证该路径是一个可执行文件，将包装器写入服务 `ProgramArguments`，并在服务环境中持久化 `OPENCLAW_WRAPPER`，以便后续强制重装、更新和 doctor 修复继续使用该包装器。
+
+```bash
+OPENCLAW_WRAPPER="$HOME/.local/bin/openclaw-doppler" openclaw gateway install --force
+openclaw doctor
+```
+
+要移除已持久化的包装器，请在重新安装时清空 `OPENCLAW_WRAPPER`：
+
+```bash
+OPENCLAW_WRAPPER= openclaw gateway install --force
+openclaw gateway restart
+```
+
+<AccordionGroup>
+  <Accordion title="命令选项">
+    - `gateway status`: `--url`、`--token`、`--password`、`--timeout`、`--no-probe`、`--require-rpc`、`--deep`、`--json`
+    - `gateway install`: `--port`、`--runtime <node|bun>`、`--token`、`--wrapper <path>`、`--force`、`--json`
+    - `gateway uninstall|start|stop|restart`: `--json`
+  </Accordion>
+  <Accordion title="服务安装与生命周期说明">
+    - `gateway install` 支持 `--port`、`--runtime`、`--token`、`--wrapper`、`--force`、`--json`。
+    - `--wrapper <path>` 会让受管服务通过一个可执行包装器启动，将 `ProgramArguments` 写为 `<wrapper> gateway --port ...`，并在服务环境中持久化 `OPENCLAW_WRAPPER`，以便强制重装、更新和 doctor 修复继续使用同一个包装器。`openclaw doctor` 也会报告当前活动的包装器。如果省略 `--wrapper`，安装会尊重来自 shell 或当前服务环境中已有的 `OPENCLAW_WRAPPER`。
+    - 要移除已持久化的包装器，可使用空的包装器环境重新安装，例如 `OPENCLAW_WRAPPER= openclaw gateway install --force`。
+    - 使用 `gateway restart` 重启受管服务。不要将 `gateway stop` 和 `gateway start` 串联起来代替重启；在 macOS 上，`gateway stop` 会在停止前故意禁用 LaunchAgent。
+    - 当令牌认证需要令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证该 SecretRef 是否可解析，但不会将解析出的令牌持久化到服务环境元数据中。
+    - 如果令牌认证需要令牌且已配置的令牌 SecretRef 未解析，安装会直接失败，而不是持久化回退明文。
+    - 对于 `gateway run` 的密码认证，优先使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file` 或由 SecretRef 支持的 `gateway.auth.password`，而不是内联 `--password`。
+    - 在推断认证模式下，仅 shell 中的 `OPENCLAW_GATEWAY_PASSWORD` 不会放宽安装令牌要求；安装受管服务时应使用持久化配置（`gateway.auth.password` 或配置 `env`）。
+    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password` 且 `gateway.auth.mode` 未设置，安装会被阻止，直到显式设置模式。
+    - 生命周期命令接受 `--json` 以便脚本化。
+  </Accordion>
+</AccordionGroup>
+
+- `gateway status`: `--url`、`--token`、`--password`、`--timeout`、`--no-probe`、`--require-rpc`、`--deep`、`--json`
+- `gateway install`: `--port`、`--runtime <node|bun>`、`--token`、`--force`、`--json`
 - `gateway uninstall|start|stop|restart`: `--json`
 
 注意：

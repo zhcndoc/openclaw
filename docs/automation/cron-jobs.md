@@ -4,7 +4,7 @@ read_when:
   - Scheduling background jobs or wakeups
   - Wiring external triggers (webhooks, Gmail) into OpenClaw
   - Deciding between heartbeat and cron for scheduled tasks
-title: "Scheduled tasks"
+title: "计划任务"
 ---
 
 Cron 是 Gateway 内置的调度器。它会持久化任务，在正确的时间唤醒代理，并且可以将输出返回到聊天频道或 webhook 端点。
@@ -25,20 +25,15 @@ openclaw cron add \
 openclaw cron list
 openclaw cron show <job-id>
 
-# 查看运行历史
-openclaw cron runs --id <job-id>
-```
-
-## Cron 如何工作
-
-- Cron 运行在 **Gateway** 进程内部（而不是在模型内部）。
-- 任务定义持久化在 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
-- 运行时执行状态持久化在其旁边的 `~/.openclaw/cron/jobs-state.json` 中。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
-- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会将任务视为新任务，因为运行时字段现在位于 `jobs-state.json` 中。
+- Cron 运行在 Gateway 进程内部（不在模型内部）。
+- 任务定义会持久化到 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
+- 运行时执行状态会持久化到旁边的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
+- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会将任务视为全新的，因为运行时字段现在位于 `jobs-state.json` 中。
 - 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
 - 一次性任务（`--at`）在成功后默认自动删除。
-- 隔离的 cron 运行会在运行完成时尽力关闭其 `cron:<jobId>` 会话下跟踪到的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤立进程。
-- 隔离的 cron 运行还会防止过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 之类的提示），并且没有仍然负责最终答案的后代子代理运行，OpenClaw 会在交付前再次提示一次以获取实际结果。
+- 隔离 cron 在运行完成时会尽力关闭其 `cron:<jobId>` 会话下已跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
+- 隔离 cron 还会防止过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有后代子代理运行仍然负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
+- 隔离 cron 会将最终摘要/输出中已知的执行拒绝标记视为失败，包括 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST` 等主机标记，因此被阻止的命令不会被报告为成功运行。
 
 <a id="maintenance"></a>
 

@@ -96,7 +96,7 @@ const handler = async (event) => {
     return;
   }
 
-  console.log(`[my-hook] New command triggered`);
+  console.log(`[my-hook] 新命令已触发`);
   // 你的逻辑在这里
 
   // 可选：向用户发送消息
@@ -168,7 +168,7 @@ openclaw hooks enable <hook-name>
 
 ### session-memory 详情
 
-提取最后 15 条用户/助手消息，通过 LLM 生成描述性文件名 slug，并保存到 `<workspace>/memory/YYYY-MM-DD-slug.md`。需要配置 `workspace.dir`。
+提取最近 15 条用户/助手消息，通过 LLM 生成描述性的文件名 slug，并使用主机本地日期保存到 `<workspace>/memory/YYYY-MM-DD-slug.md`。需要配置 `workspace.dir`。
 
 <a id="bootstrap-extra-files"></a>
 

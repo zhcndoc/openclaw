@@ -38,10 +38,15 @@ OpenClaw 有三个公开发布通道：
 
 ## 发布预检
 
-- 在发布预检之前运行 `pnpm check:test-types`，以便测试 TypeScript 在更快的本地 `pnpm check` 门禁之外也得到覆盖
-- 在发布预检之前运行 `pnpm check:architecture`，以便更广泛的导入循环和架构边界检查在更快的本地门禁之外保持绿色
-- 在运行 `pnpm release:check` 之前先运行 `pnpm build && pnpm ui:build`，以便 pack 验证步骤所需的预期 `dist/*` 发布产物和 Control UI bundle 存在
-- 每次带标签发布前都运行 `pnpm release:check`
+- 在发布预检前运行 `pnpm check:test-types`，这样测试 TypeScript 就能在更快的本地 `pnpm check` 门禁之外得到覆盖
+- 在发布预检前运行 `pnpm check:architecture`，这样更广泛的导入循环和架构边界检查就能在更快的本地门禁之外保持绿色
+- 在 `pnpm release:check` 之前运行 `pnpm build && pnpm ui:build`，这样 pack 验证步骤所需的 `dist/*` 发布产物和 Control UI bundle 就会存在
+- 当你需要从一个入口获得完整的发布验证套件时，在发布批准前运行手动的 `Full Release Validation` 工作流。它接受分支、标签或完整 commit SHA，调度手动 `CI`，并调度 `OpenClaw Release Checks`，用于安装烟测、Docker 发布路径套件、live/E2E、OpenWebUI、QA Lab parity、Matrix 和 Telegram 流水线。仅在包已发布且发布后的 Telegram E2E 也应运行时，才提供 `npm_telegram_package_spec`。
+  示例：`gh workflow run full-release-validation.yml --ref main -f ref=release/YYYY.M.D`
+- 当你只需要发布候选的完整常规 CI 覆盖时，直接运行手动 `CI` 工作流。手动 CI 调度会绕过 changed scoping，并强制运行 Linux Node shards、bundled-plugin shards、channel contracts、Node 22 兼容性、`check`、`check-additional`、build smoke、docs checks、Python skills、Windows、macOS、Android 和 Control UI i18n 流水线。
+  示例：`gh workflow run ci.yml --ref release/YYYY.M.D`
+- 在验证发布遥测时运行 `pnpm qa:otel:smoke`。它通过本地 OTLP/HTTP receiver 运行 QA-lab，并在不需要 Opik、Langfuse 或其他外部 collector 的情况下，验证导出的 trace span 名称、受限属性以及内容/标识符脱敏。
+- 在每次带标签发布前运行 `pnpm release:check`
 - 发布检查现在在一个单独的手动工作流中运行：
   `OpenClaw Release Checks`
 - `OpenClaw Release Checks` 还会在发布批准前运行 QA Lab mock parity 门禁以及实时 Matrix 和 Telegram QA 通道。实时通道使用
@@ -50,14 +55,15 @@ OpenClaw 有三个公开发布通道：
   `openclaw/releases-private/.github/workflows/openclaw-cross-os-release-checks.yml`，
   该工作流会调用可复用的公开工作流
   `.github/workflows/openclaw-cross-os-release-checks-reusable.yml`
-- 这样拆分是有意为之：保持真正的 npm 发布路径短小、确定且以产物为中心，而较慢的实时检查留在它们自己的通道中，这样就不会拖慢或阻塞发布
-- 发布检查必须从 `main` 工作流 ref 或 `release/YYYY.M.D` 工作流 ref 触发，以便工作流逻辑和密钥保持受控
-- 该工作流既接受现有发布标签，也接受当前完整的 40 字符 workflow-branch commit SHA
-- 在 commit-SHA 模式下，它只接受当前 workflow-branch 的 HEAD；较旧的发布提交请使用发布标签
-- `OpenClaw NPM Release` 仅验证预检也接受当前完整的 40 字符 workflow-branch commit SHA，而不要求已经推送标签
-- 该 SHA 路径仅用于验证，不能晋级为真正的发布
-- 在 SHA 模式下，工作流只会合成 `v<package.json version>` 用于包元数据检查；真正发布仍然需要真实的发布标签
-- 两个工作流都将真正的发布和晋级路径保留在 GitHub 托管 runner 上，而非变更性的验证路径可以使用更大的 Blacksmith Linux runner
+- 这种拆分是有意为之：保持真实 npm 发布路径简短、确定且以产物为中心，而把较慢的 live 检查留在它们自己的通道中，这样它们就不会拖慢或阻塞发布
+- 带密钥的发布检查应通过 `Full Release
+Validation` 或从 `main`/release 工作流 ref 调度，以便工作流逻辑和
+  密钥保持受控
+- `OpenClaw Release Checks` 接受分支、标签或完整 commit SHA，只要解析后的 commit 可从 OpenClaw 分支或发布标签到达
+- `OpenClaw NPM Release` 仅验证预检也接受当前完整的 40 字符 workflow-branch commit SHA，而不需要已推送的标签
+- 该 SHA 路径仅用于验证，不能晋级为真实发布
+- 在 SHA 模式下，工作流只会为了包元数据检查合成 `v<package.json version>`；真实发布仍然需要真实的发布标签
+- 这两个工作流都将真实发布和晋级路径保留在 GitHub 托管的 runner 上，而非变更性的验证路径可以使用更大的 Blacksmith Linux runner
 - 该工作流运行
   `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_CACHE_TEST=1 pnpm test:live:cache`
   使用 `OPENAI_API_KEY` 和 `ANTHROPIC_API_KEY` 工作流密钥
@@ -123,41 +129,38 @@ OpenClaw 有三个公开发布通道：
 
 `OpenClaw Release Checks` 接受以下操作员控制的输入：
 
-- `ref`: 从 `main` 触发时，用于验证的现有发布标签或当前完整的 40 字符 `main` commit
-  SHA；从发布分支触发时，使用现有发布标签或当前完整的 40 字符发布分支 commit SHA
+- `ref`: branch, tag, or full commit SHA to validate. Secret-bearing checks
+  require the resolved commit to be reachable from an OpenClaw branch or
+  release tag.
 
 规则：
 
-- 稳定标签和修正标签可以发布到 `beta` 或 `latest`
+- 稳定版和修正版标签可以发布到 `beta` 或 `latest`
 - Beta 预发布标签只能发布到 `beta`
-- 对于 `OpenClaw NPM Release`，只有在 `preflight_only=true` 时才允许输入完整 commit SHA
-- `OpenClaw Release Checks` 始终仅用于验证，并且也接受当前 workflow-branch commit SHA
-- Release checks 的 commit-SHA 模式也要求当前 workflow-branch HEAD
-- 真正的发布路径必须使用与预检期间相同的 `npm_dist_tag`；工作流会在发布前验证该元数据是否保持一致
+- 对于 `OpenClaw NPM Release`，完整 commit SHA 输入仅在
+  `preflight_only=true` 时允许
+- `OpenClaw Release Checks` 和 `Full Release Validation` 始终仅用于验证
+- 真正的发布路径必须使用与预检期间相同的 `npm_dist_tag`；
+  工作流会在发布前验证该元数据持续一致
 
 ## 稳定 npm 发布序列
 
 进行稳定 npm 发布时：
 
-1. Run `OpenClaw NPM Release` with `preflight_only=true`
-   - Before a tag exists, you may use the current full workflow-branch commit
-     SHA for a validation-only dry run of the preflight workflow
-2. Choose `npm_dist_tag=beta` for the normal beta-first flow, or `latest` only
-   when you intentionally want a direct stable publish
-3. Run `OpenClaw Release Checks` separately with the same tag or the
-   full current workflow-branch commit SHA when you want live prompt cache,
-   QA Lab parity, Matrix, and Telegram coverage
-   - This is separate on purpose so live coverage stays available without
-     recoupling long-running or flaky checks to the publish workflow
-4. Save the successful `preflight_run_id`
-5. Run `OpenClaw NPM Release` again with `preflight_only=false`, the same
-   `tag`, the same `npm_dist_tag`, and the saved `preflight_run_id`
-6. If the release landed on `beta`, use the private
+1. 运行 `OpenClaw NPM Release`，并设置 `preflight_only=true`
+   - 在标签尚不存在之前，你可以使用当前完整的 workflow-branch commit
+     SHA 对预检工作流进行仅验证的 dry run
+2. 对于正常的 beta-first 流程，选择 `npm_dist_tag=beta`；只有在你有意
+   直接发布稳定版时才选择 `latest`
+3. 在发布分支、发布标签或完整 commit SHA 上运行 `Full Release Validation`，当你希望从一个手动工作流获得常规 CI 加上 live prompt cache、Docker、QA Lab、Matrix 和 Telegram 覆盖时
+4. 如果你有意只需要确定性的常规测试图，则改为在发布 ref 上运行手动 `CI` 工作流
+5. 保存成功的 `preflight_run_id`
+6. 再次运行 `OpenClaw NPM Release`，将 `preflight_only=false`、相同的 `tag`、相同的 `npm_dist_tag` 和保存的 `preflight_run_id` 一并传入
+7. 如果发布落在 `beta` 上，使用私有的
    `openclaw/releases-private/.github/workflows/openclaw-npm-dist-tags.yml`
-   工作流将该稳定版从 `beta` 提升到 `latest`
-7. 如果发布有意直接发布到 `latest`，并且 `beta`
-   应立即跟随同一个稳定构建，则使用相同的私有
-   工作流将两个 dist-tag 都指向该稳定版本，或者让其定时的自愈同步稍后将 `beta` 移动过去
+   工作流将该稳定版本从 `beta` 提升到 `latest`
+8. 如果发布有意直接发布到 `latest`，并且 `beta` 应立即跟随同一个稳定构建，则使用同一个私有
+   工作流将两个 dist-tag 都指向该稳定版本，或者让其计划中的自愈同步稍后将 `beta` 移动过去
 
 dist-tag 的变更位于私有仓库中以确保安全，因为它仍然
 需要 `NPM_TOKEN`，而公开仓库保持仅 OIDC 的发布。

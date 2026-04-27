@@ -1,9 +1,9 @@
 ---
 summary: "节点发现与传输（Bonjour、Tailscale、SSH），用于查找网关"
 read_when:
-  - Implementing or changing Bonjour discovery/advertising
-  - Adjusting remote connection modes (direct vs SSH)
-  - Designing node discovery + pairing for remote nodes
+  - 实现或更改 Bonjour 发现/广播
+  - 调整远程连接模式（直连 vs SSH）
+  - 设计用于远程节点的节点发现 + 配对
 title: "发现与传输"
 ---
 
@@ -22,7 +22,7 @@ OpenClaw 有两个表面上看起来相似但实质不同的问题：
 - **Gateway WS (control plane)**：默认位于 `127.0.0.1:18789` 的 WebSocket 端点；可以通过 `gateway.bind` 绑定到局域网/尾网。
 - **Direct WS transport**：面向局域网/尾网的网关 WS 端点（无 SSH）。
 - **SSH transport (fallback)**：通过 SSH 转发 `127.0.0.1:18789` 进行远程控制。
-- **Legacy TCP bridge (removed)**：旧版节点传输（见 [桥接协议](/gateway/bridge-protocol)）；不再用于发现广告，也不再包含在当前构建中。
+- **Legacy TCP bridge (removed)**：旧版节点传输（见 [桥接协议](/gateway/bridge-protocol)）；不再用于发现广播，也不再包含在当前构建中。
 
 协议详见：
 
@@ -82,11 +82,12 @@ OpenClaw 有两个表面上看起来相似但实质不同的问题：
 
 禁用/覆盖：
 
-- `OPENCLAW_DISABLE_BONJOUR=1` 禁用广告。
-- `~/.openclaw/openclaw.json` 中的 `gateway.bind` 控制网关绑定模式。
-- 当发出 `sshPort` 时，`OPENCLAW_SSH_PORT` 覆盖广告中的 SSH 端口。
-- `OPENCLAW_TAILNET_DNS` 发布 `tailnetDns` 提示（MagicDNS）。
-- `OPENCLAW_CLI_PATH` 覆盖广告的 CLI 路径。
+- `OPENCLAW_DISABLE_BONJOUR=1` 禁用广播。
+- 当 `OPENCLAW_DISABLE_BONJOUR` 未设置时，Bonjour 会在正常主机上广播，并在检测到的容器内自动禁用。仅在主机、macvlan 或其他支持 mDNS 的网络中使用 `0`；使用 `1` 可强制禁用。
+- `gateway.bind` in `~/.openclaw/openclaw.json` controls the Gateway bind mode.
+- `OPENCLAW_SSH_PORT` overrides the SSH port advertised when `sshPort` is emitted.
+- `OPENCLAW_TAILNET_DNS` publishes a `tailnetDns` hint (MagicDNS).
+- `OPENCLAW_CLI_PATH` overrides the advertised CLI path.
 
 ### 2) 尾网（跨网络）
 

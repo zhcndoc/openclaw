@@ -13,12 +13,18 @@ OpenClaw 集成了 Ollama 的原生 API (`/api/chat`)，用于托管云端模型
 **远程 Ollama 用户注意**：不要使用带有 `/v1` 的 OpenAI 兼容 URL（例如 `http://host:11434/v1`）与 OpenClaw 一起使用。这会导致工具调用失效，模型可能会以纯文本形式输出原始的工具 JSON。应使用 Ollama 的原生 API URL：`baseUrl: "http://host:11434"`（不要加 `/v1`）。
 </Warning>
 
-## 入门指南
+Ollama provider config uses `baseUrl` as the canonical key. OpenClaw also accepts `baseURL` for compatibility with OpenAI SDK-style examples, but new config should prefer `baseUrl`.
+
+Local and LAN Ollama hosts do not need a real bearer token; OpenClaw uses the local `ollama-local` marker only for loopback, private-network, `.local`, and bare-hostname Ollama base URLs. Remote public hosts and Ollama Cloud (`https://ollama.com`) require a real credential through `OLLAMA_API_KEY`, an auth profile, or the provider's `apiKey`.
+
+When Ollama is used for memory embeddings, bearer auth is scoped to the host where it was declared. A provider-level key is sent only to that provider's Ollama host; `agents.*.memorySearch.remote.apiKey` is sent only to its remote embedding host; and a pure `OLLAMA_API_KEY` env value is treated as the Ollama Cloud convention rather than being sent to local/self-hosted hosts by default.
+
+## 快速开始
 
 选择您首选的设置方法和模式。
 
 <Tabs>
-  <Tab title="Onboarding (recommended)">
+  <Tab title="入门引导（推荐）">
     **最适合：** 以最快路径完成可用的 Ollama 云端或本地设置。
 
     <Steps>
@@ -64,7 +70,7 @@ OpenClaw 集成了 Ollama 的原生 API (`/api/chat`)，用于托管云端模型
 
   </Tab>
 
-  <Tab title="Manual setup">
+  <Tab title="手动设置">
     **最适合：** 完全控制云端或本地设置。
 
     <Steps>
@@ -155,11 +161,11 @@ OpenClaw 集成了 Ollama 的原生 API (`/api/chat`)，用于托管云端模型
 | 行为             | 详情                                                                                                                                                              |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 目录查询        | 查询 `/api/tags`                                                                                                                                                 |
-| 能力检测 | 使用尽力而为的 `/api/show` 查找来读取 `contextWindow` 并检测能力（包括视觉）                                                             |
-| 视觉模型        | 通过 `/api/show` 报告具有 `vision` 能力的模型被标记为支持图像（`input: ["text", "image"]`），因此 OpenClaw 会自动将图像注入提示词 |
-| 推理检测  | 使用模型名称启发式方法（`r1`, `reasoning`, `think`）标记 `reasoning`                                                                                          |
-| Token 限制         | 将 `maxTokens` 设置为 OpenClaw 使用的默认 Ollama 最大 token 上限                                                                                               |
-| 成本                | 将所有成本设置为 `0`                                                                                                                                               |
+| 能力检测 | 使用尽力而为的 `/api/show` 查询来读取 `contextWindow`、展开的 `num_ctx` Modelfile 参数，以及包括视觉/工具在内的能力                      |
+| 视觉模型        | 由 `/api/show` 报告具有 `vision` 能力的模型会被标记为支持图像（`input: ["text", "image"]`），因此 OpenClaw 会自动将图像注入提示词 |
+| 推理检测  | 使用模型名称启发式（`r1`、`reasoning`、`think`）标记 `reasoning`                                                                                          |
+| 令牌限制         | 将 `maxTokens` 设置为 OpenClaw 使用的默认 Ollama 最大令牌上限                                                                                               |
+| 成本                | 将所有成本设为 `0`                                                                                                                                               |
 
 此做法避免了手动维护模型条目，同时保证目录与本地 Ollama 实例保持一致。
 
@@ -234,7 +240,7 @@ openclaw infer image describe \
 ## 配置
 
 <Tabs>
-  <Tab title="Basic (implicit discovery)">
+  <Tab title="基础（隐式发现）">
     最简单的仅本地启用路径是通过环境变量：
 
     ```bash
@@ -247,7 +253,7 @@ openclaw infer image describe \
 
   </Tab>
 
-  <Tab title="Explicit (manual models)">
+  <Tab title="显式（手动模型）">
     当您想要托管云端设置、Ollama 运行在其他主机/端口上、您想强制指定特定的上下文窗口或模型列表，或者您想完全手动定义模型时，请使用显式配置。
 
     ```json5
@@ -318,15 +324,19 @@ openclaw infer image describe \
 }
 ```
 
+Custom Ollama provider ids are also supported. When a model ref uses the active
+provider prefix, such as `ollama-spark/qwen3:32b`, OpenClaw strips only that
+prefix before calling Ollama so the server receives `qwen3:32b`.
+
 ## Ollama 网页搜索
 
 OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者。
 
-| 属性    | 详情                                                                                                            |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| 主机        | 使用您配置的 Ollama 主机（设置时为 `models.providers.ollama.baseUrl`，否则为 `http://127.0.0.1:11434`） |
-| 认证        | 无需密钥                                                                                                          |
-| 要求 | Ollama 必须正在运行并使用 `ollama signin` 登录                                                         |
+| 属性    | 详情                                                                                                                                                               |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 主机        | 使用您配置的 Ollama 主机（设置了 `models.providers.ollama.baseUrl` 时使用该值，否则为 `http://127.0.0.1:11434`）；`https://ollama.com` 直接使用托管 API |
+| 认证        | 已登录的本地 Ollama 主机无需密钥；直接对 `https://ollama.com` 搜索或受认证保护的主机则需要 `OLLAMA_API_KEY` 或已配置的提供者认证               |
+| 要求 | 本地/自托管主机必须正在运行并通过 `ollama signin` 登录；直接托管搜索需要 `baseUrl: "https://ollama.com"` 以及真实的 Ollama API 密钥 |
 
 在 `openclaw onboard` 或 `openclaw configure --section web` 期间选择 **Ollama 网页搜索**，或设置：
 
@@ -394,10 +404,12 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
 
   </Accordion>
 
-  <Accordion title="上下文窗口">
-    对于自动发现的模型，当可用时 OpenClaw 使用 Ollama 报告的上下文窗口，否则回退到 OpenClaw 使用的默认 Ollama 上下文窗口。
+  <Accordion title="Context windows">
+    对于自动发现的模型，OpenClaw 会在可用时使用 Ollama 报告的上下文窗口，包括来自自定义 Modelfile 的更大的 `PARAMETER num_ctx` 值。否则，它会回退到 OpenClaw 使用的默认 Ollama 上下文窗口。
 
-    您可以在显式提供者配置中覆盖 `contextWindow` 和 `maxTokens`：
+    您可以在显式提供者配置中覆盖 `contextWindow` 和 `maxTokens`。要在不重建 Modelfile 的情况下限制 Ollama 每次请求的运行时上下文，请设置 `params.num_ctx`；OpenClaw 会将其作为 `options.num_ctx` 同时发送给原生 Ollama 和 OpenAI 兼容的 Ollama 适配器。无效、为零、为负以及非有限值都会被忽略，并回退到 `contextWindow`。
+
+    原生 Ollama 模型条目也接受 `params` 下常见的 Ollama 运行时选项，包括 `temperature`、`top_p`、`top_k`、`min_p`、`num_predict`、`stop`、`repeat_penalty`、`num_batch`、`num_thread` 和 `use_mmap`。OpenClaw 只转发 Ollama 请求键，因此 OpenClaw 运行时参数（例如 `streaming`）不会泄露给 Ollama。使用 `params.think` 或 `params.thinking` 发送顶层 Ollama `think`；`false` 会为 Qwen 风格的思考模型禁用 API 级思考。
 
     ```json5
     {
@@ -409,6 +421,12 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
                 id: "llama3.3",
                 contextWindow: 131072,
                 maxTokens: 65536,
+                params: {
+                  num_ctx: 32768,
+                  temperature: 0.7,
+                  top_p: 0.9,
+                  thinking: false,
+                },
               }
             ]
           }
@@ -416,6 +434,8 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
       }
     }
     ```
+
+    每个模型的 `agents.defaults.models["ollama/<model>"].params.num_ctx` 也同样有效。如果两者都进行了配置，则显式的提供者模型条目优先于代理默认值。
 
   </Accordion>
 
@@ -434,8 +454,11 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
     Ollama 是免费的且在本地运行，因此所有模型成本均设置为 $0。这适用于自动发现和手动定义的模型。
   </Accordion>
 
-  <Accordion title="内存嵌入">
-    捆绑的 Ollama 插件为 [内存搜索](/concepts/memory) 注册了一个内存嵌入提供者。它使用配置的 Ollama 基础 URL 和 API 密钥。
+  <Accordion title="Memory embeddings">
+    捆绑的 Ollama 插件会为
+    [内存搜索](/concepts/memory) 注册一个内存嵌入提供者。它使用已配置的 Ollama 基础 URL
+    和 API 密钥，调用 Ollama 当前的 `/api/embed` 端点，并在可能时将
+    多个内存块批量合并为一个 `input` 请求。
 
     | 属性      | 值               |
     | ------------- | ------------------- |
@@ -519,7 +542,7 @@ OpenClaw 支持 **Ollama 网页搜索** 作为捆绑的 `web_search` 提供者�
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     所有提供者、模型引用和故障转移行为概览。
   </Card>
   <Card title="模型选择" href="/concepts/models" icon="brain">

@@ -4,7 +4,7 @@ read_when:
   - 扩展 qa-lab 或 qa-channel
   - 添加基于仓库的 QA 场景
   - 围绕 Gateway 仪表板构建更高真实度的 QA 自动化
-title: "QA E2E automation"
+title: "QA E2E 自动化"
 ---
 
 私有 QA 技术栈旨在以比单元测试更真实、
@@ -40,22 +40,23 @@ pnpm qa:lab:watch
 
 `qa:lab:up:fast` 在预构建镜像上保持 Docker 服务运行，并将 `extensions/qa-lab/web/dist` 绑定挂载到 `qa-lab` 容器中。`qa:lab:watch` 在更改时重新构建该包，并且在 QA Lab 资源哈希更改时浏览器会自动重新加载。
 
-对于真实的 Matrix 冒烟测试通道，运行：
+用于本地 OpenTelemetry trace 冒烟测试，运行：
+
+```bash
+pnpm qa:otel:smoke
+```
+
+该脚本会启动一个本地 OTLP/HTTP trace 接收器，启用 `diagnostics-otel` 插件运行 `otel-trace-smoke` QA 场景，然后解码导出的 protobuf spans，并断言发布关键形态：必须存在 `openclaw.run`、`openclaw.harness.run`、`openclaw.model.call`、`openclaw.context.assembled` 和 `openclaw.message.delivery`；成功回合中的模型调用不得导出 `StreamAbandoned`；原始诊断 ID 和 `openclaw.content.*` 属性必须不出现在 trace 中。它会在 QA 套件产物旁边写入 `otel-smoke-summary.json`。
+
+可观测性 QA 仅限源码检出环境。npm tarball 故意不包含 QA Lab，因此包的 Docker 发布流水线不会运行 `qa` 命令。变更诊断埋点时，请在已构建的源码检出环境中使用 `pnpm qa:otel:smoke`。
+
+对于真实传输的 Matrix 冒烟通道，运行：
 
 ```bash
 pnpm openclaw qa matrix
 ```
 
-该通道会在 Docker 中部署一个一次性的 Tuwunel homeserver，注册
-临时 driver、SUT 和 observer 用户，创建一个私有房间，然后在 QA gateway 子进程中运行
-真实的 Matrix 插件。该实时传输通道会将子配置限定在正在测试的传输上，因此 Matrix 运行时
-在子配置中不会包含 `qa-channel`。它会将结构化报告工件和
-合并的 stdout/stderr 日志写入所选的 Matrix QA 输出目录。若要
-连同外层的 `scripts/run-node.mjs` 构建/启动器输出一起捕获，请设置
-`OPENCLAW_RUN_NODE_OUTPUT_LOG=<path>` 指向仓库内的日志文件。
-Matrix 进度默认会打印。`OPENCLAW_QA_MATRIX_TIMEOUT_MS` 限制
-完整运行时长，而 `OPENCLAW_QA_MATRIX_CLEANUP_TIMEOUT_MS` 限制清理时长，以便
-卡住的 Docker 清理流程会报告确切的恢复命令，而不是一直挂起。
+该通道会在 Docker 中部署一个一次性的 Tuwunel homeserver，注册临时 driver、SUT 和 observer 用户，创建一个私有房间，然后在 QA gateway 子进程中运行真实的 Matrix 插件。该实时传输通道会将子配置限定在正在测试的传输上，因此 Matrix 运行时在子配置中不会包含 `qa-channel`。它会将结构化报告工件和合并的 stdout/stderr 日志写入所选的 Matrix QA 输出目录。若要连同外层的 `scripts/run-node.mjs` 构建/启动器输出一起捕获，请设置 `OPENCLAW_RUN_NODE_OUTPUT_LOG=<path>` 指向仓库内的日志文件。Matrix 进度默认会打印。`OPENCLAW_QA_MATRIX_TIMEOUT_MS` 限制完整运行时长，而 `OPENCLAW_QA_MATRIX_CLEANUP_TIMEOUT_MS` 限制清理时长，以便卡住的 Docker 清理流程会报告确切的恢复命令，而不是一直挂起。
 
 对于真实的 Telegram 冒烟测试通道，运行：
 
@@ -63,16 +64,9 @@ Matrix 进度默认会打印。`OPENCLAW_QA_MATRIX_TIMEOUT_MS` 限制
 pnpm openclaw qa telegram
 ```
 
-该通道针对一个真实的私有 Telegram 群组，而不是部署
-一次性服务器。它需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、
-`OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN` 和
-`OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`，并且要求同一个私有群组中有两个不同的机器人。
-SUT 机器人必须拥有 Telegram 用户名，而当两个机器人都在
-`@BotFather` 中启用了 Bot-to-Bot Communication Mode 时，bot-to-bot
-观察效果最佳。
-当任何场景失败时，该命令会以非零状态退出。若你想在不返回失败退出码的情况下获取工件，请使用 `--allow-failures`。
-Telegram 报告和摘要会包含每次回复的 RTT，即从 driver 消息
-发送请求到观测到 SUT 回复之间的时间，从 canary 开始统计。
+该通道针对一个真实的私有 Telegram 群组，而不是部署一次性服务器。它需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、`OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN` 和 `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`，并且要求同一个私有群组中有两个不同的机器人。SUT 机器人必须拥有 Telegram 用户名，而当两个机器人都在 `@BotFather` 中启用了 Bot-to-Bot Communication Mode 时，bot-to-bot 观察效果最佳。  
+当任何场景失败时，该命令会以非零状态退出。若你想在不返回失败退出码的情况下获取工件，请使用 `--allow-failures`。  
+Telegram 报告和摘要会包含每次回复的 RTT，即从 driver 消息发送请求到观测到 SUT 回复之间的时间，从 canary 开始统计。
 
 在使用共享的实时凭据之前，请运行：
 
@@ -80,8 +74,7 @@ Telegram 报告和摘要会包含每次回复的 RTT，即从 driver 消息
 pnpm openclaw qa credentials doctor
 ```
 
-该 doctor 会检查 Convex broker 环境，验证端点设置，并在维护者密钥存在时验证
-admin/list 可达性。它只会报告密钥的已设置/缺失状态。
+该 doctor 会检查 Convex broker 环境，验证端点设置，并在维护者密钥存在时验证 admin/list 可达性。它只会报告密钥的已设置/缺失状态。
 
 对于真实传输的 Discord smoke 通道，运行：
 
@@ -89,13 +82,8 @@ admin/list 可达性。它只会报告密钥的已设置/缺失状态。
 pnpm openclaw qa discord
 ```
 
-该通道针对一个真实的私有 Discord guild 频道，使用两个机器人：一个由 harness 控制的 driver 机器人，以及一个由子
-OpenClaw gateway 通过随附的 Discord 插件启动的 SUT 机器人。使用环境变量凭据时，它需要
-`OPENCLAW_QA_DISCORD_GUILD_ID`、`OPENCLAW_QA_DISCORD_CHANNEL_ID`、
-`OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`、`OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`，
-以及 `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID`。
-该通道会验证频道提及处理，并检查 SUT 机器人是否已在 Discord 上注册了原生
-`/help` 命令。
+该通道针对一个真实的私有 Discord guild 频道，使用两个机器人：一个由 harness 控制的 driver 机器人，以及一个由子 OpenClaw gateway 通过随附的 Discord 插件启动的 SUT 机器人。使用环境变量凭据时，它需要 `OPENCLAW_QA_DISCORD_GUILD_ID`、`OPENCLAW_QA_DISCORD_CHANNEL_ID`、`OPENCLAW_QA_DISCORD_DRIVER_BOT_TOKEN`、`OPENCLAW_QA_DISCORD_SUT_BOT_TOKEN`，以及 `OPENCLAW_QA_DISCORD_SUT_APPLICATION_ID`。  
+该通道会验证频道提及处理，并检查 SUT 机器人是否已在 Discord 上注册了原生 `/help` 命令。  
 当任何场景失败时，该命令会以非零状态退出。若你想在不返回失败退出码的情况下获取工件，请使用 `--allow-failures`。
 
 实时传输通道现在共享一个更小的契约，而不是各自发明自己的场景列表形状：
@@ -116,10 +104,10 @@ OpenClaw gateway 通过随附的 Discord 插件启动的 SUT 机器人。使用�
 pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline
 ```
 
-这会启动一个全新的 Multipass 客户机，安装依赖，在客户机内部构建 OpenClaw，运行 `qa suite`，然后将正常的 QA 报告和摘要复制回主机上的 `.artifacts/qa-e2e/...`。
-它复用了与主机上 `qa suite` 相同的场景选择行为。
-主机和 Multipass 的 suite 运行默认会使用隔离的 gateway worker 并行执行多个所选场景。`qa-channel` 默认并发数为 4，且上限受所选场景数量限制。使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 进行串行执行。
-若任何场景失败，该命令会以非零状态退出。若你想在不返回失败退出码的情况下获取产物，请使用 `--allow-failures`。
+这会启动一个全新的 Multipass 客户机，安装依赖，在客户机内部构建 OpenClaw，运行 `qa suite`，然后将正常的 QA 报告和摘要复制回主机上的 `.artifacts/qa-e2e/...`。  
+它复用了与主机上 `qa suite` 相同的场景选择行为。  
+主机和 Multipass 的 suite 运行默认会使用隔离的 gateway worker 并行执行多个所选场景。`qa-channel` 默认并发数为 4，且上限受所选场景数量限制。使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 进行串行执行。  
+若任何场景失败，该命令会以非零状态退出。若你想在不返回失败退出码的情况下获取产物，请使用 `--allow-failures`。  
 实时运行会转发对客户机来说实用的受支持 QA 认证输入：基于环境变量的 provider key、QA live provider 配置路径，以及在存在时的 `CODEX_HOME`。请将 `--output-dir` 保持在仓库根目录下，以便客户机可以通过挂载的工作区写回数据。
 
 ## 基于仓库的种子
@@ -205,28 +193,12 @@ pnpm openclaw qa character-eval \
   --judge-concurrency 16
 ```
 
-该命令运行本地 QA gateway 子进程，而不是 Docker。角色评估
-场景应通过 `SOUL.md` 设置 persona，然后执行普通用户交互，
-例如聊天、工作区帮助和小型文件任务。候选模型不应被告知它正在被评估。
-该命令会保留每段完整转录，记录基本运行统计，然后在支持的情况下使用 `xhigh` 推理让裁判模型以 fast 模式
-对运行结果按自然度、氛围和幽默感进行排序。
-在比较 provider 时使用 `--blind-judge-models`：裁判提示词仍会收到
-每段转录和运行状态，但候选引用会被替换为中性标签，例如 `candidate-01`；报告会在解析后将排序映射回真实引用。
-候选运行默认使用 `high` thinking，而 GPT-5.4 使用 `medium`，较旧且支持该特性的 OpenAI 评估引用使用 `xhigh`。
-可通过 `--model provider/model,thinking=<level>` 覆盖某个具体候选。`--thinking <level>` 仍然会设置
-全局回退值，而较旧的 `--model-thinking <provider/model=level>` 形式则保留用于兼容。
-OpenAI 候选引用默认启用 fast 模式，因此在 provider 支持时会使用优先级处理。
-当单个候选或裁判需要覆盖时，可在行内添加 `,fast`、`,no-fast` 或 `,fast=false`。
-只有在你想强制所有候选模型都开启 fast 模式时，才传入 `--fast`。候选和裁判持续时间会记录在报告中用于基准分析，但裁判提示词明确说明不要按速度排序。
-候选和裁判模型运行都默认并发 16。当 provider 限制或本地 gateway 压力使运行过于嘈杂时，降低 `--concurrency` 或 `--judge-concurrency`。
-当未传入候选 `--model` 时，角色评估默认使用
-`openai/gpt-5.4`、`openai/gpt-5.2`、`openai/gpt-5`、`anthropic/claude-opus-4-6`、
-`anthropic/claude-sonnet-4-6`、`zai/glm-5.1`、
-`moonshot/kimi-k2.5` 和
-`google/gemini-3.1-pro-preview`。
-当未传入 `--judge-model` 时，裁判默认使用
-`openai/gpt-5.4,thinking=xhigh,fast` 和
-`anthropic/claude-opus-4-6,thinking=high`。
+该命令运行本地 QA gateway 子进程，而不是 Docker。角色评估场景应通过 `SOUL.md` 设置 persona，然后执行普通用户交互，例如聊天、工作区帮助和小型文件任务。候选模型不应被告知它正在被评估。该命令会保留每段完整转录，记录基本运行统计，然后在支持的情况下使用 `xhigh` 推理让裁判模型以 fast 模式对运行结果按自然度、氛围和幽默感进行排序。  
+在比较 provider 时使用 `--blind-judge-models`：裁判提示词仍会收到每段转录和运行状态，但候选引用会被替换为中性标签，例如 `candidate-01`；报告会在解析后将排序映射回真实引用。  
+候选运行默认使用 `high` thinking，而 GPT-5.4 使用 `medium`，较旧且支持该特性的 OpenAI 评估引用使用 `xhigh`。可通过 `--model provider/model,thinking=<level>` 覆盖某个具体候选。`--thinking <level>` 仍然会设置全局回退值，而较旧的 `--model-thinking <provider/model=level>` 形式则保留用于兼容。OpenAI 候选引用默认启用 fast 模式，因此在 provider 支持时会使用优先级处理。当单个候选或裁判需要覆盖时，可在行内添加 `,fast`、`,no-fast` 或 `,fast=false`。只有在你想强制所有候选模型都开启 fast 模式时，才传入 `--fast`。候选和裁判持续时间会记录在报告中用于基准分析，但裁判提示词明确说明不要按速度排序。  
+候选和裁判模型运行都默认并发 16。当 provider 限制或本地 gateway 压力使运行过于嘈杂时，降低 `--concurrency` 或 `--judge-concurrency`。  
+当未传入候选 `--model` 时，角色评估默认使用 `openai/gpt-5.4`、`openai/gpt-5.2`、`openai/gpt-5`、`anthropic/claude-opus-4-6`、`anthropic/claude-sonnet-4-6`、`zai/glm-5.1`、`moonshot/kimi-k2.5` 和 `google/gemini-3.1-pro-preview`。  
+当未传入 `--judge-model` 时，裁判默认使用 `openai/gpt-5.4,thinking=xhigh,fast` 和 `anthropic/claude-opus-4-6,thinking=high`。
 
 ## 相关文档
 

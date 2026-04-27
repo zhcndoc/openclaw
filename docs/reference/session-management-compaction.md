@@ -75,7 +75,7 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 - `pruneAfter`：旧条目的时间截止（默认 `30d`）
 - `maxEntries`：`sessions.json` 中条目最大数量（默认 `500`）
 - `rotateBytes`：当文件超大时旋转 `sessions.json`（默认 `10mb`）
-- `resetArchiveRetention`：`*.reset.<timestamp>` 记录归档的保留时间（默认同 `pruneAfter`；`false` 禁用清理）
+- `resetArchiveRetention`：`*.reset.<timestamp>` 记录归档的保留时间（默认与 `pruneAfter` 相同；`false` 禁用清理）
 - `maxDiskBytes`：会话目录的磁盘预算（可选）
 - `highWaterBytes`：清理后的目标大小（默认为 `maxDiskBytes` 的 80%）
 
@@ -242,6 +242,12 @@ exceeded` 以及类似的提供者特定变体）→ 压缩 → 重试。
 
 这些是 Pi 运行时语义（OpenClaw 消费事件，Pi 决定何时压缩）。
 
+OpenClaw 还可以在打开下一次运行之前触发一次预检本地压缩，
+当 `agents.defaults.compaction.maxActiveTranscriptBytes` 被设置且
+活动记录文件达到该大小时会发生。这是针对本地重开成本的文件大小保护，
+不是原始归档：OpenClaw 仍会执行正常的语义压缩，并且它需要
+`truncateAfterCompaction`，这样压缩摘要才能成为新的后继记录。
+
 ---
 
 ## 压缩设置（`reserveTokens`，`keepRecentTokens`）
@@ -260,10 +266,21 @@ Pi 的压缩设置位于 Pi 配置中：
 
 OpenClaw 还为嵌入式运行强制执行安全下限：
 
-- 若 `compaction.reserveTokens < reserveTokensFloor`，OpenClaw 会上调。
-- 默认下限为 20000 令牌。
-- 通过设置 `agents.defaults.compaction.reserveTokensFloor: 0` 可禁用下限。
-- 如果现有值更高，OpenClaw 不作更改。
+- 如果 `compaction.reserveTokens < reserveTokensFloor`，OpenClaw 会将其提升。
+- 默认下限为 `20000` 令牌。
+- 设置 `agents.defaults.compaction.reserveTokensFloor: 0` 可禁用该下限。
+- 如果它已经更高，OpenClaw 不会更改。
+- 手动 `/compact` 会遵守显式的 `agents.defaults.compaction.keepRecentTokens`
+  并保留 Pi 的最近尾部截断点。若没有显式保留预算，
+  手动压缩仍然是一个硬检查点，重建上下文将从
+  新摘要开始。
+- 将 `agents.defaults.compaction.maxActiveTranscriptBytes` 设置为字节值或
+  字符串（例如 `"20mb"`），可在回合开始前当活动记录变大时运行本地压缩。
+  只有同时启用 `truncateAfterCompaction` 时，该保护才生效。留空或设为 `0`
+  可禁用。
+- 当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 会在压缩后
+  将活动记录轮转为压缩后的后继 JSONL。旧的完整记录会保留为归档，并从
+  压缩检查点链接，而不是就地重写。
 
 目的：留足多轮“维护”头寸（例如内存写入），避免压缩变得不可避免。
 

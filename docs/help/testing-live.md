@@ -275,8 +275,8 @@ Docker 说明：
 - 单模型，gateway 烟雾测试：
   - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
-- 跨多个提供方的工具调用：
-  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,deepseek/deepseek-v4-flash,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+- Tool calling across several providers:
+  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Google 重点（Gemini API key + Antigravity）：
   - Gemini（API key）：`OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3-flash-preview" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
@@ -304,28 +304,28 @@ Docker 说明：
 
 这是我们期望持续可用的“常见模型”运行：
 
-- OpenAI（非 Codex）：`openai/gpt-5.2`
-- OpenAI Codex OAuth：`openai-codex/gpt-5.2`
-- Anthropic：`anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
-- Google（Gemini API）：`google/gemini-3.1-pro-preview` 和 `google/gemini-3-flash-preview`（避免较旧的 Gemini 2.x 模型）
-- Google（Antigravity）：`google-antigravity/claude-opus-4-6-thinking` 和 `google-antigravity/gemini-3-flash`
-- DeepSeek：`deepseek/deepseek-v4-flash` 和 `deepseek/deepseek-v4-pro`
-- Z.AI（GLM）：`zai/glm-4.7`
-- MiniMax：`minimax/MiniMax-M2.7`
+- OpenAI (非 Codex): `openai/gpt-5.2`
+- OpenAI Codex OAuth: `openai-codex/gpt-5.2`
+- Anthropic: `anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
+- Google（Gemini API）: `google/gemini-3.1-pro-preview` 和 `google/gemini-3-flash-preview`（避免旧的 Gemini 2.x 模型）
+- Google（Antigravity）: `google-antigravity/claude-opus-4-6-thinking` 和 `google-antigravity/gemini-3-flash`
+- DeepSeek: `deepseek/deepseek-v4-flash` 和 `deepseek/deepseek-v4-pro`
+- Z.AI（GLM）: `zai/glm-5.1`
+- MiniMax: `minimax/MiniMax-M2.7`
 
-使用工具 + 图片运行 gateway 烟雾测试：
-`OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,deepseek/deepseek-v4-flash,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+使用工具 + 图片运行网关冒烟测试：
+`OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 ### 基线：工具调用（Read + 可选 Exec）
 
 每个提供方家族至少选一个：
 
-- OpenAI：`openai/gpt-5.2`
-- Anthropic：`anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
-- Google：`google/gemini-3-flash-preview`（或 `google/gemini-3.1-pro-preview`）
-- DeepSeek：`deepseek/deepseek-v4-flash`
-- Z.AI（GLM）：`zai/glm-4.7`
-- MiniMax：`minimax/MiniMax-M2.7`
+- OpenAI: `openai/gpt-5.2`
+- Anthropic: `anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
+- Google: `google/gemini-3-flash-preview`（或 `google/gemini-3.1-pro-preview`）
+- DeepSeek: `deepseek/deepseek-v4-flash`
+- Z.AI（GLM）: `zai/glm-5.1`
+- MiniMax: `minimax/MiniMax-M2.7`
 
 可选的额外覆盖（锦上添花）：
 

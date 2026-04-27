@@ -117,18 +117,18 @@ Coding Plan**、**MiniMax Coding Plan**、**Z.AI / GLM Coding Plan**，以及
 
 根据您的提供商不同，`web_search` 可能会产生使用费用：
 
-- **Brave Search API**：`BRAVE_API_KEY` 或 `plugins.entries.brave.config.webSearch.apiKey`
-- **Exa**：`EXA_API_KEY` 或 `plugins.entries.exa.config.webSearch.apiKey`
-- **Firecrawl**：`FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webSearch.apiKey`
-- **Gemini (Google Search)**：`GEMINI_API_KEY` 或 `plugins.entries.google.config.webSearch.apiKey`
-- **Grok (xAI)**：`XAI_API_KEY` 或 `plugins.entries.xai.config.webSearch.apiKey`
-- **Kimi (Moonshot)**：`KIMI_API_KEY`、`MOONSHOT_API_KEY` 或 `plugins.entries.moonshot.config.webSearch.apiKey`
-- **MiniMax Search**：`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`、`MINIMAX_API_KEY` 或 `plugins.entries.minimax.config.webSearch.apiKey`
-- **Ollama Web Search**：默认无需密钥，但需要可访问的 Ollama 主机 plus `ollama signin`；当主机需要时也可以重用正常的 Ollama 提供商 bearer 认证
-- **Perplexity Search API**：`PERPLEXITY_API_KEY`、`OPENROUTER_API_KEY` 或 `plugins.entries.perplexity.config.webSearch.apiKey`
-- **Tavily**：`TAVILY_API_KEY` 或 `plugins.entries.tavily.config.webSearch.apiKey`
-- **DuckDuckGo**：无密钥回退（无 API 计费，但非官方且基于 HTML）
-- **SearXNG**：`SEARXNG_BASE_URL` 或 `plugins.entries.searxng.config.webSearch.baseUrl`（无密钥/自托管；无托管 API 计费）
+- **Brave Search API**: `BRAVE_API_KEY` or `plugins.entries.brave.config.webSearch.apiKey`
+- **Exa**: `EXA_API_KEY` or `plugins.entries.exa.config.webSearch.apiKey`
+- **Firecrawl**: `FIRECRAWL_API_KEY` or `plugins.entries.firecrawl.config.webSearch.apiKey`
+- **Gemini (Google Search)**: `GEMINI_API_KEY` or `plugins.entries.google.config.webSearch.apiKey`
+- **Grok (xAI)**: `XAI_API_KEY` or `plugins.entries.xai.config.webSearch.apiKey`
+- **Kimi (Moonshot)**: `KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `plugins.entries.moonshot.config.webSearch.apiKey`
+- **MiniMax Search**: `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, `MINIMAX_API_KEY`, or `plugins.entries.minimax.config.webSearch.apiKey`
+- **Ollama Web Search**: 对于可访问的已登录本地 Ollama 主机无需密钥；直接 `https://ollama.com` 搜索使用 `OLLAMA_API_KEY`，受认证保护的主机可以复用正常的 Ollama 提供商 Bearer 认证
+- **Perplexity Search API**: `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, or `plugins.entries.perplexity.config.webSearch.apiKey`
+- **Tavily**: `TAVILY_API_KEY` or `plugins.entries.tavily.config.webSearch.apiKey`
+- **DuckDuckGo**: 无密钥回退（无 API 计费，但非官方且基于 HTML）
+- **SearXNG**: `SEARXNG_BASE_URL` or `plugins.entries.searxng.config.webSearch.baseUrl`（无需密钥/自托管；无托管 API 计费）
 
 遗留的 `tools.web.search.*` 提供商路径仍然通过临时兼容层加载，但它们不再是推荐的配置表面。
 
