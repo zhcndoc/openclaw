@@ -179,7 +179,7 @@ title: "Exec 审批 — 高级"
       enabled: true,
       mode: "session", // "session" | "targets" | "both"
       agentFilter: ["main"],
-      sessionFilter: ["discord"], // substring or regex
+      sessionFilter: ["discord"], // 字符串或正则
       targets: [
         { channel: "slack", to: "U12345678" },
         { channel: "telegram", to: "123456789" },
@@ -282,25 +282,28 @@ FAQ：[为什么聊天审批有两个 exec 审批配置？](/help/faq-first-run#
 
 共享行为：
 
-- Slack、Matrix、Microsoft Teams 以及类似的可投递聊天在同聊天 `/approve`
-  中使用常规频道认证模型
-- 当原生审批客户端自动启用时，默认的原生投递目标是审批者 DM
-- 对于 Discord 和 Telegram，只有已解析的审批者可以批准或拒绝
+- Slack、Matrix、Microsoft Teams 以及类似的可投递聊天，使用正常的频道认证模型
+  进行同聊天 `/approve`
+- 当原生审批客户端自动启用时，默认原生投递目标为审批者 DM
+- 对于 Discord 和 Telegram，只有已解析的审批者才能批准或拒绝
 - Discord 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断
-- Telegram 审批者可以是显式的（`execApprovals.approvers`）或从现有 owner 配置推断（`allowFrom`，以及在支持时的直接消息 `defaultTo`）
+- Telegram 审批者可以是显式的（`execApprovals.approvers`）或从现有所有者配置推断（`allowFrom`，以及在支持时的直接消息 `defaultTo`）
 - Slack 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断
-- Slack 原生按钮会保留审批 id 类型，因此 `plugin:` id 可以解析到插件审批
+- Slack 原生按钮会保留审批 id 类型，因此 `plugin:` id 可以解析插件审批
   而无需第二层 Slack 本地回退
 - Matrix 原生 DM/频道路由和反应快捷方式同时处理 exec 和插件审批；
   插件授权仍来自 `channels.matrix.dm.allowFrom`
-- 请求者不需要是审批者
-- 当发起聊天已经支持命令和回复时，该聊天可直接通过 `/approve` 批准
+- Matrix 原生提示会在第一个提示事件中包含 `com.openclaw.approval` 自定义事件内容，
+  这样 OpenClaw 感知的 Matrix 客户端就能读取结构化审批状态，而原生客户端
+  则保留纯文本 `/approve` 回退
+- 请求者不必是审批者
+- 当发起聊天已经支持命令和回复时，该聊天可以直接使用 `/approve` 批准
 - 原生 Discord 审批按钮按审批 id 类型路由：`plugin:` id 会
   直接进入插件审批，其余全部进入 exec 审批
-- 原生 Telegram 审批按钮遵循与 `/approve` 相同的有界 exec 到插件回退
+- 原生 Telegram 审批按钮遵循与 `/approve` 相同的受限 exec-to-plugin 回退
 - 当原生 `target` 启用原发起聊天投递时，审批提示会包含命令文本
 - 待处理的 exec 审批默认在 30 分钟后过期
-- 如果没有操作员 UI 或已配置的审批客户端可以接受请求，提示会回退到 `askFallback`
+- 如果没有操作员 UI 或已配置的审批客户端可以接受该请求，提示会回退到 `askFallback`
 
 Telegram 默认投递到审批者 DM（`target: "dm"`）。如果你希望审批提示也出现在
 发起的 Telegram 聊天/主题中，可以切换到 `channel` 或 `both`。对于 Telegram 论坛主题，

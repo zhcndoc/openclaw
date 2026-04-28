@@ -48,6 +48,12 @@ OpenClaw 将对话组织为 **会话**。每条消息都会根据其来源路由
 如果同一个人从多个频道联系你，使用 `session.identityLinks` 链接他们的身份，以便他们共享一个会话。
 </Tip>
 
+### Dock 链接频道
+
+Dock 命令允许用户将当前直接聊天会话的回复路由移动到
+另一个已链接的频道，而无需新建会话。示例、配置和
+故障排除请参见 [Channel docking](/concepts/channel-docking)。
+
 使用 `openclaw security audit` 验证你的设置。
 
 ## 会话生命周期
@@ -85,7 +91,9 @@ OpenClaw 会自动限制会话存储随时间增长。默认情况下，它以 `
 }
 ```
 
-使用 `openclaw sessions cleanup --dry-run` 预览。
+对于生产规模的 `maxEntries` 限制，网关运行时写入会使用一个较小的高水位缓冲区，并分批清理回配置的上限。这避免了在每个隔离的 cron 会话上都执行完整的存储清理。`openclaw sessions cleanup --enforce` 会立即应用该上限。
+
+使用 `openclaw sessions cleanup --dry-run` 进行预览。
 
 ## 检查会话
 

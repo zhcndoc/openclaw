@@ -31,7 +31,7 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 每个子路径都是一个小型的、独立的模块。这可以保持启动速度更快，并防止循环依赖问题。对于特定于 channel 的入口/构建辅助工具，优先使用 `openclaw/plugin-sdk/channel-core`；将 `openclaw/plugin-sdk/core` 保留给更广泛的总入口表面和共享辅助工具，例如
 `buildChannelConfigSchema`。
 
-对于 channel 配置，请通过 `openclaw.plugin.json#channelConfigs` 发布由 channel 拥有的 JSON Schema。`plugin-sdk/channel-config-schema` 子路径用于共享的 schema 基元和通用构建器。该子路径上任何打包 channel 命名的 schema 导出都只是旧版兼容导出，不是新插件的模式。
+对于 channel 配置，通过 `openclaw.plugin.json#channelConfigs` 发布由 channel 拥有的 JSON Schema。`plugin-sdk/channel-config-schema` 子路径用于共享的 schema 基元和通用构建器。已废弃的打包 channel schema 导出位于 `plugin-sdk/channel-config-schema-legacy`，仅用于打包兼容性；它们不是新插件的模式。
 
 <Warning>
   不要导入 provider 或 channel 品牌化的便捷入口（例如
@@ -80,7 +80,9 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 | `api.registerTool(tool, opts?)` | Agent 工具（必需或 `{ optional: true }`） |
 | `api.registerCommand(def)`      | 自定义命令（绕过 LLM）             |
 
-### 基础设施
+当 agent 需要一个简短、由命令拥有的路由提示时，插件命令可以设置 `agentPromptGuidance`。该文本应只描述命令本身；不要在核心提示构建器中添加 provider 或插件特定策略。
+
+### Infrastructure
 
 | 方法                                         | 注册内容                       |
 | ---------------------------------------------- | --------------------------------------- |

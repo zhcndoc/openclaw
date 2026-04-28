@@ -34,7 +34,8 @@ openclaw nodes pending
 openclaw nodes approve <requestId>
 openclaw nodes reject <requestId>
 openclaw nodes status
-openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
+openclaw nodes remove --node <id|name|ip>
+openclaw nodes rename --node <id|name|ip> --name "Living Room iPad"
 ```
 
 `nodes status` 显示已配对/已连接节点及其功能。
@@ -48,10 +49,11 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
 
 方法：
 
-- `node.pair.request` — 创建或复用待处理请求。
+- `node.pair.request` — 创建或复用一个待处理请求。
 - `node.pair.list` — 列出待处理 + 已配对节点（`operator.pairing`）。
-- `node.pair.approve` — 批准待处理请求（发放令牌）。
-- `node.pair.reject` — 拒绝待处理请求。
+- `node.pair.approve` — 批准一个待处理请求（发放令牌）。
+- `node.pair.reject` — 拒绝一个待处理请求。
+- `node.pair.remove` — 删除一个过期的已配对节点条目。
 - `node.pair.verify` — 验证 `{ nodeId, token }`。
 
 备注：
@@ -65,12 +67,12 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
   - 非执行命令请求：`operator.pairing` + `operator.write`
   - `system.run` / `system.run.prepare` / `system.which` 请求：`operator.pairing` + `operator.admin`
 
-重要：
+<Warning>
+节点配对是一个信任与身份流程以及令牌签发流程。它**不会**按节点固定实时节点命令表面。
 
-- 节点配对是信任/身份流程加上令牌发放。
-- 它**不**固定每个节点的实时节点命令表面。
-- 实时节点命令来自节点连接时声明的内容，并在应用网关的全局节点命令策略（`gateway.nodes.allowCommands` / `denyCommands`）之后。
-- 每个节点的 `system.run` 允许/询问策略位于节点上的 `exec.approvals.node.*` 中，而不是配对记录中。
+- 实时节点命令来自节点在连接时声明的内容，并在应用网关的全局节点命令策略（`gateway.nodes.allowCommands` 和 `denyCommands`）后生效。
+- 节点级 `system.run` allow 和 ask 策略位于节点上的 `exec.approvals.node.*` 中，而不是配对记录中。
+</Warning>
 
 ## 节点命令门禁 (2026.3.31+)
 

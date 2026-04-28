@@ -87,7 +87,7 @@ type ReplyPayloadDelivery = {
 - `placeholder` 只是建议项，某些不支持原生选择器的频道可以忽略它。
 - 如果频道不支持选择器，回退文本会列出这些标签。
 
-## 生产者示例
+## Producer examples
 
 简单卡片：
 
@@ -171,7 +171,7 @@ openclaw message send --channel telegram \
 }
 ```
 
-## 渲染器契约
+## Renderer contract
 
 频道插件在其出站适配器上声明渲染支持：
 
@@ -200,7 +200,7 @@ const adapter: ChannelOutboundAdapter = {
 能力字段刻意设计为简单的布尔值。它们描述的是渲染器能使哪些内容具备交互性，
 而不是枚举所有原生平台限制。渲染器仍然负责平台特定限制，例如最大按钮数、区块数和卡片尺寸。
 
-## 核心渲染流程
+## Core render flow
 
 当 `ReplyPayload` 或消息动作包含 `presentation` 时，核心会：
 
@@ -214,7 +214,7 @@ const adapter: ChannelOutboundAdapter = {
 
 核心负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
 
-## 降级规则
+## Degradation rules
 
 呈现内容必须能够安全地发送到受限频道。
 
@@ -237,7 +237,7 @@ const adapter: ChannelOutboundAdapter = {
 
 主要例外是 `delivery.pin.required: true`；如果请求置顶并且将其设为必需，而频道无法置顶已发送消息，则投递会报告失败。
 
-## 提供方映射
+## Provider mapping
 
 当前内置渲染器：
 
@@ -285,7 +285,7 @@ import {
 
 新代码应直接接收或生成 `MessagePresentation`。
 
-## 投递置顶
+## Delivery pin
 
 置顶是投递行为，不是呈现行为。应使用 `delivery.pin`，而不是诸如
 `channelData.telegram.pin` 之类的提供方原生字段。
@@ -301,7 +301,7 @@ import {
 
 对于已有消息，当提供方支持这些操作时，手动 `pin`、`unpin` 和 `pins` 消息动作仍然存在。
 
-## 插件作者检查清单
+## Plugin author checklist
 
 - 当频道可以渲染或安全降级语义化展示时，从 `describeMessageTool(...)` 声明 `presentation`。
 - 在运行时出站适配器中添加 `presentationCapabilities`。
@@ -312,7 +312,7 @@ import {
 - 仅当提供方能够固定已发送消息 id 时，通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加送达置顶支持。
 - 不要通过共享消息动作 schema 暴露新的提供方原生卡片/块/组件/按钮字段。
 
-## 相关文档
+## Related docs
 
 - [Message CLI](/cli/message)
 - [Plugin SDK Overview](/plugins/sdk-overview)

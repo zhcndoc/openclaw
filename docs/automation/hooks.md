@@ -33,21 +33,23 @@ openclaw hooks info session-memory
 
 ## 事件类型
 
-| 事件                     | 触发时机                                    |
-| ------------------------ | ------------------------------------------------ |
-| `command:new`            | 发出 `/new` 命令                            |
-| `command:reset`          | 发出 `/reset` 命令                          |
-| `command:stop`           | 发出 `/stop` 命令                           |
-| `command`                | 任何命令事件（通用监听器）             |
-| `session:compact:before` | 在压缩总结历史之前             |
-| `session:compact:after`  | 在压缩完成后                       |
-| `session:patch`          | 当会话属性被修改时             |
-| `agent:bootstrap`        | 在工作区引导文件注入之前        |
-| `gateway:startup`        | 在通道启动且钩子加载之后        |
-| `message:received`       | 来自任何通道的传入消息                 |
-| `message:transcribed`    | 在音频转录完成后              |
-| `message:preprocessed`   | 在所有媒体和链接理解完成后 |
-| `message:sent`           | 传出消息已交付                       |
+| Event                    | When it fires                                              |
+| ------------------------ | ---------------------------------------------------------- |
+| `command:new`            | `/new` 命令触发时                                       |
+| `command:reset`          | `/reset` 命令触发时                                     |
+| `command:stop`           | `/stop` 命令触发时                                      |
+| `command`                | 任何命令事件（通用监听器）                               |
+| `session:compact:before` | 压缩在汇总历史记录之前                                      |
+| `session:compact:after`  | 压缩完成之后                                            |
+| `session:patch`          | 会话属性被修改时                                         |
+| `agent:bootstrap`        | 注入工作区引导文件之前                                     |
+| `gateway:startup`        | 通道启动并加载钩子之后                                     |
+| `gateway:shutdown`       | 网关关闭开始时                                           |
+| `gateway:pre-restart`    | 在预期的网关重启之前                                      |
+| `message:received`       | 来自任意通道的入站消息                                     |
+| `message:transcribed`    | 音频转录完成之后                                         |
+| `message:preprocessed`   | 媒体和链接预处理完成或被跳过之后                            |
+| `message:sent`            | 出站消息已送达                                           |
 
 ## 编写钩子
 
@@ -128,7 +130,9 @@ export default handler;
 
 ## 钩子发现
 
-钩子从以下目录中发现，按覆盖优先级递增的顺序：
+**Gateway lifecycle events**: `gateway:shutdown` includes `reason` and `restartExpectedMs` and fires when gateway shutdown begins. `gateway:pre-restart` includes the same context but only fires when shutdown is part of an expected restart and a finite `restartExpectedMs` value is supplied. During shutdown, each lifecycle hook wait is best-effort and bounded so shutdown continues if a handler stalls.
+
+## Hook discovery
 
 1. **内置钩子**：随 OpenClaw 一起发布
 2. **插件钩子**：捆绑在已安装插件内的钩子

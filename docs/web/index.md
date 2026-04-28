@@ -11,8 +11,7 @@ Gateway 会从与 Gateway WebSocket 相同的端口提供一个小型 **浏览�
 - 默认地址：`http://<host>:18789/`
 - 可选前缀：设置 `gateway.controlUi.basePath`（例如 `/openclaw`）
 
-功能位于 [控制界面](/web/control-ui)。
-本页侧重于绑定模式、安全性及面向网页的接口。
+能力位于 [Control UI](/web/control-ui)。本页其余部分重点介绍绑定模式、安全性以及面向 Web 的暴露面。
 
 ## Webhooks（网络钩子）
 

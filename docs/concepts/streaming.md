@@ -176,9 +176,11 @@ Matrix:
 
 支持的界面：
 
-- **Discord**、**Slack** 和 **Telegram** 会将工具进度流式写入实时预览编辑。
-- **Mattermost** 已经会将工具活动折叠进其单个草稿预览帖子中（见上文）。
-- 工具进度编辑遵循当前激活的预览流式模式；当预览流式为 `off` 或区块流式已接管消息时，会跳过这些编辑。
+- **Discord**, **Slack**, **Telegram**, and **Matrix** stream tool-progress into the live preview edit by default when preview streaming is active.
+- Telegram has shipped with tool-progress preview updates enabled since `v2026.4.22`; keeping them enabled preserves that released behavior.
+- **Mattermost** already folds tool activity into its single draft preview post (see above).
+- Tool-progress edits follow the active preview streaming mode; they are skipped when preview streaming is `off` or when block streaming has taken over the message.
+- To keep preview streaming but hide tool-progress lines, set `streaming.preview.toolProgress` to `false` for that channel. To disable preview edits entirely, set `streaming.mode` to `off`.
 
 - `partial` 模式在可用时可使用 Slack 原生流式传输（`chat.startStream`/`append`/`stop`）。
 - `block` 模式使用追加式的草稿预览。

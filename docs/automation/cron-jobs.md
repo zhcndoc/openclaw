@@ -25,15 +25,17 @@ openclaw cron add \
 openclaw cron list
 openclaw cron show <job-id>
 
-- Cron 运行在 Gateway 进程内部（不在模型内部）。
+- Cron 在 Gateway 进程内部运行（不是在模型内部）。
 - 任务定义会持久化到 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
-- 运行时执行状态会持久化到旁边的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
-- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会将任务视为全新的，因为运行时字段现在位于 `jobs-state.json` 中。
+- 运行时执行状态会保存在同目录下的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
+- 在拆分之后，较旧的 OpenClaw 版本仍然可以读取 `jobs.json`，但可能会把任务视为新任务，因为运行时字段现在位于 `jobs-state.json` 中。
+- 当在 Gateway 运行中或停止时编辑 `jobs.json`，OpenClaw 会将变更后的调度字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅格式化或仅键顺序变化的重写会保留待处理槽位。
 - 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
 - 一次性任务（`--at`）在成功后默认自动删除。
-- 隔离 cron 在运行完成时会尽力关闭其 `cron:<jobId>` 会话下已跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
-- 隔离 cron 还会防止过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有后代子代理运行仍然负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
-- 隔离 cron 会将最终摘要/输出中已知的执行拒绝标记视为失败，包括 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST` 等主机标记，因此被阻止的命令不会被报告为成功运行。
+- 隔离的 cron 运行会在任务完成时尽最大努力关闭该 `cron:<jobId>` 会话下已跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
+- 隔离的 cron 运行也会防止过时的确认回复。如果第一个结果只是一个中间状态更新（如 `on it`、`pulling everything together` 以及类似提示），并且没有任何后代子代理运行仍然负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
+- 隔离的 cron 运行会优先使用嵌入式运行中结构化的执行拒绝元数据，然后回退到已知的最终摘要/输出标记，例如 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST`，因此被阻止的命令不会被报告为成功运行。
+- 即使没有生成回复载荷，隔离的 cron 运行也会将运行级代理失败视为任务错误，因此模型/提供商失败会增加错误计数并触发失败通知，而不是将任务清除为成功。
 
 <a id="maintenance"></a>
 
@@ -89,7 +91,9 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月份
 
 `--model` 使用该任务选定的允许模型。如果请求的模型不被允许，cron 会记录警告并回退到任务的代理/默认模型选择。配置的回退链仍然适用，但没有明确每任务回退列表的普通模型覆盖不再将代理主模型作为隐藏的额外重试目标附加。
 
-隔离任务的模型选择优先级为：
+`--model` 使用该任务选定的允许模型。它不同于聊天会话中的 `/model` 覆盖：当任务主模型失败时，配置的回退链仍然适用。如果请求的模型不被允许，cron 会记录警告并回退到任务的代理/默认模型选择。
+
+Cron 任务也可以携带负载级别的 `fallbacks`。存在时，该列表会替换该任务的配置回退链。如果你希望严格的 cron 运行只尝试所选模型，请在任务负载/API 中使用 `fallbacks: []`。如果任务有 `--model` 但既没有负载回退也没有配置回退，OpenClaw 会传递一个显式的空回退覆盖，因此代理主模型不会作为隐藏的额外重试目标附加。
 
 1. Gmail hook 模型覆盖（当运行来自 Gmail 且该覆盖被允许时）
 2. 每任务负载 `model`
@@ -108,7 +112,7 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月份
 | `webhook`  | 将完成事件载荷 POST 到一个 URL                                  |
 | `none`     | 无运行器回退交付                                                 |
 
-使用 `--announce --channel telegram --to "-1001234567890"` 进行频道交付。对于 Telegram 论坛主题，使用 `-1001234567890:topic:123`。Slack/Discord/Mattermost 目标应使用明确的前缀（`channel:<id>`, `user:<id>`）。
+使用 `--announce --channel telegram --to "-1001234567890"` 进行频道交付。对于 Telegram 论坛主题，使用 `-1001234567890:topic:123`；直接 RPC/config 调用方也可以将 `delivery.threadId` 作为字符串或数字传入。Slack/Discord/Mattermost 目标应使用显式前缀（`channel:<id>`、`user:<id>`）。Matrix 房间 ID 区分大小写；请使用准确的房间 ID 或 `room:!room:server` 形式。
 
 对于隔离任务，聊天交付是共享的。如果存在聊天路由，即使任务使用 `--no-deliver`，代理也可以使用 `message` 工具。如果代理发送到了配置的/当前目标，OpenClaw 会跳过回退 announce。否则，`announce`、`webhook` 和 `none` 只控制运行器在代理轮次结束后如何处理最终回复。
 
@@ -119,7 +123,11 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当月份
 - 如果均未设置且任务已经通过 `announce` 交付，失败通知现在回退到该主通知目标。
 - `delivery.failureDestination` 仅在 `sessionTarget="isolated"` 任务上支持，除非主交付模式是 `webhook`。
 
-## CLI 示例
+- `cron.failureDestination` 为失败通知设置全局默认值。
+- `job.delivery.failureDestination` 为每个任务覆盖该设置。
+- 如果两者都未设置且任务已经通过 `announce` 交付，失败通知现在会回退到该主 announce 目标。
+- `delivery.failureDestination` 仅在 `sessionTarget="isolated"` 任务上支持，除非主交付模式是 `webhook`。
+- `failureAlert.includeSkipped: true` 可让任务或全局 cron 告警策略纳入重复的跳过运行告警。跳过运行会保留单独的连续跳过计数，因此不会影响执行错误退避。
 
 一次性提醒（主会话）：
 
@@ -199,7 +207,7 @@ curl -X POST http://127.0.0.1:18789/hooks/wake \
 
 ### POST /hooks/agent
 
-运行隔离的代理轮次：
+    字段：`message`（必需）、`name`、`agentId`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`fallbacks`、`thinking`、`timeoutSeconds`。
 
 ```bash
 curl -X POST http://127.0.0.1:18789/hooks/agent \
@@ -207,8 +215,6 @@ curl -X POST http://127.0.0.1:18789/hooks/agent \
   -H 'Content-Type: application/json' \
   -d '{"message":"Summarize inbox","name":"Email","model":"openai/gpt-5.4"}'
 ```
-
-字段：`message`（必需）、`name`、`agentId`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`thinking`、`timeoutSeconds`。
 
 ### 映射 Hooks (POST /hooks/\<name\>)
 
@@ -312,12 +318,16 @@ openclaw cron add --name "Ops sweep" --cron "0 6 * * *" --session isolated --mes
 openclaw cron edit <jobId> --clear-agent
 ```
 
+<Note>
 模型覆盖说明：
 
-- `openclaw cron add|edit --model ...` 更改任务所选的模型。
-- 如果模型被允许，该确切的服务提供商/模型将到达隔离的代理运行。
-- 如果不允许，cron 会警告并回退到任务的代理/默认模型选择。
-- 配置的回退链仍然适用，但普通的 `--model` 覆盖（没有明确的每任务回退列表）不再无声地回退到代理主模型作为额外的重试目标。
+- `openclaw cron add|edit --model ...` 会更改任务选定的模型。
+- 如果该模型被允许，那么该确切的 provider/model 会进入隔离的代理运行。
+- 如果不被允许，cron 会发出警告，并回退到任务的代理/默认模型选择。
+- 配置的回退链仍然适用，因为 cron `--model` 是任务主项，而不是会话的 `/model` 覆盖。
+- 载荷中的 `fallbacks` 会替换该任务配置的回退；`fallbacks: []` 会禁用回退并使运行严格执行。
+- 仅使用 `--model`，如果没有显式或配置的回退列表，不会静默地回退到代理主模型作为额外的重试目标。
+</Note>
 
 ## 配置
 
@@ -339,7 +349,11 @@ openclaw cron edit <jobId> --clear-agent
 }
 ```
 
-运行时状态旁车文件由 `cron.store` 派生：像 `~/clawd/cron/jobs.json` 这样的 `.json` 存储会使用 `~/clawd/cron/jobs-state.json`，而不带 `.json` 后缀的存储路径会追加 `-state.json`。
+`maxConcurrentRuns` 会同时限制计划中的 cron 分发和隔离的代理轮次执行。隔离的 cron 代理轮次在内部使用队列专用的 `cron-nested` 执行通道，因此提高这个值可以让彼此独立的 cron LLM 运行并行推进，而不只是启动它们各自的外层 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩展。
+
+运行时状态 sidecar 由 `cron.store` 派生：像 `~/clawd/cron/jobs.json` 这样的 `.json` 存储会使用 `~/clawd/cron/jobs-state.json`，而没有 `.json` 后缀的存储路径则会追加 `-state.json`。
+
+如果你手动编辑 `jobs.json`，请不要将 `jobs-state.json` 纳入源代码管理。OpenClaw 使用这个 sidecar 来保存待处理槽位、活动标记、最近运行元数据，以及调度标识；该调度标识会告诉调度器某个外部编辑过的任务何时需要一个新的 `nextRunAtMs`。
 
 禁用 cron：`cron.enabled: false` 或 `OPENCLAW_SKIP_CRON=1`。
 

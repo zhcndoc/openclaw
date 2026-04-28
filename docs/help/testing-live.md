@@ -98,12 +98,98 @@ sidebarTitle: "实时测试"
     - 内嵌 agent 将多模态用户消息转发给模型
     - 断言：回复包含 `cat` + 该代码（OCR 容错：允许轻微错误）
 
-提示：如果想查看你机器上可测试的内容（以及准确的 `provider/model` id），运行：
+- 测试：`src/gateway/android-node.capabilities.live.test.ts`
+- 脚本：`pnpm android:test:integration`
+- 目标：调用已连接 Android 节点当前**公开的每一条命令**，并断言命令契约行为。
+- 范围：
+  - 前置条件/手动设置（该套件不会安装/运行/配对应用）。
+  - 针对所选 Android 节点逐条命令进行 `node.invoke` 网关校验。
+- 所需预先设置：
+  - Android 应用已连接 + 已与网关配对。
+  - 应用保持在前台。
+  - 对你期望通过的能力已授予权限/采集同意。
+- 可选目标覆盖：
+  - `OPENCLAW_ANDROID_NODE_ID` 或 `OPENCLAW_ANDROID_NODE_NAME`。
+  - `OPENCLAW_ANDROID_GATEWAY_URL` / `OPENCLAW_ANDROID_GATEWAY_TOKEN` / `OPENCLAW_ANDROID_GATEWAY_PASSWORD`。
+- Android 完整设置细节：[Android App](/platforms/android)
+
+## 实时：模型冒烟测试（profile keys）
+
+实时测试分成两层，以便隔离故障：
+
+- “直接模型”用于确认在给定 key 的情况下，提供方/模型本身是否能正常应答。
+- “网关冒烟测试”用于确认该模型的完整网关 + agent 管线是否正常工作（会话、历史、工具、沙箱策略等）。
+
+### 第 1 层：直接模型补全（无网关）
+
+- 测试：`src/agents/models.profiles.live.test.ts`
+- 目标：
+  - 枚举已发现的模型
+  - 使用 `getApiKeyForModel` 选择你有凭证的模型
+  - 每个模型运行一次小型补全（必要时包含有针对性的回归测试）
+- 如何启用：
+  - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
+- 设置 `OPENCLAW_LIVE_MODELS=modern`（或 `all`，modern 的别名）来真正运行此套件；否则它会跳过，以保持 `pnpm test:live` 专注于网关冒烟测试
+- 如何选择模型：
+  - `OPENCLAW_LIVE_MODELS=modern` 运行 modern 白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4）
+  - `OPENCLAW_LIVE_MODELS=all` 是 modern 白名单的别名
+  - 或 `OPENCLAW_LIVE_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,..."`（逗号白名单）
+  - modern/all 扫描默认使用精心挑选的高信号上限；设置 `OPENCLAW_LIVE_MAX_MODELS=0` 可进行穷举 modern 扫描，或设置正数以使用更小的上限。
+  - 穷举扫描使用 `OPENCLAW_LIVE_TEST_TIMEOUT_MS` 作为整个直接模型测试的超时时间。默认：60 分钟。
+  - 直接模型探测默认并发 20 路；可设置 `OPENCLAW_LIVE_MODEL_CONCURRENCY` 覆盖。
+- 如何选择提供方：
+  - `OPENCLAW_LIVE_PROVIDERS="google,google-antigravity,google-gemini-cli"`（逗号白名单）
+- 密钥来源：
+  - 默认：profile 存储和环境变量回退
+  - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 可强制仅使用 **profile 存储**
+- 这样设计的原因：
+  - 将“提供方 API 坏了 / key 无效”与“gateway agent 管线坏了”分离开来
+  - 包含小型、隔离的回归测试（示例：OpenAI Responses/Codex Responses 的 reasoning replay + tool-call 流程）
+
+### 第 2 层：网关 + dev agent 冒烟测试（也就是 “@openclaw” 实际做的事）
+
+- 测试：`src/gateway/gateway-models.profiles.live.test.ts`
+- 目标：
+  - 启动一个进程内网关
+  - 创建/补丁一个 `agent:dev:*` 会话（每次运行可覆盖模型）
+  - 遍历有 key 的模型并断言：
+    - “有意义”的响应（无工具）
+    - 一个真实的工具调用可工作（read 探针）
+    - 可选的额外工具探针（exec+read 探针）
+    - OpenAI 回归路径（仅 tool-call → follow-up）仍可正常工作
+- 探针细节（方便你快速解释失败原因）：
+  - `read` 探针：测试会在工作区写入一个 nonce 文件，并要求 agent `read` 它后把 nonce 复述回来。
+  - `exec+read` 探针：测试要求 agent 用 `exec` 把 nonce 写入临时文件，然后再 `read` 回来。
+  - 图像探针：测试会附加一个生成的 PNG（猫 + 随机代码），并期望模型返回 `cat <CODE>`。
+  - 实现参考：`src/gateway/gateway-models.profiles.live.test.ts` 和 `src/gateway/live-image-probe.ts`。
+- 如何启用：
+  - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
+- 如何选择模型：
+  - 默认：modern 白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4）
+  - `OPENCLAW_LIVE_GATEWAY_MODELS=all` 是 modern 白名单的别名
+  - 或设置 `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"`（或逗号列表）进行缩小范围
+  - modern/all 网关扫描默认使用精心挑选的高信号上限；设置 `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` 可进行穷举 modern 扫描，或设置正数以使用更小的上限。
+- 如何选择提供方（避免“OpenRouter 全家桶”）：
+  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"`（逗号白名单）
+- 工具 + 图像探针在此实时测试中始终开启：
+  - `read` 探针 + `exec+read` 探针（工具压力测试）
+  - 当模型声明支持图像输入时，图像探针会运行
+  - 流程（高层）：
+    - 测试生成一个带有“CAT”+ 随机代码的微型 PNG（`src/gateway/live-image-probe.ts`）
+    - 通过 `agent` `attachments: [{ mimeType: "image/png", content: "<base64>" }]` 发送
+    - 网关将附件解析为 `images[]`（`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`）
+    - 内嵌 agent 将多模态用户消息转发给模型
+    - 断言：回复包含 `cat` + 该代码（OCR 容错：允许轻微错误）
+
+<Tip>
+要查看你机器上可以测试什么（以及准确的 `provider/model` id），请运行：
 
 ```bash
 openclaw models list
 openclaw models list --json
 ```
+
+</Tip>
 
 ## 实时：CLI 后端冒烟测试（Claude、Codex、Gemini 或其他本地 CLI）
 
@@ -275,7 +361,7 @@ Docker 说明：
 - 单模型，gateway 烟雾测试：
   - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
-- Tool calling across several providers:
+- 多个提供方的工具调用：
   - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Google 重点（Gemini API key + Antigravity）：
@@ -313,7 +399,7 @@ Docker 说明：
 - Z.AI（GLM）: `zai/glm-5.1`
 - MiniMax: `minimax/MiniMax-M2.7`
 
-使用工具 + 图片运行网关冒烟测试：
+使用工具 + 图片运行网关烟雾测试：
 `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.2,openai-codex/gpt-5.2,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 ### 基线：工具调用（Read + 可选 Exec）
@@ -350,7 +436,9 @@ Docker 说明：
 - 内置：`openai`、`openai-codex`、`anthropic`、`google`、`google-vertex`、`google-antigravity`、`google-gemini-cli`、`zai`、`openrouter`、`opencode`、`opencode-go`、`xai`、`groq`、`cerebras`、`mistral`、`github-copilot`
 - 通过 `models.providers`（自定义端点）：`minimax`（云/API），以及任何 OpenAI/Anthropic 兼容代理（LM Studio、vLLM、LiteLLM 等）
 
-提示：不要在文档里硬编码“所有模型”。权威列表是你机器上 `discoverModels(...)` 返回的内容，以及可用的密钥。
+<Tip>
+不要在文档里硬编码“所有模型”。权威列表就是你机器上 `discoverModels(...)` 返回的内容，再加上可用的密钥。
+</Tip>
 
 ## 凭据（切勿提交）
 

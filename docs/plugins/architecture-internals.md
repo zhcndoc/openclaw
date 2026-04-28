@@ -79,10 +79,15 @@ OpenClaw 在进程内保留短期缓存，用于：
 
 这些缓存减少了突发性的启动开销和重复命令开销。可以将它们视为短生命周期的性能缓存，而非持久化。
 
-性能说明：
+Gateway 启动热点路径应优先使用当前的 `PluginMetadataSnapshot`、
+派生的 `PluginLookUpTable`，或通过调用链传入的显式清单注册表。配置验证、启动自动启用以及插件引导在可用时都使用同一个快照。对于那些仍然从已持久化的已安装插件索引重建清单元数据的调用方，OpenClaw 还保留了一个小型有界回退缓存，其键由已安装索引、请求形态、配置策略、运行时根目录以及清单/包文件签名组成。该缓存仅用于重复的已安装索引重建回退；它不是可变的运行时插件注册表。
+
+性能提示：
 
 - 设置 `OPENCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE=1` 或
   `OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE=1` 可禁用这些缓存。
+- 设置 `OPENCLAW_DISABLE_INSTALLED_PLUGIN_MANIFEST_REGISTRY_CACHE=1` 可仅禁用
+  已安装索引清单注册表回退缓存。
 - 使用 `OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS` 和
   `OPENCLAW_PLUGIN_MANIFEST_CACHE_MS` 调整缓存窗口。
 
@@ -139,7 +144,7 @@ export default {
 回调负载字段：
 
 - `status`：`"approved"` 或 `"denied"`
-- `decision`：`"allow-once"`、`"allow-always"` 或 `"deny"`
+- `decision`：`"allow-once"`、`"allow-always"` 或 `"`deny"`
 - `binding`：已批准请求的解析后绑定
 - `request`：原始请求摘要、detach hint、发送者 id，以及
   会话元数据
@@ -449,11 +454,12 @@ const result = await api.runtime.subagent.run({
 
 说明：
 
-- `provider` 和 `model` 是每次运行的可选覆盖项，不是持久的会话更改。
+- `provider` 和 `model` 是每次运行可选的覆盖项，不是持久的会话变更。
 - OpenClaw 仅对受信任的调用者接受这些覆盖字段。
-- 对于插件拥有的回退运行，操作员必须通过 `plugins.entries.<id>.subagent.allowModelOverride: true` 显式启用。
-- 使用 `plugins.entries.<id>.subagent.allowedModels` 可将受信任插件限制为特定的规范 `provider/model` 目标，或使用 `"*"` 明确允许任何目标。
-- 不受信任的插件子代理运行仍然可用，但覆盖请求会被拒绝，而不是静默回退。
+- 对于插件拥有的回退运行，操作员必须显式启用 `plugins.entries.<id>.subagent.allowModelOverride: true`。
+- 使用 `plugins.entries.<id>.subagent.allowedModels` 将受信任插件限制为特定的规范化 `provider/model` 目标，或使用 `"*"` 明确允许任何目标。
+- 不受信任的插件子代理运行仍可执行，但覆盖请求会被拒绝，而不是静默回退。
+- 插件创建的子代理会话会带上创建它的插件 id。回退的 `api.runtime.subagent.deleteSession(...)` 只能删除这些所属会话；任意会话删除仍需要带管理员作用域的 Gateway 请求。
 
 对于网络搜索，插件可以消费共享运行时辅助工具，而不是
 直接深入代理工具接线：
@@ -555,12 +561,17 @@ barrel。核心子路径：
 `approvalCapability` 契约上，而不是在不相关的
 插件字段之间混用。参见 [通道插件](/plugins/sdk-channel-plugins)。
 
-运行时和配置辅助工具位于对应的 `*-runtime` 子路径下
-（`approval-runtime`、`config-runtime`、`infra-runtime`、`agent-runtime`、
-`lazy-runtime`、`directory-runtime`、`text-runtime`、`runtime-store` 等）。
+Runtime and config helpers live under matching focused `*-runtime` subpaths
+(`approval-runtime`, `agent-runtime`, `lazy-runtime`, `directory-runtime`,
+`text-runtime`, `runtime-store`, `system-event-runtime`, `heartbeat-runtime`,
+`channel-activity-runtime`, etc.). Prefer `config-types`,
+`plugin-config-runtime`, `runtime-config-snapshot`, and `config-mutation`
+instead of the broad `config-runtime` compatibility barrel.
 
 <Info>
-`openclaw/plugin-sdk/channel-runtime` 已弃用 — 这是为旧插件提供的兼容层。新代码应改为导入更窄的通用原语。
+`openclaw/plugin-sdk/channel-runtime`, `openclaw/plugin-sdk/config-runtime`,
+and `openclaw/plugin-sdk/infra-runtime` are deprecated compatibility shims for
+older plugins. New code should import narrower generic primitives instead.
 </Info>
 
 仓库内部入口点（按打包的插件包根目录）：

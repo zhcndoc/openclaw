@@ -191,10 +191,9 @@ swift run openclaw-mac discover --timeout 3000 --json
 - `--timeout <ms>`：整体发现时间窗口（默认：`2000`）
 - `--json`：结构化输出以便对比
 
-提示：将其与 `openclaw gateway discover --json` 对比，以查看
-macOS 应用的发现管线（`local.` 加上已配置的广域域名，并带有
-广域和 Tailscale Serve 回退）是否与
-Node CLI 基于 `dns-sd` 的发现不同。
+<Tip>
+将其与 `openclaw gateway discover --json` 进行比较，看看 macOS 应用的发现管道（`local.` 加上已配置的广域域名，并带有广域和 Tailscale Serve 回退）是否与 Node CLI 基于 `dns-sd` 的发现不同。
+</Tip>
 
 ## 远程连接流程（SSH 隧道）
 

@@ -133,14 +133,19 @@ title: "斜杠命令"
 - `!poll [sessionId]` 检查后台 bash 作业。
 - `!stop [sessionId]` 停止后台 bash 作业。
 
-### 生成的 Dock 命令
+Dock 命令会将当前会话的回复路由切换到另一个已关联的频道。有关设置、示例和故障排除，请参见 [频道停靠](/concepts/channel-docking)。
 
 Dock 命令由支持原生命令的频道插件生成。当前捆绑集合：
 
-- `/dock-discord`（别名：`/dock_discord`）
-- `/dock-mattermost`（别名：`/dock_mattermost`）
-- `/dock-slack`（别名：`/dock_slack`）
-- `/dock-telegram`（别名：`/dock_telegram`）
+Dock 命令由支持原生命令的频道插件生成。当前捆绑集合：
+
+在直接聊天中使用 dock 命令，可以将当前会话的回复路由切换到另一个已关联的频道。代理会保持相同的会话上下文，但该会话未来的回复会发送到所选频道对端。
+
+Dock 命令需要 `session.identityLinks`。源发送者和目标对端必须属于同一身份组，例如 `["telegram:123", "discord:456"]`。如果 id 为 `123` 的 Telegram 用户发送 `/dock_discord`，OpenClaw 会在活动会话上存储 `lastChannel: "discord"` 和 `lastTo: "456"`。如果发送者未绑定到 Discord 对端，则命令会回复设置提示，而不会回落到正常聊天。
+
+Docking 只会更改活动会话路由。它不会创建频道账户、授予访问权限、绕过频道白名单，也不会把转录历史移动到另一个会话。可使用 `/dock-telegram`、`/dock-slack`、`/dock-mattermost` 或其他生成的 dock 命令再次切换路由。
+
+### 捆绑插件命令
 
 ### 捆绑插件命令
 

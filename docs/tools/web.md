@@ -171,7 +171,7 @@ OpenClaw 还包括用于 X（前身为 Twitter）帖子的 `x_search` 和用于�
 如果未检测到任何提供商，则回退到 Brave（您将收到一个缺少密钥的错误，提示您进行配置）。
 
 <Note>
-  所有提供商密钥字段都支持 SecretRef 对象。位于 `plugins.entries.<plugin>.config.webSearch.apiKey` 下的插件作用域 SecretRef 会被解析，适用于内置的 Exa、Firecrawl、Gemini、Grok、Kimi、Perplexity 和 Tavily 提供商，无论是通过 `tools.web.search.provider` 显式选择提供商，还是通过自动检测选中提供商。在自动检测模式下，OpenClaw 只会解析所选提供商的密钥——未被选中的 SecretRef 保持非活动状态，因此您可以配置多个提供商，而无需为未使用的提供商承担解析成本。
+  所有提供商密钥字段都支持 SecretRef 对象。`plugins.entries.<plugin>.config.webSearch.apiKey` 下的插件作用域 SecretRef 会为捆绑的、基于 API 的网页搜索提供商解析，包括 Brave、Exa、Firecrawl、Gemini、Grok、Kimi、MiniMax、Perplexity 和 Tavily，无论提供商是通过 `tools.web.search.provider` 显式选择，还是通过自动检测选中。在自动检测模式下，OpenClaw 仅解析所选提供商的密钥——未选中的 SecretRef 保持不活跃，因此您可以同时配置多个提供商，而无需为未使用的提供商承担解析成本。
 </Note>
 
 ## 配置

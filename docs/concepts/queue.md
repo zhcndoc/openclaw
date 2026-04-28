@@ -73,10 +73,10 @@ steer-backlog 意味着你可在指挥运行后得到跟进响应，因此流式
 
 ## 范围与保证
 
-- 适用于所有使用网关回复管道（WhatsApp web、Telegram、Slack、Discord、Signal、iMessage、webchat 等）的入站渠道的自动回复代理运行。
-- 默认通道（`main`）是进程级的，用于入站 + 主心跳；设置 `agents.defaults.maxConcurrent` 以允许多个会话并行。
-- 可能存在额外的通道（例如 `cron`、`subagent`），以便后台作业可以并行运行而不阻塞入站回复。这些分离的运行被跟踪为 [后台任务](/automation/tasks)。
-- 每会话通道保证一次只有一个代理运行接触给定会话。
+- 适用于通过网关回复流水线使用的所有入站渠道上的自动回复代理运行（WhatsApp web、Telegram、Slack、Discord、Signal、iMessage、webchat 等）。
+- 默认通道（`main`）为进程级，适用于入站消息和主心跳；设置 `agents.defaults.maxConcurrent` 以允许多个会话并行。
+- 还可能存在其他通道（例如 `cron`、`cron-nested`、`nested`、`subagent`），这样后台任务就可以并行运行而不会阻塞入站回复。隔离的 cron 代理轮次会占用一个 `cron` 槽位，而其内部代理执行使用 `cron-nested`；两者都使用 `cron.maxConcurrentRuns`。共享的非 cron `nested` 流保持其自身的通道行为。这些分离运行会被追踪为[后台任务](/automation/tasks)。
+- 按会话划分的通道保证同一时刻只有一个代理运行会触及给定会话。
 - 无外部依赖或后台工作线程；纯 TypeScript + promises。
 
 ## 故障排查

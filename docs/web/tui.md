@@ -212,9 +212,9 @@ openclaw chat
 - `--timeout-ms <ms>`: 代理超时时间（毫秒，默认值为 `agents.defaults.timeoutSeconds`）
 - `--history-limit <n>`: 要加载的历史记录条数（默认 `200`）
 
-注意：当您设置了 `--url` 时，TUI 不会回退使用配置或环境中的凭据。
-请显式传入 `--token` 或 `--password`。缺少显式凭据会报错。
-在本地模式下，不要传入 `--url`、`--token` 或 `--password`。
+<Warning>
+当您设置了 `--url` 时，TUI 不会回退使用配置或环境中的凭据。请显式传入 `--token` 或 `--password`。缺少显式凭据会报错。在本地模式下，请勿传入 `--url`、`--token` 或 `--password`。
+</Warning>
 
 ## 故障排查
 

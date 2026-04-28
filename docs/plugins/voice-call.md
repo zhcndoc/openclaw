@@ -54,6 +54,10 @@ cd "$PLUGIN_SRC" && pnpm install
 
 在 `plugins.entries.voice-call.config` 下设置配置项：
 
+<Note>
+语音通话凭据接受 SecretRefs。`plugins.entries.voice-call.config.twilio.authToken` 和 `plugins.entries.voice-call.config.tts.providers.*.apiKey` 会通过标准 SecretRef 接口解析；请参阅 [SecretRef credential surface](/reference/secretref-credential-surface)。
+</Note>
+
 ```json5
 {
   plugins: {

@@ -72,7 +72,14 @@ openclaw browser --browser-profile openclaw snapshot
 
 ## 缺少浏览器命令或工具
 
-如果升级后 `openclaw browser` 变成未知命令，`browser.request` 丢失，或者代理报告浏览器工具不可用，通常原因是 `plugins.allow` 列表未包含 `browser`。请添加它：
+- `browser` 工具说明包含简洁的、始终生效的契约：选择正确的配置文件，让引用保持在同一标签页上，使用 `tabId`/标签来定位标签页，并为多步工作加载浏览器技能。
+- 捆绑的 `browser-automation` 技能包含更长的操作循环：先检查状态/标签页，给任务标签页加标签，操作前先快照，UI 变化后重新快照，失效引用只恢复一次，并将登录/2FA/captcha 或摄像头/麦克风阻塞作为手动操作上报，而不是猜测。
+
+启用插件后，插件捆绑的技能会列在代理可用技能中。完整技能说明按需加载，因此日常轮次不会承担完整的 token 成本。
+
+## Missing browser command or tool
+
+If `openclaw browser` is unknown after an upgrade, `browser.request` is missing, or the agent reports the browser tool as unavailable, the usual cause is a `plugins.allow` list that omits `browser` and no root `browser` config block exists. Add it:
 
 ```json5
 {
@@ -82,7 +89,7 @@ openclaw browser --browser-profile openclaw snapshot
 }
 ```
 
-`browser.enabled=true`、`plugins.entries.browser.enabled=true` 和 `tools.alsoAllow: ["browser"]` 不能替代 allowlist 成员资格——allowlist 才是插件加载的闸门，而工具策略只会在加载后生效。移除 `plugins.allow` 也会恢复默认行为。
+An explicit root `browser` block, for example `browser.enabled=true` or `browser.profiles.<name>`, activates the bundled browser plugin even under a restrictive `plugins.allow`, matching channel config behavior. `plugins.entries.browser.enabled=true` and `tools.alsoAllow: ["browser"]` do not substitute for allowlist membership by themselves. Removing `plugins.allow` entirely also restores the default.
 
 ## 配置文件：openclaw 与 user
 
@@ -144,9 +151,13 @@ openclaw browser --browser-profile openclaw snapshot
 
 <Accordion title="Ports and reachability">
 
-- 控制服务绑定到从 `gateway.port` 派生的 loopback 端口上（默认 `18791` = gateway + 2）。覆盖 `gateway.port` 或 `OPENCLAW_GATEWAY_PORT` 会在同一端口族中平移派生端口。
-- 本地 `openclaw` 配置文件会自动分配 `cdpPort`/`cdpUrl`；只有在远程 CDP 时才设置这些值。未设置时，`cdpUrl` 默认指向托管的本地 CDP 端口。
-- `remoteCdpTimeoutMs` 适用于远程（非 loopback）CDP 的 HTTP 可达性检查；`remoteCdpHandshakeTimeoutMs` 适用于远程 CDP 的 WebSocket 握手。
+- 控制服务绑定到从 `gateway.port` 派生的 loopback 端口（默认 `18791` = gateway + 2）。覆盖 `gateway.port` 或 `OPENCLAW_GATEWAY_PORT` 会以同一端口族方式改变派生端口。
+- 本地 `openclaw` 配置文件会自动分配 `cdpPort`/`cdpUrl`；只有在远程 CDP 时才设置这些值。未设置时，`cdpUrl` 默认为托管的本地 CDP 端口。
+- `remoteCdpTimeoutMs` 适用于远程和 `attachOnly` CDP HTTP 可达性检查以及打开标签页的 HTTP 请求；`remoteCdpHandshakeTimeoutMs` 适用于它们的 CDP WebSocket 握手。
+- `localLaunchTimeoutMs` 是本地启动的受管 Chrome 进程暴露其 CDP HTTP 端点的预算。`localCdpReadyTimeoutMs` 是进程被发现后等待 CDP websocket 就绪的后续预算。在 Raspberry Pi、低端 VPS 或 Chromium 启动较慢的旧硬件上，请提高这些值。值必须是大于 0 且不超过 `120000` 毫秒的正整数；无效配置值会被拒绝。
+- 受管 Chrome 的重复启动/就绪失败会按配置文件进行熔断。连续多次失败后，OpenClaw 会短暂暂停新的启动尝试，而不是在每次浏览器工具调用时都启动 Chromium。请修复启动问题、如果不需要则禁用浏览器，或在修复后重启 Gateway。
+- `actionTimeoutMs` 是当调用方未传递 `timeoutMs` 时，浏览器 `act` 请求的默认预算。客户端传输会增加一个小的宽限窗口，以便长等待可以完成而不是在 HTTP 边界超时。
+- `tabCleanup` 用于清理主代理浏览器会话打开的标签页，属于尽力而为。子代理、cron 和 ACP 生命周期清理在会话结束时仍会关闭其显式跟踪的标签页；主会话会让活动标签页保持可复用，然后在后台关闭空闲或多余的跟踪标签页。
 
 </Accordion>
 
@@ -173,7 +184,7 @@ openclaw browser --browser-profile openclaw snapshot
 
 </AccordionGroup>
 
-## 使用 Brave（或其他基于 Chromium 的浏览器）
+## 使用 Brave 或其他基于 Chromium 的浏览器
 
 如果您的 **系统默认** 浏览器基于 Chromium（如 Chrome/Brave/Edge），OpenClaw 会自动使用它。  
 您也可以通过设置 `browser.executablePath` 来覆盖自动检测：

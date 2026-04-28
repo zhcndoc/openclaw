@@ -65,9 +65,7 @@ REM 阶段提取模式和反思信号。
 
 ## 会话记录摄取
 
-Dreaming 可以摄取脱敏的会话记录到梦境语料库中。当  
-会话记录可用时，会将其输入到浅睡阶段，与每日记忆信号和回忆轨迹一起处理。  
-个人和敏感内容在摄取前会进行脱敏处理。
+Dreaming 还在 `DREAMS.md` 中保留一个叙事性的 **梦境日记**。在每个阶段拥有足够材料后，`memory-core` 运行一个尽最大努力的后台子代理回合，并追加一个简短的日记条目。它使用默认运行时模型，除非配置了 `dreaming.model`。
 
 ## 梦境日记
 
@@ -111,9 +109,10 @@ Dreaming 生成的日记/报告工件不会被纳入短期推广。
 
 默认节奏行为：
 
-| 设置 | 默认值 |
-| -------------------- | ----------- |
-| `dreaming.frequency` | `0 3 * * *` |
+| Setting              | Default       |
+| -------------------- | ------------- |
+| `dreaming.frequency` | `0 3 * * *`   |
+| `dreaming.model`     | default model |
 
 ## 快速开始
 
@@ -196,10 +195,19 @@ openclaw memory rem-harness --json
 
 所有设置都位于 `plugins.entries.memory-core.config.dreaming` 下。
 
-| 键 | 默认值 |
-| ----------- | ----------- |
-| `enabled` | `false` |
-| `frequency` | `0 3 * * *` |
+<ParamField path="enabled" type="boolean" default="false">
+  启用或禁用 dreaming 扫描。
+</ParamField>
+<ParamField path="frequency" type="string" default="0 3 * * *">
+  完整 dreaming 扫描的 cron 频率。
+</ParamField>
+<ParamField path="model" type="string">
+  可选的 Dream Diary 子代理模型覆盖。若同时设置子代理的 `allowedModels` 白名单，请使用规范的 `provider/model` 值。
+</ParamField>
+
+<Warning>
+`dreaming.model` 需要 `plugins.entries.memory-core.subagent.allowModelOverride: true`。若要限制它，还需设置 `plugins.entries.memory-core.subagent.allowedModels`。
+</Warning>
 
 阶段策略、阈值和存储行为是内部实现  
 细节（非用户面向配置）。

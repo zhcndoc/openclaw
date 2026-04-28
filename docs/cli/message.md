@@ -19,9 +19,10 @@ openclaw message <子命令> [标志]
 
 频道选择：
 
-- `--channel` 如果配置了多个频道，则必需。
-- 如果只配置了一个频道，它将作为默认值。
-- 值：`discord|googlechat|imessage|matrix|mattermost|msteams|signal|slack|telegram|whatsapp`（Mattermost 需要插件）
+- `--channel` 如果配置了多个频道则为必需。
+- 如果正好配置了一个频道，它将成为默认值。
+- 取值：`discord|googlechat|imessage|matrix|mattermost|msteams|signal|slack|telegram|whatsapp`（Mattermost 需要插件）
+- 当 `--channel` 或带频道前缀的目标存在时，`openclaw message` 会将所选频道解析为其所属插件；否则会加载已配置的频道插件以推断默认频道。
 
 目标格式 (`--target`)：
 

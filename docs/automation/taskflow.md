@@ -115,7 +115,10 @@ Task Flow 观察外部创建的任务并保持流程状态同步，而不拥有�
 
 ## 持久化状态和修订跟踪
 
-每个流程持久化其自身状态并跟踪修订，以便进度在网关重启后得以保留。修订跟踪能够在多个来源尝试并发推进同一流程时启用冲突检测。
+Each flow persists its own state and tracks revisions so progress survives gateway restarts. Revision tracking enables conflict detection when multiple sources attempt to advance the same flow concurrently.
+The flow registry uses SQLite with bounded write-ahead-log maintenance, including
+periodic and shutdown checkpoints, so long-running gateways do not retain
+unbounded `registry.sqlite-wal` sidecar files.
 
 ## 取消行为
 

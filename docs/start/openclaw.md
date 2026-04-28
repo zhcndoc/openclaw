@@ -1,8 +1,8 @@
 ---
 summary: "作为个人助理运行 OpenClaw 的端到端指南及安全注意事项"
 read_when:
-  - Onboarding a new assistant instance
-  - Reviewing safety/permission implications
+  - 新助理实例入职时
+  - 审查安全/权限影响时
 title: "个人助理设置"
 ---
 
@@ -74,7 +74,9 @@ OpenClaw 从其工作目录读取操作指令和“记忆”。
 
 默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并会自动创建此目录及初始文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`），在安装/首次运行代理时创建。仅当工作区全新时会创建 `BOOTSTRAP.md`（删除后不会再自动生成）。`MEMORY.md` 可选（不自动生成）；存在时会在正常会话中加载。子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`。
 
-提示：将此文件夹当作 OpenClaw 的“记忆”，并将其初始化为 git 仓库（最好是私有的），这样你的 `AGENTS.md` 及记忆文件都能备份。如果已安装 git，崭新的工作区会自动初始化。
+<Tip>
+将此文件夹视为 OpenClaw 的记忆，并将其设为 git 仓库（最好是私有仓库），这样你的 `AGENTS.md` 和记忆文件就会得到备份。如果已安装 git，全新的工作区会自动初始化。
+</Tip>
 
 ```bash
 openclaw setup

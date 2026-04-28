@@ -10,7 +10,9 @@ title: "Zalo personal plugin"
 
 通过插件为 OpenClaw 提供 Zalo Personal 支持，使用原生 `zca-js` 实现对普通 Zalo 用户账户的自动化操作。
 
-> **警告：**非官方自动化可能导致账户暂停或封禁，使用请自行承担风险。
+<Warning>
+非官方自动化可能导致账号被暂停或封禁。请自行承担风险使用。
+</Warning>
 
 ## 命名
 

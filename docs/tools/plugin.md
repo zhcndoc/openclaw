@@ -54,12 +54,23 @@ search 等等。有些插件是 **core**（随 OpenClaw 一起发布），另一
 ```
 
 安装路径使用与 CLI 相同的解析器：本地路径/归档文件、显式
-`clawhub:<pkg>`，或裸包规格（先 ClawHub，再回退到 npm）。
+`clawhub:<pkg>`、显式 `npm:<pkg>`，或者裸包规格（先 ClawHub，再
+回退到 npm）。
 
-如果配置无效，正常安装会直接失败，并提示你执行
-`openclaw doctor --fix`。唯一的恢复例外是一个窄范围的捆绑插件
-重装路径，适用于启用了
+如果配置无效，安装通常会失败并提示你运行
+`openclaw doctor --fix`。唯一的恢复例外是一个狭窄的捆绑插件
+重新安装路径，适用于启用了
 `openclaw.install.allowInvalidConfigRecovery` 的插件。
+在 Gateway 启动期间，单个插件的无效配置会被隔离到该插件：
+启动日志会记录 `plugins.entries.<id>.config` 问题，跳过该插件的
+加载，并保持其他插件和通道在线。运行 `openclaw doctor --fix`
+可以通过禁用该插件条目并移除其无效配置负载来隔离坏掉的插件配置；
+正常的配置备份会保留之前的值。
+当某个通道配置引用了一个已不再可发现的插件，但相同的过期插件 id 仍然
+保留在插件配置或安装记录中时，Gateway 启动会记录警告并跳过该通道，
+而不是阻止其他所有通道运行。
+运行 `openclaw doctor --fix` 可移除过期的通道/插件条目；没有过期插件
+证据的未知通道键仍会失败验证，因此拼写错误仍然会显现。
 
 打包后的 OpenClaw 安装不会急切地安装每个捆绑插件的运行时依赖树。当一个捆绑的、由 OpenClaw 维护的插件通过插件配置、旧版 channel 配置或默认启用的清单处于活动状态时，启动修复只会在导入它之前修复该插件声明的运行时依赖。显式禁用仍然优先：`plugins.entries.<id>.enabled: false`、`plugins.deny`、`plugins.enabled: false` 和 `channels.<id>.enabled: false` 会阻止对该插件/通道的自动捆绑运行时依赖修复。外部插件和自定义加载路径仍必须通过 `openclaw plugins install` 安装。
 
@@ -77,7 +88,7 @@ OpenClaw 识别两种插件格式：
 如果你正在编写原生插件，请从 [构建插件](/plugins/building-plugins)
 和 [插件 SDK 概览](/plugins/sdk-overview) 开始。
 
-## 官方插件
+## Package entrypoints
 
 ### 可安装（npm）
 
@@ -149,8 +160,8 @@ OpenClaw 识别两种插件格式：
 
 <Accordion title="插件状态：已禁用 vs 缺失 vs 无效">
   - **已禁用**：插件存在，但启用规则将其关闭。配置会被保留。
-  - **缺失**：配置引用了一个发现过程中未找到的插件 id。
-  - **无效**：插件存在，但其配置与声明的 schema 不匹配。
+  - **缺失**：配置引用了一个发现流程没有找到的插件 id。
+  - **无效**：插件存在，但其配置不符合声明的 schema。Gateway 启动只会跳过该插件；`openclaw doctor --fix` 可以通过禁用它并移除其配置负载来隔离无效条目。
 </Accordion>
 
 ## 发现与优先级
@@ -231,11 +242,12 @@ openclaw plugins inspect --all             # 全局表格
 openclaw plugins info <id>                 # inspect 别名
 openclaw plugins doctor                    # 诊断
 
-openclaw plugins install <package>         # 安装（先 ClawHub，再 npm）
-openclaw plugins install clawhub:<pkg>     # 仅从 ClawHub 安装
-openclaw plugins install <spec> --force    # 覆盖现有安装
-openclaw plugins install <path>            # 从本地路径安装
-openclaw plugins install -l <path>         # 链接（不复制），用于开发
+openclaw plugins install <package>         # install (ClawHub first, then npm)
+openclaw plugins install clawhub:<pkg>     # install from ClawHub only
+openclaw plugins install npm:<pkg>         # install from npm only
+openclaw plugins install <spec> --force    # overwrite existing install
+openclaw plugins install <path>            # install from local path
+openclaw plugins install -l <path>         # link (no copy) for dev
 openclaw plugins install <plugin> --marketplace <source>
 openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo>
 openclaw plugins install <spec> --pin      # 记录精确解析后的 npm 规格
@@ -266,7 +278,7 @@ openclaw plugins disable <id>
 
 `--pin` 仅适用于 npm。它不支持与 `--marketplace` 一起使用，因为 marketplace 安装会保留 marketplace 源元数据，而不是 npm 规格。
 
-`--dangerously-force-unsafe-install` 是一个“破窗”覆盖选项，用于处理内置危险代码扫描器的误报。它允许插件安装和插件更新在遇到内置 `critical` 发现后继续进行，但仍然不能绕过插件 `before_install` 策略阻止或扫描失败阻止。
+`--dangerously-force-unsafe-install` 是一个破窗式覆盖选项，用于绕过内置危险代码扫描器产生的误报。它允许插件安装和插件更新继续越过内置的 `critical` 发现，但仍然不能绕过插件的 `before_install` 策略阻止或扫描失败阻止。安装扫描会忽略常见的测试文件和目录，例如 `tests/`、`__tests__/`、`*.test.*` 和 `*.spec.*`，以避免阻止打包的测试 mock；即使声明的插件运行时入口点使用了这些名称之一，仍然会对其进行扫描。
 
 此 CLI 标志仅适用于插件安装/更新流程。由 Gateway 驱动的技能依赖安装则改用对应的 `dangerouslyForceUnsafeInstall` 请求覆盖项，而 `openclaw skills install` 仍然是独立的 ClawHub 技能下载/安装流程。
 
@@ -361,13 +373,13 @@ OpenClaw 在插件
 - `message_sending`: `{ cancel: true }` 是终态；较低优先级的处理器将被跳过。
 - `message_sending`: `{ cancel: false }` 是无操作，且不会清除之前的取消状态。
 
-Native Codex app-server runs bridge Codex-native tool events back into this
-hook surface. Plugins can block native Codex tools through `before_tool_call`,
-observe results through `after_tool_call`, and participate in Codex
-`PermissionRequest` approvals. The bridge does not rewrite Codex-native tool
-arguments yet.
+原生 Codex app-server 会将 Codex 原生工具事件通过桥接回传到这个
+钩子表面。插件可以通过 `before_tool_call` 阻止原生 Codex 工具，通过 `after_tool_call`
+观察结果，并参与 Codex
+`PermissionRequest` 的批准流程。该桥接暂时还不会重写 Codex 原生工具
+参数。
 
-For full typed hook behavior, see [SDK 概览](/plugins/sdk-overview#hook-decision-semantics).
+有关完整的类型化钩子行为，请参见 [SDK 概览](/plugins/sdk-overview#hook-decision-semantics)。
 
 ## 相关内容
 

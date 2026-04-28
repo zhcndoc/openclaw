@@ -48,13 +48,16 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace` 并将其写入文件日
 
 ## 脱敏
 
-OpenClaw 可以在日志或转录输出离开进程之前屏蔽敏感令牌。相同的脱敏策略适用于控制台、文件日志、OTLP 日志记录和会话转录文本输出，因此在写入磁盘之前，匹配到的密钥值会在 JSONL 行或消息中被屏蔽。
+OpenClaw 可以在日志或转录输出离开进程之前屏蔽敏感令牌。此日志脱敏策略应用于控制台、文件日志、OTLP 日志记录以及会话转录文本输出，因此在写入磁盘之前，匹配到的密钥值会被屏蔽，避免出现在 JSONL 行或消息中。
 
 - `logging.redactSensitive`：`off` | `tools`（默认：`tools`）
 - `logging.redactPatterns`：正则表达式字符串数组（覆盖默认规则）
   - 使用原始正则表达式字符串（自动带 `gi` 标志），或者使用 `/pattern/flags` 指定自定义标志。
   - 匹配的内容会保留前 6 个和后 4 个字符（长度 ≥ 18），否则全部替换为 `***`。
   - 默认规则涵盖常见密钥赋值、CLI 参数、JSON 字段、Bearer 头、PEM 块及常用令牌前缀。
+
+无论 `logging.redactSensitive` 如何设置，某些安全边界始终会进行脱敏。
+这包括控制 UI 的工具调用事件、`sessions_history` 工具输出、诊断支持导出、提供方错误观察、exec 审批命令显示以及网关 WebSocket 协议日志。这些区域仍可能使用 `logging.redactPatterns` 作为额外模式，但 `redactSensitive: "off"` 不会使其输出原始密钥。
 
 ## 网关 WebSocket 日志
 

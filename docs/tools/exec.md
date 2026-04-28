@@ -32,8 +32,8 @@ title: "Exec 工具"
 立即将命令转入后台，而不是等待 `yieldMs`。
 </ParamField>
 
-<ParamField path="timeout" type="number" default="1800">
-在这么多秒后终止命令。
+<ParamField path="timeout" type="number" default="tools.exec.timeoutSec">
+覆盖此调用的已配置 exec 超时时间。仅当命令应在没有 exec 进程超时的情况下运行时，才设置 `timeout: 0`。
 </ParamField>
 
 <ParamField path="pty" type="boolean" default="false">
@@ -62,40 +62,49 @@ title: "Exec 工具"
 
 备注：
 
-- `host` 默认为 `auto`：当本次会话启用沙箱运行时为 sandbox，否则为 gateway。
-- `auto` 是默认路由策略，不是通配符。单次调用中 `host=node` 可从 `auto` 使用；单次调用中 `host=gateway` 仅在未启用沙箱运行时允许。
-- 在没有额外配置时，`host=auto` 仍然“直接可用”：没有沙箱时会解析为 `gateway`；存在活动沙箱时则保持在沙箱内。
-- `elevated` 会绕过沙箱进入所配置的主机路径：默认是 `gateway`，或者当 `tools.exec.host=node`（或会话默认是 `host=node`）时为 `node`。仅当当前会话/提供方启用了提升访问时可用。
-- `gateway`/`node` 的审批由 `~/.openclaw/exec-approvals.json` 控制。
-- `node` 需要配对节点（伴随应用或无头节点宿主）。
-- 如果有多个节点可用，请设置 `exec.node` 或 `tools.exec.node` 以选择其一。
+- `host` 默认为 `auto`：当会话启用了沙箱运行时则为 sandbox，否则为 gateway。
+- `auto` 是默认路由策略，不是通配符。从 `auto` 出发，单次调用可使用 `host=node`；只有在没有启用沙箱运行时时，单次调用才允许 `host=gateway`。
+- 在没有额外配置时，`host=auto` 仍然“直接可用”：没有沙箱时会解析为 `gateway`；有活动沙箱时则保持在沙箱中。
+- `elevated` 会将沙箱逃逸到已配置的主机路径：默认是 `gateway`，如果 `tools.exec.host=node`（或会话默认是 `host=node`）则为 `node`。仅当当前会话/提供方启用了提升访问时才可用。
+- `gateway`/`node` 的批准由 `~/.openclaw/exec-approvals.json` 控制。
+- `node` 需要配对的节点（伴随应用或无头节点宿主）。
+- 如果可用节点不止一个，请设置 `exec.node` 或 `tools.exec.node` 进行选择。
 - `exec host=node` 是节点唯一的 shell 执行路径；旧的 `nodes.run` 包装器已被移除。
-- 在非 Windows 主机上，exec 会在设置了 `SHELL` 时使用它；如果 `SHELL` 是 `fish`，则优先从 `PATH` 中选择 `bash`（或 `sh`），以避免 fish 不兼容脚本，然后在两者都不存在时回退到 `SHELL`。
+- `timeout` 适用于前台、后台、`yieldMs`、gateway、sandbox 以及 node 的 `system.run` 执行。如果省略，OpenClaw 会使用 `tools.exec.timeoutSec`；显式设置 `timeout: 0` 会为该调用禁用 exec 进程超时。
+- 在非 Windows 主机上，exec 在设置了 `SHELL` 时会使用它；如果 `SHELL` 是 `fish`，则优先使用 `PATH` 中的 `bash`（或 `sh`），以避免与 fish 不兼容的脚本，然后在两者都不存在时回退到 `SHELL`。
 - 在 Windows 主机上，exec 优先发现 PowerShell 7（`pwsh`）（Program Files、ProgramW6432，然后是 PATH），然后回退到 Windows PowerShell 5.1。
 - 主机执行（`gateway`/`node`）会拒绝 `env.PATH` 和加载器覆盖（`LD_*`/`DYLD_*`），以防止二进制劫持或注入代码。
-- OpenClaw 在生成的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和沙箱执行），以便 shell/profile 规则能够检测 exec 工具上下文。
-- 重要：沙箱默认是**关闭**的。如果沙箱关闭，隐式 `host=auto` 会解析为 `gateway`。显式 `host=sandbox` 仍会失败并关闭，而不会静默地在 gateway 主机上运行。请启用沙箱或使用带审批的 `host=gateway`。
-- 仅针对常见 Python/Node shell 语法错误的脚本预检检查，只会检查有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，则会跳过该文件的预检。
-- 对于从现在开始运行的长时间任务，请只启动一次，并在启用自动完成唤醒且命令产生输出或失败时依赖自动完成唤醒。  
-  如需日志、状态、输入或干预，请使用 `process`；不要用 sleep 循环、timeout 循环或重复轮询来模拟调度。
-- 对于应该稍后执行或按计划执行的工作，请使用 cron，而不是 `exec` 的 sleep/delay 模式。
+- OpenClaw 会在生成的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和 sandbox 执行），以便 shell/profile 规则能够检测 exec 工具上下文。
+- 重要：沙箱默认是**关闭**的。如果沙箱关闭，隐式 `host=auto`
+  会解析为 `gateway`。显式 `host=sandbox` 仍会直接失败，而不是静默地
+  在 gateway 主机上运行。请启用沙箱，或使用带批准的 `host=gateway`。
+- 脚本预检检查（用于常见的 Python/Node shell 语法错误）只会检查
+  有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，则会跳过
+  该文件的预检。
+- 对于现在开始的长时间运行工作，只启动一次并依赖自动
+  完成唤醒（如果已启用），当命令输出或失败时会触发。
+  使用 `process` 查看日志、状态、输入或干预；不要用
+  sleep 循环、超时循环或重复轮询来模拟调度。
+- 对于应在稍后或按计划发生的工作，请使用 cron，而不是
+  `exec` 的 sleep/delay 模式。
 
 ## 配置
 
-- `tools.exec.notifyOnExit` (default: true): 当为 true 时，后台 exec 会话会排队一个系统事件，并在退出时请求一次心跳。
-- `tools.exec.approvalRunningNoticeMs` (default: 10000): 当需要批准的 exec 运行超过此时间时，发出一次“running”通知（0 表示禁用）。
-- `tools.exec.host` (default: `auto`; resolves to `sandbox` when sandbox runtime is active, `gateway` otherwise)
-- `tools.exec.security` (default: `deny` for sandbox, `full` for gateway + node when unset)
-- `tools.exec.ask` (default: `off`)
+- `tools.exec.notifyOnExit`（默认：true）：为 true 时，后台 exec 会话会在退出时排队一个系统事件并请求心跳。
+- `tools.exec.approvalRunningNoticeMs`（默认：10000）：当受审批门控的 exec 运行超过此时长时，发出一次“running”通知（0 表示禁用）。
+- `tools.exec.timeoutSec`（默认：1800）：每个命令的默认 exec 超时时间（秒）。单次调用的 `timeout` 会覆盖它；单次调用的 `timeout: 0` 会禁用该调用的 exec 进程超时。
+- `tools.exec.host`（默认：`auto`；当沙箱运行时启用时解析为 `sandbox`，否则为 `gateway`）
+- `tools.exec.security`（默认：沙箱为 `deny`，gateway + node 在未设置时为 `full`）
+- `tools.exec.ask`（默认：`off`）
 - 默认情况下，gateway + node 使用无需批准的主机 exec。如果你想要审批/允许列表行为，请同时收紧 `tools.exec.*` 和主机 `~/.openclaw/exec-approvals.json`；参见 [Exec approvals](/tools/exec-approvals#no-approval-yolo-mode)。
 - YOLO 来自主机策略默认值（`security=full`、`ask=off`），而不是来自 `host=auto`。如果你想强制 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
 - 在 `security=full` 加 `ask=off` 模式下，主机 exec 会直接遵循配置的策略；不存在额外的启发式命令混淆预过滤或脚本预检拒绝层。
-- `tools.exec.node` (default: unset)
-- `tools.exec.strictInlineEval` (default: false): 当为 true 时，`python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e` 等内联解释器 eval 形式始终需要明确批准。`allow-always` 仍可保留良性的解释器/脚本调用，但内联 eval 形式每次仍会提示。
-- `tools.exec.pathPrepend`: 在 exec 运行时要预先添加到 `PATH` 的目录列表（仅 gateway + sandbox）。
-- `tools.exec.safeBins`: 可在无需显式允许列表条目的情况下运行的仅 stdin 安全二进制文件。行为细节请参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
-- `tools.exec.safeBinTrustedDirs`: 用于 `safeBins` 路径检查的额外显式信任目录。`PATH` 条目永远不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
-- `tools.exec.safeBinProfiles`: 每个安全二进制的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
+- `tools.exec.node`（默认：未设置）
+- `tools.exec.strictInlineEval`（默认：false）：当为 true 时，`python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e` 等内联解释器 eval 形式始终需要明确批准。`allow-always` 仍可保留良性的解释器/脚本调用，但内联 eval 形式每次仍会提示。
+- `tools.exec.pathPrepend`：在 exec 运行时要预先添加到 `PATH` 的目录列表（仅 gateway + sandbox）。
+- `tools.exec.safeBins`：可在无需显式允许列表条目的情况下运行的仅 stdin 安全二进制文件。行为细节请参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
+- `tools.exec.safeBinTrustedDirs`：用于 `safeBins` 路径检查的额外显式信任目录。`PATH` 条目永远不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
+- `tools.exec.safeBinProfiles`：每个安全二进制的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
 
 示例：
 

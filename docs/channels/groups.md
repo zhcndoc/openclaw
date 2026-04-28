@@ -258,7 +258,18 @@ requireMention? 是 -> 是否被提及？否 -> 仅存为上下文
 }
 ```
 
-备注：
+<AccordionGroup>
+  <Accordion title="Mention gating notes">
+    - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。
+    - 提供明确提及的通道直接通过；模式仅做回退。
+    - 每代理覆写：`agents.list[].groupChat.mentionPatterns`（适用于多个代理共享群聊场景）。
+    - 只能在支持提及检测时启用提及门控（原生提及或配置了 `mentionPatterns`）。
+    - 群聊提示上下文在每一轮都会携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
+    - 允许静默回复的群组会将干净的空回复或仅推理内容的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天仍将空回复视为代理轮次失败。
+    - Discord 默认配置位于 `channels.discord.guilds."*"`（可针对每个公会/频道覆盖）。
+    - 群聊历史上下文在各渠道间统一包装，并且是**仅待处理**的（因提及门控而跳过的消息）；全局默认值使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
+  </Accordion>
+</AccordionGroup>
 
 - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。  
 - 提供明确提及的通道直接通过；模式仅做回退。  
@@ -307,7 +318,7 @@ requireMention? 是 -> 是否被提及？否 -> 仅存为上下文
 备注：
 
 - 群组/频道工具限制应用于全局/代理工具策略之外（deny 仍然优先）。
-- 某些频道对房间/频道使用不同的嵌套（例如 Discord `guilds.*.channels.*`、Slack `channels.*`、Microsoft Teams `teams.*.channels.*`）。
+- 某些渠道对房间/频道使用不同的嵌套（例如 Discord `guilds.*.channels.*`、Slack `channels.*`、Microsoft Teams `teams.*.channels.*`）。
 
 ## 群组白名单
 

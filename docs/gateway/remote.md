@@ -5,7 +5,7 @@ read_when:
 title: "远程访问"
 ---
 
-This repo 支持“通过 SSH 远程访问”，方法是在专用主机（桌面/服务器）上保持单个 Gateway（主控端）运行，并将客户端连接到它。
+此仓库支持“通过 SSH 远程访问”，方法是在专用主机（桌面/服务器）上保持单个 Gateway（主控端）运行，并将客户端连接到它。
 
 - 对于 **操作者（你 / macOS 应用）**：SSH 隧道是通用的后备方案。
 - 对于 **节点（iOS/Android 及未来设备）**：连接到 Gateway **WebSocket**（通过 LAN/tailnet 或根据需要通过 SSH 隧道）。
@@ -15,38 +15,37 @@ This repo 支持“通过 SSH 远程访问”，方法是在专用主机（桌�
 - Gateway WebSocket 绑定到你配置的端口上的 **回环接口**（默认端口为 18789）。
 - 远程使用时，你可以通过 SSH 将该回环端口转发（或者使用 tailnet/VPN，减少隧道需求）。
 
-## 常见的 VPN/tailnet 配置（Agent 所在的位置）
+## 常见的 VPN 和 tailnet 配置
 
-将 **Gateway 主机** 看作"Agent 所在之处”，它负责管理会话、认证配置、通道和状态。  
-你的笔记本/桌面（以及节点）连接到该主机。
+可以把 **Gateway 主机** 看作 agent 所在的位置。它拥有会话、认证配置文件、通道和状态。你的笔记本、桌面设备和节点都会连接到那台主机。
 
-### 1) 在你的 tailnet 中的常驻 Gateway（VPS 或家庭服务器）
+### 在你的 tailnet 中始终在线的 Gateway
 
-在一个持久运行的主机上运行 Gateway，并通过 **Tailscale** 或 SSH 访问它。
+在一台持续运行的主机（VPS 或家用服务器）上运行 Gateway，并通过 **Tailscale** 或 SSH 访问它。
 
-- **最佳用户体验：** 保持 `gateway.bind: "loopback"`，并使用 **Tailscale Serve** 提供控制界面。
-- **备选方案：** 保持回环绑定 + 从任何需要访问的机器通过 SSH 隧道。
-- **示例：** [exe.dev](/install/exe-dev)（易用的虚拟机）或 [Hetzner](/install/hetzner)（生产环境 VPS）。
+- **最佳体验：** 保持 `gateway.bind: "loopback"`，并使用 **Tailscale Serve** 提供 Control UI。
+- **后备方案：** 保持回环绑定，并在需要访问的任意机器上使用 SSH 隧道。
+- **示例：** [exe.dev](/install/exe-dev)（简单虚拟机）或 [Hetzner](/install/hetzner)（生产级 VPS）。
 
-当你的笔记本经常休眠但你希望 Agent 持续在线时，这种方案非常理想。
+适合你的笔记本经常休眠，但你又希望 agent 始终在线的场景。
 
-### 2) 家用台式机运行 Gateway，笔记本作为远程控制端
+### 家用桌面运行 Gateway
 
 笔记本**不运行 Agent**，而是远程连接：
 
-- 使用 macOS 应用的 **远程 SSH 模式**（设置 → 通用 → "OpenClaw 运行方式”）。
-- 应用程序打开并管理隧道，因此 WebChat 和健康检查均能“顺畅工作”。
+- 使用 macOS 应用的 **Remote over SSH** 模式（Settings → General → OpenClaw runs）。
+- 应用会自动打开并管理隧道，因此 WebChat 和健康检查都可以正常工作。
 
 使用文档：[macOS 远程访问](/platforms/mac/remote)。
 
-### 3) 笔记本运行 Gateway，其它机器远程访问
+### 笔记本运行 Gateway
 
-保持 Gateway 本地运行，但安全地暴露它：
+保持 Gateway 在本地运行，但安全地暴露它：
 
 - 从其它机器通过 SSH 隧道连接笔记本，或者
 - 使用 Tailscale Serve 提供控制 UI，同时保持 Gateway 仅允许回环访问。
 
-指南：[Tailscale](/gateway/tailscale) 和 [Web 概览](/web)。
+指南：[Tailscale](/gateway/tailscale) 和 [Web overview](/web)。
 
 ## 命令流（运行位置）
 
@@ -56,7 +55,7 @@ This repo 支持“通过 SSH 远程访问”，方法是在专用主机（桌�
 
 - Telegram 消息到达 **Gateway**。
 - Gateway 启动 **agent** 并决定是否调用节点工具。
-- Gateway 通过 Gateway WebSocket （`node.*` RPC）调用 **节点**。
+- Gateway 通过 Gateway WebSocket（`node.*` RPC）调用 **节点**。
 - 节点返回结果；Gateway 反馈给 Telegram。
 
 备注：
@@ -77,9 +76,13 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 - `openclaw health` 和 `openclaw status --deep` 现在通过 `ws://127.0.0.1:18789` 访问远程网关。
 - `openclaw gateway status`、`openclaw gateway health`、`openclaw gateway probe` 和 `openclaw gateway call` 在需要时也可以通过 `--url` 指定转发后的 URL。
 
-注意：将 `18789` 替换为你配置的 `gateway.port`（或者使用 `--port`/`OPENCLAW_GATEWAY_PORT`）。  
-注意：传入 `--url` 时，CLI 不会回退到配置或环境凭证。  
-需要显式包含 `--token` 或 `--password`，否则会报错。
+<Note>
+将 `18789` 替换为你配置的 `gateway.port`（或 `--port` 或 `OPENCLAW_GATEWAY_PORT`）。
+</Note>
+
+<Warning>
+当你传入 `--url` 时，CLI 不会回退到配置或环境凭据。请显式包含 `--token` 或 `--password`。缺少显式凭据将报错。
+</Warning>
 
 ## CLI 远程默认值
 
@@ -124,7 +127,7 @@ WebChat 不再使用单独的 HTTP 端口。SwiftUI 聊天界面直接连接到 
 - 通过 SSH 转发端口 `18789`（见上文），然后连接到 `ws://127.0.0.1:18789`。
 - macOS 上优先使用应用的“远程 SSH"模式，它会自动管理隧道。
 
-## macOS app "Remote over SSH"
+## macOS 应用的 SSH 远程访问
 
 macOS 菜单栏应用可端到端驱动相同配置（远程状态检查、WebChat 和语音唤醒转发）。
 
@@ -212,7 +215,9 @@ launchctl bootstrap gui/$UID ~/Library/LaunchAgents/ai.openclaw.ssh-tunnel.plist
 
 隧道将在登录时自动启动，崩溃时重启，并保持转发端口活跃。
 
-注意：如果你有一个来自旧设置的遗留 `com.openclaw.ssh-tunnel` LaunchAgent，请卸载并删除它。
+<Note>
+如果你有来自旧设置的遗留 `com.openclaw.ssh-tunnel` LaunchAgent，请卸载并删除它。
+</Note>
 
 #### 故障排查
 

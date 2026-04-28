@@ -236,8 +236,9 @@ register(api) {
 }
 ```
 
-- 工具名称不得与核心工具冲突（冲突项会被跳过）
-- 对于具有副作用或额外二进制依赖要求的工具，请使用 `optional: true`
+- 工具名称不得与核心工具冲突（冲突会被跳过）
+- 任何注册对象格式不正确的工具，包括缺少 `parameters` 的情况，都会被跳过并记录到插件诊断信息中，而不是导致代理运行失败
+- 对于有副作用或需要额外二进制依赖的工具，请使用 `optional: true`
 - 用户可以通过将插件 id 添加到 `tools.allow` 来启用某个插件中的所有工具
 
 ## 导入约定
@@ -278,7 +279,7 @@ import { ... } from "openclaw/plugin-sdk";
 <Check>测试通过 (`pnpm test -- <bundled-plugin-root>/my-plugin/`)</Check>
 <Check>`pnpm check` 通过 (仓库内插件)</Check>
 
-## Beta 版本测试
+## Beta release testing
 
 1. 关注 [openclaw/openclaw](https://github.com/openclaw/openclaw/releases) 上的 GitHub 发布标签，并通过 `Watch` > `Releases` 订阅。Beta 标签看起来像 `v2026.3.N-beta.1`。你也可以开启官方 OpenClaw X 账户 [@openclaw](https://x.com/openclaw) 的通知以获取发布公告。
 2. 一旦 beta 标签出现，立即针对该标签测试你的插件。稳定版之前的窗口期通常只有几个小时。

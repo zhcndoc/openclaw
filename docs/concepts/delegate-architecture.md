@@ -70,11 +70,15 @@ OpenClaw 的默认模式是**个人助理**——一个人类，一个代理。�
 
 此层级结合了层级 2 的权限与 [Cron 作业](/automation/cron-jobs) 和 [长期指令](/automation/standing-orders)。
 
-> **安全警告**：层级 3 需要仔细配置硬阻止——即无论指令如何，代理都绝不能执行的操作。在授予任何身份提供商权限之前，请先完成以下先决条件。
+<Warning>
+第 3 层需要谨慎配置硬阻止：无论指令如何，代理都绝不能执行的操作。在授予任何身份提供商权限之前，请先完成以下先决条件。
+</Warning>
 
 ## 先决条件：隔离和加固
 
-> **先做这个。**在授予任何凭证或身份提供商访问权限之前，先锁定委托的边界。本节中的步骤定义了代理**不能**做什么——在赋予它执行任何操作的能力之前，先建立这些约束。
+<Note>
+**先做这个。** 在授予任何凭证或身份提供商访问权限之前，请先锁定委托的边界。本节中的步骤定义了代理**不能**做什么。在赋予它执行任何操作的能力之前，先建立这些约束。
+</Note>
 
 ### 硬阻止（不可协商）
 
@@ -181,7 +185,9 @@ New-ApplicationAccessPolicy `
   -AccessRight RestrictAccess
 ```
 
-> **安全警告**：如果没有应用程序访问策略，`Mail.Read` 应用程序权限将授予访问**租户中每个邮箱**的权限。始终在应用程序读取任何邮件之前创建访问策略。通过确认应用对安全组之外的邮箱返回 `403` 来进行测试。
+<Warning>
+如果没有应用程序访问策略，`Mail.Read` 应用程序权限会授予对**租户中每个邮箱**的访问权限。务必在应用程序读取任何邮件之前先创建访问策略。通过确认该应用对安全组之外的邮箱返回 `403` 来进行测试。
+</Warning>
 
 #### Google Workspace
 
@@ -197,7 +203,9 @@ https://www.googleapis.com/auth/calendar           # 层级 2
 
 服务账户模拟委托用户（而非负责人），保持"代表"模式。
 
-> **安全警告**：全域委托允许服务账户模拟**整个域中的任何用户**。将范围限制为所需的最低限度，并在管理员控制台（安全 > API 控制 > 全域委托）中将服务账户的客户端 ID 限制为仅上面列出的范围。具有广泛范围的泄露服务账户密钥将授予对组织中每个邮箱和日历的完全访问权限。按计划轮换密钥并监控管理员控制台审计日志中的意外模拟事件。
+<Warning>
+域范围委托允许服务账户冒充**整个域中的任何用户**。将范围限制为最低必需范围，并在管理员控制台（Security > API controls > Domain-wide delegation）中仅将服务账户的客户端 ID 限制为上述列出的范围。泄露的、范围较广的服务账户密钥会授予对组织中每个邮箱和日历的完全访问权限。按计划轮换密钥，并监控管理员控制台审计日志中是否有意外的冒充事件。
+</Warning>
 
 ### 3. 将委托绑定到频道
 
@@ -281,7 +289,7 @@ https://www.googleapis.com/auth/calendar           # 层级 2
 
 委托的 `AGENTS.md` 定义了其自主权限——它可以无需询问就执行的操作、需要批准的操作以及禁止的操作。[Cron 任务](/automation/cron-jobs) 驱动其日常日程安排。
 
-如果授予 `sessions_history` 权限，请记住它是一个有界的、经过安全过滤的回忆视图。OpenClaw 会遮蔽凭证/令牌类文本，截断长内容，剥离思考标签 / `<relevant-memories>` 框架结构 / 纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）/ 降级的工具调用框架 / 泄露的 ASCII/全角模型控制令牌 / 来自助手回忆的格式错误的 MiniMax 工具调用 XML，并且可以用 `[sessions_history omitted: message too large]` 替换过大的行，而不是返回原始转录转储。
+如果授予 `sessions_history` 权限，请记住它是一个有界的、经过安全过滤的回忆视图。OpenClaw 会遮蔽凭证/令牌类文本，截断长内容，剥离思考标签 / `<relevant-memories>` 框架结构 / 纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>``、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）/ 降级的工具调用框架 / 泄露的 ASCII/全角模型控制令牌 / 来自助手回忆的格式错误的 MiniMax 工具调用 XML，并且可以用 `[sessions_history omitted: message too large]` 替换过大的行，而不是返回原始转录转储。
 
 ## 规模化模式
 

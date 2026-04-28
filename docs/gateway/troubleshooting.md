@@ -77,11 +77,28 @@ openclaw logs --follow
 
 检查：
 
-- 直接微小调用成功，但 OpenClaw 运行仅在较大提示词上失败
+- 直接微小调用成功，但 OpenClaw 运行仅在更大的提示词上失败
+- 即使直接 `/v1/chat/completions`
+  使用相同的裸模型 id 也能工作，仍出现 `model_not_found` 或 404 错误
 - 后端关于 `messages[].content` 期望字符串的错误
-- 后端崩溃仅出现在较大提示词令牌数或完整代理运行时提示词上
+- 与 OpenAI 兼容的本地后端中偶发的 `incomplete turn detected ... stopReason=stop payloads=0` 警告
+- 仅在更大的提示词令牌计数或完整代理运行时提示词下才出现的后端崩溃
 
-常见表现：
+<AccordionGroup>
+  <Accordion title="常见特征">
+    - 对本地 MLX/vLLM 风格服务器出现 `model_not_found` → 请验证 `baseUrl` 是否包含 `/v1`，`api` 是否为用于 `/v1/chat/completions` 后端的 `"openai-completions"`，以及 `models.providers.<provider>.models[].id` 是否为裸的提供方本地 id。首次使用时加上提供方前缀进行选择，例如 `mlx/mlx-community/Qwen3-30B-A3B-6bit`；目录条目保留为 `mlx-community/Qwen3-30B-A3B-6bit`。
+    - `messages[...].content: invalid type: sequence, expected a string` → 后端拒绝结构化聊天补全内容部分。修复：设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
+    - `incomplete turn detected ... stopReason=stop payloads=0` → 后端已完成 Chat Completions 请求，但该轮未返回任何用户可见的助手文本。OpenClaw 会对可回放的空 OpenAI 兼容轮次重试一次；持续失败通常意味着后端正在发出空/非文本内容，或抑制最终答案文本。
+    - 微小直接请求成功，但 OpenClaw 代理运行在后端/模型崩溃时失败（例如某些 `inferrs` 构建上的 Gemma）→ OpenClaw 传输很可能已经正确；后端是在更大的代理运行提示词形状上失败。
+    - 禁用工具后失败减轻但没有消失 → 工具模式是压力来源之一，但剩余问题仍是上游模型/服务器容量或后端错误。
+  </Accordion>
+  <Accordion title="修复选项">
+    1. 为只能字符串的 Chat Completions 后端设置 `compat.requiresStringContent: true`。
+    2. 为无法可靠处理 OpenClaw 工具模式表面的模型/后端设置 `compat.supportsTools: false`。
+    3. 尽可能降低提示词压力：更小的工作区引导、更短的会话历史、更轻的本地模型，或具有更强长上下文支持的后端。
+    4. 如果微小直接请求持续通过而 OpenClaw 代理轮次仍在后端内部崩溃，则应将其视为上游服务器/模型限制，并在接受的载荷形状上向其提交复现。
+  </Accordion>
+</AccordionGroup>
 
 - `messages[...].content: invalid type: sequence, expected a string` → 后端拒绝结构化聊天补全内容部分。修复：设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
 - 直接微小请求成功，但 OpenClaw 代理运行因后端/模型崩溃失败（例如某些 `inferrs` 构建上的 Gemma）→ OpenClaw 传输可能已正确；后端在较大代理运行时提示词形状上失败。
@@ -220,7 +237,16 @@ openclaw gateway status --deep   # 也扫描系统级服务
 - 当使用 `--deep` 时额外的 launchd/systemd/schtasks 安装。
 - `` `Other gateway-like services detected (best effort)` 清理提示。``
 
-常见表现：
+<AccordionGroup>
+  <Accordion title="常见特征">
+    - `Gateway start blocked: set gateway.mode=local` or `existing config is missing gateway.mode` → 本地网关模式未启用，或配置文件被覆盖并丢失了 `gateway.mode`。修复：在配置中设置 `gateway.mode="local"`，或重新运行 `openclaw onboard --mode local` / `openclaw setup` 以重新标记预期的本地模式配置。如果您通过 Podman 运行 OpenClaw，默认配置路径为 `~/.openclaw/openclaw.json`。
+    - `refusing to bind gateway ... without auth` → 非环回绑定且没有有效的网关认证路径（令牌/密码，或配置的可信代理）。
+    - `another gateway instance is already listening` / `EADDRINUSE` → 端口冲突。
+    - `Other gateway-like services detected (best effort)` → 存在过时或并行的 launchd/systemd/schtasks 单元。大多数设置应在每台机器上保留一个网关；如果您确实需要多个，请隔离端口 + 配置/状态/工作区。参见 [/gateway#multiple-gateways-same-host](/gateway#multiple-gateways-same-host).
+    - `System-level OpenClaw gateway service detected` from doctor → 存在一个 systemd 系统级单元，而用户级服务缺失。在允许 doctor 安装用户服务之前，移除或禁用重复项；如果系统单元才是预期的监督者，则设置 `OPENCLAW_SERVICE_REPAIR_POLICY=external`。
+    - `Gateway service port does not match current gateway config` → 已安装的监督程序仍固定为旧的 `--port`。运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，然后重启网关服务。
+  </Accordion>
+</AccordionGroup>
 
 - `Gateway start blocked: set gateway.mode=local` 或 `existing config is missing gateway.mode` → 本地网关模式未启用，或配置文件被覆盖并丢失了 `gateway.mode`。修复：在配置中设置 `gateway.mode="local"`，或重新运行 `openclaw onboard --mode local` / `openclaw setup` 以重新标记预期的本地模式配置。如果您通过 Podman 运行 OpenClaw，默认配置路径为 `~/.openclaw/openclaw.json`。
 - `refusing to bind gateway ... without auth` → 非环回绑定且没有有效的网关认证路径（令牌/密码，或配置的可信代理）。
@@ -525,7 +551,7 @@ openclaw doctor
 - `device identity required` → 设备认证未满足。  
 - `pairing required` → 发送方/设备需审批。
 
-如果服务配置与运行时状态仍不一致，请从相同的配置文件/状态目录重新安装服务元数据：
+如果服务配置与运行时状态仍然不一致，请从相同的配置文件/状态目录重新安装服务元数据：
 
 ```bash
 openclaw gateway install --force

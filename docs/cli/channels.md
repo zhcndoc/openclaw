@@ -12,8 +12,8 @@ title: "渠道"
 
 相关文档：
 
-- 渠道指南：[渠道](/channels/index)
-- 网关配置：[配置](/gateway/configuration)
+- Channel guides: [Channels](/channels)
+- Gateway configuration: [Configuration]
 
 ## 常用命令
 
@@ -43,7 +43,9 @@ openclaw channels add --channel nostr --private-key "$NOSTR_PRIVATE_KEY"
 openclaw channels remove --channel telegram --delete
 ```
 
-提示：`openclaw channels add --help` 显示每个渠道的标志（token、私钥、应用令牌、signal-cli 路径等）。
+<Tip>
+`openclaw channels add --help` 会显示每个渠道的标志（token、private key、app token、signal-cli 路径等）。
+</Tip>
 
 常见的非交互式添加方式包括：
 
@@ -53,7 +55,7 @@ openclaw channels remove --channel telegram --delete
 - Matrix 字段：`--homeserver`, `--user-id`, `--access-token`, `--password`, `--device-name`, `--initial-sync-limit`
 - Nostr 字段：`--private-key`, `--relay-urls`
 - Tlon 字段：`--ship`, `--url`, `--code`, `--group-channels`, `--dm-allowlist`, `--auto-discover-channels`
-- `--use-env` 用于支持默认账户的环境变量支持认证
+- `--use-env` 用于支持默认账户的环境变量认证
 
 如果在基于标志的添加命令期间需要安装渠道插件，OpenClaw 会使用该渠道的默认安装源，而不会打开交互式插件安装提示。
 
@@ -77,17 +79,15 @@ openclaw channels remove --channel telegram --delete
 
 如果您的配置已经处于混合状态（存在命名账户且仍设置了顶层单账户值），运行 `openclaw doctor --fix` 将账户范围的值移动到为该渠道选择的提升账户中。大多数渠道提升到 `accounts.default`；Matrix 可以保留现有的命名/默认目标。
 
-## 登录 / 登出（交互式）
+## 登录和登出（交互式）
 
 ```bash
 openclaw channels login --channel whatsapp
 openclaw channels logout --channel whatsapp
 ```
 
-注意：
-
 - `channels login` 支持 `--verbose`。
-- 当仅配置了一个支持的登录目标时，`channels login` / `logout` 可以推断渠道。
+- 当仅配置了一个支持的登录目标时，`channels login` 和 `logout` 可以推断渠道。
 
 ## 故障排除
 

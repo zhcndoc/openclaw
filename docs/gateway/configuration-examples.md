@@ -369,7 +369,7 @@ title: "配置示例"
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/cron.json",
-    maxConcurrentRuns: 2,
+    maxConcurrentRuns: 2, // cron 调度 + 隔离的 cron 代理轮执行
     sessionRetention: "24h",
     runLog: {
       maxBytes: "2mb",

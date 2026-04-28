@@ -27,7 +27,7 @@ API 密钥认证和动态模型解析的 provider。
 ## 逐步指南
 
 <Steps>
-  <Step title="Package and manifest">
+  <Step title="Package 和 manifest">
     <CodeGroup>
     ```json package.json
     {
@@ -321,9 +321,9 @@ API 密钥认证和动态模型解析的 provider。
     <Accordion title="驱动 family 构建器的 SDK 接缝">
       每个 family 构建器都由同一包导出的更底层公共辅助函数组成；当 Provider 需要偏离常规模式时，你可以直接使用它们：
 
-      - `openclaw/plugin-sdk/provider-model-shared` — `ProviderReplayFamily`、`buildProviderReplayFamilyHooks(...)`，以及原始 replay 构建器（`buildOpenAICompatibleReplayPolicy`、`buildAnthropicReplayPolicyForModel`、`buildGoogleGeminiReplayPolicy`、`buildHybridAnthropicOrOpenAIReplayPolicy`）。还导出 Gemini replay 辅助函数（`sanitizeGoogleGeminiReplayHistory`、`resolveTaggedReasoningOutputMode`）以及端点/模型辅助函数（`resolveProviderEndpoint`、`normalizeProviderId`、`normalizeGooglePreviewModelId`、`normalizeNativeXaiModelId`）。
-      - `openclaw/plugin-sdk/provider-stream` — `ProviderStreamFamily`、`buildProviderStreamFamilyHooks(...)`、`composeProviderStreamWrappers(...)`，以及共享的 OpenAI/Codex 包装器（`createOpenAIAttributionHeadersWrapper`、`createOpenAIFastModeWrapper`、`createOpenAIServiceTierWrapper`、`createOpenAIResponsesContextManagementWrapper`、`createCodexNativeWebSearchWrapper`）和共享的代理/provider 包装器（`createOpenRouterWrapper`、`createToolStreamWrapper`、`createMinimaxFastModeWrapper`）。
-      - `openclaw/plugin-sdk/provider-tools` — `ProviderToolCompatFamily`、`buildProviderToolCompatFamilyHooks("gemini")`、底层 Gemini schema 辅助函数（`normalizeGeminiToolSchemas`、`inspectGeminiToolSchemas`），以及 xAI 兼容辅助函数（`resolveXaiModelCompatPatch()`、`applyXaiModelCompat(model)`）。捆绑的 xAI 插件使用 `normalizeResolvedModel` + `contributeResolvedModelCompat` 来使 xAI 规则由 provider 自身拥有。
+      - `openclaw/plugin-sdk/provider-model-shared` — `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`, `normalizeNativeXaiModelId`).
+      - `openclaw/plugin-sdk/provider-stream` — `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
+      - `openclaw/plugin-sdk/provider-tools` — `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("gemini")`, underlying Gemini schema helpers (`normalizeGeminiToolSchemas`, `inspectGeminiToolSchemas`), and xAI compat helpers (`resolveXaiModelCompatPatch()`, `applyXaiModelCompat(model)`). The bundled xAI plugin uses `normalizeResolvedModel` + `contributeResolvedModelCompat` with these to keep xAI rules owned by the provider.
 
       一些 stream 辅助函数会有意保持为 provider 本地。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在自己的公共 `api.ts` / `contract-api.ts` 接口边界中，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件同样将原生 xAI Responses 整形保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning 负载移除）。
 
@@ -565,6 +565,9 @@ API 密钥认证和动态模型解析的 provider。
           label: "Acme Realtime Voice",
           isConfigured: ({ providerConfig }) => Boolean(providerConfig.apiKey),
           createBridge: (req) => ({
+            // 仅当 provider 接受单次调用的多个工具结果时才设置此项，例如先返回
+            // 立即的“工作中”响应，再返回最终结果。
+            supportsToolResultContinuation: false,
             connect: async () => {},
             sendAudio: () => {},
             setMediaTimestamp: () => {},
@@ -586,7 +589,7 @@ API 密钥认证和动态模型解析的 provider。
         });
         ```
       </Tab>
-      <Tab title="Image and video generation">
+      <Tab title="Image 和 video generation">
         视频能力使用一种 **支持模式感知** 的形状：`generate`、
         `imageToVideo` 和 `videoToVideo`。像
         `maxInputImages` / `maxInputVideos` / `maxDurationSeconds` 这样的扁平聚合字段
@@ -613,7 +616,7 @@ API 密钥认证和动态模型解析的 provider。
         });
         ```
       </Tab>
-      <Tab title="Web fetch and search">
+      <Tab title="Web fetch 和 search">
         ```typescript
         api.registerWebFetchProvider({
           id: "acme-ai-fetch",
@@ -717,13 +720,13 @@ clawhub package publish your-org/your-plugin
 
 ## 后续步骤
 
-- [Channel Plugins](/plugins/sdk-channel-plugins) — 如果你的插件还提供通道
-- [SDK Runtime](/plugins/sdk-runtime) — `api.runtime` 帮助函数（TTS、搜索、subagent）
-- [SDK Overview](/plugins/sdk-overview) — 完整的子路径导入参考
-- [Plugin Internals](/plugins/architecture-internals#provider-runtime-hooks) — hook 详情和捆绑示例
+- [通道插件](/plugins/sdk-channel-plugins) — 如果你的插件还提供通道
+- [SDK 运行时](/plugins/sdk-runtime) — `api.runtime` 帮助函数（TTS、搜索、subagent）
+- [SDK 概览](/plugins/sdk-overview) — 完整的子路径导入参考
+- [插件内部机制](/plugins/architecture-internals#provider-runtime-hooks) — hook 详情和捆绑示例
 
 ## 相关内容
 
-- [Plugin SDK setup](/plugins/sdk-setup)
-- [Building plugins](/plugins/building-plugins)
-- [Building channel plugins](/plugins/sdk-channel-plugins)
+- [插件 SDK 设置](/plugins/sdk-setup)
+- [构建插件](/plugins/building-plugins)
+- [构建通道插件](/plugins/sdk-channel-plugins)

@@ -21,7 +21,28 @@ OpenClaw 为智能体提供了跨会话工作、检查状态以及编排子智�
 | `subagents`        | 列出、引导或终止为此会话生成的子智能体                    |
 | `session_status`   | 显示一个类似 `/status` 的卡片，并可选择设置每会话模型覆盖 |
 
-## 列出和读取会话
+These tools are still subject to the active tool profile and allow/deny
+policy. `tools.profile: "coding"` includes the full session orchestration
+set, including `sessions_spawn`, `sessions_yield`, and `subagents`.
+`tools.profile: "messaging"` includes cross-session messaging tools
+(`sessions_list`, `sessions_history`, `sessions_send`, `session_status`) but
+does not include sub-agent spawning. To keep a messaging profile and still
+allow native delegation, add:
+
+```json5
+{
+  tools: {
+    profile: "messaging",
+    alsoAllow: ["sessions_spawn", "sessions_yield", "subagents"],
+  },
+}
+```
+
+Group, provider, sandbox, and per-agent policies can still remove those tools
+after the profile stage. Use `/tools` from the affected session to inspect the
+effective tool list.
+
+## Listing and reading sessions
 
 `sessions_list` 返回会话及其 key、agentId、kind、channel、model、
 token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、
@@ -70,7 +91,7 @@ token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、
 
 ## 状态和编排助手
 
-`session_status` 是当前或另一个可见会话的轻量级 `/status` 等效工具。它报告使用情况、时间、模型/运行时状态，以及存在时链接的后台任务上下文。像 `/status` 一样，它可以从最新的转录使用条目回填稀疏的令牌/缓存计数器，并且 `model=default` 清除每会话覆盖。
+`session_status` 是当前会话或另一个可见会话的轻量级 `/status` 等效工具。它会报告使用情况、时间、模型/运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以从最新的转录使用条目中补齐稀疏的 token/cache 计数，并且 `model=default` 会清除每会话覆盖。对调用方当前会话使用 `sessionKey="current"`；`openclaw-tui` 之类的可见客户端标签不是会话 key。
 
 `sessions_yield` 有意结束当前回合，以便下一条消息可以是你等待的后续事件。在生成子智能体后使用它，当你希望完成结果作为下一条消息到达而不是构建轮询循环时。
 

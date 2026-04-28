@@ -1,5 +1,5 @@
 ---
-summary: "使用设备流从 OpenClaw 登录到 GitHub Copilot"
+summary: "通过设备流程或非交互式令牌导入，从 OpenClaw 登录 GitHub Copilot"
 read_when:
   - 您想将 GitHub Copilot 作为模型提供者使用
   - 您需要使用 `openclaw models auth login-github-copilot` 流程
@@ -68,6 +68,24 @@ openclaw models auth login-github-copilot --yes
 openclaw models auth login --provider github-copilot --method device --set-default
 ```
 
+## 非交互式入门
+
+如果您已经拥有用于 Copilot 的 GitHub OAuth 访问令牌，可在无头设置期间使用
+`openclaw onboard --non-interactive` 导入它：
+
+```bash
+openclaw onboard --non-interactive --accept-risk \
+  --auth-choice github-copilot \
+  --github-copilot-token "$COPILOT_GITHUB_TOKEN" \
+  --skip-channels --skip-health
+```
+
+您也可以省略 `--auth-choice`；传入 `--github-copilot-token` 会推断出
+GitHub Copilot 提供者的认证选择。如果省略该标志，入门流程会回退到
+`COPILOT_GITHUB_TOKEN`、`GH_TOKEN`，然后是 `GITHUB_TOKEN`。使用
+`--secret-input-mode ref` 并设置 `COPILOT_GITHUB_TOKEN`，可在
+`auth-profiles.json` 中存储一个由环境变量支持的 `tokenRef`，而不是明文。
+
 <AccordionGroup>
   <Accordion title="需要交互式 TTY">
     设备登录流程需要交互式 TTY。直接在终端中运行，不要在非交互式脚本或 CI 管道中运行。
@@ -107,7 +125,7 @@ openclaw models auth login --provider github-copilot --method device --set-defau
 </AccordionGroup>
 
 <Warning>
-需要交互式 TTY。直接在终端中运行登录命令，不要在无头脚本或 CI 任务中运行。
+设备登录命令需要交互式 TTY。当您需要无头设置时，请使用非交互式入门流程。
 </Warning>
 
 ## 内存搜索嵌入

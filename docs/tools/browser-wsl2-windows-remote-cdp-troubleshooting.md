@@ -7,13 +7,7 @@ read_when:
 title: "WSL2 + Windows + 远程 Chrome CDP 排查指南"
 ---
 
-本指南涵盖了常见的分离主机部署场景：
-
-- OpenClaw 网关运行在 WSL2 内
-- Chrome 运行在 Windows 上
-- 浏览器控制必须跨越 WSL2/Windows 边界
-
-还包括来自 [issue #39369](https://github.com/openclaw/openclaw/issues/39369) 的分层失败模式：多个独立问题可能同时出现，导致错误的层看起来先坏了。
+在常见的分离主机设置中，OpenClaw Gateway 运行在 WSL2 内部，Chrome 运行在 Windows 上，而浏览器控制必须跨越 WSL2 和 Windows 边界。来自 [issue #39369](https://github.com/openclaw/openclaw/issues/39369) 的分层故障模式意味着多个独立问题可能同时出现，这会让看起来最先坏掉的那一层其实并不是根因。
 
 ## 首先选择正确的浏览器模式
 

@@ -30,6 +30,12 @@ read_when:
         ```bash
         openclaw onboard --auth-choice litellm-api-key
         ```
+
+        对于针对远程代理的非交互式设置，请显式传递代理 URL：
+
+        ```bash
+        openclaw onboard --non-interactive --auth-choice litellm-api-key --litellm-api-key "$LITELLM_API_KEY" --custom-base-url "https://litellm.example/v1"
+        ```
       </Step>
     </Steps>
 
@@ -180,7 +186,7 @@ export LITELLM_API_KEY="sk-litellm-key"
   <Card title="LiteLLM 文档" href="https://docs.litellm.ai" icon="book">
     官方 LiteLLM 文档和 API 参考。
   </Card>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     所有提供商、模型引用和故障转移行为的概览。
   </Card>
   <Card title="配置" href="/gateway/configuration" icon="gear">

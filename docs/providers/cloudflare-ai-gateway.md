@@ -19,7 +19,9 @@ Cloudflare AI 网关位于提供商 API 之前，允许你添加分析、缓存�
 对于通过 Cloudflare AI 网关路由的 Anthropic 模型，请使用你的 **Anthropic API 密钥** 作为提供商密钥。
 </Note>
 
-## 开始使用
+当为 Anthropic Messages 模型启用思考功能时，OpenClaw 会在通过 Cloudflare AI 网关发送有效负载之前，去除末尾的 assistant 预填充轮次。Anthropic 会拒绝与扩展思考一起使用的响应预填充，而普通的非思考预填充仍然可用。
+
+## 入门
 
 <Steps>
   <Step title="设置提供商 API 密钥和网关详情">

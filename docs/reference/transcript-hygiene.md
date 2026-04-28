@@ -7,7 +7,7 @@ read_when:
 title: "转录卫生"
 ---
 
-本文档描述了在运行前应用于转录的**特定提供商修复**（构建模型上下文）。这些是为满足严格的提供商要求而使用的**内存中**调整。这些卫生步骤**不会**重写磁盘上的已存储 JSONL 转录；但是，单独的会话文件修复流程可能会通过在会话加载前删除无效行来重写格式错误的 JSONL 文件。当发生修复时，原始文件会与会话文件一同备份。
+OpenClaw 在一次运行（构建模型上下文）之前会对转录应用**特定于提供商的修复**。其中大多数是用于满足严格提供商要求的**内存中**调整。单独的会话文件修复步骤也可能在会话加载前重写存储的 JSONL，方式要么是删除格式错误的 JSONL 行，要么是修复在语法上有效但已知会在回放时被某个提供商拒绝的持久化回合。发生修复时，原始文件会与会话文件一起备份。
 
 涵盖范围包括：
 
@@ -34,12 +34,12 @@ title: "转录卫生"
 
 ---
 
-## Where this runs
+## 运行位置
 
 所有转录清理操作均集中在嵌入式运行器中：
 
-- Policy selection: `src/agents/transcript-policy.ts`
-- Sanitization/repair application: `sanitizeSessionHistory` in `src/agents/pi-embedded-runner/replay-history.ts`
+- 策略选择：`src/agents/transcript-policy.ts`
+- 清理/修复应用：`src/agents/pi-embedded-runner/replay-history.ts` 中的 `sanitizeSessionHistory`
 
 该策略根据 `provider`、`modelApi` 和 `modelId` 决定应用哪些规则。
 
@@ -92,14 +92,20 @@ title: "转录卫生"
 **OpenAI / OpenAI Codex**
 
 - 仅图像清理。
-- 对 OpenAI Responses/Codex 转录，丢弃孤立的推理签名（即没有后续内容块的独立推理项）。
-- 不进行工具调用 ID 清理。
-- 不修复工具结果配对。
-- 不验证或重排序回合。
-- 不生成合成工具结果。
+- 对于 OpenAI Responses/Codex 转录，丢弃孤立的思维签名（没有后续内容块的独立思维项），并在模型路由切换后丢弃可回放的 OpenAI 思维内容。
+- 保留可回放的 OpenAI Responses 思维项载荷，包括加密的空摘要项，以便手动/WebSocket 回放能够将所需的 `rs_*` 状态与助手输出项正确配对。
+- 不进行工具调用 id 清理。
+- 工具结果配对修复可能会移动真实匹配的输出，并为缺失的工具调用合成 Codex 风格的 `aborted` 输出。
+- 不进行回合验证或重排序。
+- 缺失的 OpenAI Responses 系列工具输出会被合成为 `aborted`，以匹配 Codex 回放规范化。
 - 不剥离思维签名。
 
-**Google（生成式 AI / Gemini CLI / Antigravity）**
+**兼容 OpenAI 的 Gemma 4**
+
+- 历史助手思考/推理块在回放前会被剥离，因此本地兼容 OpenAI 的 Gemma 4 服务器不会接收到上一轮的推理内容。
+- 当前同轮的工具调用续接会让助手推理块继续附着在工具调用上，直到工具结果被回放为止。
+
+**Google（Generative AI / Gemini CLI / Antigravity）**
 
 - 工具调用 ID 清理：严格要求字母数字字符。
 - 工具结果配对修复及合成工具结果生成。
@@ -109,8 +115,11 @@ title: "转录卫生"
 
 **Anthropic / Minimax（兼容 Anthropic）**
 
-- 工具结果配对修复及合成工具结果生成。
-- 回合验证（合并连续用户回合以满足严格轮替）。
+- 工具结果配对修复和合成工具结果。
+- 回合验证（合并连续用户回合以满足严格交替）。
+- 当启用思考时，发送到 Anthropic Messages 的负载中会剥离尾随的助手预填回合，包括 Cloudflare AI Gateway 路由。
+- 在提供商转换之前，会剥离缺失、空白或留空回放签名的思考块。如果这会使某个助手回合为空，OpenClaw 会保留回合形状，并使用非空的 omitted-reasoning 文本。
+- 必须被剥离的旧版仅思考助手回合会被替换为非空的 omitted-reasoning 文本，这样提供商适配器就不会丢弃回放回合。
 
 **Mistral（包括基于模型 ID 的检测）**
 

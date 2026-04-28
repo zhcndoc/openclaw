@@ -89,13 +89,13 @@ git commit -m "添加 Clawd 工作空间"
 # 可选：添加私有远程仓库并推送
 ```
 
-## OpenClaw 的工作原理
+## OpenClaw 的功能
 
 - 运行 WhatsApp 网关 + Pi 编码代理，使助手能读写聊天内容、获取上下文，并通过主机 Mac 运行技能。
 - macOS 应用管理权限（屏幕录制、通知、麦克风）并通过捆绑的二进制文件提供 `openclaw` CLI。
 - 直接聊天默认合并入代理的 `main` 会话；群组聊天保持隔离，格式为 `agent:<agentId>:<channel>:group:<id>`（房间/频道为 `agent:<agentId>:<channel>:channel:<id>`）；心跳机制保持后台任务活跃。
 
-## 核心技能（在设置 → 技能中启用）
+## 核心技能（在 Settings → Skills 中启用）
 
 - **mcporter** — 用于管理外部技能后台的工具服务器运行时/命令行。
 - **Peekaboo** — 快速 macOS 截图，附带可选 AI 视觉分析。

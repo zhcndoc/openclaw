@@ -18,9 +18,29 @@ OpenClaw 分两个阶段处理失败：
 
 对于正常的文本运行，OpenClaw 按以下顺序评估候选项：
 
-1. 当前选定的会话模型。
-2. 按顺序配置 `agents.defaults.model.fallbacks`。
-3. 当运行从覆盖开始时，最后配置的主模型。
+<Steps>
+  <Step title="Resolve session state">
+    解析活动会话模型和认证配置文件偏好。
+  </Step>
+  <Step title="Build candidate chain">
+    根据当前模型选择及该选择来源的回退策略构建模型候选链。配置的默认值、cron 作业主模型以及自动选择的回退模型都可以使用配置的回退；显式用户会话选择则是严格的。
+  </Step>
+  <Step title="Try the current provider">
+    使用认证配置文件轮换/冷却规则尝试当前提供商。
+  </Step>
+  <Step title="Advance on failover-worthy errors">
+    如果该提供商因值得故障切换的错误而耗尽，则移动到下一个模型候选项。
+  </Step>
+  <Step title="Persist fallback override">
+    在重试开始前持久化选定的回退覆盖，以便其他会话读取者看到运行器即将使用的相同提供商/模型。持久化的模型覆盖会被标记为 `modelOverrideSource: "auto"`。
+  </Step>
+  <Step title="Roll back narrowly on failure">
+    如果回退候选项失败，仅回滚仍与该失败候选项匹配的回退拥有会话覆盖字段。
+  </Step>
+  <Step title="Throw FallbackSummaryError if exhausted">
+    如果每个候选项都失败，则抛出带有每次尝试详情以及已知时最早冷却过期时间的 `FallbackSummaryError`。
+  </Step>
+</Steps>
 
 在每个候选项内部，OpenClaw 在前进到下一个模型候选项之前尝试认证配置文件故障切换。
 
@@ -38,15 +58,26 @@ OpenClaw 分两个阶段处理失败：
 
 - `providerOverride`
 - `modelOverride`
+- `modelOverrideSource`
 - `authProfileOverride`
 - `authProfileOverrideSource`
 - `authProfileOverrideCompactionCount`
 
 这防止失败的回退重试覆盖更新的无关会话变更，例如手动 `/model` 更改或在尝试运行期间发生的会话轮换更新。
 
+## 选择来源策略
+
+OpenClaw 将所选提供商/模型与其被选择的原因分开处理。该来源控制是否允许回退链：
+
+- **配置的默认值**：`agents.defaults.model.primary`（或某个 agent 特定的 primary）使用配置的回退链。
+- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride` 和 `modelOverrideSource: "auto"`。该自动覆盖可以继续沿着配置的回退链前进，并会被 `/new`、`/reset` 和 `sessions.reset` 清除。
+- **用户会话覆盖**：`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一种精确的会话选择。如果所选提供商/模型在产生回复前失败，OpenClaw 会报告失败，而不是从无关的配置回退中回答。
+- **旧版会话覆盖**：较旧的会话条目可能有 `modelOverride` 但没有 `modelOverrideSource`。OpenClaw 将其视为用户覆盖，因此显式的旧选择不会被静默转换为回退行为。
+- **Cron 负载模型**：cron 作业的 `payload.model` / `--model` 是作业主模型，不是用户会话覆盖。它使用配置的回退，除非作业提供 `payload.fallbacks`；`payload.fallbacks: []` 会使 cron 运行保持严格。
+
 ## 认证存储（密钥 + OAuth）
 
-OpenClaw 使用**认证配置文件**管理 API 密钥和 OAuth 令牌。
+OpenClaw 使用**认证配置文件**来管理 API 密钥和 OAuth 令牌。
 
 - 密钥存储在 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（旧版：`~/.openclaw/agent/auth-profiles.json`）。
 - 运行时认证路由状态存储在 `~/.openclaw/agents/<agentId>/agent/auth-state.json`。
@@ -88,7 +119,7 @@ OAuth 登录会创建不同的配置文件，允许多个账户共存。
 OpenClaw **在每个会话内固定选择的认证配置文件**，以保持提供商缓存活跃。
 不会在每次请求时轮换。固定的配置文件会一直被复用，直到：
 
-- 会话被重置（`/new` / `/reset`）
+- 会话被重置（`/new` / `reset`）
 - 压缩完成（压缩计数加一）
 - 配置文件处于冷却或禁用状态
 
@@ -172,26 +203,32 @@ OpenClaw 不进行短暂冷却，而是将配置文件标记为**禁用**（长�
 
 ## 模型回退
 
-如果某提供商的所有配置文件均失败，OpenClaw 会切换到
-`agents.defaults.model.fallbacks` 中的下一个模型。
-此规则适用于认证失败、速率限制和使用尽所有配置文件后的超时（其他错误不触发模型回退）。
+如果提供商的所有配置文件都失败，OpenClaw 会转到 `agents.defaults.model.fallbacks` 中的下一个模型。这适用于认证失败、速率限制以及耗尽配置文件轮换的超时（其他错误不会推进回退）。未暴露足够细节的提供商错误在回退状态中仍会被精确标记：`empty_response` 表示提供商返回了不可用的消息或状态，`no_error_details` 表示提供商明确返回了 `Unknown error (no error details in response)`，而 `unclassified` 表示 OpenClaw 保留了原始预览但尚未匹配到分类器。
 
 过载和速率限制错误比计费冷却处理得更积极。默认情况下，OpenClaw 允许一次同一提供商认证配置文件重试，然后切换到下一个配置模型回退而不等待。提供商繁忙信号如 `ModelNotReadyException` 落入该过载桶。使用 `auth.cooldowns.overloadedProfileRotations`、`auth.cooldowns.overloadedBackoffMs` 和 `auth.cooldowns.rateLimitedProfileRotations` 调整此行为。
 
-当运行以模型覆盖开始时（hooks 或 CLI），回退在尝试任何配置的回退后仍结束于
-`agents.defaults.model.primary`。
+当运行从配置的 primary、cron 作业 primary 或自动选择的回退覆盖开始时，OpenClaw 可以沿着配置的回退链前进。显式用户选择（例如 `/model ollama/qwen3.5:27b`、模型选择器、`sessions.patch` 或一次性的 CLI 提供商/模型覆盖）是严格的：如果该提供商/模型不可达或在产生回复前失败，OpenClaw 会报告失败，而不是从无关的回退中回答。
 
 ### 候选链规则
 
 OpenClaw 从当前请求的 `provider/model` 加上配置的回退构建候选列表。
 
-规则：
+<AccordionGroup>
+  <Accordion title="Rules">
+    - 请求的模型始终排在第一位。
+    - 显式配置的回退被去重但不按模型允许列表过滤。它们被视作显式操作员意图。
+    - 如果当前运行已经在同一提供商家族中的配置回退上，OpenClaw 继续使用完整的配置链。
+    - 如果当前运行在与配置不同的提供商上，且该当前模型尚未成为配置回退链的一部分，OpenClaw 不会附加来自另一提供商的无关配置回退。
+    - 当向回退运行器未提供显式回退覆盖时，配置的 primary 会附加在末尾，以便在更早的候选项耗尽后，链可以回到正常默认值。
+    - 当调用方提供 `fallbacksOverride` 时，运行器只使用请求的模型加上该覆盖列表。空列表会禁用模型回退，并阻止将配置的 primary 作为隐藏重试目标附加进去。
+  </Accordion>
+</AccordionGroup>
 
 - 请求的模型始终排在第一位。
 - 显式配置的回退被去重但不按模型允许列表过滤。它们被视作显式操作员意图。
 - 如果当前运行已经在同一提供商家族中的配置回退上，OpenClaw 继续使用完整的配置链。
 - 如果当前运行在与配置不同的提供商上，且该当前模型尚未成为配置回退链的一部分，OpenClaw 不会附加来自另一提供商的无关配置回退。
-- 当运行从覆盖开始时，配置的主模型附加在末尾，以便一旦早期候选项耗尽，链可以稳定回正常默认值。
+- 当回退运行器未提供显式回退覆盖时，配置的 primary 会附加在末尾，以便在更早的候选项耗尽后，链可以回到正常默认值。
 
 ### 哪些错误推进回退
 
@@ -215,12 +252,15 @@ OpenClaw 从当前请求的 `provider/model` 加上配置的回退构建候选�
 
 当提供商的每个认证配置文件都已处于冷却状态时，OpenClaw 不会自动永远跳过该提供商。它做出每个候选项的决定：
 
-- 只有明确的用户驱动模型更改才会标记待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
-- 系统驱动的模型更改，例如回退轮换、心跳覆盖或压缩，绝不会自行标记待处理的实时切换。
+- 只有显式的用户驱动模型更改才会标记一个待处理的 live switch。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
+- 系统驱动的模型更改，如回退轮换、心跳覆盖或压缩，绝不会自行标记待处理的 live switch。
+- 用户驱动的模型覆盖被视为回退策略中的精确选择，因此不可达的所选提供商会直接暴露为失败，而不会被 `agents.defaults.model.fallbacks` 掩盖。
 - 在回退重试开始之前，回复运行器会将选定的回退覆盖字段持久化到会话条目中。
-- 实时会话协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
-- 如果实时切换错误指向活动回退链中的后续候选项，OpenClaw 会直接跳转到该选定模型，而不是先遍历无关候选项。
-- 如果回退尝试失败，运行器仅回滚它写入的覆盖字段，且仅当它们仍与该失败的候选项匹配时。
+- 自动回退覆盖在后续轮次中保持选中，因此 OpenClaw 不会在每条消息上都探测一个已知不良的 primary。`/new`、`/reset` 和 `sessions.reset` 会清除自动来源的覆盖并将会话恢复到配置的默认值。
+- `/status` 会显示所选模型，以及在回退状态不同的情况下，活动回退模型和原因。
+- live-session 协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
+- 如果 live-switch 错误指向活动回退链中的较后候选项，OpenClaw 会直接跳到该选定模型，而不是先遍历无关候选项。
+- 如果回退尝试失败，运行器只回滚它写入的覆盖字段，并且仅在这些字段仍与该失败候选项匹配时才回滚。
 
 ## 会话覆盖和实时模型切换
 
@@ -242,7 +282,9 @@ OpenClaw 从当前请求的 `provider/model` 加上配置的回退构建候选�
 4. 实时会话协调读取过时的会话状态。
 5. 重试在回退尝试开始之前被弹回旧模型。
 
-持久化的回退覆盖关闭了该窗口，而窄范围回滚保持较新的手动或运行时会话更改完好无损。
+结构化的 `model_fallback_decision` 日志在候选项失败、被跳过，或后续回退成功时，也会包含扁平的 `fallbackStep*` 字段。这些字段使尝试的切换显式化（`fallbackStepFromModel`、`fallbackStepToModel`、`fallbackStepFromFailureReason`、`fallbackStepFromFailureDetail`、`fallbackStepFinalOutcome`），因此日志和诊断导出器即使在最终回退也失败时，仍然可以重建主故障。
+
+当所有候选项都失败时，OpenClaw 会抛出 `FallbackSummaryError`。外层回复运行器可以利用它构建更具体的消息，例如“所有模型暂时受到速率限制”，并在已知时包含最早的冷却到期时间。
 
 ## 可观察性和故障摘要
 

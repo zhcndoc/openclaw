@@ -210,7 +210,7 @@ openclaw gateway
     "event_subscriptions": {
       "request_url": "https://gateway-host.example.com/slack/events",
       "bot_events": [
-        /* same as Socket Mode */
+        /* 与 Socket 模式相同 */
       ]
     },
     "interactivity": {
@@ -369,7 +369,7 @@ openclaw gateway
         "description": "显示简短帮助摘要",
         "url": "https://gateway-host.example.com/slack/events"
       }
-      // ...repeat for every command with the same `url` value
+      // ...对每个命令重复相同的 `url` 值
     ]
 ```
 
@@ -525,7 +525,9 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 - `[[reply_to_current]]`
 - `[[reply_to:<id>]]`
 
-注意：`replyToMode="off"` 会禁用 Slack 中**所有**回复线程，包括显式的 `[[reply_to_*]]` 标签。这与 Telegram 不同，在 Telegram 中即使在 `"off"` 模式下显式标签仍会被保留——Slack 线程会隐藏频道中的消息，而 Telegram 回复仍会以内联方式显示。
+<Note>
+`replyToMode="off"` 会禁用 Slack 中**所有**回复线程，包括显式 `[[reply_to_*]]` 标签。这与 Telegram 不同，在 Telegram 中即使是 `"off"` 模式，显式标签仍会被接受。Slack 线程会隐藏频道中的消息，而 Telegram 回复仍会以内联方式可见。
+</Note>
 
 ## 确认反应
 

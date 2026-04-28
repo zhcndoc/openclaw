@@ -1,6 +1,6 @@
 ---
-summary: "Canonical credential eligibility and resolution semantics for auth profiles"
-title: "Auth credential semantics"
+summary: "规范的凭证资格与解析语义，用于认证配置文件"
+title: "认证凭证语义"
 read_when:
   - 处理认证配置文件解析或凭证路由时
   - 调试模型认证失败或配置文件顺序时

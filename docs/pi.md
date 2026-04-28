@@ -6,7 +6,7 @@ read_when:
   - 修改 Pi 的代理会话生命周期、工具或提供者连接
 ---
 
-本文档描述了 OpenClaw 如何与 [pi-coding-agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 及其同级包（`pi-ai`、`pi-agent-core`、`pi-tui`）集成，以提供其 AI 代理能力。
+OpenClaw 与 [pi-coding-agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 及其兄弟包（`pi-ai`、`pi-agent-core`、`pi-tui`）集成，以提供其 AI 代理能力。
 
 ## 概述
 
@@ -19,7 +19,7 @@ OpenClaw 使用 pi SDK 将 AI 编程代理嵌入其消息网关架构中。不�
 - 多账户认证配置轮换及故障切换
 - 与提供者无关的模型切换
 
-## 依赖包
+## 包依赖
 
 ```json
 {
@@ -238,7 +238,7 @@ SDK 负责完整代理循环：发送给 LLM，执行工具调用，流式响应
 
 ## 工具架构
 
-### 工具流水线
+### 工具管线
 
 1. **基础工具**：pi 的 `codingTools`（read、bash、edit、write）
 2. **定制替换**：OpenClaw 以 `exec`/`process` 替换 bash，定制 read/edit/write 以支持沙箱
@@ -336,7 +336,7 @@ const compactResult = await compactEmbeddedPiSessionDirect({
 
 ## 认证与模型解析
 
-### 认证配置
+### Auth profiles
 
 OpenClaw 维护多 API Key 提供者的认证配置库：
 
@@ -352,7 +352,7 @@ await markAuthProfileFailure({ store, profileId, reason, cfg, agentDir });
 const rotated = await advanceAuthProfile();
 ```
 
-### 模型解析
+### Model resolution
 
 ```typescript
 import { resolveModel } from "./pi-embedded-runner/model.js";
@@ -388,7 +388,7 @@ if (fallbackConfigured && isFailoverErrorMessage(errorText)) {
 
 OpenClaw 加载自定义 pi 扩展以实现特殊行为：
 
-### 压缩保护
+### 压缩保护措施
 
 `src/agents/pi-hooks/compaction-safeguard.ts` 为压缩添加了保护措施，包括自适应 token 预算以及工具失败和文件操作摘要：
 
@@ -417,7 +417,7 @@ if (cfg?.agents?.defaults?.contextPruning?.mode === "cache-ttl") {
 
 ## 流式与块回复
 
-### 块切分
+### 块分块
 
 `EmbeddedBlockChunker` 管理流式文本分割成离散回复块：
 
@@ -459,7 +459,7 @@ isFailoverAssistantError(...)         // 需要故障切换
 classifyFailoverReason(errorText)     // "auth" | "rate_limit" | "quota" | "timeout" | ...
 ```
 
-### 思考层级降级
+### 思考层级回退
 
 若思考层级不受支持，自动降级：
 
@@ -520,7 +520,7 @@ import { ... } from "@mariozechner/pi-tui";
 
 提供与 pi 原生模式类似的交互式终端体验。
 
-## 与 Pi CLI 的关键差异
+## 与 Pi CLI 的主要差异
 
 | 比较项        | Pi CLI                       | OpenClaw 嵌入式                                                                          |
 | ------------- | ---------------------------- | ----------------------------------------------------------------------------------------- |

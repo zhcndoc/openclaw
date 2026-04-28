@@ -7,7 +7,7 @@ title: "认证"
 ---
 
 <Note>
-本页涵盖**模型提供商**认证（API 密钥、OAuth、Claude CLI 复用和 Anthropic setup-token）。对于**网关连接**认证（token、密码、trusted-proxy），请参阅 [配置](/gateway/configuration) 和 [受信任代理认证](/gateway/trusted-proxy-auth)。
+本页是**模型提供商**认证参考（API 密钥、OAuth、Claude CLI 复用，以及 Anthropic setup-token）。关于**网关连接**认证（token、密码、受信任代理），请参见 [配置](/gateway/configuration) 和 [受信任代理认证](/gateway/trusted-proxy-auth)。
 </Note>
 
 OpenClaw 支持模型提供商的 OAuth 和 API 密钥。对于始终在线的网关主机，API 密钥通常是最可预测的选项。当订阅/OAuth 流程符合您的提供商账户模型时，也支持它们。

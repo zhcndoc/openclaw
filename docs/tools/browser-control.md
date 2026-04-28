@@ -15,18 +15,19 @@ CLI 以及脚本模式（snapshots、refs、wait、debug flows）的参考。
 
 仅用于本地集成时，Gateway 提供一个小型回环 HTTP API：
 
-- 状态/启动/停止：`GET /`, `POST /start`, `POST /stop`
-- 标签页：`GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`
-- Snapshot/截图：`GET /snapshot`, `POST /screenshot`
-- 操作：`POST /navigate`, `POST /act`
-- Hooks：`POST /hooks/file-chooser`, `POST /hooks/dialog`
-- 下载：`POST /download`, `POST /wait/download`
-- 调试：`GET /console`, `POST /pdf`
-- 调试：`GET /errors`, `GET /requests`, `POST /trace/start`, `POST /trace/stop`, `POST /highlight`
-- 网络：`POST /response/body`
-- 状态：`GET /cookies`, `POST /cookies/set`, `POST /cookies/clear`
-- 状态：`GET /storage/:kind`, `POST /storage/:kind/set`, `POST /storage/:kind/clear`
-- 设置：`POST /set/offline`, `POST /set/headers`, `POST /set/credentials`, `POST /set/geolocation`, `POST /set/media`, `POST /set/timezone`, `POST /set/locale`, `POST /set/device`
+- 状态/启动/停止: `GET /`, `POST /start`, `POST /stop`
+- 标签页: `GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`
+- Snapshot/截图: `GET /snapshot`, `POST /screenshot`
+- 操作: `POST /navigate`, `POST /act`
+- 钩子: `POST /hooks/file-chooser`, `POST /hooks/dialog`
+- 下载: `POST /download`, `POST /wait/download`
+- 权限: `POST /permissions/grant`
+- 调试: `GET /console`, `POST /pdf`
+- 调试: `GET /errors`, `GET /requests`, `POST /trace/start`, `POST /trace/stop`, `POST /highlight`
+- 网络: `POST /response/body`
+- 状态: `GET /cookies`, `POST /cookies/set`, `POST /cookies/clear`
+- 状态: `GET /storage/:kind`, `POST /storage/:kind/set`, `POST /storage/:kind/clear`
+- 设置: `POST /set/offline`, `POST /set/headers`, `POST /set/credentials`, `POST /set/geolocation`, `POST /set/media`, `POST /set/timezone`, `POST /set/locale`, `POST /set/device`
 
 所有端点都接受 `?profile=<name>`。
 
@@ -338,11 +339,10 @@ JSON 中的角色快照包含 `refs` 以及一个小的 `stats` 块（lines/char
     },
   },
 }
-```
 
 ## 相关内容
 
-- [Browser](/tools/browser) — 概览、配置、配置文件、安全性
-- [Browser login](/tools/browser-login) — 登录网站
-- [Browser Linux troubleshooting](/tools/browser-linux-troubleshooting)
-- [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)
+- [浏览器](/tools/browser) — 概览、配置、配置文件、安全性
+- [浏览器登录](/tools/browser-login) — 登录网站
+- [浏览器 Linux 故障排查](/tools/browser-linux-troubleshooting)
+- [浏览器 WSL2 故障排查](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

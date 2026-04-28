@@ -1,7 +1,7 @@
 ---
 summary: "每个渠道（WhatsApp, Telegram, Discord, Slack）的路由规则及共享上下文"
 read_when:
-  - Changing channel routing or inbox behavior
+  - 更改渠道路由或收件箱行为时
 title: "渠道路由"
 ---
 
@@ -12,12 +12,12 @@ OpenClaw 会将回复**路由回消息来源的渠道**。模型并不选择渠�
 ## 关键术语
 
 - **Channel**: `telegram`, `whatsapp`, `discord`, `irc`, `googlechat`, `slack`, `signal`, `imessage`, `line`, plus plugin channels. `webchat` is the internal WebChat UI channel and is not a configurable outbound channel.
-- **AccountId**: per‑channel account instance (when supported).
-- Optional channel default account: `channels.<channel>.defaultAccount` chooses
-  which account is used when an outbound path does not specify `accountId`.
-  - In multi-account setups, set an explicit default (`defaultAccount` or `accounts.default`) when two or more accounts are configured. Without it, fallback routing may pick the first normalized account ID.
-- **AgentId**: an isolated workspace + session store (“brain”).
-- **SessionKey**: the bucket key used to store context and control concurrency.
+- **AccountId**: 每个渠道的账户实例（如支持）。
+- Optional channel default account: `channels.<channel>.defaultAccount` 选择
+  当出站路径未指定 `accountId` 时使用哪个账户。
+  - 在多账户设置中，当配置了两个或更多账户时，请设置一个显式默认值（`defaultAccount` 或 `accounts.default`）。否则，回退路由可能会选择第一个规范化后的账户 ID。
+- **AgentId**: 一个隔离的工作区 + 会话存储（“大脑”）。
+- **SessionKey**: 用于存储上下文和控制并发的桶键。
 
 ## 会话键格式示例
 
@@ -52,6 +52,10 @@ OpenClaw 会将回复**路由回消息来源的渠道**。模型并不选择渠�
 - 入站私信的发送者与该固定拥有者不匹配。
 
 在不匹配的情况下，OpenClaw 仍会记录入站会话元数据，但会跳过更新主会话的 `lastRoute`。
+
+## 受保护的入站记录
+
+当受保护的路径不能创建新的 OpenClaw 会话时，渠道插件可以将入站会话记录标记为 `createIfMissing: false`。在这种模式下，OpenClaw 可能会更新现有会话的元数据和 `lastRoute`，但不会仅仅因为观察到一条消息就创建一个仅路由用的会话条目。
 
 ## 路由规则（如何选择代理）
 

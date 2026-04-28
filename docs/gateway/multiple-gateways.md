@@ -41,7 +41,7 @@ openclaw --profile rescue gateway install --port 19789
 如果 onboarding 已经为你安装了救援服务，则最后的
 `gateway install` 就不需要了。
 
-## 这是如何工作的
+## 为什么这样有效
 
 救援机器人之所以保持独立，是因为它拥有自己的：
 

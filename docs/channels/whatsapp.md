@@ -510,8 +510,15 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 对入站回执进行立�
 
   </Accordion>
 
-  <Accordion title="发送时无活动监听器">
-    出站发送在目标账户无活动网关监听时快速失败。
+  <Accordion title="QR login times out behind a proxy">
+    症状：`openclaw channels login --channel whatsapp` 在显示可用的 QR 码之前失败，并出现 `status=408 Request-time-out` 或 TLS socket 断开。
+
+    WhatsApp Web 登录使用网关主机的标准代理环境（`HTTPS_PROXY`、`HTTP_PROXY`、小写变体以及 `NO_PROXY`）。请检查网关进程是否继承了代理环境变量，并确保 `NO_PROXY` 不匹配 `mmg.whatsapp.net`。
+
+  </Accordion>
+
+  <Accordion title="No active listener when sending">
+    当目标账户不存在活动的网关监听器时，出站发送会快速失败。
 
     确认网关已运行且账户已关联。
 
@@ -551,7 +558,9 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持用于群组和直接聊天的
 1. **直接聊天特定系统提示词** (`direct["<peerId>"].systemPrompt`)：当映射中存在该特定对端条目且其 `systemPrompt` 键已定义时使用。如果 `systemPrompt` 为空字符串（`""`），则会抑制通配符，不应用系统提示词。
 2. **直接聊天通配系统提示词** (`direct["*"].systemPrompt`)：当映射中完全不存在该特定对端条目，或者该条目存在但未定义 `systemPrompt` 键时使用。
 
-注意：`dms` 仍然是轻量级的每个 DM 历史覆盖桶（`dms.<id>.historyLimit`）；提示词覆盖位于 `direct` 下。
+<Note>
+`dms` 仍然是轻量级的按 DM 历史覆盖桶（`dms.<id>.historyLimit`）。提示词覆盖项位于 `direct` 下。
+</Note>
 
 **与 Telegram 多账户行为的区别：** 在 Telegram 中，根级 `groups` 会在多账户设置中对所有账户有意被抑制——即使某些账户没有定义自己的 `groups`，也会这样做，以防止机器人收到其不属于的群组消息。WhatsApp 不使用此保护：根级 `groups` 和根级 `direct` 会始终被那些没有定义账户级覆盖的账户继承，而不管配置了多少账户。在多账户 WhatsApp 设置中，如果您希望每个账户都有自己的群组或直接聊天提示词，请显式在每个账户下定义完整映射，而不要依赖根级默认值。
 

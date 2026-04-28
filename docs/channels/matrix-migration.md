@@ -6,7 +6,7 @@ read_when:
 title: "Matrix 迁移"
 ---
 
-本页介绍从之前公开的 `matrix` 插件升级到当前实现的方法。
+从之前公开的 `matrix` 插件升级到当前实现。
 
 对于大多数用户，升级是就地进行的：
 
@@ -116,7 +116,7 @@ OpenClaw 无法自动恢复：
    只有在它们匹配时才输入 `yes`。该命令仅在
    `Cross-signing verified` 变为 `yes` 后才会成功退出。
 
-7. If you are intentionally abandoning unrecoverable old history and want a fresh backup baseline for future messages, run:
+7. 如果你有意放弃无法恢复的旧历史，并希望为未来消息建立一个新的备份基线，请运行：
 
    ```bash
    openclaw matrix verify backup reset --yes
@@ -349,9 +349,10 @@ openclaw matrix verify status
 
 如果此后设备仍未验证，请在您的 Matrix 客户端中通过比较 SAS 表情符号或十进制代码来完成验证，并确认它们匹配。
 
-## 相关页面
+## 相关
 
-- [Matrix](/channels/matrix)
-- [诊断](/gateway/doctor)
-- [迁移](/install/migrating)
-- [插件](/tools/plugin)
+- [Matrix](/channels/matrix): 频道设置和配置。
+- [Matrix push rules](/channels/matrix-push-rules): 通知路由。
+- [Doctor](/gateway/doctor): 健康检查和自动迁移触发器。
+- [Migration guide](/install/migrating): 所有迁移路径（机器迁移、跨系统导入）。
+- [Plugins](/tools/plugin): 插件安装和注册。

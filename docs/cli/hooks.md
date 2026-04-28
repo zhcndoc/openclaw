@@ -3,7 +3,7 @@ summary: "`openclaw hooks` CLI 参考（代理钩子）"
 read_when:
   - 你想管理代理钩子
   - 你想检查钩子可用性或启用工作区钩子
-title: "Hooks"
+title: "钩子"
 ---
 
 # `openclaw hooks`
@@ -14,8 +14,8 @@ title: "Hooks"
 
 相关：
 
-- Hooks: [Hooks](/automation/hooks)
-- Plugin hooks: [Plugin hooks](/plugins/hooks)
+- 钩子: [钩子](/automation/hooks)
+- 插件钩子: [插件钩子](/plugins/hooks)
 
 ## 列出所有钩子
 
@@ -100,7 +100,7 @@ openclaw hooks info session-memory
   配置：✓ workspace.dir
 ```
 
-## 检查钩子合格状态
+## 检查钩子符合条件情况
 
 ```bash
 openclaw hooks check
@@ -196,8 +196,9 @@ openclaw hooks disable command-logger
 ## 安装钩子包
 
 ```bash
-openclaw plugins install <package>        # 先从 ClawHub，再从 npm
-openclaw plugins install <package> --pin  # 固定版本
+openclaw plugins install <package>        # 先 ClawHub，再 npm
+openclaw plugins install npm:<package>    # 仅 npm
+openclaw plugins install <package> --pin  # 锁定版本
 openclaw plugins install <path>           # 本地路径
 ```
 

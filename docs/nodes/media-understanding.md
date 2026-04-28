@@ -190,8 +190,10 @@ CLI 模板还可以使用：
 
 - `HTTPS_PROXY`
 - `HTTP_PROXY`
+- `ALL_PROXY`
 - `https_proxy`
 - `http_proxy`
+- `all_proxy`
 
 若无代理环境变量设置，则媒体理解直连外网。
 如代理值格式错误，OpenClaw 记录警告并回退至直连。

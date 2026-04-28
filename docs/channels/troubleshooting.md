@@ -31,11 +31,12 @@ openclaw channels status --probe
 
 ### WhatsApp 故障特征
 
-| 症状                         | 最快检查                                         | 修复                                                         |
-| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
-| 已连接但无私信回复            | `openclaw pairing list whatsapp`                 | 批准发送者或调整私信策略/白名单。                           |
-| 群组消息被忽略                | 检查配置中的 `requireMention` 和提及模式        | 提及机器人或放宽该群组的提及策略。                           |
-| 随机断开连接/重复登录循环    | `openclaw channels status --probe` + 日志          | 重新登录并确认凭据目录正常。                             |
+| Symptom                         | Fastest check                                       | Fix                                                      |
+| ------------------------------- | --------------------------------------------------- | -------------------------------------------------------- |
+| Connected but no DM replies     | `openclaw pairing list whatsapp`                    | Approve sender or switch DM policy/allowlist.            |
+| Group messages ignored          | Check `requireMention` + mention patterns in config | Mention the bot or relax mention policy for that group.  |
+| QR login times out with 408     | Check gateway `HTTPS_PROXY` / `HTTP_PROXY` env      | Set a reachable proxy; use `NO_PROXY` only for bypasses. |
+| Random disconnect/relogin loops | `openclaw channels status --probe` + logs           | Re-login and verify credentials directory is healthy.    |
 
 完整故障排查：[WhatsApp 故障排查](/channels/whatsapp#troubleshooting)
 

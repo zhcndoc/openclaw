@@ -334,10 +334,11 @@ OpenClaw 还在配置中存储一个轻量级的 MCP 服务器注册表，供需
 
 注意：
 
-- `list` 对服务器名称进行排序。
-- `show` 不带名称时打印完整配置的 MCP 服务器对象。
-- `set` 期望命令行上有一个 JSON 对象值。
-- 如果命名的服务器不存在，`unset` 将失败。
+- `list` 按服务器名称排序。
+- `show` 不带名称时会打印完整配置的 MCP 服务器对象。
+- `set` 期望在命令行上提供一个 JSON 对象值。
+- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。通过 `openclaw mcp set` 保存时，`openclaw mcp set` 也会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形状以兼容。
+- 如果命名服务器不存在，`unset` 会失败。
 
 示例：
 
@@ -345,7 +346,7 @@ OpenClaw 还在配置中存储一个轻量级的 MCP 服务器注册表，供需
 openclaw mcp list
 openclaw mcp show context7 --json
 openclaw mcp set context7 '{"command":"uvx","args":["context7-mcp"]}'
-openclaw mcp set docs '{"url":"https://mcp.example.com"}'
+openclaw mcp set docs '{"url":"https://mcp.example.com","transport":"streamable-http"}'
 openclaw mcp unset context7
 ```
 
@@ -360,7 +361,8 @@ openclaw mcp unset context7
         "args": ["context7-mcp"]
       },
       "docs": {
-        "url": "https://mcp.example.com"
+        "url": "https://mcp.example.com",
+        "transport": "streamable-http"
       }
     }
   }
@@ -424,6 +426,8 @@ OpenClaw 会拒绝那些可在第一个 RPC 之前改变 stdio MCP 服务器启�
 | `headers`             | HTTP 头部的可选键值映射（例如认证令牌）                       |
 | `connectionTimeoutMs` | 每个服务器的连接超时时间（毫秒）（可选）                                         |
 
+OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过 `openclaw mcp set` 保存时，CLI 原生的 MCP `type: "http"` 值会被接受，并且可通过 `openclaw doctor --fix` 在现有配置中修复，但 `transport` 才是 embedded Pi 直接消费的内容。
+
 示例：
 
 ```json
@@ -445,20 +449,19 @@ OpenClaw 会拒绝那些可在第一个 RPC 之前改变 stdio MCP 服务器启�
 
 这些命令仅管理保存的配置。它们不会启动渠道桥接，不会打开活动的 MCP 客户端会话，也不会证明目标服务器是否可达。
 
-## Current Limitations
+## 当前限制
 
-This page records the bridge features that are currently released.
+本页面记录当前已发布的桥接功能。
 
-Current limitations:
+当前限制：
 
-- conversation discovery depends on existing Gateway session route metadata
-- no generic push protocol beyond the Claude-specific adapter
-- no message edit or react tools yet
-- HTTP/SSE/streamable-http transport connects to a single remote server; no multiplexed upstream yet
-- `permissions_list_open` only includes approvals observed while the bridge is
-  connected
+- 会话发现依赖于现有的 Gateway 会话路由元数据
+- 除了 Claude 特定适配器之外，没有通用的推送协议
+- 目前还没有消息编辑或表情反应工具
+- HTTP/SSE/streamable-http 传输仅连接到单个远程服务器；尚未支持多路复用上游
+- `permissions_list_open` 仅包含桥接连接期间观察到的审批
 
-## Related
+## 相关内容
 
-- [CLI reference](/cli)
-- [Plugins](/cli/plugins)
+- [CLI 参考](/cli)
+- [插件](/cli/plugins)

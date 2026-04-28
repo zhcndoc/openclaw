@@ -6,7 +6,7 @@ read_when:
 title: "Docker"
 ---
 
-Docker 是**可选**的。仅当您想要一个容器化网关，或者想验证 Docker 流程时才使用它。
+Docker 是**可选的**。仅当您想要一个容器化网关，或者想验证 Docker 流程时才使用它。
 
 ## Docker 适合我吗？
 
@@ -153,7 +153,33 @@ docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLA
 `tailnet` / `auto`），而不是主机别名如 `0.0.0.0` 或 `127.0.0.1`。
 </Note>
 
-### 存储与持久化
+### 主机本地提供商
+
+当 OpenClaw 在 Docker 中运行时，容器内的 `127.0.0.1` 指的是容器
+自身，而不是您的主机。对于运行在主机上的 AI 提供商，请使用 `host.docker.internal`：
+
+| Provider  | Host default URL         | Docker setup URL                    |
+| --------- | ------------------------ | ----------------------------------- |
+| LM Studio | `http://127.0.0.1:1234`  | `http://host.docker.internal:1234`  |
+| Ollama    | `http://127.0.0.1:11434` | `http://host.docker.internal:11434` |
+
+捆绑的 Docker 设置会将这些主机 URL 作为 LM Studio 和 Ollama 的
+入门默认值，并且 `docker-compose.yml` 会在 Linux Docker Engine 上将 `host.docker.internal` 映射到
+Docker 的主机网关。Docker Desktop 已在 macOS 和 Windows 上提供
+相同的主机名。
+
+主机服务还必须监听 Docker 可访问的地址：
+
+```bash
+lms server start --port 1234 --bind 0.0.0.0
+OLLAMA_HOST=0.0.0.0:11434 ollama serve
+```
+
+如果您使用自己的 Compose 文件或 `docker run` 命令，请自行添加相同的主机
+映射，例如
+`--add-host=host.docker.internal:host-gateway`。
+
+### Bonjour / mDNS
 
 Docker Compose 将 `OPENCLAW_CONFIG_DIR` 绑定挂载到 `/home/node/.openclaw`，将
 `OPENCLAW_WORKSPACE_DIR` 绑定挂载到 `/home/node/.openclaw/workspace`，因此这些路径

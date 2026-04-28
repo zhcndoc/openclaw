@@ -44,24 +44,51 @@ Codex, MiniMax, Xiaomi, 和 z.ai。用量认证来自提供商特定的钩子
 注意事项：
 
 - `models set <model-or-alias>` 接受 `provider/model` 或别名。
-- `models list` 为只读：它会读取配置、认证配置文件、现有目录
+- `models list` 是只读的：它读取配置、认证配置文件、现有目录
   状态以及提供商拥有的目录行，但不会重写
   `models.json`。
-- `models list --all` 即使你尚未完成该提供商的认证，也会包含
-  内置的提供商拥有的静态目录行。这些行仍会显示为不可用，直到
-  配置了匹配的认证。
+- `models list --all --provider <id>` 即使你还没有对该提供商完成认证，也可以
+  包括来自插件清单或内置提供商目录元数据的提供商拥有的静态目录
+  行。这些行在配置匹配的认证之前仍会显示为不可用。
+- `models list` 会区分原生模型元数据和运行时上限。在表格
+  输出中，当有效运行时上限不同于原生上下文窗口时，`Ctx` 会显示 `contextTokens/contextWindow`；
+  JSON 行在提供商暴露该上限时会包含 `contextTokens`。
 - `models list --provider <id>` 按提供商 id 过滤，例如 `moonshot` 或
   `openai-codex`。它不接受交互式提供商选择器中的显示标签，例如
   `Moonshot AI`。
-- 模型引用通过在 **第一个** `/` 处拆分来解析。如果模型 ID 包含 `/`（OpenRouter 风格），请包含提供商前缀（示例：`openrouter/moonshotai/kimi-k2`）。
-- 如果省略提供商，OpenClaw 会先将输入解析为别名，然后将其作为
-  与该精确模型 id 唯一匹配的已配置提供商，最后才
+- 模型引用通过按**第一个** `/` 拆分解析。如果模型 ID 中包含 `/`（OpenRouter 风格），请包含提供商前缀（例如：`openrouter/moonshotai/kimi-k2`）。
+- 如果你省略提供商，OpenClaw 会先将输入解析为别名，然后
+  解析为该确切模型 id 的唯一已配置提供商匹配，最后才
   回退到已配置的默认提供商，并给出弃用警告。
-  如果该提供商不再暴露已配置的默认模型，OpenClaw 会回退到
-  第一个已配置的提供商/模型，而不是暴露一个已移除提供商的旧默认值。
-- `models status` 可能会在认证输出中显示 `marker(<value>)`，用于非密钥占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为密钥。
+  如果该提供商不再暴露已配置的默认模型，OpenClaw
+  会回退到第一个已配置的提供商/模型，而不是暴露一个已失效的已移除提供商默认值。
+- `models status` 在认证输出中可能显示 `marker(<value>)`，用于非秘密占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为秘密。
 
-### `models status`
+### Models scan
+
+`models scan` 读取 OpenRouter 的公共 `:free` 目录，并按回退用途对候选项排序。目录本身是公开的，因此仅元数据扫描不需要 OpenRouter 密钥。
+
+默认情况下，OpenClaw 会尝试通过实时模型调用探测工具和图像支持。
+如果未配置 OpenRouter 密钥，该命令会退回到仅元数据输出，并说明 `:free` 模型仍然需要 `OPENROUTER_API_KEY` 才能进行探测和推理。
+
+选项：
+
+- `--no-probe`（仅元数据；不进行配置/密钥查找）
+- `--min-params <b>`
+- `--max-age-days <days>`
+- `--provider <name>`
+- `--max-candidates <n>`
+- `--timeout <ms>`（目录请求和每次探测的超时）
+- `--concurrency <n>`
+- `--yes`
+- `--no-input`
+- `--set-default`
+- `--set-image`
+- `--json`
+
+`--set-default` 和 `--set-image` 需要实时探测；仅元数据扫描结果仅供参考，不会应用到配置中。
+
+### Models status
 
 选项：
 
@@ -76,7 +103,11 @@ Codex, MiniMax, Xiaomi, 和 z.ai。用量认证来自提供商特定的钩子
 - `--probe-max-tokens <n>`
 - `--agent <id>`（配置代理 ID；覆盖 `OPENCLAW_AGENT_DIR`/`PI_CODING_AGENT_DIR`）
 
-探测状态类别：
+`--json` 会保持 stdout 只输出 JSON 负载。认证配置文件、提供商
+和启动诊断会被路由到 stderr，因此脚本可以将 stdout 直接管道传给
+诸如 `jq` 的工具。
+
+探测状态桶：
 
 - `ok`
 - `auth`

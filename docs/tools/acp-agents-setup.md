@@ -276,9 +276,11 @@ openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
 
 更改这些值后请重启网关。
 
-> **重要：** OpenClaw 当前默认 `permissionMode=approve-reads` 且 `nonInteractivePermissions=fail`。在非交互式 ACP 会话中，任何触发权限提示的写入或执行都可能失败，并显示 `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
->
-> 如果你需要限制权限，请将 `nonInteractivePermissions` 设置为 `deny`，这样会话会优雅降级，而不是崩溃。
+<Warning>
+OpenClaw 默认使用 `permissionMode=approve-reads` 和 `nonInteractivePermissions=fail`。在非交互式 ACP 会话中，任何触发权限提示的写入或执行操作都可能失败，并报错 `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
+
+如果你需要限制权限，请将 `nonInteractivePermissions` 设置为 `deny`，这样会话就会优雅降级而不是崩溃。
+</Warning>
 
 ## 相关内容
 

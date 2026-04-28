@@ -110,13 +110,13 @@ sudo sysctl -p
 
 ## 6) 安装 OpenClaw
 
-### 方案 A：标准安装（推荐）
+### 选项 A：标准安装（推荐）
 
 ```bash
 curl -fsSL https://openclaw.ai/install.sh | bash
 ```
 
-### 方案 B：可修改安装（适合调试）
+### 选项 B：可修改安装（适合折腾）
 
 ```bash
 git clone https://github.com/openclaw/openclaw.git
@@ -170,7 +170,6 @@ ssh user@gateway-host 'openclaw dashboard --no-open'
 
 ```bash
 ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
-```
 ```
 
 然后在本地浏览器中打开打印出的仪表盘 URL。
@@ -254,7 +253,7 @@ sudo loginctl enable-linger "$(whoami)"
 `Restart=` 策略如何帮助自动恢复：
 [systemd 可以自动进行服务恢复](https://www.redhat.com/en/blog/systemd-automate-recovery)。
 
-### 减少内存占用
+### 减少内存使用
 
 ```bash
 # 禁用 GPU 内存分配（无头模式）
@@ -306,7 +305,7 @@ uname -m
 
 ---
 
-## 推荐模型配置
+## 推荐模型设置
 
 由于 Pi 仅做网关（模型运行云端），建议使用 API 模型：
 
@@ -396,7 +395,7 @@ echo 'wireless-power off' | sudo tee -a /etc/network/interfaces
 
 ---
 
-## 费用对比
+## 成本对比
 
 | 方案           | 一次性成本     | 月费          | 备注                         |
 | -------------- | ------------- | ------------ | ---------------------------- |

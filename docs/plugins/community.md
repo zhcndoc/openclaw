@@ -125,6 +125,20 @@ openclaw plugins install @tencent-connect/openclaw-qqbot
 openclaw plugins install @wecom/wecom-openclaw-plugin
 ```
 
+### Yuanbao
+
+Yuanbao 是腾讯元宝团队为 OpenClaw 提供的频道插件。基于
+WebSocket 持久连接，它支持私信和群聊、
+流式回复、主动消息、图片/文件/音频/视频处理、
+Markdown 格式化、内置访问控制以及斜杠菜单。
+
+- **npm:** `openclaw-plugin-yuanbao`
+- **repo:** [github.com/yb-claw/openclaw-plugin-yuanbao](https://github.com/yb-claw/openclaw-plugin-yuanbao)
+
+```bash
+openclaw plugins install openclaw-plugin-yuanbao
+```
+
 ## 提交你的插件
 
 我们欢迎有用、有文档且运行安全的社区插件。

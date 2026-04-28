@@ -89,11 +89,15 @@ for writing a clear task prompt.
 
 使用 `sessions_spawn` 工具：
 
-- 启动子代理运行（`deliver: false`，全局队列通道：`subagent`）
-- 接着执行通报步骤，将结果回复发布至请求聊天频道
-- 默认模型：继承调用者模型，除非设置了 `agents.defaults.subagents.model`（或针对单代理的 `agents.list[].subagents.model`）；显式的 `sessions_spawn.model` 优先。
-- 默认思考级别：继承调用者思考级别，除非设置了 `agents.defaults.subagents.thinking`（或单代理覆盖）；显式的 `sessions_spawn.thinking` 优先。
-- 默认运行超时：若未设置 `sessions_spawn.runTimeoutSeconds`，OpenClaw 使用 `agents.defaults.subagents.runTimeoutSeconds`（若已设置）；否则默认为 `0`（无超时）。
+Availability depends on the caller's effective tool policy. The `coding` and
+`full` profiles expose `sessions_spawn` by default. The `messaging` profile
+does not; add `tools.alsoAllow: ["sessions_spawn", "sessions_yield",
+"subagents"]` or use `tools.profile: "coding"` for agents that should delegate
+work. Channel/group, provider, sandbox, and per-agent allow/deny policies can
+still remove the tool after the profile stage. Use `/tools` from the same
+session to confirm the effective tool list.
+
+**Defaults:**
 
 工具参数：
 
@@ -116,7 +120,48 @@ for writing a clear task prompt.
   - 仅在子节点确实需要当前转录时使用 `fork`。对于局部工作，请省略 `context`。
 - `sessions_spawn` 不接受频道投递参数（`target`、`channel`、`to`、`threadId`、`replyTo`、`transport`）。如需投递，请对已启动的运行使用 `message`/`sessions_send`。
 
-## 绑定线程的会话
+<ParamField path="task" type="string" required>
+  子代理的任务描述。
+</ParamField>
+<ParamField path="label" type="string">
+  可选的人类可读标签。
+</ParamField>
+<ParamField path="agentId" type="string">
+  当 `subagents.allowAgents` 允许时，可在其他 agent id 下启动。
+</ParamField>
+<ParamField path="runtime" type='"subagent" | "acp"' default="subagent">
+  `acp` 仅用于外部 ACP harness（`claude`、`droid`、`gemini`、`opencode`，或显式请求的 Codex ACP/acpx）以及 `agents.list[]` 中 `runtime.type` 为 `acp` 的条目。
+</ParamField>
+<ParamField path="resumeSessionId" type="string">
+  仅限 ACP。在 `runtime: "acp"` 时恢复现有的 ACP harness 会话；对原生子代理启动将被忽略。
+</ParamField>
+<ParamField path="streamTo" type='"parent"'>
+  仅限 ACP。`runtime: "acp"` 时将 ACP 运行输出流式传输到父会话；原生子代理启动时省略。
+</ParamField>
+<ParamField path="model" type="string">
+  覆盖子代理模型。无效值会被跳过，子代理将使用默认模型运行，并在工具结果中给出警告。
+</ParamField>
+<ParamField path="thinking" type="string">
+  覆盖该子代理运行的思考级别。
+</ParamField>
+<ParamField path="runTimeoutSeconds" type="number">
+  默认在设置了 `agents.defaults.subagents.runTimeoutSeconds` 时使用该值，否则为 `0`。设置后，子代理运行会在 N 秒后中止。
+</ParamField>
+<ParamField path="thread" type="boolean" default="false">
+  当为 `true` 时，请求频道线程绑定该子代理会话。
+</ParamField>
+<ParamField path="mode" type='"run" | "session"' default="run">
+  如果设置了 `thread: true` 且省略 `mode`，默认变为 `session`。`mode: "session"` 需要 `thread: true`。
+</ParamField>
+<ParamField path="cleanup" type='"delete" | "keep"' default="keep">
+  `"delete"` 会在通报后立即归档（仍会通过重命名保留转录）。
+</ParamField>
+<ParamField path="sandbox" type='"inherit" | "require"' default="inherit">
+  `require` 会在目标子运行时未沙箱化时拒绝启动。
+</ParamField>
+<ParamField path="context" type='"isolated" | "fork"' default="isolated">
+  `fork` 会将请求者当前转录分支到子会话中。仅限原生子代理。只有当子节点需要当前转录时才使用 `fork`。
+</ParamField>
 
 当频道支持线程绑定时，子代理可绑定到某线程，使后续同线程用户消息继续定向该子代理会话。
 
@@ -156,7 +201,15 @@ for writing a clear task prompt.
 
 - 使用 `agents_list` 查询当前被允许用于 `sessions_spawn` 的代理 ID。
 
-自动归档：
+<ParamField path="agents.list[].subagents.allowAgents" type="string[]">
+  可通过显式 `agentId` 作为目标的代理 ID 列表（`["*"]` 允许任意）。默认：仅请求者代理。如果你设置了列表并且仍希望请求者通过 `agentId` 启动自己，请将请求者 id 也加入列表。
+</ParamField>
+<ParamField path="agents.defaults.subagents.allowAgents" type="string[]">
+  当请求者代理未设置自己的 `subagents.allowAgents` 时使用的默认目标代理白名单。
+</ParamField>
+<ParamField path="agents.defaults.subagents.requireAgentId" type="boolean" default="false">
+  阻止省略 `agentId` 的 `sessions_spawn` 调用（强制显式选择配置文件）。按代理覆盖：`agents.list[].subagents.requireAgentId`。
+</ParamField>
 
 - 子代理会话会在 `agents.defaults.subagents.archiveAfterMinutes`（默认 60 分钟）后自动归档。
 - 归档过程调用 `sessions.delete`，并将对话记录重命名为 `*.deleted.<timestamp>`（同目录）。

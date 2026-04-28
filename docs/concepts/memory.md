@@ -6,15 +6,15 @@ read_when:
   - 你想知道要写入哪些记忆文件
 ---
 
-OpenClaw 通过在你的代理工作区中写入 **纯 Markdown 文件** 来记住内容。模型只“记住”那些被保存到磁盘上的内容——不存在隐藏状态。
+OpenClaw 通过在你的代理工作区中写入 **纯 Markdown 文件** 来记住内容。模型只会“记住”被保存到磁盘上的内容——不存在隐藏状态。
 
 ## 工作原理
 
 你的代理有三个与记忆相关的文件：
 
-- **`MEMORY.md`** -- 长期记忆。持久化的事实、偏好和决策。会在每个私信会话开始时加载。
-- **`memory/YYYY-MM-DD.md`** -- 每日笔记。持续运行中的上下文与观察记录。今天和昨天的笔记会自动加载。
-- **`DREAMS.md`**（可选）-- Dream Diary 与 dreaming sweep 摘要，供人工审查使用，也包含 grounded 历史回填条目。
+- **`MEMORY.md`** — 长期记忆。持久的事实、偏好和决策。在每个 DM 会话开始时加载。
+- **`memory/YYYY-MM-DD.md`** — 每日笔记。持续记录上下文和观察。今天和昨天的笔记会被自动加载。
+- **`DREAMS.md`**（可选）— 梦境日志和 dreaming 过程摘要，供人工审阅，包括有依据的历史回填条目。
 
 这些文件位于代理工作区中（默认 `~/.openclaw/workspace`）。
 
@@ -26,8 +26,8 @@ OpenClaw 通过在你的代理工作区中写入 **纯 Markdown 文件** 来记�
 
 代理有两个用于处理记忆的工具：
 
-- **`memory_search`** -- 使用语义搜索查找相关笔记，即使措辞与原文不同。
-- **`memory_get`** -- 读取特定的记忆文件或行范围。
+- **`memory_search`** — 使用语义搜索查找相关笔记，即使措辞与原文不同。
+- **`memory_get`** — 读取特定的记忆文件或行范围。
 
 这两个工具均由活动的记忆插件提供（默认：`memory-core`）。
 
@@ -50,7 +50,10 @@ OpenClaw 通过在你的代理工作区中写入 **纯 Markdown 文件** 来记�
 
 ## Memory search
 
-配置了嵌入提供商后，`memory_search` 使用 **混合搜索** —— 结合向量相似度（语义含义）与关键词匹配（确切术语，如 ID 和代码符号）。一旦你拥有任何受支持提供商的 API 密钥，这即可开箱即用。
+When an embedding provider is configured, `memory_search` uses **hybrid
+search** — combining vector similarity (semantic meaning) with keyword matching
+(exact terms like IDs and code symbols). This works out of the box once you have
+an API key for any supported provider.
 
 <Info>
 OpenClaw 会根据可用的 API 密钥自动检测你的嵌入提供商。如果你配置了 OpenAI、Gemini、Voyage 或 Mistral 密钥，记忆搜索将自动启用。
@@ -83,7 +86,7 @@ OpenClaw 会根据可用的 API 密钥自动检测你的嵌入提供商。如果
 
 ## 自动记忆刷新
 
-在 [压缩](/concepts/compaction) 总结你的对话之前，OpenClaw 会运行一个静默回合，提醒代理将重要的上下文保存到记忆文件中。默认启用——你无需配置任何内容。
+在 [压缩](/concepts/compaction) 汇总你的对话之前，OpenClaw 会运行一个静默回合，提醒代理将重要上下文保存到记忆文件中。此功能默认开启——你无需进行任何配置。
 
 <Tip>
 记忆刷新可防止压缩期间的上下文丢失。如果你的代理在对话中有尚未写入文件的重要事实，它们将在总结发生之前自动保存。
@@ -141,16 +144,14 @@ openclaw memory index --force   # 重建索引
 
 ## 进一步阅读
 
-- [Builtin Memory Engine](/concepts/memory-builtin) -- 默认 SQLite 后端
-- [QMD Memory Engine](/concepts/memory-qmd) -- 高级本地优先 sidecar
-- [Honcho Memory](/concepts/memory-honcho) -- AI 原生跨会话记忆
-- [Memory Wiki](/plugins/memory-wiki) -- 编译后的知识库和 wiki 原生工具
-- [Memory Search](/concepts/memory-search) -- 搜索流水线、提供商与
-  调优
-- [Dreaming](/concepts/dreaming) -- 从短期回忆
-  到长期记忆的后台提升
-- [Memory configuration reference](/reference/memory-config) -- 所有配置项
-- [Compaction](/concepts/compaction) -- 压缩如何与记忆交互
+- [Builtin memory engine](/concepts/memory-builtin): 默认 SQLite 后端。
+- [QMD memory engine](/concepts/memory-qmd): 先进的本地优先 sidecar。
+- [Honcho memory](/concepts/memory-honcho): AI 原生跨会话记忆。
+- [Memory Wiki](/plugins/memory-wiki): 编译后的知识保险库和 wiki 原生工具。
+- [Memory search](/concepts/memory-search): 搜索流水线、提供商和调优。
+- [Dreaming](/concepts/dreaming): 从短期回忆到长期记忆的后台提升。
+- [Memory configuration reference](/reference/memory-config): 所有配置选项。
+- [Compaction](/concepts/compaction): 压缩如何与记忆交互。
 
 ## 相关内容
 

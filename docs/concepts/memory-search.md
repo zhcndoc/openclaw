@@ -27,6 +27,9 @@ read_when:
 
 对于无需 API 密钥的本地嵌入，使用 `provider: "local"`（需要 node-llama-cpp）。
 
+一些 OpenAI 兼容的嵌入端点需要非对称标签，例如搜索使用 `input_type: "query"`，而索引块使用 `input_type: "document"` 或 `"passage"`。
+请使用 `memorySearch.queryInputType` 和 `memorySearch.documentInputType` 进行配置；请参阅 [记忆配置参考](/reference/memory-config#provider-specific-config)。
+
 ## 支持的提供商
 
 | 提供商 | ID | 需要 API key | 备注 |

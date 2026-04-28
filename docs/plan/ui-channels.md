@@ -42,14 +42,14 @@ read_when:
 - 不支持的展示特性会自动降级为最佳文本表示。
 - 如将已发送消息 pin 住之类的交付行为，属于通用交付元数据，而非展示。
 
-## 非目标
+## Non goals
 
 - 不为 `buildCrossContextComponents` 提供向后兼容兼容层。
 - 不提供 `components`、`blocks`、`buttons` 或 `card` 的公开原生逃逸口。
 - 不让核心导入渠道原生 UI 库。
 - 不为打包渠道提供 provider 特定的 SDK 接缝。
 
-## 目标模型
+## Target model
 
 为 `ReplyPayload` 添加一个由核心拥有的 `presentation` 字段。
 
@@ -90,7 +90,7 @@ type MessagePresentationOption = {
 
 外部 agent 和 CLI schema 现在使用 `presentation`；`interactive` 仍然作为内部遗留解析/渲染辅助，用于现有回复生成者。
 
-## 交付元数据
+## Delivery metadata
 
 添加一个由核心拥有的 `delivery` 字段，用于不属于 UI 的发送行为。
 
@@ -115,7 +115,7 @@ type ReplyPayloadDelivery = {
 
 当前 Telegram ACP topic 绑定应从 `channelData.telegram.pin = true` 迁移到 `delivery.pin = true`。
 
-## 运行时能力契约
+## Runtime capability contract
 
 将 presentation 和 delivery 的渲染钩子添加到运行时出站适配器中，而不是控制平面的渠道插件中。
 
@@ -164,7 +164,7 @@ type ChannelOutboundAdapter = {
 - 如果不存在渲染器，则将 presentation 转换为文本回退。
 - 成功发送后，当请求了 `delivery.pin` 且该能力受支持时，调用 `pinDeliveredMessage`。
 
-## 渠道映射
+## Channel mapping
 
 Discord：
 
@@ -211,7 +211,7 @@ LINE：
 
 - 使用保守格式将 presentation 转换为文本。
 
-## 重构步骤
+## Refactor steps
 
 1. 重新应用 Discord 发布修复：将 `ui-colors.ts` 与基于 Carbon 的 UI 分离，并从 `extensions/discord/src/channel.ts` 中移除 `DiscordUiContainer`。
 2. 将 `presentation` 和 `delivery` 添加到 `ReplyPayload`、出站负载规范化、交付摘要和钩子负载中。
@@ -244,7 +244,7 @@ LINE：
 - 覆盖 Carbon 的 Discord 入口点导入懒加载回归测试。
 - 覆盖 Telegram 和通用回退的 delivery pin 测试。
 
-## 未决问题
+## Open questions
 
 - Should `delivery.pin` be implemented for Discord, Slack, MS Teams, and Feishu in the first pass, or only Telegram first?
 - Should `delivery` eventually absorb existing fields such as `replyToId`, `replyToCurrent`, `silent`, and `audioAsVoice`, or stay focused on post-send behaviors?

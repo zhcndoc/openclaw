@@ -13,7 +13,7 @@ title: "Signal"
 - 服务器上已安装 OpenClaw（以下 Linux 流程在 Ubuntu 24 上测试通过）。
 - 网关运行的主机上有可用的 `signal-cli`。
 - 一个能接收一次验证短信的电话号码（用于短信注册路径）。
-- 注册时能访问浏览器进行 Signal 验证码操作（`signalcaptchas.org`）。
+- 注册时可访问浏览器进行 Signal 验证码操作（`signalcaptchas.org`）。
 
 ## 快速设置（初学者）
 
@@ -152,7 +152,9 @@ openclaw channels status --probe
    - 在服务器端批准配对码：`openclaw pairing approve signal <PAIRING_CODE>`。
    - 在手机上保存机器人号码为联系人，避免显示为“未知联系人”。
 
-重要提示：使用 `signal-cli` 注册电话号码账户可能会让该号码的主 Signal 应用会话失效。建议优选专用机器人号码，或若需保留手机应用，请使用二维码链路模式。
+<Warning>
+使用 `signal-cli` 注册电话号码账户可能会使该号码在主 Signal 应用中的会话失去认证。优先使用专用机器人号码；如果需要保留现有手机应用设置，请使用二维码链接模式。
+</Warning>
 
 上游参考：
 

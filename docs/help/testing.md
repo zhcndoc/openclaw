@@ -15,6 +15,16 @@ Docker runner。本文档是“我们如何测试”的指南：
 - live 测试如何发现凭据并选择模型/提供商。
 - 如何为真实世界的模型/提供商问题添加回归测试。
 
+<Note>
+**QA 技术栈（qa-lab、qa-channel、live transport lanes）**有单独文档：
+
+- [QA 概览](/concepts/qa-e2e-automation) — 架构、命令入口、场景编写。
+- [Matrix QA](/concepts/qa-matrix) — `pnpm openclaw qa matrix` 的参考。
+- [QA channel](/channels/qa-channel) — 仓库回放场景使用的合成传输插件。
+
+本页覆盖常规测试套件和 Docker/Parallels runner 的运行方式。下面的 QA 专用 runner 部分（[QA 专用 runner](#qa-specific-runners)）列出了具体的 `qa` 调用，并回指上面的参考文档。
+</Note>
+
 ## 快速开始
 
 大多数时候：
@@ -80,21 +90,14 @@ Docker runner。本文档是“我们如何测试”的指南：
   。验证 JSON 报告 Moonshot/K2.6，并且 assistant 转录中存储了规范化的 `usage.cost`。
 
 <Tip>
-当你只需要一个失败案例时，优先使用下方描述的 allowlist 环境变量缩小 live 测试范围。
+当你只需要一个失败案例时，优先使用下面描述的 allowlist 环境变量缩小 live 测试范围。
 </Tip>
 
 ## QA 专用 runner
 
 当你需要 QA 实验室级别的真实感时，这些命令与主测试套件并列存在：
 
-CI 在专门的 workflows 中运行 QA Lab。`Parity gate` 会在匹配的 PR 上以及通过手动
-dispatch 时，使用 mock provider 运行。`QA-Lab - All Lanes` 会在 `main` 上夜间运行
-以及通过手动 dispatch 运行，包含 mock parity gate、live Matrix 线路、Convex 托管的 live
-Telegram 线路和 Convex 托管的 live Discord 线路，作为并行作业。计划任务的 QA 和 release
-检查会显式传入 Matrix `--profile fast`，而 Matrix CLI 和手动 workflow 输入的默认值仍为
-`all`；手动 dispatch 可以将 `all` 分片为 `transport`、`media`、`e2ee-smoke`、
-`e2ee-deep` 和 `e2ee-cli` 作业。`OpenClaw Release Checks` 在发布审批前会先运行 parity、
-fast Matrix 和 Telegram 线路。
+CI 会在专用工作流中运行 QA Lab。`Parity gate` 会在匹配的 PR 上运行，并在使用 mock provider 的情况下通过手动触发运行。`QA-Lab - All Lanes` 会在 `main` 上每晚运行，并在手动触发时与 mock parity gate、live Matrix lane、Convex 管理的 live Telegram lane 以及 Convex 管理的 live Discord lane 作为并行作业运行。计划任务的 QA 和发布检查会显式传递 Matrix `--profile fast`，而 Matrix CLI 和手动工作流输入的默认值保持为 `all`；手动触发可将 `all` 拆分为 `transport`、`media`、`e2ee-smoke`、`e2ee-deep` 和 `e2ee-cli` 作业。`OpenClaw Release Checks` 会在发布批准前运行 parity、fast Matrix 和 Telegram 线路。
 
 - `pnpm openclaw qa suite`
   - 直接在主机上运行仓库支持的 QA 场景。
@@ -129,26 +132,26 @@ fast Matrix 和 Telegram 线路。
     可见的用户轮次中，然后种入一个受影响的损坏 session JSONL，并验证
     `openclaw doctor --fix` 会将其重写到活动分支并生成备份。
 - `pnpm test:docker:npm-telegram-live`
-  - 在 Docker 中安装一个 OpenClaw 包候选，运行已安装包的 onboarding，通过已安装的 CLI 配置
-    Telegram，然后复用 live Telegram QA 线路，将该已安装包作为 SUT Gateway。
-  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`；也可设置
+  - 在 Docker 中安装一个 OpenClaw 包候选版本，运行已安装包的 onboarding，
+    通过已安装的 CLI 配置 Telegram，然后复用 live Telegram QA 线路，并将该已安装包作为 SUT Gateway。
+  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`；可设置
     `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或
-    `OPENCLAW_CURRENT_PACKAGE_TGZ`，以测试解析后的本地 tarball，而不是从 registry 安装。
+    `OPENCLAW_CURRENT_PACKAGE_TGZ`，以测试已解析的本地 tarball，而不是从注册表安装。
   - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram 环境凭据或 Convex 凭据来源。
-    对于 CI/release 自动化，设置
-    `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex` 再加上
-    `OPENCLAW_QA_CONVEX_SITE_URL` 和角色密钥。如果在 CI 中同时存在
-    `OPENCLAW_QA_CONVEX_SITE_URL` 和 Convex 角色密钥，Docker wrapper 会自动选择 Convex。
-  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 仅为此线路覆盖共享的
+    对于 CI/发布自动化，设置 `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex` 加上
+    `OPENCLAW_QA_CONVEX_SITE_URL` 和角色 secret。若
+    `OPENCLAW_QA_CONVEX_SITE_URL` 和一个 Convex role secret 已在 CI 中存在，
+    Docker wrapper 会自动选择 Convex。
+  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 会仅为此线路覆盖共享的
     `OPENCLAW_QA_CREDENTIAL_ROLE`。
-  - GitHub Actions 将此线路暴露为手动 maintainer workflow
-    `NPM Telegram Beta E2E`。它不会在合并时运行。该 workflow 使用
+  - GitHub Actions 将此线路作为手动维护者工作流
+    `NPM Telegram Beta E2E` 暴露出来。它不会在合并时运行。该工作流使用
     `qa-live-shared` 环境和 Convex CI 凭据租约。
-- GitHub Actions 还暴露了 `Package Acceptance`，用于针对单个候选包做旁路产品验证。它接受一个可信 ref、
-  已发布的 npm spec、HTTPS tarball URL 加 SHA-256，或来自另一轮运行的 tarball artifact，上传
-  标准化后的 `openclaw-current.tgz` 作为 `package-under-test`，然后运行现有的 Docker E2E 调度器，
-  使用 smoke、package、product、full 或 custom 线路配置。将 `telegram_mode=mock-openai` 或
-  `live-frontier` 设置为针对同一个 `package-under-test` artifact 运行 Telegram QA workflow。
+- GitHub Actions 还提供 `Package Acceptance`，用于针对单个候选包进行侧向运行的产品验证。
+  它接受受信任的 ref、已发布 npm 规格、HTTPS tarball URL 加 SHA-256，或来自另一次运行的 tarball artifact，
+  将规范化的 `openclaw-current.tgz` 作为 `package-under-test` 上传，然后运行现有的 Docker E2E 调度器，
+  使用 smoke、package、product、full 或自定义线路配置。设置 `telegram_mode=mock-openai` 或
+  `live-frontier` 可针对同一个 `package-under-test` artifact 运行 Telegram QA 工作流。
   - 最新 beta 产品验证：
 
 ```bash
@@ -159,7 +162,7 @@ gh workflow run package-acceptance.yml --ref main \
   -f telegram_mode=mock-openai
 ```
 
-- 精确的 tarball URL 验证需要 digest：
+- 精确 tarball URL 验证需要摘要：
 
 ```bash
 gh workflow run package-acceptance.yml --ref main \
@@ -169,7 +172,7 @@ gh workflow run package-acceptance.yml --ref main \
   -f suite_profile=package
 ```
 
-- Artifact 验证会从另一次 Actions 运行中下载 tarball artifact：
+- artifact 验证会从另一次 Actions 运行中下载 tarball artifact：
 
 ```bash
 gh workflow run package-acceptance.yml --ref main \
@@ -215,22 +218,8 @@ gh workflow run package-acceptance.yml --ref main \
 - `pnpm openclaw qa aimock`
   - 仅启动本地 AIMock provider server，用于直接协议冒烟测试。
 - `pnpm openclaw qa matrix`
-  - 在一次性的 Docker 驱动 Tuwunel homeserver 上运行 Matrix live QA 线路。
-  - 这个 QA 主机目前仅用于仓库/开发环境。打包后的 OpenClaw 安装不会包含 `qa-lab`，
-    因而也不会暴露 `openclaw qa`。
-  - 仓库检出会直接加载捆绑的 runner；不需要单独的插件安装步骤。
-  - 会创建三个临时 Matrix 用户（`driver`、`sut`、`observer`）以及一个私有房间，然后启动一个带真实 Matrix 插件的 QA gateway 子进程，作为 SUT transport。
-  - 默认使用 `--profile all`。发布关键的 transport 验证可使用 `--profile fast --fail-fast`，
-    或在分片完整目录时使用 `--profile transport|media|e2ee-smoke|e2ee-deep|e2ee-cli`。
-  - 默认使用固定的稳定 Tuwunel 镜像 `ghcr.io/matrix-construct/tuwunel:v1.5.1`。
-    当你需要测试其他镜像时，可通过 `OPENCLAW_QA_MATRIX_TUWUNEL_IMAGE` 覆盖。
-  - Matrix 不提供共享凭据来源标志，因为该线路会在本地创建一次性用户。
-  - 会在 `.artifacts/qa-e2e/...` 下写入 Matrix QA report、summary、observed-events artifact，
-    以及合并后的 stdout/stderr 输出日志。
-  - 默认会输出进度，并通过 `OPENCLAW_QA_MATRIX_TIMEOUT_MS` 强制硬性运行超时（默认 30 分钟）。
-    `OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS` 用于调整 negative no-reply 的静默窗口，
-    cleanup 则由 `OPENCLAW_QA_MATRIX_CLEANUP_TIMEOUT_MS` 约束，失败信息中会包含恢复用的
-    `docker compose ... down --remove-orphans` 命令。
+  - 在一个一次性 Docker 支持的 Tuwunel homeserver 上运行 Matrix live QA 线路。仅限源代码检出——打包安装不包含 `qa-lab`。
+  - 完整 CLI、profile/scenario 目录、环境变量和 artifact 布局： [Matrix QA](/concepts/qa-matrix)。
 - `pnpm openclaw qa telegram`
   - 使用来自环境变量的 driver 和 SUT bot token，在真实私有群组上运行 Telegram live QA 线路。
   - 需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、`OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN` 和
@@ -245,15 +234,7 @@ gh workflow run package-acceptance.yml --ref main \
   - 会在 `.artifacts/qa-e2e/...` 下写入 Telegram QA report、summary 和 observed-messages artifact。
     回应类场景会包含从 driver 发送请求到观察到 SUT 回复之间的 RTT。
 
-Live transport 线路共享一套标准契约，因此新的 transport 不会偏离：
-
-`qa-channel` 仍然是宽泛的合成 QA 套件，不属于 live transport 覆盖矩阵的一部分。
-
-| 线路     | Canary | Mention gating | Allowlist block | 顶层回复 | 重启恢复 | 线程后续 | 线程隔离 | reaction 观测 | 帮助命令 | 原生命令注册 |
-| -------- | ------ | -------------- | --------------- | -------- | -------- | -------- | -------- | ------------- | -------- | ------------ |
-| Matrix   | x      | x              | x               | x        | x        | x        | x        | x             |          |              |
-| Telegram | x      | x              |                 |          |          |          |          |               | x        |              |
-| Discord  | x      | x              |                 |          |          |          |          |               |          | x            |
+Live transport lanes share one standard contract so new transports do not drift; the per-lane coverage matrix lives in [QA overview → Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage). `qa-channel` is the broad synthetic suite and is not part of that matrix.
 
 ### 通过 Convex 共享 Telegram 凭据（v1）
 
@@ -333,79 +314,7 @@ Telegram 类型的 payload 形状：
 
 ### 向 QA 添加一个频道
 
-向 markdown QA 系统添加一个频道，正好需要两样东西：
-
-1. 该频道的 transport adapter。
-2. 一组用于验证该频道契约的 scenario pack。
-
-当共享的 `qa-lab` 主机能够接管流程时，不要添加新的顶层 QA 命令根。
-
-`qa-lab` 负责共享主机机制：
-
-- `openclaw qa` 命令根
-- 套件启动与关闭
-- worker 并发
-- 产物写入
-- report 生成
-- 场景执行
-- 旧 `qa-channel` 场景的兼容别名
-
-Runner 插件负责 transport 契约：
-
-- `openclaw qa <runner>` 如何挂载到共享 `qa` 根命令之下
-- 如何为该 transport 配置 gateway
-- 如何检查就绪状态
-- 如何注入入站事件
-- 如何观测出站消息
-- 如何暴露转录与规范化 transport 状态
-- 如何执行基于 transport 的动作
-- 如何处理 transport 特定的重置或清理
-
-新频道的最低接纳标准是：
-
-1. 保持 `qa-lab` 作为共享 `qa` 根命令的所有者。
-2. 在共享的 `qa-lab` 主机接点上实现 transport runner。
-3. 将 transport 特定机制保留在 runner 插件或 channel harness 内。
-4. 通过 `openclaw qa <runner>` 挂载 runner，而不是注册一个竞争性的根命令。
-   Runner 插件应在 `openclaw.plugin.json` 中声明 `qaRunners`，并在 `runtime-api.ts` 中导出匹配的
-   `qaRunnerCliRegistrations` 数组。
-   保持 `runtime-api.ts` 轻量；懒加载 CLI 和 runner 执行应留在单独入口之后。
-5. 在主题化的 `qa/scenarios/` 目录下编写或改编 markdown 场景。
-6. 新场景使用通用 scenario helper。
-7. 除非仓库正在进行有意的迁移，否则保持现有兼容别名可用。
-
-决策规则是严格的：
-
-- 如果某个行为可以只在 `qa-lab` 中表达一次，就放进 `qa-lab`。
-- 如果某个行为依赖于单一频道 transport，就把它保留在该 runner 插件或插件 harness 中。
-- 如果某个场景需要一个多个频道都能使用的新能力，就添加一个通用 helper，而不是在 `suite.ts` 中写频道特定分支。
-- 如果某个行为只对一种 transport 有意义，就保持该场景为 transport 特定，并在场景契约中明确说明。
-
-新场景首选的通用 helper 名称是：
-
-- `waitForTransportReady`
-- `waitForChannelReady`
-- `injectInboundMessage`
-- `injectOutboundMessage`
-- `waitForTransportOutboundMessage`
-- `waitForChannelOutboundMessage`
-- `waitForNoTransportOutbound`
-- `getTransportSnapshot`
-- `readTransportMessage`
-- `readTransportTranscript`
-- `formatTransportTranscript`
-- `resetTransport`
-
-现有场景仍可使用兼容别名，包括：
-
-- `waitForQaChannelReady`
-- `waitForOutboundMessage`
-- `waitForNoOutbound`
-- `formatConversationTranscript`
-- `resetBus`
-
-新的 channel 工作应使用通用 helper 名称。
-兼容别名的存在是为了避免“一次性迁移日”，而不是作为新场景编写的模型。
+新 channel adapter 的架构和 scenario-helper 名称见 [QA 概览 → 添加一个频道](/concepts/qa-e2e-automation#adding-a-channel)。最低要求：在共享的 `qa-lab` 主机 seam 上实现 transport runner，在插件清单中声明 `qaRunners`，以 `openclaw qa <runner>` 挂载，并在 `qa/scenarios/` 下编写场景。
 
 ## 测试套件（在哪运行）
 
@@ -414,11 +323,11 @@ Runner 插件负责 transport 契约：
 ### 单元 / 集成（默认）
 
 - 命令：`pnpm test`
-- 配置：未定向运行会使用 `vitest.full-*.config.ts` 分片集合，并且可能将多项目分片展开为按项目配置，以便并行调度
-- 文件：位于 `src/**/*.test.ts`、`packages/**/*.test.ts`、`test/**/*.test.ts` 下的核心/单元清单，以及由 `vitest.unit.config.ts` 覆盖的白名单 `ui` 节点测试
+- 配置：未定向运行会使用 `vitest.full-*.config.ts` 分片集合，并且可能会将多项目分片展开为逐项目配置，以便并行调度
+- 文件：`src/**/*.test.ts`、`packages/**/*.test.ts` 和 `test/**/*.test.ts` 下的 core/unit 清单；UI 单元测试运行在专门的 `unit-ui` 分片中
 - 范围：
   - 纯单元测试
-  - 进程内集成测试（网关认证、路由、工具、解析、配置）
+  - 进程内集成测试（gateway 认证、路由、工具、解析、配置）
   - 针对已知 bug 的确定性回归测试
 - 预期：
   - 在 CI 中运行
@@ -583,47 +492,47 @@ music、video、media harness）——再加上 live 运行的凭据处理——
 
 这些 Docker runner 分成两类：
 
-- Live-model runner：`test:docker:live-models` 和 `test:docker:live-gateway` 只会在仓库 Docker 镜像中运行各自匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录和工作区（如果挂载了 `~/.profile`，也会一并 source）。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
-- Docker live runner 默认使用较小的 smoke 限额，以便完整的 Docker 全量扫描保持可行：
-  `test:docker:live-models` 默认使用 `OPENCLAW_LIVE_MAX_MODELS=12`，而
-  `test:docker:live-gateway` 默认使用 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`，
-  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`，
-  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000`，以及
-  `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确想要更大、更穷尽的扫描时，再覆盖这些 env 变量。
-- `test:docker:all` 会先通过 `test:docker:live-build` 构建一次 live Docker 镜像，再通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打包一次为 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。基础镜像只作为 Node/Git runner，用于 install/update/plugin-dependency 这些 lane；这些 lane 会挂载预构建 tarball。功能镜像会把同一个 tarball 安装到 `/app` 中，用于 built-app 功能 lane。Docker lane 定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；planner 逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 执行所选计划。这个聚合器使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限可防止重型 live、npm-install 和多服务 lane 同时全部启动。如果某个单独 lane 比当前上限更重，调度器仍然可以在池为空时启动它，然后一直让它单独运行，直到再次有容量。默认值是 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=10`，以及 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。该 runner 默认会执行 Docker 预检，清理陈旧的 OpenClaw E2E 容器，每 30 秒打印一次状态，将成功的 lane 耗时存储在 `.artifacts/docker-tests/lane-timings.json`，并使用这些耗时在后续运行中优先启动更长的 lane。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可以在不构建或运行 Docker 的情况下打印加权 lane 清单，或者使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选 lane 的 CI 计划、package/image 需求以及凭据。
-- `Package Acceptance` 是 GitHub 原生的包门禁，用于判断“这个可安装 tarball 作为一个产品是否可用？”它会从 `source=npm`、`source=ref`、`source=url` 或 `source=artifact` 中解析出一个候选包，作为 `package-under-test` 上传，然后针对这个精确 tarball 运行可复用的 Docker E2E lane，而不是重新打包所选 ref。`workflow_ref` 选择受信任的 workflow/harness 脚本，而 `package_ref` 在 `source=ref` 时选择要打包的源码 commit/branch/tag；这使得当前 acceptance 逻辑可以验证更老的受信任 commit。profile 的覆盖范围按广度排序：`smoke` 是快速的 install/channel/agent 加 gateway/config，`package` 是 package/update/plugin 合约，也是大多数 Parallels package/update 覆盖的默认原生替代项，`product` 额外加入 MCP channels、cron/subagent 清理、OpenAI web search 和 OpenWebUI，而 `full` 运行带有 OpenWebUI 的 release-path Docker 块。发布验证会对目标 ref 运行 `package` profile，并启用 Telegram package QA。由 artifacts 生成的针对 GitHub Docker 的重跑命令在可用时会包含先前的 package artifact 和已准备好的 image 输入，因此失败的 lane 可以避免重新构建 package 和 images。
-- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止点之前，harness 只容忍已发布包的元数据缺口：省略的 private QA inventory 条目、缺失的 `gateway install --wrapper`、tarball 派生 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版 plugin install-record 位置、缺失的 marketplace install-record 持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的包，这些路径都将被严格视为失败。
-- 容器 smoke runner：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:update-channel-switch`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update` 以及 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
+- Live-model runners: `test:docker:live-models` 和 `test:docker:live-gateway` 只会在仓库 Docker 镜像内运行各自匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录和工作区（如果已挂载，还会 source `~/.profile`）。匹配的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
+- Docker live runners 默认使用更小的 smoke 上限，以便完整 Docker 扫描仍然可行：
+  `test:docker:live-models` 默认 `OPENCLAW_LIVE_MAX_MODELS=12`，以及
+  `test:docker:live-gateway` 默认 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`、
+  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`、
+  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000` 和 `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确想要更大的穷举扫描时，再覆盖这些环境变量。
+- `test:docker:all` 先通过 `test:docker:live-build` 构建一次 live Docker 镜像，再通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打成一次 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。裸镜像只是用于 install/update/plugin-dependency 车道的 Node/Git runner；这些车道会挂载预构建的 tarball。功能镜像会将同一个 tarball 安装到 `/app`，用于 built-app 功能车道。Docker 车道定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；规划器逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 执行所选计划。聚合运行使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限会防止重型 live、npm-install 和多服务车道全部同时启动。如果某个单独车道比当前上限更重，只要池中为空，调度器仍然可以先启动它，然后在容量再次可用之前让它单独运行。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=10` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。运行器默认会执行 Docker 预检、移除过时的 OpenClaw E2E 容器、每 30 秒打印一次状态、将成功的车道耗时存储在 `.artifacts/docker-tests/lane-timings.json` 中，并利用这些耗时在后续运行中优先启动更长的车道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可在不构建或运行 Docker 的情况下打印加权车道清单，或使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选车道、包/镜像需求和凭据的 CI 计划。
+- `Package Acceptance` 是 GitHub 原生的包门禁，用来回答“这个可安装 tarball 作为产品能工作吗？”它会从 `source=npm`、`source=ref`、`source=url` 或 `source=artifact` 中解析出一个候选包，将其作为 `package-under-test` 上传，然后针对该精确 tarball 运行可复用的 Docker E2E 车道，而不是重新打包所选 ref。`workflow_ref` 选择受信任的工作流/运行器脚本，而 `package_ref` 在 `source=ref` 时选择要打包的源 commit/branch/tag；这使当前 acceptance 逻辑能够验证更早的受信任提交。配置文件按覆盖范围排序：`smoke` 是快速的 install/channel/agent 加 gateway/config，`package` 是 package/update/plugin 契约，也是大多数 Parallels package/update 覆盖的默认原生替代；`product` 还增加了 MCP channels、cron/subagent 清理、OpenAI web search 和 OpenWebUI；`full` 则用 OpenWebUI 运行 release-path Docker 分块。发布验证会运行一个自定义 package delta（`bundled-channel-deps-compat plugins-offline`）以及 Telegram package QA，因为 release-path Docker 分块已经覆盖了重叠的 package/update/plugin 车道。基于工件生成的定向 GitHub Docker 重跑命令会在可用时包含之前的 package 工件和预备镜像输入，因此失败的车道可以避免重新构建包和镜像。
+- 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mjs`。该 guard 会从 `dist/entry.js` 和 `dist/cli/run-main.js` 开始遍历静态构建图，并在命令分发之前如果预分发启动导入了 package 依赖（如 Commander、prompt UI、undici 或 logging）就会失败。打包后的 CLI smoke 还覆盖 root help、onboard help、doctor help、status、config schema 和 model-list 命令。
+- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止日期之前，harness 只容忍已发布包的元数据缺口：遗漏的 private QA inventory 条目、缺失的 `gateway install --wrapper`、tarball 派生 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版 plugin install-record 位置、缺失的 marketplace install-record 持久化，以及 `plugins update` 期间的 config 元数据迁移。对于 `2026.4.25` 之后的包，这些路径都属于严格失败。
+- 容器 smoke runners：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:update-channel-switch`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
 
 live-model Docker runner 还会只挂载所需的 CLI auth home（如果运行没有缩小范围，则挂载所有支持的），然后在运行前将它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机的 auth 存储：
 
-- 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP bind smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，通过 `pnpm test:docker:live-acp-bind:droid` 和 `pnpm test:docker:live-acp-bind:opencode` 可进行严格的 Droid/OpenCode 覆盖）
-- CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
-- Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- Gateway + 开发 agent：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 可观测性 smoke：`pnpm qa:otel:smoke` 是一个私有 QA 源码检出 lane。它有意不包含在 package Docker 发布 lane 中，因为 npm tarball 不包含 QA Lab。
-- Open WebUI live smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 上手向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- Npm tarball onboarding/channel/agent smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包后的 OpenClaw tarball，通过 env-ref onboarding 配置 OpenAI，默认还会配置 Telegram，验证 doctor 能修复已激活的插件运行时依赖，并运行一次 mock 的 OpenAI agent turn。可通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或者通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 切换 channel。
-- 更新 channel 切换 smoke：`pnpm test:docker:update-channel-switch` 会在 Docker 中全局安装打包后的 OpenClaw tarball，将 package `stable` 切换到 git `dev`，验证持久化 channel 和插件在更新后仍可工作，然后切回 package `stable` 并检查更新状态。
-- Session runtime context smoke：`pnpm test:docker:session-runtime-context` 验证隐藏 runtime context transcript 的持久化，以及对受影响的重复 prompt-rewrite 分支的 doctor 修复。
-- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 会打包当前源码树，在隔离的 home 中使用 `bun install -g` 安装它，并验证 `openclaw infer image providers --json` 返回的是捆绑的 image providers，而不是卡住。可通过 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或者通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建的 Docker 镜像复制 `dist/`。
-- Installer Docker smoke：`bash scripts/test-install-sh-docker.sh` 在其 root、update 和 direct-npm 容器之间共享一个 npm cache。update smoke 默认以 npm `latest` 作为稳定基线，然后升级到候选 tarball。可在本地使用 `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` 覆盖，或者在 GitHub 的 Install Smoke workflow 中使用 `update_baseline_version` 输入覆盖。非 root 的 installer 检查会保留一个隔离的 npm cache，因此 root 拥有的 cache 条目不会掩盖用户本地的安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重跑时复用 root/update/direct-npm 的 cache。
-- Install Smoke CI 通过 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；如果需要 direct `npm install -g` 覆盖，请在本地运行脚本时不要设置该 env。
-- Agents delete shared workspace CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建 root Dockerfile 镜像，在隔离的容器 home 中用一个 workspace 初始化两个 agents，运行 `agents delete --json`，并验证有效 JSON 以及 workspace 保留行为。可使用 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用 install-smoke 镜像。
+- Direct models: `pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
+- ACP bind smoke: `pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，并通过 `pnpm test:docker:live-acp-bind:droid` 与 `pnpm test:docker:live-acp-bind:opencode` 提供严格的 Droid/OpenCode 覆盖）
+- CLI backend smoke: `pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
+- Codex app-server harness smoke: `pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
+- Gateway + dev agent: `pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
+- Observability smoke: `pnpm qa:otel:smoke` 是一个私有 QA 源检出车道。它有意不属于 package Docker release 车道，因为 npm tarball 不包含 QA Lab。
+- Open WebUI live smoke: `pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
+- Onboarding wizard（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
+- Npm tarball onboarding/channel/agent smoke: `pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包后的 OpenClaw tarball，默认通过 env-ref onboarding 配置 OpenAI 以及 Telegram，验证 doctor 会修复已激活插件的运行时依赖，并运行一次模拟的 OpenAI agent turn。可通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 切换 channel。
+- Update channel switch smoke: `pnpm test:docker:update-channel-switch` 会在 Docker 中全局安装打包后的 OpenClaw tarball，将 package `stable` 切换到 git `dev`，验证持久化 channel 和更新后的插件可正常工作，然后再切回 package `stable` 并检查更新状态。
+- Session runtime context smoke: `pnpm test:docker:session-runtime-context` 验证隐藏的运行时上下文 transcript 持久化，以及对受影响的重复 prompt-rewrite 分支的 doctor 修复。
+- Bun global install smoke: `bash scripts/e2e/bun-global-install-smoke.sh` 会打包当前树，在隔离的 home 中使用 `bun install -g` 安装它，并验证 `openclaw infer image providers --json` 返回的是捆绑的 image providers，而不是卡住。可通过 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，通过 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建的 Docker 镜像复制 `dist/`。
+- Installer Docker smoke：`bash scripts/test-install-sh-docker.sh` 在其 root、update 和 direct-npm 容器之间共享一个 npm cache。Update smoke 默认以 npm `latest` 作为稳定基线，然后升级到候选 tarball。可在本地使用 `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` 覆盖，或在 GitHub 的 Install Smoke workflow 中使用 `update_baseline_version` 输入覆盖。非 root 安装器检查会保留隔离的 npm cache，这样 root 拥有的 cache 条目不会掩盖用户本地的安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重跑时复用 root/update/direct-npm cache。
+- Install Smoke CI 会使用 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；如果需要 direct `npm install -g` 覆盖，请在本地运行脚本时不要设置该 env。
+- Agents delete shared workspace CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建 root Dockerfile 镜像，在隔离的容器 home 中为两个 agent 和一个 workspace 做种子化，然后运行 `agents delete --json`，并验证有效 JSON 以及保留 workspace 的行为。可通过 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用 install-smoke 镜像。
 - Gateway networking（两个容器，WS auth + health）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- Browser CDP snapshot smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）会构建源码 E2E 镜像以及 Chromium 层，使用原始 CDP 启动 Chromium，运行 `browser doctor --deep`，并验证 CDP role snapshot 覆盖 link URLs、cursor-promoted clickables、iframe refs 以及 frame metadata。
-- OpenAI Responses web_search 最小推理回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）会通过 Gateway 运行一个 mock 的 OpenAI server，验证 `web_search` 会将 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制 provider schema 拒绝并检查原始详情是否出现在 Gateway 日志中。
+- Browser CDP snapshot smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）会构建 source E2E 镜像和一个 Chromium 层，启动带原始 CDP 的 Chromium，运行 `browser doctor --deep`，并验证 CDP role snapshot 覆盖了链接 URL、光标提升的可点击项、iframe 引用以及 frame 元数据。
+- OpenAI Responses web_search minimal reasoning regression：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）通过 Gateway 运行一个模拟的 OpenAI server，验证 `web_search` 会把 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制 provider schema 拒绝，并检查原始细节是否出现在 Gateway 日志中。
 - MCP channel bridge（种子化 Gateway + stdio bridge + 原始 Claude notification-frame smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
-- Pi bundle MCP tools（真实 stdio MCP server + 内嵌 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
-- Cron/subagent MCP cleanup（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后进行 stdio MCP child teardown）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
-- Plugins（install smoke、ClawHub install/uninstall、marketplace updates，以及 Claude-bundle enable/inspect）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
-  设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可跳过 live ClawHub 区块，或者通过 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认 package。
-- Plugin update unchanged smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
-- Config reload metadata smoke：`pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
-- Bundled plugin runtime deps：`pnpm test:docker:bundled-channel-deps` 默认会构建一个小型 Docker runner 镜像，在宿主机上构建并打包一次 OpenClaw，然后将该 tarball 挂载到每个 Linux 安装场景中。可通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 复用该镜像，通过 `OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD=0` 在本地新鲜构建后跳过宿主机重建，或者通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 指向现有 tarball。完整的 Docker 聚合器和 release-path `plugins-integrations` 块会先打包一次这个 tarball，然后将 bundled channel 检查分片为独立 lane，包括 Telegram、Discord、Slack、Feishu、memory-lancedb 和 ACPX 的独立更新 lane。直接运行 bundled lane 时，可使用 `OPENCLAW_BUNDLED_CHANNELS=telegram,slack` 缩小 channel 矩阵，或者使用 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_TARGETS=telegram,acpx` 缩小更新场景。该 lane 还会验证 `channels.<id>.enabled=false` 和 `plugins.entries.<id>.enabled=false` 会抑制 doctor/runtime-dependency 修复。
-- 在迭代时，通过禁用无关场景来缩小 bundled plugin runtime deps，例如：
+- Pi bundle MCP tools（真实 stdio MCP server + 嵌入式 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
+- Cron/subagent MCP cleanup（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后进行 stdio MCP 子进程清理）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
+- Plugins（安装 smoke、ClawHub 安装/卸载、marketplace 更新，以及 Claude-bundle 启用/检查）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
+  设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可跳过 live ClawHub 块，或通过 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认包。
+- Plugin update unchanged smoke: `pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
+- Config reload metadata smoke: `pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
+- Bundled plugin runtime deps：`pnpm test:docker:bundled-channel-deps` 默认会构建一个较小的 Docker runner 镜像，在宿主机上构建并打包 OpenClaw 一次，然后将该 tarball 挂载到每个 Linux 安装场景中。可通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 复用镜像，通过 `OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD=0` 在一次新的本地构建后跳过宿主机重建，或通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 指向现有 tarball。完整的 Docker 聚合和 release-path bundled-channel 分块会先将该 tarball 打包一次，然后把 bundled channel 检查拆分为独立车道，包括 Telegram、Discord、Slack、Feishu、memory-lancedb 和 ACPX 的独立更新车道。Release 分块会把 channel smoke、更新目标以及 setup/runtime 契约拆分为 `bundled-channels-core`、`bundled-channels-update-a`、`bundled-channels-update-b` 和 `bundled-channels-contracts`；聚合的 `bundled-channels` 分块仍可用于手动重跑。发布工作流还拆分了 provider 安装器分块和 bundled plugin 安装/卸载分块；旧的 `package-update`、`plugins-runtime` 和 `plugins-integrations` 分块仍作为手动重跑的聚合别名存在。直接运行 bundled 车道时，可使用 `OPENCLAW_BUNDLED_CHANNELS=telegram,slack` 缩小 channel 矩阵，或使用 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_TARGETS=telegram,acpx` 缩小更新场景。该车道还会验证 `channels.<id>.enabled=false` 和 `plugins.entries.<id>.enabled=false` 会抑制 doctor/runtime-dependency 修复。
+- 在迭代时通过禁用无关场景来缩小 bundled plugin runtime deps，例如：
   `OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 pnpm test:docker:bundled-channel-deps`。
 
 要手动预构建并复用共享功能镜像：
@@ -713,7 +622,7 @@ key。它会启动一个种子化 Gateway 和一个真实的 stdio MCP probe ser
 - 通过真实 gateway + agent 循环进行 mock 工具调用（`src/gateway/gateway.test.ts`）。
 - 端到端向导流程，验证会话连线和配置效果（`src/gateway/gateway.test.ts`）。
 
-针对技能，目前还缺少的内容（参见 [Skills](/tools/skills)）：
+针对技能，目前还缺少的内容（参见 [技能](/tools/skills)）：
 
 - **决策能力：** 当提示中列出技能时，agent 是否会选择正确的技能（或避免无关技能）？
 - **合规性：** agent 是否会在使用前阅读 `SKILL.md` 并遵循所需步骤/参数？

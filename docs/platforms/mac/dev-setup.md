@@ -2,19 +2,19 @@
 summary: "OpenClaw macOS 应用开发者的设置指南"
 read_when:
   - 设置 macOS 开发环境
-title: "macOS dev setup"
+title: "macOS 开发设置"
 ---
 
 # macOS 开发者设置
 
-本指南涵盖从源码构建和运行 OpenClaw macOS 应用所需的步骤。
+从源代码构建并运行 OpenClaw macOS 应用。
 
 ## 前置条件
 
 在构建应用之前，请确保已安装以下内容：
 
-1. **Xcode 26.2+**: Swift 开发所需。
-2. **Node.js 24 & pnpm**: 推荐用于网关、CLI 和打包脚本。Node 22 LTS（当前为 `22.14+`）仍受支持以保持兼容性。
+1. **Xcode 26.2+**：Swift 开发所需。
+2. **Node.js 24 和 pnpm**：推荐用于网关、CLI 和打包脚本。Node 22 LTS（当前为 `22.14+`）仍受支持以保持兼容性。
 
 ## 1. 安装依赖
 
@@ -55,10 +55,10 @@ macOS 应用需要全局安装 `openclaw` CLI 来管理后台任务。
 npm install -g openclaw@<version>
 ```
 
-`pnpm add -g openclaw@<version>` and `bun add -g openclaw@<version>` also work.
-For the Gateway runtime, Node remains the recommended path.
+`pnpm add -g openclaw@<version>` 和 `bun add -g openclaw@<version>` 也可以。
+对于 Gateway 运行时，Node 仍然是推荐路径。
 
-## Troubleshooting
+## 故障排查
 
 ### 构建失败：工具链或 SDK 不匹配
 
@@ -78,7 +78,7 @@ xcrun swift --version
 
 如果版本不匹配，请更新 macOS 或 Xcode 后重新构建。
 
-### 应用在授权权限时崩溃
+### 授予权限时应用崩溃
 
 如果尝试允许 **语音识别** 或 **麦克风** 权限时应用崩溃，可能是由于 TCC 缓存损坏或签名不匹配。
 

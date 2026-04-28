@@ -75,9 +75,11 @@ openclaw sandbox recreate --all --force        # 跳过确认
 - `--browser`：仅重新创建浏览器容器
 - `--force`：跳过确认提示
 
-**重要提示：** 当代理下次被使用时，运行时会自动重新创建。
+<Note>
+当代理下次被使用时，运行时会自动重新创建。
+</Note>
 
-## 使用场景
+## 用例
 
 ### 更新 Docker 镜像后
 
@@ -146,17 +148,19 @@ openclaw sandbox recreate --agent family
 openclaw sandbox recreate --agent alfred
 ```
 
-## 为什么需要这个命令？
+## 为什么需要这样做
 
-**问题：** 当您更新沙箱配置时：
+当您更新沙箱配置时：
 
-- 现有运行时继续使用旧设置运行
-- 运行时只会在 24 小时不活动后被清理
-- 常用的代理会无限期保持旧运行时存活
+- 现有运行时会继续使用旧设置运行。
+- 运行时只有在 24 小时不活动后才会被清理。
+- 经常使用的代理会让旧运行时无限期存活。
 
-**解决方案：** 使用 `openclaw sandbox recreate` 强制删除旧运行时。它们将在下次需要时自动与当前设置一起重新创建。
+使用 `openclaw sandbox recreate` 可以强制移除旧运行时。它们会在下次需要时使用当前设置自动重新创建。
 
-提示：优先使用 `openclaw sandbox recreate`，而不是手动执行后端特定清理。它利用 Gateway 的运行时注册表，避免范围/会话键更改时的不匹配。
+<Tip>
+优先使用 `openclaw sandbox recreate`，而不是手动清理特定后端。它使用 Gateway 的运行时注册表，并且在范围或会话键更改时可避免不匹配。
+</Tip>
 
 ## 配置
 
@@ -190,4 +194,4 @@ openclaw sandbox recreate --agent alfred
 - [CLI reference](/cli)
 - [Sandboxing](/gateway/sandboxing)
 - [Agent workspace](/concepts/agent-workspace)
-- [Doctor](/gateway/doctor) — 检查沙箱设置
+- [Doctor](/gateway/doctor)：检查沙箱设置。

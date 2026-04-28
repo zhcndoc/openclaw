@@ -75,7 +75,9 @@ HTTP API 端点（例如 `/v1/*`、`/tools/invoke` 和 `/api/channels/*`）
 - 控制界面：`http://<tailscale-ip>:18789/`
 - WebSocket：`ws://<tailscale-ip>:18789`
 
-注意：此模式下环回地址（`http://127.0.0.1:18789`）**不**可用。
+<Note>
+环回地址（`http://127.0.0.1:18789`）在此模式下将**无法**工作。
+</Note>
 
 ### 公网访问（Funnel + 共享密码）
 

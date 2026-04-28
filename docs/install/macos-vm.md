@@ -14,7 +14,7 @@ title: "macOS 虚拟机"
 
 - **小型 Linux VPS**，用于始终在线的网关，且成本低廉。见 [VPS 托管](/vps)。
 - **专用硬件**（Mac mini 或 Linux 设备），如果您想完全控制环境并使用 **住宅 IP** 来实现浏览器自动化。许多网站会屏蔽数据中心 IP，因此本地浏览通常效果更好。
-- **混合方案：** 将网关部署在廉价 VPS 上， 当需要浏览器/UI 自动化时连接您的 Mac 作为 **节点**。详见 [节点](/nodes) 和 [远程网关](/gateway/remote)。
+- **混合方案：** 将网关部署在廉价 VPS 上，当需要浏览器/UI 自动化时连接您的 Mac 作为 **节点**。详见 [节点](/nodes) 和 [远程网关](/gateway/remote)。
 
 只有当您特别需要 macOS 独有功能（如 iMessage/BlueBubbles）或想与日常使用的 Mac 进行严格隔离时，才使用 macOS 虚拟机。
 
@@ -92,7 +92,9 @@ lume create openclaw --os macos --ipsw latest
 
 此命令会下载 macOS 并创建虚拟机。会自动打开一个 VNC 窗口。
 
-注意：下载时间依赖您的网络连接，可能需要一段时间。
+<Note>
+下载可能需要一些时间，具体取决于您的网络连接。
+</Note>
 
 ---
 
@@ -112,7 +114,7 @@ lume create openclaw --os macos --ipsw latest
 
 ---
 
-## 4) Get the VM IP address
+## 4) 获取虚拟机 IP 地址
 
 ```bash
 lume get openclaw

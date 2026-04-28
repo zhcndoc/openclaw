@@ -11,7 +11,7 @@ title: "长期指令"
 
 这就好比每周五告诉助手"发送周报"与授予长期权限之间的区别："你负责周报。每周五编译并发送，只有在出现问题时才升级。"
 
-## 为什么使用长期指令？
+## 为什么需要长期指令
 
 **没有长期指令时：**
 
@@ -44,7 +44,7 @@ title: "长期指令"
 将长期指令放在 `AGENTS.md` 中，以确保它们在每次会话时都被加载。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md` —— 但不会注入子目录中的任意文件。
 </Tip>
 
-## 长期指令的构成
+## 长期指令示例结构
 
 ```markdown
 ## 程序：周报
@@ -62,14 +62,14 @@ title: "长期指令"
 4. 通过配置的渠道发送摘要
 5. 将完成情况记录到 Agent/Logs/
 
-### 禁止事项
+### 不要做什么
 
 - 不得向外部发送报告
 - 不得修改源数据
 - 即使指标看起来很糟也不要跳过交付——准确报告
 ```
 
-## 长期指令 + Cron 任务
+## 长期指令 + cron 任务
 
 长期指令定义代理被授权执行**什么**操作。[Cron 任务](/automation/cron-jobs) 定义**何时**执行。它们协同工作：
 
@@ -146,7 +146,7 @@ openclaw cron add \
 - 重试 2 次后处理失败：报告失败，不要猜测
 ```
 
-### 示例 3：监控与警报（持续）
+### 示例 3：监控和警报（持续）
 
 ```markdown
 ## 程序：系统监控
@@ -243,8 +243,8 @@ openclaw cron add \
 
 ## 相关
 
-- [自动化与任务](/automation) — 一览所有自动化机制
-- [Cron 任务](/automation/cron-jobs) — 长期指令的计划执行
-- [Hooks](/automation/hooks) — 代理生命周期事件的事件驱动脚本
-- [Webhooks](/automation/cron-jobs#webhooks) — 入站 HTTP 事件触发器
-- [代理工作区](/concepts/agent-workspace) — 长期指令的存放位置，包括自动注入的引导文件完整列表（AGENTS.md、SOUL.md 等）
+- [Automation and tasks](/automation): all automation mechanisms at a glance.
+- [Cron jobs](/automation/cron-jobs): schedule enforcement for standing orders.
+- [Hooks](/automation/hooks): event-driven scripts for agent lifecycle events.
+- [Webhooks](/automation/cron-jobs#webhooks): inbound HTTP event triggers.
+- [Agent workspace](/concepts/agent-workspace): where standing orders live, including the full list of auto-injected bootstrap files (`AGENTS.md`, `SOUL.md`, etc.).

@@ -112,7 +112,9 @@ OpenClaw 目前最具效益的兼容层包括：
 | Gateway 端口    | `--port` → `OPENCLAW_GATEWAY_PORT` → `gateway.port` → `18789` |
 | 绑定模式       | 命令行/覆盖 → `gateway.bind` → `loopback`                      |
 
-### 热重载模式
+已安装的 gateway 服务会在监督器元数据中记录解析后的 `--port`。更改 `gateway.port` 后，请运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，以便 launchd/systemd/schtasks 在新端口上启动进程。
+
+Gateway 启动会在为非环回绑定生成本地 Control UI 源时使用相同的有效端口和绑定。例如，`--bind lan --port 3000` 会在运行时验证开始前生成 `http://localhost:3000` 和 `http://127.0.0.1:3000`。请将任何远程浏览器源（例如 HTTPS 代理 URL）显式添加到 `gateway.controlUi.allowedOrigins`。
 
 | `gateway.reload.mode` | 行为                                     |
 | --------------------- | ---------------------------------------- |
@@ -305,6 +307,8 @@ sudo systemctl enable --now openclaw-gateway[-<profile>].service
 `/etc/systemd/system/openclaw-gateway[-<profile>].service` 下，
 如果您的 `openclaw` 二进制文件位于其他位置，请调整 `ExecStart=`。
 
+不要同时让 `openclaw doctor --fix` 为同一个配置文件/端口安装用户级 gateway 服务。当它发现系统级 OpenClaw gateway 服务时，Doctor 会拒绝这种自动安装；当系统单元拥有生命周期时，请使用 `OPENCLAW_SERVICE_REPAIR_POLICY=external`。
+
   </Tab>
 </Tabs>
 
@@ -383,9 +387,9 @@ openclaw health
 - [Doctor](/gateway/doctor)
 - [Authentication](/gateway/authentication)
 
-## Related
+## 相关内容
 
-- [Configuration](/gateway/configuration)
-- [Gateway troubleshooting](/gateway/troubleshooting)
-- [Remote access](/gateway/remote)
-- [Secrets management](/gateway/secrets)
+- [配置](/gateway/configuration)
+- [网关故障排除](/gateway/troubleshooting)
+- [远程访问](/gateway/remote)
+- [密钥管理](/gateway/secrets)

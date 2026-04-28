@@ -48,7 +48,9 @@ openclaw devices clear --yes --pending --json
 
 通过确切的 `requestId` 批准待处理的设备配对请求。如果省略 `requestId` 或传递 `--latest`，OpenClaw 仅打印选定的待处理请求并退出；在验证详细信息后，使用确切的请求 ID 重新运行批准命令。
 
-注意：如果设备在更改认证详情（角色/作用域/公钥）后重试配对，OpenClaw 会取代之前的待处理条目并签发新的 `requestId`。在批准前立即运行 `openclaw devices list` 以使用当前 ID。
+<Note>
+如果设备在重试配对时更改了身份验证细节（角色、作用域或公钥），OpenClaw 会替换先前的待处理条目并生成新的 `requestId`。请在批准前立即运行 `openclaw devices list` 以使用当前 ID。
+</Note>
 
 如果设备已经配对，并且请求更广泛的作用域或更高的角色，OpenClaw 会保留现有批准并创建新的待处理升级请求。请查看 `openclaw devices list` 中的 `Requested` 与 `Approved` 列，或使用 `openclaw devices approve --latest` 在批准前预览确切的升级内容。
 
@@ -74,7 +76,7 @@ openclaw devices reject <requestId>
 openclaw devices rotate --device <deviceId> --role operator --scope operator.read --scope operator.write
 ```
 
-以 JSON 格式返回新的令牌负载。
+以 JSON 格式返回轮换元数据。如果调用者在使用该设备令牌进行认证时轮换自己的令牌，响应中还会包含替换后的令牌，以便客户端在重新连接前将其持久化。共享/管理员轮换不会回显持有者令牌。
 
 ### `openclaw devices revoke --device <id> --role <role>`
 
@@ -96,7 +98,9 @@ openclaw devices revoke --device <deviceId> --role node
 - `--timeout <ms>`：RPC 超时时间。
 - `--json`：JSON 格式输出（推荐用于脚本处理）。
 
-注意：当您设置了 `--url` 后，CLI 不会回退使用配置或环境中的凭据，需显式传入 `--token` 或 `--password`。缺少显式凭据会报错。
+<Warning>
+当您设置 `--url` 时，CLI 不会回退到配置或环境凭据。请显式传递 `--token` 或 `--password`。缺少显式凭据将报错。
+</Warning>
 
 ## 备注
 

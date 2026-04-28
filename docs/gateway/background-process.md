@@ -14,24 +14,25 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 关键参数：
 
-- `command`（必填）
-- `yieldMs`（默认 10000）：延迟此时间后自动转入后台
-- `background`（布尔值）：立即转入后台
-- `timeout`（秒，默认 1800）：超时后终止进程
-- `elevated`（布尔值）：如果启用/允许提升模式，则在沙箱外运行（默认为 `gateway`，当 exec 目标为 `node` 时为 `node`）
-- 需要真实的 TTY？设置 `pty: true`。
+- `command` (required)
+- `yieldMs` (默认 10000)：在此延迟后自动转入后台
+- `background` (bool)：立即转入后台
+- `timeout` (秒，默认 `tools.exec.timeoutSec`): 在此超时后终止进程；仅当该调用显式设置 `timeout: 0` 时，才会禁用 exec 进程超时
+- `elevated` (bool)：如果启用/允许提权模式，则在沙箱外运行（默认 `gateway`，或者当 exec 目标是 `node` 时为 `node`）
+- 需要真实 TTY？设置 `pty: true`。
 - `workdir`, `env`
 
 行为：
 
-- 前台运行直接返回输出。
-- 当转入后台时（显式或超时），工具返回 `status: "running"` + `sessionId` 以及简短的尾部输出。
-- 输出保留在内存中，直到会话被轮询或清除。
+- 前台运行会直接返回输出。
+- 当转入后台时（显式或因超时），工具返回 `status: "running"` + `sessionId` 和一段简短尾部输出。
+- 后台运行和 `yieldMs` 运行会继承 `tools.exec.timeoutSec`，除非该调用提供了显式 `timeout`。
+- 输出会保留在内存中，直到会话被轮询或清除。
 - 如果 `process` 工具被禁止，`exec` 将同步运行并忽略 `yieldMs`/`background`。
-- 生成的 exec 命令会接收 `OPENCLAW_SHELL=exec` 以用于上下文感知的 shell/profile 规则。
-- 对于现在开始运行的长时间任务，启动一次即可，当启用自动完成唤醒且命令发出输出或失败时依赖该机制。
-- 如果自动完成唤醒不可用，或者你需要确认一个无输出且正常退出的命令是否成功，请使用 `process` 来确认完成。
-- 不要使用 `sleep` 循环或重复轮询来模拟提醒或延迟跟进；对于未来的工作请使用 cron。
+- 启动的 exec 命令会接收 `OPENCLAW_SHELL=exec`，用于上下文感知的 shell/profile 规则。
+- 对于现在启动的长时间运行任务，只启动一次，并依赖自动完成唤醒（在启用时）以及命令输出或失败来触发。
+- 如果自动完成唤醒不可用，或者你需要对没有输出但干净退出的命令进行静默成功确认，请使用 `process` 来确认完成。
+- 不要通过 `sleep` 循环或重复轮询来模拟提醒或延迟跟进；未来的工作请使用 cron。
 
 ## 子进程桥接
 

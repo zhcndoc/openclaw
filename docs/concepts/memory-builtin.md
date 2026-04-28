@@ -72,10 +72,13 @@ GGUF 文件：
 
 OpenClaw 将 `MEMORY.md` 和 `memory/*.md` 索引为块（约 400 个 token，重叠 80 个 token），并将它们存储在每个代理独立的 SQLite 数据库中。
 
-- **索引位置：** `~/.openclaw/memory/<agentId>.sqlite`
-- **文件监视：** 内存文件的更改会触发防抖重新索引（1.5 秒）。
-- **自动重新索引：** 当嵌入提供商、模型或分块配置更改时，整个索引会自动重建。
-- **按需重新索引：** `openclaw memory index --force`
+- **Index location:** `~/.openclaw/memory/<agentId>.sqlite`
+- **Storage maintenance:** SQLite WAL sidecars are bounded with periodic and
+  shutdown checkpoints.
+- **File watching:** changes to memory files trigger a debounced reindex (1.5s).
+- **Auto-reindex:** when the embedding provider, model, or chunking config
+  changes, the entire index is rebuilt automatically.
+- **Reindex on demand:** `openclaw memory index --force`
 
 <Info>
 你也可以使用 `memorySearch.extraPaths` 索引工作区外的 Markdown 文件。请参阅 [配置参考](/reference/memory-config#additional-memory-paths)。

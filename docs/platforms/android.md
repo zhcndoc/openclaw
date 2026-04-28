@@ -4,10 +4,12 @@ read_when:
   - 配对或重新连接 Android 节点
   - 调试 Android 网关发现或认证
   - 验证不同客户端之间的聊天历史一致性
-title: "Android app"
+title: "Android 应用"
 ---
 
-> **注意：** Android 应用尚未公开发布。源代码可在 [OpenClaw 仓库](https://github.com/openclaw/openclaw) 的 `apps/android` 下找到。你可以使用 Java 17 和 Android SDK（`./gradlew :app:assemblePlayDebug`）自行构建。构建说明请参见 [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)。
+<Note>
+Android 应用目前尚未公开发布。源代码可在 [OpenClaw 仓库](https://github.com/openclaw/openclaw) 的 `apps/android` 下找到。你可以使用 Java 17 和 Android SDK 自行构建它（`./gradlew :app:assemblePlayDebug`）。构建说明请参见 [apps/android/README.md](https://github.com/openclaw/openclaw/blob/main/apps/android/README.md)。
+</Note>
 
 ## 支持快照
 
@@ -148,7 +150,9 @@ Android 聊天标签支持会话选择（默认 `main`，还有其他存在的�
 
 如果你希望节点显示真实的 HTML/CSS/JS，且代理可以在磁盘上编辑，请将节点指向网关的 Canvas 主机。
 
-注意：节点从网关的 HTTP 服务器加载 Canvas（端口与 `gateway.port` 相同，默认 `18789`）。
+<Note>
+节点从网关 HTTP 服务器加载 canvas（与 `gateway.port` 相同的端口，默认 `18789`）。
+</Note>
 
 1. 在网关主机上创建 `~/.openclaw/workspace/canvas/index.html`。
 

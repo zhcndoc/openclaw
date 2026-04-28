@@ -65,8 +65,8 @@ openclaw gateway run
 
 启动性能分析：
 
-- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 以在网关启动期间记录各阶段耗时。
-- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 来对网关启动进行基准测试。该基准会记录首次进程输出、`/healthz`、`/readyz` 和启动跟踪耗时。
+- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表计时。
+- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 可对 Gateway 启动进行基准测试。该基准会记录首次进程输出、`/healthz`、`/readyz`、启动追踪计时、事件循环延迟和插件查找表计时细节。
 
 ## 查询正在运行的网关
 
@@ -343,17 +343,16 @@ openclaw gateway restart
     - `gateway install`: `--port`、`--runtime <node|bun>`、`--token`、`--wrapper <path>`、`--force`、`--json`
     - `gateway uninstall|start|stop|restart`: `--json`
   </Accordion>
-  <Accordion title="服务安装与生命周期说明">
-    - `gateway install` 支持 `--port`、`--runtime`、`--token`、`--wrapper`、`--force`、`--json`。
-    - `--wrapper <path>` 会让受管服务通过一个可执行包装器启动，将 `ProgramArguments` 写为 `<wrapper> gateway --port ...`，并在服务环境中持久化 `OPENCLAW_WRAPPER`，以便强制重装、更新和 doctor 修复继续使用同一个包装器。`openclaw doctor` 也会报告当前活动的包装器。如果省略 `--wrapper`，安装会尊重来自 shell 或当前服务环境中已有的 `OPENCLAW_WRAPPER`。
-    - 要移除已持久化的包装器，可使用空的包装器环境重新安装，例如 `OPENCLAW_WRAPPER= openclaw gateway install --force`。
-    - 使用 `gateway restart` 重启受管服务。不要将 `gateway stop` 和 `gateway start` 串联起来代替重启；在 macOS 上，`gateway stop` 会在停止前故意禁用 LaunchAgent。
+  <Accordion title="生命周期行为">
+    - 使用 `gateway restart` 重启受管服务。不要把 `gateway stop` 和 `gateway start` 串联起来替代重启；在 macOS 上，`gateway stop` 在停止之前会有意禁用 LaunchAgent。
+    - 生命周期命令接受 `--json` 以便脚本使用。
+  </Accordion>
+  <Accordion title="安装时的认证与 SecretRef">
     - 当令牌认证需要令牌且 `gateway.auth.token` 由 SecretRef 管理时，`gateway install` 会验证该 SecretRef 是否可解析，但不会将解析出的令牌持久化到服务环境元数据中。
-    - 如果令牌认证需要令牌且已配置的令牌 SecretRef 未解析，安装会直接失败，而不是持久化回退明文。
+    - 如果令牌认证需要令牌且配置的令牌 SecretRef 未解析，安装将失败关闭，而不是持久化回退明文。
     - 对于 `gateway run` 的密码认证，优先使用 `OPENCLAW_GATEWAY_PASSWORD`、`--password-file` 或由 SecretRef 支持的 `gateway.auth.password`，而不是内联 `--password`。
-    - 在推断认证模式下，仅 shell 中的 `OPENCLAW_GATEWAY_PASSWORD` 不会放宽安装令牌要求；安装受管服务时应使用持久化配置（`gateway.auth.password` 或配置 `env`）。
-    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password` 且 `gateway.auth.mode` 未设置，安装会被阻止，直到显式设置模式。
-    - 生命周期命令接受 `--json` 以便脚本化。
+    - 在推断认证模式下，仅 shell 环境中的 `OPENCLAW_GATEWAY_PASSWORD` 不会放宽安装令牌要求；安装受管服务时请使用持久配置（`gateway.auth.password` 或配置 `env`）。
+    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password` 且未设置 `gateway.auth.mode`，安装将被阻止，直到显式设置模式。
   </Accordion>
 </AccordionGroup>
 

@@ -2,7 +2,7 @@
 summary: "`openclaw agents` 的命令行参考（列表/添加/删除/绑定/解绑/设置身份）"
 read_when:
   - 你想要多个隔离的代理（工作空间 + 路由 + 认证）
-title: "Agents"
+title: "代理"
 ---
 
 # `openclaw agents`
@@ -11,9 +11,9 @@ title: "Agents"
 
 相关内容：
 
-- 多代理路由：[多代理路由](/concepts/multi-agent)
-- 代理工作空间：[代理工作空间](/concepts/agent-workspace)
-- 技能可见性配置：[技能配置](/tools/skills-config)
+- [多代理路由](/concepts/multi-agent)
+- [代理工作空间](/concepts/agent-workspace)
+- [技能配置](/tools/skills-config)：技能可见性配置。
 
 ## 示例
 
@@ -34,10 +34,7 @@ openclaw agents delete work
 
 使用路由绑定将传入频道流量固定到特定代理。
 
-如果你还想为每个代理显示不同的技能，请在 `openclaw.json` 中配置
-`agents.defaults.skills` 和 `agents.list[].skills`。参见
-[技能配置](/tools/skills-config) 和
-[配置参考](/gateway/config-agents#agents-defaults-skills)。
+如果你还希望每个代理显示不同的技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.list[].skills`。请参见 [技能配置](/tools/skills-config) 和 [配置参考](/gateway/config-agents#agents-defaults-skills)。
 
 列出绑定：
 

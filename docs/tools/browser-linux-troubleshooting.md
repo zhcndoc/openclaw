@@ -136,15 +136,15 @@ curl -s http://127.0.0.1:18791/tabs
 
 备注：
 
-- `user` is host-only. For Linux servers, containers, or remote hosts, prefer CDP profiles.
-- `user` / other `existing-session` profiles keep the current Chrome MCP limits:
-  ref-driven actions, one-file upload hooks, no dialog timeout overrides, no
-  `wait --load networkidle`, and no `responsebody`, PDF export, download
-  interception, or batch actions.
-- Local `openclaw` profiles auto-assign `cdpPort`/`cdpUrl`; only set those for remote CDP.
-- Remote CDP profiles accept `http://`, `https://`, `ws://`, and `wss://`.
-  Use HTTP(S) for `/json/version` discovery, or WS(S) when your browser
-  service gives you a direct DevTools socket URL.
+- `user` 仅适用于主机。对于 Linux 服务器、容器或远程主机，建议使用 CDP 配置文件。
+- `user` / 其他 `existing-session` 配置文件保留当前 Chrome MCP 的限制：
+  基于引用的操作、单文件上传钩子、无对话框超时覆盖、无
+  `wait --load networkidle`，以及无 `responsebody`、PDF 导出、下载
+  拦截或批量操作。
+- 本地 `openclaw` 配置文件会自动分配 `cdpPort`/`cdpUrl`；仅在远程 CDP 时才设置这些。
+- 远程 CDP 配置文件接受 `http://`、`https://`、`ws://` 和 `wss://`。
+  使用 HTTP(S) 进行 `/json/version` 发现，或者在浏览器
+  服务直接提供 DevTools socket URL 时使用 WS(S)。
 
 ## 相关内容
 

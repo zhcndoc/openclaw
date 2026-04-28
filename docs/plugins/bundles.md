@@ -147,13 +147,14 @@ MCP 服务器可以使用 stdio 或 HTTP 传输：
 }
 ```
 
-- `transport` 可设置为 `"streamable-http"` 或 `"sse"`；省略时，OpenClaw 使用 `sse`
+- `transport` 可以设置为 `"streamable-http"` 或 `"sse"`；如果省略，OpenClaw 使用 `sse`
+- `type: "http"` 是 CLI 原生的下游形态；在 OpenClaw 配置中使用 `transport: "streamable-http"`。`openclaw mcp set` 和 `openclaw doctor --fix` 会规范化这个常见别名。
 - 仅允许 `http:` 和 `https:` URL 方案
 - `headers` 值支持 `${ENV_VAR}` 插值
-- 同时包含 `command` 和 `url` 的服务器条目将被拒绝
-- URL 凭证（用户信息和查询参数）会从工具
-  描述和日志中删节
-- `connectionTimeoutMs` 覆盖 stdio 和 HTTP 传输默认的 30 秒连接超时
+- 同时包含 `command` 和 `url` 的服务器条目会被拒绝
+- URL 凭据（userinfo 和 query params）会从工具
+  描述和日志中脱敏
+- `connectionTimeoutMs` 会覆盖 stdio 和 HTTP 传输的默认 30 秒连接超时
 
 ##### 工具命名
 
@@ -251,11 +252,10 @@ OpenClaw 首先检查原生插件格式：
 
 ## Runtime dependencies and cleanup
 
-- Bundled plugin runtime dependencies ship inside the OpenClaw package under
-  `dist/*`. OpenClaw does **not** run `npm install` at startup for bundled
-  plugins; the release pipeline is responsible for shipping a complete bundled
-  dependency payload (see the postpublish verification rule in
-  [Releasing](/reference/RELEASING)).
+- 捆绑插件运行时依赖随 OpenClaw 包一起发布在
+  `dist/*` 下。OpenClaw 在启动时**不会**为捆绑插件运行 `npm install`；
+  发布流水线负责提供完整的捆绑依赖负载（参见
+  [发布](/reference/RELEASING) 中的发布后验证规则）。
 
 ## 安全性
 

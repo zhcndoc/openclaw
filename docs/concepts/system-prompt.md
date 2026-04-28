@@ -3,7 +3,7 @@ summary: "OpenClaw 系统提示包含内容及其如何组装"
 read_when:
   - 编辑系统提示文本、工具列表或时间/心跳部分
   - 更改工作区引导或技能注入行为
-title: "System prompt"
+title: "系统提示"
 ---
 
 OpenClaw 为每次代理运行构建一个自定义系统提示。该提示由 **OpenClaw 拥有**，并且不使用 pi-coding-agent 的默认提示。
@@ -64,6 +64,11 @@ OpenClaw 可为子代理渲染较小的系统提示。运行时为每次运行�
 
 当 `promptMode=minimal` 时，额外注入的提示标记为 **子代理上下文**，而非 **群聊上下文**。
 
+For channel auto-reply runs, OpenClaw can omit the generic **Silent Replies**
+section when the direct/group chat context already includes the resolved
+conversation-specific `NO_REPLY` behavior. This avoids repeating token mechanics
+in both the global system prompt and channel context.
+
 ## 工作区引导注入
 
 引导文件会被裁剪并附加在 **项目上下文** 下，让模型无需显式读取即可感知身份和配置上下文：
@@ -74,20 +79,16 @@ OpenClaw 可为子代理渲染较小的系统提示。运行时为每次运行�
 - `IDENTITY.md`
 - `USER.md`
 - `HEARTBEAT.md`
-- `BOOTSTRAP.md` (only on brand-new workspaces)
-- `MEMORY.md` when present
+- `BOOTSTRAP.md` (仅在全新工作区中)
+- `MEMORY.md`（当存在时）
 
 除非应用了特定文件的门控，否则所有这些文件都会在每一轮对话中**注入到上下文窗口**中。当默认代理禁用心跳或 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，`HEARTBEAT.md` 在正常运行中被省略。保持注入文件简洁——尤其是 `MEMORY.md`，它可能会随时间增长，导致意外的高上下文使用和更频繁的压缩。
 
-> **注意：** `memory/*.md` 每日文件**不是**正常引导项目上下文的一部分。在普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取它们，否则不计入上下文窗口。纯粹的 `/new` 和 `/reset` 轮次是例外：运行时可以将最近的每日记忆作为一次性启动上下文块前置到第一轮次中。
+<Note>
+`memory/*.md` daily files are **not** part of the normal bootstrap Project Context. On ordinary turns they are accessed on demand via the `memory_search` and `memory_get` tools, so they do not count against the context window unless the model explicitly reads them. Bare `/new` and `/reset` turns are the exception: the runtime can prepend recent daily memory as a one-shot startup-context block for that first turn.
+</Note>
 
-Large files are truncated with a marker. The max per-file size is controlled by
-`agents.defaults.bootstrapMaxChars` (default: 12000). Total injected bootstrap
-content across files is capped by `agents.defaults.bootstrapTotalMaxChars`
-(default: 60000). Missing files inject a short missing-file marker. When truncation
-occurs, OpenClaw can inject a warning block in Project Context; control this with
-`agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`;
-default: `once`).
+大型文件会用标记截断。每个文件的最大大小由 `agents.defaults.bootstrapMaxChars` 控制（默认：12000）。跨文件注入的总引导内容上限为 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）。缺失文件会注入一个简短的缺失文件标记。当发生截断时，OpenClaw 可以在项目上下文中注入一个警告块；可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认：`once`）进行控制。
 
 子代理会话仅注入 `AGENTS.md` 和 `TOOLS.md`（过滤掉其他引导文件以保持子代理上下文精简）。
 

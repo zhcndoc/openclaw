@@ -135,7 +135,9 @@ Gateway-owned.
 - `bonjour: ... name conflict resolved` / `hostname conflict resolved`
 - `bonjour: watchdog detected non-announced service ...`
 
-## 在 iOS 节点调试
+Bonjour 会在系统主机名是有效 DNS 标签时，使用该主机名作为通告的 `.local` 主机名。如果系统主机名包含空格、下划线或其他无效的 DNS 标签字符，OpenClaw 会回退为 `openclaw.local`。在需要显式主机标签时，请在启动网关前设置 `OPENCLAW_MDNS_HOSTNAME=<name>`。
+
+## 在 iOS 节点上调试
 
 iOS 节点使用 `NWBrowser` 来发现 `_openclaw-gw._tcp`。
 

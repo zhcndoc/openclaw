@@ -30,7 +30,16 @@ OpenClaw 按以下顺序选择模型：
 - `agents.defaults.videoGenerationModel` 由共享视频生成能力使用。如果省略，`video_generate` 仍可推断基于认证的提供商默认值。它首先尝试当前默认提供商，然后按提供商 ID 顺序尝试其余注册的视频生成提供商。如果您设置了特定的提供商/模型，请同时配置该提供商的认证/API 密钥。
 - 每个代理的默认值可以通过 `agents.list[].model` 加上绑定覆盖 `agents.defaults.model`（参见 [/concepts/multi-agent](/concepts/multi-agent)）。
 
-## 快速模型策略
+## Selection source and fallback behavior
+
+The same `provider/model` can mean different things depending on where it came from:
+
+- Configured defaults (`agents.defaults.model.primary` and agent-specific primaries) are the normal starting point and use `agents.defaults.model.fallbacks`.
+- Auto fallback selections are temporary recovery state. They are stored with `modelOverrideSource: "auto"` so later turns can keep using the fallback chain without probing a known-bad primary first.
+- User session selections are exact. `/model`, the model picker, `session_status(model=...)`, and `sessions.patch` store `modelOverrideSource: "user"`; if that selected provider/model is unreachable, OpenClaw fails visibly instead of falling through to another configured model.
+- Cron `--model` / payload `model` is a per-job primary. It still uses configured fallbacks unless the job supplies explicit payload `fallbacks` (use `fallbacks: []` for a strict cron run).
+
+## Quick model policy
 
 - 将主用模型设置为您可用的最强最新一代模型。
 - 回退模型用于成本/延迟敏感任务及低风险聊天。
@@ -112,7 +121,31 @@ openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json
 /model status
 ```
 
-说明：
+<AccordionGroup>
+  <Accordion title="Picker behavior">
+    - `/model`（以及 `/model list`）是一个紧凑的带编号选择器（模型系列 + 可用提供商）。
+    - 在 Discord 上，`/model` 和 `/models` 会打开一个交互式选择器，带有提供商和模型下拉菜单以及提交步骤。
+    - `/models add` 已弃用，现在会返回弃用消息，而不是从聊天中注册模型。
+    - `/model <#>` 从该选择器中选择。
+  </Accordion>
+  <Accordion title="Persistence and live switching">
+    - `/model` 会立即持久化新的会话选择。
+    - 如果代理处于空闲状态，下一次运行会立刻使用新模型。
+    - 如果运行已经处于活动状态，OpenClaw 会将实时切换标记为待处理，并且只会在一个干净的重试点重新启动到新模型。
+    - 如果工具活动或回复输出已经开始，待处理切换可能会保持排队，直到稍后的重试机会或下一个用户回合。
+    - 用户选择的 `/model` 引用对该会话是严格的：如果所选提供商/模型不可达，回复会显式失败，而不是静默地从 `agents.defaults.model.fallbacks` 回答。这不同于已配置默认值和 cron 作业主用模型，它们仍然可以使用回退链。
+    - `/model status` 是详细视图（认证候选，以及在已配置时，提供商端点 `baseUrl` + `api` 模式）。
+  </Accordion>
+  <Accordion title="Ref parsing">
+    - 模型引用通过在**第一个** `/` 处分割来解析。输入 `/model <ref>` 时请使用 `provider/model`。
+    - 如果模型 ID 本身包含 `/`（OpenRouter 风格），则必须包含提供商前缀（例如：`/model openrouter/moonshotai/kimi-k2`）。
+    - 如果省略提供商，OpenClaw 会按以下顺序解析输入：
+      1. 别名匹配
+      2. 对该精确的未加前缀模型 ID 的唯一已配置提供商匹配
+      3. 已弃用的回退到已配置的默认提供商
+         如果该提供商不再暴露已配置的默认模型，OpenClaw 会改为回退到第一个已配置的提供商/模型，以避免显示一个已移除提供商的过期默认值。
+  </Accordion>
+</AccordionGroup>
 
 - `/model`（以及 `/model list`）是一个紧凑的带编号选择器（模型系列 + 可用提供商）。
 - 在 Discord 上，`/model` 和 `/models` 会打开一个交互式选择器，带有提供商和模型下拉菜单以及提交步骤。

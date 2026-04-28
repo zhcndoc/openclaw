@@ -11,7 +11,7 @@ read_when:
 OpenClaw 插件的测试工具、模式和 lint 强制执行参考。
 
 <Tip>
-  **寻找测试示例？** 操作指南包含完整的测试示例：
+  **在寻找测试示例？** 操作指南包含完整的测试示例：
   [频道插件测试](/plugins/sdk-channel-plugins#step-6-test) 和
   [提供者插件测试](/plugins/sdk-provider-plugins#step-6-test)。
 </Tip>
@@ -33,10 +33,28 @@ import {
 ### 可用导出
 
 | 导出                                 | 用途                                                |
-| -------------------------------------- | ---------------------------------------------- |
+| -------------------------------------- | ------------------------------------------------------ |
 | `installCommonResolveTargetErrorCases` | 目标解析错误处理的共享测试用例 |
 | `shouldAckReaction`                    | 检查频道是否应添加确认反应     |
-| `removeAckReactionAfterReply`          | 回复交付后移除确认反应               |
+| `removeAckReactionAfterReply`               | 回复送达后移除确认反应               |
+| `createTestRegistry`                   | 构建频道插件注册表夹具                |
+| `createEmptyPluginRegistry`                | 构建空插件注册表夹具                |
+| `setActivePluginRegistry`              | 为插件运行时测试安装注册表夹具    |
+| `createRequestCaptureJsonFetch`        | 在媒体辅助工具测试中捕获 JSON fetch 请求                    |
+| `withFetchPreconnect`                  | 安装 preconnect 钩子后运行 fetch 测试                    |
+| `withEnv` / `withEnvAsync`             | 临时修补环境变量                |
+| `createTempHomeEnv` / `withTempDir`    | 创建隔离的文件系统测试夹具               |
+| `createMockServerResponse`             | 创建最小 HTTP 服务器响应模拟             |
+| `registerSingleProviderPlugin`         | 在加载器冒烟测试中注册一个提供者插件     |
+| `registerProviderPlugin`              | 捕获来自单个插件的所有提供者类型               |
+| `requireRegisteredProvider`            | 断言提供者集合包含某个 id       |
+| `createProviderUsageFetch`             | 构建提供者使用 fetch 夹具                    |
+| `useFrozenTime` / `useRealTime`        | 为时间敏感测试冻结和恢复计时器     |
+| `createRuntimeEnv`                     | 构建一个模拟的 CLI/插件运行时环境          |
+| `createTestWizardPrompter`             | 构建一个模拟的设置向导提示器                   |
+| `createPluginSetupWizardStatus`        | 为频道插件构建设置状态辅助工具         |
+| `createRuntimeTaskFlow`                | 创建隔离的运行时任务流状态                |
+| `typedCases`                           | 为表驱动测试保留字面量类型          |
 
 ### 类型
 
@@ -79,7 +97,17 @@ describe("my-channel target resolution", () => {
 
 ## 测试模式
 
-### 单元测试频道插件
+### 测试注册契约
+
+将手写的 `api` 模拟传递给 `register(api)` 的单元测试不会触发 OpenClaw 的加载器接受门控。对于插件依赖的每个注册入口，至少添加一个基于加载器的冒烟测试，尤其是钩子和内存等独占能力。
+
+真实加载器会在所需元数据缺失时，或插件调用其不拥有的能力 API 时，失败插件注册。例如，`api.registerHook(...)` 需要钩子名称，而 `api.registerMemoryCapability(...)` 需要插件清单或导出的入口声明 `kind: "memory"`。
+
+### 测试运行时配置访问
+
+在测试打包插件时，优先使用仓库测试辅助工具中的共享插件运行时模拟。其已弃用的 `runtime.config.loadConfig()` 和 `runtime.config.writeConfigFile(...)` 模拟默认会抛出错误，以便测试捕获兼容性 API 的新用法。仅当测试明确覆盖旧版兼容行为时，才覆盖这些模拟。
+
+### 频道插件的单元测试
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
@@ -163,8 +191,9 @@ const mockRuntime = {
     // ... 其他模拟
   },
   config: {
-    loadConfig: vi.fn(),
-    writeConfigFile: vi.fn(),
+    current: vi.fn(() => ({}) as const),
+    mutateConfigFile: vi.fn(),
+    replaceConfigFile: vi.fn(),
   },
   // ... 其他命名空间
 } as unknown as PluginRuntime;

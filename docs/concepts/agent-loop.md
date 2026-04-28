@@ -106,9 +106,8 @@ OpenClaw 有两种钩子系统：
 
 参见 [插件钩子](/plugins/hooks) 了解钩子 API 和注册细节。
 
-Harnesses may adapt these hooks differently. The Codex app-server harness keeps
-OpenClaw plugin hooks as the compatibility contract for documented mirrored
-surfaces, while Codex native hooks remain a separate lower-level Codex mechanism.
+Harnesses 可能会以不同方式调整这些钩子。Codex app-server harness 保持
+OpenClaw 插件钩子作为文档化镜像表面的兼容性契约，而 Codex 原生钩子仍然是一个独立的、较底层的 Codex 机制。
 
 ## 流式传输 + 部分回复
 
@@ -152,9 +151,10 @@ surfaces, while Codex native hooks remain a separate lower-level Codex mechanism
 
 ## 超时
 
-- `agent.wait` 默认：30 秒（仅等待）。`timeoutMs` 参数可覆盖。
-- 代理运行时：`agents.defaults.timeoutSeconds` 默认 172800 秒（48 小时）；在 `runEmbeddedPiAgent` 中止计时器中强制执行。
-- LLM 空闲超时：`agents.defaults.llm.idleTimeoutSeconds` 当在空闲窗口前没有响应块到达时中止模型请求。为缓慢的本地模型或推理/工具调用提供商显式设置；设置为 0 以禁用。如果未设置，当配置了 `agents.defaults.timeoutSeconds` 时 OpenClaw 会使用它，否则为 120 秒。没有显式 LLM 或代理超时的 Cron 触发运行会禁用空闲看门狗并依赖 cron 外部超时。
+- `agent.wait` 默认：30s（仅等待）。`timeoutMs` 参数会覆盖。
+- Agent 运行时：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；在 `runEmbeddedPiAgent` 中由中止计时器强制执行。
+- 模型空闲超时：当在空闲窗口结束前没有响应块到达时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为较慢的本地/自托管提供方延长此空闲看门狗；否则 OpenClaw 在配置时使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。对于没有显式模型或代理超时的 cron 触发运行，会禁用空闲看门狗，并依赖 cron 外层超时。
+- 提供方 HTTP 请求超时：`models.providers.<id>.timeoutSeconds` 适用于该提供方的模型 HTTP 获取，包括连接、响应头、响应体、SDK 请求超时、总受保护获取中止处理，以及模型流空闲看门狗。在为诸如 Ollama 之类较慢的本地/自托管提供方提高整个代理运行时超时之前，请使用此配置。
 
 ## 可能提前结束的情况
 

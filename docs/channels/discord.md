@@ -493,7 +493,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 }
 ```
 
-## Native commands and command auth
+## 原生命令与命令授权
 
 - `commands.native` 默认 `"auto"`，Discord 启用。
 - 可针对频道覆盖：`channels.discord.commands.native`。
@@ -574,12 +574,13 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
     线程行为：
 
-    - Discord threads route as channel sessions and inherit parent channel config unless overridden.
-    - `channels.discord.thread.inheritParent` (default `false`) opts new auto-threads into seeding from the parent transcript. Per-account overrides live under `channels.discord.accounts.<id>.thread.inheritParent`.
-    - Message-tool reactions can resolve `user:<id>` DM targets.
-    - `guilds.<guild>.channels.<channel>.requireMention: false` is preserved during reply-stage activation fallback.
+    - Discord 线程作为频道会话路由，并继承父频道配置，除非被覆盖。
+    - 线程会话继承父频道的会话级 `/model` 选择，作为仅模型的后备方案；线程本地 `/model` 选择仍然优先，且除非启用转录继承，否则不会复制父转录历史。
+    - `channels.discord.thread.inheritParent`（默认 `false`）将新自动线程纳入从父转录中初始化。按账户覆盖位于 `channels.discord.accounts.<id>.thread.inheritParent`。
+    - 消息工具反应可解析 `user:<id>` 的私信目标。
+    - `guilds.<guild>.channels.<channel>.requireMention: false` 在回复阶段激活回退时会被保留。
 
-    Channel topics are injected as **untrusted** context. Allowlists gate who can trigger the agent, not a full supplemental-context redaction boundary.
+    频道主题会作为**不受信任**的上下文注入。白名单限制的是谁可以触发代理，而不是完整的补充上下文脱敏边界。
 
   </Accordion>
 
@@ -611,7 +612,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
         enabled: true,
         idleHours: 24,
         maxAgeHours: 0,
-        spawnSubagentSessions: false, // 需选择加入
+        spawnSubagentSessions: false, // 需要选择加入
       },
     },
   },
@@ -892,9 +893,9 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     Discord 还会渲染其他聊天频道使用的共享审批按钮。原生 Discord 适配器主要添加审批者私信路由和频道分发。
     当这些按钮存在时，它们是主要的审批用户体验；仅当工具结果显示聊天审批不可用或手动审批是唯一途径时，OpenClaw 才应包含手动 `/approve` 命令。
 
-    Gateway auth and approval resolution follow the shared Gateway client contract (`plugin:` IDs resolve through `plugin.approval.resolve`; other IDs through `exec.approval.resolve`). Approvals expire after 30 minutes by default.
+    网关授权和审批解析遵循共享 Gateway 客户端契约（`plugin:` ID 通过 `plugin.approval.resolve` 解析；其他 ID 通过 `exec.approval.resolve`）。默认情况下审批在 30 分钟后过期。
 
-    See [Exec approvals](/tools/exec-approvals).
+    见 [执行审批](/tools/exec-approvals)。
 
   </Accordion>
 </AccordionGroup>
@@ -910,9 +911,9 @@ Discord 消息操作包括消息发送、频道管理、审核、在线状态及
 - 审核：`timeout`，`kick`，`ban`
 - 在线状态：`setPresence`
 
-The `event-create` action accepts an optional `image` parameter (URL or local file path) to set the scheduled event cover image.
+`event-create` 操作接受可选的 `image` 参数（URL 或本地文件路径）以设置计划事件封面图。
 
-Action gates live under `channels.discord.actions.*`.
+操作门控位于 `channels.discord.actions.*`。
 
 默认门控行为：
 

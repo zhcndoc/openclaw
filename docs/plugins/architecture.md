@@ -126,6 +126,28 @@ OpenClaw 的插件系统有四层：
 
 这种分离让 OpenClaw 能够在完整运行时激活之前验证配置、解释缺失/禁用的插件并构建 UI/架构提示。
 
+### 插件元数据快照与查找表
+
+Gateway 启动会针对当前配置快照构建一个 `PluginMetadataSnapshot`。该快照仅包含元数据：它存储已安装插件索引、清单注册表、清单诊断、所有者映射、插件 id 规范化器以及清单记录。它不包含已加载的插件模块、提供者 SDK、包内容或运行时导出。
+
+感知插件的配置验证、启动时自动启用以及 Gateway 插件引导都会消费该快照，而不是独立重建清单/索引元数据。`PluginLookUpTable` 由同一快照派生，并为当前运行时配置添加启动插件计划。
+
+启动后，Gateway 会将当前元数据快照作为可替换的运行时产物保留。重复的运行时提供者发现可以借用该快照，而不必在每次提供者目录遍历时重建已安装索引和清单注册表。当没有兼容的当前快照时，调用方会回退到冷路径清单/索引流程。兼容性检查必须包括插件发现根，例如 `plugins.load.paths` 和默认代理工作区，因为工作区插件属于元数据范围的一部分。
+
+该快照和查找表让重复的启动决策走在快路径上：
+
+- 渠道所有权
+- 延迟渠道启动
+- 启动插件 id
+- 提供者和 CLI 后端所有权
+- setup provider、命令别名、模型目录提供者以及清单契约所有权
+- 插件配置架构和渠道配置架构验证
+- 启动时自动启用决策
+
+安全边界是快照替换，而不是变异。当前当配置、插件清单、安装记录或持久化索引策略发生变化时，应重建快照。不要把它当作一个广泛可变的全局注册表，也不要保留无限增长的历史快照。运行时插件加载仍然与元数据快照分离，因此过期的运行时状态不会被隐藏在元数据缓存之后。
+
+一些冷路径调用方仍然会直接从持久化的已安装插件索引重建清单注册表，而不是接收 Gateway 的 `PluginLookUpTable`。该回退路径保留了一个小的、有界的内存缓存，键由已安装索引、请求形状、配置策略、运行时根以及清单/包文件签名组成。它是重复索引重建的回退安全网，而不是首选的 Gateway 快路径。当调用方已经拥有当前查找表时，优先在运行流程中传递它或显式的清单注册表。
+
 ### 激活规划
 
 激活规划属于控制平面。调用方可以在加载更广泛的运行时注册表之前，询问哪些插件与某个具体命令、提供者、渠道、路由、代理运行器或能力相关。
@@ -179,12 +201,14 @@ OpenClaw 的插件系统有四层：
 
 同样的边界通常适用于以提供者命名的 SDK 接口：核心不应导入针对 Slack、Discord、Signal、WhatsApp 或类似扩展的渠道特定便利聚合模块。如果核心需要某种行为，要么使用捆绑插件自己的 `api.ts` / `runtime-api.ts` 聚合模块，要么将需求提升为共享 SDK 中的一个狭窄通用能力。
 
-具体到投票，有两个执行路径：
+捆绑插件也遵循同样的规则。捆绑插件的 `runtime-api.ts` 不应重新导出其自身带品牌的 `openclaw/plugin-sdk/<plugin-id>` 门面。这些带品牌的门面仍然是供外部插件和旧版消费者使用的兼容性适配层，但捆绑插件应使用本地导出以及诸如 `openclaw/plugin-sdk/channel-policy`、`openclaw/plugin-sdk/runtime-store` 或 `openclaw/plugin-sdk/webhook-ingress` 之类更窄的通用 SDK 子路径。新代码不应新增插件 id 特定的 SDK 门面，除非现有外部生态的兼容性边界有此要求。
+
+就投票而言，有两条执行路径：
 
 - `outbound.sendPoll` 是符合通用投票模型的渠道的共享基线
 - `actions.handleAction("poll")` 是渠道特定投票语义或额外投票参数的首选路径
 
-核心现在将共享投票解析推迟到插件投票分发拒绝该操作之后，因此插件拥有的投票处理器可以接受渠道特定的投票字段，而不会被通用投票解析器首先阻塞。
+核心现在会在插件投票分发拒绝该操作之后，才推迟到共享投票解析，因此插件拥有的投票处理器可以接受渠道特定的投票字段，而不会被通用投票解析器首先阻塞。
 
 查看 [插件架构内部](/plugins/architecture-internals) 以了解完整启动序列。
 
@@ -405,7 +429,7 @@ OpenClaw 已将图像/音频/视频理解视为一个共享能力。相同的所
 
 ## 导出边界
 
-OpenClaw 导出功能，而不是实现便利性。
+Some bundled-plugin helper subpaths still remain in the generated SDK export map for compatibility and bundled-plugin maintenance. Current examples include `plugin-sdk/feishu`, `plugin-sdk/feishu-setup`, `plugin-sdk/zalo`, `plugin-sdk/zalo-setup`, `plugin-sdk/channel-config-schema-legacy`, and several `plugin-sdk/matrix*` seams. Treat those as deprecated reserved exports, not as the recommended SDK pattern for new third-party plugins.
 
 保持功能注册公开。修剪非契约辅助导出：
 

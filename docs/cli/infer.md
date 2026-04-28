@@ -49,7 +49,7 @@ title: "推理 CLI"
 
 对于端到端的提供者检查，在较低级别的提供者测试通过后，优先使用 `openclaw infer ...`。它在发出提供者请求之前，会对已发布的 CLI、配置加载、默认代理解析、捆绑插件激活、运行时依赖修复以及共享能力运行时进行验证。
 
-## Command tree
+## 命令树
 
 ```text
  openclaw infer
@@ -104,7 +104,7 @@ title: "推理 CLI"
 
 此表将常见的推理任务映射到相应的推理命令。
 
-| Task                    | Command                                                                | Notes                                                 |
+| 任务                    | 命令                                                                   | 备注                                                  |
 | ----------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
 | 运行文本/模型提示词      | `openclaw infer model run --prompt "..." --json`                       | 默认使用常规本地路径                                 |
 | 生成图像               | `openclaw infer image generate --prompt "..." --json`                  | 从现有文件开始时使用 `image edit`                    |
@@ -119,14 +119,16 @@ title: "推理 CLI"
 
 ## 行为
 
-- `openclaw infer ...` 是这些工作流的主要 CLI 接口。
+- `openclaw infer ...` 是这些工作流的主要 CLI 界面。
 - 当输出将被另一个命令或脚本消费时，使用 `--json`。
 - 当需要特定后端时，使用 `--provider` 或 `--model provider/model`。
-- 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 形式。
-- 对于 `image describe`，显式指定 `--model` 会直接运行该 provider/model。该模型必须在模型目录或提供者配置中具备图像能力。`codex/<model>` 会运行一次受限的 Codex app-server 图像理解回合；`openai-codex/<model>` 则使用 OpenAI Codex OAuth 提供者路径。
-- 无状态执行命令默认使用本地。
-- 由网关管理状态的命令默认使用网关。
+- 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 格式。
+- 对于 `image describe`，显式的 `--model` 会直接运行该 provider/model。该模型必须在模型目录或提供者配置中支持图像。`codex/<model>` 会运行一个受限的 Codex 应用服务器图像理解轮次；`openai-codex/<model>` 使用 OpenAI Codex OAuth 提供者路径。
+- 无状态执行命令默认使用本地路径。
+- 网关管理状态的命令默认使用网关。
 - 正常的本地路径不需要网关正在运行。
+- 本地 `model run` 是一个轻量的一次性提供者完成。它会解析已配置的代理模型和认证，但不会启动聊天代理轮次、加载工具或打开捆绑的 MCP 服务器。
+- `model run --gateway` 仍然使用 Gateway 代理运行时，因此它可以练习与普通 Gateway 支持轮次相同的路由运行时路径。通过该运行时打开的 MCP 服务器会在回复后退役，因此重复的脚本化调用不会让 stdio MCP 子进程保持存活。
 
 ## 模型
 
@@ -139,10 +141,24 @@ openclaw infer model providers --json
 openclaw infer model inspect --name gpt-5.5 --json
 ```
 
+使用完整的 `<provider/model>` 引用来对特定提供者进行冒烟测试，而无需
+启动网关或加载完整的代理工具面：
+
+```bash
+openclaw infer model run --local --model anthropic/claude-sonnet-4-6 --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model cerebras/zai-glm-4.7 --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model google/gemini-2.5-flash --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model groq/llama-3.1-8b-instant --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model mistral/mistral-small-latest --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model openai/gpt-4.1 --prompt "Reply with exactly: pong" --json
+```
+
 说明：
 
-- `model run` 重用代理运行时，因此提供者/模型覆盖的行为类似于正常代理执行。
-- `model auth login`、`model auth logout` 和 `model auth status` 管理保存的提供者认证状态。
+- 本地 `model run` 是提供者/模型/认证健康检查最窄的 CLI 冒烟测试，因为它只向所选模型发送所提供的提示词。
+- 当提供者没有返回文本输出时，本地 `model run` 会以非零状态退出，因此不可达的本地提供者和空完成不会被误认为成功探测。
+- 当你需要测试 Gateway 路由、代理运行时设置或 Gateway 管理的提供者状态，而不是轻量的本地完成路径时，请使用 `model run --gateway`。
+- `model auth login`、`model auth logout` 和 `model auth status` 管理已保存的提供者认证状态。
 
 ## 图像
 
@@ -300,5 +316,5 @@ openclaw infer audio transcribe --file ./memo.m4a --model openai/whisper-1 --jso
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Models](/concepts/models)
+- [CLI 参考](/cli)
+- [模型](/concepts/models)

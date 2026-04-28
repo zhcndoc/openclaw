@@ -9,7 +9,7 @@ read_when:
 Perplexity 插件通过 Perplexity Search API 或通过 OpenRouter 的 Perplexity Sonar 提供网页搜索功能。
 
 <Note>
-本页涵盖 Perplexity **提供商**设置。关于 Perplexity **工具**（代理如何使用它），请参阅 [Perplexity 工具](/tools/perplexity-search)。
+此页面是 Perplexity **提供商** 设置。有关 Perplexity **工具**（代理如何使用它），请参见 [Perplexity tool](/tools/perplexity-search)。
 </Note>
 
 | 属性    | 值                                                                  |

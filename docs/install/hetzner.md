@@ -33,13 +33,8 @@ Hetzner 价格会变动；选择最小的 Debian/Ubuntu VPS，内存不足时再
 - 将 `~/.openclaw` + `~/.openclaw/workspace` 持久化到主机（可在重启/重建后保留）
 - 通过 SSH 隧道从你的笔记本访问控制界面
 
-That mounted `~/.openclaw` state includes `openclaw.json`, per-agent
-`agents/<agentId>/agent/auth-profiles.json`, and `.env`.
-
-该挂载的 `~/.openclaw` 状态包括 `openclaw.json`、每个代理对应的
+挂载的 `~/.openclaw` 状态包括 `openclaw.json`、每个代理对应的
 `agents/<agentId>/agent/auth-profiles.json`，以及 `.env`。
-
-The Gateway can be accessed via:
 
 Gateway 可通过以下方式访问：
 
@@ -254,7 +249,9 @@ Gateway 可通过以下方式访问：
 
 此方案作为上述 Docker 部署的补充，提供可复现部署、版本控制基础设施和自动灾难恢复。
 
-> **注意：** 由社区维护。如有问题或贡献，请参见上方仓库链接。
+<Note>
+社区维护。如有问题或贡献，请参见上方仓库链接。
+</Note>
 
 ## 下一步
 

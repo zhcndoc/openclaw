@@ -183,14 +183,25 @@ Gateway HTTP 请求和 Gateway WebSocket 帧会建立内部请求 trace 作用�
 
 ### 脱敏
 
-OpenClaw 可在敏感令牌到达控制台输出、文件日志、OTLP 日志记录或持久化会话转录文本之前对其进行脱敏：
+OpenClaw 可以在内容到达控制台输出、文件日志、
+OTLP 日志记录、持久化会话转录文本或控制界面工具
+事件负载之前，对敏感令牌进行脱敏（工具开始参数、部分/最终结果负载、派生
+执行输出以及补丁摘要）：
 
 - `logging.redactSensitive`：`off` | `tools`（默认：`tools`）
-- `logging.redactPatterns`：覆盖默认脱敏规则的正则表达式列表
+- `logging.redactPatterns`：正则字符串列表，用于覆盖默认集合。自定义模式会叠加在控制界面工具负载的内置默认规则之上，因此添加模式不会削弱对默认规则已捕获值的脱敏。
 
 文件日志和会话转录仍保持 JSONL 格式，但匹配到的密钥值会在写入磁盘前被掩码。脱敏为尽力而为：它适用于包含文本的消息内容和日志字符串，而不是每个标识符或二进制负载字段。
 
-## 诊断 + OpenTelemetry
+`logging.redactSensitive: "off"` only disables this general log/transcript
+policy. OpenClaw still redacts safety-boundary payloads that can be shown to UI
+clients, support bundles, diagnostics observers, approval prompts, or agent
+tools. Examples include Control UI tool-call events, `sessions_history` output,
+diagnostics support exports, provider error observations, exec approval command
+display, and Gateway WebSocket protocol logs. Custom `logging.redactPatterns`
+can still add project-specific patterns on those surfaces.
+
+## 诊断和 OpenTelemetry
 
 诊断是针对模型运行及消息流遥测（Webhook、队列、会话状态）的结构化、机器可读事件。诊断不替代日志，而是用于提供指标、跟踪和其他导出。
 

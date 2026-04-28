@@ -23,7 +23,7 @@ title: "exe.dev"
 - exe.dev 账号
 - 访问 [exe.dev](https://exe.dev) 虚拟机的 `ssh exe.dev` 权限（可选）
 
-## 使用 Shelley 自动安装
+## 由 Shelley 自动安装
 
 Shelley，[exe.dev](https://exe.dev) 的代理，可以通过我们的提示即时安装 OpenClaw。
 下面是所使用的提示内容：
@@ -48,9 +48,9 @@ ssh exe.dev new
 ssh <vm-name>.exe.xyz
 ```
 
-提示：请保持此 VM 为**有状态**。OpenClaw 会将 `openclaw.json`、每个 agent 的
-`auth-profiles.json`、会话以及 channel/provider 状态存储在
-`~/.openclaw/` 下，同时工作区存储在 `~/.openclaw/workspace/` 下。
+<Tip>
+保持这个 VM **有状态**。OpenClaw 会将 `openclaw.json`、每个 agent 的 `auth-profiles.json`、会话以及 channel/provider 状态存储在 `~/.openclaw/` 下，另外工作区也在 `~/.openclaw/workspace/` 中。
+</Tip>
 
 ## 2) 安装先决条件（在虚拟机上）
 
@@ -113,7 +113,7 @@ VM 中配置的共享密钥。本指南使用 token 认证，因此请通过 `op
 如果你将 gateway 改为密码认证，则改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
 使用 `openclaw devices list` 和 `openclaw devices approve <requestId>` 批准设备。若有疑问，请从浏览器中使用 Shelley！
 
-## 远程访问
+## Remote access
 
 远程访问由 [exe.dev](https://exe.dev) 的认证处理。默认情况下，端口 8000 的 HTTP 流量会被转发到 `https://<vm-name>.exe.xyz`，并且要求邮箱认证。
 

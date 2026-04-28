@@ -68,6 +68,14 @@ Groq 的模型目录经常变化。运行 `openclaw models list | grep groq` 查
 使用 `openclaw models list --provider groq` 获取账户上可用模型的最新列表。
 </Tip>
 
+## 推理模型
+
+OpenClaw 将其共享的 `/think` 级别映射到 Groq 各模型特定的
+`reasoning_effort` 值。对于 `qwen/qwen3-32b`，禁用思考会发送
+`none`，启用思考会发送 `default`。对于 Groq GPT-OSS 推理模型，
+OpenClaw 会发送 `low`、`medium` 或 `high`；禁用思考会省略
+`reasoning_effort`，因为这些模型不支持禁用值。
+
 ## 音频转录
 
 Groq 还提供基于 Whisper 的快速音频转录。当配置为媒体理解提供商时，OpenClaw 使用 Groq 的 `whisper-large-v3-turbo` 模型通过共享的 `tools.media.audio` 接口转录语音消息。

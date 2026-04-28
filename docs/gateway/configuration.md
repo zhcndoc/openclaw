@@ -375,7 +375,7 @@ OpenClaw 仅接受完全符合 schema 的配置。未知键、类型错误或无
     {
       cron: {
         enabled: true,
-        maxConcurrentRuns: 2,
+        maxConcurrentRuns: 2, // cron dispatch + isolated cron agent-turn execution
         sessionRetention: "24h",
         runLog: {
           maxBytes: "2mb",
@@ -531,18 +531,19 @@ Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改 — 大多�
 
 对于通过网关 API 写入配置的工具，建议采用以下流程：
 
-- `config.schema.lookup` 用于检查一个子树（浅层 schema 节点 + 子节点
-  摘要）
+- `config.schema.lookup` 用于检查一个子树（浅层 schema 节点 + 子项摘要）
 - `config.get` 用于获取当前快照以及 `hash`
 - `config.patch` 用于部分更新（JSON merge patch：对象合并，`null`
   删除，数组替换）
 - `config.apply` 仅在你打算替换整个配置时使用
 - `update.run` 用于显式自更新并重启
+- `update.status` 用于检查最新的更新重启哨兵，并在重启后验证正在运行的版本
+
+Agents 应将 `config.schema.lookup` 作为获取精确字段级文档和约束的第一站。需要更广泛的配置映射、默认值或指向专用子系统参考的链接时，请使用 [Configuration reference](/gateway/configuration-reference)。
 
 <Note>
-控制平面写入（`config.apply`、`config.patch`、`update.run`）对
-每个 `deviceId+clientIp` 限制为每 60 秒 3 个请求。重启请求会合并，
-然后在重启周期之间强制执行 30 秒冷却时间。
+控制平面写入（`config.apply`、`config.patch`、`update.run`）按 `deviceId+clientIp` 限流为每 60 秒 3 次请求。重启请求会合并，并在每次重启周期之间强制执行 30 秒冷却时间。
+`update.status` 仅可读，但需要 admin 权限，因为重启哨兵可能包含更新步骤摘要和命令输出尾部。
 </Note>
 
 部分补丁示例：

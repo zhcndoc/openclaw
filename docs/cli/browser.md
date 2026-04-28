@@ -4,7 +4,7 @@ read_when:
   - 你使用 `openclaw browser`，并希望查看常见任务示例
   - 你想通过 node 主机控制运行在另一台机器上的浏览器
   - 你想通过 Chrome MCP 附加到本地已登录的 Chrome
-title: "Browser"
+title: "浏览器"
 ---
 
 # `openclaw browser`
@@ -69,7 +69,8 @@ openclaw browser --browser-profile openclaw reset-profile
 
 如果 `openclaw browser` 是未知命令，请检查 `~/.openclaw/openclaw.json` 中的 `plugins.allow`。
 
-当存在 `plugins.allow` 时，必须明确列出捆绑的浏览器插件：
+When `plugins.allow` is present, list the bundled browser plugin explicitly
+unless the config already has a root `browser` block:
 
 ```json5
 {
@@ -79,7 +80,9 @@ openclaw browser --browser-profile openclaw reset-profile
 }
 ```
 
-`browser.enabled=true` 在插件允许列表排除 `browser` 时不会恢复 CLI 子命令。
+An explicit root `browser` block, for example `browser.enabled=true` or
+`browser.profiles.<name>`, also activates the bundled browser plugin under a
+restrictive plugin allowlist.
 
 相关：[Browser 工具](/tools/browser#missing-browser-command-or-tool)
 

@@ -7,7 +7,9 @@ read_when:
 title: "后台任务"
 ---
 
-> **在找调度功能？** 请参阅 [Automation & Tasks](/automation)，以选择合适的机制。本页仅介绍后台工作的**跟踪**，不涉及调度。
+<Note>
+想了解调度？请参阅 [Automation and tasks](/automation)，以选择合适的机制。本页是后台工作的活动账本，而不是调度器。
+</Note>
 
 后台任务跟踪在**主对话会话之外**运行的工作：
 ACP 运行、子代理生成、独立 Cron 任务执行和 CLI 发起的操作。
@@ -264,7 +266,9 @@ openclaw tasks flow cancel <lookup>
 $OPENCLAW_STATE_DIR/tasks/runs.sqlite
 ```
 
-注册表在网关启动时加载到内存中，并将写入同步到 SQLite 以跨重启持久化。
+The registry loads into memory at gateway start and syncs writes to SQLite for durability across restarts.
+The Gateway keeps the SQLite write-ahead log bounded by using SQLite's default
+autocheckpoint threshold plus periodic and shutdown `TRUNCATE` checkpoints.
 
 ### 自动维护
 

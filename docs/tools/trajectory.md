@@ -127,7 +127,9 @@ export OPENCLAW_TRAJECTORY_DIR=/var/lib/openclaw/trajectories
 
 当设置了这个变量时，OpenClaw 会为该目录中的每个会话 id 写入一个 JSONL 文件。
 
-## 禁用捕获
+会话维护会在其所属会话条目被会话磁盘预算裁剪、截断或逐出时移除轨迹侧车文件。位于会话目录之外的运行时文件，仅在指针目标仍能证明其属于该会话时才会被移除。
+
+## Disable capture
 
 在启动 OpenClaw 之前设置 `OPENCLAW_TRAJECTORY=0`：
 

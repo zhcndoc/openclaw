@@ -48,8 +48,9 @@ openclaw plugins marketplace list <marketplace> --json
 ### 安装
 
 ```bash
-openclaw plugins install <package>                      # 优先 ClawHub，然后 npm
+openclaw plugins install <package>                      # 先查 ClawHub，再查 npm
 openclaw plugins install clawhub:<package>              # 仅 ClawHub
+openclaw plugins install npm:<package>                  # 仅 npm
 openclaw plugins install <package> --force              # 覆盖现有安装
 openclaw plugins install <package> --pin                # 固定版本
 openclaw plugins install <package> --dangerously-force-unsafe-install
@@ -63,7 +64,7 @@ openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo
 
 如果您的 `plugins` 部分由单文件 `$include` 支持，则 `plugins install/update/enable/disable/uninstall` 会写回该被包含的文件，而保持 `openclaw.json` 不变。根包含、包含数组以及带有同级覆盖项的包含会关闭失败，而不是被展平。有关支持的形状，请参见[配置包含](/gateway/configuration)。
 
-如果配置无效，`plugins install` 通常会关闭失败，并提示您先运行 `openclaw doctor --fix`。唯一记录在案的例外是一个狭窄的内置插件恢复路径，适用于明确选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
+    如果安装期间配置无效，`plugins install` 通常会关闭失败，并提示您先运行 `openclaw doctor --fix`。在 Gateway 启动期间，某个插件的无效配置会被隔离到该插件，从而使其他通道和插件可以继续运行；`openclaw doctor --fix` 可以将无效的插件条目隔离。文档中唯一的安装时例外，是一个狭窄的捆绑插件恢复路径，适用于明确选择加入 `openclaw.install.allowInvalidConfigRecovery` 的插件。
 
 `--force` 会重用现有安装目标，并就地覆盖已安装的插件或钩子包。当您有意从新的本地路径、归档、ClawHub 包或 npm 制品重新安装同一 ID 时，请使用它。对于已跟踪的 npm 插件的常规升级，请优先使用 `openclaw plugins update <id-or-npm-spec>`。
 
@@ -77,7 +78,9 @@ openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo
 
 `plugins install` 也是在 `package.json` 中暴露 `openclaw.hooks` 的钩子包的安装入口。使用 `openclaw hooks` 进行过滤后的钩子可见性和逐个钩子启用，而不是包安装。
 
-Npm 规范仅支持**注册表内**包（包名 + 可选**精确版本**或**发布标签**）。拒绝 Git/URL/文件规范和语义版本范围。依赖安装时默认使用 `--ignore-scripts` 以保障安全。
+    当您想跳过 ClawHub 查找并直接从 npm 安装时，请使用 `npm:<package>`。裸包规范仍然优先使用 ClawHub，仅在 ClawHub 没有该包或版本时才回退到 npm。
+
+    裸规范和 `@latest` 将保持在稳定版本。如果 npm 解析出其中任一为预发布版本，OpenClaw 会停止操作并要求您显式选择预发布标签，如 `@beta`／`@rc` 或精确的预发布版本，如 `@1.2.3-beta.4`。
 
 裸规范和 `@latest` 将保持在稳定版本。如果 npm 解析出其中任一为预发布版本，OpenClaw 会停止操作并要求您显式选择预发布标签，如 `@beta`／`@rc` 或精确的预发布版本，如 `@1.2.3-beta.4`。
 
@@ -100,7 +103,15 @@ OpenClaw 现在也优先使用 ClawHub 处理裸 npm 安全插件规范。仅当
 openclaw plugins install openclaw-codex-app-server
 ```
 
-OpenClaw 从 ClawHub 下载包归档，检查所宣传的插件 API / 最低 Gateway 兼容性，然后通过常规归档路径安装。已记录的安装会保留其 ClawHub 源元数据以便后续更新。
+当您想强制仅使用 npm 解析时，请使用 `npm:`，例如当 ClawHub 不可达，或者您知道该包只存在于 npm 上时：
+
+```bash
+openclaw plugins install npm:openclaw-codex-app-server
+openclaw plugins install npm:@scope/plugin-name@1.0.1
+```
+
+OpenClaw 会从 ClawHub 下载包归档，检查所声明的插件 API / 最低 Gateway 兼容性，然后通过正常的归档路径进行安装。已记录的安装会保留其 ClawHub 源元数据，以便后续更新。
+未指定版本的 ClawHub 安装会保留未固定的记录规范，因此 `openclaw plugins update` 可以跟随较新的 ClawHub 发布；显式版本或标签选择器，如 `clawhub:pkg@1.2.3` 和 `clawhub:pkg@beta`，则会保持锁定到该选择器。
 
 当市场名称存在于 Claude 的本地注册表缓存 `~/.claude/plugins/known_marketplaces.json` 中时，使用 `plugin@marketplace` 简写：
 

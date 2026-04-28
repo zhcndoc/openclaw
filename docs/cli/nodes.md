@@ -3,7 +3,7 @@ summary: "openclaw nodes 的 CLI 参考（状态、配对、调用、摄像头/�
 read_when:
   - 您正在管理已配对的节点（摄像头、屏幕、画布）
   - 您需要批准请求或调用节点命令
-title: "Nodes"
+title: "节点"
 ---
 
 # `openclaw nodes`
@@ -29,14 +29,17 @@ openclaw nodes list --last-connected 24h
 openclaw nodes pending
 openclaw nodes approve <requestId>
 openclaw nodes reject <requestId>
+openclaw nodes remove --node <id|name|ip>
 openclaw nodes rename --node <id|name|ip> --name <displayName>
 openclaw nodes status
 openclaw nodes status --connected
 openclaw nodes status --last-connected 24h
 ```
 
-`nodes list` 会打印未处理/已配对的表格。已配对行包括最近一次连接时间（Last Connect）。
-使用 `--connected` 仅显示当前连接的节点。使用 `--last-connected <duration>` 筛选在指定时长内连接过的节点（例如 `24h`，`7d`）。
+`nodes list` 输出待处理/已配对表格。已配对行包含最近连接时间（Last Connect）。
+使用 `--connected` 仅显示当前已连接的节点。使用 `--last-connected <duration>` 来
+筛选在某个时长内连接过的节点（例如 `24h`、`7d`）。
+使用 `nodes remove --node <id|name|ip>` 删除过期的网关拥有的节点配对记录。
 
 审批说明：
 

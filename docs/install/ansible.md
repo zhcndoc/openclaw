@@ -24,7 +24,7 @@ title: "Ansible"
 | **网络**    | 用于软件包安装的网络连接                                  |
 | **Ansible** | 2.14+（由快速启动脚本自动安装）                           |
 
-## 您将获得
+## 你将获得什么
 
 - **防火墙优先的安全** -- UFW + Docker 隔离（仅 SSH + Tailscale 可访问）
 - **Tailscale VPN** -- 安全的远程访问，无需将服务公开暴露
@@ -41,7 +41,7 @@ title: "Ansible"
 curl -fsSL https://raw.githubusercontent.com/openclaw/openclaw-ansible/main/install.sh | bash
 ```
 
-## 将安装的内容
+## 将安装什么
 
 Ansible 剧本将安装并配置：
 

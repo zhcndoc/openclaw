@@ -52,8 +52,9 @@ openclaw pairing approve telegram <code>
 
 请将这些视为敏感信息（它们控制对助理的访问权限）。
 
-**重要：** 此存储用于私信访问。群组授权是独立的。
-批准私信配对代码不会自动允许该发送者在群组中运行群组命令或控制机器人。对于群组访问，请配置频道的显式群组允许列表（例如 `groupAllowFrom`、`groups` 或取决于频道的每群组/每主题覆盖）。
+<Note>
+这是用于私信访问的存储。群组授权是分开的。批准一个私信配对代码不会自动允许该发送者在群组中运行群组命令或控制机器人。对于群组访问，请配置频道的显式群组允许列表（例如 `groupAllowFrom`、`groups`，或者根据频道不同使用按群组或按主题的覆盖配置）。
+</Note>
 
 ## 2) 节点设备配对 (iOS/Android/macOS/无头节点)
 
@@ -95,13 +96,11 @@ openclaw devices reject <requestId>
 
 如果同一设备使用不同的认证详情重试（例如不同的角色/作用域/公钥），之前的待处理请求将被取代并创建新的 `requestId`。
 
-Important: an already paired device does not get broader access silently. If it
-reconnects asking for more scopes or a broader role, OpenClaw keeps the
-existing approval as-is and creates a fresh pending upgrade request. Use
-`openclaw devices list` to compare the currently approved access with the newly
-requested access before you approve.
+<Note>
+一个已经配对的设备不会在不知不觉中获得更广的访问权限。如果它重新连接并请求更多作用域或更宽泛的角色，OpenClaw 会保留现有批准不变，并创建一个新的待处理升级请求。在批准之前，请使用 `openclaw devices list` 比较当前已批准的访问权限与新请求的访问权限。
+</Note>
 
-### Node pairing state storage
+### 节点配对状态存储
 
 存储路径为 `~/.openclaw/devices/`：
 
@@ -110,11 +109,11 @@ requested access before you approve.
 
 ### 注意事项
 
-- 旧版 `node.pair.*` API（CLI: `openclaw nodes pending|approve|reject|rename`）是一个
-  独立的网关拥有的配对存储。WS 节点仍然需要设备配对。
-- 配对记录是批准角色的持久真实来源。活动
-  设备令牌仍受限于该批准角色集；批准角色之外的散乱令牌条目
-  不会创建新的访问权限。
+- 旧版 `node.pair.*` API（CLI：`openclaw nodes pending|approve|reject|remove|rename`）是
+  一个独立的、由网关拥有的配对存储。WS 节点仍然需要设备配对。
+- 配对记录是已批准角色的持久事实来源。活动
+  设备令牌始终受限于该已批准的角色集合；在已批准角色之外的
+  一个孤立令牌条目不会创建新的访问权限。
 
 ## 相关文档
 

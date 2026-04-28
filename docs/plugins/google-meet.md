@@ -42,7 +42,7 @@ sudo reboot
 
 ```bash
 system_profiler SPAudioDataType | grep -i BlackHole
-command -v rec play
+command -v sox
 ```
 
 启用插件：
@@ -118,7 +118,7 @@ openclaw googlemeet create --no-join
 
 Chrome 以已登录的 Chrome 配置文件加入。在 Meet 中，为 OpenClaw 使用的麦克风/扬声器路径选择 `BlackHole 2ch`。若要获得干净的双工音频，请使用独立的虚拟设备或类似 Loopback 的图形；单个 BlackHole 设备足够做首次冒烟测试，但可能产生回声。
 
-### 本地 Gateway + Parallels Chrome
+本地 Chrome 通过已登录的 OpenClaw 浏览器配置文件加入。在 Meet 中，为 OpenClaw 使用的麦克风/扬声器路径选择 `BlackHole 2ch`。若要获得干净的双工音频，请使用独立的虚拟设备或类似 Loopback 的图形；单个 BlackHole 设备足够做首次冒烟测试，但可能产生回声。
 
 仅为了让虚拟机拥有 Chrome，你**不需要**在 macOS 虚拟机内运行完整的 OpenClaw Gateway 或模型 API 密钥。先在本地运行 Gateway 和代理，再在虚拟机中运行节点主机。只需在虚拟机中启用捆绑插件一次，这样节点就会声明 Chrome 命令：
 
@@ -144,7 +144,7 @@ sudo reboot
 
 ```bash
 system_profiler SPAudioDataType | grep -i BlackHole
-command -v rec play
+command -v sox
 ```
 
 在虚拟机中安装或更新 OpenClaw，然后在其中启用捆绑插件：
@@ -249,9 +249,9 @@ openclaw googlemeet test-speech https://meet.google.com/abc-defg-hij
 
 Chrome 实时模式默认使用两个外部工具：
 
-- `sox`：命令行音频工具。该插件使用其 `rec` 和 `play`
-  命令作为默认的 8 kHz G.711 mu-law 音频桥接。
-- `blackhole-2ch`：macOS 虚拟音频驱动。它会创建 `BlackHole 2ch`
+- `sox`: 命令行音频工具。该插件为默认的 24 kHz PCM16 音频桥使用显式的 CoreAudio
+  设备命令。
+- `blackhole-2ch`: macOS 虚拟音频驱动。它创建 `BlackHole 2ch`
   音频设备，供 Chrome/Meet 路由使用。
 
 OpenClaw 不捆绑也不再分发这两个软件包。文档要求用户通过
@@ -264,12 +264,14 @@ Homebrew 将它们作为宿主机依赖安装。SoX 的许可证为
 
 ### Chrome
 
-Chrome 传输会在 Google Chrome 中打开 Meet URL，并以已登录的
-Chrome 配置文件身份加入。在 macOS 上，插件会在启动前检查是否存在 `BlackHole 2ch`。
-如果已配置，它还会在打开 Chrome 之前运行音频桥健康检查命令和启动命令。
-当 Chrome/音频运行在 Gateway 主机上时使用 `chrome`；当 Chrome/音频运行在配对节点上时使用
-`chrome-node`，例如 Parallels
-macOS 虚拟机。
+Chrome 传输通过 OpenClaw 浏览器控制打开 Meet URL，并以
+已登录的 OpenClaw 浏览器配置文件加入。在 macOS 上，该插件会在启动前检查
+`BlackHole 2ch`。如果已配置，它还会在打开 Chrome 之前运行音频桥接
+健康检查命令和启动命令。当 Chrome/音频在 Gateway 主机上运行时使用
+`chrome`；当 Chrome/音频在配对节点上运行时，例如 Parallels macOS 虚拟机，
+使用 `chrome-node`。对于本地 Chrome，选择
+`browser.defaultProfile` 指定的配置文件；`chrome.browserProfile` 会传递给
+`chrome-node` 主机。
 
 ```bash
 openclaw googlemeet join https://meet.google.com/abc-defg-hij --transport chrome
@@ -497,23 +499,26 @@ export GEMINI_API_KEY=...
 - `defaultMode: "realtime"`
 - `chromeNode.node`: `chrome-node` 使用的可选节点 id/名称/IP
 - `chrome.audioBackend: "blackhole-2ch"`
-- `chrome.guestName: "OpenClaw Agent"`：用于未登录 Meet 访客
-  页面上的名称
-- `chrome.autoJoin: true`：在 `chrome-node` 上通过 OpenClaw 浏览器自动化尽力填写访客名称并点击“立即加入”
-  （Join Now）
-- `chrome.reuseExistingTab: true`：激活已有的 Meet 标签页，而不是
-  打开重复标签页
-- `chrome.waitForInCallMs: 20000`：在触发实时简介之前，等待 Meet 标签页报告已在通话中
-- `chrome.audioInputCommand`：SoX `rec` 命令，将 8 kHz G.711 mu-law
-  音频写入 stdout
-- `chrome.audioOutputCommand`：SoX `play` 命令，从 stdin 读取 8 kHz G.711 mu-law
-  音频
+- `chrome.guestName: "OpenClaw Agent"`: 在未登录的 Meet 来宾界面上使用的名称
+  screen
+- `chrome.autoJoin: true`: 在 `chrome-node` 上通过 OpenClaw 浏览器自动化，
+  尽力填写来宾名称并点击“立即加入”
+- `chrome.reuseExistingTab: true`: 激活现有的 Meet 选项卡，而不是
+  打开重复项
+- `chrome.waitForInCallMs: 20000`: 在触发实时简介之前，等待 Meet 选项卡报告已进入通话
+- `chrome.audioFormat: "pcm16-24khz"`: 命令对音频格式。仅对仍输出
+  电话音频的旧版/自定义命令对使用 `"g711-ulaw-8khz"`。
+- `chrome.audioInputCommand`: 从 CoreAudio `BlackHole 2ch` 读取并
+  以 `chrome.audioFormat` 写出音频的 SoX 命令
+- `chrome.audioOutputCommand`: 以 `chrome.audioFormat` 读取音频并
+  写入 CoreAudio `BlackHole 2ch` 的 SoX 命令
 - `realtime.provider: "openai"`
 - `realtime.toolPolicy: "safe-read-only"`
-- `realtime.instructions`：简短的口头回复，并使用
-  `openclaw_agent_consult` 获取更深入的答案
-- `realtime.introMessage`：实时桥接
-  连接时的简短口头就绪检查；将其设为 `""` 可静默加入
+- `realtime.instructions`: 简短口头回复，并在需要更深入答案时使用
+  `openclaw_agent_consult`
+- `realtime.introMessage`: 实时桥接连接时的简短口头就绪检查；将其设为 `""` 以静默加入
+- `realtime.agentId`: 用于 `openclaw_agent_consult` 的可选 OpenClaw 代理 id；
+  默认为 `main`
 
 可选覆盖项：
 
@@ -522,8 +527,10 @@ export GEMINI_API_KEY=...
   defaults: {
     meeting: "https://meet.google.com/abc-defg-hij",
   },
+  browser: {
+    defaultProfile: "openclaw",
+  },
   chrome: {
-    browserProfile: "Default",
     guestName: "OpenClaw Agent",
     waitForInCallMs: 30000,
   },
@@ -532,6 +539,7 @@ export GEMINI_API_KEY=...
   },
   realtime: {
     provider: "google",
+    agentId: "jay",
     toolPolicy: "owner",
     introMessage: "请原样说：我在这里。",
     providers: {
@@ -609,7 +617,9 @@ Chrome 实时模式针对实时语音循环进行了优化。实时语音提供�
 
 咨询工具会在后台运行常规 OpenClaw 代理，使用最近的会议转录上下文，并向实时语音会话返回一个简洁的口头回答。然后语音模型可以将该回答重新说回会议中。它使用与 Voice Call 相同的共享实时咨询工具。
 
-`realtime.toolPolicy` 控制咨询运行方式：
+默认情况下，咨询会针对 `main` 代理运行。当某条 Meet 线路应咨询专用的 OpenClaw 代理工作区、模型默认值、工具策略、记忆和会话历史时，请设置 `realtime.agentId`。
+
+`realtime.toolPolicy` 控制咨询运行：
 
 - `safe-read-only`：暴露咨询工具，并将常规代理限制为 `read`、`web_search`、`web_fetch`、`x_search`、`memory_search` 和
   `memory_get`。
@@ -800,8 +810,8 @@ openclaw googlemeet status
 - Gateway 主机上可用实时提供方密钥，例如
   `OPENAI_API_KEY` 或 `GEMINI_API_KEY`。
 - Chrome 主机上可见 `BlackHole 2ch`。
-- Chrome 主机上存在 `rec` 和 `play`。
-- Meet 麦克风和扬声器通过 OpenClaw 使用的虚拟音频路径进行路由。
+- Chrome 主机上存在 `sox`。
+- Meet 麦克风和扬声器已通过 OpenClaw 使用的虚拟音频路径路由。
 
 ### Twilio 设置检查失败
 
@@ -841,8 +851,11 @@ Google Meet 的官方媒体 API 是面向接收的，因此向 Meet 通话中发
 
 Chrome 实时模式需要以下之一：
 
-- `chrome.audioInputCommand` 以及 `chrome.audioOutputCommand`：OpenClaw 负责实时模型桥接，并在这些命令与所选实时语音提供方之间传输 8 kHz G.711 mu-law 音频。
-- `chrome.audioBridgeCommand`：外部桥接命令负责整个本地音频路径，并且必须在启动或验证其守护进程后退出。
+- `chrome.audioInputCommand` plus `chrome.audioOutputCommand`: OpenClaw 负责
+  实时模型桥接，并在这些命令与所选实时语音提供方之间以 `chrome.audioFormat` 传递音频。默认 Chrome 路径为
+  24 kHz PCM16；8 kHz G.711 μ-law 仍可用于旧版命令对。
+- `chrome.audioBridgeCommand`: 外部桥接命令负责整个本地音频路径，
+  并且必须在启动或验证其守护进程后退出。
 
 为了实现干净的双工音频，请将 Meet 输出和 Meet 麦克风路由到独立的虚拟设备，或路由到类似 Loopback 的虚拟设备图。单一共享的 BlackHole 设备可能会把其他参与者的声音回传到通话中。
 
@@ -850,6 +863,6 @@ Chrome 实时模式需要以下之一：
 
 ## 相关内容
 
-- [Voice call plugin](/plugins/voice-call)
-- [Talk mode](/nodes/talk)
-- [Building plugins](/plugins/building-plugins)
+- [语音通话插件](/plugins/voice-call)
+- [对话模式](/nodes/talk)
+- [构建插件](/plugins/building-plugins)

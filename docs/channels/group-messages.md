@@ -7,7 +7,9 @@ title: "群消息"
 
 目标：让 Clawd 待在 WhatsApp 群组里，仅在被点名时唤醒，并将该线程与个人 DM 会话分开。
 
-注意：`agents.list[].groupChat.mentionPatterns` 现已被 Telegram/Discord/Slack/iMessage 共享使用；本文档重点介绍 WhatsApp 特有的行为。对于多代理设置，请为每个代理设置 `agents.list[].groupChat.mentionPatterns`（或使用 `messages.groupChat.mentionPatterns` 作为全局后备）。
+<Note>
+`agents.list[].groupChat.mentionPatterns` 也会被 Telegram、Discord、Slack 和 iMessage 使用。本文档重点介绍 WhatsApp 特定行为。对于多代理设置，请为每个代理单独设置 `agents.list[].groupChat.mentionPatterns`，或者使用 `messages.groupChat.mentionPatterns` 作为全局后备。
+</Note>
 
 ## 当前实现（2025-12-03）
 

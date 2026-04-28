@@ -7,7 +7,7 @@ read_when:
 title: "调试"
 ---
 
-此页面介绍用于流式输出的调试辅助功能，尤其适用于提供者将推理内容混入正常文本的情况。
+用于流式输出的调试辅助工具，尤其适用于提供者将推理内容混入普通文本的情况。
 
 ## 运行时调试覆盖
 
@@ -51,7 +51,7 @@ OpenClaw 保留 `src/cli/debug-timing.ts` 作为本地调查的小型辅助工�
 在你正在调查的代码附近添加该辅助工具。例如，在调试 `openclaw models list` 时，`src/commands/models/list.list-command.ts` 中的临时补丁可能如下所示：
 
 ```ts
-// Temporary debugging only. Remove before landing.
+// 临时调试专用。上线前移除。
 import { createCliDebugTiming } from "../../cli/debug-timing.js";
 
 const timing = createCliDebugTiming({ command: "models list" });
@@ -89,7 +89,7 @@ OPENCLAW_DEBUG_TIMING=1 pnpm openclaw models list --all --provider moonshot
 以下是一次临时 `models list` 调查的输出示例：
 
 ```text
-OpenClaw CLI debug timing: models list
+OpenClaw CLI 调试计时：models list
      0ms     +0ms start all=true json=false local=false plain=false provider="moonshot"
      2ms     +2ms debug:models:list:import_runtime duration=2ms
     17ms    +14ms debug:models:list:load_config duration=14ms sourceConfig=true
@@ -221,20 +221,25 @@ OPENCLAW_PROFILE=dev openclaw tui
 pnpm gateway:dev:reset
 ```
 
-注意：`--dev` 是**全局**配置文件标志，某些运行器会“吞掉”。  
-如需明确指定，请使用环境变量形式：
+<Note>
+`--dev` 是一个**全局**配置文件标志，某些运行器会吞掉它。如果你需要显式写出它，请使用环境变量形式：
 
 ```bash
 OPENCLAW_PROFILE=dev openclaw gateway --dev --reset
 ```
 
-`--reset` 会删除配置、凭证、会话和开发工作区（使用 `trash`，非 `rm`），然后重建默认开发环境。
+</Note>
 
-提示：如果已有非开发网关正在运行（launchd/systemd），请先停止：
+`--reset` 会清除配置、凭据、会话和开发工作区（使用 `trash`，不是 `rm`），然后重新创建默认开发设置。
+
+<Tip>
+如果已有非开发网关在运行（launchd 或 systemd），请先停止它：
 
 ```bash
 openclaw gateway stop
 ```
+
+</Tip>
 
 ## 原始流日志（OpenClaw）
 

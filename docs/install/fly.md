@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw 在 Fly.io 上的分步部署，包含持久化存储和 HTTPS"
+summary: "在 Fly.io 上分步部署 OpenClaw，包含持久化存储和 HTTPS"
 title: Fly.io
 read_when:
   - 在 Fly.io 上部署 OpenClaw
@@ -280,7 +280,7 @@ fly machine update <machine-id> --vm-memory 2048 -y
 
 **说明:** 512MB 过小，1GB 可能勉强可用，但高负载或详细日志可能导致 OOM。**推荐使用 2GB。**
 
-### 网关锁文件问题
+### Gateway lock issues
 
 网关启动报“已运行”错误。
 
@@ -295,7 +295,7 @@ fly machine restart <machine-id>
 
 锁文件位置为 `/data/gateway.*.lock`（非子目录）。
 
-### 配置未被读取
+### Config not being read
 
 `--allow-unconfigured` 只是绕过启动保护。它不会创建或修复 `/data/openclaw.json`，因此请确保真实配置存在，并且在你希望正常本地网关启动时包含 `gateway.mode="local"`。
 
@@ -305,7 +305,7 @@ fly machine restart <machine-id>
 fly ssh console --command "cat /data/openclaw.json"
 ```
 
-### 通过 SSH 写入配置
+### Writing config via SSH
 
 `fly ssh console -C` 不支持 shell 重定向。写配置文件的方法：
 
@@ -324,7 +324,7 @@ fly sftp shell
 fly ssh console --command "rm /data/openclaw.json"
 ```
 
-### 状态未持久化
+### State not persisting
 
 如果你在重启后丢失了认证配置文件、频道/提供商状态或会话，
 说明状态目录正在写入容器文件系统。
@@ -345,7 +345,7 @@ fly status
 fly logs
 ```
 
-### 更新机器命令
+### Updating machine command
 
 如需修改启动命令，无需完整重部署：
 
@@ -362,7 +362,7 @@ fly machine update <machine-id> --vm-memory 2048 --command "node dist/index.js g
 
 **注意:** `fly deploy` 会重置机器命令为 `fly.toml` 内定义。若手动修改，请部署后重新应用。
 
-## 私有部署（加固版）
+## Private deployment (hardened)
 
 默认情况下，Fly 会分配公网 IP，使网关通过 `https://your-app.fly.dev` 访问。这方便但导致部署可被互联网扫描器（Shodan、Censys 等）发现。
 

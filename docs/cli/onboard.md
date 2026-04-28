@@ -11,11 +11,23 @@ title: "Onboard"
 
 ## 相关指南
 
-- CLI 引导中心：[引导 (CLI)](/start/wizard)
-- 引导概览：[引导概览](/start/onboarding-overview)
-- CLI 引导参考：[CLI 设置参考](/start/wizard-cli-reference)
-- CLI 自动化：[CLI 自动化](/start/wizard-cli-automation)
-- macOS 引导：[引导 (macOS 应用)](/start/onboarding)
+<CardGroup cols={2}>
+  <Card title="CLI onboarding hub" href="/start/wizard" icon="rocket">
+    交互式 CLI 流程的演练。
+  </Card>
+  <Card title="Onboarding overview" href="/start/onboarding-overview" icon="map">
+    OpenClaw 引导流程如何协同工作。
+  </Card>
+  <Card title="CLI setup reference" href="/start/wizard-cli-reference" icon="book">
+    输出、内部机制以及每一步的行为。
+  </Card>
+  <Card title="CLI automation" href="/start/wizard-cli-automation" icon="terminal">
+    非交互式标志和脚本化设置。
+  </Card>
+  <Card title="macOS app onboarding" href="/start/onboarding" icon="apple">
+    macOS 菜单栏应用的引导流程。
+  </Card>
+</CardGroup>
 
 ## 示例
 
@@ -23,13 +35,16 @@ title: "Onboard"
 openclaw onboard
 openclaw onboard --flow quickstart
 openclaw onboard --flow manual
+openclaw onboard --flow import
+openclaw onboard --import-from hermes --import-source ~/.hermes
 openclaw onboard --skip-bootstrap
 openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 ```
 
-对于明文私有网络 `ws://` 目标（仅限受信任网络），请在引导进程环境中设置
-`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
-此客户端传输的紧急开关没有对应的 `openclaw.json` 配置项。
+`--flow import` 使用由插件拥有的迁移提供者，例如 Hermes。它仅适用于全新的 OpenClaw 设置；如果存在现有配置、凭据、会话或工作区记忆/身份文件，请在导入前重置或选择一个全新的设置。
+
+`--modern` 会启动 Crestodian 会话式引导预览。若不使用
+`--modern`，`openclaw onboard` 会保留经典引导流程。
 
 非交互式自定义提供商示例：
 
@@ -127,10 +142,11 @@ openclaw onboard --non-interactive \
 - 引导会在保存引用前做快速的预校验。
   - 如果校验失败，引导会显示错误并允许重试。
 
-非交互式 Z.AI 端点选择：
+### Non-interactive Z.AI endpoint choices
 
-注意：`--auth-choice zai-api-key` 现在会自动检测最适合你密钥的 Z.AI 端点（优先使用通用 API 和 `zai/glm-5.1`）。
-如果你特别想使用 GLM Coding Plan 端点，请选择 `zai-coding-global` 或 `zai-coding-cn`。
+<Note>
+`--auth-choice zai-api-key` 会自动检测最适合你密钥的 Z.AI 端点（优先使用带 `zai/glm-5.1` 的通用 API）。如果你明确想使用 GLM Coding Plan 端点，请选择 `zai-coding-global` 或 `zai-coding-cn`。
+</Note>
 
 ```bash
 # 无提示端点选择
@@ -152,18 +168,34 @@ openclaw onboard --non-interactive \
   --mistral-api-key "$MISTRAL_API_KEY"
 ```
 
-流程说明：
+## 流程说明
 
-- `quickstart`：最少的提示，自动生成网关令牌。
-- `manual`：关于端口/绑定/认证的完整提示（`advanced` 的别名）。
-- 当认证选择暗示了首选提供商时，引导会将默认模型和允许列表选择器预过滤为该提供商。对于火山引擎和 BytePlus，这也匹配编程计划变体（`volcengine-plan/*`, `byteplus-plan/*`）。
-- 如果首选提供商过滤器尚未产生任何加载的模型，引导将回退到未过滤的目录，而不是让选择器为空。
-- 在网页搜索步骤中，某些提供商可能会触发特定于提供商的后续提示：
-  - **Grok** 可以提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY` 和 `x_search` 模型选择。
-  - **Kimi** 可能会询问 Moonshot API 区域（`api.moonshot.ai` 对比 `api.moonshot.cn`）以及默认的 Kimi 网页搜索模型。
-- 本地引导 DM 范围行为：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)。
-- 最快的首次聊天：`openclaw dashboard`（控制 UI，无需频道设置）。
-- 自定义提供商：连接任何 OpenAI 或 Anthropic 兼容的端点，包括未列出的托管提供商。使用 Unknown 自动检测。
+<AccordionGroup>
+  <Accordion title="流程类型">
+    - `quickstart`：最少提示，自动生成网关令牌。
+    - `manual`：为端口、绑定和认证提供完整提示（`advanced` 的别名）。
+    - `import`：运行检测到的迁移提供者，预览计划，然后在确认后应用。
+  </Accordion>
+  <Accordion title="提供商预筛选">
+    当某个认证选择暗示了偏好的提供商时，引导会将默认模型和允许列表选择器预筛选到该提供商。对于 Volcengine 和 BytePlus，这也会匹配 coding-plan 变体（`volcengine-plan/*`、`byteplus-plan/*`）。
+
+    如果偏好提供商过滤后仍然没有加载任何模型，引导会回退到未过滤的目录，而不是让选择器为空。
+
+  </Accordion>
+  <Accordion title="Web 搜索后续步骤">
+    某些 web-search 提供商会触发特定于提供商的后续提示：
+
+    - **Grok** 可提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY` 和一个 `x_search` 模型选择。
+    - **Kimi** 可询问 Moonshot API 区域（`api.moonshot.ai` vs `api.moonshot.cn`）以及默认的 Kimi web-search 模型。
+
+  </Accordion>
+  <Accordion title="其他行为">
+    - 本地引导的 DM 范围行为：[CLI setup reference](/start/wizard-cli-reference#outputs-and-internals)。
+    - 最快的首次聊天：`openclaw dashboard`（控制界面，无需频道设置）。
+    - 自定义提供商：连接任何兼容 OpenAI 或 Anthropic 的端点，包括未列出的托管提供商。使用 Unknown 可自动检测。
+    - 如果检测到 Hermes 状态，引导会提供迁移流程。使用 [Migrate](/cli/migrate) 可进行 dry-run 计划、覆盖模式、报告和精确映射。
+  </Accordion>
+</AccordionGroup>
 
 ## 常用后续命令
 

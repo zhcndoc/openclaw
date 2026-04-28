@@ -7,9 +7,15 @@ read_when:
 title: "会话管理深度解析"
 ---
 
-# 会话管理与压缩（深度解析）
+OpenClaw 以端到端方式管理以下几个方面的会话：
 
-本文档介绍 OpenClaw 如何端到端地管理会话：
+- **会话路由**（入站消息如何映射到 `sessionKey`）
+- **会话存储**（`sessions.json`）及其所跟踪内容
+- **记录持久化**（`*.jsonl`）及其结构
+- **记录清理**（执行前的提供者特定修正）
+- **上下文限制**（上下文窗口 vs 跟踪的令牌）
+- **压缩**（手动 + 自动压缩）以及钩挂预压缩工作的位置
+- **静默维护**（例如内存写入但不产生用户可见输出）
 
 - **会话路由**（入站消息如何映射到 `sessionKey`）
 - **会话存储**（`sessions.json`）及其所跟踪内容
@@ -49,9 +55,11 @@ OpenClaw 在两个层面持久化会话：
    - 跟踪会话元数据（当前会话 ID、最后活动时间、开关、令牌计数等）
 
 2. **记录（`<sessionId>.jsonl`）**
-   - 追加式记录具有树形结构（条目具有 `id` + `parentId`）
+   - 追加写入的记录，带有树结构（条目包含 `id` + `parentId`）
    - 存储实际对话 + 工具调用 + 压缩摘要
-   - 用来重建未来回合的模型上下文
+   - 用于重建未来轮次的模型上下文
+   - 当活动记录超过检查点大小上限后，会跳过大型压缩前调试检查点，从而避免生成第二份巨大的
+     `.checkpoint.*.jsonl` 副本。
 
 ---
 
@@ -69,7 +77,7 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 
 ## 存储维护与磁盘控制
 
-会话持久层有自动维护控制（`session.maintenance`），用于 `sessions.json` 和记录文件：
+会话持久化为 `sessions.json`、记录工件和轨迹 sidecar 提供了自动维护控制（`session.maintenance`）：
 
 - `mode`：`warn`（默认）或 `enforce`
 - `pruneAfter`：旧条目的时间截止（默认 `30d`）
@@ -79,11 +87,13 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 - `maxDiskBytes`：会话目录的磁盘预算（可选）
 - `highWaterBytes`：清理后的目标大小（默认为 `maxDiskBytes` 的 80%）
 
-磁盘预算清理的强制流程（`mode: "enforce"`）：
+正常的 Gateway 写入会为生产级规模的上限批量执行 `maxEntries` 清理，因此在下一次高水位清理把它重写回去之前，存储可能会短暂超出配置上限。`openclaw sessions cleanup --enforce` 仍会立即应用配置上限。
 
-1. 优先删除最老的归档或孤立记录文件。
-2. 若仍超出目标，逐步淘汰最老的会话条目及其记录文件。
-3. 直到使用量降至 `highWaterBytes` 或以下。
+磁盘预算清理的执行顺序（`mode: "enforce"`）：
+
+1. 先移除最旧的归档、孤立记录或孤立轨迹工件。
+2. 如果仍高于目标，再逐出最旧的会话条目及其记录/轨迹文件。
+3. 持续执行直到使用量低于或等于 `highWaterBytes`。
 
 在 `mode: "warn"` 下，OpenClaw 仅报告潜在淘汰，不会修改存储或文件。
 
@@ -224,7 +234,7 @@ OpenClaw 有意不“修正”记录；Gateway 利用 `SessionManager` 读取/�
 
 ## 自动压缩触发时机（Pi 运行时）
 
-嵌入式 Pi 代理中，自动压缩触发有两种情况：
+在嵌入式 Pi 代理中，自动压缩会在两种情况下触发：
 
 1. **溢出恢复**：模型返回上下文溢出错误
    （`request_too_large`、`context length exceeded`、`input exceeds the maximum

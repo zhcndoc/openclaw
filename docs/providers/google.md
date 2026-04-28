@@ -13,7 +13,7 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - API: Google Gemini API
 - Runtime option: `agents.defaults.embeddedHarness.runtime: "google-gemini-cli"`
-  reuses Gemini CLI OAuth while keeping model refs canonical as `google/*`.
+  重用 Gemini CLI OAuth，同时保持模型引用为规范的 `google/*`。
 
 ## 入门指南
 
@@ -95,9 +95,9 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
       </Step>
     </Steps>
 
-    - Default model: `google/gemini-3.1-pro-preview`
-    - Runtime: `google-gemini-cli`
-    - Alias: `gemini-cli`
+    - 默认模型：`google/gemini-3.1-pro-preview`
+    - 运行时：`google-gemini-cli`
+    - 别名：`gemini-cli`
 
     **环境变量：**
 
@@ -114,9 +114,9 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
     如果登录在浏览器流程开始前失败，请确保本地 `gemini` 命令已安装并在 `PATH` 中。
     </Note>
 
-    `google-gemini-cli/*` model refs are legacy compatibility aliases. New
-    configs should use `google/*` model refs plus the `google-gemini-cli`
-    runtime when they want local Gemini CLI execution.
+    `google-gemini-cli/*` 模型引用是旧版兼容别名。新的
+    配置应使用 `google/*` 模型引用，并在需要本地 Gemini CLI 执行时
+    使用 `google-gemini-cli` 运行时。
 
   </Tab>
 </Tabs>
@@ -268,10 +268,9 @@ Here is the clean reply text.
 需要限制为 Gemini API 的 Google Cloud Console API 密钥可用于此提供程序。这不是单独的 Cloud Text-to-Speech API 路径。
 </Note>
 
-## Realtime voice
+## 实时语音
 
-The bundled `google` plugin registers a realtime voice provider backed by the
-Gemini Live API for backend audio bridges such as Voice Call and Google Meet.
+捆绑的 `google` 插件会注册一个由 Gemini Live API 支持的实时语音提供商，用于语音通话和 Google Meet 等后端音频桥接。
 
 | Setting               | Config path                                                         | Default                                                                               |
 | ---------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -281,9 +280,12 @@ Gemini Live API for backend audio bridges such as Voice Call and Google Meet.
 | VAD start sensitivity | `...google.startSensitivity`                                        | (unset)                                                                               |
 | VAD end sensitivity   | `...google.endSensitivity`                                          | (unset)                                                                               |
 | Silence duration      | `...google.silenceDurationMs`                                       | (unset)                                                                               |
+| Activity handling     | `...google.activityHandling`                                        | Google default, `start-of-activity-interrupts`                                        |
+| Turn coverage         | `...google.turnCoverage`                                            | Google default, `only-activity`                                                       |
+| Disable auto VAD      | `...google.automaticActivityDetectionDisabled`                      | `false`                                                                               |
 | API key               | `...google.apiKey`                                                  | Falls back to `models.providers.google.apiKey`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` |
 
-Example Voice Call realtime config:
+Voice Call 实时配置示例：
 
 ```json5
 {
@@ -299,6 +301,8 @@ Example Voice Call realtime config:
               google: {
                 model: "gemini-2.5-flash-native-audio-preview-12-2025",
                 voice: "Kore",
+                activityHandling: "start-of-activity-interrupts",
+                turnCoverage: "only-activity",
               },
             },
           },
@@ -312,15 +316,23 @@ Example Voice Call realtime config:
 <Note>
 Google Live API 使用双向音频和函数调用，通过 WebSocket 进行。
 OpenClaw 会将电话/Meet 桥接音频适配为 Gemini 的 PCM Live API 流，并
-将工具调用保留在共享的 realtime voice 合同上。除非您需要更改采样，
+将工具调用保留在共享的实时语音合同上。除非您需要更改采样，
 否则请将 `temperature` 保持未设置；OpenClaw 会省略非正值，因为 Google Live
 在 `temperature: 0` 时可能返回无音频的转录内容。Gemini API 转录在未设置
 `languageCodes` 的情况下启用；当前 Google SDK 会拒绝此 API 路径上的语言代码提示。
 </Note>
 
 <Note>
-Control UI Talk 浏览器会话仍然需要一个带有浏览器 WebRTC 会话实现的 realtime voice 提供商。当前该路径为 OpenAI Realtime；Google 提供商用于后端 realtime 桥接。
+Control UI Talk 支持带有限制性一次性
+令牌的 Google Live 浏览器会话。仅后端实时语音提供商也可以通过通用的
+Gateway 中继传输运行，这会将提供商凭据保留在 Gateway 上。
 </Note>
+
+如需维护者进行实时验证，请运行
+`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`。
+Google 分支会生成与 Control
+UI Talk 使用的相同受限 Live API 令牌格式，打开浏览器 WebSocket 端点，发送初始设置负载，
+并等待 `setupComplete`。
 
 ## 高级配置
 

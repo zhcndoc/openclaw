@@ -82,13 +82,19 @@ Control UI 可在首次加载时根据浏览器区域设置自动本地化。若
 - 所选语言会保存到浏览器存储中，并在后续访问时复用。
 - 缺失的翻译键会回退到英语。
 
+## 外观主题
+
+Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个浏览器本地的 tweakcn 导入槽位。要导入主题，请打开 [tweakcn themes](https://tweakcn.com/themes)，选择或创建一个主题，点击 **Share**，然后将复制的主题链接粘贴到 Appearance 中。导入器还接受 `https://tweakcn.com/r/themes/<id>` 注册表 URL、类似 `https://tweakcn.com/editor/theme?theme=amethyst-haze` 的编辑器 URL、相对路径 `/themes/<id>`、原始主题 ID，以及默认主题名称（例如 `amethyst-haze`）。
+
+导入的主题仅存储在当前浏览器配置文件中。它们不会写入 gateway 配置，也不会在设备之间同步。替换导入的主题会更新那个本地槽位；如果清空它，且该导入主题正被选中，活动主题会切换回 Claw。
+
 ## 它现在能做什么
 
 <AccordionGroup>
-  <Accordion title="聊天与对话">
+  <Accordion title="聊天与交谈">
     - 通过 Gateway WS 与模型聊天（`chat.history`、`chat.send`、`chat.abort`、`chat.inject`）。
-    - 通过 WebRTC 直接在浏览器中与 OpenAI Realtime 对话。Gateway 使用 `talk.realtime.session` 签发一个短期 Realtime 客户端密钥；浏览器直接将麦克风音频发送给 OpenAI，并通过 `chat.send` 将 `openclaw_agent_consult` 工具调用转发回为更大且已配置的 OpenClaw 模型。
-    - 在聊天中流式显示工具调用 + 实时工具输出卡片（代理事件）。
+    - 通过浏览器实时会话进行交谈。OpenAI 使用直接 WebRTC，Google Live 使用通过 WebSocket 的受限一次性浏览器 token，而仅后端的实时语音插件则使用 Gateway relay 传输。relay 会将提供商凭据保留在 Gateway 上，同时浏览器通过 `talk.realtime.relay*` RPC 传输麦克风 PCM，并通过 `chat.send` 将 `openclaw_agent_consult` 工具调用回传给更大的已配置 OpenClaw 模型。
+    - 在 Chat 中流式展示工具调用和实时工具输出卡片（agent events）。
   </Accordion>
   <Accordion title="通道、实例、会话、梦境">
     - 通道：内置通道以及捆绑/外部插件通道的状态、二维码登录和按通道配置（`channels.status`、`web.login.*`、`config.patch`）。
@@ -112,10 +118,10 @@ Control UI 可在首次加载时根据浏览器区域设置自动本地化。若
     - Raw JSON 编辑器中的“Reset to saved”会保留原始编写的形态（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照能够安全往返时，外部编辑可以在重置后保留。
     - 结构化的 SecretRef 对象值会在表单文本输入中以只读方式渲染，以防止意外的对象转字符串损坏。
   </Accordion>
-  <Accordion title="调试、日志、更新">
-    - 调试：状态/健康/模型快照 + 事件日志 + 手动 RPC 调用（`status`、`health`、`models.list`）。
-    - 日志：带过滤/导出的 gateway 文件日志实时尾随（`logs.tail`）。
-    - 更新：执行包/git 更新 + 重启（`update.run`），并生成重启报告。
+  <Accordion title="Debug、日志、更新">
+    - Debug：status/health/models 快照 + 事件日志 + 手动 RPC 调用（`status`、`health`、`models.list`）。
+    - Logs：带过滤/导出的 gateway 文件日志实时尾随（`logs.tail`）。
+    - Update：运行包/git 更新 + 重启（`update.run`），并附带重启报告，然后在重连后轮询 `update.status` 以验证正在运行的 gateway 版本。
   </Accordion>
   <Accordion title="Cron 任务面板说明">
     - 对于隔离任务，投递默认是 announce summary。若你希望仅内部运行，可切换为 none。
@@ -144,10 +150,12 @@ Control UI 可在首次加载时根据浏览器区域设置自动本地化。若
     - 聊天标题栏中的模型和 thinking 选择器会通过 `sessions.patch` 立即修改活动会话；它们是持久化的会话覆盖，而不是仅对单轮发送生效的选项。
     - 当新的 Gateway 会话使用报告显示较高的上下文压力时，聊天输入区会显示上下文提示，并在建议的压缩级别上显示一个压缩按钮，该按钮会执行正常的会话压缩路径。当 Gateway 再次报告新的使用情况时，过期的 token 快照会被隐藏。
   </Accordion>
-  <Accordion title="Talk 模式（浏览器 WebRTC）">
-    Talk 模式使用一个已注册的实时语音提供商，该提供商支持浏览器 WebRTC 会话。请通过 `talk.provider: "openai"` 以及 `talk.providers.openai.apiKey` 配置 OpenAI，或复用 Voice Call 实时提供商配置。浏览器永远不会收到标准的 OpenAI API key；它只会收到短暂的 Realtime 客户端密钥。Google Live 实时语音支持后端 Voice Call 和 Google Meet 桥接，但目前不支持此浏览器 WebRTC 路径。Realtime 会话提示词由 Gateway 组装；`talk.realtime.session` 不接受调用方提供的指令覆盖。
+  <Accordion title="交谈模式（浏览器实时）">
+    交谈模式使用注册的实时语音提供商。通过 `talk.provider: "openai"` 加上 `talk.providers.openai.apiKey` 配置 OpenAI，或者通过 `talk.provider: "google"` 加上 `talk.providers.google.apiKey` 配置 Google；Voice Call realtime provider 配置仍然可以作为回退复用。浏览器永远不会收到标准的提供商 API key。OpenAI 会接收用于 WebRTC 的临时 Realtime client secret。Google Live 会接收一个一次性受限的 Live API auth token，用于浏览器 WebSocket 会话，其中指令和工具声明会被 Gateway 锁定进 token 中。仅暴露后端 realtime bridge 的提供商会通过 Gateway relay 传输运行，因此在浏览器音频通过经过认证的 Gateway RPC 传输时，凭据和供应商套接字仍保留在服务器端。Realtime 会话提示由 Gateway 组装；`talk.realtime.session` 不接受调用方提供的指令覆盖。
 
     在 Chat 输入框中，Talk 控件是位于麦克风听写按钮旁边的波浪按钮。当 Talk 启动时，输入框状态行会显示 `Connecting Talk...`，随后在音频连接期间显示 `Talk live`，或者在实时工具调用通过 `chat.send` 询问已配置的更大模型时显示 `Asking OpenClaw...`。
+
+    维护者 live smoke：`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts` 用于验证 OpenAI 浏览器 WebRTC SDP 交换、Google Live 受限 token 的浏览器 WebSocket 设置，以及带伪造麦克风媒体的 Gateway relay 浏览器适配器。该命令仅打印提供商状态，不会记录密钥。
 
   </Accordion>
   <Accordion title="停止与中止">
@@ -321,7 +329,7 @@ Web Push 独立于 iOS APNS 中继路径（有关中继驱动的推送，请参�
 
 有关 HTTPS 设置指导，请参见 [Tailscale](/gateway/tailscale)。
 
-## 内容安全策略
+## Content security policy
 
 Control UI 附带了严格的 `img-src` 策略：只允许**同源**资源、`data:` URL，以及本地生成的 `blob:` URL。远程 `http(s)` 和协议相对的图片 URL 会被浏览器拒绝，并且不会发起网络请求。
 

@@ -7,10 +7,10 @@ read_when:
 title: "节点"
 ---
 
-A **node** is a companion device (macOS/iOS/Android/headless) that connects to the Gateway **WebSocket** (same port as operators) with `role: "node"` and exposes a command surface (e.g. `canvas.*`, `camera.*`, `device.*`, `notifications.*`, `system.*`) via `node.invoke`. Protocol details: [Gateway protocol](/gateway/protocol).
+**节点** 是一种伴随设备（macOS/iOS/Android/headless），它以 `role: "node"` 连接到网关的 **WebSocket**（与操作者使用相同端口），并通过 `node.invoke` 暴露命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。协议细节：[网关协议](/gateway/protocol)。
 
-Legacy transport: [Bridge protocol](/gateway/bridge-protocol) (TCP JSONL;
-historical only for current nodes).
+旧版传输：[Bridge 协议](/gateway/bridge-protocol)（TCP JSONL；
+仅对当前节点保留历史用途）。
 
 macOS 也可以运行在 **节点模式**：菜单栏应用连接到网关的 WS 服务器，并将其本地的 canvas/camera 命令作为节点暴露（因此 `openclaw nodes …` 可以针对这台 Mac 工作）。
 
@@ -38,9 +38,10 @@ openclaw nodes describe --node <节点 ID 或名称或 IP>
 
 备注：
 
-- `nodes status` 当节点的设备配对角色包含 `node` 时，会将其标记为**已配对**。
-- 设备配对记录是持久的已批准角色契约。令牌轮换始终留在该契约内；它不能将已配对节点升级为配对批准从未授予的其他角色。
-- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/rename`）是一个独立的、由网关拥有的节点配对存储；它**不会**阻止 WS `connect` 握手。
+- 当节点的设备配对角色包含 `node` 时，`nodes status` 会将其标记为 **paired**。
+- 设备配对记录是持久化的已批准角色契约。令牌轮换仍保留在该契约内；它不能将已配对节点升级为配对批准未授予的其他角色。
+- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/remove/rename`）是一个独立的、由网关拥有的节点配对存储；它并**不**控制 WS `connect` 握手。
+- `openclaw nodes remove --node <id|name|ip>` 会从那个独立的、由网关拥有的节点配对存储中删除过期条目。
 - 批准范围遵循挂起请求声明的命令：
   - 无命令请求：`operator.pairing`
   - 非 exec 节点命令：`operator.pairing` + `operator.write`

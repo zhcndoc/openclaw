@@ -9,14 +9,15 @@ title: "配置"
 
 用于设置凭据、设备和代理默认值的交互式提示。
 
-注意：**Model** 部分现在包含一个用于 `agents.defaults.models` allowlist 的多选项（即在 `/model` 和模型选择器中显示的内容）。
-按提供商范围的设置选项会将其选择的模型合并到现有 allowlist 中，而不是替换配置中已存在的其他无关提供商。
-重新运行 configure 中的提供商认证会保留现有的 `agents.defaults.model.primary`；当您有意更改默认模型时，请使用 `openclaw models auth login --provider <id> --set-default`
-或 `openclaw models set <model>`。
+<Note>
+**模型** 部分包含一个用于 `agents.defaults.models` 允许列表的多选项（这些内容会显示在 `/model` 和模型选择器中）。按提供商范围的设置选项会将所选模型合并到现有允许列表中，而不是替换配置中已经存在的其他提供商。通过 configure 重新运行提供商认证时，会保留现有的 `agents.defaults.model.primary`。如果您有意要更改默认模型，请使用 `openclaw models auth login --provider <id> --set-default` 或 `openclaw models set <model>`。
+</Note>
 
-当 configure 从提供商认证选择开始时，默认模型和允许列表选择器会自动优先选择该提供商。对于成对的提供商（如 Volcengine/BytePlus），相同的偏好也会匹配其 coding-plan 变体（`volcengine-plan/*`, `byteplus-plan/*`）。如果首选提供商过滤器产生空列表，configure 将回退到未过滤的目录，而不是显示空白选择器。
+当 configure 从提供商认证选项启动时，默认模型和允许列表选择器会自动优先显示该提供商。对于 Volcengine 和 BytePlus 这类成对提供商，同样的偏好也会匹配它们的编码计划变体（`volcengine-plan/*`、`byteplus-plan/*`）。如果首选提供商过滤器会产生空列表，configure 会回退到未过滤的目录，而不是显示空白选择器。
 
-提示：不带子命令的 `openclaw config` 会打开相同的向导。使用 `openclaw config get|set|unset` 进行非交互式编辑。
+<Tip>
+不带子命令的 `openclaw config` 会打开相同的向导。对于非交互式编辑，请使用 `openclaw config get|set|unset`。
+</Tip>
 
 对于 Web 搜索，`openclaw configure --section web` 允许您选择提供商并配置其凭据。某些提供商还会显示特定于提供商的后续提示：
 

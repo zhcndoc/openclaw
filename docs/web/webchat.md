@@ -23,21 +23,24 @@ title: "WebChat"
 ## 工作原理（行为）
 
 - UI 连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send` 和 `chat.inject`。
-- `chat.history` 具有稳定性边界：Gateway 可能会截断较长的文本字段、省略较重的元数据，并将超大的条目替换为 `[chat.history omitted: message too large]`。
-- `chat.history` 也会进行显示归一化：运行时专用的 OpenClaw 上下文、
-  入站信封包装器、内联传递指令标签
+- `chat.history` 的长度受限以保证稳定性：Gateway 可能会截断较长的文本字段，省略较重的元数据，并将过大的条目替换为 `[chat.history omitted: message too large]`。
+- `chat.history` 会跟随现代仅追加会话文件的当前转录分支，因此被放弃的重写分支和被取代的提示副本不会在 WebChat 中渲染。
+- Control UI 会在为新的 `chat.send` 运行 id 生成之前，合并同一会话、消息和附件的重复进行中的提交；Gateway 仍会对重用相同幂等键的重复请求进行去重。
+- `chat.history` 也会进行显示规范化：运行时专用的 OpenClaw 上下文、
+  入站信封包装、内联传递指令标签
   例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
   载荷（包括 `<tool_call>...</tool_call>`、
   `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
-  `<function_calls>...</function_calls>`，以及被截断的工具调用块），
-  以及泄漏的 ASCII/全角模型控制 token 都会从可见文本中移除，
-  并且其全部可见文本仅为精确静默
-  token `NO_REPLY` / `no_reply` 的 assistant 条目会被省略。
-- `chat.inject` 会直接向会话记录追加一条 assistant 注释，并将其广播到 UI（不触发代理运行）。
-- 被中止的运行可能会让部分 assistant 输出在 UI 中保持可见。
-- 当存在已缓冲输出时，Gateway 会将中止的部分 assistant 文本持久化到会话记录历史中，并为这些条目标记中止元数据。
-- 历史始终从网关获取（不进行本地文件监视）。
-- 如果网关不可达，WebChat 将变为只读。
+  `<function_calls>...</function_calls>` 以及被截断的工具调用块），以及
+  泄漏的 ASCII/全角模型控制令牌都会从可见文本中剥离，
+  而其全部可见文本仅为精确静默
+  令牌 `NO_REPLY` / `no_reply` 的 assistant 条目会被省略。
+- 带有推理标记的回复载荷（`isReasoning: true`）会从 WebChat 的 assistant 内容、转录回放文本和音频内容块中排除，因此仅用于思考的载荷不会作为可见的 assistant 消息或可播放音频显示。
+- `chat.inject` 会直接向转录中附加一条 assistant 注释，并将其广播到 UI（不会触发 agent 运行）。
+- 中止的运行可能会让部分 assistant 输出继续在 UI 中可见。
+- 当存在缓冲输出时，Gateway 会将中止的部分 assistant 文本持久化到转录历史中，并为这些条目标记中止元数据。
+- 历史始终从 gateway 获取（不进行本地文件监听）。
+- 如果 gateway 不可达，WebChat 将变为只读。
 
 ## Control UI 代理工具面板
 

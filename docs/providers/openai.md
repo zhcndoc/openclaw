@@ -54,7 +54,30 @@ GPT-5.5 目前可通过订阅/OAuth 路由在 OpenClaw 中使用：
 | 实时语音                 | Voice Call `realtime.provider: "openai"` / Control UI Talk | 是                                                     |
 | 嵌入                     | memory embedding provider                                  | 是                                                     |
 
-## 入门
+## Memory embeddings
+
+OpenClaw 可以使用 OpenAI，或与 OpenAI 兼容的嵌入终端，用于
+`memory_search` 索引和查询嵌入：
+
+```json5
+{
+  agents: {
+    defaults: {
+      memorySearch: {
+        provider: "openai",
+        model: "text-embedding-3-small",
+      },
+    },
+  },
+}
+```
+
+对于需要不对称嵌入标签的 OpenAI 兼容终端，请在 `memorySearch` 下设置
+`queryInputType` 和 `documentInputType`。OpenClaw 会将它们作为提供器特定的
+`input_type` 请求字段转发：查询嵌入使用 `queryInputType`；已索引的内存块和批量索引使用
+`documentInputType`。完整示例请参阅 [Memory configuration reference](/reference/memory-config#provider-specific-config)。
+
+## 开始使用
 
 选择您首选的认证方法并按照设置步骤操作。
 
@@ -438,7 +461,16 @@ GPT-5 贡献添加了带标签的行为契约，涵盖人格保持、执行安�
     | API 密钥 | `...openai.apiKey` | 回退到 `OPENAI_API_KEY` |
 
     <Note>
-    支持通过 `azureEndpoint` 和 `azureDeployment` 配置键使用 Azure OpenAI。支持双向工具调用。使用 G.711 u-law 音频格式。
+    支持通过 `azureEndpoint` 和 `azureDeployment` 配置键为后端实时桥接使用 Azure OpenAI。支持双向工具调用。使用 G.711 u-law 音频格式。
+    </Note>
+
+    <Note>
+    Control UI Talk 使用 OpenAI 浏览器实时会话，采用 Gateway 签发的
+    临时客户端密钥，并与 OpenAI Realtime API 直接进行浏览器 WebRTC SDP 交换。可使用
+    `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`
+    进行维护者实时验证；OpenAI 分支会在 Node 中签发客户端密钥，使用假的麦克风媒体生成浏览器 SDP offer，
+    将其发布到 OpenAI，并应用 SDP answer，
+    且不会记录密钥。
     </Note>
 
   </Accordion>

@@ -4,8 +4,8 @@ read_when:
   - 您想在 stable/beta/dev 之间切换
   - 您想固定到特定版本、标签或 SHA
   - 您正在标记或发布预发布版本
-title: "Release channels"
-sidebarTitle: "Release Channels"
+title: "发布渠道"
+sidebarTitle: "发布渠道"
 ---
 
 # 开发渠道
@@ -46,7 +46,9 @@ openclaw update --channel dev
   `OPENCLAW_GIT_DIR` 覆盖），切换到 `main`，基于上游进行 rebase，构建，并
   从该检出安装全局 CLI。
 
-提示：如果您想并行使用 stable + dev，请保留两个克隆，并将您的网关指向 stable 的那个。
+<Tip>
+如果您想同时使用 stable 和 dev，请保留两个克隆，并让您的网关指向 stable 那个。
+</Tip>
 
 ## 一次性版本或标签定位
 

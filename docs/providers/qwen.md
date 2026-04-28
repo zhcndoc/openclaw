@@ -71,7 +71,7 @@ Coding Plan 支持可能滞后于公共目录。
     </Steps>
 
     <Note>
-    遗留的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍作为兼容性别名工作，但新的设置流程应优先使用规范的 `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。
+    旧版 `modelstudio-*` auth-choice id 和 `modelstudio/...` 模型引用仍可作为兼容性别名使用，但新的设置流程应优先使用规范的 `qwen-*` auth-choice id 和 `qwen/...` 模型引用。如果您通过另一个 `api` 值定义了完全自定义的 `models.providers.modelstudio` 条目，那么该自定义提供程序将拥有 `modelstudio/...` 引用，而不是通义千问兼容别名。
     </Note>
 
   </Tab>
@@ -115,7 +115,7 @@ Coding Plan 支持可能滞后于公共目录。
     </Steps>
 
     <Note>
-    遗留的 `modelstudio-*` auth-choice ID 和 `modelstudio/...` 模型引用仍作为兼容性别名工作，但新的设置流程应优先使用规范的 `qwen-*` auth-choice ID 和 `qwen/...` 模型引用。
+    旧版 `modelstudio-*` auth-choice id 和 `modelstudio/...` 模型引用仍可作为兼容性别名使用，但新的设置流程应优先使用规范的 `qwen-*` auth-choice id 和 `qwen/...` 模型引用。如果您通过另一个 `api` 值定义了完全自定义的 `models.providers.modelstudio` 条目，那么该自定义提供程序将拥有 `modelstudio/...` 引用，而不是通义千问兼容别名。
     </Note>
 
   </Tab>
@@ -156,6 +156,10 @@ OpenClaw 当前包含以下捆绑式通义千问目录。配置的目录是端�
 <Note>
 即使模型存在于捆绑目录中，可用性仍可能因端点和计费计划而异。
 </Note>
+
+## Thinking Controls
+
+对于启用推理的通义千问云模型，捆绑提供程序会将 OpenClaw 的思考级别映射到 DashScope 顶层的 `enable_thinking` 请求标志。禁用思考时发送 `enable_thinking: false`；其他思考级别发送 `enable_thinking: true`。
 
 ## 多模态附加功能
 

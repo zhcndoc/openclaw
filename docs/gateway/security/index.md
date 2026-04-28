@@ -775,12 +775,9 @@ nmap -sT -p 1-65535 <公网 IP> --open
 
 医生命令可生成令牌：`openclaw doctor --generate-gateway-token`。
 
-Note: `gateway.remote.token` / `.password` are client credential sources. They
-do **not** protect local WS access by themselves.
-Local call paths can use `gateway.remote.*` as fallback only when `gateway.auth.*`
-is unset.
-If `gateway.auth.token` / `gateway.auth.password` is explicitly configured via
-SecretRef and unresolved, resolution fails closed (no remote fallback masking).
+<Note>
+`gateway.remote.token` and `gateway.remote.password` are client credential sources. They do **not** protect local WS access by themselves. Local call paths can use `gateway.remote.*` as fallback only when `gateway.auth.*` is unset. If `gateway.auth.token` or `gateway.auth.password` is explicitly configured via SecretRef and unresolved, resolution fails closed (no remote fallback masking).
+</Note>
 Optional: pin remote TLS with `gateway.remote.tlsFingerprint` when using `wss://`.
 Plaintext `ws://` is loopback-only by default. For trusted private-network
 paths, set `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` on the client process as
@@ -989,7 +986,9 @@ OpenClaw 会为代理和工具加载工作区本地的 `.env` 文件，但绝不
 - **在 Docker 中运行完整 Gateway**（容器边界）：[Docker](/install/docker)
 - **工具沙箱**（`agents.defaults.sandbox`，主机 gateway + 沙箱隔离工具；Docker 是默认后端）：[沙箱](/gateway/sandboxing)
 
-注意：避免代理间权限泄漏，`agents.defaults.sandbox.scope` 保持 `"agent"`（默认）或 `"session"`（更严格的会话隔离）。`scope: "shared"` 使用单容器/工作区。
+<Note>
+To prevent cross-agent access, keep `agents.defaults.sandbox.scope` at `"agent"` (default) or `"session"` for stricter per-session isolation. `scope: "shared"` uses a single container or workspace.
+</Note>
 
 还可配置代理对工作区访问控制：
 
@@ -998,7 +997,9 @@ OpenClaw 会为代理和工具加载工作区本地的 `.env` 文件，但绝不
 - `agents.defaults.sandbox.workspaceAccess: "rw"` 将代理工作区以读写方式挂载到 `/workspace`
 - 额外的 `sandbox.docker.binds` 会针对标准化和规范化的源路径进行验证。如果父级符号链接技巧和规范化的主目录别名解析到被阻止的根目录（如 `/etc`、`/var/run` 或操作系统主目录下的凭据目录），仍然会失败并关闭。
 
-**重要：**`tools.elevated` 是全局基线逃生通道，用于在沙箱外运行 exec。默认有效主机为 `gateway`，当 exec 目标配置为 `node` 时为 `node`。保持 `tools.elevated.allowFrom` 严格，不要为陌生人启用它。你可以通过 `agents.list[].tools.elevated` 进一步限制每个代理的提升权限。参见 [提升模式](/tools/elevated)。
+<Warning>
+`tools.elevated` is the global baseline escape hatch that runs exec outside the sandbox. The effective host is `gateway` by default, or `node` when the exec target is configured to `node`. Keep `tools.elevated.allowFrom` tight and do not enable it for strangers. You can further restrict elevated per agent via `agents.list[].tools.elevated`. See [Elevated mode](/tools/elevated).
+</Warning>
 
 ### 子代理委托防护
 

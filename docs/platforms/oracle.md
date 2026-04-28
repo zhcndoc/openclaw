@@ -193,14 +193,14 @@ https://openclaw.<tailnet-name>.ts.net/
 | 仅 SSH 密钥认证   | 不需要    | Tailscale 通过 tailnet 认证                                      |
 | IPv6 强化         | 通常不需要 | 依赖于 VCN 和子网配置，确认实际分配和暴露内容                    |
 
-### 仍建议执行
+### 仍建议
 
 - **凭据权限：** `chmod 700 ~/.openclaw`
 - **安全审计：** `openclaw security audit`
 - **系统更新：** 定期运行 `sudo apt update && sudo apt upgrade`
 - **监控 Tailscale 设备：** 查看 [Tailscale 管理控制台](https://login.tailscale.com/admin)
 
-### 验证安全状态
+### 验证安全态势
 
 ```bash
 # 确认无公网端口监听

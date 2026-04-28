@@ -130,18 +130,39 @@ OpenClaw 有三个协同工作的层级：
 
 | 配置文件     | 包含内容                                                                                                                                  |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `full`      | 无限制（与未设置相同）                                                                                                                    |
+| `full`      | 不受限制的基础配置，用于更广泛的命令/控制访问；与不设置 `tools.profile` 相同                                                   |
 | `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `image`, `image_generate`, `music_generate`, `video_generate` |
 | `messaging` | `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status`                                                         |
 | `minimal`   | 仅 `session_status`                                                                                                                             |
 
-`coding` 和 `messaging` 配置文件也允许通过插件键 `bundle-mcp` 配置的 bundle MCP 工具。
-当你希望配置文件保留其正常内置工具但隐藏所有已配置的 MCP 工具时，
-添加 `tools.deny: ["bundle-mcp"]`。`minimal` 配置文件不包含 bundle MCP 工具。
+<Note>
+`tools.profile: "messaging"` 是有意设定为较窄的，适用于以渠道为中心的
+代理。它不包含更广泛的命令/控制工具，例如文件系统、运行时、
+浏览器、canvas、nodes、cron 和 gateway 控制。将 `tools.profile: "full"`
+用作更广泛命令/控制访问的不受限制基础配置，然后在需要时通过
+`tools.allow` / `tools.deny` 收紧
+访问。
+</Note>
+
+`coding` 包括轻量级网络工具（`web_search`、`web_fetch`、`x_search`）
+但不包括完整的浏览器控制工具。浏览器自动化可以驱动真实
+会话和已登录配置文件，因此请通过
+`tools.alsoAllow: ["browser"]` 或按代理单独配置
+`agents.list[].tools.alsoAllow: ["browser"]` 显式添加它。
 
 ### 工具组
 
-在允许/拒绝列表中使用 `group:*` 简写：
+Example (broadest tool surface by default):
+
+```json5
+{
+  tools: {
+    profile: "full",
+  },
+}
+```
+
+### Tool groups
 
 | 组              | 工具                                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |

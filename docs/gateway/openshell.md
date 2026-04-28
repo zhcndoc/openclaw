@@ -99,7 +99,9 @@ openclaw sandbox explain
 - 你希望每回合的同步开销更低。
 - 你不希望主机本地的编辑静默覆盖远程沙盒状态。
 
-重要提示：如果在初始初始化后你在 OpenClaw 外部的主机上编辑文件，远程沙盒**不会**看到这些更改。使用 `openclaw sandbox recreate` 重新初始化。
+<Warning>
+如果你在初始种子之后在 OpenClaw 之外于主机上编辑文件，远程沙盒将**不会**看到这些更改。使用 `openclaw sandbox recreate` 重新播种。
+</Warning>
 
 ### 选择模式
 

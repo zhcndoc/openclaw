@@ -1,5 +1,5 @@
 ---
-summary: "入站音频/语音笔记如何下载、转录并注入回复中"
+summary: "如何下载、转录并将入站音频/语音笔记注入回复"
 read_when:
   - 更改音频转录或媒体处理
 title: "音频和语音笔记"
@@ -133,19 +133,22 @@ OpenClaw 会按以下顺序自动检测并停止于首个可用选项：
 
 - 提供商认证遵循标准模型认证顺序（认证配置文件、环境变量、`models.providers.*.apiKey`）。
 - Groq 设置详情：[Groq](/providers/groq)。
-- 使用 `provider: "deepgram"` 时会读取 `DEEPGRAM_API_KEY`。
+- 当使用 `provider: "deepgram"` 时，会读取 `DEEPGRAM_API_KEY`。
 - Deepgram 设置详情：[Deepgram（音频转录）](/providers/deepgram)。
 - Mistral 设置详情：[Mistral](/providers/mistral)。
+- 当使用 `provider: "senseaudio"` 时，会读取 `SENSEAUDIO_API_KEY`。
+- SenseAudio 设置详情：[SenseAudio](/providers/senseaudio)。
 - 音频提供商可通过 `tools.media.audio` 覆盖 `baseUrl`、`headers` 和 `providerOptions`。
-- 默认大小上限为 20MB（`tools.media.audio.maxBytes`）。超过大小的音频会跳过该模型并尝试下一个条目。
-- 小于 1024 字节的微小/空音频文件会在提供商/CLI 转录前被跳过。
-- 音频的默认 `maxChars` 是**未设置**（完整转录）。可设置 `tools.media.audio.maxChars` 或每个条目的 `maxChars` 来截断输出。
-- OpenAI 的默认自动模型是 `gpt-4o-mini-transcribe`；如需更高准确率，可设置 `model: "gpt-4o-transcribe"`。
-- 使用 `tools.media.audio.attachments` 可处理多个语音笔记（`mode: "all"` + `maxAttachments`）。
-- 转录结果可在模板中通过 `{{Transcript}}` 使用。
-- `tools.media.audio.echoTranscript` 默认关闭；启用后可在代理处理前将转录确认发送回原始聊天。
+- 默认大小上限为 20MB（`tools.media.audio.maxBytes`）。超出大小的音频会被该模型跳过，并尝试下一项。
+- 低于 1024 字节的微小/空音频文件会在提供商/CLI 转录前被跳过。
+- 音频默认的 `maxChars` **未设置**（完整转录）。设置 `tools.media.audio.maxChars` 或每个条目的 `maxChars` 可裁剪输出。
+- OpenAI 的自动默认模型是 `gpt-4o-mini-transcribe`；如需更高准确率，请设置 `model: "gpt-4o-transcribe"`。
+- 使用 `tools.media.audio.attachments` 处理多个语音笔记（`mode: "all"` + `maxAttachments`）。
+- 转录内容可在模板中通过 `{{Transcript}}` 获取。
+- `tools.media.audio.echoTranscript` 默认关闭；启用后会在代理处理前将转录确认回传到原始聊天。
 - `tools.media.audio.echoFormat` 可自定义回显文本（占位符：`{transcript}`）。
 - CLI 标准输出有上限（5MB）；请保持 CLI 输出简洁。
+- CLI `args` 应使用 `{{MediaPath}}` 作为本地音频文件路径。运行 `openclaw doctor --fix` 可迁移旧版 `audio.transcription.command` 配置中的废弃 `{input}` 占位符。
 
 ### 代理环境支持
 
@@ -153,14 +156,16 @@ OpenClaw 会按以下顺序自动检测并停止于首个可用选项：
 
 - `HTTPS_PROXY`
 - `HTTP_PROXY`
+- `ALL_PROXY`
 - `https_proxy`
 - `http_proxy`
+- `all_proxy`
 
 无代理环境变量时使用直接访问。代理配置不正当时，OpenClaw 会记录警告并回退为直接访问。
 
 ## 群组中的提及检测
 
-当对群聊设置了 `requireMention: true`，OpenClaw 会**在检查提及之前**先转录音频。这使得即使语音笔记中包含提及，也能顺利处理。
+当对群聊设置了 `requireMention: true` 时，OpenClaw 会**在检查提及之前**先转录音频。这使得即使语音笔记中包含提及，也能顺利处理。
 
 **工作原理：**
 

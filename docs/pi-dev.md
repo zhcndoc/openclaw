@@ -6,15 +6,15 @@ read_when:
   - 运行 Pi 专用的 lint、类型检查和实时测试流程时
 ---
 
-本指南总结了在 OpenClaw 中处理 pi 集成的一套合理工作流。
+在 OpenClaw 中处理 Pi 集成的一套合理工作流。
 
-## 类型检查和代码风格检查
+## Type checking and linting
 
 - 默认本地门禁：`pnpm check`
 - 构建门禁：当更改可能影响构建产物、打包或懒加载/模块边界时，运行 `pnpm build`
 - 针对 Pi 变更较多时的完整落地门禁：`pnpm check && pnpm test`
 
-## 运行 Pi 测试
+## Running Pi tests
 
 使用 Vitest 直接运行针对 Pi 的测试集：
 
@@ -43,7 +43,7 @@ OPENCLAW_LIVE_TEST=1 pnpm test src/agents/pi-embedded-runner-extraparams.live.te
 - `src/agents/pi-tool-definition-adapter.test.ts`
 - `src/agents/pi-hooks/*.test.ts`
 
-## 手动测试
+## Manual testing
 
 推荐流程：
 
@@ -56,7 +56,7 @@ OPENCLAW_LIVE_TEST=1 pnpm test src/agents/pi-embedded-runner-extraparams.live.te
 
 对于工具调用行为，系统会提示选择 `read` 或 `exec` 操作，以便观察工具的流式数据和载荷处理。
 
-## 清理重置
+## Clean slate reset
 
 状态数据位于 OpenClaw 状态目录下，默认路径为 `~/.openclaw`。如果配置了 `OPENCLAW_STATE_DIR`，则使用该目录。
 

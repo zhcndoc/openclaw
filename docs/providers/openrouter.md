@@ -49,14 +49,12 @@ OpenRouter 提供了一个 **统一 API**，可通过单个端点和 API 密钥�
 模型引用遵循 `openrouter/<provider>/<model>` 模式。有关可用提供商和模型的完整列表，请参阅 [/concepts/model-providers](/concepts/model-providers)。
 </Note>
 
-Bundled fallback examples:
+捆绑的回退示例：
 
-| Model ref                            | Notes                         |
-| ------------------------------------ | ----------------------------- |
-| `openrouter/auto`                    | OpenRouter 自动路由  |
-| `openrouter/moonshotai/kimi-k2.6`    | 通过 MoonshotAI 提供的 Kimi K2.6      |
-| `openrouter/openrouter/healer-alpha` | OpenRouter Healer Alpha 路由 |
-| `openrouter/openrouter/hunter-alpha` | OpenRouter Hunter Alpha 路由 |
+| 模型引用                          | 说明                         |
+| --------------------------------- | ---------------------------- |
+| `openrouter/auto`                 | OpenRouter 自动路由           |
+| `openrouter/moonshotai/kimi-k2.6` | 通过 MoonshotAI 使用 Kimi K2.6 |
 
 ## 图像生成
 
@@ -105,9 +103,10 @@ OpenRouter 文档中记录的应用归属请求头：
   </Accordion>
 
   <Accordion title="思考 / 推理注入">
-    在支持的非 `auto` 路由上，OpenClaw 将选定的思考级别映射到
-    OpenRouter 代理推理负载。不支持的模型提示和
-    `openrouter/auto` 会跳过该推理注入。
+    在受支持的非 `auto` 路由上，OpenClaw 会将所选思考级别映射到
+    OpenRouter 代理推理负载。未受支持的模型提示以及
+    `openrouter/auto` 会跳过该推理注入。Hunter Alpha 也会对已失效的已配置模型引用跳过
+    代理推理，因为 OpenRouter 可能会为该已退役路由在推理字段中返回最终答案文本。
   </Accordion>
 
   <Accordion title="仅 OpenAI 的请求调整">

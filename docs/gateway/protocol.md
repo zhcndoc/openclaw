@@ -81,6 +81,10 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
     "server": { "version": "…", "connId": "…" },
     "features": { "methods": ["…"], "events": ["…"] },
     "snapshot": { "…": "…" },
+    "auth": {
+      "role": "operator",
+      "scopes": ["operator.read", "operator.write"]
+    },
     "policy": {
       "maxPayload": 26214400,
       "maxBufferedBytes": 52428800,
@@ -90,10 +94,11 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
 }
 ```
 
-`server`、`features`、`snapshot` 和 `policy` 都是 schema
-（`src/gateway/protocol/schema/frames.ts`）要求的字段。`canvasHostUrl` 是可选项。`auth` 会在可用时报告协商后的角色/权限范围，并在网关签发时包含 `deviceToken`。
+`server`, `features`, `snapshot`, 和 `policy` 都是 schema
+（`src/gateway/protocol/schema/frames.ts`）所要求的。`auth` 也必需，
+并报告协商后的角色/范围。`canvasHostUrl` 是可选的。
 
-当未签发设备令牌时，`hello-ok.auth` 仍可报告协商后的权限：
+当未签发设备令牌时，`hello-ok.auth` 会报告协商后的权限，而不包含令牌字段：
 
 ```json
 {
@@ -265,9 +270,9 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
     - `models.list` 返回运行时允许的模型目录。
     - `usage.status` 返回提供方使用窗口/剩余额度摘要。
     - `usage.cost` 返回指定日期范围内的聚合成本使用摘要。
-    - `doctor.memory.status` 返回当前默认代理工作区的向量记忆 / embedding 就绪状态。
-    - `sessions.usage` 返回每个会话的使用摘要。
-    - `sessions.usage.timeseries` 返回单个会话的时间序列使用数据。
+    - `doctor.memory.status` 返回当前默认代理工作区的向量内存 / 缓存嵌入就绪状态。仅当调用方明确需要一次实时嵌入提供方 ping 时，才传入 `{ "probe": true }` 或 `{ "deep": true }`。
+    - `sessions.usage` 返回按会话划分的使用摘要。
+    - `sessions.usage.timeseries` 返回单个会话的时序使用情况。
     - `sessions.usage.logs` 返回单个会话的使用日志条目。
   </Accordion>
 
@@ -298,15 +303,16 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
   </Accordion>
 
   <Accordion title="Secrets, config, update, and wizard">
-    - `secrets.reload` 重新解析当前 SecretRef，并且仅在完全成功时切换运行时秘密状态。
-    - `secrets.resolve` 为特定命令/目标集解析命令目标的秘密分配。
+    - `secrets.reload` 重新解析当前活动的 SecretRefs，并且仅在完全成功时交换运行时秘密状态。
+    - `secrets.resolve` 解析特定命令/目标集合的命令目标秘密分配。
     - `config.get` 返回当前配置快照和哈希。
-    - `config.set` 写入经过验证的配置负载。
+    - `config.set` 写入已验证的配置负载。
     - `config.patch` 合并部分配置更新。
     - `config.apply` 验证 + 替换完整配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包括从 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 下钻的直接子项摘要。查找 schema 节点保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数字/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要公开 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
+    - `config.schema` 返回 Control UI 和 CLI 工具所用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载插件 + 通道 schema 元数据。该 schema 包含从 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 返回某个配置路径的按路径范围查询负载：规范化路径、浅层 schema 节点、匹配到的提示 + `hintPath`，以及用于 UI/CLI 下钻的直接子项摘要。查询 schema 节点保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
     - `update.run` 运行网关更新流程，并且仅在更新本身成功时安排重启。
+    - `update.status` 返回最新缓存的更新重启哨兵，包括可用时重启后的运行版本。
     - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露入门向导。
   </Accordion>
 
@@ -342,15 +348,15 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
   </Accordion>
 
   <Accordion title="Node pairing, invoke, and pending work">
-    - `node.pair.request`、`node.pair.list`、`node.pair.approve`、`node.pair.reject` 和 `node.pair.verify` 处理节点配对和引导验证。
-    - `node.list` 和 `node.describe` 返回已知/已连接的节点状态。
-    - `node.rename` 更新已配对节点标签。
-    - `node.invoke` 将命令转发给已连接节点。
-    - `node.invoke.result` 返回调用请求的结果。
-    - `node.event` 将节点来源事件带回网关。
-    - `node.canvas.capability.refresh` 刷新作用域画布能力令牌。
-    - `node.pending.pull` 和 `node.pending.ack` 是已连接节点的队列 API。
-    - `node.pending.enqueue` 和 `node.pending.drain` 管理离线/断开节点的持久化待处理工作。
+    - `node.pair.request`, `node.pair.list`, `node.pair.approve`, `node.pair.reject`, `node.pair.remove`, and `node.pair.verify` cover node pairing and bootstrap verification.
+    - `node.list` and `node.describe` return known/connected node state.
+    - `node.rename` updates a paired node label.
+    - `node.invoke` forwards a command to a connected node.
+    - `node.invoke.result` returns the result for an invoke request.
+    - `node.event` carries node-originated events back into the gateway.
+    - `node.canvas.capability.refresh` refreshes scoped canvas-capability tokens.
+    - `node.pending.pull` and `node.pending.ack` are the connected-node queue APIs.
+    - `node.pending.enqueue` and `node.pending.drain` manage durable pending work for offline/disconnected nodes.
   </Accordion>
 
   <Accordion title="Approval families">
@@ -479,37 +485,62 @@ Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输层**。所�
 
 ## 认证
 
-- 共享密钥网关认证使用 `connect.params.auth.token` 或
-  `connect.params.auth.password`，具体取决于所配置的认证模式。
-- 具备身份的模式，例如 Tailscale Serve
-  (`gateway.auth.allowTailscale: true`) 或非回环的
-  `gateway.auth.mode: "trusted-proxy"`，会通过请求头而不是
-  `connect.params.auth.*` 来满足连接认证检查。
-- 私有入口 `gateway.auth.mode: "none"` 会完全跳过共享密钥连接认证；
-  不要在公共/不受信任的入口上暴露该模式。
-- 配对后，Gateway 会发放一个按连接角色 + 范围限定的 **device token**。
-  它会在 `hello-ok.auth.deviceToken` 中返回，客户端应将其持久化以供后续连接使用。
-- 客户端应在任何成功连接后持久化主要的 `hello-ok.auth.deviceToken`。
-- 使用该**已存储**的 device token 重新连接时，也应复用该令牌先前批准的范围集合。
-  这可以保留已授予的 read/probe/status 访问权限，并避免在重连时静默收缩为更窄的、隐式的仅管理员范围。
-- 客户端侧连接认证组装（`src/gateway/client.ts` 中的 `selectConnectAuth`）：
-  - `auth.password` 是正交的，只要设置就始终会被转发。
-  - `auth.token` 按优先级填充：先显式共享令牌，然后是显式的 `deviceToken`，再然后是按设备存储的令牌（以 `deviceId` + `role` 为键）。
-  - 只有在以上都未解析出 `auth.token` 时，才发送 `auth.bootstrapToken`。共享令牌或任何已解析的 device token 都会抑制它。
-  - 在一次性的 `AUTH_TOKEN_MISMATCH` 重试中，自动提升已存储的 device token 仅限于**受信任端点**——回环地址，或带有已固定 `tlsFingerprint` 的 `wss://`。未固定指纹的公共 `wss://` 不符合条件。
-- 额外的 `hello-ok.auth.deviceTokens` 条目是引导交接令牌。仅当连接使用了引导认证并且传输是受信任的，例如 `wss://` 或本地回环/本地配对时，才将其持久化。
-- 如果客户端提供了**显式** `deviceToken` 或显式 `scopes`，则该调用者请求的范围集合保持权威；只有当客户端复用已存储的按设备令牌时，才会重用缓存的范围。
-- 设备令牌可通过 `device.token.rotate` 和
-  `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 范围）。
-- 令牌签发/轮换始终受限于该设备配对条目中记录的已批准角色集合；轮换令牌不能将设备扩展到配对审批从未授予的角色。
-- 对于已配对设备的令牌会话，设备管理默认是自我范围的，除非调用者也拥有 `operator.admin`：非管理员调用者只能移除/撤销/轮换自己的**设备条目**。
-- `device.token.rotate` 还会将请求的操作员范围集合与调用者当前会话范围进行检查。非管理员调用者不能把令牌轮换到比当前持有范围更宽的操作员范围集合。
-- 认证失败会在 `error.details.code` 中包含代码，并附带恢复提示：
-  - `error.details.canRetryWithDeviceToken`（布尔值）
-  - `error.details.recommendedNextStep`（`retry_with_device_token`、`update_auth_configuration`、`update_auth_credentials`、`wait_then_retry`、`review_auth_configuration`）
-- `AUTH_TOKEN_MISMATCH` 的客户端行为：
-  - 受信任客户端可以尝试一次有上限的重试，使用缓存的按设备令牌。
-  - 如果该重试失败，客户端应停止自动重连循环，并向操作员展示操作指引。
+- Shared-secret gateway auth uses `connect.params.auth.token` or
+  `connect.params.auth.password`, depending on the configured auth mode.
+- Identity-bearing modes such as Tailscale Serve
+  (`gateway.auth.allowTailscale: true`) or non-loopback
+  `gateway.auth.mode: "trusted-proxy"` satisfy the connect auth check from
+  request headers instead of `connect.params.auth.*`.
+- Private-ingress `gateway.auth.mode: "none"` skips shared-secret connect auth
+  entirely; do not expose that mode on public/untrusted ingress.
+- After pairing, the Gateway issues a **device token** scoped to the connection
+  role + scopes. It is returned in `hello-ok.auth.deviceToken` and should be
+  persisted by the client for future connects.
+- Clients should persist the primary `hello-ok.auth.deviceToken` after any
+  successful connect.
+- Reconnecting with that **stored** device token should also reuse the stored
+  approved scope set for that token. This preserves read/probe/status access
+  that was already granted and avoids silently collapsing reconnects to a
+  narrower implicit admin-only scope.
+- Client-side connect auth assembly (`selectConnectAuth` in
+  `src/gateway/client.ts`):
+  - `auth.password` is orthogonal and is always forwarded when set.
+  - `auth.token` is populated in priority order: explicit shared token first,
+    then an explicit `deviceToken`, then a stored per-device token (keyed by
+    `deviceId` + `role`).
+  - `auth.bootstrapToken` is sent only when none of the above resolved an
+    `auth.token`. A shared token or any resolved device token suppresses it.
+  - Auto-promotion of a stored device token on the one-shot
+    `AUTH_TOKEN_MISMATCH` retry is gated to **trusted endpoints only** —
+    loopback, or `wss://` with a pinned `tlsFingerprint`. Public `wss://`
+    without pinning does not qualify.
+- Additional `hello-ok.auth.deviceTokens` entries are bootstrap handoff tokens.
+  Persist them only when the connect used bootstrap auth on a trusted transport
+  such as `wss://` or loopback/local pairing.
+- If a client supplies an **explicit** `deviceToken` or explicit `scopes`, that
+  caller-requested scope set remains authoritative; cached scopes are only
+  reused when the client is reusing the stored per-device token.
+- Device tokens can be rotated/revoked via `device.token.rotate` and
+  `device.token.revoke` (requires `operator.pairing` scope).
+- `device.token.rotate` returns rotation metadata. It echoes the replacement
+  bearer token only for same-device calls that are already authenticated with
+  that device token, so token-only clients can persist their replacement before
+  reconnecting. Shared/admin rotations do not echo the bearer token.
+- Token issuance, rotation, and revocation stay bounded to the approved role set
+  recorded in that device's pairing entry; token mutation cannot expand or
+  target a device role that pairing approval never granted.
+- For paired-device token sessions, device management is self-scoped unless the
+  caller also has `operator.admin`: non-admin callers can remove/revoke/rotate
+  only their **own** device entry.
+- `device.token.rotate` and `device.token.revoke` also check the target operator
+  token scope set against the caller's current session scopes. Non-admin callers
+  cannot rotate or revoke a broader operator token than they already hold.
+- Auth failures include `error.details.code` plus recovery hints:
+  - `error.details.canRetryWithDeviceToken` (boolean)
+  - `error.details.recommendedNextStep` (`retry_with_device_token`, `update_auth_configuration`, `update_auth_credentials`, `wait_then_retry`, `review_auth_configuration`)
+- Client behavior for `AUTH_TOKEN_MISMATCH`:
+  - Trusted clients may attempt one bounded retry with a cached per-device token.
+  - If that retry fails, clients should stop automatic reconnect loops and surface operator action guidance.
 
 ## 设备身份 + 配对
 

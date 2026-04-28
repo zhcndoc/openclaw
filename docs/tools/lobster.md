@@ -50,7 +50,7 @@ inbox apply --json
 ```json
 {
   "action": "run",
-  "pipeline": "exec --json --shell 'inbox list --json' | exec --stdin json --shell 'inbox categorize --json' | exec --stdin json --shell 'inbox apply --json' | approve --preview-from-stdin --limit 5 --prompt 'Apply changes?'",
+  "pipeline": "exec --json --shell 'inbox list --json' | exec --stdin json --shell 'inbox categorize --json' | exec --stdin json --shell 'inbox apply --json' | approve --preview-from-stdin --limit 5 --prompt '应用更改？'",
   "timeoutMs": 30000
 }
 ```
@@ -188,7 +188,9 @@ Lobster 是一个**可选**插件工具（默认未启用）。
 
 除非打算使用严格允许列表模式，否则避免使用 `tools.allow: ["lobster"]`。
 
-注意：允许列表为可选插件而非核心工具开启。若您的允许列表仅包含插件工具（如 `lobster`），OpenClaw 会保持核心工具启用。要限制核心工具，请在允许列表中也包含所需核心工具或组。
+<Note>
+许可名单是可选插件的显式启用项。如果您的许可名单只列出插件工具（例如 `lobster`），OpenClaw 会保留核心工具可用。若要限制核心工具，也请将您想保留的核心工具或工具组加入许可名单。
+</Note>
 
 ## 示例：邮件分诊
 

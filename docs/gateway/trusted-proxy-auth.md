@@ -263,7 +263,7 @@ OpenClaw 拒绝模糊的配置，即 `gateway.auth.token`（或 `OPENCLAW_GATEWA
 - 在使用 trusted-proxy 模式时移除共享 token，或者
 - 如果打算使用基于 token 的认证，将 `gateway.auth.mode` 切换为 `"token"`。
 
-回环 trusted-proxy 认证也会失败关闭：同一主机调用者必须通过受信任代理提供配置的身份头，而不是被静默认证。
+Loopback trusted-proxy 身份头仍然会失败关闭：同主机调用方不会被静默认证为代理用户。绕过代理的内部 OpenClaw 调用方可以改为使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` 进行认证。trusted-proxy 模式下仍有意不支持 token 回退。
 
 ## 操作员作用域请求头
 
@@ -290,16 +290,15 @@ trusted-proxy 认证是一种**携带身份**的 HTTP 模式，因此调用方�
 
 ## 安全检查清单
 
-启用 trusted-proxy 认证前请确认：
-
-- [ ] **Proxy is the only path**: 网关端口已通过防火墙限制，除您的代理外没有其他访问路径
-- [ ] **trustedProxies is minimal**: 仅包含实际代理 IP，不包含整个子网
-- [ ] **No loopback proxy source**: trusted-proxy 认证会对来自回环源的请求失败关闭
-- [ ] **Proxy strips headers**: 您的代理会覆盖（而不是追加）来自客户端的 `x-forwarded-*` 请求头
-- [ ] **TLS termination**: 您的代理处理 TLS；用户通过 HTTPS 连接
-- [ ] **allowedOrigins is explicit**: 非回环 Control UI 使用显式的 `gateway.controlUi.allowedOrigins`
-- [ ] **allowUsers is set** (recommended): 限制为已知用户，而不是允许任何已认证用户
-- [ ] **No mixed token config**: 不要同时设置 `gateway.auth.token` 和 `gateway.auth.mode: "trusted-proxy"`
+- [ ] **代理是唯一路径**：网关端口已通过防火墙限制，除您的代理外没有其他访问路径
+- [ ] **trustedProxies is minimal**：仅包含实际代理 IP，不包含整个子网
+- [ ] **No loopback proxy source**：trusted-proxy 认证会对来自回环源的请求失败关闭
+- [ ] **Proxy strips headers**：您的代理会覆盖（而不是追加）来自客户端的 `x-forwarded-*` 请求头
+- [ ] **TLS termination**：您的代理处理 TLS；用户通过 HTTPS 连接
+- [ ] **allowedOrigins is explicit**：非回环 Control UI 使用显式的 `gateway.controlUi.allowedOrigins`
+- [ ] **allowUsers is set**（recommended）：限制为已知用户，而不是允许任何已认证用户
+- [ ] **No mixed token config**：不要同时设置 `gateway.auth.token` 和 `gateway.auth.mode: "trusted-proxy"`
+- [ ] **本地密码回退是私有的**：如果您为内部直接调用方配置了 `gateway.auth.password`，请保持网关端口受防火墙限制，以免非代理远程客户端可直接访问。
 
 ## 安全审计
 
@@ -307,7 +306,7 @@ trusted-proxy 认证是一种**携带身份**的 HTTP 模式，因此调用方�
 
 审计会检查：
 
-- Base `gateway.trusted_proxy_auth` warning/critical reminder
+- Base `gateway.trusted_proxy_auth` 警告/严重提醒
 - 缺少 `trustedProxies` 配置
 - 缺少 `userHeader` 配置
 - `allowUsers` 为空（允许任何已认证用户）
@@ -374,20 +373,20 @@ trusted-proxy 认证已成功，但浏览器的 `Origin` 请求头未通过 Cont
 - 在 WebSocket 升级请求时传递身份请求头（不仅限于 HTTP 请求）
 - 没有为 WebSocket 连接设定独立认证路径
 
-## 从 Token 身份验证迁移
+## Migrating from Token Authentication
 
-如果从 token 认证迁移到 trusted-proxy：
+If migrating from token authentication to trusted-proxy:
 
-1. 配置代理认证并传递身份头
-2. 单独测试代理配置（使用 curl 测试请求头）
-3. 更新 OpenClaw 配置为 trusted-proxy 认证
-4. 重启网关
-5. 测试 Control UI 的 WebSocket 连接
-6. 运行 `openclaw security audit` 并检查结果
+1. Configure proxy authentication and pass identity headers
+2. Test the proxy configuration separately (use curl to test headers)
+3. Update the OpenClaw configuration to trusted-proxy authentication
+4. Restart the gateway
+5. Test the Control UI WebSocket connection
+6. Run `openclaw security audit` and check the results
 
-## 相关链接
+## Related Links
 
-- [安全](/gateway/security) — 完整安全指南
-- [配置](/gateway/configuration) — 配置参考
-- [远程访问](/gateway/remote) — 其他远程访问方案
-- [Tailscale](/gateway/tailscale) — 仅限 tailnet 的简化方案
+- [Security](/gateway/security) — Complete security guide
+- [Configuration](/gateway/configuration) — Configuration reference
+- [Remote Access](/gateway/remote) — Other remote access options
+- [Tailscale](/gateway/tailscale) — Simplified solution for tailnet only
