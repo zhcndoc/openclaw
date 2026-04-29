@@ -1,20 +1,20 @@
 ---
-summary: "在 Oracle Cloud 的 Always Free ARM 套餐上托管 OpenClaw"
+summary: "在 Oracle Cloud 的 Always Free ARM 资源层上托管 OpenClaw"
 read_when:
   - 在 Oracle Cloud 上设置 OpenClaw
-  - 寻找用于 OpenClaw 的免费 VPS 托管
-  - 想要在小型服务器上 24/7 运行 OpenClaw
+  - 寻找 OpenClaw 的免费 VPS 托管
+  - 想在小型服务器上 24/7 运行 OpenClaw
 title: "Oracle Cloud"
 ---
 
-在 Oracle Cloud 的 **Always Free** ARM 套餐（最高 4 个 OCPU、24 GB RAM、200 GB 存储）上免费运行一个持久的 OpenClaw Gateway。
+在 Oracle Cloud 的 **Always Free** ARM 资源层上运行一个持久的 OpenClaw Gateway（最多 4 OCPU、24 GB 内存、200 GB 存储），且无需任何费用。
 
-## 前提条件
+## 前置条件
 
 - Oracle Cloud 账户（[注册](https://www.oracle.com/cloud/free/)）-- 如果遇到问题，请参阅 [社区注册指南](https://gist.github.com/rssnyder/51e3cfedd730e7dd5f4a816143b25dbd)
-- Tailscale 账户（可在 [tailscale.com](https://tailscale.com) 免费获取）
+- Tailscale 账户（在 [tailscale.com](https://tailscale.com) 免费）
 - 一对 SSH 密钥
-- 大约 30 分钟
+- 约 30 分钟
 
 ## 设置
 
@@ -28,12 +28,12 @@ title: "Oracle Cloud"
        - **形状：** `VM.Standard.A1.Flex`（Ampere ARM）
        - **OCPU：** 2（最多可到 4）
        - **内存：** 12 GB（最多可到 24 GB）
-       - **启动卷：** 50 GB（免费最多可到 200 GB）
+       - **启动卷：** 50 GB（免费额度最多 200 GB）
        - **SSH 密钥：** 添加你的公钥
     4. 点击 **Create** 并记下公网 IP 地址。
 
     <Tip>
-    如果实例创建失败并提示 "Out of capacity"，请尝试其他可用域或稍后重试。免费套餐容量有限。
+    如果实例创建失败并提示 "Out of capacity"，请尝试其他可用域，或稍后重试。免费层容量有限。
     </Tip>
 
   </Step>
@@ -46,7 +46,7 @@ title: "Oracle Cloud"
     sudo apt install -y build-essential
     ```
 
-    `build-essential` 是某些依赖项在 ARM 上编译所必需的。
+    `build-essential` 是某些依赖在 ARM 上编译所必需的。
 
   </Step>
 
@@ -57,7 +57,7 @@ title: "Oracle Cloud"
     sudo loginctl enable-linger ubuntu
     ```
 
-    启用 linger 可在退出登录后继续运行用户服务。
+    启用 linger 后，即使注销，用户服务也会继续运行。
 
   </Step>
 
@@ -77,12 +77,12 @@ title: "Oracle Cloud"
     source ~/.bashrc
     ```
 
-    当提示“你想如何孵化你的机器人？”时，选择 **Do this later**。
+    当提示“你想如何孵化你的 bot？”时，选择 **以后再说**。
 
   </Step>
 
   <Step title="配置网关">
-    使用 token auth 与 Tailscale Serve 进行安全远程访问。
+    使用 token 认证与 Tailscale Serve 以实现安全的远程访问。
 
     ```bash
     openclaw config set gateway.bind loopback
@@ -94,7 +94,7 @@ title: "Oracle Cloud"
     systemctl --user restart openclaw-gateway.service
     ```
 
-    这里的 `gateway.trustedProxies=["127.0.0.1"]` 仅用于本地 Tailscale Serve 代理的转发 IP / 本地客户端处理。它**不是** `gateway.auth.mode: "trusted-proxy"`。在此设置中，Diff viewer 路由保持 fail-closed 行为：没有转发代理头的原始 `127.0.0.1` 查看器请求可能会返回 `Diff not found`。如果需要附件，请使用 `mode=file` / `mode=both`；或者，如果你需要可共享的查看器链接，请有意启用远程查看器并设置 `plugins.entries.diffs.config.viewerBaseUrl`（或传入代理 `baseUrl`）。
+    这里的 `gateway.trustedProxies=["127.0.0.1"]` 仅用于本地 Tailscale Serve 代理的转发 IP/本地客户端处理。它**不是** `gateway.auth.mode: "trusted-proxy"`。在此设置下，Diff 查看器路由仍保持 fail-closed 行为：没有转发代理头的原始 `127.0.0.1` 查看器请求可能返回 `Diff not found`。如需附件，请使用 `mode=file` / `mode=both`；或者如果你需要可共享的查看器链接，可有意启用远程查看器并设置 `plugins.entries.diffs.config.viewerBaseUrl`（或传入代理的 `baseUrl`）。
 
   </Step>
 
@@ -102,7 +102,7 @@ title: "Oracle Cloud"
     在网络边缘阻止除 Tailscale 之外的所有流量：
 
     1. 在 OCI Console 中进入 **Networking > Virtual Cloud Networks**。
-    2. 点击你的 VCN，然后点击 **Security Lists > Default Security List**。
+    2. 点击你的 VCN，然后进入 **Security Lists > Default Security List**。
     3. **移除**除 `0.0.0.0/0 UDP 41641`（Tailscale）之外的所有入站规则。
     4. 保留默认出站规则（允许所有出站流量）。
 
@@ -118,7 +118,7 @@ title: "Oracle Cloud"
     curl http://localhost:18789
     ```
 
-    从 tailnet 中任意设备访问 Control UI：
+    在你的 tailnet 中的任意设备上访问 Control UI：
 
     ```
     https://openclaw.<tailnet-name>.ts.net/
@@ -131,7 +131,7 @@ title: "Oracle Cloud"
 
 ## 备用方案：SSH 隧道
 
-如果 Tailscale Serve 无法工作，请从本地机器使用 SSH 隧道：
+如果 Tailscale Serve 无法工作，请从你的本地机器使用 SSH 隧道：
 
 ```bash
 ssh -L 18789:127.0.0.1:18789 ubuntu@openclaw
@@ -139,21 +139,21 @@ ssh -L 18789:127.0.0.1:18789 ubuntu@openclaw
 
 然后打开 `http://localhost:18789`。
 
-## 故障排除
+## 故障排查
 
-**实例创建失败（"Out of capacity"）** -- 免费套餐的 ARM 实例很受欢迎。请尝试其他可用域或在低峰时段重试。
+**实例创建失败（"Out of capacity"）** -- 免费层 ARM 实例很受欢迎。请尝试其他可用域，或在非高峰时段重试。
 
-**Tailscale 无法连接** -- 运行 `sudo tailscale up --ssh --hostname=openclaw --reset` 重新进行身份验证。
+**Tailscale 无法连接** -- 运行 `sudo tailscale up --ssh --hostname=openclaw --reset` 以重新认证。
 
-**网关无法启动** -- 运行 `openclaw doctor --non-interactive`，并使用 `journalctl --user -u openclaw-gateway.service -n 50` 检查日志。
+**网关无法启动** -- 运行 `openclaw doctor --non-interactive`，并使用 `journalctl --user -u openclaw-gateway.service -n 50` 查看日志。
 
-**ARM 二进制问题** -- 大多数 npm 包都可在 ARM64 上运行。对于原生二进制文件，请查找 `linux-arm64` 或 `aarch64` 版本。使用 `uname -m` 验证架构。
+**ARM 二进制问题** -- 大多数 npm 包都能在 ARM64 上运行。对于原生二进制文件，请查找 `linux-arm64` 或 `aarch64` 版本。使用 `uname -m` 验证架构。
 
 ## 下一步
 
 - [Channels](/channels) -- 连接 Telegram、WhatsApp、Discord 等
 - [Gateway configuration](/gateway/configuration) -- 所有配置选项
-- [Updating](/install/updating) -- 保持 OpenClaw 为最新版本
+- [Updating](/install/updating) -- 保持 OpenClaw 最新
 
 ## 相关内容
 

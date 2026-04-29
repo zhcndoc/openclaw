@@ -2,18 +2,18 @@
 summary: "在 Render 上使用基础设施即代码部署 OpenClaw"
 read_when:
   - 将 OpenClaw 部署到 Render
-  - 您希望使用 Render Blueprints 进行声明式云部署
+  - 你希望使用 Render Blueprints 进行声明式云部署
 title: "Render"
 ---
 
 # Render
 
-使用基础设施即代码在 Render 上部署 OpenClaw。随附的 `render.yaml` Blueprint 以声明式方式定义了您的整个堆栈，包括服务、磁盘和环境变量，因此您可以一键部署，并将基础设施版本与代码一同管理。
+使用基础设施即代码在 Render 上部署 OpenClaw。随附的 `render.yaml` Blueprint 以声明式方式定义了你的整个栈，包括服务、磁盘、环境变量，因此你可以一键部署，并将基础设施与你的代码一起进行版本管理。
 
 ## 前提条件
 
-- 一个 [Render 账号](https://render.com)（提供免费套餐）
-- 您首选的 [模型提供商](/providers) 的 API 密钥
+- 一个 [Render 账户](https://render.com)（提供免费套餐）
+- 来自你首选 [模型提供商](/providers) 的 API 密钥
 
 ## 使用 Render Blueprint 部署
 
@@ -21,14 +21,14 @@ title: "Render"
 
 点击此链接将会：
 
-1. 从本仓库根目录中的 `render.yaml` Blueprint 创建一个新的 Render 服务。
+1. 根据此仓库根目录下的 `render.yaml` Blueprint 创建一个新的 Render 服务。
 2. 构建 Docker 镜像并部署
 
-部署完成后，您的服务 URL 格式为 `https://<service-name>.onrender.com`。
+部署完成后，你的服务 URL 形式如下：`https://<service-name>.onrender.com`。
 
-## 了解 Blueprint
+## 理解 Blueprint
 
-Render Blueprints 是定义基础设施的 YAML 文件。本仓库中的 `render.yaml` 配置了运行 OpenClaw 所需的一切：
+Render Blueprints 是定义你的基础设施的 YAML 文件。本仓库中的 `render.yaml` 配置了运行 OpenClaw 所需的一切：
 
 ```yaml
 services:
@@ -52,38 +52,39 @@ services:
       sizeGB: 1
 ```
 
-重点 Blueprint 功能说明：
+使用到的关键 Blueprint 特性：
 
-| 功能                  | 作用                                                       |
+| 特性                  | 作用                                                       |
 | --------------------- | ---------------------------------------------------------- |
-| `runtime: docker`     | 从仓库的 Dockerfile 构建                                      |
-| `healthCheckPath`     | Render 监控 `/health`，并重启不健康的实例                      |
-| `generateValue: true` | 自动生成一个加密学安全值                                      |
-| `disk`                | 在重新部署后仍然保留的持久化存储                                |
+| `runtime: docker`     | 从仓库的 Dockerfile 构建                                   |
+| `healthCheckPath`     | Render 监控 `/health` 并重启不健康的实例                   |
+| `generateValue: true` | 自动生成一个加密安全的值                                     |
+| `disk`                | 可在重新部署后仍然保留的持久化存储                          |
 
-## 选择计划
+## 选择套餐
 
-| 计划       | 自动关闭         | 磁盘             | 适用场景                    |
-| ---------- | ---------------- | ---------------- | ---------------------------- |
-| 免费       | 空闲 15 分钟后自动关闭 | 无               | 测试、演示                   |
-| Starter    | 永不关闭         | 1GB 以上         | 个人使用，小团队              |
-| Standard+  | 永不关闭         | 1GB 以上         | 生产环境，多渠道使用           |
+| 套餐      | 休眠           | 磁盘          | 最适合                        |
+| --------- | -------------- | ------------- | ----------------------------- |
+| Free      | 空闲 15 分钟后 | 不可用        | 测试、演示                    |
+| Starter   | 永不休眠       | 1GB+          | 个人使用、小团队              |
+| Standard+ | 永不休眠       | 1GB+          | 生产环境、多渠道              |
 
-Blueprint 默认使用 `starter`。如需使用免费套餐，请在您 fork 的 `render.yaml` 中将 `plan: free`（但请注意：没有持久盘意味着 OpenClaw 状态会在每次部署时重置）。
+Blueprint 默认使用 `starter`。要使用免费套餐，请在你 fork 的 `render.yaml` 中将 `plan: free`（但请注意：没有持久化磁盘意味着 OpenClaw 状态会在每次部署时重置）。
 
-## 部署后
+## 部署之后
 
 ### 访问控制界面
 
-网页仪表板可通过 `https://<your-service>.onrender.com/` 访问。
+Web 仪表板可在 `https://<your-service>.onrender.com/` 访问。
 
-请使用已配置的共享密钥进行连接。此部署模板会自动生成 `OPENCLAW_GATEWAY_TOKEN`（可在 **Dashboard → your service → Environment** 中找到）；如果您改用密码认证，则请使用该密码。
+使用已配置的共享密钥连接。此部署模板会自动生成 `OPENCLAW_GATEWAY_TOKEN`（可在 **Dashboard → your service →
+Environment** 中找到）；如果你将其替换为密码认证，请改用该密码。
 
-## Render 控制面板功能
+## Render 仪表板功能
 
 ### 日志
 
-在 **Dashboard → 您的服务 → Logs** 查看实时日志。可按以下类型过滤：
+在 **Dashboard → your service → Logs** 中查看实时日志。可按以下内容筛选：
 
 - 构建日志（Docker 镜像创建）
 - 部署日志（服务启动）
@@ -91,68 +92,68 @@ Blueprint 默认使用 `starter`。如需使用免费套餐，请在您 fork 的
 
 ### Shell 访问
 
-用于调试，可通过 **Dashboard → 您的服务 → Shell** 打开 shell 会话。持久盘挂载于 `/data`。
+用于调试时，可通过 **Dashboard → your service → Shell** 打开 shell 会话。持久化磁盘挂载在 `/data`。
 
 ### 环境变量
 
-在 **Dashboard → 您的服务 → Environment** 修改环境变量。修改后会自动触发重部署。
+在 **Dashboard → your service → Environment** 中修改变量。更改会触发自动重新部署。
 
 ### 自动部署
 
-使用原版 OpenClaw 仓库时，Render 不会自动部署您的 OpenClaw。如需更新，请在控制面板手动同步 Blueprint。
+如果你使用的是原始 OpenClaw 仓库，Render 不会自动部署你的 OpenClaw。要更新它，请从仪表板手动运行 Blueprint 同步。
 
 ## 自定义域名
 
-1. 进入 **Dashboard → 您的服务 → Settings → Custom Domains**
-2. 添加您的域名
-3. 按照指示配置 DNS（CNAME 指向 `*.onrender.com`）
-4. Render 会自动配置 TLS 证书
+1. 前往 **Dashboard → your service → Settings → Custom Domains**
+2. 添加你的域名
+3. 按照提示配置 DNS（CNAME 指向 `*.onrender.com`）
+4. Render 会自动提供 TLS 证书
 
-## 伸缩
+## 扩展
 
-Render 支持横向和纵向伸缩：
+Render 支持水平和垂直扩展：
 
-- **纵向伸缩**：更改计划，获取更多 CPU / 内存
-- **横向伸缩**：增加实例数量（仅限 Standard 计划及以上）
+- **垂直**：更改套餐以获得更多 CPU/RAM
+- **水平**：增加实例数量（Standard 套餐及以上）
 
-对 OpenClaw 通常纵向伸缩已足够。横向伸缩需要支持会话保持或外部状态管理。
+对于 OpenClaw 来说，垂直扩展通常就足够了。水平扩展需要粘性会话或外部状态管理。
 
 ## 备份和迁移
 
-可随时使用 Render 控制面板中的 shell 访问导出您的状态、配置、认证配置文件和工作区：
+你可以随时使用 Render 仪表板中的 shell 访问导出你的状态、配置、认证配置文件和工作区：
 
 ```bash
 openclaw backup create
 ```
 
-这将创建一个可移植的备份归档，其中包含 OpenClaw 状态以及任何已配置的工作区。详情请参见 [备份](/cli/backup)。
+这会创建一个可移植的备份归档，其中包含 OpenClaw 状态以及任何已配置的工作区。详情请参阅 [Backup](/cli/backup)。
 
-## 故障排除
+## 故障排查
 
-### Service will not start
+### 服务无法启动
 
-查看 Render 控制面板中的部署日志。常见问题：
+检查 Render 仪表板中的部署日志。常见问题包括：
 
-- 缺少 `OPENCLAW_GATEWAY_TOKEN` —— 请确认它已在 **Dashboard → Environment** 中设置
-- 端口不匹配 —— 确保设置了 `OPENCLAW_GATEWAY_PORT=8080`，以便网关绑定到 Render 期望的端口
+- 缺少 `OPENCLAW_GATEWAY_TOKEN` —— 确认它已在 **Dashboard → Environment** 中设置
+- 端口不匹配 —— 确保已设置 `OPENCLAW_GATEWAY_PORT=8080`，以便网关绑定到 Render 期望的端口
 
 ### 冷启动缓慢（免费套餐）
 
-免费套餐服务在空闲 15 分钟后自动关闭。首次请求时容器启动需几秒钟。升级到 Starter 计划可实现始终在线。
+免费套餐服务会在 15 分钟无活动后休眠。休眠后第一次请求在容器启动期间会花费几秒钟。升级到 Starter 套餐即可始终在线。
 
-### 重部署后数据丢失
+### 重新部署后数据丢失
 
-这种情况会发生在免费套餐（没有持久盘）上。请升级到付费计划，或者定期通过 Render shell 中的 `openclaw backup create` 导出完整备份。
+这发生在免费套餐上（没有持久化磁盘）。请升级到付费套餐，或定期在 Render shell 中通过 `openclaw backup create` 导出完整备份。
 
 ### 健康检查失败
 
-Render 期望 `/health` 路径返回 200 状态，且 30 秒内响应。如果构建成功但部署失败，可能是服务启动过慢。请检查：
+Render 期望在 30 秒内从 `/health` 获得 200 响应。如果构建成功但部署失败，服务可能启动耗时过长。检查：
 
 - 构建日志中是否有错误
-- 容器是否可以通过 `docker build && docker run` 在本地运行
+- 容器是否可在本地使用 `docker build && docker run` 正常运行
 
 ## 下一步
 
-- 设置消息通道：[Channels](/channels)
+- 设置消息渠道：[Channels](/channels)
 - 配置 Gateway：[Gateway configuration](/gateway/configuration)
 - 保持 OpenClaw 为最新版本：[Updating](/install/updating)

@@ -4,6 +4,26 @@
     "target": "OpenClaw"
   },
   {
+    "source": "OpenAI",
+    "target": "OpenAI"
+  },
+  {
+    "source": "OpenAI provider",
+    "target": "OpenAI provider"
+  },
+  {
+    "source": "Azure Speech",
+    "target": "Azure Speech"
+  },
+  {
+    "source": "Azure Speech provider",
+    "target": "Azure Speech provider"
+  },
+  {
+    "source": "Status",
+    "target": "Status"
+  },
+  {
     "source": "Gateway",
     "target": "Gateway 网关"
   },
@@ -76,12 +96,20 @@
     "target": "Chutes"
   },
   {
+    "source": "DeepInfra",
+    "target": "DeepInfra"
+  },
+  {
     "source": "Qwen",
     "target": "Qwen"
   },
   {
     "source": "Feishu",
     "target": "Feishu"
+  },
+  {
+    "source": "Yuanbao",
+    "target": "腾讯元宝"
   },
   {
     "source": "WeChat",
@@ -98,6 +126,10 @@
   {
     "source": "BytePlus (International)",
     "target": "BytePlus（国际版）"
+  },
+  {
+    "source": "Volcengine TTS HTTP API",
+    "target": "Volcengine TTS HTTP API"
   },
   {
     "source": "Amazon Bedrock Mantle",
@@ -318,6 +350,10 @@
   {
     "source": "Ollama Web Search",
     "target": "Ollama Web 搜索"
+  },
+  {
+    "source": "Memory LanceDB",
+    "target": "Memory LanceDB"
   },
   {
     "source": "onboarding",

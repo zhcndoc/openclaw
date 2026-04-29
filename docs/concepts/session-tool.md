@@ -1,33 +1,27 @@
 ---
-summary: "用于跨会话状态、回忆、消息传递和子智能体编排的智能体工具"
+summary: "用于跨会话状态、回忆、消息传递和子代理编排的代理工具"
 read_when:
-  - 你想了解智能体有哪些会话工具
-  - 你想配置跨会话访问或生成子智能体
-  - 你想检查状态或控制已生成的子智能体
+  - 你想了解代理有哪些会话工具
+  - 你想配置跨会话访问或子代理生成
+  - 你想检查状态或控制已生成的子代理
 title: "会话工具"
 ---
 
-OpenClaw 为智能体提供了跨会话工作、检查状态以及编排子智能体的工具。
+OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理的工具。
 
 ## 可用工具
 
-| 工具               | 功能                                                                |
-| ------------------ | --------------------------------------------------------------------------- |
-| `sessions_list`    | 列出会话，可带可选过滤条件（类型、标签、智能体、最近程度、预览） |
-| `sessions_history` | 读取特定会话的转录记录                                   |
-| `sessions_send`    | 向另一个会话发送消息，并可选择等待回复                       |
-| `sessions_spawn`   | 为后台工作生成一个隔离的子智能体会话                     |
-| `sessions_yield`               | 结束当前回合并等待后续子智能体结果               |
-| `subagents`        | 列出、引导或终止为此会话生成的子智能体                    |
-| `session_status`   | 显示一个类似 `/status` 的卡片，并可选择设置每会话模型覆盖 |
+| 工具               | 作用                                                                     |
+| ------------------ | ------------------------------------------------------------------------ |
+| `sessions_list`    | 列出会话，可选过滤条件包括 kind、label、agent、recency、preview           |
+| `sessions_history` | 读取特定会话的对话记录                                                     |
+| `sessions_send`    | 向另一个会话发送消息，并可选择等待回复                                     |
+| `sessions_spawn`   | 为后台工作生成一个隔离的子代理会话                                           |
+| `sessions_yield`   | 结束当前轮次，并等待后续子代理结果                                           |
+| `subagents`        | 列出、引导或终止此会话中已生成的子代理                                       |
+| `session_status`   | 显示一个类似 `/status` 的卡片，并可选设置按会话生效的模型覆盖值               |
 
-These tools are still subject to the active tool profile and allow/deny
-policy. `tools.profile: "coding"` includes the full session orchestration
-set, including `sessions_spawn`, `sessions_yield`, and `subagents`.
-`tools.profile: "messaging"` includes cross-session messaging tools
-(`sessions_list`, `sessions_history`, `sessions_send`, `session_status`) but
-does not include sub-agent spawning. To keep a messaging profile and still
-allow native delegation, add:
+这些工具仍然受当前生效的工具配置文件以及允许/拒绝策略约束。`tools.profile: "coding"` 包含完整的会话编排工具集，包括 `sessions_spawn`、`sessions_yield` 和 `subagents`。`tools.profile: "messaging"` 包含跨会话消息工具（`sessions_list`、`sessions_history`、`sessions_send`、`session_status`），但不包含子代理生成。若要保留 messaging 配置文件，同时仍允许原生委派，请添加：
 
 ```json5
 {
@@ -38,114 +32,99 @@ allow native delegation, add:
 }
 ```
 
-Group, provider, sandbox, and per-agent policies can still remove those tools
-after the profile stage. Use `/tools` from the affected session to inspect the
-effective tool list.
+组、提供方、沙箱以及按代理设置的策略在配置文件阶段之后仍可能移除这些工具。使用受影响会话中的 `/tools` 来查看实际生效的工具列表。
 
-## Listing and reading sessions
+## 列出和读取会话
 
-`sessions_list` 返回会话及其 key、agentId、kind、channel、model、
-token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、
-`node`）、精确 `label`、精确 `agentId`、搜索文本或最近程度
-（`activeMinutes`）进行过滤。当你需要类似邮箱的分拣时，它还可以请求一个
-按可见性范围限定的派生标题、最后一条消息预览片段，或每行受限的
-最近消息。派生标题和预览仅针对调用方在已配置的会话工具
-可见性策略下已经能够看到的会话生成，因此无关会话仍然保持隐藏。
+`sessions_list` 会返回会话及其 key、agentId、kind、channel、model、token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、`node`）、精确 `label`、精确 `agentId`、搜索文本或最近活跃时间（`activeMinutes`）进行过滤。当你需要类似邮箱的分拣时，它还可以请求一个按可见性范围派生的标题、最后一条消息的预览片段，或者每行受限的最近消息。派生标题和预览只会为调用方在已配置的会话工具可见性策略下本就可以看到的会话生成，因此无关会话会保持隐藏。
 
-`sessions_history` 获取特定会话的对话转录记录。
-默认情况下，工具结果被排除——传递 `includeTools: true` 以查看它们。
-返回的视图有意受限并经过安全过滤：
+`sessions_history` 用于获取特定会话的对话记录。默认情况下会排除工具结果——传入 `includeTools: true` 以查看它们。返回视图经过有意的边界限制和安全过滤：
 
-- 助手文本在回忆前被标准化：
-  - 思考标签被剥离
-  - `<relevant-memories>` / `<relevant_memories>` 脚手架块被剥离
+- assistant 文本在回忆前会被规范化：
+  - thinking 标签会被剥离
+  - `<relevant-memories>` / `<relevant_memories>` 脚手架块会被剥离
   - 纯文本工具调用 XML 负载块（如 `<tool_call>...</tool_call>`、
     `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>` 和
-    `<function_calls>...</function_calls>`）被剥离，包括截断
-    且从未正常关闭的负载
+    `<function_calls>...</function_calls>`）会被剥离，包括从未完整闭合的截断负载
   - 降级的工具调用/结果脚手架（如 `[Tool Call: ...]`、
-    `[Tool Result ...]` 和 `[Historical context ...]`）被剥离
-  - 泄露的模型控制令牌（如 `<|assistant|>`、其他 ASCII
-    `<|...|>` 令牌和全角 `<｜...｜>` 变体）被剥离
-  - 格式错误的 MiniMax 工具调用 XML（如 `<invoke ...>` /
-    `</minimax:tool_call>`）被剥离
-- 凭据/令牌类文本在返回前被编辑
-- 长文本块被截断
-- 非常大的历史记录可能会丢弃较旧的行或用
-  `[sessions_history omitted: message too large]` 替换过大的行
-- 该工具报告摘要标志，如 `truncated`、`droppedMessages`、
-  `contentTruncated`、`contentRedacted` 和 `bytes`
+    `[Tool Result ...]` 和 `[Historical context ...]`）会被剥离
+  - 泄露的模型控制 token（如 `<|assistant|>`、其他 ASCII
+    `<|...|>` token，以及全角 `<｜...｜>` 变体）会被剥离
+  - 形态异常的 MiniMax 工具调用 XML（如 `<invoke ...>` /
+    `</minimax:tool_call>`）会被剥离
+- 类似凭据/token 的文本在返回前会被脱敏
+- 较长的文本块会被截断
+- 非常大的历史记录可能会丢弃较早的行，或将过大的行替换为
+  `[sessions_history omitted: message too large]`
+- 该工具会报告 `truncated`、`droppedMessages`、
+  `contentTruncated`、`contentRedacted` 和 `bytes` 等汇总标志
 
-这两个工具都接受 **会话 key**（如 `"main"`）或来自先前列表调用的 **会话 ID**。
+这两个工具都接受一个**会话 key**（例如 `"main"`）或来自先前 list 调用的**会话 ID**。
 
-如果你需要精确的逐字节转录记录，请检查磁盘上的转录文件，而不是将 `sessions_history` 视为原始转储。
+如果你需要逐字节完全一致的转录，请检查磁盘上的 transcript 文件，而不要把 `sessions_history` 当作原始转储。
 
-## 发送跨会话消息
+## 跨会话发送消息
 
-`sessions_send` 将消息传递给另一个会话并可选等待响应：
+`sessions_send` 会向另一个会话传递消息，并可选择等待响应：
 
-- **发后即忘：** 设置 `timeoutSeconds: 0` 以入队并立即返回。
-- **等待回复：** 设置超时并内联获取响应。
+- **即发即弃：** 设置 `timeoutSeconds: 0`，即可入队并立即返回。
+- **等待回复：** 设置超时时间并内联获取响应。
 
-目标响应后，OpenClaw 可以运行一个 **回复循环**，智能体交替发送消息（最多 5 轮）。目标智能体可以回复 `REPLY_SKIP` 以提前停止。
+消息和 A2A 后续回复会在接收提示中（`[Inter-session message ... isUser=false]`）以及转录来源信息中标记为会话间数据。接收代理应将其视为工具路由数据，而不是直接由最终用户编写的指令。
 
-## 状态和编排助手
+目标方响应后，OpenClaw 可以运行一个**回复回环**，让代理轮流交替消息（最多 5 轮）。目标代理可以回复 `REPLY_SKIP` 以提前停止。
 
-`session_status` 是当前会话或另一个可见会话的轻量级 `/status` 等效工具。它会报告使用情况、时间、模型/运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以从最新的转录使用条目中补齐稀疏的 token/cache 计数，并且 `model=default` 会清除每会话覆盖。对调用方当前会话使用 `sessionKey="current"`；`openclaw-tui` 之类的可见客户端标签不是会话 key。
+## 状态和编排辅助工具
 
-`sessions_yield` 有意结束当前回合，以便下一条消息可以是你等待的后续事件。在生成子智能体后使用它，当你希望完成结果作为下一条消息到达而不是构建轮询循环时。
+`session_status` 是当前会话或其他可见会话的轻量级 `/status` 等价工具。它会报告用量、时间、模型/运行时状态，以及在存在时关联的后台任务上下文。与 `/status` 一样，它可以从最新的转录用量条目中回填稀疏的 token/cache 计数，而 `model=default` 会清除按会话生效的覆盖值。对调用方当前会话使用 `sessionKey="current"`；诸如 `openclaw-tui` 之类的可见客户端标签并不是会话 key。
 
-`subagents` 是已生成的 OpenClaw 子智能体的控制平面助手。它支持：
+`sessions_yield` 会有意结束当前轮次，以便下一条消息可以成为你正在等待的后续事件。在生成子代理后使用它，当你希望完成结果作为下一条消息到达，而不是建立轮询循环时尤其适合。
 
-- `action: "list"` 检查活跃/最近的运行
-- `action: "steer"` 向运行中的子项发送后续指导
-- `action: "kill"` 停止一个子项或 `all`
+`subagents` 是用于已生成 OpenClaw 子代理的控制平面辅助工具。它支持：
 
-## 生成子智能体
+- `action: "list"` 用于检查活跃/最近运行
+- `action: "steer"` 用于向正在运行的子任务发送后续指导
+- `action: "kill"` 用于停止单个子任务或 `all`
 
-`sessions_spawn` 默认会为后台任务创建一个隔离会话。
-它始终是非阻塞的——它会立即返回 `runId` 和
-`childSessionKey`。
+## 生成子代理
+
+`sessions_spawn` 默认会为后台任务创建一个隔离会话。它始终是非阻塞的——会立即返回 `runId` 和 `childSessionKey`。
 
 关键选项：
 
-- `runtime: "subagent"` (default) or `"acp"` for external harness agents.
-- `model` and `thinking` overrides for the child session.
-- `thread: true` to bind the spawn to a chat thread (Discord, Slack, etc.).
-- `sandbox: "require"` to enforce sandboxing on the child.
-- `context: "fork"` for native sub-agents when the child needs the current
-  requester transcript; omit it or use `context: "isolated"` for a clean child.
+- `runtime: "subagent"`（默认）或 `"acp"`，用于外部宿主代理。
+- `model` 和 `thinking` 覆盖子会话设置。
+- `thread: true` 将生成任务绑定到聊天线程（Discord、Slack 等）。
+- `sandbox: "require"` 强制对子任务启用沙箱。
+- `context: "fork"` 适用于原生子代理，当子代理需要当前请求者的转录时使用；若要创建干净的子代理，可省略它或使用 `context: "isolated"`。
 
-默认叶子的子智能体不会获得会话工具。当
-`maxSpawnDepth >= 2` 时，depth-1 编排器子智能体还会接收
-`sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们可以管理自己的子项。叶子运行仍然不会获得递归
-编排工具。
+默认的叶子子代理不会获得会话工具。当 `maxSpawnDepth >= 2` 时，深度为 1 的编排子代理还会额外获得 `sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们管理自己的子任务。叶子运行仍然不会获得递归编排工具。
 
-完成后，宣布步骤将结果发布到请求者的频道。完成交付在可用时保留绑定的线程/主题路由，如果完成来源仅识别一个频道，OpenClaw 仍然可以重用请求者会话的存储路由（`lastChannel` / `lastTo`）进行直接交付。
+完成后，会有一个 announce 步骤将结果发布到请求者的频道。完成结果投递会在可用时保留绑定的线程/主题路由；如果完成来源只标识了一个频道，OpenClaw 仍可以重用请求者会话中存储的路由（`lastChannel` / `lastTo`）进行直接投递。
 
-有关 ACP 特定行为，请参阅 [ACP 智能体](/tools/acp-agents)。
+关于 ACP 的特定行为，请参见 [ACP Agents](/tools/acp-agents)。
 
 ## 可见性
 
-会话工具的作用域限制了智能体可以看到的内容：
+会话工具的作用域会限制代理可见内容：
 
-| 级别   | 范围                                    |
-| ------- | ---------------------------------------- |
+| 级别   | 范围                                     |
+| ------ | ---------------------------------------- |
 | `self`  | 仅当前会话                               |
-| `tree`  | 当前会话 + 派生的子智能体                |
-| `agent` | 此智能体的所有会话                       |
-| `all`   | 所有会话（如果配置了跨智能体）           |
+| `tree`  | 当前会话 + 已生成的子代理                |
+| `agent` | 该代理的所有会话                         |
+| `all`   | 所有会话（若已配置，则跨代理）           |
 
-默认为 `tree`。沙箱会话无论配置如何都被限制为 `tree`。
+默认值为 `tree`。无论配置如何，沙箱会话都被限制为 `tree`。
 
-## 进一步阅读
+## 延伸阅读
 
 - [Session Management](/concepts/session) -- 路由、生命周期、维护
 - [ACP Agents](/tools/acp-agents) -- 外部宿主生成
-- [Multi-agent](/concepts/multi-agent) -- 多智能体架构
+- [Multi-agent](/concepts/multi-agent) -- 多代理架构
 - [Gateway Configuration](/gateway/configuration) -- 会话工具配置选项
 
-## 相关
+## 相关内容
 
 - [Session management](/concepts/session)
 - [Session pruning](/concepts/session-pruning)

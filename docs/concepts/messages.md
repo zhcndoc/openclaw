@@ -1,41 +1,44 @@
 ---
-summary: "消息流、会话、排队和推理可见性"
+summary: "消息流、会话、排队以及推理可见性"
 read_when:
   - 解释入站消息如何变成回复
-  - 澄清会话、排队模式或流行为
-  - 记录推理可见性及使用影响
+  - 澄清会话、排队模式或流式行为
+  - 记录推理可见性及其使用影响
 title: "消息"
 ---
 
-OpenClaw 通过会话解析、排队、流式传输、工具执行和推理可见性构成的流水线来处理入站消息。本页说明了从入站消息到回复的路径。
+OpenClaw 通过一个包含会话解析、排队、流式输出、工具执行和推理可见性的管道来处理入站消息。本页说明从入站消息到回复的路径。
 
-## 消息流程（高级）
+## 消息流（高层）
 
 ```
 入站消息
-  -> 路由/绑定 -> 会话密钥
-  -> 队列（如果有运行活动中）
+  -> 路由/绑定 -> 会话键
+  -> 队列（如果有正在运行的任务）
   -> 代理运行（流式 + 工具）
-  -> 出站回复（渠道限制 + 分块）
+  -> 出站回复（频道限制 + 分块）
 ```
 
-关键配置选项位于配置中：
+关键开关位于配置中：
 
-- `messages.*` 用于前缀、排队和组行为。
-- `agents.defaults.*` 用于块流和分块默认设置。
-- 渠道覆盖（如 `channels.whatsapp.*`、`channels.telegram.*` 等）用于限制和流式切换。
+- `messages.*` 用于前缀、排队和群组行为。
+- `agents.defaults.*` 用于块流式和分块默认值。
+- 频道覆盖（`channels.whatsapp.*`、`channels.telegram.*` 等）用于限制和流式开关。
 
-查看 [配置](/gateway/configuration) 获取完整架构。
+完整 schema 参见 [配置](/gateway/configuration)。
 
 ## 入站去重
 
-渠道在重新连接后可能会重新发送相同消息。OpenClaw 保持一个由渠道/帐户/对等体/会话/消息 ID 组成的短期缓存，避免重复发送触发新的代理运行。
+频道在重新连接后可能会重复投递同一条消息。OpenClaw 会保留一个
+短期缓存，以 channel/account/peer/session/message id 为键，因此重复
+投递不会再次触发代理运行。
 
 ## 入站防抖
 
-来自**同一发送者**的快速连续消息可通过 `messages.inbound` 合并为单个代理回合。防抖以渠道 + 会话为范围，使用最近消息进行回复线程/ID 处理。
+来自**同一发送者**的快速连续消息可以通过 `messages.inbound` 合并为一个
+代理轮次。防抖按每个 channel + conversation 作用域划分，并使用最新消息来进行回复线程/ID 关联。
 
-配置（全局默认 + 每渠道覆盖）：
+配置（全局默认值 + 按频道覆盖）：
 
 ```json5
 {
@@ -54,101 +57,140 @@ OpenClaw 通过会话解析、排队、流式传输、工具执行和推理可�
 
 注意：
 
-- 防抖仅适用于**纯文本**消息；媒体/附件会立即刷新。
-- 控制命令会绕过防抖，因此它们仍然作为独立消息处理——**除非**某个渠道明确选择同一发送者 DM 合并（例如 [BlueBubbles `coalesceSameSenderDms`](/channels/bluebubbles#coalescing-split-send-dms-command--url-in-one-composition)），在这种情况下，DM 命令会在防抖窗口内等待，以便拆分发送载荷可以加入同一个代理回合。
+- 防抖仅适用于**纯文本**消息；媒体/附件会立即刷新发送。
+- 控制命令会绕过防抖，因此它们保持为独立消息——**除非**某个频道显式选择加入同一发送者 DM 合并（例如 [BlueBubbles `coalesceSameSenderDms`](/channels/bluebubbles#coalescing-split-send-dms-command--url-in-one-composition)），在这种情况下，DM 命令会在防抖窗口内等待，以便拆分发送载荷可以加入同一个代理轮次。
 
-## 会话与设备
+## 会话和设备
 
-会话由网关拥有，而非客户端。
+会话归网关所有，而不是客户端。
 
-- 直接聊天合并为代理主会话密钥。
-- 群组/频道有各自的会话密钥。
-- 会话存储和聊天记录都位于网关主机。
+- 直接聊天会折叠到代理主会话键中。
+- 群组/频道有自己的会话键。
+- 会话存储和转录保留在网关主机上。
 
-多个设备/渠道可以映射同一个会话，但历史不会完全同步回每个客户端。建议：长聊使用一个主设备以避免上下文分叉。控制界面（UI）和文本界面（TUI）始终显示网关支持的会话记录，是事实源。
+多个设备/频道可以映射到同一个会话，但历史不会完全
+同步回每个客户端。建议：长对话使用一个主设备，以避免上下文分歧。控制 UI 和 TUI 始终显示
+网关托管的会话转录，因此它们是事实来源。
 
-详情见：[会话管理](/concepts/session)。
+详情： [会话管理](/concepts/session)。
 
-## 入站消息体和历史上下文
+## 工具结果元数据
 
-OpenClaw 将**提示体**和**命令体**分开：
+工具结果的 `content` 是模型可见的结果。工具结果的 `details` 是
+用于 UI 渲染、诊断、媒体传递和插件的运行时元数据。
 
-- `Body`：发送给代理的提示文本，可能包含渠道信封和可选历史包装。
-- `CommandBody`：原始用户文本，用于指令/命令解析。
-- `RawBody`：`CommandBody` 的旧别名（保留兼容性）。
+OpenClaw 明确保留了这一边界：
 
-渠道提供历史时使用共享包装：
+- `toolResult.details` 在向提供方重放和压缩输入前会被剥离。
+- 持久化的会话转录只保留有界的 `details`；过大的元数据
+  会被替换为带有 `persistedDetailsTruncated: true` 标记的紧凑摘要。
+- 插件和工具应把模型必须读取的文本放在 `content` 中，而不是只放在
+  `details` 中。
 
-- `[你上次回复后的聊天消息 - 用于上下文]`
-- `[当前消息 - 请回复此消息]`
+## 入站主体和历史上下文
 
-对于**非直接聊天**（群组/频道/聊天室），**当前消息体**会加上发送者标签（与历史条目样式相同）。这样保持实时和排队/历史消息在代理提示中的一致性。
+OpenClaw 将**提示主体**与**命令主体**分开：
 
-历史缓存是**待处理的**：包含未触发运行的群组消息（例如仅提及许可的消息），并**排除**已在会话记录中的消息。
+- `Body`：发送给代理的提示文本。它可能包含频道封装和
+  可选的历史包装器。
+- `CommandBody`：用于指令/命令解析的原始用户文本。
+- `RawBody`：`CommandBody` 的旧别名（为兼容性保留）。
 
-指令去除仅应用于**当前消息**部分，历史保持完整。包装历史消息的频道应将 `CommandBody`（或 `RawBody`）设置为原始消息文本，`Body` 保持为合并提示。历史缓存通过 `messages.groupChat.historyLimit`（全局默认）及渠道覆盖如 `channels.slack.historyLimit` 或 `channels.telegram.accounts.<id>.historyLimit` 配置（设为 `0` 禁用）。
+当某个频道提供历史时，它使用一个共享包装器：
 
-## 排队与后续处理
+- `[Chat messages since your last reply - for context]`
+- `[Current message - respond to this]`
 
-如果当前已有运行，入站消息可以排队、引导进当前运行，或收集为后续回合。
+对于**非直接聊天**（群组/频道/房间），**当前消息主体**会以前缀形式带上
+发送者标签（与历史条目使用相同风格）。这使实时消息和排队/历史
+消息在代理提示中保持一致。
 
-- 通过 `messages.queue`（及 `messages.queue.byChannel`）配置。
-- 模式包括：`interrupt`（中断）、`steer`（引导）、`followup`（后续）、`collect`（收集）及其积压变种。
+历史缓冲区是**仅待处理**的：它们包含未触发运行的群组消息（例如，提及门控消息），并且**排除**
+已在会话转录中的消息。
 
-详情见：[排队](/concepts/queue)。
+指令剥离只应用于**当前消息**部分，因此历史保持完整。
+包装历史的频道应将 `CommandBody`（或 `RawBody`）设置为原始消息文本，并将 `Body` 保持为组合后的提示。
+历史缓冲区可通过 `messages.groupChat.historyLimit`（全局默认值）和
+按频道覆盖（如 `channels.slack.historyLimit` 或 `channels.telegram.accounts.<id>.historyLimit`）进行配置（设为 `0` 可禁用）。
+
+## 排队和后续轮次
+
+如果某个运行已经处于活动状态，入站消息可以被排队、导向当前运行，
+或者收集到一个后续轮次中。
+
+- 通过 `messages.queue`（以及 `messages.queue.byChannel`）进行配置。
+- 模式：`interrupt`、`steer`、`followup`、`collect`，以及回退变体。
+
+详情： [排队](/concepts/queue)。
+
+## 频道运行所有权
+
+频道插件可以在消息进入会话队列之前保持顺序、对输入进行防抖，并应用传输层背压。
+它们不应在代理轮次本身外再施加单独超时。一旦消息被路由到
+某个会话，长时间运行的工作就由会话、工具和运行时生命周期来管理，
+因此所有频道都能一致地报告和恢复缓慢轮次。
 
 ## 流式、分块和批处理
 
-块流式发送模型产生的部分回复文本块。分块遵守渠道文本限制，避免拆分代码块。
+块流式会在模型生成文本块时发送部分回复。
+分块会遵守频道文本限制并避免拆分带围栏的代码。
 
 关键设置：
 
-- `agents.defaults.blockStreamingDefault`（`on|off`，默认关闭）
+- `agents.defaults.blockStreamingDefault`（`on|off`，默认 off）
 - `agents.defaults.blockStreamingBreak`（`text_end|message_end`）
 - `agents.defaults.blockStreamingChunk`（`minChars|maxChars|breakPreference`）
-- `agents.defaults.blockStreamingCoalesce`（基于空闲时间的批处理）
-- `agents.defaults.humanDelay`（块回复间类人延迟）
-- 渠道覆盖：`*.blockStreaming` 和 `*.blockStreamingCoalesce`（非 Telegram 频道须显式设置 `*.blockStreaming: true`）
+- `agents.defaults.blockStreamingCoalesce`（基于空闲的批处理）
+- `agents.defaults.humanDelay`（块回复之间模拟人类的暂停）
+- 频道覆盖：`*.blockStreaming` 和 `*.blockStreamingCoalesce`（非 Telegram 频道需要显式 `*.blockStreaming: true`）
 
-详情见：[流式 + 分块](/concepts/streaming)。
+详情： [流式 + 分块](/concepts/streaming)。
 
-## 推理可见性和令牌
+## 推理可见性和 token
 
-OpenClaw 可显示或隐藏模型推理：
+OpenClaw 可以暴露或隐藏模型推理：
 
-- `/reasoning on|off|stream` 控制推理可见性。
-- 推理内容产生时仍计入令牌使用。
-- Telegram 支持推理流显示在草稿气泡中。
+- `/reasoning on|off|stream` 控制可见性。
+- 即使推理内容被模型生成，它仍然会计入 token 使用量。
+- Telegram 支持将推理流式输出到草稿气泡中。
 
-详情见：[思考 + 推理指令](/tools/thinking) 和 [令牌使用](/reference/token-use)。
+详情： [思考 + 推理指令](/tools/thinking) 和 [Token 使用](/reference/token-use)。
 
 ## 前缀、线程和回复
 
-出站消息格式统一在 `messages` 管理：
+出站消息格式由 `messages` 集中管理：
 
-- `messages.responsePrefix`、`channels.<channel>.responsePrefix` 和 `channels.<channel>.accounts.<id>.responsePrefix`（出站前缀层叠），以及 `channels.whatsapp.messagePrefix`（WhatsApp 入站前缀）
-- 通过 `replyToMode` 和渠道默认设置实现回复线程
+- `messages.responsePrefix`、`channels.<channel>.responsePrefix` 和 `channels.<channel>.accounts.<id>.responsePrefix`（出站前缀级联），以及 `channels.whatsapp.messagePrefix`（WhatsApp 入站前缀）
+- 通过 `replyToMode` 以及按频道默认值进行回复线程关联
 
-详情：[配置](/gateway/config-agents#messages) 和渠道文档。
+详情： [配置](/gateway/config-agents#messages) 和频道文档。
 
 ## 静默回复
 
-精确的静默令牌 `NO_REPLY` / `no_reply` 表示“不要发送用户可见的回复”。
-OpenClaw 会根据会话类型解析该行为：
+精确的静默标记 `NO_REPLY` / `no_reply` 表示“不要发送用户可见的回复”。
+当某个轮次还带有待处理的工具媒体（例如生成的 TTS 音频）时，OpenClaw
+会去除静默文本，但仍然发送媒体附件。
+OpenClaw 按会话类型来解析该行为：
 
-- 直接会话默认不允许静默，并会将裸静默回复改写为简短的可见兜底回复。
+- 直接对话默认不允许静默，并会将裸静默
+  回复重写为简短的可见兜底文本。
 - 群组/频道默认允许静默。
 - 内部编排默认允许静默。
 
+OpenClaw 还会在非直接聊天中，针对任何助理回复之前发生的内部运行器故障使用静默回复，因此群组/频道不会看到
+网关错误样板。直接聊天默认显示简洁的失败文案；
+仅当 `/verbose` 为 `on` 或 `full` 时才显示原始运行器细节。
+
 默认值位于 `agents.defaults.silentReply` 和
 `agents.defaults.silentReplyRewrite`；`surfaces.<id>.silentReply` 和
-`surfaces.<id>.silentReplyRewrite` 可按 surface 覆盖它们。
+`surfaces.<id>.silentReplyRewrite` 可按 surface 进行覆盖。
 
-当父会话存在一个或多个待处理的已生成子代理运行时，所有 surface 上的裸静默回复都会被丢弃，而不是被改写，因此父会话会保持静默，直到子完成事件交付真实回复。
+当父会话存在一个或多个待处理的已生成子代理运行时，所有 surface 上的裸
+静默回复都会被丢弃，而不是被重写，因此父会话会保持安静，直到子完成事件发送真实回复。
 
 ## 相关内容
 
-- [流式传输](/concepts/streaming) — 实时消息交付
-- [重试](/concepts/retry) — 消息交付重试行为
-- [排队](/concepts/queue) — 消息处理队列
-- [渠道](/channels) — 消息平台集成
+- [流式](/concepts/streaming) — 实时消息传递
+- [重试](/concepts/retry) — 消息投递重试行为
+- [队列](/concepts/queue) — 消息处理队列
+- [频道](/channels) — 消息平台集成

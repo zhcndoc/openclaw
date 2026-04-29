@@ -1,77 +1,98 @@
 ---
-summary: "OpenClaw 系统提示包含内容及其如何组装"
+summary: "OpenClaw 系统提示词包含的内容以及其组装方式"
 read_when:
   - 编辑系统提示文本、工具列表或时间/心跳部分
-  - 更改工作区引导或技能注入行为
-title: "系统提示"
+  - 更改工作区引导加载或技能注入行为
+title: "系统提示词"
 ---
 
-OpenClaw 为每次代理运行构建一个自定义系统提示。该提示由 **OpenClaw 拥有**，并且不使用 pi-coding-agent 的默认提示。
+OpenClaw 为每次代理运行构建一个自定义系统提示词。该提示词归 **OpenClaw 所有**，不使用 pi-coding-agent 的默认提示词。
 
-提示由 OpenClaw 组装并注入到每次代理运行中。
+该提示词由 OpenClaw 组装，并注入到每次代理运行中。
 
-Provider 插件可以提供缓存感知的提示指导，而无需替换完整的 OpenClaw 拥有提示。Provider 运行时可以：
+提供方插件可以贡献对缓存友好的提示指导，而不必替换
+整个 OpenClaw 所有的提示词。提供方运行时可以：
 
-- 替换少量命名的核心部分（`interaction_style`, `tool_call_style`, `execution_bias`）
-- 在提示缓存边界之上注入一个 **稳定前缀**
-- 在提示缓存边界之下注入一个 **动态后缀**
+- 替换一小组命名的核心部分（`interaction_style`、
+  `tool_call_style`、`execution_bias`）
+- 在提示词缓存边界之上注入一个**稳定前缀**
+- 在提示词缓存边界之下注入一个**动态后缀**
 
-使用 Provider 拥有的贡献进行模型系列特定的调优。保留遗留的 `before_prompt_build` 提示修改以保持兼容性或进行真正的全局提示更改，而不是正常的 Provider 行为。
+针对特定模型家族的调优，请使用提供方所有的贡献。将旧的
+`before_prompt_build` 提示词修改保留用于兼容性或真正全局的提示词
+更改，而不是作为常规提供方行为。
 
-OpenAI GPT-5 系列叠加层会保持核心执行规则较小，并为人格黏附、简洁输出、工具纪律、并行查找、交付物覆盖、验证、缺失上下文以及终端工具卫生添加模型特定指导。
+OpenAI GPT-5 系列叠加层保持核心执行规则简洁，并增加
+针对人格锚定、简洁输出、工具纪律、并行查找、交付物覆盖、验证、缺失上下文以及
+终端工具卫生的模型特定指导。
 
-## Structure
+## 结构
 
-提示设计得简洁，使用固定的部分：
+该提示词有意保持紧凑，并使用固定部分：
 
-- **工具**: 结构化工具的事实来源提醒，以及运行时工具使用指导。
-- **执行偏差**: 简洁的后续执行指导：对可执行请求立即在当前轮次中行动，持续执行直到完成或受阻，从弱工具结果中恢复，实时检查可变状态，并在最终完成前进行验证。
-- **安全性**: 简短的护栏提醒，避免权力寻求行为或绕过监督。
-- **技能**（可用时）: 告诉模型如何按需加载技能说明。
-- **OpenClaw 自我更新**: 如何使用 `config.schema.lookup` 安全检查配置、用 `config.patch` 打补丁、用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。仅限所有者的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括规范化为这些受保护 exec 路径的旧版 `tools.bash.*` 别名。
-- **工作区**: 工作目录（`agents.defaults.workspace`）。
-- **文档**: OpenClaw 文档的本地路径（repo 或 npm 包）以及何时阅读它们。
-- **工作区文件（已注入）**: 表示下方已包含引导文件。
-- **沙盒**（启用时）: 表示沙盒运行时、沙盒路径，以及是否可用提权执行。
-- **当前日期和时间**: 用户本地时间、时区和时间格式。
-- **回复标签**: 受支持提供方可选的回复标签语法。
-- **心跳**: 在默认代理启用心跳时，心跳提示和确认行为。
-- **运行时**: 主机、操作系统、node、模型、仓库根目录（检测到时）、思考级别（一行）。
-- **推理**: 当前可见性级别 + `/reasoning` 切换提示。
+- **工具**：结构化工具的权威来源提醒，以及运行时工具使用指导。
+- **执行偏置**：简洁的跟进指导：对可执行请求按轮次立即行动，持续直到完成或被阻塞，从较弱的工具结果中恢复，检查可变状态的实时值，并在最终定稿前进行验证。
+- **安全性**：简短的护栏提醒，避免权力寻求行为或绕过监督。
+- **技能**（如可用）：告诉模型如何按需加载技能说明。
+- **OpenClaw 自我更新**：如何安全地使用 `config.schema.lookup` 检查配置、用 `config.patch` 打补丁、用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。仅所有者可用的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括规范化为这些受保护 exec 路径的旧版 `tools.bash.*` 别名。
+- **工作区**：工作目录（`agents.defaults.workspace`）。
+- **文档**：OpenClaw 文档的本地路径（仓库或 npm 包），以及何时阅读它们。
+- **工作区文件（注入）**：表示引导文件会在下方包含。
+- **沙箱**（如启用）：表示已沙箱化的运行时、沙箱路径，以及是否可进行提升权限的 exec。
+- **当前日期与时间**：用户本地时间、时区和时间格式。
+- **回复标签**：面向受支持提供方的可选回复标签语法。
+- **心跳**：当默认代理启用心跳时，心跳提示词与确认行为。
+- **运行时**：主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
+- **推理**：当前可见性级别 + `/reasoning` 切换提示。
 
-Tooling 部分还包括针对长期运行工作的运行时指导：
+OpenClaw 将包括 **项目上下文** 在内的大块稳定内容保留在
+内部提示词缓存边界之上。像控制 UI 嵌入指导、**消息**、**语音**、**群聊上下文**、
+**反应**、**心跳** 和 **运行时** 这样的易变通道/会话部分会被追加到该边界之下，
+以便具有前缀缓存的本地后端可以在通道轮次之间复用稳定的工作区前缀。
+工具描述同样应避免嵌入当前通道名称，因为已接受的 schema 已经携带了该运行时细节。
 
-- 使用 cron 进行后续跟进（`check back later`，提醒，重复性工作），而不是 `exec` 睡眠循环、`yieldMs` 延迟技巧或重复的 `process` 轮询
-- 仅对现在启动并在后台继续运行的命令使用 `exec` / `process`
-- 当启用自动完成唤醒时，启动命令一次，并在其输出或失败时依赖基于推送的唤醒路径
-- 当需要检查运行中的命令时，使用 `process` 获取日志、状态、输入或干预
-- 如果任务较大，首选 `sessions_spawn`；子代理完成是基于推送的，并自动向请求者宣布
-- 不要循环轮询 `subagents list` / `sessions_list` 仅仅为了等待完成
+工具部分还包含针对长时间运行工作的运行时指导：
 
-当实验性的 `update_plan` 工具启用时，Tooling 还告诉模型仅将其用于非平凡的多步工作，保持恰好一个 `in_progress` 步骤，并避免在每次更新后重复整个计划。
+- 对未来的后续处理（`check back later`、提醒、周期性工作）
+  使用 cron，而不是 `exec` 睡眠循环、`yieldMs` 延迟技巧或重复的 `process`
+  轮询
+- 仅将 `exec` / `process` 用于从现在开始并在后台继续运行的命令
+- 当启用自动完成唤醒时，只启动一次命令，并在其输出或失败时依赖基于推送的唤醒路径
+- 当你需要检查正在运行的命令时，使用 `process` 获取日志、状态、输入或干预
+- 如果任务更大，优先使用 `sessions_spawn`；子代理完成是基于推送的，并会自动回告请求方
+- 不要仅为了等待完成而循环轮询 `subagents list` / `sessions_list`
 
-系统提示中的安全护栏是建议性的。它们指导模型行为但不执行政策。使用工具策略、执行批准、沙盒和通道允许列表进行硬执行；操作员可以根据设计禁用这些。
+当实验性的 `update_plan` 工具启用时，工具部分也会告诉模型仅将其用于非平凡的多步骤工作，始终只保留一个 `in_progress` 步骤，并避免在每次更新后重复整份计划。
 
-在具有原生批准卡片/按钮的通道上，运行时提示现在告诉代理首先依赖该原生批准 UI。仅当工具结果说明聊天批准不可用或手动批准是唯一路径时，才应包含手动 `/approve` 命令。
+系统提示词中的安全护栏仅作建议。它们引导模型行为，但不会强制执行策略。应使用工具策略、exec 审批、沙箱和通道白名单来进行硬性约束；运营者可按设计禁用这些功能。
 
-## 提示模式
+在带有原生审批卡片/按钮的通道上，运行时提示词现在会告诉
+代理优先依赖原生审批 UI。只有当工具结果表明聊天审批不可用，或
+手动审批是唯一途径时，才应包含手动 `/approve` 命令。
 
-OpenClaw 可为子代理渲染较小的系统提示。运行时为每次运行设置一个 `promptMode`（非面向用户的配置）：
+## 提示词模式
 
-- `full`（默认）：包含上述所有部分。
-- `minimal`：用于子代理；省略 **技能**、**记忆回忆**、**OpenClaw 自我更新**、**模型别名**、**用户身份**、**回复标签**、**消息**、**静默回复** 和 **心跳**。仍保留工具、**安全性**、工作区、沙盒、已知时的当前日期和时间、运行时及注入的上下文。
-- `none`：仅返回基本身份行。
+OpenClaw 可以为子代理渲染更小的系统提示词。运行时会为每次运行设置一个
+`promptMode`（这不是面向用户的配置）：
 
-当 `promptMode=minimal` 时，额外注入的提示标记为 **子代理上下文**，而非 **群聊上下文**。
+- `full`（默认）：包含上面所有部分。
+- `minimal`：用于子代理；省略 **技能**、**记忆回忆**、**OpenClaw
+  自我更新**、**模型别名**、**用户身份**、**回复标签**、
+  **消息**、**静默回复** 和 **心跳**。工具、**安全性**、
+  工作区、沙箱、当前日期与时间（如已知）、运行时，以及注入的
+  上下文保持可用。
+- `none`：仅返回基础身份行。
 
-For channel auto-reply runs, OpenClaw can omit the generic **Silent Replies**
-section when the direct/group chat context already includes the resolved
-conversation-specific `NO_REPLY` behavior. This avoids repeating token mechanics
-in both the global system prompt and channel context.
+当 `promptMode=minimal` 时，额外注入的提示词会标记为 **子代理
+上下文**，而不是 **群聊上下文**。
+
+对于通道自动回复运行，如果直接/群聊上下文已经包含已解析的、
+特定对话的 `NO_REPLY` 行为，OpenClaw 可以省略通用的 **静默回复**
+部分。这样可以避免在全局系统提示词和通道上下文中重复记号机制。
 
 ## 工作区引导注入
 
-引导文件会被裁剪并附加在 **项目上下文** 下，让模型无需显式读取即可感知身份和配置上下文：
+引导文件会被裁剪并追加到 **项目上下文** 下方，因此模型无需显式读取也能看到身份和个人资料上下文：
 
 - `AGENTS.md`
 - `SOUL.md`
@@ -79,47 +100,61 @@ in both the global system prompt and channel context.
 - `IDENTITY.md`
 - `USER.md`
 - `HEARTBEAT.md`
-- `BOOTSTRAP.md` (仅在全新工作区中)
-- `MEMORY.md`（当存在时）
+- `BOOTSTRAP.md`（仅适用于全新的工作区）
+- `MEMORY.md`（如存在）
 
-除非应用了特定文件的门控，否则所有这些文件都会在每一轮对话中**注入到上下文窗口**中。当默认代理禁用心跳或 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，`HEARTBEAT.md` 在正常运行中被省略。保持注入文件简洁——尤其是 `MEMORY.md`，它可能会随时间增长，导致意外的高上下文使用和更频繁的压缩。
+这些文件都会在每一轮中**注入到上下文窗口**，除非
+应用了某个特定文件的门控。默认代理禁用心跳时，或
+`agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行会省略 `HEARTBEAT.md`。请保持注入文件简洁——尤其是 `MEMORY.md`，它会随着时间增长，可能导致
+意外偏高的上下文占用以及更频繁的压缩。
 
 <Note>
-`memory/*.md` daily files are **not** part of the normal bootstrap Project Context. On ordinary turns they are accessed on demand via the `memory_search` and `memory_get` tools, so they do not count against the context window unless the model explicitly reads them. Bare `/new` and `/reset` turns are the exception: the runtime can prepend recent daily memory as a one-shot startup-context block for that first turn.
+`memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。
 </Note>
 
-大型文件会用标记截断。每个文件的最大大小由 `agents.defaults.bootstrapMaxChars` 控制（默认：12000）。跨文件注入的总引导内容上限为 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）。缺失文件会注入一个简短的缺失文件标记。当发生截断时，OpenClaw 可以在项目上下文中注入一个警告块；可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认：`once`）进行控制。
+大型文件会被截断并带有标记。每个文件的最大大小由
+`agents.defaults.bootstrapMaxChars` 控制（默认：12000）。所有文件注入的引导内容总量
+上限由 `agents.defaults.bootstrapTotalMaxChars`
+控制（默认：60000）。缺失文件会注入一条简短的缺失文件标记。当发生截断时，
+OpenClaw 可以在项目上下文中注入警告块；可通过
+`agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；
+默认：`once`）进行控制。
 
-子代理会话仅注入 `AGENTS.md` 和 `TOOLS.md`（过滤掉其他引导文件以保持子代理上下文精简）。
+子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件
+会被过滤掉，以保持子代理上下文尽可能小）。
 
-内部钩子可通过 `agent:bootstrap` 拦截此步骤，从而修改或替换注入的引导文件（例如用替代角色的 `SOUL.md` 进行替换）。
+内部钩子可以通过 `agent:bootstrap` 拦截此步骤，以修改或替换
+注入的引导文件（例如将 `SOUL.md` 替换为另一个人格）。
 
-如果你想让代理听起来不那么通用，从 [SOUL.md 个性指南](/concepts/soul) 开始。
+如果你想让代理的声音不那么通用，可以先从
+[SOUL.md 人格指南](/concepts/soul) 开始。
 
-要检查每个注入文件的贡献量（原始与注入，截断，加上工具模式开销），使用 `/context list` 或 `/context detail`。参见 [上下文](/concepts/context)。
+要检查每个注入文件分别贡献了多少内容（原始 vs 注入、截断，以及工具 schema 开销），可使用 `/context list` 或 `/context detail`。参见 [上下文](/concepts/context)。
 
 ## 时间处理
 
-系统提示在已知用户时区时包含专门的 **当前日期和时间** 部分。为保证提示缓存的稳定性，现在仅包含 **时区**（无动态时钟或时间格式）。
+当已知用户时区时，系统提示词会包含专门的 **当前日期与时间** 部分。为了保持提示词缓存稳定，它现在只包含
+**时区**（不包含动态时钟或时间格式）。
 
-当代理需要当前时间时使用 `session_status`；状态卡片包含时间戳行。同一工具可以选择性地设置每会话模型覆盖（`model=default` 清除它）。
+当代理需要当前时间时，请使用 `session_status`；状态卡会包含时间戳行。该工具还可以选择设置每个会话的模型覆盖（`model=default` 会清除它）。
 
-配置参数包括：
+通过以下项进行配置：
 
 - `agents.defaults.userTimezone`
-- `agents.defaults.timeFormat` (`auto` | `12` | `24`)
+- `agents.defaults.timeFormat`（`auto` | `12` | `24`）
 
-详见 [日期和时间](/date-time) 了解完整行为细节。
+有关完整行为细节，参见 [日期与时间](/date-time)。
 
 ## 技能
 
-当存在可用技能时，OpenClaw 注入紧凑的 **可用技能列表**（`formatSkillsForPrompt`），包括每个技能的 **文件路径**。提示指示模型使用 `read` 以加载列出位置（工作区、托管或捆绑）的 SKILL.md 文件。若无可用技能，则省略技能部分。
+当存在符合条件的技能时，OpenClaw 会注入一个简洁的**可用技能列表**
+（`formatSkillsForPrompt`），其中包含每个技能的**文件路径**。提示词指示模型使用 `read` 加载列出位置的 `SKILL.md`（工作区、托管或内置）。如果没有符合条件的技能，则省略技能部分。
 
-资格包括技能元数据门控、运行时环境/配置检查，以及当配置了 `agents.defaults.skills` 或 `agents.list[].skills` 时的有效代理技能允许列表。
+符合条件包括技能元数据门控、运行时环境/配置检查，
+以及在配置了 `agents.defaults.skills` 或 `agents.list[].skills` 时生效的代理技能允许列表。
 
-Plugin-bundled skills are eligible only when their owning plugin is enabled.
-This lets tool plugins expose deeper operating guides without embedding all of
-that guidance directly in every tool description.
+仅当其所属插件启用时，插件捆绑的技能才符合条件。
+这使工具插件能够暴露更深入的操作指南，而无需将所有这些指导直接嵌入到每个工具描述中。
 
 ```
 <available_skills>
@@ -131,25 +166,27 @@ that guidance directly in every tool description.
 </available_skills>
 ```
 
-此设计保持基础提示体积小，同时支持有针对性的技能使用。
+这在保持基础提示词较小的同时，仍然支持有针对性的技能使用。
 
-技能列表预算由 skills 子系统负责：
+技能列表预算由技能子系统拥有：
 
 - 全局默认值：`skills.limits.maxSkillsPromptChars`
-- 每个 agent 的覆盖项：`agents.list[].skillsLimits.maxSkillsPromptChars`
+- 每个代理的覆盖：`agents.list[].skillsLimits.maxSkillsPromptChars`
 
-通用的有界运行时摘录使用另一套配置面：
+通用的受限运行时摘录使用不同的表面：
 
 - `agents.defaults.contextLimits.*`
 - `agents.list[].contextLimits.*`
 
-这种拆分让 skills 的预算与运行时读入/注入预算彼此独立，例如 `memory_get`、实时工具结果，以及压缩后 AGENTS.md 刷新注入等都走运行时那套限制。
+这种拆分使技能大小与运行时读取/注入大小分开，例如 `memory_get`、实时工具结果以及压缩后 AGENTS.md 刷新。
 
 ## 文档
 
-当可用时，系统提示会包含一个 **文档** 部分，指向本地 OpenClaw 文档目录（仓库工作区中的 `docs/` 或捆绑的 npm 包文档），并注明公共镜像、源代码仓库、社区 Discord，以及用于技能发现的 ClawHub（[https://clawhub.ai](https://clawhub.ai)）。提示会指示模型优先查阅本地文档以了解 OpenClaw 的行为、命令、配置或架构，并在可能时自行运行 `openclaw status`（仅在无法访问时才询问用户）。
+系统提示词包含一个 **文档** 部分。当本地文档可用时，它会指向本地 OpenClaw 文档目录（Git 检出中的 `docs/`，或随 npm 包附带的文档）。如果本地文档不可用，它会回退到 [https://docs.openclaw.ai](https://docs.openclaw.ai)。
 
-## 相关
+同一部分还包含 OpenClaw 源码位置。Git 检出会暴露本地源码根目录，以便代理可以直接检查代码。包安装则包含 GitHub 源码 URL，并告知代理在文档不完整或过时时，优先在那里审查源码。提示词还注明了公开文档镜像、社区 Discord，以及用于发现技能的 ClawHub（[https://clawhub.ai](https://clawhub.ai)）。它会告诉模型在了解 OpenClaw 的行为、命令、配置或架构时，先查阅文档，并在可能的情况下自行运行 `openclaw status`（仅在无法访问时才询问用户）。对于配置部分，它会将代理指向 `gateway` 工具动作 `config.schema.lookup`，以获取精确的字段级文档和约束，然后再查看 `docs/gateway/configuration.md` 和 `docs/gateway/configuration-reference.md` 以获得更广泛的指导。
+
+## 相关内容
 
 - [代理运行时](/concepts/agent)
 - [代理工作区](/concepts/agent-workspace)

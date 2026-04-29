@@ -1,27 +1,32 @@
 ---
-summary: "Tlon/Urbit 支持状态、功能和配置"
+summary: "Tlon/Urbit 支持状态、功能与配置"
 read_when:
-  - 在开发 Tlon/Urbit 频道功能时
+  - 正在处理 Tlon/Urbit 渠道功能
 title: "Tlon"
 ---
 
-Tlon 是一个构建在 Urbit 上的去中心化消息工具。OpenClaw 连接到你的 Urbit 船，并可以
-回复私信和群聊消息。默认情况下，群组回复需要 `@` 提及，并且可以
-通过允许列表进一步限制。
+Tlon 是一个构建在 Urbit 之上的去中心化消息工具。OpenClaw 会连接到你的 Urbit 船，并且可以
+响应私信和群聊消息。群组回复默认需要使用 @ 提及，并且还可以通过允许列表进一步限制。
 
-状态：捆绑插件。支持私信、群组提及、线程回复、富文本格式和图片上传。尚不支持表情反应和投票。
+状态：捆绑插件。支持私信、群组提及、线程回复、富文本格式以及
+图片上传。目前尚不支持反应和投票。
 
 ## 捆绑插件
 
-Tlon 作为捆绑插件包含在当前的 OpenClaw 发布版中，因此正常的打包构建无需单独安装。
+Tlon 作为捆绑插件随当前 OpenClaw 发布版一起提供，因此常规的
+打包构建无需单独安装。
 
-如果你使用的是旧版本或排除了 Tlon 的自定义安装，请手动安装：
+如果你使用的是较旧的构建版本，或者是排除了 Tlon 的自定义安装，请在
+发布了当前 npm 包后安装：
 
-通过 CLI（npm 仓库）安装：
+通过 CLI 安装（npm registry，当存在当前包时）：
 
 ```bash
 openclaw plugins install @openclaw/tlon
 ```
+
+如果 npm 报告 OpenClaw 拥有的包已弃用，请使用当前的已打包
+OpenClaw 构建版本，或者使用本地检出路径，直到发布更新的 npm 包。
 
 本地检出（从 git 仓库运行时）：
 
@@ -29,19 +34,19 @@ openclaw plugins install @openclaw/tlon
 openclaw plugins install ./path/to/local/tlon-plugin
 ```
 
-详情请见：[插件指南](/tools/plugin)
+详情：[插件](/tools/plugin)
 
 ## 设置
 
 1. 确保 Tlon 插件可用。
-   - 当前的打包 OpenClaw 发布版已捆绑它。
-   - 旧版/自定义安装可以通过上述命令手动添加。
-2. 收集你的船 URL 和登录码。
+   - 当前打包的 OpenClaw 发布版已经包含它。
+   - 较旧/自定义安装可以使用上面的命令手动添加。
+2. 收集你的船 URL 和登录代码。
 3. 配置 `channels.tlon`。
 4. 重启网关。
-5. 私信机器人或在群频道中提及它。
+5. 向机器人发送私信或在群组频道中提及它。
 
-最简配置（单账号）：
+最小配置（单账户）：
 
 ```json5
 {
@@ -51,15 +56,17 @@ openclaw plugins install ./path/to/local/tlon-plugin
       ship: "~sampel-palnet",
       url: "https://your-ship-host",
       code: "lidlut-tabwed-pillex-ridrup",
-      ownerShip: "~your-main-ship", // 建议设置：你的主船，始终允许
+      ownerShip: "~your-main-ship", // 推荐：你的船，始终允许
     },
   },
 }
 ```
 
-## 私有/局域网船
+## 私有/LAN 船
 
-默认情况下，OpenClaw 为防范 SSRF 攻击会阻止私有或内部主机名及 IP 范围。如果你的船运行在私有网络（localhost、局域网 IP 或内部主机名），你必须显式开启：
+默认情况下，OpenClaw 会阻止私有/内部主机名和 IP 段，以防止 SSRF 攻击。
+如果你的船运行在私有网络上（localhost、LAN IP 或内部主机名），
+你必须显式启用：
 
 ```json5
 {
@@ -72,15 +79,16 @@ openclaw plugins install ./path/to/local/tlon-plugin
 }
 ```
 
-适用 URL 如：
+这适用于如下 URL：
 
 - `http://localhost:8080`
 - `http://192.168.x.x:8080`
 - `http://my-ship.local:8080`
 
-⚠️ 仅当你信任本地网络时启用此项。该设置会禁用针对船 URL 请求的 SSRF 保护。
+⚠️ 仅在你信任本地网络时才启用此选项。此设置会禁用针对
+向你的船 URL 发起请求时的 SSRF 防护。
 
-## 群频道
+## 群组频道
 
 默认启用自动发现。你也可以手动固定频道：
 
@@ -108,7 +116,7 @@ openclaw plugins install ./path/to/local/tlon-plugin
 
 ## 访问控制
 
-私信允许列表（空表示不允许私信，使用 `ownerShip` 通过审批流程）：
+DM 允许列表（为空 = 不允许任何 DM，使用 `ownerShip` 进行审批流程）：
 
 ```json5
 {
@@ -143,9 +151,9 @@ openclaw plugins install ./path/to/local/tlon-plugin
 }
 ```
 
-## 拥有者与审批系统
+## 所有者与审批系统
 
-设置拥有者船，当未授权用户尝试互动时，可收到审批请求：
+设置一个所有者船，以便在未授权用户尝试交互时接收审批请求：
 
 ```json5
 {
@@ -157,17 +165,19 @@ openclaw plugins install ./path/to/local/tlon-plugin
 }
 ```
 
-拥有者船**自动获得所有权限**——私信邀请自动接受，频道消息始终允许。无需将拥有者加入 `dmAllowlist` 或 `defaultAuthorizedShips`。
+所有者船会在**所有地方自动获得授权**——DM 邀请会自动接受，并且
+频道消息始终被允许。你无需将所有者添加到 `dmAllowlist` 或
+`defaultAuthorizedShips`。
 
-设置后，拥有者将收到以下私信通知：
+设置后，所有者会收到以下 DM 通知：
 
-- 来自不在允许列表船只的私信请求
-- 在未授权频道的提及
+- 来自不在允许列表中的船的 DM 请求
+- 未经授权频道中的提及
 - 群组邀请请求
 
 ## 自动接受设置
 
-自动接受私信邀请（针对 `dmAllowlist` 中的船）：
+自动接受 DM 邀请（针对在 dmAllowlist 中的船）：
 
 ```json5
 {
@@ -191,42 +201,43 @@ openclaw plugins install ./path/to/local/tlon-plugin
 }
 ```
 
-## 发送目标（CLI/定时任务）
+## 投递目标（CLI/cron）
 
-与 `openclaw message send` 或定时发送结合使用：
+在 `openclaw message send` 或 cron 投递中使用这些格式：
 
-- 私信：`~sampel-palnet` 或 `dm/~sampel-palnet`
-- 群组：`chat/~host-ship/channel` 或 `group:~host-ship/channel`
+- DM: `~sampel-palnet` 或 `dm/~sampel-palnet`
+- Group: `chat/~host-ship/channel` 或 `group:~host-ship/channel`
 
-## 内置技能
+## 捆绑技能
 
-Tlon 插件包含内置技能（[`@tloncorp/tlon-skill`](https://github.com/tloncorp/tlon-skill)），提供 CLI 访问 Tlon 操作：
+Tlon 插件包含一个捆绑技能（[`@tloncorp/tlon-skill`](https://github.com/tloncorp/tlon-skill)）
+，它提供对 Tlon 操作的 CLI 访问：
 
-- **联系人**：获取/更新资料、联系人列表
-- **频道**：列出、创建、发送消息、获取历史
-- **群组**：列出、创建、管理成员
-- **私信**：发送消息、对消息反应
-- **反应**：为帖子和私信添加/移除表情反应
-- **设置**：通过斜杠命令管理插件权限
+- **Contacts**: 获取/更新个人资料，列出联系人
+- **Channels**: 列出、创建、发布消息、获取历史记录
+- **Groups**: 列出、创建、管理成员
+- **DMs**: 发送消息，对消息作出反应
+- **Reactions**: 为帖子和 DM 添加/移除表情反应
+- **Settings**: 通过斜杠命令管理插件权限
 
-安装插件后自动可用该技能。
+安装插件后，该技能会自动可用。
 
-## 功能支持情况
+## 功能
 
-| 功能             | 状态                               |
-| ---------------- | ---------------------------------- |
-| 私信             | ✅ 支持                           |
-| 群组/频道        | ✅ 支持（默认需提及）              |
-| 线程             | ✅ 支持（自动在线程内回复）       |
-| 富文本           | ✅ Markdown 转换为 Tlon 格式      |
-| 图片             | ✅ 上传至 Tlon 存储               |
-| 表情反应         | ✅ 通过 [内置技能](#内置技能)     |
-| 投票             | ❌ 尚不支持                       |
-| 原生命令         | ✅ 支持（默认仅拥有者）           |
+| Feature         | Status                                  |
+| --------------- | --------------------------------------- |
+| Direct messages | ✅ Supported                            |
+| Groups/channels | ✅ Supported (mention-gated by default) |
+| Threads         | ✅ Supported (auto-replies in thread)   |
+| Rich text       | ✅ Markdown converted to Tlon format    |
+| Images          | ✅ Uploaded to Tlon storage             |
+| Reactions       | ✅ Via [bundled skill](#bundled-skill)  |
+| Polls           | ❌ Not yet supported                    |
+| Native commands | ✅ Supported (owner-only by default)    |
 
 ## 故障排除
 
-可依次执行以下步骤检查：
+先运行以下命令链：
 
 ```bash
 openclaw status
@@ -235,45 +246,45 @@ openclaw logs --follow
 openclaw doctor
 ```
 
-常见问题：
+常见失败：
 
-- **私信被忽略**：发送者未在 `dmAllowlist` 中且未配置 `ownerShip` 审批流程。
-- **群消息被忽略**：频道未被发现或发送者未授权。
-- **连接错误**：确认船 URL 可访问；本地船需启用 `allowPrivateNetwork`。
-- **认证错误**：确认登录码有效（登录码会轮换）。
+- **DM 被忽略**：发送者不在 `dmAllowlist` 中，并且没有配置 `ownerShip` 用于审批流程。
+- **群组消息被忽略**：频道未被发现，或发送者未获授权。
+- **连接错误**：检查船 URL 是否可访问；为本地船启用 `allowPrivateNetwork`。
+- **认证错误**：验证登录代码是否为最新（代码会轮换）。
 
 ## 配置参考
 
-完整配置见：[配置文档](/gateway/configuration)
+完整配置：[配置](/gateway/configuration)
 
 提供者选项：
 
 - `channels.tlon.enabled`：启用/禁用频道启动。
-- `channels.tlon.ship`：机器人 Urbit 船名（如 `~sampel-palnet`）。
-- `channels.tlon.url`：船 URL（如 `https://sampel-palnet.tlon.network`）。
-- `channels.tlon.code`：船登录码。
-- `channels.tlon.allowPrivateNetwork`：允许 localhost/LAN 地址（绕过 SSRF）。
-- `channels.tlon.ownerShip`：审批系统拥有者船（始终授权）。
-- `channels.tlon.dmAllowlist`：允许私信的船（空表示无）。
-- `channels.tlon.autoAcceptDmInvites`：自动接受允许列表船的私信邀请。
+- `channels.tlon.ship`：机器人的 Urbit 船名称（例如 `~sampel-palnet`）。
+- `channels.tlon.url`：船 URL（例如 `https://sampel-palnet.tlon.network`）。
+- `channels.tlon.code`：船登录代码。
+- `channels.tlon.allowPrivateNetwork`：允许 localhost/LAN URL（绕过 SSRF）。
+- `channels.tlon.ownerShip`：用于审批系统的所有者船（始终授权）。
+- `channels.tlon.dmAllowlist`：允许发送 DM 的船（为空 = 不允许任何）。
+- `channels.tlon.autoAcceptDmInvites`：自动接受来自允许列表中船只的 DM。
 - `channels.tlon.autoAcceptGroupInvites`：自动接受所有群组邀请。
 - `channels.tlon.autoDiscoverChannels`：自动发现群组频道（默认：true）。
-- `channels.tlon.groupChannels`：手动固定的频道列表。
-- `channels.tlon.defaultAuthorizedShips`：默认授权所有频道的船。
-- `channels.tlon.authorization.channelRules`：按频道的授权规则。
-- `channels.tlon.showModelSignature`：消息末尾附加模型名称。
+- `channels.tlon.groupChannels`：手动固定的频道巢。
+- `channels.tlon.defaultAuthorizedShips`：对所有频道都授权的船。
+- `channels.tlon.authorization.channelRules`：按频道划分的授权规则。
+- `channels.tlon.showModelSignature`：在消息末尾附加模型名称。
 
-## 备注
+## 说明
 
 - 群组回复需要提及（例如 `~your-bot-ship`）才能响应。
-- 线程回复：如果传入消息位于线程中，OpenClaw 将在线程内回复。
+- 线程回复：如果传入消息位于某个线程中，OpenClaw 会在该线程内回复。
 - 富文本：Markdown 格式（粗体、斜体、代码、标题、列表）会转换为 Tlon 的原生格式。
-- 图片：URL 会被上传至 Tlon 存储并作为图片块嵌入。
+- 图片：URL 会上传到 Tlon 存储并作为图片块嵌入。
 
 ## 相关内容
 
-- [频道概览](/channels) — 所有支持的频道
-- [配对](/channels/pairing) — 私信认证和配对流程
-- [群组](/channels/groups) — 群聊行为和提及限制
-- [频道路由](/channels/channel-routing) — 消息会话路由
-- [安全](/gateway/security) — 访问模型和加固
+- [渠道概览](/channels) — 所有受支持的渠道
+- [配对](/channels/pairing) — DM 身份验证和配对流程
+- [群组](/channels/groups) — 群聊行为和提及门控
+- [频道路由](/channels/channel-routing) — 消息的会话路由
+- [安全](/gateway/security) — 访问模型与加固

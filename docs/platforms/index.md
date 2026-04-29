@@ -1,17 +1,17 @@
 ---
-summary: "平台支持概览（网关 + 伴侣应用）"
+summary: "平台支持概览（Gateway + 配套应用）"
 read_when:
   - 查找操作系统支持或安装路径
-  - 决定网关运行位置
+  - 决定在哪里运行 Gateway
 title: "平台"
 ---
 
-OpenClaw 核心使用 TypeScript 编写。**推荐使用 Node 作为运行时**。
-Bun 不推荐用于网关——已知与 WhatsApp 和
-Telegram 渠道存在问题；详情请参阅 [Bun（实验性）](/install/bun)。
+OpenClaw 核心采用 TypeScript 编写。**推荐使用 Node 作为运行时**。
+不建议在 Gateway 中使用 Bun——WhatsApp 和 Telegram 通道存在已知问题；详情请参见 [Bun（实验性）](/install/bun)。
 
-伴侣应用存在于 macOS（菜单栏应用）和移动节点（iOS/Android）。计划发布 Windows 和 Linux 伴侣应用，但网关目前已完全支持。
-Windows 的原生伴侣应用也在规划中；通过 WSL2 推荐使用网关。
+配套应用适用于 macOS（菜单栏应用）和移动节点（iOS/Android）。Windows 和
+Linux 的配套应用正在规划中，但 Gateway 目前已完全支持。
+Windows 的原生配套应用也在规划中；推荐通过 WSL2 使用 Gateway。
 
 ## 选择你的操作系统
 
@@ -21,39 +21,39 @@ Windows 的原生伴侣应用也在规划中；通过 WSL2 推荐使用网关。
 - Windows: [Windows](/platforms/windows)
 - Linux: [Linux](/platforms/linux)
 
-## VPS 与托管
+## VPS 和托管
 
-- VPS 集线器: [VPS 托管](/vps)
+- VPS 中心: [VPS 托管](/vps)
 - Fly.io: [Fly.io](/install/fly)
 - Hetzner (Docker): [Hetzner](/install/hetzner)
 - GCP (Compute Engine): [GCP](/install/gcp)
 - Azure (Linux VM): [Azure](/install/azure)
-- exe.dev (VM + HTTPS proxy): [exe.dev](/install/exe-dev)
+- exe.dev (VM + HTTPS 代理): [exe.dev](/install/exe-dev)
 
 ## 常用链接
 
-- 安装指南: [入门指南](/start/getting-started)
-- 网关操作手册: [网关](/gateway)
-- 网关配置: [配置](/gateway/configuration)
+- 安装指南: [快速开始](/start/getting-started)
+- Gateway 运行手册: [Gateway](/gateway)
+- Gateway 配置: [配置](/gateway/configuration)
 - 服务状态: `openclaw gateway status`
 
-## 网关服务安装（命令行）
+## Gateway 服务安装（CLI）
 
-使用以下任意一种方式（均支持）：
+使用以下任一方式（均受支持）：
 
-- 向导（推荐）：`openclaw onboard --install-daemon`
-- 直接安装：`openclaw gateway install`
-- 配置流程：`openclaw configure` → 选择 **网关服务**
-- 修复/迁移：`openclaw doctor`（提供安装或修复服务选项）
+- 向导（推荐）: `openclaw onboard --install-daemon`
+- 直接安装: `openclaw gateway install`
+- 配置流程: `openclaw configure` → 选择 **Gateway service**
+- 修复/迁移: `openclaw doctor`（会提示安装或修复该服务）
 
-服务目标根据操作系统不同：
+服务目标取决于操作系统：
 
 - macOS: LaunchAgent (`ai.openclaw.gateway` or `ai.openclaw.<profile>`; legacy `com.openclaw.*`)
-- Linux/WSL2: systemd user service (`openclaw-gateway[-<profile>].service`)
-- Native Windows: Scheduled Task (`OpenClaw Gateway` or `OpenClaw Gateway (<profile>)`), with a per-user Startup-folder login item fallback if task creation is denied
+- Linux/WSL2: systemd 用户服务 (`openclaw-gateway[-<profile>].service`)
+- 原生 Windows: 计划任务 (`OpenClaw Gateway` or `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为每用户 Startup-folder 登录项
 
-## Related
+## 相关内容
 
-- [Install overview](/install)
-- [macOS app](/platforms/macos)
-- [iOS app](/platforms/ios)
+- [安装概览](/install)
+- [macOS 应用](/platforms/macos)
+- [iOS 应用](/platforms/ios)

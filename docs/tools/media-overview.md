@@ -1,73 +1,132 @@
 ---
-summary: "媒体生成、理解和语音功能的统一入口页面"
+summary: "一览图像、视频、音乐、语音和媒体理解能力"
 read_when:
-  - 查找媒体能力概览
+  - 寻找 OpenClaw 媒体能力概览
   - 决定配置哪个媒体提供商
-  - 了解异步媒体生成如何工作
+  - 了解异步媒体生成的工作方式
 title: "媒体概览"
+sidebarTitle: "媒体概览"
 ---
 
-# 媒体生成与理解
+OpenClaw 可生成图像、视频和音乐，理解传入媒体
+（图像、音频、视频），并通过文本转语音将回复朗读出来。所有
+媒体能力都由工具驱动：代理会根据对话决定何时使用它们，
+并且每个工具只有在至少配置了一个后端提供商时才会出现。
 
-OpenClaw 生成图像、视频和音乐，理解入站媒体（图像、音频、视频），并通过文本转语音大声说出回复。所有媒体功能均由工具驱动：代理根据对话决定何时使用它们，并且只有在配置了至少一个支持提供商时，每个工具才会出现。
+## 功能
 
-## 功能概览
+<CardGroup cols={2}>
+  <Card title="图像生成" href="/tools/image-generation" icon="image">
+    通过 `image_generate` 从文本提示或参考图像创建和编辑图像。同步——在回复中内联完成。
+  </Card>
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    通过 `video_generate` 实现文生视频、图生视频和视频转视频。
+    异步——在后台运行，并在准备好时发布结果。
+  </Card>
+  <Card title="音乐生成" href="/tools/music-generation" icon="music">
+    通过 `music_generate` 生成音乐或音频轨道。在共享提供商上为异步；
+    ComfyUI 工作流路径则同步运行。
+  </Card>
+  <Card title="文本转语音" href="/tools/tts" icon="microphone">
+    通过 `tts` 工具加上 `messages.tts` 配置将外发回复转换为语音音频。同步。
+  </Card>
+  <Card title="媒体理解" href="/nodes/media-understanding" icon="eye">
+    使用具备视觉能力的模型提供商和专用媒体理解插件，对传入的图像、音频和视频进行摘要。
+  </Card>
+  <Card title="语音转文本" href="/nodes/audio" icon="ear-listen">
+    通过批量 STT 或 Voice Call 流式 STT 提供商转录传入的语音消息。
+  </Card>
+</CardGroup>
 
-| 功能                 | 工具             | 提供商                                                                                       | 作用                                                    |
-| -------------------- | ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 图像生成             | `image_generate` | ComfyUI, fal, Google, MiniMax, OpenAI, Vydra, xAI                                            | 根据文本提示或参考图像创建或编辑图像                    |
-| 视频生成             | `video_generate` | Alibaba, BytePlus, ComfyUI, fal, Google, MiniMax, OpenAI, Qwen, Runway, Together, Vydra, xAI | 根据文本、图像或现有视频创建视频                        |
-| 音乐生成             | `music_generate` | ComfyUI, Google, MiniMax                                                                     | 根据文本提示创建音乐或音轨                              |
-| 文本转语音（TTS）    | `tts`            | ElevenLabs, Google, Gradium, Microsoft, MiniMax, OpenAI, Vydra, xAI                          | 将外发回复转换为语音音频                                |
-| 媒体理解             | （自动）         | 任何具备视觉/音频能力的模型提供商，以及 CLI 回退                                           | 总结入站图像、音频和视频                                 |
+## 提供商能力矩阵
 
-## 提供商功能矩阵
-
-此表显示了哪些提供商支持平台上的哪些媒体功能。
-
-| Provider   | Image | Video | Music | TTS | STT / Transcription | Realtime Voice | Media Understanding |
-| ---------- | ----- | ----- | ----- | --- | ------------------- | -------------- | ------------------- |
-| Alibaba    |       | Yes   |       |     |                     |                |                     |
-| BytePlus   |       | Yes   |       |     |                     |                |                     |
-| ComfyUI    | Yes   | Yes   | Yes   |     |                     |                |                     |
-| Deepgram   |       |       |       |     | Yes                 |                |                     |
-| ElevenLabs |       |       |       | Yes | Yes                 |                |                     |
-| fal        | Yes   | Yes   |       |     |                     |                |                     |
-| Google     | Yes   | Yes   | Yes   | Yes |                     | Yes            | Yes                 |
-| Gradium    |       |       |       | Yes |                     |                |                     |
-| Microsoft  |       |       |       | Yes |                     |                |                     |
-| MiniMax    | Yes   | Yes   | Yes   | Yes |                     |                |                     |
-| Mistral    |       |       |       |     | Yes                 |                |                     |
-| OpenAI     | Yes   | Yes   |       | Yes | Yes                 | Yes            | Yes                 |
-| Qwen       |       | Yes   |       |     |                     |                |                     |
-| Runway     |       | Yes   |       |     |                     |                |                     |
-| Together   |       | Yes   |       |     |                     |                |                     |
-| Vydra      | Yes   | Yes   |       | Yes |                     |                |                     |
-| xAI        | Yes   | Yes   |       | Yes | Yes                 |                |                     |
+| 提供商       | 图像 | 视频 | 音乐 | TTS | STT | 实时语音 | 媒体理解 |
+| ------------ | :--: | :--: | :--: | :-: | :-: | :------: | :------: |
+| Alibaba      |      |  ✓   |      |     |     |          |          |
+| BytePlus     |      |  ✓   |      |     |     |          |          |
+| ComfyUI      |  ✓   |  ✓   |  ✓   |     |     |          |          |
+| DeepInfra    |  ✓   |  ✓   |      |  ✓  |  ✓  |          |    ✓     |
+| Deepgram     |      |      |      |     |  ✓  |    ✓     |          |
+| ElevenLabs   |      |      |      |  ✓  |  ✓  |          |          |
+| fal          |  ✓   |  ✓   |      |     |     |          |          |
+| Google       |  ✓   |  ✓   |  ✓   |  ✓  |     |    ✓     |    ✓     |
+| Gradium      |      |      |      |  ✓  |     |          |          |
+| Local CLI     |      |      |      |  ✓  |     |          |          |
+| Microsoft    |      |      |      |  ✓  |     |          |          |
+| MiniMax      |  ✓   |  ✓   |  ✓   |  ✓  |     |          |          |
+| Mistral      |      |      |      |     |  ✓  |          |          |
+| OpenAI       |  ✓   |  ✓   |      |  ✓  |  ✓  |    ✓     |    ✓     |
+| OpenRouter   |  ✓   |  ✓   |      |  ✓  |     |          |    ✓     |
+| Qwen         |      |  ✓   |      |     |     |          |          |
+| Runway       |      |  ✓   |      |     |     |          |          |
+| SenseAudio   |      |      |      |     |  ✓  |          |          |
+| Together     |      |  ✓   |      |     |     |          |          |
+| Vydra        |  ✓   |  ✓   |      |  ✓  |     |          |          |
+| xAI          |  ✓   |  ✓   |      |  ✓  |  ✓  |          |    ✓     |
+| Xiaomi MiMo  |  ✓   |      |      |  ✓  |     |          |    ✓     |
 
 <Note>
-媒体理解使用您在提供商配置中注册的任何具备视觉或音频能力的模型。上表突出了具有专用媒体理解支持的提供商；大多数具有多模态模型的 LLM 提供商（Anthropic、Google、OpenAI 等）在配置为活动回复模型时也可以理解入站媒体。
+媒体理解使用在你的提供商配置中注册的任何具备视觉能力或音频能力的模型。上面的矩阵列出了具备专用媒体理解支持的提供商；大多数多模态 LLM 提供商（Anthropic、Google、OpenAI 等）在配置为当前回复模型时，也可以理解传入媒体。
 </Note>
 
-## 异步生成如何工作
+## 异步与同步
 
-视频和音乐生成作为后台任务运行，因为提供商处理通常需要 30 秒到几分钟。当代理调用 `video_generate` 或 `music_generate` 时，OpenClaw 将请求提交给提供商，立即返回任务 ID，并在任务分类账中跟踪该作业。作业运行时，代理继续响应其他消息。当提供商完成时，OpenClaw 唤醒代理，以便它将完成的媒体发布回原始渠道。图像生成和 TTS 是同步的，并与回复一起内联完成。
+| 功能            | 模式         | 原因                                                               |
+| --------------- | ------------ | ------------------------------------------------------------------ |
+| 图像            | 同步         | 提供商响应在几秒内返回；在回复中内联完成。                          |
+| 文本转语音      | 同步         | 提供商响应在几秒内返回；作为回复音频的一部分附加。                  |
+| 视频            | 异步         | 提供商处理需要 30 秒到数分钟。                                     |
+| 音乐（共享）    | 异步         | 与视频相同的提供商处理特征。                                       |
+| 音乐（ComfyUI） | 同步         | 本地工作流针对已配置的 ComfyUI 服务器内联运行。                    |
 
-Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 在配置时都可以通过批量 `tools.media.audio` 路径转录入站音频。Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 还会注册 Voice Call 流式 STT 提供商，因此实时电话音频可以在无需等待录音完成的情况下转发给所选供应商。
+对于异步工具，OpenClaw 会将请求提交给提供商，立即返回任务
+id，并在任务账本中跟踪作业。代理会在作业运行时继续
+响应其他消息。当提供商完成后，
+OpenClaw 会唤醒代理，以便它将生成完成的媒体发布回
+原始频道。
 
-Google 映射到 OpenClaw 的图像、视频、音乐、批量 TTS、后端实时语音和媒体理解界面。OpenAI 映射到 OpenClaw 的图像、视频、批量 TTS、批量 STT、Voice Call 流式 STT、后端实时语音和记忆嵌入界面。xAI 当前映射到 OpenClaw 的图像、视频、搜索、代码执行、批量 TTS、批量 STT 和 Voice Call 流式 STT 界面。xAI Realtime voice 是上游能力，但在共享实时语音契约能够表示它之前，它不会在 OpenClaw 中注册。
+## 语音转文本与 Voice Call
 
-## 快速链接
+当配置后，Deepgram、DeepInfra、ElevenLabs、Mistral、OpenAI、SenseAudio 和 xAI 都可以通过批量 `tools.media.audio` 路径转录
+传入音频。
+会对语音消息进行 mention gating 或命令
+解析的频道插件，会在传入上下文中标记已转录的附件，因此共享
+媒体理解流程会复用该转录内容，而不是对同一音频再发起第二次
+STT 调用。
 
-- [Image Generation](/tools/image-generation) -- 生成和编辑图像
-- [Video Generation](/tools/video-generation) -- 文本生成视频、图像生成视频和视频生成视频
-- [Music Generation](/tools/music-generation) -- 创建音乐和音轨
-- [Text-to-Speech](/tools/tts) -- 将回复转换为语音音频
-- [Media Understanding](/nodes/media-understanding) -- 理解入站图像、音频和视频
+Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
+流式 STT 提供商，因此实时电话音频可以在无需等待录音完成的情况下
+转发给所选
+供应商。
 
-## 相关
+## 提供商映射（供应商如何在各个表面上拆分）
 
-- [Image generation](/tools/image-generation)
-- [Video generation](/tools/video-generation)
-- [Music generation](/tools/music-generation)
-- [Text-to-speech](/tools/tts)
+<AccordionGroup>
+  <Accordion title="Google">
+    图像、视频、音乐、批量 TTS、后端实时语音，以及
+    媒体理解相关能力。
+  </Accordion>
+  <Accordion title="OpenAI">
+    图像、视频、批量 TTS、批量 STT、Voice Call 流式 STT、后端
+    实时语音，以及记忆嵌入相关能力。
+  </Accordion>
+  <Accordion title="DeepInfra">
+    聊天/模型路由、图像生成/编辑、文生视频、批量 TTS、
+    批量 STT、图像媒体理解，以及记忆嵌入相关能力。
+    在 OpenClaw 拥有这些类别的专用提供商合约之前，DeepInfra 原生的 rerank/classification/object-detection 模型不会注册。
+  </Accordion>
+  <Accordion title="xAI">
+    图像、视频、搜索、代码执行、批量 TTS、批量 STT，以及 Voice
+    Call 流式 STT。xAI Realtime 语音是上游能力，但在共享实时语音合约能够表示它之前，
+    不会在 OpenClaw 中注册。
+  </Accordion>
+</AccordionGroup>
+
+## 相关内容
+
+- [图像生成](/tools/image-generation)
+- [视频生成](/tools/video-generation)
+- [音乐生成](/tools/music-generation)
+- [文本转语音](/tools/tts)
+- [媒体理解](/nodes/media-understanding)
+- [音频节点](/nodes/audio)

@@ -1,22 +1,22 @@
 ---
 summary: "macOS 上的 Gateway 生命周期（launchd）"
 read_when:
-  - 将 mac 应用与 gateway 生命周期集成
+  - 将 mac 应用与 Gateway 生命周期集成时
 title: "Gateway 生命周期"
 ---
 
 # macOS 上的 Gateway 生命周期
 
-macOS 应用**默认通过 launchd 管理 Gateway**，不会将 Gateway 作为子进程启动。应用首先尝试连接已经在配置端口上运行的 Gateway；如果无法连接，则通过外部的 `openclaw` 命令行工具（无嵌入式运行时）启用 launchd 服务。这为你提供了登录时自动启动和崩溃时自动重启的可靠保障。
+macOS 应用默认通过 **launchd 管理 Gateway**，并且不会将 Gateway 作为子进程启动。它首先会尝试连接到配置端口上已在运行的 Gateway；如果找不到可连接的实例，它会通过外部的 `openclaw` CLI 启用 launchd 服务（不使用内嵌运行时）。这样可以在登录时可靠自动启动，并在崩溃后自动重启。
 
-子进程模式（Gateway 由应用直接启动）**目前不使用**。如果需要与 UI 紧密耦合，请手动在终端中运行 Gateway。
+子进程模式（由应用直接启动 Gateway）目前**未启用**。如果你需要与 UI 更紧密地耦合，请在终端中手动运行 Gateway。
 
 ## 默认行为（launchd）
 
-- 应用安装一个每用户的 LaunchAgent，标签为 `ai.openclaw.gateway`  
-  （使用 `--profile` 或 `OPENCLAW_PROFILE` 时为 `ai.openclaw.<profile>`；支持旧版 `com.openclaw.*`）。
-- 启用本地模式时，应用确保 LaunchAgent 已加载，并在需要时启动 Gateway。
-- 日志写入到 launchd Gateway 日志路径（可在调试设置中查看）。
+- 应用会安装一个按用户区分的 LaunchAgent，标签为 `ai.openclaw.gateway`
+  （或者在使用 `--profile`/`OPENCLAW_PROFILE` 时为 `ai.openclaw.<profile>`；也支持旧的 `com.openclaw.*`）。
+- 启用本地模式时，应用会确保 LaunchAgent 已加载，并在需要时启动 Gateway。
+- 日志会写入 launchd 的 gateway 日志路径（可在调试设置中查看）。
 
 常用命令：
 
@@ -25,15 +25,15 @@ launchctl kickstart -k gui/$UID/ai.openclaw.gateway
 launchctl bootout gui/$UID/ai.openclaw.gateway
 ```
 
-运行命名配置文件时，将标签替换为 `ai.openclaw.<profile>`。
+运行命名配置文件时，请将标签替换为 `ai.openclaw.<profile>`。
 
-## 未签名的开发版
+## 未签名的开发构建
 
-`scripts/restart-mac.sh --no-sign` 用于在没有签名密钥时快速本地构建。为了防止 launchd 指向未签名的 relay 二进制文件，它会：
+`scripts/restart-mac.sh --no-sign` 用于没有签名密钥时的快速本地构建。为了避免 launchd 指向未签名的 relay 二进制文件，它会：
 
-- 写入 `~/.openclaw/disable-launchagent` 文件。
+- 写入 `~/.openclaw/disable-launchagent`。
 
-签署版本的 `scripts/restart-mac.sh` 如果发现标志文件会清除此覆盖。要手动重置：
+如果该标记存在，已签名运行的 `scripts/restart-mac.sh` 会清除这个覆盖设置。要手动重置：
 
 ```bash
 rm ~/.openclaw/disable-launchagent
@@ -41,22 +41,21 @@ rm ~/.openclaw/disable-launchagent
 
 ## 仅附加模式
 
-要强制 macOS 应用**永不安装或管理 launchd**，请使用 `--attach-only`（或 `--no-launchd`）启动。这会设置 `~/.openclaw/disable-launchagent`，应用仅附加到已运行的 Gateway。此行为也可以在调试设置中切换。
+要强制 macOS 应用**永远不安装或管理 launchd**，请使用 `--attach-only`（或 `--no-launchd`）启动它。这会设置 `~/.openclaw/disable-launchagent`，因此应用只会连接到已在运行的 Gateway。你也可以在调试设置中切换相同行为。
 
 ## 远程模式
 
-远程模式绝不启动本地 Gateway。应用通过 SSH 隧道连接到远程主机，并通过该隧道进行连接。
+远程模式永远不会启动本地 Gateway。应用会使用 SSH 隧道连接到远程主机，并通过该隧道建立连接。
 
 ## 我们为何偏好 launchd
 
 - 登录时自动启动。
-- 内建的重启及 KeepAlive 机制。
-- 可预测的日志和管理。
+- 内置的重启/KeepAlive 语义。
+- 可预测的日志和监督。
 
-如果将来确实再次需要真正的子进程模式，则应将其记录为一个
-单独的、明确的仅开发模式。
+如果未来真的需要子进程模式，它应被记录为单独、明确的仅开发模式。
 
 ## 相关内容
 
-- [macOS app](/platforms/macos)
-- [Gateway runbook](/gateway)
+- [macOS 应用](/platforms/macos)
+- [Gateway 运行手册](/gateway)

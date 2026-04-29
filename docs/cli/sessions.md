@@ -1,7 +1,7 @@
 ---
-summary: "`openclaw sessions` 的命令行参考（列出存储的会话 + 用法）"
+summary: "`openclaw sessions` 的 CLI 参考（列出存储的会话 + 用法）"
 read_when:
-  - 你想列出已存储的会话并查看最近活动
+  - 你想列出存储的会话并查看最近活动
 title: "会话"
 ---
 
@@ -18,15 +18,24 @@ openclaw sessions --verbose
 openclaw sessions --json
 ```
 
-范围选择：
+作用域选择：
 
-- default: 配置的默认代理存储
-- `--verbose`: 详细日志
-- `--agent <id>`: 一个配置的代理存储
-- `--all-agents`: 聚合所有配置的代理存储
-- `--store <path>`: 显式存储路径（不能与 `--agent` 或 `--all-agents` 组合）
+- 默认：已配置的默认代理存储
+- `--verbose`：详细日志
+- `--agent <id>`：一个已配置的代理存储
+- `--all-agents`：聚合所有已配置的代理存储
+- `--store <path>`：显式指定存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）
 
-`openclaw sessions --all-agents` 读取配置的代理存储。网关和 ACP 会话发现范围更广：它们还包括在默认的 `agents/` 根目录或模板化的 `session.store` 根目录下找到的仅磁盘存储。这些被发现的存储必须解析为代理根目录内的常规 `sessions.json` 文件；符号链接和根目录外的路径会被跳过。
+为已存储的会话导出 trajectory bundle：
+
+```bash
+openclaw sessions export-trajectory --session-key "agent:main:telegram:direct:123" --workspace .
+openclaw sessions export-trajectory --session-key "agent:main:telegram:direct:123" --output bug-123 --json
+```
+
+这是 `/export-trajectory` 斜杠命令在所有者批准 exec 请求后使用的命令路径。输出目录始终会在所选工作区下解析到 `.openclaw/trajectory-exports/` 内部。
+
+`openclaw sessions --all-agents` 读取已配置的代理存储。Gateway 和 ACP 的会话发现范围更广：它们还会包含在默认 `agents/` 根目录或模板化的 `session.store` 根目录下找到的仅磁盘存储。这些发现到的存储必须解析为代理根目录内的常规 `sessions.json` 文件；符号链接和超出根目录的路径会被跳过。
 
 JSON 示例：
 
@@ -64,17 +73,17 @@ openclaw sessions cleanup --json
 
 `openclaw sessions cleanup` 使用配置中的 `session.maintenance` 设置：
 
-- Scope note: `openclaw sessions cleanup` 维护会话存储、转录和轨迹 sidecar 文件。它不会清理 cron 运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [Cron configuration](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [Cron maintenance](/automation/cron-jobs#maintenance) 中进行了说明。
+- 作用域说明：`openclaw sessions cleanup` 会维护会话存储、转录和 trajectory sidecar 文件。它不会清理 cron 运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [Cron configuration](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [Cron maintenance](/automation/cron-jobs#maintenance) 中说明。
 
-- `--dry-run`: 预览将修剪/限制多少条目而不写入。
-  - 在文本模式下，dry-run 打印每个会话的操作表（`Action`, `Key`, `Age`, `Model`, `Flags`），以便您可以查看哪些将被保留与移除。
-- `--enforce`: 即使 `session.maintenance.mode` 为 `warn` 也应用维护。
-- `--fix-missing`: 移除转录文件缺失的条目，即使它们通常尚未达到老化/计数移除条件。
-- `--active-key <key>`: 保护特定活动密钥免受磁盘预算驱逐。
-- `--agent <id>`: 对一个配置的代理存储运行清理。
-- `--all-agents`: 对所有配置的代理存储运行清理。
-- `--store <path>`: 针对特定的 `sessions.json` 文件运行。
-- `--json`: 打印 JSON 摘要。使用 `--all-agents` 时，输出包含每个存储的一个摘要。
+- `--dry-run`：在不写入的情况下预览会被清理/截断的条目数量。
+  - 在文本模式下，dry-run 会打印按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），以便你查看哪些会被保留，哪些会被移除。
+- `--enforce`：即使 `session.maintenance.mode` 为 `warn`，也应用维护操作。
+- `--fix-missing`：移除转录文件缺失的条目，即使它们通常还不会因为年龄/数量限制而被清理。
+- `--active-key <key>`：保护特定的活动 key 不被磁盘预算回收。
+- `--agent <id>`：对一个已配置的代理存储运行清理。
+- `--all-agents`：对所有已配置的代理存储运行清理。
+- `--store <path>`：针对一个特定的 `sessions.json` 文件运行。
+- `--json`：打印 JSON 摘要。使用 `--all-agents` 时，输出会包含每个存储的一份摘要。
 
 `openclaw sessions cleanup --all-agents --dry-run --json`：
 
@@ -104,9 +113,9 @@ openclaw sessions cleanup --json
 }
 ```
 
-相关内容：
+相关：
 
-- 会话配置: [配置参考](/gateway/config-agents#session)
+- 会话配置：[配置参考](/gateway/config-agents#session)
 
 ## 相关
 

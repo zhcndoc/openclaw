@@ -1,37 +1,37 @@
 ---
-summary: "仓库脚本：目的、范围及安全注意事项"
+summary: "仓库脚本：用途、范围和安全说明"
 read_when:
-  - 运行仓库中的脚本时
-  - 在 ./scripts 目录下添加或更改脚本时
+  - 从仓库中运行脚本时
+  - 在 ./scripts 下添加或修改脚本时
 title: "脚本"
 ---
 
 `scripts/` 目录包含用于本地工作流和运维任务的辅助脚本。
-当任务明确与某个脚本相关时请使用这些脚本；否则优先使用 CLI。
+当某个任务明确与某个脚本相关时使用这些脚本；否则优先使用 CLI。
 
-## 规范
+## 约定
 
-- 脚本是**可选的**，除非文档或发布检查清单中有提及。
-- 优先使用已有的 CLI 界面（例如：认证监控使用 `openclaw models status --check`）。
-- 脚本通常是主机特定的；在新机器上运行前请先阅读脚本内容。
+- 脚本是**可选**的，除非文档或发布检查清单中引用了它们。
+- 优先使用已存在的 CLI 接口（例如：身份验证监控使用 `openclaw models status --check`）。
+- 假设脚本具有主机特定性；在新机器上运行前先阅读它们。
 
-## 认证监控脚本
+## 身份验证监控脚本
 
-认证监控在[认证](/gateway/authentication)中涵盖。`scripts/` 下的脚本是针对 systemd/Termux 手机工作流的可选附加组件。
+身份验证监控在 [Authentication](/gateway/authentication) 中有说明。`scripts/` 下的脚本是用于 systemd/Termux 手机工作流的可选补充。
 
-## GitHub 读取助手
+## GitHub 读取辅助脚本
 
-当你希望 `gh` 使用 GitHub App 安装令牌进行仓库范围的读取调用，同时将正常的 `gh` 保留在你的个人登录状态下用于写入操作时，请使用 `scripts/gh-read`。
+当你希望 `gh` 使用 GitHub App 安装令牌执行仓库范围内的读取调用，同时让正常的 `gh` 保持使用你的个人登录进行写入操作时，请使用 `scripts/gh-read`。
 
-所需环境变量：
+必需的环境变量：
 
 - `OPENCLAW_GH_READ_APP_ID`
 - `OPENCLAW_GH_READ_PRIVATE_KEY_FILE`
 
-可选环境变量：
+可选的环境变量：
 
-- `OPENCLAW_GH_READ_INSTALLATION_ID`：当你希望跳过基于仓库的安装查找时
-- `OPENCLAW_GH_READ_PERMISSIONS`：作为以逗号分隔的覆盖，用于请求读取权限子集
+- `OPENCLAW_GH_READ_INSTALLATION_ID`：当你想跳过基于仓库的安装查找时使用
+- `OPENCLAW_GH_READ_PERMISSIONS`：以逗号分隔的方式覆盖要请求的读取权限子集
 
 仓库解析顺序：
 
@@ -47,10 +47,10 @@ title: "脚本"
 
 ## 添加脚本时
 
-- Keep scripts focused and documented.
-- 在相关文档中添加一条简短条目（如果缺少则创建一个）。
+- 保持脚本聚焦且有文档说明。
+- 在相关文档中添加一条简短条目（如果缺失则新建一份）。
 
 ## 相关内容
 
-- [Testing](/help/testing)
-- [Testing live](/help/testing-live)
+- [测试](/help/testing)
+- [在线测试](/help/testing-live)

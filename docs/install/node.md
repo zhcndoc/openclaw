@@ -1,21 +1,21 @@
 ---
-summary: "为 OpenClaw 安装和配置 Node.js — 版本要求、安装选项以及 PATH 故障排除"
+summary: "为 OpenClaw 安装和配置 Node.js — 版本要求、安装选项和 PATH 故障排查"
 title: "Node.js"
 read_when:
-  - "您需要在安装 OpenClaw 之前安装 Node.js"
-  - "您已安装 OpenClaw，但提示找不到命令 `openclaw`"
-  - "npm install -g 因权限或 PATH 问题失败"
+  - "在安装 OpenClaw 之前，你需要先安装 Node.js"
+  - "你已经安装了 OpenClaw，但 `openclaw` 命令未找到"
+  - "`npm install -g` 因权限或 PATH 问题失败"
 ---
 
-OpenClaw 需要 **Node 22.14 或更新版本**。**Node 24 是安装、CI 和发布工作流的默认且推荐的运行时**。Node 22 仍通过当前 LTS 线路受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node — 如果您想自行设置 Node，并确保一切配置正确（版本、PATH、全局安装），请参考本页。
+OpenClaw 需要 **Node 22.14 或更高版本**。**Node 24 是安装、CI 和发布工作流的默认且推荐的运行时**。Node 22 仍通过当前的 LTS 线路获得支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——本页适用于你想自己设置 Node 并确保一切都正确连接时（版本、PATH、全局安装）。
 
-## 检查您的版本
+## 检查你的版本
 
 ```bash
 node -v
 ```
 
-如果输出 `v24.x.x` 或更高版本，说明您使用的是推荐的默认版本。如果输出 `v22.14.x` 或更高版本，说明您使用的是受支持的 Node 22 LTS 路线，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或版本过旧，请选择下面的一种安装方式。
+如果输出 `v24.x.x` 或更高版本，说明你使用的是推荐的默认版本。如果输出 `v22.14.x` 或更高版本，说明你使用的是受支持的 Node 22 LTS 路径，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或者版本过旧，请选择下面的一种安装方式。
 
 ## 安装 Node
 
@@ -27,7 +27,7 @@ node -v
     brew install node
     ```
 
-    或从 [nodejs.org](https://nodejs.org/) 下载 macOS 安装包。
+    或从 [nodejs.org](https://nodejs.org/) 下载 macOS 安装程序。
 
   </Tab>
   <Tab title="Linux">
@@ -44,7 +44,7 @@ node -v
     sudo dnf install nodejs
     ```
 
-    或者使用版本管理工具（见下文）。
+    或使用版本管理器（见下文）。
 
   </Tab>
   <Tab title="Windows">
@@ -66,13 +66,13 @@ node -v
 </Tabs>
 
 <Accordion title="使用版本管理器（nvm、fnm、mise、asdf）">
-  版本管理器让您可以轻松切换 Node 版本。流行选项包括：
+  版本管理器可以让你轻松在不同 Node 版本之间切换。常见选项：
 
-- [**fnm**](https://github.com/Schniz/fnm) — 快速，跨平台
-- [**nvm**](https://github.com/nvm-sh/nvm) — macOS/Linux 上广泛使用
-- [**mise**](https://mise.jdx.dev/) — 多语言支持（Node、Python、Ruby 等）
+- [**fnm**](https://github.com/Schniz/fnm) — 快速、跨平台
+- [**nvm**](https://github.com/nvm-sh/nvm) — 在 macOS/Linux 上广泛使用
+- [**mise**](https://mise.jdx.dev/) — 多语言（Node、Python、Ruby 等）
 
-以 fnm 为例：
+使用 fnm 的示例：
 
 ```bash
 fnm install 24
@@ -80,31 +80,31 @@ fnm use 24
 ```
 
   <Warning>
-  确保您的版本管理器在 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）中被初始化。如果没有，新的终端会话中可能找不到 `openclaw` 命令，因为 PATH 中不包含 Node 的 bin 目录。
+  确保你的版本管理器已在 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）中初始化。否则，在新的终端会话中可能找不到 `openclaw`，因为 PATH 不会包含 Node 的 bin 目录。
   </Warning>
 </Accordion>
 
-## 故障排除
+## 故障排查
 
 ### `openclaw: command not found`
 
-这通常意味着 npm 的全局 bin 目录没有在您的 PATH 中。
+这几乎总是意味着 npm 的全局 bin 目录没有加入你的 PATH。
 
 <Steps>
-  <Step title="查找您的全局 npm 安装路径">
+  <Step title="查找你的 npm 全局前缀">
     ```bash
     npm prefix -g
     ```
   </Step>
-  <Step title="检查它是否在 PATH 中">
+  <Step title="检查它是否在你的 PATH 中">
     ```bash
     echo "$PATH"
     ```
 
-    查看输出中是否包含 `<npm-prefix>/bin`（macOS/Linux）或 `<npm-prefix>`（Windows）。
+    在输出中查找 `<npm-prefix>/bin`（macOS/Linux）或 `<npm-prefix>`（Windows）。
 
   </Step>
-  <Step title="将其添加到您的 shell 启动文件">
+  <Step title="将其添加到你的 shell 启动文件">
     <Tabs>
       <Tab title="macOS / Linux">
         添加到 `~/.zshrc` 或 `~/.bashrc`：
@@ -113,19 +113,19 @@ fnm use 24
         export PATH="$(npm prefix -g)/bin:$PATH"
         ```
 
-        然后打开新的终端窗口（或在 zsh 中运行 `rehash`，bash 中运行 `hash -r`）。
+        然后打开一个新的终端（或在 zsh 中运行 `rehash` / 在 bash 中运行 `hash -r`）。
       </Tab>
       <Tab title="Windows">
-        通过 设置 → 系统 → 环境变量，将 `npm prefix -g` 的输出路径添加到系统 PATH 中。
+        通过“设置”→“系统”→“环境变量”，将 `npm prefix -g` 的输出添加到系统 PATH 中。
       </Tab>
     </Tabs>
 
   </Step>
 </Steps>
 
-### `npm install -g` 权限错误（Linux）
+### `npm install -g` 的权限错误（Linux）
 
-如果出现 `EACCES` 权限错误，请将 npm 的全局前缀目录切换到用户可写目录：
+如果你看到 `EACCES` 错误，请将 npm 的全局前缀切换到一个用户可写的目录：
 
 ```bash
 mkdir -p "$HOME/.npm-global"
@@ -133,10 +133,10 @@ npm config set prefix "$HOME/.npm-global"
 export PATH="$HOME/.npm-global/bin:$PATH"
 ```
 
-将 `export PATH=...` 行添加到您的 `~/.bashrc` 或 `~/.zshrc` 中以便永久生效。
+将 `export PATH=...` 这一行添加到你的 `~/.bashrc` 或 `~/.zshrc` 中，以使其永久生效。
 
 ## 相关内容
 
-- [安装概览](/install) — 所有安装方法
-- [更新](/install/updating) — 保持 OpenClaw 最新
-- [快速入门](/start/getting-started) — 安装后的第一步
+- [安装概览](/install) — 所有安装方式
+- [更新](/install/updating) — 让 OpenClaw 保持最新
+- [入门](/start/getting-started) — 安装后的第一步

@@ -1,5 +1,5 @@
 ---
-summary: "`openclaw webhooks` 的 CLI 参考（Webhook 辅助工具 + Gmail Pub/Sub）"
+summary: "openclaw webhooks 的 CLI 参考（webhook 辅助工具 + Gmail Pub/Sub）"
 read_when:
   - 你想将 Gmail Pub/Sub 事件接入 OpenClaw
   - 你想使用 webhook 辅助命令
@@ -8,12 +8,12 @@ title: "Webhooks"
 
 # `openclaw webhooks`
 
-Webhook 辅助工具和集成（Gmail Pub/Sub，webhook 辅助工具）。
+Webhook 辅助工具和集成（Gmail Pub/Sub、webhook 辅助工具）。
 
-相关内容：
+相关：
 
-- Webhooks：[Webhooks](/automation/cron-jobs#webhooks)
-- Gmail Pub/Sub：[Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
+- Webhooks: [Webhooks](/automation/cron-jobs#webhooks)
+- Gmail Pub/Sub: [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
 
 ## Gmail
 
@@ -24,7 +24,7 @@ openclaw webhooks gmail run
 
 ### `webhooks gmail setup`
 
-配置 Gmail 监控、Pub/Sub 和 OpenClaw webhook 投递。
+配置 Gmail 监听、Pub/Sub 和 OpenClaw webhook 投递。
 
 必需：
 
@@ -61,7 +61,7 @@ openclaw webhooks gmail setup --account you@example.com --hook-url https://gatew
 
 ### `webhooks gmail run`
 
-运行 `gog watch serve` 以及监控自动续期循环。
+运行 `gog watch serve` 以及监听自动续订循环。
 
 选项：
 
@@ -88,9 +88,9 @@ openclaw webhooks gmail setup --account you@example.com --hook-url https://gatew
 openclaw webhooks gmail run --account you@example.com
 ```
 
-有关端到端设置流程和运行细节，请参阅 [Gmail Pub/Sub 文档](/automation/cron-jobs#gmail-pubsub-integration)。
+有关端到端设置流程和操作细节，请参阅 [Gmail Pub/Sub 文档](/automation/cron-jobs#gmail-pubsub-integration)。
 
-## 相关内容
+## Related
 
-- [CLI 参考](/cli)
-- [Webhook 自动化](/automation/webhook)
+- [CLI reference](/cli)
+- [Webhook automation](/automation/webhook)

@@ -1,160 +1,165 @@
 ---
-summary: "带有浅睡、深睡和 REM 阶段以及梦境日记的后台记忆巩固"
+summary: "带有轻度、深度和 REM 阶段以及梦境日记的后台记忆巩固"
 title: "做梦"
+sidebarTitle: "做梦"
 read_when:
   - 你希望记忆提升自动运行
-  - 你想了解每个梦境阶段的作用
-  - 你想调整巩固过程而不污染 MEMORY.md
+  - 你想了解每个做梦阶段的作用
+  - 你想在不污染 MEMORY.md 的情况下调整巩固流程
 ---
 
-Dreaming 是 `memory-core` 中的后台记忆巩固系统。  
-它帮助 OpenClaw 将强烈的短期信号迁移到持久记忆中，同时保持整个过程可解释、可审查。
+做梦是 `memory-core` 中的后台记忆巩固系统。它帮助 OpenClaw 将强烈的短期信号转化为持久记忆，同时保持过程可解释、可审查。
 
-Dreaming 是**可选启用**的，默认情况下处于禁用状态。
+<Note>
+做梦默认是**可选开启**的，并且默认禁用。
+</Note>
 
-## Dreaming 写入的内容
+## 做梦会写入什么
 
-Dreaming 保留两种输出：
+做梦保留两类输出：
 
-- **机器状态**位于 `memory/.dreams/`（回忆存储、阶段信号、摄入检查点、锁）。
-- **人类可读输出**位于 `DREAMS.md`（或现有的 `dreams.md`）以及 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下的可选阶段报告文件。
+- `memory/.dreams/` 中的**机器状态**（回忆存储、阶段信号、摄取检查点、锁）。
+- `DREAMS.md`（或现有的 `dreams.md`）中的**人类可读输出**，以及位于 `memory/dreaming/<phase>/YYYY-MM-DD.md` 下的可选阶段报告文件。
 
 长期提升仍然只写入 `MEMORY.md`。
 
 ## 阶段模型
 
-Dreaming 使用三个协作阶段：
+做梦使用三个协作阶段：
 
-| 阶段 | 目的 | 持久写入 |
-| ----- | ----------------------------------------- | ----------------- |
-| 浅睡 | 排序和暂存近期短期材料 | 否 |
-| 深睡 | 评分并提升持久候选项 | 是（`MEMORY.md`） |
-| REM | 反思主题和重复想法 | 否 |
+| 阶段 | 目的                                   | 持久写入           |
+| ----- | -------------------------------------- | ------------------ |
+| Light | 对最近的短期材料进行排序和暂存         | 否                 |
+| Deep  | 评分并提升可长期保留的候选项           | 是（`MEMORY.md`）  |
+| REM   | 反思主题和重复出现的想法               | 否                 |
 
-这些阶段是内部实现细节，不是单独的用户配置
-“模式”。
+这些阶段是内部实现细节，不是独立的、由用户配置的“模式”。
 
-### 浅睡阶段
+<AccordionGroup>
+  <Accordion title="Light phase">
+    轻度阶段会摄取最近的日常记忆信号和回忆轨迹，对它们去重，并暂存候选行。
 
-浅睡阶段摄入近期的每日记忆信号和回忆轨迹，对其进行去重，  
-并暂存候选行。
+    - 在可用时，从短期回忆状态、最近的日常记忆文件以及已脱敏的会话转录中读取。
+    - 当存储包含内联输出时，会写入一个受管理的 `## Light Sleep` 区块。
+    - 为后续深度排序记录强化信号。
+    - 从不写入 `MEMORY.md`。
 
-- 从短期回忆状态、最近的每日记忆文件以及可用的脱敏会话记录中读取。
-- 当存储包含内联输出时，写入一个受管理的 `## Light Sleep` 块。
-- 记录用于后续深度排名的强化信号。
-- 永不写入 `MEMORY.md`。
+  </Accordion>
+  <Accordion title="Deep phase">
+    深度阶段决定哪些内容会成为长期记忆。
 
-### 深睡阶段
+    - 使用加权评分和阈值门槛对候选项进行排序。
+    - 需要通过 `minScore`、`minRecallCount` 和 `minUniqueQueries`。
+    - 在写入前，会从实时日常文件中重新加载片段，因此过期/已删除的片段会被跳过。
+    - 将提升后的条目追加到 `MEMORY.md`。
+    - 将 `## Deep Sleep` 摘要写入 `DREAMS.md`，并可选地写入 `memory/dreaming/deep/YYYY-MM-DD.md`。
 
-深睡阶段决定什么成为长期记忆。
+  </Accordion>
+  <Accordion title="REM phase">
+    REM 阶段会提取模式和反思信号。
 
-- 使用加权评分和阈值门限对候选项进行排名。
-- 需要通过 `minScore`、`minRecallCount` 和 `minUniqueQueries`。
-- 在写入之前从实时每日文件重新加载片段，因此跳过过时/已删除的片段。
-- 将提升的条目追加到 `MEMORY.md`。
-- 将 `## Deep Sleep` 摘要写入 `DREAMS.md`，并可选地写入 `memory/dreaming/deep/YYYY-MM-DD.md`。
+    - 基于最近的短期轨迹生成主题和反思摘要。
+    - 当存储包含内联输出时，会写入一个受管理的 `## REM Sleep` 区块。
+    - 记录供深度排序使用的 REM 强化信号。
+    - 从不写入 `MEMORY.md`。
 
-### REM 阶段
+  </Accordion>
+</AccordionGroup>
 
-REM 阶段提取模式和反思信号。
+## 会话转录摄取
 
-- 从近期短期轨迹构建主题和反思摘要。
-- 当存储包含内联输出时，写入一个受管理的 `## REM Sleep` 块。
-- 记录深睡排名使用的 REM 强化信号。
-- 从不写入 `MEMORY.md`。
-
-## 会话记录摄取
-
-Dreaming 还在 `DREAMS.md` 中保留一个叙事性的 **梦境日记**。在每个阶段拥有足够材料后，`memory-core` 运行一个尽最大努力的后台子代理回合，并追加一个简短的日记条目。它使用默认运行时模型，除非配置了 `dreaming.model`。
+做梦可以将已脱敏的会话转录摄取到做梦语料中。当转录可用时，它们会与日常记忆信号和回忆轨迹一起输入轻度阶段。摄取前会先脱敏个人和敏感内容。
 
 ## 梦境日记
 
-Dreaming 还在 `DREAMS.md` 中保留一个叙事性的**梦境日记**。  
-在每个阶段拥有足够材料后，`memory-core` 运行一个尽最大努力的后台  
-子代理回合（使用默认运行时模型），并追加一个简短的日记条目。
+做梦还会在 `DREAMS.md` 中保留一份叙事性的 **Dream Diary**。每个阶段积累到足够材料后，`memory-core` 会运行一次尽力而为的后台子代理回合，并追加一条简短的日记条目。默认会使用运行时模型，除非配置了 `dreaming.model`。如果配置的模型不可用，Dream Diary 会使用会话默认模型重试一次。
 
-本日记供人类在 Dreams UI 中阅读，**不是**推广来源。  
-Dreaming 生成的日记/报告工件不会被纳入短期推广。  
-只有有依据的记忆片段才有资格被推广到 `MEMORY.md`。
+<Note>
+这份日记供 Dreams UI 中的人类阅读，不是提升来源。做梦生成的日记/报告工件会被排除在短期提升之外。只有有依据的记忆片段才有资格提升到 `MEMORY.md`。
+</Note>
 
-还有一个用于审查和恢复工作的有依据的历史回填通道：
+此外还有一条用于审查和恢复工作的有依据历史回填通道：
 
-- `memory rem-harness --path ... --grounded` 预览来自历史 `YYYY-MM-DD.md` 笔记的有依据的日记输出。
-- `memory rem-backfill --path ...` 将可逆转的有依据日记条目写入 `DREAMS.md`。
-- `memory rem-backfill --path ... --stage-short-term` 将有依据的持久候选项暂存到与正常深度阶段相同的短期证据存储中。
-- `memory rem-backfill --rollback` 和 `--rollback-short-term` 移除那些暂存的回填工件，而不影响普通的日记条目或实时的短期回忆。
+<AccordionGroup>
+  <Accordion title="Backfill commands">
+    - `memory rem-harness --path ... --grounded` 会预览来自历史 `YYYY-MM-DD.md` 笔记的有依据日记输出。
+    - `memory rem-backfill --path ...` 会将可逆的有依据日记条目写入 `DREAMS.md`。
+    - `memory rem-backfill --path ... --stage-short-term` 会将有依据的、可持久化的候选项暂存到正常深度阶段已经使用的同一短期证据存储中。
+    - `memory rem-backfill --rollback` 和 `--rollback-short-term` 会移除这些已暂存的回填工件，而不会影响普通日记条目或实时短期回忆。
 
-控制界面提供了相同的日记回填/重置流程，以便你可以在 Dreams 场景中检查结果，再决定是否将有依据的候选条目提升。场景还展示了一个独立的有依据通道，让你看到哪些暂存的短期条目来自历史回放，哪些提升项是由有依据引导的，并可以清除仅由有依据引导的暂存条目，而不影响正常的实时短期状态。
+  </Accordion>
+</AccordionGroup>
 
-## 深度排名信号
+控制 UI 也提供相同的日记回填/重置流程，因此你可以先在 Dreams 场景中检查结果，再决定这些有依据的候选项是否值得提升。该场景还展示了一个独立的有依据通道，这样你就能看到哪些已暂存的短期条目来自历史重放、哪些已提升项目是由有依据内容驱动的，并且可以只清除仅有依据的暂存条目，而不影响普通的实时短期状态。
 
-深度排名使用六个加权基础信号加上阶段强化：
+## 深度排序信号
 
-| 信号 | 权重 | 描述 |
-| ------------------- | ------ | ------------------------------------------------- |
-| 频率 | 0.24 | 条目积累多少短期信号 |
-| 相关性 | 0.30 | 条目的平均检索质量 |
-| 查询多样性 | 0.15 | 浮现该条目的不同查询/日期上下文 |
-| 近期性 | 0.15 | 时间衰减的新鲜度评分 |
-| 巩固性 | 0.10 | 多日重复强度 |
-| 概念丰富度 | 0.06 | 来自片段/路径的概念标签密度 |
+深度排序使用六个加权基础信号以及阶段强化：
 
-浅睡和 REM 阶段命中会从  
-`memory/.dreams/phase-signals.json` 添加一个小的近期性衰减提升。
+| 信号                | 权重  | 描述                                       |
+| ------------------- | ----- | ------------------------------------------ |
+| Frequency          | 0.24  | 该条目累积了多少短期信号                   |
+| Relevance          | 0.30  | 该条目的平均检索质量                     |
+| Query diversity    | 0.15  | 使其浮现的不同查询/日期上下文数量         |
+| Recency            | 0.15  | 随时间衰减的新鲜度得分                   |
+| Consolidation      | 0.10  | 多日重复出现的强度                       |
+| Conceptual richness | 0.06  | 来自片段/路径的概念标签密度              |
+
+Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加一个小幅、随时间衰减的提升。
 
 ## 调度
 
-启用后，`memory-core` 自动管理一个用于完整梦境  
-扫描的 cron 作业。每次扫描按顺序运行阶段：light -> REM -> deep。
+启用后，`memory-core` 会自动管理一个用于完整做梦扫描的 cron 任务。每次扫描按顺序运行各阶段：light → REM → deep。
 
-默认节奏行为：
+默认频率行为：
 
-| Setting              | Default       |
+| 设置                 | 默认值        |
 | -------------------- | ------------- |
 | `dreaming.frequency` | `0 3 * * *`   |
-| `dreaming.model`     | default model |
+| `dreaming.model`     | 默认模型      |
 
 ## 快速开始
 
-启用 dreaming：
-
-```json
-{
-  "plugins": {
-    "entries": {
-      "memory-core": {
-        "config": {
-          "dreaming": {
-            "enabled": true
+<Tabs>
+  <Tab title="启用做梦">
+    ```json
+    {
+      "plugins": {
+        "entries": {
+          "memory-core": {
+            "config": {
+              "dreaming": {
+                "enabled": true
+              }
+            }
           }
         }
       }
     }
-  }
-}
-```
-
-使用自定义扫描节奏启用 dreaming：
-
-```json
-{
-  "plugins": {
-    "entries": {
-      "memory-core": {
-        "config": {
-          "dreaming": {
-            "enabled": true,
-            "timezone": "America/Los_Angeles",
-            "frequency": "0 */6 * * *"
+    ```
+  </Tab>
+  <Tab title="自定义扫描频率">
+    ```json
+    {
+      "plugins": {
+        "entries": {
+          "memory-core": {
+            "config": {
+              "dreaming": {
+                "enabled": true,
+                "timezone": "America/Los_Angeles",
+                "frequency": "0 */6 * * *"
+              }
+            }
           }
         }
       }
     }
-  }
-}
-```
+    ```
+  </Tab>
+</Tabs>
 
-## 斜杠命令
+## Slash 命令
 
 ```
 /dreaming status
@@ -165,69 +170,74 @@ Dreaming 生成的日记/报告工件不会被纳入短期推广。
 
 ## CLI 工作流
 
-使用 CLI 提升进行预览或手动应用：
+<Tabs>
+  <Tab title="提升预览 / 应用">
+    ```bash
+    openclaw memory promote
+    openclaw memory promote --apply
+    openclaw memory promote --limit 5
+    openclaw memory status --deep
+    ```
 
-```bash
-openclaw memory promote
-openclaw memory promote --apply
-openclaw memory promote --limit 5
-openclaw memory status --deep
-```
+    默认情况下，手动 `memory promote` 会使用深度阶段阈值，除非通过 CLI 标志进行覆盖。
 
-手动 `memory promote` 默认使用深睡阶段阈值，除非被  
-CLI 标志覆盖。
+  </Tab>
+  <Tab title="解释提升">
+    解释为什么某个特定候选项会或不会被提升：
 
-解释特定候选项为何会被提升或不会被提升：
+    ```bash
+    openclaw memory promote-explain "router vlan"
+    openclaw memory promote-explain "router vlan" --json
+    ```
 
-```bash
-openclaw memory promote-explain "router vlan"
-openclaw memory promote-explain "router vlan" --json
-```
+  </Tab>
+  <Tab title="REM harness 预览">
+    预览 REM 反思、候选事实和深度提升输出，而不写入任何内容：
 
-预览 REM 反思、候选真理和深度提升输出，而不写入任何内容：
+    ```bash
+    openclaw memory rem-harness
+    openclaw memory rem-harness --json
+    ```
 
-```bash
-openclaw memory rem-harness
-openclaw memory rem-harness --json
-```
+  </Tab>
+</Tabs>
 
 ## 关键默认值
 
 所有设置都位于 `plugins.entries.memory-core.config.dreaming` 下。
 
 <ParamField path="enabled" type="boolean" default="false">
-  启用或禁用 dreaming 扫描。
+  启用或禁用做梦扫描。
 </ParamField>
 <ParamField path="frequency" type="string" default="0 3 * * *">
-  完整 dreaming 扫描的 cron 频率。
+  完整做梦扫描的 cron 频率。
 </ParamField>
 <ParamField path="model" type="string">
-  可选的 Dream Diary 子代理模型覆盖。若同时设置子代理的 `allowedModels` 白名单，请使用规范的 `provider/model` 值。
+  可选的 Dream Diary 子代理模型覆盖。若同时设置了子代理 `allowedModels` 允许列表，请使用规范的 `provider/model` 值。
 </ParamField>
 
 <Warning>
-`dreaming.model` 需要 `plugins.entries.memory-core.subagent.allowModelOverride: true`。若要限制它，还需设置 `plugins.entries.memory-core.subagent.allowedModels`。
+`dreaming.model` 需要 `plugins.entries.memory-core.subagent.allowModelOverride: true`。若要限制它，还要设置 `plugins.entries.memory-core.subagent.allowedModels`。信任或允许列表失败会保持可见，而不会静默回退；重试只覆盖模型不可用错误。
 </Warning>
 
-阶段策略、阈值和存储行为是内部实现  
-细节（非用户面向配置）。
+<Note>
+阶段策略、阈值和存储行为都是内部实现细节（不是面向用户的配置）。完整键列表请参见 [记忆配置参考](/reference/memory-config#dreaming)。
+</Note>
 
-完整键列表请参见 [记忆配置参考](/reference/memory-config#dreaming)。
+## Dreams UI
 
-## Dreams 界面
+启用后，Gateway 的 **Dreams** 标签页会显示：
 
-启用后，网关 **Dreams** 标签页显示：
+- 当前做梦是否启用
+- 阶段级状态和受管理扫描是否存在
+- 短期、有依据、信号以及今日已提升数量
+- 下次计划运行时间
+- 一个独立的有依据 Scene 通道，用于暂存历史重放条目
+- 一个由 `doctor.memory.dreamDiary` 支持的可展开 Dream Diary 阅读器
 
-- 当前 dreaming 是否启用
-- 各阶段状态以及是否存在受管理的 sweep
-- short-term、grounded、signal 和今日 promoted 的计数
-- 下一次计划运行时间
-- 一个单独的 grounded Scene lane，用于暂存的历史重放条目
-- 一个可展开的 Dream Diary 阅读器，由 `doctor.memory.dreamDiary` 提供数据
+## 相关内容
 
-## Related
-
-- [Memory](/concepts/memory)
-- [Memory Search](/concepts/memory-search)
-- [memory CLI](/cli/memory)
+- [记忆](/concepts/memory)
+- [Memory CLI](/cli/memory)
 - [记忆配置参考](/reference/memory-config)
+- [记忆搜索](/concepts/memory-search)

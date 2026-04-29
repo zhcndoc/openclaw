@@ -1,8 +1,8 @@
 ---
-summary: "用于外部 CLI（signal-cli，传统 imsg）和网关模式的 RPC 适配器"
+summary: "外部 CLI 的 RPC 适配器（signal-cli、旧版 imsg）和网关模式"
 read_when:
-  - 添加或更改外部 CLI 集成
-  - 调试 RPC 适配器（signal-cli、imsg）
+  - 添加或更改外部 CLI 集成时
+  - 调试 RPC 适配器（signal-cli、imsg）时
 title: "RPC 适配器"
 ---
 
@@ -10,36 +10,36 @@ OpenClaw 通过 JSON-RPC 集成外部 CLI。目前使用两种模式。
 
 ## 模式 A：HTTP 守护进程（signal-cli）
 
-- `signal-cli` 作为守护进程运行，使用基于 HTTP 的 JSON-RPC。
-- 事件流为 SSE（`/api/v1/events`）。
-- 健康检查接口：`/api/v1/check`。
-- 当 `channels.signal.autoStart=true` 时，OpenClaw 管理其生命周期。
+- `signal-cli` 作为带有 HTTP 上 JSON-RPC 的守护进程运行。
+- 事件流使用 SSE（`/api/v1/events`）。
+- 健康检查：`/api/v1/check`。
+- 当 `channels.signal.autoStart=true` 时，OpenClaw 负责生命周期管理。
 
-详情请参见 [Signal](/channels/signal) 的设置和端点。
+有关设置和端点，请参见 [Signal](/channels/signal)。
 
-## 模式 B：标准输入输出子进程（传统：imsg）
+## 模式 B：stdio 子进程（旧版：imsg）
 
 > **注意：** 对于新的 iMessage 设置，请改用 [BlueBubbles](/channels/bluebubbles)。
 
-- OpenClaw 启动 `imsg rpc` 作为子进程（传统 iMessage 集成）。
-- JSON-RPC 通过 stdin/stdout 且按行分隔（每行一个 JSON 对象）。
-- 无需 TCP 端口，无需守护进程。
+- OpenClaw 以子进程形式启动 `imsg rpc`（旧版 iMessage 集成）。
+- JSON-RPC 通过 stdin/stdout 按行分隔传输（每行一个 JSON 对象）。
+- 不需要 TCP 端口，也不需要守护进程。
 
-主要使用的方法：
+使用的核心方法：
 
 - `watch.subscribe` → 通知（`method: "message"`）
 - `watch.unsubscribe`
 - `send`
 - `chats.list`（探测/诊断）
 
-详情请参见 [iMessage](/channels/imessage) 的传统设置及寻址（推荐使用 `chat_id`）。
+有关旧版设置和寻址（推荐使用 `chat_id`），请参见 [iMessage](/channels/imessage)。
 
 ## 适配器指南
 
-- Gateway 拥有该进程（启动/停止与提供方生命周期绑定）。
-- 保持 RPC 客户端具有弹性：设置超时，退出后重启。
+- 网关负责进程（启动/停止与提供方生命周期绑定）。
+- 让 RPC 客户端具备弹性：超时、退出后重启。
 - 优先使用稳定 ID（例如 `chat_id`），而不是显示字符串。
 
-## 相关内容
+## 相关
 
-- [Gateway protocol](/gateway/protocol)
+- [网关协议](/gateway/protocol)

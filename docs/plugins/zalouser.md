@@ -1,42 +1,44 @@
 ---
-summary: "Zalo Personal 插件：通过原生 zca-js 实现二维码登录 + 消息（插件安装 + 频道配置 + 工具）"
+summary: "Zalo 个人插件：通过原生 zca-js 实现二维码登录 + 消息发送（插件安装 + 渠道配置 + 工具）"
 read_when:
-  - 你想在 OpenClaw 中使用 Zalo Personal（非官方）支持
+  - 你想在 OpenClaw 中支持 Zalo 个人版（非官方）
   - 你正在配置或开发 zalouser 插件
-title: "Zalo personal plugin"
+title: "Zalo 个人插件"
 ---
 
-# Zalo Personal（插件）
+# Zalo 个人版（插件）
 
-通过插件为 OpenClaw 提供 Zalo Personal 支持，使用原生 `zca-js` 实现对普通 Zalo 用户账户的自动化操作。
+通过插件为 OpenClaw 提供 Zalo Personal 支持，使用原生 `zca-js` 自动化一个普通的 Zalo 用户账号。
 
 <Warning>
-非官方自动化可能导致账号被暂停或封禁。请自行承担风险使用。
+非官方自动化可能导致账号被停用或封禁。请自行承担风险。
 </Warning>
 
 ## 命名
 
-频道 ID 设为 `zalouser`，以明确其自动化的是**个人 Zalo 用户账户**（非官方）。我们保留 `zalo` 给未来可能的官方 Zalo API 集成。
+渠道 id 使用 `zalouser`，以明确表示这是在自动化一个**个人 Zalo 用户账号**（非官方）。我们保留 `zalo`，以便将来可能接入官方 Zalo API。
 
 ## 运行位置
 
-该插件**在 Gateway 进程内部**运行。
+此插件运行在 **Gateway 进程内部**。
 
-如果使用远程 Gateway，请在**运行 Gateway 的机器上安装/配置**，然后重启 Gateway。
+如果你使用远程 Gateway，请在**运行 Gateway 的机器**上安装/配置，然后重启 Gateway。
 
 不需要外部的 `zca`/`openzca` CLI 二进制文件。
 
 ## 安装
 
-### 方案 A：从 npm 安装
+### 选项 A：从 npm 安装
 
 ```bash
 openclaw plugins install @openclaw/zalouser
 ```
 
+如果 npm 提示 OpenClaw 维护的包已被弃用，那么该包版本来自较早的外部包发布线；请改用当前已打包的 OpenClaw 构建版本，或者使用本地文件夹路径，直到发布更新的 npm 包。
+
 之后重启 Gateway。
 
-### 方案 B：从本地文件夹安装（开发）
+### 选项 B：从本地文件夹安装（开发）
 
 ```bash
 PLUGIN_SRC=./path/to/local/zalouser-plugin
@@ -48,7 +50,7 @@ cd "$PLUGIN_SRC" && pnpm install
 
 ## 配置
 
-频道配置位于 `channels.zalouser` 下（而非 `plugins.entries.*`）：
+渠道配置位于 `channels.zalouser` 下（不是 `plugins.entries.*`）：
 
 ```json5
 {
@@ -61,7 +63,7 @@ cd "$PLUGIN_SRC" && pnpm install
 }
 ```
 
-## 命令行界面（CLI）
+## CLI
 
 ```bash
 openclaw channels login --channel zalouser
@@ -71,15 +73,15 @@ openclaw message send --channel zalouser --target <threadId> --message "来自 O
 openclaw directory peers list --channel zalouser --query "name"
 ```
 
-## 代理工具
+## Agent 工具
 
 工具名称：`zalouser`
 
-支持操作：`send`、`image`、`link`、`friends`、`groups`、`me`、`status`
+操作：`send`、`image`、`link`、`friends`、`groups`、`me`、`status`
 
-频道消息操作也支持 `react` 用于消息表情回应。
+渠道消息操作还支持 `react`，用于消息表情回应。
 
-## 相关
+## 相关内容
 
 - [构建插件](/plugins/building-plugins)
 - [社区插件](/plugins/community)

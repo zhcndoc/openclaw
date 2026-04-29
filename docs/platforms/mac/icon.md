@@ -1,36 +1,36 @@
 ---
-summary: "macOS 上 OpenClaw 菜单栏图标的状态与动画"
+summary: "OpenClaw 在 macOS 上的菜单栏图标状态与动画"
 read_when:
-  - Changing menu bar icon behavior
+  - 更改菜单栏图标行为
 title: "菜单栏图标"
 ---
 
 # 菜单栏图标状态
 
-作者：steipete · 更新日期：2025-12-06 · 适用范围：macOS 应用（`apps/macos`）
+作者：steipete · 更新于：2025-12-06 · 范围：macOS 应用（`apps/macos`）
 
-- **空闲（Idle）：** 正常图标动画（闪烁，偶尔轻微摆动）。
-- **暂停（Paused）：** 状态项使用 `appearsDisabled`；无动画。
-- **语音触发（大耳朵）：** 语音唤醒检测器在听到唤醒词时调用 `AppState.triggerVoiceEars(ttl: nil)`，在捕捉语音的过程中保持 `earBoostActive=true`。耳朵放大（1.9 倍），显示圆形耳洞以增强可读性，静音 1 秒后通过 `stopVoiceEars()` 还原。仅从应用内语音管道触发。
-- **工作中（代理运行）：** `AppState.isWorking=true` 触发“尾巴/腿部快速动作”微动画：工作进行时腿部抖动加快并有轻微位移。目前围绕 WebChat 代理运行进行切换；当接入其他长时任务时也可添加相同切换。
+- **空闲：** 正常图标动画（眨眼，偶尔轻微扭动）。
+- **暂停：** 状态项使用 `appearsDisabled`；无动态效果。
+- **语音触发（大耳朵）：** 当检测到唤醒词时，语音唤醒检测器调用 `AppState.triggerVoiceEars(ttl: nil)`，在捕获语音内容期间保持 `earBoostActive=true`。耳朵放大（1.9x），并显示圆形耳孔以提升可读性，然后在 1 秒静默后通过 `stopVoiceEars()` 下降。仅从应用内语音流水线触发。
+- **工作中（agent 运行）：** `AppState.isWorking=true` 驱动“尾巴/腿部疾跑”微动效：在工作进行中，腿部摆动更快并略有偏移。目前围绕 WebChat agent 运行进行切换；当你接入其他长任务时，也请在相同位置切换。
 
-接入点
+接线点
 
-- 语音唤醒：运行时/测试时，在触发时调用 `AppState.triggerVoiceEars(ttl: nil)`，静音 1 秒后调用 `stopVoiceEars()` 以匹配捕捉窗口。
-- 代理活动：在工作期间调用 `AppStateStore.shared.setWorking(true/false)`（WebChat 代理已实现）。保持工作时间段短，并在 `defer` 块中重置，避免动画卡住。
+- 语音唤醒：运行时/测试器在触发时调用 `AppState.triggerVoiceEars(ttl: nil)`，并在 1 秒静默后调用 `stopVoiceEars()`，以匹配捕获窗口。
+- Agent 活动：在工作跨度期间设置 `AppStateStore.shared.setWorking(true/false)`（WebChat agent 调用中已完成）。保持跨度尽量短，并在 `defer` 块中重置，以避免动画卡住。
 
 形状与尺寸
 
 - 基础图标绘制于 `CritterIconRenderer.makeIcon(blink:legWiggle:earWiggle:earScale:earHoles:)`。
-- 耳朵缩放默认是 `1.0`；语音增强时设置 `earScale=1.9` 并切换 `earHoles=true`，不改变整体框架（18×18 pt 模板图渲染到 36×36 px Retina 缓冲区）。
-- 快速动作时腿抖动幅度最高约为 1.0，带有小幅水平摆动；该动画是叠加在任何已有空闲摆动上的。
+- 耳朵缩放默认值为 `1.0`；语音增强会设置 `earScale=1.9` 并切换 `earHoles=true`，而不改变整体框架（18×18 pt 模板图像渲染到 36×36 px 的 Retina backing store 中）。
+- 疾跑使用最高约 `1.0` 的腿部摆动，并带有轻微的水平抖动；它会叠加在现有的空闲摆动之上。
 
 行为说明
 
-- 没有用于耳朵/工作状态的外部 CLI/broker 开关；请将其保持在应用自身信号内部，以避免意外抖动。
-- 保持 TTL 较短（&lt;10s），这样如果任务挂起，图标可以快速回到基线状态。
+- 不要为耳朵/工作状态提供外部 CLI/broker 切换；将其保持为应用自身信号的内部机制，以避免意外的频繁切换。
+- 保持 TTL 较短（&lt;10s），这样如果任务卡住，图标可以很快恢复到基线状态。
 
-## 相关内容
+## 相关
 
 - [菜单栏](/platforms/mac/menu-bar)
 - [macOS 应用](/platforms/macos)

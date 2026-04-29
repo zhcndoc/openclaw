@@ -1,15 +1,14 @@
 ---
-summary: "仅使用 JSON 的 LLM 任务，用于工作流（可选插件工具）"
+summary: "用于工作流的仅 JSON LLM 任务（可选插件工具）"
 read_when:
-  - 你想在工作流中使用仅 JSON 的 LLM 步骤
-  - 你需要用于自动化的经 schema 验证的 LLM 输出
+  - 你想在工作流中使用一个仅输出 JSON 的 LLM 步骤
+  - 你需要经过 schema 验证的 LLM 输出用于自动化
 title: "LLM 任务"
 ---
 
-`llm-task` 是一个**可选的插件工具**，它会运行一个仅 JSON 的 LLM 任务，并
-返回结构化输出（可选地根据 JSON Schema 进行验证）。
+`llm-task` 是一个 **可选的插件工具**，它会运行一个仅输出 JSON 的 LLM 任务，并返回结构化输出（可选地根据 JSON Schema 进行验证）。
 
-这非常适合像 Lobster 这样的工作流引擎：你可以添加单个 LLM 步骤，而无需为每个工作流编写自定义 OpenClaw 代码。
+这非常适合像 Lobster 这样的工作流引擎：你可以添加一个单独的 LLM 步骤，而无需为每个工作流编写自定义的 OpenClaw 代码。
 
 ## 启用插件
 
@@ -25,7 +24,7 @@ title: "LLM 任务"
 }
 ```
 
-2. 将工具加入白名单（它以 `optional: true` 注册）：
+2. 将该工具加入允许列表（它以 `optional: true` 注册）：
 
 ```json
 {
@@ -62,36 +61,36 @@ title: "LLM 任务"
 }
 ```
 
-`allowedModels` 是一个 `provider/model` 字符串的白名单。如果设置，则请求中任何不在列表里的模型都会被拒绝。
+`allowedModels` 是 `provider/model` 字符串的允许列表。如果设置了它，任何超出该列表的请求都会被拒绝。
 
 ## 工具参数
 
-- `prompt`（字符串，必填）
-- `input`（任意类型，可选）
-- `schema`（对象，可选的 JSON Schema）
-- `provider`（字符串，可选）
-- `model`（字符串，可选）
-- `thinking`（字符串，可选）
-- `authProfileId`（字符串，可选）
-- `temperature`（数字，可选）
-- `maxTokens`（数字，可选）
-- `timeoutMs`（数字，可选）
+- `prompt`（string，必需）
+- `input`（any，可选）
+- `schema`（object，可选 JSON Schema）
+- `provider`（string，可选）
+- `model`（string，可选）
+- `thinking`（string，可选）
+- `authProfileId`（string，可选）
+- `temperature`（number，可选）
+- `maxTokens`（number，可选）
+- `timeoutMs`（number，可选）
 
-`thinking` 支持标准的 OpenClaw 推理预设，例如 `low` 或 `medium`。
+`thinking` 接受标准的 OpenClaw 推理预设，例如 `low` 或 `medium`。
 
 ## 输出
 
-返回包含解析后的 JSON 的 `details.json` 文件（如果提供 `schema`，则会进行验证）。
+返回包含解析后 JSON 的 `details.json`（并在提供 `schema` 时进行验证）。
 
-## 示例：Lobster 工作流程步骤
+## 示例：Lobster 工作流步骤
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
-  "prompt": "给定输入邮件，返回意图和草稿。",
+  "prompt": "根据输入的邮件，返回意图和草稿。",
   "thinking": "low",
   "input": {
-    "subject": "你好",
-    "body": "你能帮忙吗？"
+    "subject": "Hello",
+    "body": "Can you help?"
   },
   "schema": {
     "type": "object",
@@ -105,13 +104,13 @@ openclaw.invoke --tool llm-task --action json --args-json '{
 }'
 ```
 
-## 安全注意事项
+## 安全说明
 
-- 该工具是**仅 JSON**的，并会指示模型仅输出 JSON（不包含
+- 该工具是 **仅 JSON** 的，并会指示模型只输出 JSON（不使用
   代码块，不包含评论）。
-- 本次运行不会向模型暴露任何工具。
-- 在未使用 `schema` 验证之前，应将输出视为不可信。
-- 在任何会产生副作用的步骤（发送、发布、执行）之前加入审批。
+- 此次运行不会向模型暴露任何工具。
+- 除非你使用 `schema` 进行验证，否则应将输出视为不可信。
+- 在任何会产生副作用的步骤（发送、发布、执行）之前先进行审批。
 
 ## 相关内容
 

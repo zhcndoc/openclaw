@@ -1,17 +1,17 @@
 ---
-summary: "`openclaw docs` 的命令行参考（搜索实时文档索引）"
+summary: "openclaw docs 的 CLI 参考（搜索在线文档索引）"
 read_when:
-  - 你想从终端搜索实时的 OpenClaw 文档
+  - 你希望从终端搜索 OpenClaw 在线文档
 title: "文档"
 ---
 
 # `openclaw docs`
 
-搜索实时文档索引。
+搜索在线文档索引。
 
 参数：
 
-- `[query...]`: 发送到实时文档索引的搜索词
+- `[query...]`：发送到在线文档索引的搜索词
 
 示例：
 
@@ -24,9 +24,9 @@ openclaw docs gateway token secretref
 
 说明：
 
-- 不带查询时，`openclaw docs` 会打开实时文档搜索入口。
-- 多词查询会作为一次搜索请求原样传递。
+- 不带查询词时，`openclaw docs` 会打开在线文档搜索入口。
+- 多词查询会作为一次搜索请求传递。
 
-## 相关内容
+## 相关
 
 - [CLI 参考](/cli)

@@ -1,25 +1,25 @@
 ---
 summary: "在 OpenClaw 中使用 Z.AI（GLM 模型）"
 read_when:
-  - 你想在 OpenClaw 中使用 Z.AI / GLM 模型
+  - 你希望在 OpenClaw 中使用 Z.AI / GLM 模型
   - 你需要一个简单的 ZAI_API_KEY 配置
 title: "Z.AI"
 ---
 
-Z.AI 是 GLM 模型的 API 平台。它为 GLM 提供 REST API，并使用 API 密钥进行身份验证。请在 Z.AI 控制台中创建你的 API 密钥。OpenClaw 使用带有 Z.AI API 密钥的 `zai` 提供者。
+Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 API 密钥进行身份验证。请在 Z.AI 控制台中创建你的 API 密钥。OpenClaw 使用带有 Z.AI API 密钥的 `zai` 提供方。
 
-- 提供者：`zai`
-- 认证：`ZAI_API_KEY`
-- API：Z.AI Chat Completions（Bearer 认证）
+- 提供方：`zai`
+- 身份验证：`ZAI_API_KEY`
+- API：Z.AI Chat Completions（Bearer auth）
 
-## 快速开始
+## 入门
 
 <Tabs>
   <Tab title="自动检测端点">
-    **最适合：** 大多数用户。OpenClaw 会从密钥中检测匹配的 Z.AI 端点并自动应用正确的基础 URL。
+    **最适合：** 大多数用户。OpenClaw 会根据密钥自动检测匹配的 Z.AI 端点，并自动应用正确的 base URL。
 
     <Steps>
-      <Step title="运行引导">
+      <Step title="运行初始化">
         ```bash
         openclaw onboard --auth-choice zai-api-key
         ```
@@ -41,22 +41,22 @@ Z.AI 是 GLM 模型的 API 平台。它为 GLM 提供 REST API，并使用 API �
 
   </Tab>
 
-  <Tab title="明确区域端点">
-    **最适合：** 希望强制使用特定 Coding Plan 或通用 API 界面的用户。
+  <Tab title="显式区域端点">
+    **最适合：** 希望强制使用特定 Coding Plan 或通用 API 接口的用户。
 
     <Steps>
-      <Step title="选择正确的引导选项">
+      <Step title="选择正确的初始化选项">
         ```bash
-        # Coding Plan 全球版（推荐给 Coding Plan 用户）
+        # Coding Plan Global（建议 Coding Plan 用户使用）
         openclaw onboard --auth-choice zai-coding-global
 
-        # Coding Plan 中国区（中国区域）
+        # Coding Plan CN（中国区）
         openclaw onboard --auth-choice zai-coding-cn
 
         # 通用 API
         openclaw onboard --auth-choice zai-global
 
-        # 通用 API 中国区（中国区域）
+        # 通用 API CN（中国区）
         openclaw onboard --auth-choice zai-cn
         ```
       </Step>
@@ -80,37 +80,38 @@ Z.AI 是 GLM 模型的 API 平台。它为 GLM 提供 REST API，并使用 API �
 
 ## 内置目录
 
-OpenClaw 目前为内置的 `zai` 提供者预置了以下内容：
+OpenClaw 当前为内置的 `zai` 提供方预置了以下模型：
 
-| 模型引用             | 备注          |
-| -------------------- | ------------- |
-| `zai/glm-5.1`        | 默认模型      |
-| `zai/glm-5`          |               |
-| `zai/glm-5-turbo`    |               |
-| `zai/glm-5v-turbo`   |               |
-| `zai/glm-4.7`        |               |
-| `zai/glm-4.7-flash`  |               |
-| `zai/glm-4.7-flashx` |               |
-| `zai/glm-4.6`        |               |
-| `zai/glm-4.6v`       |               |
-| `zai/glm-4.5`        |               |
-| `zai/glm-4.5-air`    |               |
-| `zai/glm-4.5-flash`  |               |
-| `zai/glm-4.5v`       |               |
+| 模型引用             | 说明           |
+| -------------------- | -------------- |
+| `zai/glm-5.1`        | 默认模型       |
+| `zai/glm-5`          |                |
+| `zai/glm-5-turbo`    |                |
+| `zai/glm-5v-turbo`   |                |
+| `zai/glm-4.7`        |                |
+| `zai/glm-4.7-flash`  |                |
+| `zai/glm-4.7-flashx` |                |
+| `zai/glm-4.6`        |                |
+| `zai/glm-4.6v`       |                |
+| `zai/glm-4.5`        |                |
+| `zai/glm-4.5-air`    |                |
+| `zai/glm-4.5-flash`  |                |
+| `zai/glm-4.5v`       |                |
 
 <Tip>
-GLM 模型可用形式为 `zai/<model>`（例如：`zai/glm-5`）。默认内置模型引用为 `zai/glm-5.1`。
+GLM 模型可通过 `zai/<model>` 访问（例如：`zai/glm-5`）。默认内置的模型引用是 `zai/glm-5.1`。
 </Tip>
 
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="向前解析未知的 GLM-5 模型">
-    未知的 `glm-5*` ID 在内置提供者路径上仍会进行向前解析，当 ID 匹配当前 GLM-5 系列格式时，会通过 `glm-4.7` 模板合成提供者拥有的元数据。
+  <Accordion title="转发解析未知的 GLM-5 模型">
+    未知的 `glm-5*` ID 仍会在内置提供方路径上进行转发解析：当该 ID
+    匹配当前 GLM-5 系列的形态时，会基于 `glm-4.7` 模板合成由提供方拥有的元数据。
   </Accordion>
 
   <Accordion title="工具调用流式传输">
-    `tool_stream` 默认对 Z.AI 工具调用流式传输启用。要禁用它：
+    `tool_stream` 默认已为 Z.AI 的工具调用流式传输启用。如需禁用：
 
     ```json5
     {
@@ -128,31 +129,62 @@ GLM 模型可用形式为 `zai/<model>`（例如：`zai/glm-5`）。默认内置
 
   </Accordion>
 
-  <Accordion title="图像理解">
-    内置的 Z.AI 插件注册了图像理解功能。
+  <Accordion title="思考与保留思考">
+    Z.AI 的思考机制遵循 OpenClaw 的 `/think` 控制。关闭思考时，
+    OpenClaw 会发送 `thinking: { type: "disabled" }`，以避免响应在可见文本之前
+    将输出预算消耗在 `reasoning_content` 上。
 
-    | 属性      | 值          |
-    | --------- | ----------- |
-    | 模型      | `glm-4.6v`  |
+    保留思考是可选开启的，因为 Z.AI 需要回放完整的历史
+    `reasoning_content`，这会增加提示词 token。按模型启用：
 
-    图像理解会根据配置的 Z.AI 认证自动解析——无需额外配置。
+    ```json5
+    {
+      agents: {
+        defaults: {
+          models: {
+            "zai/glm-5.1": {
+              params: { preserveThinking: true },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    启用后并且思考开启时，OpenClaw 会发送
+    `thinking: { type: "enabled", clear_thinking: false }`，并为同一条
+    兼容 OpenAI 的会话轨迹回放先前的 `reasoning_content`。
+
+    高级用户仍然可以通过 `params.extra_body.thinking` 覆盖精确的提供方负载。
 
   </Accordion>
 
-  <Accordion title="认证详情">
-    - Z.AI 使用带有 API 密钥的 Bearer 认证。
-    - `zai-api-key` 引导选项会从密钥前缀自动检测匹配的 Z.AI 端点。
-    - 当你想强制使用特定 API 界面时，请使用明确的区域选项（`zai-coding-global`、`zai-coding-cn`、`zai-global`、`zai-cn`）。
+  <Accordion title="图像理解">
+    内置的 Z.AI 插件已注册图像理解功能。
+
+    | 属性     | 值          |
+    | -------- | ----------- |
+    | 模型     | `glm-4.6v`  |
+
+    图像理解会根据已配置的 Z.AI 身份验证自动解析，无需额外配置。
+
+  </Accordion>
+
+  <Accordion title="身份验证详情">
+    - Z.AI 使用你的 API 密钥进行 Bearer auth。
+    - `zai-api-key` 初始化选项会根据密钥前缀自动检测匹配的 Z.AI 端点。
+    - 当你想强制使用特定 API 接口时，请使用显式的区域选项（`zai-coding-global`、`zai-coding-cn`、`zai-global`、`zai-cn`）。
+
   </Accordion>
 </AccordionGroup>
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="GLM 模型系列" href="/providers/glm" icon="microchip">
-    GLM 模型系列概述。
+  <Card title="GLM 模型家族" href="/providers/glm" icon="microchip">
+    GLM 的模型家族概览。
   </Card>
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供者、模型引用和故障转移行为。
+    选择提供方、模型引用以及故障转移行为。
   </Card>
 </CardGroup>

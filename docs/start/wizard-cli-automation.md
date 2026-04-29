@@ -1,8 +1,8 @@
 ---
-summary: "为 OpenClaw CLI 提供脚本化的入职和代理设置"
+summary: "OpenClaw CLI 的脚本化 onboarding 和 agent 设置"
 read_when:
-  - 你正在通过脚本或 CI 自动化入职流程
-  - 你需要针对特定提供商的非交互式示例
+  - 你正在脚本或 CI 中自动化 onboarding
+  - 你需要特定提供商的非交互式示例
 title: "CLI 自动化"
 sidebarTitle: "CLI 自动化"
 ---
@@ -10,7 +10,7 @@ sidebarTitle: "CLI 自动化"
 使用 `--non-interactive` 来自动化 `openclaw onboard`。
 
 <Note>
-`--json` 并不代表非交互模式。对于脚本请使用 `--non-interactive`（以及 `--workspace`）。
+`--json` 并不表示非交互模式。请在脚本中使用 `--non-interactive`（以及 `--workspace`）。
 </Note>
 
 ## 基线非交互式示例
@@ -29,14 +29,15 @@ openclaw onboard --non-interactive \
   --skip-skills
 ```
 
-添加 `--json` 可获得机器可读的摘要。
+如需机器可读的摘要，请添加 `--json`。
 
-当你的自动化流程已预置工作区文件，并且不希望入职流程创建默认的引导文件时，请使用 `--skip-bootstrap`。
+当你的自动化流程预先填充了 workspace 文件，并且不希望 onboarding 创建默认的 bootstrap 文件时，请使用 `--skip-bootstrap`。
 
-使用 `--secret-input-mode ref` 可在认证配置文件中存储基于环境变量的引用，而不是明文值。
-入职流程中支持在环境变量引用与已配置的提供商引用（`file` 或 `exec`）之间进行交互式选择。
+使用 `--secret-input-mode ref` 可将基于环境变量的引用以 auth profiles 中的引用形式存储，而不是明文值。
+在 onboarding 流程中，可以在环境变量引用与已配置的提供商引用（`file` 或 `exec`）之间进行交互式选择。
 
-在非交互的 `ref` 模式下，提供商环境变量必须在进程环境中设置。未设置匹配的环境变量时，传递内联的密钥标志会立即失败。
+在非交互式 `ref` 模式下，提供商环境变量必须设置在进程环境中。
+如果传入了内联密钥标志但没有匹配的环境变量，现在会快速失败。
 
 示例：
 
@@ -48,10 +49,10 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
-## 供应商特定示例
+## 按提供商划分的示例
 
 <AccordionGroup>
-  <Accordion title="Anthropic API 密钥示例">
+  <Accordion title="Anthropic API key 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -133,7 +134,7 @@ openclaw onboard --non-interactive \
       --gateway-bind loopback
     ```
   </Accordion>
-  <Accordion title="OpenCode Zen 示例">
+  <Accordion title="OpenCode 示例">
     ```bash
     openclaw onboard --non-interactive \
       --mode local \
@@ -142,7 +143,7 @@ openclaw onboard --non-interactive \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
-    对于 Go 目录，请切换到 `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"`。
+    对于 Go 目录，请切换为 `--auth-choice opencode-go --opencode-go-api-key "$OPENCODE_API_KEY"`。
   </Accordion>
   <Accordion title="Ollama 示例">
     ```bash
@@ -165,13 +166,15 @@ openclaw onboard --non-interactive \
       --custom-api-key "$CUSTOM_API_KEY" \
       --custom-provider-id "my-custom" \
       --custom-compatibility anthropic \
+      --custom-image-input \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
 
-    `--custom-api-key` 为可选项。如省略，入职流程会检查环境变量 `CUSTOM_API_KEY`。
+    `--custom-api-key` 是可选的。如果省略，onboarding 会检查 `CUSTOM_API_KEY`。
+    OpenClaw 会自动将常见的视觉模型 ID 标记为支持图像。对于未知的自定义视觉 ID，请添加 `--custom-image-input`；或者添加 `--custom-text-input` 以强制仅文本元数据。
 
-    引用模式变体：
+    ref 模式变体：
 
     ```bash
     export CUSTOM_API_KEY="your-key"
@@ -183,32 +186,34 @@ openclaw onboard --non-interactive \
       --secret-input-mode ref \
       --custom-provider-id "my-custom" \
       --custom-compatibility anthropic \
+      --custom-image-input \
       --gateway-port 18789 \
       --gateway-bind loopback
     ```
 
-    在此模式下，入职流程将 `apiKey` 储存为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
+    在此模式下，onboarding 会将 `apiKey` 存储为 `{ source: "env", provider: "default", id: "CUSTOM_API_KEY" }`。
 
   </Accordion>
 </AccordionGroup>
 
-Anthropic setup-token 仍然作为支持的入职令牌路径可用，但 OpenClaw 现在倾向于在可用时复用 Claude CLI。
-对于生产环境，建议使用 Anthropic API 密钥。
+Anthropic setup-token 仍然可作为受支持的 onboarding token 路径使用，但在可用时，OpenClaw 现在优先复用 Claude CLI。
+在生产环境中，请优先使用 Anthropic API key。
 
-## 添加另一个代理
+## 添加另一个 agent
 
-使用 `openclaw agents add <name>` 来创建一个独立的代理，它拥有自己的工作区、会话和认证配置。未使用 `--workspace` 运行时会启动向导。
+使用 `openclaw agents add <name>` 来创建一个独立的 agent，它拥有自己的 workspace、
+sessions 和 auth profiles。不带 `--workspace` 运行会启动向导。
 
 ```bash
 openclaw agents add work \
   --workspace ~/.openclaw/workspace-work \
-  --model openai/gpt-5.4 \
+  --model openai/gpt-5.5 \
   --bind whatsapp:biz \
   --non-interactive \
   --json
 ```
 
-设置项：
+它会设置：
 
 - `agents.list[].name`
 - `agents.list[].workspace`
@@ -216,12 +221,12 @@ openclaw agents add work \
 
 注意：
 
-- 默认工作区遵循 `~/.openclaw/workspace-<agentId>` 格式。
-- 添加 `bindings` 用于路由入站消息（向导可执行此操作）。
-- 非交互标志包括：`--model`、`--agent-dir`、`--bind`、`--non-interactive`。
+- 默认 workspaces 遵循 `~/.openclaw/workspace-<agentId>`。
+- 添加 `bindings` 以路由传入消息（向导可以完成此操作）。
+- 非交互式标志：`--model`、`--agent-dir`、`--bind`、`--non-interactive`。
 
 ## 相关文档
 
-- 入职中心：[入职 (CLI)](/start/wizard)
+- Onboarding 入口：[Onboarding (CLI)](/start/wizard)
 - 完整参考：[CLI 设置参考](/start/wizard-cli-reference)
 - 命令参考：[`openclaw onboard`](/cli/onboard)

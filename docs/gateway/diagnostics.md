@@ -1,13 +1,15 @@
 ---
-summary: "为 bug 报告创建可共享的 Gateway 诊断包"
+summary: "为错误报告创建可共享的 Gateway 诊断包"
 title: "诊断导出"
 read_when:
-  - 准备 bug 报告或支持请求
-  - 调试 Gateway 崩溃、重启、内存压力或过大的负载
-  - 查看记录或脱敏了哪些诊断数据
+  - 准备错误报告或支持请求时
+  - 调试 Gateway 崩溃、重启、内存压力或超大负载时
+  - 查看记录了哪些诊断数据或哪些数据被红acted时
 ---
 
-OpenClaw 可以创建一个本地诊断 zip，适合附加到 bug 报告中。它会组合经过清理的 Gateway 状态、健康信息、日志、配置结构以及最近的、不包含负载的稳定性事件。
+OpenClaw 可以为错误报告创建本地诊断 zip 包。它会组合经过清理的 Gateway 状态、健康信息、日志、配置结构，以及最近的、无载荷的稳定性事件。
+
+在你审查之前，请将诊断包视为机密。它们旨在省略或遮蔽负载和凭据，但仍会汇总本地 Gateway 日志和主机级运行时状态。
 
 ## 快速开始
 
@@ -15,7 +17,7 @@ OpenClaw 可以创建一个本地诊断 zip，适合附加到 bug 报告中。�
 openclaw gateway diagnostics export
 ```
 
-该命令会打印生成的 zip 路径。要指定路径：
+该命令会打印写入的 zip 路径。要指定路径：
 
 ```bash
 openclaw gateway diagnostics export --output openclaw-diagnostics.zip
@@ -27,41 +29,58 @@ openclaw gateway diagnostics export --output openclaw-diagnostics.zip
 openclaw gateway diagnostics export --json
 ```
 
+## 聊天命令
+
+所有者可以在聊天中使用 `/diagnostics [note]` 请求本地 Gateway 导出。  
+当 bug 发生在真实对话中，并且你希望为支持团队提供一份可直接复制粘贴的报告时，请使用此命令：
+
+1. 在你注意到问题的对话中发送 `/diagnostics`。如果有帮助，可以添加一条简短说明，例如 `/diagnostics 错误的工具选择`。
+2. OpenClaw 会发送诊断前置说明，并要求一次明确的 exec 批准。该批准会运行 `openclaw gateway diagnostics export --json`。不要通过放行所有规则来批准诊断。
+3. 批准后，OpenClaw 会回复一份可粘贴的报告，其中包含本地包路径、清单摘要、隐私说明以及相关会话 id。
+
+在群聊中，所有者仍然可以运行 `/diagnostics`，但 OpenClaw 不会把诊断详情回发到共享聊天中。它会通过私有批准路径向所有者发送前置说明、批准提示、Gateway 导出结果以及 Codex 会话/线程拆分信息。群聊里只会收到一条简短通知，说明诊断流程已私下发送。如果 OpenClaw 找不到私有所有者路径，该命令会安全失败，并要求所有者在私聊中运行。
+
+当当前活动的 OpenClaw 会话使用原生 OpenAI Codex harness 时，同一次 exec 批准还会覆盖一项针对 OpenClaw 已知的 Codex 运行时线程的 OpenAI 反馈上传。该上传与本地 Gateway zip 是分开的，并且仅出现在 Codex harness 会话中。在批准之前，提示会说明批准诊断也会发送 Codex 反馈，但不会列出 Codex 会话或线程 id。批准之后，聊天回复会列出已发送到 OpenAI 服务器的通道、OpenClaw 会话 id、Codex 线程 id，以及这些线程的本地恢复命令。如果你拒绝或忽略该批准，OpenClaw 不会运行导出，不会发送 Codex 反馈，也不会打印 Codex id。
+
+这使得常见的 Codex 调试流程更简短：在 Telegram、Discord 或其他渠道中注意到异常行为，运行 `/diagnostics`，一次批准，向支持团队分享报告，然后如果你想自己检查原生 Codex 线程，可以在本地运行打印出的 `codex resume <thread-id>` 命令。有关该检查流程，请参见 [Codex harness](/plugins/codex-harness#inspect-a-codex-thread-from-the-cli)。
+
 ## 导出内容
 
 该 zip 包括：
 
-- `summary.md`：用于支持人员的人类可读概览。
-- `diagnostics.json`：包含配置、日志、状态、健康信息以及稳定性数据的机器可读摘要。
+- `summary.md`：供支持团队查看的人类可读概览。
+- `diagnostics.json`：配置、日志、状态、健康信息和稳定性数据的机器可读摘要。
 - `manifest.json`：导出元数据和文件列表。
-- 经脱敏的配置结构和非机密配置详情。
-- 经脱敏的日志摘要和最近的已脱敏日志行。
-- 尽力获取的 Gateway 状态和健康信息快照。
-- `stability/latest.json`：最新持久化的稳定性包（如果可用）。
+- 经清理的配置结构和非机密配置详情。
+- 经清理的日志摘要和最近的已遮蔽日志行。
+- 尽最大努力获取的 Gateway 状态和健康快照。
+- `stability/latest.json`：最新持久化的稳定性包（如可用）。
 
-即使 Gateway 处于不健康状态，导出也同样有用。如果 Gateway 无法响应状态或健康请求，只要可用，本地日志、配置结构和最新稳定性包仍会被收集。
+即使 Gateway 处于不健康状态，该导出仍然有用。如果 Gateway 无法响应状态或健康请求，本地日志、配置结构以及最新稳定性包仍会在可用时被收集。
 
 ## 隐私模型
 
-诊断数据的设计目标是可以共享。导出会保留有助于调试的运行数据，例如：
+诊断数据旨在便于共享。导出会保留有助于调试的运行数据，例如：
 
-- 子系统名称、插件 id、提供方 id、通道 id 和已配置的模式
-- 状态码、持续时间、字节数、队列状态和内存读数
-- 经脱敏的日志元数据和已脱敏的运行消息
+- 子系统名称、插件 id、提供方 id、通道 id 和已配置模式
+- 状态码、持续时间、字节计数、队列状态和内存读数
+- 已清理的日志元数据和被遮蔽的运行消息
 - 配置结构和非机密功能设置
 
-导出会省略或脱敏以下内容：
+导出会省略或遮蔽以下内容：
 
-- 聊天文本、提示词、指令、webhook 主体和工具输出
-- 凭据、API 密钥、令牌、cookie 和密钥值
-- 原始请求或响应主体
+- 聊天文本、提示、指令、webhook 正文和工具输出
+- 凭据、API 密钥、令牌、cookie 和机密值
+- 原始请求或响应正文
 - 账户 id、消息 id、原始会话 id、主机名和本地用户名
 
-当日志消息看起来像用户、聊天、提示词或工具负载文本时，导出只保留“消息已省略”的信息以及字节数。
+当日志消息看起来像用户、聊天、提示或工具载荷文本时，导出只保留“该消息已被省略”的标记以及字节数。
 
 ## 稳定性记录器
 
-当启用诊断时，Gateway 默认会记录一个有界的、无负载的稳定性流。它用于运行事实，而非内容。
+Gateway 默认会记录一个有上限、无载荷的稳定性流，前提是已启用诊断。它用于运行事实，而不是内容。
+
+同样的诊断心跳会在 Gateway 持续运行但 Node.js 事件循环或 CPU 看起来过载时记录存活警告。这些 `diagnostic.liveness.warning` 事件包含事件循环延迟、事件循环利用率、CPU 核心比率，以及活动/等待/排队中的会话计数。它们不会自行重启 Gateway。
 
 查看实时记录器：
 
@@ -71,7 +90,7 @@ openclaw gateway stability --type payload.large
 openclaw gateway stability --json
 ```
 
-在发生致命退出、关停超时或重启启动失败后，查看最新的持久化稳定性包：
+在致命退出、关机超时或重启启动失败后，查看最新持久化的稳定性包：
 
 ```bash
 openclaw gateway stability --bundle latest
@@ -95,7 +114,7 @@ openclaw gateway diagnostics export \
 ```
 
 - `--output <path>`：写入到指定的 zip 路径。
-- `--log-lines <count>`：要包含的最大已脱敏日志行数。
+- `--log-lines <count>`：要包含的最大已清理日志行数。
 - `--log-bytes <bytes>`：要检查的最大日志字节数。
 - `--url <url>`：用于状态和健康快照的 Gateway WebSocket URL。
 - `--token <token>`：用于状态和健康快照的 Gateway 令牌。
@@ -116,11 +135,12 @@ openclaw gateway diagnostics export \
 }
 ```
 
-禁用诊断会降低 bug 报告的详细程度，但不会影响正常的 Gateway 日志记录。
+禁用诊断会减少错误报告的细节，但不会影响正常的 Gateway 日志记录。
 
-## 相关文档
+## 相关内容
 
 - [健康检查](/gateway/health)
 - [Gateway CLI](/cli/gateway#gateway-diagnostics-export)
 - [Gateway 协议](/gateway/protocol#system-and-identity)
 - [日志记录](/logging)
+- [OpenTelemetry 导出](/gateway/opentelemetry) — 将诊断流式传输到收集器的独立流程

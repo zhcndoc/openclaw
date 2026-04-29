@@ -1,26 +1,26 @@
 ---
-summary: "如何启用和调优用于检测重复工具调用循环的保护机制"
+summary: "如何启用和调优用于检测重复工具调用循环的护栏"
 title: "工具循环检测"
 read_when:
-  - 用户报告代理卡在重复工具调用中
-  - 您需要调整重复调用保护
-  - 您正在编辑代理工具/运行时策略
+  - 用户报告智能体陷入重复工具调用
+  - 你需要调优重复调用保护
+  - 你正在编辑智能体工具/运行时策略
 ---
 
-OpenClaw 可以防止代理陷入重复的工具调用模式。
-该保护机制**默认禁用**。
+OpenClaw 可以防止智能体陷入重复的工具调用模式。
+该护栏默认**禁用**。
 
-仅在必要时启用，因为严格的设置可能会阻止合法的重复调用。
+仅在需要时启用，因为在严格设置下它可能会阻止合法的重复调用。
 
-## 该功能存在的原因
+## 这样设计的原因
 
-- 检测没有进展的重复序列。
-- 检测高频率无结果循环（相同工具、相同输入、重复错误）。
+- 检测不会取得进展的重复序列。
+- 检测高频、无结果的循环（相同工具、相同输入、重复错误）。
 - 检测已知轮询工具的特定重复调用模式。
 
 ## 配置块
 
-全局默认配置：
+全局默认值：
 
 ```json5
 {
@@ -41,7 +41,7 @@ OpenClaw 可以防止代理陷入重复的工具调用模式。
 }
 ```
 
-按代理覆盖（可选）：
+按智能体覆盖（可选）：
 
 ```json5
 {
@@ -64,44 +64,44 @@ OpenClaw 可以防止代理陷入重复的工具调用模式。
 
 ### 字段行为
 
-- `enabled`：主开关。`false` 表示不执行循环检测。
-- `historySize`：用于分析的最近工具调用数量。
-- `warningThreshold`：达到该阈值前，模式仅被分类为警告。
-- `criticalThreshold`：达到该阈值时阻止重复循环模式。
-- `globalCircuitBreakerThreshold`：全局无进展断路阈值。
-- `detectors.genericRepeat`：检测重复的相同工具和相同参数模式。
-- `detectors.knownPollNoProgress`：检测已知轮询类的无状态变化模式。
+- `enabled`：总开关。`false` 表示不执行任何循环检测。
+- `historySize`：保留用于分析的最近工具调用数量。
+- `warningThreshold`：将某种模式归类为仅警告前的阈值。
+- `criticalThreshold`：阻止重复循环模式的阈值。
+- `globalCircuitBreakerThreshold`：全局无进展断路器阈值。
+- `detectors.genericRepeat`：检测相同工具 + 相同参数的重复模式。
+- `detectors.knownPollNoProgress`：检测已知的、但状态未变化的轮询类模式。
 - `detectors.pingPong`：检测交替的乒乓模式。
 
 对于 `exec`，无进展检查会比较稳定的命令结果，并忽略诸如持续时间、PID、会话 ID 和工作目录等易变的运行时元数据。
-当可用 run id 时，最近的工具调用历史只会在该 run 内进行评估，因此计划中的心跳循环和新的运行不会继承早先运行中的过期循环计数。
+当有 run id 可用时，最近的工具调用历史只会在该 run 内进行评估，因此计划中的心跳周期和新的运行不会继承早期运行中的旧循环计数。
 
 ## 推荐设置
 
-- 从 `enabled: true` 开始，保持默认值不变。
+- 先使用 `enabled: true`，其余保持默认值不变。
 - 保持阈值顺序为 `warningThreshold < criticalThreshold < globalCircuitBreakerThreshold`。
-- 若出现误报：
+- 如果出现误报：
   - 提高 `warningThreshold` 和/或 `criticalThreshold`
   - （可选）提高 `globalCircuitBreakerThreshold`
-  - 仅禁用引起问题的检测器
-  - 减小 `historySize` 以降低历史上下文严格度
+  - 仅禁用导致问题的检测器
+  - 减小 `historySize` 以降低历史上下文的严格程度
 
 ## 日志和预期行为
 
-当检测到循环时，OpenClaw 会报告循环事件，并根据严重程度阻止或抑制下一次工具调用。
-这可保护用户免于代币过度消耗和锁死，同时保留正常的工具访问。
+检测到循环时，OpenClaw 会报告一个循环事件，并根据严重程度阻止或抑制下一次工具循环。
+这可以保护用户免受失控的 token 消耗和卡死，同时保留正常的工具访问。
 
-- 首选警告和临时抑制。
-- 仅在重复证据累积时升级处理。
+- 优先使用警告和临时抑制。
+- 只有在重复证据不断累积时才升级处理。
 
-## 备注
+## 注意事项
 
-- `tools.loopDetection` 会与代理级覆盖进行合并。
-- 每个代理的配置会完全覆盖或扩展全局值。
-- 如果不存在配置，则保护机制保持关闭。
+- `tools.loopDetection` 会与智能体级别的覆盖配置合并。
+- 每个智能体的配置会完全覆盖或扩展全局值。
+- 如果不存在配置，护栏将保持关闭。
 
 ## 相关内容
 
-- [执行审批](/tools/exec-approvals)
-- [思考层级](/tools/thinking)
-- [子代理](/tools/subagents)
+- [Exec approvals](/tools/exec-approvals)
+- [Thinking levels](/tools/thinking)
+- [Sub-agents](/tools/subagents)

@@ -1,77 +1,78 @@
 ---
-summary: "OpenClaw 如何跨会话记住内容"
+summary: "OpenClaw 如何在会话之间记住内容"
 title: "记忆概览"
 read_when:
-  - 你想了解记忆如何工作
-  - 你想知道要写入哪些记忆文件
+  - 你想了解记忆是如何工作的
+  - 你想知道应该写入哪些记忆文件
 ---
 
-OpenClaw 通过在你的代理工作区中写入 **纯 Markdown 文件** 来记住内容。模型只会“记住”被保存到磁盘上的内容——不存在隐藏状态。
+OpenClaw 通过在你的 agent 工作区中写入 **纯 Markdown 文件** 来记住内容。模型只会“记住”那些被保存到磁盘上的内容——不存在隐藏状态。
 
-## 工作原理
+## 它是如何工作的
 
-你的代理有三个与记忆相关的文件：
+你的 agent 有三个与记忆相关的文件：
 
-- **`MEMORY.md`** — 长期记忆。持久的事实、偏好和决策。在每个 DM 会话开始时加载。
-- **`memory/YYYY-MM-DD.md`** — 每日笔记。持续记录上下文和观察。今天和昨天的笔记会被自动加载。
-- **`DREAMS.md`**（可选）— 梦境日志和 dreaming 过程摘要，供人工审阅，包括有依据的历史回填条目。
+- **`MEMORY.md`** —— 长期记忆。持久的事实、偏好和决策。会在每次 DM 会话开始时加载。
+- **`memory/YYYY-MM-DD.md`** —— 每日笔记。运行中的上下文和观察。今天和昨天的笔记会自动加载。
+- **`DREAMS.md`**（可选）—— Dream Diary 和 dreaming sweep 总结，供人工审阅，其中包括有依据的历史回填条目。
 
-这些文件位于代理工作区中（默认 `~/.openclaw/workspace`）。
+这些文件位于 agent 工作区中（默认 `~/.openclaw/workspace`）。
 
 <Tip>
-如果你想让代理记住某事，只需问它：“记住我更喜欢 TypeScript。”它会将内容写入适当的文件。
+如果你希望你的 agent 记住某件事，只要告诉它：“记住我更喜欢 TypeScript。” 它就会把这件事写入相应的文件。
 </Tip>
 
-## 内存工具
+## 记忆工具
 
-代理有两个用于处理记忆的工具：
+agent 有两个用于处理记忆的工具：
 
-- **`memory_search`** — 使用语义搜索查找相关笔记，即使措辞与原文不同。
-- **`memory_get`** — 读取特定的记忆文件或行范围。
+- **`memory_search`** —— 即使措辞与原文不同，也能通过语义搜索找到相关笔记。
+- **`memory_get`** —— 读取指定的记忆文件或行范围。
 
-这两个工具均由活动的记忆插件提供（默认：`memory-core`）。
+这两个工具都由当前激活的 memory 插件提供（默认：`memory-core`）。
 
 ## Memory Wiki 配套插件
 
-如果你希望持久记忆的行为更像一个持续维护的知识库，而不只是原始笔记，可以使用捆绑的 `memory-wiki` 插件。
+如果你希望持久记忆的行为更像一个维护良好的知识库，而不只是原始笔记，可以使用附带的 `memory-wiki` 插件。
 
-`memory-wiki` 会把持久知识编译成一个 wiki 知识库，具备：
+`memory-wiki` 会将持久知识编译到一个 wiki 保管库中，具备以下特性：
 
-- 可预测的页面结构
-- 结构化的断言与证据
+- 确定性的页面结构
+- 结构化的主张和证据
 - 矛盾与新鲜度跟踪
-- 自动生成的仪表盘
-- 面向 agent/运行时消费者的编译摘要
-- `wiki_search`、`wiki_get`、`wiki_apply`、`wiki_lint` 等 wiki 原生工具
+- 生成式仪表盘
+- 面向 agent/runtime 消费者的编译摘要
+- wiki 原生工具，如 `wiki_search`、`wiki_get`、`wiki_apply` 和 `wiki_lint`
 
-它不会替代 active memory 插件。active memory 插件仍然负责 recall、promotion 和 dreaming。`memory-wiki` 是在其旁边增加一层具备来源追踪能力的知识层。
+它不会取代当前激活的 memory 插件。当前激活的 memory 插件仍然负责回忆、晋升和 dreaming。`memory-wiki` 只是在旁边增加一层带有来源证明的知识层。
 
 参见 [Memory Wiki](/plugins/memory-wiki)。
 
-## Memory search
+## 记忆搜索
 
-When an embedding provider is configured, `memory_search` uses **hybrid
-search** — combining vector similarity (semantic meaning) with keyword matching
-(exact terms like IDs and code symbols). This works out of the box once you have
-an API key for any supported provider.
+当配置了 embedding 提供方时，`memory_search` 会使用 **混合搜索**——将向量相似度（语义含义）与关键词匹配（如 ID 和代码符号等精确术语）结合起来。只要你为任一支持的提供方配置了 API key，这项功能就会开箱即用。
 
 <Info>
-OpenClaw 会根据可用的 API 密钥自动检测你的嵌入提供商。如果你配置了 OpenAI、Gemini、Voyage 或 Mistral 密钥，记忆搜索将自动启用。
+OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如果你配置了 OpenAI、Gemini、Voyage 或 Mistral 的 key，记忆搜索会自动启用。
 </Info>
 
-有关搜索工作原理、调优选项和提供商设置的详细信息，请参阅 [记忆搜索](/concepts/memory-search)。
+关于搜索的工作方式、调优选项以及提供方设置的详情，请参见
+[Memory Search](/concepts/memory-search)。
 
 ## 记忆后端
 
 <CardGroup cols={3}>
-<Card title="内置（默认）" icon="database" href="/concepts/memory-builtin">
+<Card title="Builtin（默认）" icon="database" href="/concepts/memory-builtin">
 基于 SQLite。开箱即用，支持关键词搜索、向量相似度和混合搜索。无需额外依赖。
 </Card>
 <Card title="QMD" icon="search" href="/concepts/memory-qmd">
-本地优先的 sidecar，具有重排序、查询扩展以及索引工作区外目录的能力。
+本地优先的 sidecar，支持 reranking、query expansion，以及索引工作区之外目录的能力。
 </Card>
 <Card title="Honcho" icon="brain" href="/concepts/memory-honcho">
-具有用户建模、语义搜索和多代理感知功能的 AI 原生跨会话记忆。需安装插件。
+具备用户建模、语义搜索和多 agent 感知能力的 AI 原生跨会话记忆。通过插件安装。
+</Card>
+<Card title="LanceDB" icon="layers" href="/plugins/memory-lancedb">
+内置的基于 LanceDB 的记忆，支持与 OpenAI 兼容的 embeddings、自动回忆、自动捕获，以及本地 Ollama embedding 支持。
 </Card>
 </CardGroup>
 
@@ -79,41 +80,58 @@ OpenClaw 会根据可用的 API 密钥自动检测你的嵌入提供商。如果
 
 <CardGroup cols={1}>
 <Card title="Memory Wiki" icon="book" href="/plugins/memory-wiki">
-将持久记忆编译为一个具有来源信息的 wiki 保险库，包含断言、
-仪表盘、桥接模式以及适用于 Obsidian 的工作流。
+将持久记忆编译为一个带有来源证明的 wiki 保管库，包含主张、仪表盘、桥接模式，以及适合 Obsidian 的工作流。
 </Card>
 </CardGroup>
 
 ## 自动记忆刷新
 
-在 [压缩](/concepts/compaction) 汇总你的对话之前，OpenClaw 会运行一个静默回合，提醒代理将重要上下文保存到记忆文件中。此功能默认开启——你无需进行任何配置。
+在 [compaction](/concepts/compaction) 总结你的对话之前，OpenClaw 会运行一个静默轮次，提醒 agent 将重要上下文保存到记忆文件中。此功能默认开启——你无需进行任何配置。
+
+若要在本地模型上保留这个 housekeeping 轮次，请设置一个精确的 memory-flush model override：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "memoryFlush": {
+          "model": "ollama/qwen3:8b"
+        }
+      }
+    }
+  }
+}
+```
+
+该 override 仅应用于 memory-flush 轮次，不会继承 active session fallback chain。
 
 <Tip>
-记忆刷新可防止压缩期间的上下文丢失。如果你的代理在对话中有尚未写入文件的重要事实，它们将在总结发生之前自动保存。
+记忆刷新可以防止在 compaction 期间丢失上下文。如果你的 agent 在对话中有重要事实尚未写入文件，它们会在总结发生之前自动保存。
 </Tip>
 
-## Dreaming（梦境）
+## Dreaming
 
-梦境是记忆的一种可选后台巩固过程。它收集短期信号，对候选项进行评分，并仅将合格的项目提升为长期记忆（`MEMORY.md`）。
+Dreaming 是一个可选的后台记忆整合过程。它会收集短期信号，给候选项打分，并且只将符合条件的条目晋升到长期记忆（`MEMORY.md`）中。
 
-它旨在保持长期记忆的高信号：
+它的设计目标是让长期记忆保持高信噪比：
 
-- **主动启用**：默认禁用。
-- **计划任务**：启用时，`memory-core` 自动管理一个循环的 cron 作业以进行完整的梦境扫描。
-- **阈值限制**：提升必须通过分数、回忆频率和查询多样性门槛。
-- **可审查**：阶段摘要和日记条目会写入 `DREAMS.md` 供人类审查。
+- **可选启用**：默认关闭。
+- **定时执行**：启用后，`memory-core` 会自动管理一个用于完整 dreaming sweep 的定期 cron 作业。
+- **设有阈值**：晋升必须通过分数、回忆频率和查询多样性门槛。
+- **可审阅**：阶段总结和日记条目会写入 `DREAMS.md` 供人工审阅。
 
-有关阶段行为、评分信号和 Dream Diary 细节，请参见
+关于各阶段行为、评分信号以及 Dream Diary 细节，请参见
 [Dreaming](/concepts/dreaming)。
 
-## Grounded backfill 与实时提升
+## 有依据的回填与实时晋升
 
-dreaming 系统现在有两条紧密相关的审查路径：
+如今 dreaming 系统有两条密切相关的审阅通道：
 
-- **Live dreaming** 从 `memory/.dreams/` 下的短期 dreaming 存储中工作，这也是正常 deep phase 在决定哪些内容可以晋升进 `MEMORY.md` 时使用的来源。
-- **Grounded backfill** 会把历史的 `memory/YYYY-MM-DD.md` 笔记当作独立的日文件读取，并把结构化审查输出写入 `DREAMS.md`。
+- **实时 dreaming** 依赖 `memory/.dreams/` 下的短期 dreaming 存储，这也是正常 deep phase 在决定哪些内容可以晋升到 `MEMORY.md` 时所使用的内容。
+- **有依据的回填** 会读取历史的 `memory/YYYY-MM-DD.md` 笔记，将其作为独立的日文件，并把结构化审阅输出写入 `DREAMS.md`。
 
-当你想重放旧笔记，并在不手动编辑 `MEMORY.md` 的情况下检查系统认为什么是“值得持久保留”的内容时，grounded backfill 很有用。
+当你想回放旧笔记，并查看系统认为哪些内容是持久的，而无需手动编辑 `MEMORY.md` 时，有依据的回填就很有用。
 
 当你使用：
 
@@ -121,13 +139,13 @@ dreaming 系统现在有两条紧密相关的审查路径：
 openclaw memory rem-backfill --path ./memory --stage-short-term
 ```
 
-这些 grounded 的持久候选项不会被直接提升。它们会被暂存到 normal deep phase 已经在使用的同一个短期 dreaming 存储中。这意味着：
+时，有依据的持久候选项不会被直接晋升。它们会被暂存到正常 deep phase 已经使用的同一个短期 dreaming 存储中。这意味着：
 
-- `DREAMS.md` 仍然是面向人工审查的界面。
+- `DREAMS.md` 仍然是供人工审阅的界面。
 - 短期存储仍然是面向机器的排序界面。
 - `MEMORY.md` 仍然只会由 deep promotion 写入。
 
-如果你认为这次重放没有帮助，可以移除这些暂存产物，而不影响普通日记条目或正常的 recall 状态：
+如果你认为这次回放没有用，可以移除这些暂存产物，而不会影响普通日记条目或正常的回忆状态：
 
 ```bash
 openclaw memory rem-backfill --rollback
@@ -137,21 +155,22 @@ openclaw memory rem-backfill --rollback-short-term
 ## CLI
 
 ```bash
-openclaw memory status          # 检查索引状态和提供商
+openclaw memory status          # 检查索引状态和提供方
 openclaw memory search "query"  # 从命令行搜索
 openclaw memory index --force   # 重建索引
 ```
 
-## 进一步阅读
+## 延伸阅读
 
-- [Builtin memory engine](/concepts/memory-builtin): 默认 SQLite 后端。
-- [QMD memory engine](/concepts/memory-qmd): 先进的本地优先 sidecar。
-- [Honcho memory](/concepts/memory-honcho): AI 原生跨会话记忆。
-- [Memory Wiki](/plugins/memory-wiki): 编译后的知识保险库和 wiki 原生工具。
-- [Memory search](/concepts/memory-search): 搜索流水线、提供商和调优。
-- [Dreaming](/concepts/dreaming): 从短期回忆到长期记忆的后台提升。
-- [Memory configuration reference](/reference/memory-config): 所有配置选项。
-- [Compaction](/concepts/compaction): 压缩如何与记忆交互。
+- [Builtin memory engine](/concepts/memory-builtin)：默认的 SQLite 后端。
+- [QMD memory engine](/concepts/memory-qmd)：高级本地优先 sidecar。
+- [Honcho memory](/concepts/memory-honcho)：AI 原生跨会话记忆。
+- [Memory LanceDB](/plugins/memory-lancedb)：基于 LanceDB 的插件，支持与 OpenAI 兼容的 embeddings。
+- [Memory Wiki](/plugins/memory-wiki)：编译后的知识保管库和 wiki 原生工具。
+- [Memory search](/concepts/memory-search)：搜索流水线、提供方和调优。
+- [Dreaming](/concepts/dreaming)：从短期回忆到长期记忆的后台晋升。
+- [Memory configuration reference](/reference/memory-config)：所有配置选项。
+- [Compaction](/concepts/compaction)：compaction 如何与记忆交互。
 
 ## 相关内容
 
@@ -159,3 +178,4 @@ openclaw memory index --force   # 重建索引
 - [Memory search](/concepts/memory-search)
 - [Builtin memory engine](/concepts/memory-builtin)
 - [Honcho memory](/concepts/memory-honcho)
+- [Memory LanceDB](/plugins/memory-lancedb)

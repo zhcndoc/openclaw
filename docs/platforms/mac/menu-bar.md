@@ -1,7 +1,7 @@
 ---
-summary: "菜单栏状态逻辑及向用户展示的内容"
+summary: "菜单栏状态逻辑以及向用户展示的内容"
 read_when:
-  - Tweaking mac menu UI or status logic
+  - 调整 mac 菜单 UI 或状态逻辑时
 title: "菜单栏"
 ---
 
@@ -9,18 +9,18 @@ title: "菜单栏"
 
 ## 显示内容
 
-- 我们在菜单栏图标和菜单的第一状态行展示当前代理的工作状态。
-- 当工作处于活动状态时，健康状态被隐藏；所有会话空闲后，健康状态重新显示。
-- 菜单中的“节点”块仅列出**设备**（通过 `node.list` 配对的节点），不显示客户端/存在条目。
-- 当提供者使用快照可用时，Context 下会出现“使用情况”部分。
+- 我们会在菜单栏图标以及菜单的第一行状态中展示当前代理的工作状态。
+- 当有工作进行时，健康状态会被隐藏；当所有会话都处于空闲时，它会重新显示。
+- 菜单中的 “Nodes” 区块只列出**设备**（通过 `node.list` 配对的节点），不包括客户端/存在状态条目。
+- 当可用提供方使用情况快照时，Context 下会显示一个 “Usage” 部分。
 
 ## 状态模型
 
-- 会话：事件携带 `runId`（每次运行）和载荷中的 `sessionKey`。 “主”会话键为 `main`；若缺失，则回退到最近更新的会话。
-- 优先级：主会话始终优先。如果主会话处于活跃状态，立即显示其状态。主会话空闲时，显示最近活跃的非主会话。活动中不切换状态，仅在当前会话空闲或主会话变为活跃时切换。
+- 会话：事件会携带 `runId`（每次运行的）以及载荷中的 `sessionKey`。 “main” 会话的键为 `main`；如果缺失，则回退到最近更新的会话。
+- 优先级：main 始终优先。如果 main 处于活动状态，会立即显示其状态。如果 main 处于空闲，则显示最近活跃的非 main 会话。我们不会在活动过程中来回切换；只有当当前会话变为空闲，或者 main 变为活动时才会切换。
 - 活动类型：
-  - `job`：高层命令执行（`state: started|streaming|done|error`）。
-  - `tool`：`phase: start|result` 并携带 `toolName` 和 `meta/args`。
+  - `job`：高层级命令执行（`state: started|streaming|done|error`）。
+  - `tool`：`phase: start|result`，并带有 `toolName` 和 `meta/args`。
 
 ## IconState 枚举（Swift）
 
@@ -29,43 +29,43 @@ title: "菜单栏"
 - `workingOther(ActivityKind)`
 - `overridden(ActivityKind)`（调试覆盖）
 
-### ActivityKind → 图标
+### ActivityKind → glyph
 
 - `exec` → 💻
 - `read` → 📄
 - `write` → ✍️
 - `edit` → 📝
 - `attach` → 📎
-- 默认 → 🛠️
+- default → 🛠️
 
 ### 视觉映射
 
-- `idle`：普通小生物图标。
-- `workingMain`：带图标的徽章，完全着色，腿部带“工作”动画。
-- `workingOther`：带图标的徽章，阴影色调，无奔跑动画。
-- `overridden`：无视活动状态使用选定图标/色调。
+- `idle`：正常小动物。
+- `workingMain`：带 glyph 的徽章、完整色调、腿部“工作中”动画。
+- `workingOther`：带 glyph 的徽章、柔和色调、不快速跑动。
+- `overridden`：无论活动如何，均使用所选 glyph/色调。
 
-## 状态栏文本（菜单）
+## 状态行文本（菜单）
 
-- 工作时：`<Session 角色> · <活动标签>`
-  - 示例：`Main · exec: pnpm test`，`Other · read: apps/macos/Sources/OpenClaw/AppState.swift`。
-- 空闲时：显示健康摘要内容。
+- 当工作进行时：`<Session role> · <activity label>`
+  - 示例：`Main · exec: pnpm test`、`Other · read: apps/macos/Sources/OpenClaw/AppState.swift`。
+- 空闲时：回退到健康摘要。
 
-## 事件摄取
+## 事件接入
 
-- 来源：控制通道的 `agent` 事件（`ControlChannel.handleAgentEvent`）。
+- 来源：控制通道 `agent` 事件（`ControlChannel.handleAgentEvent`）。
 - 解析字段：
-  - `stream: "job"`，携带用于开始/停止的 `data.state`。
-  - `stream: "tool"`，携带 `data.phase`、`name`，可选 `meta`/`args`。
+  - `stream: "job"`，使用 `data.state` 表示开始/停止。
+  - `stream: "tool"`，使用 `data.phase`、`name`，以及可选的 `meta`/`args`。
 - 标签：
-  - `exec`：使用 `args.command` 的第一行。
-  - `read`/`write`：精简路径。
-  - `edit`：路径加上从 `meta`/差异计数推断的更改类型。
-  - 回退使用工具名称。
+  - `exec`：`args.command` 的第一行。
+  - `read`/`write`：缩短后的路径。
+  - `edit`：路径加上从 `meta`/diff 数量推断出的变更类型。
+  - fallback：工具名称。
 
 ## 调试覆盖
 
-- 设置 ▸ 调试 ▸ “图标覆盖”选择器：
+- 设置 ▸ 调试 ▸ “Icon override” 选择器：
   - `System (auto)`（默认）
   - `Working: main`（按工具类型）
   - `Working: other`（按工具类型）
@@ -74,13 +74,13 @@ title: "菜单栏"
 
 ## 测试清单
 
-- 触发主会话作业：验证图标立即切换，状态行显示主标签。
-- 主会话空闲时触发非主会话作业：图标/状态显示非主会话；在其完成前保持稳定。
-- 非主活跃时启动主会话：图标立即切换为主会话。
-- 快速连续工具突发：确保徽章不会闪烁（工具结果使用 TTL 宽限）。
-- 所有会话空闲后，健康行重新出现。
+- 触发 main 会话作业：验证图标立即切换，状态行显示 main 标签。
+- 在 main 空闲时触发非 main 会话作业：图标/状态显示非 main；在完成前保持稳定。
+- 当其他会话活跃时启动 main：图标立即切换到 main。
+- 快速的工具突发：确保徽章不会闪烁（tool 结果上有 TTL 宽限）。
+- 当所有会话都空闲后，健康行重新出现。
 
-## 相关内容
+## 相关
 
-- [macOS 应用](/platforms/macos)
-- [菜单栏图标](/platforms/mac/icon)
+- [macOS app](/platforms/macos)
+- [Menu bar icon](/platforms/mac/icon)

@@ -1,23 +1,23 @@
 ---
-summary: "通过 SSH 隧道将 OpenClaw.app 连接到远程网关的设置"
+summary: "用于将 OpenClaw.app 连接到远程网关的 SSH 隧道设置"
 read_when: "通过 SSH 将 macOS 应用连接到远程网关时"
 title: "远程网关设置"
 ---
 
-> 此内容已合并到 [远程访问](/gateway/remote#macos-persistent-ssh-tunnel-via-launchagent)。请参阅该页面获取当前指南。
+> 此内容已合并到 [远程访问](/gateway/remote#macos-persistent-ssh-tunnel-via-launchagent)。当前指南请参见该页面。
 
 # 使用远程网关运行 OpenClaw.app
 
-OpenClaw.app 使用 SSH 隧道连接到远程网关。本指南将指导你如何设置。
+OpenClaw.app 使用 SSH 隧道连接到远程网关。本指南将向你展示如何进行设置。
 
-## 概述
+## 概览
 
 ```mermaid
 flowchart TB
     subgraph Client["客户端机器"]
         direction TB
         A["OpenClaw.app"]
-        B["ws://127.0.0.1:18789\n(本地端口)"]
+        B["ws://127.0.0.1:18789\n（本地端口）"]
         T["SSH 隧道"]
 
         A --> B
@@ -35,61 +35,62 @@ flowchart TB
 
 ## 快速设置
 
-### 步骤 1：添加 SSH 配置
+### 第 1 步：添加 SSH 配置
 
 编辑 `~/.ssh/config` 并添加：
 
 ```ssh
 Host remote-gateway
-    HostName <REMOTE_IP>          # 例如，172.27.187.184
-    User <REMOTE_USER>            # 例如，jefferson
+    HostName <REMOTE_IP>          # 例如：172.27.187.184
+    User <REMOTE_USER>            # 例如：jefferson
     LocalForward 18789 127.0.0.1:18789
     IdentityFile ~/.ssh/id_rsa
 ```
 
-将 `<REMOTE_IP>` 和 `<REMOTE_USER>` 替换为你的实际值。
+将 `<REMOTE_IP>` 和 `<REMOTE_USER>` 替换为你的值。
 
-### 步骤 2：复制 SSH 密钥
+### 第 2 步：复制 SSH 密钥
 
-将你的公钥复制到远程机器（仅需输入密码一次）：
+将你的公钥复制到远程机器（输入一次密码）：
 
 ```bash
 ssh-copy-id -i ~/.ssh/id_rsa <REMOTE_USER>@<REMOTE_IP>
 ```
 
-### 步骤 3：配置远程网关认证
+### 第 3 步：配置远程网关认证
 
 ```bash
 openclaw config set gateway.remote.token "<your-token>"
 ```
 
-如果您的远程网关使用密码认证，请改用 `gateway.remote.password`。
-`OPENCLAW_GATEWAY_TOKEN` 作为 shell 级别的覆盖仍然有效，但持久的远程客户端设置是 `gateway.remote.token` / `gateway.remote.password`。
+如果你的远程网关使用密码认证，请改用 `gateway.remote.password`。
+`OPENCLAW_GATEWAY_TOKEN` 仍可作为 shell 级覆盖项使用，但持久化的
+远程客户端配置是 `gateway.remote.token` / `gateway.remote.password`。
 
-### 步骤 4：启动 SSH 隧道
+### 第 4 步：启动 SSH 隧道
 
 ```bash
 ssh -N remote-gateway &
 ```
 
-### 步骤 5：重新启动 OpenClaw.app
+### 第 5 步：重启 OpenClaw.app
 
 ```bash
-# 退出 OpenClaw.app (⌘Q)，然后重新打开：
+# 退出 OpenClaw.app（⌘Q），然后重新打开：
 open /path/to/OpenClaw.app
 ```
 
-此时应用将通过 SSH 隧道连接到远程网关。
+现在应用将通过 SSH 隧道连接到远程网关。
 
 ---
 
 ## 登录时自动启动隧道
 
-要在登录时自动启动 SSH 隧道，请创建一个 Launch Agent。
+要让 SSH 隧道在你登录时自动启动，请创建一个 Launch Agent。
 
 ### 创建 PLIST 文件
 
-保存为 `~/Library/LaunchAgents/ai.openclaw.ssh-tunnel.plist`：
+将其保存为 `~/Library/LaunchAgents/ai.openclaw.ssh-tunnel.plist`：
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -118,19 +119,19 @@ open /path/to/OpenClaw.app
 launchctl bootstrap gui/$UID ~/Library/LaunchAgents/ai.openclaw.ssh-tunnel.plist
 ```
 
-隧道将会：
+现在隧道将会：
 
 - 在你登录时自动启动
-- 崩溃时自动重启
-- 在后台保持运行
+- 在崩溃时重启
+- 在后台持续运行
 
-遗留说明：如果存在旧的 `com.openclaw.ssh-tunnel` LaunchAgent，请将其移除。
+旧版说明：如果存在任何遗留的 `com.openclaw.ssh-tunnel` LaunchAgent，请将其移除。
 
 ---
 
 ## 故障排除
 
-**检查隧道是否运行：**
+**检查隧道是否正在运行：**
 
 ```bash
 ps aux | grep "ssh -N remote-gateway" | grep -v grep
@@ -153,14 +154,14 @@ launchctl bootout gui/$UID/ai.openclaw.ssh-tunnel
 
 ## 工作原理
 
-| 组件                             | 功能说明                             |
-| -------------------------------- | ---------------------------------- |
-| `LocalForward 18789 127.0.0.1:18789` | 将本地端口 18789 转发到远程端口 18789 |
-| `ssh -N`                        | 建立不执行远程命令的 SSH 连接（只做端口转发） |
-| `KeepAlive`                     | 隧道崩溃时自动重启                   |
-| `RunAtLoad`                     | 启动 Agent 时自动启动隧道             |
+| 组件                                 | 作用                                                         |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `LocalForward 18789 127.0.0.1:18789` | 将本地端口 18789 转发到远程端口 18789                         |
+| `ssh -N`                             | 不执行远程命令的 SSH（仅进行端口转发）                        |
+| `KeepAlive`                          | 如果隧道崩溃，则自动重启                                     |
+| `RunAtLoad`                          | 在 agent 加载时启动隧道                                      |
 
-OpenClaw.app 在你的客户端机器上连接到 `ws://127.0.0.1:18789`。SSH 隧道会将该连接转发到远程机器上运行 Gateway 的 18789 端口。
+OpenClaw.app 会连接到你客户端机器上的 `ws://127.0.0.1:18789`。SSH 隧道会将该连接转发到运行网关的远程机器上的 18789 端口。
 
 ## 相关内容
 

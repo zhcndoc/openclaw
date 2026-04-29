@@ -1,30 +1,30 @@
 ---
-summary: "OpenClaw 如何总结长对话以保持在模型限制内"
+summary: "OpenClaw 如何压缩长对话以保持在模型限制内"
 read_when:
   - 你想了解自动压缩和 /compact
-  - 你正在调试长会话触及上下文限制的问题
+  - 你正在排查因上下文限制而变长的会话
 title: "压缩"
 ---
 
-每个模型都有一个上下文窗口：它可以处理的最大 token 数。当对话接近该限制时，OpenClaw 会将较早的消息**压缩**成摘要，以便聊天可以继续。
+每个模型都有一个上下文窗口：它能处理的最大 token 数量。当对话接近该限制时，OpenClaw 会将较早的消息**压缩**成摘要，以便聊天可以继续。
 
 ## 工作原理
 
-1. 旧的对话回合被总结为一个紧凑的条目。
-2. 摘要保存在会话记录中。
-3. 最近的消息保持完整。
+1. 较早的对话轮次会被总结为一个压缩条目。
+2. 该摘要会保存在会话转录中。
+3. 最近的消息会保持完整。
 
-当 OpenClaw 将历史拆分为压缩块时，它会将助手工具调用与其匹配的 `toolResult` 条目配对保留。如果分割点落在工具块内部，OpenClaw 会移动边界，使这对内容保持在一起，并保留当前尚未总结的尾部。
+当 OpenClaw 将历史拆分为压缩块时，会保持 assistant 的工具调用与其匹配的 `toolResult` 条目配对。如果拆分点落在一个工具块内部，OpenClaw 会移动边界，以确保这对内容保持在一起，并保留当前未摘要的尾部。
 
 完整的对话历史仍保存在磁盘上。压缩只会改变模型在下一轮看到的内容。
 
 ## 自动压缩
 
-自动压缩默认开启。当会话接近上下文限制时，或者模型返回上下文溢出错误时（在这种情况下 OpenClaw 会执行压缩并重试），它就会运行。
+默认开启自动压缩。当会话接近上下文限制时，或者模型返回上下文溢出错误时（在这种情况下 OpenClaw 会先压缩再重试），它就会运行。
 
 你会看到：
 
-- `🧹 Auto-compaction complete` 出现在详细模式中。
+- 在详细模式下显示 `🧹 Auto-compaction complete`。
 - `/status` 显示 `🧹 Compactions: <count>`。
 
 <Info>
@@ -32,8 +32,8 @@ title: "压缩"
 </Info>
 
 <AccordionGroup>
-  <Accordion title="Recognized overflow signatures">
-    OpenClaw detects context overflow from these provider error patterns:
+  <Accordion title="识别到的溢出签名">
+    OpenClaw 会根据以下提供方错误模式检测上下文溢出：
 
     - `request_too_large`
     - `context length exceeded`
@@ -47,21 +47,21 @@ title: "压缩"
 
 ## 手动压缩
 
-在任意聊天中输入 `/compact` 可强制执行一次压缩。可添加指令来引导摘要内容：
+在任何聊天中输入 `/compact` 可强制执行一次压缩。你也可以附加指令来指导摘要内容：
 
 ```
 /compact Focus on the API design decisions
 ```
 
-当设置了 `agents.defaults.compaction.keepRecentTokens` 时，手动压缩会遵循该 Pi 截断点，并在重建的上下文中保留最近的尾部内容。如果没有显式的保留预算，手动压缩会表现为一个硬性检查点，并仅从新的摘要继续。
+当设置了 `agents.defaults.compaction.keepRecentTokens` 时，手动压缩会遵守该 Pi 截断点，并在重建后的上下文中保留最近的尾部。若没有显式的保留预算，手动压缩会表现为一个硬检查点，并仅从新的摘要继续。
 
 ## 配置
 
-在你的 `openclaw.json` 中的 `agents.defaults.compaction` 下配置压缩。下面列出了最常见的选项；完整参考请见 [Session management deep dive](/reference/session-management-compaction)。
+在你的 `openclaw.json` 中，于 `agents.defaults.compaction` 下配置压缩。下面列出最常见的选项；完整参考请见 [Session management deep dive](/reference/session-management-compaction)。
 
-### 使用不同的模型
+### 使用不同模型
 
-默认情况下，压缩使用代理的主模型。设置 `agents.defaults.compaction.model` 可将摘要任务委托给更强大或更专用的模型。该覆盖项接受任意 `provider/model-id` 字符串：
+默认情况下，压缩使用代理的主模型。设置 `agents.defaults.compaction.model` 可将摘要生成委托给更强大或更专业的模型。该覆盖项接受任意 `provider/model-id` 字符串：
 
 ```json
 {
@@ -75,7 +75,7 @@ title: "压缩"
 }
 ```
 
-这同样适用于本地模型，例如专门用于摘要的第二个 Ollama 模型：
+这同样适用于本地模型，例如一个专用于摘要的第二个 Ollama 模型：
 
 ```json
 {
@@ -89,26 +89,26 @@ title: "压缩"
 }
 ```
 
-如果未设置，则压缩使用代理的主模型。
+未设置时，压缩会使用代理的主模型。
 
 ### 标识符保留
 
-默认情况下，压缩摘要会保留不透明标识符（`identifierPolicy: "strict"`）。可通过 `identifierPolicy: "off"` 覆盖以禁用，或使用 `identifierPolicy: "custom"` 加上 `identifierInstructions` 来提供自定义指导。
+压缩摘要默认会保留不透明标识符（`identifierPolicy: "strict"`）。可通过 `identifierPolicy: "off"` 禁用，或使用 `identifierPolicy: "custom"` 并配合 `identifierInstructions` 提供自定义指导。
 
-### 活跃转录字节守卫
+### 活动转录字节保护
 
-当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes` 时，如果活跃的 JSONL 达到该大小，OpenClaw 会在运行前触发正常的本地压缩。这对于长时间运行的会话很有用：即使提供方侧的上下文管理能保持模型上下文健康，本地转录仍在不断增长。它不会拆分原始 JSONL 字节；它会请求正常的压缩管线生成语义摘要。
+当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes` 时，如果活动 JSONL 达到该大小，OpenClaw 会在运行前触发常规的本地压缩。这对于长时间运行的会话很有用：提供方侧的上下文管理可能能保持模型上下文健康，而本地转录会继续增长。它不会拆分原始 JSONL 字节；它只是要求常规压缩流水线创建语义摘要。
 
 <Warning>
-字节守卫要求 `truncateAfterCompaction: true`。如果没有转录轮转，活跃文件不会缩小，守卫也会保持不活动状态。
+字节保护需要 `truncateAfterCompaction: true`。如果不轮转转录，活动文件不会缩小，该保护也会保持不激活。
 </Warning>
 
 ### 后继转录
 
-当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。它会根据压缩摘要、保留状态和未总结的尾部创建一个新的活跃后继转录，然后将之前的 JSONL 保留为已归档的检查点来源。
-后继转录还会删除在短暂重试窗口内到达的完全重复的长用户回合，因此通道重试风暴不会在压缩后被带入下一个活跃转录。
+当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。它会基于压缩摘要、保留状态和未摘要尾部创建一个新的活动后继转录，然后将之前的 JSONL 保留为归档检查点来源。
+后继转录还会丢弃在短重试窗口内到达的、完全重复的较长用户轮次，因此通道重试风暴不会在压缩后被带入下一个活动转录。
 
-预压缩检查点仅在其大小低于 OpenClaw 的检查点大小上限时才会保留；超大的活跃转录仍会压缩，但 OpenClaw 会跳过大型调试快照，而不是让磁盘使用量翻倍。
+预压缩检查点仅在其大小低于 OpenClaw 的检查点大小上限时保留；超大的活动转录仍会压缩，但 OpenClaw 会跳过大型调试快照，而不是让磁盘使用量翻倍。
 
 ### 压缩通知
 
@@ -128,11 +128,27 @@ title: "压缩"
 
 ### 内存刷新
 
-在压缩之前，OpenClaw 可以运行一次**静默内存刷新**轮次，将持久化笔记存储到磁盘。详情和配置请参见 [Memory](/concepts/memory)。
+在压缩之前，OpenClaw 可以运行一次**静默内存刷新**轮次，将持久化笔记存到磁盘。若此维护轮次应使用本地模型而不是当前对话模型，请设置 `agents.defaults.compaction.memoryFlush.model`：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "memoryFlush": {
+          "model": "ollama/qwen3:8b"
+        }
+      }
+    }
+  }
+}
+```
+
+内存刷新模型覆盖是精确的，不会继承活动会话的回退链。详情和配置请参见 [Memory](/concepts/memory)。
 
 ## 可插拔的压缩提供方
 
-插件可以通过插件 API 上的 `registerCompactionProvider()` 注册自定义压缩提供方。当提供方被注册并配置后，OpenClaw 会将摘要任务委托给它，而不是内置的 LLM 管线。
+插件可以通过插件 API 上的 `registerCompactionProvider()` 注册自定义压缩提供方。注册并配置后，OpenClaw 会将摘要生成委托给该提供方，而不是内置的 LLM 流水线。
 
 要使用已注册的提供方，请在配置中设置其 id：
 
@@ -148,35 +164,35 @@ title: "压缩"
 }
 ```
 
-设置 `provider` 会自动强制 `mode: "safeguard"`。提供方会接收与内置路径相同的压缩指令和标识符保留策略，并且在提供方输出后，OpenClaw 仍会保留最近回合和分割回合的后缀上下文。
+设置 `provider` 会自动强制 `mode: "safeguard"`。提供方会接收与内置路径相同的压缩指令和标识符保留策略，而 OpenClaw 在提供方输出后仍会保留最近轮次和拆分轮次后缀上下文。
 
 <Note>
-如果提供方失败或返回空结果，OpenClaw 会回退到内置的 LLM 摘要。
+如果提供方失败或返回空结果，OpenClaw 会回退到内置的 LLM 摘要生成。
 </Note>
 
 ## 压缩与修剪
 
-|                  | 压缩                    | 修剪                          |
+|                  | 压缩                          | 修剪                             |
 | ---------------- | ----------------------------- | -------------------------------- |
-| **作用** | 总结旧对话 | 修剪旧工具结果           |
-| **已保存？**       | 是（在会话记录中）   | 否（仅在内存中，每个请求） |
-| **范围**        | 整个对话           | 仅工具结果                |
+| **它做什么**    | 总结较早的对话                | 截断旧的工具结果                |
+| **已保存？**    | 是（在会话转录中）            | 否（仅内存中，每次请求）        |
+| **范围**        | 整个对话                      | 仅工具结果                      |
 
-[Session pruning](/concepts/session-pruning) 是一种更轻量级的补充，它会裁剪工具输出而不进行总结。
+[会话修剪](/concepts/session-pruning) 是一个更轻量的补充，它会截断工具输出而不进行摘要。
 
 ## 故障排除
 
-**压缩太频繁？** 可能是模型的上下文窗口较小，或者工具输出过大。尝试启用 [session pruning](/concepts/session-pruning)。
+**压缩过于频繁？** 模型的上下文窗口可能较小，或者工具输出可能较大。尝试启用 [会话修剪](/concepts/session-pruning)。
 
-**压缩后上下文感觉过时？** 使用 `/compact Focus on <topic>` 来引导摘要，或者启用 [memory flush](/concepts/memory) 以便笔记得以保留。
+**压缩后上下文感觉陈旧？** 使用 `/compact Focus on <topic>` 来引导摘要，或者启用 [内存刷新](/concepts/memory) 以便笔记得以保留。
 
-**需要重新开始？** `/new` 开始一个新会话而不进行压缩。
+**需要一个全新开始？** `/new` 会在不压缩的情况下开启一个新会话。
 
-有关高级配置（保留 token、标识符保留、自定义上下文引擎、OpenAI 服务端压缩），请参见 [Session management deep dive](/reference/session-management-compaction)。
+有关高级配置（保留 token、标识符保留、自定义上下文引擎、OpenAI 服务器端压缩），请参见 [Session management deep dive](/reference/session-management-compaction)。
 
 ## 相关内容
 
-- [Session](/concepts/session): 会话管理和生命周期。
-- [Session pruning](/concepts/session-pruning): 裁剪工具结果。
-- [Context](/concepts/context): 代理回合的上下文是如何构建的。
-- [Hooks](/automation/hooks): 压缩生命周期钩子（`before_compaction`, `after_compaction`）。
+- [Session](/concepts/session)：会话管理和生命周期。
+- [Session pruning](/concepts/session-pruning)：截断工具结果。
+- [Context](/concepts/context)：代理轮次的上下文如何构建。
+- [Hooks](/automation/hooks)：压缩生命周期钩子（`before_compaction`、`after_compaction`）。

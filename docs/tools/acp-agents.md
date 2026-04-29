@@ -1,201 +1,340 @@
 ---
-summary: "使用 ACP 运行时会话来支持 Claude Code、Cursor、Gemini CLI、显式的 Codex ACP 回退、OpenClaw ACP，以及其他 harness 代理"
+summary: "通过 ACP 后端运行外部编码 harness（Claude Code、Cursor、Gemini CLI、显式 Codex ACP、OpenClaw ACP、OpenCode）"
 read_when:
   - 通过 ACP 运行编码 harness
-  - 在消息通道上设置绑定到对话的 ACP 会话
-  - 将消息通道对话绑定到持久化 ACP 会话
-  - 排查 ACP 后端和插件接线问题
-  - 调试 ACP 完成结果交付或代理间循环
+  - 在消息渠道上设置绑定到对话的 ACP 会话
+  - 将消息渠道对话绑定到持久 ACP 会话
+  - 排查 ACP 后端、插件接线或完成投递问题
   - 在聊天中操作 /acp 命令
 title: "ACP agents"
+sidebarTitle: "ACP agents"
 ---
 
-[Agent Client Protocol (ACP)](https://agentclientprotocol.com/) 会话让 OpenClaw 可以通过 ACP 后端插件运行外部编码 harness（例如 Pi、Claude Code、Cursor、Copilot、OpenClaw ACP、OpenCode、Gemini CLI，以及其他受支持的 ACPX harness）。
+[Agent Client Protocol (ACP)](https://agentclientprotocol.com/) 会话
+让 OpenClaw 通过 ACP 后端插件运行外部编码 harness（例如 Pi、Claude Code、
+Cursor、Copilot、Droid、OpenClaw ACP、OpenCode、Gemini CLI，以及其他
+受支持的 ACPX harness）。
 
-如果你用自然语言让 OpenClaw 在当前对话中绑定或控制 Codex，OpenClaw 应当使用原生 Codex app-server 插件（`/codex bind`、`/codex threads`、`/codex resume`）。如果你要求 `/acp`、ACP、acpx，或者一个 Codex 后台子会话，OpenClaw 仍然可以通过 ACP 路由 Codex。每个 ACP 会话的创建都会作为一个[后台任务](/automation/tasks)进行跟踪。
+每次 ACP 会话创建都会被跟踪为一个[后台任务](/automation/tasks)。
 
-如果你用自然语言让 OpenClaw “在 thread 里启动 Claude Code” 或使用其他外部 harness，OpenClaw 应当将该请求路由到 ACP 运行时（而不是原生子代理运行时）。
+<Note>
+**ACP 是外部 harness 路径，不是默认的 Codex 路径。** 原生的 Codex 应用服务器插件负责
+`/codex ...` 控制和嵌入式运行时 `agentRuntime.id: "codex"`；ACP 负责
+`/acp ...` 控制和 `sessions_spawn({ runtime: "acp" })` 会话。
 
-如果你希望 Codex 或 Claude Code 作为外部 MCP 客户端直接连接到现有的 OpenClaw 频道对话，请使用 [`openclaw mcp serve`](/cli/mcp) 而不是 ACP。
+如果你希望 Codex 或 Claude Code 作为外部 MCP 客户端直接连接到现有的 OpenClaw 渠道对话，
+请改用 [`openclaw mcp serve`](/cli/mcp)，而不是 ACP。
+</Note>
 
-## 我需要哪个页面？
+## Which page do I want?
 
-有三个相近的界面容易混淆：
+| 你想要……                                                                                       | 使用这个                              | 备注                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 在当前对话中绑定或控制 Codex                                                                  | `/codex bind`, `/codex threads`       | 当启用 `codex` 插件时使用原生 Codex 应用服务器路径；包括已绑定聊天回复、图片转发、模型/fast/权限、停止和引导控制。ACP 是显式回退 |
+| 通过 OpenClaw 运行 Claude Code、Gemini CLI、显式 Codex ACP 或其他外部 harness _through_ | 本页                                  | 绑定到聊天的会话、`/acp spawn`、`sessions_spawn({ runtime: "acp" })`、后台任务、运行时控制                                                                                   |
+| 将 OpenClaw Gateway 会话 _作为_ ACP 服务器暴露给编辑器或客户端                                  | [`openclaw acp`](/cli/acp)            | 桥接模式。IDE/客户端通过 stdio/WebSocket 与 OpenClaw 通过 ACP 通信                                                                                                                            |
+| 复用本地 AI CLI 作为纯文本回退模型                                                               | [CLI Backends](/gateway/cli-backends) | 不是 ACP。没有 OpenClaw 工具，没有 ACP 控制，没有 harness 运行时                                                                                                                               |
 
-| 你想要……                                                                                        | 使用这个                            | 说明                                                                                                                                                       |
-| ----------------------------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 在当前对话中绑定或控制 Codex                                                                    | `/codex bind`、`/codex threads`      | 原生 Codex app-server 路径；包括绑定聊天回复、图像转发、模型/fast/权限、停止和 steer 控件。ACP 是显式回退 |
-| 通过 OpenClaw 运行 Claude Code、Gemini CLI、显式 Codex ACP，或其他外部 harness                  | 本页：ACP agents                    | 绑定到聊天的会话、`/acp spawn`、`sessions_spawn({ runtime: "acp" })`、后台任务、运行时控制                                                |
-| 将一个 OpenClaw Gateway 会话作为 ACP server 暴露给编辑器或客户端                                 | [`openclaw acp`](/cli/acp)          | 桥接模式。IDE/客户端通过 stdio/WebSocket 与 OpenClaw 进行 ACP 通信                                                                                         |
-| 将本地 AI CLI 复用为纯文本回退模型                                                              | [CLI Backends](/gateway/cli-backends) | 不是 ACP。没有 OpenClaw 工具、没有 ACP 控件、没有 harness 运行时                                                                                            |
+## Does this work out of the box?
 
-## 开箱即用吗？
+通常可以。全新安装默认会启用捆绑的 `acpx` 运行时插件，并配有插件本地固定版本的 `acpx` 二进制文件，OpenClaw 会在启动时探测并自我修复。运行 `/acp doctor` 可进行就绪性检查。
 
-通常是的。全新安装默认是启用捆绑的 `acpx` 运行时插件，并带有一个插件本地固定版本的 `acpx` 二进制，OpenClaw 会在启动时探测并自动修复它。运行 `/acp doctor` 可进行就绪检查。
+只有在 ACP **真正可用** 时，OpenClaw 才会向 agents 说明 ACP spawning：ACP 必须已启用，dispatch 不能被禁用，当前会话不能被 sandbox 阻止，并且必须加载了 runtime backend。若这些条件不满足，ACP 插件技能和 `sessions_spawn` 的 ACP 指引会保持隐藏，这样 agent 就不会建议一个不可用的 backend。
 
-首次运行的注意事项：
+<AccordionGroup>
+  <Accordion title="First-run gotchas">
+    - 如果设置了 `plugins.allow`，它就是一个受限的插件清单，并且**必须**包含 `acpx`；否则捆绑默认值会被故意阻止，而 `/acp doctor` 会报告缺失的 allowlist 条目。
+    - 捆绑的 Codex ACP 适配器会与 `acpx` 插件一起分阶段准备，并在可能时本地启动。
+    - 其他目标 harness 适配器在首次使用时仍可能通过 `npx` 按需获取。
+    - 该 harness 的供应商认证仍必须存在于主机上。
+    - 如果主机没有 npm 或网络访问，首次运行时的适配器获取会失败，直到缓存被预热或以其他方式安装该适配器。
 
-- 目标 harness 适配器（Codex、Claude 等）可能会在你第一次使用它们时通过 `npx` 按需获取。
-- 该 harness 所需的供应商认证仍然必须存在于主机上。
-- 如果主机没有 npm 或网络访问，首次适配器获取会失败，直到缓存被预热或以其他方式安装了适配器。
+  </Accordion>
+  <Accordion title="Runtime prerequisites">
+    ACP 会启动一个真实的外部 harness 进程。OpenClaw 负责路由、
+    后台任务状态、投递、绑定和策略；harness 负责其供应商登录、
+    模型目录、文件系统行为和原生工具。
 
-## 操作手册
+    在归咎于 OpenClaw 之前，请验证：
 
-从聊天中快速使用 `/acp` 的流程：
+    - `/acp doctor` 报告后端已启用且健康。
+    - 当 `acp.allowedAgents` 设置了 allowlist 时，目标 id 被允许。
+    - harness 命令可以在 Gateway 主机上启动。
+    - 该 harness 存在供应商认证（`claude`、`codex`、`gemini`、`opencode`、`droid` 等）。
+    - 所选模型对该 harness 存在 —— 模型 id 不能在不同 harness 之间通用。
+    - 请求的 `cwd` 存在且可访问，或者省略 `cwd` 让后端使用默认值。
+    - 权限模式与工作内容匹配。非交互式会话无法点击原生权限提示，因此大量写入/执行的编码运行通常需要一个可无头继续执行的 ACPX 权限配置文件。
 
-1. **启动** — `/acp spawn claude --bind here`、`/acp spawn gemini --mode persistent --thread auto`，或显式 `/acp spawn codex --bind here`
-2. **工作** 在绑定的对话或 thread 中进行（或者显式指定 session key）。
-3. **检查状态** — `/acp status`
-4. **调整** — `/acp model <provider/model>`、`/acp permissions <profile>`、`/acp timeout <seconds>`
-5. **Steer**，而不替换上下文 — `/acp steer tighten logging and continue`
-6. **停止** — `/acp cancel`（当前轮次）或 `/acp close`（会话 + 绑定）
+  </Accordion>
+</AccordionGroup>
 
-应当路由到原生 Codex 插件的自然语言触发：
+默认情况下，OpenClaw 插件工具和内置 OpenClaw 工具**不会**向
+ACP harness 暴露。只有在 harness 应直接调用这些工具时，
+才在 [ACP agents — setup](/tools/acp-agents-setup) 中启用显式 MCP 桥接。
 
-- “把这个 Discord 频道绑定到 Codex。”
-- “把这个聊天附加到 Codex thread `<id>`。”
-- “显示 Codex threads，然后绑定这个。”
+## Supported harness targets
 
-原生 Codex 对话绑定是默认的聊天控制路径。OpenClaw 的动态工具仍然通过 OpenClaw 执行，而诸如 shell/apply-patch 之类的 Codex 原生工具则在 Codex 内部执行。对于 Codex 原生工具事件，OpenClaw 会注入一个按轮次的原生 hook relay，这样插件 hook 就可以阻止 `before_tool_call`、观察 `after_tool_call`，并将 Codex 的 `PermissionRequest` 事件通过 OpenClaw 的审批流程进行路由。v1 relay 是刻意保守的：它不会修改 Codex 原生工具参数、重写 Codex thread 记录，也不会对最终答案/Stop hooks 进行门控。只有在你想要 ACP 运行时/会话模型时，才使用显式 ACP。
+使用捆绑的 `acpx` 后端时，可将这些 harness id 作为 `/acp spawn <id>`
+或 `sessions_spawn({ runtime: "acp", agentId: "<id>" })` 的目标：
 
-应当路由到 ACP 运行时的自然语言触发：
+| Harness id | 典型后端                                       | 备注                                                                                |
+| ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `claude`   | Claude Code ACP 适配器                         | 需要主机上的 Claude Code 认证。                                                     |
+| `codex`    | Codex ACP 适配器                               | 仅在原生 `/codex` 不可用或请求 ACP 时作为显式 ACP 回退。                           |
+| `copilot`  | GitHub Copilot ACP 适配器                      | 需要 Copilot CLI/运行时认证。                                                       |
+| `cursor`   | Cursor CLI ACP (`cursor-agent acp`)            | 如果本地安装暴露了不同的 ACP 入口点，则覆盖 acpx 命令。                            |
+| `droid`    | Factory Droid CLI                              | 需要 Factory/Droid 认证或 harness 环境中的 `FACTORY_API_KEY`。                     |
+| `gemini`   | Gemini CLI ACP 适配器                          | 需要 Gemini CLI 认证或 API key 设置。                                              |
+| `iflow`    | iFlow CLI                                      | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
+| `kilocode` | Kilo Code CLI                                  | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
+| `kimi`     | Kimi/Moonshot CLI                              | 需要主机上的 Kimi/Moonshot 认证。                                                   |
+| `kiro`     | Kiro CLI                                       | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
+| `opencode` | OpenCode ACP 适配器                            | 需要 OpenCode CLI/供应商认证。                                                      |
+| `openclaw` | 通过 `openclaw acp` 的 OpenClaw Gateway 桥接   | 让具备 ACP 感知的 harness 与 OpenClaw Gateway 会话双向通信。                        |
+| `pi`       | Pi/嵌入式 OpenClaw 运行时                       | 用于 OpenClaw 原生 harness 实验。                                                   |
+| `qwen`     | Qwen Code / Qwen CLI                           | 需要主机上的 Qwen 兼容认证。                                                        |
 
-- “把这个作为一次性的 Claude Code ACP 会话运行，并总结结果。”
-- “用 Gemini CLI 在一个 thread 中处理这个任务，然后把后续跟进留在同一个 thread 里。”
-- “通过 ACP 在后台 thread 中运行 Codex。”
+可以在 acpx 本身中配置自定义 acpx agent 别名，但 OpenClaw
+策略在分发前仍会检查 `acp.allowedAgents` 以及任何
+`agents.list[].runtime.acp.agent` 映射。
 
-OpenClaw 会选择 `runtime: "acp"`，解析 harness 的 `agentId`，在支持时绑定到当前对话或 thread，并将后续消息路由到该会话，直到关闭/过期。只有在 ACP 是显式指定时，或者请求的后台运行时仍需要 ACP 时，Codex 才会走这条路径。
+## Operator runbook
 
-## ACP 与子代理的区别
+从聊天中快速进行 `/acp` 流程：
 
-当你想要外部 harness 运行时时使用 ACP。要进行 Codex 对话绑定/控制，请使用原生 Codex app-server。要使用 OpenClaw 原生委派运行时，请使用子代理。
+<Steps>
+  <Step title="Spawn">
+    `/acp spawn claude --bind here`,
+    `/acp spawn gemini --mode persistent --thread auto`，或显式
+    `/acp spawn codex --bind here`。
+  </Step>
+  <Step title="Work">
+    在已绑定的对话或线程中继续（或显式指定会话
+    key）。
+  </Step>
+  <Step title="Check state">
+    `/acp status`
+  </Step>
+  <Step title="Tune">
+    `/acp model <provider/model>`，
+    `/acp permissions <profile>`，
+    `/acp timeout <seconds>`。
+  </Step>
+  <Step title="Steer">
+    不替换上下文地引导：`/acp steer tighten logging and continue`。
+  </Step>
+  <Step title="Stop">
+    `/acp cancel`（当前轮次）或 `/acp close`（会话 + 绑定）。
+  </Step>
+</Steps>
 
-| 区域     | ACP 会话                          | 子代理运行                        |
-| -------- | --------------------------------- | --------------------------------- |
-| 运行时   | ACP 后端插件（例如 acpx）         | OpenClaw 原生子代理运行时         |
-| 会话键   | `agent:<agentId>:acp:<uuid>`      | `agent:<agentId>:subagent:<uuid>` |
-| 主要命令 | `/acp ...`                        | `/subagents ...`                  |
-| 启动工具 | `sessions_spawn`，`runtime:"acp"` | `sessions_spawn`（默认运行时）    |
+<AccordionGroup>
+  <Accordion title="Lifecycle details">
+    - Spawn 会创建或恢复一个 ACP 运行时会话，在 OpenClaw 会话存储中记录 ACP 元数据，并且当运行由父级拥有时可能会创建后台任务。
+    - 由父级拥有的 ACP 会话会被视为后台工作，即使运行时会话是持久的；完成和跨界面投递通过父任务通知器进行，而不是像普通面向用户的聊天会话那样运作。
+    - 任务维护会关闭终止的或孤立的、由父级拥有的一次性 ACP 会话。持久 ACP 会话会在活动的对话绑定仍然存在时被保留；没有活动绑定的陈旧持久会话会被关闭，因此在拥有任务完成或其任务记录丢失后，不能被静默恢复。
+    - 绑定的后续消息会直接发送到 ACP 会话，直到绑定被关闭、失焦、重置或过期。
+    - Gateway 命令保持本地。`/acp ...`、`/status` 和 `/unfocus` 绝不会作为普通提示文本发送到绑定的 ACP harness。
+    - `cancel` 会在后端支持取消时中止当前轮次；它不会删除绑定或会话元数据。
+    - `close` 从 OpenClaw 的角度结束 ACP 会话并移除绑定。若 harness 支持恢复，它可能仍保留自己的上游历史。
+    - 空闲的运行时 worker 在 `acp.runtime.ttlMinutes` 之后有资格被清理；存储的会话元数据仍可通过 `/acp sessions` 获取。
+
+  </Accordion>
+  <Accordion title="Native Codex routing rules">
+    当启用时，应该路由到**原生 Codex
+    插件**的自然语言触发语句：
+
+    - “将这个 Discord 渠道绑定到 Codex。”
+    - “把这个聊天附加到 Codex 线程 `<id>`。”
+    - “显示 Codex 线程，然后把这个绑定上。”
+
+    原生 Codex 对话绑定是默认的聊天控制路径。
+    OpenClaw 动态工具仍通过 OpenClaw 执行，而
+    诸如 shell/apply-patch 之类的 Codex 原生工具在 Codex 内执行。
+    对于 Codex 原生工具事件，OpenClaw 会注入按轮次的原生
+    钩子中继，以便插件钩子可以阻止 `before_tool_call`、观察
+    `after_tool_call`，并通过 OpenClaw 审批路由 Codex 的 `PermissionRequest` 事件。
+    Codex 的 `Stop` 钩子会被中继到 OpenClaw 的 `before_agent_finalize`，
+    其中插件可以在 Codex 最终确定答案之前再请求一次模型推理。
+    该中继保持刻意保守：它不会修改 Codex 原生工具参数，也不会重写 Codex 线程记录。仅当你想要 ACP 运行时/会话模型时，才使用显式 ACP。
+    嵌入式 Codex 支持边界记录在
+    [Codex harness v1 support contract](/plugins/codex-harness#v1-support-contract)。
+
+  </Accordion>
+  <Accordion title="Model / provider / runtime selection cheat sheet">
+    - `openai-codex/*` — PI Codex OAuth/订阅路径。
+    - `openai/*` 加上 `agentRuntime.id: "codex"` — 原生 Codex 应用服务器嵌入式运行时。
+    - `/codex ...` — 原生 Codex 对话控制。
+    - `/acp ...` 或 `runtime: "acp"` — 显式 ACP/acpx 控制。
+
+  </Accordion>
+  <Accordion title="ACP-routing natural-language triggers">
+    应该路由到 ACP 运行时的触发语句：
+
+    - “把这个作为一次性的 Claude Code ACP 会话运行并总结结果。”
+    - “这个任务在一个线程里使用 Gemini CLI，然后让后续跟进留在同一个线程里。”
+    - “通过 ACP 在后台线程中运行 Codex。”
+
+    OpenClaw 会选择 `runtime: "acp"`，解析 harness 的 `agentId`，
+    在受支持时绑定到当前对话或线程，并将后续跟进路由到该会话，直到关闭/过期。只有当 ACP/acpx 是显式指定的，或者原生 Codex 插件对请求的操作不可用时，Codex 才会走这条路径。
+
+    对于 `sessions_spawn`，只有在 ACP
+    已启用、请求者未处于 sandbox 中且已加载 ACP 运行时
+    backend 时，才会声明 `runtime: "acp"`。`acp.dispatch.enabled=false` 会暂停自动
+    ACP 线程分发，但不会隐藏或阻止显式
+    `sessions_spawn({ runtime: "acp" })` 调用。它面向如 `codex`、
+    `claude`、`droid`、`gemini` 或 `opencode` 等 ACP harness id。不要传入来自 `agents_list` 的普通
+    OpenClaw 配置 agent id，除非该条目被显式配置为 `agents.list[].runtime.type="acp"`；
+    否则应使用默认的子 agent 运行时。当 OpenClaw agent
+    配置为 `runtime.type="acp"` 时，OpenClaw 会使用
+    `runtime.acp.agent` 作为底层 harness id。
+
+  </Accordion>
+</AccordionGroup>
+
+## ACP 与子代理
+
+当你需要外部 harness 运行时，请使用 ACP。当 `codex` 插件启用时，使用 **原生 Codex app-server** 进行 Codex 对话绑定/控制。当你需要 OpenClaw 原生的委派运行时，请使用 **子代理**。
+
+| Area          | ACP session                           | Sub-agent run                      |
+| ------------- | ------------------------------------- | ---------------------------------- |
+| Runtime       | ACP 后端插件（例如 acpx）            | OpenClaw 原生子代理运行时         |
+| Session key   | `agent:<agentId>:acp:<uuid>`          | `agent:<agentId>:subagent:<uuid>`  |
+| Main commands | `/acp ...`                            | `/subagents ...`                   |
+| Spawn tool    | `sessions_spawn` with `runtime:"acp"` | `sessions_spawn`（默认运行时）     |
 
 另见 [子代理](/tools/subagents)。
 
 ## ACP 如何运行 Claude Code
 
-对于通过 ACP 运行的 Claude Code，堆栈如下：
+通过 ACP 运行 Claude Code 时，技术栈如下：
 
-1. OpenClaw ACP 会话控制平面
-2. 捆绑的 `acpx` 运行时插件
-3. Claude ACP 适配器
-4. Claude 侧运行时/会话机制
+1. OpenClaw ACP 会话控制平面。
+2. 打包的 `acpx` 运行时插件。
+3. Claude ACP 适配器。
+4. Claude 侧运行时/会话机制。
 
-    对于 `sessions_spawn`，只有在 ACP 已启用、请求方未处于沙箱中并且已加载 ACP 运行时后端时，才会公开 `runtime: "acp"`。`acp.dispatch.enabled=false` 会暂停自动 ACP thread 分派，但不会隐藏或阻止显式的 `sessions_spawn({ runtime: "acp" })` 调用。它面向诸如 `codex`、`claude`、`droid`、`gemini` 或 `opencode` 之类的 ACP harness id。不要传入来自 `agents_list` 的普通 OpenClaw 配置 agent id，除非该条目已明确配置为 `agents.list[].runtime.type="acp"`；否则请使用默认的子代理运行时。当 OpenClaw 代理配置为 `runtime.type="acp"` 时，OpenClaw 会使用 `runtime.acp.agent` 作为底层 harness id。
+ACP Claude 是一个带有 ACP 控制、会话恢复、后台任务跟踪以及可选对话/线程绑定的 **harness 会话**。
 
-- ACP Claude 是一个具有 ACP 控制、会话恢复、后台任务跟踪和可选对话/线程绑定的工具会话。
-- CLI 后端是独立的仅文本本地回退运行时。参见 [CLI 后端](/gateway/cli-backends)。
+CLI 后端是独立的纯文本本地回退运行时——见 [CLI 后端](/gateway/cli-backends)。
 
-对于操作员，实际规则是：
+对于运维人员，实用规则是：
 
-- 想要 `/acp spawn`、可绑定会话、运行时控制或持久工具工作：使用 ACP
-- 想要通过原始 CLI 进行简单的本地文本回退：使用 CLI 后端
+- **想要 `/acp spawn`、可绑定会话、运行时控制，或持久的 harness 工作？** 使用 ACP。
+- **想要通过原始 CLI 获得简单的本地文本回退？** 使用 CLI 后端。
 
 ## 绑定会话
 
+### 心智模型
+
+- **聊天界面** — 人们持续对话的地方（Discord 频道、Telegram 主题、iMessage 聊天）。
+- **ACP 会话** — OpenClaw 路由到的持久 Codex/Claude/Gemini 运行时状态。
+- **子线程/主题** — 仅由 `--thread ...` 创建的可选额外消息界面。
+- **运行时工作区** — harness 运行的文件系统位置（`cwd`、仓库检出、后端工作区）。与聊天界面相互独立。
+
 ### 当前对话绑定
 
-`/acp spawn <harness> --bind here` 会将当前对话固定到启动的 ACP 会话——没有子 thread，使用相同的聊天界面。OpenClaw 继续负责传输、认证、安全和交付；该对话中的后续消息会路由到同一个会话；`/new` 和 `/reset` 会就地重置会话；`/acp close` 会移除绑定。
-
-思维模型：
-
-- **chat surface** — 人们持续对话的地方（Discord 频道、Telegram 话题、iMessage 聊天）。
-- **ACP session** — OpenClaw 路由到的持久化 Codex/Claude/Gemini 运行时状态。
-- **child thread/topic** — 仅由 `--thread ...` 创建的可选额外消息界面。
-- **runtime workspace** — harness 运行所在的文件系统位置（`cwd`、repo checkout、backend workspace）。与聊天界面相互独立。
+`/acp spawn <harness> --bind here` 会将当前对话固定到已生成的 ACP 会话——没有子线程，仍使用相同聊天界面。OpenClaw 继续负责传输、认证、安全和投递。该对话中的后续消息会路由到同一个会话；`/new` 和 `/reset` 会原地重置该会话；`/acp close` 会移除绑定。
 
 示例：
 
-- `/codex bind` — 保持这个聊天，启动或附加原生 Codex app-server，将未来消息路由到这里。
-- `/codex model gpt-5.4`、`/codex fast on`、`/codex permissions yolo` — 从聊天中调整已绑定的原生 Codex thread。
-- `/codex stop` 或 `/codex steer focus on the failing tests first` — 控制当前活跃的原生 Codex 轮次。
-- `/acp spawn codex --bind here` — Codex 的显式 ACP 回退。
-- `/acp spawn codex --thread auto` — OpenClaw 可能会创建一个子 thread/topic 并绑定到那里。
-- `/acp spawn codex --bind here --cwd /workspace/repo` — 相同的聊天绑定，Codex 在 `/workspace/repo` 中运行。
+```text
+/codex bind                                              # 原生 Codex 绑定，将未来消息路由到这里
+/codex model gpt-5.4                                     # 调整已绑定的原生 Codex 线程
+/codex stop                                              # 控制当前激活的原生 Codex 回合
+/acp spawn codex --bind here                             # Codex 的显式 ACP 回退
+/acp spawn codex --thread auto                           # 可能创建子线程/主题并绑定到那里
+/acp spawn codex --bind here --cwd /workspace/repo       # 相同聊天绑定，Codex 在 /workspace/repo 中运行
+```
 
-注意：
+<AccordionGroup>
+  <Accordion title="绑定规则与互斥">
+    - `--bind here` 和 `--thread ...` 互斥。
+    - `--bind here` 仅适用于支持当前对话绑定的频道；否则 OpenClaw 会返回清晰的不支持消息。绑定会在网关重启后继续保留。
+    - 在 Discord 上，只有当 OpenClaw 需要为 `--thread auto|here` 创建子线程时，才需要 `spawnAcpSessions` —— `--bind here` 不需要。
+    - 如果你在未指定 `--cwd` 的情况下 spawn 到另一个 ACP agent，OpenClaw 默认继承 **目标 agent 的** 工作区。缺失的继承路径（`ENOENT`/`ENOTDIR`）会回退到后端默认值；其他访问错误（例如 `EACCES`）会以 spawn 错误形式暴露。
+    - 绑定对话中的网关管理命令保持本地处理——即使正常后续文本会路由到已绑定的 ACP 会话，`/acp ...` 命令仍由 OpenClaw 处理；只要该界面启用了命令处理，`/status` 和 `/unfocus` 也会保持本地处理。
 
-- `--bind here` 和 `--thread ...` 互斥。
-- `--bind here` 仅适用于支持当前对话绑定的频道；否则 OpenClaw 会返回明确的“不支持”消息。绑定会在网关重启后继续保留。
-- 在 Discord 上，只有当 OpenClaw 需要为 `--thread auto|here` 创建一个子 thread 时，才需要 `spawnAcpSessions`——而不是用于 `--bind here`。
-- 如果你在没有 `--cwd` 的情况下生成到另一个 ACP agent，OpenClaw 默认会继承**目标 agent**的工作区。缺失的继承路径（`ENOENT`/`ENOTDIR`）会回退到后端默认值；其他访问错误（例如 `EACCES`）会作为生成错误显示。
+  </Accordion>
+  <Accordion title="线程绑定会话">
+    当频道适配器启用了线程绑定时：
 
-### 线程绑定会话
+    - OpenClaw 将线程绑定到目标 ACP 会话。
+    - 该线程中的后续消息会路由到已绑定的 ACP 会话。
+    - ACP 输出会回送到同一个线程。
+    - unfocus/close/archive/idle-timeout 或 max-age 到期会移除绑定。
+    - `/acp close`、`/acp cancel`、`/acp status`、`/status` 和 `/unfocus` 是 Gateway 命令，不是发给 ACP harness 的提示词。
 
-当某频道适配器启用线程绑定时，ACP 会话可以绑定到线程：
-
-- OpenClaw 将线程绑定到目标 ACP 会话。
-- 该线程中的后续消息路由到绑定的 ACP 会话。
-- ACP 输出返回到同一线程。
-- 失焦／关闭／归档／空闲超时或最大存活期后解除绑定。
-
-线程绑定支持依赖适配器。如果当前频道适配器不支持线程绑定，OpenClaw 会返回明确的“不支持/不可用”消息。
-
-线程绑定 ACP 所需的功能开关：
-
-- `acp.enabled=true`
-- `acp.dispatch.enabled` 默认处于开启状态（设为 `false` 可暂停 ACP 分派）
-- 频道适配器的 ACP 线程启动标志（适配器特定）
-  - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
-  - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
-
-### 支持线程的频道
-
-- 任何暴露会话/线程绑定能力的频道适配器。
-- 当前内置支持：
-  - Discord 线程／频道
-  - Telegram 话题（群组/超级群组的论坛话题和私聊话题）
-- 插件频道可通过相同绑定接口添加支持。
-
-## 频道特定设置
-
-对于非临时工作流，在顶层 `bindings[]` 条目中配置持久的 ACP 绑定。
+    线程绑定 ACP 所需的功能开关：
 
     - `acp.enabled=true`
-    - `acp.dispatch.enabled` 默认处于开启状态（设为 `false` 可暂停自动 ACP thread 分派；显式的 `sessions_spawn({ runtime: "acp" })` 调用仍然可用）。
-    - 启用频道适配器的 ACP 线程生成标志（适配器特定）：
+    - `acp.dispatch.enabled` 默认开启（设为 `false` 可暂停自动 ACP 线程派发；显式 `sessions_spawn({ runtime: "acp" })` 调用仍然可用）。
+    - 已启用频道适配器 ACP 线程 spawn 开关（适配器特定）：
       - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
       - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
 
-- `bindings[].type="acp"` 标记持久的 ACP 对话绑定。
-- `bindings[].match` 识别目标对话：
-  - Discord 频道或线程：`match.channel="discord"` + `match.peer.id="<channelOrThreadId>"`
-  - Telegram 论坛话题：`match.channel="telegram"` + `match.peer.id="<chatId>:topic:<topicId>"`
-  - BlueBubbles DM/群组聊天：`match.channel="bluebubbles"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`
-    对于稳定的群组绑定，首选 `chat_id:*` 或 `chat_identifier:*`。
-  - iMessage DM/群组聊天：`match.channel="imessage"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`
-    对于稳定的群组绑定，首选 `chat_id:*`。
-- `bindings[].agentId` 是拥有的 OpenClaw 代理 id。
-- 可选的 ACP 覆盖位于 `bindings[].acp` 下：
-  - `mode`（`persistent` 或 `oneshot`）
-  - `label`
-  - `cwd`
-  - `backend`
+    线程绑定支持是适配器特定的。如果当前频道适配器不支持线程绑定，OpenClaw 会返回清晰的不支持/不可用消息。
 
-### 每代理的运行时默认值
+  </Accordion>
+  <Accordion title="支持线程的频道">
+    - 任何暴露会话/线程绑定能力的频道适配器。
+    - 当前内置支持：**Discord** 线程/频道、**Telegram** 主题（群组/超级群中的论坛主题以及 DM 主题）。
+    - 插件频道可以通过同一绑定接口添加支持。
 
-用 `agents.list[].runtime` 为每个代理定义 ACP 默认值：
+  </Accordion>
+</AccordionGroup>
+
+## 持久频道绑定
+
+对于非一次性的工作流，请在顶层 `bindings[]` 条目中配置持久 ACP 绑定。
+
+### 绑定模型
+
+<ParamField path="bindings[].type" type='"acp"'>
+  标记一个持久 ACP 对话绑定。
+</ParamField>
+<ParamField path="bindings[].match" type="object">
+  标识目标对话。按频道的形状如下：
+
+- **Discord 频道/线程:** `match.channel="discord"` + `match.peer.id="<channelOrThreadId>"`
+- **Telegram 论坛主题:** `match.channel="telegram"` + `match.peer.id="<chatId>:topic:<topicId>"`
+- **BlueBubbles DM/群组:** `match.channel="bluebubbles"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`。对于稳定的群组绑定，优先使用 `chat_id:*` 或 `chat_identifier:*`。
+- **iMessage DM/群组:** `match.channel="imessage"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`。对于稳定的群组绑定，优先使用 `chat_id:*`。
+
+</ParamField>
+<ParamField path="bindings[].agentId" type="string">
+  所属的 OpenClaw agent id。
+</ParamField>
+<ParamField path="bindings[].acp.mode" type='"persistent" | "oneshot"'>
+  可选的 ACP 覆盖。
+</ParamField>
+<ParamField path="bindings[].acp.label" type="string">
+  面向操作者的可选标签。
+</ParamField>
+<ParamField path="bindings[].acp.cwd" type="string">
+  可选的运行时工作目录。
+</ParamField>
+<ParamField path="bindings[].acp.backend" type="string">
+  可选的后端覆盖。
+</ParamField>
+
+### 每个 agent 的运行时默认值
+
+使用 `agents.list[].runtime` 为每个 agent 仅定义一次 ACP 默认值：
 
 - `agents.list[].runtime.type="acp"`
-- `agents.list[].runtime.acp.agent`（工具 ID，如 `codex` 或 `claude`）
+- `agents.list[].runtime.acp.agent`（harness id，例如 `codex` 或 `claude`）
 - `agents.list[].runtime.acp.backend`
 - `agents.list[].runtime.acp.mode`
 - `agents.list[].runtime.acp.cwd`
 
-ACP 绑定会话的覆盖优先级：
+**ACP 绑定会话的覆盖优先级：**
 
 1. `bindings[].acp.*`
 2. `agents.list[].runtime.acp.*`
 3. 全局 ACP 默认值（例如 `acp.backend`）
 
-示例：
+### 示例
 
 ```json5
 {
@@ -278,23 +417,23 @@ ACP 绑定会话的覆盖优先级：
 ### 行为
 
 - OpenClaw 会确保配置的 ACP 会话在使用前已存在。
-- 该频道或话题中的消息会路由到配置的 ACP 会话。
-- 在绑定对话中，`/new` 和 `/reset` 会就地重置相同的 ACP 会话键。
-- 临时运行时绑定（例如由 thread-focus 流程创建）在存在时仍然适用。
-- 对于没有显式 `cwd` 的跨代理 ACP 生成，OpenClaw 会从代理配置中继承目标代理工作区。
-- 缺失的继承工作区路径会回退到后端默认 cwd；不存在的访问失败会作为生成错误显示。
+- 该频道或主题中的消息会路由到配置的 ACP 会话。
+- 在绑定对话中，`/new` 和 `/reset` 会原地重置同一个 ACP 会话 key。
+- 临时运行时绑定（例如由 thread-focus 流程创建的绑定）在存在时仍然适用。
+- 对于没有显式 `cwd` 的跨 agent ACP spawn，OpenClaw 会从 agent 配置继承目标 agent 工作区。
+- 缺失的继承工作区路径会回退到后端默认 cwd；非缺失的访问失败会作为 spawn 错误返回。
 
 ## 启动 ACP 会话
 
 启动 ACP 会话有两种方式：
 
 <Tabs>
-  <Tab title="从 sessions_spawn">
-    使用 `runtime: "acp"` 从代理回合或工具调用中启动 ACP 会话。
+  <Tab title="From sessions_spawn">
+    使用 `runtime: "acp"` 从 agent 回合或工具调用中启动一个 ACP 会话。
 
     ```json
     {
-      "task": "打开仓库并总结失败的测试",
+      "task": "Open the repo and summarize failing tests",
       "runtime": "acp",
       "agentId": "codex",
       "thread": true,
@@ -303,15 +442,12 @@ ACP 绑定会话的覆盖优先级：
     ```
 
     <Note>
-    `runtime` 默认是 `subagent`，因此请为 ACP 会话显式设置
-    `runtime: "acp"`。如果省略 `agentId`，OpenClaw 会在配置了
-    `acp.defaultAgent` 时使用该值。`mode: "session"` 需要
-    `thread: true` 才能保持持久的绑定会话。
+    `runtime` 默认是 `subagent`，因此 ACP 会话需要显式设置 `runtime: "acp"`。如果省略 `agentId`，OpenClaw 会在已配置时使用 `acp.defaultAgent`。`mode: "session"` 需要 `thread: true` 才能保持持久的绑定对话。
     </Note>
 
   </Tab>
-  <Tab title="从 /acp 命令">
-    使用 `/acp spawn` 从聊天中进行显式的操作员控制。
+  <Tab title="From /acp command">
+    使用 `/acp spawn` 从聊天中进行显式操作者控制。
 
     ```text
     /acp spawn codex --mode persistent --thread auto
@@ -328,7 +464,7 @@ ACP 绑定会话的覆盖优先级：
     - `--cwd <absolute-path>`
     - `--label <name>`
 
-    参见 [Slash commands](/tools/slash-commands)。
+    参见 [斜杠命令](/tools/slash-commands)。
 
   </Tab>
 </Tabs>
@@ -336,140 +472,126 @@ ACP 绑定会话的覆盖优先级：
 ### `sessions_spawn` 参数
 
 <ParamField path="task" type="string" required>
-  发送到 ACP 会话的初始提示。
+  发送给 ACP 会话的初始提示词。
 </ParamField>
 <ParamField path="runtime" type='"acp"' required>
   ACP 会话必须为 `"acp"`。
 </ParamField>
 <ParamField path="agentId" type="string">
-  ACP 目标 harness id。如果设置了，则回退到 `acp.defaultAgent`。
+  ACP 目标 harness id。如果已设置，则回退到 `acp.defaultAgent`。
 </ParamField>
 <ParamField path="thread" type="boolean" default="false">
-  在支持的情况下，请求线程绑定流程。
+  请求在支持的情况下启用线程绑定流程。
 </ParamField>
 <ParamField path="mode" type='"run" | "session"' default="run">
-  `"run"` 表示一次性执行；`"session"` 表示持久会话。如果 `thread: true` 且
-  省略了 `mode`，OpenClaw 可能会根据运行时路径默认使用持久行为。`mode: "session"` 需要
-  `thread: true`。
+  `"run"` 表示一次性；`"session"` 表示持久。如果设置了 `thread: true` 而省略了 `mode`，OpenClaw 可能会根据运行时路径默认使用持久行为。`mode: "session"` 需要 `thread: true`。
 </ParamField>
 <ParamField path="cwd" type="string">
-  请求的运行时工作目录（由后端/运行时策略验证）。如果省略，ACP spawn 会在配置了
-  目标代理工作区时继承它；未找到继承路径时会回退到后端默认值，而真实的访问错误会被返回。
+  请求的运行时工作目录（由后端/运行时策略验证）。如果省略，ACP spawn 会在已配置时继承目标 agent 工作区；缺失的继承路径会回退到后端默认值，而真实的访问错误会被返回。
 </ParamField>
 <ParamField path="label" type="string">
-  在会话/横幅文本中使用的、面向操作员的标签。
+  用于会话/横幅文本的面向操作者标签。
 </ParamField>
 <ParamField path="resumeSessionId" type="string">
-  继续现有的 ACP 会话，而不是创建新的会话。代理通过 `session/load`
-  回放其会话历史。需要 `runtime: "acp"`。
+  继续一个已有的 ACP 会话，而不是创建新的会话。agent 会通过 `session/load` 回放其对话历史。需要 `runtime: "acp"`。
 </ParamField>
 <ParamField path="streamTo" type='"parent"'>
-  `"parent"` 会将初始 ACP 运行进度摘要作为系统事件流回请求者会话。接受的响应包括
-  指向会话范围 JSONL 日志的 `streamLogPath`
-  （`<sessionId>.acp-stream.jsonl`），你可以对其进行 tail 以查看完整的转发历史。
+  `"parent"` 会把初始 ACP 运行进度摘要作为系统事件流回请求者会话。接受的响应包括指向会话作用域 JSONL 日志的 `streamLogPath`（`<sessionId>.acp-stream.jsonl`），你可以对其进行 tail 以查看完整的转发历史。
 </ParamField>
 <ParamField path="runTimeoutSeconds" type="number">
-  在 N 秒后中止 ACP 子回合。`0` 会让该回合走网关的无超时路径。相同的值会同时应用于 Gateway
-  运行和 ACP runtime，因此卡住/配额耗尽的 harness 不会无限占用父代理通道。
+  在 N 秒后中止 ACP 子回合。`0` 会让该回合走网关的无超时路径。相同的值会同时应用于 Gateway 运行和 ACP 运行时，这样卡住/额度耗尽的 harness 不会无限期占用父 agent 线路。
 </ParamField>
 <ParamField path="model" type="string">
-  ACP 子会话的显式模型覆盖。Codex ACP spawns 会在 `session/new` 之前，将 OpenClaw Codex 引用
-  如 `openai-codex/gpt-5.4` 规范化为 Codex ACP 启动配置；像
-  `openai-codex/gpt-5.4/high` 这样的斜杠形式也会为 Codex ACP 设置推理力度。
-  其他 harness 必须公开 ACP `models` 并支持 `session/set_model`；否则 OpenClaw/acpx 会明确失败，
-  而不是静默回退到目标代理默认值。
+  ACP 子会话的显式模型覆盖。Codex ACP spawn 会在 `session/new` 前，将 OpenClaw 中诸如 `openai-codex/gpt-5.4` 的 Codex 引用规范化为 Codex ACP 启动配置；像 `openai-codex/gpt-5.4/high` 这样的斜杠形式还会设置 Codex ACP 的推理力度。其他 harness 必须公开 ACP `models` 并支持 `session/set_model`；否则 OpenClaw/acpx 会明确失败，而不是静默回退到目标 agent 默认值。
 </ParamField>
 <ParamField path="thinking" type="string">
-  显式的思考/推理力度。对于 Codex ACP，`minimal` 映射为低力度，`low`/`medium`/`high`/`xhigh`
-  直接映射，而 `off` 则省略推理力度启动覆盖。
+  显式的思考/推理力度。对于 Codex ACP，`minimal` 映射到低力度，`low`/`medium`/`high`/`xhigh` 直接映射，而 `off` 则省略推理力度的启动覆盖。
 </ParamField>
 
-## Spawn 绑定和线程模式
+## Spawn 的 bind 和 thread 模式
 
 <Tabs>
   <Tab title="--bind here|off">
-    | 模式   | 行为                                                                 |
-    | ------ | -------------------------------------------------------------------- |
-    | `here` | 就地绑定当前活动会话；如果没有活动会话则失败。                        |
-    | `off`  | 不创建当前会话绑定。                                                 |
+    | Mode   | Behavior                                                               |
+    | ------ | ---------------------------------------------------------------------- |
+    | `here` | 原地绑定当前活动对话；如果没有活动对话则失败。                           |
+    | `off`  | 不创建当前对话绑定。                                                    |
 
-    注意：
+    说明：
 
-    - `--bind here` 是将“这个频道或聊天交给 Codex 提供支持”的最简单操作路径。
+    - `--bind here` 是“让这个频道或聊天使用 Codex 后端”的最简单操作者路径。
     - `--bind here` 不会创建子线程。
-    - `--bind here` 仅适用于提供当前会话绑定支持的频道。
+    - `--bind here` 仅在暴露当前对话绑定支持的频道上可用。
     - `--bind` 和 `--thread` 不能在同一个 `/acp spawn` 调用中同时使用。
 
   </Tab>
   <Tab title="--thread auto|here|off">
-    | 模式   | 行为                                                                                          |
-    | ------ | --------------------------------------------------------------------------------------------- |
-    | `auto` | 在活动线程中：绑定该线程。在线程外：在支持时创建/绑定子线程。                                 |
-    | `here` | 需要当前活动线程；如果不在其中则失败。                                                        |
-    | `off`  | 不绑定。会话以未绑定状态启动。                                                                 |
+    | Mode   | Behavior                                                                                            |
+    | ------ | --------------------------------------------------------------------------------------------------- |
+    | `auto` | 在活动线程中：绑定该线程。在非线程中：在支持时创建/绑定一个子线程。                                  |
+    | `here` | 要求当前处于活动线程；如果不在则失败。                                                              |
+    | `off`  | 不绑定。会话以未绑定状态启动。                                                                       |
 
-    注意：
+    说明：
 
     - 在非线程绑定界面上，默认行为实际上等同于 `off`。
     - 线程绑定的 spawn 需要频道策略支持：
       - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
       - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
-    - 当你想固定当前会话但不创建子线程时，请使用 `--bind here`。
+    - 当你想固定当前对话而不创建子线程时，请使用 `--bind here`。
 
   </Tab>
 </Tabs>
 
-## 交付模型
+## 投递模型
 
-ACP 会话可以是交互式工作区，也可以是父级拥有的后台工作。交付路径取决于这种形态。
+ACP 会话可以是交互式工作区，也可以是父拥有的后台工作。投递路径取决于其形态。
 
 <AccordionGroup>
   <Accordion title="交互式 ACP 会话">
-    交互式会话旨在可见聊天界面上持续对话：
+    交互式会话旨在在可见聊天界面上持续对话：
 
-    - `/acp spawn ... --bind here` 会将当前会话绑定到 ACP 会话。
-    - `/acp spawn ... --thread ...` 会将频道线程/话题绑定到 ACP 会话。
-    - 持久配置的 `bindings[].type="acp"` 会将匹配的会话路由到同一个 ACP 会话。
+    - `/acp spawn ... --bind here` 会将当前对话绑定到 ACP 会话。
+    - `/acp spawn ... --thread ...` 会将频道线程/主题绑定到 ACP 会话。
+    - 持久配置的 `bindings[].type="acp"` 会将匹配的对话路由到同一个 ACP 会话。
 
-    绑定会话中的后续消息会直接路由到 ACP 会话，ACP 输出也会返回到同一
-    频道/线程/话题。
+    绑定对话中的后续消息会直接路由到 ACP 会话，ACP 输出会回送到同一频道/线程/主题。
 
-    OpenClaw 发送给 harness 的内容：
+    OpenClaw 向 harness 发送的内容：
 
-    - 常规的绑定后续消息会作为提示文本发送，仅当 harness/backend 支持时才附带附件。
-    - `/acp` 管理命令和本地 Gateway 命令会在 ACP 分发前被拦截。
-    - 运行时生成的完成事件会按目标具体实例化。OpenClaw 代理会获得 OpenClaw 内部的运行时上下文封装；外部 ACP harness 会获得包含子结果和指令的普通提示。原始的 `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>` 封装绝不应发送给外部 harness，也不应作为 ACP 用户转录文本持久保存。
-    - ACP 转录条目使用用户可见的触发文本或普通完成提示。内部事件元数据尽可能在 OpenClaw 中保持结构化，不会被视为用户撰写的聊天内容。
-
-  </Accordion>
-  <Accordion title="父级拥有的一次性 ACP 会话">
-    由另一个代理回合启动的一次性 ACP 会话是后台子任务，类似于子代理：
-
-    - 父级通过 `sessions_spawn({ runtime: "acp", mode: "run" })` 请求工作。
-    - 子级在其自己的 ACP harness 会话中运行。
-    - 子回合运行在与原生子代理 spawn 相同的后台通道上，因此缓慢的 ACP harness 不会阻塞无关的主会话工作。
-    - 完成结果通过任务完成公告路径返回。OpenClaw 会在发送给外部 harness 之前，把内部完成元数据转换为普通 ACP 提示，因此 harness 不会看到仅属于 OpenClaw 的运行时上下文标记。
-    - 当需要面向用户的回复时，父级会以正常助手语气改写子结果。
-
-    不要将此路径视为父级和子级之间的点对点聊天。子级已经有一条回传给父级的完成通道。
+    - 普通的绑定后续消息会作为提示词文本发送，只有在 harness/后端支持时才会附带附件。
+    - `/acp` 管理命令和本地 Gateway 命令会在 ACP 派发前被拦截。
+    - 运行时生成的完成事件会按目标具现化。OpenClaw agent 会收到 OpenClaw 内部的运行时上下文信封；外部 ACP harness 会收到一个只包含子结果和指令的纯提示词。原始的 `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>` 信封绝不应发送给外部 harness，也不应作为 ACP 用户对话文本持久化。
+    - ACP 转录条目使用面向用户的触发文本或纯完成提示词。内部事件元数据会尽可能保持为 OpenClaw 中的结构化内容，不会被视为用户撰写的聊天内容。
 
   </Accordion>
-  <Accordion title="sessions_send 和 A2A 交付">
-    `sessions_send` 在 spawn 之后可以定向到另一个会话。对于正常的同级会话，OpenClaw 在注入消息后会使用代理到代理（A2A）后续路径：
+  <Accordion title="父拥有的一次性 ACP 会话">
+    由另一个 agent 运行触发的一次性 ACP 会话是后台子任务，类似于子代理：
+
+    - 父通过 `sessions_spawn({ runtime: "acp", mode: "run" })` 请求工作。
+    - 子在其自己的 ACP harness 会话中运行。
+    - 子回合运行在原生子代理 spawn 所使用的同一后台线路上，因此缓慢的 ACP harness 不会阻塞无关的主会话工作。
+    - 完成结果会通过任务完成通知路径回传。OpenClaw 会在把内部完成元数据发送给外部 harness 之前，将其转换为纯 ACP 提示词，因此 harness 不会看到 OpenClaw 专用的运行时上下文标记。
+    - 如果需要面向用户的回复，父会用正常的助手语气改写子结果。
+
+    不要把这条路径当作父与子之间的点对点聊天。子已经有一条回到父的完成通道。
+
+  </Accordion>
+  <Accordion title="sessions_send 和 A2A 投递">
+    `sessions_send` 在 spawn 之后可以目标指向另一个会话。对于普通的 peer 会话，OpenClaw 在注入消息后会使用 agent-to-agent（A2A）后续路径：
 
     - 等待目标会话回复。
-    - 可选地让请求者与目标之间交换有限数量的后续回合。
-    - 要求目标生成一条公告消息。
-    - 将该公告投递到可见频道或线程。
+    - 可选地让请求者和目标交换有限数量的后续回合。
+    - 要求目标生成一条通知消息。
+    - 将该通知投递到可见频道或线程。
 
-    该 A2A 路径是同级发送的后备方案，当发送者需要可见的后续回复时会使用。只要一个无关会话能够看到并向 ACP 目标发消息，它就保持启用，例如在较宽松的 `tools.sessions.visibility` 设置下。
+    该 A2A 路径是 peer 发送在需要可见后续时的回退方案。只要一个无关会话能够看到并向 ACP 目标发送消息，它就会保持启用，例如在较宽松的 `tools.sessions.visibility` 设置下。
 
-    OpenClaw 仅在请求者是其自身的父级拥有的一次性 ACP 子会话的父级时，才跳过 A2A 后续流程。在这种情况下，在任务完成之上再运行 A2A 可能会用子级结果唤醒父级、把父级回复再转回子级，并创建父/子回显循环。对于这种拥有子级的情况，`sessions_send` 结果会报告 `delivery.status="skipped"`，因为完成路径已经负责该结果。
+    只有当请求者是其自身父拥有的一次性 ACP 子会话的父级时，OpenClaw 才会跳过 A2A 后续。在这种情况下，在任务完成之上再运行 A2A 可能会用子结果唤醒父级，再把父级的回复转发回子级，并创建父/子回声循环。对于这种被拥有的子会话，`sessions_send` 结果会报告 `delivery.status="skipped"`，因为完成路径已经负责该结果。
 
   </Accordion>
-  <Accordion title="恢复现有会话">
-    使用 `resumeSessionId` 来继续之前的 ACP 会话，而不是重新开始。代理通过
-    `session/load` 回放其会话历史，因此会带着之前内容的完整上下文继续。
+  <Accordion title="恢复已有会话">
+    使用 `resumeSessionId` 继续之前的 ACP 会话，而不是重新开始。agent 会通过 `session/load` 回放其对话历史，因此它会带着之前完整的上下文继续。
 
     ```json
     {
@@ -482,51 +604,51 @@ ACP 会话可以是交互式工作区，也可以是父级拥有的后台工作�
 
     常见用例：
 
-    - 将 Codex 会话从你的笔记本电脑接力到手机上——让你的代理接着你离开的地方继续。
-    - 继续你在 CLI 中以交互方式开始的编码会话，现在通过你的代理无头继续。
-    - 接续因网关重启或空闲超时而中断的工作。
+    - 将 Codex 会话从你的笔记本电脑交接到手机——让你的 agent 继续你离开的地方。
+    - 继续你在 CLI 中交互式开始的编码会话，现在通过你的 agent 无头地继续。
+    - 恢复被网关重启或空闲超时中断的工作。
 
-    注意：
+    说明：
 
-    - `resumeSessionId` 仅在 `runtime: "acp"` 时适用；默认的子代理 runtime 会忽略这个仅适用于 ACP 的字段。
-    - `streamTo` 仅在 `runtime: "acp"` 时适用；默认的子代理 runtime 会忽略这个仅适用于 ACP 的字段。
-    - `resumeSessionId` 是主机本地的 ACP/harness 恢复 id，不是 OpenClaw 频道会话键；OpenClaw 在分发前仍会检查 ACP spawn 策略和目标代理策略，而 ACP 后端或 harness 负责对加载该上游 id 的授权。
-    - `resumeSessionId` 会恢复上游 ACP 会话历史；`thread` 和 `mode` 仍会正常应用于你正在创建的新 OpenClaw 会话，因此 `mode: "session"` 仍需要 `thread: true`。
-    - 目标代理必须支持 `session/load`（Codex 和 Claude Code 都支持）。
-    - 如果找不到该会话 id，spawn 会以清晰的错误失败——不会静默回退到新会话。
+    - `resumeSessionId` 仅适用于 `runtime: "acp"`；默认的子代理运行时会忽略这个仅 ACP 可用的字段。
+    - `streamTo` 仅适用于 `runtime: "acp"`；默认的子代理运行时会忽略这个仅 ACP 可用的字段。
+    - `resumeSessionId` 是主机本地的 ACP/harness 恢复 id，不是 OpenClaw 频道会话 key；OpenClaw 在派发前仍会检查 ACP spawn 策略和目标 agent 策略，而 ACP 后端或 harness 自行负责对该上游 id 的加载授权。
+    - `resumeSessionId` 会恢复上游 ACP 对话历史；`thread` 和 `mode` 仍然会正常作用于你正在创建的新 OpenClaw 会话，因此 `mode: "session"` 仍然需要 `thread: true`。
+    - 目标 agent 必须支持 `session/load`（Codex 和 Claude Code 都支持）。
+    - 如果找不到该会话 id，spawn 会以清晰错误失败——不会静默回退到新会话。
 
   </Accordion>
   <Accordion title="部署后冒烟测试">
-    在网关部署后，请运行一次真实的端到端检查，而不是依赖单元测试：
+    在网关部署后，运行一次真实的端到端检查，而不是相信单元测试：
 
-    1. 验证目标主机上已部署的网关版本和提交。
-    2. 打开一个临时的 ACPX 桥接会话到一个在线代理。
-    3. 要求该代理调用 `sessions_spawn`，并设置 `runtime: "acp"`、`agentId: "codex"`、`mode: "run"`，任务为 `Reply with exactly LIVE-ACP-SPAWN-OK`。
-    4. 验证 `accepted=yes`、真实的 `childSessionKey`，以及没有验证器错误。
-    5. 清理临时桥接会话。
+    1. 验证目标主机上部署的网关版本和提交。
+    2. 打开一个到在线 agent 的临时 ACPX bridge 会话。
+    3. 让该 agent 调用 `sessions_spawn`，并设置 `runtime: "acp"`、`agentId: "codex"`、`mode: "run"`，任务为 `Reply with exactly LIVE-ACP-SPAWN-OK`。
+    4. 验证 `accepted=yes`、真实的 `childSessionKey`，且没有 validator 错误。
+    5. 清理临时 bridge 会话。
 
-    将门禁保持为 `mode: "run"`，并跳过 `streamTo: "parent"` —
-    线程绑定的 `mode: "session"` 和流转发路径属于更丰富的独立集成流程。
+    保持 gate 为 `mode: "run"` 并跳过 `streamTo: "parent"`——线程绑定的 `mode: "session"` 和流转发路径是另一组更丰富的集成流程。
 
   </Accordion>
 </AccordionGroup>
 
 ## 沙箱兼容性
 
-ACP 会话当前运行在主机运行时上，**不**在 OpenClaw 沙箱内部运行。
+ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部运行。
 
 <Warning>
 **安全边界：**
 
-- 外部 harness 可根据其自身的 CLI 权限和所选 `cwd` 进行读写。
+- 外部 harness 可以根据其自身的 CLI 权限和所选 `cwd` 进行读写。
 - OpenClaw 的沙箱策略**不会**包裹 ACP harness 执行。
-- OpenClaw 仍然会强制执行 ACP 功能开关、允许的代理、会话所有权、频道绑定以及 Gateway 交付策略。
-- 对于受沙箱强制约束的 OpenClaw 原生工作，请使用 `runtime: "subagent"`。
+- OpenClaw 仍然会强制执行 ACP 功能开关、允许的 agent、会话所有权、频道绑定和 Gateway 投递策略。
+- 对于受沙箱约束的 OpenClaw 原生工作，请使用 `runtime: "subagent"`。
+
 </Warning>
 
 当前限制：
 
-- 如果请求者会话处于沙箱中，则 ACP spawn 会被阻止，无论是 `sessions_spawn({ runtime: "acp" })` 还是 `/acp spawn` 都一样。
+- 如果请求者会话处于沙箱中，则 `sessions_spawn({ runtime: "acp" })` 和 `/acp spawn` 都会被阻止。
 - `runtime: "acp"` 的 `sessions_spawn` 不支持 `sandbox: "require"`。
 
 ## 会话目标解析
@@ -536,102 +658,101 @@ ACP 会话当前运行在主机运行时上，**不**在 OpenClaw 沙箱内部�
 
 **解析顺序：**
 
-1. 显式目标参数（或者 `/acp steer` 的 `--session`）
+1. 显式目标参数（或 `/acp steer` 的 `--session`）
    - 先尝试 key
-   - 然后尝试 UUID 形状的 session id
+   - 再尝试 UUID 形式的 session id
    - 最后尝试 label
-2. 当前线程绑定（如果此对话/线程已绑定到一个 ACP 会话）。
+2. 当前线程绑定（如果此对话/线程已绑定到 ACP 会话）。
 3. 当前请求者会话回退。
 
 当前对话绑定和线程绑定都会参与
 第 2 步。
 
-如果没有任何目标能够解析，OpenClaw 会返回一个清晰的错误
+如果无法解析目标，OpenClaw 会返回明确的错误
 （`Unable to resolve session target: ...`）。
 
 ## ACP 控制
 
-| 命令              | 功能                                                     | 示例                                                       |
-| ----------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
-| `/acp spawn`      | 创建 ACP 会话；可选当前绑定或线程绑定。                 | `/acp spawn codex --bind here --cwd /repo`                |
-| `/acp cancel`     | 取消目标会话正在进行中的轮次。                           | `/acp cancel agent:codex:acp:<uuid>`                      |
-| `/acp steer`      | 向运行中的会话发送 steer 指令。                          | `/acp steer --session support inbox prioritize failing tests` |
-| `/acp close`      | 关闭会话并解除线程目标绑定。                             | `/acp close`                                              |
-| `/acp status`     | 显示后端、模式、状态、运行时选项、能力。                 | `/acp status`                                             |
-| `/acp set-mode`    | 为目标会话设置运行时模式。                               | `/acp set-mode plan`                                      |
-| `/acp set`         | 通用运行时配置项写入。                                   | `/acp set model openai/gpt-5.4`                           |
-| `/acp cwd`         | 设置运行时工作目录覆盖。                                 | `/acp cwd /Users/user/Projects/repo`                     |
-| `/acp permissions` | 设置审批策略配置文件。                                   | `/acp permissions strict`                                 |
-| `/acp timeout`     | 设置运行时超时（秒）。                                   | `/acp timeout 120`                                       |
-| `/acp model`       | 设置运行时模型覆盖。                                     | `/acp model anthropic/claude-opus-4-6`                    |
-| `/acp reset-options` | 移除会话运行时选项覆盖。                               | `/acp reset-options`                                     |
-| `/acp sessions`    | 列出存储中的最近 ACP 会话。                              | `/acp sessions`                                           |
-| `/acp doctor`      | 后端健康状态、能力、可执行修复。                         | `/acp doctor`                                             |
-| `/acp install`     | 打印确定性的安装和启用步骤。                             | `/acp install`                                            |
+| Command              | 功能                                                      | 示例                                                       |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| `/acp spawn`         | 创建 ACP 会话；可选择当前绑定或线程绑定。                 | `/acp spawn codex --bind here --cwd /repo`                    |
+| `/acp cancel`        | 取消目标会话正在进行中的 turn。                            | `/acp cancel agent:codex:acp:<uuid>`                          |
+| `/acp steer`         | 向运行中的会话发送 steer 指令。                            | `/acp steer --session support inbox prioritize failing tests` |
+| `/acp close`         | 关闭会话并解除线程目标绑定。                               | `/acp close`                                                  |
+| `/acp status`        | 显示后端、模式、状态、运行时选项、能力。                   | `/acp status`                                                 |
+| `/acp set-mode`      | 为目标会话设置运行模式。                                   | `/acp set-mode plan`                                          |
+| `/acp set`           | 通用运行时配置项写入。                                     | `/acp set model openai/gpt-5.4`                               |
+| `/acp cwd`           | 设置运行时工作目录覆盖。                                   | `/acp cwd /Users/user/Projects/repo`                          |
+| `/acp permissions`   | 设置审批策略配置文件。                                     | `/acp permissions strict`                                     |
+| `/acp timeout`       | 设置运行时超时（秒）。                                      | `/acp timeout 120`                                            |
+| `/acp model`         | 设置运行时模型覆盖。                                       | `/acp model anthropic/claude-opus-4-6`                        |
+| `/acp reset-options` | 移除会话运行时选项覆盖。                                   | `/acp reset-options`                                          |
+| `/acp sessions`      | 从存储中列出最近的 ACP 会话。                               | `/acp sessions`                                               |
+| `/acp doctor`        | 后端健康状态、能力、可执行修复。                           | `/acp doctor`                                                 |
+| `/acp install`       | 打印确定性的安装和启用步骤。                               | `/acp install`                                                |
 
-`/acp status` 会显示生效中的运行时选项，以及运行时级别和
-后端级别的会话标识符。当后端缺少某项能力时，
-不支持控制的错误会清晰地显示出来。`/acp sessions` 会读取
-当前绑定会话或请求者会话的存储；目标令牌
-（`session-key`、`session-id` 或 `session-label`）会通过
-网关会话发现来解析，包括每个 agent 自定义的 `session.store`
+`/acp status` 会显示生效中的运行时选项以及运行时级别和
+后端级别的会话标识符。当后端缺少某项能力时，不支持控制的错误会清晰地显示出来。`/acp sessions` 会读取
+当前绑定或请求者会话的存储；目标令牌
+（`session-key`、`session-id` 或 `session-label`）通过
+网关会话发现进行解析，包括按代理自定义的 `session.store`
 根目录。
 
 ### 运行时选项映射
 
-`/acp` 提供了便捷命令和一个通用 setter。等价
+`/acp` 既有便捷命令，也有通用 setter。等价
 操作如下：
 
-| 命令                         | 映射到                              | 备注                                                                                                                                                                         |
-| ---------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/acp model <id>`            | 运行时配置键 `model`                | 对于 Codex ACP，OpenClaw 会将 `openai-codex/<model>` 规范化为适配器模型 id，并将诸如 `openai-codex/gpt-5.4/high` 这样的带斜杠推理后缀映射到 `reasoning_effort`。 |
-| `/acp set thinking <level>`  | 运行时配置键 `thinking`             | 对于 Codex ACP，OpenClaw 会在适配器支持时发送对应的 `reasoning_effort`。                                                                                                  |
-| `/acp permissions <profile>` | 运行时配置键 `approval_policy`      | —                                                                                                                                                                            |
-| `/acp timeout <seconds>`     | 运行时配置键 `timeout`              | —                                                                                                                                                                            |
-| `/acp cwd <path>`            | 运行时 cwd 覆盖                    | 直接更新。                                                                                                                                                                   |
-| `/acp set <key> <value>`     | 通用                               | `key=cwd` 使用 cwd 覆盖路径。                                                                                                                                               |
-| `/acp reset-options`         | 清除所有运行时覆盖                   | —                                                                                                                                                                            |
+| Command                      | 映射到                              | 说明                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/acp model <id>`            | 运行时配置键 `model`           | 对于 Codex ACP，OpenClaw 会将 `openai-codex/<model>` 规范化为适配器模型 id，并将诸如 `openai-codex/gpt-5.4/high` 这类带斜杠的推理后缀映射到 `reasoning_effort`。 |
+| `/acp set thinking <level>`  | 运行时配置键 `thinking`        | 对于 Codex ACP，OpenClaw 会在适配器支持时发送相应的 `reasoning_effort`。                                                                             |
+| `/acp permissions <profile>` | 运行时配置键 `approval_policy` | —                                                                                                                                                                              |
+| `/acp timeout <seconds>`     | 运行时配置键 `timeout`         | —                                                                                                                                                                              |
+| `/acp cwd <path>`            | 运行时 cwd 覆盖                 | 直接更新。                                                                                                                                                                 |
+| `/acp set <key> <value>`     | 通用                              | `key=cwd` 使用 cwd 覆盖路径。                                                                                                                                          |
+| `/acp reset-options`         | 清除所有运行时覆盖         | —                                                                                                                                                                              |
 
-## acpx harness、插件设置和权限
+## acpx 运行器、插件设置和权限
 
-关于 acpx harness 配置（Claude Code / Codex / Gemini CLI
+有关 acpx 运行器配置（Claude Code / Codex / Gemini CLI
 别名）、plugin-tools 和 OpenClaw-tools MCP 桥接，以及 ACP
 权限模式，请参见
 [ACP agents — setup](/tools/acp-agents-setup)。
 
 ## 故障排查
 
-| 症状                                                                        | 可能原因                                                                     | 修复                                                                                                                                                                     |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ACP runtime backend is not configured`                                     | 后端插件缺失、被禁用，或被 `plugins.allow` 阻止。                              | 安装并启用后端插件；如果设置了 allowlist，则将 `acpx` 包含进去，然后运行 `/acp doctor`。                                                                                |
-| `ACP is disabled by policy (acp.enabled=false)`                             | ACP 全局被禁用。                                                              | 设置 `acp.enabled=true`。                                                                                                                                               |
-| `ACP dispatch is disabled by policy (acp.dispatch.enabled=false)`           | 来自普通线程消息的自动分发被禁用。                                            | 设置 `acp.dispatch.enabled=true` 以恢复自动线程路由；显式的 `sessions_spawn({ runtime: "acp" })` 调用仍然可用。                                                        |
-| `ACP agent "<id>" is not allowed by policy`                                 | agent 不在允许列表中。                                                        | 使用允许的 `agentId`，或更新 `acp.allowedAgents`。                                                                                                                     |
-| `/acp doctor` reports backend not ready right after startup                 | 插件依赖探测或自我修复仍在运行。                                              | 稍等片刻后重新运行 `/acp doctor`；如果一直不健康，请检查后端安装错误和插件允许/拒绝策略。                                                                              |
-| Harness command not found                                                   | 适配器 CLI 未安装，或首次运行时 `npx` 获取失败。                               | 在 Gateway 主机上安装/预热适配器，或显式配置 acpx agent 命令。                                                                                                          |
-| Model-not-found from the harness                                            | 模型 id 对其他提供商/harness 有效，但对该 ACP 目标无效。                      | 使用该 harness 列出的模型，在 harness 中配置模型，或省略覆盖。                                                                                                        |
-| Vendor auth error from the harness                                          | OpenClaw 状态正常，但目标 CLI/提供商未登录。                                 | 在 Gateway 主机环境中登录，或提供所需的提供商密钥。                                                                                                                     |
-| `Unable to resolve session target: ...`                                     | key/id/label 令牌错误。                                                       | 运行 `/acp sessions`，复制准确的 key/label，然后重试。                                                                                                                  |
-| `--bind here requires running /acp spawn inside an active ... conversation` | 在没有活动可绑定对话的情况下使用了 `--bind here`。                            | 切换到目标聊天/频道并重试，或使用未绑定的 spawn。                                                                                                                       |
-| `Conversation bindings are unavailable for <channel>.`                      | 适配器缺少当前对话 ACP 绑定能力。                                              | 在支持的情况下使用 `/acp spawn ... --thread ...`，或配置顶层 `bindings[]`，或者切换到受支持的频道。                                                                    |
-| `--thread here requires running /acp spawn inside an active ... thread`     | 在线程上下文之外使用了 `--thread here`。                                      | 切换到目标线程，或使用 `--thread auto`/`off`。                                                                                                                         |
-| `Only <user-id> can rebind this channel/conversation/thread.`               | 另一个用户拥有当前活动绑定目标。                                              | 由所有者重新绑定，或使用不同的对话或线程。                                                                                                                             |
-| `Thread bindings are unavailable for <channel>.`                            | 适配器缺少线程绑定能力。                                                      | 使用 `--thread off`，或切换到受支持的适配器/频道。                                                                                                                     |
-| `Sandboxed sessions cannot spawn ACP sessions ...`                          | ACP 运行时在主机侧；请求者会话处于沙箱中。                                     | 从沙箱会话中使用 `runtime="subagent"`，或从非沙箱会话中运行 ACP spawn。                                                                                                |
-| `sessions_spawn sandbox="require" is unsupported for runtime="acp" ...`     | 为 ACP 运行时请求了 `sandbox="require"`。                                      | 对于必须沙箱化的情况使用 `runtime="subagent"`，或者从非沙箱会话中使用带 `sandbox="inherit"` 的 ACP。                                                                   |
-| `Cannot apply --model ... did not advertise model support`                  | 目标 harness 未暴露通用 ACP 模型切换能力。                                     | 使用声明了 ACP `models`/`session/set_model` 的 harness，使用 Codex ACP 模型引用，或如果 harness 有自己的启动标志，则直接在 harness 中配置模型。                         |
-| Missing ACP metadata for bound session                                      | ACP 会话元数据过期/已删除。                                                   | 通过 `/acp spawn` 重新创建，然后重新绑定/聚焦线程。                                                                                                                    |
-| `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`    | 在非交互 ACP 会话中，`permissionMode` 阻止了写入/执行。                        | 将 `plugins.entries.acpx.config.permissionMode` 设置为 `approve-all` 并重启 gateway。参见 [权限配置](/tools/acp-agents-setup#permission-configuration)。               |
-| ACP session fails early with little output                                  | `permissionMode`/`nonInteractivePermissions` 阻止了权限提示。                | 检查 gateway 日志中的 `AcpRuntimeError`。若要获得完整权限，将 `permissionMode` 设为 `approve-all`；若要优雅降级，将 `nonInteractivePermissions` 设为 `deny`。            |
-| ACP session stalls indefinitely after completing work                       | harness 进程已结束，但 ACP 会话未报告完成。                                    | 使用 `ps aux \| grep acpx` 监控；手动终止残留进程。                                                                                                                      |
-| Harness sees `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>`                        | 内部事件信封泄漏到了 ACP 边界之外。                                            | 更新 OpenClaw 并重新运行完成流程；外部 harness 应只接收普通的完成提示。                                                                                                 |
+| 症状                                                                     | 可能原因                                                                                                           | 修复                                                                                                                                                                      |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ACP runtime backend is not configured`                                     | 后端插件缺失、被禁用，或被 `plugins.allow` 阻止。                                                       | 安装并启用后端插件；如果设置了 allowlist，则将 `acpx` 加入 `plugins.allow`，然后运行 `/acp doctor`。                                                 |
+| `ACP is disabled by policy (acp.enabled=false)`                             | ACP 全局被禁用。                                                                                                 | 设置 `acp.enabled=true`。                                                                                                                                                  |
+| `ACP dispatch is disabled by policy (acp.dispatch.enabled=false)`           | 已禁用从普通线程消息自动分发。                                                               | 设置 `acp.dispatch.enabled=true` 以恢复自动线程路由；显式的 `sessions_spawn({ runtime: "acp" })` 调用仍然可用。                                      |
+| `ACP agent "<id>" is not allowed by policy`                                 | 该代理不在允许列表中。                                                                                                | 使用允许的 `agentId`，或更新 `acp.allowedAgents`。                                                     |
+| `/acp doctor` reports backend not ready right after startup                 | 插件依赖探测或自修复仍在运行。                                                               | 稍等片刻后重新运行 `/acp doctor`；如果仍然不健康，请检查后端安装错误和插件允许/拒绝策略。                                             |
+| Harness command not found                                                   | 适配器 CLI 未安装，暂存的插件依赖缺失，或非 Codex 适配器首次运行时 `npx` 获取失败。 | 运行 `/acp doctor`，修复插件依赖，在 Gateway 主机上安装/预热适配器，或显式配置 acpx 代理命令。                          |
+| Model-not-found from the harness                                            | 该模型 id 对另一个提供方/运行器有效，但对当前 ACP 目标无效。                                                | 使用该运行器列出的模型，在运行器中配置模型，或省略覆盖。                                                                            |
+| Vendor auth error from the harness                                          | OpenClaw 状态正常，但目标 CLI/提供方尚未登录。                                                     | 在 Gateway 主机环境中登录，或提供所需的提供方密钥。                                                                                             |
+| `Unable to resolve session target: ...`                                     | key/id/label 令牌错误。                                                                                                | 运行 `/acp sessions`，复制准确的 key/label，再重试。                                                                                                                        |
+| `--bind here requires running /acp spawn inside an active ... conversation` | 在没有活动的可绑定对话时使用了 `--bind here`。                                                            | 切换到目标聊天/频道后重试，或使用未绑定的 spawn。                                                                                                         |
+| `Conversation bindings are unavailable for <channel>.`                      | 适配器缺少当前对话 ACP 绑定能力。                                                             | 在支持的情况下使用 `/acp spawn ... --thread ...`，配置顶层 `bindings[]`，或切换到受支持的频道。                                                     |
+| `--thread here requires running /acp spawn inside an active ... thread`     | 在线程上下文之外使用了 `--thread here`。                                                                         | 切换到目标线程，或使用 `--thread auto`/`off`。                                                                                                                      |
+| `Only <user-id> can rebind this channel/conversation/thread.`               | 另一个用户拥有当前活动绑定目标。                                                                           | 由拥有者重新绑定，或使用不同的对话或线程。                                                                                                               |
+| `Thread bindings are unavailable for <channel>.`                            | 适配器缺少线程绑定能力。                                                                               | 使用 `--thread off` 或切换到受支持的适配器/频道。                                                                                                                 |
+| `Sandboxed sessions cannot spawn ACP sessions ...`                          | ACP 运行时在主机侧；请求者会话处于沙盒中。                                                              | 从沙盒会话中使用 `runtime="subagent"`，或从非沙盒会话中运行 ACP spawn。                                                                         |
+| `sessions_spawn sandbox="require" is unsupported for runtime="acp" ...`     | 为 ACP 运行时请求了 `sandbox="require"`。                                                                         | 如需强制沙盒，请使用 `runtime="subagent"`；或者从非沙盒会话中使用 `sandbox="inherit"` 的 ACP。                                                      |
+| `Cannot apply --model ... did not advertise model support`                  | 目标运行器未公开通用 ACP 模型切换。                                                        | 使用声明了 ACP `models`/`session/set_model` 的运行器，使用 Codex ACP 模型引用，或在运行器自身有启动标志时直接在其中配置模型。 |
+| Missing ACP metadata for bound session                                      | ACP 会话元数据陈旧/已删除。                                                                                    | 用 `/acp spawn` 重新创建，然后重新绑定/聚焦线程。                                                                                                                    |
+| `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`    | `permissionMode` 在非交互式 ACP 会话中阻止写入/执行。                                                    | 将 `plugins.entries.acpx.config.permissionMode` 设置为 `approve-all` 并重启网关。参见 [权限配置](/tools/acp-agents-setup#permission-configuration)。 |
+| ACP session fails early with little output                                  | `permissionMode`/`nonInteractivePermissions` 阻止了权限提示。                                        | 检查网关日志中的 `AcpRuntimeError`。如需完整权限，将 `permissionMode` 设为 `approve-all`；如需优雅降级，将 `nonInteractivePermissions` 设为 `deny`。        |
+| ACP session stalls indefinitely after completing work                       | 运行器进程已结束，但 ACP 会话未报告完成。                                                    | 使用 `ps aux \| grep acpx` 监控；手动杀死残留进程。                                                                                                       |
+| Harness sees `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>`                        | 内部事件封装在 ACP 边界处泄漏。                                                                | 更新 OpenClaw 并重新运行完成流程；外部运行器只应收到纯粹的完成提示。                                                          |
 
-## 相关
+## 相关内容
 
-- [ACP 代理 — 设置](/tools/acp-agents-setup)
-- [代理发送](/tools/agent-send)
+- [ACP agents — 设置](/tools/acp-agents-setup)
+- [Agent 发送](/tools/agent-send)
 - [CLI 后端](/gateway/cli-backends)
 - [Codex harness](/plugins/codex-harness)
-- [多代理沙箱工具](/tools/multi-agent-sandbox-tools)
+- [多代理沙盒工具](/tools/multi-agent-sandbox-tools)
 - [`openclaw acp`（桥接模式）](/cli/acp)
 - [子代理](/tools/subagents)

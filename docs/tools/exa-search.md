@@ -1,5 +1,5 @@
 ---
-summary: "Exa AI 搜索 -- 神经与关键词搜索，支持内容提取"
+summary: "Exa AI 搜索 -- 通过神经和关键词搜索并进行内容提取"
 read_when:
   - 你想将 Exa 用于 web_search
   - 你需要一个 EXA_API_KEY
@@ -8,8 +8,7 @@ title: "Exa 搜索"
 ---
 
 OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
-提供神经、关键词和混合搜索模式，并内置内容
-提取（高亮、文本、摘要）。
+提供神经、关键词和混合搜索模式，并内置内容提取（高亮、文本、摘要）。
 
 ## 获取 API 密钥
 
@@ -19,7 +18,7 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
     控制面板生成 API 密钥。
   </Step>
   <Step title="保存密钥">
-    在 Gateway 环境中设置 `EXA_API_KEY`，或者通过以下方式配置：
+    在 Gateway 环境中设置 `EXA_API_KEY`，或通过以下方式配置：
 
     ```bash
     openclaw configure --section web
@@ -54,7 +53,7 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
 ```
 
 **环境替代方案：** 在 Gateway 环境中设置 `EXA_API_KEY`。
-对于 gateway 安装，请将其放在 `~/.openclaw/.env` 中。
+对于 gateway 安装，将其放入 `~/.openclaw/.env`。
 
 ## 工具参数
 
@@ -63,7 +62,7 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
 </ParamField>
 
 <ParamField path="count" type="number">
-要返回的结果数量（1–100）。
+要返回的结果数（1–100）。
 </ParamField>
 
 <ParamField path="type" type="'auto' | 'neural' | 'fast' | 'deep' | 'deep-reasoning' | 'instant'">
@@ -71,7 +70,7 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
 </ParamField>
 
 <ParamField path="freshness" type="'day' | 'week' | 'month' | 'year'">
-时间过滤器。
+时间筛选。
 </ParamField>
 
 <ParamField path="date_after" type="string">
@@ -103,41 +102,41 @@ await web_search({
 });
 ```
 
-| 内容选项       | 类型                                                                  | 描述               |
-| ------------- | --------------------------------------------------------------------- | ------------------ |
-| `text`        | `boolean \| { maxCharacters }`                                        | 提取完整页面文本    |
-| `highlights`  | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | 提取关键句子        |
-| `summary`     | `boolean \| { query }`                                                | AI 生成的摘要       |
+| Contents option | Type                                                                  | Description            |
+| --------------- | --------------------------------------------------------------------- | ---------------------- |
+| `text`          | `boolean \| { maxCharacters }`                                        | 提取完整页面文本 |
+| `highlights`    | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | 提取关键句子  |
+| `summary`       | `boolean \| { query }`                                                | AI 生成的摘要   |
 
 ### 搜索模式
 
-| 模式             | 描述                          |
-| ---------------- | ----------------------------- |
-| `auto`           | Exa 选择最佳模式（默认）        |
-| `neural`         | 基于语义/含义的搜索             |
-| `fast`           | 快速关键词搜索                  |
-| `deep`           | 全面的深度搜索                  |
-| `deep-reasoning` | 带推理的深度搜索                |
-| `instant`        | 最快的结果                      |
+| Mode             | Description                       |
+| ---------------- | --------------------------------- |
+| `auto`           | Exa 选择最佳模式（默认） |
+| `neural`         | 语义/基于含义的搜索     |
+| `fast`           | 快速关键词搜索              |
+| `deep`           | 彻底的深度搜索              |
+| `deep-reasoning` | 带推理的深度搜索        |
+| `instant`        | 最快结果                   |
 
 ## 注意事项
 
 - 如果未提供 `contents` 选项，Exa 默认使用 `{ highlights: true }`
-  因此结果会包含关键句子摘录
-- 当可用时，结果会保留 Exa API
-  响应中的 `highlightScores` 和 `summary` 字段
-- 结果描述会优先从高亮内容中获取，其次是摘要，然后是
-  完整文本——以可用者为准
-- `freshness` 不能与 `date_after`/`date_before` 组合使用——请使用一种
-  时间过滤模式
+  因此结果会包含关键句摘录
+- 当可用时，结果会保留来自 Exa API
+  响应的 `highlightScores` 和 `summary` 字段
+- 结果描述会优先从高亮内容解析，其次是摘要，然后是
+  完整文本 —— 以可用者为准
+- `freshness` 不能与 `date_after`/`date_before` 组合使用 — 请使用一种
+  时间筛选模式
 - 每个查询最多可返回 100 条结果（受 Exa 搜索类型
-  限制影响）
+  限制）
 - 结果默认缓存 15 分钟（可通过
   `cacheTtlMinutes` 配置）
-- Exa 是官方 API 集成，返回结构化 JSON 响应
+- Exa 是带有结构化 JSON 响应的官方 API 集成
 
 ## 相关内容
 
 - [Web Search 概览](/tools/web) -- 所有提供方和自动检测
-- [Brave Search](/tools/brave-search) -- 支持国家/语言过滤的结构化结果
-- [Perplexity Search](/tools/perplexity-search) -- 支持域名过滤的结构化结果
+- [Brave Search](/tools/brave-search) -- 带国家/语言筛选的结构化结果
+- [Perplexity Search](/tools/perplexity-search) -- 带域名筛选的结构化结果

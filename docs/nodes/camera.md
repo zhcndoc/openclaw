@@ -1,55 +1,55 @@
 ---
-summary: "供代理使用的摄像头捕捉（iOS/Android 节点 + macOS 应用）：照片（jpg）和短视频剪辑（mp4）"
+summary: "用于代理的摄像头采集（iOS/Android 节点 + macOS 应用）：照片（jpg）和短视频片段（mp4）"
 read_when:
-  - 在 iOS/Android 节点或 macOS 上添加或修改摄像头捕捉功能
+  - 在 iOS/Android 节点或 macOS 上添加或修改摄像头采集
   - 扩展代理可访问的 MEDIA 临时文件工作流
-title: "摄像头捕捉"
+title: "摄像头采集"
 ---
 
-OpenClaw 支持代理工作流的**摄像头捕捉**：
+OpenClaw 支持用于代理工作流的**摄像头采集**：
 
-- **iOS 节点**（通过网关配对）：通过 `node.invoke` 捕捉**照片**（`jpg`）或**短视频剪辑**（`mp4`，可选带音频）。
-- **Android 节点**（通过网关配对）：通过 `node.invoke` 捕捉**照片**（`jpg`）或**短视频剪辑**（`mp4`，可选带音频）。
-- **macOS 应用**（节点通过网关）：通过 `node.invoke` 捕捉**照片**（`jpg`）或**短视频剪辑**（`mp4`，可选带音频）。
+- **iOS 节点**（通过 Gateway 配对）：通过 `node.invoke` 采集**照片**（`jpg`）或**短视频片段**（`mp4`，可选音频）。
+- **Android 节点**（通过 Gateway 配对）：通过 `node.invoke` 采集**照片**（`jpg`）或**短视频片段**（`mp4`，可选音频）。
+- **macOS 应用**（通过 Gateway 的节点）：通过 `node.invoke` 采集**照片**（`jpg`）或**短视频片段**（`mp4`，可选音频）。
 
-所有摄像头访问均需通过**用户控制的设置**。
+所有摄像头访问都受**用户控制的设置**限制。
 
 ## iOS 节点
 
 ### 用户设置（默认开启）
 
-- iOS 设置页 → **摄像头** → **允许摄像头**（`camera.enabled`）
-  - 默认：**开启**（缺失该键视为启用）。
+- iOS 设置标签页 → **相机** → **允许相机** (`camera.enabled`)
+  - 默认：**开启**（缺失的键会被视为已启用）。
   - 关闭时：`camera.*` 命令返回 `CAMERA_DISABLED`。
 
-### 命令（通过网关 `node.invoke`）
+### 命令（通过 Gateway `node.invoke`）
 
 - `camera.list`
-  - 响应数据：
-    - `devices`：数组，元素为 `{ id, name, position, deviceType }`
+  - 响应负载：
+    - `devices`：`{ id, name, position, deviceType }` 数组
 
 - `camera.snap`
   - 参数：
-    - `facing`：`front|back`（默认：`front`）
-    - `maxWidth`：数字（可选； iOS 节点默认 `1600`）
-    - `quality`：`0..1`（可选；默认 `0.9`）
-    - `format`：当前支持 `jpg`
-    - `delayMs`：数字（可选；默认 `0`）
-    - `deviceId`：字符串（可选；来自 `camera.list`）
-  - 响应数据：
+    - `facing`: `front|back`（默认：`front`）
+    - `maxWidth`: number（可选；iOS 节点默认 `1600`）
+    - `quality`: `0..1`（可选；默认 `0.9`）
+    - `format`: 当前为 `jpg`
+    - `delayMs`: number（可选；默认 `0`）
+    - `deviceId`: string（可选；来自 `camera.list`）
+  - 响应负载：
     - `format: "jpg"`
     - `base64: "<...>"`
     - `width`, `height`
-  - 数据保护：照片会重新压缩以保证 base64 数据不超过 5 MB。
+  - 负载保护：照片会重新压缩，以将 base64 负载保持在 5 MB 以下。
 
 - `camera.clip`
   - 参数：
-    - `facing`：`front|back`（默认：`front`）
-    - `durationMs`：数字（默认 `3000`，最大限制为 `60000`）
-    - `includeAudio`：布尔值（默认 `true`）
-    - `format`：当前支持 `mp4`
-    - `deviceId`：字符串（可选；来自 `camera.list`）
-  - 响应数据：
+    - `facing`: `front|back`（默认：`front`）
+    - `durationMs`: number（默认 `3000`，最大值限制为 `60000`）
+    - `includeAudio`: boolean（默认 `true`）
+    - `format`: 当前为 `mp4`
+    - `deviceId`: string（可选；来自 `camera.list`）
+  - 响应负载：
     - `format: "mp4"`
     - `base64: "<...>"`
     - `durationMs`
@@ -57,16 +57,16 @@ OpenClaw 支持代理工作流的**摄像头捕捉**：
 
 ### 前台要求
 
-与 `canvas.*` 类似，iOS 节点只允许在**前台**执行 `camera.*` 命令。后台调用返回 `NODE_BACKGROUND_UNAVAILABLE`。
+与 `canvas.*` 一样，iOS 节点只允许在**前台**执行 `camera.*` 命令。后台调用会返回 `NODE_BACKGROUND_UNAVAILABLE`。
 
 ### CLI 辅助工具（临时文件 + MEDIA）
 
-获取附件最简单方式是通过 CLI 辅助工具，它会解码媒体到临时文件并打印 `MEDIA:<path>`。
+获取附件的最简单方式是使用 CLI 辅助工具，它会将解码后的媒体写入临时文件并打印 `MEDIA:<path>`。
 
 示例：
 
 ```bash
-openclaw nodes camera snap --node <id>               # 默认：前后摄像头各一张（输出两行 MEDIA）
+openclaw nodes camera snap --node <id>               # 默认：前后两个视角（2 行 MEDIA）
 openclaw nodes camera snap --node <id> --facing front
 openclaw nodes camera clip --node <id> --duration 3000
 openclaw nodes camera clip --node <id> --no-audio
@@ -74,92 +74,93 @@ openclaw nodes camera clip --node <id> --no-audio
 
 注意：
 
-- `nodes camera snap` 默认对两个摄像头同时拍摄，以提供双视角。
-- 输出文件为临时文件，存储在操作系统的临时目录，除非自行封装调用。
+- `nodes camera snap` 默认使用**前后两个**视角，以便代理同时获得两个角度。
+- 输出文件是临时文件（位于操作系统临时目录中），除非你自己构建包装器。
 
 ## Android 节点
 
 ### Android 用户设置（默认开启）
 
-- Android 设置面板 → **摄像头** → **允许摄像头**（`camera.enabled`）
-  - 默认：**开启**（缺失该键视为启用）。
+- Android 设置面板 → **相机** → **允许相机** (`camera.enabled`)
+  - 默认：**开启**（缺失的键会被视为已启用）。
   - 关闭时：`camera.*` 命令返回 `CAMERA_DISABLED`。
 
 ### 权限
 
 - Android 需要运行时权限：
-  - `CAMERA`：用于 `camera.snap` 和 `camera.clip`
-  - `RECORD_AUDIO`：当 `camera.clip` 启用音频时（`includeAudio=true`）
+  - `CAMERA` 用于 `camera.snap` 和 `camera.clip`。
+  - 当 `includeAudio=true` 时，`RECORD_AUDIO` 用于 `camera.clip`。
 
-若权限缺失，应用会自动请求；若拒绝，`camera.*` 请求返回 `*_PERMISSION_REQUIRED` 错误。
+如果缺少权限，应用会在可能时提示；如果被拒绝，`camera.*` 请求会以
+`*_PERMISSION_REQUIRED` 错误失败。
 
 ### Android 前台要求
 
-与 `canvas.*` 类似，Android 节点只允许在**前台**执行 `camera.*` 命令。后台调用返回 `NODE_BACKGROUND_UNAVAILABLE`。
+与 `canvas.*` 一样，Android 节点只允许在**前台**执行 `camera.*` 命令。后台调用会返回 `NODE_BACKGROUND_UNAVAILABLE`。
 
-### Android 命令（通过网关 `node.invoke`）
+### Android 命令（通过 Gateway `node.invoke`）
 
 - `camera.list`
-  - 响应数据：
-    - `devices`：数组，元素为 `{ id, name, position, deviceType }`
+  - 响应负载：
+    - `devices`：`{ id, name, position, deviceType }` 数组
 
-### 数据保护
+### 负载保护
 
-照片会重新压缩以保证 base64 数据不超过 5 MB。
+照片会重新压缩，以将 base64 负载保持在 5 MB 以下。
 
 ## macOS 应用
 
 ### 用户设置（默认关闭）
 
-macOS 配套应用提供了一个复选框：
+macOS 配套应用提供一个复选框：
 
-- **设置 → 通用 → 允许摄像头**（`openclaw.cameraEnabled`）
+- **设置 → 通用 → 允许相机** (`openclaw.cameraEnabled`)
   - 默认：**关闭**
-  - 关闭时：摄像头请求返回 “用户已禁用摄像头”。
+  - 关闭时：摄像头请求返回“Camera disabled by user”。
 
-### CLI 辅助工具（节点调用）
+### CLI 辅助工具（node invoke）
 
-使用主 `openclaw` CLI 调用 macOS 节点的摄像头命令。
+使用主 `openclaw` CLI 在 macOS 节点上调用摄像头命令。
 
 示例：
 
 ```bash
-openclaw nodes camera list --node <id>            # 列出摄像头 ID
-openclaw nodes camera snap --node <id>            # 输出 MEDIA:<path>
+openclaw nodes camera list --node <id>            # 列出 camera id
+openclaw nodes camera snap --node <id>            # 打印 MEDIA:<path>
 openclaw nodes camera snap --node <id> --max-width 1280
 openclaw nodes camera snap --node <id> --delay-ms 2000
 openclaw nodes camera snap --node <id> --device-id <id>
-openclaw nodes camera clip --node <id> --duration 10s          # 输出 MEDIA:<path>
-openclaw nodes camera clip --node <id> --duration-ms 3000      # 输出 MEDIA:<path>（旧参数）
+openclaw nodes camera clip --node <id> --duration 10s          # 打印 MEDIA:<path>
+openclaw nodes camera clip --node <id> --duration-ms 3000      # 打印 MEDIA:<path>（旧参数）
 openclaw nodes camera clip --node <id> --device-id <id>
 openclaw nodes camera clip --node <id> --no-audio
 ```
 
 注意：
 
-- `openclaw nodes camera snap` 默认 `maxWidth=1600`，除非指定覆盖。
-- macOS 上 `camera.snap` 会在预热和曝光调整完成后等待 `delayMs`（默认 2000 毫秒）再拍摄。
-- 照片数据会重新压缩，保证 base64 不超过 5 MB。
+- 除非另有覆盖，`openclaw nodes camera snap` 默认使用 `maxWidth=1600`。
+- 在 macOS 上，`camera.snap` 会在热身/曝光稳定后等待 `delayMs`（默认 2000ms）再进行拍摄。
+- 照片负载会重新压缩，以将 base64 保持在 5 MB 以下。
 
-## 安全与实际限制
+## 安全性 + 实际限制
 
-- 摄像头和麦克风访问会触发常规的系统权限弹窗（并要求 Info.plist 中提供使用说明）。
-- 视频剪辑时长有限制（当前限时 `<= 60s`），防止节点负载过大（base64 增加和消息大小限制）。
+- 摄像头和麦克风访问会触发常规的 OS 权限提示（并且需要在 Info.plist 中提供用途字符串）。
+- 视频片段有上限（当前 `<= 60s`），以避免节点负载过大（base64 开销 + 消息限制）。
 
 ## macOS 屏幕视频（系统级）
 
-对于**屏幕**视频（非摄像头），使用 macOS 配套应用：
+对于 _屏幕_ 视频（不是摄像头），请使用 macOS 配套应用：
 
 ```bash
-openclaw nodes screen record --node <id> --duration 10s --fps 15   # 输出 MEDIA:<path>
+openclaw nodes screen record --node <id> --duration 10s --fps 15   # 打印 MEDIA:<path>
 ```
 
 注意：
 
-- 需要 macOS **屏幕录制**权限（TCC）。
+- 需要 macOS **屏幕录制** 权限（TCC）。
 
 ## 相关内容
 
-- [图像与媒体支持](/nodes/images)
-- [媒体理解](/nodes/media-understanding)
-- [位置命令](/nodes/location-command)
+- [Image and media support](/nodes/images)
+- [Media understanding](/nodes/media-understanding)
+- [Location command](/nodes/location-command)

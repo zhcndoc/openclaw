@@ -1,10 +1,11 @@
 ---
-summary: "通过 MCP 暴露 OpenClaw 渠道对话并管理保存的 MCP 服务器定义"
+summary: "通过 MCP 暴露 OpenClaw 频道对话并管理已保存的 MCP 服务器定义"
 read_when:
-  - 连接 Codex、Claude Code 或其他 MCP 客户端到 OpenClaw 支持的渠道
+  - 将 Codex、Claude Code 或其他 MCP 客户端连接到由 OpenClaw 支持的频道
   - 运行 `openclaw mcp serve`
   - 管理 OpenClaw 保存的 MCP 服务器定义
 title: "MCP"
+sidebarTitle: "MCP"
 ---
 
 `openclaw mcp` 有两个职责：
@@ -15,163 +16,180 @@ title: "MCP"
 换句话说：
 
 - `serve` 是 OpenClaw 作为 MCP 服务器运行
-- `list` / `show` / `set` / `unset` 是 OpenClaw 作为 MCP 客户端侧注册表，用于其运行时稍后可能使用的其他 MCP 服务器
+- `list` / `show` / `set` / `unset` 是 OpenClaw 作为 MCP 客户端侧注册表，用于其运行时后续可能消费的其他 MCP 服务器
 
-当 OpenClaw 应自行托管代码会话环境并通过 ACP 路由该运行时时，请使用 [`openclaw acp`](/cli/acp)。
+当 OpenClaw 应该自行托管一个编码 harness 会话并通过 ACP 路由该运行时时，请改用 [`openclaw acp`](/cli/acp)。
 
 ## OpenClaw 作为 MCP 服务器
 
-这是 `openclaw mcp serve` 路径。
+这就是 `openclaw mcp serve` 路径。
 
-## 何时使用 serve
+### 何时使用 `serve`
 
-当以下情况时使用 `openclaw mcp serve`：
+在以下情况下使用 `openclaw mcp serve`：
 
-- Codex、Claude Code 或其他 MCP 客户端应直接与 OpenClaw 支持的渠道对话通信
-- 你已经拥有具有已路由会话的本地或远程 OpenClaw Gateway
-- 你想要一个跨 OpenClaw 渠道后端工作的 MCP 服务器，而不是运行单独的每渠道桥接
+- Codex、Claude Code 或其他 MCP 客户端应直接与由 OpenClaw 支持的频道对话
+- 你已经有一个带有路由会话的本地或远程 OpenClaw Gateway
+- 你希望使用一个适用于 OpenClaw 各频道后端的 MCP 服务器，而不是为每个频道分别运行桥接
 
-当 OpenClaw 应自行托管代码运行时并将代理会话保留在 OpenClaw 内部时，请改用 [`openclaw acp`](/cli/acp)。
+当 OpenClaw 应该自行托管编码运行时并将代理会话保留在 OpenClaw 内部时，请改用 [`openclaw acp`](/cli/acp)。
 
-## 工作原理
+### 工作原理
 
-`openclaw mcp serve` 启动一个 stdio MCP 服务器。MCP 客户端拥有该进程。当客户端保持 stdio 会话打开时，桥接通过 WebSocket 连接到本地或远程 OpenClaw Gateway，并通过 MCP 暴露已路由的渠道对话。
+`openclaw mcp serve` 会启动一个 stdio MCP 服务器。MCP 客户端拥有该进程。在客户端保持 stdio 会话打开期间，桥接通过 WebSocket 连接到本地或远程 OpenClaw Gateway，并通过 MCP 暴露已路由的频道对话。
 
-生命周期：
+<Steps>
+  <Step title="客户端启动桥接">
+    MCP 客户端启动 `openclaw mcp serve`。
+  </Step>
+  <Step title="桥接连接到 Gateway">
+    桥接通过 WebSocket 连接到 OpenClaw Gateway。
+  </Step>
+  <Step title="会话变为 MCP 对话">
+    已路由的会话会变为 MCP 对话以及转写/历史工具。
+  </Step>
+  <Step title="实时事件队列">
+    在桥接连接期间，实时事件会在内存中排队。
+  </Step>
+  <Step title="可选的 Claude 推送">
+    如果启用了 Claude 频道模式，同一会话也可以接收 Claude 特定的推送通知。
+  </Step>
+</Steps>
 
-1. MCP 客户端生成 `openclaw mcp serve`
-2. 桥接连接到 Gateway
-3. 已路由的会话变为 MCP 对话和记录/历史工具
-4. 实时事件在桥接连接时在内存中排队
-5. 如果启用了 Claude 渠道模式，同一会话也可以接收 Claude 特定的推送通知
+<AccordionGroup>
+  <Accordion title="重要行为">
+    - 实时队列状态从桥接连接时开始
+    - 较早的转写历史通过 `messages_read` 读取
+    - Claude 推送通知只在 MCP 会话存活期间存在
+    - 当客户端断开连接时，桥接退出，实时队列也会消失
+    - `openclaw agent` 和 `openclaw infer model run` 等一次性代理入口在回复完成时会退役其打开的任何捆绑 MCP 运行时，因此重复的脚本运行不会累积 stdio MCP 子进程
+    - OpenClaw 启动的 stdio MCP 服务器（捆绑的或用户配置的）会在关闭时作为进程树被拆除，因此由服务器启动的子进程不会在父级 stdio 客户端退出后继续存活
+    - 删除或重置会话会通过共享运行时清理路径释放该会话的 MCP 客户端，因此不会残留与已移除会话关联的 stdio 连接
 
-重要行为：
+  </Accordion>
+</AccordionGroup>
 
-- 活动队列状态在桥接连接时开始
-- 较早的记录历史通过 `messages_read` 读取
-- Claude 推送通知仅在 MCP 会话存活期间存在
-- 当客户端断开连接时，桥接退出，活动队列消失
-- OpenClaw 启动的 stdio MCP 服务器（内置或用户配置的）在关闭时会作为进程树被拆除，因此由服务器启动的子进程不会在父 stdio 客户端退出后继续存活
-- 删除或重置会话会通过共享的运行时清理路径处置该会话的 MCP 客户端，因此不会留下与已移除会话绑定的残留 stdio 连接
+### 选择客户端模式
 
-## 选择客户端模式
+同一个桥接可以用两种不同方式使用：
 
-以两种不同的方式使用同一桥接：
+<Tabs>
+  <Tab title="通用 MCP 客户端">
+    仅使用标准 MCP 工具。使用 `conversations_list`、`messages_read`、`events_poll`、`events_wait`、`messages_send` 和审批工具。
+  </Tab>
+  <Tab title="Claude Code">
+    标准 MCP 工具加上 Claude 特定的频道适配器。启用 `--claude-channel-mode on`，或保持默认的 `auto`。
+  </Tab>
+</Tabs>
 
-- 通用 MCP 客户端：仅标准 MCP 工具。使用 `conversations_list`、`messages_read`、`events_poll`、`events_wait`、`messages_send` 和审批工具。
-- Claude Code：标准 MCP 工具加上 Claude 特定的渠道适配器。启用 `--claude-channel-mode on` 或保留默认值 `auto`。
-
+<Note>
 目前，`auto` 的行为与 `on` 相同。尚未进行客户端能力检测。
+</Note>
 
-## serve 暴露的内容
+### `serve` 暴露什么
 
-桥接使用现有的 Gateway 会话路由元数据来暴露渠道支持的对话。当 OpenClaw 已经具有带有已知路由的会话状态时，对话会出现，例如：
+该桥接使用现有的 Gateway 会话路由元数据来暴露由频道支持的对话。当 OpenClaw 已经拥有具有已知路由的会话状态时，会显示一个对话，例如：
 
 - `channel`
-- 收件人或目标元数据
-- 可选 `accountId`
-- 可选 `threadId`
+- 接收方或目标元数据
+- 可选的 `accountId`
+- 可选的 `threadId`
 
-这为 MCP 客户端提供了一个地方来：
+这让 MCP 客户端可以在一个地方完成：
 
-- 列出最近的已路由对话
-- 读取最近的记录历史
+- 列出最近的路由对话
+- 读取最近的转写历史
 - 等待新的入站事件
 - 通过同一路由发送回复
-- 查看桥接连接时到达的审批请求
+- 查看桥接连接期间到达的审批请求
 
-## 用法
+### 用法
 
-```bash
-# 本地 Gateway
-openclaw mcp serve
+<Tabs>
+  <Tab title="本地 Gateway">
+    ```bash
+    openclaw mcp serve
+    ```
+  </Tab>
+  <Tab title="远程 Gateway（token）">
+    ```bash
+    openclaw mcp serve --url wss://gateway-host:18789 --token-file ~/.openclaw/gateway.token
+    ```
+  </Tab>
+  <Tab title="远程 Gateway（password）">
+    ```bash
+    openclaw mcp serve --url wss://gateway-host:18789 --password-file ~/.openclaw/gateway.password
+    ```
+  </Tab>
+  <Tab title="详细日志 / 关闭 Claude">
+    ```bash
+    openclaw mcp serve --verbose
+    openclaw mcp serve --claude-channel-mode off
+    ```
+  </Tab>
+</Tabs>
 
-# 远程 Gateway
-openclaw mcp serve --url wss://gateway-host:18789 --token-file ~/.openclaw/gateway.token
+### 桥接工具
 
-# 使用密码认证的远程 Gateway
-openclaw mcp serve --url wss://gateway-host:18789 --password-file ~/.openclaw/gateway.password
+当前桥接暴露以下 MCP 工具：
 
-# 启用详细的桥接日志
-openclaw mcp serve --verbose
+<AccordionGroup>
+  <Accordion title="conversations_list">
+    列出最近的、已绑定会话的对话，这些对话在 Gateway 会话状态中已经有路由元数据。
 
-# 禁用 Claude 特定的推送通知
-openclaw mcp serve --claude-channel-mode off
-```
+    有用的过滤条件：
 
-## 桥接工具
+    - `limit`
+    - `search`
+    - `channel`
+    - `includeDerivedTitles`
+    - `includeLastMessage`
 
-当前桥接暴露这些 MCP 工具：
+  </Accordion>
+  <Accordion title="conversation_get">
+    通过 `session_key` 返回一个对话。
+  </Accordion>
+  <Accordion title="messages_read">
+    读取一个已绑定会话对话的最近转写消息。
+  </Accordion>
+  <Accordion title="attachments_fetch">
+    从一条转写消息中提取非文本消息内容块。这是对转写内容的元数据视图，而不是独立的持久化附件 blob 存储。
+  </Accordion>
+  <Accordion title="events_poll">
+    从一个数值游标开始读取已排队的实时事件。
+  </Accordion>
+  <Accordion title="events_wait">
+    长轮询直到下一个匹配的已排队事件到达或超时结束。
 
-- `conversations_list`
-- `conversation_get`
-- `messages_read`
-- `attachments_fetch`
-- `events_poll`
-- `events_wait`
-- `messages_send`
-- `permissions_list_open`
-- `permissions_respond`
+    当通用 MCP 客户端需要接近实时的投递，但不使用 Claude 特定推送协议时，请使用这个工具。
 
-### `conversations_list`
+  </Accordion>
+  <Accordion title="messages_send">
+    通过会话上已记录的同一路由发送文本回复。
 
-列出 Gateway 会话状态中已经具有路由元数据的最近会话支持的对话。
+    当前行为：
 
-有用的过滤器：
+    - 需要一个现有的对话路由
+    - 使用会话的 channel、recipient、account id 和 thread id
+    - 仅发送文本
 
-- `limit`
-- `search`
-- `channel`
-- `includeDerivedTitles`
-- `includeLastMessage`
+  </Accordion>
+  <Accordion title="permissions_list_open">
+    列出桥接自连接到 Gateway 以来观察到的待处理 exec/plugin 审批请求。
+  </Accordion>
+  <Accordion title="permissions_respond">
+    使用以下之一解决一个待处理的 exec/plugin 审批请求：
 
-### `conversation_get`
+    - `allow-once`
+    - `allow-always`
+    - `deny`
 
-通过 `session_key` 返回一个对话。
+  </Accordion>
+</AccordionGroup>
 
-### `messages_read`
+### 事件模型
 
-读取一个会话支持的对话的最近记录消息。
-
-### `attachments_fetch`
-
-从一个记录消息中提取非文本消息内容块。这是记录内容的元数据视图，而不是独立的持久化附件 blob 存储。
-
-### `events_poll`
-
-从数字游标开始读取排队的实时事件。
-
-### `events_wait`
-
-长轮询直到下一个匹配的排队事件到达或超时过期。
-
-当通用 MCP 客户端需要近实时交付而不需要 Claude 特定的推送协议时使用此功能。
-
-### `messages_send`
-
-通过会话上已记录的同一路由发送文本回去。
-
-当前行为：
-
-- 需要现有的对话路由
-- 使用会话的渠道、收件人、账户 id 和线程 id
-- 仅发送文本
-
-### `permissions_list_open`
-
-列出桥接自连接到 Gateway 以来观察到的待处理 exec/插件审批请求。
-
-### `permissions_respond`
-
-解决一个待处理的 exec/插件审批请求，使用：
-
-- `allow-once`
-- `allow-always`
-- `deny`
-
-## 事件模型
-
-桥接在连接时保持一个内存事件队列。
+桥接在连接期间会维护一个内存中的事件队列。
 
 当前事件类型：
 
@@ -182,39 +200,46 @@ openclaw mcp serve --claude-channel-mode off
 - `plugin_approval_resolved`
 - `claude_permission_request`
 
-重要限制：
+<Warning>
+- 队列仅限实时；它从 MCP 桥接启动时开始
+- `events_poll` 和 `events_wait` 本身不会回放更早的 Gateway 历史
+- 持久的历史积压应通过 `messages_read` 读取
 
-- 队列仅是实时的；它在 MCP 桥接启动时开始
-- `events_poll` 和 `events_wait` 本身不会重放旧的 Gateway 历史
-- 持久化积压应通过 `messages_read` 读取
+</Warning>
 
-## Claude 渠道通知
+### Claude 频道通知
 
-桥接还可以暴露 Claude 特定的渠道通知。这是 OpenClaw 等效的 Claude Code 渠道适配器：标准 MCP 工具仍然可用，但实时入站消息也可以作为 Claude 特定的 MCP 通知到达。
+该桥接还可以暴露 Claude 特定的频道通知。这是 OpenClaw 对 Claude Code 频道适配器的对应实现：标准 MCP 工具仍然可用，但实时入站消息也可以作为 Claude 特定的 MCP 通知到达。
 
-标志：
+<Tabs>
+  <Tab title="off">
+    `--claude-channel-mode off`：仅使用标准 MCP 工具。
+  </Tab>
+  <Tab title="on">
+    `--claude-channel-mode on`：启用 Claude 频道通知。
+  </Tab>
+  <Tab title="auto（默认）">
+    `--claude-channel-mode auto`：当前默认值；行为与 `on` 相同。
+  </Tab>
+</Tabs>
 
-- `--claude-channel-mode off`：仅标准 MCP 工具
-- `--claude-channel-mode on`：启用 Claude 渠道通知
-- `--claude-channel-mode auto`：当前默认值；与 `on` 的桥接行为相同
-
-当启用 Claude 渠道模式时，服务器宣传 Claude 实验性功能并可以发出：
+启用 Claude 频道模式后，服务器会声明 Claude 实验性能力，并可以发出：
 
 - `notifications/claude/channel`
 - `notifications/claude/channel/permission`
 
 当前桥接行为：
 
-- 入站 `user` 记录消息作为 `notifications/claude/channel` 转发
-- 通过 MCP 接收的 Claude 权限请求在内存中跟踪
-- 如果关联的对话稍后发送 `yes abcde` 或 `no abcde`，桥接将其转换为 `notifications/claude/channel/permission`
-- 这些通知仅是实时会话的；如果 MCP 客户端断开连接，则没有推送目标
+- 入站 `user` 转写消息会作为 `notifications/claude/channel` 转发
+- 通过 MCP 接收的 Claude 权限请求会在内存中跟踪
+- 如果链接的对话后来发送了 `yes abcde` 或 `no abcde`，桥接会将其转换为 `notifications/claude/channel/permission`
+- 这些通知仅在实时会话中有效；如果 MCP 客户端断开连接，就没有推送目标了
 
-这是故意针对特定客户端的。通用 MCP 客户端应依赖标准轮询工具。
+这故意是客户端特定的。通用 MCP 客户端应依赖标准轮询工具。
 
-## MCP 客户端配置
+### MCP 客户端配置
 
-示例 stdio 客户端配置：
+stdio 客户端配置示例：
 
 ```json
 {
@@ -234,96 +259,118 @@ openclaw mcp serve --claude-channel-mode off
 }
 ```
 
-对于大多数通用 MCP 客户端，从标准工具集开始并忽略 Claude 模式。仅针对实际理解 Claude 特定通知方法的客户端开启 Claude 模式。
+对于大多数通用 MCP 客户端，请从标准工具面开始，并忽略 Claude 模式。只有当客户端确实理解 Claude 特定通知方法时，才开启 Claude 模式。
 
-## 选项
+### 选项
 
 `openclaw mcp serve` 支持：
 
-- `--url <url>`：Gateway WebSocket URL
-- `--token <token>`：Gateway 令牌
-- `--token-file <path>`：从文件读取令牌
-- `--password <password>`：Gateway 密码
-- `--password-file <path>`：从文件读取密码
-- `--claude-channel-mode <auto|on|off>`：Claude 通知模式
-- `-v`, `--verbose`：stderr 上的详细日志
+<ParamField path="--url" type="string">
+  Gateway WebSocket URL。
+</ParamField>
+<ParamField path="--token" type="string">
+  Gateway token。
+</ParamField>
+<ParamField path="--token-file" type="string">
+  从文件读取 token。
+</ParamField>
+<ParamField path="--password" type="string">
+  Gateway 密码。
+</ParamField>
+<ParamField path="--password-file" type="string">
+  从文件读取密码。
+</ParamField>
+<ParamField path="--claude-channel-mode" type='"auto" | "on" | "off"'>
+  Claude 通知模式。
+</ParamField>
+<ParamField path="-v, --verbose" type="boolean">
+  在 stderr 上输出详细日志。
+</ParamField>
 
-可能时优先使用 `--token-file` 或 `--password-file` 而不是内联密钥。
+<Tip>
+尽可能优先使用 `--token-file` 或 `--password-file`，而不是内联密钥。
+</Tip>
 
-## 安全性和信任边界
+### 安全性与信任边界
 
-桥接不创建路由。它仅暴露 Gateway 已经知道如何路由的对话。
+桥接不会凭空创造路由。它只暴露 Gateway 已经知道如何路由的对话。
 
 这意味着：
 
-- 发送者白名单、配对和渠道级信任仍然属于底层 OpenClaw 渠道配置
-- `messages_send` 只能通过现有的存储路由进行回复
-- 审批状态仅针对当前桥接会话是实时/内存中的
-- 桥接认证应使用与你信任任何其他远程 Gateway 客户端相同的 Gateway 令牌或密码控制
+- 发送方允许列表、配对以及频道级信任仍然属于底层 OpenClaw 频道配置
+- `messages_send` 只能通过现有已存储的路由进行回复
+- 审批状态仅对当前桥接会话是实时的、内存中的
+- 桥接认证应使用与任何其他远程 Gateway 客户端相同的 Gateway token 或 password 控制
 
-如果对话在 `conversations_list` 中缺失，通常原因不是 MCP 配置。而是底层 Gateway 会话中缺失或不完整的路由元数据。
+如果 `conversations_list` 中缺少某个对话，通常原因不是 MCP 配置有问题，而是底层 Gateway 会话中缺少或不完整的路由元数据。
 
-## 测试
+### 测试
 
-OpenClaw 为此桥接提供确定性 Docker 冒烟测试：
+OpenClaw 为此桥接提供了确定性的 Docker 冒烟测试：
 
 ```bash
 pnpm test:docker:mcp-channels
 ```
 
-该冒烟测试：
+该冒烟测试会：
 
-- 启动一个预植数据的 Gateway 容器
-- 启动第二个容器生成 `openclaw mcp serve`
-- 验证对话发现、记录读取、附件元数据读取、实时事件队列行为和出站发送路由
-- 通过真实的 stdio MCP 桥接验证 Claude 风格渠道和权限通知
+- 启动一个带种子的 Gateway 容器
+- 启动第二个容器来运行 `openclaw mcp serve`
+- 验证对话发现、转写读取、附件元数据读取、实时事件队列行为，以及出站发送路由
+- 通过真实的 stdio MCP 桥接验证 Claude 风格的频道和权限通知
 
-这是证明桥接工作而无需将真实的 Telegram、Discord 或 iMessage 账户接入测试运行的最快方法。
+这是在不把真实的 Telegram、Discord 或 iMessage 账户接入测试运行的情况下证明桥接可用的最快方式。
 
-有关更广泛的测试上下文，请参阅 [测试](/help/testing)。
+有关更广泛的测试背景，请参阅 [测试](/help/testing)。
 
-## 故障排除
+### 故障排查
 
-### 未返回对话
+<AccordionGroup>
+  <Accordion title="未返回任何对话">
+    通常表示 Gateway 会话尚不可路由。请确认底层会话已存储 channel/provider、recipient，以及可选的 account/thread 路由元数据。
+  </Accordion>
+  <Accordion title="events_poll 或 events_wait 漏掉了较早的消息">
+    这是预期行为。实时队列从桥接连接时开始。请使用 `messages_read` 读取更早的转写历史。
+  </Accordion>
+  <Accordion title="Claude 通知没有出现">
+    请检查以下所有项：
 
-通常意味着 Gateway 会话尚不可路由。确认底层会话已存储渠道/提供商、收件人和可选账户/线程路由元数据。
+    - 客户端保持了 stdio MCP 会话打开
+    - `--claude-channel-mode` 为 `on` 或 `auto`
+    - 客户端确实理解 Claude 特定的通知方法
+    - 入站消息发生在桥接连接之后
 
-### `events_poll` 或 `events_wait` 错过旧消息
+  </Accordion>
+  <Accordion title="缺少审批">
+    `permissions_list_open` 只显示桥接连接期间观察到的审批请求。它不是一个持久的审批历史 API。
+  </Accordion>
+</AccordionGroup>
 
-预期行为。实时队列在桥接连接时开始。使用 `messages_read` 读取旧的记录历史。
+## 作为 MCP 客户端注册表的 OpenClaw
 
-### Claude 通知未显示
+这是 `openclaw mcp list`、`show`、`set` 和 `unset` 的路径。
 
-检查所有这些：
+这些命令不会通过 MCP 暴露 OpenClaw。它们管理 OpenClaw 配置中 `mcp.servers` 下由 OpenClaw 拥有的 MCP 服务器定义。
 
-- 客户端保持 stdio MCP 会话打开
-- `--claude-channel-mode` 是 `on` 或 `auto`
-- 客户端实际理解 Claude 特定的通知方法
-- 入站消息发生在桥接连接之后
+这些已保存的定义适用于 OpenClaw 后续启动或配置的运行时，例如嵌入式 Pi 和其他运行时适配器。OpenClaw 将这些定义集中存储，因此这些运行时不需要维护自己重复的 MCP 服务器列表。
 
-### 审批缺失
+<AccordionGroup>
+  <Accordion title="重要行为">
+    - 这些命令只读取或写入 OpenClaw 配置
+    - 它们不会连接到目标 MCP 服务器
+    - 它们不会验证当前命令、URL 或远程传输是否可达
+    - 运行时适配器会在执行时决定它们实际支持哪些传输形式
+    - 嵌入式 Pi 会在普通 `coding` 和 `messaging` 工具配置文件中暴露已配置的 MCP 工具；`minimal` 仍然会隐藏它们，而 `tools.deny: ["bundle-mcp"]` 会显式禁用它们
+    - 作用域为会话的捆绑 MCP 运行时会在空闲 `mcp.sessionIdleTtlMs` 毫秒后被清理（默认 10 分钟；设为 `0` 可禁用），一次性嵌入式运行会在运行结束时清理它们
 
-`permissions_list_open` 仅显示桥接连接时观察到的审批请求。它不是持久化的审批历史 API。
+  </Accordion>
+</AccordionGroup>
 
-## OpenClaw 作为 MCP 客户端注册表
+运行时适配器可能会将这个共享注册表规范化为其下游客户端所期望的形状。例如，嵌入式 Pi 直接使用 OpenClaw 的 `transport` 值，而 Claude Code 和 Gemini 接收 CLI 原生的 `type` 值，例如 `http`、`sse` 或 `stdio`。
 
-这是 `openclaw mcp list`、`show`、`set` 和 `unset` 路径。
+### 已保存的 MCP 服务器定义
 
-这些命令不会通过 MCP 暴露 OpenClaw。它们管理 OpenClaw 配置中 `mcp.servers` 下的 OpenClaw 拥有的 MCP 服务器定义。
-
-这些保存的定义用于 OpenClaw 启动或配置的运行时，例如嵌入式 Pi 和其他运行时适配器。OpenClaw 集中存储这些定义，以便这些运行时不需要保留自己重复的 MCP 服务器列表。
-
-重要行为：
-
-- 这些命令只读取或写入 OpenClaw 配置
-- 它们不会连接到目标 MCP 服务器
-- 它们不会验证命令、URL 或远程传输是否此刻可达
-- 运行时适配器在执行时决定它们实际支持哪些传输形态
-- embedded Pi 在正常的 `coding` 和 `messaging` 工具配置文件中暴露已配置的 MCP 工具；`minimal` 仍然隐藏它们，而 `tools.deny: ["bundle-mcp"]` 会显式禁用它们
-
-## 已保存的 MCP 服务器定义
-
-OpenClaw 还在配置中存储一个轻量级的 MCP 服务器注册表，供需要 OpenClaw 管理的 MCP 定义的界面使用。
+OpenClaw 还会在配置中存储一个轻量级的 MCP 服务器注册表，用于希望使用 OpenClaw 管理的 MCP 定义的界面。
 
 命令：
 
@@ -332,13 +379,13 @@ OpenClaw 还在配置中存储一个轻量级的 MCP 服务器注册表，供需
 - `openclaw mcp set <name> <json>`
 - `openclaw mcp unset <name>`
 
-注意：
+说明：
 
-- `list` 按服务器名称排序。
-- `show` 不带名称时会打印完整配置的 MCP 服务器对象。
-- `set` 期望在命令行上提供一个 JSON 对象值。
-- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。通过 `openclaw mcp set` 保存时，`openclaw mcp set` 也会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形状以兼容。
-- 如果命名服务器不存在，`unset` 会失败。
+- `list` 会按服务器名称排序。
+- 不带名称的 `show` 会打印完整配置的 MCP 服务器对象。
+- `set` 期望在命令行中提供一个 JSON 对象值。
+- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。`openclaw mcp set` 还会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形状以兼容。
+- 如果指定名称的服务器不存在，`unset` 会失败。
 
 示例：
 
@@ -350,7 +397,7 @@ openclaw mcp set docs '{"url":"https://mcp.example.com","transport":"streamable-
 openclaw mcp unset context7
 ```
 
-示例配置结构：
+示例配置形状：
 
 ```json
 {
@@ -371,30 +418,32 @@ openclaw mcp unset context7
 
 ### Stdio 传输
 
-启动本地子进程并通过 stdin/stdout 进行通信。
+启动一个本地子进程，并通过 stdin/stdout 通信。
 
-| 字段                       | 描述                           |
-| -------------------------- | ------------------------------ |
-| `command`                  | 要生成的可执行文件（必需）     |
-| `args`                     | 命令行参数数组                 |
-| `env`                      | 额外环境变量                   |
-| `cwd` / `workingDirectory` | 进程的工作目录                 |
+| Field                      | Description                       |
+| -------------------------- | --------------------------------- |
+| `command`                  | 要启动的可执行文件（必需）        |
+| `args`                     | 命令行参数数组                    |
+| `env`                      | 额外的环境变量                    |
+| `cwd` / `workingDirectory` | 进程的工作目录                    |
 
-#### Stdio env safety filter
+<Warning>
+**Stdio 环境变量安全过滤器**
 
-OpenClaw 会拒绝那些可在第一个 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境变量键，即使它们出现在服务器的 `env` 块中也是如此。被阻止的键包括 `NODE_OPTIONS`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4` 以及类似的运行时控制变量。启动时会以配置错误拒绝这些变量，因此它们不能注入隐式前导代码、替换解释器，或对 stdio 进程启用调试器。普通的凭据、代理和服务器特定环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
+OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `NODE_OPTIONS`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4` 以及类似的运行时控制变量。启动时会因配置错误拒绝这些变量，因此它们不能注入隐式前置内容、替换解释器或针对 stdio 进程启用调试器。普通的凭据、代理和服务器特定环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
 
-如果你的 MCP 服务器确实需要这些被阻止的变量之一，请将其设置在 Gateway 主机进程上，而不是放在 stdio 服务器的 `env` 下。
+如果你的 MCP 服务器确实需要其中某个被阻止的变量，请将其设置在网关主机进程上，而不是放在 stdio 服务器的 `env` 下。
+</Warning>
 
-### SSE / HTTP transport
+### SSE / HTTP 传输
 
-通过 HTTP 服务器发送事件连接到远程 MCP 服务器。
+通过 HTTP Server-Sent Events 连接到远程 MCP 服务器。
 
-| 字段                 | 描述                                                      |
+| Field                 | Description                                                      |
 | --------------------- | ---------------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                |
-| `headers`             | HTTP 头部的可选键值映射（例如认证令牌） |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间（毫秒）（可选）                   |
+| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                           |
+| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                            |
+| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                      |
 
 示例：
 
@@ -413,20 +462,20 @@ OpenClaw 会拒绝那些可在第一个 RPC 之前改变 stdio MCP 服务器启�
 }
 ```
 
-`url`（用户信息）和 `headers` 中的敏感值在日志和状态输出中会被遮蔽。
+`url` 中的敏感值（userinfo）和 `headers` 会在日志和状态输出中被隐藏。
 
 ### Streamable HTTP 传输
 
-`streamable-http` 是 `sse` 和 `stdio` 之外的另一种传输选项。它使用 HTTP 流式传输与远程 MCP 服务器进行双向通信。
+`streamable-http` 是与 `sse` 和 `stdio` 并列的另一种传输选项。它使用 HTTP 流式传输与远程 MCP 服务器进行双向通信。
 
-| 字段                 | 描述                                                                            |
+| Field                 | Description                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                                      |
-| `transport`           | 设置为 `"streamable-http"` 以选择此传输；省略时，OpenClaw 使用 `sse` |
-| `headers`             | HTTP 头部的可选键值映射（例如认证令牌）                       |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间（毫秒）（可选）                                         |
+| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                                                  |
+| `transport`           | 设为 `"streamable-http"` 以选择此传输；如果省略，OpenClaw 将使用 `sse`               |
+| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                                                   |
+| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                                             |
 
-OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过 `openclaw mcp set` 保存时，CLI 原生的 MCP `type: "http"` 值会被接受，并且可通过 `openclaw doctor --fix` 在现有配置中修复，但 `transport` 才是 embedded Pi 直接消费的内容。
+OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过 `openclaw mcp set` 保存时会接受 CLI 原生的 MCP `type: "http"` 值，并由 `openclaw doctor --fix` 修复现有配置，但 `transport` 才是嵌入式 Pi 直接使用的值。
 
 示例：
 
@@ -447,21 +496,23 @@ OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过
 }
 ```
 
-这些命令仅管理保存的配置。它们不会启动渠道桥接，不会打开活动的 MCP 客户端会话，也不会证明目标服务器是否可达。
+<Note>
+这些命令只管理已保存的配置。它们不会启动通道桥接、打开一个实时的 MCP 客户端会话，也不能证明目标服务器可达。
+</Note>
 
 ## 当前限制
 
-本页面记录当前已发布的桥接功能。
+此页面记录的是当前随版本发布的桥接功能。
 
 当前限制：
 
 - 会话发现依赖于现有的 Gateway 会话路由元数据
 - 除了 Claude 特定适配器之外，没有通用的推送协议
-- 目前还没有消息编辑或表情反应工具
-- HTTP/SSE/streamable-http 传输仅连接到单个远程服务器；尚未支持多路复用上游
-- `permissions_list_open` 仅包含桥接连接期间观察到的审批
+- 目前还没有消息编辑或反应工具
+- HTTP/SSE/streamable-http 传输连接到单个远程服务器；尚未支持多路复用上游
+- `permissions_list_open` 只包含桥接连接期间观察到的审批
 
-## 相关内容
+## 相关
 
 - [CLI 参考](/cli)
 - [插件](/cli/plugins)

@@ -2,8 +2,8 @@
 summary: "Cerebras 设置（认证 + 模型选择）"
 title: "Cerebras"
 read_when:
-  - 你想将 Cerebras 与 OpenClaw 一起使用
-  - 你需要 Cerebras API key 环境变量或 CLI 认证选项
+  - 你想在 OpenClaw 中使用 Cerebras
+  - 你需要 Cerebras API 密钥环境变量或 CLI 认证选项
 ---
 
 [Cerebras](https://www.cerebras.ai) 提供高速、兼容 OpenAI 的推理服务。
@@ -12,16 +12,16 @@ read_when:
 | -------- | ---------------------------- |
 | Provider | `cerebras`                   |
 | Auth     | `CEREBRAS_API_KEY`           |
-| API      | 兼容 OpenAI                  |
+| API      | OpenAI-compatible            |
 | Base URL | `https://api.cerebras.ai/v1` |
 
-## Getting Started
+## 入门指南
 
 <Steps>
-  <Step title="获取 API key">
-    在 [Cerebras Cloud Console](https://cloud.cerebras.ai) 中创建一个 API key。
+  <Step title="获取 API 密钥">
+    在 [Cerebras Cloud Console](https://cloud.cerebras.ai) 中创建一个 API 密钥。
   </Step>
-  <Step title="运行 onboarding">
+  <Step title="运行初始化">
     ```bash
     openclaw onboard --auth-choice cerebras-api-key
     ```
@@ -44,22 +44,22 @@ openclaw onboard --non-interactive \
 
 ## 内置目录
 
-OpenClaw 为公开的、兼容 OpenAI 的端点提供了一个静态的 Cerebras 目录：
+OpenClaw 为公开的 OpenAI 兼容端点提供了一个静态的 Cerebras 目录：
 
 | Model ref                                 | Name                 | Notes                                  |
 | ----------------------------------------- | -------------------- | -------------------------------------- |
-| `cerebras/zai-glm-4.7`                    | Z.ai GLM 4.7         | 默认模型；预览推理模型                |
-| `cerebras/gpt-oss-120b`                   | GPT OSS 120B         | 生产环境推理模型                      |
-| `cerebras/qwen-3-235b-a22b-instruct-2507` | Qwen 3 235B Instruct | 预览非推理模型                        |
-| `cerebras/llama3.1-8b`                    | Llama 3.1 8B         | 面向速度优化的生产模型                |
+| `cerebras/zai-glm-4.7`                    | Z.ai GLM 4.7         | 默认模型；预览推理模型 |
+| `cerebras/gpt-oss-120b`                   | GPT OSS 120B         | 生产推理模型             |
+| `cerebras/qwen-3-235b-a22b-instruct-2507` | Qwen 3 235B Instruct | 预览非推理模型            |
+| `cerebras/llama3.1-8b`                    | Llama 3.1 8B         | 面向速度的生产模型         |
 
 <Warning>
-Cerebras 将 `zai-glm-4.7` 和 `qwen-3-235b-a22b-instruct-2507` 标记为预览模型，而 `llama3.1-8b` / `qwen-3-235b-a22b-instruct-2507` 已在文档中说明将于 2026 年 5 月 27 日弃用。在将它们用于生产之前，请先查看 Cerebras 的 supported-models 页面。
+Cerebras 将 `zai-glm-4.7` 和 `qwen-3-235b-a22b-instruct-2507` 标记为预览模型，并且文档中说明 `llama3.1-8b` / `qwen-3-235b-a22b-instruct-2507` 将于 2026 年 5 月 27 日弃用。在将其用于生产环境之前，请先查看 Cerebras 的 supported-models 页面。
 </Warning>
 
 ## 手动配置
 
-内置插件通常意味着你只需要 API key。若你想覆盖模型元数据，请使用显式的
+通常，内置插件意味着你只需要 API 密钥。如果你想覆盖模型元数据，可以使用显式的
 `models.providers.cerebras` 配置：
 
 ```json5
@@ -88,7 +88,7 @@ Cerebras 将 `zai-glm-4.7` 和 `qwen-3-235b-a22b-instruct-2507` 标记为预览�
 ```
 
 <Note>
-如果 Gateway 以守护进程（launchd/systemd）运行，请确保 `CEREBRAS_API_KEY`
+如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `CEREBRAS_API_KEY`
 对该进程可用，例如放在 `~/.openclaw/.env` 中，或通过
 `env.shellEnv` 提供。
 </Note>

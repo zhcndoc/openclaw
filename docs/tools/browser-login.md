@@ -1,53 +1,53 @@
 ---
-summary: "浏览器自动化的手动登录 + X/Twitter 发布"
+summary: "浏览器自动化的手动登录 + X/Twitter 发帖"
 read_when:
   - 你需要登录网站以进行浏览器自动化
-  - 你想在 X/Twitter 上发布更新
+  - 你想向 X/Twitter 发布更新
 title: "浏览器登录"
 ---
 
-# 浏览器登录 + X/Twitter 发布
+# 浏览器登录 + X/Twitter 发帖
 
 ## 手动登录（推荐）
 
-当网站需要登录时，请在 **host** 浏览器配置文件（openclaw 浏览器）中**手动登录**。
+当网站需要登录时，请在**宿主**浏览器配置文件（openclaw 浏览器）中**手动登录**。
 
-**不要**将你的凭据提供给模型。自动登录通常会触发反机器人防护，可能导致账户被锁。
+请**不要**把你的凭据提供给模型。自动化登录通常会触发反机器人防护，并可能导致账户被锁定。
 
-回到主浏览器文档：[浏览器](/tools/browser)。
+返回浏览器主文档：[浏览器](/tools/browser)。
 
-## 使用哪个 Chrome 配置文件？
+## 使用的是哪个 Chrome 配置文件？
 
-OpenClaw 控制着一个**专用 Chrome 配置文件**（名为 `openclaw`，界面带橙色调）。这个配置文件独立于你日常使用的浏览器配置文件。
+OpenClaw 控制一个**专用的 Chrome 配置文件**（名为 `openclaw`，界面带橙色调）。这与您的日常浏览器配置文件是分开的。
 
 对于代理浏览器工具调用：
 
 - 默认选择：代理应使用其隔离的 `openclaw` 浏览器。
-- 仅当现有登录会话重要且用户在电脑前能够点击/批准任何附加提示时，才使用 `profile="user"`。
-- 如果你有多个用户浏览器配置文件，请明确指定配置文件，而不是猜测。
+- 只有在现有登录会话很重要，且用户坐在电脑前可以点击/批准任何附加提示时，才使用 `profile="user"`。
+- 如果你有多个用户浏览器配置文件，请显式指定配置文件，而不是猜测。
 
-访问它的两种简单方法：
+访问它有两种简单方式：
 
 1. **让代理打开浏览器**，然后你自己登录。
-2. **通过命令行启动**：
+2. **通过 CLI 打开**：
 
 ```bash
 openclaw browser start
 openclaw browser open https://x.com
 ```
 
-如果你有多个配置文件，使用 `--browser-profile <name>` 参数（默认是 `openclaw`）。
+如果你有多个配置文件，请传入 `--browser-profile <name>`（默认是 `openclaw`）。
 
 ## X/Twitter：推荐流程
 
-- **阅读/搜索/查看讨论线程：** 使用 **host** 浏览器（手动登录）。
-- **发布更新：** 使用 **host** 浏览器（手动登录）。
+- **阅读/搜索/线程：**使用**宿主**浏览器（手动登录）。
+- **发布更新：**使用**宿主**浏览器（手动登录）。
 
-## 沙箱环境 + host 浏览器访问
+## 沙箱 + 宿主浏览器访问
 
-沙箱浏览器会话更容易触发机器人检测。对于 X/Twitter（及其他严格的网站），建议使用 **host** 浏览器。
+沙箱化的浏览器会话**更有可能**触发机器人检测。对于 X/Twitter（以及其他严格的网站），请优先使用**宿主**浏览器。
 
-如果代理在沙箱内，浏览器工具默认使用沙箱。要允许控制 host 浏览器：
+如果代理处于沙箱中，浏览器工具默认会使用沙箱。要允许宿主控制：
 
 ```json5
 {
@@ -64,16 +64,16 @@ openclaw browser open https://x.com
 }
 ```
 
-然后目标定位到 host 浏览器：
+然后目标设为宿主浏览器：
 
 ```bash
 openclaw browser open https://x.com --browser-profile openclaw --target host
 ```
 
-或者为发布更新的代理禁用沙箱。
+或者对发布更新的代理禁用沙箱。
 
 ## 相关内容
 
-- [Browser](/tools/browser)
-- [Browser Linux troubleshooting](/tools/browser-linux-troubleshooting)
-- [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)
+- [浏览器](/tools/browser)
+- [浏览器 Linux 故障排除](/tools/browser-linux-troubleshooting)
+- [浏览器 WSL2 故障排除](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

@@ -1,25 +1,25 @@
 ---
-summary: "精选链接，通往最常用的 OpenClaw 文档。"
+summary: "精选的最常用 OpenClaw 文档链接。"
 read_when:
   - 你想快速访问关键文档页面
 title: "文档目录"
 ---
 
 <Note>
-此页面为精选索引。如果你是新手，请从[快速上手](/start/getting-started)开始。
-完整的文档地图请参见[文档中心](/start/hubs)。
+本页是一个精选索引。如果你是新手，请从 [Getting Started](/start/getting-started) 开始。
+有关文档的完整地图，请参阅 [Docs hubs](/start/hubs)。
 </Note>
 
 ## 从这里开始
 
-- [文档中心（所有页面链接）](/start/hubs)
+- [Docs hubs（所有页面链接）](/start/hubs)
 - [帮助](/help)
 - [配置](/gateway/configuration)
 - [配置示例](/gateway/configuration-examples)
-- [斜线命令](/tools/slash-commands)
+- [斜杠命令](/tools/slash-commands)
 - [多代理路由](/concepts/multi-agent)
 - [更新与回滚](/install/updating)
-- [配对（私信和节点）](/channels/pairing)
+- [配对（DM 和节点）](/channels/pairing)
 - [Nix 模式](/install/nix)
 - [OpenClaw 助手设置](/start/openclaw)
 - [技能](/tools/skills)
@@ -28,18 +28,18 @@ title: "文档目录"
 - [RPC 适配器](/reference/rpc)
 - [网关运行手册](/gateway)
 - [节点（iOS 和 Android）](/nodes)
-- [网页界面（控制 UI）](/web)
+- [Web 界面（控制 UI）](/web)
 - [发现与传输](/gateway/discovery)
 - [远程访问](/gateway/remote)
 
-## 服务提供商与用户体验
+## 提供方与用户体验
 
 - [WebChat](/web/webchat)
 - [控制 UI（浏览器）](/web/control-ui)
 - [Telegram](/channels/telegram)
 - [Discord](/channels/discord)
 - [Mattermost](/channels/mattermost)
-- [BlueBubbles (iMessage)](/channels/bluebubbles)
+- [BlueBubbles（iMessage）](/channels/bluebubbles)
 - [QQ Bot](/channels/qqbot)
 - [iMessage（旧版）](/channels/imessage)
 - [群组](/channels/groups)
@@ -47,7 +47,7 @@ title: "文档目录"
 - [媒体图片](/nodes/images)
 - [媒体音频](/nodes/audio)
 
-## 伴侣应用
+## 配套应用
 
 - [macOS 应用](/platforms/macos)
 - [iOS 应用](/platforms/ios)
@@ -55,16 +55,16 @@ title: "文档目录"
 - [Windows（WSL2）](/platforms/windows)
 - [Linux 应用](/platforms/linux)
 
-## 操作与安全
+## 运营与安全
 
 - [会话](/concepts/session)
-- [定时任务](/automation/cron-jobs)
-- [Webhooks](/automation/cron-jobs#webhooks)
-- [Gmail hooks（Pub/Sub）](/automation/cron-jobs#gmail-pubsub-integration)
+- [Cron 任务](/automation/cron-jobs)
+- [Webhook](/automation/cron-jobs#webhooks)
+- [Gmail 钩子（Pub/Sub）](/automation/cron-jobs#gmail-pubsub-integration)
 - [安全](/gateway/security)
-- [故障排除](/gateway/troubleshooting)
+- [故障排查](/gateway/troubleshooting)
 
-## 相关内容
+## 相关
 
-- [快速上手](/start/getting-started)
-- [文档中心](/start/hubs)
+- [Getting started](/start/getting-started)
+- [Docs hubs](/start/hubs)

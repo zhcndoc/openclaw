@@ -3,18 +3,18 @@ summary: "Groq 设置（认证 + 模型选择）"
 title: "Groq"
 read_when:
   - 你想在 OpenClaw 中使用 Groq
-  - 你需要 API 密钥环境变量或 CLI 认证选项
+  - 你需要 API 密钥环境变量或 CLI 认证方式的选择
 ---
 
-[Groq](https://groq.com) 使用自定义 LPU 硬件为开源模型
-（Llama、Gemma、Mistral 等）提供超快推理。OpenClaw 通过其兼容 OpenAI 的 API 连接到
-Groq。
+[Groq](https://groq.com) 提供使用自定义 LPU 硬件的开源模型超高速推理
+（Llama、Gemma、Mistral 等）。OpenClaw 通过其兼容 OpenAI 的 API 连接
+到 Groq。
 
-| 属性 | 值 |
+| Property | Value             |
 | -------- | ----------------- |
-| 提供商 | `groq`            |
-| 认证     | `GROQ_API_KEY`    |
-| API      | 兼容 OpenAI |
+| Provider | `groq`            |
+| Auth     | `GROQ_API_KEY`    |
+| API      | OpenAI-compatible |
 
 ## 开始使用
 
@@ -55,30 +55,35 @@ Groq。
 
 ## 内置目录
 
-Groq 的模型目录经常变化。运行 `openclaw models list | grep groq` 查看当前可用模型，或检查 [console.groq.com/docs/models](https://console.groq.com/docs/models)。
+Groq 的模型目录变化很频繁。运行 `openclaw models list | grep groq`
+查看当前可用模型，或访问
+[console.groq.com/docs/models](https://console.groq.com/docs/models)。
 
-| 模型                       | 备注                              |
+| Model                       | Notes                              |
 | --------------------------- | ---------------------------------- |
-| **Llama 3.3 70B Versatile** | 通用，大上下文     |
-| **Llama 3.1 8B Instant**    | 快速，轻量级                  |
-| **Gemma 2 9B**              | 紧凑，高效                 |
-| **Mixtral 8x7B**            | MoE 架构，强大的推理能力 |
+| **Llama 3.3 70B Versatile** | 通用用途，大上下文     |
+| **Llama 3.1 8B Instant**    | 快速、轻量                  |
+| **Gemma 2 9B**              | 紧凑、高效                 |
+| **Mixtral 8x7B**            | MoE 架构，推理能力强               |
 
 <Tip>
-使用 `openclaw models list --provider groq` 获取账户上可用模型的最新列表。
+使用 `openclaw models list --provider groq` 获取你账户中可用模型的最新列表。
 </Tip>
 
 ## 推理模型
 
-OpenClaw 将其共享的 `/think` 级别映射到 Groq 各模型特定的
+OpenClaw 将其共享的 `/think` 等级映射到 Groq 特定模型的
 `reasoning_effort` 值。对于 `qwen/qwen3-32b`，禁用思考会发送
 `none`，启用思考会发送 `default`。对于 Groq GPT-OSS 推理模型，
-OpenClaw 会发送 `low`、`medium` 或 `high`；禁用思考会省略
+OpenClaw 会发送 `low`、`medium` 或 `high`；禁用思考时会省略
 `reasoning_effort`，因为这些模型不支持禁用值。
 
 ## 音频转录
 
-Groq 还提供基于 Whisper 的快速音频转录。当配置为媒体理解提供商时，OpenClaw 使用 Groq 的 `whisper-large-v3-turbo` 模型通过共享的 `tools.media.audio` 接口转录语音消息。
+Groq 也提供快速的基于 Whisper 的音频转录。作为一个
+媒体理解提供商进行配置时，OpenClaw 使用 Groq 的 `whisper-large-v3-turbo`
+模型，通过共享的 `tools.media.audio`
+接口来转录语音消息。
 
 ```json5
 {
@@ -94,19 +99,21 @@ Groq 还提供基于 Whisper 的快速音频转录。当配置为媒体理解提
 
 <AccordionGroup>
   <Accordion title="音频转录详情">
-    | 属性 | 值 |
+    | Property | Value |
     |----------|-------|
-    | 共享配置路径 | `tools.media.audio` |
-    | 默认基础 URL   | `https://api.groq.com/openai/v1` |
-    | 默认模型      | `whisper-large-v3-turbo` |
-    | API 端点       | 兼容 OpenAI 的 `/audio/transcriptions` |
+    | Shared config path | `tools.media.audio` |
+    | Default base URL   | `https://api.groq.com/openai/v1` |
+    | Default model      | `whisper-large-v3-turbo` |
+    | API endpoint       | OpenAI-compatible `/audio/transcriptions` |
   </Accordion>
 
   <Accordion title="环境说明">
-    如果网关作为守护进程运行（launchd/systemd），请确保该进程可以使用 `GROQ_API_KEY`（例如，在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
+    如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `GROQ_API_KEY` 对
+    该进程可用（例如，在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 
     <Warning>
-    仅在交互式 shell 中设置的密钥对守护进程管理的网关进程不可见。使用 `~/.openclaw/.env` 或 `env.shellEnv` 配置以确保持久可用。
+    仅在交互式 shell 中设置的密钥对守护进程管理的 gateway 进程不可见。请使用
+    `~/.openclaw/.env` 或 `env.shellEnv` 配置以确保持久可用。
     </Warning>
 
   </Accordion>
@@ -119,7 +126,7 @@ Groq 还提供基于 Whisper 的快速音频转录。当配置为媒体理解提
     选择提供商、模型引用和故障转移行为。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
-    包括提供商和音频设置的完整配置架构。
+    完整配置模式，包括提供商和音频设置。
   </Card>
   <Card title="Groq 控制台" href="https://console.groq.com" icon="arrow-up-right-from-square">
     Groq 仪表板、API 文档和定价。

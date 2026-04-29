@@ -1,24 +1,25 @@
 ---
-summary: "GLM 模型家族概览 + 如何在 OpenClaw 中使用"
+summary: "GLM 模型家族概览 + 如何在 OpenClaw 中使用它"
 read_when:
-  - 您想在 OpenClaw 中使用 GLM 模型
-  - 您需要模型命名约定和设置
-title: "GLM (智谱)"
+  - 你想在 OpenClaw 中使用 GLM 模型
+  - 你需要了解模型命名规范和设置方式
+title: "GLM（智谱）"
 ---
 
 # GLM 模型
 
-GLM 是通过 Z.AI 平台提供的一个**模型家族**（不是公司）。在 OpenClaw 中，GLM 模型通过 `zai` 提供者和类似 `zai/glm-5` 的模型 ID 访问。
+GLM 是一个通过 Z.AI 平台提供的**模型家族**（不是一家公司）。在 OpenClaw 中，GLM
+模型通过 `zai` 提供方访问，模型 ID 例如 `zai/glm-5`。
 
-## 快速开始
+## 开始使用
 
 <Steps>
-  <Step title="选择认证方式并运行初始化">
-    选择与您的 Z.AI 计划和区域匹配的初始化选项：
+  <Step title="选择一种认证方式并运行 onboarding">
+    请选择与你的 Z.AI 方案和地区相匹配的 onboarding 选项：
 
-    | 认证选项 | 适用场景 |
+    | Auth choice | Best for |
     | ----------- | -------- |
-    | `zai-api-key` | 带有端点自动检测的通用 API-key 设置 |
+    | `zai-api-key` | 通用 API key 设置，自动检测端点 |
     | `zai-coding-global` | Coding Plan 用户（全球） |
     | `zai-coding-cn` | Coding Plan 用户（中国区） |
     | `zai-global` | 通用 API（全球） |
@@ -55,14 +56,16 @@ GLM 是通过 Z.AI 平台提供的一个**模型家族**（不是公司）。在
 ```
 
 <Tip>
-`zai-api-key` 允许 OpenClaw 从密钥中检测匹配的 Z.AI 端点并自动应用正确的基础 URL。当您想强制使用特定的 Coding Plan 或通用 API 表面时，请使用明确的区域选项。
+`zai-api-key` 会让 OpenClaw 根据密钥自动检测匹配的 Z.AI 端点，并
+自动应用正确的 base URL。 当你想强制使用特定的 Coding Plan 或通用
+API 服务时，请使用明确的地区选项。
 </Tip>
 
 ## 内置目录
 
-OpenClaw 目前为内置的 `zai` 提供者预设了以下 GLM 引用：
+OpenClaw 当前为打包的 `zai` 提供方预置了以下 GLM 引用：
 
-| 模型           | 模型            |
+| Model           | Model            |
 | --------------- | ---------------- |
 | `glm-5.1`       | `glm-4.7`        |
 | `glm-5`         | `glm-4.7-flash`  |
@@ -74,28 +77,34 @@ OpenClaw 目前为内置的 `zai` 提供者预设了以下 GLM 引用：
 | `glm-4.5v`      |                  |
 
 <Note>
-默认内置模型引用是 `zai/glm-5.1`。GLM 版本和可用性可能会发生变化；请查阅 Z.AI 文档获取最新信息。
+默认内置的模型引用是 `zai/glm-5.1`。GLM 的版本和可用性
+可能会变化；请查看 Z.AI 的文档获取最新信息。
 </Note>
 
 ## 高级配置
 
 <AccordionGroup>
   <Accordion title="端点自动检测">
-    当您使用 `zai-api-key` 认证选项时，OpenClaw 会检查密钥格式以确定正确的 Z.AI 基础 URL。明确的区域选项（`zai-coding-global`、`zai-coding-cn`、`zai-global`、`zai-cn`）会覆盖自动检测并直接固定端点。
+    当你使用 `zai-api-key` 认证选项时，OpenClaw 会检查密钥格式
+    以确定正确的 Z.AI base URL。明确的地区选项
+    （`zai-coding-global`、`zai-coding-cn`、`zai-global`、`zai-cn`）会覆盖
+    自动检测，并直接固定端点。
   </Accordion>
 
-  <Accordion title="提供者详情">
-    GLM 模型由 `zai` 运行时提供者提供服务。有关完整的提供者配置、区域端点和其他功能，请参阅 [Z.AI 提供者文档](/providers/zai)。
+  <Accordion title="提供方详情">
+    GLM 模型由 `zai` 运行时提供方提供服务。有关完整的提供方
+    配置、地区端点和其他功能，请参阅
+    [Z.AI provider docs](/providers/zai)。
   </Accordion>
 </AccordionGroup>
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Z.AI 提供者" href="/providers/zai" icon="server">
-    完整的 Z.AI 提供者配置和区域端点。
+  <Card title="Z.AI provider" href="/providers/zai" icon="server">
+    完整的 Z.AI 提供方配置和地区端点。
   </Card>
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供者、模型引用和故障转移行为。
+    选择提供方、模型引用以及故障切换行为。
   </Card>
 </CardGroup>

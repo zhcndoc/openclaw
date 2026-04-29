@@ -8,22 +8,22 @@ title: "Kubernetes"
 
 # Kubernetes 上的 OpenClaw
 
-在 Kubernetes 上运行 OpenClaw 的最小起点——并非生产就绪的部署。涵盖了核心资源，旨在适配你的环境。
+在 Kubernetes 上运行 OpenClaw 的一个最小起点——并非生产就绪的部署。它涵盖了核心资源，旨在根据你的环境进行调整。
 
 ## 为什么不用 Helm？
 
-OpenClaw 是一个单容器加上一些配置文件。有趣的自定义在于代理内容（markdown 文件、技能、配置覆盖），而非基础设施模板。Kustomize 处理覆盖层时没有 Helm chart 的额外负担。如果部署变得更复杂，可以在这些清单的基础上叠加 Helm chart。
+OpenClaw 是一个单容器应用，带有一些配置文件。真正有意思的自定义在于 agent 内容（markdown 文件、skills、配置覆盖），而不是基础设施模板化。Kustomize 可以处理覆盖层，而无需 Helm chart 的额外开销。如果你的部署变得更加复杂，可以在这些清单之上再叠加一个 Helm chart。
 
-## 你需要的东西
+## 你需要什么
 
 - 一个正在运行的 Kubernetes 集群（AKS、EKS、GKE、k3s、kind、OpenShift 等）
-- 连接到集群的 `kubectl`
-- 至少一个模型提供者的 API 密钥
+- 已连接到你的集群的 `kubectl`
+- 至少一个模型提供商的 API key
 
 ## 快速开始
 
 ```bash
-# 替换为你的提供者：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
+# 替换为你的提供商：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
 export <PROVIDER>_API_KEY="..."
 ./scripts/k8s/deploy.sh
 
@@ -31,41 +31,40 @@ kubectl port-forward svc/openclaw 18789:18789 -n openclaw
 open http://localhost:18789
 ```
 
-获取为 Control UI 配置的共享密钥。此部署脚本
-默认创建 Token 认证：
+获取为 Control UI 配置的共享密钥。此部署脚本默认会创建 token 认证：
 
 ```bash
 kubectl get secret openclaw-secrets -n openclaw -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
 ```
 
-本地调试时，运行 `./scripts/k8s/deploy.sh --show-token` 会在部署后打印 Token。
+对于本地调试，`./scripts/k8s/deploy.sh --show-token` 会在部署后打印 token。
 
-## 使用 Kind 本地测试
+## 使用 Kind 在本地测试
 
-如果没有集群，可以用 [Kind](https://kind.sigs.k8s.io/) 在本地创建一个：
+如果你没有集群，可以使用 [Kind](https://kind.sigs.k8s.io/) 在本地创建一个：
 
 ```bash
-./scripts/k8s/create-kind.sh           # 自动识别 docker 或 podman
-./scripts/k8s/create-kind.sh --delete  # 销毁集群
+./scripts/k8s/create-kind.sh           # 自动检测 docker 或 podman
+./scripts/k8s/create-kind.sh --delete  # 删除
 ```
 
-然后用 `./scripts/k8s/deploy.sh` 正常部署。
+然后像往常一样使用 `./scripts/k8s/deploy.sh` 进行部署。
 
-## 逐步操作
+## 逐步说明
 
-### 1）部署
+### 1) 部署
 
-**选项 A** — 在环境变量中配置 API 密钥（一步完成）：
+**选项 A** — 环境变量中提供 API key（一步完成）：
 
 ```bash
-# 替换为你的提供者：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
+# 替换为你的提供商：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
 export <PROVIDER>_API_KEY="..."
 ./scripts/k8s/deploy.sh
 ```
 
-脚本会创建一个 Kubernetes Secret，包含 API 密钥和自动生成的网关 Token，然后进行部署。如果该 Secret 已存在，会保留当前的网关 Token 和未更改的 provider 密钥。
+该脚本会创建一个包含 API key 和自动生成 gateway token 的 Kubernetes Secret，然后进行部署。如果 Secret 已存在，它会保留当前的 gateway token 以及未被更改的任何提供商 key。
 
-**选项 B** — 单独创建 Secret：
+**选项 B** — 单独创建 secret：
 
 ```bash
 export <PROVIDER>_API_KEY="..."
@@ -73,43 +72,43 @@ export <PROVIDER>_API_KEY="..."
 ./scripts/k8s/deploy.sh
 ```
 
-无论哪种命令，若想在本地测试时打印 Token，可加上 `--show-token` 参数。
+如果你希望在本地测试时将 token 打印到 stdout，可以在任一命令中使用 `--show-token`。
 
-### 2）访问网关
+### 2) 访问 gateway
 
 ```bash
 kubectl port-forward svc/openclaw 18789:18789 -n openclaw
 open http://localhost:18789
 ```
 
-## 部署内容
+## 部署了什么
 
 ```
-Namespace: openclaw (可以通过 OPENCLAW_NAMESPACE 配置)
-├── Deployment/openclaw        # 单个 Pod，包含初始化容器和网关
-├── Service/openclaw           # ClusterIP，端口 18789
-├── PersistentVolumeClaim      # 10Gi，存储代理状态和配置
-├── ConfigMap/openclaw-config  # 包含 openclaw.json 和 AGENTS.md
-└── Secret/openclaw-secrets    # 网关 Token 和 API 密钥
+Namespace: openclaw（可通过 OPENCLAW_NAMESPACE 配置）
+├── Deployment/openclaw        # 单个 Pod，init 容器 + gateway
+├── Service/openclaw           # 18789 端口上的 ClusterIP
+├── PersistentVolumeClaim      # 10Gi，用于 agent 状态和配置
+├── ConfigMap/openclaw-config  # openclaw.json + AGENTS.md
+└── Secret/openclaw-secrets    # gateway token + API keys
 ```
 
 ## 自定义
 
-### 代理指令
+### Agent 指令
 
-编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `AGENTS.md` 后重新部署：
+编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `AGENTS.md` 并重新部署：
 
 ```bash
 ./scripts/k8s/deploy.sh
 ```
 
-### 网关配置
+### Gateway 配置
 
-编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请见 [Gateway 配置](/gateway/configuration)。
+编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请查看 [Gateway configuration](/gateway/configuration)。
 
-### 添加提供者
+### 添加提供商
 
-导出其他密钥后重新运行：
+重新运行并导出额外的 key：
 
 ```bash
 export ANTHROPIC_API_KEY="..."
@@ -118,7 +117,7 @@ export OPENAI_API_KEY="..."
 ./scripts/k8s/deploy.sh
 ```
 
-Secret 中的现有 provider 密钥会保留，除非被覆盖。
+现有的提供商 key 会保留在 Secret 中，除非你覆盖它们。
 
 或者直接 patch Secret：
 
@@ -139,18 +138,18 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 编辑 `scripts/k8s/manifests/deployment.yaml` 中的 `image` 字段：
 
 ```yaml
-image: ghcr.io/openclaw/openclaw:latest # 或固定为 https://github.com/openclaw/openclaw/releases 中的某个具体版本
+image: ghcr.io/openclaw/openclaw:latest # 或从 https://github.com/openclaw/openclaw/releases 固定到某个特定版本
 ```
 
-### 端口转发以外的暴露方式
+### 超出 port-forward 的暴露方式
 
-默认清单把网关绑定在 Pod 内的回环地址。这适合用 `kubectl port-forward`，但不适合 Kubernetes `Service` 或需要访问 Pod IP 的 Ingress 路径。
+默认清单将 gateway 绑定到 Pod 内部的 loopback。这可以与 `kubectl port-forward` 配合使用，但不能用于需要访问 Pod IP 的 Kubernetes `Service` 或 Ingress 路径。
 
-若想通过 Ingress 或负载均衡器暴露网关：
+如果你想通过 Ingress 或负载均衡器暴露 gateway：
 
-- 将 `scripts/k8s/manifests/configmap.yaml` 中的网关绑定地址从 `loopback` 改为符合部署模型的非环回地址
-- 保持网关认证启用，使用适当的 TLS 终端入口
-- 配置控制 UI 以远程访问，并使用支持的 Web 安全模型（例如 HTTPS/Tailscale Serve 及必要时显式允许的来源）
+- 将 `scripts/k8s/manifests/configmap.yaml` 中的 gateway 绑定从 `loopback` 改为与你的部署模式匹配的非 loopback 绑定
+- 保持 gateway 认证启用，并使用合适的 TLS 终止入口点
+- 使用受支持的 Web 安全模型为远程访问配置 Control UI（例如 HTTPS/Tailscale Serve，以及在需要时显式允许的来源）
 
 ## 重新部署
 
@@ -158,40 +157,40 @@ image: ghcr.io/openclaw/openclaw:latest # 或固定为 https://github.com/opencl
 ./scripts/k8s/deploy.sh
 ```
 
-此操作会应用所有清单，重启 Pod 以拾取任何配置或 Secret 变化。
+这会应用所有清单并重启 Pod，以获取任何配置或 secret 更改。
 
-## 卸载
+## 删除部署
 
 ```bash
 ./scripts/k8s/deploy.sh --delete
 ```
 
-此操作会删除命名空间及其内所有资源，包括 PVC。
+这会删除命名空间及其中的所有资源，包括 PVC。
 
 ## 架构说明
 
-- 默认网关绑定在 Pod 内的回环地址，因此包含的设置适用于 `kubectl port-forward`
-- 无集群作用域资源——所有资源都在单个命名空间中
-- 安全性：启用 `readOnlyRootFilesystem`，丢弃所有能力，使用非 root 用户（UID 1000）
-- 默认配置将控制 UI 保持在更安全的本地访问路径：回环绑定加 `kubectl port-forward` 到 `http://127.0.0.1:18789`
-- 若超出本地主机访问，使用支持的远程模式：HTTPS/Tailscale 和相应的网关绑定及控制 UI 来源设置
-- Secret 在临时目录生成后直接应用到集群——不会写入到仓库代码
+- gateway 默认绑定到 Pod 内部的 loopback，因此包含的设置适用于 `kubectl port-forward`
+- 不使用集群级资源——所有内容都位于单个命名空间中
+- 安全性：`readOnlyRootFilesystem`、`drop: ALL` 能力、非 root 用户（UID 1000）
+- 默认配置使 Control UI 保持在更安全的本地访问路径：loopback 绑定加上 `kubectl port-forward` 到 `http://127.0.0.1:18789`
+- 如果你要超出 localhost 访问，请使用受支持的远程模型：HTTPS/Tailscale，以及相应的 gateway 绑定和 Control UI origin 设置
+- Secret 在临时目录中生成并直接应用到集群——没有任何 secret 内容会写入仓库检出目录
 
 ## 文件结构
 
 ```
 scripts/k8s/
-├── deploy.sh                   # 创建命名空间和 Secret，通过 kustomize 部署
-├── create-kind.sh              # 本地 Kind 集群（自动识别 docker/podman）
+├── deploy.sh                   # 创建命名空间 + secret，通过 kustomize 部署
+├── create-kind.sh              # 本地 Kind 集群（自动检测 docker/podman）
 └── manifests/
-    ├── kustomization.yaml      # Kustomize 基础配置
-    ├── configmap.yaml          # 包含 openclaw.json 和 AGENTS.md
-    ├── deployment.yaml         # Pod 规格，包含安全强化
-    ├── pvc.yaml                # 10Gi 持久存储
-    └── service.yaml            # 18789 端口的 ClusterIP 服务
+    ├── kustomization.yaml      # Kustomize 基础
+    ├── configmap.yaml          # openclaw.json + AGENTS.md
+    ├── deployment.yaml         # 带安全加固的 Pod spec
+    ├── pvc.yaml                # 10Gi 持久化存储
+    └── service.yaml            # 18789 上的 ClusterIP
 ```
 
-## 相关链接
+## 相关内容
 
 - [Docker](/install/docker)
 - [Docker VM runtime](/install/docker-vm-runtime)

@@ -1,37 +1,39 @@
 ---
-summary: "Cloudflare AI 网关设置（认证 + 模型选择）"
-title: "Cloudflare AI 网关"
+summary: "Cloudflare AI Gateway 设置（认证 + 模型选择）"
+title: "Cloudflare AI gateway"
 read_when:
-  - 你想将 Cloudflare AI 网关与 OpenClaw 一起使用
-  - 你需要账号 ID、网关 ID 或 API 密钥环境变量
+  - 你想将 Cloudflare AI Gateway 与 OpenClaw 一起使用
+  - 你需要 account ID、gateway ID 或 API key 环境变量
 ---
 
-Cloudflare AI 网关位于提供商 API 之前，允许你添加分析、缓存和控制。对于 Anthropic，OpenClaw 通过你的网关端点使用 Anthropic Messages API。
+Cloudflare AI Gateway 位于提供方 API 之前，让你可以添加分析、缓存和控制功能。对于 Anthropic，OpenClaw 通过你的 Gateway 端点使用 Anthropic Messages API。
 
-| 属性      | 值                                                                                    |
+| Property      | Value                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------- |
-| 提供商      | `cloudflare-ai-gateway`                                                                  |
-| 基础 URL      | `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`               |
-| 默认模型 | `cloudflare-ai-gateway/claude-sonnet-4-6`                                                |
-| API 密钥       | `CLOUDFLARE_AI_GATEWAY_API_KEY`（通过网关发出请求时使用的提供商 API 密钥） |
+| Provider      | `cloudflare-ai-gateway`                                                                  |
+| Base URL      | `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`               |
+| Default model | `cloudflare-ai-gateway/claude-sonnet-4-6`                                                |
+| API key       | `CLOUDFLARE_AI_GATEWAY_API_KEY`（你用于通过 Gateway 发起请求的提供方 API key） |
 
 <Note>
-对于通过 Cloudflare AI 网关路由的 Anthropic 模型，请使用你的 **Anthropic API 密钥** 作为提供商密钥。
+对于通过 Cloudflare AI Gateway 路由的 Anthropic 模型，请将你的 **Anthropic API key** 作为提供方密钥使用。
 </Note>
 
-当为 Anthropic Messages 模型启用思考功能时，OpenClaw 会在通过 Cloudflare AI 网关发送有效负载之前，去除末尾的 assistant 预填充轮次。Anthropic 会拒绝与扩展思考一起使用的响应预填充，而普通的非思考预填充仍然可用。
+当 Anthropic Messages 模型启用 thinking 时，OpenClaw 会在通过 Cloudflare AI Gateway 发送负载之前移除尾随的 assistant prefill turns。
+Anthropic 会拒绝在 extended thinking 下进行 response prefilling，而普通的
+non-thinking prefill 仍然可用。
 
-## 入门
+## Getting started
 
 <Steps>
-  <Step title="设置提供商 API 密钥和网关详情">
-    运行 onboarding 并选择 Cloudflare AI 网关认证选项：
+  <Step title="设置提供方 API key 和 Gateway 详情">
+    运行 onboarding 并选择 Cloudflare AI Gateway 认证选项：
 
     ```bash
     openclaw onboard --auth-choice cloudflare-ai-gateway-api-key
     ```
 
-    这将提示你输入账号 ID、网关 ID 和 API 密钥。
+    这会提示你输入 account ID、gateway ID 和 API key。
 
   </Step>
   <Step title="设置默认模型">
@@ -48,16 +50,16 @@ Cloudflare AI 网关位于提供商 API 之前，允许你添加分析、缓存�
     ```
 
   </Step>
-  <Step title="验证模型是否可用">
+  <Step title="验证模型可用">
     ```bash
     openclaw models list --provider cloudflare-ai-gateway
     ```
   </Step>
 </Steps>
 
-## 非交互式示例
+## Non-interactive example
 
-对于脚本化或 CI 设置，在命令行上传递所有值：
+对于脚本或 CI 环境，请在命令行中传入所有值：
 
 ```bash
 openclaw onboard --non-interactive \
@@ -68,11 +70,11 @@ openclaw onboard --non-interactive \
   --cloudflare-ai-gateway-api-key "$CLOUDFLARE_AI_GATEWAY_API_KEY"
 ```
 
-## 高级配置
+## Advanced configuration
 
 <AccordionGroup>
-  <Accordion title="经过认证的网关">
-    如果你在 Cloudflare 中启用了网关认证，请添加 `cf-aig-authorization` 头。这 **除了** 你的提供商 API 密钥 **之外还需要**。
+  <Accordion title="Authenticated gateways">
+    如果你在 Cloudflare 中启用了 Gateway 认证，请添加 `cf-aig-authorization` 标头。这是**额外添加的**，不同于你的提供方 API key。
 
     ```json5
     {
@@ -89,28 +91,28 @@ openclaw onboard --non-interactive \
     ```
 
     <Tip>
-    `cf-aig-authorization` 头用于向 Cloudflare 网关本身进行认证，而提供商 API 密钥（例如你的 Anthropic 密钥）用于向上游提供商进行认证。
+    `cf-aig-authorization` 标头用于对 Cloudflare Gateway 本身进行认证，而提供方 API key（例如你的 Anthropic key）用于对上游提供方进行认证。
     </Tip>
 
   </Accordion>
 
-  <Accordion title="环境说明">
-    如果网关作为守护进程（launchd/systemd）运行，请确保 `CLOUDFLARE_AI_GATEWAY_API_KEY` 对该进程可用。
+  <Accordion title="Environment note">
+    如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `CLOUDFLARE_AI_GATEWAY_API_KEY` 对该进程可用。
 
     <Warning>
-    仅位于 `~/.profile` 中的密钥无法帮助 launchd/systemd 守护进程，除非该环境也被导入到那里。请在 `~/.openclaw/.env` 中设置密钥或通过 `env.shellEnv` 设置，以确保网关进程可以读取它。
+    仅放在 `~/.profile` 中的密钥对 launchd/systemd 守护进程没有帮助，除非该环境也被导入到那里。请将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保 gateway 进程可以读取它。
     </Warning>
 
   </Accordion>
 </AccordionGroup>
 
-## 相关内容
+## Related
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供商、模型引用和故障转移行为。
+  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
+    选择提供方、模型引用和故障切换行为。
   </Card>
-  <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
-    常规故障排除和常见问题解答。
+  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
+    常规故障排查和 FAQ。
   </Card>
 </CardGroup>

@@ -1,122 +1,144 @@
 ---
-summary: "OpenClaw 如何构建提示上下文并报告令牌使用情况与费用"
+summary: "OpenClaw 如何构建提示上下文并报告 token 使用量和成本"
 read_when:
-  - 解释令牌使用、费用或上下文窗口
+  - 解释 token 使用量、成本或上下文窗口
   - 调试上下文增长或压缩行为
-title: "令牌使用和费用"
+title: "Token 使用量和成本"
 ---
 
-# 令牌使用和费用
+# Token 使用量和成本
 
-OpenClaw 跟踪的是**令牌（tokens）**，而非字符。令牌是针对模型定制的，但大多数 OpenAI 式模型处理英文文本时，平均每个令牌约包含 ~4 个字符。
+OpenClaw 跟踪的是 **tokens**，不是字符。Token 与模型相关，但大多数
+OpenAI 风格的模型对英文文本平均每个 token 约 4 个字符。
 
-## 系统提示如何构建
+## 系统提示是如何构建的
 
-OpenClaw 每次运行时都会组装自己的系统提示，内容包括：
+OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
 - 工具列表 + 简短描述
 - 技能列表（仅元数据；说明会按需通过 `read` 加载）。
-  压缩后的技能块受 `skills.limits.maxSkillsPromptChars` 限制，
-  也可通过
-  `agents.list[].skillsLimits.maxSkillsPromptChars` 为单个智能体单独覆盖。
-- 自更新说明
-- 工作区 + 引导文件（新的情况下包括 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。根目录下小写的 `memory.md` 不会被注入；它是旧版修复输入，与 `MEMORY.md` 配对用于 `openclaw doctor --fix`。大型文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认值：12000），且引导注入总量上限为 `agents.defaults.bootstrapTotalMaxChars`（默认值：60000）。`memory/*.md` 日文件不是正常引导提示的一部分；它们会在普通轮次中通过 memory 工具按需获取，但裸 `/new` 和 `/reset` 可以为首次轮次预置一个一次性的启动上下文块，包含最近的日记忆。该启动前导块由 `agents.defaults.startupContext` 控制。
+  紧凑的技能块受 `skills.limits.maxSkillsPromptChars` 限制，
+  也可以在
+  `agents.list[].skillsLimits.maxSkillsPromptChars` 中为单个代理覆盖。
+- 自我更新说明
+- 工作区 + 引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新的 `BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。根目录下小写的 `memory.md` 不会被注入；它是与 `MEMORY.md` 搭配时供 `openclaw doctor --fix` 使用的遗留修复输入。大文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认：12000），而引导注入总量上限为 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）。`memory/*.md` 的每日文件不属于正常的引导提示；它们在普通轮次中仍可通过 memory 工具按需获取，但重置/启动模型运行可以在第一轮前附加一个一次性的启动上下文块，其中包含最近的每日记忆。纯聊天的 `/new` 和 `/reset` 命令会被确认，但不会调用模型。启动前导部分由 `agents.defaults.startupContext` 控制。
 - 时间（UTC + 用户时区）
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
 
-完整细节见 [系统提示](/concepts/system-prompt)。
+完整拆解请参见 [System Prompt](/concepts/system-prompt)。
 
-## 上下文窗口计数内容
+## 上下文窗口中计入什么
 
-模型接收到的所有内容都计入上下文限制：
+模型接收到的所有内容都会计入上下文限制：
 
-- 系统提示（上述所有部分）
-- 会话历史（用户与助理消息）
-- 工具调用及工具返回结果
-- 附件/转录（图片、音频、文件）
-- 压缩摘要及修剪产物
-- 服务提供者包装层或安全头（不可见，但计数）
+- 系统提示（上面列出的所有部分）
+- 对话历史（用户 + 助手消息）
+- 工具调用和工具结果
+- 附件/转录（图像、音频、文件）
+- 压缩摘要和剪枝产物
+- 提供方包装或安全头部（不可见，但仍会计入）
 
-某些运行时高负载表面有各自明确的上限：
+某些运行时开销较大的表面有各自明确的上限：
 
 - `agents.defaults.contextLimits.memoryGetMaxChars`
 - `agents.defaults.contextLimits.memoryGetDefaultLines`
 - `agents.defaults.contextLimits.toolResultMaxChars`
 - `agents.defaults.contextLimits.postCompactionMaxChars`
 
-单个智能体的覆盖项位于 `agents.list[].contextLimits` 下。这些参数用于有界的运行时摘录和注入的运行时所有块。它们与引导限制、启动上下文限制以及技能提示限制相互独立。
+按代理的覆盖项位于 `agents.list[].contextLimits` 下。这些旋钮用于
+有界的运行时摘录和注入的运行时拥有块。它们与引导限制、启动上下文限制以及技能提示
+限制是分开的。
 
-对于图片，OpenClaw 会在调用提供者之前下采样转录/工具图片负载。
-可通过 `agents.defaults.imageMaxDimensionPx`（默认值：`1200`）进行调节：
+对于图像，OpenClaw 会在调用提供方之前对转录/工具图像载荷进行缩放。
+使用 `agents.defaults.imageMaxDimensionPx`（默认：`1200`）来调整：
 
-- 较低值通常减少视觉令牌使用和传输大小。
-- 较高值保留更多视觉细节，适合 OCR 或界面密集截图。
+- 更低的值通常会降低视觉 token 使用量和载荷大小。
+- 更高的值可为 OCR/UI 密集型截图保留更多视觉细节。
 
-欲获取实际明细（按注入文件、工具、技能及系统提示大小划分），请使用 `/context list` 或 `/context detail`。详见 [上下文](/concepts/context)。
+关于按注入文件、工具、技能和系统提示大小的实际拆解，请使用 `/context list` 或 `/context detail`。参见 [Context](/concepts/context)。
 
-## 如何查看当前令牌使用
+## 如何查看当前 token 使用量
 
-聊天中可使用：
+在聊天中使用这些命令：
 
-- `/status` → 显示带有会话模型、上下文使用量、最近的输入/输出令牌数及**预测费用**（仅 API Key 可见）的**颜文字状态卡片**。
-- `/usage off|tokens|full` → 在每条回复尾部附加**每次响应的使用情况汇总**。
-  - 会话持续有效（存储为 `responseUsage`）。
-  - OAuth 认证下**隐藏费用**（只显示令牌数）。
-- `/usage cost` → 显示 OpenClaw 会话日志中的本地费用汇总。
+- `/status` → **带丰富表情的状态卡片**，显示会话模型、上下文使用量、
+  上一条回复的输入/输出 token，以及 **估算成本**（仅限 API key）。
+- `/usage off|tokens|full` → 为每次回复追加一个 **按响应统计的使用量页脚**。
+  - 每个会话持久化（存储为 `responseUsage`）。
+  - OAuth 认证 **隐藏成本**（仅显示 token）。
+- `/usage cost` → 显示来自 OpenClaw 会话日志的本地成本摘要。
 
-其他界面支持：
+其他表面：
 
 - **TUI/Web TUI:** 支持 `/status` + `/usage`。
-- **CLI:** `openclaw status --usage` 和 `openclaw channels list` 显示
-  标准化的提供者配额窗口（`X% left`，而非每次响应成本）。
-  当前支持使用窗口的提供者：Anthropic、GitHub Copilot、Gemini CLI、
-  OpenAI Codex、MiniMax、Xiaomi 和 z.ai。
+- **CLI:** `openclaw status --usage` 和 `openclaw channels list` 会显示
+  规范化后的提供方配额窗口（`X% left`，不是按响应成本）。  
+  当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、
+  OpenAI Codex、MiniMax、小米和 z.ai。
 
-使用界面会在显示前标准化常见的提供者原生字段别名。
-对于 OpenAI 系列 Responses 流量，这包括 `input_tokens` /
+使用量表面在显示前会先规范化常见的提供方原生字段别名。
+对于 OpenAI 家族 Responses 流量，这包括 `input_tokens` /
 `output_tokens` 以及 `prompt_tokens` / `completion_tokens`，因此传输特定的
 字段名不会改变 `/status`、`/usage` 或会话摘要。
-Gemini CLI JSON 使用情况也会被标准化：回复文本来自 `response`，并且
-当 CLI 省略显式的 `stats.input` 字段时，`stats.cached` 映射为 `cacheRead`，
-而 `stats.input_tokens - stats.cached` 会被使用。
-对于原生 OpenAI 系列 Responses 流量，WebSocket/SSE 使用别名也会
-以相同方式标准化，并且当 `total_tokens` 缺失或为 `0` 时，总计会回退为标准化后的输入 + 输出。
-当当前会话快照较为稀疏时，`/status` 和 `session_status` 也可以
-从最近的转录使用日志中恢复令牌/缓存计数器和当前运行时模型标签。
-现有的非零实时值仍优先于转录回退值，而当存储总计缺失或更小时，更大的面向提示的
-转录总计可以胜出。
-提供者配额窗口的使用认证在可用时来自提供者特定钩子；否则 OpenClaw 会回退为
-从认证配置文件、环境变量或配置中匹配 OAuth/API Key 凭证。
-助理转录条目会保留相同的标准化使用形状，包括在当前模型已配置定价且提供者
-返回使用元数据时的 `usage.cost`。这为 `/usage cost` 和基于转录的会话状态提供了
-稳定来源，即使实时运行状态已经消失。
+Gemini CLI 的 JSON 使用量也会被规范化：回复文本来自 `response`，并且
+`stats.cached` 映射到 `cacheRead`，当 CLI 省略显式的 `stats.input` 字段时，
+使用 `stats.input_tokens - stats.cached`。
+对于原生 OpenAI 家族 Responses 流量，WebSocket/SSE 使用量别名也会
+以相同方式规范化，而在缺少 `total_tokens` 或其为 `0` 时，总数会回退到规范化后的输入 + 输出。
+当当前会话快照较稀疏时，`/status` 和 `session_status` 还可以
+从最近的转录使用日志中恢复 token/cache 计数器和活动运行时模型标签。
+现有的非零实时值仍然优先于转录回退值，而当存储的总数缺失或更小时，
+更大的、以提示为导向的转录总数可以获胜。
+提供方配额窗口的使用权限认证在可用时来自提供方特定钩子；否则 OpenClaw 会回退到
+从 auth profile、环境变量或配置中匹配 OAuth/API key 凭证。
+助手转录条目会持久化相同的规范化使用量形状，包括 `usage.cost`，当活动模型配置了定价且提供方返回使用元数据时。这为 `/usage cost` 和基于转录的会话状态提供了稳定来源，即使实时运行时状态已经消失。
 
-## 费用估算（显示时）
+OpenClaw 将提供方使用量核算与当前上下文
+快照分开。提供方 `usage.total` 可能包含缓存输入、输出以及多次
+工具循环模型调用，因此它适合用于成本和遥测，但可能会高估
+实时上下文窗口。上下文显示和诊断会使用最新的提示
+快照（`promptTokens`，或者在没有提示快照时使用最后一次模型调用）作为 `context.used`。
 
-费用基于你的模型定价配置估算：
+## 成本估算（显示时）
+
+成本根据你的模型定价配置进行估算：
 
 ```
 models.providers.<provider>.models[].cost
 ```
 
-此处为每 100 万令牌的美元费用，针对 `input`、`output`、`cacheRead` 和 `cacheWrite`。如果缺少定价信息，OpenClaw 只显示令牌数。OAuth 认证的令牌永远不显示美元费用。
+这些是 `input`、`output`、`cacheRead` 和
+`cacheWrite` 的 **每 100 万 token 的美元价格**。如果缺少定价，OpenClaw 只显示 token。OAuth token 从不显示美元成本。
 
-## 缓存 TTL 和修剪影响
+网关启动时还会为已配置但本地尚未有定价的模型引用执行一个可选的后台定价引导。
+该引导会拉取远程 OpenRouter 和 LiteLLM 的定价目录。将
+`models.pricing.enabled: false` 设为跳过这些离线或受限网络上的启动目录获取；显式的 `models.providers.*.models[].cost` 条目
+会继续驱动本地成本估算。
 
-服务商的提示缓存仅在缓存 TTL 窗口内有效。OpenClaw 还可选择运行**缓存 TTL 过期修剪**：当缓存 TTL 到期后，修剪会话，然后重置缓存窗口，使后续请求可重复使用刚刚缓存的新上下文，避免全量重新缓存历史，从而降低缓存写入成本，尤其在会话闲置过长时。
+## Cache TTL 和剪枝影响
 
-可在 [网关配置](/gateway/configuration) 中设置，行为细节见 [会话修剪](/concepts/session-pruning)。
+提供方提示缓存只在 cache TTL 窗口内生效。OpenClaw 可以选择运行 **cache-ttl 剪枝**：当 cache TTL
+过期后，它会剪枝会话，然后重置缓存窗口，这样后续请求就可以重用
+新缓存的上下文，而不是重新缓存完整历史。这会在会话闲置超过 TTL 后保持更低的 cache write 成本。
 
-心跳机制可使缓存在空闲间隙保持“热”状态。若模型缓存 TTL 是 `1h`，将心跳间隔设置略低于该值（如 `55m`）可避免重新缓存整个提示，节约缓存写入成本。
+在 [Gateway configuration](/gateway/configuration) 中进行配置，并在 [Session pruning](/concepts/session-pruning) 中查看
+行为细节。
 
-多智能体环境中，可共用一份模型配置，并通过 `agents.list[].params.cacheRetention` 针对单个智能体调整缓存策略。
+Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模型 cache TTL
+是 `1h`，将 heartbeat 间隔设置得略低一些（例如 `55m`）可以避免
+重新缓存完整提示，从而降低 cache write 成本。
 
-详尽操作指南见 [提示缓存](/reference/prompt-caching)。
+在多代理设置中，你可以保留一个共享的模型配置，并通过 `agents.list[].params.cacheRetention` 针对每个代理调整缓存行为。
 
-Anthropic API 费用方面，缓存读成本远低于输入令牌，缓存写成本则按更高倍数计费。最新费率和 TTL 乘数见 Anthropic 官方文档：[https://docs.anthropic.com/docs/build-with-claude/prompt-caching](https://docs.anthropic.com/docs/build-with-claude/prompt-caching)
+关于逐项旋钮指南，请参见 [Prompt Caching](/reference/prompt-caching)。
 
-### 示例：用心跳保持 1 小时缓存“热”状态
+对于 Anthropic API 定价，cache reads 明显比 input tokens 便宜，而 cache writes
+按更高的倍数计费。有关最新费率和 TTL 倍数，请参见 Anthropic 的
+提示缓存定价：
+[https://docs.anthropic.com/docs/build-with-claude/prompt-caching](https://docs.anthropic.com/docs/build-with-claude/prompt-caching)
+
+### 示例：使用 heartbeat 保持 1h 缓存温热
 
 ```yaml
 agents:
@@ -131,7 +153,7 @@ agents:
       every: "55m"
 ```
 
-### 示例：混合流量下的每智能体缓存策略
+### 示例：按代理使用不同的缓存策略处理混合流量
 
 ```yaml
 agents:
@@ -141,22 +163,24 @@ agents:
     models:
       "anthropic/claude-opus-4-6":
         params:
-          cacheRetention: "long" # 大多数智能体的默认基线
+          cacheRetention: "long" # 大多数代理的默认基线
   list:
     - id: "research"
       default: true
       heartbeat:
-        every: "55m" # 深度会话保持长缓存热状态
+        every: "55m" # 为深度会话保持长缓存温热
     - id: "alerts"
       params:
-        cacheRetention: "none" # 突发通知避免缓存写入
+        cacheRetention: "none" # 避免为突发通知写入缓存
 ```
 
-`agents.list[].params` 会叠加于所选模型的 `params`，因此你只需覆盖 `cacheRetention`，其他模型默认参数保持不变。
+`agents.list[].params` 会在所选模型的 `params` 之上进行合并，因此你可以
+只覆盖 `cacheRetention`，并保持其他模型默认值不变。
 
-### 示例：启用 Anthropic 1M 上下文测试版请求头
+### 示例：启用 Anthropic 1M 上下文 beta 头部
 
-Anthropic 的 100 万上下文窗口目前处于测试版本。OpenClaw 可在启用支持 Opus 或 Sonnet 模型上的 `context1m` 后注入所需的 `anthropic-beta` 值。
+Anthropic 的 1M 上下文窗口目前处于 beta 门控状态。OpenClaw 可以在你对受支持的 Opus
+或 Sonnet 模型启用 `context1m` 时注入所需的 `anthropic-beta` 值。
 
 ```yaml
 agents:
@@ -167,27 +191,29 @@ agents:
           context1m: true
 ```
 
-这对应 Anthropic 的 `context-1m-2025-08-07` 测试版请求头。
+这会映射到 Anthropic 的 `context-1m-2025-08-07` beta 头部。
 
-仅当模型条目设置 `context1m: true` 时生效。
+这只适用于在该模型条目上设置了 `context1m: true` 的情况。
 
-要求：凭证必须符合长上下文使用资格。否则，
-Anthropic 会针对该请求返回提供者端的速率限制错误。
+要求：凭证必须具备长上下文使用资格。否则，
+Anthropic 会针对该请求返回提供方侧的速率限制错误。
 
-如果使用 OAuth/订阅令牌认证 Anthropic (`sk-ant-oat-*`)，OpenClaw 会跳过 `context-1m-*` 测试版请求头，因为 Anthropic 当前拒绝这种组合并返回 HTTP 401。
+如果你使用 OAuth/订阅令牌（`sk-ant-oat-*`）对 Anthropic 进行认证，
+OpenClaw 会跳过 `context-1m-*` beta 头部，因为 Anthropic 目前
+会以 HTTP 401 拒绝该组合。
 
-## 减少令牌压力的建议
+## 降低 token 压力的建议
 
-- 使用 `/compact` 概括长会话。
-- 在工作流中尽量裁剪大型工具输出。
-- 针对截图密集会话，调低 `agents.defaults.imageMaxDimensionPx`。
-- 保持技能描述简短（技能列表会注入提示中）。
-- 在冗长、探索性工作时优先选择较小模型。
+- 使用 `/compact` 来概括长会话。
+- 在你的工作流中裁剪大型工具输出。
+- 为截图密集型会话降低 `agents.defaults.imageMaxDimensionPx`。
+- 保持技能描述简短（技能列表会被注入到提示中）。
+- 对于冗长、探索性工作，优先使用更小的模型。
 
-查看 [技能](/tools/skills) 以了解确切的技能列表开销公式。
+准确的技能列表开销公式请参见 [Skills](/tools/skills)。
 
-## 相关内容
+## 相关
 
-- [API 使用和费用](/reference/api-usage-costs)
+- [API 使用情况和费用](/reference/api-usage-costs)
 - [提示缓存](/reference/prompt-caching)
 - [使用情况跟踪](/concepts/usage-tracking)

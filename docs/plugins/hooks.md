@@ -1,19 +1,19 @@
 ---
-summary: "插件钩子：拦截 agent、工具、消息、会话和 Gateway 生命周期事件"
+summary: "插件钩子：拦截 agent、tool、message、session 以及 Gateway 生命周期事件"
 title: "插件钩子"
 read_when:
-  - 你正在构建一个需要 before_tool_call、before_agent_reply、消息钩子或生命周期钩子的插件
-  - 你需要阻止、重写或要求对插件发起的工具调用进行批准
-  - 你正在在内部钩子和插件钩子之间做选择
+  - 你正在构建一个需要 before_tool_call、before_agent_reply、message 钩子或生命周期钩子的插件
+  - 你需要从插件中阻止、重写或要求批准 tool 调用
+  - 你正在内部钩子和插件钩子之间做选择
 ---
 
-插件钩子是 OpenClaw 插件的进程内扩展点。当插件需要检查或修改 agent 运行、工具调用、消息流、会话生命周期、子 agent 路由、安装或 Gateway 启动时，请使用它们。
+插件钩子是 OpenClaw 插件的进程内扩展点。当插件需要检查或修改 agent 运行、tool 调用、消息流、session 生命周期、subagent 路由、安装，或 Gateway 启动时使用它们。
 
-当你想要一个由操作员安装的、用于命令和 Gateway 事件的简短 `HOOK.md` 脚本，例如 `/new`、`/reset`、`/stop`、`agent:bootstrap` 或 `gateway:startup` 时，请改用 [内部钩子](/automation/hooks)。
+当你想为命令和 Gateway 事件（例如 `/new`、`/reset`、`/stop`、`agent:bootstrap` 或 `gateway:startup`）使用一个由操作员安装的小型 `HOOK.md` 脚本时，请改用[内部钩子](/automation/hooks)。
 
 ## 快速开始
 
-使用插件入口中的 `api.on(...)` 注册类型化插件钩子：
+在插件入口中使用 `api.on(...)` 注册带类型的插件钩子：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -45,67 +45,78 @@ export default definePluginEntry({
 });
 ```
 
-钩子处理器按 `priority` 降序顺序依次运行。相同优先级的钩子会保持注册顺序。
+钩子处理器按 `priority` 降序依次运行。相同优先级的钩子会保留注册顺序。
 
-每个钩子都会接收 `event.context.pluginConfig`，也就是为注册该处理器的插件解析后的配置。请将其用于需要当前插件选项的钩子决策；OpenClaw 会按处理器注入它，而不会修改其他插件看到的共享事件对象。
+`api.on(name, handler, opts?)` 接受：
+
+- `priority` — 处理器排序（数值越高越先运行）。
+- `timeoutMs` — 可选的每个钩子预算。设置后，钩子运行器会在预算耗尽后中止该处理器，并继续下一个，而不是让缓慢的初始化或检索工作消耗调用方配置的模型超时。不设置则使用钩子运行器通用应用的默认观察/决策超时。
+
+每个钩子都会收到 `event.context.pluginConfig`，也就是注册该处理器的插件解析后的配置。可用于需要当前插件选项的钩子决策；OpenClaw 会按处理器注入它，而不会修改其他插件看到的共享事件对象。
 
 ## 钩子目录
 
-钩子按其扩展的作用域分组。**粗体**中的名称接受决策结果（阻止、取消、覆盖或要求批准）；其他全部为仅观察。
+钩子按其扩展的表面分组。**加粗**名称接受决策结果（阻止、取消、覆盖或要求批准）；其余均仅用于观察。
 
 **Agent 回合**
 
-- `before_model_resolve` — 在会话消息加载之前覆盖提供方或模型
-- `before_prompt_build` — 在模型调用之前添加动态上下文或系统提示文本
-- `before_agent_start` — 仅用于兼容的组合阶段；优先使用上面的两个钩子
-- **`before_agent_reply`** — 通过合成回复或静默来短路模型回合
+- `before_model_resolve` — 在加载 session 消息之前覆盖提供方或模型
+- `agent_turn_prepare` — 在 prompt 钩子之前消费已排队的插件回合注入并添加同回合上下文
+- `before_prompt_build` — 在模型调用前添加动态上下文或系统提示词文本
+- `before_agent_start` — 仅兼容的组合阶段；优先使用上面两个钩子
+- **`before_agent_reply`** — 用合成回复或静默短路模型回合
+- **`before_agent_finalize`** — 检查自然生成的最终答案并请求再进行一次模型传递
 - `agent_end` — 观察最终消息、成功状态和运行时长
+- `heartbeat_prompt_contribution` — 为后台监视器和生命周期插件添加仅 heartbeat 的上下文
 
 **对话观察**
 
-- `llm_input` — 观察提供方输入（系统提示、提示词、历史记录）
+- `model_call_started` / `model_call_ended` — 观察已清理的提供方/模型调用元数据、耗时、结果，以及受限的请求 ID 哈希，而不包含提示词或响应内容
+- `llm_input` — 观察提供方输入（系统提示词、提示词、历史记录）
 - `llm_output` — 观察提供方输出
 
 **工具**
 
-- **`before_tool_call`** — 重写工具参数、阻止执行或要求批准
-- `after_tool_call` — 观察工具结果、错误和持续时间
-- **`tool_result_persist`** — 重写由工具结果生成的助手消息
-- **`before_message_write`** — 检查或阻止正在进行的消息写入（少见）
+- **`before_tool_call`** — 重写 tool 参数、阻止执行，或要求批准
+- `after_tool_call` — 观察 tool 结果、错误和持续时间
+- **`tool_result_persist`** — 重写从 tool 结果生成的 assistant 消息
+- **`before_message_write`** — 检查或阻止正在进行的消息写入（较少见）
 
-**消息与投递**
+**消息与传递**
 
-- **`inbound_claim`** — 在 agent 路由之前认领传入消息（合成回复）
-- `message_received` — 观察传入内容、发送者、线程和元数据
-- **`message_sending`** — 重写发出的内容或取消投递
-- `message_sent` — 观察发出投递的成功或失败
-- **`before_dispatch`** — 在通道移交之前检查或重写发出的调度
-- **`reply_dispatch`** — 参与最终的回复投递管道
+- **`inbound_claim`** — 在 agent 路由前认领一条入站消息（合成回复）
+- `message_received` — 观察入站内容、发送者、线程和元数据
+- **`message_sending`** — 重写出站内容或取消传递
+- `message_sent` — 观察出站传递成功或失败
+- **`before_dispatch`** — 在通道交接前检查或重写一次出站派发
+- **`reply_dispatch`** — 参与最终的回复派发流水线
 
-**会话与压缩**
+**Sessions 与压缩**
 
-- `session_start` / `session_end` — 跟踪会话生命周期边界
+- `session_start` / `session_end` — 跟踪 session 生命周期边界
 - `before_compaction` / `after_compaction` — 观察或注释压缩周期
-- `before_reset` — 观察会话重置事件（`/reset`、程序化重置）
+- `before_reset` — 观察 session 重置事件（`/reset`、程序化重置）
 
-**子 agent**
+**Subagent**
 
-- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` — 协调子 agent 路由和完成投递
+- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` — 协调 subagent 路由和完成投递
 
 **生命周期**
 
-- `gateway_start` / `gateway_stop` — 随 Gateway 启动或停止插件拥有的服务
-- **`before_install`** — 检查技能或插件安装扫描，并可选择阻止
+- `gateway_start` / `gateway_stop` — 随 Gateway 启动或停止插件自有服务
+- `cron_changed` — 观察 Gateway 拥有的 cron 生命周期变化（添加、更新、移除、启动、完成、已调度）
+- **`before_install`** — 检查技能或插件安装扫描并可选择阻止
 
-## 工具调用策略
+## Tool 调用策略
 
 `before_tool_call` 接收：
 
 - `event.toolName`
 - `event.params`
-- 可选的 `event.runId`
-- 可选的 `event.toolCallId`
-- 以及诸如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId` 和诊断信息 `ctx.trace` 等上下文字段
+- 可选 `event.runId`
+- 可选 `event.toolCallId`
+- 如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
+  `ctx.runId`、`ctx.jobId`（在 cron 驱动的运行中设置）以及诊断用 `ctx.trace` 等上下文字段
 
 它可以返回：
 
@@ -130,25 +141,43 @@ type BeforeToolCallResult = {
 
 规则：
 
-- `block: true` 是终态，并会跳过更低优先级的处理器。
-- `block: false` 会被视为没有决策。
-- `params` 会重写用于执行的工具参数。
-- `requireApproval` 会暂停 agent 运行，并通过插件审批请求用户。`/approve` 命令可以批准 exec 和插件审批。
-- 低优先级的 `block: true` 仍然可以在高优先级钩子请求批准后阻止执行。
+- `block: true` 是终态，并会跳过低优先级处理器。
+- `block: false` 视为没有决策。
+- `params` 会重写执行时的 tool 参数。
+- `requireApproval` 会暂停 agent 运行，并通过插件批准流程询问用户。`/approve` 命令可以批准 exec 和插件批准。
+- 即使较高优先级的钩子请求了批准，较低优先级的 `block: true` 仍然可以随后阻止。
 - `onResolution` 会接收已解析的批准决策——`allow-once`、`allow-always`、`deny`、`timeout` 或 `cancelled`。
 
-## 提示词和模型钩子
+需要主机级策略的捆绑插件可以用 `api.registerTrustedToolPolicy(...)` 注册受信任的 tool 策略。这些会在普通 `before_tool_call` 钩子和外部插件决策之前运行。仅将其用于主机信任的门禁，例如工作区策略、预算执行或保留工作流安全。外部插件应使用常规的 `before_tool_call` 钩子。
 
-新插件请使用按阶段划分的钩子：
+### Tool 结果持久化
 
-- `before_model_resolve`：仅接收当前提示词和附件元数据。返回 `providerOverride` 或 `modelOverride`。
-- `before_prompt_build`：接收当前提示词和会话消息。返回 `prependContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`。
+Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有元数据的结构化 `details`。请将 `details` 视为运行时元数据，而不是提示词内容：
 
-`before_agent_start` 仍保留用于兼容。请优先使用上面的显式钩子，这样你的插件就不会依赖旧的组合阶段。
+- OpenClaw 会在 provider 回放和压缩输入之前去除 `toolResult.details`，因此元数据不会变成模型上下文。
+- 持久化的 session 条目只保留有边界限制的 `details`。过大的 details 会被替换为紧凑摘要，并标记 `persistedDetailsTruncated: true`。
+- `tool_result_persist` 和 `before_message_write` 会在最终持久化上限之前运行。钩子仍应保持返回的 `details` 足够小，并避免只把与提示词相关的文本放在 `details` 中；应把模型可见的 tool 输出放在 `content` 中。
 
-当 OpenClaw 能够识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。相同的值也可在 `ctx.runId` 上获取。
+## 提示词与模型钩子
 
-需要 `llm_input`、`llm_output` 或 `agent_end` 的未打包插件必须设置：
+新插件应使用按阶段划分的钩子：
+
+- `before_model_resolve`：只接收当前提示词和附件元数据。返回 `providerOverride` 或 `modelOverride`。
+- `agent_turn_prepare`：接收当前提示词、已准备好的 session 消息，以及为该 session 取出的任何一次性排队注入。返回 `prependContext` 或 `appendContext`。
+- `before_prompt_build`：接收当前提示词和 session 消息。返回 `prependContext`、`appendContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`。
+- `heartbeat_prompt_contribution`：仅在 heartbeat 回合运行，返回 `prependContext` 或 `appendContext`。它面向需要总结当前状态但不改变用户发起回合的后台监视器。
+
+`before_agent_start` 仍保留用于兼容。建议优先使用上面的显式钩子，这样插件就不会依赖旧的组合阶段。
+
+当 OpenClaw 能识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。同一个值也可在 `ctx.runId` 中获取。cron 驱动的运行还会暴露 `ctx.jobId`（来源 cron 作业 id），因此插件钩子可以将指标、副作用或状态限定到特定计划作业。
+
+`agent_end` 是一个观察钩子，会在回合结束后 fire-and-forget 运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，而 OpenClaw 会继续；除非插件也使用自己的 abort 信号，否则它不会取消插件自有的网络工作。
+
+使用 `model_call_started` 和 `model_call_ended` 来获取不应接收原始提示词、历史记录、响应、标头、请求体或 provider 请求 ID 的提供方调用遥测。这些钩子包含稳定元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 ID 哈希时的 `upstreamRequestIdHash`。
+
+`before_agent_finalize` 只在 harness 即将接受自然生成的最终 assistant 答案时运行。它不是 `/stop` 取消路径，也不会在用户中止回合时运行。返回 `{ action: "revise", reason }` 可请求 harness 在最终定稿前再进行一次模型传递，返回 `{ action: "finalize", reason? }` 可强制定稿，或省略结果以继续。Codex 原生的 `Stop` 钩子会作为 OpenClaw 的 `before_agent_finalize` 决策转发到这里。
+
+需要 `llm_input`、`llm_output`、`before_agent_finalize` 或 `agent_end` 的非捆绑插件必须设置：
 
 ```json
 {
@@ -164,47 +193,82 @@ type BeforeToolCallResult = {
 }
 ```
 
-可以通过 `plugins.entries.<id>.hooks.allowPromptInjection=false` 为每个插件禁用提示词修改类钩子。
+可通过 `plugins.entries.<id>.hooks.allowPromptInjection=false` 为每个插件禁用提示词修改钩子和持久化的下一回合注入。
+
+### Session 扩展与下一回合注入
+
+工作流插件可以通过 `api.registerSessionExtension(...)` 持久化小型、兼容 JSON 的 session 状态，并通过 Gateway 的 `sessions.pluginPatch` 方法更新它。Session 行会通过 `pluginExtensions` 映射已注册的扩展状态，让 Control UI 和其他客户端在不了解插件内部实现的情况下也能渲染插件自有状态。
+
+当插件需要让持久化上下文只精确一次到达下一次模型回合时，请使用 `api.enqueueNextTurnInjection(...)`。OpenClaw 会在 prompt 钩子之前清空排队的注入，丢弃已过期的注入，并按插件的 `idempotencyKey` 去重。这是用于批准恢复、策略摘要、后台监视器增量，以及命令续接的正确切入点；这些内容应在下一回合对模型可见，但不应成为永久性的系统提示词文本。
+
+清理语义是契约的一部分。Session 扩展清理和运行时生命周期清理回调会接收 `reset`、`delete`、`disable` 或 `restart`。对于 reset/delete/disable，宿主会移除所属插件的持久化 session 扩展状态和待处理的下一回合注入；restart 会保留持久化 session 状态，而清理回调可让插件释放旧运行时代次的调度作业、运行上下文以及其他带外资源。
 
 ## 消息钩子
 
-使用消息钩子进行通道级路由和投递策略控制：
+将消息钩子用于通道级路由和投递策略：
 
-- `message_received`：观察传入内容、发送者、`threadId`、`messageId`、`senderId`、可选的运行/会话关联以及元数据。
+- `message_received`：观察入站内容、发送者、`threadId`、`messageId`、
+  `senderId`、可选的运行/会话关联信息以及元数据。
 - `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
 - `message_sent`：观察最终成功或失败。
 
-当可用时，消息钩子上下文会暴露稳定的关联字段：`ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、`ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。在读取旧版元数据之前，请优先使用这些一等字段。
+对于仅音频的 TTS 回复，即使通道负载中没有可见文本/说明文字，
+`content` 也可能包含隐藏的口语转写。重写该 `content` 只会更新钩子可见的转写；
+它不会作为媒体说明文字渲染。
 
-在使用特定通道元数据之前，请优先使用类型化的 `threadId` 和 `replyToId` 字段。
+当可用时，消息钩子上下文会暴露稳定的关联字段：
+`ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、
+`ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。优先使用这些
+一等字段，再读取旧版元数据。
+
+优先使用类型化的 `threadId` 和 `replyToId` 字段，然后再使用特定于通道的元数据。
 
 决策规则：
 
-- `message_sending` 中的 `cancel: true` 是终态。
-- `message_sending` 中的 `cancel: false` 会被视为没有决策。
-- 被重写的 `content` 会继续传递给更低优先级的钩子，除非后续钩子取消投递。
+- `message_sending` 携带 `cancel: true` 时为终态。
+- `message_sending` 携带 `cancel: false` 时视为没有决策。
+- 重写后的 `content` 会继续传递给低优先级钩子，除非后续某个钩子取消投递。
 
 ## 安装钩子
 
-`before_install` 会在内置的技能和插件安装扫描之后运行。返回额外的发现结果或 `{ block: true, blockReason }` 以停止安装。
+`before_install` 在内置的技能和插件安装扫描之后运行。
+返回额外的发现结果，或返回 `{ block: true, blockReason }` 以停止安装。
 
-`block: true` 是终态。`block: false` 会被视为没有决策。
+`block: true` 为终态。`block: false` 视为没有决策。
 
-## Gateway 生命周期
+## 网关生命周期
 
-为需要由 Gateway 拥有状态的插件服务使用 `gateway_start`。上下文会暴露 `ctx.config`、`ctx.workspaceDir` 以及用于 cron 检查和更新的 `ctx.getCron?.()`。使用 `gateway_stop` 清理长时间运行的资源。
+为需要由 Gateway 托管状态的插件服务使用 `gateway_start`。上下文会暴露
+`ctx.config`、`ctx.workspaceDir` 和用于 cron 检查与更新的 `ctx.getCron?.()`。
+使用 `gateway_stop` 清理长时间运行的资源。
 
 不要依赖内部的 `gateway:startup` 钩子来实现插件拥有的运行时服务。
 
-## 即将弃用的内容
+`cron_changed` 会在 Gateway 托管的 cron 生命周期事件中触发，带有一个类型化的
+事件载荷，覆盖 `added`、`updated`、`removed`、`started`、`finished` 和 `scheduled`
+原因。该事件携带 `PluginHookGatewayCronJob` 快照（在存在时包括
+`state.nextRunAtMs`、`state.lastRunStatus` 和 `state.lastError`），以及一个
+`PluginHookGatewayCronDeliveryStatus`，其值为 `not-requested` | `delivered` |
+`not-delivered` | `unknown`。被移除的事件仍然会携带已删除作业的快照，以便外部调度器
+能够协调状态。与外部唤醒调度器同步时，使用运行时上下文中的 `ctx.getCron?.()`
+和 `ctx.config`，并将 OpenClaw 作为到期检查和执行的事实来源。
 
-有少数与钩子相关的接口已弃用，但仍受支持。请在下一个主要版本发布前迁移：
+## 即将弃用
 
-- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道信封**。请读取 `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见 [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
-- **`before_agent_start`** 仍保留用于兼容。新插件应使用 `before_model_resolve` 和 `before_prompt_build`，而不是这个组合阶段。
-- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的 `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` / `timeout` / `cancelled`），而不是自由形式的 `string`。
+有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-完整列表——内存能力注册、提供方思考配置文件、外部认证提供方、提供方发现类型、任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见 [插件 SDK 迁移 → 当前弃用项](/plugins/sdk-migration#active-deprecations)。
+- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道封装**。请读取
+  `BodyForAgent` 和结构化的用户上下文块，而不要解析扁平的封装文本。参见
+  [纯文本通道封装 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`before_agent_start`** 仍保留以兼容旧版。新插件应使用 `before_model_resolve`
+  和 `before_prompt_build`，而不是这个合并阶段。
+- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的
+  `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
+  `timeout` / `cancelled`），而不是自由形式的 `string`。
+
+完整列表——内存能力注册、提供方思考配置文件、外部认证提供方、提供方发现类型、
+任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见
+[插件 SDK 迁移 → 当前弃用项](/plugins/sdk-migration#active-deprecations)。
 
 ## 相关内容
 

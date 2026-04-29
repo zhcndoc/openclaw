@@ -1,30 +1,30 @@
 ---
-summary: "在 Azure Linux VM 上全天候运行 OpenClaw 网关并持久保存状态"
+summary: "在 Azure Linux VM 上 24/7 运行 OpenClaw Gateway，并使用持久化状态"
 read_when:
-  - 你希望在 Azure 上通过网络安全组（NSG）强化来全天候运行 OpenClaw
-  - 你希望在自己的 Azure Linux VM 上部署生产级的、始终在线的 OpenClaw 网关
-  - 你希望通过 Azure Bastion 进行安全的 SSH 管理
+  - 你希望在 Azure 上配合网络安全组加固，24/7 运行 OpenClaw
+  - 你希望在自己的 Azure Linux VM 上部署生产级、始终在线的 OpenClaw Gateway
+  - 你希望通过 Azure Bastion SSH 进行安全管理
 title: "Azure"
 ---
 
 # Azure Linux VM 上的 OpenClaw
 
-本指南使用 Azure CLI 设置 Azure Linux VM，应用网络安全组（NSG）强化，配置 Azure Bastion 以进行 SSH 访问，并安装 OpenClaw。
+本指南将使用 Azure CLI 设置一台 Azure Linux VM，应用网络安全组（NSG）加固，配置 Azure Bastion 以进行 SSH 访问，并安装 OpenClaw。
 
-## 你将完成的操作
+## 你将完成什么
 
-- 使用 Azure CLI 创建 Azure 网络资源（VNet、子网、NSG）和计算资源
-- 应用网络安全组规则，使 VM SSH 仅允许来自 Azure Bastion
-- 使用 Azure Bastion 进行 SSH 访问（VM 无公网 IP）
+- 使用 Azure CLI 创建 Azure 网络（VNet、子网、NSG）和计算资源
+- 应用网络安全组规则，使 VM 的 SSH 仅允许来自 Azure Bastion
+- 使用 Azure Bastion 进行 SSH 访问（VM 上不配置公共 IP）
 - 使用安装脚本安装 OpenClaw
-- 验证网关
+- 验证 Gateway
 
-## 所需条件
+## 你需要准备
 
-- 具有创建计算和网络资源权限的 Azure 订阅
-- 已安装 Azure CLI（如需要，请参阅 [Azure CLI 安装步骤](https://learn.microsoft.com/cli/azure/install-azure-cli)）
-- SSH 密钥对（如需生成，本指南会涵盖）
-- 约 20-30 分钟
+- 一个具有创建计算和网络资源权限的 Azure 订阅
+- 已安装 Azure CLI（如有需要，请参见 [Azure CLI 安装步骤](https://learn.microsoft.com/cli/azure/install-azure-cli)）
+- 一对 SSH 密钥（如果需要，本指南会介绍如何生成）
+- 大约 20-30 分钟
 
 ## 配置部署
 
@@ -35,7 +35,7 @@ title: "Azure"
     az extension add -n ssh
     ```
 
-    # ssh 扩展是 Azure Bastion 原生 SSH 隧道所必需的。
+    `ssh` 扩展是 Azure Bastion 原生 SSH 隧道所必需的。
 
   </Step>
 
@@ -75,13 +75,13 @@ title: "Azure"
   </Step>
 
   <Step title="选择 SSH 密钥">
-    如果你已有公钥，请使用现有公钥：
+    如果你已有现有的公钥，请使用它：
 
     ```bash
     SSH_PUB_KEY="$(cat ~/.ssh/id_ed25519.pub)"
     ```
 
-    如果还没有 SSH 密钥，请生成一个：
+    如果你还没有 SSH 密钥，请生成一个：
 
     ```bash
     ssh-keygen -t ed25519 -a 100 -f ~/.ssh/id_ed25519 -C "you@example.com"
@@ -96,19 +96,19 @@ title: "Azure"
     OS_DISK_SIZE_GB=64
     ```
 
-    选择在你的订阅和区域中可用的 VM 大小和 OS 磁盘大小：
+    请选择在你的订阅和区域中可用的 VM 大小和 OS 磁盘大小：
 
-    - 对于轻度使用，从较小规格开始，后续可扩展
-    - 对于较重的自动化、更多通道或更大的模型/工具工作负载，使用更多 vCPU/内存/磁盘
-    - 如果某个 VM 大小在你的区域或订阅配额中不可用，请选择最接近的可用 SKU
+    - 轻量使用可先从较小规格开始，之后再扩容
+    - 对于更重的自动化、更多通道，或更大的模型/工具工作负载，使用更多 vCPU/RAM/磁盘
+    - 如果某个 VM 规格在你的区域或订阅配额中不可用，请选择最接近的可用 SKU
 
-    列出目标区域中可用的 VM 大小：
+    列出目标区域中可用的 VM 规格：
 
     ```bash
     az vm list-skus --location "${LOCATION}" --resource-type virtualMachines -o table
     ```
 
-    检查当前的 vCPU 和磁盘使用情况及配额：
+    检查当前的 vCPU 和磁盘使用量/配额：
 
     ```bash
     az vm list-usage --location "${LOCATION}" -o table
@@ -127,7 +127,7 @@ title: "Azure"
   </Step>
 
   <Step title="创建网络安全组">
-    创建 NSG 并添加规则，使只有 Bastion 子网可以 SSH 到 VM。
+    创建 NSG 并添加规则，使只有 Bastion 子网可以通过 SSH 进入 VM。
 
     ```bash
     az network nsg create \
@@ -141,7 +141,7 @@ title: "Azure"
       --source-address-prefixes "${BASTION_SUBNET_PREFIX}" \
       --destination-port-ranges 22
 
-    # 拒绝来自公共互联网的 SSH
+    # 拒绝来自公网的 SSH
     az network nsg rule create \
       -g "${RG}" --nsg-name "${NSG_NAME}" \
       -n DenyInternetSsh --priority 110 \
@@ -149,7 +149,7 @@ title: "Azure"
       --source-address-prefixes Internet \
       --destination-port-ranges 22
 
-    # 拒绝来自其他 VNet 源的 SSH
+    # 拒绝来自其他 VNet 来源的 SSH
     az network nsg rule create \
       -g "${RG}" --nsg-name "${NSG_NAME}" \
       -n DenyVnetSsh --priority 120 \
@@ -158,12 +158,12 @@ title: "Azure"
       --destination-port-ranges 22
     ```
 
-    规则按优先级评估（数字越小越优先）：在优先级 100 处允许 Bastion 流量，然后在 110 和 120 处阻止所有其他 SSH。
+    这些规则按优先级评估（数字越小越优先）：100 允许 Bastion 流量，110 和 120 阻止所有其他 SSH。
 
   </Step>
 
   <Step title="创建虚拟网络和子网">
-    创建带有 VM 子网（附加 NSG）的 VNet，然后添加 Bastion 子网。
+    创建包含 VM 子网（已附加 NSG）的 VNet，然后添加 Bastion 子网。
 
     ```bash
     az network vnet create \
@@ -172,12 +172,12 @@ title: "Azure"
       --subnet-name "${VM_SUBNET_NAME}" \
       --subnet-prefixes "${VM_SUBNET_PREFIX}"
 
-    # 将 NSG 附加到 VM 子网
+    # 将 NSG 关联到 VM 子网
     az network vnet subnet update \
       -g "${RG}" --vnet-name "${VNET_NAME}" \
       -n "${VM_SUBNET_NAME}" --nsg "${NSG_NAME}"
 
-    # AzureBastionSubnet — 名称由 Azure 要求固定
+    # AzureBastionSubnet — 该名称是 Azure 要求的
     az network vnet subnet create \
       -g "${RG}" --vnet-name "${VNET_NAME}" \
       -n AzureBastionSubnet \
@@ -187,7 +187,7 @@ title: "Azure"
   </Step>
 
   <Step title="创建 VM">
-    该 VM 没有公网 IP。SSH 访问完全通过 Azure Bastion 进行。
+    该 VM 不会分配公共 IP。SSH 访问仅通过 Azure Bastion 进行。
 
     ```bash
     az vm create \
@@ -204,9 +204,9 @@ title: "Azure"
       --nsg ""
     ```
 
-    `--public-ip-address ""` 防止分配公网 IP。`--nsg ""` 跳过创建基于 NIC 的 NSG（子网级 NSG 负责安全）。
+    `--public-ip-address ""` 可防止分配公共 IP。`--nsg ""` 会跳过创建按 NIC 的 NSG（由子网级 NSG 负责安全控制）。
 
-    **可重复性：** 上述命令对 Ubuntu 镜像使用 `latest`。要固定到特定版本，请列出可用版本并替换 `latest`：
+    **可复现性：** 上面的命令使用了 Ubuntu 镜像的 `latest`。如果要固定到特定版本，请列出可用版本并替换 `latest`：
 
     ```bash
     az vm image list \
@@ -217,7 +217,7 @@ title: "Azure"
   </Step>
 
   <Step title="创建 Azure Bastion">
-    Azure Bastion 为 VM 提供托管 SSH 访问，无需暴露公网 IP。CLI 方式的 `az network bastion ssh` 需要具有隧道功能的标准 SKU。
+    Azure Bastion 提供对 VM 的托管 SSH 访问，而无需暴露公共 IP。基于 CLI 的 `az network bastion ssh` 需要支持隧道功能的 Standard SKU。
 
     ```bash
     az network public-ip create \
@@ -231,7 +231,7 @@ title: "Azure"
       --sku Standard --enable-tunneling true
     ```
 
-    Bastion 预配通常需要 5-10 分钟，但在某些区域可能需要 15-30 分钟。
+    Bastion 的部署通常需要 5-10 分钟，但在某些区域可能需要 15-30 分钟。
 
   </Step>
 </Steps>
@@ -239,7 +239,7 @@ title: "Azure"
 ## 安装 OpenClaw
 
 <Steps>
-  <Step title="通过 Azure Bastion SSH 连接到 VM">
+  <Step title="通过 Azure Bastion SSH 进入 VM">
     ```bash
     VM_ID="$(az vm show -g "${RG}" -n "${VM_NAME}" --query id -o tsv)"
 
@@ -256,47 +256,42 @@ title: "Azure"
 
   <Step title="安装 OpenClaw（在 VM shell 中）">
     ```bash
-    # 下载安装脚本
     curl -fsSL https://openclaw.ai/install.sh -o /tmp/install.sh
-    # 执行安装
     bash /tmp/install.sh
-    # 清理安装文件
     rm -f /tmp/install.sh
     ```
 
-    安装程序会安装 Node LTS 和依赖项（如果尚未存在），安装 OpenClaw，并启动引导向导。详情参见 [安装](/install)。
+    如果尚未安装，安装程序会安装 Node LTS 和依赖项，安装 OpenClaw，并启动入门向导。详情请参见 [Install](/install)。
 
   </Step>
 
-  <Step title="验证网关">
-    引导完成后：
+  <Step title="验证 Gateway">
+    入门设置完成后：
 
     ```bash
     openclaw gateway status
     ```
 
-    大多数企业 Azure 团队已拥有 GitHub Copilot 许可证。如果是这种情况，我们建议在 OpenClaw 引导向导中选择 GitHub Copilot 提供程序。参见 [GitHub Copilot 提供程序](/providers/github-copilot)。
+    大多数企业 Azure 团队已经拥有 GitHub Copilot 许可证。如果你的情况也是如此，我们建议在 OpenClaw 入门向导中选择 GitHub Copilot 提供程序。请参见 [GitHub Copilot provider](/providers/github-copilot)。
 
   </Step>
 </Steps>
 
-## 成本考量
+## 成本考虑
 
-Azure Bastion 标准 SKU 每月约 **140 美元**，VM（Standard_B2as_v2）每月约 **55 美元**。
+Azure Bastion Standard SKU 的价格约为 **\$140/月**，VM（Standard_B2as_v2）的价格约为 **\$55/月**。
 
-降低成本的方法：
+如需降低成本：
 
-- **在不使用时解除分配 VM**（停止计算计费；磁盘费用保留）。VM 解除分配期间无法访问 OpenClaw 网关——需要时重新启动：
+- **在不使用时解除分配 VM**（停止计算计费；磁盘费用仍然保留）。当 VM 解除分配后，OpenClaw Gateway 将无法访问——需要时再启动它：
 
   ```bash
-  # 解除分配 VM
   az vm deallocate -g "${RG}" -n "${VM_NAME}"
-  # 稍后重新启动
-  az vm start -g "${RG}" -n "${VM_NAME}"
+  az vm start -g "${RG}" -n "${VM_NAME}"   # 之后重新启动
   ```
 
-- **不需要时删除 Bastion**，需要 SSH 访问时重新创建。Bastion 是成本最高的组件，预配只需几分钟。
-- **如果只需要基于门户的 SSH 且不需要 CLI 隧道（`az network bastion ssh`），可使用基本 Bastion SKU**（约 38 美元/月）。
+- **在不需要时删除 Bastion**，并在需要 SSH 访问时重新创建。Bastion 是最大的成本组成部分，而且部署只需几分钟。
+- **如果你只需要基于门户的 SSH 且不需要 CLI 隧道（`az network bastion ssh`）**，可使用 Basic Bastion SKU（约 \$38/月）。
 
 ## 清理
 
@@ -306,17 +301,17 @@ Azure Bastion 标准 SKU 每月约 **140 美元**，VM（Standard_B2as_v2）每�
 az group delete -n "${RG}" --yes --no-wait
 ```
 
-这将删除资源组及其内部的所有内容（VM、VNet、NSG、Bastion、公网 IP）。
+这将删除资源组及其中的一切（VM、VNet、NSG、Bastion、公共 IP）。
 
 ## 后续步骤
 
 - 设置消息通道：[Channels](/channels)
-- 将本地设备配对为节点：[Nodes](/nodes)
-- 配置网关：[Gateway configuration](/gateway/configuration)
-- 有关使用 GitHub Copilot 模型提供程序的 OpenClaw Azure 部署的更多详细信息：[带有 GitHub Copilot 的 Azure 上的 OpenClaw](https://github.com/johnsonshi/openclaw-azure-github-copilot)
+- 将本地设备作为节点配对：[Nodes](/nodes)
+- 配置 Gateway：[Gateway configuration](/gateway/configuration)
+- 有关使用 GitHub Copilot 模型提供程序在 Azure 上部署 OpenClaw 的更多详情：[使用 GitHub Copilot 在 Azure 上运行 OpenClaw](https://github.com/johnsonshi/openclaw-azure-github-copilot)
 
 ## 相关内容
 
-- [安装概览](/install)
+- [安装概述](/install)
 - [GCP](/install/gcp)
 - [DigitalOcean](/install/digitalocean)

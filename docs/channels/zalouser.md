@@ -1,38 +1,43 @@
 ---
-summary: "通过原生 zca-js 支持的 Zalo 个人账户（二维码登录）、功能和配置"
+summary: "通过原生 zca-js（二维码登录）支持 Zalo 个人账号、能力与配置"
 read_when:
   - 为 OpenClaw 设置 Zalo Personal
   - 调试 Zalo Personal 登录或消息流
-title: "Zalo personal"
+title: "Zalo 个人版"
 ---
 
-状态：实验性。此集成通过 OpenClaw 内部原生的 `zca-js` 自动化一个**个人 Zalo 账户**。
+状态：实验性。此集成通过 OpenClaw 内部的原生 `zca-js` 自动化一个 **个人 Zalo 账号**。
 
 <Warning>
-这是一个非官方集成，可能导致账户暂停或封禁。使用风险自负。
+这是一个非官方集成，可能导致账号被暂停或封禁。请自行承担风险。
 </Warning>
 
-## 内置插件
+## 捆绑插件
 
-Zalo Personal 作为内置插件包含在当前的 OpenClaw 发布版中，因此正常的打包构建无需单独安装。
+Zalo Personal 作为当前 OpenClaw 版本中的捆绑插件提供，因此正常的
+打包构建无需单独安装。
 
-如果您使用的是较旧的构建版本或排除了 Zalo Personal 的自定义安装，请手动安装：
+如果你使用的是较旧的构建版本，或自定义安装中未包含 Zalo Personal，
+在有新发布的 npm 包时安装当前版本：
 
 - 通过 CLI 安装：`openclaw plugins install @openclaw/zalouser`
-- 或从源代码检出：`openclaw plugins install ./path/to/local/zalouser-plugin`
+- 或从源代码检出目录安装：`openclaw plugins install ./path/to/local/zalouser-plugin`
 - 详情：[插件](/tools/plugin)
 
-无需外部的 `zca` 或 `openzca` CLI 可执行文件。
+如果 npm 提示 OpenClaw 维护的包已弃用，请使用当前的打包版
+OpenClaw 构建或本地检出路径，直到发布更新的 npm 包。
 
-## 快速入门（初学者）
+不需要外部 `zca`/`openzca` CLI 二进制文件。
+
+## 快速设置（初学者）
 
 1. 确保 Zalo Personal 插件可用。
-   - 当前打包的 OpenClaw 发布版已包含它。
-   - 较旧/自定义安装可以通过上述命令手动添加。
-2. 登录（二维码，在网关机器上）：
+   - 当前打包版 OpenClaw 发行版已包含该插件。
+   - 较旧/自定义安装可使用上面的命令手动添加。
+2. 登录（二维码，在 Gateway 机器上）：
    - `openclaw channels login --channel zalouser`
    - 使用 Zalo 手机应用扫描二维码。
-3. 启用频道：
+3. 启用该通道：
 
 ```json5
 {
@@ -45,23 +50,23 @@ Zalo Personal 作为内置插件包含在当前的 OpenClaw 发布版中，因�
 }
 ```
 
-4. 重启网关（或完成设置）。
-5. 私信访问默认为配对；首次联系时需批准配对码。
+4. 重启 Gateway（或完成设置）。
+5. DM 访问默认为 pairing；首次联系时请在配对码上批准。
 
-## 这是什么
+## 它是什么
 
 - 完全在进程内通过 `zca-js` 运行。
 - 使用原生事件监听器接收入站消息。
-- 通过 JS API 直接发送回复（文本/媒体/链接）。
-- 设计用于 Zalo Bot API 不可用时的“个人账户”使用场景。
+- 直接通过 JS API 发送回复（文本/媒体/链接）。
+- 面向 Zalo Bot API 不可用时的“个人账号”使用场景。
 
-## 命名说明
+## 命名
 
-频道 ID 为 `zalouser`，以明确标识这是自动化操作的 **个人 Zalo 用户账户**（非官方）。`zalo` 保留为未来潜在官方 Zalo API 集成使用。
+通道 id 使用 `zalouser`，以明确表示这是在自动化一个 **个人 Zalo 用户账号**（非官方）。我们保留 `zalo`，以便未来可能接入官方 Zalo API 集成。
 
-## 查找 ID（通讯录）
+## 查找 ID（目录）
 
-使用通讯录 CLI 来发现好友/群组及其 ID：
+使用目录 CLI 来发现好友/群组及其 ID：
 
 ```bash
 openclaw directory self --channel zalouser
@@ -71,34 +76,34 @@ openclaw directory groups list --channel zalouser --query "work"
 
 ## 限制
 
-- 出站文本分块至约 2000 字符（Zalo 客户端限制）。
+- 出站文本会被分块到约 2000 个字符（Zalo 客户端限制）。
 - 默认阻止流式传输。
 
 ## 访问控制（私信）
 
 `channels.zalouser.dmPolicy` 支持：`pairing | allowlist | open | disabled`（默认：`pairing`）。
 
-`channels.zalouser.allowFrom` 支持用户 ID 或名称。在设置期间，名称会通过插件内置的联系人查找解析为 ID。
+`channels.zalouser.allowFrom` 接受用户 ID 或名称。在设置期间，会使用插件的进程内联系人查找将名称解析为 ID。
 
-通过如下命令批准访问：
+通过以下方式批准：
 
 - `openclaw pairing list zalouser`
 - `openclaw pairing approve zalouser <code>`
 
 ## 群组访问（可选）
 
-- 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。未设置时可通过 `channels.defaults.groupPolicy` 覆盖默认值。
+- 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。当未设置时，可使用 `channels.defaults.groupPolicy` 覆盖默认值。
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
-  - `channels.zalouser.groups`（键应为稳定的群组 ID；启动时会尽可能将名称解析为 ID）
-  - `channels.zalouser.groupAllowFrom`（控制允许群组内哪些发送者可以触发机器人）
-- 屏蔽所有群组：`channels.zalouser.groupPolicy = "disabled"`。
-- 配置向导可提示设置群组允许列表。
-- 启动时，OpenClaw 会解析允许列表中的群组/用户名为 ID 并记录映射。
-- 群组允许列表匹配默认仅限 ID；未解析的名称会被忽略认证，除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`。
-- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种紧急兼容模式，重新启用可变群组名匹配。
-- 若未设置 `groupAllowFrom`，运行时群组发送者检查回退到 `allowFrom`。
-- 发送者检查适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
+  - `channels.zalouser.groups`（键应为稳定的群组 ID；启动时会在可能的情况下将名称解析为 ID）
+  - `channels.zalouser.groupAllowFrom`（控制允许群组中哪些发送者可以触发机器人）
+- 阻止所有群组：`channels.zalouser.groupPolicy = "disabled"`。
+- 配置向导可以提示输入群组允许列表。
+- 启动时，OpenClaw 会将允许列表中的群组/用户名称解析为 ID 并记录映射。
+- 群组允许列表匹配默认仅基于 ID。除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`，否则未解析的名称会在身份验证中被忽略。
+- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种破窗兼容模式，会重新启用可变的群组名称匹配。
+- 如果未设置 `groupAllowFrom`，运行时会回退使用 `allowFrom` 进行群组发送者检查。
+- 发送者检查同时适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
 
 示例：
 
@@ -120,12 +125,12 @@ openclaw directory groups list --channel zalouser --query "work"
 ### 群组提及门控
 
 - `channels.zalouser.groups.<group>.requireMention` 控制群组回复是否需要提及。
-- 解析顺序：精确群组 ID/名称 -> 规范化群组别名 -> `*` -> 默认（`true`）。
-- 这既适用于允许列表中的群组，也适用于开放群组模式。
-- 引用机器人消息视为群组激活的隐式提及。
-- 授权控制命令（例如 `/new`）可以绕过提及门控。
-- 当群组消息因需要提及而被跳过时，OpenClaw 会将其存储为待处理群组历史记录，并在下一条处理的群组消息中包含它。
-- 群组历史记录限制默认为 `messages.groupChat.historyLimit`（后备 `50`）。您可以使用 `channels.zalouser.historyLimit` 为每个账户覆盖此设置。
+- 解析顺序：精确群组 id/name -> 规范化后的群组 slug -> `*` -> 默认值（`true`）。
+- 这同时适用于允许列表群组和开放群组模式。
+- 引用机器人消息会被视为群组激活的隐式提及。
+- 经授权的控制命令（例如 `/new`）可以绕过提及门控。
+- 当群组消息因需要提及而被跳过时，OpenClaw 会将其作为待处理群组历史保存，并在下一条被处理的群组消息中包含它。
+- 群组历史限制默认使用 `messages.groupChat.historyLimit`（回退为 `50`）。你可以通过 `channels.zalouser.historyLimit` 按账号覆盖。
 
 示例：
 
@@ -143,9 +148,9 @@ openclaw directory groups list --channel zalouser --query "work"
 }
 ```
 
-## 多账户
+## 多账号
 
-账户映射到 OpenClaw 状态中的 `zalouser` 配置文件。例如：
+账号映射到 OpenClaw 状态中的 `zalouser` 配置文件。示例：
 
 ```json5
 {
@@ -161,34 +166,34 @@ openclaw directory groups list --channel zalouser --query "work"
 }
 ```
 
-## 输入状态、表情反应和送达确认
+## 输入中显示、反应和送达确认
 
-- OpenClaw 在发送回复前会发送输入中事件（尽力而为）。
-- `zalouser` 支持消息反应动作 `react`。
-  - 使用 `remove: true` 从消息中移除特定表情。
-  - 反应语义详见：[反应](/tools/reactions)
-- 对于带事件元数据的入站消息，OpenClaw 会发送送达和已读确认（尽力而为）。
+- OpenClaw 会在发送回复前先发送一个输入中事件（尽力而为）。
+- 通道操作中支持 `zalouser` 的消息反应动作 `react`。
+  - 使用 `remove: true` 可从消息中移除特定反应表情。
+  - 反应语义：[反应](/tools/reactions)
+- 对于包含事件元数据的入站消息，OpenClaw 会发送已送达 + 已查看确认（尽力而为）。
 
 ## 故障排除
 
-**登录不持久：**
+**登录无法保持：**
 
-- 执行 `openclaw channels status --probe`
+- `openclaw channels status --probe`
 - 重新登录：`openclaw channels logout --channel zalouser && openclaw channels login --channel zalouser`
 
 **允许列表/群组名称未解析：**
 
-- 在 `allowFrom`/`groupAllowFrom`/`groups` 中使用数字 ID，或精确好友/群组名称。
+- 在 `allowFrom`/`groupAllowFrom`/`groups` 中使用数字 ID，或使用精确的好友/群组名称。
 
-**从旧版基于 CLI 的设置升级：**
+**从旧的基于 CLI 的设置升级：**
 
 - 移除任何旧的外部 `zca` 进程假设。
-- 该频道现在完全在 OpenClaw 内部运行，无需外部 CLI 二进制文件。
+- 该通道现在完全在 OpenClaw 内运行，不需要外部 CLI 二进制文件。
 
 ## 相关内容
 
-- [频道概览](/channels) — 所有支持的频道
-- [配对](/channels/pairing) — 私消息认证和配对流程
+- [通道概览](/channels) — 所有受支持的通道
+- [配对](/channels/pairing) — DM 身份验证和配对流程
 - [群组](/channels/groups) — 群聊行为和提及门控
-- [频道路由](/channels/channel-routing) — 消息的会话路由
-- [安全](/gateway/security) — 访问模型和加固
+- [通道路由](/channels/channel-routing) — 消息的会话路由
+- [安全性](/gateway/security) — 访问模型与加固

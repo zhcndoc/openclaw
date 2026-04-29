@@ -1,52 +1,52 @@
 ---
-summary: "macOS 调试构建的打包脚本签名步骤"
+summary: "打包脚本生成的 macOS 调试构建签名步骤"
 read_when:
-  - Building or signing mac debug builds
-title: "macOS signing"
+  - 构建或签署 mac 调试构建
+title: "macOS 签名"
 ---
 
 # mac 签名（调试构建）
 
-此应用通常由 [`scripts/package-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/package-mac-app.sh) 构建，该脚本现在：
+这个应用通常由 [`scripts/package-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/package-mac-app.sh) 构建，该脚本现在会：
 
-- 设置一个稳定的调试包标识符：`ai.openclaw.mac.debug`
-- 使用该包标识符写入 Info.plist（可通过 `BUNDLE_ID=...` 覆盖）
-- 调用 [`scripts/codesign-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/codesign-mac-app.sh) 对主二进制文件和应用包进行签名，使 macOS 将每次重建视为同一个已签名包，并保留 TCC 权限（通知、辅助功能、屏幕录制、麦克风、语音）。为了获得稳定的权限，请使用真实的签名身份；临时签名是可选的且较脆弱（参见 [macOS 权限](/platforms/mac/permissions)）。
-- 默认使用 `CODESIGN_TIMESTAMP=auto`；它会为 Developer ID 签名启用受信任的时间戳。将 `CODESIGN_TIMESTAMP=off` 可跳过时间戳（离线调试构建）。
-- 向 Info.plist 注入构建元数据：`OpenClawBuildTimestamp`（UTC）和 `OpenClawGitCommit`（短哈希），以便“关于”面板可以显示构建、git 和调试/发布通道。
-- **打包默认使用 Node 24**：该脚本会运行 TS 构建和 Control UI 构建。为了兼容性，当前仍支持 Node 22 LTS（`22.14+`）。
-- 从环境中读取 `SIGN_IDENTITY`。将 `export SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"`（或你的 Developer ID Application 证书）添加到 shell rc 中，即可始终使用你的证书进行签名。临时签名需要通过 `ALLOW_ADHOC_SIGNING=1` 或 `SIGN_IDENTITY="-"` 明确启用（不建议用于权限测试）。
-- 签名后执行 Team ID 审核，如果应用包内任何 Mach-O 的签名 Team ID 不同则失败。设置 `SKIP_TEAM_ID_CHECK=1` 可跳过。
+- 设置一个稳定的调试 bundle 标识符：`ai.openclaw.mac.debug`
+- 使用该 bundle id 写入 Info.plist（可通过 `BUNDLE_ID=...` 覆盖）
+- 调用 [`scripts/codesign-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/codesign-mac-app.sh) 对主二进制和 app bundle 进行签名，使 macOS 将每次重新构建视为同一个已签名的 bundle，并保留 TCC 权限（通知、辅助功能、屏幕录制、麦克风、语音识别）。为了获得稳定的权限，请使用真实的签名身份；ad-hoc 为可选且不稳定（参见 [macOS 权限](/platforms/mac/permissions)）。
+- 默认使用 `CODESIGN_TIMESTAMP=auto`；它会为 Developer ID 签名启用受信任的时间戳。设置 `CODESIGN_TIMESTAMP=off` 可跳过时间戳（离线调试构建）。
+- 将构建元数据注入 Info.plist：`OpenClawBuildTimestamp`（UTC）和 `OpenClawGitCommit`（短哈希），以便 About 面板可以显示构建信息、git 信息和调试/发布通道。
+- **打包默认使用 Node 24**：脚本会运行 TS 构建和 Control UI 构建。Node 22 LTS，目前为 `22.14+`，仍然支持以保持兼容性。
+- 从环境中读取 `SIGN_IDENTITY`。将 `export SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"`（或你的 Developer ID Application 证书）添加到 shell rc 中，即可始终使用你的证书进行签名。ad-hoc 签名需要通过 `ALLOW_ADHOC_SIGNING=1` 或 `SIGN_IDENTITY="-"` 明确启用（不建议用于权限测试）。
+- 签名后运行 Team ID 审核，如果 app bundle 内任何 Mach-O 的签名 Team ID 不同则失败。设置 `SKIP_TEAM_ID_CHECK=1` 可绕过。
 
 ## 使用方法
 
 ```bash
-# 从仓库根目录运行
-scripts/package-mac-app.sh               # 自动选择签名身份；无身份则报错
-SIGN_IDENTITY="Developer ID Application: 你的名字" scripts/package-mac-app.sh   # 使用真实证书
-ALLOW_ADHOC_SIGNING=1 scripts/package-mac-app.sh    # 临时签名（权限不会持久）
-SIGN_IDENTITY="-" scripts/package-mac-app.sh        # 显式临时签名（同样限制）
-DISABLE_LIBRARY_VALIDATION=1 scripts/package-mac-app.sh   # 仅开发用 Sparkle Team ID 不匹配的变通方案
+# 从仓库根目录执行
+scripts/package-mac-app.sh               # 自动选择身份；若未找到则报错
+SIGN_IDENTITY="Developer ID Application: Your Name" scripts/package-mac-app.sh   # 真实证书
+ALLOW_ADHOC_SIGNING=1 scripts/package-mac-app.sh    # ad-hoc（权限不会保留）
+SIGN_IDENTITY="-" scripts/package-mac-app.sh        # 显式 ad-hoc（同样的注意事项）
+DISABLE_LIBRARY_VALIDATION=1 scripts/package-mac-app.sh   # 仅开发用的 Sparkle Team ID 不匹配解决方案
 ```
 
-### 临时签名注意事项
+### Ad-hoc 签名说明
 
-使用 `SIGN_IDENTITY="-"` （临时签名）时，脚本会自动禁用 **Hardened Runtime**（`--options runtime`）。这是为了防止应用在加载不共享相同 Team ID 的内嵌框架（如 Sparkle）时崩溃。临时签名也会导致 TCC 权限无法持久保存，详见[macOS 权限](/platforms/mac/permissions)了解恢复步骤。
+当使用 `SIGN_IDENTITY="-"`（ad-hoc）进行签名时，脚本会自动禁用 **Hardened Runtime**（`--options runtime`）。这是为了防止应用尝试加载与其不具有相同 Team ID 的内嵌框架（如 Sparkle）时崩溃。ad-hoc 签名也会破坏 TCC 权限持久化；请参见 [macOS 权限](/platforms/mac/permissions) 获取恢复步骤。
 
-## “关于”面板的构建元数据
+## About 的构建元数据
 
-`package-mac-app.sh` 会在包中添加：
+`package-mac-app.sh` 会在 bundle 中写入：
 
-- `OpenClawBuildTimestamp`：打包时的 ISO8601 UTC 时间戳
-- `OpenClawGitCommit`：git 短哈希（不可用时为 `unknown`）
+- `OpenClawBuildTimestamp`：打包时的 ISO8601 UTC 时间
+- `OpenClawGitCommit`：短 git 哈希（若不可用则为 `unknown`）
 
-“关于”标签页读取这些键以显示版本、构建日期、git 提交信息及是否为调试构建（通过 `#if DEBUG`）。代码更改后运行打包脚本以刷新这些值。
+About 标签页会读取这些键，以显示版本、构建日期、git 提交，以及它是否为调试构建（通过 `#if DEBUG`）。在代码变更后运行打包脚本以刷新这些值。
 
 ## 原因
 
-TCC 权限与包标识符 _以及_ 代码签名相关联。具有变化 UUID 的未签名调试构建会导致 macOS 在每次重建后忘记授予的权限。对二进制文件进行签名（默认使用临时签名）并保持固定的包 ID/路径（`dist/OpenClaw.app`），可以在构建之间保留这些权限，这与 VibeTunnel 的做法一致。
+TCC 权限同时绑定到 bundle 标识符 _和_ 代码签名。带有变化 UUID 的未签名调试构建会导致 macOS 在每次重新构建后忘记授权。对二进制进行签名（默认 ad-hoc）并保持固定的 bundle id/path（`dist/OpenClaw.app`）可在构建之间保留授权，做法与 VibeTunnel 方法一致。
 
-## 相关
+## 相关内容
 
-- [macOS app](/platforms/macos)
-- [macOS permissions](/platforms/mac/permissions)
+- [macOS 应用](/platforms/macos)
+- [macOS 权限](/platforms/mac/permissions)

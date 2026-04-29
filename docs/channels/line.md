@@ -1,25 +1,34 @@
 ---
-summary: "LINE Messaging API 插件设置、配置与使用"
+summary: "LINE Messaging API 插件的设置、配置和使用"
 read_when:
-  - 您想将 OpenClaw 连接到 LINE
-  - 您需要设置 LINE webhook 和凭证
-  - 您想了解 LINE 特定的消息选项
+  - 你想将 OpenClaw 连接到 LINE
+  - 你需要 LINE webhook + 凭证设置
+  - 你想使用 LINE 特定的消息选项
 title: LINE
 ---
 
-LINE 通过 LINE Messaging API 连接到 OpenClaw。该插件作为网关上的 webhook 接收器运行，并使用您的 channel access token + channel secret 进行身份验证。
+LINE 通过 LINE Messaging API 连接到 OpenClaw。该插件在网关上作为 webhook
+接收器运行，并使用你的 channel access token + channel secret 进行
+身份验证。
 
-状态：捆绑插件。支持私聊、群聊、媒体、位置、Flex 消息、模板消息和快速回复。不支持反应和线程。
+状态：内置插件。支持私信、群聊、媒体、位置、Flex 消息、模板消息和快速回复。不支持
+反应和线程。
 
-## 捆绑插件
+## 内置插件
 
-LINE 在当前 OpenClaw 版本中作为捆绑插件发布，因此正常的打包构建不需要单独安装。
+LINE 在当前 OpenClaw 版本中作为内置插件提供，因此常规
+打包构建无需单独安装。
 
-如果您使用的是较旧的构建或排除了 LINE 的自定义安装，请手动安装：
+如果你使用的是较旧的构建版本，或者自定义安装中排除了 LINE，请在
+发布了当前 npm 包后进行安装：
 
 ```bash
 openclaw plugins install @openclaw/line
 ```
+
+如果 npm 报告 OpenClaw 维护的包已弃用或缺失，请使用当前
+打包版 OpenClaw 构建，或者先使用本地检出版本，直到 npm 包发布节奏
+跟上为止。
 
 本地检出（从 git 仓库运行时）：
 
@@ -29,29 +38,29 @@ openclaw plugins install ./path/to/local/line-plugin
 
 ## 设置
 
-1. 创建一个 LINE 开发者账户并打开控制台：
+1. 创建一个 LINE Developers 账户并打开控制台：
    [https://developers.line.biz/console/](https://developers.line.biz/console/)
-2. 创建（或选择）一个提供者并添加 **Messaging API** 频道。
-3. 从频道设置中复制 **渠道访问令牌** 和 **渠道密钥**。
-4. 在 Messaging API 设置中启用 **使用 webhook**。
-5. 将 webhook URL 设置为您的网关端点（必须是 HTTPS）：
+2. 创建（或选择）一个 Provider，并添加一个 **Messaging API** channel。
+3. 从 channel 设置中复制 **Channel access token** 和 **Channel secret**。
+4. 在 Messaging API 设置中启用 **Use webhook**。
+5. 将 webhook URL 设置为你的网关端点（需要 HTTPS）：
 
 ```
 https://gateway-host/line/webhook
 ```
 
-网关响应 LINE 的 webhook 验证（GET）和入站事件（POST）。
-如果需要自定义路径，请设置 `channels.line.webhookPath` 或
-`channels.line.accounts.<id>.webhookPath` 并相应更新 URL。
+网关会响应 LINE 的 webhook 验证（GET）和入站事件（POST）。
+如果你需要自定义路径，请设置 `channels.line.webhookPath` 或
+`channels.line.accounts.<id>.webhookPath`，并相应更新 URL。
 
 安全提示：
 
-- LINE 签名验证依赖于正文（对原始正文进行 HMAC），因此 OpenClaw 在验证前会应用严格的预认证正文限制和超时。
-- OpenClaw 从经过验证的原始请求字节处理 webhook 事件。为了签名完整性安全，上游中间件转换的 `req.body` 值将被忽略。
+- LINE 的签名验证依赖请求体（对原始 body 做 HMAC），因此 OpenClaw 在验证前会强制执行严格的预认证 body 限制和超时。
+- OpenClaw 处理来自已验证原始请求字节的 webhook 事件。为保证签名完整性，来自上游中间件转换后的 `req.body` 值会被忽略。
 
 ## 配置
 
-最小配置示例：
+最小配置：
 
 ```json5
 {
@@ -66,7 +75,7 @@ https://gateway-host/line/webhook
 }
 ```
 
-环境变量（仅适用于默认账户）：
+环境变量（仅默认账户）：
 
 - `LINE_CHANNEL_ACCESS_TOKEN`
 - `LINE_CHANNEL_SECRET`
@@ -84,9 +93,9 @@ https://gateway-host/line/webhook
 }
 ```
 
-`tokenFile` 和 `secretFile` 必须指向普通文件。符号链接会被拒绝。
+`tokenFile` 和 `secretFile` 必须指向普通文件。不接受符号链接。
 
-多账户配置：
+多个账户：
 
 ```json5
 {
@@ -106,7 +115,8 @@ https://gateway-host/line/webhook
 
 ## 访问控制
 
-私聊默认使用配对模式。未知发送者会收到配对码，消息会被忽略，直到获得批准。
+私信默认使用配对。未知发送者会获得一个配对码，并且其
+消息会在批准前被忽略。
 
 ```bash
 openclaw pairing list line
@@ -115,54 +125,59 @@ openclaw pairing approve line <CODE>
 
 允许列表和策略：
 
-- `channels.line.dmPolicy`：`pairing | allowlist | open | disabled`
-- `channels.line.allowFrom`：允许发送私聊消息的 LINE 用户 ID 列表
-- `channels.line.groupPolicy`：`allowlist | open | disabled`
-- `channels.line.groupAllowFrom`：允许群组成员的 LINE 用户 ID 列表
-- 单群组覆盖：`channels.line.groups.<groupId>.allowFrom`
-- 运行时提示：如果完全缺少 `channels.line` 配置，运行时会将群组策略默认为 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
+- `channels.line.dmPolicy`: `pairing | allowlist | open | disabled`
+- `channels.line.allowFrom`: 用于私信的 LINE 用户 ID 允许列表
+- `channels.line.groupPolicy`: `allowlist | open | disabled`
+- `channels.line.groupAllowFrom`: 用于群组的 LINE 用户 ID 允许列表
+- 按群组覆盖：`channels.line.groups.<groupId>.allowFrom`
+- 运行时说明：如果 `channels.line` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
 
-LINE ID 区分大小写。有效 ID 形式为：
+LINE ID 区分大小写。有效 ID 形式如下：
 
 - 用户：`U` + 32 个十六进制字符
 - 群组：`C` + 32 个十六进制字符
-- 聊天室：`R` + 32 个十六进制字符
+- 房间：`R` + 32 个十六进制字符
 
 ## 消息行为
 
-- 文本超出 5000 字符会拆分成多个块。
-- Markdown 格式会被移除；代码块和表格会尽可能转换为 Flex 卡片。
-- 流式响应会被缓冲；LINE 会接收完整块并显示加载动画，直至代理处理完成。
-- 多媒体下载受 `channels.line.mediaMaxMb` 限制（默认 10MB）。
+- 文本会按每 5000 个字符分块。
+- Markdown 格式会被移除；代码块和表格会在可能时转换为 Flex
+  卡片。
+- 流式响应会被缓冲；LINE 会在 agent 工作时接收带加载
+  动画的完整分块。
+- 媒体下载上限由 `channels.line.mediaMaxMb` 控制（默认 10）。
+- 入站媒体会在传递给 agent 之前保存到 `~/.openclaw/media/inbound/`，
+  与其他内置频道插件使用的共享媒体存储保持一致。
 
-## 渠道数据（富消息）
+## Channel data（富媒体消息）
 
-使用 `channelData.line` 发送快速回复、位置、Flex 卡片或模板消息。
+使用 `channelData.line` 发送快速回复、位置、Flex 卡片或模板
+消息。
 
 ```json5
 {
-  text: "请查收",
+  text: "Here you go",
   channelData: {
     line: {
-      quickReplies: ["状态", "帮助"],
+      quickReplies: ["Status", "Help"],
       location: {
-        title: "办公室",
+        title: "Office",
         address: "123 Main St",
         latitude: 35.681236,
         longitude: 139.767125,
       },
       flexMessage: {
-        altText: "状态卡片",
+        altText: "Status card",
         contents: {
-          /* Flex 消息内容 */
+          /* Flex payload */
         },
       },
       templateMessage: {
         type: "confirm",
-        text: "是否继续？",
-        confirmLabel: "是",
+        text: "Proceed?",
+        confirmLabel: "Yes",
         confirmData: "yes",
-        cancelLabel: "否",
+        cancelLabel: "No",
         cancelData: "no",
       },
     },
@@ -170,45 +185,45 @@ LINE ID 区分大小写。有效 ID 形式为：
 }
 ```
 
-LINE 插件还附带 `/card` 命令，用于 Flex 消息预设：
+LINE 插件还提供了一个用于 Flex 消息预设的 `/card` 命令：
 
 ```
-/card info "欢迎" "感谢加入！"
+/card info "Welcome" "Thanks for joining!"
 ```
 
 ## ACP 支持
 
-LINE 支持 ACP（Agent Communication Protocol）对话绑定：
+LINE 支持 ACP（Agent Communication Protocol）会话绑定：
 
-- `/acp spawn <agent> --bind here` 将当前的 LINE 聊天绑定到 ACP 会话，而不创建子线程。
-- 配置的 ACP 绑定和活动的对话绑定 ACP 会话在 LINE 上的工作方式与其他对话渠道类似。
+- `/acp spawn <agent> --bind here` 会将当前 LINE 聊天绑定到一个 ACP 会话，而不会创建子线程。
+- 已配置的 ACP 绑定和活动的会话绑定 ACP 会话在 LINE 上的工作方式与其他会话频道相同。
 
-详见 [ACP 代理](/tools/acp-agents)。
+详情请参见 [ACP agents](/tools/acp-agents)。
 
 ## 出站媒体
 
-LINE 插件支持通过代理消息工具发送图片、视频和音频文件。媒体通过 LINE 特定的交付路径发送，并进行适当的预览和跟踪处理：
+LINE 插件支持通过 agent 消息工具发送图片、视频和音频文件。媒体会通过 LINE 特定的传递路径发送，并带有相应的预览和跟踪处理：
 
 - **图片**：作为 LINE 图片消息发送，并自动生成预览。
-- **视频**：发送时带有明确的预览和内容类型处理。
+- **视频**：带有显式预览和内容类型处理。
 - **音频**：作为 LINE 音频消息发送。
 
-Outbound media URLs 必须是公开的 HTTPS URL。OpenClaw 在将 URL 交给 LINE 之前会验证目标主机名，并拒绝回环、链路本地和私有网络目标。
+出站媒体 URL 必须是可公开访问的 HTTPS URL。OpenClaw 会在将 URL 交给 LINE 之前验证目标主机名，并拒绝回环、链路本地和私有网络目标。
 
-通用媒体发送在没有可用的 LINE 特定路径时会回退到现有的仅图片路由。
+当不存在 LINE 特定路径时，通用媒体发送会回退到现有的仅图片路由。
 
-## 故障排除
+## 故障排查
 
-- **Webhook 验证失败：** 确保 webhook URL 为 HTTPS 且
-  `channelSecret` 与 LINE 控制台匹配。
-- **无入站事件：** 确认 webhook 路径与 `channels.line.webhookPath` 匹配，
-  且网关可从 LINE 访问。
+- **Webhook 验证失败：** 确保 webhook URL 使用 HTTPS，并且
+  `channelSecret` 与 LINE 控制台一致。
+- **没有入站事件：** 确认 webhook 路径与 `channels.line.webhookPath`
+  匹配，并且网关可从 LINE 访问。
 - **媒体下载错误：** 如果媒体超过默认限制，请提高 `channels.line.mediaMaxMb`。
 
-## 相关
+## 相关内容
 
-- [渠道概览](/channels) — 所有支持的渠道
-- [配对](/channels/pairing) — 私聊认证和配对流程
-- [群组](/channels/groups) — 群聊行为和提及门禁
-- [渠道路由](/channels/channel-routing) — 消息会话路由
-- [安全](/gateway/security) — 访问模型和加固
+- [Channels Overview](/channels) — 所有受支持的频道
+- [Pairing](/channels/pairing) — 私信认证与配对流程
+- [Groups](/channels/groups) — 群聊行为与提及门控
+- [Channel Routing](/channels/channel-routing) — 消息会话路由
+- [Security](/gateway/security) — 访问模型与加固

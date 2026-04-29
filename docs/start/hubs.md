@@ -1,22 +1,22 @@
 ---
-summary: "链接到所有 OpenClaw 文档的中心枢纽"
+summary: "链接到每个 OpenClaw 文档的中心"
 read_when:
-  - 你想要完整的文档地图
-title: "文档枢纽"
+  - 你想要一份完整的文档地图
+title: "文档中心"
 ---
 
 <Note>
-如果您是 OpenClaw 新手，请从 [入门指南](/start/getting-started) 开始。
+如果你是 OpenClaw 的新用户，请从 [Getting Started](/start/getting-started) 开始。
 </Note>
 
-使用这些枢纽来发现每一个页面，包括左侧导航栏中未显示的深入讲解和参考文档。
+使用这些中心来发现每一页内容，包括左侧导航中未显示的深入内容和参考文档。
 
 ## 从这里开始
 
 - [索引](/)
-- [入门指南](/start/getting-started)
-- [新手引导](/start/onboarding)
-- [新手引导（CLI）](/start/wizard)
+- [快速开始](/start/getting-started)
+- [入门引导](/start/onboarding)
+- [入门引导（CLI）](/start/wizard)
 - [设置](/start/setup)
 - [仪表盘（本地 Gateway）](http://127.0.0.1:18789/)
 - [帮助](/help)
@@ -25,7 +25,7 @@ title: "文档枢纽"
 - [配置示例](/gateway/configuration-examples)
 - [OpenClaw 助手](/start/openclaw)
 - [展示](/start/showcase)
-- [背景故事](/start/lore)
+- [传说](/start/lore)
 
 ## 安装 + 更新
 
@@ -37,14 +37,14 @@ title: "文档枢纽"
 ## 核心概念
 
 - [架构](/concepts/architecture)
-- [特性](/concepts/features)
+- [功能](/concepts/features)
 - [网络中心](/network)
-- [Agent 运行时](/concepts/agent)
-- [Agent 工作区](/concepts/agent-workspace)
-- [内存](/concepts/memory)
-- [Agent 循环](/concepts/agent-loop)
+- [代理运行时](/concepts/agent)
+- [代理工作区](/concepts/agent-workspace)
+- [记忆](/concepts/memory)
+- [代理循环](/concepts/agent-loop)
 - [流式传输 + 分块](/concepts/streaming)
-- [多 Agent 路由](/concepts/multi-agent)
+- [多代理路由](/concepts/multi-agent)
 - [压缩](/concepts/compaction)
 - [会话](/concepts/session)
 - [会话修剪](/concepts/session-pruning)
@@ -54,18 +54,18 @@ title: "文档枢纽"
 - [RPC 适配器](/reference/rpc)
 - [TypeBox 模式](/concepts/typebox)
 - [时区处理](/concepts/timezone)
-- [存在](/concepts/presence)
+- [存在状态](/concepts/presence)
 - [发现 + 传输](/gateway/discovery)
 - [Bonjour](/gateway/bonjour)
-- [频道路由](/channels/channel-routing)
+- [通道路由](/channels/channel-routing)
 - [群组](/channels/groups)
 - [群组消息](/channels/group-messages)
-- [模型故障切换](/concepts/model-failover)
+- [模型故障转移](/concepts/model-failover)
 - [OAuth](/concepts/oauth)
 
-## 提供者 + 入口
+## 提供者 + 接入
 
-- [聊天频道中心](/channels)
+- [聊天渠道中心](/channels)
 - [模型提供者中心](/providers/models)
 - [WhatsApp](/channels/whatsapp)
 - [Telegram](/channels/telegram)
@@ -73,37 +73,37 @@ title: "文档枢纽"
 - [Discord](/channels/discord)
 - [Mattermost](/channels/mattermost)
 - [Signal](/channels/signal)
-- [BlueBubbles (iMessage)](/channels/bluebubbles)
+- [BlueBubbles（iMessage）](/channels/bluebubbles)
 - [QQ Bot](/channels/qqbot)
 - [iMessage（旧版）](/channels/imessage)
 - [位置解析](/channels/location)
 - [WebChat](/web/webchat)
 - [Webhooks](/automation/cron-jobs#webhooks)
-- [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
+- [Gmail Pub/Sub](/automation/cron-jobs#gmail-pub-sub-integration)
 
-## 网关 + 运营
+## Gateway + 运维
 
-- [网关运行手册](/gateway)
+- [Gateway 运行手册](/gateway)
 - [网络模型](/gateway/network-model)
-- [网关配对](/gateway/pairing)
-- [网关锁](/gateway/gateway-lock)
+- [Gateway 配对](/gateway/pairing)
+- [Gateway 锁](/gateway/gateway-lock)
 - [后台进程](/gateway/background-process)
 - [健康状态](/gateway/health)
 - [心跳](/gateway/heartbeat)
-- [诊断工具](/gateway/doctor)
-- [日志](/gateway/logging)
-- [沙箱环境](/gateway/sandboxing)
+- [Doctor](/gateway/doctor)
+- [日志记录](/gateway/logging)
+- [沙箱化](/gateway/sandboxing)
 - [仪表盘](/web/dashboard)
 - [控制界面](/web/control-ui)
 - [远程访问](/gateway/remote)
-- [远程网关说明](/gateway/remote-gateway-readme)
+- [远程 gateway 说明](/gateway/remote-gateway-readme)
 - [Tailscale](/gateway/tailscale)
-- [安全](/gateway/security)
+- [安全性](/gateway/security)
 - [故障排除](/gateway/troubleshooting)
 
 ## 工具 + 自动化
 
-- [工具总览](/tools)
+- [工具入口](/tools)
 - [OpenProse](/prose)
 - [CLI 参考](/cli)
 - [Exec 工具](/tools/exec)
@@ -113,17 +113,17 @@ title: "文档枢纽"
 - [自动化与任务](/automation)
 - [思考 + 详细输出](/tools/thinking)
 - [模型](/concepts/models)
-- [子 Agent](/tools/subagents)
-- [Agent send CLI](/tools/agent-send)
+- [子代理](/tools/subagents)
+- [Agent 发送 CLI](/tools/agent-send)
 - [终端 UI](/web/tui)
 - [浏览器控制](/tools/browser)
 - [浏览器（Linux 故障排除）](/tools/browser-linux-troubleshooting)
 - [投票](/cli/message)
 
-## 节点、多媒体、语音
+## 节点、媒体、语音
 
-- [节点总览](/nodes)
-- [摄像头](/nodes/camera)
+- [节点概览](/nodes)
+- [相机](/nodes/camera)
 - [图片](/nodes/images)
 - [音频](/nodes/audio)
 - [位置命令](/nodes/location-command)
@@ -132,41 +132,41 @@ title: "文档枢纽"
 
 ## 平台
 
-- [平台总览](/platforms)
+- [平台概览](/platforms)
 - [macOS](/platforms/macos)
 - [iOS](/platforms/ios)
 - [Android](/platforms/android)
 - [Windows（WSL2）](/platforms/windows)
 - [Linux](/platforms/linux)
-- [网页界面](/web)
+- [Web 界面](/web)
 
-## macOS 伴侣应用（高级）
+## macOS 配套应用（高级）
 
-- [macOS 开发环境搭建](/platforms/mac/dev-setup)
+- [macOS 开发设置](/platforms/mac/dev-setup)
 - [macOS 菜单栏](/platforms/mac/menu-bar)
 - [macOS 语音唤醒](/platforms/mac/voicewake)
-- [macOS 语音覆盖](/platforms/mac/voice-overlay)
+- [macOS 语音覆盖层](/platforms/mac/voice-overlay)
 - [macOS WebChat](/platforms/mac/webchat)
 - [macOS Canvas](/platforms/mac/canvas)
 - [macOS 子进程](/platforms/mac/child-process)
 - [macOS 健康状态](/platforms/mac/health)
 - [macOS 图标](/platforms/mac/icon)
-- [macOS 日志](/platforms/mac/logging)
+- [macOS 日志记录](/platforms/mac/logging)
 - [macOS 权限](/platforms/mac/permissions)
 - [macOS 远程](/platforms/mac/remote)
 - [macOS 签名](/platforms/mac/signing)
-- [macOS 网关（launchd）](/platforms/mac/bundled-gateway)
+- [macOS gateway（launchd）](/platforms/mac/bundled-gateway)
 - [macOS XPC](/platforms/mac/xpc)
 - [macOS 技能](/platforms/mac/skills)
-- [macOS 捉迷藏](/platforms/mac/peekaboo)
+- [macOS Peekaboo](/platforms/mac/peekaboo)
 
 ## 插件
 
-- [插件总览](/tools/plugin)
+- [插件概览](/tools/plugin)
 - [构建插件](/plugins/building-plugins)
 - [插件钩子](/plugins/hooks)
 - [插件清单](/plugins/manifest)
-- [Agent 工具](/plugins/building-plugins#registering-agent-tools)
+- [代理工具](/plugins/building-plugins#registering-agent-tools)
 - [插件包](/plugins/bundles)
 - [社区插件](/plugins/community)
 - [能力食谱](/tools/capability-cookbook)
@@ -189,14 +189,14 @@ title: "文档枢纽"
 
 ## 项目
 
-- [鸣谢](/reference/credits)
+- [致谢](/reference/credits)
 
 ## 测试 + 发布
 
 - [测试](/reference/test)
 - [发布策略](/reference/RELEASING)
-- [设备型号](/reference/device-models)
+- [设备模型](/reference/device-models)
 
 ## 相关
 
-- [入门指南](/start/getting-started)
+- [快速开始](/start/getting-started)

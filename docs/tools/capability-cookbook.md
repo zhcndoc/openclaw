@@ -1,92 +1,87 @@
 ---
-summary: "向 OpenClaw 插件系统添加新共享能力的贡献者指南"
+summary: "为 OpenClaw 插件系统添加新共享能力的贡献者指南"
 read_when:
-  - 添加新的核心能力和插件注册入口时
-  - 决定代码应归属核心、供应商插件还是功能插件时
-  - 为渠道或工具接入新的运行时助手时
+  - 添加新的核心能力和插件注册入口
+  - 判断代码应属于 core、供应商插件还是功能插件
+  - 为 channels 或 tools 接入新的运行时辅助函数
 title: "添加能力（贡献者指南）"
 sidebarTitle: "添加能力"
 ---
 
 <Info>
-  这是面向 OpenClaw 核心开发人员的**贡献者指南**。如果您正在
-  构建外部插件，请参阅 [构建插件](/plugins/building-plugins)
-  代替。
+  这是面向 OpenClaw core 开发者的**贡献者指南**。如果你是在
+  构建外部插件，请改看 [构建插件](/plugins/building-plugins)。
 </Info>
 
-当 OpenClaw 需要新的领域（如图像生成、视频生成或某些未来供应商支持的功能区域）时使用此指南。
+当 OpenClaw 需要新的领域时使用此文档，例如图像生成、视频
+生成，或未来某个由供应商支持的功能领域。
 
-规则：
+规则是：
 
-- 插件 = 所有权边界
-- 能力 = 共享核心契约
+- plugin = 归属边界
+- capability = 共享的核心契约
 
-这意味着您不应该一开始就将供应商直接连接到渠道或工具。首先定义能力。
+这意味着你不应该一开始就把供应商直接接入某个 channel 或
+tool。应先定义 capability。
 
-## 何时创建能力
+## 何时创建 capability
 
-当所有以下条件都满足时，创建新能力：
+当以下条件都满足时，创建一个新的 capability：
 
-1. 不止一个供应商可以合理地实现它
-2. 渠道、工具或功能插件应该使用它而无需关心供应商
-3. 核心需要拥有回退、策略、配置或交付行为
+1. 不止一个供应商有合理可能实现它
+2. channels、tools 或功能插件应当在不关心供应商的情况下消费它
+3. core 需要负责回退、策略、配置或交付行为
 
-如果工作仅针对供应商且尚不存在共享契约，请停下来先定义契约。
+如果这项工作只面向某个供应商，且尚不存在共享契约，就先停下来定义该契约。
 
-## 标准序列
+## 标准流程
 
-1. 定义类型化的核心契约。
+1. 定义带类型的核心契约。
 2. 为该契约添加插件注册。
-3. 添加共享运行时助手。
-4. 接入一个真实的供应商插件作为证明。
-5. 将功能/渠道消费者移至运行时助手。
+3. 添加共享运行时辅助函数。
+4. 接入一个真实的供应商插件作为验证。
+5. 将功能/channel 消费者迁移到运行时辅助函数。
 6. 添加契约测试。
-7. 记录面向操作员的配置和所有权模型。
+7. 为面向运维人员的配置和归属模型编写文档。
 
-## 内容归属
+## 各部分放在哪里
 
-核心：
+Core：
 
-- request/response types
-- provider registry + resolution
-- fallback behavior
-- config schema plus propagated `title` / `description` docs metadata on nested object, wildcard, array-item, and composition nodes
-- runtime helper surface
+- 请求/响应类型
+- provider 注册表 + 解析
+- 回退行为
+- 配置 schema，以及在嵌套对象、通配符、数组项和组合节点上向下传递的 `title` / `description` 文档元数据
+- 运行时辅助函数接口
 
-供应商插件：
+Vendor plugin：
 
 - 供应商 API 调用
-- 供应商身份验证处理
+- 供应商认证处理
 - 供应商特定的请求规范化
-- 能力实现的注册
+- 该 capability 实现的注册
 
-功能/渠道插件：
+Feature/channel plugin：
 
-- 调用 `api.runtime.*` 或匹配的 `plugin-sdk/*-runtime` 助手
+- 调用 `api.runtime.*` 或匹配的 `plugin-sdk/*-runtime` 辅助函数
 - 绝不直接调用供应商实现
 
-## Provider and harness seams
+## Provider 与 harness 的分界
 
-Use provider hooks when the behavior belongs to the model provider contract
-rather than the generic agent loop. Examples include provider-specific request
-params after transport selection, auth-profile preference, prompt overlays, and
-follow-up fallback routing after model/profile failover.
+当行为属于模型 provider 契约，而不是通用 agent 循环时，使用 provider hooks。示例包括：在选择传输层后的 provider 特定请求参数、auth-profile 偏好、prompt 覆盖，以及在模型/profile 失败切换后的后续回退路由。
 
-Use agent harness hooks when the behavior belongs to the runtime that is
-executing a turn. Harnesses can classify successful-but-unusable attempt results
-such as empty, reasoning-only, or planning-only responses so the outer model
-fallback policy can make the retry decision.
+当行为属于执行某个 turn 的运行时时，使用 agent harness hooks。Harness 可以对“成功但不可用”的尝试结果进行分类，例如空响应、仅 reasoning 响应或仅 planning 响应，这样外层的模型回退策略就能决定是否重试。
 
-Keep both seams narrow:
+保持这两个分界都足够窄：
 
-- core owns the retry/fallback policy
-- provider plugins own provider-specific request/auth/routing hints
-- harness plugins own runtime-specific attempt classification
-- third-party plugins return hints, not direct mutations of core state
+- core 负责重试/回退策略
+- provider 插件负责 provider 特定的请求/认证/路由提示
+- harness 插件负责运行时特定的尝试分类
+- 第三方插件返回提示信息，而不是直接修改 core 状态
 
-## File checklist
+## 文件清单
 
-对于新能力，预计会涉及以下区域：
+对于一个新的 capability，预计会涉及以下区域：
 
 - `src/<capability>/types.ts`
 - `src/<capability>/...registry/runtime.ts`
@@ -98,37 +93,37 @@ Keep both seams narrow:
 - `src/plugins/runtime/index.ts`
 - `src/plugin-sdk/<capability>.ts`
 - `src/plugin-sdk/<capability>-runtime.ts`
-- 一个或多个捆绑插件包
+- 一个或多个内置插件包
 - 配置/文档/测试
 
 ## 示例：图像生成
 
-图像生成遵循标准形状：
+图像生成遵循标准形态：
 
-1. core defines `ImageGenerationProvider`
-2. core exposes `registerImageGenerationProvider(...)`
-3. core exposes `runtime.imageGeneration.generate(...)`
-4. the `openai`, `google`, `fal`, and `minimax` plugins register vendor-backed implementations
-5. future vendors can register the same contract without changing channels/tools
+1. core 定义 `ImageGenerationProvider`
+2. core 暴露 `registerImageGenerationProvider(...)`
+3. core 暴露 `runtime.imageGeneration.generate(...)`
+4. `openai`、`google`、`fal` 和 `minimax` 插件注册由供应商支持的实现
+5. 未来的供应商可以在不更改 channels/tools 的情况下注册相同的契约
 
-配置键与视觉分析路由分开：
+配置键与视觉分析路由是分开的：
 
 - `agents.defaults.imageModel` = 分析图像
 - `agents.defaults.imageGenerationModel` = 生成图像
 
-保持这些分开，以便回退和策略保持明确。
+请保持它们分离，这样回退和策略才会保持明确。
 
 ## 审查清单
 
-在发布新能力之前，验证：
+在发布新的 capability 之前，请确认：
 
-- 没有渠道/工具直接导入供应商代码
-- 运行时助手是共享路径
-- 至少有一个契约测试断言捆绑所有权
-- 配置文档命名新的模型/配置键
-- 插件文档解释所有权边界
+- 没有任何 channel/tool 直接导入供应商代码
+- 运行时辅助函数是共享路径
+- 至少有一个契约测试断言了内置归属
+- 配置文档说明了新的 model/config 键
+- 插件文档解释了归属边界
 
-如果 PR 跳过能力层并将供应商行为硬编码到渠道/工具中，请退回并先定义契约。
+如果某个 PR 跳过了 capability 层，直接把供应商行为硬编码进 channel/tool，就把它退回去，并先定义契约。
 
 ## 相关内容
 

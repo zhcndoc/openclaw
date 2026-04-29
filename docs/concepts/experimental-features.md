@@ -1,40 +1,40 @@
 ---
-summary: "OpenClaw 中实验性标志的含义，以及当前记录了哪些标志"
+summary: "OpenClaw 中实验性标志的含义，以及当前已文档化的标志"
 title: "实验性功能"
 read_when:
   - 你看到一个 `.experimental` 配置键，并想知道它是否稳定
-  - 你想尝试预览版运行时功能，但又不想把它们和普通默认值混淆
-  - 你想在一个地方查看当前文档化的实验性标志
+  - 你想尝试预览版运行时功能，而不把它们与普通默认值混淆
+  - 你想在一个地方找到当前已文档化的实验性标志
 ---
 
-OpenClaw 中的实验性功能是**可选启用的预览面**。它们之所以被明确标志出来，是因为在获得长期稳定的公开契约之前，还需要更多真实场景中的使用检验。
+OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于显式标志之后，因为在配得上稳定默认值或长期公开契约之前，它们仍然需要更多真实世界的使用验证。
 
-对待它们时，要和普通配置区分开来：
+将它们与普通配置区别对待：
 
-- 除非相关文档明确建议尝试，否则默认**关闭**。
-- 预期它们的**结构和行为**会比稳定配置变化更快。
-- 如果已经有稳定路径，优先使用稳定路径。
-- 如果要大规模推广 OpenClaw，先在较小环境里测试实验性标志，再把它纳入共享基线。
+- 除非相关文档告诉你去尝试某个功能，否则保持它们**默认关闭**。
+- 预期其**形态和行为变化**会比稳定配置更快。
+- 如果已经存在稳定路径，优先使用稳定路径。
+- 如果你要在更大范围内推广 OpenClaw，请先在较小环境中测试实验性标志，然后再将它们纳入共享基线。
 
-## 当前文档化的标志
+## 当前已文档化的标志
 
-| 面向 | 键 | 适用场景 | 详情 |
+| Surface                  | Key                                                       | Use it when                                                                                                    | More                                                                                          |
 | ------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 本地模型运行时      | `agents.defaults.experimental.localModelLean`             | 较小或更严格的本地后端无法承载 OpenClaw 的完整默认工具面                                                     | [本地模型](/gateway/local-models)                                                         |
-| 内存搜索            | `agents.defaults.memorySearch.experimental.sessionMemory` | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本         | [内存配置参考](/reference/memory-config#session-memory-search-experimental) |
-| 结构化规划工具 | `tools.experimental.planTool`                             | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步工作跟踪 | [网关配置参考](/gateway/config-tools#toolsexperimental)                    |
+| 本地模型运行时           | `agents.defaults.experimental.localModelLean`             | 更小或更严格的本地后端在处理 OpenClaw 的完整默认工具集时无法正常工作                                             | [本地模型](/gateway/local-models)                                                             |
+| 内存搜索                 | `agents.defaults.memorySearch.experimental.sessionMemory` | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                      | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                   |
+| 结构化规划工具           | `tools.experimental.planTool`                             | 你希望在兼容的运行时和 UI 中公开结构化的 `update_plan` 工具，用于多步骤工作跟踪                                 | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
 
-## 本地模型轻量模式
+## 本地模型精简模式
 
-`agents.defaults.experimental.localModelLean: true` 是给较弱本地模型环境准备的泄压阀。它会裁掉 `browser`、`cron` 和 `message` 这类重量级默认工具，让提示形状更小，也更不容易在小上下文或更严格的 OpenAI 兼容后端中失稳。
+`agents.defaults.experimental.localModelLean: true` 是针对较弱本地模型设置的一个压力释放阀。它会裁剪掉 `browser`、`cron` 和 `message` 之类的重量级默认工具，使提示词形状更小、对小上下文或更严格的 OpenAI 兼容后端来说更不容易出错。
 
-这**不是**默认路径。如果你的后端能稳定处理完整运行时，就保持关闭。
+这**刻意不是**正常路径。如果你的后端能够干净地处理完整运行时，就不要开启它。
 
-## 实验性不等于隐藏
+## 实验性并不意味着隐藏
 
-如果一个功能是实验性的，OpenClaw 应该在文档和配置路径本身里明确说明。它**不应该**做的是把预览行为偷偷塞进一个看起来稳定的默认开关里，然后假装那是正常行为。那样只会让配置表面变得混乱。
+如果一个功能是实验性的，OpenClaw 应当在文档和配置路径本身中明确说明。它**不应该**做的是把预览行为偷偷塞进一个看起来稳定的默认选项里，然后假装那是正常的。配置接口变得混乱，往往就是这样开始的。
 
-## 相关内容
+## 相关
 
 - [功能](/concepts/features)
-- [发布通道](/install/development-channels)
+- [发布渠道](/install/development-channels)

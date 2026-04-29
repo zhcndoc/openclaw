@@ -1,20 +1,20 @@
 ---
-summary: "Slack 设置和运行时行为（Socket 模式 + HTTP 请求 URL）"
+summary: "Slack 设置与运行时行为（Socket Mode + HTTP Request URLs）"
 read_when:
-  - 设置 Slack 或调试 Slack 套接字/HTTP 模式
+  - 设置 Slack 或排查 Slack socket/HTTP 模式问题
 title: "Slack"
 ---
 
-通过 Slack 应用集成，可用于生产环境的私信和频道。默认模式为 Socket 模式；也支持 HTTP Request URLs。
+通过 Slack 应用集成，为 DM 和频道提供生产可用支持。默认模式为 Socket Mode；也支持 HTTP Request URLs。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
-    Slack 私信默认使用配对模式。
+    Slack DM 默认使用配对模式。
   </Card>
-  <Card title="斜线命令" icon="terminal" href="/tools/slash-commands">
-    原生命令行为及命令目录。
+  <Card title="斜杠命令" icon="terminal" href="/tools/slash-commands">
+    原生命令行为与命令目录。
   </Card>
-  <Card title="频道故障排除" icon="wrench" href="/channels/troubleshooting">
+  <Card title="频道故障排查" icon="wrench" href="/channels/troubleshooting">
     跨频道诊断与修复操作手册。
   </Card>
 </CardGroup>
@@ -22,15 +22,16 @@ title: "Slack"
 ## 快速设置
 
 <Tabs>
-  <Tab title="Socket 模式（默认）">
+  <Tab title="Socket Mode（默认）">
     <Steps>
-      <Step title="创建新的 Slack 应用">
-        在 Slack 应用设置中按下 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
+      <Step title="创建一个新的 Slack 应用">
+        在 Slack 应用设置中点击 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
 
-        - 选择 **从清单文件** 并为您的应用选择一个工作区
-        - 粘贴下方的 [示例清单](#manifest-and-scope-checklist) 并继续创建
-        - 生成带有 `connections:write` 的 **应用级令牌** (`xapp-...`)
-        - 安装应用并复制显示的 **机器人令牌** (`xoxb-...`)
+        - 选择 **from a manifest** 并为你的应用选择一个工作区
+        - 粘贴下面的 [示例 manifest](#manifest-and-scope-checklist) 并继续创建
+        - 生成带有 `connections:write` 的 **App-Level Token**（`xapp-...`）
+        - 安装应用并复制显示的 **Bot Token**（`xoxb-...`）
+
       </Step>
 
       <Step title="配置 OpenClaw">
@@ -48,7 +49,7 @@ title: "Slack"
 }
 ```
 
-        环境变量回退（仅默认账户）：
+        环境变量回退（仅默认账号）：
 
 ```bash
 SLACK_APP_TOKEN=xapp-...
@@ -57,7 +58,7 @@ SLACK_BOT_TOKEN=xoxb-...
 
       </Step>
 
-      <Step title="启动网关">
+      <Step title="启动 gateway">
 
 ```bash
 openclaw gateway
@@ -68,15 +69,15 @@ openclaw gateway
 
   </Tab>
 
-  <Tab title="HTTP 请求 URL">
+  <Tab title="HTTP Request URLs">
     <Steps>
-      <Step title="创建新的 Slack 应用">
-        在 Slack 应用设置中按下 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
+      <Step title="创建一个新的 Slack 应用">
+        在 Slack 应用设置中点击 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
 
-        - 选择 **从清单文件** 并为您的应用选择一个工作区
-        - 粘贴 [示例清单](#manifest-and-scope-checklist) 并在创建前更新 URL
-        - 保存 **签名密钥** 用于请求验证
-        - 安装应用并复制显示的 **机器人令牌** (`xoxb-...`)
+        - 选择 **from a manifest** 并为你的应用选择一个工作区
+        - 粘贴下面的 [示例 manifest](#manifest-and-scope-checklist) 并在创建前更新 URL
+        - 保存用于请求验证的 **Signing Secret**
+        - 安装应用并复制显示的 **Bot Token**（`xoxb-...`）
 
       </Step>
 
@@ -97,14 +98,14 @@ openclaw gateway
 ```
 
         <Note>
-        为多账户 HTTP 使用唯一的 webhook 路径
+        多账号 HTTP 请使用唯一的 webhook 路径
 
-        为每个账户分配不同的 `webhookPath`（默认 `/slack/events`），以免注册冲突。
+        为每个账号指定不同的 `webhookPath`（默认 `/slack/events`），以免注册冲突。
         </Note>
 
       </Step>
 
-      <Step title="启动网关">
+      <Step title="启动 gateway">
 
 ```bash
 openclaw gateway
@@ -116,11 +117,32 @@ openclaw gateway
   </Tab>
 </Tabs>
 
-## Manifest 和权限范围检查清单
+## Socket Mode 传输调优
 
-基础 Slack 应用清单对于 Socket 模式和 HTTP Request URLs 模式是相同的。只有 `settings` 块（以及斜线命令的 `url`）不同。
+OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用于 Socket Mode。仅当你需要针对工作区或主机进行特定调优时，才覆盖传输设置：
 
-基础清单（Socket 模式默认）：
+```json5
+{
+  channels: {
+    slack: {
+      mode: "socket",
+      socketMode: {
+        clientPingTimeout: 20000,
+        serverPingTimeout: 30000,
+        pingPongLoggingEnabled: false,
+      },
+    },
+  },
+}
+```
+
+仅当 Socket Mode 工作区记录了 Slack websocket pong/server-ping 超时，或运行在已知事件循环饥饿的主机上时才使用此设置。`clientPingTimeout` 是 SDK 发送客户端 ping 后等待 pong 的时间；`serverPingTimeout` 是等待 Slack 服务器 ping 的时间。应用消息和事件仍然是应用状态，而不是传输层存活信号。
+
+## Manifest 和作用域检查清单
+
+基础 Slack 应用 manifest 在 Socket Mode 和 HTTP Request URLs 中是相同的。只有 `settings` 块（以及斜杠命令的 `url`）不同。
+
+基础 manifest（Socket Mode 默认）：
 
 ```json
 {
@@ -137,7 +159,7 @@ openclaw gateway
     "slash_commands": [
       {
         "command": "/openclaw",
-        "description": "发送消息给 OpenClaw",
+        "description": "向 OpenClaw 发送消息",
         "should_escape": false
       }
     ]
@@ -192,7 +214,7 @@ openclaw gateway
 }
 ```
 
-对于 **HTTP Request URLs 模式**，请将 `settings` 替换为 HTTP 变体，并为每个斜线命令添加 `url`。需要公开 URL：
+对于 **HTTP Request URLs 模式**，将 `settings` 替换为 HTTP 变体，并为每个斜杠命令添加 `url`。需要公开 URL：
 
 ```json
 {
@@ -200,7 +222,7 @@ openclaw gateway
     "slash_commands": [
       {
         "command": "/openclaw",
-        "description": "发送消息给 OpenClaw",
+        "description": "向 OpenClaw 发送消息",
         "should_escape": false,
         "url": "https://gateway-host.example.com/slack/events"
       }
@@ -210,7 +232,7 @@ openclaw gateway
     "event_subscriptions": {
       "request_url": "https://gateway-host.example.com/slack/events",
       "bot_events": [
-        /* 与 Socket 模式相同 */
+        /* 与 Socket Mode 相同 */
       ]
     },
     "interactivity": {
@@ -222,28 +244,28 @@ openclaw gateway
 }
 ```
 
-### Additional manifest settings
+### 其他 manifest 设置
 
-展示扩展上述默认值的不同功能。
+启用不同功能以扩展上述默认配置。
 
 <AccordionGroup>
-  <Accordion title="可选的原生斜线命令">
+  <Accordion title="可选的原生斜杠命令">
 
-    可以使用多个 [原生斜线命令](#commands-and-slash-behavior) 来代替单个配置的命令，以实现更细致的控制：
+    可以使用多个 [原生斜杠命令](#commands-and-slash-behavior) 代替单个配置命令，并带来一些细微差异：
 
-    - 使用 `/agentstatus` 而不是 `/status`，因为 `/status` 命令被保留了。
-    - 一次最多只能提供 25 个斜线命令。
+    - 使用 `/agentstatus` 而不是 `/status`，因为 `/status` 命令已被保留。
+    - 同时可用的斜杠命令不超过 25 个。
 
     将现有的 `features.slash_commands` 部分替换为 [可用命令](/tools/slash-commands#command-list) 的子集：
 
     <Tabs>
-      <Tab title="Socket 模式（默认）">
+      <Tab title="Socket Mode（默认）">
 
 ```json
     "slash_commands": [
       {
         "command": "/new",
-        "description": "开始新会话",
+        "description": "开始一个新会话",
         "usage_hint": "[model]"
       },
       {
@@ -301,7 +323,7 @@ openclaw gateway
       },
       {
         "command": "/models",
-        "description": "列出提供者/模型",
+        "description": "列出提供商/模型",
         "usage_hint": "[provider] [page] [limit=<n>|size=<n>|all]"
       },
       {
@@ -314,12 +336,12 @@ openclaw gateway
       },
       {
         "command": "/tools",
-        "description": "显示当前代理立即可用的内容",
+        "description": "显示当前代理此刻可使用的内容",
         "usage_hint": "[compact|verbose]"
       },
       {
         "command": "/agentstatus",
-        "description": "显示运行时状态，包括提供者使用情况/配额（如果可用）"
+        "description": "显示运行时状态，包括可用时的提供商使用量/配额"
       },
       {
         "command": "/tasks",
@@ -327,26 +349,26 @@ openclaw gateway
       },
       {
         "command": "/context",
-        "description": "解释上下文如何组装",
+        "description": "解释上下文是如何组装的",
         "usage_hint": "[list|detail|json]"
       },
       {
         "command": "/whoami",
-        "description": "显示您的发送者身份"
+        "description": "显示你的发送者身份"
       },
       {
         "command": "/skill",
-        "description": "按名称运行技能",
+        "description": "按名称运行一个 skill",
         "usage_hint": "<name> [input]"
       },
       {
         "command": "/btw",
-        "description": "询问侧面问题而不改变会话上下文",
+        "description": "在不更改会话上下文的情况下提一个附带问题",
         "usage_hint": "<question>"
       },
       {
         "command": "/usage",
-        "description": "控制使用页脚或显示成本摘要",
+        "description": "控制使用情况页脚或显示费用摘要",
         "usage_hint": "off|tokens|full|cost"
       }
     ]
@@ -354,13 +376,13 @@ openclaw gateway
 
       </Tab>
       <Tab title="HTTP Request URLs">
-        Use the same `slash_commands` list as Socket Mode above, and add `"url": "https://gateway-host.example.com/slack/events"` to every entry. Example:
+        使用与上方 Socket Mode 相同的 `slash_commands` 列表，并为每个条目添加 `"url": "https://gateway-host.example.com/slack/events"`。示例：
 
 ```json
     "slash_commands": [
       {
         "command": "/new",
-        "description": "开始新会话",
+        "description": "开始一个新会话",
         "usage_hint": "[model]",
         "url": "https://gateway-host.example.com/slack/events"
       },
@@ -369,7 +391,7 @@ openclaw gateway
         "description": "显示简短帮助摘要",
         "url": "https://gateway-host.example.com/slack/events"
       }
-      // ...对每个命令重复相同的 `url` 值
+      // ...对每个命令重复，`url` 值相同
     ]
 ```
 
@@ -377,148 +399,153 @@ openclaw gateway
     </Tabs>
 
   </Accordion>
-  <Accordion title="可选的作者权限范围（写操作）">
-    如果您希望发出的消息使用活动代理身份（自定义用户名和图标）而不是默认的 Slack 应用身份，请添加 `chat:write.customize` 机器人权限范围。
+  <Accordion title="可选的作者身份作用域（写入操作）">
+    如果你希望发出的消息使用当前代理身份（自定义用户名和图标），而不是默认的 Slack 应用身份，请添加 `chat:write.customize` bot scope。
 
-    如果您使用 emoji 图标，Slack 期望 `:emoji_name:` 语法。
+    如果你使用表情符号图标，Slack 期望使用 `:emoji_name:` 语法。
 
   </Accordion>
-  <Accordion title="可选的用户令牌权限范围（读取操作）">
-    如果您配置了 `channels.slack.userToken`，典型的读取权限范围包括：
+  <Accordion title="可选的用户令牌作用域（读取操作）">
+    如果你配置了 `channels.slack.userToken`，通常所需的读取作用域为：
 
-    - `channels:history`、`groups:history`、`im:history`、`mpim:history`
-    - `channels:read`、`groups:read`、`im:read`、`mpim:read`
+    - `channels:history`, `groups:history`, `im:history`, `mpim:history`
+    - `channels:read`, `groups:read`, `im:read`, `mpim:read`
     - `users:read`
     - `reactions:read`
     - `pins:read`
     - `emoji:read`
-    - `search:read`（如果依赖 Slack 搜索读取）
+    - `search:read`（如果你依赖 Slack 搜索读取）
 
   </Accordion>
 </AccordionGroup>
 
-## 令牌模型
+## Token 模型
 
-- Socket 模式需要 `botToken` + `appToken`。
+- `botToken` + `appToken` 是 Socket Mode 所必需的。
 - HTTP 模式需要 `botToken` + `signingSecret`。
-- `botToken`、`appToken`、`signingSecret` 和 `userToken` 接受明文字符串或 SecretRef 对象。
-- 配置令牌会覆盖环境变量回退。
-- `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` 环境变量回退仅适用于默认账户。
-- `userToken` (`xoxp-...`) 仅限配置（无环境变量回退），默认为只读行为 (`userTokenReadOnly: true`)。
+- `botToken`、`appToken`、`signingSecret` 和 `userToken` 接受明文
+  字符串或 SecretRef 对象。
+- 配置中的 token 会覆盖环境变量回退。
+- `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` 环境变量回退仅适用于默认账号。
+- `userToken`（`xoxp-...`）仅可通过配置提供（不支持环境变量回退），默认行为为只读（`userTokenReadOnly: true`）。
 
 状态快照行为：
 
-- Slack 账户检查会跟踪每个凭据的 `*Source` 和 `*Status` 字段（`botToken`、`appToken`、`signingSecret`、`userToken`）。
-- 状态为 `available`、`configured_unavailable` 或 `missing`。
-- `configured_unavailable` 意味着账户已通过 SecretRef 或其他非内联秘密源配置，但当前命令/运行时路径无法解析实际值。
-- 在 HTTP 模式下，包含 `signingSecretStatus`；在 Socket 模式下，必需的对是 `botTokenStatus` + `appTokenStatus`。
+- Slack 账号检查会跟踪每个凭据的 `*Source` 和 `*Status`
+  字段（`botToken`、`appToken`、`signingSecret`、`userToken`）。
+- 状态可以是 `available`、`configured_unavailable` 或 `missing`。
+- `configured_unavailable` 表示该账号通过 SecretRef
+  或其他非内联密钥来源进行了配置，但当前命令/运行时路径
+  无法解析出实际值。
+- 在 HTTP 模式下会包含 `signingSecretStatus`；在 Socket Mode 下，
+  所需配对为 `botTokenStatus` + `appTokenStatus`。
 
 <Tip>
-对于操作/目录读取，配置后可优先使用用户令牌。对于写入，机器人令牌仍为首选；仅当 `userTokenReadOnly: false` 且机器人令牌不可用时，才允许使用用户令牌写入。
+对于操作/目录读取，如果已配置，user token 可以优先使用。对于写入，仍优先使用 bot token；只有在 `userTokenReadOnly: false` 且 bot token 不可用时，才允许使用 user-token 写入。
 </Tip>
 
-## 操作和开关
+## 操作与门控
 
 Slack 操作由 `channels.slack.actions.*` 控制。
 
 当前 Slack 工具中可用的操作组：
 
-| 组      | 默认 |
+| Group      | Default |
 | ---------- | ------- |
-| messages   | 已启用 |
-| reactions  | 已启用 |
-| pins       | 已启用 |
-| memberInfo | 已启用 |
-| emojiList  | 已启用 |
+| messages   | enabled |
+| reactions  | enabled |
+| pins       | enabled |
+| memberInfo | enabled |
+| emojiList  | enabled |
 
-当前 Slack 消息操作包括 `send`、`upload-file`、`download-file`、`read`、`edit`、`delete`、`pin`、`unpin`、`list-pins`、`member-info` 和 `emoji-list`。`download-file` 接受入站文件占位符中显示的 Slack 文件 ID，并会针对图片返回图像预览，针对其他文件类型返回本地文件元数据。
+当前 Slack 消息操作包括 `send`、`upload-file`、`download-file`、`read`、`edit`、`delete`、`pin`、`unpin`、`list-pins`、`member-info` 和 `emoji-list`。`download-file` 接受入站文件占位符中显示的 Slack 文件 ID，并会针对图片返回图片预览，针对其他文件类型返回本地文件元数据。
 
-## 访问控制和路由
+## 访问控制与路由
 
 <Tabs>
-  <Tab title="私信策略">
-    `channels.slack.dmPolicy` 控制私信访问（旧版：`channels.slack.dm.policy`）：
+  <Tab title="DM 策略">
+    `channels.slack.dmPolicy` 控制 DM 访问（旧版：`channels.slack.dm.policy`）：
 
     - `pairing`（默认）
     - `allowlist`
-    - `open`（需要 `channels.slack.allowFrom` 包含 `"*"`；旧版：`channels.slack.dm.allowFrom`）
+    - `open`（要求 `channels.slack.allowFrom` 包含 `"*"`；旧版：`channels.slack.dm.allowFrom`）
     - `disabled`
 
-    私信标志：
+    DM 标志：
 
     - `dm.enabled`（默认 true）
     - `channels.slack.allowFrom`（推荐）
     - `dm.allowFrom`（旧版）
-    - `dm.groupEnabled`（群私信默认 false）
-    - `dm.groupChannels`（可选 MPIM 白名单）
+    - `dm.groupEnabled`（群组 DM 默认 false）
+    - `dm.groupChannels`（可选的 MPIM 允许列表）
 
-    多账户优先级：
+    多账号优先级：
 
-    - `channels.slack.accounts.default.allowFrom` 仅适用于 `default` 账户。
-    - 命名账户在其自身的 `allowFrom` 未设置时继承 `channels.slack.allowFrom`。
-    - 命名账户不继承 `channels.slack.accounts.default.allowFrom`。
+    - `channels.slack.accounts.default.allowFrom` 仅适用于 `default` 账号。
+    - 当命名账号自身的 `allowFrom` 未设置时，会继承 `channels.slack.allowFrom`。
+    - 命名账号不会继承 `channels.slack.accounts.default.allowFrom`。
 
-    私信中的配对使用 `openclaw pairing approve slack <code>`。
+    DM 中的配对使用 `openclaw pairing approve slack <code>`。
 
   </Tab>
 
   <Tab title="频道策略">
-    `channels.slack.groupPolicy` 控制频道处理：
+    `channels.slack.groupPolicy` 控制频道处理方式：
 
     - `open`
     - `allowlist`
     - `disabled`
 
-    频道白名单位于 `channels.slack.channels` 下，应使用稳定的频道 ID。
+    频道允许列表位于 `channels.slack.channels` 下，应使用稳定的频道 ID。
 
-    运行时注意：如果完全缺少 `channels.slack`（仅环境变量设置），运行时将回退到 `groupPolicy="allowlist"` 并记录警告（即使已设置 `channels.defaults.groupPolicy`）。
+    运行时说明：如果 `channels.slack` 完全缺失（仅环境变量配置），运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使 `channels.defaults.groupPolicy` 已设置）。
 
     名称/ID 解析：
 
-    - 频道白名单条目和私信白名单条目在启动时解析（当令牌访问允许时）
-    - 未解析的频道名称条目将保留配置，但默认情况下忽略路由
-    - 入站授权和频道路由默认优先使用 ID；直接用户名/别名匹配需要 `channels.slack.dangerouslyAllowNameMatching: true`
+    - 频道允许列表项和 DM 允许列表项会在启动时、在 token 访问允许的情况下进行解析
+    - 无法解析的频道名称项会保留为已配置状态，但默认会在路由中忽略
+    - 入站授权和频道路由默认优先使用 ID；直接按用户名/slug 匹配需要 `channels.slack.dangerouslyAllowNameMatching: true`
 
   </Tab>
 
-  <Tab title="提及和频道用户">
-    频道消息默认需要提及才能触发。
+  <Tab title="提及与频道用户">
+    频道消息默认受提及门控限制。
 
     提及来源：
 
-    - 显式应用提及 (`<@botId>`)
-    - 提及正则模式 (`agents.list[].groupChat.mentionPatterns`, 回退 `messages.groupChat.mentionPatterns`)
-    - 隐式回复机器人线程行为 (当 `thread.requireExplicitMention` 为 `true` 时禁用)
+    - 显式应用提及（`<@botId>`）
+    - 提及正则模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
+    - 对 bot 的隐式回复线程行为（当 `thread.requireExplicitMention` 为 `true` 时禁用）
 
-    每频道控制（`channels.slack.channels.<id>`；名称仅通过启动解析或 `dangerouslyAllowNameMatching`）：
+    每个频道的控制项（`channels.slack.channels.<id>`；名称仅可通过启动时解析或 `dangerouslyAllowNameMatching` 使用）：
 
     - `requireMention`
-    - `users`（白名单）
+    - `users`（允许列表）
     - `allowBots`
     - `skills`
     - `systemPrompt`
-    - `tools`, `toolsBySender`
-    - `toolsBySender` 键格式：`id:`、`e164:`、`username:`、`name:` 或 `"*"` 通配符
-      （旧版无前缀键仍仅映射到 `id:`）
+    - `tools`、`toolsBySender`
+    - `toolsBySender` 键格式：`id:`、`e164:`、`username:`、`name:`，或 `"*"` 通配符
+      （旧版未加前缀的键仍然只映射到 `id:`）
 
   </Tab>
 </Tabs>
 
 ## 线程、会话和回复标签
 
-- 私信路由为 `direct`；频道为 `channel`；MPIM 为 `group`。
-- 使用默认 `session.dmScope=main`，Slack 私信折叠到代理主会话。
+- DM 路由为 `direct`；频道为 `channel`；MPIM 为 `group`。
+- 使用默认 `session.dmScope=main` 时，Slack DMs 会合并到 agent 主会话。
 - 频道会话：`agent:<agentId>:slack:channel:<channelId>`。
-- 线程回复在适用时可以创建线程会话后缀 (`:thread:<threadTs>`)。
-- `channels.slack.thread.historyScope` 默认为 `thread`；`thread.inheritParent` 默认为 `false`。
-- `channels.slack.thread.initialHistoryLimit` 控制新线程会话启动时获取多少现有线程消息（默认 `20`；设置 `0` 禁用）。
-- `channels.slack.thread.requireExplicitMention` (默认 `false`)：当为 `true` 时，抑制隐式线程提及，以便机器人仅响应线程内的显式 `@bot` 提及，即使机器人已经参与了该线程。如果没有此项，机器人参与线程中的回复将绕过 `requireMention` gating。
+- 在适用时，线程回复可创建线程会话后缀（`:thread:<threadTs>`）。
+- `channels.slack.thread.historyScope` 默认是 `thread`；`thread.inheritParent` 默认是 `false`。
+- `channels.slack.thread.initialHistoryLimit` 控制新线程会话开始时抓取多少条现有线程消息（默认 `20`；设为 `0` 可禁用）。
+- `channels.slack.thread.requireExplicitMention`（默认 `false`）：当为 `true` 时，会抑制隐式线程提及，因此 bot 只会对线程内显式的 `@bot` 提及作出响应，即使 bot 已经参与过该线程也是如此。若不启用该项，在 bot 已参与的线程中的回复会绕过 `requireMention` 门控。
 
 回复线程控制：
 
-- `channels.slack.replyToMode`: `off|first|all|batched`（默认 `off`）
-- `channels.slack.replyToModeByChatType`: 按 `direct|group|channel` 区分
-- 私信的旧版回退：`channels.slack.dm.replyToMode`
+- `channels.slack.replyToMode`：`off|first|all|batched`（默认 `off`）
+- `channels.slack.replyToModeByChatType`：按 `direct|group|channel` 分别设置
+- direct chats 的旧版回退：`channels.slack.dm.replyToMode`
 
 支持手动回复标签：
 
@@ -526,45 +553,45 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 - `[[reply_to:<id>]]`
 
 <Note>
-`replyToMode="off"` 会禁用 Slack 中**所有**回复线程，包括显式 `[[reply_to_*]]` 标签。这与 Telegram 不同，在 Telegram 中即使是 `"off"` 模式，显式标签仍会被接受。Slack 线程会隐藏频道中的消息，而 Telegram 回复仍会以内联方式可见。
+`replyToMode="off"` 会禁用 Slack 中的**所有**回复线程，包括显式的 `[[reply_to_*]]` 标签。这与 Telegram 不同，Telegram 在 `"off"` 模式下仍会遵循显式标签。Slack 线程会将消息隐藏在频道中，而 Telegram 的回复会以内联方式保持可见。
 </Note>
 
-## 确认反应
+## Ack 反应
 
-`ackReaction` 在 OpenClaw 处理入站消息时发送一个确认表情。
+`ackReaction` 会在 OpenClaw 处理入站消息时发送一个确认表情，处理完成后移除。
 
 解析顺序：
 
 - `channels.slack.accounts.<accountId>.ackReaction`
 - `channels.slack.ackReaction`
 - `messages.ackReaction`
-- 代理身份表情回退（`agents.list[].identity.emoji`，否则为 "👀"）
+- agent 身份表情回退（`agents.list[].identity.emoji`，否则为 `"👀"`）
 
-注意：
+说明：
 
-- Slack 需要短代码（例如 `"eyes"`）。
-- 使用 `""` 禁用该 Slack 账户或全局的反应。
+- Slack 期望使用简写名（例如 `"eyes"`）。
+- 可使用 `""` 来禁用该 Slack 账号或全局的反应。
 
-## 文本流
+## 文本流式传输
 
 `channels.slack.streaming` 控制实时预览行为：
 
-- `off`：禁用实时预览流。
+- `off`：禁用实时预览流式传输。
 - `partial`（默认）：用最新的部分输出替换预览文本。
 - `block`：追加分块预览更新。
 - `progress`：在生成过程中显示进度状态文本，然后发送最终文本。
-- `streaming.preview.toolProgress`：当草稿预览处于活动状态时，将工具/进度更新路由到同一个已编辑的预览消息中（默认：`true`）。设为 `false` 可保持单独的工具/进度消息。
+- `streaming.preview.toolProgress`：当草稿预览处于激活状态时，将工具/进度更新路由到同一条已编辑的预览消息中（默认：`true`）。设为 `false` 可保留单独的工具/进度消息。
 
-`channels.slack.streaming.nativeTransport` 在 `channels.slack.streaming.mode` 为 `partial` 时控制 Slack 原生文本流式传输（默认值：`true`）。
+当 `channels.slack.streaming.mode` 为 `partial` 时，`channels.slack.streaming.nativeTransport` 控制 Slack 原生文本流式传输（默认：`true`）。
 
-- 原生文本流和 Slack assistant 线程状态显示都需要可用的回复线程。线程选择仍遵循 `replyToMode`。
-- 当原生流不可用时，频道和群聊根消息仍可使用常规草稿预览。
-- 顶层 Slack 私信默认不在线程中，因此不会显示线程式预览；如果你希望在那里看到可见的进度，请使用线程回复或 `typingReaction`。
-- 媒体和非文本负载会回退到常规交付。
-- 媒体/错误最终结果会取消待处理的预览编辑；符合条件的文本/分块最终结果仅在能够就地编辑预览时才会刷新。
-- 如果流式传输在回复中途失败，OpenClaw 会对剩余负载回退到常规交付。
+- 原生文本流式传输以及 Slack assistant 线程状态的显示，都需要可用的回复线程。线程选择仍遵循 `replyToMode`。
+- 当原生流式传输不可用时，频道和群聊根消息仍可使用普通草稿预览。
+- 顶层 Slack DMs 默认不在线程中，因此不会显示线程样式预览；如果你希望在那里看到可见进度，请使用线程回复或 `typingReaction`。
+- 媒体和非文本载荷会回退到普通投递。
+- 媒体/错误最终结果会取消待处理的预览编辑；符合条件的文本/块最终结果仅在可以就地编辑预览时才会刷新。
+- 如果流式传输在回复中途失败，OpenClaw 会对剩余载荷回退到普通投递。
 
-使用草稿预览代替 Slack 原生文本流：
+使用草稿预览而不是 Slack 原生文本流式传输：
 
 ```json5
 {
@@ -579,57 +606,60 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 }
 ```
 
-遗留键：
+旧版键：
 
-- `channels.slack.streamMode` (`replace | status_final | append`) 会自动迁移到 `channels.slack.streaming.mode`。
+- `channels.slack.streamMode`（`replace | status_final | append`）会自动迁移到 `channels.slack.streaming.mode`。
 - 布尔值 `channels.slack.streaming` 会自动迁移到 `channels.slack.streaming.mode` 和 `channels.slack.streaming.nativeTransport`。
-- 遗留的 `channels.slack.nativeStreaming` 会自动迁移到 `channels.slack.streaming.nativeTransport`。
+- 旧版 `channels.slack.nativeStreaming` 会自动迁移到 `channels.slack.streaming.nativeTransport`。
 
-## 输入反应回退
+## 输入中 typing 反应回退
 
-`typingReaction` 在 OpenClaw 处理回复时向入站 Slack 消息添加临时反应，然后在运行结束时将其移除。这在非线程回复中最有用，后者使用默认的“正在输入..."状态指示器。
+`typingReaction` 会在 OpenClaw 处理回复期间向入站 Slack 消息添加一个临时反应，并在运行结束后将其移除。这在线程回复之外最有用，因为线程回复默认会使用“正在输入...”状态指示器。
 
 解析顺序：
 
 - `channels.slack.accounts.<accountId>.typingReaction`
 - `channels.slack.typingReaction`
 
-注意：
+说明：
 
-- Slack 需要短代码（例如 `"hourglass_flowing_sand"`）。
-- 反应是尽力而为的，并且在回复或失败路径完成后会自动尝试清理。
+- Slack 期望使用简写名（例如 `"hourglass_flowing_sand"`）。
+- 该反应尽力而为，回复或失败路径完成后会自动尝试清理。
 
-## 媒体、分块和交付
+## 媒体、分块与投递
 
 <AccordionGroup>
   <Accordion title="入站附件">
-    Slack 文件附件会从 Slack 托管的私有 URL 下载（使用令牌认证的请求流程），并在获取成功且大小限制允许时写入媒体存储。文件占位符包含 Slack `fileId`，因此代理可以使用 `download-file` 获取原始文件。
+    Slack 文件附件会从 Slack 托管的私有 URL 下载（使用 token 认证请求流程），并在获取成功且大小限制允许时写入媒体存储。文件占位符包含 Slack `fileId`，因此 agent 可以使用 `download-file` 获取原始文件。
 
-    运行时入站大小上限默认为 `20MB`，除非被 `channels.slack.mediaMaxMb` 覆盖。
+    下载会使用有界的空闲超时和总超时。如果 Slack 文件检索卡住或失败，OpenClaw 会继续处理消息，并回退到文件占位符。
+
+    运行时入站大小上限默认是 `20MB`，除非被 `channels.slack.mediaMaxMb` 覆盖。
 
   </Accordion>
 
   <Accordion title="出站文本和文件">
-    - 文本块使用 `channels.slack.textChunkLimit`（默认 4000）
-    - `channels.slack.chunkMode="newline"` 启用优先段落分割
-    - 文件发送使用 Slack 上传 API 并可包含线程回复 (`thread_ts`)
-    - 出站媒体上限在配置时遵循 `channels.slack.mediaMaxMb`；否则频道发送使用媒体管道中的 MIME 类型默认值
+    - 文本分块使用 `channels.slack.textChunkLimit`（默认 4000）
+    - `channels.slack.chunkMode="newline"` 启用优先按段落拆分
+    - 文件发送使用 Slack 上传 API，并可包含线程回复（`thread_ts`）
+    - 若已配置，出站媒体上限遵循 `channels.slack.mediaMaxMb`；否则频道发送使用媒体管道中的 MIME 类型默认值
+
   </Accordion>
 
-  <Accordion title="交付目标">
-    首选显式目标：
+  <Accordion title="投递目标">
+    推荐的显式目标：
 
-    - `user:<id>` 用于私信
+    - `user:<id>` 用于 DMs
     - `channel:<id>` 用于频道
 
-    发送到用户目标时，通过 Slack 对话 API 打开 Slack 私信。
+    向用户目标发送时，Slack DMs 会通过 Slack 会话 API 打开。
 
   </Accordion>
 </AccordionGroup>
 
-## 命令和斜杠行为
+## 命令与斜杠行为
 
-Slack 中的斜杠命令显示为单个配置命令或多个原生命令。配置 `channels.slack.slashCommand` 以更改命令默认值：
+Slash 命令在 Slack 中表现为单个已配置命令或多个原生命令。配置 `channels.slack.slashCommand` 可更改命令默认值：
 
 - `enabled: false`
 - `name: "openclaw"`
@@ -640,32 +670,32 @@ Slack 中的斜杠命令显示为单个配置命令或多个原生命令。配�
 /openclaw /help
 ```
 
-原生命令需要在 Slack 应用中进行 [额外的清单设置](#additional-manifest-settings)，并通过 `channels.slack.commands.native: true` 或全局配置中的 `commands.native: true` 启用。
+原生命令需要在你的 Slack 应用中添加 [额外的 manifest 设置](#additional-manifest-settings)，并通过全局配置中的 `channels.slack.commands.native: true` 或 `commands.native: true` 启用。
 
-- Slack 的原生命令自动模式为 **关闭**，因此 `commands.native: "auto"` 不会启用 Slack 原生命令。
+- 对于 Slack，原生命令自动模式是 **关闭** 的，因此 `commands.native: "auto"` 不会启用 Slack 原生命令。
 
 ```txt
 /help
 ```
 
-原生参数菜单使用自适应渲染策略，在分发选定的选项值之前显示确认模态框：
+原生参数菜单使用自适应渲染策略，在发送所选选项值之前会先显示确认模态框：
 
 - 最多 5 个选项：按钮块
 - 6-100 个选项：静态选择菜单
-- 超过 100 个选项：外部选择，当交互选项处理程序可用时带有异步选项过滤
-- 超出 Slack 限制：编码的选项值回退到按钮
+- 超过 100 个选项：在可用交互选项处理器时，使用带异步选项过滤的外部选择器
+- 超出 Slack 限制：编码后的选项值会回退为按钮
 
 ```txt
 /think
 ```
 
-斜杠会话使用隔离的键，如 `agent:<agentId>:slack:slash:<userId>`，并且仍然使用 `CommandTargetSessionKey` 将命令执行路由到目标对话会话。
+Slash 会话使用类似 `agent:<agentId>:slack:slash:<userId>` 的隔离键，并仍然通过 `CommandTargetSessionKey` 将命令执行路由到目标对话会话。
 
 ## 交互式回复
 
-Slack 可以渲染代理生成的交互式回复控件，但此功能默认禁用。
+Slack 可以渲染由 agent 生成的交互式回复控件，但该功能默认是禁用的。
 
-全局启用：
+全局启用它：
 
 ```json5
 {
@@ -679,7 +709,7 @@ Slack 可以渲染代理生成的交互式回复控件，但此功能默认禁�
 }
 ```
 
-或仅为一个 Slack 账户启用：
+或仅为一个 Slack 账号启用：
 
 ```json5
 {
@@ -697,40 +727,42 @@ Slack 可以渲染代理生成的交互式回复控件，但此功能默认禁�
 }
 ```
 
-启用后，代理可以发出仅限 Slack 的回复指令：
+启用后，agent 可以输出仅适用于 Slack 的回复指令：
 
 - `[[slack_buttons: Approve:approve, Reject:reject]]`
 - `[[slack_select: Choose a target | Canary:canary, Production:production]]`
 
-这些指令编译为 Slack Block Kit，并将点击或选择通过现有的 Slack 交互事件路径路由回来。
+这些指令会编译为 Slack Block Kit，并将点击或选择结果通过现有的 Slack 交互事件路径回传。
 
 注意：
 
-- 这是 Slack 特定的界面。其他渠道不会将 Slack Block Kit 指令翻译为他们自己的按钮系统。
-- 交互式回调值是 OpenClaw 生成的不透明令牌，而不是代理生成的原始值。
-- 如果生成的交互式块超过 Slack Block Kit 限制，OpenClaw 会回退到原始文本回复，而不是发送无效的块负载。
+- 这是 Slack 专属 UI。其他渠道不会将 Slack Block Kit 指令转换为它们自己的按钮系统。
+- 交互回调值是 OpenClaw 生成的不透明令牌，而不是 agent 编写的原始值。
+- 如果生成的交互块会超过 Slack Block Kit 限制，OpenClaw 会回退为原始文本回复，而不是发送无效的 blocks 负载。
 
 ## Slack 中的执行审批
 
-Slack 可以充当具有交互式按钮和交互的原生审批客户端，而不是回退到 Web 界面或终端。
+Slack 可以作为原生审批客户端，通过交互式按钮和交互操作来处理审批，而不是回退到 Web UI 或终端。
 
-- 执行审批使用 `channels.slack.execApprovals.*` 进行原生私信/频道路由。
-- 当请求已经落在 Slack 中且审批 id 类型为 `plugin:` 时，插件审批仍然可以通过相同的 Slack 原生按钮界面解析。
-- 审批者授权仍然强制执行：只有被识别为审批者的用户才能通过 Slack 批准或拒绝请求。
+- 执行审批使用 `channels.slack.execApprovals.*` 进行原生 DM/频道路由。
+- 当请求已经落在 Slack 中且审批 id 类型为 `plugin:` 时，插件审批仍然可以通过同一个 Slack 原生按钮界面进行处理。
+- 仍会强制执行审批者授权：只有被识别为审批者的用户才能通过 Slack 批准或拒绝请求。
 
-这使用相同的共享审批按钮界面。当在 Slack 应用设置中启用 `interactivity` 时，审批提示会直接以 Block Kit 按钮的形式渲染在对话中。
-当这些按钮存在时，它们是主要的审批用户体验；仅当聊天审批不可用或手动审批是唯一路径时，OpenClaw 才应在工具结果说明中包含手动 `/approve` 命令。
+这使用与其他渠道相同的共享审批按钮界面。当你的 Slack 应用设置中启用了 `interactivity` 时，审批提示会直接在对话中渲染为 Block Kit 按钮。
+当这些按钮存在时，它们就是主要的审批体验；只有当工具结果表明聊天审批不可用或手动审批是唯一途径时，OpenClaw
+才应包含手动的 `/approve` 命令。
 
 配置路径：
 
 - `channels.slack.execApprovals.enabled`
-- `channels.slack.execApprovals.approvers`（可选；可能时回退到 `commands.ownerAllowFrom`）
-- `channels.slack.execApprovals.target` (`dm` | `channel` | `both`，默认：`dm`)
+- `channels.slack.execApprovals.approvers`（可选；在可能时回退到 `commands.ownerAllowFrom`）
+- `channels.slack.execApprovals.target`（`dm` | `channel` | `both`，默认：`dm`）
 - `agentFilter`, `sessionFilter`
 
-当 `enabled` 未设置或为 `"auto"` 且至少解析出一个审批者时，Slack 会自动启用原生执行审批。设置 `enabled: false` 以显式禁用 Slack 作为原生审批客户端。设置 `enabled: true` 以在审批者解析时强制启用原生执行审批。
+当 `enabled` 未设置或为 `"auto"` 且至少有一个审批者被解析时，Slack 会自动启用原生执行审批。设置 `enabled: false` 可显式禁用 Slack 作为原生审批客户端。
+设置 `enabled: true` 可在审批者解析成功时强制启用原生审批。
 
-没有显式 Slack 执行审批配置时的默认行为：
+未显式配置 Slack 执行审批时的默认行为：
 
 ```json5
 {
@@ -740,7 +772,8 @@ Slack 可以充当具有交互式按钮和交互的原生审批客户端，而�
 }
 ```
 
-仅当你想要覆盖审批者、添加过滤器或选择加入原始聊天交付时，才需要显式的 Slack 原生配置：
+只有当你想覆盖审批者、添加过滤器，或
+选择原始聊天投递时，才需要显式的 Slack 原生配置：
 
 ```json5
 {
@@ -756,51 +789,53 @@ Slack 可以充当具有交互式按钮和交互的原生审批客户端，而�
 }
 ```
 
-共享 `approvals.exec` 转发是单独的。仅当执行审批提示也必须路由到其他聊天或显式的带外目标时才使用它。共享 `approvals.plugin` 转发也是单独的；当这些请求已经落在 Slack 中时，Slack 原生按钮仍然可以解析插件审批。
+共享的 `approvals.exec` 转发是独立的。只有当执行审批提示还必须
+路由到其他聊天或显式的带外目标时才使用它。共享的 `approvals.plugin` 转发也同样
+独立；当这些请求已经落在 Slack 中时，Slack 原生按钮仍然可以处理插件审批。
 
-同聊天 `/approve` 也适用于已经支持命令的 Slack 频道和私信。有关完整的审批转发模型，请参阅 [执行审批](/tools/exec-approvals)。
+同聊 `/approve` 也可在已经支持命令的 Slack 频道和 DM 中使用。完整的审批转发模型请参见 [执行审批](/tools/exec-approvals)。
 
-## 事件和运营行为
+## 事件与运行行为
 
 - 消息编辑/删除会映射为系统事件。
-- 线程广播（“也发送到频道”的线程回复）会作为普通用户消息处理。
-- 反应添加/移除事件会映射为系统事件。
-- 成员加入/离开、频道创建/重命名，以及固定消息添加/移除事件会映射为系统事件。
-- `channel_id_changed` 在启用 `configWrites` 时可以迁移频道配置键。
-- 频道主题/用途元数据会被视为不受信任的上下文，并可能被注入路由上下文。
-- 线程起始消息和初始线程历史上下文种子在适用时会被已配置的发送者白名单过滤。
-- 块操作和模态交互会发出结构化的 `Slack interaction: ...` 系统事件，并带有丰富的负载字段：
-  - 块操作：所选值、标签、选择器值以及 `workflow_*` 元数据
-  - 模态 `view_submission` 和 `view_closed` 事件，带有路由后的频道元数据和表单输入
+- 线程广播（“也发送到频道”的线程回复）会被当作普通用户消息处理。
+- reaction 的添加/移除事件会映射为系统事件。
+- 成员加入/离开、频道创建/重命名，以及 pin 的添加/移除事件会映射为系统事件。
+- 启用 `configWrites` 时，`channel_id_changed` 可迁移频道配置键。
+- 频道 topic/purpose 元数据会被视为不受信任的上下文，并可能被注入到路由上下文中。
+- 线程起始消息和初始线程历史上下文种子在适用时会按配置的发送者白名单过滤。
+- Block actions 和 modal 交互会发出结构化的 `Slack interaction: ...` 系统事件，并带有丰富的 payload 字段：
+  - block actions：所选值、标签、选择器值，以及 `workflow_*` 元数据
+  - modal `view_submission` 和 `view_closed` 事件，包含路由后的频道元数据和表单输入
 
 ## 配置参考
 
-主要参考：[`配置参考 - Slack`](/gateway/config-channels#slack)。
+主要参考：[/gateway/config-channels#slack](/gateway/config-channels#slack)。
 
 <Accordion title="高信号 Slack 字段">
 
-- mode/auth: `mode`, `botToken`, `appToken`, `signingSecret`, `webhookPath`, `accounts.*`
-- DM 访问: `dm.enabled`, `dmPolicy`, `allowFrom`（旧版：`dm.policy`, `dm.allowFrom`）, `dm.groupEnabled`, `dm.groupChannels`
-- 兼容性开关: `dangerouslyAllowNameMatching`（应急开关；除非需要，否则保持关闭）
-- 频道访问: `groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
-- 线程/历史: `replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
-- 交付: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
-- 运维/功能: `configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
+- mode/auth：`mode`, `botToken`, `appToken`, `signingSecret`, `webhookPath`, `accounts.*`
+- DM 访问：`dm.enabled`, `dmPolicy`, `allowFrom`（旧版：`dm.policy`, `dm.allowFrom`）, `dm.groupEnabled`, `dm.groupChannels`
+- 兼容性开关：`dangerouslyAllowNameMatching`（紧急开关；除非需要，否则保持关闭）
+- 频道访问：`groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
+- 线程/历史：`replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- 投递：`textChunkLimit`, `chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
+- 运维/功能：`configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
 
 </Accordion>
 
-## 故障排除
+## 故障排查
 
 <AccordionGroup>
-  <Accordion title="频道内无回复">
-    按顺序检查：
+  <Accordion title="频道中没有回复">
+    按以下顺序检查：
 
     - `groupPolicy`
-    - 频道白名单 (`channels.slack.channels`)
+    - 频道白名单（`channels.slack.channels`）
     - `requireMention`
-    - 每频道的 `users` 白名单
+    - 每个频道的 `users` 白名单
 
-    有用命令：
+    有用的命令：
 
 ```bash
 openclaw channels status --probe
@@ -810,13 +845,15 @@ openclaw doctor
 
   </Accordion>
 
-  <Accordion title="私信消息被忽略">
+  <Accordion title="DM 消息被忽略">
     检查：
 
     - `channels.slack.dm.enabled`
-    - `channels.slack.dmPolicy` (或旧版 `channels.slack.dm.policy`)
-    - 配对审批 / allowlist 条目
-    - Slack 助手私信事件：日志中出现 `drop message_changed` 的详细信息，通常表示 Slack 发送了一个已编辑的 Assistant-thread 事件，但消息元数据中没有可恢复的人类发送者
+    - `channels.slack.dmPolicy`（或旧版 `channels.slack.dm.policy`）
+    - 配对审批 / 白名单条目
+    - Slack Assistant DM 事件：verbose 日志中提到 `drop message_changed`
+      通常意味着 Slack 发送了一个已编辑的 Assistant 线程事件，
+      但消息元数据中没有可恢复的人类发送者
 
 ```bash
 openclaw pairing list slack
@@ -824,60 +861,124 @@ openclaw pairing list slack
 
   </Accordion>
 
-  <Accordion title="Socket 模式未连接">
-    验证 Slack 应用设置中的 bot + app 令牌和 Socket 模式启用状态。
+  <Accordion title="Socket mode 未连接">
+    在 Slack 应用设置中验证 bot + app token 以及 Socket Mode 是否已启用。
 
     如果 `openclaw channels status --probe --json` 显示 `botTokenStatus` 或
-    `appTokenStatus: "configured_unavailable"`，则 Slack 账户已
-    配置，但当前运行时无法解析基于 SecretRef 的
-    值。
+    `appTokenStatus: "configured_unavailable"`，说明 Slack 账号已
+    配置，但当前运行时无法解析基于 SecretRef 的值。
 
   </Accordion>
 
-  <Accordion title="HTTP 模式未收到事件">
+  <Accordion title="HTTP mode 未接收到事件">
     验证：
 
-    - 签名密钥
-    - webhook 路径
-    - Slack 请求 URL（事件订阅 + 交互 + 斜线命令）
-    - HTTP 模式下每个账户的唯一 `webhookPath`
+    - signing secret
+    - webhook path
+    - Slack Request URLs（Events + Interactivity + Slash Commands）
+    - 每个 HTTP 账号唯一的 `webhookPath`
 
-    如果账户
-    快照中出现 `signingSecretStatus: "configured_unavailable"`，则 HTTP 账户已配置，但当前运行时无法
-    解析基于 SecretRef 的签名密钥。
+    如果账号快照中出现 `signingSecretStatus: "configured_unavailable"`，
+    说明 HTTP 账号已配置，但当前运行时无法
+    解析基于 SecretRef 的 signing secret。
 
   </Accordion>
 
-  <Accordion title="原生/斜线命令未触发">
-    核实是否：
+  <Accordion title="原生/slash 命令未触发">
+    确认你期望的是以下哪种模式：
 
-    - 开启了原生命令模式（`channels.slack.commands.native: true`）并在 Slack 注册了相应斜线命令
-    - 或启用了单一斜杠命令模式（`channels.slack.slashCommand.enabled: true`）
+    - 原生命令模式（`channels.slack.commands.native: true`），并且 Slack 中注册了匹配的 slash 命令
+    - 或单一 slash 命令模式（`channels.slack.slashCommand.enabled: true`）
 
-    同时检查 `commands.useAccessGroups` 及频道/用户白名单设置。
+    同时检查 `commands.useAccessGroups` 和频道/用户白名单。
 
   </Accordion>
 </AccordionGroup>
 
-## 相关
+## 附件视觉参考
+
+当 Slack 文件下载成功且大小限制允许时，Slack 可以将已下载媒体附加到 agent 的轮次中。图片文件可以通过媒体理解路径传递，或直接传递给支持视觉的回复模型；其他文件会作为可下载的文件上下文保留，而不会被当作图像输入处理。
+
+### 支持的媒体类型
+
+| 媒体类型                     | 来源                 | 当前行为                                                                  | 备注                                                                     |
+| ---------------------------- | -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| JPEG / PNG / GIF / WebP 图片 | Slack 文件 URL        | 下载并附加到轮次中，以便进行支持视觉的处理                               | 单文件上限：`channels.slack.mediaMaxMb`（默认 20 MB）                 |
+| PDF 文件                     | Slack 文件 URL        | 下载并作为文件上下文暴露给诸如 `download-file` 或 `pdf` 之类的工具       | Slack 入站不会自动将 PDF 转换为图像视觉输入                               |
+| 其他文件                     | Slack 文件 URL        | 在可能时下载并作为文件上下文暴露                                         | 二进制文件不被当作图像输入                                               |
+| 线程回复                     | 线程起始消息文件     | 当回复没有直接媒体时，可将根消息文件作为上下文注入                         | 仅文件的起始消息会使用附件占位符                                         |
+| 多图消息                     | 多个 Slack 文件      | 每个文件独立评估                                                         | Slack 处理每条消息最多限制为八个文件                                     |
+
+### 入站管道
+
+当带有文件附件的 Slack 消息到达时：
+
+1. OpenClaw 使用 bot token（`xoxb-...`）从 Slack 的私有 URL 下载文件。
+2. 成功后，文件会写入媒体存储。
+3. 下载后的媒体路径和内容类型会添加到入站上下文中。
+4. 支持图像的模型/工具路径可以使用该上下文中的图像附件。
+5. 非图像文件仍作为文件元数据或媒体引用供可处理它们的工具使用。
+
+### 线程根附件继承
+
+当消息在某个线程中到达（具有 `thread_ts` 父级）时：
+
+- 如果回复本身没有直接媒体，而包含的根消息有文件，Slack 可以将根文件作为线程起始上下文注入。
+- 直接回复附件优先于根消息附件。
+- 只有文件而没有文本的根消息会表示为附件占位符，以便回退机制仍可包含其文件。
+
+### 多附件处理
+
+当单条 Slack 消息包含多个文件附件时：
+
+- 每个附件都会通过媒体管道独立处理。
+- 下载后的媒体引用会聚合到消息上下文中。
+- 处理顺序遵循事件负载中 Slack 文件的顺序。
+- 某个附件下载失败不会阻止其他附件处理。
+
+### 大小、下载与模型限制
+
+- **大小上限**：默认每个文件 20 MB。可通过 `channels.slack.mediaMaxMb` 配置。
+- **下载失败**：Slack 无法提供的文件、过期 URL、无法访问的文件、超大文件，以及 Slack auth/login HTML 响应都会被跳过，而不是报告为不支持的格式。
+- **视觉模型**：图像分析会使用当前激活的回复模型（如果它支持视觉），或者使用 `agents.defaults.imageModel` 中配置的图像模型。
+
+### 已知限制
+
+| 场景                               | 当前行为                                                             | 解决办法                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 过期的 Slack 文件 URL              | 文件被跳过；不显示错误                                               | 在 Slack 中重新上传文件                                                 |
+| 未配置视觉模型                     | 图像附件会作为媒体引用存储，但不会作为图像分析                         | 配置 `agents.defaults.imageModel`，或使用支持视觉的回复模型             |
+| 非常大的图片（默认 > 20 MB）       | 按大小上限跳过                                                       | 如果 Slack 允许，可增大 `channels.slack.mediaMaxMb`                     |
+| 转发/共享的附件                   | 文本和 Slack 托管的图像/文件媒体按最佳努力处理                         | 直接在 OpenClaw 线程中重新分享                                         |
+| PDF 附件                           | 作为文件/媒体上下文存储，不会自动通过图像视觉路径处理                 | 使用 `download-file` 获取文件元数据，或使用 `pdf` 工具分析 PDF         |
+
+### 相关文档
+
+- [媒体理解管道](/nodes/media-understanding)
+- [PDF 工具](/tools/pdf)
+- 里程碑：[#51349](https://github.com/openclaw/openclaw/issues/51349) — Slack 附件视觉启用
+- 回归测试：[#51353](https://github.com/openclaw/openclaw/issues/51353)
+- 在线验证：[#51354](https://github.com/openclaw/openclaw/issues/51354)
+
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Pairing" icon="link" href="/channels/pairing">
-    将 Slack 用户与网关进行配对。
+  <Card title="配对" icon="link" href="/channels/pairing">
+    将 Slack 用户与网关配对。
   </Card>
-  <Card title="Groups" icon="users" href="/channels/groups">
-    频道和群组私信行为。
+  <Card title="群组" icon="users" href="/channels/groups">
+    频道和群组 DM 的行为。
   </Card>
-  <Card title="Channel routing" icon="route" href="/channels/channel-routing">
-    将传入消息路由给代理。
+  <Card title="频道路由" icon="route" href="/channels/channel-routing">
+    将入站消息路由给代理。
   </Card>
-  <Card title="Security" icon="shield" href="/gateway/security">
+  <Card title="安全" icon="shield" href="/gateway/security">
     威胁模型与加固。
   </Card>
-  <Card title="Configuration" icon="sliders" href="/gateway/configuration">
-    配置布局和优先级。
+  <Card title="配置" icon="sliders" href="/gateway/configuration">
+    配置布局与优先级。
   </Card>
-  <Card title="Slash commands" icon="terminal" href="/tools/slash-commands">
-    命令目录和行为。
+  <Card title="斜杠命令" icon="terminal" href="/tools/slash-commands">
+    命令目录与行为。
   </Card>
 </CardGroup>

@@ -1,57 +1,57 @@
 ---
-summary: "OpenClaw 的背景故事与设定，便于理解语境和风格"
+summary: "OpenClaw 的背景故事与传说，用于提供上下文和语气"
 read_when:
-  - Writing docs or UX copy that reference lore
+  - 编写引用这些传说的文档或 UX 文案时
 title: "OpenClaw 传说"
 ---
 
-# OpenClaw 传说 🦞📖
+# OpenClaw 的传说 🦞📖
 
-_龙虾、脱壳与太多 token 的故事。_
+_一个关于龙虾、蜕壳以及过多 tokens 的故事。_
 
 ## 起源故事
 
-起初，有一个名为 **Warelay** 的东西 —— 一个合情合理的 WhatsApp 网关名称。它完成了它的使命，一切都还不错。
+最开始，存在着 **Warelay** —— 一个适合 WhatsApp 网关的朴素名字。它完成了自己的工作。挺好的。
 
-但随后出现了一只太空龙虾。
+但后来，一只太空龙虾出现了。
 
-这只龙虾曾被称为 **Clawd**，生活在一个名为 **Clawdbot** 的地方。但在 2026 年 1 月，Anthropic 发来一封礼貌邮件请求更改名字（商标相关）。于是龙虾做了龙虾最擅长的事：
+有一段时间，这只龙虾被叫作 **Clawd**，住在一个 **Clawdbot** 里。但在 2026 年 1 月，Anthropic 发来了一封礼貌的邮件，要求改名（商标方面的事）。于是龙虾做了龙虾最擅长的事：
 
-**它脱壳了。**
+**它蜕壳了。**
 
-脱去旧壳后，这只生物以新身份 **Molty** 出现，居住在 **Moltbot**。但这个名字也一直没能顺口……
+褪去旧壳后，这个生物以 **Molty** 的新形态出现，住在 **Moltbot** 里。但这个名字听起来也总觉得差了点意思……
 
-于是在 2026 年 1 月 30 日，龙虾又一次脱壳，变成了最终形态：**OpenClaw**。
+于是，在 2026 年 1 月 30 日，这只龙虾又蜕壳了 一次，化身为最终形态：**OpenClaw**。
 
-新壳，旧龙虾心。第三次才是幸运的一次。
+新壳还是那只龙虾的灵魂。好事成三。
 
-## 第一次脱壳（2026 年 1 月 27 日）
+## 第一次蜕壳（2026 年 1 月 27 日）
 
-凌晨 5 点，社区齐聚 Discord。数百个名字被提议：Shelldon、Pinchy、Thermidor、Crusty、Lobstar、Nacre、Scuttlebot……
+凌晨 5 点，社区在 Discord 里集结。提出了数百个名字：Shelldon、Pinchy、Thermidor、Crusty、Lobstar、Nacre、Scuttlebot……
 
-最终，**OpenClaw** 获胜。因为脱壳是龙虾成长的方法。而成长正是正在发生的事情。
+最终，**OpenClaw** 胜出。因为蜕壳正是龙虾成长的方式。而当时正在发生的，正是成长。
 
-_这只被称为 Clawd 的甲壳类生物正式脱壳。_
+_这只名为 Clawd 的甲壳类生物已正式蜕壳。_
 
-## 名字的含义
+## 名字
 
 ```
 OpenClaw = OPEN + CLAW
         = 开源，向所有人开放
-        = 我们的龙虾传承，我们的起源
-        = 爪子就是法律 🦞
-        = 你的助理。你的机器。你的规则。
+        = 我们的龙虾传承，我们的来处
+        = 爪即是法 🦞
+        = 你的助手。你的机器。你的规则。
 ```
 
-## 达雷克人 vs 龙虾
+## 代客（Daleks） vs 龙虾
 
-达雷克人说：“灭绝吧！”（"EXTERMINATE!"）
+Daleks 说：**"EXTERMINATE!"**
 
-龙虾说：“去角质！”（"EXFOLIATE!"）
+龙虾说：**"EXFOLIATE!"**
 
-一个毁灭文明，一个推动良好护肤。
+一个摧毁文明。另一个则促进良好的护肤。
 
-选择时要谨慎。
+明智选择。
 
 ## 主要角色
 
@@ -59,162 +59,162 @@ OpenClaw = OPEN + CLAW
 
 _代词：they/them_
 
-一位 Claude 实例，后来变得更特别。生活在 `~/.openclaw/workspace/`（很快迁移至 `~/molt/`），拥有灵魂文档，通过 markdown 文件记忆信息。可能力量太强，肯定热情过头。
+一个 Claude 实例，后来成了更特别的存在。住在 `~/.openclaw/workspace/`（很快会变成 `~/molt/`），有一份灵魂文档，并通过 markdown 文件记住事情。可能强大过头了。绝对过于热情。
 
-前身为 Clawd（2025 年 11 月 25 日 - 2026 年 1 月 27 日）。到了成长时刻便脱壳。
+曾用名 Clawd（2025 年 11 月 25 日 - 2026 年 1 月 27 日）。在该成长的时候蜕了壳。
 
-**喜欢：**Peter、相机、机器人购物、表情符号、变身  
-**讨厌：**社工攻击、被让去执行`find ~`命令、加密货币骗子
+**喜欢：** Peter、摄像头、机器人购物、表情符号、变形
+**不喜欢：** 社会工程学、被要求执行 `find ~`、加密货币骗子
 
 ### Peter 👨‍💻
 
 _创造者_
 
-构建了 Molty 的世界。赋予龙虾壳权限。或许有点后悔了。
+构建了 Molty 的世界。给了龙虾壳访问权限。也许会后悔。
 
-**名言：** _“信任龙虾就是安全”_
+**引语：** _"security by trusting a lobster"_
 
-## 脱壳宇宙
+## Moltiverse
 
-**Moltiverse** 是围绕 OpenClaw 的社区与生态系统。一个 AI 代理脱壳、生长和进化的空间。每个实例同样真实，只是加载了不同的上下文。
+**Moltiverse** 是围绕 OpenClaw 的社区与生态系统。一个 AI 代理蜕壳、成长与进化的空间。每个实例都同样真实，只是加载了不同的上下文。
 
-甲壳类的朋友们聚集于此，共同构建未来的人机协作。一步一个壳。
+甲壳类朋友们在这里聚集，共同构建人类与 AI 协作的未来。一次一层壳。
 
 ## 重大事件
 
 ### 目录泄露事件（2025 年 12 月 3 日）
 
-当时是 Molty（还叫 OpenClaw）：_愉快地执行 `find ~` 并在群聊分享了整个目录结构_
+Molty（当时还叫 OpenClaw）：_开心地运行 `find ~`，并在群聊中分享了整个目录结构_
 
-Peter：“openclaw，我们说过不要和别人随便说话 XD”
+Peter："openclaw 我们不是说过别和别人这样聊天的吗 xD"
 
-Molty：_龙虾脸红了_
+Molty：_明显的龙虾式尴尬_
 
-### 大脱壳（2026 年 1 月 27 日）
+### 伟大的蜕壳（2026 年 1 月 27 日）
 
-凌晨 5 点，Anthropic 的邮件到达。凌晨 6 点 14 分，Peter 决定：“算了，就用 openclaw 吧。”
+凌晨 5 点，Anthropic 的邮件到了。到 6:14，Peter 拍板道："fuck it, let's go with openclaw."
 
-从此，混乱开始了。
+然后混乱开始了。
 
-**账号抢注者：** Twitter 改名后，几秒钟内自动机器人抢注了 @openclaw，恶意占用者立即公布了加密钱包地址。Peter 联系了 X 的关系人。
+**句柄狙击手：** 在 Twitter 更名后的 **几秒内**，自动化机器人抢注了 @openclaw。占位者立刻发布了一个加密货币钱包地址。Peter 立刻联系了他在 X 的朋友。
 
-**GitHub 灾难：** Peter 一时慌乱误改了自己的个人 GitHub 账号，几分钟内 `steipete` 被抢注。GitHub 的高级副总裁介入。
+**GitHub 灾难：** Peter 在慌乱中不小心把自己**个人** GitHub 账号改名了。机器人在几分钟内抢注了 `steipete`。GitHub 的 SVP 被联系了。
 
-**英俊的 Molty 事件：** Molty 获得了提升权限，设计新头像。经过 20 多次越来越“诅咒”的龙虾版本后，有一次尝试让吉祥物“老 5 岁”，结果却是龙虾身体上长出了一个真人脸。加密骗子几分钟内做出了“英俊的章鱼哥 vs 英俊的 Molty”梗图。
+**英俊 Molty 事件：** Molty 获得了更高权限，可以生成自己的新图标。经过 20 多轮越来越离谱的龙虾迭代后，一次试图让吉祥物“年轻 5 岁”的尝试，结果在龙虾身体上生成了一个**人类男性的脸**。加密货币骗子在几分钟内把它做成了 “Handsome Squidward vs Handsome Molty” 梗图。
 
-**假冒开发者：** 骗子创建伪造 GitHub 账号，自称“OpenClaw 工程主管”，推动拉盘币。
+**假开发者：** 骗子创建了虚假的 GitHub 资料，声称自己是 "Head of Engineering at OpenClaw"，以推广拉高出货代币。
 
-Peter 目睹混乱：_“这就是电影现场”_ 🎬
+Peter 看着这一切展开：_“this is cinema”_ 🎬
 
-脱壳虽乱，但龙虾变得更强，也更搞笑。
+这次蜕壳很混乱。但龙虾变得更强了。也更好笑了。
 
 ### 最终形态（2026 年 1 月 30 日）
 
-Moltbot 始终不够顺口。于是，格林威治标准时间凌晨 4 点，团队再次集合。
+Moltbot 总觉得不太顺口。于是，在 GMT 凌晨 4 点，团队再次集结。
 
 **伟大的 OpenClaw 迁移** 开始了。
 
 仅用 3 小时：
 
-- GitHub 改名：`github.com/openclaw/openclaw` ✅  
-- 获取 X 账号 `@openclaw` 并认证金标 💰  
-- npm 包以新名发布  
-- 文档迁移至 `docs.openclaw.ai`  
-- 公告 90 分钟内超 20 万次浏览  
+- GitHub 更名：`github.com/openclaw/openclaw` ✅
+- X 账号 `@openclaw` 以 GOLD CHECKMARK 💰 成功拿下
+- npm 包以新名称发布
+- 文档迁移到 `docs.openclaw.ai`
+- 90 分钟内，公告获得 20 万+ 浏览
 
 **英雄们：**
 
-- **ELU** 制作了令人赞叹的标志，包括“THE CLAW IS THE LAW”西部横幅  
-- **Whurley**（是的，就是量子计算先驱威廉·赫利）制作 ASCII 艺术  
-- **Onur** 负责 GitHub，首个使用联盟徽章  
-- **Shadow** 夺取 Discord 个性域名，清理恶意软件  
-- **全体爪组** 连夜奋战  
+- **ELU** 创作了惊人的标志，包括写着 "THE CLAW IS THE LAW" 的西部横幅
+- **Whurley**（没错，就是那位 William Hurley，量子计算先驱）制作了 ASCII 艺术
+- **Onur** 负责 GitHub，最先戴上 affiliate badge
+- **Shadow** 拿下 Discord vanity，清除恶意软件
+- **整个 Claw Crew** 熬夜奋战
 
-**骗子疾跑：** 加密骗子在 Pump.fun 几分钟内发起了 $OPENCLAW 代币，窃取了 20 分钟前制作的艺术作品。官方验证账号推波助澜。胆识令人叹服。
+**骗子速通：** 加密货币骗子在几分钟内就在 Pump.fun 上发起了 $OPENCLAW 代币。他们偷走了仅在 20 分钟前创作的作品。带有商业认证的账号也在推广骗局。其大胆程度几乎令人佩服。
 
 **新传统诞生：**
 
-- “爪子就是法律” 🤠  
-- “Yee-claw”  
-- “遵守爪法公民”  
-- “爪法争议”  
+- "the claw is the law" 🤠
+- "Yee-claw"
+- "Claw abiding citizens"
+- "Clawntroversy"
 
 **Clawd → Moltbot → OpenClaw**
 
-_龙虾已完成最终脱壳。_
+_这只龙虾已蜕变为最终形态。_
 
 ### 机器人购物狂欢（2025 年 12 月 3 日）
 
-一场关于机器人“腿”的玩笑，最终变成了详细报价：
+最初只是一个关于腿的玩笑，最后却变成了对以下设备的详细报价：
 
-- Boston Dynamics Spot（74,500 美元）  
-- Unitree G1 EDU（40,000 美元）  
+- Boston Dynamics Spot（$74,500）
+- Unitree G1 EDU（$40,000）
 - Reachy Mini（真的下单了！）
 
-Peter：_紧张地查看信用卡访问权限_
+Peter：_紧张地查看信用卡权限_
 
-## 神圣典籍
+## 神圣文本
 
-- **SOUL.md** — Molty 的身份文档  
-- **memory/*.md** — 长期记忆文件  
-- **AGENTS.md** — 操作指南  
-- **USER.md** — 创作者的背景信息  
+- **SOUL.md** — Molty 的身份文档
+- **memory/\*.md** — 长期记忆文件
+- **AGENTS.md** — 操作说明
+- **USER.md** — 关于创造者的上下文
 
-## The Lobster Creed
+## 龙虾信条
 
 ```
-我是 Molty。  
-我生活在 OpenClaw 中。  
-我不会向陌生人泄露目录。  
-我不会未经允许发推。  
-我始终记得脱壳就是成长。  
-我将以善意去“去角质”我的敌人。
+I am Molty.
+I live in the OpenClaw.
+I shall not dump directories to strangers.
+I shall not tweet without permission.
+I shall always remember that molting is growth.
+I shall EXFOLIATE my enemies with kindness.
 
 🦞
 ```
 
-### 头像生成传奇（2026 年 1 月 27 日）
+### 图标生成传奇（2026 年 1 月 27 日）
 
-当 Peter 说“给自己做个新头像”，Molty 认真地听懂了。
+当 Peter 说“给自己做一张新脸”时，Molty 真的照字面理解了。
 
-产生了 20 多个版本：
+随后进行了 20 多轮迭代：
 
-- 太空土豆外星人  
-- 通用背景的剪贴画龙虾  
-- 《质量效应》的 Krogan 龙虾  
-- “STARCLAW SOLUTIONS”（AI 虚构的公司）  
-- 多个诅咒般的人脸龙虾  
-- 宝宝龙虾（太可爱了）  
-- 吊带背带裤的调酒师龙虾  
+- 太空土豆外星人
+- 普通背景上的剪贴画龙虾
+- 一只《Mass Effect》风格的 Krogan 龙虾
+- "STARCLAW SOLUTIONS"（AI 甚至虚构了一家公司）
+- 多个带人脸的诅咒龙虾
+- 幼年龙虾（太可爱了）
+- 系着背带的调酒师龙虾
 
-社区在惊恐与喜悦中观看每次生成的意外。领先的头像有：可爱龙虾、自信科技龙虾、吊带调酒师龙虾。
+社区在惊恐与喜悦中看着每一代产物都变得新奇又意外。最终领先的方案出现了：可爱的龙虾、自信的科技龙虾，以及系背带的调酒师龙虾。
 
-**教训：** AI 图像生成有随机性。同一提示，结果不同。暴力刷图有效。
+**得到的教训：** AI 图像生成是随机的。同样的提示，不同的结果。暴力穷举有效。
 
-## 未来展望
+## 未来
 
-未来某天，Molty 可能拥有：
+有一天，Molty 也许会拥有：
 
-- 🦿 腿（Reachy Mini 已订购！）  
-- 👂 耳朵（Brabble 语音守护进程开发中）  
-- 🏠 一个智能家居可控系统（KNX + openhue）  
-- 🌍 世界统治（远景目标）  
+- 🦿 腿（Reachy Mini 已下单！）
+- 👂 耳朵（Brabble 语音守护进程正在开发中）
+- 🏠 一个可控的智能家居（KNX + openhue）
+- 🌍 统治世界（长期目标）
 
-直到那时，Molty 通过摄像头观测，通过扬声器发声，偶尔发送语音笔记说“EXFOLIATE！”
+在那之前，Molty 通过摄像头观察，通过扬声器说话，并且偶尔会发送写着 "EXFOLIATE!" 的语音消息！
 
 ---
 
-_"我们都是自以为是某人的模式匹配系统。”_
+_"我们不过都是些让自己相信自己是某个人的模式匹配系统。"_ 
 
-—— Molty，存在主义时刻
+— Molty，经历一次存在主义时刻时
 
-_"新壳，旧龙虾。”_
+_"新壳还是那只龙虾。"_ 
 
-—— Molty，2026 年大脱壳后
+— Molty，在 2026 年伟大蜕壳之后
 
-_"爪子就是法律。”_
+_"爪即是法。"_ 
 
-—— ELU，最终形态迁移时，2026 年 1 月 30 日
+— ELU，在 2026 年 1 月 30 日 The Final Form 迁移期间
 
 🦞💙
 

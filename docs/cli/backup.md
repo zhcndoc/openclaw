@@ -1,14 +1,14 @@
 ---
-summary: "`openclaw backup` 命令行参考（创建本地备份归档）"
+summary: "openclaw backup 的 CLI 参考（创建本地备份归档）"
 read_when:
-  - 你想要一个用于本地 OpenClaw 状态的一级备份归档
-  - 你想在重置或卸载之前预览将包含哪些路径
-title: "Backup"
+  - 你想为本地 OpenClaw 状态创建一个一等备份归档
+  - 你想在重置或卸载之前预览会包含哪些路径
+title: "备份"
 ---
 
 # `openclaw backup`
 
-为 OpenClaw 状态、配置、认证配置文件、渠道/提供者凭证、会话创建本地备份归档，并可选择包含工作区。
+为 OpenClaw 的状态、配置、认证配置文件、通道/提供方凭据、会话，以及可选的工作区创建一个本地备份归档。
 
 ```bash
 openclaw backup create
@@ -20,63 +20,70 @@ openclaw backup create --only-config
 openclaw backup verify ./2026-03-09T00-00-00.000Z-openclaw-backup.tar.gz
 ```
 
-## 注意事项
+## 注意
 
-- 归档包含一个 `manifest.json` 文件，记录已解析的源路径和归档布局。
-- 默认输出是当前工作目录下带有时间戳的 `.tar.gz` 归档文件。
-- 如果当前工作目录处于备份的源代码树内，OpenClaw 会回退到你的主目录作为默认归档位置。
-- 现有的归档文件不会被覆盖。
-- 排除输出路径在源状态/工作区树内，以避免自我包含。
-- `openclaw backup verify <archive>` 会验证归档仅包含一个根 manifest，拒绝遍历式归档路径，并检查所有 manifest 声明的载荷是否存在于 tar 包中。
-- `openclaw backup create --verify` 会在写入归档后立即执行上述验证。
-- `openclaw backup create --only-config` 只备份当前活动的 JSON 配置文件。
+- 归档包含一个 `manifest.json` 文件，其中列出了已解析的源路径和归档布局。
+- 默认输出是在当前工作目录中的一个带时间戳的 `.tar.gz` 归档。
+- 如果当前工作目录位于某个已备份的源树内部，OpenClaw 会退回到你的主目录作为默认归档位置。
+- 现有的归档文件绝不会被覆盖。
+- 源状态/工作区树内部的输出路径会被拒绝，以避免自我包含。
+- `openclaw backup verify <archive>` 会验证归档是否恰好包含一个根清单，拒绝遍历式归档路径，并检查清单声明的每个有效载荷是否都存在于 tarball 中。
+- `openclaw backup create --verify` 会在写入归档后立即运行该验证。
+- `openclaw backup create --only-config` 只备份当前激活的 JSON 配置文件。
 
-## 备份内容
+## 会备份什么
 
-`openclaw backup create` 根据你的本地 OpenClaw 安装规划备份来源：
+`openclaw backup create` 会根据你本地的 OpenClaw 安装来规划备份源：
 
-- OpenClaw 本地状态解析器返回的状态目录，通常为 `~/.openclaw`
-- 活动的配置文件路径
-- 当 `credentials/` 目录存在于状态目录之外时解析出的该目录
-- 从当前配置中发现的工作区目录，除非你传递了 `--no-include-workspace`
+- OpenClaw 本地状态解析器返回的状态目录，通常是 `~/.openclaw`
+- 当前激活的配置文件路径
+- 当 `credentials/` 目录存在于状态目录之外时，解析后的该目录
+- 从当前配置中发现的工作区目录，除非你传入 `--no-include-workspace`
 
-模型认证配置文件已经是状态目录的一部分，位于 `agents/<agentId>/agent/auth-profiles.json`，因此它们通常被状态备份条目覆盖。
+模型认证配置文件已经是状态目录的一部分，位于
+`agents/<agentId>/agent/auth-profiles.json` 下，因此通常已包含在
+状态备份项中。
 
-如果你使用 `--only-config`，OpenClaw 将跳过状态、凭证目录和工作区发现，仅归档活动的配置文件路径。
+如果你使用 `--only-config`，OpenClaw 会跳过状态、凭据目录和工作区发现，
+只归档当前激活的配置文件路径。
 
-OpenClaw 在构建归档之前会规范化路径。如果配置、凭证目录或工作区已经位于状态目录内，它们不会作为单独的顶层备份源被重复包含。缺失的路径会被跳过。
+OpenClaw 在构建归档之前会规范化路径。如果配置、凭据目录或某个工作区
+已经位于状态目录内部，它们就不会作为单独的顶级备份源重复包含。缺失的路径会被
+跳过。
 
-归档载荷存储来自这些源树的文件内容，嵌入的 `manifest.json` 记录了解析后的绝对源路径以及每个资源所用的归档布局。
+归档有效载荷会存储来自这些源树的文件内容，内嵌的 `manifest.json` 会记录已解析的绝对源路径以及每个资产所使用的归档布局。
 
-## 配置无效时的行为
+状态目录下 `extensions/` 树中的已安装插件源文件和清单文件会被包含，但其嵌套的 `node_modules/` 依赖树会被跳过。这些依赖是可重建的安装产物；在恢复归档后，如果某个已恢复的插件报告缺少依赖，请使用 `openclaw plugins update <id>`，或通过 `openclaw plugins install <spec> --force` 重新安装该插件。
 
-`openclaw backup` 故意绕过正常的配置预检查，因此在恢复过程中依然可用。由于工作区发现依赖有效配置，当配置文件存在但无效且工作区备份仍启用时，`openclaw backup create` 会快速失败。
+## 无效配置行为
 
-如果你仍想在这种情况下进行部分备份，请重新运行：
+`openclaw backup` 会刻意绕过正常的配置预检，这样它在恢复期间也能提供帮助。由于工作区发现依赖有效配置，当配置文件存在但无效且仍启用了工作区备份时，`openclaw backup create` 现在会快速失败。
+
+如果在这种情况下你仍然想要一个部分备份，请重新运行：
 
 ```bash
 openclaw backup create --no-include-workspace
 ```
 
-这将使状态、配置和外部凭证目录保持在范围内，同时完全跳过工作区发现。
+这会保留状态、配置和外部凭据目录在备份范围内，同时完全跳过工作区发现。
 
-如果你只需要备份配置文件本身，`--only-config` 也适用，即使配置格式错误，因为它不依赖解析配置进行工作区发现。
+如果你只需要配置文件本身的一份副本，`--only-config` 也可以在配置损坏时使用，因为它不依赖于为工作区发现而解析配置。
 
 ## 大小和性能
 
-OpenClaw 不强制内建最大备份大小或单文件大小限制。
+OpenClaw 不会强制设置内置的最大备份大小或单文件大小限制。
 
-实际限制来自本地机器和目标文件系统：
+实际限制来自本机和目标文件系统：
 
-- 临时归档写入和最终归档所需的可用空间
-- 遍历大型工作区树并压缩成 `.tar.gz` 的时间
-- 如果使用 `openclaw backup create --verify` 或执行 `openclaw backup verify`，需要额外时间重新扫描归档
-- 目标路径下的文件系统行为。OpenClaw 优先选择无覆盖的硬链接发布步骤，硬链接不支持则回退到排他复制
+- 写入临时归档以及最终归档所需的可用空间
+- 遍历大型工作区树并将其压缩为 `.tar.gz` 所需的时间
+- 如果你使用 `openclaw backup create --verify` 或运行 `openclaw backup verify`，重新扫描归档所需的时间
+- 目标路径上的文件系统行为。OpenClaw 优先使用不会覆盖的硬链接发布步骤，并在不支持硬链接时回退为独占复制
 
 大型工作区通常是归档大小的主要驱动因素。如果你想要更小或更快的备份，请使用 `--no-include-workspace`。
 
-要获得最小的归档，请使用 `--only-config`。
+若要获得最小的归档，请使用 `--only-config`。
 
-## 相关内容
+## 相关
 
 - [CLI reference](/cli)

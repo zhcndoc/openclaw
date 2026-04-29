@@ -1,12 +1,12 @@
 ---
-summary: "openclaw tasks 的 CLI 参考（后台任务账本和 Task Flow 状态）"
+summary: "CLI 参考：`openclaw tasks`（后台任务账本和 Task Flow 状态）"
 read_when:
-  - 你想检查、审核或取消后台任务记录
+  - 你想检查、审计或取消后台任务记录
   - 你正在编写 `openclaw tasks flow` 下的 Task Flow 命令文档
 title: "`openclaw tasks`"
 ---
 
-检查持久化后台任务和 Task Flow 状态。若不指定子命令，
+检查持久化的后台任务和 Task Flow 状态。若不指定子命令，
 `openclaw tasks` 等同于 `openclaw tasks list`。
 
 有关生命周期和交付模型，请参见 [后台任务](/automation/tasks)。
@@ -67,7 +67,7 @@ openclaw tasks notify <lookup> <done_only|state_changes|silent>
 openclaw tasks cancel <lookup>
 ```
 
-取消一个正在运行的后台任务。
+取消正在运行的后台任务。
 
 ### `audit`
 
@@ -75,7 +75,7 @@ openclaw tasks cancel <lookup>
 openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--json]
 ```
 
-显示过期、丢失、交付失败或其他不一致的任务和 Task Flow 记录。
+显示过期、丢失、传递失败或其他不一致的任务和 Task Flow 记录。保留到 `cleanupAfter` 的丢失任务会作为警告；已过期或未加时间戳的丢失任务会作为错误。
 
 ### `maintenance`
 
@@ -83,7 +83,8 @@ openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--
 openclaw tasks maintenance [--apply] [--json]
 ```
 
-预览或应用任务和 Task Flow 的协调修复、清理标记和修剪。
+预览或应用任务与 Task Flow 的协调、清理加盖时间戳以及修剪。
+对于 cron 任务，在将旧的活动任务标记为 `lost` 之前，协调会使用持久化的运行日志/作业状态，因此已完成的 cron 运行不会仅仅因为内存中的 Gateway 运行时状态消失而变成错误的审计问题。离线 CLI 审计并不是 Gateway 进程本地 cron 活动作业集合的权威来源。
 
 ### `flow`
 
@@ -93,7 +94,7 @@ openclaw tasks flow show <lookup> [--json]
 openclaw tasks flow cancel <lookup>
 ```
 
-检查或取消任务账本下的持久化 Task Flow 状态。
+检查或取消任务账本下持久化的 Task Flow 状态。
 
 ## 相关内容
 

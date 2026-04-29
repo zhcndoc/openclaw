@@ -1,25 +1,25 @@
 ---
-summary: "安装 OpenClaw 并在几分钟内进行首次聊天。"
+summary: "在几分钟内安装 OpenClaw 并运行你的第一场聊天。"
 read_when:
   - 第一次从零开始设置
-  - 你想要最快路径完成可用聊天
+  - 你想用最快的方式获得一个可用的聊天
 title: "入门"
 ---
 
-安装 OpenClaw，运行引导流程，然后与 AI 助手聊天——整个过程只需
-大约 5 分钟。到最后，你将拥有一个正在运行的 Gateway、已配置的身份验证，
+安装 OpenClaw，运行引导，并与你的 AI 助手聊天——全部只需
+大约 5 分钟。到最后，你将拥有一个正在运行的 Gateway、已配置的认证，
 以及一个可用的聊天会话。
 
 ## 你需要什么
 
 - **Node.js** — 推荐 Node 24（也支持 Node 22.14+）
-- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——引导流程会提示你
+- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）— 引导过程会提示你
 
 <Tip>
 使用 `node --version` 检查你的 Node 版本。
-**Windows 用户：** 原生 Windows 和 WSL2 都受支持。WSL2 更加
-稳定，推荐用于完整体验。参见 [Windows](/platforms/windows)。
-需要安装 Node？参见 [Node 设置](/install/node)。
+**Windows 用户：** 同时支持原生 Windows 和 WSL2。WSL2 更稳定，
+并且更推荐以获得完整体验。参见 [Windows](/platforms/windows)。
+需要安装 Node？参见 [Node 安装](/install/node)。
 </Tip>
 
 ## 快速设置
@@ -37,7 +37,7 @@ title: "入门"
   className="rounded-lg"
 />
       </Tab>
-      <Tab title="Windows（PowerShell）">
+      <Tab title="Windows (PowerShell)">
         ```powershell
         iwr -useb https://openclaw.ai/install.ps1 | iex
         ```
@@ -54,10 +54,10 @@ title: "入门"
     openclaw onboard --install-daemon
     ```
 
-    向导将引导你选择模型提供商、设置 API 密钥，
+    向导会带你选择模型提供商、设置 API 密钥，
     并配置 Gateway。大约需要 2 分钟。
 
-    完整参考请见 [引导流程（CLI）](/start/wizard)。
+    查看 [引导（CLI）](/start/wizard) 获取完整参考。
 
   </Step>
   <Step title="验证 Gateway 是否正在运行">
@@ -73,22 +73,22 @@ title: "入门"
     openclaw dashboard
     ```
 
-    这会在你的浏览器中打开 Control UI。如果能加载出来，一切都正常。
+    这会在你的浏览器中打开 Control UI。如果成功加载，一切就正常了。
 
   </Step>
   <Step title="发送你的第一条消息">
-    在 Control UI 的聊天中输入一条消息，你应该会收到 AI 的回复。
+    在 Control UI 聊天中输入一条消息，你应该会收到 AI 回复。
 
-    想改为从手机聊天？最快的设置渠道是
-    [Telegram](/channels/telegram)（只需一个 bot token）。查看 [Channels](/channels)
-    了解所有选项。
+    想改用手机聊天？最容易设置的渠道是
+    [Telegram](/channels/telegram)（只需要一个机器人令牌）。查看 [渠道](/channels)
+    获取所有选项。
 
   </Step>
 </Steps>
 
 <Accordion title="高级：挂载自定义 Control UI 构建">
-  如果你维护一个本地化或定制化的仪表板构建，请将
-  `gateway.controlUi.root` 指向一个包含你构建生成的静态
+  如果你维护本地化或自定义的仪表板构建，请将
+  `gateway.controlUi.root` 指向一个包含你构建好的静态
   资源和 `index.html` 的目录。
 
 ```bash
@@ -125,7 +125,7 @@ openclaw dashboard
     Discord、飞书、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等更多渠道。
   </Card>
   <Card title="配对与安全" href="/channels/pairing" icon="shield">
-    控制谁可以给你的代理发消息。
+    控制谁可以给你的代理发送消息。
   </Card>
   <Card title="配置 Gateway" href="/gateway/configuration" icon="settings">
     模型、工具、沙箱和高级设置。
@@ -136,16 +136,16 @@ openclaw dashboard
 </Columns>
 
 <Accordion title="高级：环境变量">
-  如果你将 OpenClaw 作为服务账号运行，或希望使用自定义路径：
+  如果你将 OpenClaw 作为服务账户运行，或想使用自定义路径：
 
-- `OPENCLAW_HOME` — 用于内部路径解析的主目录
+- `OPENCLAW_HOME` — 内部路径解析所使用的 home 目录
 - `OPENCLAW_STATE_DIR` — 覆盖状态目录
 - `OPENCLAW_CONFIG_PATH` — 覆盖配置文件路径
 
 完整参考：[环境变量](/help/environment)。
 </Accordion>
 
-## 相关阅读
+## 相关内容
 
 - [安装概览](/install)
 - [渠道概览](/channels)

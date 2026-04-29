@@ -1,16 +1,16 @@
 ---
-summary: "Bun 工作流（实验性）：安装与注意事项对比 pnpm"
+summary: "Bun 工作流（实验性）：与 pnpm 相比的安装和注意事项"
 read_when:
-  - 你希望获得最快的本地开发循环（bun + watch）
-  - 你遇到了 Bun install/patch/lifecycle 脚本问题
+  - 你想要最快的本地开发循环（bun + watch）
+  - 你遇到 Bun 安装/补丁/生命周期脚本问题
 title: "Bun（实验性）"
 ---
 
 <Warning>
-Bun **不推荐用于网关运行时**（WhatsApp 和 Telegram 存在已知问题）。生产环境请使用 Node。
+Bun **不建议用于 gateway 运行时**（与 WhatsApp 和 Telegram 相关的已知问题）。生产环境请使用 Node。
 </Warning>
 
-Bun 是一个可选的本地运行时，用于直接运行 TypeScript（`bun run ...`、`bun --watch ...`）。默认的包管理器仍是 `pnpm`，文档工具完全支持并使用它。Bun 无法使用 `pnpm-lock.yaml` 并会忽略它。
+Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ...`、`bun --watch ...`）。默认包管理器仍然是 `pnpm`，它已得到完全支持，并被 docs 工具链使用。Bun 不能使用 `pnpm-lock.yaml`，并会忽略它。
 
 ## 安装
 
@@ -20,14 +20,14 @@ Bun 是一个可选的本地运行时，用于直接运行 TypeScript（`bun run
     bun install
     ```
 
-    `bun.lock` / `bun.lockb` 已被 git 忽略，因此不会造成仓库变动。若要完全跳过锁文件写入：
+    `bun.lock` / `bun.lockb` 已被 git 忽略，因此不会造成仓库变更。如果想完全跳过锁文件写入：
 
     ```sh
     bun install --no-save
     ```
 
   </Step>
-  <Step title="构建与测试">
+  <Step title="构建和测试">
     ```sh
     bun run build
     bun run vitest run
@@ -37,12 +37,12 @@ Bun 是一个可选的本地运行时，用于直接运行 TypeScript（`bun run
 
 ## 生命周期脚本
 
-Bun 会阻止依赖的生命周期脚本，除非显式信任。对于本仓库，通常被阻止的脚本并非必需：
+Bun 会阻止依赖生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
 
-- `@whiskeysockets/baileys` `preinstall` -- 检查 Node 主版本是否 >= 20（OpenClaw 默认使用 Node 24，同时仍支持 Node 22 LTS，目前为 `22.14+`）
-- `protobufjs` `postinstall` -- 发出关于不兼容版本方案的警告（无构建产物）
+- `@whiskeysockets/baileys` `preinstall` -- 检查 Node 主版本号 >= 20（OpenClaw 默认使用 Node 24，并且仍然支持 Node 22 LTS，目前为 `22.14+`）
+- `protobufjs` `postinstall` -- 输出关于不兼容版本方案的警告（没有构建产物）
 
-如果你遇到运行时问题需要这些脚本，请显式信任它们：
+如果你遇到需要这些脚本的运行时问题，请显式信任它们：
 
 ```sh
 bun pm trust @whiskeysockets/baileys protobufjs
@@ -50,7 +50,7 @@ bun pm trust @whiskeysockets/baileys protobufjs
 
 ## 注意事项
 
-Some scripts still hardcode pnpm (for example `docs:build`, `ui:*`, `protocol:check`). Run those via pnpm for now.
+有些脚本仍然硬编码了 pnpm（例如 `docs:build`、`ui:*`、`protocol:check`）。目前请通过 pnpm 运行这些脚本。
 
 ## 相关内容
 

@@ -1,44 +1,44 @@
 ---
-summary: "在 Northflank 上通过一键模板部署 OpenClaw"
+summary: "在 Northflank 上使用一键模板部署 OpenClaw"
 read_when:
   - 将 OpenClaw 部署到 Northflank
-  - 你想要一个基于浏览器 Control UI 的一键云部署
+  - 你希望通过基于浏览器的 Control UI 进行一键云部署
 title: "Northflank"
 ---
 
 # Northflank
 
-使用一键模板在 Northflank 上部署 OpenClaw，并通过网页 Control UI 访问它。
-这是最简单的“服务器上没有终端”的部署方式：Northflank 会为你运行 Gateway。
+使用一键模板在 Northflank 上部署 OpenClaw，并通过 Web Control UI 访问它。
+这是最简单的“服务器上没有终端”的路径：Northflank 会为你运行 Gateway。
 
 ## 如何开始
 
-1. Click [Deploy OpenClaw](https://northflank.com/stacks/deploy-openclaw) to open the template.
-2. Create an [account on Northflank](https://app.northflank.com/signup) if you don't already have one.
-3. Click **Deploy OpenClaw now**.
-4. Set the required environment variable: `OPENCLAW_GATEWAY_TOKEN` (use a strong random value).
-5. Click **Deploy stack** to build and run the OpenClaw template.
-6. Wait for the deployment to complete, then click **View resources**.
-7. Open the OpenClaw service.
-8. Open the public OpenClaw URL at `/openclaw` and connect using the configured shared secret. This template uses `OPENCLAW_GATEWAY_TOKEN` by default; if you replace it with password auth, use that password instead.
+1. 点击 [Deploy OpenClaw](https://northflank.com/stacks/deploy-openclaw) 打开模板。
+2. 如果你还没有 [Northflank 账户](https://app.northflank.com/signup)，请创建一个。
+3. 点击 **Deploy OpenClaw now**。
+4. 设置所需的环境变量：`OPENCLAW_GATEWAY_TOKEN`（请使用强随机值）。
+5. 点击 **Deploy stack** 构建并运行 OpenClaw 模板。
+6. 等待部署完成，然后点击 **View resources**。
+7. 打开 OpenClaw 服务。
+8. 在 `/openclaw` 打开公开的 OpenClaw URL，并使用已配置的共享密钥连接。此模板默认使用 `OPENCLAW_GATEWAY_TOKEN`；如果你将其替换为密码认证，请改用该密码。
 
 ## 你将获得
 
 - 托管的 OpenClaw Gateway + Control UI
-- 通过 Northflank Volume（`/data`）提供持久化存储，因此 `openclaw.json`、
-  每个代理的 `auth-profiles.json`、channel/provider 状态、sessions，以及
-  workspace 都会在重新部署后保留
+- 通过 Northflank Volume（`/data`）提供的持久化存储，因此 `openclaw.json`、
+  每个 agent 的 `auth-profiles.json`、通道/提供方状态、会话以及
+  工作区在重新部署后仍可保留
 
-## 连接 channel
+## 连接一个通道
 
-使用 `/openclaw` 处的 Control UI，或通过 SSH 运行 `openclaw onboard` 以获取 channel 设置说明：
+使用 `/openclaw` 处的 Control UI，或通过 SSH 运行 `openclaw onboard` 获取通道设置说明：
 
-- [Telegram](/channels/telegram)（最快——只需要一个 bot token）
+- [Telegram](/channels/telegram)（最快——只需一个机器人令牌）
 - [Discord](/channels/discord)
-- [所有 channels](/channels)
+- [所有通道](/channels)
 
-## 下一步
+## 后续步骤
 
-- 设置消息 channels：[Channels](/channels)
+- 配置消息通道：[Channels](/channels)
 - 配置 Gateway：[Gateway configuration](/gateway/configuration)
-- 保持 OpenClaw 为最新版本：[Updating](/install/updating)
+- 让 OpenClaw 保持最新：[Updating](/install/updating)
