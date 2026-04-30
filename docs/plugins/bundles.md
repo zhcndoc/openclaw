@@ -35,7 +35,7 @@ OpenClaw 会将其映射为原生功能，例如 skills、hooks 和 MCP tools。
     # 压缩包
     openclaw plugins install ./my-bundle.tgz
 
-    # Claude marketplace
+    # Claude 市场
     openclaw plugins marketplace list <marketplace-name>
     openclaw plugins install <plugin-name>@<marketplace-name>
     ```
@@ -255,10 +255,13 @@ OpenClaw 会先检查原生插件格式：
 
 ## 运行时依赖和清理
 
-- Bundled plugin 的运行时依赖会随 OpenClaw 包一起发布在
-  `dist/*` 下。OpenClaw 在启动时不会为 bundled plugins 执行
-  `npm install`；发布流水线负责提供完整的 bundled 依赖载荷
-  （参见 [Releasing](/reference/RELEASING) 中的 postpublish 验证规则）。
+- 第三方兼容 bundle 不会在启动时通过 `npm install` 修复。它们应通过
+  `openclaw plugins install` 安装，并在已安装的插件目录中附带所需的一切。
+- OpenClaw 自有的打包 bundle 插件有一个很小的例外：当其启用时，
+  Gateway 启动可以在导入前修复缺失的已声明运行时依赖。操作者可以使用
+  `openclaw plugins deps` 检查或修复该阶段。
+- 发布流水线在可能时仍负责交付完整的 bundled 依赖负载（参见
+  [发布](/reference/RELEASING) 中的 postpublish 验证规则）。
 
 ## 安全性
 

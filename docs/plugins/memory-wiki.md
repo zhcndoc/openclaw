@@ -145,15 +145,89 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
 
 证据条目可以包含：
 
+- `kind`
 - `sourceId`
 - `path`
 - `lines`
 - `weight`
+- `confidence`
+- `privacyTier`
 - `note`
 - `updatedAt`
 
 这就是让 wiki 更像一个信念层，而不是一个被动笔记堆的原因。
 声明可以被跟踪、评分、争议处理，并最终回溯到来源解决。
+
+## 面向代理的实体元数据
+
+实体页面也可以携带用于代理的路由元数据。这是通用的
+frontmatter，因此适用于人、团队、系统、项目或任何其他
+实体类型。
+
+常见字段包括：
+
+- `entityType`：例如 `person`、`team`、`system` 或 `project`
+- `canonicalId`：在别名和导入之间使用的稳定身份键
+- `aliases`：应解析到同一页面的名称、账号或标签
+- `privacyTier`：`public`、`local-private`、`sensitive` 或 `confirm-before-use`
+- `bestUsedFor` / `notEnoughFor`：简洁的路由提示
+- `lastRefreshedAt`：独立于页面编辑时间的来源刷新时间戳
+- `personCard`：可选的人员专用路由卡，包含账号、社交链接、
+  邮箱、时区、轨道、可询问内容、避免询问内容、置信度和隐私
+- `relationships`：指向相关页面的类型化边，包含目标、关系类型、权重、
+  置信度、证据类型、隐私层级和备注
+
+对于人员 wiki，代理通常应先打开
+`reports/person-agent-directory.md`，然后在使用联系方式或推断事实之前，
+用 `wiki_get` 打开该人员页面。
+
+示例：
+
+```yaml
+pageType: entity
+entityType: person
+id: entity.brad-groux
+canonicalId: maintainer.brad-groux
+aliases:
+  - Brad
+  - bgroux
+privacyTier: local-private
+bestUsedFor:
+  - Microsoft Teams and Azure routing
+notEnoughFor:
+  - legal approval
+lastRefreshedAt: "2026-04-29T00:00:00.000Z"
+personCard:
+  handles:
+    - "@bgroux"
+  socials:
+    - "https://x.example/bgroux"
+  emails:
+    - brad@example.com
+  timezone: America/Chicago
+  lane: Microsoft ecosystem
+  askFor:
+    - Teams rollout questions
+  avoidAskingFor:
+    - unrelated billing decisions
+  confidence: 0.8
+  privacyTier: confirm-before-use
+relationships:
+  - targetId: entity.alice
+    targetTitle: Alice
+    kind: collaborates-with
+    confidence: 0.7
+    evidenceKind: discrawl-stat
+claims:
+  - id: claim.brad.teams
+    text: Brad is useful for Microsoft Teams routing.
+    status: supported
+    confidence: 0.9
+    evidence:
+      - kind: maintainer-whois
+        sourceId: source.maintainers
+        privacyTier: local-private
+```
 
 ## 编译管线
 
@@ -184,15 +258,23 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
 - `reports/low-confidence.md`
 - `reports/claim-health.md`
 - `reports/stale-pages.md`
+- `reports/person-agent-directory.md`
+- `reports/relationship-graph.md`
+- `reports/provenance-coverage.md`
+- `reports/privacy-review.md`
 
 这些报告会跟踪如下内容：
 
-- 矛盾说明簇
-- 竞争性声明簇
+- 矛盾备注聚类
+- 竞争性声明聚类
 - 缺少结构化证据的声明
 - 低置信度页面和声明
 - 过时或未知新鲜度
-- 有未解决问题的页面
+- 存在未解决问题的页面
+- 人员/实体路由卡
+- 结构化关系边
+- 证据类别覆盖情况
+- 需要在使用前审查的非公开隐私层级
 
 ## 搜索与检索
 
@@ -209,15 +291,33 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
 
 重要行为：
 
-- 当可能时，`wiki_search` 和 `wiki_get` 会先使用编译摘要作为首轮
-- claim id 可以回溯解析到所属页面
+- `wiki_search` 和 `wiki_get` 在可能时会先使用编译后的摘要
+- claim id 可以回解析到所属页面
 - 有争议/过时/新鲜的声明会影响排序
 - 来源标签可以保留到结果中
+- 搜索模式可以针对人员查找、问题路由、来源
+  证据或原始声明来偏置排序
 
 实用规则：
 
 - 当你想要一次广泛回忆时，使用 `memory_search corpus=all`
 - 当你关心 wiki 专用排序、来源信息或页面级信念结构时，使用 `wiki_search` + `wiki_get`
+
+搜索模式：
+
+- `auto`：平衡的默认模式
+- `find-person`：提升类似人员的实体、别名、账号、社交信息和
+  规范 ID
+- `route-question`：提升代理卡片、可询问提示、最佳用途提示和
+  关系上下文
+- `source-evidence`：提升来源页面和结构化证据元数据
+- `raw-claim`：提升匹配的结构化声明，并在结果中返回声明/证据
+  元数据
+
+当结果匹配到结构化声明时，`wiki_search` 可以在其详细载荷中返回
+`matchedClaimId`、`matchedClaimStatus`、`matchedClaimConfidence`、
+`evidenceKinds` 和 `evidenceSourceIds`。当可用时，文本输出还会包含简洁的
+`Claim:` 和 `Evidence:` 行。
 
 ## 代理工具
 
@@ -232,9 +332,11 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
 它们的作用：
 
 - `wiki_status`：当前库模式、健康状态、Obsidian CLI 可用性
-- `wiki_search`：搜索 wiki 页面，并在配置后搜索共享记忆语料库
+- `wiki_search`：搜索 wiki 页面，并在配置后搜索共享记忆语料库；
+  接受 `mode` 用于人员查找、问题路由、来源证据或原始
+  声明深挖
 - `wiki_get`：按 id/path 读取 wiki 页面，或回退到共享记忆语料库
-- `wiki_apply`：在不进行自由形式页面手术的情况下，执行受限的综合/元数据修改
+- `wiki_apply`：进行受限的综合/元数据修改，而不进行自由形式的页面手术
 - `wiki_lint`：结构检查、来源缺口、矛盾、开放问题
 
 插件还注册了一个非独占的记忆语料补充，因此当活动记忆插件支持语料选择时，共享的

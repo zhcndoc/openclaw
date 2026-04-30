@@ -516,10 +516,12 @@ openclaw plugins install <package-name>
 </Info>
 
 <Note>
-打包的、由 OpenClaw 拥有的插件是唯一的启动修复例外：当某个打包安装在插件配置、旧版频道配置或其打包的默认启用 manifest 中被启用时，启动会在导入前安装该插件缺失的运行时依赖。第三方插件不应依赖启动时安装；请继续使用显式的插件安装器。
+打包的 OpenClaw 自有插件是唯一的启动修复例外：当打包安装检测到某个插件因插件配置、旧版频道配置或其打包的默认启用清单而处于启用状态时，启动会在导入前安装该插件缺失的运行时依赖。运维人员可以使用 `openclaw plugins deps` 检查或修复该阶段。第三方插件不应依赖启动时安装；请继续使用显式插件安装器。
 </Note>
 
-## 相关
+打包的包级运行时依赖是显式元数据，而不是在网关启动时从构建后的 JavaScript 中推断出来的。如果某个共享的 OpenClaw 根依赖必须在外部打包插件运行时镜像中可用，请在根包清单中的 `openclaw.bundle.mirroredRootRuntimeDependencies` 里声明它。
+
+## 相关内容
 
 - [构建插件](/plugins/building-plugins) — 分步骤入门指南
 - [插件清单](/plugins/manifest) — 完整的清单模式参考

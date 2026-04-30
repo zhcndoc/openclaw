@@ -861,15 +861,15 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
   <Accordion title="轮询或网络不稳定">
 
-    - Node 22+ + 自定义 fetch/proxy 如果 AbortSignal 类型不匹配，可能会触发立即中止行为。
-    - 某些主机会先将 `api.telegram.org` 解析到 IPv6；损坏的 IPv6 出站可能导致间歇性的 Telegram API 失败。
+    - Node 22+ + 自定义 fetch/proxy 在 AbortSignal 类型不匹配时可能触发立即中止行为。
+    - 某些主机会优先将 `api.telegram.org` 解析为 IPv6；损坏的 IPv6 出站连接可能导致间歇性的 Telegram API 失败。
     - 如果日志包含 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!`，OpenClaw 现在会将这些错误作为可恢复的网络错误重试。
-    - 如果日志包含 `Polling stall detected`，OpenClaw 会在默认情况下于 120 秒内没有完成长轮询存活信号时重启轮询并重建 Telegram 传输。
-    - 当运行中的轮询账号在启动宽限期后仍未完成 `getUpdates`，或者其最近一次成功的轮询传输活动已过期时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
-    - 只有当长时间运行的 `getUpdates` 调用本身是健康的，但你的主机仍然错误地报告轮询停滞重启时，才增加 `channels.telegram.pollingStallThresholdMs`。持续的停滞通常指向主机与 `api.telegram.org` 之间的代理、DNS、IPv6 或 TLS 出站问题。
-    - Telegram 也会遵循 Bot API 传输的进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍然可以绕过 `api.telegram.org`。
-    - 如果 OpenClaw 管理的代理通过 `OPENCLAW_PROXY_URL` 为服务环境配置，且不存在标准代理环境变量，Telegram 也会使用该 URL 进行 Bot API 传输。
-    - 在直连出站/TLS 不稳定的 VPS 主机上，可通过 `channels.telegram.proxy` 路由 Telegram API 调用：
+    - 如果日志包含 `Polling stall detected`，OpenClaw 会在默认情况下于 120 秒内没有完成 long-poll 存活检查时重启轮询并重建 Telegram 传输层。
+    - 当运行中的轮询账号在启动宽限期后尚未完成 `getUpdates`、运行中的 webhook 账号在启动宽限期后尚未完成 `setWebhook`，或者最近一次成功的轮询传输活动已过时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
+    - 仅当长时间运行的 `getUpdates` 调用正常，但你的主机仍然报告错误的轮询停滞重启时，才增加 `channels.telegram.pollingStallThresholdMs`。持续的停滞通常指向主机与 `api.telegram.org` 之间的代理、DNS、IPv6 或 TLS 出站问题。
+    - Telegram 也会尊重 Bot API 传输所使用的进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍可绕过 `api.telegram.org`。
+    - 如果 OpenClaw 托管代理在服务环境中通过 `OPENCLAW_PROXY_URL` 配置，且不存在标准代理环境变量，Telegram 也会将该 URL 用于 Bot API 传输。
+    - 在直接出站/TLS 不稳定的 VPS 主机上，可通过 `channels.telegram.proxy` 让 Telegram API 调用走代理：
 
 ```yaml
 channels:

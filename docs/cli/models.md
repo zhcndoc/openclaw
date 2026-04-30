@@ -1,5 +1,5 @@
 ---
-summary: "openclaw models 的 CLI 参考（status/list/set/scan、别名、回退、认证）"
+summary: "openclaw models 模型的 CLI 参考（status/list/set/scan、别名、回退、认证）"
 read_when:
   - 你想更改默认模型或查看提供方认证状态
   - 你想扫描可用的模型/提供方并调试认证配置文件
@@ -47,28 +47,28 @@ Codex、MiniMax、小米和 z.ai。使用认证来自提供方特定的钩子，
 - `models list` 是只读的：它会读取配置、认证配置文件、现有目录
   状态以及提供方拥有的目录行，但不会重写
   `models.json`。
-- `models list --all --provider <id>` 可以包含来自插件清单或内置提供方目录元数据的
-  提供方拥有的静态目录行，即使你
-  还没有对该提供方进行认证。这些行仍会显示为
-  不可用，直到配置了匹配的认证。
-- 广泛的 `models list --all` 会在不加载提供方运行时补充钩子的情况下，将清单目录行覆盖到注册表行之上。
-  按提供方过滤的清单快速路径只使用标记为 `static` 的提供方；标记为 `refreshable` 的提供方
-  仍保持由注册表/缓存支持，并将清单行作为补充追加，而
-  标记为 `runtime` 的提供方仍停留在注册表/运行时发现路径上。
-- `models list` 会保持原生模型元数据与运行时上限彼此独立。
-  在表格输出中，`Ctx` 会在有效运行时上限与
-  原生上下文窗口不同时显示 `contextTokens/contextWindow`；JSON 行在
-  提供方公开该上限时会包含 `contextTokens`。
+- `Auth` 列是提供方级别且只读。它根据本地
+  认证配置文件元数据、环境标记、已配置的提供方密钥、本地提供方
+  标记、AWS Bedrock 环境/配置文件标记以及插件合成认证元数据计算得出；
+  它不会加载提供方运行时、读取密钥环秘密、调用提供方
+  API，也不能证明逐模型的精确执行就绪状态。
+- `models list --all --provider <id>` 即使你尚未对该提供方进行认证，
+  也可以包含来自插件清单或内置提供方目录元数据的提供方拥有的静态目录
+  行。这些行在配置匹配认证之前仍会显示为不可用。
+- 广泛的 `models list --all` 会在不加载提供方运行时补充钩子的情况下，
+  将清单目录行覆盖到注册表行之上。提供方过滤的清单
+  快速路径仅使用标记为 `static` 的提供方；标记为 `refreshable` 的提供方
+  仍保持基于注册表/缓存，并将清单行作为补充追加，而标记为 `runtime` 的提供方
+  则继续使用注册表/运行时发现。
+- `models list` 会将原生模型元数据与运行时上限区分开来。在表格
+  输出中，当有效运行时上限不同于原生上下文窗口时，`Ctx` 会显示 `contextTokens/contextWindow`；JSON 行在提供方暴露该上限时会包含 `contextTokens`。
 - `models list --provider <id>` 按提供方 id 过滤，例如 `moonshot` 或
   `openai-codex`。它不接受交互式提供方选择器中的显示标签，
   例如 `Moonshot AI`。
 - 模型引用通过按**第一个** `/` 分割来解析。如果模型 ID 中包含 `/`（OpenRouter 风格），请包含提供方前缀（例如：`openrouter/moonshotai/kimi-k2`）。
-- 如果你省略提供方，OpenClaw 会先将输入解析为别名，
-  然后解析为该精确模型 id 的唯一已配置提供方匹配，最后才在
-  配置的默认提供方上回退，并给出弃用警告。
-  如果该提供方不再公开配置的默认模型，OpenClaw 会回退到
-  第一个已配置的提供方/模型，而不是暴露一个已失效、被移除提供方的默认值。
-- `models status` 可能会在认证输出中显示 `marker(<value>)`，用于非秘密占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将它们掩码为秘密。
+- 如果你省略提供方，OpenClaw 会先将输入解析为别名，然后解析为该精确模型 id 的唯一已配置提供方匹配，最后才在带有弃用警告的情况下回退到已配置的默认提供方。
+  如果该提供方不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的提供方/模型，而不是显示一个已失效的已移除提供方默认值。
+- `models status` 可能会在认证输出中显示 `marker(<value>)`，用于非密钥占位符（例如 `OPENAI_API_KEY`、`secretref-managed`、`minimax-oauth`、`oauth:chutes`、`ollama-local`），而不是将其掩码为密钥。
 
 ### Models scan
 

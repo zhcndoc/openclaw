@@ -21,20 +21,20 @@ title: "插件 SDK 子路径"
 | `plugin-sdk/core`                         | `defineChannelPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase`, `defineSetupPluginEntry`, `buildChannelConfigSchema`                                       |
 | `plugin-sdk/config-schema`                | `OpenClawSchema`                                                                                                                                                             |
 | `plugin-sdk/provider-entry`               | `defineSingleProviderPluginEntry`                                                                                                                                            |
-| `plugin-sdk/testing`                      | 面向旧版插件测试的宽兼容桶；新的扩展测试请优先使用更聚焦的测试子路径                                                                     |
+| `plugin-sdk/testing`                      | 面向旧版插件测试的广泛兼容桶；新的扩展测试更推荐使用更聚焦的测试子路径                                                                     |
 | `plugin-sdk/plugin-test-api`              | 用于直接插件注册单元测试的最小 `OpenClawPluginApi` mock 构建器                                                                                           |
-| `plugin-sdk/agent-runtime-test-contracts` | 原生 agent-runtime 适配器契约夹具，涵盖认证档案、交付抑制、fallback 分类、工具钩子、prompt 覆盖层、schema 和转录修复 |
-| `plugin-sdk/channel-test-helpers`         | 频道账号生命周期、目录、发送配置、运行时 mock、hook、bundled channel 入口、信封时间戳、配对回复以及通用频道契约测试 helper   |
-| `plugin-sdk/channel-target-testing`       | 共享的频道目标解析错误场景测试套件                                                                                                                       |
+| `plugin-sdk/agent-runtime-test-contracts` | 原生 agent-runtime 适配器契约夹具，用于认证档案、交付抑制、fallback 分类、tool hook、prompt overlay、schema 和 transcript repair |
+| `plugin-sdk/channel-test-helpers`         | channel 账号生命周期、目录、发送配置、运行时 mock、hook、bundled channel 入口、信封时间戳、配对回复和通用 channel 契约测试 helper   |
+| `plugin-sdk/channel-target-testing`       | 共享的 channel 目标解析错误场景测试套件                                                                                                                       |
 | `plugin-sdk/plugin-test-contracts`        | 插件注册、包清单、公共产物、运行时 API、导入副作用和直接导入契约 helper                                                  |
-| `plugin-sdk/plugin-test-runtime`          | 用于测试的插件运行时、注册表、provider 注册、setup 向导和运行时任务流夹具                                                                      |
-| `plugin-sdk/provider-test-contracts`      | provider 运行时、认证、发现、onboard、目录、媒体能力、重放策略、实时 STT 直播音频、web-search/fetch 以及向导契约 helper                 |
+| `plugin-sdk/plugin-test-runtime`          | 插件运行时、注册表、provider 注册、setup 向导和运行时任务流测试夹具                                                                      |
+| `plugin-sdk/provider-test-contracts`      | provider 运行时、认证、发现、onboard、目录、媒体能力、replay 策略、实时 STT 直播音频、web-search/fetch 和向导契约 helper                 |
 | `plugin-sdk/provider-http-test-mocks`     | 用于测试 `plugin-sdk/provider-http` 的可选 Vitest HTTP/auth mocks                                                                                    |
-| `plugin-sdk/test-env`                     | 测试环境、fetch/网络、可释放 HTTP 服务器、传入请求、live-test、临时文件系统和时间控制夹具                                        |
+| `plugin-sdk/test-env`                     | 测试环境、fetch/network、可释放 HTTP 服务器、入站请求、live-test、临时文件系统和时间控制夹具                                        |
 | `plugin-sdk/test-fixtures`                | 通用 CLI、sandbox、skill、agent-message、system-event、模块重载、bundled plugin 路径、终端、分块、auth-token 和 typed-case 测试夹具                   |
 | `plugin-sdk/test-node-mocks`              | 供在 Vitest `vi.mock("node:*")` 工厂内部使用的聚焦版 Node 内置 mock helper                                                                                        |
-| `plugin-sdk/migration`                    | 迁移 provider 条目 helper，例如 `createMigrationItem`、原因常量、条目状态标记、脱敏 helper 和 `summarizeMigrationItems`                       |
-| `plugin-sdk/migration-runtime`            | 运行时迁移 helper，例如 `copyMigrationFileItem` 和 `writeMigrationReport`                                                                                         |
+| `plugin-sdk/migration`                    | 迁移 provider 项目 helper，例如 `createMigrationItem`、原因常量、项目状态标记、脱敏 helper 和 `summarizeMigrationItems`                       |
+| `plugin-sdk/migration-runtime`            | 运行时迁移 helper，例如 `copyMigrationFileItem`、`withCachedMigrationConfigRuntime` 和 `writeMigrationReport`                                                    |
 
 <AccordionGroup>
   <Accordion title="Channel 子路径">
@@ -53,11 +53,11 @@ title: "插件 SDK 子路径"
     | `plugin-sdk/account-helpers` | 窄范围账号列表/账号动作 helper |
     | `plugin-sdk/channel-pairing` | `createChannelPairingController` |
     | `plugin-sdk/channel-reply-pipeline` | `createChannelReplyPipeline`, `resolveChannelSourceReplyDeliveryMode` |
-    | `plugin-sdk/channel-config-helpers` | `createHybridChannelConfigAdapter` |
+    | `plugin-sdk/channel-config-helpers` | `createHybridChannelConfigAdapter`, `resolveChannelDmAccess`, `resolveChannelDmAllowFrom`, `resolveChannelDmPolicy`, `normalizeChannelDmPolicy`, `normalizeLegacyDmAliases` |
     | `plugin-sdk/channel-config-schema` | 共享 channel 配置 schema 基元和通用构建器 |
-    | `plugin-sdk/bundled-channel-config-schema` | 仅供维护中的 bundled 插件使用的 bundled OpenClaw channel 配置 schemas |
-    | `plugin-sdk/channel-config-schema-legacy` | bundled-channel 配置 schemas 的已弃用兼容别名 |
-    | `plugin-sdk/telegram-command-config` | Telegram 自定义命令规范化/校验 helper，带 bundled-contract 回退 |
+    | `plugin-sdk/bundled-channel-config-schema` | 仅供已维护的 bundled 插件使用的 bundled OpenClaw channel 配置 schema |
+    | `plugin-sdk/channel-config-schema-legacy` | 已弃用的 bundled-channel 配置 schema 兼容别名 |
+    | `plugin-sdk/telegram-command-config` | 带 bundled 契约回退的 Telegram 自定义命令规范化/校验 helper |
     | `plugin-sdk/command-gating` | 窄范围命令授权门控 helper |
     | `plugin-sdk/channel-policy` | `resolveChannelGroupRequireMention` |
     | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink`, `createChannelRunQueue`，草稿流生命周期/终结 helper |
@@ -171,22 +171,22 @@ title: "插件 SDK 子路径"
     | `plugin-sdk/browser-config` | 支持的浏览器配置门面，用于规范化的 profile/默认值、CDP URL 解析和浏览器控制认证 helper |
     | `plugin-sdk/channel-runtime-context` | 通用 channel 运行时上下文注册和查找 helper |
     | `plugin-sdk/runtime-store` | `createPluginRuntimeStore` |
-    | `plugin-sdk/plugin-runtime` | 共享 plugin 命令/hook/http/interactive helper |
-    | `plugin-sdk/hook-runtime` | 共享 webhook/内部 hook 管道 helper |
+    | `plugin-sdk/plugin-runtime` | 共享 plugin command/hook/http/interactive helper |
+    | `plugin-sdk/hook-runtime` | 共享 webhook/internal hook pipeline helper |
     | `plugin-sdk/lazy-runtime` | 懒加载运行时导入/绑定 helper，例如 `createLazyRuntimeModule`、`createLazyRuntimeMethod` 和 `createLazyRuntimeSurface` |
     | `plugin-sdk/process-runtime` | 进程 exec helper |
-    | `plugin-sdk/cli-runtime` | CLI 格式化、等待、版本、参数调用以及懒加载命令组 helper |
-    | `plugin-sdk/gateway-runtime` | gateway 客户端、gateway CLI RPC、gateway 协议错误和 channel 状态补丁 helper |
-    | `plugin-sdk/config-types` | 面向插件 config 形状的仅类型 config 接口，例如 `OpenClawConfig` 以及 channel/provider config 类型 |
-    | `plugin-sdk/plugin-config-runtime` | 运行时插件配置查找 helper，例如 `requireRuntimeConfig`、`resolvePluginConfigObject` 和 `resolveLivePluginConfigObject` |
-    | `plugin-sdk/config-mutation` | 事务性配置变更 helper，例如 `mutateConfigFile`、`replaceConfigFile` 和 `logConfigUpdated` |
-    | `plugin-sdk/runtime-config-snapshot` | 当前进程配置快照 helper，例如 `getRuntimeConfig`、`getRuntimeConfigSnapshot` 和测试快照 setter |
-    | `plugin-sdk/telegram-command-config` | Telegram 命令名/描述规范化和重复/冲突检查，即使 bundled Telegram 契约面不可用 |
-    | `plugin-sdk/text-autolink-runtime` | 不依赖广泛 text-runtime 桶的文件引用自动链接检测 |
+    | `plugin-sdk/cli-runtime` | CLI 格式化、等待、版本、参数调用和懒加载 command-group helper |
+    | `plugin-sdk/gateway-runtime` | Gateway client、事件循环就绪的客户端启动 helper、gateway CLI RPC、gateway 协议错误和 channel-status 补丁 helper |
+    | `plugin-sdk/config-types` | 仅类型的 config 表面，用于 `OpenClawConfig` 以及 channel/provider config 类型等插件 config 形状 |
+    | `plugin-sdk/plugin-config-runtime` | 运行时 plugin-config 查找 helper，例如 `requireRuntimeConfig`、`resolvePluginConfigObject` 和 `resolveLivePluginConfigObject` |
+    | `plugin-sdk/config-mutation` | 事务性 config 变更 helper，例如 `mutateConfigFile`、`replaceConfigFile` 和 `logConfigUpdated` |
+    | `plugin-sdk/runtime-config-snapshot` | 当前进程 config 快照 helper，例如 `getRuntimeConfig`、`getRuntimeConfigSnapshot` 和测试快照 setter |
+    | `plugin-sdk/telegram-command-config` | Telegram 命令名/描述规范化和重复/冲突检查，即使 bundled Telegram contract 表面不可用也可使用 |
+    | `plugin-sdk/text-autolink-runtime` | 不依赖宽泛 text-runtime 桶的文件引用自动链接检测 |
     | `plugin-sdk/approval-runtime` | exec/plugin 审批 helper、审批能力构建器、认证/档案 helper、原生路由/运行时 helper，以及结构化审批展示路径格式化 |
-    | `plugin-sdk/reply-runtime` | 共享入站/回复运行时 helper、分块、分发、heartbeat、回复规划器 |
-    | `plugin-sdk/reply-dispatch-runtime` | 窄范围回复分发/终结和会话标签 helper |
-    | `plugin-sdk/reply-history` | 共享的短窗口回复历史 helper 和标记，例如 `buildHistoryContext`、`HISTORY_CONTEXT_MARKER`、`recordPendingHistoryEntry` 和 `clearHistoryEntriesIfEnabled` |
+    | `plugin-sdk/reply-runtime` | 共享入站/reply 运行时 helper、分块、分发、heartbeat、reply 规划器 |
+    | `plugin-sdk/reply-dispatch-runtime` | 窄范围 reply 分发/终结和 conversation 标签 helper |
+    | `plugin-sdk/reply-history` | 共享的短窗口 reply-history helper 和标记，例如 `buildHistoryContext`、`HISTORY_CONTEXT_MARKER`、`recordPendingHistoryEntry` 和 `clearHistoryEntriesIfEnabled` |
     | `plugin-sdk/reply-reference` | `createReplyReferencePlanner` |
     | `plugin-sdk/reply-chunking` | 窄范围文本/markdown 分块 helper |
     | `plugin-sdk/session-store-runtime` | 会话存储路径、会话键、更新时间和存储变更 helper |
@@ -206,7 +206,7 @@ title: "插件 SDK 子路径"
     | `plugin-sdk/markdown-table-runtime` | markdown 表格模式和转换 helper |
     | `plugin-sdk/model-session-runtime` | 模型/会话覆盖 helper，例如 `applyModelOverrideToSessionEntry` 和 `resolveAgentMaxConcurrent` |
     | `plugin-sdk/talk-config-runtime` | talk provider 配置解析 helper |
-    | `plugin-sdk/json-store` |  მცირე型 JSON 状态读写 helper |
+    | `plugin-sdk/json-store` | 小型 JSON 状态读写 helper |
     | `plugin-sdk/file-lock` | 可重入文件锁 helper |
     | `plugin-sdk/persistent-dedupe` | 磁盘支持的去重缓存 helper |
     | `plugin-sdk/acp-runtime` | ACP 运行时/会话和回复分发 helper |

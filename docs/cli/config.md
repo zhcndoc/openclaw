@@ -1,12 +1,12 @@
 ---
-summary: "CLI 参考：`openclaw config`（get/set/unset/file/schema/validate）"
+summary: "CLI 参考：`openclaw config`（get/set/patch/unset/file/schema/validate）"
 read_when:
   - 你想以非交互方式读取或编辑配置
 title: "配置"
 sidebarTitle: "配置"
 ---
 
-用于在 `openclaw.json` 中进行非交互式编辑的配置辅助工具：通过路径对值进行 get/set/unset/file/schema/validate 操作，并打印当前活动配置文件。若不带子命令运行，将打开配置向导（等同于 `openclaw configure`）。
+用于在 `openclaw.json` 中进行非交互式编辑的配置辅助工具：可通过路径对值进行 get/set/patch/unset/file/schema/validate，并打印当前活动配置文件。不带子命令运行时会打开配置向导（与 `openclaw configure` 相同）。
 
 ## 根选项
 
@@ -31,6 +31,7 @@ openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
 openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
 openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN
 openclaw config set secrets.providers.vaultfile --provider-source file --provider-path /etc/openclaw/secrets.json --provider-mode json
+openclaw config patch --file ./openclaw.patch.json5 --dry-run
 openclaw config unset plugins.entries.brave.config.webSearch.apiKey
 openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN --dry-run
 openclaw config validate
@@ -165,7 +166,63 @@ openclaw config set models.providers.ollama.models '[{"id":"llama3.2","name":"Ll
 
 批量解析始终使用批量载荷（`--batch-json`/`--batch-file`）作为唯一事实来源。`--strict-json` / `--json` 不会改变批量解析行为。
 
-JSON 路径/值模式仍同时支持 SecretRef 和 provider：
+## `config patch`
+
+当你想粘贴或通过管道传入一个配置形状的补丁，而不是运行许多基于路径的 `config set` 命令时，请使用 `config patch`。输入是一个 JSON5 对象。对象会递归合并，数组和标量值会替换目标值，而 `null` 会删除目标路径。
+
+```bash
+openclaw config patch --file ./openclaw.patch.json5 --dry-run
+openclaw config patch --file ./openclaw.patch.json5
+```
+
+你也可以通过 stdin 传入补丁，这对远程设置脚本很有用：
+
+```bash
+ssh openclaw-host 'openclaw config patch --stdin --dry-run' < ./openclaw.patch.json5
+ssh openclaw-host 'openclaw config patch --stdin' < ./openclaw.patch.json5
+```
+
+补丁示例：
+
+```json5
+{
+  channels: {
+    slack: {
+      enabled: true,
+      mode: "socket",
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
+      groupPolicy: "open",
+      requireMention: false,
+    },
+    discord: {
+      enabled: true,
+      token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
+      dmPolicy: "disabled",
+      dm: { enabled: false },
+      groupPolicy: "allowlist",
+    },
+  },
+  agents: {
+    defaults: {
+      model: { primary: "openai/gpt-5.5" },
+      models: {
+        "openai/gpt-5.5": { params: { fastMode: true } },
+      },
+    },
+  },
+}
+```
+
+当某个对象或数组必须精确变成所提供的值，而不是递归打补丁时，请使用 `--replace-path <path>`：
+
+```bash
+openclaw config patch --file ./discord.patch.json5 --replace-path 'channels.discord.guilds["123"].channels'
+```
+
+`--dry-run` 会在不写入的情况下运行 schema 和 SecretRef 可解析性检查。基于 exec 的 SecretRef 在 dry-run 期间默认会被跳过；当你明确希望 dry-run 执行 provider 命令时，请添加 `--allow-exec`。
+
+JSON 路径/值模式仍然同时支持 SecretRef 和 provider：
 
 ```bash
 openclaw config set channels.discord.token \

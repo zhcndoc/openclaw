@@ -133,7 +133,7 @@ sidebarTitle: "斜杠命令"
 
   </Accordion>
   <Accordion title="模型和运行控制">
-    - `/think <level>` 设置思考等级。选项来自当前模型的提供方配置文件；常见等级有 `off`、`minimal`、`low`、`medium` 和 `high`，自定义等级如 `xhigh`、`adaptive`、`max`，或二元 `on` 仅在受支持时可用。别名：`/thinking`、`/t`。
+    - `/think <level>` 设置思考级别。选项来自当前模型的提供方配置文件；常见级别有 `off`、`minimal`、`low`、`medium` 和 `high`，在支持的情况下还可使用 `xhigh`、`adaptive`、`max` 或二元 `on` 等自定义级别。别名：`/thinking`、`/t`。
     - `/verbose on|off|full` 切换详细输出。别名：`/v`。
     - `/trace on|off` 切换当前会话的插件 trace 输出。
     - `/fast [status|on|off]` 显示或设置快速模式。
@@ -141,8 +141,8 @@ sidebarTitle: "斜杠命令"
     - `/elevated [on|off|ask|full]` 切换提升模式。别名：`/elev`。
     - `/exec host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>` 显示或设置 exec 默认值。
     - `/model [name|#|status]` 显示或设置模型。
-    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出提供方或某个提供方的模型。
-    - `/queue <mode>` 管理队列行为（`steer`、`interrupt`、`followup`、`collect`、`steer-backlog`），以及像 `debounce:2s cap:25 drop:summarize` 这样的选项。
+    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出已配置/可认证使用的提供方或某个提供方的模型；添加 `all` 可浏览该提供方的完整目录。
+    - `/queue <mode>` 管理队列行为（`steer`、`followup`、`collect`、`steer-backlog`、`interrupt`），以及 `debounce:0.5s cap:25 drop:summarize` 等选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。见 [命令队列](/concepts/queue)。
 
   </Accordion>
   <Accordion title="发现和状态">

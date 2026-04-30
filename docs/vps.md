@@ -43,6 +43,21 @@ sidebarTitle: "Linux 服务器"
 
 相关页面：[Gateway 远程访问](/gateway/remote)，[平台中心](/platforms)。
 
+## 先强化管理访问
+
+在公共 VPS 上安装 OpenClaw 之前，先决定你要如何管理
+这台机器本身。
+
+- 如果你希望仅通过 Tailnet 进行管理访问，请先安装 Tailscale，将 VPS
+  加入你的 tailnet，验证通过 Tailscale IP 或
+  MagicDNS 名称建立的第二个 SSH 会话，然后限制公共 SSH。
+- 如果你不使用 Tailscale，请在暴露更多服务之前，为你的 SSH
+  路径应用等效的加固措施。
+- 这与 Gateway 访问是分开的。你仍然可以让 OpenClaw 绑定到
+  loopback，并通过 SSH 隧道或 Tailscale Serve 访问仪表板。
+
+Tailscale 特定的 Gateway 选项位于 [Tailscale](/gateway/tailscale)。
+
 ## VPS 上的共享公司代理
 
 当所有用户都处于同一信任边界内，并且该代理仅用于业务时，为团队运行单个代理是一个有效的设置。

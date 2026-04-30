@@ -151,7 +151,7 @@ openclaw doctor
 
 运行时插件调用 `api.registerMigrationProvider(...)`。该提供程序实现 `detect`、`plan` 和 `apply`。核心负责 CLI 编排、备份策略、提示、JSON 输出和冲突预检。核心将审阅后的计划传入 `apply(ctx, plan)`；为了兼容性，只有当该参数缺失时，提供程序才可重建计划。
 
-提供程序插件可以使用 `openclaw/plugin-sdk/migration` 进行条目构建和汇总计数，也可以使用 `openclaw/plugin-sdk/migration-runtime` 进行具备冲突感知的文件复制、仅归档报告复制以及迁移报告。
+提供程序插件可以使用 `openclaw/plugin-sdk/migration` 进行条目构建和摘要计数，也可以使用 `openclaw/plugin-sdk/migration-runtime` 进行具备冲突感知的文件复制、仅归档报告复制、缓存的 config-runtime 包装器以及迁移报告。
 
 ## Onboarding integration
 

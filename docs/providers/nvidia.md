@@ -19,7 +19,7 @@ NVIDIA 提供了一个 OpenAI 兼容的 API，地址为 `https://integrate.api.n
   <Step title="导出 key 并运行初始化">
     ```bash
     export NVIDIA_API_KEY="nvapi-..."
-    openclaw onboard --auth-choice skip
+    openclaw onboard --auth-choice nvidia-api-key
     ```
   </Step>
   <Step title="设置 NVIDIA 模型">
@@ -30,9 +30,15 @@ NVIDIA 提供了一个 OpenAI 兼容的 API，地址为 `https://integrate.api.n
 </Steps>
 
 <Warning>
-如果你传入 `--token` 而不是使用环境变量，那么该值会进入 shell 历史记录和
-`ps` 输出。尽可能优先使用 `NVIDIA_API_KEY` 环境变量。
+如果你使用 `--nvidia-api-key` 而不是环境变量，值会进入 shell
+历史记录和 `ps` 输出。尽可能优先使用 `NVIDIA_API_KEY` 环境变量。
 </Warning>
+
+对于非交互式设置，你也可以直接传入 key：
+
+```bash
+openclaw onboard --auth-choice nvidia-api-key --nvidia-api-key "nvapi-..."
+```
 
 ## 配置示例
 

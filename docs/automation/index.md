@@ -1,13 +1,13 @@
 ---
-summary: "自动化机制概览：任务、cron、hooks、standing orders 和 Task Flow"
+summary: "自动化机制概览：任务、cron、hooks、固定指令和 Task Flow"
 read_when:
   - 决定如何使用 OpenClaw 自动化工作
-  - 在 heartbeat、cron、hooks 和 standing orders 之间做选择
+  - 在 heartbeat、cron、commitments、hooks 和 fixed instructions 之间做选择
   - 寻找合适的自动化入口
 title: "自动化与任务"
 ---
 
-OpenClaw 通过任务、计划作业、事件 hooks 和固定指令在后台运行工作。此页面将帮助你选择合适的机制，并了解它们如何协同工作。
+OpenClaw 通过任务、计划作业、推断的承诺、事件 hooks 以及固定指令在后台运行工作。本页帮助你选择合适的机制，并理解它们如何协同工作。
 
 ## 快速决策指南
 
@@ -15,33 +15,37 @@ OpenClaw 通过任务、计划作业、事件 hooks 和固定指令在后台运�
 flowchart TD
     START([你需要什么？]) --> Q1{安排工作？}
     START --> Q2{跟踪分离的工作？}
-    START --> Q3{编排多步骤流程？}
-    START --> Q4{对生命周期事件作出反应？}
+    START --> Q3{协调多步骤流程？}
+    START --> Q4{对生命周期事件做出响应？}
     START --> Q5{给代理持久化指令？}
+    START --> Q6{记住自然的后续跟进？}
 
     Q1 -->|是| Q1a{精确时间还是灵活时间？}
     Q1a -->|精确| CRON["计划任务（Cron）"]
     Q1a -->|灵活| HEARTBEAT[Heartbeat]
 
-    Q2 -->|是| TASKS[后台任务]
-    Q3 -->|是| FLOW[Task Flow]
-    Q4 -->|是| HOOKS[Hooks]
-    Q5 -->|是| SO[固定指令]
+    Q2 -->|Yes| TASKS[后台任务]
+    Q3 -->|Yes| FLOW[Task Flow]
+    Q4 -->|Yes| HOOKS[Hooks]
+    Q5 -->|Yes| SO[固定指令]
+    Q6 -->|Yes| COMMITMENTS[推断的承诺]
 ```
 
-| 用例                                   | 推荐                   | 原因                                             |
-| -------------------------------------- | ---------------------- | ------------------------------------------------ |
-| 在上午 9 点准时发送日报                | 计划任务（Cron）       | 精确时间，隔离执行                               |
-| 20 分钟后提醒我                        | 计划任务（Cron）       | 一次性且时间精确（`--at`）                       |
-| 每周运行深度分析                       | 计划任务（Cron）       | 独立任务，可使用不同模型                        |
-| 每 30 分钟检查收件箱                   | Heartbeat              | 与其他检查批量处理，且具备上下文感知            |
-| 监控日历中的即将发生的事件             | Heartbeat              | 适合周期性关注                                   |
-| 检查子代理或 ACP 运行状态              | 后台任务                | 任务账本会跟踪所有分离的工作                    |
-| 审计运行了什么以及何时运行             | 后台任务                | `openclaw tasks list` 和 `openclaw tasks audit` |
-| 多步骤研究然后总结                     | Task Flow              | 具有修订跟踪的持久化编排                        |
-| 在会话重置时运行脚本                   | Hooks                  | 由事件驱动，在生命周期事件触发                  |
-| 在每次工具调用时执行代码               | 插件 hooks              | 进程内 hooks 可拦截工具调用                    |
-| 始终在回复前检查合规性                 | 固定指令                | 自动注入到每个会话中                             |
+| Use case                                | Recommended            | Why                                              |
+| --------------------------------------- | ---------------------- | ------------------------------------------------ |
+| Send daily report at 9 AM sharp         | 计划任务（Cron）       | 精确时间，隔离执行                               |
+| Remind me in 20 minutes                 | 计划任务（Cron）       | 一次性且时间精确（`--at`）                      |
+| Run weekly deep analysis                | 计划任务（Cron）       | 独立任务，可以使用不同模型                       |
+| Check inbox every 30 min                | Heartbeat              | 与其他检查批量处理，且具备上下文感知             |
+| Monitor calendar for upcoming events    | Heartbeat              | 周期性感知的自然适配场景                         |
+| Check in after a mentioned interview    | 推断的承诺             | 类似记忆的后续跟进，不是精确提醒请求              |
+| Gentle care check-in after user context | 推断的承诺             | 作用域限定在同一代理和通道                       |
+| Inspect status of a subagent or ACP run | 后台任务               | 任务账本会跟踪所有分离的工作                     |
+| Audit what ran and when                 | 后台任务               | `openclaw tasks list` 和 `openclaw tasks audit` |
+| Multi-step research then summarize      | Task Flow              | 具备修订跟踪的持久化编排                         |
+| Run a script on session reset           | Hooks                  | 事件驱动，在生命周期事件时触发                   |
+| Execute code on every tool call         | Plugin hooks           | 进程内 hooks 可拦截工具调用                      |
+| Always check compliance before replying | 固定指令               | 自动注入到每个会话中                             |
 
 ### 计划任务（Cron） vs Heartbeat
 
@@ -50,7 +54,7 @@ flowchart TD
 | 时间           | 精确（cron 表达式、一次性）      | 近似（默认每 30 分钟）                 |
 | 会话上下文     | 新鲜（隔离）或共享               | 完整的主会话上下文                    |
 | 任务记录       | 始终创建                         | 从不创建                               |
-| 传递方式       | 渠道、webhook 或静默             | 在主会话内联                        |
+| 传递方式       | 渠道、webhook 或静默             | 在主会话内联                          |
 | 最适合         | 报告、提醒、后台作业             | 收件箱检查、日历、通知               |
 
 当你需要精确时间或隔离执行时，使用计划任务（Cron）。当工作受益于完整会话上下文且近似时间足够时，使用 Heartbeat。
@@ -68,6 +72,12 @@ Cron 是 Gateway 内置的精确时间调度器。它会持久化作业，在正
 后台任务账本会跟踪所有分离的工作：ACP 运行、子代理启动、隔离的 cron 执行以及 CLI 操作。任务是记录，不是调度器。使用 `openclaw tasks list` 和 `openclaw tasks audit` 来检查它们。
 
 参见 [Background Tasks](/automation/tasks)。
+
+### 推断的承诺
+
+Commitments 是可选加入、短生命周期的后续记忆。OpenClaw 会从普通对话中推断它们，将其作用域限定到同一代理和通道，并通过 heartbeat 发送到期的检查跟进。用户明确请求的精确提醒仍然属于 cron。
+
+参见 [Inferred Commitments](/concepts/commitments)。
 
 ### Task Flow
 
@@ -109,10 +119,11 @@ Heartbeat 是一个周期性的主会话轮次（默认每 30 分钟）。它将
 ## 相关内容
 
 - [Scheduled Tasks](/automation/cron-jobs) — 精确调度和一次性提醒
+- [Inferred Commitments](/concepts/commitments) — 类似记忆的后续跟进检查
 - [Background Tasks](/automation/tasks) — 所有分离工作的任务账本
-- [Task Flow](/automation/taskflow) — 持久化多步骤流程编排
+- [Task Flow](/automation/taskflow) — 持久化的多步骤流程编排
 - [Hooks](/automation/hooks) — 事件驱动的生命周期脚本
 - [Plugin hooks](/plugins/hooks) — 进程内工具、提示、消息和生命周期 hooks
-- [Standing Orders](/automation/standing-orders) — 持久化代理指令
+- [Standing Orders](/automation/standing-orders) — 持久化的代理指令
 - [Heartbeat](/gateway/heartbeat) — 周期性的主会话轮次
 - [Configuration Reference](/gateway/configuration-reference) — 所有配置键

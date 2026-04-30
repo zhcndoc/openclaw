@@ -274,10 +274,11 @@ Codex app-server 安装会将插件配置写回为启用状态。
 但本地 Computer Use 桥没有响应。退出或重启 Codex Computer Use，必要时重新启动
 Codex Desktop，然后在一个新的 OpenClaw 会话中重试。
 
-**某个 Computer Use 工具提示 `Native hook relay unavailable`。** Codex 原生工具挂钩
-以过期或缺失的 relay 注册到达了 OpenClaw。使用 `/new` 或 `/reset` 开始一个新的
-OpenClaw 会话。如果持续发生，请重启 gateway，以便清除旧的 app-server 线程和挂钩注册，
-然后重试。
+**A Computer Use tool says `Native hook relay unavailable`.** Codex 原生的
+工具钩子无法通过本地桥接或
+Gateway 回退连接到一个活动的 OpenClaw 中继。请使用 `/new` 或 `/reset` 开始一个新的 OpenClaw 会话。如果它
+仍然反复出现，请重启网关，以便旧的 app-server 线程和钩子
+注册被清除，然后重试。
 
 **轮次开始的自动安装拒绝某个 source。** 这是预期行为。先使用显式的
 `/codex computer-use install --source <marketplace-source>` 添加该 source，

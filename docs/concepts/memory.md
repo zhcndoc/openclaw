@@ -22,6 +22,12 @@ OpenClaw 通过在你的 agent 工作区中写入 **纯 Markdown 文件** 来记
 如果你希望你的 agent 记住某件事，只要告诉它：“记住我更喜欢 TypeScript。” 它就会把这件事写入相应的文件。
 </Tip>
 
+## 推断出的承诺
+
+某些未来跟进事项并不是持久事实。如果你提到明天有面试，那么有用的记忆可能是“面试后跟进”，而不是“把这件事永久存到 `MEMORY.md` 里”。
+
+[Commitments](/concepts/commitments) 是针对这种情况的可选、短期跟进记忆。OpenClaw 会在一个隐藏的后台轮次中推断它们，将其限定在同一个 agent 和频道内，并通过 heartbeat 发送到期的跟进提醒。显式提醒仍然使用 [scheduled tasks](/automation/cron-jobs)。
+
 ## 记忆工具
 
 agent 有两个用于处理记忆的工具：
@@ -62,7 +68,7 @@ OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如
 ## 记忆后端
 
 <CardGroup cols={3}>
-<Card title="Builtin（默认）" icon="database" href="/concepts/memory-builtin">
+<Card title="内置（默认）" icon="database" href="/concepts/memory-builtin">
 基于 SQLite。开箱即用，支持关键词搜索、向量相似度和混合搜索。无需额外依赖。
 </Card>
 <Card title="QMD" icon="search" href="/concepts/memory-qmd">
@@ -179,3 +185,4 @@ openclaw memory index --force   # 重建索引
 - [Builtin memory engine](/concepts/memory-builtin)
 - [Honcho memory](/concepts/memory-honcho)
 - [Memory LanceDB](/plugins/memory-lancedb)
+- [Commitments](/concepts/commitments)

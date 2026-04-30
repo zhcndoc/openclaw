@@ -497,6 +497,10 @@ stdio app-server 启动默认会继承 OpenClaw 的进程环境，但 OpenClaw �
 | `approvalsReviewer` | `"user"`                                 | 使用 `"auto_review"` 让 Codex 审查原生审批提示。`guardian_subagent` 仍是旧版别名。                                                 |
 | `serviceTier`       | 未设置                                   | 可选的 Codex app-server 服务等级：`"fast"`、`"flex"` 或 `null`。无效的旧值会被忽略。                                               |
 
+OpenClaw 拥有的动态工具调用与 `appServer.requestTimeoutMs` 独立限制：每个 Codex `item/tool/call` 请求都必须在 30 秒内收到 OpenClaw 响应。超时后，OpenClaw 会在支持的情况下中止工具信号，并向 Codex 返回失败的动态工具响应，以便 turn 继续进行，而不是让会话停留在 `processing` 状态。
+
+在 OpenClaw 对 Codex 的 turn 范围 app-server 请求作出响应后，harness 还会期望 Codex 通过 `turn/completed` 完成原生 turn。如果 app-server 在该响应后 60 秒内保持静默，OpenClaw 会尽力中断 Codex turn，记录诊断超时，并释放 OpenClaw 会话通道，从而避免后续聊天消息排在一个过时的原生 turn 后面。
+
 本地测试仍可使用环境变量覆盖：
 
 - `OPENCLAW_CODEX_APP_SERVER_BIN`

@@ -62,34 +62,31 @@ title: "Exec 工具"
 
 注意：
 
-- `host` 默认为 `auto`：当会话中沙箱运行时处于活动状态时使用 sandbox，否则使用 gateway。
-- `auto` 是默认路由策略，不是通配符。从 `auto` 允许按调用设置 `host=node`；只有在没有活动沙箱运行时时，才允许按调用设置 `host=gateway`。
-- 在没有额外配置的情况下，`host=auto` 仍然“直接可用”：没有沙箱时会解析为 `gateway`；存在活动沙箱时则保持在沙箱中。
-- `elevated` 会从沙箱跳转到已配置的主机路径：默认是 `gateway`，或者当 `tools.exec.host=node` 时为 `node`（或会话默认值为 `host=node`）。仅当当前会话/提供方启用了提升访问时才可用。
-- `gateway`/`node` 审批由 `~/.openclaw/exec-approvals.json` 控制。
+- `host` 默认值为 `auto`：当会话的沙箱运行时处于活动状态时为 sandbox，否则为 gateway。
+- `host` 只接受 `auto`、`sandbox`、`gateway` 或 `node`。它不是主机名选择器；像主机名的值会在命令运行前被拒绝。
+- `auto` 是默认路由策略，不是通配符。从 `auto` 时，按调用设置 `host=node` 是允许的；只有在没有沙箱运行时处于活动状态时，按调用设置 `host=gateway` 才被允许。
+- 在没有额外配置的情况下，`host=auto` 仍然“照常可用”：没有沙箱时它解析为 `gateway`；有活动沙箱时则保留在沙箱中。
+- `elevated` 会从沙箱跳转到已配置的主机路径：默认是 `gateway`，或者当 `tools.exec.host=node`（或会话默认值为 `host=node`）时为 `node`。只有当当前会话/提供方已启用提升访问时才可用。
+- `gateway`/`node` 的审批由 `~/.openclaw/exec-approvals.json` 控制。
 - `node` 需要配对的节点（伴侣应用或无头 node 主机）。
-- 如果有多个节点可用，请设置 `exec.node` 或 `tools.exec.node` 以选择一个。
-- `exec host=node` 是节点唯一的 shell 执行路径；已移除旧的 `nodes.run` 包装器。
-- `timeout` 适用于前台、后台、`yieldMs`、gateway、sandbox，以及 node 的 `system.run` 执行。如果省略，OpenClaw 使用 `tools.exec.timeoutSec`；显式设置 `timeout: 0` 会为该调用禁用 exec 进程超时。
-- 在非 Windows 主机上，exec 使用已设置的 `SHELL`；如果 `SHELL` 是 `fish`，它会优先从 `PATH` 中选择 `bash`（或 `sh`）
-  以避免与 fish 不兼容的脚本，然后在两者都不存在时回退到 `SHELL`。
-- 在 Windows 主机上，exec 优先发现 PowerShell 7（`pwsh`）（Program Files、ProgramW6432，然后 PATH），
-  然后回退到 Windows PowerShell 5.1。
-- 主机执行（`gateway`/`node`）会拒绝 `env.PATH` 和加载器覆盖（`LD_*`/`DYLD_*`），以
-  防止二进制劫持或注入代码。
-- OpenClaw 会在生成的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和 sandbox 执行），以便 shell/profile 规则可以检测 exec-tool 上下文。
-- `openclaw channels login` 会被 `exec` 阻止，因为它是一个交互式的频道认证流程；请在 gateway 主机的终端中运行它，或者在聊天中使用 channel 原生登录工具（如果存在）。
-- 重要：沙箱默认是**关闭**的。如果沙箱关闭，隐式的 `host=auto`
-  会解析为 `gateway`。显式的 `host=sandbox` 仍然会失败关闭，而不会静默
-  在 gateway 主机上运行。请启用沙箱，或使用带审批的 `host=gateway`。
-- 预执行脚本检查（针对常见的 Python/Node shell 语法错误）只会检查
-  有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，预检查将跳过
-  该文件。
-- 对于现在开始的长时间运行任务，请启动一次并依赖自动
-  完成唤醒（当其已启用且命令产生输出或失败时）。对于日志、状态、输入或干预，请使用
-  `process`；不要使用 sleep 循环、超时循环或重复轮询来模拟
+- 如果有多个节点可用，请设置 `exec.node` 或 `tools.exec.node` 来选择一个。
+- `exec host=node` 是节点唯一的 shell 执行路径；旧的 `nodes.run` 包装器已移除。
+- `timeout` 适用于前台、后台、`yieldMs`、gateway、sandbox 和 node 的 `system.run` 执行。如果省略，OpenClaw 会使用 `tools.exec.timeoutSec`；显式 `timeout: 0` 会为该调用禁用 exec 进程超时。
+- 在非 Windows 主机上，exec 在设置了 `SHELL` 时会使用它；如果 `SHELL` 是 `fish`，则优先使用 `PATH` 中的 `bash`（或 `sh`），以避免 fish 不兼容脚本，然后如果两者都不存在再回退到 `SHELL`。
+- 在 Windows 主机上，exec 优先发现 PowerShell 7（`pwsh`）（Program Files、ProgramW6432，然后是 PATH），然后回退到 Windows PowerShell 5.1。
+- 主机执行（`gateway`/`node`）会拒绝 `env.PATH` 和加载器覆盖（`LD_*`/`DYLD_*`），以防止二进制劫持或注入代码。
+- OpenClaw 会在派生的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和 sandbox 执行），这样 shell/profile 规则就能检测 exec 工具上下文。
+- `openclaw channels login` 会被 `exec` 阻止，因为它是一个交互式频道认证流程；请在 gateway 主机上的终端中运行它，或者在有可用时使用聊天中的频道原生登录工具。
+- 重要：沙箱默认是**关闭**的。如果沙箱关闭，隐式 `host=auto`
+  会解析为 `gateway`。显式 `host=sandbox` 仍然会失败并关闭，而不会静默地
+  在 gateway 主机上运行。请启用沙箱或使用带审批的 `host=gateway`。
+- 脚本预检检查（用于常见的 Python/Node shell 语法错误）只检查
+  有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，则会跳过该文件的预检。
+- 对于从现在开始的长时间运行工作，请只启动一次，并依赖在启用后且命令输出或失败时的自动
+  完成唤醒。
+  使用 `process` 查看日志、状态、输入或干预；不要用 sleep 循环、timeout 循环或重复轮询来模拟
   调度。
-- 对于应当稍后或按计划执行的任务，请使用 cron，而不是
+- 对于应该稍后或按计划发生的工作，请改用 cron，而不是
   `exec` 的 sleep/delay 模式。
 
 ## 配置
@@ -266,6 +263,6 @@ glob。裸名称只匹配通过 PATH 调用的命令，因此当命令是 `rg` �
 ## 相关内容
 
 - [Exec Approvals](/tools/exec-approvals) — shell 命令的审批门禁
-- [Sandboxing](/gateway/sandboxing) — 在沙箱环境中运行命令
-- [Background Process](/gateway/background-process) — 长时间运行的 exec 和 process 工具
-- [Security](/gateway/security) — 工具策略和提升权限
+- [沙箱](/gateway/sandboxing) — 在沙箱环境中运行命令
+- [后台进程](/gateway/background-process) — 长时间运行的 exec 和 process 工具
+- [安全性](/gateway/security) — 工具策略和提升权限

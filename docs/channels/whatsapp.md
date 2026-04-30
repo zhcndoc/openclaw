@@ -394,22 +394,6 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
   </Accordion>
 </AccordionGroup>
 
-## 错误可见性
-
-`channels.whatsapp.exposeErrorText` 控制是否将 agent/provider 的错误文本回传到 WhatsApp。默认值为 `true`。将其设为 `false` 可让 WhatsApp 上的失败保持静默，同时保留其他通道行为。
-
-```json5
-{
-  channels: {
-    whatsapp: {
-      exposeErrorText: false,
-    },
-  },
-}
-```
-
-按账号覆盖使用 `channels.whatsapp.accounts.<id>.exposeErrorText`。
-
 ## 回复引用
 
 WhatsApp 支持原生回复引用，即出站回复会可见地引用入站消息。通过 `channels.whatsapp.replyToMode` 进行控制。
@@ -470,7 +454,7 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
       ackReaction: {
         emoji: "👀",
         direct: true,
-        group: "mentions", // always | mentions | never
+        group: "mentions", // 始终 | 提及 | 从不
       },
     },
   },
@@ -535,7 +519,7 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
   <Accordion title="已绑定但断开连接 / 重连循环">
     症状：已绑定账号反复断开或尝试重连。
 
-    安静账号在超过正常消息超时后仍可能保持连接；当 WhatsApp Web 传输活动停止、socket 关闭，或应用层活动在更长的安全窗口内持续静默时，看门狗会重新启动。
+    静默账号在超过正常消息超时后仍可能保持连接；当 WhatsApp Web 传输活动停止、socket 关闭，或应用层活动在更长的安全窗口内持续静默时，看门狗会重新启动。
 
     如果日志显示反复出现 `status=408 Request Time-out Connection was lost`，请调整 `web.whatsapp` 下的 Baileys socket 时序参数。可先将 `keepAliveIntervalMs` 调到低于你网络的空闲超时，并在慢速或丢包链接上增大 `connectTimeoutMs`：
 
@@ -672,7 +656,7 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 高信号 WhatsApp 字段：
 
 - access: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`
-- delivery: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`, `exposeErrorText`
+- delivery: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`
 - multi-account: `accounts.<id>.enabled`, `accounts.<id>.authDir`, account-level overrides
 - operations: `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`, `web.whatsapp.*`
 - session behavior: `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`

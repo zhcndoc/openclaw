@@ -148,11 +148,12 @@ Harness 可能会以不同方式适配这些 hooks。Codex app-server harness �
 
 ## 超时
 
-- `agent.wait` 默认：30s（仅等待时间）。`timeoutMs` 参数会覆盖。
-- Agent 运行时：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；在 `runEmbeddedPiAgent` 的中止计时器中强制执行。
-- 卡住 session 的恢复：在启用 diagnostics 的情况下，`diagnostics.stuckSessionWarnMs` 会检测长时间处于 `processing` 的 session。活动中的 embedded runs、活动中的 reply 操作以及活动中的 session-lane 任务默认只会警告；如果 diagnostics 显示该 session 没有活动工作，watchdog 会释放受影响的 session lane，以便队列中的启动工作能够继续排空。
-- 模型空闲超时：当在空闲窗口结束前没有响应分块到达时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为较慢的本地/自托管 provider 扩展此空闲 watchdog；否则 OpenClaw 会在配置时使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。没有显式模型或 agent 超时的 cron 触发运行会禁用空闲 watchdog，并依赖 cron 外层超时。
-- Provider HTTP 请求超时：`models.providers.<id>.timeoutSeconds` 适用于该 provider 的模型 HTTP fetch，包括连接、headers、body、SDK 请求超时、总的受保护 fetch 中止处理以及模型流空闲 watchdog。对于像 Ollama 这样的较慢本地/自托管 provider，在提升整个 agent 运行时超时之前应先使用此项。
+- `agent.wait` default: 30s (just the wait). `timeoutMs` param overrides.
+- Agent runtime: `agents.defaults.timeoutSeconds` default 172800s (48 hours); enforced in `runEmbeddedPiAgent` abort timer.
+- Cron runtime: isolated agent-turn `timeoutSeconds` is owned by cron. The scheduler starts that timer when execution begins, aborts the underlying run at the configured deadline, then runs bounded cleanup before recording the timeout so a stale child session cannot keep the lane stuck.
+- Stuck-session recovery: with diagnostics enabled, `diagnostics.stuckSessionWarnMs` detects long `processing` sessions. Active embedded runs, active reply operations, and active session-lane tasks remain warning-only by default; if diagnostics show no active work for the session, the watchdog releases the affected session lane so queued startup work can drain.
+- Model idle timeout: OpenClaw aborts a model request when no response chunks arrive before the idle window. `models.providers.<id>.timeoutSeconds` extends this idle watchdog for slow local/self-hosted providers; otherwise OpenClaw uses `agents.defaults.timeoutSeconds` when configured, capped at 120s by default. Cron-triggered runs with no explicit model or agent timeout disable the idle watchdog and rely on the cron outer timeout.
+- Provider HTTP request timeout: `models.providers.<id>.timeoutSeconds` applies to that provider's model HTTP fetches, including connect, headers, body, SDK request timeout, total guarded-fetch abort handling, and model stream idle watchdog. Use this for slow local/self-hosted providers such as Ollama before raising the whole agent runtime timeout.
 
 ## 何时会更早结束
 

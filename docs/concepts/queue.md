@@ -1,7 +1,8 @@
 ---
-summary: "命令队列设计，用于串行化传入的自动回复运行"
+summary: "自动回复队列模式、默认值和按会话覆盖"
 read_when:
-  - 修改自动回复执行或并发
+  - 更改自动回复执行或并发
+  - 解释 /queue 模式或消息引导行为
 title: "命令队列"
 ---
 
@@ -20,23 +21,29 @@ title: "命令队列"
 - 启用详细日志时，如果排队等待超过约 2 秒才开始，队列中的运行会输出一条简短提示。
 - 当输入指示器受支持时，它仍会在入队后立即触发，因此在等待轮到我们时，用户体验不会改变。
 
-## 队列模式（按渠道）
+## 默认值
+
+未设置时，所有传入渠道表面使用：
+
+- `mode: "steer"`
+- `debounceMs: 500`
+- `cap: 20`
+- `drop: "summarize"`
+
+`steer` 是默认值，因为它能让当前模型轮次保持响应，而无需启动第二个会话运行。如果当前运行无法接受 steering，OpenClaw 会回退为一个 followup 队列条目。
+
+## 队列模式
 
 传入消息可以引导当前运行、等待下一轮，或两者兼有：
 
-- `steer`：立即注入当前运行（在下一个工具边界后取消待处理的工具调用）。如果不是流式模式，则回退为 followup。
-- `followup`：在当前运行结束后，为下一次代理轮次入队。
-- `collect`：将所有排队消息合并为 **单个** followup 轮次（默认）。如果消息面向不同的渠道/线程，则会分别清空，以保持路由。
-- `steer-backlog`（又名 `steer+backlog`）：现在 steer，**并且**保留该消息用于后续 followup 轮次。
-- `interrupt`（旧版）：中止该会话的活动运行，然后运行最新消息。
-- `queue`（旧别名）：与 `steer` 相同。
+- `steer`: 将一条 steering 消息加入活跃的 Pi 运行队列。Pi 会在**当前 assistant 轮次完成其工具调用执行之后**、下一次 LLM 调用之前传递这条消息。如果运行并未主动流式输出，或者 steering 不可用，OpenClaw 会回退为一个 followup 队列条目。
+- `followup`: 将每条消息排队，等待当前运行结束后的后续代理轮次。
+- `collect`: 在静默窗口结束后，将排队消息合并为**单个** followup 轮次。如果消息面向不同的渠道/线程，则会分别清空以保持路由。
+- `steer-backlog`（又名 `steer+backlog`）：现在 steer，**同时**为后续轮次保留同一条消息。
+- `interrupt`（旧版）：中止该会话的活跃运行，然后运行最新消息。
+- `queue`（旧版别名）：与 `steer` 相同。
 
-Steer-backlog 表示你可以在被 steer 的运行之后再获得一次 followup 响应，因此流式界面看起来可能像重复。若你希望每条传入消息只对应一个响应，优先使用 `collect`/`steer`。
-可发送独立命令 `/queue collect`（按会话）或设置 `messages.queue.byChannel.discord: "collect"`。
-
-默认值（配置中未设置时）：
-
-- 所有界面 → `collect`
+Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followup 回复，因此流式界面看起来可能像重复消息。如果你希望每条传入消息只对应一个回复，请优先使用 `collect`/`steer`。
 
 可通过 `messages.queue` 全局或按渠道配置：
 
@@ -44,8 +51,8 @@ Steer-backlog 表示你可以在被 steer 的运行之后再获得一次 followu
 {
   messages: {
     queue: {
-      mode: "collect",
-      debounceMs: 1000,
+      mode: "steer",
+      debounceMs: 500,
       cap: 20,
       drop: "summarize",
       byChannel: { discord: "collect" },
@@ -58,17 +65,29 @@ Steer-backlog 表示你可以在被 steer 的运行之后再获得一次 followu
 
 这些选项适用于 `followup`、`collect` 和 `steer-backlog`（以及 `steer` 在回退为 followup 时）：
 
-- `debounceMs`：在开始 followup 轮次前等待安静一段时间（防止“继续，继续”）。
-- `cap`：每个会话允许排队的最大消息数。
-- `drop`：溢出策略（`old`、`new`、`summarize`）。
+- `debounceMs`: 在清空排队的 followup 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 单位。
+- `cap`: 每个会话的最大排队消息数。小于 `1` 的值会被忽略。
+- `drop: "summarize"`: 默认值。按需丢弃最旧的排队条目，保留紧凑摘要，并将其作为一个合成的 followup 提示注入。
+- `drop: "old"`: 按需丢弃最旧的排队条目，不保留摘要。
+- `drop: "new"`: 当队列已满时拒绝最新消息。
 
-Summarize 会保留一个简短的要点列表，记录被丢弃的消息，并将其作为合成的 followup 提示注入。
-默认值：`debounceMs: 1000`、`cap: 20`、`drop: summarize`。
+默认值：`debounceMs: 500`、`cap: 20`、`drop: summarize`。
+
+## 优先级
+
+对于模式选择，OpenClaw 的解析顺序是：
+
+1. 内联或已存储的按会话 `/queue` 覆盖。
+2. `messages.queue.byChannel.<channel>`。
+3. `messages.queue.mode`。
+4. 默认 `steer`。
+
+对于选项，内联或已存储的 `/queue` 选项优先于配置。然后应用按渠道的 debounce（`messages.queue.debounceMsByChannel`）、插件 debounce 默认值、全局 `messages.queue` 选项以及内置默认值。`cap` 和 `drop` 是全局/会话选项，而不是按渠道配置键。
 
 ## 按会话覆盖
 
-- 发送 `/queue <mode>` 作为独立命令，以便为当前会话保存该模式。
-- 选项可以组合：`/queue collect debounce:2s cap:25 drop:summarize`
+- 发送 `/queue <mode>` 作为独立命令，可将该模式存储为当前会话的设置。
+- 选项可以组合：`/queue collect debounce:0.5s cap:25 drop:summarize`
 - `/queue default` 或 `/queue reset` 会清除会话覆盖。
 
 ## 作用范围与保证

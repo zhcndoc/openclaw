@@ -74,6 +74,10 @@ await web_fetch({ url: "https://example.com/article" });
         maxRedirects: 3,
         readability: true, // 使用 Readability 提取
         userAgent: "Mozilla/5.0 ...", // 覆盖 User-Agent
+        ssrfPolicy: {
+          allowRfc2544BenchmarkRange: true, // 针对使用 198.18.0.0/15 的受信任假 IP 代理进行可选启用
+          allowIpv6UniqueLocalRange: true, // 针对使用 fc00::/7 的受信任假 IP 代理进行可选启用
+        },
       },
     },
   },
@@ -136,12 +140,15 @@ await web_fetch({ url: "https://example.com/article" });
 
 ## 限制与安全
 
-- `maxChars` 会被限制到 `tools.web.fetch.maxCharsCap`
-- 在解析前，响应正文会被限制为 `maxResponseBytes`；超大
-  响应会带着警告被截断
+- `maxChars` 会被限制为 `tools.web.fetch.maxCharsCap`
+- Response body 在解析前会被限制为 `maxResponseBytes`；超大
+  响应会被截断并给出警告
 - 私有/内部主机名会被阻止
-- 重定向会按 `maxRedirects` 检查并限制
-- `web_fetch` 尽力而为——某些站点需要 [Web Browser](/tools/browser)
+- `tools.web.fetch.ssrfPolicy.allowRfc2544BenchmarkRange` 和
+  `tools.web.fetch.ssrfPolicy.allowIpv6UniqueLocalRange` 是为
+  受信任假 IP 代理栈提供的狭义可选启用；除非你的代理拥有这些合成范围并强制执行自己的目标策略，否则请保持未设置
+- 重定向会被检查并受 `maxRedirects` 限制
+- `web_fetch` 采用尽力而为的方式——某些站点需要 [Web Browser](/tools/browser)
 
 ## 工具配置文件
 

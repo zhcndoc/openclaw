@@ -1190,13 +1190,13 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     ackReactionScope: "group-mentions", // group-mentions | group-all | direct | all
     removeAckAfterReply: false,
     queue: {
-      mode: "collect", // steer | followup | collect | steer-backlog | steer+backlog | queue | interrupt
-      debounceMs: 1000,
+      mode: "steer", // steer | followup | collect | steer-backlog | steer+backlog | queue | interrupt
+      debounceMs: 500,
       cap: 20,
       drop: "summarize", // old | new | summarize
       byChannel: {
-        whatsapp: "collect",
-        telegram: "collect",
+        whatsapp: "steer",
+        telegram: "steer",
       },
     },
     inbound: {
@@ -1345,8 +1345,8 @@ Talk 模式（macOS/iOS/Android）的默认设置。
 
 ---
 
-## Related
+## 相关
 
-- [Configuration reference](/gateway/configuration-reference) — 其他所有配置键
-- [Configuration](/gateway/configuration) — 常见任务和快速设置
-- [Configuration examples](/gateway/configuration-examples)
+- [配置参考](/gateway/configuration-reference) — 其他所有配置键
+- [配置](/gateway/configuration) — 常见任务和快速设置
+- [配置示例](/gateway/configuration-examples)

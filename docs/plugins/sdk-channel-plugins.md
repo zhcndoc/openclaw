@@ -409,8 +409,10 @@ if (decision.shouldSkip) return;
     });
     ```
 
-    <Accordion title="createChatChannelPlugin 为你做了什么">
-      你无需手动实现底层适配器接口，而是传入声明式选项，由构建器将它们组合起来：
+    对于同时接受规范的顶层 DM 键和旧式嵌套键的频道，请使用 `plugin-sdk/channel-config-helpers` 中的辅助函数：`resolveChannelDmAccess`、`resolveChannelDmPolicy`、`resolveChannelDmAllowFrom` 和 `normalizeChannelDmPolicy` 可优先使用账户本地值，而不是继承的根值。通过 `normalizeLegacyDmAliases` 将同一个解析器用于 doctor 修复，以便运行时和迁移读取同一份契约。
+
+    <Accordion title="createChatChannelPlugin 会为你做什么">
+      你无需手动实现底层适配器接口，只需传入声明式选项，构建器会将它们组合起来：
 
       | 选项 | 作用 |
       | --- | --- |

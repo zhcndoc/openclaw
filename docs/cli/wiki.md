@@ -38,6 +38,7 @@ openclaw wiki ingest ./notes/alpha.md
 openclaw wiki compile
 openclaw wiki lint
 openclaw wiki search "alpha"
+openclaw wiki search "who should I ask about Teams?" --mode route-question
 openclaw wiki get entity.alpha --from 1 --lines 80
 
 openclaw wiki apply synthesis "Alpha Summary" \
@@ -127,11 +128,31 @@ openclaw wiki obsidian daily
 
 行为取决于配置：
 
-- `search.backend`: `shared` 或 `local`
-- `search.corpus`: `wiki`、`memory` 或 `all`
+- `search.backend`: `shared` or `local`
+- `search.corpus`: `wiki`, `memory`, or `all`
+- `--mode`: `auto`, `find-person`, `route-question`, `source-evidence`, or
+  `raw-claim`
 
 当你想要 wiki 特定的排序或来源信息细节时，请使用 `wiki search`。
 如果要进行一次广泛的共享召回，且当前活动的 memory 插件提供共享搜索，则优先使用 `openclaw memory search`。
+
+搜索模式帮助 agent 选择正确的表面：
+
+- `find-person`: 别名、账号、社交信息、规范 ID 和人物页面
+- `route-question`: ask-for/best-used-for 提示和关系上下文
+- `source-evidence`: source 页面和结构化证据字段
+- `raw-claim`: 带有 claim/evidence 元数据的结构化断言文本
+
+示例：
+
+```bash
+openclaw wiki search "bgroux" --mode find-person
+openclaw wiki search "who knows Teams rollout?" --mode route-question
+openclaw wiki search "maintainer-whois" --mode source-evidence
+openclaw wiki search "strong route Teams" --mode raw-claim --json
+```
+
+文本输出在结果匹配到结构化断言时会包含 `Claim:` 和 `Evidence:` 行。JSON 输出还会暴露 `matchedClaimId`、`matchedClaimStatus`、`matchedClaimConfidence`、`evidenceKinds` 和 `evidenceSourceIds`，供 agent 侧深入查看。
 
 ### `wiki get <lookup>`
 

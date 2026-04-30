@@ -214,21 +214,26 @@ Docker 箱子位于 `OpenClaw Release Checks` 中，通过
 
 发布 Docker 覆盖包括：
 
-- 完整安装冒烟测试，并启用较慢的 Bun 全局安装冒烟测试
-- 仓库 E2E 线路
-- 发布路径 Docker 分块：`core`、`package-update-openai`、
-  `package-update-anthropic`、`package-update-core`、`plugins-runtime-plugins`、
-  `plugins-runtime-services`、`plugins-runtime-install-a`、
-  `plugins-runtime-install-b`、`plugins-runtime-install-c`、
-  `plugins-runtime-install-d`、`plugins-runtime-install-e`、
-  `plugins-runtime-install-f`、`plugins-runtime-install-g`、
-  `plugins-runtime-install-h`、`bundled-channels-core`、
-  `bundled-channels-update-a`、`bundled-channels-update-discord`、
-  `bundled-channels-update-b` 和 `bundled-channels-contracts`
-- 在请求时，在 `plugins-runtime-services` 分块内提供 OpenWebUI 覆盖
-- 将捆绑 channel 依赖线路拆分为 channel-smoke、update-target 和 setup/runtime contract 分块，而不是一个大型 bundled-channel 作业
-- 拆分 bundled plugin 安装/卸载线路
-  `bundled-plugin-install-uninstall-0` 到
+- full install smoke with the slow Bun global install smoke enabled
+- root Dockerfile smoke image preparation/reuse by target SHA, with QR,
+  root/gateway, and installer/Bun smoke jobs running as separate install-smoke
+  shards
+- repository E2E lanes
+- release-path Docker chunks: `core`, `package-update-openai`,
+  `package-update-anthropic`, `package-update-core`, `plugins-runtime-plugins`,
+  `plugins-runtime-services`,
+  `plugins-runtime-install-a`, `plugins-runtime-install-b`,
+  `plugins-runtime-install-c`, `plugins-runtime-install-d`,
+  `plugins-runtime-install-e`, `plugins-runtime-install-f`,
+  `plugins-runtime-install-g`, `plugins-runtime-install-h`,
+  `bundled-channels-core`, `bundled-channels-update-a`,
+  `bundled-channels-update-discord`, `bundled-channels-update-b`, and
+  `bundled-channels-contracts`
+- OpenWebUI coverage inside the `plugins-runtime-services` chunk when requested
+- split bundled-channel dependency lanes across channel-smoke, update-target,
+  and setup/runtime contract chunks instead of one large bundled-channel job
+- split bundled plugin install/uninstall lanes
+  `bundled-plugin-install-uninstall-0` through
   `bundled-plugin-install-uninstall-23`
 - 当发布检查包含实时套件时，提供实时/E2E 提供方套件和 Docker 实时模型覆盖
 

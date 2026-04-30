@@ -9,16 +9,16 @@ sidebarTitle: "Models CLI"
 ---
 
 <CardGroup cols={2}>
-  <Card title="Model failover" href="/concepts/model-failover">
+  <Card title="模型故障转移" href="/concepts/model-failover">
     认证配置轮换、冷却时间，以及这与回退机制如何交互。
   </Card>
-  <Card title="Model providers" href="/concepts/model-providers">
+  <Card title="模型提供商" href="/concepts/model-providers">
     供应商概览和快速示例。
   </Card>
-  <Card title="Agent runtimes" href="/concepts/agent-runtimes">
+  <Card title="Agent 运行时" href="/concepts/agent-runtimes">
     PI、Codex，以及其他 agent 循环运行时。
   </Card>
-  <Card title="Configuration reference" href="/gateway/config-agents#agent-defaults">
+  <Card title="配置参考" href="/gateway/config-agents#agent-defaults">
     模型配置键。
   </Card>
 </CardGroup>
@@ -59,11 +59,11 @@ OpenClaw 按以下顺序选择模型：
 同一个 `provider/model`，根据来源不同，含义也可能不同：
 
 - 配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常的起点，并使用 `agents.defaults.model.fallbacks`。
-- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 保存，因此后续轮次可以继续使用回退链，而不会先探测一个已知失效的主模型。
-- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会保存 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是回退到另一个已配置模型。
-- Cron `--model` / payload `model` 是每个任务的主模型。除非任务提供显式的 payload `fallbacks`，否则它仍会使用已配置的回退（若要严格运行 cron，请使用 `fallbacks: []`）。
-- CLI 默认模型和白名单选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
-- Control UI 模型选择器会请求 Gateway 的已配置模型视图：如果存在 `agents.defaults.models` 就使用它，否则使用显式的 `models.providers.*.models`，否则使用完整目录，以免新安装时为空白。
+- 自动回退选择是临时恢复状态。它们会以 `modelOverrideSource: "auto"` 的形式存储，这样后续轮次就可以继续使用回退链，而无需先探测一个已知不可用的主模型。
+- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到另一个已配置模型。
+- Cron `--model` / 负载 `model` 是每个任务的主模型。它仍然使用已配置的回退，除非任务提供显式的负载 `fallbacks`（严格的 cron 运行使用 `fallbacks: []`）。
+- CLI 默认模型和白名单选择器会尊重 `models.mode: "replace"`，此时会列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
+- Control UI 模型选择器会请求 Gateway 的已配置模型视图：如果存在 `agents.defaults.models`，则使用它；否则使用显式的 `models.providers.*.models` 以及具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"`，或 `openclaw models list --all`。
 
 ## 快速模型策略
 
@@ -218,7 +218,7 @@ openclaw models image-fallbacks clear
 
 ### `models list`
 
-默认显示已配置的模型。可用标志：
+默认显示已配置/可认证使用的模型。实用标志：
 
 <ParamField path="--all" type="boolean">
   完整目录。在配置认证之前，包含捆绑的、由提供方拥有的静态目录行，因此仅用于发现的视图可以显示那些在添加匹配的提供方凭据之前不可用的模型。

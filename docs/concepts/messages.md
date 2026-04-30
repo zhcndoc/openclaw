@@ -119,9 +119,11 @@ OpenClaw 将**提示主体**与**命令主体**分开：
 或者收集到一个后续轮次中。
 
 - 通过 `messages.queue`（以及 `messages.queue.byChannel`）进行配置。
-- 模式：`interrupt`、`steer`、`followup`、`collect`，以及回退变体。
+- 默认模式是 `steer`，当 steer 回退到排队的后续投递时，使用 500ms 的后续防抖。
+- 模式：`steer`、`followup`、`collect`、`steer-backlog`、`interrupt`，以及
+  旧的 `queue` 别名。
 
-详情： [排队](/concepts/queue)。
+详情： [命令队列](/concepts/queue)。
 
 ## 频道运行所有权
 

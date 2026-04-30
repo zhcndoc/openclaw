@@ -23,17 +23,17 @@ OpenClaw 不会提供、下载、启动、配置或认证任何代理。你负�
 - 可审计性：在出站边界记录允许和拒绝的目标。
 - 运维控制：无需重建 OpenClaw，即可强制执行目标规则、网络分段、速率限制或出站允许列表。
 
-OpenClaw 仍然保留应用层 SSRF 防护，例如 `fetchWithSsrFGuard`。代理路由是针对正常 HTTP 和 WebSocket 出站流量的额外进程级护栏，而不是受保护 fetch 或操作系统级网络沙箱的替代品。
+Proxy routing is a process-level guardrail for normal HTTP and WebSocket egress. It gives operators a fail-closed path for routing supported JavaScript HTTP clients through their own filtering proxy, but it is not an OS-level network sandbox and does not make OpenClaw certify the proxy's destination policy.
 
 ## OpenClaw 如何路由流量
 
 当 `proxy.enabled=true` 且已配置代理 URL 时，受保护的运行时进程（例如 `openclaw gateway run`、`openclaw node run` 和 `openclaw agent --local`）会将正常的 HTTP 和 WebSocket 出站流量通过所配置的代理进行路由：
 
 ```text
-OpenClaw process
-  fetch                  -> operator-managed filtering proxy -> public internet
-  node:http and https    -> operator-managed filtering proxy -> public internet
-  WebSocket clients      -> operator-managed filtering proxy -> public internet
+OpenClaw 进程
+  fetch                  -> 运维管理的过滤代理 -> 公共互联网
+  node:http and https    -> 运维管理的过滤代理 -> 公共互联网
+  WebSocket clients      -> 运维管理的过滤代理 -> 公共互联网
 ```
 
 对外公开的契约是路由行为，而不是用于实现它的内部 Node 钩子。OpenClaw Gateway 控制平面 WebSocket 客户端在 Gateway URL 使用 `localhost` 或字面量回环 IP（例如 `127.0.0.1` 或 `[::1]`）时，会对本地回环 Gateway RPC 流量使用一条窄范围的直连路径。即使运维代理阻止回环目标，这条控制平面路径也必须能够访问回环 Gateway。正常的运行时 HTTP 和 WebSocket 请求仍然使用已配置的代理。
@@ -147,9 +147,9 @@ proxy:
 
 ## 限制
 
-- 代理会提升进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不能替代应用层的 `fetchWithSsrFGuard`。
-- 原始的 `net`、`tls` 和 `http2` 套接字、本地原生插件以及子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。
-- 必要时，应在运维代理策略中将用户本地 WebUI 和本地模型服务器列入允许列表；OpenClaw 不为它们提供通用的本地网络绕过。
-- Gateway 控制平面代理绕过被有意限制为仅适用于 `localhost` 和字面量回环 IP URL。对于本地直连的 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通基于主机名的流量一样路由。
+- 该代理提高了进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它并不是 OS 级别的网络沙箱。
+- 原始的 `net`、`tls` 和 `http2` 套接字、原生插件以及子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。
+- 当需要时，用户本地 Web UI 和本地模型服务器应在运维代理策略中加入允许列表；OpenClaw 不会为它们暴露通用的本地网络绕过机制。
+- Gateway 控制平面的代理绕过刻意仅限于 `localhost` 和字面量回环 IP URL。对于本地直连的 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通基于主机名的流量一样路由。
 - OpenClaw 不会检查、测试或认证你的代理策略。
 - 请将代理策略变更视为安全敏感的运维变更。

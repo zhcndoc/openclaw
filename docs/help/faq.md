@@ -1925,13 +1925,13 @@ title: "FAQ"
   <Accordion title='Why does it feel like the bot "ignores" rapid-fire messages?'>
     队列模式控制新消息如何与正在进行的运行交互。使用 `/queue` 更改模式：
 
-    - `steer` - 新消息会重定向当前任务
-    - `followup` - 一次运行一条消息
-    - `collect` - 批量处理消息并只回复一次（默认）
-    - `steer-backlog` - 现在先 steer，然后处理积压
-    - `interrupt` - 中止当前运行并重新开始
+    - `steer` - queue steering for the next model boundary in the current run
+    - `followup` - run messages one at a time
+    - `collect` - batch messages and reply once
+    - `steer-backlog` - steer now, then process backlog
+    - `interrupt` - abort current run and start fresh
 
-    对于 followup 模式，你可以添加诸如 `debounce:2s cap:25 drop:summarize` 之类的选项。
+    Default mode is `steer`. You can add options like `debounce:0.5s cap:25 drop:summarize` for followup modes. See [Command queue](/concepts/queue).
 
   </Accordion>
 </AccordionGroup>
@@ -1948,6 +1948,5 @@ title: "FAQ"
 
 Still stuck? 请在 [Discord](https://discord.com/invite/clawd) 提问，或打开一个 [GitHub discussion](https://github.com/openclaw/openclaw/discussions)。
 
-## Related- [首次运行常见问题](/help/faq-first-run) — 安装、入门、认证、订阅、早期故障
-- [模型常见问题](/help/faq-models) — 模型选择、故障切换、认证配置文件
+## Related- [首次运行常见问题](/help/faq-first-run) — 安装、入门、认证、订阅、早期故障- [模型常见问题](/help/faq-models) — 模型选择、故障切换、认证配置文件
 - [故障排除](/help/troubleshooting) — 先看症状的分诊

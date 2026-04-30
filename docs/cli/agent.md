@@ -20,7 +20,7 @@ title: "Agent"
 
 - Agent 发送工具：[Agent send](/tools/agent-send)
 
-## Options
+## 选项
 
 - `-m, --message <text>`: 必需的消息正文
 - `-t, --to <dest>`: 用于推导会话键的收件人
@@ -38,7 +38,7 @@ title: "Agent"
 - `--timeout <seconds>`: 覆盖 agent 超时时间（默认 600 或配置值）
 - `--json`: 输出 JSON
 
-## Examples
+## 示例
 
 ```bash
 openclaw agent --to +15555550123 --message "status update" --deliver
@@ -50,19 +50,20 @@ openclaw agent --agent ops --message "Generate report" --deliver --reply-channel
 openclaw agent --agent ops --message "Run locally" --local
 ```
 
-## Notes
+## 说明
 
-- 如果 Gateway 请求失败，Gateway 模式会回退到嵌入式 agent。使用 `--local` 可在一开始就强制使用嵌入式执行。
-- `--local` 仍会先预加载插件注册表，因此由插件提供的 providers、tools 和 channels 在嵌入式运行期间仍然可用。
-- `--local` 和嵌入式回退运行都被视为一次性运行。捆绑的 MCP 回环资源以及为该本地进程打开的 warm Claude stdio 会话会在回复后被回收，因此脚本化调用不会让本地子进程保持存活。
-- 基于 Gateway 的运行会将 Gateway 拥有的 MCP 回环资源保留在正在运行的 Gateway 进程下；旧客户端可能仍会发送历史清理标志，但 Gateway 将其作为兼容性空操作接受。
+- Gateway 模式在 Gateway 请求失败时会回退到嵌入式 agent。使用 `--local` 可预先强制执行嵌入式运行。
+- `--local` 仍会先预加载插件注册表，因此插件提供的提供方、工具和渠道在嵌入式运行期间仍可用。
+- `--local` 和嵌入式回退运行都被视为一次性运行。为该本地进程打开的捆绑 MCP loopback 资源和 warm Claude stdio 会话会在回复后退役，因此脚本化调用不会让本地子进程继续存活。
+- 基于 Gateway 的运行会将 Gateway 所拥有的 MCP loopback 资源保留在正在运行的 Gateway 进程下；旧客户端可能仍会发送历史清理标志，但 Gateway 会将其作为兼容性空操作接受。
 - `--channel`、`--reply-channel` 和 `--reply-account` 影响回复投递，而不是会话路由。
-- `--json` 会将 stdout 保留给 JSON 响应。Gateway、插件和嵌入式回退诊断信息会路由到 stderr，因此脚本可以直接解析 stdout。
+- `--json` 会保留 stdout 专用于 JSON 响应。Gateway、插件和嵌入式回退诊断信息会路由到 stderr，以便脚本可以直接解析 stdout。
 - 嵌入式回退 JSON 包含 `meta.transport: "embedded"` 和 `meta.fallbackFrom: "gateway"`，以便脚本区分回退运行和 Gateway 运行。
-- 当此命令触发 `models.json` 重新生成时，由 SecretRef 管理的提供方凭据会以非密文标记形式持久化（例如 env var 名称、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不是已解析的密文明文。
-- 标记写入以源为准：OpenClaw 从当前生效的源配置快照持久化标记，而不是从已解析的运行时密钥值持久化。
+- 如果 Gateway 接受了 agent 运行，但 CLI 在等待最终回复时超时，嵌入式回退会使用一个新的显式 `gateway-fallback-*` session/run id，并报告 `meta.fallbackReason: "gateway_timeout"` 以及回退会话字段。这可避免与 Gateway 所拥有的 transcript lock 发生竞争，或静默替换原始路由会话。
+- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的提供方凭据会以非密文标记形式持久化（例如 env var 名称、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不是已解析的密文明文。
+- 标记写入以源为准：OpenClaw 持久化的是来自当前源配置快照的标记，而不是来自已解析运行时密钥值的标记。
 
-## Related
+## 相关
 
 - [CLI reference](/cli)
 - [Agent runtime](/concepts/agent)

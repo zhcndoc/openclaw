@@ -19,7 +19,7 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
       --name "Reminder" \
       --at "2026-02-01T16:00:00Z" \
       --session main \
-      --system-event "Reminder: check the cron docs draft" \
+      --system-event "提醒：检查 cron 文档草稿" \
       --wake now \
       --delete-after-run
     ```
@@ -39,18 +39,19 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
 
 ## Cron 的工作方式
 
-- Cron 运行在 Gateway 进程**内部**（不在模型内部）。
+- Cron 运行在 **Gateway** 进程内（不在模型内）。
 - 作业定义持久化在 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
-- 运行时执行状态会与之一起持久化在 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
+- 运行时执行状态会持久化在旁边的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json` 并将 `jobs-state.json` 加入 gitignore。
 - 在拆分之后，较旧的 OpenClaw 版本可以读取 `jobs.json`，但可能会把作业视为新的，因为运行时字段现在位于 `jobs-state.json` 中。
-- 当 Gateway 运行中或停止时编辑了 `jobs.json`，OpenClaw 会将变更后的计划字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅仅是格式或键顺序变更的重写会保留待处理槽位。
+- 当 Gateway 正在运行或已停止时编辑了 `jobs.json`，OpenClaw 会将变更后的计划字段与待处理的运行时槽位元数据进行比较，并清除过时的 `nextRunAtMs` 值。仅格式化或仅键顺序重写会保留待处理槽位。
 - 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
-- 在 Gateway 启动时，逾期的独立 agent-turn 作业会被重新安排到 channel-connect 窗口之外，而不是立即回放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
-- 一次性作业（`--at`）在成功后默认自动删除。
-- 独立 cron 运行会尽最大努力在运行完成时关闭其 `cron:<jobId>` 会话下已追踪的浏览器标签页/进程，因此分离式浏览器自动化不会留下孤儿进程。
-- 独立 cron 运行还会防护过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍负责最终答案，OpenClaw 会再次提示以获取真实结果，然后再进行交付。
-- 独立 cron 运行会优先使用嵌入式运行中的结构化执行拒绝元数据，然后回退到已知的最终摘要/输出标记，例如 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST`，从而不会把被阻止的命令报告为成功运行。
-- 独立 cron 运行还会将运行级别的 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方故障会增加错误计数并触发失败通知，而不是把作业清为成功。
+- 在 Gateway 启动时，已过期的独立 agent-turn 作业会被重新调度到 channel-connect 窗口之外，而不是立即回放，因此 Discord/Telegram 启动和 native-command 设置在重启后仍能保持响应。
+- 一次性作业（`--at`）默认会在成功后自动删除。
+- 独立 cron 运行会尽最大努力在运行完成时关闭其 `cron:<jobId>` 会话所跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
+- 独立 cron 运行还会防止过时的确认回复。如果第一个结果只是一个中间状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有后代子 agent 运行仍然负责最终答案，OpenClaw 会在交付前再提示一次以获取真实结果。
+- 独立 cron 运行优先使用嵌入式运行中的结构化执行拒绝元数据，然后回退到已知的最终摘要/输出标记，例如 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST`，因此被阻止的命令不会被报告为成功运行。
+- 独立 cron 运行还会将运行级别的 agent 失败视为作业错误，即使没有生成回复载荷也是如此，因此模型/提供方失败会增加错误计数并触发失败通知，而不是将作业清除为成功。
+- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行，并给予其一个短暂的清理窗口。如果运行未能完成收尾，Gateway 拥有的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此排队的聊天工作不会被遗留在一个过时的处理会话之后。
 
 <a id="maintenance"></a>
 
@@ -75,7 +76,7 @@ Cron 的任务协调首先由运行时拥有，其次才由持久历史支持：
 Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当“月中的日期”和“星期”字段都不是通配符时，croner 在**任一**字段匹配时就会认为匹配——而不是两个都匹配。这是标准的 Vixie cron 行为。
 
 ```
-# 预期："15 日上午 9 点，且仅当那天是星期一"
+# 期望："15 日上午 9 点，且仅当那天是星期一"
 # 实际：  "每个 15 日上午 9 点，以及每个星期一上午 9 点"
 0 9 15 * 1
 ```
@@ -178,7 +179,7 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
       --name "Calendar check" \
       --at "20m" \
       --session main \
-      --system-event "Next heartbeat: check calendar." \
+      --system-event "下一次 heartbeat：检查日历。"
       --wake now
     ```
   </Tab>
@@ -189,7 +190,7 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
       --cron "0 7 * * *" \
       --tz "America/Los_Angeles" \
       --session isolated \
-      --message "Summarize overnight updates." \
+      --message "总结夜间更新。" \
       --announce \
       --channel slack \
       --to "channel:C1234567890"
@@ -202,7 +203,7 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
       --cron "0 6 * * 1" \
       --tz "America/Los_Angeles" \
       --session isolated \
-      --message "Weekly deep analysis of project progress." \
+      --message "每周对项目进展进行深度分析。" \
       --model "opus" \
       --thinking high \
       --announce
@@ -241,7 +242,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     curl -X POST http://127.0.0.1:18789/hooks/wake \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"text":"New email received","mode":"now"}'
+      -d '{"text":"收到新邮件","mode":"now"}'
     ```
 
     <ParamField path="text" type="string" required>
@@ -259,7 +260,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     curl -X POST http://127.0.0.1:18789/hooks/agent \
       -H 'Authorization: Bearer SECRET' \
       -H 'Content-Type: application/json' \
-      -d '{"message":"Summarize inbox","name":"Email","model":"openai/gpt-5.4"}'
+      -d '{"message":"总结收件箱","name":"Email","model":"openai/gpt-5.4"}'
     ```
 
     字段：`message`（必填）、`name`、`agentId`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`fallbacks`、`thinking`、`timeoutSeconds`。

@@ -111,8 +111,9 @@ openclaw gateway run
 
 ### 启动性能分析
 
-- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表耗时。
-- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 可对 Gateway 启动进行基准测试。该基准会记录首次进程输出、`/healthz`、`/readyz`、启动跟踪耗时、事件循环延迟以及插件查找表耗时细节。
+- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 以在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表计时。
+- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，以便为外部 QA harness 写出尽力而为的 JSONL 启动诊断时间线。你也可以在配置中通过 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍需由环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
+- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 来对 Gateway 启动进行基准测试。该基准会记录首个进程输出、`/healthz`、`/readyz`、启动追踪计时、事件循环延迟以及插件查找表计时细节。
 
 ## 查询正在运行的 Gateway
 

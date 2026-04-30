@@ -112,6 +112,71 @@ VM 中配置的共享密钥。本指南使用 token auth，因此请通过 `open
 如果你将 gateway 改为 password auth，请改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
 使用 `openclaw devices list` 和 `openclaw devices approve <requestId>` 批准设备。如有疑问，请从浏览器中使用 Shelley！
 
+## 远程通道设置
+
+对于远程主机，建议一次使用一个 `config patch` 调用，而不是多次 SSH 调用 `config set`。将真实 token 保留在 VM 环境或 `~/.openclaw/.env` 中，并且只在 `openclaw.json` 中放置 SecretRef。
+
+在 VM 上，让服务环境包含它所需的密钥：
+
+```bash
+cat >> ~/.openclaw/.env <<'EOF'
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_APP_TOKEN=xapp-...
+DISCORD_BOT_TOKEN=...
+OPENAI_API_KEY=sk-...
+EOF
+```
+
+在本地机器上，创建一个补丁文件并将其传到 VM：
+
+```json5
+// openclaw.remote.patch.json5
+{
+  secrets: {
+    providers: {
+      default: { source: "env" },
+    },
+  },
+  channels: {
+    slack: {
+      enabled: true,
+      mode: "socket",
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
+      groupPolicy: "open",
+      requireMention: false,
+    },
+    discord: {
+      enabled: true,
+      token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
+      dmPolicy: "disabled",
+      dm: { enabled: false },
+      groupPolicy: "allowlist",
+    },
+  },
+  agents: {
+    defaults: {
+      model: { primary: "openai/gpt-5.5" },
+      models: {
+        "openai/gpt-5.5": { params: { fastMode: true } },
+      },
+    },
+  },
+}
+```
+
+```bash
+ssh <vm-name>.exe.xyz 'openclaw config patch --stdin --dry-run' < ./openclaw.remote.patch.json5
+ssh <vm-name>.exe.xyz 'openclaw config patch --stdin' < ./openclaw.remote.patch.json5
+ssh <vm-name>.exe.xyz 'openclaw gateway restart && openclaw health'
+```
+
+当嵌套 allowlist 应该精确变成补丁值时，请使用 `--replace-path`，例如在替换 Discord 通道 allowlist 时：
+
+```bash
+ssh <vm-name>.exe.xyz 'openclaw config patch --stdin --replace-path "channels.discord.guilds[\"123\"].channels"' < ./discord.patch.json5
+```
+
 ## 远程访问
 
 远程访问由 [exe.dev](https://exe.dev) 的身份验证处理。默认情况下，从端口 8000 发出的 HTTP 流量会通过 email auth 转发到

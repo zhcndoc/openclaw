@@ -98,9 +98,18 @@ title: "Discord"
 
 ```bash
 export DISCORD_BOT_TOKEN="YOUR_BOT_TOKEN"
-openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN --dry-run
-openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN
-openclaw config set channels.discord.enabled true --strict-json
+cat > discord.patch.json5 <<'JSON5'
+{
+  channels: {
+    discord: {
+      enabled: true,
+      token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
+    },
+  },
+}
+JSON5
+openclaw config patch --file ./discord.patch.json5 --dry-run
+openclaw config patch --file ./discord.patch.json5
 openclaw gateway
 ```
 
@@ -141,7 +150,7 @@ openclaw gateway
 DISCORD_BOT_TOKEN=...
 ```
 
-        支持明文 `token` 值。`channels.discord.token` 也支持在 env/file/exec 提供器中使用 SecretRef 值。参见 [Secrets Management](/gateway/secrets)。
+        用于脚本化或远程设置时，请写入相同的 JSON5 块，并先运行 `openclaw config patch --file ./discord.patch.json5 --dry-run`，然后再去掉 `--dry-run` 重新运行。支持明文 `token` 值。`channels.discord.token` 也支持跨 env/file/exec 提供方的 SecretRef 值。参见 [Secrets Management](/gateway/secrets)。
 
       </Tab>
     </Tabs>
@@ -385,11 +394,11 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
 <Tabs>
   <Tab title="DM policy">
-    `channels.discord.dmPolicy` 控制 DM 访问（旧版：`channels.discord.dm.policy`）：
+    `channels.discord.dmPolicy` 控制 DM 访问。`channels.discord.allowFrom` 是标准的 DM 白名单。
 
     - `pairing`（默认）
     - `allowlist`
-    - `open`（要求 `channels.discord.allowFrom` 包含 `"*"`；旧版：`channels.discord.dm.allowFrom`）
+    - `open`（要求 `channels.discord.allowFrom` 包含 `"*"`）
     - `disabled`
 
     如果 DM policy 不是 open，未知用户会被阻止（或在 `pairing` 模式下提示配对）。
@@ -401,7 +410,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - 当命名账号自身的 `allowFrom` 和旧版 `dm.allowFrom` 都未设置时，会继承 `channels.discord.allowFrom`。
     - 命名账号不会继承 `channels.discord.accounts.default.allowFrom`。
 
-    传递用的 DM 目标格式：
+    为兼容性考虑，旧版 `channels.discord.dm.policy` 和 `channels.discord.dm.allowFrom` 仍会被读取。`openclaw doctor --fix` 会在不改变访问权限的情况下尽可能将它们迁移到 `dmPolicy` 和 `allowFrom`。
+
+    DM 目标的交付格式：
 
     - `user:<id>`
     - `<@id>` 提及
@@ -508,7 +519,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 - 按频道覆盖：`channels.discord.commands.native`。
 - `commands.native=false` 会显式清除先前注册的 Discord 原生命令。
 - 原生命令授权使用与普通消息处理相同的 Discord 白名单/策略。
-- 即使用户未获授权，命令在 Discord UI 中仍可能可见；但执行时仍会强制执行 OpenClaw 授权并返回“not authorized”。
+- 即使用户未获授权，命令在 Discord UI 中仍可能可见；但执行时仍会强制执行 OpenClaw 授权并返回“未授权”。
 
 命令目录和行为请参见 [Slash commands](/tools/slash-commands)。
 
@@ -1089,11 +1100,11 @@ openclaw logs --follow
     - `Slow listener detected ...`
     - `stuck session: sessionKey=agent:...:discord:... state=processing ...`
 
-    Carbon 网关队列参数：
+    Discord gateway queue knobs:
 
-    - 单账号：`channels.discord.eventQueue.listenerTimeout`
-    - 多账号：`channels.discord.accounts.<accountId>.eventQueue.listenerTimeout`
-    - 这只控制 Carbon 网关 listener 的工作，不控制 agent 回合生命周期
+    - single-account: `channels.discord.eventQueue.listenerTimeout`
+    - multi-account: `channels.discord.accounts.<accountId>.eventQueue.listenerTimeout`
+    - this only controls Discord gateway listener work, not agent turn lifetime
 
     Discord 不会对排队中的 agent 回合应用 channel-owned 超时。消息监听器会立即移交，而排队中的 Discord 运行会保持每个会话的顺序，直到会话/工具/运行时生命周期完成或中止工作。
 

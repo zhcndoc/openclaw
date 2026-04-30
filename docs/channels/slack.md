@@ -36,17 +36,25 @@ title: "Slack"
 
       <Step title="配置 OpenClaw">
 
-```json5
+        推荐的 SecretRef 设置：
+
+```bash
+export SLACK_APP_TOKEN=xapp-...
+export SLACK_BOT_TOKEN=xoxb-...
+cat > slack.socket.patch.json5 <<'JSON5'
 {
   channels: {
     slack: {
       enabled: true,
       mode: "socket",
-      appToken: "xapp-...",
-      botToken: "xoxb-...",
+      appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
     },
   },
 }
+JSON5
+openclaw config patch --file ./slack.socket.patch.json5 --dry-run
+openclaw config patch --file ./slack.socket.patch.json5
 ```
 
         环境变量回退（仅默认账号）：
@@ -83,18 +91,26 @@ openclaw gateway
 
       <Step title="配置 OpenClaw">
 
-```json5
+        推荐的 SecretRef 设置：
+
+```bash
+export SLACK_BOT_TOKEN=xoxb-...
+export SLACK_SIGNING_SECRET=...
+cat > slack.http.patch.json5 <<'JSON5'
 {
   channels: {
     slack: {
       enabled: true,
       mode: "http",
-      botToken: "xoxb-...",
-      signingSecret: "your-signing-secret",
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      signingSecret: { source: "env", provider: "default", id: "SLACK_SIGNING_SECRET" },
       webhookPath: "/slack/events",
     },
   },
 }
+JSON5
+openclaw config patch --file ./slack.http.patch.json5 --dry-run
+openclaw config patch --file ./slack.http.patch.json5
 ```
 
         <Note>
@@ -463,21 +479,21 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 ## 访问控制与路由
 
 <Tabs>
-  <Tab title="DM 策略">
-    `channels.slack.dmPolicy` 控制 DM 访问（旧版：`channels.slack.dm.policy`）：
+  <Tab title="DM policy">
+    `channels.slack.dmPolicy` 控制 DM 访问。`channels.slack.allowFrom` 是规范的 DM 允许列表。
 
     - `pairing`（默认）
     - `allowlist`
-    - `open`（要求 `channels.slack.allowFrom` 包含 `"*"`；旧版：`channels.slack.dm.allowFrom`）
+    - `open` (需要 `channels.slack.allowFrom` 包含 `"*"`)
     - `disabled`
 
     DM 标志：
 
-    - `dm.enabled`（默认 true）
-    - `channels.slack.allowFrom`（推荐）
-    - `dm.allowFrom`（旧版）
-    - `dm.groupEnabled`（群组 DM 默认 false）
-    - `dm.groupChannels`（可选的 MPIM 允许列表）
+    - `dm.enabled` (默认 true)
+    - `channels.slack.allowFrom`
+    - `dm.allowFrom` (旧版)
+    - `dm.groupEnabled` (群组 DM 默认 false)
+    - `dm.groupChannels` (可选的 MPIM 允许列表)
 
     多账号优先级：
 
@@ -485,7 +501,9 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - 当命名账号自身的 `allowFrom` 未设置时，会继承 `channels.slack.allowFrom`。
     - 命名账号不会继承 `channels.slack.accounts.default.allowFrom`。
 
-    DM 中的配对使用 `openclaw pairing approve slack <code>`。
+    旧版 `channels.slack.dm.policy` 和 `channels.slack.dm.allowFrom` 仍会为兼容性读取。`openclaw doctor --fix` 会在不改变访问权限的前提下，将它们迁移到 `dmPolicy` 和 `allowFrom`。
+
+    DMs 中的配对使用 `openclaw pairing approve slack <code>`。
 
   </Tab>
 
@@ -496,7 +514,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `allowlist`
     - `disabled`
 
-    频道允许列表位于 `channels.slack.channels` 下，应使用稳定的频道 ID。
+    Channel allowlist lives under `channels.slack.channels` and **must use stable Slack channel IDs** (for example `C12345678`) as config keys.
 
     运行时说明：如果 `channels.slack` 完全缺失（仅环境变量配置），运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使 `channels.defaults.groupPolicy` 已设置）。
 
@@ -505,6 +523,42 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - 频道允许列表项和 DM 允许列表项会在启动时、在 token 访问允许的情况下进行解析
     - 无法解析的频道名称项会保留为已配置状态，但默认会在路由中忽略
     - 入站授权和频道路由默认优先使用 ID；直接按用户名/slug 匹配需要 `channels.slack.dangerouslyAllowNameMatching: true`
+
+    <Warning>
+    基于名称的键（`#channel-name` 或 `channel-name`）在 `groupPolicy: "allowlist"` 下**不会**匹配。频道查找默认采用 ID 优先，因此基于名称的键永远不会成功路由，并且该频道中的所有消息都会被静默阻止。这与 `groupPolicy: "open"` 不同，在后者中路由不需要频道键，因此基于名称的键看起来会生效。
+
+    请始终使用 Slack 频道 ID 作为键。查找方法：在 Slack 中右键点击频道 → **复制链接** — ID（`C...`）会出现在 URL 末尾。
+
+    正确：
+
+    ```json5
+    {
+      channels: {
+        slack: {
+          groupPolicy: "allowlist",
+          channels: {
+            C12345678: { allow: true, requireMention: true },
+          },
+        },
+      },
+    }
+    ```
+
+    错误（在 `groupPolicy: "allowlist"` 下会被静默阻止）：
+
+    ```json5
+    {
+      channels: {
+        slack: {
+          groupPolicy: "allowlist",
+          channels: {
+            "#eng-my-channel": { allow: true, requireMention: true },
+          },
+        },
+      },
+    }
+    ```
+    </Warning>
 
   </Tab>
 
@@ -831,7 +885,7 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
     按以下顺序检查：
 
     - `groupPolicy`
-    - 频道白名单（`channels.slack.channels`）
+    - channel allowlist (`channels.slack.channels`) — **keys must be channel IDs** (`C12345678`), not names (`#channel-name`). Name-based keys silently fail under `groupPolicy: "allowlist"` because channel routing is ID-first by default. To find an ID: right-click the channel in Slack → **Copy link** — the `C...` value at the end of the URL is the channel ID.
     - `requireMention`
     - 每个频道的 `users` 白名单
 

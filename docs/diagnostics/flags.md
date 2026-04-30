@@ -50,6 +50,37 @@ OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload
 OPENCLAW_DIAGNOSTICS=0
 ```
 
+## 时间线产物
+
+`timeline` 标志会为外部 QA 运行器写入结构化的启动和运行时计时事件：
+
+```bash
+OPENCLAW_DIAGNOSTICS=timeline \
+OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=/tmp/openclaw-timeline.jsonl \
+openclaw gateway run
+```
+
+你也可以在配置中启用它：
+
+```json
+{
+  "diagnostics": {
+    "flags": ["timeline"]
+  }
+}
+```
+
+时间线文件路径仍来自 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH`。当 `timeline` 仅通过配置启用时，最早的配置加载跨度不会被输出，因为 OpenClaw 还没有读取配置；后续的启动跨度会使用该配置标志。
+
+`OPENCLAW_DIAGNOSTICS=1`、`OPENCLAW_DIAGNOSTICS=all` 和
+`OPENCLAW_DIAGNOSTICS=*` 也会启用时间线，因为它们会启用所有诊断标志。仅当你只想要 JSONL 计时
+产物时，优先使用 `timeline`。
+
+时间线记录使用 `openclaw.diagnostics.v1` 信封。事件可以包含
+进程 ID、阶段名称、跨度名称、持续时间、插件 ID、依赖计数、
+事件循环延迟采样、提供者操作名称、子进程退出状态，
+以及启动错误名称/消息。请将时间线文件视为本地诊断产物；在向他人共享之前先进行审查。
+
 ## 日志输出位置
 
 标志会将日志输出到标准诊断日志文件中。默认情况下：

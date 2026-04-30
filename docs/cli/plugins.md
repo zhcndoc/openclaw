@@ -1,5 +1,5 @@
 ---
-summary: "CLI 参考：`openclaw plugins`（list、install、marketplace、uninstall、enable/disable、doctor）"
+summary: "openclaw plugins 的 CLI 参考（list、install、marketplace、uninstall、enable/disable、deps、doctor）"
 read_when:
   - 你想安装或管理 Gateway 插件或兼容的捆绑包
   - 你想调试插件加载失败问题
@@ -41,6 +41,10 @@ openclaw plugins disable <id>
 openclaw plugins registry
 openclaw plugins registry --refresh
 openclaw plugins uninstall <id>
+openclaw plugins deps
+openclaw plugins deps --repair
+openclaw plugins deps --prune
+openclaw plugins deps --json
 openclaw plugins doctor
 openclaw plugins update <id-or-npm-spec>
 openclaw plugins update --all
@@ -242,6 +246,19 @@ openclaw plugins install -l ./my-plugin
 插件安装元数据是机器管理的状态，不是用户配置。安装和更新会将其写入活动 OpenClaw 状态目录下的 `plugins/installs.json`。其顶层的 `installRecords` map 是安装元数据的持久来源，包括损坏或缺失插件 manifest 的记录。`plugins` 数组是基于 manifest 派生的冷 registry 缓存。该文件包含“请勿编辑”警告，并被 `openclaw plugins update`、uninstall、diagnostics 以及冷插件 registry 使用。
 
 当 OpenClaw 看到配置中已写入的旧版 `plugins.installs` 记录时，它会把它们迁移到插件索引中并移除该配置键；如果任一写入失败，则会保留配置记录，以免安装元数据丢失。
+
+### Runtime deps
+
+```bash
+openclaw plugins deps
+openclaw plugins deps --repair
+openclaw plugins deps --prune
+openclaw plugins deps --json
+```
+
+`plugins deps` 会检查 OpenClaw 自带的捆绑插件的打包运行时依赖阶段。它不是第三方 npm 或 ClawHub 插件的安装/更新路径。
+
+当打包安装在 Gateway 启动期间或 `plugins doctor` 中报告缺少捆绑运行时依赖时，请使用 `--repair`。修复只会安装缺失的、已启用的捆绑插件依赖，并禁用生命周期脚本。使用 `--prune` 可移除旧版打包布局遗留的陈旧未知外部运行时依赖根。
 
 ### 卸载
 
