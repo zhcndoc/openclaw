@@ -123,7 +123,7 @@ OpenClaw 的插件系统有四层：
     核心会决定发现的插件是启用、禁用、阻止，还是被选中用于某个独占槽位，例如 memory。
   </Step>
   <Step title="运行时加载">
-    原生 OpenClaw 插件通过 jiti 以内进程方式加载，并将能力注册到中心注册表中。兼容的 bundle 会被规范化为注册表记录，而无需导入运行时代码。
+    原生 OpenClaw 插件以内进程方式加载，并将能力注册到中央注册表中。打包后的 JavaScript 通过原生 `require` 加载；第三方本地源码 TypeScript 则使用紧急的 Jiti 回退。兼容的 bundle 会被规范化为注册表记录，而不会导入运行时代码。
   </Step>
   <Step title="表面消费">
     OpenClaw 的其余部分读取注册表，以暴露工具、频道、提供者设置、hooks、HTTP 路由、CLI 命令和服务。

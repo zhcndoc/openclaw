@@ -200,9 +200,11 @@ cd openclaw-ansible
     # 检查沙盒镜像
     sudo docker images | grep openclaw-sandbox
 
-    # 如果缺失则构建沙盒镜像
+    # 如果缺少，则构建 sandbox 镜像（需要源代码检出）
     cd /opt/openclaw/openclaw
     sudo -u openclaw ./scripts/sandbox-setup.sh
+    # 对于没有源代码检出的 npm 安装，请参见
+    # https://docs.openclaw.ai/gateway/sandboxing#images-and-setup
     ```
 
   </Accordion>

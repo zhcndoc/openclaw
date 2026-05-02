@@ -76,8 +76,11 @@ read_when:
 | `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 131,072   | 65,536     | 支持推理的 V3.2 接口                      |
 
 <Tip>
-V4 模型支持 DeepSeek 的 `thinking` 控制。OpenClaw 还会在后续轮次重放
-DeepSeek 的 `reasoning_content`，因此带工具调用的 thinking 会话可以继续。
+V4 models support DeepSeek's `thinking` control. OpenClaw also replays
+DeepSeek `reasoning_content` on follow-up turns so thinking sessions with tool
+calls can continue.
+Use `/think xhigh` or `/think max` with DeepSeek V4 models to request DeepSeek's
+maximum `reasoning_effort`.
 </Tip>
 
 ## Thinking 与工具

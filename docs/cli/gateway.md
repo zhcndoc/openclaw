@@ -146,7 +146,7 @@ openclaw gateway run
 openclaw gateway health --url ws://127.0.0.1:18789
 ```
 
-HTTP `/healthz` 端点是存活探针：只要服务器能响应 HTTP，就会返回。HTTP `/readyz` 端点更严格，在启动 sidecar、channels 或已配置 hooks 仍在就绪过程中时会保持红色。本地或已认证的详细就绪响应会包含一个 `eventLoop` 诊断块，其中包括事件循环延迟、事件循环利用率、CPU 核心比率以及 `degraded` 标志。
+HTTP `/healthz` 端点是一个存活探针：当服务器能够响应 HTTP 时就会返回。HTTP `/readyz` 端点更严格，在启动插件 sidecar、channels 或已配置 hooks 仍在就绪过程中时会保持红色。本地或已认证的详细就绪响应包含一个 `eventLoop` 诊断块，其中包含事件循环延迟、事件循环利用率、CPU 核心比率以及 `degraded` 标志。
 
 ### `gateway usage-cost`
 

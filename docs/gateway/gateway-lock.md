@@ -27,9 +27,9 @@ title: "Gateway 锁"
 
 ## 运维说明
 
-- 如果端口被 _另一个_ 进程占用，错误相同；请释放该端口，或使用 `openclaw gateway --port <port>` 选择另一个端口。
-- 在服务监管程序下，如果新的 gateway 进程看到已有健康的 `/healthz` 响应者，它会成功退出，并让该进程继续控制。如果现有进程始终未变为健康状态，重试次数是有限的，启动会以清晰的锁错误失败，而不是无限循环。
-- macOS 应用在启动 gateway 之前仍会维护自己的轻量级 PID 守卫；运行时锁由锁文件加上 HTTP/WebSocket 绑定来强制执行。
+- 如果该端口被 _另一个_ 进程占用，错误是相同的；请释放该端口，或使用 `openclaw gateway --port <port>` 选择其他端口。
+- 在服务监督程序下，新的 gateway 进程如果检测到已有健康的 `/healthz` 响应者，就会让该进程继续控制。在 systemd 上，重复启动器会以代码 78 退出，因此默认的 `RestartPreventExitStatus=78` 会阻止 `Restart=always` 因锁或 `EADDRINUSE` 冲突而反复重启。如果现有进程始终无法变为健康，重试会被限制，启动会以清晰的锁错误失败，而不是无限循环。
+- macOS 应用在启动 gateway 之前仍会维护自己的轻量级 PID 守卫；运行时锁由锁文件加上 HTTP/WebSocket 绑定共同强制执行。
 
 ## 相关内容
 

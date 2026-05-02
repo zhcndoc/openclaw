@@ -611,6 +611,9 @@ if (decision.shouldSkip) return;
   <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
     通过 api.runtime 提供 TTS、STT、媒体、subagent
   </Card>
+  <Card title="Channel turn kernel" icon="bolt" href="/plugins/sdk-channel-turn">
+    Shared inbound turn lifecycle: ingest, resolve, record, dispatch, finalize
+  </Card>
 </CardGroup>
 
 <Note>

@@ -201,7 +201,13 @@ Windows 和 macOS 伴随节点默认允许诸如
 `gateway.nodes.allowCommands` 显式启用。`gateway.nodes.denyCommands` 始终优先于
 默认值和额外的允许列表条目。
 
-在节点更改其声明的命令列表后，请拒绝旧的设备配对
+插件拥有的节点命令可以添加 Gateway 节点调用策略。该策略
+会在允许列表检查之后、转发到节点之前运行，因此原始的
+`node.invoke`、CLI 辅助工具以及专用 agent 工具共享同一个插件
+权限边界。危险的插件节点命令仍然需要显式的
+`gateway.nodes.allowCommands` 选择加入。
+
+当节点更改其声明的命令列表后，请拒绝旧的设备配对
 并批准新的请求，以便 gateway 存储更新后的命令快照。
 
 ## 截图（canvas 快照）

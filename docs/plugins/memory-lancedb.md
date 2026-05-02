@@ -292,9 +292,10 @@ openclaw memory query --filter "category = 'preference'" --order-by createdAt:de
 
 ## 运行时依赖
 
-`memory-lancedb` 依赖原生的 `@lancedb/lancedb` 包。打包的
-OpenClaw 会在首次安装时尝试使用捆绑的运行时依赖，并且在捆绑导入不可用时，
-可以在 OpenClaw 状态下修复插件运行时依赖。
+`memory-lancedb` 依赖原生 `@lancedb/lancedb` 包。打包后的
+OpenClaw 将该包视为插件包的一部分。Gateway 启动
+不会修复插件依赖；如果缺少该依赖，请重新安装或
+更新插件包并重启 Gateway。
 
 如果较旧的安装在插件加载期间记录了缺少 `dist/package.json` 或缺少
 `@lancedb/lancedb` 的错误，请升级 OpenClaw 并重启

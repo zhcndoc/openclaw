@@ -540,7 +540,7 @@ OpenClaw 可能会暴露 _短_ 消息 ID（例如 `1`、`2`）以节省 token。
 }
 ```
 
-## Media + 限制
+## 媒体 + 限制
 
 - 入站附件会被下载并存储到媒体缓存中。
 - 通过 `channels.bluebubbles.mediaMaxMb` 限制入站和出站媒体大小（默认：8 MB）。
@@ -575,12 +575,13 @@ OpenClaw 可能会暴露 _短_ 消息 ID（例如 `1`、`2`）以节省 token。
     - `channels.bluebubbles.chunkMode`: `length`（默认）仅在超过 `textChunkLimit` 时分块；`newline` 会先按空行（段落边界）分割，再进行长度分块。
 
   </Accordion>
-  <Accordion title="媒体和历史记录">
-    - `channels.bluebubbles.mediaMaxMb`: 入站/出站媒体大小上限（MB，默认：8）。
-    - `channels.bluebubbles.mediaLocalRoots`: 允许用于出站本地媒体路径的绝对本地目录显式允许列表。默认情况下，本地路径发送会被拒绝，除非配置了此项。按账户覆盖：`channels.bluebubbles.accounts.<accountId>.mediaLocalRoots`。
-    - `channels.bluebubbles.coalesceSameSenderDms`: 将连续来自同一发送者的 DM webhook 合并为一次 agent 回合，使 Apple 的文本+URL 拆分发送以单条消息到达（默认：`false`）。有关场景、窗口调优和权衡，请参见 [合并拆分发送的 DM](#coalescing-split-send-dms-command--url-in-one-composition)。启用后，如果未显式设置 `messages.inbound.byChannel.bluebubbles`，会将默认入站去抖窗口从 500 ms 扩大到 2500 ms。
-    - `channels.bluebubbles.historyLimit`: 上下文可用的群消息最大数量（0 表示禁用）。
-    - `channels.bluebubbles.dmHistoryLimit`: DM 历史记录限制。
+  <Accordion title="媒体和历史">
+    - `channels.bluebubbles.mediaMaxMb`: 入站/出站媒体上限（MB，默认：8）。
+    - `channels.bluebubbles.mediaLocalRoots`: 明确允许用于出站本地媒体路径的绝对本地目录白名单。未配置时，本地路径发送默认会被拒绝。按账户覆盖：`channels.bluebubbles.accounts.<accountId>.mediaLocalRoots`。
+    - `channels.bluebubbles.coalesceSameSenderDms`: 将来自同一发送者的连续 DM webhook 合并为一次代理回合，以便 Apple 的文本 + URL 拆分发送作为一条消息到达（默认：`false`）。有关场景、窗口调优和权衡，请参见 [合并拆分发送的 DM](/#coalescing-split-send-dms-command--url-in-one-composition)。启用后，如果没有显式设置 `messages.inbound.byChannel.bluebubbles`，会将默认入站去抖窗口从 500 ms 扩大到 2500 ms。
+    - `channels.bluebubbles.historyLimit`: 用于上下文的最大群消息数（0 表示禁用）。
+    - `channels.bluebubbles.dmHistoryLimit`: DM 历史限制。
+    - `channels.bluebubbles.replyContextApiFallback`: 当入站回复到达时缺少 `replyToBody`/`replyToSender`，且内存中的回复上下文缓存未命中时，作为尽力而为的后备方案，从 BlueBubbles HTTP API 拉取原始消息（默认：`false`）。适用于共享同一 BlueBubbles 账户的多实例部署、进程重启后，或长 TTL/LRU 缓存驱逐后。该拉取受与其他 BlueBubbles 客户端请求相同的 SSRF 防护策略保护，绝不会抛出异常，并会写入缓存以便后续回复复用。按账户覆盖：`channels.bluebubbles.accounts.<accountId>.replyContextApiFallback`。通道级设置会传播到未显式提供该标志的账户。
 
   </Accordion>
   <Accordion title="操作和账户">

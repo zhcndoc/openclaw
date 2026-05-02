@@ -327,44 +327,45 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="秘密、配置、更新与向导">
-    - `secrets.reload` 仅在完全成功时重新解析当前激活的 SecretRef，并替换运行时秘密状态。
-    - `secrets.resolve` 为特定命令/目标集合解析命令目标秘密分配。
-    - `config.get` 返回当前配置快照和 hash。
-    - `config.set` 写入已验证的配置负载。
-    - `config.patch` 合并一个部分配置更新。
-    - `config.apply` 验证并替换完整配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据；当运行时可以加载时，还包括插件 + 通道 schema 元数据。schema 包含由 UI 使用的相同标签和帮助文本派生出的字段 `title` / `description` 元数据，其中包括在存在匹配字段文档时的嵌套对象、通配符、数组项，以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、一个浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 逐级展开的直接子项摘要。查找 schema 节点保留面向用户的文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且仅在更新本身成功时安排重启。
-    - `update.status` 返回最新缓存的更新重启哨兵，若可用则包括重启后运行版本。
-    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding 向导。
+  <Accordion title="Secrets, config, update, and wizard">
+    - `secrets.reload` 重新解析当前生效的 SecretRefs，并且仅在完全成功时切换运行时 secret 状态。
+    - `secrets.resolve` 解析特定命令/目标集的命令目标 secret 分配。
+    - `config.get` 返回当前 config 快照和 hash。
+    - `config.set` 写入已验证的 config 负载。
+    - `config.patch` 合并部分 config 更新。
+    - `config.apply` 验证并替换完整的 config 负载。
+    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时 config schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包括派生自 UI 中使用的相同标签和帮助文本的字段 `title` / `description` 元数据，其中也包含匹配到字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 返回某个 config 路径的按路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 逐级展开的直接子项摘要。查找 schema 节点保留面向用户的文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数字/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
+    - `update.run` 运行网关更新流程，并且只在更新本身成功时调度重启。包管理器更新会在包替换后强制执行一次不延迟、无冷却期的更新重启，以避免旧的 Gateway 进程继续从已替换的 `dist` 目录懒加载。
+    - `update.status` 返回最新缓存的更新重启哨兵值，包括可用时的重启后运行版本。
+    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding wizard。
 
   </Accordion>
 
-  <Accordion title="Agent 与工作区助手">
-    - `agents.list` 返回已配置的 agent 条目，包括生效模型和运行时元数据。
+  <Accordion title="Agent 和工作区助手">
+    - `agents.list` 返回已配置的 agent 条目，包括生效中的模型和运行时元数据。
     - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和工作区绑定。
     - `agents.files.list`、`agents.files.get` 和 `agents.files.set` 管理为 agent 暴露的 bootstrap 工作区文件。
-    - `agent.identity.get` 返回某个 agent 或会话的生效 assistant 身份。
+    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式 `sessionKey`、`runId` 或 `taskId` 作用域暴露基于 transcript 派生的 artifact 摘要和下载。Run 和 task 查询会在服务器端解析归属会话，并且仅返回带有匹配来源的 transcript 媒体；不安全或本地 URL 来源会返回不支持的下载，而不是在服务器端抓取。
+    - `agent.identity.get` 返回某个 agent 或 session 的生效助手身份。
     - `agent.wait` 等待一次运行完成，并在可用时返回终态快照。
 
   </Accordion>
 
   <Accordion title="会话控制">
-    - `sessions.list` 返回当前会话索引，包括在配置了 agent runtime 后端时每一行的 `agentRuntime` 元数据。
+    - `sessions.list` 返回当前会话索引，包括在配置了 agent runtime 后端时每行的 `agentRuntime` 元数据。
     - `sessions.subscribe` 和 `sessions.unsubscribe` 为当前 WS 客户端切换会话变更事件订阅。
     - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 为某个会话切换 transcript/message 事件订阅。
-    - `sessions.preview` 返回特定会话 key 的有边界 transcript 预览。
-    - `sessions.resolve` 解析或规范化一个会话目标。
-    - `sessions.create` 创建一个新的会话条目。
+    - `sessions.preview` 返回特定 session key 的有界 transcript 预览。
+    - `sessions.resolve` 解析或规范化一个 session 目标。
+    - `sessions.create` 创建新的会话条目。
     - `sessions.send` 向现有会话发送消息。
-    - `sessions.steer` 是活动会话的中断并引导变体。
-    - `sessions.abort` 中止会话的活动工作。
-    - `sessions.patch` 更新会话元数据/覆盖项，并报告已解析的规范模型以及生效的 `agentRuntime`。
+    - `sessions.steer` 是用于活动会话的中断并引导变体。
+    - `sessions.abort` 中止会话的活动工作。调用方可以传入 `key` 加可选 `runId`，或者仅传入 `runId`，用于 Gateway 可解析为某个会话的活动运行。
+    - `sessions.patch` 更新会话元数据/覆盖项，并报告已解析的规范模型以及生效中的 `agentRuntime`。
     - `sessions.reset`、`sessions.delete` 和 `sessions.compact` 执行会话维护。
     - `sessions.get` 返回完整存储的会话行。
-    - Chat 执行仍然使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。`chat.history` 对 UI 客户端进行了显示规范化：可见文本中的内联指令标签会被移除，纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的 tool-call 块）和泄漏的 ASCII/全角模型控制 token 会被移除，诸如精确的 `NO_REPLY` / `no_reply` 这类纯静默 token 的 assistant 行会被省略，过大的行可以被占位符替换。
+    - Chat 执行仍然使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。`chat.history` 针对 UI 客户端做了显示规范化：会移除可见文本中的内联指令标签，移除纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）和泄漏的 ASCII/全角模型控制 token，省略纯静默 token 的 assistant 行（例如精确的 `NO_REPLY` / `no_reply`），并且可以用占位符替换过大的行。
 
   </Accordion>
 
@@ -398,9 +399,9 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="自动化、技能与工具">
-    - 自动化：`wake` 安排一次立即或下一次 heartbeat 的唤醒文本注入；`cron.list`、`cron.status`、`cron.add`、`cron.update`、`cron.remove`、`cron.run`、`cron.runs` 管理计划任务。
-    - 技能与工具：`commands.list`、`skills.*`、`tools.catalog`、`tools.effective`。
+  <Accordion title="Automation, skills, and tools">
+    - Automation: `wake` 调度立即或下一次 heartbeat 的唤醒文本注入；`cron.list`、`cron.status`、`cron.add`、`cron.update`、`cron.remove`、`cron.run`、`cron.runs` 管理计划任务。
+    - Skills and tools: `commands.list`、`skills.*`、`tools.catalog`、`tools.effective`、`tools.invoke`。
 
   </Accordion>
 </AccordionGroup>
@@ -429,34 +430,56 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
 ### Operator 助手方法
 
-- Operator 可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时命令清单。
-  - `agentId` 是可选的；省略它可读取默认 agent 工作区。
-  - `scope` 控制主 `name` 所针对的表面：
-    - `text` 返回不带前导 `/` 的主文本命令 token
-    - `native` 和默认的 `both` 路径在可用时返回具备 provider 感知的 native 名称
-  - `textAliases` 包含诸如 `/model` 和 `/m` 之类的精确 slash 别名。
-  - `nativeName` 在存在时包含具备 provider 感知的 native 命令名。
-  - `provider` 是可选的，只影响 native 命名以及 native 插件命令可用性。
-  - `includeArgs=false` 会从响应中省略序列化的参数元数据。
-- Operator 可以调用 `tools.catalog`（`operator.read`）来获取某个 agent 的运行时工具目录。响应包括分组工具和来源元数据：
-  - `source`：`core` 或 `plugin`
-  - `pluginId`：当 `source="plugin"` 时的插件所有者
-  - `optional`：某个插件工具是否可选
-- Operator 可以调用 `tools.effective`（`operator.read`）来获取某个会话的运行时生效工具清单。
-  - `sessionKey` 为必填。
-  - 网关从会话服务端派生可信运行时上下文，而不是接受调用方提供的 auth 或 delivery 上下文。
-  - 响应具有会话作用域，并反映当前活动对话现在可以使用的内容，包括 core、plugin 和 channel 工具。
-- Operator 可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见技能清单。
-  - `agentId` 是可选的；省略它可读取默认 agent 工作区。
-  - 响应包括资格、缺失要求、配置检查和经过清理的安装选项，同时不暴露原始秘密值。
-- Operator 可以调用 `skills.search` 和 `skills.detail`（`operator.read`）来获取 ClawHub 发现元数据。
-- Operator 可以调用 `skills.install`（`operator.admin`）的两种模式：
-  - ClawHub 模式：`{ source: "clawhub", slug, version?, force? }` 将一个技能文件夹安装到默认 agent 工作区的 `skills/` 目录。
-  - 网关安装器模式：`{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
-    在网关主机上运行一个声明的 `metadata.openclaw.install` 动作。
-- Operator 可以调用 `skills.update`（`operator.admin`）的两种模式：
-  - ClawHub 模式会更新一个已跟踪的 slug，或默认 agent 工作区中所有已跟踪的 ClawHub 安装。
-  - 配置模式会修补 `skills.entries.<skillKey>` 值，例如 `enabled`、`apiKey` 和 `env`。
+- Operators may call `commands.list` (`operator.read`) to fetch the runtime
+  command inventory for an agent.
+  - `agentId` is optional; omit it to read the default agent workspace.
+  - `scope` controls which surface the primary `name` targets:
+    - `text` returns the primary text command token without the leading `/`
+    - `native` and the default `both` path return provider-aware native names
+      when available
+  - `textAliases` carries exact slash aliases such as `/model` and `/m`.
+  - `nativeName` carries the provider-aware native command name when one exists.
+  - `provider` is optional and only affects native naming plus native plugin
+    command availability.
+  - `includeArgs=false` omits serialized argument metadata from the response.
+- Operators may call `tools.catalog` (`operator.read`) to fetch the runtime tool catalog for an
+  agent. The response includes grouped tools and provenance metadata:
+  - `source`: `core` or `plugin`
+  - `pluginId`: plugin owner when `source="plugin"`
+  - `optional`: whether a plugin tool is optional
+- Operators may call `tools.effective` (`operator.read`) to fetch the runtime-effective tool
+  inventory for a session.
+  - `sessionKey` is required.
+  - The gateway derives trusted runtime context from the session server-side instead of accepting
+    caller-supplied auth or delivery context.
+  - The response is session-scoped and reflects what the active conversation can use right now,
+    including core, plugin, and channel tools.
+- Operators may call `tools.invoke` (`operator.write`) to invoke one available tool through the
+  same gateway policy path as `/tools/invoke`.
+  - `name` is required. `args`, `sessionKey`, `agentId`, `confirm`, and
+    `idempotencyKey` are optional.
+  - If both `sessionKey` and `agentId` are present, the resolved session agent must match
+    `agentId`.
+  - The response is an SDK-facing envelope with `ok`, `toolName`, optional `output`, and typed
+    `error` fields. Approval or policy refusals return `ok:false` in the payload rather than
+    bypassing the gateway tool policy pipeline.
+- Operators may call `skills.status` (`operator.read`) to fetch the visible
+  skill inventory for an agent.
+  - `agentId` is optional; omit it to read the default agent workspace.
+  - The response includes eligibility, missing requirements, config checks, and
+    sanitized install options without exposing raw secret values.
+- Operators may call `skills.search` and `skills.detail` (`operator.read`) for
+  ClawHub discovery metadata.
+- Operators may call `skills.install` (`operator.admin`) in two modes:
+  - ClawHub mode: `{ source: "clawhub", slug, version?, force? }` installs a
+    skill folder into the default agent workspace `skills/` directory.
+  - Gateway installer mode: `{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
+    runs a declared `metadata.openclaw.install` action on the gateway host.
+- Operators may call `skills.update` (`operator.admin`) in two modes:
+  - ClawHub mode updates one tracked slug or all tracked ClawHub installs in
+    the default agent workspace.
+  - Config mode patches `skills.entries.<skillKey>` values such as `enabled`,
+    `apiKey`, and `env`.
 
 ### `models.list` 视图
 
@@ -564,7 +587,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 | `device signature invalid`  | `DEVICE_AUTH_SIGNATURE_INVALID` | `device-signature`       | 签名负载与 v2 负载不匹配。                          |
 | `device signature expired`  | `DEVICE_AUTH_SIGNATURE_EXPIRED` | `device-signature-stale` | 签名时间戳超出了允许的时钟偏差。                    |
 | `device identity mismatch`  | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                     |
-| `device public key invalid` | `DEVICE_AUTH_PUBLIC_KEY_INVALID` | `device-public-key`      | 公钥格式/规范化失败。                               |
+| `device public key invalid` | `DEVICE_AUTH_PUBLIC_KEY_INVALID`      | `device-public-key`      | 公钥格式/规范化失败。                               |
 
 迁移目标：
 

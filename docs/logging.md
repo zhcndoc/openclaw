@@ -217,12 +217,15 @@ exec 输出以及 patch 摘要）：
 写入磁盘之前被掩码。脱敏是尽力而为的：它适用于带文本内容的消息
 和日志字符串，而不是每一个标识符或二进制负载字段。
 
-`logging.redactSensitive: "off"` 只会禁用这项通用日志/转录策略。
-OpenClaw 仍会对可以显示给 UI 客户端、支持包、诊断观察器、
+内置默认规则覆盖常见的 API 凭据和支付凭据字段名，例如卡号、CVC/CVV、共享支付令牌和 payment credential，
+当它们以 JSON 字段、URL 参数、CLI 标志或赋值形式出现时。
+
+`logging.redactSensitive: "off"` 只会禁用这种通用日志/转录
+策略。OpenClaw 仍会对可展示给 UI 客户端、支持包、诊断观察器、
 审批提示或 agent 工具的安全边界负载进行脱敏。示例包括 Control UI
 工具调用事件、`sessions_history` 输出、诊断支持导出、provider 错误观察、
-exec 审批命令显示，以及 Gateway WebSocket 协议日志。自定义的
-`logging.redactPatterns` 仍然可以在这些界面上添加项目特定模式。
+exec 审批命令显示以及 Gateway WebSocket 协议日志。自定义
+`logging.redactPatterns` 仍可在这些表面上添加项目特定模式。
 
 ## 诊断与 OpenTelemetry
 

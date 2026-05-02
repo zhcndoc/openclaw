@@ -60,42 +60,43 @@ title: "插件 SDK 子路径"
     | `plugin-sdk/telegram-command-config` | 带 bundled 契约回退的 Telegram 自定义命令规范化/校验 helper |
     | `plugin-sdk/command-gating` | 窄范围命令授权门控 helper |
     | `plugin-sdk/channel-policy` | `resolveChannelGroupRequireMention` |
-    | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink`, `createChannelRunQueue`，草稿流生命周期/终结 helper |
-    | `plugin-sdk/inbound-envelope` | 共享的入站路由 + 信封构建器 helper |
-    | `plugin-sdk/inbound-reply-dispatch` | 共享的入站记录与分发 helper |
-    | `plugin-sdk/messaging-targets` | 目标解析/匹配 helper |
-    | `plugin-sdk/outbound-media` | 共享的出站媒体加载 helper |
-    | `plugin-sdk/outbound-send-deps` | 面向 channel 适配器的轻量出站发送依赖查找 |
-    | `plugin-sdk/outbound-runtime` | 出站交付、身份、发送委派、会话、格式化和 payload 规划 helper |
-    | `plugin-sdk/poll-runtime` | 窄范围投票规范化 helper |
-    | `plugin-sdk/thread-bindings-runtime` | 线程绑定生命周期和适配器 helper |
-    | `plugin-sdk/agent-media-payload` | 旧版 agent 媒体 payload 构建器 |
-    | `plugin-sdk/conversation-runtime` | 会话/线程绑定、配对和配置绑定 helper |
-    | `plugin-sdk/runtime-config-snapshot` | 运行时配置快照 helper |
-    | `plugin-sdk/runtime-group-policy` | 运行时组策略解析 helper |
-    | `plugin-sdk/channel-status` | 共享 channel 状态快照/摘要 helper |
-    | `plugin-sdk/channel-config-primitives` | 窄范围 channel config-schema 基元 |
-    | `plugin-sdk/channel-config-writes` | channel 配置写入授权 helper |
-    | `plugin-sdk/channel-plugin-common` | 共享 channel 插件前置导出 |
-    | `plugin-sdk/allowlist-config-edit` | allowlist 配置编辑/读取 helper |
-    | `plugin-sdk/group-access` | 共享组访问决策 helper |
-    | `plugin-sdk/direct-dm` | 共享直接 DM 认证/守卫 helper |
-    | `plugin-sdk/discord` | 已弃用的 Discord 兼容门面，适用于发布的 `@openclaw/discord@2026.3.13` 和跟踪中的 owner 兼容性；新插件应使用通用 channel SDK 子路径 |
-    | `plugin-sdk/telegram-account` | 已弃用的 Telegram 账号解析兼容门面，用于跟踪中的 owner 兼容性；新插件应使用注入的运行时 helper 或通用 channel SDK 子路径 |
-    | `plugin-sdk/interactive-runtime` | 语义消息展示、交付和旧版交互式回复 helper。参见 [Message Presentation](/plugins/message-presentation) |
-    | `plugin-sdk/channel-inbound` | 面向向后兼容的桶，包含入站 debounce、mention 匹配、mention 策略 helper 和信封 helper |
+    | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink`, `createChannelRunQueue`, draft stream lifecycle/finalization helpers |
+    | `plugin-sdk/inbound-envelope` | Shared inbound route + envelope builder helpers |
+    | `plugin-sdk/inbound-reply-dispatch` | Shared inbound record-and-dispatch helpers |
+    | `plugin-sdk/messaging-targets` | Target parsing/matching helpers |
+    | `plugin-sdk/outbound-media` | Shared outbound media loading helpers |
+    | `plugin-sdk/outbound-send-deps` | Lightweight outbound send dependency lookup for channel adapters |
+    | `plugin-sdk/outbound-runtime` | Outbound delivery, identity, send delegate, session, formatting, and payload planning helpers |
+    | `plugin-sdk/poll-runtime` | Narrow poll normalization helpers |
+    | `plugin-sdk/thread-bindings-runtime` | Thread-binding lifecycle and adapter helpers |
+    | `plugin-sdk/agent-media-payload` | Legacy agent media payload builder |
+    | `plugin-sdk/conversation-runtime` | Conversation/thread binding, pairing, and configured-binding helpers |
+    | `plugin-sdk/runtime-config-snapshot` | Runtime config snapshot helper |
+    | `plugin-sdk/runtime-group-policy` | Runtime group-policy resolution helpers |
+    | `plugin-sdk/channel-status` | Shared channel status snapshot/summary helpers |
+    | `plugin-sdk/channel-config-primitives` | Narrow channel config-schema primitives |
+    | `plugin-sdk/channel-config-writes` | Channel config-write authorization helpers |
+    | `plugin-sdk/channel-plugin-common` | Shared channel plugin prelude exports |
+    | `plugin-sdk/allowlist-config-edit` | Allowlist config edit/read helpers |
+    | `plugin-sdk/group-access` | Shared group-access decision helpers |
+    | `plugin-sdk/direct-dm` | Shared direct-DM auth/guard helpers |
+    | `plugin-sdk/discord` | 已弃用的 Discord 兼容门面，适用于已发布的 `@openclaw/discord@2026.3.13` 和受跟踪的 owner 兼容性；新的插件应使用通用 channel SDK 子路径 |
+    | `plugin-sdk/telegram-account` | 已弃用的 Telegram 账号解析兼容门面，适用于受跟踪的 owner 兼容性；新的插件应使用注入式运行时 helper 或通用 channel SDK 子路径 |
+    | `plugin-sdk/zalouser` | 已弃用的 Zalo Personal 兼容门面，适用于仍导入 sender 命令授权的已发布 Lark/Zalo 包；新的插件应使用 `plugin-sdk/command-auth` |
+    | `plugin-sdk/interactive-runtime` | 语义消息呈现、交付和旧版 interactive reply helper。参见 [Message Presentation](/plugins/message-presentation) |
+    | `plugin-sdk/channel-inbound` | 用于入站 debounce、mention 匹配、mention-policy helper 和 envelope helper 的兼容桶 |
     | `plugin-sdk/channel-inbound-debounce` | 窄范围入站 debounce helper |
-    | `plugin-sdk/channel-mention-gating` | 无更大入站运行时面向的窄范围 mention 策略、mention 标记和 mention 文本 helper |
-    | `plugin-sdk/channel-envelope` | 窄范围入站信封格式化 helper |
+    | `plugin-sdk/channel-mention-gating` | 不包含更宽泛 inbound runtime 表面的窄范围 mention-policy、mention marker 和 mention text helper |
+    | `plugin-sdk/channel-envelope` | 窄范围入站 envelope 格式化 helper |
     | `plugin-sdk/channel-location` | channel 位置上下文和格式化 helper |
     | `plugin-sdk/channel-logging` | 用于入站丢弃以及 typing/ack 失败的 channel 日志 helper |
     | `plugin-sdk/channel-send-result` | 回复结果类型 |
-    | `plugin-sdk/channel-actions` | channel 消息动作 helper，以及为插件兼容性保留的已弃用原生 schema helper |
-    | `plugin-sdk/channel-route` | 共享路由规范化、基于解析器的目标解析、线程 ID 字符串化、去重/压缩路由键、解析后目标类型，以及路由/目标比较 helper |
-    | `plugin-sdk/channel-targets` | 目标解析 helper；路由比较的调用方应使用 `plugin-sdk/channel-route` |
+    | `plugin-sdk/channel-actions` | channel 消息动作 helper，以及为兼容插件保留的已弃用原生 schema helper |
+    | `plugin-sdk/channel-route` | 共享路由规范化、基于解析器的目标解析、thread-id 字符串化、去重/压缩 route key、parsed-target 类型，以及 route/target 比较 helper |
+    | `plugin-sdk/channel-targets` | 目标解析 helper；路由比较调用方应使用 `plugin-sdk/channel-route` |
     | `plugin-sdk/channel-contract` | channel 契约类型 |
-    | `plugin-sdk/channel-feedback` | 反馈/reaction 接线 |
-    | `plugin-sdk/channel-secret-runtime` | 窄范围 secret 契约 helper，例如 `collectSimpleChannelFieldAssignments`、`getChannelSurface`、`pushAssignment` 和 secret 目标类型 |
+    | `plugin-sdk/channel-feedback` | 反馈/反应接线 |
+    | `plugin-sdk/channel-secret-runtime` | 窄范围 secret 契约 helper，例如 `collectSimpleChannelFieldAssignments`、`getChannelSurface`、`pushAssignment` 和 secret target 类型 |
   </Accordion>
 
   <Accordion title="Provider 子路径">

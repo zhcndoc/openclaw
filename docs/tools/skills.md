@@ -27,7 +27,15 @@ OpenClaw 会从以下来源加载技能，**优先级最高的在前**：
 
 如果技能名称冲突，优先级最高的来源获胜。
 
-## 按代理 vs 共享技能
+Codex CLI 的原生 `$CODEX_HOME/skills` 目录不属于这些 OpenClaw
+技能根目录之一。在 Codex harness 模式下，本地 app-server 启动会使用按代理隔离的
+Codex home，因此个人 Codex CLI 技能不会被隐式加载。
+使用 `openclaw migrate codex --dry-run` 可清点这些技能，并使用
+`openclaw migrate codex` 在复制到当前 OpenClaw 代理工作区之前，通过交互式复选框提示
+选择技能目录。对于非交互运行，请对要复制的确切技能重复使用
+`--skill <name>`。
+
+## Per-agent vs shared skills
 
 在 **多代理** 设置中，每个代理都有自己的工作区：
 
@@ -101,10 +109,13 @@ OpenClaw 会从以下来源加载技能，**优先级最高的在前**：
 | 更新所有已安装技能               | `openclaw skills update --all`         |
 | 同步（扫描 + 发布更新）          | `clawhub sync --all`                   |
 
-原生的 `openclaw skills install` 会安装到当前活动工作区的
+原生的 `openclaw skills install` 会安装到当前工作区的
 `skills/` 目录。单独的 `clawhub` CLI 也会安装到你当前工作目录下的
-`./skills`（或回退到已配置的 OpenClaw 工作区）。OpenClaw 会在下一个会话中将其视为
+`./skills`（或者回退到已配置的 OpenClaw 工作区）。OpenClaw 会在下一次会话中将其识别为
 `<workspace>/skills`。
+已配置的技能根目录也支持一个分组层级，例如
+`skills/<group>/<skill>/SKILL.md`，因此相关的第三方技能可以
+保存在共享文件夹下，而无需进行广泛的递归扫描。
 
 ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供 VirusTotal、ClawScan 和静态分析的扫描详情页。
 `openclaw skills install <slug>` 仍然只是安装路径；发布者可通过 ClawHub 仪表板或
@@ -132,7 +143,7 @@ ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供
 ```markdown
 ---
 name: image-lab
-description: Generate or edit images via a provider-backed image workflow
+description: 通过基于提供商的图像工作流生成或编辑图像
 ---
 ```
 
@@ -166,7 +177,7 @@ OpenClaw 使用 `metadata`（单行 JSON）在加载时过滤技能：
 ```markdown
 ---
 name: image-lab
-description: Generate or edit images via a provider-backed image workflow
+description: 通过基于提供商的图像工作流生成或编辑图像
 metadata:
   {
     "openclaw":
@@ -230,7 +241,7 @@ metadata:
 ```markdown
 ---
 name: gemini
-description: Use Gemini CLI for coding assistance and Google search lookups.
+description: 使用 Gemini CLI 进行编码辅助和 Google 搜索查询。
 metadata:
   {
     "openclaw":
@@ -244,7 +255,7 @@ metadata:
               "kind": "brew",
               "formula": "gemini-cli",
               "bins": ["gemini"],
-              "label": "Install Gemini CLI (brew)",
+              "label": "安装 Gemini CLI（brew）",
             },
           ],
       },
@@ -334,10 +345,10 @@ metadata:
 
 1. 读取技能元数据。
 2. 将 `skills.entries.<key>.env` 和 `skills.entries.<key>.apiKey` 应用到 `process.env`。
-3. 使用 **符合条件** 的技能构建系统提示词。
+3. 使用 **符合条件的** 技能构建系统提示词。
 4. 在运行结束后恢复原始环境。
 
-环境注入的作用域只限于代理运行，**不**是全局 shell
+环境注入的作用域只限于代理运行，**不是**全局 shell
 环境。
 
 对于打包的 `claude-cli` 后端，OpenClaw 还会把同样的
@@ -411,13 +422,13 @@ OpenClaw 随安装（npm 包或 OpenClaw.app）提供一组基础技能，作为
 ## 想找更多技能？
 
 浏览 [https://clawhub.ai](https://clawhub.ai)。完整配置
-schema：[Skills config](/tools/skills-config)。
+schema：[技能配置](/tools/skills-config)。
 
 ## 相关内容
 
 - [ClawHub](/tools/clawhub) — 公共技能注册表
-- [Creating skills](/tools/creating-skills) — 构建自定义技能
+- [创建技能](/tools/creating-skills) — 构建自定义技能
 - [Plugins](/tools/plugin) — 插件系统概览
 - [Skill Workshop plugin](/plugins/skill-workshop) — 从代理工作生成技能
-- [Skills config](/tools/skills-config) — 技能配置参考
+- [技能配置](/tools/skills-config) — 技能配置参考
 - [Slash commands](/tools/slash-commands) — 所有可用的斜杠命令

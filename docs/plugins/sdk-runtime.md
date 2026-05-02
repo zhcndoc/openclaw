@@ -173,7 +173,9 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
     });
     ```
 
-    在 Gateway 内，这个运行时是在进程内运行的。在插件 CLI 命令中，它会通过 RPC 调用已配置的 Gateway，因此像 `openclaw googlemeet recover-tab` 这样的命令可以从终端检查配对节点。节点命令仍然会经过正常的 Gateway 节点配对、命令允许列表以及节点本地命令处理。
+    在 Gateway 内部，此运行时在进程内执行。在插件 CLI 命令中，它通过 RPC 调用已配置的 Gateway，因此像 `openclaw googlemeet recover-tab` 这样的命令可以从终端检查配对节点。节点命令仍然通过正常的 Gateway 节点配对、命令允许列表、插件节点调用策略以及节点本地命令处理。
+
+    暴露危险节点主机命令的插件应使用 `api.registerNodeInvokePolicy(...)` 注册节点调用策略。该策略会在 Gateway 中运行，先于命令被转发到节点之前执行，且在命令允许列表检查之后，因此直接的 `node.invoke` 调用和更高层级的插件工具共享相同的强制执行路径。
 
   </Accordion>
   <Accordion title="api.runtime.tasks.managedFlows">

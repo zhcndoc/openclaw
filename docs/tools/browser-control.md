@@ -90,10 +90,10 @@ PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
 元素截图也会拒绝 `--full-page`；该路由会返回 `fullPage is
 not supported for element screenshots`。
 
-如果你看到 `Playwright is not available in this gateway build`，请修复
-捆绑的浏览器插件运行时依赖，确保已安装 `playwright-core`，
-然后重启 gateway。对于打包安装，请运行 `openclaw doctor --fix`。
-对于 Docker，还需要按如下所示安装 Chromium 浏览器二进制文件。
+If you see `Playwright is not available in this gateway build`, the packaged
+Gateway is missing the core browser runtime dependency. Reinstall or update
+OpenClaw, then restart the gateway. For Docker, also install the Chromium
+browser binaries as shown below.
 
 #### Docker 中安装 Playwright
 

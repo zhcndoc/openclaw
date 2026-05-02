@@ -323,7 +323,7 @@ Gateway 会在每次成功启动后保留一份受信任的最近已知良好副
     }
     ```
 
-    先构建镜像：`scripts/sandbox-setup.sh`
+    Build the image first — from a source checkout run `scripts/sandbox-setup.sh`, or from an npm install see the inline `docker build` command in [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup).
 
     有关完整指南，请参阅 [沙箱](/gateway/sandboxing)；有关所有选项，请参阅[完整参考](/gateway/config-agents#agentsdefaultssandbox)。
 
@@ -501,17 +501,24 @@ Gateway 会在每次成功启动后保留一份受信任的最近已知良好副
     }
     ```
 
-    - **单个文件**：替换所在对象
-    - **文件数组**：按顺序深度合并（后者优先）
-    - **同级键**：在 includes 之后合并（覆盖被包含的值）
-    - **嵌套 include**：支持最多 10 层深度
-    - **相对路径**：相对于包含它的文件解析
-    - **OpenClaw 所有写入**：当写入仅更改单个顶层部分，
-      且该部分由单文件 include 提供时，例如 `plugins: { $include: "./plugins.json5" }`，
-      OpenClaw 会更新那个被包含的文件，并保持 `openclaw.json` 不变
-    - **不支持的透传写入**：根 include、include 数组以及带有同级覆盖的 include
-      对 OpenClaw 所有写入会失败关闭，而不是展平配置
-    - **错误处理**：缺失文件、解析错误和循环 include 都会给出清晰错误
+    - **Single file**: replaces the containing object
+    - **Array of files**: deep-merged in order (later wins)
+    - **Sibling keys**: merged after includes (override included values)
+    - **Nested includes**: supported up to 10 levels deep
+    - **Relative paths**: resolved relative to the including file
+    - **OpenClaw-owned writes**: when a write changes only one top-level section
+      backed by a single-file include such as `plugins: { $include: "./plugins.json5" }`,
+      OpenClaw updates that included file and leaves `openclaw.json` intact
+    - **Unsupported write-through**: root includes, include arrays, and includes
+      with sibling overrides fail closed for OpenClaw-owned writes instead of
+      flattening the config
+    - **Confinement**: `$include` paths must resolve under the directory holding
+      `openclaw.json`. To share a tree across machines or users, set
+      `OPENCLAW_INCLUDE_ROOTS` to a path-list (`:` on POSIX, `;` on Windows) of
+      additional directories that includes may reference. Symlinks are resolved
+      and re-checked, so a path that lexically lives in a config dir but whose
+      real target escapes every allowed root is still rejected.
+    - **Error handling**: clear errors for missing files, parse errors, and circular includes
 
   </Accordion>
 </AccordionGroup>
@@ -555,7 +562,7 @@ Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多�
 大多数字段都可在不停机的情况下热应用。在 `hybrid` 模式下，需要重启的更改会自动处理。
 
 | 类别            | 字段                                                            | 需要重启？ |
-| ---------------- | ----------------------------------------------------------------- | --------------- |
+| ----------------------------------------------------------------- | --------------- |
 | 通道            | `channels.*`、`web`（WhatsApp）——所有内置和插件通道 | 否              |
 | 代理与模型      | `agent`、`agents`、`models`、`routing`                            | 否              |
 | 自动化          | `hooks`、`cron`、`agent.heartbeat`                                | 否              |
@@ -576,7 +583,7 @@ Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多�
 例如 `plugins: { $include: "./plugins.json5" }`，热重载决策（热应用还是重启）也会保持可预测。
 如果源布局存在歧义，重载规划会失败关闭。
 
-## Config RPC（程序化更新）
+## 配置 RPC（程序化更新）
 
 对于通过 gateway API 写入配置的工具，建议使用以下流程：
 

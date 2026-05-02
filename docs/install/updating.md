@@ -91,37 +91,21 @@ bun add -g openclaw@latest
 
 <AccordionGroup>
   <Accordion title="只读包树">
-    OpenClaw 将已打包的全局安装在运行时视为只读，即使当前用户对全局包目录具有写权限。捆绑的插件运行时依赖会被暂存到一个可写的运行时目录中，而不是修改包树本身。这样可以避免 `openclaw update` 与正在运行的网关或本地代理发生竞争，这些进程可能会在同一次安装期间修复插件依赖。
+    OpenClaw 将打包的全局安装在运行时视为只读，即使当前用户对全局包目录具有写权限。插件包安装位于用户配置目录下由 OpenClaw 拥有的 npm/git 根目录中，而网关启动不会修改 OpenClaw 的包树。
 
-    某些 Linux 的 npm 配置会将全局包安装到 root 拥有的目录下，例如 `/usr/lib/node_modules/openclaw`。OpenClaw 通过同样的外部暂存路径支持这种布局。
+    某些 Linux npm 配置会将全局包安装到 root 拥有的目录下，例如 `/usr/lib/node_modules/openclaw`。OpenClaw 支持这种布局，因为插件安装/更新命令写入的是该全局包目录之外的位置。
 
   </Accordion>
   <Accordion title="加固的 systemd 单元">
-    设置一个包含在 `ReadWritePaths` 中的可写暂存目录：
+    给予 OpenClaw 对其配置/状态根目录的写入权限，以便显式插件安装、插件更新和 doctor 清理能够持久保存更改：
 
     ```ini
-    Environment=OPENCLAW_PLUGIN_STAGE_DIR=/var/lib/openclaw/plugin-runtime-deps
     ReadWritePaths=/var/lib/openclaw /home/openclaw/.openclaw /tmp
     ```
 
-    `OPENCLAW_PLUGIN_STAGE_DIR` 也接受路径列表。OpenClaw 会按从左到右的顺序在列出的根目录中解析捆绑的插件运行时依赖，将较早的根目录视为只读的预装层，并且只会安装或修复最后一个可写根目录中的内容：
-
-    ```ini
-    Environment=OPENCLAW_PLUGIN_STAGE_DIR=/opt/openclaw/plugin-runtime-deps:/var/lib/openclaw/plugin-runtime-deps
-    ReadWritePaths=/var/lib/openclaw /home/openclaw/.openclaw /tmp
-    ```
-
-    如果未设置 `OPENCLAW_PLUGIN_STAGE_DIR`，OpenClaw 会在 systemd 提供 `$STATE_DIRECTORY` 时使用它，然后回退到 `~/.openclaw/plugin-runtime-deps`。修复步骤会将该暂存目录视为 OpenClaw 拥有的本地包根，并忽略用户的 npm 前缀和全局设置，因此全局安装的 npm 配置不会将捆绑的插件依赖重定向到 `~/node_modules` 或全局包树中。
-
   </Accordion>
-  <Accordion title="磁盘空间预检">
-    在执行包更新和捆绑运行时依赖修复之前，OpenClaw 会尽力对目标卷进行磁盘空间检查。空间不足会产生一条包含所检查路径的警告，但不会阻止更新，因为文件系统配额、快照和网络卷在检查之后可能会发生变化。实际的 npm 安装、复制和安装后验证仍然是最终依据。
-  </Accordion>
-  <Accordion title="捆绑的插件运行时依赖">
-    打包安装会将捆绑的插件运行时依赖排除在只读包树之外。在启动以及执行 `openclaw doctor --fix` 期间，OpenClaw 只会为配置中处于激活状态、通过旧版渠道配置处于激活状态，或由其捆绑清单默认值启用的捆绑插件修复运行时依赖。仅持久化的渠道认证状态不会触发网关启动时的运行时依赖修复。
-
-    明确禁用优先。被禁用的插件或渠道不会因为它存在于包中就被修复其运行时依赖。外部插件和自定义加载路径仍然使用 `openclaw plugins install` 或 `openclaw plugins update`。
-
+  <Accordion title="磁盘空间预检查">
+    在包更新和显式插件安装之前，OpenClaw 会尽力对目标卷进行磁盘空间检查。空间不足会产生一条带有已检查路径的警告，但不会阻止更新，因为文件系统配额、快照和网络卷可能会在检查后发生变化。实际的包管理器安装和安装后验证仍然具有最终决定权。
   </Accordion>
 </AccordionGroup>
 
@@ -151,6 +135,12 @@ bun add -g openclaw@latest
 
 网关还会在启动时记录一条更新提示（可通过 `update.checkOnStart: false` 禁用）。
 对于降级或事故恢复，可在网关环境中设置 `OPENCLAW_NO_AUTO_UPDATE=1`，即使配置了 `update.auto.enabled` 也会阻止自动应用。除非同时禁用 `update.checkOnStart`，否则启动时的更新提示仍可能运行。
+
+通过实时 Gateway 控制平面处理程序请求的包管理器更新
+会在包交换后强制执行一次非延迟、无冷却时间的更新重启。这
+可避免旧的内存中进程持续存在足够长时间，以便从已经被替换的包树中惰性加载块。
+对于受监督的安装，Shell `openclaw update`
+仍然是首选路径，因为它可以在更新前后停止并重启服务。
 
 ## 更新后
 

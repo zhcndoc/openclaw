@@ -55,8 +55,9 @@ read_when:
 
 ## 内置目录
 
-Groq 的模型目录变化很频繁。运行 `openclaw models list | grep groq`
-查看当前可用模型，或访问
+OpenClaw 自带一个基于 manifest 的 Groq 目录，用于快速按提供商筛选模型
+列表。运行 `openclaw models list --all --provider groq` 查看内置
+条目，或查看
 [console.groq.com/docs/models](https://console.groq.com/docs/models)。
 
 | Model                       | Notes                              |
@@ -67,7 +68,8 @@ Groq 的模型目录变化很频繁。运行 `openclaw models list | grep groq`
 | **Mixtral 8x7B**            | MoE 架构，推理能力强               |
 
 <Tip>
-使用 `openclaw models list --provider groq` 获取你账户中可用模型的最新列表。
+使用 `openclaw models list --all --provider groq` 查看当前 OpenClaw 版本已知的、
+基于 manifest 的 Groq 条目。
 </Tip>
 
 ## 推理模型

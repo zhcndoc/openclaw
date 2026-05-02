@@ -169,6 +169,7 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
   "features": {
     "bot_user": { "display_name": "OpenClaw", "always_online": true },
     "app_home": {
+      "home_tab_enabled": true,
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
     },
@@ -212,6 +213,7 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
     "socket_mode_enabled": true,
     "event_subscriptions": {
       "bot_events": [
+        "app_home_opened",
         "app_mention",
         "channel_rename",
         "member_joined_channel",
@@ -263,6 +265,8 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 ### 其他 manifest 设置
 
 启用不同功能以扩展上述默认配置。
+
+默认 manifest 会启用 Slack App Home 的 **Home** 选项卡，并订阅 `app_home_opened`。当工作区成员打开 Home 选项卡时，OpenClaw 会使用 `views.publish` 发布一个安全的默认 Home 视图；其中不包含对话负载或私有配置。**Messages** 选项卡仍对 Slack DM 保持启用。
 
 <AccordionGroup>
   <Accordion title="可选的原生斜杠命令">
@@ -514,7 +518,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `allowlist`
     - `disabled`
 
-    Channel allowlist lives under `channels.slack.channels` and **must use stable Slack channel IDs** (for example `C12345678`) as config keys.
+    频道允许列表位于 `channels.slack.channels` 下，并且 **必须使用稳定的 Slack 频道 ID**（例如 `C12345678`）作为配置键。
 
     运行时说明：如果 `channels.slack` 完全缺失（仅环境变量配置），运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使 `channels.defaults.groupPolicy` 已设置）。
 
@@ -581,6 +585,8 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `tools`、`toolsBySender`
     - `toolsBySender` 键格式：`id:`、`e164:`、`username:`、`name:`，或 `"*"` 通配符
       （旧版未加前缀的键仍然只映射到 `id:`）
+
+    对于频道和私有频道，`allowBots` 是保守的：只有当发送 bot 的房间消息的 bot 被显式列在该房间的 `users` 允许列表中，或者 `channels.slack.allowFrom` 中至少有一个显式 Slack owner ID 当前是该房间成员时，才会接受 bot 生成的房间消息。通配符和显示名 owner 条目都不能满足 owner 存在性要求。owner 存在性使用 Slack `conversations.members`；请确保应用对该房间类型具有匹配的读取权限范围（公共频道使用 `channels:read`，私有频道使用 `groups:read`）。如果成员查询失败，OpenClaw 会丢弃该 bot 生成的房间消息。
 
   </Tab>
 </Tabs>

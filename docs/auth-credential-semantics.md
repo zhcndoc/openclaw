@@ -69,8 +69,9 @@ Agent 认证继承采用读穿透方式。当某个 agent 没有本地配置文�
 
 ## 外部 CLI 凭据发现
 
-- 仅当提供方、运行时或 auth 配置文件处于当前操作的作用域内，或者该外部来源的本地已存储配置文件已存在时，才会发现由外部 CLI 持有的仅运行时凭据。
-- 只读/状态路径会传递 `allowKeychainPrompt: false`；它们仅使用文件支持的外部 CLI 凭据，不会读取或复用 macOS Keychain 结果。
+- 仅当当前操作的 provider、runtime 或 auth profile 处于作用域内时，或者当该外部来源的已存储本地配置文件已经存在时，才会发现外部 CLI 拥有的仅运行时凭据。
+- Auth-store 调用方应选择明确的 external-CLI 发现模式：`none` 表示仅持久化/plugin auth，`existing` 表示刷新已存储的 external CLI 配置文件，或 `scoped` 表示针对具体 provider/profile 集合。
+- 只读/状态路径会传递 `allowKeychainPrompt: false`；它们仅使用文件后备的 external CLI 凭据，不读取或重用 macOS Keychain 结果。
 
 ## OAuth SecretRef 策略保护
 

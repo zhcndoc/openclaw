@@ -18,22 +18,23 @@ agentic loop 是 agent 的完整“真实”运行：接收输入 → 组装上�
 
 ## 工作原理（高层）
 
-1. `agent` RPC 校验参数，解析 session（sessionKey/sessionId），持久化 session 元数据，并立即返回 `{ runId, acceptedAt }`。
+1. `agent` RPC 验证参数，解析 session（sessionKey/sessionId），持久化 session 元数据，并立即返回 `{ runId, acceptedAt }`。
 2. `agentCommand` 运行 agent：
    - 解析模型 + thinking/verbose/trace 默认值
    - 加载 skills 快照
    - 调用 `runEmbeddedPiAgent`（pi-agent-core 运行时）
-   - 如果嵌入式 loop 没有发出 **lifecycle end/error**，则补发
+   - 如果嵌入式 loop 没有发出 **lifecycle end/error**，则发出该事件
 3. `runEmbeddedPiAgent`：
-   - 通过每个 session + 全局队列对运行进行串行化
-   - 解析模型 + auth profile 并构建 pi session
-   - 订阅 pi 事件并流式发送 assistant/tool 增量
+   - 通过每 session + 全局队列串行化运行
+   - 解析模型 + 认证配置文件并构建 pi session
+   - 订阅 pi 事件并流式输出 assistant/tool 增量
    - 强制超时 -> 超出则中止运行
-   - 返回 payloads + 使用量元数据
-4. `subscribeEmbeddedPiSession` 将 pi-agent-core 事件桥接到 OpenClaw `agent` stream：
+   - 对于 Codex app-server turns，如果已接受的 turn 在没有产生 app-server 进度且没有终止事件之前停止，则中止它
+   - 返回 payload 和 usage 元数据
+4. `subscribeEmbeddedPiSession` 将 pi-agent-core 事件桥接到 OpenClaw `agent` 流：
    - tool 事件 => `stream: "tool"`
    - assistant 增量 => `stream: "assistant"`
-   - 生命周期事件 => `stream: "lifecycle"`（`phase: "start" | "end" | "error"`）
+   - lifecycle 事件 => `stream: "lifecycle"`（`phase: "start" | "end" | "error"`）
 5. `agent.wait` 使用 `waitForAgentRun`：
    - 等待 `runId` 的 **lifecycle end/error**
    - 返回 `{ status: ok|error|timeout, startedAt, endedAt, error? }`
@@ -148,12 +149,12 @@ Harness 可能会以不同方式适配这些 hooks。Codex app-server harness �
 
 ## 超时
 
-- `agent.wait` default: 30s (just the wait). `timeoutMs` param overrides.
-- Agent runtime: `agents.defaults.timeoutSeconds` default 172800s (48 hours); enforced in `runEmbeddedPiAgent` abort timer.
-- Cron runtime: isolated agent-turn `timeoutSeconds` is owned by cron. The scheduler starts that timer when execution begins, aborts the underlying run at the configured deadline, then runs bounded cleanup before recording the timeout so a stale child session cannot keep the lane stuck.
-- Stuck-session recovery: with diagnostics enabled, `diagnostics.stuckSessionWarnMs` detects long `processing` sessions. Active embedded runs, active reply operations, and active session-lane tasks remain warning-only by default; if diagnostics show no active work for the session, the watchdog releases the affected session lane so queued startup work can drain.
-- Model idle timeout: OpenClaw aborts a model request when no response chunks arrive before the idle window. `models.providers.<id>.timeoutSeconds` extends this idle watchdog for slow local/self-hosted providers; otherwise OpenClaw uses `agents.defaults.timeoutSeconds` when configured, capped at 120s by default. Cron-triggered runs with no explicit model or agent timeout disable the idle watchdog and rely on the cron outer timeout.
-- Provider HTTP request timeout: `models.providers.<id>.timeoutSeconds` applies to that provider's model HTTP fetches, including connect, headers, body, SDK request timeout, total guarded-fetch abort handling, and model stream idle watchdog. Use this for slow local/self-hosted providers such as Ollama before raising the whole agent runtime timeout.
+- `agent.wait` 默认：30s（仅等待时间）。`timeoutMs` 参数可覆盖。
+- Agent 运行时：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；在 `runEmbeddedPiAgent` 的中止计时器中强制执行。
+- Cron 运行时：独立的 agent-turn `timeoutSeconds` 由 cron 管理。调度器会在执行开始时启动该计时器，在配置的截止时间中止底层运行，然后在记录超时前执行有界清理，以免陈旧的子 session 一直占住 lane。
+- 卡住的 session 恢复：在启用诊断时，`diagnostics.stuckSessionWarnMs` 会检测长时间处于 `processing` 的 session。活跃的嵌入式运行、活跃的回复操作以及活跃的 session-lane 任务默认仅发出警告；如果诊断显示该 session 没有活跃工作，watchdog 会释放受影响的 session lane，以便排队中的启动工作得以继续。
+- 模型空闲超时：当在空闲窗口之前没有收到响应分块时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为较慢的本地/自托管 provider 延长这个空闲 watchdog；否则 OpenClaw 会在配置时使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。对于没有显式模型或 agent 超时的 cron 触发运行，将禁用空闲 watchdog，并依赖 cron 外层超时。
+- Provider HTTP 请求超时：`models.providers.<id>.timeoutSeconds` 适用于该 provider 的模型 HTTP fetch，包括 connect、headers、body、SDK 请求超时、总的受保护 fetch 中止处理，以及模型流空闲 watchdog。在提高整个 agent 运行时超时之前，可先为较慢的本地/自托管 provider（例如 Ollama）使用此项。
 
 ## 何时会更早结束
 

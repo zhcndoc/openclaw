@@ -47,13 +47,15 @@ openclaw config set commitments.maxPerDay 3
 当找到高置信度候选项时，OpenClaw 会存储一个承诺，其中包括：
 
 - 代理 id
-- 会话键
+- 会话密钥
 - 原始频道和交付目标
-- 到期时间窗口
-- 一个简短的建议检查点
-- 足够的源上下文，供 heartbeat 判断是否发送
+- 到期窗口
+- 简短的建议签到内容
+- 供 heartbeat 判断是否发送的非指令性元数据
 
-交付通过 heartbeat 完成。当某个承诺到期时，heartbeat 会把该承诺添加到同一代理和频道范围的 heartbeat 回合中。模型可以发送一个自然的检查点，或者回复 `HEARTBEAT_OK` 来将其忽略。
+交付通过 heartbeat 进行。当某个承诺到期时，heartbeat 会将该承诺添加到同一代理和频道范围的 heartbeat 轮次中。
+模型可以发送一条自然的签到消息，或回复 `HEARTBEAT_OK` 将其忽略。
+如果 heartbeat 配置为 `target: "none"`，则到期的承诺会保持在内部，不会发送外部签到。承诺交付提示不会回放原始对话文本，而且到期承诺的 heartbeat 轮次会在没有 OpenClaw 工具的情况下运行。
 
 OpenClaw 绝不会在写入承诺后立刻交付它。到期时间至少会被钳制到创建承诺后的一个 heartbeat 间隔之后，因此该后续不会在被推断出来的同一时刻回声返回。
 

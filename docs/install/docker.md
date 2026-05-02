@@ -6,7 +6,7 @@ read_when:
 title: "Docker"
 ---
 
-Docker 是**可选**的。只有在你想要一个容器化网关或验证 Docker 流程时才使用它。
+Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docker 流程时才使用它。
 
 ## Docker 适合我吗？
 
@@ -121,25 +121,24 @@ docker compose up -d openclaw-gateway
 
 设置脚本接受以下可选环境变量：
 
-| 变量                                       | 作用                                                           |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                           | 使用远程镜像而不是本地构建                                       |
-| `OPENCLAW_DOCKER_APT_PACKAGES`             | 构建期间安装额外的 apt 包（以空格分隔）                           |
-| `OPENCLAW_EXTENSIONS`                      | 在构建时预安装插件依赖（以空格分隔的名称）                       |
-| `OPENCLAW_EXTRA_MOUNTS`                    | 额外挂载主机绑定卷（以逗号分隔的 `source:target[:opts]`）       |
-| `OPENCLAW_HOME_VOLUME`                     | 将 `/home/node` 持久化到一个命名 Docker 卷中                     |
-| `OPENCLAW_PLUGIN_STAGE_DIR`                | 生成的打包插件依赖和镜像的容器路径                               |
-| `OPENCLAW_SANDBOX`                         | 启用沙箱启动（`1`、`true`、`yes`、`on`）                         |
-| `OPENCLAW_SKIP_ONBOARDING`                 | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`）                   |
-| `OPENCLAW_DOCKER_SOCKET`                   | 覆盖 Docker socket 路径                                         |
-| `OPENCLAW_DISABLE_BONJOUR`                 | 禁用 Bonjour/mDNS 广播（Docker 默认值为 `1`）                   |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | 禁用打包插件源码绑定挂载覆盖                                     |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`              | 用于 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点               |
-| `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | 用于 traces、metrics 或 logs 的信号专用 OTLP 端点                |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP 协议覆盖。当前仅支持 `http/protobuf`                       |
-| `OTEL_SERVICE_NAME`                        | OpenTelemetry 资源使用的服务名                                  |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`            | 启用最新的实验性 GenAI 语义属性                                  |
-| `OPENCLAW_OTEL_PRELOADED`                  | 如果已预加载，则跳过启动第二个 OpenTelemetry SDK                |
+| Variable                                   | Purpose                                                         |
+| ------------------------------------------ | --------------------------------------------------------------- |
+| `OPENCLAW_IMAGE`                           | 使用远程镜像而不是本地构建                  |
+| `OPENCLAW_DOCKER_APT_PACKAGES`             | 在构建期间安装额外的 apt 包（以空格分隔）       |
+| `OPENCLAW_EXTENSIONS`                      | 在构建时包含选定的内置插件助手           |
+| `OPENCLAW_EXTRA_MOUNTS`                    | 额外挂载主机绑定卷（逗号分隔的 `source:target[:opts]`） |
+| `OPENCLAW_HOME_VOLUME`                     | 将 `/home/node` 持久化到命名 Docker 卷                   |
+| `OPENCLAW_SANDBOX`                         | 启用沙箱引导（`1`、`true`、`yes`、`on`）          |
+| `OPENCLAW_SKIP_ONBOARDING`                 | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`） |
+| `OPENCLAW_DOCKER_SOCKET`                   | 覆盖 Docker socket 路径                                     |
+| `OPENCLAW_DISABLE_BONJOUR`                 | 禁用 Bonjour/mDNS 广播（Docker 默认值为 `1`）   |
+| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | 禁用内置插件源码绑定挂载覆盖层               |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`              | 供 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点    |
+| `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | 用于 traces、metrics 或 logs 的信号特定 OTLP 端点     |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP 协议覆盖。目前仅支持 `http/protobuf` |
+| `OTEL_SERVICE_NAME`                        | 用于 OpenTelemetry 资源的服务名称                   |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`            | 启用最新的实验性 GenAI 语义属性         |
+| `OPENCLAW_OTEL_PRELOADED`                  | 当已有预加载时跳过启动第二个 OpenTelemetry SDK  |
 
 维护者可以通过将一个插件源码目录挂载到其打包源码路径上，来测试打包镜像上的打包插件源码，例如
 `OPENCLAW_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`。
@@ -159,14 +158,13 @@ export OTEL_SERVICE_NAME="openclaw-gateway"
 ./scripts/docker/setup.sh
 ```
 
-官方 OpenClaw Docker 发布镜像包含打包的
-`diagnostics-otel` 插件源码。根据镜像和缓存状态，Gateway 在插件首次启用时
-仍可能暂存插件本地的 OpenTelemetry 运行时依赖，因此请允许首次启动
-连接到包仓库，或者在发布流水线中提前预热镜像。要启用导出，请在配置中允许并
-启用 `diagnostics-otel` 插件，然后设置
-`diagnostics.otel.enabled=true`，或使用
-[OpenTelemetry 导出](/gateway/opentelemetry) 中的配置示例。收集器认证头通过
-`diagnostics.otel.headers` 配置，而不是通过 Docker 环境变量。
+官方的 OpenClaw Docker 发布镜像包含内置的
+`diagnostics-otel` 插件源码。要启用导出，请在配置中允许并启用
+`diagnostics-otel` 插件，然后设置
+`diagnostics.otel.enabled=true`，或者使用
+[OpenTelemetry 导出](/gateway/opentelemetry) 中的配置示例。收集器认证头
+通过 `diagnostics.otel.headers` 配置，而不是通过 Docker 环境
+变量配置。
 
 Prometheus 指标使用已发布的 Gateway 端口。启用
 `diagnostics-prometheus` 插件，然后抓取：
@@ -267,22 +265,13 @@ Docker Compose 将 `OPENCLAW_CONFIG_DIR` 绑定挂载到 `/home/node/.openclaw`�
 - 用于保存的提供商 OAuth/API 密钥认证的 `agents/<agentId>/agent/auth-profiles.json`
 - 基于环境变量的运行时机密，如 `OPENCLAW_GATEWAY_TOKEN` 的 `.env`
 
-打包的插件运行时依赖和镜像运行时文件是生成态，不是用户配置。Compose 将它们存放在命名为
-`openclaw-plugin-runtime-deps` 的 Docker 卷中，挂载到
-`/var/lib/openclaw/plugin-runtime-deps`。将这个高变动树移出
-主机配置绑定挂载，可以避免 Docker Desktop/WSL 文件操作缓慢以及冷启动 Gateway 时出现
-Windows 句柄陈旧的问题。
-
-默认 Compose 文件会将 `OPENCLAW_PLUGIN_STAGE_DIR` 设为该路径，适用于
-`openclaw-gateway` 和 `openclaw-cli`，因此 `openclaw doctor --fix`、通道
-登录/设置命令以及 Gateway 启动都会使用同一个生成的运行时
-卷。
+已安装的可下载插件会将其包状态存储在已挂载的 OpenClaw home 下，因此插件安装记录和包根目录会在容器替换后保留。Gateway 启动不会生成内置插件依赖树。
 
 关于 VM 部署的完整持久化细节，请参见
 [Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where)。
 
-**磁盘增长热点：** 留意 `media/`、会话 JSONL 文件、`cron/runs/*.jsonl`、
-`openclaw-plugin-runtime-deps` Docker 卷，以及 `/tmp/openclaw/` 下的滚动文件日志。
+**磁盘增长热点：**关注 `media/`、session JSONL 文件、
+`cron/runs/*.jsonl`、已安装插件包根目录，以及 `/tmp/openclaw/` 下的轮转日志文件。
 
 ### Shell 助手（可选）
 
@@ -344,7 +333,7 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     ```bash
     sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
     ```
-
+    
   </Accordion>
 
   <Accordion title="更快的重建">
@@ -432,7 +421,7 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
   agents: {
     defaults: {
       sandbox: {
-        mode: "non-main", // off | non-main | all
+        mode: "non-main", // 关闭 | non-main | all
         scope: "agent", // session | agent | shared
       },
     },
@@ -440,20 +429,23 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 }
 ```
 
-构建默认沙箱镜像：
+构建默认沙箱镜像（从源码检出目录）：
 
 ```bash
 scripts/sandbox-setup.sh
 ```
 
-## 故障排除
+对于没有源码检出目录的 npm 安装，请参见 [沙箱 § 镜像与设置](/gateway/sandboxing#images-and-setup) 以获取内联 `docker build` 命令。
+
+## 故障排查
 
 <AccordionGroup>
   <Accordion title="镜像缺失或沙盒容器未启动">
     使用
     [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh)
-    构建沙盒镜像，或者将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。
-    容器会按需为每个会话自动创建。
+    (source checkout) 或 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install），
+    或将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。
+    容器会按会话按需自动创建。
   </Accordion>
 
   <Accordion title="沙盒中的权限错误">

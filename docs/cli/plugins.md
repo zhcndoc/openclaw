@@ -1,5 +1,5 @@
 ---
-summary: "openclaw plugins 的 CLI 参考（list、install、marketplace、uninstall、enable/disable、deps、doctor）"
+summary: "openclaw plugins 的 CLI 参考（列表、安装、marketplace、卸载、启用/禁用、doctor）"
 read_when:
   - 你想安装或管理 Gateway 插件或兼容的捆绑包
   - 你想调试插件加载失败问题
@@ -33,6 +33,7 @@ openclaw plugins list --verbose
 openclaw plugins list --json
 openclaw plugins install <path-or-spec>
 openclaw plugins inspect <id>
+openclaw plugins inspect <id> --runtime
 openclaw plugins inspect <id> --json
 openclaw plugins inspect --all
 openclaw plugins info <id>
@@ -41,10 +42,6 @@ openclaw plugins disable <id>
 openclaw plugins registry
 openclaw plugins registry --refresh
 openclaw plugins uninstall <id>
-openclaw plugins deps
-openclaw plugins deps --repair
-openclaw plugins deps --prune
-openclaw plugins deps --json
 openclaw plugins doctor
 openclaw plugins update <id-or-npm-spec>
 openclaw plugins update --all
@@ -69,6 +66,8 @@ openclaw plugins marketplace list <marketplace> --json
 openclaw plugins install <package>                      # 先查 ClawHub，再查 npm
 openclaw plugins install clawhub:<package>              # 仅 ClawHub
 openclaw plugins install npm:<package>                  # 仅 npm
+openclaw plugins install git:github.com/<owner>/<repo>  # git 仓库
+openclaw plugins install git:github.com/<owner>/<repo>@<ref>
 openclaw plugins install <package> --force              # 覆盖现有安装
 openclaw plugins install <package> --pin                # 锁定版本
 openclaw plugins install <package> --dangerously-force-unsafe-install
@@ -99,9 +98,8 @@ ClawHub 是大多数插件的主要分发和发现渠道。npm 仍然是受支�
     如果你对一个已经安装的插件 id 运行 `plugins install`，OpenClaw 会停止并提示你：正常升级请使用 `plugins update <id-or-npm-spec>`；如果你确实想从不同来源覆盖当前安装，则使用 `plugins install <package> --force`。
 
   </Accordion>
-  <Accordion title="--pin 的作用范围">
-    `--pin` 仅适用于 npm 安装。它不支持 `--marketplace`，因为 marketplace 安装会持久化 marketplace 源元数据，而不是 npm spec。
-
+  <Accordion title="--pin 范围">
+    `--pin` 仅适用于 npm 安装。不支持 `git:` 安装；当你想要锁定来源时，请使用显式 git ref，例如 `git:github.com/acme/plugin@v1.2.3`。它也不支持 `--marketplace`，因为 marketplace 安装会持久化 marketplace 源元数据，而不是 npm spec。
   </Accordion>
   <Accordion title="--dangerously-force-unsafe-install">
     `--dangerously-force-unsafe-install` 是一个用于内置危险代码扫描器误报的“破窗”选项。即使内置扫描器报告 `critical` 发现，它也会允许安装继续，但它**不会**绕过插件 `before_install` 钩子策略阻断，也**不会**绕过扫描失败。
@@ -120,7 +118,15 @@ ClawHub 是大多数插件的主要分发和发现渠道。npm 仍然是受支�
 
     裸 spec 和 `@latest` 会保持在稳定通道。如果 npm 将它们解析为预发布版本，OpenClaw 会停止并要求你显式选择预发布标签，例如 `@beta`/`@rc`，或者精确的预发布版本，例如 `@1.2.3-beta.4`。
 
-    如果裸安装 spec 与某个捆绑插件 id 匹配（例如 `diffs`），OpenClaw 会直接安装该捆绑插件。若要安装同名的 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
+    如果一个裸安装 spec 匹配到官方插件 id（例如 `diffs`），OpenClaw 会直接安装目录条目。若要安装同名的 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
+
+  </Accordion>
+  <Accordion title="Git 仓库">
+    使用 `git:<repo>` 直接从 git 仓库安装。支持的形式包括 `git:github.com/owner/repo`、`git:owner/repo`、完整的 `https://`、`ssh://`、`git://`、`file://`，以及 `git@host:owner/repo.git` 克隆 URL。安装前可添加 `@<ref>` 或 `#<ref>` 来检出分支、标签或提交。
+
+    Git 安装会先克隆到临时目录，在存在 ref 时检出所请求的 ref，然后使用常规插件目录安装器。这意味着 manifest 验证、危险代码扫描、包管理器安装工作以及安装记录都表现得像 npm 安装。记录的 git 安装会包含源 URL/ref 以及解析后的提交，以便 `openclaw plugins update` 之后可以重新解析来源。
+
+    从 git 安装后，请使用 `openclaw plugins inspect <id> --runtime --json` 验证运行时注册，例如 gateway 方法和 CLI 命令。如果插件使用 `api.registerCli` 注册了 CLI 根命令，请通过 OpenClaw 根 CLI 直接执行该命令，例如 `openclaw demo-plugin ping`。
 
   </Accordion>
   <Accordion title="压缩包">
@@ -225,9 +231,9 @@ openclaw plugins list --json
 
 用于运行时 hook 调试：
 
-- `openclaw plugins inspect <id> --json` 会显示来自模块加载检查过程的已注册 hooks 和诊断信息。
-- `openclaw gateway status --deep --require-rpc` 会确认可达的 Gateway、服务/进程提示、配置路径和 RPC 健康状态。
-- 非捆绑的会话 hooks（`llm_input`、`llm_output`、`before_agent_finalize`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
+- `openclaw plugins inspect <id> --runtime --json` 显示来自模块加载检查的已注册 hooks 和诊断信息。运行时检查绝不会安装依赖；请使用 `openclaw doctor --fix` 清理旧的依赖状态，或安装缺失的已配置可下载插件。
+- `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway、服务/进程提示、配置路径和 RPC 健康状态。
+- 未捆绑的 conversation hooks（`llm_input`、`llm_output`、`before_agent_finalize`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
 
 使用 `--link` 可避免复制本地目录（会添加到 `plugins.load.paths`）：
 
@@ -246,19 +252,6 @@ openclaw plugins install -l ./my-plugin
 插件安装元数据是机器管理的状态，不是用户配置。安装和更新会将其写入活动 OpenClaw 状态目录下的 `plugins/installs.json`。其顶层的 `installRecords` map 是安装元数据的持久来源，包括损坏或缺失插件 manifest 的记录。`plugins` 数组是基于 manifest 派生的冷 registry 缓存。该文件包含“请勿编辑”警告，并被 `openclaw plugins update`、uninstall、diagnostics 以及冷插件 registry 使用。
 
 当 OpenClaw 看到配置中已写入的旧版 `plugins.installs` 记录时，它会把它们迁移到插件索引中并移除该配置键；如果任一写入失败，则会保留配置记录，以免安装元数据丢失。
-
-### Runtime deps
-
-```bash
-openclaw plugins deps
-openclaw plugins deps --repair
-openclaw plugins deps --prune
-openclaw plugins deps --json
-```
-
-`plugins deps` 会检查 OpenClaw 自带的捆绑插件的打包运行时依赖阶段。它不是第三方 npm 或 ClawHub 插件的安装/更新路径。
-
-当打包安装在 Gateway 启动期间或 `plugins doctor` 中报告缺少捆绑运行时依赖时，请使用 `--repair`。修复只会安装缺失的、已启用的捆绑插件依赖，并禁用生命周期脚本。使用 `--prune` 可移除旧版打包布局遗留的陈旧未知外部运行时依赖根。
 
 ### 卸载
 
@@ -310,10 +303,13 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
 
 ```bash
 openclaw plugins inspect <id>
+openclaw plugins inspect <id> --runtime
 openclaw plugins inspect <id> --json
 ```
 
-对单个插件进行深度检查。会显示身份、加载状态、源、已注册能力、hooks、工具、命令、服务、gateway 方法、HTTP 路由、策略标志、诊断、安装元数据、bundle 能力，以及任何检测到的 MCP 或 LSP server 支持。
+Inspect 会在默认不导入插件运行时的情况下，显示身份、加载状态、来源、清单能力、策略标志、诊断信息、安装元数据、捆绑包能力，以及任何检测到的 MCP 或 LSP 服务器支持。添加 `--runtime` 可加载插件模块并包含已注册的 hooks、工具、命令、服务、gateway 方法和 HTTP 路由。运行时检查会直接报告缺失的插件依赖；安装和修复仍在 `openclaw plugins install`、`openclaw plugins update` 和 `openclaw doctor --fix` 中进行。
+
+插件拥有的 CLI 命令会作为根级 `openclaw` 命令组安装。`inspect --runtime` 显示 `cliCommands` 下的命令后，请以 `openclaw <command> ...` 的形式运行；例如，注册了 `demo-git` 的插件可通过 `openclaw demo-git ping` 验证。
 
 每个插件都会根据其在运行时实际注册的内容进行分类：
 

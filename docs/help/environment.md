@@ -103,11 +103,12 @@ OpenClaw 支持两种基于环境变量的模式：
 
 ## 路径相关环境变量
 
-| Variable               | Purpose                                                                                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`        | 覆盖用于所有内部路径解析的 home 目录（`~/.openclaw/`、agent 目录、sessions、credentials）。在将 OpenClaw 作为专用服务用户运行时很有用。 |
-| `OPENCLAW_STATE_DIR`   | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                            |
-| `OPENCLAW_CONFIG_PATH` | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                             |
+| Variable                 | Purpose                                                                                                                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_HOME`          | 覆盖所有内部路径解析所使用的 home 目录（`~/.openclaw/`、agent 目录、sessions、credentials）。当将 OpenClaw 作为专用服务用户运行时很有用。 |
+| `OPENCLAW_STATE_DIR`     | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                            |
+| `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                             |
+| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可在其中解析配置目录之外文件的目录路径列表（默认：无——`$include` 仅限于配置目录）。会展开波浪号路径。  |
 
 ## 日志
 

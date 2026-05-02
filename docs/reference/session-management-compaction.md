@@ -78,7 +78,7 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 - `maxDiskBytes`：可选的 sessions 目录预算
 - `highWaterBytes`：清理后的可选目标值（默认是 `maxDiskBytes` 的 `80%`）
 
-正常的 Gateway 写入会为生产规模的上限批量执行 `maxEntries` 清理，因此在下一次高水位清理把它写回去之前，存储可能会短暂超过配置上限。`openclaw sessions cleanup --enforce` 仍会立即应用配置的上限。
+正常的 Gateway 写入会为生产规模的上限批量执行 `maxEntries` 清理，因此在下一次高水位清理把它写回之前，存储可能会短暂超过配置的上限。Gateway 启动期间，session store 读取不会进行清理或限制条目；请在写入时清理，或使用 `openclaw sessions cleanup --enforce`。`openclaw sessions cleanup --enforce` 仍会立即应用配置的上限。
 
 OpenClaw 不再在 Gateway 写入期间创建自动的 `sessions.json.bak.*` 轮转备份。旧的 `session.maintenance.rotateBytes` 键会被忽略，且 `openclaw doctor --fix` 会将其从旧配置中移除。
 
@@ -260,6 +260,17 @@ exceeded`，以及类似的 provider 形态变体) → 压缩 → 重试。
 
 当设置了 `agents.defaults.compaction.maxActiveTranscriptBytes`，并且活跃转录文件达到该大小时，OpenClaw 也可以在打开下一次运行之前触发一次预检的本地压缩。这是用于本地重开成本的文件大小保护，不是原始归档：OpenClaw 仍然执行正常的语义压缩，并且它要求 `truncateAfterCompaction`，这样压缩后的摘要才能成为新的后继转录。
 
+对于嵌入式 Pi 运行，`agents.defaults.compaction.midTurnPrecheck.enabled: true`
+会添加一个可选的工具循环保护。在追加工具结果之后、下一次模型调用之前，
+OpenClaw 会使用与回合开始时相同的预检预算逻辑来估算提示压力。如果上下文不再适配，
+该保护不会在 Pi 的 `transformContext` 钩子内进行压缩。它会发出结构化的
+中途预检信号，停止当前提示提交，并让外层运行循环使用现有的恢复路径：
+在这样做足够时截断过大的工具结果，或者触发配置的压缩模式并重试。该
+选项默认禁用，并且适用于 `default` 和 `safeguard` 两种压缩模式，
+包括基于 provider 的 safeguard 压缩。这与 `maxActiveTranscriptBytes`
+无关：字节大小保护在一轮开始前运行，而中途预检则在嵌入式 Pi 工具
+循环中、在新增工具结果已被追加之后稍后运行。
+
 ---
 
 ## 压缩设置（`reserveTokens`、`keepRecentTokens`）
@@ -279,18 +290,23 @@ Pi 的压缩设置位于 Pi 设置中：
 OpenClaw 也会为嵌入式运行强制一个安全下限：
 
 - 如果 `compaction.reserveTokens < reserveTokensFloor`，OpenClaw 会将其提高。
-- 默认下限为 `20000` 个 token。
+- 默认下限为 `20000` tokens。
 - 设置 `agents.defaults.compaction.reserveTokensFloor: 0` 可禁用该下限。
-- 如果它已经更高，OpenClaw 会保持不变。
-- 手动 `/compact` 会遵循显式的 `agents.defaults.compaction.keepRecentTokens`
-  并保留 Pi 的最近尾部切点。若没有显式的 keep 预算，
-  手动压缩仍然是一个硬检查点，重建后的上下文从新的摘要开始。
-- 将 `agents.defaults.compaction.maxActiveTranscriptBytes` 设置为一个字节值或
-  字符串，例如 `"20mb"`，可在活跃转录变大时于轮次开始前执行本地压缩。
-  仅当同时启用 `truncateAfterCompaction` 时，此保护才会生效。保持未设置或设为 `0` 可禁用。
+- 如果它本来就更高，OpenClaw 会保持不变。
+- 手动 `/compact` 会尊重显式的 `agents.defaults.compaction.keepRecentTokens`
+  并保留 Pi 的最近尾部截断点。如果没有显式的保留预算，
+  手动压缩仍然是一个硬检查点，重建的上下文从新的摘要开始。
+- 设置 `agents.defaults.compaction.midTurnPrecheck.enabled: true` 可在
+  新的工具结果之后、下一次模型调用之前运行可选的工具循环预检。
+  这只是一个触发器；摘要生成仍然使用配置的压缩路径。它与
+  `maxActiveTranscriptBytes` 相互独立，后者是回合开始时的活跃转录字节大小保护。
+- 设置 `agents.defaults.compaction.maxActiveTranscriptBytes` 为字节值或
+  类似 `"20mb"` 的字符串，可在一轮开始前、活跃转录变大时运行本地压缩。
+  该保护仅在同时启用 `truncateAfterCompaction` 时生效。保留不设置，或设置为 `0`
+  可禁用。
 - 当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，
-  OpenClaw 会在压缩后将活跃转录轮转为一个压缩后的后继 JSONL。
-  旧的完整转录会保留归档，并通过压缩检查点链接，而不是原地重写。
+  OpenClaw 会在压缩后将活跃转录轮换为压缩后的后继 JSONL。
+  旧的完整转录会保留为归档，并从压缩检查点链接，而不是就地重写。
 
 原因：在压缩变得不可避免之前，留出足够的余量用于多轮“事务性维护”（例如内存写入）。
 
@@ -388,7 +404,7 @@ Pi 还在扩展 API 中提供了 `session_before_compact` 钩子，但 OpenClaw 
 - 存储与转录不匹配？确认 `openclaw status` 中的 Gateway 主机和存储路径。
 - 压缩过于频繁？检查：
   - 模型上下文窗口（太小）
-  - 压缩设置（`reserveTokens` 对模型窗口来说过高可能导致更早压缩）
+  - 压缩设置（`reserveTokens` 对模型窗口来说可能过高，导致更早压缩）
   - 工具结果膨胀：启用/调优会话剪枝
 - 静默轮次泄露了内容？确认回复以 `NO_REPLY` 开头（不区分大小写的精确 token），并且你使用的是包含流式抑制修复的构建版本。
 

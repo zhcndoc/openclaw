@@ -139,8 +139,8 @@ Convex 托管的 live Telegram lane 和 Convex 托管的 live Discord lane 并�
 - `pnpm qa:lab:up`
   - 启动 Docker 版 QA site，用于操作员式 QA 工作。
 - `pnpm test:docker:npm-onboard-channel-agent`
-  - 在 Docker 中从当前 checkout 构建 npm tarball，将其全局安装，运行非交互式 OpenAI API key onboarding，默认配置 Telegram，验证启用插件会按需安装运行时依赖，运行 doctor，并针对一个 mocked OpenAI 端点执行一次本地 agent 轮次。
-  - 使用 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 可在 Discord 上运行同样的打包安装 lane。
+  - 从当前 checkout 打包并安装一个 npm tarball 到 Docker 中，全局安装，运行非交互式 OpenAI API key onboarding，默认配置 Telegram，验证打包后的插件运行时能在无需启动时依赖修复的情况下加载，运行 doctor，并针对一个 mocked OpenAI 端点执行一次本地 agent 轮次。
+  - 使用 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 可用 Discord 运行相同的已打包安装 lane。
 - `pnpm test:docker:session-runtime-context`
   - 为嵌入式 runtime context transcript 运行一个确定性的 built-app Docker 冒烟。
     它验证隐藏的 OpenClaw runtime context 会以不可显示的自定义消息形式持久化，而不会泄露到可见的用户轮次中，
@@ -195,10 +195,10 @@ gh workflow run package-acceptance.yml --ref main \
   -f suite_profile=smoke
 ```
 
-- `pnpm test:docker:bundled-channel-deps`
-  - 在 Docker 中打包并安装当前 OpenClaw 构建，使用已配置 OpenAI 的方式启动 Gateway，然后通过配置编辑启用 bundled channel/plugins。
-  - 验证 setup 发现时不会留下未配置的插件运行时依赖，第一次配置好的 Gateway 或 doctor 运行会按需安装每个 bundled 插件的运行时依赖，而第二次重启不会重新安装已经激活过的依赖。
-  - 还会安装一个已知较旧的 npm 基线，在运行 `openclaw update --tag <candidate>` 前启用 Telegram，并验证候选版本的更新后 doctor 能修复 bundled channel 运行时依赖，而不需要 harness 侧的 postinstall 修复。
+- `pnpm test:docker:plugins`
+  - 在 Docker 中打包并安装当前 OpenClaw 构建，使用已配置 OpenAI 启动 Gateway，然后通过配置编辑启用随包附带的 channel/plugins。
+  - 验证 setup discovery 不会显示未配置的可下载插件，第一次配置后的 doctor 修复会显式安装每个缺失的可下载插件，第二次重启不会运行隐藏的依赖修复。
+  - 还会安装一个已知的旧 npm 基线，在运行 `openclaw update --tag <candidate>` 之前启用 Telegram，并验证候选版本更新后的 doctor 会清理旧版插件依赖残留，而不会在 harness 侧进行 postinstall 修复。
 - `pnpm test:parallels:npm-update`
   - 在 Parallels guest 上运行原生打包安装更新冒烟。每个被选中的平台会先安装所请求的基线包，然后在同一个 guest 中运行已安装的 `openclaw update` 命令，并验证已安装版本、更新状态、gateway 就绪状态以及一次本地 agent 轮次。
   - 在只迭代一个 guest 时，使用 `--platform macos`、`--platform windows` 或 `--platform linux`。使用 `--json` 获取摘要 artifact 路径和每个 lane 的状态。
@@ -210,11 +210,19 @@ gh workflow run package-acceptance.yml --ref main \
     timeout --foreground 90m pnpm test:parallels:npm-update -- --platform windows --json
     ```
 
-  - 脚本会在 `/tmp/openclaw-parallels-npm-update.*` 下写入嵌套 lane 日志。
-    在假定外层包装器卡住之前，请先检查 `windows-update.log`、`macos-update.log` 或 `linux-update.log`。
-  - Windows 更新在冷 guest 上的更新后 doctor/runtime 依赖修复阶段可能会花费 10 到 15 分钟；只要嵌套的 npm debug 日志还在推进，这仍然是正常的。
-  - 不要将这个聚合包装器与单独的 Parallels macOS、Windows 或 Linux 冒烟 lanes 并行运行。它们共享 VM 状态，可能在 snapshot restore、package serving 或 guest gateway 状态上发生冲突。
-  - 更新后验证会运行正常的 bundled plugin 面向，因为 speech、image generation 和 media understanding 等能力外观即使在 agent 轮次本身只检查简单文本回复时，也会通过 bundled runtime APIs 加载。
+  - The script writes nested lane logs under `/tmp/openclaw-parallels-npm-update.*`.
+    Inspect `windows-update.log`, `macos-update.log`, or `linux-update.log`
+    before assuming the outer wrapper is hung.
+  - Windows update can spend 10 to 15 minutes in post-update doctor and package
+    update work on a cold guest; that is still healthy when the nested npm
+    debug log is advancing.
+  - Do not run this aggregate wrapper in parallel with individual Parallels
+    macOS, Windows, or Linux smoke lanes. They share VM state and can collide on
+    snapshot restore, package serving, or guest gateway state.
+  - The post-update proof runs the normal bundled plugin surface because
+    capability facades such as speech, image generation, and media
+    understanding are loaded through bundled runtime APIs even when the agent
+    turn itself only checks a simple text response.
 
 - `pnpm openclaw qa aimock`
   - 仅启动本地 AIMock 提供方服务器，用于直接的协议冒烟测试。
@@ -504,62 +512,64 @@ Telegram kind 的 payload 结构：
 
 - 修改逻辑/测试：运行 `pnpm test`（如果改动很多，再运行 `pnpm test:coverage`）
 - 触碰网关网络 / WS 协议 / 配对：增加运行 `pnpm test:e2e`
-- 调试“我的 bot 挂了”/提供商特定失败/工具调用：运行缩小范围的 `pnpm test:live`
+- 调试“我的 bot 挂了”/提供方特定失败/工具调用：运行缩小范围的 `pnpm test:live`
 
 ## Live（涉及网络）的测试
 
-关于 live model 矩阵、CLI 后端 smoke、ACP smoke、Codex app-server
-harness，以及所有媒体提供商 live 测试（Deepgram、BytePlus、ComfyUI、image、
-music、video、media harness）——以及 live 运行的凭据处理——请参见
-[Testing — live suites](/help/testing-live)。
+For the live model matrix, CLI backend smokes, ACP smokes, Codex app-server
+harness, and all media-provider live tests (Deepgram, BytePlus, ComfyUI, image,
+music, video, media harness) — plus credential handling for live runs — see
+[Testing live suites](/help/testing-live). For the dedicated update and
+plugin validation checklist, see
+[Testing updates and plugins](/help/testing-updates-plugins).
 
 ## Docker 运行器（可选的“在 Linux 上可用”检查）
 
 这些 Docker 运行器分成两类：
 
-- Live-model 运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只在仓库 Docker 镜像内运行各自匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录和工作区（如果挂载了，还会读取 `~/.profile`）。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
-- Docker live 运行器默认使用更小的 smoke 上限，以便完整 Docker 全量扫描仍然可行：
-  `test:docker:live-models` 默认 `OPENCLAW_LIVE_MAX_MODELS=12`，而
-  `test:docker:live-gateway` 默认 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`，
-  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`，
-  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000`，以及
-  `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。当你明确想要更大的穷举扫描时，再覆盖这些 env 变量。
-- `test:docker:all` 通过 `test:docker:live-build` 先构建一次 live Docker 镜像，通过 `scripts/package-openclaw-for-docker.mjs` 先把 OpenClaw 打成一个 npm tarball，然后再构建/复用两个 `scripts/e2e/Dockerfile` 镜像。基础镜像只是用于安装/更新/插件依赖这些 lane 的 Node/Git 运行器；这些 lane 会挂载预构建 tarball。功能镜像会把同一个 tarball 安装到 `/app`，用于已构建应用功能 lane。Docker lane 定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；规划逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 执行所选计划。这个聚合器使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限可防止重型 live、npm-install 和多服务 lane 同时启动。如果某个 lane 比当前上限更重，而池子为空，调度器仍然可以启动它，然后让它单独运行，直到再次有容量可用。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=10` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。该运行器默认执行 Docker 预检，移除过期的 OpenClaw E2E 容器，每 30 秒打印一次状态，将成功的 lane 用时存到 `.artifacts/docker-tests/lane-timings.json`，并在后续运行中利用这些用时优先启动更长的 lane。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可以在不构建或运行 Docker 的情况下打印加权 lane 清单，或者使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选 lane 的 CI 计划、包/镜像需求和凭据。
-- `Package Acceptance` 是 GitHub 原生的包门禁，用来判断“这个可安装的 tarball 作为产品能否工作？”它会从 `source=npm`、`source=ref`、`source=url` 或 `source=artifact` 中解析出一个候选包，将其作为 `package-under-test` 上传，然后针对那个精确的 tarball 运行可复用的 Docker E2E lane，而不是对所选 ref 重新打包。`workflow_ref` 选择受信任的工作流/harness 脚本，而 `package_ref` 在 `source=ref` 时选择要打包的源 commit/branch/tag；这使得当前的 acceptance 逻辑可以验证更早的受信任提交。Profile 按覆盖范围排序：`smoke` 覆盖快速安装/channel/agent 以及 gateway/config，`package` 覆盖包/更新/插件契约，并且是大多数 Parallels package/update 覆盖的默认原生替代，`product` 额外加入 MCP channels、cron/subagent 清理、OpenAI web search 和 OpenWebUI，而 `full` 运行带 OpenWebUI 的 release-path Docker chunk。Release 验证会运行一个自定义包差异（`bundled-channel-deps-compat plugins-offline`）以及 Telegram 包 QA，因为 release-path Docker chunk 已经覆盖了重叠的 package/update/plugin lane。根据 artifacts 生成的定向 GitHub Docker 重跑命令会在可用时包含先前的 package artifact 和已准备好的镜像输入，因此失败的 lane 可以避免重新构建包和镜像。
-- 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mjs`。这个守卫会遍历 `dist/entry.js` 和 `dist/cli/run-main.js` 中的静态构建图，如果在命令分发之前的预分发启动导入了诸如 Commander、prompt UI、undici 或 logging 等包依赖，就会失败；它还会保持打包后的 gateway run chunk 在预算内，并拒绝已知冷路径 gateway 的静态导入。打包后的 CLI smoke 还覆盖 root help、onboard help、doctor help、status、config schema 和 model-list 命令。
-- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在这个截止点之前，harness 只容忍已发布包的元数据缺口：省略的 private QA inventory 条目、缺失的 `gateway install --wrapper`、tarball 派生的 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版插件安装记录位置、缺失的 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的包，这些路径都会被严格判定为失败。
-- 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:update-channel-switch`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层的集成路径。
+- Live-model runners: `test:docker:live-models` and `test:docker:live-gateway` run only their matching profile-key live file inside the repo Docker image (`src/agents/models.profiles.live.test.ts` and `src/gateway/gateway-models.profiles.live.test.ts`), mounting your local config dir and workspace (and sourcing `~/.profile` if mounted). The matching local entrypoints are `test:live:models-profiles` and `test:live:gateway-profiles`.
+- Docker live runners default to a smaller smoke cap so a full Docker sweep stays practical:
+  `test:docker:live-models` defaults to `OPENCLAW_LIVE_MAX_MODELS=12`, and
+  `test:docker:live-gateway` defaults to `OPENCLAW_LIVE_GATEWAY_SMOKE=1`,
+  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`,
+  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000`, and `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`. Override those env vars when you
+  explicitly want the larger exhaustive scan.
+- `test:docker:all` builds the live Docker image once via `test:docker:live-build`, packs OpenClaw once as an npm tarball through `scripts/package-openclaw-for-docker.mjs`, then builds/reuses two `scripts/e2e/Dockerfile` images. The bare image is only the Node/Git runner for install/update/plugin-dependency lanes; those lanes mount the prebuilt tarball. The functional image installs the same tarball into `/app` for built-app functionality lanes. Docker lane definitions live in `scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in `scripts/lib/docker-e2e-plan.mjs`; `scripts/test-docker-all.mjs` executes the selected plan. The aggregate uses a weighted local scheduler: `OPENCLAW_DOCKER_ALL_PARALLELISM` controls process slots, while resource caps keep heavy live, npm-install, and multi-service lanes from all starting at once. If a single lane is heavier than the active caps, the scheduler can still start it when the pool is empty and then keeps it running alone until capacity is available again. Defaults are 10 slots, `OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`, `OPENCLAW_DOCKER_ALL_NPM_LIMIT=10`, and `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`; tune `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` or `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT` only when the Docker host has more headroom. The runner performs a Docker preflight by default, removes stale OpenClaw E2E containers, prints status every 30 seconds, stores successful lane timings in `.artifacts/docker-tests/lane-timings.json`, and uses those timings to start longer lanes first on later runs. Use `OPENCLAW_DOCKER_ALL_DRY_RUN=1` to print the weighted lane manifest without building or running Docker, or `node scripts/test-docker-all.mjs --plan-json` to print the CI plan for selected lanes, package/image needs, and credentials.
+- `Package Acceptance` is the GitHub-native package gate for "does this installable tarball work as a product?" It resolves one candidate package from `source=npm`, `source=ref`, `source=url`, or `source=artifact`, uploads it as `package-under-test`, then runs the reusable Docker E2E lanes against that exact tarball instead of repacking the selected ref. Profiles are ordered by breadth: `smoke`, `package`, `product`, and `full`. See [Testing updates and plugins](/help/testing-updates-plugins) for the package/update/plugin contract, published-upgrade survivor matrix, release defaults, and failure triage.
+- Build and release checks run `scripts/check-cli-bootstrap-imports.mjs` after tsdown. The guard walks the static built graph from `dist/entry.js` and `dist/cli/run-main.js` and fails if pre-dispatch startup imports package dependencies such as Commander, prompt UI, undici, or logging before command dispatch; it also keeps the bundled gateway run chunk under budget and rejects static imports of known cold gateway paths. Packaged CLI smoke also covers root help, onboard help, doctor help, status, config schema, and a model-list command.
+- Package Acceptance legacy compatibility is capped at `2026.4.25` (`2026.4.25-beta.*` included). Through that cutoff, the harness tolerates only shipped-package metadata gaps: omitted private QA inventory entries, missing `gateway install --wrapper`, missing patch files in the tarball-derived git fixture, missing persisted `update.channel`, legacy plugin install-record locations, missing marketplace install-record persistence, and config metadata migration during `plugins update`. For packages after `2026.4.25`, those paths are strict failures.
+- Container smoke runners: `test:docker:openwebui`, `test:docker:onboard`, `test:docker:npm-onboard-channel-agent`, `test:docker:update-channel-switch`, `test:docker:upgrade-survivor`, `test:docker:published-upgrade-survivor`, `test:docker:session-runtime-context`, `test:docker:agents-delete-shared-workspace`, `test:docker:gateway-network`, `test:docker:browser-cdp-snapshot`, `test:docker:mcp-channels`, `test:docker:pi-bundle-mcp-tools`, `test:docker:cron-mcp-cleanup`, `test:docker:plugins`, `test:docker:plugin-update`, and `test:docker:config-reload` boot one or more real containers and verify higher-level integration paths.
 
 live-model Docker 运行器也会只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
 
-- 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，通过 `pnpm test:docker:live-acp-bind:droid` 和 `pnpm test:docker:live-acp-bind:opencode` 可进行严格的 Droid/OpenCode 覆盖）
-- CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
-- Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- Gateway + 开发 agent：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 可观测性 smoke：`pnpm qa:otel:smoke` 是一条 private QA 源检出 lane。它有意不包含在 package Docker release lanes 中，因为 npm tarball 不包含 QA Lab。
-- Open WebUI live smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 上手向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- npm tarball onboarding/channel/agent smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包后的 OpenClaw tarball，通过 env-ref onboarding 配置 OpenAI，并默认配置 Telegram，验证 doctor 修复已激活的插件运行时依赖，并运行一次模拟的 OpenAI agent turn。可以用 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，用 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或用 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 切换 channel。
-- 更新 channel 切换 smoke：`pnpm test:docker:update-channel-switch` 会在 Docker 中全局安装打包后的 OpenClaw tarball，将 package `stable` 切换到 git `dev`，验证持久化 channel 和插件在更新后正常工作，然后切回 package `stable` 并检查更新状态。
-- 会话运行时上下文 smoke：`pnpm test:docker:session-runtime-context` 验证隐藏运行时上下文转录持久化，以及受影响的重复 prompt-rewrite 分支的 doctor 修复。
-- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 会打包当前树，在隔离的 home 中用 `bun install -g` 安装，并验证 `openclaw infer image providers --json` 返回的是打包内置的 image providers，而不是挂起。可以用 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，用 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或用 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建的 Docker 镜像复制 `dist/`。
-- Installer Docker smoke：`bash scripts/test-install-sh-docker.sh` 在其 root、update 和 direct-npm 容器之间共享一个 npm cache。更新 smoke 默认以 npm `latest` 作为升级到候选 tarball 之前的稳定基线。可以在本地用 `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` 覆盖，或在 GitHub 的 Install Smoke workflow 中使用 `update_baseline_version` 输入覆盖。非 root 的安装器检查会保留隔离的 npm cache，这样 root 拥有的 cache 条目不会掩盖用户本地安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重跑之间复用 root/update/direct-npm cache。
-- Install Smoke CI 会使用 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；如果需要 direct `npm install -g` 覆盖，请在本地运行脚本时不要设置这个 env。
-- agents delete shared workspace CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建 root Dockerfile 镜像，在隔离的容器 home 中用一个 workspace 种下两个 agents，运行 `agents delete --json`，并验证有效 JSON 以及保留 workspace 的行为。可用 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用安装 smoke 镜像。
-- Gateway 网络（两个容器，WS auth + health）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- Browser CDP snapshot smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）会构建源 E2E 镜像以及 Chromium 层，使用原始 CDP 启动 Chromium，运行 `browser doctor --deep`，并验证 CDP role snapshots 覆盖链接 URL、光标提升的可点击项、iframe refs 和 frame metadata。
-- OpenAI Responses web_search minimal reasoning 回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）通过 Gateway 运行一个模拟的 OpenAI 服务器，验证 `web_search` 会将 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制 provider schema 拒绝并检查原始细节是否出现在 Gateway 日志中。
-- MCP channel bridge（种子化 Gateway + stdio bridge + 原始 Claude notification-frame smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
-- Pi bundle MCP tools（真实 stdio MCP server + 内嵌 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
-- Cron/subagent MCP 清理（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后进行 stdio MCP 子进程回收）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
-- Plugins（安装 smoke、ClawHub 大杂烩安装/卸载、marketplace 更新，以及 Claude-bundle 启用/检查）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
-  设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可跳过 ClawHub 区块，或用 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认的大杂烩包/运行时对。若没有 `OPENCLAW_CLAWHUB_URL`/`CLAWHUB_URL`，测试会使用一个 hermetic 的本地 ClawHub fixture server。
-- 插件更新未变化 smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
-- 配置重载元数据 smoke：`pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
-- 打包的插件运行时依赖：`pnpm test:docker:bundled-channel-deps` 默认会构建一个小型 Docker 运行器镜像，在宿主机上构建并打包 OpenClaw 一次，然后把该 tarball 挂载到每个 Linux 安装场景中。可通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 复用该镜像，通过 `OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD=0` 跳过在本地新构建后的宿主机重建，或者通过 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 指向现有 tarball。完整的 Docker 聚合和 release-path bundled-channel chunk 会先预打包一次这个 tarball，然后将 bundled channel 检查拆分成独立的 lane，包括 Telegram、Discord、Slack、Feishu、memory-lancedb 和 ACPX 的单独更新 lane。release chunk 会将 channel smoke、更新目标和 setup/runtime 契约拆分为 `bundled-channels-core`、`bundled-channels-update-a`、`bundled-channels-update-b` 和 `bundled-channels-contracts`；聚合的 `bundled-channels` chunk 仍可用于手动重跑。release workflow 还会拆分 provider installer chunk 和 bundled plugin install/uninstall chunk；旧的 `package-update`、`plugins-runtime` 和 `plugins-integrations` chunk 仍保留为聚合别名，供手动重跑使用。直接运行 bundled lane 时，可用 `OPENCLAW_BUNDLED_CHANNELS=telegram,slack` 缩小 channel 矩阵，或用 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_TARGETS=telegram,acpx` 缩小更新场景。按场景的 Docker 运行默认 `OPENCLAW_BUNDLED_CHANNEL_DOCKER_RUN_TIMEOUT=900s`；多目标更新场景默认 `OPENCLAW_BUNDLED_CHANNEL_UPDATE_DOCKER_RUN_TIMEOUT=2400s`。该 lane 还会验证 `channels.<id>.enabled=false` 和 `plugins.entries.<id>.enabled=false` 会抑制 doctor/runtime-dependency 修复。
-- 在迭代时通过禁用无关场景来缩小 bundled plugin runtime 依赖，例如：
-  `OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 pnpm test:docker:bundled-channel-deps`。
+- Direct models: `pnpm test:docker:live-models` (script: `scripts/test-live-models-docker.sh`)
+- ACP bind smoke: `pnpm test:docker:live-acp-bind` (script: `scripts/test-live-acp-bind-docker.sh`; covers Claude, Codex, and Gemini by default, with strict Droid/OpenCode coverage via `pnpm test:docker:live-acp-bind:droid` and `pnpm test:docker:live-acp-bind:opencode`)
+- CLI backend smoke: `pnpm test:docker:live-cli-backend` (script: `scripts/test-live-cli-backend-docker.sh`)
+- Codex app-server harness smoke: `pnpm test:docker:live-codex-harness` (script: `scripts/test-live-codex-harness-docker.sh`)
+- Gateway + dev agent: `pnpm test:docker:live-gateway` (script: `scripts/test-live-gateway-models-docker.sh`)
+- Observability smoke: `pnpm qa:otel:smoke` is a private QA source-checkout lane. It is intentionally not part of package Docker release lanes because the npm tarball omits QA Lab.
+- Open WebUI live smoke: `pnpm test:docker:openwebui` (script: `scripts/e2e/openwebui-docker.sh`)
+- Onboarding wizard (TTY, full scaffolding): `pnpm test:docker:onboard` (script: `scripts/e2e/onboard-docker.sh`)
+- Npm tarball onboarding/channel/agent smoke: `pnpm test:docker:npm-onboard-channel-agent` installs the packed OpenClaw tarball globally in Docker, configures OpenAI via env-ref onboarding plus Telegram by default, runs doctor, and runs one mocked OpenAI agent turn. Reuse a prebuilt tarball with `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz`, skip the host rebuild with `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0`, or switch channel with `OPENCLAW_NPM_ONBOARD_CHANNEL=discord`.
+- Update channel switch smoke: `pnpm test:docker:update-channel-switch` installs the packed OpenClaw tarball globally in Docker, switches from package `stable` to git `dev`, verifies the persisted channel and plugin post-update work, then switches back to package `stable` and checks update status.
+- Upgrade survivor smoke: `pnpm test:docker:upgrade-survivor` installs the packed OpenClaw tarball over a dirty old-user fixture with agents, channel config, plugin allowlists, stale plugin dependency state, and existing workspace/session files. It runs package update plus non-interactive doctor without live provider or channel keys, then starts a loopback Gateway and checks config/state preservation plus startup/status budgets.
+- Published upgrade survivor smoke: `pnpm test:docker:published-upgrade-survivor` installs `openclaw@latest` by default, seeds realistic existing-user files, configures that baseline with a baked command recipe, validates the resulting config, updates that published install to the candidate tarball, runs non-interactive doctor, writes `.artifacts/upgrade-survivor/summary.json`, then starts a loopback Gateway and checks configured intents, state preservation, startup, `/healthz`, `/readyz`, and RPC status budgets. Override one baseline with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC`, ask the aggregate scheduler to expand exact baselines with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS`, and expand issue-shaped fixtures with `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` such as `reported-issues`; Package Acceptance exposes those as `published_upgrade_survivor_baseline`, `published_upgrade_survivor_baselines`, and `published_upgrade_survivor_scenarios`.
+- Session runtime context smoke: `pnpm test:docker:session-runtime-context` verifies hidden runtime context transcript persistence plus doctor repair of affected duplicated prompt-rewrite branches.
+- Bun global install smoke: `bash scripts/e2e/bun-global-install-smoke.sh` packs the current tree, installs it with `bun install -g` in an isolated home, and verifies `openclaw infer image providers --json` returns bundled image providers instead of hanging. Reuse a prebuilt tarball with `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz`, skip the host build with `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0`, or copy `dist/` from a built Docker image with `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local`.
+- Installer Docker smoke: `bash scripts/test-install-sh-docker.sh` shares one npm cache across its root, update, and direct-npm containers. Update smoke defaults to npm `latest` as the stable baseline before upgrading to the candidate tarball. Override with `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` locally, or with the Install Smoke workflow's `update_baseline_version` input on GitHub. Non-root installer checks keep an isolated npm cache so root-owned cache entries do not mask user-local install behavior. Set `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` to reuse the root/update/direct-npm cache across local reruns.
+- Install Smoke CI skips the duplicate direct-npm global update with `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1`; run the script locally without that env when direct `npm install -g` coverage is needed.
+- Agents delete shared workspace CLI smoke: `pnpm test:docker:agents-delete-shared-workspace` (script: `scripts/e2e/agents-delete-shared-workspace-docker.sh`) builds the root Dockerfile image by default, seeds two agents with one workspace in an isolated container home, runs `agents delete --json`, and verifies valid JSON plus retained workspace behavior. Reuse the install-smoke image with `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1`.
+- Gateway networking (two containers, WS auth + health): `pnpm test:docker:gateway-network` (script: `scripts/e2e/gateway-network-docker.sh`)
+- Browser CDP snapshot smoke: `pnpm test:docker:browser-cdp-snapshot` (script: `scripts/e2e/browser-cdp-snapshot-docker.sh`) builds the source E2E image plus a Chromium layer, starts Chromium with raw CDP, runs `browser doctor --deep`, and verifies CDP role snapshots cover link URLs, cursor-promoted clickables, iframe refs, and frame metadata.
+- OpenAI Responses web_search minimal reasoning regression: `pnpm test:docker:openai-web-search-minimal` (script: `scripts/e2e/openai-web-search-minimal-docker.sh`) runs a mocked OpenAI server through Gateway, verifies `web_search` raises `reasoning.effort` from `minimal` to `low`, then forces the provider schema reject and checks the raw detail appears in Gateway logs.
+- MCP channel bridge (seeded Gateway + stdio bridge + raw Claude notification-frame smoke): `pnpm test:docker:mcp-channels` (script: `scripts/e2e/mcp-channels-docker.sh`)
+- Pi bundle MCP tools (real stdio MCP server + embedded Pi profile allow/deny smoke): `pnpm test:docker:pi-bundle-mcp-tools` (script: `scripts/e2e/pi-bundle-mcp-tools-docker.sh`)
+- Cron/subagent MCP cleanup (real Gateway + stdio MCP child teardown after isolated cron and one-shot subagent runs): `pnpm test:docker:cron-mcp-cleanup` (script: `scripts/e2e/cron-mcp-cleanup-docker.sh`)
+- Plugins (install smoke, ClawHub kitchen-sink install/uninstall, marketplace updates, and Claude-bundle enable/inspect): `pnpm test:docker:plugins` (script: `scripts/e2e/plugins-docker.sh`)
+  Set `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` to skip the ClawHub block, or override the default kitchen-sink package/runtime pair with `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` and `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID`. Without `OPENCLAW_CLAWHUB_URL`/`CLAWHUB_URL`, the test uses a hermetic local ClawHub fixture server.
+- Plugin update unchanged smoke: `pnpm test:docker:plugin-update` (script: `scripts/e2e/plugin-update-unchanged-docker.sh`)
+- Config reload metadata smoke: `pnpm test:docker:config-reload` (script: `scripts/e2e/config-reload-source-docker.sh`)
+- Plugins: `pnpm test:docker:plugins` covers install smoke, local ClawHub fixture installs, marketplace updates, npm package dependency installs, and Claude-bundle enable/inspect. `pnpm test:docker:plugin-update` covers unchanged update behavior for installed plugins.
 
 要手动预构建并复用共享功能镜像：
 
@@ -710,5 +720,6 @@ live-model Docker 运行器也会把当前检出以只读方式挂载，并将�
 
 ## 相关
 
-- [测试线上](/help/testing-live)
+- [Testing live](/help/testing-live)
+- [Testing updates and plugins](/help/testing-updates-plugins)
 - [CI](/ci)

@@ -43,7 +43,10 @@ otherwise -> 回复
 对于群组/频道房间，OpenClaw 默认使用 `messages.groupChat.visibleReplies: "message_tool"`。
 这意味着代理仍会处理该轮对话并可以更新记忆/会话状态，但其正常的最终答案不会自动发布回房间。若要显式发声，代理会使用 `message(action=send)`。
 
-对于直接聊天以及任何其他来源轮次，使用 `messages.visibleReplies: "message_tool"` 可以在全局范围内应用相同的仅工具可见回复行为。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
+如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
+`openclaw doctor` 会警告这种不匹配。
+
+对于直接聊天和任何其他来源轮次，使用 `messages.visibleReplies: "message_tool"` 可将同样的仅工具可见回复行为全局应用。Harness 也可以将其作为未设置时的默认值；Codex harness 在 Codex 模式的直接聊天中就是这样做的。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
 
 这替代了旧的模式：在大多数潜伏模式轮次中强制模型回答 `NO_REPLY`。在仅工具模式下，不做任何可见输出就只是意味着不调用 message 工具。
 
@@ -61,7 +64,9 @@ otherwise -> 回复
 }
 ```
 
-要让每一种来源聊天的可见输出都必须通过 message 工具：
+当文件保存后，Gateway 会热重载 `messages` 配置。只有在部署中禁用了文件监听或配置重载时才需要重启。
+
+要让每个来源聊天的可见输出都必须通过 message 工具：
 
 ```json5
 {
@@ -104,10 +109,13 @@ otherwise -> 回复
 
 | 目标                                         | 需要设置什么                                               |
 | -------------------------------------------- | ---------------------------------------------------------- |
-| 允许所有群组，但只在 @ 提及后回复            | `groups: { "*": { requireMention: true } }`                |
-| 禁用所有群组回复                             | `groupPolicy: "disabled"`                                  |
-| 仅允许特定群组                               | `groups: { "<group-id>": { ... } }`（不使用 `"*"` 键）     |
-| 只有你能在群组中触发                         | `groupPolicy: "allowlist"`，`groupAllowFrom: ["+1555..."]` |
+| 允许所有群组但只在 @ 提及时回复 | `groups: { "*": { requireMention: true } }`                |
+| 禁用所有群组回复                    | `groupPolicy: "disabled"`                                  |
+| 仅特定群组                           | `groups: { "<group-id>": { ... } }`（不使用 `"*"` 键）     |
+| 只有你可以在群组中触发               | `groupPolicy: "allowlist"`, `groupAllowFrom: ["+1555..."]` |
+| 在各渠道间复用一组受信任发送者     | `groupAllowFrom: ["accessGroup:operators"]`                |
+
+关于可复用的发送者允许名单，请参见 [Access groups](/channels/access-groups)。
 
 ## 会话键
 
@@ -252,16 +260,17 @@ otherwise -> 回复
 
 <AccordionGroup>
   <Accordion title="按渠道说明">
-    - `groupPolicy` 与提及门控是分开的（提及门控要求 @ 提及）。
+    - `groupPolicy` 与提及门控是分开的（提及门控需要 @ 提及）。
     - WhatsApp/Telegram/Signal/iMessage/Microsoft Teams/Zalo：使用 `groupAllowFrom`（回退：显式 `allowFrom`）。
-    - DM 配对审批（`*-allowFrom` 存储条目）只适用于 DM 访问；群组发送者授权仍然明确地由群组允许名单控制。
+    - Signal：`groupAllowFrom` 可以匹配传入的 Signal 群组 id 或发送者电话/UUID。
+    - DM 配对审批（`*-allowFrom` 存储项）仅适用于 DM 访问；群组发送者授权仍然显式依赖群组允许名单。
     - Discord：允许名单使用 `channels.discord.guilds.<id>.channels`。
     - Slack：允许名单使用 `channels.slack.channels`。
-    - Matrix：允许名单使用 `channels.matrix.groups`。优先使用房间 ID 或别名；已加入房间的名称查找只是尽力而为，运行时会忽略无法解析的名称。使用 `channels.matrix.groupAllowFrom` 限制发送者；也支持按房间的 `users` 允许名单。
-    - 群组 DM 单独控制（`channels.discord.dm.*`、`channels.slack.dm.*`）。
-    - Telegram 允许名单可匹配用户 ID（`"123456789"`、`"telegram:123456789"`、`"tg:123456789"`）或用户名（`"@alice"` 或 `"alice"`）；前缀大小写不敏感。
-    - 默认是 `groupPolicy: "allowlist"`；如果你的群组允许名单为空，则群组消息会被阻止。
-    - 运行时安全：当某个提供方块完全缺失时（`channels.<provider>` 不存在），群组策略会退回到 fail-closed 模式（通常是 `allowlist`），而不是继承 `channels.defaults.groupPolicy`。
+    - Matrix：允许名单使用 `channels.matrix.groups`。优先使用房间 ID 或别名；已加入房间名称查找尽力而为，未解析的名称会在运行时被忽略。使用 `channels.matrix.groupAllowFrom` 来限制发送者；也支持按房间的 `users` 允许名单。
+    - 群组 DM 由单独配置控制（`channels.discord.dm.*`、`channels.slack.dm.*`）。
+    - Telegram 允许名单可以匹配用户 ID（`"123456789"`、`"telegram:123456789"`、`"tg:123456789"`）或用户名（`"@alice"` 或 `"alice"`）；前缀不区分大小写。
+    - 默认值是 `groupPolicy: "allowlist"`；如果你的群组允许名单为空，群组消息会被阻止。
+    - 运行时安全：当某个 provider 配置块完全缺失（`channels.<provider>` 不存在）时，群组策略会回退到 fail-closed 模式（通常是 `allowlist`），而不是继承 `channels.defaults.groupPolicy`。
 
   </Accordion>
 </AccordionGroup>
@@ -324,14 +333,15 @@ otherwise -> 回复
 
 <AccordionGroup>
   <Accordion title="提及门控说明">
-    - `mentionPatterns` 是大小写不敏感且安全的正则表达式模式；无效模式和不安全的嵌套重复形式会被忽略。
+    - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。
     - 提供显式提及的界面仍会通过；模式只是兜底。
-    - 每个代理的覆盖：`agents.list[].groupChat.mentionPatterns`（当多个代理共享一个群组时很有用）。
-    - 只有在可以进行提及检测时才会强制提及门控（已配置原生提及或 `mentionPatterns`）。
-    - 群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复实现 `NO_REPLY` 机制。
-    - 允许静默回复的群组会将干净的空回复或仅推理回复视为静默，等价于 `NO_REPLY`。直接聊天只有在显式允许静默回复时才这样处理；否则空回复仍然是失败的代理轮次。
+    - 按代理覆盖：`agents.list[].groupChat.mentionPatterns`（当多个代理共享一个群组时很有用）。
+    - 只有在可以进行提及检测时才会强制提及门控（原生提及或已配置 `mentionPatterns`）。
+    - 将某个群组或发送者加入允许名单并不会禁用提及门控；当所有消息都应触发时，请将该群组的 `requireMention` 设为 `false`。
+    - 群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
+    - 允许静默回复的群组会将干净的空白或仅推理的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天只有在显式允许静默回复时才这样处理；否则空回复仍然算作失败的代理轮次。
     - Discord 默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
-    - 群组历史上下文会在所有渠道中统一包装，并且是 **pending-only**（由于提及门控而跳过的消息）；全局默认使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
+    - 群组历史上下文在各渠道间统一包装，并且是**仅待处理项**（因提及门控而跳过的消息）；全局默认使用 `messages.groupChat.historyLimit`，覆盖则使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
 
   </Accordion>
 </AccordionGroup>

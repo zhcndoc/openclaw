@@ -199,22 +199,17 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ### 路由摘要
 
-    | 模型引用 | 运行时配置 | 路由 | 认证 |
-    |----------|------------|------|------|
-    | `openai-codex/gpt-5.5` | 省略 / `runtime: "pi"` | 通过 PI 的 ChatGPT/Codex OAuth | Codex 登录 |
-    | `openai-codex/gpt-5.5` | `runtime: "auto"` | 仍然是 PI，除非某个插件显式声明 `openai-codex` | Codex 登录 |
+    | Model ref | Runtime config | Route | Auth |
+    |-----------|----------------|-------|------|
+    | `openai-codex/gpt-5.5` | omitted / `runtime: "pi"` | 通过 PI 的 ChatGPT/Codex OAuth | Codex 登录 |
+    | `openai-codex/gpt-5.4-mini` | omitted / `runtime: "pi"` | 通过 PI 的 ChatGPT/Codex OAuth | Codex 登录 |
+    | `openai-codex/gpt-5.5` | `runtime: "auto"` | 除非有插件显式声明 `openai-codex`，否则仍然是 PI | Codex 登录 |
     | `openai/gpt-5.5` | `agentRuntime.id: "codex"` | Codex 应用服务器挂载 | Codex 应用服务器认证 |
 
     <Note>
     认证/配置文件命令请继续使用 `openai-codex` 提供方 id。`openai-codex/*` 模型前缀也是 Codex OAuth 的显式 PI 路径。
     它不会选择或自动启用捆绑的 Codex 应用服务器挂载。
     </Note>
-
-    <Warning>
-    `openai-codex/gpt-5.4-mini` 不是受支持的 Codex OAuth 路径。请使用
-    `openai/gpt-5.4-mini` 配合 OpenAI API 密钥，或使用
-    `openai-codex/gpt-5.5` 配合 Codex OAuth。
-    </Warning>
 
     ### 配置示例
 
@@ -462,8 +457,11 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
     | 格式 | `messages.tts.providers.openai.responseFormat` | 语音备注为 `opus`，文件为 `mp3` |
     | API key | `messages.tts.providers.openai.apiKey` | 回退到 `OPENAI_API_KEY` |
     | Base URL | `messages.tts.providers.openai.baseUrl` | `https://api.openai.com/v1` |
+    | Extra body | `messages.tts.providers.openai.extraBody` / `extra_body` | （未设置） |
 
     可用模型：`gpt-4o-mini-tts`、`tts-1`、`tts-1-hd`。可用声音：`alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`fable`、`juniper`、`marin`、`onyx`、`nova`、`sage`、`shimmer`、`verse`。
+
+    `extraBody` 会在 OpenClaw 生成字段之后合并到 `/audio/speech` 请求 JSON 中，因此可用于需要额外键（如 `lang`）的 OpenAI 兼容端点。原型键会被忽略。
 
     ```json5
     {

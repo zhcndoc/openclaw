@@ -1,5 +1,5 @@
 ---
-summary: "Memory search 如何使用嵌入和混合检索查找相关笔记"
+summary: "Memory 搜索如何使用嵌入和混合检索查找相关笔记"
 title: "记忆搜索"
 read_when:
   - 你想了解 memory_search 是如何工作的
@@ -27,7 +27,9 @@ read_when:
 
 对于多端点配置，`provider` 也可以是一个自定义的 `models.providers.<id>` 条目，例如 `ollama-5080`，前提是该提供方设置了 `api: "ollama"` 或其他嵌入适配器拥有者。
 
-如果使用本地嵌入且没有 API key，请在 OpenClaw 旁边安装可选的 `node-llama-cpp` 运行时包，并使用 `provider: "local"`。
+对于没有 API key 的本地嵌入，请设置 `provider: "local"`。源代码检出
+可能仍需要原生构建审批：`pnpm approve-builds` 然后
+`pnpm rebuild node-llama-cpp`。
 
 某些与 OpenAI 兼容的嵌入端点需要不对称标签，例如用于搜索的 `input_type: "query"`，以及用于已索引块的 `input_type: "document"` 或 `"passage"`。请通过 `memorySearch.queryInputType` 和 `memorySearch.documentInputType` 进行配置；参见 [Memory 配置参考](/reference/memory-config#provider-specific-config)。
 
@@ -36,7 +38,7 @@ read_when:
 | 提供方         | ID               | 需要 API key | 说明                                                 |
 | -------------- | ---------------- | ------------ | ---------------------------------------------------- |
 | Bedrock        | `bedrock`        | 否            | 当 AWS 凭证链解析成功时自动检测                     |
-| Gemini         | `gemini`         | 是           | 支持图像/音频索引                                    |
+| Gemini         | `gemini`        | 是           | 支持图像/音频索引                                    |
 | GitHub Copilot | `github-copilot` | 否            | 自动检测，使用 Copilot 订阅                          |
 | Local          | `local`          | 否            | GGUF 模型，约 0.6 GB 下载                           |
 | Mistral        | `mistral`        | 是           | 自动检测                                             |

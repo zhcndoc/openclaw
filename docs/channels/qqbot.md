@@ -11,13 +11,16 @@ QQ Bot 通过官方 QQ Bot API（WebSocket 网关）连接到 OpenClaw。该
 插件支持 C2C 私聊、群 @消息，以及带
 富媒体（图片、语音、视频、文件）的频道消息。
 
-状态：内置插件。支持私信、群聊、频道，以及
-媒体。不支持反应和线程。
+状态：可下载插件。支持私聊、群聊、频道，以及
+媒体。不支持表情反应和线程。
 
-## 内置插件
+## 安装
 
-当前 OpenClaw 发行版已内置 QQ Bot，因此常规打包构建不需要
-单独执行 `openclaw plugins install` 步骤。
+安装前先安装 QQ Bot：
+
+```bash
+openclaw plugins install @openclaw/qqbot
+```
 
 ## 设置
 
@@ -233,16 +236,19 @@ channel/global TTS 配置之上进行深度合并。
 
 在 AI 队列之前拦截的内置命令：
 
-| 命令           | 描述                                                                                              |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| `/bot-ping`    | 延迟测试                                                                                           |
-| `/bot-version` | 显示 OpenClaw 框架版本                                                                              |
-| `/bot-help`    | 列出所有命令                                                                                        |
-| `/bot-upgrade` | 显示 QQBot 升级指南链接                                                                             |
-| `/bot-logs`    | 将最近的网关日志导出为文件                                                                         |
+| Command        | Description                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| `/bot-ping`    | 延迟测试                                                                                                 |
+| `/bot-version` | 显示 OpenClaw 框架版本                                                                                    |
+| `/bot-help`    | 列出所有命令                                                                                              |
+| `/bot-me`      | 显示发送者的 QQ 用户 ID（openid），用于 `allowFrom`/`groupAllowFrom` 设置                               |
+| `/bot-upgrade` | 显示 QQBot 升级指南链接                                                                                   |
+| `/bot-logs`    | 将最近的网关日志导出为文件                                                                                |
 | `/bot-approve` | 通过原生流程批准一个待处理的 QQ Bot 操作（例如，确认一次 C2C 或群上传）。 |
 
 在任何命令后追加 `?` 可查看用法帮助（例如 `/bot-upgrade ?`）。
+
+管理命令 (`/bot-me`, `/bot-upgrade`, `/bot-logs`, `/bot-clear-storage`, `/bot-streaming`, `/bot-approve`) 仅限私聊，并要求发送者的 openid 明确位于非通配符的 `allowFrom` 列表中。通配符 `allowFrom: ["*"]` 允许聊天，但不授予管理命令访问权限。群消息先匹配 `groupAllowFrom`，再回退到 `allowFrom`。在群里运行管理命令会返回提示，而不是静默丢弃。
 
 ## 引擎架构
 

@@ -1,7 +1,7 @@
 ---
-summary: "导入映射、注册 API 参考和 SDK 架构"
+summary: "导入映射、注册 API 参考与 SDK 架构"
 title: "插件 SDK 概览"
-sidebarTitle: "SDK 概览"
+sidebarTitle: "插件 SDK 概览"
 read_when:
   - 你需要知道应从哪个 SDK 子路径导入
   - 你想查看 OpenClawPluginApi 上所有注册方法的参考
@@ -9,6 +9,10 @@ read_when:
 ---
 
 插件 SDK 是插件与核心之间的类型化契约。此页面是关于**导入什么**以及**可以注册什么**的参考。
+
+<Note>
+  此页面适用于在 OpenClaw 内部使用 `openclaw/plugin-sdk/*` 的插件作者。对于希望通过 Gateway 运行 agent 的外部应用、脚本、仪表盘、CI 作业和 IDE 扩展，请改用 [OpenClaw App SDK](/concepts/openclaw-sdk) 和 `@openclaw/sdk` 包。
+</Note>
 
 <Tip>
 想找的是操作指南吗？请从 [构建插件](/plugins/building-plugins) 开始；渠道插件请使用 [Channel 插件](/plugins/sdk-channel-plugins)；提供方插件请使用 [Provider 插件](/plugins/sdk-provider-plugins)；工具或生命周期钩子插件请使用 [插件钩子](/plugins/hooks)。
@@ -322,11 +326,10 @@ my-plugin/
   `./runtime-api.ts` 进行路由。SDK 路径仅是外部契约。
 </Warning>
 
-由 Facade 加载的打包插件公共表面（`api.ts`、`runtime-api.ts`、
-`index.ts`、`setup-entry.ts` 以及类似的公共入口文件）在 OpenClaw 已经运行时，
-优先使用当前活动运行时配置快照。如果还不存在运行时快照，则回退到磁盘上已解析的配置文件。
-打包后的插件 facade 应通过 OpenClaw SDK facade 加载器加载；直接从 `dist/extensions/...`
-导入会绕过分阶段运行时依赖镜像，而打包安装会为插件自有依赖使用这些镜像。
+面向已加载外观的打包插件公共表面（`api.ts`、`runtime-api.ts`、
+`index.ts`、`setup-entry.ts` 以及类似的公共入口文件），在 OpenClaw 已经运行时，
+优先使用当前运行时配置快照。如果尚不存在运行时快照，则回退到磁盘上解析后的配置文件。
+打包后的插件外观应通过 OpenClaw 的插件外观加载器加载；直接从 `dist/extensions/...` 导入会绕过清单和运行时 sidecar 检查，而这些检查是打包安装对插件自有代码所使用的。
 
 提供者插件可以在某个辅助工具有意仅适用于该提供者且尚不属于通用 SDK 子路径时，
 暴露一个窄范围、插件本地的 contract barrel。打包示例：

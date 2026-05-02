@@ -37,10 +37,12 @@ openclaw logs --follow
 **详细模式与日志级别**
 
 - **文件日志** 仅由 `logging.level` 控制。
-- `--verbose` 只影响 **控制台详细程度**（以及 WS 日志样式）；它**不会**
+- `--verbose` 只影响 **控制台详细程度**（以及 WS 日志样式）；它不会
   提高文件日志级别。
-- 若要在文件日志中捕获仅在详细模式下才有的信息，请将 `logging.level` 设为 `debug` 或
+- 若要在文件日志中捕获仅详细模式可见的信息，请将 `logging.level` 设为 `debug` 或
   `trace`。
+- Trace 日志还包括针对选定热点路径的诊断计时摘要，例如插件工具工厂准备。请参见
+  [/tools/plugin#slow-plugin-tool-setup](/tools/plugin#slow-plugin-tool-setup)。
 
 ## 控制台捕获
 
@@ -57,11 +59,11 @@ CLI 会捕获 `console.log/info/warn/error/debug/trace` 并将它们写入文件
 OpenClaw 可以在日志或转录输出离开进程之前屏蔽敏感令牌。此日志脱敏策略会应用于控制台、文件日志、OTLP
 日志记录以及会话转录文本输出，因此匹配到的密钥值会在 JSONL 行或消息写入磁盘之前被屏蔽。
 
-- `logging.redactSensitive`: `off` | `tools`（默认：`tools`）
+- `logging.redactSensitive`: `off` | `tools` (默认：`tools`)
 - `logging.redactPatterns`: 正则字符串数组（覆盖默认值）
-  - 使用原始正则字符串（自动 `gi`），或者在需要自定义标志时使用 `/pattern/flags`。
-  - 匹配内容会被屏蔽：保留前 6 个 + 后 4 个字符（长度 >= 18），否则为 `***`。
-  - 默认规则覆盖常见的键赋值、CLI 标志、JSON 字段、Bearer 标头、PEM 块以及常见令牌前缀。
+  - 使用原始正则字符串（自动 `gi`），或在需要自定义标志时使用 `/pattern/flags`。
+  - 匹配项会通过保留前 6 个 + 后 4 个字符进行遮罩（长度 >= 18），否则为 `***`。
+  - 默认规则覆盖常见的密钥赋值、CLI 标志、JSON 字段、bearer 头、PEM 块、常见令牌前缀，以及支付凭证字段名，例如卡号、CVC/CVV、共享支付令牌和支付凭证。
 
 某些安全边界无论 `logging.redactSensitive` 如何设置都会始终脱敏。
 这包括控制 UI 的工具调用事件、`sessions_history` 工具输出、

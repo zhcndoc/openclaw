@@ -193,11 +193,12 @@ openclaw channels status --probe
 
 群组：
 
-- `channels.signal.groupPolicy = open | allowlist | disabled`。
-- 当设置为 `allowlist` 时，`channels.signal.groupAllowFrom` 控制哪些人可以在群组中触发。
-- `channels.signal.groups["<group-id>" | "*"]` 可以通过 `requireMention`、`tools` 和 `toolsBySender` 覆盖群组行为。
-- 在多账户设置中，使用 `channels.signal.accounts.<id>.groups` 进行每个账户的覆盖。
-- 运行时说明：如果 `channels.signal` 完全缺失，运行时在群组检查中会回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
+- `channels.signal.groupPolicy = open | allowlist | disabled`.
+- `channels.signal.groupAllowFrom` 控制当设置为 `allowlist` 时哪些群组或发送者可以触发群组回复；条目可以是 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者电话号码、`uuid:<id>` 值或 `*`。
+- `channels.signal.groups["<group-id>" | "*"]` 可通过 `requireMention`、`tools` 和 `toolsBySender` 覆盖群组行为。
+- 在多账户设置中，使用 `channels.signal.accounts.<id>.groups` 进行每账户覆盖。
+- 仅通过 `groupAllowFrom` 将某个 Signal 群组加入允许列表，并不会自动关闭提及门控。一个明确配置的 `channels.signal.groups["<group-id>"]` 条目会处理每条群组消息，除非设置了 `requireMention=true`。
+- 运行时说明：如果 `channels.signal` 完全缺失，运行时在群组检查中会回退为 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
 
 ## 工作原理（行为）
 
@@ -300,28 +301,28 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 
 提供程序选项：
 
-- `channels.signal.enabled`：启用/禁用频道启动。
-- `channels.signal.account`：机器人账户的 E.164 格式。
-- `channels.signal.cliPath`：`signal-cli` 的路径。
-- `channels.signal.httpUrl`：完整的守护进程 URL（会覆盖主机/端口）。
-- `channels.signal.httpHost`、`channels.signal.httpPort`：守护进程绑定地址（默认 127.0.0.1:8080）。
-- `channels.signal.autoStart`：自动启动守护进程（当 `httpUrl` 未设置时默认 true）。
-- `channels.signal.startupTimeoutMs`：启动等待超时时间，单位 ms（上限 120000）。
-- `channels.signal.receiveMode`：`on-start | manual`。
-- `channels.signal.ignoreAttachments`：跳过附件下载。
-- `channels.signal.ignoreStories`：忽略来自守护进程的动态。
-- `channels.signal.sendReadReceipts`：转发已读回执。
-- `channels.signal.dmPolicy`：`pairing | allowlist | open | disabled`（默认：pairing）。
-- `channels.signal.allowFrom`：DM 允许列表（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 不支持用户名；请使用手机号/UUID 标识。
-- `channels.signal.groupPolicy`：`open | allowlist | disabled`（默认：allowlist）。
-- `channels.signal.groupAllowFrom`：群组发送者允许列表。
-- `channels.signal.groups`：按 Signal 群组 ID（或 `"*"`）键控的每个群组覆盖配置。支持字段：`requireMention`、`tools`、`toolsBySender`。
-- `channels.signal.accounts.<id>.groups`：多账户设置中 `channels.signal.groups` 的按账户版本。
-- `channels.signal.historyLimit`：作为上下文包含的群消息最大数量（0 表示禁用）。
-- `channels.signal.dmHistoryLimit`：DM 历史记录限制，按用户回合计。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
-- `channels.signal.textChunkLimit`：出站分块大小（字符数）。
-- `channels.signal.chunkMode`：`length`（默认）或 `newline`，在按长度分块前先按空行（段落边界）拆分。
-- `channels.signal.mediaMaxMb`：入站/出站媒体上限（MB）。
+- `channels.signal.enabled`: 启用/禁用通道启动。
+- `channels.signal.account`: 机器人账户的 E.164 号码。
+- `channels.signal.cliPath`: `signal-cli` 的路径。
+- `channels.signal.httpUrl`: 完整守护进程 URL（覆盖主机/端口）。
+- `channels.signal.httpHost`, `channels.signal.httpPort`: 守护进程绑定地址（默认 127.0.0.1:8080）。
+- `channels.signal.autoStart`: 自动启动守护进程（如果未设置 `httpUrl`，默认 true）。
+- `channels.signal.startupTimeoutMs`: 启动等待超时时间（毫秒，最大 120000）。
+- `channels.signal.receiveMode`: `on-start | manual`。
+- `channels.signal.ignoreAttachments`: 跳过附件下载。
+- `channels.signal.ignoreStories`: 忽略来自守护进程的故事。
+- `channels.signal.sendReadReceipts`: 转发已读回执。
+- `channels.signal.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。
+- `channels.signal.allowFrom`: 私信允许列表（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 不支持用户名；请使用电话号码/UUID。
+- `channels.signal.groupPolicy`: `open | allowlist | disabled`（默认：allowlist）。
+- `channels.signal.groupAllowFrom`: 群组允许列表；接受 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码或 `uuid:<id>` 值。
+- `channels.signal.groups`: 按 Signal 群组 ID（或 `"*"`）键控的每群组覆盖。支持字段：`requireMention`、`tools`、`toolsBySender`。
+- `channels.signal.accounts.<id>.groups`: 多账户设置中 `channels.signal.groups` 的每账户版本。
+- `channels.signal.historyLimit`: 作为上下文包含的群组消息最大数量（0 表示禁用）。
+- `channels.signal.dmHistoryLimit`: 私信历史限制，按用户轮次计算。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
+- `channels.signal.textChunkLimit`: 出站分块大小（字符数）。
+- `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）再按长度分块。
+- `channels.signal.mediaMaxMb`: 入站/出站媒体上限（MB）。
 
 相关全局选项：
 
@@ -331,8 +332,8 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 
 ## 相关内容
 
-- [Channels Overview](/channels) — 所有受支持的频道
-- [Pairing](/channels/pairing) — DM 身份验证和配对流程
-- [Groups](/channels/groups) — 群聊行为和提及门控
-- [Channel Routing](/channels/channel-routing) — 消息的会话路由
-- [Security](/gateway/security) — 访问模型和加固
+- [频道概览](/channels) — 所有受支持的频道
+- [配对](/channels/pairing) — DM 身份验证和配对流程
+- [群组](/channels/groups) — 群聊行为和提及门控
+- [频道路由](/channels/channel-routing) — 消息的会话路由
+- [安全性](/gateway/security) — 访问模型和加固

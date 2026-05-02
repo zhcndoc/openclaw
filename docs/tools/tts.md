@@ -1,5 +1,5 @@
 ---
-summary: "用于外发回复的文本转语音 — 提供商、角色、斜杠命令以及按频道输出"
+summary: "用于出站回复的文本转语音——提供商、角色、斜杠命令以及按频道输出"
 read_when:
   - 为回复启用文本转语音
   - 配置 TTS 提供商、回退链或角色
@@ -8,14 +8,14 @@ title: "文本转语音"
 sidebarTitle: "文本转语音（TTS）"
 ---
 
-OpenClaw 可以将外发回复转换为跨 **14 个语音提供商** 的音频，并在飞书、Matrix、Telegram 和 WhatsApp 上发送原生语音消息，在其他地方发送音频附件，并为电话和 Talk 提供 PCM/Ulaw 流。
+OpenClaw 可以将出站回复转换为音频，支持 **14 个语音提供商**，并可在飞书、Matrix、Telegram 和 WhatsApp 上发送原生语音消息，在其他平台发送音频附件，并为电话和 Talk 提供 PCM/Ulaw 流。
 
 ## 快速开始
 
 <Steps>
   <Step title="选择提供商">
     OpenAI 和 ElevenLabs 是最可靠的托管选项。Microsoft 和
-    Local CLI 无需 API 密钥。请查看 [provider matrix](#supported-providers)
+    Local CLI 无需 API 密钥。请查看 [提供商矩阵](#supported-providers)
     获取完整列表。
   </Step>
   <Step title="设置 API 密钥">
@@ -45,19 +45,19 @@ OpenClaw 可以将外发回复转换为跨 **14 个语音提供商** 的音频�
 
 <Note>
 自动 TTS 默认是 **关闭** 的。当 `messages.tts.provider` 未设置时，
-OpenClaw 会按注册表自动选择顺序挑选第一个已配置的提供商。
+OpenClaw 会按照注册表自动选择顺序，挑选第一个已配置的提供商。
 </Note>
 
 ## 支持的提供商
 
 | 提供商             | 认证                                                                                                             | 说明                                                                    |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`（也支持 `AZURE_SPEECH_API_KEY`、`SPEECH_KEY`、`SPEECH_REGION`）      | 原生 Ogg/Opus 语音笔记输出和电话。                                       |
+| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`（也支持 `AZURE_SPEECH_API_KEY`、`SPEECH_KEY`、`SPEECH_REGION`）      | 原生 Ogg/Opus 语音便笺输出和电话。                                       |
 | **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认使用 `hexgrad/Kokoro-82M`。                     |
 | **ElevenLabs**    | `ELEVENLABS_API_KEY` 或 `XI_API_KEY`                                                                             | 语音克隆、多语言、可通过 `seed` 实现确定性。                              |
 | **Google Gemini** | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                                                                             | Gemini API TTS；可通过 `promptTemplate: "audio-profile-v1"` 感知角色。 |
-| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音笔记和电话输出。                                                     |
-| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音笔记和 PCM 电话。                            |
+| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音便笺和电话输出。                                                     |
+| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音便笺和 PCM 电话。                            |
 | **Local CLI**     | 无                                                                                                               | 运行一个已配置的本地 TTS 命令。                                          |
 | **Microsoft**     | 无                                                                                                               | 通过 `node-edge-tts` 使用公开的 Edge 神经 TTS。尽力而为，无 SLA。       |
 | **MiniMax**       | `MINIMAX_API_KEY`（或 Token 方案：`MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`）     | T2A v2 API。默认使用 `speech-2.8-hd`。                                  |
@@ -65,10 +65,10 @@ OpenClaw 会按注册表自动选择顺序挑选第一个已配置的提供商�
 | **OpenRouter**    | `OPENROUTER_API_KEY`（可复用 `models.providers.openrouter.apiKey`）                                             | 默认模型 `hexgrad/kokoro-82m`。                                          |
 | **Volcengine**    | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY`（旧版 AppID/token：`VOLCENGINE_TTS_APPID`/`_TOKEN`） | BytePlus Seed Speech HTTP API。                                          |
 | **Vydra**         | `VYDRA_API_KEY`                                                                                                  | 图像、视频和语音的共享提供商。                                           |
-| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音笔记。                                 |
+| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音便笺。                                 |
 | **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | 通过小米聊天完成接口提供 MiMo TTS。                                       |
 
-如果配置了多个提供商，将首先使用已选中的那个，其余作为回退选项。自动摘要使用 `summaryModel`（或
+如果配置了多个提供商，将首先使用当前选中的那个，其余作为回退选项。自动摘要使用 `summaryModel`（或
 `agents.defaults.model.primary`），因此如果你保持摘要功能开启，该提供商也必须已完成认证。
 
 <Warning>
@@ -80,7 +80,7 @@ OpenClaw 会按注册表自动选择顺序挑选第一个已配置的提供商�
 
 ## 配置
 
-TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `messages.tts` 下。选择一个
+TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一个
 预设并调整提供商块：
 
 <Tabs>
@@ -359,7 +359,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `messages.tts` 下。选择�
   </Tab>
 </Tabs>
 
-### 按代理的语音覆盖
+### 按代理覆盖语音
 
 当某个代理应使用不同的提供商、语音、模型、角色或自动 TTS 模式时，使用 `agents.list[].tts`。代理块会在 `messages.tts`
 之上进行深度合并，因此提供商凭据可以保留在全局提供商配置中：
@@ -390,7 +390,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `messages.tts` 下。选择�
 }
 ```
 
-若要为某个代理固定角色，请在提供商配置旁设置 `agents.list[].tts.persona` —— 它只会覆盖该代理的全局 `messages.tts.persona`。
+若要为某个代理固定角色，请在提供商配置旁设置 `agents.list[].tts.persona`——它只会覆盖该代理的全局 `messages.tts.persona`。
 
 自动回复、`/tts audio`、`/tts status` 以及 `tts` 代理工具的优先级顺序为：
 
@@ -398,7 +398,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `messages.tts` 下。选择�
 2. 当前激活的 `agents.list[].tts`
 3. 频道覆盖，当频道支持 `channels.<channel>.tts` 时
 4. 账号覆盖，当频道传入 `channels.<channel>.accounts.<id>.tts` 时
-5. 本机的本地 `/tts` 偏好设置
+5. 本地机器上的 `/tts` 本地偏好设置
 6. 启用 [模型驱动指令](#model-driven-directives) 时的内联 `[[tts:...]]` 指令
 
 频道和账号覆盖使用与 `messages.tts` 相同的结构，并在较早层之上进行深度合并，因此共享的提供商凭据可以保留在 `messages.tts` 中，而频道或机器人账号只更改语音、模型、角色或自动模式：
@@ -443,7 +443,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 中的 `messages.tts` 下。选择�
       persona: "narrator",
       personas: {
         narrator: {
-          label: "Narrator",
+          label: "旁白",
           provider: "elevenlabs",
           providers: {
             elevenlabs: { voiceId: "EXAVITQu4vr4xnSDxMaL", modelId: "eleven_multilingual_v2" },
@@ -683,7 +683,7 @@ OpenAI/ElevenLabs 的输出格式按通道固定（见上文）。
 - 跳过非常短的回复（少于 10 个字符）。
 - 当启用摘要时，使用 `summaryModel`（或 `agents.defaults.model.primary`）对长回复进行摘要。
 - 将生成的音频附加到回复中。
-- 在 `mode: "final"` 下，仍会在文本流完成后，为流式最终回复发送仅音频的 TTS；生成的媒体会像普通回复附件一样经过相同的 channel media 规范化处理。
+- 在 `mode: "final"` 下，仍然会在文本流完成后，为流式最终回复发送仅音频的 TTS；生成的媒体会像普通回复附件一样经过相同的 channel media 规范化处理。
 
 如果回复超过 `maxLength` 且摘要关闭（或摘要模型没有 API key），则会跳过音频并发送普通文本回复。
 
@@ -692,7 +692,7 @@ Reply -> TTS enabled?
   no  -> send text
   yes -> has media / MEDIA: / short?
           yes -> send text
-          no  -> length > limit?
+          no -> length > limit?
                    no  -> TTS -> attach audio
                    yes -> summary enabled?
                             no  -> send text
@@ -843,8 +843,9 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
   <Accordion title="OpenAI">
     <ParamField path="apiKey" type="string">回退到 `OPENAI_API_KEY`。</ParamField>
     <ParamField path="model" type="string">OpenAI TTS 模型 id（例如 `gpt-4o-mini-tts`）。</ParamField>
-    <ParamField path="voice" type="string">voice 名称（例如 `alloy`、`cedar`）。</ParamField>
-    <ParamField path="instructions" type="string">显式的 OpenAI `instructions` 字段。设置后，persona 提示字段不会自动映射。</ParamField>
+    <ParamField path="voice" type="string">Voice 名称（例如 `alloy`、`cedar`）。</ParamField>
+    <ParamField path="instructions" type="string">显式的 OpenAI `instructions` 字段。设置后，persona 提示字段**不会**自动映射。</ParamField>
+    <ParamField path="extraBody / extra_body" type="Record<string, unknown>">额外的 JSON 字段，会在生成 OpenAI TTS 字段后合并到 `/audio/speech` 请求体中。可用于 OpenAI 兼容端点（如 Kokoro）需要的提供方特定键，例如 `lang`；不安全的 prototype 键会被忽略。</ParamField>
     <ParamField path="baseUrl" type="string">
       覆盖 OpenAI TTS 端点。解析顺序：config → `OPENAI_TTS_BASE_URL` → `https://api.openai.com/v1`。非默认值会被视为 OpenAI 兼容的 TTS 端点，因此会接受自定义模型和 voice 名称。
     </ParamField>

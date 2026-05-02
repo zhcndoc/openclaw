@@ -51,6 +51,9 @@ openclaw channels remove --channel telegram --delete
 `openclaw channels add --help` 会显示各频道专用的标志（token、private key、app token、signal-cli 路径等）。
 </Tip>
 
+`channels remove` 仅对已安装/已配置的频道插件生效。对于可安装目录中的频道，请先使用 `channels add`。
+对于基于运行时的频道插件，`channels remove` 还会先要求正在运行的 Gateway 停止所选账户，然后再更新配置，因此禁用或删除账户不会让旧监听器在重启前继续保持活动状态。
+
 常见的非交互式添加入口包括：
 
 - bot-token 频道：`--token`、`--bot-token`、`--app-token`、`--token-file`
@@ -92,7 +95,8 @@ openclaw channels logout --channel whatsapp
 
 - `channels login` 支持 `--verbose`。
 - 当只配置了一个受支持的登录目标时，`channels login` 和 `logout` 可以推断频道。
-- 请在 gateway 主机上的终端中运行 `channels login`。Agent `exec` 会阻止此交互式登录流程；如果可用，应从聊天中使用频道原生的 agent 登录工具，例如 `whatsapp_login`。
+- `channels logout` 在可达时优先使用实时 Gateway 路径，因此登出会在清除频道认证状态之前停止任何活动监听器。如果本地 Gateway 不可达，它会回退到本地认证清理。
+- 请在 gateway 主机上的终端中运行 `channels login`。Agent `exec` 会阻止这种交互式登录流程；如果可用，应在聊天中使用频道原生的 agent 登录工具，例如 `whatsapp_login`。
 
 ## 故障排查
 
@@ -130,8 +134,9 @@ openclaw channels resolve --channel matrix "Project Room"
 说明：
 
 - 使用 `--kind user|group|auto` 强制指定目标类型。
-- 当多个条目共享相同名称时，解析会优先选择活动匹配项。
-- `channels resolve` 是只读操作。如果所选账户通过 SecretRef 配置，但该凭据在当前命令路径中不可用，则该命令会返回带有说明的降级未解析结果，而不是中止整个运行。
+- 解析在多个条目共享同名时会优先选择活动匹配项。
+- `channels resolve` 是只读的。如果所选账户通过 SecretRef 配置但该凭据在当前命令路径中不可用，命令会返回带说明的降级未解析结果，而不是中止整个运行。
+- `channels resolve` 不会安装频道插件。对于可安装目录中的频道，请先使用 `channels add --channel <name>` 再解析名称。
 
 ## 相关内容
 

@@ -14,8 +14,10 @@ read_when:
 - Slack 类目标语法：
   - `dm:<user>`
   - `channel:<room>`
+  - `group:<room>`
   - `thread:<room>/<thread>`
-- 由 HTTP 支持的合成总线，用于入站消息注入、出站转录捕获、线程创建、表情反应、编辑、删除以及搜索/读取操作。
+- 共享的 `channel:` 和 `group:` 会话会作为群组/频道房间轮次展示给代理，因此它们会使用与 Discord、Slack、Telegram 以及类似传输相同的可见回复和消息工具路由策略。
+- 用于入站消息注入、出站转录捕获、线程创建、反应、编辑、删除以及搜索/读取操作的 HTTP 支持合成总线。
 - 主机侧自检运行器，会将 Markdown 报告写入 `.artifacts/qa-e2e/`。
 
 ## 配置

@@ -10,9 +10,10 @@ title: "菜单栏"
 ## 显示内容
 
 - 我们会在菜单栏图标以及菜单的第一行状态中展示当前代理的工作状态。
-- 当有工作进行时，健康状态会被隐藏；当所有会话都处于空闲时，它会重新显示。
-- 菜单中的 “Nodes” 区块只列出**设备**（通过 `node.list` 配对的节点），不包括客户端/存在状态条目。
-- 当可用提供方使用情况快照时，Context 下会显示一个 “Usage” 部分。
+- 在工作进行时会隐藏健康状态；当所有会话都处于空闲时，它会重新出现。
+- 根级 “Context” 子菜单会包含最近会话，而不是直接在根菜单中展开它们。
+- 根菜单中的 “Nodes” 区块仅列出 **设备**（通过 `node.list` 配对的节点），不包含客户端/存在状态条目。
+- 当可用提供方使用情况快照时，根级 “Usage” 区块会显示在 Context 下方，若可用则随后显示使用成本详情。
 
 ## 状态模型
 
@@ -45,7 +46,15 @@ title: "菜单栏"
 - `workingOther`：带 glyph 的徽章、柔和色调、不快速跑动。
 - `overridden`：无论活动如何，均使用所选 glyph/色调。
 
-## 状态行文本（菜单）
+## Context submenu
+
+- 根菜单显示一行 “Context”，带有会话计数/状态，并打开一个子菜单。
+- Context 子菜单标题显示过去 24 小时内的活动会话数量。
+- 每个会话行保留其 token bar、时长、预览、thinking/verbose、reset、compact 和 delete 操作。
+- 加载中、断开连接以及会话加载错误消息会显示在 Context 子菜单内。
+- 提供方使用情况和使用成本详情保留在 Context 下方的根级，这样无需打开子菜单也能一眼看到。
+
+## Status row text (menu)
 
 - 当工作进行时：`<Session role> · <activity label>`
   - 示例：`Main · exec: pnpm test`、`Other · read: apps/macos/Sources/OpenClaw/AppState.swift`。

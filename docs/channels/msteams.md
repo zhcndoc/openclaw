@@ -169,12 +169,12 @@ teams app doctor <teamsAppId>
 
 **Teams + 频道允许列表**
 
-- 通过在 `channels.msteams.teams` 下列出 teams 和 channels 来限定群组/频道回复的范围。
-- 键应使用稳定的 team ID 和 channel 会话 ID。
-- 当 `groupPolicy="allowlist"` 且存在 teams 允许列表时，仅接受列出的 teams/channels（默认需要提及）。
-- 配置向导接受 `Team/Channel` 条目并为你存储它们。
-- 启动时，OpenClaw 会将 team/channel 和用户允许列表名称解析为 ID（当 Graph 权限允许时）
-  并记录映射；无法解析的 team/channel 名称会按原样保留，但默认会被忽略，不用于路由，除非启用了 `channels.msteams.dangerouslyAllowNameMatching: true`。
+- 通过在 `channels.msteams.teams` 下列出团队和频道来限定群组/频道回复的作用域。
+- 键应使用来自 Teams 链接的稳定 Teams 会话 ID，而不是可变的显示名称。
+- 当 `groupPolicy="allowlist"` 且存在团队允许列表时，只有列出的团队/频道会被接受（需要提及）。
+- 配置向导接受 `Team/Channel` 条目，并会为你存储。
+- 启动时，OpenClaw 会将团队/频道和用户允许列表名称解析为 ID（在 Graph 权限允许时）
+  并记录映射；无法解析的团队/频道名称会按原样保留，但默认会被忽略用于路由，除非启用了 `channels.msteams.dangerouslyAllowNameMatching: true`。
 
 示例：
 
@@ -536,7 +536,7 @@ teams app rsc add <teamsAppId> ChannelMessage.Read.Group --type Application
     privacyUrl: "https://example.com/privacy",
     termsOfUseUrl: "https://example.com/terms",
   },
-  description: { short: "OpenClaw in Teams", full: "OpenClaw in Teams" },
+  description: { short: "Teams 中的 OpenClaw", full: "Teams 中的 OpenClaw" },
   icons: { outline: "outline.png", color: "color.png" },
   accentColor: "#5B6DEF",
   bots: [
@@ -940,7 +940,7 @@ Teams URL 中的 `groupId` 查询参数**不是**配置所使用的团队 ID。�
 ```
 https://teams.microsoft.com/l/team/19%3ABk4j...%40thread.tacv2/conversations?groupId=...
                                     └────────────────────────────┘
-                                    团队 ID（对此进行 URL 解码）
+                                    团队会话 ID（对其进行 URL 解码）
 ```
 
 **频道 URL：**
@@ -953,9 +953,9 @@ https://teams.microsoft.com/l/channel/19%3A15bc...%40thread.tacv2/ChannelName?gr
 
 **用于配置：**
 
-- 团队 ID = `/team/` 后的路径段（URL 解码，例如 `19:Bk4j...@thread.tacv2`）
-- 频道 ID = `/channel/` 后的路径段（URL 解码）
-- **忽略** `groupId` 查询参数
+- Team key = `/team/` 后的路径段（URL 解码，例如 `19:Bk4j...@thread.tacv2`；较旧的租户可能显示 `@thread.skype`，这也是有效的）
+- Channel key = `/channel/` 后的路径段（URL 解码）
+- **忽略** OpenClaw 路由中的 `groupId` 查询参数。它是 Microsoft Entra 组 ID，不是传入 Teams 活动中使用的 Bot Framework 会话 ID。
 
 ## 私有频道
 

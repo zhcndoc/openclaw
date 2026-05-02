@@ -23,7 +23,7 @@ OpenClaw 不会提供、下载、启动、配置或认证任何代理。你负�
 - 可审计性：在出站边界记录允许和拒绝的目标。
 - 运维控制：无需重建 OpenClaw，即可强制执行目标规则、网络分段、速率限制或出站允许列表。
 
-Proxy routing is a process-level guardrail for normal HTTP and WebSocket egress. It gives operators a fail-closed path for routing supported JavaScript HTTP clients through their own filtering proxy, but it is not an OS-level network sandbox and does not make OpenClaw certify the proxy's destination policy.
+代理路由是一种针对普通 HTTP 和 WebSocket 出站流量的进程级防护措施。它为运维人员提供了一条失败即关闭的路径，可将受支持的 JavaScript HTTP 客户端通过自己的过滤代理进行路由，但它不是 OS 级别的网络沙箱，也不会使 OpenClaw 对代理的目标策略进行认证。
 
 ## OpenClaw 如何路由流量
 
@@ -38,11 +38,25 @@ OpenClaw 进程
 
 对外公开的契约是路由行为，而不是用于实现它的内部 Node 钩子。OpenClaw Gateway 控制平面 WebSocket 客户端在 Gateway URL 使用 `localhost` 或字面量回环 IP（例如 `127.0.0.1` 或 `[::1]`）时，会对本地回环 Gateway RPC 流量使用一条窄范围的直连路径。即使运维代理阻止回环目标，这条控制平面路径也必须能够访问回环 Gateway。正常的运行时 HTTP 和 WebSocket 请求仍然使用已配置的代理。
 
-代理 URL 本身必须使用 `http://`。通过 HTTP `CONNECT` 仍然支持经由代理访问 HTTPS 目标；这只意味着 OpenClaw 期望的是一个普通的 HTTP 正向代理监听器，例如 `http://127.0.0.1:3128`。
+内部上，OpenClaw 为此功能使用两种进程级路由钩子：
+
+- Undici dispatcher 路由覆盖 `fetch`、基于 undici 的客户端，以及提供自身 undici dispatcher 的传输。
+- `global-agent` 路由覆盖 Node 核心的 `node:http` 和 `node:https` 调用者，包括许多构建于 `http.request`、`https.request`、`http.get` 和 `https.get` 之上的库。受管代理模式会强制使用该全局代理，从而避免显式的 Node HTTP agent 误绕过运维代理。
+
+一些插件拥有自定义传输，即使存在进程级路由，也需要显式的代理接线。例如，Telegram 的 Bot API 传输使用其自身的 HTTP/1 undici dispatcher，因此会在该插件专用的传输路径中遵循进程代理环境以及受管的 `OPENCLAW_PROXY_URL` 回退。
+
+代理 URL 本身必须使用 `http://`。通过代理访问 HTTPS 目标时，仍然会通过 HTTP `CONNECT` 得到支持；这仅意味着 OpenClaw 期望的是一个普通的 HTTP 正向代理监听器，例如 `http://127.0.0.1:3128`。
 
 在代理生效期间，OpenClaw 会清除 `no_proxy`、`NO_PROXY` 和 `GLOBAL_AGENT_NO_PROXY`。这些绕过列表是基于目标的，因此如果保留 `localhost` 或 `127.0.0.1`，高风险 SSRF 目标就可能绕过过滤代理。
 
 关闭时，OpenClaw 会恢复之前的代理环境，并重置缓存的进程路由状态。
+
+## 相关代理术语
+
+- `proxy.enabled` / `proxy.proxyUrl`：OpenClaw 运行时出站流量的正向代理路由。本页文档说明了这一功能。
+- `gateway.auth.mode: "trusted-proxy"`：用于 Gateway 访问的入站、身份感知的反向代理认证。参见 [受信任代理认证](/gateway/trusted-proxy-auth)。
+- `openclaw proxy`：用于开发和支持的本地调试代理与捕获检查器。参见 [openclaw proxy](/cli/proxy)。
+- 通道或提供商特定的代理设置：针对特定传输的插件专用覆盖。当目标是在整个运行时实现集中式出站控制时，优先使用受管网络代理。
 
 ## 配置
 
@@ -122,12 +136,42 @@ OpenClaw 应用层分类器逻辑位于 `src/infra/net/ssrf.ts` 和 `src/shared/
 请从运行 OpenClaw 的同一台主机、容器或服务账号来验证代理：
 
 ```bash
+openclaw proxy validate --proxy-url http://127.0.0.1:3128
+```
+
+默认情况下，当未提供自定义目标时，该命令会检查 `https://example.com/` 是否成功，并启动一个临时的回环 canary，代理不应访问它。默认的拒绝检查在代理返回非 2xx 的拒绝响应，或以传输失败的方式阻止 canary 时通过；如果成功响应到达 canary，则失败。如果未启用并配置代理，验证会报告配置问题；在修改配置之前，可使用 `--proxy-url` 做一次性预检。使用 `--allowed-url` 和 `--denied-url` 测试部署特定的预期行为。自定义拒绝目标采用失败即关闭策略：任何 HTTP 响应都意味着该目标可通过代理到达，而任何传输错误都会被报告为不确定，因为 OpenClaw 无法证明代理阻止了一个可达的源。验证失败时，命令以代码 1 退出。
+
+自动化场景可使用 `--json`。JSON 输出包含总体结果、有效代理配置来源、任何配置错误以及每个目标检查项。代理 URL 凭据会在文本和 JSON 输出中被脱敏：
+
+```json
+{
+  "ok": true,
+  "config": {
+    "enabled": true,
+    "proxyUrl": "http://127.0.0.1:3128/",
+    "source": "override",
+    "errors": []
+  },
+  "checks": [
+    {
+      "kind": "allowed",
+      "url": "https://example.com/",
+      "ok": true,
+      "status": 200
+    }
+  ]
+}
+```
+
+你也可以使用 `curl` 手动验证：
+
+```bash
 curl -x http://127.0.0.1:3128 https://example.com/
 curl -x http://127.0.0.1:3128 http://127.0.0.1/
 curl -x http://127.0.0.1:3128 http://169.254.169.254/
 ```
 
-对公网的请求应该成功。回环和元数据请求应该在代理处失败。
+公共请求应当成功。回环和元数据请求应当被代理阻止。对于 `openclaw proxy validate`，内置的回环 canary 可以区分代理拒绝和可达源。自定义 `--denied-url` 检查没有这个 canary，因此除非你的代理暴露了可单独验证的部署特定拒绝信号，否则应将 HTTP 响应和含糊的传输失败都视为验证失败。
 
 然后启用 OpenClaw 代理路由：
 

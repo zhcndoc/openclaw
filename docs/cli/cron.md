@@ -65,7 +65,7 @@ title: "Cron"
 </Note>
 
 注意：隔离 cron 运行会将运行级代理失败视为作业错误，即使
-没有生成回复负载，因此模型/提供方失败仍会增加错误
+没有生成回复负载，因此模型/提供方失败仍然会增加错误
 计数并触发失败通知。
 
 ## Scheduling
@@ -226,7 +226,9 @@ openclaw cron edit <job-id> --session current
 openclaw cron edit <job-id> --session "session:daily-brief"
 ```
 
-投递微调：
+`openclaw cron add` 在 `--agent` 被省略且作业为 agent-turn 类型时会发出警告，并回退到默认代理（`main`）。在创建时传入 `--agent <id>` 可固定特定代理。
+
+Delivery tweaks:
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"

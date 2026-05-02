@@ -26,6 +26,11 @@ read_when:
 ## 快速开始
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install diffs
+    ```
+  </Step>
   <Step title="启用插件">
     ```json5
     {
@@ -354,7 +359,7 @@ read_when:
 }
 ```
 
-## Artifact 生命周期和存储
+## 资源生命周期和存储
 
 - Artifacts 存储在临时子文件夹下：`$TMPDIR/openclaw-diffs`。
 - Viewer artifact 元数据包含：
@@ -448,33 +453,33 @@ URL 构造行为：
 
 <AccordionGroup>
   <Accordion title="输入验证错误">
-    - `Provide patch or both before and after text.` — 需要同时包含 `before` 和 `after`，或者提供 `patch`。
-    - `Provide either patch or before/after input, not both.` — 不要混用输入模式。
-    - `Invalid baseUrl: ...` — 使用带可选路径的 `http(s)` origin，不要带 query/hash。
+    - `Provide patch or both before and after text.` — 需要提供 `patch`，或者同时提供 `before` 和 `after` 文本。
+    - `Provide either patch or before/after input, not both.` — 请只使用一种输入模式，不要同时使用两者。
+    - `Invalid baseUrl: ...` — 使用带可选路径的 `http(s)` origin，不要包含 query/hash。
     - `{field} exceeds maximum size (...)` — 减少负载大小。
-    - 大型 patch 被拒绝 — 减少 patch 文件数量或总行数。
+    - 大型 patch 被拒绝 — 减少 patch 的文件数量或总行数。
 
   </Accordion>
   <Accordion title="Viewer 可访问性">
     - Viewer URL 默认解析为 `127.0.0.1`。
-    - 对于远程访问场景，请任选其一：
+    - 对于远程访问场景，请选择以下任一方式：
       - 设置插件 `viewerBaseUrl`，或
-      - 按工具调用传入 `baseUrl`，或
+      - 在工具调用时传入 `baseUrl`，或
       - 使用 `gateway.bind=custom` 和 `gateway.customBindHost`
-    - 如果 `gateway.trustedProxies` 为同主机代理（例如 Tailscale Serve）包含了回环地址，那么不带转发客户端 IP 头的原始回环 viewer 请求会按设计失败并关闭。
-    - 对于该代理拓扑：
-      - 只需要附件时，优先使用 `mode: "file"` 或 `mode: "both"`，或
-      - 当你需要可分享的 viewer URL 时，主动启用 `security.allowRemoteViewer`，并设置插件 `viewerBaseUrl` 或传入代理/公共 `baseUrl`
-    - 仅当你确实打算让外部访问 viewer 时，才启用 `security.allowRemoteViewer`。
+    - 如果 `gateway.trustedProxies` 为同主机代理（例如 Tailscale Serve）包含了回环地址，那么缺少转发客户端 IP 头的原始回环 viewer 请求会按设计失败并被关闭。
+    - 对于这种代理拓扑：
+      - 如果只需要附件，优先使用 `mode: "file"` 或 `mode: "both"`，或
+      - 当你需要可分享的 viewer URL 时，显式启用 `security.allowRemoteViewer`，并设置插件 `viewerBaseUrl` 或传入代理/公共 `baseUrl`
+    - 只有在你确实打算让外部访问 viewer 时，才启用 `security.allowRemoteViewer`。
 
   </Accordion>
   <Accordion title="未修改行 row 没有展开按钮">
-    当 patch 输入不包含可展开上下文时，可能会出现这种情况。这是预期行为，并不表示 viewer 失败。
+    当 patch 输入不包含可展开的上下文时，可能会出现这种情况。这是预期行为，并不表示 viewer 出现故障。
   </Accordion>
-  <Accordion title="Artifact not found">
-    - Artifact 因 TTL 过期。
+  <Accordion title="未找到 Artifact">
+    - Artifact 已因 TTL 过期。
     - Token 或路径已更改。
-    - 清理已移除陈旧数据。
+    - 清理操作已移除陈旧数据。
 
   </Accordion>
 </AccordionGroup>
@@ -483,17 +488,17 @@ URL 构造行为：
 
 - 在 canvas 中进行本地交互式审查时，优先使用 `mode: "view"`。
 - 对于需要附件的外发聊天渠道，优先使用 `mode: "file"`。
-- 除非你的部署需要远程 viewer URL，否则保持 `allowRemoteViewer` 禁用。
-- 对敏感 diff，设置明确且较短的 `ttlSeconds`。
-- 在不需要时，避免在 diff 输入中发送秘密信息。
-- 如果你的渠道会强烈压缩图片（例如 Telegram 或 WhatsApp），优先使用 PDF 输出（`fileFormat: "pdf"`）。
+- 除非你的部署需要远程 viewer URL，否则保持 `allowRemoteViewer` 为禁用状态。
+- 对于敏感 diff，设置明确且较短的 `ttlSeconds`。
+- 在不需要时，避免在 diff 输入中发送敏感信息。
+- 如果你的渠道会严重压缩图片（例如 Telegram 或 WhatsApp），优先使用 PDF 输出（`fileFormat: "pdf"`）。
 
 <Note>
 Diff 渲染引擎由 [Diffs](https://diffs.com) 提供支持。
 </Note>
 
-## 相关内容
+## 另请参阅
 
 - [Browser](/tools/browser)
-- [Plugins](/tools/plugin)
-- [Tools overview](/tools)
+- [插件](/tools/plugin)
+- [工具概览](/tools)

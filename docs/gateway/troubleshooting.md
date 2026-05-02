@@ -261,7 +261,7 @@ openclaw gateway status
 - [远程访问](/gateway/remote)
 - [受信任代理认证](/gateway/trusted-proxy-auth)
 
-## Gateway service not running
+## Gateway 服务未运行
 
 当服务已安装但进程无法保持运行时使用此项。
 
@@ -337,11 +337,12 @@ openclaw doctor
     ```
   </Accordion>
   <Accordion title="常见特征">
-    - `.clobbered.*` 存在 → 外部直接编辑或启动时读取的内容已被恢复。
-    - `.rejected.*` 存在 → OpenClaw 管理的配置写入在提交前因 schema 或 clobber 检查失败。
-    - `Config write rejected:` → 写入尝试删除必需结构、显著缩小文件，或持久化无效配置。
-    - `missing-meta-vs-last-good`、`gateway-mode-missing-vs-last-good`，或 `size-drop-vs-last-good:*` → 启动将当前文件视为被覆盖，因为与 last-known-good 备份相比它丢失了字段或大小。
-    - `Config last-known-good promotion skipped` → 候选项包含已脱敏的密钥占位符，例如 `***`。
+    - `.clobbered.*` 存在 → 已恢复外部直接编辑或启动时读取的内容。
+    - `.rejected.*` 存在 → 在提交前，OpenClaw 管理的配置写入因模式或 clobber 检查失败。
+    - `Config write rejected:` → 写入尝试删除必需结构、明显缩小文件，或持久化无效配置。
+    - `Rejected validation details:` → 恢复日志或主代理通知包含导致恢复的 schema 路径，例如 `agents.defaults.execution` 或 `gateway.auth.password.source`。
+    - `missing-meta-vs-last-good`、`gateway-mode-missing-vs-last-good` 或 `size-drop-vs-last-good:*` → 启动时由于当前文件相比 last-known-good 备份丢失了字段或大小而将其视为已被覆盖。
+    - `Config last-known-good promotion skipped` → 候选内容包含被脱敏的密钥占位符，例如 `***`。
 
   </Accordion>
   <Accordion title="修复选项">
@@ -508,14 +509,14 @@ openclaw doctor
 - `existing-session` / `user` 配置文件的本地 Chrome 是否可用。
 
 <AccordionGroup>
-  <Accordion title="插件 / 可执行文件签名">
-    - `unknown command "browser"` 或 `unknown command 'browser'` → 内置浏览器插件被 `plugins.allow` 排除了。
-    - browser tool missing / unavailable while `browser.enabled=true` → `plugins.allow` 排除了 `browser`，因此插件从未加载。
-    - `Failed to start Chrome CDP on port` → 浏览器进程启动失败。
-    - `browser.executablePath not found` → 配置的路径无效。
-    - `browser.cdpUrl must be http(s) or ws(s)` → 配置的 CDP URL 使用了不受支持的协议，例如 `file:` 或 `ftp:`。
-    - `browser.cdpUrl has invalid port` → 配置的 CDP URL 端口错误或超出范围。
-    - `Playwright is not available in this gateway build; '<feature>' is unsupported.` → 当前网关安装缺少内置浏览器插件的 `playwright-core` 运行时依赖；请运行 `openclaw doctor --fix`，然后重启网关。ARIA 快照和基础页面截图仍然可用，但导航、AI 快照、CSS 选择器元素截图以及 PDF 导出仍不可用。
+  <Accordion title="Plugin / executable signatures">
+    - `unknown command "browser"` or `unknown command 'browser'` → bundled browser plugin is excluded by `plugins.allow`。
+    - browser tool missing / unavailable while `browser.enabled=true` → `plugins.allow` excludes `browser`，so the plugin never loaded.
+    - `Failed to start Chrome CDP on port` → browser process failed to launch.
+    - `browser.executablePath not found` → configured path is invalid.
+    - `browser.cdpUrl must be http(s) or ws(s)` → configured CDP URL uses an unsupported scheme such as `file:` or `ftp:`.
+    - `browser.cdpUrl has invalid port` → configured CDP URL has a bad or out-of-range port.
+    - `Playwright is not available in this gateway build; '<feature>' is unsupported.` → 当前 gateway 安装缺少核心浏览器运行时依赖；请重新安装或更新 OpenClaw，然后重启 gateway。ARIA 快照和基础页面截图仍可正常工作，但导航、AI 快照、CSS 选择器元素截图和 PDF 导出将不可用。
 
   </Accordion>
   <Accordion title="Chrome MCP / existing-session 签名">

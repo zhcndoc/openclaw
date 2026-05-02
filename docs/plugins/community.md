@@ -26,7 +26,7 @@ OpenClaw 会先检查 ClawHub，并自动回退到 npm。
 ### Apify
 
 使用 20,000+ 个现成抓取器从任何网站抓取数据。让你的代理
-通过提问即可从 Instagram、Facebook、TikTok、YouTube、Google 地图、Google
+只需通过提问即可从 Instagram、Facebook、TikTok、YouTube、Google 地图、Google
 搜索、电商网站等平台提取数据。
 
 - **npm:** `@apify/apify-openclaw-plugin`
@@ -39,8 +39,8 @@ openclaw plugins install @apify/apify-openclaw-plugin
 ### Codex App Server Bridge
 
 用于 Codex App Server 对话的独立 OpenClaw 桥接器。将聊天绑定到
-一个 Codex 线程，用纯文本与它对话，并通过聊天原生
-命令控制它，用于恢复、规划、审阅、模型选择、压缩等更多操作。
+一个 Codex 线程，用纯文本与其交谈，并通过聊天原生命令
+控制它，用于恢复、规划、审阅、模型选择、压缩等操作。
 
 - **npm:** `openclaw-codex-app-server`
 - **repo:** [github.com/pwrdrvr/openclaw-codex-app-server](https://github.com/pwrdrvr/openclaw-codex-app-server)
@@ -64,7 +64,7 @@ openclaw plugins install @largezhou/ddingtalk
 ### Lossless Claw (LCM)
 
 OpenClaw 的无损上下文管理插件。基于 DAG 的对话
-摘要与增量压缩——在减少 token 使用的同时保留完整上下文一致性。
+摘要与增量压缩——在减少 token 使用的同时保留完整的上下文一致性。
 
 - **npm:** `@martian-engineering/lossless-claw`
 - **repo:** [github.com/Martian-Engineering/lossless-claw](https://github.com/Martian-Engineering/lossless-claw)
@@ -75,7 +75,7 @@ openclaw plugins install @martian-engineering/lossless-claw
 
 ### Opik
 
-将代理轨迹导出到 Opik 的官方插件。监控代理行为、
+用于将代理轨迹导出到 Opik 的官方插件。监控代理行为、
 成本、token、错误等更多内容。
 
 - **npm:** `@opik/opik-openclaw`
@@ -88,7 +88,7 @@ openclaw plugins install @opik/opik-openclaw
 ### Prometheus Avatar
 
 为你的 OpenClaw 代理提供带有实时口型同步、情感
-表情和文本转语音的 Live2D 头像。包含用于 AI 资产生成的创作者工具
+表情和文本转语音的 Live2D 头像。包含用于 AI 资产生成的创作者工具，
 以及一键部署到 Prometheus Marketplace。目前处于 alpha 阶段。
 
 - **npm:** `@prometheusavatar/openclaw-plugin`
@@ -137,7 +137,7 @@ WebSocket 持久连接，它支持直接消息和群聊、
 Markdown 格式化、内置访问控制，以及斜杠命令菜单。
 
 - **npm:** `openclaw-plugin-yuanbao`
-- **repo:** [github.com/yb-claw/openclaw-plugin-yuanbao](https://github.com/yb-claw/openclaw-plugin-yuanbao)
+- **repo:** [github.com/YuanbaoTeam/yuanbao-openclaw-plugin](https://github.com/YuanbaoTeam/yuanbao-openclaw-plugin)
 
 ```bash
 openclaw plugins install openclaw-plugin-yuanbao
@@ -145,7 +145,7 @@ openclaw plugins install openclaw-plugin-yuanbao
 
 ## 提交你的插件
 
-我们欢迎有用、文档完善且安全可运行的社区插件。
+我们欢迎有用、文档完善且可安全运行的社区插件。
 
 <Steps>
   <Step title="发布到 ClawHub 或 npm">

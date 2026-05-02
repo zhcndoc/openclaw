@@ -488,6 +488,8 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
   <Accordion title="登出行为">
     `openclaw channels logout --channel whatsapp [--account <id>]` 会清除该账号的 WhatsApp 认证状态。
 
+    当 Gateway 可达时，登出会先停止所选账号的实时 WhatsApp 监听器，因此关联会话在下次重启前不会继续接收消息。`openclaw channels remove --channel whatsapp` 在禁用或删除账号配置之前也会先停止实时监听器。
+
     在旧版认证目录中，`oauth.json` 会被保留，而 Baileys 认证文件会被移除。
 
   </Accordion>
@@ -542,7 +544,15 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
     openclaw logs --follow
     ```
 
-    如有需要，使用 `channels login` 重新绑定。
+    如果 `~/.openclaw/logs/whatsapp-health.log` 显示 `Gateway inactive`，但
+    `openclaw gateway status` 和 `openclaw channels status --probe` 显示
+    gateway 和 WhatsApp 运行正常，请运行 `openclaw doctor`。在 Linux 上，doctor
+    会警告仍在调用
+    `~/.openclaw/bin/ensure-whatsapp.sh` 的旧版 crontab 条目；请使用
+    `crontab -e` 删除这些过时条目，因为 cron 可能缺少 systemd user-bus 环境，
+    从而让这个旧脚本误报 gateway 健康状态。
+
+    如有需要，使用 `channels login` 重新关联。
 
   </Accordion>
 
@@ -560,7 +570,16 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 
   </Accordion>
 
-  <Accordion title="群消息意外被忽略">
+  <Accordion title="Reply appears in transcript but not in WhatsApp">
+    Transcript rows record what the agent generated. WhatsApp delivery is checked separately: OpenClaw only treats an auto-reply as sent after Baileys returns an outbound message id for at least one visible text or media send.
+
+    Ack reactions are independent pre-reply receipts. A successful reaction does not prove that the later text or media reply was accepted by WhatsApp.
+
+    Check gateway logs for `auto-reply delivery failed` or `auto-reply was not accepted by WhatsApp provider`.
+
+  </Accordion>
+
+  <Accordion title="Group messages unexpectedly ignored">
     按以下顺序检查：
 
     - `groupPolicy`

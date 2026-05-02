@@ -83,7 +83,9 @@ Control UI 在首次加载时可以根据你的浏览器区域设置自动本地
 - 选定的区域设置会保存在浏览器存储中，并在以后访问时复用。
 - 缺失的翻译键会回退到英语。
 
-## 外观主题
+Docs 翻译会为相同的非英语区域设置生成，但 docs 站点内置的 Mintlify 语言选择器仅限于 Mintlify 接受的区域设置代码。泰语（`th`）和波斯语（`fa`）文档仍会在发布仓库中生成；在 Mintlify 支持这些代码之前，它们可能不会出现在该选择器中。
+
+## Appearance 主题
 
 Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个浏览器本地的 tweakcn 导入槽位。要导入主题，请打开 [tweakcn themes](https://tweakcn.com/themes)，选择或创建一个主题，点击 **Share**，并将复制的主题链接粘贴到 Appearance 中。导入器还接受 `https://tweakcn.com/r/themes/<id>` 注册表 URL、类似 `https://tweakcn.com/editor/theme?theme=amethyst-haze` 的编辑器 URL、相对的 `/themes/<id>` 路径、原始主题 ID，以及默认主题名称，例如 `amethyst-haze`。
 
@@ -310,7 +312,7 @@ Web Push 独立于 iOS APNS 中继路径（有关中继支持的推送，请参�
 
     `allowInsecureAuth` 只是一个本地兼容性开关：
 
-    - 它允许 localhost 的 Control UI 会话在不安全 HTTP 上下文中 बिना设备身份继续。
+    - 它允许 localhost 的 Control UI 会话在不安全 HTTP 上下文中在没有设备身份的情况下继续。
     - 它不会绕过配对检查。
     - 它不会放宽远程（非 localhost）设备身份要求。
 
@@ -388,7 +390,7 @@ pnpm ui:dev
 
 ## 调试/测试：开发服务器 + 远程网关
 
-Control UI 是静态文件；WebSocket 目标是可配置的，可以不同于 HTTP 源。这在你希望本地运行 Vite 开发服务器、但网关运行在其他位置时非常方便。
+Control UI 是静态文件；WebSocket 目标是可配置的，可以不同于 HTTP 源。当你希望本地运行 Vite 开发服务器、但网关运行在其他位置时，这会非常方便。
 
 <Steps>
   <Step title="启动 UI 开发服务器">

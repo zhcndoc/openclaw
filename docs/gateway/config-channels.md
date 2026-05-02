@@ -132,7 +132,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-<Accordion title="Multi-account WhatsApp">
+<Accordion title="多账号 WhatsApp">
 
 ```json5
 {
@@ -171,19 +171,19 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
         "*": { requireMention: true },
         "-1001234567890": {
           allowFrom: ["@admin"],
-          systemPrompt: "Keep answers brief.",
+          systemPrompt: "保持回答简洁。",
           topics: {
             "99": {
               requireMention: false,
               skills: ["search"],
-              systemPrompt: "Stay on topic.",
+              systemPrompt: "保持主题相关。",
             },
           },
         },
       },
       customCommands: [
-        { command: "backup", description: "Git backup" },
-        { command: "generate", description: "Create an image" },
+        { command: "backup", description: "Git 备份" },
+        { command: "generate", description: "创建图片" },
       ],
       historyLimit: 50,
       replyToMode: "first", // off | first | all | batched
@@ -266,7 +266,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
               requireMention: true,
               users: ["987654321098765432"],
               skills: ["docs"],
-              systemPrompt: "Short answers only.",
+              systemPrompt: "仅限简短回答。",
             },
           },
         },
@@ -297,6 +297,8 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
         ],
         daveEncryption: true,
         decryptionFailureTolerance: 24,
+        connectTimeoutMs: 30000,
+        reconnectGraceMs: 15000,
         tts: {
           provider: "openai",
           openai: { voice: "alloy" },
@@ -321,34 +323,36 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- Token：`channels.discord.token`，默认账号也可回退使用 `DISCORD_BOT_TOKEN`。
-- 提供显式 Discord `token` 的直接出站调用会在该调用中使用该 token；账号重试/策略设置仍来自当前运行时快照中选定的账号。
+- Token: `channels.discord.token`, 默认账号回退使用 `DISCORD_BOT_TOKEN`。
+- 提供显式 Discord `token` 的直接出站调用会在该调用中使用该 token；账号重试/策略设置仍来自活动运行时快照中选定的账号。
 - 可选的 `channels.discord.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
-- 使用 `user:<id>`（DM）或 `channel:<id>`（guild channel）作为投递目标；纯数字 ID 会被拒绝。
-- Guild slug 使用小写且将空格替换为 `-`；channel key 使用 slug 化后的名称（不带 `#`）。优先使用 guild IDs。
-- 默认忽略机器人作者消息。`allowBots: true` 会启用它们；使用 `allowBots: "mentions"` 仅接受提及机器人的机器人消息（仍会过滤自己的消息）。
-- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及 channel 覆盖）会丢弃提及了其他用户或角色但未提及机器人的消息（不包括 `@everyone`/`@here`）。
-- `maxLinesPerMessage`（默认 17）会在字符数未超过 2000 时也拆分过高的消息。
+- 投递目标使用 `user:<id>`（DM）或 `channel:<id>`（guild channel）；裸数字 ID 会被拒绝。
+- Guild slug 统一为小写并将空格替换为 `-`；channel key 使用 slug 化名称（不带 `#`）。建议优先使用 guild ID。
+- 默认忽略机器人发送的消息。`allowBots: true` 可启用；使用 `allowBots: "mentions"` 仅接受提及机器人的 bot 消息（自己的消息仍会被过滤）。
+- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及 channel 覆盖）会丢弃提及了其他用户或角色但未提及机器人的消息（不包括 @everyone/@here）。
+- `maxLinesPerMessage`（默认 17）会在消息少于 2000 字符时也拆分过长消息。
 - `channels.discord.threadBindings` 控制 Discord 线程绑定路由：
-  - `enabled`：线程绑定会话功能的 Discord 覆盖（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`，以及绑定交付/路由）
-  - `idleHours`：以小时为单位的空闲自动取消聚焦的 Discord 覆盖（`0` 禁用）
-  - `maxAgeHours`：以小时为单位的硬最大时长 Discord 覆盖（`0` 禁用）
-  - `spawnSubagentSessions`：为 `sessions_spawn({ thread: true })` 的自动线程创建/绑定提供显式启用开关
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目会为频道和线程配置持久化 ACP 绑定（在 `match.peer.id` 中使用 channel/thread id）。字段语义在 [ACP Agents](/tools/acp-agents#channel-specific-settings) 中共享说明。
+  - `enabled`：Discord 对线程绑定会话功能的覆盖（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 以及绑定的投递/路由）
+  - `idleHours`：以小时为单位的 Discord 空闲自动 unfocus 覆盖（`0` 表示禁用）
+  - `maxAgeHours`：以小时为单位的硬最大年龄覆盖（`0` 表示禁用）
+  - `spawnSubagentSessions`：`sessions_spawn({ thread: true })` 自动创建/绑定线程的可选开关
+- 顶层 `bindings[]` 中 `type: "acp"` 的条目可为频道和线程配置持久化 ACP 绑定（在 `match.peer.id` 中使用 channel/thread id）。字段语义在 [ACP Agents](/tools/acp-agents#channel-specific-settings) 中共享说明。
 - `channels.discord.ui.components.accentColor` 设置 Discord components v2 容器的强调色。
-- `channels.discord.voice` 启用 Discord 语音频道对话以及可选的自动加入 + LLM + TTS 覆盖。
-- `channels.discord.voice.model` 可选择性地覆盖用于 Discord 语音频道回复的 LLM 模型。
-- `channels.discord.voice.daveEncryption` 和 `channels.discord.voice.decryptionFailureTolerance` 会透传到 `@discordjs/voice` 的 DAVE 选项（默认分别为 `true` 和 `24`）。
-- OpenClaw 还会在多次解密失败后，通过离开/重新加入语音会话来尝试语音接收恢复。
+- `channels.discord.voice` 启用 Discord 语音频道对话以及可选的自动加入 + LLM + TTS 覆盖。仅文本的 Discord 配置默认关闭语音；设置 `channels.discord.voice.enabled=true` 以启用。
+- `channels.discord.voice.model` 可选地覆盖用于 Discord 语音频道回复的 LLM 模型。
+- `channels.discord.voice.daveEncryption` 和 `channels.discord.voice.decryptionFailureTolerance` 透传到 `@discordjs/voice` 的 DAVE 选项（默认分别为 `true` 和 `24`）。
+- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 的初始 Ready 等待时间（默认 `30000`）。
+- `channels.discord.voice.reconnectGraceMs` 控制一个断开的语音会话在 OpenClaw 销毁前进入重连信号状态所允许的时间（默认 `15000`）。
+- OpenClaw 还会在连续解密失败后，通过离开/重新加入语音会话来尝试恢复语音接收。
 - `channels.discord.streaming` 是规范的流模式键。旧的 `streamMode` 和布尔型 `streaming` 值会自动迁移。
-- `channels.discord.autoPresence` 将运行时可用性映射到 bot 状态（healthy => online，degraded => idle，exhausted => dnd），并允许可选的状态文本覆盖。
-- `channels.discord.dangerouslyAllowNameMatching` 重新启用可变的 name/tag 匹配（break-glass 兼容模式）。
-- `channels.discord.execApprovals`：Discord 原生执行审批的投递与审批者授权。
-  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在 auto 模式下，当可以从 `approvers` 或 `commands.ownerAllowFrom` 解析审批者时，exec approvals 会激活。
+- `channels.discord.autoPresence` 将运行时可用性映射到机器人状态（healthy => online，degraded => idle，exhausted => dnd），并允许可选的状态文本覆盖。
+- `channels.discord.dangerouslyAllowNameMatching` 重新启用可变 name/tag 匹配（break-glass 兼容模式）。
+- `channels.discord.execApprovals`：Discord 原生执行审批投递与审批者授权。
+  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在 auto 模式下，当可以从 `approvers` 或 `commands.ownerAllowFrom` 解析出审批者时，exec approvals 会激活。
   - `approvers`：允许批准 exec 请求的 Discord 用户 ID。省略时回退到 `commands.ownerAllowFrom`。
   - `agentFilter`：可选的 agent ID allowlist。省略则转发所有 agent 的审批。
   - `sessionFilter`：可选的 session key 模式（子串或正则）。
-  - `target`：审批提示的发送位置。`"dm"`（默认）发送到审批者 DM，`"channel"` 发送到来源 channel，`"both"` 两者都发送。当 target 包含 `"channel"` 时，按钮仅对已解析的审批者可用。
+  - `target`：审批提示的发送位置。`"dm"`（默认）发送到审批者 DM，`"channel"` 发送到原始频道，`"both"` 发送到两者。当前目标包含 `"channel"` 时，按钮仅对已解析审批者可用。
   - `cleanupAfterResolve`：为 `true` 时，在批准、拒绝或超时后删除审批 DM。
 
 **Reaction notification modes:** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
@@ -413,7 +417,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
           allowBots: false,
           users: ["U123"],
           skills: ["docs"],
-          systemPrompt: "Short answers only.",
+          systemPrompt: "仅限简短回答。",
         },
       },
       historyLimit: 50,
@@ -443,7 +447,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
       chunkMode: "length",
       streaming: {
         mode: "partial", // off | partial | block | progress
-        nativeTransport: true, // use Slack native streaming API when mode=partial
+        nativeTransport: true, // 使用 Slack 原生流式 API，当 mode=partial 时
       },
       mediaMaxMb: 20,
       execApprovals: {
@@ -510,7 +514,7 @@ OpenClaw 拥有的包已弃用，请使用捆绑插件或本地 checkout，
         native: true, // opt-in
         nativeSkills: true,
         callbackPath: "/api/channels/mattermost/command",
-        // Optional explicit URL for reverse-proxy/public deployments
+        // 可选的显式 URL，适用于反向代理/公网部署
         callbackUrl: "https://gateway.example.com/api/channels/mattermost/command",
       },
       textChunkLimit: 4000,
@@ -544,7 +548,7 @@ OpenClaw 拥有的包已弃用，请使用捆绑插件或本地 checkout，
   channels: {
     signal: {
       enabled: true,
-      account: "+15555550123", // optional account binding
+      account: "+15555550123", // 可选账号绑定
       dmPolicy: "pairing",
       allowFrom: ["+15551234567", "uuid:123e4567-e89b-12d3-a456-426614174000"],
       configWrites: true,
@@ -564,7 +568,7 @@ OpenClaw 拥有的包已弃用，请使用捆绑插件或本地 checkout，
 
 ### BlueBubbles
 
-BlueBubbles 是推荐的 iMessage 路径（由插件支持，在 `channels.bluebubbles` 下配置）。
+BlueBubbles 是推荐的 iMessage 路径（由插件支持，在 `channels.bbluebubbles` 下配置）。
 
 ```json5
 {
@@ -764,7 +768,11 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 
 群组消息默认需要**提及**（元数据提及或安全正则模式）。适用于 WhatsApp、Telegram、Discord、Google Chat 和 iMessage 群聊。
 
-可见回复是单独控制的。群组/channel room 默认使用 `messages.groupChat.visibleReplies: "message_tool"`：OpenClaw 仍会处理该轮对话，但正常最终回复保持私有，房间中可见的输出需要 `message(action=send)`。只有当你希望使用旧行为，即把正常回复重新发布到房间时，才设置为 `"automatic"`。如果要把同样的仅工具可见回复行为也应用到 direct chats，请设置 `messages.visibleReplies: "message_tool"`。
+Visible replies are controlled separately. Group/channel rooms default to `messages.groupChat.visibleReplies: "message_tool"`: OpenClaw still processes the turn, but normal final replies stay private and visible room output requires `message(action=send)`. Set `"automatic"` only when you want the legacy behavior where normal replies are posted back to the room. To apply the same tool-only visible-reply behavior to direct chats too, set `messages.visibleReplies: "message_tool"`; the Codex harness also uses that tool-only behavior as its unset direct-chat default.
+
+If the message tool is unavailable under the active tool policy, OpenClaw falls back to automatic visible replies instead of silently suppressing the response. `openclaw doctor` warns about this mismatch.
+
+The gateway hot-reloads `messages` config after the file is saved. Restart only when file watching or config reload is disabled in the deployment.
 
 **Mention types:**
 
@@ -775,7 +783,7 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 ```json5
 {
   messages: {
-    visibleReplies: "automatic", // direct/source chats 的全局默认值
+    visibleReplies: "automatic", // direct/source chats 的全局默认；Codex harness 对未设置的 direct chats 默认使用 message_tool
     groupChat: {
       historyLimit: 50,
       visibleReplies: "message_tool", // 默认；若要使用旧的最终回复则设为 "automatic"
@@ -789,7 +797,7 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 
 `messages.groupChat.historyLimit` 设置全局默认值。频道可以通过 `channels.<channel>.historyLimit`（或每账号）覆盖。设为 `0` 可禁用。
 
-`messages.visibleReplies` 是全局 source-turn 默认值；`messages.groupChat.visibleReplies` 会为群组/channel source-turn 覆盖它。频道 allowlist 和提及门控仍会决定某一轮是否被处理。
+`messages.visibleReplies` 是全局 source-turn 默认值；`messages.groupChat.visibleReplies` 会为 group/channel source turns 覆盖它。若未设置 `messages.visibleReplies`，harness 可以提供自己的 direct/source 默认值；Codex harness 默认为 `message_tool`。频道 allowlist 和提及门控仍会决定是否处理该轮消息。
 
 #### DM history limits
 
@@ -860,7 +868,7 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 }
 ```
 
-<Accordion title="Command details">
+<Accordion title="命令详情">
 
 - 这一块配置命令入口。当前内建 + 捆绑的命令目录请参见 [Slash Commands](/tools/slash-commands)。
 - 本页是**配置键参考**，不是完整命令目录。频道/插件拥有的命令，例如 QQ Bot `/bot-ping` `/bot-help` `/bot-logs`、LINE `/card`、device-pair `/pair`、memory `/dreaming`、phone-control `/phone`、以及 Talk `/voice`，记录在各自的频道/插件页面以及 [Slash Commands](/tools/slash-commands) 中。

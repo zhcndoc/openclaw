@@ -50,11 +50,12 @@ title: "配置"
 
 说明：
 
-- 选择 Gateway 的运行位置时总会更新 `gateway.mode`。如果你只需要这个，可以不选择其他 section，直接选择“Continue”。
-- 面向渠道的服务（Slack/Discord/Matrix/Microsoft Teams）在设置期间会提示输入频道/房间允许列表。你可以输入名称或 ID；向导会在可能时将名称解析为 ID。
-- 如果你运行 daemon 安装步骤，token 认证需要一个 token，并且 `gateway.auth.token` 由 SecretRef 管理，configure 会验证 SecretRef，但不会将解析后的明文 token 值持久化到 supervisor 服务环境元数据中。
-- 如果 token 认证需要 token，而已配置的 token SecretRef 未解析，configure 会阻止 daemon 安装，并提供可操作的修复指导。
-- 如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，configure 会阻止 daemon 安装，直到明确设置 mode。
+- 选择网关运行位置时，始终会更新 `gateway.mode`。如果你只需要这一项，可以在没有其他 section 的情况下选择“Continue”。
+- 在本地配置写入后，当所选设置路径需要时，configure 会安装选定的可下载插件。远程网关配置不会安装本地插件包。
+- 面向频道的服务（Slack/Discord/Matrix/Microsoft Teams）在设置期间会提示配置频道/房间允许列表。你可以输入名称或 ID；向导会在可能时将名称解析为 ID。
+- 如果你运行守护进程安装步骤，令牌认证需要一个 token，并且 `gateway.auth.token` 由 SecretRef 管理，configure 会验证 SecretRef，但不会将已解析的明文 token 值持久化到 supervisor 服务环境元数据中。
+- 如果 token 认证需要一个 token，而已配置的 token SecretRef 未解析，configure 会阻止守护进程安装，并提供可操作的修复指导。
+- 如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，configure 会阻止守护进程安装，直到显式设置 mode。
 
 ## 示例
 

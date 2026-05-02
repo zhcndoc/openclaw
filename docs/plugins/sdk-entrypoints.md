@@ -23,7 +23,15 @@ read_when:
 }
 ```
 
-`extensions` 和 `setupEntry` 仍然是工作区和 git 检出开发中的有效源入口。OpenClaw 加载已安装包时会优先使用 `runtimeExtensions` 和 `runtimeSetupEntry`，这样 npm 包就可以避免在运行时进行 TypeScript 编译。如果已安装的包只声明了一个 TypeScript 源入口，OpenClaw 会先使用匹配的构建后 `dist/*.js` 同级文件（如果存在），然后再回退到 TypeScript 源文件。
+`extensions` 和 `setupEntry` 对于工作区和 git
+检出开发仍然有效。`runtimeExtensions` 和 `runtimeSetupEntry`
+在 OpenClaw 加载已安装包时更受青睐，并允许 npm 包避免运行时
+TypeScript 编译。显式运行时入口是必需的：`runtimeSetupEntry`
+需要 `setupEntry`，而缺少 `runtimeExtensions` 或 `runtimeSetupEntry`
+制品会导致安装/发现失败，而不是静默回退到源代码。如果
+已安装包只声明了一个 TypeScript 源入口，OpenClaw 会在存在时使用
+匹配的构建后 `dist/*.js` 同级文件，然后再回退到 TypeScript
+源文件。
 
 所有入口路径都必须保持在插件包目录内。运行时入口以及推断出的构建后 JavaScript 同级文件，不能让一个会越界的 `extensions` 或 `setupEntry` 源路径变得有效。
 
@@ -42,8 +50,8 @@ import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 
 export default definePluginEntry({
   id: "my-plugin",
-  name: "My Plugin",
-  description: "Short summary",
+  name: "我的插件",
+  description: "简短摘要",
   register(api) {
     api.registerProvider({
       /* ... */
@@ -80,8 +88,8 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 export default defineChannelPluginEntry({
   id: "my-channel",
-  name: "My Channel",
-  description: "Short summary",
+  name: "我的通道",
+  description: "简短摘要",
   plugin: myChannelPlugin,
   setRuntime: setMyRuntime,
   registerCliMetadata(api) {

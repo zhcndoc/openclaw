@@ -201,7 +201,7 @@ sidebarTitle: "工具和自定义提供方"
     media: {
       concurrency: 2,
       asyncCompletion: {
-        directSend: false, // 可选：将完成的异步音乐/视频直接发送到频道
+        directSend: false, // 可选启用：将完成的异步视频直接发送到频道
       },
       audio: {
         enabled: true,
@@ -254,7 +254,7 @@ sidebarTitle: "工具和自定义提供方"
 
     **异步完成字段：**
 
-    - `asyncCompletion.directSend`：当为 `true` 时，完成的异步 `music_generate` 和 `video_generate` 任务会优先尝试直接发送到频道。默认值：`false`（旧版的请求者会话唤醒/模型交付路径）。
+    - `asyncCompletion.directSend`：当设为 `true` 时，支持直接完成交付的已完成异步媒体任务会优先尝试直接发送到频道。默认值：`false`（请求者会话唤醒 / 模型交付路径）。目前这适用于异步 `video_generate`；即使启用此项，异步 `music_generate` 的完成仍然通过请求者会话中介。
 
   </Accordion>
 </AccordionGroup>

@@ -65,22 +65,22 @@ OpenClaw 有三个公开发布通道：
 - 在运行 `pnpm release:check` 之前先运行 `pnpm build && pnpm ui:build`，以便打包验证步骤所需的 `dist/*` 发布产物和 Control UI bundle 已存在
 - 在发布审批前运行手动的 `Full Release Validation` 工作流，从一个入口启动所有预发布测试框。它接受分支、tag 或完整 commit SHA，分发手动 `CI`，并分发 `OpenClaw Release Checks` 用于安装 smoke、包验收、Docker 发布路径套件、live/E2E、OpenWebUI、QA Lab parity、Matrix 和 Telegram lane。仅在包已发布且也应运行发布后 Telegram E2E 时提供 `npm_telegram_package_spec`。当私有证据报告应证明验证与已发布的 npm 包匹配但不强制 Telegram E2E 时，提供 `evidence_package_spec`。示例：
   `gh workflow run full-release-validation.yml --ref main -f ref=release/YYYY.M.D`
-- 当你希望在发布工作继续推进的同时，为候选包提供侧边通道证明时，运行手动的 `Package Acceptance` 工作流。对 `openclaw@beta`、`openclaw@latest` 或精确的发布版本使用 `source=npm`；对使用当前 `workflow_ref` harness 打包可信的 `package_ref` 分支/tag/SHA 使用 `source=ref`；对带有必需 SHA-256 的 HTTPS tarball 使用 `source=url`；或对由其他 GitHub Actions 运行上传的 tarball 使用 `source=artifact`。该工作流会将候选项解析为 `package-under-test`，对该 tarball 复用 Docker E2E release scheduler，并且可以使用 `telegram_mode=mock-openai` 或 `telegram_mode=live-frontier` 对同一 tarball 运行 Telegram QA。
-  示例：`gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product -f telegram_mode=mock-openai`
-  常见 profile：
-  - `smoke`：install/channel/agent、gateway network 和 config reload lanes
-  - `package`：不含 OpenWebUI 或 live ClawHub 的 artifact-native package/update/plugin lanes
-  - `product`：package profile 加上 MCP channels、cron/subagent cleanup、
+- 在你希望在发布工作继续进行时，为包候选获得侧信道证明时，运行手动的 `Package Acceptance` 工作流。对 `openclaw@beta`、`openclaw@latest` 或精确发布版本使用 `source=npm`；使用 `source=ref` 通过当前的 `workflow_ref` harness 打包受信任的 `package_ref` 分支/标签/SHA；对带有必需 SHA-256 的 HTTPS tarball 使用 `source=url`；或者对由其他 GitHub Actions 运行上传的 tarball 使用 `source=artifact`。该工作流会将候选解析为 `package-under-test`，针对该 tarball 复用 Docker E2E 发布调度器，并可使用 `telegram_mode=mock-openai` 或 `telegram_mode=live-frontier` 在同一 tarball 上运行 Telegram QA。当所选 Docker 线路包含 `published-upgrade-survivor` 时，包制品就是候选包，`published_upgrade_survivor_baseline` 选择已发布基线。
+  示例：`gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product -f published_upgrade_survivor_baseline=openclaw@2026.4.26 -f telegram_mode=mock-openai`
+  常见配置文件：
+  - `smoke`：安装/channel/agent、网关网络和配置重载线路
+  - `package`：不包含 OpenWebUI 或 live ClawHub 的原生制品包/更新/插件线路
+  - `product`：在 package 配置基础上增加 MCP channels、cron/subagent 清理、
     OpenAI web search 和 OpenWebUI
-  - `full`：带 OpenWebUI 的 Docker release-path chunks
+  - `full`：带有 OpenWebUI 的 Docker 发布路径分块
   - `custom`：用于聚焦重跑的精确 `docker_lanes` 选择
-- 当你只需要发布候选的完整常规 CI 覆盖时，直接运行手动的 `CI` 工作流。手动 CI 分发会绕过 changed scoping，并强制运行 Linux Node shards、bundled-plugin shards、channel contracts、Node 22 compatibility、`check`、`check-additional`、build smoke、docs checks、Python skills、Windows、macOS、Android 和 Control UI i18n lanes。
+- 当你只需要发布候选的完整正常 CI 覆盖时，直接运行手动 `CI` 工作流。手动 CI 触发会绕过变更范围限制，并强制执行 Linux Node 分片、bundled-plugin 分片、channel contracts、Node 22 兼容性、`check`、`check-additional`、构建冒烟、文档检查、Python skills、Windows、macOS、Android，以及 Control UI i18n 线路。
   示例：`gh workflow run ci.yml --ref release/YYYY.M.D`
-- 在验证发布遥测时运行 `pnpm qa:otel:smoke`。它通过本地 OTLP/HTTP receiver 让 QA-lab 跑通，并验证导出的 trace span 名称、受限属性，以及内容/标识符脱敏，而无需 Opik、Langfuse 或其他外部收集器。
-- 在每次带标签的发布前运行 `pnpm release:check`
-- 发布检查现在在一个单独的手动工作流中运行：
+- 在验证发布遥测时运行 `pnpm qa:otel:smoke`。它通过本地 OTLP/HTTP 接收器对 QA Lab 进行测试，并验证导出的 trace span 名称、受限属性以及内容/标识符脱敏，而无需依赖 Opik、Langfuse 或其他外部收集器。
+- 在每次带标签发布前运行 `pnpm release:check`
+- 发布检查现在在单独的手动工作流中运行：
   `OpenClaw Release Checks`
-- `OpenClaw Release Checks` 还会在发布审批前运行 QA Lab mock parity gate，以及快速的 live Matrix profile 和 Telegram QA lane。live lanes 使用 `qa-live-shared` 环境；Telegram 也使用 Convex CI 凭据租约。当你想要并行运行完整的 Matrix transport、media 和 E2EE 清单时，运行手动的 `QA-Lab - All Lanes` 工作流，并设置 `matrix_profile=all` 和 `matrix_shards=true`。
+- `OpenClaw Release Checks` 还会在发布审批前运行 QA Lab mock parity gate，以及快速的 live Matrix profile 和 Telegram QA lane。live 线路使用 `qa-live-shared` 环境；Telegram 也使用 Convex CI 凭据租约。当你想要并行运行完整的 Matrix transport、media 和 E2EE 清单时，运行手动的 `QA-Lab - All Lanes` 工作流，并设置 `matrix_profile=all` 和 `matrix_shards=true`。
 - 跨操作系统的安装和升级运行时验证是公开的 `OpenClaw Release Checks` 和 `Full Release Validation` 的一部分，它们直接调用可复用工作流
   `.github/workflows/openclaw-cross-os-release-checks-reusable.yml`
 - 这种拆分是有意为之：保持真实的 npm 发布路径短小、确定性并聚焦于产物，而较慢的 live checks 保持在自己的 lane 中，这样它们不会拖慢或阻塞发布
@@ -112,23 +112,40 @@ OpenClaw 有三个公开发布通道：
   - 稳定版 npm publish 可以通过 workflow input 显式指定 `latest`
   - 基于 token 的 npm dist-tag 变更现在出于安全原因位于
     `openclaw/releases-private/.github/workflows/openclaw-npm-dist-tags.yml`
-    中，因为 `npm dist-tag add` 仍然需要 `NPM_TOKEN`，而公开仓库保持仅 OIDC 发布
-  - 公开的 `macOS Release` 仅用于验证
-  - 真实的私有 mac 发布必须通过成功的私有 mac
-    `preflight_run_id` 和 `validate_run_id`
-  - 真实发布路径通过提升已准备好的产物，而不是再次重建它们
-- 对于像 `YYYY.M.D-N` 这样的稳定修正版发布，发布后验证器还会检查从 `YYYY.M.D` 到 `YYYY.M.D-N` 的相同临时前缀升级路径，这样发布修正就不会在不知不觉中让较旧的全局安装停留在基础稳定有效载荷上
-- npm 发布预检会在 tarball 不同时包含 `dist/control-ui/index.html` 和非空的 `dist/control-ui/assets/` 有效载荷时失败关闭，因此我们不会再次发布一个空的浏览器仪表板
-- 发布后验证还会检查已发布的 registry 安装是否在根 `dist/*` 布局下包含非空的 bundled plugin 运行时依赖。如果某个发布带有缺失或为空的 bundled plugin 依赖有效载荷，发布后验证器会失败，并且不能被提升到 `latest`。
-- `pnpm test:install:smoke` 也会对候选更新 tarball 强制执行 npm pack 的 `unpackedSize` 预算，因此安装器 e2e 可以在发布前路径捕获意外的打包膨胀
-- 如果发布工作涉及 CI planning、extension timing manifests 或 extension test matrices，则在审批前重新生成并审查 planner 拥有的
-  `plugin-prerelease-extension-shard` matrix 输出，来源为
-  `.github/workflows/plugin-prerelease.yml`，以免发布说明描述了过时的 CI 布局
-- 稳定版 macOS 发布就绪还包括 updater surfaces：
-  - GitHub release 必须最终包含打包好的 `.zip`、`.dmg` 和 `.dSYM.zip`
-  - `main` 上的 `appcast.xml` 必须在发布后指向新的稳定 zip
-  - 打包后的应用必须保留非 debug 的 bundle id、非空的 Sparkle feed
-    URL，以及不低于该发布版本规范 Sparkle 构建下限的 `CFBundleVersion`
+    for security, because `npm dist-tag add` still needs `NPM_TOKEN` while the
+    public repo keeps OIDC-only publish
+  - public `macOS Release` is validation-only; when a tag lives only on a
+    release branch but the workflow is dispatched from `main`, set
+    `public_release_branch=release/YYYY.M.D`
+  - real private mac publish must pass successful private mac
+    `preflight_run_id` and `validate_run_id`
+  - the real publish paths promote prepared artifacts instead of rebuilding
+    them again
+- For stable correction releases like `YYYY.M.D-N`, the post-publish verifier
+  also checks the same temp-prefix upgrade path from `YYYY.M.D` to `YYYY.M.D-N`
+  so release corrections cannot silently leave older global installs on the
+  base stable payload
+- npm release preflight fails closed unless the tarball includes both
+  `dist/control-ui/index.html` and a non-empty `dist/control-ui/assets/` payload
+  so we do not ship an empty browser dashboard again
+- Post-publish verification also checks that published plugin entrypoints and
+  package metadata are present in the installed registry layout. A release that
+  ships missing plugin runtime payloads fails the postpublish verifier and
+  cannot be promoted to `latest`.
+- `pnpm test:install:smoke` also enforces the npm pack `unpackedSize` budget on
+  the candidate update tarball, so installer e2e catches accidental pack bloat
+  before the release publish path
+- If the release work touched CI planning, extension timing manifests, or
+  extension test matrices, regenerate and review the planner-owned
+  `plugin-prerelease-extension-shard` matrix outputs from
+  `.github/workflows/plugin-prerelease.yml` before approval so release notes do
+  not describe a stale CI layout
+- Stable macOS release readiness also includes the updater surfaces:
+  - the GitHub release must end up with the packaged `.zip`, `.dmg`, and `.dSYM.zip`
+  - `appcast.xml` on `main` must point at the new stable zip after publish
+  - the packaged app must keep a non-debug bundle id, a non-empty Sparkle feed
+    URL, and a `CFBundleVersion` at or above the canonical Sparkle build floor
+    for that release version
 
 ## 发布测试箱
 
@@ -140,19 +157,15 @@ gh workflow run full-release-validation.yml \
   -f ref=release/YYYY.M.D \
   -f provider=openai \
   -f mode=both \
-  -f release_profile=full \
+  -f release_profile=stable \
   -f evidence_package_spec=openclaw@YYYY.M.D-beta.N
 ```
 
-该工作流会解析目标 ref，分发带有 `target_ref=<release-ref>` 的手动 `CI`，分发 `OpenClaw Release Checks`，并在设置了 `npm_telegram_package_spec` 时可选地分发独立的发布后 Telegram E2E。随后 `OpenClaw Release Checks` 会展开安装冒烟测试、跨操作系统发布检查、覆盖发布路径的实时/E2E Docker、包含 Telegram 包 QA 的 Package Acceptance、QA Lab 一致性、实时 Matrix 和实时 Telegram。只有当 `Full Release Validation` 摘要显示 `normal_ci` 和 `release_checks` 成功，且任何可选的 `npm_telegram` 子项要么成功要么被有意跳过时，完整运行才算可接受。最终 verifier 摘要会为每个子运行包含最慢作业表，因此发布经理无需下载日志就能看到当前关键路径。
-
+工作流会解析目标 ref，分发手动 `CI` 并设置 `target_ref=<release-ref>`，分发 `OpenClaw Release Checks`，并在设置了 `npm_telegram_package_spec` 时可选地分发独立的发布后 Telegram E2E。随后 `OpenClaw Release Checks` 会展开安装冒烟、跨 OS 发布检查、发布路径的 live/E2E Docker 覆盖、带 Telegram 包 QA 的 Package Acceptance、QA Lab parity、live Matrix 和 live Telegram。只有当 `Full Release Validation` 摘要显示 `normal_ci` 和 `release_checks` 成功，并且任何可选的 `npm_telegram` 子项要么成功要么被有意跳过时，完整运行才算可接受。最终 verifier 摘要包含每个子运行最慢作业的表格，因此发布经理无需下载日志就能看到当前关键路径。
+参见 [完整发布验证](/reference/full-release-validation)，了解完整阶段矩阵、精确的工作流作业名称、stable 与 full 配置文件差异、制品以及定点重跑句柄。
 子工作流会从运行 `Full Release Validation` 的受信任 ref 分发，通常是 `--ref main`，即使目标 `ref` 指向较旧的发布分支或标签也是如此。没有单独的 Full Release Validation workflow-ref 输入；通过选择工作流运行 ref 来选择受信任的 harness。
 
 使用 `release_profile` 来选择实时/提供方覆盖范围：
-
-- `minimum`：最快的发布关键 OpenAI/核心实时与 Docker 路径
-- `stable`：在 minimum 基础上增加稳定提供方/后端覆盖，用于发布批准
-- `full`：在 stable 基础上增加更广泛的建议性提供方/媒体覆盖
 
 `OpenClaw Release Checks` 使用受信任的工作流 ref 先将目标 ref 解析一次为 `release-package-under-test`，并在发布路径 Docker 检查和 Package Acceptance 中复用该制品。这使所有面向包的测试箱都使用同一份字节，并避免重复构建包。跨 OS 的 OpenAI 安装冒烟测试会在仓库/组织变量设置时使用 `OPENCLAW_CROSS_OS_OPENAI_MODEL`，否则使用 `openai/gpt-5.4-mini`，因为这条线路验证的是包安装、上手引导、网关启动以及一次实时代理回合，而不是对最慢默认模型进行基准测试。更广泛的实时提供方矩阵仍然是按模型覆盖的地方。
 
@@ -225,13 +238,8 @@ Docker 箱子位于 `OpenClaw Release Checks` 中，通过
   `plugins-runtime-install-a`, `plugins-runtime-install-b`,
   `plugins-runtime-install-c`, `plugins-runtime-install-d`,
   `plugins-runtime-install-e`, `plugins-runtime-install-f`,
-  `plugins-runtime-install-g`, `plugins-runtime-install-h`,
-  `bundled-channels-core`, `bundled-channels-update-a`,
-  `bundled-channels-update-discord`, `bundled-channels-update-b`, and
-  `bundled-channels-contracts`
+  `plugins-runtime-install-g`, and `plugins-runtime-install-h`
 - OpenWebUI coverage inside the `plugins-runtime-services` chunk when requested
-- split bundled-channel dependency lanes across channel-smoke, update-target,
-  and setup/runtime contract chunks instead of one large bundled-channel job
 - split bundled plugin install/uninstall lanes
   `bundled-plugin-install-uninstall-0` through
   `bundled-plugin-install-uninstall-23`
@@ -269,12 +277,18 @@ Package 箱子是可安装产品的门禁。它由
 - `source=url`：下载带有必需 `package_sha256` 的 HTTPS `.tgz`
 - `source=artifact`：复用由其他 GitHub Actions 运行上传的 `.tgz`
 
-`OpenClaw Release Checks` 使用 `source=ref` 运行 Package Acceptance，
-`package_ref=<release-ref>`、`suite_profile=custom`、
-`docker_lanes=bundled-channel-deps-compat plugins-offline`，以及
-`telegram_mode=mock-openai`。发布路径 Docker 分块覆盖重叠的安装、更新和插件更新线路；Package Acceptance 则针对同一个已解析 tarball 保持制品原生的 bundled-channel 兼容性、离线插件 fixtures 和 Telegram 包 QA。它是 GitHub 原生的替代方案，可替代之前大多数需要 Parallels 的包/更新覆盖。跨 OS 发布检查对于特定于操作系统的上手、安装器和平台行为仍然重要，但包/更新产品验证应优先使用 Package Acceptance。
+`OpenClaw Release Checks` 使用 `source=artifact`、准备好的发布包制品、`suite_profile=custom`、
+`docker_lanes=doctor-switch update-channel-switch upgrade-survivor published-upgrade-survivor plugins-offline plugin-update`、
+`published_upgrade_survivor_baselines=release-history`、
+`published_upgrade_survivor_scenarios=reported-issues`，以及
+`telegram_mode=mock-openai` 运行 Package Acceptance。Package Acceptance 会针对同一个已解析 tarball 保持迁移、更新、过期插件依赖清理、离线插件 fixture、插件更新以及 Telegram 包 QA。它是 GitHub 原生的替代方案，用于替代此前大多数需要 Parallels 的 package/update 覆盖。跨 OS 发布检查对于 OS 特定的上手引导、安装器和平台行为仍然很重要，但 package/update 产品验证应优先使用 Package Acceptance。
 
-旧版 package-acceptance 的宽松策略是有意设置时间范围的。到 `2026.4.25` 为止的包可以对已发布到 npm 的元数据缺口使用兼容路径：tarball 中缺失的私有 QA 清单项、缺失的 `gateway install --wrapper`、tarball 派生 git fixture 中缺失的补丁文件、缺失的持久化 `update.channel`、旧版插件安装记录位置、缺失的 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。已发布的 `2026.4.26` 包可能会对已经发布的本地构建元数据时间戳文件发出警告。更晚的包必须满足现代包契约；这些相同的缺口会导致发布验证失败。
+更新和插件验证的权威清单是
+[测试更新和插件](/help/testing-updates-plugins)。在决定使用哪个本地、Docker、Package Acceptance 或 release-check 线路来证明插件安装/更新、doctor 清理或已发布包迁移变更时，请参考它。
+
+旧版 package-acceptance 的宽松规则已明确限定时间范围。到
+`2026.4.25` 为止的包可以对已发布到 npm 的元数据缺口使用兼容路径：tarball 中缺少的私有 QA 清单条目、缺少的
+`gateway install --wrapper`、tarball 派生 git fixture 中缺少的 patch 文件、缺少的持久化 `update.channel`、旧版插件 install-record 位置、缺少的 marketplace install-record 持久化，以及在 `plugins update` 期间的配置元数据迁移。已发布的 `2026.4.26` 包可以对已经发货的本地构建元数据戳文件发出警告。更晚的包必须满足现代包契约；这些相同的缺口会导致发布验证失败。
 
 当发布问题是关于一个真正可安装的包时，请使用更广泛的 Package Acceptance 配置文件：
 
@@ -284,7 +298,8 @@ gh workflow run package-acceptance.yml \
   -f workflow_ref=main \
   -f source=npm \
   -f package_spec=openclaw@beta \
-  -f suite_profile=product
+  -f suite_profile=product \
+  -f published_upgrade_survivor_baseline=openclaw@2026.4.26
 ```
 
 常见的包配置文件：

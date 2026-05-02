@@ -110,15 +110,17 @@ openclaw onboard --non-interactive \
 
 非交互式模式下的 Gateway token 选项：
 
-- `--gateway-auth token --gateway-token <token>` 会存储一个明文 token。
-- `--gateway-auth token --gateway-token-ref-env <name>` 会将 `gateway.auth.token` 存储为一个环境 SecretRef。
-- `--gateway-token` 与 `--gateway-token-ref-env` 互斥。
-- `--gateway-token-ref-env` 需要在引导进程环境中存在一个非空环境变量。
-- 使用 `--install-daemon` 时，当 token 认证需要 token，SecretRef 管理的 gateway token 会被验证，但不会作为解析后的明文持久化到 supervisor 服务环境元数据中。
-- 使用 `--install-daemon` 时，如果 token 模式需要 token 且已配置的 token SecretRef 未解析，引导会以失败关闭的方式终止，并给出修复建议。
-- 使用 `--install-daemon` 时，如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，引导会阻止安装，直到显式设置 mode。
-- 本地引导会将 `gateway.mode="local"` 写入配置。如果后续配置文件缺少 `gateway.mode`，应将其视为配置损坏或不完整的手动编辑，而不是有效的 local 模式快捷方式。
-- `--allow-unconfigured` 是一个独立的 gateway 运行时逃生阀。它并不意味着引导可以省略 `gateway.mode`。
+- `--gateway-auth token --gateway-token <token>` 存储明文 token。
+- `--gateway-auth token --gateway-token-ref-env <name>` 将 `gateway.auth.token` 存储为 env SecretRef。
+- `--gateway-token` 和 `--gateway-token-ref-env` 互斥。
+- `--gateway-token-ref-env` 需要在引导进程环境中存在非空的 env var。
+- 使用 `--install-daemon` 时，当 token auth 需要 token，SecretRef 管理的 gateway token 会被验证，但不会以解析后的明文形式持久化到 supervisor service environment metadata 中。
+- 使用 `--install-daemon` 时，如果 token 模式需要 token 且所配置的 token SecretRef 未解析，引导会以关闭式失败并给出修复指导。
+- 使用 `--install-daemon` 时，如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，引导会阻止安装，直到显式设置 mode。
+- 本地引导会将 `gateway.mode="local"` 写入配置。如果后续某个配置文件缺少 `gateway.mode`，应将其视为配置损坏或不完整的手动编辑，而不是有效的本地模式快捷方式。
+- 当所选设置路径需要时，本地引导会安装选定的可下载插件。
+- 远程引导只会为远程 Gateway 写入连接信息，不会安装本地插件包。
+- `--allow-unconfigured` 是一个单独的 gateway 运行时逃生通道。它不意味着引导可以省略 `gateway.mode`。
 
 示例：
 

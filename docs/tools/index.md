@@ -150,9 +150,13 @@ ComfyUI）注册了 `music_generate` 时，请使用它。这与 `tts` 不同，
 `tools.alsoAllow: ["browser"]` 或按代理的
 `agents.list[].tools.alsoAllow: ["browser"]` 显式添加它。
 
-`coding` 和 `messaging` 配置文件还允许插件键 `bundle-mcp` 下配置的
-bundle MCP 工具。添加 `tools.deny: ["bundle-mcp"]`，即可在保留其正常内置工具的同时隐藏所有已配置的 MCP 工具。
-`minimal` 配置文件不包含 bundle MCP 工具。
+<Note>
+在限制性配置文件（`messaging`、`minimal`）下配置 `tools.exec` 或 `tools.fs` 并不会隐式扩大该配置文件的允许列表。当你希望限制性配置文件使用这些已配置的部分时，请添加显式的 `tools.alsoAllow` 条目（例如用于 exec 的 `["exec", "process"]`，或用于 fs 的 `["read", "write", "edit"]`）。当某个配置部分存在但没有匹配的 `alsoAllow` 授权时，OpenClaw 会记录启动警告。
+</Note>
+
+`coding` 和 `messaging` 配置文件也允许通过插件键 `bundle-mcp` 配置的捆绑 MCP 工具。
+当你希望某个配置文件保留其正常的内置工具但隐藏所有已配置的 MCP 工具时，请添加 `tools.deny: ["bundle-mcp"]`。
+`minimal` 配置文件不包含捆绑 MCP 工具。
 
 示例（默认情况下最宽泛的工具面）：
 

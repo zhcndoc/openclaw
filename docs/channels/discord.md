@@ -62,15 +62,15 @@ title: "Discord"
     下方会出现 **Bot Permissions** 部分。至少启用：
 
     **General Permissions**
-      - View Channels
+      - 查看频道
     **Text Permissions**
-      - Send Messages
-      - Read Message History
-      - Embed Links
-      - Attach Files
-      - Add Reactions（可选）
+      - 发送消息
+      - 读取消息历史
+      - 嵌入链接
+      - 附加文件
+      - 添加表情反应（可选）
 
-    这是普通文本频道的基础权限集合。如果你计划在 Discord 线程中发帖，包括会创建或继续线程的论坛或媒体频道工作流，也请启用 **Send Messages in Threads**。
+    这是普通文本频道的基础权限集合。如果你计划在 Discord 线程中发帖，包括会创建或继续线程的论坛或媒体频道工作流，也请启用 **在线程中发送消息**。
     复制底部生成的 URL，将其粘贴到浏览器中，选择你的服务器，然后点击 **Continue** 进行连接。现在你应该可以在 Discord 服务器中看到你的 bot 了。
 
   </Step>
@@ -114,7 +114,8 @@ openclaw gateway
 ```
 
     如果 OpenClaw 已作为后台服务运行，请通过 OpenClaw Mac 应用重启它，或停止并重新启动 `openclaw gateway run` 进程。
-    对于托管服务安装，请在 `DISCORD_BOT_TOKEN` 已存在的 shell 中运行 `openclaw gateway install`，或者将该变量存储在 `~/.openclaw/.env` 中，以便服务在重启后可以解析 env SecretRef。
+    对于托管服务安装，请在包含 `DISCORD_BOT_TOKEN` 的 shell 中运行 `openclaw gateway install`，或将该变量存储在 `~/.openclaw/.env` 中，这样服务在重启后就能解析该 env SecretRef。
+    如果你的主机因 Discord 启动时的应用查询而被阻止或限流，请从 Developer Portal 设置 Discord application/client ID，以便启动时跳过该 REST 调用。默认账户使用 `channels.discord.applicationId`，当你运行多个 Discord bot 时，则使用 `channels.discord.accounts.<accountId>.applicationId`。
 
   </Step>
 
@@ -151,6 +152,28 @@ DISCORD_BOT_TOKEN=...
 ```
 
         用于脚本化或远程设置时，请写入相同的 JSON5 块，并先运行 `openclaw config patch --file ./discord.patch.json5 --dry-run`，然后再去掉 `--dry-run` 重新运行。支持明文 `token` 值。`channels.discord.token` 也支持跨 env/file/exec 提供方的 SecretRef 值。参见 [Secrets Management](/gateway/secrets)。
+
+        对于多个 Discord bot，请将每个 bot token 和 application ID 保留在各自的 account 下。顶层的 `channels.discord.applicationId` 会被 accounts 继承，因此只有在所有 account 都应使用同一个 application ID 时才在这里设置。
+
+```json5
+{
+  channels: {
+    discord: {
+      enabled: true,
+      accounts: {
+        personal: {
+          token: { source: "env", provider: "default", id: "DISCORD_PERSONAL_TOKEN" },
+          applicationId: "111111111111111111",
+        },
+        work: {
+          token: { source: "env", provider: "default", id: "DISCORD_WORK_TOKEN" },
+          applicationId: "222222222222222222",
+        },
+      },
+    },
+  },
+}
+```
 
       </Tab>
     </Tabs>
@@ -418,6 +441,81 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - `<@id>` 提及
 
     纯数字 ID 通常会在启用频道默认值时解析为频道 ID，但列在账号有效 DM `allowFrom` 中的 ID 为兼容性会被视为用户 DM 目标。
+
+  </Tab>
+
+  <Tab title="DM access groups">
+    Discord DM 可以在 `channels.discord.allowFrom` 中使用动态的 `accessGroup:<name>` 条目。
+
+    访问组名称在消息频道之间共享。使用 `type: "message.senders"` 可定义一个静态组，其成员使用每个频道的常规 `allowFrom` 语法表达；或在 Discord 频道当前的 `ViewChannel` 受众应动态定义成员资格时使用 `type: "discord.channelAudience"`。共享访问组行为的文档见：[访问组](/channels/access-groups)。
+
+```json5
+{
+  accessGroups: {
+    operators: {
+      type: "message.senders",
+      members: {
+        "*": ["global-owner-id"],
+        discord: ["discord:123456789012345678"],
+        telegram: ["987654321"],
+      },
+    },
+  },
+  channels: {
+    discord: {
+      dmPolicy: "allowlist",
+      allowFrom: ["accessGroup:operators"],
+    },
+  },
+}
+```
+
+    Discord 文本频道没有独立的成员列表。`type: "discord.channelAudience"` 将成员资格建模为：DM 发送者是已配置公会的成员，并且在应用角色与频道覆盖后，当前对所配置频道拥有有效的 `ViewChannel` 权限。
+
+    示例：允许任何能看到 `#maintainers` 的人向机器人发送 DM，同时对其他所有人关闭 DM。
+
+```json5
+{
+  accessGroups: {
+    maintainers: {
+      type: "discord.channelAudience",
+      guildId: "1456350064065904867",
+      channelId: "1456744319972282449",
+      membership: "canViewChannel",
+    },
+  },
+  channels: {
+    discord: {
+      dmPolicy: "allowlist",
+      allowFrom: ["accessGroup:maintainers"],
+    },
+  },
+}
+```
+
+    你可以混合动态和静态条目：
+
+```json5
+{
+  accessGroups: {
+    maintainers: {
+      type: "discord.channelAudience",
+      guildId: "1456350064065904867",
+      channelId: "1456744319972282449",
+    },
+  },
+  channels: {
+    discord: {
+      dmPolicy: "allowlist",
+      allowFrom: ["accessGroup:maintainers", "discord:123456789012345678"],
+    },
+  },
+}
+```
+
+    查找会在失败时关闭。如果 Discord 返回 `Missing Access`、成员查找失败，或者频道属于不同的公会，则会将该 DM 发送者视为未授权。
+
+    当使用频道受众访问组时，请在 Discord Developer Portal 中为机器人启用 **Server Members Intent**。DM 不包含公会成员状态，因此 OpenClaw 会在授权时通过 Discord REST 解析成员。
 
   </Tab>
 
@@ -1011,6 +1109,8 @@ Discord 有两个不同的语音表面：实时 **语音频道**（连续对话�
         ],
         daveEncryption: true,
         decryptionFailureTolerance: 24,
+        connectTimeoutMs: 30000,
+        reconnectGraceMs: 15000,
         tts: {
           provider: "openai",
           openai: { voice: "onyx" },
@@ -1023,24 +1123,27 @@ Discord 有两个不同的语音表面：实时 **语音频道**（连续对话�
 
 注意：
 
-- `voice.tts` 仅覆盖语音播放的 `messages.tts`。
-- `voice.model` 仅覆盖用于 Discord 语音频道响应的 LLM。保持未设置以继承路由后的 agent 模型。
+- `voice.tts` 仅覆盖语音播放所用的 `messages.tts`。
+- `voice.model` 仅覆盖 Discord 语音频道响应所使用的 LLM。保持未设置可继承路由后的 agent 模型。
 - STT 使用 `tools.media.audio`；`voice.model` 不影响转写。
-- 语音转录回合从 Discord `allowFrom`（或 `dm.allowFrom`）继承所有者状态；非所有者发言者无法访问仅所有者可用的工具（例如 `gateway` 和 `cron`）。
-- 语音默认启用；设置 `channels.discord.voice.enabled=false` 可禁用语音运行时和 `GuildVoiceStates` 网关意图。
-- `channels.discord.intents.voiceStates` 可显式覆盖 voice-state 意图订阅。保持未设置，以便该意图跟随 `voice.enabled`。
-- `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 会透传到 `@discordjs/voice` 的加入选项。
-- 如果未设置，`@discordjs/voice` 默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
-- OpenClaw 还会监视接收解密失败，并在短时间内多次失败后通过离开/重新加入语音频道来自我恢复。
-- 如果更新后接收日志持续显示 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游填充修复，该修复关闭了 discord.js issue #11419。
+- 逐频道的 Discord `systemPrompt` 覆盖会应用于该语音频道的语音转写轮次。
+- 语音转写轮次会从 Discord `allowFrom`（或 `dm.allowFrom`）派生所有者状态；非所有者说话者无法访问仅所有者可用的工具（例如 `gateway` 和 `cron`）。
+- 对于仅文本配置，Discord 语音是可选启用的；设置 `channels.discord.voice.enabled=true`（或保留现有的 `channels.discord.voice` 块）即可启用 `/vc` 命令、语音运行时和 `GuildVoiceStates` 网关 intent。
+- `channels.discord.intents.voiceStates` 可以显式覆盖 voice-state intent 订阅。保持未设置可让该 intent 跟随实际的语音启用状态。
+- `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 会透传到 `@discordjs/voice` 的 join 选项。
+- 如果未设置，`@discordjs/voice` 的默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
+- `voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时，`@discordjs/voice` 初始 Ready 等待时长。默认值：`30000`。
+- `voice.reconnectGraceMs` 控制 OpenClaw 在销毁断开的语音会话之前，等待其开始重新连接的时间。默认值：`15000`。
+- OpenClaw 还会监控接收解密失败，并在短时间内重复失败后通过离开/重新加入语音频道来自行恢复。
+- 如果在更新后接收日志持续出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游 padding 修复，该修复关闭了 discord.js issue #11419。
 
 语音频道流水线：
 
-- Discord PCM 捕获会转换为临时 WAV 文件。
-- `tools.media.audio` 处理 STT，例如 `openai/gpt-4o-mini-transcribe`。
-- 转录文本会通过正常的 Discord ingress 和路由发送。
-- 当设置了 `voice.model` 时，只会覆盖该语音频道回合的响应 LLM。
-- `voice.tts` 会与 `messages.tts` 合并；生成的音频会在已加入的频道中播放。
+- Discord PCM 捕获会转换为 WAV 临时文件。
+- `tools.media.audio` 负责 STT，例如 `openai/gpt-4o-mini-transcribe`。
+- 转写内容会通过 Discord ingress 和路由传递，而响应 LLM 会在语音输出策略下运行，该策略会隐藏 agent 的 `tts` 工具并请求返回文本，因为 Discord 语音负责最终的 TTS 播放。
+- 当设置了 `voice.model` 时，它只会覆盖该语音频道回合的响应 LLM。
+- `voice.tts` 会基于 `messages.tts` 进行合并；生成的音频会在加入的频道中播放。
 
 凭据按组件分别解析：`voice.model` 使用 LLM 路由认证，`tools.media.audio` 使用 STT 认证，`messages.tts`/`voice.tts` 使用 TTS 认证。
 

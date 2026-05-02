@@ -1,5 +1,5 @@
 ---
-summary: "Telegram 机器人支持状态、能力和配置"
+summary: "支持状态、能力和配置的 Telegram 机器人"
 read_when:
   - 处理 Telegram 功能或 webhooks 时
 title: "Telegram"
@@ -11,7 +11,7 @@ title: "Telegram"
   <Card title="配对" icon="link" href="/channels/pairing">
     Telegram 的默认 DM 策略是配对。
   </Card>
-  <Card title="渠道排障" icon="wrench" href="/channels/troubleshooting">
+  <Card title="故障排查" icon="wrench" href="/channels/troubleshooting">
     跨渠道诊断与修复操作手册。
   </Card>
   <Card title="网关配置" icon="settings" href="/gateway/configuration">
@@ -310,9 +310,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     预览流与块流是分开的。当 Telegram 显式启用了块流时，OpenClaw 会跳过预览流，以避免双重流式发送。
 
-    如果原生草稿传输不可用或被拒绝，OpenClaw 会自动回退到 `sendMessage` + `editMessageText`。
-
-    Telegram 专用推理流：
+    Telegram-only reasoning stream:
 
     - `/reasoning stream` 会在生成过程中将推理发送到实时预览
     - 最终答案发送时不包含推理文本
@@ -722,14 +720,14 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
   <Accordion title="限制、重试和 CLI 目标">
     - `channels.telegram.textChunkLimit` 默认值为 4000。
-    - `channels.telegram.chunkMode="newline"` 在按长度切分前优先使用段落边界（空行）。
+    - `channels.telegram.chunkMode="newline"` 在按长度拆分前优先按段落边界（空行）拆分。
     - `channels.telegram.mediaMaxMb`（默认 100）限制入站和出站 Telegram 媒体大小。
-    - `channels.telegram.timeoutSeconds` 覆盖 Telegram API 客户端超时（未设置时应用 grammY 默认值）。
-    - `channels.telegram.pollingStallThresholdMs` 默认值为 `120000`；仅在轮询停滞重启出现误报时，将其调整到 `30000` 到 `600000` 之间。
-    - 群组上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
-    - 回复/引用/转发的补充上下文当前会按接收内容原样传递。
-    - Telegram 允许列表主要用于限制谁可以触发代理，而不是完整的补充上下文脱敏边界。
-    - 私聊历史控制：
+    - `channels.telegram.timeoutSeconds` 覆盖 Telegram API 客户端超时（若未设置，则使用 grammY 默认值）。长轮询 bot 客户端会将配置值下限钳制到 45 秒 `getUpdates` 请求守卫以下，以免在 30 秒轮询窗口完成前中止空闲轮询。
+    - `channels.telegram.pollingStallThresholdMs` 默认值为 `120000`；仅在轮询停滞误报导致重启时，在 `30000` 到 `600000` 之间调整。
+    - 群上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
+    - 回复/引用/转发补充上下文目前按接收到的内容传递。
+    - Telegram allowlist 主要用于限制谁可以触发代理，而不是完整的补充上下文脱敏边界。
+    - DM 历史控制：
       - `channels.telegram.dmHistoryLimit`
       - `channels.telegram.dms["<user_id>"].historyLimit`
     - `channels.telegram.retry` 配置适用于 Telegram 发送辅助工具（CLI/工具/动作）在处理可恢复的出站 API 错误时使用。入站最终回复投递也会对 Telegram 预连接失败使用有界的安全发送重试，但不会重试可能导致可见消息重复的歧义性发送后网络封包。
@@ -862,14 +860,15 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
   <Accordion title="轮询或网络不稳定">
 
     - Node 22+ + 自定义 fetch/proxy 在 AbortSignal 类型不匹配时可能触发立即中止行为。
-    - 某些主机会优先将 `api.telegram.org` 解析为 IPv6；损坏的 IPv6 出站连接可能导致间歇性的 Telegram API 失败。
-    - 如果日志包含 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!`，OpenClaw 现在会将这些错误作为可恢复的网络错误重试。
-    - 如果日志包含 `Polling stall detected`，OpenClaw 会在默认情况下于 120 秒内没有完成 long-poll 存活检查时重启轮询并重建 Telegram 传输层。
-    - 当运行中的轮询账号在启动宽限期后尚未完成 `getUpdates`、运行中的 webhook 账号在启动宽限期后尚未完成 `setWebhook`，或者最近一次成功的轮询传输活动已过时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
-    - 仅当长时间运行的 `getUpdates` 调用正常，但你的主机仍然报告错误的轮询停滞重启时，才增加 `channels.telegram.pollingStallThresholdMs`。持续的停滞通常指向主机与 `api.telegram.org` 之间的代理、DNS、IPv6 或 TLS 出站问题。
-    - Telegram 也会尊重 Bot API 传输所使用的进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍可绕过 `api.telegram.org`。
-    - 如果 OpenClaw 托管代理在服务环境中通过 `OPENCLAW_PROXY_URL` 配置，且不存在标准代理环境变量，Telegram 也会将该 URL 用于 Bot API 传输。
-    - 在直接出站/TLS 不稳定的 VPS 主机上，可通过 `channels.telegram.proxy` 让 Telegram API 调用走代理：
+    - 某些主机会优先将 `api.telegram.org` 解析为 IPv6；损坏的 IPv6 出站可能导致 Telegram API 间歇性失败。
+    - 如果日志中包含 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!`，OpenClaw 现在会将这些错误作为可恢复的网络错误重试。
+    - 如果 Telegram 套接字按固定的短周期回收，请检查较低的 `channels.telegram.timeoutSeconds`；长轮询机器人客户端会把低于 `getUpdates` 请求保护值的配置值向上钳制，但较旧版本在该值低于长轮询超时时可能会在每次轮询时都中止。
+    - 如果日志中包含 `Polling stall detected`，OpenClaw 会在默认情况下于 120 秒内未完成长轮询存活检测后重启轮询并重建 Telegram 传输层。
+    - 当运行中的轮询账号在启动宽限期后尚未完成 `getUpdates`、运行中的 webhook 账号在启动宽限期后尚未完成 `setWebhook`，或者最近一次成功的轮询传输活动已过期时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
+    - 只有当长时间运行的 `getUpdates` 调用是健康的，但你的主机仍然报告错误的轮询停滞重启时，才应增加 `channels.telegram.pollingStallThresholdMs`。持续的停滞通常表明主机与 `api.telegram.org` 之间存在代理、DNS、IPv6 或 TLS 出站问题。
+    - Telegram 也会为 Bot API 传输遵循进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍可绕过 `api.telegram.org`。
+    - 如果 OpenClaw 为服务环境通过 `OPENCLAW_PROXY_URL` 配置了托管代理，且未设置标准代理环境变量，Telegram 也会将该 URL 用于 Bot API 传输。
+    - 在直连出站或 TLS 不稳定的 VPS 主机上，可通过 `channels.telegram.proxy` 让 Telegram API 调用走代理：
 
 ```yaml
 channels:

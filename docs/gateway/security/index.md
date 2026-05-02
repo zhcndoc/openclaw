@@ -206,15 +206,16 @@ OpenClaw 将两个概念分开：
 在审计访问或决定需要备份什么时使用：
 
 - **WhatsApp**: `~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-- **Telegram bot token**: 配置/环境变量或 `channels.telegram.tokenFile`（仅限普通文件；拒绝符号链接）
-- **Discord bot token**: 配置/环境变量或 SecretRef（env/file/exec 提供器）
-- **Slack tokens**: 配置/环境变量（`channels.slack.*`）
-- **配对允许列表**:
-  - `~/.openclaw/credentials/<channel>-allowFrom.json`（默认账号）
-  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json`（非默认账号）
-- **模型认证配置文件**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- **文件承载的密文载荷（可选）**: `~/.openclaw/secrets.json`
-- **旧版 OAuth 导入**: `~/.openclaw/credentials/oauth.json`
+- **Telegram bot token**: config/env or `channels.telegram.tokenFile` (regular file only; symlinks rejected)
+- **Discord bot token**: config/env or SecretRef (env/file/exec providers)
+- **Slack tokens**: config/env (`channels.slack.*`)
+- **Pairing allowlists**:
+  - `~/.openclaw/credentials/<channel>-allowFrom.json` (default account)
+  - `~/.openclaw/credentials/<channel>-<accountId>-allowFrom.json` (non-default accounts)
+- **Model auth profiles**: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- **Codex runtime state**: `~/.openclaw/agents/<agentId>/agent/codex-home/`
+- **File-backed secrets payload (optional)**: `~/.openclaw/secrets.json`
+- **Legacy OAuth import**: `~/.openclaw/credentials/oauth.json`
 
 ## 安全审计清单
 
@@ -470,17 +471,17 @@ fail-closed 的：只有一小部分提示、模型和提及门控
 
 插件与网关**同进程**运行。请将其视为受信任代码：
 
-- 只从你信任的来源安装插件。
-- 优先使用显式的 `plugins.allow` allowlist。
-- 启用前检查插件配置。
-- 插件更改后重启网关。
-- 如果你安装或更新插件（`openclaw plugins install <package>`、`openclaw plugins update <id>`），应将其视为运行不受信任代码：
-  - 安装路径是当前插件安装根目录下的每个插件目录。
-  - OpenClaw 会在安装/更新前运行内置的危险代码扫描。`critical` 结果默认会阻止。
-  - OpenClaw 使用 `npm pack`，然后在该目录中运行项目本地的 `npm install --omit=dev --ignore-scripts`。继承的全局 npm 安装设置会被忽略，因此依赖会保留在插件安装路径下。
-  - 优先使用固定的精确版本（`@scope/pkg@1.2.3`），并在启用前检查磁盘上的解包代码。
-  - `--dangerously-force-unsafe-install` 仅用于插件安装/更新流程中内置扫描的误报“破窗”处理。它不会绕过插件 `before_install` 钩子策略阻止，也不会绕过扫描失败。
-  - 基于网关的技能依赖安装遵循同样的危险/可疑分流：内置的 `critical` 发现会阻止，除非调用方显式设置 `dangerouslyForceUnsafeInstall`，而 `suspicious` 发现仍然只会警告。`openclaw skills install` 仍然是独立的 ClawHub 技能下载/安装流程。
+- 仅从你信任的来源安装插件。
+- 优先使用显式的 `plugins.allow` 允许列表。
+- 启用前审查插件配置。
+- 插件变更后重启 Gateway。
+- 如果你安装或更新插件（`openclaw plugins install <package>`、`openclaw plugins update <id>`），请将其视为运行不受信任的代码：
+  - 安装路径是当前插件安装根目录下按插件划分的目录。
+  - OpenClaw 会在安装/更新前运行内置的危险代码扫描。`critical` 结果默认会阻止安装。
+  - npm 和 git 插件安装仅在显式安装/更新流程中执行包管理器依赖收敛。本地路径和压缩包会被视为自包含的插件包；OpenClaw 会复制/引用它们，而不会运行 `npm install`。
+  - 优先使用固定的精确版本（`@scope/pkg@1.2.3`），并在启用前检查磁盘上解压后的代码。
+  - `--dangerously-force-unsafe-install` 仅用于插件安装/更新流程中内置扫描的误报“破窗”处理。它不会绕过插件 `before_install` 钩子策略阻断，也不会绕过扫描失败。
+  - 由 Gateway 支持的技能依赖安装遵循相同的危险/可疑划分：内置的 `critical` 结果会阻止安装，除非调用方显式设置 `dangerouslyForceUnsafeInstall`，而可疑结果仍然只会发出警告。`openclaw skills install` 仍然是单独的 ClawHub 技能下载/安装流程。
 
 详情： [插件](/tools/plugin)
 
@@ -897,14 +898,15 @@ HTTP API 端点（例如 `/v1/*`、`/tools/invoke` 和 `/api/channels/*`）
 
 假设 `~/.openclaw/`（或 `$OPENCLAW_STATE_DIR/`）下的任何内容都可能包含密钥或私人数据：
 
-- `openclaw.json`：配置可能包含令牌（gateway、远程 gateway）、提供方设置以及允许列表。
-- `credentials/**`：通道凭据（例如 WhatsApp 凭据）、配对允许列表、旧版 OAuth 导入。
-- `agents/<agentId>/agent/auth-profiles.json`：API key、token 配置文件、OAuth token，以及可选的 `keyRef`/`tokenRef`。
-- `secrets.json`（可选）：由 `file` SecretRef 提供方（`secrets.providers`）使用的文件后端密钥载荷。
-- `agents/<agentId>/agent/auth.json`：旧版兼容文件。发现静态 `api_key` 条目时会被清除。
-- `agents/<agentId>/sessions/**`：会话转录（`*.jsonl`）+ 路由元数据（`sessions.json`），其中可能包含私人消息和工具输出。
-- 捆绑的插件包：已安装的插件（以及其 `node_modules/`）。
-- `sandboxes/**`：工具沙盒工作区；可能会积累你在沙盒内读写的文件副本。
+- `openclaw.json`: config may include tokens (gateway, remote gateway), provider settings, and allowlists.
+- `credentials/**`: channel credentials (example: WhatsApp creds), pairing allowlists, legacy OAuth imports.
+- `agents/<agentId>/agent/auth-profiles.json`: API keys, token profiles, OAuth tokens, and optional `keyRef`/`tokenRef`.
+- `agents/<agentId>/agent/codex-home/**`: per-agent Codex app-server account, config, skills, plugins, native thread state, and diagnostics.
+- `secrets.json` (optional): file-backed secret payload used by `file` SecretRef providers (`secrets.providers`).
+- `agents/<agentId>/agent/auth.json`: legacy compatibility file. Static `api_key` entries are scrubbed when discovered.
+- `agents/<agentId>/sessions/**`: session transcripts (`*.jsonl`) + routing metadata (`sessions.json`) that can contain private messages and tool output.
+- bundled plugin packages: installed plugins (plus their `node_modules/`).
+- `sandboxes/**`: tool sandbox workspaces; can accumulate copies of files you read/write inside the sandbox.
 
 加固建议：
 
@@ -1026,7 +1028,7 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
 - **工具沙箱**（`agents.defaults.sandbox`，主机 gateway + 沙箱隔离的工具；Docker 是默认后端）：[沙箱化](/gateway/sandboxing)
 
 <Note>
-为了防止跨 agent 访问，请将 `agents.defaults.sandbox.scope` 保持为 `"agent"`（默认）或 `"session"`，以获得更严格的按会话隔离。`scope: "shared"` 会使用单个容器或工作区。
+为防止跨 agent 访问，请将 `agents.defaults.sandbox.scope` 保持为 `"agent"`（默认）或 `"session"`，以获得更严格的按会话隔离。`scope: "shared"` 会使用单个容器或工作区。
 </Note>
 
 此外，还要考虑沙箱内对 agent 工作区的访问：
@@ -1034,10 +1036,10 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
 - `agents.defaults.sandbox.workspaceAccess: "none"`（默认）会禁止访问 agent 工作区；工具会在 `~/.openclaw/sandboxes` 下的沙箱工作区中运行
 - `agents.defaults.sandbox.workspaceAccess: "ro"` 会将 agent 工作区以只读方式挂载到 `/agent`（禁用 `write`/`edit`/`apply_patch`）
 - `agents.defaults.sandbox.workspaceAccess: "rw"` 会将 agent 工作区以读写方式挂载到 `/workspace`
-- 额外的 `sandbox.docker.binds` 会基于归一化和规范化后的源路径进行校验。即使父级符号链接技巧和规范化的 home 别名最终解析到了被阻止的根目录，例如 `/etc`、`/var/run` 或操作系统 home 下的凭证目录，也会被关闭并失败。
+- 额外的 `sandbox.docker.binds` 会基于归一化和规范化后的源路径进行校验。即使利用父级符号链接技巧和规范化的 home 别名，最终解析到被阻止的根目录（例如 `/etc`、`/var/run` 或操作系统 home 下的凭证目录），也会被关闭并失败。
 
 <Warning>
-`tools.elevated` 是全局的基础逃逸出口，会在沙箱外运行 exec。默认的有效主机是 `gateway`，如果 exec 目标配置为 `node`，则为 `node`。请严格限制 `tools.elevated.allowFrom`，不要对陌生人启用它。你还可以通过 `agents.list[].tools.elevated` 按 agent 进一步限制 elevated。参见 [Elevated mode](/tools/elevated)。
+`tools.elevated` 是一个全局的基础逃逸出口，会在沙箱外运行 exec。默认的有效主机是 `gateway`，如果 exec 目标配置为 `node`，则为 `node`。请严格限制 `tools.elevated.allowFrom`，不要对陌生人启用它。你还可以通过 `agents.list[].tools.elevated` 按 agent 进一步限制 elevated。参见 [Elevated mode](/tools/elevated)。
 </Warning>
 
 ### 子 agent 委派护栏
@@ -1052,7 +1054,7 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
 ## 浏览器控制风险
 
 启用浏览器控制会赋予模型驱动真实浏览器的能力。
-如果该浏览器配置文件中已经包含登录会话，模型就可以访问那些账户和数据。请将浏览器配置文件视为**敏感状态**：
+如果该浏览器配置文件中已经包含登录会话，模型就可以访问这些账户和数据。请将浏览器配置文件视为**敏感状态**：
 
 - 优先为 agent 使用专用配置文件（默认的 `openclaw` 配置文件）。
 - 避免将 agent 指向你个人日常使用的配置文件。
@@ -1062,7 +1064,7 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
   trusted-proxy 或 Tailscale Serve 身份头。
 - 将浏览器下载内容视为不可信输入；优先使用隔离的下载目录。
 - 如果可能，在 agent 配置文件中禁用浏览器同步/密码管理器（可减小影响范围）。
-- 对于远程 gateways，假设“浏览器控制”等同于对该配置文件能够访问的任何内容具有“操作员访问权限”。
+- 对于远程 gateways，假设“浏览器控制”等同于对该配置文件能够访问的任何内容具有“操作员级访问权限”。
 - 将 Gateway 和 node 主机保持在 tailnet 内；避免将浏览器控制端口暴露给 LAN 或公共互联网。
 - 当你不需要浏览器代理路由时，请禁用它（`gateway.nodes.browser.mode="off"`）。
 - Chrome MCP 的现有会话模式并不“更安全”；它可以像你本人一样操作该主机 Chrome 配置文件能够访问的任何内容。
@@ -1094,7 +1096,7 @@ OpenClaw 的浏览器导航策略默认是严格的：除非你明确选择启�
 ## 按 agent 的访问配置文件（多 agent）
 
 在多 agent 路由下，每个 agent 都可以拥有自己的沙箱 + 工具策略：
-可用它为每个 agent 分配**完全访问**、**只读**或**无访问**。
+可用它为每个 agent 分配**完全访问**、**只读**或**无访问权限**。
 完整详情和优先级规则请参见 [多 Agent 沙箱与工具](/tools/multi-agent-sandbox-tools)。
 
 常见用例：
@@ -1200,11 +1202,11 @@ OpenClaw 的浏览器导航策略默认是严格的：除非你明确选择启�
 
 ### 遏制
 
-1. **停止它：** 停止 macOS 应用（如果它在监督 Gateway），或者终止你的 `openclaw gateway` 进程。
+1. **停止它：** 停止 macOS 应用（如果它在监管 Gateway），或者终止你的 `openclaw gateway` 进程。
 2. **关闭暴露面：** 将 `gateway.bind: "loopback"`（或禁用 Tailscale Funnel/Serve），直到你弄清楚发生了什么。
 3. **冻结访问：** 将有风险的 DM/群组切换为 `dmPolicy: "disabled"` / 要求提及，并删除你之前使用的 `"*"` 全放行条目。
 
-### 轮换（若秘密泄露则假定已被入侵）
+### 轮换（若秘密泄露则假定已被攻破）
 
 1. 轮换 Gateway 认证（`gateway.auth.token` / `OPENCLAW_GATEWAY_PASSWORD`）并重启。
 2. 轮换远程客户端密钥（`gateway.remote.token` / `.password`），适用于任何可以调用 Gateway 的机器。
@@ -1227,7 +1229,7 @@ OpenClaw 的浏览器导航策略默认是严格的：除非你明确选择启�
 ## 使用 detect-secrets 进行秘密扫描
 
 CI 会在 `secrets` 任务中运行 `detect-secrets` pre-commit hook。
-推送到 `main` 时总是会运行全文件扫描。拉取请求在可用基线提交时会使用变更文件
+推送到 `main` 时始终会运行全文件扫描。拉取请求在可用基线提交时会使用变更文件
 快速路径，否则回退到全文件扫描。
 如果失败，说明有尚未纳入基线的新候选项。
 
@@ -1261,5 +1263,5 @@ CI 会在 `secrets` 任务中运行 `detect-secrets` pre-commit hook。
 在 OpenClaw 中发现了漏洞？请负责任地报告：
 
 1. 邮件：[security@openclaw.ai](mailto:security@openclaw.ai)
-2. 在修复前不要公开发布
-3. 我们会致谢你（除非你希望匿名）
+2. 在修复前不要公开披露
+3. 我们会感谢你（除非你希望匿名）

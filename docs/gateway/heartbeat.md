@@ -46,7 +46,7 @@ Heartbeat 是一个计划好的主会话回合——它**不会**创建 [后台�
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 显式发送给最后一个联系人（默认是 "none"）
+        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
         directPolicy: "allow", // 默认：允许直接/DM 目标；设为 "block" 可抑制
         lightContext: true, // 可选：仅从 bootstrap 文件中注入 HEARTBEAT.md
         isolatedSession: true, // 可选：每次运行都使用新会话（无对话历史）
@@ -81,10 +81,11 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 ## 响应约定
 
-- 如果没有需要关注的内容，请回复 **`HEARTBEAT_OK`**。
-- 在 heartbeat 运行期间，OpenClaw 会在回复的**开头或结尾**出现 `HEARTBEAT_OK` 时将其视为确认。该 token 会被去除，并且如果剩余内容 **≤ `ackMaxChars`**（默认：300），回复会被丢弃。
-- 如果 `HEARTBEAT_OK` 出现在回复的**中间**，则不会被特殊处理。
-- 对于告警，**不要**包含 `HEARTBEAT_OK`；只返回告警文本。
+- If nothing needs attention, reply with **`HEARTBEAT_OK`**.
+- Tool-capable heartbeat runs may instead call `heartbeat_respond` with `notify: false` for no visible update, or `notify: true` plus `notificationText` for an alert. When present, the structured tool response takes precedence over the text fallback.
+- During heartbeat runs, OpenClaw treats `HEARTBEAT_OK` as an ack when it appears at the **start or end** of the reply. The token is stripped and the reply is dropped if the remaining content is **≤ `ackMaxChars`** (default: 300).
+- If `HEARTBEAT_OK` appears in the **middle** of a reply, it is not treated specially.
+- For alerts, **do not** include `HEARTBEAT_OK`; return only the alert text.
 
 在 heartbeats 之外，消息开头/结尾多余的 `HEARTBEAT_OK` 会被去除并记录；只有 `HEARTBEAT_OK` 的消息会被丢弃。
 
@@ -132,7 +133,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 显式发送给最后一个联系人（默认是 "none"）
+        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
       },
     },
     list: [
@@ -162,7 +163,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 显式发送给最后一个联系人（默认是 "none"）
+        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
         activeHours: {
           start: "09:00",
           end: "22:00",
@@ -366,12 +367,12 @@ channels:
 
 ### 常见模式
 
-| 目标                                     | 配置                                                                                   |
+| 目标 | 配置 |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 默认行为（静默 OK，告警开启）            | _(无需配置)_                                                                             |
-| 完全静默（无消息、无指示器）             | `channels.defaults.heartbeat: { showOk: false, showAlerts: false, useIndicator: false }` |
-| 仅指示器（无消息）                       | `channels.defaults.heartbeat: { showOk: false, showAlerts: false, useIndicator: true }`  |
-| 仅在一个频道中显示 OK                   | `channels.telegram.heartbeat: { showOk: true }`                                          |
+| 默认行为（静默 OK，告警开启） | _(无需配置)_ |
+| 完全静默（无消息、无指示器） | `channels.defaults.heartbeat: { showOk: false, showAlerts: false, useIndicator: false }` |
+| 仅指示器（无消息） | `channels.defaults.heartbeat: { showOk: false, showAlerts: false, useIndicator: true }` |
+| 仅在一个频道中显示 OK | `channels.telegram.heartbeat: { showOk: true }` |
 
 ## HEARTBEAT.md（可选）
 

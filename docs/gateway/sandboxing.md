@@ -249,7 +249,7 @@ OpenShell 有两种工作区模型。这是实践中最重要的部分。
 
     重要后果：
 
-    - 如果你在种子化步骤之后在 OpenClaw 之外修改主机上的文件，远程沙箱**不会**自动看到这些更改。
+    - 如果你在种子化步骤之后在 OpenClaw 之外修改了主机上的文件，远程沙箱**不会**自动看到这些更改。
     - 如果沙箱被重新创建，远程工作区会再次从本地工作区进行种子化。
     - 使用 `scope: "agent"` 或 `scope: "shared"` 时，该远程工作区会在相同作用域内共享。
 
@@ -363,31 +363,66 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
 
 默认 Docker 镜像：`openclaw-sandbox:bookworm-slim`
 
+<Note>
+**源代码检出 vs npm install**
+
+`scripts/sandbox-setup.sh`、`scripts/sandbox-common-setup.sh` 和 `scripts/sandbox-browser-setup.sh` 辅助脚本仅在从 [源码检出](https://github.com/openclaw/openclaw) 运行时可用。它们不包含在 npm 包中。
+
+如果你是通过 `npm install -g openclaw` 安装的，请改用下面展示的内联 `docker build` 命令。
+</Note>
+
 <Steps>
   <Step title="构建默认镜像">
+    从源码检出：
+
     ```bash
     scripts/sandbox-setup.sh
     ```
 
-    默认镜像**不**包含 Node。如果某个技能需要 Node（或其他运行时），可以自行构建自定义镜像，或者通过 `sandbox.docker.setupCommand` 安装（需要网络外连 + 可写根目录 + root 用户）。
+    从 npm 安装（不需要源码检出）：
 
-    当 `openclaw-sandbox:bookworm-slim` 缺失时，OpenClaw 不会静默地用普通的 `debian:bookworm-slim` 替代。以默认镜像为目标的沙箱运行会立即失败，并给出构建说明，直到你运行 `scripts/sandbox-setup.sh`，因为捆绑镜像带有 `python3`，供沙箱写入/编辑辅助工具使用。
+    ```bash
+    docker build -t openclaw-sandbox:bookworm-slim - <<'DOCKERFILE'
+    FROM debian:bookworm-slim
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash ca-certificates curl git jq python3 ripgrep \
+      && rm -rf /var/lib/apt/lists/*
+    RUN useradd --create-home --shell /bin/bash sandbox
+    USER sandbox
+    WORKDIR /home/sandbox
+    CMD ["sleep", "infinity"]
+    DOCKERFILE
+    ```
+
+    默认镜像**不**包含 Node。如果某个技能需要 Node（或其他运行时），请构建自定义镜像，或通过 `sandbox.docker.setupCommand` 安装（需要网络外连 + 可写根目录 + root 用户）。
+
+    当 `openclaw-sandbox:bookworm-slim` 缺失时，OpenClaw 不会静默地用普通的 `debian:bookworm-slim` 代替。以默认镜像为目标的沙箱运行会直接失败并提示构建说明，直到你构建它为止，因为捆绑镜像包含了用于沙箱写入/编辑辅助功能的 `python3`。
 
   </Step>
   <Step title="可选：构建通用镜像">
     为获得带有常用工具的更实用沙箱镜像（例如 `curl`、`jq`、`nodejs`、`python3`、`git`）：
 
+    从源码检出：
+
     ```bash
     scripts/sandbox-common-setup.sh
     ```
+
+    从 npm 安装时，先构建默认镜像（见上文），然后使用仓库中的 [`Dockerfile.sandbox-common`](https://github.com/openclaw/openclaw/blob/main/Dockerfile.sandbox-common) 在其之上构建通用镜像。
 
     然后将 `agents.defaults.sandbox.docker.image` 设置为 `openclaw-sandbox-common:bookworm-slim`。
 
   </Step>
   <Step title="可选：构建沙箱浏览器镜像">
+    从源码检出：
+
     ```bash
     scripts/sandbox-browser-setup.sh
     ```
+
+    从 npm 安装时，使用仓库中的 [`Dockerfile.sandbox-browser`](https://github.com/openclaw/openclaw/blob/main/Dockerfile.sandbox-browser) 构建。
+
   </Step>
 </Steps>
 

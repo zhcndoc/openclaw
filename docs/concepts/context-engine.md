@@ -196,6 +196,9 @@ export default function register(api) {
 <ParamField path="systemPromptAddition" type="string">
   前置到系统提示中。
 </ParamField>
+<ParamField path="promptAuthority" type='"assembled" | "preassembly_may_overflow"'>
+  控制运行器用于预防性溢出预检查的令牌估计值。默认值为 `"assembled"`，这意味着只检查组装后提示词的估计值——适用于返回窗口化、自包含上下文的引擎。仅当你的组装视图可能掩盖底层转录中的溢出风险时，才设置为 `"preassembly_may_overflow"`；此时，运行器在决定是否进行预防性压缩时，会取组装后估计值与预组装（未窗口化）会话历史估计值中的较大者。无论如何，你返回的消息仍然是模型实际看到的内容——`promptAuthority` 只影响预检查。
+</ParamField>
 
 `compact` 返回一个 `CompactResult`。当压缩轮换活动转录时，`result.sessionId` 和 `result.sessionFile` 会标识下一个重试或下一轮必须使用的后继会话。
 

@@ -284,7 +284,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     | `local.modelCacheDir` | `string`           | node-llama-cpp default | 下载模型的缓存目录                                                                                                                                                                                                                                                                                      |
     | `local.contextSize`   | `number \| "auto"` | `4096`                 | 嵌入上下文的上下文窗口大小。4096 可覆盖典型分块（128–512 tokens），同时限制非权重显存。受限主机上可降至 1024–2048。`"auto"` 使用模型训练的最大值——不建议用于 8B+ 模型（Qwen3-Embedding-8B：40 960 tokens → 约 32 GB VRAM，而在 4096 时约为 8.8 GB）。 |
 
-    默认模型：`embeddinggemma-300m-qat-Q8_0.gguf`（约 0.6 GB，自动下载）。需要原生构建：先执行 `pnpm approve-builds`，再执行 `pnpm rebuild node-llama-cpp`。
+    Default model: `embeddinggemma-300m-qat-Q8_0.gguf` (~0.6 GB, auto-downloaded). Source checkouts still require native build approval: `pnpm approve-builds` then `pnpm rebuild node-llama-cpp`.
 
     使用独立 CLI 验证 Gateway 使用的相同 provider 路径：
 
@@ -480,8 +480,8 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 | `includeDefaultMemory`   | `boolean` | `true`   | 自动索引 `MEMORY.md` + `memory/**/*.md`                                               |
 | `paths[]`                | `array`   | --       | 额外路径：`{ name, path, pattern? }`                                                   |
 | `sessions.enabled`       | `boolean` | `false`  | 索引会话记录                                                                           |
-| `sessions.retentionDays` | `number`  | --       | 会话记录保留天数                                                                       |
-| `sessions.exportDir`     | `string`  | --       | 导出目录                                                                               |
+| `sessions.retentionDays` | `number`   | --       | 会话记录保留天数                                                                       |
+| `sessions.exportDir`     | `string`   | --       | 导出目录                                                                               |
 
 `searchMode: "search"` 仅支持词法/BM25。OpenClaw 不会为该模式运行语义向量就绪探测或 QMD 嵌入维护，包括在 `memory status --deep` 期间；`vsearch` 和 `query` 仍然需要 QMD 向量就绪和嵌入。
 

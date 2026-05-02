@@ -29,7 +29,8 @@ title: "帮助"
 ## 测试
 
 - [测试](/help/testing) — 测试套件和 Docker 运行器
-- [实时测试](/help/testing-live) — 触及网络的提供商和 CLI 冒烟测试
+- [更新和插件测试](/help/testing-updates-plugins) — 包更新、迁移和插件安装验证
+- [实时测试](/help/testing-live) — 触及网络的提供方和 CLI 冒烟测试
 
 ## 社区与元信息
 

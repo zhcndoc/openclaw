@@ -255,13 +255,9 @@ OpenClaw 会先检查原生插件格式：
 
 ## 运行时依赖和清理
 
-- 第三方兼容 bundle 不会在启动时通过 `npm install` 修复。它们应通过
-  `openclaw plugins install` 安装，并在已安装的插件目录中附带所需的一切。
-- OpenClaw 自有的打包 bundle 插件有一个很小的例外：当其启用时，
-  Gateway 启动可以在导入前修复缺失的已声明运行时依赖。操作者可以使用
-  `openclaw plugins deps` 检查或修复该阶段。
-- 发布流水线在可能时仍负责交付完整的 bundled 依赖负载（参见
-  [发布](/reference/RELEASING) 中的 postpublish 验证规则）。
+- 第三方兼容 bundle 不会在启动时执行 `npm install` 修复。它们应该通过 `openclaw plugins install` 安装，并将所需内容随插件一起提供在已安装的插件目录中。
+- OpenClaw 自有的打包插件要么随核心以轻量形式提供，要么可通过插件安装器下载。Gateway 启动时绝不会为它们运行包管理器。
+- `openclaw doctor --fix` 会移除旧的分阶段依赖目录，并且可以安装本地插件索引中缺失的已配置可下载插件。
 
 ## 安全性
 

@@ -90,19 +90,19 @@ sidebarTitle: "后台任务"
 
 ## 什么会创建任务
 
-| 来源                   | 运行时类型      | 创建任务记录的时机                               | 默认通知策略 |
-| ---------------------- | -------------- | ----------------------------------------------- | ------------ |
-| ACP 后台运行          | `acp`          | 启动一个子 ACP 会话                              | `done_only`  |
-| 子代理编排            | `subagent`     | 通过 `sessions_spawn` 启动子代理                 | `done_only`  |
-| Cron 作业（所有类型） | `cron`         | 每次 cron 执行（主会话和隔离）                   | `silent`     |
-| CLI 操作              | `cli`          | 通过网关运行的 `openclaw agent` 命令            | `silent`     |
-| Agent 媒体作业        | `cli`          | 由会话承载的 `video_generate` 运行              | `silent`     |
+| Source                 | Runtime type | When a task record is created                          | Default notify policy |
+| ---------------------- | ------------ | ------------------------------------------------------ | --------------------- |
+| ACP background runs    | `acp`        | Spawning a child ACP session                           | `done_only`           |
+| Subagent orchestration | `subagent`   | Spawning a subagent via `sessions_spawn`               | `done_only`           |
+| Cron jobs (all types)  | `cron`       | Every cron execution (main-session and isolated)       | `silent`              |
+| CLI operations         | `cli`        | `openclaw agent` commands that run through the gateway | `silent`              |
+| Agent media jobs       | `cli`        | Session-backed `music_generate`/`video_generate` runs  | `silent`              |
 
 <AccordionGroup>
   <Accordion title="cron 和媒体的通知默认值">
     主会话 cron 任务默认使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会生成通知。隔离 cron 任务也默认使用 `silent`，但因为它们在自己的会话中运行，所以更容易被看到。
 
-    由会话承载的 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成结果会作为内部唤醒返回给原始代理会话，这样代理就可以写入后续消息，并自行附加完成的视频。如果你启用了 `tools.media.asyncCompletion.directSend`，异步 `music_generate` 和 `video_generate` 的完成结果会先尝试直接投递到通道，然后再回退到请求者会话唤醒路径。
+    基于会话的 `music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成后会作为内部唤醒交还给原始代理会话，这样代理就可以编写后续消息并自行附加已完成的媒体。如果你启用 `tools.media.asyncCompletion.directSend`，异步 `video_generate` 完成会先尝试直接发送到通道；异步 `music_generate` 完成则仍走请求者会话唤醒路径。
 
   </Accordion>
   <Accordion title="并发 video_generate 保护机制">
@@ -246,9 +246,10 @@ openclaw tasks notify <lookup> state_changes
 
     协调修复感知运行时：
 
-    - ACP/subagent 任务检查其对应的子会话。
-    - cron 任务检查 cron 运行时是否仍拥有该作业，然后在回退到 `lost` 之前，从持久化的 cron 运行日志/作业状态中恢复终态。只有 Gateway 进程才是内存中 cron 活跃作业集合的权威来源；离线 CLI 审计会使用持久历史，但不会仅因为本地 Set 为空就将 cron 任务标记为 lost。
-    - 由聊天支持的 CLI 任务检查拥有的活动运行上下文，而不只是聊天会话行。
+    - ACP/subagent 任务会检查其后备子会话。
+    - 如果子代理任务的子会话带有 restart-recovery 墓碑，则会标记为 lost，而不是当作可恢复的后备会话。
+    - Cron 任务会检查 cron 运行时是否仍然拥有该作业，然后在回退为 `lost` 之前，从持久化的 cron 运行日志/作业状态中恢复终态。只有 Gateway 进程对内存中的 cron 活动作业集合具有权威性；离线 CLI 审计会使用持久化历史，但不会仅因为本地 Set 为空就把 cron 任务标记为 lost。
+    - 基于聊天的 CLI 任务会检查拥有它的实时运行上下文，而不仅仅是聊天会话行。
 
     完成清理同样感知运行时：
 
@@ -336,9 +337,9 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
 
 <AccordionGroup>
   <Accordion title="Tasks and Task Flow">
-    [Task Flow](/automation/taskflow) 是位于后台任务之上的流程编排层。单个 flow 在其生命周期内可使用托管或镜像同步模式协调多个任务。使用 `openclaw tasks` 查看单个任务记录，使用 `openclaw tasks flow` 查看编排 flow。
+    [任务流](/automation/taskflow) 是位于后台任务之上的流程编排层。单个 flow 在其生命周期内可使用托管或镜像同步模式协调多个任务。使用 `openclaw tasks` 查看单个任务记录，使用 `openclaw tasks flow` 查看编排 flow。
 
-    详情参见 [Task Flow](/automation/taskflow)。
+    详情参见 [任务流](/automation/taskflow)。
 
   </Accordion>
   <Accordion title="Tasks and cron">

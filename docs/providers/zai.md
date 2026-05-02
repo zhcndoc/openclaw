@@ -32,9 +32,9 @@ Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 A
         }
         ```
       </Step>
-      <Step title="验证模型是否可用">
+      <Step title="验证模型已列出">
         ```bash
-        openclaw models list --provider zai
+        openclaw models list --all --provider zai
         ```
       </Step>
     </Steps>
@@ -68,9 +68,9 @@ Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 A
         }
         ```
       </Step>
-      <Step title="验证模型是否可用">
+      <Step title="验证模型已列出">
         ```bash
-        openclaw models list --provider zai
+        openclaw models list --all --provider zai
         ```
       </Step>
     </Steps>
@@ -80,7 +80,13 @@ Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 A
 
 ## 内置目录
 
-OpenClaw 当前为内置的 `zai` 提供方预置了以下模型：
+OpenClaw 在插件清单中附带了内置的 `zai` 提供方目录，因此只读列表可以在不加载提供方运行时的情况下显示已知的 GLM 条目：
+
+```bash
+openclaw models list --all --provider zai
+```
+
+当前由清单支持的目录包括：
 
 | 模型引用             | 说明           |
 | -------------------- | -------------- |

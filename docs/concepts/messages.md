@@ -91,10 +91,13 @@ OpenClaw 明确保留了这一边界：
 
 OpenClaw 将**提示主体**与**命令主体**分开：
 
-- `Body`：发送给代理的提示文本。它可能包含频道封装和
-  可选的历史包装器。
-- `CommandBody`：用于指令/命令解析的原始用户文本。
-- `RawBody`：`CommandBody` 的旧别名（为兼容性保留）。
+- `BodyForAgent`: 当前消息面向主模型的主要文本。频道
+  插件应将其聚焦在发送者当前带有提示意图的文本上。
+- `Body`: 传统的提示回退字段。这可能包含频道包裹层和
+  可选历史包装器，但当 `BodyForAgent` 可用时，当前频道不应将其
+  作为主要模型输入来依赖。
+- `CommandBody`: 用于指令/命令解析的原始用户文本。
+- `RawBody`: `CommandBody` 的旧别名（为兼容性保留）。
 
 当某个频道提供历史时，它使用一个共享包装器：
 
@@ -108,10 +111,8 @@ OpenClaw 将**提示主体**与**命令主体**分开：
 历史缓冲区是**仅待处理**的：它们包含未触发运行的群组消息（例如，提及门控消息），并且**排除**
 已在会话转录中的消息。
 
-指令剥离只应用于**当前消息**部分，因此历史保持完整。
-包装历史的频道应将 `CommandBody`（或 `RawBody`）设置为原始消息文本，并将 `Body` 保持为组合后的提示。
-历史缓冲区可通过 `messages.groupChat.historyLimit`（全局默认值）和
-按频道覆盖（如 `channels.slack.historyLimit` 或 `channels.telegram.accounts.<id>.historyLimit`）进行配置（设为 `0` 可禁用）。
+指令剥离仅适用于**当前消息**部分，因此历史会保持完整。包裹历史的频道应将 `CommandBody`（或 `RawBody`）设置为原始消息文本，并将 `Body` 保持为组合后的提示。结构化历史、回复、转发和频道元数据会在提示组装期间作为用户角色的不可信上下文块进行渲染。
+历史缓冲区可通过 `messages.groupChat.historyLimit`（全局默认值）以及诸如 `channels.slack.historyLimit` 或 `channels.telegram.accounts.<id>.historyLimit` 之类的按频道覆盖进行配置（设为 `0` 可禁用）。
 
 ## 排队和后续轮次
 
@@ -119,11 +120,11 @@ OpenClaw 将**提示主体**与**命令主体**分开：
 或者收集到一个后续轮次中。
 
 - 通过 `messages.queue`（以及 `messages.queue.byChannel`）进行配置。
-- 默认模式是 `steer`，当 steer 回退到排队的后续投递时，使用 500ms 的后续防抖。
+- 默认模式为 `steer`，当 steering 回退到队列式后续投递时，使用 500ms 的后续防抖。
 - 模式：`steer`、`followup`、`collect`、`steer-backlog`、`interrupt`，以及
-  旧的 `queue` 别名。
+  传统的一次一个 `queue` 模式。
 
-详情： [命令队列](/concepts/queue)。
+详情： [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
 
 ## 频道运行所有权
 

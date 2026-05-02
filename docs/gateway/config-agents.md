@@ -63,6 +63,20 @@ title: "配置 — 代理"
 }
 ```
 
+### `agents.defaults.skipOptionalBootstrapFiles`
+
+在仍会写入必需引导文件的同时，跳过创建选定的可选工作区文件。有效值：`SOUL.md`、`USER.md`、`HEARTBEAT.md` 和 `IDENTITY.md`。
+
+```json5
+{
+  agents: {
+    defaults: {
+      skipOptionalBootstrapFiles: ["SOUL.md", "USER.md"],
+    },
+  },
+}
+```
+
 ### `agents.defaults.contextInjection`
 
 控制工作区引导文件何时注入到系统提示词中。默认值：`"always"`。
@@ -537,6 +551,7 @@ Z.AI 模型默认启用 `tool_stream` 用于工具调用流式输出。将 `agen
         identifierPolicy: "strict", // strict | off | custom
         identifierInstructions: "精确保留部署 ID、工单 ID 和 host:port 对。", // identifierPolicy=custom 时使用
         qualityGuard: { enabled: true, maxRetries: 1 },
+        midTurnPrecheck: { enabled: false }, // optional Pi tool-loop pressure check
         postCompactionSections: ["Session Startup", "Red Lines"], // [] disables reinjection
         model: "openrouter/anthropic/claude-sonnet-4-6", // 可选的仅压缩模型覆盖
         truncateAfterCompaction: true, // 压缩后轮转到更小的后继 JSONL
@@ -555,18 +570,19 @@ Z.AI 模型默认启用 `tool_stream` 用于工具调用流式输出。将 `agen
 }
 ```
 
-- `mode`：`default` 或 `safeguard`（用于长历史记录的分块摘要）。参见 [压缩](/concepts/compaction)。
+- `mode`：`default` 或 `safeguard`（用于长历史的分块摘要）。参见 [压缩](/concepts/compaction)。
 - `provider`：已注册压缩提供方插件的 id。设置后，会调用该提供方的 `summarize()`，而不是内置的 LLM 摘要。失败时回退到内置实现。设置提供方会强制 `mode: "safeguard"`。参见 [压缩](/concepts/compaction)。
-- `timeoutSeconds`：OpenClaw 在中止一次压缩操作之前允许的最大秒数。默认值：`900`。
-- `keepRecentTokens`：Pi 截断点预算，用于原样保留最新的转录尾部。手动 `/compact` 在显式设置时会遵守此项；否则手动压缩是一个硬检查点。
-- `identifierPolicy`：`strict`（默认）、`off` 或 `custom`。`strict` 在压缩摘要期间预置内置的 opaque 标识符保留指导。
+- `timeoutSeconds`：OpenClaw 在中止单次压缩操作前允许的最长秒数。默认值：`900`。
+- `keepRecentTokens`：Pi 截断点预算，用于逐字保留最近的转录尾部。手动 `/compact` 在显式设置时会遵守此值；否则手动压缩是一个硬检查点。
+- `identifierPolicy`：`strict`（默认）、`off` 或 `custom`。`strict` 会在压缩摘要期间附加内置的模糊标识符保留指导。
 - `identifierInstructions`：当 `identifierPolicy=custom` 时使用的可选自定义标识符保留文本。
-- `qualityGuard`：针对 safeguard 摘要的错误输出重试检查。safeguard 模式下默认启用；设为 `enabled: false` 可跳过审计。
-- `postCompactionSections`：可选的 AGENTS.md 二级/三级标题名称，在压缩后重新注入。默认值为 `["Session Startup", "Red Lines"]`；设为 `[]` 可禁用重新注入。未设置或显式设为该默认对时，较旧的 `Every Session`/`Safety` 标题也会作为遗留回退被接受。
-- `model`：仅用于压缩摘要的可选 `provider/model-id` 覆盖。当主会话应保持一个模型，但压缩摘要应在另一个模型上运行时使用；未设置时，压缩会使用会话的主模型。
-- `maxActiveTranscriptBytes`：可选的字节阈值（数字或像 `"20mb"` 这样的字符串），当活动 JSONL 超过阈值时，会在运行前触发正常的本地压缩。需要 `truncateAfterCompaction`，这样成功压缩后可轮转到更小的后继转录。未设置或为 `0` 时禁用。
-- `notifyUser`：为 `true` 时，在压缩开始和完成时向用户发送简短通知（例如“正在压缩上下文…”和“压缩完成”）。默认禁用，以保持压缩静默。
-- `memoryFlush`：自动压缩前的静默代理轮次，用于存储持久化记忆。当此清理轮次应保持在本地模型上时，将 `model` 设为精确的 provider/model，例如 `ollama/qwen3:8b`；该覆盖不会继承活动会话的回退链。工作区只读时跳过。
+- `qualityGuard`：对 safeguard 摘要的格式错误重试检查。默认在 safeguard 模式中启用；设置 `enabled: false` 可跳过审计。
+- `midTurnPrecheck`：可选的 Pi 工具循环压力检查。启用时，OpenClaw 会在工具结果追加之后、下一次模型调用之前检查上下文压力。如果上下文已无法容纳，它会在提交提示词前中止当前尝试，并重用现有的预检查恢复路径来截断工具结果或压缩后重试。适用于 `default` 和 `safeguard` 两种压缩模式。默认：禁用。
+- `postCompactionSections`：压缩后可重新注入的可选 AGENTS.md H2/H3 章节名。默认值为 `["Session Startup", "Red Lines"]`；设为 `[]` 可禁用重新注入。未设置或显式设为该默认对时，也会接受较旧的 `Every Session`/`Safety` 标题作为兼容回退。
+- `model`：仅用于压缩摘要的可选 `provider/model-id` 覆盖。当主会话需要使用一个模型，而压缩摘要应使用另一个模型时使用此项；未设置时，压缩会使用会话的主模型。
+- `maxActiveTranscriptBytes`：可选的字节阈值（数字或如 `"20mb"` 这样的字符串），当活动 JSONL 增长超过阈值时，会在运行前触发正常的本地压缩。要求设置 `truncateAfterCompaction`，以便成功压缩后可以轮转到更小的后继转录。未设置或设为 `0` 时禁用。
+- `notifyUser`：为 `true` 时，在压缩开始和完成时向用户发送简短通知（例如“正在压缩上下文...”和“压缩完成”）。默认禁用，以保持压缩过程静默。
+- `memoryFlush`：自动压缩前的静默代理轮次，用于存储持久化记忆。当此整理轮次应保持在本地模型上时，将 `model` 设置为精确的 provider/model，例如 `ollama/qwen3:8b`；此覆盖不会继承活动会话的回退链。工作区只读时会跳过。
 
 ### `agents.defaults.contextPruning`
 
@@ -578,7 +594,7 @@ Z.AI 模型默认启用 `tool_stream` 用于工具调用流式输出。将 `agen
     defaults: {
       contextPruning: {
         mode: "cache-ttl", // off | cache-ttl
-        ttl: "1h", // duration (ms/s/m/h), default unit: minutes
+        ttl: "1h", // 持续时间（ms/s/m/h），默认单位：分钟
         keepLastAssistants: 3,
         softTrimRatio: 0.3,
         hardClearRatio: 0.5,
@@ -876,12 +892,14 @@ noVNC 观察者访问默认使用 VNC 认证，OpenClaw 会发出一个短期 to
 
 浏览器沙箱和 `sandbox.docker.binds` 仅适用于 Docker。
 
-构建镜像：
+Build images (从源码检出构建)：
 
 ```bash
 scripts/sandbox-setup.sh           # 主沙箱镜像
 scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 ```
+
+关于无源码检出的 npm 安装，请参见 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令。
 
 ### `agents.list`（逐代理覆盖）
 
@@ -1190,7 +1208,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     ackReactionScope: "group-mentions", // group-mentions | group-all | direct | all
     removeAckAfterReply: false,
     queue: {
-      mode: "steer", // steer | followup | collect | steer-backlog | steer+backlog | queue | interrupt
+      mode: "steer", // steer | queue (legacy one-at-a-time) | followup | collect | steer-backlog | steer+backlog | interrupt
       debounceMs: 500,
       cap: 20,
       drop: "summarize", // old | new | summarize
@@ -1249,8 +1267,8 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 {
   messages: {
     tts: {
-      auto: "always", // off | always | inbound | tagged
-      mode: "final", // final | all
+      auto: "always", // 关闭 | 始终 | 入站 | 被标记
+      mode: "final", // 最终 | 全部
       provider: "elevenlabs",
       summaryModel: "openai/gpt-4.1-mini",
       modelOverrides: { enabled: true },

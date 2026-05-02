@@ -411,7 +411,7 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 - 如果某个 live 测试说“no creds”，请用调试 `openclaw models list` / 模型选择时相同的方法来排查。
 
 - 每个代理的 auth 配置文件：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（这就是 live 测试里所说的 “profile keys”）
-- 配置：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`）
+- 配置：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`)
 - 旧版状态目录：`~/.openclaw/credentials/`（在存在时会复制到 staging 的 live home 中，但不是主 profile-key 存储）
 - 默认情况下，Live 本地运行会把当前配置、每个代理的 `auth-profiles.json` 文件、旧版 `credentials/` 以及受支持的外部 CLI auth 目录复制到临时测试 home 中；staged live home 会跳过 `workspace/` 和 `sandboxes/`，并且会去掉 `agents.*.workspace` / `agentDir` 路径覆盖，以便探测不会碰到你真实主机上的工作区。
 
@@ -479,7 +479,9 @@ openclaw infer image generate \
   --json
 ```
 
-这涵盖了 CLI 参数解析、配置/默认代理解析、内置插件激活、按需修复内置运行时依赖、共享图像生成运行时，以及 live provider 请求。
+This covers CLI argument parsing, config/default-agent resolution, bundled
+plugin activation, the shared image-generation runtime, and the live provider
+request. Plugin dependencies are expected to be present before runtime load.
 
 ## 音乐生成 live
 

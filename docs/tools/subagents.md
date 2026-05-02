@@ -486,6 +486,8 @@ OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。
 
 在网关重启后，陈旧的未结束恢复运行会被清理，除非其子会话被标记为 `abortedLastRun: true`。这些重启后中止的子会话仍可通过子代理孤儿恢复流程找回；该流程会在清除中止标记之前发送一条合成的恢复消息。
 
+每个子会话的自动重启恢复都有边界。如果同一个子代理子会话在快速重新卡住窗口内被反复接受用于孤儿恢复，OpenClaw 会在该会话上持久化一个恢复墓碑，并在后续重启中停止自动恢复它。运行 `openclaw tasks maintenance --apply` 以协调任务记录，或运行 `openclaw doctor --fix` 清除墓碑会话上过期的中止恢复标记。
+
 <Note>
 如果子代理启动因 Gateway `PAIRING_REQUIRED` /
 `scope-upgrade` 而失败，请在编辑配对状态之前检查 RPC 调用方。

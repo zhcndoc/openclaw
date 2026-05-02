@@ -8,7 +8,7 @@ title: "迁移"
 
 # `openclaw migrate`
 
-通过由插件拥有的迁移提供程序，从另一个代理系统导入状态。内置提供程序覆盖 [Claude](/install/migrating-claude) 和 [Hermes](/install/migrating-hermes)；第三方插件可以注册额外的提供程序。
+通过由插件拥有的迁移提供程序，从另一个代理系统导入状态。内置提供程序覆盖 Codex CLI 状态、[Claude](/install/migrating-claude) 和 [Hermes](/install/migrating-hermes)；第三方插件可以注册额外的提供程序。
 
 <Tip>
 面向用户的操作指南，请参阅 [从 Claude 迁移](/install/migrating-claude) 和 [从 Hermes 迁移](/install/migrating-hermes)。[迁移中心](/install/migrating) 列出了所有路径。
@@ -19,8 +19,12 @@ title: "迁移"
 ```bash
 openclaw migrate list
 openclaw migrate claude --dry-run
+openclaw migrate codex --dry-run
+openclaw migrate codex --skill gog-vault77-google-workspace
 openclaw migrate hermes --dry-run
 openclaw migrate hermes
+openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
+openclaw migrate apply codex --yes
 openclaw migrate apply claude --yes
 openclaw migrate apply hermes --yes
 openclaw migrate apply hermes --include-secrets --yes
@@ -46,6 +50,9 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 </ParamField>
 <ParamField path="--yes" type="boolean">
   跳过确认提示。在非交互模式下必需。
+</ParamField>
+<ParamField path="--skill <name>" type="string">
+  按技能名称或项目 ID 选择一个技能复制项。重复该标志可迁移多个技能。省略时，交互式 Codex 迁移会显示复选框选择器，非交互式迁移会保留所有计划中的技能。
 </ParamField>
 <ParamField path="--no-backup" type="boolean">
   跳过预应用备份。当本地 OpenClaw 状态存在时，需要配合 `--force` 使用。
@@ -98,6 +105,28 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 ### Archive and manual-review state
 
 Claude hooks、权限、环境默认值、本地记忆、路径作用域规则、子代理、缓存、计划和项目历史会保留在迁移报告中，或作为需要人工审核的项目报告。OpenClaw 不会执行 hooks、复制宽泛的允许列表，或自动导入 OAuth/Desktop 凭据状态。
+
+## Codex provider
+
+内置的 Codex 提供程序默认在 `~/.codex` 检测 Codex CLI 状态，或者在设置了该环境变量时于 `CODEX_HOME` 中检测。使用 `--from <path>` 可盘点特定的 Codex 主目录。
+
+当你迁移到 OpenClaw Codex harness，并且希望有意地提取有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动会为每个代理使用各自的 `CODEX_HOME` 和 `HOME` 目录，因此默认不会读取你的个人 Codex CLI 状态。
+
+在交互式终端中运行 `openclaw migrate codex` 时，会先预览完整计划，然后在最终应用确认之前打开一个技能复制项的复选框选择器。所有技能默认都已选中；取消勾选你不想复制到此代理中的任何技能。对于脚本化或精确运行，请对每个技能各传一次 `--skill <name>`，例如：
+
+```bash
+openclaw migrate codex --dry-run --skill gog-vault77-google-workspace
+openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
+```
+
+### What Codex imports
+
+- `$CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
+- `$HOME/.agents/skills` 下的个人 AgentSkills，当你希望按代理拥有权复制到当前 OpenClaw 代理工作区时。
+
+### Manual-review Codex state
+
+Codex 原生插件、`config.toml` 和原生 `hooks/hooks.json` 不会自动激活。插件可能暴露 MCP 服务器、应用、hooks 或其他可执行行为，因此提供程序会将它们报告出来供审查，而不是将其加载到 OpenClaw 中。配置和 hook 文件会被复制到迁移报告中以供人工审核。
 
 ## Hermes provider
 

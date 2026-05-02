@@ -12,28 +12,29 @@ title: "思考级别"
   - minimal → “think”
   - low → “think hard”
   - medium → “think harder”
-  - high → “ultrathink” （最大预算）
-  - xhigh → “ultrathink+” （GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 的 effort）
-  - adaptive → 由提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7，以及 Google Gemini 的动态思考）
-  - max → 提供方最大推理（Anthropic Claude Opus 4.7；Ollama 会将其映射为最高原生 `think` effort）
-  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 都映射到 `xhigh`。
-  - `highest` 映射到 `high`。
+  - high → “ultrathink” (max budget)
+  - xhigh → “ultrathink+” (GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 的 effort)
+  - adaptive → 由提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7，以及 Google Gemini 动态思考）
+  - max → 提供方最大推理（Anthropic Claude Opus 4.7；Ollama 会将其映射为最高的原生 `think` effort）
+  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 映射为 `xhigh`。
+  - `highest` 映射为 `high`。
 - 提供方说明：
-  - 思考菜单和选择器由提供方配置文件驱动。提供方插件会声明所选模型的确切级别集合，包括像二进制 `on` 这样的标签。
-  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的提供方/模型配置文件中展示。对不支持级别输入的指令会被拒绝，并提示该模型的有效选项。
-  - 已存在的、当前不受支持的级别会按提供方配置文件等级重新映射。`adaptive` 在非自适应模型上回退到 `medium`，而 `xhigh` 和 `max` 则回退到所选模型支持的最大非 `off` 级别。
-  - Anthropic Claude 4.6 模型在未显式设置思考级别时，默认使用 `adaptive`。
-  - Anthropic Claude Opus 4.7 不会默认使用自适应思考。其 API effort 默认值仍由提供方控制，除非你显式设置思考级别。
-  - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
-  - Anthropic Claude Opus 4.7 也提供 `/think max`；它会映射到同样由提供方控制的 max effort 路径。
-  - 支持思考的 Ollama 模型暴露 `/think low|medium|high|max`；`max` 会映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` effort 字符串。
-  - OpenAI GPT 模型通过与模型相关的 Responses API effort 支持来映射 `/think`。`/think off` 只有在目标模型支持时才发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略被禁用的 reasoning 载荷，而不是发送不受支持的值。
-  - 自定义的 OpenAI 兼容目录条目可以通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用与映射传出 OpenAI reasoning effort 载荷相同的 compat 元数据，因此菜单、会话校验、agent CLI 和 `llm-task` 都会与传输行为保持一致。
-  - 对于已失效配置的 OpenRouter Hunter Alpha 引用，会跳过代理 reasoning 注入，因为该已退役路由可能会通过 reasoning 字段返回最终答案文本。
-  - Google Gemini 会将 `/think adaptive` 映射为 Gemini 由提供方控制的动态思考。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍会映射到该模型家族中最接近的 Gemini `thinkingLevel` 或预算。
-  - 在 Anthropic 兼容流式路径上的 MiniMax（`minimax/*`）默认使用 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置思考。这样可以避免 MiniMax 非原生 Anthropic 流格式中泄漏的 `reasoning_content` 增量。
-  - Z.AI（`zai/*`）只支持二元思考（`on`/`off`）。任何非 `off` 的级别都会被视为 `on`（映射为 `low`）。
-  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 的级别映射为 `thinking: { type: "enabled" }`。当思考启用时，Moonshot 只接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容的值规范化为 `auto`。
+  - Thinking 菜单和选择器由 provider-profile 驱动。Provider 插件会为所选模型声明确切的级别集合，包括诸如二进制 `on` 之类的标签。
+  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的 provider/model profile 中公开。对不支持级别的输入指令会被拒绝，并给出该模型有效的选项。
+  - 现有已存储的不支持级别会按 provider profile 排名重映射。`adaptive` 在非自适应模型上回退到 `medium`，而 `xhigh` 和 `max` 则回退到所选模型支持的最大非 `off` 级别。
+  - Anthropic Claude 4.6 模型在未显式设置 thinking 级别时默认使用 `adaptive`。
+  - Anthropic Claude Opus 4.7 不默认使用自适应思考。其 API effort 默认值仍由提供方掌控，除非你显式设置 thinking 级别。
+  - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是一个思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
+  - Anthropic Claude Opus 4.7 还暴露 `/think max`；它会映射到同一条由提供方掌控的最大 effort 路径。
+  - DeepSeek V4 模型暴露 `/think xhigh|max`；两者都映射到 DeepSeek `reasoning_effort: "max"`，而较低的非 `off` 级别映射到 `high`。
+  - Ollama 支持思考的模型暴露 `/think low|medium|high|max`；`max` 映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` effort 字符串。
+  - OpenAI GPT 模型通过模型特定的 Responses API effort 支持来映射 `/think`。只有在目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略被禁用的 reasoning 负载，而不是发送不支持的值。
+  - 自定义的 OpenAI 兼容目录条目可以通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用了相同的兼容元数据来映射出站 OpenAI reasoning effort 负载，因此菜单、会话验证、agent CLI 和 `llm-task` 会与传输行为保持一致。
+  - 过期配置的 OpenRouter Hunter Alpha refs 会跳过代理 reasoning 注入，因为该已下线路由可能会通过 reasoning 字段返回最终答案文本。
+  - Google Gemini 会将 `/think adaptive` 映射为 Gemini 由提供方掌控的动态思考。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍然会映射到该模型系列最接近的 Gemini `thinkingLevel` 或 budget。
+  - 通过 Anthropic 兼容流路径的 MiniMax（`minimax/*`）默认使用 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置 thinking。这样可以避免 MiniMax 非原生 Anthropic 流格式中泄漏的 `reasoning_content` 增量。
+  - Z.AI（`zai/*`）仅支持二进制 thinking（`on`/`off`）。任何非 `off` 级别都视为 `on`（映射为 `low`）。
+  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。当 thinking 启用时，Moonshot 只接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容的值规范化为 `auto`。
 
 ## 解析顺序
 

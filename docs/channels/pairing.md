@@ -7,7 +7,7 @@ read_when:
 title: "配对"
 ---
 
-“Pairing” 是 OpenClaw 的显式访问审批步骤。
+“配对” 是 OpenClaw 的显式访问审批步骤。
 它用于两个场景：
 
 1. **DM 配对**（允许谁可以与机器人交谈）
@@ -24,7 +24,7 @@ title: "配对"
 `dmPolicy: "open"` 仅在生效的 DM 白名单包含 `"*"` 时才是公开开放的。
 对于公开开放配置，设置和验证都需要该通配符。如果现有
 状态中包含带具体 `allowFrom` 条目的 `open`，运行时仍然只接纳
-这些发送者，而 pairing-store 的批准不会扩大 `open` 访问范围。
+这些发送者，而配对存储中的批准不会扩大 `open` 访问范围。
 
 配对码：
 
@@ -41,11 +41,39 @@ openclaw pairing approve telegram <CODE>
 
 如果尚未配置命令拥有者，批准 DM 配对码时也会引导初始化
 `commands.ownerAllowFrom`，将其设置为被批准的发送者，例如 `telegram:123456789`。
-这会为首次设置提供一个显式的拥有者，用于特权命令和 exec
+这会为首次设置提供一个显式的拥有者，用于特权命令和执行
 审批提示。在拥有者存在之后，后续的配对批准只会授予 DM
 访问权限；不会再添加更多拥有者。
 
 支持的频道：`bluebubbles`, `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`。
+
+### 可复用的发送者组
+
+当相同的受信任发送者集合应适用于多个消息频道，或同时适用于 DM 和群组允许列表时，请使用顶层 `accessGroups`。
+
+静态组使用 `type: "message.senders"`，并通过频道允许列表中的
+`accessGroup:<name>` 引用：
+
+```json5
+{
+  accessGroups: {
+    operators: {
+      type: "message.senders",
+      members: {
+        discord: ["discord:123456789012345678"],
+        telegram: ["987654321"],
+        whatsapp: ["+15551234567"],
+      },
+    },
+  },
+  channels: {
+    telegram: { dmPolicy: "allowlist", allowFrom: ["accessGroup:operators"] },
+    whatsapp: { groupPolicy: "allowlist", groupAllowFrom: ["accessGroup:operators"] },
+  },
+}
+```
+
+访问组的详细文档在这里：[访问组](/channels/access-groups)
 
 ### 状态存储位置
 
@@ -82,7 +110,7 @@ openclaw pairing approve telegram <CODE>
 
 1. 在 Telegram 中给你的机器人发送：`/pair`
 2. 机器人会回复两条消息：一条说明消息，以及一条单独的**设置码**消息（在 Telegram 中更容易复制/粘贴）。
-3. 在你的手机上，打开 OpenClaw iOS 应用 → Settings → Gateway。
+3. 在你的手机上，打开 OpenClaw iOS 应用 → 设置 → Gateway。
 4. 粘贴设置码并连接。
 5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和范围），然后批准。
 

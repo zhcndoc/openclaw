@@ -512,14 +512,14 @@ openclaw plugins install <package-name>
 ```
 
 <Info>
-对于来自 npm 的安装，`openclaw plugins install` 会运行项目本地的 `npm install --ignore-scripts`（不执行生命周期脚本），并忽略继承的全局 npm 安装设置。请保持插件依赖树纯 JS/TS，并避免需要 `postinstall` 构建的包。
+对于来自 npm 的安装，`openclaw plugins install` 会在禁用生命周期脚本的情况下将包安装到 `~/.openclaw/npm` 下。请保持插件依赖树为纯 JS/TS，并避免需要 `postinstall` 构建的包。
 </Info>
 
 <Note>
-打包的 OpenClaw 自有插件是唯一的启动修复例外：当打包安装检测到某个插件因插件配置、旧版频道配置或其打包的默认启用清单而处于启用状态时，启动会在导入前安装该插件缺失的运行时依赖。运维人员可以使用 `openclaw plugins deps` 检查或修复该阶段。第三方插件不应依赖启动时安装；请继续使用显式插件安装器。
+网关启动不会安装插件依赖。npm/git/ClawHub 安装流程会负责依赖收敛；本地插件必须已经安装好其依赖。
 </Note>
 
-打包的包级运行时依赖是显式元数据，而不是在网关启动时从构建后的 JavaScript 中推断出来的。如果某个共享的 OpenClaw 根依赖必须在外部打包插件运行时镜像中可用，请在根包清单中的 `openclaw.bundle.mirroredRootRuntimeDependencies` 里声明它。
+打包的包元数据是显式指定的，不会在网关启动时从构建后的 JavaScript 中推断出来。运行时依赖应放在拥有它们的插件包中；打包后的 OpenClaw 启动过程不会修复或镜像插件依赖。
 
 ## 相关内容
 

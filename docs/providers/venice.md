@@ -103,7 +103,7 @@ openclaw models set venice/claude-opus-4-6
 列出所有可用模型：
 
 ```bash
-openclaw models list | grep venice
+openclaw models list --all --provider venice
 ```
 
 你也可以运行 `openclaw configure`，选择 **Model/auth**，然后选择 **Venice AI**。
@@ -157,11 +157,11 @@ OpenClaw 会将该提供商特定的回放修复与原生 DeepSeek 提供商的 
     | `nvidia-nemotron-3-nano-30b-a3b`       | NVIDIA Nemotron 3 Nano 30B         | 128k    | 通用                    |
     | `olafangensan-glm-4.7-flash-heretic`   | GLM 4.7 Flash Heretic              | 128k    | 推理                  |
     | `zai-org-glm-4.6`                      | GLM 4.6                            | 198k    | 通用                    |
-    | `zai-org-glm-4.7`                      | GLM 4.7                            | 198k    | 推理                  |
-    | `zai-org-glm-4.7-flash`                | GLM 4.7 Flash                      | 128k    | 推理                  |
-    | `zai-org-glm-5`                        | GLM 5                              | 198k    | 推理                  |
-    | `minimax-m21`                          | MiniMax M2.1                       | 198k    | 推理                  |
-    | `minimax-m25`                          | MiniMax M2.5                       | 198k    | 推理                  |
+    | `zai-org-glm-4.7`                      | GLM 4.7                            | 198k    | 推理                    |
+    | `zai-org-glm-4.7-flash`                | GLM 4.7 Flash                      | 128k    | 推理                    |
+    | `zai-org-glm-5`                        | GLM 5                              | 198k    | 推理                    |
+    | `minimax-m21`                          | MiniMax M2.1                       | 198k    | 推理                    |
+    | `minimax-m25`                          | MiniMax M2.5                       | 198k    | 推理                    |
   </Accordion>
 
   <Accordion title="匿名化模型（15）— 通过 Venice 代理">
@@ -187,7 +187,7 @@ OpenClaw 会将该提供商特定的回放修复与原生 DeepSeek 提供商的 
 
 ## 模型发现
 
-当设置了 `VENICE_API_KEY` 时，OpenClaw 会自动从 Venice API 发现模型。如果 API 不可访问，则会回退到静态目录。
+OpenClaw 提供了一个基于清单的 Venice 种子目录，用于只读模型列表。运行时刷新仍然可以从 Venice API 发现模型，如果 API 不可达，则回退到清单目录。
 
 `/models` 端点是公开的（列出时不需要认证），但推理需要有效的 API 密钥。
 

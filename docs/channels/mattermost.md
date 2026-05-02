@@ -89,10 +89,12 @@ OpenClaw 构建，或使用本地检出路径，直到发布更新的 npm 包。
 <AccordionGroup>
   <Accordion title="行为说明">
     - `native: "auto"` 对 Mattermost 默认是禁用的。设置 `native: true` 以启用。
-    - 如果省略 `callbackUrl`，OpenClaw 会根据网关 host/port + `callbackPath` 推导出一个。
-    - 对于多账号配置，`commands` 可以设置在顶层，或设置在 `channels.mattermost.accounts.<id>.commands` 下（账号值会覆盖顶层字段）。
-    - 命令回调会使用 Mattermost 在 OpenClaw 注册 `oc_*` 命令时返回的每个命令令牌进行校验。
-    - 当注册失败、启动不完整，或者回调令牌与已注册命令之一不匹配时，斜杠回调会失败并关闭。
+    - 如果省略 `callbackUrl`，OpenClaw 会根据网关主机/端口 + `callbackPath` 推导出一个。
+    - 对于多账号设置，`commands` 可以设在顶层，或设在 `channels.mattermost.accounts.<id>.commands` 下（账号级配置会覆盖顶层字段）。
+    - OpenClaw 注册 `oc_*` 命令时，Mattermost 会返回每个命令的 token；回调会使用这些 token 进行验证。
+    - OpenClaw 在接受每个回调之前都会刷新当前的 Mattermost 命令注册状态，因此已删除或重新生成的斜杠命令所对应的旧 token 将不再被接受，而无需重启网关。
+    - 如果 Mattermost API 无法确认该命令仍是当前版本，回调验证会失败并关闭；失败的验证会短暂缓存，并发查找会合并，新的查找会按每个命令进行速率限制，以控制重放压力。
+    - 当注册失败、启动未完全完成，或者回调 token 与解析出的命令已注册 token 不匹配时，斜杠回调会失败并关闭（某个命令有效的 token 不能通过上游验证去访问另一个命令）。
 
   </Accordion>
   <Accordion title="可达性要求">
@@ -276,7 +278,7 @@ Mattermost 会将思考、工具活动和部分回复文本流式汇入单个**�
 {
   channels: {
     mattermost: {
-      streaming: "partial", // off | partial | block | progress
+      streaming: "partial", // 关闭 | 部分 | 块 | 进度
     },
   },
 }

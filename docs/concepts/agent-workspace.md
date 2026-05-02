@@ -106,10 +106,11 @@ sidebarTitle: "代理工作区"
 
 以下内容位于 `~/.openclaw/` 下，不应提交到工作区仓库中：
 
-- `~/.openclaw/openclaw.json`（配置）
-- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（模型认证配置文件：OAuth + API 密钥）
+- `~/.openclaw/openclaw.json` (config)
+- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (模型认证配置文件：OAuth + API 密钥)
+- `~/.openclaw/agents/<agentId>/agent/codex-home/`（每个代理的 Codex 运行时账户、配置、技能、插件和原生线程状态）
 - `~/.openclaw/credentials/`（通道/提供方状态以及旧版 OAuth 导入数据）
-- `~/.openclaw/agents/<agentId>/sessions/`（会话转录 + 元数据）
+- `~/.openclaw/agents/<agentId>/sessions/`（会话记录 + 元数据）
 - `~/.openclaw/skills/`（托管技能）
 
 如果你需要迁移会话或配置，请单独复制它们，并使其脱离版本控制。

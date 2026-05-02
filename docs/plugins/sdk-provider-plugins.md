@@ -574,6 +574,7 @@ read_when:
             connect: async () => {},
             sendAudio: () => {},
             setMediaTimestamp: () => {},
+            handleBargeIn: () => {},
             submitToolResult: () => {},
             acknowledgeMark: () => {},
             close: () => {},
@@ -581,6 +582,9 @@ read_when:
           }),
         });
         ```
+
+        当传输能够检测到人类正在打断助手播放，并且提供方支持截断或清除
+        当前音频响应时，请实现 `handleBargeIn`。
       </Tab>
       <Tab title="媒体理解">
         ```typescript

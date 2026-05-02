@@ -30,22 +30,25 @@ title: "命令队列"
 - `cap: 20`
 - `drop: "summarize"`
 
-`steer` 是默认值，因为它能让当前模型轮次保持响应，而无需启动第二个会话运行。如果当前运行无法接受 steering，OpenClaw 会回退为一个 followup 队列条目。
+`steer` 是默认值，因为它能在不启动第二个会话运行的情况下，让当前模型轮次保持响应。它会在下一个模型边界之前清空所有已到达的引导消息。如果当前运行无法接受引导，OpenClaw 会回退到一个 followup 队列条目。
 
 ## 队列模式
 
 传入消息可以引导当前运行、等待下一轮，或两者兼有：
 
-- `steer`: 将一条 steering 消息加入活跃的 Pi 运行队列。Pi 会在**当前 assistant 轮次完成其工具调用执行之后**、下一次 LLM 调用之前传递这条消息。如果运行并未主动流式输出，或者 steering 不可用，OpenClaw 会回退为一个 followup 队列条目。
-- `followup`: 将每条消息排队，等待当前运行结束后的后续代理轮次。
-- `collect`: 在静默窗口结束后，将排队消息合并为**单个** followup 轮次。如果消息面向不同的渠道/线程，则会分别清空以保持路由。
-- `steer-backlog`（又名 `steer+backlog`）：现在 steer，**同时**为后续轮次保留同一条消息。
-- `interrupt`（旧版）：中止该会话的活跃运行，然后运行最新消息。
-- `queue`（旧版别名）：与 `steer` 相同。
+- `steer`: 将引导消息排入当前活跃运行时。Pi 会在**当前助手轮次完成其工具调用执行之后**、下一次 LLM 调用之前，投递所有待处理的引导消息；Codex app-server 会收到一个批量的 `turn/steer`。如果运行当前没有处于活跃流式输出状态，或者引导不可用，OpenClaw 会回退到一个 followup 队列条目。
+- `queue` (legacy): 旧的一次一条引导方式。Pi 会在每个模型边界投递一条排队的引导消息；Codex app-server 会收到单独的 `turn/steer` 请求。除非你需要之前那种串行化行为，否则优先使用 `steer`。
+- `followup`: 将每条消息排队，等待当前运行结束后作为后续代理轮次处理。
+- `collect`: 在静默窗口之后，将排队消息合并为**单个**后续轮次。如果消息面向不同的渠道/线程，它们会分别清空，以保留路由。
+- `steer-backlog` (aka `steer+backlog`): 立即引导，**并且**为后续轮次保留同一条消息。
+- `interrupt` (legacy): 中止该会话的当前活跃运行，然后运行最新消息。
 
 Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followup 回复，因此流式界面看起来可能像重复消息。如果你希望每条传入消息只对应一个回复，请优先使用 `collect`/`steer`。
 
-可通过 `messages.queue` 全局或按渠道配置：
+有关特定运行时的时序和依赖行为，请参阅
+[Steering queue](/concepts/queue-steering)。
+
+通过 `messages.queue` 全局配置或按渠道配置：
 
 ```json5
 {
@@ -63,7 +66,7 @@ Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followu
 
 ## 队列选项
 
-这些选项适用于 `followup`、`collect` 和 `steer-backlog`（以及 `steer` 在回退为 followup 时）：
+选项适用于 `followup`、`collect` 和 `steer-backlog`（以及当引导回退为 followup 时的 `steer` 或旧版 `queue`）：
 
 - `debounceMs`: 在清空排队的 followup 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 单位。
 - `cap`: 每个会话的最大排队消息数。小于 `1` 的值会被忽略。
@@ -100,11 +103,13 @@ Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followu
 
 ## 故障排查
 
-- 如果命令似乎卡住了，启用详细日志并查看 “queued for …ms” 行，以确认队列正在被清空。
-- 如果你需要队列深度信息，启用详细日志并观察队列时间相关的日志行。
-- 启用诊断后，若会话在 `diagnostics.stuckSessionWarnMs` 之后仍处于 `processing` 状态，会记录卡住会话警告。默认情况下，活跃的嵌入式运行、活跃的回复操作以及活跃的 lane 任务都只会给出警告；如果启动时的旧账本记录没有任何活跃会话工作，它可以释放受影响的会话 lane，从而让排队工作继续清空。
+- 如果命令看起来卡住了，请启用详细日志，并查找“queued for …ms”这样的行，以确认队列正在清空。
+- 如果你需要队列深度，请启用详细日志并观察队列时序行。
+- 接受了一个 turn 但随后停止输出进度的 Codex app-server 运行，会被 Codex 适配器中断，以便活跃会话 lane 能够释放，而不是等待外层运行超时。
+- 启用诊断时，仍处于 `processing` 且超过 `diagnostics.stuckSessionWarnMs` 的会话会记录 stuck-session 警告。活跃的嵌入式运行、活跃的回复操作以及活跃的 lane 任务默认仍仅发出警告；如果是没有任何活跃会话工作的陈旧启动记录，则可以释放受影响的会话 lane，以便排队工作继续清空。
 
 ## 相关内容
 
 - [会话管理](/concepts/session)
+- [Steering queue](/concepts/queue-steering)
 - [重试策略](/concepts/retry)
