@@ -33,8 +33,8 @@ Update and plugin tests protect these contracts:
 - Plugin npm dependencies are installed in the managed npm root, scanned before
   trust, and removed through npm during uninstall so hoisted dependencies do not
   linger.
-- Plugin update is stable when nothing changed: install records, resolved source,
-  and enabled state stay intact.
+- Plugin update is stable when nothing changed: install records, resolved
+  source, installed dependency layout, and enabled state stay intact.
 
 ## Local proof during development
 
@@ -77,14 +77,17 @@ pnpm test:docker:plugins
 pnpm test:docker:plugin-update
 pnpm test:docker:upgrade-survivor
 pnpm test:docker:published-upgrade-survivor
+pnpm test:docker:update-migration
 ```
 
 Important lanes:
 
 - `test:docker:plugins` validates plugin install smoke, local folder installs,
-  local folders with preinstalled dependencies, git installs with package
-  dependencies, npm package dependency installs, local ClawHub fixture installs,
-  marketplace update behavior, and Claude-bundle enable/inspect. Set
+  local folder update skip behavior, local folders with preinstalled
+  dependencies, `file:` package installs, git installs with CLI execution, git
+  moving-ref updates, npm registry installs with hoisted transitive
+  dependencies, npm update no-ops, local ClawHub fixture installs and update
+  no-ops, marketplace update behavior, and Claude-bundle enable/inspect. Set
   `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` to keep the ClawHub block hermetic/offline.
 - `test:docker:plugin-update` validates that an unchanged installed plugin does
   not reinstall or lose install metadata during `openclaw plugins update`.
@@ -95,6 +98,12 @@ Important lanes:
   configures it through a baked `openclaw config set` recipe, updates it to the
   candidate tarball, runs doctor, checks legacy cleanup, starts the Gateway, and
   probes `/healthz`, `/readyz`, and RPC status.
+- `test:docker:update-migration` is the cleanup-heavy published-update lane. It
+  starts from a configured Discord/Telegram-style user state, runs baseline
+  doctor so configured plugin dependencies have a chance to materialize, seeds
+  legacy plugin dependency debris for a configured packaged plugin, updates to
+  the candidate tarball, and requires post-update doctor to remove the legacy
+  dependency roots.
 
 Useful published-upgrade survivor variants:
 
@@ -109,9 +118,24 @@ pnpm test:docker:published-upgrade-survivor
 ```
 
 Available scenarios are `base`, `feishu-channel`, `bootstrap-persona`,
-`tilde-log-path`, and `versioned-runtime-deps`. In aggregate runs,
+`plugin-deps-cleanup`, `configured-plugin-installs`, `tilde-log-path`, and
+`versioned-runtime-deps`. In aggregate runs,
 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` expands to all reported
-issue-shaped scenarios.
+issue-shaped scenarios, including the configured-plugin install migration.
+
+Full update migration is intentionally separate from Full Release CI. Use the
+manual `Update Migration` workflow when the release question is "can every
+published stable release from 2026.4.23 onward update to this candidate and
+clean up plugin dependency debris?":
+
+```bash
+gh workflow run update-migration.yml \
+  --ref main \
+  -f workflow_ref=main \
+  -f package_ref=main \
+  -f baselines=all-since-2026.4.23 \
+  -f scenarios=plugin-deps-cleanup
+```
 
 ## Package Acceptance
 
@@ -130,6 +154,11 @@ Candidate sources:
 - `source=url`: validate an HTTPS tarball with required `package_sha256`.
 - `source=artifact`: reuse a tarball uploaded by another Actions run.
 
+Full Release Validation uses `source=artifact` by default, built from the
+resolved release SHA. For post-publish proof, pass
+`package_acceptance_package_spec=openclaw@YYYY.M.D` so the same upgrade matrix
+targets the shipped npm package instead.
+
 Release checks call Package Acceptance with the package/update/plugin set:
 
 ```text
@@ -139,7 +168,7 @@ doctor-switch update-channel-switch upgrade-survivor published-upgrade-survivor 
 They also pass:
 
 ```text
-published_upgrade_survivor_baselines=release-history
+published_upgrade_survivor_baselines=all-since-2026.4.23
 published_upgrade_survivor_scenarios=reported-issues
 telegram_mode=mock-openai
 ```
@@ -147,6 +176,12 @@ telegram_mode=mock-openai
 This keeps package migration, update channel switching, stale plugin dependency
 cleanup, offline plugin coverage, plugin update behavior, and Telegram package
 QA on the same resolved artifact.
+
+`all-since-2026.4.23` is the Full Release CI upgrade sample: every stable npm-published release from `2026.4.23` through `latest`. For exhaustive published
+update migration coverage, use `all-since-2026.4.23` in the separate Update
+Migration workflow instead of Full Release CI. `release-history` remains
+available for manual wider sampling when you also want the legacy pre-date
+anchor.
 
 Run a package profile manually when validating a candidate before release:
 
@@ -157,7 +192,7 @@ gh workflow run package-acceptance.yml \
   -f source=npm \
   -f package_spec=openclaw@beta \
   -f suite_profile=package \
-  -f published_upgrade_survivor_baselines=release-history \
+  -f published_upgrade_survivor_baselines=all-since-2026.4.23 \
   -f published_upgrade_survivor_scenarios=reported-issues \
   -f telegram_mode=mock-openai
 ```
@@ -208,6 +243,10 @@ can fail for the right reason:
 - Published-release migration behavior: `published-upgrade-survivor` scenario.
 - Registry/package source behavior: `test:docker:plugins` fixture or ClawHub
   fixture server.
+- Dependency layout or cleanup behavior: assert both runtime execution and the
+  filesystem boundary. npm dependencies may be hoisted under the managed npm
+  root, so tests should prove the root is scanned/cleaned instead of assuming a
+  package-local `node_modules` tree.
 
 Keep new Docker fixtures hermetic by default. Use local fixture registries and
 fake packages unless the point of the test is live registry behavior.
