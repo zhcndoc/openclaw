@@ -1,3 +1,7 @@
+#localization-select-trigger {
+  display: none !important;
+}
+
 #content > h1:first-of-type {
   display: none !important;
 }

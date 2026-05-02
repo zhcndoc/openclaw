@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "name": "OpenClaw",
-  "description": "Self-hosted gateway that connects Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more to AI coding agents. Run one Gateway process on your own machine and message your AI assistant from anywhere.",
+  "name": "OpenClaw 中文文档",
+  "description": "自托管网关，可将 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等连接到人工智能编码代理。在您自己的机器上运行一个网关进程，就可以随时随地给您的人工智能助手发送消息。",
   "theme": "mint",
   "icons": {
     "library": "lucide"
@@ -45,9 +45,9 @@
         "icon": "package"
       },
       {
-        "label": "Discord",
-        "href": "https://discord.com/invite/clawd",
-        "icon": "discord"
+        "label": "简中文档",
+        "href": "https://www.zhcndoc.com",
+        "icon": "languages"
       }
     ]
   },
@@ -955,14 +955,14 @@
         "language": "en",
         "tabs": [
           {
-            "tab": "Get started",
+            "tab": "开始使用",
             "groups": [
               {
-                "group": "Overview",
+                "group": "概览",
                 "pages": ["index", "start/showcase", "concepts/features"]
               },
               {
-                "group": "First steps",
+                "group": "第一步",
                 "pages": [
                   "start/getting-started",
                   "start/onboarding-overview",
@@ -971,7 +971,7 @@
                 ]
               },
               {
-                "group": "Guides",
+                "group": "指南",
                 "pages": [
                   "start/openclaw",
                   "start/wizard-cli-reference",
@@ -981,18 +981,18 @@
             ]
           },
           {
-            "tab": "Install",
+            "tab": "安装",
             "groups": [
               {
-                "group": "Install overview",
+                "group": "安装概览",
                 "pages": ["install/index", "install/installer", "install/node"]
               },
               {
-                "group": "Maintenance",
+                "group": "维护",
                 "pages": [
                   "install/updating",
                   {
-                    "group": "Migrating",
+                    "group": "迁移",
                     "pages": [
                       "install/migrating",
                       "install/migrating-claude",
@@ -1004,7 +1004,7 @@
                 ]
               },
               {
-                "group": "Containers",
+                "group": "容器",
                 "pages": [
                   "install/ansible",
                   "install/bun",
@@ -1015,7 +1015,7 @@
                 ]
               },
               {
-                "group": "Hosting",
+                "group": "托管",
                 "pages": [
                   "install/azure",
                   "install/digitalocean",
@@ -1036,20 +1036,20 @@
                 ]
               },
               {
-                "group": "Advanced setup",
+                "group": "高级设置",
                 "pages": ["start/setup", "pi-dev"]
               }
             ]
           },
           {
-            "tab": "Channels",
+            "tab": "渠道",
             "groups": [
               {
-                "group": "Overview",
+                "group": "概览",
                 "pages": ["channels/index"]
               },
               {
-                "group": "Mainstream messaging",
+                "group": "主流消息平台",
                 "pages": [
                   "channels/discord",
                   "channels/slack",
@@ -1066,7 +1066,7 @@
                 ]
               },
               {
-                "group": "Developer and self-hosted",
+                "group": "开发者与自托管",
                 "pages": [
                   "channels/irc",
                   "channels/mattermost",
@@ -1078,7 +1078,7 @@
                 ]
               },
               {
-                "group": "Regional platforms",
+                "group": "区域平台",
                 "pages": [
                   "channels/line",
                   "channels/wechat",
@@ -1090,7 +1090,7 @@
                 ]
               },
               {
-                "group": "Configuration",
+                "group": "配置",
                 "pages": [
                   "channels/pairing",
                   "channels/access-groups",
@@ -1106,10 +1106,10 @@
             ]
           },
           {
-            "tab": "Agents",
+            "tab": "智能体",
             "groups": [
               {
-                "group": "Fundamentals",
+                "group": "基础",
                 "pages": [
                   "concepts/architecture",
                   "concepts/agent",
@@ -1128,14 +1128,14 @@
                 ]
               },
               {
-                "group": "Sessions and memory",
+                "group": "会话与记忆",
                 "pages": [
                   "concepts/session",
                   "concepts/channel-docking",
                   "concepts/session-pruning",
                   "concepts/session-tool",
                   {
-                    "group": "Memory",
+                    "group": "记忆",
                     "pages": [
                       "concepts/memory",
                       "concepts/memory-builtin",
@@ -1151,7 +1151,7 @@
                 ]
               },
               {
-                "group": "Multi-agent",
+                "group": "多智能体",
                 "pages": [
                   "concepts/multi-agent",
                   "concepts/presence",
@@ -1159,7 +1159,7 @@
                 ]
               },
               {
-                "group": "Messages and delivery",
+                "group": "消息与投递",
                 "pages": [
                   "concepts/messages",
                   "concepts/streaming",
@@ -1171,14 +1171,14 @@
             ]
           },
           {
-            "tab": "Tools & Plugins",
+            "tab": "工具与插件",
             "groups": [
               {
-                "group": "Overview",
+                "group": "概览",
                 "pages": ["tools/index"]
               },
               {
-                "group": "Plugins",
+                "group": "插件",
                 "pages": [
                   "tools/plugin",
                   "plugins/community",
@@ -1195,7 +1195,7 @@
                   "plugins/skill-workshop",
                   "plugins/zalouser",
                   {
-                    "group": "Building plugins",
+                    "group": "构建插件",
                     "pages": [
                       "plugins/building-plugins",
                       "plugins/hooks",
@@ -1206,7 +1206,7 @@
                     ]
                   },
                   {
-                    "group": "Plugin SDK reference",
+                    "group": "插件 SDK 参考",
                     "pages": [
                       "plugins/sdk-overview",
                       "plugins/sdk-subpaths",
@@ -1224,7 +1224,7 @@
                 ]
               },
               {
-                "group": "Skills",
+                "group": "技能",
                 "pages": [
                   "tools/skills",
                   "tools/creating-skills",
@@ -1235,7 +1235,7 @@
                 ]
               },
               {
-                "group": "Automation and tasks",
+                "group": "自动化与任务",
                 "pages": [
                   "automation/index",
                   "automation/cron-jobs",
@@ -1246,7 +1246,7 @@
                 ]
               },
               {
-                "group": "Tools",
+                "group": "工具",
                 "pages": [
                   "tools/apply-patch",
                   "tools/btw",
@@ -1270,7 +1270,7 @@
                   "tools/tts",
                   "tools/video-generation",
                   {
-                    "group": "Web browser",
+                    "group": "网页浏览器",
                     "pages": [
                       "tools/browser",
                       "tools/browser-control",
@@ -1280,7 +1280,7 @@
                     ]
                   },
                   {
-                    "group": "Web tools",
+                    "group": "网页工具",
                     "pages": [
                       "tools/web-fetch",
                       "tools/web",
@@ -1301,7 +1301,7 @@
                 ]
               },
               {
-                "group": "Agent coordination",
+                "group": "智能体协作",
                 "pages": [
                   "tools/agent-send",
                   "tools/subagents",
@@ -1313,18 +1313,18 @@
             ]
           },
           {
-            "tab": "Models",
+            "tab": "模型",
             "groups": [
               {
-                "group": "Overview",
+                "group": "概览",
                 "pages": ["providers/index", "providers/models"]
               },
               {
-                "group": "Concepts and configuration",
+                "group": "概念与配置",
                 "pages": ["concepts/models", "concepts/model-providers", "concepts/model-failover"]
               },
               {
-                "group": "Providers",
+                "group": "提供商",
                 "pages": [
                   "providers/alibaba",
                   "providers/bedrock",
@@ -1384,10 +1384,10 @@
             ]
           },
           {
-            "tab": "Platforms",
+            "tab": "平台",
             "groups": [
               {
-                "group": "Platforms overview",
+                "group": "平台概览",
                 "pages": [
                   "platforms/index",
                   "platforms/macos",
@@ -1398,10 +1398,10 @@
                 ]
               },
               {
-                "group": "macOS companion app",
+                "group": "macOS 伴侣应用",
                 "pages": [
                   {
-                    "group": "Setup",
+                    "group": "设置",
                     "pages": [
                       "platforms/mac/dev-setup",
                       "platforms/mac/menu-bar",
@@ -1411,7 +1411,7 @@
                     ]
                   },
                   {
-                    "group": "Runtime",
+                    "group": "运行时",
                     "pages": [
                       "platforms/mac/bundled-gateway",
                       "platforms/mac/child-process",
@@ -1422,7 +1422,7 @@
                     ]
                   },
                   {
-                    "group": "Features",
+                    "group": "功能",
                     "pages": [
                       "platforms/mac/voicewake",
                       "platforms/mac/voice-overlay",
@@ -1437,14 +1437,14 @@
             ]
           },
           {
-            "tab": "Gateway & Ops",
+            "tab": "网关与运维",
             "groups": [
               {
-                "group": "Gateway",
+                "group": "网关",
                 "pages": [
                   "gateway/index",
                   {
-                    "group": "Configuration",
+                    "group": "配置",
                     "pages": [
                       "gateway/configuration",
                       "gateway/configuration-reference",
@@ -1455,7 +1455,7 @@
                     ]
                   },
                   {
-                    "group": "Authentication and secrets",
+                    "group": "身份验证与密钥",
                     "pages": [
                       "gateway/authentication",
                       "auth-credential-semantics",
@@ -1465,7 +1465,7 @@
                     ]
                   },
                   {
-                    "group": "Health and diagnostics",
+                    "group": "健康检查与诊断",
                     "pages": [
                       "gateway/health",
                       "gateway/heartbeat",
@@ -1479,7 +1479,7 @@
                     ]
                   },
                   {
-                    "group": "Scaling and operations",
+                    "group": "扩展与运营",
                     "pages": [
                       "gateway/gateway-lock",
                       "gateway/background-process",
@@ -1487,7 +1487,7 @@
                     ]
                   },
                   {
-                    "group": "Security and sandboxing",
+                    "group": "安全与沙盒",
                     "pages": [
                       "gateway/security/index",
                       "gateway/security/audit-checks",
@@ -1497,7 +1497,7 @@
                     ]
                   },
                   {
-                    "group": "Protocols and APIs",
+                    "group": "协议与 API",
                     "pages": [
                       "gateway/protocol",
                       "gateway/bridge-protocol",
@@ -1509,7 +1509,7 @@
                     ]
                   },
                   {
-                    "group": "Networking and discovery",
+                    "group": "网络与发现",
                     "pages": [
                       "network",
                       "gateway/network-model",
@@ -1521,11 +1521,11 @@
                 ]
               },
               {
-                "group": "Remote access",
+                "group": "远程访问",
                 "pages": ["gateway/remote", "gateway/remote-gateway-readme", "gateway/tailscale"]
               },
               {
-                "group": "Security",
+                "group": "安全",
                 "pages": [
                   "security/network-proxy",
                   "security/formal-verification",
@@ -1534,12 +1534,12 @@
                 ]
               },
               {
-                "group": "Nodes and media",
+                "group": "节点与媒体",
                 "pages": [
                   "nodes/index",
                   "nodes/troubleshooting",
                   {
-                    "group": "Media capabilities",
+                    "group": "媒体能力",
                     "pages": [
                       "nodes/media-understanding",
                       "nodes/images",
@@ -1549,26 +1549,26 @@
                     ]
                   },
                   {
-                    "group": "Node features",
+                    "group": "节点功能",
                     "pages": ["nodes/talk", "nodes/voicewake", "nodes/location-command"]
                   }
                 ]
               },
               {
-                "group": "Web interfaces",
+                "group": "网页界面",
                 "pages": ["web/index", "web/control-ui", "web/dashboard", "web/webchat", "web/tui"]
               }
             ]
           },
           {
-            "tab": "Reference",
+            "tab": "参考",
             "groups": [
               {
-                "group": "CLI commands",
+                "group": "CLI 命令",
                 "pages": [
                   "cli/index",
                   {
-                    "group": "Gateway and service",
+                    "group": "网关与服务",
                     "pages": [
                       "cli/backup",
                       "cli/daemon",
@@ -1588,7 +1588,7 @@
                     ]
                   },
                   {
-                    "group": "Agents and sessions",
+                    "group": "智能体与会话",
                     "pages": [
                       "cli/agent",
                       "cli/agents",
@@ -1604,7 +1604,7 @@
                     ]
                   },
                   {
-                    "group": "Channels and messaging",
+                    "group": "渠道与消息",
                     "pages": [
                       "cli/channels",
                       "cli/devices",
@@ -1615,7 +1615,7 @@
                     ]
                   },
                   {
-                    "group": "Tools and execution",
+                    "group": "工具与执行",
                     "pages": [
                       "cli/approvals",
                       "cli/browser",
@@ -1627,19 +1627,19 @@
                     ]
                   },
                   {
-                    "group": "Configuration",
+                    "group": "配置",
                     "pages": ["cli/config", "cli/configure", "cli/webhooks"]
                   },
                   {
-                    "group": "Plugins and skills",
+                    "group": "插件与技能",
                     "pages": ["cli/plugins", "cli/skills"]
                   },
                   {
-                    "group": "Interfaces",
+                    "group": "界面",
                     "pages": ["cli/dashboard", "cli/tui"]
                   },
                   {
-                    "group": "Utility",
+                    "group": "实用工具",
                     "pages": [
                       "cli/acp",
                       "cli/clawbot",
@@ -1654,7 +1654,7 @@
                 ]
               },
               {
-                "group": "RPC and API",
+                "group": "RPC 与 API",
                 "pages": [
                   "reference/rpc",
                   "concepts/openclaw-sdk",
@@ -1663,7 +1663,7 @@
                 ]
               },
               {
-                "group": "Templates",
+                "group": "模板",
                 "pages": [
                   "reference/AGENTS.default",
                   "reference/templates/AGENTS",
@@ -1677,7 +1677,7 @@
                 ]
               },
               {
-                "group": "Technical reference",
+                "group": "技术参考",
                 "pages": [
                   "pi",
                   "reference/wizard",
@@ -1693,7 +1693,7 @@
                 ]
               },
               {
-                "group": "Concept internals",
+                "group": "概念内部机制",
                 "pages": [
                   "concepts/typebox",
                   "concepts/markdown-formatting",
@@ -1705,11 +1705,11 @@
                 ]
               },
               {
-                "group": "Project",
+                "group": "项目",
                 "pages": ["reference/credits"]
               },
               {
-                "group": "Release and CI",
+                "group": "发布与 CI",
                 "pages": [
                   "reference/RELEASING",
                   "reference/full-release-validation",
@@ -1721,26 +1721,26 @@
             ]
           },
           {
-            "tab": "Help",
+            "tab": "帮助",
             "groups": [
               {
-                "group": "Start here",
+                "group": "从这里开始",
                 "pages": ["help/index", "help/troubleshooting", "help/debugging"]
               },
               {
-                "group": "FAQ",
+                "group": "常见问题",
                 "pages": ["help/faq", "help/faq-first-run", "help/faq-models"]
               },
               {
-                "group": "Testing",
+                "group": "测试",
                 "pages": ["help/testing", "help/testing-updates-plugins", "help/testing-live"]
               },
               {
-                "group": "Diagnostics",
+                "group": "诊断",
                 "pages": ["help/environment", "diagnostics/flags", "debug/node-issue"]
               },
               {
-                "group": "Community and meta",
+                "group": "社区与元信息",
                 "pages": ["start/lore", "start/hubs", "start/docs-directory"]
               }
             ]
