@@ -17,7 +17,7 @@ sidebarTitle: "工具和自定义提供方"
 `tools.profile` 会在 `tools.allow`/`tools.deny` 之前设置一个基础允许列表：
 
 <Note>
-本地上手流程在未设置时，会将新建的本地配置默认设为 `tools.profile: "coding"`（已显式设置的现有配置会被保留）。
+本地入门流程在未设置时，会将新建的本地配置默认设为 `tools.profile: "coding"`（已显式设置的现有配置会被保留）。
 </Note>
 
 | 配置文件   | 包含内容                                                                                                                        |
@@ -51,6 +51,14 @@ sidebarTitle: "工具和自定义提供方"
 ```json5
 {
   tools: { deny: ["browser", "canvas"] },
+}
+```
+
+`write` 和 `apply_patch` 是两个独立的工具 id。`allow: ["write"]` 也会为兼容模型启用 `apply_patch`，但 `deny: ["write"]` 不会拒绝 `apply_patch`。要阻止所有文件修改，请拒绝 `group:fs` 或显式列出每个会修改文件的工具：
+
+```json5
+{
+  tools: { deny: ["write", "edit", "apply_patch"] },
 }
 ```
 

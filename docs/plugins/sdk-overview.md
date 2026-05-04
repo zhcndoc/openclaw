@@ -122,18 +122,18 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 通用契约；Plan Mode 可以使用它们，审批工作流、
 工作区策略门禁、后台监视器、安装向导以及 UI 伴随插件也都可以使用。
 
-| 方法                                                                   | 所拥有的契约                                                                  |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `api.registerSessionExtension(...)`                                      | 由插件拥有、与 JSON 兼容的会话状态，通过 Gateway 会话投影出来    |
-| `api.enqueueNextTurnInjection(...)`                                      | 持久化的、严格一次的上下文，注入到某个会话的下一次 agent 回合    |
-| `api.registerTrustedToolPolicy(...)`                                     | 捆绑/受信任的、预插件工具策略，可阻止或重写工具参数      |
-| `api.registerToolMetadata(...)`                                          | 工具目录显示元数据，而不改变工具实现            |
-| `api.registerCommand(...)`                                               | 作用域化的插件命令；命令结果可以设置 `continueAgent: true`             |
-| `api.registerControlUiDescriptor(...)`                                   | 会话、工具、运行或设置界面的控制 UI 贡献描述符  |
-| `api.registerRuntimeLifecycle(...)`                                      | 在重置/删除/重载路径上，为插件拥有的运行时资源提供清理回调 |
-| `api.registerAgentEventSubscription(...)`                                | 用于工作流状态和监视器的已净化事件订阅                     |
-| `api.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)` | 按运行隔离的插件临时状态，在运行终态生命周期上清除                    |
-| `api.registerSessionSchedulerJob(...)`                                   | 具有确定性清理的、插件拥有的会话调度作业记录             |
+| Method                                                                   | Contract it owns                                                                                                                  |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `api.registerSessionExtension(...)`                                      | Plugin-owned, JSON-compatible session state projected through Gateway sessions                                                    |
+| `api.enqueueNextTurnInjection(...)`                                      | Durable exactly-once context injected into the next agent turn for one session                                                    |
+| `api.registerTrustedToolPolicy(...)`                                     | Bundled/trusted pre-plugin tool policy that can block or rewrite tool params                                                      |
+| `api.registerToolMetadata(...)`                                          | Tool catalog display metadata without changing the tool implementation                                                            |
+| `api.registerCommand(...)`                                               | Scoped plugin commands; command results can set `continueAgent: true`; Discord native commands support `descriptionLocalizations` |
+| `api.registerControlUiDescriptor(...)`                                   | Control UI contribution descriptors for session, tool, run, or settings surfaces                                                  |
+| `api.registerRuntimeLifecycle(...)`                                      | Cleanup callbacks for plugin-owned runtime resources on reset/delete/reload paths                                                 |
+| `api.registerAgentEventSubscription(...)`                                | Sanitized event subscriptions for workflow state and monitors                                                                     |
+| `api.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)` | Per-run plugin scratch state cleared on terminal run lifecycle                                                                    |
+| `api.registerSessionSchedulerJob(...)`                                   | Plugin-owned session scheduler job records with deterministic cleanup                                                             |
 
 这些契约刻意分离了权限：
 
@@ -301,7 +301,7 @@ AI CLI 后端的默认配置，例如 `codex-cli`。
 | `api.description`        | `string?`                 | 插件描述（可选）                                                               |
 | `api.source`             | `string`                  | 插件源路径                                                                          |
 | `api.rootDir`            | `string?`                 | 插件根目录（可选）                                                            |
-| `api.config`             | `OpenClawConfig`          | 当前配置快照（在可用时为当前内存中的运行时快照）                  |
+| `api.config`             | `OpenClawConfig`          | 当前配置快照（在可用时为当前内存中的运行时 snapshot）                  |
 | `api.pluginConfig`       | `Record<string, unknown>` | 来自 `plugins.entries.<id>.config` 的插件特定配置                                   |
 | `api.runtime`            | `PluginRuntime`           | [运行时辅助函数](/plugins/sdk-runtime)                                                     |
 | `api.logger`            | `PluginLogger`            | 作用域日志器（`debug`、`info`、`warn`、`error`）                                            |

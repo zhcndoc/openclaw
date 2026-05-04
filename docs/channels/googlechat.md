@@ -5,7 +5,21 @@ read_when:
 title: "Google Chat"
 ---
 
-状态：已就绪，可通过 Google Chat API Webhook 用于私信 + 空间（仅 HTTP）。
+状态：可下载插件，通过 Google Chat API webhook 支持 DM + 空间（仅 HTTP）。
+
+## 安装
+
+在配置该频道之前，请先安装 Google Chat：
+
+```bash
+openclaw plugins install @openclaw/googlechat
+```
+
+本地检出（当从 git 仓库运行时）：
+
+```bash
+openclaw plugins install ./path/to/local/googlechat-plugin
+```
 
 ## 快速设置（新手）
 
@@ -178,7 +192,7 @@ your-domain.com {
       groupPolicy: "allowlist",
       groups: {
         "spaces/AAAA": {
-          allow: true,
+          enabled: true,
           requireMention: true,
           users: ["users/1234567890"],
           systemPrompt: "仅简短回答。",

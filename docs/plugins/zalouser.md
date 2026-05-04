@@ -8,7 +8,7 @@ title: "Zalo 个人插件"
 
 # Zalo 个人版（插件）
 
-通过插件为 OpenClaw 提供 Zalo Personal 支持，使用原生 `zca-js` 自动化一个普通的 Zalo 用户账号。
+通过插件为 OpenClaw 提供 Zalo 个人版支持，使用原生 `zca-js` 自动化一个普通的 Zalo 用户账号。
 
 <Warning>
 非官方自动化可能导致账号被停用或封禁。请自行承担风险。
@@ -34,7 +34,7 @@ title: "Zalo 个人插件"
 openclaw plugins install @openclaw/zalouser
 ```
 
-如果 npm 提示 OpenClaw 维护的包已被弃用，那么该包版本来自较早的外部包发布线；请改用当前已打包的 OpenClaw 构建版本，或者使用本地文件夹路径，直到发布更新的 npm 包。
+使用裸包以跟随当前官方发布标签。只有在你需要可复现安装时才固定到某个精确版本。
 
 之后重启 Gateway。
 

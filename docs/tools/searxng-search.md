@@ -83,6 +83,9 @@ SearXNG 实例的插件级设置：
 - `https://` 适用于公共或私有的 SearXNG 主机
 - `http://` 仅接受受信任的私有网络或回环主机
 - 公共 SearXNG 主机必须使用 `https://`
+- 私有/内部主机使用自托管网络防护；公共 `https://`
+  主机会继续使用严格的 web-search 防护，且不能重定向到私有
+  地址
 
 ## 环境变量
 
@@ -104,13 +107,20 @@ export SEARXNG_BASE_URL="http://localhost:8888"
 
 ## 注意事项
 
-- **JSON API** -- 使用 SearXNG 原生的 `format=json` 端点，而不是 HTML 抓取
-- **无 API 密钥** -- 可直接与任何 SearXNG 实例配合使用
+- **JSON API** -- 使用 SearXNG 原生的 `format=json` 端点，而不是 HTML 爬取
+- **图像结果 URL** -- 图像分类结果在 SearXNG 返回直接图片 URL 时会包含 `img_src`
+- **无需 API 密钥** -- 可直接与任何 SearXNG 实例配合使用
 - **基础 URL 校验** -- `baseUrl` 必须是有效的 `http://` 或 `https://`
   URL；公共主机必须使用 `https://`
-- **自动检测顺序** -- 在自动检测中，SearXNG 最后检查（顺序 200）。先运行已配置密钥的 API 驱动提供商，然后是 DuckDuckGo（顺序 100），再然后是 Ollama Web Search（顺序 110）
+- **网络防护** -- 私有/内部 SearXNG 端点会显式允许
+  私有网络访问；公共 `https://` SearXNG 端点保持严格的 SSRF
+  防护
+- **自动检测顺序** -- SearXNG 在自动检测中最后检查（顺序 200）。已配置密钥的 API 驱动提供商会先运行，然后是 DuckDuckGo（顺序 100），再然后是 Ollama Web Search（顺序 110）
 - **自托管** -- 你可以控制实例、查询以及上游搜索引擎
-- **categories** 未配置时默认为 `general`
+- **分类** 在未配置时默认为 `general`
+- **分类回退** -- 如果非 `general` 分类请求成功但
+  返回零结果，OpenClaw 会在返回空结果集之前
+  再用 `general` 重试同一查询一次
 
 <Tip>
   为了让 SearXNG JSON API 正常工作，请确保你的 SearXNG 实例在其 `settings.yml` 的 `search.formats` 下启用了 `json`

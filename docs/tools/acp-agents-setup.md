@@ -109,7 +109,7 @@ ACP 核心基线：
     discord: {
       threadBindings: {
         enabled: true,
-        spawnAcpSessions: true,
+        spawnSessions: true,
       },
     },
   },
@@ -118,7 +118,7 @@ ACP 核心基线：
 
 如果线程绑定的 ACP spawn 不起作用，请先验证适配器功能开关：
 
-- Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
+- Discord: `channels.discord.threadBindings.spawnSessions=true`
 
 当前对话绑定不需要创建子线程。它们需要一个活动的对话上下文，以及一个暴露 ACP 对话绑定的通道适配器。
 
@@ -126,8 +126,15 @@ ACP 核心基线：
 
 ## acpx 后端的插件设置
 
-全新安装默认会启用捆绑的 `acpx` 运行时插件，因此 ACP
-通常无需手动安装插件步骤即可工作。
+打包安装会为 ACP 使用官方的 `@openclaw/acpx` 运行时插件。
+在使用 ACP harness 会话之前，请先安装并启用它：
+
+```bash
+openclaw plugins install @openclaw/acpx
+openclaw config set plugins.entries.acpx.enabled true
+```
+
+源代码检出也可以在 `pnpm install` 后使用本地工作区插件。
 
 先运行：
 
@@ -135,11 +142,11 @@ ACP 核心基线：
 /acp doctor
 ```
 
-如果你禁用了 `acpx`、通过 `plugins.allow` / `plugins.deny` 拒绝了它，或者
-想切换到本地开发检出版本，请使用显式插件路径：
+如果你禁用了 `acpx`、通过 `plugins.allow` / `plugins.deny` 拒绝了它，或者想
+切换回打包插件，请使用显式包路径：
 
 ```bash
-openclaw plugins install acpx
+openclaw plugins install @openclaw/acpx
 openclaw config set plugins.entries.acpx.enabled true
 ```
 
@@ -157,8 +164,8 @@ openclaw plugins install ./path/to/local/acpx-plugin
 
 ### acpx 命令和版本配置
 
-默认情况下，捆绑的 `acpx` 插件会注册内置 ACP 后端，而不会在 Gateway 启动期间
-启动 ACP 代理。运行 `/acp doctor` 进行显式的实时探测。只有在你需要
+默认情况下，`acpx` 插件会注册嵌入式 ACP 后端，而不会在 Gateway 启动期间
+启动 ACP 代理。运行 `/acp doctor` 可进行显式的实时探测。只有当你需要
 Gateway 在启动时探测已配置代理时，才设置 `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=1`。
 
 在插件配置中覆盖命令或版本：
@@ -236,10 +243,7 @@ openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 
 ### 运行时超时配置
 
-捆绑的 `acpx` 插件默认将内置运行时设置为 120 秒
-超时。这为 Gemini CLI 等较慢的运行时提供足够时间完成
-ACP 启动和初始化。若你的主机需要不同的
-运行时限制，可覆盖它：
+`acpx` 插件默认将嵌入式运行时设置为 120 秒超时。这为 Gemini CLI 之类较慢的 harness 留出足够时间完成 ACP 启动和初始化。若你的主机需要不同的运行时限制，可覆盖它：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.timeoutSeconds 180

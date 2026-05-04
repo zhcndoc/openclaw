@@ -59,15 +59,16 @@ openclaw tui --local
 
 ## 心智模型：agents + sessions
 
-- Agents 是唯一的 slug（例如 `main`、`research`）。Gateway 会公开该列表。
-- Sessions 归属于当前 agent。
-- 会话键以 `agent:<agentId>:<sessionKey>` 存储。
+- Agent 是唯一的 slug（例如 `main`、`research`）。Gateway 会公开这个列表。
+- Session 属于当前 agent。
+- Session 键存储为 `agent:<agentId>:<sessionKey>`。
   - 如果你输入 `/session main`，TUI 会将其展开为 `agent:<currentAgent>:main`。
-  - 如果你输入 `/session agent:other:main`，你会显式切换到那个 agent 会话。
-- 会话范围：
-  - `per-sender`（默认）：每个 agent 有多个会话。
-  - `global`：TUI 始终使用 `global` 会话（选择器可能为空）。
-- 当前 agent + 会话始终会显示在底部栏中。
+  - 如果你输入 `/session agent:other:main`，则会显式切换到那个 agent 的 session。
+- Session 作用域：
+  - `per-sender`（默认）：每个 agent 有多个 session。
+  - `global`：TUI 始终使用 `global` session（选择器可能为空）。
+- 当前 agent + session 始终会显示在页脚中。
+- 在未使用 `--session` 启动时，如果同一个 Gateway、agent 和 session 作用域下该 session 仍然存在，gateway 模式的 TUI 会恢复上次选择的 session。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式指定。
 
 ## 发送 + 交付
 

@@ -2,8 +2,9 @@
 summary: "CLI 参考：`openclaw update`（相对安全的源码更新 + 网关自动重启）"
 read_when:
   - 你想安全地更新一个源码检出
+  - 你正在排查 `openclaw update` 的输出或选项
   - 你需要了解 `--update` 简写行为
-title: "更新"
+title: "Update"
 ---
 
 # `openclaw update`
@@ -41,6 +42,13 @@ openclaw --update
   `postUpdate.plugins.integrityDrifts`。
 - `--timeout <seconds>`：每一步的超时时间（默认 1800 秒）。
 - `--yes`：跳过确认提示（例如降级确认）。
+
+`openclaw update` 没有 `--verbose` 标志。使用 `--dry-run` 预览
+计划中的 channel/tag/install/restart 操作，使用 `--json` 获取机器可读
+结果；当你只需要渠道和可用性详情时，使用 `openclaw update status --json`。如果你正在排查更新期间的 Gateway 日志，
+控制台详细程度和文件日志级别是分开的：Gateway 的 `--verbose` 影响
+终端/WebSocket 输出，而文件日志需要在配置中设置 `logging.level: "debug"` 或 `"trace"`。
+请参见 [Gateway logging](/gateway/logging)。
 
 <Warning>
 降级需要确认，因为旧版本可能会破坏配置。
@@ -98,13 +106,15 @@ openclaw update status --timeout 10
 已安装的 OpenClaw 构建保持一致，同时将完整的插件命令补全重建留给
 显式的 `openclaw completion --write-state` 运行。
 
-当安装了本地受管理的 Gateway 服务并且启用了重启时，
-包管理器更新会在替换包
-树之前停止正在运行的服务，然后从更新后的安装中刷新服务元数据，重启该
-服务，并验证重启后的 Gateway 报告的是预期版本。使用
-`--no-restart` 时，包替换仍会运行，但受管理服务不会被
-停止或重启，因此运行中的 Gateway 可能会继续使用旧代码，直到你手动重启
-它。
+当安装了本地托管的 Gateway 服务并且启用了重启时，
+包管理器更新会在替换包树之前停止正在运行的服务，然后从更新后的安装中刷新服务元数据，重启服务，并在报告成功之前验证重启后的 Gateway 报告的是预期版本。
+在 macOS 上，更新后的检查还会验证针对活动配置文件的 LaunchAgent 已加载/运行，并且已配置的回环端口是健康的。
+如果 plist 已安装但 launchd 没有监督它，OpenClaw 会自动重新引导 LaunchAgent，然后重新运行
+健康/版本/渠道就绪检查。新的引导会直接加载 RunAtLoad
+任务，因此更新恢复不会立即对新启动的 Gateway 执行 `kickstart -k`。
+如果 Gateway 仍然无法变得健康，命令会以非零状态退出，并打印重启日志路径以及明确的重启、重新安装和
+包回滚说明。使用 `--no-restart` 时，
+包替换仍会执行，但托管服务不会停止或重启，因此正在运行的 Gateway 可能会一直保留旧代码，直到你手动重启它。
 
 ## Git 检出流程
 
@@ -141,10 +151,12 @@ openclaw update status --timeout 10
   <Step title="运行 doctor">
     `openclaw doctor` 作为最终的安全更新检查运行。
   </Step>
-  <Step title="同步插件">
-    将插件同步到当前活跃渠道。dev 使用内置插件；stable 和 beta 使用 npm。更新通过 npm 安装的插件。
+  <Step title="Sync plugins">
+    将插件同步到当前渠道。dev 使用捆绑插件；stable 和 beta 使用 npm。更新已跟踪的插件安装。
   </Step>
 </Steps>
+
+在 beta 更新渠道上，遵循默认/latest 线的已跟踪 npm 和 ClawHub 插件安装会先尝试插件的 `@beta` 发布。如果插件没有 beta 发布，OpenClaw 会回退到记录的 default/latest 规范。精确版本和显式标签不会被重写。
 
 <Warning>
 如果一个精确固定的 npm 插件更新解析到的制品，其完整性与存储的安装记录不同，`openclaw update` 会中止该插件制品更新，而不是安装它。只有在确认你信任新制品之后，才重新安装或显式更新该插件。

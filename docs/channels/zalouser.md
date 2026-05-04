@@ -17,17 +17,15 @@ title: "Zalo 个人版"
 Zalo Personal 作为当前 OpenClaw 版本中的捆绑插件提供，因此正常的
 打包构建无需单独安装。
 
-如果你使用的是较旧的构建版本，或自定义安装中未包含 Zalo Personal，
-在有新发布的 npm 包时安装当前版本：
+如果你使用的是较旧的版本，或是一个排除了 Zalo Personal 的自定义安装，
+请直接安装 npm 包：
 
 - 通过 CLI 安装：`openclaw plugins install @openclaw/zalouser`
-- 或从源代码检出目录安装：`openclaw plugins install ./path/to/local/zalouser-plugin`
+- 锁定版本：`openclaw plugins install @openclaw/zalouser@2026.5.2`
+- 或者从源码检出安装：`openclaw plugins install ./path/to/local/zalouser-plugin`
 - 详情：[插件](/tools/plugin)
 
-如果 npm 提示 OpenClaw 维护的包已弃用，请使用当前的打包版
-OpenClaw 构建或本地检出路径，直到发布更新的 npm 包。
-
-不需要外部 `zca`/`openzca` CLI 二进制文件。
+不需要任何外部 `zca`/`openzca` CLI 二进制文件。
 
 ## 快速设置（初学者）
 

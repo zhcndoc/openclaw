@@ -7,15 +7,11 @@ title: "Mattermost"
 sidebarTitle: "Mattermost"
 ---
 
-状态：捆绑插件（bot token + WebSocket 事件）。支持频道、群组和私信。Mattermost 是一个可自托管的团队消息平台；产品详情和下载请参见官方网站 [mattermost.com](https://mattermost.com)。
+状态：可下载插件（bot token + WebSocket events）。支持频道、群组和私信。Mattermost 是一个可自托管的团队消息平台；有关产品详情和下载，请参见官方网站 [mattermost.com](https://mattermost.com)。
 
-## 捆绑插件
+## 安装
 
-<Note>
-Mattermost 已作为当前 OpenClaw 版本中的捆绑插件提供，因此常规打包构建不需要单独安装。
-</Note>
-
-如果你使用的是较旧的构建版本，或者是排除了 Mattermost 的自定义安装，请在发布新 npm 包后安装当前版本：
+在配置频道之前先安装 Mattermost：
 
 <Tabs>
   <Tab title="npm registry">
@@ -30,10 +26,7 @@ Mattermost 已作为当前 OpenClaw 版本中的捆绑插件提供，因此常�
   </Tab>
 </Tabs>
 
-如果 npm 报告 OpenClaw 维护的包已弃用，请使用当前的打包版
-OpenClaw 构建，或使用本地检出路径，直到发布更新的 npm 包。
-
-详情：[插件](/tools/plugin)
+详细信息： [Plugins](/tools/plugin)
 
 ## 快速设置
 

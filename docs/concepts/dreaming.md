@@ -111,7 +111,9 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 
 启用后，`memory-core` 会自动管理一个用于完整做梦扫描的 cron 任务。每次扫描按顺序运行各阶段：light → REM → deep。
 
-默认频率行为：
+The sweep includes the primary runtime workspace and any configured agent workspaces, deduped by path, so subagent workspace fan-out does not exclude the main agent's `DREAMS.md` and memory state.
+
+Default cadence behavior:
 
 | 设置                 | 默认值        |
 | -------------------- | ------------- |
@@ -234,6 +236,10 @@ Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加�
 - 下次计划运行时间
 - 一个独立的有依据 Scene 通道，用于暂存历史重放条目
 - 一个由 `doctor.memory.dreamDiary` 支持的可展开 Dream Diary 阅读器
+
+## 做梦从不运行：状态显示被阻止
+
+如果 `openclaw memory status` 报告 `Dreaming status: blocked`，说明受管理的 cron 已存在，但默认代理的心跳未触发。请检查默认代理是否已启用心跳，以及其目标是否不是 `none`，然后在下一个心跳间隔后再次运行 `openclaw memory status --deep`。
 
 ## 相关内容
 

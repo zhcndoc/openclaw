@@ -1,0 +1,23 @@
+---
+summary: "添加用于发送和接收 OpenClaw 消息的 Tlon 渠道表面。"
+read_when:
+  - 你正在安装、配置或审计 tlon 插件
+title: "Tlon 插件"
+---
+
+# Tlon 插件
+
+添加用于发送和接收 OpenClaw 消息的 Tlon 渠道表面。
+
+## 分发
+
+- Package: `@openclaw/tlon`
+- 安装方式：npm；ClawHub
+
+## 表面
+
+channels: tlon; contracts: tools; skills
+
+## 相关文档
+
+- [tlon](/channels/tlon)

@@ -18,7 +18,7 @@ title: "插件 SDK 子路径"
 | 子路径                                   | 主要导出                                                                                                                                                                  |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `plugin-sdk/plugin-entry`                 | `definePluginEntry`                                                                                                                                                          |
-| `plugin-sdk/core`                         | `defineChannelPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase`, `defineSetupPluginEntry`, `buildChannelConfigSchema`                                       |
+| `plugin-sdk/core`                         | `defineChannelPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase`, `defineSetupPluginEntry`, `buildChannelConfigSchema`, `buildJsonChannelConfigSchema`       |
 | `plugin-sdk/config-schema`                | `OpenClawSchema`                                                                                                                                                             |
 | `plugin-sdk/provider-entry`               | `defineSingleProviderPluginEntry`                                                                                                                                            |
 | `plugin-sdk/testing`                      | 面向旧版插件测试的广泛兼容桶；新的扩展测试更推荐使用更聚焦的测试子路径                                                                     |
@@ -54,32 +54,32 @@ title: "插件 SDK 子路径"
     | `plugin-sdk/channel-pairing` | `createChannelPairingController` |
     | `plugin-sdk/channel-reply-pipeline` | `createChannelReplyPipeline`, `resolveChannelSourceReplyDeliveryMode` |
     | `plugin-sdk/channel-config-helpers` | `createHybridChannelConfigAdapter`, `resolveChannelDmAccess`, `resolveChannelDmAllowFrom`, `resolveChannelDmPolicy`, `normalizeChannelDmPolicy`, `normalizeLegacyDmAliases` |
-    | `plugin-sdk/channel-config-schema` | 共享 channel 配置 schema 基元和通用构建器 |
-    | `plugin-sdk/bundled-channel-config-schema` | 仅供已维护的 bundled 插件使用的 bundled OpenClaw channel 配置 schema |
-    | `plugin-sdk/channel-config-schema-legacy` | 已弃用的 bundled-channel 配置 schema 兼容别名 |
-    | `plugin-sdk/telegram-command-config` | 带 bundled 契约回退的 Telegram 自定义命令规范化/校验 helper |
+    | `plugin-sdk/channel-config-schema` | 共享 channel config schema 基元以及 Zod 和直接 JSON/TypeBox 构建器 |
+    | `plugin-sdk/bundled-channel-config-schema` | 仅供已维护的 bundled plugins 使用的 bundled OpenClaw channel config schemas |
+    | `plugin-sdk/channel-config-schema-legacy` | bundled-channel config schemas 的已弃用兼容别名 |
+    | `plugin-sdk/telegram-command-config` | 带 bundled-contract 回退的 Telegram 自定义命令规范化/验证 helper |
     | `plugin-sdk/command-gating` | 窄范围命令授权门控 helper |
     | `plugin-sdk/channel-policy` | `resolveChannelGroupRequireMention` |
-    | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink`, `createChannelRunQueue`, draft stream lifecycle/finalization helpers |
-    | `plugin-sdk/inbound-envelope` | Shared inbound route + envelope builder helpers |
-    | `plugin-sdk/inbound-reply-dispatch` | Shared inbound record-and-dispatch helpers |
-    | `plugin-sdk/messaging-targets` | Target parsing/matching helpers |
-    | `plugin-sdk/outbound-media` | Shared outbound media loading helpers |
-    | `plugin-sdk/outbound-send-deps` | Lightweight outbound send dependency lookup for channel adapters |
-    | `plugin-sdk/outbound-runtime` | Outbound delivery, identity, send delegate, session, formatting, and payload planning helpers |
-    | `plugin-sdk/poll-runtime` | Narrow poll normalization helpers |
-    | `plugin-sdk/thread-bindings-runtime` | Thread-binding lifecycle and adapter helpers |
-    | `plugin-sdk/agent-media-payload` | Legacy agent media payload builder |
-    | `plugin-sdk/conversation-runtime` | Conversation/thread binding, pairing, and configured-binding helpers |
-    | `plugin-sdk/runtime-config-snapshot` | Runtime config snapshot helper |
-    | `plugin-sdk/runtime-group-policy` | Runtime group-policy resolution helpers |
-    | `plugin-sdk/channel-status` | Shared channel status snapshot/summary helpers |
-    | `plugin-sdk/channel-config-primitives` | Narrow channel config-schema primitives |
-    | `plugin-sdk/channel-config-writes` | Channel config-write authorization helpers |
-    | `plugin-sdk/channel-plugin-common` | Shared channel plugin prelude exports |
-    | `plugin-sdk/allowlist-config-edit` | Allowlist config edit/read helpers |
-    | `plugin-sdk/group-access` | Shared group-access decision helpers |
-    | `plugin-sdk/direct-dm` | Shared direct-DM auth/guard helpers |
+    | `plugin-sdk/channel-lifecycle` | `createAccountStatusSink`, `createChannelRunQueue`, draft stream 生命周期/终结 helper |
+    | `plugin-sdk/inbound-envelope` | 共享入站 route + envelope 构建器 helper |
+    | `plugin-sdk/inbound-reply-dispatch` | 共享入站记录并分发 helper |
+    | `plugin-sdk/messaging-targets` | 目标解析/匹配 helper |
+    | `plugin-sdk/outbound-media` | 共享出站媒体加载 helper |
+    | `plugin-sdk/outbound-send-deps` | 面向 channel adapter 的轻量出站发送依赖查找 |
+    | `plugin-sdk/outbound-runtime` | 出站交付、身份、发送委托、会话、格式化和 payload 规划 helper |
+    | `plugin-sdk/poll-runtime` | 窄范围 poll 规范化 helper |
+    | `plugin-sdk/thread-bindings-runtime` | 线程绑定生命周期和 adapter helper |
+    | `plugin-sdk/agent-media-payload` | 旧版 agent 媒体 payload 构建器 |
+    | `plugin-sdk/conversation-runtime` | conversation/thread 绑定、配对和已配置绑定 helper |
+    | `plugin-sdk/runtime-config-snapshot` | 运行时 config 快照 helper |
+    | `plugin-sdk/runtime-group-policy` | 运行时 group-policy 解析 helper |
+    | `plugin-sdk/channel-status` | 共享 channel status 快照/摘要 helper |
+    | `plugin-sdk/channel-config-primitives` | 窄范围 channel config-schema 基元 |
+    | `plugin-sdk/channel-config-writes` | channel config 写入授权 helper |
+    | `plugin-sdk/channel-plugin-common` | 共享 channel plugin prelude 导出 |
+    | `plugin-sdk/allowlist-config-edit` | allowlist config 编辑/读取 helper |
+    | `plugin-sdk/group-access` | 共享 group-access 决策 helper |
+    | `plugin-sdk/direct-dm` | 共享 direct-DM 认证/守卫 helper |
     | `plugin-sdk/discord` | 已弃用的 Discord 兼容门面，适用于已发布的 `@openclaw/discord@2026.3.13` 和受跟踪的 owner 兼容性；新的插件应使用通用 channel SDK 子路径 |
     | `plugin-sdk/telegram-account` | 已弃用的 Telegram 账号解析兼容门面，适用于受跟踪的 owner 兼容性；新的插件应使用注入式运行时 helper 或通用 channel SDK 子路径 |
     | `plugin-sdk/zalouser` | 已弃用的 Zalo Personal 兼容门面，适用于仍导入 sender 命令授权的已发布 Lark/Zalo 包；新的插件应使用 `plugin-sdk/command-auth` |
@@ -167,10 +167,12 @@ title: "插件 SDK 子路径"
   <Accordion title="运行时与存储子路径">
     | 子路径 | 主要导出 |
     | --- | --- |
-    | `plugin-sdk/runtime` | 广泛的运行时/日志/备份/plugin 安装 helper |
-    | `plugin-sdk/runtime-env` | 窄范围运行时环境、logger、超时、重试和退避 helper |
-    | `plugin-sdk/browser-config` | 支持的浏览器配置门面，用于规范化的 profile/默认值、CDP URL 解析和浏览器控制认证 helper |
+    | `plugin-sdk/runtime` | 广泛的运行时/日志/备份/插件安装 helper |
+    | `plugin-sdk/runtime-env` | 窄范围运行时环境、logger、超时、重试和回退 helper |
+    | `plugin-sdk/browser-config` | 用于规范化 profile/defaults、CDP URL 解析和 browser-control 认证 helper 的支持性 browser config 门面 |
     | `plugin-sdk/channel-runtime-context` | 通用 channel 运行时上下文注册和查找 helper |
+    | `plugin-sdk/matrix` | 面向旧第三方 channel 包的已弃用 Matrix 兼容门面；新插件应直接导入 `plugin-sdk/run-command` |
+    | `plugin-sdk/mattermost` | 面向旧第三方 channel 包的已弃用 Mattermost 兼容门面；新插件应直接导入通用 SDK 子路径 |
     | `plugin-sdk/runtime-store` | `createPluginRuntimeStore` |
     | `plugin-sdk/plugin-runtime` | 共享 plugin command/hook/http/interactive helper |
     | `plugin-sdk/hook-runtime` | 共享 webhook/internal hook pipeline helper |

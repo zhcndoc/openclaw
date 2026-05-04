@@ -39,9 +39,8 @@ speech）、`mock`（开发/无网络）。
       </Tab>
     </Tabs>
 
-    如果 npm 报告该 OpenClaw 维护的包已弃用，那是因为该包版本
-    来自较旧的外部包发布线；请使用当前打包的 OpenClaw
-    构建版本或本地文件夹路径，直到发布更新的 npm 包。
+    使用裸包可跟随当前官方发布标签。只有在需要可复现安装时，才固定到
+    精确版本。
 
     随后重启 Gateway 以便插件加载。
 
@@ -93,7 +92,7 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
 返回精确缺失的提供商配置。
 
 <Note>
-Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twilio.authToken`, `plugins.entries.voice-call.config.realtime.providers.*.apiKey`, `plugins.entries.voice-call.config.streaming.providers.*.apiKey`, and `plugins.entries.voice-call.config.tts.providers.*.apiKey` resolve through the standard SecretRef surface; see [SecretRef credential surface](/reference/secretref-credential-surface).
+语音通话凭据支持 SecretRef。`plugins.entries.voice-call.config.twilio.authToken`、`plugins.entries.voice-call.config.realtime.providers.*.apiKey`、`plugins.entries.voice-call.config.streaming.providers.*.apiKey` 和 `plugins.entries.voice-call.config.tts.providers.*.apiKey` 会通过标准 SecretRef 接口解析；请参见 [SecretRef 凭据接口](/reference/secretref-credential-surface)。
 </Note>
 
 ```json5
@@ -106,6 +105,18 @@ Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twi
           provider: "twilio", // 或 "telnyx" | "plivo" | "mock"
           fromNumber: "+15550001234", // Twilio 也可以使用 TWILIO_FROM_NUMBER
           toNumber: "+15550005678",
+          sessionScope: "per-phone", // per-phone | per-call
+          numbers: {
+            "+15550009999": {
+              inboundGreeting: "Silver Fox Cards, how can I help?",
+              responseSystemPrompt: "You are a concise baseball card specialist.",
+              tts: {
+                providers: {
+                  openai: { voice: "alloy" },
+                },
+              },
+            },
+          },
 
           twilio: {
             accountSid: "ACxxxxxxxx",
@@ -144,8 +155,8 @@ Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twi
             defaultMode: "notify", // notify | conversation
           },
 
-          streaming: { enabled: true /* 见 Streaming transcription */ },
-          realtime: { enabled: false /* 见 Realtime voice */ },
+          streaming: { enabled: true /* 见 流式转录 */ },
+          realtime: { enabled: false /* 见 实时语音 */ },
         },
       },
     },
@@ -189,6 +200,13 @@ Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twi
   </Accordion>
 </AccordionGroup>
 
+## Session scope
+
+默认情况下，Voice Call 使用 `sessionScope: "per-phone"`，因此来自
+同一来电者的重复通话会保留对话记忆。若每个运营商通话都应以新的上下文开始，
+例如接待、预订、IVR，或 Google Meet bridge 流程中同一电话号码可能
+代表不同会议时，请设置为 `sessionScope: "per-call"`。
+
 ## 实时语音对话
 
 `realtime` 会为实时通话音频选择一个全双工实时语音提供商。
@@ -204,12 +222,12 @@ Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twi
 
 - `realtime.enabled` 支持 Twilio Media Streams。
 - `realtime.provider` 是可选项。如果未设置，Voice Call 会使用第一个已注册的实时语音提供商。
-- 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由它们的提供商插件注册。
+- 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由其提供商插件注册。
 - 提供商专属原始配置位于 `realtime.providers.<providerId>` 下。
-- 默认情况下，Voice Call 会暴露共享的 `openclaw_agent_consult` 实时工具。当调用者请求更深入的推理、当前信息或常规 OpenClaw 工具时，实时模型可以调用它。
-- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引的记忆/会话上下文中搜索 consult 问题，并在 `realtime.fastContext.timeoutMs` 内将这些片段返回给实时模型，然后仅在 `realtime.fastContext.fallbackToConsult` 为 true 时才回退到完整的 consult agent。
+- Voice Call 默认暴露共享的 `openclaw_agent_consult` 实时工具。实时模型在来电者请求更深层推理、当前信息或常规 OpenClaw 工具时可以调用它。
+- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引记忆/会话上下文中搜索咨询问题，并在 `realtime.fastContext.timeoutMs` 内把这些片段返回给实时模型，然后仅在 `realtime.fastContext.fallbackToConsult` 为 true 时才回退到完整 consult 代理。
 - 如果 `realtime.provider` 指向未注册的提供商，或根本没有注册任何实时语音提供商，Voice Call 会记录警告并跳过实时媒体，而不是使整个插件失败。
-- Consult 会话键在可用时复用现有语音会话，然后回退到来电/去电号码，以便后续 consult 调用在通话期间保持上下文。
+- Consult 会话键会优先复用已存储的通话会话（如果可用），然后回退到已配置的 `sessionScope`（默认 `per-phone`，或用于隔离通话的 `per-call`）。
 
 ### 工具策略
 
@@ -293,7 +311,7 @@ Voice-call credentials accept SecretRefs. `plugins.entries.voice-call.config.twi
 当前运行时行为：
 
 - `streaming.provider` 是可选项。如果未设置，Voice Call 会使用第一个已注册的实时转录提供商。
-- 内置实时转录提供商：Deepgram（`deepgram`）、ElevenLabs（`elevenlabs`）、Mistral（`mistral`）、OpenAI（`openai`）和 xAI（`xai`），由它们的提供商插件注册。
+- 内置实时转录提供商：Deepgram（`deepgram`）、ElevenLabs（`elevenlabs`）、Mistral（`mistral`）、OpenAI（`openai`）和 xAI（`xai`），由其提供商插件注册。
 - 提供商专属原始配置位于 `streaming.providers.<providerId>` 下。
 - Twilio 发送已接受的 stream `start` 消息后，Voice Call 会立即注册该流，在提供商连接期间通过转录提供商排队传入媒体，并且只有在实时转录就绪后才开始初始问候语。
 - 如果 `streaming.provider` 指向未注册的提供商，或未注册任何提供商，Voice Call 会记录警告并跳过媒体流，而不是使整个插件失败。
@@ -482,6 +500,47 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
 
 自动响应使用 agent 系统。可通过 `responseModel`、
 `responseSystemPrompt` 和 `responseTimeoutMs` 进行调优。
+
+### 按号码路由
+
+当一个 Voice Call 插件接收多个电话号码的来电，且每个号码都应表现得像不同的线路时，请使用 `numbers`。例如，一个号码可以使用轻松随意的个人助理风格，而另一个号码可以使用商务人设、不同的响应 agent，以及不同的 TTS 语音。
+
+路由会根据提供商提供的拨入 `To` 号码进行选择。键必须是 E.164 号码。来电到达时，Voice Call 会先解析一次匹配的路由，将匹配到的路由存储在通话记录中，并在问候语、经典自动响应路径、实时咨询路径以及 TTS 播放中重复使用该生效配置。如果没有匹配到任何路由，则使用全局 Voice Call 配置。外拨电话不使用 `numbers`；发起通话时，请显式传入外拨目标、消息和会话。
+
+当前支持的路由覆盖项：
+
+- `inboundGreeting`
+- `tts`
+- `agentId`
+- `responseModel`
+- `responseSystemPrompt`
+- `responseTimeoutMs`
+
+`tts` 路由值会覆盖并深度合并到全局 Voice Call `tts` 配置之上，因此通常只需覆盖提供商语音：
+
+```json5
+{
+  inboundGreeting: "Hello from the main line.",
+  responseSystemPrompt: "You are the default voice assistant.",
+  tts: {
+    provider: "openai",
+    providers: {
+      openai: { voice: "coral" },
+    },
+  },
+  numbers: {
+    "+15550001111": {
+      inboundGreeting: "Silver Fox Cards, how can I help?",
+      responseSystemPrompt: "You are a concise baseball card specialist.",
+      tts: {
+        providers: {
+          openai: { voice: "alloy" },
+        },
+      },
+    },
+  },
+}
+```
 
 ### 口语输出契约
 

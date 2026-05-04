@@ -111,10 +111,7 @@ models.providers.<provider>.models[].cost
 这些是 `input`、`output`、`cacheRead` 和
 `cacheWrite` 的 **每 100 万 token 的美元价格**。如果缺少定价，OpenClaw 只显示 token。OAuth token 从不显示美元成本。
 
-网关启动时还会为已配置但本地尚未有定价的模型引用执行一个可选的后台定价引导。
-该引导会拉取远程 OpenRouter 和 LiteLLM 的定价目录。将
-`models.pricing.enabled: false` 设为跳过这些离线或受限网络上的启动目录获取；显式的 `models.providers.*.models[].cost` 条目
-会继续驱动本地成本估算。
+在 sidecars 和 channels 进入 Gateway ready 路径后，OpenClaw 会为尚未拥有本地定价的已配置模型引用启动一个可选的后台定价引导流程。该引导会获取远程 OpenRouter 和 LiteLLM 定价目录。将 `models.pricing.enabled: false` 设为 false 可在离线或受限网络中跳过这些目录获取；显式的 `models.providers.*.models[].cost` 条目仍会继续驱动本地成本估算。
 
 ## Cache TTL 和剪枝影响
 

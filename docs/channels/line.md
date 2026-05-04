@@ -11,26 +11,18 @@ LINE 通过 LINE Messaging API 连接到 OpenClaw。该插件在网关上作为 
 接收器运行，并使用你的 channel access token + channel secret 进行
 身份验证。
 
-状态：内置插件。支持私信、群聊、媒体、位置、Flex 消息、模板消息和快速回复。不支持
-反应和线程。
+状态：可下载插件。支持私信、群聊、媒体、位置、Flex
+消息、模板消息和快速回复。不支持反应和线程。
 
-## 内置插件
+## 安装
 
-LINE 在当前 OpenClaw 版本中作为内置插件提供，因此常规
-打包构建无需单独安装。
-
-如果你使用的是较旧的构建版本，或者自定义安装中排除了 LINE，请在
-发布了当前 npm 包后进行安装：
+在配置频道之前安装 LINE：
 
 ```bash
 openclaw plugins install @openclaw/line
 ```
 
-如果 npm 报告 OpenClaw 维护的包已弃用或缺失，请使用当前
-打包版 OpenClaw 构建，或者先使用本地检出版本，直到 npm 包发布节奏
-跟上为止。
-
-本地检出（从 git 仓库运行时）：
+本地检出（当从 git 仓库运行时）：
 
 ```bash
 openclaw plugins install ./path/to/local/line-plugin
@@ -169,7 +161,7 @@ LINE ID 区分大小写。有效 ID 形式如下：
       flexMessage: {
         altText: "Status card",
         contents: {
-          /* Flex payload */
+          /* Flex 载荷 */
         },
       },
       templateMessage: {

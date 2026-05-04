@@ -46,14 +46,19 @@ npm 安装在 npm 根目录下运行：
 npm install --prefix ~/.openclaw/npm <spec> --omit=dev --ignore-scripts --no-audit --no-fund
 ```
 
+npm 可能会将传递依赖提升到 `~/.openclaw/npm/node_modules`，位于
+插件包旁边。OpenClaw 在信任安装之前会扫描受管理的 npm 根目录，并在
+卸载期间使用 npm 移除 npm 管理的包，因此提升的
+运行时依赖会留在受管理的清理边界内。
+
 git 安装会克隆或刷新仓库，然后运行：
 
 ```bash
 npm install --omit=dev --ignore-scripts --no-audit --no-fund
 ```
 
-随后已安装的插件会从该包目录加载，因此包级别的
-`node_modules` 解析方式与普通 Node 包完全相同。
+随后安装的插件会从该包目录加载，因此包本地
+和父级 `node_modules` 的解析方式与普通 Node 包相同。
 
 ## 本地插件
 
@@ -89,16 +94,33 @@ openclaw doctor --fix
 它们应当要么不包含沉重的运行时依赖树，要么迁移为
 ClawHub/npm 上的可下载包。
 
-捆绑插件清单不得请求依赖分阶段安装。大型或可选的
-插件功能应当打包成普通插件，并通过与第三方插件相同的
+有关当前随核心包发布、外部安装或保持仅源码形式的插件生成清单，请参见 [插件清单](/plugins/plugin-inventory)。
+
+捆绑插件清单不得请求依赖暂存。大型或可选的
+插件功能应作为普通插件打包，并通过与第三方插件相同的
 npm/git/ClawHub 路径进行安装。
+
+在源码检出中，OpenClaw 将仓库视为 pnpm monorepo。执行
+`pnpm install` 后，捆绑插件会从 `extensions/<id>` 加载，因此包本地
+workspace 依赖可用，并且编辑会被直接拾取。源码
+检出开发仅支持 pnpm；在仓库根目录直接执行 `npm install` 不是
+准备捆绑插件依赖的受支持方式。
+
+| 安装形态                    | 捆绑插件位置                    | 依赖所有者                                                     |
+| --------------------------- | -------------------------------- | -------------------------------------------------------------- |
+| `npm install -g openclaw`   | 包内构建时运行时树               | OpenClaw 包和显式的插件安装/更新/doctor 流程     |
+| Git 检出加 `pnpm install`   | `extensions/<id>` workspace 包   | pnpm workspace，包括每个插件包自身的依赖 |
+| `openclaw plugins install ...` | 受管理的 npm/git/ClawHub 插件根目录 | 插件安装/更新流程                                       |
 
 ## 旧版清理
 
-较旧版本的 OpenClaw 会在启动时或
-doctor 修复期间生成捆绑插件依赖根目录。当前的 doctor 清理在使用 `--fix` 时会移除这些遗留目录和符号链接，包括旧的
-`plugin-runtime-deps` 根目录、
-`.openclaw-runtime-deps*` 清单、生成的插件 `node_modules`、安装
-阶段目录，以及包内本地 pnpm 存储。
+较旧的 OpenClaw 版本会在启动时或
+doctor 修复期间生成捆绑插件的依赖根目录。当前的 doctor 清理会在使用 `--fix` 时
+移除这些过期目录和符号链接，包括旧的
+`plugin-runtime-deps` 根目录、指向已裁剪 `plugin-runtime-deps` 目标的全局
+Node-prefix 包符号链接、`.openclaw-runtime-deps*` 清单、生成的插件
+`node_modules`、安装阶段目录，以及包本地 pnpm store。打包时的 postinstall
+也会在裁剪旧目标根目录之前移除这些全局符号链接，以避免升级后
+留下悬空的 ESM 包导入。
 
 这些路径只是历史遗留垃圾。新的安装不应创建它们。

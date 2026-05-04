@@ -70,7 +70,9 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 - **即发即弃：** 设置 `timeoutSeconds: 0`，即可入队并立即返回。
 - **等待回复：** 设置超时时间并内联获取响应。
 
-消息和 A2A 后续回复会在接收提示中（`[Inter-session message ... isUser=false]`）以及转录来源信息中标记为会话间数据。接收代理应将其视为工具路由数据，而不是直接由最终用户编写的指令。
+按线程作用域的聊天会话，例如以 `:thread:<id>` 结尾的 Slack 或 Discord key，不是有效的 `sessions_send` 目标。请使用父频道会话 key 进行代理间协调，这样通过工具路由的消息就不会出现在正在进行的人类可见线程中。
+
+消息和 A2A 后续回复会在接收提示词中（`[Inter-session message ... isUser=false]`）以及转录出处中标记为跨会话数据。接收代理应将它们视为通过工具路由的数据，而不是直接由终端用户撰写的指令。
 
 目标方响应后，OpenClaw 可以运行一个**回复回环**，让代理轮流交替消息（最多 5 轮）。目标代理可以回复 `REPLY_SKIP` 以提前停止。
 
@@ -92,11 +94,13 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 关键选项：
 
-- `runtime: "subagent"`（默认）或 `"acp"`，用于外部宿主代理。
-- `model` 和 `thinking` 覆盖子会话设置。
-- `thread: true` 将生成任务绑定到聊天线程（Discord、Slack 等）。
-- `sandbox: "require"` 强制对子任务启用沙箱。
-- `context: "fork"` 适用于原生子代理，当子代理需要当前请求者的转录时使用；若要创建干净的子代理，可省略它或使用 `context: "isolated"`。
+- `runtime: "subagent"` (默认) or `"acp"` 用于外部宿主代理。
+- `model` 和 `thinking` 可覆盖子会话设置。
+- `thread: true` 用于将生成操作绑定到聊天线程（Discord、Slack 等）。
+- `sandbox: "require"` 用于对子代理强制启用沙箱。
+- `context: "fork"` 用于本地子代理，当子代理需要当前请求者转录时使用；如需一个干净的子代理，可省略或使用 `context: "isolated"`。
+  绑定线程的本地子代理默认使用 `context: "fork"`，除非
+  `threadBindings.defaultSpawnContext` 另有说明。
 
 默认的叶子子代理不会获得会话工具。当 `maxSpawnDepth >= 2` 时，深度为 1 的编排子代理还会额外获得 `sessions_spawn`、`subagents`、`sessions_list` 和 `sessions_history`，以便它们管理自己的子任务。叶子运行仍然不会获得递归编排工具。
 

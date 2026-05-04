@@ -1,9 +1,9 @@
 ---
-summary: "openclaw daemon 的 CLI 参考（网关服务管理的旧别名）"
+summary: "openclaw 守护进程的 CLI 参考（网关服务管理的旧别名）"
 read_when:
   - 你仍在脚本中使用 `openclaw daemon ...`
   - 你需要服务生命周期命令（安装/启动/停止/重启/状态）
-title: "Daemon"
+title: "守护进程"
 ---
 
 # `openclaw daemon`
@@ -34,9 +34,10 @@ openclaw daemon uninstall
 
 ## 常用选项
 
-- `status`：`--url`、`--token`、`--password`、`--timeout`、`--no-probe`、`--require-rpc`、`--deep`、`--json`
-- `install`：`--port`、`--runtime <node|bun>`、`--token`、`--force`、`--json`
-- 生命周期（`uninstall|start|stop|restart`）：`--json`
+- `status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
+- `install`: `--port`, `--runtime <node|bun>`, `--token`, `--force`, `--json`
+- `restart`: `--force`, `--wait <duration>`, `--json`
+- lifecycle (`uninstall|start|stop`): `--json`
 
 注意：
 
@@ -59,5 +60,5 @@ openclaw daemon uninstall
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Gateway runbook](/gateway)
+- [CLI 参考](/cli)
+- [Gateway 运行手册](/gateway)

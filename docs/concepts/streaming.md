@@ -127,19 +127,22 @@ Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent �
 - `block`：预览按分块/追加步骤更新。
 - `progress`：生成期间显示进度/状态预览，完成时显示最终答案。
 
+`streaming.mode: "block"` 是适用于 Discord 和 Telegram 等可编辑频道的预览流式模式。它并不会在那里启用频道区块投递。若你想要正常的区块回复，请使用 `streaming.block.enabled` 或旧版 `blockStreaming` 频道键。Microsoft Teams 是个例外：它没有草稿预览区块传输，因此 `streaming.mode: "block"` 会映射到 Teams 的区块投递，而不是原生的 partial/progress 流式传输。
+
 ### 频道映射
 
-| 频道       | `off` | `partial` | `block` | `progress`        |
-| ---------- | ----- | --------- | ------- | ----------------- |
-| Telegram   | ✅    | ✅        | ✅      | 映射为 `partial`  |
-| Discord    | ✅    | ✅        | ✅      | 映射为 `partial`  |
-| Slack      | ✅    | ✅        | ✅      | ✅                |
-| Mattermost | ✅    | ✅        | ✅      | ✅                |
+| Channel    | `off` | `partial` | `block` | `progress`              |
+| ---------- | ----- | --------- | ------- | ----------------------- |
+| Telegram   | ✅    | ✅        | ✅      | 可编辑的进度草稿        |
+| Discord    | ✅    | ✅        | ✅      | 可编辑的进度草稿        |
+| Slack      | ✅    | ✅        | ✅      | ✅                      |
+| Mattermost | ✅    | ✅        | ✅      | ✅                      |
+| MS Teams   | ✅    | ✅        | ✅      | 原生进度流              |
 
 仅限 Slack：
 
 - 当 `channels.slack.streaming.mode="partial"` 时，`channels.slack.streaming.nativeTransport` 会切换 Slack 原生流式 API 调用（默认：`true`）。
-- Slack 原生流式传输和 Slack 助手线程状态都需要一个回复线程目标；顶层私信不会显示那种线程式预览。
+- Slack 原生流式传输和 Slack 助手线程状态都需要一个回复线程目标。顶层 DM 不会显示那种线程式预览，但仍然可以使用 Slack 草稿预览发布和编辑。
 
 旧键迁移：
 
@@ -159,17 +162,18 @@ Telegram：
 Discord：
 
 - 使用发送 + 编辑预览消息。
-- `block` 模式使用 draft chunking（`draftChunk`）。
+- `block` 模式使用草稿分块（`draftChunk`）。
 - 当 Discord 区块流式传输被显式启用时，会跳过预览流式传输。
 - 最终媒体、错误和显式回复载荷会取消待处理的预览，而不会刷新新草稿，然后使用正常投递。
 
 Slack：
 
-- 当可用时，`partial` 可以使用 Slack 原生流式传输（`chat.startStream`/`append`/`stop`）。
+- `partial` 在可用时可以使用 Slack 原生流式传输（`chat.startStream`/`append`/`stop`）。
 - `block` 使用追加式草稿预览。
-- `progress` 使用状态预览文本，然后输出最终答案。
-- 原生和草稿预览流式传输会抑制该轮次的区块回复，因此 Slack 回复只会通过一种投递路径流式发送。
-- 最终媒体/错误载荷和进度最终结果不会创建一次性的草稿消息；只有可以编辑预览的文本/区块最终结果才会刷新待处理的草稿文本。
+- `progress` 先使用状态预览文本，然后显示最终答案。
+- 没有回复线程的顶层 DM 会使用草稿预览发布和编辑，而不是 Slack 原生流式传输。
+- 原生和草稿预览流式传输会抑制该轮次的区块回复，因此 Slack 回复只通过一种投递路径流式传输。
+- 最终媒体/错误载荷和进度最终结果不会创建一次性草稿消息；只有能够编辑预览的文本/区块最终结果才会刷新待处理的草稿文本。
 
 Mattermost：
 
@@ -188,11 +192,12 @@ Matrix：
 
 支持的界面：
 
-- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流式传输启用时，默认会把工具进度流式写入实时预览编辑。
-- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可以保留这一已发布行为。
-- **Mattermost** 已经将工具活动折叠进其单个草稿预览帖子中（见上文）。
-- 工具进度编辑遵循当前启用的预览流式模式；当预览流式为 `off` 或区块流式已经接管消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 是仅最终输出：通用进度闲聊也会被抑制，而不会作为独立的“正在处理...”消息发送，但审批提示、媒体载荷和错误仍会正常路由。
-- 若要保留预览流式但隐藏工具进度行，可为该频道将 `streaming.preview.toolProgress` 设为 `false`。若要完全禁用预览编辑，则将 `streaming.mode` 设为 `off`。
+- **Discord**, **Slack**, **Telegram**, 和 **Matrix** 在预览流式传输启用时，默认会将工具进度流式写入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
+- Telegram 自 `v2026.4.22` 起已发布并启用工具进度预览更新；保持启用可保留这一已发布行为。
+- **Mattermost** 已经会把工具活动折叠进其单条草稿预览帖子中（见上文）。
+- 工具进度编辑遵循当前的预览流式模式；当预览流式传输为 `off` 或者区块流式传输已经接管消息时，会跳过这些编辑。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用的进度提示也会被抑制，不会作为独立状态消息投递，而审批提示、媒体载荷和错误仍会正常路由。
+- 若要保留预览流式传输但隐藏工具进度行，请为该频道将 `streaming.preview.toolProgress` 设为 `false`。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
+- Telegram 的选定引用回复是个例外：当 `replyToMode` 不是 `"off"` 且存在已选中的引用文本时，OpenClaw 会跳过该轮次的答案预览流，因此工具进度预览行无法渲染。带有当前消息回复但没有选定引用文本时，仍会保留预览流式传输。详见 [Telegram channel docs](/channels/telegram)。
 
 示例：
 
@@ -213,6 +218,7 @@ Matrix：
 
 ## 相关内容
 
-- [消息](/concepts/messages) — 消息生命周期和投递
-- [重试](/concepts/retry) — 投递失败时的重试行为
-- [频道](/channels) — 按频道支持流式传输
+- [Progress drafts](/concepts/progress-drafts) — 在长轮次中更新的可见进行中消息
+- [Messages](/concepts/messages) — 消息生命周期和投递
+- [Retry](/concepts/retry) — 投递失败时的重试行为
+- [Channels](/channels) — 各频道的流式支持

@@ -40,8 +40,9 @@ otherwise -> 回复
 
 ## 可见回复
 
-对于群组/频道房间，OpenClaw 默认使用 `messages.groupChat.visibleReplies: "message_tool"`。
-这意味着代理仍会处理该轮对话并可以更新记忆/会话状态，但其正常的最终答案不会自动发布回房间。若要显式发声，代理会使用 `message(action=send)`。
+对于群组/频道房间，OpenClaw 默认将 `messages.groupChat.visibleReplies` 设为 `"message_tool"`。
+`openclaw doctor --fix` 会把这个默认值写入那些未设置该项的已配置频道配置中。
+这意味着代理仍会处理该轮对话并可更新记忆/会话状态，但其正常的最终答案不会自动发布回房间。若要可见地发言，代理会使用 `message(action=send)`。
 
 如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
 `openclaw doctor` 会警告这种不匹配。

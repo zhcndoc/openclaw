@@ -36,7 +36,8 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
       exa: {
         config: {
           webSearch: {
-            apiKey: "exa-...", // 如果设置了 EXA_API_KEY，则为可选项
+            apiKey: "exa-...", // 如果设置了 EXA_API_KEY，则为可选
+            baseUrl: "https://api.exa.ai", // 可选；OpenClaw 会追加 /search
           },
         },
       },
@@ -54,6 +55,11 @@ OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
 
 **环境替代方案：** 在 Gateway 环境中设置 `EXA_API_KEY`。
 对于 gateway 安装，将其放入 `~/.openclaw/.env`。
+
+## 基础 URL 覆盖
+
+当 Exa 搜索请求需要通过兼容代理或其他 Exa 端点时，设置 `plugins.entries.exa.config.webSearch.baseUrl`。OpenClaw
+会通过在裸主机名前加上 `https://` 来规范化，并在路径尚未以 `/search` 结尾时追加该路径。解析后的端点会包含在搜索缓存键中，因此来自不同 Exa 端点的结果不会共享。
 
 ## 工具参数
 

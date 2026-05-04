@@ -79,7 +79,9 @@ Gateway 环境中设置 `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`。对于 gateway �
 Kimi 使用 Moonshot 网页搜索来综合答案并在文中插入引用，
 类似于 Gemini 和 Grok 的 grounded response 方法。
 
-## 支持的参数
+OpenClaw 将 Kimi `web_search` 仅在 Moonshot 返回原生 web-search grounding 证据后视为成功，例如可回放的 `$web_search` 工具载荷、`search_results` 或引用 URL。如果 Kimi 立即停止并仅返回普通聊天答案，例如“I cannot browse the internet”，且没有 grounding 证据，OpenClaw 将返回结构化的 `kimi_web_search_ungrounded` 错误，而不是把该文本包装为搜索结果。请重试查询，切换到结构化提供方（例如 Brave），或者在你已经有目标 URL 时使用 `web_fetch` / 浏览器工具。
+
+## Supported parameters
 
 Kimi 搜索支持 `query`。
 

@@ -12,17 +12,17 @@ title: "Nextcloud Talk"
 Nextcloud Talk 在当前 OpenClaw 版本中作为捆绑插件提供，因此
 普通打包构建不需要单独安装。
 
-如果你使用的是较旧的构建，或者是排除了 Nextcloud Talk 的自定义安装，
-请在发布了当前 npm 包时安装该包：
+如果你使用的是较旧的构建版本，或者是一个排除了 Nextcloud Talk 的自定义安装，
+请直接安装 npm 包：
 
-通过 CLI 安装（npm registry，当存在当前包时）：
+通过 CLI 安装（npm registry）：
 
 ```bash
 openclaw plugins install @openclaw/nextcloud-talk
 ```
 
-如果 npm 报告 OpenClaw 拥有的包已弃用，请改用当前打包版
-OpenClaw 构建，或者使用本地检出路径，直到发布更新的 npm 包。
+使用裸包以跟随当前官方发布标签。只有在需要可复现安装时才固定到精确
+版本。
 
 本地检出（从 git 仓库运行时）：
 

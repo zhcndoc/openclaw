@@ -273,7 +273,7 @@ import type { PluginRuntime } from "openclaw/plugin-sdk/runtime-store";
 
 const store = createPluginRuntimeStore<PluginRuntime>({
   pluginId: "test-plugin",
-  errorMessage: "test runtime not set",
+  errorMessage: "测试运行时未设置",
 });
 
 // 在测试设置中
@@ -336,8 +336,8 @@ pnpm test -- <bundled-plugin-root>/my-channel/
 
 ```bash
 pnpm test -- src/plugins/contracts/shape.contract.test.ts
-pnpm test -- src/plugins/contracts/auth.contract.test.ts
-pnpm test -- src/plugins/contracts/runtime.contract.test.ts
+pnpm test -- src/plugins/contracts/auth-choice.contract.test.ts
+pnpm test -- src/plugins/contracts/runtime-seams.contract.test.ts
 ```
 
 ## Lint 强制规则（仓库内插件）

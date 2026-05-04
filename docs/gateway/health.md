@@ -19,6 +19,11 @@ title: "健康检查"
 - 在 WhatsApp/WebChat 中单独发送 `/status` 作为一条独立消息，即可获得状态回复，无需调用 agent。
 - 日志：查看 `/tmp/openclaw/openclaw-*.log` 的尾部，并筛选 `web-heartbeat`、`web-reconnect`、`web-auto-reply`、`web-inbound`。
 
+对于 Discord 和其他聊天提供方，session 行不代表 socket 存活。
+`openclaw sessions`、Gateway `sessions.list` 和 agent 的 `sessions_list` 工具
+读取的是已存储的会话状态。某个提供方可以重新连接，并在任何新的 session 行生成之前就显示健康的通道
+状态。请使用上面的通道状态和健康命令来进行实时连接性检查。
+
 ## 深度诊断
 
 - 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应该是最近的）。

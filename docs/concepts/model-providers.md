@@ -20,18 +20,24 @@ sidebarTitle: "模型提供商"
     - 回退规则、冷却探测和会话覆盖持久化： [Model failover](/concepts/model-failover)。
 
   </Accordion>
-  <Accordion title="OpenAI 提供商/运行时分离">
-    OpenAI 系列路由按前缀区分：
+  <Accordion title="添加提供商认证不会更改你的主模型">
+    `openclaw configure` 在你添加或重新认证提供商时会保留现有的 `agents.defaults.model.primary`。提供商插件仍可能在其认证配置补丁中返回推荐的默认模型，但当主模型已经存在时，configure 会把这理解为“使该模型可用”，而不是“替换当前主模型”。
 
-    - `openai/<model>` 使用 PI 中直接的 OpenAI API key 提供商。
-    - `openai-codex/<model>` 在 PI 中使用 Codex OAuth。
-    - `openai/<model>` 再加上 `agents.defaults.agentRuntime.id: "codex"` 时，使用原生 Codex app-server harness。
+    若要有意切换默认模型，请使用 `openclaw models set <provider/model>` 或 `openclaw models auth login --provider <id> --set-default`。
+
+  </Accordion>
+  <Accordion title="OpenAI 提供商/运行时分离">
+    OpenAI 系列路由以缀前区分：
+
+    - `openai/<model>` 再加上 `agents.defaults.agentRuntime.id: "codex"` 时，使用原生 Codex app-server harness。这通常是 ChatGPT/Codex 订阅方案。
+    - `openai-codex/<model>` 使用 PI 中的 Codex OAuth。
+    - 不带 Codex 运行时覆盖的 `openai/<model>` 使用 PI 中直接的 OpenAI API key 提供商。
 
     参见 [OpenAI](/providers/openai) 和 [Codex harness](/plugins/codex-harness)。如果提供商/运行时分离让你感到困惑，请先阅读 [Agent runtimes](/concepts/agent-runtimes)。
 
     插件自动启用也遵循同样的边界：`openai-codex/<model>` 属于 OpenAI 插件，而 Codex 插件则由 `agentRuntime.id: "codex"` 或旧式 `codex/<model>` 引用启用。
 
-    GPT-5.5 可通过 `openai/gpt-5.5` 用于直接 API key 流量，通过 `openai-codex/gpt-5.5` 在 PI 中使用 Codex OAuth，并且在设置 `agentRuntime.id: "codex"` 时使用原生 Codex app-server harness。
+    当 `agentRuntime.id: "codex"` 已设置时，GPT-5.5 可通过原生 Codex app-server harness 使用；在 PI 中可通过 `openai-codex/gpt-5.5` 进行 Codex OAuth；当你的账户暴露了它时，还可通过 PI 中的 `openai/gpt-5.5` 直接使用 API key 流量。
 
   </Accordion>
   <Accordion title="CLI 运行时">
@@ -124,26 +130,33 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
 
 ### OpenAI Codex OAuth
 
-- 提供商：`openai-codex`
-- 认证：OAuth（ChatGPT）
-- PI 模型引用：`openai-codex/gpt-5.5`
-- 原生 Codex app-server harness 引用：`openai/gpt-5.5` 搭配 `agents.defaults.agentRuntime.id: "codex"`
-- 原生 Codex app-server harness 文档： [Codex harness](/plugins/codex-harness)
-- 旧式模型引用：`codex/gpt-*`
-- 插件边界：`openai-codex/*` 会加载 OpenAI 插件；原生 Codex app-server 插件只会由 Codex harness 运行时或旧式 `codex/*` 引用选择。
-- CLI：`openclaw onboard --auth-choice openai-codex` 或 `openclaw models auth login --provider openai-codex`
-- 默认传输方式为 `auto`（优先 WebSocket，失败后回退到 SSE）
-- 可通过 `agents.defaults.models["openai-codex/<model>"].params.transport` 按 PI 模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
-- `params.serviceTier` 也会转发到原生 Codex Responses 请求（`chatgpt.com/backend-api`）
-- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）仅会附加到发往 `chatgpt.com/backend-api` 的原生 Codex 流量，不会用于通用的 OpenAI 兼容代理
-- 与直接的 `openai/*` 共享相同的 `/fast` 开关和 `params.fastMode` 配置；OpenClaw 会将其映射为 `service_tier=priority`
-- `openai-codex/gpt-5.5` 使用 Codex 目录中的原生 `contextWindow = 400000` 和默认运行时 `contextTokens = 272000`；可通过 `models.providers.openai-codex.models[].contextTokens` 覆盖运行时上限
-- 政策说明：OpenAI Codex OAuth 明确支持用于 OpenClaw 这类外部工具/工作流。
-- 当你想使用 Codex OAuth/订阅路线时，请使用 `openai-codex/gpt-5.5`；当你的 API key 设置和本地目录暴露公共 API 路由时，请使用 `openai/gpt-5.5`。
+- Provider: `openai-codex`
+- Auth: OAuth (ChatGPT)
+- PI model ref: `openai-codex/gpt-5.5`
+- Native Codex app-server harness ref: `openai/gpt-5.5` with `agents.defaults.agentRuntime.id: "codex"`
+- Native Codex app-server harness docs: [Codex harness](/plugins/codex-harness)
+- Legacy model refs: `codex/gpt-*`
+- Plugin boundary: `openai-codex/*` loads the OpenAI plugin; the native Codex app-server plugin is selected only by the Codex harness runtime or legacy `codex/*` refs.
+- CLI: `openclaw onboard --auth-choice openai-codex` or `openclaw models auth login --provider openai-codex`
+- Default transport is `auto` (WebSocket-first, SSE fallback)
+- Override per PI model via `agents.defaults.models["openai-codex/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
+- `params.serviceTier` is also forwarded on native Codex Responses requests (`chatgpt.com/backend-api`)
+- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) are only attached on native Codex traffic to `chatgpt.com/backend-api`, not generic OpenAI-compatible proxies
+- Shares the same `/fast` toggle and `params.fastMode` config as direct `openai/*`; OpenClaw maps that to `service_tier=priority`
+- `openai-codex/gpt-5.5` uses the Codex catalog native `contextWindow = 400000` and default runtime `contextTokens = 272000`; override the runtime cap with `models.providers.openai-codex.models[].contextTokens`
+- Policy note: OpenAI Codex OAuth is explicitly supported for external tools/workflows like OpenClaw.
+- For the common subscription plus native Codex runtime route, sign in with `openai-codex` auth but configure `openai/gpt-5.5` plus `agents.defaults.agentRuntime.id: "codex"`.
+- Use `openai-codex/gpt-5.5` only when you want the Codex OAuth/subscription route through PI; use `openai/gpt-5.5` without the Codex runtime override when your API-key setup and local catalog expose the public API route.
 
 ```json5
 {
-  agents: { defaults: { model: { primary: "openai-codex/gpt-5.5" } } },
+  plugins: { entries: { codex: { enabled: true } } },
+  agents: {
+    defaults: {
+      model: { primary: "openai/gpt-5.5" },
+      agentRuntime: { id: "codex" },
+    },
+  },
 }
 ```
 
@@ -299,7 +312,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 | Venice                  | `venice`                         | `VENICE_API_KEY`                                             | —                                             |
 | Vercel AI Gateway       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                         | `vercel-ai-gateway/anthropic/claude-opus-4.6` |
 | Volcano Engine (Doubao) | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                     | `volcengine-plan/ark-code-latest`             |
-| xAI                     | `xai`                            | `XAI_API_KEY`                                                | `xai/grok-4`                                  |
+| xAI                     | `xai`                            | `XAI_API_KEY`                                                | `xai/grok-4.3`                                |
 | Xiaomi                  | `xiaomi`                         | `XIAOMI_API_KEY`                                             | `xiaomi/mimo-v2-flash`                        |
 
 #### 值得注意的特殊行为
@@ -318,7 +331,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
     模型 id 使用 `nvidia/<vendor>/<model>` 命名空间（例如 `nvidia/nvidia/nemotron-...`，以及 `nvidia/moonshotai/kimi-k2.5`）；选择器会保留字面上的 `<provider>/<model-id>` 组合，而发送到 API 的规范键仍保持单前缀。
   </Accordion>
   <Accordion title="xAI">
-    使用 xAI Responses 路径。`/fast` 或 `params.fastMode: true` 会将 `grok-3`、`grok-3-mini`、`grok-4` 和 `grok-4-0709` 重写为其 `*-fast` 变体。`tool_stream` 默认开启；可通过 `agents.defaults.models["xai/<model>"].params.tool_stream=false` 关闭。
+    使用 xAI Responses 路径。`grok-4.3` 是捆绑的默认聊天模型。`/fast` 或 `params.fastMode: true` 会将 `grok-3`、`grok-3-mini`、`grok-4` 和 `grok-4-0709` 重写为其 `*-fast` 变体。`tool_stream` 默认开启；可通过 `agents.defaults.models["xai/<model>"].params.tool_stream=false` 关闭。
   </Accordion>
   <Accordion title="Cerebras">
     作为捆绑的 `cerebras` 提供商插件提供。GLM 使用 `zai-glm-4.7`；OpenAI 兼容的基础 URL 为 `https://api.cerebras.ai/v1`。
@@ -539,7 +552,7 @@ LM Studio 作为一个内置提供商插件发布，使用原生 API：
 }
 ```
 
-OpenClaw 默认使用 LM Studio 的原生 `/api/v1/models` 和 `/api/v1/models/load` 做发现与自动加载，并使用 `/v1/chat/completions` 进行推理。请参见 [/providers/lmstudio](/providers/lmstudio) 获取设置和故障排除信息。
+OpenClaw 使用 LM Studio 的原生 `/api/v1/models` 和 `/api/v1/models/load` 进行发现 + 自动加载，并默认使用 `/v1/chat/completions` 进行推理。如果你希望由 LM Studio 自己管理模型生命周期（JIT 加载、TTL 和自动逐出），请将 `models.providers.lmstudio.params.preload: false`。有关设置和故障排除，请参见 [/providers/lmstudio](/providers/lmstudio)。
 
 ### Ollama
 
@@ -667,14 +680,15 @@ export SGLANG_API_KEY="sglang-local"
 
   </Accordion>
   <Accordion title="代理路由整形规则">
-    - 对于非原生端点上的 `api: "openai-completions"`（任何主机不是 `api.openai.com` 的非空 `baseUrl`），OpenClaw 会强制 `compat.supportsDeveloperRole: false`，以避免因不支持的 `developer` 角色导致提供商返回 400 错误。
-    - 代理式 OpenAI 兼容路由也会跳过原生 OpenAI 专用的请求整形：不使用 `service_tier`、不使用 Responses 的 `store`、不使用 Completions 的 `store`、不使用提示缓存提示、不使用 OpenAI reasoning-compat 负载整形，也不添加隐藏的 OpenClaw 归属请求头。
-    - 对于需要供应商特定字段的 OpenAI 兼容 Completions 代理，请设置 `agents.defaults.models["provider/model"].params.extra_body`（或 `extraBody`），以便将额外的 JSON 合并到出站请求体中。
-    - 对于 vLLM 的聊天模板控制，请设置 `agents.defaults.models["provider/model"].params.chat_template_kwargs`。当会话 thinking 级别关闭时，内置的 vLLM 插件会自动为 `vllm/nemotron-3-*` 发送 `enable_thinking: false` 和 `force_nonempty_content: true`。
-    - 对于较慢的本地模型或远程 LAN/tailnet 主机，请设置 `models.providers.<id>.timeoutSeconds`。这会延长提供商模型的 HTTP 请求处理时间，包括连接、请求头、主体流式传输以及受保护的 fetch 总超时，而不会增加整个 agent 运行时超时。
-    - 如果 `baseUrl` 为空/省略，OpenClaw 会保留默认的 OpenAI 行为（即解析为 `api.openai.com`）。
-    - 为了安全，即使显式设置了 `compat.supportsDeveloperRole: true`，在非原生 `openai-completions` 端点上仍会被覆盖。
-    - 对于非直连端点上的 `api: "anthropic-messages"`（任何非标准 `anthropic` 的提供商，或主机不是公共 `api.anthropic.com` 端点的自定义 `models.providers.anthropic.baseUrl`），OpenClaw 会抑制隐式的 Anthropic beta 请求头，例如 `claude-code-20250219`、`interleaved-thinking-2025-05-14` 和 OAuth 标记，这样自定义的 Anthropic 兼容代理就不会拒绝不受支持的 beta 标志。如果你的代理需要特定的 beta 功能，请显式设置 `models.providers.<id>.headers["anthropic-beta"]`。
+    - 对于非原生端点上的 `api: "openai-completions"`（任何主机不是 `api.openai.com` 的非空 `baseUrl`），OpenClaw 会强制设置 `compat.supportsDeveloperRole: false`，以避免因不支持的 `developer` 角色而导致提供商 400 错误。
+    - 代理式 OpenAI 兼容路由也会跳过原生的 OpenAI 专属请求整形：不使用 `service_tier`、不使用 Responses `store`、不使用 Completions `store`、不使用提示缓存提示、不使用 OpenAI reasoning 兼容载荷整形，也不添加隐藏的 OpenClaw 归属头。
+    - 对于需要厂商特定字段的 OpenAI 兼容 Completions 代理，请设置 `agents.defaults.models["provider/model"].params.extra_body`（或 `extraBody`），以便将额外的 JSON 合并到出站请求体中。
+    - 对于 vLLM 聊天模板控制，请设置 `agents.defaults.models["provider/model"].params.chat_template_kwargs`。当会话 thinking 级别关闭时，捆绑的 vLLM 插件会自动为 `vllm/nemotron-3-*` 发送 `enable_thinking: false` 和 `force_nonempty_content: true`。
+    - 对于较慢的本地模型或远程 LAN/tailnet 主机，请设置 `models.providers.<id>.timeoutSeconds`。这会扩展提供商模型的 HTTP 请求处理，包括连接、请求头、流式响应体以及总的受保护 fetch 中止时间，而不会增加整个 agent 的运行时超时。
+    - 模型提供商的 HTTP 调用仅允许 Surge、Clash 和 sing-box fake-IP DNS 在 `198.18.0.0/15` 和 `fc00::/7` 中的答案用于已配置提供商的 `baseUrl` 主机名。其他私有地址、回环地址、链路本地地址和元数据目标仍然需要显式启用 `models.providers.<id>.request.allowPrivateNetwork: true`。
+    - 如果 `baseUrl` 为空/省略，OpenClaw 会保持默认的 OpenAI 行为（解析为 `api.openai.com`）。
+    - 出于安全考虑，在非原生的 `openai-completions` 端点上，显式的 `compat.supportsDeveloperRole: true` 仍会被覆盖。
+    - 对于非直接端点上的 `api: "anthropic-messages"`（除规范的 `anthropic` 之外的任何提供商，或主机不是公开 `api.anthropic.com` 端点的自定义 `models.providers.anthropic.baseUrl`），OpenClaw 会抑制隐式的 Anthropic beta 头，例如 `claude-code-20250219`、`interleaved-thinking-2025-05-14` 和 OAuth 标记，以免自定义的 Anthropic 兼容代理拒绝不支持的 beta 标志。如果你的代理需要特定的 beta 功能，请显式设置 `models.providers.<id>.headers["anthropic-beta"]`。
 
   </Accordion>
 </AccordionGroup>

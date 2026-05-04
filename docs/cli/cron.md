@@ -35,6 +35,8 @@ title: "Cron"
 
 `openclaw cron list` 和 `openclaw cron show <job-id>` 会预览解析后的投递路由。对于 `channel: "last"`，预览会显示路由是从主会话还是当前会话解析得到的，或者是否会失败并关闭。
 
+带有前缀的提供方目标可以消除未解析公告频道的歧义。例如，`to: "telegram:123"` 会在省略 `delivery.channel` 或将其设为 `last` 时选择 Telegram。只有已加载插件声明的前缀才是提供方选择器。如果 `delivery.channel` 是显式指定的，则前缀必须与该频道匹配；`channel: "whatsapp"` 配合 `to: "telegram:123"` 会被拒绝。诸如 `imessage:` 和 `sms:` 之类的服务前缀仍属于频道拥有的目标语法。
+
 <Note>
 隔离的 `cron add` 作业默认使用 `--announce` 投递。使用 `--no-deliver` 可让输出保持内部。`--deliver` 仍保留为已弃用的 `--announce` 别名。
 </Note>
@@ -228,7 +230,7 @@ openclaw cron edit <job-id> --session "session:daily-brief"
 
 `openclaw cron add` 在 `--agent` 被省略且作业为 agent-turn 类型时会发出警告，并回退到默认代理（`main`）。在创建时传入 `--agent <id>` 可固定特定代理。
 
-Delivery tweaks:
+投递调整：
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"

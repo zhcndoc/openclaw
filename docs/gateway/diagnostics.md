@@ -80,7 +80,7 @@ openclaw gateway diagnostics export --json
 
 Gateway 默认会记录一个有上限、无载荷的稳定性流，前提是已启用诊断。它用于运行事实，而不是内容。
 
-同样的诊断心跳会在 Gateway 持续运行但 Node.js 事件循环或 CPU 看起来过载时记录存活警告。这些 `diagnostic.liveness.warning` 事件包含事件循环延迟、事件循环利用率、CPU 核心比率，以及活动/等待/排队中的会话计数。它们不会自行重启 Gateway。
+相同的诊断心跳会在 Gateway 仍在运行但 Node.js 事件循环或 CPU 看起来已饱和时记录存活样本。这些 `diagnostic.liveness.warning` 事件包含事件循环延迟、事件循环利用率、CPU 核心比率，以及活动/等待/排队会话计数。空闲样本会以 `info` 级别保留在遥测中。只有当有工作在等待或排队，或者活动工作与持续的事件循环延迟重叠时，存活样本才会成为 Gateway 警告。在其他方面正常的后台工作期间出现的短暂最大延迟峰值会保留在调试日志中。它们不会自行重启 Gateway。
 
 查看实时记录器：
 

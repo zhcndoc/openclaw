@@ -22,24 +22,25 @@ title: "WebChat"
 
 ## 工作原理（行为）
 
-- UI 连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send` 和 `chat.inject`。
-- `chat.history` 为了稳定性会进行长度限制：Gateway 可能会截断较长的文本字段，省略较大的元数据，并将超大条目替换为 `[chat.history omitted: message too large]`。
-- `chat.history` 会遵循现代仅追加式会话文件中的活动转写分支，因此在 WebChat 中不会渲染已放弃的重写分支和被取代的提示词副本。
-- Control UI 会在为同一会话、同一消息和同一附件生成新的 `chat.send` 运行 id 之前，合并重复的进行中提交；Gateway 仍会对复用相同幂等键的重复请求进行去重。
-- `chat.history` 也会进行显示归一化：运行时专用的 OpenClaw 上下文、
-  入站信封包装器、内联投递指令标签
-  例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
+- UI 会连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send` 和 `chat.inject`。
+- `chat.history` 为了稳定性会限制长度：Gateway 可能会截断较长的文本字段、省略较重的元数据，并将超大条目替换为 `[chat.history omitted: message too large]`。
+- `chat.history` 会跟随现代仅追加会话文件中的活动转写分支，因此被放弃的重写分支和被替代的提示词副本不会在 WebChat 中渲染。
+- 压缩条目会渲染为一个显式的压缩历史分隔符。该分隔符会说明更早的轮次已保存在检查点中，并链接到 Sessions 的检查点控制，在权限允许时，操作员可以在此分支或恢复压缩前视图。
+- Control UI 会记住 `chat.history` 返回的底层 Gateway `sessionId`，并在后续 `chat.send` 调用中包含它，因此重新连接和页面刷新会继续同一个已存储的对话，除非用户启动或重置会话。
+- Control UI 会在生成新的 `chat.send` run id 之前，对同一会话、消息和附件的重复进行中的提交进行合并；Gateway 仍会对重用同一幂等键的重复请求进行去重。
+- `chat.history` 也会进行显示规范化：仅运行时的 OpenClaw 上下文、入站信封包装器、内联投递指令标签
+  如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
   负载（包括 `<tool_call>...</tool_call>`、
   `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
-  `<function_calls>...</function_calls>`，以及被截断的工具调用块），以及
+  `<function_calls>...</function_calls>` 以及被截断的工具调用块），以及
   泄漏的 ASCII/全角模型控制令牌都会从可见文本中移除，
-  并且如果 assistant 条目的整个可见文本仅是精确的静默
-  令牌 `NO_REPLY` / `no_reply`，则会省略该条目。
-- 带有推理标记的回复负载（`isReasoning: true`）会从 WebChat assistant 内容、转写回放文本和音频内容块中排除，因此仅用于思考的负载不会作为可见的 assistant 消息或可播放音频显示出来。
+  并且其整个可见文本仅为精确静默
+  令牌 `NO_REPLY` / `no_reply` 的 assistant 条目会被省略。
+- 带有推理标记的回复负载（`isReasoning: true`）会从 WebChat 的 assistant 内容、转写回放文本和音频内容块中排除，因此仅用于思考的负载不会作为可见的 assistant 消息或可播放音频显示。
 - `chat.inject` 会直接向转写中追加一条 assistant 注释，并将其广播到 UI（不触发 agent 运行）。
-- 被中止的运行可以让部分 assistant 输出继续在 UI 中可见。
-- 当存在缓冲输出时，Gateway 会将被中止的部分 assistant 文本持久化到转写历史中，并用中止元数据标记这些条目。
-- 历史始终从 gateway 获取（不进行本地文件监听）。
+- 被中止的运行可能会让部分 assistant 输出在 UI 中保持可见。
+- 当存在已缓冲输出时，Gateway 会将被中止的部分 assistant 文本持久化到转写历史中，并用中止元数据标记这些条目。
+- 历史记录始终从 gateway 获取（不进行本地文件监视）。
 - 如果 gateway 不可达，WebChat 将变为只读。
 
 ## Control UI agents 工具面板
@@ -71,7 +72,7 @@ WebChat 选项：
 
 - `gateway.port`, `gateway.bind`：WebSocket 主机/端口。
 - `gateway.auth.mode`, `gateway.auth.token`, `gateway.auth.password`：
-  shared-secret WebSocket 认证。
+  共享密钥 WebSocket 认证。
 - `gateway.auth.allowTailscale`：在启用时，浏览器 Control UI 聊天标签页可以使用 Tailscale
   Serve 身份头。
 - `gateway.auth.mode: "trusted-proxy"`：用于位于具备身份感知的 **non-loopback** 代理源之后的浏览器客户端的反向代理认证（参见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)）。

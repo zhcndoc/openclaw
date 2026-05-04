@@ -26,16 +26,16 @@ openclaw message <subcommand> [flags]
 
 目标格式（`--target`）：
 
-- WhatsApp：E.164 或群组 JID
-- Telegram：聊天 ID 或 `@username`
-- Discord：`channel:<id>` 或 `user:<id>`（或 `<@id>` 提及；原始数字 ID 会被视为频道）
-- Google Chat：`spaces/<spaceId>` 或 `users/<userId>`
-- Slack：`channel:<id>` 或 `user:<id>`（接受原始频道 ID）
-- Mattermost（插件）：`channel:<id>`、`user:<id>` 或 `@username`（裸 ID 会被视为频道）
-- Signal：`+E.164`、`group:<id>`、`signal:+E.164`、`signal:group:<id>`，或 `username:<name>`/`u:<name>`
-- iMessage：handle、`chat_id:<id>`、`chat_guid:<guid>` 或 `chat_identifier:<id>`
-- Matrix：`@user:server`、`!room:server` 或 `#alias:server`
-- Microsoft Teams：会话 ID（`19:...@thread.tacv2`）或 `conversation:<id>` 或 `user:<aad-object-id>`
+- WhatsApp: E.164、群组 JID，或 WhatsApp 频道/通讯简报 JID（`...@newsletter`）
+- Telegram: 聊天 id 或 `@username`
+- Discord: `channel:<id>` 或 `user:<id>`（或 `<@id>` 提及；原始数字 id 会被视为频道）
+- Google Chat: `spaces/<spaceId>` 或 `users/<userId>`
+- Slack: `channel:<id>` 或 `user:<id>`（接受原始频道 id）
+- Mattermost（插件）：`channel:<id>`、`user:<id>` 或 `@username`（裸 id 会被视为频道）
+- Signal: `+E.164`、`group:<id>`、`signal:+E.164`、`signal:group:<id>`，或 `username:<name>`/`u:<name>`
+- iMessage: handle、`chat_id:<id>`、`chat_guid:<guid>`，或 `chat_identifier:<id>`
+- Matrix: `@user:server`、`!room:server`，或 `#alias:server`
+- Microsoft Teams: conversation id（`19:...@thread.tacv2`）或 `conversation:<id>` 或 `user:<aad-object-id>`
 
 名称查找：
 
@@ -70,13 +70,13 @@ openclaw message <subcommand> [flags]
   - 频道：WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage/Matrix/Microsoft Teams
   - 必需：`--target`，以及 `--message`、`--media` 或 `--presentation`
   - 可选：`--media`、`--presentation`、`--delivery`、`--pin`、`--reply-to`、`--thread-id`、`--gif-playback`、`--force-document`、`--silent`
-  - 通用 presentation 负载：`--presentation` 发送语义块（`text`、`context`、`divider`、`buttons`、`select`），核心会通过所选频道声明的能力进行渲染。参见 [消息展示](/plugins/message-presentation)。
-  - 通用投递偏好：`--delivery` 接受如 `{ "pin": true }` 之类的投递提示；当频道支持时，`--pin` 是置顶投递的简写。
+  - 共享的 presentation 负载：`--presentation` 会发送语义块（`text`、`context`、`divider`、`buttons`、`select`），由核心通过所选频道声明的能力进行渲染。参见 [消息展示](/plugins/message-presentation)。
+  - 通用投递偏好：`--delivery` 接受投递提示，例如 `{ "pin": true }`；当频道支持时，`--pin` 是置顶投递的简写。
   - 仅 Telegram：`--force-document`（将图片和 GIF 作为文档发送，以避免 Telegram 压缩）
-  - 仅 Telegram：`--thread-id`（论坛主题 ID）
-  - 仅 Slack：`--thread-id`（线程时间戳；`--reply-to` 使用相同字段）
+  - 仅 Telegram：`--thread-id`（论坛主题 id）
+  - 仅 Slack：`--thread-id`（线程时间戳；`--reply-to` 使用同一字段）
   - Telegram + Discord：`--silent`
-  - 仅 WhatsApp：`--gif-playback`
+  - 仅 WhatsApp：`--gif-playback`；WhatsApp Channels/Newsletters 使用其原生的 `@newsletter` JID 进行寻址。
 
 - `poll`
   - 频道：WhatsApp/Telegram/Discord/Matrix/Microsoft Teams
@@ -101,7 +101,8 @@ openclaw message <subcommand> [flags]
 - `read`
   - 频道：Discord/Slack/Matrix
   - 必需：`--target`
-  - 可选：`--limit`、`--before`、`--after`
+  - 可选：`--limit`、`--message-id`、`--before`、`--after`
+  - 仅 Slack：`--message-id` 读取特定的 Slack 消息时间戳；与 `--thread-id` 组合可读取精确的线程回复。
   - 仅 Discord：`--around`
 
 - `edit`

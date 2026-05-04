@@ -151,15 +151,23 @@ OpenRouter 文档中定义的应用归属请求头：
     OpenRouter 特定的 Anthropic `cache_control` 标记，OpenClaw 会使用这些标记来更好地在 system/developer 提示块上复用提示缓存。
   </Accordion>
 
-  <Accordion title="思考 / 推理注入">
-    在支持的非 `auto` 路由上，OpenClaw 会将所选思考级别映射到
-    OpenRouter 代理推理载荷。不受支持的模型提示和
-    `openrouter/auto` 会跳过该推理注入。Hunter Alpha 也会跳过
-    对过时已配置模型引用的代理推理，因为 OpenRouter 可能会在该已退役路由的推理字段中返回最终答案文本。
+  <Accordion title="Anthropic reasoning prefill">
+    在已验证的 OpenRouter 路由上，启用推理的 Anthropic 模型引用会在请求到达 OpenRouter 之前移除末尾的 assistant prefill 回合，以符合 Anthropic 的要求：推理对话必须以 user 回合结束。
   </Accordion>
 
-  <Accordion title="仅 OpenAI 请求塑形">
-    OpenRouter 仍通过代理风格的 OpenAI 兼容路径运行，因此原生仅 OpenAI 的请求塑形，例如 `serviceTier`、Responses `store`、OpenAI 推理兼容载荷和提示缓存提示，不会被转发。
+  <Accordion title="Thinking / reasoning injection">
+    在受支持的非 `auto` 路由上，OpenClaw 会将所选的思考级别映射到
+    OpenRouter 代理推理负载。未受支持的模型提示和
+    `openrouter/auto` 会跳过该推理注入。Hunter Alpha 也会为过期的已配置模型引用跳过代理推理，因为 OpenRouter 可能会针对该已退役路由在推理字段中返回最终答案文本。
+  </Accordion>
+
+  <Accordion title="DeepSeek V4 reasoning replay">
+    在已验证的 OpenRouter 路由上，`openrouter/deepseek/deepseek-v4-flash` 和
+    `openrouter/deepseek/deepseek-v4-pro` 会在重放的 assistant 回合中补全缺失的 `reasoning_content`，以便思考/工具对话保持 DeepSeek V4 所要求的后续形状。
+  </Accordion>
+
+  <Accordion title="OpenAI-only request shaping">
+    OpenRouter 仍然通过代理式的 OpenAI 兼容路径运行，因此诸如 `serviceTier`、Responses `store`、OpenAI reasoning-compat 负载和提示缓存提示等原生 OpenAI 专属请求形状不会被转发。
   </Accordion>
 
   <Accordion title="Gemini 支持的路由">

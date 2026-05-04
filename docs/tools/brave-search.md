@@ -27,6 +27,7 @@ OpenClaw 支持将 Brave Search API 作为 `web_search` 提供方。
           webSearch: {
             apiKey: "BRAVE_API_KEY_HERE",
             mode: "web", // 或 "llm-context"
+            baseUrl: "https://api.search.brave.com", // 可选的代理/基础 URL 覆盖
           },
         },
       },
@@ -51,6 +52,12 @@ Brave 搜索的提供方特定设置现在位于 `plugins.entries.brave.config.w
 
 - `web`（默认）：常规 Brave 网页搜索，返回标题、URL 和摘要
 - `llm-context`：Brave LLM Context API，返回预先提取的文本片段和来源，用于提供依据
+
+`webSearch.baseUrl` 可以将 Brave 请求指向受信任的、兼容 Brave 的代理
+或网关。OpenClaw 会在配置的 base URL 后附加 `/res/v1/web/search` 或 `/res/v1/llm/context`，
+并将 base URL 保留在缓存键中。公共
+端点必须使用 `https://`；`http://` 仅接受用于受信任的回环
+或私有网络代理主机。
 
 ## 工具参数
 
@@ -116,13 +123,16 @@ await web_search({
 
 ## 注意事项
 
-- OpenClaw 使用 Brave **Search** 套餐。如果你有旧版订阅（例如最初的 Free 套餐，每月 2,000 次查询），它仍然有效，但不包含 LLM Context 或更高的速率限制等新功能。
-- 每个 Brave 套餐都包含每月 **\$5 的免费额度**（按月重置）。Search 套餐的价格为每 1,000 次请求 \$5，因此这笔额度可覆盖每月 1,000 次查询。请在 Brave 控制台中设置你的使用上限，以避免意外收费。有关当前套餐信息，请参见 [Brave API portal](https://brave.com/search/api/)。
-- Search 套餐包含 LLM Context 端点和 AI 推理权利。将结果存储用于训练或微调模型，需要具备明确存储权利的套餐。请参见 Brave [Terms of Service](https://api-dashboard.search.brave.com/terms-of-service)。
-- `llm-context` 模式返回的是带依据的来源条目，而不是常规网页搜索摘要的结构。
-- `llm-context` 模式不支持 `ui_lang`、`freshness`、`date_after` 或 `date_before`。
-- `ui_lang` 必须包含地区子标签，例如 `en-US`。
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）。 
+- OpenClaw 使用 Brave **Search** 套餐。如果你有旧版订阅（例如最初的免费套餐，每月 2,000 次查询），它仍然有效，但不包含诸如 LLM Context 或更高速率限制等新功能。
+- 每个 Brave 套餐都包含 **每月 \$5 免费额度**（可续期）。Search 套餐每 1,000 次请求收费 \$5，因此这笔额度可覆盖每月 1,000 次查询。请在 Brave 仪表板中设置你的使用上限，以避免意外收费。有关当前套餐，请参阅 [Brave API portal](https://brave.com/search/api/)。
+- Search 套餐包括 LLM Context 端点和 AI 推理权利。将结果存储用于训练或微调模型，需要具有明确存储权利的套餐。请参阅 Brave [Terms of Service](https://api-dashboard.search.brave.com/terms-of-service)。
+- `llm-context` 模式返回有依据的来源条目，而不是普通 web-search 摘要的结构。
+- `llm-context` 模式支持 `freshness` 和受限的 `date_after` + `date_before` 范围。它不支持 `ui_lang`；如果没有 `date_after`，`date_before` 会被拒绝，因为 Brave 要求自定义时间范围同时包含开始和结束日期。
+- `ui_lang` 必须包含区域子标签，例如 `en-US`。
+- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）。
+- 自定义的 `webSearch.baseUrl` 值会包含在 Brave 缓存标识中，因此
+  不同代理的响应不会发生冲突。
+- 启用 `brave.http` diagnostics 标志，可在排查问题时记录 Brave 请求 URL/查询参数、响应状态/耗时，以及搜索缓存的命中/未命中/写入事件。该标志绝不会记录 API 密钥或响应正文，但搜索查询本身可能是敏感信息。
 
 ## 相关内容
 

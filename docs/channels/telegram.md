@@ -256,14 +256,14 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
 ## 运行时行为
 
-- Telegram 由 gateway 进程负责。
-- 路由是确定性的：Telegram 的入站消息会原路回复到 Telegram（模型不会选择渠道）。
-- 入站消息会归一化为共享的 channel envelope，并带有回复元数据和媒体占位符。
-- 群会话按群 ID 隔离。论坛主题会追加 `:topic:<threadId>` 以保持主题隔离。
-- DM 消息可以携带 `message_thread_id`；OpenClaw 会使用感知线程的会话键进行路由，并在回复中保留 thread ID。
-- 长轮询使用 grammY runner，并按 chat / thread 串行处理。整体 runner sink 并发度使用 `agents.defaults.maxConcurrent`。
-- 长轮询在每个 gateway 进程内受保护，因此同一时间只有一个活动轮询器可以使用同一个 bot token。如果你仍然看到 `getUpdates` 409 冲突，很可能是另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一个 token。
-- 默认情况下，如果 120 秒内没有完成的 `getUpdates` 存活检查，长轮询看门狗会触发重启。只有在你的部署在长时间任务期间仍然出现误判的 polling-stall 重启时，才增加 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
+- Telegram 由 gateway 进程拥有和管理。
+- 路由是确定性的：Telegram 入站回复回 Telegram（模型不会选择渠道）。
+- 入站消息会规范化为共享的渠道信封，并包含回复元数据和媒体占位符。
+- 群会话按群 ID 隔离。论坛话题会追加 `:topic:<threadId>`，以保持话题隔离。
+- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留该线程 ID 用于回复，但默认仍将 DM 保持在扁平会话中。如果你有意启用 DM 话题会话隔离，请配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
+- 长轮询使用 grammY runner，并按聊天/按线程进行排序。整体 runner sink 并发使用 `agents.defaults.maxConcurrent`。
+- 长轮询在每个 gateway 进程内部受保护，因此同一时间只有一个活跃轮询器可以使用同一个 bot token。如果你仍看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一个 token。
+- 默认情况下，如果 120 秒内没有完成 `getUpdates` liveness，长轮询看门狗会重启。只有在部署过程中仍出现误报式轮询卡死重启时，才应增大 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
 - Telegram Bot API 不支持已读回执（`sendReadReceipts` 不适用）。
 
 ## 功能参考
@@ -277,12 +277,12 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     要求：
 
-    - `channels.telegram.streaming` 为 `off | partial | block | progress`（默认：`partial`）
-    - `progress` 在 Telegram 上映射为 `partial`（以兼容跨渠道命名）
-    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（预览流启用时默认：`true`）
-    - 会自动检测旧版 `channels.telegram.streamMode` 和布尔值 `streaming`；运行 `openclaw doctor --fix` 可将它们迁移到 `channels.telegram.streaming.mode`
+    - `channels.telegram.streaming` 是 `off | partial | block | progress`（默认：`partial`）
+    - `progress` 会保留一条可编辑的状态草稿，并在工具执行进度更新时持续刷新，直到最终交付
+    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（默认：当预览流启用时为 `true`）
+    - 已检测到旧版 `channels.telegram.streamMode` 和布尔值 `streaming`；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
 
-    工具进度预览更新是工具运行时显示的简短“Working...”行，例如命令执行、文件读取、规划更新或补丁摘要。Telegram 默认保持启用这些内容，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。若要保留回答文本的已编辑预览，但隐藏工具进度行，请设置：
+    工具进度预览更新是工具运行时显示的简短状态行，例如命令执行、文件读取、计划更新或补丁摘要。Telegram 默认启用这些功能，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。若希望保留答案文本的已编辑预览，但隐藏工具进度行，请设置：
 
     ```json
     {
@@ -299,12 +299,17 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     }
     ```
 
-    仅当你希望只发送最终结果时才使用 `streaming.mode: "off"`：Telegram 预览编辑会被禁用，通用的工具/进度杂项内容会被抑制，而不是作为独立的“Working...”消息发送。审批提示、媒体载荷和错误仍然会通过正常的最终发送流程。若你只想保留答案预览编辑，同时隐藏工具进度状态行，请使用 `streaming.preview.toolProgress: false`。
+    仅当你只想要最终结果投递时，才使用 `streaming.mode: "off"`：Telegram 预览编辑会被禁用，通用的工具/进度输出也会被抑制，而不是作为独立状态消息发送。审批提示、媒体载荷和错误仍会通过正常的最终交付流程路由。若你只想保留答案预览编辑，同时隐藏工具进度状态行，请使用 `streaming.preview.toolProgress: false`。
+
+    <Note>
+      Telegram 选中文本引用回复是一个例外。当 `replyToMode` 为 `"first"`、`"all"` 或 `"batched"`，且入站消息包含选中的引用文本时，OpenClaw 会通过 Telegram 原生的引用回复路径发送最终答案，而不是编辑答案预览，因此 `streaming.preview.toolProgress` 无法在该轮展示简短状态行。没有选中文本引用的当前消息回复仍会保留预览流。若工具进度可见性比原生引用回复更重要，请将 `replyToMode` 设为 `"off"`；或者将 `streaming.preview.toolProgress` 设为 `false` 以接受这一权衡。
+    </Note>
 
     对于纯文本回复：
 
-    - 简短的私聊/群组/话题预览：OpenClaw 会保持同一条预览消息，并在原地进行最终编辑
-    - 大约一分钟以上的预览：OpenClaw 会先将完整回复作为新的最终消息发送，然后清理预览，因此 Telegram 可见时间戳会反映完成时间，而不是预览创建时间
+    - 短 DM/群组/话题预览：OpenClaw 会保留同一条预览消息并在原位置完成最终编辑，除非在预览出现后发送过可见的非预览消息
+    - 预览后接可见的非预览输出：OpenClaw 会将完成的回复作为一条新的最终消息发送，并清理较早的预览，因此最终答案会出现在中间输出之后
+    - 持续时间超过约一分钟的预览：OpenClaw 会将完成的回复作为一条新的最终消息发送，然后清理预览，因此 Telegram 可见时间戳反映的是完成时间，而不是预览创建时间
 
     对于复杂回复（例如媒体载荷），OpenClaw 会回退到正常的最终发送流程，然后清理预览消息。
 
@@ -540,9 +545,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     **持久化 ACP 话题绑定**：论坛话题可以通过顶层的类型化 ACP 绑定来固定 ACP harness 会话（`bindings[]`，`type: "acp"`，`match.channel: "telegram"`，`peer.kind: "group"`，以及类似 `-1001234567890:topic:42` 的带话题限定 ID）。当前仅适用于群组/超级群组中的论坛话题。参见 [ACP 代理](/tools/acp-agents)。
 
-    **从聊天中按线程启动 ACP**：`/acp spawn <agent> --thread here|auto` 会将当前话题绑定到一个新的 ACP 会话；后续消息会直接路由到那里。OpenClaw 会将启动确认固定在该话题中。需要 `channels.telegram.threadBindings.spawnAcpSessions=true`。
+    **Thread-bound ACP spawn from chat**: `/acp spawn <agent> --thread here|auto` binds the current topic to a new ACP session; follow-ups route there directly. OpenClaw pins the spawn confirmation in-topic. Requires `channels.telegram.threadBindings.spawnSessions` to remain enabled (default: `true`).
 
-    模板上下文暴露 `MessageThreadId` 和 `IsForum`。带有 `message_thread_id` 的私聊仍保持私聊路由，但会使用感知线程的会话键。
+    Template context exposes `MessageThreadId` and `IsForum`. DM chats with `message_thread_id` keep DM routing and reply metadata on flat sessions by default; they only use thread-aware session keys when configured with `threadReplies: "inbound"`, `threadReplies: "always"`, `requireTopic: true`, or a matching topic config. Use top-level `channels.telegram.dm.threadReplies` for the account default, or `direct.<chatId>.threadReplies` for one DM.
 
   </Accordion>
 
@@ -718,16 +723,17 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
   </Accordion>
 
-  <Accordion title="限制、重试和 CLI 目标">
-    - `channels.telegram.textChunkLimit` 默认值为 4000。
-    - `channels.telegram.chunkMode="newline"` 在按长度拆分前优先按段落边界（空行）拆分。
-    - `channels.telegram.mediaMaxMb`（默认 100）限制入站和出站 Telegram 媒体大小。
-    - `channels.telegram.timeoutSeconds` 覆盖 Telegram API 客户端超时（若未设置，则使用 grammY 默认值）。长轮询 bot 客户端会将配置值下限钳制到 45 秒 `getUpdates` 请求守卫以下，以免在 30 秒轮询窗口完成前中止空闲轮询。
-    - `channels.telegram.pollingStallThresholdMs` 默认值为 `120000`；仅在轮询停滞误报导致重启时，在 `30000` 到 `600000` 之间调整。
-    - 群上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
-    - 回复/引用/转发补充上下文目前按接收到的内容传递。
-    - Telegram allowlist 主要用于限制谁可以触发代理，而不是完整的补充上下文脱敏边界。
-    - DM 历史控制：
+  <Accordion title="Limits, retry, and CLI targets">
+    - `channels.telegram.textChunkLimit` default is 4000.
+    - `channels.telegram.chunkMode="newline"` prefers paragraph boundaries (blank lines) before length splitting.
+    - `channels.telegram.mediaMaxMb` (default 100) caps inbound and outbound Telegram media size.
+    - `channels.telegram.mediaGroupFlushMs` (default 500) controls how long Telegram albums/media groups are buffered before OpenClaw dispatches them as one inbound message. Increase it if album parts arrive late; decrease it to reduce album reply latency.
+    - `channels.telegram.timeoutSeconds` overrides Telegram API client timeout (if unset, grammY default applies). Bot clients clamp configured values below the 60-second outbound text/typing request guard so grammY does not abort visible reply delivery before OpenClaw's transport guard and fallback can run. Long polling still uses a 45-second `getUpdates` request guard so idle polls are not abandoned indefinitely.
+    - `channels.telegram.pollingStallThresholdMs` defaults to `120000`; tune between `30000` and `600000` only for false-positive polling-stall restarts.
+    - group context history uses `channels.telegram.historyLimit` or `messages.groupChat.historyLimit` (default 50); `0` disables.
+    - reply/quote/forward supplemental context is currently passed as received.
+    - Telegram allowlists primarily gate who can trigger the agent, not a full supplemental-context redaction boundary.
+    - DM history controls:
       - `channels.telegram.dmHistoryLimit`
       - `channels.telegram.dms["<user_id>"].historyLimit`
     - `channels.telegram.retry` 配置适用于 Telegram 发送辅助工具（CLI/工具/动作）在处理可恢复的出站 API 错误时使用。入站最终回复投递也会对 Telegram 预连接失败使用有界的安全发送重试，但不会重试可能导致可见消息重复的歧义性发送后网络封包。
@@ -843,32 +849,33 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
     - 授权你的发送者身份（配对和/或数字 `allowFrom`）
     - 即使群组策略为 `open`，命令授权仍然适用
-    - `setMyCommands failed` 并带有 `BOT_COMMANDS_TOO_MUCH` 表示原生菜单条目过多；减少插件/技能/自定义命令，或禁用原生菜单
-    - 启动时的 `deleteMyCommands` / `setMyCommands` 调用有边界限制，并会在请求超时后通过 Telegram 的传输回退重试一次。持续的网络/fetch 错误通常表示到 `api.telegram.org` 的 DNS/HTTPS 可达性问题
+    - `setMyCommands failed` 且返回 `BOT_COMMANDS_TOO_MUCH` 表示原生菜单条目过多；请减少插件/技能/自定义命令，或禁用原生菜单
+    - `deleteMyCommands` / `setMyCommands` 启动调用以及 `sendChatAction` 输入状态调用都有上限，并会在请求超时后通过 Telegram 的传输回退重试一次。持续的网络/fetch 错误通常表示到 `api.telegram.org` 的 DNS/HTTPS 可达性有问题
 
   </Accordion>
 
   <Accordion title="启动时报告未授权令牌">
 
-    - `getMe returned 401` 是 Telegram 对所配置机器人令牌的身份验证失败。
+    - `getMe returned 401` 表示所配置的机器人令牌发生了 Telegram 身份验证失败。
     - 在 BotFather 中重新复制或重新生成机器人令牌，然后更新 `channels.telegram.botToken`、`channels.telegram.tokenFile`、`channels.telegram.accounts.<id>.botToken`，或默认账号的 `TELEGRAM_BOT_TOKEN`。
-    - 启动期间的 `deleteWebhook 401 Unauthorized` 也是认证失败；把它视为“没有 webhook 存在”只会把同样的坏令牌失败延后到后续 API 调用。
-    - 如果在轮询启动期间 `deleteWebhook` 因临时网络错误失败，OpenClaw 会检查 `getWebhookInfo`；当 Telegram 报告 webhook URL 为空时，轮询会继续，因为清理已经满足。
+    - 启动期间的 `deleteWebhook 401 Unauthorized` 也属于身份验证失败；把它当作“不存在 webhook”只会把同样的坏令牌失败推迟到后续 API 调用。
 
   </Accordion>
 
   <Accordion title="轮询或网络不稳定">
 
     - Node 22+ + 自定义 fetch/proxy 在 AbortSignal 类型不匹配时可能触发立即中止行为。
-    - 某些主机会优先将 `api.telegram.org` 解析为 IPv6；损坏的 IPv6 出站可能导致 Telegram API 间歇性失败。
-    - 如果日志中包含 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!`，OpenClaw 现在会将这些错误作为可恢复的网络错误重试。
-    - 如果 Telegram 套接字按固定的短周期回收，请检查较低的 `channels.telegram.timeoutSeconds`；长轮询机器人客户端会把低于 `getUpdates` 请求保护值的配置值向上钳制，但较旧版本在该值低于长轮询超时时可能会在每次轮询时都中止。
-    - 如果日志中包含 `Polling stall detected`，OpenClaw 会在默认情况下于 120 秒内未完成长轮询存活检测后重启轮询并重建 Telegram 传输层。
-    - 当运行中的轮询账号在启动宽限期后尚未完成 `getUpdates`、运行中的 webhook 账号在启动宽限期后尚未完成 `setWebhook`，或者最近一次成功的轮询传输活动已过期时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
-    - 只有当长时间运行的 `getUpdates` 调用是健康的，但你的主机仍然报告错误的轮询停滞重启时，才应增加 `channels.telegram.pollingStallThresholdMs`。持续的停滞通常表明主机与 `api.telegram.org` 之间存在代理、DNS、IPv6 或 TLS 出站问题。
-    - Telegram 也会为 Bot API 传输遵循进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍可绕过 `api.telegram.org`。
-    - 如果 OpenClaw 为服务环境通过 `OPENCLAW_PROXY_URL` 配置了托管代理，且未设置标准代理环境变量，Telegram 也会将该 URL 用于 Bot API 传输。
-    - 在直连出站或 TLS 不稳定的 VPS 主机上，可通过 `channels.telegram.proxy` 让 Telegram API 调用走代理：
+    - 某些主机会优先将 `api.telegram.org` 解析到 IPv6；损坏的 IPv6 出站可能导致间歇性的 Telegram API 失败。
+    - 如果日志包含 `TypeError: fetch failed` 或 `Network request for 'getUpdates' failed!`，OpenClaw 现在会把这些错误作为可恢复的网络错误重试。
+    - 在轮询启动期间，OpenClaw 会为 grammY 复用成功的启动 `getMe` 探测，因此运行器在第一次 `getUpdates` 之前不需要第二次 `getMe`。
+    - 如果在轮询启动期间 `deleteWebhook` 因瞬态网络错误失败，OpenClaw 会继续进入长轮询，而不是再次发起一次轮询前控制面调用。若 webhook 仍然 সকտիվ，则会以 `getUpdates` 冲突的形式显现；随后 OpenClaw 会重建 Telegram 传输并重试 webhook 清理。
+    - 如果 Telegram 套接字按一个较短的固定周期回收，请检查是否设置了较低的 `channels.telegram.timeoutSeconds`；机器人客户端会将低于出站和 `getUpdates` 请求保护阈值的配置值进行钳制，但旧版本在该值低于这些阈值时，可能会让每次轮询或回复都中止。
+    - 如果日志包含 `Polling stall detected`，OpenClaw 会默认在 120 秒内没有完成长轮询存活信号时重启轮询并重建 Telegram 传输。
+    - 当正在运行的轮询账号在启动宽限期后尚未完成 `getUpdates`、正在运行的 webhook 账号在启动宽限期后尚未完成 `setWebhook`，或者最近一次成功的轮询传输活动已过期时，`openclaw channels status --probe` 和 `openclaw doctor` 会发出警告。
+    - 仅当长时间运行的 `getUpdates` 调用是健康的，但你的主机仍然报告了错误的轮询停滞重启时，才增加 `channels.telegram.pollingStallThresholdMs`。持续性的停滞通常表明主机与 `api.telegram.org` 之间存在代理、DNS、IPv6 或 TLS 出站问题。
+    - Telegram 也会尊重 Bot API 传输的进程代理环境变量，包括 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 及其小写变体。`NO_PROXY` / `no_proxy` 仍可绕过 `api.telegram.org`。
+    - 如果 OpenClaw 在服务环境中通过 `OPENCLAW_PROXY_URL` 配置了托管代理，且未设置标准代理环境变量，Telegram 也会使用该 URL 进行 Bot API 传输。
+    - 在直连出站/TLS 不稳定的 VPS 主机上，请通过 `channels.telegram.proxy` 路由 Telegram API 调用：
 
 ```yaml
 channels:
@@ -876,8 +883,8 @@ channels:
     proxy: socks5://<user>:<password>@proxy-host:1080
 ```
 
-    - Node 22+ 默认使用 `autoSelectFamily=true`（WSL2 除外）以及 `dnsResultOrder=ipv4first`。
-    - 如果你的主机是 WSL2，或者显式在仅 IPv4 行为下工作更好，可强制选择地址族：
+    - Node 22+ 默认 `autoSelectFamily=true`（WSL2 例外）。Telegram 的 DNS 结果顺序会优先遵循 `OPENCLAW_TELEGRAM_DNS_RESULT_ORDER`，然后是 `channels.telegram.network.dnsResultOrder`，再然后是进程默认值（例如 `NODE_OPTIONS=--dns-result-order=ipv4first`）；如果都不适用，Node 22+ 会回退到 `ipv4first`。
+    - 如果你的主机是 WSL2，或者明确在仅 IPv4 的行为下表现更好，请强制选择地址族：
 
 ```yaml
 channels:
@@ -927,20 +934,20 @@ dig +short api.telegram.org AAAA
 
 <Accordion title="高信号 Telegram 字段">
 
-- 启动/认证：`enabled`、`botToken`、`tokenFile`、`accounts.*`（`tokenFile` 必须指向普通文件；符号链接会被拒绝）
-- 访问控制：`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`、`groups.*.topics.*`、顶层 `bindings[]`（`type: "acp"`）
-- 执行审批：`execApprovals`、`accounts.*.execApprovals`
-- 命令/菜单：`commands.native`、`commands.nativeSkills`、`customCommands`
-- 线程/回复：`replyToMode`
-- 流式传输：`streaming`（预览）、`streaming.preview.toolProgress`、`blockStreaming`
-- 格式化/投递：`textChunkLimit`、`chunkMode`、`linkPreview`、`responsePrefix`
-- 媒体/网络：`mediaMaxMb`、`timeoutSeconds`、`pollingStallThresholdMs`、`retry`、`network.autoSelectFamily`、`network.dangerouslyAllowPrivateNetwork`、`proxy`
-- 自定义 API 根地址：`apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）
-- webhook：`webhookUrl`、`webhookSecret`、`webhookPath`、`webhookHost`
-- 动作/能力：`capabilities.inlineButtons`、`actions.sendMessage|editMessage|deleteMessage|reactions|sticker`
-- 反应：`reactionNotifications`、`reactionLevel`
-- 错误：`errorPolicy`、`errorCooldownMs`
-- 写入/历史：`configWrites`、`historyLimit`、`dmHistoryLimit`、`dms.*.historyLimit`
+- startup/auth: `enabled`, `botToken`, `tokenFile`, `accounts.*`（`tokenFile` 必须指向普通文件；拒绝符号链接）
+- access control: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`, `groups.*.topics.*`, 顶层 `bindings[]`（`type: "acp"`）
+- exec approvals: `execApprovals`, `accounts.*.execApprovals`
+- command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
+- threading/replies: `replyToMode`, `dm.threadReplies`, `direct.*.threadReplies`
+- streaming: `streaming`（预览），`streaming.preview.toolProgress`, `blockStreaming`
+- formatting/delivery: `textChunkLimit`, `chunkMode`, `linkPreview`, `responsePrefix`
+- media/network: `mediaMaxMb`, `mediaGroupFlushMs`, `timeoutSeconds`, `pollingStallThresholdMs`, `retry`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
+- custom API root: `apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）
+- webhook: `webhookUrl`, `webhookSecret`, `webhookPath`, `webhookHost`
+- actions/capabilities: `capabilities.inlineButtons`, `actions.sendMessage|editMessage|deleteMessage|reactions|sticker`
+- reactions: `reactionNotifications`, `reactionLevel`
+- errors: `errorPolicy`, `errorCooldownMs`
+- writes/history: `configWrites`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
 
 </Accordion>
 

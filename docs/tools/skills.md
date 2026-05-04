@@ -35,7 +35,7 @@ Codex home，因此个人 Codex CLI 技能不会被隐式加载。
 选择技能目录。对于非交互运行，请对要复制的确切技能重复使用
 `--skill <name>`。
 
-## Per-agent vs shared skills
+## 每代理 vs 共享技能
 
 在 **多代理** 设置中，每个代理都有自己的工作区：
 
@@ -158,7 +158,7 @@ OpenClaw 遵循 AgentSkills 规范中的布局/意图。嵌入式代理使用的
   当为 `true` 时，技能会作为用户斜杠命令暴露。
 </ParamField>
 <ParamField path="disable-model-invocation" type="boolean" default="false">
-  当为 `true` 时，技能会从模型提示词中排除（仍可通过用户调用使用）。
+  当为 `true` 时，OpenClaw 会将该技能的说明排除在代理的正常提示词之外。该技能仍会被安装，并且在 `user-invocable` 也为 `true` 时，仍可作为斜杠命令显式运行。
 </ParamField>
 <ParamField path="command-dispatch" type='"tool"'>
   当设置为 `tool` 时，斜杠命令会绕过模型并直接分派给工具。

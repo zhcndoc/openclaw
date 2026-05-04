@@ -1,5 +1,5 @@
 ---
-summary: "Discord 机器人支持状态、能力和配置"
+summary: "支持状态、能力和配置的 Discord 机器人"
 read_when:
   - 正在处理 Discord 渠道功能
 title: "Discord"
@@ -574,8 +574,10 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - 配置的提及模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
     - 在受支持情况下隐式回复机器人行为
 
-    `requireMention` 按服务器/频道配置（`channels.discord.guilds...`）。
-    `ignoreOtherMentions` 可选择性地丢弃提及其他用户/角色但未提及机器人的消息（不包括 @everyone/@here）。
+    在编写发出的 Discord 消息时，请使用规范提及语法：用户使用 `<@USER_ID>`，频道使用 `<#CHANNEL_ID>`，角色使用 `<@&ROLE_ID>`。不要使用旧版 `<@!USER_ID>` 昵称提及形式。
+
+    `requireMention` 按公会/频道配置（`channels.discord.guilds...`）。
+    `ignoreOtherMentions` 可选地丢弃那些提及了其他用户/角色但没有提及机器人的消息（`@everyone/@here` 除外）。
 
     群组 DM：
 
@@ -613,11 +615,11 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
 ## 原生命令与命令授权
 
-- `commands.native` 默认值为 `"auto"`，并且对 Discord 已启用。
+- `commands.native` 默认为 `"auto"`，并对 Discord 启用。
 - 按频道覆盖：`channels.discord.commands.native`。
-- `commands.native=false` 会显式清除先前注册的 Discord 原生命令。
-- 原生命令授权使用与普通消息处理相同的 Discord 白名单/策略。
-- 即使用户未获授权，命令在 Discord UI 中仍可能可见；但执行时仍会强制执行 OpenClaw 授权并返回“未授权”。
+- `commands.native=false` 会在启动期间跳过 Discord slash 命令注册和清理。先前注册的命令可能仍会在 Discord 中可见，直到你将它们从 Discord 应用中移除。
+- 原生命令授权使用与普通消息处理相同的 Discord allowlist/策略。
+- 对于未授权用户，命令仍可能在 Discord UI 中可见；执行时仍会强制 OpenClaw 授权并返回 "not authorized"。
 
 命令目录和行为请参见 [Slash commands](/tools/slash-commands)。
 
@@ -650,7 +652,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   </Accordion>
 
   <Accordion title="Live stream preview">
-    OpenClaw 可以通过发送临时消息并在文本到达时编辑它来流式输出草稿回复。`channels.discord.streaming` 可取 `off`（默认）| `partial` | `block` | `progress`。`progress` 在 Discord 上映射为 `partial`；`streamMode` 是旧别名，并会自动迁移。
+    OpenClaw 可以通过发送临时消息并在文本到达时编辑它来流式输出草稿回复。`channels.discord.streaming` 取值为 `off`（默认）| `partial` | `block` | `progress`。`progress` 会保留一条可编辑的状态草稿，并在最终交付前用工具进度更新它；`streamMode` 是旧版别名，会自动迁移。
 
     默认仍为 `off`，因为当多个机器人或网关共享一个账号时，Discord 预览编辑很快会触发速率限制。
 
@@ -730,7 +732,8 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
         enabled: true,
         idleHours: 24,
         maxAgeHours: 0,
-        spawnSubagentSessions: false, // 可选启用
+        spawnSessions: true,
+        defaultSpawnContext: "fork",
       },
     },
   },
@@ -741,8 +744,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     - `session.threadBindings.*` 设置全局默认值。
     - `channels.discord.threadBindings.*` 覆盖 Discord 行为。
-    - 只有将 `spawnSubagentSessions` 设为 true，才能为 `sessions_spawn({ thread: true })` 自动创建/绑定线程。
-    - 只有将 `spawnAcpSessions` 设为 true，才能为 ACP 自动创建/绑定线程（`/acp spawn ... --thread ...` 或 `sessions_spawn({ runtime: "acp", thread: true })`）。
+    - `spawnSessions` 控制 `sessions_spawn({ thread: true })` 和 ACP 线程创建的自动创建/绑定。默认：`true`。
+    - `defaultSpawnContext` 控制线程绑定 spawn 的原生子代理上下文。默认：`"fork"`。
+    - 已弃用的 `spawnSubagentSessions`/`spawnAcpSessions` 键会由 `openclaw doctor --fix` 迁移。
     - 如果某个账号禁用了线程绑定，则 `/focus` 和相关线程绑定操作不可用。
 
     参见 [Sub-agents](/tools/subagents)、[ACP Agents](/tools/acp-agents) 和 [Configuration Reference](/gateway/configuration-reference)。
@@ -806,9 +810,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
     说明：
 
-    - `/acp spawn codex --bind here` 会就地绑定当前频道或线程，并让未来消息继续使用同一个 ACP 会话。线程消息会继承父频道绑定。
-    - 在已绑定的频道或线程中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话。临时线程绑定在激活时可覆盖目标解析。
-    - 只有当 OpenClaw 需要通过 `--thread auto|here` 创建/绑定子线程时，才需要 `spawnAcpSessions`。
+    - `/acp spawn codex --bind here` 将当前频道或线程原地绑定，并让未来消息继续使用同一个 ACP 会话。线程消息会继承父频道绑定。
+    - 在已绑定的频道或线程中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话。临时线程绑定在激活时可以覆盖目标解析。
+    - `spawnSessions` 通过 `--thread auto|here` 控制子线程的创建/绑定。
 
     绑定行为详情请参见 [ACP Agents](/tools/acp-agents)。
 
@@ -915,6 +919,30 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - 仅当 `channels.discord.dangerouslyAllowNameMatching: true` 时，才会按名称/slug 匹配成员显示名
     - 查找使用原始消息 ID，并受时间窗口限制
     - 如果查找失败，代理消息会被视为机器人消息并丢弃，除非 `allowBots=true`
+
+  </Accordion>
+
+  <Accordion title="Outbound mention aliases">
+    当代理需要对已知 Discord 用户进行可确定的发出提及时，请使用 `mentionAliases`。键是不带前导 `@` 的句柄；值是 Discord 用户 ID。未知句柄、`@everyone`、`@here`，以及 Markdown 代码跨度中的提及都会保持不变。
+
+```json5
+{
+  channels: {
+    discord: {
+      mentionAliases: {
+        Vladislava: "123456789012345678",
+      },
+      accounts: {
+        ops: {
+          mentionAliases: {
+            OpsLead: "234567890123456789",
+          },
+        },
+      },
+    },
+  },
+}
+```
 
   </Accordion>
 
@@ -1241,8 +1269,24 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="权限审计不匹配">
-    `channels status --probe` 的权限检查只对数字形式的频道 ID 有效。
+  <Accordion title="Gateway READY timeout restarts">
+    OpenClaw 在启动期间以及运行时重新连接后都会等待 Discord 的 gateway `READY` 事件。带有启动错峰的多账号设置，可能需要比默认值更长的启动 READY 窗口。
+
+    READY 超时参数：
+
+    - 启动单账号：`channels.discord.gatewayReadyTimeoutMs`
+    - 启动多账号：`channels.discord.accounts.<accountId>.gatewayReadyTimeoutMs`
+    - 配置未设置时的启动环境变量回退：`OPENCLAW_DISCORD_READY_TIMEOUT_MS`
+    - 启动默认值：`15000`（15 秒），最大值：`120000`
+    - 运行时单账号：`channels.discord.gatewayRuntimeReadyTimeoutMs`
+    - 运行时多账号：`channels.discord.accounts.<accountId>.gatewayRuntimeReadyTimeoutMs`
+    - 配置未设置时的运行时环境变量回退：`OPENCLAW_DISCORD_RUNTIME_READY_TIMEOUT_MS`
+    - 运行时默认值：`30000`（30 秒），最大值：`120000`
+
+  </Accordion>
+
+  <Accordion title="Permissions audit mismatches">
+    `channels status --probe` 权限检查只对数字频道 ID 有效。
 
     如果你使用 slug 键，运行时匹配仍可能工作，但 probe 无法完全验证权限。
 
@@ -1261,6 +1305,29 @@ openclaw logs --follow
 
     如果你设置了 `channels.discord.allowBots=true`，请使用严格的提及和允许名单规则，以避免循环行为。
     建议使用 `channels.discord.allowBots="mentions"`，仅接受提及机器人的机器人消息。
+
+```json5
+{
+  channels: {
+    discord: {
+      accounts: {
+        mantis: {
+          // 螳螂只会在其他机器人提及她时监听它们。
+          allowBots: "mentions",
+        },
+        molty: {
+          // Molty 会监听所有机器人发送的 Discord 消息。
+          allowBots: true,
+          mentionAliases: {
+            // 允许 Molty 写出 "@Mantis" 并发送真正的 Discord 提及。
+            Mantis: "MANTIS_DISCORD_USER_ID",
+          },
+        },
+      },
+    },
+  },
+}
+```
 
   </Accordion>
 
@@ -1283,15 +1350,15 @@ openclaw logs --follow
 
 <Accordion title="高信号 Discord 字段">
 
-- startup/auth: `enabled`、`token`、`accounts.*`、`allowBots`
-- policy: `groupPolicy`、`dm.*`、`guilds.*`、`guilds.*.channels.*`
-- command: `commands.native`、`commands.useAccessGroups`、`configWrites`、`slashCommand.*`
-- event queue: `eventQueue.listenerTimeout`（监听器预算）、`eventQueue.maxQueueSize`、`eventQueue.maxConcurrency`
-- gateway metadata: `gatewayInfoTimeoutMs`
-- reply/history: `replyToMode`、`historyLimit`、`dmHistoryLimit`、`dms.*.historyLimit`
-- delivery: `textChunkLimit`、`chunkMode`、`maxLinesPerMessage`
-- streaming: `streaming`（旧别名：`streamMode`）、`streaming.preview.toolProgress`、`draftChunk`、`blockStreaming`、`blockStreamingCoalesce`
-- media/retry: `mediaMaxMb`（限制发往 Discord 的上传大小，默认 `100MB`）、`retry`
+- startup/auth: `enabled`, `token`, `accounts.*`, `allowBots`
+- policy: `groupPolicy`, `dm.*`, `guilds.*`, `guilds.*.channels.*`
+- command: `commands.native`, `commands.useAccessGroups`, `configWrites`, `slashCommand.*`
+- event queue: `eventQueue.listenerTimeout` (listener budget), `eventQueue.maxQueueSize`, `eventQueue.maxConcurrency`
+- gateway: `gatewayInfoTimeoutMs`, `gatewayReadyTimeoutMs`, `gatewayRuntimeReadyTimeoutMs`
+- reply/history: `replyToMode`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- delivery: `textChunkLimit`, `chunkMode`, `maxLinesPerMessage`
+- streaming: `streaming` (legacy alias: `streamMode`), `streaming.preview.toolProgress`, `draftChunk`, `blockStreaming`, `blockStreamingCoalesce`
+- media/retry: `mediaMaxMb` (caps outbound Discord uploads, default `100MB`), `retry`
 - actions: `actions.*`
 - presence: `activity`、`status`、`activityType`、`activityUrl`
 - UI: `ui.components.accentColor`

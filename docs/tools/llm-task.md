@@ -24,20 +24,17 @@ title: "LLM 任务"
 }
 ```
 
-2. 将该工具加入允许列表（它以 `optional: true` 注册）：
+2. 允许可选工具：
 
 ```json
 {
-  "agents": {
-    "list": [
-      {
-        "id": "main",
-        "tools": { "allow": ["llm-task"] }
-      }
-    ]
+  "tools": {
+    "alsoAllow": ["llm-task"]
   }
 }
 ```
+
+仅当你想要限制性允许列表模式时，才使用 `tools.allow`。
 
 ## 配置（可选）
 

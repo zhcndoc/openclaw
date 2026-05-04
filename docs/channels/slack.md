@@ -205,6 +205,7 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
         "pins:write",
         "reactions:read",
         "reactions:write",
+        "usergroups:read",
         "users:read"
       ]
     }
@@ -250,7 +251,19 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
     "event_subscriptions": {
       "request_url": "https://gateway-host.example.com/slack/events",
       "bot_events": [
-        /* 与 Socket Mode 相同 */
+        "app_home_opened",
+        "app_mention",
+        "channel_rename",
+        "member_joined_channel",
+        "member_left_channel",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "pin_added",
+        "pin_removed",
+        "reaction_added",
+        "reaction_removed"
       ]
     },
     "interactivity": {
@@ -282,116 +295,123 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
       <Tab title="Socket Mode（默认）">
 
 ```json
-    "slash_commands": [
-      {
-        "command": "/new",
-        "description": "开始一个新会话",
-        "usage_hint": "[model]"
-      },
-      {
-        "command": "/reset",
-        "description": "重置当前会话"
-      },
-      {
-        "command": "/compact",
-        "description": "压缩会话上下文",
-        "usage_hint": "[instructions]"
-      },
-      {
-        "command": "/stop",
-        "description": "停止当前运行"
-      },
-      {
-        "command": "/session",
-        "description": "管理线程绑定过期",
-        "usage_hint": "idle <duration|off> or max-age <duration|off>"
-      },
-      {
-        "command": "/think",
-        "description": "设置思考级别",
-        "usage_hint": "<level>"
-      },
-      {
-        "command": "/verbose",
-        "description": "切换详细输出",
-        "usage_hint": "on|off|full"
-      },
-      {
-        "command": "/fast",
-        "description": "显示或设置快速模式",
-        "usage_hint": "[status|on|off]"
-      },
-      {
-        "command": "/reasoning",
-        "description": "切换推理可见性",
-        "usage_hint": "[on|off|stream]"
-      },
-      {
-        "command": "/elevated",
-        "description": "切换提升模式",
-        "usage_hint": "[on|off|ask|full]"
-      },
-      {
-        "command": "/exec",
-        "description": "显示或设置 exec 默认值",
-        "usage_hint": "host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>"
-      },
-      {
-        "command": "/model",
-        "description": "显示或设置模型",
-        "usage_hint": "[name|#|status]"
-      },
-      {
-        "command": "/models",
-        "description": "列出提供商/模型",
-        "usage_hint": "[provider] [page] [limit=<n>|size=<n>|all]"
-      },
-      {
-        "command": "/help",
-        "description": "显示简短帮助摘要"
-      },
-      {
-        "command": "/commands",
-        "description": "显示生成的命令目录"
-      },
-      {
-        "command": "/tools",
-        "description": "显示当前代理此刻可使用的内容",
-        "usage_hint": "[compact|verbose]"
-      },
-      {
-        "command": "/agentstatus",
-        "description": "显示运行时状态，包括可用时的提供商使用量/配额"
-      },
-      {
-        "command": "/tasks",
-        "description": "列出当前会话的活动/最近后台任务"
-      },
-      {
-        "command": "/context",
-        "description": "解释上下文是如何组装的",
-        "usage_hint": "[list|detail|json]"
-      },
-      {
-        "command": "/whoami",
-        "description": "显示你的发送者身份"
-      },
-      {
-        "command": "/skill",
-        "description": "按名称运行一个 skill",
-        "usage_hint": "<name> [input]"
-      },
-      {
-        "command": "/btw",
-        "description": "在不更改会话上下文的情况下提一个附带问题",
-        "usage_hint": "<question>"
-      },
-      {
-        "command": "/usage",
-        "description": "控制使用情况页脚或显示费用摘要",
-        "usage_hint": "off|tokens|full|cost"
-      }
-    ]
+{
+  "slash_commands": [
+    {
+      "command": "/new",
+      "description": "Start a new session",
+      "usage_hint": "[model]"
+    },
+    {
+      "command": "/reset",
+      "description": "Reset the current session"
+    },
+    {
+      "command": "/compact",
+      "description": "Compact the session context",
+      "usage_hint": "[instructions]"
+    },
+    {
+      "command": "/stop",
+      "description": "Stop the current run"
+    },
+    {
+      "command": "/session",
+      "description": "Manage thread-binding expiry",
+      "usage_hint": "idle <duration|off> or max-age <duration|off>"
+    },
+    {
+      "command": "/think",
+      "description": "Set the thinking level",
+      "usage_hint": "<level>"
+    },
+    {
+      "command": "/verbose",
+      "description": "Toggle verbose output",
+      "usage_hint": "on|off|full"
+    },
+    {
+      "command": "/fast",
+      "description": "Show or set fast mode",
+      "usage_hint": "[status|on|off]"
+    },
+    {
+      "command": "/reasoning",
+      "description": "Toggle reasoning visibility",
+      "usage_hint": "[on|off|stream]"
+    },
+    {
+      "command": "/elevated",
+      "description": "Toggle elevated mode",
+      "usage_hint": "[on|off|ask|full]"
+    },
+    {
+      "command": "/exec",
+      "description": "Show or set exec defaults",
+      "usage_hint": "host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>"
+    },
+    {
+      "command": "/model",
+      "description": "Show or set the model",
+      "usage_hint": "[name|#|status]"
+    },
+    {
+      "command": "/models",
+      "description": "List providers/models",
+      "usage_hint": "[provider] [page] [limit=<n>|size=<n>|all]"
+    },
+    {
+      "command": "/help",
+      "description": "Show the short help summary"
+    },
+    {
+      "command": "/commands",
+      "description": "Show the generated command catalog"
+    },
+    {
+      "command": "/tools",
+      "description": "Show what the current agent can use right now",
+      "usage_hint": "[compact|verbose]"
+    },
+    {
+      "command": "/agentstatus",
+      "description": "Show runtime status, including provider usage/quota when available"
+    },
+    {
+      "command": "/tasks",
+      "description": "List active/recent background tasks for the current session"
+    },
+    {
+      "command": "/context",
+      "description": "Explain how context is assembled",
+      "usage_hint": "[list|detail|json]"
+    },
+    {
+      "command": "/whoami",
+      "description": "Show your sender identity"
+    },
+    {
+      "command": "/skill",
+      "description": "Run a skill by name",
+      "usage_hint": "<name> [input]"
+    },
+    {
+      "command": "/btw",
+      "description": "Ask a side question without changing session context",
+      "usage_hint": "<question>"
+    },
+    {
+      "command": "/side",
+      "description": "Ask a side question without changing session context",
+      "usage_hint": "<question>"
+    },
+    {
+      "command": "/usage",
+      "description": "Control the usage footer or show cost summary",
+      "usage_hint": "off|tokens|full|cost"
+    }
+  ]
+}
 ```
 
       </Tab>
@@ -399,21 +419,24 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
         使用与上方 Socket Mode 相同的 `slash_commands` 列表，并为每个条目添加 `"url": "https://gateway-host.example.com/slack/events"`。示例：
 
 ```json
-    "slash_commands": [
-      {
-        "command": "/new",
-        "description": "开始一个新会话",
-        "usage_hint": "[model]",
-        "url": "https://gateway-host.example.com/slack/events"
-      },
-      {
-        "command": "/help",
-        "description": "显示简短帮助摘要",
-        "url": "https://gateway-host.example.com/slack/events"
-      }
-      // ...对每个命令重复，`url` 值相同
-    ]
+{
+  "slash_commands": [
+    {
+      "command": "/new",
+      "description": "Start a new session",
+      "usage_hint": "[model]",
+      "url": "https://gateway-host.example.com/slack/events"
+    },
+    {
+      "command": "/help",
+      "description": "Show the short help summary",
+      "url": "https://gateway-host.example.com/slack/events"
+    }
+  ]
+}
 ```
+
+        Repeat that `url` value on every command in the list.
 
       </Tab>
     </Tabs>
@@ -571,9 +594,10 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 
     提及来源：
 
-    - 显式应用提及（`<@botId>`）
-    - 提及正则模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
-    - 对 bot 的隐式回复线程行为（当 `thread.requireExplicitMention` 为 `true` 时禁用）
+    - 显式应用提及 (`<@botId>`)
+    - 当 bot 用户是该用户组成员时的 Slack 用户组提及 (`<!subteam^S...>`); 需要 `usergroups:read`
+    - 提及正则模式（`agents.list[].groupChat.mentionPatterns`，回退为 `messages.groupChat.mentionPatterns`）
+    - 隐式回复 bot 线程行为（当 `thread.requireExplicitMention` 为 `true` 时禁用）
 
     每个频道的控制项（`channels.slack.channels.<id>`；名称仅可通过启动时解析或 `dangerouslyAllowNameMatching` 使用）：
 
@@ -593,13 +617,14 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 
 ## 线程、会话和回复标签
 
-- DM 路由为 `direct`；频道为 `channel`；MPIM 为 `group`。
-- 使用默认 `session.dmScope=main` 时，Slack DMs 会合并到 agent 主会话。
-- 频道会话：`agent:<agentId>:slack:channel:<channelId>`。
-- 在适用时，线程回复可创建线程会话后缀（`:thread:<threadTs>`）。
-- `channels.slack.thread.historyScope` 默认是 `thread`；`thread.inheritParent` 默认是 `false`。
-- `channels.slack.thread.initialHistoryLimit` 控制新线程会话开始时抓取多少条现有线程消息（默认 `20`；设为 `0` 可禁用）。
-- `channels.slack.thread.requireExplicitMention`（默认 `false`）：当为 `true` 时，会抑制隐式线程提及，因此 bot 只会对线程内显式的 `@bot` 提及作出响应，即使 bot 已经参与过该线程也是如此。若不启用该项，在 bot 已参与的线程中的回复会绕过 `requireMention` 门控。
+- DMs route as `direct`; channels as `channel`; MPIMs as `group`.
+- Slack route bindings accept raw peer IDs plus Slack target forms such as `channel:C12345678`, `user:U12345678`, and `<@U12345678>`.
+- With default `session.dmScope=main`, Slack DMs collapse to agent main session.
+- Channel sessions: `agent:<agentId>:slack:channel:<channelId>`.
+- Thread replies can create thread session suffixes (`:thread:<threadTs>`) when applicable.
+- `channels.slack.thread.historyScope` default is `thread`; `thread.inheritParent` default is `false`.
+- `channels.slack.thread.initialHistoryLimit` controls how many existing thread messages are fetched when a new thread session starts (default `20`; set `0` to disable).
+- `channels.slack.thread.requireExplicitMention` (default `false`): when `true`, suppress implicit thread mentions so the bot only responds to explicit `@bot` mentions inside threads, even when the bot already participated in the thread. Without this, replies in a bot-participated thread bypass `requireMention` gating.
 
 回复线程控制：
 
@@ -644,12 +669,12 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 
 当 `channels.slack.streaming.mode` 为 `partial` 时，`channels.slack.streaming.nativeTransport` 控制 Slack 原生文本流式传输（默认：`true`）。
 
-- 原生文本流式传输以及 Slack assistant 线程状态的显示，都需要可用的回复线程。线程选择仍遵循 `replyToMode`。
-- 当原生流式传输不可用时，频道和群聊根消息仍可使用普通草稿预览。
-- 顶层 Slack DMs 默认不在线程中，因此不会显示线程样式预览；如果你希望在那里看到可见进度，请使用线程回复或 `typingReaction`。
-- 媒体和非文本载荷会回退到普通投递。
-- 媒体/错误最终结果会取消待处理的预览编辑；符合条件的文本/块最终结果仅在可以就地编辑预览时才会刷新。
-- 如果流式传输在回复中途失败，OpenClaw 会对剩余载荷回退到普通投递。
+- A reply thread must be available for native text streaming and Slack assistant thread status to appear. Thread selection still follows `replyToMode`.
+- Channel, group-chat, and top-level DM roots can still use the normal draft preview when native streaming is unavailable or no reply thread exists.
+- Top-level Slack DMs stay off-thread by default, so they do not show Slack's thread-style native stream/status preview; OpenClaw posts and edits a draft preview in the DM instead.
+- Media and non-text payloads fall back to normal delivery.
+- Media/error finals cancel pending preview edits; eligible text/block finals flush only when they can edit the preview in place.
+- If streaming fails mid-reply, OpenClaw falls back to normal delivery for remaining payloads.
 
 使用草稿预览而不是 Slack 原生文本流式传输：
 
@@ -712,7 +737,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `user:<id>` 用于 DMs
     - `channel:<id>` 用于频道
 
-    向用户目标发送时，Slack DMs 会通过 Slack 会话 API 打开。
+    Text/block-only Slack DMs can post directly to user IDs; file uploads and threaded sends open the DM via Slack conversation APIs first because those paths require a concrete conversation ID.
 
   </Accordion>
 </AccordionGroup>

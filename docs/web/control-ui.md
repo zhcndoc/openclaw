@@ -147,18 +147,19 @@ Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个�
 ## 聊天行为
 
 <AccordionGroup>
-  <Accordion title="发送与历史语义">
-    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，响应则通过 `chat` 事件流式返回。
-    - 聊天上传支持图片和非视频文件。图片保留原生图片路径；其他文件会作为托管媒体存储，并在历史记录中显示为附件链接。
-    - 使用相同的 `idempotencyKey` 重新发送时，在运行期间返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
-    - `chat.history` 响应在大小上有界，以保证 UI 安全。当转录条目过大时，Gateway 可能会截断较长的文本字段、略去较重的元数据块，并用占位符替换超大的消息（`[chat.history omitted: message too large]`）。
-    - 助手/生成的图像会作为托管媒体引用持久化，并通过已认证的 Gateway 媒体 URL 重新提供，因此重新加载不依赖原始 base64 图像载荷仍保留在聊天历史响应中。
-    - `chat.history` 还会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄露的 ASCII/全角模型控制令牌，并且会省略那些整个可见文本仅为精确静默令牌 `NO_REPLY` / `no_reply` 的助手条目。
-    - 在活跃发送期间以及最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会保留本地乐观的用户/助手消息可见；一旦 Gateway 历史追上，规范转录会替换这些本地消息。
-    - `chat.inject` 会向会话转录中追加一条助手备注，并广播一个用于仅 UI 更新的 `chat` 事件（不触发代理运行，也不进行通道投递）。
-    - 聊天头部的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久的会话覆盖项，而不是仅对单轮生效的发送选项。
-    - 聊天模型选择器请求 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器。否则，选择器会显示明确的 `models.providers.*.models` 条目，以及具有可用认证的提供商。完整目录仍可通过调试 `models.list` RPC 并设置 `view: "all"` 获取。
-    - 当新的 Gateway 会话使用情况报告显示上下文压力较高时，聊天撰写区域会显示上下文提示，并在推荐的压缩级别显示一个压缩按钮，该按钮会执行正常的会话压缩路径。过时的令牌快照会被隐藏，直到 Gateway 再次报告新的使用情况。
+  <Accordion title="Send and history semantics">
+    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，并通过 `chat` 事件流式返回响应。
+    - 聊天上传支持图片和非视频文件。图片保留原生图片路径；其他文件会作为受管媒体存储，并在历史记录中显示为附件链接。
+    - 使用相同的 `idempotencyKey` 重新发送时，运行中会返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
+    - `chat.history` 响应的大小会受限以确保 UI 安全。当转录条目过大时，Gateway 可能会截断较长的文本字段、省略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
+    - 助手/生成的图像会作为受管媒体引用持久化，并通过已认证的 Gateway 媒体 URL 返回，因此重新加载不依赖于原始 base64 图像载荷仍保留在聊天历史响应中。
+    - `chat.history` 还会从可见的助手文本中移除仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）、泄露的 ASCII/全角模型控制令牌，并省略其全部可见文本仅为精确静默令牌 `NO_REPLY` / `no_reply` 的助手条目。
+    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会保留本地乐观的用户/助手消息可见；一旦 Gateway 历史追上，规范转录将替换这些本地消息。
+    - `chat.inject` 会向会话转录附加一条助手备注，并广播一个 `chat` 事件用于仅 UI 更新（不进行 agent 运行，也不进行通道投递）。
+    - 聊天页眉中的模型和 thinking 选择器会通过 `sessions.patch` 立即修补当前活动会话；它们是持久的会话覆盖，而不是仅限一次发送的选项。
+    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话。输入 `/reset` 会保留 Gateway 对当前会话的显式原地重置。
+    - 聊天模型选择器请求 Gateway 的配置模型视图。如果存在 `agents.defaults.models`，则该允许列表驱动选择器。否则，选择器会显示显式的 `models.providers.*.models` 条目以及具有可用 auth 的提供商。完整目录仍可通过调试 `models.list` RPC，并将 `view: "all"`。
+    - 当新的 Gateway 会话使用报告显示上下文压力较高时，聊天撰写区会显示上下文提示，并在推荐的压缩级别提供一个压缩按钮，以运行正常的会话压缩路径。过期的令牌快照会被隐藏，直到 Gateway 再次报告新的使用情况。
 
   </Accordion>
   <Accordion title="Talk 模式（浏览器实时）">
@@ -246,7 +247,23 @@ Web Push 独立于 iOS APNS 中继路径（有关中继支持的推送，请参�
 
 默认情况下，绝对的外部 `http(s)` 嵌入 URL 会被阻止。如果你有意让 `[embed url="https://..."]` 加载第三方页面，请设置 `gateway.controlUi.allowExternalEmbedUrls: true`。
 
-## Tailnet 访问（推荐）
+## Chat message width
+
+Grouped chat messages use a readable default max-width. Wide-monitor deployments can override it without patching bundled CSS by setting `gateway.controlUi.chatMessageMaxWidth`:
+
+```json5
+{
+  gateway: {
+    controlUi: {
+      chatMessageMaxWidth: "min(1280px, 82%)",
+    },
+  },
+}
+```
+
+The value is validated before it reaches the browser. Supported values include plain lengths and percentages such as `960px` or `82%`, plus constrained `min(...)`, `max(...)`, `clamp(...)`, `calc(...)`, and `fit-content(...)` width expressions.
+
+## Tailnet access (recommended)
 
 <Tabs>
   <Tab title="集成的 Tailscale Serve（首选）">

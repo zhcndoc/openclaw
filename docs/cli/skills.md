@@ -4,7 +4,7 @@ read_when:
   - 你想查看哪些技能可用并已准备好运行
   - 你想从 ClawHub 搜索、安装或更新技能
   - 你想调试技能缺失的二进制文件 / 环境 / 配置
-title: "Skills"
+title: "技能"
 ---
 
 # `openclaw skills`
@@ -17,7 +17,7 @@ title: "Skills"
 - 技能配置：[Skills config](/tools/skills-config)
 - ClawHub 安装：[ClawHub](/tools/clawhub)
 
-## Commands
+## 命令
 
 ```bash
 openclaw skills search "calendar"
@@ -38,8 +38,8 @@ openclaw skills info <name>
 openclaw skills info <name> --json
 openclaw skills info <name> --agent <id>
 openclaw skills check
-openclaw skills check --json
 openclaw skills check --agent <id>
+openclaw skills check --json
 ```
 
 `search`/`install`/`update` 直接使用 ClawHub，并安装到当前活动
@@ -53,19 +53,20 @@ agent。
 
 注意：
 
-- `search [query...]` 接受一个可选查询；如果省略，则浏览默认的
-  ClawHub 搜索源。
-- `search --limit <n>` 会限制返回结果数量。
+- `search [query...]` 接受一个可选查询；省略它可浏览默认的
+  ClawHub 搜索信息流。
+- `search --limit <n>` 会限制返回结果的数量。
 - `install --force` 会覆盖同一 slug 的现有工作区技能文件夹。
-- `--agent <id>` 会指定一个配置好的 agent 工作区，并覆盖当前工作
-  目录推断。
-- `update --all` 只更新活动工作区中已跟踪的 ClawHub 安装。
-- 未提供子命令时，`list` 是默认操作。
+- `--agent <id>` 目标指向一个已配置的 agent 工作区，并覆盖当前
+  工作目录推断。
+- `update --all` 仅更新活动工作区中已跟踪的 ClawHub 安装。
+- `check --agent <id>` 检查所选 agent 的工作区，并报告哪些
+  已就绪技能实际上对该 agent 的提示或命令界面可见。
+- `list` 是在未提供子命令时的默认操作。
 - `list`、`info` 和 `check` 会将其渲染后的输出写入 stdout。使用
-  `--json` 时，这意味着机器可读的负载会保留在 stdout，便于管道
-  和脚本使用。
+  `--json` 时，这意味着机器可读负载会保留在 stdout 中，供管道和脚本使用。
 
-## Related
+## 相关
 
 - [CLI reference](/cli)
 - [Skills](/tools/skills)

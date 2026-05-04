@@ -165,15 +165,33 @@ openclaw models auth login --provider anthropic --method cli --set-default
 
 ## 会话
 
-- 如果 CLI 支持会话，在需要把 id 插入多个标志位时，设置 `sessionArg`（例如 `--session-id`）或
-  `sessionArgs`（占位符 `{sessionId}`）。
-- 如果 CLI 使用带有不同标志位的 **resume 子命令**，请设置 `resumeArgs`（在恢复时替换 `args`），并可选设置 `resumeOutput`（用于非 JSON 恢复）。
-- `sessionMode`：
-  - `always`：始终发送会话 id（如果没有已存储的，则使用新的 UUID）。
-  - `existing`：只有在之前存储过会话 id 时才发送。
-  - `none`：从不发送会话 id。
-- `claude-cli` 默认使用 `liveSession: "claude-stdio"`、`output: "jsonl"` 和 `input: "stdin"`，因此在活动期间后续轮次会复用同一个 Claude 进程。现在默认使用热 stdio，包括那些省略传输字段的自定义配置。如果 Gateway 重启或空闲进程退出，OpenClaw 会从已存储的 Claude 会话 id 恢复。已存储的会话 id 在恢复前会先与现有可读的项目转录文本进行验证，因此幽灵绑定会以 `reason=transcript-missing` 清除，而不会在 `--resume` 下默默启动一个新的 Claude CLI 会话。
-- 已存储的 CLI 会话属于 provider 的连续性。隐式的每日会话重置不会切断它们；`/reset` 和显式的 `session.reset` 策略仍然会。
+- If the CLI supports sessions, set `sessionArg` (e.g. `--session-id`) or
+  `sessionArgs` (placeholder `{sessionId}`) when the ID needs to be inserted
+  into multiple flags.
+- If the CLI uses a **resume subcommand** with different flags, set
+  `resumeArgs` (replaces `args` when resuming) and optionally `resumeOutput`
+  (for non-JSON resumes).
+- `sessionMode`:
+  - `always`: always send a session id (new UUID if none stored).
+  - `existing`: only send a session id if one was stored before.
+  - `none`: never send a session id.
+- `claude-cli` defaults to `liveSession: "claude-stdio"`, `output: "jsonl"`,
+  and `input: "stdin"` so follow-up turns reuse the live Claude process while
+  it is active. Warm stdio is the default now, including for custom configs
+  that omit transport fields. If the Gateway restarts or the idle process
+  exits, OpenClaw resumes from the stored Claude session id. Stored session
+  ids are verified against an existing readable project transcript before
+  resume, so phantom bindings are cleared with `reason=transcript-missing`
+  instead of silently starting a fresh Claude CLI session under `--resume`.
+- Claude live sessions keep bounded JSONL output guards. Defaults allow up to
+  8 MiB and 20,000 raw JSONL lines per turn. Tool-heavy Claude turns can raise
+  them per backend with
+  `agents.defaults.cliBackends.claude-cli.reliability.outputLimits.maxTurnRawChars`
+  and `maxTurnLines`; OpenClaw clamps those settings to 64 MiB and 100,000
+  lines.
+- Stored CLI sessions are provider-owned continuity. The implicit daily session
+  reset does not cut them; `/reset` and explicit `session.reset` policies still
+  do.
 
 序列化说明：
 
@@ -188,7 +206,7 @@ openclaw models auth login --provider anthropic --method cli --set-default
 位于 `~/.claude/projects/` 的 JSONL 转录中提取上下文前导，为下一次尝试预热。没有这个种子，回退提供方会冷启动，因为对 `claude-cli` 运行而言，OpenClaw 自己的会话转录是空的。
 
 - 前导会优先使用最新的 `/compact` 摘要或 `compact_boundary`
-  标记，然后附加边界之后最近的轮次，直至达到字符预算。边界之前的轮次会被丢弃，因为摘要已经代表了它们。
+  标记，然后附加边界之后最近的轮次，直至达到字符预算。边界之前的轮次会被丢弃，因为摘要已经代表了它们了。
 - 工具块会被合并为简洁的 `(tool call: name)` 和 `(tool result: …)` 提示，以保持提示预算真实可控。如果摘要超出长度，会标记为 `(truncated)`。
 - 同 provider 的 `claude-cli` 到 `claude-cli` 回退依赖 Claude 自己的 `--resume`，并跳过前导。
 - 该种子会复用现有的 Claude 会话文件路径验证，因此无法读取任意路径。

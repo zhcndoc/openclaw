@@ -10,7 +10,9 @@ title: "配置"
 用于设置凭据、设备和代理默认设置的交互式提示。
 
 <Note>
-**Model** 部分包含一个针对 `agents.defaults.models` 允许列表的多选项（即在 `/model` 和模型选择器中显示的内容）。按提供方范围的配置选项会将所选模型合并到现有允许列表中，而不是替换配置中已存在的其他提供方。通过 configure 重新运行提供方认证会保留现有的 `agents.defaults.model.primary`。如果你有意更改默认模型，请使用 `openclaw models auth login --provider <id> --set-default` 或 `openclaw models set <model>`。
+**模型** 部分包含一个用于 `agents.defaults.models` 白名单的多选项（即 `/model` 和模型选择器中显示的内容）。按提供方范围的设置选项会将其所选模型合并到现有白名单中，而不是替换配置中已经存在的无关提供方。
+
+从 configure 重新运行提供方认证时，会保留现有的 `agents.defaults.model.primary`，即使该提供方的认证步骤返回了带有其推荐默认模型的配置补丁。也就是说，添加或重新认证 xAI、OpenRouter 或其他提供方时，应当让新模型可用，而不会取代你当前的主模型。如果你有意更改默认模型，请使用 `openclaw models auth login --provider <id> --set-default` 或 `openclaw models set <model>`。
 </Note>
 
 当 configure 从某个提供方认证选项启动时，默认模型和允许列表选择器会自动优先显示该提供方。对于 Volcengine 和 BytePlus 这类成对的提供方，同样的偏好也会匹配它们的 coding-plan 变体（`volcengine-plan/*`、`byteplus-plan/*`）。如果优先提供方过滤后会产生空列表，configure 会回退到未过滤的目录，而不是显示空白选择器。

@@ -158,9 +158,13 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
 
 对频道交付使用 `--announce --channel telegram --to "-1001234567890"`。对于 Telegram 论坛主题，请使用 `-1001234567890:topic:123`；直接 RPC/config 调用者也可以将 `delivery.threadId` 作为字符串或数字传入。Slack/Discord/Mattermost 目标应使用显式前缀（`channel:<id>`、`user:<id>`）。Matrix 房间 ID 区分大小写；请使用精确的房间 ID，或使用来自 Matrix 的 `room:!room:server` 形式。
 
-对于隔离作业，聊天交付是共享的。如果可用聊天路由，代理即使作业使用 `--no-deliver` 也可以使用 `message` 工具。如果代理发送到已配置/当前目标，OpenClaw 会跳过回退 announce。否则 `announce`、`webhook` 和 `none` 仅控制运行器在代理轮次之后如何处理最终回复。
+当 announce 交付使用 `channel: "last"` 或省略 `channel` 时，带有提供方前缀的目标（例如 `telegram:123`）可以在 cron 回退到会话历史或单个已配置频道之前选择频道。只有已加载插件声明的前缀才是提供方选择器。如果 `delivery.channel` 是显式指定的，则目标前缀必须命名同一提供方；例如，`channel: "whatsapp"` 配合 `to: "telegram:123"` 会被拒绝，而不会让 WhatsApp 将 Telegram ID 解释为电话号码。`channel:<id>`、`user:<id>`、`imessage:<handle>` 和 `sms:<number>` 等目标种类和服务前缀仍然是频道拥有的目标语法，而不是提供方选择器。
+
+对于独立作业，聊天交付是共享的。如果聊天路由可用，即使作业使用 `--no-deliver`，代理也可以使用 `message` 工具。如果代理发送到了已配置/当前目标，OpenClaw 会跳过回退 announce。否则，`announce`、`webhook` 和 `none` 只控制运行器在代理轮次结束后如何处理最终回复。
 
 当代理从活动聊天创建一个隔离提醒时，OpenClaw 会为回退 announce 路由存储保留的实时交付目标。内部会话键可能是小写；当当前聊天上下文可用时，不会根据这些键重建提供方交付目标。
+
+隐式 announce 交付会使用已配置的频道允许列表来验证并重定向过时目标。DM 配对存储中的批准不是回退自动化接收者；当计划作业应主动发送到某个 DM 时，请设置 `delivery.to` 或配置频道的 `allowFrom` 条目。
 
 失败通知遵循单独的目标路径：
 

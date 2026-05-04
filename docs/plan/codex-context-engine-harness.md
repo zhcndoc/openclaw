@@ -1,5 +1,5 @@
 ---
-title: "Codex Harness Context Engine Port"
+title: "Codex Harness 上下文引擎移植"
 summary: "使捆绑的 Codex app-server harness 支持 OpenClaw context-engine 插件的规范"
 read_when:
   - 当你正在将 context-engine 生命周期行为接入 Codex harness 时
@@ -124,14 +124,14 @@ context-engine 接口返回的是 OpenClaw `AgentMessage[]`，而不是 Codex th
 
 对于像 lossless-claw 这样的引擎，组装后的 context 应在输入不变时保持确定性。不要在生成的 context 文本中加入时间戳、随机 id 或非确定性的顺序。
 
-### PI fallback 语义不变
+### Runtime selection semantics do not change
 
 harness 选择保持原样：
 
-- `runtime: "pi"` 强制使用 PI
-- `runtime: "codex"` 选择已注册的 Codex harness
-- `runtime: "auto"` 允许插件 harness 声明支持的 provider
-- `fallback: "none"` 在没有插件 harness 匹配时禁用 PI fallback
+- `runtime: "pi"` forces PI
+- `runtime: "codex"` selects the registered Codex harness
+- `runtime: "auto"` lets plugin harnesses claim supported providers
+- unmatched `auto` runs use PI
 
 本工作改变的是 Codex harness 被选中之后发生的事情。
 

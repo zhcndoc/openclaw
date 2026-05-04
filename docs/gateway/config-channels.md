@@ -97,10 +97,19 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 ```json5
 {
   web: {
+    enabled: true,
+    heartbeatSeconds: 60,
     whatsapp: {
       keepAliveIntervalMs: 25000,
       connectTimeoutMs: 60000,
       defaultQueryTimeoutMs: 60000,
+    },
+    reconnect: {
+      initialMs: 2000,
+      maxMs: 120000,
+      factor: 1.4,
+      jitter: 0.2,
+      maxAttempts: 0,
     },
   },
   channels: {
@@ -116,17 +125,6 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
       },
       groupPolicy: "allowlist",
       groupAllowFrom: ["+15551234567"],
-    },
-  },
-  web: {
-    enabled: true,
-    heartbeatSeconds: 60,
-    reconnect: {
-      initialMs: 2000,
-      maxMs: 120000,
-      factor: 1.4,
-      jitter: 0.2,
-      maxAttempts: 0,
     },
   },
 }
@@ -212,14 +210,14 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- Bot token：`channels.telegram.botToken` 或 `channels.telegram.tokenFile`（仅支持普通文件；拒绝符号链接），默认账号也可回退使用 `TELEGRAM_BOT_TOKEN`。
-- `apiRoot` 仅指 Telegram Bot API root。应使用 `https://api.telegram.org` 或你自托管/代理的 root，不要使用 `https://api.telegram.org/bot<TOKEN>`；`openclaw doctor --fix` 会移除意外的尾部 `/bot<TOKEN>` 后缀。
-- 可选的 `channels.telegram.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
-- 在多账号设置（2+ 个账号 id）中，请设置明确的默认值（`channels.telegram.defaultAccount` 或 `channels.telegram.accounts.default`）以避免回退路由；缺失或无效时 `openclaw doctor` 会发出警告。
-- `configWrites: false` 会阻止 Telegram 触发的配置写入（supergroup ID 迁移、`/config set|unset`）。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目会为论坛主题配置持久化 ACP 绑定（在 `match.peer.id` 中使用规范化的 `chatId:topic:topicId`）。字段语义在 [ACP Agents](/tools/acp-agents#channel-specific-settings) 中共享说明。
-- Telegram 流式预览使用 `sendMessage` + `editMessageText`（在私聊和群聊中都有效）。
-- 重试策略：参见 [重试策略](/concepts/retry)。
+- Bot token: `channels.telegram.botToken` or `channels.telegram.tokenFile` (regular file only; symlinks rejected), with `TELEGRAM_BOT_TOKEN` as fallback for the default account.
+- `apiRoot` is the Telegram Bot API root only. Use `https://api.telegram.org` or your self-hosted/proxy root, not `https://api.telegram.org/bot<TOKEN>`; `openclaw doctor --fix` removes an accidental trailing `/bot<TOKEN>` suffix.
+- Optional `channels.telegram.defaultAccount` overrides default account selection when it matches a configured account id.
+- In multi-account setups (2+ account ids), set an explicit default (`channels.telegram.defaultAccount` or `channels.telegram.accounts.default`) to avoid fallback routing; `openclaw doctor` warns when this is missing or invalid.
+- `configWrites: false` blocks Telegram-initiated config writes (supergroup ID migrations, `/config set|unset`).
+- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for forum topics (use canonical `chatId:topic:topicId` in `match.peer.id`). Field semantics are shared in [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
+- Telegram stream previews use `sendMessage` + `editMessageText` (works in direct and group chats).
+- Retry policy: see [Retry policy](/concepts/retry).
 
 ### Discord
 
@@ -274,7 +272,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
       historyLimit: 20,
       textChunkLimit: 2000,
       chunkMode: "length", // length | newline
-      streaming: "off", // off | partial | block | progress (progress maps to partial on Discord)
+      streaming: "off", // off | partial | block | progress
       maxLinesPerMessage: 17,
       ui: {
         components: {
@@ -285,7 +283,8 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
         enabled: true,
         idleHours: 24,
         maxAgeHours: 0,
-        spawnSubagentSessions: false, // opt-in for sessions_spawn({ thread: true })
+        spawnSessions: true,
+        defaultSpawnContext: "fork",
       },
       voice: {
         enabled: true,
@@ -323,37 +322,39 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-- Token: `channels.discord.token`, 默认账号回退使用 `DISCORD_BOT_TOKEN`。
-- 提供显式 Discord `token` 的直接出站调用会在该调用中使用该 token；账号重试/策略设置仍来自活动运行时快照中选定的账号。
-- 可选的 `channels.discord.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
-- 投递目标使用 `user:<id>`（DM）或 `channel:<id>`（guild channel）；裸数字 ID 会被拒绝。
-- Guild slug 统一为小写并将空格替换为 `-`；channel key 使用 slug 化名称（不带 `#`）。建议优先使用 guild ID。
-- 默认忽略机器人发送的消息。`allowBots: true` 可启用；使用 `allowBots: "mentions"` 仅接受提及机器人的 bot 消息（自己的消息仍会被过滤）。
-- `channels.discord.guilds.<id>.ignoreOtherMentions`（以及 channel 覆盖）会丢弃提及了其他用户或角色但未提及机器人的消息（不包括 @everyone/@here）。
-- `maxLinesPerMessage`（默认 17）会在消息少于 2000 字符时也拆分过长消息。
-- `channels.discord.threadBindings` 控制 Discord 线程绑定路由：
-  - `enabled`：Discord 对线程绑定会话功能的覆盖（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age` 以及绑定的投递/路由）
-  - `idleHours`：以小时为单位的 Discord 空闲自动 unfocus 覆盖（`0` 表示禁用）
-  - `maxAgeHours`：以小时为单位的硬最大年龄覆盖（`0` 表示禁用）
-  - `spawnSubagentSessions`：`sessions_spawn({ thread: true })` 自动创建/绑定线程的可选开关
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目可为频道和线程配置持久化 ACP 绑定（在 `match.peer.id` 中使用 channel/thread id）。字段语义在 [ACP Agents](/tools/acp-agents#channel-specific-settings) 中共享说明。
-- `channels.discord.ui.components.accentColor` 设置 Discord components v2 容器的强调色。
-- `channels.discord.voice` 启用 Discord 语音频道对话以及可选的自动加入 + LLM + TTS 覆盖。仅文本的 Discord 配置默认关闭语音；设置 `channels.discord.voice.enabled=true` 以启用。
-- `channels.discord.voice.model` 可选地覆盖用于 Discord 语音频道回复的 LLM 模型。
-- `channels.discord.voice.daveEncryption` 和 `channels.discord.voice.decryptionFailureTolerance` 透传到 `@discordjs/voice` 的 DAVE 选项（默认分别为 `true` 和 `24`）。
-- `channels.discord.voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 的初始 Ready 等待时间（默认 `30000`）。
-- `channels.discord.voice.reconnectGraceMs` 控制一个断开的语音会话在 OpenClaw 销毁前进入重连信号状态所允许的时间（默认 `15000`）。
-- OpenClaw 还会在连续解密失败后，通过离开/重新加入语音会话来尝试恢复语音接收。
-- `channels.discord.streaming` 是规范的流模式键。旧的 `streamMode` 和布尔型 `streaming` 值会自动迁移。
-- `channels.discord.autoPresence` 将运行时可用性映射到机器人状态（healthy => online，degraded => idle，exhausted => dnd），并允许可选的状态文本覆盖。
-- `channels.discord.dangerouslyAllowNameMatching` 重新启用可变 name/tag 匹配（break-glass 兼容模式）。
-- `channels.discord.execApprovals`：Discord 原生执行审批投递与审批者授权。
-  - `enabled`：`true`、`false` 或 `"auto"`（默认）。在 auto 模式下，当可以从 `approvers` 或 `commands.ownerAllowFrom` 解析出审批者时，exec approvals 会激活。
-  - `approvers`：允许批准 exec 请求的 Discord 用户 ID。省略时回退到 `commands.ownerAllowFrom`。
-  - `agentFilter`：可选的 agent ID allowlist。省略则转发所有 agent 的审批。
-  - `sessionFilter`：可选的 session key 模式（子串或正则）。
-  - `target`：审批提示的发送位置。`"dm"`（默认）发送到审批者 DM，`"channel"` 发送到原始频道，`"both"` 发送到两者。当前目标包含 `"channel"` 时，按钮仅对已解析审批者可用。
-  - `cleanupAfterResolve`：为 `true` 时，在批准、拒绝或超时后删除审批 DM。
+- Token: `channels.discord.token`, with `DISCORD_BOT_TOKEN` as fallback for the default account.
+- Direct outbound calls that provide an explicit Discord `token` use that token for the call; account retry/policy settings still come from the selected account in the active runtime snapshot.
+- Optional `channels.discord.defaultAccount` overrides default account selection when it matches a configured account id.
+- Use `user:<id>` (DM) or `channel:<id>` (guild channel) for delivery targets; bare numeric IDs are rejected.
+- Guild slugs are lowercase with spaces replaced by `-`; channel keys use the slugged name (no `#`). Prefer guild IDs.
+- Bot-authored messages are ignored by default. `allowBots: true` enables them; use `allowBots: "mentions"` to only accept bot messages that mention the bot (own messages still filtered).
+- `channels.discord.guilds.<id>.ignoreOtherMentions` (and channel overrides) drops messages that mention another user or role but not the bot (excluding @everyone/@here).
+- `channels.discord.mentionAliases` maps stable outbound `@handle` text to Discord user IDs before sending, so known teammates can be mentioned deterministically even when the transient directory cache is empty. Per-account overrides live under `channels.discord.accounts.<accountId>.mentionAliases`.
+- `maxLinesPerMessage` (default 17) splits tall messages even when under 2000 chars.
+- `channels.discord.threadBindings` controls Discord thread-bound routing:
+  - `enabled`: Discord override for thread-bound session features (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`, and bound delivery/routing)
+  - `idleHours`: Discord override for inactivity auto-unfocus in hours (`0` disables)
+  - `maxAgeHours`: Discord override for hard max age in hours (`0` disables)
+  - `spawnSessions`: switch for `sessions_spawn({ thread: true })` and ACP thread-spawn auto thread creation/binding (default: `true`)
+  - `defaultSpawnContext`: native subagent context for thread-bound spawns (`"fork"` by default)
+- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for channels and threads (use channel/thread id in `match.peer.id`). Field semantics are shared in [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
+- `channels.discord.ui.components.accentColor` sets the accent color for Discord components v2 containers.
+- `channels.discord.voice` enables Discord voice channel conversations and optional auto-join + LLM + TTS overrides. Text-only Discord configs leave voice off by default; set `channels.discord.voice.enabled=true` to opt in.
+- `channels.discord.voice.model` optionally overrides the LLM model used for Discord voice channel responses.
+- `channels.discord.voice.daveEncryption` and `channels.discord.voice.decryptionFailureTolerance` pass through to `@discordjs/voice` DAVE options (`true` and `24` by default).
+- `channels.discord.voice.connectTimeoutMs` controls the initial `@discordjs/voice` Ready wait for `/vc join` and auto-join attempts (`30000` by default).
+- `channels.discord.voice.reconnectGraceMs` controls how long a disconnected voice session may take to enter reconnect signalling before OpenClaw destroys it (`15000` by default).
+- OpenClaw additionally attempts voice receive recovery by leaving/rejoining a voice session after repeated decrypt failures.
+- `channels.discord.streaming` is the canonical stream mode key. Legacy `streamMode` and boolean `streaming` values are auto-migrated.
+- `channels.discord.autoPresence` maps runtime availability to bot presence (healthy => online, degraded => idle, exhausted => dnd) and allows optional status text overrides.
+- `channels.discord.dangerouslyAllowNameMatching` re-enables mutable name/tag matching (break-glass compatibility mode).
+- `channels.discord.execApprovals`: Discord-native exec approval delivery and approver authorization.
+  - `enabled`: `true`, `false`, or `"auto"` (default). In auto mode, exec approvals activate when approvers can be resolved from `approvers` or `commands.ownerAllowFrom`.
+  - `approvers`: Discord user IDs allowed to approve exec requests. Falls back to `commands.ownerAllowFrom` when omitted.
+  - `agentFilter`: optional agent ID allowlist. Omit to forward approvals for all agents.
+  - `sessionFilter`: optional session key patterns (substring or regex).
+  - `target`: where to send approval prompts. `"dm"` (default) sends to approver DMs, `"channel"` sends to the originating channel, `"both"` sends to both. When target includes `"channel"`, buttons are only usable by resolved approvers.
+  - `cleanupAfterResolve`: when `true`, deletes approval DMs after approval, denial, or timeout.
 
 **Reaction notification modes:** `off`（无）、`own`（机器人的消息，默认）、`all`（所有消息）、`allowlist`（来自 `guilds.<id>.users` 的所有消息）。
 
@@ -476,9 +477,9 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 
 **Thread session isolation:** `thread.historyScope` 可以是 per-thread（默认）或 shared across channel。`thread.inheritParent` 会把父 channel 的会话记录复制到新线程。
 
-- Slack 原生流式传输以及 Slack 助手风格的“is typing...”线程状态都需要 reply thread 目标。顶层 DM 默认不在线程中，因此会使用 `typingReaction` 或普通投递，而不是线程式预览。
-- `typingReaction` 会在回复运行期间为入站 Slack 消息添加一个临时 reaction，完成后再移除。可使用 Slack emoji shortcode，例如 `"hourglass_flowing_sand"`。
-- `channels.slack.execApprovals`：Slack 原生执行审批投递与审批者授权。模式与 Discord 相同：`enabled`（`true`/`false`/`"auto"`）、`approvers`（Slack user IDs）、`agentFilter`、`sessionFilter` 和 `target`（`"dm"`、`"channel"` 或 `"both"`）。
+- Slack native streaming plus the Slack assistant-style "is typing..." thread status require a reply thread target. Top-level DMs stay off-thread by default, so they can still stream through Slack draft post-and-edit previews instead of showing the thread-style native stream/status preview.
+- `typingReaction` adds a temporary reaction to the inbound Slack message while a reply is running, then removes it on completion. Use a Slack emoji shortcode such as `"hourglass_flowing_sand"`.
+- `channels.slack.execApprovals`: Slack-native exec approval delivery and approver authorization. Same schema as Discord: `enabled` (`true`/`false`/`"auto"`), `approvers` (Slack user IDs), `agentFilter`, `sessionFilter`, and `target` (`"dm"`, `"channel"`, or `"both"`).
 
 | Action group | 默认 | 说明                  |
 | ------------ | ---- | ---------------------- |
@@ -490,11 +491,11 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 
 ### Mattermost
 
-Mattermost 在当前 OpenClaw 版本中作为捆绑插件提供。较旧或
-自定义构建可以使用
-`openclaw plugins install @openclaw/mattermost` 安装当前 npm 包；如果 npm 报告
-OpenClaw 拥有的包已弃用，请使用捆绑插件或本地 checkout，
-直到发布更新的 npm 包。
+Mattermost ships as a bundled plugin in current OpenClaw releases. Older or
+custom builds can install a current npm package with
+`openclaw plugins install @openclaw/mattermost`. Check
+[npmjs.com/package/@openclaw/mattermost](https://www.npmjs.com/package/@openclaw/mattermost)
+for the current dist-tags before pinning a version.
 
 ```json5
 {
@@ -583,10 +584,10 @@ BlueBubbles 是推荐的 iMessage 路径（由插件支持，在 `channels.bblue
 }
 ```
 
-- 此处涵盖的核心键路径：`channels.bluebubbles`、`channels.bluebubbles.dmPolicy`。
-- 可选的 `channels.bluebubbles.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目可以将 BlueBubbles 对话绑定到持久化 ACP 会话。请在 `match.peer.id` 中使用 BlueBubbles handle 或目标字符串（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。共享字段语义：[ACP Agents](/tools/acp-agents#channel-specific-settings)。
-- 完整的 BlueBubbles 频道配置文档见 [BlueBubbles](/channels/bluebubbles)。
+- Core key paths covered here: `channels.bluebubbles`, `channels.bluebubbles.dmPolicy`.
+- Optional `channels.bluebubbles.defaultAccount` overrides default account selection when it matches a configured account id.
+- Top-level `bindings[]` entries with `type: "acp"` can bind BlueBubbles conversations to persistent ACP sessions. Use a BlueBubbles handle or target string (`chat_id:*`, `chat_guid:*`, `chat_identifier:*`) in `match.peer.id`. Shared field semantics: [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
+- Full BlueBubbles channel configuration is documented in [BlueBubbles](/channels/bluebubbles).
 
 ### iMessage
 
@@ -616,13 +617,13 @@ OpenClaw 会启动 `imsg rpc`（通过 stdio 的 JSON-RPC）。不需要 daemon 
 
 - 可选的 `channels.imessage.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
 
-- 需要对 Messages 数据库开启 Full Disk Access。
-- 优先使用 `chat_id:<id>` 目标。使用 `imsg chats --limit 20` 可列出聊天。
-- `cliPath` 可以指向 SSH wrapper；为 SCP 附件获取设置 `remoteHost`（`host` 或 `user@host`）。
-- `attachmentRoots` 和 `remoteAttachmentRoots` 会限制入站附件路径（默认：`/Users/*/Library/Messages/Attachments`）。
-- SCP 使用严格的 host-key checking，因此请确保 relay host key 已存在于 `~/.ssh/known_hosts`。
-- `channels.imessage.configWrites`：允许或拒绝 iMessage 触发的配置写入。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目可以将 iMessage 对话绑定到持久化 ACP 会话。请在 `match.peer.id` 中使用规范化 handle 或显式聊天目标（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。共享字段语义：[ACP Agents](/tools/acp-agents#channel-specific-settings)。
+- Requires Full Disk Access to the Messages DB.
+- Prefer `chat_id:<id>` targets. Use `imsg chats --limit 20` to list chats.
+- `cliPath` can point to an SSH wrapper; set `remoteHost` (`host` or `user@host`) for SCP attachment fetching.
+- `attachmentRoots` and `remoteAttachmentRoots` restrict inbound attachment paths (default: `/Users/*/Library/Messages/Attachments`).
+- SCP uses strict host-key checking, so ensure the relay host key already exists in `~/.ssh/known_hosts`.
+- `channels.imessage.configWrites`: allow or deny iMessage-initiated config writes.
+- Top-level `bindings[]` entries with `type: "acp"` can bind iMessage conversations to persistent ACP sessions. Use a normalized handle or explicit chat target (`chat_id:*`, `chat_guid:*`, `chat_identifier:*`) in `match.peer.id`. Shared field semantics: [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
 
 <Accordion title="iMessage SSH wrapper example">
 
@@ -870,32 +871,32 @@ The gateway hot-reloads `messages` config after the file is saved. Restart only 
 
 <Accordion title="命令详情">
 
-- 这一块配置命令入口。当前内建 + 捆绑的命令目录请参见 [Slash Commands](/tools/slash-commands)。
-- 本页是**配置键参考**，不是完整命令目录。频道/插件拥有的命令，例如 QQ Bot `/bot-ping` `/bot-help` `/bot-logs`、LINE `/card`、device-pair `/pair`、memory `/dreaming`、phone-control `/phone`、以及 Talk `/voice`，记录在各自的频道/插件页面以及 [Slash Commands](/tools/slash-commands) 中。
-- 文本命令必须是**独立**消息，并以 `/` 开头。
-- `native: "auto"` 会为 Discord/Telegram 开启原生命令，Slack 保持关闭。
-- `nativeSkills: "auto"` 会为 Discord/Telegram 开启原生技能命令，Slack 保持关闭。
-- 按频道覆盖：`channels.discord.commands.native`（bool 或 `"auto"`）。`false` 会清除之前已注册的命令。
-- 可通过 `channels.<provider>.commands.nativeSkills` 按频道覆盖原生技能注册。
-- `channels.telegram.customCommands` 会添加额外的 Telegram bot 菜单项。
-- `bash: true` 启用 `! <cmd>` 作为主机 shell。需要 `tools.elevated.enabled` 且发送者位于 `tools.elevated.allowFrom.<channel>` 中。
-- `config: true` 启用 `/config`（读写 `openclaw.json`）。对于 gateway `chat.send` 客户端，持久化的 `/config set|unset` 写入还需要 `operator.admin`；只读的 `/config show` 对普通写权限的 operator 客户端仍可用。
-- `mcp: true` 启用 `/mcp`，用于 OpenClaw 管理的 `mcp.servers` 下 MCP server 配置。
-- `plugins: true` 启用 `/plugins`，用于插件发现、安装以及启用/禁用控制。
-- `channels.<provider>.configWrites` 按频道控制配置变更（默认：true）。
-- 对于多账号频道，`channels.<provider>.accounts.<id>.configWrites` 也会控制面向该账号的写入（例如 `/allowlist --config --account <id>` 或 `/config set channels.<provider>.accounts.<id>...`）。
-- `restart: false` 会禁用 `/restart` 和 gateway restart tool 动作。默认：`true`。
-- `ownerAllowFrom` 是仅限所有者命令/工具的显式所有者 allowlist。它与 `allowFrom` 分开。
-- `ownerDisplay: "hash"` 会在系统提示中对 owner ids 做哈希。设置 `ownerDisplaySecret` 可控制哈希方式。
-- `allowFrom` 是按 provider 区分的。设置后，它是**唯一**的授权来源（会忽略 channel allowlists/配对和 `useAccessGroups`）。
-- `useAccessGroups: false` 允许命令绕过 access-group policies，但前提是未设置 `allowFrom`。
-- 命令文档映射：
-  - 内建 + 捆绑目录：[Slash Commands](/tools/slash-commands)
-  - 频道专属命令入口：[Channels](/channels)
-  - QQ Bot 命令：[QQ Bot](/channels/qqbot)
-  - 配对命令：[Pairing](/channels/pairing)
-  - LINE card 命令：[LINE](/channels/line)
-  - memory dreaming：[Dreaming](/concepts/dreaming)
+- This block configures command surfaces. For the current built-in + bundled command catalog, see [Slash Commands](/tools/slash-commands).
+- This page is a **config-key reference**, not the full command catalog. Channel/plugin-owned commands such as QQ Bot `/bot-ping` `/bot-help` `/bot-logs`, LINE `/card`, device-pair `/pair`, memory `/dreaming`, phone-control `/phone`, and Talk `/voice` are documented in their channel/plugin pages plus [Slash Commands](/tools/slash-commands).
+- Text commands must be **standalone** messages with leading `/`.
+- `native: "auto"` turns on native commands for Discord/Telegram, leaves Slack off.
+- `nativeSkills: "auto"` turns on native skill commands for Discord/Telegram, leaves Slack off.
+- Override per channel: `channels.discord.commands.native` (bool or `"auto"`). For Discord, `false` skips native command registration and cleanup during startup.
+- Override native skill registration per channel with `channels.<provider>.commands.nativeSkills`.
+- `channels.telegram.customCommands` adds extra Telegram bot menu entries.
+- `bash: true` enables `! <cmd>` for host shell. Requires `tools.elevated.enabled` and sender in `tools.elevated.allowFrom.<channel>`.
+- `config: true` enables `/config` (reads/writes `openclaw.json`). For gateway `chat.send` clients, persistent `/config set|unset` writes also require `operator.admin`; read-only `/config show` stays available to normal write-scoped operator clients.
+- `mcp: true` enables `/mcp` for OpenClaw-managed MCP server config under `mcp.servers`.
+- `plugins: true` enables `/plugins` for plugin discovery, install, and enable/disable controls.
+- `channels.<provider>.configWrites` gates config mutations per channel (default: true).
+- For multi-account channels, `channels.<provider>.accounts.<id>.configWrites` also gates writes that target that account (for example `/allowlist --config --account <id>` or `/config set channels.<provider>.accounts.<id>...`).
+- `restart: false` disables `/restart` and gateway restart tool actions. Default: `true`.
+- `ownerAllowFrom` is the explicit owner allowlist for owner-only commands/tools. It is separate from `allowFrom`.
+- `ownerDisplay: "hash"` hashes owner ids in the system prompt. Set `ownerDisplaySecret` to control hashing.
+- `allowFrom` is per-provider. When set, it is the **only** authorization source (channel allowlists/pairing and `useAccessGroups` are ignored).
+- `useAccessGroups: false` allows commands to bypass access-group policies when `allowFrom` is not set.
+- Command docs map:
+  - built-in + bundled catalog: [Slash Commands](/tools/slash-commands)
+  - channel-specific command surfaces: [Channels](/channels)
+  - QQ Bot commands: [QQ Bot](/channels/qqbot)
+  - pairing commands: [Pairing](/channels/pairing)
+  - LINE card command: [LINE](/channels/line)
+  - memory dreaming: [Dreaming](/concepts/dreaming)
 
 </Accordion>
 

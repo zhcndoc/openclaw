@@ -1,5 +1,5 @@
 ---
-summary: "CLI reference for `openclaw setup` (初始化配置 + 工作区)"
+summary: "openclaw setup 的 CLI 参考（初始化配置 + 工作区）"
 read_when:
   - 你正在进行首次运行设置，但没有完整的 CLI 引导流程
   - 你想设置默认的工作区路径
@@ -45,9 +45,10 @@ openclaw setup --wizard
 
 说明：
 
-- 直接运行 `openclaw setup` 会初始化配置 + 工作区，而不会执行完整的引导流程。
-- 当存在任何引导标志时，会自动运行引导流程（`--wizard`、`--non-interactive`、`--mode`、`--import-from`、`--import-source`、`--import-secrets`、`--remote-url`、`--remote-token`）。
-- 如果检测到 Hermes 状态，交互式引导可以自动提供迁移。导入引导需要全新设置；在引导之外，请使用 [Migrate](/cli/migrate) 进行 dry-run 计划、备份和覆盖模式。
+- 纯粹的 `openclaw setup` 会在不经过完整引导流程的情况下初始化配置 + 工作区。
+- 在完成纯粹的 setup 之后，运行 `openclaw configure` 以选择模型、通道、Gateway、插件、技能或健康检查。
+- 当存在任何引导标志时，系统会自动运行引导流程（`--wizard`、`--non-interactive`、`--mode`、`--import-from`、`--import-source`、`--import-secrets`、`--remote-url`、`--remote-token`）。
+- 如果检测到 Hermes 状态，交互式引导可以自动提供迁移。导入引导需要全新安装；在引导之外使用 [Migrate](/cli/migrate) 进行 dry-run 计划、备份以及覆盖模式。
 
 ## 相关
 

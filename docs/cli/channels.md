@@ -39,6 +39,12 @@ openclaw channels logs --channel all
 如果 gateway 不可达，`channels status` 会退回到仅基于配置的摘要，
 而不是实时探测输出。
 
+不要使用 `openclaw sessions`、Gateway `sessions.list` 或 agent 的
+`sessions_list` 工具作为频道 socket 健康状态信号。这些界面报告的是
+已存储的会话行，而不是提供商运行时状态。Discord 提供商重启后，
+一个已连接但安静的账户可能是健康的，但在下一次入站或出站会话事件之前，
+不会出现任何 Discord 会话行。
+
 ## 添加 / 移除账户
 
 ```bash

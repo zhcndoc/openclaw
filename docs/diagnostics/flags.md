@@ -31,7 +31,7 @@ title: "诊断标志"
 ```json
 {
   "diagnostics": {
-    "flags": ["telegram.http", "gateway.*"]
+    "flags": ["telegram.http", "brave.http", "gateway.*"]
   }
 }
 ```
@@ -105,7 +105,13 @@ ls -t /tmp/openclaw/openclaw-*.log | head -n 1
 rg "telegram http error" /tmp/openclaw/openclaw-*.log
 ```
 
-或者在复现时持续跟踪：
+筛选 Brave Search HTTP 诊断日志：
+
+```bash
+rg "brave http" /tmp/openclaw/openclaw-*.log
+```
+
+或者在复现时持续查看：
 
 ```bash
 tail -f /tmp/openclaw/openclaw-$(date +%F).log | rg "telegram http error"
@@ -116,8 +122,9 @@ tail -f /tmp/openclaw/openclaw-$(date +%F).log | rg "telegram http error"
 ## 注意事项
 
 - 如果 `logging.level` 设置得高于 `warn`，这些日志可能会被抑制。默认的 `info` 就可以。
-- 保持标志启用是安全的；它们只会影响特定子系统的日志量。
-- 使用 [/logging](/logging) 更改日志目标、级别和脱敏设置。
+- `brave.http` 会记录 Brave Search 请求 URL/查询参数、响应状态/耗时，以及缓存命中/未命中/写入事件。它不会记录 API 密钥或响应正文，但搜索查询可能包含敏感信息。
+- 标志保持启用是安全的；它们只会影响特定子系统的日志量。
+- 使用 [/logging](/logging) 来更改日志目标、级别和脱敏。
 
 ## 相关内容
 

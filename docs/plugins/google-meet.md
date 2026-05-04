@@ -9,16 +9,16 @@ title: "Google Meet 插件"
 
 OpenClaw 的 Google Meet 参与者支持——该插件的设计是显式的：
 
-- 它只加入明确的 `https://meet.google.com/...` URL。
+- 它只会加入明确的 `https://meet.google.com/...` URL。
 - 它可以通过 Google Meet API 创建一个新的 Meet 空间，然后加入返回的 URL。
 - `realtime` 语音是默认模式。
 - 当需要更深层的推理或工具时，实时语音可以回调到完整的 OpenClaw 代理。
-- 代理通过 `mode` 选择加入行为：使用 `realtime` 进行实时听/说回传，或使用 `transcribe` 在不通过实时语音桥接的情况下加入/控制浏览器。
-- 身份验证从个人 Google OAuth 或已登录的 Chrome 配置文件开始。
+- 代理通过 `mode` 选择加入行为：使用 `realtime` 进行实时监听/回话，或使用 `transcribe` 在不通过实时语音桥接的情况下加入/控制浏览器。
+- 身份验证从个人 Google OAuth 或已经登录的 Chrome 配置文件开始。
 - 没有自动的同意提示播报。
 - 默认的 Chrome 音频后端是 `BlackHole 2ch`。
 - Chrome 可以在本地运行，也可以在配对的节点主机上运行。
-- Twilio 接受拨入号码以及可选的 PIN 或 DTMF 序列。
+- Twilio 接受拨入号码以及可选的 PIN 或 DTMF 序列；它不能直接拨打 Meet URL。
 - CLI 命令是 `googlemeet`；`meet` 保留给更广泛的代理电话会议工作流。
 
 ## 快速开始
@@ -103,11 +103,23 @@ openclaw googlemeet join https://meet.google.com/abc-defg-hij
 }
 ```
 
-创建一个新会议并加入：
+面向代理的 `google_meet` 工具在非 macOS 主机上仍然可用，用于 artifact、calendar、setup、transcribe、Twilio 和 `chrome-node` 工作流。由于捆绑的实时 Chrome 音频路径当前依赖 macOS `BlackHole 2ch`，因此本地 Chrome 实时操作在这些主机上会被阻止。在 Linux 上，请使用 `mode: "transcribe"`、Twilio 拨入，或使用 macOS 的 `chrome-node` 主机来进行实时 Chrome 参与。
+
+创建一个新会议并加入它：
 
 ```bash
 openclaw googlemeet create --transport chrome-node --mode realtime
 ```
+
+对于 API 创建的房间，当你希望房间的免敲门策略显式设置，而不是继承自 Google 账号默认值时，请使用 Google Meet 的 `SpaceConfig.accessType`：
+
+```bash
+openclaw googlemeet create --access-type OPEN --transport chrome-node --mode realtime
+```
+
+`OPEN` 允许任何拥有 Meet URL 的人无需敲门即可加入。`TRUSTED` 允许宿主组织的受信任用户、受邀请的外部用户和拨入用户无需敲门即可加入。`RESTRICTED` 将免敲门访问限制为受邀者。这些设置仅适用于官方 Google Meet API 创建路径，因此必须配置 OAuth 凭据。
+
+如果你在此选项可用之前已经对 Google Meet 完成了身份验证，请在将 `meetings.space.settings` 作用域添加到你的 Google OAuth 同意屏幕后，重新运行 `openclaw googlemeet auth login --json`。
 
 仅创建 URL 而不加入：
 
@@ -133,7 +145,8 @@ openclaw googlemeet create --no-join
 }
 ```
 
-对于仅观察/浏览器控制加入，请设置 `"mode": "transcribe"`。这不会启动双工实时模型桥接，不需要 BlackHole 或 SoX，并且不会在会议中回话。Chrome 以此模式加入时也会避开 OpenClaw 的麦克风/摄像头权限授予，以及 Meet 的 **Use microphone** 流程。如果 Meet 显示音频选择中间页，自动化会尝试无麦克风路径，否则会报告人工操作，而不是打开本地麦克风。在 transcribe 模式下，受管的 Chrome 传输还会尽力安装 Meet 字幕观察器。`googlemeet status --json` 和 `googlemeet doctor` 会暴露 `captioning`、`captionsEnabledAttempted`、`transcriptLines`、`lastCaptionAt`、`lastCaptionSpeaker`、`lastCaptionText` 和一个简短的 `recentTranscript` 末尾内容，以便操作员判断浏览器是否已加入通话，以及 Meet 字幕是否正在生成文本。
+对于仅观察/仅浏览器控制的加入，请设置 `"mode": "transcribe"`。这不会启动双工实时模型桥接，不需要 BlackHole 或 SoX，也不会在会议中回话。此模式下的 Chrome 加入也会避免 OpenClaw 的麦克风/摄像头权限授予，并避免 Meet 的 **Use microphone** 路径。如果 Meet 显示音频选择中间页，自动化会尝试无麦克风路径，否则会报告人工操作，而不是打开本地麦克风。在 transcribe 模式下，受管的 Chrome 传输还会尽力安装 Meet 字幕观察器。`googlemeet status --json` 和 `googlemeet doctor` 会显示 `captioning`、`captionsEnabledAttempted`、`transcriptLines`、`lastCaptionAt`、`lastCaptionSpeaker`、`lastCaptionText` 以及简短的 `recentTranscript` 尾部信息，以便操作人员判断浏览器是否已加入通话，以及 Meet 字幕是否正在产出文本。
+当你需要一个是/否探测时，请使用 `openclaw googlemeet test-listen <meet-url> --transport chrome-node`：它会以 transcribe 模式加入，等待新的字幕或转录变化，并返回 `listenVerified`、`listenTimedOut`、人工操作字段以及最新的字幕健康状态。
 
 在实时会话期间，`google_meet` 状态会包含浏览器和音频桥健康信息，例如 `inCall`、`manualActionRequired`、`providerConnected`、`realtimeReady`、`audioInputActive`、`audioOutputActive`、最后输入/输出时间戳、字节计数器以及桥接关闭状态。如果出现安全的 Meet 页面提示，浏览器自动化会在可处理时予以处理。登录、主持人接纳以及浏览器/操作系统权限提示会以人工操作的形式报告，并附带原因和消息，供代理转述。受管的 Chrome 会话只有在浏览器健康状态报告 `inCall: true` 后才会输出介绍语或测试短语；否则状态会报告 `speechReady: false`，并且语音尝试会被阻止，而不是假装代理已经在会议中发言。
 
@@ -381,6 +394,7 @@ OAuth 并不会替代 Chrome 加入路径。当你使用浏览器参会时，Chr
 4. 添加 OpenClaw 请求的作用域：
    - `https://www.googleapis.com/auth/meetings.space.created`
    - `https://www.googleapis.com/auth/meetings.space.readonly`
+   - `https://www.googleapis.com/auth/meetings.space.settings`
    - `https://www.googleapis.com/auth/meetings.conference.media.readonly`
 5. 创建一个 OAuth 客户端 ID。
    - 应用类型：**Web application**。
@@ -392,10 +406,13 @@ OAuth 并不会替代 Chrome 加入路径。当你使用浏览器参会时，Chr
 
 6. 复制客户端 ID 和客户端密钥。
 
-`meetings.space.created` 是 Google Meet `spaces.create` 所必需的。
-`meetings.space.readonly` 允许 OpenClaw 将 Meet URL/代码解析为 spaces。
-`meetings.conference.media.readonly` 用于 Meet Media API 预检和媒体相关工作；Google 在实际使用 Media API 时可能要求加入 Developer Preview 项目。
-如果你只需要基于浏览器的 Chrome 加入，可以完全跳过 OAuth。
+`meetings.space.created` 是 Google Meet `spaces.create` 所需的权限。
+`meetings.space.readonly` 允许 OpenClaw 将 Meet URL/代码解析为空间。
+`meetings.space.settings` 允许 OpenClaw 在通过 API 创建房间时传递
+`accessType` 等 `SpaceConfig` 设置。
+`meetings.conference.media.readonly` 用于 Meet Media API 预检和媒体
+相关工作；Google 在实际使用 Media API 时可能要求加入 Developer Preview。
+如果你只需要基于浏览器的 Chrome 加入，可完全跳过 OAuth。
 
 ### 获取刷新令牌
 
@@ -556,7 +573,17 @@ openclaw googlemeet artifacts --conference-record conferenceRecords/abc123 --jso
 openclaw googlemeet attendance --conference-record conferenceRecords/abc123 --json
 ```
 
-生成可读报告：
+在通话结束后，要关闭通过 API 创建的空间中的活动会议，请结束活动会议：
+
+```bash
+openclaw googlemeet end-active-conference https://meet.google.com/abc-defg-hij
+```
+
+这会调用 Google Meet `spaces.endActiveConference`，并要求 OAuth 具备 `meetings.space.created` 作用域，且该空间可由已授权账号管理。
+OpenClaw 接受 Meet URL、会议代码或 `spaces/{id}` 输入，并在结束活动会议前将其解析为 API 空间资源。
+这与 `googlemeet leave` 是分开的：`leave` 会停止 OpenClaw 的本地/会话参与，而 `end-active-conference` 则请求 Google Meet 结束该空间的活动会议。
+
+编写一份可读报告：
 
 ```bash
 openclaw googlemeet artifacts --conference-record conferenceRecords/abc123 \
@@ -591,7 +618,39 @@ openclaw googlemeet export --conference-record conferenceRecords/abc123 \
 
 设置 `"dryRun": true` 可仅返回导出清单并跳过文件写入。
 
-在真实保留的会议上运行受保护的 live smoke：
+Agents can also create an API-backed room with an explicit access policy:
+
+```json
+{
+  "action": "create",
+  "transport": "chrome-node",
+  "mode": "realtime",
+  "accessType": "OPEN"
+}
+```
+
+And they can end the active conference for a known room:
+
+```json
+{
+  "action": "end_active_conference",
+  "meeting": "https://meet.google.com/abc-defg-hij"
+}
+```
+
+For listen-first validation, agents should use `test_listen` before claiming the
+meeting is useful:
+
+```json
+{
+  "action": "test_listen",
+  "url": "https://meet.google.com/abc-defg-hij",
+  "transport": "chrome-node",
+  "timeoutMs": 30000
+}
+```
+
+Run the guarded live smoke against a real retained meeting:
 
 ```bash
 OPENCLAW_LIVE_TEST=1 \
@@ -599,7 +658,15 @@ OPENCLAW_GOOGLE_MEET_LIVE_MEETING=https://meet.google.com/abc-defg-hij \
 pnpm test:live -- extensions/google-meet/google-meet.live.test.ts
 ```
 
-live smoke 环境：
+Run the live listen-first browser probe against a meeting where someone will
+speak with Meet captions available:
+
+```bash
+openclaw googlemeet setup --transport chrome-node --mode transcribe
+openclaw googlemeet test-listen https://meet.google.com/abc-defg-hij --transport chrome-node --timeout-ms 30000
+```
+
+Live smoke environment:
 
 - `OPENCLAW_LIVE_TEST=1` 启用受保护的 live 测试。
 - `OPENCLAW_GOOGLE_MEET_LIVE_MEETING` 指向一个保留的 Meet URL、代码或
@@ -938,7 +1005,13 @@ openclaw googlemeet setup
 如果你刚刚编辑了 `plugins.entries.google-meet`，请重启或重新加载 Gateway。
 运行中的 agent 只能看到由当前 Gateway 进程注册的插件工具。
 
-### 没有已连接的、支持 Google Meet 的节点
+在非 macOS 的 Gateway 主机上，面向 agent 的 `google_meet` 工具仍然可见，
+但本地 Chrome 实时操作会在到达音频桥之前被阻止。
+本地 Chrome 实时音频当前依赖 macOS 的 `BlackHole 2ch`，因此
+Linux agent 应使用 `mode: "transcribe"`、Twilio 拨入，或 macOS
+`chrome-node` 主机，而不是默认的本地 Chrome 实时路径。
+
+### No connected Google Meet-capable node
 
 在节点主机上运行：
 
@@ -990,7 +1063,7 @@ openclaw nodes status --connected
 
 ### 浏览器打开了，但 agent 无法加入
 
-运行 `googlemeet test-speech` 并检查返回的 Chrome 健康状态。如果它报告 `manualActionRequired: true`，请将 `manualActionMessage` 显示给操作员，并在浏览器操作完成之前停止重试。
+对仅观察加入运行 `googlemeet test-listen`，或对实时加入运行 `googlemeet test-speech`，然后检查返回的 Chrome 健康状态。如果任一探测报告 `manualActionRequired: true`，请向操作员展示 `manualActionMessage`，并在浏览器操作完成前停止重试。
 
 常见的人工操作：
 
@@ -1133,17 +1206,17 @@ openclaw googlemeet join https://meet.google.com/abc-defg-hij \
 如果电话呼叫已创建，但 Meet 名册中始终没有出现拨入参与者：
 
 - 运行 `openclaw googlemeet doctor <session-id>` 以确认委托的 Twilio 呼叫 ID、DTMF 是否已排队，以及是否请求了引导问候语。
-- 运行 `openclaw voicecall status --call-id <id>` 并确认呼叫仍处于活动状态。
+- 运行 `openclaw voicecall status --call-id <id>` 并确认通话仍处于活动状态。
 - 运行 `openclaw voicecall tail` 并检查 Twilio webhook 是否到达 Gateway。
-- 运行 `openclaw logs --follow` 并查找 Twilio Meet 序列：Google Meet 委托加入，Voice Call 存储预连接 DTMF TwiML，提供该初始 TwiML，然后提供实时 TwiML，并以 `initialGreeting=queued` 启动实时桥接。
+- 运行 `openclaw logs --follow`，查看 Twilio Meet 序列：Google Meet 委托加入，Voice Call 启动电话线路，Google Meet 等待 `voiceCall.dtmfDelayMs`，使用 `voicecall.dtmf` 发送 DTMF，等待 `voiceCall.postDtmfSpeechDelayMs`，然后用 `voicecall.speak` 请求引导语音。
 - 重新运行 `openclaw googlemeet setup --transport twilio`；绿色的设置检查是必需的，但并不能证明会议 PIN 序列正确。
 - 确认拨入号码属于与 PIN 相同的 Meet 邀请和地区。
-- 如果 Meet 接听较慢，请增加 `--dtmf-sequence` 中前导暂停，例如 `wwww123456#`。
-- 如果参与者加入了但你没有听到问候语，请检查 `openclaw logs --follow` 中的实时 TwiML、实时桥接启动以及 `initialGreeting=queued`。问候语由实时桥接连接后最初的 `voicecall.start` 消息生成。
+- 如果 Meet 接听较慢，或者通话转录仍在显示发送 DTMF 之后要求输入 PIN 的提示，请增大 `voiceCall.dtmfDelayMs`。
+- 如果参与者已加入但你听不到问候语，请检查 `openclaw logs --follow` 中 DTMF 后的 `voicecall.speak` 请求，以及媒体流 TTS 播放或 Twilio `<Say>` 回退。如果通话转录中仍包含“enter the meeting PIN”，说明电话线路尚未加入 Meet 房间，因此会议参与者还听不到语音。
 
 如果 webhook 没有到达，先调试 Voice Call 插件：提供方必须能够访问 `plugins.entries.voice-call.config.publicUrl` 或配置的隧道。参见 [Voice call troubleshooting](/plugins/voice-call#troubleshooting)。
 
-## Notes
+## 注意事项
 
 Google Meet 的官方媒体 API 以接收为导向，因此在 Meet 通话中发言仍然需要一个参与者路径。这个插件保持了这一边界的可见性：Chrome 负责浏览器参与和本地音频路由；Twilio 负责电话拨入参与。
 
@@ -1154,15 +1227,9 @@ Chrome 实时模式需要 `BlackHole 2ch` 以及以下任一项：
 
 为了获得干净的双工音频，请将 Meet 输出和 Meet 麦克风路由到分开的虚拟设备，或者路由到类似 Loopback 的虚拟设备图。单个共享的 BlackHole 设备可能会把其他参与者的声音回传到通话中。
 
-With the command-pair Chrome bridge, `chrome.bargeInInputCommand` can listen to a
-separate local microphone and clear assistant playback when the human starts
-talking. This keeps human speech ahead of assistant output even when the shared
-BlackHole loopback input is temporarily suppressed during assistant playback.
-Like `chrome.audioInputCommand` and `chrome.audioOutputCommand`, it is an
-operator-configured local command. Use an explicit trusted command path or
-argument list, and do not point it at scripts from untrusted locations.
+使用命令对 Chrome 桥接时，`chrome.bargeInInputCommand` 可以监听一个单独的本地麦克风，并在用户开始说话时清除助手播放内容。这样即使在助手播放期间，共享的 BlackHole 回环输入会暂时被抑制，人类语音仍能优先于助手输出。和 `chrome.audioInputCommand` 与 `chrome.audioOutputCommand` 一样，它是由操作者配置的本地命令。请使用明确可信的命令路径或参数列表，不要指向不受信任位置中的脚本。
 
-`googlemeet speak` 触发 Chrome 会话的活动实时音频桥接。`googlemeet leave` 停止该桥接。对于通过 Voice Call 插件委托的 Twilio 会话，`leave` 也会挂断底层语音通话。
+`googlemeet speak` 会触发 Chrome 会话的活动实时音频桥接。`googlemeet leave` 会停止该桥接。对于通过语音通话插件委派的 Twilio 会话，`leave` 还会挂断底层语音通话。如果你还想关闭由 API 管理的空间中的活动 Google Meet 会议，请使用 `googlemeet end-active-conference`。
 
 ## 相关
 

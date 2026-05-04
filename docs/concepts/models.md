@@ -23,7 +23,7 @@ sidebarTitle: "Models CLI"
   </Card>
 </CardGroup>
 
-模型引用会选择一个提供商和模型。它们通常不会选择底层的 agent 运行时。例如，`openai/gpt-5.5` 可以通过普通的 OpenAI 提供商路径运行，也可以通过 Codex app-server 运行时运行，这取决于 `agents.defaults.agentRuntime.id`。参见 [Agent runtimes](/concepts/agent-runtimes)。
+模型引用会选择一个提供商和模型。它们通常不会选择底层的 agent 运行时。例如，`openai/gpt-5.5` 可以通过正常的 OpenAI 提供商路径运行，也可以通过 Codex 应用服务器运行时运行，这取决于 `agents.defaults.agentRuntime.id`。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着按 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent runtimes](/concepts/agent-runtimes)。
 
 ## 模型选择如何工作
 
@@ -163,11 +163,12 @@ Model "provider/model" is not allowed. Use /model to list available models.
 ```
 
 <AccordionGroup>
-  <Accordion title="选择器行为">
+  <Accordion title="Picker behavior">
     - `/model`（以及 `/model list`）是一个紧凑的编号选择器（模型家族 + 可用提供商）。
-    - 在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含提供商和模型下拉菜单以及一个提交步骤。
+    - 在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含提供商和模型下拉框以及一个提交步骤。
+    - 在 Telegram 中，`/models` 选择器的选择仅作用于当前会话；它们不会更改 `openclaw.json` 中 agent 的持久默认值。
     - `/models add` 已弃用，现在会返回弃用提示，而不是从聊天中注册模型。
-    - `/model <#>` 会从该选择器中选择。
+    - `/model <#>` 会从该选择器中进行选择。
 
   </Accordion>
   <Accordion title="持久化与在线切换">

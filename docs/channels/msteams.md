@@ -11,13 +11,15 @@ title: "Microsoft Teams"
 
 Microsoft Teams 在当前 OpenClaw 版本中作为捆绑插件随附提供，因此在正常的打包构建中无需单独安装。
 
-如果你使用的是较旧的构建，或者自定义安装中排除了捆绑的 Teams，请在有可用的新 npm 包时安装当前版本：
+如果你使用的是较旧的构建版本，或是一个排除了捆绑 Teams 的自定义安装，
+请直接安装 npm 包：
 
 ```bash
 openclaw plugins install @openclaw/msteams
 ```
 
-如果 npm 报告 OpenClaw 维护的包已弃用，请使用当前的打包版 OpenClaw 构建，或者先使用本地检出路径，直到发布更新的 npm 包。
+使用裸包以跟随当前官方发布标签。只有在你需要可复现安装时，才固定到确切
+版本。
 
 本地检出（从 git 仓库运行时）：
 

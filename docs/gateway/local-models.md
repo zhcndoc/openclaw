@@ -7,9 +7,22 @@ read_when:
 title: "本地模型"
 ---
 
-本地方案是可行的，但 OpenClaw 期望有很大的上下文窗口，以及对提示注入的强防御。小显卡会截断上下文并削弱安全性。目标要高：**至少 2 台满配 Mac Studio 或等效的 GPU 机器（约 3 万美元以上）**。单块 **24 GB** GPU 只适合更轻量的提示，并伴随更高延迟。请尽量使用你能运行的**最大 / 全尺寸模型变体**；过度量化或“small”检查点会提高提示注入风险（见 [安全性](/gateway/security)）。
+本地模型是可行的。它们也提高了硬件、上下文长度和提示注入防护的门槛——小型或高度量化的显卡会截断上下文并泄露安全边界。这一页是面向高端本地栈和自定义 OpenAI 兼容本地服务器的强意见指南。若想获得最少摩擦的上手体验，请从 [LM Studio](/providers/lmstudio) 或 [Ollama](/providers/ollama) 开始，并运行 `openclaw onboard`。
 
-如果你想要最省心的本地配置，先从 [LM Studio](/providers/lmstudio) 或 [Ollama](/providers/ollama) 开始，然后运行 `openclaw onboard`。本页是面向更高端本地栈和自定义 OpenAI 兼容本地服务器的带有明确建议的指南。
+## 硬件门槛
+
+尽量拉高配置：**至少 2 台满载的 Mac Studio，或等效的 GPU 主机（约 3 万美元以上）**，才能舒适地运行 agent 循环。单张 **24 GB** GPU 只能在更高延迟下处理较轻的提示。始终使用你能部署的**最大 / 完整尺寸变体**；小型或严重量化的 checkpoint 会增加提示注入风险（见 [安全性](/gateway/security)）。
+
+## 选择后端
+
+| 后端                                                 | 适用场景                                                                   |
+| ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| [LM Studio](/providers/lmstudio)                     | 初次本地搭建、GUI 加载器、原生 Responses API                               |
+| [Ollama](/providers/ollama)                          | CLI 工作流、模型库、无人值守的 systemd 服务                                |
+| MLX / vLLM / SGLang                                  | 通过 OpenAI 兼容 HTTP 端点进行高吞吐自托管服务                             |
+| LiteLLM / OAI-proxy / 自定义 OpenAI 兼容代理         | 你在前面接了另一个模型 API，并且需要让 OpenClaw 将其视为 OpenAI           |
+
+当后端支持 Responses API 时（LM Studio 支持），请使用 Responses API（`api: "openai-responses"`）。否则请坚持使用 Chat Completions（`api: "openai-completions"`）。
 
 <Warning>
 **WSL2 + Ollama + NVIDIA/CUDA 用户：** 官方 Ollama Linux 安装程序会启用一个 `Restart=always` 的 systemd 服务。在 WSL2 GPU 环境中，自动启动可能会在启动时重新加载上一个模型并占用主机内存。如果你在启用 Ollama 后 WSL2 虚拟机反复重启，请参见 [WSL2 崩溃循环](/providers/ollama#wsl2-crash-loop-repeated-reboots)。
@@ -235,23 +248,27 @@ MLX（`mlx_lm.server`）、vLLM、SGLang、LiteLLM、OAI-proxy 或自定义网�
   }
   ```
 
-- 某些更小或更严格的本地后端在使用 OpenClaw 的完整 agent 运行时提示形状时会不稳定，尤其是在包含工具 schema 时。请先用精简的本地探针验证 provider 路径：
+## 更小或更严格的后端
 
-  ```bash
-  openclaw infer model run --local --model <provider/model> --prompt "请精确回复：pong" --json
-  ```
+如果模型加载正常，但完整的 agent 回合表现异常，请自上而下排查——先确认传输，再缩小问题面。
 
-  要在不使用完整 agent 提示形状的情况下验证 Gateway 路由，请改用 Gateway 模型探针：
+1. **确认本地模型本身有响应。** 不使用工具、不带 agent 上下文：
 
-  ```bash
-  openclaw infer model run --gateway --model <provider/model> --prompt "请精确回复：pong" --json
-  ```
+   ```bash
+   openclaw infer model run --local --model <provider/model> --prompt "Reply with exactly: pong" --json
+   ```
 
-  本地和 Gateway 模型探针都只发送所提供的提示词。Gateway 探针仍会验证 Gateway 路由、认证和 provider 选择，但它会刻意跳过先前会话转录、AGENTS/bootstrap 上下文、context-engine 组装、工具以及捆绑的 MCP 服务器。
+2. **确认 Gateway 路由。** 只发送提供的提示词——跳过 transcript、AGENTS 启动、context-engine 组装、工具和捆绑的 MCP 服务器，但仍会测试 Gateway 路由、认证和 provider 选择：
 
-  如果这样成功，但正常的 OpenClaw agent 回合失败，首先尝试 `agents.defaults.experimental.localModelLean: true`，以去掉 `browser`、`cron` 和 `message` 等重量级默认工具；这是一个实验性标志，而不是稳定的默认模式设置。见 [实验性功能](/concepts/experimental-features)。如果仍然失败，再尝试 `models.providers.<provider>.models[].compat.supportsTools: false`。
+   ```bash
+   openclaw infer model run --gateway --model <provider/model> --prompt "Reply with exactly: pong" --json
+   ```
 
-- 如果后端只是在较大的 OpenClaw 运行中仍然失败，那么剩余问题通常是上游模型/服务器容量不足或后端 bug，而不是 OpenClaw 的传输层。
+3. **尝试精简模式。** 如果两个探针都通过，但真实 agent 回合因错误的工具调用或过大的提示而失败，请启用 `agents.defaults.experimental.localModelLean: true`。它会移除三个最重的默认工具（`browser`、`cron`、`message`），使提示形状更小、更不脆弱。完整说明、使用时机以及如何确认已开启，请参见 [实验性功能 → 本地模型精简模式](/concepts/experimental-features#local-model-lean-mode)。
+
+4. **最后手段：完全禁用工具。** 如果精简模式还不够，请将该模型条目的 `models.providers.<provider>.models[].compat.supportsTools: false`。这样 agent 就会在该模型上不使用工具调用。
+
+5. **再往后，瓶颈就在上游了。** 如果后端在更大的 OpenClaw 运行中仍然失败，即使启用了精简模式和 `supportsTools: false`，剩余问题通常就是上游模型或服务器容量——上下文窗口、GPU 内存、kv-cache 驱逐，或者后端 bug。到那一步就不是 OpenClaw 的传输层问题了。
 
 ## 故障排查
 

@@ -45,8 +45,9 @@ title: "命令队列"
 
 Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followup 回复，因此流式界面看起来可能像重复消息。如果你希望每条传入消息只对应一个回复，请优先使用 `collect`/`steer`。
 
-有关特定运行时的时序和依赖行为，请参阅
-[Steering queue](/concepts/queue-steering)。
+有关运行时特定的时序和依赖行为，请参见
+[Steering queue](/concepts/queue-steering)。有关显式的 `/steer <message>`
+命令，请参见 [Steer](/tools/steer)。
 
 通过 `messages.queue` 全局配置或按渠道配置：
 
@@ -103,13 +104,14 @@ Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followu
 
 ## 故障排查
 
-- 如果命令看起来卡住了，请启用详细日志，并查找“queued for …ms”这样的行，以确认队列正在清空。
-- 如果你需要队列深度，请启用详细日志并观察队列时序行。
-- 接受了一个 turn 但随后停止输出进度的 Codex app-server 运行，会被 Codex 适配器中断，以便活跃会话 lane 能够释放，而不是等待外层运行超时。
-- 启用诊断时，仍处于 `processing` 且超过 `diagnostics.stuckSessionWarnMs` 的会话会记录 stuck-session 警告。活跃的嵌入式运行、活跃的回复操作以及活跃的 lane 任务默认仍仅发出警告；如果是没有任何活跃会话工作的陈旧启动记录，则可以释放受影响的会话 lane，以便排队工作继续清空。
+- 如果命令似乎卡住了，请启用详细日志并查找“queued for …ms”行，以确认队列正在排空。
+- 如果你需要队列深度，请启用详细日志并查看队列计时行。
+- 接受一个轮次然后停止输出进度的 Codex app-server 运行会被 Codex 适配器中断，以便活动会话 lane 可以释放，而不是一直等待外层运行超时。
+- 当启用诊断时，停留在 `processing` 状态超过 `diagnostics.stuckSessionWarnMs`，且未观察到回复、工具、状态、block 或 ACP 进度的会话，会按当前活动进行分类。正在进行的工作会记录为 `session.long_running`；没有近期进度的正在进行工作会记录为 `session.stalled`；`session.stuck` 仅保留给没有活跃工作的陈旧会话账本状态，并且只有该路径才能释放受影响的会话 lane，从而让排队工作继续流动。当会话保持不变时，重复的 `session.stuck` 诊断会退避。
 
 ## 相关内容
 
 - [会话管理](/concepts/session)
 - [Steering queue](/concepts/queue-steering)
-- [重试策略](/concepts/retry)
+- [Steer](/tools/steer)
+- [Retry policy](/concepts/retry)

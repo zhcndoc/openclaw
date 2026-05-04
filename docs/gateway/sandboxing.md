@@ -183,7 +183,7 @@ OpenShell 重用了与通用 SSH 后端相同的核心 SSH 传输和远程文件
         enabled: true,
         config: {
           from: "openclaw",
-          mode: "remote", // mirror | remote
+          mode: "remote", // 镜像 | 远程
           remoteWorkspaceDir: "/sandbox",
           remoteAgentWorkspaceDir: "/agent",
         },
@@ -409,7 +409,7 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
     scripts/sandbox-common-setup.sh
     ```
 
-    从 npm 安装时，先构建默认镜像（见上文），然后使用仓库中的 [`Dockerfile.sandbox-common`](https://github.com/openclaw/openclaw/blob/main/Dockerfile.sandbox-common) 在其之上构建通用镜像。
+    从 npm 安装时，请先构建默认镜像（见上文），然后使用仓库中的 [`scripts/docker/sandbox/Dockerfile.common`](https://github.com/openclaw/openclaw/blob/main/scripts/docker/sandbox/Dockerfile.common) 在其基础上构建通用镜像。
 
     然后将 `agents.defaults.sandbox.docker.image` 设置为 `openclaw-sandbox-common:bookworm-slim`。
 
@@ -421,7 +421,7 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
     scripts/sandbox-browser-setup.sh
     ```
 
-    从 npm 安装时，使用仓库中的 [`Dockerfile.sandbox-browser`](https://github.com/openclaw/openclaw/blob/main/Dockerfile.sandbox-browser) 构建。
+    从 npm 安装时，请使用仓库中的 [`scripts/docker/sandbox/Dockerfile.browser`](https://github.com/openclaw/openclaw/blob/main/scripts/docker/sandbox/Dockerfile.browser) 来构建。
 
   </Step>
 </Steps>

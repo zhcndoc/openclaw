@@ -6,22 +6,16 @@ read_when:
 title: "Matrix"
 ---
 
-Matrix 是 OpenClaw 的一个捆绑频道插件。
-它使用官方的 `matrix-js-sdk`，并支持私聊、房间、线程、媒体、反应、投票、位置以及 E2EE。
+Matrix 是 OpenClaw 的一个可下载频道插件。
+它使用官方的 `matrix-js-sdk`，并支持 DM、房间、线程、媒体、反应、投票、位置以及 E2EE。
 
-## 捆绑插件
+## 安装
 
-当前打包的 OpenClaw 发布版已经内置了 Matrix 插件。你无需安装任何东西；配置 `channels.matrix.*`（见 [设置](#setup)）即可启用它。
-
-对于较旧的构建版本，或排除了 Matrix 的自定义安装，请在发布可用后安装当前的 npm
-包：
+在配置频道之前先安装 Matrix：
 
 ```bash
 openclaw plugins install @openclaw/matrix
 ```
-
-如果 npm 报告 OpenClaw 维护的包已弃用，请使用当前的打包版
-OpenClaw 构建，或使用本地检出版本，直到发布更新的 npm 包。
 
 从本地检出安装：
 
@@ -526,11 +520,11 @@ Matrix 原生支持 Matrix 线程，既适用于自动回复，也适用于消�
 
 ### 线程继承与斜杠命令
 
-- 进入的线程消息会把线程根消息作为额外的代理上下文。
-- 当目标是同一个房间（或同一个 DM 用户目标）时，消息工具发送会自动继承当前 Matrix 线程，除非显式提供了 `threadId`。
-- 只有当当前会话元数据证明同一 Matrix 账户上的同一个 DM 对端时，DM 用户目标复用才会生效；否则 OpenClaw 会回退到普通的按用户路由。
+- 入站的线程消息会将线程根消息作为额外的代理上下文包含进来。
+- 当消息工具发送目标为同一房间（或同一 DM 用户目标）时，会自动继承当前 Matrix 线程，除非提供了显式的 `threadId`。
+- 只有当当前会话元数据能够证明同一 Matrix 账户上的同一 DM 对端时，DM 用户目标复用才会生效；否则 OpenClaw 会回退到正常的按用户作用域路由。
 - `/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`，以及绑定线程的 `/acp spawn` 都可在 Matrix 房间和 DM 中使用。
-- 顶层 `/focus` 会创建一个新的 Matrix 线程，并在 `threadBindings.spawnSubagentSessions: true` 时将其绑定到目标会话。
+- 顶层 `/focus` 会创建一个新的 Matrix 线程，并在启用 `threadBindings.spawnSessions` 时将其绑定到目标会话。
 - 在现有 Matrix 线程中运行 `/focus` 或 `/acp spawn --thread here` 会就地绑定该线程。
 
 当 OpenClaw 检测到某个 Matrix DM 房间在同一个共享会话上与另一个 DM 房间冲突时，它会在该房间中发送一次性的 `m.notice`，指向 `/focus` 逃生通道，并建议更改 `dm.sessionScope`。该通知仅在启用了线程绑定时出现。
@@ -550,7 +544,7 @@ Matrix 房间、DM 和现有 Matrix 线程都可以在不改变聊天表面的�
 说明：
 
 - `--bind here` 不会创建子 Matrix 线程。
-- `threadBindings.spawnAcpSessions` 只在 `/acp spawn --thread auto|here` 时需要，因为此时 OpenClaw 需要创建或绑定一个子 Matrix 线程。
+- `threadBindings.spawnSessions` 控制 `/acp spawn --thread auto|here`，在这些情况下 OpenClaw 需要创建或绑定一个子 Matrix 线程。
 
 ### 线程绑定配置
 
@@ -559,13 +553,13 @@ Matrix 会从 `session.threadBindings` 继承全局默认值，同时也支持�
 - `threadBindings.enabled`
 - `threadBindings.idleHours`
 - `threadBindings.maxAgeHours`
-- `threadBindings.spawnSubagentSessions`
-- `threadBindings.spawnAcpSessions`
+- `threadBindings.spawnSessions`
+- `threadBindings.defaultSpawnContext`
 
-Matrix 线程绑定的 spawn 标志采用显式启用方式：
+Matrix 线程绑定会话默认开启：
 
-- 将 `threadBindings.spawnSubagentSessions: true` 设为允许顶层 `/focus` 创建并绑定新的 Matrix 线程。
-- 将 `threadBindings.spawnAcpSessions: true` 设为允许 `/acp spawn --thread auto|here` 将 ACP 会话绑定到 Matrix 线程。
+- 将 `threadBindings.spawnSessions` 设为 `false` 可阻止顶层 `/focus` 和 `/acp spawn --thread auto|here` 创建/绑定 Matrix 线程。
+- 当原生子代理线程生成不应分叉父转录时，将 `threadBindings.defaultSpawnContext` 设为 `"isolated"`。
 
 ## 反应
 

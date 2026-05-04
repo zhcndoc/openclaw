@@ -1,5 +1,5 @@
 ---
-summary: "Gateway WebSocket protocol: 握手、帧、版本管理"
+summary: "网关 WebSocket 协议：握手、帧、版本管理"
 read_when:
   - 实现或更新网关 WS 客户端时
   - 调试协议不匹配或连接失败时
@@ -183,7 +183,10 @@ Gateway → Client:
 
 ## 角色 + scopes
 
-### 角色
+For the full operator scope model, approval-time checks, and shared-secret
+semantics, see [Operator scopes](/gateway/operator-scopes).
+
+### Roles
 
 - `operator` = 控制平面客户端（CLI/UI/自动化）。
 - `node` = 能力宿主（camera/screen/canvas/system.run）。
@@ -328,17 +331,17 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
   </Accordion>
 
   <Accordion title="Secrets, config, update, and wizard">
-    - `secrets.reload` 重新解析当前生效的 SecretRefs，并且仅在完全成功时切换运行时 secret 状态。
-    - `secrets.resolve` 解析特定命令/目标集的命令目标 secret 分配。
-    - `config.get` 返回当前 config 快照和 hash。
-    - `config.set` 写入已验证的 config 负载。
-    - `config.patch` 合并部分 config 更新。
-    - `config.apply` 验证并替换完整的 config 负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时 config schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包括派生自 UI 中使用的相同标签和帮助文本的字段 `title` / `description` 元数据，其中也包含匹配到字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回某个 config 路径的按路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 逐级展开的直接子项摘要。查找 schema 节点保留面向用户的文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数字/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且只在更新本身成功时调度重启。包管理器更新会在包替换后强制执行一次不延迟、无冷却期的更新重启，以避免旧的 Gateway 进程继续从已替换的 `dist` 目录懒加载。
-    - `update.status` 返回最新缓存的更新重启哨兵值，包括可用时的重启后运行版本。
-    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding wizard。
+    - `secrets.reload` 重新解析当前活动的 SecretRefs，并且只在完全成功时切换运行时 secret 状态。
+    - `secrets.resolve` 为特定命令/目标集解析命令目标 secret 分配。
+    - `config.get` 返回当前配置快照和哈希。
+    - `config.set` 写入已验证的配置负载。
+    - `config.patch` 合并部分配置更新。
+    - `config.apply` 验证并替换完整配置负载。
+    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时 config schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可以加载时的插件 + 通道 schema 元数据。该 schema 包含从 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 返回单个 config 路径的按路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的提示 + `hintPath`，以及用于 UI/CLI 下钻的直接子项摘要。查找 schema 节点保留面向用户的文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
+    - `update.run` 运行网关更新流程，并且仅在更新本身成功时安排重启；有会话的调用方可以包含 `continuationMessage`，这样启动会通过重启续接队列恢复一个后续 agent 回合。包管理器更新会在包替换后强制执行一次不可延迟、无冷却的更新重启，这样旧的 Gateway 进程就不会继续从已替换的 `dist` 树中懒加载。
+    - `update.status` 返回最新缓存的更新重启哨兵，包括可用时的重启后运行版本。
+    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding 向导。
 
   </Accordion>
 
@@ -352,20 +355,21 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="会话控制">
+  <Accordion title="Session control">
     - `sessions.list` 返回当前会话索引，包括在配置了 agent runtime 后端时每行的 `agentRuntime` 元数据。
-    - `sessions.subscribe` 和 `sessions.unsubscribe` 为当前 WS 客户端切换会话变更事件订阅。
-    - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 为某个会话切换 transcript/message 事件订阅。
-    - `sessions.preview` 返回特定 session key 的有界 transcript 预览。
-    - `sessions.resolve` 解析或规范化一个 session 目标。
-    - `sessions.create` 创建新的会话条目。
-    - `sessions.send` 向现有会话发送消息。
-    - `sessions.steer` 是用于活动会话的中断并引导变体。
-    - `sessions.abort` 中止会话的活动工作。调用方可以传入 `key` 加可选 `runId`，或者仅传入 `runId`，用于 Gateway 可解析为某个会话的活动运行。
-    - `sessions.patch` 更新会话元数据/覆盖项，并报告已解析的规范模型以及生效中的 `agentRuntime`。
+    - `sessions.subscribe` 和 `sessions.unsubscribe` 切换当前 WS 客户端的会话变更事件订阅。
+    - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 切换单个会话的 transcript/message 事件订阅。
+    - `sessions.preview` 返回特定会话键的有边界 transcript 预览。
+    - `sessions.describe` 返回一个精确会话键对应的 Gateway 会话行。
+    - `sessions.resolve` 解析或规范化一个会话目标。
+    - `sessions.create` 创建一个新的会话条目。
+    - `sessions.send` 向现有会话发送一条消息。
+    - `sessions.steer` 是对活动会话的中断并引导变体。
+    - `sessions.abort` 中止会话的活动工作。调用方可以传入 `key` 加可选 `runId`，或者仅传入 `runId`，用于 Gateway 可解析为会话的活动运行。
+    - `sessions.patch` 更新会话元数据/覆盖项，并报告已解析的规范模型以及生效的 `agentRuntime`。
     - `sessions.reset`、`sessions.delete` 和 `sessions.compact` 执行会话维护。
-    - `sessions.get` 返回完整存储的会话行。
-    - Chat 执行仍然使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。`chat.history` 针对 UI 客户端做了显示规范化：会移除可见文本中的内联指令标签，移除纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）和泄漏的 ASCII/全角模型控制 token，省略纯静默 token 的 assistant 行（例如精确的 `NO_REPLY` / `no_reply`），并且可以用占位符替换过大的行。
+    - `sessions.get` 返回完整的已存储会话行。
+    - Chat 执行仍使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。`chat.history` 对 UI 客户端进行了显示规范化：可见文本中的内联指令标签会被移除，纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）和泄露的 ASCII/全角模型控制 token 会被移除，纯静默 token 的 assistant 行（例如精确的 `NO_REPLY` / `no_reply`）会被省略，过大的行可以被占位符替换。
 
   </Accordion>
 
@@ -430,56 +434,38 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
 ### Operator 助手方法
 
-- Operators may call `commands.list` (`operator.read`) to fetch the runtime
-  command inventory for an agent.
-  - `agentId` is optional; omit it to read the default agent workspace.
-  - `scope` controls which surface the primary `name` targets:
-    - `text` returns the primary text command token without the leading `/`
-    - `native` and the default `both` path return provider-aware native names
-      when available
-  - `textAliases` carries exact slash aliases such as `/model` and `/m`.
-  - `nativeName` carries the provider-aware native command name when one exists.
-  - `provider` is optional and only affects native naming plus native plugin
-    command availability.
-  - `includeArgs=false` omits serialized argument metadata from the response.
-- Operators may call `tools.catalog` (`operator.read`) to fetch the runtime tool catalog for an
-  agent. The response includes grouped tools and provenance metadata:
-  - `source`: `core` or `plugin`
-  - `pluginId`: plugin owner when `source="plugin"`
-  - `optional`: whether a plugin tool is optional
-- Operators may call `tools.effective` (`operator.read`) to fetch the runtime-effective tool
-  inventory for a session.
-  - `sessionKey` is required.
-  - The gateway derives trusted runtime context from the session server-side instead of accepting
-    caller-supplied auth or delivery context.
-  - The response is session-scoped and reflects what the active conversation can use right now,
-    including core, plugin, and channel tools.
-- Operators may call `tools.invoke` (`operator.write`) to invoke one available tool through the
-  same gateway policy path as `/tools/invoke`.
-  - `name` is required. `args`, `sessionKey`, `agentId`, `confirm`, and
-    `idempotencyKey` are optional.
-  - If both `sessionKey` and `agentId` are present, the resolved session agent must match
-    `agentId`.
-  - The response is an SDK-facing envelope with `ok`, `toolName`, optional `output`, and typed
-    `error` fields. Approval or policy refusals return `ok:false` in the payload rather than
-    bypassing the gateway tool policy pipeline.
-- Operators may call `skills.status` (`operator.read`) to fetch the visible
-  skill inventory for an agent.
-  - `agentId` is optional; omit it to read the default agent workspace.
-  - The response includes eligibility, missing requirements, config checks, and
-    sanitized install options without exposing raw secret values.
-- Operators may call `skills.search` and `skills.detail` (`operator.read`) for
-  ClawHub discovery metadata.
-- Operators may call `skills.install` (`operator.admin`) in two modes:
-  - ClawHub mode: `{ source: "clawhub", slug, version?, force? }` installs a
-    skill folder into the default agent workspace `skills/` directory.
-  - Gateway installer mode: `{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
-    runs a declared `metadata.openclaw.install` action on the gateway host.
-- Operators may call `skills.update` (`operator.admin`) in two modes:
-  - ClawHub mode updates one tracked slug or all tracked ClawHub installs in
-    the default agent workspace.
-  - Config mode patches `skills.entries.<skillKey>` values such as `enabled`,
-    `apiKey`, and `env`.
+- 操作员可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时命令清单。
+  - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
+  - `scope` 控制主 `name` 目标的表面：
+    - `text` 返回不带前导 `/` 的主文本命令 token
+    - `native` 和默认的 `both` 路径在可用时返回具备提供方感知的原生名称
+  - `textAliases` 包含精确的斜杠别名，例如 `/model` 和 `/m`。
+  - `nativeName` 在存在时携带提供方感知的原生命令名。
+  - `provider` 是可选的，仅影响原生命名以及原生插件命令可用性。
+  - `includeArgs=false` 会从响应中省略序列化的参数元数据。
+- 操作员可以调用 `tools.catalog`（`operator.read`）来获取某个 agent 的运行时工具目录。响应包含分组后的工具和来源元数据：
+  - `source`：`core` 或 `plugin`
+  - `pluginId`：当 `source="plugin"` 时的插件所有者
+  - `optional`：某个插件工具是否可选
+- 操作员可以调用 `tools.effective`（`operator.read`）来获取某个会话的运行时生效工具清单。
+  - `sessionKey` 是必需的。
+  - Gateway 会在服务器端从会话派生受信任的运行时上下文，而不是接受调用方提供的 auth 或传递上下文。
+  - 响应按会话作用域返回，并反映当前活动对话此刻可以使用的内容，包括 core、plugin 和 channel 工具。
+- 操作员可以调用 `tools.invoke`（`operator.write`）通过与 `/tools/invoke` 相同的网关策略路径调用一个可用工具。
+  - `name` 是必需的。`args`、`sessionKey`、`agentId`、`confirm` 和 `idempotencyKey` 是可选的。
+  - 如果同时存在 `sessionKey` 和 `agentId`，则解析后的会话 agent 必须与 `agentId` 匹配。
+  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选的 `output` 以及类型化 `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是绕过网关工具策略管道。
+- 操作员可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见技能清单。
+  - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
+  - 响应包含资格、缺失的要求、配置检查，以及不暴露原始 secret 值的已清理安装选项。
+- 操作员可以调用 `skills.search` 和 `skills.detail`（`operator.read`）来获取 ClawHub 发现元数据。
+- 操作员可以调用 `skills.install`（`operator.admin`）并支持两种模式：
+  - ClawHub 模式：`{ source: "clawhub", slug, version?, force? }` 将 skill 文件夹安装到默认 agent 工作区的 `skills/` 目录。
+  - Gateway 安装器模式：`{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
+    在网关主机上运行声明的 `metadata.openclaw.install` 动作。
+- 操作员可以调用 `skills.update`（`operator.admin`）并支持两种模式：
+  - ClawHub 模式更新一个已跟踪的 slug，或默认 agent 工作区中所有已跟踪的 ClawHub 安装。
+  - 配置模式修补 `skills.entries.<skillKey>` 值，例如 `enabled`、`apiKey` 和 `env`。
 
 ### `models.list` 视图
 
@@ -548,7 +534,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 - 额外的 `hello-ok.auth.deviceTokens` 条目是引导交接 token。仅当连接使用了 bootstrap 认证，且传输位于受信任通道（如 `wss://` 或回环/本地配对）时，才应持久化它们。
 - 如果客户端提供了 **显式** `deviceToken` 或显式 `scopes`，则该调用方请求的范围集仍具有权威性；只有当客户端复用已存储的按设备 token 时，才会重用缓存的 scopes。
 - Device token 可通过 `device.token.rotate` 和 `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 范围）。
-- `device.token.rotate` 会返回轮换元数据。只有对于已用该 device token 认证过的同设备调用，它才会回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/管理员轮换不会回显 bearer token。
+- `device.token.rotate` 会返回轮换元数据。只有对于已用该 device token认证过的同设备调用，它才会回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/管理员轮换不会回显 bearer token。
 - 令牌签发、轮换和撤销都限制在该设备配对条目中记录的已批准角色集合内；令牌变更不能扩展到配对批准从未授予的设备角色，也不能指向该角色。
 - 对于已配对设备的 token 会话，设备管理默认是自我范围限定的，除非调用方同时具有 `operator.admin`：非管理员调用方只能移除/撤销/轮换属于 **自己的** 设备条目。
 - `device.token.rotate` 和 `device.token.revoke` 还会检查目标 operator token 的范围集合与调用方当前会话范围是否一致。非管理员调用方不能轮换或撤销比其自身所持有范围更宽的 operator token。

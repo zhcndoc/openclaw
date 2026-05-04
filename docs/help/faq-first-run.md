@@ -50,8 +50,8 @@ sidebarTitle: "首次运行 FAQ"
     其他有用的 CLI 检查：`openclaw status --all`、`openclaw logs --follow`、
     `openclaw gateway status`、`openclaw health --verbose`。
 
-    快速调试循环：[如果有东西坏了，前 60 秒怎么做](#first-60-seconds-if-something-is-broken)。
-    安装文档：[安装](/install)、[安装器参数](/install/installer)、[更新](/install/updating)。
+    Quick debug loop: [First 60 seconds if something is broken](/help/faq#first-60-seconds-if-something-is-broken).
+    Install docs: [Install](/install), [Installer flags](/install/installer), [Updating](/install/updating).
 
   </Accordion>
 
@@ -208,9 +208,9 @@ sidebarTitle: "首次运行 FAQ"
 
     **重要：** 如果你只是把工作区提交/推送到 GitHub，你备份的是**记忆 + 引导文件**，但**不是**会话历史或认证。这些都位于 `~/.openclaw/` 下（例如 `~/.openclaw/agents/<agentId>/sessions/`）。
 
-    相关：[迁移](/install/migrating)、[磁盘上各内容的位置](#where-things-live-on-disk)、
-    [代理工作区](/concepts/agent-workspace)、[Doctor](/gateway/doctor)、
-    [远程模式](/gateway/remote)。
+    Related: [Migrating](/install/migrating), [Where things live on disk](/help/faq#where-things-live-on-disk),
+    [Agent workspace](/concepts/agent-workspace), [Doctor](/gateway/doctor),
+    [Remote mode](/gateway/remote).
 
   </Accordion>
 
@@ -559,28 +559,31 @@ sidebarTitle: "首次运行 FAQ"
     支持。OpenClaw 内置了 **Amazon Bedrock（Converse）** 提供商。在存在 AWS 环境标记时，OpenClaw 可以自动发现流式/文本 Bedrock 目录并将其作为隐式 `amazon-bedrock` 提供商合并；否则你也可以显式启用 `plugins.entries.amazon-bedrock.config.discovery.enabled` 或添加一个手动提供商条目。参见 [Amazon Bedrock](/providers/bedrock) 和 [模型提供商](/providers/models)。如果你更喜欢受管密钥流，在 Bedrock 前面放一个兼容 OpenAI 的代理仍然是有效选项。
   </Accordion>
 
-  <Accordion title="Codex 认证是怎么工作的？">
-    OpenClaw 通过 OAuth（ChatGPT 登录）支持 **OpenAI Code（Codex）**。通过默认 PI 运行器使用
-    `openai-codex/gpt-5.5` 进行 Codex OAuth。使用
-    `openai/gpt-5.5` 进行直接的 OpenAI API key 访问。GPT-5.5 也可以通过
-    `openai-codex/gpt-5.5` 使用订阅/OAuth，或者通过原生 Codex app-server
-    运行，使用 `openai/gpt-5.5` 和 `agentRuntime.id: "codex"`。
-    参见 [模型提供商](/concepts/model-providers) 和 [引导（CLI）](/start/wizard)。
+  <Accordion title="How does Codex auth work?">
+    OpenClaw supports **OpenAI Code (Codex)** via OAuth (ChatGPT sign-in). Use
+    `openai/gpt-5.5` with `agentRuntime.id: "codex"` for the common setup:
+    ChatGPT/Codex subscription auth plus native Codex app-server execution. Use
+    `openai-codex/gpt-5.5` only when you want Codex OAuth through the default
+    PI runner. Use `openai/gpt-5.5` without the Codex runtime override for
+    direct OpenAI API-key access.
+    See [Model providers](/concepts/model-providers) and [Onboarding (CLI)](/start/wizard).
   </Accordion>
 
   <Accordion title="为什么 OpenClaw 仍然提到 openai-codex？">
     `openai-codex` 是 ChatGPT/Codex OAuth 的提供商和 auth-profile id。
     它也是 Codex OAuth 的显式 PI 模型前缀：
 
-    - `openai/gpt-5.5` = PI 中当前直接 OpenAI API key 路径
-    - `openai-codex/gpt-5.5` = PI 中的 Codex OAuth 路径
-    - `openai/gpt-5.5` + `agentRuntime.id: "codex"` = 原生 Codex app-server 路径
-    - `openai-codex:...` = auth profile id，不是模型引用
+    - `openai/gpt-5.5` + `agentRuntime.id: "codex"` = ChatGPT/Codex subscription auth with native Codex runtime
+    - `openai-codex/gpt-5.5` = Codex OAuth route in PI
+    - `openai/gpt-5.5` without a Codex runtime override = direct OpenAI API-key route in PI
+    - `openai-codex:...` = auth profile id, not a model ref
 
-    如果你想要直接的 OpenAI Platform 计费/限额路径，请设置
-    `OPENAI_API_KEY`。如果你想要 ChatGPT/Codex 订阅认证，请使用
-    `openclaw models auth login --provider openai-codex` 登录，并在 PI 运行中使用
-    `openai-codex/*` 模型引用。
+    If you want the direct OpenAI Platform billing/limit path, set
+    `OPENAI_API_KEY`. If you want ChatGPT/Codex subscription auth, sign in with
+    `openclaw models auth login --provider openai-codex`. For native Codex
+    runtime, keep the model ref as `openai/gpt-5.5` and set
+    `agentRuntime.id: "codex"`. Use `openai-codex/*` model refs only for PI
+    runs.
 
   </Accordion>
 
@@ -752,7 +755,7 @@ sidebarTitle: "首次运行 FAQ"
     curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm
     ```
 
-    备份提示：参见 [备份策略](#where-things-live-on-disk)。
+    Backup tips: see [Backup strategy](/help/faq#where-things-live-on-disk).
 
   </Accordion>
 

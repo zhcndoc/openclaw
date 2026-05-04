@@ -9,7 +9,7 @@ title: "发现与传输"
 
 # 发现与传输
 
-OpenClaw 在表面上看有两个相似但实际上不同的问题：
+OpenClaw 表面上看有两个相似但实际上不同的问题：
 
 1. **操作员远程控制**：由 macOS 菜单栏应用控制运行在其他位置的网关。
 2. **节点配对**：iOS/Android（以及未来的节点）发现网关并安全地进行配对。
@@ -54,8 +54,10 @@ Multicast Bonjour 只是尽力而为，并不会跨网络传递。OpenClaw 也�
 
 目标方向：
 
-- **网关**通过 Bonjour 广播其 WS 端点。
-- 客户端浏览并显示“选择一个网关”列表，然后保存所选端点。
+- The **gateway** advertises its WS endpoint via Bonjour when the bundled
+  `bonjour` plugin is enabled. The plugin auto-starts on macOS hosts and is
+  opt-in elsewhere.
+- Clients browse and show a “pick a gateway” list, then store the chosen endpoint.
 
 故障排查和信标细节：[Bonjour](/gateway/bonjour)。
 
@@ -83,14 +85,20 @@ Multicast Bonjour 只是尽力而为，并不会跨网络传递。OpenClaw 也�
 - TLS pinning 绝不能允许广告中的 `gatewayTlsSha256` 覆盖先前已存储的 pin。
 - iOS/Android 节点在所选路线为安全/TLS 方式时，应要求先进行一次明确的“信任此指纹”确认，然后再存储首次 pin（带外验证）。
 
-禁用/覆盖：
+启用/禁用/覆盖：
 
-- `OPENCLAW_DISABLE_BONJOUR=1` 可禁用广播。
-- 当未设置 `OPENCLAW_DISABLE_BONJOUR` 时，Bonjour 会在普通主机上广播，并在检测到容器时自动禁用。仅在主机、macvlan 或其他支持 mDNS 的网络中使用 `0`；使用 `1` 可强制禁用。
-- `gateway.bind` 在 `~/.openclaw/openclaw.json` 中控制 Gateway 的绑定模式。
-- `OPENCLAW_SSH_PORT` 覆盖 `sshPort` 发出时广播的 SSH 端口。
-- `OPENCLAW_TAILNET_DNS` 发布 `tailnetDns` 提示（MagicDNS）。
-- `OPENCLAW_CLI_PATH` 覆盖广播的 CLI 路径。
+- `openclaw plugins enable bonjour` 启用 LAN multicast 广播。
+- `OPENCLAW_DISABLE_BONJOUR=1` 禁用广播。
+- 当 Bonjour 插件已启用且 `OPENCLAW_DISABLE_BONJOUR` 未设置时，
+  Bonjour 会在普通主机上广播，并在检测到容器内自动禁用。
+  空配置的 macOS Gateway 启动会自动启用该插件；Linux、
+  Windows 和容器化部署需要显式启用。
+  仅在主机、macvlan 或其他支持 mDNS 的网络上使用 `0`；使用 `1` 可
+  强制禁用。
+- `gateway.bind` 在 `~/.openclaw/openclaw.json` 中控制 Gateway 绑定模式。
+- `OPENCLAW_SSH_PORT` 会覆盖在 `sshPort` 发出时所公布的 SSH 端口。
+- `OPENCLAW_TAILNET_DNS` 会发布 `tailnetDns` 提示（MagicDNS）。
+- `OPENCLAW_CLI_PATH` 会覆盖公布的 CLI 路径。
 
 ### 2) Tailnet（跨网络）
 

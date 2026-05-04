@@ -59,7 +59,8 @@ OpenClaw 可以显示一个单独的后续步骤，以使用相同的
       xai: {
         config: {
           webSearch: {
-            apiKey: "xai-...", // 如果已设置 XAI_API_KEY，则为可选项
+            apiKey: "xai-...", // 如果设置了 XAI_API_KEY，则为可选项
+            baseUrl: "https://api.x.ai/v1", // 可选的 Responses API 代理/基础 URL 覆盖
           },
         },
       },
@@ -92,7 +93,18 @@ Grok 搜索支持 `query`。
 
 目前不支持特定于提供方的过滤器。
 
-## 相关内容
+Grok 使用特定于提供方的 60 秒默认超时，因为 xAI Responses
+基于网络的检索可能比共享的 `web_search` 默认值运行更久。设置
+`tools.web.search.timeoutSeconds` 可覆盖它。
+
+## Base URL overrides
+
+当 Grok 网页搜索需要通过运营商代理或兼容 xAI 的 Responses 端点路由时，设置 `plugins.entries.xai.config.webSearch.baseUrl`。OpenClaw
+会在去除尾部斜杠后向 `<baseUrl>/responses` 发送请求。`x_search`
+使用相同的 `webSearch.baseUrl` 回退，除非
+`plugins.entries.xai.config.xSearch.baseUrl` 已设置。
+
+## 相关
 
 - [Web Search 概览](/tools/web) -- 所有提供方和自动检测
 - [Web Search 中的 x_search](/tools/web#x_search) -- 通过 xAI 提供的原生 X 搜索

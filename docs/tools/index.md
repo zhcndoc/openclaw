@@ -107,6 +107,8 @@ ComfyUI）注册了 `music_generate` 时，请使用它。这与 `tts` 不同，
 - [OpenProse](/prose) — 以 markdown 为先的工作流编排
 - [Tokenjuice](/tools/tokenjuice) — 紧凑化噪声较多的 `exec` 和 `bash` 工具结果
 
+插件工具仍然通过 `api.registerTool(...)` 编写，并在插件清单的 `contracts.tools` 列表中声明。OpenClaw 在发现阶段会捕获已验证的工具描述符，并按插件源和契约进行缓存，因此后续的工具规划可以跳过插件运行时加载。工具执行仍然会加载所属插件并调用实时注册的实现。
+
 ## 工具配置
 
 ### 允许和拒绝列表
@@ -131,9 +133,9 @@ ComfyUI）注册了 `music_generate` 时，请使用它。这与 `tts` 不同，
 
 | 配置文件     | 包含内容                                                                                                                                  |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `full`      | 面向更广泛命令/控制访问的无限制基线；与不设置 `tools.profile` 相同                                                   |
-| `coding`    | `group:fs`、`group:runtime`、`group:web`、`group:sessions`、`group:memory`、`cron`、`image`、`image_generate`、`music_generate`、`video_generate` |
-| `messaging` | `group:messaging`、`sessions_list`、`sessions_history`、`sessions_send`、`session_status`                                                         |
+| `full`      | 所有核心和可选插件工具；用于更广泛命令/控制访问的无限制基线                                                      |
+| `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `image`, `image_generate`, `music_generate`, `video_generate` |
+| `messaging` | `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status`                                                         |
 | `minimal`   | 仅 `session_status`                                                                                                                             |
 
 <Note>

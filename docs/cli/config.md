@@ -439,9 +439,9 @@ ls -lt "$CONFIG".rejected.* 2>/dev/null | head
 openclaw config validate
 ```
 
-仍然允许直接使用编辑器写入，但运行中的 Gateway 会将其视为不受信任，直到它们通过验证。无效的直接编辑可以在启动或热重载期间从上一次已知良好的备份中恢复。参见 [Gateway 故障排查](/gateway/troubleshooting#gateway-restored-last-known-good-config)。
+直接编辑器写入仍然被允许，但运行中的 Gateway 会将其视为不受信任，直到它们通过验证。无效的直接编辑会导致启动失败，或在热重载时被跳过；Gateway 不会重写 `openclaw.json`。运行 `openclaw doctor --fix` 可修复带前缀/被覆盖的配置，或恢复上一个已知可用的副本。参见 [Gateway 故障排查](/gateway/troubleshooting#gateway-rejected-invalid-config)。
 
-整文件恢复仅保留给全局损坏的配置，例如解析错误、根级 schema 失败、旧版迁移失败，或插件与根配置同时失败。如果验证仅在 `plugins.entries.<id>...` 下失败，OpenClaw 会保留当前的 `openclaw.json`，并报告插件本地问题，而不是恢复 `.last-good`。这可以防止插件 schema 变更或 `minHostVersion` 不匹配回滚与模型、提供者、认证配置文件、通道、Gateway 暴露、工具、内存、浏览器或 cron 配置等无关的用户设置。
+整文件恢复仅保留给 doctor 修复使用。插件 schema 变更或 `minHostVersion` 不匹配会继续报错，而不会回滚无关的用户设置，例如模型、提供方、认证配置文件、渠道、gateway 暴露、工具、内存、浏览器或 cron 配置。
 
 ## 子命令
 

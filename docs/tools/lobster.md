@@ -93,7 +93,7 @@ gog.gmail.search --query 'newer_than:1d' \
     "list": [
       {
         "id": "main",
-        "tools": { "allow": ["llm-task"] }
+        "tools": { "alsoAllow": ["llm-task"] }
       }
     ]
   }
@@ -191,7 +191,7 @@ Lobster 是一个**可选**的插件工具（默认未启用）。
 除非你打算使用受限的允许列表模式，否则不要使用 `tools.allow: ["lobster"]`。
 
 <Note>
-允许列表对可选插件是可选启用的。如果你的允许列表只列出插件工具（例如 `lobster`），OpenClaw 会保持核心工具可用。若要限制核心工具，也请将你希望包含的核心工具或工具组一并加入允许列表。
+Allowlist 是可选插件的自愿启用项。`alsoAllow` 仅启用指定的可选插件工具，同时保留正常的核心工具集。若要限制核心工具，请使用 `tools.allow` 并指定你想要的核心工具或工具组。
 </Note>
 
 ## 示例：邮件分拣

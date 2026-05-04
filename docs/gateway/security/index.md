@@ -86,13 +86,14 @@ OpenClaw 假定主机和配置边界是受信任的：
 将 Gateway 和 node 视为同一个操作员信任域，但角色不同：
 
 - **Gateway** 是控制平面和策略面（`gateway.auth`、工具策略、路由）。
-- **Node** 是与该 Gateway 配对的远程执行面（命令、设备操作、主机本地能力）。
-- 经过 Gateway 认证的调用方，在 Gateway 范围内被视为受信任。配对后，node 动作被视为该 node 上的受信任操作员动作。
-- 直接使用 loopback 的后端客户端如果用共享的 gateway token/password 进行了认证，就可以发起内部控制平面 RPC，而无需提供用户设备身份。这不是远程或浏览器配对绕过：网络客户端、node 客户端、设备令牌客户端以及显式设备身份仍然会经过配对和范围升级强制执行。
-- `sessionKey` 是路由/上下文选择，不是按用户授权。
-- Exec 审批（允许列表 + 询问）是针对操作员意图的防护栏，而不是敌对多租户隔离。
-- OpenClaw 对受信任单操作员部署的产品默认行为是：在 `gateway`/`node` 上允许主机 exec 而不弹出审批提示（`security="full"`，除非你收紧，否则 `ask="off"`）。这个默认值是有意为之的 UX，而不是其自身的漏洞。
-- Exec 审批绑定的是精确的请求上下文和尽力而为的直接本地文件操作数；它们并不语义化地建模每一种运行时/解释器加载路径。若要获得强边界，请使用沙箱和主机隔离。
+- **Node** 是与该 Gateway 配对的远程执行面（命令、设备动作、主机本地能力）。
+- 经过 Gateway 认证的调用方在 Gateway 范围内是受信任的。配对完成后，node 动作属于该 node 上受信任的操作员动作。
+- 操作员作用域级别和审批时检查在 [操作员作用域](/gateway/operator-scopes) 中有总结。
+- 使用共享 gateway token/password 认证的直接 loopback 后端客户端，可以在不提供用户设备身份的情况下执行内部控制平面 RPC。这不是远程或浏览器配对绕过：网络客户端、node 客户端、device-token 客户端和显式设备身份仍然要经过配对和作用域升级强制检查。
+- `sessionKey` 是路由/上下文选择，不是按用户认证。
+- Exec 审批（允许列表 + 询问）是操作员意图的护栏，不是恶意多租户隔离。
+- OpenClaw 对受信任的单操作员设置的产品默认值是：`gateway`/`node` 上的主机 exec 允许在没有审批提示的情况下运行（`security="full"`、`ask="off"`，除非你收紧它）。这个默认值是有意的 UX 设计，本身不是漏洞。
+- Exec 审批绑定的是精确的请求上下文和尽力而为的本地文件操作数；它们不会在语义上建模每一种运行时/解释器加载路径。要获得强边界，请使用沙箱和主机隔离。
 
 如果你需要对抗性用户隔离，请按 OS 用户/主机拆分信任边界并运行独立的网关。
 
@@ -736,7 +737,7 @@ nmap -sT -p 1-65535 <public-ip> --open
 
 ### mDNS/Bonjour 发现
 
-Gateway 通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播其存在，以便进行本地设备发现。在完整模式下，这会包含可能暴露运行细节的 TXT 记录：
+当启用捆绑的 `bonjour` 插件时，Gateway 会通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播自身存在，以便本地设备发现。在完整模式下，这会包含可能暴露运行细节的 TXT 记录：
 
 - `cliPath`：CLI 二进制的完整文件系统路径（会暴露用户名和安装位置）
 - `sshPort`：在主机上声明 SSH 可用
@@ -746,7 +747,9 @@ Gateway 通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播其存在�
 
 **建议：**
 
-1. **最小模式**（默认，适用于暴露的网关，推荐）：在 mDNS 广播中省略敏感字段：
+1. **如果不需要 LAN 发现，请保持 Bonjour 禁用。** Bonjour 会在 macOS 主机上自动启动，其他平台则为可选；直接 Gateway URL、Tailnet、SSH 或广域 DNS-SD 可以避免本地多播。
+
+2. **最小模式**（启用 Bonjour 时的默认值，适用于暴露的 gateway）：从 mDNS 广播中省略敏感字段：
 
    ```json5
    {
@@ -756,7 +759,7 @@ Gateway 通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播其存在�
    }
    ```
 
-2. **完全禁用**：如果你不需要本地设备发现：
+3. **禁用 mDNS 模式**，如果你想保留插件启用，但抑制本地设备发现：
 
    ```json5
    {
@@ -766,7 +769,7 @@ Gateway 通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播其存在�
    }
    ```
 
-3. **完整模式**（按需启用）：在 TXT 记录中包含 `cliPath` + `sshPort`：
+4. **完整模式**（可选）：在 TXT 记录中包含 `cliPath` + `sshPort`：
 
    ```json5
    {
@@ -776,9 +779,9 @@ Gateway 通过 mDNS（端口 5353 上的 `_openclaw-gw._tcp`）广播其存在�
    }
    ```
 
-4. **环境变量**（替代方案）：设置 `OPENCLAW_DISABLE_BONJOUR=1`，在不更改配置的情况下禁用 mDNS。
+5. **环境变量**（替代方案）：设置 `OPENCLAW_DISABLE_BONJOUR=1`，即可在不更改配置的情况下禁用 mDNS。
 
-在最小模式下，Gateway 仍会广播足以用于设备发现的信息（`role`、`gatewayPort`、`transport`），但会省略 `cliPath` 和 `sshPort`。需要 CLI 路径信息的应用可以改为通过已认证的 WebSocket 连接获取。
+当 Bonjour 以最小模式启用时，Gateway 广播的信息足以用于设备发现（`role`、`gatewayPort`、`transport`），但会省略 `cliPath` 和 `sshPort`。需要 CLI 路径信息的应用可以改为通过已认证的 WebSocket 连接获取。
 
 ### 锁定 Gateway WebSocket（本地认证）
 
@@ -989,7 +992,7 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
 
 附加加固选项：
 
-- `tools.exec.applyPatch.workspaceOnly: true`（默认）：确保即使关闭沙盒，`apply_patch` 也无法在工作区目录之外写入/删除。只有在你明确希望 `apply_patch` 影响工作区外文件时才将其设为 `false`。
+- `tools.exec.applyPatch.workspaceOnly: true`（默认）：确保即使关闭沙箱，`apply_patch` 也无法在工作区目录之外写入/删除。只有在你明确希望 `apply_patch` 影响工作区外文件时才将其设为 `false`。
 - `tools.fs.workspaceOnly: true`（可选）：将 `read`/`write`/`edit`/`apply_patch` 路径以及原生提示图片自动加载路径限制在工作区目录内（如果你今天允许绝对路径，并希望增加一道统一的保护，这会很有用）。
 - 保持文件系统根目录狭窄：避免将 home 目录这类宽泛路径作为 agent 工作区/沙盒工作区。宽泛根目录可能会让文件系统工具暴露敏感本地文件（例如 `~/.openclaw` 下的状态/配置）。
 
@@ -1014,7 +1017,7 @@ OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝
 }
 ```
 
-如果你也想让工具执行“默认更安全”，请再为任何非 owner agent 添加沙盒 + 禁用危险工具（下面“每个 agent 的访问配置文件”中有示例）。
+如果你也想让工具执行“默认更安全”，请再为任何非 owner agent 添加沙箱 + 禁用危险工具（下面“每个 agent 的访问配置文件”中有示例）。
 
 聊天驱动的 agent turn 的内置基线：非 owner 发送者不能使用 `cron` 或 `gateway` 工具。
 
@@ -1226,37 +1229,14 @@ OpenClaw 的浏览器导航策略默认是严格的：除非你明确选择启�
 - 攻击者发了什么 + agent 做了什么
 - Gateway 是否暴露到了 loopback 之外（LAN/Tailscale Funnel/Serve）
 
-## 使用 detect-secrets 进行秘密扫描
+## Secret scanning
 
-CI 会在 `secrets` 任务中运行 `detect-secrets` pre-commit hook。
-推送到 `main` 时始终会运行全文件扫描。拉取请求在可用基线提交时会使用变更文件
-快速路径，否则回退到全文件扫描。
-如果失败，说明有尚未纳入基线的新候选项。
+CI 运行 pre-commit 的 `detect-private-key` 钩子扫描整个仓库。如果它
+失败了，请移除或轮换已提交的密钥材料，然后在本地复现：
 
-### 如果 CI 失败
-
-1. 在本地复现：
-
-   ```bash
-   pre-commit run --all-files detect-secrets
-   ```
-
-2. 理解这些工具：
-   - pre-commit 中的 `detect-secrets` 会使用仓库的
-     基线和排除项运行 `detect-secrets-hook`。
-   - `detect-secrets audit` 会打开一个交互式审查，标记每个基线
-     项为真实或误报。
-3. 对于真实秘密：轮换/删除它们，然后重新运行扫描以更新基线。
-4. 对于误报：运行交互式审计并将其标记为 false：
-
-   ```bash
-   detect-secrets audit .secrets.baseline
-   ```
-
-5. 如果你需要新的排除项，将它们添加到 `.detect-secrets.cfg`，并使用匹配的 `--exclude-files` / `--exclude-lines` 标志重新生成
-   基线（该配置文件仅供参考；detect-secrets 不会自动读取它）。
-
-当更新后的 `.secrets.baseline` 反映出预期状态后，提交它。
+```bash
+pre-commit run --all-files detect-private-key
+```
 
 ## 报告安全问题
 

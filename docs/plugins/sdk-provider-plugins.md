@@ -26,7 +26,9 @@ read_when:
 ## 操作流程
 
 <Steps>
-  <Step title="软件包与清单">
+  <Step title="Package and manifest">
+    ### Step 1: Package and manifest
+
     <CodeGroup>
     ```json package.json
     {
@@ -466,12 +468,14 @@ read_when:
 
   </Step>
 
-  <Step title="添加额外能力（可选）">
-    提供方插件可以在文本推理之外，同时注册语音、实时转写、实时
-    语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将其归类为
-    **hybrid-capability** 插件——这是公司插件的推荐模式（每个厂商一个插件）。
+  <Step title="Add extra capabilities (optional)">
+    ### Step 5: Add extra capabilities
+
+    一个提供方插件可以在文本推理之外，同时注册语音、实时转写、实时语音、
+    媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将这类插件归类为
+    **hybrid-capability** 插件——这是公司插件的推荐模式（每个供应商一个插件）。
     参见
-    [内部机制：能力归属](/plugins/architecture#capability-ownership-model)。
+    [内部机制：能力所有权](/plugins/architecture#capability-ownership-model)。
 
     在 `register(api)` 中与你现有的
     `api.registerProvider(...)` 调用并列注册每种能力。只选择你需要的选项卡：
@@ -660,7 +664,9 @@ read_when:
 
   </Step>
 
-  <Step title="测试">
+  <Step title="Test">
+    ### Step 6: Test
+
     ```typescript src/provider.test.ts
     import { describe, it, expect } from "vitest";
     // 从 index.ts 或一个专门的文件中导出你的提供方配置对象

@@ -1,5 +1,5 @@
 ---
-summary: "memory-wiki: 带有来源、声明、仪表盘和桥接模式的编译知识库"
+summary: "memory-wiki: 一个带有来源、声明、仪表盘和桥接模式的编译知识库"
 read_when:
   - 你希望在普通 MEMORY.md 笔记之外保留持久知识
   - 你正在配置捆绑的 memory-wiki 插件
@@ -193,9 +193,9 @@ aliases:
   - bgroux
 privacyTier: local-private
 bestUsedFor:
-  - Microsoft Teams and Azure routing
+  - Microsoft Teams 和 Azure 路由
 notEnoughFor:
-  - legal approval
+  - 法律批准
 lastRefreshedAt: "2026-04-29T00:00:00.000Z"
 personCard:
   handles:
@@ -205,11 +205,11 @@ personCard:
   emails:
     - brad@example.com
   timezone: America/Chicago
-  lane: Microsoft ecosystem
+  lane: Microsoft 生态系统
   askFor:
     - Teams rollout questions
   avoidAskingFor:
-    - unrelated billing decisions
+    - 无关的计费决策
   confidence: 0.8
   privacyTier: confirm-before-use
 relationships:
@@ -220,7 +220,7 @@ relationships:
     evidenceKind: discrawl-stat
 claims:
   - id: claim.brad.teams
-    text: Brad is useful for Microsoft Teams routing.
+    text: Brad 对 Microsoft Teams 路由很有用。
     status: supported
     confidence: 0.9
     evidence:
@@ -433,6 +433,9 @@ claims:
 {
   memory: {
     backend: "qmd",
+  },
+  plugins: {
+    entries: {
       "memory-wiki": {
         enabled: true,
         config: {

@@ -1,6 +1,6 @@
 ---
 summary: "用于替代底层嵌入式 agent 执行器的插件实验性 SDK 接口"
-title: "Agent harness plugins"
+title: "Agent harness 插件"
 sidebarTitle: "Agent Harness"
 read_when:
   - 你正在更改嵌入式 agent 运行时或 harness 注册表
@@ -140,13 +140,11 @@ OpenClaw 要求 Codex app-server `0.125.0` 或更高版本。Codex 插件会检�
 捆绑的 `codex` harness 是嵌入式 OpenClaw agent turn 的原生 Codex 模式。请先启用捆绑的 `codex` 插件，并在配置使用限制性 allowlist 时将 `codex` 加入 `plugins.allow`。原生 app-server 配置应使用 `openai/gpt-*`，并设置 `agentRuntime.id: "codex"`。
 若要通过 PI 使用 Codex OAuth，请改用 `openai-codex/*`。旧的 `codex/*` 模型引用仍作为原生 harness 的兼容别名保留。
 
-当此模式运行时，Codex 负责原生线程 id、resume 行为、压缩以及 app-server 执行。OpenClaw 仍负责聊天通道、可见转录镜像、工具策略、审批、媒体投递和 session 选择。当你需要证明只有 Codex app-server 路径能够认领该 run 时，请使用 `agentRuntime.id: "codex"` 且不要覆盖 `fallback`。显式插件运行时默认已经是 fail closed。只有在你有意希望由 PI 处理缺失的 harness 选择时，才设置 `fallback: "pi"`。Codex app-server 失败会直接失败，而不是通过 PI 重试。
+当此模式运行时，Codex 拥有原生线程 id、恢复行为、压缩以及 app-server 执行。OpenClaw 仍然拥有聊天通道、可见转录镜像、工具策略、审批、媒体投递和会话选择。当你需要证明只有 Codex app-server 路径可以认领该 run 时，请使用 `agentRuntime.id: "codex"`。显式插件运行时会在关闭状态下失败；Codex app-server 的选择失败和运行时失败不会通过 PI 重试。
 
-## 禁用 PI fallback
+## 运行时严格性
 
-默认情况下，OpenClaw 运行嵌入式 agent 时，`agents.defaults.agentRuntime` 设置为 `{ id: "auto", fallback: "pi" }`。在 `auto` 模式下，已注册的插件 harness 可以认领一个 provider/model 对。如果都不匹配，OpenClaw 会回退到 PI。
-
-在 `auto` 模式下，当你需要缺失的插件 harness 选择直接失败而不是使用 PI 时，请将 `fallback: "none"`。显式插件运行时，例如 `runtime: "codex"`，默认已经是 fail closed，除非在同一配置或环境覆盖作用域中设置了 `fallback: "pi"`。已选择的插件 harness 失败时总是会硬失败。这不会阻止显式的 `runtime: "pi"` 或 `OPENCLAW_AGENT_RUNTIME=pi`。
+默认情况下，OpenClaw 使用 OpenClaw Pi 运行嵌入式 agent。在 `auto` 模式下，已注册的插件 harness 可以认领一个 provider/model 对；如果没有匹配项，则由 PI 处理该 turn。当缺失 harness 选择时应当失败而不是通过 PI 路由时，请使用显式插件运行时，例如 `agentRuntime.id: "codex"`。已选择的插件 harness 失败始终会硬失败。这不会阻止显式的 `agentRuntime.id: "pi"` 或 `OPENCLAW_AGENT_RUNTIME=pi`。
 
 用于仅 Codex 的嵌入式运行：
 
@@ -163,15 +161,14 @@ OpenClaw 要求 Codex app-server `0.125.0` 或更高版本。Codex 插件会检�
 }
 ```
 
-如果你希望任何已注册的插件 harness 都可以认领匹配的模型，但又不希望 OpenClaw 静默回退到 PI，请保留 `runtime: "auto"` 并禁用 fallback：
+如果你希望任何已注册的插件 harness 认领匹配模型，否则使用 PI，请设置 `id: "auto"`：
 
 ```json
 {
   "agents": {
     "defaults": {
       "agentRuntime": {
-        "id": "auto",
-        "fallback": "none"
+        "id": "auto"
       }
     }
   }
@@ -184,35 +181,26 @@ OpenClaw 要求 Codex app-server `0.125.0` 或更高版本。Codex 插件会检�
 {
   "agents": {
     "defaults": {
-      "agentRuntime": {
-        "id": "auto",
-        "fallback": "pi"
-      }
+      "agentRuntime": { "id": "auto" }
     },
     "list": [
       {
         "id": "codex-only",
         "model": "openai/gpt-5.5",
-        "agentRuntime": {
-          "id": "codex",
-          "fallback": "none"
-        }
+        "agentRuntime": { "id": "codex" }
       }
     ]
   }
 }
 ```
 
-`OPENCLAW_AGENT_RUNTIME` 仍会覆盖已配置的 runtime。使用
-`OPENCLAW_AGENT_HARNESS_FALLBACK=none` 可从环境中禁用 PI fallback。
+`OPENCLAW_AGENT_RUNTIME` 仍会覆盖已配置的运行时。
 
 ```bash
-OPENCLAW_AGENT_RUNTIME=codex \
-OPENCLAW_AGENT_HARNESS_FALLBACK=none \
-openclaw gateway run
+OPENCLAW_AGENT_RUNTIME=codex openclaw gateway run
 ```
 
-在禁用 fallback 的情况下，当请求的 harness 未注册、不支持已解析的 provider/model，或在产生 turn 副作用之前失败时，session 会提前失败。这对于仅 Codex 的部署以及必须证明实际使用了 Codex app-server 路径的在线测试而言，是有意如此。
+在显式插件运行时下，当请求的 harness 未注册、不支持已解析的 provider/model，或在产生 turn 副作用之前失败时，session 会提前失败。这是为仅 Codex 部署以及必须证明实际使用了 Codex app-server 路径的在线测试所刻意设计的。
 
 此设置只控制嵌入式 agent harness。它不会禁用图片、视频、音乐、TTS、PDF 或其他 provider 特定的模型路由。
 

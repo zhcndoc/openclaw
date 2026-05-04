@@ -196,8 +196,8 @@ openclaw hooks disable command-logger
 ## 安装钩子包
 
 ```bash
-openclaw plugins install <package>        # 先 ClawHub，再 npm
-openclaw plugins install npm:<package>    # 仅 npm
+openclaw plugins install <package>        # 默认使用 npm
+openclaw plugins install npm:<package>    # 仅限 npm
 openclaw plugins install <package> --pin  # 固定版本
 openclaw plugins install <path>           # 本地路径
 ```

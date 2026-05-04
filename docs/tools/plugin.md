@@ -18,6 +18,9 @@ OpenClaw 自有插件包的临时集合上使用，直到迁移完成。
 
 ## 快速开始
 
+用于复制粘贴的安装、列出、卸载、更新和发布示例，请参见
+[管理插件](/plugins/manage-plugins)。
+
 <Steps>
   <Step title="查看已加载内容">
     ```bash
@@ -27,6 +30,12 @@ OpenClaw 自有插件包的临时集合上使用，直到迁移完成。
 
   <Step title="安装插件">
     ```bash
+    # 搜索 ClawHub 插件
+    openclaw plugins search "calendar"
+
+    # 来自 ClawHub
+    openclaw plugins install clawhub:openclaw-codex-app-server
+
     # 来自 npm
     openclaw plugins install npm:@acme/openclaw-plugin
 
@@ -46,6 +55,15 @@ OpenClaw 自有插件包的临时集合上使用，直到迁移完成。
     ```
 
     然后在配置文件中的 `plugins.entries.\<id\>.config` 下进行配置。
+
+  </Step>
+
+  <Step title="聊天原生管理">
+    在运行中的 Gateway 里，只有所有者可用的 `/plugins enable` 和 `/plugins disable`
+    会触发 Gateway 配置重新加载。Gateway 会在进程内重新加载插件运行时
+    相关表面，新代理轮次会从刷新后的注册表重新构建工具列表。
+    `/plugins install` 会更改插件源代码，因此 Gateway 会请求重启，
+    而不是假装当前进程能够安全地重新加载已经导入的模块。
 
   </Step>
 
@@ -71,31 +89,36 @@ OpenClaw 自有插件包的临时集合上使用，直到迁移完成。
 ```
 
 安装路径使用与 CLI 相同的解析器：本地路径/归档、显式
-`clawhub:<pkg>`、显式 `npm:<pkg>`、显式 `git:<repo>`，或裸包
-规格（先 ClawHub，再 npm 兜底）。
+`clawhub:<pkg>`、显式 `npm:<pkg>`、显式 `git:<repo>`，或通过 npm 的裸
+包名规范。
 
-如果配置无效，正常安装会失败并提示你运行
+如果配置无效，安装通常会直接失败，并指向
 `openclaw doctor --fix`。唯一的恢复例外是一个狭窄的捆绑插件
-重装路径，适用于选择启用
+重装路径，适用于选择加入
 `openclaw.install.allowInvalidConfigRecovery` 的插件。
-在 Gateway 启动期间，某个插件的无效配置会与其他插件隔离：
-启动日志会记录 `plugins.entries.<id>.config` 的问题，加载时跳过该插件，
-并保持其他插件和频道在线。运行 `openclaw doctor --fix`
-可通过禁用该插件条目并删除其无效配置负载来隔离坏插件配置；常规配置备份会保留之前的值。
-当某个频道配置引用了一个已不再可发现的插件，但相同的过时插件 id 仍然存在于插件配置或安装记录中时，Gateway 启动会记录警告并跳过该频道，而不是阻止其他所有频道。
-运行 `openclaw doctor --fix` 以移除过时的频道/插件条目；若未知
-频道键没有过时插件证据，则仍会失败校验，这样拼写错误就能保持可见。
-如果设置了 `plugins.enabled: false`，过时的插件引用会被视为无效状态：
+在 Gateway 启动期间，无效插件配置会像其他无效
+配置一样直接失败。运行 `openclaw doctor --fix` 可以通过
+禁用该插件条目并移除其无效配置载荷来隔离坏掉的插件配置；
+正常的配置备份会保留之前的值。
+当某个频道配置引用了一个不再可发现的插件，而
+插件配置或安装记录中仍保留着相同的旧插件 id 时，Gateway 启动会
+记录警告并跳过该频道，而不是阻塞其他所有频道。
+运行 `openclaw doctor --fix` 可以移除这些陈旧的频道/插件条目；没有
+陈旧插件证据的未知频道键仍然会失败校验，这样拼写错误仍然可见。
+如果设置了 `plugins.enabled: false`，陈旧的插件引用会被视为无操作：
 Gateway 启动会跳过插件发现/加载工作，而 `openclaw doctor` 会保留
-已禁用的插件配置，而不是自动删除它。若你想移除过时的插件 id，请先重新启用插件再运行 doctor 清理。
+已禁用的插件配置，而不会自动移除它。若你希望移除陈旧的插件 id，
+请在运行 doctor 清理之前重新启用插件。
 
-插件依赖安装仅在显式安装/更新或
-doctor 修复流程期间发生。Gateway 启动、配置重新加载和运行时检查都
-不会运行包管理器或修复依赖树。本地插件必须已经
-安装了其依赖，而 npm、git 和 ClawHub 插件会安装在 OpenClaw 管理的插件根目录下，并带有包级本地
-依赖。外部插件和自定义加载路径仍必须通过
-`openclaw plugins install` 安装。
+插件依赖安装只会在显式安装/更新或 doctor 修复流程期间发生。Gateway 启动、配置重新加载和运行时检查都不会运行包管理器或修复依赖树。本地插件必须已经安装好其依赖，而 npm、git 和 ClawHub 插件会安装在 OpenClaw 托管的插件根目录下。npm 依赖在 OpenClaw 托管的 npm 根目录中可能会被提升；安装/更新会在信任之前扫描该托管根目录，而卸载会通过 npm 移除由 npm 托管的包。外部插件和自定义加载路径仍然必须通过 `openclaw plugins install` 安装。
+使用 `openclaw plugins list --json` 可查看每个可见插件静态的 `dependencyStatus`，而无需导入运行时代码或修复依赖。
 有关安装时生命周期，请参见 [插件依赖解析](/plugins/dependency-resolution)。
+
+对于 npm 安装，诸如 `latest` 或 dist-tag 之类的可变选择器会在安装前解析，然后固定到 OpenClaw 托管 npm 根目录中经过验证的精确版本。npm 完成后，OpenClaw 会验证已安装的
+`package-lock.json` 条目仍与解析出的版本和完整性一致。如果 npm 写入了不同的包元数据，安装会失败，并且托管包会回滚，而不是接受不同的插件工件。
+
+源代码检出是 pnpm 工作区。如果你克隆 OpenClaw 来修改捆绑插件，请运行 `pnpm install`；OpenClaw 随后会从 `extensions/<id>` 加载捆绑插件，这样编辑和包本地依赖会被直接使用。
+普通的 npm 根目录安装是用于打包后的 OpenClaw，而不是源代码检出的开发。
 
 ## 插件类型
 
@@ -108,15 +131,18 @@ OpenClaw 识别两种插件格式：
 
 二者都会显示在 `openclaw plugins list` 中。有关捆绑包详情，请参见 [Plugin Bundles](/plugins/bundles)。
 
-如果你正在编写原生插件，请从 [Building Plugins](/plugins/building-plugins)
-和 [Plugin SDK Overview](/plugins/sdk-overview) 开始。
+如果你正在编写原生插件，请从 [构建插件](/plugins/building-plugins)
+和 [插件 SDK 概览](/plugins/sdk-overview) 开始。
 
 ## 包入口点
 
 原生插件 npm 包必须在 `package.json` 中声明 `openclaw.extensions`。
-每个条目必须保留在包目录内，并解析到可读的
-运行时文件，或者解析到 TypeScript 源文件及其推断生成的 JavaScript
-同级文件，例如 `src/index.ts` 对应 `dist/index.js`。
+每个条目都必须保留在包目录内，并解析到可读取的
+运行时文件，或者解析到一个 TypeScript 源文件及其可推断的构建后 JavaScript
+对应文件，例如 `src/index.ts` 对应 `dist/index.js`。
+打包后的安装必须携带该 JavaScript 运行时输出。TypeScript
+源代码回退适用于源代码检出和本地开发路径，而不是用于
+安装到 OpenClaw 托管插件根目录中的 npm 包。
 
 当发布的运行时文件不位于与源条目相同的路径时，请使用 `openclaw.runtimeExtensions`。存在时，`runtimeExtensions` 必须对每个 `extensions` 条目恰好包含一项。列表不匹配会导致安装和插件发现失败，而不会静默回退到源路径。如果你还发布了 `openclaw.setupEntry`，请为其构建后的 JavaScript 对应文件使用 `openclaw.runtimeSetupEntry`；在声明时该文件是必需的。
 
@@ -168,7 +194,7 @@ OpenClaw 发布版已经捆绑了许多官方插件，因此在正常设置下�
     `vercel-ai-gateway`, `volcengine`, `xiaomi`, `zai`
   </Accordion>
 
-  <Accordion title="Memory plugins">
+  <Accordion title="内存插件">
     - `memory-core` — 捆绑的内存搜索（通过 `plugins.slots.memory` 默认启用）
     - `memory-lancedb` — 基于 LanceDB 的长期记忆，带自动召回/捕获（设置 `plugins.slots.memory = "memory-lancedb"`）
 
@@ -220,18 +246,15 @@ OpenClaw 发布版已经捆绑了许多官方插件，因此在正常设置下�
 工具名称。如果某个工具允许列表引用了插件工具，请将所属插件 id 添加到
 `plugins.allow`，或移除 `plugins.allow`；`openclaw doctor` 会对此形态发出警告。
 
-配置更改**需要重启 Gateway**。如果 Gateway 正在以配置
-监听 + 进程内重启模式运行（默认的 `openclaw gateway` 路径），通常会在配置写入落地后的一会儿自动执行该重启。
-目前没有支持的原生插件运行时代码或生命周期
-hooks 热重载路径；在期望更新后的 `register(api)` 代码、`api.on(...)` hooks、工具、服务，或
-provider/runtime hooks 运行之前，请重启正在提供实时频道服务的 Gateway 进程。
+通过 `/plugins enable` 或 `/plugins disable` 进行的配置更改会触发
+进程内 Gateway 插件重新加载。新代理轮次会从刷新后的插件注册表中
+重建其工具列表。诸如安装、
+更新和卸载之类会改变源代码的操作仍然会重启 Gateway 进程，因为已经导入的
+插件模块无法安全地原地替换。
 
-`openclaw plugins list` 是本地插件注册表/配置快照。其中文件中
-`enabled` 的插件表示持久化注册表和当前配置允许该
-插件参与运行。它并不能证明一个已经在运行的远程 Gateway
-子进程已经重启并加载了相同的插件代码。在 VPS/容器部署中，如果有
-包装进程，请将重启发送到实际的 `openclaw gateway run` 进程，
-或者对正在运行的 Gateway 使用 `openclaw gateway restart`。
+`openclaw plugins list` 是本地插件注册表/配置快照。那里显示为
+`enabled` 的插件表示持久化注册表和当前配置允许该插件参与。
+这并不能证明已经运行的远程 Gateway 已经重新加载或重启到了相同的插件代码。在带有包装进程的 VPS/容器部署中，请将重启或触发重新加载的写操作发送到实际的 `openclaw gateway run` 进程，或者在重新加载报告失败时对正在运行的 Gateway 使用 `openclaw gateway restart`。
 
 <Accordion title="插件状态：已禁用 vs 缺失 vs 无效">
   - **已禁用**：插件存在，但启用规则将其关闭。配置会被保留。
@@ -324,6 +347,8 @@ openclaw logs --follow
 optional。当单个工厂耗时至少 1s，或插件工具工厂总准备耗时至少 5s 时，
 慢速行会提升为 warning。
 
+OpenClaw 会为使用相同有效请求上下文的重复解析缓存成功的插件工具工厂结果。缓存键包括有效的运行时配置、工作区、agent/session id、sandbox policy、浏览器设置、交付上下文、请求者身份以及所有权状态，因此依赖这些受信任字段的工厂会在上下文变化时重新运行。
+
 如果某个插件在耗时上占主导，请检查其运行时注册：
 
 ```bash
@@ -386,28 +411,29 @@ setup flow 或工具名。最常见的原因是某个外部 channel 插件安装
 ## CLI 参考
 
 ```bash
-openclaw plugins list                       # 紧凑清单
-openclaw plugins list --enabled            # 仅已启用插件
-openclaw plugins list --verbose            # 每个插件的详细行
+openclaw plugins list                       # 精简清单
+openclaw plugins list --enabled            # 仅显示已启用插件
+openclaw plugins list --verbose            # 按插件显示详细行
 openclaw plugins list --json               # 机器可读清单
+openclaw plugins search <query>            # 搜索 ClawHub 插件目录
 openclaw plugins inspect <id>              # 静态详情
 openclaw plugins inspect <id> --runtime    # 已注册的钩子/工具/CLI/gateway 方法
 openclaw plugins inspect <id> --json       # 机器可读
 openclaw plugins inspect --all             # 全局表
 openclaw plugins info <id>                 # inspect 别名
-openclaw plugins doctor                    # diagnostics
+openclaw plugins doctor                    # 诊断
 openclaw plugins registry                  # 检查持久化的 registry 状态
 openclaw plugins registry --refresh        # 重建持久化 registry
 openclaw doctor --fix                      # 修复插件 registry 状态
 
-openclaw plugins install <package>         # 安装（先 ClawHub，再 npm）
+openclaw plugins install <package>         # 默认从 npm 安装
 openclaw plugins install clawhub:<pkg>     # 仅从 ClawHub 安装
 openclaw plugins install npm:<pkg>         # 仅从 npm 安装
 openclaw plugins install git:<repo>        # 从 git 安装
 openclaw plugins install git:<repo>@<ref>  # 从 git ref 安装
 openclaw plugins install <spec> --force    # 覆盖现有安装
 openclaw plugins install <path>            # 从本地路径安装
-openclaw plugins install -l <path>         # 链接（不复制），用于开发
+openclaw plugins install -l <path>         # 开发用链接（不复制）
 openclaw plugins install <plugin> --marketplace <source>
 openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo>
 openclaw plugins install <spec> --pin      # 记录精确解析出的 npm spec
@@ -440,10 +466,14 @@ openclaw plugins disable <id>
 当 `plugins.allow` 已经设置时，`openclaw plugins install` 会在启用之前将已安装插件 id 添加到该 allowlist 中。若同一插件 id
 存在于 `plugins.deny` 中，install 会移除该过期 deny 条目，使显式安装在重启后可立即加载。
 
-OpenClaw 维护一个持久化的本地插件 registry，作为插件清单、贡献所有权和启动规划的冷读模型。install、update、
-uninstall、enable 和 disable 流程会在更改插件状态后刷新该 registry。相同的 `plugins/installs.json` 文件在顶层 `installRecords` 中保存持久化安装元数据，并在 `plugins` 中保存可重建的 manifest 元数据。如果 registry 缺失、过期或无效，`openclaw plugins registry
---refresh` 会在不加载插件运行时模块的情况下，基于安装记录、配置策略以及 manifest/package 元数据重建其 manifest 视图。
-`openclaw plugins update <id-or-npm-spec>` 适用于已跟踪的安装。传入带有 dist-tag 或精确版本的 npm package spec 时，会将包名解析回已跟踪的插件记录，并记录新的 spec 以便未来更新。只传包名而不带版本时，会把精确固定安装移回 registry 的默认发布线。如果已安装的 npm 插件已经匹配解析后的版本和记录的 artifact identity，OpenClaw 会跳过更新，而不会下载、重新安装或重写配置。
+OpenClaw 会将持久化的本地插件 registry 作为插件清单、贡献所有权和启动规划的冷读模型。install、update、
+uninstall、enable 和 disable 流程会在更改插件状态后刷新该 registry。相同的 `plugins/installs.json` 文件会在顶层 `installRecords` 中保留持久化安装元数据，并在 `plugins` 中保留可重建的 manifest 元数据。如果
+registry 缺失、过期或无效，`openclaw plugins registry
+--refresh` 会从安装记录、配置策略以及 manifest/package 元数据重建其清单视图，而无需加载插件运行时模块。
+`openclaw plugins update <id-or-npm-spec>` 适用于已跟踪的安装。传入带有 dist-tag 或精确版本的 npm package spec 时，会将包名重新解析回已跟踪的插件记录，并记录新的 spec 以供后续更新使用。
+仅传入不带版本的包名会把精确 pin 住的安装迁回 registry 的默认发布线。如果已安装的 npm 插件已经匹配已解析版本和已记录的 artifact 身份，OpenClaw 会跳过更新，不会下载、重新安装或重写配置。
+当 `openclaw update` 在 beta channel 上运行时，默认发布线的 npm 和 ClawHub
+插件记录会先尝试 `@beta`，若不存在插件 beta release，则回退到 default/latest。精确版本和显式标签会保持锁定。
 
 `--pin` 仅适用于 npm。它不支持与 `--marketplace` 一起使用，因为
 marketplace 安装会持久化 marketplace 源元数据，而不是 npm spec。
@@ -533,9 +563,9 @@ OpenClaw 可能会评估受信任的插件入口或通道插件模块以构建
 | `registerRealtimeTranscriptionProvider` | 流式 STT            |
 | `registerRealtimeVoiceProvider`       | 双工实时语音        |
 | `registerMediaUnderstandingProvider`   | 图像/音频分析       |
-| `registerImageGenerationProvider`     | 图像生成            |
-| `registerMusicGenerationProvider`     | 音乐生成            |
-| `registerVideoGenerationProvider`     | 视频生成            |
+| `registerImageGenerationProvider`      | 图像生成            |
+| `registerMusicGenerationProvider`      | 音乐生成            |
+| `registerVideoGenerationProvider`      | 视频生成            |
 | `registerWebFetchProvider`            | Web 获取 / 抓取提供方 |
 | `registerWebSearchProvider`            | Web 搜索            |
 | `registerHttpRoute`                   | HTTP 端点           |

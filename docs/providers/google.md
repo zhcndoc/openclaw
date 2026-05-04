@@ -78,7 +78,7 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
         # Homebrew
         brew install gemini-cli
 
-        # or npm
+        # 或 npm
         npm install -g @google/gemini-cli
         ```
 
@@ -142,6 +142,36 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
 | Web search (Grounding) | Yes                           |
 | Thinking/reasoning     | Yes (Gemini 2.5+ / Gemini 3+) |
 | Gemma 4 models         | Yes                           |
+
+## Web search
+
+捆绑的 `gemini` 网页搜索 provider 使用 Gemini Google Search grounding。
+在 `plugins.entries.google.config.webSearch` 下配置专用搜索密钥，
+或者让它在 `GEMINI_API_KEY` 后复用 `models.providers.google.apiKey`：
+
+```json5
+{
+  plugins: {
+    entries: {
+      google: {
+        config: {
+          webSearch: {
+            apiKey: "AIza...", // 如果已设置 GEMINI_API_KEY 或 models.providers.google.apiKey，则为可选项
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta", // 回退到 models.providers.google.baseUrl
+            model: "gemini-2.5-flash",
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+凭据优先级依次为专用的 `webSearch.apiKey`、`GEMINI_API_KEY`，
+然后是 `models.providers.google.apiKey`。`webSearch.baseUrl` 是可选的，
+用于运营方代理或兼容的 Gemini API 端点；如果省略，
+Gemini 网页搜索会复用 `models.providers.google.baseUrl`。参见
+[Gemini search](/tools/gemini-search) 了解 provider 特定的工具行为。
 
 <Tip>
 Gemini 3 模型使用 `thinkingLevel` 而不是 `thinkingBudget`。OpenClaw 将

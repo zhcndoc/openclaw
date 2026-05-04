@@ -53,6 +53,8 @@ OpenClaw 通过两层来持久化会话：
    - 当活动转录超过检查点大小上限后，会跳过大型预压缩调试检查点，从而避免生成第二份巨大的
      `.checkpoint.*.jsonl` 副本。
 
+Gateway 历史读取器应避免在表面明确需要任意历史访问时才物化整个转录。第一页历史、嵌入式聊天历史、重启恢复以及 token/usage 检查都会使用有界尾部读取。完整转录扫描通过异步转录索引进行，该索引按文件路径以及 `mtimeMs`/`size` 缓存，并在并发读取器之间共享。
+
 ---
 
 ## 磁盘上的位置
@@ -78,9 +80,15 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 - `maxDiskBytes`：可选的 sessions 目录预算
 - `highWaterBytes`：清理后的可选目标值（默认是 `maxDiskBytes` 的 `80%`）
 
-正常的 Gateway 写入会为生产规模的上限批量执行 `maxEntries` 清理，因此在下一次高水位清理把它写回之前，存储可能会短暂超过配置的上限。Gateway 启动期间，session store 读取不会进行清理或限制条目；请在写入时清理，或使用 `openclaw sessions cleanup --enforce`。`openclaw sessions cleanup --enforce` 仍会立即应用配置的上限。
+正常的 Gateway 写入会通过每个存储一个的 session writer 流转，它在不获取运行时文件锁的情况下串行化进程内的修改。热路径补丁助手在持有该 writer 槽位时会借用已验证的可变缓存，因此大型 `sessions.json` 文件不会在每次元数据更新时被克隆或重新读取。运行时代码应优先使用 `updateSessionStore(...)` 或 `updateSessionStoreEntry(...)`；直接的整存储保存仅用于兼容性和离线维护工具。当 Gateway 可达时，非 dry-run 的 `openclaw sessions cleanup` 和 `openclaw agents delete` 会把存储修改委托给 Gateway，因此清理会加入同一个 writer 队列；`--store <path>` 是用于直接文件维护的显式离线修复路径。`maxEntries` 清理在生产规模的上限下仍然是批处理的，因此在下一次高水位清理把它写回之前，存储可能会短暂超过配置上限。Gateway 启动期间不会在会话存储读取时修剪或限制条目；请使用写入或 `openclaw sessions cleanup --enforce` 来清理。`openclaw sessions cleanup --enforce` 仍会立即应用配置上限。
+
+维护会保留持久的外部对话指针，例如群组会话和线程范围的聊天会话，但当 cron、hook、heartbeat、ACP 和 sub-agent 的合成运行时条目超过配置的年龄、数量或磁盘预算时，仍然可以将它们移除。
 
 OpenClaw 不再在 Gateway 写入期间创建自动的 `sessions.json.bak.*` 轮转备份。旧的 `session.maintenance.rotateBytes` 键会被忽略，且 `openclaw doctor --fix` 会将其从旧配置中移除。
+
+转录变更在转录文件上使用 session 写锁。获取锁会等待最多
+`session.writeLock.acquireTimeoutMs`，之后才会抛出忙碌会话错误；默认值是 `60000`
+毫秒。只有在慢机器上合法的预处理、清理、压缩或转录镜像工作持续竞争更久时才提高这个值。陈旧锁检测和最大持有时长警告仍然是独立策略。
 
 磁盘预算清理（`mode: "enforce"`）的执行顺序：
 
@@ -134,11 +142,11 @@ openclaw sessions cleanup --enforce
 
 经验法则：
 
-- **重置**（`/new`、`/reset`）会为该 `sessionKey` 创建一个新的 `sessionId`。
-- **每日重置**（默认 gateway 主机本地时间凌晨 4:00）会在重置边界后的下一条消息创建一个新的 `sessionId`。
-- **空闲过期**（`session.reset.idleMinutes` 或旧版 `session.idleMinutes`）会在空闲窗口之后收到消息时创建一个新的 `sessionId`。当 daily 与 idle 都配置时，哪个先过期就以哪个为准。
-- **系统事件**（heartbeat、cron 唤醒、exec 通知、gateway 记账）可能会修改会话行，但不会延长 daily/idle 重置的新鲜度。重置切换会在生成新的 prompt 之前，丢弃上一会话的排队系统事件通知。
-- **线程父分叉保护**（`session.parentForkMaxTokens`，默认 `100000`）会在父会话已经过大时跳过父转录分叉；新线程会从头开始。设为 `0` 可禁用。
+- **Reset** (`/new`, `/reset`) 会为该 `sessionKey` 创建一个新的 `sessionId`。
+- **Daily reset**（默认在 Gateway 主机本地时间凌晨 4:00）会在重置边界之后的下一条消息时创建一个新的 `sessionId`。
+- **Idle expiry**（`session.reset.idleMinutes` 或旧版 `session.idleMinutes`）会在消息在空闲窗口之后到达时创建一个新的 `sessionId`。当 daily 和 idle 同时配置时，以先过期的那个为准。
+- **System events**（heartbeat、cron 唤醒、exec 通知、gateway 记账）可能会修改 session 行，但不会延长 daily/idle 重置的新鲜度。重置滚动会在构建新的提示词之前丢弃前一个会话的排队系统事件通知。
+- **Parent fork policy** 在创建 thread 或 subagent fork 时会使用 PI 的 active branch。如果该分支过大，OpenClaw 会以隔离上下文启动子进程，而不是失败或继承不可用的历史。大小策略是自动的；旧的 `session.parentForkMaxTokens` 配置已被 `openclaw doctor --fix` 移除。
 
 实现细节：该决策发生在 `src/auto-reply/reply/session.ts` 中的 `initSessionState()`。
 

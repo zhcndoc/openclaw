@@ -209,11 +209,8 @@ OpenClaw 不能自动恢复：
 
 `Legacy Matrix encrypted state was detected, but the Matrix plugin helper is unavailable. Install or repair @openclaw/matrix so OpenClaw can inspect the old rust crypto store before upgrading.`
 
-- 含义：OpenClaw 找到了旧的加密 Matrix 状态，但无法从通常用于检查该存储的 Matrix 插件中加载 helper 入口点。
-- 该怎么做：重新安装或修复 Matrix 插件（`openclaw plugins install @openclaw/matrix`，或在仓库检出目录中使用 `openclaw plugins install ./path/to/local/matrix-plugin`），然后重新运行 `openclaw doctor --fix` 或重启网关。
-- 如果 npm 将 OpenClaw 维护的 Matrix 包报告为已弃用，请改用
-  当前打包版 OpenClaw 构建中附带的插件，或使用本地检出路径，直
-  到发布更新的 npm 包为止。
+- 含义：OpenClaw 找到了旧的加密 Matrix 状态，但它无法从通常用于检查该存储的 Matrix 插件中加载 helper 入口点。
+- 该怎么做：重新安装或修复 Matrix 插件（`openclaw plugins install @openclaw/matrix`，或者如果你是在仓库检出目录中运行，则使用 `openclaw plugins install ./path/to/local/matrix-plugin`），然后重新运行 `openclaw doctor --fix` 或重启网关。
 
 `Matrix plugin helper path is unsafe: ... Reinstall @openclaw/matrix and try again.`
 
@@ -234,11 +231,8 @@ OpenClaw 不能自动恢复：
 
 `Matrix is installed from a custom path: ...`
 
-- 含义：Matrix 被固定为路径安装，因此主线更新不会自动用仓库中的标准 Matrix 包替换它。
-- 该怎么做：当你想恢复为默认 Matrix 插件时，使用 `openclaw plugins install @openclaw/matrix` 重新安装。
-- 如果 npm 将 OpenClaw 维护的 Matrix 包报告为已弃用，请改用
-  当前打包版 OpenClaw 构建中附带的插件，或本地检出路径，直
-  到发布更新的 npm 包为止。
+- 含义：Matrix 固定到一个路径安装，因此主线更新不会自动将其替换为仓库的标准 Matrix 包。
+- 该怎么做：当你希望恢复到默认 Matrix 插件时，使用 `openclaw plugins install @openclaw/matrix` 重新安装。
 
 ### 加密状态恢复消息
 
@@ -340,11 +334,8 @@ OpenClaw 不能自动恢复：
 
 `Matrix is installed from a custom path that no longer exists: ...`
 
-- 含义：你的插件安装记录指向一个已经不存在的本地路径。
-- 该怎么做：使用 `openclaw plugins install @openclaw/matrix` 重新安装，或者如果你是从仓库检出目录运行的，则使用 `openclaw plugins install ./path/to/local/matrix-plugin`。
-- 如果 npm 将 OpenClaw 维护的 Matrix 包报告为已弃用，请改用
-  当前打包版 OpenClaw 构建中附带的插件，或本地检出路径，直
-  到发布更新的 npm 包为止。
+- 含义：你的插件安装记录指向一个已不存在的本地路径。
+- 该怎么做：使用 `openclaw plugins install @openclaw/matrix` 重新安装，或者如果你是在仓库检出目录中运行，则使用 `openclaw plugins install ./path/to/local/matrix-plugin`。
 
 ## 如果加密历史记录仍然没有恢复
 

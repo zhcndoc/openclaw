@@ -9,11 +9,12 @@ title: "WhatsApp"
 
 ## 安装（按需）
 
-- 首次选择时，入门（`openclaw onboard`）和 `openclaw channels add --channel whatsapp`
-  会提示安装 WhatsApp 插件。
-- `openclaw channels login --channel whatsapp` 在插件尚未存在时也会提供安装流程。
+- 上手引导（`openclaw onboard`）和 `openclaw channels add --channel whatsapp`
+  会在你第一次选择 WhatsApp 插件时提示安装。
+- `openclaw channels login --channel whatsapp` 在
+  插件尚未存在时也会提供安装流程。
 - 开发频道 + git checkout：默认使用本地插件路径。
-- 稳定版/Beta：当已发布当前包时，使用 npm 包 `@openclaw/whatsapp`。
+- Stable/Beta：使用当前官方发布标签上的 npm 包 `@openclaw/whatsapp`。
 
 也可以手动安装：
 
@@ -21,9 +22,7 @@ title: "WhatsApp"
 openclaw plugins install @openclaw/whatsapp
 ```
 
-如果 npm 报告 OpenClaw 拥有的包已弃用或缺失，请改用
-当前打包的 OpenClaw 构建版本或本地 checkout，直到 npm 包发布链
-跟上为止。
+使用裸包以跟随当前官方发布标签。只有在需要可复现安装时才固定精确版本。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -148,16 +147,18 @@ OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（�
 
 ## 运行时模型
 
-- Gateway 负责 WhatsApp socket 和重连循环。
-- 重连看门狗使用的是 WhatsApp Web 传输活动，而不仅仅是入站应用消息量，因此静默的已链接设备会话不会仅因为最近没人发消息就被重启。若传输帧仍在到达但在看门狗窗口内未处理任何应用消息，更长的应用静默上限仍会强制重连；对于最近活跃会话的短暂重连后，这个应用静默检查在第一个恢复窗口使用正常的消息超时。
-- Baileys socket 定时参数在 `web.whatsapp.*` 下显式配置：`keepAliveIntervalMs` 控制 WhatsApp Web 应用层 ping，`connectTimeoutMs` 控制打开握手超时，`defaultQueryTimeoutMs` 控制 Baileys 查询超时。
-- 出站发送需要目标账号有一个活跃的 WhatsApp 监听器。
+- Gateway 拥有 WhatsApp socket 和重连循环。
+- 重连看门狗使用 WhatsApp Web 传输活动，而不只是入站应用消息量，因此安静的已链接设备会话不会仅因为最近没人发消息就被重启。更长的应用静默上限仍会在传输帧持续到达但在看门狗窗口内没有处理应用消息时强制重连；对于最近活跃的会话发生临时重连后，该应用静默检查会在第一个恢复窗口中使用正常消息超时。
+- Baileys socket 时序在 `web.whatsapp.*` 下是显式配置的：`keepAliveIntervalMs` 控制 WhatsApp Web 应用 ping，`connectTimeoutMs` 控制打开握手超时，`defaultQueryTimeoutMs` 控制 Baileys 查询超时。
+- 出站发送需要目标账号处于活动的 WhatsApp 监听状态。
+- 群组发送会在文本和媒体字幕中为 `@+<digits>` 和 `@<digits>` 标记附加原生提及元数据，只要该标记与当前 WhatsApp 参与者元数据匹配即可，包括基于 LID 的群组。
 - 状态和广播聊天会被忽略（`@status`、`@broadcast`）。
-- 重连看门狗跟随的是 WhatsApp Web 传输活动，而不仅仅是入站应用消息量：静默的已链接设备会话在传输帧持续到达时会保持在线，但传输停滞会很早就触发重连，远早于后面的远端断开路径。
-- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DMs 折叠到 agent 主会话）。
+- 重连看门狗跟随 WhatsApp Web 传输活动，而不只是入站应用消息量：在传输帧持续时，安静的已链接设备会话会保持在线，但传输停滞会在后续远程断开路径之前很早触发重连。
+- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DM 折叠到代理主会话）。
 - 群组会话彼此隔离（`agent:<agentId>:whatsapp:group:<jid>`）。
-- WhatsApp Web 传输会遵循 gateway 主机上的标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
-- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复投递后清除 WhatsApp ack 反应。
+- WhatsApp Channels/Newsletters 可以作为显式出站目标，并使用其原生 `@newsletter` JID。出站 newsletter 发送使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 会话语义。
+- WhatsApp Web 传输会在 gateway 主机上遵循标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
+- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复送达后清除 WhatsApp 的 ack 反应。
 
 ## 插件钩子与隐私
 
@@ -211,13 +212,16 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
 
     `allowFrom` 接受 E.164 风格号码（内部会标准化）。
 
-    多账号覆盖：`channels.whatsapp.accounts.<id>.dmPolicy`（以及 `allowFrom`）对该账号优先于频道级默认值。
+    `allowFrom` 是 DM 发送者访问控制列表。它不会限制显式发往 WhatsApp 群组 JID 或 `@newsletter` 频道 JID 的出站发送。
+
+    多账号覆盖：`channels.whatsapp.accounts.<id>.dmPolicy`（以及 `allowFrom`）优先于该账号的频道级默认值。
 
     运行时行为细节：
 
-    - 配对会持久化在频道 allow-store 中，并与配置的 `allowFrom` 合并
-    - 如果未配置 allowlist，则默认允许已链接的自号码
-    - OpenClaw 永远不会自动配对出站 `fromMe` DMs（你从已链接设备发给自己的消息）
+    - 配对记录会持久化到频道允许存储中，并与已配置的 `allowFrom` 合并
+    - 定时自动化和心跳接收者回退会使用显式投递目标或已配置的 `allowFrom`；DM 配对批准不会被当作隐式 cron 或心跳接收者
+    - 如果未配置 allowlist，已链接的自有号码默认被允许
+    - OpenClaw 不会自动为出站 `fromMe` DM（你从已链接设备发给自己的消息）进行配对
 
   </Tab>
 
@@ -289,7 +293,11 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
     [/Replying]
     ```
 
-    当可用时，回复元数据字段也会被填充（`ReplyToId`、`ReplyToBody`、`ReplyToSender`、sender JID/E.164）。
+    回复元数据字段在可用时也会被填充（`ReplyToId`、`ReplyToBody`、`ReplyToSender`、sender JID/E.164）。
+    当被引用的回复目标是可下载媒体时，OpenClaw 会通过
+    常规入站媒体存储保存它，并将其暴露为 `MediaPath`/`MediaType`，以便
+    代理可以检查引用的图片，而不只是看到
+    `<media:image>`。
 
   </Accordion>
 
@@ -571,11 +579,11 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
   </Accordion>
 
   <Accordion title="Reply appears in transcript but not in WhatsApp">
-    Transcript rows record what the agent generated. WhatsApp delivery is checked separately: OpenClaw only treats an auto-reply as sent after Baileys returns an outbound message id for at least one visible text or media send.
+    Transcript 行会记录 agent 生成了什么。WhatsApp 投递会单独检查：只有当 Baileys 至少返回一个可见的文本或媒体发送的出站消息 id 后，OpenClaw 才会将自动回复视为已发送。
 
-    Ack reactions are independent pre-reply receipts. A successful reaction does not prove that the later text or media reply was accepted by WhatsApp.
+    Ack 反应是独立的回复前回执。反应成功并不能证明后续的文本或媒体回复已被 WhatsApp 接受。
 
-    Check gateway logs for `auto-reply delivery failed` or `auto-reply was not accepted by WhatsApp provider`.
+    请检查网关日志中的 `auto-reply delivery failed` 或 `auto-reply was not accepted by WhatsApp provider`。
 
   </Accordion>
 

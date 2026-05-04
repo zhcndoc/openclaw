@@ -16,17 +16,17 @@ Tlon 是一个构建在 Urbit 之上的去中心化消息工具。OpenClaw 会�
 Tlon 作为捆绑插件随当前 OpenClaw 发布版一起提供，因此常规的
 打包构建无需单独安装。
 
-如果你使用的是较旧的构建版本，或者是排除了 Tlon 的自定义安装，请在
-发布了当前 npm 包后安装：
+如果你使用的是较旧版本，或者是一个排除了 Tlon 的自定义安装，请安装
+当前的 npm 包：
 
-通过 CLI 安装（npm registry，当存在当前包时）：
+通过 CLI 安装（npm registry）：
 
 ```bash
 openclaw plugins install @openclaw/tlon
 ```
 
-如果 npm 报告 OpenClaw 拥有的包已弃用，请使用当前的已打包
-OpenClaw 构建版本，或者使用本地检出路径，直到发布更新的 npm 包。
+使用裸包可跟随当前官方发布标签。只有在你需要可复现安装时，才固定到
+精确版本。
 
 本地检出（从 git 仓库运行时）：
 
@@ -189,17 +189,21 @@ DM 允许列表（为空 = 不允许任何 DM，使用 `ownerShip` 进行审批�
 }
 ```
 
-自动接受群组邀请：
+自动接受来自受信任船只的群组邀请：
 
 ```json5
 {
   channels: {
     tlon: {
       autoAcceptGroupInvites: true,
+      groupInviteAllowlist: ["~zod"],
     },
   },
 }
 ```
+
+当 `groupInviteAllowlist` 为空时，`autoAcceptGroupInvites` 会默认失败关闭。请将
+允许列表设置为那些其群组邀请应被自动接受的船只。
 
 ## 投递目标（CLI/cron）
 
@@ -232,7 +236,7 @@ Tlon 插件包含一个捆绑技能（[`@tloncorp/tlon-skill`](https://github.co
 | Rich text       | ✅ Markdown converted to Tlon format    |
 | Images          | ✅ Uploaded to Tlon storage             |
 | Reactions       | ✅ Via [bundled skill](#bundled-skill)  |
-| Polls           | ❌ Not yet supported                    |
+| Polls           | ❌ 尚不支持                             |
 | Native commands | ✅ Supported (owner-only by default)    |
 
 ## 故障排除
@@ -259,20 +263,21 @@ openclaw doctor
 
 提供者选项：
 
-- `channels.tlon.enabled`：启用/禁用频道启动。
-- `channels.tlon.ship`：机器人的 Urbit 船名称（例如 `~sampel-palnet`）。
-- `channels.tlon.url`：船 URL（例如 `https://sampel-palnet.tlon.network`）。
-- `channels.tlon.code`：船登录代码。
-- `channels.tlon.allowPrivateNetwork`：允许 localhost/LAN URL（绕过 SSRF）。
-- `channels.tlon.ownerShip`：用于审批系统的所有者船（始终授权）。
-- `channels.tlon.dmAllowlist`：允许发送 DM 的船（为空 = 不允许任何）。
-- `channels.tlon.autoAcceptDmInvites`：自动接受来自允许列表中船只的 DM。
-- `channels.tlon.autoAcceptGroupInvites`：自动接受所有群组邀请。
-- `channels.tlon.autoDiscoverChannels`：自动发现群组频道（默认：true）。
-- `channels.tlon.groupChannels`：手动固定的频道巢。
-- `channels.tlon.defaultAuthorizedShips`：对所有频道都授权的船。
-- `channels.tlon.authorization.channelRules`：按频道划分的授权规则。
-- `channels.tlon.showModelSignature`：在消息末尾附加模型名称。
+- `channels.tlon.enabled`: 启用/禁用频道启动。
+- `channels.tlon.ship`: 机器人对应的 Urbit 船名称（例如 `~sampel-palnet`）。
+- `channels.tlon.url`: 船 URL（例如 `https://sampel-palnet.tlon.network`）。
+- `channels.tlon.code`: 船登录代码。
+- `channels.tlon.allowPrivateNetwork`: 允许 localhost/LAN URL（绕过 SSRF）。
+- `channels.tlon.ownerShip`: 所有者船，用于审批系统（始终已授权）。
+- `channels.tlon.dmAllowlist`: 允许发送 DM 的船只（为空 = 无）。
+- `channels.tlon.autoAcceptDmInvites`: 自动接受来自允许列表中船只的 DM。
+- `channels.tlon.autoAcceptGroupInvites`: 自动接受来自允许列表中船只的群组邀请。
+- `channels.tlon.groupInviteAllowlist`: 其群组邀请可被自动接受的船只。
+- `channels.tlon.autoDiscoverChannels`: 自动发现群组频道（默认：true）。
+- `channels.tlon.groupChannels`: 手动固定的频道嵌套。
+- `channels.tlon.defaultAuthorizedShips`: 对所有频道均已授权的船只。
+- `channels.tlon.authorization.channelRules`: 每个频道的授权规则。
+- `channels.tlon.showModelSignature`: 将模型名称追加到消息中。
 
 ## 说明
 

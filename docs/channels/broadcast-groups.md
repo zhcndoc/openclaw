@@ -258,14 +258,16 @@ sidebarTitle: "广播组"
     {
       "agents": {
         "reviewer": {
-          "tools": { "allow": ["read", "exec"] } // 只读
+          "tools": { "allow": ["read", "exec"] }
         },
         "fixer": {
-          "tools": { "allow": ["read", "write", "edit", "exec"] } // 可读写
+          "tools": { "allow": ["read", "write", "edit", "exec"] }
         }
       }
     }
     ```
+
+    `reviewer` 是只读的。`fixer` 可以读写。
 
   </Accordion>
   <Accordion title="4. 监控性能">

@@ -10,10 +10,10 @@ OpenClaw 的 MiniMax 提供程序默认使用 **MiniMax M2.7**。
 
 MiniMax 还提供：
 
-- 通过 T2A v2 捆绑的语音合成
-- 通过 `MiniMax-VL-01` 捆绑的图像理解
-- 通过 `music-2.6` 捆绑的音乐生成
-- 通过 MiniMax Coding Plan 搜索 API 捆绑的 `web_search`
+- 通过 T2A v2 集成的语音合成
+- 通过 `MiniMax-VL-01` 集成的图像理解
+- 通过 `music-2.6` 集成的音乐生成
+- 通过 MiniMax Token Plan 搜索 API 集成的 `web_search`
 
 提供程序拆分：
 
@@ -353,16 +353,16 @@ MiniMax 插件将图像理解与文本目录分开注册：
 
 ### 网页搜索
 
-MiniMax 插件还通过 MiniMax Coding Plan
+MiniMax 插件还通过 MiniMax Token Plan
 搜索 API 注册了 `web_search`。
 
-- 提供程序 id：`minimax`
-- 结构化结果：标题、URL、摘要、相关查询
-- 首选环境变量：`MINIMAX_CODE_PLAN_KEY`
-- 可接受的环境别名：`MINIMAX_CODING_API_KEY`
-- 兼容性回退：当 `MINIMAX_API_KEY` 已经指向 Coding Plan token 时也可使用
-- 区域复用：`plugins.entries.minimax.config.webSearch.region`，然后是 `MINIMAX_API_HOST`，最后是 MiniMax 提供程序基础 URL
-- 搜索仍使用提供程序 id `minimax`；OAuth 中/国际版设置仍可通过 `models.providers.minimax-portal.baseUrl` 间接指定区域
+- Provider id: `minimax`
+- Structured results: 标题、URL、摘要、相关查询
+- Preferred env var: `MINIMAX_CODE_PLAN_KEY`
+- Accepted env aliases: `MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN`
+- Compatibility fallback: 当 `MINIMAX_API_KEY` 已经指向 Token Plan 凭据时使用它
+- Region reuse: `plugins.entries.minimax.config.webSearch.region`，然后是 `MINIMAX_API_HOST`，然后是 MiniMax 提供程序基础 URL
+- Search stays on provider id `minimax`; OAuth CN/global setup can steer region indirectly through `models.providers.minimax-portal.baseUrl` and can provide bearer auth through `MINIMAX_OAUTH_TOKEN`
 
 配置位于 `plugins.entries.minimax.config.webSearch.*` 下。
 
@@ -419,10 +419,11 @@ MiniMax 插件还通过 MiniMax Coding Plan
   </Accordion>
 
   <Accordion title="Coding Plan 使用详情">
-    - Coding Plan 使用 API：`https://api.minimaxi.com/v1/api/openplatform/coding_plan/remains`（需要 coding plan key）。
-    - OpenClaw 会将 MiniMax 的 coding-plan 使用量规范化为其他提供商使用的相同 `% left` 显示。MiniMax 原始的 `usage_percent` / `usagePercent` 字段表示剩余额度，而不是已消耗额度，因此 OpenClaw 会对其取反。若存在按数量计的字段，则以其为准。
-    - 当 API 返回 `model_remains` 时，OpenClaw 会优先使用聊天模型条目，在需要时从 `start_time` / `end_time` 推导窗口标签，并在计划标签中包含所选模型名称，以便更容易区分 coding-plan 窗口。
-    - 使用快照会将 `minimax`、`minimax-cn` 和 `minimax-portal` 视为同一个 MiniMax 配额面，并在回退到 Coding Plan key 环境变量之前优先使用已存储的 MiniMax OAuth。
+    - Coding Plan 使用 API：`https://api.minimaxi.com/v1/token_plan/remains` 或 `https://api.minimax.io/v1/token_plan/remains`（需要 coding plan 密钥）。
+    - 使用情况轮询会在配置时从 `models.providers.minimax-portal.baseUrl` 或 `models.providers.minimax.baseUrl` 推导主机，因此使用 `https://api.minimax.io/anthropic` 的全局配置会轮询 `api.minimax.io`。缺失或格式错误的 base URL 会保留 CN 回退以兼容。
+    - OpenClaw 会将 MiniMax coding-plan 使用量规范化为与其他提供商相同的 `% 剩余` 显示。MiniMax 原始的 `usage_percent` / `usagePercent` 字段表示剩余额度，而不是已消耗额度，因此 OpenClaw 会将其取反。若存在按数量统计的字段，则以其为准。
+    - 当 API 返回 `model_remains` 时，OpenClaw 会优先选择 chat-model 条目，在需要时从 `start_time` / `end_time` 推导窗口标签，并在计划标签中包含所选模型名称，以便更容易区分 coding-plan 窗口。
+    - 使用快照会将 `minimax`、`minimax-cn` 和 `minimax-portal` 视为同一个 MiniMax 配额面，并且会优先使用已存储的 MiniMax OAuth，然后再回退到 Coding Plan 密钥环境变量。
 
   </Accordion>
 </AccordionGroup>
@@ -491,8 +492,8 @@ MiniMax Coding Plan 推荐链接（立减 10%）：[MiniMax Coding Plan](https:/
   <Card title="视频生成" href="/tools/video-generation" icon="video">
     通用视频工具参数和提供商选择。
   </Card>
-  <Card title="MiniMax 搜索" href="/tools/minimax-search" icon="magnifying-glass">
-    通过 MiniMax Coding Plan 进行网页搜索配置。
+  <Card title="MiniMax Search" href="/tools/minimax-search" icon="magnifying-glass">
+    通过 MiniMax Token Plan 进行 Web 搜索配置。
   </Card>
   <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     通用故障排查和 FAQ。

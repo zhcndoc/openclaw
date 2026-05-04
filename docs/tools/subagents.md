@@ -22,8 +22,11 @@ sidebarTitle: "子代理"
 
 <Note>
 **成本说明：** 默认情况下，每个子代理都有自己的上下文和令牌使用量。
-对于繁重或重复的任务，请为子代理设置更便宜的模型，并让主代理使用更高质量的模型。可通过
-`agents.defaults.subagents.model` 或按代理覆盖进行配置。当某个子代理确实需要请求者当前的对话记录时，代理可以针对那一次生成请求 `context: "fork"`。
+对于重型或重复性任务，请为子代理设置更便宜的模型，并让主代理使用更高质量的模型。
+可通过 `agents.defaults.subagents.model` 或按代理覆盖进行配置。
+当子代理确实需要请求者当前转录时，代理可以在那次生成中请求
+`context: "fork"`。线程绑定的子代理会话默认使用
+`context: "fork"`，因为它们会把当前对话分支到后续线程中。
 </Note>
 
 ## 斜杠命令
@@ -40,9 +43,11 @@ sidebarTitle: "子代理"
 /subagents spawn <agentId> <task> [--model <model>] [--thinking <level>]
 ```
 
-`/subagents info` 会显示运行元数据（状态、时间戳、会话 id、
-转录路径、清理）。当你需要原始完整转录时，请使用具有界限且带安全过滤的
-`sessions_history` 回顾视图；若要查看完整原始转录，请检查磁盘上的转录路径。
+使用顶层 [`/steer <message>`](/tools/steer) 来引导当前请求者会话中的活动运行。目标是子运行时，请使用 `/subagents steer <id|#> <message>`。
+
+`/subagents info` 显示运行元数据（状态、时间戳、会话 id、
+转录路径、清理方式）。使用 `sessions_history` 获取有界的、
+经过安全过滤的回忆视图；当你需要原始完整转录时，请检查磁盘上的转录路径。
 
 ### 线程绑定控制
 
@@ -169,7 +174,7 @@ sidebarTitle: "子代理"
   `require` 会拒绝生成，除非目标子运行时已启用沙箱。
 </ParamField>
 <ParamField path="context" type='"isolated" | "fork"' default="isolated">
-  `fork` 会将请求者当前转录分支到子会话中。仅适用于原生子代理。仅当子代理需要当前转录时使用 `fork`。
+  `fork` 会将请求者当前转录分支到子会话中。仅适用于原生子代理。线程绑定生成默认使用 `fork`；非线程生成默认使用 `isolated`。
 </ParamField>
 
 <Warning>
@@ -185,13 +190,14 @@ sidebarTitle: "子代理"
 
 ### 支持线程的通道
 
-**Discord** 目前是唯一受支持的通道。它支持
-持久的线程绑定子代理会话（`sessions_spawn` 搭配 `thread: true`）、手动线程控制（`/focus`、`/unfocus`、`/agents`、
-`/session idle`、`/session max-age`），以及适配器键
-`channels.discord.threadBindings.enabled`、
-`channels.discord.threadBindings.idleHours`、
-`channels.discord.threadBindings.maxAgeHours` 和
-`channels.discord.threadBindings.spawnSubagentSessions`。
+**Discord** is currently the only supported channel. It supports
+persistent thread-bound subagent sessions (`sessions_spawn` with
+`thread: true`), manual thread controls (`/focus`, `/unfocus`, `/agents`,
+`/session idle`, `/session max-age`), and adapter keys
+`channels.discord.threadBindings.enabled`,
+`channels.discord.threadBindings.idleHours`,
+`channels.discord.threadBindings.maxAgeHours`, and
+`channels.discord.threadBindings.spawnSessions`.
 
 ### 快速流程
 

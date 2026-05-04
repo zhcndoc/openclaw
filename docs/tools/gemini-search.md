@@ -1,10 +1,10 @@
 ---
 summary: "Gemini 使用 Google Search grounding 的网页搜索"
 read_when:
-  - 当你想将 Gemini 用于 web_search
-  - 你需要一个 GEMINI_API_KEY
+  - 你想使用 Gemini 进行 web_search
+  - 你需要一个 GEMINI_API_KEY 或 models.providers.google.apiKey
   - 你想使用 Google Search grounding
-title: "Gemini 搜索"
+title: "Gemini search"
 ---
 
 OpenClaw 支持内置
@@ -19,7 +19,8 @@ OpenClaw 支持内置
     API 密钥。
   </Step>
   <Step title="存储密钥">
-    在 Gateway 环境中设置 `GEMINI_API_KEY`，或者通过以下方式配置：
+    在 Gateway 环境中设置 `GEMINI_API_KEY`，复用
+    `models.providers.google.apiKey`，或者通过以下方式配置专用的 web-search 密钥：
 
     ```bash
     openclaw configure --section web
@@ -37,7 +38,8 @@ OpenClaw 支持内置
       google: {
         config: {
           webSearch: {
-            apiKey: "AIza...", // 如果已设置 GEMINI_API_KEY，则为可选项
+            apiKey: "AIza...", // 如果已设置 GEMINI_API_KEY 或 models.providers.google.apiKey，则可选
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta", // 可选；回退到 models.providers.google.baseUrl
             model: "gemini-2.5-flash", // 默认
           },
         },
@@ -54,8 +56,13 @@ OpenClaw 支持内置
 }
 ```
 
-**环境替代方案：** 在 Gateway 环境中设置 `GEMINI_API_KEY`。
-对于 gateway 安装，请将其放在 `~/.openclaw/.env` 中。
+**凭证优先级：** Gemini web search 会首先使用
+`plugins.entries.google.config.webSearch.apiKey`，然后是 `GEMINI_API_KEY`，
+最后是 `models.providers.google.apiKey`。对于 base URL，
+`plugins.entries.google.config.webSearch.baseUrl` 的优先级高于
+`models.providers.google.baseUrl`。
+
+对于 gateway 安装，请将环境变量键放在 `~/.openclaw/.env` 中。
 
 ## 工作原理
 
@@ -72,19 +79,29 @@ URL。
 
 ## 支持的参数
 
-Gemini 搜索支持 `query`。
+Gemini search 支持 `query`、`freshness`、`date_after` 和 `date_before`。
 
 `count` 被接受用于共享 `web_search` 兼容性，但 Gemini grounding
 仍然只返回一个带引用的综合答案，而不是包含 N 个结果的列表。
 
-不支持 `country`、`language`、`freshness` 和
-`domain_filter` 等特定于提供商的筛选条件。
+`freshness` 支持 `day`、`week`、`month`、`year`，以及共享快捷方式
+`pd`、`pw`、`pm` 和 `py`。OpenClaw 会将这些值，或显式的
+`date_after`/`date_before` 范围，转换为 Gemini Google Search grounding 的
+`timeRangeFilter`。`country`、`language` 和 `domain_filter` 不受支持。
 
 ## 模型选择
 
 默认模型是 `gemini-2.5-flash`（快速且经济高效）。任何支持 grounding 的 Gemini
 模型都可以通过
 `plugins.entries.google.config.webSearch.model` 使用。
+
+## Base URL 覆盖
+
+当 Gemini web search 必须通过运营商代理或自定义的 Gemini 兼容端点路由时，
+请设置 `plugins.entries.google.config.webSearch.baseUrl`。如果未设置该项，
+Gemini web search 会复用 `models.providers.google.baseUrl`。纯粹的
+`https://generativelanguage.googleapis.com` 值会被规范化为
+`https://generativelanguage.googleapis.com/v1beta`；自定义代理路径会在去除末尾斜杠后按提供的内容保留。
 
 ## 相关内容
 

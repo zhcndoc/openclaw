@@ -158,15 +158,15 @@ export OTEL_SERVICE_NAME="openclaw-gateway"
 ./scripts/docker/setup.sh
 ```
 
-官方的 OpenClaw Docker 发布镜像包含内置的
-`diagnostics-otel` 插件源码。要启用导出，请在配置中允许并启用
+在启用导出之前，请从 ClawHub 安装官方的 `@openclaw/diagnostics-otel` 插件，
+用于打包的 Docker 安装。自定义源码构建的镜像仍然可以通过
+`OPENCLAW_EXTENSIONS=diagnostics-otel` 包含本地插件源码。要启用导出，请在配置中允许并启用
 `diagnostics-otel` 插件，然后设置
-`diagnostics.otel.enabled=true`，或者使用
-[OpenTelemetry 导出](/gateway/opentelemetry) 中的配置示例。收集器认证头
-通过 `diagnostics.otel.headers` 配置，而不是通过 Docker 环境
-变量配置。
+`diagnostics.otel.enabled=true`，或者使用 [OpenTelemetry 导出](/gateway/opentelemetry) 中的配置示例。
+Collector 认证头通过 `diagnostics.otel.headers` 配置，而不是通过 Docker 环境变量。
 
-Prometheus 指标使用已发布的 Gateway 端口。启用
+Prometheus 指标使用已经发布的 Gateway 端口。安装
+`clawhub:@openclaw/diagnostics-prometheus`，启用
 `diagnostics-prometheus` 插件，然后抓取：
 
 ```text

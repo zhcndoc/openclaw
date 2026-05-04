@@ -51,10 +51,10 @@ openclaw memory index --agent main --verbose
 
 `memory status`：
 
-- `--deep`：探测向量和 embedding 可用性。普通的 `memory status` 会保持快速，不会执行实时 embedding ping。QMD 词法 `searchMode: "search"` 会跳过语义向量探测和 embedding 维护，即使使用 `--deep` 也是如此。
+- `--deep`: 探测本地向量存储就绪状态、embedding 提供者就绪状态，以及语义向量搜索就绪状态。普通的 `memory status` 保持快速，不会执行实时 embedding 或提供者发现工作；未知的向量存储或语义向量状态表示该命令中未对其进行探测。QMD 词法 `searchMode: "search"` 会跳过语义向量探测和 embedding 维护，即使使用 `--deep` 也是如此。
 - `--index`：如果存储是脏的，则执行重新索引（隐含 `--deep`）。
 - `--fix`：修复过期的回忆锁并规范化提升元数据。
-- `--json`：输出 JSON。
+- `--json`：打印 JSON 输出。
 
 如果 `memory status` 显示 `Dreaming status: blocked`，说明受管的 dreaming 定时任务已启用，但驱动它的 heartbeat 没有为默认 agent 触发。有关两种常见原因，请参见 [Dreaming never runs](/concepts/dreaming#dreaming-never-runs-status-shows-blocked)。
 

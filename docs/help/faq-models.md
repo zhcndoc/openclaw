@@ -142,12 +142,13 @@ sidebarTitle: "模型常见问题"
 
   </Accordion>
 
-  <Accordion title="我可以日常任务用 GPT 5.5，编程任务用 Codex 5.5 吗？">
-    可以。将一个设为默认值，并按需切换：
+  <Accordion title="我可以将 GPT 5.5 用于日常任务，并将 Codex 5.5 用于编码吗？">
+    可以。将模型选择和运行时选择分开看待：
 
-    - **快速切换（按会话）：** 当前直接 OpenAI API key 任务使用 `/model openai/gpt-5.5`，或 GPT-5.5 Codex OAuth 任务使用 `/model openai-codex/gpt-5.5`。
-    - **默认值：** 将 `agents.defaults.model.primary` 设为 `openai/gpt-5.5` 以用于 API key，或设为 `openai-codex/gpt-5.5` 以用于 GPT-5.5 Codex OAuth。
-    - **子 agent：** 将编程任务路由到默认模型不同的子 agent。
+    - **原生 Codex 编码 agent：** 将 `agents.defaults.model.primary` 设为 `openai/gpt-5.5`，并将 `agents.defaults.agentRuntime.id` 设为 `"codex"`。当你需要 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
+    - **通过 PI 直接执行 OpenAI API 任务：** 在不覆盖 Codex 运行时的情况下使用 `/model openai/gpt-5.5`，并配置 `OPENAI_API_KEY`。
+    - **通过 PI 使用 Codex OAuth：** 仅当你有意想使用带 Codex OAuth 的普通 PI 运行器时，使用 `/model openai-codex/gpt-5.5`。
+    - **子 agent：** 将编码任务路由到一个仅使用 Codex 的 agent，并为其设置自己的模型和 `agentRuntime` 默认值。
 
     参见 [模型](/concepts/models) 和 [斜杠命令](/tools/slash-commands)。
 

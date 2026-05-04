@@ -21,9 +21,9 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- 推荐使用 Node 24（仍支持 Node 22 LTS，目前为 `22.14+`）
-- 优先使用 `pnpm`（如果你有意使用 [Bun 工作流](/install/bun)，也可以用 Bun）
-- Docker（可选；仅用于容器化设置/e2e——参见 [Docker](/install/docker)）
+- 推荐使用 Node 24（当前仍支持 Node 22 LTS，`22.14+`）
+- 从源码检出时需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm 工作区包中加载打包好的插件，因此根目录执行 `npm install` 不会准备完整的源码树。
+- Docker（可选；仅用于容器化设置/端到端测试——见 [Docker](/install/docker)）
 
 ## 定制化策略（让更新不会伤到你）
 
@@ -44,7 +44,7 @@ openclaw setup
 openclaw setup
 ```
 
-如果你还没有全局安装，可以通过 `pnpm openclaw setup` 运行它（如果你使用 Bun 工作流，则使用 `bun run openclaw setup`）。
+If you don’t have a global install yet, run it via `pnpm openclaw setup`.
 
 ## 从本仓库运行 Gateway
 
@@ -96,25 +96,10 @@ pnpm openclaw setup
 pnpm gateway:watch
 ```
 
-`gateway:watch` 会在一个命名的 tmux
-会话中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。
-非交互式 shell 会保持
-分离状态并打印 `tmux attach -t openclaw-gateway-watch-main`；使用
-`OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 可以让交互式运行
-保持分离，或者使用 `pnpm gateway:watch:raw` 进入前台监视模式。监视器会在相关源码、配置以及捆绑插件元数据变化时重新加载。
-`pnpm openclaw setup` 是全新检出后的一次性本地配置/工作区初始化步骤。
-`pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 发生变化后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
+`gateway:watch` 会在一个命名的 tmux 会话中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离，并打印 `tmux attach -t openclaw-gateway-watch-main`；可使用 `OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 让交互式运行保持分离，或使用 `pnpm gateway:watch:raw` 以前台监视模式运行。监视器会在相关源码、配置和打包插件元数据发生变化时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次 `openclaw doctor --fix --non-interactive`，然后重试；设置 `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用这一步仅用于开发的修复流程。`pnpm openclaw setup` 是在全新检出后进行一次性的本地配置/工作区初始化步骤。
+`pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 变更后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
 
-如果你有意使用 Bun 工作流，对应的命令是：
-
-```bash
-bun install
-# 仅首次运行（或在重置本地 OpenClaw 配置/工作区之后）
-bun run openclaw setup
-bun run gateway:watch
-```
-
-### 2) 将 macOS 应用指向正在运行的 Gateway
+### 2) Point the macOS app at your running Gateway
 
 在 **OpenClaw.app** 中：
 
@@ -157,8 +142,8 @@ openclaw health
 
 ## 更新（不破坏你的设置）
 
-- 将 `~/.openclaw/workspace` 和 `~/.openclaw/` 保持为“你的内容”；不要把个人提示词/配置放进 `openclaw` 仓库里。
-- 更新源码：`git pull` + 你选择的包管理器安装步骤（默认是 `pnpm install`；Bun 工作流使用 `bun install`）+ 继续使用匹配的 `gateway:watch` 命令。
+- 将 `~/.openclaw/workspace` 和 `~/.openclaw/` 视为“你的内容”；不要把个人提示词/配置放进 `openclaw` 仓库中。
+- 更新源码：`git pull` + `pnpm install` + 继续使用 `pnpm gateway:watch`。
 
 ## Linux（systemd 用户服务）
 

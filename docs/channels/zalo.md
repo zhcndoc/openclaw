@@ -11,13 +11,13 @@ title: "Zalo"
 
 Zalo 作为当前 OpenClaw 版本中的捆绑插件提供，因此正常的打包构建无需单独安装。
 
-如果你使用的是较旧的构建版本，或是排除了 Zalo 的自定义安装，请在发布了相应 npm 包后安装当前版本：
+如果你使用的是较旧的构建版本，或者是排除了 Zalo 的自定义安装，请直接安装
+npm 包：
 
 - 通过 CLI 安装：`openclaw plugins install @openclaw/zalo`
-- 或者从源码检出安装：`openclaw plugins install ./path/to/local/zalo-plugin`
+- 固定版本：`openclaw plugins install @openclaw/zalo@2026.5.2`
+- 或从源码检出安装：`openclaw plugins install ./path/to/local/zalo-plugin`
 - 详情：[Plugins](/tools/plugin)
-
-如果 npm 报告 OpenClaw 维护的包已弃用，请使用当前的打包版 OpenClaw 构建，或使用本地检出路径，直到发布更新的 npm 包。
 
 ## 快速设置（入门）
 

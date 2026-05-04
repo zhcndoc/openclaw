@@ -213,9 +213,9 @@ title: "FAQ"
 
     所需配置：
 
-    - 全局默认值：`session.threadBindings.enabled`、`session.threadBindings.idleHours`、`session.threadBindings.maxAgeHours`。
-    - Discord 覆盖：`channels.discord.threadBindings.enabled`、`channels.discord.threadBindings.idleHours`、`channels.discord.threadBindings.maxAgeHours`。
-    - 生成时自动绑定：设置 `channels.discord.threadBindings.spawnSubagentSessions: true`。
+    - Global defaults: `session.threadBindings.enabled`, `session.threadBindings.idleHours`, `session.threadBindings.maxAgeHours`.
+    - Discord overrides: `channels.discord.threadBindings.enabled`, `channels.discord.threadBindings.idleHours`, `channels.discord.threadBindings.maxAgeHours`.
+    - Auto-bind on spawn: `channels.discord.threadBindings.spawnSessions` defaults to `true`; set it to `false` to disable thread-bound session spawns.
 
     文档：[子智能体](/tools/subagents)、[Discord](/channels/discord)、[配置参考](/gateway/configuration-reference)、[斜杠命令](/tools/slash-commands)。
 
@@ -796,20 +796,20 @@ title: "FAQ"
 
     当前 OpenClaw 已保护许多误删情况：
 
-    - OpenClaw 自己的配置写入会在写入前验证整个变更后的配置。
-    - 无效或破坏性的 OpenClaw 配置写入会被拒绝，并保存为 `openclaw.json.rejected.*`。
-    - 如果直接编辑导致启动或热重载失败，Gateway 会恢复到最后已知良好的配置，并将被拒绝的文件保存为 `openclaw.json.clobbered.*`。
-    - 恢复后主代理会收到启动警告，因此不会盲目再次写入坏配置。
+    - OpenClaw-owned config writes validate the full post-change config before writing.
+    - Invalid or destructive OpenClaw-owned writes are rejected and saved as `openclaw.json.rejected.*`.
+    - If a direct edit breaks startup or hot reload, Gateway fails closed or skips the reload; it does not rewrite `openclaw.json`.
+    - `openclaw doctor --fix` owns repair and can restore last-known-good while saving the rejected file as `openclaw.json.clobbered.*`.
 
     恢复方法：
 
-    - 查看 `openclaw logs --follow` 中的 `Config auto-restored from last-known-good`、`Config write rejected:` 或 `config reload restored last-known-good config`。
-    - 检查活动配置旁最新的 `openclaw.json.clobbered.*` 或 `openclaw.json.rejected.*`。
-    - 如果恢复后的活动配置可用，就保留它，然后只用 `openclaw config set` 或 `config.patch` 把想要的键复制回去。
-    - 运行 `openclaw config validate` 和 `openclaw doctor`。
-    - 如果没有 last-known-good 或被拒绝的负载，请从备份恢复，或重新运行 `openclaw doctor` 并重新配置 channels/models。
-    - 如果这是意外情况，请提交 bug，并附上你最后已知的配置或任何备份。
-    - 本地编码代理通常可以根据日志或历史重建一个可工作的配置。
+    - Check `openclaw logs --follow` for `Invalid config at`, `Config write rejected:`, or `config reload skipped (invalid config)`.
+    - Inspect the newest `openclaw.json.clobbered.*` or `openclaw.json.rejected.*` beside the active config.
+    - Run `openclaw config validate` and `openclaw doctor --fix`.
+    - Copy only the intended keys back with `openclaw config set` or `config.patch`.
+    - If you have no last-known-good or rejected payload, restore from backup, or re-run `openclaw doctor` and reconfigure channels/models.
+    - If this was unexpected, file a bug and include your last known config or any backup.
+    - A local coding agent can often reconstruct a working config from logs or history.
 
     避免再次发生：
 
@@ -819,7 +819,7 @@ title: "FAQ"
     - 部分 RPC 编辑请使用 `config.patch`；仅在需要完整配置替换时才用 `config.apply`。
     - 如果你在代理运行中使用仅 owner 可用的 `gateway` 工具，它仍会拒绝写入 `tools.exec.ask` / `tools.exec.security`（包括归一化到相同受保护 exec 路径的旧 `tools.bash.*` 别名）。
 
-    文档：[Config](/cli/config), [Configure](/cli/configure), [Gateway troubleshooting](/gateway/troubleshooting#gateway-restored-last-known-good-config), [Doctor](/gateway/doctor)。
+    Docs: [Config](/cli/config), [Configure](/cli/configure), [Gateway troubleshooting](/gateway/troubleshooting#gateway-rejected-invalid-config), [Doctor](/gateway/doctor).
 
   </Accordion>
 
@@ -1856,7 +1856,7 @@ title: "FAQ"
     **inherit**。同时确认你没有使用在配置中将 `verboseDefault` 设为
     `on` 的机器人配置文件。
 
-    文档：[Thinking and verbose](/tools/thinking), [Security](/gateway/security#reasoning-verbose-output-in-groups)。
+    Docs: [Thinking and verbose](/tools/thinking), [Security](/gateway/security/index#reasoning-and-verbose-output-in-groups).
 
   </Accordion>
 

@@ -44,8 +44,9 @@ OpenClaw 可以将出站回复转换为音频，支持 **14 个语音提供商**
 </Steps>
 
 <Note>
-自动 TTS 默认是 **关闭** 的。当 `messages.tts.provider` 未设置时，
-OpenClaw 会按照注册表自动选择顺序，挑选第一个已配置的提供商。
+自动 TTS 默认**关闭**。当 `messages.tts.provider` 未设置时，OpenClaw 会按注册表自动选择顺序选择第一个已配置的提供商。
+内置的 `tts` 代理工具仅在明确意图时才会触发：普通聊天保持文本输出，除非用户要求音频、使用 `/tts`，或启用自动 TTS/指令式
+语音。
 </Note>
 
 ## 支持的提供商
@@ -802,11 +803,14 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
   </Accordion>
 
   <Accordion title="Inworld">
+    ### Inworld 主配置
+
     <ParamField path="apiKey" type="string">环境变量：`INWORLD_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.inworld.ai`。</ParamField>
     <ParamField path="modelId" type="string">默认 `inworld-tts-1.5-max`。此外还有：`inworld-tts-1.5-mini`、`inworld-tts-1-max`、`inworld-tts-1`。</ParamField>
     <ParamField path="voiceId" type="string">默认 `Sarah`。</ParamField>
     <ParamField path="temperature" type="number">采样温度 `0..2`。</ParamField>
+
   </Accordion>
 
   <Accordion title="本地 CLI (tts-local-cli)">
@@ -918,11 +922,11 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 
 ## 服务链接
 
-- [OpenAI 文本转语音指南](https://platform.openai.com/docs/guides/text-to-speech)
+- [OpenAI Text to Speech 指南](https://platform.openai.com/docs/guides/text-to-speech)
 - [OpenAI 音频 API 参考](https://platform.openai.com/docs/api-reference/audio)
-- [Azure Speech REST 文本转语音](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
+- [Azure Speech REST Text to Speech](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
 - [Azure Speech 提供方](/providers/azure-speech)
-- [ElevenLabs 文本转语音](https://elevenlabs.io/docs/api-reference/text-to-speech)
+- [ElevenLabs Text to Speech](https://elevenlabs.io/docs/api-reference/text-to-speech)
 - [ElevenLabs 认证](https://elevenlabs.io/docs/api-reference/authentication)
 - [Gradium](/providers/gradium)
 - [Inworld TTS API](https://docs.inworld.ai/tts/tts)
@@ -931,7 +935,7 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 - [Xiaomi MiMo 语音合成](/providers/xiaomi#text-to-speech)
 - [node-edge-tts](https://github.com/SchneeHertz/node-edge-tts)
 - [Microsoft Speech 输出格式](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
-- [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
+- [xAI Text to Speech](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
 
 ## 相关内容
 

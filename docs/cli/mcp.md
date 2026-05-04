@@ -147,7 +147,7 @@ sidebarTitle: "MCP"
 
   </Accordion>
   <Accordion title="conversation_get">
-    通过 `session_key` 返回一个对话。
+    通过 `session_key` 使用直接的 Gateway 会话查找返回一个对话。
   </Accordion>
   <Accordion title="messages_read">
     读取一个已绑定会话对话的最近转写消息。

@@ -14,7 +14,7 @@ sidebarTitle: "Twitch"
 Twitch 在当前 OpenClaw 版本中作为捆绑插件提供，因此正常的打包构建不需要单独安装。
 </Note>
 
-如果你使用的是较旧的构建，或者是排除了 Twitch 的自定义安装，请在发布可用后安装当前的 npm 包：
+如果你使用的是较旧的构建版本，或者是排除了 Twitch 的自定义安装，请直接安装 npm 包：
 
 <Tabs>
   <Tab title="npm registry">
@@ -29,7 +29,7 @@ Twitch 在当前 OpenClaw 版本中作为捆绑插件提供，因此正常的打
   </Tab>
 </Tabs>
 
-如果 npm 提示 OpenClaw 维护的包已弃用，请使用当前的 OpenClaw 打包版本或本地检出路径，直到发布更新的 npm 包。
+使用裸包以跟随当前官方发布标签。只有在你需要可复现安装时，才固定为精确版本。
 
 详情：[插件](/tools/plugin)
 

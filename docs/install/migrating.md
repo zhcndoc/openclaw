@@ -29,7 +29,7 @@ CLI 入口点是 [`openclaw migrate`](/cli/migrate)。当引导流程检测到�
 复制 **状态目录**（默认是 `~/.openclaw/`）和你的 **工作区**，以保留：
 
 - **配置** — `openclaw.json` 和所有网关设置。
-- **认证** — 每个代理的 `auth-profiles.json`（API 密钥加 OAuth），以及 `credentials/` 下的任何通道或提供方状态。
+- **认证** — 每个代理的 `auth-profiles.json`（API 密钥和 OAuth），以及 `credentials/` 下的任何通道或提供方状态。
 - **会话** — 对话历史和代理状态。
 - **通道状态** — WhatsApp 登录、Telegram 会话，以及类似内容。
 - **工作区文件** — `MEMORY.md`、`USER.md`、技能和提示。
@@ -82,6 +82,14 @@ CLI 入口点是 [`openclaw migrate`](/cli/migrate)。当引导流程检测到�
   </Step>
 </Steps>
 
+如果 Telegram 或 Discord 使用默认的环境变量回退（`TELEGRAM_BOT_TOKEN` 或 `DISCORD_BOT_TOKEN`），请验证迁移后的状态目录 `.env` 包含这些键，而不要输出密钥值：
+
+```bash
+awk -F= '/^(TELEGRAM_BOT_TOKEN|DISCORD_BOT_TOKEN)=/ { print $1 "=present" }' ~/.openclaw/.env
+```
+
+当启用的默认 Telegram 或 Discord 账户没有已配置的令牌，且 doctor 进程也无法访问匹配的环境变量时，`openclaw doctor` 也会发出警告。
+
 ### 常见陷阱
 
 <AccordionGroup>
@@ -126,4 +134,4 @@ CLI 入口点是 [`openclaw migrate`](/cli/migrate)。当引导流程检测到�
 - [`openclaw migrate`](/cli/migrate)：跨系统导入的 CLI 参考。
 - [安装概览](/install)：所有安装方式。
 - [Doctor](/gateway/doctor)：迁移后的健康检查。
-- [卸载](/install/uninstall)：清理地移除 OpenClaw。
+- [卸载](/install/uninstall)：干净地移除 OpenClaw。

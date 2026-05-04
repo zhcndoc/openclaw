@@ -65,8 +65,9 @@ sidebarTitle: "斜杠命令"
   启用在聊天消息中解析 `/...`。在没有原生命令的平台（WhatsApp/WebChat/Signal/iMessage/Google Chat/Microsoft Teams）上，即使你将其设为 `false`，文本命令仍然可用。
 </ParamField>
 <ParamField path="commands.native" type='boolean | "auto"' default='"auto"'>
-  注册原生命令。自动：在 Discord/Telegram 上启用；在 Slack 上关闭（直到你添加斜杠命令）；对不支持原生命令的提供方忽略。可设置 `channels.discord.commands.native`、`channels.telegram.commands.native` 或 `channels.slack.commands.native` 按提供方覆盖（bool 或 `"auto"`）。`false` 会在启动时清除 Discord/Telegram 上先前注册的命令。Slack 命令由 Slack 应用管理，不会自动移除。
+  注册原生命令。自动：在 Discord/Telegram 上启用；在 Slack 上关闭（直到你添加斜杠命令）；对于没有原生支持的提供方则忽略。可设置 `channels.discord.commands.native`、`channels.telegram.commands.native` 或 `channels.slack.commands.native` 按提供方覆盖（bool 或 `"auto"`）。在 Discord 上，`false` 会在启动期间跳过斜杠命令注册和清理；先前注册的命令可能仍然可见，直到你将它们从 Discord 应用中移除。Slack 命令由 Slack 应用管理，不会自动移除。
 </ParamField>
+在 Discord 上，原生命令规范可以包含 `descriptionLocalizations`，OpenClaw 会将其发布为 Discord `description_localizations` 并在一致性检查比较中包含它。
 <ParamField path="commands.nativeSkills" type='boolean | "auto"' default='"auto"'>
   在支持时以原生方式注册**技能**命令。自动：在 Discord/Telegram 上启用；在 Slack 上关闭（Slack 需要为每个技能创建一个斜杠命令）。可设置 `channels.discord.commands.nativeSkills`、`channels.telegram.commands.nativeSkills` 或 `channels.slack.commands.nativeSkills` 按提供方覆盖（bool 或 `"auto"`）。
 </ParamField>
@@ -122,27 +123,29 @@ sidebarTitle: "斜杠命令"
 ### Core 内置命令
 
 <AccordionGroup>
-  <Accordion title="会话和运行">
-    - `/new [model]` 启动一个新会话；`/reset` 是重置别名。
-    - `/reset soft [message]` 保留当前对话记录，丢弃重复使用的 CLI 后端会话 id，并在原地重新运行启动/系统提示词加载。
-    - `/compact [instructions]` 压缩会话上下文。见 [压缩](/concepts/compaction)。
+  <Accordion title="Sessions and runs">
+    - `/new [model]` 开始一个新会话；`/reset` 是重置别名。
+    - 控制界面会拦截输入的 `/new`，以创建并切换到一个新的仪表板会话；输入的 `/reset` 仍会运行 Gateway 的原地重置。
+    - `/reset soft [message]` 会保留当前转录，删除复用的 CLI 后端会话 id，并就地重新运行启动/系统提示词加载。
+    - `/compact [instructions]` 会压缩会话上下文。见 [压缩](/concepts/compaction)。
     - `/stop` 中止当前运行。
     - `/session idle <duration|off>` 和 `/session max-age <duration|off>` 管理线程绑定过期。
     - `/export-session [path]` 将当前会话导出为 HTML。别名：`/export`。
-    - `/export-trajectory [path]` 请求 exec 批准，然后为当前会话导出一个 JSONL [轨迹包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和对话记录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
+    - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出 JSONL [轨迹包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
 
   </Accordion>
   <Accordion title="模型和运行控制">
-    - `/think <level>` 设置思考级别。可选项来自当前模型的提供方配置文件；常见级别有 `off`、`minimal`、`low`、`medium` 和 `high`，在支持的情况下还包括 `xhigh`、`adaptive`、`max` 或二值 `on` 等自定义级别。别名：`/thinking`、`/t`。
+    - `/think <level>` 设置思考级别。选项来自当前模型的提供方配置文件；常见级别有 `off`、`minimal`、`low`、`medium` 和 `high`，支持时也可用 `xhigh`、`adaptive`、`max` 或二值 `on` 等自定义级别。别名：`/thinking`、`/t`。
     - `/verbose on|off|full` 切换详细输出。别名：`/v`。
     - `/trace on|off` 切换当前会话的插件 trace 输出。
     - `/fast [status|on|off]` 显示或设置快速模式。
     - `/reasoning [on|off|stream]` 切换推理可见性。别名：`/reason`。
-    - `/elevated [on|off|ask|full]` 切换提升模式。别名：`/elev`。
+    - `/elevated [on|off|ask|full]` 切换提权模式。别名：`/elev`。
     - `/exec host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>` 显示或设置 exec 默认值。
     - `/model [name|#|status]` 显示或设置模型。
-    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出某个提供方已配置/可授权使用的提供方或模型；添加 `all` 可浏览该提供方的完整目录。
+    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出已配置/可认证使用的提供方或某个提供方的模型；添加 `all` 可浏览该提供方的完整目录。
     - `/queue <mode>` 管理队列行为（`steer`、旧版 `queue`、`followup`、`collect`、`steer-backlog`、`interrupt`），以及诸如 `debounce:0.5s cap:25 drop:summarize` 之类的选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。见 [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
+    - `/steer <message>` 将指导注入当前会话的活动运行中，与 `/queue` 模式无关。会话空闲时它不会启动新的运行。别名：`/tell`。见 [Steer](/tools/steer)。
 
   </Accordion>
   <Accordion title="发现和状态">
@@ -158,21 +161,21 @@ sidebarTitle: "斜杠命令"
     - `/usage off|tokens|full|cost` 控制每条响应的使用量页脚，或打印本地成本摘要。
 
   </Accordion>
-  <Accordion title="技能、允许列表、批准">
+  <Accordion title="技能、允许列表、审批">
     - `/skill <name> [input]` 按名称运行一个技能。
     - `/allowlist [list|add|remove] ...` 管理允许列表条目。仅文本。
-    - `/approve <id> <decision>` 处理 exec 批准提示。
-    - `/btw <question>` 在不改变未来会话上下文的情况下提出一个附带问题。见 [BTW](/tools/btw)。
+    - `/approve <id> <decision>` 解决 exec 批准提示。
+    - `/btw <question>` 在不更改未来会话上下文的情况下提出一个旁支问题。别名：`/side`。见 [BTW](/tools/btw)。
 
   </Accordion>
   <Accordion title="子代理和 ACP">
     - `/subagents list|kill|log|info|send|steer|spawn` 管理当前会话的子代理运行。
     - `/acp spawn|cancel|steer|close|sessions|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|help` 管理 ACP 会话和运行时选项。
-    - `/focus <target>` 将当前 Discord 线程或 Telegram topic/conversation 绑定到一个会话目标。
+    - `/focus <target>` 将当前 Discord 线程或 Telegram 主题/对话绑定到一个会话目标。
     - `/unfocus` 移除当前绑定。
     - `/agents` 列出当前会话中绑定到线程的代理。
     - `/kill <id|#|all>` 中止一个或所有正在运行的子代理。
-    - `/steer <id|#> <message>` 向正在运行的子代理发送引导。别名：`/tell`。
+    - `/subagents steer <id|#> <message>` 向正在运行的子代理发送引导。见 [Steer](/tools/steer)。
 
   </Accordion>
   <Accordion title="仅 owner 写入和管理">
@@ -234,21 +237,22 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
 
 用户可调用的技能也会作为斜杠命令公开：
 
-- `/skill <name> [input]` 始终可作为通用入口使用。
-- 当技能/插件注册它们时，技能也可能以直接命令形式出现，例如 `/prose`。
+- `/skill <name> [input]` 始终可作为通用入口点使用。
+- 当技能/插件注册它们时，技能也可能作为直接命令出现，例如 `/prose`。
 - 原生技能命令注册由 `commands.nativeSkills` 和 `channels.<provider>.commands.nativeSkills` 控制。
+- 命令规范可以为支持本地化描述的原生表面提供 `descriptionLocalizations`，包括 Discord。
 
 <AccordionGroup>
   <Accordion title="参数和解析器说明">
-    - 命令接受命令与参数之间可选的 `:`（例如 `/think: high`、`/send: on`、`/help:`）。
-    - `/new <model>` 接受模型别名、`provider/model` 或提供方名称（模糊匹配）；如果没有匹配，则将文本视为消息正文。
-    - 完整的提供方使用量明细请使用 `openclaw status --usage`。
-    - `/allowlist add|remove` 需要 `commands.config=true`，并遵守频道 `configWrites`。
-    - 在多账号频道中，面向配置的 `/allowlist --account <id>` 和 `/config set channels.<provider>.accounts.<id>...` 也会遵守目标账号的 `configWrites`。
-    - `/usage` 控制每条响应的使用量页脚；`/usage cost` 会从 OpenClaw 会话日志打印本地成本摘要。
-    - `/restart` 默认启用；设置 `commands.restart: false` 可禁用它。
-    - `/plugins install <spec>` 接受与 `openclaw plugins install` 相同的插件规格：本地路径/压缩包、npm 包、`git:<repo>` 或 `clawhub:<pkg>`。
-    - `/plugins enable|disable` 会更新插件配置，并可能提示重启。
+    - 命令可在命令和参数之间使用可选的 `:`（例如 `/think: high`、`/send: on`、`/help:`）。
+    - `/new <model>` 可接受模型别名、`provider/model` 或提供方名称（模糊匹配）；如果没有匹配，则该文本会被当作消息正文。
+    - 如需完整的提供方使用量拆分，请使用 `openclaw status --usage`。
+    - `/allowlist add|remove` 需要 `commands.config=true` 并遵守频道 `configWrites`。
+    - 在多账号频道中，针对配置的 `/allowlist --account <id>` 和 `/config set channels.<provider>.accounts.<id>...` 也会遵守目标账号的 `configWrites`。
+    - `/usage` 控制每条响应的使用量页脚；`/usage cost` 会从 OpenClaw 会话日志中打印本地成本摘要。
+    - `/restart` 默认启用；设置 `commands.restart: false` 可将其禁用。
+    - `/plugins install <spec>` 接受与 `openclaw plugins install` 相同的插件规范：本地路径/归档、npm 包、`git:<repo>` 或 `clawhub:<pkg>`，随后会请求 Gateway 重启，因为插件源模块已更改。
+    - `/plugins enable|disable` 会更新插件配置并触发 Gateway 插件重新加载，以便新代理轮次生效。
 
   </Accordion>
   <Accordion title="频道特定行为">
@@ -269,7 +273,7 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
   <Accordion title="模型切换">
     - `/model` 会立即持久化新的会话模型。
     - 如果代理处于空闲状态，下一次运行会立即使用它。
-    - 如果运行已经 सक्रिय，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
+    - 如果运行已经 ակտիվ，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
     - 如果工具活动或回复输出已经开始，待处理切换可能会保持排队，直到稍后的重试机会或下一次用户轮次。
     - 在本地 TUI 中，`/crestodian [request]` 会从普通代理 TUI 返回到 Crestodian。这与消息频道救援模式是分开的，并且不会授予远程配置权限。
 
@@ -425,10 +429,10 @@ Override 会立即应用于新的 config 读取，但不会写入 `openclaw.json
 ```
 
 <Note>
-- `/plugins list` 和 `/plugins show` 会基于当前 workspace 加上磁盘上的 config 进行真实的插件发现。
-- `/plugins enable|disable` 只会更新插件 config；不会安装或卸载插件。
-- 启用/禁用更改后，重启 gateway 以使其生效。
-
+- `/plugins list` 和 `/plugins show` 使用针对当前 workspace 以及磁盘上 config 的真实插件发现。
+- `/plugins install` 可从 ClawHub、npm、git、本地目录和归档包进行安装。
+- `/plugins enable|disable` 只更新插件配置；不会安装或卸载插件。
+- 启用和禁用会为新的 agent 回合热重载 Gateway 插件运行时表面；安装需要重启 Gateway，因为插件源码模块已发生变化。
 </Note>
 
 ## 界面说明
@@ -441,19 +445,17 @@ Override 会立即应用于新的 config 读取，但不会写入 `openclaw.json
       - Slack: `agent:<agentId>:slack:slash:<userId>`（前缀可通过 `channels.slack.slashCommand.sessionPrefix` 配置）
       - Telegram: `telegram:slash:<userId>`（通过 `CommandTargetSessionKey` 目标指向 chat session）
     - **`/stop`** 目标是当前的 chat session，以便中止当前运行。
-
   </Accordion>
   <Accordion title="Slack 细节">
     `channels.slack.slashCommand` 仍然支持单个 `/openclaw` 风格的命令。如果你启用 `commands.native`，则必须为每个内置命令创建一个 Slack slash command（名称与 `/help` 相同）。Slack 的命令参数菜单会以临时的 Block Kit 按钮形式提供。
 
     Slack 原生命令例外：请注册 `/agentstatus`（而不是 `/status`），因为 Slack 保留了 `/status`。文本形式的 `/status` 在 Slack 消息中仍然可用。
-
   </Accordion>
 </AccordionGroup>
 
 ## BTW 附带问题
 
-`/btw` 是关于当前会话的一个快速**附带问题**。
+`/btw` 是关于当前会话的一个快速**附带问题**。`/side` 是别名。
 
 不同于普通聊天：
 
@@ -469,6 +471,7 @@ Override 会立即应用于新的 config 读取，但不会写入 `openclaw.json
 
 ```text
 /btw what are we doing right now?
+/side what changed while the main run continued?
 ```
 
 完整行为和客户端 UX 细节请参见 [BTW Side Questions](/tools/btw)。

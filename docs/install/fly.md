@@ -45,7 +45,7 @@ read_when:
   <Step title="配置 fly.toml">
     编辑 `fly.toml` 以匹配你的应用名称和需求。
 
-    **安全提示：** 默认配置会暴露一个公共 URL。若要进行无公网 IP 的加固部署，请查看 [Private Deployment](#private-deployment-hardened) 或使用 `fly.private.toml`。
+    **安全说明：** 默认配置会暴露一个公共 URL。若要进行无公网 IP 的加固部署，请参见 [Private Deployment](#private-deployment-hardened) 或使用 `deploy/fly.private.toml`。
 
     ```toml
     app = "my-openclaw"  # 你的应用名称
@@ -392,11 +392,11 @@ fly machine update <machine-id> --vm-memory 2048 --command "node dist/index.js g
 
 ### 设置
 
-使用 `fly.private.toml`，而不是标准配置：
+使用 `deploy/fly.private.toml` 替代标准配置：
 
 ```bash
-# 使用私有配置进行部署
-fly deploy -c fly.private.toml
+# 使用私有配置部署
+fly deploy -c deploy/fly.private.toml
 ```
 
 或者转换现有部署：
@@ -409,9 +409,9 @@ fly ips list -a my-openclaw
 fly ips release <public-ipv4> -a my-openclaw
 fly ips release <public-ipv6> -a my-openclaw
 
-# 切换到私有配置，这样未来的部署不会重新分配公共 IP
-# （移除 [http_service]，或使用私有模板进行部署）
-fly deploy -c fly.private.toml
+# 切换到私有配置，使后续部署不再重新分配公共 IP
+# （移除 [http_service] 或使用私有模板部署）
+fly deploy -c deploy/fly.private.toml
 
 # 分配仅私有的 IPv6
 fly ips allocate-v6 --private -a my-openclaw

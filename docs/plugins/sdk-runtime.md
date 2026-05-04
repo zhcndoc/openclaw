@@ -109,10 +109,15 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
 
     ```typescript
     const storePath = api.runtime.agent.session.resolveStorePath(cfg);
-    const store = api.runtime.agent.session.loadSessionStore(cfg);
-    await api.runtime.agent.session.saveSessionStore(cfg, store);
+    const store = api.runtime.agent.session.loadSessionStore(storePath);
+    await api.runtime.agent.session.updateSessionStore(storePath, (nextStore) => {
+      // 在不使用陈旧状态替换整个文件的情况下，修补一条记录。
+      nextStore[sessionKey] = { ...nextStore[sessionKey], thinkingLevel: "high" };
+    });
     const filePath = api.runtime.agent.session.resolveSessionFilePath(cfg, sessionId);
     ```
+
+    优先使用 `updateSessionStore(...)` 或 `updateSessionStoreEntry(...)` 进行运行时写入。它们通过 Gateway 托管的 session-store 写入器进行路由，保留并发更新，并复用热缓存。`saveSessionStore(...)` 仍保留用于兼容性和离线维护式重写。
 
   </Accordion>
   <Accordion title="api.runtime.agent.defaults">
@@ -348,7 +353,12 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
 
     ```typescript
     await api.runtime.system.enqueueSystemEvent(event);
-    api.runtime.system.requestHeartbeatNow();
+    api.runtime.system.requestHeartbeat({
+      source: "other",
+      intent: "event",
+      reason: "plugin-event",
+    });
+    api.runtime.system.requestHeartbeatNow({ reason: "plugin-event" }); // 已弃用的兼容别名。
     const output = await api.runtime.system.runCommandWithTimeout(cmd, args, opts);
     const hint = api.runtime.system.formatNativeDependencyHint(pkg);
     ```

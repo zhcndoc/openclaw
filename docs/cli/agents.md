@@ -150,9 +150,10 @@ openclaw agents unbind --agent work --all
 说明：
 
 - `main` 不能被删除。
-- 如果不使用 `--force`，需要交互式确认。
-- 工作区、agent 状态和会话转写目录会被移动到废纸篓，而不是永久删除。
-- 如果另一个 agent 的工作区路径相同、位于此工作区内部，或包含此工作区，
+- 未使用 `--force` 时，需要交互式确认。
+- 工作区、agent 状态以及会话转录目录会移动到废纸篓，而不是直接硬删除。
+- 当 Gateway 可达时，删除会通过 Gateway 发送，因此配置和会话存储清理会与运行时流量共享同一个写入方。如果 Gateway 不可达，CLI 会回退到离线本地路径。
+- 如果另一个 agent 的工作区与此工作区是同一路径、位于此工作区内部，或包含此工作区，
   则会保留该工作区，并且 `--json` 会报告 `workspaceRetained`、
   `workspaceRetainedReason` 和 `workspaceSharedWith`。
 

@@ -281,7 +281,6 @@ type ImportedCustomTheme = {
 可能新增的辅助文件：
 
 - `ui/src/ui/custom-theme.ts`
-- `ui/src/ui/custom-theme-import.ts`
 
 测试：
 

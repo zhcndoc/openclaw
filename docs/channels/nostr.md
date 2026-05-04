@@ -17,16 +17,16 @@ Nostr 是一个用于社交网络的去中心化协议。此通道使 OpenClaw �
 
 ### 较旧/自定义安装
 
-- 上线引导（`openclaw onboard`）和 `openclaw channels add` 仍会从共享通道目录中显示
+- Onboarding (`openclaw onboard`) 和 `openclaw channels add` 仍会从共享通道目录中显示
   Nostr。
-- 如果你的构建未包含捆绑的 Nostr，请在可用时安装当前的 npm 包。
+- 如果你的构建不包含捆绑的 Nostr，请直接安装 npm 包。
 
 ```bash
 openclaw plugins install @openclaw/nostr
 ```
 
-如果 npm 报告 OpenClaw 维护的包已被弃用，请使用当前的已打包
-OpenClaw 构建，或先使用本地检出版本，直到发布更新的 npm 包。
+使用裸包可跟随当前官方发布标签。只有在需要可复现安装时才固定
+到精确版本。
 
 使用本地检出版本（开发流程）：
 

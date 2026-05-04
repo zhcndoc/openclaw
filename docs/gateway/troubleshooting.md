@@ -299,9 +299,9 @@ openclaw gateway status --deep   # 也扫描系统级服务
 - [配置](/gateway/configuration)
 - [Doctor](/gateway/doctor)
 
-## Gateway 恢复了最后已知良好配置
+## Gateway 拒绝了无效配置
 
-当 Gateway 可以启动，但日志显示它恢复了 `openclaw.json` 时使用此项。
+当 Gateway 启动失败并显示 `Invalid config`，或者热重载日志显示它跳过了无效编辑时使用此项。
 
 ```bash
 openclaw logs --follow
@@ -312,19 +312,19 @@ openclaw doctor
 
 查看以下内容：
 
-- `Config auto-restored from last-known-good`
-- `gateway: invalid config was restored from last-known-good backup`
-- `config reload restored last-known-good config after invalid-config`
-- 活动配置旁边带时间戳的 `openclaw.json.clobbered.*` 文件
-- 以 `Config recovery warning` 开头的主代理系统事件
+- `Invalid config at ...`
+- `config reload skipped (invalid config): ...`
+- `Config write rejected: ...`
+- 活动配置旁带时间戳的 `openclaw.json.rejected.*` 文件
+- 如果 `doctor --fix` 修复了损坏的直接编辑，则会在活动配置旁生成带时间戳的 `openclaw.json.clobbered.*` 文件
 
 <AccordionGroup>
   <Accordion title="发生了什么">
-    - 被拒绝的配置在启动或热重载期间未通过验证。
-    - OpenClaw 将被拒绝的载荷保存为 `.clobbered.*`。
-    - 活动配置已从上一次已验证的 last-known-good 副本恢复。
-    - 下一次主代理轮次会收到警告，不要盲目重写被拒绝的配置。
-    - 如果所有验证问题都位于 `plugins.entries.<id>...` 下，OpenClaw 不会恢复整个文件。插件本地失败会保持明显可见，而无关的用户设置仍保留在活动配置中。
+    - 配置在启动、热重载或 OpenClaw 所有写入过程中未能通过验证。
+    - Gateway 启动会直接失败，而不是重写 `openclaw.json`。
+    - 热重载会跳过无效的外部编辑，并保持当前运行时配置有效。
+    - OpenClaw 所有的写入会在提交前拒绝无效/破坏性负载，并保存 `.rejected.*`。
+    - `openclaw doctor --fix` 负责修复。它可以移除非 JSON 前缀，或在保留被拒绝负载为 `.clobbered.*` 的同时恢复最后已知良好副本。
 
   </Accordion>
   <Accordion title="检查并修复">
@@ -336,20 +336,21 @@ openclaw doctor
     openclaw doctor
     ```
   </Accordion>
-  <Accordion title="常见特征">
-    - `.clobbered.*` 存在 → 已恢复外部直接编辑或启动时读取的内容。
-    - `.rejected.*` 存在 → 在提交前，OpenClaw 管理的配置写入因模式或 clobber 检查失败。
-    - `Config write rejected:` → 写入尝试删除必需结构、明显缩小文件，或持久化无效配置。
-    - `Rejected validation details:` → 恢复日志或主代理通知包含导致恢复的 schema 路径，例如 `agents.defaults.execution` 或 `gateway.auth.password.source`。
-    - `missing-meta-vs-last-good`、`gateway-mode-missing-vs-last-good` 或 `size-drop-vs-last-good:*` → 启动时由于当前文件相比 last-known-good 备份丢失了字段或大小而将其视为已被覆盖。
-    - `Config last-known-good promotion skipped` → 候选内容包含被脱敏的密钥占位符，例如 `***`。
+  <Accordion title="常见签名">
+    - `.clobbered.*` 存在 → doctor 在修复活动配置时保留了一个损坏的外部编辑。
+    - `.rejected.*` 存在 → 一个 OpenClaw 所有的配置写入在提交前因 schema 或 clobber 检查失败。
+    - `Config write rejected:` → 该写入试图删除必需结构、显著缩小文件，或持久化无效配置。
+    - `config reload skipped (invalid config):` → 一次直接编辑未通过验证，被正在运行的 Gateway 忽略。
+    - `Invalid config at ...` → Gateway 服务启动前就已失败。
+    - `missing-meta-vs-last-good`、`gateway-mode-missing-vs-last-good` 或 `size-drop-vs-last-good:*` → 一个 OpenClaw 所有的写入因相较于最后已知良好备份丢失了字段或体积而被拒绝。
+    - `Config last-known-good promotion skipped` → 候选配置包含被脱敏的秘密占位符，例如 `***`。
 
   </Accordion>
   <Accordion title="修复选项">
-    1. 如果恢复后的活动配置是正确的，就保留它。
-    2. 只从 `.clobbered.*` 或 `.rejected.*` 中复制需要的键，然后使用 `openclaw config set` 或 `config.patch` 应用。
-    3. 在重启前运行 `openclaw config validate`。
-    4. 如果手动编辑，请保留完整的 JSON5 配置，而不是只保留你想修改的部分对象。
+    1. 运行 `openclaw doctor --fix`，让 doctor 修复带前缀/被 clobber 的配置，或恢复最后已知良好版本。
+    2. 只从 `.clobbered.*` 或 `.rejected.*` 中复制你想保留的键，然后使用 `openclaw config set` 或 `config.patch` 应用它们。
+    3. 重启前先运行 `openclaw config validate`。
+    4. 如果你手动编辑，请保留完整的 JSON5 配置，而不是只保留你想修改的部分对象。
   </Accordion>
 </AccordionGroup>
 
@@ -545,12 +546,12 @@ openclaw doctor
 - [浏览器（OpenClaw 托管）](/tools/browser)
 - [浏览器故障排查](/tools/browser-linux-troubleshooting)
 
-## 如果你升级后某些内容突然坏了
+## If something suddenly broke after you upgraded
 
-大多数升级后的故障都是配置漂移或更严格的默认值现在开始被强制执行所致。
+Most upgrade-time breakages are caused by configuration drift or stricter defaults being enforced now.
 
 <AccordionGroup>
-  <Accordion title="1. 认证和 URL 覆盖行为已更改">
+  <Accordion title="1. Authentication and URL override behavior changed">
     ```bash
     openclaw gateway status
     openclaw config get gateway.mode
@@ -558,18 +559,18 @@ openclaw doctor
     openclaw config get gateway.auth.mode
     ```
 
-    需要检查什么：
+    What to check:
 
-    - 如果 `gateway.mode=remote`，CLI 调用可能会指向远程，而你的本地服务其实是正常的。
-    - 显式的 `--url` 调用不会回退到已保存的凭据。
+    - If `gateway.mode=remote`, CLI calls may be pointing to the remote while your local service is actually healthy.
+    - Explicit `--url` calls do not fall back to saved credentials.
 
-    常见签名：
+    Common signatures:
 
-    - `gateway connect failed:` → 目标 URL 错误。
-    - `unauthorized` → 端点可达，但认证错误。
+    - `gateway connect failed:` → wrong target URL.
+    - `unauthorized` → the endpoint is reachable, but authentication is wrong.
 
   </Accordion>
-  <Accordion title="2. 绑定和认证防护现在更严格了">
+  <Accordion title="2. Binding and auth guardrails are stricter now">
     ```bash
     openclaw config get gateway.bind
     openclaw config get gateway.auth.mode
@@ -578,18 +579,18 @@ openclaw doctor
     openclaw logs --follow
     ```
 
-    需要检查什么：
+    What to check:
 
-    - 非回环绑定（`lan`、`tailnet`、`custom`）需要有效的网关认证路径：共享令牌/密码认证，或正确配置的非回环 `trusted-proxy` 部署。
-    - 旧键如 `gateway.token` 不能替代 `gateway.auth.token`。
+    - Non-loopback binds (`lan`, `tailnet`, `custom`) require a valid gateway auth path: shared-token/password auth, or a properly configured non-loopback `trusted-proxy` deployment.
+    - Older keys like `gateway.token` do not substitute for `gateway.auth.token`.
 
-    常见签名：
+    Common signatures:
 
-    - `refusing to bind gateway ... without auth` → 非回环绑定，但没有有效的网关认证路径。
-    - `Connectivity probe: failed` 且运行时正在运行 → 网关在线，但使用当前认证/URL 无法访问。
+    - `refusing to bind gateway ... without auth` → non-loopback bind, but no valid gateway auth path.
+    - `Connectivity probe: failed` and the runtime is running → the gateway is up, but unreachable with the current auth/URL.
 
   </Accordion>
-  <Accordion title="3. 配对和设备身份状态已更改">
+  <Accordion title="3. Pairing and device identity state changed">
     ```bash
     openclaw devices list
     openclaw pairing list --channel <channel> [--account <id>]
@@ -597,34 +598,34 @@ openclaw doctor
     openclaw doctor
     ```
 
-    需要检查什么：
+    What to check:
 
-    - 仪表板/节点是否有待处理的设备批准。
-    - 在策略或身份变更后，是否有待处理的 DM 配对批准。
+    - Whether the dashboard/node has pending device approvals.
+    - Whether there are pending DM pairing approvals after policy or identity changes.
 
-    常见签名：
+    Common signatures:
 
-    - `device identity required` → 设备认证未满足。
-    - `pairing required` → 发送方/设备必须先获批。
+    - `device identity required` → device authentication is not satisfied.
+    - `pairing required` → the sender/device must be approved first.
 
   </Accordion>
 </AccordionGroup>
 
-如果在检查后服务配置和运行时仍然不一致，请从同一个配置文件/状态目录重新安装服务元数据：
+If, after checking, the service configuration and runtime still disagree, reinstall the service metadata from the same config file/state directory:
 
 ```bash
 openclaw gateway install --force
 openclaw gateway restart
 ```
 
-相关：
+Related:
 
-- [认证](/gateway/authentication)
-- [后台执行和进程工具](/gateway/background-process)
-- [网关拥有的配对](/gateway/pairing)
+- [Authentication](/gateway/authentication)
+- [Background execution and process tools](/gateway/background-process)
+- [Gateway-owned pairing](/gateway/pairing)
 
-## 相关
+## Related
 
-- [诊断](/gateway/doctor)
-- [常见问题](/help/faq)
-- [网关运行手册](/gateway)
+- [Diagnostics](/gateway/doctor)
+- [FAQ](/help/faq)
+- [Gateway runbook](/gateway)

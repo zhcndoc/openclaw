@@ -141,7 +141,7 @@ sidebarTitle: "音乐生成"
   当提供方支持时的输出格式提示。
 </ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方请求超时（毫秒）。</ParamField>
+<ParamField path="timeoutMs" type="number">可选的提供方请求超时时间，单位为毫秒。10000ms 以下的值会提升到 10000ms，并在工具结果中报告。</ParamField>
 
 <Note>
 并非所有提供方都支持所有参数。OpenClaw 仍会在提交前验证诸如输入数量之类的硬性限制。当某个提供方支持时长但其最大值小于请求值时，OpenClaw 会将其夹取到最接近的受支持时长。真正不受支持的可选提示会在所选提供方或模型无法满足时被忽略，并给出警告。工具结果会报告已应用的设置；`details.normalization` 会记录任何从请求值到应用值的映射。

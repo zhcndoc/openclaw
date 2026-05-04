@@ -1,10 +1,10 @@
 ---
-summary: "心跳轮询消息和通知规则"
+summary: "Heartbeat 轮询消息和通知规则"
 read_when:
-  - 调整心跳频率或消息
-  - 在心跳和 cron 之间为计划任务做决定
-title: "心跳"
-sidebarTitle: "心跳"
+  - 调整 heartbeat 频率或消息
+  - 在 heartbeat 和 cron 之间为计划任务做决定
+title: "Heartbeat"
+sidebarTitle: "Heartbeat"
 ---
 
 <Note>
@@ -81,11 +81,11 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 
 ## 响应约定
 
-- If nothing needs attention, reply with **`HEARTBEAT_OK`**.
-- Tool-capable heartbeat runs may instead call `heartbeat_respond` with `notify: false` for no visible update, or `notify: true` plus `notificationText` for an alert. When present, the structured tool response takes precedence over the text fallback.
-- During heartbeat runs, OpenClaw treats `HEARTBEAT_OK` as an ack when it appears at the **start or end** of the reply. The token is stripped and the reply is dropped if the remaining content is **≤ `ackMaxChars`** (default: 300).
-- If `HEARTBEAT_OK` appears in the **middle** of a reply, it is not treated specially.
-- For alerts, **do not** include `HEARTBEAT_OK`; return only the alert text.
+- 如果没有需要关注的内容，请回复 **`HEARTBEAT_OK`**。
+- 支持工具的 heartbeat 运行也可以改为调用 `heartbeat_respond`，若无需可见更新则使用 `notify: false`，若需告警则使用 `notify: true` 加上 `notificationText`。当存在结构化工具响应时，它优先于文本回退。
+- 在 heartbeat 运行期间，OpenClaw 会将 `HEARTBEAT_OK` 视为确认，只要它出现在回复的**开头或结尾**。如果剩余内容**≤ `ackMaxChars`**（默认：300），则会移除该 token 并丢弃回复。
+- 如果 `HEARTBEAT_OK` 出现在回复的**中间**，则不会被特殊处理。
+- 对于告警，**不要**包含 `HEARTBEAT_OK`；只返回告警文本。
 
 在 heartbeats 之外，消息开头/结尾多余的 `HEARTBEAT_OK` 会被去除并记录；只有 `HEARTBEAT_OK` 的消息会被丢弃。
 
@@ -479,9 +479,9 @@ openclaw system event --text "检查紧急跟进事项" --mode now
 
 ## 心跳后的上下文溢出
 
-如果某个心跳使用了较小的本地模型，例如带有 32k 窗口的 Ollama 模型，而下一次主会话轮次报告上下文溢出，请检查前一个心跳是否让会话停留在心跳模型上。当最后一次运行时模型与配置的 `heartbeat.model` 匹配时，OpenClaw 的重置消息会指出这一点。
+如果心跳先前在较小的本地模型上留下了现有会话，例如一个带有 32k 窗口的 Ollama 模型，而下一次主会话轮次报告上下文溢出，请将会话运行时模型重置回已配置的主模型。当最后运行时模型与已配置的 `heartbeat.model` 匹配时，OpenClaw 的重置消息会指出这一点。
 
-使用 `isolatedSession: true` 在全新会话中运行心跳，将其与 `lightContext: true` 结合可获得最小提示，或者选择一个上下文窗口足够大的心跳模型，以适配共享会话。
+当前心跳在运行完成后会保留共享会话现有的运行时模型。你仍然可以使用 `isolatedSession: true` 在新的会话中运行心跳，配合 `lightContext: true` 以获得最小提示，或者选择一个上下文窗口足够大的心跳模型，以适配共享会话。
 
 ## 相关内容
 

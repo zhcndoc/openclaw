@@ -177,7 +177,7 @@ openclaw channels add bluebubbles --http-url http://192.168.1.100:1234 --passwor
     - 通过以下方式批准：
       - `openclaw pairing list bluebubbles`
       - `openclaw pairing approve bluebubbles <CODE>`
-    - 配对是默认的令牌交换方式。详情：[Pairing](/channels/pairing)
+    - 配对是默认的令牌交换方式。详情：[配对](/channels/pairing)
 
   </Tab>
   <Tab title="Groups">
@@ -267,15 +267,7 @@ BlueBubbles 支持群聊的提及门控，行为与 iMessage/WhatsApp 一致：
     bluebubbles: {
       groups: {
         "iMessage;+;chat-family": {
-          systemPrompt: [
-            "在这个群组中回复时，始终调用 action=reply，并使用",
-            "上下文中的 [[reply_to:N]] messageId，这样你的回复会线程化",
-            "到触发消息下方。不要发送新的未关联消息。",
-            "",
-            "对于简短确认（'ok'、'got it'、'on it'），请使用",
-            "带有合适 tapback 表情的 action=react（❤️、👍、😂、‼️、❓）",
-            "而不是发送文本回复。",
-          ].join(" "),
+          systemPrompt: "When replying in this group, always call action=reply with the [[reply_to:N]] messageId from context so your response threads under the triggering message. Never send a new unlinked message. For short acknowledgements ('ok', 'got it', 'on it'), use action=react with an appropriate tapback emoji (❤️, 👍, 😂, ‼️, ❓) instead of sending a text reply.",
         },
       },
     },

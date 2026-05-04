@@ -84,14 +84,13 @@ OpenClaw 只接受完全符合架构的配置。未知键、格式错误的类�
 - 运行 `openclaw doctor` 查看确切问题
 - 运行 `openclaw doctor --fix`（或 `--yes`）应用修复
 
-Gateway 会在每次成功启动后保留一份受信任的最近已知良好副本。
-如果之后 `openclaw.json` 校验失败（或丢失 `gateway.mode`、大幅缩减，
-或前面多了一行日志文本），OpenClaw 会将损坏文件保留为 `.clobbered.*`，
-恢复最近已知良好副本，并记录恢复原因。下一轮代理交互还会收到一条系统事件警告，
-这样主代理就不会盲目重写已恢复的配置。当候选文件包含诸如 `***` 这样的已脱敏密钥占位符时，
-不会提升为最近已知良好副本。
-当所有校验问题都限定在 `plugins.entries.<id>...` 时，OpenClaw 不会执行整文件恢复。
-它会保持当前配置处于激活状态，并暴露插件本地失败，这样插件架构或主机版本不匹配就不会回滚无关的用户设置。
+The Gateway keeps a trusted last-known-good copy after each successful startup,
+but startup and hot reload do not restore it automatically. If `openclaw.json`
+fails validation (including plugin-local validation), Gateway startup fails or
+the reload is skipped and the current runtime keeps the last accepted config.
+Run `openclaw doctor --fix` (or `--yes`) to repair prefixed/clobbered config or
+restore the last-known-good copy. Promotion to last-known-good is skipped when a
+candidate contains redacted secret placeholders such as `***`.
 
 ## 常见任务
 
@@ -323,7 +322,7 @@ Gateway 会在每次成功启动后保留一份受信任的最近已知良好副
     }
     ```
 
-    Build the image first — from a source checkout run `scripts/sandbox-setup.sh`, or from an npm install see the inline `docker build` command in [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup).
+    先构建镜像——从源码检出运行 `scripts/sandbox-setup.sh`，或者在 npm 安装后查看 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令。
 
     有关完整指南，请参阅 [沙箱](/gateway/sandboxing)；有关所有选项，请参阅[完整参考](/gateway/config-agents#agentsdefaultssandbox)。
 
@@ -527,18 +526,17 @@ Gateway 会在每次成功启动后保留一份受信任的最近已知良好副
 
 Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多数设置无需手动重启。
 
-直接文件编辑在验证通过前都视为不受信任。监视器会等待编辑器临时写入/重命名抖动稳定下来，
-读取最终文件，并通过恢复最近已知良好配置来拒绝无效的外部编辑。OpenClaw 所有的配置写入
-在写入前也会使用同样的架构门控；例如丢弃 `gateway.mode` 或将文件缩小超过一半之类的破坏性覆盖
-会被拒绝并保存为 `.rejected.*` 供检查。
+Direct file edits are treated as untrusted until they validate. The watcher waits
+for editor temp-write/rename churn to settle, reads the final file, and rejects
+invalid external edits without rewriting `openclaw.json`. OpenClaw-owned config
+writes use the same schema gate before writing; destructive clobbers such as
+dropping `gateway.mode` or shrinking the file by more than half are rejected and
+saved as `.rejected.*` for inspection.
 
-插件本地校验失败是个例外：如果所有问题都位于 `plugins.entries.<id>...` 下，
-重载会保留当前配置，并报告插件问题，而不是恢复 `.last-good`。
-
-如果你在日志中看到 `Config auto-restored from last-known-good` 或
-`config reload restored last-known-good config`，请检查位于 `openclaw.json` 旁边的匹配
-`.clobbered.*` 文件，修复被拒绝的载荷，然后运行
-`openclaw config validate`。有关恢复检查清单，请参阅 [Gateway 故障排查](/gateway/troubleshooting#gateway-restored-last-known-good-config)。
+If you see `config reload skipped (invalid config)` or startup reports `Invalid
+config`, inspect the config, run `openclaw config validate`, then run `openclaw
+doctor --fix` for repair. See [Gateway troubleshooting](/gateway/troubleshooting#gateway-rejected-invalid-config)
+for the checklist.
 
 ### 重载模式
 
@@ -587,14 +585,14 @@ Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多�
 
 对于通过 gateway API 写入配置的工具，建议使用以下流程：
 
-- `config.schema.lookup` 用于检查某个子树（浅层 schema 节点 + 子节点
+- `config.schema.lookup` 用于检查一个子树（浅层 schema 节点 + 子节点
   摘要）
 - `config.get` 用于获取当前快照以及 `hash`
 - `config.patch` 用于部分更新（JSON merge patch：对象合并，`null`
   删除，数组替换）
 - `config.apply` 仅在你打算替换整个配置时使用
-- `update.run` 用于显式自更新并重启
-- `update.status` 用于检查最新的更新重启哨兵，并在重启后验证运行版本
+- `update.run` 用于显式自更新并重启；当重启后的会话应运行一次后续回合时，请包含 `continuationMessage`
+- `update.status` 用于检查最新的更新重启哨兵，并在重启后验证正在运行的版本
 
 Agents 应将 `config.schema.lookup` 视为获取精确
 字段级文档和约束的第一站。在需要更广泛的配置映射、默认值或指向专用

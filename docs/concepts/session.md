@@ -117,6 +117,10 @@ OpenClaw 会随着时间自动限制会话存储的规模。默认情况下，�
 
 对于生产规模的 `maxEntries` 限制，Gateway 运行时写入会使用一个较小的高水位缓冲区，并按批次清理回配置的上限。会话存储读取在 Gateway 启动期间不会裁剪或限制条目。这样可以避免在每次启动或孤立的 cron 会话时都执行完整的存储清理。`openclaw sessions cleanup --enforce` 会立即应用该上限。
 
+维护会保留持久的外部会话指针，包括群组
+会话和线程范围的聊天会话，同时仍允许合成的 cron、
+hook、heartbeat、ACP 和子代理条目过期。
+
 使用 `openclaw sessions cleanup --dry-run` 进行预览。
 
 ## 检查会话

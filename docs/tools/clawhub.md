@@ -60,26 +60,34 @@ ClawHub 是 **OpenClaw 技能和插件** 的公共注册表。
   </Tab>
   <Tab title="插件">
     ```bash
+    openclaw plugins search "calendar"
     openclaw plugins install clawhub:<package>
     openclaw plugins update --all
     ```
 
-    纯 npm 安全的插件规格也会先尝试在 npm 之前到 ClawHub 中查找：
+    `plugins search` 会查询 ClawHub 插件目录并打印可直接安装的
+    包名。当你希望使用 ClawHub 解析时，请使用 `clawhub:<package>`。
+    在启动切换期间，裸的、符合 npm 安全要求的插件规格会从 npm 安装：
 
     ```bash
     openclaw plugins install openclaw-codex-app-server
     ```
 
-    当你希望仅使用 npm 解析而不进行
-    ClawHub 查找时，请使用 `npm:<package>`：
+    `npm:<package>` 也仅限 npm，当某个规格否则可能
+    含义不明确时很有用：
 
     ```bash
     openclaw plugins install npm:openclaw-codex-app-server
     ```
 
     插件安装会在归档安装运行之前验证所声明的 `pluginApi` 和
-    `minGatewayVersion` 兼容性，因此不兼容的主机会尽早失败，
-    而不是部分安装包。
+    `minGatewayVersion` 兼容性，因此不兼容的宿主会
+    尽早失败，而不是部分安装该包。当某个包版本发布了 ClawPack 资源时，
+    OpenClaw 会优先使用上传的精确 npm-pack `.tgz`，验证 ClawHub
+    摘要头和下载字节，并记录资源类型、npm
+    完整性、npm shasum、tarball 名称以及 ClawPack 摘要元数据，
+    以便后续更新。没有 ClawPack 元数据的旧版包仍然使用
+    传统的包归档验证路径。
 
   </Tab>
 </Tabs>

@@ -23,7 +23,7 @@ Synology Chat 已作为捆绑插件包含在当前 OpenClaw 版本中，因此�
 openclaw plugins install ./path/to/local/synology-chat-plugin
 ```
 
-详情：[Plugins](/tools/plugin)
+详情：[插件](/tools/plugin)
 
 ## 快速设置
 
@@ -109,6 +109,7 @@ Webhook 认证详情：
 ```bash
 openclaw message send --channel synology-chat --target 123456 --text "Hello from OpenClaw"
 openclaw message send --channel synology-chat --target synology-chat:123456 --text "Hello again"
+openclaw message send --channel synology-chat --target synology:123456 --text "Short prefix"
 ```
 
 支持基于 URL 的文件投递来发送媒体。

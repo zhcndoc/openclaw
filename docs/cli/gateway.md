@@ -4,20 +4,20 @@ read_when:
   - 从 CLI 运行 Gateway（开发或服务器）
   - 调试 Gateway 认证、绑定模式和连通性
   - 通过 Bonjour 发现网关（本地 + 广域 DNS-SD）
-title: "Gateway"
-sidebarTitle: "Gateway"
+title: "网关"
+sidebarTitle: "网关"
 ---
 
 Gateway 是 OpenClaw 的 WebSocket 服务器（channels、nodes、sessions、hooks）。本页中的子命令位于 `openclaw gateway …` 下。
 
 <CardGroup cols={3}>
-  <Card title="Bonjour discovery" href="/gateway/bonjour">
+  <Card title="Bonjour 发现" href="/gateway/bonjour">
     本地 mDNS + 广域 DNS-SD 设置。
   </Card>
-  <Card title="Discovery overview" href="/gateway/discovery">
+  <Card title="发现概览" href="/gateway/discovery">
     OpenClaw 如何发布和查找网关。
   </Card>
-  <Card title="Configuration" href="/gateway/configuration">
+  <Card title="配置" href="/gateway/configuration">
     顶层 gateway 配置键。
   </Card>
 </CardGroup>
@@ -37,7 +37,7 @@ openclaw gateway run
 ```
 
 <AccordionGroup>
-  <Accordion title="Startup behavior">
+  <Accordion title="启动行为">
     - 默认情况下，除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则 Gateway 会拒绝启动。临时/开发运行请使用 `--allow-unconfigured`。
     - `openclaw onboard --mode local` 和 `openclaw setup` 预计会写入 `gateway.mode=local`。如果文件存在但缺少 `gateway.mode`，应将其视为损坏或被覆盖的配置，并进行修复，而不是隐式地假定为本地模式。
     - 如果文件存在且缺少 `gateway.mode`，Gateway 会将其视为可疑的配置损坏，并拒绝为你“猜测为本地模式”。
@@ -120,13 +120,13 @@ openclaw gateway run
 所有查询命令都使用 WebSocket RPC。
 
 <Tabs>
-  <Tab title="Output modes">
+  <Tab title="输出模式">
     - 默认：人类可读（TTY 中带颜色）。
     - `--json`：机器可读 JSON（无样式/无 spinner）。
     - `--no-color`（或 `NO_COLOR=1`）：禁用 ANSI，同时保留人类布局。
 
   </Tab>
-  <Tab title="Shared options">
+  <Tab title="共享选项">
     - `--url <url>`：Gateway WebSocket URL。
     - `--token <token>`：Gateway 令牌。
     - `--password <password>`：Gateway 密码。
@@ -194,7 +194,7 @@ openclaw gateway stability --json
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Privacy and bundle behavior">
+  <Accordion title="隐私和 bundle 行为">
     - 记录保留运行时元数据：事件名称、计数、字节大小、内存读数、队列/会话状态、channel/plugin 名称，以及已脱敏的会话摘要。它们不会保留聊天文本、webhook 正文、工具输出、原始请求或响应正文、令牌、cookie、密钥值、主机名或原始会话 id。设置 `diagnostics.enabled: false` 可完全禁用记录器。
     - 在 Gateway 致命退出、关闭超时以及重启启动失败时，如果记录器有事件，OpenClaw 会将相同的诊断快照写入 `~/.openclaw/logs/stability/openclaw-stability-*.json`。使用 `openclaw gateway stability --bundle latest` 检查最新 bundle；`--limit`、`--type` 和 `--since-seq` 也适用于 bundle 输出。
 
@@ -276,7 +276,7 @@ openclaw gateway status --require-rpc
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Status semantics">
+  <Accordion title="状态语义">
     - 即使本地 CLI 配置缺失或无效，`gateway status` 仍可用于诊断。
     - 默认的 `gateway status` 会证明服务状态、WebSocket 连接以及握手时可见的认证能力。它不能证明读/写/管理操作。
     - 诊断探针对首次设备认证是非变更性的：如果存在现有的缓存设备令牌，它们会复用该令牌，但不会仅为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
@@ -288,7 +288,7 @@ openclaw gateway status --require-rpc
     - 人类可读输出会包含解析后的文件日志路径，以及 CLI 与服务的配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
 
   </Accordion>
-  <Accordion title="Linux systemd auth-drift checks">
+  <Accordion title="Linux systemd auth-drift 检查">
     - 在 Linux systemd 安装中，服务认证漂移检查会从 unit 中读取 `Environment=` 和 `EnvironmentFile=` 两种值（包括 `%h`、带引号的路径、多个文件以及可选的 `-` 文件）。
     - 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRef（先使用服务命令环境，再回退到进程环境）。
     - 如果令牌认证实际上未启用（显式的 `gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可能生效而没有令牌候选可以生效），则 token 漂移检查会跳过配置令牌解析。
@@ -319,7 +319,7 @@ openclaw gateway probe --json
 ```
 
 <AccordionGroup>
-  <Accordion title="Interpretation">
+  <Accordion title="解释">
     - `Reachable: yes` 表示至少有一个目标接受了 WebSocket 连接。
     - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` 报告探针能够证明的认证能力。这与可达性是分开的。
     - `Read probe: ok` 表示读范围详细 RPC 调用（`health`/`status`/`system-presence`/`config.get`）也成功了。
@@ -329,7 +329,7 @@ openclaw gateway probe --json
     - 只有当所有被探测的目标都不可达时，退出码才为非零。
 
   </Accordion>
-  <Accordion title="JSON output">
+  <Accordion title="JSON 输出">
     顶层：
 
     - `ok`：至少有一个目标可达。
@@ -353,7 +353,7 @@ openclaw gateway probe --json
     - `capability`：该目标显示出的认证能力分类。
 
   </Accordion>
-  <Accordion title="Common warning codes">
+  <Accordion title="常见警告代码">
     - `ssh_tunnel_failed`：SSH 隧道设置失败；命令回退到直接探测。
     - `multiple_gateways`：有多个目标可达；除非你有意运行隔离 profile（例如 rescue bot），这通常不寻常。
     - `auth_secretref_unresolved`：已配置的认证 SecretRef 无法为失败的目标解析。
@@ -470,12 +470,15 @@ openclaw gateway restart
   <Accordion title="命令选项">
     - `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
     - `gateway install`: `--port`, `--runtime <node|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`
-    - `gateway uninstall|start|stop|restart`: `--json`
+    - `gateway restart`: `--force`, `--wait <duration>`, `--json`
+    - `gateway uninstall|start|stop`: `--json`
 
   </Accordion>
   <Accordion title="生命周期行为">
-    - 使用 `gateway restart` 来重启托管服务。不要将 `gateway stop` 和 `gateway start` 串联起来作为重启的替代；在 macOS 上，`gateway stop` 会在停止前故意禁用 LaunchAgent。
-    - 生命周期命令接受 `--json`，便于脚本化。
+    - 使用 `gateway restart` 来重启受管理的服务。不要将 `gateway stop` 和 `gateway start` 作为重启的替代方案；在 macOS 上，`gateway stop` 会在停止之前有意禁用 LaunchAgent。
+    - `gateway restart --wait 30s` 会覆盖该次重启的配置重启排空预算。裸数字表示毫秒；可接受 `s`、`m` 和 `h` 等单位。`--wait 0` 表示无限等待。
+    - `gateway restart --force` 会跳过活动工作排空并立即重启。在操作员已经检查过列出的任务阻塞项并希望立即恢复 gateway 时使用它。
+    - 生命周期命令接受 `--json` 以便脚本化。
 
   </Accordion>
   <Accordion title="安装时的认证和 SecretRef">

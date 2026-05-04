@@ -52,7 +52,29 @@ export default definePluginEntry({
 - `priority` — 处理器排序（数值越高越先运行）。
 - `timeoutMs` — 可选的每个钩子预算。设置后，钩子运行器会在预算耗尽后中止该处理器，并继续下一个，而不是让缓慢的初始化或检索工作消耗调用方配置的模型超时。不设置则使用钩子运行器通用应用的默认观察/决策超时。
 
-每个钩子都会收到 `event.context.pluginConfig`，也就是注册该处理器的插件解析后的配置。可用于需要当前插件选项的钩子决策；OpenClaw 会按处理器注入它，而不会修改其他插件看到的共享事件对象。
+操作员也可以在不修改插件代码的情况下设置钩子预算：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "my-plugin": {
+        "hooks": {
+          "timeoutMs": 30000,
+          "timeouts": {
+            "before_prompt_build": 90000,
+            "agent_end": 60000
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`hooks.timeouts.<hookName>` 会覆盖 `hooks.timeoutMs`，而 `hooks.timeoutMs` 会覆盖插件作者在 `api.on(..., { timeoutMs })` 中设置的值。每个已配置的值必须是大于 0 且不超过 600000 毫秒的正整数。对于已知较慢的钩子，优先使用按钩子覆盖，这样单个插件不会在所有地方都获得更长的预算。
+
+每个钩子都会接收 `event.context.pluginConfig`，即注册该处理器的插件解析后的配置。将其用于需要当前插件选项的钩子决策；OpenClaw 会为每个处理器单独注入它，而不会修改其他插件看到的共享事件对象。
 
 ## 钩子目录
 
@@ -171,7 +193,9 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 当 OpenClaw 能识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。同一个值也可在 `ctx.runId` 中获取。cron 驱动的运行还会暴露 `ctx.jobId`（来源 cron 作业 id），因此插件钩子可以将指标、副作用或状态限定到特定计划作业。
 
-`agent_end` 是一个观察钩子，会在回合结束后 fire-and-forget 运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，而 OpenClaw 会继续；除非插件也使用自己的 abort 信号，否则它不会取消插件自有的网络工作。
+对于源自通道的运行，`ctx.messageProvider` 是诸如 `discord` 或 `telegram` 的提供方表面，而 `ctx.channelId` 是当 OpenClaw 能从 session key 或投递元数据推导出时的会话目标标识符。
+
+`agent_end` 是一个观察型钩子，并在回合结束后以 fire-and-forget 方式运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续执行；除非插件也使用自己的 abort signal，否则它不会取消插件拥有的网络工作。
 
 使用 `model_call_started` 和 `model_call_ended` 来获取不应接收原始提示词、历史记录、响应、标头、请求体或 provider 请求 ID 的提供方调用遥测。这些钩子包含稳定元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 ID 哈希时的 `upstreamRequestIdHash`。
 

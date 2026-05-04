@@ -62,130 +62,25 @@ OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
 在使用 CPU 分析器之前，先用这个来调查插件生命周期。
 如果命令是从源码检出中运行的，优先在 `pnpm build` 之后通过 `node dist/entry.js ...` 测量构建后的运行时；`pnpm openclaw ...` 也会测量源码运行器的额外开销。
 
-## 临时 CLI 调试计时
+## CLI 启动和命令分析
 
-OpenClaw 保留 `src/cli/debug-timing.ts` 作为一个用于本地调查的小助手。它有意没有接入 CLI 启动、命令路由或任何默认命令。只在调试一个慢命令时使用它，然后在合并行为更改之前移除导入和跨度。
-
-当某个命令很慢，并且你需要在决定使用 CPU 分析器还是修复某个特定子系统之前，快速查看阶段拆解时，请使用它。
-
-### 添加临时跨度
-
-在你正在调查的代码附近添加这个助手。例如，在调试 `openclaw models list` 时，`src/commands/models/list.list-command.ts` 中的一个临时补丁可能如下所示：
-
-```ts
-// 仅用于临时调试。合并前移除。
-import { createCliDebugTiming } from "../../cli/debug-timing.js";
-
-const timing = createCliDebugTiming({ command: "models list" });
-
-const authStore = timing.time("debug:models:list:auth_store", () => ensureAuthProfileStore());
-
-const loaded = await timing.timeAsync(
-  "debug:models:list:registry",
-  () => loadListModelRegistry(cfg, { sourceConfig }),
-  (result) => ({
-    models: result.models.length,
-    discoveredKeys: result.discoveredKeys.size,
-  }),
-);
-```
-
-指南：
-
-- 临时阶段名称以前缀 `debug:` 开头。
-- 只在可疑的慢区段周围添加少量跨度。
-- 优先使用 `registry`、`auth_store` 或 `rows` 之类的宽泛阶段，而不是辅助函数名称。
-- 对同步工作使用 `time()`，对 promise 使用 `timeAsync()`。
-- 保持 stdout 干净。该助手会写入 stderr，因此命令 JSON 输出仍可解析。
-- 在打开最终修复 PR 之前移除临时导入和跨度。
-- 在 issue 或 PR 中附上计时输出或简短摘要，以解释优化内容。
-
-### 以可读输出运行
-
-可读模式最适合实时调试：
+当某个命令感觉很慢时，使用已检入的启动基准测试：
 
 ```bash
-OPENCLAW_DEBUG_TIMING=1 pnpm openclaw models list --all --provider moonshot
+pnpm test:startup:bench:smoke
+pnpm tsx scripts/bench-cli-startup.ts --preset real --case status --runs 3
+pnpm tsx scripts/bench-cli-startup.ts --preset real --cpu-prof-dir .artifacts/cli-cpu
 ```
 
-来自一次临时 `models list` 调查的示例输出：
-
-```text
-OpenClaw CLI debug timing: models list
-     0ms     +0ms start all=true json=false local=false plain=false provider="moonshot"
-     2ms     +2ms debug:models:list:import_runtime duration=2ms
-    17ms    +14ms debug:models:list:load_config duration=14ms sourceConfig=true
-  20.3s  +20.3s debug:models:list:auth_store duration=20.3s
-  20.3s     +0ms debug:models:list:resolve_agent_dir duration=0ms agentDir=true
-  20.3s     +0ms debug:models:list:resolve_provider_filter duration=0ms
-  25.3s   +5.0s debug:models:list:ensure_models_json duration=5.0s
-  31.2s   +5.9s debug:models:list:load_model_registry duration=5.9s models=869 availableKeys=38 discoveredKeys=868 availabilityError=false
-  31.2s     +0ms debug:models:list:resolve_configured_entries duration=0ms entries=1
-  31.2s     +0ms debug:models:list:build_configured_lookup duration=0ms entries=1
-  33.6s   +2.4s debug:models:list:read_registry_models duration=2.4s models=871
-  35.2s   +1.5s debug:models:list:append_discovered_rows duration=1.5s seenKeys=0 rows=0
-  36.9s   +1.7s debug:models:list:append_catalog_supplement_rows duration=1.7s seenKeys=5 rows=5
-
-Model                                      Input       Ctx   Local Auth  Tags
-moonshot/kimi-k2-thinking                  text        256k  no    no
-moonshot/kimi-k2-thinking-turbo            text        256k  no    no
-moonshot/kimi-k2-turbo                     text        250k  no    no
-moonshot/kimi-k2.5                         text+image  256k  no    no
-moonshot/kimi-k2.6                         text+image  256k  no    no
-
-  36.9s     +0ms debug:models:list:print_model_table duration=0ms rows=5
-  36.9s     +0ms complete rows=5
-```
-
-来自此输出的发现：
-
-| 阶段                                     |       时间 | 含义                                                                                              |
-| ---------------------------------------- | ---------: | ------------------------------------------------------------------------------------------------- |
-| `debug:models:list:auth_store`           |      20.3s | auth-profile 存储加载是最大的开销，应优先调查。                                                   |
-| `debug:models:list:ensure_models_json`   |       5.0s | 同步 `models.json` 的成本足够高，需要检查缓存或跳过条件。                                         |
-| `debug:models:list:load_model_registry`  |       5.9s | 注册表构建和提供方可用性工作也是有意义的成本。                                                    |
-| `debug:models:list:read_registry_models` |       2.4s | 读取所有注册表模型并非没有开销，且在 `--all` 场景下可能很重要。                                   |
-| row append phases                        | 3.2s total | 构建五行显示结果仍然花费了几秒，因此过滤路径值得进一步查看。                                      |
-| `debug:models:list:print_model_table`    |        0ms | 渲染不是瓶颈。                                                                                    |
-
-这些发现足以指导下一次补丁，而不必把计时代码保留在生产路径中。
-
-### 以 JSON 输出运行
-
-当你想保存或比较计时数据时，请使用 JSON 模式：
+如需通过正常的源码运行器进行一次性分析，请设置
+`OPENCLAW_RUN_NODE_CPU_PROF_DIR`：
 
 ```bash
-OPENCLAW_DEBUG_TIMING=json pnpm openclaw models list --all --provider moonshot \
-  2> .artifacts/models-list-timing.jsonl
+OPENCLAW_RUN_NODE_CPU_PROF_DIR=.artifacts/cli-cpu pnpm openclaw status
 ```
 
-每一行 stderr 都是一个 JSON 对象：
-
-```json
-{
-  "command": "models list",
-  "phase": "debug:models:list:registry",
-  "elapsedMs": 31200,
-  "deltaMs": 5900,
-  "durationMs": 5900,
-  "models": 869,
-  "discoveredKeys": 868
-}
-```
-
-### 合并前清理
-
-在打开最终 PR 之前：
-
-```bash
-rg 'createCliDebugTiming|debug:[a-z0-9_-]+:' src/commands src/cli \
-  --glob '!src/cli/debug-timing.*' \
-  --glob '!*.test.ts'
-```
-
-除非该 PR 明确是在添加一个永久的诊断面，否则该命令不应返回任何临时插桩调用点。对于正常的性能修复，只保留行为变更、测试，以及一条带有计时证据的简短说明。
-
-对于更深层的 CPU 热点，请使用 Node profiling（`--cpu-prof`）或外部分析器，而不是添加更多计时包装器。
+源码运行器会添加 Node CPU 分析标志，并为该
+命令写入一个 `.cpuprofile` 文件。在向命令代码添加临时埋点之前，先使用这个。
 
 ## Gateway 监视模式
 
@@ -223,10 +118,32 @@ OPENCLAW_GATEWAY_WATCH_TMUX=0 pnpm gateway:watch
 OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch
 ```
 
-tmux 包装器会将常见的非密钥运行时选择器，如
+在调试启动/运行时热点时，对被监视的 Gateway CPU 时间进行分析：
+
+```bash
+pnpm gateway:watch --benchmark
+```
+
+监视包装器会在调用 Gateway 之前消费 `--benchmark`，并在
+`.artifacts/gateway-watch-profiles/` 下为 Gateway 子进程的每次退出写入
+一个 V8 `.cpuprofile`。停止或重启被监视的 gateway 以刷新当前分析文件，
+然后使用 Chrome DevTools 或 Speedscope 打开它：
+
+```bash
+npx speedscope .artifacts/gateway-watch-profiles/*.cpuprofile
+```
+
+当你希望将分析文件写到其他位置时，使用 `--benchmark-dir <path>`。
+当你希望开启基准分析的子进程跳过默认的 `--force` 端口清理，并在 Gateway 端口已被占用时快速失败，请使用 `--benchmark-no-force`。
+
+tmux 包装器会将常见的非机密运行时选择器传入窗格，例如
 `OPENCLAW_PROFILE`、`OPENCLAW_CONFIG_PATH`、`OPENCLAW_STATE_DIR`、
-`OPENCLAW_GATEWAY_PORT` 和 `OPENCLAW_SKIP_CHANNELS` 传入窗格。将
-提供方凭据放在你的常规 profile/config 中，或者在一次性临时密钥场景下使用原始前台模式。
+`OPENCLAW_GATEWAY_PORT` 和 `OPENCLAW_SKIP_CHANNELS`。将提供方凭据放在你常用的 profile/config 中，或对一次性的临时密钥使用原始前台模式。
+如果被监视的 Gateway 在启动期间退出，watcher 会运行一次
+`openclaw doctor --fix --non-interactive`，然后重启 Gateway 子进程。
+当你希望看到原始启动失败，而不经过仅限开发环境的修复流程时，使用 `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0`。
+受管的 tmux 窗格还默认启用带颜色的 Gateway 日志以提升可读性；
+在启动 `pnpm gateway:watch` 时设置 `FORCE_COLOR=0` 可禁用 ANSI 输出。
 
 watcher 会在 `src/` 下的构建相关文件、扩展源文件、扩展 `package.json` 和 `openclaw.plugin.json` 元数据、`tsconfig.json`、`package.json` 以及 `tsdown.config.ts` 发生变化时重启。扩展元数据更改会在不强制进行 `tsdown` 重建的情况下重启 gateway；源码和配置更改仍会先重建 `dist`。
 

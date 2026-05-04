@@ -116,11 +116,12 @@ LM Studio 与流式使用量兼容。当它没有发出 OpenAI 形式的
 
 ### 思考兼容性
 
-当 LM Studio 的 `/api/v1/models` 发现结果报告了模型特定的推理
-选项时，OpenClaw 会在模型兼容元数据中保留这些原生值。对于
-声明 `allowed_options: ["off", "on"]` 的二元思考模型，
-OpenClaw 会将禁用思考映射为 `off`，将启用 `/think` 级别映射为 `on`，
-而不是发送诸如 `low` 或 `medium` 之类仅 OpenAI 支持的值。
+当 LM Studio 的 `/api/v1/models` 发现结果报告特定于模型的推理
+选项时，OpenClaw 会在模型兼容性元数据中暴露匹配的、与 OpenAI 兼容的 `reasoning_effort`
+值。当前 LM Studio 构建版本可能会 الإعلان বাইনারি
+UI 选项，例如 `allowed_options: ["off", "on"]`，同时却会在 `/v1/chat/completions` 上拒绝这些值；在发送请求之前，OpenClaw 会将这种二元发现形状规范化为
+`none`、`minimal`、`low`、`medium`、`high` 和 `xhigh`。
+当加载目录时，包含 `off`/`on` 推理映射的旧版 LM Studio 保存配置也会以相同方式规范化。
 
 ### 显式配置
 
@@ -176,7 +177,22 @@ curl http://localhost:1234/api/v1/models
 
 ### 即时模型加载
 
-LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加载。请确保已启用此功能，以避免出现“Model not loaded”错误。
+LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加载。默认情况下，OpenClaw 会通过 LM Studio 的原生加载端点预加载模型，这在禁用 JIT 时很有帮助。要让 LM Studio 的 JIT、空闲 TTL 和自动回收行为接管模型生命周期，请禁用 OpenClaw 的预加载步骤：
+
+```json5
+{
+  models: {
+    providers: {
+      lmstudio: {
+        baseUrl: "http://localhost:1234/v1",
+        api: "openai-completions",
+        params: { preload: false },
+        models: [{ id: "qwen/qwen3.5-9b" }],
+      },
+    },
+  },
+}
+```
 
 ### LAN 或 tailnet 上的 LM Studio 主机
 

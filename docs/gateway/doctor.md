@@ -119,13 +119,14 @@ cat ~/.openclaw/openclaw.json
     - 设备配对问题检测（待处理的首次配对请求、待处理的角色/范围升级、陈旧的本地 device-token 缓存漂移，以及已配对记录的认证漂移）。
 
   </Accordion>
-  <Accordion title="工作区和 shell">
-    - Linux 上的 systemd linger 检查。
-    - 工作区 bootstrap 文件大小检查（上下文文件的截断/接近上限警告）。
-    - shell 补全状态检查和自动安装/升级。
-    - 记忆搜索 embedding provider 就绪性检查（本地模型、远程 API key 或 QMD 二进制文件）。
-    - 源码安装检查（pnpm workspace 不匹配、缺失 UI assets、缺失 tsx 二进制）。
-    - 写入更新后的配置 + 向导元数据。
+  <Accordion title="Workspace and shell">
+    - systemd linger check on Linux.
+    - Workspace bootstrap file size check (truncation/near-limit warnings for context files).
+    - Skills readiness check for the default agent; reports allowed skills with missing bins, env, config, or OS requirements, and `--fix` can disable unavailable skills in `skills.entries`.
+    - Shell completion status check and auto-install/upgrade.
+    - Memory search embedding provider readiness check (local model, remote API key, or QMD binary).
+    - Source install checks (pnpm workspace mismatch, missing UI assets, missing tsx binary).
+    - Writes updated config + wizard metadata.
 
   </Accordion>
 </AccordionGroup>
@@ -188,6 +189,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - `routing.groupChat.requireMention` → `channels.whatsapp/telegram/imessage.groups."*".requireMention`
     - `routing.groupChat.historyLimit` → `messages.groupChat.historyLimit`
     - `routing.groupChat.mentionPatterns` → `messages.groupChat.mentionPatterns`
+    - configured-channel configs missing visible reply policy → `messages.groupChat.visibleReplies: "message_tool"`
     - `routing.queue` → `messages.queue`
     - `routing.bindings` → 顶层 `bindings`
     - `routing.agents`/`routing.defaultAgentId` → `agents.list` + `agents.list[].default`
@@ -259,10 +261,10 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
 
     Doctor 不会自动修复这一点，因为两种路由都有效：
 
-    - `openai-codex/*` + PI 表示“通过正常的 OpenClaw runner 使用 Codex OAuth/订阅认证。”
-    - `openai/*` + `runtime: "codex"` 表示“通过原生 Codex app-server 运行嵌入式 turn。”
-    - `/codex ...` 表示“从聊天中控制或绑定一个原生 Codex 对话。”
-    - `/acp ...` 或 `runtime: "acp"` 表示“使用外部 ACP/acpx 适配器。”
+    - `openai-codex/*` + PI means "use Codex OAuth/subscription auth through the normal OpenClaw runner."
+    - `openai/*` + `agentRuntime.id: "codex"` means "run the embedded turn through native Codex app-server."
+    - `/codex ...` means "control or bind a native Codex conversation from chat."
+    - `/acp ...` or `runtime: "acp"` means "use the external ACP/acpx adapter."
 
     如果出现该警告，请选择你原本意图的路由并手动编辑配置。当 PI Codex OAuth 是有意为之时，请保留该警告。
 
@@ -344,7 +346,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="7b. 插件安装清理">
     在 `openclaw doctor --fix` / `openclaw doctor --repair` 模式下，Doctor 会移除旧版 OpenClaw 生成的插件依赖暂存状态。这包括过期的生成依赖根目录、旧的安装阶段目录，以及早期捆绑插件依赖修复代码留下的包本地残留物。
 
-    当配置引用了可下载插件但本地插件注册表找不到它们时，Doctor 还可以重新安装这些已配置插件。Gateway 启动和配置重载不会运行包管理器；插件安装仍然是显式的 doctor/install/update 操作。
+    Doctor can also reinstall configured downloadable plugins when the config references them but the local plugin registry cannot find them. For the 2026.5.2 bundled-plugin externalization, doctor automatically installs downloadable plugins that the existing config already uses and then relies on `meta.lastTouchedVersion` to run that release pass only once. Gateway startup and config reload do not run package managers; plugin installs remain explicit doctor/install/update work.
 
   </Accordion>
   <Accordion title="8. Gateway 服务迁移和清理提示">
@@ -473,7 +475,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="17. Gateway 运行时最佳实践">
     当 gateway 服务运行在 Bun 上或版本管理的 Node 路径（`nvm`、`fnm`、`volta`、`asdf` 等）上时，doctor 会发出警告。WhatsApp + Telegram 频道需要 Node，而版本管理器路径在升级后可能失效，因为服务不会加载你的 shell init。Doctor 会在可用时提供迁移到系统 Node 安装的选项（Homebrew/apt/choco）。
 
-    新安装或修复的服务会保留显式环境根目录（`NVM_DIR`、`FNM_DIR`、`VOLTA_HOME`、`ASDF_DATA_DIR`、`BUN_INSTALL`、`PNPM_HOME`）和稳定的 user-bin 目录，但猜测到的版本管理器回退目录只有在这些目录确实存在于磁盘上时才会写入服务 PATH。这使生成的 supervisor PATH 与 doctor 之后运行的相同最小 PATH 审计保持一致。
+    Newly installed or repaired macOS LaunchAgents use a canonical system PATH (`/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`) instead of copying the interactive shell PATH, so Volta, asdf, fnm, pnpm, and other version-manager directories do not change which Node child processes resolve. Linux services still keep explicit environment roots (`NVM_DIR`, `FNM_DIR`, `VOLTA_HOME`, `ASDF_DATA_DIR`, `BUN_INSTALL`, `PNPM_HOME`) and stable user-bin directories, but guessed version-manager fallback directories are only written to the service PATH when those directories exist on disk.
 
   </Accordion>
   <Accordion title="18. 配置写入 + 向导元数据">

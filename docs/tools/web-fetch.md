@@ -72,6 +72,7 @@ await web_fetch({ url: "https://example.com/article" });
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
         maxRedirects: 3,
+        useTrustedEnvProxy: false, // 让受信任的 HTTP(S) 环境代理解析 DNS
         readability: true, // 使用 Readability 提取
         userAgent: "Mozilla/5.0 ...", // 覆盖 User-Agent
         ssrfPolicy: {
@@ -126,29 +127,49 @@ await web_fetch({ url: "https://example.com/article" });
 </Note>
 
 <Note>
-  Firecrawl 的 `baseUrl` 覆盖已被锁定：必须使用 `https://` 并且
-  使用官方 Firecrawl 主机（`api.firecrawl.dev`）。
+  Firecrawl `baseUrl` 覆盖已被锁定：托管流量使用
+  `https://api.firecrawl.dev`；自托管覆盖必须指向私有或
+  内部端点，并且仅对这些私有目标接受 `http://`。
 </Note>
 
 当前运行时行为：
 
-- `tools.web.fetch.provider` 会显式选择获取回退提供方。
-- 如果省略 `provider`，OpenClaw 会根据可用凭据自动检测第一个可用的
-  web-fetch 提供方。当前内置提供方是 Firecrawl。
+- `tools.web.fetch.provider` 明确选择抓取回退提供方。
+- 如果省略 `provider`，OpenClaw 会根据可用凭据自动检测第一个就绪的 web-fetch
+  提供方。非沙箱化的 `web_fetch` 可以使用声明了 `contracts.webFetchProviders` 的
+  已安装插件，并在运行时注册匹配的提供方。当前捆绑的提供方是 Firecrawl。
+- 沙箱化的 `web_fetch` 调用仍仅限于捆绑提供方。
 - 如果禁用了 Readability，`web_fetch` 会直接跳到所选
-  提供方回退。如果没有可用提供方，则会关闭式失败。
+  提供方回退。如果没有可用提供方，则会安全失败。
+
+## 受信任的环境代理
+
+如果你的部署要求 `web_fetch` 通过受信任的外部
+HTTP(S) 代理，请设置 `tools.web.fetch.useTrustedEnvProxy: true`。
+
+在此模式下，OpenClaw 在发送请求前仍会应用基于主机名的 SSRF 检查，
+但它会让代理解析 DNS，而不是在本地进行 DNS 固定。仅当代理由操作员控制，
+并且在 DNS 解析后强制执行外发策略时才启用此功能。
+
+<Note>
+  如果未配置 HTTP(S) 代理环境变量，或者目标主机被
+  `NO_PROXY` 排除，`web_fetch` 将回退到带本地 DNS
+  固定的正常严格路径。
+</Note>
 
 ## 限制与安全
 
 - `maxChars` 会被限制为 `tools.web.fetch.maxCharsCap`
-- Response body 在解析前会被限制为 `maxResponseBytes`；超大
-  响应会被截断并给出警告
+- 在解析前，响应正文会被限制为 `maxResponseBytes`；超大
+  响应会带警告地截断
 - 私有/内部主机名会被阻止
 - `tools.web.fetch.ssrfPolicy.allowRfc2544BenchmarkRange` 和
-  `tools.web.fetch.ssrfPolicy.allowIpv6UniqueLocalRange` 是为
-  受信任假 IP 代理栈提供的狭义可选启用；除非你的代理拥有这些合成范围并强制执行自己的目标策略，否则请保持未设置
+  `tools.web.fetch.ssrfPolicy.allowIpv6UniqueLocalRange` 是针对受信任假 IP 代理栈的
+  细粒度可选项；除非你的代理拥有这些合成范围并强制执行其自身的目标策略，否则请保持未设置
 - 重定向会被检查并受 `maxRedirects` 限制
-- `web_fetch` 采用尽力而为的方式——某些站点需要 [Web Browser](/tools/browser)
+- `useTrustedEnvProxy` 是显式可选启用项，并且仅应为仍在 DNS
+  解析后强制执行外发策略的、由操作员控制的代理启用
+- `web_fetch` 尽力而为——某些站点需要 [Web Browser](/tools/browser)
 
 ## 工具配置文件
 

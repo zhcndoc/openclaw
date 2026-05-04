@@ -68,61 +68,61 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
 
 ### 第 1 层：直接模型补全（无 gateway）
 
-- 测试：`src/agents/models.profiles.live.test.ts`
-- 目标：
+- Test: `src/agents/models.profiles.live.test.ts`
+- Goal:
   - 枚举发现的模型
-  - 使用 `getApiKeyForModel` 选择你有凭据的模型
-  - 针对每个模型运行一次小型补全（必要时加上定向回归测试）
-- 如何启用：
+  - 使用 `getApiKeyForModel` 选择你拥有凭据的模型
+  - 对每个模型运行一次小型补全（必要时包含定向回归）
+- How to enable:
   - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
-- 设置 `OPENCLAW_LIVE_MODELS=modern`（或 `all`，modern 的别名）以实际运行此套件；否则它会跳过，以保持 `pnpm test:live` 专注于 gateway 冒烟测试
-- 如何选择模型：
-  - `OPENCLAW_LIVE_MODELS=modern` 运行现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4）
+- Set `OPENCLAW_LIVE_MODELS=modern`（或 `all`，`modern` 的别名）以实际运行此套件；否则它会跳过，以保持 `pnpm test:live` 聚焦于 gateway 冒烟
+- How to select models:
+  - `OPENCLAW_LIVE_MODELS=modern` 运行现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4.3）
   - `OPENCLAW_LIVE_MODELS=all` 是现代白名单的别名
-  - 或 `OPENCLAW_LIVE_MODELS="openai/gpt-5.5,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,..."`（逗号分隔白名单）
-  - 现代/all 扫描默认使用经过筛选的高信号上限；设为 `OPENCLAW_LIVE_MAX_MODELS=0` 可进行穷举式现代扫描，或设置一个正数以使用更小的上限。
-  - 穷举扫描使用 `OPENCLAW_LIVE_TEST_TIMEOUT_MS` 作为整个直接模型测试的超时时间。默认：60 分钟。
-  - 直接模型探测默认并行度为 20；可设置 `OPENCLAW_LIVE_MODEL_CONCURRENCY` 覆盖。
-- 如何选择提供商：
-  - `OPENCLAW_LIVE_PROVIDERS="google,google-antigravity,google-gemini-cli"`（逗号分隔白名单）
-- 密钥来源：
+  - 或 `OPENCLAW_LIVE_MODELS="openai/gpt-5.5,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,..."`（逗号白名单）
+  - Modern/all 扫描默认采用经过筛选的高信号上限；将 `OPENCLAW_LIVE_MAX_MODELS=0` 设为完整现代扫描，或设置为正数以使用更小的上限。
+  - 完整扫描使用 `OPENCLAW_LIVE_TEST_TIMEOUT_MS` 作为整个直接模型测试超时。默认：60 分钟。
+  - 直接模型探测默认以 20 路并行运行；设置 `OPENCLAW_LIVE_MODEL_CONCURRENCY` 可覆盖。
+- How to select providers:
+  - `OPENCLAW_LIVE_PROVIDERS="google,google-antigravity,google-gemini-cli"`（逗号白名单）
+- Where keys come from:
   - 默认：配置文件存储和环境变量回退
-  - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 可强制仅使用**配置文件存储**
-- 这样设计的原因：
-  - 将“提供商 API 出错 / 密钥无效”与“gateway agent 流水线出错”分离
-  - 包含小型、隔离的回归测试（示例：OpenAI Responses/Codex Responses 推理回放 + 工具调用流程）
+  - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以仅强制使用**配置文件存储**
+- Why this exists:
+  - 将“提供商 API 已损坏 / 密钥无效”与“gateway agent 流水线已损坏”分离
+  - 包含小型、隔离的回归（例如：OpenAI Responses/Codex Responses 推理回放 + 工具调用流程）
 
 ### 第 2 层：Gateway + 开发 agent 冒烟（即“@openclaw”实际执行的内容）
 
-- 测试：`src/gateway/gateway-models.profiles.live.test.ts`
-- 目标：
-  - 启动一个进程内 gateway
-  - 创建/修补一个 `agent:dev:*` 会话（每次运行可覆盖模型）
-  - 遍历带密钥的模型并断言：
+- Test: `src/gateway/gateway-models.profiles.live.test.ts`
+- Goal:
+  - 在进程内启动 gateway
+  - 创建/修补一个 `agent:dev:*` 会话（每次运行覆盖模型）
+  - 遍历具有密钥的模型并断言：
     - “有意义”的响应（无工具）
-    - 真正的工具调用可工作（read 探测）
+    - 一个真实的工具调用可正常工作（read 探测）
     - 可选的额外工具探测（exec+read 探测）
     - OpenAI 回归路径（仅工具调用 → 后续跟进）保持可用
-- 探测细节（便于快速解释故障）：
-  - `read` 探测：测试在工作区中写入一个 nonce 文件，并要求 agent `read` 它并回显该 nonce。
-  - `exec+read` 探测：测试要求 agent 通过 `exec` 将 nonce 写入临时文件，然后再 `read` 回来。
-  - 图片探测：测试附加一张生成的 PNG（猫 + 随机代码），并期望模型返回 `cat <CODE>`。
-  - 实现参考：`src/gateway/gateway-models.profiles.live.test.ts` 和 `src/gateway/live-image-probe.ts`。
-- 如何启用：
+- Probe details (so you can explain failures quickly):
+  - `read` probe: 测试会在工作区写入一个 nonce 文件，并要求 agent `read` 它，然后把 nonce 回显回来。
+  - `exec+read` probe: 测试要求 agent `exec` 将 nonce 写入临时文件，然后再 `read` 回来。
+  - image probe: 测试附加一个生成的 PNG（猫 + 随机代码），并期望模型返回 `cat <CODE>`。
+  - Implementation reference: `src/gateway/gateway-models.profiles.live.test.ts` 和 `src/gateway/live-image-probe.ts`。
+- How to enable:
   - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
-- 如何选择模型：
-  - 默认：现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4）
+- How to select models:
+  - 默认：现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4.3）
   - `OPENCLAW_LIVE_GATEWAY_MODELS=all` 是现代白名单的别名
-  - 或设置 `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"`（或逗号列表）进行缩小范围
-  - 现代/all gateway 扫描默认使用经过筛选的高信号上限；设为 `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` 可进行穷举式现代扫描，或设置一个正数以使用更小的上限。
-- 如何选择提供商（避免“OpenRouter 全开”）：
-  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"`（逗号分隔白名单）
-- 本实时测试始终开启工具 + 图片探测：
-  - `read` 探测 + `exec+read` 探测（工具压力测试）
-  - 当模型声明支持图像输入时运行图片探测
-  - 流程（高层）：
-    - 测试生成一个包含 “CAT” + 随机代码的小型 PNG（`src/gateway/live-image-probe.ts`）
-    - 通过 `agent` `attachments: [{ mimeType: "image/png", content: "<base64>" }]` 发送
+  - 或设置 `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"`（或逗号列表）以缩小范围
+  - Modern/all gateway 扫描默认采用经过筛选的高信号上限；将 `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` 设为完整现代扫描，或设置为正数以使用更小的上限。
+- How to select providers (avoid “OpenRouter everything”):
+  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"`（逗号白名单）
+- Tool + image probes are always on in this live test:
+  - `read` probe + `exec+read` probe（工具压力测试）
+  - image probe 在模型声明支持图像输入时运行
+  - Flow (high level):
+    - 测试生成一个带有“CAT”+ 随机代码的微型 PNG（`src/gateway/live-image-probe.ts`）
+    - 通过 `agent` 的 `attachments: [{ mimeType: "image/png", content: "<base64>" }]` 发送
     - Gateway 将附件解析为 `images[]`（`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`）
     - 内嵌 agent 将多模态用户消息转发给模型
     - 断言：回复包含 `cat` + 该代码（OCR 容错：允许轻微错误）
@@ -263,30 +263,30 @@ pnpm test:docker:live-acp-bind:opencode
 Docker 说明：
 
 - Docker 运行器位于 `scripts/test-live-acp-bind-docker.sh`。
-- 默认情况下，它会按顺序对聚合的在线 CLI 代理运行 ACP bind 冒烟测试：`claude`、`codex`，然后是 `gemini`。
+- 默认情况下，它会按顺序对聚合的实时 CLI 代理运行 ACP 绑定冒烟测试：`claude`、`codex`，然后是 `gemini`。
 - 使用 `OPENCLAW_LIVE_ACP_BIND_AGENTS=claude`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=codex`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=droid`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=gemini` 或 `OPENCLAW_LIVE_ACP_BIND_AGENTS=opencode` 可缩小矩阵范围。
-- 它会加载 `~/.profile`，将匹配的 CLI 认证材料分阶段复制到容器中，然后在缺失时安装所请求的在线 CLI（`@anthropic-ai/claude-code`、`@openai/codex`、通过 `https://app.factory.ai/cli` 的 Factory Droid、`@google/gemini-cli` 或 `opencode-ai`）。ACP 后端本身是来自 `acpx` 插件的内嵌 `acpx/runtime` 包。
-- Droid 的 Docker 变体会分阶段复制 `~/.factory` 作为设置，转发 `FACTORY_API_KEY`，并要求提供该 API key，因为本地 Factory OAuth/keyring 认证无法便携到容器中。它使用 ACPX 内置的 `droid exec --output-format acp` 注册表条目。
-- OpenCode 的 Docker 变体是一个严格的单代理回归通道。它会在加载 `~/.profile` 后，根据 `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL`（默认 `opencode/kimi-k2.6`）写入一个临时的 `OPENCODE_CONFIG_CONTENT` 默认模型，并且 `pnpm test:docker:live-acp-bind:opencode` 要求存在一个已绑定的助手转录，而不是接受通用的绑定后跳过。
-- 直接的 `acpx` CLI 调用仅是用于在网关之外比较行为的手动/应急路径。Docker ACP bind 冒烟测试会覆盖 OpenClaw 内嵌的 `acpx` 运行时后端。
+- 它会加载 `~/.profile`，将匹配的 CLI 认证材料转存到容器中，然后在缺失时安装所需的实时 CLI（`@anthropic-ai/claude-code`、`@openai/codex`、通过 `https://app.factory.ai/cli` 的 Factory Droid、`@google/gemini-cli` 或 `opencode-ai`）。ACP 后端本身是官方 `acpx` 插件中的嵌入式 `acpx/runtime` 包。
+- Droid Docker 变体会暂存 `~/.factory` 作为设置，转发 `FACTORY_API_KEY`，并要求该 API key，因为本地 Factory OAuth/keyring 认证无法移植到容器中。它使用 ACPX 内置的 `droid exec --output-format acp` 注册表项。
+- OpenCode Docker 变体是一个严格的单代理回归通道。它在加载 `~/.profile` 后，会根据 `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL`（默认 `opencode/kimi-k2.6`）写入临时的 `OPENCODE_CONFIG_CONTENT` 默认模型，并且 `pnpm test:docker:live-acp-bind:opencode` 需要一个已绑定的助手转录，而不是接受通用的绑定后跳过。
+- 直接的 `acpx` CLI 调用仅是用于在 Gateway 之外对比行为的手动/绕过路径。Docker ACP 绑定冒烟测试的是 OpenClaw 内嵌的 `acpx` 运行时后端。
 
 ## Live: Codex app-server harness 冒烟测试
 
-- 目标：通过正常的网关 `agent` 方法验证插件拥有的 Codex harness：
-  - 加载内置的 `codex` 插件
+- 目标：通过正常的 gateway `agent` 方法验证插件拥有的 Codex harness：
+  - 加载捆绑的 `codex` 插件
   - 选择 `OPENCLAW_AGENT_RUNTIME=codex`
-  - 向 `openai/gpt-5.5` 发送第一轮网关代理消息，并强制使用 Codex harness
-  - 向同一个 OpenClaw 会话发送第二轮消息，并验证 app-server 线程可以恢复
-  - 通过相同的网关命令路径运行 `/codex status` 和 `/codex models`
-  - 可选地运行两个经 Guardian 审核的升级 shell 探针：一个应当被批准的良性命令，以及一个应当被拒绝、从而让代理追问的伪秘密上传命令
+  - 向 `openai/gpt-5.5` 发送首个 gateway agent 回合，并强制使用 Codex harness
+  - 向同一个 OpenClaw 会话发送第二个回合，并验证 app-server 线程可以恢复
+  - 通过同一条 gateway 命令路径运行 `/codex status` 和 `/codex models`
+  - 可选地运行两个经过 Guardian 审核的升级 shell 探针：一个应被批准的良性命令，以及一个应被拒绝的伪造密钥上传，这样 agent 会反问
 - 测试：`src/gateway/gateway-codex-harness.live.test.ts`
 - 启用：`OPENCLAW_LIVE_CODEX_HARNESS=1`
 - 默认模型：`openai/gpt-5.5`
 - 可选图像探针：`OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
 - 可选 MCP/工具探针：`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
 - 可选 Guardian 探针：`OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
-- 该冒烟测试会设置 `OPENCLAW_AGENT_HARNESS_FALLBACK=none`，这样损坏的 Codex harness 就不能通过静默回退到 PI 而蒙混过关。
-- 认证：来自本地 Codex 订阅登录的 Codex app-server 认证。Docker 冒烟测试在适用时也可以提供 `OPENAI_API_KEY` 用于非 Codex 探针，并可选地复制 `~/.codex/auth.json` 和 `~/.codex/config.toml`。
+- 该 smoke 使用 `agentRuntime.id: "codex"`，因此损坏的 Codex harness 不会通过静默回退到 PI 而侥幸通过。
+- 认证：来自本地 Codex 订阅登录的 Codex app-server 认证。Docker smoke 在适用时也可以提供 `OPENAI_API_KEY` 用于非 Codex 探针，并可选复制 `~/.codex/auth.json` 和 `~/.codex/config.toml`。
 
 本地配方：
 
@@ -309,10 +309,12 @@ pnpm test:docker:live-codex-harness
 
 Docker 说明：
 
-- Docker 运行器位于 `scripts/test-live-codex-harness-docker.sh`。
-- 它会加载挂载的 `~/.profile`，传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将 `@openai/codex` 安装到一个可写的挂载 npm 前缀中，分阶段复制源码树，然后只运行 Codex harness 的在线测试。
-- Docker 默认启用图像、MCP/工具和 Guardian 探针。需要更窄的调试运行时，可设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0`、`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或 `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
-- Docker 还会导出 `OPENCLAW_AGENT_HARNESS_FALLBACK=none`，与在线测试配置保持一致，从而确保旧别名或 PI 回退不会掩盖 Codex harness 的回归。
+- Docker runner 位于 `scripts/test-live-codex-harness-docker.sh`。
+- 它会 source 挂载的 `~/.profile`，传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将 `@openai/codex` 安装到可写的挂载 npm 前缀中，准备源码树，然后只运行 Codex-harness live 测试。
+- Docker 默认启用图像、MCP/工具和 Guardian 探针。若需要更窄的调试运行，可设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或
+  `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或
+  `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
+- Docker 使用相同的显式 Codex runtime 配置，因此旧别名或 PI 回退不会掩盖 Codex harness 回归。
 
 ### 推荐的 live 配方
 
@@ -378,10 +380,10 @@ Docker 说明：
 
 可选的额外覆盖（有则更好）：
 
-- xAI：`xai/grok-4`（或最新可用版本）
-- Mistral：`mistral/`…（选择一个你已启用、支持“工具”的模型）
-- Cerebras：`cerebras/`…（如果你有访问权限）
-- LM Studio：`lmstudio/`…（本地；工具调用取决于 API 模式）
+- xAI: `xai/grok-4.3` (or latest available)
+- Mistral: `mistral/`… (pick one “tools” capable model you have enabled)
+- Cerebras: `cerebras/`… (if you have access)
+- LM Studio: `lmstudio/`… (local; tool calling depends on API mode)
 
 ### 视觉：图像发送（附件 → 多模态消息）
 
@@ -479,9 +481,7 @@ openclaw infer image generate \
   --json
 ```
 
-This covers CLI argument parsing, config/default-agent resolution, bundled
-plugin activation, the shared image-generation runtime, and the live provider
-request. Plugin dependencies are expected to be present before runtime load.
+这覆盖了 CLI 参数解析、config/default-agent 解析、捆绑插件激活、共享的图像生成 runtime，以及 live provider 请求。插件依赖应在 runtime 加载之前就已存在。
 
 ## 音乐生成 live
 

@@ -1,5 +1,5 @@
 ---
-summary: "openclaw directory 的 CLI 参考（自己、联系人、群组）"
+summary: "openclaw directory 目录的 CLI 参考（自己、联系人、群组）"
 read_when:
   - 你想查找某个频道的联系人/群组/自己的 ID
   - 你正在开发一个频道目录适配器
@@ -19,8 +19,9 @@ title: "目录"
 ## 说明
 
 - `directory` 用于帮助你找到可以粘贴到其他命令中的 ID（尤其是 `openclaw message send --target ...`）。
-- 对于许多频道，结果来自配置（允许名单 / 已配置群组），而不是实时的提供方目录。
-- 默认输出为用制表符分隔的 `id`（有时还有 `name`）；脚本使用请加 `--json`。
+- 对于许多频道，结果是基于配置的（允许列表 / 已配置的群组），而不是来自实时提供者目录。
+- 已安装的频道插件仍然可能省略目录支持；在这种情况下，命令会报告不受支持的目录操作，而不是重新安装插件。
+- 默认输出为由制表符分隔的 `id`（有时还有 `name`）；脚本使用请加 `--json`。
 
 ## 与 `message send` 结合使用结果
 
@@ -31,14 +32,14 @@ openclaw message send --channel slack --target user:U012ABCDEF --message "hello"
 
 ## ID 格式（按频道）
 
-- WhatsApp：`+15551234567`（私聊），`1234567890-1234567890@g.us`（群组）
-- Telegram：`@username` 或数字 chat id；群组为数字 id
-- Slack：`user:U…` 和 `channel:C…`
-- Discord：`user:<id>` 和 `channel:<id>`
-- Matrix（插件）：`user:@user:server`、`room:!roomId:server` 或 `#alias:server`
-- Microsoft Teams（插件）：`user:<id>` 和 `conversation:<id>`
-- Zalo（插件）：用户 ID（Bot API）
-- Zalo Personal / `zalouser`（插件）：来自 `zca` 的线程 ID（私聊/群组）（`me`、`friend list`、`group list`）
+- WhatsApp: `+15551234567` (DM), `1234567890-1234567890@g.us` (group), `120363123456789@newsletter` (Channel/Newsletter outbound target)
+- Telegram: `@username` 或数字聊天 ID；群组为数字 ID
+- Slack: `user:U…` 和 `channel:C…`
+- Discord: `user:<id>` 和 `channel:<id>`
+- Matrix (plugin): `user:@user:server`, `room:!roomId:server`, or `#alias:server`
+- Microsoft Teams (plugin): `user:<id>` 和 `conversation:<id>`
+- Zalo (plugin): user id（Bot API）
+- Zalo Personal / `zalouser` (plugin): 来自 `zca` 的 thread id（DM/group）（`me`、`friend list`、`group list`）
 
 ## 自己（“我”）
 

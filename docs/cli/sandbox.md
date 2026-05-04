@@ -164,7 +164,16 @@ openclaw sandbox recreate --agent alfred
 优先使用 `openclaw sandbox recreate`，而不是手动进行特定后端的清理。它会使用 Gateway 的运行时注册表，并在范围或会话键变化时避免不匹配。
 </Tip>
 
-## 配置
+## Registry migration
+
+OpenClaw 将沙箱运行时元数据存储为沙箱状态目录下每个容器/浏览器条目一个 JSON 分片。旧版本安装可能仍然保留单体的旧文件：
+
+- `~/.openclaw/sandbox/containers.json`
+- `~/.openclaw/sandbox/browsers.json`
+
+常规的沙箱运行时读取不会重写这些文件。运行 `openclaw doctor --fix` 可将有效的旧条目迁移到分片化的注册表目录中。无效的旧文件会被隔离，以免某个损坏的旧注册表掩盖当前的运行时条目。
+
+## Configuration
 
 沙箱设置位于 `~/.openclaw/openclaw.json` 中的 `agents.defaults.sandbox` 下（按代理的覆盖项放在 `agents.list[].sandbox` 中）：
 
@@ -173,9 +182,9 @@ openclaw sandbox recreate --agent alfred
   "agents": {
     "defaults": {
       "sandbox": {
-        "mode": "all", // off, non-main, all
-        "backend": "docker", // docker, ssh, openshell
-        "scope": "agent", // session, agent, shared
+        "mode": "all", // 关闭，非 main，全部
+        "backend": "docker", // docker，ssh，openshell
+        "scope": "agent", // session，agent，shared
         "docker": {
           "image": "openclaw-sandbox:bookworm-slim",
           "containerPrefix": "openclaw-sbx-",

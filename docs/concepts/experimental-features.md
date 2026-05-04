@@ -26,9 +26,53 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 
 ## 本地模型精简模式
 
-`agents.defaults.experimental.localModelLean: true` 是针对较弱本地模型设置的一个压力释放阀。它会裁剪掉 `browser`、`cron` 和 `message` 之类的重量级默认工具，使提示词形状更小、对小上下文或更严格的 OpenAI 兼容后端来说更不容易出错。
+`agents.defaults.experimental.localModelLean: true` 是一个针对较弱本地模型配置的缓冲阀。启用后，OpenClaw 会在每一轮中从代理的工具面板里移除三个默认工具 —— `browser`、`cron` 和 `message`。除此之外没有任何变化。
 
-这**刻意不是**正常路径。如果你的后端能够干净地处理完整运行时，就不要开启它。
+### 为什么是这三个工具
+
+这三个工具在默认的 OpenClaw 运行时中拥有最长的描述和最多的参数形状。对于小上下文或更严格的 OpenAI 兼容后端而言，这意味着：
+
+- 工具 schema 能否干净地放入提示词中，还是会挤占对话历史。
+- 模型能否选中正确的工具，还是因为相似 schema 太多而发出格式错误的工具调用。
+- Chat Completions 适配器能否保持在服务端结构化输出限制之内，还是会因工具调用负载大小触发 400 错误。
+
+移除它们不会悄悄重写 OpenClaw —— 只是让工具列表变短了。模型仍然可以使用 `read`、`write`、`edit`、`exec`、`apply_patch`、Web 搜索/获取（在已配置时）、memory，以及会话/代理工具。
+
+### 何时启用
+
+当你已经证明模型可以与 Gateway 通信，但完整的代理轮次表现异常时，启用精简模式。典型的信号链是：
+
+1. `openclaw infer model run --gateway --model <ref> --prompt "Reply with exactly: pong"` 成功。
+2. 正常的代理轮次因格式错误的工具调用、提示词过大，或模型忽略其工具而失败。
+3. 切换 `localModelLean: true` 后故障消失。
+
+### 何时保持关闭
+
+如果你的后端能够干净地处理完整默认运行时，就保持关闭。精简模式是一种变通方案，不是默认设置。它之所以存在，是因为某些本地栈需要更小的工具面板才能正常工作；托管模型和资源充足的本地设备则不需要。
+
+精简模式也不能替代 `tools.profile`、`tools.allow`/`tools.deny`，或模型的 `compat.supportsTools: false` 逃逸阀。如果你需要为某个特定代理永久使用更窄的工具面板，应优先使用这些稳定选项，而不是实验性标志。
+
+### 启用
+
+```json5
+{
+  agents: {
+    defaults: {
+      experimental: {
+        localModelLean: true,
+      },
+    },
+  },
+}
+```
+
+更改标志后重启 Gateway，然后使用以下命令确认精简后的工具列表：
+
+```bash
+openclaw status --deep
+```
+
+深度状态输出会列出当前启用的代理工具；当精简模式开启时，`browser`、`cron` 和 `message` 应当不会出现。
 
 ## 实验性并不意味着隐藏
 

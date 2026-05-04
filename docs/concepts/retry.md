@@ -37,7 +37,9 @@ title: "重试策略"
 
 ### Discord
 
-- 仅在速率限制错误（HTTP 429）时重试。
+- 针对速率限制错误（HTTP 429）、请求超时、HTTP 5xx 响应，
+  以及瞬时传输故障（例如 DNS 解析失败、连接重置、
+  套接字关闭和 fetch 失败）进行重试。
 - 可用时使用 Discord 的 `retry_after`，否则使用指数退避。
 
 ### Telegram

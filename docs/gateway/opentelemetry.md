@@ -7,10 +7,7 @@ read_when:
   - 你需要精确的指标名称、span 名称或属性形状来构建仪表盘或告警
 ---
 
-OpenClaw 通过内置的 `diagnostics-otel` 插件，
-使用 **OTLP/HTTP（protobuf）** 导出诊断信息。任何接受 OTLP/HTTP 的收集器或后端
-都可以直接使用，无需修改代码。有关本地文件日志及其读取方式，请参阅
-[Logging](/logging)。
+OpenClaw 通过官方 `diagnostics-otel` 插件使用 **OTLP/HTTP (protobuf)** 导出诊断。任何接受 OTLP/HTTP 的收集器或后端都无需代码更改即可使用。关于本地文件日志及其读取方式，请参阅 [日志](/logging)。
 
 ## 工作原理
 
@@ -20,6 +17,12 @@ OpenClaw 通过内置的 `diagnostics-otel` 插件，
 - 只有当诊断面和插件都启用时，导出器才会挂载，因此默认情况下进程内开销几乎为零。
 
 ## 快速开始
+
+对于打包安装，请先安装插件：
+
+```bash
+openclaw plugins install clawhub:@openclaw/diagnostics-otel
+```
 
 ```json5
 {
@@ -163,14 +166,26 @@ openclaw plugins enable diagnostics-otel
 
 ### 队列与会话
 
-- `openclaw.queue.lane.enqueue`（counter，attrs: `openclaw.lane`）
-- `openclaw.queue.lane.dequeue`（counter，attrs: `openclaw.lane`）
-- `openclaw.queue.depth`（histogram，attrs: `openclaw.lane` 或 `openclaw.channel=heartbeat`）
-- `openclaw.queue.wait_ms`（histogram，attrs: `openclaw.lane`）
-- `openclaw.session.state`（counter，attrs: `openclaw.state`, `openclaw.reason`）
-- `openclaw.session.stuck`（counter，attrs: `openclaw.state`）
-- `openclaw.session.stuck_age_ms`（histogram，attrs: `openclaw.state`）
-- `openclaw.run.attempt`（counter，attrs: `openclaw.attempt`）
+- `openclaw.queue.lane.enqueue` (counter, attrs: `openclaw.lane`)
+- `openclaw.queue.lane.dequeue` (counter, attrs: `openclaw.lane`)
+- `openclaw.queue.depth` (histogram, attrs: `openclaw.lane` or `openclaw.channel=heartbeat`)
+- `openclaw.queue.wait_ms` (histogram, attrs: `openclaw.lane`)
+- `openclaw.session.state` (counter, attrs: `openclaw.state`, `openclaw.reason`)
+- `openclaw.session.stuck` (counter, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
+- `openclaw.session.stuck_age_ms` (histogram, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
+- `openclaw.run.attempt` (counter, attrs: `openclaw.attempt`)
+
+### Session liveness telemetry
+
+`diagnostics.stuckSessionWarnMs` 是会话存活诊断的无进展时间阈值。当 OpenClaw 观察到回复、工具、状态、块或 ACP 运行时进展时，`processing` 会话不会向该阈值增长。打字保活不计为进展，因此静默的模型或 harness 仍然可以被检测到。
+
+OpenClaw 按其仍能观察到的工作对会话进行分类：
+
+- `session.long_running`：活动的嵌入式工作、模型调用或工具调用仍在持续推进。
+- `session.stalled`：存在活动工作，但当前运行尚未报告近期进展。停滞的嵌入式运行最初仅观察不干预，然后在至少 10 分钟且在无进展情况下达到 5 倍 `diagnostics.stuckSessionWarnMs` 后进入中止清理，以便该 lane 后面的排队轮次能够继续。
+- `session.stuck`：没有活动工作的过时会话账本记录。这会立即释放受影响的会话 lane。
+
+只有 `session.stuck` 会发出 `openclaw.session.stuck` counter、`openclaw.session.stuck_age_ms` histogram 和 `openclaw.session.stuck` span。只要会话保持不变，重复的 `session.stuck` 诊断会退避，因此仪表盘应关注持续增长，而不是每一次心跳 tick。有关配置开关和默认值，请参阅 [配置参考](/gateway/configuration-reference#diagnostics)。
 
 ### Harness 生命周期
 
@@ -192,7 +207,7 @@ openclaw plugins enable diagnostics-otel
 
 - `openclaw.model.usage`
   - `openclaw.channel`, `openclaw.provider`, `openclaw.model`
-  - `openclaw.tokens.*`（input/output/cache_read/cache_write/total）
+  - `openclaw.tokens.*`（输入/输出/缓存读取/缓存写入/总计）
   - 默认使用 `gen_ai.system`，或者在启用最新 GenAI 语义约定时使用 `gen_ai.provider.name`
   - `gen_ai.request.model`, `gen_ai.operation.name`, `gen_ai.usage.*`
 - `openclaw.run`
@@ -247,9 +262,9 @@ openclaw plugins enable diagnostics-otel
 **队列和会话**
 
 - `queue.lane.enqueue` / `queue.lane.dequeue`
-- `session.state` / `session.stuck`
-- `run.attempt`
-- `diagnostic.heartbeat`（聚合计数器：webhooks/queue/session）
+- `session.state` / `session.long_running` / `session.stalled` / `session.stuck`
+- `run.attempt` / `run.progress`
+- `diagnostic.heartbeat` (aggregate counters: webhooks/queue/session)
 
 **Harness 生命周期**
 

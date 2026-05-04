@@ -16,12 +16,21 @@ sidebarTitle: "更新和插件测试"
 
 更新和插件测试保护以下契约：
 
-- 包 tarball 是完整的，包含有效的 `dist/postinstall-inventory.json`，并且不依赖解包后的仓库文件。
-- 用户可以从较旧的已发布包迁移到候选包，而不会丢失配置、agents、sessions、workspaces、插件 allowlist 或 channel 配置。
-- `openclaw doctor --fix --non-interactive` 负责旧版清理和修复路径。启动流程不应为过时的插件状态增加隐藏的兼容性迁移。
-- 插件安装可从本地目录、git 仓库、npm 包以及 ClawHub registry 路径工作。
-- 插件 npm 依赖会安装到受管理的 npm root 中，在信任前进行扫描，并在卸载时通过 npm 移除，因此 hoisted 依赖不会残留。
-- 当没有任何变更时，插件更新保持稳定：安装记录、解析来源和启用状态都保持不变。
+- 包 tarball 是完整的，具有有效的 `dist/postinstall-inventory.json`，
+  并且不依赖于解包后的仓库文件。
+- 用户可以从较旧的已发布包迁移到候选包，
+  而不会丢失配置、agents、sessions、workspaces、插件 allowlist，或
+  channel 配置。
+- `openclaw doctor --fix --non-interactive` 负责旧版清理和修复
+  路径。启动过程不应为过时的
+  插件状态增加隐藏的兼容性迁移。
+- 插件安装可从本地目录、git 仓库、npm 包以及
+  ClawHub registry 路径工作。
+- 插件 npm 依赖会安装到受管理的 npm 根目录中，在建立信任前进行扫描，
+  并在卸载时通过 npm 移除，这样提升的依赖就不会
+  残留。
+- 当没有变化时，插件更新应保持稳定：安装记录、已解析的
+  来源、已安装的依赖布局以及启用状态都应保持完好。
 
 ## 开发期间的本地验证
 
@@ -55,17 +64,41 @@ Docker lanes 是产品级验证。它们在 Linux 容器中安装或更新真实
 
 ```bash
 pnpm test:docker:plugins
+pnpm test:docker:plugin-lifecycle-matrix
 pnpm test:docker:plugin-update
 pnpm test:docker:upgrade-survivor
 pnpm test:docker:published-upgrade-survivor
+pnpm test:docker:update-migration
 ```
 
 重要 lanes：
 
-- `test:docker:plugins` 验证插件安装冒烟、本地文件夹安装、带预装依赖的本地文件夹、带包依赖的 git 安装、npm 包依赖安装、本地 ClawHub fixture 安装、marketplace 更新行为，以及 Claude-bundle 的启用/检查。设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可保持 ClawHub 区块的 hermetic/离线。
-- `test:docker:plugin-update` 验证在 `openclaw plugins update` 期间，未变化的已安装插件不会重新安装或丢失安装元数据。
-- `test:docker:upgrade-survivor` 在脏旧用户 fixture 上安装候选 tarball，运行包更新加非交互式 doctor，然后启动 loopback Gateway 并检查状态保留。
-- `test:docker:published-upgrade-survivor` 先安装已发布基线，通过 baked 的 `openclaw config set` 配方进行配置，更新到候选 tarball，运行 doctor，检查旧版清理，启动 Gateway，并探测 `/healthz`、`/readyz` 和 RPC 状态。
+- `test:docker:plugins` 验证插件安装冒烟测试、本地文件夹安装、
+  本地文件夹更新跳过行为、带有预安装
+  依赖的本地文件夹、`file:` 包安装、带 CLI 执行的 git 安装、git
+  移动引用更新、带有提升的传递性
+  依赖的 npm registry 安装、npm 更新 no-op、本地 ClawHub fixture 安装和更新
+  no-op、marketplace 更新行为，以及 Claude-bundle 启用/检查。设置
+  `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 以保持 ClawHub 模块 hermetic/离线。
+- `test:docker:plugin-lifecycle-matrix` 在一个裸
+  容器中安装候选包，对一个 npm 插件执行安装、检查、禁用、启用、
+  显式升级、显式降级，以及在删除插件
+  代码后的卸载。它会为每个阶段记录 RSS 和 CPU 指标。
+- `test:docker:plugin-update` 验证一个未更改的已安装插件
+  在 `openclaw plugins update` 期间不会重新安装，也不会丢失安装元数据。
+- `test:docker:upgrade-survivor` 在一个脏的
+  旧用户 fixture 之上安装候选 tarball，运行包更新和非交互式 doctor，然后启动
+  一个 loopback Gateway 并检查状态保留。
+- `test:docker:published-upgrade-survivor` 先安装一个已发布的基线版本，
+  通过内置的 `openclaw config set` 配方进行配置，将其更新到
+  候选 tarball，运行 doctor，检查旧版清理，启动 Gateway，并
+  探测 `/healthz`、`/readyz` 和 RPC 状态。
+- `test:docker:update-migration` 是以清理为重点的已发布更新 lane。它
+  从一个已配置的 Discord/Telegram 风格用户状态开始，运行基线
+  doctor，使已配置插件依赖有机会实例化，为一个已配置的打包插件
+  注入旧版插件依赖残留，更新到
+  候选 tarball，并要求更新后的 doctor 移除旧版
+  依赖根目录。
 
 有用的 published-upgrade survivor 变体：
 
@@ -79,7 +112,24 @@ OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=bootstrap-persona \
 pnpm test:docker:published-upgrade-survivor
 ```
 
-可用场景为 `base`、`feishu-channel`、`bootstrap-persona`、`tilde-log-path` 和 `versioned-runtime-deps`。在聚合运行中，`OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` 会展开为所有已报告问题形态的场景。
+可用场景包括 `base`、`feishu-channel`、`bootstrap-persona`，
+`plugin-deps-cleanup`、`configured-plugin-installs`、`tilde-log-path` 和
+`versioned-runtime-deps`。在聚合运行中，
+`OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` 会展开为所有已报告的
+问题形态场景，包括已配置插件安装迁移。
+
+完整更新迁移有意与 Full Release CI 分离。当发布问题是“从 2026.4.23 起的每个
+已发布稳定版本都能更新到这个候选版本并清理插件依赖残留吗？”时，请使用手动
+`Update Migration` 工作流：
+
+```bash
+gh workflow run update-migration.yml \
+  --ref main \
+  -f workflow_ref=main \
+  -f package_ref=main \
+  -f baselines=all-since-2026.4.23 \
+  -f scenarios=plugin-deps-cleanup
+```
 
 ## 包接纳
 
@@ -92,7 +142,12 @@ Package Acceptance 是 GitHub 原生的包门禁。它将一个候选包解析�
 - `source=url`：验证一个带有必需 `package_sha256` 的 HTTPS tarball。
 - `source=artifact`：复用另一个 Actions 运行上传的 tarball。
 
-发布检查会使用 package/update/plugin 集合调用 Package Acceptance：
+Full Release Validation 默认使用 `source=artifact`，从
+已解析的发布 SHA 构建。对于发布后的证明，请传入
+`package_acceptance_package_spec=openclaw@YYYY.M.D`，这样同一套升级矩阵
+就会改为针对已发布的 npm 包。
+
+发布检查会以包/更新/插件集合调用 Package Acceptance：
 
 ```text
 doctor-switch update-channel-switch upgrade-survivor published-upgrade-survivor plugins-offline plugin-update
@@ -101,14 +156,20 @@ doctor-switch update-channel-switch upgrade-survivor published-upgrade-survivor 
 它们还会传入：
 
 ```text
-published_upgrade_survivor_baselines=release-history
+published_upgrade_survivor_baselines=all-since-2026.4.23
 published_upgrade_survivor_scenarios=reported-issues
 telegram_mode=mock-openai
 ```
 
 这使包迁移、更新 channel 切换、过时插件依赖清理、离线插件覆盖、插件更新行为以及 Telegram 包 QA 都基于同一个已解析产物。
 
-在发布前验证候选包时，手动运行一个 package profile：
+`all-since-2026.4.23` 是 Full Release CI 的升级样本：从 `2026.4.23` 到 `latest` 的每个已通过 npm 发布的稳定版本。对于穷尽式的已发布
+更新迁移覆盖，请在单独的 Update
+Migration 工作流中使用 `all-since-2026.4.23`，而不是在 Full Release CI 中使用。`release-history` 仍然
+可用于手动进行更广范围的采样，当你还希望包含旧的前置日期
+锚点时。
+
+在发布前验证候选版本时，手动运行一个 package profile：
 
 ```bash
 gh workflow run package-acceptance.yml \
@@ -117,7 +178,7 @@ gh workflow run package-acceptance.yml \
   -f source=npm \
   -f package_spec=openclaw@beta \
   -f suite_profile=package \
-  -f published_upgrade_survivor_baselines=release-history \
+  -f published_upgrade_survivor_baselines=all-since-2026.4.23 \
   -f published_upgrade_survivor_scenarios=reported-issues \
   -f telegram_mode=mock-openai
 ```
@@ -151,10 +212,15 @@ gh workflow run package-acceptance.yml \
 当更改更新或插件行为时，请在最可能以正确原因失败的最低层添加覆盖：
 
 - 纯路径或元数据逻辑：在源代码旁添加单元测试。
-- 包清单或打包文件行为：`package-dist-inventory` 或 tarball 检查器测试。
+- 包清单或打包文件行为：`package-dist-inventory` 或 tarball
+  检查器测试。
 - CLI 安装/更新行为：Docker lane 断言或 fixture。
-- 已发布版本的迁移行为：`published-upgrade-survivor` 场景。
-- registry/包来源行为：`test:docker:plugins` fixture 或 ClawHub fixture server。
+- 已发布版本迁移行为：`published-upgrade-survivor` 场景。
+- registry/包来源行为：`test:docker:plugins` fixture 或 ClawHub
+  fixture 服务器。
+- 依赖布局或清理行为：同时断言运行时执行和文件系统边界。npm 依赖可能会在受管理的 npm
+  根目录下被提升，因此测试应证明根目录被扫描/清理，而不是假设存在
+  包本地的 `node_modules` 树。
 
 默认保持新的 Docker fixtures 为 hermetic。除非测试目标就是 live registry 行为，否则使用本地 fixture registry 和伪造包。
 

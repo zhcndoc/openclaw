@@ -37,23 +37,28 @@ Cursor、Copilot、Droid、OpenClaw ACP、OpenCode、Gemini CLI，以及其他
 
 ## 这开箱即用吗？
 
-通常是的。全新安装默认启用捆绑的 `acpx` 运行时插件，
-并带有一个插件本地固定版本的 `acpx` 二进制文件，OpenClaw 会在
-Gateway HTTP 监听器上线后立即探测并自我修复。运行
-`/acp doctor` 进行就绪检查。
+Yes, after installing the official ACP runtime plugin:
+
+```bash
+openclaw plugins install @openclaw/acpx
+openclaw config set plugins.entries.acpx.enabled true
+```
+
+Source checkouts can use the local `extensions/acpx` workspace plugin after
+`pnpm install`. Run `/acp doctor` for a readiness check.
 
 只有在 ACP **真正可用** 时，OpenClaw 才会向 agents 说明 ACP spawning：ACP 必须已启用，dispatch 不能被禁用，当前会话不能被 sandbox 阻止，并且必须加载了 runtime backend。若这些条件不满足，ACP 插件技能和 `sessions_spawn` 的 ACP 指引会保持隐藏，这样 agent 就不会建议一个不可用的 backend。
 
 <AccordionGroup>
-  <Accordion title="First-run gotchas">
-    - 如果设置了 `plugins.allow`，它就是一个受限的插件清单，并且**必须**包含 `acpx`；否则捆绑默认值会被故意阻止，而 `/acp doctor` 会报告缺失的 allowlist 条目。
-    - 捆绑的 Codex ACP 适配器会与 `acpx` 插件一起分阶段准备，并在可能时本地启动。
-    - 其他目标 harness 适配器在首次使用时仍可能通过 `npx` 按需获取。
-    - 该 harness 的供应商认证仍必须存在于主机上。
-    - 如果主机没有 npm 或网络访问，首次运行时的适配器获取会失败，直到缓存被预热或以其他方式安装该适配器。
+  <Accordion title="首次运行注意事项">
+    - 如果设置了 `plugins.allow`，它就是一个受限的插件清单，**必须**包含 `acpx`；否则已安装的 ACP 后端会被有意阻止，并且 `/acp doctor` 会报告缺少 allowlist 条目。
+    - Codex ACP 适配器会与 `acpx` 插件一起分阶段部署，并在可能时于本地启动。
+    - 其他目标 harness 适配器在你首次使用时，仍可能会按需通过 `npx` 拉取。
+    - 供应商认证仍必须存在于主机上。
+    - 如果主机没有 npm 或网络访问，首次运行时的适配器拉取会失败，直到缓存被预热或以其他方式安装适配器。
 
   </Accordion>
-  <Accordion title="Runtime prerequisites">
+  <Accordion title="运行时前提条件">
     ACP 会启动一个真实的外部 harness 进程。OpenClaw 负责路由、
     后台任务状态、投递、绑定和策略；harness 负责其供应商登录、
     模型目录、文件系统行为和原生工具。
@@ -77,8 +82,8 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
 
 ## 支持的 harness 目标
 
-使用捆绑的 `acpx` 后端时，可将这些 harness id 作为 `/acp spawn <id>`
-或 `sessions_spawn({ runtime: "acp", agentId: "<id>" })` 的目标：
+With the `acpx` backend, use these harness ids as `/acp spawn <id>`
+or `sessions_spawn({ runtime: "acp", agentId: "<id>" })` targets:
 
 | Harness id | 典型后端                                       | 备注                                                                                |
 | ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -132,7 +137,7 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="Lifecycle details">
+  <Accordion title="生命周期细节">
     - Spawn 会创建或恢复一个 ACP 运行时会话，在 OpenClaw 会话存储中记录 ACP 元数据，并且当运行由父级拥有时可能会创建后台任务。
     - 由父级拥有的 ACP 会话会被视为后台工作，即使运行时会话是持久的；完成和跨界面投递通过父任务通知器进行，而不是像普通面向用户的聊天会话那样运作。
     - 任务维护会关闭终止的或孤立的、由父级拥有的一次性 ACP 会话。持久 ACP 会话会在活动的对话绑定仍然存在时被保留；没有活动绑定的陈旧持久会话会被关闭，因此在拥有任务完成或其任务记录丢失后，不能被静默恢复。
@@ -143,7 +148,7 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
     - 空闲的运行时 worker 在 `acp.runtime.ttlMinutes` 之后有资格被清理；存储的会话元数据仍可通过 `/acp sessions` 获取。
 
   </Accordion>
-  <Accordion title="Native Codex routing rules">
+  <Accordion title="原生 Codex 路由规则">
     当启用时，应该路由到**原生 Codex
     插件**的自然语言触发语句：
 
@@ -164,14 +169,14 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
     [Codex harness v1 support contract](/plugins/codex-harness#v1-support-contract)。
 
   </Accordion>
-  <Accordion title="Model / provider / runtime selection cheat sheet">
+  <Accordion title="模型 / 供应商 / 运行时选择速查表">
     - `openai-codex/*` — PI Codex OAuth/订阅路径。
     - `openai/*` 加上 `agentRuntime.id: "codex"` — 原生 Codex 应用服务器嵌入式运行时。
     - `/codex ...` — 原生 Codex 对话控制。
     - `/acp ...` 或 `runtime: "acp"` — 显式 ACP/acpx 控制。
 
   </Accordion>
-  <Accordion title="ACP-routing natural-language triggers">
+  <Accordion title="ACP 路由自然语言触发语句">
     应该路由到 ACP 运行时的触发语句：
 
     - “把这个作为一次性的 Claude Code ACP 会话运行并总结结果。”
@@ -199,12 +204,12 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
 
 当你需要外部 harness 运行时，请使用 ACP。当 `codex` 插件启用时，使用 **原生 Codex app-server** 进行 Codex 对话绑定/控制。当你需要 OpenClaw 原生的委派运行时，请使用 **子代理**。
 
-| Area          | ACP session                           | Sub-agent run                      |
+| Area          | ACP 会话                           | 子代理运行                      |
 | ------------- | ------------------------------------- | ---------------------------------- |
-| Runtime       | ACP 后端插件（例如 acpx）            | OpenClaw 原生子代理运行时         |
-| Session key   | `agent:<agentId>:acp:<uuid>`          | `agent:<agentId>:subagent:<uuid>`  |
-| Main commands | `/acp ...`                            | `/subagents ...`                   |
-| Spawn tool    | `sessions_spawn` with `runtime:"acp"` | `sessions_spawn`（默认运行时）     |
+| 运行时       | ACP 后端插件（例如 acpx）            | OpenClaw 原生子代理运行时         |
+| 会话 key   | `agent:<agentId>:acp:<uuid>`          | `agent:<agentId>:subagent:<uuid>`  |
+| 主要命令 | `/acp ...`                            | `/subagents ...`                   |
+| 生成工具     | `sessions_spawn` with `runtime:"acp"` | `sessions_spawn`（默认运行时）     |
 
 另见 [子代理](/tools/subagents)。
 
@@ -213,7 +218,7 @@ ACP harness 暴露。只有在 harness 应直接调用这些工具时，
 通过 ACP 运行 Claude Code 时，技术栈如下：
 
 1. OpenClaw ACP 会话控制平面。
-2. 打包的 `acpx` 运行时插件。
+2. 官方 `@openclaw/acpx` 运行时插件。
 3. Claude ACP 适配器。
 4. Claude 侧运行时/会话机制。
 
@@ -251,12 +256,12 @@ CLI 后端是独立的纯文本本地回退运行时——见 [CLI 后端](/gate
 ```
 
 <AccordionGroup>
-  <Accordion title="绑定规则与互斥">
-    - `--bind here` 和 `--thread ...` 互斥。
-    - `--bind here` 仅适用于支持当前对话绑定的频道；否则 OpenClaw 会返回清晰的不支持消息。绑定会在网关重启后继续保留。
-    - 在 Discord 上，只有当 OpenClaw 需要为 `--thread auto|here` 创建子线程时，才需要 `spawnAcpSessions` —— `--bind here` 不需要。
-    - 如果你在未指定 `--cwd` 的情况下 spawn 到另一个 ACP agent，OpenClaw 默认继承 **目标 agent 的** 工作区。缺失的继承路径（`ENOENT`/`ENOTDIR`）会回退到后端默认值；其他访问错误（例如 `EACCES`）会以 spawn 错误形式暴露。
-    - 绑定对话中的网关管理命令保持本地处理——即使正常后续文本会路由到已绑定的 ACP 会话，`/acp ...` 命令仍由 OpenClaw 处理；只要该界面启用了命令处理，`/status` 和 `/unfocus` 也会保持本地处理。
+  <Accordion title="Binding rules and exclusivity">
+    - `--bind here` and `--thread ...` are mutually exclusive.
+    - `--bind here` only works on channels that advertise current-conversation binding; OpenClaw returns a clear unsupported message otherwise. Bindings persist across gateway restarts.
+    - On Discord, `spawnSessions` gates child thread creation for `--thread auto|here` — not `--bind here`.
+    - If you spawn to a different ACP agent without `--cwd`, OpenClaw inherits the **target agent's** workspace by default. Missing inherited paths (`ENOENT`/`ENOTDIR`) fall back to the backend default; other access errors (e.g. `EACCES`) surface as spawn errors.
+    - Gateway management commands stay local in bound conversations — `/acp ...` commands are handled by OpenClaw even when normal follow-up text routes to the bound ACP session; `/status` and `/unfocus` also stay local whenever command handling is enabled for that surface.
 
   </Accordion>
   <Accordion title="线程绑定会话">
@@ -271,10 +276,10 @@ CLI 后端是独立的纯文本本地回退运行时——见 [CLI 后端](/gate
     线程绑定 ACP 所需的功能开关：
 
     - `acp.enabled=true`
-    - `acp.dispatch.enabled` 默认开启（设为 `false` 可暂停自动 ACP 线程派发；显式 `sessions_spawn({ runtime: "acp" })` 调用仍然可用）。
-    - 已启用频道适配器 ACP 线程 spawn 开关（适配器特定）：
-      - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
-      - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
+    - `acp.dispatch.enabled` is on by default (set `false` to pause automatic ACP thread dispatch; explicit `sessions_spawn({ runtime: "acp" })` calls still work).
+    - Channel-adapter thread session spawns enabled (default: `true`):
+      - Discord: `channels.discord.threadBindings.spawnSessions=true`
+      - Telegram: `channels.telegram.threadBindings.spawnSessions=true`
 
     线程绑定支持是适配器特定的。如果当前频道适配器不支持线程绑定，OpenClaw 会返回清晰的不支持/不可用消息。
 
@@ -421,7 +426,7 @@ CLI 后端是独立的纯文本本地回退运行时——见 [CLI 后端](/gate
 
 - OpenClaw 会确保配置的 ACP 会话在使用前已存在。
 - 该频道或主题中的消息会路由到配置的 ACP 会话。
-- 在绑定对话中，`/new` 和 `/reset` 会原地重置同一个 ACP 会话 key。
+- 在绑定对话中，`/new` 和 `/reset` 会在原地重置同一个 ACP 会话 key。
 - 临时运行时绑定（例如由 thread-focus 流程创建的绑定）在存在时仍然适用。
 - 对于没有显式 `cwd` 的跨 agent ACP spawn，OpenClaw 会从 agent 配置继承目标 agent 工作区。
 - 缺失的继承工作区路径会回退到后端默认 cwd；非缺失的访问失败会作为 spawn 错误返回。
@@ -537,10 +542,10 @@ CLI 后端是独立的纯文本本地回退运行时——见 [CLI 后端](/gate
 
     说明：
 
-    - 在非线程绑定界面上，默认行为实际上等同于 `off`。
-    - 线程绑定的 spawn 需要频道策略支持：
-      - Discord: `channels.discord.threadBindings.spawnAcpSessions=true`
-      - Telegram: `channels.telegram.threadBindings.spawnAcpSessions=true`
+    - 在非线程绑定界面上，默认行为实际上是 `off`。
+    - 线程绑定 spawn 需要频道策略支持：
+      - Discord: `channels.discord.threadBindings.spawnSessions=true`
+      - Telegram: `channels.telegram.threadBindings.spawnSessions=true`
     - 当你想固定当前对话而不创建子线程时，请使用 `--bind here`。
 
   </Tab>

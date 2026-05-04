@@ -114,7 +114,7 @@ export default handler;
 
 **命令事件**（`command:new`、`command:reset`）：`context.sessionEntry`、`context.previousSessionEntry`、`context.commandSource`、`context.workspaceDir`、`context.cfg`。
 
-**消息事件**（`message:received`）：`context.from`、`context.content`、`context.channelId`、`context.metadata`（特定于提供商的数据，包括 `senderId`、`senderName`、`guildId`）。
+**消息事件** (`message:received`): `context.from`, `context.content`, `context.channelId`, `context.metadata` (提供方特定数据，包括 `senderId`、`senderName`、`guildId`)。`context.content` 会优先使用命令类消息中非空白的命令正文，然后回退到原始入站正文和通用正文；它不包含仅代理可见的增强内容，例如线程历史或链接摘要。
 
 **消息事件**（`message:sent`）：`context.to`、`context.content`、`context.success`、`context.channelId`。
 
@@ -157,12 +157,13 @@ Npm spec 仅支持注册表来源（包名 + 可选的精确版本或 dist-tag�
 
 ## 捆绑 hooks
 
-| Hook                  | 事件                           | 作用                                              |
-| --------------------- | ------------------------------ | ------------------------------------------------- |
-| session-memory        | `command:new`, `command:reset` | 将会话上下文保存到 `<workspace>/memory/`         |
-| bootstrap-extra-files | `agent:bootstrap`              | 从 glob 模式注入额外的 bootstrap 文件             |
-| command-logger        | `command`                      | 将所有命令记录到 `~/.openclaw/logs/commands.log` |
-| boot-md               | `gateway:startup`              | Gateway 启动时运行 `BOOT.md`                     |
+| Hook                  | Events                                            | 它的作用                                                     |
+| --------------------- | ------------------------------------------------- | ------------------------------------------------------------ |
+| session-memory        | `command:new`, `command:reset`                    | 将会话上下文保存到 `<workspace>/memory/`                     |
+| bootstrap-extra-files | `agent:bootstrap`                                 | 从 glob 模式注入额外的 bootstrap 文件                        |
+| command-logger        | `command`                                         | 将所有命令记录到 `~/.openclaw/logs/commands.log`            |
+| compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话紧凑化开始/结束时发送可见的聊天通知                    |
+| boot-md               | `gateway:startup`                                 | 在网关启动时运行 `BOOT.md`                                      |
 
 启用任意捆绑 hook：
 
@@ -202,6 +203,12 @@ openclaw hooks enable <hook-name>
 ### command-logger 详情
 
 将每条斜杠命令记录到 `~/.openclaw/logs/commands.log`。
+
+<a id="compaction-notifier"></a>
+
+### compaction-notifier 详情
+
+在 OpenClaw 开始和结束紧凑化会话转录时，向当前对话发送简短状态消息。这会让长轮次在聊天界面上不那么令人困惑，因为用户可以看到助手正在总结上下文，并会在紧凑化后继续。
 
 <a id="boot-md"></a>
 

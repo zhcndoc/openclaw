@@ -6,20 +6,17 @@ read_when:
 title: "社区插件"
 ---
 
-社区插件是第三方包，用于通过新的
-频道、工具、提供者或其他能力来扩展 OpenClaw。它们由社区构建和维护，
-通常发布在 [ClawHub](/tools/clawhub) 上，并且可通过
-一条命令安装。对于尚未迁移到 ClawHub 的包，Npm 仍然是受支持的备用方案。
+社区插件是第三方包，它们通过新增频道、工具、提供者或其他能力来扩展 OpenClaw。它们由社区构建和维护，通常发布在 [ClawHub](/tools/clawhub) 上，并且可通过一条命令安装。在 ClawHub 包安装逐步推出期间，裸包规格仍默认使用 Npm 作为启动默认值。
 
 ClawHub 是社区插件的权威发现入口。不要仅仅为了可发现性而打开
 只改文档的 PR 来把你的插件加到这里；请改为将其发布到
 ClawHub。
 
 ```bash
-openclaw plugins install <package-name>
+openclaw plugins install clawhub:<package-name>
 ```
 
-OpenClaw 会先检查 ClawHub，并自动回退到 npm。
+对于托管在 npm 上的包，请使用 `openclaw plugins install <package-name>`。
 
 ## 列出的插件
 

@@ -56,7 +56,8 @@ openclaw logs --url ws://127.0.0.1:18789 --token "$OPENCLAW_GATEWAY_TOKEN"
 ## 注意
 
 - 使用 `--local-time` 以本地时区渲染时间戳。
-- 如果隐式的本地回环 Gateway 请求配对、在连接期间关闭，或在 `logs.tail` 返回结果之前超时，`openclaw logs` 会自动回退到已配置的 Gateway 文件日志。显式的 `--url` 目标不会使用此回退。
+- 如果隐式的本地回环 Gateway 需要配对、在连接期间关闭，或者在 `logs.tail` 回复前超时，`openclaw logs` 会自动回退到已配置的 Gateway 文件日志。显式 `--url` 目标不会使用此回退。
+- 使用 `--follow` 时，临时的 gateway 断开连接（WebSocket 关闭、超时、连接中断）会触发自动重连，并采用指数退避策略（最多 8 次重试，重试间隔上限为 30 秒）。每次重试都会向 stderr 打印一条警告，而一旦轮询成功，会打印一次 `[logs] gateway reconnected` 提示。在 `--json` 模式下，重试警告和重连转换都会以 `{"type":"notice"}` 记录的形式输出到 stderr。不可恢复的错误（认证失败、配置错误）仍会立即退出。
 
 ## 相关
 

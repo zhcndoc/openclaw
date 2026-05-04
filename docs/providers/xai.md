@@ -25,19 +25,21 @@ OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
   <Step title="选择一个模型">
     ```json5
     {
-      agents: { defaults: { model: { primary: "xai/grok-4" } } },
+      agents: { defaults: { model: { primary: "xai/grok-4.3" } } },
     }
     ```
   </Step>
 </Steps>
 
 <Note>
-OpenClaw 使用 xAI Responses API 作为内置的 xAI 传输层。相同的
-`XAI_API_KEY` 也可用于支持 Grok 的 `web_search`、一等公民级 `x_search`
+OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。相同的
+`XAI_API_KEY` 也可用于支持 Grok 的 `web_search`、一等公民 `x_search`，
 以及远程 `code_execution`。
-如果你将 xAI 密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
-内置的 xAI 模型提供方也会将该密钥作为后备复用。
-`code_execution` 的调优配置位于 `plugins.entries.xai.config.codeExecution`。
+如果你在 `plugins.entries.xai.config.webSearch.apiKey` 下存储了 xAI 密钥，
+内置的 xAI 模型提供方也会将该密钥作为回退使用。
+将 `plugins.entries.xai.config.webSearch.baseUrl` 设置为通过运维方的 xAI Responses 代理路由 Grok 的
+`web_search`，并且默认情况下也路由 `x_search`。
+`code_execution` 调优位于 `plugins.entries.xai.config.codeExecution` 下。
 </Note>
 
 ## 内置目录
@@ -47,6 +49,7 @@ OpenClaw 默认包含以下 xAI 模型家族：
 | 家族            | 模型 ID                                                                 |
 | -------------- | ------------------------------------------------------------------------ |
 | Grok 3         | `grok-3`, `grok-3-fast`, `grok-3-mini`, `grok-3-mini-fast`               |
+| Grok 4.3       | `grok-4.3`                                                               |
 | Grok 4         | `grok-4`, `grok-4-0709`                                                  |
 | Grok 4 Fast    | `grok-4-fast`, `grok-4-fast-non-reasoning`                               |
 | Grok 4.1 Fast  | `grok-4-1-fast`, `grok-4-1-fast-non-reasoning`                           |
@@ -56,7 +59,8 @@ OpenClaw 默认包含以下 xAI 模型家族：
 当新的 `grok-4*` 和 `grok-code-fast*` ID 具有相同的 API 结构时，该插件也会向前解析它们。
 
 <Tip>
-`grok-4-fast`、`grok-4-1-fast` 和 `grok-4.20-beta-*` 变体是当前内置目录中支持图像能力的 Grok 引用。
+`grok-4.3`, `grok-4-fast`, `grok-4-1-fast`, 和 `grok-4.20-beta-*`
+这些变体是当前捆绑目录中具备图像能力的 Grok 引用。
 </Tip>
 
 ## OpenClaw 功能覆盖
@@ -324,12 +328,13 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
     | 键                 | 类型    | 默认值             | 说明                                 |
     | ------------------ | ------- | ------------------ | ------------------------------------ |
-    | `enabled`          | boolean | —                  | 启用或禁用 x_search                   |
-    | `model`            | string  | `grok-4-1-fast`    | 用于 x_search 请求的模型              |
-    | `inlineCitations`  | boolean | —                  | 在结果中包含行内引用                  |
-    | `maxTurns`         | number  | —                  | 最大对话轮数                          |
-    | `timeoutSeconds`   | number  | —                  | 请求超时时间（秒）                    |
-    | `cacheTtlMinutes`  | number  | —                  | 缓存存活时间（分钟）                  |
+    | `enabled`          | boolean | —                  | 启用或禁用 x_search           |
+    | `model`            | string  | `grok-4-1-fast`    | 用于 x_search 请求的模型     |
+    | `baseUrl`          | string  | —                  | xAI Responses 基础 URL 覆盖      |
+    | `inlineCitations`  | boolean | —                  | 在结果中包含行内引用  |
+    | `maxTurns`         | number  | —                  | 最大对话轮数           |
+    | `timeoutSeconds`   | number  | —                  | 请求超时时间（秒）           |
+    | `cacheTtlMinutes`  | number  | —                  | 缓存存活时间（分钟）        |
 
     ```json5
     {
@@ -340,6 +345,7 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
               xSearch: {
                 enabled: true,
                 model: "grok-4-1-fast",
+                baseUrl: "https://api.x.ai/v1",
                 inlineCitations: true,
               },
             },
@@ -398,14 +404,18 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
   </Accordion>
 
   <Accordion title="高级说明">
-    - OpenClaw 会在共享运行路径上自动应用 xAI 特定的工具 schema 和工具调用兼容性修复。
+    - OpenClaw 会在共享运行器路径上自动应用 xAI 特定的工具 schema 和工具调用兼容性修复。
     - 原生 xAI 请求默认 `tool_stream: true`。将
-      `agents.defaults.models["xai/<model>"].params.tool_stream` 设置为 `false` 可将其禁用。
-    - 内置的 xAI 包装器会在发送原生 xAI 请求前移除不受支持的 strict 工具 schema 标志和
-      reasoning 负载键。
-    - `web_search`、`x_search` 和 `code_execution` 会作为 OpenClaw
-      工具暴露。OpenClaw 会在每次工具请求中启用所需的特定 xAI 内置能力，而不是在每轮聊天中附加所有原生工具。
-    - `x_search` 和 `code_execution` 归内置的 xAI 插件所有，而不是硬编码到核心模型运行时中。
+      `agents.defaults.models["xai/<model>"].params.tool_stream` 设为 `false` 可
+      禁用它。
+    - 捆绑的 xAI 包装器会在发送原生 xAI 请求之前移除不受支持的严格工具 schema 标志和
+      推理负载键。
+    - `web_search`、`x_search` 和 `code_execution` 作为 OpenClaw
+      工具暴露。OpenClaw 会在每个工具请求中启用其所需的特定 xAI 内置能力，而不是把所有原生工具都附加到每一轮聊天中。
+    - Grok 的 `web_search` 会读取 `plugins.entries.xai.config.webSearch.baseUrl`。
+      `x_search` 会读取 `plugins.entries.xai.config.xSearch.baseUrl`，然后
+      回退到 Grok 网页搜索基础 URL。
+    - `x_search` 和 `code_execution` 由捆绑的 xAI 插件负责，而不是硬编码到核心模型运行时中。
     - `code_execution` 是远程 xAI 沙箱执行，不是本地
       [`exec`](/tools/exec)。
   </Accordion>

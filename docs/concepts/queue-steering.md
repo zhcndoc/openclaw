@@ -40,6 +40,9 @@ Codex review 和手动压缩回合会拒绝同回合 steering。当某个
 运行时无法接受 steering 时，OpenClaw 会回退到 followup 队列中
 该模式允许的行为。
 
+此页面解释的是用于普通入站消息的队列模式 steering。对于
+显式的 `/steer <message>` 命令，请参见 [Steer](/tools/steer)。
+
 ## 模式
 
 | 模式            | 主动运行行为                                                                                                             | 后续 followup 行为                                                            |
@@ -75,6 +78,7 @@ Codex harness，OpenClaw 会使用相同的 debounce 值作为静默窗口，
 
 ## 相关内容
 
-- [命令队列](/concepts/queue)
-- [消息](/concepts/messages)
-- [代理循环](/concepts/agent-loop)
+- [Command queue](/concepts/queue)
+- [Steer](/tools/steer)
+- [Messages](/concepts/messages)
+- [Agent loop](/concepts/agent-loop)

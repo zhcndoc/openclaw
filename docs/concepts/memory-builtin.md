@@ -114,8 +114,7 @@ openclaw memory index --force --agent main
 
 **结果过时？** 运行 `openclaw memory index --force` 进行重建。监视器在极少数边缘情况下可能会漏掉更改。
 
-**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。
-请查看日志以获取具体的加载错误。
+**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。`openclaw memory status --deep` 会将本地向量存储与 embedding 提供商分开报告，因此 `Vector store: unavailable` 指向 sqlite-vec 加载问题，而 `Embeddings: unavailable` 指向提供商/认证或模型就绪问题。请检查日志以获取具体的加载错误。
 
 ## 配置
 

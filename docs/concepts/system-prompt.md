@@ -90,6 +90,27 @@ OpenClaw 可以为子代理渲染更小的系统提示词。运行时会为每�
 特定对话的 `NO_REPLY` 行为，OpenClaw 可以省略通用的 **静默回复**
 部分。这样可以避免在全局系统提示词和通道上下文中重复记号机制。
 
+## Prompt snapshots
+
+OpenClaw 为 Codex 运行时的 happy path 保留已提交的提示词快照，位于
+`test/fixtures/agents/prompt-snapshots/codex-runtime-happy-path/`。它们会渲染
+选定的 app-server 线程/轮次参数，以及针对 Telegram 私聊、Discord 群组和心跳轮次重建的
+模型绑定提示层栈。该栈包括一个固定的 Codex `gpt-5.5` 模型提示词
+样例，该样例由 Codex 的模型目录/缓存形状生成，Codex 的 happy-path 权限开发者文本，
+OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模式指令，
+用户轮次输入，以及动态工具规范的引用。
+
+使用
+`pnpm prompt:snapshots:sync-codex-model` 刷新固定的 Codex 模型提示词样例。默认情况下，脚本会先查找 Codex 的运行时缓存
+`$CODEX_HOME/models_cache.json`，然后是 `~/.codex/models_cache.json`，最后才回退到维护者 Codex 检出约定
+`~/code/codex/codex-rs/models-manager/models.json`。如果这些来源都不存在，命令会在不更改已提交样例的情况下退出。传递 `--catalog <path>` 可从特定的 `models_cache.json`
+或 `models.json` 文件刷新。
+
+这些快照仍然不是逐字节的原始 OpenAI 请求捕获。在 OpenClaw 发送线程和轮次参数之后，Codex 仍然可以在 Codex 运行时内部添加运行时拥有的工作区上下文，例如 `AGENTS.md`、环境上下文、记忆、应用/插件指令，以及内置的 Default 协作模式指令。
+
+使用 `pnpm prompt:snapshots:gen` 重新生成它们，并使用
+`pnpm prompt:snapshots:check` 验证漂移。CI 会在额外的边界分片中运行漂移检查，以便提示词变更和快照更新保持附着在同一个 PR 上。
+
 ## 工作区引导注入
 
 引导文件会被裁剪并追加到 **项目上下文** 下方，因此模型无需显式读取也能看到身份和个人资料上下文：
@@ -107,6 +128,8 @@ OpenClaw 可以为子代理渲染更小的系统提示词。运行时会为每�
 应用了某个特定文件的门控。默认代理禁用心跳时，或
 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行会省略 `HEARTBEAT.md`。请保持注入文件简洁——尤其是 `MEMORY.md`，它会随着时间增长，可能导致
 意外偏高的上下文占用以及更频繁的压缩。
+
+当会话运行在原生 Codex 运行器上时，Codex 会通过其自身的项目文档发现机制加载 `AGENTS.md`。OpenClaw 仍然会解析其余引导文件并将它们作为 Codex 配置指令转发，因此 `SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md` 会保持相同的工作区上下文角色，而不会重复 `AGENTS.md`。
 
 <Note>
 `memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。

@@ -91,21 +91,21 @@ title: "Exec 工具"
 
 ## 配置
 
-- `tools.exec.notifyOnExit`（默认：true）：当为 true 时，后台化的 exec 会话会在退出时排队一个系统事件并请求一次心跳。
-- `tools.exec.approvalRunningNoticeMs`（默认：10000）：当受审批限制的 exec 运行超过该时间时，发出一次“running”通知（0 表示禁用）。
-- `tools.exec.timeoutSec`（默认：1800）：默认的每命令 exec 超时时间（秒）。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用该调用的 exec 进程超时。
-- `tools.exec.host`（默认：`auto`；在沙箱运行时处于活动状态时解析为 `sandbox`，否则为 `gateway`）
-- `tools.exec.security`（默认：沙箱为 `deny`，gateway + node 在未设置时为 `full`）
-- `tools.exec.ask`（默认：`off`）
-- 无审批的主机 exec 是 gateway + node 的默认行为。如果你想要审批/允许列表行为，请同时收紧 `tools.exec.*` 和主机的 `~/.openclaw/exec-approvals.json`；参见 [Exec approvals](/tools/exec-approvals#no-approval-yolo-mode)。
-- YOLO 来自主机策略默认值（`security=full`、`ask=off`），而不是来自 `host=auto`。如果你想强制使用 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
-- 在 `security=full` 且 `ask=off` 模式下，主机 exec 会直接遵循已配置的策略；不会额外进行启发式命令混淆预过滤或脚本预检查拒绝层。
-- `tools.exec.node`（默认：未设置）
-- `tools.exec.strictInlineEval`（默认：false）：当为 true 时，`python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e` 等内联解释器 eval 形式始终需要显式审批。`allow-always` 仍然可以持久保存无害的解释器/脚本调用，但内联 eval 形式仍会每次提示。
-- `tools.exec.pathPrepend`：为 exec 运行（仅 gateway + sandbox）预先追加到 `PATH` 的目录列表。
-- `tools.exec.safeBins`：仅 stdin 的安全二进制程序，可在没有显式允许列表条目的情况下运行。有关行为细节，参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
-- `tools.exec.safeBinTrustedDirs`：用于 `safeBins` 路径检查的额外显式可信目录。`PATH` 条目绝不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
-- `tools.exec.safeBinProfiles`：按 safe bin 可选的自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
+- `tools.exec.notifyOnExit` (default: true): 当为 true 时，后台 exec 会话会在退出时排队一个系统事件并请求心跳。
+- `tools.exec.approvalRunningNoticeMs` (default: 10000): 当一个需要审批门控的 exec 运行超过此时长时，发出一次“running”通知（0 可禁用）。
+- `tools.exec.timeoutSec` (default: 1800): 默认的每命令 exec 超时时间，单位为秒。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用 exec 进程超时。
+- `tools.exec.host` (default: `auto`; resolves to `sandbox` when sandbox runtime is active, `gateway` otherwise)
+- `tools.exec.security` (default: `deny` for sandbox, `full` for gateway + node when unset)
+- `tools.exec.ask` (default: `off`)
+- 无审批的主机 exec 是 gateway + node 的默认行为。如果你想要审批/允许列表行为，请同时收紧 `tools.exec.*` 和主机上的 `~/.openclaw/exec-approvals.json`；参见 [Exec approvals](/tools/exec-approvals#yolo-mode-no-approval)。
+- YOLO 来自主机策略默认值（`security=full`、`ask=off`），而不是来自 `host=auto`。如果你想强制 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
+- 在 `security=full` 且 `ask=off` 模式下，主机 exec 会直接遵循已配置策略；不会额外进行启发式命令混淆预过滤或脚本预检拒绝层。
+- `tools.exec.node` (default: unset)
+- `tools.exec.strictInlineEval` (default: false): 当为 true 时，像 `python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e` 这样的内联解释器 eval 形式总是需要显式批准。`allow-always` 仍然可以持久化良性的解释器/脚本调用，但内联 eval 形式每次仍会提示。
+- `tools.exec.pathPrepend`: 为 exec 运行追加到 `PATH` 前面的目录列表（仅 gateway + sandbox）。
+- `tools.exec.safeBins`: 仅 stdin 的安全二进制文件，可在没有显式允许列表条目的情况下运行。行为细节参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
+- `tools.exec.safeBinTrustedDirs`: 为 `safeBins` 路径检查额外显式信任的目录。`PATH` 条目绝不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
+- `tools.exec.safeBinProfiles`: 每个安全 bin 的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
 
 示例：
 
@@ -256,9 +256,10 @@ glob。裸名称只匹配通过 PATH 调用的命令，因此当命令是 `rg` �
 
 - 仅适用于 OpenAI/OpenAI Codex 模型。
 - 工具策略仍然适用；`allow: ["write"]` 会隐式允许 `apply_patch`。
+- `deny: ["write"]` 不会拒绝 `apply_patch`；如果补丁写入也应被阻止，请显式拒绝 `apply_patch`，或在需要阻止补丁写入时使用 `deny: ["group:fs"]`。
 - 配置位于 `tools.exec.applyPatch` 下。
-- `tools.exec.applyPatch.enabled` 默认为 `true`；将其设为 `false` 可为 OpenAI 模型禁用该工具。
-- `tools.exec.applyPatch.workspaceOnly` 默认为 `true`（仅限工作区内）。只有在你有意希望 `apply_patch` 在工作区目录之外进行写入/删除时，才将其设为 `false`。
+- `tools.exec.applyPatch.enabled` 的默认值为 `true`；将其设置为 `false` 可为 OpenAI 模型禁用该工具。
+- `tools.exec.applyPatch.workspaceOnly` 的默认值为 `true`（仅限工作区内）。只有当你明确希望 `apply_patch` 在工作区目录之外写入/删除时，才将其设置为 `false`。
 
 ## 相关内容
 

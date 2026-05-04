@@ -30,7 +30,7 @@ read_when:
         "setupEntry": "./setup-entry.ts",
         "channel": {
           "id": "my-channel",
-          "label": "My Channel",
+          "label": "我的频道",
           "blurb": "频道的简短描述。"
         }
       }
@@ -117,9 +117,9 @@ read_when:
   "openclaw": {
     "channel": {
       "id": "my-channel",
-      "label": "My Channel",
-      "selectionLabel": "My Channel (self-hosted)",
-      "detailLabel": "My Channel Bot",
+      "label": "我的频道",
+      "selectionLabel": "我的频道（自托管）",
+      "detailLabel": "我的频道机器人",
       "docsPath": "/channels/my-channel",
       "docsLabel": "my-channel",
       "blurb": "基于 Webhook 的自托管聊天集成。",
@@ -154,21 +154,22 @@ read_when:
 
 `openclaw.install` 是包元数据，不是清单元数据。
 
-| 字段                         | 类型                 | 含义                                                                     |
-| ---------------------------- | -------------------- | ------------------------------------------------------------------------ |
-| `npmSpec`                    | `string`             | 用于安装/更新流程的规范化 npm 规格。                                     |
-| `localPath`                  | `string`             | 本地开发或捆绑安装路径。                                                 |
-| `defaultChoice`              | `"npm"` \| `"local"` | 两者都可用时的首选安装来源。                                             |
-| `minHostVersion`             | `string`             | 最低支持的 OpenClaw 版本，格式为 `>=x.y.z`。                             |
-| `expectedIntegrity`          | `string`             | 预期的 npm dist integrity 字符串，通常为 `sha512-...`，用于固定安装。    |
-| `allowInvalidConfigRecovery` | `boolean`            | 允许捆绑插件重装流程从某些过期配置失败中恢复。                            |
+| 字段                         | 类型                                | 含义                                                                     |
+| ---------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `clawhubSpec`                | `string`                            | 安装/更新和引导按需安装流程的规范化 ClawHub 规格。                        |
+| `npmSpec`                    | `string`                            | 安装/更新回退流程的规范化 npm 规格。                                      |
+| `localPath`                  | `string`                            | 本地开发或打包后的安装路径。                                              |
+| `defaultChoice`              | `"clawhub"` \| `"npm"` \| `"local"` | 当有多个来源可用时的首选安装来源。                                         |
+| `minHostVersion`             | `string`                            | 最低支持的 OpenClaw 版本，格式为 `>=x.y.z` 或 `>=x.y.z-prerelease`。     |
+| `expectedIntegrity`          | `string`                            | 预期的 npm dist integrity 字符串，通常为 `sha512-...`，用于固定安装。     |
+| `allowInvalidConfigRecovery` | `boolean`                           | 允许捆绑插件重装流程从特定的过期配置失败中恢复。                            |
 
 <AccordionGroup>
   <Accordion title="引导行为">
-    交互式引导也会使用 `openclaw.install` 来支持按需安装界面。如果你的插件在运行时加载之前暴露提供者认证选项或频道设置/目录元数据，引导可以显示该选项，提示选择 npm 或本地安装，安装或启用插件，然后继续所选流程。Npm 引导选项需要带有注册表 `npmSpec` 的受信任目录元数据；精确版本和 `expectedIntegrity` 是可选固定值。如果存在 `expectedIntegrity`，安装/更新流程会强制校验它。请将“展示什么”的元数据放在 `openclaw.plugin.json` 中，将“如何安装它”的元数据放在 `package.json` 中。
+    交互式引导也会使用 `openclaw.install` 来支持按需安装界面。如果你的插件在运行时加载前公开了提供者认证选项或频道设置/目录元数据，引导可以显示该选项，提示选择 ClawHub、npm 或本地安装，安装或启用插件，然后继续所选流程。ClawHub 引导选项使用 `clawhubSpec`，在存在时会优先使用；npm 选项需要带有注册表 `npmSpec` 的受信任目录元数据；精确版本和 `expectedIntegrity` 是可选的 npm 固定项。如果存在 `expectedIntegrity`，安装/更新流程会对 npm 强制执行它。把“展示什么”的元数据放在 `openclaw.plugin.json` 中，把“如何安装”的元数据放在 `package.json` 中。
   </Accordion>
-  <Accordion title="minHostVersion 强制校验">
-    如果设置了 `minHostVersion`，安装和清单注册表加载都会强制校验它。较旧的主机将跳过该插件；无效的版本字符串会被拒绝。
+  <Accordion title="minHostVersion 强制执行">
+    如果设置了 `minHostVersion`，安装以及非捆绑的清单注册表加载都会强制执行它。较旧的宿主会跳过外部插件；无效的版本字符串会被拒绝。捆绑源码插件默认视为与宿主检出版本一致。
   </Accordion>
   <Accordion title="固定的 npm 安装">
     对于固定的 npm 安装，请在 `npmSpec` 中保留精确版本，并添加预期的制品完整性：
@@ -398,7 +399,21 @@ const accountSchema = z.object({
 const configSchema = buildChannelConfigSchema(accountSchema);
 ```
 
-对于第三方插件，冷路径契约仍然是插件清单：将生成的 JSON Schema 镜像到 `openclaw.plugin.json#channelConfigs` 中，这样配置 schema、设置和 UI 界面就可以在不加载运行时代码的情况下检查 `channels.<id>`。
+如果你已经将契约编写为 JSON Schema 或 TypeBox，请使用直接辅助函数，这样 OpenClaw 就可以在元数据路径上跳过 Zod 到 JSON Schema 的转换：
+
+```typescript
+import { Type } from "typebox";
+import { buildJsonChannelConfigSchema } from "openclaw/plugin-sdk/channel-config-schema";
+
+const configSchema = buildJsonChannelConfigSchema(
+  Type.Object({
+    token: Type.Optional(Type.String()),
+    allowFrom: Type.Optional(Type.Array(Type.String())),
+  }),
+);
+```
+
+对于第三方插件，冷路径契约仍然是插件清单：将生成的 JSON Schema 镜像到 `openclaw.plugin.json#channelConfigs` 中，这样配置 schema、setup 和 UI 界面就可以在不加载运行时代码的情况下检查 `channels.<id>`。
 
 ## Setup 向导
 
@@ -480,12 +495,12 @@ const setupWizard: ChannelSetupWizard = {
 **外部插件：** 发布到 [ClawHub](/tools/clawhub)，然后安装：
 
 <Tabs>
-  <Tab title="自动（ClawHub 然后 npm）">
+  <Tab title="npm">
     ```bash
     openclaw plugins install @myorg/openclaw-my-plugin
     ```
 
-    OpenClaw 会先尝试 ClawHub，然后自动回退到 npm。
+    裸包规范会在启动切换期间从 npm 安装。
 
   </Tab>
   <Tab title="仅 ClawHub">

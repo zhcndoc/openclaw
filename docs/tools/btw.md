@@ -6,8 +6,8 @@ read_when:
 title: "BTW 旁路问题"
 ---
 
-`/btw` 让你能够就 **当前会话** 提出一个快速的旁路问题，而不会
-把这个问题变成正常的对话历史。
+`/btw` 让你可以就 **当前会话** 提出一个快速的旁路问题，而不会
+把这个问题变成正常的对话历史。`/side` 是它的别名。
 
 它的设计灵感来自 Claude Code 的 `/btw` 行为，但已适配 OpenClaw 的
 Gateway 和多通道架构。
@@ -115,10 +115,11 @@ Gateway 会正确地将 BTW 以 `chat.side_result` 发送，而 BTW 不会包含
 示例：
 
 ```text
-/btw 我们正在编辑哪个文件？
-/btw 这个错误是什么意思？
-/btw 用一句话总结当前任务
-/btw 17 * 19 是多少？
+/btw what file are we editing?
+/side what changed while the main run continued?
+/btw what does this error mean?
+/btw summarize the current task in one sentence
+/btw what is 17 * 19?
 ```
 
 ## 何时不要使用 BTW

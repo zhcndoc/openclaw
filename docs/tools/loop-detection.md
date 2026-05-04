@@ -78,13 +78,13 @@ OpenClaw 可以防止智能体陷入重复的工具调用模式。
 
 ## 推荐设置
 
-- 先使用 `enabled: true`，其余保持默认值不变。
+- 对于较小的模型，建议从 `enabled: true` 开始，并保持默认值不变。旗舰模型通常很少需要循环检测，可以保持禁用。
 - 保持阈值顺序为 `warningThreshold < criticalThreshold < globalCircuitBreakerThreshold`。
 - 如果出现误报：
   - 提高 `warningThreshold` 和/或 `criticalThreshold`
   - （可选）提高 `globalCircuitBreakerThreshold`
-  - 仅禁用导致问题的检测器
-  - 减小 `historySize` 以降低历史上下文的严格程度
+  - 仅禁用引起问题的检测器
+  - 降低 `historySize` 以减少历史上下文的严格程度
 
 ## 日志和预期行为
 

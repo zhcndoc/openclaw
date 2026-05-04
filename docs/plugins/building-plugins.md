@@ -11,16 +11,16 @@ read_when:
 插件通过新增能力来扩展 OpenClaw：channels、模型提供方、
 speech、实时转录、实时语音、媒体理解、图像生成、视频生成、网页抓取、网页搜索、agent 工具，或这些能力的任意组合。
 
-你不需要把插件添加到 OpenClaw 仓库中。发布到
-[ClawHub](/tools/clawhub)，用户通过
-`openclaw plugins install <package-name>` 安装。OpenClaw 会先尝试 ClawHub，
-如果包仍然使用 npm 分发，则会自动回退到 npm。
+你不需要将你的插件添加到 OpenClaw 仓库中。发布到
+[ClawHub](/tools/clawhub)，用户可通过
+`openclaw plugins install clawhub:<package-name>` 安装。在发布切换期间，裸包说明仍然会
+从 npm 安装。
 
 ## 前提条件
 
-- Node >= 22 以及一个包管理器（npm 或 pnpm）
+- Node >= 22 和一个包管理器（npm 或 pnpm）
 - 熟悉 TypeScript（ESM）
-- 对于仓库内插件：已克隆仓库并完成 `pnpm install`
+- 对于仓库内插件：已克隆仓库并执行 `pnpm install`。源码检出方式的插件开发仅支持 pnpm，因为 OpenClaw 会从 `extensions/*` 工作区包中加载已捆绑的插件。
 
 ## 这是什么类型的插件？
 
@@ -72,7 +72,10 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     {
       "id": "my-plugin",
       "name": "My Plugin",
-      "description": "为 OpenClaw 添加一个自定义工具",
+      "description": "Adds a custom tool to OpenClaw",
+      "contracts": {
+        "tools": ["my_tool"]
+      },
       "activation": {
         "onStartup": true
       },
@@ -84,10 +87,11 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     ```
     </CodeGroup>
 
-    每个插件都需要一个清单，即使没有配置；并且每个插件都应该有意地声明 `activation.onStartup`。
-    运行时注册的工具需要在启动时导入，所以这个示例将其设为 `true`。
-    完整 schema 请参见 [Manifest](/plugins/manifest)。规范的 ClawHub 发布片段位于
-    `docs/snippets/plugin-publish/` 中。
+    每个插件都需要一个清单，即使没有配置也是如此。运行时注册的工具
+    必须列在 `contracts.tools` 中，这样 OpenClaw 才能在不加载每个插件运行时的情况下发现其所属
+    插件。插件也应明确声明 `activation.onStartup`。本示例将其设为 `true`。完整 schema 请参见
+    [Manifest](/plugins/manifest)。规范的 ClawHub
+    发布片段位于 `docs/snippets/plugin-publish/` 中。
 
   </Step>
 
@@ -131,8 +135,8 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     openclaw plugins install clawhub:@myorg/openclaw-my-plugin
     ```
 
-    对于像 `@myorg/openclaw-my-plugin` 这样的裸包规格，OpenClaw 也会在 npm 之前先检查 ClawHub；
-    对于尚未迁移到 ClawHub 的包，npm 仍然作为回退方案。
+    像 `@myorg/openclaw-my-plugin` 这样的裸包说明会在发布切换期间
+    从 npm 安装。当你想使用 ClawHub 解析时，请使用 `clawhub:`。
 
     **仓库内插件：** 放置在捆绑插件工作区树下 — 会自动被发现。
 
@@ -151,7 +155,7 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
 | ------------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------ |
 | 文本推理（LLM）          | `api.registerProvider(...)`                      | [Provider Plugins](/plugins/sdk-provider-plugins)                              |
 | CLI 推理后端             | `api.registerCliBackend(...)`                    | [CLI Backends](/gateway/cli-backends)                                          |
-| Channel / 消息            | `api.registerChannel(...)`                       | [Channel Plugins](/plugins/sdk-channel-plugins)                                |
+| Channel / 消息           | `api.registerChannel(...)`                       | [Channel Plugins](/plugins/sdk-channel-plugins)                                |
 | Speech（TTS/STT）        | `api.registerSpeechProvider(...)`                | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
 | 实时转录                 | `api.registerRealtimeTranscriptionProvider(...)` | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
 | 实时语音                 | `api.registerRealtimeVoiceProvider(...)`         | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
@@ -230,7 +234,22 @@ register(api) {
 }
 ```
 
-用户在配置中启用可选工具：
+通过 `api.registerTool(...)` 注册的每个工具也必须在
+插件清单中声明：
+
+```json
+{
+  "contracts": {
+    "tools": ["my_tool", "workflow_tool"]
+  }
+}
+```
+
+OpenClaw 会捕获并缓存已注册工具中经过验证的描述符，
+因此插件无需在清单中重复 `description` 或 schema 数据。该
+清单契约仅声明归属和发现；执行时仍会调用实时注册的工具实现。
+
+用户可在配置中启用可选工具：
 
 ```json5
 {
@@ -284,82 +303,76 @@ openclaw demo-plugin ping
 
 ## 导入约定
 
-Always import from the focused `openclaw/plugin-sdk/<subpath>` paths:
+始终从聚焦的 `openclaw/plugin-sdk/<subpath>` 路径导入：
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 
-// Wrong: monolithic root path (deprecated and will be removed)
+// 错误：单体根路径（已弃用且将被移除）
 import { ... } from "openclaw/plugin-sdk";
 ```
 
-For the full subpath reference, see the [SDK overview](/plugins/sdk-overview).
+有关完整的子路径参考，请参阅 [SDK 概览](/plugins/sdk-overview)。
 
-Inside your plugin, use local barrel files (`api.ts`, `runtime-api.ts`) for
-internal imports—do not import your own plugin via its SDK path.
+在你的插件内部，使用本地 barrel 文件（`api.ts`、`runtime-api.ts`）进行内部导入——不要通过其 SDK 路径导入你自己的插件。
 
-For provider plugins, keep provider-specific helpers in those package-root
-barrels unless the interface is genuinely generic. Current bundled examples
-include:
+对于 provider 插件，除非接口确实是通用的，否则请将 provider 特定的辅助工具保留在这些包根的 barrel 文件中。当前内置的示例包括：
 
-- Anthropic: Claude stream wrappers and `service_tier` / beta helpers
-- OpenAI: provider builders, default model helpers, realtime providers
-- OpenRouter: provider builders and boot/config helpers
+- Anthropic：Claude 流包装器以及 `service_tier` / beta 辅助工具
+- OpenAI：provider 构建器、默认模型辅助工具、实时 provider
+- OpenRouter：provider 构建器以及 boot/config 辅助工具
 
-If a helper is only useful inside one bundled provider package, keep it on that
-package-root surface instead of promoting it into `openclaw/plugin-sdk/*`.
+如果某个辅助工具只在一个内置 provider 包内部有用，请将它保留在该包根级别的导出面上，而不是将其提升到 `openclaw/plugin-sdk/*` 中。
 
-Some generated `openclaw/plugin-sdk/<bundled-id>` helper surfaces still exist
-for bundled plugin maintenance when they document owner usage. Treat those as
-reserved interfaces, not the default pattern for new third-party plugins.
+一些生成的 `openclaw/plugin-sdk/<bundled-id>` 辅助导出面仍然存在，用于在其文档说明所有者用法时维护内置插件。请将这些视为保留接口，而不是新第三方插件的默认模式。
 
-## Pre-submit checklist
+## 提交前检查清单
 
-<Check>**package.json** has the correct `openclaw` metadata</Check>
-<Check>**openclaw.plugin.json** manifest exists and is valid</Check>
-<Check>Entry points use `defineChannelPluginEntry` or `definePluginEntry`</Check>
-<Check>All imports use focused `plugin-sdk/<subpath>` paths</Check>
-<Check>Internal imports use local modules, not SDK self-imports</Check>
-<Check>Tests pass (`pnpm test -- <bundled-plugin-root>/my-plugin/`)</Check>
-<Check>`pnpm check` passes (for in-repo plugins)</Check>
+<Check>**package.json** 具有正确的 `openclaw` 元数据</Check>
+<Check>**openclaw.plugin.json** 清单文件存在且有效</Check>
+<Check>入口点使用 `defineChannelPluginEntry` 或 `definePluginEntry`</Check>
+<Check>所有导入都使用聚焦的 `plugin-sdk/<subpath>` 路径</Check>
+<Check>内部导入使用本地模块，而不是 SDK 自导入</Check>
+<Check>测试通过（`pnpm test -- <bundled-plugin-root>/my-plugin/`）</Check>
+<Check>`pnpm check` 通过（适用于仓库内插件）</Check>
 
-## Beta release testing
+## Beta 版本测试
 
-1. Watch GitHub release tags on [openclaw/openclaw](https://github.com/openclaw/openclaw/releases) and subscribe via `Watch` > `Releases`. Beta tags look like `v2026.3.N-beta.1`. You can also enable notifications for the official OpenClaw X account [@openclaw](https://x.com/openclaw) to catch release announcements.
-2. As soon as a beta tag appears, test your plugin against it immediately. The window before stable is often only a few hours.
-3. After testing, reply in your plugin’s `plugin-forum` Discord thread with `all good` or describe what broke. If you do not have a thread yet, create one.
-4. If there is a problem, open or update an issue titled `Beta blocker: <plugin-name> - <summary>` and add the `beta-blocker` label. Put the issue link in your thread.
-5. Create a PR against `main` titled `fix(<plugin-id>): beta blocker - <summary>` and include the issue link in both the PR and your Discord thread. Contributors cannot label PRs, so the title is how maintainers and automation recognize PR-side signals. Blockers with PRs will be merged; blockers without PRs may still ship. Maintainers watch those threads during beta testing.
-6. Silence means pass. If you miss the window, your fix will likely land in the next cycle.
+1. 关注 [openclaw/openclaw](https://github.com/openclaw/openclaw/releases) 上的 GitHub 发布标签，并通过 `Watch` > `Releases` 订阅。Beta 标签看起来像 `v2026.3.N-beta.1`。你也可以为 OpenClaw 官方 X 账号 [@openclaw](https://x.com/openclaw) 启用通知，以便及时获知发布公告。
+2. 一旦出现 beta 标签，立即用它测试你的插件。正式版发布前的窗口通常只有几个小时。
+3. 测试完成后，在你插件的 `plugin-forum` Discord 主题中回复 `all good`，或说明出现了什么问题。如果你还没有主题，请创建一个。
+4. 如果存在问题，请创建或更新一个标题为 `Beta blocker: <plugin-name> - <summary>` 的 issue，并添加 `beta-blocker` 标签。将该 issue 链接放到你的主题中。
+5. 针对 `main` 创建一个标题为 `fix(<plugin-id>): beta blocker - <summary>` 的 PR，并在 PR 和你的 Discord 主题中都附上 issue 链接。贡献者不能给 PR 添加标签，因此标题是维护者和自动化识别 PR 侧信号的方式。有 PR 的 blocker 会被合并；没有 PR 的 blocker 仍然可能随版本发布。维护者会在 beta 测试期间关注这些主题。
+6. 沉默即表示通过。如果你错过了这个窗口，你的修复很可能会在下一个周期才落地。
 
-## Next steps
+## 后续步骤
 
 <CardGroup cols={2}>
-  <Card title="Channel plugins" icon="messages-square" href="/plugins/sdk-channel-plugins">
-    Build a message channel plugin
+  <Card title="Channel 插件" icon="messages-square" href="/plugins/sdk-channel-plugins">
+    构建消息通道插件
   </Card>
-  <Card title="Provider plugins" icon="cpu" href="/plugins/sdk-provider-plugins">
-    Build a model provider plugin
+  <Card title="Provider 插件" icon="cpu" href="/plugins/sdk-provider-plugins">
+    构建模型 provider 插件
   </Card>
-  <Card title="SDK overview" icon="book-open" href="/plugins/sdk-overview">
-    Import map and registration API reference
+  <Card title="SDK 概览" icon="book-open" href="/plugins/sdk-overview">
+    导入映射和注册 API 参考
   </Card>
-  <Card title="Runtime helpers" icon="settings" href="/plugins/sdk-runtime">
-    TTS, search, and sub-agents via api.runtime
+  <Card title="运行时辅助工具" icon="settings" href="/plugins/sdk-runtime">
+    通过 api.runtime 使用 TTS、搜索和子代理
   </Card>
-  <Card title="Testing" icon="test-tubes" href="/plugins/sdk-testing">
-    Testing tools and patterns
+  <Card title="测试" icon="test-tubes" href="/plugins/sdk-testing">
+    测试工具和模式
   </Card>
-  <Card title="Plugin manifest" icon="file-json" href="/plugins/manifest">
-    Full manifest schema reference
+  <Card title="插件清单" icon="file-json" href="/plugins/manifest">
+    完整的清单 schema 参考
   </Card>
 </CardGroup>
 
-## See also
+## 另请参阅
 
-- [Plugin architecture](/plugins/architecture) — Deep dive into the internal architecture
-- [SDK overview](/plugins/sdk-overview) — Plugin SDK reference
-- [Manifest](/plugins/manifest) — Plugin manifest format
-- [Channel plugins](/plugins/sdk-channel-plugins) — Build channel plugins
-- [Provider plugins](/plugins/sdk-provider-plugins) — Build provider plugins
+- [插件架构](/plugins/architecture) — 深入了解内部架构
+- [SDK 概览](/plugins/sdk-overview) — 插件 SDK 参考
+- [清单](/plugins/manifest) — 插件清单格式
+- [Channel 插件](/plugins/sdk-channel-plugins) — 构建通道插件
+- [Provider 插件](/plugins/sdk-provider-plugins) — 构建 provider 插件

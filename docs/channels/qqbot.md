@@ -82,12 +82,28 @@ openclaw configure --section channels
 }
 ```
 
-注意：
+Env SecretRef AppSecret:
+
+```json5
+{
+  channels: {
+    qqbot: {
+      enabled: true,
+      appId: "YOUR_APP_ID",
+      clientSecret: { source: "env", provider: "default", id: "QQBOT_CLIENT_SECRET" },
+    },
+  },
+}
+```
+
+说明：
 
 - 环境变量回退仅适用于默认 QQ Bot 账号。
 - `openclaw channels add --channel qqbot --token-file ...` 只提供
-  AppSecret；AppID 必须已经在配置中设置，或者通过 `QQBOT_APP_ID` 提供。
-- `clientSecret` 也接受 SecretRef 输入，不仅限于明文字符串。
+  AppSecret；AppID 必须已在配置中设置，或通过 `QQBOT_APP_ID` 提供。
+- `clientSecret` 也接受 SecretRef 输入，不仅仅是明文字符串。
+- 旧式的 `secretref:/...` 标记字符串不是有效的 `clientSecret` 值；
+  请使用上面的结构化 SecretRef 对象。
 
 ### 多账号设置
 
@@ -193,7 +209,7 @@ STT 和 TTS 支持两级配置，并按优先级回退：
         voice: "your-voice",
       },
       accounts: {
-        qq-main: {
+        "qq-main": {
           tts: {
             providers: {
               openai: { voice: "shimmer" },

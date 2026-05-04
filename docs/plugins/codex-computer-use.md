@@ -98,7 +98,6 @@ CUA 的驱动程序是 macOS 专用的，并且仍然需要其应用提示时请
       model: "openai/gpt-5.5",
       agentRuntime: {
         id: "codex",
-        fallback: "none",
       },
     },
   },

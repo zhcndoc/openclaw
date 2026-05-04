@@ -62,6 +62,10 @@ agents
 create agent work workspace ~/Projects/work
 models
 set default model openai/gpt-5.5
+plugins list
+plugins search slack
+plugin install clawhub:openclaw-codex-app-server
+plugin uninstall openclaw-codex-app-server
 talk to work agent
 talk to agent for ~/Projects/work
 audit
@@ -87,25 +91,29 @@ Crestodian 使用类型化操作，而不是临时编辑配置。
 
 只读操作可以立即运行：
 
-- 显示概览
-- 列出代理
-- 显示模型/后端状态
-- 运行状态或健康检查
-- 检查 Gateway 可达性
-- 在没有交互式修复的情况下运行 doctor
-- 验证配置
-- 显示审计日志路径
+- show overview
+- list agents
+- list installed plugins
+- search ClawHub plugins
+- show model/backend status
+- run status or health checks
+- check Gateway reachability
+- run doctor without interactive fixes
+- validate config
+- show the audit-log path
 
 持久性操作在交互模式下需要会话式批准，除非你为直接命令传入 `--yes`：
 
-- 写入配置
-- 运行 `config set`
-- 通过 `config set-ref` 设置受支持的 SecretRef 值
-- 运行设置/引导初始化
-- 更改默认模型
-- 启动、停止或重启 Gateway
-- 创建代理
-- 运行会重写配置或状态的 doctor 修复
+- write config
+- run `config set`
+- set supported SecretRef values through `config set-ref`
+- run setup/onboarding bootstrap
+- change the default model
+- start, stop, or restart the Gateway
+- create agents
+- install plugins from ClawHub or npm
+- uninstall plugins
+- run doctor repairs that rewrite config or state
 
 已应用的写入会记录到：
 
@@ -203,15 +211,18 @@ create agent work workspace ~/Projects/work model openai/gpt-5.5
 
 远程救援的安全契约：
 
-- 在沙箱化启用时禁用。如果某个代理/会话处于沙箱中，Crestodian 必须拒绝远程救援，并说明需要本地 CLI 修复。
-- 默认有效状态为 `auto`：仅在可信的 YOLO 操作中允许远程救援，此时运行时已经拥有非沙箱化的本地权限。
-- 需要显式的所有者身份。救援不得接受通配符发送者规则、开放群组策略、未认证 webhook 或匿名通道。
+- 当沙箱处于启用状态时禁用。如果某个 agent/session 处于沙箱化状态，
+  Crestodian 必须拒绝远程救援，并解释需要进行本地 CLI 修复。
+- 默认有效状态为 `auto`：仅在受信任的 YOLO 运行中允许远程救援，
+  也就是运行时已经拥有未沙箱化的本地权限时。
+- 要求显式的所有者身份。救援不得接受通配符发送者规则、开放群组策略、未认证 webhook 或匿名通道。
 - 默认仅限所有者 DM。群组/频道救援需要显式选择加入。
+- 插件搜索和列表为只读。插件安装默认仅限本地，因为它会下载可执行代码。若救援策略允许持久写入，则可以将插件卸载作为已批准的修复操作。
 - 远程救援不能打开本地 TUI 或切换到交互式代理会话。请使用本地 `openclaw` 进行代理交接。
 - 即使在救援模式下，持久写入仍需要批准。
-- 对每个已应用的救援操作进行审计。消息通道救援会记录频道、账户、发送者和源地址元数据。会修改配置的操作还会记录修改前后的配置哈希。
+- 审计每个已应用的救援操作。消息通道救援会记录通道、账户、发送者和源地址元数据。修改配置的操作还会记录修改前后的配置哈希。
 - 永远不要回显密钥。SecretRef 检查应报告可用性，而不是值。
-- 如果 Gateway 存活，优先使用 Gateway 类型化操作。如果 Gateway 已死，只使用不依赖正常代理循环的最小本地修复面。
+- 如果 Gateway 仍然存活，优先使用 Gateway 的类型化操作。如果 Gateway 已死亡，则仅使用不依赖正常代理循环的最小本地修复表面。
 
 配置形状：
 
