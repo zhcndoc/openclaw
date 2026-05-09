@@ -1,14 +1,12 @@
 ---
 summary: "在隔离的 macOS VM 中运行 OpenClaw（本地或托管），当你需要隔离环境或 iMessage 时使用"
 read_when:
-  - 你希望 OpenClaw 与你的主 macOS 环境隔离
-  - 你希望在沙箱中使用 iMessage 集成（BlueBubbles）
-  - 你希望拥有一个可重置、可克隆的 macOS 环境
-  - 你希望比较本地与托管 macOS VM 方案
-title: "macOS 虚拟机"
+  - 你想让 OpenClaw 与你的主 macOS 环境隔离
+  - 你想在沙箱中使用 iMessage 集成
+  - 你想要一个可重置、可克隆的 macOS 环境
+  - 你想比较本地与托管的 macOS VM 选项
+title: "macOS VMs"
 ---
-
-# 在 macOS 虚拟机上运行 OpenClaw（沙箱化）
 
 ## 推荐默认方案（大多数用户）
 
@@ -16,7 +14,7 @@ title: "macOS 虚拟机"
 - **专用硬件**（Mac mini 或 Linux 机器）：如果你想要完全控制权，以及用于浏览器自动化的 **住宅 IP**。许多网站会屏蔽数据中心 IP，因此本地浏览通常效果更好。
 - **混合方案**：将 Gateway 放在便宜的 VPS 上，并在需要浏览器/UI 自动化时把你的 Mac 作为 **节点** 连接。参见 [节点](/nodes) 和 [Gateway 远程](/gateway/remote)。
 
-当你明确需要仅 macOS 才有的能力（iMessage/BlueBubbles），或者想要与日常使用的 Mac 严格隔离时，使用 macOS VM。
+当你明确需要 macOS 专属功能（例如 iMessage），或希望与日常使用的 Mac 严格隔离时，请使用 macOS VM。
 
 ## macOS VM 选项
 
@@ -26,10 +24,10 @@ title: "macOS 虚拟机"
 
 这会给你带来：
 
-- 完全隔离的 macOS 环境（你的宿主机保持干净）
-- 通过 BlueBubbles 支持 iMessage（在 Linux/Windows 上不可能）
+- 隔离的完整 macOS 环境（你的宿主机保持干净）
+- 通过 `imsg` 支持 iMessage（在 Linux/Windows 上无法使用默认的本地路径）
 - 通过克隆 VM 实现即时重置
-- 无需额外硬件或云端成本
+- 无需额外硬件或云成本
 
 ### 托管 Mac 提供商（云端）
 
@@ -200,24 +198,24 @@ ssh youruser@192.168.64.X "openclaw status"
 
 ## 额外功能：iMessage 集成
 
-这是在 macOS 上运行的杀手级功能。使用 [BlueBubbles](https://bluebubbles.app) 为 OpenClaw 添加 iMessage。
+这是在 macOS 上运行的杀手级功能。使用 [iMessage](/channels/imessage) 和 `imsg` 将 Messages 添加到 OpenClaw。
 
 在 VM 内：
 
-1. 从 bluebubbles.app 下载 BlueBubbles
-2. 使用你的 Apple ID 登录
-3. 启用 Web API 并设置密码
-4. 将 BlueBubbles webhooks 指向你的 gateway（示例：`https://your-gateway-host:3000/bluebubbles-webhook?password=<password>`）
+1. 登录 Messages。
+2. 安装 `imsg`。
+3. 为运行 OpenClaw/`imsg` 的进程授予“完全磁盘访问权限”和“自动化”权限。
+4. 使用 `imsg rpc --help` 验证 RPC 支持。
 
 在你的 OpenClaw 配置中添加：
 
 ```json5
 {
   channels: {
-    bluebubbles: {
-      serverUrl: "http://localhost:1234",
-      password: "your-api-password",
-      webhookPath: "/bluebubbles-webhook",
+    imessage: {
+      enabled: true,
+      cliPath: "imsg",
+      dbPath: "~/Library/Messages/chat.db",
     },
   },
 }
@@ -225,7 +223,7 @@ ssh youruser@192.168.64.X "openclaw status"
 
 重启 gateway。现在你的 agent 可以收发 iMessages 了。
 
-完整设置详情：[BlueBubbles channel](/channels/bluebubbles)
+完整设置详情：[iMessage channel](/channels/imessage)
 
 ---
 
@@ -273,11 +271,11 @@ lume run openclaw --no-display
 
 ## 相关文档
 
-- [VPS 托管](/vps)
-- [节点](/nodes)
-- [Gateway 远程](/gateway/remote)
-- [BlueBubbles channel](/channels/bluebubbles)
-- [Lume 快速开始](https://cua.ai/docs/lume/guide/getting-started/quickstart)
-- [Lume CLI 参考](https://cua.ai/docs/lume/reference/cli-reference)
-- [无人值守 VM 设置](https://cua.ai/docs/lume/guide/fundamentals/unattended-setup)（高级）
-- [Docker 沙箱化](/install/docker)（替代隔离方案）
+- [VPS hosting](/vps)
+- [Nodes](/nodes)
+- [Gateway remote](/gateway/remote)
+- [iMessage channel](/channels/imessage)
+- [Lume Quickstart](https://cua.ai/docs/lume/guide/getting-started/quickstart)
+- [Lume CLI Reference](https://cua.ai/docs/lume/reference/cli-reference)
+- [Unattended VM Setup](https://cua.ai/docs/lume/guide/fundamentals/unattended-setup) (advanced)
+- [Docker Sandboxing](/install/docker) (alternative isolation approach)

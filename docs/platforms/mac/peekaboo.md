@@ -8,8 +8,8 @@ read_when:
 title: "Peekaboo bridge"
 ---
 
-OpenClaw 可以将 **PeekabooBridge** 作为本地、具备权限感知的 UI 自动化
-broker 托管。这让 `peekaboo` CLI 能够驱动 UI 自动化，同时复用
+OpenClaw 可以将 **PeekabooBridge** 作为本地、感知权限的 UI 自动化
+broker 托管。这使得 `peekaboo` CLI 能够驱动 UI 自动化，同时复用
 macOS 应用的 TCC 权限。
 
 ## 这是什么（以及不是什么）
@@ -64,7 +64,7 @@ socket path。你也可以通过以下方式覆盖：
 export PEEKABOO_BRIDGE_SOCKET=/path/to/bridge.sock
 ```
 
-## 安全与权限
+## Security and permissions
 
 - 该桥接会验证**调用者代码签名**；会强制执行 TeamID 白名单（Peekaboo 主机 TeamID + OpenClaw 应用 TeamID）。
 - 请求会在约 10 秒后超时。
@@ -73,14 +73,15 @@ export PEEKABOO_BRIDGE_SOCKET=/path/to/bridge.sock
 
 ## 快照行为（自动化）
 
-快照会存储在内存中，并在较短时间窗口后自动过期。
+快照存储在内存中，并会在短时间后自动过期。
 如果你需要更长的保留时间，请从客户端重新捕获。
 
 ## 故障排查
 
-- 如果 `peekaboo` 报告“bridge client is not authorized”，请确保客户端
-  已正确签名，或者仅在**调试**模式下使用 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 运行主机。
-- 如果未找到任何主机，请打开其中一个主机应用（Peekaboo.app 或 OpenClaw.app）
+- 如果 `peekaboo` 报告 "bridge client is not authorized"，请确保客户端已
+  正确签名，或仅在 **debug** 模式下使用 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1`
+  启动主机。
+- 如果未找到主机，请打开其中一个主机应用（Peekaboo.app 或 OpenClaw.app）
   并确认已授予权限。
 
 ## 相关

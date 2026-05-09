@@ -6,7 +6,12 @@ read_when:
 title: "DigitalOcean"
 ---
 
-在 DigitalOcean Droplet 上运行一个持久化的 OpenClaw Gateway。
+在 DigitalOcean Droplet 上运行一个持久的 OpenClaw Gateway（1 GB 基础套餐约 $6/月）。
+
+DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或免费的选项：
+
+- [Hetzner](/install/hetzner) — €3.79/月，每美元可获得更多核心/RAM。
+- [Oracle Cloud](/install/oracle) — 始终免费的 ARM（最高 4 OCPU、24 GB RAM），但注册可能比较麻烦，而且仅支持 ARM。
 
 ## 前提条件
 
@@ -45,8 +50,17 @@ title: "DigitalOcean"
 
     # 安装 OpenClaw
     curl -fsSL https://openclaw.ai/install.sh | bash
+
+    # 创建将拥有 OpenClaw 状态和服务的非 root 用户。
+    adduser openclaw
+    usermod -aG sudo openclaw
+    loginctl enable-linger openclaw
+
+    su - openclaw
     openclaw --version
     ```
+
+    仅在系统引导阶段使用 root shell。请以非 root 的 `openclaw` 用户身份运行 OpenClaw 命令，这样状态会保存在 `/home/openclaw/.openclaw/` 下，并且 Gateway 会以该用户的 systemd 服务安装。
 
   </Step>
 
@@ -92,15 +106,17 @@ title: "DigitalOcean"
     **选项 B：Tailscale Serve**
 
     ```bash
-    curl -fsSL https://tailscale.com/install.sh | sh
-    tailscale up
+    curl -fsSL https://tailscale.com/install.sh | sudo sh
+    sudo tailscale up
     openclaw config set gateway.tailscale.mode serve
     openclaw gateway restart
     ```
 
     然后从你 tailnet 中的任何设备打开 `https://<magicdns>/`。
 
-    **选项 C：Tailnet 绑定（不使用 Serve）**
+    Tailscale Serve 通过 tailnet 身份头验证 Control UI 和 WebSocket 流量，这默认假设 gateway 主机本身是可信的。无论如何，HTTP API 端点都会遵循 gateway 的正常认证模式（token/password）。如果你希望在 Serve 下强制使用显式共享密钥凭证，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
+
+    **选项 C：Tailnet bind（不使用 Serve）**
 
     ```bash
     openclaw config set gateway.bind tailnet
@@ -112,7 +128,31 @@ title: "DigitalOcean"
   </Step>
 </Steps>
 
-## 故障排查
+## 持久化与备份
+
+OpenClaw 状态存放在：
+
+- `~/.openclaw/` — `openclaw.json`、每个 agent 的 `auth-profiles.json`、频道/提供商状态以及会话数据。
+- `~/.openclaw/workspace/` — agent 工作区（SOUL.md、记忆、工件）。
+
+这些内容会在 Droplet 重启后保留。要创建一个可移植的快照：
+
+```bash
+openclaw backup create
+```
+
+DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可以跨主机移植。
+
+## 1 GB RAM 提示
+
+这个 $6 的 Droplet 只有 1 GB RAM。为了保持顺畅：
+
+- 确保上面的 swap 步骤已经写入 `/etc/fstab`，这样重启后仍然有效。
+- 优先使用基于 API 的模型（Claude、GPT），而不是本地模型——本地 LLM 推理无法在 1 GB 内运行。
+- 如果在大提示词上遇到 OOM，请将 `agents.defaults.model.primary` 设置为更小的模型。
+- 使用 `free -h` 和 `htop` 进行监控。
+
+## 故障排除
 
 **Gateway 无法启动** -- 运行 `openclaw doctor --non-interactive`，并使用 `journalctl --user -u openclaw-gateway.service -n 50` 检查日志。
 

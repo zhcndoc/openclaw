@@ -78,32 +78,31 @@ sidebarTitle: "上手引导参考"
     - 完整工作区布局 + 备份指南：[Agent workspace](/concepts/agent-workspace)
 
   </Step>
-  <Step title="网关">
+  <Step title="Gateway">
     - 端口、绑定、认证模式、tailscale 暴露。
-    - 认证建议：即使是 loopback 也保持 **Token**，这样本地 WS 客户端必须进行认证。
+    - 认证建议：即使是 loopback 也保留 **Token**，这样本地 WS 客户端必须进行认证。
     - 在 token 模式下，交互式设置提供：
       - **生成/存储明文 token**（默认）
       - **使用 SecretRef**（可选）
-      - 快速开始会在 onboarding 探测/仪表板引导中，跨 `env`、`file` 和 `exec` 提供方复用现有的 `gateway.auth.token` SecretRef。
-      - 如果已配置该 SecretRef 但无法解析，上手引导会尽早失败，并给出明确的修复信息，而不是悄悄降级运行时认证。
-    - 在 password 模式下，交互式设置也支持明文或 SecretRef 存储。
+      - 快速开始会在 `env`、`file` 和 `exec` 提供方之间复用现有的 `gateway.auth.token` SecretRef，用于上手引导探测/仪表盘启动。
+      - 如果该 SecretRef 已配置但无法解析，上手引导会提前失败，并给出明确的修复信息，而不会悄悄降级运行时认证。
+    - 在密码模式下，交互式设置也支持明文或 SecretRef 存储。
     - 非交互式 token SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-      - 需要在上手引导进程环境中存在非空环境变量。
-      - 不能与 `--gateway-token` 同时使用。
-    - 只有在你完全信任每个本地进程时才禁用认证。
+      - 要求在上手引导进程环境中该环境变量非空。
+      - 不能与 `--gateway-token` 组合使用。
+    - 仅在你完全信任每个本地进程时才禁用认证。
     - 非 loopback 绑定仍然需要认证。
 
   </Step>
-  <Step title="通道">
+  <Step title="Channels">
     - [WhatsApp](/channels/whatsapp)：可选 QR 登录。
-    - [Telegram](/channels/telegram)：bot token。
-    - [Discord](/channels/discord)：bot token。
-    - [Google Chat](/channels/googlechat)：service account JSON + webhook audience。
-    - [Mattermost](/channels/mattermost)（插件）：bot token + 基础 URL。
-    - [Signal](/channels/signal)：可选的 `signal-cli` 安装 + 账户配置。
-    - [BlueBubbles](/channels/bluebubbles)：**iMessage 推荐方案**；服务器 URL + 密码 + webhook。
-    - [iMessage](/channels/imessage)：旧版 `imsg` CLI 路径 + 数据库访问。
-    - DM 安全：默认是配对。第一条 DM 会发送一个代码；可通过 `openclaw pairing approve <channel> <code>` 批准，或使用允许名单。
+    - [Telegram](/channels/telegram)：机器人 token。
+    - [Discord](/channels/discord)：机器人 token。
+    - [Google Chat](/channels/googlechat)：服务账户 JSON + webhook 受众。
+    - [Mattermost](/channels/mattermost)（插件）：机器人 token + 基础 URL。
+    - [Signal](/channels/signal)：可选安装 `signal-cli` + 账户配置。
+    - [iMessage](/channels/imessage)：`imsg` CLI 路径 + Messages 数据库访问；当 Gateway 运行在 Mac 之外时请使用 SSH 包装器。
+    - DM 安全：默认是配对。第一条 DM 会发送一个代码；通过 `openclaw pairing approve <channel> <code>` 进行批准，或使用允许名单。
 
   </Step>
   <Step title="网页搜索">
@@ -163,7 +162,7 @@ openclaw onboard --non-interactive \
   --skip-skills
 ```
 
-添加 `--json` 可获得机器可读的摘要。
+添加 `--json` 可输出机器可读摘要。
 
 非交互模式下的 Gateway token SecretRef：
 
@@ -198,8 +197,8 @@ openclaw agents add work \
 
 ## Gateway 向导 RPC
 
-Gateway 通过 RPC 暴露引导流程（`wizard.start`、`wizard.next`、`wizard.cancel`、`wizard.status`）。
-客户端（macOS 应用、Control UI）可以直接渲染步骤，而无需重新实现引导逻辑。
+Gateway 通过 RPC 暴露上手引导流程（`wizard.start`、`wizard.next`、`wizard.cancel`、`wizard.status`）。
+客户端（macOS 应用、Control UI）可以无需重新实现上手引导逻辑而渲染步骤。
 
 ## Signal 设置（signal-cli）
 
@@ -245,8 +244,8 @@ WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 
 ## 相关文档
 
-- 引导概览：[Onboarding (CLI)](/start/wizard)
-- macOS 应用引导：[Onboarding](/start/onboarding)
-- 配置参考：[Gateway configuration](/gateway/configuration)
-- 提供方：[WhatsApp](/channels/whatsapp)、[Telegram](/channels/telegram)、[Discord](/channels/discord)、[Google Chat](/channels/googlechat)、[Signal](/channels/signal)、[BlueBubbles](/channels/bluebubbles)（iMessage）、[iMessage](/channels/imessage)（旧版）
-- Skills：[Skills](/tools/skills)、[Skills config](/tools/skills-config)
+- Onboarding overview: [Onboarding (CLI)](/start/wizard)
+- macOS app onboarding: [Onboarding](/start/onboarding)
+- Config reference: [Gateway configuration](/gateway/configuration)
+- Providers: [WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord), [Google Chat](/channels/googlechat), [Signal](/channels/signal), [iMessage](/channels/imessage)
+- Skills: [Skills](/tools/skills), [Skills config](/tools/skills-config)

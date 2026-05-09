@@ -44,8 +44,16 @@ otherwise -> 回复
 `openclaw doctor --fix` 会把这个默认值写入那些未设置该项的已配置频道配置中。
 这意味着代理仍会处理该轮对话并可更新记忆/会话状态，但其正常的最终答案不会自动发布回房间。若要可见地发言，代理会使用 `message(action=send)`。
 
+此默认行为取决于一个能够可靠调用工具的模型/运行时。如果日志中显示
+assistant 文本但 `didSendViaMessagingTool: false`，说明模型是私下回答了，
+而不是调用 message 工具。这不是
+Discord/Slack/Telegram 发送失败。请为
+群组/频道会话使用可靠进行工具调用的模型，或者设置
+`messages.groupChat.visibleReplies: "automatic"` 以恢复旧版可见
+最终回复。
+
 如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
-`openclaw doctor` 会警告这种不匹配。
+`openclaw doctor` 会提醒这种不匹配。
 
 对于直接聊天和任何其他来源轮次，使用 `messages.visibleReplies: "message_tool"` 可将同样的仅工具可见回复行为全局应用。Harness 也可以将其作为未设置时的默认值；Codex harness 在 Codex 模式的直接聊天中就是这样做的。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
 
@@ -472,11 +480,7 @@ otherwise -> 回复
 - `WasMentioned`（提及门控结果）
 - Telegram 论坛主题还会包含 `MessageThreadId` 和 `IsForum`。
 
-渠道特定说明：
-
-- BlueBubbles 可选地在填充 `GroupMembers` 之前，从本地 Contacts 数据库中丰富未命名的 macOS 群组参与者信息。此功能默认关闭，并且只会在正常群组门控通过后运行。
-
-代理系统提示会在新群组会话的第一轮包含一段群组介绍。它会提醒模型像人类一样回应，避免使用 Markdown 表格，尽量减少空行并遵循正常聊天间距，同时避免输入字面量 `\n` 序列。来自渠道的群组名称和参与者标签会被渲染为带边界的、不可信元数据，而不是行内系统指令。
+代理系统提示在新群组会话的首次轮次中包含一个群组简介。它会提醒模型像人类一样回复，避免使用 Markdown 表格，尽量减少空行并遵循正常的聊天间距，以及避免输入字面上的 `\n` 序列。来自渠道的群组名称和参与者标签会被渲染为带围栏的未受信元数据，而不是内联系统指令。
 
 ## iMessage 细节
 

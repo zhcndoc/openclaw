@@ -65,23 +65,24 @@ OpenClaw 默认包含以下 xAI 模型家族：
 
 ## OpenClaw 功能覆盖
 
-内置插件将 xAI 当前公开的 API 面映射到 OpenClaw 共享的提供方和工具契约上。那些不符合共享契约的能力
-（例如流式 TTS 和实时语音）不会暴露出来——请参见下表。
+捆绑的插件将 xAI 当前的公共 API 表面映射到 OpenClaw 共享的
+提供方和工具契约上。不符合共享契约的能力
+（例如流式 TTS 和实时语音）不会暴露——见下表。
 
 | xAI 能力                  | OpenClaw 接口                          | 状态                                                              |
 | -------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
-| 聊天 / Responses          | `xai/<model>` 模型提供方               | 是                                                                 |
-| 服务端网页搜索            | `web_search` 提供方 `grok`              | 是                                                                 |
-| 服务端 X 搜索             | `x_search` 工具                           | 是                                                                 |
-| 服务端代码执行            | `code_execution` 工具                     | 是                                                                 |
-| 图像                      | `image_generate`                          | 是                                                                 |
-| 视频                      | `video_generate`                          | 是                                                                 |
-| 批量文本转语音            | `messages.tts.provider: "xai"` / `tts`    | 是                                                                 |
-| 流式 TTS                  | —                                         | 不暴露；OpenClaw 的 TTS 契约返回完整音频缓冲区 |
-| 批量语音转文本            | `tools.media.audio` / 媒体理解           | 是                                                                 |
-| 流式语音转文本            | Voice Call `streaming.provider: "xai"`    | 是                                                                 |
-| 实时语音                  | —                                         | 目前未暴露；需要不同的会话/WebSocket 契约               |
-| 文件 / 批处理             | 仅通用模型 API 兼容性                     | 不是 OpenClaw 的一等公民工具                                      |
+| Chat / Responses           | `xai/<model>` model provider              | Yes                                                                 |
+| Server-side web search     | `web_search` provider `grok`              | Yes                                                                 |
+| Server-side X search       | `x_search` tool                           | Yes                                                                 |
+| Server-side code execution | `code_execution` tool                     | Yes                                                                 |
+| Images                     | `image_generate`                          | Yes                                                                 |
+| Videos                    | `video_generate`                          | Yes                                                                 |
+| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | Yes                                                                 |
+| Streaming TTS              | -                                         | Not exposed; OpenClaw 的 TTS 契约返回完整音频缓冲区 |
+| Batch speech-to-text       | `tools.media.audio` / media understanding | Yes                                                                 |
+| Streaming speech-to-text   | Voice Call `streaming.provider: "xai"`    | Yes                                                                 |
+| Realtime voice             | -                                         | 目前未暴露；不同的会话/WebSocket 契约               |
+| Files / batches            | Generic model API compatibility only      | 不是 OpenClaw 的一等公民工具                                     |
 
 <Note>
 OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、语音和批量转录，
@@ -328,13 +329,13 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
     | 键                 | 类型    | 默认值             | 说明                                 |
     | ------------------ | ------- | ------------------ | ------------------------------------ |
-    | `enabled`          | boolean | —                  | 启用或禁用 x_search           |
-    | `model`            | string  | `grok-4-1-fast`    | 用于 x_search 请求的模型     |
-    | `baseUrl`          | string  | —                  | xAI Responses 基础 URL 覆盖      |
-    | `inlineCitations`  | boolean | —                  | 在结果中包含行内引用  |
-    | `maxTurns`         | number  | —                  | 最大对话轮数           |
-    | `timeoutSeconds`   | number  | —                  | 请求超时时间（秒）           |
-    | `cacheTtlMinutes`  | number  | —                  | 缓存存活时间（分钟）        |
+    | `enabled`          | boolean | -                  | 启用或禁用 x_search                  |
+    | `model`            | string  | `grok-4-1-fast`    | 用于 x_search 请求的模型              |
+    | `baseUrl`          | string  | -                  | xAI Responses 基础 URL 覆盖          |
+    | `inlineCitations`  | boolean | -                  | 在结果中包含行内引用                  |
+    | `maxTurns`         | number  | -                  | 最大对话轮数                          |
+    | `timeoutSeconds`   | number  | -                  | 请求超时时间（秒）                   |
+    | `cacheTtlMinutes`  | number  | -                  | 缓存生存时间（分钟）                 |
 
     ```json5
     {
@@ -365,10 +366,10 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
     | 键               | 类型    | 默认值            | 说明                              |
     | ----------------- | ------- | ------------------ | ---------------------------------------- |
-    | `enabled`         | boolean | `true`（如果密钥可用） | 启用或禁用代码执行  |
-    | `model`           | string  | `grok-4-1-fast`    | 用于代码执行请求的模型   |
-    | `maxTurns`        | number  | —                  | 最大对话轮数               |
-    | `timeoutSeconds`  | number  | —                  | 请求超时时间（秒）               |
+    | `enabled`         | boolean | `true` (if key available) | 启用或禁用代码执行            |
+    | `model`           | string  | `grok-4-1-fast`    | 用于代码执行请求的模型         |
+    | `maxTurns`        | number  | -                  | 最大对话轮数               |
+    | `timeoutSeconds`  | number  | -                  | 请求超时时间（秒）               |
 
     <Note>
     这是远程 xAI 沙箱执行，不是本地 [`exec`](/tools/exec)。

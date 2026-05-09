@@ -8,14 +8,12 @@ read_when:
 title: "Hetzner"
 ---
 
-# 在 Hetzner 上运行 OpenClaw（Docker，生产级 VPS 指南）
-
 ## 目标
 
 使用 Docker 在 Hetzner VPS 上运行一个持久化的 OpenClaw Gateway，具备持久状态、内置二进制文件和安全的重启行为。
 
-如果你想要“每月约 5 美元运行 OpenClaw 24/7”，这是最简单可靠的方案。
-Hetzner 的价格会变化；请选择最小的 Debian/Ubuntu VPS，如果遇到 OOM 再升级。
+如果你想要“花大约 5 美元实现 OpenClaw 24/7”，这是最简单可靠的方案。  
+Hetzner 的定价会变化；请选择最小的 Debian/Ubuntu VPS，如果遇到 OOM 再升级。
 
 安全模型提醒：
 
@@ -145,7 +143,11 @@ Gateway 可通过以下方式访问：
     XDG_CONFIG_HOME=/home/node/.openclaw
     ```
 
-    除非你明确希望通过 `.env` 管理它，否则将 `OPENCLAW_GATEWAY_TOKEN` 保持为空；OpenClaw 会在首次启动时向配置中写入一个随机的 gateway token。生成一个 keyring 密码并将其粘贴到 `GOG_KEYRING_PASSWORD` 中：
+    当你希望通过 `.env` 来管理稳定的 gateway
+    token 时，请设置 `OPENCLAW_GATEWAY_TOKEN`；否则，在依赖跨重启的客户端之前，
+    请先配置 `gateway.auth.token`。如果两者都不存在，OpenClaw 会为该次启动使用
+    仅运行时有效的 token。生成一个 keyring 密码并将其粘贴到
+    `GOG_KEYRING_PASSWORD`：
 
     ```bash
     openssl rand -hex 32

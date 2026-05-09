@@ -49,9 +49,9 @@ node --import tsx scripts/repro/tsx-name-repro.ts
 
 ## 说明 / 假设
 
-- `tsx` 使用 esbuild 来转换 TS/ESM。esbuild 的 `keepNames` 会生成一个 `__name` helper，并用 `__name(...)` 包裹函数定义。
-- 崩溃表明 `__name` 确实存在，但在运行时不是函数，这意味着在 Node 25 的加载器路径中，该模块的 helper 丢失或被覆盖了。
-- 在其他使用 esbuild 的场景中，也曾报告过类似的 `__name` helper 问题，通常是 helper 丢失或被重写所致。
+- `tsx` 使用 esbuild 转换 TS/ESM。esbuild 的 `keepNames` 会生成一个 `__name` helper，并用 `__name(...)` 包裹函数定义。
+- 该崩溃表明运行时中 `__name` 确实存在，但它不是一个函数，这意味着在 Node 25 的加载器路径中，这个模块的 helper 丢失或被覆盖了。
+- 在其他 esbuild 使用者中，也曾报告过类似的 `__name` helper 问题，通常是 helper 丢失或被重写所致。
 
 ## 回归历史
 

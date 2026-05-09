@@ -1,8 +1,8 @@
 ---
 summary: "OpenClaw 的高级设置和开发工作流"
 read_when:
-  - 设置新机器时
-  - 你想要“最新 + 最强”但又不想破坏个人设置时
+  - Setting up a new machine
+  - You want "latest + greatest" without breaking your personal setup
 title: "设置"
 ---
 
@@ -21,13 +21,13 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- 推荐使用 Node 24（当前仍支持 Node 22 LTS，`22.14+`）
-- 从源码检出时需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm 工作区包中加载打包好的插件，因此根目录执行 `npm install` 不会准备完整的源码树。
-- Docker（可选；仅用于容器化设置/端到端测试——见 [Docker](/install/docker)）
+- 推荐使用 Node 24（仍支持 Node 22 LTS，目前为 `22.16+`）
+- 源码检出需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载打包好的插件，因此根目录的 `npm install` 无法准备完整的源码树。
+- Docker（可选；仅用于容器化设置/e2e - 参见 [Docker](/install/docker)）
 
 ## 定制化策略（让更新不会伤到你）
 
-如果你想要“完全按我定制”_并且_还能轻松更新，请将你的自定义内容保存在：
+如果你想要“完全按我的需求定制”，同时又希望轻松更新，请将你的定制内容保存在：
 
 - **配置：** `~/.openclaw/openclaw.json`（JSON/JSON5 风格）
 - **工作区：** `~/.openclaw/workspace`（技能、提示词、记忆；建议将其设为私有 git 仓库）
@@ -44,7 +44,7 @@ openclaw setup
 openclaw setup
 ```
 
-If you don’t have a global install yet, run it via `pnpm openclaw setup`.
+如果你还没有全局安装，可以通过 `pnpm openclaw setup` 运行它。
 
 ## 从本仓库运行 Gateway
 
@@ -99,7 +99,7 @@ pnpm gateway:watch
 `gateway:watch` 会在一个命名的 tmux 会话中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离，并打印 `tmux attach -t openclaw-gateway-watch-main`；可使用 `OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 让交互式运行保持分离，或使用 `pnpm gateway:watch:raw` 以前台监视模式运行。监视器会在相关源码、配置和打包插件元数据发生变化时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次 `openclaw doctor --fix --non-interactive`，然后重试；设置 `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用这一步仅用于开发的修复流程。`pnpm openclaw setup` 是在全新检出后进行一次性的本地配置/工作区初始化步骤。
 `pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 变更后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
 
-### 2) Point the macOS app at your running Gateway
+### 2) 将 macOS 应用指向你正在运行的 Gateway
 
 在 **OpenClaw.app** 中：
 
@@ -108,7 +108,7 @@ pnpm gateway:watch
 
 ### 3) 验证
 
-- 应用内的 Gateway 状态应显示 **“Using existing gateway …”**
+- 应用内的 Gateway 状态应显示 **"Using existing gateway …"**
 - 或通过 CLI：
 
 ```bash
@@ -142,14 +142,12 @@ openclaw health
 
 ## 更新（不破坏你的设置）
 
-- 将 `~/.openclaw/workspace` 和 `~/.openclaw/` 视为“你的内容”；不要把个人提示词/配置放进 `openclaw` 仓库中。
+- 将 `~/.openclaw/workspace` 和 `~/.openclaw/` 视为“你的内容”；不要把个人提示词/配置放进 `openclaw` 仓库。
 - 更新源码：`git pull` + `pnpm install` + 继续使用 `pnpm gateway:watch`。
 
 ## Linux（systemd 用户服务）
 
-Linux 安装使用 systemd **用户** 服务。默认情况下，systemd 会在注销/空闲时停止用户
-服务，这会杀掉 Gateway。入门流程会尝试为你启用
-lingering（可能会提示 sudo）。如果它仍然关闭，请运行：
+Linux 安装使用 systemd **用户** 服务。默认情况下，systemd 会在注销/空闲时停止用户服务，这会杀死 Gateway。入门流程会尝试为你启用 lingering（可能会提示输入 sudo）。如果仍然未启用，请运行：
 
 ```bash
 sudo loginctl enable-linger $USER

@@ -1,14 +1,13 @@
 ---
 summary: "使用 DeepInfra 的统一 API，在 OpenClaw 中访问最受欢迎的开源和前沿模型"
 read_when:
-  - 你想为顶级开源 LLM 使用一个单一的 API 密钥
-  - 你想通过 DeepInfra 的 API 在 OpenClaw 中运行模型
+  - 你想要为最顶级的开源 LLM 使用一个统一的 API 密钥
+  - 你想在 OpenClaw 中通过 DeepInfra 的 API 运行模型
+title: "DeepInfra"
 ---
 
-# DeepInfra
-
-DeepInfra 提供了一个 **统一 API**，通过单一的
-端点和 API 密钥将请求路由到最受欢迎的开源和前沿模型。它与 OpenAI 兼容，因此大多数 OpenAI SDK 只需切换 base URL 即可使用。
+DeepInfra 提供了一个**统一 API**，通过单一的
+端点和 API 密钥将请求路由到最受欢迎的开源和前沿模型。它与 OpenAI 兼容，因此只需切换 base URL，大多数 OpenAI SDK 都可以直接使用。
 
 ## 获取 API 密钥
 
@@ -80,4 +79,9 @@ deepinfra/zai-org/GLM-5.1
 - 模型引用格式为 `deepinfra/<provider>/<model>`（例如，`deepinfra/Qwen/Qwen3-Max`）。
 - 默认模型：`deepinfra/deepseek-ai/DeepSeek-V3.2`
 - Base URL: `https://api.deepinfra.com/v1/openai`
-- 原生视频生成功能使用 `https://api.deepinfra.com/v1/inference/<model>`。
+- Native video generation uses `https://api.deepinfra.com/v1/inference/<model>`.
+
+## 相关链接
+
+- [模型提供方](/concepts/model-providers)
+- [所有提供方](/providers/index)

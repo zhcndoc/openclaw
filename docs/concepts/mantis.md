@@ -28,7 +28,7 @@ Mantis 从 Discord 开始，因为 Discord 为我们提供了一个高价值的�
 - 在登录、浏览器自动化或 provider 认证卡住时，保留足够的机器状态以便通过 VNC 救援。
 - 当运行被阻塞、需要人工 VNC 帮助或完成时，向运营者 Discord 频道发布简洁状态。
 
-## 非目标
+## Non goals
 
 - Mantis 不是单元测试的替代品。Mantis 运行在理解修复之后，通常应转化为更小的回归测试。
 - Mantis 不是常规的快速 CI 门禁。它更慢，使用真实凭据，仅用于直播环境很重要的缺陷。
@@ -49,7 +49,7 @@ Mantis 位于 OpenClaw QA 栈中。
 这种边界将传输知识留在 OpenClaw，将机器调度留在
 Crabbox，将维护者工作流胶水留在 ClawSweeper。
 
-## 命令形态
+## Command shape
 
 第一个本地命令会验证 Discord bot、guild、频道、消息发送、reaction 发送以及工件路径：
 
@@ -73,15 +73,180 @@ runner 会在输出目录下创建分离的 baseline 和 candidate worktree，�
 `--allow-failures` 运行场景，然后写入 `baseline/`、`candidate/`、`comparison.json` 和 `mantis-report.md`。
 对于第一个 Discord 场景，成功验证意味着 baseline 状态为 `fail` 且 candidate 状态为 `pass`。
 
-GitHub smoke workflow 是 `Mantis Discord Smoke`。第一个真实场景的 before and after GitHub
+第二个 Discord before/after 探针目标是 thread 附件：
+
+```bash
+pnpm openclaw qa mantis run \
+  --transport discord \
+  --scenario discord-thread-reply-filepath-attachment \
+  --baseline <bug-ref> \
+  --candidate <fix-ref> \
+  --output-dir .artifacts/qa-e2e/mantis/local-discord-thread-attachment
+```
+
+该场景使用驱动 bot 发送一条父消息，创建一个真实的 Discord
+thread，调用 OpenClaw 的 `message.thread-reply` 动作并传入仓库本地
+`filePath`，然后轮询该 thread 以获取 SUT 回复和附件文件名。基线
+截图显示的是没有附件的回复；候选截图显示的是预期的
+`mantis-thread-report.md` 附件。
+
+第一个 VM/browser 原语是 desktop smoke：
+
+```bash
+pnpm openclaw qa mantis desktop-browser-smoke \
+  --output-dir .artifacts/qa-e2e/mantis/desktop-browser
+```
+
+它租用或复用一台 Crabbox desktop 机器，在
+VNC 会话中启动可见浏览器，捕获桌面，回收工件到本地输出
+目录，并将重新连接命令写入报告。该命令默认
+使用 Hetzner provider，因为它是 Mantis 这条线路中第一个具备可用 desktop/VNC
+覆盖的 provider。若要在其他 Crabbox 机群上运行，可通过 `--provider`、`--crabbox-bin` 或
+`OPENCLAW_MANTIS_CRABBOX_PROVIDER` 覆盖它。
+
+有用的 desktop smoke 标志：
+
+- `--lease-id <cbx_...>` 或 `OPENCLAW_MANTIS_CRABBOX_LEASE_ID` 复用一个已预热的 desktop。
+- `--browser-url <url>` 更改可见浏览器打开的页面。
+- `--html-file <path>` 在可见浏览器中渲染仓库本地 HTML 工件。Mantis 使用它通过真实的 Crabbox desktop 捕获生成的 Discord 状态 reaction 时间线。
+- `--browser-profile-dir <remote-path>` 复用远程 Chrome user-data-dir，以便持久化的 Mantis desktop 在多次运行之间保持登录状态。可用于长期存在的 Discord Web viewer profile。
+- `--browser-profile-archive-env <name>` 在启动浏览器前，从指定环境变量中恢复一个 base64 编码的 `.tgz` Chrome user-data-dir 归档。可用于 Discord Web 这类已登录 witness。默认环境变量是 `OPENCLAW_MANTIS_BROWSER_PROFILE_TGZ_B64`。
+- `--video-duration <seconds>` 控制 MP4 捕获时长。对于需要时间稳定下来的慢速已登录 web 应用，使用更长时长。
+- `--keep-lease` 或 `OPENCLAW_MANTIS_KEEP_VM=1` 会在成功时保持新创建的 passing lease 打开，以便进行 VNC 检查。若运行失败且已创建 lease，则默认保留 lease，以便操作员可以重新连接。
+- `--class`、`--idle-timeout` 和 `--ttl` 用于调整机器规格和 lease 生命周期。
+
+对于 Discord Web 证据，Mantis 使用专用的 viewer 账号，而不是 bot token。实时 Discord API 场景仍然是 oracle：它创建真实的
+thread，发送 SUT 的 `thread-reply`，并通过 Discord
+REST 检查附件。当设置 `OPENCLAW_QA_DISCORD_CAPTURE_UI_METADATA=1` 时，该场景还会
+写出一个 Discord Web URL 工件。当设置 `OPENCLAW_QA_DISCORD_KEEP_THREADS=1` 时，它会让该 thread 保持可用足够长的时间，以便已登录浏览器打开
+并记录它。
+
+GitHub workflow 会在 Discord Web 中打开候选 thread URL，捕获截图，记录 MP4，并在 Crabbox
+媒体工具可用时生成裁剪后的 GIF 预览。优先使用通过
+`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_DIR` 配置的持久化 viewer profile 路径，因为完整的 Chrome profile
+归档可能会超过 GitHub secret 大小限制。对于较小/引导用 profile，workflow 也可以从
+`MANTIS_DISCORD_VIEWER_CHROME_PROFILE_TGZ_B64` 恢复一个 base64 编码的 `.tgz` 归档。如果未配置任一种 profile 来源，
+workflow 仍会发布确定性的 baseline/candidate 附件截图，并记录一条说明：已登录的 Discord Web witness 被跳过。
+
+第一个完整 desktop transport 原语是 Slack desktop smoke：
+
+```bash
+pnpm openclaw qa mantis slack-desktop-smoke \
+  --output-dir .artifacts/qa-e2e/mantis/slack-desktop \
+  --gateway-setup \
+  --scenario slack-canary \
+  --keep-lease
+```
+
+它租用或复用一台 Crabbox desktop 机器，将当前 checkout 同步到
+VM，在该 VM 内运行 `pnpm openclaw qa slack`，在 VNC
+浏览器中打开 Slack Web，捕获可见桌面，并将 Slack QA 工件以及
+VNC 截图一起复制回本地输出目录。这是第一个 Mantis
+形态：SUT OpenClaw gateway 和浏览器都运行在同一个
+Linux desktop VM 中。
+
+使用 `--gateway-setup` 时，命令会在 `$HOME/.openclaw-mantis/slack-openclaw` 下准备一个持久的、可丢弃的 OpenClaw
+home，为所选频道打补丁 Slack Socket Mode
+配置，在端口 `38973` 上启动 `openclaw gateway run`，并让 Chrome 在 VNC 会话中保持运行。这就是“给我一台
+带 Slack 和 claw 正在运行的 Linux desktop”模式；省略 `--gateway-setup` 时，bot-to-bot Slack QA 线路仍然是默认行为。
+
+`--credential-source env` 所需输入：
+
+- `OPENCLAW_QA_SLACK_CHANNEL_ID`
+- `OPENCLAW_QA_SLACK_DRIVER_BOT_TOKEN`
+- `OPENCLAW_QA_SLACK_SUT_BOT_TOKEN`
+- `OPENCLAW_QA_SLACK_SUT_APP_TOKEN`
+- 用于远程 model 线路的 `OPENCLAW_LIVE_OPENAI_KEY`。如果本地只设置了
+  `OPENAI_API_KEY`，Mantis 会在调用 Crabbox 之前将其映射为 `OPENCLAW_LIVE_OPENAI_KEY`，
+  以便 Crabbox 的 `OPENCLAW_*` 环境变量转发将其带入 VM。
+
+使用 `--gateway-setup --credential-source convex` 时，Mantis 会在创建 VM 之前从共享池中租用 Slack SUT
+凭据，并将租用到的 channel id、Socket Mode app token 和 bot token 作为桌面内的 `OPENCLAW_MANTIS_SLACK_*`
+运行时环境变量转发。这让 GitHub workflow 保持精简：它们只需要 Convex broker secret，而不需要原始 Slack bot 或 app token。
+
+有用的 Slack desktop 标志：
+
+- `--lease-id <cbx_...>` 重新在一台操作员已通过 VNC 登录过 Slack Web 的机器上运行。
+- `--gateway-setup` 在 VM 中启动一个持久的 OpenClaw Slack gateway，而不仅仅是运行 bot-to-bot QA 线路。
+- `--keep-lease` 在成功后保持 gateway VM 打开以供 VNC 检查；`--no-keep-lease` 会在收集工件后将其停止。
+- `--slack-url <url>` 打开指定的 Slack Web URL。若未提供，Mantis 会在 SUT bot token 可用时，根据 Slack `auth.test` 推导出 `https://app.slack.com/client/<team>/<channel>`。
+- `--slack-channel-id <id>` 控制 gateway setup 使用的 Slack channel allowlist。
+- `OPENCLAW_MANTIS_SLACK_BROWSER_PROFILE_DIR` 控制 VM 内持久化的 Chrome profile。默认值为 `$HOME/.config/openclaw-mantis/slack-chrome-profile`，因此手动的 Slack Web 登录会在同一 lease 的重复运行之间保留。
+- `--credential-source convex --credential-role ci` 使用共享凭据池，而不是直接使用 Slack 环境 token。
+- `--provider-mode`、`--model`、`--alt-model` 和 `--fast` 会透传到 Slack live 线路。
+
+GitHub smoke workflow 是 `Mantis Discord Smoke`。第一个真实场景的 before 和 after GitHub
 workflow 是 `Mantis Discord Status Reactions`。它接受：
 
 - `baseline_ref`：预期复现仅队列行为的 ref。
 - `candidate_ref`：预期展示 `queued -> thinking -> done` 的 ref。
 
-它会检出 workflow harness ref，构建独立的 baseline 和 candidate worktree，针对每个 worktree 运行
-`discord-status-reactions-tool-only`，并将 `baseline/`、`candidate/`、`comparison.json` 和 `mantis-report.md`
-作为 Actions 工件上传。
+它会检出 workflow harness ref，构建分离的 baseline 和 candidate
+worktree，针对每个 worktree 运行 `discord-status-reactions-tool-only`，并将
+`baseline/`、`candidate/`、`comparison.json` 和 `mantis-report.md` 作为
+Actions artifacts 上传。它还会在 Crabbox
+desktop browser 中渲染每条 lane 的时间线 HTML，并在 PR 评论中将这些 VNC 截图与确定性
+时间线 PNG 并列发布。同一条 PR 评论还会嵌入由 `crabbox media preview` 生成的轻量级
+motion-trimmed GIF 预览，链接到对应的 motion-trimmed MP4 片段，并保留完整的 desktop MP4 文件供深入
+检查。截图会以内联方式保留以便快速审阅。该 workflow 从
+`openclaw/crabbox` main 构建 Crabbox CLI，以便在下一个 Crabbox binary release 发布前就能使用当前的 desktop/browser lease 标志。
+
+`Mantis Scenario` 是通用的手动入口点。它接收 `scenario_id`、
+`candidate_ref`、可选的 `baseline_ref` 和可选的 `pr_number`，然后
+分发到场景拥有的 workflow。该 wrapper 故意保持轻薄：
+场景 workflow 仍然拥有自己的 transport setup、凭据、VM class、
+预期 oracle 以及工件清单。
+
+`Mantis Slack Desktop Smoke` 是第一个 Slack VM workflow。它在独立 worktree 中检出受信任的 candidate ref，租用一台 Crabbox Linux desktop，
+对该 candidate 运行 `pnpm openclaw qa mantis slack-desktop-smoke --gateway-setup`，在 VNC 浏览器中打开 Slack Web，记录桌面，使用
+`crabbox media preview` 生成 motion-trimmed 预览，上传完整工件
+目录，并可选择在目标 PR 上发布内联证据评论。它默认使用 AWS 作为 desktop lease 提供方，并暴露一个手动 provider 输入，以便操作员在 AWS 容量缓慢或不可用时切换到 Hetzner。当你想要的是“带 Slack 和 claw 正在运行的 Linux desktop”，而不是仅仅一个 bot-to-bot Slack 转录时，请使用这条线路。
+
+每个发布 PR 的场景都会在其报告旁写入 `mantis-evidence.json`。
+该 schema 是场景代码与 GitHub 评论之间的交接接口：
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "discord-status-reactions",
+  "title": "Mantis Discord Status Reactions QA",
+  "summary": "Human-readable top summary for the PR comment.",
+  "scenario": "discord-status-reactions-tool-only",
+  "comparison": {
+    "baseline": { "sha": "...", "status": "fail", "expected": "queued-only" },
+    "candidate": { "sha": "...", "status": "pass", "expected": "queued -> thinking -> done" },
+    "pass": true
+  },
+  "artifacts": [
+    {
+      "kind": "timeline",
+      "lane": "baseline",
+      "label": "Baseline queued-only",
+      "path": "baseline/timeline.png",
+      "targetPath": "baseline.png",
+      "alt": "Baseline Discord timeline",
+      "width": 420
+    }
+  ]
+}
+```
+
+Artifact `path` 值是相对于 manifest 目录的。`targetPath`
+值是 `qa-artifacts` 分支发布目录下的相对路径。
+发布器会拒绝路径穿越，并在可选预览或视频不可用时跳过标记为
+`"required": false` 的条目。
+
+支持的 artifact kind：
+
+- `timeline`：确定性的场景截图，通常是 before/after。
+- `desktopScreenshot`：VNC/browser desktop 截图。
+- `motionPreview`：从桌面录制生成的内联动画 GIF。
+- `motionClip`：去除静态前导和尾段的 motion-trimmed MP4。
+- `fullVideo`：用于深入检查的完整 MP4 录制。
+- `metadata`：JSON/log sidecar。
+- `report`：Markdown 报告。
+
+可复用的发布器是 `scripts/mantis/publish-pr-evidence.mjs`。workflow 会使用 manifest、目标 PR、`qa-artifacts` 目标根目录、评论标记、Actions artifact URL、run URL 以及 request source 来调用它。它会将声明的工件复制到 `qa-artifacts` 分支，构建一个以摘要优先的 PR 评论，内联图片/预览并链接视频，然后更新已有的标记评论或创建一个新的。
 
 你也可以直接从 PR 评论触发 status-reactions 运行：
 
@@ -111,18 +276,19 @@ ClawSweeper 评审发现，将 PR 或 issue 映射到推荐的 Mantis 场景。
 
 1. 获取凭据。
 2. 分配或复用一台 VM。
-3. 为 baseline ref 准备一个干净的 checkout。
-4. 安装依赖，并且只构建场景需要的内容。
-5. 启动一个带隔离状态目录的子 OpenClaw Gateway。
-6. 配置实时传输、provider、模型和浏览器配置文件。
-7. 运行场景并捕获 baseline 证据。
-8. 停止 gateway 并保留日志。
-9. 在同一台 VM 上准备 candidate ref。
-10. 运行同一场景并捕获 candidate 证据。
-11. 比较 oracle 结果和视觉证据。
-12. 写入 Markdown、JSON、日志、截图以及可选的 trace 工件。
-13. 上传 GitHub Actions 工件。
-14. 发布简洁的 PR 或 Discord 状态消息。
+3. 当场景需要 UI 证据时，准备桌面/浏览器配置文件。
+4. 为 baseline ref 准备一个干净的检出。
+5. 仅安装该场景需要的依赖并执行构建。
+6. 启动一个带有隔离状态目录的子 OpenClaw Gateway。
+7. 配置实时传输、provider、模型和浏览器配置文件。
+8. 运行场景并捕获 baseline 证据。
+9. 停止 gateway 并保留日志。
+10. 在同一台 VM 上准备 candidate ref。
+11. 运行相同的场景并捕获 candidate 证据。
+12. 比较 oracle 结果和视觉证据。
+13. 写入 Markdown、JSON、日志、截图，以及可选的 trace 工件。
+14. 上传 GitHub Actions artifacts。
+15. 发布一条简洁的 PR 或 Discord 状态消息。
 
 场景应当能够以两种不同方式失败：
 
@@ -245,7 +411,7 @@ Mantis 应当建立在现有的私有 QA 栈之上，而不是从零开始：
 截图是证据，不是秘密。它们仍然需要去敏处理：私有频道名称、用户名或消息内容可能会出现。对于公共 PR，
 在更强的去敏方案到位之前，优先使用 GitHub Actions 工件链接而不是内联图片。
 
-## 浏览器与 VNC
+## 浏览器和 VNC
 
 浏览器通道有两种模式：
 
@@ -303,8 +469,13 @@ VM 不应在预期的凭据或浏览器配置文件存储之外保留长期原�
 - `OPENCLAW_QA_REDACT_PUBLIC_METADATA=1` 用于公开的 GitHub 产物上传
 - `OPENCLAW_QA_CONVEX_SITE_URL`
 - `OPENCLAW_QA_CONVEX_SECRET_CI`
+- `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR`
+- `OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN`
 
-从长期来看，Convex 凭据池应继续作为实时传输凭据的默认来源。GitHub secrets 用于引导代理和回退通道。
+长期来看，Convex credential pool 应继续作为 live transport 凭据的常规来源。GitHub secrets 用于引导 broker 和 fallback lanes。
+Discord status-reactions 工作流会将 Mantis Crabbox secrets 映射回
+Crabbox CLI 期望的 `CRABBOX_COORDINATOR` 和 `CRABBOX_COORDINATOR_TOKEN` 环境变量。
+普通的 `CRABBOX_*` GitHub secret 名称仍然作为兼容性回退被接受。
 
 Mantis 运行器绝不能打印：
 
@@ -320,7 +491,7 @@ Mantis 运行器绝不能打印：
 
 如果 token 不小心被粘贴到 issue、PR、聊天或日志中，应在新密钥存储完成后立即轮换。
 
-## GitHub 产物与 PR 评论
+## GitHub artifacts 和 PR 评论
 
 Mantis 工作流应将完整证据包作为短期有效的 Actions artifact 上传。 当工作流是针对 bug 报告或修复 PR 运行时，它还应将脱敏后的 PNG 截图发布到 `qa-artifacts` 分支，并在该 bug 或修复 PR 上 upsert 一条带有前后对比截图的评论。不要只把主要证据发布到一个通用的 QA 自动化 PR 上。原始日志、观察到的消息以及其他体积较大的证据保留在 Actions artifact 中。
 
@@ -383,7 +554,7 @@ Mantis Discord 状态反应 QA
 
 视觉检查应当是增量式的。如果平台 API 可以证明 bug 存在，就使用该 API 作为通过/失败的 oracle，并保留截图供人工确认。
 
-## 提供商扩展
+## Provider 扩展
 
 在 Discord 之后，同一个运行器还可以新增：
 

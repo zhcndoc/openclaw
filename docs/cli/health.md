@@ -2,7 +2,7 @@
 summary: "openclaw health 的 CLI 参考（通过 RPC 获取网关健康快照）"
 read_when:
   - 你想快速检查正在运行的 Gateway 的健康状态
-title: "健康"
+title: "Health"
 ---
 
 # `openclaw health`

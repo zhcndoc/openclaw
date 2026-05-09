@@ -257,7 +257,7 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
 
 - `whatsapp`, `telegram`, `discord`, `slack`, `signal`, `imessage`
 - `irc`, `line`, `googlechat`, `mattermost`, `matrix`, `nextcloud-talk`
-- `bluebubbles`, `zalo`, `zalouser`, `nostr`, `feishu`
+- `zalo`, `zalouser`, `nostr`, `feishu`
 
 ## 概念
 

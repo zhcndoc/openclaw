@@ -11,9 +11,9 @@ read_when:
 插件通过新增能力来扩展 OpenClaw：channels、模型提供方、
 speech、实时转录、实时语音、媒体理解、图像生成、视频生成、网页抓取、网页搜索、agent 工具，或这些能力的任意组合。
 
-你不需要将你的插件添加到 OpenClaw 仓库中。发布到
-[ClawHub](/tools/clawhub)，用户可通过
-`openclaw plugins install clawhub:<package-name>` 安装。在发布切换期间，裸包说明仍然会
+你不需要将插件添加到 OpenClaw 仓库中。发布到
+[ClawHub](/clawhub)，用户可通过
+`openclaw plugins install clawhub:<package-name>` 安装。裸包规格在发布切换期间仍然会
 从 npm 安装。
 
 ## 前提条件
@@ -31,8 +31,11 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
   <Card title="Provider 插件" icon="cpu" href="/plugins/sdk-provider-plugins">
     添加一个模型提供方（LLM、代理或自定义端点）
   </Card>
-  <Card title="工具 / hook 插件" icon="wrench" href="/plugins/hooks">
-    注册 agent 工具、事件 hooks 或服务 — 继续阅读下文
+  <Card title="CLI backend plugin" icon="terminal" href="/plugins/cli-backend-plugins">
+    将本地 AI CLI 映射到 OpenClaw 的文本回退运行器
+  </Card>
+  <Card title="Tool / hook plugin" icon="wrench" href="/plugins/hooks">
+    注册 agent 工具、事件钩子或服务 - 继续下面
   </Card>
 </CardGroup>
 
@@ -72,7 +75,7 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     {
       "id": "my-plugin",
       "name": "My Plugin",
-      "description": "Adds a custom tool to OpenClaw",
+      "description": "向 OpenClaw 添加一个自定义工具",
       "contracts": {
         "tools": ["my_tool"]
       },
@@ -119,9 +122,9 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     });
     ```
 
-    `definePluginEntry` 用于非 channel 插件。对于 channels，请使用
-    `defineChannelPluginEntry` — 参见 [Channel Plugins](/plugins/sdk-channel-plugins)。
-    关于完整的入口点选项，请参见 [Entry Points](/plugins/sdk-entrypoints)。
+    `definePluginEntry` 用于非 channel 插件。对于 channel，请使用
+    `defineChannelPluginEntry` - 参见 [Channel Plugins](/plugins/sdk-channel-plugins)。
+    有关完整的入口点选项，请参见 [Entry Points](/plugins/sdk-entrypoints)。
 
   </Step>
 
@@ -138,7 +141,7 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
     像 `@myorg/openclaw-my-plugin` 这样的裸包说明会在发布切换期间
     从 npm 安装。当你想使用 ClawHub 解析时，请使用 `clawhub:`。
 
-    **仓库内插件：** 放置在捆绑插件工作区树下 — 会自动被发现。
+    **仓库内插件：** 放在捆绑插件工作区树下 - 会自动发现。
 
     ```bash
     pnpm test -- <bundled-plugin-root>/my-plugin/
@@ -151,27 +154,27 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
 
 单个插件可以通过 `api` 对象注册任意数量的能力：
 
-| 能力                     | 注册方法                                         | 详细指南                                                                       |
-| ------------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------ |
-| 文本推理（LLM）          | `api.registerProvider(...)`                      | [Provider Plugins](/plugins/sdk-provider-plugins)                              |
-| CLI 推理后端             | `api.registerCliBackend(...)`                    | [CLI Backends](/gateway/cli-backends)                                          |
-| Channel / 消息           | `api.registerChannel(...)`                       | [Channel Plugins](/plugins/sdk-channel-plugins)                                |
-| Speech（TTS/STT）        | `api.registerSpeechProvider(...)`                | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 实时转录                 | `api.registerRealtimeTranscriptionProvider(...)` | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 实时语音                 | `api.registerRealtimeVoiceProvider(...)`         | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 媒体理解                 | `api.registerMediaUnderstandingProvider(...)`    | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 图像生成                 | `api.registerImageGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 音乐生成                 | `api.registerMusicGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 视频生成                 | `api.registerVideoGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 网页抓取                 | `api.registerWebFetchProvider(...)`              | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 网页搜索                 | `api.registerWebSearchProvider(...)`             | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
-| 工具结果中间件           | `api.registerAgentToolResultMiddleware(...)`     | [SDK Overview](/plugins/sdk-overview#registration-api)                         |
-| Agent 工具               | `api.registerTool(...)`                          | 下方                                                                           |
-| 自定义命令               | `api.registerCommand(...)`                       | [Entry Points](/plugins/sdk-entrypoints)                                       |
-| 插件 hooks               | `api.on(...)`                                    | [Plugin hooks](/plugins/hooks)                                                 |
-| 内部事件 hooks           | `api.registerHook(...)`                          | [Entry Points](/plugins/sdk-entrypoints)                                       |
-| HTTP 路由                | `api.registerHttpRoute(...)`                     | [Internals](/plugins/architecture-internals#gateway-http-routes)               |
-| CLI 子命令               | `api.registerCli(...)`                           | [Entry Points](/plugins/sdk-entrypoints)                                       |
+| 能力                   | 注册方法                                         | 详细指南                                                                        |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| 文本推理（LLM）        | `api.registerProvider(...)`                      | [Provider Plugins](/plugins/sdk-provider-plugins)                               |
+| CLI 推理后端           | `api.registerCliBackend(...)`                    | [CLI Backend Plugins](/plugins/cli-backend-plugins)                             |
+| Channel / 消息         | `api.registerChannel(...)`                       | [Channel Plugins](/plugins/sdk-channel-plugins)                                 |
+| 语音（TTS/STT）        | `api.registerSpeechProvider(...)`                | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 实时转录               | `api.registerRealtimeTranscriptionProvider(...)` | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 实时语音               | `api.registerRealtimeVoiceProvider(...)`         | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 媒体理解               | `api.registerMediaUnderstandingProvider(...)`    | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 图像生成               | `api.registerImageGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 音乐生成               | `api.registerMusicGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 视频生成               | `api.registerVideoGenerationProvider(...)`       | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 网页抓取               | `api.registerWebFetchProvider(...)`              | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 网页搜索               | `api.registerWebSearchProvider(...)`             | [Provider Plugins](/plugins/sdk-provider-plugins#step-5-add-extra-capabilities) |
+| 工具结果中间件         | `api.registerAgentToolResultMiddleware(...)`     | [SDK Overview](/plugins/sdk-overview#registration-api)                          |
+| Agent 工具             | `api.registerTool(...)`                          | 下文                                                                            |
+| 自定义命令             | `api.registerCommand(...)`                       | [Entry Points](/plugins/sdk-entrypoints)                                        |
+| 插件 hooks             | `api.on(...)`                                    | [Plugin hooks](/plugins/hooks)                                                  |
+| 内部事件 hooks         | `api.registerHook(...)`                          | [Entry Points](/plugins/sdk-entrypoints)                                        |
+| HTTP 路由              | `api.registerHttpRoute(...)`                     | [Internals](/plugins/architecture-internals#gateway-http-routes)                |
+| CLI 子命令             | `api.registerCli(...)`                           | [Entry Points](/plugins/sdk-entrypoints)                                        |
 
 关于完整的注册 API，请参见 [SDK Overview](/plugins/sdk-overview#registration-api)。
 
@@ -209,7 +212,7 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
 
 ```typescript
 register(api) {
-  // 必需工具 — 始终可用
+  // 必需工具 - 始终可用
   api.registerTool({
     name: "my_tool",
     description: "做一件事",
@@ -219,7 +222,7 @@ register(api) {
     },
   });
 
-  // 可选工具 — 用户必须添加到允许列表
+  // 可选工具 - 用户必须将其添加到允许列表
   api.registerTool(
     {
       name: "workflow_tool",
@@ -241,13 +244,20 @@ register(api) {
 {
   "contracts": {
     "tools": ["my_tool", "workflow_tool"]
+  },
+  "toolMetadata": {
+    "workflow_tool": {
+      "optional": true
+    }
   }
 }
 ```
 
 OpenClaw 会捕获并缓存已注册工具中经过验证的描述符，
-因此插件无需在清单中重复 `description` 或 schema 数据。该
-清单契约仅声明归属和发现；执行时仍会调用实时注册的工具实现。
+因此插件无需在清单中重复 `description` 或 schema 数据。清单契约只声明所有权和发现；
+执行时仍然会调用实际注册的工具实现。
+对于使用 `api.registerTool(..., { optional: true })` 注册的工具，将 `toolMetadata.<tool>.optional: true`
+，以便 OpenClaw 能在该工具被显式加入允许列表之前避免加载该插件运行时。
 
 用户可在配置中启用可选工具：
 
@@ -315,7 +325,7 @@ import { ... } from "openclaw/plugin-sdk";
 
 有关完整的子路径参考，请参阅 [SDK 概览](/plugins/sdk-overview)。
 
-在你的插件内部，使用本地 barrel 文件（`api.ts`、`runtime-api.ts`）进行内部导入——不要通过其 SDK 路径导入你自己的插件。
+在你的插件中，使用本地 barrel 文件（`api.ts`、`runtime-api.ts`）进行内部导入——不要通过其 SDK 路径导入你自己的插件。
 
 对于 provider 插件，除非接口确实是通用的，否则请将 provider 特定的辅助工具保留在这些包根的 barrel 文件中。当前内置的示例包括：
 
@@ -355,6 +365,9 @@ import { ... } from "openclaw/plugin-sdk";
   <Card title="Provider 插件" icon="cpu" href="/plugins/sdk-provider-plugins">
     构建模型 provider 插件
   </Card>
+  <Card title="CLI Backend Plugins" icon="terminal" href="/plugins/cli-backend-plugins">
+    注册本地 AI CLI 后端
+  </Card>
   <Card title="SDK 概览" icon="book-open" href="/plugins/sdk-overview">
     导入映射和注册 API 参考
   </Card>
@@ -371,8 +384,8 @@ import { ... } from "openclaw/plugin-sdk";
 
 ## 另请参阅
 
-- [插件架构](/plugins/architecture) — 深入了解内部架构
-- [SDK 概览](/plugins/sdk-overview) — 插件 SDK 参考
-- [清单](/plugins/manifest) — 插件清单格式
-- [Channel 插件](/plugins/sdk-channel-plugins) — 构建通道插件
-- [Provider 插件](/plugins/sdk-provider-plugins) — 构建 provider 插件
+- [Plugin Architecture](/plugins/architecture) - 内部架构深度解析
+- [SDK Overview](/plugins/sdk-overview) - 插件 SDK 参考
+- [Manifest](/plugins/manifest) - 插件清单格式
+- [Channel Plugins](/plugins/sdk-channel-plugins) - 构建通道插件
+- [Provider Plugins](/plugins/sdk-provider-plugins) - 构建 provider 插件

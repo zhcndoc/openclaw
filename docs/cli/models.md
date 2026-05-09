@@ -25,21 +25,27 @@ openclaw models set <model-or-alias>
 openclaw models scan
 ```
 
-`openclaw models status` 会显示解析后的默认值/回退以及认证概览。
-当可用提供方使用快照时，OAuth/API 密钥状态部分会包含
+`openclaw models status` 会显示解析后的默认值/回退项以及认证概览。
+当可用提供方使用情况快照时，OAuth/API 密钥状态部分会包含
 提供方使用窗口和配额快照。
 当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、OpenAI
-Codex、MiniMax、小米和 z.ai。使用认证来自提供方特定的钩子，
-如果可用；否则 OpenClaw 会回退为从认证配置文件、环境变量或配置中
-匹配 OAuth/API 密钥凭据。
-在 `--json` 输出中，`auth.providers` 是支持环境/配置/存储感知的提供方
-概览，而 `auth.oauth` 仅是认证存储配置文件健康状态。
+Codex、MiniMax、Xiaomi 和 z.ai。使用认证来自
+提供方特定的 hook（如可用）；否则 OpenClaw 会回退到
+auth 配置文件、环境变量或配置中匹配的 OAuth/API 密钥
+凭据。
+在 `--json` 输出中，`auth.providers` 是考虑环境/配置/存储的提供方
+概览，而 `auth.oauth` 仅是 auth store 配置文件健康状态。
 添加 `--probe` 可针对每个已配置的提供方配置文件运行实时认证探测。
-探测是真实请求（可能消耗令牌并触发速率限制）。
-使用 `--agent <id>` 可检查某个已配置代理的模型/认证状态。省略时，
-命令会使用 `OPENCLAW_AGENT_DIR`/`PI_CODING_AGENT_DIR`（如果已设置），否则使用
-已配置的默认代理。
-探测行可以来自认证配置文件、环境凭据或 `models.json`。
+探测是真实请求（可能消耗 token 并触发速率限制）。
+使用 `--agent <id>` 可检查已配置代理的模型/认证状态。若省略，
+该命令会使用 `OPENCLAW_AGENT_DIR`/`PI_CODING_AGENT_DIR`（如果已设置），否则
+使用已配置的默认代理。
+探测行可以来自 auth 配置文件、环境凭据或 `models.json`。
+对于 Codex OAuth 故障排查，`openclaw models status`、
+`openclaw models auth list --provider openai-codex`，以及
+`openclaw config get agents.defaults.model --json` 是最快的方法，
+可确认某个代理是否具有可用于
+通过原生 Codex 运行时访问 `openai/*` 的可用 `openai-codex` auth 配置文件。参见 [OpenAI provider setup](/providers/openai#check-and-recover-codex-oauth-routing)。
 
 注意：
 
@@ -61,7 +67,7 @@ Codex、MiniMax、小米和 z.ai。使用认证来自提供方特定的钩子，
   并让发现过程在后台继续完成。若你需要精确的完整发现目录并且
   愿意等待提供方发现，请使用 `--all`。
 - 广泛的 `models list --all` 会将清单目录行叠加到注册表行之上，
-  而不会加载提供方运行时补充钩子。按提供方过滤的清单快速路径仅使用
+  而不会加载提供方运行时补充 hook。按提供方过滤的清单快速路径仅使用
   标记为 `static` 的提供方；标记为 `refreshable` 的提供方仍保持
   由注册表/缓存支持，并将清单行作为补充附加，而标记为 `runtime`
   的提供方仍依赖注册表/运行时发现。
@@ -156,6 +162,7 @@ openclaw models fallbacks list
 
 ```bash
 openclaw models auth add
+openclaw models auth list [--provider <id>] [--json]
 openclaw models auth login --provider <id>
 openclaw models auth setup-token --provider <id>
 openclaw models auth paste-token
@@ -164,16 +171,22 @@ openclaw models auth paste-token
 `models auth add` 是交互式认证助手。它可以启动提供方认证
 流程（OAuth/API 密钥），或根据你选择的提供方引导你手动粘贴令牌。
 
-`models auth login` 会运行提供方插件的认证流程（OAuth/API 密钥）。使用
+`models auth list` 会列出所选代理的已保存认证配置文件，而不会
+打印 token、API 密钥或 OAuth 密钥材料。使用 `--provider <id>` 可
+筛选到单个提供方，例如 `openai-codex`，并使用 `--json` 便于脚本处理。
+
+`models auth login` 会运行提供方插件的认证流程（OAuth/API key）。使用
 `openclaw plugins list` 查看已安装了哪些提供方。
 使用 `openclaw models auth --agent <id> <subcommand>` 可将认证结果写入
-特定已配置的代理存储。父级 `--agent` 标志适用于
-`add`、`login`、`setup-token`、`paste-token` 和 `login-github-copilot`。
+特定的已配置代理存储。父级 `--agent` 标志会被 `add`、`list`、
+`login`、`setup-token`、`paste-token` 和
+`login-github-copilot` 继承。
 
 示例：
 
 ```bash
 openclaw models auth login --provider openai-codex --set-default
+openclaw models auth list --provider openai-codex
 ```
 
 注意：

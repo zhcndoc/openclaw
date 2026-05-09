@@ -16,28 +16,29 @@ read_when:
   `openclaw/plugin-sdk/*` 仅供运行在 OpenClaw 内部、并注册 provider、channel、tool、hook 或受信任运行时的插件使用。
 </Note>
 
-## 目前已发布内容
+## 今天提供的内容
 
 `@openclaw/sdk` 提供以下内容：
 
-| Surface                   | 状态   | 功能说明                                                                |
-| ------------------------- | ------ | -------------------------------------------------------------------------- |
-| `OpenClaw`                | 已就绪 | 主客户端入口。负责传输、连接、请求和事件。 |
-| `GatewayClientTransport`  | 已就绪 | 由 Gateway 客户端支持的 WebSocket 传输。                          |
-| `oc.agents`               | 已就绪 | 列出、创建、更新、删除并获取 agent 句柄。                  |
-| `Agent.run()`             | 已就绪 | 启动一个 Gateway `agent` 运行并返回一个 `Run`。                          |
-| `oc.runs`                 | 已就绪 | 创建、获取、等待、取消并流式获取运行。                       |
-| `Run.events()`            | 已就绪 | 流式输出按运行归一化的事件，并为快速完成的运行提供回放。               |
-| `Run.wait()`              | 已就绪 | 调用 `agent.wait` 并返回稳定的 `RunResult`。                       |
-| `Run.cancel()`            | 已就绪 | 按运行 id 调用 `sessions.abort`，在可用时带上 session key。         |
-| `oc.sessions`             | 已就绪 | 创建、解析、发送、补丁更新、压缩并获取 session 句柄。  |
-| `Session.send()`          | 已就绪 | 调用 `sessions.send` 并返回一个 `Run`。                                 |
-| `oc.models`               | 已就绪 | 调用 `models.list` 和当前的 `models.authStatus` 状态 RPC。        |
-| `oc.tools`                | 已就绪 | 通过策略流水线列出、限定范围并调用 Gateway 工具。              |
-| `oc.artifacts`            | 已就绪 | 列出、获取并下载 Gateway 转录制品。                   |
-| `oc.approvals`            | 已就绪 | 通过 Gateway 审批 RPC 列出并处理 exec 审批。           |
-| `oc.rawEvents()`          | 已就绪 | 为高级使用者暴露原始 Gateway 事件。                         |
-| `normalizeGatewayEvent()` | 已就绪 | 将原始 Gateway 事件转换为稳定的 SDK 事件形状。               |
+| Surface                   | 状态   | 作用                                                                              |
+| ------------------------- | ------ | --------------------------------------------------------------------------------- |
+| `OpenClaw`                | Ready   | 主客户端入口。负责传输、连接、请求和事件。        |
+| `GatewayClientTransport`  | Ready   | 由 Gateway 客户端支持的 WebSocket 传输层。                                 |
+| `oc.agents`               | Ready   | 列出、创建、更新、删除和获取 agent 句柄。                         |
+| `Agent.run()`             | Ready   | 启动一个 Gateway `agent` 运行并返回一个 `Run`。                                 |
+| `oc.runs`                 | Ready   | 创建、获取、等待、取消以及流式接收运行。                              |
+| `Run.events()`            | Ready   | 为快速完成的运行提供回放的、归一化的每次运行事件流。                      |
+| `Run.wait()`              | Ready   | 调用 `agent.wait` 并返回稳定的 `RunResult`。                              |
+| `Run.cancel()`            | Ready   | 根据运行 id 调用 `sessions.abort`，在可用时附带 session key。                |
+| `oc.sessions`             | Ready   | 创建、解析、发送、补丁、压缩并获取 session 句柄。         |
+| `Session.send()`          | Ready   | 调用 `sessions.send` 并返回一个 `Run`。                                        |
+| `oc.models`               | Ready   | 调用 `models.list` 和当前的 `models.authStatus` 状态 RPC。               |
+| `oc.tools`                | Ready   | 通过策略管道列出、作用域化并调用 Gateway 工具。             |
+| `oc.artifacts`            | Ready   | 列出、获取和下载 Gateway 转录制品。            |
+| `oc.approvals`            | Ready   | 通过 Gateway 审批 RPC 列出并解决执行审批。                  |
+| `oc.environments`         | Partial | 列出 Gateway 本地和节点环境候选项；创建/删除尚未接通。 |
+| `oc.rawEvents()`          | Ready   | 为高级使用者暴露原始 Gateway 事件。                                |
+| `normalizeGatewayEvent()` | Ready   | 将原始 Gateway 事件转换为稳定的 SDK 事件形状。                      |
 
 该 SDK 还导出了这些 Surface 所使用的核心类型：
 `AgentRunParams`、`RunResult`、`RunStatus`、`OpenClawEvent`、
@@ -56,7 +57,7 @@ read_when:
 import { OpenClaw } from "@openclaw/sdk";
 
 const oc = new OpenClaw({
-  url: "ws://127.0.0.1:14565",
+  url: "ws://127.0.0.1:18789",
   token: process.env.OPENCLAW_GATEWAY_TOKEN,
   requestTimeoutMs: 30_000,
 });
@@ -80,7 +81,7 @@ const oc = new OpenClaw({
 });
 ```
 
-## 运行一个 Agent
+## 运行 agent
 
 当应用需要一个 agent 句柄时，使用 `oc.agents.get(id)`，然后调用
 `agent.run()`。
@@ -112,7 +113,7 @@ console.log(result.status);
 
 `run.wait()` 使用 Gateway 的 `agent.wait` RPC。若等待截止时间到期时运行仍处于活动状态，则返回 `status: "accepted"`，而不是假装运行本身已超时。运行时超时、已中止运行和已取消运行会被归一化为 `timed_out` 或 `cancelled`。
 
-## 创建并复用 Session
+## 创建并复用 sessions
 
 当应用需要持久化的转录状态时，请使用 session。
 
@@ -156,7 +157,7 @@ type OpenClawEvent = {
 
 常见事件类型包括：
 
-| Event type            | 来源 Gateway 事件                        |
+| 事件类型               | 来源 Gateway 事件                        |
 | --------------------- | ------------------------------------------- |
 | `run.started`         | `agent` 生命周期开始                     |
 | `run.completed`       | `agent` 生命周期结束                       |
@@ -194,7 +195,7 @@ for await (const event of run.events()) {
 对于应用级流，请使用 `oc.events()`。对于原始 Gateway 帧，请使用
 `oc.rawEvents()`。
 
-## 模型、工具、制品与审批
+## 模型、工具、制品和审批
 
 模型辅助方法映射到当前 Gateway 方法：
 
@@ -238,7 +239,14 @@ const approvals = await oc.approvals.list();
 await oc.approvals.respond("approval-id", { decision: "approve" });
 ```
 
-## 目前明确不支持的内容
+Environment helpers expose read-only Gateway-local and node discovery:
+
+```typescript
+const { environments } = await oc.environments.list();
+await oc.environments.status(environments[0].id);
+```
+
+## 今天明确不支持的内容
 
 该 SDK 包含我们希望实现的产品模型的名称，但不会假装 Gateway RPC 以静默方式存在。以下调用目前会抛出明确的“不支持”错误：
 
@@ -247,15 +255,13 @@ await oc.tasks.list();
 await oc.tasks.get("task-id");
 await oc.tasks.cancel("task-id");
 
-await oc.environments.list();
 await oc.environments.create({});
-await oc.environments.status("environment-id");
 await oc.environments.delete("environment-id");
 ```
 
 按运行级别的 `workspace`、`runtime`、`environment` 和 `approvals` 字段被类型定义为未来形态，但当前 Gateway 不支持在 `agent` RPC 上使用这些覆盖项。如果调用方传入这些字段，SDK 会在提交运行前抛出错误，这样工作就不会意外使用默认的 workspace、runtime、environment 或审批行为来执行。
 
-## App SDK 与 Plugin SDK
+## App SDK vs Plugin SDK
 
 当代码运行在 OpenClaw 之外时，使用 App SDK：
 
@@ -276,7 +282,7 @@ await oc.environments.delete("environment-id");
 
 App SDK 代码应从 `@openclaw/sdk` 导入。Plugin 代码应从文档中记录的 `openclaw/plugin-sdk/*` 子路径导入。不要混用这两种契约。
 
-## 相关文档
+## 相关内容
 
 - [OpenClaw App SDK API 设计](/reference/openclaw-sdk-api-design)
 - [Gateway RPC 参考](/reference/rpc)

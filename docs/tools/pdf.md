@@ -184,5 +184,5 @@ read_when:
 
 ## 相关内容
 
-- [工具概览](/tools) — 所有可用的代理工具
-- [配置参考](/gateway/config-agents#agent-defaults) — `pdfMaxBytesMb` 和 `pdfMaxPages` 配置
+- [工具概览](/tools) - 所有可用的代理工具
+- [配置参考](/gateway/config-agents#agent-defaults) - pdfMaxBytesMb 和 pdfMaxPages 配置

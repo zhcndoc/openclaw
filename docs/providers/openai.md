@@ -10,13 +10,16 @@ title: "OpenAI"
 OpenAI 为 GPT 模型提供开发者 API，Codex 也可以通过 OpenAI 的 Codex 客户端作为
 ChatGPT 方案的编码代理使用。OpenClaw 会将这些接口分开，以便配置保持可预测。
 
-OpenClaw 支持三种 OpenAI 系路由。大多数希望获得 Codex 行为的 ChatGPT/Codex 订阅用户
-应使用原生 Codex 应用服务器运行时。模型前缀选择提供方/模型名称；单独的运行时设置选择
-嵌入式代理循环由谁执行：
+OpenClaw 使用 `openai/*` 作为 OpenAI 的规范模型路由。嵌入式代理转为
+OpenAI 模型时，默认通过原生 Codex 应用服务器运行时；对于图像、嵌入、语音和实时等
+非代理 OpenAI 界面，仍可直接使用 OpenAI API 密钥认证。
 
-- **API key** - 直接 OpenAI Platform 访问，按使用量计费（`openai/*` 模型）
-- **Codex subscription with native Codex runtime** - ChatGPT/Codex 登录加上 Codex 应用服务器执行（`openai/*` 模型加上 `agents.defaults.agentRuntime.id: "codex"`）
-- **Codex subscription through PI** - 使用正常 OpenClaw PI 运行器的 ChatGPT/Codex 登录（`openai-codex/*` 模型）
+- **代理模型** - 通过 Codex 运行时使用 `openai/*` 模型；使用
+  `openai-codex` 认证登录以便通过 ChatGPT/Codex 订阅使用，或者在你明确想要 API 密钥认证时配置
+  `openai-codex` API 密钥配置文件。
+- **非代理 OpenAI API** - 通过 `OPENAI_API_KEY` 或 OpenAI API 密钥引导，直接访问 OpenAI Platform，并按用量计费。
+- **旧版配置** - `openai-codex/*` 模型引用会被
+  `openclaw doctor --fix` 修复为 `openai/*` 加 Codex 运行时。
 
 OpenAI 明确支持在 OpenClaw 之类的外部工具和工作流中使用订阅 OAuth。
 
@@ -25,59 +28,66 @@ OpenAI 明确支持在 OpenClaw 之类的外部工具和工作流中使用订阅
 
 ## 快速选择
 
-| Goal                                                 | Use                                              | Notes                                                                     |
-| ---------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
-| ChatGPT/Codex subscription with native Codex runtime | `openai/gpt-5.5` plus `agentRuntime.id: "codex"` | Recommended Codex setup for most users. Sign in with `openai-codex` auth. |
-| Direct API-key billing                               | `openai/gpt-5.5`                                 | Set `OPENAI_API_KEY` or run OpenAI API-key onboarding.                    |
-| ChatGPT/Codex subscription auth through PI           | `openai-codex/gpt-5.5`                           | Use only when you intentionally want the normal PI runner.                |
-| Image generation or editing                          | `openai/gpt-image-2`                             | Works with either `OPENAI_API_KEY` or OpenAI Codex OAuth.                 |
-| Transparent-background images                        | `openai/gpt-image-1.5`                           | Use `outputFormat=png` or `webp` and `openai.background=transparent`.     |
+| Goal                                                 | Use                                                     | Notes                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| ChatGPT/Codex subscription with native Codex runtime | `openai/gpt-5.5`                                        | 默认 OpenAI 代理设置。使用 `openai-codex` 认证登录。         |
+| Direct API-key billing for agent models              | `openai/gpt-5.5` plus an `openai-codex` API-key profile | 使用 `auth.order.openai-codex` 来优先选择该配置文件。                 |
+| Direct API-key billing through explicit PI           | `openai/gpt-5.5` plus provider/model runtime `pi`       | 选择一个普通的 `openai` API 密钥配置文件。                             |
+| Latest ChatGPT Instant API alias                     | `openai/chat-latest`                                    | 仅支持直接 API 密钥。用于实验的移动别名，不是默认值。   |
+| ChatGPT/Codex subscription auth through explicit PI  | `openai/gpt-5.5` plus provider/model runtime `pi`       | 选择一个 `openai-codex` 认证配置文件以使用兼容路由。    |
+| Image generation or editing                          | `openai/gpt-image-2`                                    | 可与 `OPENAI_API_KEY` 或 OpenAI Codex OAuth 一起使用。             |
+| Transparent-background images                        | `openai/gpt-image-1.5`                                  | 使用 `outputFormat=png` 或 `webp` 以及 `openai.background=transparent`。 |
 
 ## 命名映射
 
 这些名称相似，但不能互换：
 
-| 你看到的名称                      | 层级              | 含义                                                                                           |
-| --------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------ |
-| `openai`                          | 提供方前缀        | 直接 OpenAI Platform API 路径。                                                                |
-| `openai-codex`                    | 提供方前缀        | 通过正常 OpenClaw PI 运行器的 OpenAI Codex OAuth/订阅路径。                                     |
-| `codex` 插件                     | 插件              | 随 OpenClaw 捆绑的插件，提供原生 Codex 应用服务器运行时和 `/codex` 聊天控制。                 |
-| `agentRuntime.id: codex`          | 代理运行时        | 为嵌入式轮次强制使用原生 Codex 应用服务器挂载。                                                |
-| `/codex ...`                      | 聊天命令集        | 从对话中绑定/控制 Codex 应用服务器线程。                                                      |
-| `runtime: "acp", agentId: "codex"` | ACP 会话路径      | 通过 ACP/acpx 运行 Codex 的显式回退路径。                                                     |
+| Name you see                            | Layer               | Meaning                                                                                           |
+| --------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
+| `openai`                                | Provider prefix     | 规范的 OpenAI 模型路由；代理转为使用 Codex 运行时。                                  |
+| `openai-codex`                          | Auth/profile prefix | OpenAI Codex OAuth/订阅认证配置文件提供方。                                            |
+| `codex` plugin                          | Plugin              | 捆绑的 OpenClaw 插件，提供原生 Codex 应用服务器运行时和 `/codex` 聊天控制。 |
+| provider/model `agentRuntime.id: codex` | Agent runtime       | 强制匹配的嵌入式回合使用原生 Codex 应用服务器执行环境。                            |
+| `/codex ...`                            | Chat command set    | 从对话中绑定/控制 Codex 应用服务器线程。                                        |
+| `runtime: "acp", agentId: "codex"`      | ACP session route   | 通过 ACP/acpx 运行 Codex 的显式回退路径。                                          |
 
-这意味着一个配置可以有意同时包含 `openai-codex/*` 和
-`codex` 插件。当你希望通过 PI 使用 Codex OAuth，同时也希望
-可用原生 `/codex` 聊天控制时，这是有效的。`openclaw doctor` 会对这种
-组合发出警告，以便你确认它是有意为之；它不会重写配置。
+这意味着一个配置中可以故意同时包含 `openai/*` 模型引用和
+`openai-codex` 认证配置文件。`openclaw doctor --fix` 会把旧的
+`openai-codex/*` 模型引用重写为规范的 OpenAI 模型路由。
 
 <Note>
-GPT-5.5 可通过直接 OpenAI Platform API 密钥访问以及订阅/OAuth 路由获得。对于 ChatGPT/Codex 订阅加原生 Codex 执行，请使用 `openai/gpt-5.5` 并搭配 `agentRuntime.id: "codex"`。仅在通过 PI 使用 Codex OAuth 时使用 `openai-codex/gpt-5.5`，或者在直接使用 `OPENAI_API_KEY` 流量时使用不带 Codex 运行时覆盖的 `openai/gpt-5.5`。
+GPT-5.5 可通过直接 OpenAI Platform API 密钥访问以及
+订阅/OAuth 路由获取。对于 ChatGPT/Codex 订阅加原生 Codex
+执行，请使用 `openai/gpt-5.5`；未设置运行时配置时会为 OpenAI 代理回合选择 Codex
+执行环境。仅当你想为 OpenAI 代理模型使用直接 API 密钥认证时，才使用 OpenAI API 密钥配置文件。
 </Note>
 
 <Note>
-启用 OpenAI 插件，或选择 `openai-codex/*` 模型，并不会
-启用捆绑的 Codex 应用服务器插件。只有当你显式选择原生 Codex 挂载并使用
-`agentRuntime.id: "codex"`，或者使用旧版 `codex/*` 模型引用时，OpenClaw 才会启用该插件。
-如果捆绑的 `codex` 插件已启用，但 `openai-codex/*` 仍然通过 PI 解析，
-`openclaw doctor` 会发出警告并保持路由不变。
+OpenAI 代理模型回合需要捆绑的 Codex 应用服务器插件。显式
+PI 运行时配置仍可作为可选的兼容路由。若明确选择 PI
+并使用 `openai-codex` 认证配置文件，OpenClaw 会保留
+公开模型引用为 `openai/*`，并在内部通过旧版
+Codex 认证传输路由到 PI。运行 `openclaw doctor --fix` 可修复陈旧的
+`openai-codex/*` 模型引用或不来自
+显式运行时配置的旧 PI 会话固定项。
 </Note>
 
 ## OpenClaw 功能覆盖
 
-| OpenAI 能力             | OpenClaw 接口                                          | 状态                                                 |
-| ----------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
-| 聊天 / Responses        | `openai/<model>` 模型提供方                            | 是                                                   |
-| Codex 订阅模型         | `openai-codex/<model>` 搭配 `openai-codex` OAuth      | 是                                                   |
-| Codex 应用服务器挂载   | `openai/<model>` 搭配 `agentRuntime.id: codex`        | 是                                                   |
-| 服务器端网页搜索       | 原生 OpenAI Responses 工具                             | 是，在启用网页搜索且未固定提供方时                 |
-| 图像                    | `image_generate`                                       | 是                                                   |
-| 视频                    | `video_generate`                                       | 是                                                   |
-| 文本转语音              | `messages.tts.provider: "openai"` / `tts`              | 是                                                   |
-| 批量语音转文本          | `tools.media.audio` / 媒体理解                        | 是                                                   |
-| 流式语音转文本          | Voice Call `streaming.provider: "openai"`              | 是                                                   |
-| 实时语音                | Voice Call `realtime.provider: "openai"` / Control UI Talk | 是                                              |
-| 嵌入                    | memory embedding provider                              | 是                                                   |
+| OpenAI capability         | OpenClaw surface                                                                 | Status                                                 |
+| ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Chat / Responses          | `openai/<model>` model provider                                                  | Yes                                                    |
+| Codex subscription models | `openai/<model>` with `openai-codex` OAuth                                       | Yes                                                    |
+| Legacy Codex model refs   | `openai-codex/<model>`                                                           | Repaired by doctor to `openai/<model>`                 |
+| Codex app-server harness  | `openai/<model>` with omitted runtime or provider/model `agentRuntime.id: codex` | Yes                                                    |
+| Server-side web search    | Native OpenAI Responses tool                                                     | Yes, when web search is enabled and no provider pinned |
+| Images                    | `image_generate`                                                                 | Yes                                                    |
+| Videos                    | `video_generate`                                                                 | Yes                                                    |
+| Text-to-speech            | `messages.tts.provider: "openai"` / `tts`                                        | Yes                                                    |
+| Batch speech-to-text      | `tools.media.audio` / media understanding                                        | Yes                                                    |
+| Streaming speech-to-text  | Voice Call `streaming.provider: "openai"`                                        | Yes                                                    |
+| Realtime voice            | Voice Call `realtime.provider: "openai"` / Control UI Talk                       | Yes                                                    |
+| Embeddings                | memory embedding provider                                                        | Yes                                                    |
 
 ## 内存嵌入
 
@@ -134,15 +144,17 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ### 路由摘要
 
-    | 模型引用                 | 运行时配置                  | 路由                         | 认证               |
-    | ------------------------ | --------------------------- | ---------------------------- | ------------------ |
-    | `openai/gpt-5.5`        | 省略 / `agentRuntime.id: "pi"`    | 直接 OpenAI Platform API    | `OPENAI_API_KEY`   |
-    | `openai/gpt-5.4-mini`   | 省略 / `agentRuntime.id: "pi"`    | 直接 OpenAI Platform API    | `OPENAI_API_KEY`   |
-    | `openai/gpt-5.5`        | `agentRuntime.id: "codex"`        | Codex 应用服务器挂载        | Codex 应用服务器   |
+    | Model ref              | Runtime config             | Route                       | Auth             |
+    | ---------------------- | -------------------------- | --------------------------- | ---------------- |
+    | `openai/gpt-5.5`      | omitted / provider/model `agentRuntime.id: "codex"` | Codex app-server harness | `openai-codex` profile |
+    | `openai/gpt-5.4-mini` | omitted / provider/model `agentRuntime.id: "codex"` | Codex app-server harness | `openai-codex` profile |
+    | `openai/gpt-5.5`      | provider/model `agentRuntime.id: "pi"`              | PI embedded runtime      | `openai` profile or selected `openai-codex` profile |
 
     <Note>
-    除非你显式强制使用 Codex 应用服务器挂载，否则 `openai/*` 是直接 OpenAI API 密钥路径。对 Codex OAuth 通过默认 PI 运行器请使用 `openai-codex/*`，或者使用带
-    `agentRuntime.id: "codex"` 的 `openai/gpt-5.5` 来进行原生 Codex 应用服务器执行。
+    `openai/*` 代理模型使用 Codex 应用服务器执行环境。若要为代理模型使用 API 密钥
+    认证，请创建一个 `openai-codex` API 密钥配置文件，并用
+    `auth.order.openai-codex` 指定其优先级；`OPENAI_API_KEY` 仍是非代理 OpenAI API 界面的直接
+    回退方案。
     </Note>
 
     ### 配置示例
@@ -153,6 +165,21 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
       agents: { defaults: { model: { primary: "openai/gpt-5.5" } } },
     }
     ```
+
+    要通过 OpenAI API 尝试 ChatGPT 当前的 Instant 模型，请将模型
+    设置为 `openai/chat-latest`：
+
+    ```json5
+    {
+      env: { OPENAI_API_KEY: "sk-..." },
+      agents: { defaults: { model: { primary: "openai/chat-latest" } } },
+    }
+    ```
+
+    `chat-latest` 是一个移动别名。OpenAI 将其描述为 ChatGPT 中使用的最新 Instant
+    模型，并建议在生产 API 用途中使用 `gpt-5.5`，因此
+    除非你明确需要该别名行为，否则请将 `openai/gpt-5.5` 作为稳定默认值。该别名当前只接受
+    `medium` 文本冗长度，因此 OpenClaw 会为此模型规范化不兼容的 OpenAI 文本冗长度覆盖。
 
     <Warning>
     OpenClaw **不**公开 `openai/gpt-5.3-codex-spark`。在线 OpenAI API 请求会拒绝该模型，当前的 Codex 目录也未公开它。
@@ -181,12 +208,14 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
         openclaw models auth login --provider openai-codex --device-code
         ```
       </Step>
-      <Step title="使用原生 Codex 运行时">
+      <Step title="使用规范的 OpenAI 模型路由">
         ```bash
-        openclaw config set plugins.entries.codex '{"enabled":true}' --strict-json --merge
         openclaw config set agents.defaults.model.primary openai/gpt-5.5
-        openclaw config set agents.defaults.agentRuntime '{"id":"codex"}' --strict-json
         ```
+
+        默认路径不需要运行时配置。OpenAI 代理回合会
+        自动选择原生 Codex 应用服务器运行时，而 OpenClaw 在选择此路由时会
+        安装或修复捆绑的 Codex 插件。
       </Step>
       <Step title="验证 Codex 认证是否可用">
         ```bash
@@ -202,13 +231,19 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     | Model ref | Runtime config | Route | Auth |
     |-----------|----------------|-------|------|
-    | `openai/gpt-5.5` | `agentRuntime.id: "codex"` | Native Codex app-server harness | Codex sign-in or selected `openai-codex` profile |
-    | `openai-codex/gpt-5.5` | omitted / `runtime: "pi"` | ChatGPT/Codex OAuth through PI | Codex sign-in |
-    | `openai-codex/gpt-5.4-mini` | omitted / `runtime: "pi"` | ChatGPT/Codex OAuth through PI | Codex sign-in |
-    | `openai-codex/gpt-5.5` | `runtime: "auto"` | Still PI unless a plugin explicitly claims `openai-codex` | Codex sign-in |
+    | `openai/gpt-5.5` | omitted / provider/model `agentRuntime.id: "codex"` | Native Codex app-server harness | Codex sign-in or selected `openai-codex` profile |
+    | `openai/gpt-5.5` | provider/model `agentRuntime.id: "pi"` | PI embedded runtime with internal Codex-auth transport | Selected `openai-codex` profile |
+    | `openai-codex/gpt-5.5` | repaired by doctor | Legacy route rewritten to `openai/gpt-5.5` | Existing `openai-codex` profile |
+
+    <Warning>
+    不要配置较旧的 `openai-codex/gpt-5.1*`、`openai-codex/gpt-5.2*` 或
+    `openai-codex/gpt-5.3*` 模型引用。ChatGPT/Codex OAuth 账户现在会拒绝
+    这些模型。请使用 `openai/gpt-5.5`；OpenAI 代理回合现在默认选择 Codex
+    运行时。
+    </Warning>
 
     <Note>
-    认证/配置文件命令请继续使用 `openai-codex` 提供方 id。`openai-codex/*` 模型前缀同样是 Codex OAuth 的显式 PI 路由。它不会选择或自动启用捆绑的 Codex 应用服务器挂载。对于常见的订阅加原生运行时设置，请使用 `openai-codex` 登录，但将模型引用保留为 `openai/gpt-5.5`，并设置 `agentRuntime.id: "codex"`。
+    认证/配置文件命令仍请使用 `openai-codex` 提供方 id。`openai-codex/*` 模型前缀是已由 doctor 修复的旧版配置。对于常见的订阅加原生运行时设置，请使用 `openai-codex` 登录，但将模型引用保持为 `openai/gpt-5.5`。
     </Note>
 
     ### 配置示例
@@ -219,37 +254,70 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
       agents: {
         defaults: {
           model: { primary: "openai/gpt-5.5" },
-          agentRuntime: { id: "codex" },
         },
       },
     }
     ```
 
-    若要改为在正常 PI 运行器上使用 Codex OAuth，请使用
-    `openai-codex/gpt-5.5` 并省略 Codex 运行时覆盖。
-
     <Note>
     引导过程不再从 `~/.codex` 导入 OAuth 材料。请使用浏览器 OAuth（默认）或上面的设备码流程登录——OpenClaw 会在其自己的代理认证存储中管理生成的凭据。
     </Note>
 
+    ### 检查并恢复 Codex OAuth 路由
+
+    使用这些命令查看默认
+    代理正在使用哪个模型、运行时和认证路由：
+
+    ```bash
+    openclaw models status
+    openclaw models auth list --provider openai-codex
+    openclaw config get agents.defaults.model --json
+    openclaw config get models.providers.openai.agentRuntime --json
+    ```
+
+    对于特定代理，添加 `--agent <id>`：
+
+    ```bash
+    openclaw models status --agent <id>
+    openclaw models auth list --agent <id> --provider openai-codex
+    ```
+
+    如果旧配置中仍有 `openai-codex/gpt-*` 或没有显式运行时配置的过期 OpenAI PI
+    会话固定项，请修复它：
+
+    ```bash
+    openclaw doctor --fix
+    openclaw config validate
+    ```
+
+    如果 `models auth list --provider openai-codex` 显示没有可用配置文件，请重新登录：
+
+    ```bash
+    openclaw models auth login --provider openai-codex
+    openclaw models status --probe --probe-provider openai-codex
+    ```
+
+    `openai-codex` 仍然是认证/配置文件提供方 id。`openai/*` 是
+    通过 Codex 运行的 OpenAI 代理回合的模型路由。
+
     ### 状态指示器
 
-    聊天 `/status` 会显示当前会话正在使用哪个模型运行时。
-    默认 PI 挂载显示为 `Runtime: OpenClaw Pi Default`。当
-    选择捆绑的 Codex 应用服务器挂载时，`/status` 会显示
-    `Runtime: OpenAI Codex`。现有会话会保留其记录的挂载 id，因此在更改 `agentRuntime` 后，如需让 `/status`
-    反映新的 PI/Codex 选择，请使用 `/new` 或 `/reset`。
+    聊天中的 `/status` 会显示当前会话正在使用的模型运行时。
+    对于 OpenAI 代理模型回合，捆绑的 Codex 应用服务器执行环境会显示为 `Runtime: OpenAI Codex`。过期的 PI 会话固定项会被修复为 Codex，除非
+    配置中明确固定为 PI。
 
     ### Doctor 警告
 
-    如果在选择 `openai-codex/*` 路由时启用了捆绑的 `codex` 插件，`openclaw doctor` 会警告该模型仍通过 PI 解析。
-    只有当该 PI 订阅认证路由是有意为之时，才保持配置不变。当你想要原生 Codex 应用服务器执行时，请切换到 `openai/<model>` 加上 `agentRuntime.id: "codex"`。
+    如果配置或
+    会话状态中仍存在 `openai-codex/*` 路由或过期的 OpenAI PI 固定项，
+    `openclaw doctor --fix` 会将它们重写为带有
+    Codex 运行时的 `openai/*`，除非明确配置了 PI。
 
     ### 上下文窗口上限
 
     OpenClaw 将模型元数据与运行时上下文上限视为两个独立值。
 
-    对于通过 Codex OAuth 的 `openai-codex/gpt-5.5`：
+    对于通过 Codex OAuth 目录的 `openai/gpt-5.5`：
 
     - 原生 `contextWindow`: `1000000`
     - 默认运行时 `contextTokens` 上限: `272000`
@@ -274,9 +342,9 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ### 目录恢复
 
-    当上游 Codex 目录中存在 `gpt-5.5` 时，OpenClaw 会使用其元数据。如果实时 Codex 发现结果中省略了
-    `openai-codex/gpt-5.5` 这一行，而账户已通过认证，OpenClaw 会合成该 OAuth 模型行，以便
-    cron、子代理和已配置的默认模型运行不会因
+    当上游 Codex 目录中存在 `gpt-5.5` 时，OpenClaw 会使用其元数据。如果
+    账户已认证但实时 Codex 发现未包含 `gpt-5.5` 条目，
+    OpenClaw 会合成该 OAuth 模型条目，以便 cron、子代理和配置的默认模型运行不会因
     `Unknown model` 而失败。
 
   </Tab>
@@ -284,9 +352,9 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
 ## 原生 Codex app-server 认证
 
-原生 Codex app-server harness 使用 `openai/*` 模型引用以及
-`agentRuntime.id: "codex"`，但其认证仍然基于账户。OpenClaw
-按以下顺序选择认证方式：
+原生 Codex app-server harness 使用 `openai/*` 模型引用，并省略
+运行时配置或 provider/model `agentRuntime.id: "codex"`，但其认证仍然
+是基于账户的。OpenClaw 按以下顺序选择认证方式：
 
 1. 显式绑定到 agent 的 OpenClaw `openai-codex` 认证配置文件。
 2. app-server 现有的账户，例如本地 Codex CLI 的 ChatGPT 登录。
@@ -406,9 +474,9 @@ openclaw infer image generate \
 
 ## GPT-5 提示贡献
 
-OpenClaw 为跨提供方的 GPT-5 系列运行添加了一个共享的 GPT-5 提示贡献。它按模型 id 生效，因此 `openai-codex/gpt-5.5`、`openai/gpt-5.5`、`openrouter/openai/gpt-5.5`、`opencode/gpt-5.5` 以及其他兼容的 GPT-5 引用都会收到相同的覆盖层。较旧的 GPT-4.x 模型则不会。
+OpenClaw 为跨 provider 的 GPT-5 系列运行添加了共享的 GPT-5 提示贡献。它按模型 id 应用，因此 `openai/gpt-5.5`、修复前的旧引用如 `openai-codex/gpt-5.5`、`openrouter/openai/gpt-5.5`、`opencode/gpt-5.5` 以及其他兼容的 GPT-5 引用都会收到相同的叠加层。较旧的 GPT-4.x 模型不会。
 
-捆绑的原生 Codex harness 通过 Codex app-server 开发者指令使用相同的 GPT-5 行为和心跳覆盖层，因此通过 `agentRuntime.id: "codex"` 强制运行的 `openai/gpt-5.x` 会话，即使其余 harness 提示由 Codex 负责，也会保留相同的跟进和主动心跳指导。
+捆绑的原生 Codex harness 通过 Codex app-server 开发者指令使用相同的 GPT-5 行为和 heartbeat 叠加层，因此通过 Codex 路由的 `openai/gpt-5.x` 会话即使其余 harness 提示由 Codex 控制，也仍保留相同的跟进与主动 heartbeat 指导。
 
 GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、执行安全、工具纪律、输出形态、完成检查和验证。与频道相关的回复和静默消息行为仍保留在共享的 OpenClaw 系统提示和出站投递策略中。GPT-5 指导始终对匹配模型启用。友好交互风格层是独立的，并且可配置。
 
@@ -541,20 +609,36 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
 
     | 设置 | 配置路径 | 默认值 |
     |---------|------------|---------|
-    | 模型 | `plugins.entries.voice-call.config.realtime.providers.openai.model` | `gpt-realtime-1.5` |
-    | 声音 | `...openai.voice` | `alloy` |
-    | 温度 | `...openai.temperature` | `0.8` |
-    | VAD 阈值 | `...openai.vadThreshold` | `0.5` |
-    | 静音时长 | `...openai.silenceDurationMs` | `500` |
+    | Model | `plugins.entries.voice-call.config.realtime.providers.openai.model` | `gpt-realtime-2` |
+    | Voice | `...openai.voice` | `alloy` |
+    | Temperature (Azure deployment bridge) | `...openai.temperature` | `0.8` |
+    | VAD threshold | `...openai.vadThreshold` | `0.5` |
+    | Silence duration | `...openai.silenceDurationMs` | `500` |
     | API key | `...openai.apiKey` | 回退到 `OPENAI_API_KEY` |
 
+    `gpt-realtime-2` 可用的内置 Realtime 声音：`alloy`、`ash`、
+    `ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin`、`cedar`。
+    OpenAI 推荐使用 `marin` 和 `cedar` 以获得最佳 Realtime 质量。这
+    与上面的文本转语音声音是不同的一组；不要假设类似 `fable`、
+    `nova` 或 `onyx` 的 TTS 声音也可用于 Realtime 会话。
+
     <Note>
-    支持通过 `azureEndpoint` 和 `azureDeployment` 配置键为后端实时桥接使用 Azure OpenAI。支持双向工具调用。使用 G.711 u-law 音频格式。
+    后端 OpenAI realtime 桥接使用 GA Realtime WebSocket 会话形态，不接受 `session.temperature`。Azure OpenAI 部署仍可通过 `azureEndpoint` 和 `azureDeployment` 使用，并保持与部署兼容的会话形态。支持双向工具调用和 G.711 u-law 音频。
     </Note>
 
     <Note>
-    Control UI Talk 使用 OpenAI 浏览器实时会话，配合 Gateway 签发的临时客户端密钥，并通过直接的浏览器 WebRTC SDP 交换与 OpenAI Realtime API 通信。可使用
-    `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts` 进行维护者现场验证；OpenAI 分支会在 Node 中签发客户端密钥，使用伪造麦克风媒体生成浏览器 SDP offer，将其发布到 OpenAI，并在不记录密钥的情况下应用 SDP answer。
+    Realtime 声音在会话创建时选定。OpenAI 允许大多数
+    会话字段在之后更改，但一旦模型在该会话中发出过音频，就不能再
+    更改声音。OpenClaw 当前将内置 Realtime 声音 id 作为字符串暴露。
+    </Note>
+
+    <Note>
+    Control UI Talk 使用 OpenAI browser realtime 会话，借助 Gateway 签发的
+    临时 client secret，并通过浏览器 WebRTC SDP 直接与
+    OpenAI Realtime API 交换。维护者可通过以下命令进行实时验证：
+    `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`；
+    OpenAI 路径会在不记录密钥的情况下验证后端 WebSocket 桥接和浏览器
+    WebRTC SDP 交换。
     </Note>
 
   </Accordion>
@@ -675,7 +759,7 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
 
 <AccordionGroup>
   <Accordion title="传输（WebSocket vs SSE）">
-    OpenClaw 对 `openai/*` 和 `openai-codex/*` 都默认采用 WebSocket 优先、SSE 回退（`"auto"`）。
+    OpenClaw 对 `openai/*` 默认采用 WebSocket 优先，并在失败时回退到 SSE（`"auto"`）。
 
     在 `"auto"` 模式下，OpenClaw：
     - 在回退到 SSE 之前，会重试一次早期的 WebSocket 失败
@@ -697,9 +781,6 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
             "openai/gpt-5.5": {
               params: { transport: "auto" },
             },
-            "openai-codex/gpt-5.5": {
-              params: { transport: "auto" },
-            },
           },
         },
       },
@@ -713,7 +794,7 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
   </Accordion>
 
   <Accordion title="WebSocket 预热">
-    OpenClaw 默认对 `openai/*` 和 `openai-codex/*` 启用 WebSocket 预热，以降低首轮延迟。
+    OpenClaw 默认会为 `openai/*` 启用 WebSocket 预热，以降低首轮延迟。
 
     ```json5
     // 禁用预热
@@ -733,7 +814,7 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
   </Accordion>
 
   <Accordion title="快速模式">
-    OpenClaw 为 `openai/*` 和 `openai-codex/*` 暴露了一个共享的快速模式开关：
+    OpenClaw 为 `openai/*` 提供共享的快速模式开关：
 
     - **聊天/UI：** `/fast status|on|off`
     - **配置：** `agents.defaults.models["<provider>/<model>"].params.fastMode`
@@ -788,7 +869,7 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
     - 注入 `context_management: [{ type: "compaction", compact_threshold: ... }]`
     - 默认 `compact_threshold`：`contextWindow` 的 70%（如果不可用则为 `80000`）
 
-    这适用于内置的 Pi harness 路径，以及嵌入式运行所使用的 OpenAI 提供程序钩子。原生 Codex 应用服务器 harness 通过 Codex 自行管理其上下文，并通过 `agents.defaults.agentRuntime.id` 单独配置。
+    此设置适用于内置的 Pi harness 路径，以及嵌入式运行所使用的 OpenAI 提供程序钩子。原生 Codex 应用服务器 harness 通过 Codex 管理自己的上下文，并由 OpenAI 的默认代理路由或提供程序/模型运行时策略进行配置。
 
     <Tabs>
       <Tab title="显式启用">

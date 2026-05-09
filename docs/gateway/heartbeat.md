@@ -98,15 +98,15 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
       heartbeat: {
         every: "30m", // 默认：30m（0m 会禁用）
         model: "anthropic/claude-opus-4-6",
-        includeReasoning: false, // 默认：false（在可用时传递单独的 Reasoning: 消息）
-        lightContext: false, // 默认：false；为 true 时，仅保留工作区 bootstrap 文件中的 HEARTBEAT.md
-        isolatedSession: false, // 默认：false；为 true 时，每次 heartbeat 都在新会话中运行（无对话历史）
-        skipWhenBusy: false, // 默认：false；为 true 时也会等待 subagent/嵌套 lanes
-        target: "last", // 默认：none | 可选：last | none | <channel id>（core 或 plugin，例如 "bluebubbles"）
-        to: "+15551234567", // 可选：按渠道覆盖接收者
-        accountId: "ops-bot", // 可选：多账户 channel id
-        prompt: "如果存在 HEARTBEAT.md（工作区上下文），请阅读它。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。",
-        ackMaxChars: 300, // HEARTBEAT_OK 之后允许的最大字符数
+        includeReasoning: false, // default: false (deliver separate Reasoning: message when available)
+        lightContext: false, // default: false; true keeps only HEARTBEAT.md from workspace bootstrap files
+        isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
+        skipWhenBusy: false, // default: false; true also waits for subagent/nested lanes
+        target: "last", // default: none | options: last | none | <channel id> (core or plugin, e.g. "imessage")
+        to: "+15551234567", // optional channel-specific override
+        accountId: "ops-bot", // optional multi-account channel id
+        prompt: "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+        ackMaxChars: 300, // max chars allowed after HEARTBEAT_OK
       },
     },
   },

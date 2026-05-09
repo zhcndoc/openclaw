@@ -6,19 +6,20 @@ read_when:
 title: "SenseAudio"
 ---
 
-# SenseAudio
+SenseAudio 可通过 OpenClaw 共享的 `tools.media.audio` 管道转写传入音频和语音笔记附件。OpenClaw 会将多部分音频发送到与 OpenAI 兼容的转写端点，并将返回的文本注入为 `{{Transcript}}` 以及一个 `[Audio]` 块。
 
-SenseAudio 可以通过 OpenClaw 共享的 `tools.media.audio` 管道对传入的音频/语音消息附件进行转写。OpenClaw 会将 multipart 音频发送到与 OpenAI 兼容的转写端点，并将返回的文本注入为 `{{Transcript}}` 以及一个 `[Audio]` 块。
-
-| 详情          | 值                                               |
+| Property      | Value                                            |
 | ------------- | ------------------------------------------------ |
-| 网站          | [senseaudio.cn](https://senseaudio.cn)           |
-| 文档          | [senseaudio.cn/docs](https://senseaudio.cn/docs) |
-| 认证          | `SENSEAUDIO_API_KEY`                             |
-| 默认模型      | `senseaudio-asr-pro-1.5-260319`                  |
-| 默认 URL      | `https://api.senseaudio.cn/v1`                   |
+| Provider id   | `senseaudio`                                     |
+| Plugin        | bundled, `enabledByDefault: true`                |
+| Contract      | `mediaUnderstandingProviders` (audio)            |
+| Auth env var  | `SENSEAUDIO_API_KEY`                             |
+| Default model | `senseaudio-asr-pro-1.5-260319`                  |
+| Default URL   | `https://api.senseaudio.cn/v1`                   |
+| Website       | [senseaudio.cn](https://senseaudio.cn)           |
+| Docs          | [senseaudio.cn/docs](https://senseaudio.cn/docs) |
 
-## 入门
+## Getting started
 
 <Steps>
   <Step title="设置你的 API key">
@@ -58,3 +59,8 @@ SenseAudio 可以通过 OpenClaw 共享的 `tools.media.audio` 管道对传入�
 <Note>
 在 OpenClaw 中，SenseAudio 仅支持批量 STT。语音通话的实时转写仍然使用支持流式 STT 的提供方。
 </Note>
+
+## Related
+
+- [Media understanding (audio)](/nodes/audio)
+- [Model providers](/concepts/model-providers)

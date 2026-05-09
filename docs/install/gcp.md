@@ -7,11 +7,7 @@ read_when:
 title: "GCP"
 ---
 
-# 在 GCP Compute Engine 上运行 OpenClaw（Docker，生产 VPS 指南）
-
-## 目标
-
-使用 Docker 在 GCP Compute Engine VM 上运行一个持久化的 OpenClaw Gateway，并具备持久状态、内置二进制文件以及安全的重启行为。
+使用 Docker 在 GCP Compute Engine VM 上运行一个持久化的 OpenClaw Gateway，带有持久状态、内置二进制文件和安全的重启行为。
 
 如果你想要“每月约 5-12 美元运行 OpenClaw 24/7”，这是一个在 Google Cloud 上可靠的方案。  
 价格会因机器类型和区域而异；请选择最适合你工作负载的最小 VM，如果遇到 OOM 再进行扩容。
@@ -224,7 +220,8 @@ Ubuntu 也可以；相应地映射软件包即可。
     XDG_CONFIG_HOME=/home/node/.openclaw
     ```
 
-    除非你明确希望通过 `.env` 管理它，否则保持 `OPENCLAW_GATEWAY_TOKEN` 为空；OpenClaw 会在首次启动时将随机 gateway token 写入配置。生成一个 keyring 密码并将其填入 `GOG_KEYRING_PASSWORD`：
+    当你想通过 `.env` 管理稳定的 gateway
+    token 时，请设置 `OPENCLAW_GATEWAY_TOKEN`；否则，请在依赖跨重启客户端之前配置 `gateway.auth.token`。如果两者都不存在，OpenClaw 会在该次启动时使用仅运行时 token。生成一个 keyring 密码并将其粘贴到 `GOG_KEYRING_PASSWORD` 中：
 
     ```bash
     openssl rand -hex 32

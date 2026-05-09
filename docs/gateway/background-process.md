@@ -6,21 +6,19 @@ read_when:
 title: "后台 exec 和 process 工具"
 ---
 
-# 后台 Exec + Process 工具
-
 OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任务保存在内存中。`process` 工具用于管理这些后台会话。
 
 ## exec 工具
 
 关键参数：
 
-- `command`（必需）
-- `yieldMs`（默认 10000）：在此延迟后自动转入后台
-- `background`（布尔）：立即转入后台
-- `timeout`（秒，默认 `tools.exec.timeoutSec`）：在此超时后终止进程；仅在该次调用中设置 `timeout: 0` 才可禁用 exec 进程超时
-- `elevated`（布尔）：如果启用了/允许提权模式，则在沙箱外运行（默认 `gateway`，或者当 exec 目标是 `node` 时为 `node`）
-- 需要真正的 TTY？设置 `pty: true`。
-- `workdir`、`env`
+- `command` (required)
+- `yieldMs` (default 10000): 在此延迟后自动转入后台
+- `background` (bool): 立即后台运行
+- `timeout` (seconds, default `tools.exec.timeoutSec`): 在此超时后终止进程；仅当你想为该次调用禁用 exec 进程超时时，才将 `timeout: 0` 设为 0
+- `elevated` (bool): 如果已启用/允许提权模式，则在沙箱外运行（默认是 `gateway`，当 exec 目标是 `node` 时为 `node`）
+- 需要真实 TTY？设置 `pty: true`。
+- `workdir`, `env`
 
 行为：
 
@@ -40,10 +38,10 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 环境覆盖：
 
-- `PI_BASH_YIELD_MS`：默认 yield（毫秒）
-- `PI_BASH_MAX_OUTPUT_CHARS`：内存中的输出上限（字符）
-- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`：每个流的待处理 stdout/stderr 上限（字符）
-- `PI_BASH_JOB_TTL_MS`：已完成会话的 TTL（毫秒，限制在 1m–3h）
+- `PI_BASH_YIELD_MS`: 默认 yield（毫秒）
+- `PI_BASH_MAX_OUTPUT_CHARS`: 内存中的输出上限（字符）
+- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: 待处理 stdout/stderr 每个流的上限（字符）
+- `PI_BASH_JOB_TTL_MS`: 已完成会话的 TTL（毫秒，范围限制为 1 分钟–3 小时）
 
 配置（推荐）：
 

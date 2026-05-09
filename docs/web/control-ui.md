@@ -68,7 +68,7 @@ Control UI 是一个由 Gateway 提供的、基于 **Vite + Lit** 的单页应�
 
 Control UI 支持按浏览器保存的个人身份（显示名称和头像），用于在共享会话中将其附加到发出的消息上以便归属。它存储在浏览器中，作用域仅限于当前浏览器配置文件，不会同步到其他设备，也不会在服务端持久化，除了你实际发送消息时的正常对话作者元数据之外。清除站点数据或切换浏览器会将其重置为空。
 
-同样的浏览器本地模式也适用于助手头像覆盖。上传的助手头像仅在本地浏览器上覆盖 Gateway 解析出的身份，不会通过 `config.patch` 往返回传。对于直接写入该字段的非 UI 客户端（例如脚本化 gateway 或自定义仪表盘），共享的 `ui.assistant.avatar` 配置字段仍然可用。
+同样的浏览器本地模式也适用于助手头像覆盖。上传的助手头像仅在本地浏览器上覆盖 Gateway 解析出的身份，不会通过 `config.patch` 往返回。对于直接写入该字段的非 UI 客户端（例如脚本化 gateway 或自定义仪表盘），共享的 `ui.assistant.avatar` 配置字段仍然可用。
 
 ## 运行时配置端点
 
@@ -87,24 +87,26 @@ Docs 翻译会为相同的非英语区域设置生成，但 docs 站点内置的
 
 ## Appearance 主题
 
-Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个浏览器本地的 tweakcn 导入槽位。要导入主题，请打开 [tweakcn themes](https://tweakcn.com/themes)，选择或创建一个主题，点击 **Share**，并将复制的主题链接粘贴到 Appearance 中。导入器还接受 `https://tweakcn.com/r/themes/<id>` 注册表 URL、类似 `https://tweakcn.com/editor/theme?theme=amethyst-haze` 的编辑器 URL、相对的 `/themes/<id>` 路径、原始主题 ID，以及默认主题名称，例如 `amethyst-haze`。
+外观面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个浏览器本地的 tweakcn 导入槽位。要导入主题，请打开 [tweakcn editor](https://tweakcn.com/editor/theme)，选择或创建一个主题，点击 **Share**，然后将复制的主题链接粘贴到 Appearance 中。导入器也接受 `https://tweakcn.com/r/themes/<id>` 注册表 URL、类似 `https://tweakcn.com/editor/theme?theme=amethyst-haze` 的编辑器 URL、相对路径 `/themes/<id>`、原始主题 ID，以及默认主题名称，例如 `amethyst-haze`。
 
 导入的主题仅存储在当前浏览器配置文件中。它们不会写入 gateway 配置，也不会在设备之间同步。替换导入的主题会更新那个本地槽位；如果已选中导入主题，清空它会将当前活动主题切回 Claw。
 
 ## 它目前能做什么
 
 <AccordionGroup>
-  <Accordion title="聊天与通话">
+  <Accordion title="聊天和对话">
     - 通过 Gateway WS 与模型聊天（`chat.history`、`chat.send`、`chat.abort`、`chat.inject`）。
-    - 通过浏览器实时会话通话。OpenAI 使用直接 WebRTC，Google Live 使用通过 WebSocket 的受限一次性浏览器令牌，而仅后端的实时语音插件则使用 Gateway 中继传输。中继会将提供商凭证保留在 Gateway 上，同时浏览器通过 `talk.realtime.relay*` RPC 流式传输麦克风 PCM，并将 `openclaw_agent_consult` 工具调用通过 `chat.send` 发送回去，以供更大、已配置的 OpenClaw 模型处理。
+    - 聊天历史刷新会请求一个有上限的最近窗口，并对每条消息设置文本上限，这样大型会话就不会在聊天变得可用之前强制浏览器渲染完整转录负载。
+    - 通过浏览器实时会话进行对话。OpenAI 使用直接 WebRTC，Google Live 使用通过 WebSocket 的受限一次性浏览器令牌，而仅后端的实时语音插件则使用 Gateway 中继传输。客户端拥有的提供方会话从 `talk.client.create` 开始；Gateway 中继会话从 `talk.session.create` 开始。该中继会将提供方凭据保留在 Gateway 上，同时浏览器通过 `talk.session.appendAudio` 传输麦克风 PCM，并将 `openclaw_agent_consult` 提供方工具调用通过 `talk.client.toolCall` 转发给 Gateway，以便进行策略控制并使用更大、已配置的 OpenClaw 模型。
     - 在 Chat 中流式显示工具调用和实时工具输出卡片（代理事件）。
 
   </Accordion>
-  <Accordion title="通道、实例、会话、梦想">
-    - 通道：内置以及捆绑/外部插件通道状态、二维码登录和按通道配置（`channels.status`、`web.login.*`、`config.patch`）。
+  <Accordion title="通道、实例、会话、梦境">
+    - 通道：内置通道以及捆绑/外部插件通道的状态、QR 登录和按通道配置（`channels.status`、`web.login.*`、`config.patch`）。
+    - 通道探测刷新会在缓慢的提供方检查完成时保持前一个快照可见，并且当探测或审计超过其 UI 预算时会标记为部分快照。
     - 实例：在线列表 + 刷新（`system-presence`）。
-    - 会话：列表 + 每个会话的 model/thinking/fast/verbose/trace/reasoning 覆盖（`sessions.list`、`sessions.patch`）。
-    - Dreams：做梦状态、启用/禁用切换，以及 Dream Diary 阅读器（`doctor.memory.status`、`doctor.memory.dreamDiary`、`config.patch`）。
+    - 会话：默认列出已配置代理会话，从过期的未配置代理会话键回退，并应用每个会话的模型/思考/快速/详细/跟踪/推理覆盖（`sessions.list`、`sessions.patch`）。
+    - 梦境：做梦状态、启用/禁用开关，以及 Dream Diary 读取器（`doctor.memory.status`、`doctor.memory.dreamDiary`、`config.patch`）。
 
   </Accordion>
   <Accordion title="Cron、技能、节点、exec 审批">
@@ -126,9 +128,10 @@ Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个�
 
   </Accordion>
   <Accordion title="调试、日志、更新">
-    - 调试：状态/健康/模型快照 + 事件日志 + 手动 RPC 调用（`status`、`health`、`models.list`）。
-    - 日志：带过滤/导出的 gateway 文件日志实时尾随（`logs.tail`）。
-    - 更新：执行包/git 更新 + 重启（`update.run`）并生成重启报告，然后在重连后轮询 `update.status` 以验证正在运行的 gateway 版本。
+    - 调试：状态/健康状态/模型快照 + 事件日志 + 手动 RPC 调用（`status`、`health`、`models.list`）。
+    - 事件日志包含 Control UI 刷新/RPC 耗时、缓慢的聊天/配置渲染耗时，以及当浏览器暴露这些 PerformanceObserver 条目类型时，针对长动画帧或长任务的浏览器响应性条目。
+    - 日志：gateway 文件日志的实时尾随，支持过滤/导出（`logs.tail`）。
+    - 更新：运行包/git 更新 + 重启（`update.run`），并附带重启报告，然后在重连后轮询 `update.status` 以验证正在运行的 gateway 版本。
 
   </Accordion>
   <Accordion title="Cron 作业面板说明">
@@ -147,27 +150,32 @@ Appearance 面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个�
 ## 聊天行为
 
 <AccordionGroup>
-  <Accordion title="Send and history semantics">
-    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，并通过 `chat` 事件流式返回响应。
-    - 聊天上传支持图片和非视频文件。图片保留原生图片路径；其他文件会作为受管媒体存储，并在历史记录中显示为附件链接。
-    - 使用相同的 `idempotencyKey` 重新发送时，运行中会返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
-    - `chat.history` 响应的大小会受限以确保 UI 安全。当转录条目过大时，Gateway 可能会截断较长的文本字段、省略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
-    - 助手/生成的图像会作为受管媒体引用持久化，并通过已认证的 Gateway 媒体 URL 返回，因此重新加载不依赖于原始 base64 图像载荷仍保留在聊天历史响应中。
-    - `chat.history` 还会从可见的助手文本中移除仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）、泄露的 ASCII/全角模型控制令牌，并省略其全部可见文本仅为精确静默令牌 `NO_REPLY` / `no_reply` 的助手条目。
-    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会保留本地乐观的用户/助手消息可见；一旦 Gateway 历史追上，规范转录将替换这些本地消息。
-    - `chat.inject` 会向会话转录附加一条助手备注，并广播一个 `chat` 事件用于仅 UI 更新（不进行 agent 运行，也不进行通道投递）。
-    - 聊天页眉中的模型和 thinking 选择器会通过 `sessions.patch` 立即修补当前活动会话；它们是持久的会话覆盖，而不是仅限一次发送的选项。
-    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话。输入 `/reset` 会保留 Gateway 对当前会话的显式原地重置。
-    - 聊天模型选择器请求 Gateway 的配置模型视图。如果存在 `agents.defaults.models`，则该允许列表驱动选择器。否则，选择器会显示显式的 `models.providers.*.models` 条目以及具有可用 auth 的提供商。完整目录仍可通过调试 `models.list` RPC，并将 `view: "all"`。
-    - 当新的 Gateway 会话使用报告显示上下文压力较高时，聊天撰写区会显示上下文提示，并在推荐的压缩级别提供一个压缩按钮，以运行正常的会话压缩路径。过期的令牌快照会被隐藏，直到 Gateway 再次报告新的使用情况。
+  <Accordion title="发送和历史语义">
+    - `chat.send` 是**非阻塞**的：它会立即确认并返回 `{ runId, status: "started" }`，响应则通过 `chat` 事件流式返回。
+    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件作为托管媒体存储，并在历史记录中以附件链接显示。
+    - 使用相同的 `idempotencyKey` 重新发送时，在运行中会返回 `{ status: "in_flight" }`，完成后会返回 `{ status: "ok" }`。
+    - `chat.history` 响应在大小上有界，以保证 UI 安全。当转录条目过大时，Gateway 可能会截断较长文本字段、忽略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
+    - 助手/生成图像会作为托管媒体引用持久化，并通过经过身份验证的 Gateway 媒体 URL 返回，因此重新加载时不依赖原始 base64 图像负载仍保留在聊天历史响应中。
+    - 渲染 `chat.history` 时，Control UI 会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄露的 ASCII/全角模型控制 token；并且会省略那些其整个可见文本仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
+    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会保持本地乐观的用户/助手消息可见；当 Gateway 历史记录赶上后，规范转录会替换这些本地消息。
+    - 实时 `chat` 事件表示投递状态，而 `chat.history` 则从持久化会话转录重建。在工具最终事件之后，Control UI 会重新加载历史并只合并一个较小的乐观尾部；转录边界记录在 [WebChat](/web/webchat) 中。
+    - `chat.inject` 会向会话转录追加一条助手注释，并广播一个 `chat` 事件用于仅 UI 更新（无代理运行、无通道投递）。
+    - 聊天标题栏会在会话选择器之前显示代理筛选器，并且会话选择器按所选代理进行作用域限定。切换代理时只会显示与该代理关联的会话，并在该代理还没有保存的仪表盘会话时回退到该代理的主会话。
+    - 在桌面宽度下，聊天控件会保持在一行紧凑布局中，并在向下滚动转录时折叠；向上滚动、回到顶部或到达底部时会恢复控件。
+    - 连续重复的仅文本消息会渲染为一个气泡并带有计数徽标。包含图片、附件、工具输出或画布预览的消息不会折叠。
+    - 聊天标题栏中的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久化的会话覆盖项，而不是仅一次发送选项。
+    - 如果你在同一会话的模型选择器更改仍在保存时发送消息，撰写器会先等待该会话补丁完成，再调用 `chat.send`，以便发送使用所选模型。
+    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父会话是该代理的主会话；在这种情况下，它会在原地重置主会话。输入 `/reset` 则会保留 Gateway 对当前会话的显式原地重置。
+    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器。否则，选择器会显示显式的 `models.providers.*.models` 条目以及具有可用 auth 的提供方。完整目录仍可通过调试 RPC `models.list` 且 `view: "all"` 获取。
+    - 当新的 Gateway 会话使用情况报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文使用指示器。在上下文压力较高时，它会切换为警告样式；在建议的压缩级别时，会显示一个可触发正常会话压缩路径的紧凑按钮。旧的 token 快照会被隐藏，直到 Gateway 再次报告新的使用情况。
 
   </Accordion>
-  <Accordion title="Talk 模式（浏览器实时）">
-    Talk 模式使用已注册的实时语音提供商。要配置 OpenAI，请设置 `talk.provider: "openai"` 并加上 `talk.providers.openai.apiKey`；或者配置 Google，设置 `talk.provider: "google"` 并加上 `talk.providers.google.apiKey`；Voice Call 实时提供商配置仍可作为后备复用。浏览器不会接收标准的提供商 API 密钥。OpenAI 会接收一个用于 WebRTC 的临时 Realtime 客户端密钥。Google Live 会接收一个一次性、受限制的 Live API 认证令牌，用于浏览器 WebSocket 会话，其中说明和工具声明会被 Gateway 锁定进令牌中。仅提供后端实时桥接的提供商会通过 Gateway 中继传输运行，因此凭据和供应商套接字都保留在服务器端，而浏览器音频则通过已认证的 Gateway RPC 传输。Realtime 会话提示词由 Gateway 组装；`talk.realtime.session` 不接受调用方提供的指令覆盖。
+  <Accordion title="对话模式（浏览器实时）">
+    对话模式使用一个已注册的实时语音提供方。将 OpenAI 配置为 `talk.realtime.provider: "openai"` 并设置 `talk.realtime.providers.openai.apiKey`，或者将 Google 配置为 `talk.realtime.provider: "google"` 并设置 `talk.realtime.providers.google.apiKey`。浏览器永远不会接收到标准的提供方 API key。OpenAI 会收到一个用于 WebRTC 的临时 Realtime 客户端密钥。Google Live 会收到一个用于浏览器 WebSocket 会话的一次性受限 Live API auth token，指令和工具声明会被 Gateway 锁定进该 token 中。仅提供后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商套接字保持在服务端，而浏览器音频通过经过身份验证的 Gateway RPC 流动。Realtime 会话提示由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
 
-    在 Chat 撰写器中，Talk 控件是麦克风听写按钮旁边的波形按钮。Talk 启动时，撰写器状态行会显示 `Connecting Talk...`，然后在音频连接时显示 `Talk live`，或者在通过 `chat.send` 调用已配置的大模型咨询实时工具调用时显示 `Asking OpenClaw...`。
+    在 Chat 撰写器中，Talk 控件是麦克风听写按钮旁边的波浪按钮。当 Talk 开始时，撰写器状态行会显示 `Connecting Talk...`，然后在音频连接后显示 `Talk live`，或者在实时工具调用通过 `talk.client.toolCall` 询问已配置的更大模型时显示 `Asking OpenClaw...`。
 
-    维护者实时冒烟测试：`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts` 会验证 OpenAI 浏览器 WebRTC SDP 交换、Google Live 受限令牌浏览器 WebSocket 设置，以及带伪造麦克风媒体的 Gateway 中继浏览器适配器。该命令只打印提供商状态，不会记录密钥。
+    维护者实时烟雾测试：`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts` 会验证 OpenAI 后端 WebSocket 桥接、OpenAI 浏览器 WebRTC SDP 交换、Google Live 受限令牌浏览器 WebSocket 设置，以及带有伪麦克风媒体的 Gateway 中继浏览器适配器。该命令只打印提供方状态，不会记录密钥。
 
   </Accordion>
   <Accordion title="停止与中止">
@@ -383,7 +391,17 @@ Control UI 采用严格的 `img-src` 策略：仅允许**同源**资源、`data:
 
 如果你禁用网关认证（不建议在共享主机上这样做），头像路由也会变为未认证，与网关其余部分保持一致。
 
-## 构建 UI
+## Assistant media route auth
+
+When gateway auth is configured, assistant local-media previews use a two-step route:
+
+- `GET /__openclaw__/assistant-media?meta=1&source=<path>` requires the normal Control UI operator auth. The browser sends the gateway token as a bearer header when checking availability.
+- Successful metadata responses include a short-lived `mediaTicket` scoped to that exact source path.
+- Browser-rendered image, audio, video, and document URLs use `mediaTicket=<ticket>` instead of the active gateway token or password. The ticket expires quickly and cannot authorize a different source.
+
+This keeps normal media rendering compatible with browser-native media elements without putting reusable gateway credentials in visible media URLs.
+
+## Building the UI
 
 网关会从 `dist/control-ui` 提供静态文件。使用以下命令构建：
 

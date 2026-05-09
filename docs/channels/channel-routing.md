@@ -11,13 +11,13 @@ OpenClaw 会将回复**路由回消息来源的频道**。模型不会选择频�
 
 ## 关键术语
 
-- **Channel**: `telegram`、`whatsapp`、`discord`、`irc`、`googlechat`、`slack`、`signal`、`imessage`、`line`，以及插件频道。`webchat` 是内部的 WebChat UI 频道，不是可配置的外发频道。
-- **AccountId**: 按频道划分的账号实例（在支持时）。
-- 可选的频道默认账号：`channels.<channel>.defaultAccount` 会在外发路径未指定 `accountId` 时选择
-  使用哪个账号。
-  - 在多账号设置中，当配置了两个或更多账号时，请设置一个明确的默认值（`defaultAccount` 或 `accounts.default`）。否则，回退路由可能会选择第一个规范化后的账号 ID。
-- **AgentId**: 一个隔离的工作区 + 会话存储（“大脑”）。
-- **SessionKey**: 用于存储上下文并控制并发的桶键。
+- **Channel**: `telegram`, `whatsapp`, `discord`, `irc`, `googlechat`, `slack`, `signal`, `imessage`, `line`, plus plugin channels. `webchat` is the internal WebChat UI channel and is not a configurable outbound channel.
+- **AccountId**: per-channel account instance (when supported).
+- Optional channel default account: `channels.<channel>.defaultAccount` chooses
+  which account is used when an outbound path does not specify `accountId`.
+  - In multi-account setups, set an explicit default (`defaultAccount` or `accounts.default`) when two or more accounts are configured. Without it, fallback routing may pick the first normalized account ID.
+- **AgentId**: an isolated workspace + session store ("brain").
+- **SessionKey**: the bucket key used to store context and control concurrency.
 
 ## Outbound target prefixes
 
@@ -27,7 +27,7 @@ OpenClaw 会将回复**路由回消息来源的频道**。模型不会选择频�
 
 ## Session key shapes (examples)
 
-默认情况下，直接消息会折叠到代理的**主**会话：
+Direct messages collapse to the agent's **main** session by default:
 
 - `agent:<agentId>:<mainKey>`（默认：`agent:main:main`）
 
@@ -52,9 +52,9 @@ OpenClaw 会将回复**路由回消息来源的频道**。模型不会选择频�
 
 ## 主 DM 路由固定
 
-当 `session.dmScope` 为 `main` 时，直接消息可能共享一个主会话。
-为了防止会话的 `lastRoute` 被非拥有者的 DM 覆盖，
-当以下条件都满足时，OpenClaw 会根据 `allowFrom` 推断一个固定拥有者：
+When `session.dmScope` is `main`, direct messages may share one main session.
+To prevent the session's `lastRoute` from being overwritten by non-owner DMs,
+OpenClaw infers a pinned owner from `allowFrom` when all of these are true:
 
 - `allowFrom` 恰好只有一个非通配符条目。
 - 该条目可以被规范化为该频道的具体发送者 ID。
@@ -140,8 +140,9 @@ Gateway 和 ACP 的会话发现也会扫描默认 `agents/` 根目录以及模�
 
 ## WebChat 行为
 
-WebChat 会附加到**选定的代理**，并默认使用该代理的主
-会话。因此，WebChat 让你可以在一个地方查看该代理的跨频道上下文。
+WebChat 会附加到**所选代理**，并默认使用该代理的主
+会话。因此，WebChat 让你可以在一个地方查看该
+代理的跨频道上下文。
 
 ## 回复上下文
 

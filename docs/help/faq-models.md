@@ -21,7 +21,7 @@ sidebarTitle: "模型常见问题"
     agents.defaults.model.primary
     ```
 
-    模型使用 `provider/model` 的形式引用（例如：`openai/gpt-5.5` 或 `openai-codex/gpt-5.5`）。如果你省略 provider，OpenClaw 会先尝试别名，然后尝试与该精确模型 id 匹配的唯一已配置 provider，只有在此之后才会回退到已配置的默认 provider，作为已弃用的兼容路径。如果该 provider 不再提供已配置的默认模型，OpenClaw 会回退到第一个已配置的 provider/model，而不是暴露一个已失效、已移除 provider 的默认值。你仍然应该 **显式** 设置 `provider/model`。
+    模型引用格式为 `provider/model`（例如：`openai/gpt-5.5` 或 `anthropic/claude-sonnet-4-6`）。如果你省略 provider，OpenClaw 会先尝试别名，然后尝试与该精确模型 ID 唯一匹配的已配置 provider，只有在这之后才会退回到已配置的默认 provider，作为一种已弃用的兼容路径。如果该 provider 不再暴露已配置的默认模型，OpenClaw 会回退到第一个已配置的 provider/model，而不是暴露一个陈旧、已移除 provider 的默认值。你仍应当**显式**设置 `provider/model`。
 
   </Accordion>
 
@@ -145,10 +145,10 @@ sidebarTitle: "模型常见问题"
   <Accordion title="我可以将 GPT 5.5 用于日常任务，并将 Codex 5.5 用于编码吗？">
     可以。将模型选择和运行时选择分开看待：
 
-    - **原生 Codex 编码 agent：** 将 `agents.defaults.model.primary` 设为 `openai/gpt-5.5`，并将 `agents.defaults.agentRuntime.id` 设为 `"codex"`。当你需要 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
-    - **通过 PI 直接执行 OpenAI API 任务：** 在不覆盖 Codex 运行时的情况下使用 `/model openai/gpt-5.5`，并配置 `OPENAI_API_KEY`。
-    - **通过 PI 使用 Codex OAuth：** 仅当你有意想使用带 Codex OAuth 的普通 PI 运行器时，使用 `/model openai-codex/gpt-5.5`。
-    - **子 agent：** 将编码任务路由到一个仅使用 Codex 的 agent，并为其设置自己的模型和 `agentRuntime` 默认值。
+    - **Native Codex coding agent:** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
+    - **Direct OpenAI API tasks outside the agent loop:** 为 images、embeddings、speech、realtime 以及其他非 agent 的 OpenAI API 接口配置 `OPENAI_API_KEY`。
+    - **OpenAI agent API-key auth:** 使用 `/model openai/gpt-5.5` 并配合有序的 `openai-codex` API key 配置文件。
+    - **Sub-agents:** 将编码任务路由到一个专注 Codex 的 agent，并使用它自己的 `openai/gpt-5.5` 模型。
 
     参见 [模型](/concepts/models) 和 [斜杠命令](/tools/slash-commands)。
 
@@ -157,8 +157,8 @@ sidebarTitle: "模型常见问题"
   <Accordion title="如何为 GPT 5.5 配置快速模式？">
     使用会话切换或配置默认值中的任意一种：
 
-    - **按会话：** 在会话使用 `openai/gpt-5.5` 或 `openai-codex/gpt-5.5` 时发送 `/fast on`。
-    - **按模型默认值：** 将 `agents.defaults.models["openai/gpt-5.5"].params.fastMode` 或 `agents.defaults.models["openai-codex/gpt-5.5"].params.fastMode` 设为 `true`。
+    - **每会话：** 当会话正在使用 `openai/gpt-5.5` 时发送 `/fast on`。
+    - **每模型默认值：** 将 `agents.defaults.models["openai/gpt-5.5"].params.fastMode` 设置为 `true`。
 
     示例：
 
@@ -189,11 +189,14 @@ sidebarTitle: "模型常见问题"
     会话覆盖的 **允许列表**。选择一个不在该列表中的模型会返回：
 
     ```
-    Model "provider/model" is not allowed. Use /model to list available models.
+    Model "provider/model" is not allowed. Use /models to list providers, or /models <provider> to list models.
+    Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' --strict-json --merge
     ```
 
-    这个错误会被返回，**而不是**正常回复。修复方法：将该模型添加到
+    该错误会**代替**正常回复返回。修复方法：将模型添加到
     `agents.defaults.models`，移除允许列表，或者从 `/model list` 中选择一个模型。
+    如果命令还包含 `--runtime codex`，请先添加该模型，然后重试
+    相同的 `/model provider/model --runtime codex` 命令。
 
   </Accordion>
 
@@ -267,7 +270,7 @@ sidebarTitle: "模型常见问题"
 
     - `opus` → `anthropic/claude-opus-4-6`
     - `sonnet` → `anthropic/claude-sonnet-4-6`
-    - `gpt` → 在 API key 设置中为 `openai/gpt-5.5`，或者在配置为 Codex OAuth 时为 `openai-codex/gpt-5.5`
+    - `gpt` → `openai/gpt-5.5`
     - `gpt-mini` → `openai/gpt-5.4-mini`
     - `gpt-nano` → `openai/gpt-5.4-nano`
     - `gemini` → `google/gemini-3.1-pro-preview`
@@ -459,6 +462,8 @@ sidebarTitle: "模型常见问题"
     ```
     ~/.openclaw/agents/<agentId>/agent/auth-profiles.json
     ```
+
+    如需查看已保存的配置文件而不泄露密钥，请运行 `openclaw models auth list`（可选 `--provider <id>` 或 `--json`）。详情参见 [Models CLI](/cli/models#auth-profiles)。
 
   </Accordion>
 

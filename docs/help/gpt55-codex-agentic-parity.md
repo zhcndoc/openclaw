@@ -7,9 +7,7 @@ read_when:
   - 回顾严格 agentic、工具 schema、提升权限与回放修复
 ---
 
-# OpenClaw 中的 GPT-5.5 / Codex Agentic Parity
-
-OpenClaw 之前已经能很好地与使用工具的前沿模型配合，但 GPT-5.5 和 Codex 风格模型在几个实际方面仍然表现不佳：
+OpenClaw 已经能很好地与使用工具的前沿模型配合，但 GPT-5.5 和 Codex 风格模型在一些实际方面仍表现不佳：
 
 - 它们可能在规划之后就停止，而不是继续完成工作
 - 它们可能错误地使用严格的 OpenAI/Codex 工具 schema
@@ -25,13 +23,13 @@ OpenClaw 之前已经能很好地与使用工具的前沿模型配合，但 GPT-
 
 这个切片为嵌入式 Pi GPT-5 运行增加了一个可选的 `strict-agentic` 执行契约。
 
-启用后，OpenClaw 不再把只输出计划的轮次当作“足够好”的完成。如果模型只是说它打算做什么，却没有真正使用工具或取得进展，OpenClaw 会用“立即行动”的引导重试，然后在明确的 blocked 状态下关闭失败，而不是悄悄结束任务。
+启用后，OpenClaw 不再把“只做计划”的轮次当作“足够好”的完成。如果模型只是说出打算做什么，却没有真正使用工具或取得进展，OpenClaw 会用 act-now 引导重试，然后以显式的 blocked 状态失败关闭，而不是悄悄结束任务。
 
 这对 GPT-5.5 的提升最明显，尤其是在以下场景中：
 
-- 简短的“ok do it”后续回复
-- 第一歩很明显的代码任务
-- `update_plan` 应该是进度跟踪而不是填充文本的流程
+- 简短的“好，去做吧”跟进
+- 代码任务中第一步显而易见的情况
+- `update_plan` 应该用于进度跟踪而不是填充文本的流程
 
 ### PR B：运行时真实性
 
@@ -86,21 +84,21 @@ pnpm openclaw qa parity-report \
 
 这会把用户体验从：
 
-- “模型有一个好计划但停下来了”
+- "the model had a good plan but stopped"
 
 变成：
 
-- “模型要么已经行动，要么 OpenClaw 已经暴露出它无法行动的确切原因”
+- "the model either acted, or OpenClaw surfaced the exact reason it could not"
 
 ## GPT-5.5 用户的前后对比
 
-| 这个项目之前                                                                                 | PR A-D 之后                                                                              |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| GPT-5.5 可能在做出合理计划后停止，而不执行下一步工具操作                                     | PR A 将“只计划”变成“立即行动或暴露 blocked 状态”                                         |
-| 严格工具 schema 可能以令人困惑的方式拒绝无参数或 OpenAI/Codex 形状的工具                    | PR C 让 provider 拥有的工具注册和调用更可预测                                            |
-| `/elevated full` 指引在被阻止的运行时中可能含糊或错误                                        | PR B 为 GPT-5.5 和用户提供真实的运行时与权限提示                                          |
-| 回放或压缩失败可能让人感觉任务悄然消失                                                       | PR C 明确暴露 paused、blocked、abandoned 和 replay-invalid 结果                          |
-| “GPT-5.5 比 Opus 更差”的说法大多只是轶事                                                     | PR D 将其转化为相同的场景包、相同的指标，以及严格的 pass/fail 门禁                        |
+| Before this program                                                                            | After PR A-D                                                                             |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GPT-5.5 could stop after a reasonable plan without taking the next tool step                   | PR A turns "plan only" into "act now or surface a blocked state"                         |
+| Strict tool schemas could reject parameter-free or OpenAI/Codex-shaped tools in confusing ways | PR C makes provider-owned tool registration and invocation more predictable              |
+| `/elevated full` guidance could be vague or wrong in blocked runtimes                          | PR B gives GPT-5.5 and the user truthful runtime and permission hints                    |
+| Replay or compaction failures could feel like the task silently disappeared                    | PR C surfaces paused, blocked, abandoned, and replay-invalid outcomes explicitly         |
+| "GPT-5.5 feels worse than Opus" was mostly anecdotal                                           | PR D turns that into the same scenario pack, the same metrics, and a hard pass/fail gate |
 
 ## 架构
 
@@ -142,7 +140,7 @@ flowchart LR
 
 ### `approval-turn-tool-followthrough`
 
-检查模型在简短批准后不会停留在“我会去做”的表述上。它应该在同一轮中采取第一个具体动作。
+检查模型在简短批准后不会停留在“我会去做”上。它应该在同一轮中采取第一个具体动作。
 
 ### `model-switch-tool-continuity`
 
@@ -208,18 +206,18 @@ parity 证据刻意分成两层：
 
 将 `qa-agentic-parity-summary.json` 中的裁决作为第一波 parity 包的最终机器可读决定。
 
-- `pass` 表示 GPT-5.5 覆盖了与 Opus 4.6 相同的场景，并且在约定的聚合指标上没有回归。
-- `fail` 表示至少触发了一条硬门槛：完成能力更弱、意外停止更差、有效工具使用更弱、存在任何 fake-success 案例，或场景覆盖不匹配。
-- “shared/base CI issue” 本身不是 parity 结果。如果 PR D 之外的 CI 噪声阻塞了一次运行，裁决应等待一次干净的合并后运行时执行，而不是根据分支时期日志推断。
-- Auth、proxy、DNS 和 `/elevated full` 的真实性仍然来自 PR B 的确定性套件，因此最终发布声明需要两者：PR D parity 裁决通过，以及 PR B 真实性覆盖为绿。
+- `pass` 表示 GPT-5.5 覆盖了与 Opus 4.6 相同的场景，并且没有在约定的聚合指标上回归。
+- `fail` 表示至少触发了一个硬门槛：更弱的完成率、更差的非预期停止率、更弱的有效工具使用、任何虚假成功案例，或场景覆盖不匹配。
+- “共享/基础 CI 问题”本身不算 parity 结果。如果 PR D 之外的 CI 噪声阻塞了运行，裁决应等待干净的合并后运行，而不是根据分支时期日志推断。
+- auth、proxy、DNS 和 `/elevated full` 的真实性仍然来自 PR B 的确定性套件，因此最终发布声明需要两者都满足：通过的 PR D parity 裁决，以及绿色的 PR B 真实性覆盖。
 
 ## 谁应该启用 `strict-agentic`
 
 在以下情况下使用 `strict-agentic`：
 
-- 代理在下一步显而易见时，预期应立即行动
+- 当下一步显而易见时，agent 预期应立即行动
 - GPT-5.5 或 Codex 家族模型是主要运行时
-- 你更偏好明确的 blocked 状态，而不是“有帮助”的仅复述回复
+- 你更倾向于显式的 blocked 状态，而不是“有帮助的”仅复述回复
 
 在以下情况下保留默认契约：
 

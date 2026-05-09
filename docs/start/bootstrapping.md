@@ -8,7 +8,7 @@ title: "Agent 引导"
 sidebarTitle: "引导"
 ---
 
-引导是 **首次运行** 的仪式，用于准备 agent 工作区并收集身份详情。它发生在 onboarding 之后，即 agent 第一次启动时。
+Bootstrapping 是一种 **首次运行** 仪式，用于准备 agent 工作区并收集身份详细信息。它发生在 onboarding 之后，即 agent 第一次启动时。
 
 ## 引导会做什么
 

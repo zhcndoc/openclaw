@@ -20,32 +20,31 @@ OpenClaw 可以在你已经在使用的任何聊天应用上与你交流。每�
 
 ## 支持的频道
 
-- [BlueBubbles](/channels/bluebubbles) — **推荐用于 iMessage**；使用 BlueBubbles macOS server REST API，并提供完整功能支持（捆绑插件；编辑、取消发送、特效、表情反应、群组管理——编辑目前在 macOS 26 Tahoe 上已损坏）。
-- [Discord](/channels/discord) — Discord Bot API + Gateway；支持服务器、频道和私信。
-- [Feishu](/channels/feishu) — 通过 WebSocket 连接的 Feishu/Lark bot（捆绑插件）。
-- [Google Chat](/channels/googlechat) — 通过 HTTP webhook 的 Google Chat API app（可下载插件）。
-- [iMessage (legacy)](/channels/imessage) — 通过 imsg CLI 的传统 macOS 集成（已弃用，新设置请使用 BlueBubbles）。
-- [IRC](/channels/irc) — 经典 IRC 服务器；支持频道 + 私信，并带有配对/允许名单控制。
-- [LINE](/channels/line) — LINE Messaging API bot（可下载插件）。
-- [Matrix](/channels/matrix) — Matrix 协议（可下载插件）。
-- [Mattermost](/channels/mattermost) — Bot API + WebSocket；支持频道、群组、私信（可下载插件）。
-- [Microsoft Teams](/channels/msteams) — Bot Framework；企业级支持（捆绑插件）。
-- [Nextcloud Talk](/channels/nextcloud-talk) — 通过 Nextcloud Talk 的自托管聊天（捆绑插件）。
-- [Nostr](/channels/nostr) — 通过 NIP-04 的去中心化私信（捆绑插件）。
-- [QQ Bot](/channels/qqbot) — QQ Bot API；支持私聊、群聊和富媒体（捆绑插件）。
-- [Signal](/channels/signal) — signal-cli；注重隐私。
-- [Slack](/channels/slack) — Bolt SDK；工作区应用。
-- [Synology Chat](/channels/synology-chat) — 通过出站+入站 webhook 的 Synology NAS Chat（捆绑插件）。
-- [Telegram](/channels/telegram) — 通过 grammY 的 Bot API；支持群组。
-- [Tlon](/channels/tlon) — 基于 Urbit 的消息工具（捆绑插件）。
-- [Twitch](/channels/twitch) — 通过 IRC 连接的 Twitch 聊天（捆绑插件）。
-- [Voice Call](/plugins/voice-call) — 通过 Plivo 或 Twilio 进行电话通信（插件，需单独安装）。
-- [WebChat](/web/webchat) — 通过 WebSocket 的 Gateway WebChat 界面。
-- [WeChat](/channels/wechat) — 通过二维码登录的腾讯 iLink Bot 插件；仅支持私聊（外部插件）。
-- [WhatsApp](/channels/whatsapp) — 最流行；使用 Baileys，并需要二维码配对。
-- [Yuanbao](/channels/yuanbao) — 腾讯元宝 bot（外部插件）。
-- [Zalo](/channels/zalo) — Zalo Bot API；越南流行的消息应用（捆绑插件）。
-- [Zalo Personal](/channels/zalouser) — 通过二维码登录的 Zalo 个人账号（捆绑插件）。
+- [Discord](/channels/discord) - Discord Bot API + Gateway; 支持服务器、频道和私信。
+- [Feishu](/channels/feishu) - 通过 WebSocket 的 Feishu/Lark bot（捆绑插件）。
+- [Google Chat](/channels/googlechat) - 通过 HTTP webhook 的 Google Chat API 应用（可下载插件）。
+- [iMessage](/channels/imessage) - 在已登录的 Mac 上通过 `imsg` 桥接实现原生 macOS 集成（或在 Gateway 运行于其他位置时使用 SSH 包装器），包括用于回复、tapback、效果、附件和群组管理的私有 API 操作。在主机权限和 Messages 访问权限满足时，适合作为新 OpenClaw iMessage 设置的首选。
+- [IRC](/channels/irc) - 经典 IRC 服务器；通过配对/允许名单控制的频道 + 私信。
+- [LINE](/channels/line) - LINE Messaging API bot（可下载插件）。
+- [Matrix](/channels/matrix) - Matrix 协议（可下载插件）。
+- [Mattermost](/channels/mattermost) - Bot API + WebSocket；频道、群组、私信（可下载插件）。
+- [Microsoft Teams](/channels/msteams) - Bot Framework；企业支持（捆绑插件）。
+- [Nextcloud Talk](/channels/nextcloud-talk) - 通过 Nextcloud Talk 的自托管聊天（捆绑插件）。
+- [Nostr](/channels/nostr) - 通过 NIP-04 的去中心化私信（捆绑插件）。
+- [QQ Bot](/channels/qqbot) - QQ Bot API；私聊、群聊和富媒体（捆绑插件）。
+- [Signal](/channels/signal) - signal-cli；注重隐私。
+- [Slack](/channels/slack) - Bolt SDK；工作区应用。
+- [Synology Chat](/channels/synology-chat) - 通过出站+入站 webhook 的 Synology NAS Chat（捆绑插件）。
+- [Telegram](/channels/telegram) - 通过 grammY 的 Bot API；支持群组。
+- [Tlon](/channels/tlon) - 基于 Urbit 的消息工具（捆绑插件）。
+- [Twitch](/channels/twitch) - 通过 IRC 连接的 Twitch 聊天（捆绑插件）。
+- [Voice Call](/plugins/voice-call) - 通过 Plivo 或 Twilio 的电话服务（插件，需单独安装）。
+- [WebChat](/web/webchat) - 通过 WebSocket 的 Gateway WebChat UI。
+- [WeChat](/channels/wechat) - 通过二维码登录的腾讯 iLink Bot 插件；仅支持私聊（外部插件）。
+- [WhatsApp](/channels/whatsapp) - 最受欢迎；使用 Baileys 并需要二维码配对。
+- [Yuanbao](/channels/yuanbao) - 腾讯元宝 bot（外部插件）。
+- [Zalo](/channels/zalo) - Zalo Bot API；越南流行的消息工具（捆绑插件）。
+- [Zalo Personal](/channels/zalouser) - 通过二维码登录的 Zalo 个人账号（捆绑插件）。
 
 ## 说明
 

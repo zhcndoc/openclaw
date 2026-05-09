@@ -64,9 +64,9 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 
 ### Playwright 要求
 
-某些功能（navigate/act/AI snapshot/role snapshot、元素截图、
-PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
-清晰的 501 错误。
+Some features (navigate/act/AI snapshot/role snapshot, element screenshots,
+PDF) require Playwright. If Playwright isn't installed, those endpoints return
+a clear 501 error.
 
 不使用 Playwright 仍可用的功能：
 
@@ -232,12 +232,12 @@ openclaw browser set device "iPhone 14"
 
 ## 快照和 ref
 
-OpenClaw 支持两种“快照”样式：
+OpenClaw supports two "snapshot" styles:
 
-- **AI 快照（数字 refs）**: `openclaw browser snapshot`（默认；`--format ai`）
-  - 输出：包含数字 refs 的文本快照。
-  - 操作：`openclaw browser click 12`、`openclaw browser type 23 "hello"`。
-  - 在内部，ref 通过 Playwright 的 `aria-ref` 解析。
+- **AI snapshot (numeric refs)**: `openclaw browser snapshot` (default; `--format ai`)
+  - Output: a text snapshot that includes numeric refs.
+  - Actions: `openclaw browser click 12`, `openclaw browser type 23 "hello"`.
+  - Internally, the ref is resolved via Playwright's `aria-ref`.
 
 - **Role 快照（类似 `e12` 的 role refs）**: `openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
   - 输出：带有 `[ref=e12]`（以及可选 `[nth=1]`）的基于 role 的列表/树。
@@ -290,7 +290,7 @@ openclaw browser wait "#main" \
 
 ## 调试工作流
 
-当某个操作失败时（例如“not visible”、“strict mode violation”、“covered”）：
+当操作失败时（例如“not visible”、“strict mode violation”、“covered”）：
 
 1. `openclaw browser snapshot --interactive`
 2. 使用 `click <ref>` / `type <ref>`（在交互模式下优先使用 role refs）
@@ -320,7 +320,7 @@ JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/ch
 
 ## 状态和环境开关
 
-这些对于“让站点表现得像 X 一样”的工作流很有用：
+这些对“让网站表现得像 X”之类的工作流很有用：
 
 - Cookies：`cookies`、`cookies set`、`cookies clear`
 - 存储：`storage local|session get|set|clear`
@@ -360,7 +360,7 @@ JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/ch
 
 ## 相关内容
 
-- [Browser](/tools/browser) — 概览、配置、配置文件、安全性
-- [Browser login](/tools/browser-login) — 登录网站
+- [Browser](/tools/browser) - 概述、配置、配置文件、安全性
+- [Browser login](/tools/browser-login) - 登录网站
 - [Browser Linux troubleshooting](/tools/browser-linux-troubleshooting)
 - [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

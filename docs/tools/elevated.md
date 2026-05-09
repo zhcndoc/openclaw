@@ -97,13 +97,27 @@ title: "提升模式"
 
 ## elevated 不控制的内容
 
-- **工具策略**：如果 `exec` 被工具策略拒绝，elevated 无法绕过
-- **宿主选择策略**：elevated 不会将 `auto` 变成可自由跨宿主覆盖。它使用已配置/会话的 exec 目标规则，仅在目标已经是 `node` 时选择 `node`
-- **与 `/exec` 分离**：`/exec` 指令会为已授权发送者调整每个会话的 exec 默认值，并且不需要 elevated 模式
+- **工具策略**：如果 `exec` 被工具策略拒绝，elevated 无法覆盖。
+- **宿主选择策略**：elevated 不会将 `auto` 变成可自由跨宿主覆盖的选项。它会使用已配置/会话的 exec 目标规则，仅当目标本身已经是 `node` 时才选择 `node`。
+- **与 `/exec` 分离**：`/exec` 指令会为授权发送者调整每个会话的 exec 默认值，并不需要 elevated 模式。
+
+<Note>
+  bash 聊天命令（`!` 前缀；`/bash` 别名）是一个独立门控，除了其自身的 `tools.bash.enabled` 标志外，还要求启用 `tools.elevated`。禁用 elevated 也会将 `!` shell 命令一并锁定。
+</Note>
 
 ## 相关内容
 
-- [Exec 工具](/tools/exec) — shell 命令执行
-- [Exec 审批](/tools/exec-approvals) — 审批和允许列表系统
-- [沙箱化](/gateway/sandboxing) — 沙箱配置
-- [沙箱 vs 工具策略 vs 提升模式](/gateway/sandbox-vs-tool-policy-vs-elevated)
+<CardGroup cols={2}>
+  <Card title="Exec 工具" href="/tools/exec" icon="terminal">
+    来自代理的 Shell 命令执行。
+  </Card>
+  <Card title="Exec 审批" href="/tools/exec-approvals" icon="shield">
+    `exec` 的审批和允许列表系统。
+  </Card>
+  <Card title="沙箱" href="/gateway/sandboxing" icon="box">
+    Gateway 级别的沙箱配置。
+  </Card>
+  <Card title="沙箱 vs 工具策略 vs 提升模式" href="/gateway/sandbox-vs-tool-policy-vs-elevated" icon="scale-balanced">
+    工具调用期间这三个门控如何组合。
+  </Card>
+</CardGroup>

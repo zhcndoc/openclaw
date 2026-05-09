@@ -15,11 +15,22 @@ Session 列表不是通道/提供方在线状态检查。它们显示的是会�
 通道连接状态时，请使用 `openclaw channels status --probe`、
 `openclaw status --deep` 或 `openclaw health --verbose`。
 
+`openclaw sessions` 和 Gateway `sessions.list` 响应默认都有上限，因此大型、长期存储不会垄断 CLI 进程或 Gateway
+事件循环。CLI 默认返回最新的 100 个会话；传入
+`--limit <n>` 可获取更小/更大的窗口，或在你有意
+需要完整存储时使用 `--limit all`。当调用方需要显示还有更多行时，JSON 响应会包含 `totalCount`、`limitApplied` 和 `hasMore`。
+
+RPC 客户端可以传入 `configuredAgentsOnly: true`，在保留广泛的组合
+发现来源的同时，仅返回当前在配置中存在的代理的行。
+控制 UI 默认使用该模式，因此已删除或仅磁盘上的代理存储不会
+再次出现在 Sessions 视图中。
+
 ```bash
 openclaw sessions
 openclaw sessions --agent work
 openclaw sessions --all-agents
 openclaw sessions --active 120
+openclaw sessions --limit 25
 openclaw sessions --verbose
 openclaw sessions --json
 ```
@@ -27,10 +38,11 @@ openclaw sessions --json
 作用域选择：
 
 - 默认：已配置的默认代理存储
-- `--verbose`：详细日志
-- `--agent <id>`：一个已配置的代理存储
-- `--all-agents`：聚合所有已配置的代理存储
-- `--store <path>`：显式指定存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）
+- `--verbose`: 详细日志
+- `--agent <id>`: 一个已配置的代理存储
+- `--all-agents`: 汇总所有已配置的代理存储
+- `--store <path>`: 显式存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）
+- `--limit <n|all>`: 要输出的最大行数（默认 `100`；`all` 恢复完整输出）
 
 为已存储的会话导出 trajectory bundle：
 
@@ -56,6 +68,9 @@ JSON 示例：
   ],
   "allAgents": true,
   "count": 2,
+  "totalCount": 2,
+  "limitApplied": 100,
+  "hasMore": false,
   "activeMinutes": null,
   "sessions": [
     { "agentId": "main", "key": "agent:main:main", "model": "gpt-5" },
@@ -74,22 +89,25 @@ openclaw sessions cleanup --agent work --dry-run
 openclaw sessions cleanup --all-agents --dry-run
 openclaw sessions cleanup --enforce
 openclaw sessions cleanup --enforce --active-key "agent:main:telegram:direct:123"
+openclaw sessions cleanup --dry-run --fix-dm-scope
 openclaw sessions cleanup --json
 ```
 
 `openclaw sessions cleanup` 使用配置中的 `session.maintenance` 设置：
 
-- 作用域说明：`openclaw sessions cleanup` 会维护会话存储、转录和 trajectory sidecar 文件。它不会清理 cron 运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [Cron configuration](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [Cron maintenance](/automation/cron-jobs#maintenance) 中说明。
+- 范围说明：`openclaw sessions cleanup` 会维护会话存储、转录和 trajectory sidecar。它不会清理 cron 运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [Cron 配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [Cron 维护](/automation/cron-jobs#maintenance) 中解释。
+- 清理还会删除未被引用、且早于 `session.maintenance.pruneAfter` 的主转录、压缩检查点和 trajectory sidecar；仍被 `sessions.json` 引用的文件会被保留。
 
-- `--dry-run`：预览将要剪枝/截断的条目数量，而不会写入。
-  - 在文本模式下，dry-run 会打印按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），这样你可以看到哪些会被保留，哪些会被移除。
-- `--enforce`：即使 `session.maintenance.mode` 为 `warn`，也强制应用维护。
-- `--fix-missing`：移除其转录文件缺失的条目，即使它们通常还未达到按年龄/数量淘汰的条件。
-- `--active-key <key>`：保护某个特定的活动 key，不因磁盘预算回收而被移除。持久化的外部会话指针，例如群组会话和按线程范围的聊天会话，也会按年龄/数量/磁盘预算维护而保留。
-- `--agent <id>`：为一个已配置的代理存储运行清理。
-- `--all-agents`：为所有已配置的代理存储运行清理。
-- `--store <path>`：针对特定的 `sessions.json` 文件运行。
-- `--json`：打印 JSON 摘要。使用 `--all-agents` 时，输出会包含每个存储的一份摘要。
+- `--dry-run`: 预览将要修剪/截断的条目数量，而不写入。
+  - 在文本模式下，dry-run 会输出按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），这样你可以看到哪些会被保留、哪些会被移除。
+- `--enforce`: 即使 `session.maintenance.mode` 为 `warn` 也执行维护。
+- `--fix-missing`: 移除转录文件缺失的条目，即使它们通常还不会因时间/数量而被清理。
+- `--fix-dm-scope`: 当 `session.dmScope` 为 `main` 时，清理早期 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由遗留的、按对等方键控的陈旧直连 DM 行。请先使用 `--dry-run`；执行清理会将这些行从 `sessions.json` 中移除，并将其转录保留为已删除归档。
+- `--active-key <key>`: 保护特定的活动 key 不被磁盘预算驱逐。持久化的外部会话指针，例如群组会话和线程作用域聊天会话，也会因年龄/数量/磁盘预算维护而保留。
+- `--agent <id>`: 为一个已配置的代理存储运行清理。
+- `--all-agents`: 为所有已配置的代理存储运行清理。
+- `--store <path>`: 针对特定 `sessions.json` 文件运行。
+- `--json`: 打印 JSON 摘要。使用 `--all-agents` 时，输出会为每个存储包含一个摘要。
 
 当 Gateway 可用时，对已配置代理存储执行的非 dry-run 清理会通过 Gateway 发送，因此它与运行时流量共享同一个会话存储写入器。若要对某个存储文件进行显式离线修复，请使用 `--store <path>`。
 
@@ -106,6 +124,8 @@ openclaw sessions cleanup --json
       "storePath": "/home/user/.openclaw/agents/main/sessions/sessions.json",
       "beforeCount": 120,
       "afterCount": 80,
+      "missing": 0,
+      "dmScopeRetired": 0,
       "pruned": 40,
       "capped": 0
     },
@@ -114,6 +134,8 @@ openclaw sessions cleanup --json
       "storePath": "/home/user/.openclaw/agents/work/sessions/sessions.json",
       "beforeCount": 18,
       "afterCount": 18,
+      "missing": 0,
+      "dmScopeRetired": 0,
       "pruned": 0,
       "capped": 0
     }

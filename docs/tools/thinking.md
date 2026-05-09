@@ -7,34 +7,35 @@ title: "思考级别"
 
 ## 它的作用
 
-- 任何传入正文中的内联指令：`/t <level>`、`/think:<level>`，或 `/thinking <level>`。
+- 任意入站正文中的内联指令：`/t <level>`、`/think:<level>` 或 `/thinking <level>`。
 - 级别（别名）：`off | minimal | low | medium | high | xhigh | adaptive | max`
-  - minimal → “think”
-  - low → “think hard”
-  - medium → “think harder”
-  - high → “ultrathink” (max budget)
-  - xhigh → “ultrathink+” (GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 的 effort)
-  - adaptive → 由提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7，以及 Google Gemini 动态思考）
-  - max → 提供方最大推理（Anthropic Claude Opus 4.7；Ollama 会将其映射为最高的原生 `think` effort）
-  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 映射为 `xhigh`。
-  - `highest` 映射为 `high`。
+  - minimal → "think"
+  - low → "think hard"
+  - medium → "think harder"
+  - high → "ultrathink"（最大预算）
+  - xhigh → "ultrathink+"（GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 effort）
+  - adaptive → 提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7，以及 Google Gemini dynamic thinking）
+  - max → 提供方最大推理（Anthropic Claude Opus 4.7；Ollama 会将其映射为其最高原生的 `think` effort）
+  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 都映射到 `xhigh`。
+  - `highest` 映射到 `high`。
 - 提供方说明：
-  - Thinking 菜单和选择器由 provider-profile 驱动。Provider 插件会为所选模型声明确切的级别集合，包括诸如二进制 `on` 之类的标签。
-  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的 provider/model profile 中公开。对不支持级别的输入指令会被拒绝，并给出该模型有效的选项。
-  - 现有已存储的不支持级别会按 provider profile 排名重映射。`adaptive` 在非自适应模型上回退到 `medium`，而 `xhigh` 和 `max` 则回退到所选模型支持的最大非 `off` 级别。
-  - Anthropic Claude 4.6 模型在未显式设置 thinking 级别时默认使用 `adaptive`。
-  - Anthropic Claude Opus 4.7 不默认使用自适应思考。其 API effort 默认值仍由提供方掌控，除非你显式设置 thinking 级别。
-  - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是一个思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
-  - Anthropic Claude Opus 4.7 还暴露 `/think max`；它会映射到同一条由提供方掌控的最大 effort 路径。
-  - DeepSeek V4 模型暴露 `/think xhigh|max`；两者都映射到 DeepSeek `reasoning_effort: "max"`，而较低的非 `off` 级别映射到 `high`。
-  - Ollama 支持思考的模型暴露 `/think low|medium|high|max`；`max` 映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` effort 字符串。
-  - OpenAI GPT 模型通过模型特定的 Responses API effort 支持来映射 `/think`。只有在目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略被禁用的 reasoning 负载，而不是发送不支持的值。
-  - 自定义的 OpenAI 兼容目录条目可以通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用了相同的兼容元数据来映射出站 OpenAI reasoning effort 负载，因此菜单、会话验证、agent CLI 和 `llm-task` 会与传输行为保持一致。
-  - 过期配置的 OpenRouter Hunter Alpha refs 会跳过代理 reasoning 注入，因为该已下线路由可能会通过 reasoning 字段返回最终答案文本。
-  - Google Gemini 会将 `/think adaptive` 映射为 Gemini 由提供方掌控的动态思考。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍然会映射到该模型系列最接近的 Gemini `thinkingLevel` 或 budget。
-  - 通过 Anthropic 兼容流路径的 MiniMax（`minimax/*`）默认使用 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置 thinking。这样可以避免 MiniMax 非原生 Anthropic 流格式中泄漏的 `reasoning_content` 增量。
-  - Z.AI（`zai/*`）仅支持二进制 thinking（`on`/`off`）。任何非 `off` 级别都视为 `on`（映射为 `low`）。
-  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。当 thinking 启用时，Moonshot 只接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容的值规范化为 `auto`。
+  - 思考菜单和选择器由提供方配置文件驱动。提供方插件会为所选模型声明精确的级别集合，包括诸如二元 `on` 之类的标签。
+  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的提供方/模型配置文件中公开。对不受支持级别的输入指令会被拒绝，并返回该模型的有效选项。
+  - 现有已存储但不受支持的级别会按提供方配置文件排名重新映射。`adaptive` 在非自适应模型上回退到 `medium`，而 `xhigh` 和 `max` 则回退到所选模型支持的最高非 `off` 级别。
+  - Anthropic Claude 4.6 模型在未显式设置思考级别时默认使用 `adaptive`。
+  - Anthropic Claude Opus 4.7 不会默认使用自适应思考。其 API effort 默认值保持由提供方管理，除非你显式设置了思考级别。
+  - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
+  - Anthropic Claude Opus 4.7 也公开 `/think max`；它会映射到相同的由提供方管理的最大 effort 路径。
+  - 直接的 DeepSeek V4 模型公开 `/think xhigh|max`；二者都会映射到 DeepSeek `reasoning_effort: "max"`，而更低的非 `off` 级别则映射到 `high`。
+  - 通过 OpenRouter 路由的 DeepSeek V4 模型公开 `/think xhigh`，并发送 OpenRouter 支持的 `reasoning_effort` 值。已存储的 `max` 覆盖会回退到 `xhigh`。
+  - 支持思考的 Ollama 模型公开 `/think low|medium|high|max`；`max` 映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` 这几种 effort 字符串。
+  - OpenAI GPT 模型通过特定于模型的 Responses API effort 支持来映射 `/think`。仅当目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略已禁用的推理负载，而不是发送不受支持的值。
+  - 自定义 OpenAI 兼容目录条目可以通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用与映射出站 OpenAI reasoning effort 负载相同的兼容元数据，因此菜单、会话校验、agent CLI 和 `llm-task` 会与传输行为保持一致。
+  - 已失效配置的 OpenRouter Hunter Alpha 引用会跳过代理推理注入，因为该已下线路由可能会通过 reasoning 字段返回最终答案文本。
+  - Google Gemini 将 `/think adaptive` 映射为 Gemini 由提供方管理的 dynamic thinking。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍会映射为该模型家族中最接近的 Gemini `thinkingLevel` 或 budget。
+  - MiniMax（`minimax/*`）在 Anthropic 兼容流式路径上，默认 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置了 thinking。这可以避免 MiniMax 非原生 Anthropic 流格式中泄漏的 `reasoning_content` 增量。
+  - Z.AI（`zai/*`）仅支持二元 thinking（`on`/`off`）。任何非 `off` 级别都被视为 `on`（映射为 `low`）。
+  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。启用 thinking 时，Moonshot 只接受 `tool_choice` 为 `auto|none`；OpenClaw 会将不兼容的值规范化为 `auto`。
 
 ## 解析顺序
 
@@ -54,6 +55,7 @@ title: "思考级别"
 ## 按 agent 应用
 
 - **Embedded Pi**：解析后的级别会传递给进程内 Pi agent 运行时。
+- **Claude CLI backend**：在使用 `claude-cli` 时，非 `off` 级别会作为 `--effort` 传递给 Claude Code；参见 [CLI backends](/gateway/cli-backends)。
 
 ## 快速模式（/fast）
 
@@ -75,14 +77,17 @@ title: "思考级别"
 
 ## 详细日志指令（/verbose 或 /v）
 
-- 级别：`on`（最小） | `full` | `off`（默认）。
-- 仅包含指令的消息会切换会话 verbose 并回复 `Verbose logging enabled.` / `Verbose logging disabled.`；无效级别会返回提示且不改变状态。
-- `/verbose off` 会存储一个显式的会话覆盖；可在 Sessions UI 中通过选择 `inherit` 清除。
+- 级别：`on`（minimal）| `full` | `off`（默认）。
+- 仅包含指令的消息会切换会话 verbose 并回复 `Verbose logging enabled.` / `Verbose logging disabled.`；无效级别会返回提示而不会更改状态。
+- `/verbose off` 会存储一个显式会话覆盖；可在 Sessions UI 中选择 `inherit` 来清除它。
 - 内联指令仅影响该消息；否则会应用会话/全局默认值。
 - 发送不带参数的 `/verbose`（或 `/verbose:`）可查看当前 verbose 级别。
-- 当 verbose 打开时，输出结构化工具结果的 agent（Pi、其他 JSON agents）会将每次工具调用作为各自独立的仅元数据消息返回，并在可用时以前缀 `<emoji> <tool-name>: <arg>`（path/command）显示。这些工具摘要会在每个工具启动时立即发送（分开的气泡），而不是作为流式增量发送。
-- 工具失败摘要在正常模式下仍然可见，但原始错误详情后缀会被隐藏，除非 verbose 为 `on` 或 `full`。
-- 当 verbose 为 `full` 时，工具输出也会在完成后转发（单独气泡，截断到安全长度）。如果你在运行进行中切换 `/verbose on|full|off`，后续的工具气泡会遵循新的设置。
+- 启用 verbose 时，会产出结构化工具结果的 agent（Pi、其他 JSON agents）会将每次工具调用作为各自的仅元数据消息回传，若可用则以前缀 `<emoji> <tool-name>: <arg>` 标记。这些工具摘要会在每个工具启动时立即发送（独立气泡），而不是作为流式增量发送。
+- 工具失败摘要在正常模式下仍可见，但原始错误详情后缀会被隐藏，除非 verbose 为 `on` 或 `full`。
+- 当 verbose 为 `full` 时，工具输出也会在完成后转发（独立气泡，截断到安全长度）。如果你在运行进行中切换 `/verbose on|full|off`，后续的工具气泡会遵循新设置。
+- `agents.defaults.toolProgressDetail` 控制 `/verbose` 工具摘要和 progress-draft 工具行的形式。使用 `"explain"`（默认）可获得简洁的人类标签，例如 `🛠️ Exec: checking JS syntax`；使用 `"raw"` 则会同时附加原始命令/详情以便调试。每个 agent 可通过 `agents.list[].toolProgressDetail` 覆盖默认值。
+  - `explain`：`🛠️ Exec: check JS syntax for /tmp/app.js`
+  - `raw`：`🛠️ Exec: check JS syntax for /tmp/app.js, node --check /tmp/app.js`
 
 ## 插件追踪指令（/trace）
 
@@ -96,12 +101,12 @@ title: "思考级别"
 ## 推理可见性（/reasoning）
 
 - 级别：`on|off|stream`。
-- 仅包含指令的消息会切换回复中是否显示思考块。
-- 启用后，reasoning 会作为一条**单独的消息**发送，并以前缀 `Reasoning:` 标识。
-- `stream`（仅 Telegram）：在回复生成期间将 reasoning 流式写入 Telegram 草稿气泡，然后在不包含 reasoning 的情况下发送最终答案。
+- 仅包含指令的消息会切换是否在回复中显示 thinking 块。
+- 启用后，reasoning 会作为一条**单独消息**发送，并以前缀 `Reasoning:` 标识。
+- `stream`（仅 Telegram）：在回复生成时将 reasoning 流式写入 Telegram 草稿气泡，然后在最终答案中不包含 reasoning。
 - 别名：`/reason`。
 - 发送不带参数的 `/reasoning`（或 `/reasoning:`）可查看当前 reasoning 级别。
-- 解析顺序：内联指令，然后是会话覆盖，然后是每个 agent 的默认值（`agents.list[].reasoningDefault`），最后是回退（`off`）。
+- 解析顺序：内联指令，其次是会话覆盖，然后是每个 agent 的默认值（`agents.list[].reasoningDefault`），再然后是全局默认值（`agents.defaults.reasoningDefault`），最后回退（`off`）。
 
 对格式错误的本地模型 reasoning 标签会采取保守处理。已闭合的 `<think>...</think>` 块在正常回复中会保持隐藏，而在已显示文本之后出现的未闭合 reasoning 也会被隐藏。如果一条回复完全包裹在一个未闭合的起始标签中，并且否则会以空文本交付，OpenClaw 会移除格式错误的起始标签并交付剩余文本。
 
@@ -116,10 +121,11 @@ title: "思考级别"
 
 ## Web chat UI
 
-- Web 聊天思考选择器在页面加载时，会镜像入站 session store/config 中该会话已存储的级别。
+- 网页聊天的思考选择器在页面加载时会镜像入站会话存储/配置中的会话已存储级别。
 - 选择其他级别会立即通过 `sessions.patch` 写入会话覆盖；它不会等到下一次发送，也不是一次性的 `thinkingOnce` 覆盖。
-- 第一个选项始终是 `Default (<resolved level>)`，其中已解析的默认值来自当前会话模型的 provider thinking profile，以及 `/status` 和 `session_status` 使用的相同回退逻辑。
-- 该选择器使用网关 session 行/defaults 返回的 `thinkingLevels`，并将 `thinkingOptions` 保留为旧版标签列表。浏览器 UI 不再维护自己的 provider 正则列表；插件负责模型特定的级别集合。
+- 第一个选项始终是清除覆盖的选项。当会话继承了一个非 `off` 的有效默认值时，它会显示 `Inherited: <resolved level>`；当继承的 thinking 被禁用时，则显示 `Off`。
+- 显式的选择器选项会标记为覆盖，同时在有提供方标签时保留它们（例如，对带有提供方标签的 `max` 选项显示 `Override: maximum`）。
+- 选择器使用 gateway session 行/defaults 返回的 `thinkingLevels`，而 `thinkingOptions` 仅作为旧版标签列表保留。浏览器 UI 不维护自己的提供方正则列表；各插件负责具体模型的级别集合。
 - `/think:<level>` 仍然可用，并会更新相同的已存储会话级别，因此聊天指令和选择器会保持同步。
 
 ## Provider profiles

@@ -1,35 +1,35 @@
 ---
 summary: "上下文：模型看到什么、它如何构建，以及如何检查它"
 read_when:
-  - 你想了解在 OpenClaw 中“上下文”是什么意思
-  - 你在排查模型为什么“知道”某些东西（或者为什么忘了）
+  - 你想了解在 OpenClaw 中 “context” 的含义
+  - 你在调试模型为什么“知道”某件事（或者为什么忘了它）
   - 你想减少上下文开销（/context、/status、/compact）
 title: "上下文"
 ---
 
-“上下文”是 **OpenClaw 在一次运行中发送给模型的全部内容**。它受模型的 **上下文窗口**（token 限制）约束。
+"Context" 是 **OpenClaw 在一次运行中发送给模型的所有内容**。它受模型的 **上下文窗口**（token 限制）约束。
 
 初学者心智模型：
 
 - **系统提示词**（由 OpenClaw 构建）：规则、工具、技能列表、时间/运行时，以及注入的工作区文件。
-- **对话历史**：你在本会话中的消息 + 助手的消息。
-- **工具调用/结果 + 附件**：命令输出、文件读取、图片/音频等。
+- **对话历史**：你在本次会话中的消息 + 助手的消息。
+- **工具调用/结果 + 附件**：命令输出、文件读取、图像/音频等。
 
-上下文 _不等同于_ “记忆”：记忆可以存储在磁盘上并在之后重新加载；上下文是模型当前窗口中的内容。
+Context 并不等同于“记忆”：记忆可以存储在磁盘上并在之后重新加载；context 是当前模型窗口中的内容。
 
 ## 快速开始（检查上下文）
 
-- `/status` → 快速查看“我的窗口有多满？” + 会话设置。
-- `/context list` → 注入了什么 + 大致大小（按文件 + 总计）。
+- `/status` → 快速查看“我的窗口有多满？”以及会话设置。
+- `/context list` → 查看注入了什么内容 + 大致大小（按文件和总量）。
 - `/context detail` → 更深入的拆分：按文件、按工具 schema 大小、按技能条目大小，以及系统提示词大小。
-- `/usage tokens` → 在正常回复后附加每次回复的 token 使用页脚。
-- `/compact` → 将较早的历史总结为一个紧凑条目，以释放窗口空间。
+- `/usage tokens` → 在正常回复后附加每条回复的使用情况页脚。
+- `/compact` → 将较早的历史压缩成一个紧凑条目，以释放窗口空间。
 
 另见：[斜杠命令](/tools/slash-commands)、[Token 使用与成本](/reference/token-use)、[压缩](/concepts/compaction)。
 
 ## 示例输出
 
-数值会因模型、提供方、工具策略以及工作区中的内容而异。
+数值会因模型、提供方、工具策略以及你的工作区内容而异。
 
 ### `/context list`
 
@@ -81,9 +81,9 @@ Top tools (schema size):
 - 系统提示词（所有部分）。
 - 对话历史。
 - 工具调用 + 工具结果。
-- 附件/转录内容（图片/音频/文件）。
+- 附件/转录内容（图像/音频/文件）。
 - 压缩摘要和裁剪产物。
-- 提供方的“包装层”或隐藏头部（不可见，但仍计入）。
+- 提供方的“包装层”或隐藏头部（不可见，但仍会计入）。
 
 ## OpenClaw 如何构建系统提示词
 
@@ -94,11 +94,11 @@ Top tools (schema size):
 - 工作区位置。
 - 时间（UTC + 如已配置则转换后的用户时间）。
 - 运行时元数据（主机/OS/模型/思考）。
-- 在 **Project Context** 下注入的工作区启动文件。
+- 在 **项目上下文** 下注入的工作区启动文件。
 
 完整拆分：[系统提示词](/concepts/system-prompt)。
 
-## 注入的工作区文件（Project Context）
+## 注入的工作区文件（项目上下文）
 
 默认情况下，OpenClaw 会注入一组固定的工作区文件（如果存在）：
 
@@ -112,20 +112,20 @@ Top tools (schema size):
 
 大文件会按文件使用 `agents.defaults.bootstrapMaxChars`（默认 `12000` 字符）进行截断。OpenClaw 还会在所有文件上强制执行一个总的启动注入上限 `agents.defaults.bootstrapTotalMaxChars`（默认 `60000` 字符）。`/context` 会显示 **原始 vs 注入后** 的大小，以及是否发生了截断。
 
-当发生截断时，运行时可以在 Project Context 下注入一个提示块警告。通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `once`）进行配置。
+当发生截断时，运行时可以在项目上下文下注入一个提示块警告。通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `once`）进行配置。
 
 ## 技能：按需注入 vs 按需加载
 
 系统提示词包含一个精简的 **技能列表**（名称 + 描述 + 位置）。这个列表有真实的开销。
 
-技能说明默认 _不会_ 被包含。模型应仅在需要时 `read` 该技能的 `SKILL.md`。
+技能说明默认不会包含在内。模型应当仅在需要时 `read` 该技能的 `SKILL.md`。
 
 ## 工具：有两种成本
 
 工具会通过两种方式影响上下文：
 
-1. 系统提示词中的 **工具列表文本**（你看到的“Tooling”）。
-2. **工具 schemas**（JSON）。这些会发送给模型以便它调用工具。即使你看不到它们的纯文本形式，它们也会计入上下文。
+1. 系统提示词中的 **工具列表文本**（你看到的“工具信息”）。
+2. **工具 schemas**（JSON）。这些会发送给模型，以便它可以调用工具。即使你看不到它们的纯文本形式，它们也会计入上下文。
 
 `/context detail` 会拆分出最大的工具 schema，以便你看到哪些占用最多。
 
@@ -133,11 +133,11 @@ Top tools (schema size):
 
 斜杠命令由 Gateway 处理。有几种不同的行为：
 
-- **独立命令**：只有 `/...` 的消息会作为命令运行。
+- **独立命令**：仅为 `/...` 的消息会作为命令执行。
 - **指令**：`/think`、`/verbose`、`/trace`、`/reasoning`、`/elevated`、`/model`、`/queue` 会在模型看到消息之前被移除。
-  - 仅指令消息会持久化会话设置。
-  - 普通消息中的内联指令会作为逐消息提示。
-- **内联快捷方式**（仅允许名单发送者）：普通消息中的某些 `/...` token 可以立即运行（例如：“hey /status”），并会在模型看到剩余文本之前被移除。
+  - 仅指令消息会保留会话设置。
+  - 普通消息中的内联指令会作为每条消息的提示。
+- **内联快捷方式**（仅允许名单中的发送者）：普通消息中的某些 `/...` 标记可以立即执行（例如：“hey /status”），并且会在模型看到剩余文本之前被移除。
 
 详情：[斜杠命令](/tools/slash-commands)。
 
@@ -145,9 +145,9 @@ Top tools (schema size):
 
 哪些内容会跨消息保留取决于具体机制：
 
-- **普通历史** 会保存在会话转录中，直到根据策略被压缩/裁剪。
+- **普通历史** 会保留在会话转录中，直到按策略被压缩/裁剪。
 - **压缩** 会将摘要持久化到转录中，并保留最近的消息不变。
-- **裁剪** 会从 _内存中_ 的提示词里删除旧工具结果，以释放上下文窗口空间，但不会重写会话转录——完整历史仍可在磁盘上检查。
+- **裁剪** 会从 _内存中的_ 提示词里移除旧的工具结果，以释放上下文窗口空间，但不会重写会话转录——完整历史仍可在磁盘上检查。
 
 文档：[会话](/concepts/session)、[压缩](/concepts/compaction)、[会话裁剪](/concepts/session-pruning)。
 
@@ -164,14 +164,24 @@ Top tools (schema size):
 
 `/context` 在可用时会优先使用最新的 **运行构建** 系统提示词报告：
 
-- `System prompt (run)` = 从上一次嵌入式（支持工具的）运行中捕获，并持久化到会话存储。
-- `System prompt (estimate)` = 当没有运行报告时（或通过不会生成该报告的 CLI 后端运行时）即时计算。
+- `System prompt (run)` = 从最后一次嵌入式（可使用工具的）运行中捕获，并持久化到会话存储中。
+- `System prompt (estimate)` = 当不存在运行报告时（或通过不会生成报告的 CLI 后端运行时）即时计算得到。
 
 无论哪种方式，它都会报告大小和主要贡献者；它**不会**输出完整的系统提示词或工具 schemas。
 
 ## 相关内容
 
-- [上下文引擎](/concepts/context-engine) — 通过插件进行自定义上下文注入
-- [压缩](/concepts/compaction) — 总结长对话
-- [系统提示词](/concepts/system-prompt) — 系统提示词如何构建
-- [Agent 循环](/concepts/agent-loop) — 完整的代理执行周期
+<CardGroup cols={2}>
+  <Card title="Context engine" href="/concepts/context-engine" icon="puzzle-piece">
+    通过插件进行自定义上下文注入。
+  </Card>
+  <Card title="Compaction" href="/concepts/compaction" icon="compress">
+    对长对话进行摘要，以使其保持在模型窗口内。
+  </Card>
+  <Card title="System prompt" href="/concepts/system-prompt" icon="message-lines">
+    系统提示词如何构建，以及它在每轮中注入什么。
+  </Card>
+  <Card title="Agent loop" href="/concepts/agent-loop" icon="arrows-rotate">
+    从传入消息到最终回复的完整代理执行周期。
+  </Card>
+</CardGroup>

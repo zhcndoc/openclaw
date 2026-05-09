@@ -7,19 +7,27 @@ read_when:
 title: "Mistral"
 ---
 
-OpenClaw 支持 Mistral 用于文本/图像模型路由（`mistral/...`）以及
-通过媒体理解中的 Voxtral 进行音频转录。
-Mistral 也可用于记忆嵌入（`memorySearch.provider = "mistral"`）。
+OpenClaw 包含一个捆绑的 Mistral 插件，注册了四个契约：聊天补全、媒体理解（Voxtral 批量转录）、用于 Voice Call 的实时 STT（Voxtral Realtime），以及记忆嵌入（`mistral-embed`）。
 
-- 提供方：`mistral`
-- 认证：`MISTRAL_API_KEY`
-- API：Mistral Chat Completions（`https://api.mistral.ai/v1`）
+| Property         | Value                                       |
+| ---------------- | ------------------------------------------- |
+| Provider id      | `mistral`                                   |
+| Plugin           | bundled, `enabledByDefault: true`           |
+| Auth env var     | `MISTRAL_API_KEY`                           |
+| Onboarding flag  | `--auth-choice mistral-api-key`             |
+| Direct CLI flag  | `--mistral-api-key <key>`                   |
+| API              | OpenAI-compatible (`openai-completions`)    |
+| Base URL         | `https://api.mistral.ai/v1`                 |
+| Default model    | `mistral/mistral-large-latest`              |
+| Embedding model  | `mistral-embed`                             |
+| Voxtral batch    | `voxtral-mini-latest` (audio transcription) |
+| Voxtral realtime | `voxtral-mini-transcribe-realtime-2602`     |
 
 ## 开始使用
 
 <Steps>
   <Step title="获取你的 API 密钥">
-    在 [Mistral Console](https://console.mistral.ai/) 中创建一个 API 密钥。
+    在 [Mistral 控制台](https://console.mistral.ai/) 中创建一个 API 密钥。
   </Step>
   <Step title="运行接入引导">
     ```bash
@@ -155,11 +163,12 @@ OpenClaw 将 Mistral 实时 STT 默认设为 8 kHz 的 `pcm_mulaw`，因此 Voic
 
   </Accordion>
 
-  <Accordion title="认证和基础 URL">
-    - Mistral 认证使用 `MISTRAL_API_KEY`。
-    - 提供方基础 URL 默认是 `https://api.mistral.ai/v1`。
+  <Accordion title="Auth and base URL">
+    - Mistral 认证使用 `MISTRAL_API_KEY`（Bearer 头）。
+    - 提供方基础 URL 默认为 `https://api.mistral.ai/v1`，并接受标准的 OpenAI 兼容 chat-completions 请求格式。
     - 接入引导的默认模型是 `mistral/mistral-large-latest`。
-    - Z.AI 使用带有你的 API 密钥的 Bearer 认证。
+    - 只有当 Mistral 明确发布了你需要的区域端点时，才在 `models.providers.mistral.baseUrl` 下覆盖基础 URL。
+
   </Accordion>
 </AccordionGroup>
 

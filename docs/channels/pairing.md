@@ -7,8 +7,8 @@ read_when:
 title: "配对"
 ---
 
-“配对” 是 OpenClaw 的显式访问审批步骤。
-它用于两个场景：
+"配对" 是 OpenClaw 的显式访问批准步骤。
+它用于两个地方：
 
 1. **DM 配对**（允许谁可以与机器人交谈）
 2. **节点配对**（允许哪些设备/节点加入网关网络）
@@ -45,7 +45,7 @@ openclaw pairing approve telegram <CODE>
 审批提示。在拥有者存在之后，后续的配对批准只会授予 DM
 访问权限；不会再添加更多拥有者。
 
-支持的频道：`bluebubbles`, `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`。
+Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`.
 
 ### 可复用的发送者组
 
@@ -109,10 +109,10 @@ openclaw pairing approve telegram <CODE>
 如果你使用 `device-pair` 插件，你可以完全通过 Telegram 完成首次设备配对：
 
 1. 在 Telegram 中给你的机器人发送：`/pair`
-2. 机器人会回复两条消息：一条说明消息，以及一条单独的**设置码**消息（在 Telegram 中更容易复制/粘贴）。
-3. 在你的手机上，打开 OpenClaw iOS 应用 → 设置 → Gateway。
-4. 粘贴设置码并连接。
-5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和范围），然后批准。
+2. 机器人会回复两条消息：一条说明消息和一条单独的**设置码**消息（在 Telegram 中很容易复制/粘贴）。
+3. 在手机上，打开 OpenClaw iOS 应用 → Settings → Gateway。
+4. 扫描二维码或粘贴设置码并连接。
+5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和作用域），然后批准。
 
 设置码是一个 base64 编码的 JSON 负载，其中包含：
 
@@ -132,6 +132,12 @@ openclaw pairing approve telegram <CODE>
 
 在设置码有效期间，请将其视为密码。
 
+对于 Tailscale、公网或其他远程移动端配对，请使用 Tailscale Serve/Funnel
+或其他 `wss://` Gateway URL。明文 `ws://` 设置码仅接受
+环回、本地 LAN 地址、`.local` Bonjour 主机，以及 Android
+模拟器主机。Tailnet CGNAT 地址、`.ts.net` 名称和公网主机仍会在
+二维码/设置码发放之前失败并关闭。
+
 ### 批准节点设备
 
 ```bash
@@ -140,8 +146,13 @@ openclaw devices approve <requestId>
 openclaw devices reject <requestId>
 ```
 
-如果同一设备使用不同的认证细节重试（例如不同的
-role/scopes/public key），之前的待处理请求会被取代，并创建一个新的
+当由于批准配对设备会话是以仅配对范围打开的而导致显式批准被拒绝时，CLI 会使用
+`operator.admin` 重新尝试同一请求。这使得已有管理能力的配对设备能够恢复新的
+Control UI/浏览器配对，而无需手动编辑 `devices/paired.json`。Gateway
+仍会验证重试连接；无法使用 `operator.admin` 进行身份验证的令牌仍会被阻止。
+
+如果同一设备使用不同的认证详情重试（例如不同的
+角色/范围/公钥），先前的待处理请求会被取代，并创建一个新的
 `requestId`。
 
 <Note>
@@ -193,7 +204,6 @@ role/scopes/public key），之前的待处理请求会被取代，并创建一�
   - Telegram: [Telegram](/channels/telegram)
   - WhatsApp: [WhatsApp](/channels/whatsapp)
   - Signal: [Signal](/channels/signal)
-  - BlueBubbles（iMessage）: [BlueBubbles](/channels/bluebubbles)
-  - iMessage（旧版）: [iMessage](/channels/imessage)
+  - iMessage: [iMessage](/channels/imessage)
   - Discord: [Discord](/channels/discord)
   - Slack: [Slack](/channels/slack)

@@ -29,19 +29,19 @@ sidebarTitle: "模型提供商"
   <Accordion title="OpenAI 提供商/运行时分离">
     OpenAI 系列路由以缀前区分：
 
-    - `openai/<model>` 再加上 `agents.defaults.agentRuntime.id: "codex"` 时，使用原生 Codex app-server harness。这通常是 ChatGPT/Codex 订阅方案。
-    - `openai-codex/<model>` 使用 PI 中的 Codex OAuth。
-    - 不带 Codex 运行时覆盖的 `openai/<model>` 使用 PI 中直接的 OpenAI API key 提供商。
+    - `openai/<model>` 默认使用原生 Codex app-server harness 处理代理轮次。这通常是 ChatGPT/Codex 订阅设置。
+    - `openai-codex/<model>` 是旧式配置，doctor 会将其重写为 `openai/<model>`。
+    - `openai/<model>` 加上 provider/model `agentRuntime.id: "pi"` 时，会使用 PI 处理显式 API key 或兼容性路由。
 
     参见 [OpenAI](/providers/openai) 和 [Codex harness](/plugins/codex-harness)。如果提供商/运行时分离让你感到困惑，请先阅读 [Agent runtimes](/concepts/agent-runtimes)。
 
-    插件自动启用也遵循同样的边界：`openai-codex/<model>` 属于 OpenAI 插件，而 Codex 插件则由 `agentRuntime.id: "codex"` 或旧式 `codex/<model>` 引用启用。
+    插件自动启用遵循相同边界：`openai/*` 代理引用会为默认路由启用 Codex 插件；显式 provider/model `agentRuntime.id: "codex"` 或旧式 `codex/<model>` 引用也同样需要它。
 
-    当 `agentRuntime.id: "codex"` 已设置时，GPT-5.5 可通过原生 Codex app-server harness 使用；在 PI 中可通过 `openai-codex/gpt-5.5` 进行 Codex OAuth；当你的账户暴露了它时，还可通过 PI 中的 `openai/gpt-5.5` 直接使用 API key 流量。
+    GPT-5.5 默认可通过原生 Codex app-server harness 在 `openai/gpt-5.5` 上使用；只有当 provider/model 运行时策略明确选择 `pi` 时，才通过 PI 使用。
 
   </Accordion>
   <Accordion title="CLI 运行时">
-    CLI 运行时使用相同的分离方式：先选择规范模型引用，如 `anthropic/claude-*`、`google/gemini-*` 或 `openai/gpt-*`，然后在想使用本地 CLI 后端时，将 `agents.defaults.agentRuntime.id` 设置为 `claude-cli`、`google-gemini-cli` 或 `codex-cli`。
+    CLI 运行时使用相同的拆分方式：先选择规范模型引用，如 `anthropic/claude-*`、`google/gemini-*` 或 `openai/gpt-*`，然后在希望使用本地 CLI 后端时，将 provider/model 运行时策略设置为 `claude-cli`、`google-gemini-cli` 或 `codex-cli`。
 
     旧式 `claude-cli/*`、`google-gemini-cli/*` 和 `codex-cli/*` 引用会迁移回规范提供商引用，并将运行时单独记录。
 
@@ -82,7 +82,7 @@ sidebarTitle: "模型提供商"
 
 ## 内置提供商（pi-ai 目录）
 
-OpenClaw 自带 pi‑ai 目录。这些提供商**不需要** `models.providers` 配置；只需设置认证并选择一个模型即可。
+OpenClaw 自带 pi-ai 目录。这些提供商**不需要** `models.providers` 配置；只需设置认证并选择模型即可。
 
 ### OpenAI
 
@@ -115,8 +115,10 @@ OpenClaw 自带 pi‑ai 目录。这些提供商**不需要** `models.providers`
 - 可选轮换：`ANTHROPIC_API_KEYS`、`ANTHROPIC_API_KEY_1`、`ANTHROPIC_API_KEY_2`，以及 `OPENCLAW_LIVE_ANTHROPIC_KEY`（单个覆盖）
 - 示例模型：`anthropic/claude-opus-4-6`
 - CLI：`openclaw onboard --auth-choice apiKey`
-- 直接的公共 Anthropic 请求支持共享的 `/fast` 开关和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API key 和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic `service_tier`（`auto` vs `standard_only`）
-- 首选的 Claude CLI 配置会保持模型引用为规范形式，并单独选择 CLI 后端：`anthropic/claude-opus-4-7` 搭配 `agents.defaults.agentRuntime.id: "claude-cli"`。旧式 `claude-cli/claude-opus-4-7` 引用仍可用于兼容。
+- 直接的公开 Anthropic 请求支持共享 `/fast` 切换和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API key 和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic `service_tier`（`auto` vs `standard_only`）
+- 推荐的 Claude CLI 配置会保持模型引用为规范形式，并单独选择 CLI 后端：`anthropic/claude-opus-4-7` 搭配
+  模型级 `agentRuntime.id: "claude-cli"`。旧式
+  `claude-cli/claude-opus-4-7` 引用仍可用于兼容性。
 
 <Note>
 Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许，因此 OpenClaw 将 Claude CLI 复用和 `claude -p` 用法视为该集成的授权方式，除非 Anthropic 发布新的政策。Anthropic setup-token 仍然作为受支持的 OpenClaw token 路径可用，但 OpenClaw 现在在可用时优先使用 Claude CLI 复用和 `claude -p`。
@@ -130,23 +132,24 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
 
 ### OpenAI Codex OAuth
 
-- Provider: `openai-codex`
-- Auth: OAuth (ChatGPT)
-- PI model ref: `openai-codex/gpt-5.5`
-- Native Codex app-server harness ref: `openai/gpt-5.5` with `agents.defaults.agentRuntime.id: "codex"`
-- Native Codex app-server harness docs: [Codex harness](/plugins/codex-harness)
-- Legacy model refs: `codex/gpt-*`
-- Plugin boundary: `openai-codex/*` loads the OpenAI plugin; the native Codex app-server plugin is selected only by the Codex harness runtime or legacy `codex/*` refs.
-- CLI: `openclaw onboard --auth-choice openai-codex` or `openclaw models auth login --provider openai-codex`
-- Default transport is `auto` (WebSocket-first, SSE fallback)
-- Override per PI model via `agents.defaults.models["openai-codex/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
-- `params.serviceTier` is also forwarded on native Codex Responses requests (`chatgpt.com/backend-api`)
-- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) are only attached on native Codex traffic to `chatgpt.com/backend-api`, not generic OpenAI-compatible proxies
-- Shares the same `/fast` toggle and `params.fastMode` config as direct `openai/*`; OpenClaw maps that to `service_tier=priority`
-- `openai-codex/gpt-5.5` uses the Codex catalog native `contextWindow = 400000` and default runtime `contextTokens = 272000`; override the runtime cap with `models.providers.openai-codex.models[].contextTokens`
-- Policy note: OpenAI Codex OAuth is explicitly supported for external tools/workflows like OpenClaw.
-- For the common subscription plus native Codex runtime route, sign in with `openai-codex` auth but configure `openai/gpt-5.5` plus `agents.defaults.agentRuntime.id: "codex"`.
-- Use `openai-codex/gpt-5.5` only when you want the Codex OAuth/subscription route through PI; use `openai/gpt-5.5` without the Codex runtime override when your API-key setup and local catalog expose the public API route.
+- 提供商：`openai-codex`
+- 认证：OAuth（ChatGPT）
+- 旧式 PI 模型引用：`openai-codex/gpt-5.5`
+- 原生 Codex app-server harness 引用：`openai/gpt-5.5`
+- 原生 Codex app-server harness 文档： [Codex harness](/plugins/codex-harness)
+- 旧式模型引用：`codex/gpt-*`
+- 插件边界：`openai-codex/*` 会加载 OpenAI 插件；原生 Codex app-server 插件仅由 Codex harness 运行时或旧式 `codex/*` 引用选择。
+- CLI：`openclaw onboard --auth-choice openai-codex` 或 `openclaw models auth login --provider openai-codex`
+- 默认传输方式为 `auto`（优先 WebSocket，失败后回退到 SSE）
+- 可通过 `agents.defaults.models["openai-codex/<model>"].params.transport` 按 PI 模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
+- `params.serviceTier` 也会转发到原生 Codex Responses 请求（`chatgpt.com/backend-api`）
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）只会附加在发往 `chatgpt.com/backend-api` 的原生 Codex 流量上，不会用于通用的 OpenAI 兼容代理
+- 与直接的 `openai/*` 一样，共享 `/fast` 切换和 `params.fastMode` 配置；OpenClaw 会将其映射为 `service_tier=priority`
+- `openai-codex/gpt-5.5` 使用 Codex 目录的原生 `contextWindow = 400000` 和默认运行时 `contextTokens = 272000`；可通过 `models.providers.openai-codex.models[].contextTokens` 覆盖运行时上限
+- 政策说明：OpenAI Codex OAuth 明确支持 OpenClaw 之类的外部工具/工作流。
+- 对于常见的订阅加原生 Codex 运行时路径，请使用 `openai-codex` 认证登录，但配置 `openai/gpt-5.5`；OpenAI 代理轮次默认选择 Codex。
+- 仅当你想通过 PI 使用兼容性路由时，才将 provider/model `agentRuntime.id: "pi"` 一起使用；否则请让 `openai/gpt-5.5` 继续使用默认 Codex harness。
+- 较早的 `openai-codex/gpt-5.1*`、`openai-codex/gpt-5.2*` 和 `openai-codex/gpt-5.3*` 引用已被屏蔽，因为 ChatGPT/Codex OAuth 账号会拒绝它们；请改用 `openai-codex/gpt-5.5` 或原生 Codex 运行时路径。
 
 ```json5
 {
@@ -154,7 +157,6 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
   agents: {
     defaults: {
       model: { primary: "openai/gpt-5.5" },
-      agentRuntime: { id: "codex" },
     },
   },
 }
@@ -176,7 +178,7 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
 
 <CardGroup cols={3}>
   <Card title="GLM 模型" href="/providers/glm">
-    Z.AI Coding Plan 或通用 API 端点。
+    Z.AI 编码计划或通用 API 端点。
   </Card>
   <Card title="MiniMax" href="/providers/minimax">
     MiniMax Coding Plan OAuth 或 API key 访问。
@@ -292,14 +294,14 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 | ----------------------- | -------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
 | BytePlus                | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                           | `byteplus-plan/ark-code-latest`               |
 | Cerebras                | `cerebras`                       | `CEREBRAS_API_KEY`                                           | `cerebras/zai-glm-4.7`                        |
-| Cloudflare AI Gateway   | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                              | —                                             |
+| Cloudflare AI Gateway   | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                              | -                                             |
 | DeepInfra               | `deepinfra`                      | `DEEPINFRA_API_KEY`                                          | `deepinfra/deepseek-ai/DeepSeek-V3.2`         |
 | DeepSeek                | `deepseek`                       | `DEEPSEEK_API_KEY`                                           | `deepseek/deepseek-v4-flash`                  |
-| GitHub Copilot          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`         | —                                             |
-| Groq                    | `groq`                           | `GROQ_API_KEY`                                               | —                                             |
-| Hugging Face Inference  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                        | `huggingface/deepseek-ai/DeepSeek-R1`         |
+| GitHub Copilot          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`         | -                                             |
+| Groq                    | `groq`                           | `GROQ_API_KEY`                                               | -                                             |
+| Hugging Face Inference  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                         | `huggingface/deepseek-ai/DeepSeek-R1`         |
 | Kilo Gateway            | `kilocode`                       | `KILOCODE_API_KEY`                                           | `kilocode/kilo/auto`                          |
-| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                         | `kimi/kimi-code`                              |
+| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` 或 `KIMICODE_API_KEY`                         | `kimi/kimi-code`                              |
 | MiniMax                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                    | `minimax/MiniMax-M2.7`                        |
 | Mistral                 | `mistral`                        | `MISTRAL_API_KEY`                                            | `mistral/mistral-large-latest`                |
 | Moonshot                | `moonshot`                       | `MOONSHOT_API_KEY`                                           | `moonshot/kimi-k2.6`                          |
@@ -309,7 +311,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 | Qwen Cloud              | `qwen`                           | `QWEN_API_KEY` / `MODELSTUDIO_API_KEY` / `DASHSCOPE_API_KEY` | `qwen/qwen3.5-plus`                           |
 | StepFun                 | `stepfun` / `stepfun-plan`       | `STEPFUN_API_KEY`                                            | `stepfun/step-3.5-flash`                      |
 | Together                | `together`                       | `TOGETHER_API_KEY`                                           | `together/moonshotai/Kimi-K2.5`               |
-| Venice                  | `venice`                         | `VENICE_API_KEY`                                             | —                                             |
+| Venice                  | `venice`                         | `VENICE_API_KEY`                                             | -                                             |
 | Vercel AI Gateway       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                         | `vercel-ai-gateway/anthropic/claude-opus-4.6` |
 | Volcano Engine (Doubao) | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                     | `volcengine-plan/ark-code-latest`             |
 | xAI                     | `xai`                            | `XAI_API_KEY`                                                | `xai/grok-4.3`                                |
@@ -340,7 +342,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 
 ## 通过 `models.providers` 提供（自定义/基础 URL）
 
-使用 `models.providers`（或 `models.json`）来添加**自定义**提供商，或 OpenAI/Anthropic 兼容的代理。
+使用 `models.providers`（或 `models.json`）来添加**自定义**提供商或 OpenAI/Anthropic 兼容代理。
 
 下面许多内置的提供商插件已经发布了默认目录。只有在你想覆盖默认基础 URL、请求头或模型列表时，才使用显式的 `models.providers.<id>` 条目。
 
@@ -705,7 +707,7 @@ openclaw models list
 
 ## 相关内容
 
-- [配置参考](/gateway/config-agents#agent-defaults) — 模型配置键
-- [模型故障切换](/concepts/model-failover) — 回退链和重试行为
-- [模型](/concepts/models) — 模型配置和别名
-- [提供方](/providers) — 各提供方设置指南
+- [Configuration reference](/gateway/config-agents#agent-defaults) - 模型配置键
+- [Model failover](/concepts/model-failover) - 回退链和重试行为
+- [Models](/concepts/models) - 模型配置和别名
+- [Providers](/providers) - 每个提供商的设置指南

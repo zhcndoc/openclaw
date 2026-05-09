@@ -15,6 +15,16 @@ OpenClaw 有两个日志“输出面”：
 - **控制台输出**（你在终端 / 调试 UI 中看到的内容）。
 - **文件日志**（JSON 行），由网关日志记录器写入。
 
+在启动时，网关会打印已解析的默认代理模型，以及影响新会话的模式默认值，例如：
+
+```text
+agent model: openai-codex/gpt-5.5 (thinking=medium, fast=on)
+```
+
+`thinking` 来自默认代理、模型参数或全局代理默认值；
+当其未设置时，启动摘要会显示 `medium`。`fast` 来自
+默认代理或模型的 `fastMode` 参数。
+
 ## 基于文件的日志记录器
 
 - 默认轮转日志文件位于 `/tmp/openclaw/` 下（每天一个文件）：`openclaw-YYYY-MM-DD.log`
@@ -27,8 +37,13 @@ OpenClaw 有两个日志“输出面”：
 
 文件格式为每行一个 JSON 对象。
 
-控制 UI 的 Logs 选项卡通过网关（`logs.tail`）跟踪此文件。
-CLI 也可以执行相同操作：
+对话、实时语音和受管房间代码路径使用共享文件日志记录器
+来记录有界的生命周期记录。这些记录用于运维调试
+和 OTLP 日志导出；转录文本、音频负载、turn id、call id 和
+provider item id 不会被复制到日志记录中。
+
+控制 UI 的 Logs 选项卡通过网关（`logs.tail`）跟随该文件。
+CLI 也可以这样做：
 
 ```bash
 openclaw logs --follow
@@ -76,7 +91,7 @@ OpenClaw 可以在日志或转录输出离开进程之前屏蔽敏感令牌。�
 
 网关以两种模式打印 WebSocket 协议日志：
 
-- **正常模式（不带 `--verbose`）**：只打印“有意思”的 RPC 结果：
+- **正常模式（未使用 `--verbose`）**：仅打印“有意义”的 RPC 结果：
   - 错误（`ok=false`）
   - 慢调用（默认阈值：`>= 50ms`）
   - 解析错误

@@ -312,17 +312,23 @@ type ChannelTurnAdapter<TRaw> = {
 type ChannelTurnDeliveryAdapter = {
   deliver(payload: ReplyPayload, info: ChannelDeliveryInfo): Promise<ChannelDeliveryResult | void>;
   onError?(err: unknown, info: { kind: string }): void;
+  durable?: false | DurableInboundReplyDeliveryOptions;
 };
 
 type ChannelDeliveryResult = {
   messageIds?: string[];
+  receipt?: MessageReceipt;
   threadId?: string;
   replyToId?: string;
   visibleReplySent?: boolean;
 };
 ```
 
-`deliver` 会针对每个已缓冲的回复块调用一次。如果频道拥有平台消息 ID，请返回它们，这样分发器就能保留线程锚点并在后续块中编辑。对于仅观察的轮次，返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelTurnDeliveryAdapter()`。
+`deliver` 每个缓冲的回复块会调用一次。在消息生命周期迁移期间，组装后的频道轮次投递默认由频道拥有：省略 `durable` 字段表示内核必须直接调用 `deliver`，且不得通过通用出站投递路径路由。只有在频道经过审计并证明通用发送路径能保持旧的投递行为后，才能设置 `durable`，包括回复/线程目标、媒体处理、已发送消息/自回显缓存、状态清理以及返回的消息 ID。`durable: false` 仍然是“使用频道拥有的回调”的兼容写法，但未迁移的频道不应需要添加它。如果频道有平台消息 ID，请返回它们，以便分发器保留线程锚点并在后续块中继续编辑；较新的投递路径还应返回 `receipt`，这样恢复、预览收尾和重复抑制就可以摆脱对 `messageIds` 的依赖。对于仅观察的轮次，返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelTurnDeliveryAdapter()`。
+
+使用 `runPrepared` 且完全由频道拥有分发器的频道没有 `ChannelTurnDeliveryAdapter`。这些分发器默认不是 durable。它们应继续使用直接投递路径，直到显式选择新的发送上下文，并且具备完整的目标、可重放安全的适配器、receipt 契约以及频道副作用钩子。
+
+诸如 `recordInboundSessionAndDispatchReply`、`dispatchInboundReplyWithBase` 和直接 DM 辅助函数之类的公共兼容性辅助工具，在迁移期间必须保持行为不变。它们不应在调用方拥有的 `deliver` 或 `reply` 回调之前调用通用 durable 投递。
 
 ## 记录选项
 
@@ -388,6 +394,7 @@ await runtime.channel.turn.run({
 
 ## 相关内容
 
-- [构建频道插件](/plugins/sdk-channel-plugins) 了解更广泛的频道插件契约
-- [插件运行时 helper](/plugins/sdk-runtime) 了解其他 `runtime.*` 表面
-- [插件内部机制](/plugins/architecture-internals) 了解加载管线和注册表机制
+- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) for the planned send/receive/live lifecycle that will wrap this kernel
+- [Building channel plugins](/plugins/sdk-channel-plugins) for the broader channel plugin contract
+- [Plugin runtime helpers](/plugins/sdk-runtime) for other `runtime.*` surfaces
+- [Plugin internals](/plugins/architecture-internals) for load pipeline and registry mechanics

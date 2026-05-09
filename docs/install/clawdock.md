@@ -97,8 +97,16 @@ ClawDock 使用与 [Docker](/install/docker) 中描述的相同 Docker 配置拆
 
 当你想快速查看 `.env` 文件和 `openclaw.json` 时，使用 `clawdock-show-config`。它会在打印输出中隐藏 `.env` 值。
 
-## 相关页面
+## 相关
 
-- [Docker](/install/docker)
-- [Docker VM Runtime](/install/docker-vm-runtime)
-- [更新](/install/updating)
+<CardGroup cols={2}>
+  <Card title="Docker" href="/install/docker" icon="docker">
+    OpenClaw 的标准 Docker 安装。
+  </Card>
+  <Card title="Docker VM runtime" href="/install/docker-vm-runtime" icon="cube">
+    由 Docker 管理的 VM 运行时，用于更强的隔离。
+  </Card>
+  <Card title="Updating" href="/install/updating" icon="arrow-up-right-from-square">
+    更新 OpenClaw 包和受管服务。
+  </Card>
+</CardGroup>

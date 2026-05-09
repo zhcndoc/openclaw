@@ -81,6 +81,23 @@ title: "LLM 任务"
 
 ## 示例：Lobster 工作流步骤
 
+### 重要限制
+
+下面的示例假设 **独立运行的 Lobster CLI** 正在一个环境中运行，在该环境中 `openclaw.invoke` 已经具有正确的网关 URL/身份验证上下文。
+
+对于 OpenClaw 中捆绑的 **嵌入式** Lobster 运行器来说，这种嵌套 CLI 模式 **目前并不可靠**：
+
+```lobster
+openclaw.invoke --tool llm-task --action json --args-json '{ ... }'
+```
+
+在嵌入式 Lobster 还没有为此流程提供受支持的桥接之前，请优先选择以下任一方式：
+
+- 在 Lobster 之外直接调用 `llm-task` 工具，或
+- 不依赖嵌套 `openclaw.invoke` 调用的 Lobster 步骤。
+
+独立运行的 Lobster CLI 示例：
+
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
   "prompt": "根据输入的邮件，返回意图和草稿。",

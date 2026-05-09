@@ -17,8 +17,8 @@ sidebarTitle: "CLI 参考"
 - 模型和认证设置（OpenAI Code 订阅 OAuth、Anthropic Claude CLI 或 API key，以及 MiniMax、GLM、Ollama、Moonshot、StepFun 和 AI Gateway 选项）
 - 工作区位置和引导文件
 - 网关设置（端口、绑定、认证、tailscale）
-- 频道和提供方（Telegram、WhatsApp、Discord、Google Chat、Mattermost、Signal、BlueBubbles，以及其他捆绑的频道插件）
-- 守护进程安装（LaunchAgent、systemd 用户单元，或原生 Windows 计划任务，并带有 Startup 文件夹回退方案）
+- 渠道和提供方（Telegram、WhatsApp、Discord、Google Chat、Mattermost、Signal、iMessage，以及其他捆绑的渠道插件）
+- 守护进程安装（LaunchAgent、systemd 用户单元，或带启动文件夹回退的原生 Windows 计划任务）
 - 健康检查
 - 技能设置
 
@@ -63,17 +63,16 @@ sidebarTitle: "CLI 参考"
     - 非 loopback 绑定仍然需要认证。
 
   </Step>
-  <Step title="频道">
-    - [WhatsApp](/channels/whatsapp)：可选的 QR 登录
-    - [Telegram](/channels/telegram)：机器人令牌
-    - [Discord](/channels/discord)：机器人令牌
-    - [Google Chat](/channels/googlechat)：服务账号 JSON + webhook audience
-    - [Mattermost](/channels/mattermost)：机器人令牌 + 基础 URL
-    - [Signal](/channels/signal)：可选安装 `signal-cli` + 账号配置
-    - [BlueBubbles](/channels/bluebubbles)：推荐用于 iMessage；服务器 URL + 密码 + webhook
-    - [iMessage](/channels/imessage)：旧版 `imsg` CLI 路径 + DB 访问
-    - DM 安全：默认是配对。首次 DM 会发送一个代码；通过
-      `openclaw pairing approve <channel> <code>` 批准，或使用允许名单。
+  <Step title="渠道">
+    - [WhatsApp](/channels/whatsapp): 可选 QR 登录
+    - [Telegram](/channels/telegram): bot token
+    - [Discord](/channels/discord): bot token
+    - [Google Chat](/channels/googlechat): service account JSON + webhook audience
+    - [Mattermost](/channels/mattermost): bot token + base URL
+    - [Signal](/channels/signal): 可选安装 `signal-cli` + 账户配置
+    - [iMessage](/channels/imessage): `imsg` CLI 路径 + Messages 数据库访问；当网关运行在非 Mac 机器上时请使用 SSH 包装器
+    - DM 安全：默认是配对。第一条私信会发送验证码；通过
+      `openclaw pairing approve <channel> <code>` 批准，或使用允许列表。
   </Step>
   <Step title="守护进程安装">
     - macOS：LaunchAgent
@@ -89,7 +88,7 @@ sidebarTitle: "CLI 参考"
   </Step>
   <Step title="健康检查">
     - 启动网关（如需要）并运行 `openclaw health`。
-    - `openclaw status --deep` 会在状态输出中添加实时网关健康探测，包括在支持时的频道探测。
+    - `openclaw status --deep` 会在状态输出中添加实时网关健康探测，包括在支持时的渠道探测。
 
   </Step>
   <Step title="技能">

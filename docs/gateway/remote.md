@@ -5,7 +5,7 @@ read_when:
 title: "远程访问"
 ---
 
-这个仓库通过在专用主机（桌面/服务器）上保持单个 Gateway（master）运行，并将客户端连接到它，来支持“通过 SSH 远程访问”。
+本仓库通过在专用主机（桌面/服务器）上运行单个 Gateway（主节点），并将客户端连接到它，从而支持“通过 SSH 远程访问”。
 
 - 对于 **操作员（你 / macOS 应用）**：SSH 隧道是通用的兜底方案。
 - 对于 **节点（iOS/Android 和未来设备）**：连接到 Gateway **WebSocket**（按需使用 LAN/tailnet 或 SSH 隧道）。
@@ -60,8 +60,8 @@ title: "远程访问"
 
 说明：
 
-- **节点不会运行 gateway 服务。** 除非你有意运行隔离配置文件（见 [Multiple gateways](/gateway/multiple-gateways)），否则每台主机只应运行一个 gateway。
-- macOS 应用的“node 模式”本质上只是通过 Gateway WebSocket 连接的节点客户端。
+- **节点不运行 gateway 服务。** 除非你有意运行隔离配置文件（参见 [多个 gateway](/gateway/multiple-gateways)），否则每台主机只应运行一个 gateway。
+- macOS 应用中的“node 模式”只是通过 Gateway WebSocket 连接的 node 客户端。
 
 ## SSH 隧道（CLI + 工具）
 
@@ -100,9 +100,9 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 }
 ```
 
-当 gateway 仅绑定 loopback 时，请保持 URL 为 `ws://127.0.0.1:18789`，并先建立 SSH 隧道。
-在 macOS 应用的 SSH 隧道传输中，发现的 gateway 主机名应放在
-`gateway.remote.sshTarget`；`gateway.remote.url` 仍然保持为本地隧道 URL。
+当 gateway 仅绑定 loopback 时，请保持 URL 为 `ws://127.0.0.1:18789`，并先打开 SSH 隧道。
+在 macOS 应用的 SSH 隧道传输中，发现到的 gateway 主机名应放在
+`gateway.remote.sshTarget`；`gateway.remote.url` 保持为本地隧道 URL。
 
 ## 凭据优先级
 
@@ -137,7 +137,7 @@ macOS 菜单栏应用可以端到端驱动同一套配置（远程状态检查�
 
 ## 安全规则（远程/VPN）
 
-简而言之：**保持 Gateway 仅绑定 loopback**，除非你确定确实需要对外绑定。
+简短版：**保持 Gateway 仅绑定 loopback**，除非你确定需要绑定到其他地址。
 
 - **Loopback + SSH/Tailscale Serve** 是最安全的默认方式（不会公开暴露）。
 - 明文 `ws://` 默认仅限 loopback。对于受信任的私有网络，

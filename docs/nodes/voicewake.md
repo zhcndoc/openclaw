@@ -74,12 +74,12 @@ OpenClaw 将 **唤醒词视为由 **Gateway** 拥有的单一全局列表**。
 ### macOS 应用
 
 - 使用全局列表来控制 `VoiceWakeRuntime` 触发。
-- 在 Voice Wake 设置中编辑“Trigger words”会调用 `voicewake.set`，然后依赖广播让其他客户端保持同步。
+- 在 Voice Wake 设置中编辑“触发词”会调用 `voicewake.set`，然后依赖广播来让其他客户端保持同步。
 
 ### iOS 节点
 
 - 使用全局列表进行 `VoiceWakeManager` 触发检测。
-- 在设置中编辑 Wake Words 会调用 `voicewake.set`（通过 Gateway WS），并且也会保持本地唤醒词检测响应及时。
+- 在设置中编辑唤醒词会调用 `voicewake.set`（通过 Gateway WS），并且也会保持本地唤醒词检测响应及时。
 
 ### Android 节点
 

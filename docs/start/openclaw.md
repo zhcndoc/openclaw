@@ -6,13 +6,11 @@ read_when:
 title: "个人助手设置"
 ---
 
-# 使用 OpenClaw 构建个人助手
-
-OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等连接到 AI 代理。本指南介绍“个人助手”设置：一个专用的 WhatsApp 号码，表现得像你始终在线的 AI 助手。
+OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 以及更多服务连接到 AI 代理。本指南涵盖“个人助手”设置：一个专用的 WhatsApp 号码，像你始终在线的 AI 助手一样工作。
 
 ## ⚠️ 安全第一
 
-你正在让一个代理处于以下位置：
+你正在把一个代理放在这样的位置：
 
 - 在你的机器上运行命令（取决于你的工具策略）
 - 读取/写入你工作区中的文件
@@ -26,7 +24,7 @@ OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Ma
 
 ## 前提条件
 
-- 已安装并完成初始化的 OpenClaw —— 如果你还没做过，请参见 [Getting Started](/start/getting-started)
+- 已安装并完成 OpenClaw 配置 - 如果你还没做过，请参见 [Getting Started](/start/getting-started)
 - 一个用于助手的第二个电话号码（SIM/eSIM/预付费）
 
 ## 双手机设置（推荐）
@@ -39,7 +37,7 @@ flowchart TB
     B -- 通过 QR 连接 --> C["<b>你的 Mac（openclaw）<br></b><br>AI 代理"]
 ```
 
-如果你把你的个人 WhatsApp 连接到 OpenClaw，那么发给你的每一条消息都会变成“代理输入”。这通常不是你想要的。
+如果你将你的个人 WhatsApp 链接到 OpenClaw，那么发给你的每一条消息都会变成“代理输入”。这通常不是你想要的。
 
 ## 5 分钟快速开始
 
@@ -70,7 +68,7 @@ openclaw gateway --port 18789
 
 ## 给代理一个工作区（AGENTS）
 
-OpenClaw 会从其工作区目录读取操作说明和“记忆”。
+OpenClaw 会从其工作区目录中读取操作说明和“记忆”。
 
 默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并会在设置/首次运行代理时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`）。`BOOTSTRAP.md` 只会在工作区是全新时创建（你删除后它不应再次出现）。`MEMORY.md` 是可选的（不会自动创建）；当它存在时，会在正常会话中加载。子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`。
 
@@ -111,7 +109,7 @@ openclaw setup
 
 ## 将其变成“助手”的配置
 
-OpenClaw 默认已经是一个不错的助手配置，但你通常会想调整以下内容：
+OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 - [`SOUL.md`](/concepts/soul) 中的人设/指令
 - 思考默认值（如果需要）
@@ -168,11 +166,11 @@ OpenClaw 默认已经是一个不错的助手配置，但你通常会想调整�
 `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
 将 `agents.defaults.heartbeat.every: "0m"` 可将其禁用。
 
-- 如果 `HEARTBEAT.md` 存在但实际上为空（只有空行和类似 `# Heading` 的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。
-- 如果文件缺失，心跳仍会运行，由模型决定要做什么。
-- 如果代理回复 `HEARTBEAT_OK`（可选地带少量填充内容；见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发传递。
-- 默认情况下，允许将心跳投递到 DM 风格的 `user:<id>` 目标。设置 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时禁止直接目标投递。
-- 心跳会运行完整的代理轮次——更短的间隔会消耗更多 token。
+- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行和像 `# Heading` 这样的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。
+- 如果文件缺失，心跳仍会运行，由模型决定如何处理。
+- 如果代理回复 `HEARTBEAT_OK`（可选地带少量填充内容；参见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发投递。
+- 默认情况下，允许将心跳投递到 DM 风格的 `user:<id>` 目标。设置 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时抑制直接目标投递。
+- 心跳会执行完整的代理轮次——间隔越短，消耗的 token 越多。
 
 ```json5
 {
@@ -193,7 +191,7 @@ OpenClaw 默认已经是一个不错的助手配置，但你通常会想调整�
 代理发送的外发附件：在单独一行中包含 `MEDIA:<path-or-url>`（不要有空格）。例如：
 
 ```
-这是截图。
+这里是截图。
 MEDIA:https://example.com/screenshot.png
 ```
 

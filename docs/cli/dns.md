@@ -1,8 +1,8 @@
 ---
 summary: "CLI 参考：`openclaw dns`（广域发现辅助工具）"
 read_when:
-  - 当你想通过 Tailscale + CoreDNS 进行广域发现（DNS-SD）时
-  - 当你正在为自定义发现域名（例如：openclaw.internal）设置分离 DNS 时
+  - 你想通过 Tailscale + CoreDNS 进行广域发现（DNS-SD）
+  - 你正在为自定义发现域配置分离 DNS（例如：openclaw.internal）
 title: "DNS"
 ---
 
@@ -38,7 +38,7 @@ openclaw dns setup --apply
 - 区域文件路径
 - 当前 tailnet IP
 - 推荐的 `openclaw.json` 发现配置
-- 需要设置的 Tailscale Split DNS 名称服务器/域值
+- 需要设置的 Tailscale 分离 DNS 名称服务器/域值
 
 说明：
 

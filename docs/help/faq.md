@@ -407,7 +407,7 @@ title: "FAQ"
     openclaw skills update --all
     ```
 
-    原生安装会进入当前工作区的 `skills/` 目录。对于跨代理共享技能，把它们放在 `~/.openclaw/skills/<name>/SKILL.md`。如果只希望某些代理看到某个共享安装，请配置 `agents.defaults.skills` 或 `agents.list[].skills`。某些技能依赖通过 Homebrew 安装的二进制文件；在 Linux 上这意味着使用 Linuxbrew（参见上面的 Homebrew Linux FAQ 条目）。另见 [Skills](/tools/skills)、[Skills config](/tools/skills-config) 和 [ClawHub](/tools/clawhub)。
+    原生安装会落在当前工作区的 `skills/` 目录中。对于跨代理共享的技能，请将它们放在 `~/.openclaw/skills/<name>/SKILL.md`。如果只希望部分代理看到共享安装，请配置 `agents.defaults.skills` 或 `agents.list[].skills`。某些技能需要通过 Homebrew 安装的二进制文件；在 Linux 上这意味着要使用 Linuxbrew（参见上面的 Homebrew Linux FAQ 条目）。参见 [Skills](/tools/skills)、[Skills config](/tools/skills-config) 和 [ClawHub](/clawhub)。
 
   </Accordion>
 
@@ -690,7 +690,7 @@ title: "FAQ"
   </Accordion>
 
   <Accordion title="Why do I need a token on localhost now?">
-    OpenClaw 默认会强制 gateway 认证，包括回环地址。在正常默认路径下，这意味着 token 认证：如果没有显式配置认证路径，gateway 启动会解析到 token 模式并自动生成一个，保存到 `gateway.auth.token`，因此**本地 WS 客户端必须认证**。这会阻止其他本地进程调用 Gateway。
+    OpenClaw 默认强制执行 gateway 认证，包括回环。在正常默认路径下，这意味着 token 认证：如果没有配置显式认证路径，gateway 启动会解析为 token 模式，并为该次启动生成一个仅运行时可用的 token，因此**本地 WS 客户端必须认证**。当客户端需要在重启间保持稳定 secret 时，请显式配置 `gateway.auth.token`、`gateway.auth.password`、`OPENCLAW_GATEWAY_TOKEN` 或 `OPENCLAW_GATEWAY_PASSWORD`。这可以阻止其他本地进程调用 Gateway。
 
     如果你更喜欢其他认证路径，可以显式选择 password 模式（或者对于具备身份感知的反向代理，选择 `trusted-proxy`）。如果你**真的**想开放回环访问，请在配置中显式设置 `gateway.auth.mode: "none"`。你随时可以让 doctor 帮你生成 token：`openclaw doctor --generate-gateway-token`。
 
@@ -972,7 +972,7 @@ title: "FAQ"
   <Accordion title="Do nodes run a gateway service?">
     不。除非你有意运行隔离配置文件（参见 [Multiple gateways](/gateway/multiple-gateways)），否则每台主机上只应运行 **一个 gateway**。Nodes 是连接到 gateway 的外围设备（iOS/Android nodes，或菜单栏应用中的 macOS“node mode”）。对于无头 node 主机和 CLI 控制，参见 [Node host CLI](/cli/node)。
 
-    对 `gateway`、`discovery` 和 `canvasHost` 的更改需要完全重启。
+    A full restart is required for `gateway`, `discovery`, and hosted plugin surface changes.
 
   </Accordion>
 

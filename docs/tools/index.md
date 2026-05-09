@@ -53,19 +53,18 @@ OpenClaw 有三层协同工作：
 | `exec` / `process`                         | 运行 shell 命令，管理后台进程                       | [Exec](/tools/exec), [Exec Approvals](/tools/exec-approvals) |
 | `code_execution`                           | 运行沙箱化的远程 Python 分析                                  | [Code Execution](/tools/code-execution)                      |
 | `browser`                                  | 控制 Chromium 浏览器（导航、点击、截图）              | [Browser](/tools/browser)                                    |
-| `web_search` / `x_search` / `web_fetch`    | 搜索网页、搜索 X 帖子、获取页面内容                                            | [Web](/tools/web), [Web Fetch](/tools/web-fetch)             |
+| `web_search` / `x_search` / `web_fetch`    | 搜索网页、搜索 X 帖子、获取页面内容                    | [Web](/tools/web), [Web Fetch](/tools/web-fetch)             |
 | `read` / `write` / `edit`                  | 工作区中的文件 I/O                                             |                                                              |
 | `apply_patch`                              | 多块文件补丁                                               | [Apply Patch](/tools/apply-patch)                            |
-| `message`                                  | 在所有频道之间发送消息                                     | [Agent Send](/tools/agent-send)                              |
-| `canvas`                                   | 驱动 node Canvas（present、eval、snapshot）                           |                                                              |
+| `message`                                  | 跨所有频道发送消息                                     | [Agent Send](/tools/agent-send)                              |
 | `nodes`                                    | 发现并定位配对设备                                    |                                                              |
-| `cron` / `gateway`                         | 管理计划任务；检查、修补、重启或更新网关 |                                                              |
+| `cron` / `gateway`                         | 管理计划任务；检查、打补丁、重启或更新网关 |                                                              |
 | `image` / `image_generate`                 | 分析或生成图像                                            | [Image Generation](/tools/image-generation)                  |
-| `music_generate`                           | 生成音乐曲目                                                 | [Music Generation](/tools/music-generation)                  |
+| `music_generate`                           | 生成音乐轨道                                                 | [Music Generation](/tools/music-generation)                  |
 | `video_generate`                           | 生成视频                                                       | [Video Generation](/tools/video-generation)                  |
 | `tts`                                      | 一次性文本转语音转换                                    | [TTS](/tools/tts)                                            |
 | `sessions_*` / `subagents` / `agents_list` | 会话管理、状态和子代理编排               | [Sub-agents](/tools/subagents)                               |
-| `session_status`                           | 轻量级的 `/status` 风格回读以及会话模型覆盖       | [Session Tools](/concepts/session-tool)                      |
+| `session_status`                           | 轻量级的 `/status` 风格回读和会话模型覆盖       | [Session Tools](/concepts/session-tool)                      |
 
 对于图像工作，使用 `image` 进行分析，使用 `image_generate` 进行生成或编辑。如果你目标是 `openai/*`、`google/*`、`fal/*` 或其他非默认图像提供商，请先配置该提供商的认证/API 密钥。
 
@@ -100,12 +99,13 @@ ComfyUI）注册了 `music_generate` 时，请使用它。这与 `tts` 不同，
 
 插件可以注册额外工具。一些示例：
 
+- [Canvas](/plugins/reference/canvas) — 用于节点 Canvas 控制和 A2UI 渲染的实验性打包插件
 - [Diffs](/tools/diffs) — diff 查看器和渲染器
 - [LLM Task](/tools/llm-task) — 仅 JSON 的 LLM 步骤，用于结构化输出
-- [Lobster](/tools/lobster) — 带可恢复审批的类型化工作流运行时
-- [Music Generation](/tools/music-generation) — 由工作流支持提供商共享的 `music_generate` 工具
+- [Lobster](/tools/lobster) — 支持可恢复授权的类型化工作流运行时
+- [Music Generation](/tools/music-generation) — 基于工作流后端提供商的共享 `music_generate` 工具
 - [OpenProse](/prose) — 以 markdown 为先的工作流编排
-- [Tokenjuice](/tools/tokenjuice) — 紧凑化噪声较多的 `exec` 和 `bash` 工具结果
+- [Tokenjuice](/tools/tokenjuice) — 压缩冗长的 `exec` 和 `bash` 工具结果
 
 插件工具仍然通过 `api.registerTool(...)` 编写，并在插件清单的 `contracts.tools` 列表中声明。OpenClaw 在发现阶段会捕获已验证的工具描述符，并按插件源和契约进行缓存，因此后续的工具规划可以跳过插件运行时加载。工具执行仍然会加载所属插件并调用实时注册的实现。
 
@@ -176,17 +176,17 @@ ComfyUI）注册了 `music_generate` 时，请使用它。这与 `tts` 不同，
 
 | 分组              | 工具                                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `group:runtime`    | exec、process、code_execution（`bash` 可作为 `exec` 的别名接受）                                 |
-| `group:fs`         | read、write、edit、apply_patch                                                                            |
-| `group:sessions`   | sessions_list、sessions_history、sessions_send、sessions_spawn、sessions_yield、subagents、session_status |
-| `group:memory`     | memory_search、memory_get                                                                                 |
-| `group:web`        | web_search、x_search、web_fetch                                                                           |
-| `group:ui`         | browser、canvas                                                                                           |
-| `group:automation` | cron、gateway                                                                                             |
+| `group:runtime`    | exec, process, code_execution (`bash` is accepted as an alias for `exec`)                                 |
+| `group:fs`         | read, write, edit, apply_patch                                                                            |
+| `group:sessions`   | sessions_list, sessions_history, sessions_send, sessions_spawn, sessions_yield, subagents, session_status |
+| `group:memory`     | memory_search, memory_get                                                                                 |
+| `group:web`        | web_search, x_search, web_fetch                                                                           |
+| `group:ui`         | browser, canvas when the bundled Canvas plugin is enabled                                                 |
+| `group:automation` | heartbeat_respond, cron, gateway                                                                          |
 | `group:messaging`  | message                                                                                                   |
 | `group:nodes`      | nodes                                                                                                     |
-| `group:agents`     | agents_list                                                                                               |
-| `group:media`      | image、image_generate、music_generate、video_generate、tts                                                |
+| `group:agents`     | agents_list, update_plan                                                                                  |
+| `group:media`      | image, image_generate, music_generate, video_generate, tts                                                |
 | `group:openclaw`   | 所有内置 OpenClaw 工具（不包括插件工具）                                                       |
 
 `sessions_history` 返回一个有边界、经过安全过滤的回忆视图。它会移除

@@ -10,12 +10,12 @@ read_when:
 
 可以通过 Arcee 平台直接访问 Arcee AI 模型，也可以通过 [OpenRouter](/providers/openrouter) 访问。
 
-| Property | Value                                                                                 |
+| 属性 | 值                                                                                 |
 | -------- | ------------------------------------------------------------------------------------- |
-| Provider | `arcee`                                                                               |
-| Auth     | `ARCEEAI_API_KEY`（直接）或 `OPENROUTER_API_KEY`（通过 OpenRouter）                   |
+| 提供方 | `arcee`                                                                               |
+| 认证     | `ARCEEAI_API_KEY`（直接）或 `OPENROUTER_API_KEY`（通过 OpenRouter）                   |
 | API      | 与 OpenAI 兼容                                                                     |
-| Base URL | `https://api.arcee.ai/api/v1`（直接）或 `https://openrouter.ai/api/v1`（OpenRouter） |
+| 基础 URL | `https://api.arcee.ai/api/v1`（直接）或 `https://openrouter.ai/api/v1`（OpenRouter） |
 
 ## 开始使用
 
@@ -98,7 +98,7 @@ read_when:
 
 OpenClaw 当前附带以下内置的 Arcee 目录：
 
-| Model ref                      | Name                   | Input | Context | Cost (in/out per 1M) | Notes                                     |
+| 模型引用                      | 名称                   | 输入 | 上下文 | 成本（每 100 万输入/输出） | 备注                                     |
 | ------------------------------ | ---------------------- | ----- | ------- | -------------------- | ----------------------------------------- |
 | `arcee/trinity-large-thinking` | Trinity Large Thinking | text  | 256K    | $0.25 / $0.90        | 默认模型；已启用推理                      |
 | `arcee/trinity-large-preview`  | Trinity Large Preview  | text  | 128K    | $0.25 / $1.00        | 通用用途；400B 参数，13B 激活              |
@@ -110,12 +110,12 @@ OpenClaw 当前附带以下内置的 Arcee 目录：
 
 ## 支持的功能
 
-| Feature                                       | Supported                    |
-| --------------------------------------------- | ---------------------------- |
-| 流式输出                                     | 是                          |
-| 工具使用 / 函数调用                          | 是                          |
-| 结构化输出（JSON 模式和 JSON schema）        | 是                          |
-| 扩展思考                                     | 是（Trinity Large Thinking） |
+| 功能                                       | 支持情况                                    |
+| --------------------------------------------- | -------------------------------------------- |
+| 流式输出                                     | Yes                                          |
+| 工具使用 / 函数调用                   | Yes (Trinity Mini, Trinity Large Preview)    |
+| 结构化输出（JSON 模式和 JSON Schema） | Yes                                          |
+| 扩展思考                             | Yes (Trinity Large Thinking; tools disabled) |
 
 <AccordionGroup>
   <Accordion title="环境说明">

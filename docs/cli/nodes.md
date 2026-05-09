@@ -3,7 +3,7 @@ summary: "openclaw nodes 的 CLI 参考（状态、配对、调用、摄像头/�
 read_when:
   - 你正在管理已配对的节点（摄像头、屏幕、画布）
   - 你需要批准请求或调用节点命令
-title: "节点"
+title: "Nodes"
 ---
 
 # `openclaw nodes`
@@ -66,9 +66,9 @@ openclaw nodes invoke --node <id|name|ip> --command <command> --params <json>
 - `--idempotency-key <key>`：可选的幂等键。
 - `system.run` 和 `system.run.prepare` 在这里被阻止；请使用带 `host=node` 的 `exec` 工具执行 shell。
 
-在节点上执行 shell 时，请使用带 `host=node` 的 `exec` 工具，而不是 `openclaw nodes run`。
-`nodes` CLI 现在以能力为中心：通过 `nodes invoke` 进行直接 RPC，再加上配对、摄像头、
-屏幕、位置、画布和通知。
+For shell execution on a node, use the `exec` tool with `host=node` instead of `openclaw nodes run`.
+The `nodes` CLI is now capability-focused: direct RPC via `nodes invoke`, plus pairing, camera,
+screen, location, Canvas, and notifications. Canvas commands are implemented by the bundled experimental Canvas plugin; core keeps a compatibility hook so they remain under `openclaw nodes canvas`.
 
 ## 相关
 

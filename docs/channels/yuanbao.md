@@ -6,9 +6,7 @@ read_when:
 title: Yuanbao
 ---
 
-# Yuanbao
-
-腾讯元宝是腾讯的 AI 助手平台。OpenClaw 渠道插件通过 WebSocket 将 Yuanbao 机器人连接到 OpenClaw，使其能够通过私信和群聊与用户互动。
+Tencent Yuanbao 是腾讯的 AI 助手平台。OpenClaw 渠道插件通过 WebSocket 将 Yuanbao 机器人连接到 OpenClaw，使其能够通过私信和群聊与用户交互。
 
 **状态：** 已可用于生产环境，支持机器人私信 + 群聊。WebSocket 是唯一受支持的连接模式。
 
@@ -51,10 +49,10 @@ openclaw channels login --channel yuanbao
 
 配置 `dmPolicy` 以控制谁可以私信机器人：
 
-- `"pairing"` — 未知用户会收到配对码；通过 CLI 审批
-- `"allowlist"` — 仅允许 `allowFrom` 中列出的用户聊天
-- `"open"` — 允许所有用户（默认）
-- `"disabled"` — 禁用所有私信
+- `"pairing"` - 未知用户会收到配对码；通过 CLI 审批
+- `"allowlist"` - 只有 `allowFrom` 中列出的用户可以聊天
+- `"open"` - 允许所有用户（默认）
+- `"disabled"` - 禁用所有私信
 
 **审批配对请求：**
 
@@ -67,8 +65,8 @@ openclaw pairing approve yuanbao <CODE>
 
 **提及要求**（`channels.yuanbao.requireMention`）：
 
-- `true` — 需要 @ 提及（默认）
-- `false` — 无需 @ 提及即可响应
+- `true` - 需要 @ 提及（默认）
+- `false` - 无需 @ 提及即可响应
 
 在群聊中回复机器人的消息会被视为隐式提及。
 
@@ -226,9 +224,9 @@ openclaw pairing approve yuanbao <CODE>
 
 ### 消息限制
 
-- `maxChars` — 单条消息最大字符数（默认：`3000` 字符）
-- `mediaMaxMb` — 媒体上传/下载限制（默认：`20` MB）
-- `overflowPolicy` — 消息超出限制时的行为：`"split"`（默认）或 `"stop"`
+- `maxChars` - 单条消息最大字符数（默认：`3000` 个字符）
+- `mediaMaxMb` - 媒体上传/下载限制（默认：`20` MB）
+- `overflowPolicy` - 消息超出限制时的行为：`"split"`（默认）或 `"stop"`
 
 ### 流式输出
 
@@ -352,30 +350,30 @@ Yuanbao 支持块级流式输出。启用后，机器人会在生成文本时按
 
 完整配置：[网关配置](/gateway/configuration)
 
-| 设置                                       | 描述                                           | 默认值                               |
-| ------------------------------------------ | ---------------------------------------------- | ------------------------------------ |
-| `channels.yuanbao.enabled`                 | 启用/禁用该渠道                                | `true`                               |
-| `channels.yuanbao.defaultAccount`          | 出站路由使用的默认账号                         | `default`                            |
-| `channels.yuanbao.accounts.<id>.appKey`    | App Key（用于签名和票据生成）                  | —                                    |
-| `channels.yuanbao.accounts.<id>.appSecret` | App Secret（用于签名）                        | —                                    |
-| `channels.yuanbao.accounts.<id>.token`     | 预签名令牌（跳过自动票据签名）                 | —                                    |
-| `channels.yuanbao.accounts.<id>.name`      | 账号显示名称                                   | —                                    |
-| `channels.yuanbao.accounts.<id>.enabled`   | 启用/禁用某个特定账号                           | `true`                               |
-| `channels.yuanbao.dm.policy`               | 私信策略                                       | `open`                               |
-| `channels.yuanbao.dm.allowFrom`            | 私信允许列表（用户 ID 列表）                   | —                                    |
-| `channels.yuanbao.requireMention`          | 群聊中是否需要 @ 提及                          | `true`                               |
-| `channels.yuanbao.overflowPolicy`          | 长消息处理（`split` 或 `stop`）                | `split`                              |
-| `channels.yuanbao.replyToMode`             | 群聊回复引用策略（`off`、`first`、`all`）       | `first`                              |
-| `channels.yuanbao.outboundQueueStrategy`   | 出站策略（`merge-text` 或 `immediate`）        | `merge-text`                         |
-| `channels.yuanbao.minChars`                | merge-text：触发发送所需的最少字符数           | `2800`                               |
-| `channels.yuanbao.maxChars`                | merge-text：每条消息最大字符数                 | `3000`                               |
-| `channels.yuanbao.idleMs`                  | merge-text：自动刷新前的空闲超时时间（毫秒）    | `5000`                               |
-| `channels.yuanbao.mediaMaxMb`              | 媒体大小限制（MB）                             | `20`                                 |
-| `channels.yuanbao.historyLimit`            | 群聊历史上下文条目数                           | `100`                                |
-| `channels.yuanbao.disableBlockStreaming`   | 禁用块级流式输出                               | `false`                              |
-| `channels.yuanbao.fallbackReply`           | AI 无内容返回时的回退回复                      | `暂时无法解答，你可以换个问题问问我哦` |
-| `channels.yuanbao.markdownHintEnabled`     | 注入 markdown 防包裹指令                      | `true`                               |
-| `channels.yuanbao.debugBotIds`             | 调试白名单机器人 ID（未清洗日志）             | `[]`                                 |
+| Setting                                    | Description                                       | Default                                |
+| ------------------------------------------ | ------------------------------------------------- | -------------------------------------- |
+| `channels.yuanbao.enabled`                 | 启用/禁用该渠道                                   | `true`                                 |
+| `channels.yuanbao.defaultAccount`          | 出站路由使用的默认账号                             | `default`                              |
+| `channels.yuanbao.accounts.<id>.appKey`    | App Key（用于签名和票据生成）                      | -                                      |
+| `channels.yuanbao.accounts.<id>.appSecret` | App Secret（用于签名）                            | -                                      |
+| `channels.yuanbao.accounts.<id>.token`     | 预签名 token（跳过自动票据签名）                   | -                                      |
+| `channels.yuanbao.accounts.<id>.name`      | 账号显示名称                                       | -                                      |
+| `channels.yuanbao.accounts.<id>.enabled`   | 启用/禁用特定账号                                 | `true`                                 |
+| `channels.yuanbao.dm.policy`               | 私信策略                                         | `open`                                 |
+| `channels.yuanbao.dm.allowFrom`            | 私信允许名单（用户 ID 列表）                      | -                                      |
+| `channels.yuanbao.requireMention`          | 群聊中是否需要 @ 提及                              | `true`                                 |
+| `channels.yuanbao.overflowPolicy`          | 长消息处理（`split` 或 `stop`）                   | `split`                                |
+| `channels.yuanbao.replyToMode`             | 群聊回复策略（`off`、`first`、`all`）             | `first`                                |
+| `channels.yuanbao.outboundQueueStrategy`   | 出站策略（`merge-text` 或 `immediate`）           | `merge-text`                           |
+| `channels.yuanbao.minChars`                | merge-text：触发发送的最小字符数                  | `2800`                                 |
+| `channels.yuanbao.maxChars`                | merge-text：每条消息最大字符数                    | `3000`                                 |
+| `channels.yuanbao.idleMs`                  | merge-text：自动刷新前的空闲超时（毫秒）          | `5000`                                 |
+| `channels.yuanbao.mediaMaxMb`              | 媒体大小限制（MB）                                | `20`                                   |
+| `channels.yuanbao.historyLimit`            | 群聊历史上下文条目数                              | `100`                                  |
+| `channels.yuanbao.disableBlockStreaming`   | 禁用块级流式输出                                  | `false`                                |
+| `channels.yuanbao.fallbackReply`           | AI 无内容返回时的回退回复                         | `暂时无法解答，你可以换个问题问问我哦` |
+| `channels.yuanbao.markdownHintEnabled`     | 注入 markdown 防包裹指令                          | `true`                                 |
+| `channels.yuanbao.debugBotIds`             | 调试白名单机器人 ID（未清洗日志）                 | `[]`                                   |
 
 ---
 
@@ -409,8 +407,8 @@ Yuanbao 支持块级流式输出。启用后，机器人会在生成文本时按
 
 ## 相关内容
 
-- [Channels Overview](/channels) — 所有支持的频道
-- [Pairing](/channels/pairing) — DM 身份验证和配对流程
-- [Groups](/channels/groups) — 群聊行为和提及门控
-- [Channel Routing](/channels/channel-routing) — 消息的会话路由
-- [Security](/gateway/security) — 访问模型和加固
+- [Channels Overview](/channels) - 所有受支持的渠道
+- [Pairing](/channels/pairing) - 私信认证和配对流程
+- [Groups](/channels/groups) - 群聊行为和提及门控
+- [Channel Routing](/channels/channel-routing) - 消息会话路由
+- [Security](/gateway/security) - 访问模型和加固

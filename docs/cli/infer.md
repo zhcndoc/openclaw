@@ -164,14 +164,15 @@ openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe 
 
 备注：
 
-- 本地 `model run` 是用于检查 provider/model/auth 健康状况的最窄 CLI 冒烟测试，因为它只会将提供的提示发送给所选模型。
-- 本地 `model run --file` 保持这种精简路径，并将图像内容直接附加到单个用户消息上。常见的图像文件，如 PNG、JPEG 和 WebP，只要其 MIME 类型被检测为 `image/*` 就可工作；不受支持或无法识别的文件会在调用提供商之前失败。
-- 当你想直接测试所选的多模态文本模型时，`model run --file` 是最佳选择。当你想使用 OpenClaw 的图像理解提供商选择和默认图像模型路由时，请使用 `infer image describe`。
+- Local `model run` 是用于 provider/model/auth 健康检查的最窄 CLI smoke，因为对于非 Codex 提供商，它只会将提供的提示发送给所选模型。
+- `openai-codex/*` 本地探测是一个窄例外：OpenClaw 会添加一条最小系统指令，以便 Codex Responses 传输可以填充其必需的 `instructions` 字段，而不会添加完整的 agent 上下文、工具、记忆或会话转录。
+- Local `model run --file` 保留了这条精简路径，并将图像内容直接附加到单个用户消息中。检测到 MIME 类型为 `image/*` 的常见图像文件，如 PNG、JPEG 和 WebP，都可以工作；不支持或无法识别的文件会在调用提供商之前失败。
+- 当你想直接测试所选的多模态文本模型时，`model run --file` 是最佳选择。当你想要 OpenClaw 的图像理解提供商选择和默认图像模型路由时，请使用 `infer image describe`。
 - 所选模型必须支持图像输入；仅文本模型可能会在提供商层拒绝该请求。
 - `model run --prompt` 必须包含非空白文本；空提示会在调用本地提供商或 Gateway 之前被拒绝。
-- 当提供商没有返回任何文本输出时，本地 `model run` 会以非零状态退出，因此不可达的本地提供商和空补全不会看起来像成功探测。
-- 当你需要测试 Gateway 路由、agent 运行时设置或 Gateway 管理的提供商状态，同时保持模型输入原始时，请使用 `model run --gateway`。当你想要完整的 agent 上下文、工具、记忆和会话转录时，请使用 `openclaw agent` 或聊天界面。
-- `model auth login`、`model auth logout` 和 `model auth status` 管理已保存的提供商认证状态。
+- 当提供商返回没有文本输出时，Local `model run` 会以非零状态退出，因此不可达的本地提供商和空补全不会看起来像成功探测。
+- 当你需要测试 Gateway 路由、agent 运行时设置或 Gateway 管理的提供商状态，同时保持模型输入原始时，请使用 `model run --gateway`。当你想要完整的 agent 上下文、工具、记忆和会话转录时，请使用 `openclaw agent` 或聊天表面。
+- `model auth login`、`model auth logout` 和 `model auth status` 用于管理已保存的提供商认证状态。
 
 ## 图像
 

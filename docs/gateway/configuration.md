@@ -98,16 +98,16 @@ candidate contains redacted secret placeholders such as `***`.
   <Accordion title="设置通道（WhatsApp、Telegram、Discord 等）">
     每个通道在 `channels.<provider>` 下都有自己的配置部分。请参阅对应的通道页面了解设置步骤：
 
-    - [WhatsApp](/channels/whatsapp) — `channels.whatsapp`
-    - [Telegram](/channels/telegram) — `channels.telegram`
-    - [Discord](/channels/discord) — `channels.discord`
-    - [飞书](/channels/feishu) — `channels.feishu`
-    - [Google Chat](/channels/googlechat) — `channels.googlechat`
-    - [Microsoft Teams](/channels/msteams) — `channels.msteams`
-    - [Slack](/channels/slack) — `channels.slack`
-    - [Signal](/channels/signal) — `channels.signal`
-    - [iMessage](/channels/imessage) — `channels.imessage`
-    - [Mattermost](/channels/mattermost) — `channels.mattermost`
+    - [WhatsApp](/channels/whatsapp) - `channels.whatsapp`
+    - [Telegram](/channels/telegram) - `channels.telegram`
+    - [Discord](/channels/discord) - `channels.discord`
+    - [Feishu](/channels/feishu) - `channels.feishu`
+    - [Google Chat](/channels/googlechat) - `channels.googlechat`
+    - [Microsoft Teams](/channels/msteams) - `channels.msteams`
+    - [Slack](/channels/slack) - `channels.slack`
+    - [Signal](/channels/signal) - `channels.signal`
+    - [iMessage](/channels/imessage) - `channels.imessage`
+    - [Mattermost](/channels/mattermost) - `channels.mattermost`
 
     所有通道共享相同的 DM 策略模式：
 
@@ -117,8 +117,8 @@ candidate contains redacted secret placeholders such as `***`.
         telegram: {
           enabled: true,
           botToken: "123:abc",
-          dmPolicy: "pairing",   // pairing | allowlist | open | disabled
-          allowFrom: ["tg:123"], // 仅适用于 allowlist/open
+          dmPolicy: "pairing",   // 配对 | 允许列表 | 开放 | 禁用
+          allowFrom: ["tg:123"], // 仅适用于允许列表/开放
         },
       },
     }
@@ -322,7 +322,7 @@ candidate contains redacted secret placeholders such as `***`.
     }
     ```
 
-    先构建镜像——从源码检出运行 `scripts/sandbox-setup.sh`，或者在 npm 安装后查看 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令。
+    先构建镜像 - 从源代码检出目录运行 `scripts/sandbox-setup.sh`，或在 npm 安装后查看 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中内联的 `docker build` 命令。
 
     有关完整指南，请参阅 [沙箱](/gateway/sandboxing)；有关所有选项，请参阅[完整参考](/gateway/config-agents#agentsdefaultssandbox)。
 
@@ -500,31 +500,25 @@ candidate contains redacted secret placeholders such as `***`.
     }
     ```
 
-    - **Single file**: replaces the containing object
-    - **Array of files**: deep-merged in order (later wins)
-    - **Sibling keys**: merged after includes (override included values)
-    - **Nested includes**: supported up to 10 levels deep
-    - **Relative paths**: resolved relative to the including file
-    - **OpenClaw-owned writes**: when a write changes only one top-level section
-      backed by a single-file include such as `plugins: { $include: "./plugins.json5" }`,
-      OpenClaw updates that included file and leaves `openclaw.json` intact
-    - **Unsupported write-through**: root includes, include arrays, and includes
-      with sibling overrides fail closed for OpenClaw-owned writes instead of
-      flattening the config
-    - **Confinement**: `$include` paths must resolve under the directory holding
-      `openclaw.json`. To share a tree across machines or users, set
-      `OPENCLAW_INCLUDE_ROOTS` to a path-list (`:` on POSIX, `;` on Windows) of
-      additional directories that includes may reference. Symlinks are resolved
-      and re-checked, so a path that lexically lives in a config dir but whose
-      real target escapes every allowed root is still rejected.
-    - **Error handling**: clear errors for missing files, parse errors, and circular includes
+    - **单文件**：替换其包含的对象
+    - **文件数组**：按顺序深度合并（后者覆盖前者）
+    - **同级键**：在 includes 之后合并（覆盖被包含的值）
+    - **嵌套 includes**：支持最多 10 层深度
+    - **相对路径**：相对于包含文件解析
+    - **OpenClaw 所有的写入操作**：当一次写入只更改一个由单文件 include 支持的顶层部分时，例如 `plugins: { $include: "./plugins.json5" }`，
+      OpenClaw 会更新该包含文件并保持 `openclaw.json` 不变
+    - **不支持的透传写入**：根 include、include 数组以及带同级覆盖的 includes
+      对 OpenClaw 所有的写入操作会直接失败，而不会
+      扁平化配置
+    - **隔离**：`$include` 路径必须解析到 `openclaw.json` 所在目录下。若要在机器或用户之间共享树结构，请将 `OPENCLAW_INCLUDE_ROOTS` 设置为路径列表（POSIX 上用 `:`，Windows 上用 `;`），指向 includes 可引用的额外目录。符号链接会被解析并重新检查，因此即使某路径在字面上位于配置目录中，但其真实目标逃逸出所有允许根目录，也仍会被拒绝。
+    - **错误处理**：对缺失文件、解析错误和循环 includes 提供清晰错误
 
   </Accordion>
 </AccordionGroup>
 
 ## 配置热重载
 
-Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多数设置无需手动重启。
+The Gateway watches `~/.openclaw/openclaw.json` and applies changes automatically - no manual restart needed for most settings.
 
 Direct file edits are treated as untrusted until they validate. The watcher waits
 for editor temp-write/rename churn to settle, reads the final file, and rejects
@@ -542,10 +536,10 @@ for the checklist.
 
 | 模式                   | 行为                                                                                |
 | ---------------------- | --------------------------------------------------------------------------------------- |
-| **`hybrid`**（默认）   | 立即热应用安全更改。对关键更改自动重启。           |
-| **`hot`**              | 仅热应用安全更改。当需要重启时记录警告——由你来处理。 |
-| **`restart`**          | 任意配置更改都会重启 Gateway，无论安全与否。                                 |
-| **`off`**              | 禁用文件监视。更改会在下一次手动重启后生效。                 |
+| **`hybrid`** (default) | 热应用安全更改，立即生效。对关键更改会自动重启。           |
+| **`hot`**              | 仅热应用安全更改。需要重启时会记录警告——由你来处理。 |
+| **`restart`**          | 任何配置更改都会重启 Gateway，无论安全与否。                                 |
+| **`off`**              | 禁用文件监视。更改会在下一次手动重启时生效。                 |
 
 ```json5
 {
@@ -559,19 +553,19 @@ for the checklist.
 
 大多数字段都可在不停机的情况下热应用。在 `hybrid` 模式下，需要重启的更改会自动处理。
 
-| 类别            | 字段                                                            | 需要重启？ |
-| ----------------------------------------------------------------- | --------------- |
-| 通道            | `channels.*`、`web`（WhatsApp）——所有内置和插件通道 | 否              |
-| 代理与模型      | `agent`、`agents`、`models`、`routing`                            | 否              |
-| 自动化          | `hooks`、`cron`、`agent.heartbeat`                                | 否              |
-| 会话与消息      | `session`、`messages`                                             | 否              |
-| 工具与媒体       | `tools`、`browser`、`skills`、`mcp`、`audio`、`talk`              | 否              |
-| UI 与杂项       | `ui`、`logging`、`identity`、`bindings`                           | 否              |
-| Gateway 服务器  | `gateway.*`（端口、bind、auth、tailscale、TLS、HTTP）              | **是**         |
-| 基础设施        | `discovery`、`canvasHost`、`plugins`                              | **是**         |
+| Category            | Fields                                                            | Restart needed? |
+| ------------------- | ----------------------------------------------------------------- | --------------- |
+| Channels            | `channels.*`, `web` (WhatsApp) - all built-in and plugin channels | No              |
+| Agent & models      | `agent`, `agents`, `models`, `routing`                            | No              |
+| Automation          | `hooks`, `cron`, `agent.heartbeat`                                | No              |
+| Sessions & messages | `session`, `messages`                                             | No              |
+| Tools & media       | `tools`, `browser`, `skills`, `mcp`, `audio`, `talk`              | No              |
+| UI & misc           | `ui`, `logging`, `identity`, `bindings`                           | No              |
+| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP)              | **Yes**         |
+| Infrastructure      | `discovery`, `plugins`                                            | **Yes**         |
 
 <Note>
-`gateway.reload` 和 `gateway.remote` 是例外——更改它们**不会**触发重启。
+`gateway.reload` and `gateway.remote` are exceptions - changing them does **not** trigger a restart.
 </Note>
 
 ### 重载规划

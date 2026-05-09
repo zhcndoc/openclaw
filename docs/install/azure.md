@@ -7,9 +7,7 @@ read_when:
 title: "Azure"
 ---
 
-# Azure Linux VM 上的 OpenClaw
-
-本指南将使用 Azure CLI 设置一台 Azure Linux VM，应用网络安全组（NSG）加固，配置 Azure Bastion 以进行 SSH 访问，并安装 OpenClaw。
+本指南将使用 Azure CLI 设置一台 Azure Linux VM，应用网络安全组（NSG）加固，配置 Azure Bastion 以便 SSH 访问，并安装 OpenClaw。
 
 ## 你将完成什么
 

@@ -24,6 +24,16 @@ openclaw plugins install @openclaw/whatsapp
 
 使用裸包以跟随当前官方发布标签。只有在需要可复现安装时才固定精确版本。
 
+在 Windows 上，WhatsApp 插件在 npm install 期间需要 Git 位于 `PATH` 中，因为
+它的一个 Baileys/libsignal 依赖是从 git URL 拉取的。请先为 Windows 安装 Git，
+然后重启 shell 并重新运行安装：
+
+```powershell
+winget install --id Git.Git -e
+```
+
+如果 Portable Git 的 `bin` 目录在 `PATH` 中，也同样可用。
+
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
     未知发送者的默认 DM 策略是配对。

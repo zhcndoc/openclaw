@@ -249,6 +249,7 @@ title: "配置示例"
       skills: ["github", "weather"], // 被省略 list[].skills 的 agents 继承
       thinkingDefault: "low",
       verboseDefault: "off",
+      toolProgressDetail: "explain",
       reasoningDefault: "off",
       elevatedDefault: "on",
       blockStreamingDefault: "off",
@@ -527,7 +528,7 @@ title: "配置示例"
 
 ### 安全 DM 模式（共享收件箱 / 多用户 DM）
 
-如果有不止一个人可以给你的机器人发私信（`allowFrom` 中有多个条目、为多个人进行配对批准，或 `dmPolicy: "open"`），请启用 **安全 DM 模式**，这样来自不同发送者的私信默认不会共享同一个上下文：
+如果有多于一人可以向你的机器人发送 DM（`allowFrom` 中有多个条目、针对多人的配对批准，或 `dmPolicy: "open"`），请启用 **安全 DM 模式**，这样不同发送者的 DM 默认不会共享同一个上下文：
 
 ```json5
 {
@@ -648,9 +649,9 @@ title: "配置示例"
 ## 提示
 
 - 如果你设置了 `dmPolicy: "open"`，匹配的 `allowFrom` 列表必须包含 `"*"`.
-- 提供商 ID 会有所不同（电话号码、用户 ID、频道 ID）。请使用提供商文档确认格式。
-- 可稍后添加的可选部分：`web`、`browser`、`ui`、`discovery`、`canvasHost`、`talk`、`signal`、`imessage`。
-- 有关更深入的设置说明，请参阅 [提供商](/providers) 和 [故障排除](/gateway/troubleshooting)。
+- Provider ID 各不相同（电话号码、用户 ID、频道 ID）。请查阅 provider 文档以确认格式。
+- 可稍后添加的可选部分：`web`、`browser`、`ui`、`discovery`、`plugins`、`talk`、`signal`、`imessage`。
+- 查看 [Providers](/providers) 和 [Troubleshooting](/gateway/troubleshooting) 以获取更深入的设置说明。
 
 ## 相关内容
 

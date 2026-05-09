@@ -37,7 +37,7 @@ openclaw cron add \
   --cron "0 7 * * 1-5" \
   --tz "America/New_York" \
   --session session:market-intel \
-  --message "Run the market-intel Lobster workflow. Verify source freshness before summarizing." \
+  --message "运行 market-intel Lobster 工作流。在总结之前验证来源的新鲜度。" \
   --announce \
   --channel slack \
   --to "channel:C1234567890"
@@ -90,7 +90,7 @@ steps:
 
 在总结之前，让工作流拒绝或标记过期项。LLM 步骤应只接收结构化 JSON，并且应被要求在输出中保留 `sourceUrl`、`retrievedAt` 和 `asOf`。当你需要在工作流中使用一个经过 schema 验证的模型步骤时，请使用 [LLM Task](/tools/llm-task)。
 
-对于可复用的团队或社区工作流，将 CLI、`.lobster` 文件以及任何设置说明打包为 skill 或 plugin，并通过 [ClawHub](/tools/clawhub) 发布。除非 plugin API 缺少所需的通用能力，否则请将工作流特定的防护措施保留在该包中。
+用于可复用的团队或社区工作流时，请将 CLI、`.lobster` 文件以及任何设置说明打包为 skill 或 plugin，并通过 [ClawHub](/clawhub) 发布。除非插件 API 缺少所需的通用能力，否则应将工作流特定的护栏保留在该包中。
 
 ## 同步模式
 
@@ -111,7 +111,7 @@ Flow: weekly-report
 
 Task Flow 观察外部创建的任务，并在不负责任务创建的情况下保持流状态同步。当任务来源于 cron jobs、CLI 命令或其他来源，而你希望将它们的进度统一视图为一个 flow 时，这非常有用。
 
-示例：三个独立的 cron jobs，共同构成一个“morning ops”例程。一个 mirrored flow 跟踪它们的整体进度，而不控制它们何时或如何运行。
+示例：三个独立的 cron jobs，共同构成一个“早间运维”例程。一个 mirrored flow 跟踪它们的整体进度，而不控制它们何时或如何运行。
 
 ## 持久化状态与修订跟踪
 

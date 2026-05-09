@@ -116,7 +116,7 @@ macOS 配套应用提供一个复选框：
 
 - **设置 → 通用 → 允许相机** (`openclaw.cameraEnabled`)
   - 默认：**关闭**
-  - 关闭时：摄像头请求返回“Camera disabled by user”。
+  - 关闭时：摄像头请求返回“由用户禁用摄像头”。
 
 ### CLI 辅助工具（node invoke）
 

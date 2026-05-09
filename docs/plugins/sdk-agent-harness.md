@@ -89,15 +89,23 @@ export default definePluginEntry({
 
 OpenClaw 会在 provider/model 解析之后选择 harness：
 
-1. 现有 session 记录的 harness id 优先，因此配置/env 变更不会把该转录热切换到另一个运行时。
-2. `OPENCLAW_AGENT_RUNTIME=<id>` 会强制对尚未固定的 session 使用该 id 的已注册 harness。
-3. `OPENCLAW_AGENT_RUNTIME=pi` 会强制使用内置 PI harness。
-4. `OPENCLAW_AGENT_RUNTIME=auto` 会询问已注册的 harness 是否支持已解析的 provider/model。
-5. 如果没有已注册的 harness 匹配，OpenClaw 会使用 PI，除非禁用了 PI fallback。
+1. Model-scoped runtime policy wins.
+2. Provider-scoped runtime policy comes next.
+3. `auto` asks registered harnesses if they support the resolved
+   provider/model.
+4. If no registered harness matches, OpenClaw uses PI unless PI fallback is
+   disabled.
 
 插件 harness 的失败会表现为运行失败。在 `auto` 模式下，只有当没有已注册的插件 harness 支持已解析的 provider/model 时，才会使用 PI fallback。一旦某个插件 harness 已经认领了一个 run，OpenClaw 不会再通过 PI 重放同一个 turn，因为那可能改变认证/运行时语义或产生重复副作用。
 
-已选择的 harness id 会在嵌入式运行后与 session id 一起持久化。早于 harness pin 机制创建的旧 session，在拥有转录历史后会被视为已固定到 PI。切换 PI 与原生插件 harness 时，请使用新的/重置的 session。`/status` 会显示非默认的 harness id，例如 `codex`，并显示在 `Fast` 旁边；PI 作为默认兼容路径会被隐藏。如果所选 harness 出乎意料，请启用 `agents/harness` 调试日志，并检查 gateway 的结构化 `agent harness selected` 记录。它包含已选中的 harness id、选择原因、运行时/fallback 策略，以及在 `auto` 模式下每个插件候选项的支持结果。
+Whole-session and whole-agent runtime pins are ignored by selection. That
+includes stale session `agentHarnessId` values, `agents.defaults.agentRuntime`,
+`agents.list[].agentRuntime`, and `OPENCLAW_AGENT_RUNTIME`. `/status` shows the
+effective runtime selected from the provider/model route.
+If the selected harness is surprising, enable `agents/harness` debug logging and
+inspect the gateway's structured `agent harness selected` record. It includes
+the selected harness id, selection reason, runtime/fallback policy, and, in
+`auto` mode, each plugin candidate's support result.
 
 捆绑的 Codex 插件会将 `codex` 注册为其 harness id。核心将其视为普通的插件 harness id；Codex 特定别名应放在插件或运维配置中，而不是放在共享运行时选择器中。
 
@@ -107,14 +115,18 @@ OpenClaw 会在 provider/model 解析之后选择 harness：
 
 捆绑的 Codex 插件遵循此模式：
 
-- 首选用户模型引用：`openai/gpt-5.5`，以及
-  `agentRuntime.id: "codex"`
-- 兼容性引用：仍然接受旧的 `codex/gpt-*` 引用，但新配置不应将其作为普通的 provider/model 引用使用
-- harness id：`codex`
-- 认证：合成的 provider 可用性，因为 Codex harness 自己持有原生 Codex 登录/session
-- app-server 请求：OpenClaw 会把裸模型 id 发送给 Codex，并让 harness 与原生 app-server 协议通信
+- preferred user model refs: `openai/gpt-5.5`
+- compatibility refs: legacy `codex/gpt-*` refs remain accepted, but new
+  configs should not use them as normal provider/model refs
+- harness id: `codex`
+- auth: synthetic provider availability, because the Codex harness owns the
+  native Codex login/session
+- app-server request: OpenClaw sends the bare model id to Codex and lets the
+  harness talk to the native app-server protocol
 
-Codex 插件是增量式的。普通的 `openai/gpt-*` 引用仍会使用标准的 OpenClaw provider 路径，除非你通过 `agentRuntime.id: "codex"` 强制使用 Codex harness。较旧的 `codex/gpt-*` 引用为了兼容性，仍会选择 Codex provider 和 harness。
+The Codex plugin is additive. Plain `openai/gpt-*` agent refs on the official
+OpenAI provider select the Codex harness by default. Older `codex/gpt-*` refs
+still select the Codex provider and harness for compatibility.
 
 有关运维设置、模型前缀示例以及仅 Codex 的配置，请参见
 [Codex Harness](/plugins/codex-harness)。
@@ -137,67 +149,86 @@ OpenClaw 要求 Codex app-server `0.125.0` 或更高版本。Codex 插件会检�
 
 ### 原生 Codex harness 模式
 
-捆绑的 `codex` harness 是嵌入式 OpenClaw agent turn 的原生 Codex 模式。请先启用捆绑的 `codex` 插件，并在配置使用限制性 allowlist 时将 `codex` 加入 `plugins.allow`。原生 app-server 配置应使用 `openai/gpt-*`，并设置 `agentRuntime.id: "codex"`。
-若要通过 PI 使用 Codex OAuth，请改用 `openai-codex/*`。旧的 `codex/*` 模型引用仍作为原生 harness 的兼容别名保留。
+捆绑的 `codex` harness 是嵌入式 OpenClaw agent turn 的原生 Codex 模式。请先启用捆绑的 `codex` 插件，并在你的配置使用限制性 allowlist 时，将 `codex` 加入 `plugins.allow`。原生 app-server 配置应使用 `openai/gpt-*`；OpenAI agent turn 会默认选择 Codex harness。旧的 `openai-codex/*` 路由应使用 `openclaw doctor --fix` 修复，而旧的 `codex/*` model refs 仍作为原生 harness 的兼容别名保留。
 
-当此模式运行时，Codex 拥有原生线程 id、恢复行为、压缩以及 app-server 执行。OpenClaw 仍然拥有聊天通道、可见转录镜像、工具策略、审批、媒体投递和会话选择。当你需要证明只有 Codex app-server 路径可以认领该 run 时，请使用 `agentRuntime.id: "codex"`。显式插件运行时会在关闭状态下失败；Codex app-server 的选择失败和运行时失败不会通过 PI 重试。
+在此模式运行时，Codex 拥有原生线程 id、恢复行为、压缩以及 app-server 执行。OpenClaw 仍然拥有聊天通道、可见转录镜像、工具策略、审批、媒体投递和会话选择。当你需要证明只有 Codex app-server 路径能够认领该 run 时，请在 provider/model 中使用 `agentRuntime.id: "codex"`。显式插件运行时会失败关闭；Codex app-server 选择失败和运行时失败不会通过 PI 重试。
 
 ## 运行时严格性
 
-默认情况下，OpenClaw 使用 OpenClaw Pi 运行嵌入式 agent。在 `auto` 模式下，已注册的插件 harness 可以认领一个 provider/model 对；如果没有匹配项，则由 PI 处理该 turn。当缺失 harness 选择时应当失败而不是通过 PI 路由时，请使用显式插件运行时，例如 `agentRuntime.id: "codex"`。已选择的插件 harness 失败始终会硬失败。这不会阻止显式的 `agentRuntime.id: "pi"` 或 `OPENCLAW_AGENT_RUNTIME=pi`。
+默认情况下，OpenClaw 使用 `auto` provider/model runtime policy：已注册的插件 harness 可以认领一个 provider/model 对，而当没有任何匹配时，PI 负责处理该 turn。官方 OpenAI provider 上的 OpenAI agent refs 默认选择 Codex。若缺少 harness 选择时应当失败而不是通过 PI 路由，请使用显式的 provider/model 插件运行时，例如 `agentRuntime.id: "codex"`。已选中的插件 harness 失败时总是硬失败。这不会阻止显式的 provider/model `agentRuntime.id: "pi"`。
 
 用于仅 Codex 的嵌入式运行：
 
 ```json
 {
+  "models": {
+    "providers": {
+      "openai": {
+        "agentRuntime": {
+          "id": "codex"
+        }
+      }
+    }
+  },
   "agents": {
     "defaults": {
-      "model": "openai/gpt-5.5",
-      "agentRuntime": {
-        "id": "codex"
+      "model": "openai/gpt-5.5"
+    }
+  }
+}
+```
+
+如果你希望某个规范模型使用 CLI 后端，请把运行时放在该模型条目上：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "model": "anthropic/claude-opus-4-7",
+      "models": {
+        "anthropic/claude-opus-4-7": {
+          "agentRuntime": {
+            "id": "claude-cli"
+          }
+        }
       }
     }
   }
 }
 ```
 
-如果你希望任何已注册的插件 harness 认领匹配模型，否则使用 PI，请设置 `id: "auto"`：
+逐 agent 覆盖使用相同的按模型范围形状：
 
 ```json
 {
   "agents": {
-    "defaults": {
-      "agentRuntime": {
-        "id": "auto"
-      }
-    }
-  }
-}
-```
-
-按 agent 的覆盖使用相同结构：
-
-```json
-{
-  "agents": {
-    "defaults": {
-      "agentRuntime": { "id": "auto" }
-    },
     "list": [
       {
         "id": "codex-only",
         "model": "openai/gpt-5.5",
-        "agentRuntime": { "id": "codex" }
+        "models": {
+          "openai/gpt-5.5": {
+            "agentRuntime": { "id": "codex" }
+          }
+        }
       }
     ]
   }
 }
 ```
 
-`OPENCLAW_AGENT_RUNTIME` 仍会覆盖已配置的运行时。
+如下这类旧的按整个 agent 设定运行时示例会被忽略：
 
-```bash
-OPENCLAW_AGENT_RUNTIME=codex openclaw gateway run
+```json
+{
+  "agents": {
+    "defaults": {
+      "agentRuntime": {
+        "id": "codex"
+      }
+    }
+  }
+}
 ```
 
 在显式插件运行时下，当请求的 harness 未注册、不支持已解析的 provider/model，或在产生 turn 副作用之前失败时，session 会提前失败。这是为仅 Codex 部署以及必须证明实际使用了 Codex app-server 路径的在线测试所刻意设计的。

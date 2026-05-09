@@ -69,11 +69,11 @@ title: "本地模型"
 
 **设置清单**
 
-- 安装 LM Studio：[https://lmstudio.ai](https://lmstudio.ai)
-- 在 LM Studio 中下载**可用的最大模型构建版本**（避免“small”/高度量化的变体），启动服务器，并确认 `http://127.0.0.1:1234/v1/models` 能列出它。
+- 安装 LM Studio: [https://lmstudio.ai](https://lmstudio.ai)
+- 在 LM Studio 中，下载**可用的最大模型构建版本**（避免“small”/高度量化变体），启动服务器，确认 `http://127.0.0.1:1234/v1/models` 能列出该模型。
 - 将 `my-local-model` 替换为 LM Studio 中显示的实际模型 ID。
-- 保持模型已加载；冷启动加载会增加启动延迟。
-- 如果你的 LM Studio 构建不同，请调整 `contextWindow`/`maxTokens`。
+- 保持模型加载状态；冷启动会增加启动延迟。
+- 如果你的 LM Studio 构建版本不同，请调整 `contextWindow`/`maxTokens`。
 - 对于 WhatsApp，请坚持使用 Responses API，这样只会发送最终文本。
 
 即使在本地运行时，也要保留已配置的托管模型；使用 `models.mode: "merge"`，这样后备方案始终可用。
@@ -272,28 +272,29 @@ MLX（`mlx_lm.server`）、vLLM、SGLang、LiteLLM、OAI-proxy 或自定义网�
 
 ## 故障排查
 
-- Gateway 能连到代理吗？`curl http://127.0.0.1:1234/v1/models`。
-- LM Studio 模型未加载？重新加载；冷启动是常见的“卡住”原因。
-- 本地服务器显示 `terminated`、`ECONNRESET`，或在回合中途关闭流？
-  OpenClaw 会在诊断中记录一个低基数的 `model.call.error.failureKind`，以及
+- Gateway 能连到代理吗？`curl http://127.0.0.1:1234/v1/models`.
+- LM Studio 模型是否已卸载？重新加载；冷启动是常见的“卡住”原因。
+- 本地服务器显示 `terminated`、`ECONNRESET`，或者在回合中途关闭流？
+  OpenClaw 会在诊断中记录低基数的 `model.call.error.failureKind` 以及
   OpenClaw 进程的 RSS/heap 快照。对于 LM Studio/Ollama
-  内存压力，请用该时间戳对照服务器日志或 macOS 崩溃 /
-  jetsam 日志，以确认模型服务器是否被终止。
-- OpenClaw 会根据检测到的模型窗口，或在 `agents.defaults.contextTokens` 降低有效窗口时根据未封顶的模型窗口推导上下文窗口预检阈值。它在低于 20% 时给出警告，并设置 **8k** 下限。硬性阻断使用 10% 阈值，并设置 **4k** 下限，同时将其封顶到有效上下文窗口，以便过大的模型元数据不会拒绝原本有效的用户上限。如果触发了该预检，请提高服务器/模型上下文限制或选择更大的模型。
+  的内存压力，请将该时间戳与服务器日志或 macOS 崩溃 /
+  jetsam 日志对照，以确认模型服务器是否已被终止。
+- OpenClaw 会根据检测到的模型窗口，或在 `agents.defaults.contextTokens` 降低有效窗口时根据未封顶的模型窗口来推导上下文窗口预检阈值。低于 20% 时会发出警告，并设有 **8k** 下限。硬性阻止使用 10% 阈值并设有 **4k** 下限，同时会封顶到有效上下文窗口，这样过大的模型元数据就不会拒绝原本有效的用户上限。如果触发了该预检，请提高服务器/模型上下文限制或选择更大的模型。
 - 上下文错误？降低 `contextWindow` 或提高你的服务器限制。
 - OpenAI 兼容服务器返回 `messages[].content ... expected a string`？
   在该模型条目上添加 `compat.requiresStringContent: true`。
-- 直接调用小型 `/v1/chat/completions` 可以工作，但 `openclaw infer model run --local`
+- 直接调用小型 `/v1/chat/completions` 可以，但 `openclaw infer model run --local`
   在 Gemma 或其他本地模型上失败？先检查 provider URL、模型引用、认证
   标记和服务器日志；本地 `model run` 不包含 agent 工具。
-  如果本地 `model run` 成功但更大的 agent 回合失败，请通过 `localModelLean` 或 `compat.supportsTools: false` 减少 agent 工具面。
-- 工具调用以原始 JSON/XML/ReAct 文本形式出现，或者 provider 返回了
-  空的 `tool_calls` 数组？不要添加一个会盲目把 assistant
-  文本转换为工具执行的代理。先修复服务器的 chat 模板/解析器。如果
-  模型只有在强制使用工具时才可用，请添加上面的按模型
-  `params.extra_body.tool_choice: "required"` 覆盖，并且只在每一轮都预期有工具调用的会话中使用该模型
+  如果本地 `model run` 成功但更大的 agent 回合失败，请通过 `localModelLean` 或 `compat.supportsTools: false` 降低 agent
+  工具面。
+- 工具调用以原始 JSON/XML/ReAct 文本出现，或者 provider 返回了一个
+  空的 `tool_calls` 数组？不要加一个把 assistant
+  文本盲目转换为工具执行的代理。先修复服务器 chat template/parser。若
+  模型只有在强制使用工具时才能工作，请添加上面的按模型
+  `params.extra_body.tool_choice: "required"` 覆盖，并且只在每一轮都预期会调用工具的会话中使用该模型
   条目。
-- 安全性：本地模型会跳过提供方侧过滤；请保持 agent 范围尽量窄，并开启 compaction 以限制提示注入的爆炸半径。
+- 安全性：本地模型会跳过提供方侧过滤；请保持 agent 范围狭窄并开启 compaction，以限制提示注入的影响范围。
 
 ## 相关
 

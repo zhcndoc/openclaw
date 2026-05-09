@@ -5,11 +5,11 @@ read_when:
 title: "代理运行时"
 ---
 
-OpenClaw 运行一个**单一的内嵌代理运行时**——每个 Gateway 对应一个代理进程，拥有自己的工作区、引导文件和会话存储。本页介绍该运行时契约：工作区必须包含什么、会注入哪些文件，以及会话如何基于它完成引导。
+OpenClaw 运行一个 **单一的嵌入式代理运行时**——每个 Gateway 一个代理进程，拥有自己的工作区、引导文件和会话存储。此页涵盖该运行时契约：工作区必须包含什么、会注入哪些文件，以及会话如何在其上引导。
 
 ## 工作区（必需）
 
-OpenClaw 使用单一的代理工作区目录（`agents.defaults.workspace`）作为代理用于工具和上下文的**唯一**工作目录（`cwd`）。
+OpenClaw 使用单个代理工作区目录（`agents.defaults.workspace`）作为代理工具和上下文的**唯一**工作目录（`cwd`）。
 
 建议：如果缺失，请使用 `openclaw setup` 创建 `~/.openclaw/openclaw.json` 并初始化工作区文件。
 
@@ -23,20 +23,20 @@ OpenClaw 使用单一的代理工作区目录（`agents.defaults.workspace`）�
 
 在 `agents.defaults.workspace` 中，OpenClaw 期望存在以下可由用户编辑的文件：
 
-- `AGENTS.md` — 操作说明 + “记忆”
-- `SOUL.md` — 角色设定、边界、语气
-- `TOOLS.md` — 用户维护的工具笔记（例如 `imsg`、`sag`、约定）
-- `BOOTSTRAP.md` — 一次性的首次运行仪式（完成后删除）
-- `IDENTITY.md` — 代理名称/风格/表情符号
-- `USER.md` — 用户资料 + 偏好称呼
+- `AGENTS.md` - 操作说明 + “记忆”
+- `SOUL.md` - 人设、边界、语气
+- `TOOLS.md` - 用户维护的工具备注（例如 `imsg`、`sag`、约定）
+- `BOOTSTRAP.md` - 一次性首次运行仪式（完成后删除）
+- `IDENTITY.md` - 代理名称/风格/表情符号
+- `USER.md` - 用户档案 + 偏好称呼
 
-在新会话的第一轮中，OpenClaw 会将这些文件的内容直接注入到代理上下文中。
+在新会话的第一轮，OpenClaw 会将这些文件的内容注入到系统提示词的 Project Context 中。
 
 空文件会被跳过。大型文件会被裁剪并带上标记，以保持提示词精简（完整内容请读取文件）。
 
-如果某个文件缺失，OpenClaw 会注入一行“缺失文件”标记（并且 `openclaw setup` 会创建一个安全的默认模板）。
+如果文件缺失，OpenClaw 会注入一行单独的“缺失文件”标记行（并且 `openclaw setup` 会创建一个安全的默认模板）。
 
-`BOOTSTRAP.md` 仅在**全新工作区**时创建（即不存在其他引导文件）。如果你在完成仪式后将其删除，那么后续重启时它不应再次被创建。
+`BOOTSTRAP.md` 仅会为**全新工作区**创建（不存在其他引导文件时）。在其待处理期间，OpenClaw 会将其保留在 Project Context 中，并为初始仪式添加系统提示词级别的引导说明，而不是把它复制到用户消息中。如果你在完成仪式后将其删除，那么在后续重启时它不应被重新创建。
 
 要完全禁用引导文件创建（适用于预置工作区），请设置：
 
@@ -46,10 +46,7 @@ OpenClaw 使用单一的代理工作区目录（`agents.defaults.workspace`）�
 
 ## 内置工具
 
-核心工具（read/exec/edit/write 以及相关系统工具）始终可用，
-但受工具策略约束。`apply_patch` 是可选的，并受
-`tools.exec.applyPatch` 控制。`TOOLS.md` 并**不**决定有哪些工具存在；它只是
-指导**你**希望如何使用它们。
+核心工具（read/exec/edit/write 和相关系统工具）始终可用，受工具策略约束。`apply_patch` 是可选的，并受 `tools.exec.applyPatch` 控制。`TOOLS.md` **不**控制有哪些工具存在；它只是说明你希望如何使用它们。
 
 ## 技能
 
@@ -87,14 +84,12 @@ OpenClaw 会从以下位置加载技能（优先级从高到低）：
 [队列](/concepts/queue) 和 [Steering 队列](/concepts/queue-steering) 了解模式
 和边界行为。
 
-块流式发送会在完成后立即发送已完成的助手块；它**默认关闭**（`agents.defaults.blockStreamingDefault: "off"`）。
-通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` vs `message_end`；默认为 `text_end`）。
-使用 `agents.defaults.blockStreamingChunk` 控制软块分片（默认为
-800–1200 字符；优先段落换行，其次普通换行；最后才是句子）。
-使用 `agents.defaults.blockStreamingCoalesce` 合并流式分片，以减少
-单行刷屏（发送前基于空闲时间进行合并）。非 Telegram 通道需要显式设置 `*.blockStreaming: true` 才能启用块回复。
-详细工具摘要会在工具开始时发出（无去抖）；Control UI 会在可用时通过代理事件流式传输工具输出。
-更多细节：[流式传输 + 分块](/concepts/streaming)。
+Block streaming 会在完成后立即发送已完成的助手块；它默认是**关闭**的（`agents.defaults.blockStreamingDefault: "off"`）。
+通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` vs `message_end`；默认值为 text_end）。
+使用 `agents.defaults.blockStreamingChunk` 控制软块分片（默认 800-1200 字符；优先段落断点，其次换行；最后是句子）。
+使用 `agents.defaults.blockStreamingCoalesce` 合并流式分片，以减少单行刷屏（发送前基于空闲时间进行合并）。非 Telegram 渠道需要显式设置 `*.blockStreaming: true` 才能启用块回复。
+工具的详细摘要会在工具开始时发出（无去抖）；Control UI 会在可用时通过代理事件流式输出工具结果。
+更多详情：[流式传输 + 分块](/concepts/streaming)。
 
 ## 模型引用
 

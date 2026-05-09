@@ -69,17 +69,17 @@ Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent �
 
 区块分块由 `EmbeddedBlockChunker` 实现：
 
-- **低边界：** 除非被强制，否则在缓冲区 >= `minChars` 前不发出。
-- **高边界：** 优先在 `maxChars` 之前拆分；如被强制，则在 `maxChars` 处拆分。
-- **断点偏好：** `paragraph` → `newline` → `sentence` → `whitespace` → 硬断开。
-- **代码围栏：** 绝不在围栏内部拆分；如在 `maxChars` 处被强制，会关闭 + 重新打开围栏以保持 Markdown 合法。
+- **低边界：** 除非被强制，否则在缓冲区达到 `minChars` 之前不发出。
+- **高边界：** 优先在 `maxChars` 之前切分；如果被强制，则在 `maxChars` 处切分。
+- **断点偏好：** `paragraph` → `newline` → `sentence` → `whitespace` → hard break。
+- **代码围栏：** 不会在围栏内部拆分；如果在 `maxChars` 处被强制拆分，会先关闭再重新打开围栏，以保持 Markdown 有效。
 
-`maxChars` 会被限制到频道的 `textChunkLimit`，因此你无法超过每个频道的上限。
+`maxChars` 会被限制到频道的 `textChunkLimit`，因此无法超过每个频道的上限。
 
 ## 合并（合并已流式区块）
 
-启用区块流式传输时，OpenClaw 可以在发送前 **合并连续的区块分块**
-。这可以减少“单行刷屏”，同时仍然提供
+当启用区块流式传输时，OpenClaw 可以在发送前**合并连续的区块片段**
+。这可以减少“单行刷屏”，同时仍提供
 渐进式输出。
 
 - 合并会等待 **空闲间隔**（`idleMs`）后再刷新。
@@ -98,8 +98,8 @@ Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent �
 更自然。
 
 - 配置：`agents.defaults.humanDelay`（可通过 `agents.list[].humanDelay` 按 agent 覆盖）。
-- 模式：`off`（默认）、`natural`（800–2500ms）、`custom`（`minMs`/`maxMs`）。
-- 仅适用于 **区块回复**，不适用于最终回复或工具摘要。
+- 模式：`off`（默认）、`natural`（800-2500ms）、`custom`（`minMs`/`maxMs`）。
+- 仅适用于**区块回复**，不适用于最终回复或工具摘要。
 
 ## “流式分块还是一次全部输出”
 
@@ -146,18 +146,20 @@ Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent �
 
 旧键迁移：
 
-- Telegram：检测到旧版 `streamMode` 和标量/布尔 `streaming` 值后，会通过 doctor/config 兼容路径迁移到 `streaming.mode`。
-- Discord：`streamMode` + 布尔 `streaming` 会自动迁移为 `streaming` 枚举。
-- Slack：`streamMode` 会自动迁移到 `streaming.mode`；布尔 `streaming` 会自动迁移到 `streaming.mode` + `streaming.nativeTransport`；旧版 `nativeStreaming` 会自动迁移到 `streaming.nativeTransport`。
+- Telegram：旧版 `streamMode` 和标量/布尔类型的 `streaming` 值会被 doctor/config 兼容路径检测并迁移到 `streaming.mode`。
+- Discord：`streamMode` + 布尔类型 `streaming` 仍然是 `streaming` 枚举的运行时别名；运行 `openclaw doctor --fix` 可重写持久化配置。
+- Slack：`streamMode` 仍然是 `streaming.mode` 的运行时别名；布尔类型 `streaming` 仍然是 `streaming.mode` 加上 `streaming.nativeTransport` 的运行时别名；旧版 `nativeStreaming` 仍然是 `streaming.nativeTransport` 的运行时别名。运行 `openclaw doctor --fix` 可重写持久化配置。
 
 ### 运行时行为
 
 Telegram：
 
-- 在私信和群组/话题中，使用 `sendMessage` + `editMessageText` 进行预览更新。
-- 如果预览已显示约一分钟，则发送一条新的最终消息，而不是原地编辑，然后清理预览，以便 Telegram 的时间戳反映回复完成时间。
-- 当 Telegram 区块流式传输被显式启用时，会跳过预览流式传输（以避免双重流式输出）。
-- `/reasoning stream` 可以把推理写入预览。
+- 使用 `sendMessage` + `editMessageText` 在私聊和群组/话题中更新预览。
+- 最终文本会就地编辑当前预览；较长的最终内容会将该消息复用为第一个分块，并且只发送剩余分块。
+- `progress` 模式会把工具进度保留在可编辑的状态草稿中，完成时清除该草稿，并通过正常投递发送最终答案。
+- 如果在完成文本被确认之前最终编辑失败，OpenClaw 会改用正常的最终投递并清理过时的预览。
+- 当显式启用 Telegram 区块流式传输时，会跳过预览流式传输（以避免双重流式传输）。
+- `/reasoning stream` 可以把推理写入一个临时预览，该预览会在最终投递后被删除。
 
 Discord：
 
@@ -188,18 +190,18 @@ Matrix：
 
 ### 工具进度预览更新
 
-预览流式传输还可以包含 **工具进度** 更新——类似“正在搜索网页”、“正在读取文件”或“正在调用工具”这样的简短状态行——它们会在工具运行期间显示在同一条预览消息中，早于最终回复出现。这样可以让多步骤工具轮次在视觉上保持“活着”，而不是在第一段思考预览和最终答案之间静默。
+预览流式传输还可以包含 **工具进度** 更新——例如“正在搜索网页”、“正在读取文件”或“正在调用工具”这类简短状态行——它们会在工具运行期间显示在同一条预览消息中，早于最终回复。这样可以让多步骤工具轮次在视觉上保持活跃，而不是在第一次思考预览和最终答案之间显得沉默。
 
 支持的界面：
 
-- **Discord**, **Slack**, **Telegram**, 和 **Matrix** 在预览流式传输启用时，默认会将工具进度流式写入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
-- Telegram 自 `v2026.4.22` 起已发布并启用工具进度预览更新；保持启用可保留这一已发布行为。
-- **Mattermost** 已经会把工具活动折叠进其单条草稿预览帖子中（见上文）。
-- 工具进度编辑遵循当前的预览流式模式；当预览流式传输为 `off` 或者区块流式传输已经接管消息时，会跳过这些编辑。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用的进度提示也会被抑制，不会作为独立状态消息投递，而审批提示、媒体载荷和错误仍会正常路由。
-- 若要保留预览流式传输但隐藏工具进度行，请为该频道将 `streaming.preview.toolProgress` 设为 `false`。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
-- Telegram 的选定引用回复是个例外：当 `replyToMode` 不是 `"off"` 且存在已选中的引用文本时，OpenClaw 会跳过该轮次的答案预览流，因此工具进度预览行无法渲染。带有当前消息回复但没有选定引用文本时，仍会保留预览流式传输。详见 [Telegram channel docs](/channels/telegram)。
+- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流式传输启用时，默认会将工具进度流式写入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
+- Telegram 自 `v2026.4.22` 起已默认启用工具进度预览更新；保持启用可延续该已发布行为。
+- **Mattermost** 已经将工具活动折叠进其单条草稿预览帖子中（见上文）。
+- 工具进度编辑遵循当前启用的预览流式模式；当预览流式传输为 `off` 或区块流式传输已接管该消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用的进度闲聊也会被抑制，不会作为独立状态消息发送，但审批提示、媒体载荷和错误仍会正常路由。
+- 若想保留预览流式传输但隐藏工具进度行，可将该频道的 `streaming.preview.toolProgress` 设为 `false`。若想保留工具进度行但隐藏命令/执行文本，可将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度频道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
+- Telegram 已选引用回复是一个例外：当 `replyToMode` 不是 `"off"` 且存在已选引用文本时，OpenClaw 会跳过该轮次的答案预览流，因此工具进度预览行无法渲染。没有已选引用文本的当前消息回复仍会保留预览流式传输。详见 [Telegram 频道文档](/channels/telegram)。
 
-示例：
+保持进度行可见，但隐藏原始命令/执行文本：
 
 ```json
 {
@@ -208,7 +210,26 @@ Matrix：
       "streaming": {
         "mode": "partial",
         "preview": {
-          "toolProgress": false
+          "toolProgress": true,
+          "commandText": "status"
+        }
+      }
+    }
+  }
+}
+```
+
+在另一个紧凑进度频道键下使用相同结构，例如 `channels.discord`、`channels.matrix`、`channels.msteams`、`channels.mattermost` 或 Slack 草稿预览。对于进度草稿模式，请将相同策略放在 `streaming.progress` 下：
+
+```json
+{
+  "channels": {
+    "telegram": {
+      "streaming": {
+        "mode": "progress",
+        "progress": {
+          "toolProgress": true,
+          "commandText": "status"
         }
       }
     }
@@ -218,7 +239,8 @@ Matrix：
 
 ## 相关内容
 
-- [Progress drafts](/concepts/progress-drafts) — 在长轮次中更新的可见进行中消息
-- [Messages](/concepts/messages) — 消息生命周期和投递
-- [Retry](/concepts/retry) — 投递失败时的重试行为
-- [Channels](/channels) — 各频道的流式支持
+- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) - 目标是共享预览、编辑、流式传输和最终定稿设计
+- [Progress drafts](/concepts/progress-drafts) - 在长轮次中更新的可见进行中消息
+- [Messages](/concepts/messages) - 消息生命周期与投递
+- [Retry](/concepts/retry) - 投递失败时的重试行为
+- [Channels](/channels) - 各频道的流式传输支持

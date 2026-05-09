@@ -5,8 +5,6 @@ read_when:
 title: "致谢"
 ---
 
-# 致谢与鸣谢
-
 ## 名称的由来
 
 OpenClaw = CLAW + TARDIS，因为每只太空龙虾都需要一台时空机器。

@@ -7,7 +7,21 @@ read_when:
 title: "Raspberry Pi"
 ---
 
-在 Raspberry Pi 上运行一个持久、始终在线的 OpenClaw Gateway。由于 Pi 只是网关（模型通过 API 在云端运行），即使是性能一般的 Pi 也能很好地处理这项工作。
+在 Raspberry Pi 上运行一个持久、始终在线的 OpenClaw Gateway。由于 Pi 只是网关（模型通过 API 在云端运行），即使是配置普通的 Pi 也能很好地承担这项工作——典型硬件成本为**一次性 35–80 美元**，没有月费。
+
+## 硬件兼容性
+
+| Pi 型号      | 内存   | 可用？ | 说明                                |
+| ------------ | ------ | ------ | ----------------------------------- |
+| Pi 5        | 4/8 GB | 最佳   | 速度最快，推荐。                    |
+| Pi 4        | 4 GB   | 良好   | 适合大多数用户的最佳选择。          |
+| Pi 4        | 2 GB   | 可以   | 需要添加交换空间。                  |
+| Pi 4        | 1 GB   | 紧张   | 配合交换空间可用，配置要尽量精简。  |
+| Pi 3B+      | 1 GB   | 慢     | 可以运行，但比较卡。                |
+| Pi Zero 2 W | 512 MB | 不行   | 不推荐。                            |
+
+**最低配置：** 1 GB 内存、1 核、500 MB 可用磁盘空间、64 位操作系统。  
+**推荐配置：** 2 GB+ 内存、16 GB+ SD 卡（或 USB SSD）、以太网。
 
 ## 前置条件
 
@@ -137,6 +151,61 @@ source ~/.bashrc
 echo 'gpu_mem=16' | sudo tee -a /boot/config.txt
 sudo systemctl disable bluetooth
 ```
+
+**用于稳定重启的 systemd drop-in** -- 如果这台 Pi 主要运行 OpenClaw，请添加一个服务 drop-in：
+
+```bash
+systemctl --user edit openclaw-gateway.service
+```
+
+```ini
+[Service]
+Environment=OPENCLAW_NO_RESPAWN=1
+Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+Restart=always
+RestartSec=2
+TimeoutStartSec=90
+```
+
+然后执行 `systemctl --user daemon-reload && systemctl --user restart openclaw-gateway.service`。在无头 Pi 上，还应先启用 lingering，这样用户服务在注销后也能继续运行：`sudo loginctl enable-linger "$(whoami)"`。
+
+## 推荐模型设置
+
+由于 Pi 只运行网关，请使用云端托管的 API 模型：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-6",
+        "fallbacks": ["openai/gpt-5.4-mini"]
+      }
+    }
+  }
+}
+```
+
+不要在 Pi 上运行本地 LLM——即使是小模型也慢得不实用。让 Claude 或 GPT 负责模型推理工作。
+
+## ARM 二进制说明
+
+大多数 OpenClaw 功能在 ARM64 上无需更改即可运行（Node.js、Telegram、WhatsApp/Baileys、Chromium）。偶尔缺少 ARM 构建的二进制，通常是技能包中附带的可选 Go/Rust CLI 工具。在回退到从源代码构建之前，请先检查缺失二进制的发布页面是否提供 `linux-arm64` / `aarch64` 构建产物。
+
+## 持久化与备份
+
+OpenClaw 的状态位于：
+
+- `~/.openclaw/` — `openclaw.json`、按 agent 区分的 `auth-profiles.json`、渠道/提供商状态、会话。
+- `~/.openclaw/workspace/` — agent 工作区（SOUL.md、memory、artifacts）。
+
+这些内容会在重启后保留。可使用以下命令创建可移植快照：
+
+```bash
+openclaw backup create
+```
+
+如果你将这些内容放在 SSD 上，性能和寿命都会优于 SD 卡。
 
 ## 故障排查
 

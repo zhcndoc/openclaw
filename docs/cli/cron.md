@@ -14,24 +14,24 @@ title: "Cron"
 运行 `openclaw cron --help` 查看完整命令集合。参见 [Cron jobs](/automation/cron-jobs) 获取概念性指南。
 </Tip>
 
-## Sessions
+## 会话
 
 `--session` 接受 `main`、`isolated`、`current` 或 `session:<id>`。
 
 <AccordionGroup>
-  <Accordion title="Session keys">
+  <Accordion title="会话键">
     - `main` 绑定到代理的主会话。
     - `isolated` 为每次运行创建一个新的转录和会话 id。
     - `current` 绑定到创建时的活动会话。
     - `session:<id>` 固定到一个显式的持久会话键。
 
   </Accordion>
-  <Accordion title="Isolated session semantics">
+  <Accordion title="隔离会话语义">
     隔离运行会重置环境会话上下文。通道和组路由、发送/排队策略、提升、来源以及 ACP 运行时绑定都会为新运行重置。安全偏好，以及用户显式选择的模型或身份验证覆盖，可以跨运行保留。
   </Accordion>
 </AccordionGroup>
 
-## Delivery
+## 投递
 
 `openclaw cron list` 和 `openclaw cron show <job-id>` 会预览解析后的投递路由。对于 `channel: "last"`，预览会显示路由是从主会话还是当前会话解析得到的，或者是否会失败并关闭。
 
@@ -41,7 +41,7 @@ title: "Cron"
 隔离的 `cron add` 作业默认使用 `--announce` 投递。使用 `--no-deliver` 可让输出保持内部。`--deliver` 仍保留为已弃用的 `--announce` 别名。
 </Note>
 
-### Delivery ownership
+### 投递所有权
 
 隔离 cron 聊天投递由代理和运行器共同负责：
 
@@ -54,7 +54,7 @@ title: "Cron"
 
 从活动聊天创建的提醒会保留实时聊天投递目标，用于回退 announce 投递。内部会话键可能是小写；不要把它们当作区分大小写的提供方 ID 的真实来源，例如 Matrix 房间 ID。
 
-### Failure delivery
+### 失败投递
 
 失败通知按以下顺序解析：
 
@@ -70,9 +70,9 @@ title: "Cron"
 没有生成回复负载，因此模型/提供方失败仍然会增加错误
 计数并触发失败通知。
 
-## Scheduling
+## 调度
 
-### One-shot jobs
+### 一次性作业
 
 `--at <datetime>` 会调度一次性运行。没有偏移量的 datetime 会被视为 UTC，除非你同时传入 `--tz <iana>`，此时会按给定时区解释墙上时钟时间。
 
@@ -80,7 +80,7 @@ title: "Cron"
 一次性作业默认在成功后删除。使用 `--keep-after-run` 可保留它们。
 </Note>
 
-### Recurring jobs
+### 循环作业
 
 循环作业在连续错误后使用指数退避重试：30 秒、1 分钟、5 分钟、15 分钟、60 分钟。下一次成功运行后，计划会恢复正常。
 
@@ -90,7 +90,7 @@ title: "Cron"
 
 注意：cron 作业定义位于 `jobs.json`，而待处理的运行时状态位于 `jobs-state.json`。如果 `jobs.json` 被外部编辑，Gateway 会重新加载已变更的计划并清除过期的待处理槽位；仅格式化层面的重写不会清除待处理槽位。
 
-### Manual runs
+### 手动运行
 
 `openclaw cron run` 会在手动运行排队后立即返回。成功响应包含 `{ ok: true, enqueued: true, runId }`。使用 `openclaw cron runs --id <job-id>` 跟踪最终结果。
 
@@ -98,7 +98,7 @@ title: "Cron"
 `openclaw cron run <job-id>` 默认强制运行。使用 `--due` 可保留旧的“仅在到期时运行”行为。
 </Note>
 
-## Models
+## 模型
 
 `cron add|edit --model <ref>` 会为作业选择一个允许的模型。
 
@@ -113,7 +113,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 - 空的按作业回退列表（作业负载/API 中的 `fallbacks: []`）会使 cron 运行保持严格。
 - 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传递一个显式的空回退覆盖，因此不会把代理主项作为隐藏的重试目标附加进去。
 
-### Isolated cron model precedence
+### 隔离 cron 模型优先级
 
 隔离 cron 按以下顺序解析活动模型：
 
@@ -122,44 +122,44 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 3. 存储的 cron 会话模型覆盖（当用户选择了一个时）。
 4. 代理或默认模型选择。
 
-### Fast mode
+### 快速模式
 
 隔离 cron 的快速模式遵循已解析的实时模型选择。模型配置 `params.fastMode` 默认适用，但存储的会话 `fastMode` 覆盖仍会优先于配置。
 
-### Live model switch retries
+### 实时模型切换重试
 
 如果隔离运行抛出 `LiveSessionModelSwitchError`，cron 会在重试之前，为活动运行持久化切换后的提供方和模型（以及存在时切换后的 auth profile 覆盖）。外层重试循环在初始尝试后最多进行两次切换重试，然后会中止而不是无限循环。
 
-## Run output and denials
+## 运行输出和拒绝
 
-### Stale acknowledgement suppression
+### 过时确认抑制
 
 隔离 cron turn 会抑制过时的仅确认回复。如果第一个结果只是一个中间状态更新，并且没有后代子代理运行负责最终答案，cron 会在投递前重新提示一次以获取真实结果。
 
-### Silent token suppression
+### 静默 token 抑制
 
 如果隔离 cron 运行只返回静默 token（`NO_REPLY` 或 `no_reply`），cron 会同时抑制直接外发投递和回退队列摘要路径，因此不会向聊天回传任何内容。
 
-### Structured denials
+### 结构化拒绝
 
 隔离 cron 运行会优先使用嵌入运行中的结构化执行拒绝元数据，然后再回退到最终输出中的已知拒绝标记，例如 `SYSTEM_RUN_DENIED`、`INVALID_REQUEST` 和审批绑定拒绝短语。
 
 `cron list` 和运行历史会显示拒绝原因，而不是把被阻止的命令报告为 `ok`。
 
-## Retention
+## 保留
 
 保留和清理在配置中控制：
 
 - `cron.sessionRetention`（默认 `24h`）会清理已完成的隔离运行会话。
 - `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 会清理 `~/.openclaw/cron/runs/<jobId>.jsonl`。
 
-## Migrating older jobs
+## 迁移旧作业
 
 <Note>
 如果你有来自当前投递和存储格式之前的 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧的 `threadId`、负载 `provider` 投递别名），并在配置了 `cron.webhook` 时，将简单的 `notify: true` webhook 回退作业迁移为显式的 webhook 投递。
 </Note>
 
-## Common edits
+## 常见编辑
 
 在不更改消息的情况下更新投递设置：
 
@@ -205,19 +205,24 @@ openclaw cron add \
 
 `--light-context` 仅适用于隔离的代理回合作业。对于 cron 运行，轻量模式会保持引导上下文为空，而不是注入完整的工作区引导集合。
 
-## Common admin commands
+## 常见管理命令
 
 手动运行与检查：
 
 ```bash
 openclaw cron list
+openclaw cron list --agent ops
 openclaw cron show <job-id>
 openclaw cron run <job-id>
 openclaw cron run <job-id> --due
 openclaw cron runs --id <job-id> --limit 50
 ```
 
-`cron runs` 条目包含投递诊断信息，包括预期的 cron 目标、解析后的目标、message 工具发送、回退使用情况以及已投递状态。
+`openclaw cron list` 默认显示所有匹配的作业。传入 `--agent <id>` 仅显示其有效规范化代理 id 匹配的作业；没有存储代理 id 的作业将计为已配置的默认代理。
+
+`cron list --json` 和 `cron show <job-id> --json` 会在每个作业上包含一个顶层 `status` 字段，它由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。这与可读状态列一致，因此外部工具无需重新推导即可读取作业状态。
+
+`cron runs` 条目包含投递诊断信息，涵盖预期的 cron 目标、解析后的目标、message 工具发送、回退使用情况以及已投递状态。
 
 代理和会话重定向：
 
@@ -228,7 +233,7 @@ openclaw cron edit <job-id> --session current
 openclaw cron edit <job-id> --session "session:daily-brief"
 ```
 
-`openclaw cron add` 在 `--agent` 被省略且作业为 agent-turn 类型时会发出警告，并回退到默认代理（`main`）。在创建时传入 `--agent <id>` 可固定特定代理。
+当省略 `--agent` 且作业为 agent-turn 类型时，`openclaw cron add` 会发出警告，并回退到默认代理（`main`）。在创建时传入 `--agent <id>` 可固定特定代理。
 
 投递调整：
 
@@ -239,7 +244,7 @@ openclaw cron edit <job-id> --no-best-effort-deliver
 openclaw cron edit <job-id> --no-deliver
 ```
 
-## Related
+## 相关
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)
 - [定时任务](/automation/cron-jobs)

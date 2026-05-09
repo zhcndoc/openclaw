@@ -27,11 +27,11 @@ OpenClaw 有两种入门路径。两者都会配置认证、Gateway，以及
 
 无论你选择哪种路径，入门都会设置：
 
-1. **模型提供商和认证** — 你所选提供商的 API 密钥、OAuth 或设置令牌
+1. **模型提供商和认证** — API key、OAuth，或针对你所选提供商的设置令牌
 2. **工作区** — 用于代理文件、启动模板和记忆的目录
 3. **Gateway** — 端口、绑定地址、认证模式
 4. **频道**（可选）— 内置和捆绑的聊天频道，例如
-   BlueBubbles、Discord、飞书、Google Chat、Mattermost、Microsoft Teams、
+   iMessage、Discord、飞书、Google Chat、Mattermost、Microsoft Teams、
    Telegram、WhatsApp 等
 5. **守护进程**（可选）— 后台服务，使 Gateway 自动启动
 

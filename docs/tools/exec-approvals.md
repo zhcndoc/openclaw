@@ -11,7 +11,7 @@ sidebarTitle: "Exec 许可"
 Exec 许可是用于让一个沙箱化 agent 在真实主机（`gateway` 或 `node`）上运行命令的 **配套应用 / node 主机护栏**。这是一个安全联锁：只有当策略 + 允许列表 +（可选）用户许可都一致时，命令才会被允许。Exec 许可会在工具策略和 elevated gating **之上叠加**（除非 elevated 被设置为 `full`，这会跳过许可）。
 
 <Note>
-生效策略取 `tools.exec.*` 与许可默认值中**更严格**的那个；如果某个许可字段被省略，则使用 `tools.exec` 的值。Host exec 还会使用该机器上的本地许可状态——即使 session 或 config 默认请求的是 `ask: "on-miss"`，`~/.openclaw/exec-approvals.json` 中主机本地的 `ask: "always"` 仍会持续提示。
+有效策略是 `tools.exec.*` 与 approvals defaults 中**更严格**的那个；如果省略了某个 approvals 字段，则使用 `tools.exec` 的值。Host exec 也使用该机器上的本地 approvals 状态——`~/.openclaw/exec-approvals.json` 中本地的 `ask: "always"` 即使 session 或 config 默认要求 `ask: "on-miss"`，也会持续弹出提示。
 </Note>
 
 ## 检查生效策略
@@ -39,12 +39,13 @@ Exec 许可在执行主机本地强制执行：
 
 ### 信任模型
 
-- 通过 Gateway 身份验证的调用方是该 Gateway 的受信任操作员。
-- 已配对的 nodes 将这种受信任操作员能力扩展到 node 主机上。
-- Exec 许可可降低误执行风险，但**不是**按用户划分的身份验证边界。
-- 已批准的 node-host 运行会绑定规范化执行上下文：规范化 cwd、精确 argv、存在时的 env 绑定，以及在适用时固定的可执行文件路径。
-- 对于 shell 脚本和直接解释器/运行时文件调用，OpenClaw 还会尽量绑定一个具体的本地文件操作数。如果该已绑定文件在批准后、执行前发生变化，则运行会被拒绝，而不会执行漂移后的内容。
-- 文件绑定有意采用尽力而为的方式，**不是**对每条解释器/运行时加载路径的完整语义模型。如果审批模式无法识别出恰好一个可绑定的具体本地文件，它会拒绝生成基于许可的运行，而不是假装完全覆盖。
+- 经过 Gateway 认证的调用者对该 Gateway 来说是受信任的操作员。
+- 已配对的 node 会把这种受信任操作员能力扩展到 node 主机上。
+- Exec 许可可以降低误执行风险，但**不是**按用户划分的认证边界，也不是文件系统只读策略。
+- 一旦获批，命令可根据所选主机或沙箱文件系统权限修改文件。
+- 已批准的 node-host 运行会绑定规范执行上下文：规范 cwd、精确 argv、存在时的 env 绑定，以及在适用时固定的可执行文件路径。
+- 对于 shell 脚本和直接解释器/运行时文件调用，OpenClaw 也会尝试绑定一个具体的本地文件操作数。如果在批准后、执行前该绑定文件发生了变化，运行会被拒绝，而不会执行漂移后的内容。
+- 文件绑定刻意采用尽力而为的方式，**不是**对每一种解释器/运行时加载器路径的完整语义模型。如果批准模式无法准确识别出恰好一个可绑定的本地文件，它会拒绝生成基于许可的运行，而不是假装完全覆盖。
 
 ### macOS 拆分
 
@@ -101,18 +102,18 @@ Exec 许可在执行主机本地强制执行：
 ### `exec.security`
 
 <ParamField path="security" type='"deny" | "allowlist" | "full"'>
-  - `deny` — 阻止所有 host exec 请求。
-  - `allowlist` — 仅允许允许列表中的命令。
-  - `full` — 允许一切（等同于 elevated）。
+  - `deny` - 阻止所有 host exec 请求。
+  - `allowlist` - 仅允许在允许列表中的命令。
+  - `full` - 允许一切（等同于 elevated）。
 
 </ParamField>
 
 ### `exec.ask`
 
 <ParamField path="ask" type='"off" | "on-miss" | "always"'>
-  - `off` — 从不提示。
-  - `on-miss` — 仅当允许列表未匹配时才提示。
-  - `always` — 每条命令都提示。即使有效 ask 模式是 `always`，`allow-always` 的持久信任也**不会**抑制提示。
+  - `off` - 从不提示。
+  - `on-miss` - 仅在允许列表不匹配时提示。
+  - `always` - 每条命令都提示。即使有效 ask 模式为 `always`，`allow-always` 的持久化信任也**不会**抑制提示。
 
 </ParamField>
 
@@ -121,9 +122,9 @@ Exec 许可在执行主机本地强制执行：
 <ParamField path="askFallback" type='"deny" | "allowlist" | "full"'>
   当需要提示但无法到达任何 UI 时的处理方式。
 
-- `deny` — 阻止。
-- `allowlist` — 仅当允许列表匹配时才允许。
-- `full` — 允许。
+- `deny` - 阻止。
+- `allowlist` - 仅当允许列表匹配时才允许。
+- `full` - 允许。
 
 </ParamField>
 
@@ -147,7 +148,10 @@ Exec 许可在执行主机本地强制执行：
 
 ## YOLO 模式（无许可）
 
-如果你希望 host exec 在没有许可提示的情况下运行，你必须同时打开**两层**策略：OpenClaw 配置中的请求 exec 策略（`tools.exec.*`）**以及** `~/.openclaw/exec-approvals.json` 中的主机本地许可策略。
+如果你希望 host exec 在没有批准提示的情况下运行，你必须同时打开
+OpenClaw 配置中的**两层**策略：
+请求的 exec policy（`tools.exec.*`）以及
+`~/.openclaw/exec-approvals.json` 中的本地主机 approvals policy。
 
 YOLO 是默认的主机行为，除非你显式收紧它：
 
@@ -167,7 +171,7 @@ YOLO 是默认的主机行为，除非你显式收紧它：
 
 </Warning>
 
-暴露其自身非交互式权限模式的 CLI 后端提供方可以遵循此策略。当 OpenClaw 请求的 exec 策略是 YOLO 时，Claude CLI 会添加 `--permission-mode bypassPermissions`。可通过 `agents.defaults.cliBackends.claude-cli.args` / `resumeArgs` 下的显式 Claude 参数覆盖该后端行为——例如 `--permission-mode default`、`acceptEdits` 或 `bypassPermissions`。
+提供自己非交互许可模式的 CLI 后端也可以遵循此策略。Claude CLI 在 OpenClaw 请求的 exec policy 为 YOLO 时会添加 `--permission-mode bypassPermissions`。可通过 `agents.defaults.cliBackends.claude-cli.args` / `resumeArgs` 中显式传入 Claude 参数来覆盖该后端行为——例如 `--permission-mode default`、`acceptEdits` 或 `bypassPermissions`。
 
 如果你想要更保守的配置，可以将任一层收紧回 `allowlist` / `on-miss` 或 `deny`。
 
@@ -259,14 +263,42 @@ EOF
 - `~/.local/bin/*`
 - `/opt/homebrew/bin/rg`
 
-每个允许列表条目会跟踪：
+### 使用 argPattern 限制参数
 
-| 字段              | 含义                     |
-| ----------------- | ------------------------ |
-| `id`               | 用于 UI 标识的稳定 UUID  |
-| `lastUsedAt`       | 上次使用时间戳          |
-| `lastUsedCommand`  | 上次匹配的命令          |
-| `lastResolvedPath` | 上次解析出的二进制路径  |
+当某个允许列表条目应当匹配某个二进制和特定参数形式时，添加 `argPattern`。OpenClaw 会针对解析后的命令参数评估该正则表达式，不包括可执行文件标记（`argv[0]`）。对于手工编写的条目，参数会用单个空格连接，因此在需要精确匹配时请为模式添加锚点。
+
+```json
+{
+  "version": 1,
+  "agents": {
+    "main": {
+      "allowlist": [
+        {
+          "pattern": "python3",
+          "argPattern": "^safe\\.py$"
+        }
+      ]
+    }
+  }
+}
+```
+
+该条目允许 `python3 safe.py`；`python3 other.py` 则是一次允许列表未命中。如果同一个二进制还存在仅按路径匹配的条目，则未匹配的参数仍可能回退到该仅路径条目。若目标是将该二进制限制为声明的参数，请省略仅路径条目。
+
+由批准流程保存的条目可以使用内部分隔符格式来实现精确 argv 匹配。建议使用 UI 或批准流程来重新生成这些条目，而不是手工编辑编码后的值。如果 OpenClaw 无法解析某个命令段的 argv，则带有 `argPattern` 的条目不会匹配。
+
+每个允许列表条目都支持：
+
+| 字段              | 含义                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| `pattern`          | 已解析二进制路径 glob 或裸命令名 glob           |
+| `argPattern`       | 可选的 argv 正则；省略时为仅路径匹配            |
+| `id`               | 用于 UI 身份识别的稳定 UUID                               |
+| `source`           | 条目来源，例如 `allow-always`                          |
+| `commandText`      | 批准流程创建该条目时捕获的命令文本 |
+| `lastUsedAt`       | 最近使用时间戳                                           |
+| `lastUsedCommand`  | 最近一次匹配的命令                                     |
+| `lastResolvedPath` | 最近一次解析出的二进制路径                                     |
 
 ## 自动允许技能 CLI
 
@@ -281,8 +313,10 @@ EOF
 
 ## 安全 bin 与审批转发
 
-关于安全 bin（仅 stdin 的快速路径）、解释器绑定细节，以及如何将审批提示转发到 Slack/Discord/Telegram（或将其作为原生审批客户端运行），请参见
-[Exec approvals — advanced](/tools/exec-approvals-advanced)。
+对于安全 bin（仅 stdin 的快速路径）、解释器绑定详情，以及
+如何将审批提示转发到 Slack/Discord/Telegram（或将它们作为
+原生审批客户端运行），请参见
+[Exec approvals - advanced](/tools/exec-approvals-advanced)。
 
 ## 控制 UI 编辑
 
@@ -290,7 +324,7 @@ EOF
 
 目标选择器可选择 **Gateway**（本地审批）或 **Node**。节点必须公开 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。如果某个节点尚未公开 exec approvals，请直接编辑其本地的 `~/.openclaw/exec-approvals.json`。
 
-CLI：`openclaw approvals` 支持 gateway 或 node 编辑 —— 参见
+CLI: `openclaw approvals` 支持 gateway 或 node 编辑 - 参见
 [Approvals CLI](/cli/approvals)。
 
 ## 审批流程
@@ -334,7 +368,7 @@ Exec 生命周期会作为系统消息显示：
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Exec approvals — advanced" href="/tools/exec-approvals-advanced" icon="gear">
+  <Card title="Exec approvals - advanced" href="/tools/exec-approvals-advanced" icon="gear">
     安全 bin、解释器绑定，以及将审批转发到聊天。
   </Card>
   <Card title="Exec tool" href="/tools/exec" icon="terminal">

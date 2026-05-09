@@ -6,13 +6,11 @@ read_when:
   - 为 OpenClaw 运行时流量配置外部正向代理
 ---
 
-# 网络代理
-
-OpenClaw 可以将运行时 HTTP 和 WebSocket 流量通过由运维管理的正向代理进行路由。这是一种可选的纵深防御，适用于希望集中控制出站流量、增强 SSRF 防护以及提高网络可审计性的部署。
+OpenClaw 可以将运行时 HTTP 和 WebSocket 流量通过由运维管理的正向代理进行路由。对于希望集中控制出站流量、增强 SSRF 防护并提升网络可审计性的部署而言，这是一种可选的纵深防御措施。
 
 OpenClaw 不会提供、下载、启动、配置或认证任何代理。你负责运行适合你环境的代理技术，而 OpenClaw 会将正常的进程本地 HTTP 和 WebSocket 客户端通过它进行路由。
 
-## 为什么使用代理？
+## 为什么使用代理
 
 代理为运维人员提供了一个统一的出站 HTTP 和 WebSocket 流量网络控制点。即使不考虑 SSRF 加固，这也很有用：
 
@@ -53,10 +51,11 @@ OpenClaw 进程
 
 ## 相关代理术语
 
-- `proxy.enabled` / `proxy.proxyUrl`：OpenClaw 运行时出站流量的正向代理路由。本页文档说明了这一功能。
-- `gateway.auth.mode: "trusted-proxy"`：用于 Gateway 访问的入站、身份感知的反向代理认证。参见 [受信任代理认证](/gateway/trusted-proxy-auth)。
-- `openclaw proxy`：用于开发和支持的本地调试代理与捕获检查器。参见 [openclaw proxy](/cli/proxy)。
-- 通道或提供商特定的代理设置：针对特定传输的插件专用覆盖。当目标是在整个运行时实现集中式出站控制时，优先使用受管网络代理。
+- `proxy.enabled` / `proxy.proxyUrl`：用于 OpenClaw 运行时出站流量的正向代理路由。本页对此功能进行了说明。
+- `gateway.auth.mode: "trusted-proxy"`：用于 Gateway 访问的入站、具备身份感知的反向代理认证。参见 [受信任代理认证](/gateway/trusted-proxy-auth)。
+- `openclaw proxy`：用于开发和支持的本地调试代理与抓包检查器。参见 [openclaw proxy](/cli/proxy)。
+- `tools.web.fetch.useTrustedEnvProxy`：为 `web_fetch` 提供可选能力，使运维控制的 HTTP(S) 环境代理在保留默认严格 DNS 固定和主机名策略的同时解析 DNS。参见 [Web fetch](/tools/web-fetch#trusted-env-proxy)。
+- 通道或提供者特定的代理设置：针对特定传输的所有者级覆盖。当目标是在整个运行时实现集中出站控制时，应优先使用受管网络代理。
 
 ## 配置
 
@@ -74,7 +73,22 @@ OPENCLAW_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
 
 `proxy.proxyUrl` 的优先级高于 `OPENCLAW_PROXY_URL`。
 
-如果 `enabled=true` 但未配置有效的代理 URL，受保护命令会在启动时失败，而不会回退到直接网络访问。
+### Gateway 回环模式
+
+本地 Gateway 控制平面客户端通常会连接到诸如 `ws://127.0.0.1:18789` 的回环 WebSocket。使用 `proxy.loopbackMode` 来选择在受管代理激活期间这类流量的行为：
+
+```yaml
+proxy:
+  enabled: true
+  proxyUrl: http://127.0.0.1:3128
+  loopbackMode: gateway-only # gateway-only, proxy, or block
+```
+
+- `gateway-only`（默认）：OpenClaw 会在活动的 `global-agent` `NO_PROXY` 控制器中注册 Gateway 回环权限，从而使本地 Gateway WebSocket 流量可以直接连接。自定义回环 Gateway 端口可以正常工作，因为当前活动 Gateway URL 的主机和端口会被注册。
+- `proxy`：OpenClaw 不会注册 Gateway 回环 `NO_PROXY` 权限，因此本地 Gateway 流量会通过受管代理发送。如果代理是远程的，它必须为 OpenClaw 主机的回环服务提供特殊路由，例如将其映射为代理可达的主机名、IP 或隧道。标准远程代理会从代理主机而不是从 OpenClaw 主机解析 `127.0.0.1` 和 `localhost`。
+- `block`：OpenClaw 会在打开套接字之前拒绝回环 Gateway 控制平面连接。
+
+如果 `enabled=true` 但未配置有效的代理 URL，受保护的命令会在启动时失败，而不是回退到直接网络访问。
 
 对于使用 `openclaw gateway start` 启动的托管 Gateway 服务，建议将 URL 存储在配置中：
 
@@ -139,7 +153,7 @@ OpenClaw 应用层分类器逻辑位于 `src/infra/net/ssrf.ts` 和 `src/shared/
 openclaw proxy validate --proxy-url http://127.0.0.1:3128
 ```
 
-默认情况下，当未提供自定义目标时，该命令会检查 `https://example.com/` 是否成功，并启动一个临时的回环 canary，代理不应访问它。默认的拒绝检查在代理返回非 2xx 的拒绝响应，或以传输失败的方式阻止 canary 时通过；如果成功响应到达 canary，则失败。如果未启用并配置代理，验证会报告配置问题；在修改配置之前，可使用 `--proxy-url` 做一次性预检。使用 `--allowed-url` 和 `--denied-url` 测试部署特定的预期行为。自定义拒绝目标采用失败即关闭策略：任何 HTTP 响应都意味着该目标可通过代理到达，而任何传输错误都会被报告为不确定，因为 OpenClaw 无法证明代理阻止了一个可达的源。验证失败时，命令以代码 1 退出。
+默认情况下，当未提供自定义目标时，该命令会检查 `https://example.com/` 是否成功，并启动一个临时的回环 canary，代理不应访问该 canary。默认的拒绝检查在代理返回非 2xx 的拒绝响应，或以传输失败阻止 canary 时通过；如果成功响应到达 canary，则失败。如果没有启用并配置代理，验证会报告配置问题；在更改配置之前，可使用 `--proxy-url` 进行一次性预检。使用 `--allowed-url` 和 `--denied-url` 来测试部署特定的期望。添加 `--apns-reachable` 还可以验证直接 APNs HTTP/2 传输是否能够通过代理打开 `CONNECT` 隧道并收到沙盒 APNs 响应；该探测会使用一个故意无效的 provider token，因此预期会返回 `403 InvalidProviderToken`，这也表示可达。自定义的拒绝目标采用失败即关闭：任何 HTTP 响应都表示该目标可通过代理访问，而任何传输错误都会被报告为不确定，因为 OpenClaw 无法证明代理阻止了一个本可访问的源站。验证失败时，命令以退出码 1 结束。
 
 自动化场景可使用 `--json`。JSON 输出包含总体结果、有效代理配置来源、任何配置错误以及每个目标检查项。代理 URL 凭据会在文本和 JSON 输出中被脱敏：
 
@@ -158,6 +172,12 @@ openclaw proxy validate --proxy-url http://127.0.0.1:3128
       "url": "https://example.com/",
       "ok": true,
       "status": 200
+    },
+    {
+      "kind": "apns",
+      "url": "https://api.sandbox.push.apple.com",
+      "ok": true,
+      "status": 403
     }
   ]
 }
@@ -191,9 +211,21 @@ proxy:
 
 ## 限制
 
-- 该代理提高了进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它并不是 OS 级别的网络沙箱。
-- 原始的 `net`、`tls` 和 `http2` 套接字、原生插件以及子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。
-- 当需要时，用户本地 Web UI 和本地模型服务器应在运维代理策略中加入允许列表；OpenClaw 不会为它们暴露通用的本地网络绕过机制。
-- Gateway 控制平面的代理绕过刻意仅限于 `localhost` 和字面量回环 IP URL。对于本地直连的 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通基于主机名的流量一样路由。
+- 代理提高了进程内 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是操作系统级别的网络沙箱。
+- 网关回环控制平面流量默认通过 `proxy.loopbackMode: "gateway-only"` 直接本地绕过。OpenClaw 通过在受管的 `global-agent` `NO_PROXY` 控制器中注册当前活动的 Gateway 回环权限来实现该绕过。运维人员可以设置 `proxy.loopbackMode: "proxy"` 让 Gateway 回环流量通过受管代理，或设置 `proxy.loopbackMode: "block"` 来拒绝回环 Gateway 连接。有关远程代理的注意事项，请参见 [Gateway Loopback Mode](#gateway-loopback-mode)。
+- 原始的 `net`、`tls` 和 `http2` 套接字、原生 addon，以及非 OpenClaw 的子进程，可能会绕过 Node 级别的代理路由，除非它们继承并遵守代理环境变量。fork 出来的 OpenClaw 子 CLI 会继承受管的代理 URL 和 `proxy.loopbackMode` 状态。
+- IRC 是一个位于运维人员管理的转发代理路由之外的原始 TCP/TLS 通道。在要求所有出站流量都必须经过该转发代理的部署中，除非明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
+- 本地调试代理是诊断工具；在受管代理模式处于活动状态时，其对代理请求和 CONNECT 隧道的直接上游转发默认被禁用；仅在获得批准的本地诊断场景下启用直接转发。
+- 如有需要，应在运维人员的代理策略中允许列出用户本地 WebUI 和本地模型服务器；OpenClaw 不为它们提供通用的本地网络绕过。
+- Gateway 控制平面的代理绕过有意仅限于 `localhost` 和字面量回环 IP URL。对于本地直接的 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通的基于主机名的流量一样路由。
 - OpenClaw 不会检查、测试或认证你的代理策略。
 - 请将代理策略变更视为安全敏感的运维变更。
+
+| Surface                                                      | Managed proxy status                                                                               |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `fetch`, `node:http`, `node:https`, common WebSocket clients | 在配置后通过受管代理钩子进行路由。                                                                 |
+| APNs direct HTTP/2                                           | 通过 APNs 受管 CONNECT 辅助程序进行路由。                                                         |
+| Gateway control-plane loopback                               | 仅对已配置的本地回环 Gateway URL 直接连接。                                                       |
+| Debug proxy upstream forwarding                              | 在受管代理模式激活时被禁用，除非为本地诊断显式启用。                                               |
+| IRC                                                          | 原始 TCP/TLS；在受管 HTTP 代理模式下不会被代理。除非直接 IRC 出站已获批准，否则请禁用。           |
+| Other raw `net`, `tls`, or `http2` client calls              | 必须在落地前由原始套接字守卫进行分类。                                                             |

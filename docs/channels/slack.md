@@ -19,18 +19,175 @@ title: "Slack"
   </Card>
 </CardGroup>
 
+## 选择 Socket Mode 或 HTTP Request URLs
+
+这两种传输方式都已可用于生产环境，并且在消息、斜杠命令、App Home 和交互功能上具有同等能力。请选择部署形态，而不是功能。
+
+| 关注点                       | Socket Mode（默认）                                                                         | HTTP Request URLs                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 公网 Gateway URL             | 不需要                                                                                      | 需要（DNS、TLS、反向代理或隧道）                                                                              |
+| 出站网络                     | 必须能访问到 `wss-primary.slack.com` 的出站 WSS                                           | 不需要出站 WS；仅需入站 HTTPS                                                                                |
+| 所需令牌                     | Bot token（`xoxb-...`）+ 具备 `connections:write` 的 App-Level Token（`xapp-...`）       | Bot token（`xoxb-...`）+ Signing Secret                                                                      |
+| 开发笔记本 / 防火墙后面       | 可直接使用                                                                                  | 需要公网隧道（ngrok、Cloudflare Tunnel、Tailscale Funnel）或 staging Gateway                                   |
+| 横向扩展                     | 每个主机上每个应用一个 Socket Mode 会话；多个 Gateway 需要分别配置 Slack 应用               | 无状态 POST 处理器；多个 Gateway 副本可通过负载均衡共享同一个应用                                              |
+| 单个 Gateway 上的多账号       | 支持；每个账号都会打开各自的 WS                                                               | 支持；每个账号都需要唯一的 `webhookPath`（默认 `/slack/events`），以免注册冲突                                 |
+| 斜杠命令传输                  | 通过 WS 连接传递；`slash_commands[].url` 会被忽略                                            | Slack 会向 `slash_commands[].url` 发送 POST；该字段是命令分发所必需的                                           |
+| 请求签名                      | 不使用（认证方式为 App-Level Token）                                                         | Slack 会对每个请求签名；OpenClaw 使用 `signingSecret` 验证                                                     |
+| 连接断开后的恢复              | Slack SDK 会自动重连；适用网关的 pong-timeout 传输调优                                        | 不存在需要掉线恢复的持久连接；Slack 的重试按请求进行                                                           |
+
+<Note>
+  **选择 Socket Mode** 适用于单 Gateway 主机、开发笔记本，以及能够向外访问 `*.slack.com` 但不能接受入站 HTTPS 的本地/内网环境。
+
+**选择 HTTP Request URLs** 适用于在负载均衡器后运行多个 Gateway 副本、出站 WSS 被阻止但允许入站 HTTPS、或者你已经在反向代理处终结 Slack webhook 的场景。
+</Note>
+
 ## 快速设置
 
 <Tabs>
   <Tab title="Socket Mode（默认）">
     <Steps>
-      <Step title="创建一个新的 Slack 应用">
-        在 Slack 应用设置中点击 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
+      <Step title="创建新的 Slack 应用">
+        打开 [api.slack.com/apps](https://api.slack.com/apps/new) → **Create New App** → **From a manifest** → 选择你的 workspace → 粘贴下面任一 manifest → **Next** → **Create**。
 
-        - 选择 **from a manifest** 并为你的应用选择一个工作区
-        - 粘贴下面的 [示例 manifest](#manifest-and-scope-checklist) 并继续创建
-        - 生成带有 `connections:write` 的 **App-Level Token**（`xapp-...`）
-        - 安装应用并复制显示的 **Bot Token**（`xoxb-...`）
+        <CodeGroup>
+
+```json Recommended
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "Slack connector for OpenClaw"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true },
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "slash_commands": [
+      {
+        "command": "/openclaw",
+        "description": "发送消息给 OpenClaw",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "commands",
+        "emoji:read",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "mpim:history",
+        "mpim:read",
+        "mpim:write",
+        "pins:read",
+        "pins:write",
+        "reactions:read",
+        "reactions:write",
+        "usergroups:read",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "socket_mode_enabled": true,
+    "event_subscriptions": {
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "channel_rename",
+        "member_joined_channel",
+        "member_left_channel",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "pin_added",
+        "pin_removed",
+        "reaction_added",
+        "reaction_removed"
+      ]
+    }
+  }
+}
+```
+
+```json Minimal
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "Slack connector for OpenClaw"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true },
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "slash_commands": [
+      {
+        "command": "/openclaw",
+        "description": "发送消息给 OpenClaw",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "commands",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "socket_mode_enabled": true,
+    "event_subscriptions": {
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im"
+      ]
+    }
+  }
+}
+```
+
+        </CodeGroup>
+
+        <Note>
+          **Recommended** 与内置 Slack 插件的完整功能集一致：App Home、斜杠命令、文件、反应、pin、群组私信，以及 emoji/usergroup 读取。若 workspace 策略限制 scopes，请选择 **Minimal** —— 它覆盖 DM、频道/群组历史、mentions 和斜杠命令，但会移除 files、reactions、pins、group-DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。关于每个 scope 的理由以及诸如额外斜杠命令之类的增量选项，请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
+        </Note>
+
+        Slack 创建应用后：
+
+        - **Basic Information → App-Level Tokens → Generate Token and Scopes**：添加 `connections:write`，保存，并复制 `xapp-...` 值。
+        - **Install App → Install to Workspace**：复制 `xoxb-...` Bot User OAuth Token。
 
       </Step>
 
@@ -79,13 +236,164 @@ openclaw gateway
 
   <Tab title="HTTP Request URLs">
     <Steps>
-      <Step title="创建一个新的 Slack 应用">
-        在 Slack 应用设置中点击 **[创建新应用](https://api.slack.com/apps/new)** 按钮：
+      <Step title="创建新的 Slack 应用">
+        打开 [api.slack.com/apps](https://api.slack.com/apps/new) → **Create New App** → **From a manifest** → 选择你的 workspace → 粘贴下面任一 manifest → 将 `https://gateway-host.example.com/slack/events` 替换为你的公网 Gateway URL → **Next** → **Create**。
 
-        - 选择 **from a manifest** 并为你的应用选择一个工作区
-        - 粘贴下面的 [示例 manifest](#manifest-and-scope-checklist) 并在创建前更新 URL
-        - 保存用于请求验证的 **Signing Secret**
-        - 安装应用并复制显示的 **Bot Token**（`xoxb-...`）
+        <CodeGroup>
+
+```json Recommended
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "Slack connector for OpenClaw"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true },
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "slash_commands": [
+      {
+        "command": "/openclaw",
+        "description": "发送消息给 OpenClaw",
+        "should_escape": false,
+        "url": "https://gateway-host.example.com/slack/events"
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "commands",
+        "emoji:read",
+        "files:read",
+        "files:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "mpim:history",
+        "mpim:read",
+        "mpim:write",
+        "pins:read",
+        "pins:write",
+        "reactions:read",
+        "reactions:write",
+        "usergroups:read",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://gateway-host.example.com/slack/events",
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "channel_rename",
+        "member_joined_channel",
+        "member_left_channel",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "pin_added",
+        "pin_removed",
+        "reaction_added",
+        "reaction_removed"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://gateway-host.example.com/slack/events",
+      "message_menu_options_url": "https://gateway-host.example.com/slack/events"
+    }
+  }
+}
+```
+
+```json Minimal
+{
+  "display_information": {
+    "name": "OpenClaw",
+    "description": "Slack connector for OpenClaw"
+  },
+  "features": {
+    "bot_user": { "display_name": "OpenClaw", "always_online": true },
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "slash_commands": [
+      {
+        "command": "/openclaw",
+        "description": "发送消息给 OpenClaw",
+        "should_escape": false,
+        "url": "https://gateway-host.example.com/slack/events"
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "assistant:write",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "commands",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "im:read",
+        "im:write",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://gateway-host.example.com/slack/events",
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://gateway-host.example.com/slack/events",
+      "message_menu_options_url": "https://gateway-host.example.com/slack/events"
+    }
+  }
+}
+```
+
+        </CodeGroup>
+
+        <Note>
+          **Recommended** 与内置 Slack 插件的完整功能集一致；**Minimal** 为受限 workspace 去掉了 files、reactions、pins、group-DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。关于每个 scope 的理由，请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
+        </Note>
+
+        <Info>
+          这三个 URL 字段（`slash_commands[].url`、`event_subscriptions.request_url` 和 `interactivity.request_url` / `message_menu_options_url`）都指向同一个 OpenClaw 端点。Slack 的 manifest schema 要求它们分别命名，但 OpenClaw 会按 payload 类型路由，因此一个 `webhookPath`（默认 `/slack/events`）就足够。HTTP 模式下，如果没有 `slash_commands[].url`，斜杠命令将会静默失效。
+        </Info>
+
+        Slack 创建应用后：
+
+        - **Basic Information → App Credentials**：复制 **Signing Secret** 用于请求验证。
+        - **Install App → Install to Workspace**：复制 `xoxb-...` Bot User OAuth Token。
 
       </Step>
 
@@ -299,115 +607,115 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
   "slash_commands": [
     {
       "command": "/new",
-      "description": "Start a new session",
+      "description": "开始一个新会话",
       "usage_hint": "[model]"
     },
     {
       "command": "/reset",
-      "description": "Reset the current session"
+      "description": "重置当前会话"
     },
     {
       "command": "/compact",
-      "description": "Compact the session context",
+      "description": "压缩会话上下文",
       "usage_hint": "[instructions]"
     },
     {
       "command": "/stop",
-      "description": "Stop the current run"
+      "description": "停止当前运行"
     },
     {
       "command": "/session",
-      "description": "Manage thread-binding expiry",
+      "description": "管理线程绑定过期时间",
       "usage_hint": "idle <duration|off> or max-age <duration|off>"
     },
     {
       "command": "/think",
-      "description": "Set the thinking level",
+      "description": "设置思考级别",
       "usage_hint": "<level>"
     },
     {
       "command": "/verbose",
-      "description": "Toggle verbose output",
+      "description": "切换详细输出",
       "usage_hint": "on|off|full"
     },
     {
       "command": "/fast",
-      "description": "Show or set fast mode",
+      "description": "显示或设置快速模式",
       "usage_hint": "[status|on|off]"
     },
     {
       "command": "/reasoning",
-      "description": "Toggle reasoning visibility",
+      "description": "切换推理可见性",
       "usage_hint": "[on|off|stream]"
     },
     {
       "command": "/elevated",
-      "description": "Toggle elevated mode",
+      "description": "切换提升模式",
       "usage_hint": "[on|off|ask|full]"
     },
     {
       "command": "/exec",
-      "description": "Show or set exec defaults",
+      "description": "显示或设置 exec 默认值",
       "usage_hint": "host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>"
     },
     {
       "command": "/model",
-      "description": "Show or set the model",
+      "description": "显示或设置模型",
       "usage_hint": "[name|#|status]"
     },
     {
       "command": "/models",
-      "description": "List providers/models",
+      "description": "列出提供方/模型",
       "usage_hint": "[provider] [page] [limit=<n>|size=<n>|all]"
     },
     {
       "command": "/help",
-      "description": "Show the short help summary"
+      "description": "显示简短帮助摘要"
     },
     {
       "command": "/commands",
-      "description": "Show the generated command catalog"
+      "description": "显示生成的命令目录"
     },
     {
       "command": "/tools",
-      "description": "Show what the current agent can use right now",
+      "description": "显示当前代理此刻可使用的内容",
       "usage_hint": "[compact|verbose]"
     },
     {
       "command": "/agentstatus",
-      "description": "Show runtime status, including provider usage/quota when available"
+      "description": "显示运行时状态，包括可用时的提供方使用情况/配额"
     },
     {
       "command": "/tasks",
-      "description": "List active/recent background tasks for the current session"
+      "description": "列出当前会话的活动/最近后台任务"
     },
     {
       "command": "/context",
-      "description": "Explain how context is assembled",
+      "description": "解释上下文是如何组装的",
       "usage_hint": "[list|detail|json]"
     },
     {
       "command": "/whoami",
-      "description": "Show your sender identity"
+      "description": "显示你的发送者身份"
     },
     {
       "command": "/skill",
-      "description": "Run a skill by name",
+      "description": "按名称运行一个技能",
       "usage_hint": "<name> [input]"
     },
     {
       "command": "/btw",
-      "description": "Ask a side question without changing session context",
+      "description": "在不更改会话上下文的情况下提出一个旁支问题",
       "usage_hint": "<question>"
     },
     {
       "command": "/side",
-      "description": "Ask a side question without changing session context",
+      "description": "在不更改会话上下文的情况下提出一个旁支问题",
       "usage_hint": "<question>"
     },
     {
       "command": "/usage",
-      "description": "Control the usage footer or show cost summary",
+      "description": "控制使用情况页脚或显示费用摘要",
       "usage_hint": "off|tokens|full|cost"
     }
   ]
@@ -423,20 +731,20 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
   "slash_commands": [
     {
       "command": "/new",
-      "description": "Start a new session",
+      "description": "开始一个新会话",
       "usage_hint": "[model]",
       "url": "https://gateway-host.example.com/slack/events"
     },
     {
       "command": "/help",
-      "description": "Show the short help summary",
+      "description": "显示简短帮助摘要",
       "url": "https://gateway-host.example.com/slack/events"
     }
   ]
 }
 ```
 
-        Repeat that `url` value on every command in the list.
+        对列表中的每个命令都重复该 `url` 值。
 
       </Tab>
     </Tabs>
@@ -610,21 +918,22 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `toolsBySender` 键格式：`id:`、`e164:`、`username:`、`name:`，或 `"*"` 通配符
       （旧版未加前缀的键仍然只映射到 `id:`）
 
-    对于频道和私有频道，`allowBots` 是保守的：只有当发送 bot 的房间消息的 bot 被显式列在该房间的 `users` 允许列表中，或者 `channels.slack.allowFrom` 中至少有一个显式 Slack owner ID 当前是该房间成员时，才会接受 bot 生成的房间消息。通配符和显示名 owner 条目都不能满足 owner 存在性要求。owner 存在性使用 Slack `conversations.members`；请确保应用对该房间类型具有匹配的读取权限范围（公共频道使用 `channels:read`，私有频道使用 `groups:read`）。如果成员查询失败，OpenClaw 会丢弃该 bot 生成的房间消息。
+    对于频道和私有频道，`allowBots` 是保守的：只有当发送 bot 的房间消息的 bot 被显式列在该房间的 `users` 允许列表中，或者 `channels.slack.allowFrom` 中至少有一个显式 Slack owner ID 当前是该房间成员时，才会接受 bot 生成的房间消息。通配符和显示名 owner 条目都不能满足 owner 存在性要求。owner 存在性使用 Slack `conversations.members`; 请确保应用对该房间类型具有匹配的读取权限范围（公共频道使用 `channels:read`，私有频道使用 `groups:read`）。如果成员查询失败，OpenClaw 会丢弃该 bot 生成的房间消息。
 
   </Tab>
 </Tabs>
 
 ## 线程、会话和回复标签
 
-- DMs route as `direct`; channels as `channel`; MPIMs as `group`.
-- Slack route bindings accept raw peer IDs plus Slack target forms such as `channel:C12345678`, `user:U12345678`, and `<@U12345678>`.
-- With default `session.dmScope=main`, Slack DMs collapse to agent main session.
-- Channel sessions: `agent:<agentId>:slack:channel:<channelId>`.
-- Thread replies can create thread session suffixes (`:thread:<threadTs>`) when applicable.
-- `channels.slack.thread.historyScope` default is `thread`; `thread.inheritParent` default is `false`.
-- `channels.slack.thread.initialHistoryLimit` controls how many existing thread messages are fetched when a new thread session starts (default `20`; set `0` to disable).
-- `channels.slack.thread.requireExplicitMention` (default `false`): when `true`, suppress implicit thread mentions so the bot only responds to explicit `@bot` mentions inside threads, even when the bot already participated in the thread. Without this, replies in a bot-participated thread bypass `requireMention` gating.
+- DMs 路由为 `direct`；频道为 `channel`；MPIMs 为 `group`。
+- Slack 路由绑定接受原始 peer ID 以及 Slack 目标形式，例如 `channel:C12345678`、`user:U12345678` 和 `<@U12345678>`。
+- 使用默认 `session.dmScope=main` 时，Slack DMs 会折叠到 agent 主会话。
+- 频道会话：`agent:<agentId>:slack:channel:<channelId>`。
+- 线程回复在适用时可以创建线程会话后缀（`:thread:<threadTs>`）。
+- 在 OpenClaw 处理顶层消息且不要求显式提及的频道中，非 `off` 的 `replyToMode` 会将每个已处理的根消息路由到 `agent:<agentId>:slack:channel:<channelId>:thread:<rootTs>`，这样可见的 Slack 线程会从第一轮开始映射到一个 OpenClaw 会话。
+- `channels.slack.thread.historyScope` 默认值为 `thread`；`thread.inheritParent` 默认值为 `false`。
+- `channels.slack.thread.initialHistoryLimit` 控制新线程会话开始时会拉取多少条现有线程消息（默认 `20`；设为 `0` 可禁用）。
+- `channels.slack.thread.requireExplicitMention`（默认 `false`）：当为 `true` 时，会抑制隐式线程提及，因此即使 bot 已经参与过线程，也只会在线程内对显式 `@bot` 提及作出响应。若不启用此项，则 bot 已参与线程中的回复会绕过 `requireMention` 门控。
 
 回复线程控制：
 
@@ -662,19 +971,38 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 `channels.slack.streaming` 控制实时预览行为：
 
 - `off`：禁用实时预览流式传输。
-- `partial`（默认）：用最新的部分输出替换预览文本。
+- `partial`（默认）：使用最新的部分输出替换预览文本。
 - `block`：追加分块预览更新。
-- `progress`：在生成过程中显示进度状态文本，然后发送最终文本。
-- `streaming.preview.toolProgress`：当草稿预览处于激活状态时，将工具/进度更新路由到同一条已编辑的预览消息中（默认：`true`）。设为 `false` 可保留单独的工具/进度消息。
+- `progress`：在生成期间显示进度状态文本，然后发送最终文本。
+- `streaming.preview.toolProgress`：当草稿预览处于活动状态时，将工具/进度更新路由到同一条已编辑的预览消息中（默认：`true`）。设为 `false` 可保留单独的工具/进度消息。
+- `streaming.preview.commandText` / `streaming.progress.commandText`：设为 `status` 可在隐藏原始 command/exec 文本的同时保留紧凑的工具进度行（默认：`raw`）。
+
+隐藏原始 command/exec 文本，同时保留紧凑的进度行：
+
+```json
+{
+  "channels": {
+    "slack": {
+      "streaming": {
+        "mode": "progress",
+        "progress": {
+          "toolProgress": true,
+          "commandText": "status"
+        }
+      }
+    }
+  }
+}
+```
 
 当 `channels.slack.streaming.mode` 为 `partial` 时，`channels.slack.streaming.nativeTransport` 控制 Slack 原生文本流式传输（默认：`true`）。
 
-- A reply thread must be available for native text streaming and Slack assistant thread status to appear. Thread selection still follows `replyToMode`.
-- Channel, group-chat, and top-level DM roots can still use the normal draft preview when native streaming is unavailable or no reply thread exists.
-- Top-level Slack DMs stay off-thread by default, so they do not show Slack's thread-style native stream/status preview; OpenClaw posts and edits a draft preview in the DM instead.
-- Media and non-text payloads fall back to normal delivery.
-- Media/error finals cancel pending preview edits; eligible text/block finals flush only when they can edit the preview in place.
-- If streaming fails mid-reply, OpenClaw falls back to normal delivery for remaining payloads.
+- 原生文本流式传输和 Slack assistant 线程状态显示时，必须有一个回复线程可用。线程选择仍遵循 `replyToMode`。
+- 当原生流式传输不可用或不存在回复线程时，频道、群聊和顶层 DM 根消息仍可以使用正常的草稿预览。
+- 顶层 Slack DMs 默认保持为非线程模式，因此不会显示 Slack 的线程式原生流/状态预览；OpenClaw 会在 DM 中发布并编辑草稿预览。
+- 媒体和非文本载荷会回退到正常投递。
+- 媒体/错误的最终结果会取消待处理的预览编辑；符合条件的文本/分块最终结果只会在可以原地编辑预览时刷新。
+- 如果流式传输在回复过程中途失败，OpenClaw 会对剩余载荷回退到正常投递。
 
 使用草稿预览而不是 Slack 原生文本流式传输：
 
@@ -693,9 +1021,10 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 
 旧版键：
 
-- `channels.slack.streamMode`（`replace | status_final | append`）会自动迁移到 `channels.slack.streaming.mode`。
-- 布尔值 `channels.slack.streaming` 会自动迁移到 `channels.slack.streaming.mode` 和 `channels.slack.streaming.nativeTransport`。
-- 旧版 `channels.slack.nativeStreaming` 会自动迁移到 `channels.slack.streaming.nativeTransport`。
+- `channels.slack.streamMode` (`replace | status_final | append`) 是 `channels.slack.streaming.mode` 的旧版运行时别名。
+- 布尔值 `channels.slack.streaming` 是 `channels.slack.streaming.mode` 和 `channels.slack.streaming.nativeTransport` 的旧版运行时别名。
+- 旧版 `channels.slack.nativeStreaming` 是 `channels.slack.streaming.nativeTransport` 的运行时别名。
+- 运行 `openclaw doctor --fix` 可将持久化的 Slack 流式配置重写为规范键。
 
 ## 输入中 typing 反应回退
 
@@ -737,7 +1066,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `user:<id>` 用于 DMs
     - `channel:<id>` 用于频道
 
-    Text/block-only Slack DMs can post directly to user IDs; file uploads and threaded sends open the DM via Slack conversation APIs first because those paths require a concrete conversation ID.
+    仅文本/分块的 Slack DMs 可以直接发布到 user ID；文件上传和带线程的发送会先通过 Slack conversation API 打开 DM，因为这些路径需要一个具体的 conversation ID。
 
   </Accordion>
 </AccordionGroup>

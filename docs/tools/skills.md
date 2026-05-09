@@ -72,18 +72,18 @@ Codex home，因此个人 Codex CLI 技能不会被隐式加载。
 ```
 
 <AccordionGroup>
-  <Accordion title="允许列表规则">
-    - 省略 `agents.defaults.skills`，默认就是不受限制的技能。
+  <Accordion title="Allowlist rules">
+    - 省略 `agents.defaults.skills`，默认即为不受限制的技能。
     - 省略 `agents.list[].skills`，则继承 `agents.defaults.skills`。
-    - 将 `agents.list[].skills` 设为 `[]` 表示没有技能。
-    - 非空的 `agents.list[].skills` 列表是该代理的**最终**集合 — 它不会与默认值合并。
-    - 生效的允许列表适用于提示词构建、技能斜杠命令发现、沙箱同步和技能快照。
+    - 将 `agents.list[].skills` 设为 `[]`，表示没有技能。
+    - 非空的 `agents.list[].skills` 列表是该代理的**最终**集合——不会与默认值合并。
+    - 生效的允许列表适用于提示词构建、技能斜杠命令发现、沙箱同步以及技能快照。
   </Accordion>
 </AccordionGroup>
 
 ## 插件和技能
 
-插件可以通过在 `openclaw.plugin.json` 中列出 `skills` 目录（路径相对于插件根目录）来提供自己的技能。插件技能会在插件启用时加载。这是放置特定工具操作指南的合适位置——这些指南对工具描述来说太长，但在插件安装后应该始终可用——例如，浏览器插件提供了一个 `browser-automation` 技能用于多步浏览器控制。
+插件可以通过在 `openclaw.plugin.json` 中列出 `skills` 目录来提供自己的技能（路径相对于插件根目录）。当插件启用时，会加载插件技能。这是放置工具特定操作指南的合适位置，这类指南对工具描述来说太长，但在安装插件后又应该始终可用——例如，浏览器插件提供了一个用于多步浏览器控制的 `browser-automation` 技能。
 
 插件技能目录会合并到与 `skills.load.extraDirs` 相同的低优先级路径中，因此同名的内置、托管、代理或工作区技能会覆盖它们。你可以在插件的配置条目上通过 `metadata.openclaw.requires.config` 对它们进行门控。
 
@@ -100,8 +100,8 @@ Codex home，因此个人 Codex CLI 技能不会被隐式加载。
 ## ClawHub（安装与同步）
 
 [ClawHub](https://clawhub.ai) 是 OpenClaw 的公开技能注册表。
-可使用原生的 `openclaw skills` 命令进行发现/安装/更新，或使用单独的 `clawhub` CLI 进行发布/同步工作流。完整指南：
-[ClawHub](/tools/clawhub)。
+可使用原生 `openclaw skills` 命令进行发现/安装/更新，或使用独立的 `clawhub` CLI 进行发布/同步工作流。完整指南：
+[ClawHub](/clawhub)。
 
 | 操作                             | 命令                                |
 | -------------------------------- | ----------------------------------- |
@@ -129,10 +129,10 @@ ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供
 [沙箱化](/gateway/sandboxing)。
 </Warning>
 
-- 工作区和额外目录的技能发现只接受其解析后的 realpath 仍位于配置根目录内的技能根目录和 `SKILL.md` 文件。
-- Gateway 支持的技能依赖安装（`skills.install`、入门流程以及 Skills 设置 UI）会在执行安装器元数据之前运行内置的危险代码扫描器。默认情况下，`critical` 结果会阻止安装，除非调用方显式设置危险覆盖；`suspicious` 结果仍只会发出警告。
-- `openclaw skills install <slug>` 不同——它会将 ClawHub 技能文件夹下载到工作区，并且不使用上面的安装器元数据路径。
-- `skills.entries.*.env` 和 `skills.entries.*.apiKey` 会将密钥注入该代理轮次的**主机**进程（不是沙箱）。请将密钥排除在提示词和日志之外。
+- 工作区和额外目录的技能发现只接受其解析后的真实路径仍位于已配置根目录内的技能根和 `SKILL.md` 文件。
+- Gateway 支持的技能依赖安装（`skills.install`、入门引导以及 Skills 设置 UI）会在执行安装器元数据之前运行内置的危险代码扫描器。默认会阻止 `critical` 级别的结果，除非调用方显式设置了危险覆盖；`suspicious` 结果仍然只会警告。
+- `openclaw skills install <slug>` 不同——它会将一个 ClawHub 技能文件夹下载到工作区中，并且不使用上面的安装器元数据路径。
+- `skills.entries.*.env` 和 `skills.entries.*.apiKey` 会在该代理轮次中将机密注入到**主机**进程中（而不是沙箱中）。请避免在提示词和日志中泄露机密。
 
 有关更广泛的威胁模型和检查清单，请参见 [安全](/gateway/security)。
 
@@ -264,13 +264,13 @@ metadata:
 ```
 
 <AccordionGroup>
-  <Accordion title="安装器选择规则">
-    - 如果列出多个安装器，Gateway 会选择单个首选项（可用时优先 brew，否则 node）。
-    - 如果所有安装器都是 `download`，OpenClaw 会列出每个条目，以便你看到可用工件。
+  <Accordion title="Installer selection rules">
+    - 如果列出了多个安装器，Gateway 会选择一个首选项（可用时优先 brew，否则是 node）。
+    - 如果所有安装器都是 `download`，OpenClaw 会列出每个条目，以便你查看可用工件。
     - 安装器规格可以包含 `os: ["darwin"|"linux"|"win32"]`，用于按平台过滤选项。
-    - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm/pnpm/yarn/bun）。这只影响技能安装；Gateway 运行时仍应使用 Node——不建议在 WhatsApp/Telegram 中使用 Bun。
-    - Gateway 支持的安装器选择是基于偏好的：当安装规格混合多种类型时，如果启用了 `skills.install.preferBrew` 且 `brew` 存在，OpenClaw 会优先 Homebrew，然后是 `uv`，然后是配置的 node 管理器，再然后是其他回退项如 `go` 或 `download`。
-    - 如果所有安装规格都是 `download`，OpenClaw 会展示所有下载选项，而不是折叠为单个首选安装器。
+    - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm/pnpm/yarn/bun）。这只会影响技能安装；Gateway 运行时仍应使用 Node——不建议在 WhatsApp/Telegram 中使用 Bun。
+    - Gateway 支持的安装器选择是基于偏好驱动的：当安装规格混合了不同类型时，如果启用了 `skills.install.preferBrew` 且存在 `brew`，OpenClaw 会优先选择 Homebrew，然后是 `uv`，然后是已配置的 node manager，再到其他回退选项如 `go` 或 `download`。
+    - 如果所有安装规格都是 `download`，OpenClaw 会展示所有下载选项，而不是折叠为一个首选安装器。
 
   </Accordion>
   <Accordion title="每个安装器的详细信息">
@@ -325,9 +325,9 @@ metadata:
   仅适用于 **打包** 技能的可选允许列表。如果设置，则只有列表中的打包技能才有资格（已管理/工作区技能不受影响）。
 </ParamField>
 
-如果技能名称包含连字符，请将键名加引号（JSON5 允许带引号的
-键）。默认情况下配置键与 **技能名称** 匹配——如果某个技能
-定义了 `metadata.openclaw.skillKey`，则在 `skills.entries` 下使用该键。
+如果技能名称包含连字符，请将键加上引号（JSON5 允许使用带引号的
+键）。默认情况下，配置键与 **技能名称** 匹配 - 如果某个技能
+定义了 `metadata.openclaw.skillKey`，请在 `skills.entries` 下使用该键。
 
 <Note>
 在 OpenClaw 内部进行标准图片生成/编辑时，请使用核心
@@ -416,8 +416,10 @@ OpenAI 风格估算是约 4 个字符/token，因此 **97 个字符 ≈ 24 个 t
 
 ## 已管理技能生命周期
 
-OpenClaw 随安装（npm 包或 OpenClaw.app）提供一组基础技能，作为 **打包技能**。`~/.openclaw/skills` 用于
-本地覆盖——例如，在不修改打包副本的情况下固定或修补某个技能。工作区技能归用户所有，并在名称冲突时覆盖这两者。
+OpenClaw 随安装包（npm 包或 OpenClaw.app）提供一组基础技能，
+作为 **打包技能**。`~/.openclaw/skills` 用于本地覆盖——例如，
+在不更改打包副本的情况下固定或修补某个技能。工作区技能归用户所有，
+并且在名称冲突时会覆盖两者。
 
 ## 想找更多技能？
 
@@ -426,9 +428,9 @@ schema：[技能配置](/tools/skills-config)。
 
 ## 相关内容
 
-- [ClawHub](/tools/clawhub) — 公共技能注册表
-- [创建技能](/tools/creating-skills) — 构建自定义技能
-- [Plugins](/tools/plugin) — 插件系统概览
-- [Skill Workshop plugin](/plugins/skill-workshop) — 从代理工作生成技能
-- [技能配置](/tools/skills-config) — 技能配置参考
-- [Slash commands](/tools/slash-commands) — 所有可用的斜杠命令
+- [ClawHub](/clawhub) - 公共技能注册表
+- [Creating skills](/tools/creating-skills) - 构建自定义技能
+- [Plugins](/tools/plugin) - 插件系统概览
+- [Skill Workshop plugin](/plugins/skill-workshop) - 从代理工作中生成技能
+- [Skills config](/tools/skills-config) - 技能配置参考
+- [Slash commands](/tools/slash-commands) - 所有可用的斜杠命令

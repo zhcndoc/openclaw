@@ -124,14 +124,14 @@ sidebarTitle: "斜杠命令"
 
 <AccordionGroup>
   <Accordion title="Sessions and runs">
-    - `/new [model]` 开始一个新会话；`/reset` 是重置别名。
-    - 控制界面会拦截输入的 `/new`，以创建并切换到一个新的仪表板会话；输入的 `/reset` 仍会运行 Gateway 的原地重置。
+    - `/new [model]` 会启动一个新会话；`/reset` 是重置别名。
+    - 控制 UI 会拦截输入的 `/new` 来创建并切换到一个新的 dashboard 会话，除非配置了 `session.dmScope: "main"` 且当前父会话是代理的主会话；在这种情况下，`/new` 会就地重置主会话。输入的 `/reset` 仍然会运行 Gateway 的就地重置。
     - `/reset soft [message]` 会保留当前转录，删除复用的 CLI 后端会话 id，并就地重新运行启动/系统提示词加载。
-    - `/compact [instructions]` 会压缩会话上下文。见 [压缩](/concepts/compaction)。
-    - `/stop` 中止当前运行。
+    - `/compact [instructions]` 会压缩会话上下文。见 [Compaction](/concepts/compaction)。
+    - `/stop` 会中止当前运行。
     - `/session idle <duration|off>` 和 `/session max-age <duration|off>` 管理线程绑定过期。
     - `/export-session [path]` 将当前会话导出为 HTML。别名：`/export`。
-    - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出 JSONL [轨迹包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
+    - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出一个 JSONL [轨迹捆绑包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
 
   </Accordion>
   <Accordion title="模型和运行控制">
@@ -148,15 +148,15 @@ sidebarTitle: "斜杠命令"
     - `/steer <message>` 将指导注入当前会话的活动运行中，与 `/queue` 模式无关。会话空闲时它不会启动新的运行。别名：`/tell`。见 [Steer](/tools/steer)。
 
   </Accordion>
-  <Accordion title="发现和状态">
+  <Accordion title="Discovery and status">
     - `/help` 显示简短帮助摘要。
     - `/commands` 显示生成的命令目录。
-    - `/tools [compact|verbose]` 显示当前代理此刻可用的内容。
-    - `/status` 显示执行/运行时状态，包括 `Execution`/`Runtime` 标签，以及可用时的提供方使用量/配额。
-    - `/diagnostics [note]` 是用于 Gateway bug 和 Codex harness 运行的仅 owner 支持报告流程。它会在每次运行 `openclaw gateway diagnostics export --json` 之前要求明确的 exec 批准；不要用允许全部规则批准 diagnostics。批准后，它会发送一份可粘贴的报告，包含本地 bundle 路径、清单摘要、隐私说明以及相关会话 ids。在群聊中，批准提示和报告会私下发送给 owner。当当前会话使用 OpenAI Codex harness 时，同样的批准也会将相关 Codex 反馈发送到 OpenAI 服务器，而完成后的回复会列出 OpenClaw 会话 ids、Codex thread ids，以及 `codex resume <thread-id>` 命令。见 [Diagnostics Export](/gateway/diagnostics)。
-    - `/crestodian <request>` 从 owner DM 中运行 Crestodian 设置和修复助手。
+    - `/tools [compact|verbose]` 显示当前代理此刻可用的能力。
+    - `/status` 显示执行/运行时状态、Gateway 和系统运行时间，以及可用时的提供方使用量/配额。
+    - `/diagnostics [note]` 是用于 Gateway bug 和 Codex harness 运行的仅 owner 支持报告流程。它每次都会在运行 `openclaw gateway diagnostics export --json` 之前请求明确的 exec 批准；不要使用 allow-all 规则批准 diagnostics。批准后，它会发送一份可直接粘贴的报告，其中包含本地 bundle 路径、清单摘要、隐私说明以及相关会话 id。在群聊中，批准提示和报告会私下发送给 owner。当活动会话使用 OpenAI Codex harness 时，相同的批准还会将相关 Codex 反馈发送到 OpenAI 服务器，完成的回复会列出 OpenClaw 会话 id、Codex 线程 id，以及 `codex resume <thread-id>` 命令。见 [Diagnostics Export](/gateway/diagnostics)。
+    - `/crestodian <request>` 从 owner DM 运行 Crestodian 设置和修复助手。
     - `/tasks` 列出当前会话的活动/最近后台任务。
-    - `/context [list|detail|json]` 解释上下文如何组装。
+    - `/context [list|detail|json]` 解释上下文是如何组装的。
     - `/whoami` 显示你的发送者 id。别名：`/id`。
     - `/usage off|tokens|full|cost` 控制每条响应的使用量页脚，或打印本地成本摘要。
 
@@ -273,7 +273,7 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
   <Accordion title="模型切换">
     - `/model` 会立即持久化新的会话模型。
     - 如果代理处于空闲状态，下一次运行会立即使用它。
-    - 如果运行已经 ակտիվ，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
+    - 如果运行已经 সক动，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
     - 如果工具活动或回复输出已经开始，待处理切换可能会保持排队，直到稍后的重试机会或下一次用户轮次。
     - 在本地 TUI 中，`/crestodian [request]` 会从普通代理 TUI 返回到 Crestodian。这与消息频道救援模式是分开的，并且不会授予远程配置权限。
 

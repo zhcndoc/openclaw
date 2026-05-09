@@ -492,7 +492,7 @@ const setupWizard: ChannelSetupWizard = {
 
 ## 发布与安装
 
-**外部插件：** 发布到 [ClawHub](/tools/clawhub)，然后安装：
+**External plugins:** 发布到 [ClawHub](/clawhub)，然后安装：
 
 <Tabs>
   <Tab title="npm">

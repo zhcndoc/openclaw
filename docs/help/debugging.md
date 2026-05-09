@@ -62,25 +62,14 @@ OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
 在使用 CPU 分析器之前，先用这个来调查插件生命周期。
 如果命令是从源码检出中运行的，优先在 `pnpm build` 之后通过 `node dist/entry.js ...` 测量构建后的运行时；`pnpm openclaw ...` 也会测量源码运行器的额外开销。
 
-## CLI 启动和命令分析
-
-当某个命令感觉很慢时，使用已检入的启动基准测试：
-
-```bash
-pnpm test:startup:bench:smoke
-pnpm tsx scripts/bench-cli-startup.ts --preset real --case status --runs 3
-pnpm tsx scripts/bench-cli-startup.ts --preset real --cpu-prof-dir .artifacts/cli-cpu
-```
-
-如需通过正常的源码运行器进行一次性分析，请设置
-`OPENCLAW_RUN_NODE_CPU_PROF_DIR`：
+For startup stalls that look like synchronous filesystem or module-loader work,
+add Node's sync I/O trace flag through the source runner:
 
 ```bash
-OPENCLAW_RUN_NODE_CPU_PROF_DIR=.artifacts/cli-cpu pnpm openclaw status
+OPENCLAW_TRACE_SYNC_IO=1 pnpm openclaw gateway --force
 ```
 
-源码运行器会添加 Node CPU 分析标志，并为该
-命令写入一个 `.cpuprofile` 文件。在向命令代码添加临时埋点之前，先使用这个。
+`pnpm gateway:watch` 默认会为被监视的 Gateway 子进程禁用此标志。若你明确希望在监视模式下看到 Node 同步 I/O 跟踪输出，请设置 `OPENCLAW_TRACE_SYNC_IO=1`。
 
 ## Gateway 监视模式
 
@@ -133,8 +122,15 @@ pnpm gateway:watch --benchmark
 npx speedscope .artifacts/gateway-watch-profiles/*.cpuprofile
 ```
 
-当你希望将分析文件写到其他位置时，使用 `--benchmark-dir <path>`。
-当你希望开启基准分析的子进程跳过默认的 `--force` 端口清理，并在 Gateway 端口已被占用时快速失败，请使用 `--benchmark-no-force`。
+Use `--benchmark-dir <path>` when you want profiles somewhere else.
+Use `--benchmark-no-force` when you want the benchmarked child to skip the
+default `--force` port cleanup and fail fast if the Gateway port is already in
+use.
+Benchmark mode suppresses sync-I/O trace spam by default. Set
+`OPENCLAW_TRACE_SYNC_IO=1` with `--benchmark` when you explicitly want both CPU
+profiles and Node sync-I/O stack traces. In benchmark mode those trace blocks
+are written to `gateway-watch-output.log` under the benchmark directory and
+filtered from the terminal pane; normal Gateway logs remain visible.
 
 tmux 包装器会将常见的非机密运行时选择器传入窗格，例如
 `OPENCLAW_PROFILE`、`OPENCLAW_CONFIG_PATH`、`OPENCLAW_STATE_DIR`、
@@ -163,7 +159,7 @@ pnpm gateway:dev
 OPENCLAW_PROFILE=dev openclaw tui
 ```
 
-如果你还没有全局安装，请通过 `pnpm openclaw ...` 来运行 CLI。
+If you don't have a global install yet, run the CLI via `pnpm openclaw ...`.
 
 这会做什么：
 
@@ -173,14 +169,14 @@ OPENCLAW_PROFILE=dev openclaw tui
    - `OPENCLAW_CONFIG_PATH=~/.openclaw-dev/openclaw.json`
    - `OPENCLAW_GATEWAY_PORT=19001`（浏览器/canvas 端口会相应变化）
 
-2. **Dev 启动**（`gateway --dev`）
-   - 如果缺失，则写入最小配置（`gateway.mode=local`，绑定 loopback）。
-   - 将 `agent.workspace` 设置为 dev 工作区。
-   - 设置 `agent.skipBootstrap=true`（不使用 BOOTSTRAP.md）。
-   - 若工作区文件缺失，则初始化这些文件：
-     `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`。
-   - 默认身份：**C3‑PO**（协议机器人）。
-   - 在 dev 模式下跳过 channel providers（`OPENCLAW_SKIP_CHANNELS=1`）。
+2. **Dev bootstrap** (`gateway --dev`)
+   - Writes a minimal config if missing (`gateway.mode=local`, bind loopback).
+   - Sets `agent.workspace` to the dev workspace.
+   - Sets `agent.skipBootstrap=true` (no BOOTSTRAP.md).
+   - Seeds the workspace files if missing:
+     `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`.
+   - Default identity: **C3-PO** (protocol droid).
+   - Skips channel providers in dev mode (`OPENCLAW_SKIP_CHANNELS=1`).
 
 重置流程（全新开始）：
 
@@ -256,7 +252,8 @@ PI_RAW_STREAM_PATH=~/.pi-mono/logs/raw-openai-completions.jsonl
 
 `~/.pi-mono/logs/raw-openai-completions.jsonl`
 
-> 注意：这只会由使用 pi-mono 的 `openai-completions` provider 的进程输出。
+> Note: this is only emitted by processes using pi-mono's
+> `openai-completions` provider.
 
 ## 安全提示
 
@@ -264,7 +261,39 @@ PI_RAW_STREAM_PATH=~/.pi-mono/logs/raw-openai-completions.jsonl
 - 将日志保存在本地，并在调试后删除它们。
 - 如果你分享日志，请先清理密钥和 PII。
 
-## 相关内容
+## 在 VSCode 中调试
+
+Source maps are required to enable debugging in VSCode-based IDEs because many of the generated files end up with hashed names as part of the build process. The included `launch.json` configurations target the Gateway service, but can be adapted quickly for other purposes:
+
+1. **Rebuild and Debug Gateway** - Debugs the Gateway service after creating a new build
+2. **Debug Gateway** - Debugs the Gateway service of a pre-existing build
+
+### Setup
+
+The default **Rebuild and Debug Gateway** configuration is batteries-included, it will automatically delete the `/dist` folder and rebuild the project with debugging enabled:
+
+1. Open the **Run and Debug** panel from the Activity Bar or press `Ctrl`+`Shift`+`D`
+2. In the IDE, ensure **Rebuild and Debug Gateway** is selected in the configuration dropdown and then press the **Start Debugging** button
+
+Alternatively - if you prefer to manage the build and debug processes manually:
+
+1. Open a terminal and enable source maps:
+   - **Linux/macOS**: `export OUTPUT_SOURCE_MAPS=1`
+   - **Windows (PowerShell)**: `$env:OUTPUT_SOURCE_MAPS="1"`
+   - **Windows (CMD)**: `set OUTPUT_SOURCE_MAPS=1`
+2. In the same terminal, rebuild the project: `pnpm clean:dist && pnpm build`
+3. In the IDE, select the **Debug Gateway** option in the **Run and Debug** configuration dropdown and then press the **Start Debugging** button
+
+You can now set breakpoints in your TypeScript source files (`src/` directory) and the debugger will correctly map breakpoints to the compiled JavaScript via source maps. You'll be able to inspect variables, step through code, and examine call stacks as expected.
+
+### Notes
+
+- If using the **"Rebuild and Debug Gateway"** option - each time the debugger is launched it will completely delete the `/dist` folder and run a full `pnpm build` with source maps enabled before starting the Gateway
+- If using the **"Debug Gateway"** option - debug sessions can be started and stopped at any time without affecting the `/dist` folder, but you must use a separate terminal process to both enable debugging and manage the build cycle
+- Modify the `launch.json` settings for `args` to debug other sections of the project
+- If you need to use the built OpenClaw CLI for other tasks (i.e. `dashboard --no-open` if your debug session spawns a new auth token), you can execute it in another terminal as `node ./openclaw.mjs` or create a shell alias like `alias openclaw-build="node $(pwd)/openclaw.mjs"`
+
+## 相关
 
 - [故障排查](/help/troubleshooting)
 - [常见问题](/help/faq)

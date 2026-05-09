@@ -255,14 +255,17 @@ openclaw nodes invoke --node "iOS Node" --command canvas.snapshot --params '{"ma
 ## 语音唤醒 + 对话模式
 
 - 语音唤醒和对话模式可在设置中使用。
-- iOS 可能会暂停后台音频；当应用未处于活动状态时，请将语音功能视为尽力而为。
+- 支持对话的 iOS 节点会声明 `talk` 能力，并可以声明
+  `talk.ptt.start`、`talk.ptt.stop`、`talk.ptt.cancel` 和 `talk.ptt.once`；
+  对于受信任、支持对话的节点，Gateway 默认允许这些按键通话命令。
+- iOS 可能会挂起后台音频；当应用未处于活动状态时，请将语音功能视为尽力而为。
 
 ## 常见错误
 
-- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用切换到前台（画布/相机/屏幕命令需要它）。
-- `A2UI_HOST_NOT_CONFIGURED`：Gateway 未公布画布主机 URL；请检查 [Gateway 配置](/gateway/configuration) 中的 `canvasHost`。
-- 配对提示从不出现：运行 `openclaw devices list` 并手动批准。
-- 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为节点配对。
+- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用切到前台（画布/摄像头/屏幕命令需要它）。
+- `A2UI_HOST_NOT_CONFIGURED`：Gateway 未公布 Canvas 插件表面 URL；请检查 [Gateway configuration](/gateway/configuration) 中的 `plugins.entries.canvas.config.host`。
+- 配对提示始终不出现：运行 `openclaw devices list` 并手动批准。
+- 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为该节点配对。
 
 ## 相关文档
 

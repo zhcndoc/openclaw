@@ -224,10 +224,10 @@ openclaw channels status --probe
 
 ## 反应（消息工具）
 
-- 使用 `message action=react` 并设置 `channel=signal`。
-- 目标：发送者的 E.164 或 UUID（使用配对输出中的 `uuid:<id>`；裸 UUID 也可以）。
-- `messageId` 是你要回应的那条消息的 Signal 时间戳。
-- 群组反应需要 `targetAuthor` 或 `targetAuthorUuid`。
+- Use `message action=react` with `channel=signal`.
+- Targets: sender E.164 or UUID (use `uuid:<id>` from pairing output; bare UUID works too).
+- `messageId` is the Signal timestamp for the message you're reacting to.
+- Group reactions require `targetAuthor` or `targetAuthorUuid`.
 
 示例：
 

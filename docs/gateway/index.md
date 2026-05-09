@@ -83,7 +83,7 @@ Gateway 配置重载会监视当前活动配置文件路径（从 profile/state 
 
 ## OpenAI 兼容端点
 
-OpenClaw 当前最具价值的兼容面是：
+OpenClaw 最高价值的兼容性接口现在是：
 
 - `GET /v1/models`
 - `GET /v1/models/{id}`
@@ -176,31 +176,6 @@ OPENCLAW_CONFIG_PATH=~/.openclaw/b.json OPENCLAW_STATE_DIR=~/.openclaw-b opencla
 
 详细设置：[/gateway/multiple-gateways](/gateway/multiple-gateways)。
 
-## VoiceClaw 实时大脑端点
-
-OpenClaw 提供一个与 VoiceClaw 兼容的实时 WebSocket 端点，位于
-`/voiceclaw/realtime`。当 VoiceClaw 桌面客户端应直接与实时 OpenClaw 大脑通信，而不是经过单独的中继进程时，请使用它。
-
-该端点使用 Gemini Live 处理实时音频，并通过将 OpenClaw 工具直接暴露给 Gemini Live 来把 OpenClaw 作为大脑调用。工具调用会立即返回一个 `working` 结果，以保持语音轮次的响应性，然后 OpenClaw 异步执行实际工具并将结果注入回实时会话。请在 gateway 进程环境中设置 `GEMINI_API_KEY`。如果启用了 gateway 认证，桌面客户端会在其第一条 `session.config` 消息中发送 gateway token 或 password。
-
-实时大脑访问会运行经过所有者授权的 OpenClaw agent 命令。请将 `gateway.auth.mode: "none"` 仅限制在 loopback-only 的测试实例中。非本地实时大脑连接需要 gateway 认证。
-
-对于隔离的测试 gateway，请使用各自独立的端口、配置和状态运行一个单独实例：
-
-```bash
-OPENCLAW_CONFIG_PATH=/path/to/openclaw-realtime/openclaw.json \
-OPENCLAW_STATE_DIR=/path/to/openclaw-realtime/state \
-OPENCLAW_SKIP_CHANNELS=1 \
-GEMINI_API_KEY=... \
-openclaw gateway --port 19789
-```
-
-然后将 VoiceClaw 配置为使用：
-
-```text
-ws://127.0.0.1:19789/voiceclaw/realtime
-```
-
 ## 远程访问
 
 首选：Tailscale/VPN。
@@ -232,7 +207,9 @@ openclaw gateway restart
 openclaw gateway stop
 ```
 
-重启请使用 `openclaw gateway restart`。不要连续执行 `openclaw gateway stop` 和 `openclaw gateway start`；在 macOS 上，`gateway stop` 会在停止前有意禁用 LaunchAgent。
+使用 `openclaw gateway restart` 进行重启。不要将 `openclaw gateway stop` 和 `openclaw gateway start` 串联起来代替重启。
+
+在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`——这会把 LaunchAgent 从当前启动会话中移除，而不会持久化禁用，因此在意外崩溃后 KeepAlive 自动恢复仍然有效，并且 `gateway start` 会干净地重新启用。若要在重启之间持久抑制自动重启，请传入 `--disable`：`openclaw gateway stop --disable`。
 
 LaunchAgent 标签为 `ai.openclaw.gateway`（默认）或 `ai.openclaw.<profile>`（命名 profile）。`openclaw doctor` 会审计并修复服务配置漂移。
 

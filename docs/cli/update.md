@@ -33,15 +33,17 @@ openclaw --update
 
 ## 选项
 
-- `--no-restart`：成功更新后跳过重启 Gateway 服务。需要重启 Gateway 的包管理器更新会在命令成功前验证重启后的服务报告的是预期的更新版本。
-- `--channel <stable|beta|dev>`：设置更新渠道（git + npm；持久化到配置中）。
-- `--tag <dist-tag|version|spec>`：仅为此次更新覆盖包目标。对于包安装，`main` 映射到 `github:openclaw/openclaw#main`。
-- `--dry-run`：预览计划中的更新操作（channel/tag/target/restart 流程），不会写入配置、安装、同步插件或重启。
-- `--json`：输出机器可读的 `UpdateRunResult` JSON，包括
-  在更新后插件同步期间检测到 npm 插件制品漂移时的
+- `--no-restart`: 在成功更新后跳过重启 Gateway 服务。会重启 Gateway 的包管理器更新会在命令成功之前验证重启后的服务报告的是预期的已更新版本。
+- `--channel <stable|beta|dev>`: 设置更新渠道（git + npm；持久化到配置中）。
+- `--tag <dist-tag|version|spec>`: 仅针对本次更新覆盖包目标。对于包安装，`main` 映射到 `github:openclaw/openclaw#main`。
+- `--dry-run`: 预览计划中的更新操作（channel/tag/target/restart 流程），不写入配置、不安装、不同步插件，也不重启。
+- `--json`: 输出机器可读的 `UpdateRunResult` JSON，包括
+  当核心更新成功后，损坏或无法卸载的已管理插件需要
+  修复时的 `postUpdate.plugins.warnings`，以及
+  当在更新后的插件同步期间检测到 npm 插件制品漂移时的
   `postUpdate.plugins.integrityDrifts`。
-- `--timeout <seconds>`：每一步的超时时间（默认 1800 秒）。
-- `--yes`：跳过确认提示（例如降级确认）。
+- `--timeout <seconds>`: 每个步骤的超时时间（默认是 1800 秒）。
+- `--yes`: 跳过确认提示（例如降级确认）。
 
 `openclaw update` 没有 `--verbose` 标志。使用 `--dry-run` 预览
 计划中的 channel/tag/install/restart 操作，使用 `--json` 获取机器可读
@@ -49,6 +51,10 @@ openclaw --update
 控制台详细程度和文件日志级别是分开的：Gateway 的 `--verbose` 影响
 终端/WebSocket 输出，而文件日志需要在配置中设置 `logging.level: "debug"` 或 `"trace"`。
 请参见 [Gateway logging](/gateway/logging)。
+
+<Note>
+在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，不允许会修改状态的 `openclaw update` 运行。请改为更新本次安装的 Nix source 或 flake input；对于 nix-openclaw，请使用 agent-first 的 [Quick Start](https://github.com/openclaw/nix-openclaw#quick-start)。`openclaw update status` 和 `openclaw update --dry-run` 仍然是只读的。
+</Note>
 
 <Warning>
 降级需要确认，因为旧版本可能会破坏配置。
@@ -136,8 +142,8 @@ openclaw update status --timeout 10
   <Step title="获取上游">
     仅 dev。
   </Step>
-  <Step title="预检构建（仅 dev）">
-    在临时工作区中运行 lint 和 TypeScript 构建。如果最新提交失败，则最多回退 10 个提交以找到最新的可干净构建。
+  <Step title="Preflight build (dev only)">
+    在临时 worktree 中运行 TypeScript 构建。如果 tip 失败，会向后回退最多 10 个提交以找到最新的可构建提交。设置 `OPENCLAW_UPDATE_PREFLIGHT_LINT=1` 也会在此预检阶段运行 lint；由于用户更新主机通常比 CI runner 更小，lint 会在受限的串行模式下运行。
   </Step>
   <Step title="Rebase">
     在所选提交上执行 rebase（仅 dev）。
@@ -156,14 +162,18 @@ openclaw update status --timeout 10
   </Step>
 </Steps>
 
-在 beta 更新渠道上，遵循默认/latest 线的已跟踪 npm 和 ClawHub 插件安装会先尝试插件的 `@beta` 发布。如果插件没有 beta 发布，OpenClaw 会回退到记录的 default/latest 规范。精确版本和显式标签不会被重写。
+在 beta 更新渠道上，跟踪的 npm 和 ClawHub 插件安装，如果遵循
+默认/latest 线路，会先尝试插件的 `@beta` 发布。如果插件没有
+beta 发布，OpenClaw 会回退到记录的 default/latest spec。对于 npm
+插件，如果 beta 包存在但安装验证失败，OpenClaw 也会回退。
+精确版本和显式标签不会被重写。
 
 <Warning>
 如果一个精确固定的 npm 插件更新解析到的制品，其完整性与存储的安装记录不同，`openclaw update` 会中止该插件制品更新，而不是安装它。只有在确认你信任新制品之后，才重新安装或显式更新该插件。
 </Warning>
 
 <Note>
-更新后的插件同步失败会使更新结果失败，并停止后续的重启工作。请修复插件安装或更新错误，然后重新运行 `openclaw update`。
+更新后插件同步失败如果只影响某个已管理插件，会在核心更新成功后以警告形式报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json` 的指导。意外的更新器或同步异常仍会使更新结果失败。先修复插件安装或更新错误，然后重新运行 `openclaw doctor --fix` 或 `openclaw update`。
 
 当更新后的 Gateway 启动时，插件加载仅限于验证：启动不会运行包管理器或修改依赖树。包管理器 `update.run` 重启会在包树交换后绕过正常的空闲延迟和重启冷却时间，因此旧进程无法继续懒加载已移除的块。
 

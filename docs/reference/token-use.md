@@ -6,10 +6,8 @@ read_when:
 title: "Token 使用量和成本"
 ---
 
-# Token 使用量和成本
-
-OpenClaw 跟踪的是 **tokens**，不是字符。Token 与模型相关，但大多数
-OpenAI 风格的模型对英文文本平均每个 token 约 4 个字符。
+OpenClaw 跟踪的是 **token**，而不是字符。Token 取决于模型，但大多数
+OpenAI 风格的模型在英文文本中平均每个 token 约 4 个字符。
 
 ## 系统提示是如何构建的
 
@@ -62,17 +60,17 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
 在聊天中使用这些命令：
 
-- `/status` → **带丰富表情的状态卡片**，显示会话模型、上下文使用量、
-  上一条回复的输入/输出 token，以及 **估算成本**（仅限 API key）。
-- `/usage off|tokens|full` → 为每次回复追加一个 **按响应统计的使用量页脚**。
-  - 每个会话持久化（存储为 `responseUsage`）。
+- `/status` → **带有丰富 emoji 的状态卡片**，显示会话模型、上下文使用量、
+  上次响应的输入/输出 token，以及 **估算成本**（仅 API key）。
+- `/usage off|tokens|full` → 在每次回复后附加一个 **每条响应的使用量页脚**。
+  - 每会话持久保存（存储为 `responseUsage`）。
   - OAuth 认证 **隐藏成本**（仅显示 token）。
 - `/usage cost` → 显示来自 OpenClaw 会话日志的本地成本摘要。
 
 其他表面：
 
-- **TUI/Web TUI:** 支持 `/status` + `/usage`。
-- **CLI:** `openclaw status --usage` 和 `openclaw channels list` 会显示
+- **TUI/Web TUI：** 支持 `/status` + `/usage`。
+- **CLI：** `openclaw status --usage` 和 `openclaw channels list` 会显示
   规范化后的提供方配额窗口（`X% left`，不是按响应成本）。  
   当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、
   OpenAI Codex、MiniMax、小米和 z.ai。
@@ -130,9 +128,9 @@ Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模�
 
 关于逐项旋钮指南，请参见 [Prompt Caching](/reference/prompt-caching)。
 
-对于 Anthropic API 定价，cache reads 明显比 input tokens 便宜，而 cache writes
-按更高的倍数计费。有关最新费率和 TTL 倍数，请参见 Anthropic 的
-提示缓存定价：
+对于 Anthropic API 定价，cache read 的费用显著低于 input
+token，而 cache write 的计费倍率更高。请参阅 Anthropic 的
+prompt caching 定价以了解最新费率和 TTL 倍率：
 [https://docs.anthropic.com/docs/build-with-claude/prompt-caching](https://docs.anthropic.com/docs/build-with-claude/prompt-caching)
 
 ### 示例：使用 heartbeat 保持 1h 缓存温热

@@ -129,6 +129,62 @@ title: "Oracle Cloud"
   </Step>
 </Steps>
 
+## 验证安全态势
+
+在 VCN 已锁定（仅开放 UDP 41641）且 Gateway 绑定到 loopback 的情况下，公共流量会在网络边缘被阻止，管理访问仅限 tailnet 内。这使得若干传统 VPS 加固步骤不再需要：
+
+| 传统步骤           | 需要吗？ | 原因                                                                      |
+| ------------------ | -------- | ------------------------------------------------------------------------- |
+| UFW 防火墙         | 否       | VCN 会在流量到达实例之前就将其阻止。                                      |
+| fail2ban           | 否       | 22 端口已在 VCN 处被阻止；没有暴力破解面。                                |
+| sshd 加固          | 否       | Tailscale SSH 不使用 sshd。                                               |
+| 禁用 root 登录     | 否       | Tailscale 通过 tailnet 身份进行认证，而不是系统用户。                    |
+| 仅限 SSH 密钥认证  | 否       | 同上——tailnet 身份取代了系统 SSH 密钥。                                  |
+| IPv6 加固          | 通常不需要 | 取决于 VCN/子网设置；请确认实际分配/暴露的内容。                           |
+
+仍然建议：
+
+- `chmod 700 ~/.openclaw`，以限制凭据文件权限。
+- `openclaw security audit`，用于 OpenClaw 专用的安全态势检查。
+- 定期执行 `sudo apt update && sudo apt upgrade` 以安装系统补丁。
+- 定期在 [Tailscale 管理控制台](https://login.tailscale.com/admin) 中检查设备。
+
+快速验证命令：
+
+```bash
+# 确认没有公共端口在监听
+sudo ss -tlnp | grep -v '127.0.0.1\|::1'
+
+# 验证 Tailscale SSH 已启用
+tailscale status | grep -q 'offers: ssh' && echo "Tailscale SSH active"
+
+# 可选：一旦确认 Tailscale SSH 工作正常，完全禁用 sshd
+sudo systemctl disable --now ssh
+```
+
+## ARM 说明
+
+Always Free 层是 ARM（`aarch64`）。大多数 OpenClaw 功能都能正常工作；少量原生二进制文件需要 ARM 构建：
+
+- Node.js、Telegram、WhatsApp（Baileys）：纯 JavaScript，无问题。
+- 大多数带有原生代码的 npm 包：有预构建的 `linux-arm64` 工件。
+- 可选 CLI 辅助工具（例如 skills 打包的 Go/Rust 二进制文件）：安装前请检查是否有 `aarch64` / `linux-arm64` 版本。
+
+使用 `uname -m` 验证架构（应输出 `aarch64`）。对于没有 ARM 构建的二进制文件，请从源码安装或跳过。
+
+## 持久性与备份
+
+OpenClaw 的状态位于：
+
+- `~/.openclaw/` — `openclaw.json`、每个代理的 `auth-profiles.json`、channel/provider 状态以及会话数据。
+- `~/.openclaw/workspace/` — 代理工作区（SOUL.md、memory、artifacts）。
+
+这些内容会在重启后保留。要创建一个可移植快照：
+
+```bash
+openclaw backup create
+```
+
 ## 备用方案：SSH 隧道
 
 如果 Tailscale Serve 无法工作，请从你的本地机器使用 SSH 隧道：

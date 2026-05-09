@@ -142,7 +142,7 @@ await web_fetch({ url: "https://example.com/article" });
 - 如果禁用了 Readability，`web_fetch` 会直接跳到所选
   提供方回退。如果没有可用提供方，则会安全失败。
 
-## 受信任的环境代理
+## Trusted env proxy
 
 如果你的部署要求 `web_fetch` 通过受信任的外部
 HTTP(S) 代理，请设置 `tools.web.fetch.useTrustedEnvProxy: true`。

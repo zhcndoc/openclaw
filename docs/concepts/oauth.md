@@ -8,8 +8,8 @@ read_when:
 title: "OAuth"
 ---
 
-OpenClaw 通过 OAuth 支持提供该能力的供应商的“订阅认证”
-（尤其是 **OpenAI Codex（ChatGPT OAuth）**）。对于 Anthropic，当前实际可分为：
+OpenClaw 支持通过 OAuth 提供“订阅式认证”，适用于提供该能力的服务商
+（尤其是 **OpenAI Codex（ChatGPT OAuth）**）。对于 Anthropic，目前实际上的区分是：
 
 - **Anthropic API key**：正常的 Anthropic API 计费
 - **Anthropic Claude CLI / OpenClaw 内的订阅认证**：Anthropic 员工
@@ -23,8 +23,8 @@ OpenAI Codex OAuth 明确支持用于 OpenClaw 这类外部工具。本页说明
 - 令牌**存储**在哪里（以及原因）
 - 如何处理**多个账号**（配置文件 + 按会话覆盖）
 
-OpenClaw 还支持**提供商插件**，它们会自带自己的 OAuth 或 API key
-流程。通过以下方式运行它们：
+OpenClaw 也支持**提供商插件**，它们会自带自己的 OAuth 或 API key
+流程。运行方式如下：
 
 ```bash
 openclaw models auth login --provider <id>
@@ -36,7 +36,7 @@ OAuth 提供商在登录/刷新流程中通常会签发一个**新的刷新令�
 
 实际症状：
 
-- 你通过 OpenClaw _和_ Claude Code / Codex CLI 登录 → 其中一个会在稍后随机“登出”
+- you log in via OpenClaw _and_ via Claude Code / Codex CLI → one of them randomly gets "logged out" later
 
 为降低这种情况，OpenClaw 将 `auth-profiles.json` 视为一个**令牌汇点**：
 
@@ -112,9 +112,9 @@ OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工�
 1. 生成 PKCE verifier/challenge + 随机 `state`
 2. 打开 `https://auth.openai.com/oauth/authorize?...`
 3. 尝试在 `http://127.0.0.1:1455/auth/callback` 捕获回调
-4. 如果回调无法绑定（或你是远程/无头环境），则粘贴重定向 URL/代码
-5. 在 `https://auth.openai.com/oauth/token` 交换
-6. 从访问令牌中提取 `accountId`，并存储 `{ access, refresh, expires, accountId }`
+4. 如果回调无法绑定（或你是远程/无头环境），则粘贴重定向 URL/code
+5. 在 `https://auth.openai.com/oauth/token` 交换令牌
+6. 从访问令牌中提取 `accountId` 并存储 `{ access, refresh, expires, accountId }`
 
 向导路径为 `openclaw onboard` → 认证选项 `openai-codex`。
 
@@ -143,7 +143,7 @@ OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工�
 
 ### 1) 推荐：分离代理
 
-如果你希望“个人”和“工作”绝不互相影响，请使用隔离的代理（独立会话 + 凭据 + 工作区）：
+如果你希望“个人”和“工作”永不互相影响，请使用隔离代理（独立会话 + 凭据 + 工作区）：
 
 ```bash
 openclaw agents add work
@@ -176,6 +176,6 @@ openclaw agents add personal
 
 ## 相关内容
 
-- [认证](/gateway/authentication) — 模型提供商认证概览
-- [Secrets](/gateway/secrets) — 凭据存储与 SecretRef
-- [配置参考](/gateway/configuration-reference#auth-storage) — 认证配置键
+- [Authentication](/gateway/authentication) - 模型提供商认证概览
+- [Secrets](/gateway/secrets) - 凭据存储和 SecretRef
+- [Configuration Reference](/gateway/configuration-reference#auth-storage) - 认证配置键

@@ -98,9 +98,9 @@ PR D 是证明层。它不应成为延迟运行时正确性 PR 的原因。
 
 ### PR B
 
-- auth/proxy/runtime 失败不再被折叠成通用的“model failed” 处理
-- 只有在 `/elevated full`  वास्तव可用时才描述其可用
-- blocked 原因对模型和面向用户的运行时都可见
+- auth/proxy/runtime failures stop collapsing into generic "model failed" handling
+- `/elevated full` is only described as available when it is actually available
+- blocked reasons are visible to both the model and the user-facing runtime
 
 ### PR C
 

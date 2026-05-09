@@ -23,7 +23,7 @@ sidebarTitle: "Models CLI"
   </Card>
 </CardGroup>
 
-模型引用会选择一个提供商和模型。它们通常不会选择底层的 agent 运行时。例如，`openai/gpt-5.5` 可以通过正常的 OpenAI 提供商路径运行，也可以通过 Codex 应用服务器运行时运行，这取决于 `agents.defaults.agentRuntime.id`。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着按 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent runtimes](/concepts/agent-runtimes)。
+模型引用会选择提供商和模型。它们通常不会选择底层的 agent 运行时。OpenAI agent 引用是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。显式的运行时覆盖应放在提供商/模型策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent runtimes](/concepts/agent-runtimes)。
 
 ## 模型选择如何工作
 
@@ -119,7 +119,8 @@ openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json
 如果设置了 `agents.defaults.models`，它就会成为 `/model` 和会话覆盖的**白名单**。当用户选择的模型不在该白名单中时，OpenClaw 会返回：
 
 ```
-Model "provider/model" is not allowed. Use /model to list available models.
+Model "provider/model" is not allowed. Use /models to list providers, or /models <provider> to list models.
+Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' --strict-json --merge
 ```
 
 <Warning>
@@ -131,10 +132,12 @@ Model "provider/model" is not allowed. Use /model to list available models.
 
 </Warning>
 
+当被拒绝的命令包含运行时覆盖，例如 `/model openai/gpt-5.5 --runtime codex` 时，先修复白名单，然后重试同一个 `/model ... --runtime ...` 命令。对于原生 Codex 执行，所选模型仍然是 `openai/gpt-5.5`；`codex` 运行时会选择执行器并单独使用 Codex 认证。
+
 对于本地/GGUF 模型，请在白名单中存储完整的带提供商前缀引用，
-例如 `ollama/gemma4:26b`、`lmstudio/Gemma4-26b-a4-it-gguf`，或者
-`openclaw models list --provider <provider>` 显示的精确 provider/model。
-当白名单处于启用状态时，仅有裸本地文件名或显示名是不够的。
+例如 `ollama/gemma4:26b`、`lmstudio/Gemma4-26b-a4-it-gguf`，或
+`openclaw models list --provider <provider>` 显示的精确提供商/模型。
+当白名单启用时，裸本地文件名或显示名称是不够的。
 
 白名单配置示例：
 
@@ -239,7 +242,7 @@ openclaw models image-fallbacks clear
 
 ### `models status`
 
-显示已解析的主模型、回退模型、图像模型，以及已配置提供方的认证概览。它还会展示在认证存储中找到的配置文件的 OAuth 过期状态（默认在 24 小时内发出警告）。`--plain` 仅打印已解析的主模型。
+显示已解析的主模型、回退模型、图像模型，以及已配置提供商的认证概览。它还会展示在认证存储中找到的配置文件的 OAuth 过期状态（默认在 24 小时内发出警告）。`--plain` 仅打印已解析的主模型。
 
 <AccordionGroup>
   <Accordion title="认证与探测行为">
@@ -253,7 +256,7 @@ openclaw models image-fallbacks clear
 </AccordionGroup>
 
 <Note>
-认证选择取决于提供方/账户。对于始终在线的网关主机，API 密钥通常是最可预测的；也支持复用 Claude CLI 以及现有的 Anthropic OAuth/令牌配置文件。
+认证选择取决于提供商/账户。对于始终在线的网关主机，API 密钥通常是最可预测的；也支持复用 Claude CLI 以及现有的 Anthropic OAuth/令牌配置文件。
 </Note>
 
 示例（Claude CLI）：

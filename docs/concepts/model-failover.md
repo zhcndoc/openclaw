@@ -116,7 +116,7 @@ OAuth 登录会创建不同的配置文件，以便多个账户可以共存。
 
 OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓存处于热状态。它**不会**在每次请求时轮换。锁定的配置文件会被重复使用，直到：
 
-- 会话被重置（`/new` / `/reset`）
+- 会话被重置（`/new` / `reset`）
 - 完成一次压缩（压缩计数递增）
 - 该配置文件处于冷却/禁用状态
 
@@ -128,7 +128,7 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 
 ### 为什么 OAuth 可能“看起来丢失了”
 
-如果你对同一个提供方同时有一个 OAuth 配置文件和一个 API 密钥配置文件，轮询可能会在消息之间切换它们，除非已锁定。要强制使用单一配置文件：
+如果你对同一提供方同时拥有一个 OAuth 配置文件和一个 API 密钥配置文件，轮询可能会在消息之间切换它们，除非已固定。要强制使用单一配置文件：
 
 - 使用 `auth.order[provider] = ["provider:profileId"]` 锁定，或
 - 通过 `/model …` 使用带配置文件覆盖的每会话覆盖（当你的 UI/聊天界面支持时）。
@@ -214,7 +214,7 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 
 ## 模型回退
 
-如果某个提供商的所有配置文件都失败了，OpenClaw 会切换到 `agents.defaults.model.fallbacks` 中的下一个模型。这适用于认证失败、速率限制以及耗尽配置文件轮换后的超时（其他错误不会推进回退）。没有暴露足够细节的提供商错误在回退状态中仍会被精确标记：`empty_response` 表示提供商没有返回可用消息或状态，`no_error_details` 表示提供商明确返回了 `Unknown error (no error details in response)`，而 `unclassified` 表示 OpenClaw 保留了原始预览，但当前还没有分类器匹配到它。
+如果某个提供方的所有配置文件都失败了，OpenClaw 会切换到 `agents.defaults.model.fallbacks` 中的下一个模型。这适用于认证失败、速率限制以及耗尽配置文件轮换后的超时（其他错误不会推进回退）。没有暴露足够细节的提供商错误在回退状态中仍会被精确标记：`empty_response` 表示提供商没有返回可用消息或状态，`no_error_details` 表示提供商明确返回了 `Unknown error (no error details in response)`，而 `unclassified` 表示 OpenClaw 保留了原始预览，但当前还没有分类器匹配到它。
 
 过载和速率限制错误的处理比计费冷却更激进。默认情况下，OpenClaw 允许一次同提供商认证配置文件重试，然后在不等待的情况下切换到下一个已配置的模型回退。诸如 `ModelNotReadyException` 之类的提供商繁忙信号会落入该过载桶。可通过 `auth.cooldowns.overloadedProfileRotations`、`auth.cooldowns.overloadedBackoffMs` 和 `auth.cooldowns.rateLimitedProfileRotations` 来调整。
 
@@ -259,7 +259,7 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
 
 ### 冷却跳过 vs 探测行为
 
-当某个提供商的所有认证配置文件都已经处于冷却中时，OpenClaw 不会自动永远跳过该提供商。它会按每个候选项做决策：
+当某个提供方的所有认证配置文件都已经处于冷却中时，OpenClaw 不会自动永远跳过该提供方。它会按每个候选项做决策：
 
 <AccordionGroup>
   <Accordion title="逐候选项决策">

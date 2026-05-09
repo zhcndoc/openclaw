@@ -7,9 +7,7 @@ read_when:
 title: "网络"
 ---
 
-# 网络中心
-
-这个中心链接了 OpenClaw 如何连接、配对，以及如何在 localhost、LAN 和 tailnet 之间保护设备的核心文档。
+此中心链接了 OpenClaw 如何在 localhost、LAN 和 tailnet 之间连接、配对并保护设备的核心文档。
 
 ## 核心模型
 
@@ -69,5 +67,5 @@ title: "网络"
 
 ## 相关
 
-- [Gateway 网络模型](/gateway/network-model)
+- [Gateway 运行手册](/gateway)
 - [远程访问](/gateway/remote)

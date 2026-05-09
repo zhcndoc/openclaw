@@ -6,7 +6,10 @@ read_when:
 title: "社区插件"
 ---
 
-社区插件是第三方包，它们通过新增频道、工具、提供者或其他能力来扩展 OpenClaw。它们由社区构建和维护，通常发布在 [ClawHub](/tools/clawhub) 上，并且可通过一条命令安装。在 ClawHub 包安装逐步推出期间，裸包规格仍默认使用 Npm 作为启动默认值。
+社区插件是由第三方提供的包，可为 OpenClaw 扩展新的
+频道、工具、提供商或其他能力。它们由社区构建和维护，
+通常发布在 [ClawHub](/clawhub) 上，并且只需一条命令即可安装。
+在 ClawHub 包安装逐步推出期间，对于裸包规格，Npm 仍然是默认启动项。
 
 ClawHub 是社区插件的权威发现入口。不要仅仅为了可发现性而打开
 只改文档的 PR 来把你的插件加到这里；请改为将其发布到
@@ -146,9 +149,8 @@ openclaw plugins install openclaw-plugin-yuanbao
 
 <Steps>
   <Step title="发布到 ClawHub 或 npm">
-    你的插件必须能通过 `openclaw plugins install \<package-name\>` 安装。
-    除非你明确需要仅通过 npm 分发，
-    否则请发布到 [ClawHub](/tools/clawhub)。
+    你的插件必须能够通过 `openclaw plugins install \<package-name\>` 安装。
+    除非你明确需要仅通过 npm 分发，否则请发布到 [ClawHub](/clawhub)。
     完整指南请参见 [构建插件](/plugins/building-plugins)。
 
   </Step>

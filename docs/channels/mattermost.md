@@ -7,7 +7,7 @@ title: "Mattermost"
 sidebarTitle: "Mattermost"
 ---
 
-状态：可下载插件（bot token + WebSocket events）。支持频道、群组和私信。Mattermost 是一个可自托管的团队消息平台；有关产品详情和下载，请参见官方网站 [mattermost.com](https://mattermost.com)。
+状态：可下载插件（bot token + WebSocket 事件）。支持频道、群组和私信。Mattermost 是一个可自托管的团队消息平台；有关产品详情和下载，请参见官方网站 [mattermost.com](https://mattermost.com)。
 
 ## 安装
 
@@ -359,9 +359,9 @@ message action=send channel=mattermost target=channel:<channelId> buttons=[[{"te
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="实现说明">
-    - 按钮回调使用 HMAC-SHA256 验证（自动完成，无需配置）。
-    - Mattermost 会从其 API 响应中剥离 callback data（安全特性），因此点击后所有按钮都会被移除——无法部分移除。
+  <Accordion title="Implementation notes">
+    - 按钮回调使用 HMAC-SHA256 验证（自动进行，无需配置）。
+    - Mattermost 会从其 API 响应中剥离 callback data（安全特性），因此点击后所有按钮都会被移除 - 无法部分移除。
     - 包含连字符或下划线的 action ID 会被自动清理（Mattermost 路由限制）。
 
   </Accordion>
@@ -391,9 +391,9 @@ message action=send channel=mattermost target=channel:<channelId> buttons=[[{"te
       {
         actions: [
           {
-            id: "mybutton01", // 仅限字母数字 — 见下文
-            type: "button", // 必填，否则点击会被静默忽略
-            name: "批准", // 显示标签
+            id: "mybutton01", // 仅限字母数字 - 见下文
+            type: "button", // 必需，否则点击会被静默忽略
+            name: "Approve", // 显示标签
             style: "primary", // 可选："default"、"primary"、"danger"
             integration: {
               url: "https://gateway.example.com/mattermost/interactions/default",
@@ -415,12 +415,12 @@ message action=send channel=mattermost target=channel:<channelId> buttons=[[{"te
 <Warning>
 **关键规则**
 
-1. 附件必须放在 `props.attachments` 中，而不是顶层 `attachments`（会被静默忽略）。
-2. 每个 action 都需要 `type: "button"` — 没有它，点击会被静默吞掉。
-3. 每个 action 都需要 `id` 字段 — 没有 ID 的 action 会被 Mattermost 忽略。
-4. action 的 `id` 必须**仅限字母数字**（`[a-zA-Z0-9]`）。连字符和下划线会破坏 Mattermost 的服务端 action 路由（返回 404）。使用前请将其去除。
-5. `context.action_id` 必须与按钮的 `id` 匹配，这样确认消息才会显示按钮名称（例如“批准”），而不是原始 ID。
-6. `context.action_id` 是必需的 — 交互处理器没有它会返回 400。
+1. Attachments 放在 `props.attachments` 中，而不是顶层 `attachments`（会被静默忽略）。
+2. 每个 action 都需要 `type: "button"` - 没有它，点击会被静默吞掉。
+3. 每个 action 都需要 `id` 字段 - 没有 ID 的 action 会被 Mattermost 忽略。
+4. Action `id` 必须**仅包含字母数字**（`[a-zA-Z0-9]`）。连字符和下划线会破坏 Mattermost 服务器端的 action 路由（返回 404）。使用前请先去除。
+5. `context.action_id` 必须与按钮的 `id` 匹配，这样确认消息才会显示按钮名称（例如 “Approve”）而不是原始 ID。
+6. `context.action_id` 是必需的 - 没有它，interaction handler 会返回 400。
 
 </Warning>
 
@@ -465,10 +465,10 @@ context = {**ctx, "_token": token}
 
 <AccordionGroup>
   <Accordion title="常见 HMAC 陷阱">
-    - Python 的 `json.dumps` 默认会添加空格（`{"key": "val"}`）。请使用 `separators=(",", ":")` 以匹配 JavaScript 的紧凑输出（`{"key":"val"}`）。
-    - 始终签名**所有**上下文字段（减去 `_token`）。gateway 会先去掉 `_token`，然后对剩余全部内容签名。只签名子集会导致静默验证失败。
-    - 使用 `sort_keys=True` — gateway 会在签名前对键排序，而 Mattermost 在存储负载时可能会重新排列上下文字段。
-    - 从 bot token 派生密钥（确定性），而不是随机字节。创建按钮的进程与验证的 gateway 必须使用相同的密钥。
+    - Python 的 `json.dumps` 默认会添加空格（`{"key": "val"}`）。使用 `separators=(",", ":")` 以匹配 JavaScript 的紧凑输出（`{"key":"val"}`）。
+    - 始终对**所有**上下文字段（减去 `_token`）签名。gateway 会删除 `_token` 后对剩余所有内容签名。只签名子集会导致静默验证失败。
+    - 使用 `sort_keys=True` - gateway 在签名前会对键排序，而 Mattermost 在存储负载时可能会重新排序上下文字段。
+    - 从 bot token 派生密钥（确定性），不要使用随机字节。创建按钮的进程与验证按钮的 gateway 必须使用相同的密钥。
 
   </Accordion>
 </AccordionGroup>
@@ -477,7 +477,7 @@ context = {**ctx, "_token": token}
 
 Mattermost 插件包含一个目录适配器，可通过 Mattermost API 解析频道和用户名称。这使得 `openclaw message send` 以及 cron/webhook 投递可以使用 `#channel-name` 和 `@username` 目标。
 
-无需配置——适配器使用账号配置中的 bot token。
+无需配置 - 该适配器使用账号配置中的 bot token。
 
 ## 多账号
 
@@ -531,8 +531,8 @@ Mattermost 支持在 `channels.mattermost.accounts` 下配置多个账号：
 
 ## 相关内容
 
-- [频道路由](/channels/channel-routing) — 消息的会话路由
-- [频道概览](/channels) — 所有受支持的频道
-- [群组](/channels/groups) — 群聊行为和提及门控
-- [配对](/channels/pairing) — DM 认证和配对流程
-- [安全性](/gateway/security) — 访问模型和加固
+- [Channel Routing](/channels/channel-routing) - 消息的会话路由
+- [Channels Overview](/channels) - 所有支持的频道
+- [Groups](/channels/groups) - 群聊行为和 mention gating
+- [Pairing](/channels/pairing) - DM 认证和配对流程
+- [Security](/gateway/security) - 访问模型和加固

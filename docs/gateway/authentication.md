@@ -19,8 +19,10 @@ OpenClaw 支持模型提供方的 OAuth 和 API 密钥。对于始终在线的�
 
 ## 推荐设置（API 密钥，任意提供方）
 
-如果你运行的是长期存在的网关，请先为所选提供方使用 API 密钥。
-就 Anthropic 而言，API 密钥认证仍然是最可预测的服务器端设置，但 OpenClaw 也支持复用本地 Claude CLI 登录。
+If you're running a long-lived gateway, start with an API key for your chosen
+provider.
+For Anthropic specifically, API key auth is still the most predictable server
+setup, but OpenClaw also supports reusing a local Claude CLI login.
 
 1. 在你的提供方控制台中创建一个 API 密钥。
 2. 将其放到**网关主机**上（运行 `openclaw gateway` 的机器）。
@@ -46,8 +48,8 @@ openclaw models status
 openclaw doctor
 ```
 
-如果你不想自己管理环境变量，onboarding 也可以为守护进程使用存储
-API 密钥：`openclaw onboard`。
+If you'd rather not manage env vars yourself, onboarding can store
+API keys for daemon use: `openclaw onboard`.
 
 有关环境继承（`env.shellEnv`、`~/.openclaw/.env`、systemd/launchd）的详细信息，请参见 [Help](/help)。
 
@@ -104,7 +106,9 @@ openclaw models auth paste-token --provider openrouter
 
 OpenClaw 在运行时要求使用规范的 `version` + `profiles` 结构。如果旧安装仍然保留平面文件，例如 `{ "openrouter": { "apiKey": "..." } }`，请运行 `openclaw doctor --fix` 将其重写为 `openrouter:default` 的 API 密钥配置文件；doctor 会在原文件旁边保留一份 `.legacy-flat.*.bak` 备份。诸如 `baseUrl`、`api`、模型 id、headers 和 timeouts 等端点细节应放在 `openclaw.json` 或 `models.json` 中的 `models.providers.<id>` 下，而不是放在 `auth-profiles.json` 中。
 
-静态凭据也支持 Auth profile 引用：
+External auth routes such as Bedrock `auth: "aws-sdk"` are also not credentials. If you want a named Bedrock route, put `auth.profiles.<id>.mode: "aws-sdk"` in `openclaw.json`; do not write `type: "aws-sdk"` into `auth-profiles.json`. `openclaw doctor --fix` moves legacy AWS SDK markers from the credential store into config metadata.
+
+Auth profile refs are also supported for static credentials:
 
 - `api_key` 凭据可以使用 `keyRef: { source, provider, id }`
 - `token` 凭据可以使用 `tokenRef: { source, provider, id }`
@@ -178,7 +182,7 @@ requests`、`ThrottlingException`、`concurrency limit reached`，或
 
 ### 按代理（CLI 覆盖）
 
-为某个代理设置显式的 auth profile 顺序覆盖（存储在该代理的 `auth-state.json` 中）：
+Set an explicit auth profile order override for an agent (stored in that agent's `auth-state.json`):
 
 ```bash
 openclaw models auth order get --provider anthropic

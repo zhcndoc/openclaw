@@ -35,8 +35,8 @@ Client → Gateway:
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 3,
-    "maxProtocol": 3,
+    "minProtocol": 4,
+    "maxProtocol": 4,
     "client": {
       "id": "cli",
       "version": "1.2.3",
@@ -71,7 +71,7 @@ Gateway → Client:
   "ok": true,
   "payload": {
     "type": "hello-ok",
-    "protocol": 3,
+    "protocol": 4,
     "server": { "version": "…", "connId": "…" },
     "features": { "methods": ["…"], "events": ["…"] },
     "snapshot": { "…": "…" },
@@ -90,7 +90,17 @@ Gateway → Client:
 
 当 Gateway 仍在完成启动 sidecar 时，`connect` 请求可以返回一个可重试的 `UNAVAILABLE` 错误，其中 `details.reason` 设为 `"startup-sidecars"`，并带有 `retryAfterMs`。客户端应在其整体连接预算内重试该响应，而不是将其作为终态握手失败上报。
 
-`server`、`features`、`snapshot` 和 `policy` 都是 schema（`src/gateway/protocol/schema/frames.ts`）所必需的。`auth` 也同样必需，并报告协商后的 role/scopes。`canvasHostUrl` 是可选的。
+`server`, `features`, `snapshot`, and `policy` are all required by the schema
+(`src/gateway/protocol/schema/frames.ts`). `auth` is also required and reports
+the negotiated role/scopes. `pluginSurfaceUrls` is optional and maps plugin
+surface names, such as `canvas`, to scoped hosted URLs.
+
+Scoped plugin surface URLs may expire. Nodes can call
+`node.pluginSurface.refresh` with `{ "surface": "canvas" }` to receive a fresh
+entry in `pluginSurfaceUrls`. The experimental Canvas plugin refactor does not
+support the deprecated `canvasHostUrl`, `canvasCapability`, or
+`node.canvas.capability.refresh` compatibility path; current native clients and
+gateways must use plugin surfaces.
 
 当未签发设备令牌时，`hello-ok.auth` 会报告协商后的权限，但不包含令牌字段：
 
@@ -146,8 +156,8 @@ Gateway → Client:
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 3,
-    "maxProtocol": 3,
+    "minProtocol": 4,
+    "maxProtocol": 4,
     "client": {
       "id": "ios-node",
       "version": "1.2.3",
@@ -183,10 +193,9 @@ Gateway → Client:
 
 ## 角色 + scopes
 
-For the full operator scope model, approval-time checks, and shared-secret
-semantics, see [Operator scopes](/gateway/operator-scopes).
+有关完整的 operator scope 模型、审批时检查以及共享密钥语义，请参见 [Operator scopes](/gateway/operator-scopes)。
 
-### Roles
+### 角色
 
 - `operator` = 控制平面客户端（CLI/UI/自动化）。
 - `node` = 能力宿主（camera/screen/canvas/system.run）。
@@ -221,9 +230,9 @@ semantics, see [Operator scopes](/gateway/operator-scopes).
 
 节点在 connect 时声明能力主张：
 
-- `caps`：高层级能力类别。
-- `commands`：invoke 的命令 allowlist。
-- `permissions`：细粒度开关（例如 `screen.record`、`camera.capture`）。
+- `caps`: camera、canvas、screen、location、voice 和 talk 等高级能力类别。
+- `commands`: 调用的命令允许列表。
+- `permissions`: 细粒度开关（例如 `screen.record`、`camera.capture`）。
 
 Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
@@ -318,15 +327,26 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Talk 与 TTS">
-    - `talk.config` 返回生效中的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
+  <Accordion title="Talk and TTS">
+    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、标准模式、传输、brain 策略以及实时音频/能力标志，而不会返回提供方 secret 或修改全局配置。
+    - `talk.config` 返回生效的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
+    - `talk.session.create` 创建一个 Gateway 拥有的 Talk 会话，用于 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room`。`brain: "direct-tools"` 需要 `operator.admin`。
+    - `talk.session.join` 验证一个 managed-room 会话 token，按需发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不返回明文 token 或存储的 token hash。
+    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转录会话中。
+    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动 managed-room 回合生命周期，并在状态清除前拒绝陈旧回合。
+    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控抢话。
+    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。
+    - `talk.session.close` 关闭一个 Gateway 拥有的 relay、转录或 managed-room 会话，并发出终态 Talk 事件。
     - `talk.mode` 为 WebChat/Control UI 客户端设置/广播当前 Talk 模式状态。
-    - `talk.speak` 通过当前激活的 Talk 语音提供方合成语音。
+    - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
+    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交提供方特定工具结果前等待正常的 chat 生命周期事件。
+    - `talk.event` 是实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
+    - `talk.speak` 通过当前 Talk 语音提供方合成语音。
     - `tts.status` 返回 TTS 启用状态、当前提供方、回退提供方以及提供方配置状态。
     - `tts.providers` 返回可见的 TTS 提供方清单。
-    - `tts.enable` 和 `tts.disable` 切换 TTS 偏好状态。
-    - `tts.setProvider` 更新首选 TTS 提供方。
-    - `tts.convert` 执行一次性文本转语音转换。
+    - `tts.enable` 和 `tts.disable` 切换 TTS 首选项状态。
+    - `tts.setProvider` 更新首选的 TTS 提供方。
+    - `tts.convert` 执行一次性的文本转语音转换。
 
   </Accordion>
 
@@ -345,12 +365,13 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Agent 和工作区助手">
-    - `agents.list` 返回已配置的 agent 条目，包括生效中的模型和运行时元数据。
-    - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和工作区绑定。
+  <Accordion title="Agent and workspace helpers">
+    - `agents.list` 返回已配置的 agent 条目，包括生效的模型和运行时元数据。
+    - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和工作区 wiring。
     - `agents.files.list`、`agents.files.get` 和 `agents.files.set` 管理为 agent 暴露的 bootstrap 工作区文件。
-    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式 `sessionKey`、`runId` 或 `taskId` 作用域暴露基于 transcript 派生的 artifact 摘要和下载。Run 和 task 查询会在服务器端解析归属会话，并且仅返回带有匹配来源的 transcript 媒体；不安全或本地 URL 来源会返回不支持的下载，而不是在服务器端抓取。
-    - `agent.identity.get` 返回某个 agent 或 session 的生效助手身份。
+    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式的 `sessionKey`、`runId` 或 `taskId` 作用域暴露由 transcript 派生的 artifact 摘要和下载。运行和任务查询会在服务器端解析所属会话，并且只返回 provenance 匹配的 transcript 媒体；不安全或本地 URL 来源会返回不受支持的下载，而不是在服务器端抓取。
+    - `environments.list` 和 `environments.status` 为 SDK 客户端暴露只读的 Gateway 本地和节点环境发现。
+    - `agent.identity.get` 返回某个 agent 或会话的生效 assistant 身份。
     - `agent.wait` 等待一次运行完成，并在可用时返回终态快照。
 
   </Accordion>
@@ -381,16 +402,15 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="节点配对、invoke 与待处理工作">
-    - `node.pair.request`、`node.pair.list`、`node.pair.approve`、`node.pair.reject`、`node.pair.remove` 和 `node.pair.verify` 涵盖节点配对和 bootstrap 验证。
-    - `node.list` 和 `node.describe` 返回已知/已连接节点状态。
-    - `node.rename` 更新已配对节点标签。
-    - `node.invoke` 将一个命令转发到已连接节点。
-    - `node.invoke.result` 返回一次 invoke 请求的结果。
-    - `node.event` 将来自节点的事件带回网关。
-    - `node.canvas.capability.refresh` 刷新有作用域的 canvas-capability 令牌。
-    - `node.pending.pull` 和 `node.pending.ack` 是已连接节点队列 API。
-    - `node.pending.enqueue` 和 `node.pending.drain` 管理离线/断开节点的持久化待处理工作。
+  <Accordion title="Node pairing, invoke, and pending work">
+    - `node.pair.request`, `node.pair.list`, `node.pair.approve`, `node.pair.reject`, `node.pair.remove`, and `node.pair.verify` cover node pairing and bootstrap verification.
+    - `node.list` and `node.describe` return known/connected node state.
+    - `node.rename` updates a paired node label.
+    - `node.invoke` forwards a command to a connected node.
+    - `node.invoke.result` returns the result for an invoke request.
+    - `node.event` carries node-originated events back into the gateway.
+    - `node.pending.pull` and `node.pending.ack` are the connected-node queue APIs.
+    - `node.pending.enqueue` and `node.pending.drain` manage durable pending work for offline/disconnected nodes.
 
   </Accordion>
 
@@ -454,7 +474,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 - 操作员可以调用 `tools.invoke`（`operator.write`）通过与 `/tools/invoke` 相同的网关策略路径调用一个可用工具。
   - `name` 是必需的。`args`、`sessionKey`、`agentId`、`confirm` 和 `idempotencyKey` 是可选的。
   - 如果同时存在 `sessionKey` 和 `agentId`，则解析后的会话 agent 必须与 `agentId` 匹配。
-  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选的 `output` 以及类型化 `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是绕过网关工具策略管道。
+  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选的 `output` 以及类型化的 `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是绕过网关工具策略管道。
 - 操作员可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见技能清单。
   - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
   - 响应包含资格、缺失的要求、配置检查，以及不暴露原始 secret 值的已清理安装选项。
@@ -491,8 +511,8 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
 ## 版本管理
 
-- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/schema/protocol-schemas.ts`。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务端会拒绝不匹配的情况。
+- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts`。
+- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝不匹配的版本。
 - Schema + 模型由 TypeBox 定义生成：
   - `pnpm protocol:gen`
   - `pnpm protocol:gen:swift`
@@ -500,21 +520,21 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
 ### 客户端常量
 
-`src/gateway/client.ts` 中的参考客户端使用以下默认值。其值在 protocol v3 中保持稳定，并且是第三方客户端应采用的基线。
+`src/gateway/client.ts` 中的参考客户端使用这些默认值。该值在 protocol v4 中保持稳定，是第三方客户端预期的基线。
 
 | 常量                                      | 默认值                                                | 来源                                                                                     |
-| ----------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PROTOCOL_VERSION`                        | `3`                                                   | `src/gateway/protocol/schema/protocol-schemas.ts`                                        |
-| 请求超时（每个 RPC）                       | `30_000` ms                                           | `src/gateway/client.ts`（`requestTimeoutMs`）                                              |
-| 预认证 / connect-challenge 超时            | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts`（配置/env 可提高配对的服务端/客户端预算）            |
-| 初始重连退避                               | `1_000` ms                                            | `src/gateway/client.ts`（`backoffMs`）                                                    |
-| 最大重连退避                               | `30_000` ms                                           | `src/gateway/client.ts`（`scheduleReconnect`）                                            |
-| 设备令牌关闭后的快速重试上限               | `250` ms                                              | `src/gateway/client.ts`                                                                    |
-| `terminate()` 之前的强制停止宽限           | `250` ms                                              | `FORCE_STOP_TERMINATE_GRACE_MS`                                                           |
-| `stopAndWait()` 默认超时                   | `1_000` ms                                            | `STOP_AND_WAIT_TIMEOUT_MS`                                                                |
-| 默认 tick 间隔（`hello-ok` 之前）          | `30_000` ms                                           | `src/gateway/client.ts`                                                                    |
-| tick 超时关闭                              | 当静默超过 `tickIntervalMs * 2` 时，代码 `4000`       | `src/gateway/client.ts`                                                                    |
-| `MAX_PAYLOAD_BYTES`                       | `25 * 1024 * 1024`（25 MB）                           | `src/gateway/server-constants.ts`                                                         |
+| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `PROTOCOL_VERSION`                        | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
+| Request timeout (per RPC)                 | `30_000` ms                                           | `src/gateway/client.ts` (`requestTimeoutMs`)                                               |
+| Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (config/env can raise the paired server/client budget) |
+| Initial reconnect backoff                 | `1_000` ms                                            | `src/gateway/client.ts` (`backoffMs`)                                                      |
+| Max reconnect backoff                     | `30_000` ms                                           | `src/gateway/client.ts` (`scheduleReconnect`)                                              |
+| Fast-retry clamp after device-token close | `250` ms                                              | `src/gateway/client.ts`                                                                    |
+| Force-stop grace before `terminate()`     | `250` ms                                              | `FORCE_STOP_TERMINATE_GRACE_MS`                                                            |
+| `stopAndWait()` default timeout           | `1_000` ms                                            | `STOP_AND_WAIT_TIMEOUT_MS`                                                                 |
+| Default tick interval (pre `hello-ok`)    | `30_000` ms                                           | `src/gateway/client.ts`                                                                    |
+| Tick-timeout close                        | code `4000` when silence exceeds `tickIntervalMs * 2` | `src/gateway/client.ts`                                                                    |
+| `MAX_PAYLOAD_BYTES`                       | `25 * 1024 * 1024` (25 MB)                            | `src/gateway/server-constants.ts`                                                          |
 
 服务端会在 `hello-ok` 中通告实际生效的 `policy.tickIntervalMs`、`policy.maxPayload` 和 `policy.maxBufferedBytes`；客户端应遵守这些值，而不是握手前的默认值。
 

@@ -8,8 +8,6 @@ title: "发布通道"
 sidebarTitle: "发布通道"
 ---
 
-# 开发通道
-
 OpenClaw 提供三个更新通道：
 
 - **stable**: npm dist-tag `latest`。推荐大多数用户使用。

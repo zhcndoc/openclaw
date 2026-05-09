@@ -14,13 +14,13 @@ title: "语音唤醒（macOS）"
 
 ## 运行时行为（唤醒词）
 
-- 语音识别器运行在 `VoiceWakeRuntime` 中。
-- 只有在唤醒词和下一个词之间存在**有意义的停顿**时才会触发（约 0.55s 的间隔）。浮层/提示音可以在停顿时开始，甚至早于命令开始之前。
-- 静音窗口：当语音持续流动时为 2.0s；如果只听到触发词，则为 5.0s。
-- 强制停止：120s，防止会话失控持续。
-- 会话之间的防抖：350ms。
-- 浮层由 `VoiceWakeOverlayController` 驱动，带有已提交/临时内容的着色。
-- 发送后，识别器会干净地重启，以监听下一个触发词。
+- Speech recognizer lives in `VoiceWakeRuntime`.
+- Trigger only fires when there's a **meaningful pause** between the wake word and the next word (~0.55s gap). The overlay/chime can start on the pause even before the command begins.
+- Silence windows: 2.0s when speech is flowing, 5.0s if only the trigger was heard.
+- Hard stop: 120s to prevent runaway sessions.
+- Debounce between sessions: 350ms.
+- Overlay is driven via `VoiceWakeOverlayController` with committed/volatile coloring.
+- After send, recognizer restarts cleanly to listen for the next trigger.
 
 ## 生命周期不变量
 
@@ -29,7 +29,7 @@ title: "语音唤醒（macOS）"
 
 ## 卡住的浮层失败模式（之前）
 
-之前，如果浮层卡住可见，而你手动关闭了它，Voice Wake 可能会看起来“失效”，因为运行时的重启尝试会被浮层可见性阻止，并且不会安排后续重启。
+Previously, if the overlay got stuck visible and you manually closed it, Voice Wake could appear "dead" because the runtime's restart attempt could be blocked by overlay visibility and no subsequent restart was scheduled.
 
 加固措施：
 
@@ -47,10 +47,10 @@ title: "语音唤醒（macOS）"
 ## 面向用户的设置
 
 - **Voice Wake** 开关：启用唤醒词运行时。
-- **按住 Cmd+Fn 说话**：启用按住说话监视器。macOS < 26 上禁用。
-- 语言和麦克风选择器、实时电平表、触发词表、测试器（仅本地；不会转发）。
-- 如果设备断开，麦克风选择器会保留上次选择，显示断开提示，并暂时回退到系统默认值，直到设备恢复。
-- **声音**：在触发检测和发送时播放提示音；默认使用 macOS 的“Glass”系统声音。你可以为每个事件选择任意可被 `NSSound` 加载的文件（例如 MP3/WAV/AIFF），或者选择 **无声音**。
+- **Hold Cmd+Fn to talk**：启用按住说话监视器。macOS < 26 上禁用。
+- 语言与麦克风选择器、实时电平表、触发词表、测试器（仅本地；不会转发）。
+- 如果设备断开连接，麦克风选择器会保留上一次选择，显示断开提示，并临时回退到系统默认，直到设备恢复。
+- **Sounds**：触发检测和发送时的提示音；默认使用 macOS 的 “Glass” 系统声音。你可以为每个事件选择任何可被 `NSSound` 加载的文件（例如 MP3/WAV/AIFF），或选择 **No Sound**。
 
 ## 转发行为
 

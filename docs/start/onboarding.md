@@ -7,8 +7,8 @@ title: "上手引导（macOS 应用）"
 sidebarTitle: "上手引导：macOS 应用"
 ---
 
-本文档描述了**当前**的首次运行设置流程。目标是提供顺畅的“第 0 天”体验：选择 Gateway 的运行位置、连接身份验证、运行向导，并让代理自行完成引导。
-有关上手引导路径的一般概述，请参见 [上手引导概述](/start/onboarding-overview)。
+本文档描述了**当前**的首次运行设置流程。目标是提供一种顺畅的“第 0 天”体验：选择 Gateway 运行的位置，连接身份验证，运行向导，并让代理自动完成引导。
+有关上手路径的一般概述，请参阅 [Onboarding Overview](/start/onboarding-overview)。
 
 <Steps>
 <Step title="批准 macOS 警告">
@@ -48,8 +48,8 @@ sidebarTitle: "上手引导：macOS 应用"
 <Tip>
 **Gateway 身份验证提示：**
 
-- 向导现在即使对于回环也会生成一个 **token**，因此本地 WS 客户端必须进行身份验证。
-- 如果你禁用身份验证，任何本地进程都可以连接；仅在完全受信任的机器上这样做。
+- 向导现在即使对回环地址也会生成一个 **token**，因此本地 WS 客户端必须进行身份验证。
+- 如果你禁用身份验证，任何本地进程都可以连接；仅在完全受信任的机器上使用该选项。
 - 对于多机器访问或非回环绑定，请使用 **token**。
 
 </Tip>
@@ -76,10 +76,10 @@ sidebarTitle: "上手引导：macOS 应用"
   应用可以通过 npm、pnpm 或 bun 安装全局 `openclaw` CLI。
   它会优先使用 npm，然后是 pnpm，如果检测到的唯一包管理器是 bun，则使用 bun。对于 Gateway 运行时，Node 仍然是推荐路径。
 </Step>
-<Step title="上手引导聊天（专用会话）">
-  完成设置后，应用会打开一个专用的上手引导聊天会话，以便代理
-  进行自我介绍并引导后续步骤。这样可以将首次运行指导与
-  你的正常对话分开。有关首次代理运行期间在 gateway 主机上会发生什么，请参见 [引导启动](/start/bootstrapping)。
+<Step title="Onboarding Chat (dedicated session)">
+  设置完成后，应用会打开一个专门的上手引导聊天会话，这样代理就可以
+  自我介绍并指导后续步骤。这使首次运行的引导与
+  你的常规对话分开。有关首次代理运行期间在 gateway 主机上发生的情况，请参阅 [Bootstrapping](/start/bootstrapping)。
 </Step>
 </Steps>
 

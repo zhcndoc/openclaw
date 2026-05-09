@@ -6,8 +6,6 @@ read_when:
 title: "Zalo 个人插件"
 ---
 
-# Zalo 个人版（插件）
-
 通过插件为 OpenClaw 提供 Zalo 个人版支持，使用原生 `zca-js` 自动化一个普通的 Zalo 用户账号。
 
 <Warning>
@@ -83,5 +81,5 @@ openclaw directory peers list --channel zalouser --query "name"
 
 ## 相关内容
 
-- [构建插件](/plugins/building-plugins)
-- [社区插件](/plugins/community)
+- [Building plugins](/plugins/building-plugins)
+- [ClawHub](/clawhub)

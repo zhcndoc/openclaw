@@ -2,14 +2,12 @@
 summary: "审计哪些功能会花钱、使用了哪些密钥，以及如何查看使用情况"
 read_when:
   - 你想了解哪些功能可能会调用付费 API
-  - 你需要审计密钥、成本和使用情况的可见性
-  - 你正在解释 /status 或 /usage 的成本报告
-title: "API 使用与成本"
+  - 你需要审计密钥、成本和使用情况可见性
+  - 你在解释 /status 或 /usage 的成本报告
+title: "API usage and costs"
 ---
 
-# API 使用与成本
-
-本文档列出了**可以调用 API 密钥的功能**以及它们的成本显示位置。它重点关注
+本文列出了**可以调用 API 密钥的功能**以及它们的成本会显示在哪里。重点介绍了
 能够产生提供方用量或付费 API 调用的 OpenClaw 功能。
 
 ## 成本显示位置（聊天 + CLI）
@@ -147,7 +145,7 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 
 - `FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webFetch.apiKey`
 
-如果未配置 Firecrawl，该工具会回退到直接抓取加上内置的 `web-readability` 插件（无需付费 API）。禁用 `plugins.entries.web-readability.enabled` 可跳过本地 Readability 提取。
+如果未配置 Firecrawl，该工具会回退到直接抓取以及捆绑的 `web-readability` 插件（无付费 API）。禁用 `plugins.entries.web-readability.enabled` 可跳过本地 Readability 提取。
 
 参见 [Web 工具](/tools/web)。
 
@@ -183,8 +181,8 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 
 ### 10) 技能（第三方 API）
 
-技能可以将 `apiKey` 存储在 `skills.entries.<name>.apiKey` 中。如果某个技能使用该密钥访问外部
-API，就可能根据该技能所使用的提供方产生费用。
+Skills 可以将 `apiKey` 存储在 `skills.entries.<name>.apiKey` 中。如果某个技能将该密钥用于外部
+API，则会根据该技能的提供方产生费用。
 
 参见 [Skills](/tools/skills)。
 

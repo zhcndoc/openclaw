@@ -15,7 +15,7 @@ read_when:
 </Note>
 
 <Tip>
-想找的是操作指南吗？请从 [构建插件](/plugins/building-plugins) 开始；渠道插件请使用 [Channel 插件](/plugins/sdk-channel-plugins)；提供方插件请使用 [Provider 插件](/plugins/sdk-provider-plugins)；工具或生命周期钩子插件请使用 [插件钩子](/plugins/hooks)。
+  想找的是操作指南而不是参考文档？请从 [Building plugins](/plugins/building-plugins) 开始；渠道插件请使用 [Channel plugins](/plugins/sdk-channel-plugins)；提供方插件请使用 [Provider plugins](/plugins/sdk-provider-plugins)；本地 AI CLI 后端请使用 [CLI backend plugins](/plugins/cli-backend-plugins)；工具或生命周期钩子插件请使用 [Plugin hooks](/plugins/hooks)。
 </Tip>
 
 ## 导入约定
@@ -77,11 +77,11 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 | 方法                                           | 注册内容                     |
 | ------------------------------------------------ | ------------------------------------- |
-| `api.registerProvider(...)`                      | 文本推理（LLM）                  |
-| `api.registerAgentHarness(...)`                  | 实验性的底层 agent 执行器 |
-| `api.registerCliBackend(...)`                    | 本地 CLI 推理后端           |
-| `api.registerChannel(...)`                       | 消息渠道                     |
-| `api.registerSpeechProvider(...)`                | 文本转语音 / STT 合成        |
+| `api.registerProvider(...)`                  | 文本推理（LLM）                  |
+| `api.registerAgentHarness(...)`              | 实验性的底层 agent 执行器 |
+| `api.registerCliBackend(...)`                | 本地 CLI 推理后端           |
+| `api.registerChannel(...)`                   | 消息渠道                     |
+| `api.registerSpeechProvider(...)`            | 文本转语音 / STT 合成        |
 | `api.registerRealtimeTranscriptionProvider(...)` | 流式实时转写      |
 | `api.registerRealtimeVoiceProvider(...)`         | 双向实时语音会话        |
 | `api.registerMediaUnderstandingProvider(...)`    | 图像/音频/视频分析            |
@@ -104,16 +104,17 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 | 方法                                         | 注册内容                       |
 | ---------------------------------------------- | --------------------------------------- |
-| `api.registerHook(events, handler, opts?)`     | 事件钩子                              |
+| `api.registerHook(events, handler, opts?)`     | Event hook                              |
 | `api.registerHttpRoute(params)`                | Gateway HTTP 端点                   |
 | `api.registerGatewayMethod(name, handler)`     | Gateway RPC 方法                      |
 | `api.registerGatewayDiscoveryService(service)` | 本地 Gateway 发现广播器      |
 | `api.registerCli(registrar, opts?)`            | CLI 子命令                          |
+| `api.registerNodeCliFeature(registrar, opts?)` | `openclaw nodes` 下的 Node 功能 |
 | `api.registerService(service)`                 | 后台服务                      |
 | `api.registerInteractiveHandler(registration)` | 交互式处理器                     |
 | `api.registerAgentToolResultMiddleware(...)`   | 运行时工具结果中间件          |
-| `api.registerMemoryPromptSupplement(builder)`  | 追加的、与内存相邻的提示词部分 |
-| `api.registerMemoryCorpusSupplement(adapter)`  | 追加的内存搜索/读取语料      |
+| `api.registerMemoryPromptSupplement(builder)`  | 额外的、与内存相邻的提示词部分 |
+| `api.registerMemoryCorpusSupplement(adapter)`  | 额外的内存搜索/读取语料      |
 
 ### 工作流插件的宿主钩子
 
@@ -122,18 +123,18 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 通用契约；Plan Mode 可以使用它们，审批工作流、
 工作区策略门禁、后台监视器、安装向导以及 UI 伴随插件也都可以使用。
 
-| Method                                                                   | Contract it owns                                                                                                                  |
+| 方法                                                                   | 所拥有的契约                                                                                                                  |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerSessionExtension(...)`                                      | Plugin-owned, JSON-compatible session state projected through Gateway sessions                                                    |
-| `api.enqueueNextTurnInjection(...)`                                      | Durable exactly-once context injected into the next agent turn for one session                                                    |
-| `api.registerTrustedToolPolicy(...)`                                     | Bundled/trusted pre-plugin tool policy that can block or rewrite tool params                                                      |
-| `api.registerToolMetadata(...)`                                          | Tool catalog display metadata without changing the tool implementation                                                            |
-| `api.registerCommand(...)`                                               | Scoped plugin commands; command results can set `continueAgent: true`; Discord native commands support `descriptionLocalizations` |
-| `api.registerControlUiDescriptor(...)`                                   | Control UI contribution descriptors for session, tool, run, or settings surfaces                                                  |
-| `api.registerRuntimeLifecycle(...)`                                      | Cleanup callbacks for plugin-owned runtime resources on reset/delete/reload paths                                                 |
-| `api.registerAgentEventSubscription(...)`                                | Sanitized event subscriptions for workflow state and monitors                                                                     |
-| `api.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)` | Per-run plugin scratch state cleared on terminal run lifecycle                                                                    |
-| `api.registerSessionSchedulerJob(...)`                                   | Plugin-owned session scheduler job records with deterministic cleanup                                                             |
+| `api.registerSessionExtension(...)`                                      | 由插件拥有、与 JSON 兼容的会话状态，经 Gateway 会话投影                                                   |
+| `api.enqueueNextTurnInjection(...)`                                      | 为单个会话注入到下一个 agent 回合中的持久化一次性上下文                                                    |
+| `api.registerTrustedToolPolicy(...)`                                     | 捆绑/受信任、插件之前的工具策略，可阻止或重写工具参数                                                      |
+| `api.registerToolMetadata(...)`                                          | 不更改工具实现的工具目录显示元数据                                                            |
+| `api.registerCommand(...)`                                               | 作用域插件命令；命令结果可以设置 `continueAgent: true`；Discord 原生命令支持 `descriptionLocalizations` |
+| `api.registerControlUiDescriptor(...)`                                   | 会话、工具、运行或设置界面的控制 UI 贡献描述符                                                  |
+| `api.registerRuntimeLifecycle(...)`                                      | 用于重置/删除/重新加载路径上插件拥有的运行时资源的清理回调                                                 |
+| `api.registerAgentEventSubscription(...)`                                | 用于工作流状态和监视器的已净化事件订阅                                                                     |
+| `api.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)` | 在终止性运行生命周期中清除的每次运行插件临时状态                                                                    |
+| `api.registerSessionSchedulerJob(...)`                                   | 具有确定性清理的、插件拥有的会话调度作业记录                                                             |
 
 这些契约刻意分离了权限：
 
@@ -198,10 +199,17 @@ Gateway 发现插件不得将公开的 TXT 值视为秘密或
 
 ### CLI 注册元数据
 
-`api.registerCli(registrar, opts?)` 接受两类顶层元数据：
+`api.registerCli(registrar, opts?)` 接受两类命令元数据：
 
-- `commands`：由 registrar 拥有的显式命令根
-- `descriptors`：用于根 CLI 帮助、路由和惰性插件 CLI 注册的解析期命令描述符
+- `commands`：由 registrar 拥有的显式命令名称
+- `descriptors`：用于 CLI 帮助、路由和惰性插件 CLI 注册的解析时命令描述符
+- `parentPath`：用于嵌套命令组的可选父命令路径，例如
+  `["nodes"]`
+
+对于成对节点功能，优先使用
+`api.registerNodeCliFeature(registrar, opts?)`。它是
+`api.registerCli(..., { parentPath: ["nodes"] })` 的一个小包装，并使诸如
+`openclaw nodes canvas` 这样的命令成为明确的插件拥有节点功能。
 
 如果你希望插件命令在常规根 CLI 路径中保持惰性加载，
 请提供覆盖该 registrar 暴露的每个顶层命令根的 `descriptors`。
@@ -224,7 +232,30 @@ api.registerCli(
 );
 ```
 
-仅当你不需要惰性的根 CLI 注册时，才单独使用 `commands`。这种急加载兼容路径仍受支持，但它不会为解析期惰性加载安装基于描述符的占位符。
+嵌套命令会将解析后的父命令作为 `program` 传入：
+
+```typescript
+api.registerCli(
+  async ({ program }) => {
+    const { registerNodesCanvasCommands } = await import("./src/cli.js");
+    registerNodesCanvasCommands(program);
+  },
+  {
+    parentPath: ["nodes"],
+    descriptors: [
+      {
+        name: "canvas",
+        description: "从配对节点捕获或渲染画布内容",
+        hasSubcommands: true,
+      },
+    ],
+  },
+);
+```
+
+仅当你不需要惰性根 CLI 注册时，才单独使用 `commands`。
+该急切兼容路径仍受支持，但它不会为解析时惰性加载安装基于
+描述符的占位符。
 
 ### CLI 后端注册
 
@@ -232,10 +263,17 @@ api.registerCli(
 AI CLI 后端的默认配置，例如 `codex-cli`。
 
 - 后端 `id` 会成为模型引用中的提供方前缀，例如 `codex-cli/gpt-5`。
-- 后端 `config` 使用与 `agents.defaults.cliBackends.<id>` 相同的结构。
-- 用户配置仍然优先。OpenClaw 会在运行 CLI 之前，将 `agents.defaults.cliBackends.<id>` 与插件默认配置合并。
-- 当后端在合并后需要兼容性重写时，使用 `normalizeConfig`
-  （例如规范化旧的参数形状）。
+- 后端 `config` 的结构与 `agents.defaults.cliBackends.<id>` 相同。
+- 用户配置仍然优先。OpenClaw 会在运行 CLI 之前，将 `agents.defaults.cliBackends.<id>` 合并到
+  插件默认配置之上。
+- 当后端在合并后需要兼容性重写时，请使用 `normalizeConfig`
+  （例如规范化旧的标志位结构）。
+- 对于属于 CLI 方言的、按请求作用域的 argv 重写，请使用 `resolveExecutionArgs`，
+  例如将 OpenClaw 的思考级别映射为原生的努力
+  标志。
+
+有关端到端编写指南，请参见
+[CLI backend plugins](/plugins/cli-backend-plugins)。
 
 ### 独占槽位
 

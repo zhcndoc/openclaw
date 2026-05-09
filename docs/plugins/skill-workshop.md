@@ -32,11 +32,11 @@ Skill Workshop 是工作区技能的流程性记忆。它允许代理将可复�
 
 它不用于：
 
-- “用户喜欢蓝色”之类的事实
+- 诸如“用户喜欢蓝色”之类的事实
 - 广泛的自传式记忆
-- 原始对话转录归档
-- 密钥、凭据或隐藏提示文本
-- 不会重复出现的一次性指令
+- 原始对话记录归档
+- 密钥、凭证或隐藏提示文本
+- 不会重复出现的一次性说明
 
 ## 默认状态
 
@@ -49,8 +49,7 @@ Skill Workshop 是工作区技能的流程性记忆。它允许代理将可复�
 - 该插件足够支持选择加入测试和内部自用
 - 提案存储、审查阈值和捕获启发式可以演进
 - 待批准模式是推荐的起始模式
-- 自动应用适用于受信任的个人/工作区设置，不适用于共享或恶意
-  的高输入环境
+- 自动应用适用于受信任的个人/工作区设置，不适用于共享或恶意的高输入环境
 
 ## 启用
 
@@ -202,7 +201,7 @@ Skill Workshop 有三条捕获路径。
 - `toolsAllow: []`
 - `disableMessageTool: true`
 
-审查器返回 `{ "action": "none" }` 或一个提案。`action` 字段可以是 `create`、`append` 或 `replace` —— 当已存在相关技能时，优先使用 `append`/`replace`；仅当没有现有技能适配时才使用 `create`。
+审查器返回 `{ "action": "none" }` 或一个提案。`action` 字段可以是 `create`、`append` 或 `replace`——当相关技能已存在时，优先使用 `append`/`replace`；只有在没有现有技能适配时才使用 `create`。
 
 `create` 示例：
 
@@ -339,7 +338,7 @@ skill_workshop
 ```
 
 <AccordionGroup>
-  <Accordion title="强制安全写入（apply: true）">
+  <Accordion title="Request immediate write in auto mode (apply: true)">
 
 ```json
 {
@@ -350,6 +349,9 @@ skill_workshop
   "body": "## Workflow\n\n- Verify true animation.\n- Record attribution."
 }
 ```
+
+With `approvalPolicy: "pending"`, `apply: true` still queues the proposal. Review it, then use
+the `apply` action after approval.
 
   </Accordion>
 
@@ -399,6 +401,9 @@ skill_workshop
 
 应用一个待处理提案。
 
+With `approvalPolicy: "pending"`, this action asks for operator approval before writing the
+workspace skill.
+
 ```json
 {
   "action": "apply",
@@ -441,7 +446,7 @@ quarantined proposal cannot be applied
   "action": "write_support_file",
   "skillName": "release-workflow",
   "relativePath": "references/checklist.md",
-  "body": "# Release Checklist\n\n- Run release docs.\n- Verify changelog.\n"
+  "body": "# 发布检查清单\n\n- 运行发布文档。\n- 验证变更日志。\n"
 }
 ```
 
@@ -528,8 +533,8 @@ Skill Workshop 对生成的 `SKILL.md` 内容和支持文件进行安全扫描�
 
 写入模式文本会随 `approvalPolicy` 变化：
 
-- pending 模式：排队建议；仅在明确批准后应用
-- auto 模式：当工作区技能明显可复用时，自动应用安全的更新
+- pending mode: queue suggestions; use `apply` after explicit approval
+- auto mode: apply safe workspace-skill updates unless `apply: false` queues instead
 
 ## 成本和运行时行为
 
@@ -553,17 +558,17 @@ LLM 审查会在当前/默认代理模型上运行一个嵌入式执行。它是
 
 当用户说以下内容时，使用 Skill Workshop：
 
-- “下次，做 X”
-- “从现在开始，优先 Y”
-- “确保验证 Z”
-- “把这个保存为一个工作流”
-- “这花了很久；记住这个过程”
-- “为这个更新本地技能”
+- "next time, do X"
+- "from now on, prefer Y"
+- "make sure to verify Z"
+- "save this as a workflow"
+- "this took a while; remember the process"
+- "update the local skill for this"
 
 好的技能文本：
 
 ```markdown
-## Workflow
+## 工作流
 
 - 验证 GIF URL 能解析为 `image/gif`。
 - 确认文件包含多个帧。

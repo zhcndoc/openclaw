@@ -20,10 +20,10 @@ Anthropic 发布新的政策。
 
 Anthropic 当前的公开文档：
 
-- [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
-- [Claude Agent SDK overview](https://platform.claude.com/docs/en/agent-sdk/overview)
-- [Using Claude Code with your Pro or Max plan](https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan)
-- [Using Claude Code with your Team or Enterprise plan](https://support.anthropic.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan/)
+- [Claude Code CLI 参考](https://code.claude.com/docs/en/cli-reference)
+- [Claude Agent SDK 概览](https://platform.claude.com/docs/en/agent-sdk/overview)
+- [使用你的 Pro 或 Max 计划运行 Claude Code](https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan)
+- [使用你的 Team 或 Enterprise 计划运行 Claude Code](https://support.anthropic.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan/)
 
 </Warning>
 
@@ -35,7 +35,7 @@ Anthropic 当前的公开文档：
 
     <Steps>
       <Step title="获取你的 API key">
-        在 [Anthropic Console](https://console.anthropic.com/) 中创建一个 API key。
+        在 [Anthropic 控制台](https://console.anthropic.com/) 中创建一个 API key。
       </Step>
       <Step title="运行初始化">
         ```bash
@@ -94,7 +94,7 @@ Anthropic 当前的公开文档：
     </Steps>
 
     <Note>
-    Claude CLI 后端的设置和运行时细节见 [CLI Backends](/gateway/cli-backends)。
+    Claude CLI 后端的设置和运行时细节见 [CLI 后端](/gateway/cli-backends)。
     </Note>
 
     ### 配置示例
@@ -106,15 +106,18 @@ Anthropic 当前的公开文档：
       agents: {
         defaults: {
           model: { primary: "anthropic/claude-opus-4-7" },
-          agentRuntime: { id: "claude-cli" },
+          models: {
+            "anthropic/claude-opus-4-7": {
+              agentRuntime: { id: "claude-cli" },
+            },
+          },
         },
       },
     }
     ```
 
-    旧的 `claude-cli/claude-opus-4-7` 模型引用仍然兼容，
-    但新的配置应保持提供方/模型选择为 `anthropic/*`，并把执行后端放在
-    `agentRuntime.id` 中。
+    旧版 `claude-cli/claude-opus-4-7` 模型引用仍然可用于兼容性，但新的配置应将提供方/模型选择保持为
+    `anthropic/*`，并将执行后端放在 provider/model runtime policy 中。
 
     <Tip>
     如果你想要最清晰的计费路径，建议改用 Anthropic API key。OpenClaw 也支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/glm) 的订阅式选项。
@@ -251,10 +254,10 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
   <Accordion title="媒体理解（图片和 PDF）">
     随附的 Anthropic 插件会注册图片和 PDF 理解能力。OpenClaw 会根据已配置的 Anthropic 认证自动解析媒体能力——无需额外配置。
 
-    | 属性           | 值                   |
-    | -------------- | -------------------- |
-    | 默认模型       | `claude-opus-4-6`    |
-    | 支持的输入     | 图片、PDF 文档        |
+    | 属性            | 值                    |
+    | --------------- | --------------------- |
+    | 默认模型        | `claude-opus-4-7`     |
+    | 支持的输入      | 图片、PDF 文档         |
 
     当图片或 PDF 附加到对话中时，OpenClaw 会自动通过 Anthropic 媒体理解提供方进行路由。
 
@@ -316,7 +319,7 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 </AccordionGroup>
 
 <Note>
-更多帮助：[Troubleshooting](/help/troubleshooting) 和 [FAQ](/help/faq)。
+更多帮助：[故障排除](/help/troubleshooting) 和 [FAQ](/help/faq)。
 </Note>
 
 ## 相关内容

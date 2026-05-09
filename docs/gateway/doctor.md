@@ -76,19 +76,19 @@ cat ~/.openclaw/openclaw.json
     - Skills 状态摘要（符合条件/缺失/被阻止）和插件状态。
 
   </Accordion>
-  <Accordion title="配置和迁移">
-    - 旧版值的配置规范化。
-    - 将旧版扁平 `talk.*` 字段迁移为 `talk.provider` + `talk.providers.<provider>` 的 Talk 配置迁移。
-    - 针对旧版 Chrome 扩展配置的浏览器迁移检查，以及 Chrome MCP 就绪性检查。
+  <Accordion title="Config and migrations">
+    - 旧值的配置规范化。
+    - 将旧式扁平 `talk.*` 字段迁移到 `talk.provider` + `talk.providers.<provider>`。
+    - 浏览器迁移检查：旧 Chrome 扩展配置和 Chrome MCP 就绪性。
     - OpenCode provider 覆盖警告（`models.providers.opencode` / `models.providers.opencode-go`）。
     - Codex OAuth 遮蔽警告（`models.providers.openai-codex`）。
-    - OpenAI Codex OAuth 配置文件的 OAuth TLS 前置条件检查。
-    - 当 `plugins.allow` 具有限制性，但工具策略仍请求通配符或插件拥有的工具时，发出插件/工具允许列表警告。
-    - 旧版磁盘状态迁移（sessions/agent 目录/WhatsApp 认证）。
-    - 旧版插件 manifest 合约键迁移（`speechProviders`、`realtimeTranscriptionProviders`、`realtimeVoiceProviders`、`mediaUnderstandingProviders`、`imageGenerationProviders`、`videoGenerationProviders`、`webFetchProviders`、`webSearchProviders` → `contracts`）。
-    - 旧版 cron 存储迁移（`jobId`、`schedule.cron`、顶层 delivery/payload 字段、payload `provider`、简单的 `notify: true` webhook 回退任务）。
-    - 将旧版 agent 运行时策略迁移到 `agents.defaults.agentRuntime` 和 `agents.list[].agentRuntime`。
-    - 启用插件时清理过时的插件配置；当 `plugins.enabled=false` 时，过时的插件引用会被视为惰性隔离配置并予以保留。
+    - OpenAI Codex OAuth 配置文件的 TLS 前置条件检查。
+    - 当 `plugins.allow` 过于严格而工具策略仍请求通配符或插件拥有的工具时发出插件/工具 allowlist 警告。
+    - 旧的磁盘状态迁移（sessions/agent 目录/WhatsApp 认证）。
+    - 旧插件 manifest 合约键迁移（`speechProviders`、`realtimeTranscriptionProviders`、`realtimeVoiceProviders`、`mediaUnderstandingProviders`、`imageGenerationProviders`、`videoGenerationProviders`、`webFetchProviders`、`webSearchProviders` → `contracts`）。
+    - 旧 cron 存储迁移（`jobId`、`schedule.cron`、顶层 delivery/payload 字段、payload `provider`、简单的 `notify: true` webhook 回退任务）。
+    - 旧的整体 agent 运行时策略清理；provider/model 运行时策略是当前有效的路由选择器。
+    - 当插件启用时清理陈旧的插件配置；当 `plugins.enabled=false` 时，陈旧的插件引用被视为无害的保留型配置并会保留。
 
   </Accordion>
   <Accordion title="状态和完整性">
@@ -101,14 +101,17 @@ cat ~/.openclaw/openclaw.json
     - 额外工作区目录检测（`~/openclaw`）。
 
   </Accordion>
-  <Accordion title="Gateway、服务和 supervisor">
-    - 启用沙箱时修复沙箱镜像。
+  <Accordion title="Gateway, services, and supervisors">
+    - 启用沙箱时的沙箱镜像修复。
     - 旧服务迁移和额外 gateway 检测。
     - Matrix 频道旧状态迁移（在 `--fix` / `--repair` 模式下）。
-    - Gateway 运行时检查（服务已安装但未运行；缓存的 launchd 标签）。
+    - Gateway 运行时检查（已安装但未运行的服务；缓存的 launchd 标签）。
     - 频道状态警告（从运行中的 gateway 探测）。
-    - supervisor 配置审计（launchd/systemd/schtasks）并可选择修复。
-    - Gateway 服务的内嵌代理环境清理：移除安装或更新时捕获到的 shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 值。
+    - 频道特定权限检查位于 `openclaw channels capabilities`；例如，Discord 语音频道权限可通过 `openclaw channels capabilities --channel discord --target channel:<channel-id>` 审计。
+    - 当本地 TUI 客户端仍在运行而 Gateway 事件循环健康状况下降时，WhatsApp 响应性检查会发出警告；`--fix` 只会停止已验证的本地 TUI 客户端。
+    - 针对主模型、回退、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及会话 route pin 中旧的 `openai-codex/*` 模型引用的 Codex 路由修复；`--fix` 会将它们重写为 `openai/*`，移除陈旧的会话/整体 agent 运行时 pin，并让规范化的 OpenAI agent 引用保持在默认 Codex harness 上。
+    - supervisor 配置审计（launchd/systemd/schtasks），并可选择修复。
+    - 修复 gateway 服务捕获安装或更新期间 shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 值的嵌入式代理环境清理问题。
     - Gateway 运行时最佳实践检查（Node vs Bun、版本管理器路径）。
     - Gateway 端口冲突诊断（默认 `18789`）。
 
@@ -120,13 +123,13 @@ cat ~/.openclaw/openclaw.json
 
   </Accordion>
   <Accordion title="Workspace and shell">
-    - systemd linger check on Linux.
-    - Workspace bootstrap file size check (truncation/near-limit warnings for context files).
-    - Skills readiness check for the default agent; reports allowed skills with missing bins, env, config, or OS requirements, and `--fix` can disable unavailable skills in `skills.entries`.
-    - Shell completion status check and auto-install/upgrade.
-    - Memory search embedding provider readiness check (local model, remote API key, or QMD binary).
-    - Source install checks (pnpm workspace mismatch, missing UI assets, missing tsx binary).
-    - Writes updated config + wizard metadata.
+    - Linux 上的 systemd linger 检查。
+    - 工作区 bootstrap 文件大小检查（上下文文件的截断/接近上限警告）。
+    - 默认 agent 的 Skills 就绪性检查；报告允许的 skills 中缺少 bin、env、config 或 OS 要求的项，且 `--fix` 可以在 `skills.entries` 中禁用不可用的 skills。
+    - Shell 补全状态检查和自动安装/升级。
+    - 记忆搜索 embedding provider 就绪性检查（本地模型、远程 API key 或 QMD 二进制）。
+    - 源码安装检查（pnpm 工作区不匹配、缺少 UI 资源、缺少 tsx 二进制）。
+    - 写入更新后的配置 + 向导元数据。
 
   </Accordion>
 </AccordionGroup>
@@ -164,12 +167,9 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="1. 配置规范化">
     如果配置包含旧式值结构（例如没有按频道覆盖的 `messages.ackReaction`），doctor 会将其规范化为当前 schema。
 
-    这也包括旧版 Talk 扁平字段。当前公开的 Talk 配置是 `talk.provider` + `talk.providers.<provider>`。Doctor 会把旧的 `talk.voiceId` / `talk.voiceAliases` / `talk.modelId` / `talk.outputFormat` / `talk.apiKey` 结构重写到 provider map 中。
+    这也包括旧式 Talk 扁平字段。当前公开的 Talk 语音配置是 `talk.provider` + `talk.providers.<provider>`，实时语音配置是 `talk.realtime.*`。Doctor 会将旧的 `talk.voiceId` / `talk.voiceAliases` / `talk.modelId` / `talk.outputFormat` / `talk.apiKey` 结构重写到 provider 映射中，并将旧的顶层实时选择器（`talk.mode`、`talk.transport`、`talk.brain`、`talk.model`、`talk.voice`）重写到 `talk.realtime`。
 
-    当 `plugins.allow` 非空且工具策略使用
-    通配符或插件拥有的工具条目时，Doctor 也会发出警告。`tools.allow: ["*"]` 只会匹配
-    实际已加载插件中的工具；它不会绕过排他的插件
-    allowlist。
+    Doctor 还会在 `plugins.allow` 非空且工具策略使用通配符或插件拥有的工具条目时发出警告。`tools.allow: ["*"]` 只匹配实际加载的插件中的工具；它不会绕过独占插件 allowlist。Doctor 会为迁移后的旧 allowlist 配置写入 `plugins.bundledDiscovery: "compat"`，以保留现有的内置 provider 行为，然后再指向更严格的 `"allowlist"` 设置。
 
   </Accordion>
   <Accordion title="2. 旧配置键迁移">
@@ -181,7 +181,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 展示它应用的迁移。
     - 使用更新后的 schema 重写 `~/.openclaw/openclaw.json`。
 
-    当 Gateway 检测到旧配置格式时，也会在启动时自动运行 doctor 迁移，因此过时配置会在没有人工干预的情况下得到修复。Cron 任务存储迁移由 `openclaw doctor --fix` 处理。
+    Gateway 启动会拒绝旧配置格式，并要求你运行 `openclaw doctor --fix`；它不会在启动时重写 `openclaw.json`。cron 任务存储迁移也由 `openclaw doctor --fix` 处理。
 
     当前迁移：
 
@@ -189,11 +189,13 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - `routing.groupChat.requireMention` → `channels.whatsapp/telegram/imessage.groups."*".requireMention`
     - `routing.groupChat.historyLimit` → `messages.groupChat.historyLimit`
     - `routing.groupChat.mentionPatterns` → `messages.groupChat.mentionPatterns`
+    - `channels.telegram.requireMention` → `channels.telegram.groups."*".requireMention`
     - configured-channel configs missing visible reply policy → `messages.groupChat.visibleReplies: "message_tool"`
     - `routing.queue` → `messages.queue`
     - `routing.bindings` → 顶层 `bindings`
     - `routing.agents`/`routing.defaultAgentId` → `agents.list` + `agents.list[].default`
-    - 旧的 `talk.voiceId`/`talk.voiceAliases`/`talk.modelId`/`talk.outputFormat`/`talk.apiKey` → `talk.provider` + `talk.providers.<provider>`
+    - legacy `talk.voiceId`/`talk.voiceAliases`/`talk.modelId`/`talk.outputFormat`/`talk.apiKey` → `talk.provider` + `talk.providers.<provider>`
+    - legacy top-level realtime Talk selectors (`talk.mode`/`talk.transport`/`talk.brain`/`talk.model`/`talk.voice`) + `talk.provider`/`talk.providers` → `talk.realtime`
     - `routing.agentToAgent` → `tools.agentToAgent`
     - `routing.transcribeAudio` → `tools.media.audio.models`
     - `messages.tts.<provider>`（`openai`/`elevenlabs`/`microsoft`/`edge`）→ `messages.tts.providers.<provider>`
@@ -256,17 +258,24 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="2e. Codex OAuth provider 覆盖">
     如果你之前在 `models.providers.openai-codex` 下添加了旧的 OpenAI 传输设置，它们可能会遮蔽新版发布自动使用的内置 Codex OAuth provider 路径。Doctor 在看到这些旧传输设置与 Codex OAuth 同时存在时会发出警告，方便你移除或重写过时的传输覆盖，并恢复内置的路由/回退行为。自定义代理和仅头部覆盖仍受支持，不会触发此警告。
   </Accordion>
-  <Accordion title="2f. Codex 插件路由警告">
-    当启用捆绑的 Codex 插件时，doctor 还会检查 `openai-codex/*` 的主模型引用是否仍通过默认 PI runner 解析。这个组合在你希望通过 PI 使用 Codex OAuth/订阅认证时是有效的，但很容易与原生 Codex app-server harness 混淆。Doctor 会发出警告并指向明确的 app-server 形式：`openai/*` 加上 `agentRuntime.id: "codex"` 或 `OPENCLAW_AGENT_RUNTIME=codex`。
+  <Accordion title="2f. Codex route repair">
+    Doctor 会检查旧的 `openai-codex/*` 模型引用。原生 Codex harness 路由使用规范化的 `openai/*` 模型引用；OpenAI agent 回合会通过 Codex app-server harness，而不是 OpenClaw PI OpenAI 路径。
 
-    Doctor 不会自动修复这一点，因为两种路由都有效：
+    在 `--fix` / `--repair` 模式下，doctor 会重写受影响的默认 agent 和按 agent 的引用，包括主模型、回退、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及陈旧的持久化会话 route 状态：
 
-    - `openai-codex/*` + PI means "use Codex OAuth/subscription auth through the normal OpenClaw runner."
-    - `openai/*` + `agentRuntime.id: "codex"` means "run the embedded turn through native Codex app-server."
-    - `/codex ...` means "control or bind a native Codex conversation from chat."
-    - `/acp ...` or `runtime: "acp"` means "use the external ACP/acpx adapter."
+    - `openai-codex/gpt-*` 会变成 `openai/gpt-*`。
+    - 由于运行时选择是 provider/model 作用域的，因此会移除陈旧的整体 agent 运行时配置和持久化会话 runtime pin。
+    - 会保留显式的 provider/model 运行时策略。
+    - 现有的模型回退列表会保留，但其中的旧条目会被重写；复制过来的按模型设置会从旧键移动到规范化的 `openai/*` 键。
+    - 持久化会话中的 `modelProvider`/`providerOverride`、`model`/`modelOverride`、回退通知、auth-profile pin 和 Codex harness pin 会在所有发现的 agent 会话存储中修复。
+    - `/codex ...` 表示“从聊天中控制或绑定一个原生 Codex 对话”。
+    - `/acp ...` 或 `runtime: "acp"` 表示“使用外部 ACP/acpx 适配器”。
 
-    如果出现该警告，请选择你原本意图的路由并手动编辑配置。当 PI Codex OAuth 是有意为之时，请保留该警告。
+  </Accordion>
+  <Accordion title="2g. 会话 route 清理">
+    当你把已配置模型或运行时从某个插件拥有的 route（例如 Codex）迁移走后，Doctor 还会扫描已发现的 agent 会话存储中的陈旧自动创建 route 状态。
+
+    `openclaw doctor --fix` 可以清除自动创建的陈旧状态，例如 `modelOverrideSource: "auto"` 模型 pin、运行时模型元数据、固定的 harness id、CLI 会话绑定，以及在其所属 route 不再配置时的自动 auth-profile 覆盖。显式用户选择或旧的会话模型选择会被报告出来供人工审查，并保持不变；如果该 route 不再被需要，可通过 `/model ...`、`/new` 切换，或重置会话。
 
   </Accordion>
   <Accordion title="3. 旧状态迁移（磁盘布局）">
@@ -343,10 +352,10 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="7. 沙箱镜像修复">
     启用沙箱时，doctor 会检查 Docker 镜像，并在当前镜像缺失时提供构建或切换到旧名称的选项。
   </Accordion>
-  <Accordion title="7b. 插件安装清理">
-    在 `openclaw doctor --fix` / `openclaw doctor --repair` 模式下，Doctor 会移除旧版 OpenClaw 生成的插件依赖暂存状态。这包括过期的生成依赖根目录、旧的安装阶段目录，以及早期捆绑插件依赖修复代码留下的包本地残留物。
+  <Accordion title="7b. Plugin install cleanup">
+    Doctor removes legacy OpenClaw-generated plugin dependency staging state in `openclaw doctor --fix` / `openclaw doctor --repair` mode. This covers stale generated dependency roots, old install-stage directories, package-local debris from earlier bundled-plugin dependency repair code, and orphaned or recovered managed npm copies of bundled `@openclaw/*` plugins that can shadow the current bundled manifest.
 
-    Doctor can also reinstall configured downloadable plugins when the config references them but the local plugin registry cannot find them. For the 2026.5.2 bundled-plugin externalization, doctor automatically installs downloadable plugins that the existing config already uses and then relies on `meta.lastTouchedVersion` to run that release pass only once. Gateway startup and config reload do not run package managers; plugin installs remain explicit doctor/install/update work.
+    Doctor can also reinstall missing downloadable plugins when config references them but the local plugin registry cannot find them. Examples include material `plugins.entries`, configured channel/provider/search settings, and configured agent runtimes. During package updates, doctor avoids running package-manager plugin repair while the core package is being swapped; run `openclaw doctor --fix` again after the update if a configured plugin still needs recovery. Gateway startup and config reload do not run package managers; plugin installs remain explicit doctor/install/update work.
 
   </Accordion>
   <Accordion title="8. Gateway 服务迁移和清理提示">
@@ -475,7 +484,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="17. Gateway 运行时最佳实践">
     当 gateway 服务运行在 Bun 上或版本管理的 Node 路径（`nvm`、`fnm`、`volta`、`asdf` 等）上时，doctor 会发出警告。WhatsApp + Telegram 频道需要 Node，而版本管理器路径在升级后可能失效，因为服务不会加载你的 shell init。Doctor 会在可用时提供迁移到系统 Node 安装的选项（Homebrew/apt/choco）。
 
-    Newly installed or repaired macOS LaunchAgents use a canonical system PATH (`/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`) instead of copying the interactive shell PATH, so Volta, asdf, fnm, pnpm, and other version-manager directories do not change which Node child processes resolve. Linux services still keep explicit environment roots (`NVM_DIR`, `FNM_DIR`, `VOLTA_HOME`, `ASDF_DATA_DIR`, `BUN_INSTALL`, `PNPM_HOME`) and stable user-bin directories, but guessed version-manager fallback directories are only written to the service PATH when those directories exist on disk.
+    新安装或修复的 macOS LaunchAgents 使用规范化的系统 PATH（`/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`），而不是复制交互式 shell PATH，因此由 Homebrew 管理的系统二进制仍然可用，而 Volta、asdf、fnm、pnpm 和其他版本管理器目录不会改变 Node 子进程解析结果。Linux 服务仍然保留显式环境根目录（`NVM_DIR`、`FNM_DIR`、`VOLTA_HOME`、`ASDF_DATA_DIR`、`BUN_INSTALL`、`PNPM_HOME`）和稳定的 user-bin 目录，但只有当这些版本管理器回退目录在磁盘上实际存在时，才会把它们写入服务 PATH。
 
   </Accordion>
   <Accordion title="18. 配置写入 + 向导元数据">

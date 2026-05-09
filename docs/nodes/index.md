@@ -12,17 +12,17 @@ title: "节点"
 旧版传输：[Bridge protocol](/gateway/bridge-protocol)（TCP JSONL；
 仅适用于历史上的当前节点）。
 
-macOS 也可以运行在 **node 模式**：菜单栏应用连接到 Gateway 的
-WS 服务器，并将其本地 canvas/camera 命令作为节点暴露出来（因此
-`openclaw nodes …` 可以针对这台 Mac 生效）。在远程 gateway 模式下，浏览器
-自动化由 CLI node 主机（`openclaw node run` 或
+macOS 也可以在 **node 模式** 下运行：菜单栏应用连接到 Gateway 的
+WS 服务器，并将其本地 canvas/camera 命令作为一个节点暴露出来（因此
+`openclaw nodes …` 可以对这台 Mac 生效）。在远程 gateway 模式下，浏览器
+自动化由 CLI node host（`openclaw node run` 或
 已安装的 node 服务）处理，而不是由原生应用节点处理。
 
 注意：
 
-- 节点是**外设**，不是 gateway。它们不运行 gateway 服务。
-- Telegram/WhatsApp 等消息会进入**gateway**，不会进入节点。
-- 故障排查手册：[/nodes/troubleshooting](/nodes/troubleshooting)
+- 节点是**外围设备**，不是 gateway。它们不运行 gateway 服务。
+- Telegram/WhatsApp 等消息会进入 **gateway**，而不是节点。
+- 故障排查运行手册：[/nodes/troubleshooting](/nodes/troubleshooting)
 
 ## 配对 + 状态
 
@@ -185,7 +185,7 @@ node 允许列表/批准约束）。
 openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"javaScript":"location.href"}'
 ```
 
-对于常见的“给 agent 一个 MEDIA 附件”的工作流，也有更高层级的辅助工具。
+常见的“把一个 MEDIA 附件交给 agent”工作流有更高级别的辅助工具。
 
 ## 命令策略
 
@@ -194,12 +194,14 @@ openclaw nodes invoke --node <idOrNameOrIp> --command canvas.eval --params '{"ja
 1. 节点必须在其 WebSocket `connect.commands` 列表中声明该命令。
 2. gateway 的平台策略必须允许所声明的命令。
 
-Windows 和 macOS 伴随节点默认允许诸如
-`canvas.*`、`camera.list`、`location.get` 和 `screen.snapshot` 之类的安全声明命令。像
+Windows 和 macOS 伴随节点默认允许安全的已声明命令，例如
+`canvas.*`、`camera.list`、`location.get` 和 `screen.snapshot`。声明了
+`talk` 能力或 `talk.*` 命令的受信任节点，也默认允许已声明的按键通话命令
+（`talk.ptt.start`、`talk.ptt.stop`、
+`talk.ptt.cancel`、`talk.ptt.once`），且不受平台标签影响。
 `camera.snap`、`camera.clip` 和
-`screen.record` 这类危险或高度涉及隐私的命令仍然需要通过
-`gateway.nodes.allowCommands` 显式启用。`gateway.nodes.denyCommands` 始终优先于
-默认值和额外的允许列表条目。
+`screen.record` 等危险或隐私密集型命令仍然需要通过
+`gateway.nodes.allowCommands` 显式选择加入。`gateway.nodes.denyCommands` 始终会覆盖默认值和额外的允许列表条目。
 
 插件拥有的节点命令可以添加 Gateway 节点调用策略。该策略
 会在允许列表检查之后、转发到节点之前运行，因此原始的
@@ -299,9 +301,9 @@ openclaw nodes location get --node <idOrNameOrIp> --accuracy precise --max-age 1
 
 注意：
 
-- Location 默认**关闭**。
-- “Always” 需要系统权限；后台获取尽力而为。
-- 响应包含经纬度、精度（米）和时间戳。
+- 位置功能默认关闭。
+- “始终”需要系统权限；后台获取尽力而为。
+- 响应包含纬度/经度、精度（米）和时间戳。
 
 ## SMS（Android 节点）
 

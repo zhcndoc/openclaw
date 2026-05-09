@@ -299,7 +299,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     }
     ```
   </Tab>
-  <Tab title="安全执行（不修改文件）">
+  <Tab title="禁用文件系统工具的 Shell 执行">
     ```json
     {
       "tools": {
@@ -308,6 +308,11 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
       }
     }
     ```
+
+    <Warning>
+    此策略会禁用 OpenClaw 的文件系统工具，但 `exec` 仍然是一个 shell，并且可以在所选主机或沙箱文件系统允许的任何位置写入文件。对于只读代理，请拒绝 `exec` 和 `process`，或者将 shell 访问与沙箱文件系统控制结合使用，例如 `agents.defaults.sandbox.workspaceAccess: "ro"` 或 `"none"`。
+    </Warning>
+
   </Tab>
   <Tab title="仅通信">
     ```json

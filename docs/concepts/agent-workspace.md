@@ -60,40 +60,40 @@ sidebarTitle: "代理工作区"
 以下是 OpenClaw 期望工作区内存在的标准文件：
 
 <AccordionGroup>
-  <Accordion title="AGENTS.md — 操作说明">
-    代理的操作说明，以及它应该如何使用记忆。会在每次会话开始时加载。适合作为规则、优先级和“如何表现”细节的存放位置。
+  <Accordion title="AGENTS.md - 操作说明">
+    代理的操作说明以及它应如何使用记忆。在每个会话开始时加载。适合作为规则、优先级以及“应如何表现”等细节的存放处。
   </Accordion>
-  <Accordion title="SOUL.md — 人格与语气">
-    人格、语气和边界。每次会话都会加载。指南：[SOUL.md personality guide](/concepts/soul)。
+  <Accordion title="SOUL.md - 人设与语气">
+    人设、语气和边界。每次会话都会加载。指南：[SOUL.md personality guide](/concepts/soul)。
   </Accordion>
-  <Accordion title="USER.md — 用户是谁">
-    用户是谁，以及如何称呼他们。每次会话都会加载。
+  <Accordion title="USER.md - 用户是谁">
+    用户是谁，以及应该如何称呼他们。每次会话都会加载。
   </Accordion>
-  <Accordion title="IDENTITY.md — 名称、风格、表情符号">
-    代理的名称、风格和表情符号。在引导仪式期间创建/更新。
+  <Accordion title="IDENTITY.md - 名字、风格、表情符号">
+    代理的名字、风格和表情符号。在引导仪式期间创建/更新。
   </Accordion>
-  <Accordion title="TOOLS.md — 本地工具约定">
-    关于你的本地工具和约定的说明。不控制工具可用性；仅作为指导。
+  <Accordion title="TOOLS.md - 本地工具约定">
+    关于你的本地工具和约定的说明。不控制工具可用性；它只是指导。
   </Accordion>
-  <Accordion title="HEARTBEAT.md — 心跳检查清单">
-    用于心跳运行的可选简短清单。请保持简短，以避免 token 浪费。
+  <Accordion title="HEARTBEAT.md - 心跳检查清单">
+    供心跳运行使用的可选小型清单。请保持简短，以免消耗过多 token。
   </Accordion>
-  <Accordion title="BOOT.md — 启动检查清单">
-    在网关重启时自动运行的可选启动检查清单（当启用[内部钩子](/automation/hooks)时）。请保持简短；对外发送请使用消息工具。
+  <Accordion title="BOOT.md - 启动检查清单">
+    在网关重启时自动运行的可选启动检查清单（当启用[内部钩子](/automation/hooks)时）。请保持简短；出站发送请使用消息工具。
   </Accordion>
-  <Accordion title="BOOTSTRAP.md — 首次运行仪式">
-    一次性的首次运行仪式。仅为全新工作区创建。仪式完成后请将其删除。
+  <Accordion title="BOOTSTRAP.md - 首次运行仪式">
+    一次性的首次运行仪式。仅为全新的工作区创建。仪式完成后请删除它。
   </Accordion>
-  <Accordion title="memory/YYYY-MM-DD.md — 每日记忆日志">
+  <Accordion title="memory/YYYY-MM-DD.md - 每日记忆日志">
     每日记忆日志（每天一个文件）。建议在会话开始时读取今天和昨天的内容。
   </Accordion>
-  <Accordion title="MEMORY.md — 精选长期记忆（可选）">
-    精选长期记忆。仅在主私有会话中加载（不在共享/群组上下文中）。有关工作流和自动记忆刷新，请参见[Memory](/concepts/memory)。
+  <Accordion title="MEMORY.md - 精选长期记忆（可选）">
+    精选长期记忆。仅在主私有会话中加载（不在共享/群组上下文中加载）。有关工作流和自动记忆刷新，请参见[Memory](/concepts/memory)。
   </Accordion>
-  <Accordion title="skills/ — 工作区技能（可选）">
-    工作区特定技能。该工作区中优先级最高的技能位置。若名称冲突，会覆盖项目代理技能、个人代理技能、托管技能、捆绑技能以及 `skills.load.extraDirs`。
+  <Accordion title="skills/ - 工作区技能（可选）">
+    工作区特定的技能。该工作区中优先级最高的技能位置。当名称冲突时，会覆盖项目代理技能、个人代理技能、托管技能、捆绑技能以及 `skills.load.extraDirs`。
   </Accordion>
-  <Accordion title="canvas/ — Canvas UI 文件（可选）">
+  <Accordion title="canvas/ - Canvas UI 文件（可选）">
     用于节点显示的 Canvas UI 文件（例如 `canvas/index.html`）。
   </Accordion>
 </AccordionGroup>
@@ -106,7 +106,7 @@ sidebarTitle: "代理工作区"
 
 以下内容位于 `~/.openclaw/` 下，不应提交到工作区仓库中：
 
-- `~/.openclaw/openclaw.json` (config)
+- `~/.openclaw/openclaw.json` (配置)
 - `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` (模型认证配置文件：OAuth + API 密钥)
 - `~/.openclaw/agents/<agentId>/agent/codex-home/`（每个代理的 Codex 运行时账户、配置、技能、插件和原生线程状态）
 - `~/.openclaw/credentials/`（通道/提供方状态以及旧版 OAuth 导入数据）
@@ -224,7 +224,7 @@ sidebarTitle: "代理工作区"
 
 ## 相关内容
 
-- [Heartbeat](/gateway/heartbeat) — HEARTBEAT.md 工作区文件
-- [Sandboxing](/gateway/sandboxing) — 沙箱环境中的工作区访问
-- [Session](/concepts/session) — 会话存储路径
-- [Standing orders](/automation/standing-orders) — 工作区文件中的持久化指令
+- [Heartbeat](/gateway/heartbeat) - HEARTBEAT.md 工作区文件
+- [Sandboxing](/gateway/sandboxing) - 沙箱环境中的工作区访问
+- [Session](/concepts/session) - 会话存储路径
+- [Standing orders](/automation/standing-orders) - 工作区文件中的持久指令

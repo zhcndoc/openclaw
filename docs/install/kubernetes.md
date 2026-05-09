@@ -6,9 +6,7 @@ read_when:
 title: "Kubernetes"
 ---
 
-# Kubernetes 上的 OpenClaw
-
-在 Kubernetes 上运行 OpenClaw 的一个最小起点——并非生产就绪的部署。它涵盖了核心资源，旨在根据你的环境进行调整。
+在 Kubernetes 上运行 OpenClaw 的最小起点——不是生产就绪的部署。它涵盖核心资源，旨在根据你的环境进行调整。
 
 ## 为什么不用 Helm？
 

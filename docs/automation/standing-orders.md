@@ -7,7 +7,7 @@ read_when:
 title: "常设指令"
 ---
 
-常设指令为你的代理授予针对已定义程序的**永久操作权限**。你无需每次都提供单独的任务说明，而是为程序定义清晰的范围、触发条件和升级规则——代理会在这些边界内自主执行。
+常设指令赋予你的代理对已定义程序的**永久操作权限**。你无需每次都给出单独的任务指令，而是定义具有清晰范围、触发条件和升级规则的程序——代理会在这些边界内自主执行。
 
 这就像你每周五都对助理说“发送周报”与授予常设权限之间的区别：“周报由你负责。每周五整理并发送；只有在看起来不对时才上报。”
 
@@ -33,15 +33,15 @@ title: "常设指令"
 
 每个程序都指定：
 
-1. **范围** — 代理被授权做什么
-2. **触发条件** — 何时执行（计划、事件或条件）
-3. **审批门槛** — 在行动前哪些事情需要人工签字确认
-4. **升级规则** — 何时停止并寻求帮助
+1. **范围** - 代理被授权做什么
+2. **触发条件** - 何时执行（按计划、事件或条件）
+3. **审批门槛** - 在采取行动前需要哪些人工签字确认
+4. **升级规则** - 何时停止并寻求帮助
 
 代理会通过工作区引导文件在每次会话中加载这些指令（完整的自动注入文件列表见 [Agent Workspace](/concepts/agent-workspace)），并结合 [cron 任务](/automation/cron-jobs) 按时间执行进行操作。
 
 <Tip>
-将常设指令放在 `AGENTS.md` 中，以确保它们每次会话都会被加载。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md`——但不会注入子目录中的任意文件。
+将常设指令放在 `AGENTS.md` 中，以确保它们在每个会话中都能被加载。工作区引导会自动注入 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md`——但不会注入子目录中的任意文件。
 </Tip>
 
 ## 常设指令的结构
@@ -64,9 +64,9 @@ title: "常设指令"
 
 ### What NOT to do
 
-- 不要将报告发送给外部方
-- 不要修改源数据
-- 即使指标看起来很差，也不要跳过发送——要如实报告
+- Do not send reports to external parties
+- Do not modify source data
+- Do not skip delivery if metrics look bad - report accurately
 ```
 
 ## 常设指令 + cron 任务
@@ -90,7 +90,7 @@ openclaw cron add \
   --tz America/New_York \
   --timeout-seconds 300 \
   --announce \
-  --channel bluebubbles \
+  --channel imessage \
   --to "+1XXXXXXXXXX" \
   --message "根据常设指令执行每日收件箱分诊。检查邮件中的新警报。解析、分类并持久化每一项。向负责人报告摘要。升级未知项。"
 ```
@@ -109,8 +109,8 @@ openclaw cron add \
 ### Weekly cycle
 
 - **Monday:** 审查平台指标和受众互动
-- **Tuesday–Thursday:** 起草社交帖子，创建博客内容
-- **Friday:** 汇总每周营销简报 → 交付给负责人
+- **Tuesday-Thursday:** 起草社交媒体帖子，创建博客内容
+- **Friday:** 汇总每周营销简报 → 交付给所有者
 
 ### Content rules
 
@@ -176,19 +176,19 @@ openclaw cron add \
 
 当与严格的执行纪律结合时，常设指令效果最佳。常设指令中的每个任务都应遵循这个循环：
 
-1. **执行** — 实际完成工作（不要只是确认收到指令）
-2. **验证** — 确认结果正确（文件存在、消息已送达、数据已解析）
-3. **报告** — 告诉负责人完成了什么、验证了什么
+1. **执行** - 做实际工作（不要只是确认指令）
+2. **验证** - 确认结果正确（文件存在、消息已送达、数据已解析）
+3. **报告** - 告诉所有者做了什么以及验证了什么
 
 ```markdown
 ### Execution rules
 
-- 每个任务都遵循执行-验证-报告。没有例外。
-- “我会处理”不算执行。先做，再报告。
-- 没有验证的“完成”不可接受。要证明它。
-- 如果执行失败：用调整后的方法重试一次。
-- 如果仍然失败：带着诊断结果报告失败。绝不静默失败。
-- 永远不要无限重试——最多 3 次，然后升级。
+- Every task follows Execute-Verify-Report. No exceptions.
+- "I'll do that" is not execution. Do it, then report.
+- "Done" without verification is not acceptable. Prove it.
+- If execution fails: retry once with adjusted approach.
+- If still fails: report failure with diagnosis. Never silently fail.
+- Never retry indefinitely - 3 attempts max, then escalate.
 ```
 
 这种模式可以防止代理最常见的失败方式：只确认任务，却没有真正完成。
@@ -226,19 +226,19 @@ openclaw cron add \
 
 ### 应当这样做
 
-- 从较窄的权限开始，随着信任建立再逐步扩大
+- 从狭窄的权限开始，并随着信任建立逐步扩大
 - 为高风险操作定义明确的审批门槛
-- 包含“不要做什么”部分——边界与权限同样重要
-- 与 cron 任务结合，以实现可靠的按时间执行
-- 每周检查代理日志，确认常设指令正在被遵守
-- 随着需求演变更新常设指令——它们是会变化的文档
+- 包含“不要做什么”部分——边界和权限同样重要
+- 结合 cron 任务实现可靠的基于时间的执行
+- 每周审查代理日志，验证常设指令是否被遵循
+- 随着需求变化更新常设指令——它们是活文档
 
 ### 应避免这样做
 
-- 第一天天就授予广泛权限（“按你认为最好的方式做”）
-- 跳过升级规则——每个程序都需要一个“何时停止并求助”的条款
-- 假设代理会记住口头指令——把所有内容写入文件
-- 把不同关注点混在一个程序里——不同领域应分开
+- 一开始就授予过宽的权限（“你觉得怎么做最好就怎么做”）
+- 跳过升级规则——每个程序都需要“何时停止并询问”的条款
+- 假设代理会记住口头指令——把所有内容都写进文件
+- 在单个程序中混合不同关注点——不同领域应分开程序
 - 忘记用 cron 任务强制执行——没有触发条件的常设指令会变成建议
 
 ## 相关内容

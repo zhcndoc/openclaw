@@ -257,13 +257,13 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 ## 运行时行为
 
 - Telegram 由 gateway 进程拥有和管理。
-- 路由是确定性的：Telegram 入站回复回 Telegram（模型不会选择渠道）。
-- 入站消息会规范化为共享的渠道信封，并包含回复元数据和媒体占位符。
-- 群会话按群 ID 隔离。论坛话题会追加 `:topic:<threadId>`，以保持话题隔离。
-- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留该线程 ID 用于回复，但默认仍将 DM 保持在扁平会话中。如果你有意启用 DM 话题会话隔离，请配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
-- 长轮询使用 grammY runner，并按聊天/按线程进行排序。整体 runner sink 并发使用 `agents.defaults.maxConcurrent`。
-- 长轮询在每个 gateway 进程内部受保护，因此同一时间只有一个活跃轮询器可以使用同一个 bot token。如果你仍看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一个 token。
-- 默认情况下，如果 120 秒内没有完成 `getUpdates` liveness，长轮询看门狗会重启。只有在部署过程中仍出现误报式轮询卡死重启时，才应增大 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
+- 路由是确定性的：Telegram 入站只会回到 Telegram（模型不会选择渠道）。
+- 入站消息会规范化为共享的 channel envelope，包含回复元数据、媒体占位符，以及 gateway 已观察到的 Telegram 回复的持久化回复链上下文。
+- 群会话按群组 ID 隔离。论坛话题会追加 `:topic:<threadId>` 以保持话题隔离。
+- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留线程 ID 以便回复，但默认仍把 DM 保持在扁平会话中。若你有意让 DM 话题会话隔离，请配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
+- 长轮询使用 grammY runner，并按聊天/按线程顺序处理。整体 runner sink 并发使用 `agents.defaults.maxConcurrent`。
+- 长轮询在每个 gateway 进程内都有保护，因此同一时刻只有一个活跃轮询器可以使用同一个 bot token。如果你仍然看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一 token。
+- 默认情况下，如果 120 秒内没有完成的 `getUpdates` 存活检查，长轮询 watchdog 会触发重启。只有在你的部署在长时间工作期间仍出现误报式轮询停滞重启时，才应增大 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
 - Telegram Bot API 不支持已读回执（`sendReadReceipts` 不适用）。
 
 ## 功能参考
@@ -277,10 +277,11 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     要求：
 
-    - `channels.telegram.streaming` 是 `off | partial | block | progress`（默认：`partial`）
-    - `progress` 会保留一条可编辑的状态草稿，并在工具执行进度更新时持续刷新，直到最终交付
-    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（默认：当预览流启用时为 `true`）
-    - 已检测到旧版 `channels.telegram.streamMode` 和布尔值 `streaming`；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
+    - `channels.telegram.streaming` 为 `off | partial | block | progress`（默认：`partial`）
+    - `progress` 会保留一条可编辑的状态草稿用于工具进度，在完成时清除它，并将最终答案作为普通消息发送
+    - `streaming.preview.toolProgress` 控制工具/进度更新是否复用同一条已编辑的预览消息（默认：当启用预览流时为 `true`）
+    - `streaming.preview.commandText` 控制这些工具进度行中的命令/执行细节：`raw`（默认，保留已发布行为）或 `status`（仅工具标签）
+    - 已检测到旧版 `channels.telegram.streamMode` 和布尔类型的 `streaming` 值；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
 
     工具进度预览更新是工具运行时显示的简短状态行，例如命令执行、文件读取、计划更新或补丁摘要。Telegram 默认启用这些功能，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。若希望保留答案文本的已编辑预览，但隐藏工具进度行，请设置：
 
@@ -299,7 +300,42 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     }
     ```
 
-    仅当你只想要最终结果投递时，才使用 `streaming.mode: "off"`：Telegram 预览编辑会被禁用，通用的工具/进度输出也会被抑制，而不是作为独立状态消息发送。审批提示、媒体载荷和错误仍会通过正常的最终交付流程路由。若你只想保留答案预览编辑，同时隐藏工具进度状态行，请使用 `streaming.preview.toolProgress: false`。
+    要保留工具进度可见，但隐藏命令/执行文本，请设置：
+
+    ```json
+    {
+      "channels": {
+        "telegram": {
+          "streaming": {
+            "mode": "partial",
+            "preview": {
+              "commandText": "status"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    当你想要可见的工具进度，但不希望把最终答案编辑到同一条消息中时，请使用 `progress` 模式。将命令文本策略放在 `streaming.progress` 下：
+
+    ```json
+    {
+      "channels": {
+        "telegram": {
+          "streaming": {
+            "mode": "progress",
+            "progress": {
+              "toolProgress": true,
+              "commandText": "status"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    仅当你希望只发送最终结果时使用 `streaming.mode: "off"`：Telegram 预览编辑会被禁用，通用工具/进度输出会被抑制，而不是作为独立状态消息发送。审批提示、媒体载荷和错误仍会通过正常的最终投递流程发送。当你只想保留答案预览编辑、同时隐藏工具进度状态行时，请使用 `streaming.preview.toolProgress: false`。
 
     <Note>
       Telegram 选中文本引用回复是一个例外。当 `replyToMode` 为 `"first"`、`"all"` 或 `"batched"`，且入站消息包含选中的引用文本时，OpenClaw 会通过 Telegram 原生的引用回复路径发送最终答案，而不是编辑答案预览，因此 `streaming.preview.toolProgress` 无法在该轮展示简短状态行。没有选中文本引用的当前消息回复仍会保留预览流。若工具进度可见性比原生引用回复更重要，请将 `replyToMode` 设为 `"off"`；或者将 `streaming.preview.toolProgress` 设为 `false` 以接受这一权衡。
@@ -307,9 +343,10 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     对于纯文本回复：
 
-    - 短 DM/群组/话题预览：OpenClaw 会保留同一条预览消息并在原位置完成最终编辑，除非在预览出现后发送过可见的非预览消息
-    - 预览后接可见的非预览输出：OpenClaw 会将完成的回复作为一条新的最终消息发送，并清理较早的预览，因此最终答案会出现在中间输出之后
-    - 持续时间超过约一分钟的预览：OpenClaw 会将完成的回复作为一条新的最终消息发送，然后清理预览，因此 Telegram 可见时间戳反映的是完成时间，而不是预览创建时间
+    - 短 DM/群组/话题预览：OpenClaw 会保留同一条预览消息，并在原位完成最终编辑
+    - 分成多条 Telegram 消息的长文本最终回复会尽量复用现有预览作为第一个最终片段，然后只发送剩余片段
+    - progress 模式下，最终回复会清除状态草稿，并使用普通最终投递，而不是把草稿编辑成答案
+    - 如果最终编辑在完成文本确认前失败，OpenClaw 会改用普通最终投递并清理过期预览
 
     对于复杂回复（例如媒体载荷），OpenClaw 会回退到正常的最终发送流程，然后清理预览消息。
 
@@ -317,8 +354,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     Telegram-only reasoning stream:
 
-    - `/reasoning stream` 会在生成过程中将推理发送到实时预览
-    - 最终答案发送时不包含推理文本
+    - `/reasoning stream` 在生成时将推理发送到实时预览
+    - 推理预览会在最终投递后删除；若推理需要保持可见，请使用 `/reasoning on`
+    - 最终答案不包含推理文本
 
   </Accordion>
 
@@ -716,33 +754,36 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   <Accordion title="长轮询与 webhook">
     默认使用长轮询。若使用 webhook 模式，请设置 `channels.telegram.webhookUrl` 和 `channels.telegram.webhookSecret`；可选项包括 `webhookPath`、`webhookHost`、`webhookPort`（默认分别为 `/telegram-webhook`、`127.0.0.1`、`8787`）。
 
-    本地监听器绑定到 `127.0.0.1:8787`。若要公开接入，请在本地端口前放置反向代理，或有意将 `webhookHost` 设置为 `"0.0.0.0"`。
+    在长轮询模式下，OpenClaw 只会在某个更新成功分发后持久化其重启水位线。如果某个处理器失败，该更新在同一进程内仍可重试，并且不会被写为已完成以用于重启去重。
+
+    本地监听器绑定到 `127.0.0.1:8787`。若需要公网入口，请在本地端口前放置反向代理，或有意设置 `webhookHost: "0.0.0.0"`。
 
     webhook 模式会在向 Telegram 返回 `200` 之前验证请求守卫、Telegram secret token 和 JSON 主体。
     然后 OpenClaw 会通过与长轮询相同的按聊天/按话题 bot 通道异步处理更新，因此缓慢的代理轮次不会阻塞 Telegram 的投递确认。
 
   </Accordion>
 
-  <Accordion title="Limits, retry, and CLI targets">
-    - `channels.telegram.textChunkLimit` default is 4000.
-    - `channels.telegram.chunkMode="newline"` prefers paragraph boundaries (blank lines) before length splitting.
-    - `channels.telegram.mediaMaxMb` (default 100) caps inbound and outbound Telegram media size.
-    - `channels.telegram.mediaGroupFlushMs` (default 500) controls how long Telegram albums/media groups are buffered before OpenClaw dispatches them as one inbound message. Increase it if album parts arrive late; decrease it to reduce album reply latency.
-    - `channels.telegram.timeoutSeconds` overrides Telegram API client timeout (if unset, grammY default applies). Bot clients clamp configured values below the 60-second outbound text/typing request guard so grammY does not abort visible reply delivery before OpenClaw's transport guard and fallback can run. Long polling still uses a 45-second `getUpdates` request guard so idle polls are not abandoned indefinitely.
-    - `channels.telegram.pollingStallThresholdMs` defaults to `120000`; tune between `30000` and `600000` only for false-positive polling-stall restarts.
-    - group context history uses `channels.telegram.historyLimit` or `messages.groupChat.historyLimit` (default 50); `0` disables.
-    - reply/quote/forward supplemental context is currently passed as received.
-    - Telegram allowlists primarily gate who can trigger the agent, not a full supplemental-context redaction boundary.
-    - DM history controls:
+  <Accordion title="限制、重试与 CLI 目标">
+    - `channels.telegram.textChunkLimit` 默认值为 4000。
+    - `channels.telegram.chunkMode="newline"` 会优先按段落边界（空行）再进行长度切分。
+    - `channels.telegram.mediaMaxMb`（默认 100）限制入站和出站 Telegram 媒体大小。
+    - `channels.telegram.mediaGroupFlushMs`（默认 500）控制 Telegram 相册/媒体组在 OpenClaw 作为一条入站消息分发前的缓冲时长。如果相册分片到达较晚，请增大它；如果想降低相册回复延迟，请减小它。
+    - `channels.telegram.timeoutSeconds` 可覆盖 Telegram API 客户端超时（未设置时使用 grammY 默认值）。bot 客户端会把低于 60 秒出站文本/typing 请求保护阈值的配置值截断，因此 grammY 不会在 OpenClaw 的传输保护和回退机制运行之前中止可见回复投递。长轮询仍使用 45 秒的 `getUpdates` 请求保护阈值，以免空闲轮询被无限期放弃。
+    - `channels.telegram.pollingStallThresholdMs` 默认为 `120000`；仅在误报式轮询停滞重启时调节到 `30000` 到 `600000` 之间。
+    - 群上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
+    - 回复/引用/转发的补充上下文在 gateway 观察到父消息后会规范化为“最近优先”的回复链；已观察到的消息缓存会与会话存储并行持久化。Telegram 在更新中只包含一层浅的 `reply_to_message`，因此比缓存更早的链会受到 Telegram 当前更新载荷的限制。
+    - Telegram allowlist 主要用于限制谁可以触发代理，而不是完整的补充上下文脱敏边界。
+    - DM 历史控制：
       - `channels.telegram.dmHistoryLimit`
       - `channels.telegram.dms["<user_id>"].historyLimit`
     - `channels.telegram.retry` 配置适用于 Telegram 发送辅助工具（CLI/工具/动作）在处理可恢复的出站 API 错误时使用。入站最终回复投递也会对 Telegram 预连接失败使用有界的安全发送重试，但不会重试可能导致可见消息重复的歧义性发送后网络封包。
 
-    CLI 发送目标可以是数字聊天 ID 或用户名：
+    CLI 和消息工具发送目标可以是数字 chat ID、用户名，或论坛话题目标：
 
 ```bash
 openclaw message send --channel telegram --target 123456789 --message "hi"
 openclaw message send --channel telegram --target @name --message "hi"
+openclaw message send --channel telegram --target -1001234567890:topic:42 --message "hi topic"
 ```
 
     Telegram 轮询使用 `openclaw message poll`，并支持论坛话题：

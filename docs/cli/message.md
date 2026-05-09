@@ -26,16 +26,16 @@ openclaw message <subcommand> [flags]
 
 目标格式（`--target`）：
 
-- WhatsApp: E.164、群组 JID，或 WhatsApp 频道/通讯简报 JID（`...@newsletter`）
-- Telegram: 聊天 id 或 `@username`
+- WhatsApp: E.164、群组 JID，或 WhatsApp Channel/Newsletter JID（`...@newsletter`）
+- Telegram: 聊天 id、`@username`，或论坛主题目标（`-1001234567890:topic:42`，或 `--thread-id 42`）
 - Discord: `channel:<id>` 或 `user:<id>`（或 `<@id>` 提及；原始数字 id 会被视为频道）
 - Google Chat: `spaces/<spaceId>` 或 `users/<userId>`
 - Slack: `channel:<id>` 或 `user:<id>`（接受原始频道 id）
-- Mattermost（插件）：`channel:<id>`、`user:<id>` 或 `@username`（裸 id 会被视为频道）
+- Mattermost（插件）：`channel:<id>`、`user:<id>`，或 `@username`（裸 id 会被视为频道）
 - Signal: `+E.164`、`group:<id>`、`signal:+E.164`、`signal:group:<id>`，或 `username:<name>`/`u:<name>`
 - iMessage: handle、`chat_id:<id>`、`chat_guid:<guid>`，或 `chat_identifier:<id>`
 - Matrix: `@user:server`、`!room:server`，或 `#alias:server`
-- Microsoft Teams: conversation id（`19:...@thread.tacv2`）或 `conversation:<id>` 或 `user:<aad-object-id>`
+- Microsoft Teams: 会话 id（`19:...@thread.tacv2`）或 `conversation:<id>` 或 `user:<aad-object-id>`
 
 名称查找：
 

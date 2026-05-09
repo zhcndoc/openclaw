@@ -6,20 +6,20 @@ read_when:
 title: "macOS 应用"
 ---
 
-macOS 应用是 OpenClaw 的 **菜单栏伴随应用**。它负责权限，
-在本地管理/附加到 Gateway（launchd 或手动），并将 macOS
+macOS 应用是 OpenClaw 的**菜单栏伴随应用**。它负责权限管理，
+在本地（launchd 或手动）管理/附加到 Gateway，并将 macOS
 能力作为一个节点暴露给代理。
 
 ## 它的作用
 
-- 在菜单栏显示原生通知和状态。
+- 在菜单栏中显示原生通知和状态。
 - 负责 TCC 提示（通知、辅助功能、屏幕录制、麦克风、
   语音识别、自动化/AppleScript）。
 - 运行或连接到 Gateway（本地或远程）。
-- 暴露仅限 macOS 的工具（Canvas、Camera、Screen Recording、`system.run`）。
-- 在 **远程** 模式下启动本地节点主机服务（launchd），并在 **本地** 模式下停止它。
-- 可选地托管用于 UI 自动化的 **PeekabooBridge**。
-- 按需通过 npm、pnpm 或 bun 安装全局 CLI（`openclaw`）（应用优先使用 npm，然后是 pnpm，最后是 bun；Node 仍然是推荐的 Gateway 运行时）。
+- 暴露仅限 macOS 的工具（Canvas、Camera、屏幕录制、`system.run`）。
+- 在**远程**模式下启动本地节点主机服务（launchd），并在**本地**模式下停止它。
+- 可选地为 UI 自动化托管 **PeekabooBridge**。
+- 按需通过 npm、pnpm 或 bun 安装全局 CLI（`openclaw`）（应用优先使用 npm，其次 pnpm，再次 bun；Node 仍是推荐的 Gateway 运行时）。
 
 ## 本地模式与远程模式
 
@@ -34,8 +34,8 @@ macOS 应用是 OpenClaw 的 **菜单栏伴随应用**。它负责权限，
 
 ## Launchd 控制
 
-应用管理一个按用户分配的 LaunchAgent，标签为 `ai.openclaw.gateway`
-（如果使用 `--profile`/`OPENCLAW_PROFILE`，则为 `ai.openclaw.<profile>`；旧的 `com.openclaw.*` 仍会被卸载）。
+应用会管理一个按用户划分的 LaunchAgent，标签为 `ai.openclaw.gateway`
+（如果使用 `--profile`/`OPENCLAW_PROFILE`，则为 `ai.openclaw.<profile>`；旧版 `com.openclaw.*` 仍然会被卸载）。
 
 ```bash
 launchctl kickstart -k gui/$UID/ai.openclaw.gateway
@@ -44,7 +44,7 @@ launchctl bootout gui/$UID/ai.openclaw.gateway
 
 在运行命名配置文件时，请将标签替换为 `ai.openclaw.<profile>`。
 
-如果 LaunchAgent 未安装，请在应用中启用它，或运行
+如果未安装 LaunchAgent，请在应用中启用它，或运行
 `openclaw gateway install`。
 
 ## 节点能力（mac）
@@ -56,7 +56,7 @@ macOS 应用将自身呈现为一个节点。常见命令：
 - Screen: `screen.snapshot`, `screen.record`
 - System: `system.run`, `system.notify`
 
-节点会报告一个 `permissions` 映射，以便代理决定哪些操作被允许。
+节点会报告一个 `permissions` 映射，以便代理可以判断哪些操作被允许。
 
 节点服务 + 应用 IPC：
 
@@ -102,12 +102,12 @@ security + ask + allowlist 存储在 Mac 本地：
 
 说明：
 
-- `allowlist` 条目可以是已解析二进制路径的 glob 模式，或者是通过 PATH 调用命令时使用的裸命令名。
+- `allowlist` 条目是已解析二进制路径的 glob 模式，或者是通过 PATH 调用的命令的裸命令名。
 - 包含 shell 控制或展开语法（`&&`、`||`、`;`、`|`、`` ` ``、`$`、`<`、`>`、`(`、`)`）的原始 shell 命令文本会被视为 allowlist 未命中，并需要显式批准（或将 shell 二进制加入 allowlist）。
 - 在提示中选择“始终允许”会将该命令添加到 allowlist。
-- `system.run` 的环境覆盖会被过滤（移除 `PATH`、`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`），然后与应用的环境合并。
+- `system.run` 的环境覆盖会被过滤（移除 `PATH`、`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`），然后与应用环境合并。
 - 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的环境覆盖会被缩减为一个较小的显式 allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
-- 对于 allowlist 模式下的始终允许决策，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果无法安全拆包，则不会自动持久化 allowlist 条目。
+- 对于 allow-always 决策中的 allowlist 模式，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果无法安全解包，则不会自动持久化任何 allowlist 条目。
 
 ## 深度链接
 
@@ -161,7 +161,7 @@ OPENCLAW_STATE_DIR=~/.openclaw
 
 它会发出警告，并建议移回本地路径。
 
-## 构建与开发工作流（原生）
+## Build and dev workflow (native)
 
 - `cd apps/macos && swift build`
 - `swift run OpenClaw`（或 Xcode）
@@ -188,9 +188,9 @@ swift run openclaw-mac discover --timeout 3000 --json
 
 发现选项：
 
-- `--include-local`：包含会被过滤为“本地”的 Gateway
-- `--timeout <ms>`：整体发现窗口（默认：`2000`）
-- `--json`：用于 diff 的结构化输出
+- `--include-local`: 包括会被过滤为“本地”的网关
+- `--timeout <ms>`: 整体发现窗口（默认：`2000`）
+- `--json`: 用于 diff 的结构化输出
 
 <Tip>
 对照 `openclaw gateway discover --json` 检查 macOS 应用的发现流水线（`local.` 加上配置的广域域名，并带有广域和 Tailscale Serve 回退）是否与 Node CLI 基于 `dns-sd` 的发现不同。

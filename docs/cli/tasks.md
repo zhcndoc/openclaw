@@ -83,8 +83,10 @@ openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--
 openclaw tasks maintenance [--apply] [--json]
 ```
 
-预览或应用任务与 Task Flow 的协调、清理加盖时间戳以及修剪。
-对于 cron 任务，在将旧的活动任务标记为 `lost` 之前，协调会使用持久化的运行日志/作业状态，因此已完成的 cron 运行不会仅仅因为内存中的 Gateway 运行时状态消失而变成错误的审计问题。离线 CLI 审计并不是 Gateway 进程本地 cron 活动作业集合的权威来源。
+预览或应用任务与 Task Flow 的协调、清理标记和修剪。
+对于 cron 任务，在将旧的活动任务标记为 `lost` 之前，协调会使用持久化的运行日志/作业状态，因此已完成的 cron 运行不会仅仅因为内存中的 Gateway 运行时状态已消失而变成错误的审计错误。
+离线 CLI 审计并不能作为 Gateway 进程本地 cron 活动作业集合的权威依据。
+当带有 run id/source id 的 CLI 任务的实时 Gateway 运行上下文消失时，即使旧的子会话行仍然存在，它们也会被标记为 `lost`。
 
 ### `flow`
 

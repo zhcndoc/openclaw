@@ -37,11 +37,11 @@ sidebarTitle: "工具和自定义提供方"
 | `group:memory`     | `memory_search`, `memory_get`                                                                                           |
 | `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                   |
 | `group:ui`         | `browser`, `canvas`                                                                                                     |
-| `group:automation` | `cron`, `gateway`                                                                                                       |
+| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                  |
 | `group:messaging`  | `message`                                                                                                               |
 | `group:nodes`      | `nodes`                                                                                                                 |
-| `group:agents`     | `agents_list`                                                                                                           |
-| `group:media`      | `image`, `image_generate`, `video_generate`, `tts`                                                                      |
+| `group:agents`     | `agents_list`, `update_plan`                                                                                            |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                    |
 | `group:openclaw`   | 所有内置工具（不包括提供方插件）                                                                          |
 
 ### `tools.allow` / `tools.deny`
@@ -209,7 +209,7 @@ sidebarTitle: "工具和自定义提供方"
     media: {
       concurrency: 2,
       asyncCompletion: {
-        directSend: false, // 可选启用：将完成的异步视频直接发送到频道
+        directSend: false, // 已弃用：完成结果仍由 agent 中介传递
       },
       audio: {
         enabled: true,
@@ -262,7 +262,7 @@ sidebarTitle: "工具和自定义提供方"
 
     **异步完成字段：**
 
-    - `asyncCompletion.directSend`：当设为 `true` 时，支持直接完成交付的已完成异步媒体任务会优先尝试直接发送到频道。默认值：`false`（请求者会话唤醒 / 模型交付路径）。目前这适用于异步 `video_generate`；即使启用此项，异步 `music_generate` 的完成仍然通过请求者会话中介。
+    - `asyncCompletion.directSend`: 已弃用的兼容标志。完成的异步媒体任务仍会保持 requester-session 中介，以便 agent 接收结果、决定如何告知用户，并在源传递需要时使用 message 工具。
 
   </Accordion>
 </AccordionGroup>

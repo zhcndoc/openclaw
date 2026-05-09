@@ -132,6 +132,10 @@ openclaw plugins install "@tencent-weixin/openclaw-weixin" --force
 openclaw gateway restart
 ```
 
+如果启动时报告已安装的插件包 `requires compiled runtime
+output for TypeScript entry`，则说明该 npm 包发布时未包含 OpenClaw 需要的已编译
+JavaScript 运行时文件。请在插件发布者提供修复后的包之后更新/重新安装，或者暂时禁用/卸载该插件。
+
 临时禁用：
 
 ```bash

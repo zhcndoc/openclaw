@@ -5,14 +5,14 @@ read_when:
 title: "OpenAI 聊天补全"
 ---
 
-OpenClaw 的 Gateway 可以提供一个小型、兼容 OpenAI 的 Chat Completions 端点。
+OpenClaw 的 Gateway 可以提供一个小型的、兼容 OpenAI 的 Chat Completions 端点。
 
 此端点默认**禁用**。请先在配置中启用它。
 
 - `POST /v1/chat/completions`
 - 与 Gateway 相同的端口（WS + HTTP 复用）：`http://<gateway-host>:<port>/v1/chat/completions`
 
-当启用 Gateway 的 OpenAI 兼容 HTTP 接口时，它还会提供：
+当启用了 Gateway 的 OpenAI 兼容 HTTP 接口后，它还会提供：
 
 - `GET /v1/models`
 - `GET /v1/models/{id}`

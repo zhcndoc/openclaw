@@ -13,13 +13,18 @@ Inworld 是一个流式文本转语音（TTS）提供商。在 OpenClaw 中，�
 OpenClaw 会向 Inworld 的流式 TTS 端点发送请求，将返回的
 base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音频管道。
 
-| 详情          | 值                                                          |
-| ------------- | ----------------------------------------------------------- |
-| 网站          | [inworld.ai](https://inworld.ai)                            |
-| 文档          | [docs.inworld.ai/tts/tts](https://docs.inworld.ai/tts/tts)  |
-| 认证          | `INWORLD_API_KEY`（HTTP Basic，Base64 仪表盘凭证）           |
-| 默认音色      | `Sarah`                                                     |
-| 默认模型      | `inworld-tts-1.5-max`                                       |
+| 属性          | 值                                                              |
+| ------------- | --------------------------------------------------------------- |
+| 提供商 ID      | `inworld`                                                       |
+| 插件          | bundled, `enabledByDefault: true`                               |
+| 合约          | `speechProviders` (仅 TTS)                                      |
+| 认证环境变量    | `INWORLD_API_KEY` (HTTP Basic, Base64 仪表盘凭证)                |
+| 基础 URL      | `https://api.inworld.ai`                                        |
+| 默认音色       | `Sarah`                                                         |
+| 默认模型       | `inworld-tts-1.5-max`                                           |
+| 输出          | MP3（默认）、OGG_OPUS（语音备注）、PCM 22050 Hz（电话）         |
+| 网站          | [inworld.ai](https://inworld.ai)                                |
+| 文档          | [docs.inworld.ai/tts/tts](https://docs.inworld.ai/tts/tts)      |
 
 ## 开始使用
 

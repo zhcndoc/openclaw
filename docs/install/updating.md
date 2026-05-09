@@ -85,7 +85,9 @@ curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm --ve
 npm i -g openclaw@latest
 ```
 
-当 `openclaw update` 管理全局 npm 安装时，它会先将目标安装到一个临时的 npm 前缀中，验证打包后的 `dist` 清单，然后将干净的包树交换到真实的全局前缀中。这样可以避免 npm 将新包叠加到旧包的残留文件之上。如果安装命令失败，OpenClaw 会带着 `--omit=optional` 重试一次。这个重试有助于那些本地可选依赖无法编译的主机，同时如果回退方案也失败，仍会保留最初的失败信息。
+对于受监督的安装，优先使用 `openclaw update`，因为它可以协调包交换与正在运行的 Gateway 服务。如果你在受管理的 Gateway 运行时手动更新，请在包管理器完成后立即重启 Gateway，以免旧进程继续从已替换的包文件中提供服务。
+
+当 `openclaw update` 管理一个全局 npm 安装时，它会先将目标安装到一个临时 npm 前缀中，验证打包的 `dist` 清单，然后将干净的包树交换到真实的全局前缀中。这样可以避免 npm 将新包覆盖到旧包的残留文件之上。如果安装命令失败，OpenClaw 会使用 `--omit=optional` 重试一次。该重试有助于原生可选依赖无法编译的主机，同时如果回退也失败，仍会保留原始失败信息可见。
 
 ```bash
 pnpm add -g openclaw@latest

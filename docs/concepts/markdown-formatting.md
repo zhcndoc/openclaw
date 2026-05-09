@@ -39,14 +39,14 @@ OpenClaw 通过先将出站 Markdown 转换为共享的中间
 输入 Markdown：
 
 ```markdown
-Hello **world** — see [docs](https://docs.openclaw.ai).
+Hello **world** - see [docs](https://docs.openclaw.ai).
 ```
 
 IR（示意）：
 
 ```json
 {
-  "text": "Hello world — see docs.",
+  "text": "Hello world - see docs.",
   "styles": [{ "start": 6, "end": 11, "style": "bold" }],
   "links": [{ "start": 19, "end": 23, "href": "https://docs.openclaw.ai" }]
 }
@@ -108,7 +108,7 @@ SPOILER 样式范围。其他频道将其视为纯文本。
 ## 如何添加或更新频道格式化器
 
 1. **解析一次：** 使用共享的 `markdownToIR(...)` 辅助函数，并配合频道适用的
-   选项（autolink、heading style、blockquote prefix）。
+   选项（自动链接、标题样式、引用块前缀）。
 2. **渲染：** 实现一个带有 `renderMarkdownWithMarkers(...)` 和
    样式标记映射（或 Signal 样式范围）的渲染器。
 3. **分块：** 在渲染前调用 `chunkMarkdownIR(...)`；对每个分块进行渲染。
@@ -127,5 +127,11 @@ SPOILER 样式范围。其他频道将其视为纯文本。
 
 ## 相关内容
 
-- [Streaming and chunking](/concepts/streaming)
-- [System prompt](/concepts/system-prompt)
+<CardGroup cols={2}>
+  <Card title="Streaming and chunking" href="/concepts/streaming" icon="bars-staggered">
+    出站流式传输行为、分块边界以及频道特定的交付。
+  </Card>
+  <Card title="System prompt" href="/concepts/system-prompt" icon="message-lines">
+    模型在对话前看到的内容，包括注入的工作区文件。
+  </Card>
+</CardGroup>

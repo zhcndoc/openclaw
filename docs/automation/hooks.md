@@ -175,7 +175,7 @@ openclaw hooks enable <hook-name>
 
 ### session-memory 详情
 
-提取最近 15 条用户/助手消息，通过 LLM 生成描述性的文件名 slug，并使用宿主机本地日期保存到 `<workspace>/memory/YYYY-MM-DD-slug.md`。需要配置 `workspace.dir`。
+提取最近 15 条用户/助手消息，并使用宿主机本地日期保存到 `<workspace>/memory/YYYY-MM-DD-HHMM.md`。记忆捕获在后台运行，因此 `/new` 和 `/reset` 的确认不会因转录读取或可选的 slug 生成而延迟。将 `hooks.internal.entries.session-memory.llmSlug: true` 设为 true，可使用配置的模型生成描述性文件名 slug。需要配置 `workspace.dir`。
 
 <a id="bootstrap-extra-files"></a>
 

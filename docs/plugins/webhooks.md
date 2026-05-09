@@ -6,10 +6,7 @@ read_when:
 title: "Webhooks 插件"
 ---
 
-# Webhooks（插件）
-
-Webhooks 插件添加了已认证的 HTTP 路由，用于将外部
-自动化与 OpenClaw TaskFlow 绑定。
+Webhooks 插件会添加已认证的 HTTP 路由，将外部自动化绑定到 OpenClaw TaskFlow。
 
 当你希望像 Zapier、n8n、CI 任务或内部服务这样的受信任系统，
 在不先编写自定义插件的情况下创建并驱动受管 TaskFlow 时，

@@ -27,7 +27,7 @@ read_when:
 
 <Steps>
   <Step title="Package and manifest">
-    ### Step 1: Package and manifest
+    ### 第 1 步：Package and manifest
 
     <CodeGroup>
     ```json package.json
@@ -275,8 +275,8 @@ read_when:
     });
     ```
 
-    如果解析需要网络请求，请使用 `prepareDynamicModel` 做异步预热 —— `resolveDynamicModel`
-    会在其完成后再次运行。
+    如果解析需要网络调用，请使用 `prepareDynamicModel` 进行异步
+    预热 - 完成后 `resolveDynamicModel` 会再次运行。
 
   </Step>
 
@@ -329,9 +329,9 @@ read_when:
       每个家族构建器都由同一软件包导出的更底层公共辅助函数组合而成；当某个提供方需要脱离通用模式时，
       你可以直接使用这些函数：
 
-      - `openclaw/plugin-sdk/provider-model-shared` — `ProviderReplayFamily`、`buildProviderReplayFamilyHooks(...)`，以及原始 replay 构建器（`buildOpenAICompatibleReplayPolicy`、`buildAnthropicReplayPolicyForModel`、`buildGoogleGeminiReplayPolicy`、`buildHybridAnthropicOrOpenAIReplayPolicy`）。还导出 Gemini replay 辅助函数（`sanitizeGoogleGeminiReplayHistory`、`resolveTaggedReasoningOutputMode`）以及端点/模型辅助函数（`resolveProviderEndpoint`、`normalizeProviderId`、`normalizeGooglePreviewModelId`、`normalizeNativeXaiModelId`）。
-      - `openclaw/plugin-sdk/provider-stream` — `ProviderStreamFamily`、`buildProviderStreamFamilyHooks(...)`、`composeProviderStreamWrappers(...)`，以及共享的 OpenAI/Codex 包装器（`createOpenAIAttributionHeadersWrapper`、`createOpenAIFastModeWrapper`、`createOpenAIServiceTierWrapper`、`createOpenAIResponsesContextManagementWrapper`、`createCodexNativeWebSearchWrapper`）、DeepSeek V4 OpenAI 兼容包装器（`createDeepSeekV4OpenAICompatibleThinkingWrapper`）、Anthropic Messages thinking prefill 清理（`createAnthropicThinkingPrefillPayloadWrapper`），以及共享代理/提供方包装器（`createOpenRouterWrapper`、`createToolStreamWrapper`、`createMinimaxFastModeWrapper`）。
-      - `openclaw/plugin-sdk/provider-tools` — `ProviderToolCompatFamily`、`buildProviderToolCompatFamilyHooks("gemini")`、底层 Gemini schema 辅助函数（`normalizeGeminiToolSchemas`、`inspectGeminiToolSchemas`），以及 xAI 兼容辅助函数（`resolveXaiModelCompatPatch()`、`applyXaiModelCompat(model)`）。打包的 xAI 插件使用 `normalizeResolvedModel` + `contributeResolvedModelCompat` 来确保 xAI 规则由该提供方自身拥有。
+      - `openclaw/plugin-sdk/provider-model-shared` - `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`, `normalizeNativeXaiModelId`).
+      - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
+      - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("gemini")`, underlying Gemini schema helpers (`normalizeGeminiToolSchemas`, `inspectGeminiToolSchemas`), and xAI compat helpers (`resolveXaiModelCompatPatch()`, `applyXaiModelCompat(model)`). The bundled xAI plugin uses `normalizeResolvedModel` + `contributeResolvedModelCompat` with these to keep xAI rules owned by the provider.
 
       某些 stream 辅助函数会刻意保持为提供方本地私有。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在自己的公共 `api.ts` / `contract-api.ts` 接口边界内，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件也将原生 xAI Responses 形状保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning 负载移除）。
 
@@ -469,13 +469,14 @@ read_when:
   </Step>
 
   <Step title="Add extra capabilities (optional)">
-    ### Step 5: Add extra capabilities
+    ### 第 5 步：Add extra capabilities
 
-    一个提供方插件可以在文本推理之外，同时注册语音、实时转写、实时语音、
-    媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将这类插件归类为
-    **hybrid-capability** 插件——这是公司插件的推荐模式（每个供应商一个插件）。
-    参见
-    [内部机制：能力所有权](/plugins/architecture#capability-ownership-model)。
+    A provider plugin can register speech, realtime transcription, realtime
+    voice, media understanding, image generation, video generation, web fetch,
+    and web search alongside text inference. OpenClaw classifies this as a
+    **hybrid-capability** plugin - the recommended pattern for company plugins
+    (one plugin per vendor). See
+    [Internals: Capability Ownership](/plugins/architecture#capability-ownership-model).
 
     在 `register(api)` 中与你现有的
     `api.registerProvider(...)` 调用并列注册每种能力。只选择你需要的选项卡：
@@ -519,10 +520,11 @@ read_when:
         对提供方 HTTP 失败请使用 `assertOkOrThrowProviderError(...)`，这样插件可以共享
         有上限的错误正文读取、JSON 错误解析和 request-id 后缀。
       </Tab>
-      <Tab title="实时转写">
-        优先使用 `createRealtimeTranscriptionWebSocketSession(...)`——这个共享
-        辅助函数会处理代理捕获、重连退避、关闭刷新、就绪握手、音频排队以及关闭事件诊断。
-        你的插件只需要映射上游事件。
+      <Tab title="Realtime transcription">
+        Prefer `createRealtimeTranscriptionWebSocketSession(...)` - the shared
+        helper handles proxy capture, reconnect backoff, close flushing, ready
+        handshakes, audio queueing, and close-event diagnostics. Your plugin
+        only maps upstream events.
 
         ```typescript
         api.registerRealtimeTranscriptionProvider({
@@ -570,6 +572,13 @@ read_when:
         api.registerRealtimeVoiceProvider({
           id: "acme-ai",
           label: "Acme Realtime Voice",
+          capabilities: {
+            transports: ["gateway-relay"],
+            inputAudioFormats: [{ encoding: "pcm16", sampleRateHz: 24000, channels: 1 }],
+            outputAudioFormats: [{ encoding: "pcm16", sampleRateHz: 24000, channels: 1 }],
+            supportsBargeIn: true,
+            supportsToolCalls: true,
+          },
           isConfigured: ({ providerConfig }) => Boolean(providerConfig.apiKey),
           createBridge: (req) => ({
             // 只有当提供方接受一次调用对应多个工具响应时才设置此项，
@@ -587,8 +596,8 @@ read_when:
         });
         ```
 
-        当传输能够检测到人类正在打断助手播放，并且提供方支持截断或清除
-        当前音频响应时，请实现 `handleBargeIn`。
+        声明 `capabilities`，这样 `talk.catalog` 就可以向浏览器和原生 Talk
+        客户端暴露有效模式、传输、音频格式和功能标志。当传输能够检测到人类正在打断助手播放，并且提供方支持截断或清空当前音频响应时，实现 `handleBargeIn`。
       </Tab>
       <Tab title="媒体理解">
         ```typescript
@@ -665,7 +674,7 @@ read_when:
   </Step>
 
   <Step title="Test">
-    ### Step 6: Test
+    ### 第 6 步：Test
 
     ```typescript src/provider.test.ts
     import { describe, it, expect } from "vitest";
@@ -737,10 +746,10 @@ clawhub package publish your-org/your-plugin
 
 ## 下一步
 
-- [渠道插件](/plugins/sdk-channel-plugins) — 如果你的插件也提供一个渠道
-- [SDK 运行时](/plugins/sdk-runtime) — `api.runtime` 辅助函数（TTS、搜索、子代理）
-- [SDK 概览](/plugins/sdk-overview) — 完整的子路径导入参考
-- [插件内部机制](/plugins/architecture-internals#provider-runtime-hooks) — 钩子细节和捆绑示例
+- [Channel Plugins](/plugins/sdk-channel-plugins) - 如果你的插件还提供一个 channel
+- [SDK Runtime](/plugins/sdk-runtime) - `api.runtime` 辅助函数（TTS、搜索、subagent）
+- [SDK Overview](/plugins/sdk-overview) - 完整的子路径导入参考
+- [Plugin Internals](/plugins/architecture-internals#provider-runtime-hooks) - hook 详情和捆绑示例
 
 ## 相关内容
 

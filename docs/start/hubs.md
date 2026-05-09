@@ -9,7 +9,7 @@ title: "文档中心"
 如果你是 OpenClaw 的新用户，请从 [Getting Started](/start/getting-started) 开始。
 </Note>
 
-使用这些中心来发现每一页内容，包括左侧导航中未显示的深入内容和参考文档。
+使用这些中心来发现每一页内容，包括左侧导航中没有出现的深入说明和参考文档。
 
 ## 从这里开始
 
@@ -73,23 +73,22 @@ title: "文档中心"
 - [Discord](/channels/discord)
 - [Mattermost](/channels/mattermost)
 - [Signal](/channels/signal)
-- [BlueBubbles（iMessage）](/channels/bluebubbles)
 - [QQ Bot](/channels/qqbot)
-- [iMessage（旧版）](/channels/imessage)
-- [位置解析](/channels/location)
+- [iMessage](/channels/imessage)
+- [Location parsing](/channels/location)
 - [WebChat](/web/webchat)
 - [Webhooks](/automation/cron-jobs#webhooks)
 - [Gmail Pub/Sub](/automation/cron-jobs#gmail-pub-sub-integration)
 
 ## Gateway + 运维
 
-- [Gateway 运行手册](/gateway)
-- [网络模型](/gateway/network-model)
-- [Gateway 配对](/gateway/pairing)
-- [Gateway 锁](/gateway/gateway-lock)
-- [后台进程](/gateway/background-process)
-- [健康状态](/gateway/health)
-- [心跳](/gateway/heartbeat)
+- [Gateway runbook](/gateway)
+- [Network model](/network#core-model)
+- [Gateway pairing](/gateway/pairing)
+- [Gateway lock](/gateway/gateway-lock)
+- [Background process](/gateway/background-process)
+- [Health](/gateway/health)
+- [Heartbeat](/gateway/heartbeat)
 - [Doctor](/gateway/doctor)
 - [日志记录](/gateway/logging)
 - [沙箱化](/gateway/sandboxing)
@@ -168,7 +167,7 @@ title: "文档中心"
 - [插件清单](/plugins/manifest)
 - [代理工具](/plugins/building-plugins#registering-agent-tools)
 - [插件包](/plugins/bundles)
-- [社区插件](/plugins/community)
+- [ClawHub](/clawhub)
 - [能力食谱](/tools/capability-cookbook)
 - [语音通话插件](/plugins/voice-call)
 - [Zalo 用户插件](/plugins/zalouser)
@@ -176,7 +175,7 @@ title: "文档中心"
 ## 工作区 + 模板
 
 - [技能](/tools/skills)
-- [ClawHub](/tools/clawhub)
+- [ClawHub](/clawhub)
 - [技能配置](/tools/skills-config)
 - [默认 AGENTS](/reference/AGENTS.default)
 - [模板：AGENTS](/reference/templates/AGENTS)

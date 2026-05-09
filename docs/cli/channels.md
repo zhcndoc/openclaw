@@ -19,12 +19,16 @@ title: "频道"
 
 ```bash
 openclaw channels list
+openclaw channels list --all
 openclaw channels status
 openclaw channels capabilities
 openclaw channels capabilities --channel discord --target channel:123
+openclaw channels capabilities --channel discord --target channel:<voice-channel-id>
 openclaw channels resolve --channel slack "#general" "@jane"
 openclaw channels logs --channel all
 ```
+
+`channels list` 仅显示聊天频道：默认情况下显示已配置账户，并为每个账户标注 `installed`、`configured` 和 `enabled` 状态标签。使用 `--all` 还会显示尚未配置账户的内置频道，以及尚未落盘但可从目录安装的频道。此处不再打印认证提供商（OAuth + API keys）和模型提供商的使用量/配额快照；请使用 `openclaw models auth list` 查看提供商认证配置文件，使用 `openclaw status` 或 `openclaw models list` 查看使用情况。
 
 ## 状态 / 能力 / 解析 / 日志
 
@@ -108,8 +112,8 @@ openclaw channels logout --channel whatsapp
 
 - 运行 `openclaw status --deep` 进行广泛探测。
 - 使用 `openclaw doctor` 获取引导式修复。
-- `openclaw channels list` 输出 `Claude: HTTP 403 ... user:profile` → 使用统计快照需要 `user:profile` 作用域。请使用 `--no-usage`，或者提供 claude.ai 会话密钥（`CLAUDE_WEB_SESSION_KEY` / `CLAUDE_WEB_COOKIE`），或者通过 Claude CLI 重新认证。
-- 当 gateway 不可达时，`openclaw channels status` 会退回到仅基于配置的摘要。如果某个受支持的频道凭据通过 SecretRef 配置但在当前命令路径中不可用，它会将该账户报告为已配置并附带降级说明，而不是将其显示为未配置。
+- `openclaw channels list` 不再打印模型提供商的使用量/配额快照。对于这些信息，请使用 `openclaw status`（总览）或 `openclaw models list`（按提供商）。
+- 当 gateway 不可达时，`openclaw channels status` 会回退到仅配置摘要。如果通过 SecretRef 配置了受支持的频道凭据，但在当前命令路径中不可用，则会将该账户报告为已配置并带有降级说明，而不是显示为未配置。
 
 ## 能力探测
 
@@ -124,8 +128,8 @@ openclaw channels capabilities --channel discord --target channel:123
 
 - `--channel` 是可选的；省略它可列出所有频道（包括扩展）。
 - `--account` 仅在与 `--channel` 一起使用时有效。
-- `--target` 接受 `channel:<id>` 或原始数字频道 ID，并且仅适用于 Discord。
-- 探测是提供商特定的：Discord intents + 可选频道权限；Slack bot + user scopes；Telegram bot 标志 + webhook；Signal daemon 版本；Microsoft Teams app token + Graph roles/scopes（在已知情况下会标注）。没有探测的频道会报告 `Probe: unavailable`。
+- `--target` 接受 `channel:<id>` 或原始数字频道 ID，且仅适用于 Discord。对于 Discord 语音频道，权限检查会标记缺失的 `ViewChannel`、`Connect`、`Speak`、`SendMessages` 和 `ReadMessageHistory`。
+- 探测因提供商而异：Discord intents + 可选频道权限；Slack bot + user scopes；Telegram bot 标志 + webhook；Signal daemon 版本；Microsoft Teams app token + Graph roles/scopes（在已知情况下会加注）。没有探测的频道会报告 `Probe: unavailable`。
 
 ## 将名称解析为 ID
 
@@ -140,7 +144,7 @@ openclaw channels resolve --channel matrix "Project Room"
 说明：
 
 - 使用 `--kind user|group|auto` 强制指定目标类型。
-- 解析在多个条目共享同名时会优先选择活动匹配项。
+- 当多个条目共享同名时，解析会优先选择活动匹配项。
 - `channels resolve` 是只读的。如果所选账户通过 SecretRef 配置但该凭据在当前命令路径中不可用，命令会返回带说明的降级未解析结果，而不是中止整个运行。
 - `channels resolve` 不会安装频道插件。对于可安装目录中的频道，请先使用 `channels add --channel <name>` 再解析名称。
 

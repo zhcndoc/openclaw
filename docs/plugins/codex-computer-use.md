@@ -96,9 +96,6 @@ CUA 的驱动程序是 macOS 专用的，并且仍然需要其应用提示时请
   agents: {
     defaults: {
       model: "openai/gpt-5.5",
-      agentRuntime: {
-        id: "codex",
-      },
     },
   },
 }
@@ -113,9 +110,8 @@ marketplace，OpenClaw 会请求 Codex app-server 安装或重新启用
 `/Applications/Codex.app/Contents/Resources/plugins/openai-bundled`。如果设置
 仍然无法让 MCP 服务器可用，则会在线程开始前使该轮次失败。
 
-现有会话会保留其运行时和 Codex 线程绑定。在更改
-`agentRuntime` 或 Computer Use 配置后，请在受影响的聊天中使用 `/new` 或 `/reset`
-再进行测试。
+更改 Computer Use 配置后，请在受影响的聊天中使用 `/new` 或 `/reset`
+，然后再测试，因为现有的 Codex 线程可能已经开始。
 
 ## 命令
 
@@ -279,6 +275,13 @@ Gateway 回退连接到一个活动的 OpenClaw 中继。请使用 `/new` 或 `/
 仍然反复出现，请重启网关，以便旧的 app-server 线程和钩子
 注册被清除，然后重试。
 
-**轮次开始的自动安装拒绝某个 source。** 这是预期行为。先使用显式的
-`/codex computer-use install --source <marketplace-source>` 添加该 source，
-之后未来的轮次开始自动安装就可以使用已发现的本地 marketplace。
+**回合开始自动安装拒绝某个 source。** 这是预期行为。先使用显式的
+`/codex computer-use install --source <marketplace-source>`
+添加 source，然后未来的回合开始自动安装就可以使用已发现的本地
+marketplace。
+
+## 相关内容
+
+- [Codex harness](/plugins/codex-harness)
+- [Peekaboo bridge](/platforms/mac/peekaboo)
+- [iOS 应用](/platforms/ios)

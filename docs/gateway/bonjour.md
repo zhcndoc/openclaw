@@ -6,30 +6,28 @@ read_when:
 title: "Bonjour 发现"
 ---
 
-# Bonjour / mDNS 发现
-
-OpenClaw 可以使用 Bonjour（mDNS / DNS-SD）来发现一个活动的 Gateway（WebSocket 端点）。
-多播 `local.` 浏览是一个 **仅限 LAN 的便利功能**。捆绑的 `bonjour`
-插件负责 LAN 广播。它会在 macOS 主机上自动启动，在
-Linux、Windows 和容器化的 Gateway 部署中则需要显式启用。对于跨网络发现，同一个
+OpenClaw 可以使用 Bonjour（mDNS / DNS-SD）来发现一个正在运行的 Gateway（WebSocket 端点）。
+多播 `local.` 浏览是一种**仅限 LAN 的便捷功能**。捆绑的 `bonjour`
+插件负责 LAN 广播。它会在 macOS 主机上自动启动，并在
+Linux、Windows 和容器化的 Gateway 部署中按需启用。对于跨网络发现，同一个
 信标也可以通过已配置的广域 DNS-SD 域发布。发现
-仍然是尽力而为的，并且**不能**替代 SSH 或基于 Tailnet 的连接。
+仍然是尽力而为，**不能**替代 SSH 或 Tailnet 基础的连接。
 
 ## 通过 Tailscale 使用广域 Bonjour（单播 DNS-SD）
 
 如果节点和 Gateway 位于不同网络，多播 mDNS 不会跨越
-边界。你可以通过在 Tailscale 上使用 **单播 DNS‑SD**
-（“广域 Bonjour”）来保持相同的发现交互体验。
+边界。你可以通过在 Tailscale 上使用**单播 DNS-SD**
+（“广域 Bonjour”）来保持相同的发现体验。
 
 高层步骤：
 
 1. 在 Gateway 主机上运行一个 DNS 服务器（可通过 Tailnet 访问）。
-2. 在专用区域下发布 `_openclaw-gw._tcp` 的 DNS‑SD 记录
+2. 在专用区域下为 `_openclaw-gw._tcp` 发布 DNS-SD 记录
    （示例：`openclaw.internal.`）。
-3. 配置 Tailscale **拆分 DNS**，让你选择的域名通过该
+3. 配置 Tailscale **分割 DNS**，使你选择的域通过该
    DNS 服务器为客户端（包括 iOS）解析。
 
-OpenClaw 支持任意发现域名；`openclaw.internal.` 只是一个示例。
+OpenClaw 支持任何发现域；`openclaw.internal.` 只是一个示例。
 iOS/Android 节点会同时浏览 `local.` 和你配置的广域域名。
 
 ### Gateway 配置（推荐）
@@ -50,9 +48,9 @@ openclaw dns setup --apply
 这会安装 CoreDNS 并将其配置为：
 
 - 仅在 Gateway 的 Tailscale 接口上监听 53 端口
-- 从 `~/.openclaw/dns/<domain>.db` 提供你选择的域名（示例：`openclaw.internal.`）
+- 从 `~/.openclaw/dns/<domain>.db` 提供你选择的域（示例：`openclaw.internal.`）
 
-在已连接到 tailnet 的机器上验证：
+从一个已连接到 tailnet 的机器上验证：
 
 ```bash
 dns-sd -B _openclaw-gw._tcp openclaw.internal.
@@ -63,8 +61,8 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 
 在 Tailscale 管理控制台中：
 
-- 添加一个指向 Gateway tailnet IP（UDP/TCP 53）的 nameserver。
-- 添加拆分 DNS，使你的发现域名使用该 nameserver。
+- 添加一个指向 Gateway 的 tailnet IP 的 nameserver（UDP/TCP 53）。
+- 添加 split DNS，使你的发现域使用该 nameserver。
 
 一旦客户端接受 tailnet DNS，iOS 节点和 CLI 发现就可以在你的发现域名中浏览
 `_openclaw-gw._tcp`，而无需多播。
@@ -74,7 +72,7 @@ dig @<TAILNET_IPV4> -p 53 _openclaw-gw._tcp.openclaw.internal PTR +short
 Gateway WS 端口（默认 `18789`）默认绑定到回环地址。对于 LAN/tailnet
 访问，请显式绑定并保持启用认证。
 
-对于仅 tailnet 的配置：
+对于仅 tailnet 的设置：
 
 - 在 `~/.openclaw/openclaw.json` 中设置 `gateway.bind: "tailnet"`。
 - 重启 Gateway（或重启 macOS 菜单栏应用）。
@@ -87,11 +85,11 @@ DNS-SD 发布仍由 Gateway 负责。
 
 ## 服务类型
 
-- `_openclaw-gw._tcp` — Gateway 传输信标（供 macOS/iOS/Android 节点使用）。
+- `_openclaw-gw._tcp` - gateway 传输信标（供 macOS/iOS/Android 节点使用）。
 
 ## TXT 键（非秘密提示）
 
-Gateway 会发布一些小型的非秘密提示，以便让 UI 流程更方便：
+Gateway 会广播少量非秘密提示，以便让 UI 流程更方便：
 
 - `role=gateway`
 - `displayName=<friendly name>`
@@ -115,7 +113,7 @@ Gateway 会发布一些小型的非秘密提示，以便让 UI 流程更方便�
 
 ## 在 macOS 上调试
 
-有用的内置工具：
+内置的有用工具：
 
 - 浏览实例：
 
@@ -156,7 +154,7 @@ iOS 节点使用 `NWBrowser` 发现 `_openclaw-gw._tcp`。
 
 日志包含浏览器状态转换和结果集变化。
 
-## When to enable Bonjour
+## 何时启用 Bonjour
 
 Bonjour 会在 macOS 主机上的空配置 Gateway 启动时自动启动，因为
 本地应用和附近的 iOS/Android 节点通常依赖同一 LAN 的发现。
@@ -173,7 +171,7 @@ openclaw plugins enable bonjour
 `cliPath` 或 `sshPort` 提示时使用 `full`，并使用 `off` 来抑制 LAN 多播，
 而不改变插件启用状态。
 
-## When to disable Bonjour
+## 何时禁用 Bonjour
 
 当 LAN 多播广播不必要、不可用或有害时，请保持 Bonjour 处于禁用状态。
 常见情况包括非 macOS 服务器、Docker bridge 网络、
@@ -249,23 +247,24 @@ openclaw plugins disable bonjour
 
 ## 常见故障模式
 
-- **Bonjour 无法跨网络**：使用 Tailnet 或 SSH。
-- **多播被阻止**：某些 Wi‑Fi 网络会禁用 mDNS。
-- **广播器卡在 probing/announcing**：主机上的多播被阻止、
-  容器桥接、WSL 或接口频繁变化，都可能使 ciao 广播器处于
-  未宣布状态。OpenClaw 会重试几次，然后为当前 Gateway 进程禁用 Bonjour，
-  而不是无限重启广播器。
-- **Docker bridge 网络**：在检测到的容器中会自动禁用 Bonjour。
-  仅在 host、macvlan 或其他支持 mDNS 的网络中将 `OPENCLAW_DISABLE_BONJOUR=0`。
-- **睡眠 / 接口变化**：macOS 可能会暂时丢失 mDNS 结果；请重试。
-- **浏览正常但解析失败**：保持机器名简单（避免表情符号或
-  标点），然后重启 Gateway。服务实例名来自
-  主机名，因此过于复杂的名称会让某些解析器感到困惑。
+- **Bonjour 不跨网络**：请使用 Tailnet 或 SSH。
+- **多播被阻止**：某些 Wi-Fi 网络会禁用 mDNS。
+- **广告器卡在 probing/announcing**：主机上被阻止的多播、
+  容器桥接、WSL 或接口频繁变动都可能让 ciao 广播器处于
+  未宣布状态。OpenClaw 会重试几次，然后为当前 Gateway 进程
+  禁用 Bonjour，而不是无限重启广告器。
+- **Docker bridge 网络**：Bonjour 会在检测到的容器中自动禁用。
+  仅在 host、macvlan 或其他已知支持
+  mDNS 的网络中将 `OPENCLAW_DISABLE_BONJOUR=0`。
+- **睡眠 / 接口频繁变动**：macOS 可能会暂时丢失 mDNS 结果；请重试。
+- **浏览正常但解析失败**：保持机器名简洁（避免 emoji 或
+  标点），然后重启 Gateway。服务实例名来源于
+  主机名，因此过于复杂的名称可能会让某些解析器感到困惑。
 
 ## 转义的实例名（`\032`）
 
-Bonjour/DNS‑SD 常会将服务实例名中的字节转义为十进制 `\DDD`
-序列（例如空格变为 `\032`）。
+Bonjour/DNS-SD 通常会将服务实例名中的字节转义为十进制 `\DDD`
+序列（例如空格会变成 `\032`）。
 
 - 这是协议层面的正常现象。
 - UI 应在显示时进行解码（iOS 使用 `BonjourEscapes.decode`）。

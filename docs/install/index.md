@@ -1,5 +1,5 @@
 ---
-summary: "安装 OpenClaw — 安装脚本、npm/pnpm/bun、从源码、Docker 等"
+summary: "安装 OpenClaw - 安装脚本、npm/pnpm/bun、源码、Docker 等"
 read_when:
   - 当你需要除“Getting Started”快速入门之外的安装方式时
   - 你想部署到云平台时
@@ -9,8 +9,8 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 24**（推荐）或 Node 22.14+ — 安装脚本会自动处理
-- **macOS、Linux 或 Windows** — 原生 Windows 和 WSL2 均受支持；WSL2 更稳定。请参阅 [Windows](/platforms/windows)。
+- **Node 24**（推荐）或 Node 22.16+ - 安装脚本会自动处理这些
+- **macOS、Linux 或 Windows** - 原生 Windows 和 WSL2 均受支持；WSL2 更稳定。参见 [Windows](/platforms/windows)。
 - 仅在你从源码构建时才需要 `pnpm`
 
 ## 推荐：安装脚本

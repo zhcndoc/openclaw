@@ -76,6 +76,36 @@ agent 轮次中失败：
 
 参考：[插件架构](/plugins/architecture)
 
+## 插件存在但因可疑所有权被阻止
+
+如果 `openclaw doctor`、安装或启动警告显示：
+
+```text
+blocked plugin candidate: suspicious ownership (... uid=1000, expected uid=0 or root)
+plugin present but blocked
+```
+
+则插件文件的 Unix 所有者与加载它们的进程不同。不要删除插件配置。请修复文件所有权，或者让 OpenClaw 以拥有状态目录的同一用户运行。
+
+Docker 安装通常以 `node`（uid `1000`）运行。对于默认 Docker 设置，请修复主机绑定挂载：
+
+```bash
+sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
+openclaw doctor --fix
+```
+
+如果你有意以 root 运行 OpenClaw，请改为将托管的插件根目录修复为 root 所有：
+
+```bash
+sudo chown -R root:root /path/to/openclaw-config/npm
+openclaw doctor --fix
+```
+
+更深入的文档：
+
+- [插件路径所有权](/tools/plugin#blocked-plugin-path-ownership)
+- [Docker 权限](/install/docker#permissions-and-eacces)
+
 ## 决策树
 
 ```mermaid

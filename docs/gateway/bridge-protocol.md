@@ -33,7 +33,7 @@ TCP 桥接已被**移除**。当前 OpenClaw 构建版本不再包含桥接监�
 3. 客户端发送 `pair-request`。
 4. 网关等待批准，然后发送 `pair-ok` 和 `hello-ok`。
 
-历史上，`hello-ok` 会返回 `serverName`，并且可能包含 `canvasHostUrl`。
+历史上，`hello-ok` 会返回 `serverName`；托管的插件界面现在通过 `pluginSurfaceUrls` 进行公告。Canvas/A2UI 使用 `pluginSurfaceUrls.canvas`；已弃用的 `canvasHostUrl` 别名不属于重构后的协议。
 
 ## 帧
 
@@ -65,9 +65,9 @@ TCP 桥接已被**移除**。当前 OpenClaw 构建版本不再包含桥接监�
 
 ## 历史上的 tailnet 用法
 
-- 将桥接绑定到 tailnet IP：在 `~/.openclaw/openclaw.json` 中设置 `bridge.bind: "tailnet"`（仅历史用途；`bridge.*` 已不再有效）。
+- 将桥接绑定到 tailnet IP：在 `~/.openclaw/openclaw.json` 中设置 `bridge.bind: "tailnet"`（仅历史用途；`bridge.*` 不再有效）。
 - 客户端通过 MagicDNS 名称或 tailnet IP 连接。
-- Bonjour **不会** 跨网络传播；必要时请使用手动主机/端口或广域 DNS-SD。
+- Bonjour **不会**跨网络传播；必要时请使用手动主机/端口或广域 DNS-SD。
 
 ## 版本
 

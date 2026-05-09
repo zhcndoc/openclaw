@@ -115,5 +115,5 @@ YAML frontmatter 支持以下字段：
 
 - [Skills reference](/tools/skills) — 加载、优先级和门控规则
 - [Skills config](/tools/skills-config) — `skills.*` 配置模式
-- [ClawHub](/tools/clawhub) — 公共技能注册表
-- [Building Plugins](/plugins/building-plugins) — 插件可以随附技能
+- [ClawHub](/clawhub) — 公共技能注册表
+- [Building Plugins](/plugins/building-plugins) — 插件可以捆绑技能

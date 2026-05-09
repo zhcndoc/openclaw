@@ -40,7 +40,7 @@ openclaw browser --browser-profile openclaw open https://example.com
 openclaw browser --browser-profile openclaw snapshot
 ```
 
-如果你看到“Browser disabled”，请在配置中启用它（见下文）并重新启动
+如果你看到 "Browser disabled"，请在配置中启用它（见下文）并重启
 Gateway。
 
 如果 `openclaw browser` 完全缺失，或者代理提示浏览器工具不可用，请跳到 [缺少 browser 命令或工具](/tools/browser#missing-browser-command-or-tool)。
@@ -314,11 +314,11 @@ CDP WebSocket 时都会保留认证信息。请优先使用环境变量或 secre
 
 说明：
 
-- node host 通过 **代理命令** 暴露其本地浏览器控制服务器。
-- 配置文件来自 node 自己的 `browser.profiles` 配置（与本地相同）。
-- `nodeHost.browserProxy.allowProfiles` 是可选项。保持为空以使用旧版/默认行为：所有已配置的配置文件仍可通过代理访问，包括配置文件的创建/删除路由。
-- 如果你设置了 `nodeHost.browserProxy.allowProfiles`，OpenClaw 会将其视为最小权限边界：只有白名单中的配置文件可以被目标化，且代理面上的持久化配置文件创建/删除路由会被阻止。
-- 如果你不想使用它，请禁用：
+- node host 通过一个 **代理命令** 暴露其本地浏览器控制服务。
+- 配置文件来自 node 自身的 `browser.profiles` 配置（与本地相同）。
+- `nodeHost.browserProxy.allowProfiles` 是可选项。留空以保持旧版/默认行为：所有已配置的配置文件都可通过代理访问，包括配置文件创建/删除路由。
+- 如果你设置了 `nodeHost.browserProxy.allowProfiles`，OpenClaw 会将其视为最小权限边界：只有白名单中的配置文件可被目标化，且持久化的配置文件创建/删除路由会在代理表面被阻止。
+- 如果你不想要它，请禁用：
   - 在 node 上：`nodeHost.browserProxy.enabled=false`
   - 在 gateway 上：`gateway.nodes.browser.mode="off"`
 
@@ -395,24 +395,24 @@ OpenClaw 无法访问的地址，那么 CDP 的 HTTP 部分看起来可能正常
 标准的基于 HTTP 的 CDP 发现方式（`/json/version`）。OpenClaw 接受三种
 CDP URL 形式，并会自动选择正确的连接策略：
 
-- **HTTP(S) 发现** — `http://host[:port]` 或 `https://host[:port]`。
-  OpenClaw 调用 `/json/version` 来发现 WebSocket 调试器 URL，然后
-  连接。没有 WebSocket 回退。
-- **直接 WebSocket 端点** — `ws://host[:port]/devtools/<kind>/<id>` 或
-  `wss://...`，并带有 `/devtools/browser|page|worker|shared_worker|service_worker/<id>`
-  路径。OpenClaw 会通过 WebSocket 握手直接连接，并完全跳过
+- **HTTP(S) 发现** - `http://host[:port]` 或 `https://host[:port]`。
+  OpenClaw 调用 `/json/version` 以发现 WebSocket 调试器 URL，然后
+  连接。无 WebSocket 回退。
+- **直接 WebSocket 端点** - `ws://host[:port]/devtools/<kind>/<id>` 或
+  `wss://...`，路径为 `/devtools/browser|page|worker|shared_worker|service_worker/<id>`。
+  OpenClaw 通过 WebSocket 握手直接连接，并完全跳过
   `/json/version`。
-- **裸 WebSocket 根地址** — `ws://host[:port]` 或 `wss://host[:port]`，且没有
+- **裸 WebSocket 根路径** - `ws://host[:port]` 或 `wss://host[:port]`，没有
   `/devtools/...` 路径（例如 [Browserless](https://browserless.io)，
   [Browserbase](https://www.browserbase.com)）。OpenClaw 会先尝试 HTTP
-  `/json/version` 发现（将协议标准化为 `http`/`https`）；
+  `/json/version` 发现（将 scheme 规范化为 `http`/`https`）；
   如果发现返回了 `webSocketDebuggerUrl`，则使用它，否则 OpenClaw
-  会回退到在裸根地址上直接进行 WebSocket 握手。如果广告的
-  WebSocket 端点拒绝 CDP 握手，但配置的裸根地址接受它，OpenClaw 也会回退到该根地址。
-  这使得指向本地 Chrome 的裸 `ws://` 仍然可以连接，因为 Chrome 只接受
-  来自 `/json/version` 的特定目标路径上的 WebSocket 升级，而托管
-  提供商在其发现端点公告的是一个不适合 Playwright CDP 的短期 URL 时，
-  仍然可以使用其根 WebSocket 端点。
+  会回退到在裸根路径上的直接 WebSocket 握手。如果广告的
+  WebSocket 端点拒绝了 CDP 握手，但配置的裸根路径
+  接受了它，OpenClaw 也会回退到该根路径。这使得指向本地 Chrome 的裸 `ws://`
+  仍然可以连接，因为 Chrome 只接受来自 `/json/version` 的特定目标路径上的 WebSocket
+  升级，而托管提供商仍然可以在其发现端点广告一个不适合 Playwright CDP 的短期 URL 时，
+  使用其根 WebSocket 端点。
 
 ### Browserbase
 
@@ -451,15 +451,21 @@ CDP URL 形式，并会自动选择正确的连接策略：
 
 核心要点：
 
-- 浏览器控制仅限回环；访问通过 Gateway 的认证或 node 配对进行。
+- 浏览器控制仅限回环；访问通过 Gateway 的认证或节点配对进行。
 - 独立的回环浏览器 HTTP API 仅使用 **共享密钥认证**：
-  gateway token bearer 认证、`x-openclaw-password`，或使用
-  已配置的 gateway 密码进行 HTTP Basic 认证。
-- Tailscale Serve 身份标头和 `gateway.auth.mode: "trusted-proxy"` 不会对该独立回环浏览器 API 进行认证。
-- 如果启用了浏览器控制但未配置共享密钥认证，OpenClaw 会在启动时自动生成 `gateway.auth.token` 并将其持久化到配置中。
-- 当 `gateway.auth.mode` 已经是 `password`、`none` 或 `trusted-proxy` 时，OpenClaw **不会** 自动生成该令牌。
-- 将 Gateway 和任何 node host 保持在私有网络中（Tailscale）；避免公开暴露。
-- 将远程 CDP URL/令牌视为密钥；优先使用环境变量或 secrets manager。
+  gateway token bearer auth、`x-openclaw-password`，或使用
+  配置的 gateway 密码进行 HTTP Basic auth。
+- Tailscale Serve 身份头和 `gateway.auth.mode: "trusted-proxy"` 不会对
+  这个独立的回环浏览器 API 进行认证。
+- 如果已启用浏览器控制但未配置共享密钥认证，OpenClaw
+  会为该次启动生成一个仅运行时可用的 gateway token。如果客户端需要在
+  重启之间保持稳定的密钥，请显式配置
+  `gateway.auth.token`、`gateway.auth.password`、`OPENCLAW_GATEWAY_TOKEN` 或
+  `OPENCLAW_GATEWAY_PASSWORD`。
+- 当 `gateway.auth.mode` 已经是 `password`、`none` 或 `trusted-proxy` 时，
+  OpenClaw 不会自动生成该 token。
+- 将 Gateway 和任何节点主机放在私有网络（Tailscale）上；避免公开暴露。
+- 将远程 CDP URL/令牌视为密钥；优先使用环境变量或密钥管理器。
 
 远程 CDP 提示：
 
@@ -476,11 +482,11 @@ OpenClaw 支持多个命名配置文件（路由配置）。配置文件可以�
 
 默认值：
 
-- 如果缺少 `openclaw` 配置文件，会自动创建。
-- `user` 配置文件是内置的，用于 Chrome MCP existing-session 附加。
-- existing-session 配置文件除了 `user` 之外都需要显式启用；使用 `--driver existing-session` 创建它们。
-- 本地 CDP 端口默认从 **18800–18899** 分配。
-- 删除配置文件会把其本地数据目录移动到废纸篓。
+- 如果缺失，会自动创建 `openclaw` 配置文件。
+- `user` 配置文件是内置的，用于 Chrome MCP 现有会话附加。
+- 除了 `user` 外，现有会话配置文件均为可选；使用 `--driver existing-session` 创建它们。
+- 本地 CDP 端口默认从 **18800-18899** 分配。
+- 删除配置文件会将其本地数据目录移动到废纸篓。
 
 所有控制端点都接受 `?profile=<name>`；CLI 使用 `--browser-profile`。
 
@@ -560,8 +566,8 @@ openclaw browser --browser-profile user snapshot --format ai
 Agent 使用方式：
 
 - 当你需要用户已登录的浏览器状态时，请使用 `profile="user"`。
-- 如果你使用自定义的现有会话配置文件，请传入那个明确的配置文件名。
-- 只有在用户在电脑前可以批准连接提示时，才应选择此模式。
+- 如果你使用自定义的现有会话配置文件，请传入那个明确的配置文件名称。
+- 只有在用户在电脑前并可批准附加提示时，才选择此模式。
 - Gateway 或节点主机可以启动 `npx chrome-devtools-mcp@latest --autoConnect`
 
 注意：
@@ -591,10 +597,10 @@ Agent 使用方式：
 
 与受管理的 `openclaw` 配置文件相比，existing-session 驱动的限制更多：
 
-- **截图** — 页面捕获和 `--ref` 元素捕获可用；CSS `--element` 选择器不可用。`--full-page` 不能与 `--ref` 或 `--element` 组合。页面或基于 ref 的元素截图不需要 Playwright。
-- **操作** — `click`、`type`、`hover`、`scrollIntoView`、`drag` 和 `select` 需要 snapshot refs（不支持 CSS 选择器）。`click-coords` 点击可见视口坐标，不需要 snapshot ref。`click` 仅支持鼠标左键。`type` 不支持 `slowly=true`；请使用 `fill` 或 `press`。`press` 不支持 `delayMs`。`type`、`hover`、`scrollIntoView`、`drag`、`select`、`fill` 和 `evaluate` 不支持每次调用的超时。`select` 只接受单个值。
-- **等待 / 上传 / 对话框** — `wait --url` 支持精确匹配、子串和 glob 模式；不支持 `wait --load networkidle`。上传钩子需要 `ref` 或 `inputRef`，一次只能上传一个文件，不支持 CSS `element`。对话框钩子不支持超时覆盖。
-- **仅受管理模式可用的功能** — 批量操作、PDF 导出、下载拦截和 `responsebody` 仍然需要受管理的浏览器路径。
+- **截图** - 页面捕获和 `--ref` 元素捕获可用；CSS `--element` 选择器不可用。`--full-page` 不能与 `--ref` 或 `--element` 组合。页面或基于 ref 的元素截图不需要 Playwright。
+- **操作** - `click`、`type`、`hover`、`scrollIntoView`、`drag` 和 `select` 需要 snapshot refs（不支持 CSS 选择器）。`click-coords` 会点击可见视口坐标，不需要 snapshot ref。`click` 仅支持左键。`type` 不支持 `slowly=true`；请使用 `fill` 或 `press`。`press` 不支持 `delayMs`。`type`、`hover`、`scrollIntoView`、`drag`、`select`、`fill` 和 `evaluate` 不支持按次调用超时。`select` 接受单个值。
+- **等待 / 上传 / 对话框** - `wait --url` 支持精确、子串和 glob 模式；不支持 `wait --load networkidle`。上传钩子需要 `ref` 或 `inputRef`，一次一个文件，不支持 CSS `element`。对话框钩子不支持超时覆盖。
+- **仅受管理功能** - 批量操作、PDF 导出、下载拦截和 `responsebody` 仍然需要受管理的浏览器路径。
 
 </Accordion>
 
@@ -682,7 +688,7 @@ openclaw browser --browser-profile openclaw open https://example.com
 
 Agent 只有**一个工具**用于浏览器自动化：
 
-- `browser` — doctor/status/start/stop/tabs/open/focus/close/snapshot/screenshot/navigate/act
+- `browser` - doctor/status/start/stop/tabs/open/focus/close/snapshot/screenshot/navigate/act
 
 映射关系：
 
@@ -701,6 +707,6 @@ Agent 只有**一个工具**用于浏览器自动化：
 
 ## 相关
 
-- [工具概览](/tools) — 所有可用的代理工具
-- [沙盒](/gateway/sandboxing) — 沙盒环境中的浏览器控制
-- [安全性](/gateway/security) — 浏览器控制风险与加固
+- [Tools Overview](/tools) - 所有可用的 agent 工具
+- [Sandboxing](/gateway/sandboxing) - 沙箱环境中的浏览器控制
+- [Security](/gateway/security) - 浏览器控制风险与加固

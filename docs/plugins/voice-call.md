@@ -224,10 +224,12 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
 - `realtime.provider` 是可选项。如果未设置，Voice Call 会使用第一个已注册的实时语音提供商。
 - 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由其提供商插件注册。
 - 提供商专属原始配置位于 `realtime.providers.<providerId>` 下。
-- Voice Call 默认暴露共享的 `openclaw_agent_consult` 实时工具。实时模型在来电者请求更深层推理、当前信息或常规 OpenClaw 工具时可以调用它。
-- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引记忆/会话上下文中搜索咨询问题，并在 `realtime.fastContext.timeoutMs` 内把这些片段返回给实时模型，然后仅在 `realtime.fastContext.fallbackToConsult` 为 true 时才回退到完整 consult 代理。
+- Voice Call 默认暴露共享的 `openclaw_agent_consult` 实时工具。当呼叫者请求更深入的推理、当前信息或常规 OpenClaw 工具时，实时模型可以调用它。
+- `realtime.consultPolicy` 会为实时模型何时应调用 `openclaw_agent_consult` 额外添加指导。
+- `realtime.agentContext.enabled` 默认关闭。启用后，Voice Call 会在会话初始化时向实时提供商指令注入一个有边界的代理身份、system prompt 覆盖，以及选定的 workspace-file 片段。
+- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引的 memory/session context 中搜索咨询问题，并在 `realtime.fastContext.timeoutMs` 内将这些片段返回给实时模型；只有当 `realtime.fastContext.fallbackToConsult` 为 true 时，才会回退到完整的 consult agent。
 - 如果 `realtime.provider` 指向未注册的提供商，或根本没有注册任何实时语音提供商，Voice Call 会记录警告并跳过实时媒体，而不是使整个插件失败。
-- Consult 会话键会优先复用已存储的通话会话（如果可用），然后回退到已配置的 `sessionScope`（默认 `per-phone`，或用于隔离通话的 `per-call`）。
+- Consult session key 在可用时会复用已存储的通话 session，然后回退到配置的 `sessionScope`（默认 `per-phone`，或隔离通话时用 `per-call`）。
 
 ### 工具策略
 
@@ -239,13 +241,56 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
 | `owner`          | 暴露 consult 工具，并允许常规代理使用正常的代理工具策略。                                                      |
 | `none`           | 不暴露 consult 工具。自定义 `realtime.tools` 仍会传递给实时提供商。                               |
 
-### 实时提供商示例
+`realtime.consultPolicy` 仅控制实时模型指令：
+
+| Policy        | Guidance                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `auto`        | 保持默认提示，并让提供商自行决定何时调用 consult 工具。              |
+| `substantive` | 直接回答简单的对话衔接内容，并在事实、记忆、工具或上下文之前先进行 consult。 |
+| `always`      | 在每个实质性回答之前先 consult。                                                        |
+
+### Agent voice context
+
+当语音桥接应听起来像所配置的 OpenClaw agent，而普通轮次又不想付出完整 agent-consult 往返开销时，请启用 `realtime.agentContext`。context capsule 会在 realtime session 创建时一次性加入，因此不会增加每轮延迟。对 `openclaw_agent_consult` 的调用仍会运行完整的 OpenClaw agent，适用于工具工作、当前信息、记忆查询或 workspace 状态。
+
+```json5
+{
+  plugins: {
+    entries: {
+      "voice-call": {
+        config: {
+          agentId: "main",
+          realtime: {
+            enabled: true,
+            provider: "google",
+            toolPolicy: "safe-read-only",
+            consultPolicy: "substantive",
+            agentContext: {
+              enabled: true,
+              maxChars: 6000,
+              includeIdentity: true,
+              includeSystemPrompt: true,
+              includeWorkspaceFiles: true,
+              files: ["SOUL.md", "IDENTITY.md", "USER.md"],
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+### Realtime provider examples
 
 <Tabs>
   <Tab title="Google Gemini Live">
     默认值：API key 来自 `realtime.providers.google.apiKey`、
     `GEMINI_API_KEY` 或 `GOOGLE_GENERATIVE_AI_API_KEY`；模型
     `gemini-2.5-flash-native-audio-preview-12-2025`；语音 `Kore`。
+    `sessionResumption` 和 `contextWindowCompression` 默认开启，用于更长、可重新连接的通话。可使用
+    `silenceDurationMs`、`startSensitivity` 和
+    `endSensitivity` 来调优电话音频上的更快轮流对话。
 
     ```json5
     {
@@ -261,11 +306,15 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
                 provider: "google",
                 instructions: "简短说话。在使用更深层工具之前先调用 openclaw_agent_consult。",
                 toolPolicy: "safe-read-only",
+                consultPolicy: "substantive",
+                agentContext: { enabled: true },
                 providers: {
                   google: {
                     apiKey: "${GEMINI_API_KEY}",
                     model: "gemini-2.5-flash-native-audio-preview-12-2025",
                     voice: "Kore",
+                    silenceDurationMs: 500,
+                    startSensitivity: "high",
                   },
                 },
               },
@@ -817,18 +866,15 @@ openclaw googlemeet setup --transport twilio
 拨入号码、PIN 和 `--dtmf-sequence`。电话通话可能是正常的，而会议却拒绝
 或忽略了错误的 DTMF 序列。
 
-Google Meet 会将 Meet DTMF 序列和介绍文本传递给 `voicecall.start`。
-对于 Twilio 呼叫，Voice Call 会先提供 DTMF TwiML，再重定向回
-webhook，然后打开 realtime media stream，这样保存的介绍会在电话参与者
-加入会议后生成。
+Google Meet 通过带有预连接 DTMF 序列的 `voicecall.start` 启动 Twilio 电话腿。基于 PIN 生成的序列会把 Google Meet 插件的 `voiceCall.dtmfDelayMs` 作为前导 Twilio 等待数字。默认值是 12 秒，因为 Meet 的拨入提示可能会延迟到达。随后，Voice Call 会在请求介绍问候语之前切回实时处理。
 
 使用 `openclaw logs --follow` 查看实时阶段追踪。健康的 Twilio Meet 加入日志顺序如下：
 
-- Google Meet 将 Twilio 加入委托给 Voice Call。
-- Voice Call 存储预接通 DTMF TwiML。
-- 在 realtime 处理之前，Twilio 初始 TwiML 被消费并提供。
-- Voice Call 为 Twilio 呼叫提供 realtime TwiML。
-- realtime bridge 以已排队的初始问候开始。
+- Google Meet delegates the Twilio join to Voice Call.
+- Voice Call stores pre-connect DTMF TwiML.
+- Twilio initial TwiML is consumed and served before realtime handling.
+- Voice Call serves realtime TwiML for the Twilio call.
+- Google Meet requests intro speech with `voicecall.speak` after the post-DTMF delay.
 
 `openclaw voicecall tail` 仍然会显示持久化的通话记录；它适合查看
 通话状态和转写，但并非每一次 webhook/realtime 过渡都会出现在那里。

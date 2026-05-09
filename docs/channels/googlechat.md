@@ -161,7 +161,7 @@ your-domain.com {
    - 空间使用会话键 `agent:<agentId>:googlechat:group:<spaceId>`。
 4. 默认私信访问采用配对机制。未知发送者会收到一个配对码；使用以下命令批准：
    - `openclaw pairing approve googlechat <code>`
-5. 默认情况下，群组空间需要 @-mention。若提及检测需要应用的用户名，请使用 `botUser`。
+5. Group spaces 默认需要 @ 提及。若提及检测需要应用的用户名，请使用 `botUser`。
 
 ## 目标对象
 
@@ -208,14 +208,14 @@ your-domain.com {
 
 说明：
 
-- 服务账号凭据也可以以内联方式通过 `serviceAccount`（JSON 字符串）传入。
-- 也支持 `serviceAccountRef`（env/file SecretRef），包括 `channels.googlechat.accounts.<id>.serviceAccountRef` 下的每个账号引用。
+- 服务账号凭据也可以通过 `serviceAccount` 内联传入（JSON 字符串）。
+- 也支持 `serviceAccountRef`（env/file SecretRef），包括 `channels.googlechat.accounts.<id>.serviceAccountRef` 下的按账号引用。
 - 如果未设置 `webhookPath`，默认 webhook 路径为 `/googlechat`。
-- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配用于 allowlist（紧急兼容模式）。
-- 当启用 `actions.reactions` 时，可以通过 `reactions` 工具和 `channels action` 使用表情反应。
-- 消息操作提供用于文本的 `send`，以及用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，并可附带可选的 `message`、`filename` 和线程目标。
+- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配，用于 allowlist（破窗兼容模式）。
+- 当启用 `actions.reactions` 时，可通过 `reactions` 工具和 `channels action` 使用反应功能。
+- 消息操作暴露了用于文本的 `send` 和用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程定位。
 - `typingIndicator` 支持 `none`、`message`（默认）和 `reaction`（reaction 需要用户 OAuth）。
-- 附件会通过 Chat API 下载，并存储在媒体管道中（大小上限由 `mediaMaxMb` 限制）。
+- 附件会通过 Chat API 下载，并存储在媒体管道中（大小上限由 `mediaMaxMb` 控制）。
 
 密钥引用详情：[Secrets Management](/gateway/secrets)。
 

@@ -10,7 +10,7 @@ sidebarTitle: "音乐生成"
 
 `music_generate` 工具允许 agent 通过已配置的提供方使用共享的音乐生成能力来创建音乐或音频——当前支持 Google、MiniMax，以及通过工作流配置的 ComfyUI。
 
-对于基于会话的 agent 运行，OpenClaw 会将音乐生成作为后台任务启动，将其跟踪在任务账本中，然后在音轨准备就绪时再次唤醒 agent，以便 agent 能将完成的音频发布回原始频道。
+对于有会话支持的 agent 运行，OpenClaw 会将音乐生成作为后台任务启动，在任务账本中跟踪它，然后在音轨就绪时再次唤醒 agent，以便 agent 告知用户并附加已完成的音频。在使用仅 message-tool 可见传递的群组/频道聊天中，agent 会通过 message tool 中继结果。如果完成 agent 只写入一条私有的最终回复，OpenClaw 会回退为直接渠道发送已生成的媒体。完成唤醒会明确警告 agent，在这些路径中普通最终回复是私有的。
 
 <Note>
 内置的共享工具只有在至少有一个音乐生成提供方可用时才会出现。如果你在 agent 的工具中看不到 `music_generate`，请配置 `agents.defaults.musicGenerationModel` 或设置提供方 API 密钥。

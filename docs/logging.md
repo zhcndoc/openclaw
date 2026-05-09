@@ -10,7 +10,7 @@ title: "日志"
 OpenClaw 有两个主要的日志展示界面：
 
 - **文件日志**（JSON 行），由 Gateway 写入。
-- **控制台输出**，显示在终端和 Gateway Debug UI 中。
+- **控制台输出**，显示在终端和 Gateway 调试 UI 中。
 
 Control UI 的 **Logs** 选项卡会跟随 gateway 文件日志。本页解释日志存放位置、
 如何阅读，以及如何配置日志级别和格式。
@@ -84,8 +84,8 @@ openclaw doctor
 
 ### Control UI（Web）
 
-Control UI 的 **Logs** 选项卡使用 `logs.tail` 跟随同一个文件。
-有关如何打开它，请参见 [/web/control-ui](/web/control-ui)。
+Control UI 的 **Logs** 选项卡会使用 `logs.tail` 跟随同一个文件。
+关于如何打开它，请参见 [Control UI](/web/control-ui)。
 
 ### 仅限通道的日志
 
@@ -113,7 +113,11 @@ openclaw channels logs --channel whatsapp
 OpenClaw 会在保留这些字段的同时保留原始的结构化日志参数，
 因此读取带编号 tslog 参数键的现有解析器仍然可以正常工作。
 
-### 控制台输出
+Talk、实时语音以及托管房间活动也会通过同一文件日志管道输出有界生命周期日志
+记录。这些记录在可用时包含事件类型、模式、传输、提供方以及大小/时间测量值，
+但不会包含转录文本、音频载荷、turn id、call id 和提供方 item id。
+
+### Console output
 
 控制台日志具有 **TTY 感知**，并针对可读性进行了格式化：
 
@@ -183,7 +187,10 @@ Gateway HTTP 请求和 Gateway WebSocket 帧会建立一个内部请求追踪
 因此本地日志、诊断快照、OTEL spans，以及可信 provider 的 `traceparent`
 头部都可以通过 `traceId` 关联起来，而无需记录原始请求或模型内容。
 
-### 模型调用大小和时序
+Talk 生命周期日志记录在启用 OpenTelemetry 日志导出时，也会通过
+OTLP logs 流向相同的流程，使用与文件日志相同的有界属性。
+
+### Model call size and timing
 
 模型调用诊断会记录有界的请求/响应测量值，而不会捕获原始 prompt 或响应内容：
 
@@ -215,7 +222,7 @@ exec 输出以及 patch 摘要）：
 
 文件日志和会话转录仍然保持 JSONL 格式，但匹配到的密钥值会在
 写入磁盘之前被掩码。脱敏是尽力而为的：它适用于带文本内容的消息
-和日志字符串，而不是每一个标识符或二进制负载字段。
+和日志字符串，而不是每一个标识符或二进制载荷字段。
 
 内置默认规则覆盖常见的 API 凭据和支付凭据字段名，例如卡号、CVC/CVV、共享支付令牌和 payment credential，
 当它们以 JSON 字段、URL 参数、CLI 标志或赋值形式出现时。

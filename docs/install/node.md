@@ -1,5 +1,5 @@
 ---
-summary: "为 OpenClaw 安装和配置 Node.js — 版本要求、安装选项和 PATH 故障排查"
+summary: "为 OpenClaw 安装和配置 Node.js - 版本要求、安装选项和 PATH 故障排查"
 title: "Node.js"
 read_when:
   - "在安装 OpenClaw 之前，你需要先安装 Node.js"
@@ -7,7 +7,7 @@ read_when:
   - "`npm install -g` 因权限或 PATH 问题失败"
 ---
 
-OpenClaw 需要 **Node 22.14 或更高版本**。**Node 24 是安装、CI 和发布工作流的默认且推荐的运行时**。Node 22 仍通过当前的 LTS 线路获得支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——本页适用于你想自己设置 Node 并确保一切都正确连接时（版本、PATH、全局安装）。
+OpenClaw 需要 **Node 22.16 或更高版本**。**Node 24 是安装、CI 和发布工作流的默认且推荐运行时**。Node 22 仍通过当前 LTS 线路受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——如果你想自行设置 Node，并确保一切正确配置（版本、PATH、全局安装），可以参考本页。
 
 ## 检查你的版本
 
@@ -15,7 +15,7 @@ OpenClaw 需要 **Node 22.14 或更高版本**。**Node 24 是安装、CI 和发
 node -v
 ```
 
-如果输出 `v24.x.x` 或更高版本，说明你使用的是推荐的默认版本。如果输出 `v22.14.x` 或更高版本，说明你使用的是受支持的 Node 22 LTS 路径，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或者版本过旧，请选择下面的一种安装方式。
+如果输出 `v24.x.x` 或更高版本，则说明你使用的是推荐的默认版本。如果输出 `v22.16.x` 或更高版本，则说明你处于受支持的 Node 22 LTS 路径上，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或者版本过旧，请在下方选择一种安装方式。
 
 ## 安装 Node
 
@@ -68,9 +68,9 @@ node -v
 <Accordion title="使用版本管理器（nvm、fnm、mise、asdf）">
   版本管理器可以让你轻松在不同 Node 版本之间切换。常见选项：
 
-- [**fnm**](https://github.com/Schniz/fnm) — 快速、跨平台
-- [**nvm**](https://github.com/nvm-sh/nvm) — 在 macOS/Linux 上广泛使用
-- [**mise**](https://mise.jdx.dev/) — 多语言（Node、Python、Ruby 等）
+- [**fnm**](https://github.com/Schniz/fnm) - 快速、跨平台
+- [**nvm**](https://github.com/nvm-sh/nvm) - 在 macOS/Linux 上广泛使用
+- [**mise**](https://mise.jdx.dev/) - 多语言（Node、Python、Ruby 等）
 
 使用 fnm 的示例：
 
@@ -137,6 +137,6 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 
 ## 相关内容
 
-- [安装概览](/install) — 所有安装方式
-- [更新](/install/updating) — 让 OpenClaw 保持最新
-- [入门](/start/getting-started) — 安装后的第一步
+- [Install Overview](/install) - 所有安装方式
+- [Updating](/install/updating) - 保持 OpenClaw 为最新版本
+- [Getting Started](/start/getting-started) - 安装后的第一步

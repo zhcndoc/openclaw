@@ -131,6 +131,17 @@ Gateway 会正确地将 BTW 以 `chat.side_result` 发送，而 BTW 不会包含
 
 ## 相关内容
 
-- [斜杠命令](/tools/slash-commands)
-- [思考层级](/tools/thinking)
-- [会话](/concepts/session)
+<CardGroup cols={2}>
+  <Card title="Slash commands" href="/tools/slash-commands" icon="terminal">
+    原生命令目录和聊天指令。
+  </Card>
+  <Card title="Thinking levels" href="/tools/thinking" icon="brain">
+    用于旁路问题模型调用的推理努力级别。
+  </Card>
+  <Card title="Session" href="/concepts/session" icon="comments">
+    会话键、历史记录和持久化语义。
+  </Card>
+  <Card title="Steer command" href="/tools/steer" icon="arrow-right">
+    在不结束当前运行的情况下，向活动运行注入一条引导消息。
+  </Card>
+</CardGroup>

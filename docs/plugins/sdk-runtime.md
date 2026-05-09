@@ -129,6 +129,26 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
     ```
 
   </Accordion>
+
+  <Accordion title="api.runtime.llm">
+    在不导入 provider 内部实现或重复 OpenClaw 模型/认证/基础 URL 准备逻辑的情况下，运行一次宿主拥有的文本补全。
+
+    ```typescript
+    const result = await api.runtime.llm.complete({
+      messages: [{ role: "user", content: "总结这段转录内容。" }],
+      purpose: "my-plugin.summary",
+      maxTokens: 512,
+      temperature: 0.2,
+    });
+    ```
+
+    该辅助工具使用与 OpenClaw 内置运行时相同的简单补全准备流程以及宿主拥有的运行时配置快照。上下文引擎会获得与会话绑定的 `llm.complete` 能力，因此模型调用会使用当前会话的 agent，而不会静默回退到默认 agent。返回结果会包含 provider/model/agent 归属信息，以及在可用时的规范化 token、缓存和估算成本使用情况。
+
+    <Warning>
+    模型覆盖需要在配置中通过 `plugins.entries.<id>.llm.allowModelOverride: true` 获得操作员明确允许。使用 `plugins.entries.<id>.llm.allowedModels` 可将受信任插件限制到特定的规范化 `provider/model` 目标。跨 agent 的补全调用需要 `plugins.entries.<id>.llm.allowAgentIdOverride: true`。
+    </Warning>
+
+  </Accordion>
   <Accordion title="api.runtime.subagent">
     启动并管理后台 subagent 运行。
 
@@ -410,12 +430,13 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
     });
 
     await store.register("key-1", { value: "hello" });
+    const claimed = await store.registerIfAbsent("dedupe-key", { value: "first" });
     const value = await store.lookup("key-1");
     await store.consume("key-1");
     await store.clear();
     ```
 
-    键值存储会在重启后保持，并按运行时绑定的 plugin id 进行隔离。限制：每个命名空间 `maxEntries`，每个插件最多 1,000 行活动记录，JSON 值小于 64KB，并支持可选的 TTL 过期。
+    键控存储可在重启后保留，并按运行时绑定的插件 id 隔离。使用 `registerIfAbsent(...)` 进行原子去重声明：当键缺失或已过期并已注册时返回 `true`；当已存在有效值且不会覆盖其值、创建时间或 TTL 时返回 `false`。限制：每个命名空间 `maxEntries`、每个插件 1,000 条有效行、64KB 以下的 JSON 值，以及可选的 TTL 过期。
 
     <Warning>
     仅限本版本中的打包插件。

@@ -67,6 +67,22 @@ https://gateway-host/line/webhook
 }
 ```
 
+公共 DM 配置：
+
+```json5
+{
+  channels: {
+    line: {
+      enabled: true,
+      channelAccessToken: "LINE_CHANNEL_ACCESS_TOKEN",
+      channelSecret: "LINE_CHANNEL_SECRET",
+      dmPolicy: "open",
+      allowFrom: ["*"],
+    },
+  },
+}
+```
+
 环境变量（仅默认账户）：
 
 - `LINE_CHANNEL_ACCESS_TOKEN`
@@ -118,7 +134,7 @@ openclaw pairing approve line <CODE>
 允许列表和策略：
 
 - `channels.line.dmPolicy`: `pairing | allowlist | open | disabled`
-- `channels.line.allowFrom`: 用于私信的 LINE 用户 ID 允许列表
+- `channels.line.allowFrom`: 用于私信的已允许 LINE 用户 ID；`dmPolicy: "open"` 需要 `["*"]`
 - `channels.line.groupPolicy`: `allowlist | open | disabled`
 - `channels.line.groupAllowFrom`: 用于群组的 LINE 用户 ID 允许列表
 - 按群组覆盖：`channels.line.groups.<groupId>.allowFrom`

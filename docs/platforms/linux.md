@@ -14,7 +14,7 @@ Gateway 在 Linux 上获得完全支持。**Node 是推荐的运行时**。
 
 ## 初学者快速路径（VPS）
 
-1. 安装 Node 24（推荐；Node 22 LTS，目前 `22.14+`，仍可用于兼容性）
+1. 安装 Node 24（推荐；Node 22 LTS，目前 `22.16+`，也可用于兼容性）
 2. `npm i -g openclaw@latest`
 3. `openclaw onboard --install-daemon`
 4. 从你的笔记本电脑上：`ssh -N -L 18789:127.0.0.1:18789 <user>@<host>`

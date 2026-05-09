@@ -10,6 +10,10 @@ sidebarTitle: "文本转语音（TTS）"
 
 OpenClaw 可以将出站回复转换为音频，支持 **14 个语音提供商**，并可在飞书、Matrix、Telegram 和 WhatsApp 上发送原生语音消息，在其他平台发送音频附件，并为电话和 Talk 提供 PCM/Ulaw 流。
 
+TTS 是 Talk 的 `stt-tts` 模式中的语音输出部分。原生提供商
+`realtime` Talk 会话会在实时提供商内部合成语音，而不是调用此 TTS 路径，
+而 `transcription` 会话不会合成助手的语音回复。
+
 ## 快速开始
 
 <Steps>
@@ -51,23 +55,23 @@ OpenClaw 可以将出站回复转换为音频，支持 **14 个语音提供商**
 
 ## 支持的提供商
 
-| 提供商             | 认证                                                                                                             | 说明                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION`（也支持 `AZURE_SPEECH_API_KEY`、`SPEECH_KEY`、`SPEECH_REGION`）      | 原生 Ogg/Opus 语音便笺输出和电话。                                       |
-| **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认使用 `hexgrad/Kokoro-82M`。                     |
-| **ElevenLabs**    | `ELEVENLABS_API_KEY` 或 `XI_API_KEY`                                                                             | 语音克隆、多语言、可通过 `seed` 实现确定性。                              |
-| **Google Gemini** | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                                                                             | Gemini API TTS；可通过 `promptTemplate: "audio-profile-v1"` 感知角色。 |
-| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音便笺和电话输出。                                                     |
-| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音便笺和 PCM 电话。                            |
-| **Local CLI**     | 无                                                                                                               | 运行一个已配置的本地 TTS 命令。                                          |
-| **Microsoft**     | 无                                                                                                               | 通过 `node-edge-tts` 使用公开的 Edge 神经 TTS。尽力而为，无 SLA。       |
-| **MiniMax**       | `MINIMAX_API_KEY`（或 Token 方案：`MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`）     | T2A v2 API。默认使用 `speech-2.8-hd`。                                  |
-| **OpenAI**        | `OPENAI_API_KEY`                                                                                                 | 也用于自动摘要；支持角色 `instructions`。                                 |
-| **OpenRouter**    | `OPENROUTER_API_KEY`（可复用 `models.providers.openrouter.apiKey`）                                             | 默认模型 `hexgrad/kokoro-82m`。                                          |
-| **Volcengine**    | `VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY`（旧版 AppID/token：`VOLCENGINE_TTS_APPID`/`_TOKEN`） | BytePlus Seed Speech HTTP API。                                          |
-| **Vydra**         | `VYDRA_API_KEY`                                                                                                  | 图像、视频和语音的共享提供商。                                           |
-| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音便笺。                                 |
-| **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | 通过小米聊天完成接口提供 MiMo TTS。                                       |
+| Provider          | Auth                                                                                                             | Notes                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` (also `AZURE_SPEECH_API_KEY`, `SPEECH_KEY`, `SPEECH_REGION`)          | 原生 Ogg/Opus 语音消息输出和电话功能。                                                      |
+| **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认为 `hexgrad/Kokoro-82M`。                                           |
+| **ElevenLabs**    | `ELEVENLABS_API_KEY` or `XI_API_KEY`                                                                             | 声音克隆、多语言、可通过 `seed` 确定性复现；用于 Discord 语音播放时流式传输。              |
+| **Google Gemini** | `GEMINI_API_KEY` or `GOOGLE_API_KEY`                                                                             | Gemini API 批量 TTS；通过 `promptTemplate: "audio-profile-v1"` 感知角色。                 |
+| **Gradium**       | `GRADIUM_API_KEY`                                                                                                | 语音消息和电话输出。                                                                        |
+| **Inworld**       | `INWORLD_API_KEY`                                                                                                | 流式 TTS API。原生 Opus 语音消息和 PCM 电话功能。                                           |
+| **Local CLI**     | none                                                                                                             | 运行一个已配置的本地 TTS 命令。                                                              |
+| **Microsoft**     | none                                                                                                             | 通过 `node-edge-tts` 使用 Microsoft Edge 的公开神经 TTS。尽力而为，无 SLA。               |
+| **MiniMax**       | `MINIMAX_API_KEY` (or Token Plan: `MINIMAX_OAUTH_TOKEN`, `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`)      | T2A v2 API。默认为 `speech-2.8-hd`。                                                        |
+| **OpenAI**        | `OPENAI_API_KEY`                                                                                                 | 也用于自动摘要；支持角色 `instructions`。                                                   |
+| **OpenRouter**    | `OPENROUTER_API_KEY` (can reuse `models.providers.openrouter.apiKey`)                                            | 默认模型 `hexgrad/kokoro-82m`。                                                             |
+| **Volcengine**    | `VOLCENGINE_TTS_API_KEY` or `BYTEPLUS_SEED_SPEECH_API_KEY` (legacy AppID/token: `VOLCENGINE_TTS_APPID`/`_TOKEN`) | BytePlus Seed Speech HTTP API。                                                             |
+| **Vydra**         | `VYDRA_API_KEY`                                                                                                  | 共享的图像、视频和语音提供商。                                                              |
+| **xAI**           | `XAI_API_KEY`                                                                                                    | xAI 批量 TTS。不支持原生 Opus 语音消息。                                                     |
+| **Xiaomi MiMo**   | `XIAOMI_API_KEY`                                                                                                 | 通过小米聊天补全实现 MiMo TTS。                                                            |
 
 如果配置了多个提供商，将首先使用当前选中的那个，其余作为回退选项。自动摘要使用 `summaryModel`（或
 `agents.defaults.model.primary`），因此如果你保持摘要功能开启，该提供商也必须已完成认证。
@@ -430,7 +434,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
 }
 ```
 
-## 人设
+## Persona
 
 **persona** 是一种稳定的口语身份，可在各个提供商之间以确定性方式应用。它可以偏好某个提供商，定义与提供商无关的提示意图，并携带用于声音、模型、提示模板、seed 和语音设置的提供商特定绑定。
 
@@ -564,6 +568,8 @@ Persona 提示字段（`profile`、`scene`、`sampleContext`、`style`、`accent
 
 只有当**每个**被尝试的提供商都被跳过或失败时，整个 TTS 请求才会失败。
 
+Talk 会话提供商选择以会话为作用域。Talk 客户端应从 `talk.catalog` 中选择 provider id、model id、voice id 和 locale，并通过 Talk 会话或交接请求传递它们。打开语音会话不应修改 `messages.tts` 或全局 Talk 提供商默认值。
+
 ## 模型驱动的指令
 
 默认情况下，助手**可以**发出 `[[tts:...]]` 指令来为单条回复覆盖声音、模型或语速，并可选地使用
@@ -655,24 +661,30 @@ Slash 命令会将本地覆盖写入 `prefsPath`。默认值为 `~/.openclaw/set
 
 TTS 语音投递由通道能力驱动。通道插件会声明语音风格 TTS 应该向提供商请求原生 `voice-note` 目标，还是保留普通 `audio-file` 合成，并仅将兼容输出标记为语音投递。
 
-- **支持 voice-note 的通道**：voice-note 回复优先使用 Opus（ElevenLabs 使用 `opus_48000_64`，OpenAI 使用 `opus`）。
-  - 48kHz / 64kbps 是语音消息的一个良好折中。
-- **飞书 / WhatsApp**：当 voice-note 回复以 MP3/WebM/WAV/M4A 或其他可能的音频文件形式生成时，通道插件会在发送原生语音消息前使用 `ffmpeg` 将其转码为 48kHz Ogg/Opus。WhatsApp 会通过 Baileys 的 `audio` 载荷发送结果，并设置 `ptt: true` 和 `audio/ogg; codecs=opus`。如果转换失败，飞书会收到原始文件作为附件；WhatsApp 则发送失败，而不是发布不兼容的 PTT 载荷。
-- **BlueBubbles**：保持提供商合成走普通音频文件路径；MP3 和 CAF 输出会被标记为 iMessage 语音备忘录投递。
-- **其他通道**：MP3（ElevenLabs 使用 `mp3_44100_128`，OpenAI 使用 `mp3`）。
+- **支持语音消息的通道**：语音消息回复优先使用 Opus（ElevenLabs 用 `opus_48000_64`，OpenAI 用 `opus`）。
+  - 48kHz / 64kbps 是语音消息的良好折中。
+- **Feishu / WhatsApp**：当语音消息回复以 MP3/WebM/WAV/M4A
+  或其他可能的音频文件形式生成时，通道插件会在发送原生语音消息前，使用 `ffmpeg`
+  将其转码为 48kHz 的 Ogg/Opus。WhatsApp 会通过 Baileys 的 `audio` 负载发送结果，
+  并设置 `ptt: true` 和 `audio/ogg; codecs=opus`。如果转换失败，Feishu 会将原始
+  文件作为附件接收；WhatsApp 则发送失败，而不是发布不兼容的 PTT 负载。
+- **其他通道**：MP3（ElevenLabs 用 `mp3_44100_128`，OpenAI 用 `mp3`）。
   - 44.1kHz / 128kbps 是语音清晰度的默认平衡。
-- **MiniMax**：普通音频附件使用 MP3（`speech-2.8-hd` 模型，32kHz 采样率）。对于通道声明的 voice-note 目标，如果通道支持转码，OpenClaw 会在投递前使用 `ffmpeg` 将 MiniMax 的 MP3 转码为 48kHz Opus。
-- **Xiaomi MiMo**：默认使用 MP3，或在配置时使用 WAV。对于通道声明的 voice-note 目标，如果通道支持转码，OpenClaw 会在投递前使用 `ffmpeg` 将 Xiaomi 的输出转码为 48kHz Opus。
-- **本地 CLI**：使用所配置的 `outputFormat`。voice-note 目标会转换为 Ogg/Opus，电话输出会使用 `ffmpeg` 转换为原始 16 kHz 单声道 PCM。
-- **Google Gemini**：Gemini API TTS 返回原始 24kHz PCM。OpenClaw 会将其封装为 WAV 用于音频附件，将其转码为 48kHz Opus 用于 voice-note 目标，并为 Talk/电话直接返回 PCM。
-- **Gradium**：音频附件使用 WAV，voice-note 目标使用 Opus，电话使用 8 kHz 的 `ulaw_8000`。
-- **Inworld**：普通音频附件使用 MP3，voice-note 目标使用原生 `OGG_OPUS`，而 Talk/电话使用 22050 Hz 的原始 `PCM`。
-- **xAI**：默认使用 MP3；`responseFormat` 可以是 `mp3`、`wav`、`pcm`、`mulaw` 或 `alaw`。OpenClaw 使用 xAI 的批量 REST TTS 端点并返回完整的音频附件；此提供商路径不使用 xAI 的流式 TTS WebSocket。此路径不支持原生 Opus voice-note 格式。
+- **MiniMax**：用于普通音频附件时使用 MP3（`speech-2.8-hd` 模型，32kHz 采样率）。对于通道声明支持的语音消息目标，当通道支持转码时，OpenClaw 会在发送前使用 `ffmpeg` 将 MiniMax 的 MP3 转码为 48kHz Opus。
+- **Xiaomi MiMo**：默认使用 MP3，或在配置时使用 WAV。对于通道声明支持的语音消息目标，当通道支持转码时，OpenClaw 会在发送前使用 `ffmpeg` 将 Xiaomi 输出转码为 48kHz Opus。
+- **本地 CLI**：使用已配置的 `outputFormat`。语音消息目标
+  会转换为 Ogg/Opus，而电话输出会使用 `ffmpeg`
+  转换为原始 16 kHz 单声道 PCM。
+- **Google Gemini**：Gemini API TTS 返回原始 24kHz PCM。OpenClaw 会将其包装为 WAV 用于音频附件，将其转码为 48kHz Opus 用于语音消息目标，并为 Talk/电话直接返回 PCM。
+- **Gradium**：音频附件使用 WAV，语音消息目标使用 Opus，电话使用 8 kHz 的 `ulaw_8000`。
+- **Inworld**：普通音频附件使用 MP3，语音消息目标使用原生 `OGG_OPUS`，Talk/电话使用 22050 Hz 的原始 `PCM`。
+- **xAI**：默认使用 MP3；`responseFormat` 可以是 `mp3`、`wav`、`pcm`、`mulaw` 或 `alaw`。OpenClaw 使用 xAI 的批量 REST TTS 端点并返回完整的音频附件；此提供商路径不使用 xAI 的流式 TTS WebSocket。此路径不支持原生 Opus 语音消息格式。
 - **Microsoft**：使用 `microsoft.outputFormat`（默认 `audio-24khz-48kbitrate-mono-mp3`）。
-  - 捆绑的传输接受 `outputFormat`，但服务端并非所有格式都可用。
+  - 捆绑的传输层接受 `outputFormat`，但并非所有格式都可从服务中获得。
   - 输出格式值遵循 Microsoft Speech 输出格式（包括 Ogg/WebM Opus）。
-  - Telegram `sendVoice` 接受 OGG/MP3/M4A；如果你需要保证 Opus 语音消息，请使用 OpenAI/ElevenLabs。
-  - 如果配置的 Microsoft 输出格式失败，OpenClaw 会回退重试 MP3。
+  - Telegram `sendVoice` 接受 OGG/MP3/M4A；如果你需要
+    保证的 Opus 语音消息，请使用 OpenAI/ElevenLabs。
+  - 如果配置的 Microsoft 输出格式失败，OpenClaw 会重试 MP3。
 
 OpenAI/ElevenLabs 的输出格式按通道固定（见上文）。
 
@@ -924,9 +936,9 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 
 - [OpenAI Text to Speech 指南](https://platform.openai.com/docs/guides/text-to-speech)
 - [OpenAI 音频 API 参考](https://platform.openai.com/docs/api-reference/audio)
-- [Azure Speech REST Text to Speech](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
+- [Azure Speech REST 文本转语音](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
 - [Azure Speech 提供方](/providers/azure-speech)
-- [ElevenLabs Text to Speech](https://elevenlabs.io/docs/api-reference/text-to-speech)
+- [ElevenLabs 文本转语音](https://elevenlabs.io/docs/api-reference/text-to-speech)
 - [ElevenLabs 认证](https://elevenlabs.io/docs/api-reference/authentication)
 - [Gradium](/providers/gradium)
 - [Inworld TTS API](https://docs.inworld.ai/tts/tts)
@@ -935,7 +947,7 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 - [Xiaomi MiMo 语音合成](/providers/xiaomi#text-to-speech)
 - [node-edge-tts](https://github.com/SchneeHertz/node-edge-tts)
 - [Microsoft Speech 输出格式](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
-- [xAI Text to Speech](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
+- [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
 
 ## 相关内容
 

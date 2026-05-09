@@ -320,10 +320,32 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
   </Accordion>
 
   <Accordion title="共享网络安全说明">
-    `openclaw-cli` 使用 `network_mode: "service:openclaw-gateway"`，这样 CLI
-    命令就可以通过 `127.0.0.1` 访问网关。请将其视为共享
-    信任边界。compose 配置会在 `openclaw-cli` 上移除 `NET_RAW`/`NET_ADMIN` 并启用
-    `no-new-privileges`。
+    `openclaw-cli` 使用 `network_mode: "service:openclaw-gateway"`，因此 CLI
+    命令可以通过 `127.0.0.1` 访问网关。请将其视为共享的信任边界。compose 配置会为
+    `openclaw-gateway` 和 `openclaw-cli` 同时移除 `NET_RAW`/`NET_ADMIN`
+    并启用 `no-new-privileges`。
+  </Accordion>
+
+  <Accordion title="openclaw-cli 中的 Docker Desktop DNS 失败">
+    某些 Docker Desktop 配置在移除 `NET_RAW` 后，会在共享网络的
+    `openclaw-cli` sidecar 中 DNS 查询失败，这会在诸如 `openclaw plugins install`
+    之类依赖 npm 的命令中表现为 `EAI_AGAIN`。正常网关运行时请保留默认的加固 compose 文件。
+    下方的本地覆盖文件会通过恢复 Docker 的默认 capabilities 来放宽 CLI 容器的安全策略，
+    因此它只应用于需要访问包注册表的一次性 CLI 命令，而不是作为默认的 Compose 调用：
+
+    ```bash
+    printf '%s\n' \
+      'services:' \
+      '  openclaw-cli:' \
+      '    cap_drop: !reset []' \
+      > docker-compose.cli-no-dropped-caps.local.yml
+
+    docker compose -f docker-compose.yml -f docker-compose.cli-no-dropped-caps.local.yml run --rm openclaw-cli plugins install <package>
+    ```
+
+    如果你已经创建了一个长期运行的 `openclaw-cli` 容器，请使用相同的覆盖重新创建它。
+    `docker compose exec` 和 `docker exec` 无法为已创建的容器更改 Linux capabilities。
+
   </Accordion>
 
   <Accordion title="权限与 EACCES">
@@ -333,7 +355,14 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     ```bash
     sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
     ```
-    
+
+    同样的不匹配也可能表现为插件警告，例如
+    `blocked plugin candidate: suspicious ownership (... uid=1000, expected uid=0 or root)`
+    ，随后出现 `plugin present but blocked`。这意味着进程 uid 与
+    挂载的插件目录所有者不一致。请优先以默认 uid 1000 运行容器，并修正绑定挂载的所有权。
+    只有在你有意长期以 root 运行 OpenClaw 时，才将
+    `/path/to/openclaw-config/npm` chown 为 `root:root`。
+
   </Accordion>
 
   <Accordion title="更快的重建">
@@ -383,10 +412,8 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
   </Accordion>
 
   <Accordion title="基础镜像元数据">
-    主 Docker 运行时镜像使用 `node:24-bookworm-slim`，并发布 OCI
-    基础镜像注解，包括 `org.opencontainers.image.base.name`、
-    `org.opencontainers.image.source` 等。Node 基础镜像摘要通过 Dependabot Docker
-    基础镜像 PR 进行刷新；发布构建不会运行发行版升级层。参见
+    主 Docker 运行时镜像使用 `node:24-bookworm-slim`，并包含 `tini` 作为入口点初始化进程（PID 1），以确保长时间运行的容器能够正确回收僵尸进程并处理信号。它会发布 OCI 基础镜像注解，包括 `org.opencontainers.image.base.name`、
+    `org.opencontainers.image.source` 等。Node 基础镜像的摘要会通过 Dependabot Docker 基础镜像 PR 进行刷新；发布构建不会运行发行版升级层。参见
     [OCI image annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
   </Accordion>
 </AccordionGroup>

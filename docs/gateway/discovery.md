@@ -7,9 +7,7 @@ read_when:
 title: "发现与传输"
 ---
 
-# 发现与传输
-
-OpenClaw 表面上看有两个相似但实际上不同的问题：
+OpenClaw 有两个表面上看起来相似、但实际上不同的问题：
 
 1. **操作员远程控制**：由 macOS 菜单栏应用控制运行在其他位置的网关。
 2. **节点配对**：iOS/Android（以及未来的节点）发现网关并安全地进行配对。
@@ -31,7 +29,7 @@ OpenClaw 表面上看有两个相似但实际上不同的问题：
 - [Gateway 协议](/gateway/protocol)
 - [桥接协议（旧版）](/gateway/bridge-protocol)
 
-## 为什么我们同时保留“直连”和 SSH
+## 为什么同时保留直连和 SSH
 
 - **直接 WS** 在同一网络和 tailnet 内提供最佳用户体验：
   - 通过 Bonjour 在 LAN 上自动发现
@@ -54,10 +52,8 @@ Multicast Bonjour 只是尽力而为，并不会跨网络传递。OpenClaw 也�
 
 目标方向：
 
-- The **gateway** advertises its WS endpoint via Bonjour when the bundled
-  `bonjour` plugin is enabled. The plugin auto-starts on macOS hosts and is
-  opt-in elsewhere.
-- Clients browse and show a “pick a gateway” list, then store the chosen endpoint.
+- **gateway** 在启用捆绑的 `bonjour` 插件时，通过 Bonjour 发布其 WS 端点。该插件会在 macOS 主机上自动启动，并在其他平台上默认不启用。
+- 客户端浏览并显示“选择一个网关”的列表，然后保存所选端点。
 
 故障排查和信标细节：[Bonjour](/gateway/bonjour)。
 
@@ -80,10 +76,10 @@ Multicast Bonjour 只是尽力而为，并不会跨网络传递。OpenClaw 也�
 
 安全说明：
 
-- Bonjour/mDNS TXT 记录是**未经认证**的。客户端必须将 TXT 值仅作为 UI 提示。
+- Bonjour/mDNS TXT 记录是**未经认证的**。客户端必须将 TXT 值仅作为用户体验提示。
 - 路由（主机/端口）应优先使用**解析后的服务端点**（SRV + A/AAAA），而不是 TXT 中提供的 `lanHost`、`tailnetDns` 或 `gatewayPort`。
-- TLS pinning 绝不能允许广告中的 `gatewayTlsSha256` 覆盖先前已存储的 pin。
-- iOS/Android 节点在所选路线为安全/TLS 方式时，应要求先进行一次明确的“信任此指纹”确认，然后再存储首次 pin（带外验证）。
+- TLS 固定绑定绝不能允许已公布的 `gatewayTlsSha256` 覆盖之前存储的绑定。
+- iOS/Android 节点在保存首次指纹时，若所选路由是安全/TLS 路由，则应要求显式“信任此指纹”的确认（带外验证）。
 
 启用/禁用/覆盖：
 
@@ -102,7 +98,7 @@ Multicast Bonjour 只是尽力而为，并不会跨网络传递。OpenClaw 也�
 
 ### 2) Tailnet（跨网络）
 
-对于 London/Vienna 这样的部署，Bonjour 没有帮助。推荐的“直连”目标是：
+对于伦敦/维也纳式的部署，Bonjour 帮不上忙。推荐的“直连”目标是：
 
 - Tailscale MagicDNS 名称（首选）或稳定的 tailnet IP。
 
@@ -127,9 +123,9 @@ macOS 应用现在在网关发现时更偏好 MagicDNS 名称，而不是原始�
 
 推荐的客户端行为：
 
-1. 如果已配置且可达的已配对直连端点存在，则使用它。
-2. 否则，如果发现网关位于 `local.` 或已配置的广域域名上，则提供一键“使用此网关”的选项，并将其保存为直连端点。
-3. 否则，如果配置了 tailnet DNS/IP，则尝试直连。
+1. 如果已配置且可达已配对的直连端点，则使用它。
+2. 否则，如果发现到 `local.` 或已配置广域域上的网关，则提供一键“使用此网关”选项，并将其保存为直连端点。
+3. 否则，如果已配置 tailnet DNS/IP，则尝试直连。
    对于 tailnet/public 路线上的移动节点，直连意味着安全端点，而不是明文远程 `ws://`。
 4. 否则，回退到 SSH。
 

@@ -11,12 +11,12 @@ OpenClaw 支持 DuckDuckGo 作为一个**无密钥**的 `web_search` 提供程�
 密钥或账户。
 
 <Warning>
-  DuckDuckGo 是一个**实验性、非官方**的集成，它从 DuckDuckGo 的非 JavaScript 搜索页面中抓取结果——不是官方 API。请预期会因机器人挑战页面或 HTML 变更而偶尔出现故障。
+  DuckDuckGo 是一个**实验性、非官方**的集成，它从 DuckDuckGo 的非 JavaScript 搜索页面中获取结果——不是官方 API。预计会偶尔因机器人挑战页面或 HTML 更改而出现故障。
 </Warning>
 
 ## 设置
 
-不需要 API 密钥——只需将 DuckDuckGo 设置为你的提供程序：
+无需 API 密钥——只需将 DuckDuckGo 设置为你的提供程序：
 
 <Steps>
   <Step title="配置">
@@ -67,7 +67,7 @@ OpenClaw 支持 DuckDuckGo 作为一个**无密钥**的 `web_search` 提供程�
 </ParamField>
 
 <ParamField path="count" type="number" default="5">
-要返回的结果数（1–10）。
+返回结果数量（1-10）。
 </ParamField>
 
 <ParamField path="region" type="string">
@@ -79,19 +79,19 @@ SafeSearch 级别。
 </ParamField>
 
 地区和 SafeSearch 也可以在插件配置中设置（见上文）——工具
-参数会按查询覆盖配置值。
+参数会按每次查询覆盖配置值。
 
 ## 注意事项
 
-- **无需 API 密钥**——开箱即用，零配置
-- **实验性**——从 DuckDuckGo 的非 JavaScript HTML
+- **无需 API 密钥** - 开箱即用，零配置
+- **实验性** - 从 DuckDuckGo 的非 JavaScript HTML
   搜索页面中收集结果，不是官方 API 或 SDK
-- **机器人挑战风险**——在高负载或自动化使用下，DuckDuckGo 可能会返回 CAPTCHA 或阻止请求
-- **HTML 解析**——结果依赖于页面结构，而页面结构可能在没有
+- **存在机器人挑战风险** - 在高负载或自动化使用下，DuckDuckGo 可能会提供 CAPTCHA 或阻止请求
+- **HTML 解析** - 结果依赖于页面结构，可能会在没有
   通知的情况下发生变化
-- **自动检测顺序**——DuckDuckGo 是自动检测中的第一个无密钥回退项
+- **自动检测顺序** - DuckDuckGo 是自动检测中第一个无密钥回退项
   （顺序 100）。带已配置密钥的 API 提供程序会先运行，然后是 Ollama Web Search（顺序 110），再然后是 SearXNG（顺序 200）
-- **未配置时 SafeSearch 默认为 moderate**
+- **SafeSearch 默认为 moderate**，当未配置时
 
 <Tip>
   对于生产环境使用，建议考虑 [Brave Search](/tools/brave-search)（提供免费层级）

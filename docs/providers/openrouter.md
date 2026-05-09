@@ -132,11 +132,11 @@ OpenRouter 在底层使用带有你的 API 密钥的 Bearer token。
 在真实的 OpenRouter 请求（`https://openrouter.ai/api/v1`）中，OpenClaw 还会添加
 OpenRouter 文档中定义的应用归属请求头：
 
-| Header                    | 值                    |
-| ------------------------- | --------------------- |
-| `HTTP-Referer`            | `https://openclaw.ai` |
-| `X-OpenRouter-Title`      | `OpenClaw`            |
-| `X-OpenRouter-Categories` | `cli-agent`           |
+| Header                    | Value                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `HTTP-Referer`            | `https://openclaw.ai`                                                                                  |
+| `X-OpenRouter-Title`      | `OpenClaw`                                                                                             |
+| `X-OpenRouter-Categories` | `cli-agent,cloud-agent,programming-app,creative-writing,writing-assistant,general-chat,personal-agent` |
 
 <Warning>
 如果你将 OpenRouter 提供商重新指向其他代理或 base URL，OpenClaw
@@ -146,9 +146,41 @@ OpenRouter 文档中定义的应用归属请求头：
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Anthropic 缓存标记">
+  <Accordion title="Response caching">
+    OpenRouter 响应缓存是可选启用的。可通过模型参数为每个 OpenRouter 模型单独启用：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          models: {
+            "openrouter/auto": {
+              params: {
+                responseCache: true,
+                responseCacheTtlSeconds: 300,
+              },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    OpenClaw 发送 `X-OpenRouter-Cache: true`，并在配置时发送
+    `X-OpenRouter-Cache-TTL`。`responseCacheClear: true` 会强制刷新
+    当前请求并存储替换后的响应。snake_case 别名
+    （`response_cache`、`response_cache_ttl_seconds` 和
+    `response_cache_clear`）也同样被接受。
+
+    这与提供商提示缓存以及 OpenRouter 的 Anthropic `cache_control` 标记是分开的。它只会应用于已验证的
+    `openrouter.ai` 路由，而不会应用于自定义代理 base URL。
+
+  </Accordion>
+
+  <Accordion title="Anthropic cache markers">
     在已验证的 OpenRouter 路由上，Anthropic 模型引用会保留
-    OpenRouter 特定的 Anthropic `cache_control` 标记，OpenClaw 会使用这些标记来更好地在 system/developer 提示块上复用提示缓存。
+    OpenRouter 特定的 Anthropic `cache_control` 标记，OpenClaw 会使用这些标记来
+    更好地在 system/developer 提示块上复用提示缓存。
   </Accordion>
 
   <Accordion title="Anthropic reasoning prefill">
@@ -163,7 +195,8 @@ OpenRouter 文档中定义的应用归属请求头：
 
   <Accordion title="DeepSeek V4 reasoning replay">
     在已验证的 OpenRouter 路由上，`openrouter/deepseek/deepseek-v4-flash` 和
-    `openrouter/deepseek/deepseek-v4-pro` 会在重放的 assistant 回合中补全缺失的 `reasoning_content`，以便思考/工具对话保持 DeepSeek V4 所要求的后续形状。
+    `openrouter/deepseek/deepseek-v4-pro` 会在重放的 assistant 回合中补全缺失的 `reasoning_content`，以便思考/工具对话保持 DeepSeek V4 所需的后续形状。OpenClaw 会为这些路由发送 OpenRouter 支持的
+    `reasoning_effort` 值；`xhigh` 是当前声明的最高级别，过时的 `max` 覆盖会映射为 `xhigh`。
   </Accordion>
 
   <Accordion title="OpenAI-only request shaping">

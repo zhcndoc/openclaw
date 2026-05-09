@@ -9,7 +9,7 @@ OpenClaw 有三个相关（但不同）的控制项：
 
 1. **Sandbox** (`agents.defaults.sandbox.*` / `agents.list[].sandbox.*`) 决定 **工具在哪里运行**（sandbox 后端 vs 主机）。
 2. **Tool policy** (`tools.*`, `tools.sandbox.tools.*`, `agents.list[].tools.*`) 决定 **哪些工具可用/被允许**。
-3. **Elevated** (`tools.elevated.*`, `agents.list[].tools.elevated.*`) 是一个仅用于 **exec 的逃生阀**，当你处于 sandbox 中时可在 sandbox 外运行（默认是 `gateway`，或者当 exec 目标配置为 `node` 时为 `node`）。
+3. **Elevated** (`tools.elevated.*`, `agents.list[].tools.elevated.*`) 是一个 **仅 exec 的逃生口**，用于在你处于 sandbox 中时在 sandbox 外运行（默认是 `gateway`，或者当 exec 目标配置为 `node` 时是 `node`）。
 
 ## 快速调试
 
@@ -34,8 +34,8 @@ openclaw sandbox explain --json
 Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 - `"off"`：所有内容都在主机上运行。
-- `"non-main"`：只有非 main 会话会被 sandbox 化（群组/频道里常见的“意外情况”）。
-- `"all"`：所有内容都在 sandbox 中运行。
+- `"non-main"`：只有 non-main 会话会被 sandbox 化（群组/频道中常见的“意外情况”）。
+- `"all"`：所有内容都被 sandbox 化。
 
 完整矩阵（范围、工作区挂载、镜像）请参见 [Sandboxing](/gateway/sandboxing)。
 
@@ -61,11 +61,12 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 经验法则：
 
-- `deny` 永远优先。
-- 如果 `allow` 非空，其余一切都视为被阻止。
-- Tool policy 是硬性停止：`/exec` 不能覆盖被拒绝的 `exec` 工具。
-- `/exec` 只会为已授权的发送者修改会话默认值；它不会授予工具访问权限。
-  Provider 工具键接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
+- `deny` 总是优先生效。
+- 如果 `allow` 非空，则其他一切都视为被阻止。
+- Tool policy 是最终拦截：`/exec` 不能覆盖被拒绝的 `exec` 工具。
+- Tool policy 只按名称筛选工具可用性；它不会检查 `exec` 内部的副作用。如果 `exec` 被允许，拒绝 `write`、`edit` 或 `apply_patch` 并不会让 shell 命令变成只读。
+- `/exec` 只会为被授权的发送者更改会话默认值；它不会授予工具访问权限。
+  Provider tool 键可以接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
 
 ### 工具组（简写）
 
@@ -85,30 +86,31 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 可用的组：
 
-- `group:runtime`: `exec`, `process`, `code_execution`（`bash` 可作为
+- `group:runtime`：`exec`、`process`、`code_execution`（`bash` 可作为
   `exec` 的别名）
-- `group:fs`: `read`, `write`, `edit`, `apply_patch`
-- `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`
-- `group:memory`: `memory_search`, `memory_get`
-- `group:web`: `web_search`, `x_search`, `web_fetch`
-- `group:ui`: `browser`, `canvas`
-- `group:automation`: `cron`, `gateway`
-- `group:messaging`: `message`
-- `group:nodes`: `nodes`
-- `group:agents`: `agents_list`
-- `group:media`: `image`, `image_generate`, `video_generate`, `tts`
-- `group:openclaw`: 所有内置 OpenClaw 工具（不包括 provider 插件）
+- `group:fs`：`read`、`write`、`edit`、`apply_patch`
+  对于只读 agent，除非 sandbox 文件系统策略或单独的主机边界强制实施只读限制，否则应同时拒绝 `group:runtime` 以及会修改文件系统的工具。
+- `group:sessions`：`sessions_list`、`sessions_history`、`sessions_send`、`sessions_spawn`、`sessions_yield`、`subagents`、`session_status`
+- `group:memory`：`memory_search`、`memory_get`
+- `group:web`：`web_search`、`x_search`、`web_fetch`
+- `group:ui`：`browser`、`canvas`
+- `group:automation`：`heartbeat_respond`、`cron`、`gateway`
+- `group:messaging`：`message`
+- `group:nodes`：`nodes`
+- `group:agents`：`agents_list`、`update_plan`
+- `group:media`：`image`、`image_generate`、`music_generate`、`video_generate`、`tts`
+- `group:openclaw`：所有内置 OpenClaw 工具（不包括 provider 插件）
 
 ## Elevated：仅 exec 的“在主机上运行”
 
 Elevated **不会** 授予额外工具；它只影响 `exec`。
 
-- 如果你处于 sandbox 中，`/elevated on`（或带 `elevated: true` 的 `exec`）会在 sandbox 外运行（仍可能需要审批）。
+- 如果你处于 sandbox 中，`/elevated on`（或带 `elevated: true` 的 `exec`）会在 sandbox 外运行（但仍可能需要审批）。
 - 使用 `/elevated full` 可跳过该会话的 exec 审批。
-- 如果你已经在直接运行，elevated 实际上是无操作的（仍受门控）。
-- Elevated **不** 受 skill 作用域限制，也**不会**覆盖工具允许/拒绝。
-- Elevated 不会从 `host=auto` 获得任意跨主机覆盖；它遵循正常的 exec 目标规则，并且只有在配置/会话目标已经是 `node` 时才保留 `node`。
-- `/exec` 与 elevated 是分开的。它只会为已授权的发送者调整每个会话的 exec 默认值。
+- 如果你已经在直接模式下运行，elevated 实际上不会产生作用（但仍受门控）。
+- Elevated **不** 作用于技能范围，也 **不会** 覆盖工具的允许/拒绝。
+- Elevated 不会从 `host=auto` 授予任意跨主机覆盖；它遵循正常的 exec 目标规则，并且仅在已配置/会话目标本来就是 `node` 时保留 `node`。
+- `/exec` 与 elevated 是分开的。它只会为被授权的发送者调整每个会话的 exec 默认值。
 
 门控：
 

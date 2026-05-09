@@ -31,12 +31,13 @@ openclaw channels status --probe
 
 ### WhatsApp 失败特征
 
-| 症状                         | 最快检查项                                       | 修复方法                                                                                                                        |
-| --------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| 已连接但没有 DM 回复         | `openclaw pairing list whatsapp`                    | 批准发送者，或切换 DM 策略/允许列表。                                                                                            |
-| 群消息被忽略                 | 检查配置中的 `requireMention` + mention patterns | 提及机器人，或放宽该群组的提及策略。                                                                                             |
-| QR 登录因 408 超时          | 检查网关 `HTTPS_PROXY` / `HTTP_PROXY` 环境变量    | 设置一个可达的代理；仅将 `NO_PROXY` 用于绕过。                                                                                   |
-| 随机断开/重新登录循环       | `openclaw channels status --probe` + logs           | 即使当前已连接，最近的重连也会被标记；观察日志、重启网关，然后如果仍然频繁抖动则重新关联。 |
+| 症状                                | 最快检查项                                      | 修复方法                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 已连接但没有 DM 回复                | `openclaw pairing list whatsapp`                | 批准发送者或切换 DM 策略/允许列表。                                                                                    |
+| 群组消息被忽略                      | 检查配置中的 `requireMention` + 提及模式        | 提及机器人，或放宽该群组的提及策略。                                                                          |
+| QR 登录在 408 时超时               | 检查网关的 `HTTPS_PROXY` / `HTTP_PROXY` 环境变量 | 设置可达的代理；仅对绕过项使用 `NO_PROXY`。                                                                         |
+| 随机断开/重新登录循环               | `openclaw channels status --probe` + 日志       | 即使当前已连接，最近的重连也会被标记；关注日志，重启网关，然后如果仍持续抖动则重新绑定。 |
+| 回复晚了几秒/几分钟到达             | `openclaw doctor --fix`                         | doctor 会停止经验证已过时、并正在拖慢 Gateway 事件循环的本地 TUI 客户端。                                    |
 
 完整故障排查：[WhatsApp 故障排查](/channels/whatsapp#troubleshooting)
 
@@ -60,11 +61,12 @@ openclaw channels status --probe
 
 ### Discord 失败特征
 
-| 症状                         | 最快检查项                       | 修复方法                                                       |
-| --------------------------- | ----------------------------------- | --------------------------------------------------------- |
-| 机器人在线但没有 guild 回复 | `openclaw channels status --probe`  | 允许 guild/channel 并验证 message content intent。        |
-| 群消息被忽略                 | 检查日志中提及门控丢弃             | 提及机器人，或将 guild/channel 的 `requireMention` 设为 `false`。 |
-| DM 回复缺失                  | `openclaw pairing list discord`     | 批准 DM 配对或调整 DM 策略。                               |
+| 症状                                   | 最快检查项                                                          | 修复方法                                                                                                                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 机器人在线但没有服务器回复           | `openclaw channels status --probe`                                     | 允许该服务器/频道，并验证消息内容 intent。                                                                                                                  |
+| 群组消息被忽略                    | 检查日志中提及门控丢弃                                | 提及机器人，或将服务器/频道 `requireMention: false`。                                                                                                               |
+| 有打字/令牌使用，但没有 Discord 消息 | 会话日志显示 assistant 文本，且 `didSendViaMessagingTool: false` | 模型是私下回答的，而不是调用消息工具。请使用更可靠触发工具调用的模型，或将 `messages.groupChat.visibleReplies: "automatic"` 设置为自动发布。 |
+| DM 回复缺失                        | `openclaw pairing list discord`                                        | 批准 DM 配对或调整 DM 策略。                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 完整故障排查：[Discord 故障排查](/channels/discord#troubleshooting)
 
@@ -80,20 +82,19 @@ openclaw channels status --probe
 
 完整故障排查：[Slack 故障排查](/channels/slack#troubleshooting)
 
-## iMessage 和 BlueBubbles
+## iMessage
 
-### iMessage 和 BlueBubbles 失败特征
+### iMessage failure signatures
 
-| 症状                          | 最快检查项                                                           | 修复方法                                                   |
-| ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------- |
-| 没有入站事件                | 验证 webhook/服务器可达性和应用权限                                  | 修复 webhook URL 或 BlueBubbles 服务器状态。          |
-| 能发送但在 macOS 上无法接收 | 检查 Messages automation 的 macOS 隐私权限                         | 重新授予 TCC 权限并重启频道进程。 |
-| DM 发送者被阻止             | `openclaw pairing list imessage` or `openclaw pairing list bluebubbles` | 批准配对或更新允许列表。                  |
+| 症状                              | 最快检查项                                           | 修复方法                                                                   |
+| ------------------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------- |
+| `imsg` 缺失或在非 macOS 上失败 | `openclaw channels status --probe --channel imessage`   | 在 Messages 所在的 Mac 上运行 OpenClaw，或为 `cliPath` 使用 SSH 封装器。 |
+| 在 macOS 上可以发送但无法接收     | 检查 Messages automation 的 macOS 隐私权限 | 重新授予 TCC 权限并重启频道进程。                 |
+| DM 发送者被阻止                    | `openclaw pairing list imessage`                        | 批准配对或更新允许列表。                                  |
 
 完整故障排查：
 
-- [iMessage 故障排查](/channels/imessage#troubleshooting)
-- [BlueBubbles 故障排查](/channels/bluebubbles#troubleshooting)
+- [iMessage troubleshooting](/channels/imessage#troubleshooting)
 
 ## Signal
 

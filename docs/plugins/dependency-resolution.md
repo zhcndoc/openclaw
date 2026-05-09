@@ -8,11 +8,7 @@ title: "插件依赖解析"
 sidebarTitle: "依赖项"
 ---
 
-# 插件依赖解析
-
-OpenClaw 将插件依赖工作保留在安装/更新阶段。运行时加载
-不会运行包管理器、修复依赖树，也不会修改 OpenClaw
-包目录。
+OpenClaw 在安装/更新时处理插件依赖。运行时加载不会运行包管理器、修复依赖树，或修改 OpenClaw 包目录。
 
 ## 责任划分
 
@@ -43,13 +39,14 @@ OpenClaw 为每种来源使用稳定的根目录：
 npm 安装在 npm 根目录下运行：
 
 ```bash
-npm install --prefix ~/.openclaw/npm <spec> --omit=dev --ignore-scripts --no-audit --no-fund
+npm install --prefix ~/.openclaw/npm <spec> --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund
 ```
 
-npm 可能会将传递依赖提升到 `~/.openclaw/npm/node_modules`，位于
-插件包旁边。OpenClaw 在信任安装之前会扫描受管理的 npm 根目录，并在
-卸载期间使用 npm 移除 npm 管理的包，因此提升的
-运行时依赖会留在受管理的清理边界内。
+`openclaw plugins install npm-pack:<path.tgz>` 使用相同的受管理 npm 根目录来处理本地 npm-pack tarball。OpenClaw 读取 tarball 的 npm 元数据，将其作为复制的 `file:` 依赖添加到受管理根目录中，运行正常的 npm install，然后在信任该插件之前验证已安装的 lockfile 元数据。此流程用于包验收和发布候选验证，以便本地 pack 产物的行为与其模拟的 registry 产物一致。
+
+npm 可能会将传递依赖提升到插件包旁边的 `~/.openclaw/npm/node_modules`。OpenClaw 在信任安装前会扫描受管理的 npm 根目录，并在卸载时使用 npm 删除 npm 管理的包，因此被提升的运行时依赖仍然保留在受管理清理边界内。
+
+导入 `openclaw/plugin-sdk/*` 的插件会将 `openclaw` 声明为 peer 依赖。OpenClaw 不允许 npm 将宿主包的单独 registry 副本安装到受管理根目录中，因为过时的宿主包会影响后续插件安装期间的 npm peer 解析。受管理的 npm 安装会跳过共享根目录的 npm peer 解析/实例化，并且在安装、更新或卸载后，OpenClaw 会为声明了宿主 peer 的已安装包重新建立插件本地的 `node_modules/openclaw` 链接。
 
 git 安装会克隆或刷新仓库，然后运行：
 
@@ -84,9 +81,7 @@ openclaw plugins install <source>
 openclaw doctor --fix
 ```
 
-`doctor --fix` 可以清理旧版 OpenClaw 生成的依赖状态，并安装
-配置中的、可下载但在本地安装记录中缺失的插件。
-它不会为已经安装好的本地插件修复依赖。
+`doctor --fix` 可以清理旧版 OpenClaw 生成的依赖状态，并在配置引用它们时恢复本地安装记录中缺失的可下载插件。Doctor 不会修复已经安装的本地插件的依赖。
 
 ## 捆绑插件
 

@@ -121,7 +121,13 @@ OpenClaw 会随着时间自动限制会话存储的规模。默认情况下，�
 会话和线程范围的聊天会话，同时仍允许合成的 cron、
 hook、heartbeat、ACP 和子代理条目过期。
 
-使用 `openclaw sessions cleanup --dry-run` 进行预览。
+If you previously used direct-message isolation and later returned
+`session.dmScope` to `main`, preview stale peer-keyed DM rows with
+`openclaw sessions cleanup --dry-run --fix-dm-scope`. Applying the same flag
+retires those old direct-DM rows and keeps their transcripts as deleted
+archives.
+
+Preview with `openclaw sessions cleanup --dry-run`.
 
 ## 检查会话
 

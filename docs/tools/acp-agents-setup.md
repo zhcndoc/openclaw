@@ -20,8 +20,8 @@ Codex 有两条 OpenClaw 路径：
 
 | Route                      | Config/command                                         | Setup page                              |
 | -------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| 原生 Codex app-server      | `/codex ...`, `agentRuntime.id: "codex"`               | [Codex harness](/plugins/codex-harness) |
-| 显式 Codex ACP 适配器      | `/acp spawn codex`, `runtime: "acp", agentId: "codex"` | 本页                                    |
+| 原生 Codex app-server    | `/codex ...`, `openai/gpt-*` agent refs                | [Codex harness](/plugins/codex-harness) |
+| 显式 Codex ACP 适配器 | `/acp spawn codex`, `runtime: "acp", agentId: "codex"` | 本页                               |
 
 除非你明确需要 ACP/acpx 行为，否则优先使用原生路径。
 

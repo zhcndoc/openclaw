@@ -39,9 +39,10 @@ openclaw gateway run
 
 ## 安全默认值
 
-- `channels.irc.dmPolicy` 的默认值为 `"pairing"`。
-- `channels.irc.groupPolicy` 的默认值为 `"allowlist"`。
-- 当 `groupPolicy="allowlist"` 时，设置 `channels.irc.groups` 来定义允许的频道。
+- IRC 使用原始 TCP/TLS 套接字，运行在 OpenClaw 运营者管理的转发代理路由之外。在需要所有出站流量都通过该转发代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
+- `channels.irc.dmPolicy` 默认为 `"pairing"`。
+- `channels.irc.groupPolicy` 默认为 `"allowlist"`。
+- 当 `groupPolicy="allowlist"` 时，请设置 `channels.irc.groups` 以定义允许的频道。
 - 除非你有意接受明文传输，否则请使用 TLS（`channels.irc.tls=true`）。
 
 ## 访问控制
@@ -67,7 +68,7 @@ IRC 频道有两个独立的“门”：
 
 - `irc: drop group sender alice!ident@host (policy=allowlist)`
 
-这意味着该发送者未被允许发送 **组/频道** 消息。可以通过以下任一方式修复：
+...这意味着该发送者未被允许用于**组/频道**消息。你可以通过以下方式修复：
 
 - 设置 `channels.irc.groupAllowFrom`（对所有频道全局生效），或
 - 为每个频道设置发送者白名单：`channels.irc.groups["#channel"].allowFrom`

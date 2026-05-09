@@ -10,7 +10,7 @@ sidebarTitle: "上下文引擎"
 
 **上下文引擎** 控制 OpenClaw 在每次运行时如何构建模型上下文：包含哪些消息、如何总结较早的历史，以及如何在子代理边界之间管理上下文。
 
-OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大多数用户从不需要更改这一点。只有当你希望不同的组装、压缩或跨会话记忆行为时，才需要安装并选择插件引擎。
+OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大多数用户从不需要更改这一点。仅当你想要不同的组装、压缩或跨会话回忆行为时，才安装并选择一个插件引擎。
 
 ## 快速开始
 
@@ -61,7 +61,7 @@ OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大�
 
   </Step>
   <Step title="切回 legacy（可选）">
-    将 `contextEngine` 设置为 `"legacy"`（或者直接移除该键——`"legacy"` 是默认值）。
+    将 `contextEngine` 设为 `"legacy"`（或者直接移除该键——`"legacy"` 是默认值）。
   </Step>
 </Steps>
 
@@ -197,7 +197,7 @@ export default function register(api) {
   前置到系统提示中。
 </ParamField>
 <ParamField path="promptAuthority" type='"assembled" | "preassembly_may_overflow"'>
-  控制运行器用于预防性溢出预检查的令牌估计值。默认值为 `"assembled"`，这意味着只检查组装后提示词的估计值——适用于返回窗口化、自包含上下文的引擎。仅当你的组装视图可能掩盖底层转录中的溢出风险时，才设置为 `"preassembly_may_overflow"`；此时，运行器在决定是否进行预防性压缩时，会取组装后估计值与预组装（未窗口化）会话历史估计值中的较大者。无论如何，你返回的消息仍然是模型实际看到的内容——`promptAuthority` 只影响预检查。
+  控制运行器用于预先溢出预检查的令牌估计值。默认值为 `"assembled"`，这意味着只检查组装后提示词的估计值——适用于返回窗口化、自包含上下文的引擎。仅当你的组装视图可能掩盖底层转录中的溢出风险时，才将其设为 `"preassembly_may_overflow"`；此时，运行器在决定是否提前压缩时，会取组装后估计值与组装前（未窗口化）的会话历史估计值中的较大者。无论哪种方式，你返回的消息仍然是模型实际看到的内容——`promptAuthority` 只影响预检查。
 </ParamField>
 
 `compact` 返回一个 `CompactResult`。当压缩轮换活动转录时，`result.sessionId` 和 `result.sessionFile` 会标识下一个重试或下一轮必须使用的后继会话。
@@ -206,12 +206,12 @@ export default function register(api) {
 
 | 成员                           | 类型   | 作用                                                                                                            |
 | ------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `bootstrap(params)`            | 方法   | 为会话初始化引擎状态。首次看到某个会话时调用一次（例如导入历史）。                                             |
-| `ingestBatch(params)`          | 方法   | 以批处理方式摄取完整轮次。在一次运行完成后调用，一次接收该轮的所有消息。                                       |
-| `afterTurn(params)`            | 方法   | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                             |
-| `prepareSubagentSpawn(params)` | 方法   | 在子会话开始前为其设置共享状态。                                                                                 |
-| `onSubagentEnded(params)`      | 方法   | 在子代理结束后清理。                                                                                           |
-| `dispose()`                    | 方法   | 释放资源。在网关关闭或插件重载期间调用——不是按会话调用。                                                       |
+| `bootstrap(params)`            | Method | 为某个会话初始化引擎状态。引擎第一次看到某个会话时调用一次（例如导入历史记录）。                                  |
+| `ingestBatch(params)`          | Method | 以批处理方式摄取一个已完成的轮次。运行完成后一次性传入该轮的所有消息。                                            |
+| `afterTurn(params)`            | Method | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                              |
+| `prepareSubagentSpawn(params)` | Method | 在子会话开始前为其设置共享状态。                                                                                  |
+| `onSubagentEnded(params)`      | Method | 子代理结束后进行清理。                                                                                           |
+| `dispose()`                    | Method | 释放资源。在网关关闭或插件重新加载期间调用——不是按会话调用。                                                     |
 
 ### ownsCompaction
 
@@ -233,10 +233,10 @@ export default function register(api) {
 这意味着有两种有效的插件模式：
 
 <Tabs>
-  <Tab title="Owning mode">
+  <Tab title="拥有模式">
     实现你自己的压缩算法，并设置 `ownsCompaction: true`。
   </Tab>
-  <Tab title="Delegating mode">
+  <Tab title="委托模式">
     设置 `ownsCompaction: false`，并让 `compact()` 调用 `openclaw/plugin-sdk/core` 中的 `delegateCompactionToRuntime(...)`，以使用 OpenClaw 内置的压缩行为。
   </Tab>
 </Tabs>
@@ -258,7 +258,7 @@ export default function register(api) {
 ```
 
 <Note>
-该槽位在运行时是独占的——对于给定的一次运行或压缩操作，只会解析一个已注册的上下文引擎。其他已启用的 `kind: "context-engine"` 插件仍然可以加载并运行其注册代码；`plugins.slots.contextEngine` 只是在 OpenClaw 需要上下文引擎时选择要解析的已注册引擎 id。
+该槽位在运行时是独占的——对于给定的一次运行或压缩操作，只会解析出一个已注册的上下文引擎。其他已启用的 `kind: "context-engine"` 插件仍然可以加载并运行其注册代码；`plugins.slots.contextEngine` 只是在 OpenClaw 需要上下文引擎时，选择它要解析的已注册引擎 id。
 </Note>
 
 <Note>
@@ -271,8 +271,8 @@ export default function register(api) {
   <Accordion title="压缩">
     压缩是上下文引擎的一项职责。legacy 引擎会委托给 OpenClaw 内置的摘要功能。插件引擎可以实现任何压缩策略（DAG 摘要、向量检索等）。
   </Accordion>
-  <Accordion title="内存插件">
-    内存插件（`plugins.slots.memory`）与上下文引擎是分开的。内存插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎可能在组装过程中使用内存插件数据。希望使用活动内存提示路径的插件引擎，应优先使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将活动内存提示区段转换为可直接预置的 `systemPromptAddition`。如果引擎需要更低层级的控制，也可以通过 `openclaw/plugin-sdk/memory-host-core` 中的 `buildActiveMemoryPromptSection(...)` 获取原始行。
+  <Accordion title="Memory plugins">
+    内存插件（`plugins.slots.memory`）与上下文引擎是分开的。内存插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎可能会在组装期间使用内存插件数据。希望使用活动内存提示词路径的插件引擎，应优先使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将活动内存提示词分段转换为可直接前置的 `systemPromptAddition`。如果引擎需要更底层的控制，也仍然可以通过 `openclaw/plugin-sdk/memory-host-core` 中的 `buildActiveMemoryPromptSection(...)` 获取原始行。
   </Accordion>
   <Accordion title="会话裁剪">
     无论当前激活的是哪个上下文引擎，内存中对旧工具结果的裁剪都会继续运行。
@@ -288,8 +288,8 @@ export default function register(api) {
 
 ## 相关内容
 
-- [压缩](/concepts/compaction) — 长对话摘要
-- [上下文](/concepts/context) — 代理回合的上下文是如何构建的
-- [插件架构](/plugins/architecture) — 注册上下文引擎插件
-- [插件清单](/plugins/manifest) — 插件清单字段
-- [插件](/tools/plugin) — 插件概览
+- [Compaction](/concepts/compaction) - 压缩长对话
+- [Context](/concepts/context) - 上下文如何为代理轮次构建
+- [Plugin Architecture](/plugins/architecture) - 注册上下文引擎插件
+- [Plugin manifest](/plugins/manifest) - 插件清单字段
+- [Plugins](/tools/plugin) - 插件概览

@@ -39,11 +39,11 @@ Android 直接连接到 Gateway WebSocket，并使用设备配对（`role: node`
 
 - 你可以在“主”机器上运行 Gateway。
 - Android 设备/模拟器可以访问 gateway WebSocket：
-  - 同一局域网并使用 mDNS/NSD，**或者**
-  - 通过 Wide-Area Bonjour / 单播 DNS-SD 连接到同一 Tailscale tailnet（见下文），**或者**
-  - 手动指定 gateway 主机/端口（兜底）
-- tailnet/公网移动端配对**不会**使用原始 tailnet IP `ws://` 端点。请改用 Tailscale Serve 或其他 `wss://` URL。
-- 你可以在 gateway 机器上运行 CLI（`openclaw`）（或通过 SSH）。
+  - 同一局域网，使用 mDNS/NSD，**或**
+  - 位于同一 Tailscale tailnet，并使用广域 Bonjour / 单播 DNS-SD（见下文），**或**
+  - 手动指定 gateway 主机/端口（回退方案）
+- tailnet/公网移动端配对**不**使用原始 tailnet IP 的 `ws://` 端点。请改用 Tailscale Serve 或其他 `wss://` URL。
+- 你可以在 gateway 机器上运行 CLI（`openclaw`）（或通过 SSH 运行）。
 
 ### 1) 启动 Gateway
 
@@ -84,7 +84,7 @@ openclaw gateway discover --json
 
 #### 通过单播 DNS-SD 在 tailnet（Vienna ⇄ London）中发现
 
-Android 的 NSD/mDNS 发现不会跨网络。如果你的 Android 节点和 gateway 处于不同网络，但通过 Tailscale 连接，请改用 Wide-Area Bonjour / 单播 DNS-SD。
+Android NSD/mDNS 发现不会跨网络。如果你的 Android 节点和 gateway 位于不同网络，但通过 Tailscale 连接，请改用广域 Bonjour / 单播 DNS-SD。
 
 仅靠发现不足以完成 tailnet/公网 Android 配对。发现到的路由仍需要一个安全端点（`wss://` 或 Tailscale Serve）：
 

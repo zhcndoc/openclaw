@@ -54,18 +54,18 @@ oc.models.list();
 oc.models.status(); // Gateway models.authStatus
 
 oc.tools.list();
-oc.tools.invoke(...); // 未来 API：当前 SDK 会抛出不支持
+oc.tools.invoke("tool-name", { sessionKey, idempotencyKey });
 
-oc.artifacts.list({ runId }); // 未来 API：当前 SDK 会抛出不支持
-oc.artifacts.get(artifactId); // 未来 API：当前 SDK 会抛出不支持
-oc.artifacts.download(artifactId); // 未来 API：当前 SDK 会抛出不支持
+oc.artifacts.list({ runId });
+oc.artifacts.get(artifactId, { runId });
+oc.artifacts.download(artifactId, { runId });
 
 oc.approvals.list();
 oc.approvals.respond(approvalId, ...);
 
-oc.environments.list(); // 未来 API：当前 SDK 会抛出不支持
+oc.environments.list();
 oc.environments.create(...); // 未来 API：当前 SDK 会抛出不支持
-oc.environments.status(environmentId); // 未来 API：当前 SDK 会抛出不支持
+oc.environments.status(environmentId);
 oc.environments.delete(environmentId); // 未来 API：当前 SDK 会抛出不支持
 ```
 
@@ -357,7 +357,7 @@ type EnvironmentProvider = {
 - 低层使用者仍然拥有完整的协议访问能力
 - 高层使用者获得更精简的产品 API
 
-## 相关文档
+## Related
 
 - [OpenClaw App SDK](/concepts/openclaw-sdk)
 - [Gateway RPC 参考](/reference/rpc)

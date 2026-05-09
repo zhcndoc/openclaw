@@ -8,7 +8,7 @@ title: "目录"
 
 # `openclaw directory`
 
-适用于支持目录查询的频道的目录查找（联系人/对等方、群组，以及“我”）。
+支持目录查询的频道的目录检索（联系人/用户、群组，以及“我”）。
 
 ## 常用标志
 
@@ -32,11 +32,11 @@ openclaw message send --channel slack --target user:U012ABCDEF --message "hello"
 
 ## ID 格式（按频道）
 
-- WhatsApp: `+15551234567` (DM), `1234567890-1234567890@g.us` (group), `120363123456789@newsletter` (Channel/Newsletter outbound target)
+- WhatsApp: `+15551234567` (DM), `1234567890-1234567890@g.us` (群组), `120363123456789@newsletter` (频道/Newsletter 外发目标)
 - Telegram: `@username` 或数字聊天 ID；群组为数字 ID
 - Slack: `user:U…` 和 `channel:C…`
 - Discord: `user:<id>` 和 `channel:<id>`
-- Matrix (plugin): `user:@user:server`, `room:!roomId:server`, or `#alias:server`
+- Matrix (plugin): `user:@user:server`, `room:!roomId:server`, 或 `#alias:server`
 - Microsoft Teams (plugin): `user:<id>` 和 `conversation:<id>`
 - Zalo (plugin): user id（Bot API）
 - Zalo Personal / `zalouser` (plugin): 来自 `zca` 的 thread id（DM/group）（`me`、`friend list`、`group list`）

@@ -10,13 +10,13 @@ title: "进度草稿"
 
 进度草稿让耗时较长的代理轮次在聊天中显得“活着”，而不会把对话变成一堆临时状态回复。
 
-启用进度草稿后，OpenClaw 会创建一条可见的进行中消息，在代理读取、规划、调用工具或等待批准时更新它，然后在频道能够安全处理时把这条草稿转成最终答案。
+启用进度草稿后，OpenClaw 只有在该轮次确实开始做实际工作之后，才会创建一条可见的进行中消息；在代理读取、规划、调用工具或等待批准时会持续更新它，并在频道能够安全处理时将这条草稿转换为最终答案。
 
 ```text
-Shelling
-- 正在读取最近的频道上下文
-- 正在检查匹配的问题
-- 正在准备回复
+Shelling...
+📖 来自 docs/concepts/progress-drafts.md
+🔎 Web Search: 用于 "discord edit message"
+🛠️ Bash: run tests
 ```
 
 当你希望在大量工具工作期间只显示一条整洁的状态消息，并在轮次结束后显示最终答案时，使用进度草稿。
@@ -37,18 +37,20 @@ Shelling
 }
 ```
 
-通常这样就足够了。OpenClaw 会自动选择一个单词标签，在有用的工作发生时添加简洁的进度行，并在该轮次中抑制重复的独立进度消息。
+这通常就足够了。OpenClaw 会自动选择一个单词标签，等到工作持续至少五秒或发出第二个工作事件后再显示，随着有用的工作进行添加简洁的进度行，并抑制该轮次中重复的独立进度闲聊。
 
 ## 用户会看到什么
 
 进度草稿由两部分组成：
 
-| 部分           | 目的                                                             |
-| -------------- | ---------------------------------------------------------------- |
-| 标签           | 简短标题，例如 `Thinking` 或 `Shelling`。                       |
-| 进度行         | 简洁的运行更新，例如工具调用、任务步骤或批准。                  |
+| 部分           | 作用                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------ |
+| 标签           | 一行简短的起始/状态文本，例如 `Thinking...` 或 `Shelling...`。                      |
+| 进度行         | 使用与详细输出相同的工具图标和详细格式化器的简洁运行更新。                            |
 
-代理开始回复时，标签会立即出现。只有当代理发出有用的工作更新时，才会添加进度行。最终答案会在可能时替换草稿；否则，OpenClaw 会正常发送最终答案，并根据频道的传输方式清理或停止更新草稿。
+标签会在代理开始有意义的工作后出现，并且要么持续忙碌五秒，要么发出第二个工作事件。它属于滚动的进度行列表，因此一旦出现足够具体的工作内容，起始状态就会滚动离开。纯文本回复不会显示进度草稿。只有当代理发出有用的工作更新时才会添加进度行，例如 `🛠️ Bash: run tests`、`🔎 Web Search: 用于 "discord edit message"`，或 `✍️ Write: to /tmp/file`。
+默认情况下，它们使用与 `/verbose` 相同的简洁 explain 模式；如果你在调试时还想附加原始命令/详情，可以设置 `agents.defaults.toolProgressDetail: "raw"`。
+最终答案会在可能时替换草稿；否则，OpenClaw 会正常发送最终答案，并根据频道的传输方式清理或停止更新草稿。
 
 ## 选择一种模式
 
@@ -71,29 +73,29 @@ Shelling
 
 进度标签位于 `channels.<channel>.streaming.progress` 下。
 
-默认标签是 `auto`，它会从 OpenClaw 内置的单词标签池中选择：
+默认标签为 `auto`，它会从 OpenClaw 内置的单词加省略号标签池中选择：
 
 ```text
-Thinking
-Shelling
-Scuttling
-Clawing
-Pinching
-Molting
-Bubbling
-Tiding
-Reefing
-Cracking
-Sifting
-Brining
-Nautiling
-Krilling
-Barnacling
-Lobstering
-Tidepooling
-Pearling
-Snapping
-Surfacing
+Thinking...
+Shelling...
+Scuttling...
+Clawing...
+Pinching...
+Molting...
+Bubbling...
+Tiding...
+Reefing...
+Cracking...
+Sifting...
+Brining...
+Nautiling...
+Krilling...
+Barnacling...
+Lobstering...
+Tidepooling...
+Pearling...
+Snapping...
+Surfacing...
 ```
 
 使用固定标签：
@@ -152,7 +154,30 @@ Surfacing
 
 在进度模式下，进度行默认启用。它们来自真实的运行事件：工具开始、项目更新、任务计划、批准、命令输出、补丁摘要以及类似的代理活动。
 
-限制可见行数：
+OpenClaw 对进度草稿和 `/verbose` 使用相同的格式化器：
+
+```json5
+{
+  agents: {
+    defaults: {
+      toolProgressDetail: "explain", // explain | raw
+    },
+  },
+}
+```
+
+`"explain"` 是默认值，它会用简洁标签保持草稿稳定，例如
+`🛠️ check JS syntax for /tmp/app.js`。`"raw"` 会在可用时附加底层
+命令/详情，这在调试时很有用，但在聊天中会更嘈杂。
+
+例如，同一条命令会根据详细程度模式显示得不同：
+
+| 模式      | 进度行                                                       |
+| --------- | ------------------------------------------------------------- |
+| `explain` | `🛠️ check JS syntax for /tmp/app.js`                           |
+| `raw`     | `🛠️ check JS syntax for /tmp/app.js, node --check /tmp/app.js` |
+
+限制可见的行数：
 
 ```json5
 {
@@ -169,7 +194,30 @@ Surfacing
 }
 ```
 
-保留单个进度草稿，但隐藏工具和任务行：
+进度行会自动压缩，以减少草稿编辑时聊天气泡的重新换行。
+
+默认情况下，OpenClaw 会截断较长的进度行，以免重复的草稿编辑在每次更新时都产生不同的换行。前缀会保持可读，而路径或原始命令等较长细节会用省略号缩短。
+
+Slack 可以将进度行渲染为结构化的 Block Kit 字段，而不是单个文本正文：
+
+```json5
+{
+  channels: {
+    slack: {
+      streaming: {
+        mode: "progress",
+        progress: {
+          render: "rich",
+        },
+      },
+    },
+  },
+}
+```
+
+富渲染保留了相同的纯文本回退，因此不支持更丰富结构的频道和客户端仍然可以显示简洁的进度文本。
+
+保留单一进度草稿，但隐藏工具和任务行：
 
 ```json5
 {

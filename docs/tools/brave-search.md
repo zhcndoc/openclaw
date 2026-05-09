@@ -6,9 +6,7 @@ read_when:
 title: "Brave 搜索"
 ---
 
-# Brave Search API
-
-OpenClaw 支持将 Brave Search API 作为 `web_search` 提供方。
+OpenClaw 支持 Brave Search API 作为 `web_search` 提供方。
 
 ## 获取 API 密钥
 

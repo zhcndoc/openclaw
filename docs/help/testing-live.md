@@ -63,8 +63,8 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
 
 实时测试分为两层，以便隔离故障：
 
-- “直接模型”告诉我们提供商/模型在给定密钥下是否能正常回答。
-- “gateway 冒烟”告诉我们该模型的完整 gateway+agent 流水线是否工作正常（会话、历史、工具、沙箱策略等）。
+- “Direct model” 告诉我们，提供商/模型在给定密钥下是否确实能够响应。
+- “Gateway smoke” 告诉我们，该模型的完整 gateway+agent 流水线是否正常工作（会话、历史、工具、沙盒策略等）。
 
 ### 第 1 层：直接模型补全（无 gateway）
 
@@ -89,20 +89,20 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
   - 默认：配置文件存储和环境变量回退
   - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以仅强制使用**配置文件存储**
 - Why this exists:
-  - 将“提供商 API 已损坏 / 密钥无效”与“gateway agent 流水线已损坏”分离
-  - 包含小型、隔离的回归（例如：OpenAI Responses/Codex Responses 推理回放 + 工具调用流程）
+  - 将“提供商 API 坏了/密钥无效”和“gateway agent 流水线坏了”分离开来
+  - 包含小而独立的回归问题（例如：OpenAI Responses/Codex Responses 的 reasoning replay + tool-call flows）
 
 ### 第 2 层：Gateway + 开发 agent 冒烟（即“@openclaw”实际执行的内容）
 
 - Test: `src/gateway/gateway-models.profiles.live.test.ts`
 - Goal:
-  - 在进程内启动 gateway
+  - 启动一个进程内 gateway
   - 创建/修补一个 `agent:dev:*` 会话（每次运行覆盖模型）
-  - 遍历具有密钥的模型并断言：
+  - 遍历有密钥的模型并断言：
     - “有意义”的响应（无工具）
-    - 一个真实的工具调用可正常工作（read 探测）
-    - 可选的额外工具探测（exec+read 探测）
-    - OpenAI 回归路径（仅工具调用 → 后续跟进）保持可用
+    - 真实的工具调用可用（read probe）
+    - 可选的额外工具探测（exec+read probe）
+    - OpenAI 回归路径（仅 tool-call → follow-up）仍然正常
 - Probe details (so you can explain failures quickly):
   - `read` probe: 测试会在工作区写入一个 nonce 文件，并要求 agent `read` 它，然后把 nonce 回显回来。
   - `exec+read` probe: 测试要求 agent `exec` 将 nonce 写入临时文件，然后再 `read` 回来。
@@ -111,21 +111,21 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
 - How to enable:
   - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
 - How to select models:
-  - 默认：现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4.3）
-  - `OPENCLAW_LIVE_GATEWAY_MODELS=all` 是现代白名单的别名
-  - 或设置 `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"`（或逗号列表）以缩小范围
-  - Modern/all gateway 扫描默认采用经过筛选的高信号上限；将 `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` 设为完整现代扫描，或设置为正数以使用更小的上限。
-- How to select providers (avoid “OpenRouter everything”):
-  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"`（逗号白名单）
+  - Default: modern allowlist (Opus/Sonnet 4.6+, GPT-5.2 + Codex, Gemini 3, DeepSeek V4, GLM 4.7, MiniMax M2.7, Grok 4.3)
+  - `OPENCLAW_LIVE_GATEWAY_MODELS=all` is an alias for the modern allowlist
+  - Or set `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"` (or comma list) to narrow
+  - Modern/all gateway sweeps default to a curated high-signal cap; set `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` for an exhaustive modern sweep or a positive number for a smaller cap.
+- How to select providers (avoid "OpenRouter everything"):
+  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"` (comma allowlist)
 - Tool + image probes are always on in this live test:
   - `read` probe + `exec+read` probe（工具压力测试）
   - image probe 在模型声明支持图像输入时运行
   - Flow (high level):
-    - 测试生成一个带有“CAT”+ 随机代码的微型 PNG（`src/gateway/live-image-probe.ts`）
-    - 通过 `agent` 的 `attachments: [{ mimeType: "image/png", content: "<base64>" }]` 发送
-    - Gateway 将附件解析为 `images[]`（`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`）
-    - 内嵌 agent 将多模态用户消息转发给模型
-    - 断言：回复包含 `cat` + 该代码（OCR 容错：允许轻微错误）
+    - Test generates a tiny PNG with "CAT" + random code (`src/gateway/live-image-probe.ts`)
+    - Sends it via `agent` `attachments: [{ mimeType: "image/png", content: "<base64>" }]`
+    - Gateway parses attachments into `images[]` (`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`)
+    - Embedded agent forwards a multimodal user message to the model
+    - Assertion: reply contains `cat` + the code (OCR tolerance: minor mistakes allowed)
 
 <Tip>
 要查看你机器上可以测试的内容（以及精确的 `provider/model` id），请运行：
@@ -202,7 +202,16 @@ pnpm test:docker:live-cli-backend:gemini
 - 这个实时 CLI 后端冒烟现在对 Claude、Codex 和 Gemini 执行相同的端到端流程：文本轮次、图像分类轮次，然后通过 gateway CLI 验证 MCP `cron` 工具调用。
 - Claude 的默认冒烟还会将会话从 Sonnet 修补到 Opus，并验证恢复后的会话仍记得早先的一条备注。
 
-## Live: ACP 绑定冒烟测试（`/acp spawn ... --bind here`）
+## Live: APNs HTTP/2 proxy reachability
+
+- Test: `src/infra/push-apns-http2.live.test.ts`
+- Goal: tunnel through a local HTTP CONNECT proxy to Apple's sandbox APNs endpoint, send the APNs HTTP/2 validation request, and assert Apple's real `403 InvalidProviderToken` response comes back through the proxy path.
+- Enable:
+  - `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_APNS_REACHABILITY=1 pnpm test:live src/infra/push-apns-http2.live.test.ts`
+- Optional timeout:
+  - `OPENCLAW_LIVE_APNS_TIMEOUT_MS=30000`
+
+## Live: ACP bind smoke (`/acp spawn ... --bind here`)
 
 - 测试：`src/gateway/gateway-acp-bind.live.test.ts`
 - 目标：使用一个真实的 ACP 代理验证真实的 ACP conversation-bind 流程：
@@ -272,21 +281,26 @@ Docker 说明：
 
 ## Live: Codex app-server harness 冒烟测试
 
-- 目标：通过正常的 gateway `agent` 方法验证插件拥有的 Codex harness：
+- 目标：通过正常网关的 `agent` 方法验证插件拥有的 Codex harness：
   - 加载捆绑的 `codex` 插件
-  - 选择 `OPENCLAW_AGENT_RUNTIME=codex`
-  - 向 `openai/gpt-5.5` 发送首个 gateway agent 回合，并强制使用 Codex harness
-  - 向同一个 OpenClaw 会话发送第二个回合，并验证 app-server 线程可以恢复
-  - 通过同一条 gateway 命令路径运行 `/codex status` 和 `/codex models`
-  - 可选地运行两个经过 Guardian 审核的升级 shell 探针：一个应被批准的良性命令，以及一个应被拒绝的伪造密钥上传，这样 agent 会反问
+  - 选择 `openai/gpt-5.5`，这会默认将 OpenAI agent 回合路由到 Codex
+  - 向已选择 Codex harness 的 `openai/gpt-5.5` 发送第一回合网关 agent 请求
+  - 向同一个 OpenClaw 会话发送第二回合，并验证 app-server
+    线程可以恢复
+  - 通过同一路径的网关命令运行 `/codex status` 和 `/codex models`
+  - 可选地运行两个经过 Guardian 审核的升级 shell 探测：一个应当被批准的良性
+    命令，以及一个应当被拒绝的伪造密钥上传，这样 agent 会回问
 - 测试：`src/gateway/gateway-codex-harness.live.test.ts`
 - 启用：`OPENCLAW_LIVE_CODEX_HARNESS=1`
 - 默认模型：`openai/gpt-5.5`
-- 可选图像探针：`OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
-- 可选 MCP/工具探针：`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
-- 可选 Guardian 探针：`OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
-- 该 smoke 使用 `agentRuntime.id: "codex"`，因此损坏的 Codex harness 不会通过静默回退到 PI 而侥幸通过。
-- 认证：来自本地 Codex 订阅登录的 Codex app-server 认证。Docker smoke 在适用时也可以提供 `OPENAI_API_KEY` 用于非 Codex 探针，并可选复制 `~/.codex/auth.json` 和 `~/.codex/config.toml`。
+- 可选图像探测：`OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
+- 可选 MCP/工具探测：`OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
+- 可选 Guardian 探测：`OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
+- 该烟雾测试强制使用 provider/model `agentRuntime.id: "codex"`，因此损坏的 Codex
+  harness 不会因为静默回退到 PI 而通过。
+- 认证：来自本地 Codex 订阅登录的 Codex app-server 认证。Docker
+  烟雾测试在适用时也可以为非 Codex 探测提供 `OPENAI_API_KEY`，
+  另外还可选复制 `~/.codex/auth.json` 和 `~/.codex/config.toml`。
 
 本地配方：
 
@@ -311,7 +325,7 @@ Docker 说明：
 
 - Docker runner 位于 `scripts/test-live-codex-harness-docker.sh`。
 - 它会 source 挂载的 `~/.profile`，传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将 `@openai/codex` 安装到可写的挂载 npm 前缀中，准备源码树，然后只运行 Codex-harness live 测试。
-- Docker 默认启用图像、MCP/工具和 Guardian 探针。若需要更窄的调试运行，可设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或
+- Docker 默认启用图像、MCP/工具和 Guardian 探测。若需要更窄的调试运行，可设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或
   `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或
   `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
 - Docker 使用相同的显式 Codex runtime 配置，因此旧别名或 PI 回退不会掩盖 Codex harness 回归。
@@ -341,19 +355,19 @@ Docker 说明：
 说明：
 
 - `google/...` 使用 Gemini API（API key）。
-- `google-antigravity/...` 使用 Antigravity OAuth 桥接（Cloud Code Assist 风格的代理端点）。
-- `google-gemini-cli/...` 使用你机器上的本地 Gemini CLI（独立的认证 + 工具差异）。
+- `google-antigravity/...` 使用 Antigravity OAuth 桥接（Cloud Code Assist 风格的 agent 端点）。
+- `google-gemini-cli/...` 使用你机器上的本地 Gemini CLI（独立的认证 + 工具链特性）。
 - Gemini API 与 Gemini CLI：
-  - API：OpenClaw 通过 HTTP 调用 Google 托管的 Gemini API（API key / 配置文件认证）；这也是大多数用户所说的“Gemini”。
-  - CLI：OpenClaw 会调用本地的 `gemini` 二进制；它有自己的认证，并且行为可能不同（流式/工具支持/版本偏差）。
+  - API：OpenClaw 通过 HTTP 调用 Google 托管的 Gemini API（API key / profile auth）；这也是大多数人所说的“Gemini”。
+  - CLI：OpenClaw 调用本地 `gemini` 二进制；它有自己的认证，并且行为可能不同（流式传输/工具支持/版本偏差）。
 
 ## Live: 模型矩阵（我们覆盖什么）
 
-没有固定的“CI 模型列表”（live 是按需启用的），但以下是建议在带有密钥的开发机上定期覆盖的**推荐**模型。
+没有固定的“CI 模型列表”（live 是按需启用的），但以下是建议在带密钥的开发机上定期覆盖的 **推荐** 模型。
 
 ### 现代冒烟集合（工具调用 + 图像）
 
-这是我们希望持续可用的“常见模型”运行集：
+这是我们期望持续可用的“常见模型”运行集：
 
 - OpenAI（非 Codex）：`openai/gpt-5.5`
 - OpenAI Codex OAuth：`openai-codex/gpt-5.5`
@@ -380,14 +394,14 @@ Docker 说明：
 
 可选的额外覆盖（有则更好）：
 
-- xAI: `xai/grok-4.3` (or latest available)
-- Mistral: `mistral/`… (pick one “tools” capable model you have enabled)
-- Cerebras: `cerebras/`… (if you have access)
-- LM Studio: `lmstudio/`… (local; tool calling depends on API mode)
+- xAI: `xai/grok-4.3`（或可用的最新版本）
+- Mistral: `mistral/`…（选择你已启用的任一“tools”能力模型）
+- Cerebras: `cerebras/`…（如果你有访问权限）
+- LM Studio: `lmstudio/`…（本地；工具调用取决于 API 模式）
 
 ### 视觉：图像发送（附件 → 多模态消息）
 
-在 `OPENCLAW_LIVE_GATEWAY_MODELS` 中至少包含一个支持图像的模型（Claude/Gemini/OpenAI 的视觉能力变体等），以覆盖图像探针。
+在 `OPENCLAW_LIVE_GATEWAY_MODELS` 中至少包含一个支持图像的模型（Claude/Gemini/OpenAI 的视觉能力变体等），以覆盖图像探测。
 
 ### 聚合器 / 备用网关
 
@@ -409,13 +423,13 @@ Docker 说明：
 
 Live 测试发现凭据的方式与 CLI 相同。实际影响：
 
-- 如果 CLI 可用，live 测试应能找到相同的密钥。
-- 如果某个 live 测试说“no creds”，请用调试 `openclaw models list` / 模型选择时相同的方法来排查。
+- 如果 CLI 可用，live 测试也应该能找到相同的密钥。
+- 如果某个 live 测试提示“no creds”，排查方式应与排查 `openclaw models list` / 模型选择相同。
 
-- 每个代理的 auth 配置文件：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（这就是 live 测试里所说的 “profile keys”）
-- 配置：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`)
-- 旧版状态目录：`~/.openclaw/credentials/`（在存在时会复制到 staging 的 live home 中，但不是主 profile-key 存储）
-- 默认情况下，Live 本地运行会把当前配置、每个代理的 `auth-profiles.json` 文件、旧版 `credentials/` 以及受支持的外部 CLI auth 目录复制到临时测试 home 中；staged live home 会跳过 `workspace/` 和 `sandboxes/`，并且会去掉 `agents.*.workspace` / `agentDir` 路径覆盖，以便探测不会碰到你真实主机上的工作区。
+- 每个 agent 的认证配置文件：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（这就是 live 测试中“profile keys”的含义）
+- 配置：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`）
+- 旧版状态目录：`~/.openclaw/credentials/`（存在时会复制到暂存的 live home 中，但不是主 profile-key 存储）
+- 本地 live 运行默认会把活动配置、每个 agent 的 `auth-profiles.json` 文件、旧版 `credentials/`，以及受支持的外部 CLI 认证目录复制到临时测试 home；暂存的 live home 会跳过 `workspace/` 和 `sandboxes/`，并移除 `agents.*.workspace` / `agentDir` 路径覆盖，因此探测不会触及你真实主机的工作区。
 
 如果你想依赖环境变量中的密钥（例如在你的 `~/.profile` 中导出的），请在 `source ~/.profile` 之后运行本地测试，或者使用下面的 Docker 运行器（它们可以把 `~/.profile` 挂载到容器中）。
 
@@ -558,4 +572,4 @@ openclaw infer image generate \
 
 ## 相关
 
-- [测试](/help/testing) — 单元、集成、QA 和 Docker 套件
+- [Testing](/help/testing) - 单元、集成、QA 和 Docker 套件

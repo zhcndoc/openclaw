@@ -96,13 +96,13 @@ openclaw doctor
 openclaw channels login
 ```
 
-在 macOS 上，Podman machine 可能会使浏览器对 gateway 显示为非本地。
-如果 Control UI 在启动后报告设备认证错误，请使用
-[Podman + Tailscale](#podman--tailscale) 中的指导。
+在 macOS 上，Podman machine 可能会使浏览器在网关看来像是非本地的。
+如果控制 UI 在启动后报告设备认证错误，请使用
+[Podman and Tailscale](#podman--tailscale) 中的 Tailscale 指南。
 
 <a id="podman--tailscale"></a>
 
-## Podman + Tailscale
+## Podman and Tailscale
 
 如需 HTTPS 或远程浏览器访问，请遵循主要的 Tailscale 文档。
 

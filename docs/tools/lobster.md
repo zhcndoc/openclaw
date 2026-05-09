@@ -26,10 +26,10 @@ Lobster 是位于分离式后台工作的上一层编写层。对于位于单个
 
 Lobster 故意保持小巧。目标不是“又一种新语言”，而是一个可预测、对 AI 友好的管道规范，内置审批和恢复 token。
 
-- **审批/恢复内置**：普通程序可以提示人类，但如果没有你自己发明那套运行时，它无法用持久 token 来 _暂停并恢复_。
-- **确定性 + 可审计性**：管道是数据，因此易于记录、diff、回放和审查。
-- **为 AI 约束的表面**：小型语法 + JSON 管道减少“创造性”代码路径，并使验证切实可行。
-- **内置安全策略**：超时、输出上限、沙箱检查和允许列表由运行时强制执行，而不是每个脚本分别处理。
+- **审批/恢复内置**：普通程序可以提示人类，但如果不自己发明运行时，它无法借助持久化 token 来_暂停并恢复_。
+- **确定性 + 可审计性**：管道就是数据，因此它们容易记录、比较、重放和审查。
+- **面向 AI 的受限表面**：小型语法 + JSON 管道可减少“创意”代码路径，并使验证变得现实。
+- **内建安全策略**：超时、输出上限、沙箱检查和允许列表由运行时强制执行，而不是由每个脚本分别处理。
 - **仍然可编程**：每一步都可以调用任意 CLI 或脚本。如果你想用 JS/TS，可以从代码生成 `.lobster` 文件。
 
 ## 它是如何工作的
@@ -39,7 +39,7 @@ OpenClaw 使用嵌入式运行器 **在进程内** 运行 Lobster 工作流。�
 
 ## 模式：小型 CLI + JSON 管道 + 审批
 
-构建能说 JSON 的小命令，然后将它们串联成一次 Lobster 调用。（下面是示例命令名——请替换为你自己的。）
+构建能说 JSON 的小命令，然后把它们串成一次 Lobster 调用。（下面是示例命令名——请替换为你自己的。）
 
 ```bash
 inbox list --json
@@ -50,7 +50,7 @@ inbox apply --json
 ```json
 {
   "action": "run",
-  "pipeline": "exec --json --shell 'inbox list --json' | exec --stdin json --shell 'inbox categorize --json' | exec --stdin json --shell 'inbox apply --json' | approve --preview-from-stdin --limit 5 --prompt 'Apply changes?'",
+  "pipeline": "exec --json --shell 'inbox list --json' | exec --stdin json --shell 'inbox categorize --json' | exec --stdin json --shell 'inbox apply --json' | approve --preview-from-stdin --limit 5 --prompt '应用更改？'",
   "timeoutMs": 30000
 }
 ```
@@ -100,7 +100,19 @@ gog.gmail.search --query 'newer_than:1d' \
 }
 ```
 
-在管道中使用它：
+### 重要限制：嵌入式 Lobster 与 `openclaw.invoke`
+
+捆绑的 Lobster 插件在网关内部**进程内**运行工作流。在这种嵌入式模式下，`openclaw.invoke` 不会自动为嵌套的 OpenClaw CLI 工具调用继承网关 URL/认证上下文。
+
+这意味着以下模式在嵌入式运行器中**目前不可靠**：
+
+```lobster
+openclaw.invoke --tool llm-task --action json --args-json '{ ... }'
+```
+
+仅当你在一个 `openclaw.invoke` 已配置正确网关/认证上下文的环境中运行**独立的 Lobster CLI** 时，才使用下面的示例。
+
+在独立的 Lobster CLI 管道中使用它：
 
 ```lobster
 openclaw.invoke --tool llm-task --action json --args-json '{
@@ -119,7 +131,12 @@ openclaw.invoke --tool llm-task --action json --args-json '{
 }'
 ```
 
-更多详情和配置选项请参见 [LLM Task](/tools/llm-task)。
+如果你当前使用的是嵌入式 Lobster 插件，请优先选择以下之一：
+
+- 在 Lobster 之外直接调用 `llm-task` 工具，或
+- 在 Lobster 管道内避免使用 `openclaw.invoke` 步骤，直到添加受支持的嵌入式桥接。
+
+详情和配置选项请参见 [LLM Task](/tools/llm-task)。
 
 ## 工作流文件（.lobster）
 
@@ -148,8 +165,8 @@ steps:
 
 说明：
 
-- `stdin: $step.stdout` 和 `stdin: $step.json` 会传递前一步的输出。
-- `condition`（或 `when`）可以根据 `$step.approved` 对步骤设置门控。
+- `stdin: $step.stdout` 和 `stdin: $step.json` 传递前一步的输出。
+- `condition`（或 `when`）可以根据 `$step.approved` 对步骤进行门控。
 
 ## 安装 Lobster
 
@@ -317,10 +334,10 @@ OpenProse 与 Lobster 搭配得很好：使用 `/prose` 编排多 agent 准备�
 
 ## 安全性
 
-- **仅本地进程内** — 工作流在网关进程内部执行；插件本身不会发起网络调用。
-- **无密钥** — Lobster 不管理 OAuth；它调用的是负责这部分的 OpenClaw 工具。
-- **感知沙箱** — 当工具上下文处于沙箱中时会被禁用。
-- **强化** — 由嵌入式运行器强制执行超时和输出上限。
+- **仅本地进程内** - 工作流在网关进程内执行；插件本身不发起网络调用。
+- **无密钥** - Lobster 不管理 OAuth；它调用的是由 OpenClaw 管理的工具。
+- **沙箱感知** - 当工具上下文处于沙箱中时会被禁用。
+- **加固** - 嵌入式运行器会强制执行超时和输出上限。
 
 ## 故障排查
 
@@ -336,13 +353,13 @@ OpenProse 与 Lobster 搭配得很好：使用 `/prose` 编排多 agent 准备�
 
 ## 案例研究：社区工作流
 
-一个公开示例：一个“第二大脑” CLI + Lobster 流水线，管理三个 Markdown 知识库（个人、伴侣、共享）。CLI 会为统计信息、收件箱列表和过期扫描输出 JSON；Lobster 将这些命令串联成诸如 `weekly-review`、`inbox-triage`、`memory-consolidation` 和 `shared-task-sync` 之类的工作流，每个工作流都带有审批关卡。AI 在可用时负责判断（分类），在不可用时则回退到确定性规则。
+一个公开示例：一个“第二大脑”CLI + Lobster 管道，用于管理三个 Markdown vault（个人、伴侣、共享）。该 CLI 为统计信息、收件箱列表和过期扫描输出 JSON；Lobster 将这些命令串成 `weekly-review`、`inbox-triage`、`memory-consolidation` 和 `shared-task-sync` 等工作流，每个工作流都带有审批闸门。AI 在可用时负责判断（分类），在不可用时回退到确定性规则。
 
 - 线程：[https://x.com/plattenschieber/status/2014508656335770033](https://x.com/plattenschieber/status/2014508656335770033)
 - 仓库：[https://github.com/bloomedai/brain-cli](https://github.com/bloomedai/brain-cli)
 
 ## 相关内容
 
-- [自动化与任务](/automation) — 调度 Lobster 工作流
-- [自动化概览](/automation) — 所有自动化机制
-- [工具概览](/tools) — 所有可用的代理工具
+- [Automation & Tasks](/automation) - 调度 Lobster 工作流
+- [Automation Overview](/automation) - 所有自动化机制
+- [Tools Overview](/tools) - 所有可用的 agent 工具

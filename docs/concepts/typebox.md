@@ -5,11 +5,10 @@ read_when:
 title: "TypeBox"
 ---
 
-# 将 TypeBox 作为协议真实来源
-
-最后更新：2026-01-10
-
-TypeBox 是一个以 TypeScript 为先的模式库。我们用它来定义 **Gateway WebSocket 协议**（握手、请求/响应、服务器事件）。这些模式驱动 **运行时校验**、**JSON Schema 导出**，以及面向 macOS 应用的 **Swift 代码生成**。一个真实来源；其他一切都由此生成。
+TypeBox 是一个以 TypeScript 为首的模式库。我们用它来定义 **Gateway
+WebSocket 协议**（握手、请求/响应、服务端事件）。这些模式驱动着
+**运行时校验**、**JSON Schema 导出**，以及 macOS 应用的
+**Swift 代码生成**。单一真实来源；其他一切都由此生成。
 
 如果你想了解更高层的协议上下文，请从 [Gateway 架构](/concepts/architecture) 开始。
 
@@ -61,7 +60,7 @@ Client                    Gateway
 ## 当前流水线
 
 - `pnpm protocol:gen`
-  - 将 JSON Schema（draft‑07）写入 `dist/protocol.schema.json`
+  - 写入 JSON Schema（draft-07）到 `dist/protocol.schema.json`
 - `pnpm protocol:gen:swift`
   - 生成 Swift 网关模型
 - `pnpm protocol:check`
@@ -84,8 +83,8 @@ Connect（第一条消息）：
   "id": "c1",
   "method": "connect",
   "params": {
-    "minProtocol": 3,
-    "maxProtocol": 3,
+    "minProtocol": 4,
+    "maxProtocol": 4,
     "client": {
       "id": "openclaw-macos",
       "displayName": "macos",
@@ -107,7 +106,7 @@ Hello-ok 响应：
   "ok": true,
   "payload": {
     "type": "hello-ok",
-    "protocol": 3,
+    "protocol": 4,
     "server": { "version": "dev", "connId": "ws-1" },
     "features": { "methods": ["health"], "events": ["tick"] },
     "snapshot": {
@@ -153,8 +152,8 @@ ws.on("open", () => {
       id: "c1",
       method: "connect",
       params: {
-        minProtocol: 3,
-        maxProtocol: 3,
+        minProtocol: 4,
+        maxProtocol: 4,
         client: {
           id: "cli",
           displayName: "example",
@@ -258,8 +257,8 @@ Swift 生成器会输出：
 
 ## 版本控制 + 兼容性
 
-- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/schema.ts`。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务端会拒绝不匹配项。
+- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts` 中。
+- 客户端发送 `minProtocol` + `maxProtocol`；服务端会拒绝不匹配的情况。
 - Swift 模型会保留未知帧类型，以避免破坏旧客户端。
 
 ## 模式模式与约定

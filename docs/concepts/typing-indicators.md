@@ -22,15 +22,15 @@ title: "输入中指示器"
 
 将 `agents.defaults.typingMode` 设置为以下之一：
 
-- `never` — 永不显示输入中指示器。
-- `instant` — **只要模型循环开始就**开始输入中，即使该运行
-  最终只返回静默回复标记。
-- `thinking` — 在**第一个推理增量**时开始输入中（该运行需要
-  `reasoningLevel: "stream"`）。
-- `message` — 在**第一个非静默文本增量**时开始输入中（忽略
-  `NO_REPLY` 静默标记）。
+- `never` - 从不显示输入中指示器。
+- `instant` - 在**模型循环开始时立即**开始输入，即使运行
+  最终只返回静默回复令牌。
+- `thinking` - 在**第一个推理增量**时开始输入（需要
+  该运行的 `reasoningLevel: "stream"`）。
+- `message` - 在**第一个非静默文本增量**时开始输入（忽略
+  `NO_REPLY` 静默令牌）。
 
-“触发得有多早”的顺序：
+“触发越早”的顺序：
 `never` → `message` → `thinking` → `instant`
 
 ## 配置
@@ -57,19 +57,23 @@ title: "输入中指示器"
 
 ## 注意
 
-- `message` 模式不会为仅静默回复显示输入中状态，如果整个
-  载荷正好是静默标记（例如 `NO_REPLY` / `no_reply`，不区分大小写匹配）。
-- `thinking` 只会在运行流式输出推理时触发（`reasoningLevel: "stream"`）。
-  如果模型没有发出推理增量，则不会开始输入中。
-- 心跳输入中是解析后的传递目标的存活信号。它
-  在心跳运行开始时启动，而不是遵循 `message` 或 `thinking`
+- `message` 模式不会在整个载荷恰好是静默令牌时，为仅静默回复显示输入中状态（例如
+  `NO_REPLY` / `no_reply`，按大小写不敏感匹配）。
+- `thinking` 仅在运行流式输出推理时触发（`reasoningLevel: "stream"`）。
+  如果模型没有发出推理增量，输入中状态就不会开始。
+- 心跳输入中是所解析出的投递目标的存活信号。它在心跳运行开始时启动，而不是遵循 `message` 或 `thinking`
   的流式时序。设置 `typingMode: "never"` 可将其禁用。
-- 当 `target: "none"`、目标无法
- 解析、心跳的聊天传递被禁用，或者频道不支持输入中时，心跳不会显示输入中。
-- `typingIntervalSeconds` 控制**刷新频率**，而不是开始时间。
-  默认值为 6 秒。
+- 当 `target: "none"`、无法解析目标、心跳的聊天投递被禁用，或频道不支持输入中时，心跳不会显示输入中状态。
+- `typingIntervalSeconds` 控制的是**刷新频率**，而不是开始时间。
+  默认值是 6 秒。
 
 ## 相关
 
-- [Presence](/concepts/presence)
-- [Streaming and chunking](/concepts/streaming)
+<CardGroup cols={2}>
+  <Card title="Presence" href="/concepts/presence" icon="signal">
+    Gateway 如何跟踪已连接的客户端，并在 macOS Instances 选项卡中显示它们。
+  </Card>
+  <Card title="Streaming and chunking" href="/concepts/streaming" icon="bars-staggered">
+    出站流式行为、分块边界以及按频道的投递。
+  </Card>
+</CardGroup>

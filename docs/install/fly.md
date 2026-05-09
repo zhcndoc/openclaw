@@ -6,9 +6,7 @@ read_when:
   - 设置 Fly 卷、密钥以及首次运行配置
 ---
 
-# Fly.io 部署
-
-**目标：** OpenClaw Gateway 运行在一台 [Fly.io](https://fly.io) 机器上，具备持久化存储、自动 HTTPS，以及 Discord/频道访问能力。
+**目标：** 在 [Fly.io](https://fly.io) 的机器上运行 OpenClaw Gateway，具备持久化存储、自动 HTTPS 以及 Discord/频道访问能力。
 
 ## 你需要准备什么
 
@@ -80,9 +78,11 @@ read_when:
       destination = "/data"
     ```
 
+    OpenClaw Docker 镜像使用 `tini` 作为 entrypoint。Fly 的进程命令会替换 Docker 的 `CMD`，但不会替换 `ENTRYPOINT`，因此进程仍然会在 `tini` 下运行。
+
     **关键设置：**
 
-    | Setting                        | 为什么                                                                        |
+    | 设置                           | 为什么                                                                        |
     | ------------------------------ | ----------------------------------------------------------------------------- |
     | `--bind lan`                   | 绑定到 `0.0.0.0`，这样 Fly 的代理才能访问该 gateway                          |
     | `--allow-unconfigured`         | 在没有配置文件的情况下启动（你之后会创建一个）                                 |

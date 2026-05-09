@@ -105,6 +105,16 @@ openclaw gateway run
   原始流 jsonl 路径。
 </ParamField>
 
+## 重启 Gateway
+
+```bash
+openclaw gateway restart
+openclaw gateway restart --safe
+openclaw gateway restart --force
+```
+
+`openclaw gateway restart --safe` 会在重启前要求正在运行的 Gateway 预检当前的 OpenClaw 工作。如果存在排队中的操作、回复投递、嵌入式运行或任务运行仍在活动，Gateway 会报告阻塞项，合并重复的安全重启请求，并在活动工作耗尽后重启。普通的 `restart` 为兼容性保留现有的服务管理器行为。仅当你明确希望立即覆盖路径时才使用 `--force`。
+
 <Warning>
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
 </Warning>
@@ -241,7 +251,7 @@ openclaw gateway diagnostics export --json
 
 导出内容包含清单、Markdown 摘要、配置形状、已净化的配置细节、已净化的日志摘要、已净化的 Gateway 状态/健康快照，以及（如果存在）最新的稳定性 bundle。
 
-它 предназначается 用于共享。它保留有助于调试的运行细节，例如安全的 OpenClaw 日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件 id、provider id、非密钥功能设置以及已脱敏的运行日志消息。它会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当一条类似 LogTape 风格的消息看起来像用户/聊天/工具载荷文本时，导出只保留“已省略该消息”以及其字节数。
+它 предназначяется 用于共享。它保留有助于调试的运行细节，例如安全的 OpenClaw 日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件 id、provider id、非密钥功能设置以及已脱敏的运行日志消息。它会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当一条类似 LogTape 风格的消息看起来像用户/聊天/工具载荷文本时，导出只保留“已省略该消息”以及其字节数。
 
 ### `gateway status`
 
@@ -277,15 +287,16 @@ openclaw gateway status --require-rpc
 
 <AccordionGroup>
   <Accordion title="状态语义">
-    - 即使本地 CLI 配置缺失或无效，`gateway status` 仍可用于诊断。
-    - 默认的 `gateway status` 会证明服务状态、WebSocket 连接以及握手时可见的认证能力。它不能证明读/写/管理操作。
-    - 诊断探针对首次设备认证是非变更性的：如果存在现有的缓存设备令牌，它们会复用该令牌，但不会仅为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
-    - `gateway status` 会在可能的情况下解析已配置的认证 SecretRef 以供探测认证使用。
-    - 如果在此命令路径中必需的认证 SecretRef 无法解析，当探测连通性/认证失败时，`gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥来源。
-    - 如果探测成功，为避免误报，将抑制未解析认证引用的警告。
-    - 当监听服务本身不足以满足需求，而你还需要读范围 RPC 调用也正常时，请在脚本和自动化中使用 `--require-rpc`。
-    - `--deep` 会尽力扫描额外的 launchd/systemd/schtasks 安装。当检测到多个类似 gateway 的服务时，人类可读输出会打印清理提示，并警告大多数设置应当在每台机器上只运行一个 gateway。
-    - 人类可读输出会包含解析后的文件日志路径，以及 CLI 与服务的配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
+    - `gateway status` 在本地 CLI 配置缺失或无效时仍可用于诊断。
+    - 默认的 `gateway status` 可证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作。
+    - 诊断探测对首次设备认证是非变更性的：如果存在现有的缓存设备令牌，它们会复用该令牌，但不会仅为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
+    - `gateway status` 会在可能时为探测认证解析已配置的 auth SecretRef。
+    - 如果在该命令路径中所需的 auth SecretRef 未解析，且探测连通性/认证失败，则 `gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥源。
+    - 如果探测成功，未解析的 auth-ref 警告会被抑制，以避免误报。
+    - 当监听服务还不够，而你也需要读范围 RPC 调用健康时，请在脚本和自动化中使用 `--require-rpc`。
+    - `--deep` 会尽力扫描额外的 launchd/systemd/schtasks 安装。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数设置应每台机器只运行一个 gateway。
+    - `--deep` 还会在服务进程为外部 supervisor 重启而正常退出时，报告最近一次 Gateway supervisor 重启交接。
+    - 人类输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
 
   </Accordion>
   <Accordion title="Linux systemd auth-drift 检查">
@@ -470,15 +481,18 @@ openclaw gateway restart
   <Accordion title="命令选项">
     - `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
     - `gateway install`: `--port`, `--runtime <node|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`
-    - `gateway restart`: `--force`, `--wait <duration>`, `--json`
-    - `gateway uninstall|start|stop`: `--json`
+    - `gateway restart`: `--safe`, `--force`, `--wait <duration>`, `--json`
+    - `gateway uninstall|start`: `--json`
+    - `gateway stop`: `--disable`, `--json`
 
   </Accordion>
   <Accordion title="生命周期行为">
-    - 使用 `gateway restart` 来重启受管理的服务。不要将 `gateway stop` 和 `gateway start` 作为重启的替代方案；在 macOS 上，`gateway stop` 会在停止之前有意禁用 LaunchAgent。
-    - `gateway restart --wait 30s` 会覆盖该次重启的配置重启排空预算。裸数字表示毫秒；可接受 `s`、`m` 和 `h` 等单位。`--wait 0` 表示无限等待。
-    - `gateway restart --force` 会跳过活动工作排空并立即重启。在操作员已经检查过列出的任务阻塞项并希望立即恢复 gateway 时使用它。
-    - 生命周期命令接受 `--json` 以便脚本化。
+    - Use `gateway restart` to restart a managed service. Do not chain `gateway stop` and `gateway start` as a restart substitute.
+    - On macOS, `gateway stop` uses `launchctl bootout` by default, which removes the LaunchAgent from the current boot session without persisting a disable — KeepAlive auto-recovery remains active for future crashes and `gateway start` re-enables cleanly without a manual `launchctl enable`. Pass `--disable` to persistently suppress KeepAlive and RunAtLoad so the gateway does not respawn until the next explicit `gateway start`; use this when a manual stop should survive reboots or system restarts.
+    - `gateway restart --safe` asks the running Gateway to preflight active OpenClaw work and defer the restart until reply delivery, embedded runs, and task runs drain. `--safe` cannot be combined with `--force` or `--wait`.
+    - `gateway restart --wait 30s` overrides the configured restart drain budget for that restart. Bare numbers are milliseconds; units such as `s`, `m`, and `h` are accepted. `--wait 0` waits indefinitely.
+    - `gateway restart --force` skips the active-work drain and restarts immediately. Use it when an operator has already inspected the listed task blockers and wants the gateway back now.
+    - Lifecycle commands accept `--json` for scripting.
 
   </Accordion>
   <Accordion title="安装时的认证和 SecretRef">

@@ -1,5 +1,5 @@
 ---
-summary: "使用 SOUL.md 给你的 OpenClaw 代理赋予真正的声音，而不是泛泛的助手废话"
+summary: "用 SOUL.md 给你的 OpenClaw 代理赋予真正的声音，而不是泛泛的助手废话"
 read_when:
   - 你想让你的代理听起来不那么泛泛
   - 你正在编辑 SOUL.md
@@ -49,8 +49,8 @@ OpenClaw 会在正常会话中注入它，所以它很有分量。如果你的�
 
 OpenAI 参考：
 
-- [Prompt engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)
-- [Message roles and instruction following](https://developers.openai.com/api/docs/guides/prompt-engineering#message-roles-and-instruction-following)
+- [提示工程](https://developers.openai.com/api/docs/guides/prompt-engineering)
+- [消息角色和指令遵循](https://developers.openai.com/api/docs/guides/prompt-engineering#message-roles-and-instruction-following)
 
 ## Molty 提示词
 
@@ -101,8 +101,16 @@ OpenClaw 工作区的路径已固定：使用 `SOUL.md`，不要用 `http://SOUL
 
 锋利是好事。烦人不是。 
 
-## 相关文档
+## 相关内容
 
-- [Agent workspace](/concepts/agent-workspace)
-- [System prompt](/concepts/system-prompt)
-- [SOUL.md template](/reference/templates/SOUL)
+<CardGroup cols={2}>
+  <Card title="代理工作区" href="/concepts/agent-workspace" icon="folder-open">
+    OpenClaw 注入到系统提示词中的工作区文件。
+  </Card>
+  <Card title="系统提示词" href="/concepts/system-prompt" icon="message-lines">
+    `SOUL.md` 是如何被组合进每轮系统提示词中的。
+  </Card>
+  <Card title="SOUL.md 模板" href="/reference/templates/SOUL" icon="file-lines">
+    适用于个性文件的起始模板。
+  </Card>
+</CardGroup>

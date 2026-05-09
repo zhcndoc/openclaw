@@ -296,13 +296,16 @@ flowchart LR
   I --> M["主回复"]
 ```
 
-阻塞式记忆子代理只能使用可用的记忆召回工具：
+阻塞式记忆子代理只能使用已配置的记忆召回工具。
+默认情况下，这些工具是：
 
-- `memory_recall`
 - `memory_search`
 - `memory_get`
 
-如果连接较弱，应返回 `NONE`。
+当 `plugins.slots.memory` 是 `memory-lancedb` 时，默认改为 `memory_recall`。
+如果另一个记忆提供器暴露了不同的召回工具契约，请设置 `config.toolsAllow`。
+
+如果连接较弱，它应返回 `NONE`。
 
 ## 查询模式
 
@@ -422,7 +425,110 @@ modelFallback: "google/gemini-3-flash"
 
 `config.modelFallbackPolicy` 仅保留为旧配置的弃用兼容字段。它不再改变运行时行为。
 
-## 高级逃生口
+## Memory tools
+
+默认情况下，Active Memory 允许阻塞式召回子代理调用
+`memory_search` 和 `memory_get`。这与内置的 `memory-core`
+契约一致。当 `plugins.slots.memory` 选择 `memory-lancedb` 且
+`config.toolsAllow` 未设置时，Active Memory 会保留现有的 LanceDB 行为，
+并改用 `memory_recall`。
+
+如果你使用另一个记忆插件，请将 `config.toolsAllow` 设置为该插件注册的精确工具
+名称。Active Memory 会在召回
+提示中列出这些工具，并将同样的列表传递给嵌入式子代理。如果没有任何已配置的
+工具可用，或者记忆子代理失败，Active Memory 会跳过该轮召回，主回复将继续而不带记忆上下文。
+`toolsAllow` 只接受具体的记忆工具名称。通配符、`group:*`
+条目，以及 `read`、`exec`、`message` 和
+`web_search` 等核心代理工具，会在隐藏的记忆子代理启动前被忽略。
+
+默认行为说明：Active Memory 不再将 `memory_recall` 包含在
+memory-core 的默认允许列表中。现有的 `memory-lancedb` 配置在
+`plugins.slots.memory` 设为 `memory-lancedb` 时仍可继续工作。显式的 `toolsAllow`
+始终会覆盖自动默认值。
+
+### 内置 memory-core
+
+默认配置不需要显式的 `toolsAllow`：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "active-memory": {
+        enabled: true,
+        config: {
+          agents: ["main"],
+          // 默认：["memory_search", "memory_get"]
+        },
+      },
+    },
+  },
+}
+```
+
+### LanceDB memory
+
+随附的 `memory-lancedb` 插件暴露了 `memory_recall`。选择
+memory 插槽后，Active Memory 就会使用该召回工具：
+
+```json5
+{
+  plugins: {
+    slots: {
+      memory: "memory-lancedb",
+    },
+    entries: {
+      "memory-lancedb": {
+        enabled: true,
+        config: {
+          embedding: {
+            provider: "openai",
+            model: "text-embedding-3-small",
+          },
+        },
+      },
+      "active-memory": {
+        enabled: true,
+        config: {
+          agents: ["main"],
+          promptAppend: "对长期用户偏好、过去的决定以及之前讨论过的话题，请使用 memory_recall。如果召回没有找到有用内容，请返回 NONE。",
+        },
+      },
+    },
+  },
+}
+```
+
+### Lossless Claw
+
+Lossless Claw 是一个带有自身召回工具的上下文引擎插件。请先将其安装并
+配置为上下文引擎；参见 [Context engine](/concepts/context-engine)。
+然后让 Active Memory 使用 Lossless Claw 的召回工具：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "lossless-claw": {
+        enabled: true,
+      },
+      "active-memory": {
+        enabled: true,
+        config: {
+          agents: ["main"],
+          toolsAllow: ["lcm_grep", "lcm_describe", "lcm_expand_query"],
+          promptAppend: "先使用 lcm_grep 进行压缩后的对话召回。使用 lcm_describe 检查某个特定摘要。仅当最新的用户消息需要可能已被压缩掉的精确细节时，才使用 lcm_expand_query。如果检索到的上下文并不明显有用，请返回 NONE。",
+        },
+      },
+    },
+  },
+}
+```
+
+不要在主 Active Memory 子代理的 `toolsAllow` 中包含 `lcm_expand`。
+Lossless Claw 将其用作更低层级的委派扩展工具。
+
+## 高级逃生通道
 
 这些选项是有意不作为推荐设置的一部分。
 
@@ -445,6 +551,8 @@ thinking: "off"
 ```json5
 promptAppend: "优先考虑稳定的长期偏好，而不是一次性事件。"
 ```
+
+在非核心记忆插件需要提供方特定的工具顺序或查询塑形指令时，请将 `promptAppend` 与自定义的 `toolsAllow` 搭配使用。
 
 `config.promptOverride` 会替换默认的 Active Memory 提示词。OpenClaw 仍会在之后追加对话上下文：
 
@@ -509,25 +617,26 @@ plugins.entries.active-memory
 
 最重要的字段如下：
 
-| Key                          | Type                                                                                                 | Meaning                                                                                                                                                                          |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                    | `boolean`                                                                                            | Enables the plugin itself                                                                                                                                                        |
-| `config.agents`              | `string[]`                                                                                           | Agent ids that may use active memory                                                                                                                                             |
-| `config.model`               | `string`                                                                                             | Optional blocking memory sub-agent model ref; when unset, active memory uses the current session model                                                                           |
-| `config.allowedChatTypes`    | `("direct" \| "group" \| "channel")[]`                                                               | Session types that may run Active Memory; defaults to direct-message style sessions                                                                                              |
-| `config.allowedChatIds`      | `string[]`                                                                                           | Optional per-conversation allowlist applied after `allowedChatTypes`; non-empty lists fail closed                                                                                |
-| `config.deniedChatIds`       | `string[]`                                                                                           | Optional per-conversation denylist that overrides allowed session types and allowed ids                                                                                          |
-| `config.queryMode`           | `"message" \| "recent" \| "full"`                                                                    | Controls how much conversation the blocking memory sub-agent sees                                                                                                                |
-| `config.promptStyle`         | `"balanced" \| "strict" \| "contextual" \| "recall-heavy" \| "precision-heavy" \| "preference-only"` | Controls how eager or strict the blocking memory sub-agent is when deciding whether to return memory                                                                             |
-| `config.thinking`            | `"off" \| "minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| "adaptive" \| "max"`                | Advanced thinking override for the blocking memory sub-agent; default `off` for speed                                                                                            |
-| `config.promptOverride`      | `string`                                                                                             | Advanced full prompt replacement; not recommended for normal use                                                                                                                 |
-| `config.promptAppend`        | `string`                                                                                             | Advanced extra instructions appended to the default or overridden prompt                                                                                                         |
-| `config.timeoutMs`           | `number`                                                                                             | Hard timeout for the blocking memory sub-agent, capped at 120000 ms                                                                                                              |
-| `config.setupGraceTimeoutMs` | `number`                                                                                             | Advanced extra setup budget before the recall timeout expires; defaults to 0 and is capped at 30000 ms. See [Cold-start grace](#cold-start-grace) for v2026.4.x upgrade guidance |
-| `config.maxSummaryChars`     | `number`                                                                                             | Maximum total characters allowed in the active-memory summary                                                                                                                    |
-| `config.logging`             | `boolean`                                                                                            | Emits active memory logs while tuning                                                                                                                                            |
-| `config.persistTranscripts`  | `boolean`                                                                                            | Keeps blocking memory sub-agent transcripts on disk instead of deleting temp files                                                                                               |
-| `config.transcriptDir`       | `string`                                                                                             | Relative blocking memory sub-agent transcript directory under the agent sessions folder                                                                                          |
+| Key                          | Type                                                                                                 | Meaning                                                                                                                                                                                                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                    | `boolean`                                                                                            | 启用插件本身                                                                                                                                                                                                                                             |
+| `config.agents`              | `string[]`                                                                                           | 可以使用 active memory 的代理 ID                                                                                                                                                                                                                          |
+| `config.model`               | `string`                                                                                             | 可选的阻塞式记忆子代理模型引用；未设置时，active memory 使用当前会话模型                                                                                                                                                                                   |
+| `config.allowedChatTypes`    | `("direct" \| "group" \| "channel")[]`                                                               | 可以运行 Active Memory 的会话类型；默认为直连消息风格的会话                                                                                                                                                                                                 |
+| `config.allowedChatIds`      | `string[]`                                                                                           | 可选的按会话 allowlist，在 `allowedChatTypes` 之后应用；非空列表会在失败时关闭                                                                                                                                                                            |
+| `config.deniedChatIds`       | `string[]`                                                                                           | 可选的按会话 denylist，会覆盖允许的会话类型和允许的 ID                                                                                                                                                                                                       |
+| `config.queryMode`           | `"message" \| "recent" \| "full"`                                                                    | 控制阻塞式记忆子代理能看到多少对话内容                                                                                                                                                                                                                     |
+| `config.promptStyle`         | `"balanced" \| "strict" \| "contextual" \| "recall-heavy" \| "precision-heavy" \| "preference-only"` | 控制阻塞式记忆子代理在决定是否返回记忆时的积极程度或严格程度                                                                                                                                                                                                |
+| `config.toolsAllow`          | `string[]`                                                                                           | 阻塞式记忆子代理可以调用的具体记忆工具名称；默认是 `["memory_search", "memory_get"]`，或者当 `plugins.slots.memory` 为 `memory-lancedb` 时为 `["memory_recall"]`；忽略通配符、`group:*` 条目以及核心代理工具 |
+| `config.thinking`            | `"off" \| "minimal" \| "low" \| "medium" \| "high" \| "xhigh" \| "adaptive" \| "max"`                | 阻塞式记忆子代理的高级思考级别覆盖；为速度起见，默认 `off`                                                                                                                                                                                                  |
+| `config.promptOverride`      | `string`                                                                                             | 高级完整提示词替换；不建议在正常使用中启用                                                                                                                                                                                                                |
+| `config.promptAppend`        | `string`                                                                                             | 追加到默认或被覆盖提示词之后的高级额外指令                                                                                                                                                                                                                |
+| `config.timeoutMs`           | `number`                                                                                             | 阻塞式记忆子代理的硬超时，最多 120000 ms                                                                                                                                                                                                                  |
+| `config.setupGraceTimeoutMs` | `number`                                                                                             | 在召回超时到期前的高级额外初始化预算；默认值为 0，且上限为 30000 ms。有关 v2026.4.x 升级指引，请参见 [冷启动宽限期](#cold-start-grace)                                                                                                                    |
+| `config.maxSummaryChars`     | `number`                                                                                             | active-memory 摘要允许的最大总字符数                                                                                                                                                                                                                    |
+| `config.logging`             | `boolean`                                                                                            | 在调优期间输出 active memory 日志                                                                                                                                                                                                                         |
+| `config.persistTranscripts`  | `boolean`                                                                                            | 将阻塞式记忆子代理转录保留在磁盘上，而不是删除临时文件                                                                                                                                                                                                     |
+| `config.transcriptDir`       | `string`                                                                                             | 位于代理会话文件夹下的相对阻塞式记忆子代理转录目录                                                                                                                                                                                                          |
 
 有用的调优字段：
 
@@ -639,9 +748,10 @@ plugins.entries.active-memory
 ## 常见问题
 
 Active Memory 依赖于所配置的 memory 插件的 recall 流水线，因此大多数
-recall 异常其实是 embedding provider 的问题，而不是 Active Memory 的 bug。
-默认的 `memory-core` 路径使用 `memory_search`；`memory-lancedb` 使用
-`memory_recall`。
+recall 异常其实是 embedding provider 问题，而不是 Active Memory 的 bug。默认的
+`memory-core` 路径使用 `memory_search` 和 `memory_get`；`memory-lancedb` 插槽使用
+`memory_recall`。如果你使用的是其他 memory 插件，请确认 `config.toolsAllow`
+列出了该插件实际注册的工具名称。
 
 <AccordionGroup>
   <Accordion title="Embedding provider 切换了或停止工作">

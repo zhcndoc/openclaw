@@ -7,7 +7,7 @@ read_when:
 title: "转录卫生"
 ---
 
-OpenClaw 在运行前会对转录应用**提供商特定的修复**（构建模型上下文）。这些修复大多是**内存中**调整，用于满足严格的提供商要求。另有一个单独的会话文件修复流程，可能会在会话加载前重写已存储的 JSONL，但仅限于格式错误的行，或已持久化但并非有效持久化记录的轮次。已交付的 assistant 回复会保留在磁盘上；提供商特定的 assistant 前置填充剥离仅在构建出站负载时发生。发生修复时，原始文件会与会话文件一起备份。
+OpenClaw 会在运行前对转录应用**提供商特定的修复**（构建模型上下文）。这些修复大多是**内存中**调整，用于满足严格的提供商要求。另有一个单独的会话文件修复流程，可能会在会话加载前重写已存储的 JSONL，但仅限于格式错误的行，或已持久化但并非有效持久化记录的轮次。已交付的 assistant 回复会保留在磁盘上；提供商特定的 assistant 前置填充剥离仅在构建出站负载时发生。发生修复时，原始文件会与会话文件一起备份。
 
 范围包括：
 
@@ -106,11 +106,12 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 - 仅图像清理。
 - 丢弃孤立的 reasoning 签名（没有后续内容块的独立 reasoning 项），适用于 OpenAI Responses/Codex 转录；并在模型路由切换后丢弃可回放的 OpenAI reasoning。
-- 保留可回放的 OpenAI Responses reasoning 项负载，包括加密的空摘要项，以便手动/WebSocket 回放能保持所需的 `rs_*` 状态与 assistant 输出项配对。
+- 保留可回放的 OpenAI Responses reasoning 项负载，包括加密的空摘要项，以便手动/WebSocket 回放将必需的 `rs_*` 状态与 assistant 输出项正确配对。
+- 原生 ChatGPT Codex Responses 通过在保留会话 `prompt_cache_key` 的同时，回放先前的 Responses reasoning/message/function 负载（不包含先前项 id），遵循 Codex 的线协议一致性。
 - 不进行工具调用 id 清理。
-- 工具结果配对修复可以移动真实匹配的输出，并为缺失的工具调用合成 Codex 风格的 `aborted` 输出。
-- 不进行轮次验证或重排。
-- 缺失的 OpenAI Responses 系列工具输出会被合成为 `aborted`，以匹配 Codex 回放归一化。
+- 工具结果配对修复可以移动真实的匹配输出，并为缺失的工具调用综合生成 Codex 风格的 `aborted` 输出。
+- 不进行轮次验证或重排序。
+- 缺失的 OpenAI Responses 系列工具输出会被综合为 `aborted`，以匹配 Codex 回放规范化。
 - 不剥离 thought 签名。
 
 **OpenAI 兼容的 Gemma 4**

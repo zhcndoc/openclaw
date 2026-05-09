@@ -28,9 +28,9 @@ openclaw plugins install ./path/to/local/matrix-plugin
 ## 设置
 
 1. 在你的 homeserver 上创建一个 Matrix 账户。
-2. 使用 `homeserver` + `accessToken`，或 `homeserver` + `userId` + `password` 配置 `channels.matrix`。
+2. 使用 `homeserver` + `accessToken`，或者 `homeserver` + `userId` + `password` 配置 `channels.matrix`。
 3. 重启网关。
-4. 与机器人发起一个私聊，或邀请它加入一个房间（见 [自动加入](#auto-join) — 只有新的邀请在 `autoJoin` 允许时才会生效）。
+4. 与机器人发起一个 DM，或者邀请它加入房间（参见 [自动加入](#auto-join) - 只有新的邀请才会在 `autoJoin` 允许时进入）。
 
 ### 交互式设置
 
@@ -80,7 +80,7 @@ openclaw configure --section channels
 
 `channels.matrix.autoJoin` 的默认值是 `off`。在默认设置下，除非你手动加入，否则机器人不会出现在新房间或来自新邀请的私聊中。
 
-OpenClaw 无法在邀请时判断被邀请的房间是私聊还是群组，因此所有邀请——包括私聊风格的邀请——都会先经过 `autoJoin`。`dm.policy` 只会在之后、机器人已经加入且房间已分类时才生效。
+OpenClaw 无法在邀请时判断一个被邀请的房间是 DM 还是群组，因此所有邀请——包括 DM 风格的邀请——都会先经过 `autoJoin`。`dm.policy` 只会在之后生效，即机器人加入并且房间已被分类之后。
 
 <Warning>
 将 `autoJoin: "allowlist"` 与 `autoJoinAllowlist` 配合使用，以限制机器人接受哪些邀请，或者使用 `autoJoin: "always"` 接受每个邀请。
@@ -122,7 +122,7 @@ Matrix 将缓存的凭据存储在 `~/.openclaw/credentials/matrix/` 下：
 - 默认账户：`credentials.json`
 - 命名账户：`credentials-<account>.json`
 
-当那里存在缓存凭据时，OpenClaw 会将 Matrix 视为已配置，即使访问令牌不在配置文件中也是如此——这适用于设置、`openclaw doctor` 和频道状态探测。
+当这里存在缓存凭据时，即使访问令牌不在配置文件中，OpenClaw 也会将 Matrix 视为已配置——这涵盖初始化、`openclaw doctor` 和频道状态探测。
 
 ### 环境变量
 
@@ -237,7 +237,7 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其中 OpenClaw 
 
 ### 用于静默最终化预览的自托管推送规则
 
-`streaming: "quiet"` 只会在某个块或某轮最终化后通知接收者——必须有一个按用户设置的推送规则匹配到最终化的预览标记。完整步骤请参见 [Matrix 静默预览的推送规则](/channels/matrix-push-rules)（接收者令牌、pusher 检查、规则安装、各 homeserver 注意事项）。
+`streaming: "quiet"` 只会在某个块或轮次最终完成后通知接收者——每用户推送规则必须匹配最终化的预览标记。完整配方请参见 [Matrix 静默预览推送规则](/channels/matrix-push-rules)（接收者令牌、推送器检查、规则安装、各 homeserver 注意事项）。
 
 ## Bot-to-bot rooms
 
@@ -270,7 +270,7 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其中 OpenClaw 
 
 ## 加密与验证
 
-在加密（E2EE）房间中，发出的图片事件会使用 `thumbnail_file`，因此图片预览会与完整附件一起加密。未加密房间仍然使用普通的 `thumbnail_url`。无需配置——插件会自动检测 E2EE 状态。
+在加密（E2EE）房间中，出站图片事件会使用 `thumbnail_file`，因此图片预览会与完整附件一起加密。未加密房间仍然使用普通的 `thumbnail_url`。无需任何配置——插件会自动检测 E2EE 状态。
 
 所有 `openclaw matrix` 命令都接受 `--verbose`（完整诊断信息）、`--json`（机器可读输出）和 `--account <id>`（多账户设置）。默认情况下输出简洁，并关闭内部 SDK 的详细日志。下面的示例展示的是标准形式；按需添加这些标志。
 
@@ -331,7 +331,7 @@ openclaw matrix verify status --include-recovery-key --json
 
 ### 使用恢复密钥验证此设备
 
-恢复密钥很敏感——请通过 stdin 传递，而不是在命令行中直接传入。设置 `MATRIX_RECOVERY_KEY`（或命名账户使用 `MATRIX_<ID>_RECOVERY_KEY`）：
+恢复密钥非常敏感——请通过 stdin 传递，而不是在命令行中直接传入。设置 `MATRIX_RECOVERY_KEY`（或命名账户的 `MATRIX_<ID>_RECOVERY_KEY`）：
 
 ```bash
 printf '%s\n' "$MATRIX_RECOVERY_KEY" | openclaw matrix verify device --recovery-key-stdin
@@ -405,7 +405,7 @@ openclaw matrix verify request --user-id @ops:example.org --device-id ABCDEF
 
 从这个 OpenClaw 账户发送验证请求。`--own-user` 请求自我验证（你会在同一用户的另一个 Matrix 客户端中接受提示）；`--user-id`/`--device-id`/`--room-id` 用于指定他人。`--own-user` 不能与其他目标标志组合使用。
 
-对于更底层的生命周期处理——通常是在从另一个客户端影子跟随传入请求时——这些命令会作用于特定请求 `<id>`（由 `verify list` 和 `verify request` 打印）：
+对于更低层级的生命周期处理——通常是在从另一个客户端影子跟踪传入请求时——这些命令会作用于某个特定请求 `<id>`（由 `verify list` 和 `verify request` 打印）：
 
 | 命令                                    | 目的                                                                |
 | --------------------------------------- | ------------------------------------------------------------------- |
@@ -435,7 +435,7 @@ openclaw matrix verify request --user-id @ops:example.org --device-id ABCDEF
   <Accordion title="验证通知">
     Matrix 会将验证生命周期通知以 `m.notice` 消息发布到严格的 DM 验证房间中：请求、就绪（带有“通过表情符号验证”的提示）、开始/完成，以及可用时的 SAS（表情符号/数字）详情。
 
-    来自另一个 Matrix 客户端的传入请求会被跟踪并自动接受。对于自我验证，OpenClaw 会自动启动 SAS 流程，并在表情符号验证可用后确认自身这一侧——你仍然需要在你的 Matrix 客户端中比较并确认“它们一致”。
+    来自另一个 Matrix 客户端的传入请求会被跟踪并自动接受。对于自我验证，OpenClaw 会自动开始 SAS 流程，并在表情符号验证可用后自动确认自己这一侧——你仍然需要在你的 Matrix 客户端中比较并确认“两者一致”。
 
     验证系统通知不会转发到代理聊天管道。
 
@@ -516,7 +516,7 @@ Matrix 原生支持 Matrix 线程，既适用于自动回复，也适用于消�
 - `"inbound"`：只有当输入消息本身已经在某个线程中时，才在该线程内回复。
 - `"always"`：在由触发消息根节点所根植的线程中回复；从第一次触发开始，该对话会通过一个匹配的、线程作用域的会话进行路由。
 
-`dm.threadReplies` 仅对 DM 覆盖此设置——例如，可以让房间线程彼此隔离，同时让 DM 保持平铺。
+`dm.threadReplies` 仅对 DMs 覆盖此行为 - 例如，保持房间线程隔离，同时保持 DMs 为扁平结构。
 
 ### 线程继承与斜杠命令
 
@@ -675,10 +675,10 @@ openclaw matrix direct repair --user-id @alice:example.org
 
 Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApprovals` 下配置（或者为每个账户在 `channels.matrix.accounts.<account>.execApprovals` 下覆盖）：
 
-- `enabled`：通过 Matrix 原生提示传递批准。未设置或为 `"auto"` 时，一旦至少可以解析出一个批准人，Matrix 就会自动启用。显式设为 `false` 可禁用。
-- `approvers`：允许批准 exec 请求的 Matrix 用户 ID（`@owner:example.org`）。可选——若未设置，则回退到 `channels.matrix.dm.allowFrom`。
-- `target`：提示发送到哪里。`"dm"`（默认）发送到批准人的 DM；`"channel"` 发送到发起的 Matrix 房间或 DM；`"both"` 同时发送到两者。
-- `agentFilter` / `sessionFilter`：可选允许名单，用于指定哪些代理/会话会触发 Matrix 投递。
+- `enabled`: 通过 Matrix 原生提示传递批准。当未设置或为 `"auto"` 时，只要至少能解析出一个批准者，Matrix 就会自动启用。显式设为 `false` 可禁用。
+- `approvers`: 允许批准 exec 请求的 Matrix 用户 ID（`@owner:example.org`）。可选 - 回退到 `channels.matrix.dm.allowFrom`。
+- `target`: 提示发送到哪里。`"dm"`（默认）发送到批准者的 DM；`"channel"` 发送到发起的 Matrix 房间或 DM；`"both"` 同时发送到两者。
+- `agentFilter` / `sessionFilter`: 可选允许名单，用于指定哪些代理/会话会触发 Matrix 投递。
 
 不同批准类型的授权略有差异：
 
@@ -693,7 +693,7 @@ Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApp
 
 备用斜杠命令：`/approve <id> allow-once`、`/approve <id> allow-always`、`/approve <id> deny`。
 
-只有已解析出的批准者才能批准或拒绝。Exec 批准的频道投递会包含命令文本——因此仅在受信任的房间中启用 `channel` 或 `both`。
+只有已解析出的批准者才能批准或拒绝。用于 exec 批准的频道投递会包含命令文本 - 仅在受信任的房间中启用 `channel` 或 `both`。
 
 相关：[Exec 批准](/tools/exec-approvals)。
 
@@ -740,10 +740,10 @@ Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApp
 
 **默认账户选择：**
 
-- 将 `defaultAccount` 设为你希望隐式路由、探测和 CLI 命令优先使用的命名账户。
-- 如果你有多个账户，其中一个确实名为 `default`，即使未设置 `defaultAccount`，OpenClaw 也会隐式使用它。
-- 如果你有多个命名账户但没有选定默认账户，CLI 命令不会猜测——请设置 `defaultAccount` 或传入 `--account <id>`。
-- 只有当顶层 `channels.matrix.*` 区块的认证完整时（`homeserver` + `accessToken`，或 `homeserver` + `userId` + `password`），它才会被视为隐式的 `default` 账户。只要缓存凭据已覆盖认证，命名账户仍可通过 `homeserver` + `userId` 被发现。
+- 将 `defaultAccount` 设为首选的命名账户，以供隐式路由、探测和 CLI 命令使用。
+- 如果你有多个账户，并且其中一个账户就叫 `default`，即使未设置 `defaultAccount`，OpenClaw 也会隐式使用它。
+- 如果你有多个命名账户且未选择默认账户，CLI 命令会拒绝猜测 - 请设置 `defaultAccount` 或传入 `--account <id>`。
+- 只有当顶层 `channels.matrix.*` 配置块的认证完整时（`homeserver` + `accessToken`，或 `homeserver` + `userId` + `password`），它才会被视为隐式的 `default` 账户。只要缓存的凭据覆盖了认证，命名账户仍可通过 `homeserver` + `userId` 被发现。
 
 **提升：**
 
@@ -905,8 +905,8 @@ OpenClaw 会将内部会话键规范化后再存储，因此这些小写键并�
 
 ## 相关内容
 
-- [Channels Overview](/channels) — 所有支持的频道
-- [Pairing](/channels/pairing) — DM 认证和配对流程
-- [Groups](/channels/groups) — 群聊行为和提及门控
-- [Channel Routing](/channels/channel-routing) — 消息的会话路由
-- [Security](/gateway/security) — 访问模型和加固
+- [Channels Overview](/channels) - 所有支持的通道
+- [Pairing](/channels/pairing) - DM 认证与配对流程
+- [Groups](/channels/groups) - 群聊行为与提及门控
+- [Channel Routing](/channels/channel-routing) - 消息的会话路由
+- [Security](/gateway/security) - 访问模型与加固

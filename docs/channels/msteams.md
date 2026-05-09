@@ -75,12 +75,12 @@ teams app create \
 
 这条单命令会：
 
-- 创建一个 Entra ID（Azure AD）应用程序
-- 生成客户端密钥
-- 构建并上传 Teams 应用清单（含图标）
-- 注册机器人（默认由 Teams 托管——无需 Azure 订阅）
+- 创建一个 Entra ID（Azure AD）应用
+- 生成一个客户端密钥
+- 构建并上传一个 Teams 应用清单（包含图标）
+- 注册机器人（默认由 Teams 托管 - 无需 Azure 订阅）
 
-输出将显示 `CLIENT_ID`、`CLIENT_SECRET`、`TENANT_ID` 以及一个 **Teams App ID** —— 请记录这些信息以便下一步使用。它还会提供直接在 Teams 中安装该应用的选项。
+输出将显示 `CLIENT_ID`、`CLIENT_SECRET`、`TENANT_ID` 和一个 **Teams App ID** - 请在下一步中记下这些信息。它还会提供直接在 Teams 中安装应用的选项。
 
 **4. 使用输出中的凭据配置 OpenClaw**：
 
@@ -102,7 +102,7 @@ teams app create \
 
 **5. 在 Teams 中安装应用**
 
-`teams app create` 会提示你安装应用——请选择“Install in Teams”。如果你跳过了这一步，之后可以通过以下命令获取链接：
+`teams app create` 会提示你安装应用 - 选择 "Install in Teams"。如果你跳过了它，之后可以获取链接：
 
 ```bash
 teams app get <teamsAppId> --install-link
@@ -144,17 +144,17 @@ teams app doctor <teamsAppId>
 
 **DM 访问**
 
-- 默认：`channels.msteams.dmPolicy = "pairing"`。未知发送者在获批前会被忽略。
+- 默认：`channels.msteams.dmPolicy = "pairing"`。未知发送者会被忽略，直到获得批准。
 - `channels.msteams.allowFrom` 应使用稳定的 AAD 对象 ID。
-- 不要依赖 UPN/显示名称匹配来做允许列表——它们可能会变化。OpenClaw 默认禁用直接名称匹配；如需启用，请显式设置 `channels.msteams.dangerouslyAllowNameMatching: true`。
-- 向导可以在凭据允许时通过 Microsoft Graph 将名称解析为 ID。
+- 不要依赖 UPN/显示名称匹配来实现允许列表 - 它们可能会变化。OpenClaw 默认禁用直接名称匹配；如需启用，请显式设置 `channels.msteams.dangerouslyAllowNameMatching: true`。
+- 当凭据允许时，向导可以通过 Microsoft Graph 将名称解析为 ID。
 
 **群组访问**
 
-- 默认：`channels.msteams.groupPolicy = "allowlist"`（除非添加 `groupAllowFrom`，否则被阻止）。当未设置时，使用 `channels.defaults.groupPolicy` 覆盖默认值。
+- 默认：`channels.msteams.groupPolicy = "allowlist"`（除非你添加 `groupAllowFrom`，否则会被阻止）。当未设置时，使用 `channels.defaults.groupPolicy` 覆盖默认值。
 - `channels.msteams.groupAllowFrom` 控制哪些发送者可以在群聊/频道中触发（回退到 `channels.msteams.allowFrom`）。
-- 设置 `groupPolicy: "open"` 可允许任何成员（默认仍需提及）。
-- 要允许**没有任何频道**，请设置 `channels.msteams.groupPolicy: "disabled"`。
+- 设置 `groupPolicy: "open"` 以允许任何成员（默认仍需提及）。
+- 若要允许**无频道**，设置 `channels.msteams.groupPolicy: "disabled"`。
 
 示例：
 
@@ -171,12 +171,12 @@ teams app doctor <teamsAppId>
 
 **Teams + 频道允许列表**
 
-- 通过在 `channels.msteams.teams` 下列出团队和频道来限定群组/频道回复的作用域。
+- 通过在 `channels.msteams.teams` 下列出 teams 和 channels 来限定群组/频道回复范围。
 - 键应使用来自 Teams 链接的稳定 Teams 会话 ID，而不是可变的显示名称。
-- 当 `groupPolicy="allowlist"` 且存在团队允许列表时，只有列出的团队/频道会被接受（需要提及）。
-- 配置向导接受 `Team/Channel` 条目，并会为你存储。
-- 启动时，OpenClaw 会将团队/频道和用户允许列表名称解析为 ID（在 Graph 权限允许时）
-  并记录映射；无法解析的团队/频道名称会按原样保留，但默认会被忽略用于路由，除非启用了 `channels.msteams.dangerouslyAllowNameMatching: true`。
+- 当 `groupPolicy="allowlist"` 且存在 teams 允许列表时，只有列出的 teams/channels 会被接受（仍需提及）。
+- 配置向导接受 `Team/Channel` 条目，并会为你保存它们。
+- 启动时，OpenClaw 会将 team/channel 和用户允许列表名称解析为 ID（当 Graph 权限允许时）
+  并记录映射；无法解析的 team/channel 名称会按输入保留，但默认会被忽略用于路由，除非启用了 `channels.msteams.dangerouslyAllowNameMatching: true`。
 
 示例：
 
@@ -415,7 +415,7 @@ teams app doctor <teamsAppId>
        azure.workload.identity/use: "true"
    ```
 
-5. **确保可访问 IMDS**（`169.254.169.254`）——如果使用 NetworkPolicy，请添加一条允许到 `169.254.169.254/32` 的 80 端口出站流量规则。
+5. **确保网络可访问** IMDS（`169.254.169.254`）- 如果使用 NetworkPolicy，请添加一条允许到 `169.254.169.254/32` 的 80 端口流量的 egress 规则。
 
 ### 认证类型对比
 
@@ -677,38 +677,38 @@ Teams 的 markdown 比 Slack 或 Discord 更受限：
 
 关键设置（共享频道模式见 `/gateway/configuration`）：
 
-- `channels.msteams.enabled`：启用/禁用该频道。
-- `channels.msteams.appId`、`channels.msteams.appPassword`、`channels.msteams.tenantId`：机器人凭据。
-- `channels.msteams.webhook.port`（默认 `3978`）
-- `channels.msteams.webhook.path`（默认 `/api/messages`）
-- `channels.msteams.dmPolicy`：`pairing | allowlist | open | disabled`（默认：pairing）
-- `channels.msteams.allowFrom`：DM 白名单（推荐使用 AAD 对象 ID）。当 Graph 可用时，向导会在设置期间将名称解析为 ID。
-- `channels.msteams.dangerouslyAllowNameMatching`：紧急开关，用于重新启用可变 UPN/显示名匹配以及直接的团队/频道名称路由。
-- `channels.msteams.textChunkLimit`：出站文本分块大小。
-- `channels.msteams.chunkMode`：`length`（默认）或 `newline`，先按空行（段落边界）拆分，再按长度分块。
-- `channels.msteams.mediaAllowHosts`：入站附件主机白名单（默认 Microsoft/Teams 域名）。
-- `channels.msteams.mediaAuthAllowHosts`：在媒体重试时附加 Authorization 头的主机白名单（默认 Graph + Bot Framework 主机）。
-- `channels.msteams.requireMention`：在频道/群组中要求 @mention（默认 true）。
-- `channels.msteams.replyStyle`：`thread | top-level`（见 [回复样式](#reply-style-threads-vs-posts)）。
-- `channels.msteams.teams.<teamId>.replyStyle`：按团队覆盖。
-- `channels.msteams.teams.<teamId>.requireMention`：按团队覆盖。
-- `channels.msteams.teams.<teamId>.tools`：默认的团队级工具策略覆盖（当频道覆盖缺失时使用 `allow`/`deny`/`alsoAllow`）。
-- `channels.msteams.teams.<teamId>.toolsBySender`：默认的团队级按发送者工具策略覆盖（支持 `"*"` 通配符）。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`：按频道覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`：按频道覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`：按频道的工具策略覆盖（`allow`/`deny`/`alsoAllow`）。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`：按频道按发送者的工具策略覆盖（支持 `"*"` 通配符）。
-- `toolsBySender` 键应使用明确前缀：
-  `id:`、`e164:`、`username:`、`name:`（旧的无前缀键仍仅映射到 `id:`）。
-- `channels.msteams.actions.memberInfo`：启用或禁用基于 Graph 的成员信息动作（默认：在 Graph 凭据可用时启用）。
-- `channels.msteams.authType`：认证类型 — `"secret"`（默认）或 `"federated"`。
-- `channels.msteams.certificatePath`：PEM 证书文件路径（federated + certificate auth）。
-- `channels.msteams.certificateThumbprint`：证书指纹（可选，认证不需要）。
-- `channels.msteams.useManagedIdentity`：启用托管标识认证（federated 模式）。
-- `channels.msteams.managedIdentityClientId`：用户分配托管标识的客户端 ID。
-- `channels.msteams.sharePointSiteId`：用于群聊/频道文件上传的 SharePoint site ID（见 [在群聊中发送文件](#sending-files-in-group-chats)）。
+- `channels.msteams.enabled`: 启用/禁用该通道。
+- `channels.msteams.appId`, `channels.msteams.appPassword`, `channels.msteams.tenantId`: bot 凭据。
+- `channels.msteams.webhook.port` (默认 `3978`)
+- `channels.msteams.webhook.path` (默认 `/api/messages`)
+- `channels.msteams.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）
+- `channels.msteams.allowFrom`: DM allowlist（建议使用 AAD 对象 ID）。在可用 Graph 访问时，向导会在设置过程中将名称解析为 ID。
+- `channels.msteams.dangerouslyAllowNameMatching`: 紧急开关，用于重新启用可变 UPN/显示名称匹配以及直接的团队/频道名称路由。
+- `channels.msteams.textChunkLimit`: 发出的文本分块大小。
+- `channels.msteams.chunkMode`: `length`（默认）或 `newline`，在按长度分块前先按空行（段落边界）拆分。
+- `channels.msteams.mediaAllowHosts`: 入站附件主机 allowlist（默认 Microsoft/Teams 域）。
+- `channels.msteams.mediaAuthAllowHosts`: 在媒体重试时附加 Authorization 头的 allowlist（默认 Graph + Bot Framework 主机）。
+- `channels.msteams.requireMention`: 在频道/群组中要求 @mention（默认 true）。
+- `channels.msteams.replyStyle`: `thread | top-level`（见 [回复样式](#reply-style-threads-vs-posts)）。
+- `channels.msteams.teams.<teamId>.replyStyle`: 按团队覆盖。
+- `channels.msteams.teams.<teamId>.requireMention`: 按团队覆盖。
+- `channels.msteams.teams.<teamId>.tools`: 默认的按团队工具策略覆盖（`allow`/`deny`/`alsoAllow`），当频道覆盖缺失时使用。
+- `channels.msteams.teams.<teamId>.toolsBySender`: 默认的按团队按发送者工具策略覆盖（支持 `"*"` 通配符）。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`: 按频道覆盖。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`: 按频道覆盖。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`: 按频道工具策略覆盖（`allow`/`deny`/`alsoAllow`）。
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`: 按频道按发送者工具策略覆盖（支持 `"*"` 通配符）。
+- `toolsBySender` keys should use explicit prefixes:
+  `id:`, `e164:`, `username:`, `name:` (legacy unprefixed keys still map to `id:` only).
+- `channels.msteams.actions.memberInfo`: 启用或禁用由 Graph 支持的成员信息操作（默认：当 Graph 凭据可用时启用）。
+- `channels.msteams.authType`: 认证类型 - `"secret"`（默认）或 `"federated"`。
+- `channels.msteams.certificatePath`: PEM 证书文件路径（联邦 + 证书认证）。
+- `channels.msteams.certificateThumbprint`: 证书指纹（可选，认证不需要）。
+- `channels.msteams.useManagedIdentity`: 启用托管标识认证（联邦模式）。
+- `channels.msteams.managedIdentityClientId`: 用户分配托管标识的客户端 ID。
+- `channels.msteams.sharePointSiteId`: 群聊/频道中文件上传的 SharePoint site ID（见 [在群聊中发送文件](#sending-files-in-group-chats)）。
 
-## 路由与会话
+## 路由和会话
 
 - 会话键遵循标准代理格式（见 [/concepts/session](/concepts/session)）：
   - 直接消息共享主会话（`agent:<agentId>:<mainKey>`）。
@@ -751,7 +751,28 @@ Teams 最近在同一底层数据模型之上引入了两种频道 UI 样式：
 }
 ```
 
-## 附件与图片
+### 优先级顺序
+
+当机器人向频道发送回复时，`replyStyle` 会从最具体的覆盖项逐级解析到默认值。第一个非 `undefined` 的值生效：
+
+1. **按频道** — `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`
+2. **按团队** — `channels.msteams.teams.<teamId>.replyStyle`
+3. **全局** — `channels.msteams.replyStyle`
+4. **隐式默认值** — 由 `requireMention` 推导：
+   - `requireMention: true` → `thread`
+   - `requireMention: false` → `top-level`
+
+如果你在全局设置了 `requireMention: false`，但没有显式设置 `replyStyle`，那么 Posts 风格频道中的提及消息会作为顶层帖子显示，即使入站消息是线程回复。为了避免意外，请在全局、团队或频道级别固定设置 `replyStyle: "thread"`。
+
+### 线程上下文保留
+
+当 `replyStyle: "thread"` 生效，并且机器人是在频道线程中被 @提及时，OpenClaw 会将原始线程根重新附加到出站会话引用中（`19:…@thread.tacv2;messageid=<root>`），这样回复就会落在同一线程里。这对实时（in-turn）发送和 Bot Framework turn 上下文过期后的主动发送都适用（例如长时间运行的 agent、通过 `mcp__openclaw__message` 排队的工具调用回复）。
+
+线程根会从会话引用中保存的 `threadId` 获取。更早期、尚未包含 `threadId` 的旧引用会回退到 `activityId`（即最近一次为会话提供上下文的入站 activity），因此现有部署无需重新播种也能继续工作。
+
+当 `replyStyle: "top-level"` 生效时，来自频道线程的入站消息会被有意作为新的顶层帖子来回复——不会附加线程后缀。这对于 Threads 风格频道来说是正确行为；如果你看到本应是线程回复的消息却变成了顶层帖子，那么说明该频道的 `replyStyle` 配置错误。
+
+## 附件和图片
 
 **当前限制：**
 
@@ -1013,8 +1034,8 @@ https://teams.microsoft.com/l/channel/19%3A15bc...%40thread.tacv2/ChannelName?gr
 
 ## 相关内容
 
-- [频道概览](/channels) — 所有受支持的频道
-- [配对](/channels/pairing) — 私信认证与配对流程
-- [群组](/channels/groups) — 群聊行为和提及门控
-- [频道路由](/channels/channel-routing) — 消息的会话路由
-- [安全性](/gateway/security) — 访问模型与加固
+- [Channels Overview](/channels) - 所有受支持的频道
+- [Pairing](/channels/pairing) - DM 认证和配对流程
+- [Groups](/channels/groups) - 群聊行为和提及门控
+- [Channel Routing](/channels/channel-routing) - 消息的会话路由
+- [Security](/gateway/security) - 访问模型和加固

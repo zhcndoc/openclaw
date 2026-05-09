@@ -93,13 +93,13 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 ### 安全二进制与 allowlist 的对比
 
-| 主题             | `tools.exec.safeBins`                                  | Allowlist（`exec-approvals.json`）                                                     |
-| ---------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| 目标             | 自动允许狭窄的 stdin 过滤器                             | 显式信任特定可执行文件                                                               |
-| 匹配类型         | 可执行文件名 + 安全二进制 argv 策略                    | 解析后的可执行文件路径 glob，或 PATH 调用命令的裸命令名 glob                          |
-| 参数范围         | 受安全二进制配置文件和字面标记规则限制                  | 仅路径匹配；其余参数由你自行负责                                                       |
-| 典型示例         | `head`、`tail`、`tr`、`wc`                             | `jq`、`python3`、`node`、`ffmpeg`、自定义 CLI                                         |
-| 最佳用途         | 管道中低风险的文本转换                                  | 任何具有更广泛行为或副作用的工具                                                       |
+| Topic            | `tools.exec.safeBins`                                  | Allowlist (`exec-approvals.json`)                                                  |
+| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Goal             | Auto-allow narrow stdin filters                        | Explicitly trust specific executables                                              |
+| Match type       | Executable name + safe-bin argv policy                 | Resolved executable path glob, or bare command-name glob for PATH-invoked commands |
+| Argument scope   | Restricted by safe-bin profile and literal-token rules | Path match by default; optional `argPattern` can restrict parsed argv              |
+| Typical examples | `head`, `tail`, `tr`, `wc`                             | `jq`, `python3`, `node`, `ffmpeg`, custom CLIs                                     |
+| Best use         | Low-risk text transforms in pipelines                  | Any tool with broader behavior or side effects                                     |
 
 配置位置：
 
@@ -219,9 +219,9 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 其配置形状与 `approvals.exec` 相同：`enabled`、`mode`、`agentFilter`、
 `sessionFilter` 和 `targets` 的工作方式一致。
 
-支持共享交互式回复的频道会为 exec 和
-插件审批渲染相同的审批按钮。不支持共享交互式 UI 的频道会回退到带有
-`/approve` 说明的纯文本。
+支持共享交互式回复的频道会为 exec 和插件审批渲染相同的审批按钮。不支持共享交互式 UI 的频道会回退到带 `/approve`
+说明的纯文本。
+插件审批请求可能会限制可用决策。审批界面使用请求声明的决策集，Gateway 会拒绝提交未被提供的决策。
 
 ### 任意频道上的同聊审批
 

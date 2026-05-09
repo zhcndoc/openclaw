@@ -1,15 +1,13 @@
 ---
-summary: "使用 Kilo Gateway 的统一 API 在 OpenClaw 中访问多个模型"
-title: "Kilocode"
+summary: "使用 Kilo Gateway 的统一 API 在 OpenClaw 中访问众多模型"
+title: "Kilo Gateway"
 read_when:
   - 你希望为多个 LLM 使用一个 API 密钥
   - 你希望通过 OpenClaw 中的 Kilo Gateway 运行模型
 ---
 
-# Kilo Gateway
-
 Kilo Gateway 提供一个 **统一 API**，通过单个
-端点和 API 密钥将请求路由到多个模型。它与 OpenAI 兼容，因此大多数 OpenAI SDK 只需切换 base URL 即可使用。
+端点和 API 密钥将请求路由到许多模型。它兼容 OpenAI，因此大多数 OpenAI SDK 只需切换 base URL 即可工作。
 
 | Property | Value                              |
 | -------- | ---------------------------------- |
@@ -61,13 +59,13 @@ OpenClaw 会在启动时从 Kilo Gateway 动态发现可用模型。使用
 
 网关上可用的任何模型都可以使用 `kilocode/` 前缀：
 
-| Model ref                              | Notes                              |
-| -------------------------------------- | ---------------------------------- |
-| `kilocode/kilo/auto`                   | Default — 智能路由            |
-| `kilocode/anthropic/claude-sonnet-4`   | 通过 Kilo 使用 Anthropic                 |
-| `kilocode/openai/gpt-5.5`              | 通过 Kilo 使用 OpenAI                    |
-| `kilocode/google/gemini-3-pro-preview` | 通过 Kilo 使用 Google                    |
-| ...and many more                       | 使用 `/models kilocode` 列出全部 |
+| Model ref                                | Notes                              |
+| ---------------------------------------- | ---------------------------------- |
+| `kilocode/kilo/auto`                     | 默认 — 智能路由            |
+| `kilocode/anthropic/claude-sonnet-4`     | 通过 Kilo 的 Anthropic                 |
+| `kilocode/openai/gpt-5.5`                | 通过 Kilo 的 OpenAI                    |
+| `kilocode/google/gemini-3.1-pro-preview` | 通过 Kilo 的 Google                    |
+| ...and many more                         | 使用 `/models kilocode` 列出全部 |
 
 <Tip>
 在启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models`，并将

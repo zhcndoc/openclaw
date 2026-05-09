@@ -53,10 +53,10 @@ Zalo Personal 作为当前 OpenClaw 版本中的捆绑插件提供，因此正�
 
 ## 它是什么
 
-- 完全在进程内通过 `zca-js` 运行。
+- 完全通过 `zca-js` 在进程内运行。
 - 使用原生事件监听器接收入站消息。
 - 直接通过 JS API 发送回复（文本/媒体/链接）。
-- 面向 Zalo Bot API 不可用时的“个人账号”使用场景。
+- 专为 Zalo Bot API 不可用的“个人账号”场景而设计。
 
 ## 命名
 
@@ -81,7 +81,9 @@ openclaw directory groups list --channel zalouser --query "work"
 
 `channels.zalouser.dmPolicy` 支持：`pairing | allowlist | open | disabled`（默认：`pairing`）。
 
-`channels.zalouser.allowFrom` 接受用户 ID 或名称。在设置期间，会使用插件的进程内联系人查找将名称解析为 ID。
+`channels.zalouser.allowFrom` 应使用稳定的 Zalo 用户 ID。在交互式设置期间，输入的名称可通过插件的进程内联系人查找解析为 ID。
+
+如果原始名称仍保留在配置中，仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，启动才会解析它。若不启用该选项，运行时发送者检查仅基于 ID，原始名称会被忽略，不用于授权。
 
 通过以下方式批准：
 
@@ -93,13 +95,13 @@ openclaw directory groups list --channel zalouser --query "work"
 - 默认：`channels.zalouser.groupPolicy = "open"`（允许群组）。当未设置时，可使用 `channels.defaults.groupPolicy` 覆盖默认值。
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
-  - `channels.zalouser.groups`（键应为稳定的群组 ID；启动时会在可能的情况下将名称解析为 ID）
+  - `channels.zalouser.groups`（键应为稳定的群组 ID；仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，名称才会在启动时解析为 ID）
   - `channels.zalouser.groupAllowFrom`（控制允许群组中哪些发送者可以触发机器人）
 - 阻止所有群组：`channels.zalouser.groupPolicy = "disabled"`。
-- 配置向导可以提示输入群组允许列表。
-- 启动时，OpenClaw 会将允许列表中的群组/用户名称解析为 ID 并记录映射。
-- 群组允许列表匹配默认仅基于 ID。除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`，否则未解析的名称会在身份验证中被忽略。
-- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种破窗兼容模式，会重新启用可变的群组名称匹配。
+- 配置向导可提示输入群组允许列表。
+- 启动时，仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，OpenClaw 才会将允许列表中的群组/用户名称解析为 ID 并记录映射。
+- 默认情况下，群组允许列表匹配仅基于 ID。除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`，否则无法解析的名称会被忽略，不用于授权。
+- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种“打破玻璃”式的兼容模式，会重新启用可变的启动名称解析和运行时群组名称匹配。
 - 如果未设置 `groupAllowFrom`，运行时会回退使用 `allowFrom` 进行群组发送者检查。
 - 发送者检查同时适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
 
@@ -181,7 +183,7 @@ openclaw directory groups list --channel zalouser --query "work"
 
 **允许列表/群组名称未解析：**
 
-- 在 `allowFrom`/`groupAllowFrom`/`groups` 中使用数字 ID，或使用精确的好友/群组名称。
+- 在 `allowFrom`/`groupAllowFrom` 中使用数字 ID，并在 `groups` 中使用稳定的群组 ID。如果你有意需要精确的好友/群组名称，请启用 `channels.zalouser.dangerouslyAllowNameMatching: true`。
 
 **从旧的基于 CLI 的设置升级：**
 

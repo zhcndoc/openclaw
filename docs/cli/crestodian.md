@@ -91,29 +91,29 @@ Crestodian 使用类型化操作，而不是临时编辑配置。
 
 只读操作可以立即运行：
 
-- show overview
-- list agents
-- list installed plugins
-- search ClawHub plugins
-- show model/backend status
-- run status or health checks
-- check Gateway reachability
-- run doctor without interactive fixes
-- validate config
-- show the audit-log path
+- 显示概览
+- 列出代理
+- 列出已安装的插件
+- 搜索 ClawHub 插件
+- 显示模型/后端状态
+- 运行状态或健康检查
+- 检查 Gateway 可达性
+- 运行 doctor 而不进行交互式修复
+- 验证配置
+- 显示审计日志路径
 
 持久性操作在交互模式下需要会话式批准，除非你为直接命令传入 `--yes`：
 
-- write config
-- run `config set`
-- set supported SecretRef values through `config set-ref`
-- run setup/onboarding bootstrap
-- change the default model
-- start, stop, or restart the Gateway
-- create agents
-- install plugins from ClawHub or npm
-- uninstall plugins
-- run doctor repairs that rewrite config or state
+- 写入配置
+- 运行 `config set`
+- 通过 `config set-ref` 设置受支持的 SecretRef 值
+- 运行 setup/onboarding 引导
+- 更改默认模型
+- 启动、停止或重启 Gateway
+- 创建代理
+- 从 ClawHub 或 npm 安装插件
+- 卸载插件
+- 运行会重写配置或状态的 doctor 修复
 
 已应用的写入会记录到：
 
@@ -152,7 +152,7 @@ setup workspace ~/Projects/work model openai/gpt-5.5
 Crestodian 总是以确定性模式启动。对于确定性解析器无法理解的模糊命令，本地 Crestodian 可以通过 OpenClaw 的正常运行路径进行一次受限的规划器回合。它首先使用已配置的 OpenClaw 模型。如果当前没有可用的已配置模型，它可以回退到机器上已存在的本地运行时：
 
 - Claude Code CLI: `claude-cli/claude-opus-4-7`
-- Codex app-server harness: 带有 `agentRuntime.id: "codex"` 的 `openai/gpt-5.5`
+- Codex app-server harness: `openai/gpt-5.5`
 - Codex CLI: `codex-cli/gpt-5.5`
 
 模型辅助规划器不能直接修改配置。它必须将请求翻译为 Crestodian 的某个类型化命令，然后正常的审批和审计规则才会生效。Crestodian 会在执行任何操作之前打印它使用的模型以及解释后的命令。无配置回退的规划器回合是临时的、在运行时支持的情况下禁用工具，并使用临时工作区/会话。

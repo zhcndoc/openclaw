@@ -93,9 +93,9 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
 
 角色：`system`、`developer`、`user`、`assistant`。
 
-- `system` 和 `developer` 会附加到系统提示中。
-- 最近的 `user` 或 `function_call_output` 条目会成为“当前消息”。
-- 更早的 user/assistant 消息会作为上下文历史包含在内。
+- `system` 和 `developer` 会追加到系统提示中。
+- 最近的 `user` 或 `function_call_output` 项会成为“当前消息”。
+- 更早的 user/assistant 消息会作为上下文历史包含进来。
 
 ### `function_call_output`（基于轮次的工具）
 

@@ -14,16 +14,18 @@ title: "迁移"
 面向用户的操作指南，请参阅 [从 Claude 迁移](/install/migrating-claude) 和 [从 Hermes 迁移](/install/migrating-hermes)。[迁移中心](/install/migrating) 列出了所有路径。
 </Tip>
 
-## Commands
+## 命令
 
 ```bash
 openclaw migrate list
 openclaw migrate claude --dry-run
 openclaw migrate codex --dry-run
 openclaw migrate codex --skill gog-vault77-google-workspace
+openclaw migrate codex --plugin google-calendar --dry-run
 openclaw migrate hermes --dry-run
 openclaw migrate hermes
 openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
+openclaw migrate apply codex --yes --plugin google-calendar
 openclaw migrate apply codex --yes
 openclaw migrate apply claude --yes
 openclaw migrate apply hermes --yes
@@ -54,6 +56,9 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 <ParamField path="--skill <name>" type="string">
   按技能名称或项目 ID 选择一个技能复制项。重复该标志可迁移多个技能。省略时，交互式 Codex 迁移会显示复选框选择器，非交互式迁移会保留所有计划中的技能。
 </ParamField>
+<ParamField path="--plugin <name>" type="string">
+  按插件名称或项目 ID 选择一个 Codex 插件安装项。重复该标志可迁移多个 Codex 插件。此选项仅适用于由 Codex 应用服务器清单发现的、源安装的 `openai-curated` Codex 插件。
+</ParamField>
 <ParamField path="--no-backup" type="boolean">
   跳过预应用备份。当本地 OpenClaw 状态存在时，需要配合 `--force` 使用。
 </ParamField>
@@ -64,7 +69,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   将计划或 apply 结果以 JSON 打印。使用 `--json` 且不带 `--yes` 时，apply 会打印计划且不会修改状态。
 </ParamField>
 
-## Safety model
+## 安全模型
 
 `openclaw migrate` 采用先预览的方式。
 
@@ -86,7 +91,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   </Accordion>
 </AccordionGroup>
 
-## Claude provider
+## Claude 提供程序
 
 内置的 Claude 提供程序默认检测位于 `~/.claude` 的 Claude Code 状态。使用 `--from <path>` 可导入特定的 Claude Code 主目录或项目根目录。
 
@@ -94,7 +99,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 面向用户的操作指南，请参阅 [从 Claude 迁移](/install/migrating-claude)。
 </Tip>
 
-### What Claude imports
+### Claude 导入内容
 
 - 将项目 `CLAUDE.md` 和 `.claude/CLAUDE.md` 导入到 OpenClaw 代理工作区。
 - 将用户 `~/.claude/CLAUDE.md` 追加到工作区 `USER.md`。
@@ -102,37 +107,56 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 - 包含 `SKILL.md` 的 Claude 技能目录。
 - 将 Claude 命令 Markdown 文件转换为 OpenClaw 技能，仅支持手动调用。
 
-### Archive and manual-review state
+### 归档和人工审核状态
 
 Claude hooks、权限、环境默认值、本地记忆、路径作用域规则、子代理、缓存、计划和项目历史会保留在迁移报告中，或作为需要人工审核的项目报告。OpenClaw 不会执行 hooks、复制宽泛的允许列表，或自动导入 OAuth/Desktop 凭据状态。
 
-## Codex provider
+## Codex 提供程序
 
 内置的 Codex 提供程序默认在 `~/.codex` 检测 Codex CLI 状态，或者在设置了该环境变量时于 `CODEX_HOME` 中检测。使用 `--from <path>` 可盘点特定的 Codex 主目录。
 
 当你迁移到 OpenClaw Codex harness，并且希望有意地提取有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动会为每个代理使用各自的 `CODEX_HOME` 和 `HOME` 目录，因此默认不会读取你的个人 Codex CLI 状态。
 
-在交互式终端中运行 `openclaw migrate codex` 时，会先预览完整计划，然后在最终应用确认之前打开一个技能复制项的复选框选择器。所有技能默认都已选中；取消勾选你不想复制到此代理中的任何技能。对于脚本化或精确运行，请对每个技能各传一次 `--skill <name>`，例如：
+在交互式终端中运行 `openclaw migrate codex` 会先预览完整计划，然后在最终应用确认前打开一个技能复制项的复选框选择器。使用 `Toggle all on` 或 `Toggle all off` 进行批量选择；计划中的技能默认勾选，冲突技能默认不勾选，而 `Skip for now` 会在不应用的情况下保持技能不变。对于脚本化或精确运行，请为每个技能传入一次 `--skill <name>`，例如：
 
 ```bash
 openclaw migrate codex --dry-run --skill gog-vault77-google-workspace
 openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
 ```
 
-### What Codex imports
+使用 `--plugin <name>` 可将原生 Codex 插件迁移限制为一个或多个源安装的精选插件：
+
+```bash
+openclaw migrate codex --dry-run --plugin google-calendar
+openclaw migrate apply codex --yes --plugin google-calendar
+```
+
+### Codex 导入内容
 
 - `$CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
-- `$HOME/.agents/skills` 下的个人 AgentSkills，当你希望按代理拥有权复制到当前 OpenClaw 代理工作区时。
+- `$HOME/.agents/skills` 下的个人 AgentSkills，当你希望按代理拥有时会复制到当前 OpenClaw 代理工作区。
+- 通过 Codex 应用服务器 `plugin/list` 发现的源安装 `openai-curated` Codex 插件。apply 调用会为每个选定插件执行应用服务器 `plugin/install`，即使目标应用服务器已经报告该插件已安装并启用。迁移后的 Codex 插件仅可在选择原生 Codex harness 的会话中使用；它们不会暴露给 Pi、普通 OpenAI 提供程序运行、ACP 对话绑定或其他 harness。
 
-### Manual-review Codex state
+### 需要人工审核的 Codex 状态
 
-Codex 原生插件、`config.toml` 和原生 `hooks/hooks.json` 不会自动激活。插件可能暴露 MCP 服务器、应用、hooks 或其他可执行行为，因此提供程序会将它们报告出来供审查，而不是将其加载到 OpenClaw 中。配置和 hook 文件会被复制到迁移报告中以供人工审核。
+Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场，以及不是源安装精选插件的缓存插件包不会自动激活。它们会被复制或记录在迁移报告中供人工审核。
 
-## Hermes provider
+对于已迁移的源安装精选插件，apply 会写入：
+
+- `plugins.entries.codex.enabled: true`
+- `plugins.entries.codex.config.codexPlugins.enabled: true`
+- `plugins.entries.codex.config.codexPlugins.allow_destructive_actions: false`
+- 每个选定插件对应一条显式插件条目，包含 `marketplaceName: "openai-curated"` 和 `pluginName`
+
+迁移绝不会写入 `plugins["*"]`，也绝不会存储本地市场缓存路径。需要认证的安装会在受影响的插件项目上报告为 `status: "skipped"`、`reason: "auth_required"`，并带有已脱敏的应用标识符。在你重新授权并启用之前，它们的显式配置条目会保持禁用状态。其他安装失败会作为项目范围的 `error` 结果。
+
+如果在规划期间 Codex 应用服务器插件清单不可用，迁移会退回到缓存包建议项，而不是使整个迁移失败。
+
+## Hermes 提供程序
 
 内置的 Hermes 提供程序默认检测位于 `~/.hermes` 的状态。若 Hermes 位于其他位置，请使用 `--from <path>`。
 
-### What Hermes imports
+### Hermes 导入内容
 
 - 来自 `config.yaml` 的默认模型配置。
 - 来自 `providers` 和 `custom_providers` 的已配置模型提供程序以及自定义 OpenAI 兼容端点。
@@ -144,7 +168,7 @@ Codex 原生插件、`config.toml` 和原生 `hooks/hooks.json` 不会自动激�
 - 来自 `skills.config` 的每项技能配置值。
 - 仅在使用 `--include-secrets` 时，从 `.env` 导入受支持的 API 密钥。
 
-### Supported `.env` keys
+### 支持的 `.env` 密钥
 
 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`.
 
@@ -166,7 +190,7 @@ OpenClaw 无法安全解释的 Hermes 状态会被复制到迁移报告中供人
 openclaw doctor
 ```
 
-## Plugin contract
+## 插件契约
 
 迁移源是插件。插件在 `openclaw.plugin.json` 中声明其 provider id：
 
@@ -182,7 +206,7 @@ openclaw doctor
 
 提供程序插件可以使用 `openclaw/plugin-sdk/migration` 进行条目构建和摘要计数，也可以使用 `openclaw/plugin-sdk/migration-runtime` 进行具备冲突感知的文件复制、仅归档报告复制、缓存的 config-runtime 包装器以及迁移报告。
 
-## Onboarding integration
+## 引导集成
 
 当提供程序检测到已知来源时，引导流程可以提供迁移。`openclaw onboard --flow import` 和 `openclaw setup --wizard --import-from hermes` 都使用相同的插件迁移提供程序，并且在应用前仍会显示预览。
 
@@ -190,7 +214,7 @@ openclaw doctor
 引导导入需要全新的 OpenClaw 安装。如果你已经有本地状态，请先重置配置、凭据、会话和工作区。现有安装的备份加覆盖或合并导入属于功能开关控制。
 </Note>
 
-## Related
+## 相关内容
 
 - [从 Hermes 迁移](/install/migrating-hermes)：面向用户的操作指南。
 - [从 Claude 迁移](/install/migrating-claude)：面向用户的操作指南。

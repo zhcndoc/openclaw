@@ -3,12 +3,10 @@ summary: "通过 Gateway HTTP 端点直接调用单个工具"
 read_when:
   - 不运行完整的 agent turn 而调用工具
   - 构建需要执行工具策略强制的自动化
-title: "Tools invoke API"
+title: "工具调用 API"
 ---
 
-# 工具调用（HTTP）
-
-OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，用于直接调用单个工具。它始终启用，并使用 Gateway 认证以及工具策略。与 OpenAI 兼容的 `/v1/*` 接口一样，共享密钥 bearer 认证会被视为整个 gateway 的可信操作员访问。
+OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，可直接调用单个工具。它始终启用，并使用 Gateway 认证加工具策略。与兼容 OpenAI 的 `/v1/*` 接口一样，共享密钥 bearer 认证会被视为整个 gateway 的可信操作员访问。
 
 - `POST /tools/invoke`
 - 与 Gateway 相同的端口（WS + HTTP 复用）：`http://<gateway-host>:<port>/tools/invoke`
@@ -95,24 +93,25 @@ OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，用于直接调用�
 
 重要边界说明：
 
-- exec 审批是操作员护栏，而不是这个 HTTP 端点的独立授权边界。若某个工具通过 Gateway 认证 + 工具策略可在此处访问，`/tools/invoke` 不会额外增加每次调用的审批提示。
-- 不要将 Gateway bearer 凭据分享给不受信任的调用方。如果你需要跨信任边界进行隔离，请运行独立的 gateways（理想情况下还要使用不同的 OS 用户/主机）。
+- Exec approvals are operator guardrails, not a separate authorization boundary for this HTTP endpoint. If a tool is reachable here via Gateway auth + tool policy, `/tools/invoke` does not add an extra per-call approval prompt.
+- If `exec` is reachable here, treat it as a mutating shell surface. Denying `write`, `edit`, `apply_patch`, or HTTP filesystem-write tools does not make shell execution read-only.
+- Do not share Gateway bearer credentials with untrusted callers. If you need separation across trust boundaries, run separate gateways (and ideally separate OS users/hosts).
 
 Gateway HTTP 还会默认应用一个硬性拒绝列表（即使 session 策略允许该工具）：
 
-- `exec` — 直接命令执行（RCE 表面）
-- `spawn` — 任意子进程创建（RCE 表面）
-- `shell` — shell 命令执行（RCE 表面）
-- `fs_write` — 对主机上的任意文件进行修改
-- `fs_delete` — 删除主机上的任意文件
-- `fs_move` — 在主机上任意移动/重命名文件
-- `apply_patch` — 补丁应用可能重写任意文件
-- `sessions_spawn` — session 编排；远程启动 agents 属于 RCE
-- `sessions_send` — 跨 session 消息注入
-- `cron` — 持久化自动化控制平面
-- `gateway` — gateway 控制平面；防止通过 HTTP 重新配置
-- `nodes` — 节点命令转发可以到达配对主机上的 system.run
-- `whatsapp_login` — 需要终端二维码扫描的交互式设置；在 HTTP 上会挂起
+- `exec` - 直接命令执行（RCE surface）
+- `spawn` - 任意子进程创建（RCE surface）
+- `shell` - shell 命令执行（RCE surface）
+- `fs_write` - 对主机上的任意文件进行修改
+- `fs_delete` - 对主机上的任意文件进行删除
+- `fs_move` - 对主机上的任意文件进行移动/重命名
+- `apply_patch` - 补丁应用可能会重写任意文件
+- `sessions_spawn` - session 编排；远程启动 agents 属于 RCE
+- `sessions_send` - 跨 session 消息注入
+- `cron` - 持久化自动化控制平面
+- `gateway` - gateway 控制平面；防止通过 HTTP 重新配置
+- `nodes` - 节点命令转发可到达已配对主机上的 system.run
+- `whatsapp_login` - 需要终端扫描二维码的交互式设置；在 HTTP 上会卡住
 
 你可以通过 `gateway.tools` 自定义此拒绝列表：
 

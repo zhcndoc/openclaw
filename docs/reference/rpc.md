@@ -1,5 +1,5 @@
 ---
-summary: "外部 CLI 的 RPC 适配器（signal-cli、旧版 imsg）和网关模式"
+summary: "用于外部 CLI 的 RPC 适配器（signal-cli、imsg）和网关模式"
 read_when:
   - 添加或更改外部 CLI 集成时
   - 调试 RPC 适配器（signal-cli、imsg）时
@@ -17,12 +17,10 @@ OpenClaw 通过 JSON-RPC 集成外部 CLI。目前使用两种模式。
 
 有关设置和端点，请参见 [Signal](/channels/signal)。
 
-## 模式 B：stdio 子进程（旧版：imsg）
+## 模式 B：stdio 子进程（imsg）
 
-> **注意：** 对于新的 iMessage 设置，请改用 [BlueBubbles](/channels/bluebubbles)。
-
-- OpenClaw 以子进程形式启动 `imsg rpc`（旧版 iMessage 集成）。
-- JSON-RPC 通过 stdin/stdout 按行分隔传输（每行一个 JSON 对象）。
+- OpenClaw 为 [iMessage](/channels/imessage) 启动 `imsg rpc` 作为子进程。
+- JSON-RPC 通过 stdin/stdout 以按行分隔的方式传输（每行一个 JSON 对象）。
 - 不需要 TCP 端口，也不需要守护进程。
 
 使用的核心方法：

@@ -6,8 +6,6 @@ read_when:
   - 开发安全功能或审核响应时
 ---
 
-# OpenClaw 威胁模型 v1.0
-
 ## MITRE ATLAS 框架
 
 **版本：** 1.0-draft

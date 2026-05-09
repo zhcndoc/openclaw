@@ -15,12 +15,12 @@ title: "使用情况跟踪"
 
 ## 显示位置
 
-- 聊天中的 `/status`：带 emoji 的状态卡，显示会话 token + 预估成本（仅 API key）。在可用时，提供方使用情况会以标准化的 `X% left` 窗口显示给 **当前模型提供方**。
-- 聊天中的 `/usage off|tokens|full`：每次响应的使用情况页脚（OAuth 仅显示 token）。
-- 聊天中的 `/usage cost`：从 OpenClaw 会话日志聚合得出的本地成本摘要。
-- CLI：`openclaw status --usage` 将打印完整的按提供方拆分情况。
-- CLI：`openclaw channels list` 会在提供方配置旁边打印相同的使用情况快照（使用 `--no-usage` 可跳过）。
-- macOS 菜单栏：Context 下的“Usage”部分（仅在可用时）。
+- `/status` in chats: 带有表情符号的状态卡片，显示会话 token + 估算成本（仅限 API key）。当可用时，提供方使用情况会以规范化的 `X% left` 窗口显示为**当前模型提供方**。
+- `/usage off|tokens|full` in chats: 每条响应的使用情况页脚（OAuth 仅显示 token）。
+- `/usage cost` in chats: 从 OpenClaw 会话日志聚合的本地成本摘要。
+- CLI: `openclaw status --usage` 打印完整的按提供方拆分信息。
+- CLI: `openclaw channels list` 会在提供方配置旁打印相同的使用情况快照（可使用 `--no-usage` 跳过）。
+- macOS 菜单栏：Context 下的“Usage”部分（仅在可用时显示）。
 
 ## 提供方 + 凭据
 

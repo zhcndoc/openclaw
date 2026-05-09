@@ -130,7 +130,7 @@ openclaw hooks enable <name>
 
 通过将特定钩子添加到你的配置中来启用它（默认是 `~/.openclaw/openclaw.json`）。
 
-**注意：** 工作区钩子默认处于禁用状态，直到在此处或在配置中启用。由插件管理的钩子会在 `openclaw hooks list` 中显示 `plugin:<id>`，并且不能在此处启用/禁用。请改为启用/禁用对应插件。
+**Note:** 工作区钩子默认处于禁用状态，直到在此处或在配置中启用它们。由插件管理的钩子在 `openclaw hooks list` 中显示为 `plugin:<id>`，并且不能在此处启用/禁用。请改为启用/禁用该插件。
 
 **参数：**
 
@@ -279,7 +279,7 @@ OpenClaw 会打印警告并在继续之前请求确认。使用
 openclaw hooks enable session-memory
 ```
 
-**输出：** `~/.openclaw/workspace/memory/YYYY-MM-DD-slug.md`
+**输出：** `~/.openclaw/workspace/memory/YYYY-MM-DD-HHMM.md` 默认。将 `hooks.internal.entries.session-memory.llmSlug: true` 设置为模型生成的文件名 slug。
 
 **参见：** [session-memory 文档](/automation/hooks#session-memory)
 

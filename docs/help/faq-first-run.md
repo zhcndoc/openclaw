@@ -50,8 +50,8 @@ sidebarTitle: "首次运行 FAQ"
     其他有用的 CLI 检查：`openclaw status --all`、`openclaw logs --follow`、
     `openclaw gateway status`、`openclaw health --verbose`。
 
-    Quick debug loop: [First 60 seconds if something is broken](/help/faq#first-60-seconds-if-something-is-broken).
-    Install docs: [Install](/install), [Installer flags](/install/installer), [Updating](/install/updating).
+    快速调试循环：[如果有问题，前 60 秒该做什么](/help/faq#first-60-seconds-if-something-is-broken)。
+    安装文档：[安装](/install)、[安装器参数](/install/installer)、[更新](/install/updating)。
 
   </Accordion>
 
@@ -208,9 +208,9 @@ sidebarTitle: "首次运行 FAQ"
 
     **重要：** 如果你只是把工作区提交/推送到 GitHub，你备份的是**记忆 + 引导文件**，但**不是**会话历史或认证。这些都位于 `~/.openclaw/` 下（例如 `~/.openclaw/agents/<agentId>/sessions/`）。
 
-    Related: [Migrating](/install/migrating), [Where things live on disk](/help/faq#where-things-live-on-disk),
-    [Agent workspace](/concepts/agent-workspace), [Doctor](/gateway/doctor),
-    [Remote mode](/gateway/remote).
+    相关： [迁移](/install/migrating)、[磁盘上的文件存放位置](/help/faq#where-things-live-on-disk)、
+    [代理工作区](/concepts/agent-workspace)、[Doctor](/gateway/doctor)、
+    [远程模式](/gateway/remote)。
 
   </Accordion>
 
@@ -560,30 +560,28 @@ sidebarTitle: "首次运行 FAQ"
   </Accordion>
 
   <Accordion title="How does Codex auth work?">
-    OpenClaw supports **OpenAI Code (Codex)** via OAuth (ChatGPT sign-in). Use
-    `openai/gpt-5.5` with `agentRuntime.id: "codex"` for the common setup:
-    ChatGPT/Codex subscription auth plus native Codex app-server execution. Use
-    `openai-codex/gpt-5.5` only when you want Codex OAuth through the default
-    PI runner. Use `openai/gpt-5.5` without the Codex runtime override for
-    direct OpenAI API-key access.
-    See [Model providers](/concepts/model-providers) and [Onboarding (CLI)](/start/wizard).
+    OpenClaw 支持通过 OAuth（ChatGPT 登录）使用 **OpenAI Code（Codex）**。常见设置请使用
+    `openai/gpt-5.5`：ChatGPT/Codex 订阅认证加上原生 Codex app-server 执行。`openai-codex/gpt-*`
+    模型引用是旧配置，可由 `openclaw doctor --fix` 修复。直接 OpenAI API key
+    访问仍然可用于非代理 OpenAI API 表面，也可通过按顺序排列的 `openai-codex`
+    API key 配置文件用于代理模型。
+    参见 [模型提供商](/concepts/model-providers) 和 [引导（CLI）](/start/wizard)。
   </Accordion>
 
-  <Accordion title="为什么 OpenClaw 仍然提到 openai-codex？">
-    `openai-codex` 是 ChatGPT/Codex OAuth 的提供商和 auth-profile id。
-    它也是 Codex OAuth 的显式 PI 模型前缀：
+  <Accordion title="Why does OpenClaw still mention openai-codex?">
+    `openai-codex` 是 ChatGPT/Codex OAuth 的提供商和认证配置文件 id。
+    旧配置也曾把它当作模型前缀：
 
-    - `openai/gpt-5.5` + `agentRuntime.id: "codex"` = ChatGPT/Codex subscription auth with native Codex runtime
-    - `openai-codex/gpt-5.5` = Codex OAuth route in PI
-    - `openai/gpt-5.5` without a Codex runtime override = direct OpenAI API-key route in PI
-    - `openai-codex:...` = auth profile id, not a model ref
+    - `openai/gpt-5.5` = ChatGPT/Codex 订阅认证，代理轮次使用原生 Codex 运行时
+    - `openai-codex/gpt-5.5` = 可由 `openclaw doctor --fix` 修复的旧模型路由
+    - `openai/gpt-5.5` 加上一个按顺序排列的 `openai-codex` API key 配置文件 = 用于 OpenAI 代理模型的 API key 认证
+    - `openai-codex:...` = 认证配置文件 id，不是模型引用
 
-    If you want the direct OpenAI Platform billing/limit path, set
-    `OPENAI_API_KEY`. If you want ChatGPT/Codex subscription auth, sign in with
-    `openclaw models auth login --provider openai-codex`. For native Codex
-    runtime, keep the model ref as `openai/gpt-5.5` and set
-    `agentRuntime.id: "codex"`. Use `openai-codex/*` model refs only for PI
-    runs.
+    如果你想要直接的 OpenAI Platform 计费/限额路径，请设置
+    `OPENAI_API_KEY`。如果你想要 ChatGPT/Codex 订阅认证，请使用
+    `openclaw models auth login --provider openai-codex` 登录。模型引用保持为
+    `openai/gpt-5.5`；`openai-codex/*` 模型引用属于旧配置，会被
+    `openclaw doctor --fix` 重写。
 
   </Accordion>
 
@@ -633,22 +631,23 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="我必须买 Mac Mini 才能安装这个吗？">
     不需要。OpenClaw 可在 macOS 或 Linux 上运行（Windows 通过 WSL2）。Mac mini 是可选的——有些人会买它作为常开主机，但小型 VPS、家用服务器或 Raspberry Pi 级别的设备也可以。
 
-    你只在需要**仅 macOS 工具**时才需要 Mac。对于 iMessage，请使用 [BlueBubbles](/channels/bluebubbles)（推荐）——BlueBubbles 服务器可运行在任何 Mac 上，而 Gateway 可以运行在 Linux 或其他地方。如果你想使用其他仅 macOS 的工具，请在 Mac 上运行 Gateway 或配对一个 macOS 节点。
+    You only need a Mac **for macOS-only tools**. For iMessage, use [iMessage](/channels/imessage) with `imsg` on any Mac signed into Messages. If the Gateway runs on Linux or elsewhere, set `channels.imessage.cliPath` to an SSH wrapper that runs `imsg` on that Mac. If you want other macOS-only tools, run the Gateway on a Mac or pair a macOS node.
 
-    文档：[BlueBubbles](/channels/bluebubbles)、[节点](/nodes)、[Mac 远程模式](/platforms/mac/remote)。
+    Docs: [iMessage](/channels/imessage), [Nodes](/nodes), [Mac remote mode](/platforms/mac/remote).
 
   </Accordion>
 
-  <Accordion title="我需要 Mac mini 才能支持 iMessage 吗？">
-    你需要**某台 macOS 设备**登录了 Messages。它**不一定**非得是 Mac mini——任何 Mac 都可以。**使用 [BlueBubbles](/channels/bluebubbles)**（推荐）来支持 iMessage——BlueBubbles 服务器运行在 macOS 上，而 Gateway 可以运行在 Linux 或其他地方。
+  <Accordion title="Do I need a Mac mini for iMessage support?">
+    You need **some macOS device** signed into Messages. It does **not** have to be a Mac mini -
+    any Mac works. **Use [iMessage](/channels/imessage)** with `imsg`; the Gateway can run on that Mac, or it can run elsewhere with an SSH wrapper `cliPath`.
 
     常见方案：
 
-    - 在 Linux/VPS 上运行 Gateway，并在任意已登录 Messages 的 Mac 上运行 BlueBubbles 服务器。
-    - 如果你想要最简单的单机设置，就把所有东西都运行在 Mac 上。
+    - Run the Gateway on Linux/VPS, and set `channels.imessage.cliPath` to an SSH wrapper that runs `imsg` on a Mac signed into Messages.
+    - Run everything on the Mac if you want the simplest single-machine setup.
 
-    文档：[BlueBubbles](/channels/bluebubbles)、[节点](/nodes)、
-    [Mac 远程模式](/platforms/mac/remote)。
+    Docs: [iMessage](/channels/imessage), [Nodes](/nodes),
+    [Mac remote mode](/platforms/mac/remote).
 
   </Accordion>
 

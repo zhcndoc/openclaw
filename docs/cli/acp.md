@@ -37,28 +37,46 @@ title: "ACP"
 
 ## 兼容性矩阵
 
-| ACP 领域                                                             | 状态        | 备注                                                                                                                                                                                                                                              |
-| -------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `initialize`, `newSession`, `prompt`, `cancel`                       | 已实现      | 通过 stdio 到 Gateway chat/send + abort 的核心桥接流程。                                                                                                                                                                                         |
-| `listSessions`, slash 命令                                            | 已实现      | 会话列表基于 Gateway 会话状态工作；命令通过 `available_commands_update` 进行广告。                                                                                                                                                                |
-| `loadSession`                                                        | 部分支持    | 将 ACP 会话重新绑定到一个 Gateway 会话键，并重放已保存的用户/助手文本历史。工具/系统历史尚未重建。                                                                                                                                              |
-| 提示内容（`text`、嵌入的 `resource`、图片）                            | 部分支持    | 文本/资源会被展开为聊天输入；图片会变成 Gateway 附件。                                                                                                                                                                                           |
-| 会话模式                                                            | 部分支持    | 支持 `session/set_mode`，并且桥接暴露了初始的、基于 Gateway 的会话控制项，用于思考级别、工具详细程度、推理、用量细节和提升权限的操作。更广泛的 ACP 原生模式/配置界面仍不在范围内。                                                                |
-| 会话信息和用量更新                                                   | 部分支持    | 桥接会从缓存的 Gateway 会话快照中发出 `session_info_update` 和尽力而为的 `usage_update` 通知。用量是近似值，并且只有在 Gateway 标记 token 总数为新鲜数据时才会发送。                                                                                 |
-| 工具流式输出                                                         | 部分支持    | 当 Gateway 工具参数/结果暴露原始 I/O、文本内容以及尽力而为的文件位置时，`tool_call` / `tool_call_update` 事件会包含这些信息。嵌入式终端和更丰富的基于 diff 的输出仍未暴露。                                                                     |
-| 每会话 MCP 服务器（`mcpServers`）                                     | 不支持      | 桥接模式会拒绝每会话 MCP 服务器请求。请在 OpenClaw gateway 或 agent 上配置 MCP。                                                                                                                                                                 |
-| 客户端文件系统方法（`fs/read_text_file`、`fs/write_text_file`）      | 不支持      | 桥接不会调用 ACP 客户端文件系统方法。                                                                                                                                                                                                             |
-| 客户端终端方法（`terminal/*`）                                        | 不支持      | 桥接不会创建 ACP 客户端终端，也不会通过工具调用流式传递终端 id。                                                                                                                                                                                  |
-| 会话计划 / 思考流式输出                                               | 不支持      | 当前桥接发出的是输出文本和工具状态，而不是 ACP 计划或思考更新。                                                                                                                                                                                  |
+| ACP area                                                              | Status      | Notes                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`, `newSession`, `prompt`, `cancel`                        | 已实现      | 通过 stdio 到 Gateway chat/send + abort 的核心桥接流程。                                                                                                                                                                                        |
+| `listSessions`, slash commands                                        | 已实现      | 会话列表可针对 Gateway 会话状态工作，支持有界游标分页和 `cwd` 过滤，前提是 Gateway 会话行携带工作区元数据；命令通过 `available_commands_update` 进行通告。                                                                                      |
+| `resumeSession`, `closeSession`                                       | 已实现      | 恢复会将一个 ACP 会话重新绑定到现有的 Gateway 会话，而不会回放历史。关闭会取消正在进行的桥接工作，将待处理提示解析为已取消，并释放桥接会话状态。                                                                                                 |
+| `loadSession`                                                         | 部分支持    | 将 ACP 会话重新绑定到一个 Gateway 会话键，并为由桥接创建的会话回放 ACP 事件账本历史。较旧/无账本的会话会回退到存储的用户/助手文本。                                                                                                                |
+| Prompt content (`text`, embedded `resource`, images)                  | 部分支持    | 文本/资源会被扁平化为聊天输入；图片会变成 Gateway 附件。                                                                                                                                                                                         |
+| Session modes                                                         | 部分支持    | 支持 `session/set_mode`，并且桥接会暴露初始的、由 Gateway 支持的会话控制项，用于思考级别、工具详细程度、推理、使用详情和提升权限操作。更广泛的 ACP 原生模式/配置面目前仍不在范围内。                                                               |
+| Session info and usage updates                                        | 部分支持    | 桥接会从缓存的 Gateway 会话快照中发出 `session_info_update` 和尽力而为的 `usage_update` 通知。用量是近似值，并且仅在 Gateway 将 token 总数标记为最新时发送。                                                                                       |
+| Tool streaming                                                        | 部分支持    | 当 Gateway 工具参数/结果暴露了原始 I/O、文本内容以及尽力而为的文件位置时，`tool_call` / `tool_call_update` 事件会包含这些信息。嵌入式终端和更丰富的 diff 原生输出仍未暴露。                                                                        |
+| Exec approvals                                                        | 部分支持    | 在活动 ACP 提示轮次期间，Gateway 的 exec 审批提示会通过 `session/request_permission` 转发给 ACP 客户端。                                                                                                                                         |
+| Per-session MCP servers (`mcpServers`)                                | 不支持      | 桥接模式会拒绝按会话配置 MCP 服务器请求。请在 OpenClaw gateway 或 agent 上配置 MCP。                                                                                                                                                            |
+| Client filesystem methods (`fs/read_text_file`, `fs/write_text_file`) | 不支持      | 桥接不会调用 ACP 客户端文件系统方法。                                                                                                                                                                                                            |
+| Client terminal methods (`terminal/*`)                                | 不支持      | 桥接不会创建 ACP 客户端终端，也不会通过工具调用流式传递终端 ID。                                                                                                                                                                              |
+| Session plans / thought streaming                                     | 不支持      | 目前桥接输出文本和工具状态，而不是 ACP 计划或思考更新。                                                                                                                                                                                         |
 
 ## 已知限制
 
-- `loadSession` 会重放已保存的用户和助手文本历史，但不会重建历史工具调用、系统通知或更丰富的 ACP 原生事件类型。
-- 如果多个 ACP 客户端共享同一个 Gateway 会话键，事件和取消路由只能尽力而为，而不能做到严格的按客户端隔离。若你需要干净的编辑器本地轮次，请优先使用默认隔离的 `acp:<uuid>` 会话。
-- Gateway 停止状态会被转换为 ACP 停止原因，但这种映射不如完整的 ACP 原生运行时表达力强。
-- 当前会话控制仅暴露 Gateway 选项中的一个聚焦子集：思考级别、工具详细程度、推理、用量细节和提升权限操作。模型选择和 exec-host 控制尚未作为 ACP 配置选项暴露出来。
-- `session_info_update` 和 `usage_update` 来源于 Gateway 会话快照，而不是实时的 ACP 原生运行时记账。用量是近似值，不包含成本数据，并且只有在 Gateway 将 token 总数据标记为新鲜时才会发出。
-- 工具跟随数据只能尽力而为。桥接可以暴露出已知工具参数/结果中出现的文件路径，但尚不会发出 ACP 终端或结构化文件 diff。
+- `loadSession` can replay complete ACP event-ledger history only for
+  bridge-created sessions. Older/no-ledger sessions still use transcript
+  fallback and do not reconstruct historic tool calls or system notices.
+- If multiple ACP clients share the same Gateway session key, event and cancel
+  routing are best-effort rather than strictly isolated per client. Prefer the
+  default isolated `acp:<uuid>` sessions when you need clean editor-local
+  turns.
+- Gateway stop states are translated into ACP stop reasons, but that mapping is
+  less expressive than a fully ACP-native runtime.
+- Initial session controls currently surface a focused subset of Gateway knobs:
+  thought level, tool verbosity, reasoning, usage detail, and elevated
+  actions. Model selection and exec-host controls are not yet exposed as ACP
+  config options.
+- `session_info_update` and `usage_update` are derived from Gateway session
+  snapshots, not live ACP-native runtime accounting. Usage is approximate,
+  carries no cost data, and is only emitted when the Gateway marks total token
+  data as fresh.
+- Tool follow-along data is best-effort. The bridge can surface file paths that
+  appear in known tool args/results, but it does not yet emit ACP terminals or
+  structured file diffs.
+- Exec approval relay is scoped to the active ACP prompt turn; approvals from
+  other Gateway sessions are ignored.
 
 ## 用法
 
@@ -98,11 +116,55 @@ openclaw acp client --server "node" --server-args openclaw.mjs acp --url ws://12
 
 权限模型（客户端调试模式）：
 
-- 自动批准基于白名单，并且只适用于受信任的核心工具 ID。
-- `read` 的自动批准作用域限定为当前工作目录（设置了 `--cwd` 时）。
-- ACP 只会自动批准窄范围的只读类别：当前 cwd 下作用域内的 `read` 调用，以及只读搜索工具（`search`、`web_search`、`memory_search`）。未知/非核心工具、超出作用域的读取、具备执行能力的工具、控制平面工具、会修改状态的工具以及交互式流程始终需要显式的提示批准。
-- 服务器提供的 `toolCall.kind` 会被视为不可信元数据（不是授权来源）。
-- 这个 ACP 桥接策略与 ACPX harness 权限是分开的。如果你通过 `acpx` 后端运行 OpenClaw，`plugins.entries.acpx.config.permissionMode=approve-all` 是该 harness 会话的破窗“yolo”开关。
+- 自动批准基于允许列表，并且只适用于受信任的核心工具 ID。
+- `read` 的自动批准仅限于当前工作目录范围内（设置了 `--cwd` 时以其为准）。
+- ACP 仅自动批准狭义的只读类别：活动 cwd 下范围内的 `read` 调用，以及只读搜索工具（`search`、`web_search`、`memory_search`）。未知/非核心工具、超出范围的读取、可执行工具、控制平面工具、会修改状态的工具以及交互式流程始终需要显式的提示批准。
+- 服务器提供的 `toolCall.kind` 会被视为不受信任的元数据（不是授权来源）。
+- 该 ACP 桥接策略独立于 ACPX harness 权限。如果你通过 `acpx` 后端运行 OpenClaw，`plugins.entries.acpx.config.permissionMode=approve-all` 是该 harness 会话的“破玻璃”式“yolo”开关。
+
+## 协议冒烟测试
+
+对于协议级调试，请启动一个带隔离状态的 Gateway，并通过 ACP JSON-RPC 客户端在 stdio 上驱动
+`openclaw acp`。覆盖 `initialize`、
+`session/new`、带绝对 `cwd` 的 `session/list`、`session/resume`、
+`session/close`、重复关闭以及缺失的恢复。
+
+证明应包含所通告的生命周期能力、一个由 Gateway 支持的
+会话行、更新通知，以及 Gateway 的 `sessions.list` 日志：
+
+```json
+{
+  "initialize": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "list": {},
+        "resume": {},
+        "close": {}
+      }
+    }
+  },
+  "listSessions": {
+    "sessions": [
+      {
+        "sessionId": "agent:main:acp-smoke",
+        "cwd": "/path/to/workspace",
+        "_meta": {
+          "sessionKey": "agent:main:acp-smoke",
+          "kind": "direct"
+        }
+      }
+    ],
+    "nextCursor": null
+  },
+  "notifications": ["session_info_update", "available_commands_update", "usage_update"],
+  "gatewayLogTail": ["[gateway] ready", "[ws] ⇄ res ✓ sessions.list 305ms"]
+}
+```
+
+不要将 `openclaw gateway call sessions.list` 作为唯一的 ACP 证明。该
+CLI 路径可能会请求一个新的 token 运维范围升级；ACP 桥接
+正确性应通过 ACP stdio 帧以及 Gateway 的 `sessions.list` 日志来证明。
 
 ## 如何使用
 
@@ -123,7 +185,7 @@ openclaw config set gateway.remote.token <token>
 
 ```bash
 openclaw acp --url wss://gateway-host:18789 --token <token>
-# 本地进程安全时推荐
+# 当本地进程安全时推荐
 openclaw acp --url wss://gateway-host:18789 --token-file ~/.openclaw/gateway.token
 ```
 
@@ -200,7 +262,7 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 
 ## Zed 编辑器设置
 
-在 `~/.config/zed/settings.json` 中添加一个自定义 ACP 代理（或者使用 Zed 的设置界面）：
+在 `~/.config/zed/settings.json` 中添加一个自定义 ACP agent（或使用 Zed 的设置界面）：
 
 ```json
 {
@@ -238,7 +300,7 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 }
 ```
 
-在 Zed 中，打开 Agent 面板并选择“OpenClaw ACP”即可开始一个线程。
+在 Zed 中，打开 Agent 面板并选择 "OpenClaw ACP" 以启动线程。
 
 ## 会话映射
 

@@ -9,7 +9,7 @@ title: "Matrix QA"
 
 Matrix QA 运行通道会在 Docker 中针对一个可丢弃的 Tuwunel homeserver 运行捆绑的 `@openclaw/matrix` 插件，并使用临时的 driver、SUT 和 observer 账户以及预置房间。这是面向 Matrix 的实时传输级真实覆盖。
 
-这是仅限维护者使用的工具。打包后的 OpenClaw 发布版会刻意省略 `qa-lab`，因此 `openclaw qa` 只能从源码检出中使用。源码检出会直接加载捆绑的运行器——无需安装插件步骤。
+This is maintainer-only tooling. Packaged OpenClaw releases intentionally omit `qa-lab`, so `openclaw qa` is only available from a source checkout. Source checkouts load the bundled runner directly - no plugin install step is needed.
 
 如需更广泛的 QA 框架背景，请参见 [QA 概览](/concepts/qa-e2e-automation)。
 
@@ -23,11 +23,11 @@ pnpm openclaw qa matrix --profile fast --fail-fast
 
 ## 该运行通道会做什么
 
-1. 在 Docker 中提供一个可丢弃的 Tuwunel homeserver（默认镜像 `ghcr.io/matrix-construct/tuwunel:v1.5.1`，服务器名 `matrix-qa.test`，端口 `28008`）。
-2. 注册三个临时用户——`driver`（发送入站流量）、`sut`（待测的 OpenClaw Matrix 账户）、`observer`（第三方流量捕获）。
-3. 为所选场景播种所需房间（主房间、线程、媒体、重启、secondary、allowlist、E2EE、验证 DM 等）。
-4. 启动一个子 OpenClaw 网关，在其中仅针对 SUT 账户加载真实的 Matrix 插件；子进程中不会加载 `qa-channel`。
-5. 按顺序运行各个场景，通过 driver/observer Matrix 客户端观察事件。
+1. 在 Docker 中部署一个可丢弃的 Tuwunel homeserver（默认镜像 `ghcr.io/matrix-construct/tuwunel:v1.5.1`，服务器名 `matrix-qa.test`，端口 `28008`）。
+2. 注册三个临时用户 - `driver`（发送入站流量）、`sut`（被测的 OpenClaw Matrix 账户）、`observer`（第三方流量捕获）。
+3. 为所选场景预置所需房间（主房间、线程、媒体、重启、次级房间、允许名单、E2EE、验证 DM 等）。
+4. 启动一个子 OpenClaw 网关，仅为 SUT 账户加载真实的 Matrix 插件；子进程中不加载 `qa-channel`。
+5. 按顺序运行场景，通过 driver/observer Matrix 客户端观察事件。
 6. 清理 homeserver，写入报告和摘要产物，然后退出。
 
 ## CLI
@@ -40,12 +40,12 @@ pnpm openclaw qa matrix [options]
 
 | Flag                  | Default                                       | Description                                                                                                            |
 | --------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `--profile <profile>` | `all`                                         | 场景配置文件。见 [配置文件](#profiles)。                                                                                 |
-| `--fail-fast`         | off                                           | 在首次失败的检查或场景后停止。                                                                                           |
-| `--scenario <id>`     | —                                             | 仅运行此场景。可重复使用。见 [场景](#scenarios)。                                                                       |
-| `--output-dir <path>` | `<repo>/.artifacts/qa-e2e/matrix-<timestamp>` | 报告、摘要、已观测事件和输出日志的写入位置。相对路径会相对于 `--repo-root` 解析。                                       |
-| `--repo-root <path>`  | `process.cwd()`                               | 从中性工作目录调用时的仓库根目录。                                                                                      |
-| `--sut-account <id>`  | `sut`                                         | QA 网关配置中的 Matrix 账户 id。                                                                                         |
+| `--profile <profile>` | `all`                                         | 场景配置文件。见 [Profiles](#profiles)。                                                                           |
+| `--fail-fast`         | off                                           | 在第一个失败的检查或场景后停止。                                                                         |
+| `--scenario <id>`     | -                                             | 仅运行此场景。可重复。见 [Scenarios](#scenarios)。                                                       |
+| `--output-dir <path>` | `<repo>/.artifacts/qa-e2e/matrix-<timestamp>` | 报告、摘要、观测事件以及输出日志的写入位置。相对路径会相对于 `--repo-root` 解析。 |
+| `--repo-root <path>`  | `process.cwd()`                               | 当从中性工作目录调用时的仓库根目录。                                                        |
+| `--sut-account <id>`  | `sut`                                         | QA 网关配置中的 Matrix 账户 id。                                                                        |
 
 ### 提供方标志
 
@@ -66,13 +66,13 @@ Matrix QA 不接受 `--credential-source` 或 `--credential-role`。该运行通
 
 | Profile         | Use it for                                                                                                                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `all` (default) | 完整目录。慢但全面。                                                                                                                                                                                                                  |
-| `fast`          | 发布门禁子集，覆盖实时传输契约：canary、mention gating、allowlist 阻断、回复形状、重启恢复、线程后续、线程隔离、reaction 观察，以及 exec approval 元数据传递。                                                         |
-| `transport`     | 传输级线程、DM、房间、自动加入、mention/allowlist、approval 和 reaction 场景。                                                                                                                                                     |
-| `media`         | 图像、音频、视频、PDF、EPUB 附件覆盖。                                                                                                                                                                                               |
-| `e2ee-smoke`    | 最小 E2EE 覆盖——基础加密回复、线程后续、bootstrap 成功。                                                                                                                                                                           |
-| `e2ee-deep`     | 全面的 E2EE 状态丢失、备份、密钥和恢复场景。                                                                                                                                                                                        |
-| `e2ee-cli`      | 通过 QA harness 驱动的 `openclaw matrix encryption setup` 和 `verify *` CLI 场景。                                                                                                                                                  |
+| `all` (default) | 完整目录。速度较慢，但覆盖全面。                                                                                                                                                                                                   |
+| `fast`          | 发布门禁子集，覆盖实时传输契约：canary、提及门控、允许名单阻止、回复形状、重启恢复、线程后续、线程隔离、反应观察以及 exec 批准元数据传递。 |
+| `transport`     | 传输层级的线程、DM、房间、自动加入、提及/允许名单、批准和反应场景。                                                                                                                                  |
+| `media`         | 图片、音频、视频、PDF、EPUB 附件覆盖。                                                                                                                                                                                  |
+| `e2ee-smoke`    | 最小 E2EE 覆盖——基本加密回复、线程后续、引导成功。                                                                                                                                                  |
+| `e2ee-deep`     | 全面的 E2EE 状态丢失、备份、密钥和恢复场景。                                                                                                                                                                     |
+| `e2ee-cli`      | 通过 QA harness 驱动的 `openclaw matrix encryption setup` 和 `verify *` CLI 场景。                                                                                                                                       |
 
 确切映射位于 `extensions/qa-matrix/src/runners/contract/scenario-catalog.ts`。
 
@@ -80,17 +80,17 @@ Matrix QA 不接受 `--credential-source` 或 `--credential-role`。该运行通
 
 完整的场景 id 列表是 `extensions/qa-matrix/src/runners/contract/scenario-catalog.ts:15` 中的 `MatrixQaScenarioId` 联合类型。类别包括：
 
-- threading — `matrix-thread-*`, `matrix-subagent-thread-spawn`
-- top-level / DM / room — `matrix-top-level-reply-shape`, `matrix-room-*`, `matrix-dm-*`
-- streaming and tool progress — `matrix-room-partial-streaming-preview`, `matrix-room-quiet-streaming-preview`, `matrix-room-tool-progress-*`, `matrix-room-block-streaming`
-- media — `matrix-media-type-coverage`, `matrix-room-image-understanding-attachment`, `matrix-attachment-only-ignored`, `matrix-unsupported-media-safe`
-- routing — `matrix-room-autojoin-invite`, `matrix-secondary-room-*`
-- reactions — `matrix-reaction-*`
-- approvals — `matrix-approval-*`（exec/plugin 元数据、分块回退、拒绝 reaction、线程，以及 `target: "both"` 路由）
-- restart and replay — `matrix-restart-*`, `matrix-stale-sync-replay-dedupe`, `matrix-room-membership-loss`, `matrix-homeserver-restart-resume`, `matrix-initial-catchup-then-incremental`
-- mention gating, bot-to-bot, and allowlists — `matrix-mention-*`, `matrix-allowbots-*`, `matrix-allowlist-*`, `matrix-multi-actor-ordering`, `matrix-inbound-edit-*`, `matrix-mxid-prefixed-command-block`, `matrix-observer-allowlist-override`
-- E2EE — `matrix-e2ee-*`（基础回复、线程后续、bootstrap、恢复密钥生命周期、状态丢失变体、服务器备份行为、设备卫生、SAS / QR / DM 验证、重启、产物脱敏）
-- E2EE CLI — `matrix-e2ee-cli-*`（加密设置、幂等设置、bootstrap 失败、恢复密钥生命周期、多账户、网关回复往返、自我验证）
+- threading - `matrix-thread-*`, `matrix-subagent-thread-spawn`
+- top-level / DM / room - `matrix-top-level-reply-shape`, `matrix-room-*`, `matrix-dm-*`
+- streaming and tool progress - `matrix-room-partial-streaming-preview`, `matrix-room-quiet-streaming-preview`, `matrix-room-tool-progress-*`, `matrix-room-block-streaming`
+- media - `matrix-media-type-coverage`, `matrix-room-image-understanding-attachment`, `matrix-attachment-only-ignored`, `matrix-unsupported-media-safe`
+- routing - `matrix-room-autojoin-invite`, `matrix-secondary-room-*`
+- reactions - `matrix-reaction-*`
+- approvals - `matrix-approval-*` (exec/plugin metadata, chunked fallback, deny reactions, threads, and `target: "both"` routing)
+- restart and replay - `matrix-restart-*`, `matrix-stale-sync-replay-dedupe`, `matrix-room-membership-loss`, `matrix-homeserver-restart-resume`, `matrix-initial-catchup-then-incremental`
+- mention gating, bot-to-bot, and allowlists - `matrix-mention-*`, `matrix-allowbots-*`, `matrix-allowlist-*`, `matrix-multi-actor-ordering`, `matrix-inbound-edit-*`, `matrix-mxid-prefixed-command-block`, `matrix-observer-allowlist-override`
+- E2EE - `matrix-e2ee-*` (basic reply, thread follow-up, bootstrap, recovery key lifecycle, state-loss variants, server backup behavior, device hygiene, SAS / QR / DM verification, restart, artifact redaction)
+- E2EE CLI - `matrix-e2ee-cli-*` (encryption setup, idempotent setup, bootstrap failure, recovery-key lifecycle, multi-account, gateway-reply round-trip, self-verification)
 
 传入 `--scenario <id>`（可重复）可运行手动挑选的一组；与 `--profile all` 结合使用可忽略配置文件门控。
 
@@ -112,10 +112,10 @@ Matrix QA 不接受 `--credential-source` 或 `--credential-role`。该运行通
 
 写入到 `--output-dir`：
 
-- `matrix-qa-report.md` — Markdown 协议报告（哪些通过、失败、被跳过，以及原因）。
-- `matrix-qa-summary.json` — 适合 CI 解析和仪表板使用的结构化摘要。
-- `matrix-qa-observed-events.json` — 来自驱动和观察者客户端的观测到的 Matrix 事件。除非 `OPENCLAW_QA_MATRIX_CAPTURE_CONTENT=1`，否则消息正文会被脱敏；审批元数据会使用选定的安全字段进行摘要，并截断命令预览。
-- `matrix-qa-output.log` — 本次运行的合并 stdout/stderr。如果设置了 `OPENCLAW_RUN_NODE_OUTPUT_LOG`，则会改用外层启动器的日志。
+- `matrix-qa-report.md` - Markdown 协议报告（哪些通过、哪些失败、哪些被跳过，以及原因）。
+- `matrix-qa-summary.json` - 适用于 CI 解析和仪表盘的结构化摘要。
+- `matrix-qa-observed-events.json` - 来自驱动和观察者客户端的已观察 Matrix 事件。除非 `OPENCLAW_QA_MATRIX_CAPTURE_CONTENT=1`，否则正文会被脱敏；审批元数据会使用选定的安全字段和截断的命令预览进行摘要。
+- `matrix-qa-output.log` - 本次运行合并后的 stdout/stderr。如果设置了 `OPENCLAW_RUN_NODE_OUTPUT_LOG`，则改用外层启动器的日志。
 
 默认输出目录为 `<repo>/.artifacts/qa-e2e/matrix-<timestamp>`，因此连续运行不会相互覆盖。
 
@@ -133,7 +133,7 @@ Matrix 是三个实时传输 lane 之一（Matrix、Telegram、Discord），它�
 
 ## 相关内容
 
-- [QA 概览](/concepts/qa-e2e-automation) — 整体 QA 栈和实时传输契约
-- [QA Channel](/channels/qa-channel) — 用于基于仓库场景的合成频道适配器
-- [测试](/help/testing) — 运行测试并添加 QA 覆盖
-- [Matrix](/channels/matrix) — 正在测试的频道插件
+- [QA 概览](/concepts/qa-e2e-automation) - 整体 QA 栈和实时传输契约
+- [QA Channel](/channels/qa-channel) - 面向 repo-backed 场景的合成频道适配器
+- [测试](/help/testing) - 运行测试和添加 QA 覆盖
+- [Matrix](/channels/matrix) - 正在测试的频道插件

@@ -51,6 +51,14 @@ title: "apply_patch 工具"
 
 ## 相关内容
 
-- [Diffs](/tools/diffs)
-- [Exec tool](/tools/exec)
-- [Code execution](/tools/code-execution)
+<CardGroup cols={2}>
+  <Card title="Diffs" href="/tools/diffs" icon="code-compare">
+    用于展示更改的只读差异查看器。
+  </Card>
+  <Card title="Exec tool" href="/tools/exec" icon="terminal">
+    来自代理的 Shell 命令执行。
+  </Card>
+  <Card title="Code execution" href="/tools/code-execution" icon="square-code">
+    与 xAI 一起进行沙盒化远程 Python 分析。
+  </Card>
+</CardGroup>

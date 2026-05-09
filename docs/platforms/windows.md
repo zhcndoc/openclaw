@@ -31,7 +31,7 @@ OpenClaw 同时支持 **原生 Windows** 和 **WSL2**。WSL2 是更
 - 内置本地 agent/provider 试运行，例如：
 
 ```powershell
-openclaw agent --local --agent main --thinking low -m "Reply with exactly WINDOWS-HATCH-OK."
+openclaw agent --local --agent main --thinking low -m "回复时必须且只能输出 WINDOWS-HATCH-OK。"
 ```
 
 当前注意事项：
@@ -244,8 +244,38 @@ pnpm gateway:watch
 
 ## Windows 配套应用
 
-我们目前还没有 Windows 配套应用。如果你愿意，
-欢迎通过贡献来推动它实现。
+我们目前还没有 Windows 配套应用。如果你愿意帮助实现它，欢迎贡献。
+
+## Git 和 GitHub 连通性（贡献者）
+
+有些网络会阻止或限制到 GitHub 的 HTTPS 访问。如果 `git clone` 因超时
+或连接重置而失败，请尝试其他网络、VPN，或使用你所在组织提供的
+HTTP/HTTPS 代理。
+
+如果在浏览器设备流程中 `gh auth login` 失败（例如无法在规定时间内访问
+`github.com:443`），请改用个人访问令牌进行认证：
+
+1. 创建一个至少包含 `repo` 范围（classic PAT）或等效细粒度访问权限的令牌。
+2. 在 PowerShell 中为当前会话设置：
+
+```powershell
+$env:GH_TOKEN="<your-token>"
+gh auth status
+gh auth setup-git
+```
+
+3. 如果 `gh auth status` 提示缺少 `read:org`，请生成一个包含
+   该范围的令牌并重新赋值变量：
+
+```powershell
+$env:GH_TOKEN="<your-token-with-repo-and-read:org>"
+gh auth status
+```
+
+`gh auth refresh -s read:org` 仅在你通过 `gh auth login`
+进行认证并且已经保存了可刷新的凭据时才适用（使用 `GH_TOKEN` 时不适用）。
+
+绝不要提交令牌，也不要把它们粘贴到 issue 或 pull request 中。
 
 ## 相关
 

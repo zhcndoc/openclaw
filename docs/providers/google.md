@@ -12,8 +12,8 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
 - Provider: `google`
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - API: Google Gemini API
-- Runtime option: `agents.defaults.agentRuntime.id: "google-gemini-cli"`
-  复用 Gemini CLI OAuth，同时保持模型引用为规范化的 `google/*`。
+- Runtime option: provider/model `agentRuntime.id: "google-gemini-cli"`
+  复用 Gemini CLI OAuth，同时保持模型引用规范为 `google/*`。
 
 ## 开始使用
 
@@ -285,6 +285,10 @@ Gemma 4 模型（例如 `gemma-4-26b-a4b-it`）支持思考模式。OpenClaw
 - 输出：常规 TTS 附件为 WAV，语音便笺目标为 Opus，Talk/电话场景为 PCM
 - 语音便笺输出：Google PCM 会被包装为 WAV，并通过 `ffmpeg` 转码为 48 kHz Opus
 
+Google 的批量 Gemini TTS 路径会在完成的 `generateContent` 响应中返回生成的音频。
+对于最低延迟的语音对话，请使用由 Gemini Live API 支持的 Google 实时语音 provider，
+而不是批量 TTS。
+
 要将 Google 设为默认 TTS provider：
 
 ```json5
@@ -330,15 +334,17 @@ Gemini Live API 支持的实时语音 provider，用于后端音频桥接，例�
 
 | 设置                  | 配置路径                                                          | 默认值                                                                               |
 | --------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| 模型                 | `plugins.entries.voice-call.config.realtime.providers.google.model` | `gemini-2.5-flash-native-audio-preview-12-2025`                                       |
-| 语音                 | `...google.voice`                                                   | `Kore`                                                                                |
-| 温度                 | `...google.temperature`                                             | (unset)                                                                               |
-| VAD 开始敏感度       | `...google.startSensitivity`                                        | (unset)                                                                               |
-| VAD 结束敏感度       | `...google.endSensitivity`                                          | (unset)                                                                               |
-| 静音时长             | `...google.silenceDurationMs`                                       | (unset)                                                                               |
-| 活动处理             | `...google.activityHandling`                                        | Google default, `start-of-activity-interrupts`                                        |
-| 回合覆盖             | `...google.turnCoverage`                                            | Google default, `only-activity`                                                       |
-| 禁用自动 VAD         | `...google.automaticActivityDetectionDisabled`                      | `false`                                                                               |
+| Model                 | `plugins.entries.voice-call.config.realtime.providers.google.model` | `gemini-2.5-flash-native-audio-preview-12-2025`                                       |
+| Voice                 | `...google.voice`                                                   | `Kore`                                                                                |
+| Temperature           | `...google.temperature`                                             | (unset)                                                                               |
+| VAD start sensitivity | `...google.startSensitivity`                                        | (unset)                                                                               |
+| VAD end sensitivity   | `...google.endSensitivity`                                          | (unset)                                                                               |
+| Silence duration      | `...google.silenceDurationMs`                                       | (unset)                                                                               |
+| Activity handling     | `...google.activityHandling`                                        | Google default, `start-of-activity-interrupts`                                        |
+| Turn coverage         | `...google.turnCoverage`                                            | Google default, `only-activity`                                                       |
+| Disable auto VAD      | `...google.automaticActivityDetectionDisabled`                      | `false`                                                                               |
+| Session resumption    | `...google.sessionResumption`                                       | `true`                                                                                |
+| Context compression   | `...google.contextWindowCompression`                                | `true`                                                                                |
 | API key               | `...google.apiKey`                                                  | 回退到 `models.providers.google.apiKey`、`GEMINI_API_KEY` 或 `GOOGLE_API_KEY` |
 
 Voice Call 实时配置示例：
@@ -385,10 +391,10 @@ Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上�
 </Note>
 
 对于维护者的实时验证，请运行
-`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`。
-Google 这一路会生成与 Control
-UI Talk 使用的相同受限 Live API 令牌格式，打开浏览器 WebSocket 端点，发送初始设置负载，
-并等待 `setupComplete`。
+`OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`.
+该 smoke 也覆盖 OpenAI 后端/WebRTC 路径；Google 这一路会签发与 Control UI Talk 使用的相同
+受限 Live API 令牌形状，打开浏览器 WebSocket 端点，发送初始设置负载，并等待
+`setupComplete`。
 
 ## 高级配置
 

@@ -1,9 +1,9 @@
 ---
 summary: "openclaw memory 的 CLI 参考（status/index/search/promote/promote-explain/rem-harness）"
 read_when:
-  - 你想为语义记忆建立索引或进行搜索
-  - 你正在调试记忆可用性或索引问题
-  - 你想将回忆到的短期记忆提升到 `MEMORY.md`
+  - 你想索引或搜索语义记忆
+  - 你在排查记忆可用性或索引问题
+  - 你想把回忆到的短期记忆提升到 `MEMORY.md`
 title: "记忆"
 ---
 

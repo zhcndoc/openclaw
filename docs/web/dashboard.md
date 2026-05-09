@@ -36,9 +36,13 @@ Gateway 仪表板是浏览器控制 UI，默认由 `/` 提供服务
 
 ## 快速路径（推荐）
 
-- 入门完成后，CLI 会自动打开仪表板并打印一个干净的（不含 token）链接。
-- 随时重新打开：`openclaw dashboard`（会复制链接，尽可能打开浏览器，无头模式下会显示 SSH 提示）。
-- 如果 UI 提示共享密钥认证，请将已配置的 token 或
+- 在完成入门设置后，CLI 会自动打开仪表板并打印一个干净的（未带 token 的）链接。
+- 随时重新打开：`openclaw dashboard`（会复制链接，若可能会打开浏览器，若是无头环境则显示 SSH 提示）。
+- 如果剪贴板和浏览器传递都失败，`openclaw dashboard` 仍会打印
+  干净的 URL，并告诉你使用 `OPENCLAW_GATEWAY_TOKEN` 中的 token 或
+  `gateway.auth.token` 作为 URL fragment 键 `token`；它不会在日志中打印 token
+  值。
+- 如果 UI 提示共享密钥认证，请将配置的 token 或
   密码粘贴到 Control UI 设置中。
 
 ## 认证基础（本地 vs 远程）

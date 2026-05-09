@@ -5,23 +5,21 @@ read_when:
 title: "菜单栏"
 ---
 
-# 菜单栏状态逻辑
-
 ## 显示内容
 
-- 我们会在菜单栏图标以及菜单的第一行状态中展示当前代理的工作状态。
-- 在工作进行时会隐藏健康状态；当所有会话都处于空闲时，它会重新出现。
-- 根级 “Context” 子菜单会包含最近会话，而不是直接在根菜单中展开它们。
-- 根菜单中的 “Nodes” 区块仅列出 **设备**（通过 `node.list` 配对的节点），不包含客户端/存在状态条目。
-- 当可用提供方使用情况快照时，根级 “Usage” 区块会显示在 Context 下方，若可用则随后显示使用成本详情。
+- 我们会在菜单栏图标以及菜单的第一行状态中展示当前 agent 的工作状态。
+- 工作进行时会隐藏健康状态；当所有会话都处于空闲状态时，健康状态会重新显示。
+- 根级 "Context" 子菜单包含最近会话，而不是在根菜单中直接展开它们。
+- 根菜单中的 "Nodes" 区块只列出 **devices**（通过 `node.list` 绑定的节点），不包含 client/presence 条目。
+- 当可用 provider usage 快照时，根级 "Usage" 区块会出现在 Context 下方；如果有 usage-cost 详情，则会继续显示在其后。
 
 ## 状态模型
 
-- 会话：事件会携带 `runId`（每次运行的）以及载荷中的 `sessionKey`。 “main” 会话的键为 `main`；如果缺失，则回退到最近更新的会话。
-- 优先级：main 始终优先。如果 main 处于活动状态，会立即显示其状态。如果 main 处于空闲，则显示最近活跃的非 main 会话。我们不会在活动过程中来回切换；只有当当前会话变为空闲，或者 main 变为活动时才会切换。
-- 活动类型：
-  - `job`：高层级命令执行（`state: started|streaming|done|error`）。
-  - `tool`：`phase: start|result`，并带有 `toolName` 和 `meta/args`。
+- Sessions：事件载荷中包含 `runId`（每次运行一个）以及 `sessionKey`。"main" 会话的 key 为 `main`；如果不存在，则回退到最近更新的会话。
+- 优先级：main 永远优先。如果 main 处于 active，其状态会立即显示。如果 main 处于 idle，则显示最近活跃的非 main 会话。我们不会在活动中途来回切换；只有当当前会话进入 idle 或 main 变为 active 时才会切换。
+- Activity kinds:
+  - `job`: 高层命令执行（`state: started|streaming|done|error`）。
+  - `tool`: `phase: start|result`，包含 `toolName` 和 `meta/args`。
 
 ## IconState 枚举（Swift）
 
@@ -41,20 +39,20 @@ title: "菜单栏"
 
 ### 视觉映射
 
-- `idle`：正常小动物。
-- `workingMain`：带 glyph 的徽章、完整色调、腿部“工作中”动画。
-- `workingOther`：带 glyph 的徽章、柔和色调、不快速跑动。
-- `overridden`：无论活动如何，均使用所选 glyph/色调。
+- `idle`: normal critter.
+- `workingMain`: 带 glyph 的徽标、完整色调、腿部 "working" 动画。
+- `workingOther`: 带 glyph 的徽标、弱化色调、无 scurry。
+- `overridden`: 无论活动状态如何，都使用所选的 glyph/tint。
 
-## Context submenu
+## Context 子菜单
 
-- 根菜单显示一行 “Context”，带有会话计数/状态，并打开一个子菜单。
-- Context 子菜单标题显示过去 24 小时内的活动会话数量。
-- 每个会话行保留其 token bar、时长、预览、thinking/verbose、reset、compact 和 delete 操作。
-- 加载中、断开连接以及会话加载错误消息会显示在 Context 子菜单内。
-- 提供方使用情况和使用成本详情保留在 Context 下方的根级，这样无需打开子菜单也能一眼看到。
+- 根菜单显示一行 "Context"，带有会话数量/状态，并打开一个子菜单。
+- Context 子菜单标题显示最近 24 小时内的活跃会话数量。
+- 每个会话行都会保留 token bar、age、preview、thinking/verbose、reset、compact 和 delete 操作。
+- Loading、disconnected 和 session-load error 消息会显示在 Context 子菜单内。
+- Provider usage 和 usage-cost 详情保持在根级、位于 Context 下方，以便无需打开子菜单也能一眼看到。
 
-## Status row text (menu)
+## 状态行文本（菜单）
 
 - 当工作进行时：`<Session role> · <activity label>`
   - 示例：`Main · exec: pnpm test`、`Other · read: apps/macos/Sources/OpenClaw/AppState.swift`。
@@ -62,34 +60,34 @@ title: "菜单栏"
 
 ## 事件接入
 
-- 来源：控制通道 `agent` 事件（`ControlChannel.handleAgentEvent`）。
-- 解析字段：
-  - `stream: "job"`，使用 `data.state` 表示开始/停止。
-  - `stream: "tool"`，使用 `data.phase`、`name`，以及可选的 `meta`/`args`。
-- 标签：
-  - `exec`：`args.command` 的第一行。
-  - `read`/`write`：缩短后的路径。
-  - `edit`：路径加上从 `meta`/diff 数量推断出的变更类型。
-  - fallback：工具名称。
+- Source: control-channel `agent` events（`ControlChannel.handleAgentEvent`）。
+- Parsed fields:
+  - `stream: "job"` with `data.state` 用于 start/stop。
+  - `stream: "tool"` with `data.phase`, `name`, optional `meta`/`args`。
+- Labels:
+  - `exec`: `args.command` 的第一行。
+  - `read`/`write`: 缩短后的路径。
+  - `edit`: 路径以及从 `meta`/diff 计数推断出的变更类型。
+  - fallback: 工具名称。
 
 ## 调试覆盖
 
-- 设置 ▸ 调试 ▸ “Icon override” 选择器：
+- Settings ▸ Debug ▸ "Icon override" picker:
   - `System (auto)`（默认）
-  - `Working: main`（按工具类型）
-  - `Working: other`（按工具类型）
+  - `Working: main`（按 tool kind）
+  - `Working: other`（按 tool kind）
   - `Idle`
 - 通过 `@AppStorage("iconOverride")` 存储；映射到 `IconState.overridden`。
 
 ## 测试清单
 
-- 触发 main 会话作业：验证图标立即切换，状态行显示 main 标签。
-- 在 main 空闲时触发非 main 会话作业：图标/状态显示非 main；在完成前保持稳定。
-- 当其他会话活跃时启动 main：图标立即切换到 main。
-- 快速的工具突发：确保徽章不会闪烁（tool 结果上有 TTL 宽限）。
-- 当所有会话都空闲后，健康行重新出现。
+- Trigger main session job: verify icon switches immediately and status row shows main label.
+- Trigger non-main session job while main idle: icon/status shows non-main; stays stable until it finishes.
+- Start main while other active: icon flips to main instantly.
+- Rapid tool bursts: ensure badge does not flicker (TTL grace on tool results).
+- Health row reappears once all sessions idle.
 
 ## 相关
 
 - [macOS app](/platforms/macos)
-- [Menu bar icon](/platforms/mac/icon)
+- [Menu bar icon](/platforms/macos/icon)

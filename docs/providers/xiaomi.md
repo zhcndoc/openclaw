@@ -6,15 +6,20 @@ read_when:
 title: "Xiaomi MiMo"
 ---
 
-Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 使用带有 API 密钥认证的 Xiaomi
-OpenAI 兼容端点。
+Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 包含一个内置的 `xiaomi` 插件，它会使用同一个 `XIAOMI_API_KEY` 同时注册一个兼容 OpenAI 的聊天提供方和一个语音（TTS）提供方。
 
-| Property | Value                           |
-| -------- | ------------------------------- |
-| Provider | `xiaomi`                        |
-| Auth     | `XIAOMI_API_KEY`                |
-| API      | OpenAI-compatible               |
-| Base URL | `https://api.xiaomimimo.com/v1` |
+| Property        | Value                                    |
+| --------------- | ---------------------------------------- |
+| Provider id     | `xiaomi`                                 |
+| Plugin          | 内置，`enabledByDefault: true`           |
+| Auth env var    | `XIAOMI_API_KEY`                         |
+| Onboarding flag | `--auth-choice xiaomi-api-key`           |
+| Direct CLI flag | `--xiaomi-api-key <key>`                 |
+| Contracts       | chat completions + `speechProviders`     |
+| API             | 兼容 OpenAI（`openai-completions`）      |
+| Base URL        | `https://api.xiaomimimo.com/v1`          |
+| Default model   | `xiaomi/mimo-v2-flash`                   |
+| TTS default     | `mimo-v2.5-tts`，voice `mimo_default`    |
 
 ## 开始使用
 
@@ -63,7 +68,7 @@ OpenAI 兼容端点。
 | TTS id   | `xiaomi` (`mimo` 别名)                  |
 | Auth     | `XIAOMI_API_KEY`                         |
 | API      | `POST /v1/chat/completions` with `audio` |
-| Default  | `mimo-v2.5-tts`, voice `mimo_default`    |
+| Default  | `mimo-v2.5-tts`，voice `mimo_default`    |
 | Output   | 默认输出 MP3；配置后为 WAV               |
 
 ```json5
@@ -78,7 +83,7 @@ OpenAI 兼容端点。
           model: "mimo-v2.5-tts",
           voice: "mimo_default",
           format: "mp3",
-          style: "Bright, natural, conversational tone.",
+          style: "明亮、自然、对话感的语气。",
         },
       },
     },

@@ -16,10 +16,15 @@ title: "CLI 后端"
 - **支持会话**（因此后续轮次能保持连贯）。
 - 如果 CLI 接受图片路径，**可以透传图片**。
 
-这被设计为一个 **安全网**，而不是主路径。当你希望在不依赖外部 API 的情况下获得“始终可用”的文本响应时使用它。
+这是设计为一个 **安全网**，而不是主要路径。当你想要“不依赖外部 API 也总能工作”的文本响应时使用它。
 
 如果你想要一个带有 ACP 会话控制、后台任务、线程/会话绑定以及持久化外部编码会话的完整运行时，请改用
 [ACP Agents](/tools/acp-agents)。CLI 后端不是 ACP。
+
+<Tip>
+  构建新的后端插件？请使用
+  [CLI 后端插件](/plugins/cli-backend-plugins)。本页面面向的是配置和操作已注册后端的用户。
+</Tip>
 
 ## 适合初学者的快速开始
 
@@ -45,7 +50,7 @@ openclaw agent --message "hi" --model codex-cli/gpt-5.5
 }
 ```
 
-就这样。除了 CLI 本身之外，不需要密钥，也不需要额外的认证配置。
+就是这样。除 CLI 本身外，不需要任何密钥或额外的认证配置。
 
 如果你在网关主机上将捆绑的 CLI 后端用作**主要消息提供方**，当你的配置在模型引用中或在
 `agents.defaults.cliBackends` 下明确引用该后端时，OpenClaw 现在会自动加载其所属的捆绑插件。
@@ -153,7 +158,11 @@ model_instructions_file="..."`）传递 OpenClaw 的系统提示。Codex 不提�
 Claude CLI 也有自己的非交互权限模式。OpenClaw 将其映射到现有的执行策略，而不是添加 Claude 专属配置：当有效请求的执行策略为 YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）时，OpenClaw 会添加 `--permission-mode bypassPermissions`。
 每个 agent 的 `agents.list[].tools.exec` 设置会覆盖该 agent 的全局 `tools.exec`。如果你想强制使用不同的 Claude 模式，可以在 `agents.defaults.cliBackends.claude-cli.args` 和匹配的 `resumeArgs` 下设置显式的原始后端参数，例如 `--permission-mode default` 或 `--permission-mode acceptEdits`。
 
-在 OpenClaw 能使用捆绑的 `claude-cli` 后端之前，Claude Code 本身必须已经在同一台主机上登录：
+捆绑的 Anthropic `claude-cli` 后端还会将 OpenClaw 的 `/think` 等级映射到 Claude Code 原生的 `--effort` 标志（适用于非关闭等级）。`minimal` 和
+`low` 映射到 `low`，`adaptive` 和 `medium` 映射到 `medium`，而 `high`、
+`xhigh` 和 `max` 则直接映射。其他 CLI 后端需要其所属插件在 `/think` 能影响启动的 CLI 之前声明等效的 argv 映射器。
+
+在 OpenClaw 能使用捆绑的 `claude-cli` 后端之前，Claude Code 本身必须已经在同一主机上登录：
 
 ```bash
 claude auth login
@@ -165,33 +174,25 @@ openclaw models auth login --provider anthropic --method cli --set-default
 
 ## 会话
 
-- If the CLI supports sessions, set `sessionArg` (e.g. `--session-id`) or
-  `sessionArgs` (placeholder `{sessionId}`) when the ID needs to be inserted
-  into multiple flags.
-- If the CLI uses a **resume subcommand** with different flags, set
-  `resumeArgs` (replaces `args` when resuming) and optionally `resumeOutput`
-  (for non-JSON resumes).
-- `sessionMode`:
-  - `always`: always send a session id (new UUID if none stored).
-  - `existing`: only send a session id if one was stored before.
-  - `none`: never send a session id.
-- `claude-cli` defaults to `liveSession: "claude-stdio"`, `output: "jsonl"`,
-  and `input: "stdin"` so follow-up turns reuse the live Claude process while
-  it is active. Warm stdio is the default now, including for custom configs
-  that omit transport fields. If the Gateway restarts or the idle process
-  exits, OpenClaw resumes from the stored Claude session id. Stored session
-  ids are verified against an existing readable project transcript before
-  resume, so phantom bindings are cleared with `reason=transcript-missing`
-  instead of silently starting a fresh Claude CLI session under `--resume`.
-- Claude live sessions keep bounded JSONL output guards. Defaults allow up to
-  8 MiB and 20,000 raw JSONL lines per turn. Tool-heavy Claude turns can raise
-  them per backend with
+- 如果 CLI 支持会话，请在需要将 ID 插入多个标志时设置 `sessionArg`（例如 `--session-id`）或
+  `sessionArgs`（占位符 `{sessionId}`）。
+- 如果 CLI 使用带有不同标志的 **resume 子命令**，请设置 `resumeArgs`（在恢复时替换 `args`），并可选设置 `resumeOutput`
+  （用于非 JSON 恢复）。
+- `sessionMode`：
+  - `always`：始终发送会话 id（若未存储则使用新的 UUID）。
+  - `existing`：仅在之前存储过会话 id 时发送。
+  - `none`：从不发送会话 id。
+- `claude-cli` 默认 `liveSession: "claude-stdio"`、`output: "jsonl"`，
+  以及 `input: "stdin"`，因此后续轮次会在活动期间复用同一个 Claude 进程。
+  现在默认使用热 stdio，包括那些省略传输字段的自定义配置。如果网关重启或空闲进程
+  退出，OpenClaw 会从已存储的 Claude 会话 id 恢复。已存储的会话 id 在恢复前会与现有可读的项目转录进行验证，因此幽灵绑定会以 `reason=transcript-missing`
+  被清除，而不是在 `--resume` 下悄悄启动一个新的 Claude CLI 会话。
+- Claude 活动会话保留有界的 JSONL 输出保护。默认允许每轮最多
+  8 MiB 和 20,000 行原始 JSONL。工具较多的 Claude 轮次可以按后端提升这些限制，使用
   `agents.defaults.cliBackends.claude-cli.reliability.outputLimits.maxTurnRawChars`
-  and `maxTurnLines`; OpenClaw clamps those settings to 64 MiB and 100,000
-  lines.
-- Stored CLI sessions are provider-owned continuity. The implicit daily session
-  reset does not cut them; `/reset` and explicit `session.reset` policies still
-  do.
+  和 `maxTurnLines`；OpenClaw 会将这些设置钳制到 64 MiB 和 100,000
+  行。
+- 已存储的 CLI 会话属于 provider 的连续性。隐式的每日会话重置不会中断它们；`/reset` 和显式的 `session.reset` 策略仍然会。
 
 序列化说明：
 
@@ -338,13 +339,13 @@ slug 生成和活动记忆回忆，会在运行结束时请求清理，因此 st
 
 ## 限制
 
-- **不直接进行 OpenClaw 工具调用。** OpenClaw 不会将工具调用注入到
-  CLI 后端协议中。只有当后端选择接入 `bundleMcp: true` 时，才会看到网关工具。
-- **流式传输取决于后端。** 某些后端流式输出 JSONL；其他后端则缓冲
+- **不直接调用 OpenClaw 工具。** OpenClaw 不会将工具调用注入
+  CLI 后端协议。只有当后端选择接入 `bundleMcp: true` 时，后端才会看到网关工具。
+- **流式传输因后端而异。** 有些后端流式输出 JSONL；另一些则会缓冲
   到退出为止。
-- **结构化输出** 依赖于 CLI 的 JSON 格式。
-- **Codex CLI 会话** 通过文本输出恢复（不使用 JSONL），其结构化程度
-  低于初始的 `--json` 运行。OpenClaw 会话仍然可以正常工作。
+- **结构化输出** 取决于 CLI 的 JSON 格式。
+- **Codex CLI 会话** 通过文本输出恢复（不是 JSONL），其结构化程度
+  低于初始的 `--json` 运行。OpenClaw 会话仍可正常工作。
 
 ## 故障排除
 

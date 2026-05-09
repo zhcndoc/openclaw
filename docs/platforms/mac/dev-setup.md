@@ -13,8 +13,8 @@ title: "macOS 开发设置"
 
 在构建应用之前，请确保已安装以下内容：
 
-1. **Xcode 26.2+**：Swift 开发所需。
-2. **Node.js 24 和 pnpm**：推荐用于 gateway、CLI 和打包脚本。为了兼容性，目前仍支持 Node 22 LTS，现为 `22.14+`。
+1. **Xcode 26.2+**: Swift 开发所必需。
+2. **Node.js 24 & pnpm**: 推荐用于 gateway、CLI 和打包脚本。当前仍支持 Node 22 LTS，即 `22.16+`，以保证兼容性。
 
 ## 1. 安装依赖
 
@@ -76,7 +76,7 @@ xcodebuild -version
 xcrun swift --version
 ```
 
-如果版本不匹配，请更新 macOS/Xcode 并重新运行构建。
+如果版本不匹配，请更新 macOS/Xcode 后重新运行构建。
 
 ### 授权后应用崩溃
 

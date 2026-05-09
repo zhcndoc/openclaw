@@ -101,9 +101,9 @@ title: "技能配置"
 
 每个技能字段：
 
-- `enabled`：设为 `false` 可禁用某个技能，即使它是捆绑/已安装的。
-- `env`：为 agent 运行注入的环境变量（仅在尚未设置时）。
-- `apiKey`：适用于声明了主环境变量的技能的可选便捷配置。
+- `enabled`: 即使技能已捆绑/安装，也可将其禁用时设为 `false`。
+- `env`: 注入给 agent 运行时的环境变量（仅在尚未设置时生效）。
+- `apiKey`: 适用于声明了主要环境变量的技能的可选便捷配置。
   支持纯文本字符串或 SecretRef 对象（`{ source, provider, id }`）。
 
 ## 说明
@@ -115,20 +115,32 @@ title: "技能配置"
   `skills.load.extraDirs`。
 - 在启用监视器时，对技能的更改会在下一个 agent 回合中被拾取。
 
-### 沙盒化技能 + env 变量
+### 沙箱化的技能与环境变量
 
-当会话处于 **沙盒化** 状态时，技能进程会在配置的沙盒后端中运行。
-该沙盒不会继承宿主的 `process.env`。
+当会话处于 **沙箱化** 状态时，技能进程会在配置好的沙箱后端内运行。该沙箱不会继承宿主机的 `process.env`。
+
+<Warning>
+  全局 `env` 和 `skills.entries.<skill>.env`/`apiKey` 仅适用于 **宿主机** 运行。在沙箱内部它们不起作用，因此依赖 `GEMINI_API_KEY` 的技能会失败并显示 `apiKey not configured`，除非沙箱单独提供了该变量。
+</Warning>
 
 请使用以下之一：
 
-- `agents.defaults.sandbox.docker.env` 用于 Docker 后端（或每个 agent 的 `agents.list[].sandbox.docker.env`）
-- 将 env 烘焙进你的自定义沙盒镜像或远程沙盒环境中
-
-全局 `env` 以及 `skills.entries.<skill>.env/apiKey` 仅适用于 **宿主** 运行。
+- `agents.defaults.sandbox.docker.env` 用于 Docker 后端（或按 agent 配置的 `agents.list[].sandbox.docker.env`）。
+- 将环境变量烘焙进你的自定义沙箱镜像或远程沙箱环境中。
 
 ## 相关内容
 
-- [技能](/tools/skills)
-- [创建技能](/tools/creating-skills)
-- [斜杠命令](/tools/slash-commands)
+<CardGroup cols={2}>
+  <Card title="技能" href="/tools/skills" icon="puzzle-piece">
+    技能是什么，以及它们如何加载。
+  </Card>
+  <Card title="创建技能" href="/tools/creating-skills" icon="hammer">
+    编写自定义技能包。
+  </Card>
+  <Card title="斜杠命令" href="/tools/slash-commands" icon="terminal">
+    原生命令目录和聊天指令。
+  </Card>
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    `skills` 和 `agents.skills` 的完整 schema。
+  </Card>
+</CardGroup>

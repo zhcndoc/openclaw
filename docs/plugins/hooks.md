@@ -49,8 +49,8 @@ export default definePluginEntry({
 
 `api.on(name, handler, opts?)` 接受：
 
-- `priority` — 处理器排序（数值越高越先运行）。
-- `timeoutMs` — 可选的每个钩子预算。设置后，钩子运行器会在预算耗尽后中止该处理器，并继续下一个，而不是让缓慢的初始化或检索工作消耗调用方配置的模型超时。不设置则使用钩子运行器通用应用的默认观察/决策超时。
+- `priority` - 处理器排序（越高越先运行）。
+- `timeoutMs` - 可选的单钩子预算。设置后，钩子运行器会在预算耗尽后中止该处理器，并继续下一个，而不是让缓慢的初始化或回忆工作消耗调用方配置的模型超时。省略它可使用钩子运行器通用应用的默认观察/决策超时。
 
 操作员也可以在不修改插件代码的情况下设置钩子预算：
 
@@ -82,52 +82,53 @@ export default definePluginEntry({
 
 **Agent 回合**
 
-- `before_model_resolve` — 在加载 session 消息之前覆盖提供方或模型
-- `agent_turn_prepare` — 在 prompt 钩子之前消费已排队的插件回合注入并添加同回合上下文
-- `before_prompt_build` — 在模型调用前添加动态上下文或系统提示词文本
-- `before_agent_start` — 仅兼容的组合阶段；优先使用上面两个钩子
-- **`before_agent_reply`** — 用合成回复或静默短路模型回合
-- **`before_agent_finalize`** — 检查自然生成的最终答案并请求再进行一次模型传递
-- `agent_end` — 观察最终消息、成功状态和运行时长
-- `heartbeat_prompt_contribution` — 为后台监视器和生命周期插件添加仅 heartbeat 的上下文
+- `before_model_resolve` - 在会话消息加载前覆盖提供方或模型
+- `agent_turn_prepare` - 消耗已排队的插件回合注入，并在提示词钩子之前添加同回合上下文
+- `before_prompt_build` - 在模型调用前添加动态上下文或系统提示词文本
+- `before_agent_start` - 仅为兼容保留的组合阶段；优先使用上面的两个钩子
+- **`before_agent_run`** - 在模型提交前检查最终提示词和会话消息，并可选择阻止运行
+- **`before_agent_reply`** - 用合成回复或静默短路模型回合
+- **`before_agent_finalize`** - 检查自然生成的最终答案并请求再进行一次模型传递
+- `agent_end` - 观察最终消息、成功状态和运行时长
+- `heartbeat_prompt_contribution` - 为后台监视器和生命周期插件添加仅用于 heartbeat 的上下文
 
 **对话观察**
 
-- `model_call_started` / `model_call_ended` — 观察已清理的提供方/模型调用元数据、耗时、结果，以及受限的请求 ID 哈希，而不包含提示词或响应内容
-- `llm_input` — 观察提供方输入（系统提示词、提示词、历史记录）
-- `llm_output` — 观察提供方输出
+- `model_call_started` / `model_call_ended` - 观察已脱敏的提供方/模型调用元数据、计时、结果，以及带边界限制的请求 ID 哈希，不包含提示词或响应内容
+- `llm_input` - 观察提供方输入（系统提示词、提示词、历史记录）
+- `llm_output` - 观察提供方输出
 
 **工具**
 
-- **`before_tool_call`** — 重写 tool 参数、阻止执行，或要求批准
-- `after_tool_call` — 观察 tool 结果、错误和持续时间
-- **`tool_result_persist`** — 重写从 tool 结果生成的 assistant 消息
-- **`before_message_write`** — 检查或阻止正在进行的消息写入（较少见）
+- **`before_tool_call`** - 重写工具参数、阻止执行或要求批准
+- `after_tool_call` - 观察工具结果、错误和持续时间
+- **`tool_result_persist`** - 重写由工具结果生成的 assistant 消息
+- **`before_message_write`** - 检查或阻止正在进行的消息写入（较少见）
 
 **消息与传递**
 
-- **`inbound_claim`** — 在 agent 路由前认领一条入站消息（合成回复）
-- `message_received` — 观察入站内容、发送者、线程和元数据
-- **`message_sending`** — 重写出站内容或取消传递
-- `message_sent` — 观察出站传递成功或失败
-- **`before_dispatch`** — 在通道交接前检查或重写一次出站派发
-- **`reply_dispatch`** — 参与最终的回复派发流水线
+- **`inbound_claim`** - 在 agent 路由前认领传入消息（合成回复）
+- `message_received` - 观察传入内容、发送者、线程和元数据
+- **`message_sending`** - 重写传出内容或取消投递
+- `message_sent` - 观察传出投递成功或失败
+- **`before_dispatch`** - 在通道交接前检查或重写传出分发
+- **`reply_dispatch`** - 参与最终回复分发流水线
 
 **Sessions 与压缩**
 
-- `session_start` / `session_end` — 跟踪 session 生命周期边界
-- `before_compaction` / `after_compaction` — 观察或注释压缩周期
-- `before_reset` — 观察 session 重置事件（`/reset`、程序化重置）
+- `session_start` / `session_end` - 跟踪 session 生命周期边界
+- `before_compaction` / `after_compaction` - 观察或标注压缩周期
+- `before_reset` - 观察 session 重置事件（`/reset`、程序化重置）
 
 **Subagent**
 
-- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` — 协调 subagent 路由和完成投递
+- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` - 协调 subagent 路由和完成投递
 
 **生命周期**
 
-- `gateway_start` / `gateway_stop` — 随 Gateway 启动或停止插件自有服务
-- `cron_changed` — 观察 Gateway 拥有的 cron 生命周期变化（添加、更新、移除、启动、完成、已调度）
-- **`before_install`** — 检查技能或插件安装扫描并可选择阻止
+- `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件拥有的服务
+- `cron_changed` - 观察 Gateway 拥有的 cron 生命周期变更（添加、更新、移除、启动、完成、已调度）
+- **`before_install`** - 检查 skill 或插件安装扫描并可选择阻止
 
 ## Tool 调用策略
 
@@ -163,12 +164,14 @@ type BeforeToolCallResult = {
 
 规则：
 
-- `block: true` 是终态，并会跳过低优先级处理器。
+- `block: true` 是终止性的，会跳过低优先级处理器。
 - `block: false` 视为没有决策。
-- `params` 会重写执行时的 tool 参数。
-- `requireApproval` 会暂停 agent 运行，并通过插件批准流程询问用户。`/approve` 命令可以批准 exec 和插件批准。
-- 即使较高优先级的钩子请求了批准，较低优先级的 `block: true` 仍然可以随后阻止。
-- `onResolution` 会接收已解析的批准决策——`allow-once`、`allow-always`、`deny`、`timeout` 或 `cancelled`。
+- `params` 会为执行重写工具参数。
+- `requireApproval` 会暂停 agent 运行，并通过插件批准向用户请求。
+  `/approve` 命令可以批准 exec 和插件批准。
+- 较低优先级的 `block: true` 仍然可以在较高优先级钩子请求批准后阻止执行。
+- `onResolution` 接收已解析的批准决策 - `allow-once`、
+  `allow-always`、`deny`、`timeout` 或 `cancelled`。
 
 需要主机级策略的捆绑插件可以用 `api.registerTrustedToolPolicy(...)` 注册受信任的 tool 策略。这些会在普通 `before_tool_call` 钩子和外部插件决策之前运行。仅将其用于主机信任的门禁，例如工作区策略、预算执行或保留工作流安全。外部插件应使用常规的 `before_tool_call` 钩子。
 
@@ -191,7 +194,11 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 `before_agent_start` 仍保留用于兼容。建议优先使用上面的显式钩子，这样插件就不会依赖旧的组合阶段。
 
-当 OpenClaw 能识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。同一个值也可在 `ctx.runId` 中获取。cron 驱动的运行还会暴露 `ctx.jobId`（来源 cron 作业 id），因此插件钩子可以将指标、副作用或状态限定到特定计划作业。
+`before_agent_run` 在提示词构建完成后、任何模型输入之前运行，包括提示词本地图片加载和 `llm_input` 观察。它接收当前用户输入作为 `prompt`，以及已加载的会话历史 `messages` 和活动系统提示词。返回 `{ outcome: "block", reason, message? }` 可在模型读取提示词之前停止运行。`reason` 是内部原因；`message` 是面向用户的替代文本。唯一支持的结果是 `pass` 和 `block`；不支持的决策形状会默认关闭失败。
+
+当运行被阻止时，OpenClaw 只会在 `message.content` 中存储替代文本，以及诸如阻止插件 id 和时间戳之类的非敏感阻止元数据。原始用户文本不会保留在转录或未来上下文中。内部阻止原因被视为敏感信息，并会从转录、历史、广播、日志和诊断载荷中排除。可观测性应使用经过脱敏的字段，例如阻止者 id、结果、时间戳或安全类别。
+
+当 OpenClaw 能识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。同样的值也可在 `ctx.runId` 中获得。由 cron 驱动的运行还会暴露 `ctx.jobId`（来源 cron 作业 id），以便插件钩子可以将指标、副作用或状态限定到特定的计划作业。
 
 对于源自通道的运行，`ctx.messageProvider` 是诸如 `discord` 或 `telegram` 的提供方表面，而 `ctx.channelId` 是当 OpenClaw 能从 session key 或投递元数据推导出时的会话目标标识符。
 
@@ -201,7 +208,22 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 `before_agent_finalize` 只在 harness 即将接受自然生成的最终 assistant 答案时运行。它不是 `/stop` 取消路径，也不会在用户中止回合时运行。返回 `{ action: "revise", reason }` 可请求 harness 在最终定稿前再进行一次模型传递，返回 `{ action: "finalize", reason? }` 可强制定稿，或省略结果以继续。Codex 原生的 `Stop` 钩子会作为 OpenClaw 的 `before_agent_finalize` 决策转发到这里。
 
-需要 `llm_input`、`llm_output`、`before_agent_finalize` 或 `agent_end` 的非捆绑插件必须设置：
+当返回 `action: "revise"` 时，插件可以包含 `retry` 元数据，以使额外的模型传递具有边界并且可安全回放：
+
+```typescript
+type BeforeAgentFinalizeRetry = {
+  instruction: string;
+  idempotencyKey?: string;
+  maxAttempts?: number;
+};
+```
+
+`instruction` 会附加到发送给 harness 的修订原因中。
+`idempotencyKey` 允许宿主在等价的 finalize 决策之间统计同一插件请求的重试次数，而 `maxAttempts` 则限制宿主在继续采用自然最终答案之前允许的额外传递次数。
+
+非捆绑插件若需要原始对话钩子（`before_model_resolve`、
+`before_agent_reply`、`llm_input`、`llm_output`、`before_agent_finalize`、
+`agent_end` 或 `before_agent_run`），必须设置：
 
 ```json
 {
@@ -290,15 +312,16 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
   `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
   `timeout` / `cancelled`），而不是自由形式的 `string`。
 
-完整列表——内存能力注册、提供方思考配置文件、外部认证提供方、提供方发现类型、
-任务运行时访问器，以及 `command-auth` → `command-status` 重命名——请参见
-[插件 SDK 迁移 → 当前弃用项](/plugins/sdk-migration#active-deprecations)。
+For the full list - memory capability registration, provider thinking
+profile, external auth providers, provider discovery types, task runtime
+accessors, and the `command-auth` → `command-status` rename - see
+[Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations).
 
 ## 相关内容
 
-- [插件 SDK 迁移](/plugins/sdk-migration) — 当前弃用项和移除时间线
-- [构建插件](/plugins/building-plugins)
-- [插件 SDK 概览](/plugins/sdk-overview)
-- [插件入口点](/plugins/sdk-entrypoints)
-- [内部钩子](/automation/hooks)
-- [插件架构内部](/plugins/architecture-internals)
+- [Plugin SDK migration](/plugins/sdk-migration) - active deprecations and removal timeline
+- [Building plugins](/plugins/building-plugins)
+- [Plugin SDK overview](/plugins/sdk-overview)
+- [Plugin entry points](/plugins/sdk-entrypoints)
+- [Internal hooks](/automation/hooks)
+- [Plugin architecture internals](/plugins/architecture-internals)

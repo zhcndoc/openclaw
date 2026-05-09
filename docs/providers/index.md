@@ -6,8 +6,6 @@ read_when:
 title: "提供商目录"
 ---
 
-# 模型提供商
-
 OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证，然后将
 默认模型设置为 `provider/model`。
 
@@ -30,7 +28,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [Amazon Bedrock](/providers/bedrock)
 - [Amazon Bedrock Mantle](/providers/bedrock-mantle)
 - [Anthropic（API + Claude CLI）](/providers/anthropic)
-- [Arcee AI（Trinity models）](/providers/arcee)
+- [Arcee AI（Trinity 模型）](/providers/arcee)
 - [Azure Speech](/providers/azure-speech)
 - [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Cerebras](/providers/cerebras)
@@ -42,7 +40,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)
 - [GitHub Copilot](/providers/github-copilot)
-- [GLM models](/providers/glm)
+- [GLM 模型](/providers/glm)
 - [Google（Gemini）](/providers/google)
 - [Gradium](/providers/gradium)
 - [Groq（LPU 推理）](/providers/groq)

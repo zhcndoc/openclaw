@@ -45,15 +45,15 @@ API key，而另一些则无需 key。你也可以稍后使用
 上手引导从 **QuickStart**（默认值）与 **Advanced**（完全控制）开始。
 
 <Tabs>
-  <Tab title="QuickStart（默认值）">
-    - 本地 gateway（loopback）
+  <Tab title="QuickStart (defaults)">
+    - 本地 Gateway（回环地址）
     - 工作区默认值（或现有工作区）
     - Gateway 端口 **18789**
-    - Gateway 认证 **Token**（自动生成，即使在 loopback 上也是如此）
-    - 新本地设置的工具策略默认值：`tools.profile: "coding"`（若已有显式 profile，则会保留）
+    - Gateway 认证 **Token**（自动生成，即使在回环地址上也是如此）
+    - 新本地设置的工具策略默认值：`tools.profile: "coding"`（会保留已有明确配置的 profile）
     - DM 隔离默认值：本地上手引导在未设置时会写入 `session.dmScope: "per-channel-peer"`。详情：[CLI Setup Reference](/start/wizard-cli-reference#outputs-and-internals)
     - Tailscale 暴露 **关闭**
-    - Telegram + WhatsApp DMs 默认使用 **allowlist**（你会被提示输入电话号码）
+    - Telegram + WhatsApp 私信默认设为 **allowlist**（会提示你输入电话号码）
 
   </Tab>
   <Tab title="Advanced（完全控制）">
@@ -66,24 +66,24 @@ API key，而另一些则无需 key。你也可以稍后使用
 
 **本地模式（默认）** 会引导你完成以下步骤：
 
-1. **模型/认证** — 选择任何受支持的提供方/认证流程（API key、OAuth，或提供方特定的手动认证），包括自定义提供方
-   （OpenAI 兼容、Anthropic 兼容，或未知自动检测）。选择默认模型。
-   安全提示：如果此代理将运行工具或处理 webhook/hooks 内容，优先选择可用的最强最新一代模型，并保持严格的工具策略。较弱/较旧的层级更容易受到 prompt injection。
-   对于非交互运行，`--secret-input-mode ref` 会将基于环境变量的引用存储在认证 profile 中，而不是明文 API key 值。
-   在非交互 `ref` 模式下，必须设置提供方环境变量；如果未设置该环境变量而直接传入内联 key 标志，会立即失败。
-   在交互运行中，选择 secret reference 模式后，你可以指向环境变量或已配置的提供方引用（`file` 或 `exec`），并在保存前进行快速预检验证。
-   对于 Anthropic，交互式 onboarding/configure 提供 **Anthropic Claude CLI** 作为首选本地路径，并提供 **Anthropic API key** 作为推荐的生产路径。Anthropic setup-token 也仍然可作为受支持的 token-auth 路径使用。
-2. **工作区** — 代理文件的位置（默认 `~/.openclaw/workspace`）。会生成引导初始化文件。
+1. **Model/Auth** — 选择任何受支持的提供方/认证流程（API key、OAuth，或提供方特定的手动认证），包括 Custom Provider
+   （OpenAI-compatible、Anthropic-compatible 或 Unknown auto-detect）。选择一个默认模型。
+   安全提示：如果该 agent 将运行工具或处理 webhook/hooks 内容，请优先选择可用的最强最新一代模型，并保持严格的工具策略。较弱/较旧的模型层级更容易受到 prompt-inject 攻击。
+   对于非交互式运行，`--secret-input-mode ref` 会将基于环境变量的引用存储在认证 profile 中，而不是明文 API key 值。
+   在非交互式 `ref` 模式下，必须设置提供方环境变量；如果传入内联 key 标志但未设置该环境变量，会立即失败。
+   在交互式运行中，选择 secret reference 模式后，你可以指向环境变量或已配置的提供方引用（`file` 或 `exec`），并在保存前进行快速预检验证。
+   对于 Anthropic，交互式上手引导/配置会提供 **Anthropic Claude CLI** 作为首选本地路径，以及 **Anthropic API key** 作为推荐的生产环境路径。Anthropic setup-token 仍然可用，作为受支持的 token-auth 路径。
+2. **Workspace** — agent 文件的位置（默认 `~/.openclaw/workspace`）。会生成引导文件。
 3. **Gateway** — 端口、绑定地址、认证模式、Tailscale 暴露。
-   在交互式 token 模式下，可选择默认明文 token 存储，或启用 SecretRef。
+   在交互式 token 模式下，可选择默认明文 token 存储，或改用 SecretRef。
    非交互式 token SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-4. **通道** — 内置和捆绑的聊天通道，例如 BlueBubbles、Discord、Feishu、Google Chat、Mattermost、Microsoft Teams、QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
-5. **守护进程** — 安装 LaunchAgent（macOS）、systemd user unit（Linux/WSL2），或原生 Windows Scheduled Task，并提供按用户 Startup-folder 回退方案。
-   如果 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理，则守护进程安装会验证它，但不会将解析后的 token 持久化到 supervisor 服务环境元数据中。
-   如果 token 认证需要 token 且已配置的 token SecretRef 未解析，守护进程安装将被阻止，并提供可执行的指导。
-   如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，则在显式设置模式之前，守护进程安装会被阻止。
-6. **健康检查** — 启动 Gateway 并验证其正在运行。
-7. **技能** — 安装推荐技能和可选依赖项。
+4. **Channels** — 内置和捆绑的聊天通道，例如 iMessage、Discord、Feishu、Google Chat、Mattermost、Microsoft Teams、QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
+5. **Daemon** — 安装 LaunchAgent（macOS）、systemd user unit（Linux/WSL2），或原生 Windows Scheduled Task，并提供按用户 Startup-folder 作为后备方案。
+   如果 token 认证需要 token，且 `gateway.auth.token` 由 SecretRef 管理，守护进程安装会验证它，但不会将解析后的 token 持久化到 supervisor 服务环境元数据中。
+   如果 token 认证需要 token，且已配置的 token SecretRef 未解析，守护进程安装会被阻止，并给出可操作的指导。
+   如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置，且 `gateway.auth.mode` 未设置，则守护进程安装会被阻止，直到显式设置模式为止。
+6. **Health check** — 启动 Gateway 并验证其是否运行正常。
+7. **Skills** — 安装推荐技能和可选依赖。
 
 <Note>
 重新运行上手引导不会**清除**任何内容，除非你明确选择 **Reset**（或传入 `--reset`）。

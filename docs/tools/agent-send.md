@@ -92,6 +92,17 @@ openclaw agent --agent ops --message "警报" --deliver --reply-channel telegram
 
 ## 相关内容
 
-- [Agent CLI reference](/cli/agent)
-- [Sub-agents](/tools/subagents) — 后台 sub-agent 启动
-- [Sessions](/concepts/session) — session key 的工作方式
+<CardGroup cols={2}>
+  <Card title="Agent CLI reference" href="/cli/agent" icon="terminal">
+    完整的 `openclaw agent` 标志和选项参考。
+  </Card>
+  <Card title="Sub-agents" href="/tools/subagents" icon="users">
+    后台子 agent 启动。
+  </Card>
+  <Card title="Sessions" href="/concepts/session" icon="comments">
+    session key 的工作方式，以及 `--to`、`--agent` 和 `--session-id` 如何解析它们。
+  </Card>
+  <Card title="Slash commands" href="/tools/slash-commands" icon="slash">
+    agent 会话中使用的原生命令目录。
+  </Card>
+</CardGroup>

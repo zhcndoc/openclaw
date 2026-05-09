@@ -63,14 +63,14 @@ export default definePluginEntry({
 });
 ```
 
-| 字段           | 类型                                                            | 必需 | 默认值              |
-| -------------- | ---------------------------------------------------------------- | ---- | ------------------- |
-| `id`           | `string`                                                         | 是   | —                   |
-| `name`         | `string`                                                         | 是   | —                   |
-| `description`  | `string`                                                         | 是   | —                   |
-| `kind`         | `string`                                                         | 否   | —                   |
-| `configSchema` | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
-| `register`     | `(api: OpenClawPluginApi) => void`                               | 是   | —                   |
+| Field          | Type                                                             | Required | Default             |
+| -------------- | ---------------------------------------------------------------- | -------- | ------------------- |
+| `id`           | `string`                                                         | Yes      | -                   |
+| `name`         | `string`                                                         | Yes      | -                   |
+| `description`  | `string`                                                         | Yes      | -                   |
+| `kind`         | `string`                                                         | No       | -                   |
+| `configSchema` | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | No       | Empty object schema |
+| `register`     | `(api: OpenClawPluginApi) => void`                               | Yes      | -                   |
 
 - `id` 必须与 `openclaw.plugin.json` 清单匹配。
 - `kind` 用于独占槽位：`"memory"` 或 `"context-engine"`。
@@ -101,25 +101,45 @@ export default defineChannelPluginEntry({
 });
 ```
 
-| 字段                  | 类型                                                            | 必需 | 默认值              |
-| --------------------- | ---------------------------------------------------------------- | ---- | ------------------- |
-| `id`                  | `string`                                                         | 是   | —                   |
-| `name`                | `string`                                                         | 是   | —                   |
-| `description`         | `string`                                                         | 是   | —                   |
-| `plugin`              | `ChannelPlugin`                                                  | 是   | —                   |
-| `configSchema`        | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
-| `setRuntime`          | `(runtime: PluginRuntime) => void`                               | 否   | —                   |
-| `registerCliMetadata` | `(api: OpenClawPluginApi) => void`                               | 否   | —                   |
-| `registerFull`        | `(api: OpenClawPluginApi) => void`                               | 否   | —                   |
+| Field                 | Type                                                             | Required | Default             |
+| --------------------- | ---------------------------------------------------------------- | -------- | ------------------- |
+| `id`                  | `string`                                                         | Yes      | -                   |
+| `name`                | `string`                                                         | Yes      | -                   |
+| `description`         | `string`                                                         | Yes      | -                   |
+| `plugin`              | `ChannelPlugin`                                                  | Yes      | -                   |
+| `configSchema`        | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | No       | Empty object schema |
+| `setRuntime`          | `(runtime: PluginRuntime) => void`                               | No       | -                   |
+| `registerCliMetadata` | `(api: OpenClawPluginApi) => void`                               | No       | -                   |
+| `registerFull`        | `(api: OpenClawPluginApi) => void`                               | No       | -                   |
 
-- `setRuntime` 会在注册期间调用，因此你可以存储运行时引用（通常通过 `createPluginRuntimeStore`）。在 CLI 元数据捕获期间会跳过它。
-- `registerCliMetadata` 会在 `api.registrationMode === "cli-metadata"`、`api.registrationMode === "discovery"` 和 `api.registrationMode === "full"` 时运行。
-  将其作为通道自有 CLI 描述符的规范位置，这样根帮助就保持非激活，发现快照会包含静态命令元数据，并且常规 CLI 命令注册仍然与完整插件加载兼容。
-- 发现注册是非激活的，但不是免导入的。OpenClaw 可能会计算受信任的插件入口和通道插件模块来构建快照，因此请保持顶层导入无副作用，并将 sockets、clients、workers 和 services 放在仅 `"full"` 的路径之后。
-- `registerFull` 仅在 `api.registrationMode === "full"` 时运行。在仅 setup 加载期间会跳过它。
-- 与 `definePluginEntry` 类似，`configSchema` 可以是一个懒工厂，OpenClaw 会在首次访问时缓存解析后的 schema。
-- 对于插件拥有的根 CLI 命令，如果你希望命令保持懒加载但又不从根 CLI 解析树中消失，优先使用 `api.registerCli(..., { descriptors: [...] })`。对于通道插件，优先在 `registerCliMetadata(...)` 中注册这些描述符，并让 `registerFull(...)` 专注于仅运行时工作。
-- 如果 `registerFull(...)` 还注册了 gateway RPC 方法，请将它们放在插件专属前缀下。保留的核心管理员命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）始终会被强制为 `operator.admin`。
+- `setRuntime` 会在注册期间调用，因此你可以存储运行时引用
+  （通常通过 `createPluginRuntimeStore`）。在 CLI 元数据
+  捕获期间会跳过它。
+- `registerCliMetadata` 会在 `api.registrationMode === "cli-metadata"`、
+  `api.registrationMode === "discovery"` 以及
+  `api.registrationMode === "full"` 时运行。
+  当作通道拥有的 CLI 描述符的规范放置位置，以便根帮助保持非激活、发现快照包含静态命令元数据，并且常规 CLI 命令注册仍然与完整插件加载兼容。
+- 发现注册是非激活的，但不是免导入的。OpenClaw 可能会
+  评估受信任的插件入口和通道插件模块来构建
+  快照，因此请保持顶层导入无副作用，并将 sockets、
+  clients、workers 和 services 放在仅 `"full"` 的路径之后。
+- `registerFull` 仅在 `api.registrationMode === "full"` 时运行。它会在
+  仅 setup 加载期间被跳过。
+- 与 `definePluginEntry` 类似，`configSchema` 可以是延迟工厂，OpenClaw
+  会在首次访问时对解析后的 schema 进行记忆化。
+- 对于插件拥有的根 CLI 命令，当你希望命令保持懒加载但又不从
+  根 CLI 解析树中消失时，请优先使用 `api.registerCli(..., { descriptors: [...] })`。
+  对于成对节点功能命令，请优先使用
+  `api.registerNodeCliFeature(...)`，这样命令会落在 `openclaw nodes` 下。
+  对于其他嵌套插件命令，请添加 `parentPath` 并在传给注册器的
+  `program` 对象上注册命令；OpenClaw 会在调用插件前将其解析为
+  父命令。对于通道插件，请优先从
+  `registerCliMetadata(...)` 注册这些描述符，并让 `registerFull(...)`
+  专注于仅运行时工作。
+- 如果 `registerFull(...)` 还注册 gateway RPC 方法，请将它们保留在
+  插件专用前缀下。保留的核心管理员命名空间（`config.*`、
+  `exec.approvals.*`、`wizard.*`、`update.*`）始终会被强制归类为
+  `operator.admin`。
 
 ## `defineSetupPluginEntry`
 
@@ -226,8 +246,8 @@ OpenClaw 根据已加载插件的注册行为对其进行分类：
 
 ## 相关
 
-- [SDK 概览](/plugins/sdk-overview) — 注册 API 和子路径参考
-- [运行时辅助工具](/plugins/sdk-runtime) — `api.runtime` 和 `createPluginRuntimeStore`
-- [设置与配置](/plugins/sdk-setup) — 清单、设置入口、延迟加载
-- [Channel 插件](/plugins/sdk-channel-plugins) — 构建 `ChannelPlugin` 对象
-- [Provider 插件](/plugins/sdk-provider-plugins) — provider 注册和 hooks
+- [SDK 概览](/plugins/sdk-overview) - 注册 API 和子路径参考
+- [运行时辅助工具](/plugins/sdk-runtime) - `api.runtime` 和 `createPluginRuntimeStore`
+- [设置与配置](/plugins/sdk-setup) - 清单、设置入口、延迟加载
+- [通道插件](/plugins/sdk-channel-plugins) - 构建 `ChannelPlugin` 对象
+- [提供者插件](/plugins/sdk-provider-plugins) - 提供者注册和 hooks

@@ -7,9 +7,7 @@ read_when:
 title: "Ansible"
 ---
 
-# Ansible 安装
-
-使用 **[openclaw-ansible](https://github.com/openclaw/openclaw-ansible)** 将 OpenClaw 部署到生产服务器——这是一个以安全优先架构为核心的自动化安装器。
+将 OpenClaw 部署到生产服务器，使用 **[openclaw-ansible](https://github.com/openclaw/openclaw-ansible)** —— 一个采用安全优先架构的自动化安装程序。
 
 <Info>
 [openclaw-ansible](https://github.com/openclaw/openclaw-ansible) 仓库是 Ansible 部署的唯一可信来源。本页面仅作快速概览。
@@ -46,11 +44,11 @@ curl -fsSL https://raw.githubusercontent.com/openclaw/openclaw-ansible/main/inst
 Ansible playbook 会安装并配置：
 
 1. **Tailscale** -- 用于安全远程访问的 mesh VPN
-2. **UFW 防火墙** -- 仅开放 SSH + Tailscale 端口
+2. **UFW firewall** -- 仅开放 SSH + Tailscale 端口
 3. **Docker CE + Compose V2** -- 用于默认的 agent 沙盒后端
-4. **Node.js 24 + pnpm** -- 运行时依赖（Node 22 LTS，当前 `22.14+`，仍受支持）
+4. **Node.js 24 + pnpm** -- 运行时依赖（Node 22 LTS，目前 `22.16+` 仍受支持）
 5. **OpenClaw** -- 基于主机运行，而非容器化
-6. **Systemd 服务** -- 带安全加固的自动启动
+6. **Systemd service** -- 自动启动并进行安全加固
 
 <Note>
 网关直接运行在主机上（不在 Docker 中）。Agent 沙盒化是可选的；此 playbook 安装 Docker 是因为它是默认的沙盒后端。有关详细信息和其他后端，请参见 [Sandboxing](/gateway/sandboxing)。

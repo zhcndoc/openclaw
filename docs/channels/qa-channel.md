@@ -7,7 +7,7 @@ read_when:
   - 你正在迭代端到端 QA 自动化
 ---
 
-`qa-channel` 是一个用于自动化 OpenClaw QA 的内置合成消息传输。它不是生产频道——它的存在是为了在保持状态确定且完全可检查的同时，练习与真实传输所使用的相同频道插件边界。
+`qa-channel` 是一个为自动化 OpenClaw QA 打包的合成消息传输。它不是生产频道——它的存在是为了在保持状态确定且完全可检查的同时，练习与真实传输相同的频道插件边界。
 
 ## 它的作用
 
@@ -38,20 +38,20 @@ read_when:
 
 账户键：
 
-- `enabled` — 此账户的总开关。
-- `name` — 可选的显示标签。
-- `baseUrl` — 合成总线 URL。
-- `botUserId` — 在目标语法中使用的 Matrix 风格机器人用户 id。
-- `botDisplayName` — 出站消息的显示名称。
-- `pollTimeoutMs` — 长轮询等待窗口。介于 100 和 30000 之间的整数。
-- `allowFrom` — 发送者允许列表（用户 id 或 `"*"`）。
-- `defaultTo` — 未提供目标时的回退目标。
-- `actions.messages` / `actions.reactions` / `actions.search` / `actions.threads` — 按操作进行的工具门控。
+- `enabled` - 此账户的总开关。
+- `name` - 可选显示标签。
+- `baseUrl` - 合成总线 URL。
+- `botUserId` - 在目标语法中使用的 Matrix 风格机器人用户 id。
+- `botDisplayName` - 出站消息的显示名称。
+- `pollTimeoutMs` - 长轮询等待窗口。介于 100 和 30000 之间的整数。
+- `allowFrom` - 发送方允许列表（用户 id 或 `"*"`）。
+- `defaultTo` - 未提供目标时的回退目标。
+- `actions.messages` / `actions.reactions` / `actions.search` / `actions.threads` - 按动作的工具门控。
 
 顶层的多账户键：
 
-- `accounts` — 以账户 id 为键的、命名的每账户覆盖记录。
-- `defaultAccount` — 配置了多个账户时的首选账户 id。
+- `accounts` - 以账户 id 为键的命名账户级覆盖记录。
+- `defaultAccount` - 配置多个账户时首选的账户 id。
 
 ## 运行器
 
@@ -81,8 +81,8 @@ pnpm qa:lab:up
 
 ## 相关内容
 
-- [QA 概览](/concepts/qa-e2e-automation) — 整体栈、传输适配器、场景编写
-- [Matrix QA](/concepts/qa-matrix) — 驱动真实频道的示例实时传输运行器
-- [配对](/channels/pairing)
-- [群组](/channels/groups)
-- [频道概览](/channels)
+- [QA overview](/concepts/qa-e2e-automation) - 整体栈、传输适配器、场景编写
+- [Matrix QA](/concepts/qa-matrix) - 驱动真实频道的示例实时传输运行器
+- [Pairing](/channels/pairing)
+- [Groups](/channels/groups)
+- [Channels overview](/channels)

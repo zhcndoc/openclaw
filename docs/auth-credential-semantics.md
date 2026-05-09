@@ -57,6 +57,18 @@ Agent 认证继承采用读穿透方式。当某个 agent 没有本地配置文�
 
 不可移植的配置文件仍可通过读穿透继承访问，除非目标 agent 单独登录并创建自己的本地配置文件。
 
+## 仅配置的 auth 路由
+
+`auth.profiles` 中 `mode: "aws-sdk"` 的条目是路由元数据，而不是存储的
+凭据。当目标提供方使用
+`models.providers.<id>.auth: "aws-sdk"` 或内置的 Amazon Bedrock 默认
+AWS SDK 路由时，它们是有效的。即使 `auth-profiles.json` 中没有对应条目，这些配置文件 id 仍可能出现在 `auth.order` 和会话
+覆盖中。
+
+不要将 `type: "aws-sdk"` 写入 `auth-profiles.json`。如果旧版安装
+中存在此类标记，`openclaw doctor --fix` 会将其移动到 `auth.profiles` 并
+从凭据存储中移除该标记。
+
 ## 显式 auth 顺序过滤
 
 - 当为某个提供方设置了 `auth.order.<provider>` 或 auth-store 顺序覆盖时，`models status --probe` 只会探测保留在该提供方已解析 auth 顺序中的配置文件 id。

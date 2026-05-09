@@ -12,15 +12,15 @@ title: "macOS 日志"
 
 OpenClaw 通过 swift-log 路由 macOS 应用日志（默认使用统一日志），并且在你需要持久化捕获时，可以将本地的滚动文件日志写入磁盘。
 
-- 详细程度：**调试面板 → 日志 → 应用日志 → 详细程度**
-- 启用：**调试面板 → 日志 → 应用日志 → “写入滚动诊断日志（JSONL）”**
-- 位置：`~/Library/Logs/OpenClaw/diagnostics.jsonl`（会自动轮转；旧文件后缀为 `.1`、`.2`，……）
-- 清除：**调试面板 → 日志 → 应用日志 → “清除”**
+- Verbosity: **Debug pane → Logs → App logging → Verbosity**
+- Enable: **Debug pane → Logs → App logging → "Write rolling diagnostics log (JSONL)"**
+- Location: `~/Library/Logs/OpenClaw/diagnostics.jsonl` (rotates automatically; old files are suffixed with `.1`, `.2`, …)
+- Clear: **Debug pane → Logs → App logging → "Clear"**
 
 说明：
 
-- 这项功能默认是**关闭**的。仅在主动调试时启用。
-- 请将该文件视为敏感信息；未经检查不要分享。
+- 这项功能**默认关闭**。仅在主动调试时启用。
+- 请将该文件视为敏感信息；未经审查不要共享。
 
 ## macOS 上的统一日志私有数据
 

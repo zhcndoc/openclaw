@@ -7,7 +7,7 @@ read_when:
 title: "Nix"
 ---
 
-使用 **[nix-openclaw](https://github.com/openclaw/nix-openclaw)** 声明式安装 OpenClaw —— 一个开箱即用的 Home Manager 模块。
+使用 **[nix-openclaw](https://github.com/openclaw/nix-openclaw)** 声明式安装 OpenClaw —— 首选的、开箱即用的 Home Manager 模块。
 
 <Info>
 [nix-openclaw](https://github.com/openclaw/nix-openclaw) 仓库是 Nix 安装的唯一事实来源。本页仅作快速概览。
@@ -50,7 +50,7 @@ title: "Nix"
 
 ## Nix 模式运行时行为
 
-当设置 `OPENCLAW_NIX_MODE=1` 时（nix-openclaw 会自动设置），OpenClaw 会进入一种确定性模式，从而禁用自动安装流程。
+当设置了 `OPENCLAW_NIX_MODE=1`（在使用 nix-openclaw 时会自动设置）时，OpenClaw 会进入适用于 Nix 管理安装的确定性模式。其他 Nix 包也可以设置相同模式；nix-openclaw 是首选参考实现。
 
 你也可以手动设置：
 
@@ -67,7 +67,9 @@ defaults write ai.openclaw.mac openclaw.nixMode -bool true
 ### Nix 模式下会有什么变化
 
 - 自动安装和自我修改流程被禁用
-- 缺失的依赖会显示 Nix 专用的修复消息
+- `openclaw.json` 会被视为不可变。启动时生成的默认值仍仅限于运行时，且诸如 setup、onboarding、会修改配置的 `openclaw update`、plugin install/update/uninstall/enable、`doctor --fix`、`doctor --generate-gateway-token` 和 `openclaw config set` 等配置写入器都会拒绝编辑该文件。
+- 应由代理直接编辑 Nix 源代码。对于 nix-openclaw，请使用 agent-first [Quick Start](https://github.com/openclaw/nix-openclaw#quick-start)，并在 `programs.openclaw.config` 或 `instances.<name>.config` 下设置配置。
+- 缺失依赖会显示 Nix 特定的修复建议消息
 - UI 会显示只读的 Nix 模式横幅
 
 ### 配置和状态路径
@@ -84,13 +86,24 @@ OpenClaw 会从 `OPENCLAW_CONFIG_PATH` 读取 JSON5 配置，并将可变数据�
 
 launchd/systemd 网关服务会自动发现 Nix-profile 二进制文件，因此通过 shell 调用 `nix` 安装的可执行文件的插件和工具无需手动设置 PATH：
 
-- 当设置了 `NIX_PROFILES` 时，其中的每个条目都会按从右到左的优先级添加到服务 PATH 中（与 Nix shell 的优先级一致——最右侧优先）。
-- 当未设置 `NIX_PROFILES` 时，会添加 `~/.nix-profile/bin` 作为后备。
+- 当设置了 `NIX_PROFILES` 时，每个条目都会按从右到左的优先级添加到服务 PATH 中（与 Nix shell 的优先级一致——最右侧获胜）。
+- 当未设置 `NIX_PROFILES` 时，会将 `~/.nix-profile/bin` 作为回退路径添加。
 
 这同时适用于 macOS 的 launchd 和 Linux 的 systemd 服务环境。
 
 ## 相关内容
 
-- [nix-openclaw](https://github.com/openclaw/nix-openclaw) —— 完整设置指南
-- [Wizard](/start/wizard) —— 非 Nix 的 CLI 设置
-- [Docker](/install/docker) —— 容器化设置
+<CardGroup cols={2}>
+  <Card title="nix-openclaw" href="https://github.com/openclaw/nix-openclaw" icon="arrow-up-right-from-square">
+    事实来源的 Home Manager 模块和完整设置指南。
+  </Card>
+  <Card title="Setup wizard" href="/start/wizard" icon="wand-magic-sparkles">
+    非 Nix CLI 设置流程。
+  </Card>
+  <Card title="Docker" href="/install/docker" icon="docker">
+    容器化安装，作为非 Nix 替代方案。
+  </Card>
+  <Card title="Updating" href="/install/updating" icon="arrow-up-right-from-square">
+    将 Home Manager 管理的安装与包一起更新。
+  </Card>
+</CardGroup>

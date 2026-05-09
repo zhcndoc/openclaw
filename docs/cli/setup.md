@@ -1,14 +1,18 @@
 ---
 summary: "openclaw setup 的 CLI 参考（初始化配置 + 工作区）"
 read_when:
-  - 你正在进行首次运行设置，但没有完整的 CLI 引导流程
-  - 你想设置默认的工作区路径
-title: "设置"
+  - 你正在进行首次设置，而不是完整的 CLI 引导
+  - 你想设置默认工作区路径
+title: "Setup"
 ---
 
 # `openclaw setup`
 
 初始化 `~/.openclaw/openclaw.json` 和代理工作区。
+
+<Note>
+`openclaw setup` 适用于可变配置安装。在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，OpenClaw 会拒绝 setup 写入，因为配置文件由 Nix 管理。代理应使用官方的 [nix-openclaw Quick Start](https://github.com/openclaw/nix-openclaw#quick-start) 或其他 Nix 包对应的源码配置。
+</Note>
 
 相关：
 

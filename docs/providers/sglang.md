@@ -6,16 +6,21 @@ read_when:
 title: "SGLang"
 ---
 
-SGLang 可以通过 **兼容 OpenAI** 的 HTTP API 提供开源模型服务。
-OpenClaw 可以使用 `openai-completions` API 连接到 SGLang。
+SGLang 通过兼容 OpenAI 的 HTTP API 提供开源权重模型。OpenClaw 使用 `openai-completions` 提供方家族连接到 SGLang，并自动发现可用模型。
 
-当你通过 `SGLANG_API_KEY` 启用时（如果你的服务器不强制认证，任何值都可以）
-且你没有定义显式的 `models.providers.sglang` 条目时，OpenClaw 还可以
-**自动发现** SGLang 中可用的模型。
+| Property                  | Value                                                        |
+| ------------------------- | ------------------------------------------------------------ |
+| Provider id               | `sglang`                                                     |
+| Plugin                    | bundled, `enabledByDefault: true`                            |
+| Auth env var              | `SGLANG_API_KEY`（如果服务器没有认证，则任意非空值均可） |
+| Onboarding flag           | `--auth-choice sglang`                                       |
+| API                       | OpenAI-compatible (`openai-completions`)                     |
+| Default base URL          | `http://127.0.0.1:30000/v1`                                  |
+| Default model placeholder | `sglang/Qwen/Qwen3-8B`                                       |
+| Streaming usage           | Yes (`supportsStreamingUsage: true`)                         |
+| Pricing                   | 标记为外部免费（`modelPricing.external: false`）        |
 
-OpenClaw 将 `sglang` 视为一个本地的、兼容 OpenAI 的提供方，支持
-流式使用量统计，因此状态/上下文 token 计数可以从
-`stream_options.include_usage` 响应中更新。
+如果你使用 `SGLANG_API_KEY` 并且没有定义显式的 `models.providers.sglang` 条目，OpenClaw 还会从 SGLang **自动发现** 可用模型——见下文的 [Model discovery (implicit provider)](#model-discovery-implicit-provider)。
 
 ## 入门
 

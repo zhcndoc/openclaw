@@ -57,8 +57,8 @@ OpenClaw 通过一个包含会话解析、排队、流式输出、工具执行�
 
 注意：
 
-- 防抖仅适用于**纯文本**消息；媒体/附件会立即刷新发送。
-- 控制命令会绕过防抖，因此它们保持为独立消息——**除非**某个频道显式选择加入同一发送者 DM 合并（例如 [BlueBubbles `coalesceSameSenderDms`](/channels/bluebubbles#coalescing-split-send-dms-command--url-in-one-composition)），在这种情况下，DM 命令会在防抖窗口内等待，以便拆分发送载荷可以加入同一个代理轮次。
+- 防抖仅适用于**纯文本**消息；媒体/附件会立即刷新。
+- 控制命令会绕过防抖，因此会保持为独立消息。显式选择启用同一发送者 DM 合并的频道，可以让 DM 命令保留在防抖窗口内，从而使拆分发送的负载能够加入同一代理轮次。
 
 ## 会话和设备
 
@@ -154,8 +154,8 @@ OpenClaw 将**提示主体**与**命令主体**分开：
 OpenClaw 可以暴露或隐藏模型推理：
 
 - `/reasoning on|off|stream` 控制可见性。
-- 即使推理内容被模型生成，它仍然会计入 token 使用量。
-- Telegram 支持将推理流式输出到草稿气泡中。
+- 当模型生成推理内容时，它仍然计入 token 使用量。
+- Telegram 支持将推理流式输出到一个临时草稿气泡中，该气泡会在最终投递后删除；使用 `/reasoning on` 可获得持久的推理输出。
 
 详情： [思考 + 推理指令](/tools/thinking) 和 [Token 使用](/reference/token-use)。
 
@@ -170,10 +170,10 @@ OpenClaw 可以暴露或隐藏模型推理：
 
 ## 静默回复
 
-精确的静默标记 `NO_REPLY` / `no_reply` 表示“不要发送用户可见的回复”。
-当某个轮次还带有待处理的工具媒体（例如生成的 TTS 音频）时，OpenClaw
-会去除静默文本，但仍然发送媒体附件。
-OpenClaw 按会话类型来解析该行为：
+确切的静默令牌 `NO_REPLY` / `no_reply` 表示“不要投递对用户可见的回复”。
+当某一轮还包含待处理的工具媒体，例如生成的 TTS 音频时，OpenClaw
+会剥离静默文本，但仍会投递媒体附件。
+OpenClaw 会按对话类型解析该行为：
 
 - 直接对话默认不允许静默，并会将裸静默
   回复重写为简短的可见兜底文本。
@@ -193,7 +193,8 @@ OpenClaw 还会在非直接聊天中，针对任何助理回复之前发生的�
 
 ## 相关内容
 
-- [流式](/concepts/streaming) — 实时消息传递
-- [重试](/concepts/retry) — 消息投递重试行为
-- [队列](/concepts/queue) — 消息处理队列
-- [频道](/channels) — 消息平台集成
+- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) - 目标是持久化的发送和接收设计
+- [Streaming](/concepts/streaming) — 实时消息传递
+- [Retry](/concepts/retry) — 消息投递重试行为
+- [Queue](/concepts/queue) — 消息处理队列
+- [Channels](/channels) — 消息平台集成

@@ -6,9 +6,10 @@ read_when:
 title: "Exec 工具"
 ---
 
-在工作区中运行 shell 命令。通过 `process` 支持前台 + 后台执行。
-如果不允许 `process`，`exec` 将同步运行并忽略 `yieldMs`/`background`。
-后台会话按 agent 作用域隔离；`process` 只能看到来自同一 agent 的会话。
+在工作区中运行 shell 命令。`exec` 是一个会修改环境的 shell 接口：命令可以在所选主机或沙箱文件系统允许的任何位置创建、编辑或删除文件。禁用 OpenClaw 文件系统工具（如 `write`、`edit` 或 `apply_patch`）并不会让 `exec` 变成只读。
+
+通过 `process` 支持前台 + 后台执行。如果不允许 `process`，`exec` 会同步运行并忽略 `yieldMs`/`background`。
+后台会话按 agent 范围隔离；`process` 只能看到来自同一 agent 的会话。
 
 ## 参数
 
@@ -92,8 +93,8 @@ title: "Exec 工具"
 ## 配置
 
 - `tools.exec.notifyOnExit` (default: true): 当为 true 时，后台 exec 会话会在退出时排队一个系统事件并请求心跳。
-- `tools.exec.approvalRunningNoticeMs` (default: 10000): 当一个需要审批门控的 exec 运行超过此时长时，发出一次“running”通知（0 可禁用）。
-- `tools.exec.timeoutSec` (default: 1800): 默认的每命令 exec 超时时间，单位为秒。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用 exec 进程超时。
+- `tools.exec.approvalRunningNoticeMs` (default: 10000): 当受审批门禁的 exec 运行时间超过此值时，发出一次“running”通知（设为 0 可禁用）。
+- `tools.exec.timeoutSec` (default: 1800): 默认的每条命令 exec 超时时间（秒）。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用 exec 进程超时。
 - `tools.exec.host` (default: `auto`; resolves to `sandbox` when sandbox runtime is active, `gateway` otherwise)
 - `tools.exec.security` (default: `deny` for sandbox, `full` for gateway + node when unset)
 - `tools.exec.ask` (default: `off`)
@@ -139,7 +140,7 @@ openclaw config get agents.list
 openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
 ```
 
-控制界面：Nodes 选项卡包含一个小的“Exec node binding”面板，用于相同设置。
+控制 UI：Nodes 选项卡包含一个小型“Exec 节点绑定”面板，用于相同设置。
 
 ## 会话覆盖（`/exec`）
 

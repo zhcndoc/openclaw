@@ -30,18 +30,24 @@ OpenAI GPT-5 系列叠加层保持核心执行规则简洁，并增加
 
 该提示词有意保持紧凑，并使用固定部分：
 
-- **工具**：结构化工具的权威来源提醒，以及运行时工具使用指导。
-- **执行偏置**：简洁的跟进指导：对可执行请求按轮次立即行动，持续直到完成或被阻塞，从较弱的工具结果中恢复，检查可变状态的实时值，并在最终定稿前进行验证。
+- **工具**：结构化工具的单一事实来源提醒，以及运行时工具使用指导。
+- **执行偏置**：简洁的跟进指导：对可执行请求当场处理，
+  持续推进直到完成或受阻，从薄弱的工具结果中恢复，实时检查可变状态，
+  并在最终确定前进行验证。
 - **安全性**：简短的护栏提醒，避免权力寻求行为或绕过监督。
-- **技能**（如可用）：告诉模型如何按需加载技能说明。
-- **OpenClaw 自我更新**：如何安全地使用 `config.schema.lookup` 检查配置、用 `config.patch` 打补丁、用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。仅所有者可用的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括规范化为这些受保护 exec 路径的旧版 `tools.bash.*` 别名。
+- **技能**（如有）：告诉模型如何按需加载技能说明。
+- **OpenClaw 自我更新**：如何使用
+  `config.schema.lookup` 安全地检查配置，使用 `config.patch` 修补配置，
+  使用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。
+  所有者专有的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，
+  包括会归一化到这些受保护执行路径的旧版 `tools.bash.*` 别名。
 - **工作区**：工作目录（`agents.defaults.workspace`）。
-- **文档**：OpenClaw 文档的本地路径（仓库或 npm 包），以及何时阅读它们。
-- **工作区文件（注入）**：表示引导文件会在下方包含。
-- **沙箱**（如启用）：表示已沙箱化的运行时、沙箱路径，以及是否可进行提升权限的 exec。
-- **当前日期与时间**：用户本地时间、时区和时间格式。
-- **回复标签**：面向受支持提供方的可选回复标签语法。
-- **心跳**：当默认代理启用心跳时，心跳提示词与确认行为。
+- **文档**：本地 OpenClaw 文档路径（仓库或 npm 包）以及何时读取它们。
+- **工作区文件（注入）**：表示下方包含引导文件。
+- **沙箱**（如启用）：表示已沙箱化的运行时、沙箱路径，以及是否可使用提权执行。
+- **当前日期与时间**：仅包含时区（对缓存稳定；实时钟表来自 `session_status`）。
+- **回复标签**：支持的提供方可使用的可选回复标签语法。
+- **心跳**：当默认代理启用心跳时，心跳提示词和确认行为。
 - **运行时**：主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
 - **推理**：当前可见性级别 + `/reasoning` 切换提示。
 
@@ -135,13 +141,14 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 `memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。
 </Note>
 
-大型文件会被截断并带有标记。每个文件的最大大小由
-`agents.defaults.bootstrapMaxChars` 控制（默认：12000）。所有文件注入的引导内容总量
-上限由 `agents.defaults.bootstrapTotalMaxChars`
-控制（默认：60000）。缺失文件会注入一条简短的缺失文件标记。当发生截断时，
-OpenClaw 可以在项目上下文中注入警告块；可通过
-`agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；
-默认：`once`）进行控制。
+Large files are truncated with a marker. The max per-file size is controlled by
+`agents.defaults.bootstrapMaxChars` (default: 12000). Total injected bootstrap
+content across files is capped by `agents.defaults.bootstrapTotalMaxChars`
+(default: 60000). Missing files inject a short missing-file marker. When truncation
+occurs, OpenClaw can inject a concise system-prompt warning notice; control this with
+`agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`;
+default: `once`). Detailed raw/injected counts stay in diagnostics such as
+`/context`, `/status`, doctor, and logs.
 
 子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件
 会被过滤掉，以保持子代理上下文尽可能小）。
@@ -150,7 +157,7 @@ OpenClaw 可以在项目上下文中注入警告块；可通过
 注入的引导文件（例如将 `SOUL.md` 替换为另一个人格）。
 
 如果你想让代理的声音不那么通用，可以先从
-[SOUL.md 人格指南](/concepts/soul) 开始。
+[SOUL.md 人格指南](/concepts/soul)开始。
 
 要检查每个注入文件分别贡献了多少内容（原始 vs 注入、截断，以及工具 schema 开销），可使用 `/context list` 或 `/context detail`。参见 [上下文](/concepts/context)。
 

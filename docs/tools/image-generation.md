@@ -44,7 +44,7 @@ sidebarTitle: "图像生成"
   <Step title="让 agent 执行">
     _"生成一张友好机器人吉祥物的图片。"_
 
-    agent 会自动调用 `image_generate`。不需要工具白名单——只要有可用的提供方，它就会默认启用。
+    该 agent 会自动调用 `image_generate`。如果有可用的提供方，则无需工具白名单——默认已启用。
 
   </Step>
 </Steps>
@@ -94,11 +94,11 @@ sidebarTitle: "图像生成"
 
 | 能力                  | ComfyUI            | DeepInfra | fal               | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
 | --------------------- | ------------------ | --------- | ----------------- | -------------- | --------------------- | -------------- | ----- | -------------- |
-| 生成（最大数量）       | 工作流定义          | 4         | 4                 | 4              | 9                     | 4              | 1     | 4              |
-| 编辑 / 参考            | 1 张图像（工作流）   | 1 张图像   | 1 张图像           | 最多 5 张图像  | 1 张图像（主体参考）   | 最多 5 张图像  | —     | 最多 5 张图像 |
-| 尺寸控制               | —                  | ✓         | ✓                 | ✓              | —                     | 最多 4K       | —     | —              |
-| 宽高比                 | —                  | —         | ✓（仅生成）        | ✓              | ✓                     | —              | —     | ✓              |
-| 分辨率（1K/2K/4K）     | —                  | —         | ✓                 | ✓              | —                     | —              | —     | 1K, 2K         |
+| Generate (max count)  | Workflow-defined   | 4         | 4                 | 4              | 9                     | 4              | 1     | 4              |
+| Edit / reference      | 1 image (workflow) | 1 image   | 1 image           | Up to 5 images | 1 image (subject ref) | Up to 5 images | -     | Up to 5 images |
+| Size control          | -                  | ✓         | ✓                 | ✓              | -                     | Up to 4K       | -     | -              |
+| Aspect ratio          | -                  | -         | ✓ (generate only) | ✓              | ✓                     | -              | -     | ✓              |
+| Resolution (1K/2K/4K) | -                  | -         | ✓                 | ✓              | -                     | -              | -     | 1K, 2K         |
 
 ## 工具参数
 
@@ -135,8 +135,8 @@ sidebarTitle: "图像生成"
   当提供方支持时使用的背景提示。对支持透明的提供方，使用
   `outputFormat: "png"` 或 `"webp"` 搭配 `transparent`。
 </ParamField>
-<ParamField path="count" type="number">要生成的图像数量（1–4）。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方请求超时时间，单位毫秒。</ParamField>
+<ParamField path="count" type="number">要生成的图像数量（1-4）。</ParamField>
+<ParamField path="timeoutMs" type="number">可选的提供方请求超时时间，单位为毫秒。</ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
 <ParamField path="openai" type="object">
   仅适用于 OpenAI 的提示：`background`、`moderation`、`outputCompression` 和 `user`。
@@ -178,11 +178,11 @@ sidebarTitle: "图像生成"
 OpenClaw 会按以下顺序尝试提供方：
 
 1. **`model` 参数**，来自工具调用（如果 agent 指定了）。
-2. **`imageGenerationModel.primary`**，来自配置。
-3. **`imageGenerationModel.fallbacks`**，按顺序。
-4. **自动检测** —— 仅限有认证支持的提供方默认值：
-   - 当前默认提供方优先；
-   - 其余已注册的图像生成提供方按 provider-id 顺序。
+2. 配置中的 **`imageGenerationModel.primary`**。
+3. 按顺序的 **`imageGenerationModel.fallbacks`**。
+4. **自动检测** - 仅基于认证的提供方默认值：
+   - 先使用当前默认提供方；
+   - 然后按 provider-id 顺序使用其余已注册的图像生成提供方。
 
 如果某个提供方失败（认证错误、速率限制等），会自动尝试下一个已配置的候选项。如果全部失败，错误信息会包含每次尝试的详细信息。
 
@@ -220,16 +220,14 @@ OpenAI、OpenRouter、Google 和 xAI 通过 `images` 参数支持最多 5 张参
 ## 提供商深度解析
 
 <AccordionGroup>
-  <Accordion title="OpenAI gpt-image-2（以及 gpt-image-1.5）">
+  <Accordion title="OpenAI gpt-image-2 (and gpt-image-1.5)">
     OpenAI 图像生成默认使用 `openai/gpt-image-2`。如果配置了
-    `openai-codex` OAuth 配置文件，OpenClaw 会复用 Codex 订阅聊天模型所使用的同一
-    OAuth 配置文件，并通过 Codex Responses 后端发送图像请求。诸如
-    `https://chatgpt.com/backend-api` 之类的旧版 Codex 基础
-    URL 会在图像请求中规范化为
-    `https://chatgpt.com/backend-api/codex`。OpenClaw
-    不会为该请求静默回退到 `OPENAI_API_KEY`——如果要强制直接走 OpenAI Images API 路由，请显式配置
-    `models.providers.openai`，提供 API key、自定义基础 URL
-    或 Azure 端点。
+    `openai-codex` OAuth 配置文件，OpenClaw 会重用 Codex 订阅聊天模型使用的
+    同一个 OAuth 配置文件，并通过 Codex Responses 后端发送图像请求。像
+    `https://chatgpt.com/backend-api` 这样的旧版 Codex base URL 会在图像请求中规范化为
+    `https://chatgpt.com/backend-api/codex`。OpenClaw 对该请求**不会**静默回退到
+    `OPENAI_API_KEY`——如需强制直接路由到 OpenAI Images API，请使用 API 密钥、
+    自定义 base URL 或 Azure 端点显式配置 `models.providers.openai`。
 
     `openai/gpt-image-1.5`、`openai/gpt-image-1` 和
     `openai/gpt-image-1-mini` 模型仍然可以显式选择。对于透明背景 PNG/WebP 输出，请使用
@@ -326,12 +324,12 @@ OpenAI、OpenRouter、Google 和 xAI 通过 `images` 参数支持最多 5 张参
 <Tabs>
   <Tab title="生成（4K 横版）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="A clean editorial poster for OpenClaw image generation" size=3840x2160 count=1
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="为 OpenClaw 图像生成设计一张干净的编辑风格海报" size=3840x2160 count=1
 ```
   </Tab>
   <Tab title="生成（透明 PNG）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-1.5 prompt="A simple red circle sticker on a transparent background" outputFormat=png background=transparent
+/tool image_generate action=generate model=openai/gpt-image-1.5 prompt="在透明背景上的一个简单红色圆形贴纸" outputFormat=png background=transparent
 ```
 
 等效 CLI：
@@ -341,24 +339,24 @@ openclaw infer image generate \
   --model openai/gpt-image-1.5 \
   --output-format png \
   --background transparent \
-  --prompt "A simple red circle sticker on a transparent background" \
+  --prompt "在透明背景上的一个简单红色圆形贴纸" \
   --json
 ```
 
   </Tab>
   <Tab title="生成（两个正方形）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Two visual directions for a calm productivity app icon" size=1024x1024 count=2
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="为一个平静的效率应用图标提供两个视觉方向" size=1024x1024 count=2
 ```
   </Tab>
   <Tab title="编辑（一个参考图）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Keep the subject, replace the background with a bright studio setup" image=/path/to/reference.png size=1024x1536
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="保留主体，将背景替换为明亮的工作室场景" image=/path/to/reference.png size=1024x1536
 ```
   </Tab>
   <Tab title="编辑（多个参考图）">
 ```text
-/tool image_generate action=generate model=openai/gpt-image-2 prompt="Combine the character identity from the first image with the color palette from the second" images='["/path/to/character.png","/path/to/palette.jpg"]' size=1536x1024
+/tool image_generate action=generate model=openai/gpt-image-2 prompt="将第一张图像中的角色身份与第二张图像中的配色方案结合起来" images='["/path/to/character.png","/path/to/palette.jpg"]' size=1536x1024
 ```
   </Tab>
 </Tabs>
@@ -371,13 +369,13 @@ OpenAI 特定的别名保留。除 OpenAI 之外的内置提供商目前不声�
 
 ## 相关内容
 
-- [工具概览](/tools) — 所有可用的代理工具
-- [ComfyUI](/providers/comfy) — 本地 ComfyUI 和 Comfy Cloud 工作流设置
-- [fal](/providers/fal) — fal 图像和视频提供商设置
-- [Google (Gemini)](/providers/google) — Gemini 图像提供商设置
-- [MiniMax](/providers/minimax) — MiniMax 图像提供商设置
-- [OpenAI](/providers/openai) — OpenAI Images 提供商设置
-- [Vydra](/providers/vydra) — Vydra 图像、视频和语音设置
-- [xAI](/providers/xai) — Grok 图像、视频、搜索、代码执行和 TTS 设置
-- [配置参考](/gateway/config-agents#agent-defaults) — `imageGenerationModel` 配置
-- [模型](/concepts/models) — 模型配置和故障转移
+- [工具概览](/tools) - 所有可用的 agent 工具
+- [ComfyUI](/providers/comfy) - 本地 ComfyUI 和 Comfy Cloud 工作流设置
+- [fal](/providers/fal) - fal 图像和视频提供商设置
+- [Google (Gemini)](/providers/google) - Gemini 图像提供商设置
+- [MiniMax](/providers/minimax) - MiniMax 图像提供商设置
+- [OpenAI](/providers/openai) - OpenAI 图像提供商设置
+- [Vydra](/providers/vydra) - Vydra 图像、视频和语音设置
+- [xAI](/providers/xai) - Grok 图像、视频、搜索、代码执行和 TTS 设置
+- [配置参考](/gateway/config-agents#agent-defaults) - `imageGenerationModel` 配置
+- [模型](/concepts/models) - 模型配置和故障转移

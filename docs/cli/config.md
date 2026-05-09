@@ -8,6 +8,10 @@ sidebarTitle: "配置"
 
 用于在 `openclaw.json` 中进行非交互式编辑的配置辅助工具：可通过路径对值进行 get/set/patch/unset/file/schema/validate，并打印当前活动配置文件。不带子命令运行时会打开配置向导（与 `openclaw configure` 相同）。
 
+<Note>
+当 `OPENCLAW_NIX_MODE=1` 时，OpenClaw 会将 `openclaw.json` 视为不可变。诸如 `config get`、`config file`、`config schema` 和 `config validate` 之类的只读命令仍可正常工作，但配置写入操作会被拒绝。代理应改为编辑安装所使用的 Nix 源；对于第一方 nix-openclaw 发行版，请使用 [nix-openclaw 快速开始](https://github.com/openclaw/nix-openclaw#quick-start)，并在 `programs.openclaw.config` 或 `instances.<name>.config` 下设置值。
+</Note>
+
 ## 根选项
 
 <ParamField path="--section <section>" type="string">

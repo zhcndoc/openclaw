@@ -7,11 +7,19 @@ read_when:
 title: "Inferrs"
 ---
 
-[inferrs](https://github.com/ericcurtin/inferrs) 可以在一个兼容 OpenAI 的 `/v1` API 后面提供本地模型服务。OpenClaw 通过通用的
-`openai-completions` 路径与 `inferrs` 协同工作。
+[inferrs](https://github.com/ericcurtin/inferrs) 可以通过兼容 OpenAI 的 `/v1` API 提供本地模型服务。OpenClaw 通过通用的 `openai-completions` 路径与 `inferrs` 协同工作。
 
-目前最好将 `inferrs` 视为一个自托管的、兼容 OpenAI 的
-后端，而不是一个专门的 OpenClaw 提供方插件。
+| Property           | Value                                                              |
+| ------------------ | ------------------------------------------------------------------ |
+| Provider id        | `inferrs`（自定义；在 `models.providers.inferrs` 下配置）           |
+| Plugin             | 无 — `inferrs` 不是内置的 OpenClaw 提供方插件                        |
+| Auth env var       | 可选。如果你的 inferrs 服务器没有认证，任何值都可以                   |
+| API                | 兼容 OpenAI（`openai-completions`）                                 |
+| Suggested base URL | `http://127.0.0.1:8080/v1`（或你的 inferrs 服务器所在位置）         |
+
+<Note>
+  `inferrs` 目前最好被视为一个自托管的、兼容 OpenAI 的自定义后端，而不是一个专用的 OpenClaw 提供方插件。你需要通过 `models.providers.inferrs` 来配置它，而不是通过入门选择标志。如果你需要一个带自动发现功能的真正内置插件，请参见 [SGLang](/providers/sglang) 或 [vLLM](/providers/vllm)。
+</Note>
 
 ## 快速开始
 
