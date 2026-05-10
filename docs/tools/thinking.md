@@ -26,7 +26,7 @@ title: "思考级别"
   - Anthropic Claude Opus 4.7 不会默认使用自适应思考。其 API effort 默认值保持由提供方管理，除非你显式设置了思考级别。
   - Anthropic Claude Opus 4.7 会将 `/think xhigh` 映射为自适应思考加上 `output_config.effort: "xhigh"`，因为 `/think` 是思考指令，而 `xhigh` 是 Opus 4.7 的 effort 设置。
   - Anthropic Claude Opus 4.7 也公开 `/think max`；它会映射到相同的由提供方管理的最大 effort 路径。
-  - 直接的 DeepSeek V4 模型公开 `/think xhigh|max`；二者都会映射到 DeepSeek `reasoning_effort: "max"`，而更低的非 `off` 级别则映射到 `high`。
+  - 直接的 DeepSeek V4 模型公开 `/think xhigh|max`；二者都会映射到 DeepSeek `reasoning_effort: "max"`，而更低的非 `off` 级别则映射为 `high`。
   - 通过 OpenRouter 路由的 DeepSeek V4 模型公开 `/think xhigh`，并发送 OpenRouter 支持的 `reasoning_effort` 值。已存储的 `max` 覆盖会回退到 `xhigh`。
   - 支持思考的 Ollama 模型公开 `/think low|medium|high|max`；`max` 映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` 这几种 effort 字符串。
   - OpenAI GPT 模型通过特定于模型的 Responses API effort 支持来映射 `/think`。仅当目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略已禁用的推理负载，而不是发送不受支持的值。
@@ -47,10 +47,11 @@ title: "思考级别"
 
 ## 设置会话默认值
 
-- 发送一条**只包含**指令的消息（允许空白），例如 `/think:medium` 或 `/t high`。
-- 这会在当前会话中生效（默认按发送者区分）；可通过 `/think:off` 或会话空闲重置清除。
-- 会发送确认回复（`Thinking level set to high.` / `Thinking disabled.`）。如果级别无效（例如 `/thinking big`），命令会被拒绝并给出提示，且会话状态保持不变。
-- 发送 `/think`（或 `/think:`）且不带参数，可查看当前思考级别。
+- 发送一条**仅包含**该指令的消息（允许空白），例如 `/think:medium` 或 `/t high`。
+- 这会在当前会话中生效（默认按发送者区分）。使用 `/think default` 可清除会话覆盖并继承已配置/提供方默认值；别名包括 `inherit`、`clear`、`reset` 和 `unpin`。
+- `/think off` 会存储一个显式的 off 覆盖。它会禁用 thinking，直到你更改或清除该会话覆盖。
+- 会发送确认回复（`Thinking level set to high.` / `Thinking disabled.`）。如果级别无效（例如 `/thinking big`），命令会被拒绝并给出提示，同时会话状态保持不变。
+- 发送不带参数的 `/think`（或 `/think:`）即可查看当前 thinking 级别。
 
 ## 按 agent 应用
 
@@ -59,21 +60,21 @@ title: "思考级别"
 
 ## 快速模式（/fast）
 
-- 级别：`on|off`。
-- 仅包含指令的消息会切换会话 fast-mode 覆盖并回复 `Fast mode enabled.` / `Fast mode disabled.`。
-- 发送不带模式的 `/fast`（或 `/fast status`）可查看当前生效的 fast-mode 状态。
+- 级别：`on|off|default`。
+- 仅包含指令的消息会切换会话 fast-mode 覆盖并回复 `Fast mode enabled.` / `Fast mode disabled.`。使用 `/fast default` 可清除会话覆盖并继承已配置默认值；别名包括 `inherit`、`clear`、`reset` 和 `unpin`。
+- 发送不带模式参数的 `/fast`（或 `/fast status`）即可查看当前生效的 fast-mode 状态。
 - OpenClaw 按以下顺序解析 fast mode：
-  1. 内联/仅指令的 `/fast on|off`
+  1. 内联/仅指令的 `/fast on|off` 覆盖（`/fast default` 清除此层）
   2. 会话覆盖
   3. 每个 agent 的默认值（`agents.list[].fastModeDefault`）
   4. 每个模型的配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
   5. 回退：`off`
-- 对于 `openai/*`，fast mode 通过在受支持的 Responses 请求上发送 `service_tier=priority` 映射为 OpenAI 优先处理。
+- 对于 `openai/*`，fast mode 通过在受支持的 Responses 请求中发送 `service_tier=priority` 映射到 OpenAI priority processing。
 - 对于 `openai-codex/*`，fast mode 会在 Codex Responses 上发送相同的 `service_tier=priority` 标志。OpenClaw 在这两条认证路径之间保持一个共享的 `/fast` 开关。
-- 对于直接的公开 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，fast mode 会映射为 Anthropic 服务层级：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
+- 对于直接的公共 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，fast mode 会映射到 Anthropic service tiers：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
 - 对于 Anthropic 兼容路径上的 `minimax/*`，`/fast on`（或 `params.fastMode: true`）会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
-- 当两者都设置时，显式的 Anthropic `serviceTier` / `service_tier` 模型参数会覆盖 fast-mode 默认值。OpenClaw 对非 Anthropic 代理基础 URL 仍会跳过 Anthropic 服务层级注入。
-- 只有在启用 fast mode 时，`/status` 才会显示 `Fast`。
+- 当两者都设置时，显式的 Anthropic `serviceTier` / `service_tier` 模型参数会覆盖 fast-mode 默认值。对于非 Anthropic 代理 base URL，OpenClaw 仍会跳过 Anthropic service-tier 注入。
+- 仅当 fast mode 启用时，`/status` 才会显示 `Fast`。
 
 ## 详细日志指令（/verbose 或 /v）
 

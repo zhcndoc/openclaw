@@ -40,7 +40,7 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 2. 在你的 Nextcloud 服务器上创建一个 bot：
 
    ```bash
-   ./occ talk:bot:install "OpenClaw" "<shared-secret>" "<webhook-url>" --feature reaction
+   ./occ talk:bot:install "OpenClaw" "<shared-secret>" "<webhook-url>" --feature webhook --feature response --feature reaction
    ```
 
 3. 在目标房间设置中启用该 bot。

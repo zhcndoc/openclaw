@@ -135,8 +135,12 @@ sidebarTitle: "图像生成"
   当提供方支持时使用的背景提示。对支持透明的提供方，使用
   `outputFormat: "png"` 或 `"webp"` 搭配 `transparent`。
 </ParamField>
-<ParamField path="count" type="number">要生成的图像数量（1-4）。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方请求超时时间，单位为毫秒。</ParamField>
+<ParamField path="count" type="number">生成图像数量（1-4）。</ParamField>
+<ParamField path="timeoutMs" type="number">
+  可选的提供方请求超时时间，单位为毫秒。当 Codex 通过动态工具调用
+  `image_generate` 时，这个按次调用的值仍会覆盖已配置的默认值，
+  且上限为 600000 毫秒。
+</ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
 <ParamField path="openai" type="object">
   仅适用于 OpenAI 的提示：`background`、`moderation`、`outputCompression` 和 `user`。
@@ -196,9 +200,10 @@ OpenClaw 会按以下顺序尝试提供方：
     `agents.defaults.mediaGenerationAutoProviderFallback: false` 设置为仅使用
     显式的 `model`、`primary` 和 `fallbacks` 条目。
   </Accordion>
-  <Accordion title="超时">
-    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。单次调用的
-    `timeoutMs` 工具参数会覆盖已配置的默认值。
+  <Accordion title="Timeouts">
+    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。
+    按次调用的 `timeoutMs` 工具参数会覆盖已配置的默认值。Codex 动态工具调用会遵守相同的超时预算，
+    但受 OpenClaw 的 600000 毫秒动态工具桥接最大值限制。
   </Accordion>
   <Accordion title="运行时检查">
     使用 `action: "list"` 检查当前已注册的提供方、

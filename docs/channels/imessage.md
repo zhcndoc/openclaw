@@ -9,7 +9,7 @@ title: "iMessage"
 <Note>
 对于 OpenClaw iMessage 部署，请在已登录的 macOS Messages 主机上使用 `imsg`。如果你的 Gateway 运行在 Linux 或 Windows 上，请将 `channels.imessage.cliPath` 指向一个通过 SSH 在 Mac 上运行 `imsg` 的包装器。
 
-**已知缺口：无法在网关离线期间补收消息。** 网关离线时到达的消息（崩溃、重启、Mac 休眠、机器关机）在网关恢复后不会交付给代理——`imsg watch` 会从当前状态继续，并忽略在空档期落入 `chat.db` 的任何内容。已在 [openclaw#78649](https://github.com/openclaw/openclaw/issues/78649) 跟踪。
+**Gateway 停机后的补抓是可选功能。** 启用后（`channels.imessage.catchup.enabled: true`），网关会在下次启动时重放在其离线期间（崩溃、重启、Mac 睡眠）落入 `chat.db` 的入站消息。默认禁用——参见 [网关停机后的补抓](#catching-up-after-gateway-downtime)。关闭 [openclaw#78649](https://github.com/openclaw/openclaw/issues/78649)。
 </Note>
 
 <Warning>
@@ -270,6 +270,37 @@ imsg send <handle> "test"
     - 如果未配置任何模式，则无法执行提及门控
 
     来自已授权发送者的控制命令可以绕过群组中的提及门控。
+
+    每组 `systemPrompt`：
+
+    `channels.imessage.groups.*` 下的每个条目都接受一个可选的 `systemPrompt` 字符串。该值会在每次处理该组消息的回合中注入到代理的系统提示词里。其解析方式与 `channels.whatsapp.groups` 使用的按组提示词解析规则一致：
+
+    1. **组特定系统提示词**（`groups["<chat_id>"].systemPrompt`）：当映射中存在该特定组条目并且其 `systemPrompt` 键已定义时使用。如果 `systemPrompt` 为空字符串（`""`），则会抑制通配符，并且不会将系统提示词应用于该组。
+    2. **组通配系统提示词**（`groups["*"].systemPrompt`）：当特定组条目在映射中完全不存在，或者它存在但未定义 `systemPrompt` 键时使用。
+
+    ```json5
+    {
+      channels: {
+        imessage: {
+          groupPolicy: "allowlist",
+          groupAllowFrom: ["+15555550123"],
+          groups: {
+            "*": { "systemPrompt": "请使用英式拼写。" },
+            "8421": {
+              requireMention: true,
+              systemPrompt: "这是值班轮班聊天。回复请控制在 3 句以内。",
+            },
+            "9907": {
+              // 显式抑制：通配符 "请使用英式拼写。" 不适用于此处
+              systemPrompt: "",
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    每组提示词仅适用于群组消息——此通道中的直接消息不受影响。
 
   </Tab>
 
@@ -603,6 +634,66 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 | 短时间内快速洪泛（窗口内 >10 条小 DM）                             | N 行                     | N 次轮次                                  | 一次轮次，输出受限（保留最早 + 最新，应用文本/附件上限）            |
 | 群聊中两个人同时输入                                              | 来自 M 个发送者的 N 行    | M+ 次轮次（每个发送者桶一次）            | M+ 次轮次——群聊不会被合并                                           |
 
+## 网关停机后的追赶
+
+当网关离线时（崩溃、重启、Mac 休眠、机器关机），`imsg watch` 会在网关恢复后从当前 `chat.db` 状态继续运行——在这段空窗期间到达的内容，默认情况下都不会被看到。追赶机制会在下次启动时重放这些消息，这样代理就不会静默漏掉入站流量。
+
+追赶功能默认**关闭**。按频道启用：
+
+```ts
+channels: {
+  imessage: {
+    catchup: {
+      enabled: true,             // 总开关（默认：false）
+      maxAgeMinutes: 120,        // 跳过早于现在 - 2 小时的行（默认：120，范围限制 1..720）
+      perRunLimit: 50,           // 每次启动最多重放的行数（默认：50，范围限制 1..500）
+      firstRunLookbackMinutes: 30, // 首次运行且没有游标：回看 30 分钟（默认：30）
+      maxFailureRetries: 10,     // 对同一个卡住的 guid 失败 10 次后放弃（默认：10）
+    },
+  },
+}
+```
+
+### 运行方式
+
+每次 `monitorIMessageProvider` 启动只执行一轮，顺序为 `imsg launch` ready → `watch.subscribe` → `performIMessageCatchup` → live dispatch loop。追赶本身使用与 `imsg watch` 相同的 JSON-RPC 客户端，通过 `chats.list` + 按聊天的 `messages.history` 进行回放。追赶轮次中到达的内容会正常进入实时分发流程；现有的入站去重缓存会吸收与重放行的任何重叠。
+
+每条重放的行都会经过实时分发路径（`evaluateIMessageInbound` + `dispatchInboundMessage`），因此允许列表、群组策略、去抖器、回显缓存和已读回执在重放消息与实时消息上表现一致。
+
+### 游标与重试语义
+
+追赶会为每个账号在 `<openclawStateDir>/imessage/catchup/<account>__<hash>.json` 维护一个游标（OpenClaw 状态目录默认是 `~/.openclaw`，可通过 `OPENCLAW_STATE_DIR` 覆盖）：
+
+```json
+{
+  "lastSeenMs": 1717900800000,
+  "lastSeenRowid": 482910,
+  "updatedAt": 1717900801234,
+  "failureRetries": { "<guid>": 1 }
+}
+```
+
+- 每次成功分发后游标都会前进；如果某一行分发时抛出错误，则游标会保持不动——下次启动会从该保留游标再次尝试同一行。
+- 对同一个 `guid` 连续抛出达到 `maxFailureRetries` 次后，追赶会记录一条 `warn`，并强制将游标越过该卡住的消息，从而让后续启动能够继续推进。
+- 已经放弃的 guid 在之后的运行中会在发现时直接跳过（不再尝试分发），并在运行摘要中计入 `skippedGivenUp`。
+
+### 运维可见信号
+
+```
+imessage catchup: replayed=N skippedFromMe=… skippedGivenUp=… failed=… givenUp=… fetchedCount=…
+imessage catchup: giving up on guid=<guid> after <N> failures; advancing cursor past it
+imessage catchup: fetched <X> rows across chats, capped to perRunLimit=<Y>
+```
+
+出现 `WARN ... capped to perRunLimit` 表示一次启动并未清空全部积压。如果你的空窗期经常超过默认的 50 行处理量，请提高 `perRunLimit`（最大 500）。
+
+### 何时关闭它
+
+- 网关持续运行，并通过 watchdog 自动重启，且空窗通常少于几秒——默认关闭即可。
+- DM 量很低，漏消息也不会改变代理行为——首次启用时 `firstRunLookbackMinutes` 的初始窗口可能会意外派发较旧的上下文。
+
+当你开启 catchup 后，第一次没有游标的启动只会回看 `firstRunLookbackMinutes`（默认 30 分钟），而不会回看完整的 `maxAgeMinutes` 窗口——这样可以避免重放大量启用前的历史消息。
+
 ## 故障排查
 
 <AccordionGroup>
@@ -619,7 +710,7 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 
   </Accordion>
 
-  <Accordion title="Gateway is not running on macOS">
+  <Accordion title="Gateway 未在 macOS 上运行">
     默认的 `cliPath: "imsg"` 必须在登录到 Messages 的 Mac 上运行。在 Linux 或 Windows 上，将 `channels.imessage.cliPath` 设置为一个包装脚本，通过 SSH 连接到那台 Mac 并运行 `imsg "$@"`。
 
 ```bash

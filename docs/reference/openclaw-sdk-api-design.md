@@ -1,7 +1,7 @@
 ---
 summary: "公开 OpenClaw App SDK API、事件分类、制品、审批和包结构的参考设计"
-title: "OpenClaw App SDK API 设计"
-sidebarTitle: "App SDK API 设计"
+title: "OpenClaw App SDK 设计"
+sidebarTitle: "App SDK 设计"
 read_when:
   - 你正在实现提议中的公开 OpenClaw 应用 SDK
   - 你需要应用 SDK 的草案命名空间、事件、结果、制品、审批或安全契约
@@ -45,9 +45,9 @@ oc.runs.events(runId, { after });
 oc.runs.wait(runId);
 oc.runs.cancel(runId);
 
-oc.tasks.list(); // 未来 API：当前 SDK 会抛出不支持
-oc.tasks.get(taskId); // 未来 API：当前 SDK 会抛出不支持
-oc.tasks.cancel(taskId); // 未来 API：当前 SDK 会抛出不支持
+oc.tasks.list({ status: "running" });
+oc.tasks.get(taskId);
+oc.tasks.cancel(taskId, { reason });
 oc.tasks.events(taskId, { after }); // 未来 API
 
 oc.models.list();
@@ -126,7 +126,7 @@ type OpenClawEvent = {
 | `tool.call.failed`    | 工具调用失败。                                            |
 | `approval.requested`  | Run 或工具需要审批。                                      |
 | `approval.resolved`   | 审批已被授予、拒绝、过期或取消。                           |
-| `question.requested`  | 运行时向用户或宿主应用请求输入。                           |
+| `question.requested`   | 运行时向用户或宿主应用请求输入。                           |
 | `question.answered`   | 宿主应用提供了答案。                                       |
 | `artifact.created`    | 新制品可用。                                              |
 | `artifact.updated`    | 现有制品已变更。                                          |

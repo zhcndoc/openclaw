@@ -53,7 +53,9 @@ OpenClaw 在构建归档之前会规范化路径。如果配置、凭据目录�
 
 归档有效载荷会存储来自这些源树的文件内容，内嵌的 `manifest.json` 会记录已解析的绝对源路径以及每个资产所使用的归档布局。
 
-状态目录下 `extensions/` 树中的已安装插件源文件和清单文件会被包含，但其嵌套的 `node_modules/` 依赖树会被跳过。这些依赖是可重建的安装产物；在恢复归档后，如果某个已恢复的插件报告缺少依赖，请使用 `openclaw plugins update <id>`，或通过 `openclaw plugins install <spec> --force` 重新安装该插件。
+在归档创建过程中，OpenClaw 会跳过那些没有恢复价值的已知实时变更文件，包括活动代理会话记录、cron 运行日志、滚动日志、投递队列、状态目录下的 socket/pid/temp 文件，以及相关的持久队列临时文件。JSON 结果包含 `skippedVolatileCount`，以便自动化流程了解有多少文件被有意省略。
+
+状态目录中的 `extensions/` 树下已安装插件的源文件和清单文件会被包含在内，但其嵌套的 `node_modules/` 依赖树会被跳过。这些依赖是可重建的安装产物；在恢复归档后，如果恢复的插件报告缺少依赖，请使用 `openclaw plugins update <id>`，或使用 `openclaw plugins install <spec> --force` 重新安装该插件。
 
 ## 无效配置行为
 

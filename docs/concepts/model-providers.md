@@ -86,21 +86,20 @@ OpenClaw 自带 pi-ai 目录。这些提供商**不需要** `models.providers` �
 
 ### OpenAI
 
-- 提供商：`openai`
-- 认证：`OPENAI_API_KEY`
-- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单个覆盖）
-- 示例模型：`openai/gpt-5.5`、`openai/gpt-5.4-mini`
-- 如果某个具体安装或 API key 行为不同，可用 `openclaw models list --provider openai` 验证账号/模型可用性。
-- CLI：`openclaw onboard --auth-choice openai-api-key`
-- 默认传输方式为 `auto`（优先 WebSocket，失败后回退到 SSE）
-- 可通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
-- OpenAI Responses WebSocket 预热默认启用，通过 `params.openaiWsWarmup`（`true`/`false`）控制
-- OpenAI 优先级处理可通过 `agents.defaults.models["openai/<model>"].params.serviceTier` 启用
-- `/fast` 和 `params.fastMode` 会将直接的 `openai/*` Responses 请求映射为 `api.openai.com` 上的 `service_tier=priority`
-- 当你想使用显式层级而不是共享 `/fast` 开关时，请使用 `params.serviceTier`
-- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）只会应用于发往 `api.openai.com` 的原生 OpenAI 流量，不会用于通用的 OpenAI 兼容代理
-- 原生 OpenAI 路由还会保留 Responses `store`、提示缓存提示，以及 OpenAI reasoning-compat payload 形状；代理路由不会保留这些
-- `openai/gpt-5.3-codex-spark` 在 OpenClaw 中被有意屏蔽，因为实时 OpenAI API 请求会拒绝它，而当前 Codex 目录也未公开该模型
+- Provider: `openai`
+- Auth: `OPENAI_API_KEY`
+- Optional rotation: `OPENAI_API_KEYS`, `OPENAI_API_KEY_1`, `OPENAI_API_KEY_2`, plus `OPENCLAW_LIVE_OPENAI_KEY` (single override)
+- Example models: `openai/gpt-5.5`, `openai/gpt-5.4-mini`
+- Verify account/model availability with `openclaw models list --provider openai` if a specific install or API key behaves differently.
+- CLI: `openclaw onboard --auth-choice openai-api-key`
+- Default transport is `auto`; OpenClaw passes the transport choice to pi-ai.
+- Override per model via `agents.defaults.models["openai/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
+- OpenAI priority processing can be enabled via `agents.defaults.models["openai/<model>"].params.serviceTier`
+- `/fast` and `params.fastMode` map direct `openai/*` Responses requests to `service_tier=priority` on `api.openai.com`
+- Use `params.serviceTier` when you want an explicit tier instead of the shared `/fast` toggle
+- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) apply only on native OpenAI traffic to `api.openai.com`, not generic OpenAI-compatible proxies
+- Native OpenAI routes also keep Responses `store`, prompt-cache hints, and OpenAI reasoning-compat payload shaping; proxy routes do not
+- `openai/gpt-5.3-codex-spark` is intentionally suppressed in OpenClaw because live OpenAI API requests reject it and the current Codex catalog does not expose it
 
 ```json5
 {

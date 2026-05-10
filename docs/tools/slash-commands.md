@@ -118,7 +118,7 @@ sidebarTitle: "斜杠命令"
 - core 内置项来自 `src/auto-reply/commands-registry.shared.ts`
 - 生成的 dock 命令来自 `src/auto-reply/commands-registry.data.ts`
 - 插件命令来自插件的 `registerCommand()` 调用
-- 你的 gateway 上的实际可用性仍取决于配置标志、频道界面以及已安装/启用的插件
+- 你的 gateway 上的实际可用性仍然取决于配置标志、频道界面以及已安装/启用的插件
 
 ### Core 内置命令
 
@@ -134,18 +134,18 @@ sidebarTitle: "斜杠命令"
     - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出一个 JSONL [轨迹捆绑包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
 
   </Accordion>
-  <Accordion title="模型和运行控制">
-    - `/think <level>` 设置思考级别。选项来自当前模型的提供方配置文件；常见级别有 `off`、`minimal`、`low`、`medium` 和 `high`，支持时也可用 `xhigh`、`adaptive`、`max` 或二值 `on` 等自定义级别。别名：`/thinking`、`/t`。
+  <Accordion title="Model and run controls">
+    - `/think <level|default>` 设置思考级别或清除会话覆盖。选项来自当前模型的提供方配置文件；常见级别包括 `off`、`minimal`、`low`、`medium` 和 `high`，在支持的情况下也可使用 `xhigh`、`adaptive`、`max` 或二进制 `on` 等自定义级别。别名：`/thinking`、`/t`。
     - `/verbose on|off|full` 切换详细输出。别名：`/v`。
     - `/trace on|off` 切换当前会话的插件 trace 输出。
-    - `/fast [status|on|off]` 显示或设置快速模式。
+    - `/fast [status|on|off|default]` 显示、设置或清除快速模式。
     - `/reasoning [on|off|stream]` 切换推理可见性。别名：`/reason`。
     - `/elevated [on|off|ask|full]` 切换提权模式。别名：`/elev`。
     - `/exec host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>` 显示或设置 exec 默认值。
     - `/model [name|#|status]` 显示或设置模型。
-    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出已配置/可认证使用的提供方或某个提供方的模型；添加 `all` 可浏览该提供方的完整目录。
-    - `/queue <mode>` 管理队列行为（`steer`、旧版 `queue`、`followup`、`collect`、`steer-backlog`、`interrupt`），以及诸如 `debounce:0.5s cap:25 drop:summarize` 之类的选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。见 [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
-    - `/steer <message>` 将指导注入当前会话的活动运行中，与 `/queue` 模式无关。会话空闲时它不会启动新的运行。别名：`/tell`。见 [Steer](/tools/steer)。
+    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出某提供方已配置/可认证使用的提供方或模型；添加 `all` 可浏览该提供方的完整目录。
+    - `/queue <mode>` 管理队列行为（`steer`、旧版 `queue`、`followup`、`collect`、`steer-backlog`、`interrupt`），以及诸如 `debounce:0.5s cap:25 drop:summarize` 的选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。见 [Command queue](/concepts/queue) 和 [Steering queue](/concepts/queue-steering)。
+    - `/steer <message>` 将引导注入当前会话的活动运行中，与 `/queue` 模式无关。会话空闲时它不会启动新的运行。别名：`/tell`。见 [Steer](/tools/steer)。
 
   </Accordion>
   <Accordion title="Discovery and status">

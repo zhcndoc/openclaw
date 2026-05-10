@@ -16,6 +16,7 @@ title: "技能配置"
     allowBundled: ["gemini", "peekaboo"],
     load: {
       extraDirs: ["~/Projects/agent-scripts/skills", "~/Projects/oss/some-skill-pack/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
       watch: true,
       watchDebounceMs: 250,
     },
@@ -80,30 +81,62 @@ title: "技能配置"
 
 ## 字段
 
-- 内置技能根始终包括 `~/.openclaw/skills`、`~/.agents/skills`、
+- 内置技能根目录始终包括 `~/.openclaw/skills`、`~/.agents/skills`、
   `<workspace>/.agents/skills` 和 `<workspace>/skills`。
 - `allowBundled`：仅用于 **捆绑** 技能的可选白名单。设置后，只有列表中的
-  捆绑技能才有资格生效（不影响已管理、agent 和工作区技能）。
+  捆绑技能才有资格启用（已管理、agent 和工作区技能不受影响）。
 - `load.extraDirs`：要扫描的额外技能目录（优先级最低）。
-- `load.watch`：监视技能文件夹并刷新技能快照（默认值：true）。
-- `load.watchDebounceMs`：技能监视器事件的防抖时间，单位毫秒（默认值：250）。
-- `install.preferBrew`：在可用时优先使用 brew 安装器（默认值：true）。
-- `install.nodeManager`：node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`，默认值：npm）。
-  这只影响 **技能安装**；Gateway 运行时仍应使用 Node
+- `load.allowSymlinkTargets`：受信任的真实目标目录；即使符号链接位于
+  该目标根目录之外，符号链接的技能文件夹也可以解析到这些目录中。
+  当你有意使用相邻仓库布局时请使用此项，例如
+  `~/.agents/skills/manager -> ~/Projects/manager/skills`。
+- `load.watch`：监听技能文件夹并刷新技能快照（默认：true）。
+- `load.watchDebounceMs`：技能监听事件的防抖时间，单位毫秒（默认：250）。
+- `install.preferBrew`：在可用时优先使用 brew 安装器（默认：true）。
+- `install.nodeManager`：node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`，默认：npm）。
+  这只会影响 **技能安装**；Gateway 运行时仍应使用 Node
   （不建议在 WhatsApp/Telegram 中使用 Bun）。
-  - `openclaw setup --node-manager` 的范围更窄，目前只接受 `npm`、
+  - `openclaw setup --node-manager` 的范围更窄，目前仅接受 `npm`、
     `pnpm` 或 `bun`。如果你想使用基于 Yarn 的技能安装，请手动设置
     `skills.install.nodeManager: "yarn"`。
-- `entries.<skillKey>`：按技能覆盖的配置。
+- `entries.<skillKey>`：按技能覆盖。
 - `agents.defaults.skills`：可选的默认技能白名单，由省略
   `agents.list[].skills` 的 agent 继承。
-- `agents.list[].skills`：可选的每个 agent 最终技能白名单；显式列表会替换继承的默认值，而不是合并。
+- `agents.list[].skills`：可选的按 agent 最终技能白名单；显式
+  列表会替代继承的默认值，而不是合并。
 
-每个技能字段：
+## 符号链接的相邻仓库
 
-- `enabled`: 即使技能已捆绑/安装，也可将其禁用时设为 `false`。
-- `env`: 注入给 agent 运行时的环境变量（仅在尚未设置时生效）。
-- `apiKey`: 适用于声明了主要环境变量的技能的可选便捷配置。
+默认情况下，每个技能根目录都是一个包含边界。如果 `~/.agents/skills` 下的
+某个技能文件夹是一个符号链接，并且解析后位于 `~/.agents/skills` 之外，
+OpenClaw 会跳过它并记录 `Skipping escaped skill path outside its configured
+root`。
+
+保留符号链接布局，并且仅允许受信任的目标根目录：
+
+```json5
+{
+  skills: {
+    load: {
+      extraDirs: ["~/Projects/manager/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
+    },
+  },
+}
+```
+
+使用此配置后，诸如
+`~/.agents/skills/manager -> ~/Projects/manager/skills` 的符号链接在
+realpath 解析后会被接受。`extraDirs` 也会直接扫描相邻仓库，而
+`allowSymlinkTargets` 会为现有的 agent-技能布局保留符号链接路径。
+请保持目标条目范围狭窄；不要指向诸如 `~` 或
+`~/Projects` 之类的宽泛根目录，除非该根目录下的每个技能树都值得信任。
+
+按技能字段：
+
+- `enabled`：即使技能已捆绑/安装，也可将其禁用时设为 `false`。
+- `env`：注入给 agent 运行时的环境变量（仅在尚未设置时生效）。
+- `apiKey`：适用于声明了主要环境变量的技能的可选便捷配置。
   支持纯文本字符串或 SecretRef 对象（`{ source, provider, id }`）。
 
 ## 说明

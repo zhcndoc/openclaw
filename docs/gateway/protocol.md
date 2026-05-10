@@ -328,29 +328,29 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
   </Accordion>
 
   <Accordion title="Talk and TTS">
-    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、标准模式、传输、brain 策略以及实时音频/能力标志，而不会返回提供方 secret 或修改全局配置。
-    - `talk.config` 返回生效的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
-    - `talk.session.create` 创建一个 Gateway 拥有的 Talk 会话，用于 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room`。`brain: "direct-tools"` 需要 `operator.admin`。
-    - `talk.session.join` 验证一个 managed-room 会话 token，按需发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不返回明文 token 或存储的 token hash。
-    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转录会话中。
+    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、规范模式、传输、brain 策略，以及实时音频/能力标志，而不会返回提供方 secret 或修改全局配置。
+    - `talk.config` 返回生效中的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
+    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。`brain: "direct-tools"` 需要 `operator.admin`。
+    - `talk.session.join` 验证一个 managed-room 会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不会返回明文令牌或已存储令牌哈希。
+    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的 realtime relay 和 transcription 会话。
     - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动 managed-room 回合生命周期，并在状态清除前拒绝陈旧回合。
     - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控抢话。
-    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。
-    - `talk.session.close` 关闭一个 Gateway 拥有的 relay、转录或 managed-room 会话，并发出终态 Talk 事件。
+    - `talk.session.submitToolResult` 完成由 Gateway 拥有的 realtime relay 会话发出的提供方工具调用。若最终结果随后到达，传入 `options: { willContinue: true }` 用于中间工具输出。
+    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、transcription 或 managed-room 会话，并发出终止性的 Talk 事件。
     - `talk.mode` 为 WebChat/Control UI 客户端设置/广播当前 Talk 模式状态。
     - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
-    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交提供方特定工具结果前等待正常的 chat 生命周期事件。
-    - `talk.event` 是实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
-    - `talk.speak` 通过当前 Talk 语音提供方合成语音。
-    - `tts.status` 返回 TTS 启用状态、当前提供方、回退提供方以及提供方配置状态。
+    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交该提供方特定工具结果前等待正常的 chat 生命周期事件。
+    - `talk.event` 是用于实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
+    - `talk.speak` 通过当前活动的 Talk 语音提供方合成语音。
+    - `tts.status` 返回 TTS 启用状态、当前活动提供方、回退提供方以及提供方配置状态。
     - `tts.providers` 返回可见的 TTS 提供方清单。
     - `tts.enable` 和 `tts.disable` 切换 TTS 首选项状态。
-    - `tts.setProvider` 更新首选的 TTS 提供方。
-    - `tts.convert` 执行一次性的文本转语音转换。
+    - `tts.setProvider` 更新首选 TTS 提供方。
+    - `tts.convert` 执行一次性文本转语音转换。
 
   </Accordion>
 
-  <Accordion title="Secrets, config, update, and wizard">
+  <Accordion title="Secrets、config、update 和 wizard">
     - `secrets.reload` 重新解析当前活动的 SecretRefs，并且只在完全成功时切换运行时 secret 状态。
     - `secrets.resolve` 为特定命令/目标集解析命令目标 secret 分配。
     - `config.get` 返回当前配置快照和哈希。
@@ -365,14 +365,15 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Agent and workspace helpers">
-    - `agents.list` 返回已配置的 agent 条目，包括生效的模型和运行时元数据。
-    - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和工作区 wiring。
-    - `agents.files.list`、`agents.files.get` 和 `agents.files.set` 管理为 agent 暴露的 bootstrap 工作区文件。
-    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式的 `sessionKey`、`runId` 或 `taskId` 作用域暴露由 transcript 派生的 artifact 摘要和下载。运行和任务查询会在服务器端解析所属会话，并且只返回 provenance 匹配的 transcript 媒体；不安全或本地 URL 来源会返回不受支持的下载，而不是在服务器端抓取。
-    - `environments.list` 和 `environments.status` 为 SDK 客户端暴露只读的 Gateway 本地和节点环境发现。
-    - `agent.identity.get` 返回某个 agent 或会话的生效 assistant 身份。
-    - `agent.wait` 等待一次运行完成，并在可用时返回终态快照。
+  <Accordion title="Agent 和 workspace 助手">
+    - `agents.list` 返回已配置的 agent 条目，包括生效模型和运行时元数据。
+    - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和 workspace 绑定。
+    - `agents.files.list`、`agents.files.get` 和 `agents.files.set` 管理为某个 agent 暴露的 bootstrap workspace 文件。
+    - `tasks.list`、`tasks.get` 和 `tasks.cancel` 向 SDK 和 operator 客户端暴露 Gateway 任务账本。
+    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式的 `sessionKey`、`runId` 或 `taskId` 作用域暴露由 transcript 派生的 artifact 摘要和下载内容。Run 和 task 查询会在服务端解析归属会话，并且只返回来源匹配的 transcript 媒体；不安全或本地 URL 来源返回不支持的下载，而不会在服务端抓取。
+    - `environments.list` 和 `environments.status` 为 SDK 客户端暴露只读的 Gateway 本地和节点环境发现能力。
+    - `agent.identity.get` 返回某个 agent 或会话的生效助手身份。
+    - `agent.wait` 等待某个运行结束，并在可用时返回终态快照。
 
   </Accordion>
 
@@ -452,7 +453,35 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
 - 节点可以调用 `skills.bins` 来获取当前技能可执行文件列表，用于自动放行检查。
 
-### Operator 助手方法
+### Task ledger RPCs
+
+Operator clients may inspect and cancel Gateway background task records through
+the task ledger RPCs. These methods return sanitized task summaries, not raw
+runtime state.
+
+- `tasks.list` requires `operator.read`.
+  - Params: optional `status` (`"queued"`, `"running"`, `"completed"`,
+    `"failed"`, `"cancelled"`, or `"timed_out"`) or an array of those statuses,
+    optional `agentId`, optional `sessionKey`, optional `limit` from `1` to
+    `500`, and optional string `cursor`.
+  - Result: `{ "tasks": TaskSummary[], "nextCursor"?: string }`.
+- `tasks.get` requires `operator.read`.
+  - Params: `{ "taskId": string }`.
+  - Result: `{ "task": TaskSummary }`.
+  - Missing task ids return the Gateway not-found error shape.
+- `tasks.cancel` requires `operator.write`.
+  - Params: `{ "taskId": string, "reason"?: string }`.
+  - Result:
+    `{ "found": boolean, "cancelled": boolean, "reason"?: string, "task"?: TaskSummary }`.
+  - `found` reports whether the ledger had a matching task. `cancelled`
+    reports whether the runtime accepted or recorded cancellation.
+
+`TaskSummary` includes `id`, `status`, and optional metadata such as `kind`,
+`runtime`, `title`, `agentId`, `sessionKey`, `childSessionKey`, `ownerKey`,
+`runId`, `taskId`, `flowId`, `parentTaskId`, `sourceId`, timestamps, progress,
+terminal summary, and sanitized error text.
+
+### Operator helper methods
 
 - 操作员可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时命令清单。
   - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
@@ -526,7 +555,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `PROTOCOL_VERSION`                        | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
 | Request timeout (per RPC)                 | `30_000` ms                                           | `src/gateway/client.ts` (`requestTimeoutMs`)                                               |
-| Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (config/env can raise the paired server/client budget) |
+| Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (配置/环境可以提高配对的服务器/客户端预算) |
 | Initial reconnect backoff                 | `1_000` ms                                            | `src/gateway/client.ts` (`backoffMs`)                                                      |
 | Max reconnect backoff                     | `30_000` ms                                           | `src/gateway/client.ts` (`scheduleReconnect`)                                              |
 | Fast-retry clamp after device-token close | `250` ms                                              | `src/gateway/client.ts`                                                                    |
@@ -589,7 +618,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 | 消息                        | details.code                     | details.reason           | 含义                                               |
 | --------------------------- | -------------------------------- | ------------------------ | -------------------------------------------------- |
 | `device nonce required`     | `DEVICE_AUTH_NONCE_REQUIRED`     | `device-nonce-missing`   | 客户端省略了 `device.nonce`（或传入空值）。          |
-| `device nonce mismatch`     | `DEVICE_AUTH_NONCE_MISMATCH`    | `device-nonce-mismatch`  | 客户端使用了过期/错误的 nonce 进行签名。            |
+| `device nonce mismatch`    | `DEVICE_AUTH_NONCE_MISMATCH`    | `device-nonce-mismatch`  | 客户端使用了过期/错误的 nonce 进行签名。            |
 | `device signature invalid`  | `DEVICE_AUTH_SIGNATURE_INVALID` | `device-signature`       | 签名负载与 v2 负载不匹配。                          |
 | `device signature expired`  | `DEVICE_AUTH_SIGNATURE_EXPIRED` | `device-signature-stale` | 签名时间戳超出了允许的时钟偏差。                    |
 | `device identity mismatch`  | `DEVICE_AUTH_DEVICE_ID_MISMATCH` | `device-id-mismatch`     | `device.id` 与公钥指纹不匹配。                     |

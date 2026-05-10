@@ -385,9 +385,9 @@ sidebarTitle: "工具和自定义提供方"
 
 ---
 
-## 自定义提供商和基础 URL
+## Custom providers and base URLs
 
-OpenClaw 使用内置模型目录。可通过配置中的 `models.providers` 或 `~/.openclaw/agents/<agentId>/agent/models.json` 添加自定义提供商。
+OpenClaw uses the built-in model catalog. Custom providers can be added via `models.providers` in the config or `~/.openclaw/agents/<agentId>/agent/models.json`.
 
 ```json5
 {
@@ -468,12 +468,13 @@ OpenClaw 使用内置模型目录。可通过配置中的 `models.providers` 或
 
   </Accordion>
   <Accordion title="模型目录条目">
-    - `models.providers.*.models`：显式的 provider 模型目录条目。
-    - `models.providers.*.models.*.input`：模型输入模态。纯文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。仅当所选模型被标记为支持图像时，图像附件才会注入到 agent 回合中。
-    - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
-    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时使用它；当两者不同，`openclaw models list` 会同时显示。
-    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`），OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保持默认 OpenAI 行为。
-    - `models.providers.*.models.*.compat.requiresStringContent`：用于仅字符串 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将纯文本 `messages[].content` 数组压平成普通字符串。
+    - `models.providers.*.models`：显式 provider 模型目录条目。
+    - `models.providers.*.models.*.input`：模型输入模态。纯文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。仅当所选模型被标记为支持图像时，才会将图像附件注入到 agent 回合中。
+    - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。这会覆盖该模型的 provider 级 `contextWindow`。
+    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。这会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时可使用它；`openclaw models list` 在二者不同时时会显示两个值。
+    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选的兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`），OpenClaw 会在运行时强制将其设为 `false`。`baseUrl` 为空或省略时保留默认 OpenAI 行为。
+    - `models.providers.*.models.*.compat.requiresStringContent`：用于仅字符串的 OpenAI 兼容 chat 端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将纯文本 `messages[].content` 数组扁平化为普通字符串。
+    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 负载提示。对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），顶层 `enable_thinking` 使用 `"qwen"`，而 `chat_template_kwargs.enable_thinking` 使用 `"qwen-chat-template"`。
 
   </Accordion>
   <Accordion title="Amazon Bedrock 发现">

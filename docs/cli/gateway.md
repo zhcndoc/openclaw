@@ -110,10 +110,13 @@ openclaw gateway run
 ```bash
 openclaw gateway restart
 openclaw gateway restart --safe
+openclaw gateway restart --safe --skip-deferral
 openclaw gateway restart --force
 ```
 
 `openclaw gateway restart --safe` 会在重启前要求正在运行的 Gateway 预检当前的 OpenClaw 工作。如果存在排队中的操作、回复投递、嵌入式运行或任务运行仍在活动，Gateway 会报告阻塞项，合并重复的安全重启请求，并在活动工作耗尽后重启。普通的 `restart` 为兼容性保留现有的服务管理器行为。仅当你明确希望立即覆盖路径时才使用 `--force`。
+
+`openclaw gateway restart --safe --skip-deferral` 会执行与 `--safe` 相同的 OpenClaw 感知协调重启，但会绕过活动工作延迟门控，因此即使报告了阻塞项，Gateway 也会立即发出重启。当延迟被卡住的任务运行钉住，而 `--safe` 单独使用会无限等待时，可将其作为操作员的逃生出口。`--skip-deferral` 需要 `--safe`。
 
 <Warning>
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
@@ -481,18 +484,19 @@ openclaw gateway restart
   <Accordion title="命令选项">
     - `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
     - `gateway install`: `--port`, `--runtime <node|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`
-    - `gateway restart`: `--safe`, `--force`, `--wait <duration>`, `--json`
+    - `gateway restart`: `--safe`, `--skip-deferral`, `--force`, `--wait <duration>`, `--json`
     - `gateway uninstall|start`: `--json`
     - `gateway stop`: `--disable`, `--json`
 
   </Accordion>
   <Accordion title="生命周期行为">
-    - Use `gateway restart` to restart a managed service. Do not chain `gateway stop` and `gateway start` as a restart substitute.
-    - On macOS, `gateway stop` uses `launchctl bootout` by default, which removes the LaunchAgent from the current boot session without persisting a disable — KeepAlive auto-recovery remains active for future crashes and `gateway start` re-enables cleanly without a manual `launchctl enable`. Pass `--disable` to persistently suppress KeepAlive and RunAtLoad so the gateway does not respawn until the next explicit `gateway start`; use this when a manual stop should survive reboots or system restarts.
-    - `gateway restart --safe` asks the running Gateway to preflight active OpenClaw work and defer the restart until reply delivery, embedded runs, and task runs drain. `--safe` cannot be combined with `--force` or `--wait`.
-    - `gateway restart --wait 30s` overrides the configured restart drain budget for that restart. Bare numbers are milliseconds; units such as `s`, `m`, and `h` are accepted. `--wait 0` waits indefinitely.
-    - `gateway restart --force` skips the active-work drain and restarts immediately. Use it when an operator has already inspected the listed task blockers and wants the gateway back now.
-    - Lifecycle commands accept `--json` for scripting.
+    - 使用 `gateway restart` 重启托管服务。不要把 `gateway stop` 和 `gateway start` 连接起来当作重启替代方案。
+    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用——KeepAlive 的自动恢复仍会对未来的崩溃保持 सक्रिय，且 `gateway start` 可在不手动执行 `launchctl enable` 的情况下干净地重新启用。传入 `--disable` 可持久化地抑制 KeepAlive 和 RunAtLoad，这样 gateway 在下一次显式 `gateway start` 之前不会重新启动；当手动停止需要在重启或系统重启后仍然生效时，请使用此选项。
+    - `gateway restart --safe` 会要求正在运行的 Gateway 对当前活跃的 OpenClaw 工作进行预检，并将重启延后，直到回复投递、内嵌运行和任务运行全部排空。`--safe` 不能与 `--force` 或 `--wait` 组合使用。
+    - `gateway restart --wait 30s` 会覆盖该次重启配置的排空预算。裸数字表示毫秒；支持 `s`、`m` 和 `h` 等单位。`--wait 0` 表示无限等待。
+    - `gateway restart --safe --skip-deferral` 会运行支持 OpenClaw 的安全重启，但绕过延后门控，因此即使报告了阻塞项，Gateway 也会立即发出重启。用于处理卡住的任务运行延后；需要 `--safe`。
+    - `gateway restart --force` 会跳过活跃工作排空并立即重启。当操作员已经检查过所列出的任务阻塞项并希望立刻恢复 gateway 时，请使用它。
+    - 生命周期命令支持 `--json`，便于脚本化。
 
   </Accordion>
   <Accordion title="安装时的认证和 SecretRef">

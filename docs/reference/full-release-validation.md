@@ -42,15 +42,15 @@ Package Acceptance 通常会从解析后的 `ref` 构建候选 tarball，包括�
 
 当 `live_suite_filter` 为空时，Docker release-path 阶段运行以下分块：
 
-| Chunk                                                           | Coverage                                                                |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `core`                                                          | 核心 Docker release-path 冒烟通道。                                   |
-| `package-update-openai`                                         | OpenAI 包安装和更新行为。                             |
-| `package-update-anthropic`                                      | Anthropic 包安装和更新行为。                          |
-| `package-update-core`                                           | 与提供方无关的包和更新行为。                           |
-| `plugins-runtime-plugins`                                       | 运行插件行为的插件运行时通道。                     |
-| `plugins-runtime-services`                                      | 由服务支持的插件运行时通道；在请求时包含 OpenWebUI。 |
-| `plugins-runtime-install-a` through `plugins-runtime-install-h` | 为并行发布验证拆分的插件安装/运行时批次。   |
+| Chunk                                                           | Coverage                                                                         |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `core`                                                          | Core Docker release-path smoke lanes.                                            |
+| `package-update-openai`                                         | OpenAI package install/update behavior, including Codex on-demand install.       |
+| `package-update-anthropic`                                      | Anthropic package install and update behavior.                                   |
+| `package-update-core`                                           | Provider-neutral package and update behavior.                                    |
+| `plugins-runtime-plugins`                                       | Plugin runtime lanes that exercise plugin behavior.                              |
+| `plugins-runtime-services`                                      | Service-backed and live plugin runtime lanes; includes OpenWebUI when requested. |
+| `plugins-runtime-install-a` through `plugins-runtime-install-h` | Plugin install/runtime batches split for parallel release validation.            |
 
 当只有一个 Docker 通道失败时，请在可复用的 live/E2E 工作流中使用有针对性的 `docker_lanes=<lane[,lane]>`。发布制品在可用时包含每个通道的重新运行命令，以及包制品和镜像复用输入。
 

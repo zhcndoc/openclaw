@@ -20,34 +20,37 @@ read_when:
 
 `@openclaw/sdk` 提供以下内容：
 
-| Surface                   | 状态   | 作用                                                                              |
-| ------------------------- | ------ | --------------------------------------------------------------------------------- |
-| `OpenClaw`                | Ready   | 主客户端入口。负责传输、连接、请求和事件。        |
+| Surface                   | Status  | What it does                                                                      |
+| ------------------------- | ------- | --------------------------------------------------------------------------------- |
+| `OpenClaw`                | Ready   | 主客户端入口点。负责传输、连接、请求和事件。        |
 | `GatewayClientTransport`  | Ready   | 由 Gateway 客户端支持的 WebSocket 传输层。                                 |
 | `oc.agents`               | Ready   | 列出、创建、更新、删除和获取 agent 句柄。                         |
 | `Agent.run()`             | Ready   | 启动一个 Gateway `agent` 运行并返回一个 `Run`。                                 |
-| `oc.runs`                 | Ready   | 创建、获取、等待、取消以及流式接收运行。                              |
-| `Run.events()`            | Ready   | 为快速完成的运行提供回放的、归一化的每次运行事件流。                      |
+| `oc.runs`                 | Ready   | 创建、获取、等待、取消和流式接收运行。                              |
+| `Run.events()`            | Ready   | 以归一化的形式流式接收每个运行的事件，并为快速完成的运行提供回放。                      |
 | `Run.wait()`              | Ready   | 调用 `agent.wait` 并返回稳定的 `RunResult`。                              |
-| `Run.cancel()`            | Ready   | 根据运行 id 调用 `sessions.abort`，在可用时附带 session key。                |
-| `oc.sessions`             | Ready   | 创建、解析、发送、补丁、压缩并获取 session 句柄。         |
+| `Run.cancel()`                | Ready   | 按运行 id 调用 `sessions.abort`，如有可用的 session key 也会一并使用。                |
+| `oc.sessions`             | Ready   | 创建、解析、发送、补丁、压缩和获取 session 句柄。         |
 | `Session.send()`          | Ready   | 调用 `sessions.send` 并返回一个 `Run`。                                        |
+| `oc.tasks`                | Ready   | 列出、读取和取消 Gateway 任务账本条目。                            |
 | `oc.models`               | Ready   | 调用 `models.list` 和当前的 `models.authStatus` 状态 RPC。               |
 | `oc.tools`                | Ready   | 通过策略管道列出、作用域化并调用 Gateway 工具。             |
-| `oc.artifacts`            | Ready   | 列出、获取和下载 Gateway 转录制品。            |
-| `oc.approvals`            | Ready   | 通过 Gateway 审批 RPC 列出并解决执行审批。                  |
-| `oc.environments`         | Partial | 列出 Gateway 本地和节点环境候选项；创建/删除尚未接通。 |
-| `oc.rawEvents()`          | Ready   | 为高级使用者暴露原始 Gateway 事件。                                |
+| `oc.artifacts`            | Ready   | 列出、获取和下载 Gateway 转录制品。                            |
+| `oc.approvals`            | Ready   | 通过 Gateway 审批 RPC 列出并解决执行审批。                            |
+| `oc.environments`         | Partial | 列出 Gateway 本地和节点环境候选项；创建/删除尚未接入。 |
+| `oc.rawEvents()`          | Ready   | 为高级消费者暴露原始 Gateway 事件。                                |
 | `normalizeGatewayEvent()` | Ready   | 将原始 Gateway 事件转换为稳定的 SDK 事件形状。                      |
 
-该 SDK 还导出了这些 Surface 所使用的核心类型：
-`AgentRunParams`、`RunResult`、`RunStatus`、`OpenClawEvent`、
-`OpenClawEventType`、`GatewayEvent`、`OpenClawTransport`、
-`GatewayRequestOptions`、`SessionCreateParams`、`SessionSendParams`、
-`ArtifactSummary`、`ArtifactQuery`、`ArtifactsListResult`、
-`ArtifactsGetResult`、`ArtifactsDownloadResult`、`RuntimeSelection`、
-`EnvironmentSelection`、`WorkspaceSelection`、`ApprovalMode` 以及相关
-结果类型。
+The SDK also exports the core types used by those surfaces:
+`AgentRunParams`, `RunResult`, `RunStatus`, `OpenClawEvent`,
+`OpenClawEventType`, `GatewayEvent`, `OpenClawTransport`,
+`GatewayRequestOptions`, `SessionCreateParams`, `SessionSendParams`,
+`ArtifactSummary`, `ArtifactQuery`, `ArtifactsListResult`,
+`ArtifactsGetResult`, `ArtifactsDownloadResult`,
+`TaskSummary`, `TaskStatus`, `TasksListParams`, `TasksListResult`,
+`TasksGetResult`, `TasksCancelResult`, `RuntimeSelection`,
+`EnvironmentSelection`, `WorkspaceSelection`, `ApprovalMode`, and related
+result types.
 
 ## 连接到 Gateway
 
@@ -239,7 +242,15 @@ const approvals = await oc.approvals.list();
 await oc.approvals.respond("approval-id", { decision: "approve" });
 ```
 
-Environment helpers expose read-only Gateway-local and node discovery:
+任务辅助方法使用持久化的任务账本，这也为 `openclaw tasks` 提供支持：
+
+```typescript
+const tasks = await oc.tasks.list({ status: "running", sessionKey: "agent:main:main" });
+const task = await oc.tasks.get(tasks.tasks[0].id);
+await oc.tasks.cancel(task.task.id, { reason: "user stopped task" });
+```
+
+环境辅助方法暴露只读的 Gateway 本地和节点发现功能：
 
 ```typescript
 const { environments } = await oc.environments.list();
@@ -251,10 +262,6 @@ await oc.environments.status(environments[0].id);
 该 SDK 包含我们希望实现的产品模型的名称，但不会假装 Gateway RPC 以静默方式存在。以下调用目前会抛出明确的“不支持”错误：
 
 ```typescript
-await oc.tasks.list();
-await oc.tasks.get("task-id");
-await oc.tasks.cancel("task-id");
-
 await oc.environments.create({});
 await oc.environments.delete("environment-id");
 ```
@@ -291,4 +298,4 @@ App SDK 代码应从 `@openclaw/sdk` 导入。Plugin 代码应从文档中记录
 - [会话](/concepts/session)
 - [后台任务](/automation/tasks)
 - [ACP agents](/tools/acp-agents)
-- [Plugin SDK 概览](/plugins/sdk-overview)
+- [插件 SDK 概览](/plugins/sdk-overview)

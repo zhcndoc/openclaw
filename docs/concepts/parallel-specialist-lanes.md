@@ -47,7 +47,7 @@ OpenClaw 已经通过 [命令队列](/concepts/queue) 按会话串行化运行�
   agents: {
     defaults: {
       maxConcurrent: 4,
-      subagents: { maxConcurrent: 8 },
+      subagents: { maxConcurrent: 8, delegationMode: "prefer" },
     },
   },
   messages: {

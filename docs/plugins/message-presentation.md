@@ -273,6 +273,7 @@ const adapter: ChannelOutboundAdapter = {
 import {
   interactiveReplyToPresentation,
   normalizeMessagePresentation,
+  presentationToInteractiveControlsReply,
   presentationToInteractiveReply,
   renderMessagePresentationFallbackText,
 } from "openclaw/plugin-sdk/interactive-runtime";
@@ -280,7 +281,17 @@ import {
 
 新代码应直接接收或生成 `MessagePresentation`。
 
-## 投递置顶
+`presentationToInteractiveReply(...)` 会通过将标题、文本、上下文、按钮和选择器映射到较早的
+`InteractiveReply` 形状来保留可见的展示文本。已经原生绘制标题、文本、
+上下文和分隔线区块的组件渲染器应改用
+`presentationToInteractiveControlsReply(...)`，然后只附加按钮和选择器控件。
+
+`renderMessagePresentationFallbackText(...)` 对于没有文本回退的
+展示区块会返回空字符串，例如仅包含分隔线的展示。需要非空发送正文的传输层可以传入
+`emptyFallback`，以在不改变默认回退
+契约的情况下使用最小正文。
+
+## Delivery pin
 
 置顶属于投递行为，而不是展示。请使用 `delivery.pin`，而不是诸如 `channelData.telegram.pin` 之类的提供方原生字段。
 

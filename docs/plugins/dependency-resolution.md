@@ -39,7 +39,8 @@ OpenClaw 为每种来源使用稳定的根目录：
 npm 安装在 npm 根目录下运行：
 
 ```bash
-npm install --prefix ~/.openclaw/npm <spec> --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+cd ~/.openclaw/npm
+npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund
 ```
 
 `openclaw plugins install npm-pack:<path.tgz>` 使用相同的受管理 npm 根目录来处理本地 npm-pack tarball。OpenClaw 读取 tarball 的 npm 元数据，将其作为复制的 `file:` 依赖添加到受管理根目录中，运行正常的 npm install，然后在信任该插件之前验证已安装的 lockfile 元数据。此流程用于包验收和发布候选验证，以便本地 pack 产物的行为与其模拟的 registry 产物一致。

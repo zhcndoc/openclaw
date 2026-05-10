@@ -108,8 +108,8 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
           sessionScope: "per-phone", // per-phone | per-call
           numbers: {
             "+15550009999": {
-              inboundGreeting: "Silver Fox Cards, how can I help?",
-              responseSystemPrompt: "You are a concise baseball card specialist.",
+              inboundGreeting: "Silver Fox Cards，您好，我能帮您什么？",
+              responseSystemPrompt: "你是一位简明扼要的棒球卡专家。",
               tts: {
                 providers: {
                   openai: { voice: "alloy" },
@@ -307,6 +307,8 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
                 instructions: "简短说话。在使用更深层工具之前先调用 openclaw_agent_consult。",
                 toolPolicy: "safe-read-only",
                 consultPolicy: "substantive",
+                consultThinkingLevel: "low",
+                consultFastMode: true,
                 agentContext: { enabled: true },
                 providers: {
                   google: {
@@ -727,7 +729,7 @@ p50/p90/p99。
 | `speak_to_user` | `callId`, `message`                        |
 | `send_dtmf`     | `callId`, `digits`                         |
 | `end_call`      | `callId`                                   |
-| `get_status`    | `callId`                                   |
+| `get_status`     | `callId`                                   |
 
 本仓库还提供了匹配的技能文档：`skills/voice-call/SKILL.md`。
 

@@ -11,11 +11,13 @@ Matrix 是 OpenClaw 的一个可下载频道插件。
 
 ## 安装
 
-在配置频道之前先安装 Matrix：
+在配置频道之前，请先从 ClawHub 安装 Matrix：
 
 ```bash
 openclaw plugins install @openclaw/matrix
 ```
+
+裸插件规格会先尝试 ClawHub，然后回退到 npm。要强制指定注册源，请使用 `openclaw plugins install clawhub:@openclaw/matrix` 或 `openclaw plugins install npm:@openclaw/matrix`。
 
 从本地检出安装：
 

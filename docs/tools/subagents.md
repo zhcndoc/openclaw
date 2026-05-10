@@ -134,6 +134,34 @@ sidebarTitle: "子代理"
 - **思考：** 继承调用方，除非你设置了 `agents.defaults.subagents.thinking`（或按代理设置 `agents.list[].subagents.thinking`）；显式的 `sessions_spawn.thinking` 仍然优先生效。
 - **运行超时：** 如果省略 `sessions_spawn.runTimeoutSeconds`，OpenClaw 会在设置了 `agents.defaults.subagents.runTimeoutSeconds` 时使用该值；否则回退为 `0`（无超时）。
 
+### Delegation prompt mode
+
+`agents.defaults.subagents.delegationMode` 仅控制提示引导；它不会改变工具策略，也不会强制委派。
+
+- `suggest`（默认）：保持标准提示，引导把更大或更慢的工作交给子代理。
+- `prefer`：提示主代理保持响应，并将任何比直接回复更复杂的工作通过 `sessions_spawn` 委派出去。
+
+按代理覆盖使用 `agents.list[].subagents.delegationMode`。
+
+```json5
+{
+  agents: {
+    defaults: {
+      subagents: {
+        delegationMode: "prefer",
+        maxConcurrent: 4,
+      },
+    },
+    list: [
+      {
+        id: "coordinator",
+        subagents: { delegationMode: "prefer" },
+      },
+    ],
+  },
+}
+```
+
 ### 工具参数
 
 <ParamField path="task" type="string" required>
@@ -513,12 +541,12 @@ CLI 的已配对设备作用域基线。远程调用方、显式的 `deviceIdent
 
 ## 限制
 
-- 子代理公告是**尽力而为**的。如果网关重启，待处理的“回传公告”工作会丢失。
-- 子代理仍然共享同一个网关进程资源；请将 `maxConcurrent` 视为安全阀。
-- `sessions_spawn` 始终是非阻塞的：它会立即返回 `{ status: "accepted", runId, childSessionKey }`。
-- 子代理上下文只注入 `AGENTS.md` + `TOOLS.md`（不包含 `SOUL.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md` 或 `BOOTSTRAP.md`）。
-- 最大嵌套深度为 5（`maxSpawnDepth` 范围：1–5）。对于大多数用例，推荐使用深度 2。
-- `maxChildrenPerAgent` 限制每个会话的活跃子级数量（默认 `5`，范围 `1–20`）。
+- Sub-agent announce is **best-effort**. If the gateway restarts, pending "announce back" work is lost.
+- Sub-agents still share the same gateway process resources; treat `maxConcurrent` as a safety valve.
+- `sessions_spawn` is always non-blocking: it returns `{ status: "accepted", runId, childSessionKey }` immediately.
+- Sub-agent context only injects `AGENTS.md`, `TOOLS.md`, `SOUL.md`, `IDENTITY.md` and `USER.md` (no `MEMORY.md`, `HEARTBEAT.md`, or `BOOTSTRAP.md`).
+- Maximum nesting depth is 5 (`maxSpawnDepth` range: 1–5). Depth 2 is recommended for most use cases.
+- `maxChildrenPerAgent` caps active children per session (default `5`, range `1–20`).
 
 ## 相关内容
 

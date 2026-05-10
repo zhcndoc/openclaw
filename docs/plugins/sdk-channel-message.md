@@ -23,6 +23,30 @@ Core 负责队列、持久性、通用重试策略、hooks、回执，以及共�
 `channel-message` 子路径被刻意设计得足够轻量，适合像 `channel.ts` 这样的热插件引导文件：它暴露适配器契约、能力证明、回执和兼容性适配层，而不会加载出站投递。运行时投递辅助函数可从
 `openclaw/plugin-sdk/channel-message-runtime` 获取，适用于已经在进行异步消息 I/O 的监控/send 代码路径。
 
+新的频道和插件发送代码应使用
+`openclaw/plugin-sdk/channel-message-runtime` 中的消息生命周期辅助函数：`sendDurableMessageBatch`、
+`withDurableMessageSendContext` 或 `deliverInboundReplyWithMessageSendContext`。
+`openclaw/plugin-sdk/outbound-runtime` 中较旧的
+`deliverOutboundPayloads(...)` 辅助函数是用于出站内部、恢复和旧版适配器的已弃用兼容性/运行时底层。新频道或插件发送路径不要使用它。
+
+`sendDurableMessageBatch(...)` 返回明确的生命周期结果：
+
+- `sent` - 至少有一条可见的平台消息已投递。
+- `suppressed` - 没有平台消息应被视为丢失。稳定的
+  原因包括 `cancelled_by_message_sending_hook`、
+  `empty_after_message_sending_hook`、`no_visible_payload`、
+  `adapter_returned_no_identity` 以及旧版 `no_visible_result`。
+- `partial_failed` - 至少有一条平台消息在后续 payload 或副作用失败之前已投递。结果包含已投递的回执前缀
+  以及失败信息。
+- `failed` - 未产生任何平台回执。
+
+当一个批次混合了 sent、suppressed 和 failed payload 时，请使用 `payloadOutcomes`。
+不要通过检查旧的直接投递数组是否为空来推断 hook 取消。
+
+仍然需要缓冲回复分发器的兼容性调度器，应使用
+`openclaw/plugin-sdk/channel-message` 中的 `createChannelMessageReplyPipeline(...)` 构建回复前缀选项，然后调用运行时的
+`channel.turn.runPrepared(...)`。这样可以在共享的 turn 生命周期上保持会话记录和分发顺序，而不会再增加另一个公共 turn 包装器。
+
 ## 最小适配器
 
 大多数新的频道插件都可以从一个小型适配器开始：
@@ -102,7 +126,9 @@ const demoMessageAdapter = createChannelMessageAdapterFromOutbound({
 
 共享的 `message(action="send")` 路径应使用与最终回复相同的核心投递生命周期。如果频道需要针对工具发送进行特定于提供方的整形，请实现 `actions.prepareSendPayload(...)`，而不是从 `actions.handleAction(...)` 中发送。
 
-`prepareSendPayload(...)` 会接收规范化后的 core `ReplyPayload` 以及完整的动作上下文。返回一个在 `payload.channelData.<channel>` 中包含频道特定数据的 payload，并让 core 调用 `sendMessage(...)`、`deliverOutboundPayloads(...)`、写前日志队列、message-sending hooks、重试、恢复以及 ack 清理。
+`prepareSendPayload(...)` 接收规范化后的 core `ReplyPayload` 以及完整的 action 上下文。返回一个在 `payload.channelData.<channel>` 中包含频道特定数据的 payload，并让 core 调用 `sendMessage(...)`、
+消息生命周期运行时、写前队列、message-sending hooks、重试、恢复以及 ack 清理。生命周期运行时可能会在内部调用
+`deliverOutboundPayloads(...)` 作为兼容性底层，但频道插件不应为了新的发送行为直接调用它。
 
 只有当发送无法表示为持久化 payload 时才返回 `null`，例如它包含一个不可序列化的组件工厂。Core 会为兼容性保留旧版插件动作回退，但新的频道发送特性应当能够表示为持久化 payload 数据。
 
@@ -289,7 +315,7 @@ import {
   verifyChannelMessageReceiveAckPolicyAdapterProofs,
 } from "openclaw/plugin-sdk/channel-message";
 
-it("支持已声明的消息能力", async () => {
+it("supports declared message capabilities", async () => {
   await expect(
     verifyChannelMessageAdapterCapabilityProofs({
       adapterName: "demo",
@@ -322,17 +348,21 @@ it("支持已声明的消息能力", async () => {
 
 这些 API 仍可导入以兼容第三方。请勿将其用于新的渠道代码。
 
-| 已弃用 API                                  | 替代方案                                                                                                         |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `openclaw/plugin-sdk/channel-reply-pipeline` | `openclaw/plugin-sdk/channel-message`                                                                               |
-| `createChannelTurnReplyPipeline(...)`        | 兼容分发器使用 `createChannelMessageReplyPipeline(...)`，或新渠道代码使用 `message` 适配器 |
-| `deliverDurableInboundReplyPayload(...)`     | 来自 `openclaw/plugin-sdk/channel-message-runtime` 的 `deliverInboundReplyWithMessageSendContext(...)`                 |
-| `dispatchInboundReplyWithBase(...)`          | 仅供兼容分发器使用 `dispatchChannelMessageReplyWithBase(...)`                                       |
-| `recordInboundSessionAndDispatchReply(...)`  | 仅供兼容分发器使用 `recordChannelMessageReplyDispatch(...)`                                         |
-| `resolveChannelSourceReplyDeliveryMode(...)` | `resolveChannelMessageSourceReplyDeliveryMode(...)`                                                                 |
-| `deliverFinalizableDraftPreview(...)`        | `defineFinalizableLivePreviewAdapter(...)` 加上 `deliverWithFinalizableLivePreviewAdapter(...)`                     |
-| `DraftPreviewFinalizerDraft`                 | `LivePreviewFinalizerDraft`                                                                                         |
-| `DraftPreviewFinalizerResult`                | `LivePreviewFinalizerResult`                                                                                        |
+| Deprecated API                               | Replacement                                                                                                                |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `openclaw/plugin-sdk/channel-reply-pipeline` | `openclaw/plugin-sdk/channel-message`                                                                                      |
+| `createChannelTurnReplyPipeline(...)`        | `createChannelMessageReplyPipeline(...)` for compatibility dispatchers, or a `message` adapter for new channel code        |
+| `buildChannelMessageReplyDispatchBase(...)`  | `createChannelMessageReplyPipeline(...)` plus `channel.turn.runPrepared(...)`, or a `message` adapter for new channel code |
+| `dispatchChannelMessageReplyWithBase(...)`   | `createChannelMessageReplyPipeline(...)` plus `channel.turn.runPrepared(...)`, or a `message` adapter for new channel code |
+| `recordChannelMessageReplyDispatch(...)`     | `createChannelMessageReplyPipeline(...)` plus `channel.turn.runPrepared(...)`, or a `message` adapter for new channel code |
+| `deliverOutboundPayloads(...)`               | `sendDurableMessageBatch(...)` or `deliverInboundReplyWithMessageSendContext(...)` from `channel-message-runtime`          |
+| `deliverDurableInboundReplyPayload(...)`     | `deliverInboundReplyWithMessageSendContext(...)` from `openclaw/plugin-sdk/channel-message-runtime`                        |
+| `dispatchInboundReplyWithBase(...)`          | `createChannelMessageReplyPipeline(...)` plus `channel.turn.runPrepared(...)`, or a `message` adapter for new channel code |
+| `recordInboundSessionAndDispatchReply(...)`  | `createChannelMessageReplyPipeline(...)` plus `channel.turn.runPrepared(...)`, or a `message` adapter for new channel code |
+| `resolveChannelSourceReplyDeliveryMode(...)` | `resolveChannelMessageSourceReplyDeliveryMode(...)`                                                                        |
+| `deliverFinalizableDraftPreview(...)`        | `defineFinalizableLivePreviewAdapter(...)` plus `deliverWithFinalizableLivePreviewAdapter(...)`                            |
+| `DraftPreviewFinalizerDraft`                 | `LivePreviewFinalizerDraft`                                                                                                |
+| `DraftPreviewFinalizerResult`                | `LivePreviewFinalizerResult`                                                                                               |
 
 兼容分发器仍可通过消息外观层使用 `createReplyPrefixContext(...)`、
 `createReplyPrefixOptions(...)` 和 `createTypingCallbacks(...)`。新的生命周期代码应避免旧的

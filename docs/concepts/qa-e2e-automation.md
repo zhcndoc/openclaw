@@ -222,7 +222,7 @@ pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline
 
 ### 共享 CLI 标志
 
-These lanes register through `extensions/qa-lab/src/live-transports/shared/live-transport-cli.ts` and accept the same flags:
+这些通道通过 `extensions/qa-lab/src/live-transports/shared/live-transport-cli.ts` 注册，并接受相同的标志：
 
 | Flag                                  | Default                                                         | Description                                                                                                           |
 | ------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -266,6 +266,7 @@ pnpm openclaw qa telegram
 - `telegram-tools-compact-command`
 - `telegram-whoami-command`
 - `telegram-status-command`
+- `telegram-repeated-command-authorization`
 - `telegram-other-bot-command-gating`
 - `telegram-context-command`
 - `telegram-current-session-status-tool`

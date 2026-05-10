@@ -136,10 +136,10 @@ export default definePluginEntry({
 
 - `event.toolName`
 - `event.params`
-- 可选 `event.runId`
-- 可选 `event.toolCallId`
-- 如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
-  `ctx.runId`、`ctx.jobId`（在 cron 驱动的运行中设置）以及诊断用 `ctx.trace` 等上下文字段
+- 可选的 `event.derivedPaths`，其中包含尽力而为的、基于主机推导的目标路径提示，适用于诸如 `apply_patch` 之类的已知工具封装；如果存在，这些路径可能不完整，或者可能比工具实际会触及的范围更宽泛（例如，输入格式错误或不完整时）
+- 可选的 `event.runId`
+- 可选的 `event.toolCallId`
+- `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、`ctx.runId`、`ctx.jobId`（在 cron 驱动的运行中设置）以及诊断信息 `ctx.trace` 等上下文字段
 
 它可以返回：
 
@@ -271,9 +271,11 @@ type BeforeAgentFinalizeRetry = {
 
 决策规则：
 
-- `message_sending` 携带 `cancel: true` 时为终态。
-- `message_sending` 携带 `cancel: false` 时视为没有决策。
-- 重写后的 `content` 会继续传递给低优先级钩子，除非后续某个钩子取消投递。
+- `message_sending` 中的 `cancel: true` 是终止性的。
+- `message_sending` 中的 `cancel: false` 视为没有决策。
+- 重写后的 `content` 会继续传递给更低优先级的钩子，除非后续钩子取消投递。
+- `message_sending` 可以在取消时返回 `cancelReason` 和有边界限制的 `metadata`。新的消息生命周期 API 会将其暴露为一个被抑制的投递结果，原因是 `cancelled_by_message_sending_hook`；旧版直接投递仍会为了兼容返回空结果数组。
+- `message_sent` 仅用于观察。处理器失败会被记录，但不会改变投递结果。
 
 ## 安装钩子
 
@@ -315,7 +317,7 @@ type BeforeAgentFinalizeRetry = {
 For the full list - memory capability registration, provider thinking
 profile, external auth providers, provider discovery types, task runtime
 accessors, and the `command-auth` → `command-status` rename - see
-[Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations).
+[Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations)。
 
 ## 相关内容
 

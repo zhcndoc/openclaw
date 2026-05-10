@@ -447,6 +447,7 @@ title: "配置示例"
     allowBundled: ["gemini", "peekaboo"],
     load: {
       extraDirs: ["~/Projects/agent-scripts/skills"],
+      allowSymlinkTargets: ["~/Projects/agent-scripts/skills"],
     },
     install: {
       preferBrew: true,
@@ -463,6 +464,24 @@ title: "配置示例"
   },
 }
 ```
+
+### 软链接的兄弟技能仓库
+
+当内置技能根目录包含指向兄弟仓库的软链接时使用，例如 `~/.agents/skills/manager -> ~/Projects/manager/skills`。
+
+```json5
+{
+  skills: {
+    load: {
+      extraDirs: ["~/Projects/manager/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
+    },
+  },
+}
+```
+
+- `extraDirs` 会将兄弟仓库作为显式技能根目录进行扫描。
+- `allowSymlinkTargets` 允许软链接的技能文件夹解析到该受信任的真实目标根目录，而不会允许任意的软链接逃逸。
 
 ## 常见模式
 

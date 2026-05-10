@@ -138,13 +138,13 @@ sidebarTitle: "CLI 参考"
   <Accordion title="OpenAI Code 订阅（OAuth）">
     浏览器流程；粘贴 `code#state`。
 
-    当模型未设置或已是 OpenAI 系列时，会将 `agents.defaults.model` 设置为 `openai-codex/gpt-5.5`。
+    当模型未设置或已属于 OpenAI 系列时，通过 Codex 运行时将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
 
   </Accordion>
   <Accordion title="OpenAI Code 订阅（设备配对）">
     带短期设备码的浏览器配对流程。
 
-    当模型未设置或已是 OpenAI 系列时，会将 `agents.defaults.model` 设置为 `openai-codex/gpt-5.5`。
+    当模型未设置或已属于 OpenAI 系列时，通过 Codex 运行时将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
 
   </Accordion>
   <Accordion title="OpenAI API key">

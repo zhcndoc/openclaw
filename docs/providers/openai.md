@@ -793,28 +793,8 @@ OpenClaw 的隐藏归因请求头——请参见 [Advanced configuration](#advan
 
   </Accordion>
 
-  <Accordion title="WebSocket 预热">
-    OpenClaw 默认会为 `openai/*` 启用 WebSocket 预热，以降低首轮延迟。
-
-    ```json5
-    // 禁用预热
-    {
-      agents: {
-        defaults: {
-          models: {
-            "openai/gpt-5.5": {
-              params: { openaiWsWarmup: false },
-            },
-          },
-        },
-      },
-    }
-    ```
-
-  </Accordion>
-
-  <Accordion title="快速模式">
-    OpenClaw 为 `openai/*` 提供共享的快速模式开关：
+  <Accordion title="Fast mode">
+    OpenClaw 为 `openai/*` 提供一个共享的快速模式开关：
 
     - **聊天/UI：** `/fast status|on|off`
     - **配置：** `agents.defaults.models["<provider>/<model>"].params.fastMode`

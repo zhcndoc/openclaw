@@ -629,10 +629,14 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 
 后面的 provider 在键冲突时获胜，因此插件可以有意用相同的 provider id 覆盖内置 provider 条目。
 
+插件还可以通过
+`api.registerModelCatalogProvider({ provider, kinds, staticCatalog, liveCatalog })` 发布只读模型行。这是列表/帮助/选择器界面的前进路径，并支持 `text`、`image_generation`、`video_generation` 和 `music_generation` 行。provider 插件仍然拥有实时端点调用、令牌交换和供应商响应映射；core 拥有通用行形状、来源标签和媒体工具帮助格式。媒体生成 provider 注册会根据 `defaultModel`、`models` 和 `capabilities` 自动生成静态目录行。
+
 兼容性：
 
-- `discovery` 仍作为旧版别名可用
-- 如果同时注册了 `catalog` 和 `discovery`，OpenClaw 使用 `catalog`
+- `discovery` 仍然作为旧别名可用，但会发出弃用警告
+- 如果同时注册了 `catalog` 和 `discovery`，OpenClaw 会使用 `catalog`
+- `augmentModelCatalog` 已弃用；打包的 provider 应通过 `registerModelCatalogProvider` 发布补充行
 
 ## 只读渠道检查
 

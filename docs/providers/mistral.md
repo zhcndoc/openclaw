@@ -20,7 +20,7 @@ OpenClaw 包含一个捆绑的 Mistral 插件，注册了四个契约：聊天�
 | Base URL         | `https://api.mistral.ai/v1`                 |
 | Default model    | `mistral/mistral-large-latest`              |
 | Embedding model  | `mistral-embed`                             |
-| Voxtral batch    | `voxtral-mini-latest` (audio transcription) |
+| Voxtral batch    | `voxtral-mini-latest` (音频转录) |
 | Voxtral realtime | `voxtral-mini-transcribe-realtime-2602`     |
 
 ## 开始使用
@@ -58,17 +58,40 @@ OpenClaw 包含一个捆绑的 Mistral 插件，注册了四个契约：聊天�
 
 ## 内置 LLM 目录
 
-OpenClaw 当前附带以下 Mistral 目录：
+[Mistral Medium 3.5](https://docs.mistral.ai/models/model-cards/mistral-medium-3-5-26-04)
+是捆绑目录中的当前混合式 Medium 模型：128B 稠密权重、
+文本和图像输入、256K 上下文、函数调用、结构化输出、编码，
+以及通过 Chat Completions API 可调的推理能力。若你想使用
+Mistral 更新的统一 agentic/coding 模型而不是默认的 `mistral/mistral-large-latest`，
+请使用 `mistral/mistral-medium-3-5`。
 
-| 模型引用                         | 输入         | 上下文  | 最大输出 | 备注                                                             |
-| -------------------------------- | ------------ | ------- | -------- | ---------------------------------------------------------------- |
-| `mistral/mistral-large-latest`   | text, image  | 262,144 | 16,384   | 默认模型                                                         |
-| `mistral/mistral-medium-2508`    | text, image  | 262,144 | 8,192    | Mistral Medium 3.1                                              |
-| `mistral/mistral-small-latest`   | text, image  | 128,000 | 16,384   | Mistral Small 4；可通过 API `reasoning_effort` 调整推理强度      |
-| `mistral/pixtral-large-latest`   | text, image  | 128,000 | 32,768   | Pixtral                                                          |
-| `mistral/codestral-latest`       | text         | 256,000 | 4,096    | 编码                                                             |
-| `mistral/devstral-medium-latest` | text         | 262,144 | 32,768   | Devstral 2                                                       |
-| `mistral/magistral-small`        | text         | 128,000 | 40,000   | 支持推理                                                         |
+OpenClaw 当前提供以下捆绑的 Mistral 目录：
+
+| Model ref                        | Input       | Context | Max output | Notes                                                            |
+| -------------------------------- | ----------- | ------- | ---------- | ---------------------------------------------------------------- |
+| `mistral/mistral-large-latest`   | text, image | 262,144 | 16,384     | 默认模型                                                    |
+| `mistral/mistral-medium-2508`    | text, image | 262,144 | 8,192      | Mistral Medium 3.1                                               |
+| `mistral/mistral-medium-3-5`     | text, image | 262,144 | 8,192      | Mistral Medium 3.5；可调推理                         |
+| `mistral/mistral-small-latest`   | text, image | 128,000 | 16,384     | Mistral Small 4；可通过 API `reasoning_effort` 调整推理 |
+| `mistral/pixtral-large-latest`   | text, image | 128,000 | 32,768     | Pixtral                                                          |
+| `mistral/codestral-latest`       | text        | 256,000 | 4,096      | 编码                                                           |
+| `mistral/devstral-medium-latest` | text        | 262,144 | 32,768     | Devstral 2                                                       |
+| `mistral/magistral-small`        | text        | 128,000 | 40,000     | 支持推理                                                |
+
+在接入引导之后、且不启动 Gateway 的情况下，对 Medium 3.5 进行烟雾测试：
+
+```bash
+openclaw infer model run --local \
+  --model mistral/mistral-medium-3-5 \
+  --prompt "Reply with exactly: mistral-ok" \
+  --json
+```
+
+在更改配置之前，浏览捆绑目录中的这一行：
+
+```bash
+openclaw models list --all --provider mistral --plain
+```
 
 ## 音频转录（Voxtral）
 
@@ -136,8 +159,8 @@ OpenClaw 将 Mistral 实时 STT 默认设为 8 kHz 的 `pcm_mulaw`，因此 Voic
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="可调整推理（mistral-small-latest）">
-    `mistral/mistral-small-latest` 映射到 Mistral Small 4，并在 Chat Completions API 上通过 [`reasoning_effort`](https://docs.mistral.ai/capabilities/reasoning/adjustable) 支持[可调整推理](https://docs.mistral.ai/capabilities/reasoning/adjustable)（`none` 会尽量减少输出中的额外思考；`high` 会在最终答案前展示完整思考轨迹）。
+  <Accordion title="Adjustable reasoning">
+    `mistral/mistral-small-latest` (Mistral Small 4) and `mistral/mistral-medium-3-5` support [adjustable reasoning](https://docs.mistral.ai/studio-api/conversations/reasoning/adjustable) on the Chat Completions API via `reasoning_effort` (`none` minimizes extra thinking in the output; `high` surfaces full thinking traces before the final answer). Mistral recommends `reasoning_effort="high"` for Medium 3.5 agentic and code use cases.
 
     OpenClaw 会将会话的 **thinking** 级别映射到 Mistral 的 API：
 
@@ -145,6 +168,33 @@ OpenClaw 将 Mistral 实时 STT 默认设为 8 kHz 的 `pcm_mulaw`，因此 Voic
     | ---------------------------------------------- | -------------------------- |
     | **off** / **minimal**                         | `none`                     |
     | **low** / **medium** / **high** / **xhigh** / **adaptive** / **max** | `high`     |
+
+    <Warning>
+    不要将 Medium 3.5 推理模式与 `temperature: 0` 结合使用。Mistral
+    HTTP API 会在 `reasoning_effort="high"` 加上 `temperature: 0` 时返回 400
+    响应。请保持 temperature 不设置，让 Mistral 使用默认值，或者遵循
+    [Medium 3.5 推荐设置](https://huggingface.co/mistralai/Mistral-Medium-3.5-128B)
+    并在高推理场景下使用 `temperature: 0.7`。对于确定性的直接
+    答案，在降低 temperature 之前先关闭/最小化 thinking，使 OpenClaw 发送
+    `reasoning_effort: "none"`。
+    </Warning>
+
+    Medium 3.5 推理的按模型配置示例：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          model: { primary: "mistral/mistral-medium-3-5" },
+          models: {
+            "mistral/mistral-medium-3-5": {
+              params: { thinking: "high" },
+            },
+          },
+        },
+      },
+    }
+    ```
 
     <Note>
     其他内置的 Mistral 目录模型不使用此参数。当你想要 Mistral 原生的“优先推理”行为时，请继续使用 `magistral-*` 模型。
@@ -163,7 +213,7 @@ OpenClaw 将 Mistral 实时 STT 默认设为 8 kHz 的 `pcm_mulaw`，因此 Voic
 
   </Accordion>
 
-  <Accordion title="Auth and base URL">
+  <Accordion title="认证和基础 URL">
     - Mistral 认证使用 `MISTRAL_API_KEY`（Bearer 头）。
     - 提供方基础 URL 默认为 `https://api.mistral.ai/v1`，并接受标准的 OpenAI 兼容 chat-completions 请求格式。
     - 接入引导的默认模型是 `mistral/mistral-large-latest`。

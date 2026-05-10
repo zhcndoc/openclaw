@@ -89,6 +89,10 @@ openclaw plugins install <plugin> --marketplace <name>  # marketplace（显式�
 openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo>
 ```
 
+维护者测试设置时的安装可以通过受保护的环境变量覆盖自动插件安装
+来源。请参见
+[插件安装覆盖](/plugins/install-overrides)。
+
 <Warning>
 在启动切换期间，裸包名默认从 npm 安装。ClawHub 请使用 `clawhub:<package>`。请将插件安装视为运行代码，优先使用锁定版本。
 </Warning>

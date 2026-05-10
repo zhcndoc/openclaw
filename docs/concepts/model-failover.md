@@ -79,7 +79,7 @@ OpenClaw 对 API 密钥和 OAuth 令牌都使用**认证配置文件**。
 凭据类型：
 
 - `type: "api_key"` → `{ provider, key }`
-- `type: "oauth"` → `{ provider, access, refresh, expires, email? }`（某些提供方还会带 `projectId`/`enterpriseUrl`）
+- `type: "oauth"` → `{ provider, access, refresh, expires, email? }`（某些提供方还会带有 `projectId`/`enterpriseUrl`）
 
 ## 配置文件 ID
 
@@ -141,7 +141,7 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
   <Accordion title="进入速率限制 / 超时桶的内容">
     这个速率限制桶比单纯的 `429` 更宽：它还包括诸如 `Too many concurrent requests`、`ThrottlingException`、`concurrency limit reached`、`workers_ai ... quota limit exceeded`、`throttled`、`resource exhausted` 以及周期性的使用窗口限制（如 `weekly/monthly limit reached`）等提供方消息。
 
-    格式/无效请求错误（例如 Cloud Code Assist 工具调用 ID 验证失败）会被视为可故障转移，并使用相同的冷却。OpenAI 兼容的停止原因错误，例如 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error`，会被分类为超时/故障转移信号。
+    格式/无效请求错误通常是终止性的，因为重试相同载荷会以同样方式失败，所以 OpenClaw 会直接呈现这些错误，而不是轮换认证配置文件。已知的重试修复路径可以显式启用：例如，Cloud Code Assist 工具调用 ID 验证失败会被清理并通过 `allowFormatRetry` 策略重试一次。类似 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error` 这样的 OpenAI 兼容 stop-reason 错误会被归类为超时/故障转移信号。
 
     当来源匹配已知的瞬态模式时，通用服务器文本也可能进入该超时桶。例如，裸的 pi-ai stream-wrapper 消息 `An unknown error occurred` 会被视为所有提供方都可故障转移，因为当提供方流在没有具体细节的情况下以 `stopReason: "aborted"` 或 `stopReason: "error"` 结束时，pi-ai 会输出它。带有瞬态服务器文本的 JSON `api_error` 负载，例如 `internal server error`、`unknown error, 520`、`upstream error` 或 `backend error`，也会被视为可故障转移的超时。
 
@@ -266,7 +266,7 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
     - 持久性认证失败会立即跳过整个提供商。
     - 计费禁用通常会跳过，但主候选项仍可能在节流条件下被探测，以便无需重启也能恢复。
     - 主候选项可能会在接近冷却到期时被探测，并带有按提供商节流。
-    - 即使处于冷却中，只要失败看起来是瞬时性的（`rate_limit`、`overloaded` 或未知），仍可尝试同提供商的回退兄弟项。这在速率限制是模型范围、而兄弟模型可能仍能立即恢复时尤其相关。
+    - 即使处于冷却中，只要失败看起来是瞬时性的（`rate_limit`、`overloaded` 或未知），仍可尝试同提供商的回退兄弟项。这在速率限制是模型范围、而兄弟模型可能仍可立即恢复时尤其相关。
     - 瞬时冷却探测在每次回退运行中每个提供商最多一次，以免单个提供商拖慢跨提供商回退。
 
   </Accordion>

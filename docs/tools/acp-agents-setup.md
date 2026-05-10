@@ -20,7 +20,7 @@ Codex 有两条 OpenClaw 路径：
 
 | Route                      | Config/command                                         | Setup page                              |
 | -------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| 原生 Codex app-server    | `/codex ...`, `openai/gpt-*` agent refs                | [Codex harness](/plugins/codex-harness) |
+| 原生 Codex app-server    | `/codex ...`, `openai/gpt-*` 代理引用                | [Codex harness](/plugins/codex-harness) |
 | 显式 Codex ACP 适配器 | `/acp spawn codex`, `runtime: "acp", agentId: "codex"` | 本页                               |
 
 除非你明确需要 ACP/acpx 行为，否则优先使用原生路径。
@@ -189,6 +189,31 @@ Gateway 在启动时探测已配置代理时，才设置 `OPENCLAW_ACPX_RUNTIME_
 - `command` 可接受绝对路径、相对路径（从 OpenClaw 工作区解析），或命令名。
 - `expectedVersion: "any"` 会禁用严格版本匹配。
 - 自定义 `command` 路径会禁用插件本地自动安装。
+
+当路径或标志值应保持为一个 argv token 时，可使用结构化参数覆盖单个 ACP 代理命令：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "acpx": {
+        "enabled": true,
+        "config": {
+          "agents": {
+            "claude": {
+              "command": "node",
+              "args": ["/path/to/custom adapter.mjs", "--verbose"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+- `agents.<id>.command` 是该 ACP 代理的可执行文件或现有命令字符串。
+- `agents.<id>.args` 为可选项。OpenClaw 通过当前 acpx 命令字符串注册表传递之前，会先对数组中的每一项进行 shell 引号转义。
 
 参见 [插件](/tools/plugin)。
 

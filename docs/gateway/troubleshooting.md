@@ -62,7 +62,47 @@ openclaw config get meta.lastTouchedVersion
 仅在有意降级或紧急恢复时，为单个命令设置 `OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1`。正常运行时请保持其未设置。
 </Warning>
 
-## Anthropic 429 长上下文需要额外使用量
+## 技能符号链接因路径越界而跳过
+
+当日志包含以下内容时使用此项：
+
+```text
+Skipping escaped skill path outside its configured root: ... reason=symlink-escape
+```
+
+OpenClaw 将每个技能根视为一个封闭边界。`~/.agents/skills`、`<workspace>/.agents/skills`、`<workspace>/skills` 或 `~/.openclaw/skills` 下的符号链接，如果其真实目标解析到该根之外，则会被跳过，除非该目标被显式信任。
+
+检查该链接：
+
+```bash
+ls -l ~/.agents/skills/<name>
+realpath ~/.agents/skills/<name>
+openclaw config get skills.load
+```
+
+如果目标是有意为之，请同时配置直接技能根和允许的符号链接目标：
+
+```json5
+{
+  skills: {
+    load: {
+      extraDirs: ["~/Projects/manager/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
+    },
+  },
+}
+```
+
+然后启动新会话，或等待技能监视器刷新。如果当前运行进程早于配置更改，请重启网关。
+
+不要使用过于宽泛的目标，例如 `~`、`/`，或整个同步项目文件夹。请将 `allowSymlinkTargets` 的范围限制在包含受信任 `SKILL.md` 目录的真实技能根。
+
+相关：
+
+- [技能配置](/tools/skills-config#symlinked-sibling-repos)
+- [配置示例](/gateway/configuration-examples#symlinked-sibling-skill-repo)
+
+## Anthropic 429 长上下文需要额外用量
 
 当日志/错误包含 `HTTP 429: rate_limit_error: Extra usage is required for long context requests` 时使用此项。
 
@@ -546,12 +586,12 @@ openclaw doctor
 - [浏览器（OpenClaw 托管）](/tools/browser)
 - [浏览器故障排查](/tools/browser-linux-troubleshooting)
 
-## If something suddenly broke after you upgraded
+## 如果你在升级后突然遇到故障
 
-Most upgrade-time breakages are caused by configuration drift or stricter defaults being enforced now.
+大多数升级期间的故障都是由配置漂移或现在启用了更严格的默认值引起的。
 
 <AccordionGroup>
-  <Accordion title="1. Authentication and URL override behavior changed">
+  <Accordion title="1. 认证和 URL 覆盖行为已更改">
     ```bash
     openclaw gateway status
     openclaw config get gateway.mode
@@ -559,18 +599,18 @@ Most upgrade-time breakages are caused by configuration drift or stricter defaul
     openclaw config get gateway.auth.mode
     ```
 
-    What to check:
+    需要检查的内容：
 
-    - If `gateway.mode=remote`, CLI calls may be pointing to the remote while your local service is actually healthy.
-    - Explicit `--url` calls do not fall back to saved credentials.
+    - 如果 `gateway.mode=remote`，CLI 调用可能指向远程端，而你的本地服务实际上是正常的。
+    - 显式的 `--url` 调用不会回退到已保存的凭据。
 
-    Common signatures:
+    常见特征：
 
-    - `gateway connect failed:` → wrong target URL.
-    - `unauthorized` → the endpoint is reachable, but authentication is wrong.
+    - `gateway connect failed:` → 目标 URL 错误。
+    - `unauthorized` → 端点可达，但认证错误。
 
   </Accordion>
-  <Accordion title="2. Binding and auth guardrails are stricter now">
+  <Accordion title="2. 绑定和认证防护现在更严格了">
     ```bash
     openclaw config get gateway.bind
     openclaw config get gateway.auth.mode
@@ -579,18 +619,18 @@ Most upgrade-time breakages are caused by configuration drift or stricter defaul
     openclaw logs --follow
     ```
 
-    What to check:
+    需要检查的内容：
 
-    - Non-loopback binds (`lan`, `tailnet`, `custom`) require a valid gateway auth path: shared-token/password auth, or a properly configured non-loopback `trusted-proxy` deployment.
-    - Older keys like `gateway.token` do not substitute for `gateway.auth.token`.
+    - 非 loopback 绑定（`lan`、`tailnet`、`custom`）需要有效的 gateway 认证路径：共享令牌/密码认证，或者经过正确配置的非 loopback `trusted-proxy` 部署。
+    - 较旧的键，例如 `gateway.token`，不能替代 `gateway.auth.token`。
 
-    Common signatures:
+    常见特征：
 
-    - `refusing to bind gateway ... without auth` → non-loopback bind, but no valid gateway auth path.
-    - `Connectivity probe: failed` and the runtime is running → the gateway is up, but unreachable with the current auth/URL.
+    - `refusing to bind gateway ... without auth` → 非 loopback 绑定，但没有有效的 gateway 认证路径。
+    - `Connectivity probe: failed` 且运行时正在运行 → gateway 已启动，但在当前认证/URL 下不可达。
 
   </Accordion>
-  <Accordion title="3. Pairing and device identity state changed">
+  <Accordion title="3. 配对和设备身份状态已更改">
     ```bash
     openclaw devices list
     openclaw pairing list --channel <channel> [--account <id>]
@@ -598,34 +638,34 @@ Most upgrade-time breakages are caused by configuration drift or stricter defaul
     openclaw doctor
     ```
 
-    What to check:
+    需要检查的内容：
 
-    - Whether the dashboard/node has pending device approvals.
-    - Whether there are pending DM pairing approvals after policy or identity changes.
+    - 仪表盘/节点是否有待处理的设备批准。
+    - 在策略或身份变更后，是否存在待处理的 DM 配对批准。
 
-    Common signatures:
+    常见特征：
 
-    - `device identity required` → device authentication is not satisfied.
-    - `pairing required` → the sender/device must be approved first.
+    - `device identity required` → 设备认证不满足。
+    - `pairing required` → 发送方/设备必须先获得批准。
 
   </Accordion>
 </AccordionGroup>
 
-If, after checking, the service configuration and runtime still disagree, reinstall the service metadata from the same config file/state directory:
+如果检查后，服务配置和运行时仍然不一致，请从同一个配置文件/状态目录重新安装服务元数据：
 
 ```bash
 openclaw gateway install --force
 openclaw gateway restart
 ```
 
-Related:
+相关：
 
-- [Authentication](/gateway/authentication)
-- [Background execution and process tools](/gateway/background-process)
-- [Gateway-owned pairing](/gateway/pairing)
+- [认证](/gateway/authentication)
+- [后台执行和进程工具](/gateway/background-process)
+- [Gateway 拥有的配对](/gateway/pairing)
 
-## Related
+## 相关
 
-- [Diagnostics](/gateway/doctor)
-- [FAQ](/help/faq)
-- [Gateway runbook](/gateway)
+- [诊断](/gateway/doctor)
+- [常见问题](/help/faq)
+- [Gateway 运行手册](/gateway)

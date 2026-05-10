@@ -57,7 +57,7 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   按技能名称或项目 ID 选择一个技能复制项。重复该标志可迁移多个技能。省略时，交互式 Codex 迁移会显示复选框选择器，非交互式迁移会保留所有计划中的技能。
 </ParamField>
 <ParamField path="--plugin <name>" type="string">
-  按插件名称或项目 ID 选择一个 Codex 插件安装项。重复该标志可迁移多个 Codex 插件。此选项仅适用于由 Codex 应用服务器清单发现的、源安装的 `openai-curated` Codex 插件。
+  按插件名称或项目 ID 选择一个 Codex 插件安装项。重复该标志可迁移多个 Codex 插件。省略时，交互式 Codex 迁移会显示原生 Codex 插件复选框选择器，非交互式迁移会保留所有计划中的插件。这仅适用于通过 Codex app-server 清单发现的源安装 `openai-curated` Codex 插件。
 </ParamField>
 <ParamField path="--no-backup" type="boolean">
   跳过预应用备份。当本地 OpenClaw 状态存在时，需要配合 `--force` 使用。
@@ -117,14 +117,27 @@ Claude hooks、权限、环境默认值、本地记忆、路径作用域规则�
 
 当你迁移到 OpenClaw Codex harness，并且希望有意地提取有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动会为每个代理使用各自的 `CODEX_HOME` 和 `HOME` 目录，因此默认不会读取你的个人 Codex CLI 状态。
 
-在交互式终端中运行 `openclaw migrate codex` 会先预览完整计划，然后在最终应用确认前打开一个技能复制项的复选框选择器。使用 `Toggle all on` 或 `Toggle all off` 进行批量选择；计划中的技能默认勾选，冲突技能默认不勾选，而 `Skip for now` 会在不应用的情况下保持技能不变。对于脚本化或精确运行，请为每个技能传入一次 `--skill <name>`，例如：
+Running `openclaw migrate codex` in an interactive terminal previews the full
+plan, then opens checkbox selectors before the final apply confirmation. Skill
+copy items are prompted first. Use `Toggle all on` or `Toggle all off` for bulk
+selection; planned skills start checked, conflict skills start unchecked, and
+`Skip for now` skips skill copies for this run while still continuing to plugin
+selection. When source-installed curated Codex plugins are migratable and
+`--plugin` was not supplied, migration then prompts for native Codex plugin
+activation by plugin name. Plugin items
+start checked unless the target OpenClaw Codex plugin config already has that
+plugin. Existing target plugins start unchecked and show a conflict hint such as
+`conflict: plugin exists`; choose `Toggle all off` to migrate no native Codex
+plugins in that run, or `Skip for now` to stop before applying. For scripted or
+exact runs, pass `--skill <name>` once per skill, for example:
 
 ```bash
 openclaw migrate codex --dry-run --skill gog-vault77-google-workspace
 openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
 ```
 
-使用 `--plugin <name>` 可将原生 Codex 插件迁移限制为一个或多个源安装的精选插件：
+Use `--plugin <name>` to limit native Codex plugin migration non-interactively
+to one or more source-installed curated plugins:
 
 ```bash
 openclaw migrate codex --dry-run --plugin google-calendar

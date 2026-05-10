@@ -76,18 +76,30 @@ Docker 运行器。本文档是一份“我们如何测试”的指南：
     以及 Guardian 探针。隔离其他 Codex app-server 失败时，可通过
     `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=0` 关闭子 agent 探针。若要进行聚焦的子 agent 检查，请关闭其他探针：
     `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1 pnpm test:docker:live-codex-harness`.
-    除非设置了
-    `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_ONLY=0`，否则在子 agent 探针之后会退出。
-- Crestodian rescue command 冒烟测试：`pnpm test:live:crestodian-rescue-channel`
-  - 面向消息通道 rescue command 表面的可选“加双保险”检查。它会执行 `/crestodian status`，排队一个持久化模型变更，回复 `/crestodian yes`，并验证审计/配置写入路径。
+    此命令会在子 agent 探针后退出，除非设置了
+    `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_ONLY=0`。
+- Codex 按需安装冒烟测试：`pnpm test:docker:codex-on-demand`
+  - 在 Docker 中安装打包后的 OpenClaw tarball，运行 OpenAI API key
+    onboarding，并验证 Codex 插件以及 `@openai/codex` 依赖
+    已按需下载到受管理的 npm 根目录中。
+- Live 插件工具依赖冒烟测试：`pnpm test:docker:live-plugin-tool`
+  - 打包一个带有真实 `slugify` 依赖的 fixture 插件，通过
+    `npm-pack:` 安装它，验证该依赖位于受管理的 npm 根目录下，然后请求一个
+    live OpenAI 模型调用插件工具并返回隐藏的 slug。
+- Crestodian rescue 命令冒烟测试：`pnpm test:live:crestodian-rescue-channel`
+  - 针对 message-channel rescue 命令表面的可选安全检查。它会执行 `/crestodian status`，排队一个持久化模型
+    变更，回复 `/crestodian yes`，并验证审计/配置写入路径。
 - Crestodian planner Docker 冒烟测试：`pnpm test:docker:crestodian-planner`
-  - 在一个无配置容器中运行 Crestodian，`PATH` 上带有一个假的 Claude CLI，并验证模糊 planner 回退会转换为一次已审计的 typed config 写入。
+  - 在一个无配置容器中运行 Crestodian，`PATH` 上带有一个 fake Claude CLI，
+    并验证模糊规划器回退会转换为一个已审计的 typed
+    config 写入。
 - Crestodian 首次运行 Docker 冒烟测试：`pnpm test:docker:crestodian-first-run`
-  - 从空的 OpenClaw 状态目录开始，将裸 `openclaw` 路由到 Crestodian，应用 setup/model/agent/Discord plugin + SecretRef 写入，校验配置，并验证审计条目。相同的 Ring 0 setup 路径也在 QA Lab 中通过
+  - 从空的 OpenClaw 状态目录开始，将裸的 `openclaw` 路由到
+    Crestodian，应用 setup/model/agent/Discord plugin + SecretRef 写入，
+    验证配置，并检查审计条目。同样的 Ring 0 设置路径也在 QA Lab 中通过
     `pnpm openclaw qa suite --scenario crestodian-ring-zero-setup` 覆盖。
-- Moonshot/Kimi 成本冒烟测试：在设置 `MOONSHOT_API_KEY` 后，运行
-  `openclaw models list --provider moonshot --json`，然后针对
-  `moonshot/kimi-k2.6` 运行一个隔离的
+- Moonshot/Kimi 成本冒烟测试：设置 `MOONSHOT_API_KEY` 后，运行
+  `openclaw models list --provider moonshot --json`，然后运行一个隔离的
   `openclaw agent --local --session-id live-kimi-cost --message 'Reply exactly: KIMI_LIVE_OK' --thinking off --json`
   。验证 JSON 报告 Moonshot/K2.6，并且 assistant transcript 存储了归一化的
   `usage.cost`。

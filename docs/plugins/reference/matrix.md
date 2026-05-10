@@ -11,8 +11,8 @@ title: "Matrix 插件"
 
 ## 分发
 
-- 包：`@openclaw/matrix`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/matrix`
+- Install route: ClawHub: `clawhub:@openclaw/matrix`; npm
 
 ## 表面
 

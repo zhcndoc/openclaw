@@ -43,7 +43,7 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
         {
           agents: {
             defaults: {
-              model: { primary: "google/gemini-3.1-pro-preview" },
+              model: { primary: "google/gemini-2.5-flash" },
             },
           },
         }

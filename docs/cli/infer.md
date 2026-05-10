@@ -126,16 +126,18 @@ title: "推理 CLI"
 - `openclaw infer ...` 是这些工作流的主要 CLI 表面。
 - 当输出将被另一个命令或脚本消费时，使用 `--json`。
 - 当需要特定后端时，使用 `--provider` 或 `--model provider/model`。
+- 使用 `model run --thinking <level>` 来传递一次性的思考/推理级别（`off`、`minimal`、`low`、`medium`、`high`、`adaptive`、`xhigh` 或 `max`），同时保持原始运行。
 - 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 形式。
 - 对于 `image describe`，显式的 `--model` 会直接运行该 provider/model。该模型必须在模型目录或提供商配置中支持图像。`codex/<model>` 会运行一次受限的 Codex app-server 图像理解轮次；`openai-codex/<model>` 使用 OpenAI Codex OAuth 提供商路径。
-- 无状态执行命令默认使用 local。
-- 由 gateway 管理状态的命令默认使用 gateway。
-- 正常的本地路径不需要 gateway 正在运行。
-- 本地 `model run` 是一种精简的一次性提供商补全。它会解析已配置的 agent 模型和认证，但不会启动 chat-agent 轮次、加载工具或打开捆绑的 MCP 服务器。
-- `model run --file` 接受图像文件，检测其 MIME 类型，并将它们与提供的提示一起发送给所选模型。对多个图像重复 `--file`。
-- `model run --file` 会拒绝非图像输入。音频文件请使用 `infer audio transcribe`，视频文件请使用 `infer video describe`。
-- `model run --gateway` 会测试 Gateway 路由、已保存的认证、提供商选择以及嵌入式运行时，但仍然作为原始模型探测运行：它会发送提供的提示和任何图像附件，不会使用先前的会话转录、bootstrap/AGENTS 上下文、上下文引擎组装、工具或捆绑的 MCP 服务器。
-- `model run --gateway --model <provider/model>` 需要受信任的操作员 gateway 凭证，因为该请求要求 Gateway 运行一次性的 provider/model 覆盖。
+- 无状态执行命令默认使用本地。
+- 由 Gateway 管理状态的命令默认使用 gateway。
+- 正常的本地路径不需要 gateway 运行。
+- 本地 `model run` 是一种轻量的一次性提供商补全。它会解析已配置的 agent 模型和认证，但不会启动聊天 agent 轮次、加载工具或打开捆绑的 MCP 服务器。
+- 本地 `model run --file` 接受图像文件，检测其 MIME 类型，并将它们与所提供的提示一起发送给所选模型。对多个图像重复 `--file`。
+- `model run --file` 会拒绝非图像输入。音频文件使用 `infer audio transcribe`，视频文件使用 `infer video describe`。
+- `model run --gateway` 会演练 Gateway 路由、已保存认证、提供商选择以及嵌入式运行时，但仍然作为原始模型探测运行：它会发送所提供的提示和任何图像附件，而不会带上先前的会话记录、bootstrap/AGENTS 上下文、上下文引擎组装、工具或捆绑的 MCP 服务器。
+- `model run --gateway --model <provider/model>` 需要受信任的 operator gateway 凭证，因为该请求要求 Gateway 运行一次性 provider/model 覆盖。
+- 本地 `model run --thinking` 使用轻量的提供商补全路径；诸如 `adaptive` 和 `max` 之类的提供商特定级别会映射到最接近的可移植简单补全级别。
 
 ## 模型
 
@@ -145,6 +147,7 @@ title: "推理 CLI"
 openclaw infer model run --prompt "Reply with exactly: smoke-ok" --json
 openclaw infer model run --prompt "Summarize this changelog entry" --model openai/gpt-5.4 --json
 openclaw infer model run --prompt "Describe this image in one sentence" --file ./photo.jpg --model google/gemini-2.5-flash --json
+openclaw infer model run --prompt "Use more reasoning here" --thinking high --json
 openclaw infer model providers --json
 openclaw infer model inspect --name gpt-5.5 --json
 ```
@@ -157,6 +160,7 @@ openclaw infer model run --local --model anthropic/claude-sonnet-4-6 --prompt "R
 openclaw infer model run --local --model cerebras/zai-glm-4.7 --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model google/gemini-2.5-flash --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model groq/llama-3.1-8b-instant --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model mistral/mistral-medium-3-5 --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model mistral/mistral-small-latest --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model openai/gpt-4.1 --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe this image." --file ./photo.jpg --json
@@ -164,15 +168,17 @@ openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe 
 
 备注：
 
-- Local `model run` 是用于 provider/model/auth 健康检查的最窄 CLI smoke，因为对于非 Codex 提供商，它只会将提供的提示发送给所选模型。
-- `openai-codex/*` 本地探测是一个窄例外：OpenClaw 会添加一条最小系统指令，以便 Codex Responses 传输可以填充其必需的 `instructions` 字段，而不会添加完整的 agent 上下文、工具、记忆或会话转录。
-- Local `model run --file` 保留了这条精简路径，并将图像内容直接附加到单个用户消息中。检测到 MIME 类型为 `image/*` 的常见图像文件，如 PNG、JPEG 和 WebP，都可以工作；不支持或无法识别的文件会在调用提供商之前失败。
+- 本地 `model run` 是用于 provider/model/auth 健康检查的最窄 CLI 冒烟测试，因为对于非 Codex 提供商，它只将所提供的提示发送给所选模型。
+- 在该提供商写入配置之前，本地 `model run --model <provider/model>` 可以使用来自 `models list --all` 的精确捆绑静态目录行。仍然需要提供商认证；缺少凭据会作为认证错误失败，而不是 `Unknown model`。
+- 对于 Mistral Medium 3.5 推理探测，请保持 temperature 未设置/默认。Mistral 会拒绝 `reasoning_effort="high"` 加上 `temperature: 0`；请使用默认 temperature 的 `mistral/mistral-medium-3-5`，或使用非零推理模式值，例如 `0.7`。
+- `openai-codex/*` 本地探测是一个窄例外：OpenClaw 会添加最小系统指令，以便 Codex Responses 传输可以填充其必需的 `instructions` 字段，而不会添加完整的 agent 上下文、工具、记忆或会话记录。
+- 本地 `model run --file` 保持这种轻量路径，并将图像内容直接附加到单条用户消息中。当检测到其 MIME 类型为 `image/*` 时，常见图像文件如 PNG、JPEG 和 WebP 都可工作；不受支持或无法识别的文件会在调用提供商之前失败。
 - 当你想直接测试所选的多模态文本模型时，`model run --file` 是最佳选择。当你想要 OpenClaw 的图像理解提供商选择和默认图像模型路由时，请使用 `infer image describe`。
 - 所选模型必须支持图像输入；仅文本模型可能会在提供商层拒绝该请求。
 - `model run --prompt` 必须包含非空白文本；空提示会在调用本地提供商或 Gateway 之前被拒绝。
-- 当提供商返回没有文本输出时，Local `model run` 会以非零状态退出，因此不可达的本地提供商和空补全不会看起来像成功探测。
-- 当你需要测试 Gateway 路由、agent 运行时设置或 Gateway 管理的提供商状态，同时保持模型输入原始时，请使用 `model run --gateway`。当你想要完整的 agent 上下文、工具、记忆和会话转录时，请使用 `openclaw agent` 或聊天表面。
-- `model auth login`、`model auth logout` 和 `model auth status` 用于管理已保存的提供商认证状态。
+- 当提供商返回没有文本输出时，本地 `model run` 会以非零状态退出，因此无法访问的本地提供商和空补全不会看起来像成功的探测。
+- 当你需要测试 Gateway 路由、agent 运行时设置或 Gateway 管理的提供商状态，同时保持模型输入原始时，请使用 `model run --gateway`。当你想要完整的 agent 上下文、工具、记忆和会话记录时，请使用 `openclaw agent` 或聊天界面。
+- `model auth login`、`model auth logout` 和 `model auth status` 管理已保存的提供商认证状态。
 
 ## 图像
 
@@ -223,7 +229,7 @@ openclaw infer image describe --file ./photo.jpg --model ollama/qwen2.5vl:7b --p
 
 ```bash
 openclaw infer audio transcribe --file ./memo.m4a --json
-openclaw infer audio transcribe --file ./team-sync.m4a --language en --prompt "Focus on names and action items" --json
+openclaw infer audio transcribe --file ./team-sync.m4a --language en --prompt "专注于人名和行动项" --json
 openclaw infer audio transcribe --file ./memo.m4a --model openai/whisper-1 --json
 ```
 
@@ -238,7 +244,7 @@ openclaw infer audio transcribe --file ./memo.m4a --model openai/whisper-1 --jso
 
 ```bash
 openclaw infer tts convert --text "hello from openclaw" --output ./hello.mp3 --json
-openclaw infer tts convert --text "Your build is complete" --output ./build-complete.mp3 --json
+openclaw infer tts convert --text "你的构建已完成" --output ./build-complete.mp3 --json
 openclaw infer tts providers --json
 openclaw infer tts status --json
 ```
@@ -253,8 +259,8 @@ openclaw infer tts status --json
 使用 `video` 进行生成和描述。
 
 ```bash
-openclaw infer video generate --prompt "cinematic sunset over the ocean" --json
-openclaw infer video generate --prompt "slow drone shot over a forest lake" --resolution 768P --duration 6 --json
+openclaw infer video generate --prompt "海洋上空的电影感日落" --json
+openclaw infer video generate --prompt "掠过森林湖泊的缓慢无人机镜头" --resolution 768P --duration 6 --json
 openclaw infer video describe --file ./clip.mp4 --json
 openclaw infer video describe --file ./clip.mp4 --model openai/gpt-4.1-mini --json
 ```
@@ -269,7 +275,7 @@ openclaw infer video describe --file ./clip.mp4 --model openai/gpt-4.1-mini --js
 使用 `web` 进行搜索和抓取工作流。
 
 ```bash
-openclaw infer web search --query "OpenClaw docs" --json
+openclaw infer web search --query "OpenClaw 文档" --json
 openclaw infer web search --query "OpenClaw infer web providers" --json
 openclaw infer web fetch --url https://docs.openclaw.ai/cli/infer --json
 openclaw infer web providers --json

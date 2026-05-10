@@ -378,6 +378,8 @@ OpenClaw 会在会话开始时对符合条件的技能进行快照，
 {
   skills: {
     load: {
+      extraDirs: ["~/Projects/agent-scripts/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
       watch: true,
       watchDebounceMs: 250,
     },
@@ -385,7 +387,11 @@ OpenClaw 会在会话开始时对符合条件的技能进行快照，
 }
 ```
 
-### 远程 macOS 节点（Linux 网关）
+对于有意采用的兄弟仓库布局，其中一个内置技能根目录包含符号链接，请使用 `allowSymlinkTargets`，例如
+`~/.agents/skills/manager -> ~/Projects/manager/skills`。目标列表
+会在 realpath 解析后进行匹配，并且应保持范围尽量狭窄。
+
+### Remote macOS nodes (Linux gateway)
 
 如果 Gateway 运行在 Linux 上，但连接了一个允许 `system.run` 的 **macOS 节点**（Exec approvals 安全设置未设为 `deny`），
 那么当所需二进制文件在该节点上存在时，OpenClaw 可以将仅限 macOS 的技能视为符合条件。

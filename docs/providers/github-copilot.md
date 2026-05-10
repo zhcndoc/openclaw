@@ -88,8 +88,27 @@ openclaw onboard --non-interactive --accept-risk \
     Copilot 模型的可用性取决于你的 GitHub 套餐。如果某个模型被拒绝，请尝试另一个 ID（例如 `github-copilot/gpt-4.1`）。
   </Accordion>
 
-  <Accordion title="传输方式选择">
-    Claude 模型 ID 会自动使用 Anthropic Messages 传输。GPT、o 系列和 Gemini 模型保留 OpenAI Responses 传输。OpenClaw 会根据模型引用选择正确的传输方式。
+  <Accordion title="从 Copilot API 实时刷新目录">
+    一旦设备登录（或环境变量）认证路径解析出 GitHub 令牌，OpenClaw 就会按需从 `${baseUrl}/models` 刷新模型目录（与 VS Code Copilot 使用的相同端点），从而让运行时跟踪每个账户的权限和准确的上下文窗口，而无需清单频繁变更。新发布的 Copilot 模型无需升级 OpenClaw 即可可见，且上下文窗口会反映真实的每个模型限制（例如 gpt-5.x 系列为 400k，内部 `claude-opus-*-1m` 变体为 1M）。
+
+    在发现功能被禁用、用户没有 GitHub 认证配置文件、令牌交换失败，或者 `/models` HTTPS 调用出错时，内置静态目录会作为可见回退项保留。若要退出并完全依赖静态清单目录（离线 / 断网环境）：
+
+    ```json5
+    {
+      plugins: {
+        entries: {
+          "github-copilot": {
+            config: { discovery: { enabled: false } },
+          },
+        },
+      },
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="传输选择">
+    Claude 模型 ID 会自动使用 Anthropic Messages 传输。GPT、o-series 和 Gemini 模型则保持使用 OpenAI Responses 传输。OpenClaw 会根据模型引用选择正确的传输方式。
   </Accordion>
 
   <Accordion title="请求兼容性">

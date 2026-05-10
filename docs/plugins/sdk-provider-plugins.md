@@ -95,8 +95,10 @@ read_when:
 
   </Step>
 
-  <Step title="注册提供方">
-    一个最小的提供方需要 `id`、`label`、`auth` 和 `catalog`：
+  <Step title="Register the provider">
+    一个最小的文本提供方需要 `id`、`label`、`auth` 和 `catalog`。
+    `catalog` 是提供方拥有的运行时/配置钩子；它可以调用实时
+    厂商 API，并返回 `models.providers` 条目。
 
     ```typescript index.ts
     import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -163,11 +165,34 @@ read_when:
             },
           },
         });
+
+        api.registerModelCatalogProvider({
+          provider: "acme-ai",
+          kinds: ["text"],
+          liveCatalog: async (ctx) => {
+            const apiKey = ctx.resolveProviderApiKey("acme-ai").apiKey;
+            if (!apiKey) return null;
+            return [
+              {
+                kind: "text",
+                provider: "acme-ai",
+                model: "acme-large",
+                label: "Acme Large",
+                source: "live",
+              },
+            ];
+          },
+        });
       },
     });
     ```
 
-    这就是一个可工作的提供方。现在用户可以运行
+    `registerModelCatalogProvider` 是用于列表/帮助/选择器 UI 的较新的控制平面目录
+    表面。将它用于文本、图像生成、视频生成和音乐生成条目。把厂商端点调用和
+    响应映射保留在插件中；OpenClaw 负责共享的行形状、来源
+    标签和帮助渲染。
+
+    这就是一个可工作的提供方。用户现在可以
     `openclaw onboard --acme-ai-api-key <key>` 并选择
     `acme-ai/acme-large` 作为他们的模型。
 
@@ -471,12 +496,11 @@ read_when:
   <Step title="Add extra capabilities (optional)">
     ### 第 5 步：Add extra capabilities
 
-    A provider plugin can register speech, realtime transcription, realtime
-    voice, media understanding, image generation, video generation, web fetch,
-    and web search alongside text inference. OpenClaw classifies this as a
-    **hybrid-capability** plugin - the recommended pattern for company plugins
-    (one plugin per vendor). See
-    [Internals: Capability Ownership](/plugins/architecture#capability-ownership-model).
+    一个提供方插件可以在文本推理之外，同时注册语音、实时转写、实时
+    语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将其归类为
+    **hybrid-capability** 插件——这是公司插件的推荐模式
+    （每个厂商一个插件）。参见
+    [内部机制：能力所有权](/plugins/architecture#capability-ownership-model)。
 
     在 `register(api)` 中与你现有的
     `api.registerProvider(...)` 调用并列注册每种能力。只选择你需要的选项卡：
@@ -521,10 +545,10 @@ read_when:
         有上限的错误正文读取、JSON 错误解析和 request-id 后缀。
       </Tab>
       <Tab title="Realtime transcription">
-        Prefer `createRealtimeTranscriptionWebSocketSession(...)` - the shared
-        helper handles proxy capture, reconnect backoff, close flushing, ready
-        handshakes, audio queueing, and close-event diagnostics. Your plugin
-        only maps upstream events.
+        优先使用 `createRealtimeTranscriptionWebSocketSession(...)` - 共享
+        辅助函数会处理代理捕获、重连退避、关闭刷新、就绪
+        握手、音频排队和关闭事件诊断。你的插件
+        只需要映射上游事件。
 
         ```typescript
         api.registerRealtimeTranscriptionProvider({

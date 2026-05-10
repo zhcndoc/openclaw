@@ -103,7 +103,7 @@ iMessage 和 BlueBubbles 在很多通道级配置上是相同的。发生变化�
 
 多账户配置（`channels.bluebubbles.accounts.*`）可一对一转换为 `channels.imessage.accounts.*`。
 
-## Group registry footgun
+## 群组注册表陷阱
 
 捆绑的 iMessage 插件会连续运行 **两个** 独立的群组 allowlist 门禁。群组消息要到达 agent，两个都必须通过：
 
@@ -159,7 +159,7 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
          allowFrom: ["+15555550123"], // 从 bluebubbles.allowFrom 复制
          groupPolicy: "allowlist",
          groupAllowFrom: [], // 从 bluebubbles.groupAllowFrom 复制
-         groups: { "*": { requireMention: true } }, // 从 bluebubbles.groups 复制 — 如果缺失会静默丢弃群组，见上面的“Group registry footgun”
+         groups: { "*": { requireMention: true } }, // 从 bluebubbles.groups 复制 — 如果缺失会静默丢弃群组，见上面的“群组注册表陷阱”
          actions: {
            reactions: true,
            edit: true,
@@ -197,7 +197,7 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
 
 4. **验证 DM。** 给 agent 发一条直接消息；确认回复能够送达。
 
-5. **单独验证群组。** DM 和群组走不同的代码路径——DM 成功并不能证明群组也在正确路由。给 agent 在一个已配对的群聊中发消息，并确认回复能够送达。如果群组变得沉默（没有 agent 回复，也没有错误），检查网关日志中是否有 `imessage: dropping group message from chat_id=<id>` 或启动时的 `imessage: groupPolicy="allowlist" but channels.imessage.groups is empty` 行——这两者在默认日志级别下都会触发。如果出现任意一个，说明你的 `groups` 块缺失或为空——见上面的“Group registry footgun”。
+5. **单独验证群组。** DM 和群组走不同的代码路径——DM 成功并不能证明群组也在正确路由。给 agent 在一个已配对的群聊中发消息，并确认回复能够送达。如果群组变得沉默（没有 agent 回复，也没有错误），检查网关日志中是否有 `imessage: dropping group message from chat_id=<id>` 或启动时的 `imessage: groupPolicy="allowlist" but channels.imessage.groups is empty` 行——这两者在默认日志级别下都会触发。如果出现任意一个，说明你的 `groups` 块缺失或为空——见上面的“群组注册表陷阱”。
 
 6. **验证动作能力** — 在一个已配对的 DM 中，让 agent 执行 react、edit、unsend、reply、发送照片，以及（在群组中）重命名群组 / 添加或移除成员。每个动作都应该原生落到 Messages.app 中。如果有任何动作抛出 “iMessage `<action>` requires the imsg private API bridge”，请再次运行 `imsg launch` 并刷新 `channels status --probe`。
 
@@ -205,22 +205,22 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
 
 ## 一览动作对齐
 
-| 动作                                                     | 旧版 BlueBubbles                  | 捆绑 iMessage                                                                     |
-| -------------------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
-| 发送文本 / SMS 回退                                       | ✅                                  | ✅                                                                                   |
-| 发送媒体（照片、视频、文件、语音）                         | ✅                                  | ✅                                                                                   |
-| 线程式回复 (`reply_to_guid`)                              | ✅                                  | ✅（关闭 [#51892](https://github.com/openclaw/openclaw/issues/51892)）             |
-| Tapback (`react`)                                          | ✅                                  | ✅                                                                                   |
-| 编辑 / 撤回（macOS 13+ 收件人）                            | ✅                                  | ✅                                                                                   |
-| 发送带屏幕特效                                            | ✅                                  | ✅（部分关闭 [#9394](https://github.com/openclaw/openclaw/issues/9394)）            |
-| 富文本粗体 / 斜体 / 下划线 / 删除线                         | ✅                                  | ✅（通过 attributedBody 的 typed-run 格式化）                                        |
-| 重命名群组 / 设置群组图标                                   | ✅                                  | ✅                                                                                   |
-| 添加 / 移除参与者，离开群组                                 | ✅                                  | ✅                                                                                   |
-| 已读回执和输入中指示器                                      | ✅                                  | ✅（受 private API 探测门控）                                                        |
-| 同一发送者 DM 合并                                          | ✅                                  | ✅（仅 DM；通过 `channels.imessage.coalesceSameSenderDms` 显式启用）                  |
-| 网关离线期间收到的传入消息补取                               | ✅（webhook 重放 + 历史拉取）      | _(尚未支持——跟踪于 [#78649](https://github.com/openclaw/openclaw/issues/78649))_   |
+| Action                                                     | legacy BlueBubbles                  | bundled iMessage                                                                                                        |
+| ---------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Send text / SMS fallback                                   | ✅                                  | ✅                                                                                                                      |
+| Send media (photo, video, file, voice)                     | ✅                                  | ✅                                                                                                                      |
+| Threaded reply (`reply_to_guid`)                           | ✅                                  | ✅ (closes [#51892](https://github.com/openclaw/openclaw/issues/51892))                                                 |
+| Tapback (`react`)                                          | ✅                                  | ✅                                                                                                                      |
+| Edit / unsend (macOS 13+ recipients)                       | ✅                                  | ✅                                                                                                                      |
+| Send with screen effect                                    | ✅                                  | ✅ (closes part of [#9394](https://github.com/openclaw/openclaw/issues/9394))                                           |
+| Rich text bold / italic / underline / strikethrough        | ✅                                  | ✅ (typed-run formatting via attributedBody)                                                                            |
+| Rename group / set group icon                              | ✅                                  | ✅                                                                                                                      |
+| Add / remove participant, leave group                      | ✅                                  | ✅                                                                                                                      |
+| Read receipts and typing indicator                         | ✅                                  | ✅ (gated on private API probe)                                                                                         |
+| Same-sender DM coalescing                                  | ✅                                  | ✅ (DM-only; opt-in via `channels.imessage.coalesceSameSenderDms`)                                                      |
+| Catchup of inbound messages received while gateway is down | ✅ (webhook replay + history fetch) | ✅ (opt-in via `channels.imessage.catchup.enabled`; closes [#78649](https://github.com/openclaw/openclaw/issues/78649)) |
 
-补取缺口是生产部署中最重要的运维差异：计划内重启、Mac 睡眠，或网关意外崩溃持续几秒以上，都会在使用捆绑 iMessage 时静默丢弃这段时间内到达的任何 iMessage 传入流量。BlueBubbles 的 webhook + 历史拉取流程会在重新连接时恢复这些消息，但 BlueBubbles 已不再受支持。当前没有能保留补取能力的受支持迁移路径；请等待 [#78649](https://github.com/openclaw/openclaw/issues/78649)。
+iMessage 补抓现在已作为捆绑插件的可选功能提供。在网关启动时，如果 `channels.imessage.catchup.enabled` 为 `true`，网关会使用与 `imsg watch` 相同的 JSON-RPC 客户端执行一次 `chats.list` + 按聊天分别执行 `messages.history`，将每条遗漏的入站记录重新走一遍实时分发路径（allowlist、群组策略、去抖、回声缓存），并为每个账号持久化一个游标，以便后续启动从上次中断处继续。有关调优请参见 [在网关停机后进行补抓](/channels/imessage#catching-up-after-gateway-downtime)。
 
 ## 配对、会话和 ACP 绑定
 

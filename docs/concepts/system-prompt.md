@@ -10,8 +10,21 @@ OpenClaw 为每次代理运行构建一个自定义系统提示词。该提示�
 
 该提示词由 OpenClaw 组装，并注入到每次代理运行中。
 
-提供方插件可以贡献对缓存友好的提示指导，而不必替换
-整个 OpenClaw 所有的提示词。提供方运行时可以：
+提示词组装分为三层：
+
+- `buildAgentSystemPrompt` 根据显式输入渲染提示词。它应
+  保持为纯渲染器，不应直接读取全局配置。
+- `resolveAgentSystemPromptConfig` 解析由配置驱动的提示词开关，例如
+  所有者显示、TTS 提示、模型别名、记忆引用模式，以及特定代理的子代理
+  委派模式。
+- 运行时适配器（嵌入式、CLI、命令/导出预览、压缩）收集
+  实时事实，例如工具、沙箱状态、通道能力、上下文文件，
+  以及提供方提示词贡献，然后调用已配置的提示词外观。
+
+这使导出/调试提示词表面与实时运行保持一致，而不会
+把每个运行时特定细节都变成一个单一的庞大构建器。
+
+提供方插件可以贡献支持缓存感知的提示词指导，而不会替换完整的 OpenClaw 所有提示词。提供方运行时可以：
 
 - 替换一小组命名的核心部分（`interaction_style`、
   `tool_call_style`、`execution_bias`）
@@ -68,7 +81,11 @@ OpenClaw 将包括 **项目上下文** 在内的大块稳定内容保留在
 - 如果任务更大，优先使用 `sessions_spawn`；子代理完成是基于推送的，并会自动回告请求方
 - 不要仅为了等待完成而循环轮询 `subagents list` / `sessions_list`
 
-当实验性的 `update_plan` 工具启用时，工具部分也会告诉模型仅将其用于非平凡的多步骤工作，始终只保留一个 `in_progress` 步骤，并避免在每次更新后重复整份计划。
+`agents.defaults.subagents.delegationMode` 可以加强此指导。默认的 `suggest` 模式保留基础提示。`prefer` 会增加一个专门的 **子代理委派** 部分，告诉主代理充当响应式协调者，并将任何比直接回复更复杂的内容通过 `sessions_spawn` 推出去。这只是提示词层面的；工具策略仍然控制 `sessions_spawn` 是否可用。
+
+当启用实验性 `update_plan` 工具时，工具部分还会告诉
+模型仅将其用于非平凡的多步骤工作，保持恰好一个
+`in_progress` 步骤，并避免在每次更新后重复整份计划。
 
 系统提示词中的安全护栏仅作建议。它们引导模型行为，但不会强制执行策略。应使用工具策略、exec 审批、沙箱和通道白名单来进行硬性约束；运营者可按设计禁用这些功能。
 
@@ -141,14 +158,14 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 `memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。
 </Note>
 
-Large files are truncated with a marker. The max per-file size is controlled by
-`agents.defaults.bootstrapMaxChars` (default: 12000). Total injected bootstrap
-content across files is capped by `agents.defaults.bootstrapTotalMaxChars`
-(default: 60000). Missing files inject a short missing-file marker. When truncation
-occurs, OpenClaw can inject a concise system-prompt warning notice; control this with
-`agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`;
-default: `once`). Detailed raw/injected counts stay in diagnostics such as
-`/context`, `/status`, doctor, and logs.
+大型文件会被截断并附带标记。每个文件的最大大小由
+`agents.defaults.bootstrapMaxChars` 控制（默认：12000）。跨文件的总注入引导
+内容上限为 `agents.defaults.bootstrapTotalMaxChars`
+（默认：60000）。缺失文件会注入一条简短的缺失文件标记。当发生截断
+时，OpenClaw 可以注入一条简洁的系统提示警告；通过
+`agents.defaults.bootstrapPromptTruncationWarning` 控制（`off`、`once`、`always`；
+默认：`once`）。详细的原始/注入计数会保留在诸如
+`/context`、`/status`、doctor 和日志等诊断信息中。
 
 子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件
 会被过滤掉，以保持子代理上下文尽可能小）。

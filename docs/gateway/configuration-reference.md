@@ -41,12 +41,14 @@ Agent 查找路径：在修改前，请使用 `gateway` 工具动作 `config.sch
 [Configuration - agents](/gateway/config-agents) 了解：
 
 - `agents.defaults.*`（workspace、model、thinking、heartbeat、memory、media、skills、sandbox）
-- `multiAgent.*`（multi-agent 路由和绑定）
-- `session.*`（session 生命周期、压缩、剪枝）
+- `multiAgent.*`（多 agent 路由和绑定）
+- `session.*`（session 生命周期、压缩、修剪）
 - `messages.*`（消息投递、TTS、markdown 渲染）
 - `talk.*`（Talk 模式）
-  - `talk.speechLocale`：Talk 在 iOS/macOS 上进行语音识别时可选的 BCP 47 locale id
-  - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转写内容前保留平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
+  - `talk.consultThinkingLevel`：Control UI Talk 实时咨询背后完整 OpenClaw agent 运行的 thinking level 覆盖
+  - `talk.consultFastMode`：Control UI Talk 实时咨询的一次性 fast-mode 覆盖
+  - `talk.speechLocale`：用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
+  - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转录前保留平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
 
 ## Tools and custom providers
 
@@ -123,6 +125,7 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
     allowBundled: ["gemini", "peekaboo"],
     load: {
       extraDirs: ["~/Projects/agent-scripts/skills"],
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
     },
     install: {
       preferBrew: true,
@@ -142,10 +145,11 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 
 - `allowBundled`：仅针对捆绑 skills 的可选 allowlist（不影响 managed/workspace skills）。
 - `load.extraDirs`：额外的共享 skill 根目录（优先级最低）。
-- `install.preferBrew`：当 `brew` 可用时，若为 true，则优先使用 Homebrew 安装器，然后再回退到其他安装器类型。
-- `install.nodeManager`：`metadata.openclaw.install` 规范的 node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`）。
-- `entries.<skillKey>.enabled: false` 会禁用某个 skill，即使它已捆绑/安装。
-- `entries.<skillKey>.apiKey`：用于声明主环境变量的 skills 的便捷配置（明文字符串或 SecretRef 对象）。
+- `load.allowSymlinkTargets`：受信任的真实目标根目录；当 symlink 位于其配置的 source root 之外时，skill symlink 可解析到这些目录。
+- `install.preferBrew`：为 `true` 时，在回退到其他安装器类型之前，优先使用可用的 Homebrew 安装器。
+- `install.nodeManager`：`metadata.openclaw.install` 规格的 node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`）。
+- `entries.<skillKey>.enabled: false`：即使已捆绑/已安装，也会禁用某个 skill。
+- `entries.<skillKey>.apiKey`：为声明了主 env 变量的 skill 提供的便捷字段（明文字符串或 SecretRef 对象）。
 
 ---
 
@@ -187,9 +191,9 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 - `plugins.entries.<id>.hooks.allowPromptInjection`：当为 `false` 时，核心会阻止 `before_prompt_build` 并忽略来自旧版 `before_agent_start` 的 prompt 变更字段，同时保留旧版 `modelOverride` 和 `providerOverride`。适用于原生插件 hooks 和受支持的 bundle 提供的 hook 目录。
 - `plugins.entries.<id>.hooks.allowConversationAccess`：当为 `true` 时，受信任的非 bundled plugins 可以通过类型化 hooks 读取原始会话内容，例如 `llm_input`、`llm_output`、`before_model_resolve`、`before_agent_reply`、`before_agent_run`、`before_agent_finalize` 和 `agent_end`。
 - `plugins.entries.<id>.subagent.allowModelOverride`：显式信任该插件，为后台 subagent 运行请求按次运行的 `provider` 和 `model` 覆盖。
-- `plugins.entries.<id>.subagent.allowedModels`：受信任的 subagent 覆盖所允许的 canonical `provider/model` 目标的可选 allowlist。仅当你有意允许任何 model 时使用 `"*"`.
+- `plugins.entries.<id>.subagent.allowedModels`：受信任的 subagent 覆盖所允许的 canonical `provider/model` 目标的可选 allowlist。仅当你有意允许任何 model 时使用 `"*"`。
 - `plugins.entries.<id>.llm.allowModelOverride`：显式信任该插件，为 `api.runtime.llm.complete` 请求 model 覆盖。
-- `plugins.entries.<id>.llm.allowedModels`：受信任的插件 LLM completion 覆盖所允许的 canonical `provider/model` 目标的可选 allowlist。仅当你有意允许任何 model 时使用 `"*"`.
+- `plugins.entries.<id>.llm.allowedModels`：受信任的插件 LLM completion 覆盖所允许的 canonical `provider/model` 目标的可选 allowlist。仅当你有意允许任何 model 时使用 `"*"`。
 - `plugins.entries.<id>.llm.allowAgentIdOverride`：显式信任该插件，让 `api.runtime.llm.complete` 作用于非默认 agent id。
 - `plugins.entries.<id>.config`：插件定义的配置对象（在可用时由原生 OpenClaw plugin schema 校验）。
 - Channel plugin 账户/运行时设置位于 `channels.<id>` 下，应由所属插件的 manifest `channelConfigs` 元数据描述，而不是由中心化的 OpenClaw option registry 描述。
@@ -578,7 +582,7 @@ openclaw gateway --port 19001
 {
   gateway: {
     reload: {
-      mode: "hybrid", // off | restart | hot | hybrid
+      mode: "hybrid", // 关闭 | 重启 | 热重载 | 混合
       debounceMs: 500,
       deferralTimeoutMs: 300000,
     },
@@ -1296,9 +1300,9 @@ openclaw gateway --port 19001
 
 ---
 
-## 配置包含（`$include`）
+## Configuration Includes (`$include`)
 
-将配置拆分到多个文件中：
+Split your configuration across multiple files:
 
 ```json5
 // ~/.openclaw/openclaw.json
@@ -1311,22 +1315,22 @@ openclaw gateway --port 19001
 }
 ```
 
-**合并行为：**
+**Merge behavior:**
 
-- 单文件：替换所包含的对象。
-- 文件数组：按顺序深度合并（后者覆盖前者）。
-- 同级键：在 include 之后合并（覆盖被包含的值）。
-- 嵌套 include：最多 10 层。
-- 路径：相对于包含它的文件解析，但必须保留在顶级配置目录（`openclaw.json` 的 `dirname`）内。只有当绝对路径/`../` 形式最终仍解析到该边界内时才允许。
-- OpenClaw 负责的写入如果只更改由单文件 include 支持的某个顶级部分，则会写回到该包含文件中。例如，`plugins install` 会更新 `plugins: { $include: "./plugins.json5" }` 中的 `plugins.json5`，并保持 `openclaw.json` 不变。
-- 根级 includes、include 数组以及带有同级覆盖的 includes 对 OpenClaw 负责的写入是只读的；这些写入会直接失败，而不是将配置扁平化。
-- 错误：针对缺失文件、解析错误和循环 includes 提供清晰的消息。
+- Single file: replaces the included object.
+- File array: deep-merges in order (later files override earlier ones).
+- Sibling keys: merged after the include (overriding included values).
+- Nested includes: up to 10 levels.
+- Paths: resolved relative to the file that includes them, but must remain within the top-level config directory (`dirname` of `openclaw.json`). Only absolute paths/`../` forms are allowed if they still resolve within that boundary.
+- Writes handled by OpenClaw will write back into the included file if they only change a top-level section supported by a single-file include. For example, `plugins install` will update `plugins.json5` in `plugins: { $include: "./plugins.json5" }` and keep `openclaw.json` unchanged.
+- Root-level includes, include arrays, and includes with sibling overrides are read-only for writes handled by OpenClaw; these writes fail directly rather than flattening the config.
+- Errors: clear messages for missing files, parse errors, and cyclic includes.
 
 ---
 
-_相关：[配置](/gateway/configuration) · [配置示例](/gateway/configuration-examples) · [诊断](/gateway/doctor)_
+_See also: [Configuration](/gateway/configuration) · [Configuration examples](/gateway/configuration-examples) · [Doctor](/gateway/doctor)_
 
-## 相关
+## See also
 
-- [配置](/gateway/configuration)
-- [配置示例](/gateway/configuration-examples)
+- [Configuration](/gateway/configuration)
+- [Configuration examples](/gateway/configuration-examples)

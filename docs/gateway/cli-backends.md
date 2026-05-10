@@ -128,6 +128,9 @@ provider id 会成为你的模型引用左侧的一部分：
           systemPromptWhen: "first",
           imageArg: "--image",
           imageMode: "repeat",
+          // 仅在该后端可能在压缩前，从有界的原始 OpenClaw 转录历史中重新种子化
+          // 安全失效的会话时启用
+          reseedFromRawTranscriptWhenUncompacted: true,
           serialize: true,
         },
       },
@@ -190,9 +193,17 @@ openclaw models auth login --provider anthropic --method cli --set-default
 - Claude 活动会话保留有界的 JSONL 输出保护。默认允许每轮最多
   8 MiB 和 20,000 行原始 JSONL。工具较多的 Claude 轮次可以按后端提升这些限制，使用
   `agents.defaults.cliBackends.claude-cli.reliability.outputLimits.maxTurnRawChars`
-  和 `maxTurnLines`；OpenClaw 会将这些设置钳制到 64 MiB 和 100,000
+  和 `maxTurnLines`; OpenClaw 将这些设置上限夹紧到 64 MiB 和 100,000
   行。
-- 已存储的 CLI 会话属于 provider 的连续性。隐式的每日会话重置不会中断它们；`/reset` 和显式的 `session.reset` 策略仍然会。
+- 存储的 CLI 会话属于提供方所有的连续性。隐式的每日会话
+  重置不会切断它们；`/reset` 和显式的 `session.reset` 策略仍然会
+  这样做。
+- 新的 CLI 会话通常只会从 OpenClaw 的压缩摘要
+  加上压缩后的尾部重新种子化。要恢复在压缩前就失效的短会话，后端可以通过
+  `reseedFromRawTranscriptWhenUncompacted: true` 选择启用。OpenClaw 仍会对原始
+  转录重新种子化进行有界控制，并将其限制为安全失效场景，例如缺失
+  CLI 转录、系统提示/MCP 变更，或会话过期重试；认证配置文件或凭据周期更改
+  永远不会重新种子化原始转录历史。
 
 序列化说明：
 
