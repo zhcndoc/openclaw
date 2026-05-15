@@ -21,7 +21,7 @@ sidebarTitle: "模型提供商"
 
   </Accordion>
   <Accordion title="添加提供商认证不会更改你的主模型">
-    `openclaw configure` 在你添加或重新认证提供商时会保留现有的 `agents.defaults.model.primary`。提供商插件仍可能在其认证配置补丁中返回推荐的默认模型，但当主模型已经存在时，configure 会把这理解为“使该模型可用”，而不是“替换当前主模型”。
+    `openclaw configure` 在你添加或重新认证某个提供商时，会保留现有的 `agents.defaults.model.primary`。`openclaw models auth login` 也会这样做，除非你传入 `--set-default`。提供商插件仍可能在其认证配置补丁中返回一个推荐的默认模型，但当主模型已存在时，OpenClaw 会把这理解为“让该模型可用”，而不是“替换当前主模型”。
 
     若要有意切换默认模型，请使用 `openclaw models set <provider/model>` 或 `openclaw models auth login --provider <id> --set-default`。
 
@@ -41,9 +41,9 @@ sidebarTitle: "模型提供商"
 
   </Accordion>
   <Accordion title="CLI 运行时">
-    CLI 运行时使用相同的拆分方式：先选择规范模型引用，如 `anthropic/claude-*`、`google/gemini-*` 或 `openai/gpt-*`，然后在希望使用本地 CLI 后端时，将 provider/model 运行时策略设置为 `claude-cli`、`google-gemini-cli` 或 `codex-cli`。
+    CLI 运行时使用相同的拆分方式：先选择规范模型引用，例如 `anthropic/claude-*` 或 `google/gemini-*`，然后在你想使用本地 CLI 后端时，将 provider/model 运行时策略设置为 `claude-cli` 或 `google-gemini-cli`。
 
-    旧式 `claude-cli/*`、`google-gemini-cli/*` 和 `codex-cli/*` 引用会迁移回规范提供商引用，并将运行时单独记录。
+    旧式 `claude-cli/*` 和 `google-gemini-cli/*` 引用会迁移回规范的提供商引用，同时把运行时单独记录。旧式 `codex-cli/*` 引用会迁移为 `openai/*` 并使用 Codex app-server 路由；OpenClaw 不再保留捆绑的 Codex CLI 后端。
 
   </Accordion>
 </AccordionGroup>
@@ -86,20 +86,20 @@ OpenClaw 自带 pi-ai 目录。这些提供商**不需要** `models.providers` �
 
 ### OpenAI
 
-- Provider: `openai`
-- Auth: `OPENAI_API_KEY`
-- Optional rotation: `OPENAI_API_KEYS`, `OPENAI_API_KEY_1`, `OPENAI_API_KEY_2`, plus `OPENCLAW_LIVE_OPENAI_KEY` (single override)
-- Example models: `openai/gpt-5.5`, `openai/gpt-5.4-mini`
-- Verify account/model availability with `openclaw models list --provider openai` if a specific install or API key behaves differently.
-- CLI: `openclaw onboard --auth-choice openai-api-key`
-- Default transport is `auto`; OpenClaw passes the transport choice to pi-ai.
-- Override per model via `agents.defaults.models["openai/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
-- OpenAI priority processing can be enabled via `agents.defaults.models["openai/<model>"].params.serviceTier`
-- `/fast` and `params.fastMode` map direct `openai/*` Responses requests to `service_tier=priority` on `api.openai.com`
-- Use `params.serviceTier` when you want an explicit tier instead of the shared `/fast` toggle
-- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) apply only on native OpenAI traffic to `api.openai.com`, not generic OpenAI-compatible proxies
-- Native OpenAI routes also keep Responses `store`, prompt-cache hints, and OpenAI reasoning-compat payload shaping; proxy routes do not
-- `openai/gpt-5.3-codex-spark` is intentionally suppressed in OpenClaw because live OpenAI API requests reject it and the current Codex catalog does not expose it
+- 提供商：`openai`
+- 认证：`OPENAI_API_KEY`
+- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单个覆盖）
+- 示例模型：`openai/gpt-5.5`、`openai/gpt-5.4-mini`
+- 如果某个特定安装或 API key 的行为不同，可使用 `openclaw models list --provider openai` 验证账号/模型可用性。
+- CLI：`openclaw onboard --auth-choice openai-api-key`
+- 默认传输方式为 `auto`；OpenClaw 会将传输选择传递给 pi-ai。
+- 可通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
+- 可通过 `agents.defaults.models["openai/<model>"].params.serviceTier` 启用 OpenAI priority 处理
+- `/fast` 和 `params.fastMode` 会将直接的 `openai/*` Responses 请求映射为 `api.openai.com` 上的 `service_tier=priority`
+- 当你想使用显式层级而不是共享的 `/fast` 开关时，请使用 `params.serviceTier`
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）只会在发往 `api.openai.com` 的原生 OpenAI 流量上应用，不会用于通用的 OpenAI 兼容代理
+- 原生 OpenAI 路由还会保留 Responses `store`、提示缓存提示，以及 OpenAI reasoning-compat 载荷整形；代理路由不会保留这些
+- `openai/gpt-5.3-codex-spark` 在 OpenClaw 中被有意屏蔽，因为实时 OpenAI API 请求会拒绝它，且当前 Codex 目录未暴露它
 
 ```json5
 {
@@ -300,7 +300,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 | Groq                    | `groq`                           | `GROQ_API_KEY`                                               | -                                             |
 | Hugging Face Inference  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                         | `huggingface/deepseek-ai/DeepSeek-R1`         |
 | Kilo Gateway            | `kilocode`                       | `KILOCODE_API_KEY`                                           | `kilocode/kilo/auto`                          |
-| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` 或 `KIMICODE_API_KEY`                         | `kimi/kimi-code`                              |
+| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                         | `kimi/kimi-for-coding`                        |
 | MiniMax                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                    | `minimax/MiniMax-M2.7`                        |
 | Mistral                 | `mistral`                        | `MISTRAL_API_KEY`                                            | `mistral/mistral-large-latest`                |
 | Moonshot                | `moonshot`                       | `MOONSHOT_API_KEY`                                           | `moonshot/kimi-k2.6`                          |
@@ -347,7 +347,9 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 
 网关模型能力检查也会读取显式的 `models.providers.<id>.models[]` 元数据。如果自定义或代理模型支持图像，请在该模型上设置 `input: ["text", "image"]`，这样 WebChat 和 node-origin 附件路径会将图像作为原生模型输入传递，而不是仅文本的媒体引用。
 
-### Moonshot AI（Kimi）
+`agents.defaults.models["provider/model"]` 只控制 agent 的模型可见性、别名和每个模型的元数据。它本身不会注册新的运行时模型。对于自定义提供商模型，还需要添加 `models.providers.<provider>.models[]`，并至少包含匹配的 `id`。
+
+### Moonshot AI (Kimi)
 
 Moonshot 作为一个内置提供商插件发布。默认使用内置提供商，仅当你需要覆盖基础 URL 或模型元数据时，才添加显式的 `models.providers.moonshot` 条目：
 
@@ -391,20 +393,20 @@ Kimi K2 模型 ID：
 
 Kimi Coding 使用 Moonshot AI 的 Anthropic 兼容端点：
 
-- 提供商：`kimi`
-- 认证：`KIMI_API_KEY`
-- 示例模型：`kimi/kimi-code`
+- Provider: `kimi`
+- Auth: `KIMI_API_KEY`
+- Example model: `kimi/kimi-for-coding`
 
 ```json5
 {
   env: { KIMI_API_KEY: "sk-..." },
   agents: {
-    defaults: { model: { primary: "kimi/kimi-code" } },
+    defaults: { model: { primary: "kimi/kimi-for-coding" } },
   },
 }
 ```
 
-旧的 `kimi/k2p5` 仍然作为兼容性模型 ID 被接受。
+旧版的 `kimi/kimi-code` 和 `k2p5` 仍然作为兼容的模型 id 被接受，并会归一化为 Kimi 的稳定 API 模型 id。
 
 ### 火山引擎（豆包）
 

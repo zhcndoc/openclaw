@@ -7,9 +7,9 @@ read_when:
 title: "Moonshot AI"
 ---
 
-Moonshot 提供了与 OpenAI 兼容端点的 Kimi API。配置
+Moonshot 提供与 OpenAI 兼容端点的 Kimi API。配置该
 提供方并将默认模型设置为 `moonshot/kimi-k2.6`，或者使用
-`kimi/kimi-code` 的 Kimi Coding。
+`kimi/kimi-for-coding` 的 Kimi Coding。
 
 <Warning>
 Moonshot 和 Kimi Coding 是**不同的提供方**。密钥不能互换，端点不同，模型引用也不同（`moonshot/...` vs `kimi/...`）。
@@ -185,7 +185,7 @@ $0.60/MTok input，和 $3.00/MTok output。其他旧目录条目仍保持
     **最适合：** 通过 Kimi Coding 端点处理代码相关任务。
 
     <Note>
-    Kimi Coding 使用不同的 API 密钥和提供方前缀（`kimi/...`），不同于 Moonshot（`moonshot/...`）。旧模型引用 `kimi/k2p5` 仍被接受为兼容 id。
+    Kimi Coding 使用与 Moonshot（`moonshot/...`）不同的 API 密钥和提供方前缀（`kimi/...`）。稳定的 API 模型引用是 `kimi/kimi-for-coding`；旧版引用 `kimi/kimi-code` 和 `kimi/k2p5` 仍然被接受，并会规范化为该 API 模型 id。
     </Note>
 
     <Steps>
@@ -199,7 +199,7 @@ $0.60/MTok input，和 $3.00/MTok output。其他旧目录条目仍保持
         {
           agents: {
             defaults: {
-              model: { primary: "kimi/kimi-code" },
+              model: { primary: "kimi/kimi-for-coding" },
             },
           },
         }
@@ -219,9 +219,9 @@ $0.60/MTok input，和 $3.00/MTok output。其他旧目录条目仍保持
       env: { KIMI_API_KEY: "sk-..." },
       agents: {
         defaults: {
-          model: { primary: "kimi/kimi-code" },
+          model: { primary: "kimi/kimi-for-coding" },
           models: {
-            "kimi/kimi-code": { alias: "Kimi" },
+            "kimi/kimi-for-coding": { alias: "Kimi" },
           },
         },
       },

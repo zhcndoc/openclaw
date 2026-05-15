@@ -6,7 +6,7 @@ title: "文档中心"
 ---
 
 <Note>
-如果你是 OpenClaw 的新用户，请从 [Getting Started](/start/getting-started) 开始。
+如果你是 OpenClaw 的新用户，请从 [快速开始](/start/getting-started) 开始。
 </Note>
 
 使用这些中心来发现每一页内容，包括左侧导航中没有出现的深入说明和参考文档。
@@ -75,20 +75,20 @@ title: "文档中心"
 - [Signal](/channels/signal)
 - [QQ Bot](/channels/qqbot)
 - [iMessage](/channels/imessage)
-- [Location parsing](/channels/location)
+- [位置解析](/channels/location)
 - [WebChat](/web/webchat)
 - [Webhooks](/automation/cron-jobs#webhooks)
 - [Gmail Pub/Sub](/automation/cron-jobs#gmail-pub-sub-integration)
 
 ## Gateway + 运维
 
-- [Gateway runbook](/gateway)
-- [Network model](/network#core-model)
-- [Gateway pairing](/gateway/pairing)
-- [Gateway lock](/gateway/gateway-lock)
-- [Background process](/gateway/background-process)
-- [Health](/gateway/health)
-- [Heartbeat](/gateway/heartbeat)
+- [Gateway 运行手册](/gateway)
+- [网络模型](/network#core-model)
+- [Gateway 配对](/gateway/pairing)
+- [Gateway 锁](/gateway/gateway-lock)
+- [后台进程](/gateway/background-process)
+- [健康状态](/gateway/health)
+- [心跳](/gateway/heartbeat)
 - [Doctor](/gateway/doctor)
 - [日志记录](/gateway/logging)
 - [沙箱化](/gateway/sandboxing)
@@ -108,12 +108,12 @@ title: "文档中心"
 - [Exec 工具](/tools/exec)
 - [PDF 工具](/tools/pdf)
 - [提升模式](/tools/elevated)
-- [定时任务](/automation/cron-jobs)
-- [自动化与任务](/automation)
-- [思考 + 详细输出](/tools/thinking)
+- [Cron 作业](/automation/cron-jobs)
+- [自动化](/automation)
+- [思考 + 详细模式](/tools/thinking)
 - [模型](/concepts/models)
 - [子代理](/tools/subagents)
-- [Agent 发送 CLI](/tools/agent-send)
+- [Agent send CLI](/tools/agent-send)
 - [终端 UI](/web/tui)
 - [浏览器控制](/tools/browser)
 - [浏览器（Linux 故障排除）](/tools/browser-linux-troubleshooting)

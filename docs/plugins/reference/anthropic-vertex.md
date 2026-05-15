@@ -11,8 +11,8 @@ title: "Anthropic Vertex 插件"
 
 ## 分发
 
-- 包：`@openclaw/anthropic-vertex-provider`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/anthropic-vertex-provider`
+- Install route: npm; ClawHub
 
 ## 接口
 

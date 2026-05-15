@@ -23,7 +23,7 @@ agentic loop 是 agent 的完整“真实”运行：接收输入 → 组装上�
    - 解析模型 + thinking/verbose/trace 默认值
    - 加载 skills 快照
    - 调用 `runEmbeddedPiAgent`（pi-agent-core 运行时）
-   - 如果嵌入式 loop 没有发出 **lifecycle end/error**，则发出该事件
+   - 如果嵌入式 loop 没有发出 **生命周期结束/错误**，则发出该事件
 3. `runEmbeddedPiAgent`：
    - 通过每 session + 全局队列串行化运行
    - 解析模型 + 认证配置文件并构建 pi session
@@ -36,17 +36,22 @@ agentic loop 是 agent 的完整“真实”运行：接收输入 → 组装上�
    - assistant 增量 => `stream: "assistant"`
    - lifecycle 事件 => `stream: "lifecycle"`（`phase: "start" | "end" | "error"`）
 5. `agent.wait` 使用 `waitForAgentRun`：
-   - 等待 `runId` 的 **lifecycle end/error**
+   - 等待 `runId` 的 **生命周期结束/错误**
    - 返回 `{ status: ok|error|timeout, startedAt, endedAt, error? }`
 
 ## 排队 + 并发
 
-- 运行会按 session key（session lane）串行化，并且可选地通过全局 lane 串行化。
-- 这可以防止工具/session 竞态，并保持 session 历史一致。
-- 消息通道可以选择队列模式（collect/steer/followup），这些模式会接入此 lane 系统。
-  参见 [Command Queue](/concepts/queue)。
-- Transcript 写入同样受 session 文件上的 session 写锁保护。该锁具有进程感知且基于文件，因此可以捕获绕过进程内队列或来自其他进程的写入者。Session transcript 写入者在报告 session 忙碌之前，会等待最多 `session.writeLock.acquireTimeoutMs`；默认值为 `60000` ms。
-- Session 写锁默认是不可重入的。如果某个 helper 有意在保持单一逻辑写者的前提下嵌套获取同一把锁，则必须显式启用 `allowReentrant: true`。
+- Runs are serialized per session key (session lane) and optionally through a global lane.
+- This prevents tool/session races and keeps session history consistent.
+- Messaging channels can choose queue modes (steer/followup/collect/interrupt) that feed this lane system.
+  See [Command Queue](/concepts/queue).
+- Transcript writes are also protected by a session write lock on the session file. The lock is
+  process-aware and file-based, so it catches writers that bypass the in-process queue or come from
+  another process. Session transcript writers wait up to `session.writeLock.acquireTimeoutMs`
+  before reporting the session as busy; the default is `60000` ms.
+- Session write locks are non-reentrant by default. If a helper intentionally nests acquisition of
+  the same lock while preserving one logical writer, it must opt in explicitly with
+  `allowReentrant: true`.
 
 ## Session + workspace 准备
 
@@ -145,7 +150,7 @@ Harness 可能会以不同方式适配这些 hooks。Codex app-server harness �
 ## Chat 通道处理
 
 - assistant 增量会被缓冲为 chat `delta` 消息。
-- chat `final` 会在 **lifecycle end/error** 时发出。
+- chat `final` 会在 **生命周期结束/错误** 时发出。
 
 ## 超时
 

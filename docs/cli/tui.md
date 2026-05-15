@@ -16,6 +16,23 @@ title: "TUI"
 
 - TUI 指南：[TUI](/web/tui)
 
+## 选项
+
+| Flag                  | Default                                   | Description                                                                        |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| `--local`             | `false`                                   | 运行本地嵌入式 agent 运行时，而不是 Gateway。                                         |
+| `--url <url>`         | `gateway.remote.url` from config          | Gateway WebSocket URL。                                                             |
+| `--token <token>`     | (none)                                    | 如有需要，Gateway token。                                                           |
+| `--password <pass>`   | (none)                                    | 如有需要，Gateway 密码。                                                             |
+| `--session <key>`     | `main` (or `global` when scope is global) | 会话 key。在 agent 工作区内，它会自动选择该 agent，除非前缀已指定。                    |
+| `--deliver`           | `false`                                   | 通过已配置的渠道发送 assistant 回复。                                                |
+| `--thinking <level>`  | (model default)                           | 思考级别覆盖。                                                                      |
+| `--message <text>`    | (none)                                    | 连接后发送初始消息。                                                                |
+| `--timeout-ms <ms>`   | `agents.defaults.timeoutSeconds`          | agent 超时。无效值会记录警告并被忽略。                                               |
+| `--history-limit <n>` | `200`                                     | 连接时加载的历史条目数量。                                                          |
+
+别名：`openclaw chat` 和 `openclaw terminal` 会以隐含的 `--local` 调用同一个命令。
+
 注意：
 
 - `chat` 和 `terminal` 是 `openclaw tui --local` 的别名。
@@ -34,8 +51,8 @@ openclaw tui --local
 openclaw tui
 openclaw tui --url ws://127.0.0.1:18789 --token <token>
 openclaw tui --session main --deliver
-openclaw chat --message "Compare my config to the docs and tell me what to fix"
-# when run inside an agent workspace, infers that agent automatically
+openclaw chat --message "比较我的配置与文档，并告诉我需要修复什么"
+# 当在 agent 工作区内运行时，会自动推断该 agent
 openclaw tui --session bugfix
 ```
 

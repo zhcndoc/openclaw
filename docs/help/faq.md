@@ -258,7 +258,7 @@ title: "FAQ"
     openclaw cron runs --id <jobId> --limit 50
     ```
 
-    文档：[Cron 任务](/automation/cron-jobs)、[自动化与任务](/automation)。
+    文档：[Cron 任务](/automation/cron-jobs)、[自动化](/automation)。
 
   </Accordion>
 
@@ -343,7 +343,7 @@ title: "FAQ"
     - **Heartbeat** 用于“主会话”的周期性检查。
     - **Isolated jobs** 用于自主代理，向聊天中发送摘要或投递内容。
 
-    文档：[Cron jobs](/automation/cron-jobs), [Automation & Tasks](/automation),
+    文档：[Cron jobs](/automation/cron-jobs), [Automation](/automation),
     [Heartbeat](/gateway/heartbeat).
 
   </Accordion>
@@ -1438,11 +1438,11 @@ title: "FAQ"
 
     事实（来自代码）：
 
-    - Control UI 会把 token 保存在当前浏览器标签页会话和所选 gateway URL 的 `sessionStorage` 中，因此同标签页刷新时无需恢复持久化的本地 `localStorage` token 也能工作。
-    - 在 `AUTH_TOKEN_MISMATCH` 时，如果 gateway 返回重试提示（`canRetryWithDeviceToken=true`、`recommendedNextStep=retry_with_device_token`），受信任客户端可以尝试一次有边界的、带缓存设备 token 的重试。
-    - 这个缓存 token 重试现在会复用与设备 token 一起存储的已批准 scope。显式 `deviceToken` / 显式 `scopes` 调用者仍会保留其请求的 scope 集，而不是继承缓存 scope。
-    - 在该重试路径之外，connect 认证优先级是：显式共享 token/password，然后是显式 `deviceToken`，然后是存储的 device token，最后是 bootstrap token。
-    - Bootstrap token 的 scope 检查带有角色前缀。内置的 bootstrap operator allowlist 只满足 operator 请求；node 或其他非 operator 角色仍需要其自身角色前缀下的 scope。
+    - The Control UI keeps the token in `sessionStorage` for the current browser tab session and selected gateway URL, so same-tab refreshes keep working without restoring long-lived localStorage token persistence.
+    - On `AUTH_TOKEN_MISMATCH`, trusted clients can attempt one bounded retry with a cached device token when the gateway returns retry hints (`canRetryWithDeviceToken=true`, `recommendedNextStep=retry_with_device_token`).
+    - That cached-token retry now reuses the cached approved scopes stored with the device token. Explicit `deviceToken` / explicit `scopes` callers still keep their requested scope set instead of inheriting cached scopes.
+    - Outside that retry path, connect auth precedence is explicit shared token/password first, then explicit `deviceToken`, then stored device token, then bootstrap token.
+    - Built-in setup-code bootstrap is node-only. After approval, it returns a node device token with `scopes: []` and does not return a handed-off operator token.
 
     修复：
 
@@ -1923,16 +1923,14 @@ title: "FAQ"
   </Accordion>
 
   <Accordion title='Why does it feel like the bot "ignores" rapid-fire messages?'>
-    队列模式控制新消息如何与正在进行的运行交互。使用 `/queue` 更改模式：
+    Mid-run prompts are steered into the active run by default. Use `/queue` to choose active-run behavior：
 
-    - `steer` - queue all pending steering for the next model boundary in the current run
-    - `queue` - legacy one-at-a-time steering
-    - `followup` - run messages one at a time
-    - `collect` - batch messages and reply once
-    - `steer-backlog` - steer now, then process backlog
+    - `steer` - guide the active run at the next model boundary
+    - `followup` - queue messages and run them one at a time after the current run ends
+    - `collect` - queue compatible messages and reply once after the current run ends
     - `interrupt` - abort current run and start fresh
 
-    Default mode is `steer`. You can add options like `debounce:0.5s cap:25 drop:summarize` for followup modes. See [Command queue](/concepts/queue) and [Steering queue](/concepts/queue-steering)。
+    Default mode is `steer`. You can add options like `debounce:0.5s cap:25 drop:summarize` for queued modes. See [Command queue](/concepts/queue) and [Steering queue](/concepts/queue-steering).
 
   </Accordion>
 </AccordionGroup>

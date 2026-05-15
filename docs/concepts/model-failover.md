@@ -58,12 +58,12 @@ OpenClaw 分两个阶段处理失败：
 
 OpenClaw 将所选的提供方/模型与其被选择的原因分开。该来源决定是否允许回退链：
 
-- **已配置的默认值**：`agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
-- **Agent 主模型**：`agents.list[].model` 默认是严格的，除非该 agent 的模型对象包含它自己的 `fallbacks`。使用 `fallbacks: []` 可以显式表示严格行为，或者提供一个非空列表让该 agent 启用模型回退。
-- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride` 和 `modelOverrideSource: "auto"`。该自动覆盖可以继续沿着已配置的回退链前进，并会在 `/new`、`/reset` 和 `sessions.reset` 时被清除。
-- **用户会话覆盖**：`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一种精确的会话选择。如果所选提供方/模型在产生回复之前失败，OpenClaw 会报告该失败，而不是从无关的已配置回退中回答。
-- **旧版会话覆盖**：较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被悄悄转换为回退行为。
-- **Cron 负载模型**：cron 任务的 `payload.model` / `--model` 是任务主模型，不是用户会话覆盖。除非任务提供了 `payload.fallbacks`，否则它会使用已配置的回退；`payload.fallbacks: []` 会使 cron 运行保持严格。
+- **已配置的默认值**: `agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
+- **Agent 主项**: `agents.list[].model` 默认是严格的，除非该 agent 的 model 对象包含自己的 `fallbacks`。使用 `fallbacks: []` 可显式表明严格行为，或者提供一个非空列表，让该 agent 使用模型回退。
+- **自动回退覆盖**: 运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"` 和所选的来源模型。该自动覆盖可以继续沿着已配置的回退链向下遍历，并会在 `/new`、`/reset` 和 `sessions.reset` 中清除。若未显式提供 `heartbeat.model`，心跳运行也会在其来源不再匹配当前已配置默认值时清除直接的自动覆盖。
+- **用户会话覆盖**: `/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这表示精确的会话选择。如果所选提供方/模型在返回回复前失败，OpenClaw 会报告失败，而不是从无关的已配置回退中作答。
+- **旧版会话覆盖**: 较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被静默转换为回退行为。
+- **Cron 负载模型**: cron 作业的 `payload.model` / `--model` 是作业主项，而不是用户会话覆盖。它会使用已配置回退，除非作业提供了 `payload.fallbacks`；`payload.fallbacks: []` 会使 cron 运行保持严格。
 
 ## 认证存储（密钥 + OAuth）
 
@@ -123,15 +123,38 @@ OpenClaw 会**按会话锁定所选认证配置文件**，以保持提供方缓�
 通过 `/model …@<profileId>` 进行的手动选择会为该会话设置一个**用户覆盖**，并且在新会话开始之前不会自动轮换。
 
 <Note>
-自动锁定的配置文件（由会话路由器选择）被视为一种**偏好**：它们会被优先尝试，但在速率限制/超时时，OpenClaw 可能会轮换到另一个配置文件。用户锁定的配置文件会保持锁定到该配置文件；如果它失败且配置了模型回退，OpenClaw 会移动到下一个模型，而不是切换配置文件。
+自动固定的配置文件（由会话路由器选中）被视为一种**偏好**：它们会先被尝试，但在速率限制/超时时，OpenClaw 可能会轮换到另一个配置文件。当原始配置文件再次可用时，新运行可以再次优先使用它，而无需更改所选模型或运行时。用户固定的配置文件会保持锁定到该配置文件；如果它失败且配置了模型回退，OpenClaw 会移动到下一个模型，而不是切换配置文件。
 </Note>
 
-### 为什么 OAuth 可能“看起来丢失了”
+### OpenAI Codex 订阅加 API 密钥备用
 
-如果你对同一提供方同时拥有一个 OAuth 配置文件和一个 API 密钥配置文件，轮询可能会在消息之间切换它们，除非已固定。要强制使用单一配置文件：
+对于 OpenAI agent 模型，认证与运行时是分开的。`openai/gpt-*` 仍运行在
+Codex harness 上，而认证可以在 Codex 订阅配置文件与
+OpenAI API 密钥备用之间轮换。
 
-- 使用 `auth.order[provider] = ["provider:profileId"]` 锁定，或
-- 通过 `/model …` 使用带配置文件覆盖的每会话覆盖（当你的 UI/聊天界面支持时）。
+为面向用户的顺序使用 `auth.order.openai`：
+
+```json5
+{
+  auth: {
+    order: {
+      openai: ["openai-codex:user@example.com", "openai:api-key-backup"],
+    },
+  },
+}
+```
+
+现有的 Codex 订阅配置文件仍可能使用旧版
+`openai-codex:*` 配置文件 ID。按顺序排列的 API 密钥备用可以是普通的
+`openai:*` API 密钥配置文件。当订阅达到 Codex 使用限制时，
+OpenClaw 会记录 Codex 提供的确切重置时间，尝试下一个
+按顺序排列的认证配置文件，并继续保持运行在 Codex harness 中。等重置
+时间过去后，订阅配置文件会再次变为可用，下一次自动
+选择可以回到它。
+
+仅当你希望为该会话强制使用某个账户/密钥时，才使用用户固定的配置文件。
+用户固定的配置文件是故意设计为严格的，不会静默切换到
+另一个配置文件。
 
 ## 冷却
 
@@ -227,11 +250,11 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
 <AccordionGroup>
   <Accordion title="规则">
     - 请求的模型始终排在第一位。
-    - 显式配置的回退会去重，但不会按模型允许列表过滤。它们会被视为明确的操作意图。
-    - 如果当前运行已经位于同一提供商家族中的某个已配置回退上，OpenClaw 会继续使用完整的已配置链。
-    - 如果当前运行位于与配置不同的提供商上，并且当前模型本身不在已配置回退链中，OpenClaw 不会从另一个提供商追加无关的已配置回退。
-    - 当没有向回退运行器提供显式回退覆盖时，会在末尾追加已配置的主项，这样在较早候选项用尽后，链条可以回到正常默认值。
-    - 当调用方提供 `fallbacksOverride` 时，运行器会严格使用请求的模型加上该覆盖列表。空列表会禁用模型回退，并阻止将已配置主项作为隐藏重试目标追加进去。
+    - 显式配置的回退会去重，但不会按模型允许列表过滤。它们被视为明确的操作员意图。
+    - 如果当前运行已经在同一提供商家族中的某个已配置回退上，OpenClaw 会继续使用完整的已配置链。
+    - 当未提供显式回退覆盖时，即使请求的模型使用的是不同提供商，已配置的回退也会在已配置主项之前尝试。
+    - 当回退运行器未收到显式回退覆盖时，已配置主项会被追加到末尾，这样在更早的候选项耗尽后，链可以回到正常默认项。
+    - 当调用方提供 `fallbacksOverride` 时，运行器会精确使用请求的模型加上该覆盖列表。空列表会禁用模型回退，并阻止将已配置主项作为隐藏重试目标追加。
 
   </Accordion>
 </AccordionGroup>

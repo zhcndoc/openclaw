@@ -9,30 +9,23 @@ title: "WhatsApp"
 
 ## 安装（按需）
 
-- 上手引导（`openclaw onboard`）和 `openclaw channels add --channel whatsapp`
-  会在你第一次选择 WhatsApp 插件时提示安装。
-- `openclaw channels login --channel whatsapp` 在
-  插件尚未存在时也会提供安装流程。
-- 开发频道 + git checkout：默认使用本地插件路径。
-- Stable/Beta：使用当前官方发布标签上的 npm 包 `@openclaw/whatsapp`。
+- Onboarding (`openclaw onboard`) 和 `openclaw channels add --channel whatsapp`
+  会在你第一次选择它时提示安装 WhatsApp 插件。
+- `openclaw channels login --channel whatsapp` 在插件尚未存在时也会提供安装流程。
+- Dev channel + git checkout：默认使用本地插件路径。
+- Stable/Beta：先从 ClawHub 安装官方 `@openclaw/whatsapp` 插件，
+  如失败则回退到 npm。
+- WhatsApp 运行时分发在核心 OpenClaw npm 包之外，因此
+  WhatsApp 特定的运行时依赖会保留在外部插件中。
 
 也可以手动安装：
 
 ```bash
-openclaw plugins install @openclaw/whatsapp
+openclaw plugins install clawhub:@openclaw/whatsapp
 ```
 
-使用裸包以跟随当前官方发布标签。只有在需要可复现安装时才固定精确版本。
-
-在 Windows 上，WhatsApp 插件在 npm install 期间需要 Git 位于 `PATH` 中，因为
-它的一个 Baileys/libsignal 依赖是从 git URL 拉取的。请先为 Windows 安装 Git，
-然后重启 shell 并重新运行安装：
-
-```powershell
-winget install --id Git.Git -e
-```
-
-如果 Portable Git 的 `bin` 目录在 `PATH` 中，也同样可用。
+仅在你需要 registry 回退时才使用裸 npm 包（`@openclaw/whatsapp`）。
+只有在你需要可复现安装时才固定到精确版本。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -485,6 +478,32 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 - 失败会被记录，但不会阻止正常回复投递
 - 组模式 `mentions` 会在提及触发的轮次上进行反应；组激活 `always` 作为此检查的绕过条件
 - WhatsApp 使用 `channels.whatsapp.ackReaction`（此处不使用旧的 `messages.ackReaction`）
+
+## 生命周期状态反应
+
+将 `messages.statusReactions.enabled: true` 设为开启，即可让 WhatsApp 在一次轮次中用状态反应替代确认反应，而不是保留一个静态的回执 emoji。启用后，OpenClaw 会为 queued、thinking、tool activity、compaction、done 和 error 等生命周期状态使用同一个入站消息反应槽位。
+
+```json5
+{
+  messages: {
+    statusReactions: {
+      enabled: true,
+      emojis: {
+        deploy: "🛫",
+        build: "🏗️",
+        concierge: "💁",
+      },
+    },
+  },
+}
+```
+
+行为说明：
+
+- `channels.whatsapp.ackReaction` 仍控制状态反应是否可用于私聊和群组。
+- WhatsApp 每条消息只有一个 bot 反应槽位，因此生命周期更新会直接替换当前反应。
+- `messages.removeAckAfterReply: true` 会在配置的 done/error 保持时间之后清除最终状态反应。
+- 工具 emoji 分类包括 `tool`、`coding`、`web`、`deploy`、`build` 和 `concierge`。
 
 ## 多账号与凭据
 

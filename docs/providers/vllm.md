@@ -8,7 +8,7 @@ title: "vLLM"
 
 vLLM 可以通过 **OpenAI 兼容** 的 HTTP API 提供开源（以及某些自定义）模型。OpenClaw 使用 `openai-completions` API 连接到 vLLM。
 
-当你启用 `VLLM_API_KEY`（如果你的服务器不强制认证，任何值都可以）并且没有显式定义 `models.providers.vllm` 条目时，OpenClaw 还可以从 vLLM **自动发现** 可用模型。
+OpenClaw 也可以在你启用 `VLLM_API_KEY` 时从 vLLM **自动发现** 可用模型（如果你的服务器不强制认证，任何值都可以）。当你还配置了自定义 vLLM base URL 时，在 `agents.defaults.models` 中使用 `vllm/*` 可以让发现保持动态。
 
 OpenClaw 将 `vllm` 视为一个支持流式使用量统计的本地 OpenAI 兼容提供方，因此状态/上下文 token 计数可以从 `stream_options.include_usage` 响应中更新。
 
@@ -70,7 +70,7 @@ GET http://127.0.0.1:8000/v1/models
 并将返回的 ID 转换为模型条目。
 
 <Note>
-如果你显式设置了 `models.providers.vllm`，则会跳过自动发现，你必须手动定义模型。
+如果你显式设置了 `models.providers.vllm`，OpenClaw 默认会使用你声明的模型。当你希望 OpenClaw 查询该已配置提供方的 `/models` 端点并包含所有已发布的 vLLM 模型时，请在 `agents.defaults.models` 中添加 `"vllm/*": {}`。
 </Note>
 
 ## 显式配置（手动模型）
@@ -103,6 +103,20 @@ GET http://127.0.0.1:8000/v1/models
             maxTokens: 8192,
           },
         ],
+      },
+    },
+  },
+}
+```
+
+如果你想在不手动列出每个模型的情况下保持该提供方的动态性，请将提供方通配符添加到可见模型目录中：
+
+```json5
+{
+  agents: {
+    defaults: {
+      models: {
+        "vllm/*": {},
       },
     },
   },
@@ -320,8 +334,8 @@ GET http://127.0.0.1:8000/v1/models
 
   </Accordion>
 
-  <Accordion title="未发现任何模型">
-    自动发现要求已设置 `VLLM_API_KEY`，并且**没有**显式的 `models.providers.vllm` 配置条目。如果你已经手动定义了该提供方，OpenClaw 会跳过发现并只使用你声明的模型。
+  <Accordion title="No models discovered">
+    自动发现需要设置 `VLLM_API_KEY`。如果你已经定义了 `models.providers.vllm`，除非 `agents.defaults.models` 包含 `"vllm/*": {}`，否则 OpenClaw 只会使用你声明的模型。
   </Accordion>
 
   <Accordion title="工具显示为原始文本">

@@ -62,13 +62,13 @@ openclaw browser open https://x.com
 }
 ```
 
-然后目标设为宿主浏览器：
+然后你自己打开宿主浏览器（CLI 调用始终在宿主浏览器上运行）：
 
 ```bash
-openclaw browser open https://x.com --browser-profile openclaw --target host
+openclaw browser open https://x.com --browser-profile openclaw
 ```
 
-或者对发布更新的代理禁用沙箱。
+一旦设置了 `sandbox.browser.allowHostControl: true`，代理的 `browser` 工具调用就可以针对宿主浏览器。或者，也可以为发布更新的代理禁用沙箱。
 
 ## 相关内容
 

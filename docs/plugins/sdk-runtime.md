@@ -43,11 +43,55 @@ register(api) {
 
 `api.runtime.config.loadConfig()` 和 `api.runtime.config.writeConfigFile(...)` 是 `runtime-config-load-write` 下的弃用兼容辅助工具。它们会在运行时警告一次，并在迁移窗口内继续供旧版外部插件使用。打包后的插件不得使用它们；如果插件代码调用这些辅助工具，或从插件 SDK 子路径导入它们，配置边界保护会失败。
 
-对于直接的 SDK 导入，请使用更聚焦的配置子路径，而不是宽泛的 `openclaw/plugin-sdk/config-runtime` 兼容聚合入口：`config-types` 用于类型，`plugin-config-runtime` 用于已加载配置断言和插件入口查找，`runtime-config-snapshot` 用于当前进程快照，`config-mutation` 用于写入。打包插件测试应直接 mock 这些聚焦子路径，而不是 mock 宽泛的兼容聚合入口。
+对于直接的 SDK 导入，请改用更聚焦的 config 子路径，而不是宽泛的
+`openclaw/plugin-sdk/config-runtime` 兼容入口：`config-contracts`
+用于类型，`plugin-config-runtime` 用于已加载配置断言和插件
+入口查找，`runtime-config-snapshot` 用于当前进程快照，以及
+`config-mutation` 用于写入。打包后的插件测试应直接模拟这些聚焦的
+子路径，而不是模拟宽泛的兼容入口。
 
 OpenClaw 内部运行时代码遵循相同方向：在 CLI、gateway 或进程边界只加载一次配置，然后将该值向下传递。成功的修改写入会刷新进程运行时快照并推进其内部修订版本；长生命周期缓存应使用运行时拥有的缓存键，而不是在本地序列化配置。长生命周期运行时模块对环境中的 `loadConfig()` 调用实行零容忍扫描；请使用传入的 `cfg`、请求的 `context.getRuntimeConfig()`，或在明确的进程边界使用 `getRuntimeConfig()`。
 
 provider 和 channel 的执行路径必须使用当前运行时配置快照，而不是用于配置回读或编辑的文件快照。文件快照会保留源值，例如用于 UI 和写入的 SecretRef 标记；provider 回调需要的是解析后的运行时视图。当某个辅助工具可能接收当前源快照或当前运行时快照中的任意一种时，请在读取凭据前通过 `selectApplicableRuntimeConfig()` 进行路由。
+
+## Reusable runtime utilities
+
+对机器人生成的入站消息使用 channel-turn 的 `botLoopProtection` 事实。Core 在 session 记录和分发之前会先应用共享的内存滑动窗口保护，而不会把策略绑定到某个单一 channel。该保护会跟踪 `(scopeId, conversationId, participant pair)` 键，将一对参与者的两个方向计为同一组，在窗口预算超出后应用冷却时间，并机会性地清理不活跃条目。
+
+向操作员暴露此行为的 channel 插件应优先使用共享的 `channels.defaults.botLoopProtection` 结构作为基础预算，然后再叠加 channel/provider 特定覆盖。共享配置使用秒作为单位，因为它面向用户：
+
+```typescript
+type ChannelBotLoopProtectionConfig = {
+  enabled?: boolean;
+  maxEventsPerWindow?: number;
+  windowSeconds?: number;
+  cooldownSeconds?: number;
+};
+```
+
+将规范化后的 bot-pair 事实与已解析的 turn 一起传入。Core 会解析默认值、单位转换和 `enabled` 语义：
+
+```typescript
+return {
+  channel: "example",
+  routeSessionKey,
+  storePath,
+  ctxPayload,
+  recordInboundSession,
+  runDispatch,
+  botLoopProtection: {
+    scopeId: "account-1",
+    conversationId: "channel-1",
+    senderId: "bot-a",
+    receiverId: "bot-b",
+    config: channelConfig.botLoopProtection,
+    defaultsConfig: runtimeConfig.channels?.defaults?.botLoopProtection,
+    defaultEnabled: allowBotsMode !== "off",
+  },
+};
+```
+
+仅当你要实现不经过共享 channel-turn 内核的自定义双方事件循环时，才直接使用 `openclaw/plugin-sdk/pair-loop-guard-runtime`。
 
 ## 运行时命名空间
 
@@ -206,6 +250,10 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
   <Accordion title="api.runtime.tasks.managedFlows">
     将 Task Flow 运行时绑定到现有的 OpenClaw 会话键或受信任的工具上下文，然后在不必每次调用都传入 owner 的情况下创建和管理 Task Flow。
 
+    Task Flow 跟踪持久的多步骤工作流状态。它不是调度器：
+    对未来唤醒请使用 Cron 或 `api.session.workflow.scheduleSessionTurn(...)`，然后在该计划回合中使用
+    `managedFlows`，当该工作需要 flow 状态、子任务、等待或取消时再使用它。
+
     ```typescript
     const taskFlow = api.runtime.tasks.managedFlows.fromToolContext(ctx);
 
@@ -287,6 +335,34 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
     // 通用文件分析
     const result = await api.runtime.mediaUnderstanding.runFile({
       filePath: "/tmp/inbound-file.pdf",
+      cfg: api.config,
+    });
+
+    // 通过特定 provider/model 进行结构化图像提取。
+    // 至少包含一张图片；文本输入作为补充上下文。
+    const evidence = await api.runtime.mediaUnderstanding.extractStructuredWithModel({
+      provider: "codex",
+      model: "gpt-5.5",
+      input: [
+        {
+          type: "image",
+          buffer: receiptImageBuffer,
+          fileName: "receipt.png",
+          mime: "image/png",
+        },
+        { type: "text", text: "优先使用打印出来的总计，而不是手写备注。" },
+      ],
+      instructions: "提取供应商、总额和可搜索标签。",
+      schemaName: "receipt.evidence",
+      jsonSchema: {
+        type: "object",
+        properties: {
+          vendor: { type: "string" },
+          total: { type: "number" },
+          tags: { type: "array", items: { type: "string" } },
+        },
+        required: ["vendor", "total"],
+      },
       cfg: api.config,
     });
     ```
@@ -456,7 +532,20 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
   <Accordion title="api.runtime.channel">
     channel 特定的运行时辅助工具（在加载了 channel 插件时可用）。
 
-    对于使用运行时注入的打包 channel 插件，`api.runtime.channel.mentions` 是共享的入站提及策略表面：
+    `api.runtime.channel.media` 是 channel 媒体下载和存储的首选接口：
+
+    ```typescript
+    const saved = await api.runtime.channel.media.saveRemoteMedia({
+      url,
+      subdir: "inbound",
+      maxBytes,
+      filePathHint: fileName,
+    });
+    ```
+
+    当远程 URL 应该成为 OpenClaw 媒体时使用 `saveRemoteMedia(...)`。当插件已经使用插件自有的认证、重定向或允许列表处理获取到 `Response` 时，使用 `saveResponseMedia(...)`。仅当插件需要原始字节进行检查、转换、解密或重新上传时，才使用 `readRemoteMediaBuffer(...)`。`fetchRemoteMedia(...)` 仍然作为 `readRemoteMediaBuffer(...)` 的已弃用兼容别名保留。
+
+    `api.runtime.channel.mentions` 是使用运行时注入的打包 channel 插件共享的入站提及策略接口：
 
     ```typescript
     const mentionMatch = api.runtime.channel.mentions.matchesMentionWithExplicit(text, {

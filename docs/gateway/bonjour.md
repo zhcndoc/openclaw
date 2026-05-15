@@ -99,9 +99,9 @@ Gateway 会广播少量非秘密提示，以便让 UI 流程更方便：
 - `gatewayTlsSha256=<sha256>`（仅在启用 TLS 且指纹可用时）
 - `canvasPort=<port>`（仅在启用 canvas host 时；当前与 `gatewayPort` 相同）
 - `transport=gateway`
-- `tailnetDns=<magicdns>`（仅 mDNS 完整模式；当 Tailnet 可用时的可选提示）
-- `sshPort=<port>`（仅 mDNS 完整模式；广域 DNS-SD 可能省略它）
-- `cliPath=<path>`（仅 mDNS 完整模式；广域 DNS-SD 仍会将其写为远程安装提示）
+- `tailnetDns=<magicdns>` （仅 mDNS 完整模式；当 Tailnet 可用时的可选提示）
+- `sshPort=<port>` （仅完整模式；在最小模式和关闭模式中省略）
+- `cliPath=<path>` （仅完整模式；在最小模式和关闭模式中省略）
 
 安全说明：
 
@@ -141,7 +141,15 @@ Gateway 会写入一个滚动日志文件（启动时会打印为
 - `bonjour: watchdog detected non-announced service ...`
 - `bonjour: disabling advertiser after ... failed restarts ...`
 
-当系统主机名是有效的 DNS 标签时，Bonjour 会使用系统主机名作为广告中的 `.local` 主机名。如果系统主机名包含空格、下划线或其他无效的 DNS 标签字符，OpenClaw 会回退到 `openclaw.local`。当你需要明确的主机标签时，请在启动 Gateway 前设置 `OPENCLAW_MDNS_HOSTNAME=<name>`。
+看门狗会将活跃的 `probing`、`announcing` 以及新鲜的冲突重命名视为
+进行中状态。如果服务始终未达到 `announced`，OpenClaw 最终会
+重新创建广告器，并且在反复失败后，会为该
+Gateway 进程禁用 Bonjour，而不是无限重试广播。
+
+当系统主机名是有效的 DNS 标签时，Bonjour 会使用它作为广告中的 `.local` 主机名。如果系统主机名包含空格、下划线或其他
+无效的 DNS 标签字符，OpenClaw 会回退到 `openclaw.local`。在需要
+明确主机标签时，请在启动 Gateway 之前设置
+`OPENCLAW_MDNS_HOSTNAME=<name>`。
 
 ## 在 iOS 节点上调试
 
@@ -166,10 +174,11 @@ Windows 或其他非 macOS 主机有用时，请显式启用 Bonjour：
 openclaw plugins enable bonjour
 ```
 
-启用后，Bonjour 会使用 `discovery.mdns.mode` 来决定发布多少 TXT 元数据。
-默认模式是 `minimal`；仅在本地客户端需要
-`cliPath` 或 `sshPort` 提示时使用 `full`，并使用 `off` 来抑制 LAN 多播，
-而不改变插件启用状态。
+启用后，Bonjour 会使用 `discovery.mdns.mode` 来决定要发布多少 TXT 元数据。
+相同的模式也控制广域 DNS-SD 记录中的可选 TXT 提示。
+默认模式为 `minimal`；仅当客户端需要 `cliPath` 或
+`sshPort` 提示时使用 `full`。使用 `off` 可在不更改插件
+启用状态的情况下抑制 LAN 多播；当 `discovery.wideArea.enabled` 为真时，广域 DNS-SD 仍可发布最小 Gateway 信标。
 
 ## 何时禁用 Bonjour
 
@@ -241,7 +250,7 @@ openclaw plugins disable bonjour
    dns-sd -B _openclaw-gw._tcp local.
    ```
 
-   如果浏览为空，或者 Gateway 日志显示反复的 ciao watchdog
+   如果浏览为空，或者 Gateway 日志显示反复的 ciao 看门狗
    取消，请恢复 `OPENCLAW_DISABLE_BONJOUR=1` 并使用直接路由或
    Tailnet 路由。
 

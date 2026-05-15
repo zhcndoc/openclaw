@@ -190,16 +190,16 @@ Matrix：
 
 ### 工具进度预览更新
 
-预览流式传输还可以包含 **工具进度** 更新——例如“正在搜索网页”、“正在读取文件”或“正在调用工具”这类简短状态行——它们会在工具运行期间显示在同一条预览消息中，早于最终回复。这样可以让多步骤工具轮次在视觉上保持活跃，而不是在第一次思考预览和最终答案之间显得沉默。
+Preview streaming 也可以包含 **工具进度** 更新——例如“正在搜索网页”“正在读取文件”或“正在调用工具”之类的简短状态行——它们会在工具运行时显示在同一条预览消息中，并早于最终回复。在 Codex app-server 模式下，Codex 的前言/注释消息使用同一条预览路径，因此简短的“我正在检查……”进度说明可以流式进入可编辑草稿，而不会成为最终答案的一部分。这样可以让多步骤工具轮次在视觉上保持“活跃”，而不是在第一条思考预览和最终答案之间沉默。
 
 支持的界面：
 
-- **Discord**、**Slack**、**Telegram** 和 **Matrix** 在预览流式传输启用时，默认会将工具进度流式写入实时预览编辑中。Microsoft Teams 在个人聊天中使用其原生进度流。
-- Telegram 自 `v2026.4.22` 起已默认启用工具进度预览更新；保持启用可延续该已发布行为。
-- **Mattermost** 已经将工具活动折叠进其单条草稿预览帖子中（见上文）。
-- 工具进度编辑遵循当前启用的预览流式模式；当预览流式传输为 `off` 或区块流式传输已接管该消息时，它们会被跳过。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用的进度闲聊也会被抑制，不会作为独立状态消息发送，但审批提示、媒体载荷和错误仍会正常路由。
-- 若想保留预览流式传输但隐藏工具进度行，可将该频道的 `streaming.preview.toolProgress` 设为 `false`。若想保留工具进度行但隐藏命令/执行文本，可将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。此策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度频道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
-- Telegram 已选引用回复是一个例外：当 `replyToMode` 不是 `"off"` 且存在已选引用文本时，OpenClaw 会跳过该轮次的答案预览流，因此工具进度预览行无法渲染。没有已选引用文本的当前消息回复仍会保留预览流式传输。详见 [Telegram 频道文档](/channels/telegram)。
+- **Discord**、**Slack**、**Telegram** 和 **Matrix** 会在预览流式传输激活时，默认将工具进度和 Codex 前言更新流式写入实时预览编辑。Microsoft Teams 在个人聊天中使用其原生进度流。
+- Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可保留该已发布行为。
+- **Mattermost** 已经会将工具活动折叠进其单一草稿预览帖子中（见上文）。
+- 工具进度编辑会遵循当前活动的预览流式模式；当预览流式为 `off`，或区块流式已接管该消息时，会跳过这些更新。在 Telegram 上，`streaming.mode: "off"` 是仅最终结果模式：通用进度闲聊也会被抑制，而不是作为独立状态消息投递；不过审批提示、媒体载荷和错误仍会正常路由。
+- 若要保留预览流式传输但隐藏工具进度行，请为该频道将 `streaming.preview.toolProgress` 设为 `false`。若要在隐藏命令/执行文本的同时保留工具进度行可见，请将 `streaming.preview.commandText` 设为 `"status"`，或将 `streaming.progress.commandText` 设为 `"status"`；默认值为 `"raw"`，以保留已发布行为。该策略适用于使用 OpenClaw 紧凑进度渲染器的草稿/进度频道，包括 Discord、Matrix、Microsoft Teams、Mattermost、Slack 草稿预览和 Telegram。若要完全禁用预览编辑，请将 `streaming.mode` 设为 `off`。
+- Telegram 选中的引用回复是个例外：当 `replyToMode` 不是 `"off"` 且存在选中的引用文本时，OpenClaw 会跳过该轮的答案预览流，因此工具进度预览行不会渲染。当前消息回复如果没有选中文本，仍会保留预览流式传输。详情见 [Telegram channel docs](/channels/telegram)。
 
 保持进度行可见，但隐藏原始命令/执行文本：
 

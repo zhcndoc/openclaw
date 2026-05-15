@@ -11,7 +11,7 @@ sidebarTitle: "Exec 许可"
 Exec 许可是用于让一个沙箱化 agent 在真实主机（`gateway` 或 `node`）上运行命令的 **配套应用 / node 主机护栏**。这是一个安全联锁：只有当策略 + 允许列表 +（可选）用户许可都一致时，命令才会被允许。Exec 许可会在工具策略和 elevated gating **之上叠加**（除非 elevated 被设置为 `full`，这会跳过许可）。
 
 <Note>
-有效策略是 `tools.exec.*` 与 approvals defaults 中**更严格**的那个；如果省略了某个 approvals 字段，则使用 `tools.exec` 的值。Host exec 也使用该机器上的本地 approvals 状态——`~/.openclaw/exec-approvals.json` 中本地的 `ask: "always"` 即使 session 或 config 默认要求 `ask: "on-miss"`，也会持续弹出提示。
+有效策略是 `tools.exec.*` 与 approvals defaults 中**更严格的**那个；如果省略了某个 approvals 字段，则使用 `tools.exec` 的值。Host exec 也使用该机器上的本地 approvals 状态——`~/.openclaw/exec-approvals.json` 中本地的 `ask: "always"` 即使 session 或 config 默认要求 `ask: "on-miss"`，也会持续弹出提示。
 </Note>
 
 ## 检查生效策略
@@ -146,7 +146,15 @@ Exec 许可在执行主机本地强制执行：
 
 在严格模式下，这些命令仍然需要显式许可，且 `allow-always` 不会自动为它们持久化新的允许列表条目。
 
-## YOLO 模式（无许可）
+### `tools.exec.commandHighlighting`
+
+<ParamField path="commandHighlighting" type="boolean" default="false">
+  仅控制 exec 许可提示中的展示效果。启用后，OpenClaw 可能会附加由解析器派生的命令跨度，以便 Web 许可提示能够高亮命令标记。将其设为 `true` 可启用命令文本高亮。
+</ParamField>
+
+此设置不会更改 `security`、`ask`、允许列表匹配、严格内联求值行为、许可转发或命令执行。它可以全局设置为 `tools.exec.commandHighlighting`，也可以按 agent 设置为 `agents.list[].tools.exec.commandHighlighting`。
+
+## YOLO mode (no-approval)
 
 如果你希望 host exec 在没有批准提示的情况下运行，你必须同时打开
 OpenClaw 配置中的**两层**策略：

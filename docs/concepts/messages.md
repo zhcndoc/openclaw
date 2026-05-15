@@ -116,13 +116,11 @@ OpenClaw 将**提示主体**与**命令主体**分开：
 
 ## 排队和后续轮次
 
-如果某个运行已经处于活动状态，入站消息可以被排队、导向当前运行，
-或者收集到一个后续轮次中。
+如果运行已处于活动状态，入站消息默认会被导入当前运行。`messages.queue` 用于选择活动运行中的消息是导向、排队到以后、合并为一个稍后回合，还是中断活动运行。
 
 - 通过 `messages.queue`（以及 `messages.queue.byChannel`）进行配置。
-- 默认模式为 `steer`，当 steering 回退到队列式后续投递时，使用 500ms 的后续防抖。
-- 模式：`steer`、`followup`、`collect`、`steer-backlog`、`interrupt`，以及
-  传统的一次一个 `queue` 模式。
+- 默认模式为 `steer`，对 Codex 导向批次以及 followup/collect 队列使用 500ms 防抖。
+- 模式：`steer`、`followup`、`collect` 和 `interrupt`。
 
 详情： [命令队列](/concepts/queue) 和 [引导队列](/concepts/queue-steering)。
 

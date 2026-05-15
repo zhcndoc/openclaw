@@ -237,8 +237,16 @@ register(api) {
 }
 ```
 
-通过 `api.registerTool(...)` 注册的每个工具也必须在
-插件清单中声明：
+Tool factories receive a runtime-supplied context object. Use
+`ctx.activeModel` when a tool needs to log, display, or adapt to the active
+model for the current turn. The object can include `provider`, `modelId`, and
+`modelRef`. Treat it as informational runtime metadata, not as a security
+boundary against the local operator, installed plugin code, or a modified
+OpenClaw runtime. For sensitive local tools, keep an explicit plugin or operator
+opt-in and fail closed when the active model metadata is missing or unsuitable.
+
+Every tool registered with `api.registerTool(...)` must also be declared in the
+plugin manifest:
 
 ```json
 {
@@ -333,7 +341,7 @@ import { ... } from "openclaw/plugin-sdk";
 - OpenAI：provider 构建器、默认模型辅助工具、实时 provider
 - OpenRouter：provider 构建器以及 boot/config 辅助工具
 
-如果某个辅助工具只在一个内置 provider 包内部有用，请将它保留在该包根级别的导出面上，而不是将其提升到 `openclaw/plugin-sdk/*` 中。
+如果某个辅助工具只在一个内置 provider 包内部有用，请将它保留在该包根级别的导出面上，而不是将它提升到 `openclaw/plugin-sdk/*` 中。
 
 一些生成的 `openclaw/plugin-sdk/<bundled-id>` 辅助导出面仍然存在，用于在其文档说明所有者用法时维护内置插件。请将这些视为保留接口，而不是新第三方插件的默认模式。
 
@@ -384,8 +392,8 @@ import { ... } from "openclaw/plugin-sdk";
 
 ## 另请参阅
 
-- [Plugin Architecture](/plugins/architecture) - 内部架构深度解析
-- [SDK Overview](/plugins/sdk-overview) - 插件 SDK 参考
-- [Manifest](/plugins/manifest) - 插件清单格式
-- [Channel Plugins](/plugins/sdk-channel-plugins) - 构建通道插件
-- [Provider Plugins](/plugins/sdk-provider-plugins) - 构建 provider 插件
+- [插件架构](/plugins/architecture) - 内部架构深度解析
+- [SDK 概览](/plugins/sdk-overview) - 插件 SDK 参考
+- [清单](/plugins/manifest) - 插件清单格式
+- [通道插件](/plugins/sdk-channel-plugins) - 构建通道插件
+- [Provider 插件](/plugins/sdk-provider-plugins) - 构建 provider 插件

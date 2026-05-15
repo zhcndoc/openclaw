@@ -20,7 +20,7 @@ SGLang 通过兼容 OpenAI 的 HTTP API 提供开源权重模型。OpenClaw 使�
 | Streaming usage           | Yes (`supportsStreamingUsage: true`)                         |
 | Pricing                   | 标记为外部免费（`modelPricing.external: false`）        |
 
-如果你使用 `SGLANG_API_KEY` 并且没有定义显式的 `models.providers.sglang` 条目，OpenClaw 还会从 SGLang **自动发现** 可用模型——见下文的 [Model discovery (implicit provider)](#model-discovery-implicit-provider)。
+OpenClaw 还会在你使用 `SGLANG_API_KEY` 时 **自动发现** SGLang 中可用的模型。若你同时配置了自定义的 SGLang base URL，请在 `agents.defaults.models` 中使用 `sglang/*` 以保持动态发现。参见下方 [模型发现（隐式提供方）](#model-discovery-implicit-provider)。
 
 ## 入门
 
@@ -71,8 +71,7 @@ SGLang 通过兼容 OpenAI 的 HTTP API 提供开源权重模型。OpenClaw 使�
 并将返回的 ID 转换为模型条目。
 
 <Note>
-如果你显式设置了 `models.providers.sglang`，则会跳过自动发现，
-你必须手动定义模型。
+如果你显式设置了 `models.providers.sglang`，OpenClaw 默认会使用你声明的模型。当你希望 OpenClaw 查询该已配置提供方的 `/models` 端点并包含所有已公布的 SGLang 模型时，请在 `agents.defaults.models` 中添加 `"sglang/*": {}`。
 </Note>
 
 ## 显式配置（手动模型）

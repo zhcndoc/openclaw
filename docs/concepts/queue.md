@@ -30,20 +30,16 @@ title: "命令队列"
 - `cap: 20`
 - `drop: "summarize"`
 
-`steer` 是默认值，因为它能在不启动第二个会话运行的情况下，让当前模型轮次保持响应。它会在下一个模型边界之前清空所有已到达的引导消息。如果当前运行无法接受引导，OpenClaw 会回退到一个 followup 队列条目。
+同轮引导是默认行为。若某个提示在运行中途到达，并且该运行可以接受引导，那么它会被注入到当前运行时中，因此不会启动第二次会话运行。如果当前运行无法接受引导，OpenClaw 会等待当前运行结束后再开始处理该提示。
 
 ## 队列模式
 
-传入消息可以引导当前运行、等待下一轮，或两者兼有：
+`/queue` 控制当会话已经有一个活跃运行时，正常的入站消息会如何处理：
 
-- `steer`: 将引导消息排入当前活跃运行时。Pi 会在**当前助手轮次完成其工具调用执行之后**、下一次 LLM 调用之前，投递所有待处理的引导消息；Codex app-server 会收到一个批量的 `turn/steer`。如果运行当前没有处于活跃流式输出状态，或者引导不可用，OpenClaw 会回退到一个 followup 队列条目。
-- `queue` (legacy): 旧的一次一条引导方式。Pi 会在每个模型边界投递一条排队的引导消息；Codex app-server 会收到单独的 `turn/steer` 请求。除非你需要之前那种串行化行为，否则优先使用 `steer`。
-- `followup`: 将每条消息排队，等待当前运行结束后作为后续代理轮次处理。
-- `collect`: 在静默窗口之后，将排队消息合并为**单个**后续轮次。如果消息面向不同的渠道/线程，它们会分别清空，以保留路由。
-- `steer-backlog` (aka `steer+backlog`): 立即引导，**并且**为后续轮次保留同一条消息。
-- `interrupt` (legacy): 中止该会话的当前活跃运行，然后运行最新消息。
-
-Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followup 回复，因此流式界面看起来可能像重复消息。如果你希望每条传入消息只对应一个回复，请优先使用 `collect`/`steer`。
+- `steer`: 将消息注入到活跃运行时。Pi 会在当前助手轮次完成其工具调用执行之后、下一次 LLM 调用之前，传递所有待处理的引导消息；Codex app-server 会收到一个批量的 `turn/steer`。如果运行并未在主动流式输出，或者不可用引导，OpenClaw 会等待当前运行结束后再开始处理该提示。
+- `followup`: 不进行引导。将每条消息入队，待当前运行结束后再进行后续的代理轮次。
+- `collect`: 不进行引导。将队列中的消息合并为在静默窗口之后的 **单个** 后续轮次。如果消息针对不同的渠道/线程，则会分别清空以保持路由不变。
+- `interrupt`: 中止该会话的活跃运行，然后运行最新消息。
 
 有关运行时特定的时序和依赖行为，请参见
 [Steering queue](/concepts/queue-steering)。有关显式的 `/steer <message>`
@@ -67,13 +63,14 @@ Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followu
 
 ## 队列选项
 
-选项适用于 `followup`、`collect` 和 `steer-backlog`（以及当引导回退为 followup 时的 `steer` 或旧版 `queue`）：
+Options apply to queued delivery. `debounceMs` also sets the Codex steering
+quiet window in `steer` mode:
 
-- `debounceMs`: 在清空排队的 followup 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 单位。
+- `debounceMs`: 在清空排队的后续消息或 collect 批次之前的静默窗口；在 Codex 的 `steer` 模式下，则是在发送批量 `turn/steer` 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 单位。
 - `cap`: 每个会话的最大排队消息数。小于 `1` 的值会被忽略。
-- `drop: "summarize"`: 默认值。按需丢弃最旧的排队条目，保留紧凑摘要，并将其作为一个合成的 followup 提示注入。
-- `drop: "old"`: 按需丢弃最旧的排队条目，不保留摘要。
-- `drop: "new"`: 当队列已满时拒绝最新消息。
+- `drop: "summarize"`：默认值。按需丢弃最旧的队列条目，保留简短摘要，并将其作为合成的后续提示注入。
+- `drop: "old"`：按需丢弃最旧的队列条目，不保留摘要。
+- `drop: "new"`：当队列已满时拒绝最新消息。
 
 默认值：`debounceMs: 500`、`cap: 20`、`drop: summarize`。
 
@@ -90,7 +87,7 @@ Steer-backlog 表示你可以在被 steer 的运行之后再收到一个 followu
 
 ## 按会话覆盖
 
-- 发送 `/queue <mode>` 作为独立命令，可将该模式存储为当前会话的设置。
+- 发送 `/queue <steer|followup|collect|interrupt>` 作为独立命令，以存储当前会话的队列模式。
 - 选项可以组合：`/queue collect debounce:0.5s cap:25 drop:summarize`
 - `/queue default` 或 `/queue reset` 会清除会话覆盖。
 

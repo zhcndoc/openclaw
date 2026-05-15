@@ -24,8 +24,9 @@ title: "压缩"
 
 你会看到：
 
-- 在详细模式下显示 `🧹 Auto-compaction complete`。
-- `/status` 显示 `🧹 Compactions: <count>`。
+- `embedded run auto-compaction start` / `complete` in normal Gateway logs.
+- `🧹 Auto-compaction complete` in verbose mode.
+- `/status` showing `🧹 Compactions: <count>`.
 
 <Info>
 在压缩之前，OpenClaw 会自动提醒代理将重要笔记保存到 [memory](/concepts/memory) 文件中。这可以防止上下文丢失。

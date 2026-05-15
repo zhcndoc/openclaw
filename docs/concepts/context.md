@@ -20,10 +20,11 @@ Context 并不等同于“记忆”：记忆可以存储在磁盘上并在之后
 ## 快速开始（检查上下文）
 
 - `/status` → 快速查看“我的窗口有多满？”以及会话设置。
-- `/context list` → 查看注入了什么内容 + 大致大小（按文件和总量）。
+- `/context list` → 注入了什么 + 大致大小（按文件 + 总计）。
 - `/context detail` → 更深入的拆分：按文件、按工具 schema 大小、按技能条目大小，以及系统提示词大小。
-- `/usage tokens` → 在正常回复后附加每条回复的使用情况页脚。
-- `/compact` → 将较早的历史压缩成一个紧凑条目，以释放窗口空间。
+- `/context map` → 以 WinDirStat 风格的矩形树图像显示当前会话中被追踪的上下文贡献项。
+- `/usage tokens` → 在正常回复后附加每次回复的 token 使用页脚。
+- `/compact` → 将较早的历史总结为一个紧凑条目，以释放窗口空间。
 
 另见：[斜杠命令](/tools/slash-commands)、[Token 使用与成本](/reference/token-use)、[压缩](/concepts/compaction)。
 
@@ -73,6 +74,17 @@ Top tools (schema size):
 - exec: 6,240 chars (~1,560 tok)
 … (+N more tools)
 ```
+
+### `/context map`
+
+发送一个由最近一次缓存运行报告生成的图像。在本次会话中，如果正常消息尚未生成运行报告，`/context map` 会返回不可用消息，而不是渲染估算结果。矩形面积与已追踪的提示词字符数成正比：
+
+- 注入的工作区文件
+- 基础系统提示词文本
+- 技能提示词条目
+- 工具 JSON schemas
+
+当没有缓存运行报告时，`/context list`、`/context detail` 和 `/context json` 仍然可以检查按需估算结果。
 
 ## 什么计入上下文窗口
 

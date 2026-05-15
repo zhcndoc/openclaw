@@ -62,7 +62,15 @@ openclaw pairing approve telegram <CODE>
   </Step>
 
   <Step title="将机器人添加到群组">
-    将机器人添加到你的群组，然后设置 `channels.telegram.groups` 和 `groupPolicy` 以匹配你的访问模型。
+    将机器人添加到你的群组，然后获取该群组访问所需的两个 ID：
+
+    - 你的 Telegram 用户 ID，用于 `allowFrom` / `groupAllowFrom`
+    - Telegram 群聊 ID，用作 `channels.telegram.groups` 下的键
+
+    首次设置时，可从 `openclaw logs --follow`、转发 ID 机器人或 Bot API `getUpdates` 获取群聊 ID。群组被允许后，`/whoami@<bot_username>` 可以确认用户和群组 ID。
+
+    以 `-100` 开头的 Telegram supergroup 负 ID 就是群聊 ID。请把它们放在 `channels.telegram.groups` 下，而不是 `groupAllowFrom` 下。
+
   </Step>
 </Steps>
 
@@ -169,7 +177,29 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     单所有者机器人的实用模式：在 `channels.telegram.allowFrom` 中设置你的用户 ID，保持 `groupAllowFrom` 不设置，并在 `channels.telegram.groups` 下允许目标群组。
     运行时说明：如果 `channels.telegram` 完全缺失，运行时默认使用 fail-closed 的 `groupPolicy="allowlist"`，除非显式设置了 `channels.defaults.groupPolicy`。
 
-    示例：允许某个特定群组中的任何成员：
+    Owner-only group setup:
+
+```json5
+{
+  channels: {
+    telegram: {
+      enabled: true,
+      dmPolicy: "pairing",
+      allowFrom: ["<YOUR_TELEGRAM_USER_ID>"],
+      groupPolicy: "allowlist",
+      groups: {
+        "<GROUP_CHAT_ID>": {
+          requireMention: true,
+        },
+      },
+    },
+  },
+}
+```
+
+    Test it from the group with `@<bot_username> ping`. Plain group messages do not trigger the bot while `requireMention: true`.
+
+    Example: allow any member in one specific group:
 
 ```json5
 {
@@ -247,23 +277,25 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     获取群聊 ID：
 
-    - 将群消息转发给 `@userinfobot` / `@getidsbot`
+    - 将群消息转发到 `@userinfobot` / `@getidsbot`
     - 或从 `openclaw logs --follow` 中读取 `chat.id`
-    - 或检查 Bot API 的 `getUpdates`
+    - 或检查 Bot API `getUpdates`
+    - 群组被允许后，若启用了原生命令，运行 `/whoami@<bot_username>`
 
   </Tab>
 </Tabs>
 
 ## 运行时行为
 
-- Telegram 由 gateway 进程拥有和管理。
-- 路由是确定性的：Telegram 入站只会回到 Telegram（模型不会选择渠道）。
-- 入站消息会规范化为共享的 channel envelope，包含回复元数据、媒体占位符，以及 gateway 已观察到的 Telegram 回复的持久化回复链上下文。
-- 群会话按群组 ID 隔离。论坛话题会追加 `:topic:<threadId>` 以保持话题隔离。
-- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留线程 ID 以便回复，但默认仍把 DM 保持在扁平会话中。若你有意让 DM 话题会话隔离，请配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
-- 长轮询使用 grammY runner，并按聊天/按线程顺序处理。整体 runner sink 并发使用 `agents.defaults.maxConcurrent`。
-- 长轮询在每个 gateway 进程内都有保护，因此同一时刻只有一个活跃轮询器可以使用同一个 bot token。如果你仍然看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一 token。
-- 默认情况下，如果 120 秒内没有完成的 `getUpdates` 存活检查，长轮询 watchdog 会触发重启。只有在你的部署在长时间工作期间仍出现误报式轮询停滞重启时，才应增大 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
+- Telegram 由 gateway 进程拥有。
+- 路由是确定性的：Telegram 入站回复回 Telegram（模型不会选择渠道）。
+- 入站消息会规范化为共享渠道信封，并带有回复元数据、媒体占位符，以及 gateway 已观察到的 Telegram 回复的持久化回复链上下文。
+- 群会话按群 ID 隔离。论坛话题会附加 `:topic:<threadId>` 以保持话题隔离。
+- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留该线程 ID 用于回复，但默认仍将 DM 保持在扁平会话中。若你有意让 DM 也进行话题会话隔离，可配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
+- 长轮询使用 grammY runner，并按聊天/按线程顺序处理。整体 runner sink 并发度使用 `agents.defaults.maxConcurrent`。
+- 多账号启动会限制并发的 Telegram `getMe` 探测，因此大型机器人集群不会同时对所有账号进行探测。
+- 长轮询在每个 gateway 进程内受保护，因此同一时刻只能有一个活动轮询器使用某个 bot token。如果你仍然看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用相同 token。
+- 默认情况下，长轮询看门狗会在 120 秒未完成 `getUpdates` 活性检查后重启。只有在部署中仍然因长时间工作而出现误判的轮询卡死重启时，才增加 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
 - Telegram Bot API 不支持已读回执（`sendReadReceipts` 不适用）。
 
 ## 功能参考
@@ -283,7 +315,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     - `streaming.preview.commandText` 控制这些工具进度行中的命令/执行细节：`raw`（默认，保留已发布行为）或 `status`（仅工具标签）
     - 已检测到旧版 `channels.telegram.streamMode` 和布尔类型的 `streaming` 值；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
 
-    工具进度预览更新是工具运行时显示的简短状态行，例如命令执行、文件读取、计划更新或补丁摘要。Telegram 默认启用这些功能，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。若希望保留答案文本的已编辑预览，但隐藏工具进度行，请设置：
+    Tool-progress preview updates are the short status lines shown while tools run, for example command execution, file reads, planning updates, patch summaries, or Codex preamble/commentary text in Codex app-server mode. Telegram keeps these enabled by default to match released OpenClaw behavior from `v2026.4.22` and later. To keep the edited preview for answer text but hide tool-progress lines, set:
 
     ```json
     {
@@ -363,9 +395,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   <Accordion title="格式化和 HTML 回退">
     发出的文本使用 Telegram `parse_mode: "HTML"`。
 
-    - 类 Markdown 文本会被渲染为 Telegram 安全的 HTML。
-    - 原始模型 HTML 会被转义，以减少 Telegram 解析失败。
-    - 如果 Telegram 拒绝解析后的 HTML，OpenClaw 会重试为纯文本。
+    - Markdown-ish text is rendered to Telegram-safe HTML.
+    - Supported Telegram HTML tags are preserved; unsupported HTML is escaped.
+    - If Telegram rejects parsed HTML, OpenClaw retries as plain text.
 
     链接预览默认启用，可通过 `channels.telegram.linkPreview: false` 禁用。
 
@@ -426,7 +458,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
        - 当只有一个待处理请求时使用 `/pair approve`
        - `/pair approve latest` 用于最近的请求
 
-    设置代码包含一个短期有效的启动令牌。内置的启动接管会将主节点令牌保持在 `scopes: []`；任何接管的操作员令牌都仅限于 `operator.approvals`、`operator.read`、`operator.talk.secrets` 和 `operator.write`。启动范围检查带有角色前缀，因此操作员允许列表只满足操作员请求；非操作员角色仍然需要其各自角色前缀下的 scopes。
+    The setup code carries a short-lived bootstrap token. Built-in setup-code bootstrap is node-only: the first connect creates a pending node request, and after approval the Gateway returns a durable node token with `scopes: []`. It does not return a handed-off operator token; operator access requires a separate approved operator pairing or token flow.
 
     如果设备使用更改后的认证信息重试（例如角色/scopes/公钥），之前待处理的请求会被新请求取代，而新请求会使用不同的 `requestId`。批准前请重新运行 `/pair pending`。
 
@@ -495,7 +527,29 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 }
 ```
 
-    回调点击会作为文本传给代理：
+    Mini App button example:
+
+```json5
+{
+  action: "send",
+  channel: "telegram",
+  to: "123456789",
+  message: "Open app:",
+  presentation: {
+    blocks: [
+      {
+        type: "buttons",
+        buttons: [{ label: "Launch", web_app: { url: "https://example.com/app" } }],
+      },
+    ],
+  },
+}
+```
+
+    Telegram `web_app` buttons work only in private chats between a user and the
+    bot.
+
+    Callback clicks are passed to the agent as text:
     `callback_data: <value>`
 
   </Accordion>
@@ -539,7 +593,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     当启用回复线程且原始 Telegram 文本或标题可用时，OpenClaw 会自动包含原生 Telegram 引用摘录。Telegram 对原生引用文本的上限是 1024 个 UTF-16 代码单元，因此更长的消息会从开头截取引用；如果 Telegram 拒绝该引用，则回退为普通回复。
 
-    注意：`off` 会禁用隐式回复线程。显式的 `[[reply_to_*]]` 标签仍会被遵循。
+    注意：`off` 会禁用隐式回复线程。显式的 `[[reply_to_*]]` 标签仍然会被遵循。
 
   </Accordion>
 
@@ -763,17 +817,17 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
   </Accordion>
 
-  <Accordion title="限制、重试与 CLI 目标">
-    - `channels.telegram.textChunkLimit` 默认值为 4000。
-    - `channels.telegram.chunkMode="newline"` 会优先按段落边界（空行）再进行长度切分。
-    - `channels.telegram.mediaMaxMb`（默认 100）限制入站和出站 Telegram 媒体大小。
-    - `channels.telegram.mediaGroupFlushMs`（默认 500）控制 Telegram 相册/媒体组在 OpenClaw 作为一条入站消息分发前的缓冲时长。如果相册分片到达较晚，请增大它；如果想降低相册回复延迟，请减小它。
-    - `channels.telegram.timeoutSeconds` 可覆盖 Telegram API 客户端超时（未设置时使用 grammY 默认值）。bot 客户端会把低于 60 秒出站文本/typing 请求保护阈值的配置值截断，因此 grammY 不会在 OpenClaw 的传输保护和回退机制运行之前中止可见回复投递。长轮询仍使用 45 秒的 `getUpdates` 请求保护阈值，以免空闲轮询被无限期放弃。
-    - `channels.telegram.pollingStallThresholdMs` 默认为 `120000`；仅在误报式轮询停滞重启时调节到 `30000` 到 `600000` 之间。
-    - 群上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
-    - 回复/引用/转发的补充上下文在 gateway 观察到父消息后会规范化为“最近优先”的回复链；已观察到的消息缓存会与会话存储并行持久化。Telegram 在更新中只包含一层浅的 `reply_to_message`，因此比缓存更早的链会受到 Telegram 当前更新载荷的限制。
-    - Telegram allowlist 主要用于限制谁可以触发代理，而不是完整的补充上下文脱敏边界。
-    - DM 历史控制：
+  <Accordion title="Limits, retry, and CLI targets">
+    - `channels.telegram.textChunkLimit` default is 4000.
+    - `channels.telegram.chunkMode="newline"` prefers paragraph boundaries (blank lines) before length splitting.
+    - `channels.telegram.mediaMaxMb` (default 100) caps inbound and outbound Telegram media size.
+    - `channels.telegram.mediaGroupFlushMs` (default 500) controls how long Telegram albums/media groups are buffered before OpenClaw dispatches them as one inbound message. Increase it if album parts arrive late; decrease it to reduce album reply latency.
+    - `channels.telegram.timeoutSeconds` overrides Telegram API client timeout (if unset, grammY default applies). Bot clients clamp configured values below the 60-second outbound text/typing request guard so grammY does not abort visible reply delivery before OpenClaw's transport guard and fallback can run. Long polling still uses a 45-second `getUpdates` request guard so idle polls are not abandoned indefinitely.
+    - `channels.telegram.pollingStallThresholdMs` defaults to `120000`; tune between `30000` and `600000` only for false-positive polling-stall restarts.
+    - group context history uses `channels.telegram.historyLimit` or `messages.groupChat.historyLimit` (default 50); `0` disables.
+    - reply/quote/forward supplemental context is normalized into one selected conversation context window when the gateway has observed the parent messages; the observed-message cache is persisted beside the session store. Telegram only includes one shallow `reply_to_message` in updates, so chains older than the cache are limited to Telegram's current update payload.
+    - Telegram allowlists primarily gate who can trigger the agent, not a full supplemental-context redaction boundary.
+    - DM history controls:
       - `channels.telegram.dmHistoryLimit`
       - `channels.telegram.dms["<user_id>"].historyLimit`
     - `channels.telegram.retry` 配置适用于 Telegram 发送辅助工具（CLI/工具/动作）在处理可恢复的出站 API 错误时使用。入站最终回复投递也会对 Telegram 预连接失败使用有界的安全发送重试，但不会重试可能导致可见消息重复的歧义性发送后网络封包。
@@ -805,9 +859,9 @@ openclaw message poll --channel telegram --target -1001234567890:topic:42 \
 
     Telegram 发送还支持：
 
-    - 当 `channels.telegram.capabilities.inlineButtons` 允许时，使用带 `buttons` 块的 `--presentation` 进行内联键盘
-    - 在机器人可以对该聊天进行置顶时，使用 `--pin` 或 `--delivery '{"pin":true}'` 请求置顶发送
-    - 使用 `--force-document` 将出站图片和 GIF 作为文档发送，而不是压缩照片或动图上传
+    - `--presentation` with `buttons` blocks for inline keyboards when `channels.telegram.capabilities.inlineButtons` allows it
+    - `--pin` or `--delivery '{"pin":true}'` to request pinned delivery when the bot can pin in that chat
+    - `--force-document` to send outbound images, GIFs, and videos as documents instead of compressed photo, animated-media, or video uploads
 
     动作开关：
 

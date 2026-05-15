@@ -11,12 +11,16 @@ OpenClaw 可以在你已经在使用的任何聊天应用上与你交流。每�
 
 ## 传递说明
 
-- Telegram 回复中包含 markdown 图片语法（例如 `![alt](url)`）时，
-  在可能的情况下，会在最终出站路径中转换为媒体回复。
-- Slack 的多人私信会按群聊路由，因此 MPIM 对话适用群组策略、提及
-  行为和群组会话规则。
-- WhatsApp 的设置采用按需安装：在插件包尚未安装时，引导流程也可以显示设置步骤，
-  而 Gateway 仅在频道真正处于活动状态时才加载 WhatsApp 运行时。
+- Telegram replies that contain markdown image syntax, such as `![alt](url)`,
+  are converted into media replies on the final outbound path when possible.
+- Slack multi-person DMs route as group chats, so group policy, mention
+  behavior, and group-session rules apply to MPIM conversations.
+- WhatsApp setup is install-on-demand: onboarding can show the setup flow before
+  the plugin package is installed, and the Gateway loads the external
+  ClawHub/npm plugin only when the channel is actually active.
+- Channels that accept bot-authored inbound messages can use shared
+  [bot loop protection](/channels/bot-loop-protection) to prevent bot pairs from
+  replying to each other indefinitely.
 
 ## 支持的频道
 

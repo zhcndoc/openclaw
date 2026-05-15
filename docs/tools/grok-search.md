@@ -9,10 +9,10 @@ title: "Grok 搜索"
 OpenClaw 支持将 Grok 作为 `web_search` 提供方，使用 xAI 基于网络的
 响应生成由实时搜索结果支撑并带有引用的 AI 综合答案。
 
-同一个 `XAI_API_KEY` 也可以为内置的 `x_search` 工具提供支持，用于 X
-（原 Twitter）帖子搜索。如果你将密钥存储在
-`plugins.entries.xai.config.webSearch.apiKey` 下，OpenClaw 现在还会将其
-作为捆绑的 xAI 模型提供方的备用密钥。
+同一个 xAI API 密钥也可为内置的 `x_search` 工具提供支持，用于 X
+（原 Twitter）帖子搜索以及 `code_execution` 工具。如果你将该密钥存储在
+`plugins.entries.xai.config.webSearch.apiKey` 下，OpenClaw 现在也会将其
+作为捆绑的 xAI 模型提供方的回退选项。
 
 对于帖子级别的 X 指标，例如转发、回复、收藏或浏览量，请优先使用
 `x_search` 并提供精确的帖子 URL 或状态 ID，而不是宽泛的搜索

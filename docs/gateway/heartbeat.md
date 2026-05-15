@@ -8,7 +8,7 @@ sidebarTitle: "Heartbeat"
 ---
 
 <Note>
-**Heartbeat vs cron?** 参见 [Automation & Tasks](/automation) 以了解何时使用各自功能。
+**Heartbeat vs cron?** 参见 [Automation](/automation) 了解何时使用各自功能的指导。
 </Note>
 
 Heartbeat 会在主会话中运行**定期的 agent 回合**，这样模型就能在不刷屏的情况下，提出任何需要关注的内容。
@@ -46,11 +46,11 @@ Heartbeat 是一个计划好的主会话回合——它**不会**创建 [后台�
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
-        directPolicy: "allow", // 默认：允许直接/DM 目标；设为 "block" 可抑制
+        target: "last", // 显式发送给最后一个联系人（默认是 "none"）
+        directPolicy: "allow", // 默认：允许直接/DM 目标；设置为 "block" 可抑制
         lightContext: true, // 可选：仅从 bootstrap 文件中注入 HEARTBEAT.md
-        isolatedSession: true, // 可选：每次运行都使用新会话（无对话历史）
-        skipWhenBusy: true, // 可选：在子 agent 或嵌套 lane 忙碌时也延后
+        isolatedSession: true, // 可选：每次运行使用新会话（无对话历史）
+        skipWhenBusy: true, // 可选：当该 agent 的子 agent 或嵌套通道繁忙时也延后
         // activeHours: { start: "08:00", end: "24:00" },
         // includeReasoning: true, // 可选：也发送单独的 `Reasoning:` 消息
       },
@@ -61,12 +61,12 @@ Heartbeat 是一个计划好的主会话回合——它**不会**创建 [后台�
 
 ## 默认值
 
-- 间隔：`30m`（如果检测到 Anthropic OAuth/token auth 为身份验证模式，则为 `1h`，包括 Claude CLI 复用）。设置 `agents.defaults.heartbeat.every` 或按 agent 设置 `agents.list[].heartbeat.every`；使用 `0m` 可禁用。
-- 提示正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`如果存在 HEARTBEAT.md（工作区上下文），请阅读它。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。`
-- heartbeat 提示会作为用户消息**逐字**发送。只有在默认 agent 启用 heartbeats 时，系统提示中才会包含 "Heartbeat" 部分，并且该运行会被内部标记。
-- 当 heartbeats 使用 `0m` 禁用时，正常运行也会从 bootstrap 上下文中省略 `HEARTBEAT.md`，这样模型就不会看到仅用于 heartbeat 的说明。
-- 活跃时段（`heartbeat.activeHours`）会根据所配置的时区进行检查。在窗口之外，heartbeats 会被跳过，直到下一个落在窗口内的 tick。
-- 当 cron 工作处于活动或排队状态时，heartbeats 会自动延后。将 `heartbeat.skipWhenBusy: true` 设为在额外繁忙的 lanes（子 agent 或嵌套命令工作）也延后；这对本地 Ollama 和其他受限的单运行时主机很有用。
+- 间隔：`30m`（如果检测到 Anthropic OAuth/token auth 模式，则为 `1h`，包括 Claude CLI 复用）。设置 `agents.defaults.heartbeat.every` 或按 agent 设置 `agents.list[].heartbeat.every`；使用 `0m` 可禁用。
+- 提示正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。`
+- heartbeat 提示会作为用户消息**原样**发送。仅当默认 agent 启用 heartbeats 时，系统提示中才会包含 “Heartbeat” 部分，并且该运行会被内部标记。
+- 当使用 `0m` 禁用 heartbeats 时，正常运行也会从 bootstrap 上下文中省略 `HEARTBEAT.md`，因此模型不会看到仅供 heartbeat 使用的指令。
+- 活跃时段（`heartbeat.activeHours`）会在配置的时区中检查。超出窗口时，heartbeats 会被跳过，直到下一个落入窗口内的 tick。
+- 当 cron 工作处于活动或排队状态时，heartbeats 会自动延后。设置 `heartbeat.skipWhenBusy: true` 可进一步在该 agent 自身的 session 绑定子 agent 或嵌套命令通道繁忙时也延后；仅仅因为另一个 agent 正在处理子 agent 工作，兄弟 agent 不再暂停。
 
 ## heartbeat 提示的用途
 
@@ -98,15 +98,15 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
       heartbeat: {
         every: "30m", // 默认：30m（0m 会禁用）
         model: "anthropic/claude-opus-4-6",
-        includeReasoning: false, // default: false (deliver separate Reasoning: message when available)
-        lightContext: false, // default: false; true keeps only HEARTBEAT.md from workspace bootstrap files
-        isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
-        skipWhenBusy: false, // default: false; true also waits for subagent/nested lanes
-        target: "last", // default: none | options: last | none | <channel id> (core or plugin, e.g. "imessage")
-        to: "+15551234567", // optional channel-specific override
-        accountId: "ops-bot", // optional multi-account channel id
-        prompt: "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
-        ackMaxChars: 300, // max chars allowed after HEARTBEAT_OK
+        includeReasoning: false, // 默认：false（在可用时传递单独的 Reasoning: 消息）
+        lightContext: false, // 默认：false；为 true 时仅保留工作区 bootstrap 文件中的 HEARTBEAT.md
+        isolatedSession: false, // 默认：false；为 true 时每次 heartbeat 在新会话中运行（无对话历史）
+        skipWhenBusy: false, // 默认：false；为 true 时也会等待该 agent 的子 agent/嵌套通道
+        target: "last", // 默认：none | 可选：last | none | <channel id>（核心或插件，例如 "imessage"）
+        to: "+15551234567", // 可选的按通道覆盖
+        accountId: "ops-bot", // 可选的多账户 channel id
+        prompt: "如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。",
+        ackMaxChars: 300, // HEARTBEAT_OK 之后允许的最大字符数
       },
     },
   },
@@ -235,7 +235,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
   为 true 时，每次 heartbeat 都会在没有之前对话历史的新会话中运行。使用与 cron `sessionTarget: "isolated"` 相同的隔离模式。可大幅降低每次 heartbeat 的 token 成本。与 `lightContext: true` 结合可获得最大节省。传递路由仍然使用主会话上下文。
 </ParamField>
 <ParamField path="skipWhenBusy" type="boolean" default="false">
-  为 true 时，heartbeat 运行会在额外繁忙的 lanes 上延后：子 agent 或嵌套命令工作。cron lanes 始终会延后 heartbeats，即使没有这个标志也是如此，因此本地模型主机不会同时运行 cron 和 heartbeat 提示。
+  当为 true 时，heartbeat 会在该 agent 额外繁忙的通道上延后：它自己的 session 绑定子 agent 或嵌套命令工作。cron 通道总会延后 heartbeats，即使没有这个标志，因此本地模型主机不会同时运行 cron 和 heartbeat 提示。
 </ParamField>
 <ParamField path="session" type="string">
   heartbeat 运行的可选会话键。
@@ -289,14 +289,14 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 ## 投递行为
 
 <AccordionGroup>
-  <Accordion title="会话和目标路由">
-    - 心跳默认在代理的主会话中运行（`agent:<id>:<mainKey>`），如果 `session.scope = "global"` 则为 `global`。设置 `session` 可覆盖为特定频道会话（Discord/WhatsApp 等）。
+  <Accordion title="Session and target routing">
+    - 心跳默认在代理的主会话中运行（`agent:<id>:<mainKey>`），或者在 `session.scope = "global"` 时使用 `global`。设置 `session` 可覆盖为特定的频道会话（Discord/WhatsApp 等）。
     - `session` 只影响运行上下文；投递由 `target` 和 `to` 控制。
-    - 要投递到特定频道/收件人，请设置 `target` + `to`。当 `target: "last"` 时，投递会使用该会话的最后一个外部频道。
-    - 默认情况下，心跳投递允许直接/DM 目标。设置 `directPolicy: "block"` 可在仍然运行心跳轮次的同时，禁止向直接目标发送。
-    - 如果主队列、目标会话泳道、cron 泳道或正在运行的 cron 作业繁忙，心跳会被跳过并稍后重试。
-    - 如果 `skipWhenBusy: true`，子代理和嵌套泳道也会延后心跳运行。
-    - 如果 `target` 解析后没有外部目的地，运行仍会发生，但不会发送任何外发消息。
+    - 要投递到特定频道/收件人，请设置 `target` + `to`。使用 `target: "last"` 时，投递将使用该会话的最后一个外部频道。
+    - 心跳投递默认允许直接/DM 目标。设置 `directPolicy: "block"` 可在仍运行心跳轮次的同时禁止向直接目标发送。
+    - 如果主队列、目标会话通道、cron 通道或活跃的 cron 作业正忙，则会跳过心跳并稍后重试。
+    - 如果 `skipWhenBusy: true`，此代理按会话键划分的子代理和嵌套通道也会推迟心跳运行。其他代理繁忙的通道不会推迟此代理。
+    - 如果 `target` 解析后没有外部目的地，运行仍会发生，但不会发送任何出站消息。
 
   </Accordion>
   <Accordion title="可见性和跳过行为">
@@ -485,7 +485,7 @@ openclaw system event --text "检查紧急跟进事项" --mode now
 
 ## 相关内容
 
-- [自动化与任务](/automation) — 一览所有自动化机制
-- [后台任务](/automation/tasks) — 如何跟踪分离式工作
-- [时区](/concepts/timezone) — 时区如何影响心跳调度
-- [故障排除](/automation/cron-jobs#troubleshooting) — 调试自动化问题
+- [Automation](/automation) — 一览所有自动化机制
+- [Background Tasks](/automation/tasks) — 如何跟踪分离的工作
+- [Timezone](/concepts/timezone) — 时区如何影响心跳调度
+- [Troubleshooting](/automation/cron-jobs#troubleshooting) — 自动化问题排查

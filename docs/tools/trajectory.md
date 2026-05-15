@@ -153,6 +153,20 @@ export OPENCLAW_TRAJECTORY=0
 转录分支，但仅运行时文件（例如编译后的上下文、
 提供方工件和提示元数据）可能会缺失。
 
+## 调整 flush 超时
+
+OpenClaw 会在代理清理期间刷写运行时轨迹侧车文件。默认
+清理超时为 10,000 ms。在慢速磁盘或大型存储上，请在启动 OpenClaw 之前设置
+`OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS`：
+
+```bash
+export OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
+```
+
+这会控制 OpenClaw 何时记录 `pi-trajectory-flush` 超时并继续。
+它不会改变轨迹大小上限。要调整所有未传入显式超时的代理清理步骤，
+请设置 `OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS`。
+
 ## 隐私和限制
 
 轨迹包是为支持和调试设计的，不适合公开发布。OpenClaw 会在写入导出文件之前对敏感值进行脱敏：

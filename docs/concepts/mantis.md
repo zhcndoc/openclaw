@@ -202,15 +202,57 @@ motion-trimmed GIF 预览，链接到对应的 motion-trimmed MP4 片段，并�
 `crabbox media preview` 生成 motion-trimmed 预览，上传完整工件
 目录，并可选择在目标 PR 上发布内联证据评论。它默认使用 AWS 作为 desktop lease 提供方，并暴露一个手动 provider 输入，以便操作员在 AWS 容量缓慢或不可用时切换到 Hetzner。当你想要的是“带 Slack 和 claw 正在运行的 Linux desktop”，而不是仅仅一个 bot-to-bot Slack 转录时，请使用这条线路。
 
-每个发布 PR 的场景都会在其报告旁写入 `mantis-evidence.json`。
-该 schema 是场景代码与 GitHub 评论之间的交接接口：
+`Mantis Telegram Live` 将现有的 Telegram live QA 线路封装进同一条 PR
+证据管道中。它在独立 worktree 中检出受信任的 candidate ref，运行 `pnpm openclaw qa telegram --credential-source convex
+--credential-role ci`，从 Telegram QA 摘要和 observed-message 工件生成一个
+`mantis-evidence.json` 清单，通过 Crabbox desktop browser 渲染去敏后的
+transcript HTML，使用 `crabbox media preview` 生成 motion-trimmed GIF，
+并在有 PR 编号时发布内联 PR 证据评论。该线路以 transcript-visual 为主，
+而不是已登录的 Telegram Web 证明：Telegram Bot API 能提供稳定的实时消息证据，但正常的 Mantis 自动化不需要 Telegram Web 登录状态。
+
+`Mantis Telegram Desktop Proof` 是 agentic 的原生 Telegram Desktop
+before/after 包装器。维护者可以从 PR 评论中使用 `@Mantis telegram desktop proof` 触发它，
+也可以在 Actions UI 中通过自由形式说明触发，或者通过通用的
+`Mantis Scenario` 分发器触发。该 workflow 会将 PR、baseline ref、candidate ref 和维护者说明交给 Codex。
+agent 读取 PR，决定什么 Telegram 可见行为可以证明该变化，针对 baseline 和
+candidate 运行真实用户的 Crabbox Telegram Desktop proof 线路，反复迭代直到原生 GIF 可用，
+将配对的 `motionPreview` 工件写入 `mantis-evidence.json`，上传 bundle，
+并在有 PR 编号时发布一个两列式 PR 证据表。
+
+对于有人参与的 Telegram desktop 设置，请使用场景构建器：
+
+```bash
+pnpm openclaw qa mantis telegram-desktop-builder \
+  --credential-source convex \
+  --credential-role maintainer \
+  --keep-lease
+```
+
+builder 会租用或复用一台 Crabbox desktop，安装原生 Linux
+Telegram Desktop 二进制文件，可选地恢复用户会话归档，使用租用到的 Telegram SUT bot token 配置
+OpenClaw，在端口 `38974` 上启动 `openclaw gateway run`，向租用的私有群组发布驱动 bot 就绪消息，然后从可见的 VNC desktop 捕获截图和 MP4。bot
+token 不会把 Telegram Desktop 登录；它只用于配置 OpenClaw。desktop
+viewer 是一个独立的 Telegram 用户会话，通过
+`--telegram-profile-archive-env <name>` 恢复，或者通过 VNC 手动创建并使用
+`--keep-lease` 保持存活。
+
+有用的 Telegram desktop builder 标志：
+
+- `--lease-id <cbx_...>` 在操作员已经登录 Telegram Desktop 的 VM 上重新运行。
+- `--telegram-profile-archive-env <name>` 从该环境变量读取 base64 编码的 `.tgz` Telegram Desktop profile 归档，并在启动前恢复它。
+- `--telegram-profile-dir <remote-path>` 控制远程 Telegram Desktop profile 目录。默认值为 `$HOME/.local/share/TelegramDesktop`。
+- `--no-gateway-setup` 会安装并打开 Telegram Desktop，但不配置 OpenClaw。
+- `--credential-source convex --credential-role ci` 使用共享凭据 broker，而不是直接使用 Telegram 环境 token。
+
+每个发布 PR 的场景都会在其报告旁边写入 `mantis-evidence.json`。
+该 schema 是场景代码与 GitHub 评论之间的交接：
 
 ```json
 {
   "schemaVersion": 1,
   "id": "discord-status-reactions",
   "title": "Mantis Discord Status Reactions QA",
-  "summary": "Human-readable top summary for the PR comment.",
+  "summary": "用于 PR 评论的人类可读顶部摘要。",
   "scenario": "discord-status-reactions-tool-only",
   "comparison": {
     "baseline": { "sha": "...", "status": "fail", "expected": "queued-only" },
@@ -231,9 +273,10 @@ motion-trimmed GIF 预览，链接到对应的 motion-trimmed MP4 片段，并�
 }
 ```
 
-Artifact `path` 值是相对于 manifest 目录的。`targetPath`
-值是 `qa-artifacts` 分支发布目录下的相对路径。
-发布器会拒绝路径穿越，并在可选预览或视频不可用时跳过标记为
+Artifact `path` 值相对于清单目录。`targetPath`
+值是上传到 Actions artifact bundle 内部的相对路径。Mantis
+不能将证据发布到 Git 分支；Git 历史不是 artifact 存储。该
+publisher 会拒绝路径穿越，并在可选预览或视频不可用时跳过标记为
 `"required": false` 的条目。
 
 支持的 artifact kind：
@@ -246,7 +289,11 @@ Artifact `path` 值是相对于 manifest 目录的。`targetPath`
 - `metadata`：JSON/log sidecar。
 - `report`：Markdown 报告。
 
-可复用的发布器是 `scripts/mantis/publish-pr-evidence.mjs`。workflow 会使用 manifest、目标 PR、`qa-artifacts` 目标根目录、评论标记、Actions artifact URL、run URL 以及 request source 来调用它。它会将声明的工件复制到 `qa-artifacts` 分支，构建一个以摘要优先的 PR 评论，内联图片/预览并链接视频，然后更新已有的标记评论或创建一个新的。
+可复用的 publisher 是 `scripts/mantis/publish-pr-evidence.mjs`。工作流
+会使用清单、目标 PR、artifact root、评论标记、Actions
+artifact URL、run URL 和请求来源来调用它。工作流通过
+`actions/upload-artifact` 上传所声明的文件；publisher 会构建一个以摘要为先的 PR
+评论，链接到该 artifact 并列出 bundle 中的文件名。它不会提交或推送证据文件。
 
 你也可以直接从 PR 评论触发 status-reactions 运行：
 
@@ -261,6 +308,19 @@ Artifact `path` 值是相对于 manifest 目录的。`targetPath`
 ```text
 @Mantis discord status reactions baseline=origin/main candidate=HEAD
 ```
+
+Telegram live QA 也可以从 PR 评论触发：
+
+```text
+@Mantis telegram
+@Mantis telegram scenario=telegram-status-command
+@Mantis telegram scenarios=telegram-status-command,telegram-mentioned-message-reply
+```
+
+默认情况下，它使用当前 PR head SHA 作为候选，并运行
+`telegram-status-command`。维护者在需要特定 ref 或
+预热好的 Crabbox desktop 时，可以覆盖 `candidate=...`、
+`provider=aws|hetzner` 和 `lease=<cbx_...>`。
 
 ClawSweeper 命令示例：
 
@@ -299,13 +359,13 @@ ClawSweeper 评审发现，将 PR 或 issue 映射到推荐的 Mantis 场景。
 
 ## Discord MVP
 
-第一个场景应该针对 guild 频道中的 Discord status reactions，其中源回复投递模式为 `message_tool_only`。
+第一个场景应该针对 guild 频道中的 Discord 状态 reaction，其中源回复投递模式为 `message_tool_only`。
 
 为什么它是一个很好的 Mantis 起点：
 
 - 它在 Discord 中以触发消息上的 reaction 形式可见。
 - 它通过 Discord 消息 reaction 状态具有很强的 REST oracle。
-- 它会涉及真实的 OpenClaw Gateway、Discord bot 认证、消息分发、源回复投递模式、status reaction 状态以及模型轮次生命周期。
+- 它会涉及真实的 OpenClaw Gateway、Discord bot 认证、消息分发、源回复投递模式、状态 reaction 状态以及模型轮次生命周期。
 - 它足够聚焦，能够确保第一个实现足够严谨。
 
 预期的场景形态：
@@ -493,7 +553,13 @@ Mantis 运行器绝不能打印：
 
 ## GitHub artifacts 和 PR 评论
 
-Mantis 工作流应将完整证据包作为短期有效的 Actions artifact 上传。 当工作流是针对 bug 报告或修复 PR 运行时，它还应将脱敏后的 PNG 截图发布到 `qa-artifacts` 分支，并在该 bug 或修复 PR 上 upsert 一条带有前后对比截图的评论。不要只把主要证据发布到一个通用的 QA 自动化 PR 上。原始日志、观察到的消息以及其他体积较大的证据保留在 Actions artifact 中。
+Mantis workflows should upload the full evidence bundle as a short-lived Actions
+artifact. When the workflow is run for a bug report or fix PR, it should also
+upsert a comment on that bug or fix PR with a short summary and a link to the
+Actions artifact. Do not post the primary proof only on a generic QA automation
+PR. Do not use Git branches, tags, or commits as Mantis artifact storage. Raw
+logs, screenshots, recordings, observed messages, and other bulky evidence stay
+in the Actions artifact.
 
 生产工作流应使用 Mantis GitHub App 发布这些评论，而不是使用 `github-actions[bot]`。将 app id 和私钥分别存为 `MANTIS_GITHUB_APP_ID` 和 `MANTIS_GITHUB_APP_PRIVATE_KEY` GitHub Actions secrets。工作流使用隐藏标记作为 upsert key，当 token 可以编辑该评论时更新它；当更旧的 bot-owned 标记无法被编辑时，则创建一条新的、归 Mantis 所有的评论。
 

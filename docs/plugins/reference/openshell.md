@@ -12,7 +12,7 @@ title: "Openshell 插件"
 ## 分发
 
 - Package: `@openclaw/openshell-sandbox`
-- Install route: 包含在 OpenClaw 中
+- Install route: npm; ClawHub
 
 ## 表面
 

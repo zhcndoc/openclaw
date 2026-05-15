@@ -13,7 +13,7 @@ title: "iMessage"
 </Note>
 
 <Warning>
-BlueBubbles 支持已移除。请将 `channels.bluebubbles` 配置迁移到 `channels.imessage`；OpenClaw 仅通过 `imsg` 支持 iMessage。
+BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `channels.imessage`；OpenClaw 仅通过 `imsg` 支持 iMessage。从 [BlueBubbles 移除与 imsg iMessage 路径](/announcements/bluebubbles-imessage) 查看简短公告，或从 [来自 BlueBubbles](/channels/imessage-from-bluebubbles) 查看完整迁移表。
 </Warning>
 
 状态：原生外部 CLI 集成。Gateway 会启动 `imsg rpc`，并通过 stdio 上的 JSON-RPC 通信（没有单独的守护进程/端口）。高级操作需要 `imsg launch` 以及成功的私有 API 探测。
@@ -217,7 +217,7 @@ imsg send <handle> "test"
 
     允许列表字段：`channels.imessage.allowFrom`。
 
-    允许列表条目可以是 handle 或聊天目标（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。
+    Allowlist 条目必须标识发送者：handle 或静态发送者访问组（`accessGroup:<name>`）。针对诸如 `chat_id:*`、`chat_guid:*` 或 `chat_identifier:*` 之类的聊天目标，请使用 `channels.imessage.groupAllowFrom`；针对数字 `chat_id` 注册表键，请使用 `channels.imessage.groups`。
 
   </Tab>
 
@@ -230,8 +230,10 @@ imsg send <handle> "test"
 
     群组发送者允许列表：`channels.imessage.groupAllowFrom`。
 
-    运行时回退：如果未设置 `groupAllowFrom`，iMessage 群组发送者检查会在可用时回退到 `allowFrom`。
-    运行时说明：如果 `channels.imessage` 完全缺失，运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
+    `groupAllowFrom` 条目也可以引用静态发送者访问组（`accessGroup:<name>`）。
+
+    运行时回退：如果未设置 `groupAllowFrom`，iMessage 群组发送者检查会使用 `allowFrom`；当私信和群组准入应不同时时，请设置 `groupAllowFrom`。
+    运行时说明：如果完全缺少 `channels.imessage`，运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
 
     <Warning>
     群组路由有 **两个** 依次执行的允许列表门槛，而且两者都必须通过：
@@ -537,6 +539,19 @@ imsg send <handle> "test"
     早于按方法级别能力列表的旧版 `imsg` 构建会静默关闭输入状态/已读；OpenClaw 每次重启只会记录一次警告，因此缺失回执的原因可以追溯。
 
   </Accordion>
+
+  <Accordion title="入站 tapback">
+    OpenClaw 会订阅 iMessage tapback，并将接受到的反应作为系统事件路由，而不是普通消息文本，因此用户的 tapback 不会触发普通回复循环。
+
+    通知模式由 `channels.imessage.reactionNotifications` 控制：
+
+    - `"own"`（默认）：仅在用户对机器人生成的消息作出反应时通知。
+    - `"all"`：对所有来自授权发送者的入站 tapback 通知。
+    - `"off"`：忽略入站 tapback。
+
+    按账号覆盖使用 `channels.imessage.accounts.<id>.reactionNotifications`。
+
+  </Accordion>
 </AccordionGroup>
 
 ## 配置写入
@@ -777,9 +792,10 @@ openclaw channels status --probe --channel imessage
 
 ## 相关内容
 
-- [Channels Overview](/channels) — 所有受支持的渠道
-- [Coming from BlueBubbles](/channels/imessage-from-bluebubbles) — 配置翻译表和逐步切换
-- [Pairing](/channels/pairing) — DM 认证和配对流程
-- [Groups](/channels/groups) — 群聊行为和提及门控
-- [Channel Routing](/channels/channel-routing) — 消息的会话路由
-- [Security](/gateway/security) — 访问模型和加固
+- [Channels Overview](/channels) — all supported channels
+- [BlueBubbles removal and the imsg iMessage path](/announcements/bluebubbles-imessage) — announcement and migration summary
+- [Coming from BlueBubbles](/channels/imessage-from-bluebubbles) — config translation table and step-by-step cutover
+- [Pairing](/channels/pairing) — DM authentication and pairing flow
+- [Groups](/channels/groups) — group chat behavior and mention gating
+- [Channel Routing](/channels/channel-routing) — session routing for messages
+- [Security](/gateway/security) — access model and hardening

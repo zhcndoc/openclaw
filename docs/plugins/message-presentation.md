@@ -53,6 +53,8 @@ type MessagePresentationButton = {
   label: string;
   value?: string;
   url?: string;
+  webApp?: { url: string };
+  web_app?: { url: string };
   style?: "primary" | "secondary" | "success" | "danger";
 };
 
@@ -74,10 +76,11 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `value` 是一个应用动作值；当频道支持可点击控件时，它会通过频道现有的交互路径路由回去。
-- `url` 是一个链接按钮。它可以在没有 `value` 的情况下存在。
-- `label` 是必需的，并且也会用于文本回退。
-- `style` 仅作建议。渲染器应将不支持的样式映射为安全的默认值，而不是发送失败。
+- `value` 是一个应用动作值，当频道支持可点击控件时，会通过该频道现有的交互路径回传。
+- `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
+- `webApp` 和 `web_app` 描述频道原生的 Web App 按钮。Telegram 会将其渲染为 `web_app`，且只支持私聊。
+- `label` 是必填项，也用于文本回退。
+- `style` 仅供参考。渲染器应将不支持的样式映射到安全默认值，而不是发送失败。
 
 选择器语义：
 
@@ -116,6 +119,19 @@ type ReplyPayloadDelivery = {
     {
       "type": "buttons",
       "buttons": [{ "label": "打开说明", "url": "https://example.com/release" }]
+    }
+  ]
+}
+```
+
+Telegram Mini App 按钮：
+
+```json
+{
+  "blocks": [
+    {
+      "type": "buttons",
+      "buttons": [{ "label": "启动", "web_app": { "url": "https://example.com/app" } }]
     }
   ]
 }
@@ -244,7 +260,7 @@ const adapter: ChannelOutboundAdapter = {
 | Slack          | Block Kit                             | 为现有的提供方原生载荷生产者保留旧的 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                   |
 | Telegram       | 文本加内联键盘                          | 按钮/选择器要求目标表面具备内联按钮能力；否则使用文本回退。                                                                                                |
 | Mattermost     | 文本加交互属性                          | 其他区块会降级为文本。                                                                                                                                     |
-| Microsoft Teams | Adaptive Cards                        | 当两者都提供时，纯 `message` 文本会与卡片一起包含。                                                                                                        |
+| Microsoft Teams | 自适应卡片                            | 当两者都提供时，纯 `message` 文本会与卡片一起包含。                                                                                                        |
 | 飞书           | 交互式卡片                              | 卡片头部可以使用 `title`；正文会避免重复该标题。                                                                                                           |
 | 纯文本频道      | 文本回退                               | 没有渲染器的频道仍会得到可读输出。                                                                                                                         |
 

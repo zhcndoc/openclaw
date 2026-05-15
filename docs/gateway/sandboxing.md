@@ -96,8 +96,9 @@ SSH 专属配置位于 `agents.defaults.sandbox.ssh` 下。OpenShell 专属配�
 
 如果你将 OpenClaw Gateway 本身部署为 Docker 容器，它会使用主机的 Docker socket（DooD）来编排同级沙箱容器。这会引入一个特定的路径映射约束：
 
-- **配置要求主机路径**：`openclaw.json` 中的 `workspace` 配置 MUST 包含**主机的绝对路径**（例如 `/home/user/.openclaw/workspaces`），而不是 Gateway 容器内部路径。当 OpenClaw 请求 Docker 守护进程启动沙箱时，守护进程会在 Host OS 命名空间下解析路径，而不是在 Gateway 命名空间下。
-- **文件系统桥接一致性（相同的卷映射）**：OpenClaw Gateway 的原生进程也会向 `workspace` 目录写入 heartbeat 和 bridge 文件。由于 Gateway 会在其容器化环境中解析完全相同的字符串（主机路径），Gateway 部署 MUST 包含一个相同的卷映射，以原生方式将主机命名空间链接起来（`-v /home/user/.openclaw:/home/user/.openclaw`）。
+- **配置需要主机路径**：`openclaw.json` 中的 `workspace` 配置**必须**包含**主机的绝对路径**（例如 `/home/user/.openclaw/workspaces`），而不是 Gateway 容器内部路径。当 OpenClaw 请求 Docker 守护进程启动沙箱时，守护进程会在主机 OS 命名空间下而不是 Gateway 命名空间下解析路径。
+- **文件系统桥接一致性（完全相同的卷映射）**：OpenClaw Gateway 原生进程也会向 `workspace` 目录写入 heartbeat 和桥接文件。由于 Gateway 会在其容器化环境中评估完全相同的字符串（主机路径），因此 Gateway 部署**必须**包含一份相同的卷映射，将主机命名空间原生地链接起来（`-v /home/user/.openclaw:/home/user/.openclaw`）。
+- **Codex 代码模式**：当 OpenClaw 沙箱处于活动状态时，OpenClaw 会将 Codex app-server 的轮次限制为 Codex 的 `workspace-write` 沙箱模式，即使 Codex 插件默认值是 `danger-full-access`。不要把主机 Docker socket 挂载到 agent 沙箱容器或自定义 Codex 沙箱中。
 
 如果你只是在内部映射路径，而没有主机绝对路径的一致性，OpenClaw 在尝试于容器环境中写入 heartbeat 时会原生抛出 `EACCES` 权限错误，因为完整限定路径字符串在原生环境中并不存在。
 </Warning>

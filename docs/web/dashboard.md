@@ -73,17 +73,17 @@ Gateway 仪表板是浏览器控制 UI，默认由 `/` 提供服务
 
 ## 如果你看到 "unauthorized" / 1008
 
-- 确保 gateway 可达（本地：`openclaw status`；远程：SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@host`，然后打开 `http://127.0.0.1:18789/`）。
-- 对于 `AUTH_TOKEN_MISMATCH`，当 gateway 返回重试提示时，客户端可以使用缓存的设备 token 进行一次受信任的重试。该缓存 token 的重试会复用该 token 的缓存已批准作用域；显式 `deviceToken` / 显式 `scopes` 调用方会保留其请求的作用域集合。如果在该重试后认证仍然失败，请手动修复 token 漂移。
-- 在该重试路径之外，连接认证优先级依次为：显式共享 token/password，然后是显式 `deviceToken`，然后是存储的设备 token，最后是引导 token。
-- 在异步的 Tailscale Serve Control UI 路径中，在失败认证限流器记录之前，同一
-  `{scope, ip}` 的失败尝试会被串行化，因此第二个并发的错误重试可能已经显示 `retry later`。
-- 有关 token 漂移修复步骤，请遵循 [Token 漂移恢复清单](/cli/devices#token-drift-recovery-checklist)。
-- 从 gateway 主机检索或提供共享密钥：
-  - Token：`openclaw config get gateway.auth.token`
-  - 密码：解析已配置的 `gateway.auth.password` 或
+- 确保网关可访问（本地：`openclaw status`；远程：SSH 隧道 `ssh -N -L 18789:127.0.0.1:18789 user@host`，然后打开 `http://127.0.0.1:18789/`）。
+- 对于 `AUTH_TOKEN_MISMATCH`，当网关返回重试提示时，客户端可以使用缓存的设备令牌进行一次受信任的重试。该缓存令牌重试会重用该令牌缓存的已批准作用域；显式 `deviceToken` / 显式 `scopes` 的调用方会保留其请求的作用域集合。如果在该重试后认证仍然失败，请手动解决令牌漂移。
+- 对于 `AUTH_SCOPE_MISMATCH`，设备令牌已被识别，但不包含仪表板请求的作用域；请重新配对或批准请求的作用域契约，而不是轮换共享的网关令牌。
+- 在该重试路径之外，连接认证优先级依次为：显式共享令牌/密码优先，然后是显式 `deviceToken`，然后是已存储的设备令牌，最后是引导令牌。
+- 在异步的 Tailscale Serve Control UI 路径上，同一 `{scope, ip}` 的失败尝试会在失败认证限流器记录之前被串行化，因此第二个并发的错误重试可能已经显示 `retry later`。
+- 有关令牌漂移修复步骤，请参见 [令牌漂移恢复清单](/cli/devices#token-drift-recovery-checklist)。
+- 从网关主机检索或提供共享密钥：
+  - Token: `openclaw config get gateway.auth.token`
+  - Password: 解析已配置的 `gateway.auth.password` 或
     `OPENCLAW_GATEWAY_PASSWORD`
-  - SecretRef 管理的 token：解析外部密钥提供方，或在此 shell 中导出
+  - 由 SecretRef 管理的 token：解析外部密钥提供方，或在此 shell 中导出
     `OPENCLAW_GATEWAY_TOKEN`，然后重新运行 `openclaw dashboard`
   - 未配置共享密钥：`openclaw doctor --generate-gateway-token`
 - 在仪表板设置中，将 token 或密码粘贴到认证字段，

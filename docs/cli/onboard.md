@@ -7,7 +7,7 @@ title: "Onboard"
 
 # `openclaw onboard`
 
-用于本地或远程 Gateway 设置的交互式引导。
+面向本地或远程 Gateway 设置的完整引导式 onboarding。当你希望 OpenClaw 一次性带你完成模型认证、workspace、gateway、channels、skills 和健康检查时，请使用此命令。
 
 ## 相关指南
 
@@ -144,10 +144,10 @@ openclaw onboard --non-interactive \
 
 使用引用模式的交互式引导行为：
 
-- 在提示时选择 **Use secret reference**。
+- 在提示时选择 **使用密钥引用**。
 - 然后选择以下任一项：
-  - Environment variable
-  - Configured secret provider (`file` or `exec`)
+  - 环境变量
+  - 已配置的密钥提供方（`file` 或 `exec`）
 - 引导会在保存引用之前执行快速预检验证。
   - 如果验证失败，引导会显示错误并允许你重试。
 
@@ -211,9 +211,12 @@ openclaw onboard --non-interactive \
 ## 常见后续命令
 
 ```bash
+openclaw channels add
 openclaw configure
 openclaw agents add <name>
 ```
+
+仅在你只需要基础配置/workspace 时，请改用 `openclaw setup`。稍后可使用 `openclaw configure` 进行有针对性的更改，并使用 `openclaw channels add` 进行仅 channel 的设置。
 
 <Note>
 `--json` 并不意味着非交互式模式。脚本请使用 `--non-interactive`。

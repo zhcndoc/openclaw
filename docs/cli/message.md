@@ -67,16 +67,16 @@ openclaw message <subcommand> [flags]
 ### 核心
 
 - `send`
-  - 频道：WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage/Matrix/Microsoft Teams
-  - 必需：`--target`，以及 `--message`、`--media` 或 `--presentation`
-  - 可选：`--media`、`--presentation`、`--delivery`、`--pin`、`--reply-to`、`--thread-id`、`--gif-playback`、`--force-document`、`--silent`
-  - 共享的 presentation 负载：`--presentation` 会发送语义块（`text`、`context`、`divider`、`buttons`、`select`），由核心通过所选频道声明的能力进行渲染。参见 [消息展示](/plugins/message-presentation)。
-  - 通用投递偏好：`--delivery` 接受投递提示，例如 `{ "pin": true }`；当频道支持时，`--pin` 是置顶投递的简写。
-  - 仅 Telegram：`--force-document`（将图片和 GIF 作为文档发送，以避免 Telegram 压缩）
-  - 仅 Telegram：`--thread-id`（论坛主题 id）
-  - 仅 Slack：`--thread-id`（线程时间戳；`--reply-to` 使用同一字段）
-  - Telegram + Discord：`--silent`
-  - 仅 WhatsApp：`--gif-playback`；WhatsApp Channels/Newsletters 使用其原生的 `@newsletter` JID 进行寻址。
+  - Channels: WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost (plugin)/Signal/iMessage/Matrix/Microsoft Teams
+  - Required: `--target`, plus `--message`, `--media`, or `--presentation`
+  - Optional: `--media`, `--presentation`, `--delivery`, `--pin`, `--reply-to`, `--thread-id`, `--gif-playback`, `--force-document`, `--silent`
+  - Shared presentation payloads: `--presentation` sends semantic blocks (`text`, `context`, `divider`, `buttons`, `select`) that core renders through the selected channel's declared capabilities. See [Message Presentation](/plugins/message-presentation).
+  - Generic delivery preferences: `--delivery` accepts delivery hints such as `{ "pin": true }`; `--pin` is shorthand for pinned delivery when the channel supports it.
+  - Telegram only: `--force-document` (send images, GIFs, and videos as documents to avoid Telegram compression)
+  - Telegram only: `--thread-id` (forum topic id)
+  - Slack only: `--thread-id` (thread timestamp; `--reply-to` uses the same field)
+  - Telegram + Discord: `--silent`
+  - WhatsApp only: `--gif-playback`; WhatsApp Channels/Newsletters are addressed with their native `@newsletter` JID.
 
 - `poll`
   - 频道：WhatsApp/Telegram/Discord/Matrix/Microsoft Teams
@@ -283,6 +283,15 @@ openclaw message react --channel signal \
 openclaw message send --channel telegram --target @mychat --message "Choose:" \
   --presentation '{"blocks":[{"type":"buttons","buttons":[{"label":"Yes","value":"cmd:yes"},{"label":"No","value":"cmd:no"}]}]}'
 ```
+
+通过通用 presentation 发送 Telegram Mini App 按钮：
+
+```
+openclaw message send --channel telegram --target 123456789 --message "Open app:" \
+  --presentation '{"blocks":[{"type":"buttons","buttons":[{"label":"Launch","web_app":{"url":"https://example.com/app"}}]}]}'
+```
+
+Telegram `web_app` 按钮仅支持用户与机器人之间的私聊。
 
 通过通用 presentation 发送 Teams 卡片：
 

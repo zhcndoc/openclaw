@@ -86,6 +86,57 @@ title: "Inferrs"
 }
 ```
 
+## 按需启动
+
+只有在选择了 `inferrs/...` 模型时，OpenClaw 也可以启动 inferrs。将 `localService` 添加到同一个提供方条目中：
+
+```json5
+{
+  models: {
+    providers: {
+      inferrs: {
+        baseUrl: "http://127.0.0.1:8080/v1",
+        apiKey: "inferrs-local",
+        api: "openai-completions",
+        timeoutSeconds: 300,
+        localService: {
+          command: "/opt/homebrew/bin/inferrs",
+          args: [
+            "serve",
+            "google/gemma-4-E2B-it",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8080",
+            "--device",
+            "metal",
+          ],
+          healthUrl: "http://127.0.0.1:8080/v1/models",
+          readyTimeoutMs: 180000,
+          idleStopMs: 0,
+        },
+        models: [
+          {
+            id: "google/gemma-4-E2B-it",
+            name: "Gemma 4 E2B (inferrs)",
+            reasoning: false,
+            input: ["text"],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+            contextWindow: 131072,
+            maxTokens: 4096,
+            compat: {
+              requiresStringContent: true,
+            },
+          },
+        ],
+      },
+    },
+  },
+}
+```
+
+`command` 必须是绝对路径。在 Gateway 主机上使用 `which inferrs` 并将该路径写入配置。完整字段参考请参见 [本地模型服务](/gateway/local-model-services)。
+
 ## 高级配置
 
 <AccordionGroup>
@@ -204,8 +255,11 @@ title: "Inferrs"
   <Card title="本地模型" href="/gateway/local-models" icon="server">
     在本地模型服务器上运行 OpenClaw。
   </Card>
+  <Card title="本地模型服务" href="/gateway/local-model-services" icon="play">
+    按需启动已配置提供方的本地模型服务器。
+  </Card>
   <Card title="网关故障排除" href="/gateway/troubleshooting#local-openai-compatible-backend-passes-direct-probes-but-agent-runs-fail" icon="wrench">
-    调试那些能够通过探测但在 agent 运行时失败的本地 OpenAI 兼容后端。
+    调试通过探测但在 agent 运行时失败的本地 OpenAI 兼容后端。
   </Card>
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     所有提供方、模型引用和故障转移行为的概览。

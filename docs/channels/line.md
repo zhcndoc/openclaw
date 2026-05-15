@@ -136,9 +136,10 @@ openclaw pairing approve line <CODE>
 - `channels.line.dmPolicy`: `pairing | allowlist | open | disabled`
 - `channels.line.allowFrom`: 用于私信的已允许 LINE 用户 ID；`dmPolicy: "open"` 需要 `["*"]`
 - `channels.line.groupPolicy`: `allowlist | open | disabled`
-- `channels.line.groupAllowFrom`: 用于群组的 LINE 用户 ID 允许列表
-- 按群组覆盖：`channels.line.groups.<groupId>.allowFrom`
-- 运行时说明：如果 `channels.line` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
+- `channels.line.groupAllowFrom`: 群组的已允许 LINE 用户 ID
+- 各群组覆盖：`channels.line.groups.<groupId>.allowFrom`
+- 静态发送者访问组可在 `allowFrom`、`groupAllowFrom` 以及各群组的 `allowFrom` 中通过 `accessGroup:<name>` 引用。
+- 运行时说明：如果 `channels.line` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
 
 LINE ID 区分大小写。有效 ID 形式如下：
 

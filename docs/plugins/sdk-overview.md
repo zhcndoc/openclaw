@@ -66,7 +66,14 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 捆绑插件辅助函数）。完整目录——按组整理并带链接——请参见
 [插件 SDK 子路径](/plugins/sdk-subpaths)。
 
-生成的 200+ 个子路径列表位于 `scripts/lib/plugin-sdk-entrypoints.json` 中。
+编译器入口点清单位于
+`scripts/lib/plugin-sdk-entrypoints.json`；包导出是在
+从公共子集减去 `scripts/lib/plugin-sdk-private-local-only-subpaths.json` 中列出的仓库本地测试/内部子路径后生成的。
+运行
+`pnpm plugin-sdk:surface` 可审计公共导出数量。已弃用且历史足够久、并且未被捆绑扩展生产代码使用的公共
+子路径记录在 `scripts/lib/plugin-sdk-deprecated-public-subpaths.json` 中；广泛的
+已弃用重导出 barrel 记录在
+`scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json` 中。
 
 ## 注册 API
 
@@ -123,18 +130,50 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 通用契约；Plan Mode 可以使用它们，审批工作流、
 工作区策略门禁、后台监视器、安装向导以及 UI 伴随插件也都可以使用。
 
-| 方法                                                                   | 所拥有的契约                                                                                                                  |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerSessionExtension(...)`                                      | 由插件拥有、与 JSON 兼容的会话状态，经 Gateway 会话投影                                                   |
-| `api.enqueueNextTurnInjection(...)`                                      | 为单个会话注入到下一个 agent 回合中的持久化一次性上下文                                                    |
-| `api.registerTrustedToolPolicy(...)`                                     | 捆绑/受信任、插件之前的工具策略，可阻止或重写工具参数                                                      |
-| `api.registerToolMetadata(...)`                                          | 不更改工具实现的工具目录显示元数据                                                            |
-| `api.registerCommand(...)`                                               | 作用域插件命令；命令结果可以设置 `continueAgent: true`；Discord 原生命令支持 `descriptionLocalizations` |
-| `api.registerControlUiDescriptor(...)`                                   | 会话、工具、运行或设置界面的控制 UI 贡献描述符                                                  |
-| `api.registerRuntimeLifecycle(...)`                                      | 用于重置/删除/重新加载路径上插件拥有的运行时资源的清理回调                                                 |
-| `api.registerAgentEventSubscription(...)`                                | 用于工作流状态和监视器的已净化事件订阅                                                                     |
-| `api.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)` | 在终止性运行生命周期中清除的每次运行插件临时状态                                                                    |
-| `api.registerSessionSchedulerJob(...)`                                   | 具有确定性清理的、插件拥有的会话调度作业记录                                                             |
+| 方法                                                                               | 契约所有内容                                                                                                                  |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `api.session.state.registerSessionExtension(...)`                                    | 由插件拥有、与 JSON 兼容的会话状态，通过 Gateway 会话进行投影                                                    |
+| `api.session.workflow.enqueueNextTurnInjection(...)`                                 | 持久化的、exactly-once 的上下文，注入到一个会话的下一次 agent 回合中                                                    |
+| `api.registerTrustedToolPolicy(...)`                                                 | 捆绑/受信任的、插件前置的工具策略，可阻止或重写工具参数                                                      |
+| `api.registerToolMetadata(...)`                                                      | 不改变工具实现的工具目录显示元数据                                                            |
+| `api.registerCommand(...)`                                                           | 作用域化插件命令；命令结果可以设置 `continueAgent: true`；Discord 原生命令支持 `descriptionLocalizations` |
+| `api.session.controls.registerControlUiDescriptor(...)`                              | 会话、工具、运行或设置界面的 Control UI 贡献描述符                                                  |
+| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | 用于插件拥有的运行时资源在重置/删除/重载路径上的清理回调                                                 |
+| `api.agent.events.registerAgentEventSubscription(...)`                               | 用于工作流状态和监视器的已净化事件订阅                                                                     |
+| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | 每次运行的插件临时状态，在终止性运行生命周期中清除                                                                    |
+| `api.session.workflow.registerSessionSchedulerJob(...)`                              | 插件拥有的调度器作业的清理元数据；不会调度工作或创建任务记录                                   |
+| `api.session.workflow.sendSessionAttachment(...)`                                    | 仅捆绑插件可用的、由宿主中介的文件附件投递到活动的直接出站会话路由                                   |
+| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | 仅捆绑插件可用的、由 Cron 支持的计划会话回合以及基于标签的清理                                                           |
+| `api.session.controls.registerSessionAction(...)`                                    | 类型化会话动作，客户端可以通过 Gateway 分发                                                                    |
+
+新插件代码请使用分组命名空间：
+
+- `api.session.state.registerSessionExtension(...)`
+- `api.session.workflow.enqueueNextTurnInjection(...)`
+- `api.session.workflow.registerSessionSchedulerJob(...)`
+- `api.session.workflow.sendSessionAttachment(...)`
+- `api.session.workflow.scheduleSessionTurn(...)`
+- `api.session.workflow.unscheduleSessionTurnsByTag(...)`
+- `api.session.controls.registerSessionAction(...)`
+- `api.session.controls.registerControlUiDescriptor(...)`
+- `api.agent.events.registerAgentEventSubscription(...)`
+- `api.agent.events.emitAgentEvent(...)`
+- `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`
+- `api.lifecycle.registerRuntimeLifecycle(...)`
+
+现有插件仍可使用等价的平面方法作为已弃用的兼容别名。不要添加新插件代码直接调用
+`api.registerSessionExtension`、`api.enqueueNextTurnInjection`、
+`api.registerControlUiDescriptor`、`api.registerRuntimeLifecycle`、
+`api.registerAgentEventSubscription`、`api.emitAgentEvent`、
+`api.setRunContext`、`api.getRunContext`、`api.clearRunContext`、
+`api.registerSessionSchedulerJob`、`api.registerSessionAction`、
+`api.sendSessionAttachment`、`api.scheduleSessionTurn` 或
+`api.unscheduleSessionTurnsByTag`。
+
+`scheduleSessionTurn(...)` 是在 Gateway
+Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在回合运行时创建后台任务记录；Plugin SDK 仅约束目标会话、插件拥有的
+命名和清理。当工作本身需要持久化的多步骤 Task Flow 状态时，请在计划中的
+回合内使用 `api.runtime.tasks.managedFlows`。
 
 这些契约刻意分离了权限：
 
@@ -260,17 +299,15 @@ api.registerCli(
 ### CLI 后端注册
 
 `api.registerCliBackend(...)` 允许插件拥有本地
-AI CLI 后端的默认配置，例如 `codex-cli`。
+AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
-- 后端 `id` 会成为模型引用中的提供方前缀，例如 `codex-cli/gpt-5`。
-- 后端 `config` 的结构与 `agents.defaults.cliBackends.<id>` 相同。
-- 用户配置仍然优先。OpenClaw 会在运行 CLI 之前，将 `agents.defaults.cliBackends.<id>` 合并到
-  插件默认配置之上。
+- 后端 `id` 会成为模型引用中的提供方前缀，例如 `my-cli/gpt-5`。
+- 后端 `config` 的形状与 `agents.defaults.cliBackends.<id>` 相同。
+- 用户配置仍然优先。OpenClaw 会在运行 CLI 前，将 `agents.defaults.cliBackends.<id>` 叠加在插件默认值之上。
 - 当后端在合并后需要兼容性重写时，请使用 `normalizeConfig`
-  （例如规范化旧的标志位结构）。
-- 对于属于 CLI 方言的、按请求作用域的 argv 重写，请使用 `resolveExecutionArgs`，
-  例如将 OpenClaw 的思考级别映射为原生的努力
-  标志。
+  （例如规范化旧的标志形状）。
+- 当需要属于 CLI 方言的、请求作用域的 argv 重写时，请使用 `resolveExecutionArgs`，
+  例如将 OpenClaw 的思考级别映射到原生的 effort 标志。
 
 有关端到端编写指南，请参见
 [CLI backend plugins](/plugins/cli-backend-plugins)。

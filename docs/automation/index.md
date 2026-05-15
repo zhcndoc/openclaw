@@ -1,10 +1,11 @@
 ---
-summary: "自动化机制概览：任务、cron、hooks、固定指令和 Task Flow"
+doc-schema-version: 1
+summary: "自动化机制概览：任务、计划任务、hooks、固定指令和 Task Flow"
 read_when:
   - 决定如何使用 OpenClaw 自动化工作
-  - 在 heartbeat、cron、commitments、hooks 和 standing orders 之间做选择
+  - 在 heartbeat、cron、commitments、hooks 和固定指令之间做选择
   - 寻找合适的自动化入口点
-title: "自动化与任务"
+title: "自动化"
 ---
 
 OpenClaw 通过任务、计划作业、推断的承诺、事件 hooks 以及固定指令在后台运行工作。本页帮助你选择合适的机制，并理解它们如何协同工作。
@@ -103,7 +104,7 @@ Task Flow 是位于后台任务之上的流程编排基础设施。它管理具�
 
 ### Heartbeat
 
-Heartbeat 是一个周期性的主会话轮次（默认每 30 分钟）。它将多项检查（收件箱、日历、通知）批量合并到一次代理轮次中，并使用完整的会话上下文。Heartbeat 轮次不会创建任务记录，也不会延长每日/空闲会话重置的新鲜度。使用 `HEARTBEAT.md` 来放置一个小型检查清单，或者在你希望在 Heartbeat 本身内部只执行到期任务检查时使用 `tasks:` 块。空的 heartbeat 文件会以 `empty-heartbeat-file` 跳过；仅到期任务模式会以 `no-tasks-due` 跳过。当 cron 工作处于活动或排队状态时，Heartbeat 会延后，而 `heartbeat.skipWhenBusy` 也可以在子代理或嵌套通道繁忙时延后它们。
+Heartbeat 是一个周期性的主会话轮次（默认每 30 分钟一次）。它会在一次代理轮次中批量处理多个检查（收件箱、日历、通知），并拥有完整的会话上下文。Heartbeat 轮次不会创建任务记录，也不会延长每日/空闲会话重置的新鲜度。可使用 `HEARTBEAT.md` 编写一个小型检查清单，或者在你希望在 heartbeat 内部仅按到期项执行周期性检查时使用 `tasks:` 块。空的 heartbeat 文件会以 `empty-heartbeat-file` 跳过；仅按到期项的任务模式会以 `no-tasks-due` 跳过。当 cron 工作正在运行或排队时，heartbeat 会延后；`heartbeat.skipWhenBusy` 也可以在同一代理的会话键控子代理或嵌套 lane 忙碌时延后该代理。
 
 参见 [Heartbeat](/gateway/heartbeat)。
 

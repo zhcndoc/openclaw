@@ -166,14 +166,17 @@ OpenClaw 会使用 provider-safe 名称注册 bundle MCP tools，格式为
 `memory_search` 工具的 server 会注册为 `vigil-harbor__memory_search`。
 
 - `A-Za-z0-9_-` 之外的字符会被替换为 `-`
+- 以非字母开头的片段会加上字母前缀，因此像 `12306` 这样的数字
+  server key 会变成 provider-safe tool 前缀
 - server 前缀最长为 30 个字符
 - 完整工具名最长为 64 个字符
-- 空的 server 名称会回退为 `mcp`
-- 冲突的清理后名称会通过数字后缀进行区分
-- 最终暴露的工具顺序会按安全名称确定性排序，以保持重复的 Pi 回合缓存稳定
-- profile 过滤会将某个 bundle MCP server 的所有工具视为由 `bundle-mcp`
-  这个插件拥有，因此 profile 的 allowlist 和 deny list 可以包含单个暴露的
-  工具名，或 `bundle-mcp` 插件键
+- 空 server 名称会回退为 `mcp`
+- 冲突的已清理名称会通过数字后缀消歧
+- 最终暴露的工具顺序会按 safe name 确定性排序，以保持重复的 Pi
+  回合缓存稳定
+- profile filtering 会将某个 bundle MCP server 的所有工具视为由插件
+  `bundle-mcp` 拥有，因此 profile 的 allowlist 和 deny list 可以包含单个
+  暴露的工具名或 `bundle-mcp` 插件键
 
 #### 嵌入式 Pi 设置
 

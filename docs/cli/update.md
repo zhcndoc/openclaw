@@ -33,16 +33,12 @@ openclaw --update
 
 ## 选项
 
-- `--no-restart`: 在成功更新后跳过重启 Gateway 服务。会重启 Gateway 的包管理器更新会在命令成功之前验证重启后的服务报告的是预期的已更新版本。
-- `--channel <stable|beta|dev>`: 设置更新渠道（git + npm；持久化到配置中）。
-- `--tag <dist-tag|version|spec>`: 仅针对本次更新覆盖包目标。对于包安装，`main` 映射到 `github:openclaw/openclaw#main`。
+- `--no-restart`: 在成功更新后跳过重启 Gateway 服务。会重启 Gateway 的包管理器更新会在命令成功前验证重启后的服务报告的是预期的更新版本。
+- `--channel <stable|beta|dev>`: 设置更新渠道（git + npm；持久化在配置中）。
+- `--tag <dist-tag|version|spec>`: 仅为本次更新覆盖包目标。对于包安装，`main` 映射到 `github:openclaw/openclaw#main`。
 - `--dry-run`: 预览计划中的更新操作（channel/tag/target/restart 流程），不写入配置、不安装、不同步插件，也不重启。
-- `--json`: 输出机器可读的 `UpdateRunResult` JSON，包括
-  当核心更新成功后，损坏或无法卸载的已管理插件需要
-  修复时的 `postUpdate.plugins.warnings`，以及
-  当在更新后的插件同步期间检测到 npm 插件制品漂移时的
-  `postUpdate.plugins.integrityDrifts`。
-- `--timeout <seconds>`: 每个步骤的超时时间（默认是 1800 秒）。
+- `--json`: 输出机器可读的 `UpdateRunResult` JSON，包括当核心更新成功后需要修复损坏或无法卸载的受管插件时的 `postUpdate.plugins.warnings`，当某个插件没有 beta 发布时的 beta 渠道插件回退细节，以及在更新后插件同步期间检测到 npm 插件制品漂移时的 `postUpdate.plugins.integrityDrifts`。
+- `--timeout <seconds>`: 每个步骤的超时时间（默认 1800 秒）。
 - `--yes`: 跳过确认提示（例如降级确认）。
 
 `openclaw update` 没有 `--verbose` 标志。使用 `--dry-run` 预览
@@ -148,8 +144,8 @@ openclaw update status --timeout 10
   <Step title="Rebase">
     在所选提交上执行 rebase（仅 dev）。
   </Step>
-  <Step title="安装依赖">
-    使用仓库的包管理器。对于 pnpm 检出，更新器会按需引导安装 `pnpm`（先通过 `corepack`，然后作为临时回退执行 `npm install pnpm@10`），而不是在 pnpm 工作区内运行 `npm run build`。
+  <Step title="Install dependencies">
+    使用仓库的包管理器。对于 pnpm 检出，更新器会按需引导 `pnpm`（先通过 `corepack`，再回退到临时的 `npm install pnpm@11`），而不是在 pnpm 工作区内运行 `npm run build`。
   </Step>
   <Step title="构建 Control UI">
     构建 gateway 和 Control UI。
@@ -162,18 +158,16 @@ openclaw update status --timeout 10
   </Step>
 </Steps>
 
-在 beta 更新渠道上，跟踪的 npm 和 ClawHub 插件安装，如果遵循
-默认/latest 线路，会先尝试插件的 `@beta` 发布。如果插件没有
-beta 发布，OpenClaw 会回退到记录的 default/latest spec。对于 npm
-插件，如果 beta 包存在但安装验证失败，OpenClaw 也会回退。
-精确版本和显式标签不会被重写。
+在 beta 更新渠道中，遵循默认/latest 线路的已跟踪 npm 和 ClawHub 插件安装会先尝试插件的 `@beta` 发布。如果插件没有 beta 发布，OpenClaw 会回退到记录的 default/latest spec，并将其报告为警告。对于 npm 插件，如果 beta 包存在但安装验证失败，OpenClaw 也会回退。这些插件回退警告不会导致核心更新失败。精确版本和显式标签不会被重写。
 
 <Warning>
 如果一个精确固定的 npm 插件更新解析到的制品，其完整性与存储的安装记录不同，`openclaw update` 会中止该插件制品更新，而不是安装它。只有在确认你信任新制品之后，才重新安装或显式更新该插件。
 </Warning>
 
 <Note>
-更新后插件同步失败如果只影响某个已管理插件，会在核心更新成功后以警告形式报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json` 的指导。意外的更新器或同步异常仍会使更新结果失败。先修复插件安装或更新错误，然后重新运行 `openclaw doctor --fix` 或 `openclaw update`。
+更新后插件同步失败中，若其范围仅限于某个受管插件，并且同步路径可以绕开它们（例如某个非关键插件的 npm registry 不可达），则会在核心更新成功后作为警告报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json` 的指导。意外的更新器或同步异常仍会使更新结果失败。修复插件安装或更新错误，然后重新运行 `openclaw doctor --fix` 或 `openclaw update`。
+
+在逐个插件同步步骤之后，`openclaw update` 会在 gateway 重启之前运行一个强制的 **post-core convergence** 过程：它会修复缺失的已配置插件载荷，验证磁盘上每个_活动的_已跟踪安装记录，并静态验证其 `package.json` 可解析（且任何显式声明的 `main` 都存在）。该过程的失败——以及无效的 OpenClaw 配置快照——会返回 `postUpdate.plugins.status: "error"`，并将顶层更新 `status` 置为 `"error"`，因此 `openclaw update` 会以非零状态退出，并且 gateway _不会_ 使用未经验证的插件集重启。错误信息会包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向后续处理所需的 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json`。此处会跳过已禁用的插件条目以及那些不是受信任来源关联的官方同步目标的记录，这与缺失载荷检查所使用的 `skipDisabledPlugins` 策略一致，因此过时的已禁用插件记录不会阻止一次本来有效的更新。
 
 当更新后的 Gateway 启动时，插件加载仅限于验证：启动不会运行包管理器或修改依赖树。包管理器 `update.run` 重启会在包树交换后绕过正常的空闲延迟和重启冷却时间，因此旧进程无法继续懒加载已移除的块。
 

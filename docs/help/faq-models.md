@@ -142,8 +142,21 @@ sidebarTitle: "模型常见问题"
 
   </Accordion>
 
-  <Accordion title="我可以将 GPT 5.5 用于日常任务，并将 Codex 5.5 用于编码吗？">
-    可以。将模型选择和运行时选择分开看待：
+  <Accordion title="If two providers expose the same model id, which one does /model use?">
+    `/model provider/model` selects that exact provider route for the session.
+
+    For example, `qianfan/deepseek-v4-flash` and `deepseek/deepseek-v4-flash` are different model refs even though both contain `deepseek-v4-flash`. OpenClaw should not silently switch from one provider to the other just because the bare model id matches.
+
+    A user-selected `/model` ref is also strict for fallback policy. If that selected provider/model is unavailable, the reply fails visibly instead of answering from `agents.defaults.model.fallbacks`. Configured fallback chains still apply to configured defaults, cron job primaries, and auto-selected fallback state.
+
+    If a run that started from a non-session override is allowed to use fallback, OpenClaw tries the requested provider/model first, then configured fallbacks, and only then the configured primary. That prevents duplicate bare model ids from jumping directly back to the default provider.
+
+    See [Models](/concepts/models) and [Model failover](/concepts/model-failover).
+
+  </Accordion>
+
+  <Accordion title="Can I use GPT 5.5 for daily tasks and Codex 5.5 for coding?">
+    Yes. Treat model choice and runtime choice separately:
 
     - **Native Codex coding agent:** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
     - **Direct OpenAI API tasks outside the agent loop:** 为 images、embeddings、speech、realtime 以及其他非 agent 的 OpenAI API 接口配置 `OPENAI_API_KEY`。
@@ -193,10 +206,10 @@ sidebarTitle: "模型常见问题"
     Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' --strict-json --merge
     ```
 
-    该错误会**代替**正常回复返回。修复方法：将模型添加到
-    `agents.defaults.models`，移除允许列表，或者从 `/model list` 中选择一个模型。
-    如果命令还包含 `--runtime codex`，请先添加该模型，然后重试
-    相同的 `/model provider/model --runtime codex` 命令。
+    该错误会**代替**正常回复返回。修复方法：将精确模型添加到
+    `agents.defaults.models`，为动态 provider 目录添加类似 `"provider/*": {}` 的 provider 通配符，移除允许列表，或者从 `/model list` 中选择一个模型。
+    如果命令还包含 `--runtime codex`，请先更新允许列表，然后重新尝试
+    同一个 `/model provider/model --runtime codex` 命令。
 
   </Accordion>
 
@@ -268,9 +281,9 @@ sidebarTitle: "模型常见问题"
   <Accordion title="opus / sonnet / gpt 是内置快捷方式吗？">
     是的。OpenClaw 提供了一些默认的简写（仅在模型存在于 `agents.defaults.models` 中时生效）：
 
-    - `opus` → `anthropic/claude-opus-4-6`
+    - `opus` → `anthropic/claude-opus-4-7`
     - `sonnet` → `anthropic/claude-sonnet-4-6`
-    - `gpt` → `openai/gpt-5.5`
+    - `gpt` → `openai/gpt-5.4`
     - `gpt-mini` → `openai/gpt-5.4-mini`
     - `gpt-nano` → `openai/gpt-5.4-nano`
     - `gemini` → `google/gemini-3.1-pro-preview`

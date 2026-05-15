@@ -182,11 +182,17 @@ openclaw models auth paste-token
 `login`、`setup-token`、`paste-token` 和
 `login-github-copilot` 继承。
 
+对于 OpenAI 模型，`--provider openai` 默认使用 ChatGPT/Codex 账户登录。
+仅当你想添加 OpenAI API 密钥配置文件时才使用 `--method api-key`，
+通常这是 Codex 订阅额度的备用方案。旧的
+`--provider openai-codex` 写法对现有脚本仍然有效。
+
 示例：
 
 ```bash
-openclaw models auth login --provider openai-codex --set-default
-openclaw models auth list --provider openai-codex
+openclaw models auth login --provider openai --set-default
+openclaw models auth login --provider openai --method api-key
+openclaw models auth list --provider openai
 ```
 
 注意：

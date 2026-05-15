@@ -23,10 +23,10 @@ OpenClaw 使用 pi SDK 将一个 AI 编码代理嵌入到其消息网关架构�
 
 ```json
 {
-  "@mariozechner/pi-agent-core": "0.73.0",
-  "@mariozechner/pi-ai": "0.73.0",
-  "@mariozechner/pi-coding-agent": "0.73.0",
-  "@mariozechner/pi-tui": "0.73.0"
+  "@earendil-works/pi-agent-core": "0.74.0",
+  "@earendil-works/pi-ai": "0.74.0",
+  "@earendil-works/pi-coding-agent": "0.74.0",
+  "@earendil-works/pi-tui": "0.74.0"
 }
 ```
 
@@ -171,7 +171,7 @@ import {
   DefaultResourceLoader,
   SessionManager,
   SettingsManager,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 
 const resourceLoader = new DefaultResourceLoader({
   cwd: resolvedWorkspace,
@@ -285,7 +285,7 @@ export function splitSdkTools(options: { tools: AnyAgentTool[]; sandboxEnabled: 
 
 ## 系统提示词构建
 
-系统提示词在 `buildAgentSystemPrompt()`（`system-prompt.ts`）中构建。它会组装一个完整的提示词，包含 Tooling、Tool Call Style、Safety guardrails、OpenClaw CLI reference、Skills、Docs、Workspace、Sandbox、Messaging、Reply Tags、Voice、Silent Replies、Heartbeats、Runtime metadata 等章节；在启用时还会加入 Memory 和 Reactions，以及可选的上下文文件和额外系统提示词内容。对于子代理使用的最小提示词模式，这些章节会被裁剪。
+系统提示词在 `buildAgentSystemPrompt()`（`system-prompt.ts`）中构建。它会组装一个完整提示词，包含以下部分：工具、工具调用风格、安全护栏、OpenClaw 控制、技能、文档、工作区、沙箱、消息、助手输出指令、语音、静默回复、心跳、运行时元数据，以及在启用时的记忆和反应，还包括可选的上下文文件和额外系统提示词内容。对于子代理使用的最小提示词模式，这些部分会被裁剪。
 
 提示词在会话创建后通过 `applySystemPromptOverrideToSession()` 应用：
 
@@ -516,7 +516,7 @@ OpenClaw 还提供本地 TUI 模式，直接使用 pi-tui 组件：
 
 ```typescript
 // src/tui/tui.ts
-import { ... } from "@mariozechner/pi-tui";
+import { ... } from "@earendil-works/pi-tui";
 ```
 
 这提供了类似 pi 原生模式的交互式终端体验。

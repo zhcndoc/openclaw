@@ -112,9 +112,13 @@ OpenClaw 支持两种基于环境变量的模式：
 
 ## 日志
 
-| Variable             | Purpose                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_LOG_LEVEL` | 覆盖文件和控制台的日志级别（例如 `debug`、`trace`）。其优先级高于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并给出警告。 |
+| Variable                         | Purpose                                                                                                                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_LOG_LEVEL`             | 覆盖文件和控制台的日志级别（例如 `debug`、`trace`）。优先级高于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并给出警告。 |
+| `OPENCLAW_DEBUG_MODEL_TRANSPORT` | 在不启用全局 debug 日志的情况下，以 `info` 级别输出针对性的模型请求/响应时序诊断。                                                                                  |
+| `OPENCLAW_DEBUG_MODEL_PAYLOAD`   | 模型负载诊断：`summary`、`tools` 或 `full-redacted`。`full-redacted` 有长度上限并会脱敏，但可能包含 prompt/message 文本。                                               |
+| `OPENCLAW_DEBUG_SSE`             | 流式诊断：`events` 用于首个/完成时序，`peek` 会包含前五个脱敏的 SSE 事件。                                                                                 |
+| `OPENCLAW_DEBUG_CODE_MODE`       | 代码模式的模型表面诊断，包括 provider 工具隐藏和 exec/wait-only 强制执行。                                                                                          |
 
 ### `OPENCLAW_HOME`
 

@@ -95,10 +95,10 @@ gh workflow run full-release-validation.yml --ref main -f ref=<branch-or-sha>
 
 | Runner                           | Jobs                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ubuntu-24.04`                   | `preflight`、快速安全任务及汇总（`security-scm-fast`、`security-dependency-audit`、`security-fast`）、快速协议/契约/捆绑检查、分片 channel 契约检查、除 lint 外的 `check` 分片、`check-additional` 汇总、Node 测试汇总验证器、文档检查、Python skills、workflow-sanity、labeler、auto-response；install-smoke 预检也使用 GitHub 托管的 Ubuntu，因此 Blacksmith 矩阵可以更早排队 |
-| `blacksmith-4vcpu-ubuntu-2404`   | `CodeQL Critical Quality`、较低权重的扩展分片、`checks-fast-core`、`checks-node-compat-node22`、`check-prod-types` 和 `check-test-types`                                                                                                                                                                                                                                                                                                                  |
-| `blacksmith-8vcpu-ubuntu-2404`   | `build-artifacts`、build-smoke、Linux Node 测试分片、bundled plugin 测试分片、`check-additional` 分片、`android`                                                                                                                                                                                                                                                                                                                                        |
-| `blacksmith-16vcpu-ubuntu-2404`  | `check-lint`（对 CPU 敏感到 8 vCPU 的成本高于收益）；install-smoke Docker 构建（32-vCPU 的排队时间成本高于收益）                                                                                                                                                                                                                                                                                                                                       |
+| `ubuntu-24.04`                   | `preflight`, 快速安全作业和聚合（`security-scm-fast`、`security-dependency-audit`、`security-fast`）、快速协议/合约/bundled 检查、分片的 channel 合约检查、除 lint 外的 `check` 分片、`check-additional` 聚合、Node 测试聚合验证器、文档检查、Python 技能、workflow-sanity、labeler、auto-response；install-smoke preflight 也使用 GitHub 托管的 Ubuntu，以便 Blacksmith 矩阵能更早排队 |
+| `blacksmith-4vcpu-ubuntu-2404`   | `CodeQL Critical Quality`、较低权重的扩展分片、`checks-fast-core`、`checks-node-compat-node22`、`check-prod-types` 和 `check-test-types`                                                                                                                                                                                                                                                                                                        |
+| `blacksmith-8vcpu-ubuntu-2404`   | build-smoke、Linux Node 测试分片、bundled 插件测试分片、`check-additional` 分片、`android`                                                                                                                                                                                                                                                                                                                                                        |
+| `blacksmith-16vcpu-ubuntu-2404`  | `build-artifacts`、`check-lint`（对 CPU 敏感到 8 vCPU 的成本高于收益）；install-smoke Docker 构建（32-vCPU 队列等待时间的成本高于收益）                                                                                                                                                                                                                                                                                       |
 | `blacksmith-16vcpu-windows-2025` | `checks-windows`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `blacksmith-6vcpu-macos-latest`  | `openclaw/openclaw` 上的 `macos-node`；fork 会回退到 `macos-latest`                                                                                                                                                                                                                                                                                                                                                                                         |
 | `blacksmith-12vcpu-macos-latest` | `openclaw/openclaw` 上的 `macos-swift`；fork 会回退到 `macos-latest`                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -156,7 +156,7 @@ gh workflow run openclaw-performance.yml --ref main -f target_ref=v2026.5.2 -f p
 
 ## 完整发布验证
 
-`Full Release Validation` 是用于“发布前运行全部内容”的手动总工作流。它接受分支、标签或完整 commit SHA，针对该目标派发手动的 `CI` 工作流，派发 `Plugin Prerelease` 以进行仅发布用途的插件/包/静态资源/Docker 证明，并派发 `OpenClaw Release Checks` 以执行 install smoke、包接受、跨 OS 包检查、QA Lab 对等性、Matrix 和 Telegram 车道。稳定/默认运行会将详尽的 live/E2E 和 Docker 发布路径覆盖保留在 `run_release_soak=true` 之后；`release_profile=full` 会强制开启该 soak 覆盖，以便广泛的 advisory 验证仍然保持广泛。搭配 `rerun_group=all` 和 `release_profile=full` 时，它还会针对发布检查中的 `release-package-under-test` artifact 运行 `NPM Telegram Beta E2E`。发布后，传入 `npm_telegram_package_spec` 可针对已发布的 npm 包重新运行相同的 Telegram 包车道。
+`Full Release Validation` 是用于“在发布前把所有内容都跑一遍”的手动总流程工作流。它接受分支、标签或完整提交 SHA，使用该目标派发手动的 `CI` 工作流，派发用于仅发布插件/包/静态资源/Docker 证明的 `Plugin Prerelease`，并派发用于安装 smoke、包接受、跨 OS 包检查、QA Lab parity、Matrix 和 Telegram lanes 的 `OpenClaw Release Checks`。稳定/默认运行会将详尽的 live/E2E 和 Docker 发布路径覆盖保留在 `run_release_soak=true` 之后；`release_profile=full` 会强制开启这些 soak 覆盖，从而保持广泛的 advisory 验证范围。配合 `rerun_group=all` 和 `release_profile=full`，它还会针对发布检查中的 `release-package-under-test` 工件运行 `NPM Telegram Beta E2E`。发布之后，传入 `release_package_spec` 可在 release checks、Package Acceptance、Docker、cross-OS 和 Telegram 中复用已发布的 npm 包，而无需重新构建。仅当 Telegram 必须证明不同的包时，才使用 `npm_telegram_package_spec`。
 
 参见 [完整发布验证](/reference/full-release-validation) 以了解
 阶段矩阵、确切的工作流任务名称、配置差异、产物以及
@@ -198,9 +198,9 @@ GitHub workflow dispatch refs 必须是分支或标签，而不是原始 commit 
 
 这个总控会记录已触发的子运行 id，而最终的 `Verify full validation` 任务会重新检查当前子运行的结论，并为每个子运行附加最慢任务表。如果某个子工作流被重新运行并变为绿色，只需重新运行父级验证器任务即可刷新总控结果和耗时摘要。
 
-For recovery, both `Full Release Validation` and `OpenClaw Release Checks` accept `rerun_group`. Use `all` for a release candidate, `ci` for only the normal full CI child, `plugin-prerelease` for only the plugin prerelease child, `release-checks` for every release child, or a narrower group: `install-smoke`, `cross-os`, `live-e2e`, `package`, `qa`, `qa-parity`, `qa-live`, or `npm-telegram` on the umbrella. This keeps a failed release box rerun bounded after a focused fix. For one failed cross-OS lane, combine `rerun_group=cross-os` with `cross_os_suite_filter`, for example `windows/packaged-upgrade`; long cross-OS commands emit heartbeat lines and packaged-upgrade summaries include per-phase timings. QA release-check lanes are advisory, so QA-only failures warn but do not block the release-check verifier.
+为恢复而言，`Full Release Validation` 和 `OpenClaw Release Checks` 都接受 `rerun_group`。对 release candidate 使用 `all`，对普通完整 CI 子流程仅使用 `ci`，对仅插件预发布子流程使用 `plugin-prerelease`，对所有 release 子流程使用 `release-checks`，或者在总流程中使用更窄的分组：`install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 或 `npm-telegram`。这能让失败的发布箱在局部修复后保持有限重跑范围。对于单个失败的 cross-OS lane，将 `rerun_group=cross-os` 与 `cross_os_suite_filter` 结合使用，例如 `windows/packaged-upgrade`；较长的 cross-OS 命令会输出 heartbeat 行，而 packaged-upgrade 摘要会包含各阶段耗时。QA 发布检查 lane 只是 advisory，因此仅 QA 失败会发出警告，但不会阻止 release-check 验证器。
 
-`OpenClaw Release Checks` uses the trusted workflow ref to resolve the selected ref once into a `release-package-under-test` tarball, then passes that artifact to cross-OS checks and Package Acceptance, plus the live/E2E release-path Docker workflow when soak coverage runs. That keeps the package bytes consistent across release boxes and avoids repacking the same candidate in multiple child jobs.
+`OpenClaw Release Checks` 使用受信任的工作流 ref，将所选 ref 一次解析为 `release-package-under-test` tarball，然后在运行 soak 覆盖时把该工件传给 cross-OS 检查、Package Acceptance，以及 live/E2E 发布路径 Docker 工作流。这样可确保各发布箱中的包字节一致，并避免在多个子任务中重复打包同一个候选版本。
 
 对于 `ref=main` 且 `rerun_group=all` 的重复 `Full Release Validation` 运行，会取代较旧的总控流程。父级监控器在父流程被取消时会取消它已经触发的任何子工作流，因此较新的 main 验证不会排在一个陈旧的两小时发布检查运行之后。发布分支/标签验证和定向重跑分组保持 `cancel-in-progress: false`。
 
@@ -248,27 +248,27 @@ For recovery, both `Full Release Validation` and `OpenClaw Release Checks` accep
 
 ### 套件 profile
 
-- `smoke` — `npm-onboard-channel-agent`、`gateway-network`、`config-reload`
-- `package` — `npm-onboard-channel-agent`、`doctor-switch`、`update-channel-switch`、`upgrade-survivor`、`published-upgrade-survivor`、`plugins-offline`、`plugin-update`
-- `product` — `package` 外加 `mcp-channels`、`cron-mcp-cleanup`、`openai-web-search-minimal`、`openwebui`
-- `full` — 含 OpenWebUI 的完整 Docker release-path 分块
-- `custom` — 精确的 `docker_lanes`；当 `suite_profile=custom` 时必需
+- `smoke` — `npm-onboard-channel-agent`, `gateway-network`, `config-reload`
+- `package` — `npm-onboard-channel-agent`, `doctor-switch`, `update-channel-switch`, `skill-install`, `update-corrupt-plugin`, `upgrade-survivor`, `published-upgrade-survivor`, `update-restart-auth`, `plugins-offline`, `plugin-update`
+- `product` — `package` plus `mcp-channels`, `cron-mcp-cleanup`, `openai-web-search-minimal`, `openwebui`
+- `full` — full Docker release-path chunks with OpenWebUI
+- `custom` — exact `docker_lanes`; required when `suite_profile=custom`
 
 `package` profile 使用离线插件覆盖，因此已发布包的验证不会受制于线上 ClawHub 可用性。可选的 Telegram lane 在 `NPM Telegram Beta E2E` 中重用 `package-under-test` 工件，而已发布的 npm spec 路径仍保留给独立分发使用。
 
 关于专门的更新和插件测试策略，包括本地命令、Docker lanes、Package Acceptance 输入、发布默认值和失败排查，请参见 [Testing updates and plugins](/help/testing-updates-plugins)。
 
-Release checks 会使用 `source=artifact`、准备好的发布包工件、`suite_profile=custom`、`docker_lanes='doctor-switch update-channel-switch upgrade-survivor published-upgrade-survivor plugins-offline plugin-update'` 以及 `telegram_mode=mock-openai` 调用 Package Acceptance。这样可以让包迁移、更新、陈旧插件依赖清理、已配置插件安装修复、离线插件、plugin-update 和 Telegram 证明都基于同一个已解析的包 tarball。将 `package_acceptance_package_spec` 设置在 Full Release Validation 或 OpenClaw Release Checks 上，可以针对已发布的 npm 包而不是 SHA 构建的工件运行同样的矩阵。跨操作系统的 release checks 仍然覆盖与操作系统相关的 onboarding、installer 和平台行为；包/更新产品验证应从 Package Acceptance 开始。`published-upgrade-survivor` Docker lane 在阻塞式发布路径中每次运行验证一个已发布包基线。在 Package Acceptance 中，解析得到的 `package-under-test` tarball 始终是候选包，而 `published_upgrade_survivor_baseline` 选择回退的已发布基线，默认值为 `openclaw@latest`；失败 lane 的重跑命令会保留该基线。使用 `run_release_soak=true` 或 `release_profile=full` 的 Full Release Validation 会设置 `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` 和 `published_upgrade_survivor_scenarios=reported-issues`，以扩展到最近四个稳定版 npm 发布以及固定的插件兼容性边界版本，并覆盖用于飞书配置、保留的 bootstrap/persona 文件、已配置的 OpenClaw 插件安装、波浪线日志路径以及陈旧旧版插件依赖根的 issue 形态 fixtures。多基线的 published-upgrade survivor 选择会按基线分片，拆分为独立的定向 Docker 运行器作业。单独的 `Update Migration` 工作流在问题是穷尽式已发布更新清理而不是常规 Full Release CI 广度时，会使用带有 `all-since-2026.4.23` 和 `plugin-deps-cleanup` 的 `update-migration` Docker lane。本地聚合运行可以通过 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS` 传入精确包规格，使用 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` 保持单个 lane，例如 `openclaw@2026.4.15`，或者设置 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` 以指定场景矩阵。已发布 lane 会用内置的 `openclaw config set` 命令配方配置基线，在 `summary.json` 中记录配方步骤，并在 Gateway 启动后探测 `/healthz`、`/readyz` 以及 RPC 状态。Windows 打包和 installer fresh lanes 还会验证已安装包是否可以从原始绝对 Windows 路径导入 browser-control override。OpenAI 跨操作系统 agent-turn smoke 在设置了 `OPENCLAW_CROSS_OS_OPENAI_MODEL` 时默认使用该值，否则使用 `openai/gpt-5.4`，因此安装和 gateway 证明会停留在 GPT-5 测试模型上，同时避免 GPT-4.x 默认值。
+Release checks call Package Acceptance with `source=artifact`, the prepared release package artifact, `suite_profile=custom`, `docker_lanes='doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update'`, and `telegram_mode=mock-openai`. This keeps package migration, update, live ClawHub skill install, stale-plugin-dependency cleanup, configured-plugin install repair, offline plugin, plugin-update, and Telegram proof on the same resolved package tarball. Set `release_package_spec` on Full Release Validation or OpenClaw Release Checks after publishing a beta to run the same matrix against the shipped npm package without rebuilding; set `package_acceptance_package_spec` only when Package Acceptance needs a different package from the rest of release validation. Cross-OS release checks still cover OS-specific onboarding, installer, and platform behavior; package/update product validation should start with Package Acceptance. The `published-upgrade-survivor` Docker lane validates one published package baseline per run in the blocking release path. In Package Acceptance, the resolved `package-under-test` tarball is always the candidate and `published_upgrade_survivor_baseline` selects the fallback published baseline, defaulting to `openclaw@latest`; failed-lane rerun commands preserve that baseline. Full Release Validation with `run_release_soak=true` or `release_profile=full` sets `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` and `published_upgrade_survivor_scenarios=reported-issues` to expand across the four latest stable npm releases plus pinned plugin-compatibility boundary releases and issue-shaped fixtures for Feishu config, preserved bootstrap/persona files, configured OpenClaw plugin installs, tilde log paths, and stale legacy plugin dependency roots. Multi-baseline published-upgrade survivor selections are sharded by baseline into separate targeted Docker runner jobs. The separate `Update Migration` workflow uses the `update-migration` Docker lane with `all-since-2026.4.23` and `plugin-deps-cleanup` when the question is exhaustive published update cleanup, not normal Full Release CI breadth. Local aggregate runs can pass exact package specs with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS`, keep a single lane with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` such as `openclaw@2026.4.15`, or set `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` for the scenario matrix. The published lane configures the baseline with a baked `openclaw config set` command recipe, records recipe steps in `summary.json`, and probes `/healthz`, `/readyz`, plus RPC status after Gateway start. The Windows packaged and installer fresh lanes also verify that an installed package can import a browser-control override from a raw absolute Windows path. The OpenAI cross-OS agent-turn smoke defaults to `OPENCLAW_CROSS_OS_OPENAI_MODEL` when set, otherwise `openai/gpt-5.4`, so the install and gateway proof stays on a GPT-5 test model while avoiding GPT-4.x defaults.
 
 ### 旧版兼容窗口
 
 Package Acceptance 对已发布包提供有边界的旧版兼容窗口。对于 `2026.4.25` 及之前的包，包括 `2026.4.25-beta.*`，可以使用兼容路径：
 
-- `dist/postinstall-inventory.json` 中已知的私有 QA 条目可以指向 tarball 中省略的文件；
-- 当包未暴露该标志时，`doctor-switch` 可以跳过 `gateway install --wrapper` 持久化子场景；
-- `update-channel-switch` 可以从基于 tarball 的伪 git fixture 中清理缺失的 `pnpm.patchedDependencies`，并且可以记录缺失的持久化 `update.channel`；
-- plugin smoke 可以读取旧版安装记录位置，或接受 marketplace 安装记录持久化缺失；
-- `plugin-update` 可以允许配置元数据迁移，同时仍然要求安装记录和 no-reinstall 行为保持不变。
+- known private QA entries in `dist/postinstall-inventory.json` may point at tarball-omitted files;
+- `doctor-switch` may skip the `gateway install --wrapper` persistence subcase when the package does not expose that flag;
+- `update-channel-switch` may prune missing pnpm `patchedDependencies` from the tarball-derived fake git fixture and may log missing persisted `update.channel`;
+- plugin smokes may read legacy install-record locations or accept missing marketplace install-record persistence;
+- `plugin-update` may allow config metadata migration while still requiring the install record and no-reinstall behavior to stay unchanged.
 
 已发布的 `2026.4.26` 包也可能会对已经发布出去的本地构建元数据 stamp 文件发出警告。更晚的包必须满足现代契约；相同条件会导致失败，而不是警告或跳过。
 
@@ -315,14 +315,14 @@ gh workflow run package-acceptance.yml \
 
 当排查一次失败的 package acceptance 运行时，请先查看 `resolve_package` summary，以确认包来源、版本和 SHA-256。然后检查 `docker_acceptance` 子运行及其 Docker 工件：`.artifacts/docker-tests/**/summary.json`、`failures.json`、lane 日志、阶段耗时以及重新运行命令。优先重新运行失败的 package profile 或精确的 Docker lanes，而不是重新运行完整的发布验证。
 
-## Install smoke
+## 安装 smoke
 
 独立的 `Install Smoke` 工作流通过自己的 `preflight` 作业复用同一范围脚本。它将 smoke 覆盖拆分为 `run_fast_install_smoke` 和 `run_full_install_smoke`。
 
-- **Fast path** 适用于触及 Docker/package 表面、捆绑插件 package/manifest 变更，或 Docker smoke 作业会执行到的核心插件/channel/gateway/Plugin SDK 表面的拉取请求。仅源代码层面的捆绑插件改动、仅测试改动和仅文档改动不会占用 Docker worker。fast path 会先构建一次根 Dockerfile 镜像，检查 CLI，运行 agents delete shared-workspace CLI smoke，运行容器 gateway-network e2e，验证捆绑扩展 build arg，并在 240 秒的聚合命令超时下运行受限的捆绑插件 Docker profile（每个场景的 Docker run 会单独设上限）。
-- **Full path** 为夜间定时运行、手动分发、workflow-call 发布检查，以及真正触及 installer/package/Docker 表面的拉取请求保留 QR package install 和 installer Docker/update 覆盖。在 full 模式下，install-smoke 会准备或复用一个目标 SHA 的 GHCR 根 Dockerfile smoke 镜像，然后将 QR package install、根 Dockerfile/gateway smoke、installer/update smoke 以及 fast bundled-plugin Docker E2E 作为独立作业运行，这样 installer 工作就不必排在根镜像 smoke 后面等待。
+- **快速路径** 适用于触及 Docker/package 表面、捆绑插件 package/manifest 变更，或 Docker smoke 作业会执行到的核心插件/channel/gateway/Plugin SDK 表面的拉取请求。仅源代码层面的捆绑插件改动、仅测试改动和仅文档改动不会占用 Docker worker。快速路径会先构建一次根 Dockerfile 镜像，检查 CLI，运行 agents delete shared-workspace CLI smoke，运行容器 gateway-network e2e，验证捆绑扩展 build arg，并在 240 秒的聚合命令超时下运行受限的捆绑插件 Docker profile（每个场景的 Docker run 会单独设上限）。
+- **完整路径** 为夜间定时运行、手动分发、workflow-call 发布检查，以及真正触及 installer/package/Docker 表面的拉取请求保留 QR package install 和 installer Docker/update 覆盖。在完整模式下，install-smoke 会准备或复用一个目标 SHA 的 GHCR 根 Dockerfile smoke 镜像，然后将 QR package install、根 Dockerfile/gateway smoke、installer/update smoke 以及快速捆绑插件 Docker E2E 作为独立作业运行，这样 installer 工作就不必排在根镜像 smoke 后面等待。
 
-`main` 推送（包括合并提交）不会强制进入 full path；当变更范围逻辑在 push 场景下要求完整覆盖时，工作流仍保持 fast Docker smoke，并将完整的 install smoke 留给夜间或发布验证。
+`main` 推送（包括合并提交）不会强制进入完整路径；当变更范围逻辑在 push 场景下要求完整覆盖时，工作流仍保持快速 Docker smoke，并将完整的 install smoke 留给夜间或发布验证。
 
 较慢的 Bun global install image-provider smoke 由 `run_bun_global_install_smoke` 单独门控。它会在夜间计划任务和 release checks 工作流中运行，手动 `Install Smoke` 分发也可以选择启用它，但拉取请求和 `main` 推送不会运行它。QR 和 installer 的 Docker 测试保留各自聚焦安装的 Dockerfile。
 
@@ -377,7 +377,7 @@ pnpm test:docker:timings <summary>   # 慢 lane 和阶段关键路径摘要
 
 ## 插件预发布
 
-`插件预发布` 是更昂贵的产品/package 覆盖，因此它是一个由 `Full Release Validation` 或显式操作员单独触发的工作流。普通 pull request、`main` 分支推送以及独立的手动 CI 派发都会关闭该套件。它将捆绑插件测试分摊到 8 个扩展 worker 上；这些扩展分片作业每次最多并行运行 2 组插件配置，每组使用 1 个 Vitest worker，并使用更大的 Node 堆，以免导入较重的插件批次额外创建 CI 作业。仅发布路径的 Docker 预发布会将定向 Docker lanes 分批成小组，以避免为持续一到三分钟的作业预留几十个 runner。
+`Plugin Prerelease` 是更昂贵的产品/package 覆盖，因此它是一个由 `Full Release Validation` 或显式操作者派发的独立工作流。普通 pull request、`main` 推送以及独立的手动 CI 派发都不会运行这套检查。它会在八个 extension worker 之间平衡捆绑插件测试；这些 extension shard 作业一次最多运行两个 plugin config group，每个 group 使用一个 Vitest worker，并配置更大的 Node heap，这样 import-heavy 的插件批次就不会创建额外的 CI 作业。仅限发布的 Docker prerelease 路径会将目标 Docker lanes 分成小批次，以避免为一到三分钟的作业预留几十个 runner。该工作流还会从 `@openclaw/plugin-inspector` 上传一个信息性 `plugin-inspector-advisory` artifact；inspector 发现结果仅作为分流输入，不会改变阻塞性的 Plugin Prerelease 门禁。
 
 ## QA 实验室
 
@@ -482,13 +482,11 @@ gh workflow run duplicate-after-merge.yml \
 
 ## Testbox 验证
 
-从仓库根目录运行 Testbox，并且在进行广泛验证时优先使用一个新鲜、已预热的 box。在对一个已复用、已过期或刚刚报告了异常大的同步的 box 花费慢速门控之前，先在 box 内运行 `pnpm testbox:sanity`。
+Crabbox 是仓库自有的远程 box 封装器，用于维护者的 Linux 证明。当检查范围对本地编辑循环来说过于宽泛、需要 CI 一致性、需要 secrets、Docker、包通道、可复用 box 或远程日志时，请在仓库根目录使用它。普通的 OpenClaw 后端是 `blacksmith-testbox`；自有的 AWS/Hetzner 容量则作为 Blacksmith 故障、配额问题或显式自有容量测试时的备选方案。
 
-当所需的根文件（例如 `pnpm-lock.yaml`）消失，或者 `git status --short` 显示至少 200 个被跟踪的删除时，sanity 检查会快速失败。这通常意味着远程同步状态不是 PR 的可信副本；停止该 box 并预热一个新 box，而不是去调试产品测试失败。对于有意的大规模删除 PR，请在该 sanity 运行中设置 `OPENCLAW_TESTBOX_ALLOW_MASS_DELETIONS=1`。
+由 Crabbox 驱动的 Blacksmith 会依次执行 warm、claim、sync、run、report 和 clean up 的一次性 Testbox。内置的同步健全性检查会在所需根文件（例如 `pnpm-lock.yaml`）消失，或 `git status --short` 显示至少 200 个已跟踪删除时快速失败。对于有意的大规模删除 PR，请为远程命令设置 `OPENCLAW_TESTBOX_ALLOW_MASS_DELETIONS=1`。
 
-`pnpm testbox:run` 还会终止一个本地 Blacksmith CLI 调用：当它在同步阶段停留超过五分钟且没有后同步输出时。设置 `OPENCLAW_TESTBOX_SYNC_TIMEOUT_MS=0` 可禁用该保护，或者为异常大的本地差异使用更大的毫秒值。
-
-Crabbox 是仓库自有的远程 box 封装器，用于维护者的 Linux 证明。当某个检查对本地编辑循环来说范围过大、需要与 CI 保持一致、或证明需要 secrets、Docker、package lanes、可复用 box 或远程日志时，请使用它。常规的 OpenClaw 后端是 `blacksmith-testbox`；在 Blacksmith 故障、配额问题或需要显式使用自有容量测试时，才使用自有的 AWS/Hetzner 容量作为回退。
+如果同步阶段停留超过五分钟且在 sync 之后没有输出，Crabbox 也会终止本地 Blacksmith CLI 调用。设置 `CRABBOX_BLACKSMITH_SYNC_TIMEOUT_MS=0` 可以禁用该保护，或者在本地差异异常巨大时使用更大的毫秒值。
 
 首次运行前，请在仓库根目录检查该封装器：
 
@@ -496,7 +494,11 @@ Crabbox 是仓库自有的远程 box 封装器，用于维护者的 Linux 证明
 pnpm crabbox:run -- --help | sed -n '1,120p'
 ```
 
-仓库封装器会拒绝不宣称 `blacksmith-testbox` 的过期 Crabbox 二进制。即使 `.crabbox.yaml` 里有自有云默认值，也要显式传入 provider。
+仓库封装器会拒绝不再声明 `blacksmith-testbox` 的过期 Crabbox 二进制。即使 `.crabbox.yaml` 有自有云默认值，也要显式传入提供商。在 Codex 工作树或链接/稀疏检出中，避免使用本地 `pnpm crabbox:run` 脚本，因为 pnpm 可能会在 Crabbox 启动前协调依赖；请改为直接调用 node 封装器：
+
+```bash
+node scripts/crabbox-wrapper.mjs run --provider blacksmith-testbox --timing-json --shell -- "pnpm test <path-or-filter>"
+```
 
 变更门控：
 
@@ -558,13 +560,7 @@ pnpm crabbox:run -- --provider blacksmith-testbox --id <tbx_id> --no-sync --timi
 pnpm crabbox:stop -- <tbx_id>
 ```
 
-如果 Crabbox 这个层有问题，但 Blacksmith 本身可用，请使用直接的 Blacksmith 作为窄范围回退：
-
-```bash
-blacksmith testbox warmup ci-check-testbox.yml --ref main --idle-timeout 90
-blacksmith testbox run --id <tbx_id> "env CI=1 NODE_OPTIONS=--max-old-space-size=4096 OPENCLAW_TEST_PROJECTS_PARALLEL=6 OPENCLAW_VITEST_MAX_WORKERS=1 OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS=900000 pnpm check:changed"
-blacksmith testbox stop --id <tbx_id>
-```
+如果 Crabbox 这一层有问题但 Blacksmith 本身可用，则仅将 Blacksmith 直接用于诊断，例如 `list`、`status` 和清理。先修复 Crabbox 路径，再把直接的 Blacksmith 运行视为维护者证明。
 
 如果 `blacksmith testbox list --all` 和 `blacksmith testbox status` 能工作，但新的 warmup 在几分钟后仍处于 `queued`，既没有 IP 也没有 Actions 运行 URL，则应将其视为 Blacksmith 提供商、队列、计费或组织限制压力。停止你创建的 queued id，避免再启动更多 Testbox，并把证明转移到下面的自有 Crabbox 容量路径，同时让别人检查 Blacksmith 仪表板、计费和组织限制。
 

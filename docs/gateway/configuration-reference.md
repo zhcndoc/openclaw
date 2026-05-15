@@ -71,9 +71,10 @@ provider 定义、model allowlist，以及自定义 provider 设置位于
 }
 ```
 
-- `models.mode`：provider catalog 行为（`merge` 或 `replace`）。
-- `models.providers`：以 provider id 为键的自定义 provider 映射。
-- `models.pricing.enabled`：控制后台 pricing 启动流程，该流程在 sidecar 和 channel 到达 Gateway ready 路径后开始。设为 `false` 时，Gateway 会跳过 OpenRouter 和 LiteLLM pricing-catalog 拉取；已配置的 `models.providers.*.models[].cost` 值仍可用于本地成本估算。
+- `models.mode`: provider catalog 行为（`merge` 或 `replace`）。
+- `models.providers`: 以 provider id 为键的自定义 provider 映射。
+- `models.providers.*.localService`: 本地 model server 的可选按需进程管理器。OpenClaw 会探测所配置的健康检查端点，需要时启动绝对路径的 `command`，等待就绪，然后发送 model 请求。参见 [Local model services](/gateway/local-model-services)。
+- `models.pricing.enabled`：控制在 sidecar 和 channels 到达 Gateway ready 路径后启动的后台定价引导流程。设为 `false` 时，Gateway 会跳过 OpenRouter 和 LiteLLM 的 pricing-catalog 获取；已配置的 `models.providers.*.models[].cost` 值仍可用于本地成本估算。
 
 ## MCP
 
@@ -130,6 +131,7 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
     install: {
       preferBrew: true,
       nodeManager: "npm", // npm | pnpm | yarn | bun
+      allowUploadedArchives: false,
     },
     entries: {
       "image-lab": {
@@ -143,13 +145,14 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 }
 ```
 
-- `allowBundled`：仅针对捆绑 skills 的可选 allowlist（不影响 managed/workspace skills）。
+- `allowBundled`：仅适用于 bundled skills 的可选 allowlist（不影响 managed/workspace skills）。
 - `load.extraDirs`：额外的共享 skill 根目录（优先级最低）。
-- `load.allowSymlinkTargets`：受信任的真实目标根目录；当 symlink 位于其配置的 source root 之外时，skill symlink 可解析到这些目录。
-- `install.preferBrew`：为 `true` 时，在回退到其他安装器类型之前，优先使用可用的 Homebrew 安装器。
+- `load.allowSymlinkTargets`：受信任的真实目标根目录；当 skill symlink 位于其配置的源根目录之外时，链接可以解析到这些目录。
+- `install.preferBrew`：当 `brew` 可用时，优先使用 Homebrew 安装器，然后再回退到其他安装器类型。
 - `install.nodeManager`：`metadata.openclaw.install` 规格的 node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`）。
-- `entries.<skillKey>.enabled: false`：即使已捆绑/已安装，也会禁用某个 skill。
-- `entries.<skillKey>.apiKey`：为声明了主 env 变量的 skill 提供的便捷字段（明文字符串或 SecretRef 对象）。
+- `install.allowUploadedArchives`：允许受信任的 `operator.admin` Gateway 客户端安装通过 `skills.upload.*` 暂存的私有 zip 归档（默认：`false`）。这只启用上传归档路径；正常的 ClawHub 安装不需要它。
+- `entries.<skillKey>.enabled: false` 即使 skill 已 bundled/installed 也会禁用它。
+- `entries.<skillKey>.apiKey`：为声明主环境变量的 skills 提供的便捷配置（明文字符串或 SecretRef 对象）。
 
 ---
 
@@ -200,7 +203,7 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 
 ### Codex harness plugin config
 
-捆绑的 `codex` plugin 在 `plugins.entries.codex.config` 下拥有原生 Codex app-server harness 设置。完整运行时模型请参见 [Codex harness](/plugins/codex-harness)。
+捆绑的 `codex` plugin 在 `plugins.entries.codex.config` 下拥有原生 Codex app-server harness 设置。完整配置范围请参见 [Codex harness reference](/plugins/codex-harness-reference)，运行时模型请参见 [Codex harness](/plugins/codex-harness)。
 
 `codexPlugins` 仅适用于选择原生 Codex harness 的 session。
 它不会为 Pi、普通 OpenAI provider 运行、ACP
@@ -215,7 +218,7 @@ conversation bindings，或任何非 Codex harness 启用 Codex plugins。
         config: {
           codexPlugins: {
             enabled: true,
-            allow_destructive_actions: false,
+            allow_destructive_actions: true,
             plugins: {
               "google-calendar": {
                 enabled: true,
@@ -232,21 +235,15 @@ conversation bindings，或任何非 Codex harness 启用 Codex plugins。
 }
 ```
 
-- `plugins.entries.codex.config.codexPlugins.enabled`：为 Codex harness 启用原生 Codex
-  plugin/app 支持。默认值：`false`。
+- `plugins.entries.codex.config.codexPlugins.enabled`：为 Codex harness 启用原生 Codex plugin/app 支持。默认值：`false`。
 - `plugins.entries.codex.config.codexPlugins.allow_destructive_actions`：
-  迁移后的 plugin app 询问的默认破坏性操作策略。
-  默认值：`false`。
-- `plugins.entries.codex.config.codexPlugins.plugins.<key>.enabled`：当全局 `codexPlugins.enabled` 也为 true 时，
-  启用一个迁移的 plugin 条目。
-  对于显式条目，默认值：`true`。
+  迁移后的 plugin app 请求的默认破坏性操作策略。默认值：`true`。
+- `plugins.entries.codex.config.codexPlugins.plugins.<key>.enabled`：当全局 `codexPlugins.enabled` 也为 true 时，启用迁移后的 plugin 条目。默认值：显式条目为 `true`。
 - `plugins.entries.codex.config.codexPlugins.plugins.<key>.marketplaceName`：
   稳定的 marketplace 标识。V1 仅支持 `"openai-curated"`。
-- `plugins.entries.codex.config.codexPlugins.plugins.<key>.pluginName`：迁移所得的稳定
-  Codex plugin 标识，例如 `"google-calendar"`。
+- `plugins.entries.codex.config.codexPlugins.plugins.<key>.pluginName`：来自迁移的稳定 Codex plugin 标识，例如 `"google-calendar"`。
 - `plugins.entries.codex.config.codexPlugins.plugins.<key>.allow_destructive_actions`：
-  单个 plugin 的破坏性操作覆盖。未提供时，将使用全局
-  `allow_destructive_actions` 值。
+  单个 plugin 的破坏性操作覆盖。省略时，使用全局 `allow_destructive_actions` 值。
 
 `codexPlugins.enabled` 是全局启用指令。由迁移写入的显式 plugin
 条目是持久安装和修复资格集合。`plugins["*"]` 不受支持，没有 `install`
@@ -404,11 +401,11 @@ session 建立时计算，而不是每一轮都计算；在更改原生 plugin �
 ```json5
 {
   gateway: {
-    mode: "local", // local | remote
+    mode: "local", // 本地 | 远程
     port: 18789,
     bind: "loopback",
     auth: {
-      mode: "token", // none | token | password | trusted-proxy
+      mode: "token", // 无 | 令牌 | 密码 | 可信代理
       token: "your-token",
       // password: "your-password", // 或 OPENCLAW_GATEWAY_PASSWORD
       // trustedProxy: { userHeader: "x-forwarded-user" }, // 适用于 mode=trusted-proxy；见 /gateway/trusted-proxy-auth
@@ -421,18 +418,18 @@ session 建立时计算，而不是每一轮都计算；在更改原生 plugin �
       },
     },
     tailscale: {
-      mode: "off", // off | serve | funnel
+      mode: "off", // 关闭 | 提供服务 | 漏斗
       resetOnExit: false,
     },
     controlUi: {
       enabled: true,
       basePath: "/openclaw",
       // root: "dist/control-ui",
-      // embedSandbox: "scripts", // strict | scripts | trusted
-      // allowExternalEmbedUrls: false, // dangerous: allow absolute external http(s) embed URLs
-      // chatMessageMaxWidth: "min(1280px, 82%)", // optional grouped chat message max-width
-      // allowedOrigins: ["https://control.example.com"], // required for non-loopback Control UI
-      // dangerouslyAllowHostHeaderOriginFallback: false, // dangerous: Host-header origin fallback mode
+      // embedSandbox: "scripts", // 严格 | 脚本 | 可信
+      // allowExternalEmbedUrls: false, // 危险：允许绝对外部 http(s) 嵌入 URL
+      // chatMessageMaxWidth: "min(1280px, 82%)", // 可选的分组聊天消息最大宽度
+      // allowedOrigins: ["https://control.example.com"], // 非 loopback Control UI 必填
+      // dangerouslyAllowHostHeaderOriginFallback: false, // 危险：Host-header origin 回退模式
       // allowInsecureAuth: false,
       // dangerouslyDisableDeviceAuth: false,
     },
@@ -1300,9 +1297,9 @@ openclaw gateway --port 19001
 
 ---
 
-## Configuration Includes (`$include`)
+## 配置包含（`$include`）
 
-Split your configuration across multiple files:
+将你的配置拆分到多个文件中：
 
 ```json5
 // ~/.openclaw/openclaw.json
@@ -1315,22 +1312,22 @@ Split your configuration across multiple files:
 }
 ```
 
-**Merge behavior:**
+**合并行为：**
 
-- Single file: replaces the included object.
-- File array: deep-merges in order (later files override earlier ones).
-- Sibling keys: merged after the include (overriding included values).
-- Nested includes: up to 10 levels.
-- Paths: resolved relative to the file that includes them, but must remain within the top-level config directory (`dirname` of `openclaw.json`). Only absolute paths/`../` forms are allowed if they still resolve within that boundary.
-- Writes handled by OpenClaw will write back into the included file if they only change a top-level section supported by a single-file include. For example, `plugins install` will update `plugins.json5` in `plugins: { $include: "./plugins.json5" }` and keep `openclaw.json` unchanged.
-- Root-level includes, include arrays, and includes with sibling overrides are read-only for writes handled by OpenClaw; these writes fail directly rather than flattening the config.
-- Errors: clear messages for missing files, parse errors, and cyclic includes.
+- 单个文件：替换被包含的对象。
+- 文件数组：按顺序深度合并（后面的文件覆盖前面的）。
+- 同级键：在 include 之后合并（覆盖被包含的值）。
+- 嵌套 include：最多 10 层。
+- 路径：相对于包含它们的文件解析，但必须保持在顶级配置目录（`openclaw.json` 的 `dirname`）内。只有当绝对路径/`../` 形式仍然解析到该边界内时才允许。
+- OpenClaw 处理的写入会写回到被包含的文件中，前提是它们只更改一个由单文件 include 支持的顶级部分。例如，`plugins install` 会更新 `plugins: { $include: "./plugins.json5" }` 中的 `plugins.json5`，并保持 `openclaw.json` 不变。
+- 根级 include、include 数组以及带有同级覆盖项的 include 对于 OpenClaw 处理的写入都是只读的；这些写入不会进行配置扁平化，而是直接失败。
+- 错误：为缺失文件、解析错误和循环 include 提供清晰的消息。
 
 ---
 
-_See also: [Configuration](/gateway/configuration) · [Configuration examples](/gateway/configuration-examples) · [Doctor](/gateway/doctor)_
+_另请参见： [配置](/gateway/configuration) · [配置示例](/gateway/configuration-examples) · [诊断](/gateway/doctor)_
 
-## See also
+## 另请参见
 
-- [Configuration](/gateway/configuration)
-- [Configuration examples](/gateway/configuration-examples)
+- [配置](/gateway/configuration)
+- [配置示例](/gateway/configuration-examples)

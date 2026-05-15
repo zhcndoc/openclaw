@@ -63,7 +63,41 @@ openclaw agent --agent ops --message "Run locally" --local
 - 当此命令触发 `models.json` 重新生成时，SecretRef 管理的提供方凭据会以非密文标记形式持久化（例如 env var 名称、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不是已解析的密文明文。
 - 标记写入以源为准：OpenClaw 持久化的是来自当前源配置快照的标记，而不是来自已解析运行时密钥值的标记。
 
+## JSON 投递状态
+
+当使用 `--json --deliver` 时，CLI 的 JSON 响应可能会包含顶层 `deliveryStatus`，以便脚本区分已投递、已抑制、部分失败和失败的发送：
+
+```json
+{
+  "payloads": [{ "text": "Report ready", "mediaUrl": null }],
+  "meta": { "durationMs": 1200 },
+  "deliveryStatus": {
+    "requested": true,
+    "attempted": true,
+    "status": "sent",
+    "succeeded": true,
+    "resultCount": 1
+  }
+}
+```
+
+`deliveryStatus.status` 的取值之一为 `sent`、`suppressed`、`partial_failed` 或 `failed`。`suppressed` 表示投递是有意不发送的，例如消息发送钩子取消了它，或者没有可见结果；它仍然是一个最终的、无需重试的结果。`partial_failed` 表示至少有一个 payload 已发送，而后续某个 payload 发送失败。`failed` 表示没有完成持久化发送，或者投递预检失败。
+
+基于 Gateway 的 CLI 响应也会保留原始 Gateway 结果结构，此时同一个对象可在 `result.deliveryStatus` 处获取。
+
+常见字段：
+
+- `requested`：只要对象存在，就始终为 `true`。
+- `attempted`：持久化发送路径运行后为 `true`；预检失败或没有可见 payload 时为 `false`。
+- `succeeded`：`true`、`false` 或 `"partial"`；`"partial"` 与 `status: "partial_failed"` 配对。
+- `reason`：来自持久化投递或预检验证的、采用小写蛇形命名的原因。已知原因包括 `cancelled_by_message_sending_hook`、`no_visible_payload`、`no_visible_result`、`channel_resolved_to_internal`、`unknown_channel`、`invalid_delivery_target` 和 `no_delivery_target`；失败的持久化发送也可能报告失败阶段。请将未知值视为不透明值，因为该集合可能会扩展。
+- `resultCount`：可用时的渠道发送结果数量。
+- `sentBeforeError`：当部分失败在错误发生前至少发送了一个 payload 时为 `true`。
+- `error`：对失败或部分失败发送而言为布尔值 `true`。
+- `errorMessage`：仅在捕获到底层投递错误消息时包含。预检失败会携带 `error` 和 `reason`，但不会包含 `errorMessage`。
+- `payloadOutcomes`：可选的逐 payload 结果，包含可用时的 `index`、`status`、`reason`、`resultCount`、`error`、`stage`、`sentBeforeError` 或 hook 元数据。
+
 ## 相关
 
-- [CLI reference](/cli)
-- [Agent runtime](/concepts/agent)
+- [CLI 参考](/cli)
+- [Agent 运行时](/concepts/agent)

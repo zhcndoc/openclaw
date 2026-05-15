@@ -70,12 +70,15 @@ title: "Agent send"
 
 ## 行为
 
-- 默认情况下，CLI 会**通过 Gateway** 运行。添加 `--local` 可强制在当前机器上使用
-  嵌入式运行时。
+- 默认情况下，CLI 会**通过 Gateway**运行。添加 `--local` 可强制使用
+  当前机器上的嵌入式运行时。
 - 如果 Gateway 不可达，CLI 会**回退**到本地嵌入式运行。
-- 会话选择：`--to` 会派生 session key（群组/频道目标保持隔离；直接聊天会折叠为 `main`）。
-- thinking 和 verbose 标志会持久保存到会话存储中。
-- 输出：默认输出纯文本，或使用 `--json` 输出结构化负载 + 元数据。
+- 会话选择：`--to` 会派生 session key（群组/频道目标
+  保持隔离；直接聊天会折叠为 `main`）。
+- thinking 和 verbose 标志会持久化到 session store 中。
+- 输出：默认输出纯文本，或使用 `--json` 输出结构化载荷 + 元数据。
+- 使用 `--json --deliver` 时，JSON 会包含发送、抑制、部分发送和失败发送的投递状态。参见
+  [JSON delivery status](/cli/agent#json-delivery-status)。
 
 ## 示例
 

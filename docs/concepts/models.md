@@ -42,14 +42,14 @@ OpenClaw 按以下顺序选择模型：
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="相关的模型入口">
-    - `agents.defaults.models` 是 OpenClaw 可使用的模型白名单/目录（以及别名）。
-    - `agents.defaults.imageModel` **仅在**主模型无法接受图像时使用。
-    - `agents.defaults.pdfModel` 由 `pdf` 工具使用。如果省略，则该工具会回退到 `agents.defaults.imageModel`，然后回退到解析后的会话/默认模型。
-    - `agents.defaults.imageGenerationModel` 由共享的图像生成能力使用。如果省略，`image_generate` 仍可推断出一个由认证支持的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的图像生成提供商。如果你设置了特定的提供商/模型，也要配置该提供商的认证/API key。
-    - `agents.defaults.musicGenerationModel` 由共享的音乐生成能力使用。如果省略，`music_generate` 仍可推断出一个由认证支持的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的音乐生成提供商。如果你设置了特定的提供商/模型，也要配置该提供商的认证/API key。
-    - `agents.defaults.videoGenerationModel` 由共享的视频生成能力使用。如果省略，`video_generate` 仍可推断出一个由认证支持的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的视频生成提供商。如果你设置了特定的提供商/模型，也要配置该提供商的认证/API key。
-    - 每个 agent 的默认值可以通过 `agents.list[].model` 以及绑定覆盖 `agents.defaults.model`（参见 [Multi-agent routing](/concepts/multi-agent)）。
+  <Accordion title="相关模型表面">
+    - `agents.defaults.models` 是 OpenClaw 可使用模型的允许列表/目录（加上别名）。使用 `provider/*` 条目可以限制可见提供商，同时保持提供商发现的动态性。
+    - `agents.defaults.imageModel` **仅在**主模型不能接受图像时使用。
+    - `agents.defaults.pdfModel` 由 `pdf` 工具使用。若省略，该工具会回退到 `agents.defaults.imageModel`，然后回退到已解析的会话/默认模型。
+    - `agents.defaults.imageGenerationModel` 由共享的图像生成能力使用。若省略，`image_generate` 仍可推断一个带认证的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的图像生成提供商。如果你设置了特定提供商/模型，也要配置该提供商的认证/API key。
+    - `agents.defaults.musicGenerationModel` 由共享的音乐生成能力使用。若省略，`music_generate` 仍可推断一个带认证的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的音乐生成提供商。如果你设置了特定提供商/模型，也要配置该提供商的认证/API key。
+    - `agents.defaults.videoGenerationModel` 由共享的视频生成能力使用。若省略，`video_generate` 仍可推断一个带认证的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的视频生成提供商。如果你设置了特定提供商/模型，也要配置该提供商的认证/API key。
+    - 每个 agent 的默认值可以通过 `agents.list[].model` 结合绑定来覆盖 `agents.defaults.model`（参见 [Multi-agent routing](/concepts/multi-agent)）。
 
   </Accordion>
 </AccordionGroup>
@@ -59,11 +59,11 @@ OpenClaw 按以下顺序选择模型：
 同一个 `provider/model`，根据来源不同，含义也可能不同：
 
 - 配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常的起点，并使用 `agents.defaults.model.fallbacks`。
-- 自动回退选择是临时恢复状态。它们会以 `modelOverrideSource: "auto"` 的形式存储，这样后续轮次就可以继续使用回退链，而无需先探测一个已知不可用的主模型。
-- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到另一个已配置模型。
-- Cron `--model` / 负载 `model` 是每个任务的主模型。它仍然使用已配置的回退，除非任务提供显式的负载 `fallbacks`（严格的 cron 运行使用 `fallbacks: []`）。
-- CLI 默认模型和白名单选择器会尊重 `models.mode: "replace"`，此时会列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
-- Control UI 模型选择器会请求 Gateway 的已配置模型视图：如果存在 `agents.defaults.models`，则使用它；否则使用显式的 `models.providers.*.models` 以及具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"`，或 `openclaw models list --all`。
+- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 的形式存储，因此后续轮次可以继续使用回退链，而无需先探测一个已知有问题的主模型。
+- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果该选择的提供商/模型不可达，OpenClaw 会显式失败，而不会落到另一个已配置模型。
+- Cron `--model` / payload `model` 是每个作业的主模型。除非作业提供显式的 payload `fallbacks`，否则它仍会使用配置的回退（要进行严格的 cron 运行，请使用 `fallbacks: []`）。
+- CLI 默认模型和允许列表选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models` 而不是加载完整的内置目录。
+- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：若存在，则使用 `agents.defaults.models`，包括提供商级别的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 以及具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"` 或 `openclaw models list --all`。
 
 ## 快速模型策略
 
@@ -88,7 +88,7 @@ openclaw onboard
 - `agents.defaults.pdfModel.primary` 和 `agents.defaults.pdfModel.fallbacks`
 - `agents.defaults.imageGenerationModel.primary` 和 `agents.defaults.imageGenerationModel.fallbacks`
 - `agents.defaults.videoGenerationModel.primary` 和 `agents.defaults.videoGenerationModel.fallbacks`
-- `agents.defaults.models`（白名单 + 别名 + 提供商参数）
+- `agents.defaults.models`（允许列表 + 别名 + 提供商参数 + `provider/*` 动态提供商条目）
 - `models.providers`（写入 `models.json` 的自定义提供商）
 
 <Note>
@@ -139,15 +139,35 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
 `openclaw models list --provider <provider>` 显示的精确提供商/模型。
 当白名单启用时，裸本地文件名或显示名称是不够的。
 
-白名单配置示例：
+如果你想限制提供商而不必手动列出每个模型，可将
+`provider/*` 条目添加到 `agents.defaults.models`：
 
 ```json5
 {
-  agent: {
-    model: { primary: "anthropic/claude-sonnet-4-6" },
-    models: {
-      "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
-      "anthropic/claude-opus-4-6": { alias: "Opus" },
+  agents: {
+    defaults: {
+      models: {
+        "openai-codex/*": {},
+        "vllm/*": {},
+      },
+    },
+  },
+}
+```
+
+使用该策略后，`/model`、`/models` 和模型选择器只会显示这些提供商已发现的目录。所选提供商的新模型可以在不编辑允许列表的情况下出现。当你需要来自另一个提供商的某个特定模型时，可以将精确的 `provider/model` 条目与 `provider/*` 条目混合使用。
+
+允许列表配置示例：
+
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "anthropic/claude-sonnet-4-6" },
+      models: {
+        "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
+        "anthropic/claude-opus-4-6": { alias: "Opus" },
+      },
     },
   },
 }
@@ -166,7 +186,7 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
 ```
 
 <AccordionGroup>
-  <Accordion title="Picker behavior">
+  <Accordion title="选择器行为">
     - `/model`（以及 `/model list`）是一个紧凑的编号选择器（模型家族 + 可用提供商）。
     - 在 Discord 中，`/model` 和 `/models` 会打开一个交互式选择器，包含提供商和模型下拉框以及一个提交步骤。
     - 在 Telegram 中，`/models` 选择器的选择仅作用于当前会话；它们不会更改 `openclaw.json` 中 agent 的持久默认值。

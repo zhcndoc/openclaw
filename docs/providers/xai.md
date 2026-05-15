@@ -32,14 +32,15 @@ OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
 </Steps>
 
 <Note>
-OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。相同的
-`XAI_API_KEY` 也可用于支持 Grok 的 `web_search`、一等公民 `x_search`，
-以及远程 `code_execution`。
-如果你在 `plugins.entries.xai.config.webSearch.apiKey` 下存储了 xAI 密钥，
-内置的 xAI 模型提供方也会将该密钥作为回退使用。
-将 `plugins.entries.xai.config.webSearch.baseUrl` 设置为通过运维方的 xAI Responses 代理路由 Grok 的
-`web_search`，并且默认情况下也路由 `x_search`。
-`code_execution` 调优位于 `plugins.entries.xai.config.codeExecution` 下。
+OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。来自
+`openclaw onboard --auth-choice xai-api-key` 的同一
+API 密钥也可用于一流的 `x_search` 和远程 `code_execution`；`XAI_API_KEY` 或插件
+web-search 配置也可以为基于 Grok 的 `web_search` 提供支持。
+如果你将 xAI 密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
+捆绑的 xAI 模型提供方也会将该密钥作为回退使用。
+将 `plugins.entries.xai.config.webSearch.baseUrl` 设为通过运维方 xAI Responses 代理路由 Grok 的 `web_search`
+，并默认让 `x_search` 通过该代理。
+`code_execution` 的调优位于 `plugins.entries.xai.config.codeExecution` 下。
 </Note>
 
 ## 内置目录
@@ -117,8 +118,9 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 ## 功能
 
 <AccordionGroup>
-  <Accordion title="网页搜索">
-    内置的 `grok` 网页搜索提供方也会使用 `XAI_API_KEY`：
+  <Accordion title="Web search">
+    捆绑的 `grok` 网页搜索提供方可以使用 `XAI_API_KEY` 或插件
+    web-search 密钥：
 
     ```bash
     openclaw config set tools.web.search.provider grok
@@ -394,14 +396,17 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
   </Accordion>
 
-  <Accordion title="已知限制">
-    - 目前仅支持 API 密钥认证。OpenClaw 还没有 xAI OAuth 或设备码流程。
-    - `grok-4.20-multi-agent-experimental-beta-0304` 在常规 xAI 提供方路径上不受支持，
-      因为它需要与标准 OpenClaw xAI 传输层不同的上游 API 面。
-    - xAI Realtime 语音尚未作为 OpenClaw 提供方注册。它需要比批量 STT 或
-      流式转录更不同的双向语音会话契约。
-    - xAI 图像的 `quality`、图像 `mask` 以及额外的仅原生宽高比在共享的 `image_generate` 工具具备相应的
-      跨提供方控制之前不会暴露。
+  <Accordion title="Known limits">
+    - 认证目前仅支持 API 密钥。API 密钥可以存储在 xAI 认证
+      配置文件、环境变量或插件配置中；OpenClaw 目前还没有 xAI OAuth 或
+      设备码流程。
+    - `grok-4.20-multi-agent-experimental-beta-0304` 不受
+      常规 xAI 提供方路径支持，因为它需要与标准 OpenClaw xAI 传输
+      不同的上游 API 表面。
+    - xAI Realtime 语音尚未注册为 OpenClaw 提供方。它
+      需要与批量 STT 或流式转录不同的双向语音会话契约。
+    - xAI 图像的 `quality`、图像 `mask` 和额外的仅原生比例在共享的
+      `image_generate` 工具具有相应的跨提供方控制项之前不会暴露。
   </Accordion>
 
   <Accordion title="高级说明">
@@ -424,8 +429,8 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
 ## 在线测试
 
-xAI 媒体路径由单元测试和可选的在线套件覆盖。在线
-命令会在探测 `XAI_API_KEY` 之前，从你的登录 shell 中加载密钥，包括 `~/.profile`。
+xAI 媒体路径由单元测试和可选的在线测试套件覆盖。运行在线探测前，
+请先在进程环境中导出 `XAI_API_KEY`。
 
 ```bash
 pnpm test extensions/xai

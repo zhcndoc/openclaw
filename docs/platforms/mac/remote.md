@@ -76,12 +76,12 @@ title: "远程控制"
 
 ## 故障排查
 
-- **退出 127 / 未找到**：`openclaw` 没有出现在非登录 shell 的 PATH 中。将其添加到 `/etc/paths`、你的 shell rc，或符号链接到 `/usr/local/bin`/`/opt/homebrew/bin`。
-- **健康探测失败**：检查 SSH 可达性、PATH，以及 Baileys 是否已登录（`openclaw status --json`）。
-- **Web Chat 卡住**：确认远程主机上的网关正在运行，并且转发端口与网关 WS 端口一致；UI 需要一个健康的 WS 连接。
-- **节点 IP 显示为 127.0.0.1**：这是 SSH 隧道下的预期行为。如果你希望网关看到真实客户端 IP，请将 **传输方式** 切换为 **直接（ws/wss）**。
-- **仪表盘可用但 Mac 能力离线**：这表示应用的操作/控制连接是健康的，但配套节点连接未连接或缺少其命令面。打开菜单栏设备区域，检查该 Mac 是否显示为 `paired · disconnected`。对于 `wss://*.ts.net` 的 Tailscale Serve 端点，应用会在证书轮换后检测到过期的旧 TLS leaf pin，在 macOS 信任新证书时清除旧 pin，并自动重试。如果证书未被系统信任，或主机不是 Tailscale Serve 名称，请检查证书或切换到 **通过 SSH 远程**。
-- **Voice Wake**：在远程模式下，触发短语会自动转发；不需要单独的转发器。
+- **exit 127 / not found**: `openclaw` 未添加到非登录 shell 的 PATH 中。将其添加到 `/etc/paths`、你的 shell rc，或链接到 `/usr/local/bin`/`/opt/homebrew/bin`。
+- **Health probe failed**: 检查 SSH 可达性、PATH，以及 Baileys 是否已登录（`openclaw status --json`）。
+- **Web Chat stuck**: 确认网关正在远程主机上运行，并且转发端口与网关的 WS 端口匹配；UI 需要健康的 WS 连接。
+- **Node IP shows 127.0.0.1**: 使用 SSH 隧道时这是预期行为。如果你希望网关看到真实的客户端 IP，请将 **Transport** 切换为 **Direct (ws/wss)**。
+- **Dashboard works but Mac capabilities are offline**: 这表示应用的 operator/control 连接是健康的，但 companion 节点连接未连接或缺少其命令面。打开菜单栏设备部分，检查该 Mac 是否为 `paired · disconnected`。对于 `wss://*.ts.net` 的 Tailscale Serve 端点，应用会在证书轮换后检测到过期的旧 TLS leaf pin，在 macOS 信任新证书时清除过期 pin，并自动重试。如果证书未被系统信任，或者主机不是 Tailscale Serve 名称，请将 `gateway.remote.tlsFingerprint` 设置为预期的证书指纹，查看证书，或切换到 **Remote over SSH**。
+- **Voice Wake**: 触发短语在远程模式下会自动转发；不需要单独的转发器。
 
 ## 通知声音
 

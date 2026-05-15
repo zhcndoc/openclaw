@@ -35,7 +35,11 @@ openclaw update --dry-run   # 预览，不实际应用
 beta 标签不存在或比最新稳定版本更旧时，运行时会回退到 stable/latest。若你想在一次性包更新中使用原始的 npm beta dist-tag，请使用 `--tag beta`
 。
 
-有关渠道语义，请参见 [开发渠道](/install/development-channels)。
+对于受管理的插件，beta 渠道回退属于警告：核心更新
+仍可能成功，而插件会使用其记录的默认/latest 发布版本，因为没有
+可用的插件 beta 版本。
+
+参见 [开发渠道](/install/development-channels) 了解渠道语义。
 
 ## 在 npm 和 git 安装之间切换
 

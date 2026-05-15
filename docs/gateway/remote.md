@@ -139,20 +139,18 @@ macOS 菜单栏应用可以端到端驱动同一套配置（远程状态检查�
 
 简短版：**保持 Gateway 仅绑定 loopback**，除非你确定需要绑定到其他地址。
 
-- **Loopback + SSH/Tailscale Serve** 是最安全的默认方式（不会公开暴露）。
-- 明文 `ws://` 默认仅限 loopback。对于受信任的私有网络，
-  可在客户端进程上设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1` 作为
-  应急开关。没有对应的 `openclaw.json` 配置；这必须是发起 WebSocket 连接的客户端进程
-  环境变量。
-- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或者在 loopback 不可用时的 `auto`）必须使用 gateway 认证：token、password，或带有 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
-- `gateway.remote.token` / `.password` 是客户端凭据来源。它们**不会**单独配置服务器认证。
-- 本地调用路径只有在 `gateway.auth.*` 未设置时才可以将 `gateway.remote.*` 作为回退。
-- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 明确配置但未解析成功，则解析会安全失败关闭（不会被远程回退掩盖）。
-- 使用 `wss://` 时，`gateway.remote.tlsFingerprint` 会固定远程 TLS 证书。
-- **Tailscale Serve** 可通过身份头对 Control UI/WebSocket 流量进行认证，当 `gateway.auth.allowTailscale: true` 时生效；HTTP API 端点不使用该 Tailscale 头认证，而是遵循 gateway 的正常 HTTP 认证模式。该无 token 流程假定 gateway 主机是可信的。如果你希望所有地方都使用共享密钥认证，请将其设为 `false`。
-- **Trusted-proxy** 认证默认期望非 loopback 的身份感知代理设置。
-  同主机的 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-- 将浏览器控制视为操作员访问：仅限 tailnet + 有意进行的节点配对。
+- **Loopback + SSH/Tailscale Serve** 是最安全的默认选择（不会公开暴露）。
+- 明文 `ws://` 默认仅限 loopback 使用。对于受信任的私有网络，
+  可在客户端进程上设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`
+  作为应急开关。`openclaw.json` 没有对应项；这必须是建立 WebSocket 连接的客户端进程环境变量。
+- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或者在 loopback 不可用时的 `auto`）必须使用 gateway 身份验证：token、password，或带有 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
+- `gateway.remote.token` / `.password` 是客户端凭据来源。它们本身**不会**配置服务端认证。
+- 本地 call 路径只有在 `gateway.auth.*` 未设置时，才可将 `gateway.remote.*` 作为回退。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析成功，解析会闭合失败（不会被远程回退掩盖）。
+- 使用 `wss://` 时，`gateway.remote.tlsFingerprint` 会固定远程 TLS 证书，包括 macOS 直接模式。若没有已配置或已存储的固定值，macOS 只会在正常系统信任通过后，对首次使用的证书进行固定；macOS 本身不信任的自签名或私有 CA gateway 需要显式 fingerprint 或通过 Remote over SSH。
+- **Tailscale Serve** 可以通过身份头为 Control UI/WebSocket 流量进行认证，当 `gateway.auth.allowTailscale: true` 时生效；HTTP API 端点不会使用该 Tailscale 头部认证，而是遵循 gateway 的正常 HTTP 认证模式。这个无 token 流程假定 gateway 主机是可信的。如果你希望所有地方都使用共享密钥认证，请将其设为 `false`。
+- **Trusted-proxy** 认证默认期望非 loopback 的身份感知代理部署。同主机 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
+- 将浏览器控制视为操作员访问：仅限 tailnet + 明确的节点配对。
 
 深入了解：[安全](/gateway/security)。
 

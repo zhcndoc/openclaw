@@ -12,11 +12,41 @@ OpenClaw 通过在你的 agent 工作区中写入 **纯 Markdown 文件** 来记
 
 你的 agent 有三个与记忆相关的文件：
 
-- **`MEMORY.md`** —— 长期记忆。持久的事实、偏好和决策。会在每次 DM 会话开始时加载。
-- **`memory/YYYY-MM-DD.md`** —— 每日笔记。运行中的上下文和观察。今天和昨天的笔记会自动加载。
-- **`DREAMS.md`**（可选）—— Dream Diary 和 dreaming sweep 总结，供人工审阅，其中包括有依据的历史回填条目。
+- **`MEMORY.md`** — 长期记忆。持久的事实、偏好和
+  决策。会在每个 DM 会话开始时加载。
+- **`memory/YYYY-MM-DD.md`**（或 **`memory/YYYY-MM-DD-<slug>.md`**）— 每日日记。
+  运行中的上下文和观察。今天和昨天的日记会被
+  自动加载，带有 slug 的变体（例如由捆绑的
+  session-memory hook 在 `/new` 或 `/reset` 时写入的文件）现在也会与
+  仅日期文件一起被读取。
+- **`DREAMS.md`**（可选）— Dream Diary 和 dreaming sweep
+  总结，供人工审阅，包括有依据的历史回填条目。
 
 这些文件位于 agent 工作区中（默认 `~/.openclaw/workspace`）。
+
+## 什么写到哪里
+
+`MEMORY.md` 是紧凑、经过整理的层。把它用于持久事实、
+偏好、固定决策，以及应在
+主私有会话开始时可用的简短摘要。它不适合用作原始对话记录、
+每日日志或详尽归档。
+
+`memory/YYYY-MM-DD.md` 文件是工作层。把它们用于详细的每日
+笔记、观察、会话摘要，以及之后可能仍然有用的
+原始上下文。这些文件会被 `memory_search` 和 `memory_get` 索引，
+但不会在每一轮都注入到正常的启动提示中。
+
+随着时间推移，系统会期望 agent 将每日日记中的有用内容
+提炼到 `MEMORY.md` 中，并移除过时的长期条目。
+生成的工作区指令和 heartbeat 流程可以周期性地完成这件事；你不需要
+为了每个被记住的细节都手动编辑 `MEMORY.md`。
+
+如果 `MEMORY.md` 超过了启动文件预算，OpenClaw 会保留
+磁盘上的原文件不变，但会截断注入模型上下文的副本。把这看作一个信号：
+将详细内容移回 `memory/*.md`，在 `MEMORY.md` 中只保留
+持久摘要，或者如果你明确希望花费更多提示预算，就提高启动限制。
+使用 `/context list`、`/context detail` 或
+`openclaw doctor` 查看原始大小与注入大小以及截断状态。
 
 <Tip>
 如果你希望你的 agent 记住某件事，只要告诉它：“记住我更喜欢 TypeScript。” 它就会把这件事写入相应的文件。

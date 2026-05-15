@@ -216,8 +216,9 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 移除 `agents.defaults.llm`；对较慢的 provider/model 超时请使用 `models.providers.<id>.timeoutSeconds`
     - `browser.ssrfPolicy.allowPrivateNetwork` → `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`
     - `browser.profiles.*.driver: "extension"` → `"existing-session"`
-    - 移除 `browser.relayBindHost`（旧的扩展 relay 设置）
-    - 旧的 `models.providers.*.api: "openai"` → `"openai-completions"`（Gateway 启动时也会跳过 `api` 被设置为未来或未知枚举值的 provider，而不是直接失败）
+    - remove `browser.relayBindHost` (legacy extension relay setting)
+    - legacy `models.providers.*.api: "openai"` → `"openai-completions"` (gateway startup also skips providers whose `api` is set to a future or unknown enum value rather than failing closed)
+    - remove `plugins.entries.codex.config.codexDynamicToolsProfile`; Codex app-server always keeps Codex-native workspace tools native
 
     Doctor 警告还包括多账号频道的默认账号指引：
 
@@ -225,8 +226,8 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 如果 `channels.<channel>.defaultAccount` 被设置为未知的账号 ID，doctor 会警告并列出已配置的账号 ID。
 
   </Accordion>
-  <Accordion title="2b. OpenCode provider 覆盖">
-    如果你手动添加了 `models.providers.opencode`、`opencode-zen` 或 `opencode-go`，它会覆盖来自 `@mariozechner/pi-ai` 的内置 OpenCode 目录。这可能会把模型路由到错误的 API，或把费用置零。Doctor 会发出警告，以便你移除该覆盖并恢复每个模型的 API 路由 + 费用。
+  <Accordion title="2b. OpenCode provider overrides">
+    If you've added `models.providers.opencode`, `opencode-zen`, or `opencode-go` manually, it overrides the built-in OpenCode catalog from `@earendil-works/pi-ai`. That can force models onto the wrong API or zero out costs. Doctor warns so you can remove the override and restore per-model API routing + costs.
   </Accordion>
   <Accordion title="2c. 浏览器迁移和 Chrome MCP 就绪性">
     如果你的浏览器配置仍指向已移除的 Chrome 扩展路径，doctor 会将其规范化为当前的主机本地 Chrome MCP attach 模型：
@@ -263,13 +264,14 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
 
     在 `--fix` / `--repair` 模式下，doctor 会重写受影响的默认 agent 和按 agent 的引用，包括主模型、回退、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及陈旧的持久化会话 route 状态：
 
-    - `openai-codex/gpt-*` 会变成 `openai/gpt-*`。
-    - 由于运行时选择是 provider/model 作用域的，因此会移除陈旧的整体 agent 运行时配置和持久化会话 runtime pin。
-    - 会保留显式的 provider/model 运行时策略。
-    - 现有的模型回退列表会保留，但其中的旧条目会被重写；复制过来的按模型设置会从旧键移动到规范化的 `openai/*` 键。
-    - 持久化会话中的 `modelProvider`/`providerOverride`、`model`/`modelOverride`、回退通知、auth-profile pin 和 Codex harness pin 会在所有发现的 agent 会话存储中修复。
-    - `/codex ...` 表示“从聊天中控制或绑定一个原生 Codex 对话”。
-    - `/acp ...` 或 `runtime: "acp"` 表示“使用外部 ACP/acpx 适配器”。
+    - `openai-codex/gpt-*` becomes `openai/gpt-*`.
+    - Codex intent moves to provider/model-scoped `agentRuntime.id: "codex"` entries for repaired agent model refs so `openai-codex:...` auth profiles can still be selected after the model ref becomes `openai/*`.
+    - Stale whole-agent runtime config and persisted session runtime pins are removed because runtime selection is provider/model-scoped.
+    - Existing provider/model runtime policy is preserved unless the repaired legacy model ref needs Codex routing to keep the old auth path.
+    - Existing model fallback lists are preserved with their legacy entries rewritten; copied per-model settings move from the legacy key to the canonical `openai/*` key.
+    - Persisted session `modelProvider`/`providerOverride`, `model`/`modelOverride`, fallback notices, and auth-profile pins are repaired across all discovered agent session stores.
+    - `/codex ...` means "control or bind a native Codex conversation from chat."
+    - `/acp ...` or `runtime: "acp"` means "use the external ACP/acpx adapter."
 
   </Accordion>
   <Accordion title="2g. 会话 route 清理">
@@ -312,8 +314,8 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     在 Linux 上，doctor 还会在用户的 crontab 仍调用旧版 `~/.openclaw/bin/ensure-whatsapp.sh` 时发出警告。这个宿主机本地脚本不受当前 OpenClaw 维护，而且当 cron 无法访问 systemd 用户总线时，可能会向 `~/.openclaw/logs/whatsapp-health.log` 写入虚假的 `Gateway inactive` 消息。请使用 `crontab -e` 删除过时的 crontab 条目；当前健康检查请使用 `openclaw channels status --probe`、`openclaw doctor` 和 `openclaw gateway status`。
 
   </Accordion>
-  <Accordion title="3c. 会话锁清理">
-    Doctor 会扫描每个 agent 的会话目录，查找过期的写锁文件——即会话异常退出后遗留的文件。对于找到的每个锁文件，它会报告：路径、PID、该 PID 是否仍存活、锁的年龄，以及它是否被视为过期（PID 已死或超过 30 分钟）。在 `--fix` / `--repair` 模式下，它会自动移除过期锁文件；否则会打印提示并要求你使用 `--fix` 重新运行。
+  <Accordion title="3c. Session lock cleanup">
+    Doctor scans every agent session directory for stale write-lock files — files left behind when a session exited abnormally. For each lock file found it reports: the path, PID, whether the PID is still alive, lock age, and whether it is considered stale (dead PID, older than 30 minutes, or a live PID that can be proven to belong to a non-OpenClaw process). In `--fix` / `--repair` mode it removes stale lock files automatically; otherwise it prints a note and instructs you to rerun with `--fix`.
   </Accordion>
   <Accordion title="3d. 会话转写分支修复">
     Doctor 会扫描 agent 会话 JSONL 文件，查找由 2026.4.24 prompt transcript rewrite bug 造成的重复分支结构：一个带有 OpenClaw 内部运行时上下文的已放弃 user turn，以及一个包含相同可见用户提示的活动同级分支。在 `--fix` / `--repair` 模式下，doctor 会在原文件旁边为每个受影响文件创建备份，并将转写重写为活动分支，这样 gateway 历史和 memory 读取器就不再会看到重复 turn。
@@ -353,7 +355,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     启用沙箱时，doctor 会检查 Docker 镜像，并在当前镜像缺失时提供构建或切换到旧名称的选项。
   </Accordion>
   <Accordion title="7b. Plugin install cleanup">
-    Doctor removes legacy OpenClaw-generated plugin dependency staging state in `openclaw doctor --fix` / `openclaw doctor --repair` mode. This covers stale generated dependency roots, old install-stage directories, package-local debris from earlier bundled-plugin dependency repair code, and orphaned or recovered managed npm copies of bundled `@openclaw/*` plugins that can shadow the current bundled manifest.
+    Doctor removes legacy OpenClaw-generated plugin dependency staging state in `openclaw doctor --fix` / `openclaw doctor --repair` mode. This covers stale generated dependency roots, old install-stage directories, package-local debris from earlier bundled-plugin dependency repair code, and orphaned or recovered managed npm copies of bundled `@openclaw/*` plugins that can shadow the current bundled manifest. Doctor also relinks the host `openclaw` package into managed npm plugins that declare `peerDependencies.openclaw`, so package-local runtime imports such as `openclaw/plugin-sdk/*` keep resolving after updates or npm repairs.
 
     Doctor can also reinstall missing downloadable plugins when config references them but the local plugin registry cannot find them. Examples include material `plugins.entries`, configured channel/provider/search settings, and configured agent runtimes. During package updates, doctor avoids running package-manager plugin repair while the core package is being swapped; run `openclaw doctor --fix` again after the update if a configured plugin still needs recovery. Gateway startup and config reload do not run package managers; plugin installs remain explicit doctor/install/update work.
 

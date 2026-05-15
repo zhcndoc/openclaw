@@ -100,7 +100,7 @@ openclaw onboard --non-interactive \
     如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `CLOUDFLARE_AI_GATEWAY_API_KEY` 对该进程可用。
 
     <Warning>
-    仅放在 `~/.profile` 中的密钥对 launchd/systemd 守护进程没有帮助，除非该环境也被导入到那里。请将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保 gateway 进程可以读取它。
+    仅在交互式 shell 中导出的密钥不会帮助 launchd/systemd 守护进程，除非该环境也被导入其中。请将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保 gateway 进程可以读取它。
     </Warning>
 
   </Accordion>

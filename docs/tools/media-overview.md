@@ -42,30 +42,30 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 ## 提供商能力矩阵
 
-| 提供商       | 图像 | 视频 | 音乐 | TTS | STT | 实时语音 | 媒体理解 |
-| ------------ | :--: | :--: | :--: | :-: | :-: | :------: | :------: |
-| Alibaba      |      |  ✓   |      |     |     |          |          |
-| BytePlus     |      |  ✓   |      |     |     |          |          |
-| ComfyUI      |  ✓   |  ✓   |  ✓   |     |     |          |          |
-| DeepInfra    |  ✓   |  ✓   |      |  ✓  |  ✓  |          |    ✓     |
-| Deepgram     |      |      |      |     |  ✓  |    ✓     |          |
-| ElevenLabs   |      |      |      |  ✓  |  ✓  |          |          |
-| fal          |  ✓   |  ✓   |      |     |     |          |          |
-| Google       |  ✓   |  ✓   |  ✓   |  ✓  |     |    ✓     |    ✓     |
-| Gradium      |      |      |      |  ✓  |     |          |          |
-| Local CLI     |      |      |      |  ✓  |     |          |          |
-| Microsoft    |      |      |      |  ✓  |     |          |          |
-| MiniMax      |  ✓   |  ✓   |  ✓   |  ✓  |     |          |          |
-| Mistral      |      |      |      |     |  ✓  |          |          |
-| OpenAI       |  ✓   |  ✓   |      |  ✓  |  ✓  |    ✓     |    ✓     |
-| OpenRouter   |  ✓   |  ✓   |      |  ✓  |     |          |    ✓     |
-| Qwen         |      |  ✓   |      |     |     |          |          |
-| Runway       |      |  ✓   |      |     |     |          |          |
-| SenseAudio   |      |      |      |     |  ✓  |          |          |
-| Together     |      |  ✓   |      |     |     |          |          |
-| Vydra        |  ✓   |  ✓   |      |  ✓  |     |          |          |
-| xAI          |  ✓   |  ✓   |      |  ✓  |  ✓  |          |    ✓     |
-| Xiaomi MiMo  |  ✓   |      |      |  ✓  |     |          |    ✓     |
+| Provider    | Image | Video | Music | TTS | STT | Realtime voice | Media understanding |
+| ----------- | :---: | :---: | :---: | :-: | :-: | :------------: | :-----------------: |
+| Alibaba     |       |   ✓   |       |     |     |                |                     |
+| BytePlus    |       |   ✓   |       |     |     |                |                     |
+| ComfyUI     |   ✓   |   ✓   |   ✓   |     |     |                |                     |
+| DeepInfra   |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
+| Deepgram    |       |       |       |     |  ✓  |       ✓        |                     |
+| ElevenLabs  |       |       |       |  ✓  |  ✓  |                |                     |
+| fal         |   ✓   |   ✓   |       |     |     |                |                     |
+| Google      |   ✓   |   ✓   |   ✓   |  ✓  |     |       ✓        |          ✓          |
+| Gradium     |       |       |       |  ✓  |     |                |                     |
+| Local CLI   |       |       |       |  ✓  |     |                |                     |
+| Microsoft   |       |       |       |  ✓  |     |                |                     |
+| MiniMax     |   ✓   |   ✓   |   ✓   |  ✓  |     |                |                     |
+| Mistral     |       |       |       |     |  ✓  |                |                     |
+| OpenAI      |   ✓   |   ✓   |       |  ✓  |  ✓  |       ✓        |          ✓          |
+| OpenRouter  |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
+| Qwen        |       |   ✓   |       |     |     |                |                     |
+| Runway      |       |   ✓   |       |     |     |                |                     |
+| SenseAudio  |       |       |       |     |  ✓  |                |                     |
+| Together    |       |   ✓   |       |     |     |                |                     |
+| Vydra       |   ✓   |   ✓   |       |  ✓  |     |                |                     |
+| xAI         |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
+| Xiaomi MiMo |   ✓   |       |       |  ✓  |     |                |          ✓          |
 
 <Note>
 媒体理解使用在你的提供商配置中注册的任何具备视觉能力或音频能力的模型。上面的矩阵列出了具备专用媒体理解支持的提供商；大多数多模态 LLM 提供商（Anthropic、Google、OpenAI 等）在配置为当前回复模型时，也可以理解传入媒体。
@@ -91,12 +91,12 @@ id，并在任务账本中跟踪该作业。代理在作业运行期间会继续
 
 ## 语音转文本与 Voice Call
 
-当配置后，Deepgram、DeepInfra、ElevenLabs、Mistral、OpenAI、SenseAudio 和 xAI 都可以通过批量 `tools.media.audio` 路径转录
-传入音频。
-会对语音消息进行 mention gating 或命令
-解析的频道插件，会在传入上下文中标记已转录的附件，因此共享
-媒体理解流程会复用该转录内容，而不是对同一音频再发起第二次
-STT 调用。
+Deepgram, DeepInfra, ElevenLabs, Mistral, OpenAI, OpenRouter, SenseAudio, and xAI can all transcribe
+inbound audio through the batch `tools.media.audio` path when configured.
+Channel plugins that preflight a voice note for mention gating or command
+parsing mark the transcribed attachment on the inbound context, so the shared
+media-understanding pass reuses that transcript instead of making a second
+STT call for the same audio.
 
 Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
 流式 STT 提供商，因此实时电话音频可以在无需等待录音完成的情况下

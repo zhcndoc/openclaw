@@ -51,14 +51,13 @@ openclaw-plugin-inspector ./my-plugin
 
 ### 维护者验收通道
 
-在验证外部检查器与 OpenClaw 插件包的兼容性时，使用 Blacksmith Testbox 作为可安装包的验收通道。在包构建完成后，从一个干净的 OpenClaw 检出环境中运行：
+在验证外部检查器与 OpenClaw 插件包时，请将由 Crabbox 支持的 Blacksmith Testbox 用作可安装包验收通道。
+在构建完成后，从一个干净的 OpenClaw 检出目录中运行它：
 
 ```sh
-blacksmith testbox warmup ci-check-testbox.yml --ref main --idle-timeout 90
-blacksmith testbox run --id <tbx_id> "pnpm install && pnpm build && npm exec --yes @openclaw/plugin-inspector@0.1.0 -- ./extensions/telegram --json"
-blacksmith testbox run --id <tbx_id> "npm exec --yes @openclaw/plugin-inspector@0.1.0 -- ./extensions/discord --json"
-blacksmith testbox run --id <tbx_id> "npm exec --yes @openclaw/plugin-inspector@0.1.0 -- <clawhub-plugin-dir> --json"
-blacksmith testbox stop <tbx_id>
+pnpm crabbox:run -- --provider blacksmith-testbox --timing-json --shell -- "pnpm install && pnpm build && npm exec --yes @openclaw/plugin-inspector@0.1.0 -- ./extensions/telegram --json"
+pnpm crabbox:run -- --provider blacksmith-testbox --timing-json --shell -- "npm exec --yes @openclaw/plugin-inspector@0.1.0 -- ./extensions/discord --json"
+pnpm crabbox:run -- --provider blacksmith-testbox --timing-json --shell -- "npm exec --yes @openclaw/plugin-inspector@0.1.0 -- <clawhub-plugin-dir> --json"
 ```
 
 请将此通道保持为维护者可选，因为它会安装外部 npm 包，并且可能检查从仓库外部克隆的插件包。本地仓库的保护覆盖了 SDK 导出映射、兼容性注册表元数据、已弃用的 SDK 导入清理，以及内置扩展导入边界；Testbox 检查器验证则覆盖了外部插件作者实际消费该包时的情况。

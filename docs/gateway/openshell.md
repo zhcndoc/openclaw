@@ -16,14 +16,19 @@ OpenShell 插件重用与通用 [SSH 后端](/gateway/sandboxing#ssh-backend) �
 
 ## 前提条件
 
-- 已安装 `openshell` CLI 并且可通过 `PATH` 访问（或者通过
+- 已安装 OpenShell 插件（`openclaw plugins install @openclaw/openshell-sandbox`）
+- 已安装 `openshell` CLI，并且在 `PATH` 中（或通过
   `plugins.entries.openshell.config.command` 设置自定义路径）
-- 一个具有沙盒访问权限的 OpenShell 账户
-- 运行在主机上的 OpenClaw Gateway
+- 拥有可访问沙盒的 OpenShell 账户
+- 主机上正在运行 OpenClaw Gateway
 
 ## 快速开始
 
-1. 启用插件并设置沙盒后端：
+1. 安装并启用插件，然后设置沙盒后端：
+
+```bash
+openclaw plugins install @openclaw/openshell-sandbox
+```
 
 ```json5
 {
@@ -127,7 +132,7 @@ openclaw sandbox explain
 | `mode`                    | `"mirror"` 或 `"remote"` | `"mirror"`    | 工作区同步模式                                    |
 | `command`                 | `string`                 | `"openshell"` | `openshell` CLI 的路径或名称                      |
 | `from`                    | `string`                 | `"openclaw"`  | 首次创建时的沙盒来源                              |
-| `gateway`                 | `string`                 | —             | OpenShell 网关名称（`--gateway`）                 |
+| `gateway`                | `string`                 | —             | OpenShell 网关名称（`--gateway`）                 |
 | `gatewayEndpoint`         | `string`                 | —             | OpenShell 网关端点 URL（`--gateway-endpoint`）    |
 | `policy`                  | `string`                 | —             | 用于创建沙盒的 OpenShell 策略 ID                  |
 | `providers`               | `string[]`               | `[]`          | 创建沙盒时要附加的提供商名称                      |

@@ -68,12 +68,13 @@ OpenAI API 表面。
 
 这是面向代理的决策树：
 
-1. 如果用户要求 **Codex bind/control/thread/resume/steer/stop**，在启用捆绑的 `codex` 插件时，使用原生的 `/codex` 命令表面。
-2. 如果用户要求 **将 Codex 作为嵌入式运行时**，或者想要常规的基于订阅的 Codex 代理体验，使用 `openai/<model>`。
-3. 如果用户明确为 **OpenAI 模型选择 PI**，则保持模型引用为 `openai/<model>`，并将 provider/model runtime 策略设为 `agentRuntime.id: "pi"`。已选择的 `openai-codex` 认证配置会在内部通过 PI 的旧版 Codex-auth 传输进行路由。
-4. 如果旧配置中仍包含 **`openai-codex/*` 模型引用**，使用 `openclaw doctor --fix` 将其修复为 `openai/<model>`。
-5. 如果用户明确说 **ACP**、**acpx** 或 **Codex ACP adapter**，则使用 `runtime: "acp"` 和 `agentId: "codex"` 的 ACP。
-6. 如果请求的是 **Claude Code、Gemini CLI、OpenCode、Cursor、Droid 或其他外部 harness**，则使用 ACP/acpx，而不是原生子代理运行时。
+1. 如果用户要求 **Codex 绑定/控制/线程/恢复/引导/停止**，并且启用了捆绑的 `codex` 插件，请使用原生 `/codex` 命令表面。
+2. 如果用户要求 **将 Codex 作为嵌入式运行时**，或者想要常规的基于订阅的 Codex 代理体验，请使用 `openai/<model>`。
+3. 如果用户明确为 OpenAI 模型选择 **PI**，请保持模型引用为 `openai/<model>`，并将 provider/model 运行时策略设置为 `agentRuntime.id: "pi"`。选定的 `openai-codex` 认证配置会在内部通过 PI 的旧版 Codex 认证传输路由。
+4. 如果旧配置仍包含 **`openai-codex/*` 模型引用**，请使用 `openclaw doctor --fix` 将其修复为 `openai/<model>`；doctor 会通过在旧模型引用所暗示的位置添加 provider/model 作用域的 `agentRuntime.id: "codex"` 来保留 Codex 认证路由。
+   旧的 **`codex-cli/*` 模型引用** 也会修复为相同的 `openai/<model>` Codex app-server 路由；OpenClaw 不再保留捆绑的 Codex CLI 后端。
+5. 如果用户明确说 **ACP**、**acpx** 或 **Codex ACP 适配器**，请使用带有 `runtime: "acp"` 和 `agentId: "codex"` 的 ACP。
+6. 如果请求是 **Claude Code、Gemini CLI、OpenCode、Cursor、Droid** 或其他外部 harness，请使用 ACP/acpx，而不是原生子代理运行时。
 
 | 你指的是...                             | 使用...                                       |
 | --------------------------------------- | -------------------------------------------- |
@@ -82,7 +83,9 @@ OpenAI API 表面。
 | OpenAI Codex OAuth                      | `openai-codex` 认证配置                      |
 | Claude Code 或其他外部 harness           | ACP/acpx                                     |
 
-关于 OpenAI 家族前缀拆分，请参见 [OpenAI](/providers/openai) 和 [模型提供方](/concepts/model-providers)。关于 Codex 运行时支持契约，请参见 [Codex harness](/plugins/codex-harness#v1-support-contract)。
+For the OpenAI-family prefix split, see [OpenAI](/providers/openai) and
+[Model providers](/concepts/model-providers). For the Codex runtime support
+contract, see [Codex harness runtime](/plugins/codex-harness-runtime#v1-support-contract).
 
 ## 运行时所有权
 
@@ -147,7 +150,17 @@ CLI 后端别名与嵌入式 harness id 不同。推荐的 Claude CLI 形式是�
 
 诸如 `claude-cli/claude-opus-4-7` 这样的旧式引用仍为兼容性保留支持，但新的配置应保持 provider/model 规范化，并将执行后端放在 provider/model runtime 策略中。
 
-`auto` 模式对于大多数提供方来说是刻意保守的。OpenAI 代理模型是例外：未设置运行时和 `auto` 都会解析为 Codex harness。显式 PI 运行时配置仍是 `openai/*` 代理轮次的可选兼容路径；当与已选择的 `openai-codex` 认证配置配对时，OpenClaw 会在内部通过 PI 的旧版 Codex-auth 传输进行路由，同时将公开模型引用保持为 `openai/*`。过期的 OpenAI PI 会话绑定会被运行时选择忽略，并可使用 `openclaw doctor --fix` 清理。
+Legacy `codex-cli/*` refs are different: doctor migrates them to `openai/*` so
+they run through the Codex app-server harness instead of preserving a Codex CLI
+backend.
+
+`auto` mode is intentionally conservative for most providers. OpenAI agent
+models are the exception: unset runtime and `auto` both resolve to the Codex
+harness. Explicit PI runtime config remains an opt-in compatibility route for
+`openai/*` agent turns; when paired with a selected `openai-codex` auth profile,
+OpenClaw routes PI internally through the legacy Codex-auth transport while
+keeping the public model ref as `openai/*`. Stale OpenAI PI session pins are
+ignored by runtime selection and can be cleaned with `openclaw doctor --fix`.
 
 如果 `openclaw doctor` 提示已启用 `codex` 插件但配置中仍保留 `openai-codex/*`，请将其视为旧路由状态。运行 `openclaw doctor --fix` 将其重写为带 Codex 运行时的 `openai/*`。
 
@@ -167,23 +180,24 @@ CLI 后端别名与嵌入式 harness id 不同。推荐的 Claude CLI 形式是�
 | 暴露了哪些 compaction 数据？           | 有些插件只需要通知，而另一些则需要保留/丢弃的元数据。                                              |
 | 哪些内容是有意不支持的？               | 用户不应假定与 PI 等价，因为原生运行时拥有更多状态。                                               |
 
-Codex 运行时支持契约记录在
-[Codex harness](/plugins/codex-harness#v1-support-contract) 中。
+The Codex runtime support contract is documented in
+[Codex harness runtime](/plugins/codex-harness-runtime#v1-support-contract).
 
-## 状态标签
+## Status Labels
 
-状态输出可能同时显示 `Execution` 和 `Runtime` 标签。应将它们视为诊断信息，而不是提供者名称。
+Status output may show both `Execution` and `Runtime` labels. Treat them as diagnostic information, not provider names.
 
-- 例如，模型引用如 `openai/gpt-5.5` 表示所选的提供者/模型。
-- 运行时 id 如 `codex` 表示当前轮次由哪个循环执行。
-- 渠道标签如 Telegram 或 Discord 表示对话发生的位置。
+- For example, a model reference like `openai/gpt-5.5` indicates the selected provider/model.
+- A runtime id like `codex` indicates which loop executed the current turn.
+- Channel labels such as Telegram or Discord indicate where the conversation is happening.
 
-如果运行仍显示意外的运行时，请先检查所选提供者/模型的运行时策略。
-旧版会话运行时固定不再决定路由。
+If the runtime still shows unexpectedly, first check the runtime policy for the selected provider/model.
+Legacy session runtimes are fixed and no longer determine routing.
 
-## 相关链接
+## Related Links
 
 - [Codex harness](/plugins/codex-harness)
+- [Codex harness runtime](/plugins/codex-harness-runtime)
 - [OpenAI](/providers/openai)
 - [Agent harness plugins](/plugins/sdk-agent-harness)
 - [Agent loop](/concepts/agent-loop)

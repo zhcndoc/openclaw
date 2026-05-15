@@ -41,12 +41,19 @@ read_when:
 - `enabled` - 此账户的总开关。
 - `name` - 可选显示标签。
 - `baseUrl` - 合成总线 URL。
-- `botUserId` - 在目标语法中使用的 Matrix 风格机器人用户 id。
+- `botUserId` - 目标语法中使用的 Matrix 风格机器人用户 id。
 - `botDisplayName` - 出站消息的显示名称。
 - `pollTimeoutMs` - 长轮询等待窗口。介于 100 和 30000 之间的整数。
-- `allowFrom` - 发送方允许列表（用户 id 或 `"*"`）。
+- `allowFrom` - 发送者允许列表（用户 id 或 `"*"`）。直接消息和
+  允许列表中的群组策略都使用这些合成发送者 id。
+- `groupPolicy` - 共享房间策略：`"open"`（默认）、`"allowlist"`，或
+  `"disabled"`。
+- `groupAllowFrom` - 可选的共享房间发送者允许列表。在
+  `"allowlist"` 下省略时，QA Channel 会回退到 `allowFrom`。
+- `groups.<room>.requireMention` - 在特定群组/频道房间回复前要求提及机器人。
+  `groups."*"` 设置默认值。
 - `defaultTo` - 未提供目标时的回退目标。
-- `actions.messages` / `actions.reactions` / `actions.search` / `actions.threads` - 按动作的工具门控。
+- `actions.messages` / `actions.reactions` / `actions.search` / `actions.threads` - 按操作进行的工具门控。
 
 顶层的多账户键：
 

@@ -13,14 +13,9 @@ sidebarTitle: "实时测试"
 套件：模型矩阵、CLI 后端、ACP 和媒体提供商实时测试，以及
 凭据处理。
 
-## 实时：本地配置文件冒烟命令
+## Live: local smoke commands
 
-在临时实时检查前先加载 `~/.profile`，以便提供商密钥和本地工具
-路径与当前 shell 保持一致：
-
-```bash
-source ~/.profile
-```
+在进行临时实时检查之前，请先在进程环境中导出所需的提供商密钥。
 
 安全的媒体冒烟测试：
 
@@ -137,7 +132,7 @@ openclaw models list --json
 
 </Tip>
 
-## 实时：CLI 后端冒烟（Claude、Codex、Gemini 或其他本地 CLI）
+## Live: CLI backend smoke (Claude, Gemini, or other local CLIs)
 
 - 测试：`src/gateway/gateway-cli-backend.live.test.ts`
 - 目标：使用本地 CLI 后端验证 Gateway + agent 流水线，而不触碰你的默认配置。
@@ -149,21 +144,21 @@ openclaw models list --json
   - 默认提供商/模型：`claude-cli/claude-sonnet-4-6`
   - 命令/参数/图像行为来自所属 CLI 后端插件元数据。
 - 覆盖项（可选）：
-  - `OPENCLAW_LIVE_CLI_BACKEND_MODEL="codex-cli/gpt-5.5"`
-  - `OPENCLAW_LIVE_CLI_BACKEND_COMMAND="/full/path/to/codex"`
-  - `OPENCLAW_LIVE_CLI_BACKEND_ARGS='["exec","--json","--color","never","--sandbox","read-only","--skip-git-repo-check"]'`
-  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_PROBE=1` 发送真实图片附件（路径会注入到提示词中）。Docker 配方默认关闭，除非明确请求。
-  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_ARG="--image"` 通过 CLI 参数而不是提示词注入来传递图片文件路径。
-  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_MODE="repeat"`（或 `"list"`）用于在设置了 `IMAGE_ARG` 时控制图片参数的传递方式。
-  - `OPENCLAW_LIVE_CLI_BACKEND_RESUME_PROBE=1` 发送第二轮并验证恢复流程。
-  - `OPENCLAW_LIVE_CLI_BACKEND_MODEL_SWITCH_PROBE=1` 在所选模型支持切换目标时，启用 Claude Sonnet -> Opus 同会话连续性探测。Docker 配方默认关闭，以保证整体可靠性。
-  - `OPENCLAW_LIVE_CLI_BACKEND_MCP_PROBE=1` 启用 MCP/工具回环探测。Docker 配方默认关闭，除非明确请求。
+  - `OPENCLAW_LIVE_CLI_BACKEND_MODEL="claude-cli/claude-sonnet-4-6"`
+  - `OPENCLAW_LIVE_CLI_BACKEND_COMMAND="/full/path/to/claude"`
+  - `OPENCLAW_LIVE_CLI_BACKEND_ARGS='["-p","--output-format","json"]'`
+  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_PROBE=1` 以发送一个真实的图像附件（路径会注入到提示词中）。Docker 配方默认关闭，除非显式请求。
+  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_ARG="--image"` 以将图像文件路径作为 CLI 参数传递，而不是注入到提示词中。
+  - `OPENCLAW_LIVE_CLI_BACKEND_IMAGE_MODE="repeat"`（或 `"list"`）用于在设置了 `IMAGE_ARG` 时控制图像参数的传递方式。
+  - `OPENCLAW_LIVE_CLI_BACKEND_RESUME_PROBE=1` 以发送第二轮并验证恢复流程。
+  - `OPENCLAW_LIVE_CLI_BACKEND_MODEL_SWITCH_PROBE=1` 以启用 Claude Sonnet -> Opus 同会话连续性探测（当所选模型支持切换目标时）。Docker 配方默认关闭，以保证聚合可靠性。
+  - `OPENCLAW_LIVE_CLI_BACKEND_MCP_PROBE=1` 以启用 MCP/工具回环探测。Docker 配方默认关闭，除非显式请求。
 
 示例：
 
 ```bash
-OPENCLAW_LIVE_CLI_BACKEND=1 \
-  OPENCLAW_LIVE_CLI_BACKEND_MODEL="codex-cli/gpt-5.5" \
+  OPENCLAW_LIVE_CLI_BACKEND=1 \
+  OPENCLAW_LIVE_CLI_BACKEND_MODEL="claude-cli/claude-sonnet-4-6" \
   pnpm test:live src/gateway/gateway-cli-backend.live.test.ts
 ```
 
@@ -189,26 +184,25 @@ pnpm test:docker:live-cli-backend
 ```bash
 pnpm test:docker:live-cli-backend:claude
 pnpm test:docker:live-cli-backend:claude-subscription
-pnpm test:docker:live-cli-backend:codex
 pnpm test:docker:live-cli-backend:gemini
 ```
 
 说明：
 
 - Docker 运行器位于 `scripts/test-live-cli-backend-docker.sh`。
-- 它在仓库 Docker 镜像内以非 root 的 `node` 用户运行实时 CLI 后端冒烟测试。
-- 它从所属扩展解析 CLI 冒烟元数据，然后将匹配的 Linux CLI 包（`@anthropic-ai/claude-code`、`@openai/codex` 或 `@google/gemini-cli`）安装到 `OPENCLAW_DOCKER_CLI_TOOLS_DIR` 下的可写缓存前缀中（默认：`~/.cache/openclaw/docker-cli-tools`）。
-- `pnpm test:docker:live-cli-backend:claude-subscription` 需要通过 `~/.claude/.credentials.json` 中的 `claudeAiOauth.subscriptionType` 或来自 `claude setup-token` 的 `CLAUDE_CODE_OAUTH_TOKEN` 提供可移植的 Claude Code 订阅 OAuth。它首先在 Docker 中证明直接的 `claude -p` 可用，然后在不保留 Anthropic API key 环境变量的情况下运行两次 Gateway CLI 后端轮次。此订阅通道默认禁用 Claude 的 MCP/工具和图像探测，因为 Claude 当前会将第三方应用使用路由到额外使用计费，而不是正常的订阅计划限制。
-- 这个实时 CLI 后端冒烟现在对 Claude、Codex 和 Gemini 执行相同的端到端流程：文本轮次、图像分类轮次，然后通过 gateway CLI 验证 MCP `cron` 工具调用。
-- Claude 的默认冒烟还会将会话从 Sonnet 修补到 Opus，并验证恢复后的会话仍记得早先的一条备注。
+- 它会在仓库 Docker 镜像中以非 root 的 `node` 用户运行实时 CLI 后端冒烟测试。
+- 它会从所属扩展解析 CLI 冒烟元数据，然后将匹配的 Linux CLI 包（`@anthropic-ai/claude-code` 或 `@google/gemini-cli`）安装到 `OPENCLAW_DOCKER_CLI_TOOLS_DIR` 中的可写缓存前缀（默认：`~/.cache/openclaw/docker-cli-tools`）。
+- `pnpm test:docker:live-cli-backend:claude-subscription` 需要通过 `~/.claude/.credentials.json` 中的 `claudeAiOauth.subscriptionType` 或 `claude setup-token` 生成的 `CLAUDE_CODE_OAUTH_TOKEN` 提供可移植的 Claude Code 订阅 OAuth。它会先在 Docker 中证明直接的 `claude -p` 可用，然后在不保留 Anthropic API key 环境变量的情况下运行两轮 Gateway CLI 后端交互。此订阅通道默认禁用 Claude 的 MCP/工具和图像探测，因为 Claude 目前会通过额外用量计费而不是常规订阅方案限制来处理第三方应用使用。
+- 现在的实时 CLI 后端冒烟测试会对 Claude 和 Gemini 执行相同的端到端流程：文本轮次、图像分类轮次，然后通过 gateway CLI 验证 MCP `cron` 工具调用。
+- Claude 的默认冒烟测试还会将会话从 Sonnet 修补到 Opus，并验证恢复后的会话仍然记得之前的笔记。
 
 ## Live: APNs HTTP/2 proxy reachability
 
-- Test: `src/infra/push-apns-http2.live.test.ts`
-- Goal: tunnel through a local HTTP CONNECT proxy to Apple's sandbox APNs endpoint, send the APNs HTTP/2 validation request, and assert Apple's real `403 InvalidProviderToken` response comes back through the proxy path.
-- Enable:
+- 测试：`src/infra/push-apns-http2.live.test.ts`
+- 目标：通过本地 HTTP CONNECT 代理隧道连接到 Apple 的 sandbox APNs 端点，发送 APNs HTTP/2 验证请求，并断言 Apple 的真实 `403 InvalidProviderToken` 响应会经由代理路径返回。
+- 启用：
   - `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_APNS_REACHABILITY=1 pnpm test:live src/infra/push-apns-http2.live.test.ts`
-- Optional timeout:
+- 可选超时：
   - `OPENCLAW_LIVE_APNS_TIMEOUT_MS=30000`
 
 ## Live: ACP bind smoke (`/acp spawn ... --bind here`)
@@ -272,12 +266,12 @@ pnpm test:docker:live-acp-bind:opencode
 Docker 说明：
 
 - Docker 运行器位于 `scripts/test-live-acp-bind-docker.sh`。
-- 默认情况下，它会按顺序对聚合的实时 CLI 代理运行 ACP 绑定冒烟测试：`claude`、`codex`，然后是 `gemini`。
+- 默认情况下，它会按顺序对聚合的实时 CLI 代理运行 ACP bind 冒烟测试：`claude`、`codex`，然后是 `gemini`。
 - 使用 `OPENCLAW_LIVE_ACP_BIND_AGENTS=claude`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=codex`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=droid`、`OPENCLAW_LIVE_ACP_BIND_AGENTS=gemini` 或 `OPENCLAW_LIVE_ACP_BIND_AGENTS=opencode` 可缩小矩阵范围。
-- 它会加载 `~/.profile`，将匹配的 CLI 认证材料转存到容器中，然后在缺失时安装所需的实时 CLI（`@anthropic-ai/claude-code`、`@openai/codex`、通过 `https://app.factory.ai/cli` 的 Factory Droid、`@google/gemini-cli` 或 `opencode-ai`）。ACP 后端本身是官方 `acpx` 插件中的嵌入式 `acpx/runtime` 包。
-- Droid Docker 变体会暂存 `~/.factory` 作为设置，转发 `FACTORY_API_KEY`，并要求该 API key，因为本地 Factory OAuth/keyring 认证无法移植到容器中。它使用 ACPX 内置的 `droid exec --output-format acp` 注册表项。
-- OpenCode Docker 变体是一个严格的单代理回归通道。它在加载 `~/.profile` 后，会根据 `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL`（默认 `opencode/kimi-k2.6`）写入临时的 `OPENCODE_CONFIG_CONTENT` 默认模型，并且 `pnpm test:docker:live-acp-bind:opencode` 需要一个已绑定的助手转录，而不是接受通用的绑定后跳过。
-- 直接的 `acpx` CLI 调用仅是用于在 Gateway 之外对比行为的手动/绕过路径。Docker ACP 绑定冒烟测试的是 OpenClaw 内嵌的 `acpx` 运行时后端。
+- 它会将匹配的 CLI 认证材料放入容器，然后在缺失时安装所需的实时 CLI（`@anthropic-ai/claude-code`、`@openai/codex`、通过 `https://app.factory.ai/cli` 的 Factory Droid、`@google/gemini-cli` 或 `opencode-ai`）。ACP 后端本身是官方 `acpx` 插件中的嵌入式 `acpx/runtime` 包。
+- Droid Docker 变体会暂存 `~/.factory` 配置，转发 `FACTORY_API_KEY`，并要求该 API key，因为本地 Factory OAuth/keyring 认证无法移植到容器中。它使用 ACPX 内置的 `droid exec --output-format acp` 注册项。
+- OpenCode Docker 变体是一个严格的单代理回归通道。它会从 `OPENCLAW_LIVE_ACP_BIND_OPENCODE_MODEL`（默认 `opencode/kimi-k2.6`）写入临时的 `OPENCODE_CONFIG_CONTENT` 默认模型，并且 `pnpm test:docker:live-acp-bind:opencode` 需要绑定的助手转录，而不是接受通用的绑定后跳过。
+- 直接的 `acpx` CLI 调用仅用于在 Gateway 之外比较行为的手动/临时路径。Docker ACP bind 冒烟测试会使用 OpenClaw 内嵌的 `acpx` 运行时后端。
 
 ## Live: Codex app-server harness 冒烟测试
 
@@ -305,7 +299,6 @@ Docker 说明：
 本地配方：
 
 ```bash
-source ~/.profile
 OPENCLAW_LIVE_CODEX_HARNESS=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1 \
@@ -317,18 +310,21 @@ OPENCLAW_LIVE_CODEX_HARNESS=1 \
 Docker 配方：
 
 ```bash
-source ~/.profile
 pnpm test:docker:live-codex-harness
 ```
 
 Docker 说明：
 
-- Docker runner 位于 `scripts/test-live-codex-harness-docker.sh`。
-- 它会 source 挂载的 `~/.profile`，传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将 `@openai/codex` 安装到可写的挂载 npm 前缀中，准备源码树，然后只运行 Codex-harness live 测试。
-- Docker 默认启用图像、MCP/工具和 Guardian 探测。若需要更窄的调试运行，可设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或
+- Docker 运行器位于 `scripts/test-live-codex-harness-docker.sh`。
+- 它会传递 `OPENAI_API_KEY`，在存在时复制 Codex CLI 认证文件，将
+  `@openai/codex` 安装到可写的挂载 npm
+  前缀中，暂存源码树，然后只运行 Codex-harness live 测试。
+- Docker 默认启用图像、MCP/工具和 Guardian 探测。需要更窄的调试
+  运行时，设置 `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` 或
   `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` 或
   `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0`。
-- Docker 使用相同的显式 Codex runtime 配置，因此旧别名或 PI 回退不会掩盖 Codex harness 回归。
+- Docker 使用相同的显式 Codex 运行时配置，因此旧别名或 PI
+  回退不会掩盖 Codex harness 回归。
 
 ### 推荐的 live 配方
 
@@ -347,9 +343,8 @@ Docker 说明：
   - Gemini（API key）：`OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3-flash-preview" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
   - Antigravity（OAuth）：`OPENCLAW_LIVE_GATEWAY_MODELS="google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-pro-high" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
-- Google 自适应思考冒烟：
-  - 如果本地密钥存放在 shell 配置中：`source ~/.profile`
-  - Gemini 3 动态默认值：`pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-3.1-pro-preview --alt-model google/gemini-3.1-pro-preview --message '/think adaptive Reply exactly: GEMINI_ADAPTIVE_OK' --timeout-ms 180000`
+- Google 自适应思考 smoke：
+  - Gemini 3 动态默认：`pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-3.1-pro-preview --alt-model google/gemini-3.1-pro-preview --message '/think adaptive Reply exactly: GEMINI_ADAPTIVE_OK' --timeout-ms 180000`
   - Gemini 2.5 动态预算：`pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-2.5-flash --alt-model google/gemini-2.5-flash --message '/think adaptive Reply exactly: GEMINI25_ADAPTIVE_OK' --timeout-ms 180000`
 
 说明：
@@ -431,7 +426,7 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 - 旧版状态目录：`~/.openclaw/credentials/`（存在时会复制到暂存的 live home 中，但不是主 profile-key 存储）
 - 本地 live 运行默认会把活动配置、每个 agent 的 `auth-profiles.json` 文件、旧版 `credentials/`，以及受支持的外部 CLI 认证目录复制到临时测试 home；暂存的 live home 会跳过 `workspace/` 和 `sandboxes/`，并移除 `agents.*.workspace` / `agentDir` 路径覆盖，因此探测不会触及你真实主机的工作区。
 
-如果你想依赖环境变量中的密钥（例如在你的 `~/.profile` 中导出的），请在 `source ~/.profile` 之后运行本地测试，或者使用下面的 Docker 运行器（它们可以把 `~/.profile` 挂载到容器中）。
+如果你想依赖环境变量中的密钥，请在本地测试前先导出它们，或使用下面的 Docker 运行器并显式指定 `OPENCLAW_PROFILE_FILE`。
 
 ## Deepgram live（音频转录）
 
@@ -455,15 +450,15 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 
 ## 图像生成 live
 
-- 测试：`test/image-generation.runtime.live.test.ts`
-- 命令：`pnpm test:live test/image-generation.runtime.live.test.ts`
-- Harness：`pnpm test:live:media image`
-- 范围：
+- Test: `test/image-generation.runtime.live.test.ts`
+- Command: `pnpm test:live test/image-generation.runtime.live.test.ts`
+- Harness: `pnpm test:live:media image`
+- Scope:
   - 枚举每个已注册的图像生成 provider 插件
-  - 在探测前，从你的登录 shell（`~/.profile`）加载缺失的 provider 环境变量
-  - 默认优先使用 live/env API key 而不是已存储的 auth 配置文件，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
+  - 探测前优先使用已导出的 provider 环境变量
+  - 默认优先使用 live/env API key，而不是已存储的 auth profiles，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
   - 跳过没有可用 auth/profile/model 的 provider
-  - 通过共享图像生成运行时运行每个已配置的 provider：
+  - 通过共享的图像生成 runtime 运行每个已配置 provider：
     - `<provider>:generate`
     - 当 provider 声明支持编辑时运行 `<provider>:edit`
 - 当前覆盖的内置 provider：
@@ -499,22 +494,22 @@ openclaw infer image generate \
 
 ## 音乐生成 live
 
-- 测试：`extensions/music-generation-providers.live.test.ts`
-- 启用：`OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
-- Harness：`pnpm test:live:media music`
-- 范围：
-  - 测试共享的内置音乐生成 provider 路径
-  - 目前覆盖 Google 和 MiniMax
-  - 在探测前，从你的登录 shell（`~/.profile`）加载 provider 环境变量
-  - 默认优先使用 live/env API key 而不是已存储的 auth 配置文件，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
+- Test: `extensions/music-generation-providers.live.test.ts`
+- Enable: `OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
+- Harness: `pnpm test:live:media music`
+- Scope:
+  - 练习共享的捆绑音乐生成 provider 路径
+  - 当前覆盖 Google 和 MiniMax
+  - 探测前优先使用已导出的 provider 环境变量
+  - 默认优先使用 live/env API key，而不是已存储的 auth profiles，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
   - 跳过没有可用 auth/profile/model 的 provider
-  - 在可用时运行所有声明的运行时模式：
-    - 使用仅 prompt 输入的 `generate`
+  - 在可用时运行两种已声明的运行时模式：
+    - `generate`，使用仅提示词输入
     - 当 provider 声明 `capabilities.edit.enabled` 时运行 `edit`
   - 当前共享通道覆盖：
     - `google`：`generate`、`edit`
     - `minimax`：`generate`
-    - `comfy`：单独的 Comfy live 文件，不属于这次共享扫描
+    - `comfy`：单独的 Comfy live 文件，不在这个共享扫描中
 - 可选缩小范围：
   - `OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS="google,minimax"`
   - `OPENCLAW_LIVE_MUSIC_GENERATION_MODELS="google/lyria-3-clip-preview,minimax/music-2.6"`
@@ -523,23 +518,23 @@ openclaw infer image generate \
 
 ## 视频生成 live
 
-- 测试：`extensions/video-generation-providers.live.test.ts`
-- 启用：`OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts`
-- Harness：`pnpm test:live:media video`
-- 范围：
-  - 测试共享的内置视频生成 provider 路径
-  - 默认使用适合发布的冒烟路径：非 FAL provider、每个 provider 一次 text-to-video 请求、一个一秒钟的 lobster 提示词，以及来自 `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS` 的每个 provider 操作上限（默认 `180000`）
-  - 默认跳过 FAL，因为 provider 端队列延迟可能主导发布耗时；传入 `--video-providers fal` 或 `OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS="fal"` 可显式运行它
-  - 在探测前，从你的登录 shell（`~/.profile`）加载 provider 环境变量
-  - 默认优先使用 live/env API key 而不是已存储的 auth 配置文件，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
-  - 跳过没有可用 auth/profile/model 的 provider
-  - 默认只运行 `generate`
-  - 设定 `OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES=1` 也会在可用时运行声明的变换模式：
-    - 当 provider 声明 `capabilities.imageToVideo.enabled` 且所选 provider/model 在共享扫描中接受基于 buffer 的本地图像输入时，运行 `imageToVideo`
-    - 当 provider 声明 `capabilities.videoToVideo.enabled` 且所选 provider/model 在共享扫描中接受基于 buffer 的本地视频输入时，运行 `videoToVideo`
-  - 当前在共享扫描中已声明但跳过的 `imageToVideo` provider：
-    - `vydra`，因为内置的 `veo3` 仅支持文本，且内置的 `kling` 需要远程图片 URL
-  - Vydra 的特定 provider 覆盖：
+- Test: `extensions/video-generation-providers.live.test.ts`
+- Enable: `OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts`
+- Harness: `pnpm test:live:media video`
+- Scope:
+  - Exercises the shared bundled video-generation provider path
+  - Defaults to the release-safe smoke path: non-FAL providers, one text-to-video request per provider, one-second lobster prompt, and a per-provider operation cap from `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS` (`180000` by default)
+  - Skips FAL by default because provider-side queue latency can dominate release time; pass `--video-providers fal` or `OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS="fal"` to run it explicitly
+  - Uses already-exported provider env vars before probing
+  - Uses live/env API keys ahead of stored auth profiles by default, so stale test keys in `auth-profiles.json` do not mask real shell credentials
+  - Skips providers with no usable auth/profile/model
+  - Runs only `generate` by default
+  - Set `OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES=1` to also run declared transform modes when available:
+    - `imageToVideo` when the provider declares `capabilities.imageToVideo.enabled` and the selected provider/model accepts buffer-backed local image input in the shared sweep
+    - `videoToVideo` when the provider declares `capabilities.videoToVideo.enabled` and the selected provider/model accepts buffer-backed local video input in the shared sweep
+  - Current declared-but-skipped `imageToVideo` providers in the shared sweep:
+    - `vydra` because bundled `veo3` is text-only and bundled `kling` requires a remote image URL
+  - Provider-specific Vydra coverage:
     - `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_VYDRA_VIDEO=1 pnpm test:live -- extensions/vydra/vydra.live.test.ts`
     - 该文件默认运行 `veo3` 的 text-to-video，以及一个使用远程图片 URL fixture 的 `kling` 通道
   - 当前 `videoToVideo` 的 live 覆盖：
@@ -558,13 +553,13 @@ openclaw infer image generate \
 
 ## 媒体 live harness
 
-- 命令：`pnpm test:live:media`
-- 目的：
-  - 通过一个仓库原生入口点运行共享的图像、音乐和视频 live 套件
-  - 自动从 `~/.profile` 加载缺失的 provider 环境变量
-  - 默认自动将每个套件缩小到当前具有可用认证的 provider
-  - 复用 `scripts/test-live.mjs`，因此心跳和静默模式行为保持一致
-- 示例：
+- Command: `pnpm test:live:media`
+- Purpose:
+  - Runs the shared image, music, and video live suites through one repo-native entrypoint
+  - Uses already-exported provider env vars
+  - Auto-narrows each suite to providers that currently have usable auth by default
+  - Reuses `scripts/test-live.mjs`, so heartbeat and quiet-mode behavior stay consistent
+- Examples:
   - `pnpm test:live:media`
   - `pnpm test:live:media image video --providers openai,google,minimax`
   - `pnpm test:live:media video --video-providers openai,runway --all-providers`

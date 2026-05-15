@@ -624,9 +624,12 @@ Agent 使用方式：
 
 平台：
 
-- macOS：检查 `/Applications` 和 `~/Applications`。
-- Linux：检查 `/usr/bin`、`/snap/bin`、`/opt/google`、`/opt/brave.com`、`/usr/lib/chromium` 和 `/usr/lib/chromium-browser` 下常见的 Chrome/Brave/Edge/Chromium 位置。
-- Windows：检查常见安装位置。
+- macOS: checks `/Applications` and `~/Applications`.
+- Linux: checks common Chrome/Brave/Edge/Chromium locations under `/usr/bin`,
+  `/snap/bin`, `/opt/google`, `/opt/brave.com`, `/usr/lib/chromium`, and
+  `/usr/lib/chromium-browser`, plus Playwright-managed Chromium under
+  `PLAYWRIGHT_BROWSERS_PATH` or `~/.cache/ms-playwright`.
+- Windows: checks common install locations.
 
 ## 控制 API（可选）
 

@@ -36,7 +36,7 @@ OAuth 提供商在登录/刷新流程中通常会签发一个**新的刷新令�
 
 实际症状：
 
-- you log in via OpenClaw _and_ via Claude Code / Codex CLI → one of them randomly gets "logged out" later
+- 你通过 OpenClaw 和 Claude Code / Codex CLI 登录 → 之后其中一个会随机“登出”
 
 为降低这种情况，OpenClaw 将 `auth-profiles.json` 视为一个**令牌汇点**：
 
@@ -92,7 +92,7 @@ Claude 登录，上手/配置流程可以直接复用它。
 
 ## OAuth 交换（登录如何工作）
 
-OpenClaw 的交互式登录流程由 `@mariozechner/pi-ai` 实现，并接入到向导/命令中。
+OpenClaw's interactive login flows are implemented in `@earendil-works/pi-ai` and wired into the wizards/commands.
 
 ### Anthropic setup-token
 

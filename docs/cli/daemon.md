@@ -41,20 +41,21 @@ openclaw daemon uninstall
 
 注意：
 
-- `status` 会在可能的情况下解析为探测认证所配置的 auth SecretRefs。
-- 如果在此命令路径中某个必需的 auth SecretRef 未解析，而探测连通性/认证失败，`daemon status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥来源。
-- 如果探测成功，为避免误报，未解析的 auth-ref 警告会被抑制。
-- `status --deep` 会额外进行一次尽力而为的系统级服务扫描。当它发现其他类似 gateway 的服务时，人工输出会打印清理提示，并警告单机仍然建议只运行一个 gateway。
-- 在 Linux 的 systemd 安装中，`status` 的 token 漂移检查会同时包含 `Environment=` 和 `EnvironmentFile=` 单元来源。
-- 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` 的 SecretRefs（优先使用服务命令环境，其次回退到进程环境）。
-- 如果 token 认证并未实际生效（`gateway.auth.mode` 明确为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可生效并且没有可生效的 token 候选），token 漂移检查会跳过配置 token 解析。
-- 当 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理时，`install` 会验证该 SecretRef 是否可解析，但不会将解析出的 token 持久化到服务环境元数据中。
-- 如果 token 认证需要 token 且配置的 token SecretRef 未解析，安装会失败并关闭。
-- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，则会阻止安装，直到显式设置 mode。
-- 在 macOS 上，`install` 会保持 LaunchAgent plist 仅限所有者访问，并通过仅限所有者访问的文件和包装器加载受管服务环境值，而不是把 API keys 或 auth-profile env refs 序列化到 `EnvironmentVariables` 中。
+- `status` 会在可能的情况下解析已配置的认证 SecretRefs，用于探测认证。
+- 如果此命令路径中所需的认证 SecretRef 未解析，则 `daemon status --json` 在探测连接性/认证失败时会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥来源。
+- 如果探测成功，会抑制未解析的认证引用警告，以避免误报。
+- `status --deep` 会额外执行尽力而为的系统级服务扫描。当它发现其他类似 gateway 的服务时，人工输出会打印清理提示，并警告每台机器运行一个 gateway 仍是常规建议。
+- `status --deep` 还会以插件感知模式运行配置验证，并展示已配置的插件清单警告（例如缺少 channel 配置元数据），以便安装和更新的冒烟检查能够捕获它们。默认的 `status` 保持快速、只读路径，会跳过插件验证。
+- 在 Linux systemd 安装中，`status` 的 token 漂移检查同时包含 `Environment=` 和 `EnvironmentFile=` 单元来源。
+- 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRefs（先使用服务命令环境，再回退到进程环境）。
+- 如果 token 认证并未实际启用（显式的 `gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可能生效而没有可生效的 token 候选），token 漂移检查会跳过配置 token 解析。
+- 当 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理时，`install` 会验证该 SecretRef 是否可解析，但不会把解析出的 token 持久化到服务环境元数据中。
+- 如果 token 认证需要 token 且已配置的 token SecretRef 未解析，安装将失败并关闭。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，则会阻止安装，直到显式设置模式。
+- 在 macOS 上，`install` 会保持 LaunchAgent plist 仅限所有者访问，并通过仅所有者可访问的文件和包装器加载托管的服务环境值，而不是将 API 密钥或 auth-profile 环境引用序列化到 `EnvironmentVariables` 中。
 - 如果你有意在一台主机上运行多个 gateway，请隔离端口、配置/状态和工作区；参见 [/gateway#multiple-gateways-same-host](/gateway#multiple-gateways-same-host)。
-- `restart --safe` 会要求正在运行的 Gateway 预检查活动工作，并在活动工作清空后安排一次合并后的重启。普通 `restart` 保持现有的服务管理器行为；`--force` 仍然是立即覆盖路径。
-- `restart --safe --skip-deferral` 会运行 OpenClaw 感知的安全重启，但绕过活动工作延迟门控，因此即使报告了阻塞，Gateway 也会立即发起重启。适用于任务卡住导致安全重启被阻塞时的运维逃生口；需要 `--safe`。
+- `restart --safe` 会请求正在运行的 Gateway 预检当前工作，并在当前工作排空后安排一次合并重启。普通 `restart` 保持现有的服务管理器行为；`--force` 仍然是立即覆盖路径。
+- `restart --safe --skip-deferral` 会运行 OpenClaw 感知的安全重启，但绕过当前工作延迟门控，因此即使报告了阻塞，Gateway 也会立即发出重启。适用于任务卡住导致安全重启被挂起时的运维逃生通道；需要 `--safe`。
 
 ## 优先使用
 

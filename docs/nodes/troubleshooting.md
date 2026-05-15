@@ -108,16 +108,12 @@ openclaw logs --follow
 - 重新授予 OS 权限。
 - 重新创建/调整 exec 审批策略。
 
-相关：
-
-- [/nodes/index](/nodes/index)
-- [/nodes/camera](/nodes/camera)
-- [/nodes/location-command](/nodes/location-command)
-- [/tools/exec-approvals](/tools/exec-approvals)
-- [/gateway/pairing](/gateway/pairing)
-
 ## 相关内容
 
 - [节点概览](/nodes)
+- [摄像头节点](/nodes/camera)
+- [定位命令](/nodes/location-command)
+- [Exec 审批](/tools/exec-approvals)
+- [网关配对](/gateway/pairing)
 - [网关故障排查](/gateway/troubleshooting)
 - [通道故障排查](/channels/troubleshooting)

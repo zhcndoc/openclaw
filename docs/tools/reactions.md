@@ -47,7 +47,8 @@ title: "反应"
 
   <Accordion title="WhatsApp">
     - 空的 `emoji` 会移除机器人的反应。
-    - `remove: true` 在内部会映射为空的 emoji（工具调用中仍需要提供 `emoji`）。
+    - `remove: true` 在内部会映射为空表情（工具调用中仍需要 `emoji`）。
+    - WhatsApp 每条消息只有一个机器人反应槽；状态反应更新会替换该槽，而不是叠加多个表情。
 
   </Accordion>
 
@@ -65,6 +66,12 @@ title: "反应"
 
   <Accordion title="Signal">
     - 入站反应通知由 `channels.signal.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人的消息做出反应时发出事件，而 `"all"` 会为所有反应发出事件。
+
+  </Accordion>
+
+  <Accordion title="iMessage">
+    - 出站反应是 iMessage tapback（`love`、`like`、`dislike`、`laugh`、`emphasize` 和 `question`）。
+    - 入站 tapback 通知由 `channels.imessage.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人编写的消息做出反应时发出事件，而 `"all"` 会为来自已授权发送者的所有 tapback 发出事件。
 
   </Accordion>
 </AccordionGroup>

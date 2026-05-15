@@ -94,9 +94,9 @@ export default definePluginEntry({
 
 **对话观察**
 
-- `model_call_started` / `model_call_ended` - 观察已脱敏的提供方/模型调用元数据、计时、结果，以及带边界限制的请求 ID 哈希，不包含提示词或响应内容
-- `llm_input` - 观察提供方输入（系统提示词、提示词、历史记录）
-- `llm_output` - 观察提供方输出
+- `model_call_started` / `model_call_ended` - 观察已脱敏的提供方/模型调用元数据、耗时、结果，以及在不含提示词或响应内容的情况下受限的请求 id 哈希
+- `llm_input` - 观察提供方输入（系统提示词、提示词、历史）
+- `llm_output` - 观察提供方输出、用量，以及在可用时解析后的 `contextTokenBudget`
 
 **工具**
 
@@ -116,7 +116,7 @@ export default definePluginEntry({
 
 **Sessions 与压缩**
 
-- `session_start` / `session_end` - 跟踪 session 生命周期边界
+- `session_start` / `session_end` - 跟踪 session 生命周期边界。该事件的 `reason` 取值为 `new`、`reset`、`idle`、`daily`、`compaction`、`deleted`、`shutdown`、`restart` 或 `unknown` 之一。`shutdown` 和 `restart` 的值会在 session 仍处于活动状态时进程停止或重启，由 Gateway shutdown finalizer 触发，因此下游插件（例如内存或转录存储）可以完成原本会在重启期间以打开状态遗留的 ghost 行。该 finalizer 受到边界限制，因此缓慢的插件不会阻塞 SIGTERM/SIGINT。
 - `before_compaction` / `after_compaction` - 观察或标注压缩周期
 - `before_reset` - 观察 session 重置事件（`/reset`、程序化重置）
 
@@ -130,7 +130,17 @@ export default definePluginEntry({
 - `cron_changed` - 观察 Gateway 拥有的 cron 生命周期变更（添加、更新、移除、启动、完成、已调度）
 - **`before_install`** - 检查 skill 或插件安装扫描并可选择阻止
 
-## Tool 调用策略
+## 调试运行时钩子
+
+当插件需要为 agent 回合切换 provider 或模型时，请使用 `before_model_resolve`。
+它在模型解析之前运行；`llm_output` 只会在一次模型尝试产生 assistant 输出后运行。
+
+要验证有效的 session 模型，请检查运行时注册，然后使用
+`openclaw sessions` 或 Gateway 的 session/status 界面。调试 provider 载荷时，
+请使用 `--raw-stream` 和 `--raw-stream-path <path>` 启动 Gateway；
+这些标志会将原始模型流事件写入 jsonl 文件。
+
+## 工具调用策略
 
 `before_tool_call` 接收：
 
@@ -162,7 +172,7 @@ type BeforeToolCallResult = {
 };
 ```
 
-规则：
+Typed 生命周期钩子的守卫行为：
 
 - `block: true` 是终止性的，会跳过低优先级处理器。
 - `block: false` 视为没有决策。
@@ -204,7 +214,7 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 `agent_end` 是一个观察型钩子，并在回合结束后以 fire-and-forget 方式运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续执行；除非插件也使用自己的 abort signal，否则它不会取消插件拥有的网络工作。
 
-使用 `model_call_started` 和 `model_call_ended` 来获取不应接收原始提示词、历史记录、响应、标头、请求体或 provider 请求 ID 的提供方调用遥测。这些钩子包含稳定元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 ID 哈希时的 `upstreamRequestIdHash`。
+使用 `model_call_started` 和 `model_call_ended` 来记录 provider 调用遥测，这些遥测不应接收原始提示词、历史、响应、标题、请求体或 provider 请求 id。这些钩子包含稳定的元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 id 哈希时提供的 `upstreamRequestIdHash`。当运行时已解析 context-window 元数据时，钩子事件和上下文还会包含 `contextTokenBudget`，即在模型/配置/agent 上限之后的有效 token 预算；如果应用了更低的上限，还会包含 `contextWindowSource` 和 `contextWindowReferenceTokens`。
 
 `before_agent_finalize` 只在 harness 即将接受自然生成的最终 assistant 答案时运行。它不是 `/stop` 取消路径，也不会在用户中止回合时运行。返回 `{ action: "revise", reason }` 可请求 harness 在最终定稿前再进行一次模型传递，返回 `{ action: "finalize", reason? }` 可强制定稿，或省略结果以继续。Codex 原生的 `Stop` 钩子会作为 OpenClaw 的 `before_agent_finalize` 决策转发到这里。
 
@@ -212,9 +222,9 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 ```typescript
 type BeforeAgentFinalizeRetry = {
-  instruction: string;
-  idempotencyKey?: string;
-  maxAttempts?: number;
+    instruction: string;
+    idempotencyKey?: string;
+    maxAttempts?: number;
 };
 ```
 
@@ -314,14 +324,14 @@ type BeforeAgentFinalizeRetry = {
   `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
   `timeout` / `cancelled`），而不是自由形式的 `string`。
 
-For the full list - memory capability registration, provider thinking
-profile, external auth providers, provider discovery types, task runtime
-accessors, and the `command-auth` → `command-status` rename - see
+有关完整列表——内存能力注册、provider thinking
+配置文件、外部认证提供方、provider 发现类型、任务运行时
+访问器，以及 `command-auth` → `command-status` 重命名——请参见
 [Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations)。
 
 ## 相关内容
 
-- [Plugin SDK migration](/plugins/sdk-migration) - active deprecations and removal timeline
+- [Plugin SDK migration](/plugins/sdk-migration) - 活跃弃用项和移除时间线
 - [Building plugins](/plugins/building-plugins)
 - [Plugin SDK overview](/plugins/sdk-overview)
 - [Plugin entry points](/plugins/sdk-entrypoints)

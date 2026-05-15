@@ -66,23 +66,23 @@ API key，而另一些则无需 key。你也可以稍后使用
 
 **本地模式（默认）** 会引导你完成以下步骤：
 
-1. **Model/Auth** — 选择任何受支持的提供方/认证流程（API key、OAuth，或提供方特定的手动认证），包括 Custom Provider
-   （OpenAI-compatible、Anthropic-compatible 或 Unknown auto-detect）。选择一个默认模型。
-   安全提示：如果该 agent 将运行工具或处理 webhook/hooks 内容，请优先选择可用的最强最新一代模型，并保持严格的工具策略。较弱/较旧的模型层级更容易受到 prompt-inject 攻击。
-   对于非交互式运行，`--secret-input-mode ref` 会将基于环境变量的引用存储在认证 profile 中，而不是明文 API key 值。
-   在非交互式 `ref` 模式下，必须设置提供方环境变量；如果传入内联 key 标志但未设置该环境变量，会立即失败。
-   在交互式运行中，选择 secret reference 模式后，你可以指向环境变量或已配置的提供方引用（`file` 或 `exec`），并在保存前进行快速预检验证。
-   对于 Anthropic，交互式上手引导/配置会提供 **Anthropic Claude CLI** 作为首选本地路径，以及 **Anthropic API key** 作为推荐的生产环境路径。Anthropic setup-token 仍然可用，作为受支持的 token-auth 路径。
-2. **Workspace** — agent 文件的位置（默认 `~/.openclaw/workspace`）。会生成引导文件。
+1. **Model/Auth** — 选择任何受支持的提供方/认证流程（API key、OAuth 或提供方特定的手动认证），包括自定义提供方
+   （兼容 OpenAI、兼容 Anthropic，或未知自动检测）。选择一个默认模型。
+   安全提示：如果此 agent 将运行工具或处理 webhook/hooks 内容，建议使用可用的最强最新一代模型，并保持严格的工具策略。较弱/较旧的模型更容易受到提示注入攻击。
+   对于非交互式运行，`--secret-input-mode ref` 会在 auth profile 中存储基于环境变量引用的值，而不是明文 API key 值。
+   在非交互式 `ref` 模式下，必须设置提供方环境变量；若传入内联 key 标志但没有该环境变量，将会快速失败。
+   在交互式运行中，选择 secret reference mode 后，你可以指向一个环境变量，或一个已配置的提供方引用（`file` 或 `exec`），并在保存前进行快速预检验证。
+   对于 Anthropic，交互式 onboarding/configure 提供 **Anthropic Claude CLI** 作为首选本地路径，提供 **Anthropic API key** 作为推荐的生产路径。Anthropic setup-token 也仍然可用，作为受支持的 token-auth 路径。
+2. **Workspace** — agent 文件的位置（默认 `~/.openclaw/workspace`）。会生成引导初始化文件。
 3. **Gateway** — 端口、绑定地址、认证模式、Tailscale 暴露。
    在交互式 token 模式下，可选择默认明文 token 存储，或改用 SecretRef。
    非交互式 token SecretRef 路径：`--gateway-token-ref-env <ENV_VAR>`。
-4. **Channels** — 内置和捆绑的聊天通道，例如 iMessage、Discord、Feishu、Google Chat、Mattermost、Microsoft Teams、QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
-5. **Daemon** — 安装 LaunchAgent（macOS）、systemd user unit（Linux/WSL2），或原生 Windows Scheduled Task，并提供按用户 Startup-folder 作为后备方案。
-   如果 token 认证需要 token，且 `gateway.auth.token` 由 SecretRef 管理，守护进程安装会验证它，但不会将解析后的 token 持久化到 supervisor 服务环境元数据中。
-   如果 token 认证需要 token，且已配置的 token SecretRef 未解析，守护进程安装会被阻止，并给出可操作的指导。
-   如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置，且 `gateway.auth.mode` 未设置，则守护进程安装会被阻止，直到显式设置模式为止。
-6. **Health check** — 启动 Gateway 并验证其是否运行正常。
+4. **Channels** — 内置和官方插件聊天通道，例如 iMessage、Discord、飞书、Google Chat、Mattermost、Microsoft Teams、QQ Bot、Signal、Slack、Telegram、WhatsApp 等。
+5. **Daemon** — 安装 LaunchAgent（macOS）、systemd user unit（Linux/WSL2），或原生 Windows Scheduled Task，并提供按用户的 Startup-folder 备用方案。
+   如果 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理，daemon 安装会验证它，但不会将解析后的 token 持久化到 supervisor service 环境元数据中。
+   如果 token 认证需要 token 且已配置的 token SecretRef 未解析，daemon 安装将被阻止，并提供可操作的指导。
+   如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，daemon 安装会被阻止，直到显式设置模式。
+6. **Health check** — 启动 Gateway 并验证其正在运行。
 7. **Skills** — 安装推荐技能和可选依赖。
 
 <Note>

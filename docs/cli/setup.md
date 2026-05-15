@@ -1,23 +1,39 @@
 ---
-summary: "openclaw setup 的 CLI 参考（初始化配置 + 工作区）"
+summary: "CLI 参考：`openclaw setup`（初始化配置和工作区，可选运行引导）"
 read_when:
-  - 你正在进行首次设置，而不是完整的 CLI 引导
+  - 你正在进行首次设置，但不需要完整的 CLI 引导
   - 你想设置默认工作区路径
-title: "Setup"
+  - 你需要了解每个标志，以及 setup 如何在基础模式和向导模式之间做出决定
+title: "设置"
 ---
 
 # `openclaw setup`
 
-初始化 `~/.openclaw/openclaw.json` 和代理工作区。
+初始化基础配置和代理工作区。只要存在任何引导标志，也会运行向导。
 
 <Note>
-`openclaw setup` 适用于可变配置安装。在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，OpenClaw 会拒绝 setup 写入，因为配置文件由 Nix 管理。代理应使用官方的 [nix-openclaw Quick Start](https://github.com/openclaw/nix-openclaw#quick-start) 或其他 Nix 包对应的源码配置。
+`openclaw setup` 适用于可变配置安装。在 Nix 模式（`OPENCLAW_NIX_MODE=1`）下，OpenClaw 会拒绝 setup 写入，因为配置文件由 Nix 管理。请使用官方的 [nix-openclaw 快速开始](https://github.com/openclaw/nix-openclaw#quick-start)，或者其他 Nix 包对应的源配置。
 </Note>
 
-相关：
+## 选项
 
-- 入门： [Getting started](/start/getting-started)
-- CLI 引导： [Onboarding (CLI)](/start/wizard)
+| Flag                       | Description                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `--workspace <dir>`        | 代理工作区目录（默认 `~/.openclaw/workspace`；存储为 `agents.defaults.workspace`）。 |
+| `--wizard`                 | 运行交互式引导。                                                                         |
+| `--non-interactive`        | 无提示运行引导。                                                                     |
+| `--mode <mode>`            | 引导模式：`local` 或 `remote`。                                                               |
+| `--import-from <provider>` | 在引导期间运行的迁移提供方。                                                        |
+| `--import-source <path>`   | `--import-from` 的源代理主目录。                                                              |
+| `--import-secrets`         | 在引导迁移期间导入受支持的密钥。                                               |
+| `--remote-url <url>`       | 远程 Gateway WebSocket URL。                                                                       |
+| `--remote-token <token>`   | 远程 Gateway 令牌（可选）。                                                                    |
+
+### 向导自动触发
+
+当以下任一标志被显式传入时，即使没有 `--wizard`，`openclaw setup` 也会运行向导：
+
+`--wizard`, `--non-interactive`, `--mode`, `--import-from`, `--import-source`, `--import-secrets`, `--remote-url`, `--remote-token`。
 
 ## 示例
 
@@ -29,32 +45,15 @@ openclaw setup --wizard --import-from hermes --import-source ~/.hermes
 openclaw setup --non-interactive --mode remote --remote-url wss://gateway-host:18789 --remote-token <token>
 ```
 
-## 选项
+## Notes
 
-- `--workspace <dir>`: 代理工作区目录（存储为 `agents.defaults.workspace`）
-- `--wizard`: 运行引导流程
-- `--non-interactive`: 无提示运行引导流程
-- `--mode <local|remote>`: 引导模式
-- `--import-from <provider>`: 在引导期间运行的迁移提供方
-- `--import-source <path>`: `--import-from` 的源代理主目录
-- `--import-secrets`: 在引导迁移期间导入受支持的密钥
-- `--remote-url <url>`: 远程 Gateway WebSocket URL
-- `--remote-token <token>`: 远程 Gateway 令牌
-
-通过 setup 运行引导流程：
-
-```bash
-openclaw setup --wizard
-```
-
-说明：
-
-- 纯粹的 `openclaw setup` 会在不经过完整引导流程的情况下初始化配置 + 工作区。
-- 在完成纯粹的 setup 之后，运行 `openclaw configure` 以选择模型、通道、Gateway、插件、技能或健康检查。
-- 当存在任何引导标志时，系统会自动运行引导流程（`--wizard`、`--non-interactive`、`--mode`、`--import-from`、`--import-source`、`--import-secrets`、`--remote-url`、`--remote-token`）。
-- 如果检测到 Hermes 状态，交互式引导可以自动提供迁移。导入引导需要全新安装；在引导之外使用 [Migrate](/cli/migrate) 进行 dry-run 计划、备份以及覆盖模式。
+- 直接运行 `openclaw setup` 会初始化配置和工作区，但不会执行完整的引导流程。
+- 在基础设置之后，运行 `openclaw onboard` 可进行完整的引导流程，运行 `openclaw configure` 可进行有针对性的更改，或运行 `openclaw channels add` 添加频道账户。
+- 如果检测到 Hermes 状态，交互式引导可自动提供迁移。导入引导需要全新的设置；在引导之外，请使用 [Migrate](/cli/migrate) 来进行 dry-run 计划、备份以及覆盖模式。  
 
 ## 相关
 
 - [CLI reference](/cli)
-- [安装概览](/install)
+- [Onboarding (CLI)](/start/wizard)
+- [Getting started](/start/getting-started)
+- [Install overview](/install)

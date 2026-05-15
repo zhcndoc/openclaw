@@ -27,13 +27,16 @@ OpenClaw 会从以下来源加载技能，**优先级最高的在前**：
 
 如果技能名称冲突，优先级最高的来源获胜。
 
-Codex CLI 的原生 `$CODEX_HOME/skills` 目录不属于这些 OpenClaw
-技能根目录之一。在 Codex harness 模式下，本地 app-server 启动会使用按代理隔离的
-Codex home，因此个人 Codex CLI 技能不会被隐式加载。
-使用 `openclaw migrate codex --dry-run` 可清点这些技能，并使用
-`openclaw migrate codex` 在复制到当前 OpenClaw 代理工作区之前，通过交互式复选框提示
-选择技能目录。对于非交互运行，请对要复制的确切技能重复使用
-`--skill <name>`。
+Codex CLI's native `$CODEX_HOME/skills` directory is not one of these OpenClaw
+skill roots. In Codex harness mode, local app-server launches use isolated
+per-agent Codex homes, so skills in the operator's personal `~/.codex/skills`
+are not loaded implicitly. Codex-native `.agents` discovery uses inherited
+`HOME` separately; OpenClaw's own skill roots above already include
+`~/.agents/skills`. Use `openclaw migrate codex --dry-run` to inventory skills
+from the Codex home, then `openclaw migrate codex` to choose skill directories
+with an interactive
+checkbox prompt before copying them into the current OpenClaw agent workspace.
+For non-interactive runs, repeat `--skill <name>` for the exact skills to copy.
 
 ## 每代理 vs 共享技能
 
@@ -117,9 +120,22 @@ Codex home，因此个人 Codex CLI 技能不会被隐式加载。
 `skills/<group>/<skill>/SKILL.md`，因此相关的第三方技能可以
 保存在共享文件夹下，而无需进行广泛的递归扫描。
 
-ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供 VirusTotal、ClawScan 和静态分析的扫描详情页。
-`openclaw skills install <slug>` 仍然只是安装路径；发布者可通过 ClawHub 仪表板或
-`clawhub skill rescan <slug>` 处理误报。
+Gateway clients that need private, non-ClawHub delivery can stage a zip skill
+archive with `skills.upload.begin`, `skills.upload.chunk`, and
+`skills.upload.commit`, then install the committed upload with
+`skills.install({ source: "upload", uploadId, slug, force?, sha256? })`. This is
+an explicit admin upload path for trusted clients, not the normal
+`openclaw skills install <slug>` or ClawHub install flow. It is off by default
+and only works when `skills.install.allowUploadedArchives: true` is set in
+`openclaw.json`. Upload mode still installs into the default agent workspace
+`skills/<slug>` directory; the archive's internal folder name is ignored for the
+final install target.
+
+ClawHub skill pages expose the latest security scan state before install,
+with scanner detail pages for VirusTotal, ClawScan, and static analysis.
+`openclaw skills install <slug>` remains only the install path; publishers
+recover false positives through the ClawHub dashboard or
+`clawhub skill rescan <slug>`.
 
 ## 安全
 
@@ -129,10 +145,11 @@ ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供
 [沙箱化](/gateway/sandboxing)。
 </Warning>
 
-- 工作区和额外目录的技能发现只接受其解析后的真实路径仍位于已配置根目录内的技能根和 `SKILL.md` 文件。
-- Gateway 支持的技能依赖安装（`skills.install`、入门引导以及 Skills 设置 UI）会在执行安装器元数据之前运行内置的危险代码扫描器。默认会阻止 `critical` 级别的结果，除非调用方显式设置了危险覆盖；`suspicious` 结果仍然只会警告。
-- `openclaw skills install <slug>` 不同——它会将一个 ClawHub 技能文件夹下载到工作区中，并且不使用上面的安装器元数据路径。
-- `skills.entries.*.env` 和 `skills.entries.*.apiKey` 会在该代理轮次中将机密注入到**主机**进程中（而不是沙箱中）。请避免在提示词和日志中泄露机密。
+- 工作区、项目代理和额外目录的技能发现只接受那些解析后的真实路径仍位于配置根目录内的技能根目录，除非 `skills.load.allowSymlinkTargets` 明确信任某个目标根目录。捆绑技能始终保持在其范围内。托管的 `~/.openclaw/skills` 和个人的 `~/.agents/skills` 根目录可能包含由 ClawHub 或其他本地技能管理器安装的符号链接技能文件夹，但每个 `SKILL.md` 的真实路径仍必须位于其解析后的技能目录内。
+- Gateway 私有归档安装默认关闭。显式启用后，它们要求提交一个包含 `SKILL.md` 的 zip 上传，并且重用与 ClawHub 技能安装相同的归档解压、路径穿越、符号链接、强制覆盖和回滚保护。它们受 `skills.install.allowUploadedArchives` 约束；正常的 ClawHub 安装不需要该设置。
+- Gateway 支持的技能依赖安装（`skills.install`、入门引导以及 Skills 设置 UI）会在执行安装器元数据之前运行内置的危险代码扫描器。`critical` 结果默认会阻止，除非调用方显式设置危险覆盖；`suspicious` 结果仍然只会警告。
+- `openclaw skills install <slug>` 不同——它会将一个 ClawHub 技能文件夹下载到工作区中，不使用上面的安装器元数据路径。
+- `skills.entries.*.env` 和 `skills.entries.*.apiKey` 会将密钥注入该代理轮次的**主机**进程（而不是沙箱）。请将密钥排除在提示和日志之外。
 
 有关更广泛的威胁模型和检查清单，请参见 [安全](/gateway/security)。
 
@@ -387,11 +404,11 @@ OpenClaw 会在会话开始时对符合条件的技能进行快照，
 }
 ```
 
-对于有意采用的兄弟仓库布局，其中一个内置技能根目录包含符号链接，请使用 `allowSymlinkTargets`，例如
-`~/.agents/skills/manager -> ~/Projects/manager/skills`。目标列表
-会在 realpath 解析后进行匹配，并且应保持范围尽量狭窄。
+对于有意设计的工作区、项目代理或额外目录布局，如果某个技能根目录包含符号链接，请使用 `allowSymlinkTargets`，例如
+`<workspace>/skills/manager -> ~/Projects/manager/skills`。受管理的
+`~/.openclaw/skills` 和个人 `~/.agents/skills` 默认可以跟随本地技能管理器中的技能目录符号链接，但目标列表在经过 realpath 解析后仍会再次匹配，因此配置时应保持范围尽量窄。
 
-### Remote macOS nodes (Linux gateway)
+### 远程 macOS 节点（Linux 网关）
 
 如果 Gateway 运行在 Linux 上，但连接了一个允许 `system.run` 的 **macOS 节点**（Exec approvals 安全设置未设为 `deny`），
 那么当所需二进制文件在该节点上存在时，OpenClaw 可以将仅限 macOS 的技能视为符合条件。

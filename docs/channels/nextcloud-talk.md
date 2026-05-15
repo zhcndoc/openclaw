@@ -141,30 +141,31 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 
 提供者选项：
 
-- `channels.nextcloud-talk.enabled`：启用/禁用频道启动。
-- `channels.nextcloud-talk.baseUrl`：Nextcloud 实例 URL。
-- `channels.nextcloud-talk.botSecret`：bot 共享密钥。
-- `channels.nextcloud-talk.botSecretFile`：普通文件的密钥路径。不接受符号链接。
-- `channels.nextcloud-talk.apiUser`：用于房间查找的 API 用户（DM 检测）。
-- `channels.nextcloud-talk.apiPassword`：用于房间查找的 API/app 密码。
-- `channels.nextcloud-talk.apiPasswordFile`：API 密码文件路径。
-- `channels.nextcloud-talk.webhookPort`：webhook 监听端口（默认：8788）。
-- `channels.nextcloud-talk.webhookHost`：webhook 主机（默认：0.0.0.0）。
-- `channels.nextcloud-talk.webhookPath`：webhook 路径（默认：/nextcloud-talk-webhook）。
-- `channels.nextcloud-talk.webhookPublicUrl`：外部可访问的 webhook URL。
-- `channels.nextcloud-talk.dmPolicy`：`pairing | allowlist | open | disabled`。
-- `channels.nextcloud-talk.allowFrom`：DM 允许列表（用户 ID）。`open` 需要 `"*"`.
-- `channels.nextcloud-talk.groupPolicy`：`allowlist | open | disabled`。
-- `channels.nextcloud-talk.groupAllowFrom`：群组允许列表（用户 ID）。
-- `channels.nextcloud-talk.rooms`：按房间设置和允许列表。
-- `channels.nextcloud-talk.historyLimit`：群组历史记录限制（0 表示禁用）。
-- `channels.nextcloud-talk.dmHistoryLimit`：私信历史记录限制（0 表示禁用）。
-- `channels.nextcloud-talk.dms`：按私信覆盖设置（historyLimit）。
-- `channels.nextcloud-talk.textChunkLimit`：输出文本分块大小（字符数）。
-- `channels.nextcloud-talk.chunkMode`：`length`（默认）或 `newline`，在按长度分块前按空行（段落边界）拆分。
-- `channels.nextcloud-talk.blockStreaming`：为此频道禁用 block streaming。
-- `channels.nextcloud-talk.blockStreamingCoalesce`：block streaming 合并调优。
-- `channels.nextcloud-talk.mediaMaxMb`：输入媒体上限（MB）。
+- `channels.nextcloud-talk.enabled`: 启用/禁用频道启动。
+- `channels.nextcloud-talk.baseUrl`: Nextcloud 实例 URL。
+- `channels.nextcloud-talk.botSecret`: bot 共享密钥。
+- `channels.nextcloud-talk.botSecretFile`: 常规文件密钥路径。会拒绝符号链接。
+- `channels.nextcloud-talk.apiUser`: 用于房间查找的 API 用户（DM 检测）。
+- `channels.nextcloud-talk.apiPassword`: 用于房间查找的 API/app 密码。
+- `channels.nextcloud-talk.apiPasswordFile`: API 密码文件路径。
+- `channels.nextcloud-talk.webhookPort`: webhook 监听端口（默认：8788）。
+- `channels.nextcloud-talk.webhookHost`: webhook 主机（默认：0.0.0.0）。
+- `channels.nextcloud-talk.webhookPath`: webhook 路径（默认：/nextcloud-talk-webhook）。
+- `channels.nextcloud-talk.webhookPublicUrl`: 外部可访问的 webhook URL。
+- `channels.nextcloud-talk.dmPolicy`: `pairing | allowlist | open | disabled`。
+- `channels.nextcloud-talk.allowFrom`: DM 允许列表（用户 ID）。`open` 需要 `"*"`.
+- `channels.nextcloud-talk.groupPolicy`: `allowlist | open | disabled`。
+- `channels.nextcloud-talk.groupAllowFrom`: 群组允许列表（用户 ID）。
+- `channels.nextcloud-talk.rooms`: 每个房间的设置和允许列表。
+- 静态发送者访问组可以通过 `accessGroup:<name>` 在 `allowFrom` 和 `groupAllowFrom` 中引用。
+- `channels.nextcloud-talk.historyLimit`: 群组历史记录上限（0 表示禁用）。
+- `channels.nextcloud-talk.dmHistoryLimit`: DM 历史记录上限（0 表示禁用）。
+- `channels.nextcloud-talk.dms`: 每个 DM 的覆盖设置（historyLimit）。
+- `channels.nextcloud-talk.textChunkLimit`: 出站文本分块大小（字符）。
+- `channels.nextcloud-talk.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）分割，再进行长度分块。
+- `channels.nextcloud-talk.blockStreaming`: 为此频道禁用块流式传输。
+- `channels.nextcloud-talk.blockStreamingCoalesce`: 块流式传输合并调优。
+- `channels.nextcloud-talk.mediaMaxMb`: 入站媒体上限（MB）。
 
 ## 相关内容
 

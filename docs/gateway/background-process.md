@@ -39,9 +39,10 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 环境覆盖：
 
 - `PI_BASH_YIELD_MS`: 默认 yield（毫秒）
-- `PI_BASH_MAX_OUTPUT_CHARS`: 内存中的输出上限（字符）
-- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: 待处理 stdout/stderr 每个流的上限（字符）
-- `PI_BASH_JOB_TTL_MS`: 已完成会话的 TTL（毫秒，范围限制为 1 分钟–3 小时）
+- `PI_BASH_MAX_OUTPUT_CHARS`: 内存输出上限（字符）
+- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: 每个流的待处理 stdout/stderr 上限（字符）
+- `PI_BASH_JOB_TTL_MS`: 已完成会话的 TTL（毫秒，范围限制在 1 分钟到 3 小时）
+- `OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`: 可写后台会话在被标记为可能正在等待输入之前的空闲输出阈值（默认 15000 毫秒）
 
 配置（推荐）：
 
@@ -55,30 +56,38 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 操作：
 
-- `list`：运行中 + 已完成的会话
-- `poll`：拉取某个会话的新输出（也会报告退出状态）
-- `log`：读取聚合后的输出（支持 `offset` + `limit`）
-- `write`：发送 stdin（`data`，可选 `eof`）
-- `send-keys`：向基于 PTY 的会话发送显式按键标记或字节
-- `submit`：向基于 PTY 的会话发送 Enter / 回车
-- `paste`：发送字面文本，可选使用括号化粘贴模式包裹
-- `kill`：终止后台会话
-- `clear`：从内存中移除一个已完成的会话
-- `remove`：如果在运行则终止，否则如果已完成则清除
+- `list`: 正在运行 + 已完成会话
+- `poll`: 拉取某个会话的新输出（也会报告退出状态）
+- `log`: 读取聚合后的输出并显示输入恢复提示（支持 `offset` + `limit`）
+- `write`: 发送 stdin（`data`，可选 `eof`）
+- `send-keys`: 向基于 PTY 的会话发送显式按键标记或字节
+- `submit`: 向基于 PTY 的会话发送 Enter / 回车
+- `paste`: 发送字面文本，可选用方括号粘贴模式包裹
+- `kill`: 终止后台会话
+- `clear`: 从内存中移除已完成的会话
+- `remove`: 若正在运行则终止，否则若已完成则清除
 
 说明：
 
-- 只有转入后台的会话会被列出/保存在内存中。
-- 进程重启后会话会丢失（没有磁盘持久化）。
-- 只有在你运行 `process poll/log` 且工具结果被记录到聊天历史中时，会话日志才会保存到聊天历史。
-- `process` 按 agent 作用域隔离；它只能看到该 agent 启动的会话。
-- 使用 `poll` / `log` 获取状态、日志、静默成功确认，或在自动完成唤醒不可用时进行完成确认。
-- 当你需要输入或干预时，使用 `write` / `send-keys` / `submit` / `paste` / `kill`。
-- `process list` 会包含一个派生的 `name`（命令动词 + 目标），便于快速浏览。
-- `process log` 使用按行的 `offset`/`limit`。
-- 当同时省略 `offset` 和 `limit` 时，它会返回最后 200 行，并包含分页提示。
-- 当提供了 `offset` 但省略 `limit` 时，它会返回从 `offset` 到末尾的内容（不限制为 200 行）。
-- 轮询用于按需获取状态，不用于等待循环调度。如果工作应当稍后发生，请改用 cron。
+- Only backgrounded sessions are listed/persisted in memory.
+- Sessions are lost on process restart (no disk persistence).
+- Session logs are only saved to chat history if you run `process poll/log` and the tool result is recorded.
+- `process` is scoped per agent; it only sees sessions started by that agent.
+- Use `poll` / `log` for status, logs, quiet-success confirmation, or
+  completion confirmation when automatic completion wake is unavailable.
+- Use `log` before recovering an interactive CLI so the current transcript,
+  stdin state, and input-wait hint are visible together.
+- Use `write` / `send-keys` / `submit` / `paste` / `kill` when you need input
+  or intervention.
+- `process list` includes a derived `name` (command verb + target) for quick scans.
+- `process list`, `poll`, and `log` report `waitingForInput` only
+  when the session still has writable stdin and has been idle longer than the
+  input-wait threshold.
+- `process log` uses line-based `offset`/`limit`.
+- When both `offset` and `limit` are omitted, it returns the last 200 lines and includes a paging hint.
+- When `offset` is provided and `limit` is omitted, it returns from `offset` to the end (not capped to 200).
+- Polling is for on-demand status, not wait-loop scheduling. If the work should
+  happen later, use cron instead.
 
 ## 示例
 
@@ -90,6 +99,12 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 ```json
 { "tool": "process", "action": "poll", "sessionId": "<id>" }
+```
+
+在发送输入前检查交互式会话：
+
+```json
+{ "tool": "process", "action": "log", "sessionId": "<id>" }
 ```
 
 立即在后台启动：

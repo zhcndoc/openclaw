@@ -11,10 +11,26 @@ title: "从 BlueBubbles 迁移"
 
 BlueBubbles 支持已被移除。OpenClaw 仅通过 `imsg` 支持 iMessage。本指南用于将旧的 `channels.bluebubbles` 配置迁移到 `channels.imessage`；没有其他受支持的迁移路径。
 
+<Note>
+关于简短公告和运维摘要，请参见 [BlueBubbles 移除以及 imsg iMessage 路径](/announcements/bluebubbles-imessage)。
+</Note>
+
+## 迁移清单
+
+当你已经知道旧的 BlueBubbles 配置，并且想要最短且安全的迁移路径时，请使用此清单：
+
+1. 在运行 Messages.app 的 Mac 上直接验证 `imsg`（`imsg chats`、`imsg history`、`imsg send` 和 `imsg rpc --help`）。
+2. 将行为类键从 `channels.bluebubbles` 复制到 `channels.imessage`：`dmPolicy`、`allowFrom`、`groupPolicy`、`groupAllowFrom`、`groups`、`includeAttachments`、`attachmentRoots`、`mediaMaxMb`、`textChunkLimit`、`coalesceSameSenderDms` 和 `actions`。
+3. 删除不再存在的传输键：`serverUrl`、`password`、webhook URL，以及 BlueBubbles 服务器设置。
+4. 如果 Gateway 没有运行在 Messages 所在的 Mac 上，将 `channels.imessage.cliPath` 设置为 SSH 包装器，并为远程附件获取设置 `remoteHost`。
+5. 在 Gateway 停止后，启用 `channels.imessage`，然后运行 `openclaw channels status --probe --channel imessage`。
+6. 测试一个 DM、一个允许的群组、（如果启用）附件，以及你期望代理使用的每个私有 API 动作。
+7. 在验证 iMessage 路径后，删除 BlueBubbles 服务器和旧的 `channels.bluebubbles` 配置。
+
 ## 何时适合进行此迁移
 
-- 你已经在同一台 Mac 上运行 `imsg`（或通过 SSH 可访问的 Mac），并且 Messages.app 已登录。
-- 你希望减少一个组件——不再需要单独的 BlueBubbles 服务器、无需认证 REST 端点、也无需 webhook 相关配置。只用一个 CLI 二进制文件，而不是服务器 + 客户端应用 + 辅助进程。
+- 你已经在同一台 Mac 上运行 `imsg`（或可通过 SSH 访问的 Mac），并且 Messages.app 已登录。
+- 你希望减少一个组件——不再需要单独的 BlueBubbles 服务器、无需认证 REST 端点，也无需 webhook 相关配置。只用一个 CLI 二进制文件，而不是服务器 + 客户端应用 + 辅助进程。
 - 你使用的是 [受支持的 macOS / `imsg` 构建版本](/channels/imessage#requirements-and-permissions-macos)，并且私有 API 探测报告 `available: true`。
 
 ## imsg 的作用
@@ -60,13 +76,13 @@ BlueBubbles 支持已被移除。OpenClaw 仅通过 `imsg` 支持 iMessage。本
 
    `imsg launch` 需要关闭 SIP。基本发送、历史记录和监听不需要 `imsg launch`；高级操作才需要。
 
-4. 通过 OpenClaw 验证桥接：
+4. 在添加启用状态的 `channels.imessage` 配置后，通过 OpenClaw 验证该桥接：
 
    ```bash
    openclaw channels status --probe
    ```
 
-   你希望看到 `imessage.privateApi.available: true`。如果它报告为 `false`，先修复这个问题——参见[能力检测](/channels/imessage#private-api-actions)。
+   你希望看到 `imessage.privateApi.available: true`。如果它报告为 `false`，请先修复这一点——参见 [能力检测](/channels/imessage#private-api-actions) 。`channels status --probe` 只会探测已配置且启用的账户。
 
 5. 备份你的配置：
 
@@ -143,7 +159,7 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
 
 ## 步骤说明
 
-1. 在现有 BlueBubbles 块旁边添加一个 iMessage 块。在新路径验证通过之前，旧块只保留为复制来源：
+1. 在现有的 BlueBubbles 块旁边添加一个 iMessage 块。在 Gateway 仍在路由 BlueBubbles 流量时，保持它禁用：
 
    ```json5
    {
@@ -153,7 +169,7 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
          // ... 现有配置 ...
        },
        imessage: {
-         enabled: false, // 在下面的干运行验证后再打开
+         enabled: false,
          cliPath: "/opt/homebrew/bin/imsg",
          dmPolicy: "pairing",
          allowFrom: ["+15555550123"], // 从 bluebubbles.allowFrom 复制
@@ -173,17 +189,17 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
    }
    ```
 
-2. **干运行探测** — 启动网关并确认 iMessage 报告健康：
+2. **先探测，再处理流量** — 停止 Gateway，临时启用 iMessage 块，并通过 CLI 确认 iMessage 报告健康：
 
    ```bash
-   openclaw gateway
-   openclaw channels status
-   openclaw channels status --probe   # 期望 imessage.privateApi.available: true
+   openclaw gateway stop
+   # 编辑配置: channels.imessage.enabled = true
+   openclaw channels status --probe --channel imessage   # 期望 imessage.privateApi.available: true
    ```
 
-   因为 `imessage.enabled` 仍然是 `false`，所以此时不会路由任何传入的 iMessage 流量——但 `--probe` 会实际探测 bridge，从而在切换前捕获权限 / 安装问题。
+   `channels status --probe` 只会探测已配置且已启用的账号。不要在 BlueBubbles 和 iMessage 都启用的情况下重启 Gateway，除非你明确希望两个通道监视器都运行。如果你不会立即切换，请在重启 Gateway 前把 `channels.imessage.enabled` 改回 `false`。使用 [开始之前](#before-you-start) 中的直接 `imsg` 命令来验证 Mac，然后再启用 OpenClaw 流量。
 
-3. **切换过去。** 删除 BlueBubbles 配置，并在一次配置编辑中启用 iMessage：
+3. **切换。** 一旦已启用的 iMessage 账号报告健康，就移除 BlueBubbles 配置并保持 iMessage 启用：
 
    ```json5
    {
@@ -209,16 +225,16 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
 | ---------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Send text / SMS fallback                                   | ✅                                  | ✅                                                                                                                      |
 | Send media (photo, video, file, voice)                     | ✅                                  | ✅                                                                                                                      |
-| Threaded reply (`reply_to_guid`)                           | ✅                                  | ✅ (closes [#51892](https://github.com/openclaw/openclaw/issues/51892))                                                 |
+| Threaded reply (`reply_to_guid`)                           | ✅                                  | ✅ (关闭 [#51892](https://github.com/openclaw/openclaw/issues/51892))                                                 |
 | Tapback (`react`)                                          | ✅                                  | ✅                                                                                                                      |
 | Edit / unsend (macOS 13+ recipients)                       | ✅                                  | ✅                                                                                                                      |
-| Send with screen effect                                    | ✅                                  | ✅ (closes part of [#9394](https://github.com/openclaw/openclaw/issues/9394))                                           |
-| Rich text bold / italic / underline / strikethrough        | ✅                                  | ✅ (typed-run formatting via attributedBody)                                                                            |
+| Send with screen effect                                    | ✅                                  | ✅ (关闭 [#9394](https://github.com/openclaw/openclaw/issues/9394))                                                   |
+| Rich text bold / italic / underline / strikethrough        | ✅                                  | ✅（通过 attributedBody 的 typed-run 格式化）                                                                            |
 | Rename group / set group icon                              | ✅                                  | ✅                                                                                                                      |
 | Add / remove participant, leave group                      | ✅                                  | ✅                                                                                                                      |
-| Read receipts and typing indicator                         | ✅                                  | ✅ (gated on private API probe)                                                                                         |
-| Same-sender DM coalescing                                  | ✅                                  | ✅ (DM-only; opt-in via `channels.imessage.coalesceSameSenderDms`)                                                      |
-| Catchup of inbound messages received while gateway is down | ✅ (webhook replay + history fetch) | ✅ (opt-in via `channels.imessage.catchup.enabled`; closes [#78649](https://github.com/openclaw/openclaw/issues/78649)) |
+| Read receipts and typing indicator                         | ✅                                  | ✅（取决于 private API 探测）                                                                                         |
+| Same-sender DM coalescing                                  | ✅                                  | ✅（仅限 DM；通过 `channels.imessage.coalesceSameSenderDms` 选择启用）                                                      |
+| Catchup of inbound messages received while gateway is down | ✅（webhook replay + history fetch） | ✅（通过 `channels.imessage.catchup.enabled` 选择启用；关闭 [#78649](https://github.com/openclaw/openclaw/issues/78649)） |
 
 iMessage 补抓现在已作为捆绑插件的可选功能提供。在网关启动时，如果 `channels.imessage.catchup.enabled` 为 `true`，网关会使用与 `imsg watch` 相同的 JSON-RPC 客户端执行一次 `chats.list` + 按聊天分别执行 `messages.history`，将每条遗漏的入站记录重新走一遍实时分发路径（allowlist、群组策略、去抖、回声缓存），并为每个账号持久化一个游标，以便后续启动从上次中断处继续。有关调优请参见 [在网关停机后进行补抓](/channels/imessage#catching-up-after-gateway-downtime)。
 
@@ -236,7 +252,8 @@ iMessage 补抓现在已作为捆绑插件的可选功能提供。在网关启�
 
 ## 相关
 
+- [BlueBubbles removal and the imsg iMessage path](/announcements/bluebubbles-imessage) — 简短公告和运维摘要。
 - [iMessage](/channels/imessage) — 完整的 iMessage 通道参考，包括 `imsg launch` 设置和能力检测。
-- `/channels/bluebubbles` — 重定向到本迁移指南的旧 URL。
+- `/channels/bluebubbles` — 重定向到此迁移指南的旧 URL。
 - [Pairing](/channels/pairing) — DM 认证和配对流程。
 - [Channel Routing](/channels/channel-routing) — 网关如何为出站回复选择通道。

@@ -56,7 +56,8 @@ OpenRouter 提供了一个 **统一 API**，可通过单一
 | Model ref                         | 说明                         |
 | --------------------------------- | ---------------------------- |
 | `openrouter/auto`                 | OpenRouter 自动路由          |
-| `openrouter/moonshotai/kimi-k2.6` | 通过 MoonshotAI 使用 Kimi K2.6 |
+| `openrouter/moonshotai/kimi-k2.6` | 通过 MoonshotAI 的 Kimi K2.6 |
+| `openrouter/moonshotai/kimi-k2.5` | 通过 MoonshotAI 的 Kimi K2.5 |
 
 ## 图像生成
 
@@ -124,6 +125,29 @@ OpenRouter 也可通过其兼容 OpenAI 的
 
 如果省略 `messages.tts.providers.openrouter.apiKey`，TTS 将依次复用
 `models.providers.openrouter.apiKey`，然后是 `OPENROUTER_API_KEY`。
+
+## 语音转文本（入站音频）
+
+OpenRouter 可以通过其 STT 端点（`/audio/transcriptions`），使用共享的
+`tools.media.audio` 路径转录入站语音/音频附件。
+这适用于任何将入站语音/音频转发到
+媒体理解预检的通道插件。
+
+```json5
+{
+  tools: {
+    media: {
+      audio: {
+        enabled: true,
+        models: [{ provider: "openrouter", model: "openai/whisper-large-v3-turbo" }],
+      },
+    },
+  },
+}
+```
+
+OpenClaw 会将 OpenRouter STT 请求作为 JSON 发送，并在
+`input_audio` 下附带 base64 音频（OpenRouter STT 合约），而不是作为 multipart OpenAI 表单上传。
 
 ## 身份验证和请求头
 

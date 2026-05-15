@@ -14,21 +14,21 @@ sidebarTitle: "上手引导参考"
 ## 流程详情（本地模式）
 
 <Steps>
-  <Step title="检测现有配置">
-    - 如果 `~/.openclaw/openclaw.json` 存在，选择 **保留 / 修改 / 重置**。
+  <Step title="现有配置检测">
+    - 如果 `~/.openclaw/openclaw.json` 存在，选择 **保留当前值**、**审查并更新** 或 **重置后设置**。
     - 重新运行上手引导**不会**清除任何内容，除非你明确选择 **重置**
-      （或传入 `--reset`）。
-    - CLI `--reset` 默认为 `config+creds+sessions`；使用 `--reset-scope full`
+      （或者传入 `--reset`）。
+    - CLI `--reset` 默认值为 `config+creds+sessions`；使用 `--reset-scope full`
       还会移除工作区。
-    - 如果配置无效或包含旧版键，向导会停止，并要求
-      你先运行 `openclaw doctor` 再继续。
-    - 重置使用 `trash`（绝不使用 `rm`），并提供以下范围：
+    - 如果配置无效或包含旧版键，向导会停止并要求
+      你在继续之前运行 `openclaw doctor`。
+    - 重置使用 `trash`（绝不使用 `rm`）并提供以下范围：
       - 仅配置
       - 配置 + 凭据 + 会话
       - 完全重置（也会移除工作区）
 
   </Step>
-  <Step title="Model/Auth">
+  <Step title="模型/认证">
     - **Anthropic API key**: 如果存在则使用 `ANTHROPIC_API_KEY`，否则提示输入密钥，然后将其保存供守护进程使用。
     - **Anthropic API key**: 在上手引导/配置中首选 Anthropic 助手选项。
     - **Anthropic setup-token**: 在上手引导/配置中仍然可用，不过 OpenClaw 现在在可用时更倾向于复用 Claude CLI。
@@ -78,7 +78,7 @@ sidebarTitle: "上手引导参考"
     - 完整工作区布局 + 备份指南：[Agent workspace](/concepts/agent-workspace)
 
   </Step>
-  <Step title="Gateway">
+  <Step title="网关">
     - 端口、绑定、认证模式、tailscale 暴露。
     - 认证建议：即使是 loopback 也保留 **Token**，这样本地 WS 客户端必须进行认证。
     - 在 token 模式下，交互式设置提供：
@@ -94,7 +94,7 @@ sidebarTitle: "上手引导参考"
     - 非 loopback 绑定仍然需要认证。
 
   </Step>
-  <Step title="Channels">
+  <Step title="频道">
     - [WhatsApp](/channels/whatsapp)：可选 QR 登录。
     - [Telegram](/channels/telegram)：机器人 token。
     - [Discord](/channels/discord)：机器人 token。
@@ -136,7 +136,7 @@ sidebarTitle: "上手引导参考"
 
   </Step>
   <Step title="完成">
-    - 摘要 + 下一步，包括用于额外功能的 iOS/Android/macOS 应用。
+    - Summary + next steps, including the **How do you want to hatch your agent?** prompt for Terminal, Browser, or later.
 
   </Step>
 </Steps>
@@ -244,8 +244,8 @@ WhatsApp 凭据存放在 `~/.openclaw/credentials/whatsapp/<accountId>/` 下。
 
 ## 相关文档
 
-- Onboarding overview: [Onboarding (CLI)](/start/wizard)
-- macOS app onboarding: [Onboarding](/start/onboarding)
-- Config reference: [Gateway configuration](/gateway/configuration)
-- Providers: [WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord), [Google Chat](/channels/googlechat), [Signal](/channels/signal), [iMessage](/channels/imessage)
-- Skills: [Skills](/tools/skills), [Skills config](/tools/skills-config)
+- 上手引导概览：[上手引导（CLI）](/start/wizard)
+- macOS 应用上手引导：[上手引导](/start/onboarding)
+- 配置参考：[Gateway configuration](/gateway/configuration)
+- 提供方：[WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord), [Google Chat](/channels/googlechat), [Signal](/channels/signal), [iMessage](/channels/imessage)
+- 技能：[Skills](/tools/skills), [Skills config](/tools/skills-config)

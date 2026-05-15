@@ -174,7 +174,35 @@ openclaw gateway --verbose --ws-log full
 `--verbose` 只影响控制台输出和 WS 日志详细程度；它不会更改
 文件日志级别。
 
-### 追踪关联
+### 定向模型传输诊断
+
+在调试提供方调用时，请使用定向环境标志，而不是把所有日志都提升到 `debug`：
+
+```bash
+OPENCLAW_DEBUG_MODEL_TRANSPORT=1 openclaw gateway
+OPENCLAW_DEBUG_MODEL_PAYLOAD=tools OPENCLAW_DEBUG_SSE=events openclaw gateway
+```
+
+可用标志：
+
+- `OPENCLAW_DEBUG_MODEL_TRANSPORT=1`：在 `info` 级别输出请求开始、获取响应、SDK
+  头、首个流式事件、流完成和传输错误。
+- `OPENCLAW_DEBUG_MODEL_PAYLOAD=summary`：在模型请求日志中包含有界的请求载荷
+  摘要。
+- `OPENCLAW_DEBUG_MODEL_PAYLOAD=tools`：在载荷摘要中包含所有面向模型的工具名称。
+- `OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted`：包含已脱敏、已截断的 JSON
+  载荷快照。仅在调试时使用；机密信息会被脱敏，但提示词和消息文本可能仍会保留。
+- `OPENCLAW_DEBUG_SSE=events`：输出首个事件和流完成时间。
+- `OPENCLAW_DEBUG_SSE=peek`：还会输出前五个已脱敏的 SSE 事件
+  载荷，并按事件截断。
+- `OPENCLAW_DEBUG_CODE_MODE=1`：输出代码模式的模型表面诊断，
+  包括当原生提供方工具因代码模式接管工具表面而被隐藏时的情况。
+
+这些标志会通过正常的 OpenClaw 日志记录，因此 `openclaw logs --follow`
+和 Control UI 的 Logs 选项卡都能显示它们。若不使用这些标志，相同的诊断信息
+仍可在 `debug` 级别下查看。
+
+### Trace correlation
 
 文件日志是 JSONL。当日志调用携带有效的诊断追踪上下文时，
 OpenClaw 会将追踪字段写为顶层 JSON 键（`traceId`、`spanId`、
@@ -190,7 +218,7 @@ Gateway HTTP 请求和 Gateway WebSocket 帧会建立一个内部请求追踪
 Talk 生命周期日志记录在启用 OpenTelemetry 日志导出时，也会通过
 OTLP logs 流向相同的流程，使用与文件日志相同的有界属性。
 
-### Model call size and timing
+### 模型调用大小和时序
 
 模型调用诊断会记录有界的请求/响应测量值，而不会捕获原始 prompt 或响应内容：
 

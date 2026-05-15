@@ -187,7 +187,7 @@ openclaw sessions cleanup --enforce
 
 ## Transcript structure（`*.jsonl`）
 
-转录由 `@mariozechner/pi-coding-agent` 的 `SessionManager` 管理。
+转录由 `@earendil-works/pi-coding-agent` 的 `SessionManager` 管理。
 
 文件采用 JSONL 格式：
 
@@ -349,7 +349,8 @@ OpenClaw 也会为嵌入式运行强制一个安全下限：
 - `/status`（在任意聊天会话中）
 - `openclaw status`（CLI）
 - `openclaw sessions` / `sessions --json`
-- 详细模式：`🧹 Auto-compaction complete` + 压缩次数
+- Gateway logs (`pnpm gateway:watch` or `openclaw logs --follow`): `embedded run auto-compaction start` + `complete`
+- Verbose mode: `🧹 Auto-compaction complete` + compaction count
 
 ---
 
@@ -409,7 +410,7 @@ Pi 还在扩展 API 中暴露了 `session_before_compact` 钩子，但 OpenClaw 
 - 存储与转录不匹配？请确认 Gateway 主机以及 `openclaw status` 中的存储路径。
 - 压缩过于频繁？检查：
   - 模型上下文窗口（太小）
-  - 压缩设置（`reserveTokens` 对模型窗口来说过高可能导致更早触发压缩）
+  - 压缩设置（`reserveTokens` 对模型窗口来说可能过高导致更早触发压缩）
   - 工具结果膨胀：启用/调整会话剪枝
 - 静默轮次泄露？确认回复以 `NO_REPLY` 开头（大小写不敏感的精确令牌），并且你使用的是包含流式抑制修复的构建版本。
 

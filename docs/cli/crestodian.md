@@ -142,7 +142,7 @@ setup workspace ~/Projects/work model openai/gpt-5.5
 - `OPENAI_API_KEY` -> `openai/gpt-5.5`
 - `ANTHROPIC_API_KEY` -> `anthropic/claude-opus-4-7`
 - Claude Code CLI -> `claude-cli/claude-opus-4-7`
-- Codex CLI -> `codex-cli/gpt-5.5`
+- Codex -> `openai/gpt-5.5` 通过 Codex app-server harness
 
 如果这些都不可用，setup 仍会写入默认工作区并保持模型未设置。请安装或登录 Codex/Claude Code，或暴露
 `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`，然后再次运行 setup。
@@ -153,7 +153,6 @@ Crestodian 总是以确定性模式启动。对于确定性解析器无法理解
 
 - Claude Code CLI: `claude-cli/claude-opus-4-7`
 - Codex app-server harness: `openai/gpt-5.5`
-- Codex CLI: `codex-cli/gpt-5.5`
 
 模型辅助规划器不能直接修改配置。它必须将请求翻译为 Crestodian 的某个类型化命令，然后正常的审批和审计规则才会生效。Crestodian 会在执行任何操作之前打印它使用的模型以及解释后的命令。无配置回退的规划器回合是临时的、在运行时支持的情况下禁用工具，并使用临时工作区/会话。
 
@@ -193,11 +192,11 @@ TUI 内的代理切换会留下一个提示，表明 `/crestodian` 可用。
 
 ```text
 You, in a trusted owner DM: /crestodian status
-OpenClaw: Crestodian rescue mode. Gateway reachable: no. Config valid: no.
+OpenClaw: Crestodian 救援模式。Gateway 可达：否。配置有效：否。
 You: /crestodian restart gateway
-OpenClaw: Plan: restart the Gateway. Reply /crestodian yes to apply.
+OpenClaw: 计划：重启 Gateway。回复 /crestodian yes 以应用。
 You: /crestodian yes
-OpenClaw: Applied. Audit entry written.
+OpenClaw: 已应用。已写入审计条目。
 ```
 
 代理创建也可以从本地提示符或救援模式排队：

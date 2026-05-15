@@ -141,7 +141,7 @@ Groq 的内置插件还注册了一个**音频媒体理解提供方**，因此�
     如果 Gateway 作为受管服务运行（launchd、systemd、Docker），`GROQ_API_KEY` 必须对该进程可见——而不只是对你的交互式 shell 可见。
 
     <Warning>
-      仅放在 `~/.profile` 里的密钥对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入其中。将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以便网关进程可以读取。
+      仅在交互式 shell 中导出的密钥对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入到那里。将密钥设置在 `~/.openclaw/.env` 中或通过 `env.shellEnv` 设置，以便网关进程可以读取。
     </Warning>
 
   </Accordion>

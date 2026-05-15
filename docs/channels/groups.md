@@ -342,15 +342,15 @@ Discord/Slack/Telegram 发送失败。请为
 
 <AccordionGroup>
   <Accordion title="提及门控说明">
-    - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。
+    - `mentionPatterns` 是大小写不敏感且安全的正则表达式模式；无效模式和不安全的嵌套重复形式会被忽略。
     - 提供显式提及的界面仍会通过；模式只是兜底。
     - 按代理覆盖：`agents.list[].groupChat.mentionPatterns`（当多个代理共享一个群组时很有用）。
     - 只有在可以进行提及检测时才会强制提及门控（原生提及或已配置 `mentionPatterns`）。
-    - 将某个群组或发送者加入允许名单并不会禁用提及门控；当所有消息都应触发时，请将该群组的 `requireMention` 设为 `false`。
+    - 将群组或发送者列入允许名单不会关闭提及门控；当所有消息都应触发时，请将该群组的 `requireMention` 设为 `false`。
     - 群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
-    - 允许静默回复的群组会将干净的空白或仅推理的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天只有在显式允许静默回复时才这样处理；否则空回复仍然算作失败的代理轮次。
-    - Discord 默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
-    - 群组历史上下文在各渠道间统一包装，并且是**仅待处理项**（因提及门控而跳过的消息）；全局默认使用 `messages.groupChat.historyLimit`，覆盖则使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
+    - 允许静默回复的群组会将干净的空回复或仅推理回复视为静默，等同于 `NO_REPLY`。直接聊天只有在显式允许直接静默回复时才会这样；否则空回复仍会被视为失败的代理轮次。
+    - Discord 的默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
+    - 群聊历史上下文会在所有渠道中统一包装。受提及门控的群组会保留待处理的跳过消息；始终开启的群组在渠道支持时也可能保留最近已处理的房间消息。全局默认使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
 
   </Accordion>
 </AccordionGroup>
@@ -359,8 +359,8 @@ Discord/Slack/Telegram 发送失败。请为
 
 某些渠道配置支持限制在**特定群组/房间/渠道内部**可用的工具。
 
-- `tools`：为整个群组允许/禁止工具。
-- `toolsBySender`：群组内按发送者覆盖。使用显式键前缀：`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>` 和 `"*"` 通配符。旧式未加前缀的键仍被接受，并且只按 `id:` 匹配。
+- `tools`: 为整个群组允许/拒绝工具。
+- `toolsBySender`: 群组内按发送者覆盖。使用显式键前缀：`channel:<channelId>:<senderId>`、`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>` 和 `"*"` 通配符。渠道 id 使用 OpenClaw 规范渠道 id；像 `teams` 这样的别名会规范化为 `msteams`。旧版未加前缀的键仍然被接受，但只会按 `id:` 匹配。
 
 解析顺序（越具体优先级越高）：
 

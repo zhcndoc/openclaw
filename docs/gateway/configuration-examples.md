@@ -15,7 +15,7 @@ title: "配置示例"
 
 ```json5
 {
-  agent: { workspace: "~/.openclaw/workspace" },
+  agents: { defaults: { workspace: "~/.openclaw/workspace" } },
   channels: { whatsapp: { allowFrom: ["+15555550123"] } },
 }
 ```
@@ -26,14 +26,21 @@ title: "配置示例"
 
 ```json5
 {
-  identity: {
-    name: "Clawd",
-    theme: "helpful assistant",
-    emoji: "🦞",
-  },
-  agent: {
-    workspace: "~/.openclaw/workspace",
-    model: { primary: "anthropic/claude-sonnet-4-6" },
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace",
+      model: { primary: "anthropic/claude-sonnet-4-6" },
+    },
+    list: [
+      {
+        id: "main",
+        identity: {
+          name: "Clawd",
+          theme: "helpful assistant",
+          emoji: "🦞",
+        },
+      },
+    ],
   },
   channels: {
     whatsapp: {
@@ -83,12 +90,7 @@ title: "配置示例"
     },
   },
 
-  // 身份
-  identity: {
-    name: "Samantha",
-    theme: "helpful sloth",
-    emoji: "🦥",
-  },
+  // 身份是按 agent 区分的——请在下方的 agents.list[].identity 中设置。
 
   // 日志
   logging: {
@@ -111,18 +113,18 @@ title: "配置示例"
       visibleReplies: "message_tool", // 群组/频道中的正常最终回复保持私密
     },
     queue: {
-      mode: "steer",
+      mode: "followup",
       debounceMs: 500,
       cap: 20,
       drop: "summarize",
       byChannel: {
-        whatsapp: "steer",
-        telegram: "steer",
-        discord: "steer",
-        slack: "steer",
-        signal: "steer",
-        imessage: "steer",
-        webchat: "steer",
+        whatsapp: "followup",
+        telegram: "followup",
+        discord: "collect",
+        slack: "collect",
+        signal: "followup",
+        imessage: "followup",
+        webchat: "followup",
       },
     },
   },
@@ -307,6 +309,11 @@ title: "配置示例"
       {
         id: "main",
         default: true,
+        identity: {
+          name: "Samantha",
+          theme: "helpful sloth",
+          emoji: "🦥",
+        },
         // 继承 defaults.skills -> github, weather
         groupChat: {
           mentionPatterns: ["@openclaw", "openclaw"],
@@ -452,6 +459,7 @@ title: "配置示例"
     install: {
       preferBrew: true,
       nodeManager: "npm", // npm | pnpm | yarn | bun
+      allowUploadedArchives: false,
     },
     entries: {
       "image-lab": {
@@ -510,7 +518,7 @@ title: "配置示例"
 
 ```json5
 {
-  agent: { workspace: "~/.openclaw/workspace" },
+  agents: { defaults: { workspace: "~/.openclaw/workspace" } },
   channels: {
     whatsapp: { allowFrom: ["+15555550123"] },
     telegram: {
@@ -598,11 +606,13 @@ title: "配置示例"
       },
     },
   },
-  agent: {
-    workspace: "~/.openclaw/workspace",
-    model: {
-      primary: "anthropic/claude-opus-4-6",
-      fallbacks: ["minimax/MiniMax-M2.7"],
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace",
+      model: {
+        primary: "anthropic/claude-opus-4-6",
+        fallbacks: ["minimax/MiniMax-M2.7"],
+      },
     },
   },
 }
@@ -612,13 +622,20 @@ title: "配置示例"
 
 ```json5
 {
-  identity: {
-    name: "WorkBot",
-    theme: "专业助手",
-  },
-  agent: {
-    workspace: "~/work-openclaw",
-    elevated: { enabled: false },
+  agents: {
+    defaults: {
+      workspace: "~/work-openclaw",
+      elevatedDefault: "off",
+    },
+    list: [
+      {
+        id: "main",
+        identity: {
+          name: "WorkBot",
+          theme: "专业助手",
+        },
+      },
+    ],
   },
   channels: {
     slack: {
@@ -637,9 +654,11 @@ title: "配置示例"
 
 ```json5
 {
-  agent: {
-    workspace: "~/.openclaw/workspace",
-    model: { primary: "lmstudio/my-local-model" },
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace",
+      model: { primary: "lmstudio/my-local-model" },
+    },
   },
   models: {
     mode: "merge",

@@ -18,7 +18,10 @@ OpenClaw 插件的测试工具、模式和 lint 约束参考。
 
 ## 测试工具
 
-**插件 API mock 导入：** `openclaw/plugin-sdk/plugin-test-api`
+These test-helper subpaths are repo-local source entrypoints for OpenClaw's own
+bundled plugin tests. They are not package exports for third-party plugins.
+
+**Plugin API mock import:** `openclaw/plugin-sdk/plugin-test-api`
 
 **Agent 运行时契约导入：** `openclaw/plugin-sdk/agent-runtime-test-contracts`
 
@@ -42,11 +45,11 @@ OpenClaw 插件的测试工具、模式和 lint 约束参考。
 
 **Node 内置 mock 导入：** `openclaw/plugin-sdk/test-node-mocks`
 
-新插件测试优先使用下面这些更聚焦的子路径。广义的
-`openclaw/plugin-sdk/testing` 入口仅用于旧版兼容。
-仓库守卫会拒绝来自 `plugin-sdk/testing` 和
-`plugin-sdk/test-utils` 的新的真实导入；这些名称仅作为已弃用的兼容
-表面保留给外部插件和兼容性记录测试。
+新插件测试请优先使用下面这些更聚焦的子路径。宽泛的
+`openclaw/plugin-sdk/testing` 聚合入口仅用于向后兼容。
+仓库的 guardrail 会拒绝新的、真实的 `plugin-sdk/testing` 和
+`plugin-sdk/test-utils` 导入；这些名称仅作为已弃用的兼容
+表面，供 compatibility-record 测试使用。
 
 ```typescript
 import {
@@ -159,7 +162,7 @@ import type {
   ChannelAccountSnapshot,
   ChannelGatewayContext,
 } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { MockFn, PluginRuntime, RuntimeEnv } from "openclaw/plugin-sdk/plugin-test-runtime";
 ```
 

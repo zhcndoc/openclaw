@@ -146,12 +146,12 @@ candidate contains redacted secret placeholders such as `***`.
     }
     ```
 
-    - `agents.defaults.models` 定义模型目录，并作为 `/model` 的允许列表。
-    - 使用 `openclaw config set agents.defaults.models '<json>' --strict-json --merge` 可在不移除现有模型的情况下添加允许列表条目。会移除条目的普通替换会被拒绝，除非你传入 `--replace`。
+    - `agents.defaults.models` 定义模型目录，并作为 `/model` 的允许列表；`provider/*` 条目会将 `/model`、`/models` 和模型选择器筛选为所选提供方，同时仍使用动态模型发现。
+    - 使用 `openclaw config set agents.defaults.models '<json>' --strict-json --merge` 可在不移除现有模型的情况下添加允许列表条目。若普通替换会移除条目，则会被拒绝，除非你传入 `--replace`。
     - 模型引用使用 `provider/model` 格式（例如 `anthropic/claude-opus-4-6`）。
-    - `agents.defaults.imageMaxDimensionPx` 控制转录/工具图像的缩放（默认 `1200`）；较低的值通常会在大量截图的运行中减少视觉 token 用量。
-    - 有关在聊天中切换模型，请参阅 [模型 CLI](/concepts/models)；有关身份验证轮换和回退行为，请参阅 [模型故障转移](/concepts/model-failover)。
-    - 关于自定义/自托管提供商，请参阅参考中的 [自定义提供商](/gateway/config-tools#custom-providers-and-base-urls)。
+    - `agents.defaults.imageMaxDimensionPx` 控制转录/工具图片缩放（默认 `1200`）；较低的值通常可减少以截图为主的运行中的视觉 token 用量。
+    - 在聊天中切换模型请参阅 [Models CLI](/concepts/models)，有关认证轮换和回退行为请参阅 [Model Failover](/concepts/model-failover)。
+    - 对于自定义/自托管提供方，请参阅参考中的 [Custom providers](/gateway/config-tools#custom-providers-and-base-urls)。
 
   </Accordion>
 

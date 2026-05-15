@@ -9,7 +9,7 @@ sidebarTitle: "后台任务"
 ---
 
 <Note>
-在找调度功能吗？请参阅 [Automation and tasks](/automation)，以选择合适的机制。本页是后台工作的活动台账，不是调度器。
+在找调度功能？请参阅 [Automation](/automation) 以选择合适的机制。本页是后台工作的活动台账，而不是调度器。
 </Note>
 
 后台任务用于跟踪**在主对话会话之外**运行的工作：ACP 运行、子代理启动、隔离的 cron 作业执行，以及由 CLI 发起的操作。
@@ -160,7 +160,7 @@ Transitions happen automatically - when the associated agent run ends, the task 
 
 当任务到达终态时，OpenClaw 会通知你。投递路径有两种：
 
-**直接投递**——如果任务有通道目标（`requesterOrigin`），完成消息会直接发送到该通道（Telegram、Discord、Slack 等）。对于子代理完成，OpenClaw 还会在可用时保留绑定的线程/主题路由，并且在放弃直接投递之前，可以用请求者会话中存储的路由（`lastChannel` / `lastTo` / `lastAccountId`）补全缺失的 `to` / account。
+**直接投递** - 如果任务有一个通道目标（`requesterOrigin`），完成消息会直接发送到该通道（Telegram、Discord、Slack 等）。群组和频道任务完成则会改为通过请求者会话路由，以便父代理可以写出可见回复。对于子代理完成，如果可用，OpenClaw 还会保留绑定的 thread/topic 路由，并且在放弃直接投递之前，可以从请求者会话存储的路由（`lastChannel` / `lastTo` / `lastAccountId`）中补全缺失的 `to` / account。
 
 **会话排队投递**——如果直接投递失败或未设置来源，该更新会作为系统事件排入请求者会话，并在下一次 heartbeat 时显示。
 
@@ -241,7 +241,7 @@ openclaw tasks notify <lookup> state_changes
     openclaw tasks maintenance --apply [--json]
     ```
 
-    用于预览或应用任务及 Task Flow 状态的协调修复、清理时间戳设置和裁剪。
+    用于预览或应用任务、Task Flow 状态以及过期 cron 运行会话注册表行的协调修复、清理打标和裁剪。
 
     协调修复感知运行时：
 
@@ -257,6 +257,8 @@ openclaw tasks notify <lookup> state_changes
     - 隔离 cron 投递会在需要时等待后代 subagent 后续跟进，并抑制过时的父级确认文本，而不是宣布它。
     - subagent 完成投递优先使用最新可见的 assistant 文本；如果为空，则回退到已清理的最新 tool/toolResult 文本，而仅因超时工具调用的运行可能会折叠为简短的部分进度摘要。终态失败的运行会宣布失败状态，而不会回放捕获到的回复文本。
     - 清理失败不会掩盖真实的任务结果。
+
+    应用维护时，OpenClaw 还会移除超过 7 天的过期 `cron:<jobId>:run:<uuid>` 会话注册表行，同时保留当前正在运行的 cron 作业对应的行，并且不影响非 cron 的会话行。
 
   </Accordion>
   <Accordion title="tasks flow list | show | cancel">
@@ -305,7 +307,7 @@ Tasks: 3 queued · 2 running · 1 issues
 $OPENCLAW_STATE_DIR/tasks/runs.sqlite
 ```
 
-注册表在 gateway 启动时加载到内存，并将写入同步到 SQLite，以确保跨重启的持久性。
+注册表在 gateway 启动时加载到内存，并将写入同步到 SQLite，以确保跨重启的持久性。  
 Gateway 通过使用 SQLite 默认的
 autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限制 SQLite 写前日志的大小。
 
@@ -363,8 +365,8 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
 
 ## 相关内容
 
-- [Automation & Tasks](/automation) - 所有自动化机制一览
+- [Automation](/automation) - 所有自动化机制一览
 - [CLI: Tasks](/cli/tasks) - CLI 命令参考
 - [Heartbeat](/gateway/heartbeat) - 周期性的主会话轮次
 - [Scheduled Tasks](/automation/cron-jobs) - 调度后台工作
-- [Task Flow](/automation/taskflow) - 位于任务之上的 flow 编排
+- [Task Flow](/automation/taskflow) - 位于任务之上的流程编排

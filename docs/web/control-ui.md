@@ -89,7 +89,9 @@ Docs 翻译会为相同的非英语区域设置生成，但 docs 站点内置的
 
 外观面板保留了内置的 Claw、Knot 和 Dash 主题，以及一个浏览器本地的 tweakcn 导入槽位。要导入主题，请打开 [tweakcn editor](https://tweakcn.com/editor/theme)，选择或创建一个主题，点击 **Share**，然后将复制的主题链接粘贴到 Appearance 中。导入器也接受 `https://tweakcn.com/r/themes/<id>` 注册表 URL、类似 `https://tweakcn.com/editor/theme?theme=amethyst-haze` 的编辑器 URL、相对路径 `/themes/<id>`、原始主题 ID，以及默认主题名称，例如 `amethyst-haze`。
 
-导入的主题仅存储在当前浏览器配置文件中。它们不会写入 gateway 配置，也不会在设备之间同步。替换导入的主题会更新那个本地槽位；如果已选中导入主题，清空它会将当前活动主题切回 Claw。
+Appearance 还包括一个浏览器本地的文本大小设置。该设置会与其他 Control UI 偏好一起存储，适用于聊天文本、撰写器文本、工具卡片和聊天侧边栏，并会将文本输入保持在至少 16px，以避免移动端 Safari 在聚焦时自动缩放。
+
+导入的主题仅存储在当前浏览器配置文件中。它们不会写入 gateway 配置，也不会在设备之间同步。替换导入的主题会更新这一个本地槽位；如果所选的是导入主题，清除它会将当前主题切回 Claw。
 
 ## 它目前能做什么
 
@@ -116,15 +118,16 @@ Docs 翻译会为相同的非英语区域设置生成，但 docs 站点内置的
     - Exec 审批：编辑 gateway 或节点允许列表 + `exec host=gateway/node` 的询问策略（`exec.approvals.*`）。
 
   </Accordion>
-  <Accordion title="配置">
-    - 查看/编辑 `~/.openclaw/openclaw.json`（`config.get`、`config.set`）。
-    - 带验证地应用并重启（`config.apply`），并唤醒最后一个活动会话。
-    - 写入包含 base-hash 守卫，以防止覆盖并发编辑。
-    - 写入（`config.set`/`config.apply`/`config.patch`）会对提交的配置载荷中的引用进行 active SecretRef 解析预检；未解析的 active 提交引用会在写入前被拒绝。
-    - Schema 和表单渲染（`config.schema` / `config.schema.lookup`，包括字段 `title` / `description`、匹配到的 UI 提示、直接子摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，以及在可用时的插件和通道 schema）；只有当快照具有安全的原始往返能力时，Raw JSON 编辑器才可用。
-    - 如果某个快照无法安全地原始往返，Control UI 会强制该快照使用 Form 模式并禁用 Raw 模式。
-    - Raw JSON 编辑器中的“Reset to saved”会保留原始作者形态（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照可安全往返时，外部编辑在重置后仍然会保留。
-    - 结构化的 SecretRef 对象值会在表单文本输入中以只读方式渲染，以防止意外的对象到字符串损坏。
+  <Accordion title="Config">
+    - 查看/编辑 `~/.openclaw/openclaw.json`（`config.get`, `config.set`）。
+    - 使用验证进行应用 + 重启（`config.apply`），并唤醒最后一个活动会话。
+    - 写入包含 base-hash 防护，以防止覆盖并发编辑。
+    - 对已提交配置负载中的引用，写入（`config.set`/`config.apply`/`config.patch`）会在预检时解析活动的 SecretRef；未解析的活动已提交引用会在写入前被拒绝。
+    - 表单保存会丢弃无法从已保存配置中恢复的过期已脱敏占位符，同时保留仍可映射到已保存密钥的已脱敏值。
+    - Schema + 表单渲染（`config.schema` / `config.schema.lookup`，包括字段 `title` / `description`、匹配的 UI 提示、立即子摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，以及可用时的插件 + 通道 schema）；只有当快照具有安全的原始往返能力时，才提供 Raw JSON 编辑器。
+    - 如果快照无法安全地进行原始往返，Control UI 会强制使用表单模式，并为该快照禁用 Raw 模式。
+    - Raw JSON 编辑器中的“Reset to saved”会保留原始编写的形状（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照能够安全往返时，外部编辑在重置后仍可保留。
+    - 结构化 SecretRef 对象值会在表单文本输入中以只读方式渲染，以防止意外的对象到字符串损坏。
 
   </Accordion>
   <Accordion title="调试、日志、更新">
@@ -151,27 +154,29 @@ Docs 翻译会为相同的非英语区域设置生成，但 docs 站点内置的
 
 <AccordionGroup>
   <Accordion title="发送和历史语义">
-    - `chat.send` 是**非阻塞**的：它会立即确认并返回 `{ runId, status: "started" }`，响应则通过 `chat` 事件流式返回。
-    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件作为托管媒体存储，并在历史记录中以附件链接显示。
-    - 使用相同的 `idempotencyKey` 重新发送时，在运行中会返回 `{ status: "in_flight" }`，完成后会返回 `{ status: "ok" }`。
-    - `chat.history` 响应在大小上有界，以保证 UI 安全。当转录条目过大时，Gateway 可能会截断较长文本字段、忽略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
-    - 助手/生成图像会作为托管媒体引用持久化，并通过经过身份验证的 Gateway 媒体 URL 返回，因此重新加载时不依赖原始 base64 图像负载仍保留在聊天历史响应中。
-    - 渲染 `chat.history` 时，Control UI 会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块），以及泄露的 ASCII/全角模型控制 token；并且会省略那些其整个可见文本仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
-    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会保持本地乐观的用户/助手消息可见；当 Gateway 历史记录赶上后，规范转录会替换这些本地消息。
-    - 实时 `chat` 事件表示投递状态，而 `chat.history` 则从持久化会话转录重建。在工具最终事件之后，Control UI 会重新加载历史并只合并一个较小的乐观尾部；转录边界记录在 [WebChat](/web/webchat) 中。
-    - `chat.inject` 会向会话转录追加一条助手注释，并广播一个 `chat` 事件用于仅 UI 更新（无代理运行、无通道投递）。
-    - 聊天标题栏会在会话选择器之前显示代理筛选器，并且会话选择器按所选代理进行作用域限定。切换代理时只会显示与该代理关联的会话，并在该代理还没有保存的仪表盘会话时回退到该代理的主会话。
-    - 在桌面宽度下，聊天控件会保持在一行紧凑布局中，并在向下滚动转录时折叠；向上滚动、回到顶部或到达底部时会恢复控件。
-    - 连续重复的仅文本消息会渲染为一个气泡并带有计数徽标。包含图片、附件、工具输出或画布预览的消息不会折叠。
-    - 聊天标题栏中的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久化的会话覆盖项，而不是仅一次发送选项。
-    - 如果你在同一会话的模型选择器更改仍在保存时发送消息，撰写器会先等待该会话补丁完成，再调用 `chat.send`，以便发送使用所选模型。
-    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父会话是该代理的主会话；在这种情况下，它会在原地重置主会话。输入 `/reset` 则会保留 Gateway 对当前会话的显式原地重置。
-    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器。否则，选择器会显示显式的 `models.providers.*.models` 条目以及具有可用 auth 的提供方。完整目录仍可通过调试 RPC `models.list` 且 `view: "all"` 获取。
-    - 当新的 Gateway 会话使用情况报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文使用指示器。在上下文压力较高时，它会切换为警告样式；在建议的压缩级别时，会显示一个可触发正常会话压缩路径的紧凑按钮。旧的 token 快照会被隐藏，直到 Gateway 再次报告新的使用情况。
+    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，并通过 `chat` 事件流式返回响应。
+    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件会作为托管媒体存储，并在历史记录中显示为附件链接。
+    - 使用相同的 `idempotencyKey` 重新发送时，在运行中会返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
+    - `chat.history` 响应的大小受限以确保 UI 安全。当转录条目过大时，Gateway 可能会截断较长的文本字段、省略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
+    - 助手/生成的图片会作为托管媒体引用持久化，并通过经过身份验证的 Gateway 媒体 URL 返回，因此重新加载不依赖于原始 base64 图片负载仍保留在聊天历史响应中。
+    - 渲染 `chat.history` 时，Control UI 会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）、泄漏的 ASCII/全角模型控制 token，并省略那些可见文本全部仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
+    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会继续显示本地乐观的用户/助手消息；一旦 Gateway 历史赶上，规范转录会替换这些本地消息。
+    - 实时 `chat` 事件表示投递状态，而 `chat.history` 则从持久会话转录重建。在工具最终事件之后，Control UI 会重新加载历史，并且只合并一个小的乐观尾部；转录边界在 [WebChat](/web/webchat) 中有文档说明。
+    - `chat.inject` 会向会话转录追加一条助手注释，并广播一个 `chat` 事件用于仅 UI 更新（不触发 agent 运行，也不进行通道投递）。
+    - 聊天标题会在会话选择器之前显示 agent 过滤器，并且会话选择器会按所选 agent 进行范围限定。切换 agent 时只显示与该 agent 关联的会话，并在该 agent 尚无已保存仪表盘会话时回退到该 agent 的主会话。
+    - 在桌面宽度下，聊天控件会保持在一行紧凑布局，并在向下滚动转录时折叠；向上滚动、回到顶部或到达底部时会恢复控件。
+    - 连续重复的纯文本消息会渲染为一个带计数徽标的气泡。带有图片、附件、工具输出或画布预览的消息不会合并。
+    - 聊天标题中的模型和思考选择器会通过 `sessions.patch` 立即为活动会话打补丁；它们是持久的会话覆盖，而不是仅针对单次发送的选项。
+    - 如果你在同一会话的模型选择器变更仍在保存时发送消息，撰写器会等待该会话补丁完成，然后再调用 `chat.send`，以便发送使用所选模型。
+    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父会话是 agent 的主会话；在这种情况下，它会就地重置主会话。输入 `/reset` 会保留 Gateway 对当前会话显式的就地重置。
+    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器，包括使提供方作用域目录保持动态的 `provider/*` 条目。否则，选择器会显示明确的 `models.providers.*.models` 条目以及具有可用 auth 的提供方。完整目录仍可通过调试 RPC `models.list` 且 `view: "all"` 访问。
+    - 当新的 Gateway 会话使用报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文使用指示器。在上下文压力较高时它会切换为警告样式，并在建议的压缩级别显示一个紧凑按钮，用于执行正常的会话压缩路径。在 Gateway 再次报告新的使用情况之前，过时的 token 快照会被隐藏。
 
   </Accordion>
-  <Accordion title="对话模式（浏览器实时）">
-    对话模式使用一个已注册的实时语音提供方。将 OpenAI 配置为 `talk.realtime.provider: "openai"` 并设置 `talk.realtime.providers.openai.apiKey`，或者将 Google 配置为 `talk.realtime.provider: "google"` 并设置 `talk.realtime.providers.google.apiKey`。浏览器永远不会接收到标准的提供方 API key。OpenAI 会收到一个用于 WebRTC 的临时 Realtime 客户端密钥。Google Live 会收到一个用于浏览器 WebSocket 会话的一次性受限 Live API auth token，指令和工具声明会被 Gateway 锁定进该 token 中。仅提供后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商套接字保持在服务端，而浏览器音频通过经过身份验证的 Gateway RPC 流动。Realtime 会话提示由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
+  <Accordion title="Talk 模式（浏览器实时）">
+    Talk 模式使用一个已注册的实时语音提供方。使用 `talk.realtime.provider: "openai"` 并配置 `talk.realtime.providers.openai.apiKey`、`OPENAI_API_KEY` 或 `openai-codex` OAuth 配置文件之一来配置 OpenAI；使用 `talk.realtime.provider: "google"` 并配置 `talk.realtime.providers.google.apiKey` 来配置 Google。浏览器永远不会接收标准提供方 API key。OpenAI 会收到用于 WebRTC 的一次性 Realtime 客户端密钥。Google Live 会收到一个仅限一次使用的受限 Live API auth token，用于浏览器 WebSocket 会话，指令和工具声明会由 Gateway 锁定进该 token。仅暴露后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商 socket 保持在服务端，而浏览器音频则通过经过身份验证的 Gateway RPC 传输。Realtime 会话提示由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
+
+    Chat 撰写器在 Talk 开始/停止按钮旁边包含一个 Talk 选项按钮。这些选项适用于下一次 Talk 会话，并且可以覆盖提供方、传输、模型、语音、推理力度、VAD 阈值、静默时长和前缀填充。当某个选项为空时，Gateway 会尽可能使用已配置的默认值，或者使用提供方默认值。选择 Gateway relay 会强制使用后端中继路径；选择 WebRTC 会保持会话归客户端所有，如果提供方无法创建浏览器会话，则会失败，而不是静默回退到 relay。
 
     在 Chat 撰写器中，Talk 控件是麦克风听写按钮旁边的波浪按钮。当 Talk 开始时，撰写器状态行会显示 `Connecting Talk...`，然后在音频连接后显示 `Talk live`，或者在实时工具调用通过 `talk.client.toolCall` 询问已配置的更大模型时显示 `Asking OpenClaw...`。
 
@@ -423,7 +428,17 @@ pnpm ui:dev
 
 然后将 UI 指向你的网关 WS URL（例如 `ws://127.0.0.1:18789`）。
 
-## 调试/测试：开发服务器 + 远程网关
+## Blank Control UI page
+
+If the browser loads a blank dashboard and DevTools shows no useful error, an extension or early content script may have prevented the JavaScript module app from evaluating. The static page includes a plain HTML recovery panel that appears when `<openclaw-app>` is not registered after startup.
+
+Use the panel's **Try again** action after changing the browser environment, or reload manually after these checks:
+
+- Disable extensions that inject into all pages, especially extensions with `<all_urls>` content scripts.
+- Try a private window, a clean browser profile, or another browser.
+- Keep the Gateway running and verify the same dashboard URL after the browser change.
+
+## Debugging/testing: dev server + remote Gateway
 
 Control UI 是静态文件；WebSocket 目标是可配置的，可以不同于 HTTP 源。当你希望本地运行 Vite 开发服务器、但网关运行在其他位置时，这会非常方便。
 

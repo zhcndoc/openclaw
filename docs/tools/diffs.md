@@ -102,8 +102,8 @@ read_when:
   <Tab title="Before and after">
     ```json
     {
-      "before": "# Hello\n\nOne",
-      "after": "# Hello\n\nTwo",
+      "before": "# 你好\n\n一",
+      "after": "# 你好\n\n二",
       "path": "docs/example.md",
       "mode": "view"
     }
@@ -288,6 +288,7 @@ read_when:
             fileScale: 2,
             fileMaxWidth: 960,
             mode: "both",
+            ttlSeconds: 21600,
           },
         },
       },
@@ -312,6 +313,7 @@ read_when:
 - `fileScale`
 - `fileMaxWidth`
 - `mode`
+- `ttlSeconds`
 
 显式工具参数会覆盖这些默认值。
 

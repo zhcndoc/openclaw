@@ -360,6 +360,6 @@ OpenProse 与 Lobster 搭配得很好：使用 `/prose` 编排多 agent 准备�
 
 ## 相关内容
 
-- [Automation & Tasks](/automation) - 调度 Lobster 工作流
-- [Automation Overview](/automation) - 所有自动化机制
-- [Tools Overview](/tools) - 所有可用的 agent 工具
+- [Automation](/automation) - scheduling Lobster workflows
+- [Automation Overview](/automation) - all automation mechanisms
+- [Tools Overview](/tools) - all available agent tools

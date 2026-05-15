@@ -110,8 +110,9 @@ OpenClaw 无法在邀请时判断一个被邀请的房间是 DM 还是群组，�
 
 DM 和房间的允许列表最好使用稳定 ID 来填充：
 
-- DM（`dm.allowFrom`、`groupAllowFrom`、`groups.<room>.users`）：使用 `@user:server`。仅当 homeserver 目录返回恰好一个匹配项时，显示名称才会被解析。
-- 房间（`groups`、`autoJoinAllowlist`）：使用 `!room:server` 或 `#alias:server`。名称会基于已加入的房间尽力解析；无法解析的条目在运行时会被忽略。
+- DMs (`dm.allowFrom`, `groupAllowFrom`, `groups.<room>.users`): 使用 `@user:server`。默认会忽略显示名称，因为它们是可变的；只有在你明确需要兼容显示名称条目时，才设置 `dangerouslyAllowNameMatching: true`。
+- 房间允许列表键（`groups`，旧版 `rooms`）：使用 `!room:server` 或 `#alias:server`。默认会忽略普通房间名称；只有在你明确需要兼容已加入房间的名称查找时，才设置 `dangerouslyAllowNameMatching: true`。
+- 邀请允许列表（`autoJoinAllowlist`）：使用 `!room:server`、`#alias:server` 或 `*`。普通房间名称会被拒绝。
 
 ### 账户 ID 规范化
 
@@ -262,11 +263,12 @@ Matrix 原生审批提示是普通的 `m.room.message` 事件，其中 OpenClaw 
 }
 ```
 
-- `allowBots: true` 接受来自其他已配置 Matrix 机器人账户的消息，适用于允许的房间和 DM。
-- `allowBots: "mentions"` 仅在这些消息在房间中明显提及了这个机器人时才接受。DM 仍然允许。
+- `allowBots: true` 接受来自其他已配置 Matrix 机器人账户的消息，前提是在允许的房间和 DM 中。
+- `allowBots: "mentions"` 仅在这些消息在房间中明显提及此机器人时接受。DM 仍然允许。
 - `groups.<room>.allowBots` 会覆盖单个房间的账户级设置。
-- OpenClaw 仍会忽略来自同一个 Matrix 用户 ID 的消息，以避免自我回复循环。
-- Matrix 在这里不提供原生 bot 标志；OpenClaw 将“由 bot 发出”视为“由另一个在这个 OpenClaw 网关上配置的 Matrix 账户发送”。
+- 被接受的已配置机器人消息会使用共享的 [bot 循环保护](/channels/bot-loop-protection)。先配置 `channels.defaults.botLoopProtection`，然后在某个房间需要不同预算时，使用 `channels.matrix.botLoopProtection` 或 `channels.matrix.groups.<room>.botLoopProtection` 覆盖。
+- OpenClaw 仍会忽略来自相同 Matrix 用户 ID 的消息，以避免自我回复循环。
+- Matrix 在这里不会暴露原生 bot 标志；OpenClaw 将“机器人生成”视为“由这个 OpenClaw 网关上的另一个已配置 Matrix 账户发送”。
 
 在共享房间中启用 bot-to-bot 流量时，请使用严格的房间允许列表和提及要求。
 
@@ -820,13 +822,15 @@ OpenClaw 会将内部会话键规范化后再存储，因此这些小写键并�
 
 实时目录查询使用已登录的 Matrix 账户：
 
-- 用户查询会在该 homeserver 上查询 Matrix 用户目录。
-- 房间查询会先直接接受显式房间 ID 和别名，然后回退到为该账户搜索已加入房间的名称。
-- 已加入房间的名称查找是尽力而为。如果某个房间名称无法解析为 ID 或别名，则会在运行时白名单解析中被忽略。
+- 用户查找会查询该 homeserver 上的 Matrix 用户目录。
+- 房间查找直接接受显式房间 ID 和别名。已加入房间的名称查找尽力而为，并且仅在设置了 `dangerouslyAllowNameMatching: true` 时适用于运行时房间允许名单。
+- 如果房间名称无法解析为 ID 或别名，则会在运行时允许名单解析中忽略它。
 
 ## 配置参考
 
-白名单样式字段（`groupAllowFrom`、`dm.allowFrom`、`groups.<room>.users`）接受完整的 Matrix 用户 ID（最安全）。精确目录匹配会在启动时以及监控器运行期间白名单发生变化时解析；无法解析的条目在运行时会被忽略。出于同样原因，房间白名单更倾向于使用房间 ID 或别名。
+允许名单式用户字段（`groupAllowFrom`、`dm.allowFrom`、`groups.<room>.users`）接受完整的 Matrix 用户 ID（最安全）。默认情况下，非 ID 用户条目会被忽略。如果你设置了 `dangerouslyAllowNameMatching: true`，则在启动时以及监控运行期间允许名单变更时，会解析精确匹配的 Matrix 目录显示名；无法解析的条目会在运行时被忽略。
+
+房间允许名单键（`groups`、旧版 `rooms`）应为房间 ID 或别名。纯房间名键默认会被忽略；`dangerouslyAllowNameMatching: true` 可恢复对已加入房间名称的尽力而为查询。
 
 ### 账户与连接
 
@@ -853,18 +857,19 @@ OpenClaw 会将内部会话键规范化后再存储，因此这些小写键并�
 
 ### 访问与策略
 
-- `groupPolicy`：`"open"`、`"allowlist"` 或 `"disabled"`。默认值：`"allowlist"`。
-- `groupAllowFrom`：房间流量的用户 ID 白名单。
-- `dm.enabled`：当为 `false` 时，忽略所有私信。默认值：`true`。
-- `dm.policy`：`"pairing"`（默认）、`"allowlist"`、`"open"` 或 `"disabled"`。在机器人加入并将房间分类为私信之后生效；不影响邀请处理。
-- `dm.allowFrom`：私信流量的用户 ID 白名单。
-- `dm.sessionScope`：`"per-user"`（默认）或 `"per-room"`。
-- `dm.threadReplies`：仅限私信的回复线程覆盖（`"off"`、`"inbound"`、`"always"`）。
-- `allowBots`：接受来自其他已配置 Matrix 机器人账户的消息（`true` 或 `"mentions"`）。
-- `allowlistOnly`：当为 `true` 时，强制所有启用的私信策略（除 `"disabled"` 外）和 `"open"` 房间策略改为 `"allowlist"`。不会更改 `"disabled"` 策略。
-- `autoJoin`：`"always"`、`"allowlist"` 或 `"off"`。默认值：`"off"`。适用于每个 Matrix 邀请，包括私信式邀请。
-- `autoJoinAllowlist`：当 `autoJoin` 为 `"allowlist"` 时允许的房间/别名。别名条目会针对 homeserver 解析，而不是针对被邀请房间声明的状态。
-- `contextVisibility`：补充上下文可见性（默认 `"all"`，也可为 `"allowlist"`、`"allowlist_quote"`）。
+- `groupPolicy`: `"open"`, `"allowlist"`, or `"disabled"`. Default: `"allowlist"`.
+- `groupAllowFrom`: allowlist of user IDs for room traffic.
+- `dm.enabled`: when `false`, ignore all DMs. Default: `true`.
+- `dm.policy`: `"pairing"` (default), `"allowlist"`, `"open"`, or `"disabled"`. Applies after the bot has joined and classified the room as a DM; it does not affect invite handling.
+- `dm.allowFrom`: allowlist of user IDs for DM traffic.
+- `dm.sessionScope`: `"per-user"` (default) or `"per-room"`.
+- `dm.threadReplies`: DM-only override for reply threading (`"off"`, `"inbound"`, `"always"`).
+- `allowBots`: accept messages from other configured Matrix bot accounts (`true` or `"mentions"`).
+- `allowlistOnly`: when `true`, forces all active DM policies (except `"disabled"`) and `"open"` group policies to `"allowlist"`. Does not change `"disabled"` policies.
+- `dangerouslyAllowNameMatching`: when `true`, allows Matrix display-name directory lookup for user allowlist entries and joined-room name lookup for room allowlist keys. Prefer full `@user:server` IDs and room IDs or aliases.
+- `autoJoin`: `"always"`, `"allowlist"`, or `"off"`. Default: `"off"`. Applies to every Matrix invite, including DM-style invites.
+- `autoJoinAllowlist`: rooms/aliases allowed when `autoJoin` is `"allowlist"`. Alias entries are resolved against the homeserver, not against state claimed by the invited room.
+- `contextVisibility`: supplemental context visibility (`"all"` default, `"allowlist"`, `"allowlist_quote"`).
 
 ### 回复行为
 
@@ -907,8 +912,8 @@ OpenClaw 会将内部会话键规范化后再存储，因此这些小写键并�
 
 ## 相关内容
 
-- [Channels Overview](/channels) - 所有支持的通道
-- [Pairing](/channels/pairing) - DM 认证与配对流程
-- [Groups](/channels/groups) - 群聊行为与提及门控
-- [Channel Routing](/channels/channel-routing) - 消息的会话路由
-- [Security](/gateway/security) - 访问模型与加固
+- [通道概览](/channels) - 所有支持的通道
+- [配对](/channels/pairing) - DM 认证与配对流程
+- [群组](/channels/groups) - 群聊行为与提及门控
+- [通道路由](/channels/channel-routing) - 消息的会话路由
+- [安全性](/gateway/security) - 访问模型与加固

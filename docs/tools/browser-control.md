@@ -64,9 +64,9 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 
 ### Playwright 要求
 
-Some features (navigate/act/AI snapshot/role snapshot, element screenshots,
-PDF) require Playwright. If Playwright isn't installed, those endpoints return
-a clear 501 error.
+某些功能（navigate/act/AI 快照/role 快照、元素截图、
+PDF）需要 Playwright。如果未安装 Playwright，这些端点会返回
+明确的 501 错误。
 
 不使用 Playwright 仍可用的功能：
 
@@ -90,15 +90,21 @@ a clear 501 error.
 元素截图也会拒绝 `--full-page`；该路由会返回 `fullPage is
 not supported for element screenshots`。
 
-If you see `Playwright is not available in this gateway build`, the packaged
-Gateway is missing the core browser runtime dependency. Reinstall or update
-OpenClaw, then restart the gateway. For Docker, also install the Chromium
-browser binaries as shown below.
+如果你看到 `Playwright is not available in this gateway build`，说明打包的
+Gateway 缺少核心浏览器运行时依赖。请重新安装或更新
+OpenClaw，然后重启 gateway。对于 Docker，还请按如下所示安装 Chromium
+浏览器二进制文件。
 
 #### Docker 中安装 Playwright
 
 如果你的 Gateway 运行在 Docker 中，请避免使用 `npx playwright`（npm 覆盖冲突）。
-请改用捆绑的 CLI：
+对于自定义镜像，请将 Chromium 烘焙进镜像：
+
+```bash
+OPENCLAW_INSTALL_BROWSER=1 ./scripts/docker/setup.sh
+```
+
+对于现有镜像，请改为通过捆绑的 CLI 安装：
 
 ```bash
 docker compose run --rm openclaw-cli \
@@ -106,7 +112,9 @@ docker compose run --rm openclaw-cli \
 ```
 
 要持久化浏览器下载，请设置 `PLAYWRIGHT_BROWSERS_PATH`（例如，
-`/home/node/.cache/ms-playwright`），并确保 `/home/node` 通过 `OPENCLAW_HOME_VOLUME` 或绑定挂载持久化。参见 [Docker](/install/docker)。
+`/home/node/.cache/ms-playwright`），并确保 `/home/node` 通过
+`OPENCLAW_HOME_VOLUME` 或绑定挂载进行持久化。OpenClaw 会在 Linux 上自动检测持久化的
+Chromium。参见 [Docker](/install/docker)。
 
 ## 工作原理（内部）
 

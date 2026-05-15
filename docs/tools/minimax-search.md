@@ -83,10 +83,10 @@ web search 的注册 provider id 仍然是 `minimax`；OAuth 提供方的 base U
 
 ## 支持的参数
 
-MiniMax Search 支持：
-
-- `query`
-- `count`（OpenClaw 会将返回的结果列表裁剪到请求的数量）
+| Parameter | Type    | Constraints | Description                                                                 |
+| --------- | ------- | ----------- | --------------------------------------------------------------------------- |
+| `query`   | string  | required    | 搜索查询字符串。                                                        |
+| `count`   | integer | 1-10        | 返回结果数量。OpenClaw 会将返回列表截断为此大小。 |
 
 目前不支持提供方特定的筛选器。
 

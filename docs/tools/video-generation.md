@@ -191,13 +191,13 @@ Seedance 会用它根据输入图像尺寸自动检测比例）。
 ### 高级
 
 <ParamField path="action" type='"generate" | "status" | "list"' default="generate">
-  `"status"` 返回当前会话任务；`"list"` 检查提供方。
+  `"status"` 返回当前会话任务；`"list"` 检查提供商。
 </ParamField>
-<ParamField path="model" type="string">提供方/模型覆盖（例如 `runway/gen4.5`）。</ParamField>
+<ParamField path="model" type="string">提供商/模型覆盖（例如 `runway/gen4.5`）。</ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方操作超时，单位为毫秒。</ParamField>
+<ParamField path="timeoutMs" type="number">可选的提供商操作超时时间（毫秒）。若省略，OpenClaw 会在已配置时使用 `agents.defaults.videoGenerationModel.timeoutMs`。</ParamField>
 <ParamField path="providerOptions" type="object">
-  作为 JSON 对象的提供方特定选项（例如 `{"seed": 42, "draft": true}`）。
+  作为 JSON 对象的提供商特定选项（例如 `{"seed": 42, "draft": true}`）。
   声明了类型化 schema 的提供方会验证键和值类型；未知键或类型不匹配会在回退时跳过该候选项。未声明 schema 的提供方会原样接收这些选项。运行 `video_generate action=list`
   可查看每个提供方接受什么。
 </ParamField>
@@ -243,12 +243,10 @@ Seedance 会用它根据输入图像尺寸自动检测比例）。
 
 OpenClaw 按以下顺序解析模型：
 
-1. **`model` tool parameter** - if the agent specifies one in the call.
-2. **`videoGenerationModel.primary`** from config.
-3. **`videoGenerationModel.fallbacks`** in order.
-4. **Auto-detection** - providers that have valid auth, starting with the
-   current default provider, then remaining providers in alphabetical
-   order.
+1. **`model` 工具参数** - 如果代理在调用中指定了该参数。
+2. 配置中的 **`videoGenerationModel.primary`**。
+3. 按顺序使用 **`videoGenerationModel.fallbacks`**。
+4. **自动检测** - 具有有效认证的提供方，从当前默认提供方开始，然后按字母顺序处理其余提供方。
 
 如果某个提供方失败，会自动尝试下一个候选项。如果所有
 候选项都失败，错误会包含每次尝试的详细信息。
@@ -431,9 +429,8 @@ OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.liv
 pnpm test:live:media video
 ```
 
-这个实时文件会从 `~/.profile` 加载缺失的提供商环境变量，默认优先使用
-实时/环境 API 密钥，而不是已存储的认证配置文件，并且默认执行
-对发布安全的冒烟测试：
+此实时文件默认优先使用已导出的提供方环境变量，而不是存储的认证
+配置文件，并默认执行发布安全的冒烟测试：
 
 - 对扫描中的每个非 FAL 提供商执行 `generate`。
 - 一秒钟的 lobster 提示词。

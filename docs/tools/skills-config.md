@@ -22,7 +22,8 @@ title: "技能配置"
     },
     install: {
       preferBrew: true,
-      nodeManager: "npm", // npm | pnpm | yarn | bun（Gateway 运行时仍然是 Node；不建议使用 bun）
+      nodeManager: "npm", // npm | pnpm | yarn | bun (Gateway 运行时仍应使用 Node；不推荐 bun)
+      allowUploadedArchives: false,
     },
     entries: {
       "image-lab": {
@@ -83,34 +84,39 @@ title: "技能配置"
 
 - 内置技能根目录始终包括 `~/.openclaw/skills`、`~/.agents/skills`、
   `<workspace>/.agents/skills` 和 `<workspace>/skills`。
-- `allowBundled`：仅用于 **捆绑** 技能的可选白名单。设置后，只有列表中的
-  捆绑技能才有资格启用（已管理、agent 和工作区技能不受影响）。
-- `load.extraDirs`：要扫描的额外技能目录（优先级最低）。
-- `load.allowSymlinkTargets`：受信任的真实目标目录；即使符号链接位于
-  该目标根目录之外，符号链接的技能文件夹也可以解析到这些目录中。
-  当你有意使用相邻仓库布局时请使用此项，例如
-  `~/.agents/skills/manager -> ~/Projects/manager/skills`。
-- `load.watch`：监听技能文件夹并刷新技能快照（默认：true）。
-- `load.watchDebounceMs`：技能监听事件的防抖时间，单位毫秒（默认：250）。
+- `allowBundled`：仅针对**捆绑**技能的可选白名单。设置后，只有列表中的
+  捆绑技能才有资格被使用（托管、agent 和工作区技能不受影响）。
+- `load.extraDirs`：要额外扫描的技能目录（优先级最低）。
+- `load.allowSymlinkTargets`：受信任的真实目标目录；符号链接的工作区、
+  project-agent 或 extra-dir 技能文件夹即使符号链接位于该目标根目录之外，
+  也可解析到这些目录中。适用于有意采用的相邻仓库布局，例如
+  `<workspace>/skills/manager -> ~/Projects/manager/skills`。托管的
+  `~/.openclaw/skills` 和个人的 `~/.agents/skills` 根目录默认可跟随来自本地技能管理器的
+  技能目录符号链接，但每个 `SKILL.md` 仍必须解析到其自身的技能目录内。
+- `load.watch`：监视技能文件夹并刷新技能快照（默认：true）。
+- `load.watchDebounceMs`：技能监视器事件的防抖时间，单位毫秒（默认：250）。
 - `install.preferBrew`：在可用时优先使用 brew 安装器（默认：true）。
-- `install.nodeManager`：node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`，默认：npm）。
-  这只会影响 **技能安装**；Gateway 运行时仍应使用 Node
-  （不建议在 WhatsApp/Telegram 中使用 Bun）。
-  - `openclaw setup --node-manager` 的范围更窄，目前仅接受 `npm`、
-    `pnpm` 或 `bun`。如果你想使用基于 Yarn 的技能安装，请手动设置
+- `install.nodeManager`：Node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`，默认：npm）。
+  这只影响**技能安装**；Gateway 运行时仍应使用 Node
+  （WhatsApp/Telegram 不推荐使用 Bun）。
+  - `openclaw setup --node-manager` 范围更窄，目前接受 `npm`、
+    `pnpm` 或 `bun`。如果你想要基于 Yarn 的技能安装，请手动设置
     `skills.install.nodeManager: "yarn"`。
-- `entries.<skillKey>`：按技能覆盖。
-- `agents.defaults.skills`：可选的默认技能白名单，由省略
-  `agents.list[].skills` 的 agent 继承。
-- `agents.list[].skills`：可选的按 agent 最终技能白名单；显式
-  列表会替代继承的默认值，而不是合并。
+- `install.allowUploadedArchives`：允许受信任的 `operator.admin` Gateway
+  客户端安装通过 `skills.upload.*` 暂存的私有 zip 压缩包
+  （默认：false）。这只启用上传归档路径；正常的 ClawHub
+  安装不需要它。
+- `entries.<skillKey>`：每个技能的覆盖配置。
+- `agents.defaults.skills`：可选的默认技能白名单，由省略 `agents.list[].skills` 的 agent 继承。
+- `agents.list[].skills`：可选的每个 agent 最终技能白名单；显式
+  列表会替换继承的默认值，而不是合并。
 
 ## 符号链接的相邻仓库
 
-默认情况下，每个技能根目录都是一个包含边界。如果 `~/.agents/skills` 下的
-某个技能文件夹是一个符号链接，并且解析后位于 `~/.agents/skills` 之外，
-OpenClaw 会跳过它并记录 `Skipping escaped skill path outside its configured
-root`。
+默认情况下，工作区、project-agent、extra-dir 和捆绑技能根目录
+都是包含边界。如果 `<workspace>/skills` 下的某个技能文件夹是一个
+解析到 `<workspace>/skills` 之外的符号链接，OpenClaw 会跳过它并记录
+`Skipping escaped skill path outside its configured root`。
 
 保留符号链接布局，并且仅允许受信任的目标根目录：
 
@@ -125,12 +131,13 @@ root`。
 }
 ```
 
-使用此配置后，诸如
-`~/.agents/skills/manager -> ~/Projects/manager/skills` 的符号链接在
+使用此配置后，像
+`<workspace>/skills/manager -> ~/Projects/manager/skills` 这样的符号链接在
 realpath 解析后会被接受。`extraDirs` 也会直接扫描相邻仓库，而
-`allowSymlinkTargets` 会为现有的 agent-技能布局保留符号链接路径。
-请保持目标条目范围狭窄；不要指向诸如 `~` 或
-`~/Projects` 之类的宽泛根目录，除非该根目录下的每个技能树都值得信任。
+`allowSymlinkTargets` 则为现有的工作区技能布局保留符号链接路径。托管的
+`~/.openclaw/skills` 和个人的 `~/.agents/skills`
+目录已经允许技能目录符号链接，因为这些根目录属于用户拥有的本地技能管理器界面；但每个技能的 `SKILL.md` 仍然适用包含性限制。请保持目标条目足够窄；不要指向诸如 `~` 或
+`~/Projects` 之类的宽泛根目录，除非该根目录下的每个技能树都已被信任。
 
 按技能字段：
 

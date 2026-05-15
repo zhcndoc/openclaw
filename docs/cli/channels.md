@@ -32,10 +32,10 @@ openclaw channels logs --channel all
 
 ## 状态 / 能力 / 解析 / 日志
 
-- `channels status`：`--probe`、`--timeout <ms>`、`--json`
-- `channels capabilities`：`--channel <name>`、`--account <id>`（仅可与 `--channel` 一起使用）、`--target <dest>`、`--timeout <ms>`、`--json`
-- `channels resolve`：`<entries...>`、`--channel <name>`、`--account <id>`、`--kind <auto|user|group>`、`--json`
-- `channels logs`：`--channel <name|all>`、`--lines <n>`、`--json`
+- `channels status`: `--channel <name>`, `--probe`, `--timeout <ms>`, `--json`
+- `channels capabilities`: `--channel <name>`, `--account <id>` (仅与 `--channel` 一起使用), `--target <dest>`, `--timeout <ms>`, `--json`
+- `channels resolve`: `<entries...>`, `--channel <name>`, `--account <id>`, `--kind <auto|user|group>`, `--json`
+- `channels logs`: `--channel <name|all>`, `--lines <n>`, `--json`
 
 `channels status --probe` 是实时路径：在可达的 gateway 上，它会对每个账户运行
 `probeAccount` 和可选的 `auditAccount` 检查，因此输出可能包含传输
@@ -78,9 +78,9 @@ openclaw channels remove --channel telegram --delete
 
 当你在不带标志的情况下运行 `openclaw channels add` 时，交互式向导可能会提示：
 
-- 所选频道下每个账户的账户 ID
+- 所选频道的账户 ID
 - 这些账户的可选显示名称
-- `Bind configured channel accounts to agents now?`
+- `现在将这些频道账户路由给 agents 吗？`
 
 如果你确认立即绑定，向导会询问哪个 agent 应拥有每个已配置的频道账户，并写入账户范围的路由绑定。
 

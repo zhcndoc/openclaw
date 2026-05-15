@@ -86,10 +86,8 @@ Search API 或通过 OpenRouter 的 Perplexity Sonar 提供网页搜索能力。
     `PERPLEXITY_API_KEY` 对该进程可用。
 
     <Warning>
-    仅设置在 `~/.profile` 中的密钥不会被 launchd/systemd
-    守护进程看到，除非显式导入该环境。请在
-    `~/.openclaw/.env` 中设置密钥，或通过 `env.shellEnv` 设置，以确保网关进程能够
-    读取它。
+    仅在交互式 shell 中导出的密钥对 launchd/systemd 守护进程不可见，除非显式导入该环境。请将
+    密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保网关进程可以读取它。
     </Warning>
 
   </Accordion>

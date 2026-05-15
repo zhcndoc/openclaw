@@ -63,8 +63,9 @@ Admission 可以来自 `classify`（事件类别表示它不能启动 turn）、
 Runtime 提供三个首选入口点，方便 adapters 以最适合该 channel 的层级接入。
 
 ```typescript
-runtime.channel.turn.run(...)             // 由 adapter 驱动的完整 pipeline
-runtime.channel.turn.runPrepared(...)     // channel 自主管理 dispatch；kernel 运行 record + finalize
+runtime.channel.turn.run(...)             // adapter 驱动的完整 pipeline
+runtime.channel.turn.runAssembled(...)    // 已构建好的 context + delivery adapter
+runtime.channel.turn.runPrepared(...)     // channel 自行负责 dispatch；kernel 运行 record + finalize
 runtime.channel.turn.buildContext(...)    // 从纯 facts 映射到 FinalizedMsgContext
 ```
 
@@ -72,7 +73,7 @@ runtime.channel.turn.buildContext(...)    // 从纯 facts 映射到 FinalizedMsg
 
 ```typescript
 runtime.channel.turn.runResolved(...)      // 已弃用的兼容别名；优先使用 run
-runtime.channel.turn.dispatchAssembled(...) // 已弃用的兼容别名；优先使用 run 或 runPrepared
+runtime.channel.turn.dispatchAssembled(...) // 已弃用的兼容别名；优先使用 runAssembled
 ```
 
 ### run
@@ -113,6 +114,35 @@ await runtime.channel.turn.run({
 ```
 
 当 channel 只有较小的 adapter 逻辑，并且希望通过 hooks 自行掌握生命周期时，`run` 是合适的形式。
+
+### runAssembled
+
+当 channel 已经解析好了 routing、构建好了 `FinalizedMsgContext`，并且只需要共享的 record、reply-pipeline、dispatch 和 finalize 顺序时使用。这是简单 bundled inbound 路径的首选形态，否则它们会重复 `createChannelMessageReplyPipeline(...)` 和 `runPrepared(...)` 的样板代码。
+
+```typescript
+await runtime.channel.turn.runAssembled({
+  cfg,
+  channel: "irc",
+  accountId,
+  agentId: route.agentId,
+  routeSessionKey: route.sessionKey,
+  storePath,
+  ctxPayload,
+  recordInboundSession: runtime.channel.session.recordInboundSession,
+  dispatchReplyWithBufferedBlockDispatcher:
+    runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher,
+  delivery: {
+    deliver: async (payload) => {
+      await sendPlatformReply(payload);
+    },
+    onError: (err, info) => {
+      runtime.error?.(`reply ${info.kind} failed: ${String(err)}`);
+    },
+  },
+});
+```
+
+当唯一由 channel 负责的 dispatch 行为只是最终 payload 发送，以及可选的 typing、reply options、durable delivery 或错误日志记录时，优先使用 `runAssembled` 而不是 `runPrepared`。
 
 ### runPrepared
 

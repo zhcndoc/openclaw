@@ -164,9 +164,10 @@ openclaw plugins install ./path/to/local/acpx-plugin
 
 ### acpx 命令和版本配置
 
-默认情况下，`acpx` 插件会注册嵌入式 ACP 后端，而不会在 Gateway 启动期间
-启动 ACP 代理。运行 `/acp doctor` 可进行显式的实时探测。只有当你需要
-Gateway 在启动时探测已配置代理时，才设置 `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=1`。
+默认情况下，`acpx` 插件会在 Gateway
+启动期间探测内嵌的 ACP 后端，并在网关发出 `ready` 信号之前等待该探测完成。将
+`OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=0` 设为跳过启动探测，并改为延迟注册
+后端。运行 `/acp doctor` 可进行显式按需探测。
 
 在插件配置中覆盖命令或版本：
 
@@ -278,10 +279,9 @@ openclaw config set plugins.entries.acpx.config.timeoutSeconds 180
 
 ### 健康探测代理配置
 
-当 `/acp doctor` 或可选的启动探测检查后端时，捆绑的
-`acpx` 插件会探测一个运行时代理。如果设置了 `acp.allowedAgents`，则
-默认使用第一个允许的代理；否则默认为 `codex`。如果你的
-部署需要用于健康检查的不同 ACP 代理，请显式设置探测代理：
+当 `/acp doctor` 或启动探测检查后端时，随附的 `acpx`
+插件会探测一个 harness 代理。如果设置了 `acp.allowedAgents`，则默认使用
+第一个允许的代理；否则默认使用 `codex`。如果你的部署需要用于健康检查的不同 ACP 代理，请显式设置探测代理：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.probeAgent claude

@@ -71,18 +71,18 @@ sidebarTitle: "图像生成"
 
 ## 支持的提供方
 
-| 提供方     | 默认模型                            | 编辑支持                      | 认证                                                  |
-| ---------- | ----------------------------------- | --------------------------- | ----------------------------------------------------- |
-| ComfyUI    | `workflow`                          | 支持（1 张图像，按工作流配置） | `COMFY_API_KEY` 或云端使用 `COMFY_CLOUD_API_KEY`      |
-| DeepInfra  | `black-forest-labs/FLUX-1-schnell`  | 支持（1 张图像）             | `DEEPINFRA_API_KEY`                                   |
-| fal        | `fal-ai/flux/dev`                  | 支持                           | `FAL_KEY`                                             |
-| Google     | `gemini-3.1-flash-image-preview`   | 支持                           | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`                  |
-| LiteLLM    | `gpt-image-2`                      | 支持（最多 5 张输入图像）      | `LITELLM_API_KEY`                                     |
-| MiniMax    | `image-01`                         | 支持（主体参考）               | `MINIMAX_API_KEY` 或 MiniMax OAuth（`minimax-portal`） |
-| OpenAI     | `gpt-image-2`                      | 支持（最多 4 张图像）          | `OPENAI_API_KEY` 或 OpenAI Codex OAuth                |
-| OpenRouter | `google/gemini-3.1-flash-image-preview` | 支持（最多 5 张输入图像）   | `OPENROUTER_API_KEY`                                  |
-| Vydra      | `grok-imagine`                     | 不支持                         | `VYDRA_API_KEY`                                       |
-| xAI        | `grok-imagine-image`               | 支持（最多 5 张图像）          | `XAI_API_KEY`                                         |
+| Provider   | Default model                           | Edit support                       | Auth                                                  |
+| ---------- | --------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| ComfyUI    | `workflow`                              | Yes (1 image, workflow-configured) | `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` for cloud    |
+| DeepInfra  | `black-forest-labs/FLUX-1-schnell`      | Yes (1 image)                      | `DEEPINFRA_API_KEY`                                   |
+| fal        | `fal-ai/flux/dev`                       | Yes (model-specific limits)        | `FAL_KEY`                                             |
+| Google     | `gemini-3.1-flash-image-preview`        | Yes                                | `GEMINI_API_KEY` or `GOOGLE_API_KEY`                  |
+| LiteLLM    | `gpt-image-2`                           | Yes (up to 5 input images)         | `LITELLM_API_KEY`                                     |
+| MiniMax    | `image-01`                              | Yes (subject reference)            | `MINIMAX_API_KEY` or MiniMax OAuth (`minimax-portal`) |
+| OpenAI     | `gpt-image-2`                           | Yes (up to 4 images)               | `OPENAI_API_KEY` or OpenAI Codex OAuth                |
+| OpenRouter | `google/gemini-3.1-flash-image-preview` | Yes (up to 5 input images)         | `OPENROUTER_API_KEY`                                  |
+| Vydra      | `grok-imagine`                          | No                                 | `VYDRA_API_KEY`                                       |
+| xAI        | `grok-imagine-image`                    | Yes (up to 5 images)               | `XAI_API_KEY`                                         |
 
 在运行时使用 `action: "list"` 来检查可用的提供方和模型：
 
@@ -92,13 +92,13 @@ sidebarTitle: "图像生成"
 
 ## 提供方能力
 
-| 能力                  | ComfyUI            | DeepInfra | fal               | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
-| --------------------- | ------------------ | --------- | ----------------- | -------------- | --------------------- | -------------- | ----- | -------------- |
-| Generate (max count)  | Workflow-defined   | 4         | 4                 | 4              | 9                     | 4              | 1     | 4              |
-| Edit / reference      | 1 image (workflow) | 1 image   | 1 image           | Up to 5 images | 1 image (subject ref) | Up to 5 images | -     | Up to 5 images |
-| Size control          | -                  | ✓         | ✓                 | ✓              | -                     | Up to 4K       | -     | -              |
-| Aspect ratio          | -                  | -         | ✓ (generate only) | ✓              | ✓                     | -              | -     | ✓              |
-| Resolution (1K/2K/4K) | -                  | -         | ✓                 | ✓              | -                     | -              | -     | 1K, 2K         |
+| Capability            | ComfyUI            | DeepInfra | fal                       | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
+| --------------------- | ------------------ | --------- | ------------------------- | -------------- | --------------------- | -------------- | ----- | -------------- |
+| Generate (max count)  | Workflow-defined   | 4         | 4                         | 4              | 9                     | 4              | 1     | 4              |
+| Edit / reference      | 1 image (workflow) | 1 image   | Flux: 1; GPT: 10; NB2: 14 | Up to 5 images | 1 image (subject ref) | Up to 5 images | -     | Up to 5 images |
+| Size control          | -                  | ✓         | ✓                         | ✓              | -                     | Up to 4K       | -     | -              |
+| Aspect ratio          | -                  | -         | ✓                         | ✓              | ✓                     | -              | -     | ✓              |
+| Resolution (1K/2K/4K) | -                  | -         | ✓                         | ✓              | -                     | -              | -     | 1K, 2K         |
 
 ## 工具参数
 
@@ -220,12 +220,15 @@ OpenAI、OpenRouter、Google、DeepInfra、fal、MiniMax、ComfyUI 和 xAI 支�
 "将这张照片生成水彩风格版本" + image: "/path/to/photo.jpg"
 ```
 
-OpenAI、OpenRouter、Google 和 xAI 通过 `images` 参数支持最多 5 张参考图像。fal、MiniMax 和 ComfyUI 支持 1 张。
+OpenAI、OpenRouter、Google 和 xAI 支持通过
+`images` 参数传入最多 5 张参考图像。fal 支持用于 Flux image-to-image 的 1 张参考图像，
+用于 GPT Image 2 编辑最多 10 张，用于 Nano Banana 2 编辑最多 14 张。MiniMax 和
+ComfyUI 支持 1 张。
 
 ## 提供商深度解析
 
 <AccordionGroup>
-  <Accordion title="OpenAI gpt-image-2 (and gpt-image-1.5)">
+  <Accordion title="OpenAI gpt-image-2（以及 gpt-image-1.5）">
     OpenAI 图像生成默认使用 `openai/gpt-image-2`。如果配置了
     `openai-codex` OAuth 配置文件，OpenClaw 会重用 Codex 订阅聊天模型使用的
     同一个 OAuth 配置文件，并通过 Codex Responses 后端发送图像请求。像

@@ -1,5 +1,5 @@
 ---
-summary: "openclaw plugins 的 CLI 参考（列表、安装、marketplace、卸载、启用/禁用、doctor）"
+summary: "openclaw 插件的 CLI 参考（列表、安装、marketplace、卸载、启用/禁用、doctor）"
 read_when:
   - 你想安装或管理 Gateway 插件或兼容的捆绑包
   - 你想调试插件加载失败问题
@@ -130,10 +130,11 @@ Beta 通道的安装和更新会优先在可用时使用 npm 的 `beta` dist-tag
   <Accordion title="--dangerously-force-unsafe-install">
     `--dangerously-force-unsafe-install` 是一个用于内置危险代码扫描器误报的“破窗”选项。即使内置扫描器报告 `critical` 发现，它也会允许安装继续，但它**不会**绕过插件 `before_install` 钩子策略阻断，也**不会**绕过扫描失败。
 
-    这个 CLI 标志适用于插件 install/update 流程。Gateway 支持的 skill 依赖安装使用对应的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍是一个独立的 ClawHub skill 下载/安装流程。
+    安装扫描会忽略常见的测试文件和目录，例如 `tests/`、`__tests__/`、`*.test.*` 和 `*.spec.*`，以避免阻止已打包的测试 mock；即使这些名称命中，声明的插件运行时入口点仍会被扫描。
 
-    如果你发布到 ClawHub 的插件被 registry 扫描阻止，请参阅 [ClawHub](/clawhub/security) 中的发布者步骤。
+    此 CLI 标志适用于插件安装/更新流程。由 Gateway 驱动的 skill 依赖安装会使用匹配的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍然是一个独立的 ClawHub skill 下载/安装流程。
 
+    如果你发布到 ClawHub 的插件被 registry 扫描隐藏或阻止，请使用 [ClawHub publishing](/clawhub/publishing) 中的发布者步骤。`--dangerously-force-unsafe-install` 只影响你自己机器上的安装；它不会要求 ClawHub 重新扫描该插件，也不会让被阻止的发布公开。
   </Accordion>
   <Accordion title="Hook 包和 npm spec">
     `plugins install` 也是安装暴露 `package.json` 中 `openclaw.hooks` 的 hook 包的入口。请使用 `openclaw hooks` 进行过滤后的 hook 可见性和单个 hook 启用，而不是用于包安装。
@@ -272,8 +273,8 @@ ClawHub 包名、family、channel、version、summary，以及类似 `openclaw p
 
 用于运行时 hook 调试：
 
-- `openclaw plugins inspect <id> --runtime --json` 显示从模块加载检查中注册的 hooks 和诊断信息。运行时检查绝不会安装依赖；请使用 `openclaw doctor --fix` 清理旧的依赖状态，或恢复配置中引用但缺失的可下载插件。
-- `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway、服务/进程提示、配置路径以及 RPC 健康状况。
+- `openclaw plugins inspect <id> --runtime --json` 显示来自模块加载检查的已注册 hooks 和诊断信息。运行时检查绝不会安装依赖；请使用 `openclaw doctor --fix` 清理旧的依赖状态，或恢复配置中引用的缺失可下载插件。
+- `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway URL/profile、服务/进程提示、配置路径和 RPC 健康状态。
 - 非捆绑的 conversation hooks（`llm_input`、`llm_output`、`before_model_resolve`、`before_agent_reply`、`before_agent_run`、`before_agent_finalize`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
 
 使用 `--link` 可避免复制本地目录（会添加到 `plugins.load.paths`）：
@@ -329,9 +330,8 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
     只传入不带版本或标签的 npm 包名也会解析回已跟踪的插件记录。当某个插件曾被锁定到精确版本，而你想把它切回 registry 的默认发布线时，可以使用这种方式。
 
   </Accordion>
-  <Accordion title="Beta 通道更新">
-    `openclaw plugins update` 会在你未传入新 spec 时复用已跟踪的插件 spec。`openclaw update` 还会识别当前 OpenClaw 更新通道：在 beta 通道上，默认发布线的 npm 和 ClawHub 插件记录会先尝试 `@beta`，如果没有 beta 版本则回退到记录中的默认/latest spec。精确版本和显式标签会继续固定在该选择器上。
-
+  <Accordion title="Beta channel updates">
+    `openclaw plugins update` 会重用已跟踪的插件 spec，除非你传入新的 spec。`openclaw update` 还知道当前活动的 OpenClaw 更新通道：在 beta 通道上，默认线路的 npm 和 ClawHub 插件记录会先尝试 `@beta`。如果没有插件 beta 发布，它们会回退到记录的默认/latest spec；当 beta 包存在但安装验证失败时，npm 插件也会回退。该回退会以警告形式报告，并不会导致核心更新失败。精确版本和显式标签会继续固定在该选择器上。
   </Accordion>
   <Accordion title="版本检查与完整性漂移">
     在进行实时 npm 更新之前，OpenClaw 会将已安装包版本与 npm registry 元数据进行检查。如果已安装版本与记录的产物标识已经匹配解析目标，则会跳过更新，不会下载、重新安装或重写 `openclaw.json`。
@@ -375,7 +375,7 @@ Inspect 会在默认不导入插件运行时的情况下，显示身份、加载
 openclaw plugins doctor
 ```
 
-`doctor` 会报告插件加载错误、manifest/发现诊断信息以及兼容性提示。当一切正常时，它会输出 `No plugin issues detected.`
+`doctor` 会报告插件加载错误、清单/发现诊断、兼容性提示，以及过期的插件配置引用，例如缺失的插件槽位。当安装树和插件配置都干净时，它会打印 `No plugin issues detected.`。如果仍存在过期配置，但安装树其他方面是健康的，总结会如实说明，而不是暗示插件完全健康。
 
 如果某个已配置插件存在于磁盘上，但被加载器的路径安全检查阻止，配置验证会保留该插件条目并将其报告为 `present but blocked`。请修复前面的被阻止插件诊断，例如路径所有权或 world-writable 权限，而不是移除 `plugins.entries.<id>` 或 `plugins.allow` 配置。
 
@@ -393,7 +393,7 @@ openclaw plugins registry --json
 
 使用 `plugins registry` 来检查持久化 registry 是否存在、是否最新或是否过期。使用 `--refresh` 可根据持久化插件索引、配置策略以及 manifest/package 元数据重建它。这是一条修复路径，不是运行时激活路径。
 
-`openclaw doctor --fix` 还会修复与 registry 相邻的受管理 npm 漂移：如果受管理插件 npm 根目录下某个孤儿或恢复的 `@openclaw/*` 包遮蔽了一个捆绑插件，doctor 会移除该旧包并重建 registry，以便启动时按捆绑 manifest 进行校验。
+`openclaw doctor --fix` 还会修复 registry 附近已管理的 npm 漂移：如果受管理插件 npm 根目录下某个孤立或恢复的 `@openclaw/*` 包遮蔽了一个捆绑插件，doctor 会移除那个过期包并重建 registry，从而使启动时针对捆绑 manifest 的验证能够通过。Doctor 还会把宿主 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管理 npm 插件中，以便更新或 npm 修复后，诸如 `openclaw/plugin-sdk/*` 之类的包内运行时导入能够正常解析。
 
 <Warning>
 `OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY=1` 是一个已弃用的、用于 registry 读取失败的“破窗”兼容开关。请优先使用 `plugins registry --refresh` 或 `openclaw doctor --fix`；环境变量回退只用于迁移过程中的紧急启动恢复。

@@ -56,7 +56,7 @@ export FIREWORKS_API_KEY=fw-...
   </Step>
 </Steps>
 
-## Non-interactive setup
+## 非交互式设置
 
 对于脚本或 CI 安装，请在命令行中传入所有参数：
 
@@ -118,7 +118,7 @@ OpenClaw 在运行时接受任意 Fireworks 模型或路由 id。使用 Firework
     如果 Gateway 作为受管服务运行（launchd、systemd、Docker），Fireworks 密钥必须对该进程可见——而不仅仅对你的交互式 shell 可见。
 
     <Warning>
-      仅放在 `~/.profile` 中的密钥对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入那里。将密钥设置到 `~/.openclaw/.env` 或通过 `env.shellEnv` 设置，以便网关进程可以读取。
+      仅在交互式 shell 中导出的密钥，对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入其中。请将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以便网关进程能够读取。
     </Warning>
 
     在 macOS 上，`openclaw gateway install` 已经会把 `~/.openclaw/.env` 连接到 LaunchAgent 环境文件。轮换密钥后，请重新运行安装（或 `openclaw doctor --fix`）。

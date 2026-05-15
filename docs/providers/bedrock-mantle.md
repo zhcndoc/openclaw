@@ -87,6 +87,13 @@ OpenClaw 会尝试从 AWS 默认凭证链生成 Mantle bearer token。然后它�
 | 发现缓存         | 结果缓存 1 小时           |
 | IAM token 刷新   | 每小时                    |
 
+要保持 Mantle 插件启用，但禁止自动发现和 IAM
+bearer token 生成，请禁用由插件拥有的发现开关：
+
+```bash
+openclaw config set plugins.entries.amazon-bedrock-mantle.config.discovery.enabled false
+```
+
 <Note>
 bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用的 `AWS_BEARER_TOKEN_BEDROCK` 相同。
 </Note>

@@ -188,16 +188,18 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 - 通过以下命令批准：
   - `openclaw pairing list mattermost`
   - `openclaw pairing approve mattermost <CODE>`
-- 公开私信：`channels.mattermost.dmPolicy="open"` 再加上 `channels.mattermost.allowFrom=["*"]`。
+- 公共私信：`channels.mattermost.dmPolicy="open"`，并加上 `channels.mattermost.allowFrom=["*"]`。
+- `channels.mattermost.allowFrom` 接受 `accessGroup:<name>` 条目。参见 [Access groups](/channels/access-groups)。
 
 ## 频道（群组）
 
-- 默认：`channels.mattermost.groupPolicy = "allowlist"`（需要 @ 提及）。
-- 使用 `channels.mattermost.groupAllowFrom` 将发送者加入允许列表（推荐使用用户 ID）。
-- 按频道的提及覆盖配置位于 `channels.mattermost.groups.<channelId>.requireMention`，或者通过 `channels.mattermost.groups["*"].requireMention` 作为默认值。
-- `@username` 匹配是可变的，只有在 `channels.mattermost.dangerouslyAllowNameMatching: true` 时才启用。
-- 公开频道：`channels.mattermost.groupPolicy="open"`（需要 @ 提及）。
-- 运行时说明：如果 `channels.mattermost` 完全缺失，运行时在群组检查中会回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
+- 默认：`channels.mattermost.groupPolicy = "allowlist"`（仅限提及触发）。
+- 使用 `channels.mattermost.groupAllowFrom` 设置允许列表发送者（推荐使用用户 ID）。
+- `channels.mattermost.groupAllowFrom` 接受 `accessGroup:<name>` 条目。参见 [Access groups](/channels/access-groups)。
+- 单频道提及覆盖位于 `channels.mattermost.groups.<channelId>.requireMention`，或通过 `channels.mattermost.groups["*"].requireMention` 设置默认值。
+- `@username` 匹配是可变的，并且仅在 `channels.mattermost.dangerouslyAllowNameMatching: true` 时启用。
+- 开放频道：`channels.mattermost.groupPolicy="open"`（提及触发）。
+- 运行时说明：如果 `channels.mattermost` 完全缺失，运行时会在群组检查中回退到 `groupPolicy="allowlist"`（即使设置了 `channels.defaults.groupPolicy`）。
 
 示例：
 
@@ -359,7 +361,7 @@ message action=send channel=mattermost target=channel:<channelId> buttons=[[{"te
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="Implementation notes">
+  <Accordion title="实现说明">
     - 按钮回调使用 HMAC-SHA256 验证（自动进行，无需配置）。
     - Mattermost 会从其 API 响应中剥离 callback data（安全特性），因此点击后所有按钮都会被移除 - 无法部分移除。
     - 包含连字符或下划线的 action ID 会被自动清理（Mattermost 路由限制）。

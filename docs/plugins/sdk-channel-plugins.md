@@ -56,7 +56,21 @@ read_when:
 `dispatchInboundReplyWithBase` 和
 `recordInboundSessionAndDispatchReply`，仍可用于兼容性分发器。不要在新的通道代码中使用这些名称；新插件应从 `openclaw/plugin-sdk/channel-message` 上的 `message` 适配器、收据以及收发生命周期帮助器开始。
 
-如果你的通道在入站回复之外还支持输入中指示器，请在通道插件上暴露 `heartbeat.sendTyping(...)`。核心会在心跳模型运行开始前，使用解析后的心跳投递目标调用它，并使用共享的输入中保持活动/清理生命周期。当平台需要显式停止信号时，再添加 `heartbeat.clearTyping(...)`。
+Channels migrating inbound authorization can use the experimental
+`openclaw/plugin-sdk/channel-ingress-runtime` subpath from runtime receive
+paths. The subpath keeps platform lookup and side effects in the plugin, while
+sharing allowlist state resolution, route/sender/command/event/activation
+decisions, redacted diagnostics, and turn-admission mapping. Keep plugin
+identity normalization in the descriptor you pass to the resolver; do not
+serialize raw match values from the resolved state or decision. See
+[Channel ingress API](/plugins/sdk-channel-ingress) for the API design,
+ownership boundary, and test expectations.
+
+If your channel supports typing indicators outside inbound replies, expose
+`heartbeat.sendTyping(...)` on the channel plugin. Core calls it with the
+resolved heartbeat delivery target before the heartbeat model run starts and
+uses the shared typing keepalive/cleanup lifecycle. Add `heartbeat.clearTyping(...)`
+when the platform needs an explicit stop signal.
 
 如果你的通道为消息工具参数添加了承载媒体来源的字段，请通过
 `describeMessageTool(...).mediaSourceParams` 暴露这些参数名。核心会使用这份显式列表做沙箱路径归一化和外发媒体访问策略，因此插件不需要在共享核心中为提供商特定的头像、附件或封面图参数编写特殊分支。
@@ -112,8 +126,8 @@ read_when:
 - `openclaw/plugin-sdk/approval-reply-runtime`
 - `openclaw/plugin-sdk/channel-runtime-context`
 
-同样地，当你不需要更宽泛的总入口表面时，优先使用 `openclaw/plugin-sdk/setup-runtime`、
-`openclaw/plugin-sdk/setup-adapter-runtime`、
+同样地，在不需要更宽泛的总入口接入面时，优先使用 `openclaw/plugin-sdk/setup-runtime`、
+`openclaw/plugin-sdk/setup-runtime`、
 `openclaw/plugin-sdk/reply-runtime`、
 `openclaw/plugin-sdk/reply-dispatch-runtime`、
 `openclaw/plugin-sdk/reply-reference` 和
@@ -121,16 +135,17 @@ read_when:
 
 特别是针对设置：
 
-- `openclaw/plugin-sdk/setup-runtime` 覆盖运行时安全的设置帮助器：
-  导入安全的设置补丁适配器（`createPatchedAccountSetupAdapter`、
-  `createEnvPatchedAccountSetupAdapter`、
-  `createSetupInputPresenceValidator`）、查找说明输出、
-  `promptResolvedAllowFrom`、`splitSetupEntries`，以及委托式
-  setup-proxy 构建器
-- `openclaw/plugin-sdk/setup-adapter-runtime` 是用于 `createEnvPatchedAccountSetupAdapter` 的更窄的、感知环境的适配器接入面
-- `openclaw/plugin-sdk/channel-setup` 覆盖可选安装的设置
-  构建器以及一些设置安全的原语：
-  `createOptionalChannelSetupSurface`、`createOptionalChannelSetupAdapter`、
+- `openclaw/plugin-sdk/setup-runtime` covers the runtime-safe setup helpers:
+  import-safe setup patch adapters (`createPatchedAccountSetupAdapter`,
+  `createEnvPatchedAccountSetupAdapter`,
+  `createSetupInputPresenceValidator`), lookup-note output,
+  `promptResolvedAllowFrom`, `splitSetupEntries`, and the delegated
+  setup-proxy builders
+- `openclaw/plugin-sdk/setup-runtime` includes the env-aware adapter seam for
+  `createEnvPatchedAccountSetupAdapter`
+- `openclaw/plugin-sdk/channel-setup` covers the optional-install setup
+  builders plus a few setup-safe primitives:
+  `createOptionalChannelSetupSurface`, `createOptionalChannelSetupAdapter`,
 
 如果你的通道支持由环境驱动的设置或认证，并且通用启动/配置流程在运行时加载之前就应该知道这些环境名，请在插件 manifest 中通过 `channelEnvVars` 声明它们。仅将通道运行时的 `envVars` 或本地常量用于面向操作员的文案。
 

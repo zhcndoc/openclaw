@@ -123,7 +123,7 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
   ],
   "uiHints": {
     "apiKey": {
-      "label": "API key",
+      "label": "API 密钥",
       "placeholder": "sk-or-v1-...",
       "sensitive": true
     }
@@ -262,16 +262,16 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 | 字段             | 必填 | 类型     | 含义                                                                                                                                                                 |
 | ---------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`        | 是   | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
-| `providerBaseUrl` | 否   | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
+| `provider`        | 是       | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
+| `providerBaseUrl` | 否       | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
 
 每个 `providerBaseUrl` 守卫支持：
 
 | 字段             | 必填 | 类型       | 含义                                                                                                                                        |
 | ---------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`       | 是   | `string`   | 应检查其 `baseUrl` 的 provider 配置 id。                                                                                                |
-| `defaultBaseUrl` | 否   | `string`   | 当 provider 配置省略 `baseUrl` 时假定使用的 base URL。                                                                                   |
-| `allowedBaseUrls` | 是   | `string[]` | 该 auth 信号允许的 base URL。当已配置或默认的 base URL 与这些规范化后的值都不匹配时，该信号将被忽略。 |
+| `provider`       | 是         | `string`   | 应检查其 `baseUrl` 的 provider 配置 id。                                                                                                |
+| `defaultBaseUrl` | 否         | `string`   | 当 provider 配置省略 `baseUrl` 时假定使用的 base URL。                                                                                   |
+| `allowedBaseUrls` | 是        | `string[]` | 该 auth 信号允许的 base URL。当已配置或默认的 base URL 与这些规范化后的值都不匹配时，该信号将被忽略。 |
 
 ## Tool metadata reference
 
@@ -361,24 +361,19 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 插件代码已经执行。activation planner 会使用这些字段在回退到现有 manifest 所有权元数据之前先缩小候选插件范围，
 这些元数据包括 `providers`、`channels`、`commandAliases`、`setup.providers`、`contracts.tools` 和 hooks。
 
-优先使用已经描述所有权的最窄元数据。当这些字段已经表达了关系时，请使用
-`providers`、`channels`、`commandAliases`、setup descriptors 或 `contracts`。
-当这些所有权字段无法表达时，再使用 `activation` 作为额外的 planner 提示。
-对于诸如 `claude-cli`、`codex-cli` 或 `google-gemini-cli` 这类 CLI runtime 别名，请使用顶层 `cliBackends`；
-`activation.onAgentHarnesses` 仅用于那些没有现成所有权字段的嵌入式 agent harness id。
+优先使用已经描述所有权的最窄元数据。若 `providers`、`channels`、`commandAliases`、setup 描述符或 `contracts`
+已经能表达关系，就使用这些字段。对于无法用这些所有权字段表示的额外 planner 提示，请使用 `activation`。
+对于诸如 `claude-cli`、`my-cli` 或 `google-gemini-cli` 之类的 CLI 运行时别名，请使用顶层 `cliBackends`；`activation.onAgentHarnesses` 仅用于
+那些尚未拥有所有权字段的嵌入式 agent harness id。
 
-This block is metadata only. It does not register runtime behavior, and it does
-not replace `register(...)`, `setupEntry`, or other runtime/plugin entrypoints.
-Current consumers use it as a narrowing hint before broader plugin loading, so
-missing non-startup activation metadata usually only costs performance; it
-should not change correctness while manifest ownership fallbacks still exist.
+此块仅为元数据。它不会注册运行时行为，也不会替代 `register(...)`、`setupEntry` 或其他运行时/插件入口点。
+当前消费者将其用作更宽泛插件加载之前的缩小范围提示，因此缺少非启动激活元数据通常只会影响性能；
+在 manifest 所有权回退仍然存在时，这不应影响正确性。
 
-Every plugin should set `activation.onStartup` intentionally. Set it to `true`
-only when the plugin must run during Gateway startup. Set it to `false` when
-the plugin is inert at startup and should load only from narrower triggers.
-Omitting `onStartup` no longer startup-loads the plugin implicitly; use explicit
-activation metadata for startup, channel, config, agent-harness, memory, or
-other narrower activation triggers.
+每个插件都应有意设置 `activation.onStartup`。只有当插件必须在 Gateway 启动期间运行时，才将其设为 `true`。
+当插件在启动时是惰性的，并且应仅从更窄的触发器加载时，将其设为 `false`。
+不再会因为省略 `onStartup` 而隐式在启动时加载插件；请为启动、channel、config、agent-harness、memory 或其他更窄的激活触发器使用显式的
+activation 元数据。
 
 ```json
 {
@@ -394,16 +389,16 @@ other narrower activation triggers.
 }
 ```
 
-| Field              | Required | Type                                                 | 含义                                                                                                                                                                               |
+| 字段              | 必需 | 类型                                                 | 含义                                                                                                                                                                               |
 | ------------------ | ---------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onStartup`        | No       | `boolean`                                            | 显式的 Gateway 启动激活。每个插件都应设置此项。`true` 会在启动期间导入插件；`false` 会保持启动时惰性加载，除非其他匹配的触发器要求加载。 |
-| `onProviders`      | No       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 provider id。                                                                                                                      |
-| `onAgentHarnesses` | No       | `string[]`                                           | 在 activation/load 计划中应包含此插件的嵌入式 agent harness runtime id。CLI backend 别名请使用顶层 `cliBackends`。                                           |
-| `onCommands`       | No       | `string[]`                                           | 在 activation/load 计划中应包含此插件的命令 id。                                                                                                                       |
-| `onChannels`       | No       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 channel id。                                                                                                                       |
-| `onRoutes`         | No       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 route 类型。                                                                                                                       |
-| `onConfigPaths`    | No       | `string[]`                                           | 当路径存在且未被显式禁用时，在 startup/load 计划中应包含此插件的根相对配置路径。                                                      |
-| `onCapabilities`   | No       | `Array<"provider" \| "channel" \| "tool" \| "hook">` | 控制平面激活规划使用的宽泛能力提示。尽可能优先使用更窄的字段。                                                                                     |
+| `onStartup`        | 否       | `boolean`                                            | 显式的 Gateway 启动激活。每个插件都应设置此项。`true` 会在启动期间导入插件；`false` 会保持启动时惰性加载，除非其他匹配的触发器要求加载。 |
+| `onProviders`      | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 provider id。                                                                                                                      |
+| `onAgentHarnesses` | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的嵌入式 agent harness runtime id。CLI backend 别名请使用顶层 `cliBackends`。                                           |
+| `onCommands`       | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的命令 id。                                                                                                                       |
+| `onChannels`       | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 channel id。                                                                                                                       |
+| `onRoutes`         | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 route 类型。                                                                                                                       |
+| `onConfigPaths`    | 否       | `string[]`                                           | 当路径存在且未被显式禁用时，在 startup/load 计划中应包含此插件的根相对配置路径。                                                      |
+| `onCapabilities`   | 否       | `Array<"provider" \| "channel" \| "tool" \| "hook">` | 控制平面激活规划使用的宽泛能力提示。尽可能优先使用更窄的字段。                                                                                     |
 
 当前实时消费者：
 
@@ -499,22 +494,20 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 | `envVars`      | No       | `string[]` | 在插件运行时加载前，通用 setup/status 界面可以检查的环境变量。                                   |
 | `authEvidence` | No       | `object[]` | 适用于能通过非机密标记进行认证的 provider 的廉价本地认证证据检查。                              |
 
-`authEvidence` is for provider-owned local credential markers that can be
-verified without loading runtime code. These checks must stay cheap and local:
-no network calls, no keychain or secret-manager reads, no shell commands, and no
-provider API probes.
+`authEvidence` 用于可通过本地凭据标记验证的、由 provider 拥有的本地凭据标记。
+这些检查必须保持廉价且本地化：不能进行网络调用、不能读取 keychain 或 secret-manager、不能执行 shell 命令，也不能探测 provider API。
 
-Supported evidence entries:
+支持的证据条目：
 
-| Field              | Required | Type              | 含义                                                                                                  |
+| 字段              | 必需 | 类型              | 含义                                                                                                  |
 | -------- | ---- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `type`             | Yes      | `string`   | 当前为 `local-file-with-env`。                                                                                 |
-| `fileEnvVar`       | No       | `string`   | 包含显式凭据文件路径的环境变量。                                                                               |
-| `fallbackPaths`    | No       | `string[]` | 当 `fileEnvVar` 缺失或为空时检查的本地凭据文件路径。支持 `${HOME}` 和 `${APPDATA}`。                            |
-| `requiresAnyEnv`   | No       | `string[]` | 在该证据有效之前，所列环境变量中至少一个必须非空。                                                             |
-| `requiresAllEnv`   | No       | `string[]` | 在该证据有效之前，所列环境变量都必须非空。                                                                     |
-| `credentialMarker` | Yes      | `string`   | 证据存在时返回的非机密标记。                                                                                   |
-| `source`           | No       | `string`   | 用于 auth/status 输出的面向用户的来源标签。                                                                    |
+| `type`             | 是   | `string`   | 当前为 `local-file-with-env`。                                                                                 |
+| `fileEnvVar`       | 否   | `string`   | 包含显式凭据文件路径的环境变量。                                                                               |
+| `fallbackPaths`    | 否   | `string[]` | 当 `fileEnvVar` 缺失或为空时检查的本地凭据文件路径。支持 `${HOME}` 和 `${APPDATA}`。                            |
+| `requiresAnyEnv`   | 否   | `string[]` | 在该证据有效之前，所列环境变量中至少一个必须非空。                                                             |
+| `requiresAllEnv`   | 否   | `string[]` | 在该证据有效之前，所列环境变量都必须非空。                                                                     |
+| `credentialMarker` | 是   | `string`   | 证据存在时返回的非机密标记。                                                                                   |
+| `source`           | 否   | `string`   | 用于 auth/status 输出的面向用户的来源标签。                                                                    |
 
 ### setup 字段
 
@@ -1079,7 +1072,10 @@ Provider Index 条目也可以携带可安装插件元数据，适用于那些�
 
 ## 发现优先级（重复的插件 id）
 
-OpenClaw 会从多个根目录发现插件（捆绑、全局安装、工作区、显式配置选择的路径）。如果两次发现共享相同的 `id`，则只保留**优先级最高**的 manifest；较低优先级的重复项会被丢弃，而不会与其并列加载。
+OpenClaw 从多个根目录发现插件。对于原始文件系统扫描顺序，请参见 [Plugin scan
+order](/gateway/configuration-reference#plugin-scan-order)。如果两次发现
+共享相同的 `id`，则只保留**优先级最高**的 manifest；
+较低优先级的重复项会被丢弃，而不是与其并列加载。
 
 优先级从高到低：
 
@@ -1100,7 +1096,7 @@ OpenClaw 会从多个根目录发现插件（捆绑、全局安装、工作区�
 - **每个插件都必须提供 JSON Schema**，即使它不接受任何配置。
 - 空 schema 是可以接受的（例如，`{ "type": "object", "additionalProperties": false }`）。
 - Schema 会在配置读写时进行验证，而不是在运行时。
-- 当扩展或分叉捆绑插件并加入新的配置键时，请同时更新该插件的 `openclaw.plugin.json` 中的 `configSchema`。捆绑插件的 schema 很严格，因此如果没有在 `configSchema.properties` 中添加 `myNewKey`，就在用户配置中添加 `plugins.entries.<id>.config.myNewKey`，会在插件运行时加载之前被拒绝。
+- 当扩展或分叉捆绑插件并加入新的配置键时，请同时更新该插件的 `openclaw.plugin.json` 中的 `configSchema`。捆绑插件的 schema 非常严格，因此如果没有在 `configSchema.properties` 中添加 `myNewKey`，就在用户配置中添加 `plugins.entries.<id>.config.myNewKey`，会在插件运行时加载之前被拒绝。
 
 示例 schema 扩展示例：
 

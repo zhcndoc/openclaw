@@ -35,16 +35,20 @@ title: "输入中指示器"
 
 ## 配置
 
+设置代理级默认值：
+
 ```json5
 {
-  agent: {
-    typingMode: "thinking",
-    typingIntervalSeconds: 6,
+  agents: {
+    defaults: {
+      typingMode: "thinking",
+      typingIntervalSeconds: 6,
+    },
   },
 }
 ```
 
-你可以按会话覆盖模式或节奏：
+按会话覆盖模式或频率：
 
 ```json5
 {

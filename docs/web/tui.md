@@ -72,8 +72,9 @@ openclaw tui --local
 
 ## 发送 + 交付
 
-- 消息发送到 Gateway；向 provider 的交付默认关闭。
-- 开启交付：
+- 消息会发送到 Gateway；默认情况下不会交付给 provider。
+- TUI 是一种内部来源界面，类似 WebChat，而不是通用的出站通道。对于需要 `tools.message` 才能显示回复的 harness，可以用无目标的 `message.send` 来满足当前 TUI 回合；显式的 provider 交付仍然使用正常配置的通道，并且绝不会回退到 `lastChannel`。
+- 开启回合交付：
   - `/deliver on`
   - 或在 Settings 面板中
   - 或启动时使用 `openclaw tui --deliver`

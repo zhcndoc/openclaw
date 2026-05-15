@@ -1,17 +1,17 @@
 ---
 summary: "一个由插件拥有的阻塞式内存子代理，在交互式聊天会话中注入相关记忆"
-title: "Active memory"
+title: "主动记忆"
 read_when:
-  - 你想了解 active memory 的用途
-  - 你想为对话代理开启 active memory
-  - 你想在不全局启用的情况下调整 active memory 行为
+  - 你想了解主动记忆的用途
+  - 你想为对话代理开启主动记忆
+  - 你想在不全局启用的情况下调整主动记忆行为
 ---
 
-Active memory 是一个可选的、由插件拥有的阻塞式内存子代理，它会在符合条件的对话会话中于主回复生成之前运行。
+主动记忆是一个可选的、由插件拥有的阻塞式内存子代理，它会在符合条件的对话会话中于主回复生成之前运行。
 
 它之所以存在，是因为大多数记忆系统虽然功能强大，但都是被动的。它们依赖主代理决定何时搜索记忆，或者依赖用户说出诸如“记住这个”或“搜索记忆”之类的话。到了那时，记忆本可以让回复显得自然的那个时刻，已经过去了。
 
-Active memory 给系统提供了一次有限的机会，在主回复生成前浮现相关记忆。
+主动记忆给系统提供了一次有限的机会，在主回复生成前浮现相关记忆。
 
 ## 快速开始
 
@@ -57,18 +57,18 @@ openclaw gateway
 各关键字段的作用：
 
 - `plugins.entries.active-memory.enabled: true` 会开启插件
-- `config.agents: ["main"]` 只让 `main` 代理使用 active memory
+- `config.agents: ["main"]` 只让 `main` 代理使用主动记忆
 - `config.allowedChatTypes: ["direct"]` 将其限定为直接消息会话（群组/频道需显式加入）
 - `config.model`（可选）会固定一个专用回忆模型；不设置则继承当前会话模型
 - `config.modelFallback` 仅在没有显式或继承模型可用时使用
 - `config.promptStyle: "balanced"` 是 `recent` 模式下的默认值
-- Active memory 仍然只会在符合条件的交互式持久聊天会话中运行
+- 主动记忆仍然只会在符合条件的交互式持久聊天会话中运行
 
 ## 速度建议
 
-最简单的配置是让 `config.model` 保持未设置状态，并让 Active Memory 使用你平时用于正常回复的同一模型。这是最安全的默认方式，因为它会沿用你现有的提供商、认证和模型偏好。
+最简单的配置是让 `config.model` 保持未设置状态，并让主动记忆使用你平时用于正常回复的同一模型。这是最安全的默认方式，因为它会沿用你现有的提供商、认证和模型偏好。
 
-如果你希望 Active Memory 更快，可以使用专用推理模型，而不是借用主聊天模型。回忆质量很重要，但对主回答路径来说，延迟比它更重要，而且 Active Memory 的工具面很窄（它只会调用可用的记忆回忆工具）。
+如果你希望主动记忆更快，可以使用专用推理模型，而不是借用主聊天模型。回忆质量很重要，但对主回答路径来说，延迟比它更重要，而且主动记忆的工具面很窄（它只会调用可用的记忆回忆工具）。
 
 推荐的快速模型选项：
 
@@ -78,7 +78,7 @@ openclaw gateway
 
 ### Cerebras 配置
 
-添加一个 Cerebras 提供商，并将 Active Memory 指向它：
+添加一个 Cerebras 提供商，并将主动记忆指向它：
 
 ```json5
 {
@@ -107,11 +107,11 @@ openclaw gateway
 
 ## 如何查看
 
-Active memory 会为模型注入一个隐藏的、不受信任的提示前缀。它不会在普通客户端可见回复中暴露原始的 `<active_memory_plugin>...</active_memory_plugin>` 标签。
+主动记忆会为模型注入一个隐藏的、不受信任的提示前缀。它不会在普通客户端可见回复中暴露原始的 `<active_memory_plugin>...</active_memory_plugin>` 标签。
 
 ## 会话开关
 
-当你想在不编辑配置的情况下暂停或恢复当前聊天会话中的 active memory 时，请使用插件命令：
+当你想在不编辑配置的情况下暂停或恢复当前聊天会话中的主动记忆时，请使用插件命令：
 
 ```text
 /active-memory status
@@ -122,7 +122,7 @@ Active memory 会为模型注入一个隐藏的、不受信任的提示前缀。
 这是会话级别的设置。它不会更改
 `plugins.entries.active-memory.enabled`、代理目标，或其他全局配置。
 
-如果你希望命令写入配置，并为所有会话暂停或恢复 active memory，请使用显式的全局形式：
+如果你希望命令写入配置，并为所有会话暂停或恢复主动记忆，请使用显式的全局形式：
 
 ```text
 /active-memory status --global
@@ -131,9 +131,9 @@ Active memory 会为模型注入一个隐藏的、不受信任的提示前缀。
 ```
 
 全局形式会写入 `plugins.entries.active-memory.config.enabled`。它会保留
-`plugins.entries.active-memory.enabled` 为开启状态，这样该命令以后仍然可用，以便重新打开 active memory。
+`plugins.entries.active-memory.enabled` 为开启状态，这样该命令以后仍然可用，以便重新打开主动记忆。
 
-如果你想查看 active memory 在实时会话中的行为，请开启与你想要输出相匹配的会话开关：
+如果你想查看主动记忆在实时会话中的行为，请开启与你想要输出相匹配的会话开关：
 
 ```text
 /verbose on
@@ -142,10 +142,10 @@ Active memory 会为模型注入一个隐藏的、不受信任的提示前缀。
 
 启用后，OpenClaw 可以显示：
 
-- 一条 active memory 状态行，例如 `Active Memory: status=ok elapsed=842ms query=recent summary=34 chars`，当使用 `/verbose on`
+- 一条主动记忆状态行，例如 `Active Memory: status=ok elapsed=842ms query=recent summary=34 chars`，当使用 `/verbose on`
 - 一条可读的调试摘要，例如 `Active Memory Debug: Lemon pepper wings with blue cheese.`，当使用 `/trace on`
 
-这些行都来自同一次 active memory 处理流程，该流程会向隐藏提示前缀提供内容，但它们经过了面向人类的格式化，而不是暴露原始提示标记。它们会在正常助手回复之后作为后续诊断消息发送，因此像 Telegram 这样的频道客户端不会闪现一个单独的、回复前的诊断气泡。
+这些行都来自同一次主动记忆处理流程，该流程会向隐藏提示前缀提供内容，但它们经过了面向人类的格式化，而不是暴露原始提示标记。它们会在正常助手回复之后作为后续诊断消息发送，因此像 Telegram 这样的频道客户端不会闪现一个单独的、回复前的诊断气泡。
 
 如果你还启用 `/trace raw`，被跟踪的 `Model Input (User Role)` 块会将隐藏的 Active Memory 前缀显示为：
 
@@ -177,13 +177,13 @@ what wings should i order?
 
 ## 运行时机
 
-Active memory 使用两个门槛：
+主动记忆使用两个门槛：
 
 1. **配置显式启用**
    插件必须开启，并且当前代理 id 必须出现在
    `plugins.entries.active-memory.config.agents` 中。
 2. **严格的运行时资格**
-   即使已启用并且已指定目标，active memory 也只会在符合条件的
+   即使已启用并且已指定目标，主动记忆也只会在符合条件的
    交互式持久聊天会话中运行。
 
 实际规则是：
@@ -200,12 +200,12 @@ eligible interactive persistent chat session
 active memory runs
 ```
 
-如果其中任何一项失败，active memory 就不会运行。
+如果其中任何一项失败，主动记忆就不会运行。
 
 ## 会话类型
 
-`config.allowedChatTypes` 控制哪些类型的对话可以运行 Active
-Memory。
+`config.allowedChatTypes` 控制哪些类型的对话可以运行主动
+记忆。
 
 默认值是：
 
@@ -213,7 +213,7 @@ Memory。
 allowedChatTypes: ["direct"]
 ```
 
-这意味着 Active Memory 默认会在直接消息式会话中运行，但不会在群组或频道会话中运行，除非你显式将它们加入。
+这意味着主动记忆默认会在直接消息式会话中运行，但不会在群组或频道会话中运行，除非你显式将它们加入。
 
 示例：
 
@@ -233,13 +233,13 @@ allowedChatTypes: ["direct", "group", "channel"]
 `config.deniedChatIds`。
 
 `allowedChatIds` 是解析后对话 id 的显式允许名单。当它
-非空时，只有当会话的对话 id 在该列表中，Active Memory 才会运行。
+非空时，只有当会话的对话 id 在该列表中，主动记忆才会运行。
 这会一次性缩小所有允许的聊天类型范围，包括直接消息。如果你想要所有直接消息，以及仅某些群组，请将直接对端 id 包含在 `allowedChatIds` 中，或者将 `allowedChatTypes` 只聚焦于你正在测试的群组/频道放量。
 
 `deniedChatIds` 是显式拒绝名单。它总是优先于
 `allowedChatTypes` 和 `allowedChatIds`，因此即使某个对话的会话类型原本允许，只要匹配也会被跳过。
 
-这些 id 来自持久频道会话键：例如飞书的 `chat_id` / `open_id`、Telegram 的 chat id，或 Slack 的 channel id。匹配不区分大小写。如果 `allowedChatIds` 非空，而 OpenClaw 无法为该会话解析出对话 id，Active Memory 会跳过该轮，而不是猜测。
+这些 id 来自持久频道会话键：例如飞书的 `chat_id` / `open_id`、Telegram 的 chat id，或 Slack 的 channel id。匹配不区分大小写。如果 `allowedChatIds` 非空，而 OpenClaw 无法为该会话解析出对话 id，主动记忆会跳过该轮，而不是猜测。
 
 示例：
 
@@ -251,7 +251,7 @@ deniedChatIds: ["oc_large_public_group"]
 
 ## 运行位置
 
-Active memory 是一个对话增强功能，而不是平台级推理功能。
+主动记忆是一个对话增强功能，而不是平台级推理功能。
 
 | Surface                                                             | Runs active memory?                                     |
 | ------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -264,7 +264,7 @@ Active memory 是一个对话增强功能，而不是平台级推理功能。
 
 ## 为什么使用它
 
-在以下情况下使用 active memory：
+在以下情况下使用主动记忆：
 
 - 会话是持久化的，并且面向用户
 - 代理拥有有意义的长期记忆可供搜索
@@ -281,7 +281,7 @@ Active memory 是一个对话增强功能，而不是平台级推理功能。
 - 自动化
 - 内部工作器
 - 一次性 API 任务
-- 隐式个性化会显得突兀的场景
+- 隐式个性化显得突兀的场景
 
 ## 它是如何工作的
 
@@ -290,9 +290,9 @@ Active memory 是一个对话增强功能，而不是平台级推理功能。
 ```mermaid
 flowchart LR
   U["用户消息"] --> Q["构建记忆查询"]
-  Q --> R["活跃记忆阻塞记忆子代理"]
-  R -->|NONE 或为空| M["主回复"]
-  R -->|相关摘要| I["附加隐藏的 active_memory_plugin 系统上下文"]
+  Q --> R["主动记忆阻塞式内存子代理"]
+  R -->|NONE / no relevant memory| M["主回复"]
+  R -->|相关摘要| I["追加隐藏的 active_memory_plugin 系统上下文"]
   I --> M["主回复"]
 ```
 
@@ -404,7 +404,7 @@ promptStyle: "preference-only"
 
 ## 模型回退策略
 
-如果未设置 `config.model`，Active Memory 会按以下顺序解析模型：
+如果未设置 `config.model`，主动记忆会按以下顺序解析模型：
 
 ```text
 显式插件模型
@@ -421,27 +421,27 @@ promptStyle: "preference-only"
 modelFallback: "google/gemini-3-flash"
 ```
 
-如果没有解析到显式、继承或已配置的回退模型，Active Memory 会跳过该轮召回。
+如果没有解析到显式、继承或已配置的回退模型，主动记忆会跳过该轮召回。
 
 `config.modelFallbackPolicy` 仅保留为旧配置的弃用兼容字段。它不再改变运行时行为。
 
 ## Memory tools
 
-默认情况下，Active Memory 允许阻塞式召回子代理调用
+默认情况下，主动记忆允许阻塞式召回子代理调用
 `memory_search` 和 `memory_get`。这与内置的 `memory-core`
 契约一致。当 `plugins.slots.memory` 选择 `memory-lancedb` 且
-`config.toolsAllow` 未设置时，Active Memory 会保留现有的 LanceDB 行为，
+`config.toolsAllow` 未设置时，主动记忆会保留现有的 LanceDB 行为，
 并改用 `memory_recall`。
 
 如果你使用另一个记忆插件，请将 `config.toolsAllow` 设置为该插件注册的精确工具
-名称。Active Memory 会在召回
+名称。主动记忆会在召回
 提示中列出这些工具，并将同样的列表传递给嵌入式子代理。如果没有任何已配置的
-工具可用，或者记忆子代理失败，Active Memory 会跳过该轮召回，主回复将继续而不带记忆上下文。
+工具可用，或者记忆子代理失败，主动记忆会跳过该轮召回，主回复将继续而不带记忆上下文。
 `toolsAllow` 只接受具体的记忆工具名称。通配符、`group:*`
 条目，以及 `read`、`exec`、`message` 和
 `web_search` 等核心代理工具，会在隐藏的记忆子代理启动前被忽略。
 
-默认行为说明：Active Memory 不再将 `memory_recall` 包含在
+默认行为说明：主动记忆不再将 `memory_recall` 包含在
 memory-core 的默认允许列表中。现有的 `memory-lancedb` 配置在
 `plugins.slots.memory` 设为 `memory-lancedb` 时仍可继续工作。显式的 `toolsAllow`
 始终会覆盖自动默认值。
@@ -469,7 +469,7 @@ memory-core 的默认允许列表中。现有的 `memory-lancedb` 配置在
 ### LanceDB memory
 
 随附的 `memory-lancedb` 插件暴露了 `memory_recall`。选择
-memory 插槽后，Active Memory 就会使用该召回工具：
+memory 插槽后，主动记忆就会使用该召回工具：
 
 ```json5
 {
@@ -503,7 +503,7 @@ memory 插槽后，Active Memory 就会使用该召回工具：
 
 Lossless Claw 是一个带有自身召回工具的上下文引擎插件。请先将其安装并
 配置为上下文引擎；参见 [Context engine](/concepts/context-engine)。
-然后让 Active Memory 使用 Lossless Claw 的召回工具：
+然后让主动记忆使用 Lossless Claw 的召回工具：
 
 ```json5
 {
@@ -525,7 +525,7 @@ Lossless Claw 是一个带有自身召回工具的上下文引擎插件。请先
 }
 ```
 
-不要在主 Active Memory 子代理的 `toolsAllow` 中包含 `lcm_expand`。
+不要在主主动记忆子代理的 `toolsAllow` 中包含 `lcm_expand`。
 Lossless Claw 将其用作更低层级的委派扩展工具。
 
 ## 高级逃生通道

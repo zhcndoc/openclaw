@@ -50,13 +50,13 @@ openclaw config set plugins.entries.acpx.enabled true
 只有在 ACP **真正可用** 时，OpenClaw 才会向 agents 说明 ACP spawning：ACP 必须已启用，dispatch 不能被禁用，当前会话不能被 sandbox 阻止，并且必须加载了 runtime backend。若这些条件不满足，ACP 插件技能和 `sessions_spawn` 的 ACP 指引会保持隐藏，这样 agent 就不会建议一个不可用的 backend。
 
 <AccordionGroup>
-  <Accordion title="First-run gotchas">
-    - 如果设置了 `plugins.allow`，它就是一个受限的插件清单，且**必须**包含 `acpx`；否则已安装的 ACP backend 会被有意阻止，并且 `/acp doctor` 会报告缺少 allowlist 条目。
-    - Codex ACP 适配器与 `acpx` 插件一同分阶段准备，并在可能时在本地启动。
-    - Codex ACP 使用隔离的 `CODEX_HOME` 运行；OpenClaw 只会从主机 Codex 配置中复制受信任的项目条目并信任当前工作区，同时将认证、通知和 hooks 保留在主机配置上。
-    - 其他目标 harness 适配器在首次使用时仍可能会通过 `npx` 按需获取。
-    - 供应商认证仍必须在主机上存在，才能供该 harness 使用。
-    - 如果主机没有 npm 或网络访问，首次运行时的适配器获取会失败，直到缓存被预热或以其他方式安装适配器。
+  <Accordion title="首次运行注意事项">
+    - 如果设置了 `plugins.allow`，它就是一个受限的插件清单，并且**必须**包含 `acpx`；否则已安装的 ACP backend 会被故意阻止，且 `/acp doctor` 会报告缺少 allowlist 条目。
+    - Codex ACP 适配器会与 `acpx` 插件一起分阶段准备，并在可能时本地启动。
+    - Codex ACP 使用隔离的 `CODEX_HOME` 运行；OpenClaw 会从主机上的 Codex 配置中复制受信任的项目条目以及安全的模型/提供商路由配置，而认证、通知和钩子则保留在主机配置中。
+    - 其他目标 harness 适配器在你首次使用它们时，仍可能通过 `npx` 按需获取。
+    - 供应商认证仍必须存在于主机上，才能供该 harness 使用。
+    - 如果主机没有 npm 或网络访问，首次运行时的适配器获取会失败，直到缓存被预热或适配器以其他方式安装。
 
   </Accordion>
   <Accordion title="运行时前提条件">
@@ -66,7 +66,7 @@ openclaw config set plugins.entries.acpx.enabled true
 
     在归咎于 OpenClaw 之前，请验证：
 
-    - `/acp doctor` reports an enabled, healthy backend.
+    - `/acp doctor` 报告 backend 已启用且健康。
     - 当设置了 allowlist 时，目标 id 需要被 `acp.allowedAgents` 允许。
     - harness 命令可以在 Gateway 主机上启动。
     - 该 harness 已存在供应商认证（`claude`、`codex`、`gemini`、`opencode`、`droid` 等）。
@@ -139,7 +139,7 @@ ACP harness。仅在 harness
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="Lifecycle details">
+  <Accordion title="生命周期细节">
     - Spawn 会创建或恢复一个 ACP runtime 会话，在 OpenClaw 会话存储中记录 ACP 元数据，并且在运行由父项拥有时可能创建一个后台任务。
     - 由父项拥有的 ACP 会话会被视为后台工作，即使 runtime 会话是持久的；完成和跨界面投递通过父任务通知器进行，而不是像普通面向用户的聊天会话那样处理。
     - 任务维护会关闭终止或孤立的由父项拥有的一次性 ACP 会话。持久 ACP 会话在仍有活动的对话绑定时会被保留；没有活动绑定的过期持久会话会被关闭，因此在拥有任务完成或其任务记录消失后，它们无法被静默恢复。
@@ -161,18 +161,18 @@ ACP harness。仅在 harness
 
     原生 Codex 对话绑定是默认的聊天控制路径。
     OpenClaw 动态工具仍通过 OpenClaw 执行，而
-    诸如 shell/apply-patch 之类的 Codex 原生工具在 Codex 内执行。
-    对于 Codex 原生工具事件，OpenClaw 会注入按轮次的原生
-    钩子中继，以便插件钩子可以阻止 `before_tool_call`、观察
-    `after_tool_call`，并通过 OpenClaw 审批路由 Codex 的 `PermissionRequest` 事件。
-    Codex 的 `Stop` 钩子会被中继到 OpenClaw 的 `before_agent_finalize`，
-    其中插件可以在 Codex 最终确定答案之前再请求一次模型推理。
-    该中继保持刻意保守：它不会修改 Codex 原生工具参数，也不会重写 Codex 线程记录。仅当你想要 ACP 运行时/会话模型时，才使用显式 ACP。
-    嵌入式 Codex 支持边界记录在
-    [Codex harness v1 support contract](/plugins/codex-harness#v1-support-contract)。
+    Codex 原生工具（如 shell/apply-patch）则在 Codex 内部执行。
+    对于 Codex 原生工具事件，OpenClaw 会注入一个按轮次的原生
+    hook relay，以便插件 hooks 可以拦截 `before_tool_call`、观察
+    `after_tool_call`，并通过 OpenClaw 审批来路由 Codex `PermissionRequest` 事件。
+    Codex 的 `Stop` hooks 会转发到 OpenClaw `before_agent_finalize`，
+    这样插件就可以在 Codex 最终输出答案之前再请求一次模型运行。
+    该 relay 保持刻意保守：它不会修改 Codex 原生工具参数，也不会重写 Codex 线程记录。只有在你想要 ACP runtime/session 模型时，才使用显式 ACP。嵌入式 Codex
+    支持边界记录在
+    [Codex harness v1 support contract](/plugins/codex-harness-runtime#v1-support-contract)。
 
   </Accordion>
-  <Accordion title="Model / provider / runtime selection cheat sheet">
+  <Accordion title="模型 / 提供商 / 运行时选择速查表">
     - `openai-codex/*` - 由 doctor 修复的旧版 Codex OAuth/订阅模型路由。
     - `openai/*` - 用于 OpenAI agent 回合的原生 Codex 应用服务器内嵌运行时。
     - `/codex ...` - 原生 Codex 对话控制。
@@ -312,6 +312,7 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
   标识目标对话。按频道的形状如下：
 
 - **Discord channel/thread:** `match.channel="discord"` + `match.peer.id="<channelOrThreadId>"`
+- **Slack channel/DM:** `match.channel="slack"` + `match.peer.id="<channelId|channel:<channelId>|#<channelId>|userId|user:<userId>|slack:<userId>|<@userId>>"`. 优先使用稳定的 Slack id；频道绑定也会匹配该频道线程中的回复。
 - **Telegram forum topic:** `match.channel="telegram"` + `match.peer.id="<chatId>:topic:<topicId>"`
 - **iMessage DM/group:** `match.channel="imessage"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`。稳定的群组绑定优先使用 `chat_id:*`。
 
@@ -719,15 +720,15 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 `/acp` 既有便捷命令，也有通用 setter。等价
 操作如下：
 
-| Command                      | 映射到                              | 说明                                                                                                                                                                          |
-| ---------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/acp model <id>`            | runtime config key `model`           | 对于 Codex ACP，OpenClaw 会将 `openai-codex/<model>` 规范化为适配器模型 id，并将类似 `openai-codex/gpt-5.4/high` 这样的带斜杠推理后缀映射到 `reasoning_effort`。 |
-| `/acp set thinking <level>`  | runtime config key `thinking`        | 对于 Codex ACP，OpenClaw 会在适配器支持时发送对应的 `reasoning_effort`。                                                                             |
-| `/acp permissions <profile>` | runtime config key `approval_policy` | -                                                                                                                                                                              |
-| `/acp timeout <seconds>`     | runtime config key `timeout`         | -                                                                                                                                                                              |
-| `/acp cwd <path>`            | runtime cwd override                 | 直接更新。                                                                                                                                                                 |
-| `/acp set <key> <value>`     | generic                              | `key=cwd` 使用 cwd 覆盖路径。                                                                                                                                          |
-| `/acp reset-options`         | clears all runtime overrides         | -                                                                                                                                                                              |
+| Command                      | Maps to                              | Notes                                                                                                                                                                                                      |
+| ---------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/acp model <id>`            | runtime config key `model`           | For Codex ACP, OpenClaw normalizes `openai-codex/<model>` to the adapter model id and maps slash reasoning suffixes such as `openai-codex/gpt-5.4/high` to `reasoning_effort`.                             |
+| `/acp set thinking <level>`  | canonical option `thinking`          | OpenClaw sends the backend-advertised equivalent when present, preferring `thinking`, then `effort`, `reasoning_effort`, or `thought_level`. For Codex ACP, the adapter maps values to `reasoning_effort`. |
+| `/acp permissions <profile>` | canonical option `permissionProfile` | OpenClaw sends the backend-advertised equivalent when present, such as `approval_policy`, `permission_profile`, `permissions`, or `permission_mode`.                                                       |
+| `/acp timeout <seconds>`     | canonical option `timeoutSeconds`    | OpenClaw sends the backend-advertised equivalent when present, such as `timeout` or `timeout_seconds`.                                                                                                     |
+| `/acp cwd <path>`            | runtime cwd override                 | Direct update.                                                                                                                                                                                             |
+| `/acp set <key> <value>`     | generic                              | `key=cwd` uses the cwd override path.                                                                                                                                                                      |
+| `/acp reset-options`         | clears all runtime overrides         | -                                                                                                                                                                                                          |
 
 ## acpx 运行器、插件设置和权限
 
@@ -769,6 +770,7 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 - [Agent 发送](/tools/agent-send)
 - [CLI 后端](/gateway/cli-backends)
 - [Codex harness](/plugins/codex-harness)
-- [多代理沙盒工具](/tools/multi-agent-sandbox-tools)
-- [`openclaw acp`（桥接模式）](/cli/acp)
+- [Codex harness runtime](/plugins/codex-harness-runtime)
+- [Multi-agent sandbox tools](/tools/multi-agent-sandbox-tools)
+- [`openclaw acp` (桥接模式)](/cli/acp)
 - [子代理](/tools/subagents)

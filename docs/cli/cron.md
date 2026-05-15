@@ -70,6 +70,14 @@ title: "Cron"
 没有生成回复负载，因此模型/提供方失败仍然会增加错误
 计数并触发失败通知。
 
+如果隔离运行在第一次模型请求之前超时，`openclaw cron show`
+和 `openclaw cron runs` 会包含特定阶段的错误，例如
+`setup timed out before runner start` 或
+`stalled before first model call (last phase: context-engine)`。
+对于基于 CLI 的提供方，在外部
+CLI 回合开始之前，预模型看门狗仍会保持活动，因此会话查找、钩子、认证、提示以及 CLI 设置卡顿会
+被报告为预模型 cron 失败。
+
 ## 调度
 
 ### 一次性作业
@@ -212,6 +220,7 @@ openclaw cron add \
 ```bash
 openclaw cron list
 openclaw cron list --agent ops
+openclaw cron get <job-id>
 openclaw cron show <job-id>
 openclaw cron run <job-id>
 openclaw cron run <job-id> --due
@@ -220,7 +229,9 @@ openclaw cron runs --id <job-id> --limit 50
 
 `openclaw cron list` 默认显示所有匹配的作业。传入 `--agent <id>` 仅显示其有效规范化代理 id 匹配的作业；没有存储代理 id 的作业将计为已配置的默认代理。
 
-`cron list --json` 和 `cron show <job-id> --json` 会在每个作业上包含一个顶层 `status` 字段，它由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。这与可读状态列一致，因此外部工具无需重新推导即可读取作业状态。
+`openclaw cron get <job-id>` 直接返回存储的作业 JSON。想要带投递路由预览的人类可读视图时，请使用 `cron show <job-id>`。
+
+`cron list --json` 和 `cron show <job-id> --json` 会在每个作业上包含一个顶层 `status` 字段，该字段由 `enabled`、`state.runningAtMs` 和 `state.lastRunStatus` 计算得出。取值：`disabled`、`running`、`ok`、`error`、`skipped` 或 `idle`。这与人类可读的状态列一致，因此外部工具无需重新推导即可读取作业状态。
 
 `cron runs` 条目包含投递诊断信息，涵盖预期的 cron 目标、解析后的目标、message 工具发送、回退使用情况以及已投递状态。
 

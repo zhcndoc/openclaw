@@ -76,13 +76,12 @@ OpenClaw 会从以下位置加载技能（优先级从高到低）：
 
 ## 流式处理中进行 steering
 
-当队列模式为 `steer` 时，传入消息会被注入到当前运行中。
-排队的 steering 会在**当前助手轮次完成其工具调用之后**、下一次 LLM 调用之前送达。Pi 会将 `steer` 的所有待处理 steering 消息一起清空；旧版 `queue` 则在每个模型边界每次只清空一条消息。Steering 不再跳过当前助手消息中剩余的工具调用。
+运行中途到达的输入提示默认会被引导到当前运行中。
+Steering 会在当前助手轮次完成其工具调用之后、下一次 LLM 调用之前投递，并且不再跳过当前助手消息中的剩余工具调用。
 
-当队列模式为 `followup` 或 `collect` 时，传入消息会被保留，直到
-当前轮次结束，然后以排队的载荷开始新的代理轮次。参见
-[队列](/concepts/queue) 和 [Steering 队列](/concepts/queue-steering) 了解模式
-和边界行为。
+`/queue steer` 是默认的 active-run 行为。`/queue followup` 和 `/queue collect` 会让消息等待后续轮次，而不是进行 steering。
+`/queue interrupt` 则会中止当前 active-run。有关队列和边界行为，请参见 [Queue](/concepts/queue)
+和 [Steering queue](/concepts/queue-steering)。
 
 Block streaming 会在完成后立即发送已完成的助手块；它默认是**关闭**的（`agents.defaults.blockStreamingDefault: "off"`）。
 通过 `agents.defaults.blockStreamingBreak` 调整边界（`text_end` vs `message_end`；默认值为 text_end）。

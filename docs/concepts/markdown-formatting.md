@@ -1,5 +1,5 @@
 ---
-summary: "Markdown 格式化流水线，用于出站频道"
+summary: "用于出站频道的 Markdown 格式化流水线"
 read_when:
   - 你正在更改出站频道的 markdown 格式化或分块
   - 你正在添加新的频道格式化器或样式映射
@@ -63,9 +63,9 @@ IR（示意）：
 Markdown 表格在聊天客户端中的支持并不一致。使用
 `markdown.tables` 来按频道（以及按账户）控制转换。
 
-- `code`：将表格渲染为代码块（大多数频道的默认值）。
-- `bullets`：将每一行转换为项目符号列表（Signal + WhatsApp 的默认值）。
-- `off`：禁用表格解析和转换；原始表格文本直接透传。
+- `code`: 将表格渲染为代码块（大多数频道的默认值）。
+- `bullets`: 将每一行转换为项目符号列表（Matrix、Signal 和 WhatsApp 的默认值）。
+- `off`: 禁用表格解析和转换；原始表格文本直接透传。
 
 配置键：
 

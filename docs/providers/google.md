@@ -43,7 +43,7 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
         {
           agents: {
             defaults: {
-              model: { primary: "google/gemini-2.5-flash" },
+              model: { primary: "google/gemini-3.1-pro-preview" },
             },
           },
         }
@@ -131,17 +131,17 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
 
 | 功能                    | 支持情况                      |
 | ---------------------- | ----------------------------- |
-| Chat completions       | Yes                           |
-| Image generation       | Yes                           |
-| Music generation       | Yes                           |
-| Text-to-speech         | Yes                           |
-| Realtime voice         | Yes (Google Live API)         |
-| Image understanding    | Yes                           |
-| Audio transcription    | Yes                           |
-| Video understanding    | Yes                           |
-| Web search (Grounding) | Yes                           |
-| Thinking/reasoning     | Yes (Gemini 2.5+ / Gemini 3+) |
-| Gemma 4 models         | Yes                           |
+| Chat completions       | 是                           |
+| Image generation       | 是                           |
+| Music generation       | 是                           |
+| Text-to-speech         | 是                           |
+| Realtime voice         | 是（Google Live API）         |
+| Image understanding    | 是                           |
+| Audio transcription    | 是                           |
+| Video understanding    | 是                           |
+| Web search (Grounding) | 是                           |
+| Thinking/reasoning     | 是（Gemini 2.5+ / Gemini 3+） |
+| Gemma 4 models         | 是                           |
 
 ## Web search
 
@@ -224,8 +224,8 @@ Gemma 4 模型（例如 `gemma-4-26b-a4b-it`）支持思考模式。OpenClaw
 
 - 默认视频模型: `google/veo-3.1-fast-generate-preview`
 - 模式：文本转视频、图像转视频，以及单视频参考流程
-- 支持 `aspectRatio`、`resolution` 和 `audio`
-- 当前时长限制：**4 到 8 秒**
+- 支持 `aspectRatio`（`16:9`、`9:16`）和 `resolution`（`720P`、`1080P`）；Veo 目前不支持音频输出
+- 支持时长：**4、6 或 8 秒**（其他值会自动调整到最接近的允许值）
 
 要将 Google 设为默认视频 provider：
 

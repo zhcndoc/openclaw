@@ -46,7 +46,8 @@ title: "Exec 工具"
 </ParamField>
 
 <ParamField path="security" type="'deny' | 'allowlist' | 'full'">
-`gateway` / `node` 执行的强制模式。
+普通工具调用会忽略。`gateway` / `node` 安全性由
+`tools.exec.security` 和 `~/.openclaw/exec-approvals.json` 控制；提升模式只能在操作员明确授予提升访问权限时强制使用 `security=full`。
 </ParamField>
 
 <ParamField path="ask" type="'off' | 'on-miss' | 'always'">
@@ -102,9 +103,10 @@ title: "Exec 工具"
 - YOLO 来自主机策略默认值（`security=full`、`ask=off`），而不是来自 `host=auto`。如果你想强制 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
 - 在 `security=full` 且 `ask=off` 模式下，主机 exec 会直接遵循已配置策略；不会额外进行启发式命令混淆预过滤或脚本预检拒绝层。
 - `tools.exec.node` (default: unset)
-- `tools.exec.strictInlineEval` (default: false): 当为 true 时，像 `python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e` 这样的内联解释器 eval 形式总是需要显式批准。`allow-always` 仍然可以持久化良性的解释器/脚本调用，但内联 eval 形式每次仍会提示。
-- `tools.exec.pathPrepend`: 为 exec 运行追加到 `PATH` 前面的目录列表（仅 gateway + sandbox）。
-- `tools.exec.safeBins`: 仅 stdin 的安全二进制文件，可在没有显式允许列表条目的情况下运行。行为细节参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
+- `tools.exec.strictInlineEval` (default: false): 当为 true 时，内联解释器求值形式（如 `python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e`）始终需要显式批准。`allow-always` 仍可持久保留无害的解释器/脚本调用，但内联求值形式每次仍会提示。
+- `tools.exec.commandHighlighting` (default: false): 当为 true 时，审批提示可以在命令文本中高亮解析器提取的命令片段。全局或按 agent 将其设为 `true`，即可在不更改 exec 审批策略的情况下启用命令文本高亮。
+- `tools.exec.pathPrepend`: 要在 exec 运行中追加到 `PATH` 前面的目录列表（仅限 gateway + sandbox）。
+- `tools.exec.safeBins`: 仅 stdin 的安全二进制文件，可在不需要显式允许列表条目的情况下运行。有关行为细节，请参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
 - `tools.exec.safeBinTrustedDirs`: 为 `safeBins` 路径检查额外显式信任的目录。`PATH` 条目绝不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
 - `tools.exec.safeBinProfiles`: 每个安全 bin 的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
 

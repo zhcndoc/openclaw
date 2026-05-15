@@ -12,9 +12,9 @@ title: "Amazon Bedrock Mantle 插件"
 ## 分发
 
 - Package: `@openclaw/amazon-bedrock-mantle-provider`
-- Install route: 包含在 OpenClaw 中
+- 安装方式: npm; ClawHub
 
-## Surface
+## 接口
 
 providers: amazon-bedrock-mantle
 

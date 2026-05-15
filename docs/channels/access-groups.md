@@ -125,7 +125,26 @@ DM 允许列表示例：
 - 使用相同发送者匹配规则的、按房间划分的特定渠道发送者允许列表
 - 重用消息渠道发送者允许列表的命令授权路径
 
-渠道支持取决于该渠道是否通过共享的 OpenClaw 发送者授权辅助工具进行接线。当前内置支持包括 Discord、Google Chat、Nostr、WhatsApp、Zalo 和 Zalo Personal。静态 `message.senders` 组被设计为与渠道无关，因此新的消息渠道只要改用共享的插件 SDK 辅助工具而不是自定义允许列表展开，就应该支持它们。
+Channel support depends on whether that channel is wired through the shared OpenClaw sender-authorization helpers. Current bundled support includes Discord, Feishu, Google Chat, iMessage, LINE, Mattermost, Microsoft Teams, Nextcloud Talk, Nostr, QQBot, Signal, WhatsApp, Zalo, and Zalo Personal. Static `message.senders` groups are designed to be channel-agnostic, so new message channels should support them by using the shared plugin SDK helpers instead of custom allowlist expansion.
+
+## 插件诊断
+
+插件作者可以在不将其展开回扁平 allowlist 的情况下检查结构化的访问组状态：
+
+```typescript
+import { resolveAccessGroupAllowFromState } from "openclaw/plugin-sdk/security-runtime";
+
+const state = await resolveAccessGroupAllowFromState({
+  accessGroups: cfg.accessGroups,
+  allowFrom: channelConfig.allowFrom,
+  channel: "my-channel",
+  accountId: "default",
+  senderId,
+  isSenderAllowed,
+});
+```
+
+结果会报告已引用、已匹配、缺失、不支持和失败的组。当你需要诊断或一致性测试时使用它。仅在仍然期望扁平 `allowFrom` 数组的兼容性路径中使用 `expandAllowFromWithAccessGroups(...)`。
 
 ## Discord 渠道受众
 

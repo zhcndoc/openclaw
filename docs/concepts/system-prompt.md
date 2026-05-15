@@ -43,24 +43,19 @@ OpenAI GPT-5 系列叠加层保持核心执行规则简洁，并增加
 
 该提示词有意保持紧凑，并使用固定部分：
 
-- **工具**：结构化工具的单一事实来源提醒，以及运行时工具使用指导。
-- **执行偏置**：简洁的跟进指导：对可执行请求当场处理，
-  持续推进直到完成或受阻，从薄弱的工具结果中恢复，实时检查可变状态，
-  并在最终确定前进行验证。
-- **安全性**：简短的护栏提醒，避免权力寻求行为或绕过监督。
-- **技能**（如有）：告诉模型如何按需加载技能说明。
-- **OpenClaw 自我更新**：如何使用
-  `config.schema.lookup` 安全地检查配置，使用 `config.patch` 修补配置，
-  使用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。
-  所有者专有的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，
-  包括会归一化到这些受保护执行路径的旧版 `tools.bash.*` 别名。
+- **工具**：结构化工具的真实来源提醒以及运行时工具使用指导。
+- **执行偏置**：简洁的跟进指导：对可执行请求立即在当前轮次中采取行动，持续进行直到完成或被阻塞，从较弱的工具结果中恢复，实时检查可变状态，并在最终确认前进行验证。
+- **安全**：简短的护栏提醒，避免追求权力或绕过监督。
+- **技能**（如可用）：告诉模型如何按需加载技能说明。
+- **OpenClaw 控制**：告诉模型在配置/重启工作中优先使用 `gateway` 工具，并避免编造 CLI 命令。
+- **OpenClaw 自更新**：说明如何使用 `config.schema.lookup` 安全检查配置，使用 `config.patch` 修补配置，使用 `config.apply` 替换完整配置，以及仅在用户明确请求时运行 `update.run`。仅限所有者的 `gateway` 工具也会拒绝重写 `tools.exec.ask` / `tools.exec.security`，包括归一化到这些受保护执行路径的旧 `tools.bash.*` 别名。
 - **工作区**：工作目录（`agents.defaults.workspace`）。
-- **文档**：本地 OpenClaw 文档路径（仓库或 npm 包）以及何时读取它们。
-- **工作区文件（注入）**：表示下方包含引导文件。
-- **沙箱**（如启用）：表示已沙箱化的运行时、沙箱路径，以及是否可使用提权执行。
-- **当前日期与时间**：仅包含时区（对缓存稳定；实时钟表来自 `session_status`）。
-- **回复标签**：支持的提供方可使用的可选回复标签语法。
-- **心跳**：当默认代理启用心跳时，心跳提示词和确认行为。
+- **文档**：OpenClaw 文档/源码的本地路径以及何时阅读它们。
+- **工作区文件（已注入）**：指示下方包含了启动文件。
+- **沙箱**（如启用）：指示沙箱化运行时、沙箱路径，以及是否可使用提升权限的执行。
+- **当前日期与时间**：仅时区（缓存稳定；实时时钟来自 `session_status`）。
+- **助手输出指令**：简洁的附件、语音笔记和回复标签语法。
+- **心跳**：在为默认代理启用心跳时，心跳提示与确认行为。
 - **运行时**：主机、操作系统、node、模型、仓库根目录（如检测到）、思考级别（一行）。
 - **推理**：当前可见性级别 + `/reasoning` 切换提示。
 
@@ -98,13 +93,12 @@ OpenClaw 将包括 **项目上下文** 在内的大块稳定内容保留在
 OpenClaw 可以为子代理渲染更小的系统提示词。运行时会为每次运行设置一个
 `promptMode`（这不是面向用户的配置）：
 
-- `full`（默认）：包含上面所有部分。
-- `minimal`：用于子代理；省略 **技能**、**记忆回忆**、**OpenClaw
-  自我更新**、**模型别名**、**用户身份**、**回复标签**、
-  **消息**、**静默回复** 和 **心跳**。工具、**安全性**、
-  工作区、沙箱、当前日期与时间（如已知）、运行时，以及注入的
-  上下文保持可用。
-- `none`：仅返回基础身份行。
+- `full` (default): 包含上面的所有部分。
+- `minimal`: 用于子代理；省略 **Memory Recall**、**OpenClaw
+  Self-Update**、**Model Aliases**、**User Identity**、**Assistant Output Directives**、
+  **Messaging**、**Silent Replies** 和 **Heartbeats**。当提供时，Tooling、**Safety**、
+  **Skills**、Workspace、Sandbox、Current Date & Time（如已知）、Runtime，以及注入的上下文保持可用。
+- `none`: 仅返回基础身份行。
 
 当 `promptMode=minimal` 时，额外注入的提示词会标记为 **子代理
 上下文**，而不是 **群聊上下文**。
@@ -147,10 +141,15 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 - `BOOTSTRAP.md`（仅适用于全新的工作区）
 - `MEMORY.md`（如存在）
 
-这些文件都会在每一轮中**注入到上下文窗口**，除非
-应用了某个特定文件的门控。默认代理禁用心跳时，或
-`agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行会省略 `HEARTBEAT.md`。请保持注入文件简洁——尤其是 `MEMORY.md`，它会随着时间增长，可能导致
-意外偏高的上下文占用以及更频繁的压缩。
+All of these files are **injected into the context window** on every turn unless
+a file-specific gate applies. `HEARTBEAT.md` is omitted on normal runs when
+heartbeats are disabled for the default agent or
+`agents.defaults.heartbeat.includeSystemPromptSection` is false. Keep injected
+files concise, especially `MEMORY.md`. `MEMORY.md` is intended to stay a
+curated long-term summary; detailed daily notes belong in `memory/*.md` where
+`memory_search` and `memory_get` can retrieve them on demand. Oversized
+`MEMORY.md` files increase prompt usage and can be partially injected because of
+the bootstrap file limits below.
 
 当会话运行在原生 Codex 运行器上时，Codex 会通过其自身的项目文档发现机制加载 `AGENTS.md`。OpenClaw 仍然会解析其余引导文件并将它们作为 Codex 配置指令转发，因此 `SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md` 会保持相同的工作区上下文角色，而不会重复 `AGENTS.md`。
 
@@ -167,8 +166,14 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 默认：`once`）。详细的原始/注入计数会保留在诸如
 `/context`、`/status`、doctor 和日志等诊断信息中。
 
-子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件
-会被过滤掉，以保持子代理上下文尽可能小）。
+For memory files, truncation is not data loss: the file remains intact on disk,
+but the model only sees the shortened injected copy until it reads or searches
+memory directly. If `MEMORY.md` is repeatedly truncated, distill it into a
+shorter durable summary and move detailed history into `memory/*.md`, or
+intentionally raise the bootstrap limits.
+
+Sub-agent sessions only inject `AGENTS.md` and `TOOLS.md` (other bootstrap files
+are filtered out to keep the sub-agent context small).
 
 内部钩子可以通过 `agent:bootstrap` 拦截此步骤，以修改或替换
 注入的引导文件（例如将 `SOUL.md` 替换为另一个人格）。

@@ -165,18 +165,20 @@ openclaw logs --follow
 
 <AccordionGroup>
   <Accordion title="常见特征">
-    - 使用本地 MLX/vLLM 风格服务器时出现 `model_not_found` → 确认 `baseUrl` 包含 `/v1`，`api` 对于 `/v1/chat/completions` 后端应为 `"openai-completions"`，并且 `models.providers.<provider>.models[].id` 是裸的 provider 本地 id。先带 provider 前缀选择一次，例如 `mlx/mlx-community/Qwen3-30B-A3B-6bit`；目录条目保持为 `mlx-community/Qwen3-30B-A3B-6bit`。
-    - `messages[...].content: invalid type: sequence, expected a string` → 后端拒绝结构化 Chat Completions 内容部分。修复：设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
-    - `incomplete turn detected ... stopReason=stop payloads=0` → 后端完成了 Chat Completions 请求，但该轮没有返回用户可见的助手文本。OpenClaw 会对可重放的空 OpenAI 兼容轮次重试一次；持续失败通常意味着后端正在发出空的/非文本内容，或抑制了最终回答文本。
-    - 直接的小请求成功，但 OpenClaw 代理运行在后端内部失败（例如某些 `inferrs` 构建上的 Gemma）→ OpenClaw 传输大概率已经正确；后端在更大的代理运行时提示词形状上失败。
-    - 关闭工具后失败有所减少但没有消失 → 工具 schema 造成了一部分压力，但剩余问题仍然是上游模型/服务器容量或后端 bug。
+    - `model_not_found` with a local MLX/vLLM-style server → verify `baseUrl` includes `/v1`, `api` is `"openai-completions"` for `/v1/chat/completions` backends, and `models.providers.<provider>.models[].id` is the bare provider-local id. Select it with the provider prefix once, for example `mlx/mlx-community/Qwen3-30B-A3-B-6bit`; keep the catalog entry as `mlx-community/Qwen3-30B-A3-B-6bit`.
+    - `messages[...].content: invalid type: sequence, expected a string` → backend rejects structured Chat Completions content parts. Fix: set `models.providers.<provider>.models[].compat.requiresStringContent: true`.
+    - `validation.keys` or allowed message keys like `["role","content"]` → backend rejects OpenAI-style replay metadata on Chat Completions messages. Fix: set `models.providers.<provider>.models[].compat.strictMessageKeys: true`.
+    - `incomplete turn detected ... stopReason=stop payloads=0` → 后端完成了 Chat Completions 请求，但该轮没有返回任何用户可见的助手文本。OpenClaw 会对可重放的空 OpenAI 兼容轮次重试一次；持续失败通常意味着后端正在输出空/非文本内容，或抑制了最终答案文本。
+    - direct tiny requests succeed, but OpenClaw agent runs fail with backend/model crashes (for example Gemma on some `inferrs` builds) → OpenClaw transport is likely already correct; the backend is failing on the larger agent-runtime prompt shape.
+    - failures shrink after disabling tools but do not disappear → tool schemas were part of the pressure, but the remaining issue is still upstream model/server capacity or a backend bug.
 
   </Accordion>
   <Accordion title="修复选项">
-    1. 对仅支持字符串的 Chat Completions 后端设置 `compat.requiresStringContent: true`。
-    2. 对无法可靠处理 OpenClaw 工具 schema 表面的模型/后端设置 `compat.supportsTools: false`。
-    3. 在可能的情况下降低提示词压力：更小的工作区引导、更短的会话历史、更轻量的本地模型，或使用对长上下文支持更强的后端。
-    4. 如果小的直接请求持续通过，而 OpenClaw 代理轮次仍在后端内部崩溃，则应将其视为上游服务器/模型限制，并在可接受的 payload 形状基础上向对方提交复现问题。
+    1. 为仅接受字符串的 Chat Completions 后端设置 `compat.requiresStringContent: true`。
+    2. 为只接受每条消息中 `role` 和 `content` 的严格 Chat Completions 后端设置 `compat.strictMessageKeys: true`。
+    3. 为无法稳定处理 OpenClaw 工具模式面的模型/后端设置 `compat.supportsTools: false`。
+    4. 尽可能降低提示词压力：更小的工作区启动内容、更短的会话历史、更轻量的本地模型，或使用更强的长上下文支持后端。
+    5. 如果小型直接请求持续通过，而 OpenClaw 代理轮次仍然在后端内部崩溃，则应将其视为上游服务器/模型限制，并用被接受的载荷形状向上游提交复现问题。
   </Accordion>
 </AccordionGroup>
 
@@ -237,16 +239,17 @@ openclaw gateway status --json
 <AccordionGroup>
   <Accordion title="连接 / 认证特征">
     - `device identity required` → 非安全上下文或缺少设备认证。
-    - `origin not allowed` → 浏览器 `Origin` 不在 `gateway.controlUi.allowedOrigins` 中（或者你正在从非 loopback 浏览器 origin 连接，但没有显式允许列表）。
+    - `origin not allowed` → 浏览器 `Origin` 不在 `gateway.controlUi.allowedOrigins` 中（或者你正从非回环浏览器来源连接，但没有显式允许列表）。
     - `device nonce required` / `device nonce mismatch` → 客户端没有完成基于挑战的设备认证流程（`connect.challenge` + `device.nonce`）。
-    - `device signature invalid` / `device signature expired` → 客户端为当前握手签署了错误的载荷（或使用了过期时间戳）。
-    - `AUTH_TOKEN_MISMATCH` 且 `canRetryWithDeviceToken=true` → 客户端可以使用缓存的设备 token 进行一次受信任重试。
-    - 该缓存 token 重试会复用与配对设备 token 一起存储的缓存作用域集合。显式 `deviceToken` / 显式 `scopes` 调用方则保持其请求的作用域集合。
-    - 在该重试路径之外，连接认证优先级依次是：显式共享 token/password、显式 `deviceToken`、存储的设备 token、引导 token。
-    - 在异步 Tailscale Serve Control UI 路径上，对于同一 `{scope, ip}` 的失败尝试会在限流器记录失败之前串行化。因此，同一客户端的两个并发错误重试，第二次可能会显示 `retry later`，而不是两个普通的不匹配错误。
-    - 来自浏览器源 loopback 客户端的 `too many failed authentication attempts (retry later)` → 来自同一规范化 `Origin` 的重复失败会被临时锁定；另一个 localhost origin 使用单独的桶。
-    - 随后再次出现的 `unauthorized` → 共享 token/设备 token 漂移；刷新 token 配置，并在需要时重新批准/轮换设备 token。
-    - `gateway connect failed:` → 目标主机/端口/URL 错误。
+    - `device signature invalid` / `device signature expired` → 客户端为当前握手签署了错误的载荷（或过期时间戳）。
+    - `AUTH_TOKEN_MISMATCH` with `canRetryWithDeviceToken=true` → 客户端可以使用缓存的设备 token 进行一次受信任重试。
+    - 该缓存 token 重试会重用与已配对设备 token 一起存储的缓存作用域集合。显式 `deviceToken` / 显式 `scopes` 调用方则会保留其请求的作用域集合。
+    - `AUTH_SCOPE_MISMATCH` → 已识别设备 token，但其已批准作用域不涵盖此次连接请求；请重新配对或批准请求的作用域契约，而不是轮换共享网关 token。
+    - 在该重试路径之外，连接认证优先级依次为：显式共享 token/password、显式 `deviceToken`、已存储设备 token、引导 token。
+    - 在异步 Tailscale Serve Control UI 路径上，同一 `{scope, ip}` 的失败尝试会在限速器记录失败之前被串行化。因此，同一客户端的两个错误并发重试可能会在第二次尝试中表现为 `retry later`，而不是两个普通的不匹配。
+    - 来自浏览器来源回环客户端的 `too many failed authentication attempts (retry later)` → 来自同一规范化 `Origin` 的重复失败会被临时锁定；另一个 localhost 来源会使用单独的桶。
+    - 在该重试之后仍反复 `unauthorized` → 共享 token/设备 token 漂移；刷新 token 配置，必要时重新批准/轮换设备 token。
+    - `gateway connect failed:` → 主机/端口/url 目标错误。
 
   </Accordion>
 </AccordionGroup>
@@ -257,10 +260,11 @@ openclaw gateway status --json
 
 | 详情代码                     | 含义                                                                                                                                                                                        | 建议操作                                                                                                                                                                                                                                                                               |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_TOKEN_MISSING`         | 客户端没有发送必需的共享 token。                                                                                                                                                            | 在客户端中粘贴/设置 token，然后重试。对于仪表板路径：先运行 `openclaw config get gateway.auth.token`，然后将其粘贴到 Control UI 设置中。                                                                                                                                                 |
-| `AUTH_TOKEN_MISMATCH`        | 共享 token 与网关认证 token 不匹配。                                                                                                                                                        | 如果 `canRetryWithDeviceToken=true`，允许进行一次受信任重试。缓存 token 重试会复用已存储的已批准作用域；显式 `deviceToken` / `scopes` 调用方保留其请求的作用域。如果仍然失败，请运行 [token 漂移恢复检查清单](/cli/devices#token-drift-recovery-checklist)。                                 |
-| `AUTH_DEVICE_TOKEN_MISMATCH` | 缓存的每设备 token 已过期或已撤销。                                                                                                                                                         | 使用 [devices CLI](/cli/devices) 轮换/重新批准设备 token，然后重新连接。                                                                                                                                                                                                                |
-| `PAIRING_REQUIRED`           | 设备身份需要批准。检查 `error.details.reason` 是否为 `not-paired`、`scope-upgrade`、`role-upgrade` 或 `metadata-upgrade`，并在存在时使用 `requestId` / `remediationHint`。 | 批准待处理请求：先 `openclaw devices list`，然后 `openclaw devices approve <requestId>`。作用域/角色升级在你查看所请求访问后使用相同流程。                                                                                                                                               |
+| `AUTH_TOKEN_MISSING`         | Client did not send a required shared token.                                                                                                                                                 | Paste/set token in the client and retry. For dashboard paths: `openclaw config get gateway.auth.token` then paste into Control UI settings.                                                                                                                                              |
+| `AUTH_TOKEN_MISMATCH`        | Shared token did not match gateway auth token.                                                                                                                                               | If `canRetryWithDeviceToken=true`, allow one trusted retry. Cached-token retries reuse stored approved scopes; explicit `deviceToken` / `scopes` callers keep requested scopes. If still failing, run the [token drift recovery checklist](/cli/devices#token-drift-recovery-checklist). |
+| `AUTH_DEVICE_TOKEN_MISMATCH` | Cached per-device token is stale or revoked.                                                                                                                                                 | Rotate/re-approve device token using [devices CLI](/cli/devices), then reconnect.                                                                                                                                                                                                        |
+| `AUTH_SCOPE_MISMATCH`        | Device token is valid, but its approved role/scopes do not cover this connect request.                                                                                                       | Re-pair the device or approve the requested scope contract; do not treat this as shared-token drift.                                                                                                                                                                                     |
+| `PAIRING_REQUIRED`           | Device identity needs approval. Check `error.details.reason` for `not-paired`, `scope-upgrade`, `role-upgrade`, or `metadata-upgrade`, and use `requestId` / `remediationHint` when present. | Approve pending request: `openclaw devices list` then `openclaw devices approve <requestId>`. Scope/role upgrades use the same flow after you review the requested access.                                                                                                               |
 
 <Note>
 使用共享网关 token/password 进行认证的直接 loopback 后端 RPC 不应依赖 CLI 的已配对设备作用域基线。如果子代理或其他内部调用仍然以 `scope-upgrade` 失败，请确认调用方使用的是 `client.id: "gateway-client"` 和 `client.mode: "backend"`，并且没有强制显式 `deviceIdentity` 或设备 token。

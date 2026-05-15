@@ -43,17 +43,19 @@ OpenClaw 自带一个 `fal` 提供程序，用于托管图像和视频生成。
 内置的 `fal` 图像生成提供程序默认使用
 `fal/fal-ai/flux/dev`。
 
-| Capability     | Value                      |
-| -------------- | -------------------------- |
-| Max images     | 每个请求最多 4 张              |
-| Edit mode      | 已启用，1 张参考图像 |
-| Size overrides | 支持                  |
-| Aspect ratio   | 支持                  |
-| Resolution     | 支持                  |
-| Output format  | `png` 或 `jpeg`            |
+| Capability     | Value                                                       |
+| -------------- | ----------------------------------------------------------- |
+| Max images     | 4 per request                                               |
+| Edit mode      | Flux: 1 reference image; GPT Image 2: 10; Nano Banana 2: 14 |
+| Size overrides | Supported                                                   |
+| Aspect ratio   | Supported for generate and GPT Image 2/Nano Banana 2 edit   |
+| Resolution     | Supported                                                   |
+| Output format  | `png` or `jpeg`                                             |
 
 <Warning>
-fal 图像编辑端点**不**支持 `aspectRatio` 覆盖。
+Flux image-to-image requests do **not** support `aspectRatio` overrides. GPT
+Image 2 and Nano Banana 2 edit requests use fal's `/edit` endpoint and accept
+aspect-ratio hints.
 </Warning>
 
 当您想要 PNG 输出时，请使用 `outputFormat: "png"`。fal 在 OpenClaw 中没有声明

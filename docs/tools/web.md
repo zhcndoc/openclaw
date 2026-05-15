@@ -198,29 +198,24 @@ OpenClaw 还包含用于 X（原 Twitter）帖子的 `x_search`，以及用于�
 }
 ```
 
-Provider-specific config (API keys, base URLs, modes) lives under
-`plugins.entries.<plugin>.config.webSearch.*`. Gemini can also reuse
-`models.providers.google.apiKey` and `models.providers.google.baseUrl` as lower-priority
-fallbacks after its dedicated web-search config and `GEMINI_API_KEY`. See the
-provider pages for examples.
+提供商特定配置（API 密钥、base URL、模式）位于
+`plugins.entries.<plugin>.config.webSearch.*` 下。Gemini 还可以在其专用网页搜索配置和 `GEMINI_API_KEY` 之后，使用
+`models.providers.google.apiKey` 和 `models.providers.google.baseUrl` 作为较低优先级的
+回退。示例请参见
+提供商页面。
 
-`tools.web.search.provider` is validated against the web-search provider ids
-declared by bundled and installed plugin manifests. A typo such as `"brvae"`
-fails config validation instead of silently falling back to auto-detection. If a
-configured provider only has stale plugin evidence, such as a leftover
-`plugins.entries.<plugin>` block after uninstalling a third-party plugin,
-OpenClaw keeps startup resilient and reports a warning so you can reinstall the
-plugin or run `openclaw doctor --fix` to clean up the stale config.
+`tools.web.search.provider` 会根据已捆绑和已安装插件清单中声明的网页搜索提供商 ID 进行验证。像 `"brvae"` 这样的拼写错误会导致配置验证失败，而不是静默回退到自动检测。如果某个已配置提供商只有过时的插件证据，例如卸载第三方插件后留下的
+`plugins.entries.<plugin>` 配置块，
+OpenClaw 会保持启动过程的弹性并报告警告，以便你重新安装该
+插件或运行 `openclaw doctor --fix` 清理过时配置。
 
 `web_fetch` 备用提供商的选择是独立的：
 
-- choose it with `tools.web.fetch.provider`
-- or omit that field and let OpenClaw auto-detect the first ready web-fetch
-  provider from available credentials
-- non-sandboxed `web_fetch` can use installed plugin providers that declare
-  `contracts.webFetchProviders`; sandboxed fetches stay bundled-only
-- today the bundled web-fetch provider is Firecrawl, configured under
-  `plugins.entries.firecrawl.config.webFetch.*`
+- 通过 `tools.web.fetch.provider` 选择
+- 或省略该字段，让 OpenClaw 从可用凭据中自动检测第一个就绪的 web-fetch
+  提供商
+- 非沙箱化的 `web_fetch` 可使用声明了 `contracts.webFetchProviders` 的已安装插件提供商；沙箱化获取仍仅限捆绑提供商
+- 目前捆绑的 web-fetch 提供商是 Firecrawl，在 `plugins.entries.firecrawl.config.webFetch.*` 下配置
 
 当你在 `openclaw onboard` 或
 `openclaw configure --section web` 期间选择 **Kimi** 时，OpenClaw 还可能会询问：
@@ -228,12 +223,15 @@ plugin or run `openclaw doctor --fix` to clean up the stale config.
 - Moonshot API 区域（`https://api.moonshot.ai/v1` 或 `https://api.moonshot.cn/v1`）
 - 默认的 Kimi 网页搜索模型（默认为 `kimi-k2.6`）
 
-对于 `x_search`，请配置 `plugins.entries.xai.config.xSearch.*`。它使用与 Grok 网页搜索相同的
-`XAI_API_KEY` 备用项。
-旧版 `tools.web.x_search.*` 配置会由 `openclaw doctor --fix` 自动迁移。
-当你在 `openclaw onboard` 或 `openclaw configure --section web` 期间选择 Grok 时，
-OpenClaw 也可以使用相同的密钥提供可选的 `x_search` 设置。
-这是在 Grok 路径中的一个单独后续步骤，不是单独的顶层
+`x_search` 的配置位于 `plugins.entries.xai.config.xSearch.*` 下。它使用
+与聊天相同的 xAI 认证配置文件，或 Grok 网页搜索使用的
+`XAI_API_KEY` / 插件网页搜索
+凭据。
+旧版 `tools.web.x_search.*` 配置会由 `openclaw doctor --fix`
+自动迁移。
+当你在 `openclaw onboard` 或 `openclaw configure --section web`
+期间选择 Grok 时，OpenClaw 也可以提供可选的 `x_search` 设置，并使用相同的密钥。
+这是在 Grok 路径中的一个单独后续步骤，不是单独的顶级
 网页搜索提供商选择。如果你选择其他提供商，OpenClaw 不会
 显示 `x_search` 提示。
 
@@ -336,8 +334,8 @@ OpenClaw 也可以使用相同的密钥提供可选的 `x_search` 设置。
             cacheTtlMinutes: 15,
           },
           webSearch: {
-            apiKey: "xai-...", // 如果已设置 XAI_API_KEY，则可选
-            baseUrl: "https://api.x.ai/v1", // 可选的共享 xAI Responses base URL
+            apiKey: "xai-...", // 如果已设置 xAI 认证配置文件或 XAI_API_KEY，则为可选
+            baseUrl: "https://api.x.ai/v1", // 可选，共享的 xAI Responses base URL
           },
         },
       },

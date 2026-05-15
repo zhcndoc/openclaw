@@ -74,7 +74,7 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 消息和 A2A 后续回复会在接收提示词中（`[Inter-session message ... isUser=false]`）以及转录出处中标记为跨会话数据。接收代理应将它们视为通过工具路由的数据，而不是直接由终端用户撰写的指令。
 
-目标方响应后，OpenClaw 可以运行一个**回复回环**，让代理轮流交替消息（最多 5 轮）。目标代理可以回复 `REPLY_SKIP` 以提前停止。
+目标响应后，OpenClaw 可以运行一个**回复回环**，其中代理交替发送消息（最多 `session.agentToAgent.maxPingPongTurns` 轮，范围为 0-20，默认 5）。目标代理可以回复 `REPLY_SKIP` 以提前停止。
 
 ## 状态和编排辅助工具
 
@@ -90,7 +90,9 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 ## 生成子代理
 
-`sessions_spawn` 默认会为后台任务创建一个隔离会话。它始终是非阻塞的——会立即返回 `runId` 和 `childSessionKey`。
+`sessions_spawn` 默认会为后台任务创建一个隔离会话。
+它始终是非阻塞的——它会立即返回 `runId` 和
+`childSessionKey`。原生子代理运行会在子会话的首个可见 `[Subagent Task]` 消息中接收委派任务，而系统提示词只携带子代理运行时规则和路由上下文。
 
 关键选项：
 

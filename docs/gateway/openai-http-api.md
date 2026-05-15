@@ -188,6 +188,69 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 - 每一条事件行都是 `data: <json>`
 - 流结束时发送 `data: [DONE]`
 
+## Chat 工具契约
+
+`/v1/chat/completions` 支持与常见 OpenAI Chat 客户端兼容的函数工具子集。
+
+### 支持的请求字段
+
+- `tools`: `{"type":"function","function":{...}}` 数组
+- `tool_choice`: `"auto"`、`"none"`
+- `messages[*].role: "tool"` 后续轮次
+- `messages[*].tool_call_id` 用于将工具结果绑定回先前的工具调用
+- `max_completion_tokens`: 数字；每次调用的总 completion token 上限（包括 reasoning tokens）。这是当前 OpenAI Chat Completions 的字段名；当同时发送 `max_completion_tokens` 和 `max_tokens` 时优先使用它。
+- `max_tokens`: 数字；为向后兼容而接受的旧别名。当 `max_completion_tokens` 也存在时会被忽略。
+- `temperature`: 数字；尽力而为的采样温度，通过 agent stream-param 通道转发给上游 provider。
+- `top_p`: 数字；尽力而为的核采样，通过 agent stream-param 通道转发给上游 provider。
+
+当任一 token 上限字段被设置时，该值会通过 agent stream-param 通道转发给上游 provider。发送给上游 provider 的实际 wire 字段名由 provider transport 决定：OpenAI 系列端点使用 `max_completion_tokens`，而只接受旧名称的 provider（例如 Mistral 和 Chutes）使用 `max_tokens`。采样字段（`temperature`、`top_p`）遵循相同的 stream-param 通道；基于 ChatGPT 的 Codex Responses 后端会在服务端将它们剥离，因为它使用固定采样。
+
+### 不支持的变体
+
+端点会针对不支持的工具变体返回 `400 invalid_request_error`，包括：
+
+- 非数组 `tools`
+- 非 function 的工具条目
+- 缺少 `tool.function.name`
+- `tool_choice` 变体，例如 `allowed_tools` 和 `custom`
+- `tool_choice: "required"`（运行时尚未强制；在实现硬性强制后将支持）
+- `tool_choice: { "type": "function", "function": { "name": "..." } }`（与 `required` 的理由相同）
+- `tool_choice.function.name` 的值与提供的 `tools` 不匹配
+
+### 非流式工具响应形状
+
+当 agent 决定调用工具时，响应使用：
+
+- `choices[0].finish_reason = "tool_calls"`
+- `choices[0].message.tool_calls[]` 条目包含：
+  - `id`
+  - `type: "function"`
+  - `function.name`
+  - `function.arguments`（JSON 字符串）
+
+工具调用之前的 assistant 评论会在 `choices[0].message.content` 中返回（可能为空）。
+
+### 流式工具响应形状
+
+当 `stream: true` 时，工具调用会以增量 SSE 分块形式发出：
+
+- 初始 assistant role delta
+- 可选的 assistant 评论 deltas
+- 一个或多个携带工具身份和参数片段的 `delta.tool_calls` 分块
+- 最终分块，`finish_reason: "tool_calls"`
+- `data: [DONE]`
+
+如果 `stream_options.include_usage=true`，则会在 `[DONE]` 之前发出一个尾随 usage 分块。
+
+### 工具后续循环
+
+在收到 `tool_calls` 后，客户端应执行请求的函数，并发送一条后续请求，其中包括：
+
+- 先前的 assistant tool-call 消息
+- 一条或多条 `role: "tool"` 消息，且 `tool_call_id` 匹配
+
+这使 gateway agent 运行可以继续同一推理循环，并生成最终的 assistant 答案。
+
 ## Open WebUI 快速设置
 
 用于基本的 Open WebUI 连接：
@@ -276,5 +339,5 @@ curl -sS http://127.0.0.1:18789/v1/embeddings \
 
 ## 相关
 
-- [Configuration reference](/gateway/configuration-reference)
+- [配置参考](/gateway/configuration-reference)
 - [OpenAI](/providers/openai)

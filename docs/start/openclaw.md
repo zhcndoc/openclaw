@@ -120,13 +120,24 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 ```json5
 {
   logging: { level: "info" },
-  agent: {
-    model: "anthropic/claude-opus-4-6",
-    workspace: "~/.openclaw/workspace",
-    thinkingDefault: "high",
-    timeoutSeconds: 1800,
-    // 先从 0 开始；稍后再启用。
-    heartbeat: { every: "0m" },
+  agents: {
+    defaults: {
+      model: { primary: "anthropic/claude-opus-4-6" },
+      workspace: "~/.openclaw/workspace",
+      thinkingDefault: "high",
+      timeoutSeconds: 1800,
+      // 从 0 开始；稍后再启用。
+      heartbeat: { every: "0m" },
+    },
+    list: [
+      {
+        id: "main",
+        default: true,
+        groupChat: {
+          mentionPatterns: ["@openclaw", "openclaw"],
+        },
+      },
+    ],
   },
   channels: {
     whatsapp: {
@@ -134,11 +145,6 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
       groups: {
         "*": { requireMention: true },
       },
-    },
-  },
-  routing: {
-    groupChat: {
-      mentionPatterns: ["@openclaw", "openclaw"],
     },
   },
   session: {
@@ -174,8 +180,10 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 
 ```json5
 {
-  agent: {
-    heartbeat: { every: "30m" },
+  agents: {
+    defaults: {
+      heartbeat: { every: "30m" },
+    },
   },
 }
 ```

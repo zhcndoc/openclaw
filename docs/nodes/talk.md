@@ -85,6 +85,7 @@ Talk 模式有两种运行形态：
           voice: "cedar",
         },
       },
+      instructions: "请热情地说话，并保持回答简短。",
       mode: "realtime",
       transport: "webrtc",
       brain: "agent-consult",
@@ -96,22 +97,23 @@ Talk 模式有两种运行形态：
 默认值：
 
 - `interruptOnSpeech`: true
-- `silenceTimeoutMs`: 未设置时，Talk 会在发送转写内容前保持平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
-- `provider`: 选择当前启用的 Talk 提供方。对于 macOS 本地播放路径，请使用 `elevenlabs`、`mlx` 或 `system`。
-- `providers.<provider>.voiceId`: 对 ElevenLabs 会回退到 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（如果 API key 可用，则回退到第一个 ElevenLabs voice）。
+- `silenceTimeoutMs`: 未设置时，Talk 会在发送转写内容前保持平台默认的停顿窗口（macOS 和 Android 上为 `700 ms`，iOS 上为 `900 ms`）
+- `provider`: 选择当前启用的 Talk 提供方。macOS 本地播放路径可使用 `elevenlabs`、`mlx` 或 `system`。
+- `providers.<provider>.voiceId`: ElevenLabs 会回退到 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（如果 API 密钥可用，则回退到第一个 ElevenLabs 语音）。
 - `providers.elevenlabs.modelId`: 未设置时默认为 `eleven_v3`。
 - `providers.mlx.modelId`: 未设置时默认为 `mlx-community/Soprano-80M-bf16`。
-- `providers.elevenlabs.apiKey`: 回退到 `ELEVENLABS_API_KEY`（或可用时回退到 gateway shell profile）。
-- `consultThinkingLevel`: 可选的 thinking level 覆盖项，用于 realtime `openclaw_agent_consult` 调用背后的完整 OpenClaw agent 运行。
-- `consultFastMode`: 可选的 fast-mode 覆盖项，用于 realtime `openclaw_agent_consult` 调用。
-- `realtime.provider`: 选择当前启用的浏览器/服务端 realtime 语音提供方。WebRTC 使用 `openai`，provider WebSocket 使用 `google`，或者通过 Gateway relay 使用仅 bridge 的提供方。
-- `realtime.providers.<provider>` 存储提供方拥有的 realtime 配置。浏览器只接收一次性或受限制的会话凭据，绝不会接收标准 API key。
-- `realtime.providers.openai.voice`: 内置的 OpenAI Realtime voice id。当前 `gpt-realtime-2` 的 voices 为 `alloy`、`ash`、`ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin` 和 `cedar`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。
-- `realtime.brain`: `agent-consult` 通过 Gateway 策略路由 realtime 工具调用；`direct-tools` 是仅 owner 可用的兼容行为；`none` 用于转写或外部编排。
-- `talk.catalog` 会暴露每个提供方的有效模式、传输方式、brain 策略、realtime 音频格式和能力标志，以便第一方 Talk 客户端避免不受支持的组合。
-- 流式转写提供方通过 `talk.catalog.transcription` 发现。当前 Gateway relay 会沿用 Voice Call 流式提供方配置，直到添加专门的 Talk 转写配置面。
-- `speechLocale`: iOS/macOS 上设备端 Talk 语音识别可选的 BCP 47 locale id。留空则使用设备默认值。
-- `outputFormat`: macOS/iOS 上默认为 `pcm_44100`，Android 上默认为 `pcm_24000`（设置 `mp3_*` 可强制使用 MP3 流）
+- `providers.elevenlabs.apiKey`: 回退到 `ELEVENLABS_API_KEY`（或可用的 gateway shell 配置文件）。
+- `consultThinkingLevel`: 可选的思考级别覆盖项，用于 realtime `openclaw_agent_consult` 调用背后的完整 OpenClaw agent 运行。
+- `consultFastMode`: 可选的快速模式覆盖项，用于 realtime `openclaw_agent_consult` 调用。
+- `realtime.provider`: 选择当前浏览器/服务端实时语音提供方。WebRTC 使用 `openai`，provider WebSocket 使用 `google`，或通过 Gateway relay 使用仅桥接提供方。
+- `realtime.providers.<provider>` 存储由提供方拥有的实时配置。浏览器只接收临时或受限的会话凭据，绝不会接收标准 API 密钥。
+- `realtime.providers.openai.voice`: 内置的 OpenAI Realtime 语音 ID。当前 `gpt-realtime-2` 的语音有 `alloy`、`ash`、`ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin` 和 `cedar`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。
+- `realtime.brain`: `agent-consult` 会通过 Gateway 策略路由实时工具调用；`direct-tools` 是仅所有者兼容行为；`none` 用于转写或外部编排。
+- `realtime.instructions`: 将提供方可见的系统指令附加到 OpenClaw 内置的实时提示词中。用于语音风格和语气；OpenClaw 会保留默认的 `openclaw_agent_consult` 指引。
+- `talk.catalog` 会公开每个提供方有效的模式、传输、brain 策略、实时音频格式和能力标志，以便第一方 Talk 客户端避免使用不受支持的组合。
+- 流式转写提供方通过 `talk.catalog.transcription` 发现。当前的 Gateway relay 在添加专用 Talk 转写配置界面之前，会使用 Voice Call 流式提供方配置。
+- `speechLocale`: iOS/macOS 设备端 Talk 语音识别可选的 BCP 47 语言环境 ID。留空则使用设备默认值。
+- `outputFormat`: macOS/iOS 默认 `pcm_44100`，Android 默认 `pcm_24000`（设置 `mp3_*` 可强制使用 MP3 流式传输）
 
 ## macOS 界面
 

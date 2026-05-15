@@ -36,6 +36,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [ComfyUI](/providers/comfy)
 - [DeepSeek](/providers/deepseek)
+- [ds4 (本地 DeepSeek V4)](/providers/ds4)
 - [ElevenLabs](/providers/elevenlabs)
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)

@@ -88,7 +88,7 @@ sidebarTitle: "代理工作区"
     每日记忆日志（每天一个文件）。建议在会话开始时读取今天和昨天的内容。
   </Accordion>
   <Accordion title="MEMORY.md - 精选长期记忆（可选）">
-    精选长期记忆。仅在主私有会话中加载（不在共享/群组上下文中加载）。有关工作流和自动记忆刷新，请参见[Memory](/concepts/memory)。
+    精选长期记忆：持久的事实、偏好、决定以及简短摘要。将详细日志保留在 `memory/YYYY-MM-DD.md` 中，这样记忆工具就能按需检索它们，而无需将其注入到每个提示中。仅在主的私密会话中加载 `MEMORY.md`（不要在共享/群组上下文中加载）。有关工作流程和自动记忆刷新，请参阅 [Memory](/concepts/memory)。
   </Accordion>
   <Accordion title="skills/ - 工作区技能（可选）">
     工作区特定的技能。该工作区中优先级最高的技能位置。当名称冲突时，会覆盖项目代理技能、个人代理技能、托管技能、捆绑技能以及 `skills.load.extraDirs`。

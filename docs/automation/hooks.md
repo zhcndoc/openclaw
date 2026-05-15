@@ -98,11 +98,11 @@ const handler = async (event) => {
     return;
   }
 
-  console.log(`[my-hook] New command triggered`);
+  console.log(`[my-hook] 新命令被触发`);
   // 你的逻辑写在这里
 
   // 可选地向用户发送消息
-  event.messages.push("Hook executed!");
+  event.messages.push("Hook 已执行！");
 };
 
 export default handler;
@@ -132,7 +132,9 @@ export default handler;
 
 **Gateway 生命周期事件**：`gateway:shutdown` 包含 `reason` 和 `restartExpectedMs`，并在 Gateway 关闭开始时触发。`gateway:pre-restart` 包含相同上下文，但仅在关闭是预期重启的一部分且提供了有限的 `restartExpectedMs` 值时触发。在关闭期间，每个生命周期 hook 的等待都是尽力而为且有界的，因此如果某个处理器卡住，关闭仍会继续。
 
-## Hook 发现
+Between the `gateway:shutdown` (or `gateway:pre-restart`) event and the rest of the shutdown sequence, the gateway also fires a typed `session_end` plugin hook for every session that was still active when the process stopped. The event's `reason` is `shutdown` for a plain SIGTERM/SIGINT stop and `restart` when the close was scheduled as part of an expected restart. This drain is bounded so a slow `session_end` handler cannot block process exit, and sessions that have already been finalized through replace / reset / delete / compaction are skipped to avoid double-firing.
+
+## Hook discovery
 
 Hooks 会按覆盖优先级从低到高在以下目录中发现：
 

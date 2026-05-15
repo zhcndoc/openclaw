@@ -83,7 +83,7 @@ Connect（第一条消息）：
   "id": "c1",
   "method": "connect",
   "params": {
-    "minProtocol": 4,
+    "minProtocol": 3,
     "maxProtocol": 4,
     "client": {
       "id": "openclaw-macos",
@@ -249,16 +249,16 @@ pnpm protocol:check
 
 Swift 生成器会输出：
 
-- 带有 `req`、`res`、`event` 和 `unknown` 分支的 `GatewayFrame` 枚举
+- `GatewayFrame` 枚举，包含 `req`、`res`、`event` 和 `unknown` 分支
 - 强类型的负载结构体/枚举
-- `ErrorCode` 值和 `GATEWAY_PROTOCOL_VERSION`
+- `ErrorCode` 值、`GATEWAY_PROTOCOL_VERSION` 和 `GATEWAY_MIN_PROTOCOL_VERSION`
 
 未知帧类型会以原始负载形式保留，以保证向前兼容。
 
 ## 版本控制 + 兼容性
 
-- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts` 中。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务端会拒绝不匹配的情况。
+- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts`。
+- 客户端发送 `minProtocol` + `maxProtocol`；服务端会拒绝不包含其当前协议版本的范围。
 - Swift 模型会保留未知帧类型，以避免破坏旧客户端。
 
 ## 模式模式与约定

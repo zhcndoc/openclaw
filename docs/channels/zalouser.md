@@ -81,7 +81,7 @@ openclaw directory groups list --channel zalouser --query "work"
 
 `channels.zalouser.dmPolicy` 支持：`pairing | allowlist | open | disabled`（默认：`pairing`）。
 
-`channels.zalouser.allowFrom` 应使用稳定的 Zalo 用户 ID。在交互式设置期间，输入的名称可通过插件的进程内联系人查找解析为 ID。
+`channels.zalouser.allowFrom` 应使用稳定的 Zalo 用户 ID。它也可以引用静态发送者访问组（`accessGroup:<name>`）。在交互式设置期间，输入的名称可以通过插件的进程内联系人查找解析为 ID。
 
 如果原始名称仍保留在配置中，仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，启动才会解析它。若不启用该选项，运行时发送者检查仅基于 ID，原始名称会被忽略，不用于授权。
 
@@ -96,12 +96,12 @@ openclaw directory groups list --channel zalouser --query "work"
 - 通过以下方式限制为允许列表：
   - `channels.zalouser.groupPolicy = "allowlist"`
   - `channels.zalouser.groups`（键应为稳定的群组 ID；仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，名称才会在启动时解析为 ID）
-  - `channels.zalouser.groupAllowFrom`（控制允许群组中哪些发送者可以触发机器人）
+  - `channels.zalouser.groupAllowFrom`（控制允许组中哪些发送者可以触发机器人；可通过 `accessGroup:<name>` 引用静态发送者访问组）
 - 阻止所有群组：`channels.zalouser.groupPolicy = "disabled"`。
-- 配置向导可提示输入群组允许列表。
-- 启动时，仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，OpenClaw 才会将允许列表中的群组/用户名称解析为 ID 并记录映射。
-- 默认情况下，群组允许列表匹配仅基于 ID。除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`，否则无法解析的名称会被忽略，不用于授权。
-- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种“打破玻璃”式的兼容模式，会重新启用可变的启动名称解析和运行时群组名称匹配。
+- 配置向导可以提示设置群组允许列表。
+- 启动时，仅当启用 `channels.zalouser.dangerouslyAllowNameMatching: true` 时，OpenClaw 才会将允许列表中的群组/用户名称解析为 ID，并记录该映射。
+- 群组允许列表匹配默认仅基于 ID。除非启用 `channels.zalouser.dangerouslyAllowNameMatching: true`，否则无法解析的名称会被忽略，且不用于授权。
+- `channels.zalouser.dangerouslyAllowNameMatching: true` 是一种“破窗”兼容模式，会重新启用可变的启动名称解析和运行时群组名称匹配。
 - 如果未设置 `groupAllowFrom`，运行时会回退使用 `allowFrom` 进行群组发送者检查。
 - 发送者检查同时适用于普通群组消息和控制命令（例如 `/new`、`/reset`）。
 
@@ -115,7 +115,7 @@ openclaw directory groups list --channel zalouser --query "work"
       groupAllowFrom: ["1471383327500481391"],
       groups: {
         "123456789": { allow: true },
-        "Work Chat": { allow: true },
+        "工作聊天": { allow: true },
       },
     },
   },
@@ -141,7 +141,7 @@ openclaw directory groups list --channel zalouser --query "work"
       groupPolicy: "allowlist",
       groups: {
         "*": { allow: true, requireMention: true },
-        "Work Chat": { allow: true, requireMention: false },
+        "工作聊天": { allow: true, requireMention: false },
       },
     },
   },

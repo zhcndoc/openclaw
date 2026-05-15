@@ -78,9 +78,29 @@ sidebarTitle: "工具和自定义提供方"
 }
 ```
 
+### `tools.toolsBySender`
+
+限制特定请求者身份可用的工具。这是在 channel 访问控制之上的纵深防御；sender 值必须来自 channel 适配器，而不是消息文本。
+
+```json5
+{
+  tools: {
+    toolsBySender: {
+      "channel:discord:1234567890123": { alsoAllow: ["group:fs"] },
+      "id:guest-user-id": { deny: ["group:runtime", "group:fs"] },
+      "*": { deny: ["exec", "process", "write", "edit", "apply_patch"] },
+    },
+  },
+}
+```
+
+键使用显式前缀：`channel:<channelId>:<senderId>`、`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>`，或 `"*"`. Channel id 是规范的 OpenClaw id；像 `teams` 这样的别名会规范化为 `msteams`。兼容旧版本的不带前缀键仅作为 `id:` 接受。匹配顺序为 channel+id、id、e164、username、name，然后是通配符。
+
+当 `agents.list[].tools.toolsBySender` 匹配时，它会覆盖全局 sender 匹配，即使是空的 `{}` 策略也一样。
+
 ### `tools.elevated`
 
-控制 sandbox 之外的提升权限 exec 访问：
+控制 sandbox 之外的提升权限 `exec` 访问：
 
 ```json5
 {
@@ -111,6 +131,7 @@ sidebarTitle: "工具和自定义提供方"
       cleanupMs: 1800000,
       notifyOnExit: true,
       notifyOnExitEmptySuccess: false,
+      commandHighlighting: false,
       applyPatch: {
         enabled: false,
         allowModels: ["gpt-5.5"],
@@ -371,6 +392,7 @@ sidebarTitle: "工具和自定义提供方"
         model: "minimax/MiniMax-M2.7",
         maxConcurrent: 8,
         runTimeoutSeconds: 900,
+        announceTimeoutMs: 120000,
         archiveAfterMinutes: 60,
       },
     },
@@ -378,16 +400,17 @@ sidebarTitle: "工具和自定义提供方"
 }
 ```
 
-- `model`：派生 sub-agents 的默认模型。如果省略，sub-agents 会继承调用者的模型。
-- `allowAgents`：当请求者 agent 未设置自己的 `subagents.allowAgents` 时，`sessions_spawn` 的默认目标 agent id 允许列表（`["*"]` = 任意；默认：仅同一 agent）。
+- `model`：派生子代理的默认模型。若省略，子代理将继承调用者的模型。
+- `allowAgents`：当请求方 agent 未设置自己的 `subagents.allowAgents` 时，`sessions_spawn` 的目标 agent id 默认允许列表（`["*"]` = 任意；默认：仅同一 agent）。
 - `runTimeoutSeconds`：当工具调用省略 `runTimeoutSeconds` 时，`sessions_spawn` 的默认超时时间（秒）。`0` 表示无超时。
-- 每个 subagent 的工具策略：`tools.subagents.tools.allow` / `tools.subagents.tools.deny`。
+- `announceTimeoutMs`：gateway `agent` 通知投递尝试的单次调用超时（毫秒）。默认：`120000`。重试可能使总等待时间超过单次配置超时。
+- 每个子代理的工具策略：`tools.subagents.tools.allow` / `tools.subagents.tools.deny`。
 
 ---
 
-## Custom providers and base URLs
+## 自定义 provider 和 base URL
 
-OpenClaw uses the built-in model catalog. Custom providers can be added via `models.providers` in the config or `~/.openclaw/agents/<agentId>/agent/models.json`.
+OpenClaw 使用内置的模型目录。可以通过配置中的 `models.providers` 或 `~/.openclaw/agents/<agentId>/agent/models.json` 添加自定义 provider。
 
 ```json5
 {
@@ -467,14 +490,15 @@ OpenClaw uses the built-in model catalog. Custom providers can be added via `mod
     - `request.allowPrivateNetwork`：当为 `true` 时，如果 DNS 解析到私有、CGNAT 或类似地址范围，允许通过 provider HTTP fetch guard 访问 `baseUrl` 的 HTTPS（适用于受信任的自托管 OpenAI 兼容端点，需操作员显式启用）。像 `localhost`、`127.0.0.1` 和 `[::1]` 这样的回环模型 provider 流 URL 会自动允许，除非显式设为 `false`；LAN、tailnet 和私有 DNS 主机仍需要显式启用。WebSocket 会使用相同的 `request` 处理头部/TLS，但不受该 fetch SSRF gate 保护。默认 `false`。
 
   </Accordion>
-  <Accordion title="模型目录条目">
-    - `models.providers.*.models`：显式 provider 模型目录条目。
-    - `models.providers.*.models.*.input`：模型输入模态。纯文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。仅当所选模型被标记为支持图像时，才会将图像附件注入到 agent 回合中。
-    - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。这会覆盖该模型的 provider 级 `contextWindow`。
-    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。这会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时可使用它；`openclaw models list` 在二者不同时时会显示两个值。
-    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选的兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`），OpenClaw 会在运行时强制将其设为 `false`。`baseUrl` 为空或省略时保留默认 OpenAI 行为。
-    - `models.providers.*.models.*.compat.requiresStringContent`：用于仅字符串的 OpenAI 兼容 chat 端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将纯文本 `messages[].content` 数组扁平化为普通字符串。
-    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 负载提示。对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），顶层 `enable_thinking` 使用 `"qwen"`，而 `chat_template_kwargs.enable_thinking` 使用 `"qwen-chat-template"`。
+  <Accordion title="Model catalog entries">
+    - `models.providers.*.models`: 显式 provider 模型目录条目。
+    - `models.providers.*.models.*.input`: 模型输入模态。仅文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型标记为支持图像时，才会将图像附件注入 agent 回合。
+    - `models.providers.*.models.*.contextWindow`: 原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
+    - `models.providers.*.models.*.contextTokens`: 可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时使用它；当二者不同，`openclaw models list` 会显示两个值。
+    - `models.providers.*.models.*.compat.supportsDeveloperRole`: 可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认 OpenAI 行为。
+    - `models.providers.*.models.*.compat.requiresStringContent`: 针对仅支持字符串内容的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前把纯文本 `messages[].content` 数组压平成普通字符串。
+    - `models.providers.*.models.*.compat.strictMessageKeys`: 针对严格的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为仅保留 `role` 和 `content`。
+    - `models.providers.*.models.*.compat.thinkingFormat`: 可选的 thinking 载荷提示。对于顶层 `enable_thinking` 使用 `"qwen"`，对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），则使用 `chat_template_kwargs.enable_thinking` 对应的 `"qwen-chat-template"`。
 
   </Accordion>
   <Accordion title="Amazon Bedrock 发现">
@@ -538,8 +562,8 @@ OpenClaw uses the built-in model catalog. Custom providers can be added via `mod
       env: { KIMI_API_KEY: "sk-..." },
       agents: {
         defaults: {
-          model: { primary: "kimi/kimi-code" },
-          models: { "kimi/kimi-code": { alias: "Kimi Code" } },
+          model: { primary: "kimi/kimi-for-coding" },
+          models: { "kimi/kimi-for-coding": { alias: "Kimi Code" } },
         },
       },
     }

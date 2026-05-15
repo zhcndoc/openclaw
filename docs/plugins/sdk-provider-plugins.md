@@ -26,8 +26,8 @@ read_when:
 ## 操作流程
 
 <Steps>
-  <Step title="Package and manifest">
-    ### 第 1 步：Package and manifest
+  <Step title="Package 和 manifest">
+    ### 第 1 步：Package 和 manifest
 
     <CodeGroup>
     ```json package.json
@@ -95,7 +95,7 @@ read_when:
 
   </Step>
 
-  <Step title="Register the provider">
+  <Step title="注册提供方">
     一个最小的文本提供方需要 `id`、`label`、`auth` 和 `catalog`。
     `catalog` 是提供方拥有的运行时/配置钩子；它可以调用实时
     厂商 API，并返回 `models.providers` 条目。
@@ -354,9 +354,9 @@ read_when:
       每个家族构建器都由同一软件包导出的更底层公共辅助函数组合而成；当某个提供方需要脱离通用模式时，
       你可以直接使用这些函数：
 
-      - `openclaw/plugin-sdk/provider-model-shared` - `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`, `normalizeNativeXaiModelId`).
+      - `openclaw/plugin-sdk/provider-model-shared` - `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`).
       - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
-      - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("gemini")`, underlying Gemini schema helpers (`normalizeGeminiToolSchemas`, `inspectGeminiToolSchemas`), and xAI compat helpers (`resolveXaiModelCompatPatch()`, `applyXaiModelCompat(model)`). The bundled xAI plugin uses `normalizeResolvedModel` + `contributeResolvedModelCompat` with these to keep xAI rules owned by the provider.
+      - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("gemini")`, and underlying Gemini schema helpers (`normalizeGeminiToolSchemas`, `inspectGeminiToolSchemas`).
 
       某些 stream 辅助函数会刻意保持为提供方本地私有。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在自己的公共 `api.ts` / `contract-api.ts` 接口边界内，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件也将原生 xAI Responses 形状保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning 负载移除）。
 
@@ -493,8 +493,8 @@ read_when:
 
   </Step>
 
-  <Step title="Add extra capabilities (optional)">
-    ### 第 5 步：Add extra capabilities
+  <Step title="添加额外能力（可选）">
+    ### 第 5 步：添加额外能力
 
     一个提供方插件可以在文本推理之外，同时注册语音、实时转写、实时
     语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将其归类为
@@ -544,7 +544,7 @@ read_when:
         对提供方 HTTP 失败请使用 `assertOkOrThrowProviderError(...)`，这样插件可以共享
         有上限的错误正文读取、JSON 错误解析和 request-id 后缀。
       </Tab>
-      <Tab title="Realtime transcription">
+      <Tab title="实时转写">
         优先使用 `createRealtimeTranscriptionWebSocketSession(...)` - 共享
         辅助函数会处理代理捕获、重连退避、关闭刷新、就绪
         握手、音频排队和关闭事件诊断。你的插件
@@ -697,8 +697,8 @@ read_when:
 
   </Step>
 
-  <Step title="Test">
-    ### 第 6 步：Test
+  <Step title="测试">
+    ### 第 6 步：测试
 
     ```typescript src/provider.test.ts
     import { describe, it, expect } from "vitest";
@@ -765,7 +765,7 @@ clawhub package publish your-org/your-plugin
 | --------- | ------------ | ----------------------------------------------- |
 | `simple`  | 第一轮       | 纯 API 密钥提供者                               |
 | `profile` | simple 之后 | 由认证配置文件控制的提供者                      |
-| `paired`  | profile 之后 | 合成多个相关条目                                |
+| `paired`   | profile 之后 | 合成多个相关条目                                |
 | `late`    | 最后一轮     | 覆盖现有提供者（冲突时获胜）                    |
 
 ## 下一步

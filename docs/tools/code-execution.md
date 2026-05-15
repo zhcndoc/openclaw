@@ -9,14 +9,14 @@ title: "代码执行"
 
 `code_execution` 在 xAI 的 Responses API 上运行受沙箱保护的远程 Python 分析。它由捆绑的 `xai` 插件（在 `tools` 契约下）注册，并路由到与 `x_search` 相同的 `https://api.x.ai/v1/responses` 端点。
 
-| 属性               | 值                                                             |
-| ------------------ | -------------------------------------------------------------- |
-| 工具名称           | `code_execution`                                               |
-| 提供方插件         | `xai`（捆绑，`enabledByDefault: true`）                       |
-| 认证               | `XAI_API_KEY` 或 `plugins.entries.xai.config.webSearch.apiKey` |
-| 默认模型           | `grok-4-1-fast`                                                |
-| 默认超时           | 30 秒                                                          |
-| 默认 `maxTurns`    | 未设置（xAI 会应用其自身的内部限制）                           |
+| Property           | Value                                                                             |
+| ------------------ | --------------------------------------------------------------------------------- |
+| Tool name          | `code_execution`                                                                  |
+| Provider plugin    | `xai` (捆绑，`enabledByDefault: true`)                                         |
+| Auth               | xAI 认证配置文件、`XAI_API_KEY`，或 `plugins.entries.xai.config.webSearch.apiKey` |
+| Default model      | `grok-4-1-fast`                                                                   |
+| Default timeout    | 30 秒                                                                             |
+| Default `maxTurns` | 未设置（xAI 会应用其内部限制）                                                      |
 
 这与本地的 [`exec`](/tools/exec) 不同：
 
@@ -37,7 +37,7 @@ title: "代码执行"
 
 <Steps>
   <Step title="提供 xAI API 密钥">
-    在 gateway 环境中设置 `XAI_API_KEY`，或在 xAI 插件下配置该密钥，这样同一凭据就可用于 `code_execution`、`x_search`、web search 以及其他 xAI 工具：
+    为 `code_execution` 和 `x_search` 运行 `openclaw onboard --auth-choice xai-api-key`，或者设置 `XAI_API_KEY` / 在 xAI 插件下配置密钥，当你还希望 Grok web 搜索使用相同凭据时：
 
     ```bash
     export XAI_API_KEY=xai-...
@@ -117,12 +117,12 @@ title: "代码执行"
 
 ## 错误
 
-当工具在没有认证信息的情况下运行时，它会返回一个结构化的 `missing_xai_api_key` 错误，指向环境变量和配置路径。该错误是 JSON，而不是抛出的异常，因此代理可以自行修正：
+当工具在没有认证的情况下运行时，它会返回一个结构化的 `missing_xai_api_key` 错误，指向认证配置文件、环境变量和配置选项。该错误是 JSON 格式，而不是抛出的异常，因此代理可以自行纠正：
 
 ```json
 {
   "error": "missing_xai_api_key",
-  "message": "code_execution 需要 xAI API 密钥。请在 Gateway 环境中设置 XAI_API_KEY，或配置 plugins.entries.xai.config.webSearch.apiKey。",
+  "message": "code_execution 需要一个 xAI API 密钥。运行 openclaw onboard --auth-choice xai-api-key，在 Gateway 环境中设置 XAI_API_KEY，或配置 plugins.entries.xai.config.webSearch.apiKey。",
   "docs": "https://docs.openclaw.ai/tools/code-execution"
 }
 ```

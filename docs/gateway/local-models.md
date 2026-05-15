@@ -9,18 +9,22 @@ title: "本地模型"
 
 本地模型是可行的。它们也提高了硬件、上下文长度和提示注入防护的门槛——小型或高度量化的显卡会截断上下文并泄露安全边界。这一页是面向高端本地栈和自定义 OpenAI 兼容本地服务器的强意见指南。若想获得最少摩擦的上手体验，请从 [LM Studio](/providers/lmstudio) 或 [Ollama](/providers/ollama) 开始，并运行 `openclaw onboard`。
 
+对于应仅在所选模型需要时才启动的本地服务器，请参见
+[本地模型服务](/gateway/local-model-services)。
+
 ## 硬件门槛
 
 尽量拉高配置：**至少 2 台满载的 Mac Studio，或等效的 GPU 主机（约 3 万美元以上）**，才能舒适地运行 agent 循环。单张 **24 GB** GPU 只能在更高延迟下处理较轻的提示。始终使用你能部署的**最大 / 完整尺寸变体**；小型或严重量化的 checkpoint 会增加提示注入风险（见 [安全性](/gateway/security)）。
 
 ## 选择后端
 
-| 后端                                                 | 适用场景                                                                   |
-| ---------------------------------------------------- | -------------------------------------------------------------------------- |
-| [LM Studio](/providers/lmstudio)                     | 初次本地搭建、GUI 加载器、原生 Responses API                               |
-| [Ollama](/providers/ollama)                          | CLI 工作流、模型库、无人值守的 systemd 服务                                |
-| MLX / vLLM / SGLang                                  | 通过 OpenAI 兼容 HTTP 端点进行高吞吐自托管服务                             |
-| LiteLLM / OAI-proxy / 自定义 OpenAI 兼容代理         | 你在前面接了另一个模型 API，并且需要让 OpenClaw 将其视为 OpenAI           |
+| Backend                                              | Use when                                                                    |
+| ---------------------------------------------------- | --------------------------------------------------------------------------- |
+| [ds4](/providers/ds4)                                | Local DeepSeek V4 Flash on macOS Metal with OpenAI-compatible tool calls    |
+| [LM Studio](/providers/lmstudio)                     | First-time local setup, GUI loader, native Responses API                    |
+| LiteLLM / OAI-proxy / custom OpenAI-compatible proxy | You front another model API and need OpenClaw to treat it as OpenAI         |
+| MLX / vLLM / SGLang                                  | High-throughput self-hosted serving with an OpenAI-compatible HTTP endpoint |
+| [Ollama](/providers/ollama)                          | CLI workflow, model library, hands-off systemd service                      |
 
 当后端支持 Responses API 时（LM Studio 支持），请使用 Responses API（`api: "openai-responses"`）。否则请坚持使用 Chat Completions（`api: "openai-completions"`）。
 
@@ -272,29 +276,28 @@ MLX（`mlx_lm.server`）、vLLM、SGLang、LiteLLM、OAI-proxy 或自定义网�
 
 ## 故障排查
 
-- Gateway 能连到代理吗？`curl http://127.0.0.1:1234/v1/models`.
-- LM Studio 模型是否已卸载？重新加载；冷启动是常见的“卡住”原因。
-- 本地服务器显示 `terminated`、`ECONNRESET`，或者在回合中途关闭流？
-  OpenClaw 会在诊断中记录低基数的 `model.call.error.failureKind` 以及
+- 网关能访问代理吗？`curl http://127.0.0.1:1234/v1/models`。
+- LM Studio 模型已卸载？重新加载；冷启动是常见的“卡住”原因。
+- 本地服务器显示 `terminated`、`ECONNRESET`，或在处理中途关闭流？
+  OpenClaw 会在 diagnostics 中记录低基数的 `model.call.error.failureKind`，以及
   OpenClaw 进程的 RSS/heap 快照。对于 LM Studio/Ollama
   的内存压力，请将该时间戳与服务器日志或 macOS 崩溃 /
-  jetsam 日志对照，以确认模型服务器是否已被终止。
-- OpenClaw 会根据检测到的模型窗口，或在 `agents.defaults.contextTokens` 降低有效窗口时根据未封顶的模型窗口来推导上下文窗口预检阈值。低于 20% 时会发出警告，并设有 **8k** 下限。硬性阻止使用 10% 阈值并设有 **4k** 下限，同时会封顶到有效上下文窗口，这样过大的模型元数据就不会拒绝原本有效的用户上限。如果触发了该预检，请提高服务器/模型上下文限制或选择更大的模型。
-- 上下文错误？降低 `contextWindow` 或提高你的服务器限制。
+  jetsam 日志对照，以确认模型服务器是否被终止。
+- OpenClaw 会根据检测到的模型窗口，或在 `agents.defaults.contextTokens` 降低有效窗口时根据未封顶的模型窗口推导上下文窗口预检阈值。它会在低于 20% 时发出警告，并设有 **8k** 下限。硬阻止使用 10% 阈值并设有 **4k** 下限，同时上限为有效上下文窗口，因此过大的模型元数据不会拒绝本来有效的用户上限。如果触发了该预检，请提高服务器/模型上下文限制，或选择更大的模型。
+- 上下文错误？降低 `contextWindow` 或提高服务器限制。
 - OpenAI 兼容服务器返回 `messages[].content ... expected a string`？
   在该模型条目上添加 `compat.requiresStringContent: true`。
-- 直接调用小型 `/v1/chat/completions` 可以，但 `openclaw infer model run --local`
-  在 Gemma 或其他本地模型上失败？先检查 provider URL、模型引用、认证
-  标记和服务器日志；本地 `model run` 不包含 agent 工具。
-  如果本地 `model run` 成功但更大的 agent 回合失败，请通过 `localModelLean` 或 `compat.supportsTools: false` 降低 agent
-  工具面。
-- 工具调用以原始 JSON/XML/ReAct 文本出现，或者 provider 返回了一个
-  空的 `tool_calls` 数组？不要加一个把 assistant
-  文本盲目转换为工具执行的代理。先修复服务器 chat template/parser。若
-  模型只有在强制使用工具时才能工作，请添加上面的按模型
-  `params.extra_body.tool_choice: "required"` 覆盖，并且只在每一轮都预期会调用工具的会话中使用该模型
-  条目。
-- 安全性：本地模型会跳过提供方侧过滤；请保持 agent 范围狭窄并开启 compaction，以限制提示注入的影响范围。
+- OpenAI 兼容服务器返回 `validation.keys`，或者提示消息条目只允许 `role` 和 `content`？
+  在该模型条目上添加 `compat.strictMessageKeys: true`。
+- 直接的微小 `/v1/chat/completions` 调用可用，但 `openclaw infer model run --local`
+  在 Gemma 或其他本地模型上失败？先检查 provider URL、model ref、auth
+  标记和服务器日志；本地 `model run` 不包含 agent tools。
+  如果本地 `model run` 成功但更大的 agent 轮次失败，请通过 `localModelLean` 或 `compat.supportsTools: false`
+  缩减 agent 工具面。
+- 工具调用显示为原始 JSON/XML/ReAct 文本，或者 provider 返回一个
+  空的 `tool_calls` 数组？不要添加一个会把 assistant 文本盲目转换为工具执行的代理。先修复服务器的 chat template/parser。如果模型只有在强制使用工具时才可用，请在上方为该模型添加按模型级别的
+  `params.extra_body.tool_choice: "required"` 覆盖，并且只在每一轮都预期会有工具调用的会话中使用该模型条目。
+- 安全性：本地模型会跳过 provider 侧过滤；请保持 agent 范围尽量窄，并开启 compaction 以限制提示注入的影响范围。
 
 ## 相关
 

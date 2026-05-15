@@ -109,7 +109,7 @@ OpenClaw 提供了一个静态的 Cerebras 目录，与公开的 OpenAI 兼容�
 ```
 
 <Note>
-  如果 Gateway 以守护进程方式运行（launchd、systemd、Docker），请确保 `CEREBRAS_API_KEY` 对该进程可用——例如放在 `~/.openclaw/.env` 中，或者通过 `env.shellEnv` 提供。仅存在于 `~/.profile` 中的密钥不会帮助受管理的服务，除非环境变量被单独导入。
+  如果 Gateway 以守护进程方式运行（launchd、systemd、Docker），请确保 `CEREBRAS_API_KEY` 对该进程可用——例如放在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。仅在交互式 shell 中导出的密钥不会对托管服务生效，除非该环境变量被单独导入。
 </Note>
 
 ## 相关内容

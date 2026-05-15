@@ -23,7 +23,7 @@ Feishu/Lark 是一个一体化协作平台，团队可以在这里聊天、共�
   ```bash
   openclaw channels login --channel feishu
   ```
-  使用飞书/Lark 手机应用扫描二维码，自动创建飞书/Lark 机器人。
+  选择手动设置以粘贴来自 Feishu Open Platform 的 App ID 和 App Secret，或者选择二维码设置来自动创建机器人。如果国内版飞书移动应用对二维码没有反应，请重新运行设置并选择手动设置。
   </Step>
   
   <Step title="设置完成后，重启网关以应用更改">
@@ -211,7 +211,14 @@ openclaw pairing list feishu
 5. 确保网关正在运行：`openclaw gateway status`
 6. 检查日志：`openclaw logs --follow`
 
-### App Secret 泄露
+### QR setup does not react in the Feishu mobile app
+
+1. 重新运行设置：`openclaw channels login --channel feishu`
+2. 选择手动设置
+3. 在 Feishu Open Platform 中创建自建应用并复制其 App ID 和 App Secret
+4. 将这些凭据粘贴到设置向导中
+
+### App Secret leaked
 
 1. 在飞书开放平台 / Lark 开发者平台重置 App Secret
 2. 更新配置中的值

@@ -1,9 +1,9 @@
 ---
 summary: "CLI 后端：带可选 MCP 工具桥接的本地 AI CLI 回退"
 read_when:
-  - 当你希望在 API 提供商失败时有一个可靠的回退方案
-  - 当你正在运行 Codex CLI 或其他本地 AI CLI，并希望复用它们
-  - 当你想了解用于 CLI 后端工具访问的 MCP 回环桥接时
+  - 你想要在 API 提供商失败时有一个可靠的回退
+  - 你正在运行本地 AI CLI，并希望复用它们
+  - 你想了解 CLI 后端工具访问的 MCP 回环桥接
 title: "CLI 后端"
 ---
 
@@ -28,10 +28,10 @@ title: "CLI 后端"
 
 ## 适合初学者的快速开始
 
-你可以**无需任何配置**直接使用 Codex CLI（捆绑的 OpenAI 插件会注册一个默认后端）：
+你可以在**无需任何配置**的情况下使用 Claude Code CLI（捆绑的 Anthropic 插件会注册一个默认后端）：
 
 ```bash
-openclaw agent --message "hi" --model codex-cli/gpt-5.5
+openclaw agent --message "hi" --model claude-cli/claude-sonnet-4-6
 ```
 
 如果你的网关运行在 launchd/systemd 下且 PATH 很简洁，只需添加命令路径：
@@ -41,8 +41,8 @@ openclaw agent --message "hi" --model codex-cli/gpt-5.5
   agents: {
     defaults: {
       cliBackends: {
-        "codex-cli": {
-          command: "/opt/homebrew/bin/codex",
+        "claude-cli": {
+          command: "/opt/homebrew/bin/claude",
         },
       },
     },
@@ -65,11 +65,11 @@ openclaw agent --message "hi" --model codex-cli/gpt-5.5
     defaults: {
       model: {
         primary: "anthropic/claude-opus-4-6",
-        fallbacks: ["codex-cli/gpt-5.5"],
+        fallbacks: ["claude-cli/claude-sonnet-4-6"],
       },
       models: {
         "anthropic/claude-opus-4-6": { alias: "Opus" },
-        "codex-cli/gpt-5.5": {},
+        "claude-cli/claude-sonnet-4-6": {},
       },
     },
   },
@@ -89,8 +89,8 @@ openclaw agent --message "hi" --model codex-cli/gpt-5.5
 agents.defaults.cliBackends
 ```
 
-每个条目都以一个 **provider id**（例如 `codex-cli`、`my-cli`）作为键。
-provider id 会成为你的模型引用左侧的一部分：
+每个条目都以 **provider id** 为键（例如 `claude-cli`、`my-cli`）。
+provider id 会成为你的模型引用的左侧部分：
 
 ```
 <provider>/<model>
@@ -103,9 +103,6 @@ provider id 会成为你的模型引用左侧的一部分：
   agents: {
     defaults: {
       cliBackends: {
-        "codex-cli": {
-          command: "/opt/homebrew/bin/codex",
-        },
         "my-cli": {
           command: "my-cli",
           args: ["--json"],
@@ -141,22 +138,20 @@ provider id 会成为你的模型引用左侧的一部分：
 
 ## 工作原理
 
-1. **根据 provider 前缀选择后端**（`codex-cli/...`）。
+1. **根据 provider 前缀选择后端**（`claude-cli/...`）。
 2. **使用相同的 OpenClaw 提示词 + 工作区上下文构建系统提示**。
-3. **执行 CLI**，带上会话 id（如果支持），以便历史记录保持一致。
-   捆绑的 `claude-cli` 后端会为每个 OpenClaw 会话保持一个 Claude stdio 进程存活，并通过 stream-json stdin 发送后续轮次。
+3. **以会话 id 执行 CLI**（如果支持），以保持历史一致。
+   捆绑的 `claude-cli` 后端会为每个 OpenClaw 会话保持一个 Claude stdio 进程存活，
+   并通过 stream-json stdin 发送后续轮次。
 4. **解析输出**（JSON 或纯文本）并返回最终文本。
-5. **按后端持久化会话 id**，以便后续调用复用同一个 CLI 会话。
+5. **按后端持久化会话 id**，因此后续调用会复用同一个 CLI 会话。
 
 <Note>
 捆绑的 Anthropic `claude-cli` 后端现已重新支持。Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法再次被允许，因此除非 Anthropic 发布新的政策，否则 OpenClaw 会将 `claude -p` 用法视为此集成的授权用法。
 </Note>
 
-捆绑的 OpenAI `codex-cli` 后端会通过 Codex 的 `model_instructions_file` 配置覆盖（`-c
-model_instructions_file="..."`）传递 OpenClaw 的系统提示。Codex 不提供类似 Claude 的
-`--append-system-prompt` 标志，因此 OpenClaw 会在每个新的 Codex CLI 会话中将组装好的提示写入一个临时文件。
-
-捆绑的 Anthropic `claude-cli` 后端会以两种方式接收 OpenClaw 的 skills 快照：一是附加到系统提示中的精简版 OpenClaw skills 目录，二是通过 `--plugin-dir` 传入的临时 Claude Code 插件。该插件只包含该 agent/会话符合条件的 skills，因此 Claude Code 的原生 skill 解析器看到的是与 OpenClaw 原本会在提示中展示的相同过滤结果。skill 的环境变量/API 密钥覆盖仍会由 OpenClaw 在运行时应用到子进程环境。
+捆绑的 Anthropic `claude-cli` 后端会通过两种方式接收 OpenClaw 的 skills 快照：
+一是附加到系统提示中的精简 OpenClaw skills 目录，二是通过 `--plugin-dir` 传递的临时 Claude Code 插件。该插件仅包含该 agent/session 允许使用的 skills，因此 Claude Code 的原生 skill 解析器看到的是与 OpenClaw 原本在提示中公布的相同的过滤后集合。skills 的环境变量/API key 覆盖仍会由 OpenClaw 在运行时应用到子进程环境中。
 
 Claude CLI 也有自己的非交互权限模式。OpenClaw 将其映射到现有的执行策略，而不是添加 Claude 专属配置：当有效请求的执行策略为 YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）时，OpenClaw 会添加 `--permission-mode bypassPermissions`。
 每个 agent 的 `agents.list[].tools.exec` 设置会覆盖该 agent 的全局 `tools.exec`。如果你想强制使用不同的 Claude 模式，可以在 `agents.defaults.cliBackends.claude-cli.args` 和匹配的 `resumeArgs` 下设置显式的原始后端参数，例如 `--permission-mode default` 或 `--permission-mode acceptEdits`。
@@ -236,9 +231,9 @@ OpenClaw 会把 base64 图片写入临时文件。如果设置了 `imageArg`，�
 
 ## 输入 / 输出
 
-- `output: "json"`（默认）会尝试解析 JSON 并提取文本 + 会话 id。
-- 对于 Gemini CLI 的 JSON 输出，当 `usage` 缺失或为空时，OpenClaw 会从 `response` 读取回复文本，并从 `stats` 读取用量信息。
-- `output: "jsonl"` 会解析 JSONL 流（例如 Codex CLI `--json`），并在存在时提取最终的 agent 消息以及会话标识符。
+- `output: "json"` (默认) 会尝试解析 JSON 并提取文本 + 会话 id。
+- 对于 Gemini CLI 的 JSON 输出，当 `usage` 缺失或为空时，OpenClaw 会从 `response` 中读取回复文本，并从 `stats` 中读取用量信息。
+- `output: "jsonl"` 会解析 JSONL 流，并在存在时提取最终的 agent 消息和会话标识符。
 - `output: "text"` 会将 stdout 视为最终响应。
 
 输入模式：
@@ -249,16 +244,19 @@ OpenClaw 会把 base64 图片写入临时文件。如果设置了 `imageArg`，�
 
 ## 默认值（插件所有）
 
-捆绑的 OpenAI 插件还会为 `codex-cli` 注册一个默认值：
+捆绑的 CLI 后端默认值属于其所属插件。例如，
+Anthropic 负责 `claude-cli`，Google 负责 `google-gemini-cli`。OpenAI Codex
+agent 运行通过 `openai/*` 使用 Codex app-server harness；OpenClaw
+不再注册捆绑的 `codex-cli` 后端。
 
-- `command: "codex"`
-- `args: ["exec","--json","--color","never","--sandbox","workspace-write","--skip-git-repo-check"]`
-- `resumeArgs: ["exec","resume","{sessionId}","-c","sandbox_mode=\"workspace-write\"","--skip-git-repo-check"]`
+捆绑的 Anthropic 插件为 `claude-cli` 注册了一个默认值：
+
+- `command: "claude"`
+- `args: ["-p","--output-format","stream-json","--include-partial-messages","--verbose", ...]`
 - `output: "jsonl"`
-- `resumeOutput: "text"`
+- `input: "stdin"`
 - `modelArg: "--model"`
-- `imageArg: "--image"`
-- `sessionMode: "existing"`
+- `sessionMode: "always"`
 
 捆绑的 Google 插件还会为 `google-gemini-cli` 注册一个默认值：
 
@@ -325,9 +323,6 @@ CLI 后端不会直接接收 OpenClaw 工具调用，但后端可以通过
 当前捆绑行为：
 
 - `claude-cli`：生成严格的 MCP 配置文件
-- `codex-cli`：为 `mcp_servers` 提供内联配置覆盖；生成的
-  OpenClaw 回环服务器会使用 Codex 的按服务器工具审批模式标记，
-  因此 MCP 调用不会因本地审批提示而停滞
 - `google-gemini-cli`：生成 Gemini 系统设置文件
 
 启用 bundle MCP 后，OpenClaw 会：
@@ -350,20 +345,15 @@ slug 生成和活动记忆回忆，会在运行结束时请求清理，因此 st
 
 ## 限制
 
-- **不直接调用 OpenClaw 工具。** OpenClaw 不会将工具调用注入
-  CLI 后端协议。只有当后端选择接入 `bundleMcp: true` 时，后端才会看到网关工具。
-- **流式传输因后端而异。** 有些后端流式输出 JSONL；另一些则会缓冲
-  到退出为止。
+- **不直接调用 OpenClaw 工具。** OpenClaw 不会向 CLI 后端协议注入工具调用。只有在后端选择接入 `bundleMcp: true` 时，后端才会看到网关工具。
+- **流式传输由后端决定。** 有些后端流式输出 JSONL；另一些则会缓冲直到退出。
 - **结构化输出** 取决于 CLI 的 JSON 格式。
-- **Codex CLI 会话** 通过文本输出恢复（不是 JSONL），其结构化程度
-  低于初始的 `--json` 运行。OpenClaw 会话仍可正常工作。
 
 ## 故障排除
 
 - **未找到 CLI**：将 `command` 设置为完整路径。
 - **模型名称错误**：使用 `modelAliases` 将 `provider/model` 映射到 CLI 模型。
-- **没有会话连续性**：确保已设置 `sessionArg`，并且 `sessionMode` 不是
-  `none`（Codex CLI 目前无法使用 JSON 输出恢复）。
+- **没有会话连续性**：确保已设置 `sessionArg`，且 `sessionMode` 不是 `none`。
 - **图片被忽略**：设置 `imageArg`（并确认 CLI 支持文件路径）。
 
 ## 相关

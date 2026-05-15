@@ -50,7 +50,8 @@ Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docke
     设置脚本会自动运行入门配置。它会：
 
     - 提示输入提供商 API 密钥
-    - 生成网关令牌并写入 `.env`
+    - 生成网关令牌并将其写入 `.env`
+    - 创建 auth-profile 机密密钥目录
     - 通过 Docker Compose 启动网关
 
     在设置期间，预启动入门和配置写入会直接通过
@@ -251,13 +252,13 @@ Docker 主机请使用已发布的 Gateway URL、Tailscale 或广域 DNS-SD。
 
 ### 存储与持久化
 
-Docker Compose 将 `OPENCLAW_CONFIG_DIR` 绑定挂载到 `/home/node/.openclaw`，并将
-`OPENCLAW_WORKSPACE_DIR` 挂载到 `/home/node/.openclaw/workspace`，因此这些路径
-在容器替换后仍会保留。当任一变量未设置时，打包的
-`docker-compose.yml` 会回退到 `${HOME}/.openclaw`（以及
-工作区挂载的 `${HOME}/.openclaw/workspace`），如果 `HOME` 本身也缺失，则回退到
-`/tmp/.openclaw`。这样可以避免在裸环境中执行 `docker compose up` 时
-出现空源卷规范。
+Docker Compose 将 `OPENCLAW_CONFIG_DIR` 挂载到 `/home/node/.openclaw`，
+将 `OPENCLAW_WORKSPACE_DIR` 挂载到 `/home/node/.openclaw/workspace`，并将
+`OPENCLAW_AUTH_PROFILE_SECRET_DIR` 挂载到 `/home/node/.config/openclaw`，因此这些
+路径在容器替换后仍会保留。当任一变量未设置时，捆绑的
+`docker-compose.yml` 会回退到 `${HOME}` 下；如果 `HOME` 本身也缺失，则回退到
+`/tmp`。这样可以避免 `docker compose up` 在裸环境中输出空源
+卷规范。
 
 该挂载的配置目录是 OpenClaw 存放以下内容的地方：
 
@@ -265,7 +266,9 @@ Docker Compose 将 `OPENCLAW_CONFIG_DIR` 绑定挂载到 `/home/node/.openclaw`�
 - 用于保存的提供商 OAuth/API 密钥认证的 `agents/<agentId>/agent/auth-profiles.json`
 - 基于环境变量的运行时机密，如 `OPENCLAW_GATEWAY_TOKEN` 的 `.env`
 
-已安装的可下载插件会将其包状态存储在已挂载的 OpenClaw home 下，因此插件安装记录和包根目录会在容器替换后保留。Gateway 启动不会生成内置插件依赖树。
+auth-profile 机密密钥目录存储用于 OAuth 支持的 auth profile 令牌材料的本地加密密钥。请将其与 Docker 主机状态一起保存，但要与 `OPENCLAW_CONFIG_DIR` 分开。
+
+已安装的可下载插件会将其包状态保存在挂载的 OpenClaw home 下，因此插件安装记录和包根目录会在容器替换后保留。网关启动不会生成内置插件的依赖树。
 
 关于 VM 部署的完整持久化细节，请参见
 [Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where)。
@@ -303,9 +306,10 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     ./scripts/docker/setup.sh
     ```
 
-    该脚本只会在沙箱前置条件通过后才挂载 `docker.sock`。如果
+    脚本仅在沙箱前置条件通过后才会挂载 `docker.sock`。如果
     沙箱设置无法完成，脚本会将 `agents.defaults.sandbox.mode`
-    重置为 `off`。
+    重置为 `off`。在 OpenClaw 沙箱处于活动状态时，Codex code-mode 回合仍然仅受限于 Codex
+    `workspace-write`；不要将宿主机 Docker socket 挂载到代理沙箱容器中。
 
   </Accordion>
 
@@ -393,16 +397,17 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     默认镜像以安全优先为原则，并以非 root 的 `node` 运行。若要获得功能更完整的
     容器：
 
-    1. **持久化 `/home/node`**：`export OPENCLAW_HOME_VOLUME="openclaw_home"`
-    2. **预装系统依赖**：`export OPENCLAW_DOCKER_APT_PACKAGES="git curl jq"`
-    3. **安装 Playwright 浏览器**：
+    1. **持久化 `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
+    2. **内置系统依赖**: `export OPENCLAW_DOCKER_APT_PACKAGES="git curl jq"`
+    3. **内置 Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`
+    4. **或者将 Playwright 浏览器安装到持久化卷中**:
        ```bash
        docker compose run --rm openclaw-cli \
          node /app/node_modules/playwright-core/cli.js install chromium
        ```
-    4. **持久化浏览器下载**：设置
-       `PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright` 并使用
-       `OPENCLAW_HOME_VOLUME` 或 `OPENCLAW_EXTRA_MOUNTS`。
+    5. **持久化浏览器下载**：使用 `OPENCLAW_HOME_VOLUME` 或
+       `OPENCLAW_EXTRA_MOUNTS`。OpenClaw 会在 Linux 上自动检测 Docker 镜像中
+       由 Playwright 管理的 Chromium。
 
   </Accordion>
 

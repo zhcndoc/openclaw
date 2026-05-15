@@ -124,17 +124,18 @@ OpenClaw 运行在 Docker 中，但 Docker 不是事实来源。
 
 | 组件                | 位置                                                   | 持久化机制             | 说明                                                          |
 | ------------------- | ------------------------------------------------------ | ---------------------- | ------------------------------------------------------------- |
-| Gateway 配置        | `/home/node/.openclaw/`                                | 主机卷挂载             | 包含 `openclaw.json`、`.env`                                  |
-| 模型认证配置        | `/home/node/.openclaw/agents/`                         | 主机卷挂载             | `agents/<agentId>/agent/auth-profiles.json`（OAuth、API 密钥） |
-| 技能配置            | `/home/node/.openclaw/skills/`                         | 主机卷挂载             | 技能级状态                                                    |
-| Agent 工作区        | `/home/node/.openclaw/workspace/`                      | 主机卷挂载             | 代码和 agent 工件                                             |
-| WhatsApp 会话       | `/home/node/.openclaw/`                                | 主机卷挂载             | 保留二维码登录                                                |
-| Gmail 密钥环        | `/home/node/.openclaw/`                                | 主机卷 + 密码          | 需要 `GOG_KEYRING_PASSWORD`                                   |
-| 插件包              | `/home/node/.openclaw/npm`, `/home/node/.openclaw/git` | 主机卷挂载             | 可下载插件包根目录                                            |
-| 外部二进制文件      | `/usr/local/bin/`                                      | Docker 镜像            | 必须在构建时烘焙进去                                          |
-| Node 运行时         | 容器文件系统                                           | Docker 镜像            | 每次镜像构建时都会重新构建                                    |
-| OS 包               | 容器文件系统                                           | Docker 镜像            | 不要在运行时安装                                              |
-| Docker 容器         | 临时                                                   | 可重启                 | 可安全销毁                                                    |
+| Gateway 配置      | `/home/node/.openclaw/`                                | Host volume mount      | 包含 `openclaw.json`、`.env`                              |
+| 模型认证配置文件 | `/home/node/.openclaw/agents/`                         | Host volume mount      | `agents/<agentId>/agent/auth-profiles.json`（OAuth、API keys） |
+| 认证配置文件密钥    | `/home/node/.config/openclaw/`                         | Host volume mount      | 用于 OAuth 认证配置文件令牌材料的本地加密密钥    |
+| 技能配置       | `/home/node/.openclaw/skills/`                         | Host volume mount      | 技能级状态                                             |
+| 代理工作区     | `/home/node/.openclaw/workspace/`                      | Host volume mount      | 代码和代理工件                                      |
+| WhatsApp 会话    | `/home/node/.openclaw/`                                | Host volume mount      | 保留 QR 登录                                            |
+| Gmail keyring       | `/home/node/.openclaw/`                                | Host volume + password | 需要 `GOG_KEYRING_PASSWORD`                               |
+| 插件包     | `/home/node/.openclaw/npm`, `/home/node/.openclaw/git` | Host volume mount      | 可下载的插件包根目录                             |
+| 外部二进制文件   | `/usr/local/bin/`                                      | Docker image           | 必须在构建时烘焙                                   |
+| Node 运行时        | Container filesystem                                   | Docker image           | 每次镜像构建都会重新构建                                     |
+| OS packages         | Container filesystem                                   | Docker image           | 不要在运行时安装                                     |
+| Docker 容器    | Ephemeral                                              | Restartable            | 可安全销毁                                               |
 
 ## 更新
 

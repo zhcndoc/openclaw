@@ -402,6 +402,30 @@ const video = await api.runtime.mediaUnderstanding.describeVideoFile({
   filePath: "/tmp/inbound-video.mp4",
   cfg: api.config,
 });
+
+const extraction = await api.runtime.mediaUnderstanding.extractStructuredWithModel({
+  provider: "codex",
+  model: "gpt-5.5",
+  input: [
+    {
+      type: "image",
+      buffer: receiptImageBuffer,
+      fileName: "receipt.png",
+      mime: "image/png",
+    },
+    { type: "text", text: "使用打印出的字段作为事实来源。" },
+  ],
+  instructions: "返回实体和可搜索标签。",
+  schemaName: "example.evidence",
+  jsonSchema: {
+    type: "object",
+    properties: {
+      entities: { type: "array", items: { type: "string" } },
+      tags: { type: "array", items: { type: "string" } },
+    },
+  },
+  cfg: api.config,
+});
 ```
 
 对于音频转写，插件可以使用媒体理解运行时，或者旧的 STT 别名：
@@ -417,10 +441,16 @@ const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
 
 注释：
 
-- `api.runtime.mediaUnderstanding.*` 是图像/音频/视频理解的首选共享接口。
+- `api.runtime.mediaUnderstanding.*` 是用于
+  图像/音频/视频理解的首选共享接口。
+- `extractStructuredWithModel(...)` 是面向插件的受限
+  供应商拥有的图像优先抽取接缝。至少包含一个图像输入；
+  文本输入只是补充上下文。
+  产品插件拥有它们的路由和 schema，而 OpenClaw 拥有
+  提供方/运行时边界。
 - 使用核心媒体理解音频配置（`tools.media.audio`）和提供方回退顺序。
-- 当未产生转写输出时返回 `{ text: undefined }`（例如跳过/不支持的输入）。
-- `api.runtime.stt.transcribeAudioFile(...)` 仍然作为兼容别名保留。
+- 当未生成任何转写输出时返回 `{ text: undefined }`（例如跳过/不支持的输入）。
+- `api.runtime.stt.transcribeAudioFile(...)` 仍作为兼容别名保留。
 
 插件还可以通过 `api.runtime.subagent` 启动后台子代理运行：
 
@@ -533,17 +563,18 @@ api.registerHttpRoute({
 | `openclaw/plugin-sdk/core`          | 通用共享辅助工具和总括契约                           |
 | `openclaw/plugin-sdk/config-schema` | 根 `openclaw.json` Zod 模式（`OpenClawSchema`） |
 
-通道插件从一组更窄的接缝中选择——`channel-setup`、
-`setup-runtime`、`setup-adapter-runtime`、`setup-tools`、`channel-pairing`、
+Channel plugins 从一组更窄的接缝中选择——`channel-setup`、
+`setup-runtime`、`setup-tools`、`channel-pairing`、
 `channel-contract`、`channel-feedback`、`channel-inbound`、`channel-lifecycle`、
 `channel-reply-pipeline`、`command-auth`、`secret-input`、`webhook-ingress`、
-`channel-targets` 和 `channel-actions`。审批行为应统一到一个
-`approvalCapability` 契约上，而不是在不相关的插件字段之间混用。参见 [Channel plugins](/plugins/sdk-channel-plugins)。
+`channel-targets` 和 `channel-actions`。审批行为应当集中
+在单个 `approvalCapability` 合约上，而不是分散到无关的
+插件字段中。参见 [Channel plugins](/plugins/sdk-channel-plugins)。
 
 运行时和配置辅助工具位于对应的聚焦 `*-runtime` 子路径下
 （`approval-runtime`、`agent-runtime`、`lazy-runtime`、`directory-runtime`、
 `text-runtime`、`runtime-store`、`system-event-runtime`、`heartbeat-runtime`、
-`channel-activity-runtime` 等）。优先使用 `config-types`、
+`channel-activity-runtime` 等）。优先使用 `config-contracts`、
 `plugin-config-runtime`、`runtime-config-snapshot` 和 `config-mutation`，
 而不是宽泛的 `config-runtime` 兼容 barrel。
 

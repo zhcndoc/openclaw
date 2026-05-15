@@ -121,14 +121,12 @@ Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`
 
 该引导令牌携带内置的配对引导配置：
 
-- 主 hand-off 的 `node` 令牌保持 `scopes: []`
-- 任何 hand-off 的 `operator` 令牌仍会被限制在引导白名单内：
-  `operator.approvals`, `operator.read`, `operator.talk.secrets`, `operator.write`
-- 引导范围检查按角色前缀进行，而不是共享一个扁平的范围池：
-  operator 范围条目只满足 operator 请求，而非 operator 角色
-  仍必须在其自己的角色前缀下请求范围
-- 后续令牌轮换/撤销仍同时受设备已批准
-  的角色契约以及调用方会话的 operator 范围限制
+- the built-in setup profile allows only the `node` role
+- after approval, the handed-off `node` token stays `scopes: []`
+- the built-in setup-code flow does not hand off an `operator` token
+- operator access requires a separate approved operator pairing or token flow
+- later token rotation/revocation remains bounded by both the device's approved
+  role contract and the caller session's operator scopes
 
 在设置码有效期间，请将其视为密码。
 

@@ -49,10 +49,11 @@ title: "WebChat"
 
 WebChat 有两条独立的数据路径：
 
-- 会话 JSONL 文件是持久化的模型/运行时转写。对于正常的 agent 运行，Pi 会通过其会话管理器持久化模型可见的 `user`、`assistant` 和 `toolResult` 消息。WebChat 不会将任意投递、状态或辅助文本写入该转写。
-- Gateway `ReplyPayload` 事件是实时投递投影。它们可以为 WebChat/通道显示进行归一化、阻止流式传输、指令标签、媒体嵌入、TTS/音频标记以及 UI 回退行为。它们本身并不是规范的会话日志。
-- WebChat 仅在 Gateway 拥有一个非正常 Pi 助手轮次之外的已显示消息时，才注入助手转写条目：`chat.inject`、非 agent 命令回复、中止的部分输出，以及 WebChat 管理的媒体转写补充。
-- `chat.history` 会读取已存储的会话转写并应用 WebChat 显示投影。如果运行期间出现实时助手文本，但在历史重新加载后消失，先检查原始 JSONL 中是否包含该助手文本，再检查 `chat.history` 投影是否将其剥离，然后检查 Control UI 的 optimistic-tail merge 是否用持久化快照替换了本地投递状态。
+- session JSONL 文件是持久化的模型/运行时转写。对于正常的 agent 运行，Pi 会通过其会话管理器将对模型可见的 `user`、`assistant` 和 `toolResult` 消息持久化到该文件中。WebChat 不会将任意投递、状态或辅助文本写入该转写。
+- Gateway `ReplyPayload` 事件是实时投递投影。它们可以针对 WebChat/通道显示、块流式输出、指令标签、媒体嵌入、TTS/音频标志以及 UI 回退行为进行归一化。它们本身并不是权威的会话日志。
+- 需要通过 `tools.message` 显示回复的 harness 仍将 WebChat 作为当前运行的内部源回复接收端。来自该活动 WebChat 运行、且不带目标的 `message.send` 会被投影到同一聊天并镜像到会话转写；WebChat 不会变成可复用的出站通道，也不会继承 `lastChannel`。
+- WebChat 仅在 Gateway 负责显示了一个不属于正常 Pi assistant 轮次的消息时，才注入助手转写条目：`chat.inject`、非 agent 命令回复、中止的部分输出，以及 WebChat 管理的媒体转写补充。
+- `chat.history` 读取已存储的会话转写并应用 WebChat 显示投影。如果在运行期间出现的实时助手文本在历史重新加载后消失，先检查原始 JSONL 是否包含该助手文本，然后检查 `chat.history` 投影是否将其剥离，最后检查 Control UI 的乐观尾部合并是否用持久化快照替换了本地投递状态。
 
 正常的 agent 运行最终答案应该是持久化的，因为 Pi 会写入助手 `message_end`。任何将已投递最终载荷镜像回转写的回退逻辑，必须先避免重复写入 Pi 已经写入的助手轮次。
 

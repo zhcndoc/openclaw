@@ -1,18 +1,20 @@
 ---
-summary: "通过 signal-cli 的 Signal 支持（JSON-RPC + SSE）、设置路径和号码模型"
+summary: "通过 signal-cli 提供的 Signal 支持（原生守护进程或 bbernhard 容器）、设置路径以及号码模型"
 read_when:
   - 设置 Signal 支持
   - 排查 Signal 发送/接收问题
 title: "Signal"
 ---
 
-状态：外部 CLI 集成。网关通过 HTTP JSON-RPC + SSE 与 `signal-cli` 通信。
+状态：外部 CLI 集成。网关通过 HTTP 与 `signal-cli` 通信——要么是原生守护进程（JSON-RPC + SSE），要么是 bbernhard/signal-cli-rest-api 容器（REST + WebSocket）。
 
 ## 前置条件
 
 - 服务器上已安装 OpenClaw（下面的 Linux 流程已在 Ubuntu 24 上测试）。
-- 网关运行所在主机可用 `signal-cli`。
-- 一个可以接收一条验证码短信的手机号码（用于短信注册路径）。
+- 满足以下之一：
+  - 主机上可用 `signal-cli`（原生模式），**或**
+  - `bbernhard/signal-cli-rest-api` Docker 容器（容器模式）。
+- 一个可以接收一条验证码短信的电话号码（用于短信注册路径）。
 - 注册期间可通过浏览器访问 Signal 验证码页面（`signalcaptchas.org`）。
 
 ## 快速设置（入门）
@@ -179,6 +181,63 @@ openclaw channels status --probe
 
 这样会跳过自动拉起以及 OpenClaw 内部的启动等待。对于自动拉起时启动较慢的情况，可设置 `channels.signal.startupTimeoutMs`。
 
+## 容器模式（bbernhard/signal-cli-rest-api）
+
+你也可以不原生运行 `signal-cli`，而是使用 [bbernhard/signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) Docker 容器。它将 `signal-cli` 封装在 REST API 和 WebSocket 接口之后。
+
+要求：
+
+- 容器 **必须** 以 `MODE=json-rpc` 运行，才能实时接收消息。
+- 在连接 OpenClaw 之前，先在容器内注册或绑定你的 Signal 账户。
+
+示例 `docker-compose.yml` 服务：
+
+```yaml
+signal-cli:
+  image: bbernhard/signal-cli-rest-api:latest
+  environment:
+    MODE: json-rpc
+  ports:
+    - "8080:8080"
+  volumes:
+    - signal-cli-data:/home/.local/share/signal-cli
+```
+
+OpenClaw 配置：
+
+```json5
+{
+  channels: {
+    signal: {
+      enabled: true,
+      account: "+15551234567",
+      httpUrl: "http://signal-cli:8080",
+      autoStart: false,
+      apiMode: "container", // 或使用 "auto" 自动检测
+    },
+  },
+}
+```
+
+`apiMode` 字段控制 OpenClaw 使用哪种协议：
+
+| 值            | 行为                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------ |
+| `"auto"`      | （默认）探测两种传输；流式模式会验证容器 WebSocket 接收                        |
+| `"native"`    | 强制使用原生 signal-cli（`/api/v1/rpc` 上的 JSON-RPC，`/api/v1/events` 上的 SSE） |
+| `"container"` | 强制使用 bbernhard 容器（`/v2/send` 上的 REST，`/v1/receive/{account}` 上的 WebSocket） |
+
+当 `apiMode` 为 `"auto"` 时，OpenClaw 会缓存检测结果 30 秒，以避免重复探测。只有当 `/v1/receive/{account}` 升级为 WebSocket 后，才会在流式模式下选择容器接收；这要求 `MODE=json-rpc`。
+
+容器模式支持与原生模式相同的 Signal 通道操作，只要容器暴露了相匹配的 API：发送、接收、附件、输入中指示、已读/已查看回执、反应、群组以及样式文本。OpenClaw 会将其原生 Signal RPC 调用转换为容器的 REST 负载，包括 `group.{base64(internal_id)}` 群组 ID，以及用于格式化文本的 `text_mode: "styled"`。
+
+运行说明：
+
+- 在容器模式下使用 `autoStart: false`。当选择 `apiMode: "container"` 时，OpenClaw 不应启动原生守护进程。
+- 接收时使用 `MODE=json-rpc`。`MODE=normal` 可能会让 `/v1/about` 看起来正常，但 `/v1/receive/{account}` 不会升级为 WebSocket，因此 OpenClaw 在 `auto` 模式下不会选择容器接收流。
+- 当你确定 `httpUrl` 指向 bbernhard 的 REST API 时，设置 `apiMode: "container"`。当你确定它指向原生 `signal-cli` JSON-RPC/SSE 时，设置 `apiMode: "native"`。当部署环境可能变化时，使用 `"auto"`。
+- 容器附件下载遵循与原生模式相同的媒体字节限制。当服务器发送 `Content-Length` 时，超大响应会在完全缓冲前被拒绝；否则会在流式传输过程中拒绝。
+
 ## 访问控制（私信 + 群组）
 
 私信：
@@ -202,8 +261,9 @@ openclaw channels status --probe
 
 ## 工作原理（行为）
 
-- `signal-cli` 作为守护进程运行；网关通过 SSE 读取事件。
-- 入站消息会被规范化为共享通道封装。
+- 原生模式：`signal-cli` 作为守护进程运行；网关通过 SSE 读取事件。
+- 容器模式：网关通过 REST API 发送，并通过 WebSocket 接收。
+- 入站消息会被规范化为共享通道信封。
 - 回复始终路由回同一个号码或群组。
 
 ## 媒体 + 限制
@@ -224,10 +284,10 @@ openclaw channels status --probe
 
 ## 反应（消息工具）
 
-- Use `message action=react` with `channel=signal`.
-- Targets: sender E.164 or UUID (use `uuid:<id>` from pairing output; bare UUID works too).
-- `messageId` is the Signal timestamp for the message you're reacting to.
-- Group reactions require `targetAuthor` or `targetAuthorUuid`.
+- 使用 `message action=react` 并设置 `channel=signal`。
+- 目标：发送者的 E.164 号码或 UUID（使用配对输出中的 `uuid:<id>`；裸 UUID 也可以）。
+- `messageId` 是你要进行反应的消息对应的 Signal 时间戳。
+- 群组反应需要 `targetAuthor` 或 `targetAuthorUuid`。
 
 示例：
 
@@ -301,25 +361,26 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 
 提供程序选项：
 
-- `channels.signal.enabled`: 启用/禁用通道启动。
-- `channels.signal.account`: 机器人账户的 E.164 号码。
+- `channels.signal.enabled`: 启用/禁用频道启动。
+- `channels.signal.apiMode`: `auto | native | container`（默认：auto）。参见[容器模式](#container-mode-bbernhardsignal-cli-rest-api)。
+- `channels.signal.account`: 机器人账户的 E.164。
 - `channels.signal.cliPath`: `signal-cli` 的路径。
 - `channels.signal.httpUrl`: 完整守护进程 URL（覆盖主机/端口）。
 - `channels.signal.httpHost`, `channels.signal.httpPort`: 守护进程绑定地址（默认 127.0.0.1:8080）。
 - `channels.signal.autoStart`: 自动启动守护进程（如果未设置 `httpUrl`，默认 true）。
-- `channels.signal.startupTimeoutMs`: 启动等待超时时间（毫秒，最大 120000）。
+- `channels.signal.startupTimeoutMs`: 启动等待超时时间，单位 ms（上限 120000）。
 - `channels.signal.receiveMode`: `on-start | manual`。
 - `channels.signal.ignoreAttachments`: 跳过附件下载。
 - `channels.signal.ignoreStories`: 忽略来自守护进程的故事。
 - `channels.signal.sendReadReceipts`: 转发已读回执。
 - `channels.signal.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。
-- `channels.signal.allowFrom`: 私信允许列表（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 不支持用户名；请使用电话号码/UUID。
+- `channels.signal.allowFrom`: DM 允许列表（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 不支持用户名；请使用电话号码/UUID 标识。
 - `channels.signal.groupPolicy`: `open | allowlist | disabled`（默认：allowlist）。
-- `channels.signal.groupAllowFrom`: 群组允许列表；接受 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码或 `uuid:<id>` 值。
-- `channels.signal.groups`: 按 Signal 群组 ID（或 `"*"`）键控的每群组覆盖。支持字段：`requireMention`、`tools`、`toolsBySender`。
-- `channels.signal.accounts.<id>.groups`: 多账户设置中 `channels.signal.groups` 的每账户版本。
+- `channels.signal.groupAllowFrom`: 群组允许列表；接受 Signal 群组 ID（原始形式、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码，或 `uuid:<id>` 值。
+- `channels.signal.groups`: 以 Signal 群组 id 为键的每群组覆盖配置（或 `"*"`）。支持字段：`requireMention`、`tools`、`toolsBySender`。
+- `channels.signal.accounts.<id>.groups`: 在多账户设置中，`channels.signal.groups` 的按账户版本。
 - `channels.signal.historyLimit`: 作为上下文包含的群组消息最大数量（0 表示禁用）。
-- `channels.signal.dmHistoryLimit`: 私信历史限制，按用户轮次计算。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
+- `channels.signal.dmHistoryLimit`: DM 历史限制，按用户轮次计算。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
 - `channels.signal.textChunkLimit`: 出站分块大小（字符数）。
 - `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）再按长度分块。
 - `channels.signal.mediaMaxMb`: 入站/出站媒体上限（MB）。

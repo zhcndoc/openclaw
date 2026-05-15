@@ -86,9 +86,9 @@ OpenClaw 接受 Vercel Claude 简写模型引用，并在运行时将其规范�
     `AI_GATEWAY_API_KEY` 对该进程可用。
 
     <Warning>
-    仅在 `~/.profile` 中设置的密钥对 launchd/systemd 守护进程不可见，除非显式导入该环境变量。请将密钥设置在
-    `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保 gateway 进程可以
-    读取它。
+    仅在交互式 shell 中导出的 key 对 launchd/systemd 守护进程不可见，除非该环境被显式导入。请将
+    key 设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以确保 gateway
+    进程能够读取它。
     </Warning>
 
   </Accordion>

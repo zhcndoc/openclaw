@@ -35,7 +35,7 @@ Client → Gateway:
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 4,
+    "minProtocol": 3,
     "maxProtocol": 4,
     "client": {
       "id": "cli",
@@ -127,26 +127,19 @@ gateways must use plugin surfaces.
 }
 ```
 
-在受信任的 bootstrap 交接期间，`hello-ok.auth` 也可能在 `deviceTokens` 中包含额外的有界 role 条目：
+内置的 QR/setup-code 启动流程仅限节点。所有者批准待处理的节点请求后，`hello-ok.auth` 会包含主节点令牌：
 
 ```json
 {
   "auth": {
     "deviceToken": "…",
     "role": "node",
-    "scopes": [],
-    "deviceTokens": [
-      {
-        "deviceToken": "…",
-        "role": "operator",
-        "scopes": ["operator.approvals", "operator.read", "operator.talk.secrets", "operator.write"]
-      }
-    ]
+    "scopes": []
   }
 }
 ```
 
-对于内置的 node/operator bootstrap 流程，主 node token 保持 `scopes: []`，而任何交接的 operator token 仍受限于 bootstrap operator allowlist（`operator.approvals`、`operator.read`、`operator.talk.secrets`、`operator.write`）。bootstrap scope 检查仍保持 role 前缀化：operator 条目只满足 operator 请求，而非 operator 角色仍需要其自身 role 前缀下的 scopes。
+内置的 setup-code 流程不包含额外的 `deviceTokens` 条目，也不会下发 operator 令牌。客户端作者应将可选的 `hello-ok.auth.deviceTokens` 字段视为旧版/自定义启动扩展数据：仅在受信任的传输上出现时才持久化，并且不要将其作为内置配对的必需项。
 
 ### 节点示例
 
@@ -156,7 +149,7 @@ gateways must use plugin surfaces.
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 4,
+    "minProtocol": 3,
     "maxProtocol": 4,
     "client": {
       "id": "ios-node",
@@ -327,22 +320,22 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Talk and TTS">
-    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、规范模式、传输、brain 策略，以及实时音频/能力标志，而不会返回提供方 secret 或修改全局配置。
+  <Accordion title="Talk 和 TTS">
+    - `talk.catalog` 返回用于语音、流式转写和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、规范模式、传输、brain 策略以及实时音频/能力标志，但不会返回提供方密钥或修改全局配置。
     - `talk.config` 返回生效中的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
-    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。`brain: "direct-tools"` 需要 `operator.admin`。
-    - `talk.session.join` 验证一个 managed-room 会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不会返回明文令牌或已存储令牌哈希。
-    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的 realtime relay 和 transcription 会话。
-    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动 managed-room 回合生命周期，并在状态清除前拒绝陈旧回合。
-    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控抢话。
-    - `talk.session.submitToolResult` 完成由 Gateway 拥有的 realtime relay 会话发出的提供方工具调用。若最终结果随后到达，传入 `options: { willContinue: true }` 用于中间工具输出。
-    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、transcription 或 managed-room 会话，并发出终止性的 Talk 事件。
+    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。对于 `stt-tts/managed-room`，传入 `sessionKey` 的 `operator.write` 调用方还必须传入 `spawnedBy`，以便实现作用域化的 session-key 可见性；无作用域的 `sessionKey` 创建和 `brain: "direct-tools"` 需要 `operator.admin`。
+    - `talk.session.join` 验证受管房间会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，但不返回明文令牌或存储的令牌哈希。
+    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转写会话。
+    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动受管房间的轮次生命周期，并在清除状态前拒绝过期轮次。
+    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控插话。
+    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。若最终结果随后会到来，可传入 `options: { willContinue: true }` 作为临时工具输出；若工具结果应满足提供方调用而无需启动另一段实时助手回复，则可传入 `options: { suppressResponse: true }`。
+    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、转写或受管房间会话，并发出终态 Talk 事件。
     - `talk.mode` 为 WebChat/Control UI 客户端设置/广播当前 Talk 模式状态。
     - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
-    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交该提供方特定工具结果前等待正常的 chat 生命周期事件。
-    - `talk.event` 是用于实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
-    - `talk.speak` 通过当前活动的 Talk 语音提供方合成语音。
-    - `tts.status` 返回 TTS 启用状态、当前活动提供方、回退提供方以及提供方配置状态。
+    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发到 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个运行 id，并在提交提供方特定的工具结果之前等待正常的 chat 生命周期事件。
+    - `talk.event` 是实时、转写、STT/TTS、受管房间、电信和会议适配器的单一 Talk 事件通道。
+    - `talk.speak` 通过活动的 Talk 语音提供方合成语音。
+    - `tts.status` 返回 TTS 启用状态、活动提供方、回退提供方以及提供方配置状态。
     - `tts.providers` 返回可见的 TTS 提供方清单。
     - `tts.enable` 和 `tts.disable` 切换 TTS 首选项状态。
     - `tts.setProvider` 更新首选 TTS 提供方。
@@ -425,104 +418,139 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
   </Accordion>
 
   <Accordion title="Automation, skills, and tools">
-    - Automation: `wake` 调度立即或下一次 heartbeat 的唤醒文本注入；`cron.list`、`cron.status`、`cron.add`、`cron.update`、`cron.remove`、`cron.run`、`cron.runs` 管理计划任务。
-    - Skills and tools: `commands.list`、`skills.*`、`tools.catalog`、`tools.effective`、`tools.invoke`。
+    - Automation: `wake` schedules an immediate or next-heartbeat wake text injection; `cron.get`, `cron.list`, `cron.status`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` manage scheduled work.
+    - Skills and tools: `commands.list`, `skills.*`, `tools.catalog`, `tools.effective`, `tools.invoke`.
 
   </Accordion>
 </AccordionGroup>
 
 ### 常见事件族
 
-- `chat`：如 `chat.inject` 和其他仅 transcript 的 chat 事件等 UI chat 更新。
-- `session.message` 和 `session.tool`：已订阅会话的 transcript/event-stream 更新。
-- `sessions.changed`：会话索引或元数据已变更。
-- `presence`：系统 presence 快照更新。
-- `tick`：周期性 keepalive / liveness 事件。
-- `health`：网关健康状态快照更新。
-- `heartbeat`：heartbeat 事件流更新。
-- `cron`：cron 运行/作业变更事件。
-- `shutdown`：网关关闭通知。
-- `node.pair.requested` / `node.pair.resolved`：节点配对生命周期。
-- `node.invoke.request`：节点 invoke 请求广播。
-- `device.pair.requested` / `device.pair.resolved`：已配对设备生命周期。
-- `voicewake.changed`：唤醒词触发配置已变更。
-- `exec.approval.requested` / `exec.approval.resolved`：exec 审批生命周期。
-- `plugin.approval.requested` / `plugin.approval.resolved`：插件审批生命周期。
+- `chat`: UI chat 更新，例如 `chat.inject` 和其他仅 transcript 的 chat
+  事件。在 protocol v4 中，delta 负载携带 `deltaText`；`message` 仍然是
+  累积的 assistant 快照。非前缀替换会设置 `replace=true`
+  并使用 `deltaText` 作为替换文本。
+- `session.message` 和 `session.tool`: 已订阅会话的 transcript/event-stream 更新。
+- `sessions.changed`: 会话索引或元数据已更改。
+- `presence`: 系统 presence 快照更新。
+- `tick`: 周期性 keepalive / 存活事件。
+- `health`: 网关健康状态快照更新。
+- `heartbeat`: heartbeat 事件流更新。
+- `cron`: cron 运行/作业变更事件。
+- `shutdown`: 网关关停通知。
+- `node.pair.requested` / `node.pair.resolved`: 节点配对生命周期。
+- `node.invoke.request`: 节点 invoke 请求广播。
+- `device.pair.requested` / `device.pair.resolved`: 已配对设备生命周期。
+- `voicewake.changed`: 唤醒词触发配置已更改。
+- `exec.approval.requested` / `exec.approval.resolved`: exec 审批
+  生命周期。
+- `plugin.approval.requested` / `plugin.approval.resolved`: 插件审批
+  生命周期。
 
 ### 节点助手方法
 
 - 节点可以调用 `skills.bins` 来获取当前技能可执行文件列表，用于自动放行检查。
 
-### Task ledger RPCs
+### Task 账本 RPC
 
-Operator clients may inspect and cancel Gateway background task records through
-the task ledger RPCs. These methods return sanitized task summaries, not raw
-runtime state.
+Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任务记录。
+这些方法返回的是经过净化的任务摘要，而不是原始运行时状态。
 
-- `tasks.list` requires `operator.read`.
-  - Params: optional `status` (`"queued"`, `"running"`, `"completed"`,
-    `"failed"`, `"cancelled"`, or `"timed_out"`) or an array of those statuses,
-    optional `agentId`, optional `sessionKey`, optional `limit` from `1` to
-    `500`, and optional string `cursor`.
-  - Result: `{ "tasks": TaskSummary[], "nextCursor"?: string }`.
-- `tasks.get` requires `operator.read`.
-  - Params: `{ "taskId": string }`.
-  - Result: `{ "task": TaskSummary }`.
-  - Missing task ids return the Gateway not-found error shape.
-- `tasks.cancel` requires `operator.write`.
-  - Params: `{ "taskId": string, "reason"?: string }`.
-  - Result:
-    `{ "found": boolean, "cancelled": boolean, "reason"?: string, "task"?: TaskSummary }`.
-  - `found` reports whether the ledger had a matching task. `cancelled`
-    reports whether the runtime accepted or recorded cancellation.
+- `tasks.list` 需要 `operator.read`。
+  - 参数：可选 `status`（`"queued"`、`"running"`、`"completed"`、
+    `"failed"`、`"cancelled"` 或 `"timed_out"`）或这些状态的数组，
+    可选 `agentId`，可选 `sessionKey`，可选范围为
+    `1` 到 `500` 的 `limit`，以及可选字符串 `cursor`。
+  - 结果：`{ "tasks": TaskSummary[], "nextCursor"?: string }`。
+- `tasks.get` 需要 `operator.read`。
+  - 参数：`{ "taskId": string }`。
+  - 结果：`{ "task": TaskSummary }`。
+  - 缺失的 task id 会返回 Gateway 的 not-found 错误形状。
+- `tasks.cancel` 需要 `operator.write`。
+  - 参数：`{ "taskId": string, "reason"?: string }`。
+  - 结果：
+    `{ "found": boolean, "cancelled": boolean, "reason"?: string, "task"?: TaskSummary }`。
+  - `found` 表示账本中是否存在匹配任务。`cancelled`
+    表示运行时是否接受或记录了取消请求。
 
-`TaskSummary` includes `id`, `status`, and optional metadata such as `kind`,
-`runtime`, `title`, `agentId`, `sessionKey`, `childSessionKey`, `ownerKey`,
-`runId`, `taskId`, `flowId`, `parentTaskId`, `sourceId`, timestamps, progress,
-terminal summary, and sanitized error text.
+`TaskSummary` 包括 `id`、`status`，以及可选元数据，例如 `kind`、
+`runtime`、`title`、`agentId`、`sessionKey`、`childSessionKey`、`ownerKey`、
+`runId`、`taskId`、`flowId`、`parentTaskId`、`sourceId`、时间戳、进度、
+终态摘要和净化后的错误文本。
 
 ### Operator helper methods
 
-- 操作员可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时命令清单。
-  - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
-  - `scope` 控制主 `name` 目标的表面：
+- Operator 可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时
+  命令清单。
+  - `agentId` 为可选；省略它可读取默认 agent workspace。
+  - `scope` 控制主 `name` 所指向的表面：
     - `text` 返回不带前导 `/` 的主文本命令 token
-    - `native` 和默认的 `both` 路径在可用时返回具备提供方感知的原生名称
+    - `native` 和默认的 `both` 路径在可用时返回感知提供方的原生名称
   - `textAliases` 包含精确的斜杠别名，例如 `/model` 和 `/m`。
-  - `nativeName` 在存在时携带提供方感知的原生命令名。
-  - `provider` 是可选的，仅影响原生命名以及原生插件命令可用性。
+  - `nativeName` 在存在时包含感知提供方的原生命令名。
+  - `provider` 为可选项，仅影响原生命名以及原生插件命令可用性。
   - `includeArgs=false` 会从响应中省略序列化的参数元数据。
-- 操作员可以调用 `tools.catalog`（`operator.read`）来获取某个 agent 的运行时工具目录。响应包含分组后的工具和来源元数据：
-  - `source`：`core` 或 `plugin`
-  - `pluginId`：当 `source="plugin"` 时的插件所有者
-  - `optional`：某个插件工具是否可选
-- 操作员可以调用 `tools.effective`（`operator.read`）来获取某个会话的运行时生效工具清单。
+- Operator 可以调用 `tools.catalog`（`operator.read`）来获取某个
+  agent 的运行时工具目录。响应包含分组工具和来源元数据：
+  - `source`: `core` 或 `plugin`
+  - `pluginId`: 当 `source="plugin"` 时的插件所有者
+  - `optional`: 插件工具是否可选
+- Operator 可以调用 `tools.effective`（`operator.read`）来获取某个会话的运行时生效工具
+  清单。
   - `sessionKey` 是必需的。
-  - Gateway 会在服务器端从会话派生受信任的运行时上下文，而不是接受调用方提供的 auth 或传递上下文。
-  - 响应按会话作用域返回，并反映当前活动对话此刻可以使用的内容，包括 core、plugin 和 channel 工具。
-- 操作员可以调用 `tools.invoke`（`operator.write`）通过与 `/tools/invoke` 相同的网关策略路径调用一个可用工具。
-  - `name` 是必需的。`args`、`sessionKey`、`agentId`、`confirm` 和 `idempotencyKey` 是可选的。
-  - 如果同时存在 `sessionKey` 和 `agentId`，则解析后的会话 agent 必须与 `agentId` 匹配。
-  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选的 `output` 以及类型化的 `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是绕过网关工具策略管道。
-- 操作员可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见技能清单。
-  - `agentId` 是可选的；省略它即可读取默认 agent 工作区。
-  - 响应包含资格、缺失的要求、配置检查，以及不暴露原始 secret 值的已清理安装选项。
-- 操作员可以调用 `skills.search` 和 `skills.detail`（`operator.read`）来获取 ClawHub 发现元数据。
-- 操作员可以调用 `skills.install`（`operator.admin`）并支持两种模式：
-  - ClawHub 模式：`{ source: "clawhub", slug, version?, force? }` 将 skill 文件夹安装到默认 agent 工作区的 `skills/` 目录。
+  - Gateway 从会话服务端派生受信任的运行时上下文，而不是接受调用方提供的认证或投递上下文。
+  - 响应按会话作用域返回，并反映当前活动对话此刻可用的内容，
+    包括核心、插件和通道工具。
+- Operator 可以调用 `tools.invoke`（`operator.write`）通过与 `/tools/invoke`
+  相同的 gateway policy 路径调用一个可用工具。
+  - `name` 是必需的。`args`、`sessionKey`、`agentId`、`confirm` 和
+    `idempotencyKey` 为可选。
+  - 如果同时存在 `sessionKey` 和 `agentId`，解析后的会话 agent 必须与
+    `agentId` 匹配。
+  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选 `output` 和类型化
+    `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是
+    绕过 gateway 工具策略管道。
+- Operator 可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见
+  技能清单。
+  - `agentId` 为可选；省略它可读取默认 agent workspace。
+  - 响应包含资格、缺失要求、配置检查，以及
+    净化后的安装选项，而不会暴露原始 secret 值。
+- Operator 可以调用 `skills.search` 和 `skills.detail`（`operator.read`）获取
+  ClawHub 发现元数据。
+- Operator 可以调用 `skills.upload.begin`、`skills.upload.chunk` 和
+  `skills.upload.commit`（`operator.admin`）在安装前暂存一个私有技能归档文件。
+  这是面向受信任客户端的独立管理上传路径，不是普通的 ClawHub 技能安装流程，且默认禁用，除非
+  启用了 `skills.install.allowUploadedArchives`。
+  - `skills.upload.begin({ kind: "skill-archive", slug, sizeBytes, sha256?, force?, idempotencyKey? })`
+    创建一个绑定到该 slug 和 force 值的上传。
+  - `skills.upload.chunk({ uploadId, offset, dataBase64 })` 以
+    精确的解码偏移追加字节。
+  - `skills.upload.commit({ uploadId, sha256? })` 验证最终大小和
+    SHA-256。Commit 只会完成上传；不会安装该技能。
+  - 上传的技能归档是包含 `SKILL.md` 根目录的 zip 归档文件。该
+    归档内部的目录名不会决定安装目标。
+- Operator 可以以三种模式调用 `skills.install`（`operator.admin`）：
+  - ClawHub 模式：`{ source: "clawhub", slug, version?, force? }` 将一个
+    技能文件夹安装到默认 agent workspace 的 `skills/` 目录。
+  - 上传模式：`{ source: "upload", uploadId, slug, force?, sha256?, timeoutMs? }`
+    将已提交的上传安装到默认 agent workspace 的 `skills/<slug>`
+    目录。slug 和 force 值必须与原始的
+    `skills.upload.begin` 请求一致。除非启用了
+    `skills.install.allowUploadedArchives`，否则该模式会被拒绝。此设置不会影响 ClawHub 安装。
   - Gateway 安装器模式：`{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
-    在网关主机上运行声明的 `metadata.openclaw.install` 动作。
-- 操作员可以调用 `skills.update`（`operator.admin`）并支持两种模式：
-  - ClawHub 模式更新一个已跟踪的 slug，或默认 agent 工作区中所有已跟踪的 ClawHub 安装。
-  - 配置模式修补 `skills.entries.<skillKey>` 值，例如 `enabled`、`apiKey` 和 `env`。
+    在 gateway 主机上运行一个声明的 `metadata.openclaw.install` 动作。
+- Operator 可以以两种模式调用 `skills.update`（`operator.admin`）：
+  - ClawHub 模式会更新一个已跟踪的 slug，或更新默认 agent workspace 中所有已跟踪的 ClawHub 安装。
+  - 配置模式会补丁式更新 `skills.entries.<skillKey>` 值，例如 `enabled`、
+    `apiKey` 和 `env`。
 
 ### `models.list` 视图
 
 `models.list` 接受一个可选的 `view` 参数：
 
-- 省略或 `"default"`：当前运行时行为。如果配置了 `agents.defaults.models`，响应就是允许的目录；否则响应就是完整的 Gateway 目录。
-- `"configured"`：适合选择器大小的行为。如果配置了 `agents.defaults.models`，它仍然优先生效。否则响应使用显式的 `models.providers.*.models` 条目，只有在不存在任何已配置模型行时才回退到完整目录。
-- `"all"`：完整的 Gateway 目录，绕过 `agents.defaults.models`。将其用于诊断和发现 UI，而不是普通模型选择器。
+- 省略或 `"default"`：当前运行时行为。如果配置了 `agents.defaults.models`，响应为允许的目录，包括 `provider/*` 条目动态发现的模型。否则响应为完整的 Gateway 目录。
+- `"configured"`：适合选择器大小的行为。如果配置了 `agents.defaults.models`，它仍然生效，包括 `provider/*` 条目的 provider 作用域发现。若没有 allowlist，响应会使用显式的 `models.providers.*.models` 条目，仅在不存在任何已配置模型行时才回退到完整目录。
+- `"all"`：完整的 Gateway 目录，绕过 `agents.defaults.models`。用于诊断和发现 UI，而不是普通模型选择器。
 
 ## Exec 审批
 
@@ -534,15 +562,16 @@ terminal summary, and sanitized error text.
 
 ## Agent 投递回退
 
-- `agent` 请求可以包含 `deliver=true` 来请求外发投递。
+- `agent` 请求可以包含 `deliver=true` 以请求出站投递。
 - `bestEffortDeliver=false` 保持严格行为：未解析或仅内部可用的投递目标会返回 `INVALID_REQUEST`。
-- `bestEffortDeliver=true` 允许在无法解析到外部可投递路径时回退到仅会话执行（例如内部/webchat 会话或歧义的多通道配置）。
+- `bestEffortDeliver=true` 允许在无法解析到外部可投递路由时回退到仅会话执行（例如内部/webchat 会话或多通道配置不明确的情况）。
+- 最终的 `agent` 结果在请求了投递时，可能包含 `result.deliveryStatus`，其状态与 [`openclaw agent --json --deliver`](/cli/agent#json-delivery-status) 中文档化的 `sent`、`suppressed`、`partial_failed` 和 `failed` 状态一致。
 
 ## 版本管理
 
 - `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts`。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝不匹配的版本。
-- Schema + 模型由 TypeBox 定义生成：
+- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝那些不包含其当前协议版本的范围。当前客户端和服务器需要 protocol v4。
+- Schemas + models are generated from TypeBox definitions:
   - `pnpm protocol:gen`
   - `pnpm protocol:gen:swift`
   - `pnpm protocol:check`
@@ -554,6 +583,7 @@ terminal summary, and sanitized error text.
 | 常量                                      | 默认值                                                | 来源                                                                                     |
 | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `PROTOCOL_VERSION`                        | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
+| `MIN_CLIENT_PROTOCOL_VERSION`             | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
 | Request timeout (per RPC)                 | `30_000` ms                                           | `src/gateway/client.ts` (`requestTimeoutMs`)                                               |
 | Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (配置/环境可以提高配对的服务器/客户端预算) |
 | Initial reconnect backoff                 | `1_000` ms                                            | `src/gateway/client.ts` (`backoffMs`)                                                      |
@@ -569,30 +599,41 @@ terminal summary, and sanitized error text.
 
 ## 认证
 
-- 共享密钥网关认证使用 `connect.params.auth.token` 或 `connect.params.auth.password`，具体取决于配置的认证模式。
-- 具有身份的模式，例如 Tailscale Serve（`gateway.auth.allowTailscale: true`）或非回环的 `gateway.auth.mode: "trusted-proxy"`，会基于请求头而不是 `connect.params.auth.*` 来满足连接认证检查。
-- 私有入口的 `gateway.auth.mode: "none"` 会完全跳过共享密钥连接认证；不要在公共/不受信任的入口上暴露该模式。
-- 配对后，Gateway 会发放一个按连接角色 + 范围限定的 **device token**。它会在 `hello-ok.auth.deviceToken` 中返回，客户端应将其持久化以供后续连接使用。
+- Shared-secret gateway auth 使用 `connect.params.auth.token` 或
+  `connect.params.auth.password`，具体取决于配置的认证模式。
+- 具有身份信息的模式，如 Tailscale Serve
+  (`gateway.auth.allowTailscale: true`) 或非回环的
+  `gateway.auth.mode: "trusted-proxy"`，会通过请求头而不是
+  `connect.params.auth.*` 满足连接认证检查。
+- 私有入口的 `gateway.auth.mode: "none"` 会完全跳过 shared-secret 连接认证；
+  不要在公开/不受信任的入口上暴露该模式。
+- 配对后，Gateway 会颁发一个与连接角色 + 范围绑定的 **device token**。它会在 `hello-ok.auth.deviceToken` 中返回，并且应由客户端持久化以供后续连接使用。
 - 客户端应在任何成功连接后持久化主 `hello-ok.auth.deviceToken`。
-- 使用该 **已存储** 的 device token 重新连接时，也应复用该 token 已存储的已批准范围集合。这可以保留已授予的读取/probe/status 访问权限，并避免在重连时悄悄收缩为更窄的隐式仅管理员范围。
+- 使用该 **已存储** 的 device token 重新连接时，也应复用该 token 对应的已存储批准范围集合。这可以保留已授予的 read/probe/status 访问权限，并避免重连时悄然收缩为更窄的隐式仅管理员范围。
 - 客户端侧连接认证组装（`src/gateway/client.ts` 中的 `selectConnectAuth`）：
   - `auth.password` 是正交的，只要设置就会始终转发。
-  - `auth.token` 按优先级填充：先显式共享令牌，然后显式 `deviceToken`，再到按设备存储的 token（以 `deviceId` + `role` 为键）。
-  - `auth.bootstrapToken` 仅在以上都未解析出 `auth.token` 时发送。共享令牌或任何已解析的 device token 都会抑制它。
-  - 在一次性的 `AUTH_TOKEN_MISMATCH` 重试中，自动提升存储的 device token 仅限于 **受信任端点** —— 回环，或带有固定 `tlsFingerprint` 的 `wss://`。未固定指纹的公共 `wss://` 不符合条件。
-- 额外的 `hello-ok.auth.deviceTokens` 条目是引导交接 token。仅当连接使用了 bootstrap 认证，且传输位于受信任通道（如 `wss://` 或回环/本地配对）时，才应持久化它们。
-- 如果客户端提供了 **显式** `deviceToken` 或显式 `scopes`，则该调用方请求的范围集仍具有权威性；只有当客户端复用已存储的按设备 token 时，才会重用缓存的 scopes。
-- Device token 可通过 `device.token.rotate` 和 `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 范围）。
-- `device.token.rotate` 会返回轮换元数据。只有对于已用该 device token认证过的同设备调用，它才会回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/管理员轮换不会回显 bearer token。
-- 令牌签发、轮换和撤销都限制在该设备配对条目中记录的已批准角色集合内；令牌变更不能扩展到配对批准从未授予的设备角色，也不能指向该角色。
-- 对于已配对设备的 token 会话，设备管理默认是自我范围限定的，除非调用方同时具有 `operator.admin`：非管理员调用方只能移除/撤销/轮换属于 **自己的** 设备条目。
-- `device.token.rotate` 和 `device.token.revoke` 还会检查目标 operator token 的范围集合与调用方当前会话范围是否一致。非管理员调用方不能轮换或撤销比其自身所持有范围更宽的 operator token。
+  - `auth.token` 按优先级填充：先是显式共享 token，然后是显式 `deviceToken`，最后是按设备保存的 token（以 `deviceId` + `role` 为键）。
+  - 只有在以上都未解析出 `auth.token` 时，才会发送 `auth.bootstrapToken`。共享 token 或任何已解析的 device token 都会抑制它。
+  - 在一次性的 `AUTH_TOKEN_MISMATCH` 重试中，已存储 device token 的自动提升仅对 **受信任端点** 生效——回环，或带有固定 `tlsFingerprint` 的 `wss://`。未固定指纹的公开 `wss://` 不符合条件。
+- 内置 setup-code bootstrap 只返回主节点的 `hello-ok.auth.deviceToken`；客户端不应期待在 `hello-ok.auth.deviceTokens` 中还有额外的 operator token。
+- 当内置 setup-code bootstrap 正在等待批准时，`PAIRING_REQUIRED` 详情会包含 `recommendedNextStep: "wait_then_retry"`、`retryable: true` 和 `pauseReconnect: false`。客户端应继续使用相同的 bootstrap token 重连，直到请求被批准或 token 失效。
+- 如果较旧或自定义的受信任 bootstrap 流程包含可选的 `hello-ok.auth.deviceTokens` 条目，则仅在连接使用了受信任传输上的 bootstrap 认证时保存它们，例如 `wss://` 或回环/本地配对。
+- 如果客户端提供了显式的 `deviceToken` 或显式的 `scopes`，则该调用方请求的范围集合仍然具有权威性；只有当客户端正在复用已存储的按设备 token 时，才会复用缓存的范围。
+- Device tokens can be rotated/revoked via `device.token.rotate` and
+  `device.token.revoke` (requires `operator.pairing` scope).
+- `device.token.rotate` 返回 rotation metadata。它只会在同设备调用且已使用该 device token 认证的情况下回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/admin 轮换不会回显 bearer token。
+- Token issuance, rotation, and revocation stay bounded to the approved role set
+  recorded in that device's pairing entry; token mutation cannot expand or
+  target a device role that pairing approval never granted.
+- 对于已配对设备的 token 会话，设备管理默认只作用于自身范围，除非调用方还具有 `operator.admin`：非管理员调用方只能移除/撤销/轮换自己的 **设备条目**。
+- `device.token.rotate` 和 `device.token.revoke` 也会将目标 operator token 范围集合与调用方当前会话范围进行检查。非管理员调用方不能轮换或撤销比自己已持有范围更宽的 operator token。
 - 认证失败会包含 `error.details.code` 以及恢复提示：
   - `error.details.canRetryWithDeviceToken`（布尔值）
   - `error.details.recommendedNextStep`（`retry_with_device_token`、`update_auth_configuration`、`update_auth_credentials`、`wait_then_retry`、`review_auth_configuration`）
 - `AUTH_TOKEN_MISMATCH` 的客户端行为：
-  - 受信任客户端可以尝试一次受限重试，使用缓存的按设备 token。
-  - 如果该重试失败，客户端应停止自动重连循环，并向操作员提供操作指导。
+  - 受信任的客户端可以尝试一次有限重试，使用已缓存的按设备 token。
+  - 如果该重试失败，客户端应停止自动重连循环并展示操作员操作指引。
+- `AUTH_SCOPE_MISMATCH` 表示 device token 已被识别，但不覆盖请求的角色/范围。客户端不应将其表现为 token 无效；应提示操作员重新配对，或批准更窄/更宽的范围契约。
 
 ## 设备身份 + 配对
 

@@ -185,6 +185,7 @@ your-domain.com {
       audience: "https://gateway.example.com/googlechat",
       webhookPath: "/googlechat",
       botUser: "users/1234567890", // 可选；有助于提及检测
+      allowBots: false,
       dm: {
         policy: "pairing",
         allowFrom: ["users/1234567890"],
@@ -208,14 +209,15 @@ your-domain.com {
 
 说明：
 
-- 服务账号凭据也可以通过 `serviceAccount` 内联传入（JSON 字符串）。
+- Service account 凭据也可以通过内联的 `serviceAccount` 传入（JSON 字符串）。
 - 也支持 `serviceAccountRef`（env/file SecretRef），包括 `channels.googlechat.accounts.<id>.serviceAccountRef` 下的按账号引用。
 - 如果未设置 `webhookPath`，默认 webhook 路径为 `/googlechat`。
-- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配，用于 allowlist（破窗兼容模式）。
+- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配以用于 allowlist（紧急兼容模式）。
 - 当启用 `actions.reactions` 时，可通过 `reactions` 工具和 `channels action` 使用反应功能。
-- 消息操作暴露了用于文本的 `send` 和用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程定位。
+- 消息操作暴露了用于文本的 `send` 以及用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程目标。
 - `typingIndicator` 支持 `none`、`message`（默认）和 `reaction`（reaction 需要用户 OAuth）。
-- 附件会通过 Chat API 下载，并存储在媒体管道中（大小上限由 `mediaMaxMb` 控制）。
+- 附件会通过 Chat API 下载，并存储在媒体管道中（大小上限由 `mediaMaxMb` 限制）。
+- 默认会忽略机器人生成的 Google Chat 消息。如果你有意设置 `allowBots: true`，被接受的机器人消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)。先配置 `channels.defaults.botLoopProtection`，然后在某个空间需要不同预算时，用 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
 
 密钥引用详情：[Secrets Management](/gateway/secrets)。
 

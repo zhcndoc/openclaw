@@ -22,6 +22,7 @@ openclaw migrate claude --dry-run
 openclaw migrate codex --dry-run
 openclaw migrate codex --skill gog-vault77-google-workspace
 openclaw migrate codex --plugin google-calendar --dry-run
+openclaw migrate codex --plugin google-calendar --verify-plugin-apps --dry-run
 openclaw migrate hermes --dry-run
 openclaw migrate hermes
 openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
@@ -58,6 +59,9 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 </ParamField>
 <ParamField path="--plugin <name>" type="string">
   按插件名称或项目 ID 选择一个 Codex 插件安装项。重复该标志可迁移多个 Codex 插件。省略时，交互式 Codex 迁移会显示原生 Codex 插件复选框选择器，非交互式迁移会保留所有计划中的插件。这仅适用于通过 Codex app-server 清单发现的源安装 `openai-curated` Codex 插件。
+</ParamField>
+<ParamField path="--verify-plugin-apps" type="boolean">
+  仅限 Codex。在规划原生插件激活之前，强制重新执行一次源 Codex app-server 的 `app/list` 遍历。默认关闭，以保持迁移规划快速。
 </ParamField>
 <ParamField path="--no-backup" type="boolean">
   跳过预应用备份。当本地 OpenClaw 状态存在时，需要配合 `--force` 使用。
@@ -109,35 +113,22 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
 
 ### 归档和人工审核状态
 
-Claude hooks、权限、环境默认值、本地记忆、路径作用域规则、子代理、缓存、计划和项目历史会保留在迁移报告中，或作为需要人工审核的项目报告。OpenClaw 不会执行 hooks、复制宽泛的允许列表，或自动导入 OAuth/Desktop 凭据状态。
+Claude hooks、权限、环境默认值、本地记忆、路径作用域规则、子代理、缓存、计划和项目历史将保留在迁移报告中，或作为需要人工审核的项目报告。OpenClaw 不会执行 hooks、复制宽泛的允许列表，或自动导入 OAuth/Desktop 凭据状态。
 
 ## Codex 提供程序
 
 内置的 Codex 提供程序默认在 `~/.codex` 检测 Codex CLI 状态，或者在设置了该环境变量时于 `CODEX_HOME` 中检测。使用 `--from <path>` 可盘点特定的 Codex 主目录。
 
-当你迁移到 OpenClaw Codex harness，并且希望有意地提取有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动会为每个代理使用各自的 `CODEX_HOME` 和 `HOME` 目录，因此默认不会读取你的个人 Codex CLI 状态。
+当迁移到 OpenClaw Codex harness，并且你想有意识地提升有用的个人 Codex CLI 资产时，请使用此提供程序。本地 Codex app-server 启动使用按代理划分的 `CODEX_HOME`，因此默认不会读取你的个人 `~/.codex`。正常的进程 `HOME` 仍会被继承，因此 Codex 可以看到共享的 `$HOME/.agents/*` 技能/插件市场条目，并且子进程可以找到用户主目录中的配置和令牌。
 
-Running `openclaw migrate codex` in an interactive terminal previews the full
-plan, then opens checkbox selectors before the final apply confirmation. Skill
-copy items are prompted first. Use `Toggle all on` or `Toggle all off` for bulk
-selection; planned skills start checked, conflict skills start unchecked, and
-`Skip for now` skips skill copies for this run while still continuing to plugin
-selection. When source-installed curated Codex plugins are migratable and
-`--plugin` was not supplied, migration then prompts for native Codex plugin
-activation by plugin name. Plugin items
-start checked unless the target OpenClaw Codex plugin config already has that
-plugin. Existing target plugins start unchecked and show a conflict hint such as
-`conflict: plugin exists`; choose `Toggle all off` to migrate no native Codex
-plugins in that run, or `Skip for now` to stop before applying. For scripted or
-exact runs, pass `--skill <name>` once per skill, for example:
+在交互式终端中运行 `openclaw migrate codex` 会先预览完整计划，然后在最终应用确认之前打开复选框选择器。先提示技能复制项。使用 `Toggle all on` 或 `Toggle all off` 进行批量选择。按 Space 可切换行，或按 Enter 激活高亮行并继续。计划中的技能默认勾选，冲突技能默认不勾选，而 `Skip for now` 会跳过本次运行中的技能复制，同时仍继续进行插件选择。当源安装的精选 Codex 插件可迁移且未提供 `--plugin` 时，迁移随后会按插件名称提示进行原生 Codex 插件激活。插件项默认勾选，除非目标 OpenClaw Codex 插件配置中已经有该插件。现有的目标插件默认不勾选，并显示类似 `conflict: plugin exists` 的冲突提示；选择 `Toggle all off` 可在该次运行中不迁移任何原生 Codex 插件，或选择 `Skip for now` 在应用前停止。对于脚本化或精确运行，请为每个技能传入一次 `--skill <name>`，例如：
 
 ```bash
 openclaw migrate codex --dry-run --skill gog-vault77-google-workspace
 openclaw migrate apply codex --yes --skill gog-vault77-google-workspace
 ```
 
-Use `--plugin <name>` to limit native Codex plugin migration non-interactively
-to one or more source-installed curated plugins:
+使用 `--plugin <name>` 可在非交互模式下将原生 Codex 插件迁移限制为一个或多个源安装的精选插件：
 
 ```bash
 openclaw migrate codex --dry-run --plugin google-calendar
@@ -147,21 +138,24 @@ openclaw migrate apply codex --yes --plugin google-calendar
 ### Codex 导入内容
 
 - `$CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
-- `$HOME/.agents/skills` 下的个人 AgentSkills，当你希望按代理拥有时会复制到当前 OpenClaw 代理工作区。
-- 通过 Codex 应用服务器 `plugin/list` 发现的源安装 `openai-curated` Codex 插件。apply 调用会为每个选定插件执行应用服务器 `plugin/install`，即使目标应用服务器已经报告该插件已安装并启用。迁移后的 Codex 插件仅可在选择原生 Codex harness 的会话中使用；它们不会暴露给 Pi、普通 OpenAI 提供程序运行、ACP 对话绑定或其他 harness。
+- 位于 `$HOME/.agents/skills` 下的个人 AgentSkills，在你希望按代理拥有时会复制到当前 OpenClaw 代理工作区。
+- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex 插件。规划会为每个已启用的已安装插件读取 `plugin/read`。基于 app 的插件要求源 Codex app-server 的账户响应是 ChatGPT 订阅账户；非 ChatGPT 或缺失的账户响应会以 `codex_subscription_required` 跳过。默认情况下，迁移不会调用源 `app/list`，因此通过账户门禁的基于 app 的插件会在没有源 app 可访问性验证的情况下进行规划，而账户查询传输失败会以 `codex_account_unavailable` 跳过。当你希望迁移强制获取新的源 `app/list` 快照，并要求在规划原生激活之前每个拥有的 app 都存在、已启用且可访问时，请传入 `--verify-plugin-apps`。在该模式下，账户查询传输失败会继续进入源 app 清单验证。源 app 清单快照仅保留在当前进程内存中；不会写入迁移输出或目标配置。已禁用的插件、无法读取的插件详情、受订阅门禁限制的源账户，以及在请求验证时缺失的 app、已禁用的 app、无法访问的 app 或源 app 清单失败，都会变成带类型原因的手动跳过项，而不是目标配置条目。
+  对于每个选中的符合条件的插件，apply 都会调用 app-server `plugin/install`，即使目标 app-server 已报告该插件已安装并启用。迁移后的 Codex 插件仅可在选择原生 Codex harness 的会话中使用；它们不会暴露给 Pi、普通 OpenAI 提供程序运行、ACP 会话绑定或其他 harness。
 
 ### 需要人工审核的 Codex 状态
 
-Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场，以及不是源安装精选插件的缓存插件包不会自动激活。它们会被复制或记录在迁移报告中供人工审核。
+Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场、不是源安装精选插件的缓存插件包，以及未通过源订阅门禁的源安装插件，不会被自动激活。当设置了 `--verify-plugin-apps` 时，未通过源 app 清单门禁的插件也会被跳过。它们会被复制到迁移报告中，或在其中报告，以供人工审核。
 
 对于已迁移的源安装精选插件，apply 会写入：
 
 - `plugins.entries.codex.enabled: true`
 - `plugins.entries.codex.config.codexPlugins.enabled: true`
-- `plugins.entries.codex.config.codexPlugins.allow_destructive_actions: false`
-- 每个选定插件对应一条显式插件条目，包含 `marketplaceName: "openai-curated"` 和 `pluginName`
+- `plugins.entries.codex.config.codexPlugins.allow_destructive_actions: true`
+- one explicit plugin entry with `marketplaceName: "openai-curated"` and
+  `pluginName` for each selected plugin
 
-迁移绝不会写入 `plugins["*"]`，也绝不会存储本地市场缓存路径。需要认证的安装会在受影响的插件项目上报告为 `status: "skipped"`、`reason: "auth_required"`，并带有已脱敏的应用标识符。在你重新授权并启用之前，它们的显式配置条目会保持禁用状态。其他安装失败会作为项目范围的 `error` 结果。
+迁移绝不会写入 `plugins["*"]`，也绝不会存储本地市场缓存路径。源侧订阅失败会在手动项上报告为带类型原因，例如 `codex_subscription_required`、`codex_account_unavailable`、`plugin_disabled` 或 `plugin_read_unavailable`。在使用 `--verify-plugin-apps` 时，源 app 清单失败也可能表现为 `app_inaccessible`、`app_disabled`、`app_missing` 或 `app_inventory_unavailable`。被跳过的插件不会写入目标配置。
+目标侧需要认证的安装会在受影响的插件项上报告，状态为 `status: "skipped"`、`reason: "auth_required"`，并使用已脱敏的 app 标识。其显式配置条目会保持禁用状态，直到你重新授权并启用它们。其他安装失败则作为按项范围的 `error` 结果。
 
 如果在规划期间 Codex 应用服务器插件清单不可用，迁移会退回到缓存包建议项，而不是使整个迁移失败。
 

@@ -144,17 +144,17 @@ teams app doctor <teamsAppId>
 
 **DM 访问**
 
-- 默认：`channels.msteams.dmPolicy = "pairing"`。未知发送者会被忽略，直到获得批准。
-- `channels.msteams.allowFrom` 应使用稳定的 AAD 对象 ID。
-- 不要依赖 UPN/显示名称匹配来实现允许列表 - 它们可能会变化。OpenClaw 默认禁用直接名称匹配；如需启用，请显式设置 `channels.msteams.dangerouslyAllowNameMatching: true`。
+- 默认：`channels.msteams.dmPolicy = "pairing"`。未知发送者会被忽略，直到通过审批。
+- `channels.msteams.allowFrom` 应使用稳定的 AAD 对象 ID 或静态发送者访问组，例如 `accessGroup:core-team`。
+- 不要依赖 UPN/显示名称匹配来做允许列表——它们可能会变化。OpenClaw 默认会禁用直接名称匹配；如需启用，请显式设置 `channels.msteams.dangerouslyAllowNameMatching: true`。
 - 当凭据允许时，向导可以通过 Microsoft Graph 将名称解析为 ID。
 
 **群组访问**
 
-- 默认：`channels.msteams.groupPolicy = "allowlist"`（除非你添加 `groupAllowFrom`，否则会被阻止）。当未设置时，使用 `channels.defaults.groupPolicy` 覆盖默认值。
-- `channels.msteams.groupAllowFrom` 控制哪些发送者可以在群聊/频道中触发（回退到 `channels.msteams.allowFrom`）。
-- 设置 `groupPolicy: "open"` 以允许任何成员（默认仍需提及）。
-- 若要允许**无频道**，设置 `channels.msteams.groupPolicy: "disabled"`。
+- 默认：`channels.msteams.groupPolicy = "allowlist"`（除非你添加 `groupAllowFrom`，否则会被阻止）。当未设置时，可使用 `channels.defaults.groupPolicy` 覆盖默认值。
+- `channels.msteams.groupAllowFrom` 控制哪些发送者或静态发送者访问组可以在群聊/频道中触发（回退到 `channels.msteams.allowFrom`）。
+- 设置 `groupPolicy: "open"` 以允许任何成员（默认仍需提及门控）。
+- 要允许**没有任何频道**，请设置 `channels.msteams.groupPolicy: "disabled"`。
 
 示例：
 
@@ -163,7 +163,7 @@ teams app doctor <teamsAppId>
   channels: {
     msteams: {
       groupPolicy: "allowlist",
-      groupAllowFrom: ["user@org.com"],
+      groupAllowFrom: ["00000000-0000-0000-0000-000000000000", "accessGroup:core-team"],
     },
   },
 }
@@ -699,14 +699,14 @@ Teams 的 markdown 比 Slack 或 Discord 更受限：
 - `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`: 按频道工具策略覆盖（`allow`/`deny`/`alsoAllow`）。
 - `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`: 按频道按发送者工具策略覆盖（支持 `"*"` 通配符）。
 - `toolsBySender` keys should use explicit prefixes:
-  `id:`, `e164:`, `username:`, `name:` (legacy unprefixed keys still map to `id:` only).
-- `channels.msteams.actions.memberInfo`: 启用或禁用由 Graph 支持的成员信息操作（默认：当 Graph 凭据可用时启用）。
-- `channels.msteams.authType`: 认证类型 - `"secret"`（默认）或 `"federated"`。
-- `channels.msteams.certificatePath`: PEM 证书文件路径（联邦 + 证书认证）。
-- `channels.msteams.certificateThumbprint`: 证书指纹（可选，认证不需要）。
-- `channels.msteams.useManagedIdentity`: 启用托管标识认证（联邦模式）。
-- `channels.msteams.managedIdentityClientId`: 用户分配托管标识的客户端 ID。
-- `channels.msteams.sharePointSiteId`: 群聊/频道中文件上传的 SharePoint site ID（见 [在群聊中发送文件](#sending-files-in-group-chats)）。
+  `channel:`, `id:`, `e164:`, `username:`, `name:` (legacy unprefixed keys still map to `id:` only).
+- `channels.msteams.actions.memberInfo`: enable or disable the Graph-backed member info action (default: enabled when Graph credentials are available).
+- `channels.msteams.authType`: authentication type - `"secret"` (default) or `"federated"`.
+- `channels.msteams.certificatePath`: path to PEM certificate file (federated + certificate auth).
+- `channels.msteams.certificateThumbprint`: certificate thumbprint (optional, not required for auth).
+- `channels.msteams.useManagedIdentity`: enable managed identity auth (federated mode).
+- `channels.msteams.managedIdentityClientId`: client ID for user-assigned managed identity.
+- `channels.msteams.sharePointSiteId`: SharePoint site ID for file uploads in group chats/channels (see [Sending files in group chats](#sending-files-in-group-chats)).
 
 ## 路由和会话
 

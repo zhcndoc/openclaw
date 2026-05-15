@@ -2,19 +2,21 @@
 summary: "openclaw health 的 CLI 参考（通过 RPC 获取网关健康快照）"
 read_when:
   - 你想快速检查正在运行的 Gateway 的健康状态
-title: "Health"
+title: "健康"
 ---
 
 # `openclaw health`
 
 从正在运行的 Gateway 获取健康状态。
 
-选项：
+## 选项
 
-- `--json`：机器可读输出
-- `--timeout <ms>`：连接超时时间，单位为毫秒（默认 `10000`）
-- `--verbose`：详细日志
-- `--debug`：`--verbose` 的别名
+| 标志             | 默认值 | 描述                                                           |
+| ---------------- | ------- | -------------------------------------------------------------- |
+| `--json`         | `false` | 以机器可读的 JSON 代替文本输出。                                 |
+| `--timeout <ms>` | `10000` | 连接超时时间，单位为毫秒。                                       |
+| `--verbose`      | `false` | 详细日志。强制进行实时探测，并展开每个代理的输出。             |
+| `--debug`        | `false` | `--verbose` 的别名。                                           |
 
 示例：
 

@@ -132,7 +132,7 @@ openclaw devices revoke --device <deviceId> --role node
 
 ## 令牌漂移恢复检查清单
 
-当 Control UI 或其他客户端持续因 `AUTH_TOKEN_MISMATCH` 或 `AUTH_DEVICE_TOKEN_MISMATCH` 失败时，请使用此流程。
+当 Control UI 或其他客户端持续出现 `AUTH_TOKEN_MISMATCH`、`AUTH_DEVICE_TOKEN_MISMATCH` 或 `AUTH_SCOPE_MISMATCH` 时，请使用此清单。
 
 1. 确认当前 gateway token 来源：
 
@@ -164,8 +164,9 @@ openclaw devices approve <requestId>
 
 说明：
 
-- 正常重新连接的认证优先级是：显式共享 token/password 优先，然后是显式 `deviceToken`，然后是存储的设备令牌，最后是引导令牌。
-- 受信任的 `AUTH_TOKEN_MISMATCH` 恢复可以在那一次有边界的重试中临时同时发送共享令牌和存储的设备令牌。
+- 正常重新连接的认证优先级是：显式共享 token/password 优先，然后是显式 `deviceToken`，然后是已存储的设备令牌，最后是引导令牌。
+- 可信的 `AUTH_TOKEN_MISMATCH` 恢复可以在一次受限重试中临时同时发送共享令牌和已存储的设备令牌。
+- `AUTH_SCOPE_MISMATCH` 表示设备令牌已被识别，但不包含请求的范围集合；在更改共享 Gateway 认证之前，请先修复配对/范围批准契约。
 
 相关：
 

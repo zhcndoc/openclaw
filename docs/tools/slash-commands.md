@@ -135,30 +135,30 @@ sidebarTitle: "斜杠命令"
 
   </Accordion>
   <Accordion title="Model and run controls">
-    - `/think <level|default>` 设置思考级别或清除会话覆盖。选项来自当前模型的提供方配置文件；常见级别包括 `off`、`minimal`、`low`、`medium` 和 `high`，在支持的情况下也可使用 `xhigh`、`adaptive`、`max` 或二进制 `on` 等自定义级别。别名：`/thinking`、`/t`。
+    - `/think <level|default>` 设置思考级别或清除会话覆盖。选项来自活动模型的提供方配置文件；常见级别有 `off`、`minimal`、`low`、`medium` 和 `high`，在支持的情况下还可使用自定义级别，如 `xhigh`、`adaptive`、`max` 或二进制 `on`。别名：`/thinking`、`/t`。
     - `/verbose on|off|full` 切换详细输出。别名：`/v`。
     - `/trace on|off` 切换当前会话的插件 trace 输出。
     - `/fast [status|on|off|default]` 显示、设置或清除快速模式。
     - `/reasoning [on|off|stream]` 切换推理可见性。别名：`/reason`。
-    - `/elevated [on|off|ask|full]` 切换提权模式。别名：`/elev`。
+    - `/elevated [on|off|ask|full]` 切换提升模式。别名：`/elev`。
     - `/exec host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>` 显示或设置 exec 默认值。
     - `/model [name|#|status]` 显示或设置模型。
-    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出某提供方已配置/可认证使用的提供方或模型；添加 `all` 可浏览该提供方的完整目录。
-    - `/queue <mode>` 管理队列行为（`steer`、旧版 `queue`、`followup`、`collect`、`steer-backlog`、`interrupt`），以及诸如 `debounce:0.5s cap:25 drop:summarize` 的选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。见 [Command queue](/concepts/queue) 和 [Steering queue](/concepts/queue-steering)。
-    - `/steer <message>` 将引导注入当前会话的活动运行中，与 `/queue` 模式无关。会话空闲时它不会启动新的运行。别名：`/tell`。见 [Steer](/tools/steer)。
+    - `/models [provider] [page] [limit=<n>|size=<n>|all]` 列出为某提供方配置/可用授权的提供方或模型；添加 `all` 可浏览该提供方的完整目录。`agents.defaults.models` 中的 `provider/*` 条目会让 `/model` 和 `/models` 仅为这些提供方显示已发现的模型。
+    - `/queue <mode>` 管理活动运行队列行为（`steer`、`followup`、`collect`、`interrupt`），以及诸如 `debounce:0.5s cap:25 drop:summarize` 之类的选项；`/queue default` 或 `/queue reset` 会清除会话覆盖。运行中途的提示默认会在没有队列指令的情况下进行引导。见 [Command queue](/concepts/queue) 和 [Steering queue](/concepts/queue-steering)。
+    - `/steer <message>` 为当前会话中的活动运行注入引导，独立于 `/queue` 模式。如果无法引导或会话处于空闲状态，`<message>` 会继续作为普通提示。别名：`/tell`。见 [Steer](/tools/steer)。
 
   </Accordion>
   <Accordion title="Discovery and status">
     - `/help` 显示简短帮助摘要。
     - `/commands` 显示生成的命令目录。
-    - `/tools [compact|verbose]` 显示当前代理此刻可用的能力。
-    - `/status` 显示执行/运行时状态、Gateway 和系统运行时间，以及可用时的提供方使用量/配额。
-    - `/diagnostics [note]` 是用于 Gateway bug 和 Codex harness 运行的仅 owner 支持报告流程。它每次都会在运行 `openclaw gateway diagnostics export --json` 之前请求明确的 exec 批准；不要使用 allow-all 规则批准 diagnostics。批准后，它会发送一份可直接粘贴的报告，其中包含本地 bundle 路径、清单摘要、隐私说明以及相关会话 id。在群聊中，批准提示和报告会私下发送给 owner。当活动会话使用 OpenAI Codex harness 时，相同的批准还会将相关 Codex 反馈发送到 OpenAI 服务器，完成的回复会列出 OpenClaw 会话 id、Codex 线程 id，以及 `codex resume <thread-id>` 命令。见 [Diagnostics Export](/gateway/diagnostics)。
-    - `/crestodian <request>` 从 owner DM 运行 Crestodian 设置和修复助手。
-    - `/tasks` 列出当前会话的活动/最近后台任务。
-    - `/context [list|detail|json]` 解释上下文是如何组装的。
+    - `/tools [compact|verbose]` 显示当前代理此刻可用的内容。
+    - `/status` 显示执行/运行时状态、Gateway 和系统运行时间，以及可用时的提供方用量/配额。
+    - `/diagnostics [note]` 是用于 Gateway bug 和 Codex harness 运行的仅 owner 支持报告流程。它每次都会在运行 `openclaw gateway diagnostics export --json` 之前请求显式的 exec 批准；不要用 allow-all 规则批准 diagnostics。批准后，它会发送一份可粘贴的报告，包含本地 bundle 路径、清单摘要、隐私说明和相关会话 id。在群聊中，批准提示和报告会私下发送给 owner。当活动会话使用 OpenAI Codex harness 时，同样的批准还会向 OpenAI 服务器发送相关 Codex 反馈，并且完成后的回复会列出 OpenClaw 会话 id、Codex 线程 id，以及 `codex resume <thread-id>` 命令。见 [Diagnostics Export](/gateway/diagnostics)。
+    - `/crestodian <request>` 从 owner DM 中运行 Crestodian 设置和修复助手。
+    - `/tasks` 列出当前会话的活动/近期后台任务。
+    - `/context [list|detail|map|json]` 解释上下文是如何组装的。`map` 会发送当前会话上下文的树状图图像。
     - `/whoami` 显示你的发送者 id。别名：`/id`。
-    - `/usage off|tokens|full|cost` 控制每条响应的使用量页脚，或打印本地成本摘要。
+    - `/usage off|tokens|full|cost` 控制每条响应的使用量页脚或打印本地成本摘要。
 
   </Accordion>
   <Accordion title="技能、允许列表、审批">
@@ -335,10 +335,10 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
 
 说明：
 
-- `/model` 和 `/model list` 会显示一个紧凑的、带编号的选择器（模型家族 + 可用 provider）。
-- 在 Discord 上，`/model` 和 `/models` 会打开一个交互式选择器，包含 provider 和 model 下拉菜单，以及一个 Submit 步骤。
-- `/model <#>` 会从该选择器中选择（并在可能时优先当前 provider）。
-- `/model status` 会显示详细视图，包括已配置的 provider endpoint（`baseUrl`）以及可用时的 API 模式（`api`）。
+- `/model` 和 `/model list` 会显示一个紧凑的、带编号的选择器（模型家族 + 可用提供方）。
+- 在 Discord 上，`/model` 和 `/models` 会打开一个交互式选择器，包含 provider 和 model 下拉菜单以及一个 Submit 步骤。该选择器会遵循 `agents.defaults.models`，包括 `provider/*` 条目，因此按 provider 作用域进行发现时，可以让选择器保持在 Discord 25 个选项的组件限制之下。
+- `/model <#>` 会从该选择器中选择（并在可能时优先使用当前 provider）。
+- `/model status` 会显示详细视图，包括已配置的 provider endpoint（`baseUrl`）和 API 模式（`api`）（如果可用）。
 
 ## 调试 override
 
@@ -460,10 +460,11 @@ Override 会立即应用于新的 config 读取，但不会写入 `openclaw.json
 不同于普通聊天：
 
 - 它使用当前会话作为背景上下文，
-- 它作为一个独立的、**无工具**的一次性调用运行，
+- 在 Codex harness 会话中，它会作为一个临时的 Codex side thread 运行，并使用当前的 Codex 权限和原生工具面，
+- 在非 Codex 会话中，它会保持旧的直接一次性 side-call 行为，
 - 它不会改变未来的会话上下文，
 - 它不会写入 transcript 历史，
-- 它以实时附带结果的形式返回，而不是普通 assistant 消息。
+- 它会作为实时的 side result 返回，而不是普通的 assistant 消息。
 
 这使得 `/btw` 在你想要临时澄清一些内容、同时主任务继续进行时非常有用。
 

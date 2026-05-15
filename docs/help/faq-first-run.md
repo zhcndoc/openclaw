@@ -65,7 +65,7 @@ sidebarTitle: "首次运行 FAQ"
 
     在任务模式下，只有一次真实的心跳运行完成后，到期时间戳才会前进。被跳过的运行不会把任务标记为完成。
 
-    文档：[Heartbeat](/gateway/heartbeat)，[自动化与任务](/automation)。
+    Docs: [Heartbeat](/gateway/heartbeat), [Automation](/automation).
 
   </Accordion>
 

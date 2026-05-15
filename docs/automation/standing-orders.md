@@ -243,8 +243,8 @@ openclaw cron add \
 
 ## 相关内容
 
-- [自动化和任务](/automation)：一览所有自动化机制。
-- [Cron 任务](/automation/cron-jobs)：为常设指令提供调度执行。
-- [Hooks](/automation/hooks)：代理生命周期事件的事件驱动脚本。
-- [Webhooks](/automation/cron-jobs#webhooks)：入站 HTTP 事件触发器。
-- [代理工作区](/concepts/agent-workspace)：常设指令存放的位置，包括自动注入的引导文件完整列表（`AGENTS.md`、`SOUL.md` 等）。
+- [Automation](/automation): 所有自动化机制一览。
+- [Cron jobs](/automation/cron-jobs): 常设指令的计划执行强制机制。
+- [Hooks](/automation/hooks): 用于代理生命周期事件的事件驱动脚本。
+- [Webhooks](/automation/cron-jobs#webhooks): 入站 HTTP 事件触发器。
+- [Agent workspace](/concepts/agent-workspace): 常设指令所在的位置，包括自动注入的启动文件完整列表（`AGENTS.md`、`SOUL.md` 等）。

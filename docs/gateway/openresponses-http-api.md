@@ -67,13 +67,15 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
 
 请求遵循带有基于条目的输入的 OpenResponses API。目前支持：
 
-- `input`：字符串或条目对象数组。
-- `instructions`：合并到系统提示中。
-- `tools`：客户端工具定义（函数工具）。
-- `tool_choice`：过滤或强制客户端工具。
-- `stream`：启用 SSE 流式传输。
-- `max_output_tokens`：尽力而为的输出限制（取决于提供方）。
-- `user`：稳定的会话路由。
+- `input`: 字符串或条目对象数组。
+- `instructions`: 合并到系统提示中。
+- `tools`: 客户端工具定义（函数工具）。
+- `tool_choice`: 过滤或要求客户端工具。
+- `stream`: 启用 SSE 流式传输。
+- `max_output_tokens`: 尽力而为的输出上限（取决于提供方）。
+- `temperature`: 尽力而为的采样温度，转发给提供方。ChatGPT 相关的 Codex Responses 后端会忽略它，因为它使用固定的服务端采样。
+- `top_p`: 尽力而为的 nucleus 采样，转发给提供方。与 `temperature` 相同，Codex Responses 也有相同的注意事项。
+- `user`: 稳定的会话路由。
 
 已接受但**当前忽略**：
 

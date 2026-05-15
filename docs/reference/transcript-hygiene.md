@@ -114,12 +114,14 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 - 缺失的 OpenAI Responses 系列工具输出会被综合为 `aborted`，以匹配 Codex 回放规范化。
 - 不剥离 thought 签名。
 
-**OpenAI 兼容的 Gemma 4**
+**OpenAI-compatible Chat Completions**
 
-- 在回放前剥离历史 assistant thinking/reasoning 块，因此本地
-  OpenAI 兼容的 Gemma 4 服务器不会接收到上一轮的 reasoning 内容。
-- 当前同轮次的工具调用续接会保留 assistant reasoning 块，
-  直到工具结果已被回放为止。
+- 历史 assistant 思考/reasoning 块会在回放前被剥离，因此
+  本地和代理式 OpenAI-compatible 服务器不会接收到上一轮的
+  reasoning 字段，例如 `reasoning` 或 `reasoning_content`。
+- 当前同轮次的工具调用续接会保留 assistant reasoning 块
+  附着在工具调用上，直到工具结果被回放。
+- 当提供商自有异常要求回放 reasoning 元数据时，可选择退出。
 
 **Google（Generative AI / Gemini CLI / Antigravity）**
 

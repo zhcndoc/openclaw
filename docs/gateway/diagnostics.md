@@ -42,7 +42,12 @@ openclaw gateway diagnostics export --json
 
 当当前活动的 OpenClaw 会话使用原生 OpenAI Codex harness 时，同一次 exec 批准还会覆盖一项针对 OpenClaw 已知的 Codex 运行时线程的 OpenAI 反馈上传。该上传与本地 Gateway zip 是分开的，并且仅出现在 Codex harness 会话中。在批准之前，提示会说明批准诊断也会发送 Codex 反馈，但不会列出 Codex 会话或线程 id。批准之后，聊天回复会列出已发送到 OpenAI 服务器的通道、OpenClaw 会话 id、Codex 线程 id，以及这些线程的本地恢复命令。如果你拒绝或忽略该批准，OpenClaw 不会运行导出，不会发送 Codex 反馈，也不会打印 Codex id。
 
-这使得常见的 Codex 调试流程更简短：在 Telegram、Discord 或其他渠道中注意到异常行为，运行 `/diagnostics`，一次批准，向支持团队分享报告，然后如果你想自己检查原生 Codex 线程，可以在本地运行打印出的 `codex resume <thread-id>` 命令。有关该检查流程，请参见 [Codex harness](/plugins/codex-harness#inspect-a-codex-thread-from-the-cli)。
+That makes the common Codex debugging loop short: notice the bad behavior in
+Telegram, Discord, or another channel, run `/diagnostics`, approve once, share
+the report with support, then run the printed `codex resume <thread-id>` command
+locally if you want to inspect the native Codex thread yourself. See
+[Codex harness](/plugins/codex-harness#inspect-codex-threads-locally) for
+that inspection workflow.
 
 ## 导出内容
 

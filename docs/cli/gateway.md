@@ -289,17 +289,18 @@ openclaw gateway status --require-rpc
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="状态语义">
-    - `gateway status` 在本地 CLI 配置缺失或无效时仍可用于诊断。
-    - 默认的 `gateway status` 可证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作。
-    - 诊断探测对首次设备认证是非变更性的：如果存在现有的缓存设备令牌，它们会复用该令牌，但不会仅为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
-    - `gateway status` 会在可能时为探测认证解析已配置的 auth SecretRef。
-    - 如果在该命令路径中所需的 auth SecretRef 未解析，且探测连通性/认证失败，则 `gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥源。
-    - 如果探测成功，未解析的 auth-ref 警告会被抑制，以避免误报。
-    - 当监听服务还不够，而你也需要读范围 RPC 调用健康时，请在脚本和自动化中使用 `--require-rpc`。
-    - `--deep` 会尽力扫描额外的 launchd/systemd/schtasks 安装。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数设置应每台机器只运行一个 gateway。
+  <Accordion title="Status 语义">
+    - `gateway status` 即使本地 CLI 配置缺失或无效，也仍可用于诊断。
+    - 默认的 `gateway status` 会证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作。
+    - 诊断探测对首次设备认证是非变更性的：当已有缓存设备令牌时会复用它，但不会为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
+    - `gateway status` 在可能时会解析已配置认证 SecretRef 以用于探测认证。
+    - 如果在此命令路径中必需的认证 SecretRef 未解析，而探测连通性/认证失败，则 `gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥源。
+    - 如果探测成功，则未解析的 auth-ref 警告会被抑制，以避免误报。
+    - 当监听服务还不够，而你还需要读范围 RPC 调用也正常时，请在脚本和自动化中使用 `--require-rpc`。
+    - `--deep` 会增加对额外 launchd/systemd/schtasks 安装的尽力而为扫描。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数设置应每台机器只运行一个 gateway。
     - `--deep` 还会在服务进程为外部 supervisor 重启而正常退出时，报告最近一次 Gateway supervisor 重启交接。
-    - 人类输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
+    - `--deep` 以插件感知模式运行配置验证（`pluginValidation: "full"`），并显示已配置的插件清单警告（例如缺少 channel 配置元数据），以便安装和更新的冒烟检查能够捕获它们。默认的 `gateway status` 保持快速只读路径，跳过插件验证。
+    - 人类可读输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或状态目录漂移。
 
   </Accordion>
   <Accordion title="Linux systemd auth-drift 检查">
@@ -491,7 +492,7 @@ openclaw gateway restart
   </Accordion>
   <Accordion title="生命周期行为">
     - 使用 `gateway restart` 重启托管服务。不要把 `gateway stop` 和 `gateway start` 连接起来当作重启替代方案。
-    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用——KeepAlive 的自动恢复仍会对未来的崩溃保持 सक्रिय，且 `gateway start` 可在不手动执行 `launchctl enable` 的情况下干净地重新启用。传入 `--disable` 可持久化地抑制 KeepAlive 和 RunAtLoad，这样 gateway 在下一次显式 `gateway start` 之前不会重新启动；当手动停止需要在重启或系统重启后仍然生效时，请使用此选项。
+    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用——KeepAlive 的自动恢复仍会对未来的崩溃保持活动，且 `gateway start` 可在不手动执行 `launchctl enable` 的情况下干净地重新启用。传入 `--disable` 可持久化地抑制 KeepAlive 和 RunAtLoad，这样 gateway 在下一次显式 `gateway start` 之前不会重新启动；当手动停止需要在重启或系统重启后仍然生效时，请使用此选项。
     - `gateway restart --safe` 会要求正在运行的 Gateway 对当前活跃的 OpenClaw 工作进行预检，并将重启延后，直到回复投递、内嵌运行和任务运行全部排空。`--safe` 不能与 `--force` 或 `--wait` 组合使用。
     - `gateway restart --wait 30s` 会覆盖该次重启配置的排空预算。裸数字表示毫秒；支持 `s`、`m` 和 `h` 等单位。`--wait 0` 表示无限等待。
     - `gateway restart --safe --skip-deferral` 会运行支持 OpenClaw 的安全重启，但绕过延后门控，因此即使报告了阻塞项，Gateway 也会立即发出重启。用于处理卡住的任务运行延后；需要 `--safe`。
@@ -518,15 +519,15 @@ openclaw gateway restart
 
 只有启用了 Bonjour 发现的 gateway（默认）才会广播该信标。
 
-广域发现记录包含（TXT）：
+广域发现记录可以包含以下 TXT 提示：
 
 - `role`（gateway 角色提示）
 - `transport`（传输提示，例如 `gateway`）
 - `gatewayPort`（WebSocket 端口，通常为 `18789`）
-- `sshPort`（可选；当不存在时，客户端默认将 SSH 目标设为 `22`）
+- `sshPort`（仅完整发现模式；当缺失时，客户端默认将 SSH 目标设为 `22`）
 - `tailnetDns`（MagicDNS 主机名，如可用）
-- `gatewayTls` / `gatewayTlsSha256`（TLS 已启用 + 证书指纹）
-- `cliPath`（写入广域区域的远程安装提示）
+- `gatewayTls` / `gatewayTlsSha256`（已启用 TLS + 证书指纹）
+- `cliPath`（仅完整发现模式）
 
 ### `gateway discover`
 
@@ -549,9 +550,9 @@ openclaw gateway discover --json | jq '.beacons[].wsUrl'
 ```
 
 <Note>
-- CLI 会扫描 `local.`，以及在启用时配置的广域域名。
-- JSON 输出中的 `wsUrl` 源自解析后的服务端点，而不是仅来自 TXT 的提示，例如 `lanHost` 或 `tailnetDns`。
-- 在 `local.` mDNS 上，只有当 `discovery.mdns.mode` 为 `full` 时才会广播 `sshPort` 和 `cliPath`。广域 DNS-SD 仍会写入 `cliPath`；在那里 `sshPort` 也仍然是可选的。
+- CLI 会扫描 `local.` 以及已启用时配置的广域域。
+- JSON 输出中的 `wsUrl` 派生自已解析的服务端点，而不是仅来自 TXT 提示，例如 `lanHost` 或 `tailnetDns`。
+- 在 `local.` mDNS 和广域 DNS-SD 上，仅当 `discovery.mdns.mode` 为 `full` 时才会发布 `sshPort` 和 `cliPath`。
 
 </Note>
 
