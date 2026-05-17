@@ -1,11 +1,11 @@
 ---
-summary: "Models CLI: 列出、设置、别名、回退、扫描、状态"
+summary: "模型 CLI：列出、设置、别名、回退、扫描、状态"
 read_when:
   - 添加或修改 models CLI（models list/set/scan/aliases/fallbacks）
   - 更改模型回退行为或选择交互体验
   - 更新模型扫描探测（工具/图像）
-title: "Models CLI"
-sidebarTitle: "Models CLI"
+title: "模型 CLI"
+sidebarTitle: "模型 CLI"
 ---
 
 <CardGroup cols={2}>
@@ -23,7 +23,7 @@ sidebarTitle: "Models CLI"
   </Card>
 </CardGroup>
 
-模型引用会选择提供商和模型。它们通常不会选择底层的 agent 运行时。OpenAI agent 引用是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。显式的运行时覆盖应放在提供商/模型策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent runtimes](/concepts/agent-runtimes)。
+模型引用会选择提供商和模型。它们通常不会选择底层的 agent 运行时。OpenAI agent 引用是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。显式的运行时覆盖应放在提供商/模型策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent 运行时](/concepts/agent-runtimes)。
 
 ## 模型选择如何工作
 
@@ -42,8 +42,8 @@ OpenClaw 按以下顺序选择模型：
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="相关模型表面">
-    - `agents.defaults.models` 是 OpenClaw 可使用模型的允许列表/目录（加上别名）。使用 `provider/*` 条目可以限制可见提供商，同时保持提供商发现的动态性。
+  <Accordion title="相关模型入口">
+    - `agents.defaults.models` 是 OpenClaw 可使用模型的白名单/目录（加上别名）。使用 `provider/*` 条目可以限制可见提供商，同时保持提供商发现的动态性。
     - `agents.defaults.imageModel` **仅在**主模型不能接受图像时使用。
     - `agents.defaults.pdfModel` 由 `pdf` 工具使用。若省略，该工具会回退到 `agents.defaults.imageModel`，然后回退到已解析的会话/默认模型。
     - `agents.defaults.imageGenerationModel` 由共享的图像生成能力使用。若省略，`image_generate` 仍可推断一个带认证的提供商默认值。它会先尝试当前默认提供商，然后按 provider-id 顺序尝试其余已注册的图像生成提供商。如果你设置了特定提供商/模型，也要配置该提供商的认证/API key。
@@ -58,12 +58,12 @@ OpenClaw 按以下顺序选择模型：
 
 同一个 `provider/model`，根据来源不同，含义也可能不同：
 
-- 配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常的起点，并使用 `agents.defaults.model.fallbacks`。
-- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 的形式存储，因此后续轮次可以继续使用回退链，而无需先探测一个已知有问题的主模型。
-- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果该选择的提供商/模型不可达，OpenClaw 会显式失败，而不会落到另一个已配置模型。
-- Cron `--model` / payload `model` 是每个作业的主模型。除非作业提供显式的 payload `fallbacks`，否则它仍会使用配置的回退（要进行严格的 cron 运行，请使用 `fallbacks: []`）。
-- CLI 默认模型和允许列表选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models` 而不是加载完整的内置目录。
-- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：若存在，则使用 `agents.defaults.models`，包括提供商级别的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 以及具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"` 或 `openclaw models list --all`。
+- 已配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常的起点，并使用 `agents.defaults.model.fallbacks`。
+- 自动回退选择是临时恢复状态。它们会以 `modelOverrideSource: "auto"` 存储，因此后续轮次可以继续使用回退链，而不必每次都探测一个已知不可用的主模型；OpenClaw 会定期重新探测原始主模型，在恢复后清除自动选择，并在每次状态变化时宣布回退/恢复切换。
+- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到另一个已配置模型上。
+- Cron `--model` / 载荷 `model` 是每个作业的主模型。除非作业提供显式的载荷 `fallbacks`，否则它仍会使用已配置的回退（若要严格运行 cron，请使用 `fallbacks: []`）。
+- CLI 默认模型和白名单选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
+- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：如果存在 `agents.defaults.models`，就使用它，包括提供商级的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 加上具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"`，或 `openclaw models list --all`。
 
 ## 快速模型策略
 
@@ -88,7 +88,7 @@ openclaw onboard
 - `agents.defaults.pdfModel.primary` 和 `agents.defaults.pdfModel.fallbacks`
 - `agents.defaults.imageGenerationModel.primary` 和 `agents.defaults.imageGenerationModel.fallbacks`
 - `agents.defaults.videoGenerationModel.primary` 和 `agents.defaults.videoGenerationModel.fallbacks`
-- `agents.defaults.models`（允许列表 + 别名 + 提供商参数 + `provider/*` 动态提供商条目）
+- `agents.defaults.models`（白名单 + 别名 + 提供商参数 + `provider/*` 动态提供商条目）
 - `models.providers`（写入 `models.json` 的自定义提供商）
 
 <Note>
@@ -213,7 +213,7 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
   </Accordion>
 </AccordionGroup>
 
-完整的命令行为/配置： [Slash commands](/tools/slash-commands)。
+完整的命令行为/配置： [斜杠命令](/tools/slash-commands)。
 
 ## CLI 命令
 

@@ -1,30 +1,30 @@
 ---
-summary: "Hooks：面向命令和生命周期事件的事件驱动自动化"
+summary: "钩子：面向命令和生命周期事件的事件驱动自动化"
 read_when:
   - 你希望为 /new、/reset、/stop 和代理生命周期事件实现事件驱动自动化
-  - 你想构建、安装或调试 hooks
-title: "Hooks"
+  - 你想构建、安装或调试钩子
+title: "钩子"
 ---
 
-Hooks 是一些小脚本，会在 Gateway 内部发生某些事情时运行。它们可以从目录中发现，并通过 `openclaw hooks` 进行检查。只有在你启用 hooks 或配置至少一个 hook 条目、hook pack、旧式处理器或额外的 hook 目录后，Gateway 才会加载内部 hooks。
+钩子是一些小脚本，会在 Gateway 内部发生某些事情时运行。它们可以从目录中发现，并通过 `openclaw hooks` 进行检查。只有在你启用钩子或配置至少一个 hook 条目、hook 包、旧式处理器或额外的 hook 目录后，Gateway 才会加载内部钩子。
 
-OpenClaw 中有两种 hooks：
+OpenClaw 中有两种钩子：
 
-- **内部 hooks**（本页）：当代理事件触发时在 Gateway 内部运行，例如 `/new`、`/reset`、`/stop` 或生命周期事件。
+- **内部钩子**（本页）：当代理事件触发时在 Gateway 内部运行，例如 `/new`、`/reset`、`/stop` 或生命周期事件。
 - **Webhooks**：外部 HTTP 端点，允许其他系统在 OpenClaw 中触发工作。参见 [Webhooks](/automation/cron-jobs#webhooks)。
 
-Hooks 也可以打包在插件中。`openclaw hooks list` 会同时显示独立 hooks 和由插件管理的 hooks。
+钩子也可以打包在插件中。`openclaw hooks list` 会同时显示独立钩子和由插件管理的钩子。
 
 ## 快速开始
 
 ```bash
-# 列出可用的 hooks
+# 列出可用的钩子
 openclaw hooks list
 
-# 启用一个 hook
+# 启用一个钩子
 openclaw hooks enable session-memory
 
-# 检查 hook 状态
+# 检查钩子状态
 openclaw hooks check
 
 # 获取详细信息
@@ -43,7 +43,7 @@ openclaw hooks info session-memory
 | `session:compact:after`  | 紧凑化完成之后                                           |
 | `session:patch`          | 会话属性被修改时                                       |
 | `agent:bootstrap`        | 工作区 bootstrap 文件被注入之前                        |
-| `gateway:startup`        | 通道启动且 hooks 已加载之后                            |
+| `gateway:startup`        | 通道启动且钩子已加载之后                               |
 | `gateway:shutdown`       | Gateway 关闭开始时                                    |
 | `gateway:pre-restart`    | 预期中的 Gateway 重启之前                               |
 | `message:received`       | 来自任意通道的入站消息                                 |
@@ -51,11 +51,11 @@ openclaw hooks info session-memory
 | `message:preprocessed`   | 媒体和链接预处理完成或被跳过后                          |
 | `message:sent`           | 出站消息已送达                                         |
 
-## 编写 hooks
+## 编写钩子
 
-### Hook 结构
+### 钩子结构
 
-每个 hook 都是一个包含两个文件的目录：
+每个钩子都是一个包含两个文件的目录：
 
 ```
 my-hook/
@@ -130,26 +130,53 @@ export default handler;
 
 `command:stop` 反映用户发出 `/stop`；它属于取消/命令生命周期，而不是代理最终完成的门控。需要检查自然最终答案并要求代理再执行一次的插件，应使用类型化插件 hook `before_agent_finalize`。参见 [Plugin hooks](/plugins/hooks)。
 
-**Gateway 生命周期事件**：`gateway:shutdown` 包含 `reason` 和 `restartExpectedMs`，并在 Gateway 关闭开始时触发。`gateway:pre-restart` 包含相同上下文，但仅在关闭是预期重启的一部分且提供了有限的 `restartExpectedMs` 值时触发。在关闭期间，每个生命周期 hook 的等待都是尽力而为且有界的，因此如果某个处理器卡住，关闭仍会继续。
+## Gateway 生命周期事件
 
-Between the `gateway:shutdown` (or `gateway:pre-restart`) event and the rest of the shutdown sequence, the gateway also fires a typed `session_end` plugin hook for every session that was still active when the process stopped. The event's `reason` is `shutdown` for a plain SIGTERM/SIGINT stop and `restart` when the close was scheduled as part of an expected restart. This drain is bounded so a slow `session_end` handler cannot block process exit, and sessions that have already been finalized through replace / reset / delete / compaction are skipped to avoid double-firing.
+`gateway:shutdown` 包含 `reason` 和 `restartExpectedMs`，并在 gateway 关闭开始时触发。`gateway:pre-restart` 包含相同的上下文，但仅在关闭是预期重启的一部分且提供了有限的 `restartExpectedMs` 值时触发。在关闭期间，每个生命周期 hook 的等待都是尽力而为且有上限的，因此如果某个处理器卡住，关闭仍会继续。默认等待预算是 `gateway:shutdown` 5 秒，`gateway:pre-restart` 10 秒。
 
-## Hook discovery
+当通道仍然可用时，请使用 `gateway:pre-restart` 发送简短的重启通知：
 
-Hooks 会按覆盖优先级从低到高在以下目录中发现：
+```typescript
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
-1. **捆绑 hooks**：随 OpenClaw 一起提供
-2. **插件 hooks**：打包在已安装插件中的 hooks
-3. **托管 hooks**：`~/.openclaw/hooks/`（用户安装，在工作区之间共享）。来自 `hooks.internal.load.extraDirs` 的额外目录共享此优先级。
-4. **工作区 hooks**：`<workspace>/hooks/`（按代理隔离，默认禁用，直到显式启用）
+const execFileAsync = promisify(execFile);
 
-工作区 hooks 可以添加新的 hook 名称，但不能覆盖同名的捆绑、托管或插件提供的 hooks。
+export default async function handler(event) {
+  if (event.type !== "gateway" || event.action !== "pre-restart") {
+    return;
+  }
 
-在内部 hooks 配置完成之前，Gateway 启动时会跳过内部 hook 发现。使用 `openclaw hooks enable <name>` 启用捆绑或托管 hook，安装 hook pack，或设置 `hooks.internal.enabled=true` 以启用。启用一个已命名的 hook 时，Gateway 只加载该 hook 的处理器；`hooks.internal.enabled=true`、额外的 hook 目录以及旧式处理器会启用更广泛的发现。
+  const restartInSeconds = Math.ceil(event.context.restartExpectedMs / 1000);
+  await execFileAsync("openclaw", [
+    "system",
+    "event",
+    "--mode",
+    "now",
+    "--text",
+    `Gateway restarting in ~${restartInSeconds}s (${event.context.reason}). Checkpoint now.`,
+  ]);
+}
+```
 
-### Hook packs
+在 `gateway:shutdown`（或 `gateway:pre-restart`）事件与后续关闭流程之间，gateway 还会为进程停止时仍处于活动状态的每个会话触发一个类型化的 `session_end` 插件 hook。对于普通的 SIGTERM/SIGINT 停止，事件的 `reason` 为 `shutdown`；当关闭是预期重启的一部分时，`reason` 为 `restart`。此清理过程有上限，因此较慢的 `session_end` 处理器不会阻塞进程退出，并且已经通过 replace / reset / delete / compaction 完成终结的会话会被跳过，以避免重复触发。
 
-Hook packs 是通过 `package.json` 中的 `openclaw.hooks` 导出 hooks 的 npm 包。使用以下命令安装：
+## 钩子发现
+
+钩子会按覆盖优先级从低到高在以下目录中发现：
+
+1. **捆绑钩子**：随 OpenClaw 一起提供
+2. **插件钩子**：打包在已安装插件中的钩子
+3. **托管钩子**：`~/.openclaw/hooks/`（用户安装，在工作区之间共享）。来自 `hooks.internal.load.extraDirs` 的额外目录共享此优先级。
+4. **工作区钩子**：`<workspace>/hooks/`（按代理隔离，默认禁用，直到显式启用）
+
+工作区钩子可以添加新的 hook 名称，但不能覆盖同名的捆绑、托管或插件提供的钩子。
+
+在内部钩子配置完成之前，Gateway 启动时会跳过内部钩子发现。使用 `openclaw hooks enable <name>` 启用捆绑或托管钩子，安装 hook 包，或设置 `hooks.internal.enabled=true` 以启用。启用一个已命名的钩子时，Gateway 只加载该钩子的处理器；`hooks.internal.enabled=true`、额外的 hook 目录以及旧式处理器会启用更广泛的发现。
+
+### Hook 包
+
+Hook 包是通过 `package.json` 中的 `openclaw.hooks` 导出钩子的 npm 包。使用以下命令安装：
 
 ```bash
 openclaw plugins install <path-or-spec>
@@ -157,17 +184,17 @@ openclaw plugins install <path-or-spec>
 
 Npm spec 仅支持注册表来源（包名 + 可选的精确版本或 dist-tag）。Git/URL/file spec 和 semver 范围会被拒绝。
 
-## 捆绑 hooks
+## 捆绑钩子
 
-| Hook                  | Events                                            | 它的作用                                                     |
+| 钩子                  | 事件                                              | 它的作用                                                     |
 | --------------------- | ------------------------------------------------- | ------------------------------------------------------------ |
 | session-memory        | `command:new`, `command:reset`                    | 将会话上下文保存到 `<workspace>/memory/`                     |
 | bootstrap-extra-files | `agent:bootstrap`                                 | 从 glob 模式注入额外的 bootstrap 文件                        |
 | command-logger        | `command`                                         | 将所有命令记录到 `~/.openclaw/logs/commands.log`            |
 | compaction-notifier   | `session:compact:before`, `session:compact:after` | 在会话紧凑化开始/结束时发送可见的聊天通知                    |
-| boot-md               | `gateway:startup`                                 | 在网关启动时运行 `BOOT.md`                                      |
+| boot-md               | `gateway:startup`                                 | 在网关启动时运行 `BOOT.md`                                   |
 
-启用任意捆绑 hook：
+启用任意捆绑钩子：
 
 ```bash
 openclaw hooks enable <hook-name>
@@ -218,12 +245,12 @@ openclaw hooks enable <hook-name>
 
 Gateway 启动时运行当前工作区中的 `BOOT.md`。
 
-## 插件 hooks
+## 插件钩子
 
-插件可以通过 Plugin SDK 注册类型化 hooks，以实现更深度的集成：
+插件可以通过 Plugin SDK 注册类型化钩子，以实现更深度的集成：
 拦截工具调用、修改提示词、控制消息流等。
 当你需要 `before_tool_call`、`before_agent_reply`、
-`before_install` 或其他进程内生命周期 hooks 时，请使用插件 hooks。
+`before_install` 或其他进程内生命周期钩子时，请使用插件钩子。
 
 完整的插件 hook 参考请见 [Plugin hooks](/plugins/hooks)。
 
@@ -243,7 +270,7 @@ Gateway 启动时运行当前工作区中的 `BOOT.md`。
 }
 ```
 
-每个 hook 的环境变量：
+每个钩子的环境变量：
 
 ```json
 {
@@ -260,7 +287,7 @@ Gateway 启动时运行当前工作区中的 `BOOT.md`。
 }
 ```
 
-额外的 hook 目录：
+额外的钩子目录：
 
 ```json
 {
@@ -275,7 +302,7 @@ Gateway 启动时运行当前工作区中的 `BOOT.md`。
 ```
 
 <Note>
-旧的 `hooks.internal.handlers` 数组配置格式仍然受支持，以便向后兼容，但新的 hooks 应使用基于发现的系统。
+旧的 `hooks.internal.handlers` 数组配置格式仍然受支持，以便向后兼容，但新的钩子应使用基于发现的系统。
 </Note>
 
 ## CLI 参考
@@ -297,8 +324,8 @@ openclaw hooks disable <hook-name>
 
 ## 最佳实践
 
-- **保持 handler 快速。** Hook 会在命令处理期间运行。对于耗时较重的工作，请使用 `void processInBackground(event)` 进行即发即弃处理。
-- **优雅地处理错误。** 将有风险的操作包裹在 try/catch 中；不要抛出异常，这样其他 handler 才能继续运行。
+- **保持处理函数快速。** Hook 会在命令处理期间运行。对于耗时较重的工作，请使用 `void processInBackground(event)` 进行即发即弃处理。
+- **优雅地处理错误。** 将有风险的操作包裹在 try/catch 中；不要抛出异常，这样其他处理函数才能继续运行。
 - **尽早过滤事件。** 如果事件类型/动作不相关，立即返回。
 - **使用具体的事件键。** 相比 `"events": ["command"]`，更推荐使用 `"events": ["command:new"]`，以减少开销。
 

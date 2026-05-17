@@ -58,12 +58,30 @@ OpenClaw 分两个阶段处理失败：
 
 OpenClaw 将所选的提供方/模型与其被选择的原因分开。该来源决定是否允许回退链：
 
-- **已配置的默认值**: `agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
-- **Agent 主项**: `agents.list[].model` 默认是严格的，除非该 agent 的 model 对象包含自己的 `fallbacks`。使用 `fallbacks: []` 可显式表明严格行为，或者提供一个非空列表，让该 agent 使用模型回退。
-- **自动回退覆盖**: 运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"` 和所选的来源模型。该自动覆盖可以继续沿着已配置的回退链向下遍历，并会在 `/new`、`/reset` 和 `sessions.reset` 中清除。若未显式提供 `heartbeat.model`，心跳运行也会在其来源不再匹配当前已配置默认值时清除直接的自动覆盖。
-- **用户会话覆盖**: `/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这表示精确的会话选择。如果所选提供方/模型在返回回复前失败，OpenClaw 会报告失败，而不是从无关的已配置回退中作答。
-- **旧版会话覆盖**: 较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被静默转换为回退行为。
-- **Cron 负载模型**: cron 作业的 `payload.model` / `--model` 是作业主项，而不是用户会话覆盖。它会使用已配置回退，除非作业提供了 `payload.fallbacks`；`payload.fallbacks: []` 会使 cron 运行保持严格。
+- **已配置默认值**：`agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
+- **Agent 主项**：`agents.list[].model` 默认是严格的，除非该 agent 的模型对象包含它自己的 `fallbacks`。使用 `fallbacks: []` 可以明确表示严格行为，或者提供一个非空列表，让该 agent 启用模型回退。
+- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"` 以及所选的原始模型。该自动覆盖可以继续沿着已配置的回退链向下走，而不必在每条消息上都探测主项，但 OpenClaw 会周期性地再次探测已配置的原始项，并在其恢复时清除自动覆盖。`/new`、`/reset` 和 `sessions.reset` 也会清除自动来源的覆盖。若未显式提供 `heartbeat.model`，心跳会在其原始项不再与当前已配置默认值匹配时清除直接的自动覆盖。
+- **用户会话覆盖**：`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一种精确的会话选择。如果所选提供方/模型在产生回复前失败，OpenClaw 会报告失败，而不是从无关的已配置回退中回答。
+- **旧版会话覆盖**：较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被静默转换为回退行为。
+- **Cron 负载模型**：cron 作业的 `payload.model` / `--model` 是作业主项，而不是用户会话覆盖。它会使用已配置回退，除非作业提供了 `payload.fallbacks`；`payload.fallbacks: []` 会让 cron 运行保持严格。
+
+自动回退的主项探测间隔是五分钟，且不可配置。OpenClaw 会按会话和主模型记住最近的探测，因此不会在每一轮都重复探测失败的主项。OpenClaw 在会话切换到回退时会发送一次可见通知，在其返回所选主项时也会发送一次；对于持续停留在回退上的轮次，不会每次都重复通知。
+
+## 用户可见的回退通知
+
+当会话切换到自动选择的回退时，OpenClaw 会在同一回复界面发送状态通知：
+
+```text
+↪️ Model Fallback: <fallback> (selected <primary>; <reason>)
+```
+
+当后续探测成功、会话回到所选主项时，OpenClaw 会发送：
+
+```text
+↪️ Model Fallback cleared: <primary> (was <fallback>)
+```
+
+这些通知是运行时消息，不是助手内容。它们会在状态变化时发送一次，包括在可行的仅副作用轮次中，但持续停留在回退上的轮次不会重复发送。发送会绕过正常的源回复抑制，这些通知不会占用线程通道的首个助手回复槽位，并且会被排除在文本转语音和提交内容提取之外。
 
 ## 认证存储（密钥 + OAuth）
 
@@ -301,15 +319,16 @@ OpenClaw 会根据当前请求的 `provider/model` 以及已配置的回退构�
 
 这意味着回退重试必须与实时模型切换协同：
 
-- 只有显式的用户驱动模型更改才会标记一个待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
-- 系统驱动的模型更改，例如回退轮换、心跳覆盖或压缩，绝不会自行标记待处理的实时切换。
-- 用户驱动的模型覆盖被视为回退策略中的精确选择，因此不可访问的所选提供商会直接暴露为失败，而不会被 `agents.defaults.model.fallbacks` 掩盖。
-- 在回退重试开始之前，回复运行器会将所选回退覆盖字段持久化到会话条目中。
-- 自动回退覆盖在后续轮次中会继续保持选中状态，这样 OpenClaw 就不会在每条消息上都探测一个已知有问题的主项。`/new`、`/reset` 和 `sessions.reset` 会清除自动来源的覆盖，并将会话恢复到已配置的默认值。
-- `/status` 会显示所选模型，以及当回退状态不同时，当前活跃的回退模型和原因。
-- 实时会话协调优先使用持久化的会话覆盖，而不是过时的运行时模型字段。
-- 如果实时切换错误指向当前活跃回退链中的更晚候选项，OpenClaw 会直接跳到该所选模型，而不是先遍历无关候选项。
-- 如果回退尝试失败，运行器只会回滚它写入的覆盖字段，并且仅在这些字段仍然与失败的候选项匹配时才回滚。
+- 只有显式由用户驱动的模型变更才会标记一个待处理的实时切换。这包括 `/model`、`session_status(model=...)` 和 `sessions.patch`。
+- 诸如回退轮换、心跳覆盖或压缩之类的系统驱动模型变更，绝不会单独标记待处理的实时切换。
+- 用户驱动的模型覆盖会被视为回退策略中的精确选择，因此一个不可达的已选提供商会被视为失败，而不会被 `agents.defaults.model.fallbacks` 掩盖。
+- 在开始回退重试之前，回复运行器会将所选回退覆盖字段持久化到会话条目。
+- 自动回退覆盖会在后续轮次中保持选中状态，这样 OpenClaw 不会在每条消息上都探测一个已知有问题的主模型。OpenClaw 会周期性地重新探测配置的原始模型，并在其恢复后清除自动覆盖；`/new`、`/reset` 和 `sessions.reset` 会立即清除自动来源的覆盖。
+- 用户回复会在每次状态变化时播报回退切换以及回退清除后的恢复。粘性回退轮次不会重复提示。
+- `/status` 会显示所选模型，并在回退状态不同时时显示当前回退模型及原因。
+- 实时会话协调优先使用已持久化的会话覆盖，而不是过时的运行时模型字段。
+- 如果某个实时切换错误指向当前回退链中的后续候选项，OpenClaw 会直接跳转到该已选模型，而不是先遍历无关候选项。
+- 如果回退尝试失败，运行器只会回滚它写入的覆盖字段，并且仅在这些字段仍然与那个失败的候选项匹配时才会回滚。
 
 这可以避免经典竞态：
 

@@ -3,7 +3,7 @@ summary: "openclaw security 的 CLI 参考（审计并修复常见安全隐患�
 read_when:
   - 你想对配置/状态进行快速安全审计
   - 你想应用安全的“修复”建议（权限、收紧默认值）
-title: "Security"
+title: "安全"
 ---
 
 # `openclaw security`
@@ -12,7 +12,7 @@ title: "Security"
 
 相关：
 
-- 安全指南：[Security](/gateway/security)
+- 安全指南：[安全](/gateway/security)
 
 ## 审计
 
@@ -43,6 +43,37 @@ openclaw security audit --json
 当 `gateway.auth.mode="none"` 使 Gateway HTTP API 在没有共享密钥的情况下仍可访问时（`/tools/invoke` 以及任何已启用的 `/v1/*` 端点），它会发出警告。
 以前缀 `dangerous`/`dangerously` 的设置是明确的“破窗”式操作员覆盖；启用其中一项本身并不构成安全漏洞报告。
 关于完整的危险参数清单，请参阅 [Security](/gateway/security) 中的“Insecure or dangerous flags summary”部分。
+
+有意保留的现有发现可以通过 `security.audit.suppressions` 接受。
+每个 suppression 都会匹配一个精确的 `checkId`，并可通过
+`titleIncludes` 和/或 `detailIncludes` 的不区分大小写子字符串进行缩小：
+
+```json
+{
+  "security": {
+    "audit": {
+      "suppressions": [
+        {
+          "checkId": "plugins.tools_reachable_permissive_policy",
+          "detailIncludes": "Enabled extension plugins: gbrain",
+          "reason": "trusted local operator plugin"
+        }
+      ]
+    }
+  }
+}
+```
+
+被抑制的发现会从活动的 `summary` 和 `findings` 列表中移除。
+JSON 输出会将它们保留在 `suppressedFindings` 中，以便审计。
+当配置了 suppressions 时，活动输出还会保留一个不可抑制的
+`security.audit.suppressions.active` 信息类发现，以便读者知道审计
+结果经过了过滤。危险配置标志会按“每个发现一个标志”方式输出，因此
+接受一个危险标志不会隐藏共享同一个
+`config.insecure_or_dangerous_flags` checkId 的其他已启用标志。
+由于 suppressions 可能隐藏长期存在的风险，通过
+agent 运行的 shell 命令添加或移除它们需要 exec 批准，除非 exec 已经在
+`security="full"` 且 `ask="off"` 的可信本地自动化环境中运行。
 
 SecretRef 行为：
 
@@ -87,5 +118,5 @@ openclaw security audit --fix --json | jq '{fix: .fix.ok, summary: .report.summa
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Security audit](/gateway/security)
+- [CLI 参考](/cli)
+- [安全审计](/gateway/security)

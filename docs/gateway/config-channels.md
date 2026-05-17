@@ -271,6 +271,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
       },
       historyLimit: 20,
       textChunkLimit: 2000,
+      suppressEmbeds: true,
       chunkMode: "length", // length | newline
       streaming: {
         mode: "progress", // off | partial | block | progress (Discord 默认：progress)
@@ -339,6 +340,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 - `channels.discord.guilds.<id>.ignoreOtherMentions` (and channel overrides) drops messages that mention another user or role but not the bot (excluding @everyone/@here).
 - `channels.discord.mentionAliases` maps stable outbound `@handle` text to Discord user IDs before sending, so known teammates can be mentioned deterministically even when the transient directory cache is empty. Per-account overrides live under `channels.discord.accounts.<accountId>.mentionAliases`.
 - `maxLinesPerMessage` (default 17) splits tall messages even when under 2000 chars.
+- `channels.discord.suppressEmbeds` defaults to `true`, so outbound URLs do not expand into Discord link previews unless disabled. Explicit `embeds` payloads still send normally; per-message tool calls can override with `suppressEmbeds`.
 - `channels.discord.threadBindings` controls Discord thread-bound routing:
   - `enabled`: Discord override for thread-bound session features (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`, and bound delivery/routing)
   - `idleHours`: Discord override for inactivity auto-unfocus in hours (`0` disables)
@@ -485,7 +487,7 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 - `configWrites: false` blocks Slack-initiated config writes.
 - Optional `channels.slack.defaultAccount` overrides default account selection when it matches a configured account id.
 - `channels.slack.streaming.mode` is the canonical Slack stream mode key. `channels.slack.streaming.nativeTransport` controls Slack's native streaming transport. Legacy `streamMode`, boolean `streaming`, and `nativeStreaming` values remain runtime aliases; run `openclaw doctor --fix` to rewrite persisted config.
-- `unfurlLinks` and `unfurlMedia` pass Slack's `chat.postMessage` link and media unfurl booleans through for bot replies. Omit them to keep Slack's default behavior; set them at `channels.slack.accounts.<accountId>` to override the top-level default for one account.
+- `unfurlLinks` and `unfurlMedia` pass Slack's `chat.postMessage` link and media unfurl booleans through for bot replies. `unfurlLinks` defaults to `false` so outbound bot links do not expand inline unless enabled; `unfurlMedia` is omitted unless configured. Set either value at `channels.slack.accounts.<accountId>` to override the top-level value for one account.
 - Use `user:<id>` (DM) or `channel:<id>` for delivery targets.
 
 **Reaction notification modes:** `off`、`own`（默认）、`all`、`allowlist`（来自 `reactionAllowlist`）。
@@ -780,14 +782,15 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 
 群组消息默认需要**提及**（元数据提及或安全正则模式）。适用于 WhatsApp、Telegram、Discord、Google Chat 和 iMessage 群聊。
 
-Visible replies are controlled separately. Group/channel rooms default to `messages.groupChat.visibleReplies: "message_tool"`: OpenClaw still processes the turn, but normal final replies stay private and visible room output requires `message(action=send)`. Set `"automatic"` only when you want the legacy behavior where normal replies are posted back to the room. To apply the same tool-only visible-reply behavior to direct chats too, set `messages.visibleReplies: "message_tool"`; the Codex harness also uses that tool-only behavior as its unset direct-chat default.
+Visible replies are controlled separately. Group/channel rooms default to `messages.groupChat.visibleReplies: "message_tool"`: OpenClaw still processes the turn and asks the agent to use `message(action=send)` for visible room output. If the model returns final text without calling the message tool, that final text stays private and the gateway verbose log records suppressed payload metadata. Set `"automatic"` when you want all visible group replies to use the legacy final-reply path. To apply the same tool-only visible-reply behavior to direct chats too, set `messages.visibleReplies: "message_tool"`; the Codex harness also uses that tool-only behavior as its unset direct-chat default.
 
 Tool-only visible replies require a model/runtime that reliably calls tools. If
 the session log shows assistant text with `didSendViaMessagingTool: false`, the
-model produced a private final answer instead of calling the message tool.
-Switch to a stronger tool-calling model for that channel, or set
-`messages.groupChat.visibleReplies: "automatic"` to restore legacy visible final
-replies.
+model produced private final text instead of calling the message tool. Switch
+to a stronger tool-calling model for that channel, inspect the gateway verbose
+log for the suppressed payload summary, or set
+`messages.groupChat.visibleReplies: "automatic"` to use legacy visible final
+replies for every group/channel request.
 
 If the message tool is unavailable under the active tool policy, OpenClaw falls back to automatic visible replies instead of silently suppressing the response. `openclaw doctor` warns about this mismatch.
 
@@ -889,32 +892,32 @@ The gateway hot-reloads `messages` config after the file is saved. Restart only 
 
 <Accordion title="命令详情">
 
-- This block configures command surfaces. For the current built-in + bundled command catalog, see [Slash Commands](/tools/slash-commands).
-- This page is a **config-key reference**, not the full command catalog. Channel/plugin-owned commands such as QQ Bot `/bot-ping` `/bot-help` `/bot-logs`, LINE `/card`, device-pair `/pair`, memory `/dreaming`, phone-control `/phone`, and Talk `/voice` are documented in their channel/plugin pages plus [Slash Commands](/tools/slash-commands).
-- Text commands must be **standalone** messages with leading `/`.
-- `native: "auto"` turns on native commands for Discord/Telegram, leaves Slack off.
-- `nativeSkills: "auto"` turns on native skill commands for Discord/Telegram, leaves Slack off.
-- Override per channel: `channels.discord.commands.native` (bool or `"auto"`). For Discord, `false` skips native command registration and cleanup during startup.
-- Override native skill registration per channel with `channels.<provider>.commands.nativeSkills`.
-- `channels.telegram.customCommands` adds extra Telegram bot menu entries.
-- `bash: true` enables `! <cmd>` for host shell. Requires `tools.elevated.enabled` and sender in `tools.elevated.allowFrom.<channel>`.
-- `config: true` enables `/config` (reads/writes `openclaw.json`). For gateway `chat.send` clients, persistent `/config set|unset` writes also require `operator.admin`; read-only `/config show` stays available to normal write-scoped operator clients.
-- `mcp: true` enables `/mcp` for OpenClaw-managed MCP server config under `mcp.servers`.
-- `plugins: true` enables `/plugins` for plugin discovery, install, and enable/disable controls.
-- `channels.<provider>.configWrites` gates config mutations per channel (default: true).
-- For multi-account channels, `channels.<provider>.accounts.<id>.configWrites` also gates writes that target that account (for example `/allowlist --config --account <id>` or `/config set channels.<provider>.accounts.<id>...`).
-- `restart: false` disables `/restart` and gateway restart tool actions. Default: `true`.
-- `ownerAllowFrom` is the explicit owner allowlist for owner-only commands/tools. It is separate from `allowFrom`.
-- `ownerDisplay: "hash"` hashes owner ids in the system prompt. Set `ownerDisplaySecret` to control hashing.
-- `allowFrom` is per-provider. When set, it is the **only** authorization source (channel allowlists/pairing and `useAccessGroups` are ignored).
-- `useAccessGroups: false` allows commands to bypass access-group policies when `allowFrom` is not set.
-- Command docs map:
-  - built-in + bundled catalog: [Slash Commands](/tools/slash-commands)
-  - channel-specific command surfaces: [Channels](/channels)
-  - QQ Bot commands: [QQ Bot](/channels/qqbot)
-  - pairing commands: [Pairing](/channels/pairing)
-  - LINE card command: [LINE](/channels/line)
-  - memory dreaming: [Dreaming](/concepts/dreaming)
+- 该块配置命令入口。当前内置 + 捆绑命令目录见 [Slash Commands](/tools/slash-commands)。
+- 该页是**配置键参考**，不是完整命令目录。QQ Bot `/bot-ping` `/bot-help` `/bot-logs`、LINE `/card`、设备配对 `/pair`、memory `/dreaming`、phone-control `/phone` 和 Talk `/voice` 等由频道/插件拥有的命令文档见各自频道/插件页面以及 [Slash Commands](/tools/slash-commands)。
+- 文本命令必须是**独立消息**，并以 `/` 开头。
+- `native: "auto"` 会为 Discord/Telegram 打开原生命令，Slack 保持关闭。
+- `nativeSkills: "auto"` 会为 Discord/Telegram 打开原生技能命令，Slack 保持关闭。
+- 每频道覆盖：`channels.discord.commands.native`（bool 或 `"auto"`）。对 Discord，`false` 会在启动期间跳过原生命令注册和清理。
+- 每频道可通过 `channels.<provider>.commands.nativeSkills` 覆盖原生技能注册。
+- `channels.telegram.customCommands` 会添加额外的 Telegram bot 菜单项。
+- `bash: true` 为主机 shell 启用 `! <cmd>`。需要 `tools.elevated.enabled` 且发送者位于 `tools.elevated.allowFrom.<channel>` 中。
+- `config: true` 启用 `/config`（读/写 `openclaw.json`）。对于 gateway `chat.send` 客户端，持久化的 `/config set|unset` 写入还需要 `operator.admin`；只读 `/config show` 对普通具备写权限的 operator 客户端仍可用。
+- `mcp: true` 启用 `/mcp`，用于管理 `mcp.servers` 下由 OpenClaw 管控的 MCP 服务器配置。
+- `plugins: true` 启用 `/plugins`，用于插件发现、安装以及启用/禁用控制。
+- `channels.<provider>.configWrites` 按频道控制配置变更（默认：true）。
+- 对多账号频道，`channels.<provider>.accounts.<id>.configWrites` 也会控制针对该账号的写入（例如 `/allowlist --config --account <id>` 或 `/config set channels.<provider>.accounts.<id>...`）。
+- `restart: false` 会禁用 `/restart` 和 gateway restart tool 操作。默认：`true`。
+- `ownerAllowFrom` 是 owner-only 命令/工具的显式 owner allowlist。它独立于 `allowFrom`。
+- `ownerDisplay: "hash"` 会在 system prompt 中对 owner id 进行哈希处理。设置 `ownerDisplaySecret` 以控制哈希方式。
+- `allowFrom` 按 provider 生效。设置后，它是**唯一**授权来源（会忽略 channel allowlists/配对以及 `useAccessGroups`）。
+- `useAccessGroups: false` 允许命令在未设置 `allowFrom` 时绕过 access-group 策略。
+- 命令文档映射：
+  - 内置 + 捆绑目录：[Slash Commands](/tools/slash-commands)
+  - 频道特定命令入口：[Channels](/channels)
+  - QQ Bot 命令：[QQ Bot](/channels/qqbot)
+  - 配对命令：[Pairing](/channels/pairing)
+  - LINE 卡片命令：[LINE](/channels/line)
+  - memory dreaming：[Dreaming](/concepts/dreaming)
 
 </Accordion>
 

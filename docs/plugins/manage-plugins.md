@@ -15,9 +15,9 @@ doc-schema-version: 1
 
 大多数安装流程如下：
 
-1. 找到一个包
+1. 查找一个包
 2. 从 ClawHub、npm、git 或本地路径安装它
-3. 重启为你的通道提供服务的 Gateway
+3. 让受管理的 Gateway 自动重启，或在非受管理时手动重启它
 4. 验证插件的运行时注册
 
 ## 列出和搜索插件
@@ -80,14 +80,16 @@ openclaw plugins install --link ./my-plugin
 
 ## 重启和检查
 
-安装插件代码后，重启为你的通道提供服务的 Gateway：
+安装、更新或卸载插件代码后，如果正在运行的受管理
+Gateway 启用了配置重新加载，就会自动重启。如果 Gateway 未受管理或
+关闭了重新加载，请在检查实时运行表面之前手动重启它：
 
 ```bash
 openclaw gateway restart
 openclaw plugins inspect <plugin-id> --runtime --json
 ```
 
-当你需要证明插件已注册运行时
+当你需要证明插件已注册到运行时
 表面，例如工具、hooks、服务、Gateway 方法、HTTP 路由或
 插件拥有的 CLI 命令时，请使用 `inspect --runtime`。普通的 `inspect` 和 `list` 只是冷态的清单、
 配置和注册表检查。
@@ -125,12 +127,12 @@ openclaw plugins update @scope/openclaw-plugin
 openclaw plugins uninstall <plugin-id> --dry-run
 openclaw plugins uninstall <plugin-id>
 openclaw plugins uninstall <plugin-id> --keep-files
-openclaw gateway restart
 ```
 
-卸载会移除插件的配置条目、持久化的插件索引记录、
-允许/拒绝列表条目，以及在适用时的链接加载路径。受管安装
-目录会被移除，除非你传入 `--keep-files`。
+卸载会移除插件的配置项、持久化的插件索引记录、
+允许/拒绝列表条目，以及在适用时的链接加载路径。除非你传入 `--keep-files`，否则
+受管理的安装目录会被删除。正在运行的受管理
+Gateway 会在卸载更改插件来源时自动重启。
 
 在 Nix 模式下（`OPENCLAW_NIX_MODE=1`），插件安装、更新、卸载、启用
 和禁用命令都会被禁用。请在 Nix 源中管理这些安装选择。
@@ -143,7 +145,7 @@ openclaw gateway restart
 | npmjs.com    | 你已经在发布 JavaScript 包，或需要 npm dist-tag/私有注册表                 | `openclaw plugins install npm:@acme/openclaw-plugin`           |
 | git         | 你想要仓库中的分支、标签或提交                                             | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
 | 本地路径     | 你正在同一台机器上开发或测试插件                                           | `openclaw plugins install --link ./my-plugin`                  |
-| npm pack     | 你想通过 npm 安装语义来验证本地包产物                                       | `openclaw plugins install npm-pack:<path.tgz>`                 |
+| npm pack    | 你想通过 npm 安装语义来验证本地包产物                                       | `openclaw plugins install npm-pack:<path.tgz>`                 |
 | marketplace  | 你正在安装一个与 Claude 兼容的 marketplace 插件                            | `openclaw plugins install <plugin> --marketplace <source>`     |
 
 ## 发布插件

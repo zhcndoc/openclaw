@@ -15,7 +15,7 @@ title: "插件 SDK 子路径"
 
 ## 插件入口
 
-| Subpath                        | Key exports                                                                                                                                                            |
+| 子路径                         | 主要导出                                                                                                                                                            |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `plugin-sdk/plugin-entry`      | `definePluginEntry`                                                                                                                                                    |
 | `plugin-sdk/core`              | `defineChannelPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase`, `defineSetupPluginEntry`, `buildChannelConfigSchema`, `buildJsonChannelConfigSchema` |
@@ -79,11 +79,11 @@ bundled 扩展的生产导入。它们仍可导入以保持兼容性，
     | 子路径 | 主要导出 |
     | --- | --- |
     | `plugin-sdk/channel-core` | `defineChannelPluginEntry`, `defineSetupPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase` |
-    | `plugin-sdk/config-schema` | 根 `openclaw.json` Zod schema 导出 (`OpenClawSchema`) |
-    | `plugin-sdk/json-schema-runtime` | 插件自有 schema 的缓存 JSON Schema 验证 helper |
-    | `plugin-sdk/channel-setup` | `createOptionalChannelSetupSurface`, `createOptionalChannelSetupAdapter`, `createOptionalChannelSetupWizard`, 以及 `DEFAULT_ACCOUNT_ID`, `createTopLevelChannelDmPolicy`, `setSetupChannelEnabled`, `splitSetupEntries` |
-    | `plugin-sdk/setup` | 共享的 setup 向导 helper、allowlist 提示、setup 状态构建器 |
-    | `plugin-sdk/setup-runtime` | `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
+    | `plugin-sdk/config-schema` | 根 `openclaw.json` 的 Zod schema 导出（`OpenClawSchema`） |
+    | `plugin-sdk/json-schema-runtime` | 面向插件自有 schema 的缓存 JSON Schema 验证 helper |
+    | `plugin-sdk/channel-setup` | `createOptionalChannelSetupSurface`, `createOptionalChannelSetupAdapter`, `createOptionalChannelSetupWizard`，以及 `DEFAULT_ACCOUNT_ID`、`createTopLevelChannelDmPolicy`、`setSetupChannelEnabled`、`splitSetupEntries` |
+    | `plugin-sdk/setup` | 共享 setup 向导 helper、setup translator、allowlist 提示、setup 状态构建器 |
+    | `plugin-sdk/setup-runtime` | `createSetupTranslator`, `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
     | `plugin-sdk/setup-adapter-runtime` | 已弃用的兼容性别名；请使用 `plugin-sdk/setup-runtime` |
     | `plugin-sdk/setup-tools` | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR` |
     | `plugin-sdk/account-core` | 多账号 config/action-gate helper，默认账号回退 helper |
@@ -94,7 +94,7 @@ bundled 扩展的生产导入。它们仍可导入以保持兼容性，
     | `plugin-sdk/channel-pairing` | `createChannelPairingController` |
     | `plugin-sdk/channel-reply-pipeline` | 旧版 reply pipeline helper。新的 channel reply pipeline 代码应使用 `plugin-sdk/channel-message` 中的 `createChannelMessageReplyPipeline` 和 `resolveChannelMessageSourceReplyDeliveryMode`。 |
     | `plugin-sdk/channel-config-helpers` | `createHybridChannelConfigAdapter`, `resolveChannelDmAccess`, `resolveChannelDmAllowFrom`, `resolveChannelDmPolicy`, `normalizeChannelDmPolicy`, `normalizeLegacyDmAliases` |
-    | `plugin-sdk/channel-config-schema` | 共享 channel config schema 基元以及 Zod 和直接 JSON/TypeBox 构建器 |
+    | `plugin-sdk/channel-config-schema` | 共享 channel config schema 基元，以及 Zod 和直接 JSON/TypeBox 构建器 |
     | `plugin-sdk/bundled-channel-config-schema` | 仅供已维护的 bundled plugins 使用的 bundled OpenClaw channel config schemas |
     | `plugin-sdk/channel-config-schema-legacy` | bundled-channel config schemas 的已弃用兼容别名 |
     | `plugin-sdk/telegram-command-config` | 带 bundled-contract 回退的 Telegram 自定义命令规范化/验证 helper |
@@ -221,20 +221,21 @@ bundled 扩展的生产导入。它们仍可导入以保持兼容性，
     | `plugin-sdk/runtime-store` | `createPluginRuntimeStore` |
     | `plugin-sdk/plugin-runtime` | 共享插件 command/hook/http/interactive helper |
     | `plugin-sdk/hook-runtime` | 共享 webhook/internal hook pipeline helper |
-    | `plugin-sdk/lazy-runtime` | 延迟 runtime 导入/绑定 helper，例如 `createLazyRuntimeModule`、`createLazyRuntimeMethod` 和 `createLazyRuntimeSurface` |
-    | `plugin-sdk/process-runtime` | 进程 exec helper |
-    | `plugin-sdk/cli-runtime` | CLI 格式化、等待、版本、参数调用以及延迟 command-group helper |
-    | `plugin-sdk/gateway-runtime` | gateway 客户端、事件循环就绪客户端启动 helper、gateway CLI RPC、gateway 协议错误，以及 channel-status 补丁 helper |
-    | `plugin-sdk/config-contracts` | 面向插件 config 形状的聚焦型仅类型 config 表面，例如 `OpenClawConfig` 和 channel/provider config 类型 |
-    | `plugin-sdk/plugin-config-runtime` | 运行时插件 config 查找 helper，例如 `requireRuntimeConfig`、`resolvePluginConfigObject` 和 `resolveLivePluginConfigObject` |
-    | `plugin-sdk/config-mutation` | 事务性 config 变更 helper，例如 `mutateConfigFile`、`replaceConfigFile` 和 `logConfigUpdated` |
-    | `plugin-sdk/runtime-config-snapshot` | 当前进程 config 快照 helper，例如 `getRuntimeConfig`、`getRuntimeConfigSnapshot` 和测试快照 setter |
-    | `plugin-sdk/telegram-command-config` | Telegram 命令名/描述规范化和重复/冲突检查，即使 bundled Telegram contract 表面不可用时也是如此 |
-    | `plugin-sdk/text-autolink-runtime` | 不依赖宽泛 text barrel 的文件引用自动链接检测 |
-    | `plugin-sdk/approval-runtime` | exec/plugin 审批 helper、审批能力构建器、auth/profile helper、原生路由/runtime helper，以及结构化审批展示路径格式化 |
-    | `plugin-sdk/reply-runtime` | 共享入站/reply runtime helper、chunking、dispatch、heartbeat、reply planner |
-    | `plugin-sdk/reply-dispatch-runtime` | 窄范围 reply dispatch/finalize 和 conversation-label helper |
-    | `plugin-sdk/reply-history` | 共享的短窗口 reply-history helper 和标记，例如 `buildHistoryContext`、`HISTORY_CONTEXT_MARKER`、`recordPendingHistoryEntry` 和 `clearHistoryEntriesIfEnabled` |
+    | `plugin-sdk/lazy-runtime` | 延迟运行时导入/绑定 helper，例如 `createLazyRuntimeModule`、`createLazyRuntimeMethod` 和 `createLazyRuntimeSurface` |
+    | `plugin-sdk/process-runtime` | 进程执行 helper |
+    | `plugin-sdk/cli-runtime` | CLI 格式化、等待、版本、参数调用和延迟命令组 helper |
+    | `plugin-sdk/gateway-method-runtime` | 为声明了 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 的插件 HTTP 路由保留的 Gateway 方法派发 helper |
+    | `plugin-sdk/gateway-runtime` | Gateway 客户端、事件循环就绪的客户端启动 helper、gateway CLI RPC、gateway 协议错误，以及 channel-status 补丁 helper |
+    | `plugin-sdk/config-contracts` | 面向插件 config 形状（如 `OpenClawConfig` 以及 channel/provider config 类型）的聚焦型仅类型 config 表面 |
+    | `plugin-sdk/plugin-config-runtime` | 运行时 plugin-config 查找 helper，例如 `requireRuntimeConfig`、`resolvePluginConfigObject` 和 `resolveLivePluginConfigObject` |
+    | `plugin-sdk/config-mutation` | 事务型 config 变更 helper，例如 `mutateConfigFile`、`replaceConfigFile` 和 `logConfigUpdated` |
+    | `plugin-sdk/runtime-config-snapshot` | 当前进程 config 快照 helper，例如 `getRuntimeConfig`、`getRuntimeConfigSnapshot` 和测试快照设置器 |
+    | `plugin-sdk/telegram-command-config` | Telegram 命令名/描述规范化和重复/冲突检查，即使 bundled Telegram contract 表面不可用也能使用 |
+    | `plugin-sdk/text-autolink-runtime` | 不使用宽泛 text barrel 的文件引用自动链接检测 |
+    | `plugin-sdk/approval-runtime` | exec/plugin 审批 helper、审批能力构建器、auth/profile helper、原生路由/运行时 helper，以及结构化审批展示路径格式化 |
+    | `plugin-sdk/reply-runtime` | 共享入站/reply 运行时 helper、分块、派发、心跳、reply 规划器 |
+    | `plugin-sdk/reply-dispatch-runtime` | 窄范围 reply 派发/定稿和会话标签 helper |
+    | `plugin-sdk/reply-history` | 共享短窗口 reply-history helper。新的消息回合代码应使用 `createChannelHistoryWindow`；底层 map helper 仅作为已弃用兼容性导出保留 |
     | `plugin-sdk/reply-reference` | `createReplyReferencePlanner` |
     | `plugin-sdk/reply-chunking` | 窄范围文本/markdown 分块 helper |
     | `plugin-sdk/session-store-runtime` | session store 路径、session-key、updated-at 和 store 变更 helper |
@@ -364,7 +365,7 @@ bundled 扩展的生产导入。它们仍可导入以保持兼容性，
     保留的 bundled-helper SDK 子路径是面向 bundled plugin 代码的窄范围、所有者专属表面。它们会在 SDK 清单中跟踪，以便包构建和别名保持确定性，但它们不是通用插件编写 API。新的可复用 host 契约应使用通用 SDK 子路径，例如 `plugin-sdk/gateway-runtime`、`plugin-sdk/security-runtime` 和
     `plugin-sdk/plugin-config-runtime`。
 
-    | Subpath | Owner and purpose |
+    | 子路径 | 所有者与用途 |
     | --- | --- |
     | `plugin-sdk/codex-mcp-projection` | bundled Codex plugin helper，用于将用户 MCP server config 投影到 Codex app-server thread config |
     | `plugin-sdk/codex-native-task-runtime` | bundled Codex plugin helper，用于将 Codex app-server native subagents 镜像到 OpenClaw task state |

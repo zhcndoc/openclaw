@@ -2,7 +2,7 @@
 summary: "带有示例配置和 CLI 流程的模型提供商概览"
 read_when:
   - 你需要按提供商逐一查看模型设置参考
-  - 你想获取模型提供商的示例配置或 CLI 上手命令
+  - 你想获取模型提供商的示例配置或 CLI 入门命令
 title: "模型提供商"
 sidebarTitle: "模型提供商"
 ---
@@ -17,7 +17,7 @@ sidebarTitle: "模型提供商"
     - `agents.defaults.models` 在设置后会作为允许列表。
     - CLI 辅助工具：`openclaw onboard`、`openclaw models list`、`openclaw models set <provider/model>`。
     - `models.providers.*.contextWindow` / `contextTokens` / `maxTokens` 设置提供商级默认值；`models.providers.*.models[].contextWindow` / `contextTokens` / `maxTokens` 按模型覆盖这些默认值。
-    - 回退规则、冷却探测和会话覆盖持久化： [Model failover](/concepts/model-failover)。
+    - 回退规则、冷却探测和会话覆盖持久化： [模型故障切换](/concepts/model-failover)。
 
   </Accordion>
   <Accordion title="添加提供商认证不会更改你的主模型">
@@ -289,32 +289,32 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 
 ### 其他捆绑的提供商插件
 
-| Provider                | Id                               | Auth env                                                     | Example model                                 |
-| ----------------------- | -------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
-| BytePlus                | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                           | `byteplus-plan/ark-code-latest`               |
-| Cerebras                | `cerebras`                       | `CEREBRAS_API_KEY`                                           | `cerebras/zai-glm-4.7`                        |
-| Cloudflare AI Gateway   | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                              | -                                             |
-| DeepInfra               | `deepinfra`                      | `DEEPINFRA_API_KEY`                                          | `deepinfra/deepseek-ai/DeepSeek-V3.2`         |
-| DeepSeek                | `deepseek`                       | `DEEPSEEK_API_KEY`                                           | `deepseek/deepseek-v4-flash`                  |
-| GitHub Copilot          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`         | -                                             |
-| Groq                    | `groq`                           | `GROQ_API_KEY`                                               | -                                             |
-| Hugging Face Inference  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                         | `huggingface/deepseek-ai/DeepSeek-R1`         |
-| Kilo Gateway            | `kilocode`                       | `KILOCODE_API_KEY`                                           | `kilocode/kilo/auto`                          |
-| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                         | `kimi/kimi-for-coding`                        |
-| MiniMax                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                    | `minimax/MiniMax-M2.7`                        |
-| Mistral                 | `mistral`                        | `MISTRAL_API_KEY`                                            | `mistral/mistral-large-latest`                |
-| Moonshot                | `moonshot`                       | `MOONSHOT_API_KEY`                                           | `moonshot/kimi-k2.6`                          |
-| NVIDIA                  | `nvidia`                         | `NVIDIA_API_KEY`                                             | `nvidia/nvidia/nemotron-3-super-120b-a12b`    |
-| OpenRouter              | `openrouter`                     | `OPENROUTER_API_KEY`                                         | `openrouter/auto`                             |
-| Qianfan                 | `qianfan`                        | `QIANFAN_API_KEY`                                            | `qianfan/deepseek-v3.2`                       |
-| Qwen Cloud              | `qwen`                           | `QWEN_API_KEY` / `MODELSTUDIO_API_KEY` / `DASHSCOPE_API_KEY` | `qwen/qwen3.5-plus`                           |
-| StepFun                 | `stepfun` / `stepfun-plan`       | `STEPFUN_API_KEY`                                            | `stepfun/step-3.5-flash`                      |
-| Together                | `together`                       | `TOGETHER_API_KEY`                                           | `together/moonshotai/Kimi-K2.5`               |
-| Venice                  | `venice`                         | `VENICE_API_KEY`                                             | -                                             |
-| Vercel AI Gateway       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                         | `vercel-ai-gateway/anthropic/claude-opus-4.6` |
-| Volcano Engine (Doubao) | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                     | `volcengine-plan/ark-code-latest`             |
-| xAI                     | `xai`                            | `XAI_API_KEY`                                                | `xai/grok-4.3`                                |
-| Xiaomi                  | `xiaomi`                         | `XIAOMI_API_KEY`                                             | `xiaomi/mimo-v2-flash`                        |
+| 提供商                | Id                               | 认证环境变量                                               | 示例模型                                       |
+| --------------------- | -------------------------------- | ---------------------------------------------------------- | ---------------------------------------------- |
+| BytePlus              | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                         | `byteplus-plan/ark-code-latest`                |
+| Cerebras              | `cerebras`                       | `CEREBRAS_API_KEY`                                         | `cerebras/zai-glm-4.7`                         |
+| Cloudflare AI Gateway | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                            | -                                              |
+| DeepInfra             | `deepinfra`                      | `DEEPINFRA_API_KEY`                                        | `deepinfra/deepseek-ai/DeepSeek-V3.2`          |
+| DeepSeek              | `deepseek`                       | `DEEPSEEK_API_KEY`                                         | `deepseek/deepseek-v4-flash`                   |
+| GitHub Copilot        | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`       | -                                              |
+| Groq                  | `groq`                           | `GROQ_API_KEY`                                             | -                                              |
+| Hugging Face 推理      | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` 或 `HF_TOKEN`                      | `huggingface/deepseek-ai/DeepSeek-R1`          |
+| Kilo Gateway          | `kilocode`                       | `KILOCODE_API_KEY`                                         | `kilocode/kilo/auto`                           |
+| Kimi Coding           | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                       | `kimi/kimi-for-coding`                         |
+| MiniMax               | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                  | `minimax/MiniMax-M2.7`                         |
+| Mistral               | `mistral`                        | `MISTRAL_API_KEY`                                          | `mistral/mistral-large-latest`                 |
+| Moonshot              | `moonshot`                       | `MOONSHOT_API_KEY`                                         | `moonshot/kimi-k2.6`                           |
+| NVIDIA                | `nvidia`                         | `NVIDIA_API_KEY`                                           | `nvidia/nvidia/nemotron-3-super-120b-a12b`     |
+| OpenRouter            | `openrouter`                     | `OPENROUTER_API_KEY`                                       | `openrouter/auto`                              |
+| Qianfan               | `qianfan`                        | `QIANFAN_API_KEY`                                          | `qianfan/deepseek-v3.2`                        |
+| Qwen Cloud            | `qwen`                           | `QWEN_API_KEY` / `MODELSTUDIO_API_KEY` / `DASHSCOPE_API_KEY` | `qwen/qwen3.5-plus`                           |
+| StepFun               | `stepfun` / `stepfun-plan`       | `STEPFUN_API_KEY`                                          | `stepfun/step-3.5-flash`                       |
+| Together               | `together`                       | `TOGETHER_API_KEY`                                         | `together/moonshotai/Kimi-K2.5`                |
+| Venice                | `venice`                         | `VENICE_API_KEY`                                           | -                                              |
+| Vercel AI Gateway     | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                       | `vercel-ai-gateway/anthropic/claude-opus-4.6`  |
+| Volcano Engine（豆包） | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                   | `volcengine-plan/ark-code-latest`              |
+| xAI                   | `xai`                            | `XAI_API_KEY`                                              | `xai/grok-4.3`                                 |
+| 小米                   | `xiaomi`                         | `XIAOMI_API_KEY`                                           | `xiaomi/mimo-v2-flash`                         |
 
 #### 值得注意的特殊行为
 
@@ -393,9 +393,9 @@ Kimi K2 模型 ID：
 
 Kimi Coding 使用 Moonshot AI 的 Anthropic 兼容端点：
 
-- Provider: `kimi`
-- Auth: `KIMI_API_KEY`
-- Example model: `kimi/kimi-for-coding`
+- 提供商：`kimi`
+- 认证：`KIMI_API_KEY`
+- 示例模型：`kimi/kimi-for-coding`
 
 ```json5
 {
@@ -683,15 +683,15 @@ export SGLANG_API_KEY="sglang-local"
 
   </Accordion>
   <Accordion title="代理路由整形规则">
-    - 对于非原生端点上的 `api: "openai-completions"`（任何主机不是 `api.openai.com` 的非空 `baseUrl`），OpenClaw 会强制设置 `compat.supportsDeveloperRole: false`，以避免因不支持的 `developer` 角色而导致提供商 400 错误。
-    - 代理式 OpenAI 兼容路由也会跳过原生的 OpenAI 专属请求整形：不使用 `service_tier`、不使用 Responses `store`、不使用 Completions `store`、不使用提示缓存提示、不使用 OpenAI reasoning 兼容载荷整形，也不添加隐藏的 OpenClaw 归属头。
-    - 对于需要厂商特定字段的 OpenAI 兼容 Completions 代理，请设置 `agents.defaults.models["provider/model"].params.extra_body`（或 `extraBody`），以便将额外的 JSON 合并到出站请求体中。
-    - 对于 vLLM 聊天模板控制，请设置 `agents.defaults.models["provider/model"].params.chat_template_kwargs`。当会话 thinking 级别关闭时，捆绑的 vLLM 插件会自动为 `vllm/nemotron-3-*` 发送 `enable_thinking: false` 和 `force_nonempty_content: true`。
-    - 对于较慢的本地模型或远程 LAN/tailnet 主机，请设置 `models.providers.<id>.timeoutSeconds`。这会扩展提供商模型的 HTTP 请求处理，包括连接、请求头、流式响应体以及总的受保护 fetch 中止时间，而不会增加整个 agent 的运行时超时。
-    - 模型提供商的 HTTP 调用仅允许 Surge、Clash 和 sing-box fake-IP DNS 在 `198.18.0.0/15` 和 `fc00::/7` 中的答案用于已配置提供商的 `baseUrl` 主机名。其他私有地址、回环地址、链路本地地址和元数据目标仍然需要显式启用 `models.providers.<id>.request.allowPrivateNetwork: true`。
-    - 如果 `baseUrl` 为空/省略，OpenClaw 会保持默认的 OpenAI 行为（解析为 `api.openai.com`）。
-    - 出于安全考虑，在非原生的 `openai-completions` 端点上，显式的 `compat.supportsDeveloperRole: true` 仍会被覆盖。
-    - 对于非直接端点上的 `api: "anthropic-messages"`（除规范的 `anthropic` 之外的任何提供商，或主机不是公开 `api.anthropic.com` 端点的自定义 `models.providers.anthropic.baseUrl`），OpenClaw 会抑制隐式的 Anthropic beta 头，例如 `claude-code-20250219`、`interleaved-thinking-2025-05-14` 和 OAuth 标记，以免自定义的 Anthropic 兼容代理拒绝不支持的 beta 标志。如果你的代理需要特定的 beta 功能，请显式设置 `models.providers.<id>.headers["anthropic-beta"]`。
+    - 对于非原生端点上的 `api: "openai-completions"`（任何主机不是 `api.openai.com` 的非空 `baseUrl`），OpenClaw 会强制 `compat.supportsDeveloperRole: false`，以避免提供商因不支持的 `developer` 角色而返回 400 错误。
+    - 代理风格的 OpenAI 兼容路由也会跳过原生 OpenAI 专用的请求整形：不发送 `service_tier`、不发送 Responses 的 `store`、不发送 Completions 的 `store`、不发送 prompt-cache 提示、不进行 OpenAI reasoning 兼容载荷整形，并且不会添加隐藏的 OpenClaw 归因请求头。
+    - 对于需要供应商特定字段的 OpenAI 兼容 Completions 代理，请设置 `agents.defaults.models["provider/model"].params.extra_body`（或 `extraBody`），将额外的 JSON 合并到出站请求体中。
+    - 对于 vLLM 的 chat-template 控制，请设置 `agents.defaults.models["provider/model"].params.chat_template_kwargs`。当会话的 thinking 级别关闭时，随附的 vLLM 插件会自动为 `vllm/nemotron-3-*` 发送 `enable_thinking: false` 和 `force_nonempty_content: true`。
+    - 对于较慢的本地模型或远程 LAN/tailnet 主机，请设置 `models.providers.<id>.timeoutSeconds`。这会延长提供商模型的 HTTP 请求处理时间，包括连接、请求头、流式请求体以及总的受保护 fetch 中止时间，但不会增加整个 agent 运行时的超时时间。如果 `agents.defaults.timeoutSeconds` 或某次运行的特定超时更低，也需要同时提高那个上限；提供商超时不能延长整个运行时长。
+    - 模型提供商的 HTTP 调用仅允许 Surge、Clash 和 sing-box 的 fake-IP DNS 应答（`198.18.0.0/15` 和 `fc00::/7`）用于已配置的提供商 `baseUrl` 主机名。自定义/本地提供商端点也会对该精确配置的 `scheme://host:port` 来源信任受保护的模型请求，包括回环、局域网和 tailnet 主机。这不是一个新的配置选项；你配置的 `baseUrl` 只会将请求策略扩展到该来源。fake-IP 主机名允许与精确来源信任是相互独立的机制。其他私有地址、回环、链路本地、元数据目标以及不同端口仍然需要显式启用 `models.providers.<id>.request.allowPrivateNetwork: true`。设置 `models.providers.<id>.request.allowPrivateNetwork: false` 可退出精确来源信任。
+    - 如果 `baseUrl` 为空/未指定，OpenClaw 会保持默认的 OpenAI 行为（即解析到 `api.openai.com`）。
+    - 出于安全考虑，即使显式设置了 `compat.supportsDeveloperRole: true`，在非原生 `openai-completions` 端点上也仍会被覆盖。
+    - 对于非直连端点上的 `api: "anthropic-messages"`（任何非标准的 `anthropic` 提供商，或者主机不是公开 `api.anthropic.com` 端点的自定义 `models.providers.anthropic.baseUrl`），OpenClaw 会抑制隐式的 Anthropic beta 请求头，例如 `claude-code-20250219`、`interleaved-thinking-2025-05-14` 和 OAuth 标记，从而避免自定义的 Anthropic 兼容代理拒绝不受支持的 beta 标志。如果你的代理需要特定的 beta 功能，请显式设置 `models.providers.<id>.headers["anthropic-beta"]`。
 
   </Accordion>
 </AccordionGroup>
@@ -708,7 +708,7 @@ openclaw models list
 
 ## 相关内容
 
-- [Configuration reference](/gateway/config-agents#agent-defaults) - 模型配置键
-- [Model failover](/concepts/model-failover) - 回退链和重试行为
-- [Models](/concepts/models) - 模型配置和别名
-- [Providers](/providers) - 每个提供商的设置指南
+- [配置参考](/gateway/config-agents#agent-defaults) - 模型配置键
+- [模型故障转移](/concepts/model-failover) - 回退链和重试行为
+- [模型](/concepts/models) - 模型配置和别名
+- [提供商](/providers) - 每个提供商的设置指南

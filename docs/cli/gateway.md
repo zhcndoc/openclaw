@@ -8,7 +8,7 @@ title: "网关"
 sidebarTitle: "网关"
 ---
 
-Gateway 是 OpenClaw 的 WebSocket 服务器（channels、nodes、sessions、hooks）。本页中的子命令位于 `openclaw gateway …` 下。
+Gateway 是 OpenClaw 的 WebSocket 服务器（通道、节点、会话、钩子）。本页中的子命令位于 `openclaw gateway …` 下。
 
 <CardGroup cols={3}>
   <Card title="Bonjour 发现" href="/gateway/bonjour">
@@ -122,11 +122,12 @@ openclaw gateway restart --force
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
 </Warning>
 
-### 启动性能分析
+### Gateway 性能剖析
 
-- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 以在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表计时。
-- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，以便为外部 QA harness 写出尽力而为的 JSONL 启动诊断时间线。你也可以在配置中通过 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍需由环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
-- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 来对 Gateway 启动进行基准测试。该基准会记录首个进程输出、`/healthz`、`/readyz`、启动追踪计时、事件循环延迟以及插件查找表计时细节。
+- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表耗时。
+- 设置 `OPENCLAW_GATEWAY_RESTART_TRACE=1` 可记录重启范围内的 `restart trace:` 行，涵盖重启信号处理、活动工作清空、关闭阶段、下一次启动、就绪时间以及内存指标。
+- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，可为外部 QA harness 写出一个尽力而为的 JSONL 启动诊断时间线。你也可以在配置中使用 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍需通过环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
+- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 可对 Gateway 启动进行基准测试。该基准会记录首个进程输出、`/healthz`、`/readyz`、启动追踪耗时、事件循环延迟以及插件查找表耗时细节。
 
 ## 查询正在运行的 Gateway
 
@@ -216,7 +217,7 @@ openclaw gateway stability --json
 
 ### `gateway diagnostics export`
 
-写出一个本地诊断 zip，设计用于附加到 bug 报告中。关于隐私模型和 bundle 内容，请参见 [Diagnostics Export](/gateway/diagnostics)。
+写出一个本地诊断 zip，专为附加到 bug 报告中设计。关于隐私模型和 bundle 内容，请参见 [Diagnostics Export](/gateway/diagnostics)。
 
 ```bash
 openclaw gateway diagnostics export
@@ -254,7 +255,7 @@ openclaw gateway diagnostics export --json
 
 导出内容包含清单、Markdown 摘要、配置形状、已净化的配置细节、已净化的日志摘要、已净化的 Gateway 状态/健康快照，以及（如果存在）最新的稳定性 bundle。
 
-它 предназначяется 用于共享。它保留有助于调试的运行细节，例如安全的 OpenClaw 日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件 id、provider id、非密钥功能设置以及已脱敏的运行日志消息。它会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当一条类似 LogTape 风格的消息看起来像用户/聊天/工具载荷文本时，导出只保留“已省略该消息”以及其字节数。
+它专为共享而设计。它保留有助于调试的运行细节，例如安全的 OpenClaw 日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件 id、provider id、非密钥功能设置以及已脱敏的运行日志消息。它会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当一条类似 LogTape 风格的消息看起来像用户/聊天/工具载荷文本时，导出只保留“已省略该消息”以及其字节数。
 
 ### `gateway status`
 

@@ -41,17 +41,14 @@ agentic loop 是 agent 的完整“真实”运行：接收输入 → 组装上�
 
 ## 排队 + 并发
 
-- Runs are serialized per session key (session lane) and optionally through a global lane.
-- This prevents tool/session races and keeps session history consistent.
-- Messaging channels can choose queue modes (steer/followup/collect/interrupt) that feed this lane system.
-  See [Command Queue](/concepts/queue).
-- Transcript writes are also protected by a session write lock on the session file. The lock is
-  process-aware and file-based, so it catches writers that bypass the in-process queue or come from
-  another process. Session transcript writers wait up to `session.writeLock.acquireTimeoutMs`
-  before reporting the session as busy; the default is `60000` ms.
-- Session write locks are non-reentrant by default. If a helper intentionally nests acquisition of
-  the same lock while preserving one logical writer, it must opt in explicitly with
-  `allowReentrant: true`.
+- 运行会按 session key（session lane）串行化，并且可选地通过全局 lane 进一步串行化。
+- 这可以防止工具/session 竞争，并保持 session 历史一致。
+- 消息通道可以选择队列模式（steer/followup/collect/interrupt），这些模式会进入该 lane 系统。
+  参见 [Command Queue](/concepts/queue)。
+- transcript 写入也受 session 文件上的 session 写锁保护。该锁具有进程感知且基于文件，因此可以捕获绕过进程内队列或来自其他进程的写入者。session transcript 写入器最多等待 `session.writeLock.acquireTimeoutMs`
+  之后才会将 session 报告为繁忙；默认值为 `60000` ms。
+- session 写锁默认不可重入。如果某个 helper 有意在保持单一逻辑写入者的同时嵌套获取同一把锁，则必须显式启用
+  `allowReentrant: true`。
 
 ## Session + workspace 准备
 
@@ -154,12 +151,12 @@ Harness 可能会以不同方式适配这些 hooks。Codex app-server harness �
 
 ## 超时
 
-- `agent.wait` 默认：30s（仅等待）。`timeoutMs` 参数可覆盖。
-- Agent runtime：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；由 `runEmbeddedPiAgent` 的 abort 定时器强制执行。
-- Cron runtime：isolated agent-turn `timeoutSeconds` 由 cron 管理。调度器在执行开始时启动该定时器，在到达配置截止时间时中止底层运行，然后在记录超时之前执行有界清理，以便陈旧的子 session 不会让 lane 卡住。
-- Session liveness diagnostics：启用 diagnostics 时，`diagnostics.stuckSessionWarnMs` 会将长时间处于 `processing`、且没有观察到回复、工具、status、block 或 ACP 进度的 session 归类出来。活动中的嵌入式运行、模型调用和工具调用会报告为 `session.long_running`；有活动但近期没有进展的工作会报告为 `session.stalled`；`session.stuck` 仅保留给没有活动工作、但 session 记账过时的情况。陈旧的 session 记账会立即释放受影响的 session lane；卡住的嵌入式运行只会在 `diagnostics.stuckSessionAbortMs` 之后进行 abort-drain（默认：至少 10 分钟且为警告阈值的 5 倍），以便队列中的工作能够恢复，而不会仅仅因为运行较慢就被切断。恢复会发出结构化的 requested/completed 结果，并且只有当同一个 processing generation 仍然是当前时，诊断状态才会被标记为空闲。重复的 `session.stuck` 诊断会在 session 保持不变时退避。
-- Model idle timeout：当在空闲窗口之前没有任何响应块到达时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为缓慢的本地/自托管提供商延长这个空闲看门狗；否则 OpenClaw 会在配置时使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。对于没有显式模型或 agent 超时的 cron 触发运行，会禁用空闲看门狗，并依赖 cron 外层超时。
-- Provider HTTP request timeout：`models.providers.<id>.timeoutSeconds` 适用于该 provider 的模型 HTTP 获取，包括连接、headers、body、SDK 请求超时、总的受保护 fetch 中止处理以及模型流空闲看门狗。在将整个 agent runtime 超时调大之前，可先将其用于像 Ollama 这样的缓慢本地/自托管 provider。
+- `agent.wait` 默认值：30s（仅等待）。`timeoutMs` 参数会覆盖。
+- Agent 运行时：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；由 `runEmbeddedPiAgent` 的 abort timer 强制执行。
+- Cron 运行时：隔离的 agent-turn `timeoutSeconds` 由 cron 拥有。调度器会在执行开始时启动该计时器，在配置的截止时间中止底层运行，然后在记录超时之前执行有界清理，以免一个陈旧的子 session 持续占用 lane。
+- Session 存活诊断：启用诊断后，`diagnostics.stuckSessionWarnMs` 会将长时间处于 `processing` 且未观察到回复、工具、状态、block 或 ACP 进展的 session 归类。活跃的嵌入式运行、模型调用和工具调用会被报告为 `session.long_running`；有活跃工作但近期没有进展的会报告为 `session.stalled`；`session.stuck` 仅保留给没有活跃工作的陈旧 session 账目。陈旧 session 账目会立即释放受影响的 session lane；卡住的嵌入式运行只有在 `diagnostics.stuckSessionAbortMs` 之后才会被 abort-drain（默认：至少 5 分钟且为告警阈值的 3 倍），这样排队工作可以恢复，而不会过早切断只是较慢的运行。恢复会发出结构化的 requested/completed 结果，并且只有当同一 processing generation 仍是当前状态时，诊断状态才会被标记为空闲。重复的 `session.stuck` 诊断会在 session 保持不变时退避。
+- 模型空闲超时：当在空闲窗口到达前没有响应块到来时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为较慢的本地/自托管提供商延长该空闲看门狗，但它仍会受到更低的 `agents.defaults.timeoutSeconds` 或运行特定超时的限制，因为这些控制着整个 agent 运行。否则 OpenClaw 会使用已配置的 `agents.defaults.timeoutSeconds`，默认上限为 120s。没有显式模型或 agent 超时的 cron 触发运行会禁用空闲看门狗，并依赖 cron 外层超时。
+- 提供商 HTTP 请求超时：`models.providers.<id>.timeoutSeconds` 适用于该提供商的模型 HTTP 获取，包括连接、headers、body、SDK 请求超时、受保护的 fetch 总中止处理以及模型流空闲看门狗。在为整个 agent 运行时超时之前，请将其用于较慢的本地/自托管提供商（如 Ollama），并在模型请求需要运行更久时，将 agent/runtime 超时保持在至少相同或更高的水平。
 
 ## 何时会更早结束
 

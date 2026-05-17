@@ -1,5 +1,5 @@
 ---
-summary: "工具配置（策略、实验性开关、由提供方支持的工具）以及自定义提供方/基础 URL 设置"
+summary: "工具配置（策略、实验性开关、提供方支持的工具）以及自定义提供方/基础 URL 设置"
 read_when:
   - 配置 `tools.*` 策略、允许列表或实验性功能
   - 注册自定义提供方或覆盖基础 URL
@@ -8,7 +8,7 @@ title: "配置 — 工具和自定义提供方"
 sidebarTitle: "工具和自定义提供方"
 ---
 
-`tools.*` 配置键以及自定义提供方 / 基础 URL 设置。关于 agents、channels 和其他顶层配置键，请参见 [配置参考](/gateway/configuration-reference)。
+`tools.*` 配置键以及自定义提供方 / 基础 URL 设置。关于代理、通道和其他顶层配置键，请参见 [配置参考](/gateway/configuration-reference)。
 
 ## 工具
 
@@ -412,6 +412,8 @@ sidebarTitle: "工具和自定义提供方"
 
 OpenClaw 使用内置的模型目录。可以通过配置中的 `models.providers` 或 `~/.openclaw/agents/<agentId>/agent/models.json` 添加自定义 provider。
 
+为自定义/本地 provider 配置 `baseUrl`，同时也是模型 HTTP 请求的窄范围网络信任决策：OpenClaw 会通过受保护的 fetch 路径放行该精确的 `scheme://host:port` 源，而不会额外添加单独的配置项，也不会信任其他私有源。
+
 ```json5
 {
   models: {
@@ -483,22 +485,22 @@ OpenClaw 使用内置的模型目录。可以通过配置中的 `models.provider
   <Accordion title="请求传输覆盖">
     `models.providers.*.request`：模型提供商 HTTP 请求的传输覆盖。
 
-    - `request.headers`：额外头（与 provider 默认值合并）。值支持 SecretRef。
+    - `request.headers`：额外头部（与 provider 默认值合并）。值支持 SecretRef。
     - `request.auth`：认证策略覆盖。模式：`"provider-default"`（使用 provider 内置认证）、`"authorization-bearer"`（配合 `token`）、`"header"`（配合 `headerName`、`value`、可选 `prefix`）。
     - `request.proxy`：HTTP 代理覆盖。模式：`"env-proxy"`（使用 `HTTP_PROXY`/`HTTPS_PROXY` 环境变量）、`"explicit-proxy"`（配合 `url`）。两种模式都支持可选的 `tls` 子对象。
-    - `request.tls`：直连的 TLS 覆盖。字段：`ca`、`cert`、`key`、`passphrase`（均支持 SecretRef）、`serverName`、`insecureSkipVerify`。
-    - `request.allowPrivateNetwork`：当为 `true` 时，如果 DNS 解析到私有、CGNAT 或类似地址范围，允许通过 provider HTTP fetch guard 访问 `baseUrl` 的 HTTPS（适用于受信任的自托管 OpenAI 兼容端点，需操作员显式启用）。像 `localhost`、`127.0.0.1` 和 `[::1]` 这样的回环模型 provider 流 URL 会自动允许，除非显式设为 `false`；LAN、tailnet 和私有 DNS 主机仍需要显式启用。WebSocket 会使用相同的 `request` 处理头部/TLS，但不受该 fetch SSRF gate 保护。默认 `false`。
+    - `request.tls`：直连的 TLS 覆盖。字段：`ca`、`cert`、`key`、`passphrase`（全部支持 SecretRef）、`serverName`、`insecureSkipVerify`。
+    - `request.allowPrivateNetwork`：当为 `true` 时，允许模型 provider 的 HTTP 请求通过 provider HTTP fetch 保护机制访问私有、CGNAT 或类似网段。自定义/本地 provider 的 base URL 已经会信任精确配置的源，除元数据/链路本地（link-local）源外；这些源在未显式启用时仍会被阻止。将其设为 `false` 可放弃精确源信任。WebSocket 会对头部/TLS 使用同一个 `request`，但不会经过该 fetch SSRF 门禁。默认 `false`。
 
   </Accordion>
-  <Accordion title="Model catalog entries">
-    - `models.providers.*.models`: 显式 provider 模型目录条目。
-    - `models.providers.*.models.*.input`: 模型输入模态。仅文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型标记为支持图像时，才会将图像附件注入 agent 回合。
-    - `models.providers.*.models.*.contextWindow`: 原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
-    - `models.providers.*.models.*.contextTokens`: 可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时使用它；当二者不同，`openclaw models list` 会显示两个值。
-    - `models.providers.*.models.*.compat.supportsDeveloperRole`: 可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认 OpenAI 行为。
-    - `models.providers.*.models.*.compat.requiresStringContent`: 针对仅支持字符串内容的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前把纯文本 `messages[].content` 数组压平成普通字符串。
-    - `models.providers.*.models.*.compat.strictMessageKeys`: 针对严格的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为仅保留 `role` 和 `content`。
-    - `models.providers.*.models.*.compat.thinkingFormat`: 可选的 thinking 载荷提示。对于顶层 `enable_thinking` 使用 `"qwen"`，对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），则使用 `chat_template_kwargs.enable_thinking` 对应的 `"qwen-chat-template"`。
+  <Accordion title="模型目录条目">
+    - `models.providers.*.models`：显式 provider 模型目录条目。
+    - `models.providers.*.models.*.input`：模型输入模态。仅文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型标记为支持图像时，才会将图像附件注入 agent 回合。
+    - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
+    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时使用它；当二者不同，`openclaw models list` 会显示两个值。
+    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认 OpenAI 行为。
+    - `models.providers.*.models.*.compat.requiresStringContent`：针对仅支持字符串内容的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前把纯文本 `messages[].content` 数组压平成普通字符串。
+    - `models.providers.*.models.*.compat.strictMessageKeys`：针对严格的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为仅保留 `role` 和 `content`。
+    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 载荷提示。对于顶层 `enable_thinking` 使用 `"qwen"`，对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），则使用 `chat_template_kwargs.enable_thinking` 对应的 `"qwen-chat-template"`。
 
   </Accordion>
   <Accordion title="Amazon Bedrock 发现">

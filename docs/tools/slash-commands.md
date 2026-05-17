@@ -243,16 +243,16 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
 - 命令规范可以为支持本地化描述的原生表面提供 `descriptionLocalizations`，包括 Discord。
 
 <AccordionGroup>
-  <Accordion title="参数和解析器说明">
-    - 命令可在命令和参数之间使用可选的 `:`（例如 `/think: high`、`/send: on`、`/help:`）。
-    - `/new <model>` 可接受模型别名、`provider/model` 或提供方名称（模糊匹配）；如果没有匹配，则该文本会被当作消息正文。
-    - 如需完整的提供方使用量拆分，请使用 `openclaw status --usage`。
-    - `/allowlist add|remove` 需要 `commands.config=true` 并遵守频道 `configWrites`。
-    - 在多账号频道中，针对配置的 `/allowlist --account <id>` 和 `/config set channels.<provider>.accounts.<id>...` 也会遵守目标账号的 `configWrites`。
-    - `/usage` 控制每条响应的使用量页脚；`/usage cost` 会从 OpenClaw 会话日志中打印本地成本摘要。
-    - `/restart` 默认启用；设置 `commands.restart: false` 可将其禁用。
-    - `/plugins install <spec>` 接受与 `openclaw plugins install` 相同的插件规范：本地路径/归档、npm 包、`git:<repo>` 或 `clawhub:<pkg>`，随后会请求 Gateway 重启，因为插件源模块已更改。
-    - `/plugins enable|disable` 会更新插件配置并触发 Gateway 插件重新加载，以便新代理轮次生效。
+  <Accordion title="Argument and parser notes">
+    - Commands accept an optional `:` between the command and args (e.g. `/think: high`, `/send: on`, `/help:`).
+    - `/new <model>` accepts a model alias, `provider/model`, or a provider name (fuzzy match); if no match, the text is treated as the message body.
+    - For full provider usage breakdown, use `openclaw status --usage`.
+    - `/allowlist add|remove` requires `commands.config=true` and honors channel `configWrites`.
+    - In multi-account channels, config-targeted `/allowlist --account <id>` and `/config set channels.<provider>.accounts.<id>...` also honor the target account's `configWrites`.
+    - `/usage` controls the per-response usage footer; `/usage cost` prints a local cost summary from OpenClaw session logs.
+    - `/restart` is enabled by default; set `commands.restart: false` to disable it.
+    - `/plugins install <spec>` accepts the same plugin specs as `openclaw plugins install`: local path/archive, npm package, `git:<repo>`, or `clawhub:<pkg>`. Managed Gateways restart automatically because plugin source modules changed.
+    - `/plugins enable|disable` updates plugin config and triggers Gateway plugin reload for new agent turns.
 
   </Accordion>
   <Accordion title="频道特定行为">
@@ -429,10 +429,11 @@ Override 会立即应用于新的 config 读取，但不会写入 `openclaw.json
 ```
 
 <Note>
-- `/plugins list` 和 `/plugins show` 使用针对当前 workspace 以及磁盘上 config 的真实插件发现。
-- `/plugins install` 可从 ClawHub、npm、git、本地目录和归档包进行安装。
-- `/plugins enable|disable` 只更新插件配置；不会安装或卸载插件。
-- 启用和禁用会为新的 agent 回合热重载 Gateway 插件运行时表面；安装需要重启 Gateway，因为插件源码模块已发生变化。
+- `/plugins list` 和 `/plugins show` 使用当前 workspace 以及磁盘上的 config 进行真实的插件发现。
+- `/plugins install` 可从 ClawHub、npm、git、本地目录和归档文件安装。
+- `/plugins enable|disable` 仅更新插件 config；不会安装或卸载插件。
+- 启用和禁用会为新的 agent 回合热重载 Gateway 插件的运行时表面；安装会在插件源码模块变更后自动重启受管理的 Gateway。
+
 </Note>
 
 ## 界面说明

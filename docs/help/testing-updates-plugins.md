@@ -74,34 +74,13 @@ pnpm test:docker:update-migration
 
 重要 lanes：
 
-- `test:docker:plugins` 验证插件安装冒烟测试、本地文件夹安装、
-  本地文件夹更新跳过行为、带预装
-  依赖的本地文件夹、`file:` 包安装、带 CLI 执行的 git 安装、git
-  移动 ref 更新、带提升的传递
-  依赖的 npm registry 安装、npm 更新无操作、本地 ClawHub fixture 安装和更新
-  无操作、marketplace 更新行为，以及 Claude-bundle 启用/检查。设置
-  `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 可保持 ClawHub 区块 hermetic/offline。
-- `test:docker:plugin-lifecycle-matrix` 在一个裸
-  容器中安装候选包，通过安装、检查、禁用、启用、显式升级、显式降级和
-  在删除插件代码后的卸载来运行一个 npm 插件。它会为每个阶段记录 RSS 和 CPU 指标。
-- `test:docker:plugin-update` 验证在 `openclaw plugins update` 期间，未变化的已安装插件不会
-  重新安装或丢失安装元数据。
-- `test:docker:upgrade-survivor` 在一个脏的
-  旧用户 fixture 上安装候选 tarball，运行包更新以及非交互式 doctor，然后启动一个回环 Gateway 并检查状态保留。
-- `test:docker:published-upgrade-survivor` 先安装一个已发布的基线，
-  通过预制的 `openclaw config set` 配方对其进行配置，将其更新到
-  候选 tarball，运行 doctor，检查旧版清理，启动 Gateway，并探测
-  `/healthz`、`/readyz` 和 RPC 状态。
-- `test:docker:update-restart-auth` 安装候选包，启动一个
-  受管理的 token-auth Gateway，为 `openclaw update --yes --json` 取消调用方 gateway auth 环境变量，
-  并要求候选更新命令在正常探针之前
-  重启 Gateway。
-- `test:docker:update-migration` 是一个清理密集型的已发布更新 lane。它
-  从一个已配置的 Discord/Telegram 风格用户状态开始，运行基线
-  doctor，使已配置的插件依赖有机会实例化，种入
-  一个已配置的打包插件的旧版插件依赖碎片，更新到
-  候选 tarball，并要求更新后的 doctor 移除旧版
-  依赖根目录。
+- `test:docker:plugins` 会验证插件安装冒烟测试、本地文件夹安装、本地文件夹更新跳过行为、带预装依赖的本地文件夹、`file:` 包安装、带 CLI 执行的 git 安装、git 移动引用更新、带提升式传递依赖的 npm registry 安装、npm 更新无操作、损坏的 npm 包元数据拒绝、本地 ClawHub fixture 安装与更新无操作、marketplace 更新行为，以及 Claude-bundle 启用/检查。将 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 设为 0 可使 ClawHub 区块保持 hermetic/离线。
+- `test:docker:plugin-lifecycle-matrix` 会在一个裸容器中安装候选包，运行一个 npm 插件完成安装、检查、禁用、启用、显式升级、显式降级，以及在删除插件代码后卸载。它会记录每个阶段的 RSS 和 CPU 指标。
+- `test:docker:plugin-update` 会验证在 `openclaw plugins update` 期间，未发生变化的已安装插件不会重新安装，也不会丢失安装元数据。
+- `test:docker:upgrade-survivor` 会在一个脏旧用户 fixture 上安装候选 tarball，运行包更新加非交互式 doctor，然后启动一个 loopback Gateway 并检查状态保留。
+- `test:docker:published-upgrade-survivor` 会先安装一个已发布基线，通过预先烘焙的 `openclaw config set` 配方进行配置，更新到候选 tarball，运行 doctor，检查旧版清理，启动 Gateway，并探测 `/healthz`、`/readyz` 和 RPC 状态。
+- `test:docker:update-restart-auth` 会安装候选包，启动一个受管的 token-auth Gateway，清除调用方 gateway auth 环境变量以供 `openclaw update --yes --json` 使用，并要求候选更新命令在正常探测之前重启 Gateway。
+- `test:docker:update-migration` 是一个重清理的已发布更新 lane。它从已配置的 Discord/Telegram 风格用户状态开始，运行基线 doctor，使已配置的插件依赖有机会落地，为一个已配置的打包插件播种旧版插件依赖残留，更新到候选 tarball，并要求更新后的 doctor 删除旧的依赖根目录。
 
 有用的 published-upgrade survivor 变体：
 
@@ -150,13 +129,13 @@ Full Release Validation 默认使用 `source=artifact`，从
 `package_acceptance_package_spec=openclaw@YYYY.M.D`，这样同一套升级矩阵
 就会改为针对已发布的 npm 包。
 
-Release checks call Package Acceptance with the package/update/restart/plugin set:
+发布检查会针对 package/update/restart/plugin 套件调用 Package Acceptance：
 
 ```text
 doctor-switch update-channel-switch update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update
 ```
 
-When release soak is enabled, they also pass:
+当启用发布 soak 时，它们还会传入：
 
 ```text
 published_upgrade_survivor_baselines=last-stable-4 2026.4.23 2026.5.2 2026.4.15
@@ -164,28 +143,25 @@ published_upgrade_survivor_scenarios=reported-issues
 telegram_mode=mock-openai
 ```
 
-This keeps package migration, update channel switching, corrupt managed-plugin
-tolerance, stale plugin dependency cleanup, offline plugin coverage, plugin
-update behavior, and Telegram package QA on the same resolved artifact without
-making the default release package gate walk every published release.
+这使包迁移、更新渠道切换、损坏的受管插件容错、过时插件依赖清理、离线插件覆盖、插件更新行为以及 Telegram 包 QA 都在同一个已解析产物上进行，而不会让默认的发布包门禁去遍历每一个已发布版本。
 
-`last-stable-4` resolves to the four latest stable npm-published OpenClaw
-releases. Release package acceptance pins `2026.4.23` as the first plugin-update
-compatibility boundary, `2026.5.2` as a plugin-architecture churn boundary, and
-`2026.4.15` as an older 2026.4.1x published-update baseline; the resolver
-dedupes pins that are already in the latest four. For exhaustive published
-update migration coverage, use `all-since-2026.4.23` in the separate Update
-Migration workflow instead of Full Release CI. `release-history` remains
-available for manual wider sampling when you also want the legacy pre-date
-anchor.
+`last-stable-4` 会解析为最近四个已发布到 npm 的稳定版 OpenClaw
+版本。发布包接纳将 `2026.4.23` 作为第一个插件更新
+兼容性边界，`2026.5.2` 作为插件架构变动边界，以及
+`2026.4.15` 作为较早的 2026.4.1x 已发布更新基线；解析器会
+去重已包含在最近四个中的固定版本。对于穷尽的已发布
+更新迁移覆盖，请在单独的 Update
+Migration 工作流中使用 `all-since-2026.4.23`，而不是 Full Release CI。`release-history` 仍然
+可用于手动更广泛抽样，尤其是在你也想要使用旧的发布日期
+锚点时。
 
-When multiple published-upgrade survivor baselines are selected, the reusable
-Docker workflow shards each baseline into its own targeted runner job. Each
-baseline shard still runs the selected scenario set, but logs and artifacts stay
-per-baseline and wall time is bounded by the slowest shard instead of one large
-serial job.
+当选择多个 published-upgrade survivor 基线时，可复用的
+Docker workflow 会将每个基线拆分为自己的目标 runner job。每个
+基线分片仍然会运行所选场景集，但日志和产物都保持
+按基线分开，且总耗时由最慢的分片决定，而不是一个大的
+串行任务。
 
-Run a package profile manually when validating a candidate before release:
+在发布前手动运行一个 package profile 进行验证：
 
 ```bash
 gh workflow run package-acceptance.yml \
@@ -205,14 +181,14 @@ gh workflow run package-acceptance.yml \
 
 对于发布候选版本，默认验证栈为：
 
-1. `pnpm check:changed` and `pnpm test:changed` for source-level regressions.
-2. `pnpm release:check` for package artifact integrity.
-3. Package Acceptance `package` profile or the release-check custom package
-   lanes for install/update/restart/plugin contracts.
-4. Cross-OS release checks for OS-specific installer, onboarding, and platform
-   behavior.
-5. Live suites only when the changed surface touches provider or hosted-service
-   behavior.
+1. `pnpm check:changed` 和 `pnpm test:changed`，用于源代码级回归。
+2. `pnpm release:check`，用于包产物完整性。
+3. Package Acceptance 的 `package` profile 或 release-check 自定义包
+   lanes，用于 install/update/restart/plugin 契约。
+4. 跨操作系统发布检查，用于特定于操作系统的安装器、引导以及平台
+   行为。
+5. 仅当变更范围触及 provider 或托管服务
+   行为时才运行 live suites。
 
 在维护者机器上，广泛门禁和 Docker/package 产品验证应在 Testbox 中运行，除非明确在做本地验证。
 
@@ -224,26 +200,26 @@ gh workflow run package-acceptance.yml \
 - 已发布的 `2026.4.26` 包可以对已发布的本地构建元数据 stamp 文件发出警告。
 - 更晚的包必须满足现代契约。同样的缺口会失败，而不是警告或跳过。
 
-Do not add new startup migrations for these old shapes. Add or extend a doctor
-repair, then prove it with `upgrade-survivor`, `published-upgrade-survivor`, or
-`update-restart-auth` when the update command owns the restart.
+不要为这些旧形状添加新的启动迁移。请添加或扩展 doctor
+修复，然后在更新命令负责重启时，使用 `upgrade-survivor`、`published-upgrade-survivor` 或
+`update-restart-auth` 来证明它。
 
 ## 添加覆盖
 
 当更改更新或插件行为时，请在最可能以正确原因失败的最低层添加覆盖：
 
-- Pure path or metadata logic: unit test beside the source.
-- Package inventory or packed-file behavior: `package-dist-inventory` or tarball
-  checker test.
-- CLI install/update behavior: Docker lane assertion or fixture.
-- Published-release migration behavior: `published-upgrade-survivor` scenario.
-- Update-owned restart behavior: `update-restart-auth`.
-- Registry/package source behavior: `test:docker:plugins` fixture or ClawHub
-  fixture server.
-- Dependency layout or cleanup behavior: assert both runtime execution and the
-  filesystem boundary. npm dependencies may be hoisted under the managed npm
-  root, so tests should prove the root is scanned/cleaned instead of assuming a
-  package-local `node_modules` tree.
+- 纯路径或元数据逻辑：在源码旁边添加单元测试。
+- 包清单或打包文件行为：`package-dist-inventory` 或 tarball
+  检查器测试。
+- CLI 安装/更新行为：Docker lane 断言或 fixture。
+- 已发布版本迁移行为：`published-upgrade-survivor` 场景。
+- 由更新负责的重启行为：`update-restart-auth`。
+- registry/包源行为：`test:docker:plugins` fixture 或 ClawHub
+  fixture server。
+- 依赖布局或清理行为：同时断言运行时执行和
+  文件系统边界。npm 依赖可能会在受管理的 npm
+  根目录下被 hoist，所以测试应证明扫描/清理的是根目录，而不是假设存在
+  package-local 的 `node_modules` 树。
 
 默认保持新的 Docker fixtures 为 hermetic。除非测试目标就是 live registry 行为，否则使用本地 fixture registry 和伪造包。
 

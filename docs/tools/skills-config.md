@@ -22,7 +22,7 @@ title: "技能配置"
     },
     install: {
       preferBrew: true,
-      nodeManager: "npm", // npm | pnpm | yarn | bun (Gateway 运行时仍应使用 Node；不推荐 bun)
+      nodeManager: "npm", // npm | pnpm | yarn | bun（Gateway 运行时仍应使用 Node；不推荐 bun）
       allowUploadedArchives: false,
     },
     entries: {
@@ -167,6 +167,8 @@ realpath 解析后会被接受。`extraDirs` 也会直接扫描相邻仓库，�
 
 - `agents.defaults.sandbox.docker.env` 用于 Docker 后端（或按 agent 配置的 `agents.list[].sandbox.docker.env`）。
 - 将环境变量烘焙进你的自定义沙箱镜像或远程沙箱环境中。
+
+对于 Docker 沙箱，配置的 `sandbox.docker.env` 值会成为显式的容器环境变量。具有 Docker 守护进程访问权限的用户可以通过 Docker 元数据检查它们，因此在无法接受这种暴露时，请使用挂载的密钥文件、自定义镜像或其他交付路径。
 
 ## 相关内容
 

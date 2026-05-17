@@ -9,7 +9,7 @@ sidebarTitle: "后台任务"
 ---
 
 <Note>
-在找调度功能？请参阅 [Automation](/automation) 以选择合适的机制。本页是后台工作的活动台账，而不是调度器。
+在找调度功能？请参阅 [自动化](/automation) 以选择合适的机制。本页是后台工作的活动台账，而不是调度器。
 </Note>
 
 后台任务用于跟踪**在主对话会话之外**运行的工作：ACP 运行、子代理启动、隔离的 cron 作业执行，以及由 CLI 发起的操作。
@@ -89,25 +89,25 @@ sidebarTitle: "后台任务"
 
 ## 什么会创建任务
 
-| Source                 | Runtime type | When a task record is created                          | Default notify policy |
-| ---------------------- | ------------ | ------------------------------------------------------ | --------------------- |
-| ACP 后台运行          | `acp`        | 启动一个子 ACP 会话                                     | `done_only`           |
-| 子代理编排            | `subagent`   | 通过 `sessions_spawn` 启动一个子代理                    | `done_only`           |
-| Cron 作业（所有类型）  | `cron`       | 每次 cron 执行（主会话和隔离模式）                      | `silent`              |
-| CLI 操作               | `cli`        | 通过网关运行的 `openclaw agent` 命令                    | `silent`              |
-| Agent 媒体作业         | `cli`        | 由会话承载的 `music_generate`/`video_generate` 运行      | `silent`              |
+| 来源                   | 运行时类型 | 创建任务记录的时机                                         | 默认通知策略 |
+| ---------------------- | ---------- | ---------------------------------------------------------- | ------------ |
+| ACP 后台运行            | `acp`      | 启动一个子 ACP 会话                                        | `done_only`  |
+| 子代理编排              | `subagent` | 通过 `sessions_spawn` 启动子代理                          | `done_only`  |
+| Cron 作业（所有类型）   | `cron`     | 每次 cron 执行（主会话和隔离会话）                        | `silent`     |
+| CLI 操作                | `cli`      | 通过网关运行的 `openclaw agent` 命令                      | `silent`     |
+| 代理媒体任务            | `cli`      | 由会话支持的 `image_generate`/`music_generate`/`video_generate` 运行 | `silent`     |
 
 <AccordionGroup>
   <Accordion title="Cron 和媒体的通知默认值">
     主会话 cron 任务默认使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会生成通知。隔离 cron 任务也默认是 `silent`，但因为它们在自己的会话中运行，所以更显眼。
 
-    由会话承载的 `music_generate` 和 `video_generate` 运行同样使用 `silent` 通知策略。它们仍会创建任务记录，但完成结果会作为内部唤醒返回给原始代理会话，这样代理就可以写入后续消息并自行附加完成的媒体。如果来源投递要求使用消息工具，则群组/频道完成会遵循正常的可见回复策略，因此代理会使用消息工具。如果完成代理在仅工具路由中未能产出消息工具投递证据，OpenClaw 会将完成回退直接发送到原始通道，而不是把媒体保持为私有。
+    由会话支持的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍会创建任务记录，但完成结果会作为内部唤醒返回给原始代理会话，以便代理可以自己写后续消息并附加已完成的媒体。群组/频道的完成则遵循正常的可见回复策略，因此当源端投递需要它时，代理会使用消息工具。如果完成代理在仅工具路径中未能提供消息工具投递证据，OpenClaw 会将完成回退直接发送到原始通道，而不是让媒体保持私有。
 
   </Accordion>
-  <Accordion title="并发 video_generate 保护机制">
-    当一个由会话承载的 `video_generate` 任务仍处于活动状态时，该工具也充当保护机制：在同一个会话中重复调用 `video_generate` 会返回当前活动任务的状态，而不会启动第二个并发生成。如果你想从代理侧明确查询进度/状态，请使用 `action: "status"`。
+  <Accordion title="并发媒体生成保护">
+    当一个由会话支持的媒体生成任务仍在进行时，该工具也会充当保护机制：在同一会话中重复调用 `image_generate`、`music_generate` 或 `video_generate` 时，会返回当前活动任务状态，而不是启动第二个并发生成。若你希望从代理侧显式查询进度/状态，请使用 `action: "status"`。
   </Accordion>
-  <Accordion title="What does not create tasks">
+  <Accordion title="哪些情况不会创建任务">
     - Heartbeat 回合——主会话；请参阅 [Heartbeat](/gateway/heartbeat)
     - 普通的交互式聊天回合
     - 直接 `/command` 响应
@@ -174,11 +174,11 @@ Transitions happen automatically - when the associated agent run ends, the task 
 
 控制你从每个任务中接收到多少信息：
 
-| Policy                | What is delivered                                                       |
-| --------------------- | ----------------------------------------------------------------------- |
-| `done_only` (default) | Only terminal state (succeeded, failed, etc.) - **this is the default** |
-| `state_changes`       | Every state transition and progress update                              |
-| `silent`              | Nothing at all                                                          |
+| 策略                  | 投递内容                                                              |
+| --------------------- | --------------------------------------------------------------------- |
+| `done_only`（默认）   | 仅投递终态（succeeded、failed 等）——**这是默认值**                  |
+| `state_changes`       | 每一次状态转换和进度更新                                              |
+| `silent`              | 完全不投递                                                            |
 
 在任务运行期间更改通知策略：
 
@@ -194,7 +194,7 @@ openclaw tasks notify <lookup> state_changes
     openclaw tasks list [--runtime <acp|subagent|cron|cli>] [--status <status>] [--json]
     ```
 
-    输出列：Task ID、Kind、Status、Delivery、Run ID、Child Session、Summary。
+    输出列：任务 ID、类型、状态、投递、Run ID、子会话、摘要。
 
   </Accordion>
   <Accordion title="tasks show">
@@ -225,7 +225,7 @@ openclaw tasks notify <lookup> state_changes
 
     暴露运行问题。检测到问题时，发现项也会出现在 `openclaw status` 中。
 
-    | Finding                   | Severity   | Trigger                                                                                                      |
+    | 发现项                    | 严重性     | 触发条件                                                                                                      |
     | ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
     | `stale_queued`            | warn       | 排队超过 10 分钟                                                                                             |
     | `stale_running`           | error      | 运行超过 30 分钟                                                                                             |
@@ -252,10 +252,10 @@ openclaw tasks notify <lookup> state_changes
 
     完成清理同样感知运行时：
 
-    - subagent 完成时会尽力在公告清理继续之前关闭该子会话跟踪的浏览器标签页/进程。
+    - 子代理完成时会尽力在公告清理继续之前关闭该子会话跟踪的浏览器标签页/进程。
     - 隔离 cron 完成时会尽力在运行完全拆除之前关闭该 cron 会话跟踪的浏览器标签页/进程。
-    - 隔离 cron 投递会在需要时等待后代 subagent 后续跟进，并抑制过时的父级确认文本，而不是宣布它。
-    - subagent 完成投递优先使用最新可见的 assistant 文本；如果为空，则回退到已清理的最新 tool/toolResult 文本，而仅因超时工具调用的运行可能会折叠为简短的部分进度摘要。终态失败的运行会宣布失败状态，而不会回放捕获到的回复文本。
+    - 隔离 cron 投递会在需要时等待后代子代理后续跟进，并抑制过时的父级确认文本，而不是宣布它。
+    - 子代理完成投递优先使用最新可见的 assistant 文本；如果为空，则回退到已清理的最新 tool/toolResult 文本，而仅因超时工具调用的运行可能会折叠为简短的部分进度摘要。终态失败的运行会宣布失败状态，而不会回放捕获到的回复文本。
     - 清理失败不会掩盖真实的任务结果。
 
     应用维护时，OpenClaw 还会移除超过 7 天的过期 `cron:<jobId>:run:<uuid>` 会话注册表行，同时保留当前正在运行的 cron 作业对应的行，并且不影响非 cron 的会话行。
@@ -291,9 +291,9 @@ Tasks: 3 queued · 2 running · 1 issues
 
 该摘要报告：
 
-- **active** - `queued` + `running` 的数量
-- **failures** - `failed` + `timed_out` + `lost` 的数量
-- **byRuntime** - 按 `acp`、`subagent`、`cron`、`cli` 的细分
+- **活跃** - `queued` + `running` 的数量
+- **失败** - `failed` + `timed_out` + `lost` 的数量
+- **按运行时** - 按 `acp`、`subagent`、`cron`、`cli` 的细分
 
 `/status` 和 `session_status` 工具都使用一个具备清理感知的任务快照：优先显示活跃任务，隐藏过期的已完成行，并且只有在没有活跃工作时才显示最近的失败。这使状态卡片专注于当前最重要的内容。
 
@@ -316,13 +316,13 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
 每 **60 秒** 运行一次 sweeper，并处理四件事：
 
 <Steps>
-  <Step title="Reconciliation">
+  <Step title="对账">
     检查活跃任务是否仍有权威的运行时支撑。ACP/subagent 任务使用子会话状态，cron 任务使用活跃作业所有权，而带有运行身份的 CLI 任务使用所属的运行上下文。如果该支撑状态消失超过 5 分钟，则任务会被标记为 `lost`。
   </Step>
   <Step title="ACP 会话修复">
     关闭终态或孤立的、由父级拥有的一次性 ACP 会话，并且只有在不再存在活跃会话绑定时，才关闭过期终态或孤立的持久 ACP 会话。
   </Step>
-  <Step title="清理时间戳设置">
+  <Step title="设置清理时间戳">
     为终态任务设置 `cleanupAfter` 时间戳（endedAt + 7 天）。在保留期内，lost 任务在审计中仍作为警告出现；在 `cleanupAfter` 过期后，或清理元数据缺失时，它们会变成错误。
   </Step>
   <Step title="裁剪">
@@ -337,36 +337,36 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
 ## 任务如何与其他系统关联
 
 <AccordionGroup>
-  <Accordion title="Tasks and Task Flow">
+  <Accordion title="任务与任务流">
     [任务流](/automation/taskflow) 是位于后台任务之上的流程编排层。单个 flow 在其生命周期内可使用托管或镜像同步模式协调多个任务。使用 `openclaw tasks` 查看单个任务记录，使用 `openclaw tasks flow` 查看编排 flow。
 
     详情参见 [任务流](/automation/taskflow)。
 
   </Accordion>
-  <Accordion title="Tasks and cron">
+  <Accordion title="任务与 cron">
     cron 作业的 **定义** 存放在 `~/.openclaw/cron/jobs.json` 中；运行时执行状态存放在相邻的 `~/.openclaw/cron/jobs-state.json` 中。**每一次** cron 执行都会创建一条任务记录——无论是主会话还是隔离会话。主会话 cron 任务默认使用 `silent` 通知策略，因此它们会被跟踪，但不会生成通知。
 
     详情参见 [Cron Jobs](/automation/cron-jobs)。
 
   </Accordion>
-  <Accordion title="Tasks and heartbeat">
+  <Accordion title="任务与 heartbeat">
     Heartbeat 运行是主会话轮次——它们不会创建任务记录。任务完成时，它可以触发 heartbeat 唤醒，以便你及时看到结果。
 
     详情参见 [Heartbeat](/gateway/heartbeat)。
 
   </Accordion>
-  <Accordion title="Tasks and sessions">
+  <Accordion title="任务与会话">
     任务可以引用 `childSessionKey`（工作运行的位置）和 `requesterSessionKey`（发起者）。会话是对话上下文；任务是在此之上的活动跟踪。
   </Accordion>
-  <Accordion title="Tasks and agent runs">
+  <Accordion title="任务与 Agent 运行">
     任务的 `runId` 连接到正在执行工作的 agent run。Agent 生命周期事件（开始、结束、错误）会自动更新任务状态——你无需手动管理生命周期。
   </Accordion>
 </AccordionGroup>
 
 ## 相关内容
 
-- [Automation](/automation) - 所有自动化机制一览
-- [CLI: Tasks](/cli/tasks) - CLI 命令参考
+- [自动化](/automation) - 所有自动化机制一览
+- [CLI：任务](/cli/tasks) - CLI 命令参考
 - [Heartbeat](/gateway/heartbeat) - 周期性的主会话轮次
-- [Scheduled Tasks](/automation/cron-jobs) - 调度后台工作
-- [Task Flow](/automation/taskflow) - 位于任务之上的流程编排
+- [计划任务](/automation/cron-jobs) - 调度后台工作
+- [任务流](/automation/taskflow) - 位于任务之上的流程编排

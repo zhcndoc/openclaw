@@ -8,7 +8,7 @@ title: "图像生成"
 sidebarTitle: "图像生成"
 ---
 
-`image_generate` 工具允许 agent 使用你配置的提供方来创建和编辑图像。生成的图像会作为媒体附件自动发送到 agent 的回复中。
+`image_generate` 工具允许 agent 使用你已配置的提供方创建和编辑图像。在聊天会话中，图像生成会异步运行：OpenClaw 会记录后台任务，立即返回任务 ID，并在提供方完成后唤醒 agent。完成后的 agent 必须通过 `message` 工具发送生成的图像；OpenClaw 不会作为回退自动发布私有的最终回复。
 
 <Note>
 只有在至少有一个图像生成提供方可用时，该工具才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.imageGenerationModel`，设置提供方 API 密钥，或者使用 OpenAI Codex OAuth 登录。
@@ -44,7 +44,7 @@ sidebarTitle: "图像生成"
   <Step title="让 agent 执行">
     _"生成一张友好机器人吉祥物的图片。"_
 
-    该 agent 会自动调用 `image_generate`。如果有可用的提供方，则无需工具白名单——默认已启用。
+    agent 会自动调用 `image_generate`。无需工具 allow-listing——当有提供方可用时，它默认启用。该工具会返回一个后台任务 ID，随后完成后的 agent 会在准备好后通过 `message` 工具发送生成的附件。
 
   </Step>
 </Steps>
@@ -90,6 +90,12 @@ sidebarTitle: "图像生成"
 /tool image_generate action=list
 ```
 
+使用 `action: "status"` 来检查当前会话中的活动图像生成任务：
+
+```text
+/tool image_generate action=status
+```
+
 ## 提供方能力
 
 | Capability            | ComfyUI            | DeepInfra | fal                       | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
@@ -105,8 +111,9 @@ sidebarTitle: "图像生成"
 <ParamField path="prompt" type="string" required>
   图像生成提示词。`action: "generate"` 时必填。
 </ParamField>
-<ParamField path="action" type='"generate" | "list"' default="generate">
-  使用 `"list"` 在运行时检查可用的提供方和模型。
+<ParamField path="action" type='"generate" | "status" | "list"' default="generate">
+  使用 `"status"` 来检查当前会话任务，或使用 `"list"` 在运行时检查
+  可用的提供方和模型。
 </ParamField>
 <ParamField path="model" type="string">
   覆盖提供方/模型（例如 `openai/gpt-image-2`）。透明的 OpenAI 背景使用
@@ -201,9 +208,7 @@ OpenClaw 会按以下顺序尝试提供方：
     显式的 `model`、`primary` 和 `fallbacks` 条目。
   </Accordion>
   <Accordion title="Timeouts">
-    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。
-    按次调用的 `timeoutMs` 工具参数会覆盖已配置的默认值。Codex 动态工具调用会遵守相同的超时预算，
-    但受 OpenClaw 的 600000 毫秒动态工具桥接最大值限制。
+    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。每次调用的 `timeoutMs` 工具参数会覆盖已配置的默认值。Google、OpenRouter 和 xAI 托管的图像提供方使用 180 秒默认值；Azure OpenAI 图像生成使用 600 秒。Codex 动态工具调用遵循相同的超时预算，并受 OpenClaw 的 600000 ms 动态工具桥接最大值限制。
   </Accordion>
   <Accordion title="运行时检查">
     使用 `action: "list"` 检查当前已注册的提供方、
@@ -314,12 +319,12 @@ ComfyUI 支持 1 张。
     内置的 xAI 提供商在仅提示词请求时使用 `/v1/images/generations`，
     当存在 `image` 或 `images` 时使用 `/v1/images/edits`。
 
-    - 模型：`xai/grok-imagine-image`、`xai/grok-imagine-image-pro`
+    - 模型：`xai/grok-imagine-image`, `xai/grok-imagine-image-quality`
     - 数量：最多 4
     - 参考图：一个 `image` 或最多五个 `images`
-    - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`2:3`、`3:2`
-    - 分辨率：`1K`、`2K`
-    - 输出：作为由 OpenClaw 管理的图像附件返回
+    - 宽高比：`1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `2:3`, `3:2`
+    - 分辨率：`1K`, `2K`
+    - 输出：作为 OpenClaw 托管的图像附件返回
 
     在共享的跨提供商 `image_generate` 合同中尚未具备这些控制项之前，OpenClaw 有意不暴露 xAI 原生的 `quality`、`mask`、
     `user`，或额外的仅原生支持的宽高比。

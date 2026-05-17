@@ -3,7 +3,7 @@ summary: "definePluginEntry、defineChannelPluginEntry 和 defineSetupPluginEntr
 title: "插件入口点"
 sidebarTitle: "入口点"
 read_when:
-  - 你需要 definePluginEntry 或 defineChannelPluginEntry 的精确类型签名
+  - 你需要 `definePluginEntry` 或 `defineChannelPluginEntry` 的精确类型签名
   - 你想了解注册模式（完整、setup 或 CLI 元数据）
   - 你正在查找入口点选项
 ---
@@ -63,14 +63,14 @@ export default definePluginEntry({
 });
 ```
 
-| Field          | Type                                                             | Required | Default             |
-| -------------- | ---------------------------------------------------------------- | -------- | ------------------- |
-| `id`           | `string`                                                         | Yes      | -                   |
-| `name`         | `string`                                                         | Yes      | -                   |
-| `description`  | `string`                                                         | Yes      | -                   |
-| `kind`         | `string`                                                         | No       | -                   |
-| `configSchema` | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | No       | Empty object schema |
-| `register`     | `(api: OpenClawPluginApi) => void`                               | Yes      | -                   |
+| 字段           | 类型                                                             | 必需 | 默认值              |
+| -------------- | ---------------------------------------------------------------- | ---- | ------------------- |
+| `id`           | `string`                                                         | 是   | -                   |
+| `name`         | `string`                                                         | 是   | -                   |
+| `description`  | `string`                                                         | 是   | -                   |
+| `kind`         | `string`                                                         | 否   | -                   |
+| `configSchema` | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
+| `register`     | `(api: OpenClawPluginApi) => void`                               | 是   | -                   |
 
 - `id` 必须与 `openclaw.plugin.json` 清单匹配。
 - `kind` 用于独占槽位：`"memory"` 或 `"context-engine"`。
@@ -101,16 +101,16 @@ export default defineChannelPluginEntry({
 });
 ```
 
-| Field                 | Type                                                             | Required | Default             |
-| --------------------- | ---------------------------------------------------------------- | -------- | ------------------- |
-| `id`                  | `string`                                                         | Yes      | -                   |
-| `name`                | `string`                                                         | Yes      | -                   |
-| `description`         | `string`                                                         | Yes      | -                   |
-| `plugin`              | `ChannelPlugin`                                                  | Yes      | -                   |
-| `configSchema`        | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | No       | Empty object schema |
-| `setRuntime`          | `(runtime: PluginRuntime) => void`                               | No       | -                   |
-| `registerCliMetadata` | `(api: OpenClawPluginApi) => void`                               | No       | -                   |
-| `registerFull`        | `(api: OpenClawPluginApi) => void`                               | No       | -                   |
+| 字段                | 类型                                                             | 必需 | 默认值              |
+| ------------------- | ---------------------------------------------------------------- | ---- | ------------------- |
+| `id`                | `string`                                                         | 是   | -                   |
+| `name`              | `string`                                                         | 是   | -                   |
+| `description`       | `string`                                                         | 是   | -                   |
+| `plugin`            | `ChannelPlugin`                                                  | 是   | -                   |
+| `configSchema`      | `OpenClawPluginConfigSchema \| () => OpenClawPluginConfigSchema` | 否   | 空对象 schema       |
+| `setRuntime`        | `(runtime: PluginRuntime) => void`                               | 否   | -                   |
+| `registerCliMetadata` | `(api: OpenClawPluginApi) => void`                             | 否   | -                   |
+| `registerFull`      | `(api: OpenClawPluginApi) => void`                               | 否   | -                   |
 
 - `setRuntime` 会在注册期间调用，因此你可以存储运行时引用
   （通常通过 `createPluginRuntimeStore`）。在 CLI 元数据
@@ -118,7 +118,7 @@ export default defineChannelPluginEntry({
 - `registerCliMetadata` 会在 `api.registrationMode === "cli-metadata"`、
   `api.registrationMode === "discovery"` 以及
   `api.registrationMode === "full"` 时运行。
-  当作通道拥有的 CLI 描述符的规范放置位置，以便根帮助保持非激活、发现快照包含静态命令元数据，并且常规 CLI 命令注册仍然与完整插件加载兼容。
+  这是放置通道拥有的 CLI 描述符的规范位置，这样根帮助可以保持非激活、发现快照可以包含静态命令元数据，并且常规 CLI 命令注册仍然与完整插件加载兼容。
 - 发现注册是非激活的，但不是免导入的。OpenClaw 可能会
   评估受信任的插件入口和通道插件模块来构建
   快照，因此请保持顶层导入无副作用，并将 sockets、
@@ -157,11 +157,11 @@ export default defineSetupPluginEntry(myChannelPlugin);
 
 实践中，将 `defineSetupPluginEntry(...)` 与以下窄范围 setup 辅助族配对使用：
 
-- `openclaw/plugin-sdk/setup-runtime`，用于运行时安全的 setup 辅助，例如
-  import-safe setup patch 适配器、lookup-note 输出、
+- `openclaw/plugin-sdk/setup-runtime` 用于运行时安全的 setup 辅助工具，例如
+  `createSetupTranslator`、导入安全的 setup patch 适配器、lookup-note 输出、
   `promptResolvedAllowFrom`、`splitSetupEntries` 和委托式 setup 代理
-- `openclaw/plugin-sdk/channel-setup`，用于可选安装的 setup 表面
-- `openclaw/plugin-sdk/setup-tools`，用于 setup/install CLI/archive/docs 辅助
+- `openclaw/plugin-sdk/channel-setup` 用于可选安装的 setup 表面
+- `openclaw/plugin-sdk/setup-tools` 用于 setup/安装 CLI/归档/文档辅助工具
 
 将重型 SDK、CLI 注册以及长生命周期的运行时服务保留在完整入口中。
 

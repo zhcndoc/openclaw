@@ -90,8 +90,7 @@ GET http://127.0.0.1:8000/v1/models
         baseUrl: "http://127.0.0.1:8000/v1",
         apiKey: "${VLLM_API_KEY}",
         api: "openai-completions",
-        request: { allowPrivateNetwork: true },
-        timeoutSeconds: 300, // 可选：为较慢的本地模型延长连接/头部/正文/请求超时
+        timeoutSeconds: 300, // 可选：为速度较慢的本地模型延长连接/响应头/正文/请求超时
         models: [
           {
             id: "your-model-id",
@@ -259,7 +258,6 @@ GET http://127.0.0.1:8000/v1/models
             baseUrl: "http://192.168.1.50:9000/v1",
             apiKey: "${VLLM_API_KEY}",
             api: "openai-completions",
-            request: { allowPrivateNetwork: true },
             timeoutSeconds: 300,
             models: [
               {
@@ -295,7 +293,6 @@ GET http://127.0.0.1:8000/v1/models
             baseUrl: "http://192.168.1.50:8000/v1",
             apiKey: "${VLLM_API_KEY}",
             api: "openai-completions",
-            request: { allowPrivateNetwork: true },
             timeoutSeconds: 300,
             models: [{ id: "your-model-id", name: "Local vLLM Model" }],
           },
@@ -318,10 +315,13 @@ GET http://127.0.0.1:8000/v1/models
     curl http://127.0.0.1:8000/v1/models
     ```
 
-    如果你看到连接错误，请检查主机、端口，以及 vLLM 是否以 OpenAI 兼容服务器模式启动。
-    对于显式的 loopback、LAN 或 Tailscale 端点，也要设置
-    `models.providers.vllm.request.allowPrivateNetwork: true`；除非提供方
-    被显式信任，否则提供方请求默认会阻止私有网络 URL。
+    如果你看到连接错误，请确认主机、端口，以及 vLLM 是否以 OpenAI 兼容服务器模式启动。
+    对于显式的 loopback、LAN 或 Tailscale 端点，OpenClaw 会信任
+    已配置的 `models.providers.vllm.baseUrl` 源作为受保护模型
+    请求的精确来源。metadata/link-local 源在未显式
+    启用前仍会被阻止。仅当 vLLM 请求必须访问另一个私有源时，
+    才设置 `models.providers.vllm.request.allowPrivateNetwork: true`，
+    并将其设为 `false` 以取消精确来源信任。
 
   </Accordion>
 
@@ -334,7 +334,7 @@ GET http://127.0.0.1:8000/v1/models
 
   </Accordion>
 
-  <Accordion title="No models discovered">
+  <Accordion title="未发现模型">
     自动发现需要设置 `VLLM_API_KEY`。如果你已经定义了 `models.providers.vllm`，除非 `agents.defaults.models` 包含 `"vllm/*": {}`，否则 OpenClaw 只会使用你声明的模型。
   </Accordion>
 

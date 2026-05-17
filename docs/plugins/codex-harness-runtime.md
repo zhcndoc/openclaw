@@ -18,7 +18,8 @@ Codex 模式并不是 PI，只是在底层换了一个不同的模型调用。Co
 诊断相关接口。
 
 OpenClaw 仍然负责通道路由、会话文件、可见消息投递、
-OpenClaw 动态工具、审批、媒体传递以及转录镜像。Codex 负责规范化的原生线程、
+OpenClaw 动态工具、审批、媒体投递以及转录镜像。
+除非当前的 OpenClaw 上下文引擎声明自己负责压缩，否则 Codex 负责规范化的原生线程、
 原生模型循环、原生工具续接以及原生压缩。
 
 ## 线程绑定和模型变更
@@ -32,7 +33,7 @@ OpenClaw 动态工具、审批、媒体传递以及转录镜像。Codex 负责�
 
 当某个来源聊天回合通过 Codex harness 运行时，如果部署没有明确配置
 `messages.visibleReplies`，可见回复默认使用 OpenClaw 的 `message` 工具。
-代理仍然可以私下完成它的 Codex 回合；只有当它调用
+代理仍然可以私下完成其 Codex 回合；只有当它调用
 `message(action="send")` 时，才会发布到通道。设置 `messages.visibleReplies: "automatic"` 以保持直接聊天的最终回复走
 传统的自动投递路径。
 
@@ -144,7 +145,9 @@ Codex 审阅和手动压缩回合可以拒绝同回合引导。在这种情况�
 
 ## 压缩和转录镜像
 
-当所选模型使用 Codex harness 时，原生线程压缩会委托给 Codex app-server。OpenClaw 会保留一个转录镜像，用于频道历史、搜索、`/new`、`/reset` 以及未来的模型或 harness 切换。
+当所选模型使用 Codex harness 时，原生线程压缩会委托给 Codex app-server，除非某个活动上下文引擎声明 `ownsCompaction: true`。拥有压缩职责的上下文引擎会先执行压缩，并促使 OpenClaw 放弃旧的 Codex 后端线程，以便下一轮能够从引擎管理的上下文中重新恢复一个新的线程。OpenClaw 会保留一份转录镜像，用于频道历史、搜索、`/new`、`/reset`，以及未来的模型或 harness 切换。
+
+当某个上下文引擎请求 Codex 线程引导投影时，OpenClaw 会将工具调用的名称和 id、输入形状，以及经过脱敏的工具结果内容投影到新的 Codex 线程中。它不会把原始的工具调用参数值复制到该投影里。
 
 该镜像包含用户提示、最终助手文本，以及当 app-server 发出时的轻量级 Codex 推理或计划记录。如今，OpenClaw 仅记录原生压缩的开始和完成信号。它尚未暴露可供人阅读的压缩摘要，也未暴露一份可审计的列表来说明 Codex 在压缩后保留了哪些条目。
 

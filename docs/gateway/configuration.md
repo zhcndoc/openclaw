@@ -84,13 +84,13 @@ OpenClaw 只接受完全符合架构的配置。未知键、格式错误的类�
 - 运行 `openclaw doctor` 查看确切问题
 - 运行 `openclaw doctor --fix`（或 `--yes`）应用修复
 
-The Gateway keeps a trusted last-known-good copy after each successful startup,
-but startup and hot reload do not restore it automatically. If `openclaw.json`
-fails validation (including plugin-local validation), Gateway startup fails or
-the reload is skipped and the current runtime keeps the last accepted config.
-Run `openclaw doctor --fix` (or `--yes`) to repair prefixed/clobbered config or
-restore the last-known-good copy. Promotion to last-known-good is skipped when a
-candidate contains redacted secret placeholders such as `***`.
+Gateway 在每次成功启动后都会保留一份受信任的最近一次已知良好副本，
+但启动和热重载不会自动恢复它。如果 `openclaw.json`
+校验失败（包括插件本地校验），Gateway 启动会失败，或者
+重载会被跳过，而当前运行时会保留最后一次接受的配置。
+运行 `openclaw doctor --fix`（或 `--yes`）以修复带前缀/被覆盖的配置，或
+恢复最近一次已知良好副本。当候选配置包含诸如 `***`
+之类的被遮蔽密钥占位符时，不会提升为最近一次已知良好副本。
 
 ## 常见任务
 
@@ -170,14 +170,14 @@ candidate contains redacted secret placeholders such as `***`.
   </Accordion>
 
   <Accordion title="设置群聊提及门控">
-    群消息默认**需要提及**。为每个代理配置触发模式，并保持可见房间回复走默认的 message-tool 路径，除非你明确想要旧式自动最终回复：
+    群消息默认 **需要提及**。请为每个代理配置触发模式，并保持可见房间回复走默认的 message-tool 路径，除非你有意让每个普通群回复都使用旧式自动最终回复路径：
 
     ```json5
     {
       messages: {
         visibleReplies: "automatic", // 设为 "message_tool" 可在全局要求 message-tool 发送
         groupChat: {
-          visibleReplies: "message_tool", // 默认值；如需旧式房间回复可用 "automatic"
+          visibleReplies: "message_tool", // 默认；可见输出需要 message(action=send)
         },
       },
       agents: {
@@ -314,8 +314,8 @@ candidate contains redacted secret placeholders such as `***`.
       agents: {
         defaults: {
           sandbox: {
-            mode: "non-main",  // off | non-main | all
-            scope: "agent",    // session | agent | shared
+            mode: "non-main",  // 关闭 | 非主 | 全部
+            scope: "agent",    // 会话 | 代理 | 共享
           },
         },
       },
@@ -518,25 +518,25 @@ candidate contains redacted secret placeholders such as `***`.
 
 ## 配置热重载
 
-The Gateway watches `~/.openclaw/openclaw.json` and applies changes automatically - no manual restart needed for most settings.
+Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多数设置无需手动重启。
 
-Direct file edits are treated as untrusted until they validate. The watcher waits
-for editor temp-write/rename churn to settle, reads the final file, and rejects
-invalid external edits without rewriting `openclaw.json`. OpenClaw-owned config
-writes use the same schema gate before writing; destructive clobbers such as
-dropping `gateway.mode` or shrinking the file by more than half are rejected and
-saved as `.rejected.*` for inspection.
+直接文件编辑在验证通过之前都被视为不可信。监视器会等待
+编辑器临时写入/重命名的抖动稳定下来，读取最终文件，并拒绝
+无效的外部编辑，而不会重写 `openclaw.json`。OpenClaw 自身的配置
+写入在写入前也会使用相同的架构门控；诸如
+删除 `gateway.mode` 或将文件缩小超过一半等破坏性覆盖会被拒绝，并
+保存为 `.rejected.*` 以供检查。
 
-If you see `config reload skipped (invalid config)` or startup reports `Invalid
-config`, inspect the config, run `openclaw config validate`, then run `openclaw
-doctor --fix` for repair. See [Gateway troubleshooting](/gateway/troubleshooting#gateway-rejected-invalid-config)
-for the checklist.
+如果你看到 `config reload skipped (invalid config)` 或启动报告 `Invalid
+config`，请检查配置，运行 `openclaw config validate`，然后运行 `openclaw
+doctor --fix` 进行修复。请参阅 [Gateway 故障排查](/gateway/troubleshooting#gateway-rejected-invalid-config)
+获取检查清单。
 
 ### 重载模式
 
 | 模式                   | 行为                                                                                |
 | ---------------------- | --------------------------------------------------------------------------------------- |
-| **`hybrid`** (default) | 热应用安全更改，立即生效。对关键更改会自动重启。           |
+| **`hybrid`**（默认）   | 热应用安全更改，立即生效。对关键更改会自动重启。           |
 | **`hot`**              | 仅热应用安全更改。需要重启时会记录警告——由你来处理。 |
 | **`restart`**          | 任何配置更改都会重启 Gateway，无论安全与否。                                 |
 | **`off`**              | 禁用文件监视。更改会在下一次手动重启时生效。                 |
@@ -553,19 +553,19 @@ for the checklist.
 
 大多数字段都可在不停机的情况下热应用。在 `hybrid` 模式下，需要重启的更改会自动处理。
 
-| Category            | Fields                                                            | Restart needed? |
-| ------------------- | ----------------------------------------------------------------- | --------------- |
-| Channels            | `channels.*`, `web` (WhatsApp) - all built-in and plugin channels | No              |
-| Agent & models      | `agent`, `agents`, `models`, `routing`                            | No              |
-| Automation          | `hooks`, `cron`, `agent.heartbeat`                                | No              |
-| Sessions & messages | `session`, `messages`                                             | No              |
-| Tools & media       | `tools`, `browser`, `skills`, `mcp`, `audio`, `talk`              | No              |
-| UI & misc           | `ui`, `logging`, `identity`, `bindings`                           | No              |
-| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP)              | **Yes**         |
-| Infrastructure      | `discovery`, `plugins`                                            | **Yes**         |
+| 类别                | 字段                                                              | 需要重启？ |
+| ------------------- | ----------------------------------------------------------------- | ---------- |
+| 通道                | `channels.*`、`web`（WhatsApp）- 所有内置和插件通道              | 否         |
+| 代理与模型          | `agent`、`agents`、`models`、`routing`                            | 否         |
+| 自动化              | `hooks`、`cron`、`agent.heartbeat`                                | 否         |
+| 会话与消息          | `session`、`messages`                                             | 否         |
+| 工具与媒体          | `tools`、`browser`、`skills`、`mcp`、`audio`、`talk`              | 否         |
+| UI 与其他           | `ui`、`logging`、`identity`、`bindings`                           | 否         |
+| Gateway 服务器      | `gateway.*`（port、bind、auth、tailscale、TLS、HTTP）              | **是**     |
+| 基础设施            | `discovery`、`plugins`                                            | **是**     |
 
 <Note>
-`gateway.reload` and `gateway.remote` are exceptions - changing them does **not** trigger a restart.
+`gateway.reload` 和 `gateway.remote` 是例外——更改它们不会触发重启。
 </Note>
 
 ### 重载规划
@@ -590,7 +590,7 @@ for the checklist.
 
 Agents 应将 `config.schema.lookup` 视为获取精确
 字段级文档和约束的第一站。在需要更广泛的配置映射、默认值或指向专用
-子系统参考的链接时，请使用 [Configuration reference](/gateway/configuration-reference)。
+子系统参考的链接时，请使用 [配置参考](/gateway/configuration-reference)。
 
 <Note>
 控制平面写入（`config.apply`、`config.patch`、`update.run`）在每个 `deviceId+clientIp` 上每 60 秒限制 3 次请求。重启
@@ -631,7 +631,7 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 }
 ```
 
-<Accordion title="Shell env 导入（可选）">
+<Accordion title="Shell 环境导入（可选）">
   如果启用且预期的键未设置，OpenClaw 会运行你的登录 shell，并且只导入缺失的键：
 
 ```json5
@@ -702,18 +702,18 @@ SecretRef 详情（包括用于 `env`/`file`/`exec` 的 `secrets.providers`）�
 支持的凭据路径列在 [SecretRef Credential Surface](/reference/secretref-credential-surface)。
 </Accordion>
 
-完整优先级和来源请参见 [Environment](/help/environment)。
+完整优先级和来源请参见 [环境](/help/environment)。
 
 ## 完整参考
 
-有关按字段的完整参考，请参见 **[Configuration Reference](/gateway/configuration-reference)**。
+有关按字段的完整参考，请参见 **[配置参考](/gateway/configuration-reference)**。
 
 ---
 
-_相关：[Configuration Examples](/gateway/configuration-examples) · [Configuration Reference](/gateway/configuration-reference) · [Doctor](/gateway/doctor)_
+_相关：[配置示例](/gateway/configuration-examples) · [配置参考](/gateway/configuration-reference) · [诊断工具](/gateway/doctor)_
 
 ## 相关内容
 
-- [Configuration reference](/gateway/configuration-reference)
-- [Configuration examples](/gateway/configuration-examples)
-- [Gateway runbook](/gateway)
+- [配置参考](/gateway/configuration-reference)
+- [配置示例](/gateway/configuration-examples)
+- [Gateway 运行手册](/gateway)

@@ -28,7 +28,7 @@ Mantis 从 Discord 开始，因为 Discord 为我们提供了一个高价值的�
 - 在登录、浏览器自动化或 provider 认证卡住时，保留足够的机器状态以便通过 VNC 救援。
 - 当运行被阻塞、需要人工 VNC 帮助或完成时，向运营者 Discord 频道发布简洁状态。
 
-## Non goals
+## 非目标
 
 - Mantis 不是单元测试的替代品。Mantis 运行在理解修复之后，通常应转化为更小的回归测试。
 - Mantis 不是常规的快速 CI 门禁。它更慢，使用真实凭据，仅用于直播环境很重要的缺陷。
@@ -49,7 +49,7 @@ Mantis 位于 OpenClaw QA 栈中。
 这种边界将传输知识留在 OpenClaw，将机器调度留在
 Crabbox，将维护者工作流胶水留在 ClawSweeper。
 
-## Command shape
+## 命令形式
 
 第一个本地命令会验证 Discord bot、guild、频道、消息发送、reaction 发送以及工件路径：
 
@@ -273,11 +273,8 @@ viewer 是一个独立的 Telegram 用户会话，通过
 }
 ```
 
-Artifact `path` 值相对于清单目录。`targetPath`
-值是上传到 Actions artifact bundle 内部的相对路径。Mantis
-不能将证据发布到 Git 分支；Git 历史不是 artifact 存储。该
-publisher 会拒绝路径穿越，并在可选预览或视频不可用时跳过标记为
-`"required": false` 的条目。
+Artifact `path` 值是相对于 manifest 目录的。`targetPath`
+值是相对于已配置的 Mantis R2/S3 工件前缀的路径。发布器会拒绝路径穿越，并在可选预览或视频不可用时跳过标记为 `"required": false` 的条目。
 
 支持的 artifact kind：
 
@@ -289,11 +286,14 @@ publisher 会拒绝路径穿越，并在可选预览或视频不可用时跳过�
 - `metadata`：JSON/log sidecar。
 - `report`：Markdown 报告。
 
-可复用的 publisher 是 `scripts/mantis/publish-pr-evidence.mjs`。工作流
-会使用清单、目标 PR、artifact root、评论标记、Actions
-artifact URL、run URL 和请求来源来调用它。工作流通过
-`actions/upload-artifact` 上传所声明的文件；publisher 会构建一个以摘要为先的 PR
-评论，链接到该 artifact 并列出 bundle 中的文件名。它不会提交或推送证据文件。
+可复用的发布器是 `scripts/mantis/publish-pr-evidence.mjs`。工作流会将 manifest、目标 PR、工件目标根目录、评论标记、Actions artifact URL、run URL 和请求来源传给它。它会把声明的工件上传到已配置的 Mantis R2/S3 bucket，生成一个先摘要后正文的 PR 评论，包含内联图片/预览和链接视频，然后更新已有的标记评论或新建一个。工作流发布到 `openclaw-crabbox-artifacts`，公共 URL 位于 `https://artifacts.openclaw.ai`。它们直接提供 bucket、region 和 public URL 值。可复用发布器需要：
+
+- `MANTIS_ARTIFACT_R2_ACCESS_KEY_ID`
+- `MANTIS_ARTIFACT_R2_SECRET_ACCESS_KEY`
+- `MANTIS_ARTIFACT_R2_BUCKET`
+- `MANTIS_ARTIFACT_R2_ENDPOINT`
+- `MANTIS_ARTIFACT_R2_REGION`
+- `MANTIS_ARTIFACT_R2_PUBLIC_BASE_URL`
 
 你也可以直接从 PR 评论触发 status-reactions 运行：
 
@@ -357,7 +357,7 @@ ClawSweeper 评审发现，将 PR 或 issue 映射到推荐的 Mantis 场景。
 
 最终报告必须区分这些情况，以免维护者将不稳定环境与产品行为混淆。
 
-## Discord MVP
+## Discord 最小可行产品
 
 第一个场景应该针对 guild 频道中的 Discord 状态 reaction，其中源回复投递模式为 `message_tool_only`。
 
@@ -551,15 +551,9 @@ Mantis 运行器绝不能打印：
 
 如果 token 不小心被粘贴到 issue、PR、聊天或日志中，应在新密钥存储完成后立即轮换。
 
-## GitHub artifacts 和 PR 评论
+## GitHub 产物和 PR 评论
 
-Mantis workflows should upload the full evidence bundle as a short-lived Actions
-artifact. When the workflow is run for a bug report or fix PR, it should also
-upsert a comment on that bug or fix PR with a short summary and a link to the
-Actions artifact. Do not post the primary proof only on a generic QA automation
-PR. Do not use Git branches, tags, or commits as Mantis artifact storage. Raw
-logs, screenshots, recordings, observed messages, and other bulky evidence stay
-in the Actions artifact.
+Mantis 工作流应将完整证据包作为短生命周期的 Actions 产物上传。当工作流用于 bug 报告或修复 PR 时，它还应将已脱敏的内联媒体发布到已配置的 Mantis R2/S3 bucket，并在该 bug 或修复 PR 上 upsert 一条包含内联前后截图的评论。不要只把主要证据发布在一个通用的 QA 自动化 PR 上。原始日志、observed messages 以及其他体量较大的证据应保留在 Actions 产物中。
 
 生产工作流应使用 Mantis GitHub App 发布这些评论，而不是使用 `github-actions[bot]`。将 app id 和私钥分别存为 `MANTIS_GITHUB_APP_ID` 和 `MANTIS_GITHUB_APP_PRIVATE_KEY` GitHub Actions secrets。工作流使用隐藏标记作为 upsert key，当 token 可以编辑该评论时更新它；当更旧的 bot-owned 标记无法被编辑时，则创建一条新的、归 Mantis 所有的评论。
 

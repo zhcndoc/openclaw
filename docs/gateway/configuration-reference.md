@@ -10,7 +10,7 @@ read_when:
 
 本文涵盖主要的 OpenClaw 配置面，并在某个子系统拥有更深入的专门参考时提供链接。由 channel 和 plugin 拥有的命令目录，以及深度 memory/QMD 参数，都会放在各自的页面，而不是本文。
 
-代码真相：
+代码事实：
 
 - `openclaw config schema` 会打印用于校验和 Control UI 的实时 JSON Schema，并在可用时合并内置/plugin/channel 元数据
 - `config.schema.lookup` 会返回一个按路径作用域限定的 schema 节点，供下钻工具使用
@@ -35,7 +35,7 @@ Agent 查找路径：在修改前，请使用 `gateway` 工具动作 `config.sch
 包括 Slack、Discord、Telegram、WhatsApp、Matrix、iMessage 以及其他
 捆绑的 channels（认证、访问控制、多账号、提及门控）。
 
-## Agent defaults, multi-agent, sessions, and messages
+## Agent 默认值、多 Agent、会话和消息
 
 已移到专门页面 - 参见
 [Configuration - agents](/gateway/config-agents) 了解：
@@ -50,13 +50,13 @@ Agent 查找路径：在修改前，请使用 `gateway` 工具动作 `config.sch
   - `talk.speechLocale`：用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
   - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转录前保留平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
 
-## Tools and custom providers
+## 工具和自定义 provider
 
 工具策略、实验性开关、provider 支持的工具配置，以及自定义
 provider / base-URL 设置已移到专门页面 - 参见
 [Configuration - tools and custom providers](/gateway/config-tools)。
 
-## Models
+## 模型
 
 provider 定义、model allowlist，以及自定义 provider 设置位于
 [Configuration - tools and custom providers](/gateway/config-tools#custom-providers-and-base-urls)。
@@ -71,9 +71,9 @@ provider 定义、model allowlist，以及自定义 provider 设置位于
 }
 ```
 
-- `models.mode`: provider catalog 行为（`merge` 或 `replace`）。
-- `models.providers`: 以 provider id 为键的自定义 provider 映射。
-- `models.providers.*.localService`: 本地 model server 的可选按需进程管理器。OpenClaw 会探测所配置的健康检查端点，需要时启动绝对路径的 `command`，等待就绪，然后发送 model 请求。参见 [Local model services](/gateway/local-model-services)。
+- `models.mode`：provider catalog 行为（`merge` 或 `replace`）。
+- `models.providers`：以 provider id 为键的自定义 provider 映射。
+- `models.providers.*.localService`：本地 model server 的可选按需进程管理器。OpenClaw 会探测所配置的健康检查端点，需要时启动绝对路径的 `command`，等待就绪，然后发送 model 请求。参见 [Local model services](/gateway/local-model-services)。
 - `models.pricing.enabled`：控制在 sidecar 和 channels 到达 Gateway ready 路径后启动的后台定价引导流程。设为 `false` 时，Gateway 会跳过 OpenRouter 和 LiteLLM 的 pricing-catalog 获取；已配置的 `models.providers.*.models[].cost` 值仍可用于本地成本估算。
 
 ## MCP
@@ -99,26 +99,43 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
         headers: {
           Authorization: "Bearer ${MCP_REMOTE_TOKEN}",
         },
+        // 可选的 Codex app-server 投影控制。
+        codex: {
+          agents: ["main"],
+          defaultToolsApprovalMode: "approve", // auto | prompt | approve
+        },
       },
     },
   },
 }
 ```
 
-- `mcp.servers`：供暴露已配置 MCP 工具的运行时使用的命名 stdio 或远程 MCP server 定义。
+- `mcp.servers`：供运行时使用的命名 stdio 或远程 MCP server 定义，用于暴露已配置的 MCP 工具。
   远程条目使用 `transport: "streamable-http"` 或 `transport: "sse"`；
   `type: "http"` 是 CLI 原生别名，`openclaw mcp set` 和
   `openclaw doctor --fix` 会将其规范化为 canonical 的 `transport` 字段。
-- `mcp.sessionIdleTtlMs`：会话作用域内捆绑 MCP 运行时的空闲 TTL。
-  一次性嵌入式运行会请求在运行结束时清理；此 TTL 作为长生命周期会话和未来调用者的后备保障。
-- `mcp.*` 下的更改会通过释放已缓存的会话 MCP 运行时而热应用。
-  下一次工具发现/使用会使用新配置重新创建它们，因此被移除的
-  `mcp.servers` 条目会立即被清理，而不是等待空闲 TTL。
+- `mcp.servers.<name>.codex`：可选的 Codex app-server 投影控制。
+  该区块仅用于 Codex app-server 线程的 OpenClaw 元数据；它不会
+  影响 ACP session、通用 Codex harness 配置或其他运行时适配器。
+  非空的 `codex.agents` 会将 server 限制为列出的 OpenClaw agent id。
+  空、空白或无效的 scoped agent 列表会被配置校验拒绝，
+  并在运行时投影路径中被省略，而不会变成全局设置。
+  `codex.defaultToolsApprovalMode` 会为该 server 发出 Codex 原生的
+  `default_tools_approval_mode`。OpenClaw 会在将原生 `mcp_servers`
+  配置传给 Codex 之前移除 `codex` 区块。省略该区块即可让该 server
+  对每个 Codex app-server agent 都可投影，并使用 Codex 默认的 MCP
+  批准行为。
+- `mcp.sessionIdleTtlMs`：会话作用域捆绑 MCP 运行时的空闲 TTL。
+  一次性嵌入式运行会请求 run-end 清理；该 TTL 是长生命周期 session
+  和未来调用方的兜底。
+- `mcp.*` 下的更改会通过释放缓存的 session MCP 运行时实现热应用。
+  下一次工具发现/使用会根据新配置重新创建它们，因此已移除的
+  `mcp.servers` 条目会立即被回收，而不会等待空闲 TTL。
 
 有关运行时行为，请参见 [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) 和
 [CLI backends](/gateway/cli-backends#bundle-mcp-overlays)。
 
-## Skills
+## 技能
 
 ```json5
 {
@@ -156,7 +173,7 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 
 ---
 
-## Plugins
+## 插件
 
 ```json5
 {
@@ -201,7 +218,7 @@ OpenClaw 管理的 MCP server 定义位于 `mcp.servers` 下，并被
 - `plugins.entries.<id>.config`：插件定义的配置对象（在可用时由原生 OpenClaw plugin schema 校验）。
 - Channel plugin 账户/运行时设置位于 `channels.<id>` 下，应由所属插件的 manifest `channelConfigs` 元数据描述，而不是由中心化的 OpenClaw option registry 描述。
 
-### Codex harness plugin config
+### Codex harness 插件配置
 
 捆绑的 `codex` plugin 在 `plugins.entries.codex.config` 下拥有原生 Codex app-server harness 设置。完整配置范围请参见 [Codex harness reference](/plugins/codex-harness-reference)，运行时模型请参见 [Codex harness](/plugins/codex-harness)。
 
@@ -434,7 +451,7 @@ session 建立时计算，而不是每一轮都计算；在更改原生 plugin �
       // dangerouslyDisableDeviceAuth: false,
     },
     remote: {
-      url: "ws://gateway.tailnet:18789",
+      url: "ws://127.0.0.1:18789",
       transport: "ssh", // ssh | direct
       token: "your-token",
       // password: "your-password",
@@ -470,63 +487,59 @@ session 建立时计算，而不是每一轮都计算；在更改原生 plugin �
 
 <Accordion title="网关字段详情">
 
-- `mode`: `local`（运行网关）或 `remote`（连接到远程网关）。除非为 `local`，否则网关会拒绝启动。
-- `port`: WS + HTTP 共享的单一复用端口。优先级：`--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`。
-- `bind`: `auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（仅 Tailscale IP）或 `custom`。
-- **旧版 bind 别名**：在 `gateway.bind` 中使用绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），而不是主机别名（`0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
-- **Docker 注意**：默认的 `loopback` 绑定会在容器内监听 `127.0.0.1`。使用 Docker bridge 网络（`-p 18789:18789`）时，流量会从 `eth0` 进入，因此网关不可达。请使用 `--network host`，或将 `bind` 设为 `"lan"`（或 `bind: "custom"` 并设置 `customBindHost: "0.0.0.0"`）以监听所有网卡。
-- **认证**：默认必需。非 loopback 绑定需要网关认证。实际上，这意味着共享 token/password，或使用带身份感知的反向代理并设置 `gateway.auth.mode: "trusted-proxy"`。入门向导默认会生成 token。
-- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRef），则必须显式将 `gateway.auth.mode` 设为 `token` 或 `password`。当两者都已配置但 mode 未设置时，启动以及服务安装/修复流程会失败。
-- `gateway.auth.mode: "none"`：显式无认证模式。仅适用于受信任的本地 loopback 环境；入门提示故意不提供此模式。
-- `gateway.auth.mode: "trusted-proxy"`：将浏览器/用户认证委托给带身份感知的反向代理，并信任来自 `gateway.trustedProxies` 的身份头（参见 [可信代理认证](/gateway/trusted-proxy-auth)）。此模式默认要求代理来源为**非 loopback**；同主机 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。内部同主机调用者可以使用 `gateway.auth.password` 作为本地直接回退；`gateway.auth.token` 与 trusted-proxy 模式仍然互斥。
-- `gateway.auth.allowTailscale`：当为 `true` 时，Tailscale Serve 身份头可满足 Control UI/WebSocket 认证（通过 `tailscale whois` 验证）。HTTP API 端点**不**使用该 Tailscale 头认证；它们会改为遵循网关的常规 HTTP 认证模式。这个无 token 流程假设网关主机是可信的。`tailscale.mode = "serve"` 时默认值为 `true`。
-- `gateway.auth.rateLimit`：可选的失败认证限流器。按客户端 IP 和认证范围分别生效（共享密钥和设备 token 独立跟踪）。被阻止的尝试会返回 `429` 和 `Retry-After`。
-  - 在异步 Tailscale Serve Control UI 路径上，相同 `{scope, clientIp}` 的失败尝试会在失败写入前串行化。因此，同一客户端的并发错误尝试可能会在第二个请求时触发限流，而不是两者都像普通不匹配那样竞争通过。
-  - `gateway.auth.rateLimit.exemptLoopback` 默认值为 `true`；当你有意希望 localhost 流量也被限流时，将其设为 `false`（用于测试环境或严格代理部署）。
-- 浏览器来源的 WS 认证尝试始终会被限流，且禁用 loopback 豁免（对基于浏览器的 localhost 暴力破解的纵深防御）。
-- 在 loopback 上，这些浏览器来源的锁定按规范化后的 `Origin`
-  值隔离，因此来自一个 localhost origin 的重复失败不会自动
+- `mode`：`local`（运行网关）或 `remote`（连接到远程网关）。除非为 `local`，否则网关会拒绝启动。
+- `port`：WS + HTTP 共用的单一多路复用端口。优先级：`--port` > `OPENCLAW_GATEWAY_PORT` > `gateway.port` > `18789`。
+- `bind`：`auto`、`loopback`（默认）、`lan`（`0.0.0.0`）、`tailnet`（仅 Tailscale IP），或 `custom`。
+- **旧版绑定别名**：在 `gateway.bind` 中使用绑定模式值（`auto`、`loopback`、`lan`、`tailnet`、`custom`），不要使用主机别名（`0.0.0.0`、`127.0.0.1`、`localhost`、`::`、`::1`）。
+- **Docker 注意事项**：默认的 `loopback` 绑定会在容器内监听 `127.0.0.1`。使用 Docker bridge 网络（`-p 18789:18789`）时，流量会从 `eth0` 进入，因此网关无法访问。请使用 `--network host`，或者设置 `bind: "lan"`（或 `bind: "custom"` 并配合 `customBindHost: "0.0.0.0"`）以监听所有接口。
+- **认证**：默认必需。非回环绑定需要网关认证。实际上，这意味着共享令牌/密码，或者使用具备身份感知能力的反向代理并将 `gateway.auth.mode` 设为 `"trusted-proxy"`。引导向导默认会生成一个令牌。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`（包括 SecretRef），请显式将 `gateway.auth.mode` 设为 `token` 或 `password`。当两者都已配置但模式未设置时，启动和服务安装/修复流程会失败。
+- `gateway.auth.mode: "none"`：显式的无认证模式。仅用于受信任的本地回环环境；引导提示不会提供该模式。
+- `gateway.auth.mode: "trusted-proxy"`：将浏览器/用户认证委派给具备身份感知能力的反向代理，并信任来自 `gateway.trustedProxies` 的身份头（参见 [可信代理认证](/gateway/trusted-proxy-auth)）。该模式默认要求代理源为**非回环**地址；同主机上的回环反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。同主机内部调用方可以使用 `gateway.auth.password` 作为本地直接回退；`gateway.auth.token` 仍然与 trusted-proxy 模式互斥。
+- `gateway.auth.allowTailscale`：当为 `true` 时，Tailscale Serve 身份头可以满足 Control UI/WebSocket 认证（通过 `tailscale whois` 验证）。HTTP API 端点**不会**使用该 Tailscale 头部认证；它们仍遵循网关正常的 HTTP 认证模式。此无令牌流程假定网关主机是可信的。默认在 `tailscale.mode = "serve"` 时为 `true`。
+- `gateway.auth.rateLimit`：可选的失败认证限流器。按客户端 IP 和认证范围分别生效（共享密钥和设备令牌分别跟踪）。被阻止的尝试会返回 `429` + `Retry-After`。
+  - 在异步的 Tailscale Serve Control UI 路径上，同一 `{scope, clientIp}` 的失败尝试会在写入失败结果之前串行化。因此，同一客户端的并发错误尝试可能会在第二个请求时触发限流，而不是都像普通不匹配那样并发通过。
+  - `gateway.auth.rateLimit.exemptLoopback` 默认是 `true`；当你有意希望对 localhost 流量也进行限流时设为 `false`（用于测试环境或严格的代理部署）。
+- 浏览器来源的 WS 认证尝试始终会进行限速，并关闭回环豁免（作为针对基于浏览器的 localhost 暴力破解的纵深防御）。
+- 在回环模式下，这些浏览器来源的锁定会按规范化后的 `Origin`
+  值分别隔离，因此某个 localhost origin 的重复失败不会自动
   锁定另一个 origin。
-- `tailscale.mode`: `serve`（仅 tailnet，loopback 绑定）或 `funnel`（公网，需认证）。
+- `tailscale.mode`：`serve`（仅 tailnet，回环绑定）或 `funnel`（公开访问，需要认证）。
 - `tailscale.preserveFunnel`：当为 `true` 且 `tailscale.mode = "serve"` 时，OpenClaw
-  会在启动时重新应用 Serve 之前检查 `tailscale funnel status`，如果已有外部配置的 Funnel 路由已覆盖网关端口，则跳过它。
+  会在启动时重新应用 Serve 之前检查 `tailscale funnel status`，如果外部配置的 Funnel 路由已经覆盖了网关端口，则会跳过该步骤。
   默认 `false`。
-- `controlUi.allowedOrigins`：用于网关 WebSocket 连接的显式浏览器来源允许列表。当预期浏览器客户端来自非 loopback 来源时必填。
-- `controlUi.chatMessageMaxWidth`：Control UI 分组聊天消息的可选最大宽度。可接受受限的 CSS 宽度值，如 `960px`、`82%`、`min(1280px, 82%)` 和 `calc(100% - 2rem)`。
+- `controlUi.allowedOrigins`：用于网关 WebSocket 连接的显式浏览器来源允许列表。公共非回环浏览器来源需要此项。来自回环、RFC1918/link-local、`.local`、`.ts.net` 或 Tailscale CGNAT 主机的同源 LAN/Tailnet UI 加载可在不启用 Host-header 回退的情况下被接受。
+- `controlUi.chatMessageMaxWidth`：分组 Control UI 聊天消息的可选最大宽度。接受受限的 CSS 宽度值，例如 `960px`、`82%`、`min(1280px, 82%)` 和 `calc(100% - 2rem)`。
 - `controlUi.dangerouslyAllowHostHeaderOriginFallback`：危险模式，启用 Host-header origin 回退，适用于有意依赖 Host-header origin 策略的部署。
-- `remote.transport`: `ssh`（默认）或 `direct`（ws/wss）。对于 `direct`，`remote.url` 必须是 `ws://` 或 `wss://`。
-- `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`：客户端进程环境
-  的紧急覆盖开关，允许明文 `ws://` 连接到受信任的私有网络
-  IP；默认仍然仅允许 loopback 的明文连接。没有 `openclaw.json`
-  对应项，浏览器私有网络配置（如
-  `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork`）不会影响网关
-  WebSocket 客户端。
+- `remote.transport`：`ssh`（默认）或 `direct`（ws/wss）。对于 `direct`，公网主机的 `remote.url` 必须使用 `wss://`；明文 `ws://` 仅在回环、LAN、link-local、`.local`、`.ts.net` 和 Tailscale CGNAT 主机上被接受。
+- `remote.remotePort`：远程 SSH 主机上的网关端口。默认 `18789`；当本地隧道端口与远程网关端口不同的时候使用它。
 - `gateway.remote.token` / `.password` 是远程客户端凭据字段。它们本身不会配置网关认证。
-- `gateway.push.apns.relay.baseUrl`：官方/TestFlight iOS 构建在将 relay-backed 注册发布到网关后，用于外部 APNs relay 的基础 HTTPS URL。该 URL 必须与编译进 iOS 构建中的 relay URL 匹配。
-- `gateway.push.apns.relay.timeoutMs`：网关到 relay 的发送超时时间，单位毫秒。默认：`10000`。
-- relay-backed 注册会委托给特定的网关身份。配对的 iOS 应用会获取 `gateway.identity.get`，在 relay 注册中包含该身份，并向网关转发一个与注册作用域绑定的发送授权。另一个网关不能复用该已存储的注册。
-- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`：上述 relay 配置的临时环境变量覆盖。
-- `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`：仅用于开发的回退开关，允许 loopback HTTP relay URL。生产环境 relay URL 应保持 HTTPS。
-- `gateway.handshakeTimeoutMs`：认证前的网关 WebSocket 握手超时时间，单位毫秒。默认：`15000`。当设置时，`OPENCLAW_HANDSHAKE_TIMEOUT_MS` 优先级更高。在负载较高或性能较弱的主机上，如果本地客户端在启动预热仍未稳定时即可连接，请增大该值。
+- `gateway.push.apns.relay.baseUrl`：官方/TestFlight iOS 构建在向网关发布基于中继的注册后所使用的外部 APNs relay 的基础 HTTPS URL。此 URL 必须与编译进 iOS 构建中的 relay URL 匹配。
+- `gateway.push.apns.relay.timeoutMs`：网关到 relay 的发送超时时间，单位毫秒。默认 `10000`。
+- 基于 relay 的注册会委派给特定的网关身份。配对的 iOS 应用会获取 `gateway.identity.get`，将该身份包含在 relay 注册中，并向网关转发一个按注册范围限定的发送授权。其他网关不能重用该已存储的注册。
+- `OPENCLAW_APNS_RELAY_BASE_URL` / `OPENCLAW_APNS_RELAY_TIMEOUT_MS`：上面 relay 配置的临时环境变量覆盖。
+- `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true`：仅用于开发的回环 HTTP relay URL 逃生开关。生产环境的 relay URL 应保持 HTTPS。
+- `gateway.handshakeTimeoutMs`：认证前的 Gateway WebSocket 握手超时，单位毫秒。默认：`15000`。当本地客户端能够连接，但启动预热仍在进行时，请在负载较高或性能较低的主机上调大该值。
 - `gateway.channelHealthCheckMinutes`：通道健康监控间隔，单位分钟。设为 `0` 可全局禁用健康监控重启。默认：`5`。
-- `gateway.channelStaleEventThresholdMinutes`：陈旧 socket 阈值，单位分钟。请保持其大于或等于 `gateway.channelHealthCheckMinutes`。默认：`30`。
-- `gateway.channelMaxRestartsPerHour`：每个通道/账户在滚动一小时内允许的健康监控重启最大次数。默认：`10`。
-- `channels.<provider>.healthMonitor.enabled`：在保持全局监控启用的同时，针对单个通道禁用健康监控重启。
-- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户通道的按账户覆盖。设置后优先于通道级覆盖。
-- 本地网关调用路径仅在 `gateway.auth.*` 未设置时，才可将 `gateway.remote.*` 作为回退。
-- 如果通过 SecretRef 显式配置了 `gateway.auth.token` / `gateway.auth.password` 但解析失败，则解析会失败关闭（不会被远程回退掩盖）。
-- `trustedProxies`：终止 TLS 或注入转发客户端头的反向代理 IP。只列出你控制的代理。loopback 条目对于同主机代理/本地检测场景仍然有效（例如 Tailscale Serve 或本地反向代理），但它们**不会**让 loopback 请求符合 `gateway.auth.mode: "trusted-proxy"` 的资格。
+- `gateway.channelStaleEventThresholdMinutes`：过期 socket 阈值，单位分钟。请将其设置为大于或等于 `gateway.channelHealthCheckMinutes`。默认：`30`。
+- `gateway.channelMaxRestartsPerHour`：每个通道/账户在滚动一小时内的最大健康监控重启次数。默认：`10`。
+- `channels.<provider>.healthMonitor.enabled`：针对单个通道的健康监控重启关闭项，同时保留全局监控开启。
+- `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户通道的按账户覆盖设置。设置后，其优先级高于通道级覆盖。
+- 仅当 `gateway.auth.*` 未设置时，本地网关调用路径才可以使用 `gateway.remote.*` 作为回退。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但尚未解析，则解析会失败并关闭（不会被远程回退掩盖）。
+- `trustedProxies`：终止 TLS 或注入转发客户端头部的反向代理 IP。只列出你控制的代理。回环条目对于同主机代理/本地检测场景仍然有效（例如 Tailscale Serve 或本地反向代理），但它们**不会**使回环请求有资格使用 `gateway.auth.mode: "trusted-proxy"`。
 - `allowRealIpFallback`：当为 `true` 时，如果缺少 `X-Forwarded-For`，网关会接受 `X-Real-IP`。默认 `false`，以实现失败即关闭的行为。
-- `gateway.nodes.pairing.autoApproveCidrs`：可选的 CIDR/IP 允许列表，用于在未请求任何作用域时自动批准首次节点设备配对。未设置时将禁用。它不会自动批准 operator/browser/Control UI/WebChat 配对，也不会自动批准角色、作用域、元数据或公钥升级。
-- `gateway.nodes.allowCommands` / `gateway.nodes.denyCommands`：配对后以及平台允许列表评估之后，对已声明节点命令进行全局允许/拒绝控制。使用 `allowCommands` 允许诸如 `camera.snap`、`camera.clip` 和 `screen.record` 等危险节点命令；即使平台默认或显式允许原本会包含某命令，`denyCommands` 仍会将其移除。节点更改其已声明命令列表后，应拒绝并重新批准该设备配对，以便网关存储更新后的命令快照。
-- `gateway.tools.deny`：为 HTTP `POST /tools/invoke` 额外阻止的工具名称（扩展默认拒绝列表）。
-- `gateway.tools.allow`：从默认 HTTP 拒绝列表中移除工具名称。
+- `gateway.nodes.pairing.autoApproveCidrs`：用于在未请求任何作用域的情况下，自动批准首次节点设备配对的可选 CIDR/IP 允许列表。未设置时将被禁用。这不会自动批准操作者/浏览器/Control UI/WebChat 配对，也不会自动批准角色、作用域、元数据或公钥升级。
+- `gateway.nodes.allowCommands` / `gateway.nodes.denyCommands`：在配对和平台允许列表评估之后，对声明的节点命令进行全局允许/拒绝控制。使用 `allowCommands` 可启用诸如 `camera.snap`、`camera.clip` 和 `screen.record` 之类的危险节点命令；即使平台默认或显式允许本来会包含某个命令，`denyCommands` 也会将其移除。在节点更改其声明的命令列表后，应拒绝并重新批准该设备配对，以便网关存储更新后的命令快照。
+- `gateway.tools.deny`：用于 HTTP `POST /tools/invoke` 的额外工具名称阻止项（扩展默认拒绝列表）。
+- `gateway.tools.allow`：从默认的 HTTP 拒绝列表中移除工具名称。
 
 </Accordion>
 
 ### OpenAI 兼容端点
 
-- Chat Completions：默认禁用。通过 `gateway.http.endpoints.chatCompletions.enabled: true` 启用。
+- 管理员 HTTP RPC：默认作为 `admin-http-rpc` 插件关闭。启用该插件以注册 `POST /api/v1/admin/rpc`。参见 [管理员 HTTP RPC](/plugins/admin-http-rpc)。
+- Chat Completions：默认禁用。使用 `gateway.http.endpoints.chatCompletions.enabled: true` 启用。
 - Responses API：`gateway.http.endpoints.responses.enabled`。
 - Responses URL 输入加固：
   - `gateway.http.endpoints.responses.maxUrlParts`
@@ -597,7 +610,7 @@ openclaw gateway --port 19001
 
 ---
 
-## Hooks
+## 钩子
 
 ```json5
 {
@@ -742,7 +755,7 @@ openclaw gateway --port 19001
 {
   discovery: {
     mdns: {
-      mode: "minimal", // minimal | full | off
+      mode: "minimal", // 最小 | 完整 | 关闭
     },
   },
 }
@@ -905,7 +918,7 @@ openclaw gateway --port 19001
 - 静态运行时凭据来自内存中解析后的快照；发现旧式静态 `auth.json` 条目时会被清理。
 - 旧式 OAuth 导入来自 `~/.openclaw/credentials/oauth.json`。
 - 参见 [OAuth](/concepts/oauth)。
-- 密钥运行时行为以及 `audit/configure/apply` 工具： [Secrets Management](/gateway/secrets)。
+- 密钥运行时行为以及 `audit/configure/apply` 工具： [密钥管理](/gateway/secrets)。
 
 ### `auth.cooldowns`
 
@@ -970,7 +983,8 @@ openclaw gateway --port 19001
     enabled: true,
     flags: ["telegram.*"],
     stuckSessionWarnMs: 30000,
-    stuckSessionAbortMs: 600000,
+    stuckSessionAbortMs: 300000,
+    memoryPressureSnapshot: false,
 
     otel: {
       enabled: false,
@@ -1009,24 +1023,25 @@ openclaw gateway --port 19001
 
 - `enabled`：仪器化输出的总开关（默认：`true`）。
 - `flags`：用于启用定向日志输出的标志字符串数组（支持通配符，如 `"telegram.*"` 或 `"*"`）。
-- `stuckSessionWarnMs`：用于将长时间运行的处理会话分类为 `session.long_running`、`session.stalled` 或 `session.stuck` 的无进展时长阈值（毫秒）。回复、工具、状态、阻塞和 ACP 进度会重置计时器；在状态未变化时，重复的 `session.stuck` 诊断会退避。
-- `stuckSessionAbortMs`：在满足条件的卡住的活动工作可被中止并清理以恢复之前的无进展时长阈值（毫秒）。未设置时，OpenClaw 会使用更安全的扩展嵌入式运行窗口，至少 10 分钟且为 `stuckSessionWarnMs` 的 5 倍。
-- `otel.enabled`：启用 OpenTelemetry 导出管道（默认：`false`）。完整配置、信号目录和隐私模型请参见 [OpenTelemetry 导出](/gateway/opentelemetry)。
-- `otel.endpoint`：用于 OTel 导出的收集器 URL。
-- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：可选的按信号指定的 OTLP 端点。设置后，它们会仅针对对应信号覆盖 `otel.endpoint`。
+- `stuckSessionWarnMs`：用于将长时间运行的处理会话归类为 `session.long_running`、`session.stalled` 或 `session.stuck` 的无进展年龄阈值（毫秒）。回复、工具、状态、块和 ACP 进度都会重置计时器；在状态未变化时，重复的 `session.stuck` 诊断会逐步退避。
+- `stuckSessionAbortMs`：在无进展达到该阈值（毫秒）后，符合条件的卡住活动工作可被中止并回收以恢复系统。未设置时，OpenClaw 会采用更安全的扩展嵌入式运行窗口，至少 5 分钟且为 `stuckSessionWarnMs` 的 3 倍。
+- `memoryPressureSnapshot`：当内存压力达到 `critical` 时，会捕获一份脱敏的 OOM 前稳定性快照（默认：`false`）。设为 `true` 可在保留常规内存压力事件的同时，增加稳定性捆绑文件的扫描/写入。
+- `otel.enabled`：启用 OpenTelemetry 导出流水线（默认：`false`）。完整配置、信号目录和隐私模型请参见 [OpenTelemetry 导出](/gateway/opentelemetry)。
+- `otel.endpoint`：OTel 导出的收集器 URL。
+- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：按信号指定的可选 OTLP 端点。设置后，它们会仅对对应信号覆盖 `otel.endpoint`。
 - `otel.protocol`：`"http/protobuf"`（默认）或 `"grpc"`。
 - `otel.headers`：随 OTel 导出请求发送的额外 HTTP/gRPC 元数据头。
-- `otel.serviceName`：资源属性的服务名称。
-- `otel.traces` / `otel.metrics` / `otel.logs`：启用 trace、metrics 或 log 导出。
-- `otel.sampleRate`：trace 采样率 `0`-`1`。
-- `otel.flushIntervalMs`：周期性遥测刷新间隔（毫秒）。
-- `otel.captureContent`：用于 OTEL span 属性的原始内容捕获可选开启。默认关闭。布尔值 `true` 会捕获非系统消息/工具内容；对象形式可显式启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs` 和 `systemPrompt`。
-- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：用于最新实验性 GenAI span provider 属性的环境开关。默认情况下，span 为兼容性保留旧版 `gen_ai.system` 属性；GenAI 指标使用有界语义属性。
-- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。OpenClaw 会跳过插件拥有的 SDK 启动/关闭，同时保持诊断监听器处于活动状态。
-- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：当匹配的配置键未设置时使用的按信号端点环境变量。
-- `cacheTrace.enabled`：为嵌入式运行记录缓存追踪快照（默认：`false`）。
-- `cacheTrace.filePath`：缓存追踪 JSONL 的输出路径（默认：`$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl`）。
-- `cacheTrace.includeMessages` / `includePrompt` / `includeSystem`：控制缓存追踪输出中包含哪些内容（默认均为：`true`）。
+- `otel.serviceName`：资源属性使用的服务名。
+- `otel.traces` / `otel.metrics` / `otel.logs`：启用追踪、指标或日志导出。
+- `otel.sampleRate`：追踪采样率 `0`-`1`。
+- `otel.flushIntervalMs`：定期遥测刷新间隔（毫秒）。
+- `otel.captureContent`：用于 OTEL span 属性的原始内容捕获可选项。默认关闭。布尔值 `true` 会捕获非系统消息/工具内容；对象形式可显式启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs` 和 `systemPrompt`。
+- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：用于最新实验性 GenAI span 提供者属性的环境开关。默认情况下，span 会保留旧版的 `gen_ai.system` 属性以兼容；GenAI 指标使用受限语义属性。
+- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。OpenClaw 随后会跳过由插件拥有的 SDK 启动/关闭，同时保持诊断监听器处于活动状态。
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：在匹配的配置键未设置时使用的按信号端点环境变量。
+- `cacheTrace.enabled`：为嵌入式运行记录缓存跟踪快照日志（默认：`false`）。
+- `cacheTrace.filePath`：缓存跟踪 JSONL 的输出路径（默认：`$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl`）。
+- `cacheTrace.includeMessages` / `includePrompt` / `includeSystem`：控制缓存跟踪输出中包含哪些内容（默认均为：`true`）。
 
 ---
 
@@ -1146,7 +1161,7 @@ openclaw gateway --port 19001
 
 ## 身份
 
-请参见 [Agent defaults](/gateway/config-agents#agent-defaults) 下 `agents.list` 的身份字段。
+请参见 [代理默认值](/gateway/config-agents#agent-defaults) 下 `agents.list` 的身份字段。
 
 ---
 
@@ -1183,7 +1198,7 @@ openclaw gateway --port 19001
     maxConcurrentRuns: 2, // cron 分发 + 隔离的 cron 代理轮次执行
     webhook: "https://example.invalid/legacy", // 已弃用的、用于已存储 notify:true 作业的回退项
     webhookToken: "replace-with-dedicated-token", // 用于出站 webhook 认证的可选 bearer token
-    sessionRetention: "24h", // duration string 或 false
+    sessionRetention: "24h", // 持续时间字符串 或 false
     runLog: {
       maxBytes: "2mb", // 默认 2_000_000 字节
       keepLines: 2000, // 默认 2000
@@ -1266,7 +1281,7 @@ openclaw gateway --port 19001
 - 当全局和作业级失败目的地都未设置时，已经通过 `announce` 投递的作业在失败时会回退到该主要 announce 目标。
 - `delivery.failureDestination` 仅支持 `sessionTarget="isolated"` 的作业，除非该作业的主要 `delivery.mode` 是 `"webhook"`。
 
-参见 [Cron Jobs](/automation/cron-jobs)。隔离的 cron 执行会被跟踪为 [后台任务](/automation/tasks)。
+参见 [Cron 作业](/automation/cron-jobs)。隔离的 cron 执行会被跟踪为 [后台任务](/automation/tasks)。
 
 ## 媒体模型模板变量
 

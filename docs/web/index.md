@@ -19,7 +19,13 @@ Gateway 会从与 Gateway WebSocket 相同的端口提供一个小型 **浏览�
 当 `hooks.enabled=true` 时，Gateway 还会在同一个 HTTP 服务器上暴露一个小型 webhook 端点。
 有关认证和载荷，请参见 [Gateway 配置](/gateway/configuration) → `hooks`。
 
-## 配置（默认开启）
+## Admin HTTP RPC
+
+Admin HTTP RPC 会在 `POST /api/v1/admin/rpc` 上公开部分 Gateway 控制平面方法。
+它默认关闭，并且仅在启用 `admin-http-rpc` 插件时注册。
+有关认证模型、允许的方法以及与 WebSocket 的对比，请参见 [Admin HTTP RPC](/plugins/admin-http-rpc)。
+
+## Config (default-on)
 
 当资源文件存在时（`dist/control-ui`），Control UI 会**默认启用**。
 你可以通过配置进行控制：
@@ -94,25 +100,24 @@ openclaw gateway
 
 ## 安全说明
 
-- 默认需要 Gateway 认证（token、password、trusted-proxy，或在启用时使用 Tailscale Serve 身份头）。
-- 非 loopback 绑定仍然**需要** Gateway 认证。实际上，这意味着 token/password 认证，或使用带有 `gateway.auth.mode: "trusted-proxy"` 的、感知身份的反向代理。
+- 默认情况下需要 Gateway 认证（启用时可使用 token、password、trusted-proxy，或 Tailscale Serve 身份标头）。
+- 非 loopback 绑定仍然**需要** gateway 认证。实际上，这意味着需要 token/password 认证，或使用支持身份感知的反向代理并将 `gateway.auth.mode` 设为 `"trusted-proxy"`。
 - 向导默认会创建共享密钥认证，并且通常会生成一个 gateway token（即使在 loopback 上也是如此）。
 - 在共享密钥模式下，UI 会发送 `connect.params.auth.token` 或 `connect.params.auth.password`。
-- 当 `gateway.tls.enabled: true` 时，本地仪表盘和状态辅助功能会渲染
+- 当 `gateway.tls.enabled: true` 时，本地仪表盘和状态辅助工具会渲染
   `https://` 仪表盘 URL 和 `wss://` WebSocket URL。
-- 在如 Tailscale Serve 或 `trusted-proxy` 这类带身份信息的模式中，
-  WebSocket 认证检查会改为从请求头中满足。
-- 对于非 loopback 的 Control UI 部署，请显式设置 `gateway.controlUi.allowedOrigins`
-  （完整来源）。如果不设置，默认会拒绝启动 gateway。
+- 在 Tailscale Serve 或 `trusted-proxy` 等带身份的模式中，WebSocket 认证检查会改为通过请求标头满足。
+- 对于面向公网的非 loopback Control UI 部署，请显式设置 `gateway.controlUi.allowedOrigins`
+  （完整 origin）。对于 loopback、RFC1918/link-local、`.local`、`.ts.net` 和 Tailscale CGNAT 主机，允许私有同源 LAN/Tailnet 加载。
 - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 会启用
-  Host-header origin 回退模式，但这是一个危险的安全降级。
-- 使用 Serve 时，当 `gateway.auth.allowTailscale` 为 `true` 时，Tailscale 身份头可以满足 Control UI/WebSocket 认证
+  Host 标头 origin 回退模式，但这是一个危险的安全降级。
+- 使用 Serve 时，当 `gateway.auth.allowTailscale` 为 `true`，Tailscale 身份标头可满足 Control UI/WebSocket 认证
   （无需 token/password）。
-  HTTP API 端点不会使用这些 Tailscale 身份头；它们会遵循
-  gateway 的常规 HTTP 认证模式。将
-  `gateway.auth.allowTailscale: false` 设为需要显式凭据。参见
-  [Tailscale](/gateway/tailscale) 和 [Security](/gateway/security)。这种
-  无 token 流程假设 gateway 主机是可信的。
+  HTTP API 端点不会使用这些 Tailscale 身份标头；它们会遵循
+  gateway 的正常 HTTP 认证模式。设置
+  `gateway.auth.allowTailscale: false` 以要求显式凭据。请参见
+  [Tailscale](/gateway/tailscale) 和 [Security](/gateway/security)。此
+  无 token 流程假定 gateway 主机是可信的。
 - `gateway.tailscale.mode: "funnel"` 需要 `gateway.auth.mode: "password"`（共享密码）。
 
 ## 构建 UI

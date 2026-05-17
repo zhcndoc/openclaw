@@ -2,8 +2,8 @@
 summary: "安装 OpenClaw - 安装脚本、npm/pnpm/bun、源码、Docker 等"
 read_when:
   - 当你需要除“Getting Started”快速入门之外的安装方式时
-  - 你想部署到云平台时
-  - 你需要更新、迁移或卸载时
+  - 当你想部署到云平台时
+  - 当你需要更新、迁移或卸载时
 title: "安装"
 ---
 
@@ -75,6 +75,12 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash
     npm install -g openclaw@latest
     openclaw onboard --install-daemon
     ```
+
+    <Note>
+    托管安装程序会清除 OpenClaw 包安装所使用的 npm 新鲜度过滤条件，例如 `min-release-age`。
+    如果你手动使用 npm 安装，你自己的 npm 策略仍然会生效。
+    </Note>
+
   </Tab>
   <Tab title="pnpm">
     ```bash

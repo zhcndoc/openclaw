@@ -82,26 +82,45 @@ OpenClaw 不应在引入替代方案的同一个发布版本中移除已文档�
 
 当前兼容性记录包括：
 
-- 旧版宽泛的 SDK 导入，例如 `openclaw/plugin-sdk/compat`
-- 旧版仅 hook 的插件形态和 `before_agent_start`
-- 在插件迁移到 `register(api)` 期间仍保留的旧版 `activate(api)` 插件入口点
-- 旧版 SDK 别名，例如 `openclaw/extension-api`、`openclaw/plugin-sdk/channel-runtime`、`openclaw/plugin-sdk/command-auth` 状态构建器、`openclaw/plugin-sdk/test-utils`（已被更聚焦的 `openclaw/plugin-sdk/*` 测试子路径替代），以及 `ClawdbotConfig` / `OpenClawSchemaType` 类型别名
+- 诸如 `openclaw/plugin-sdk/compat` 之类的旧版宽泛 SDK 导入
+- 旧版仅 hook 插件形状和 `before_agent_start`
+- 插件迁移到 `gateway_stop` 期间，旧版 `api.on("deactivate", ...)` 清理 hook 名称
+- 插件迁移到 `register(api)` 期间，旧版 `activate(api)` 插件入口点
+- 诸如 `openclaw/extension-api`、
+  `openclaw/plugin-sdk/channel-runtime`、`openclaw/plugin-sdk/command-auth`
+  状态构建器、`openclaw/plugin-sdk/test-utils`（已替换为更聚焦的
+  `openclaw/plugin-sdk/*` 测试子路径），以及 `ClawdbotConfig` /
+  `OpenClawSchemaType` 类型别名等旧版 SDK 别名
 - 打包插件 allowlist 和启用行为
-- 旧版 provider/channel 环境变量 manifest 元数据
-- 在 provider 迁移到显式 catalog、auth、thinking、replay 和 transport hooks 期间保留的旧版 provider 插件 hooks 和类型别名
-- 旧版运行时别名，例如 `api.runtime.taskFlow`、`api.runtime.subagent.getSession`、`api.runtime.stt`，以及已弃用的 `api.runtime.config.loadConfig()` / `api.runtime.config.writeConfigFile(...)`
-- memory 插件迁移到 `registerMemoryCapability` 期间保留的旧版 memory-plugin 拆分注册
-- 用于原生消息 schema、mention gating、入站 envelope 格式化和 approval capability 嵌套的旧版 channel SDK helper
-- 旧版 channel route key 和可比较目标 helper 别名，同时插件迁移到 `openclaw/plugin-sdk/channel-route`
-- 正在被 manifest 贡献所有权替代的 activation hints
-- setup 描述符迁移到冷态 `setup.requiresRuntime: false` 元数据时的 `setup-api` 运行时回退
-- provider `discovery` hooks，而 provider catalog hooks 迁移到 `catalog.run(...)`
-- channel `showConfigured` / `showInSetup` 元数据，而 channel 包迁移到 `openclaw.channel.exposure`
-- 旧版 runtime-policy config 键，而 doctor 正在将操作员迁移到 `agentRuntime`
-- 生成的打包 channel config 元数据回退，而 registry-first 的 `channelConfigs` 元数据正在落地
-- 持久化的插件注册表禁用和安装迁移环境变量标志，而修复流程正将操作员迁移到 `openclaw plugins registry --refresh` 和 `openclaw doctor --fix`
-- 旧版由插件拥有的 web search、web fetch 和 x_search config 路径，而 doctor 正在将它们迁移到 `plugins.entries.<plugin>.config`
-- 旧版 `plugins.installs` 作者配置和打包插件 load-path 别名，而安装元数据正迁移到由状态管理的插件账本中
+- 旧版 provider/channel env-var manifest 元数据
+- 旧版 provider 插件 hook 和类型别名，同时 provider 迁移到
+  显式的 catalog、auth、thinking、replay 和 transport hooks
+- 旧版 runtime 别名，如 `api.runtime.taskFlow`、
+  `api.runtime.subagent.getSession`、`api.runtime.stt`，以及已弃用的
+  `api.runtime.config.loadConfig()` / `api.runtime.config.writeConfigFile(...)`
+- memory 插件拆分注册的旧版形式，同时 memory 插件迁移到
+  `registerMemoryCapability`
+- 处理原生消息 schema、mention gating、入站 envelope 格式，以及 approval capability 嵌套的旧版 channel SDK helper
+- 旧版 channel route key 和可比目标 helper 别名，同时插件迁移到
+  `openclaw/plugin-sdk/channel-route`
+- 正在被 manifest contribution ownership 替代的 activation hints
+- `setup-api` 运行时回退，同时 setup 描述符迁移到冷路径
+  `setup.requiresRuntime: false` 元数据
+- provider `discovery` hook，同时 provider catalog hook 迁移到
+  `catalog.run(...)`
+- channel `showConfigured` / `showInSetup` 元数据，同时 channel 包迁移到
+  `openclaw.channel.exposure`
+- 旧版 runtime-policy config 键，同时 doctor 迁移操作员到
+  `agentRuntime`
+- 生成的打包 channel config 元数据回退，同时 registry-first
+  `channelConfigs` 元数据落地
+- 持久化的插件注册表禁用和安装迁移 env 标志，同时
+  修复流程迁移操作员到 `openclaw plugins registry --refresh` 和
+  `openclaw doctor --fix`
+- 旧版由插件拥有的 web search、web fetch 和 x_search config 路径，同时
+  doctor 将它们迁移到 `plugins.entries.<plugin>.config`
+- 旧版 `plugins.installs` 编写的 config 和打包插件 load-path
+  别名，同时安装元数据迁移到状态管理的插件账本中
 
 新的插件代码应优先使用注册表和具体迁移指南中列出的替代方案。现有插件可以继续使用兼容路径，直到文档、诊断和发布说明宣布移除窗口。
 

@@ -90,17 +90,17 @@ Gateway → Client:
 
 当 Gateway 仍在完成启动 sidecar 时，`connect` 请求可以返回一个可重试的 `UNAVAILABLE` 错误，其中 `details.reason` 设为 `"startup-sidecars"`，并带有 `retryAfterMs`。客户端应在其整体连接预算内重试该响应，而不是将其作为终态握手失败上报。
 
-`server`, `features`, `snapshot`, and `policy` are all required by the schema
-(`src/gateway/protocol/schema/frames.ts`). `auth` is also required and reports
-the negotiated role/scopes. `pluginSurfaceUrls` is optional and maps plugin
-surface names, such as `canvas`, to scoped hosted URLs.
+`server`、`features`、`snapshot` 和 `policy` 都是 schema
+（`src/gateway/protocol/schema/frames.ts`）所必需的。`auth` 也是必需的，并报告
+协商后的 role/scopes。`pluginSurfaceUrls` 是可选项，它会把插件
+表面名称（例如 `canvas`）映射到带作用域的托管 URL。
 
-Scoped plugin surface URLs may expire. Nodes can call
-`node.pluginSurface.refresh` with `{ "surface": "canvas" }` to receive a fresh
-entry in `pluginSurfaceUrls`. The experimental Canvas plugin refactor does not
-support the deprecated `canvasHostUrl`, `canvasCapability`, or
-`node.canvas.capability.refresh` compatibility path; current native clients and
-gateways must use plugin surfaces.
+带作用域的插件表面 URL 可能会过期。节点可以调用
+`node.pluginSurface.refresh`，传入 `{ "surface": "canvas" }`，以在
+`pluginSurfaceUrls` 中获得一条新的条目。实验性的 Canvas 插件重构不
+支持已弃用的 `canvasHostUrl`、`canvasCapability` 或
+`node.canvas.capability.refresh` 兼容路径；当前的原生客户端和
+网关必须使用插件表面。
 
 当未签发设备令牌时，`hello-ok.auth` 会报告协商后的权限，但不包含令牌字段：
 
@@ -343,18 +343,18 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Secrets、config、update 和 wizard">
-    - `secrets.reload` 重新解析当前活动的 SecretRefs，并且只在完全成功时切换运行时 secret 状态。
-    - `secrets.resolve` 为特定命令/目标集解析命令目标 secret 分配。
-    - `config.get` 返回当前配置快照和哈希。
-    - `config.set` 写入已验证的配置负载。
+  <Accordion title="Secrets、配置、更新和向导">
+    - `secrets.reload` 仅在完全成功时重新解析当前 SecretRef，并切换运行时秘密状态。
+    - `secrets.resolve` 解析特定命令/目标集合的命令目标秘密分配。
+    - `config.get` 返回当前配置快照和 hash。
+    - `config.set` 写入经过验证的配置负载。
     - `config.patch` 合并部分配置更新。
     - `config.apply` 验证并替换完整配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时 config schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可以加载时的插件 + 通道 schema 元数据。该 schema 包含从 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回单个 config 路径的按路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的提示 + `hintPath`，以及用于 UI/CLI 下钻的直接子项摘要。查找 schema 节点保留面向用户的文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且仅在更新本身成功时安排重启；有会话的调用方可以包含 `continuationMessage`，这样启动会通过重启续接队列恢复一个后续 agent 回合。包管理器更新会在包替换后强制执行一次不可延迟、无冷却的更新重启，这样旧的 Gateway 进程就不会继续从已替换的 `dist` 树中懒加载。
-    - `update.status` 返回最新缓存的更新重启哨兵，包括可用时的重启后运行版本。
-    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding 向导。
+    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据；当运行时能够加载插件和通道 schema 元数据时，也会包含它们。该 schema 包含与 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 为某个配置路径返回一个路径作用域的 lookup 负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 下钻的直接子级摘要。lookup schema 节点会保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子级摘要会暴露 `key`、规范化后的 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
+    - `update.run` 运行网关更新流程，并且只在更新本身成功时才安排重启；具有会话的调用方可以包含 `continuationMessage`，以便启动在重启续接队列中继续一次后续的 agent 回合。来自控制平面的包管理器更新会使用一个分离的受管服务交接，而不是直接替换正在运行的 Gateway 内部包树。已启动的交接会返回 `ok: true`，其中 `result.reason: "managed-service-handoff-started"` 且 `handoff.status: "started"`；不可用或失败的交接会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，在需要手动 shell 更新时还会附带 `handoff.command`。在进行中的交接期间，重启哨兵可能会短暂报告 `stats.reason: "restart-health-pending"`；续接会延迟到 CLI 验证重启后的 Gateway 并写入最终的 `ok` 哨兵之后。
+    - `update.status` 返回最新缓存的更新重启哨兵，在可用时包含重启后的运行版本。
+    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露引导向导。
 
   </Accordion>
 
@@ -370,7 +370,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Session control">
+  <Accordion title="会话控制">
     - `sessions.list` 返回当前会话索引，包括在配置了 agent runtime 后端时每行的 `agentRuntime` 元数据。
     - `sessions.subscribe` 和 `sessions.unsubscribe` 切换当前 WS 客户端的会话变更事件订阅。
     - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 切换单个会话的 transcript/message 事件订阅。
@@ -396,15 +396,15 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Node pairing, invoke, and pending work">
-    - `node.pair.request`, `node.pair.list`, `node.pair.approve`, `node.pair.reject`, `node.pair.remove`, and `node.pair.verify` cover node pairing and bootstrap verification.
-    - `node.list` and `node.describe` return known/connected node state.
-    - `node.rename` updates a paired node label.
-    - `node.invoke` forwards a command to a connected node.
-    - `node.invoke.result` returns the result for an invoke request.
-    - `node.event` carries node-originated events back into the gateway.
-    - `node.pending.pull` and `node.pending.ack` are the connected-node queue APIs.
-    - `node.pending.enqueue` and `node.pending.drain` manage durable pending work for offline/disconnected nodes.
+  <Accordion title="节点配对、调用和待处理工作">
+    - `node.pair.request`、`node.pair.list`、`node.pair.approve`、`node.pair.reject`、`node.pair.remove` 和 `node.pair.verify` 涵盖节点配对和启动验证。
+    - `node.list` 和 `node.describe` 返回已知/已连接的节点状态。
+    - `node.rename` 更新已配对节点的标签。
+    - `node.invoke` 将命令转发到已连接节点。
+    - `node.invoke.result` 返回一次 invoke 请求的结果。
+    - `node.event` 将节点发起的事件带回网关。
+    - `node.pending.pull` 和 `node.pending.ack` 是面向已连接节点的队列 API。
+    - `node.pending.enqueue` 和 `node.pending.drain` 管理离线/断开节点的持久待处理工作。
 
   </Accordion>
 
@@ -417,34 +417,37 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Automation, skills, and tools">
-    - Automation: `wake` schedules an immediate or next-heartbeat wake text injection; `cron.get`, `cron.list`, `cron.status`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` manage scheduled work.
-    - Skills and tools: `commands.list`, `skills.*`, `tools.catalog`, `tools.effective`, `tools.invoke`.
+  <Accordion title="自动化、技能和工具">
+    - 自动化：`wake` 会安排一次立即或下一次 heartbeat 的唤醒文本注入；`cron.get`、`cron.list`、`cron.status`、`cron.add`、`cron.update`、`cron.remove`、`cron.run`、`cron.runs` 管理定时工作。
+    - `cron.run` 仍然是用于手动运行的入队式 RPC。需要完成语义的客户端应读取返回的 `runId` 并轮询 `cron.runs`。
+    - `cron.runs` 接受一个可选的非空 `runId` 过滤器，以便客户端可以跟踪某个已排队的手动运行，而不会与同一作业的其他历史条目竞争。
+    - 技能与工具：`commands.list`、`skills.*`、`tools.catalog`、`tools.effective`、`tools.invoke`。
 
   </Accordion>
 </AccordionGroup>
 
 ### 常见事件族
 
-- `chat`: UI chat 更新，例如 `chat.inject` 和其他仅 transcript 的 chat
-  事件。在 protocol v4 中，delta 负载携带 `deltaText`；`message` 仍然是
-  累积的 assistant 快照。非前缀替换会设置 `replace=true`
-  并使用 `deltaText` 作为替换文本。
-- `session.message` 和 `session.tool`: 已订阅会话的 transcript/event-stream 更新。
-- `sessions.changed`: 会话索引或元数据已更改。
-- `presence`: 系统 presence 快照更新。
-- `tick`: 周期性 keepalive / 存活事件。
-- `health`: 网关健康状态快照更新。
-- `heartbeat`: heartbeat 事件流更新。
-- `cron`: cron 运行/作业变更事件。
-- `shutdown`: 网关关停通知。
-- `node.pair.requested` / `node.pair.resolved`: 节点配对生命周期。
-- `node.invoke.request`: 节点 invoke 请求广播。
-- `device.pair.requested` / `device.pair.resolved`: 已配对设备生命周期。
-- `voicewake.changed`: 唤醒词触发配置已更改。
-- `exec.approval.requested` / `exec.approval.resolved`: exec 审批
+- `chat`：UI 聊天更新，例如 `chat.inject` 和其他仅 transcript 的聊天
+  事件。在协议 v4 中，delta 负载携带 `deltaText`；`message` 仍然是
+  累积的 assistant 快照。非前缀替换会设置 `replace=true`，并使用
+  `deltaText` 作为替换文本。
+- `session.message`、`session.operation` 和 `session.tool`：订阅的
+  会话的 transcript、进行中的会话操作，以及事件流更新。
+- `sessions.changed`：会话索引或元数据已更改。
+- `presence`：系统 presence 快照更新。
+- `tick`：周期性 keepalive / 存活事件。
+- `health`：网关健康快照更新。
+- `heartbeat`：heartbeat 事件流更新。
+- `cron`：cron 运行/作业变更事件。
+- `shutdown`：网关关闭通知。
+- `node.pair.requested` / `node.pair.resolved`：节点配对生命周期。
+- `node.invoke.request`：节点 invoke 请求广播。
+- `device.pair.requested` / `device.pair.resolved`：已配对设备生命周期。
+- `voicewake.changed`：唤醒词触发配置已更改。
+- `exec.approval.requested` / `exec.approval.resolved`：exec 审批
   生命周期。
-- `plugin.approval.requested` / `plugin.approval.resolved`: 插件审批
+- `plugin.approval.requested` / `plugin.approval.resolved`：插件审批
   生命周期。
 
 ### 节点助手方法
@@ -478,7 +481,7 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 `runId`、`taskId`、`flowId`、`parentTaskId`、`sourceId`、时间戳、进度、
 终态摘要和净化后的错误文本。
 
-### Operator helper methods
+### Operator 辅助方法
 
 - Operator 可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时
   命令清单。
@@ -548,7 +551,7 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 `models.list` 接受一个可选的 `view` 参数：
 
-- 省略或 `"default"`：当前运行时行为。如果配置了 `agents.defaults.models`，响应为允许的目录，包括 `provider/*` 条目动态发现的模型。否则响应为完整的 Gateway 目录。
+- 省略或 `"default"`：当前运行时行为。如果配置了 `agents.defaults.models`，响应为允许的目录，包括动态发现的 `provider/*` 条目模型。否则响应为完整的 Gateway 目录。
 - `"configured"`：适合选择器大小的行为。如果配置了 `agents.defaults.models`，它仍然生效，包括 `provider/*` 条目的 provider 作用域发现。若没有 allowlist，响应会使用显式的 `models.providers.*.models` 条目，仅在不存在任何已配置模型行时才回退到完整目录。
 - `"all"`：完整的 Gateway 目录，绕过 `agents.defaults.models`。用于诊断和发现 UI，而不是普通模型选择器。
 
@@ -619,12 +622,10 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 - 当内置 setup-code bootstrap 正在等待批准时，`PAIRING_REQUIRED` 详情会包含 `recommendedNextStep: "wait_then_retry"`、`retryable: true` 和 `pauseReconnect: false`。客户端应继续使用相同的 bootstrap token 重连，直到请求被批准或 token 失效。
 - 如果较旧或自定义的受信任 bootstrap 流程包含可选的 `hello-ok.auth.deviceTokens` 条目，则仅在连接使用了受信任传输上的 bootstrap 认证时保存它们，例如 `wss://` 或回环/本地配对。
 - 如果客户端提供了显式的 `deviceToken` 或显式的 `scopes`，则该调用方请求的范围集合仍然具有权威性；只有当客户端正在复用已存储的按设备 token 时，才会复用缓存的范围。
-- Device tokens can be rotated/revoked via `device.token.rotate` and
-  `device.token.revoke` (requires `operator.pairing` scope).
-- `device.token.rotate` 返回 rotation metadata。它只会在同设备调用且已使用该 device token 认证的情况下回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/admin 轮换不会回显 bearer token。
-- Token issuance, rotation, and revocation stay bounded to the approved role set
-  recorded in that device's pairing entry; token mutation cannot expand or
-  target a device role that pairing approval never granted.
+- 设备 token 可以通过 `device.token.rotate` 和
+  `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 范围）。
+- `device.token.rotate` 返回轮换元数据。它只会在同设备调用且已使用该 device token 认证的情况下回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/admin 轮换不会回显 bearer token。
+- Token 的签发、轮换和撤销始终受限于该设备配对条目中记录的已批准角色集合；token 变更不能扩展到配对批准从未授予的设备角色，也不能针对该角色。
 - 对于已配对设备的 token 会话，设备管理默认只作用于自身范围，除非调用方还具有 `operator.admin`：非管理员调用方只能移除/撤销/轮换自己的 **设备条目**。
 - `device.token.rotate` 和 `device.token.revoke` 也会将目标 operator token 范围集合与调用方当前会话范围进行检查。非管理员调用方不能轮换或撤销比自己已持有范围更宽的 operator token。
 - 认证失败会包含 `error.details.code` 以及恢复提示：

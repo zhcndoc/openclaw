@@ -368,6 +368,8 @@ pnpm test:docker:mcp-channels
 
 运行时适配器可能会将这个共享注册表规范化为其下游客户端所期望的形状。例如，嵌入式 Pi 直接使用 OpenClaw 的 `transport` 值，而 Claude Code 和 Gemini 接收 CLI 原生的 `type` 值，例如 `http`、`sse` 或 `stdio`。
 
+Codex app-server 也支持每个服务器上的可选 `codex` 块。这是仅针对 Codex app-server 线程的 OpenClaw 投影元数据；它不会更改 ACP 会话、通用 Codex harness 配置或其他运行时适配器。使用非空的 `codex.agents` 可以将服务器仅投影到特定的 OpenClaw agent id。空的、空白的或无效的 agent 列表会被配置验证拒绝，并且会在运行时投影路径中被省略，而不是变成全局配置。使用 `codex.defaultToolsApprovalMode`（`auto`、`prompt` 或 `approve`）为受信任的服务器发出 Codex 原生的 `default_tools_approval_mode`。在将原生 `mcp_servers` 配置交给 Codex 之前，OpenClaw 会剥离 `codex` 元数据。
+
 ### 已保存的 MCP 服务器定义
 
 OpenClaw 还会在配置中存储一个轻量级的 MCP 服务器注册表，用于希望使用 OpenClaw 管理的 MCP 定义的界面。
@@ -420,12 +422,12 @@ openclaw mcp unset context7
 
 启动一个本地子进程，并通过 stdin/stdout 通信。
 
-| Field                      | Description                       |
-| -------------------------- | --------------------------------- |
-| `command`                  | 要启动的可执行文件（必需）        |
-| `args`                     | 命令行参数数组                    |
-| `env`                      | 额外的环境变量                    |
-| `cwd` / `workingDirectory` | 进程的工作目录                    |
+| 字段                       | 说明                          |
+| -------------------------- | ----------------------------- |
+| `command`                  | 要启动的可执行文件（必需）     |
+| `args`                     | 命令行参数数组                |
+| `env`                      | 额外的环境变量                |
+| `cwd` / `workingDirectory` | 进程的工作目录                |
 
 <Warning>
 **Stdio 环境变量安全过滤器**
@@ -439,11 +441,11 @@ OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启�
 
 通过 HTTP Server-Sent Events 连接到远程 MCP 服务器。
 
-| Field                 | Description                                                      |
-| --------------------- | ---------------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                           |
-| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                            |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                      |
+| 字段                 | 说明                                                      |
+| --------------------- | --------------------------------------------------------- |
+| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                    |
+| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                     |
+| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）               |
 
 示例：
 
@@ -468,12 +470,12 @@ OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启�
 
 `streamable-http` 是与 `sse` 和 `stdio` 并列的另一种传输选项。它使用 HTTP 流式传输与远程 MCP 服务器进行双向通信。
 
-| Field                 | Description                                                                            |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                                                  |
-| `transport`           | 设为 `"streamable-http"` 以选择此传输；如果省略，OpenClaw 将使用 `sse`               |
-| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                                                   |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                                             |
+| 字段                 | 说明                                                                            |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                                          |
+| `transport`           | 设为 `"streamable-http"` 以选择此传输；如果省略，OpenClaw 将使用 `sse`          |
+| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                                           |
+| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                                     |
 
 OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过 `openclaw mcp set` 保存时会接受 CLI 原生的 MCP `type: "http"` 值，并由 `openclaw doctor --fix` 修复现有配置，但 `transport` 才是嵌入式 Pi 直接使用的值。
 

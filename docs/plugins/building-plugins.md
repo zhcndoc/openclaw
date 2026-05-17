@@ -31,10 +31,10 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
   <Card title="Provider 插件" icon="cpu" href="/plugins/sdk-provider-plugins">
     添加一个模型提供方（LLM、代理或自定义端点）
   </Card>
-  <Card title="CLI backend plugin" icon="terminal" href="/plugins/cli-backend-plugins">
+  <Card title="CLI 后端插件" icon="terminal" href="/plugins/cli-backend-plugins">
     将本地 AI CLI 映射到 OpenClaw 的文本回退运行器
   </Card>
-  <Card title="Tool / hook plugin" icon="wrench" href="/plugins/hooks">
+  <Card title="工具 / hook 插件" icon="wrench" href="/plugins/hooks">
     注册 agent 工具、事件钩子或服务 - 继续下面
   </Card>
 </CardGroup>
@@ -185,7 +185,12 @@ speech、实时转录、实时语音、媒体理解、图像生成、视频生�
 如果你的插件注册自定义 gateway RPC 方法，请将它们放在插件专用前缀下。
 核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）保持保留状态，并且始终解析为 `operator.admin`，即使某个插件要求更窄的作用域也是如此。
 
-需要记住的 hook 守卫语义：
+`openclaw/plugin-sdk/gateway-method-runtime` 是一个保留的控制平面桥接，
+用于声明
+`contracts.gatewayMethodDispatch: ["authenticated-request"]` 的插件 HTTP 路由。它是
+为经过审查的原生插件设置的有意使用保护，而不是沙箱边界。
+
+需要牢记的 Hook 守卫语义：
 
 - `before_tool_call`：`{ block: true }` 是终止性的，并会停止更低优先级的处理器。
 - `before_tool_call`：`{ block: false }` 被视为没有决定。
@@ -237,16 +242,9 @@ register(api) {
 }
 ```
 
-Tool factories receive a runtime-supplied context object. Use
-`ctx.activeModel` when a tool needs to log, display, or adapt to the active
-model for the current turn. The object can include `provider`, `modelId`, and
-`modelRef`. Treat it as informational runtime metadata, not as a security
-boundary against the local operator, installed plugin code, or a modified
-OpenClaw runtime. For sensitive local tools, keep an explicit plugin or operator
-opt-in and fail closed when the active model metadata is missing or unsuitable.
+工具工厂会接收一个运行时提供的上下文对象。当工具需要记录、展示或适配当前轮次所使用的活动模型时，请使用 `ctx.activeModel`。该对象可能包含 `provider`、`modelId` 和 `modelRef`。请将其视为信息性运行时元数据，而不是针对本地操作员、已安装插件代码或被修改过的 OpenClaw 运行时的安全边界。对于敏感的本地工具，请保留明确的插件或操作员选择加入，并在活动模型元数据缺失或不合适时以关闭状态失败。
 
-Every tool registered with `api.registerTool(...)` must also be declared in the
-plugin manifest:
+每个通过 `api.registerTool(...)` 注册的工具也必须在插件清单中声明：
 
 ```json
 {
@@ -373,7 +371,7 @@ import { ... } from "openclaw/plugin-sdk";
   <Card title="Provider 插件" icon="cpu" href="/plugins/sdk-provider-plugins">
     构建模型 provider 插件
   </Card>
-  <Card title="CLI Backend Plugins" icon="terminal" href="/plugins/cli-backend-plugins">
+  <Card title="CLI 后端插件" icon="terminal" href="/plugins/cli-backend-plugins">
     注册本地 AI CLI 后端
   </Card>
   <Card title="SDK 概览" icon="book-open" href="/plugins/sdk-overview">

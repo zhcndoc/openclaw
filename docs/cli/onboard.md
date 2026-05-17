@@ -1,8 +1,8 @@
 ---
-summary: "openclaw onboard 的 CLI 参考（交互式引导）"
+summary: "OpenClaw onboard 的 CLI 参考（交互式引导）"
 read_when:
   - 你需要关于 gateway、workspace、auth、channels 和 skills 的引导式设置
-title: "Onboard"
+title: "引导"
 ---
 
 # `openclaw onboard`
@@ -12,19 +12,19 @@ title: "Onboard"
 ## 相关指南
 
 <CardGroup cols={2}>
-  <Card title="CLI onboarding hub" href="/start/wizard" icon="rocket">
-    交互式 CLI 流程的演练。
+  <Card title="CLI 引导中心" href="/start/wizard" icon="rocket">
+    交互式 CLI 流程演练。
   </Card>
-  <Card title="Onboarding overview" href="/start/onboarding-overview" icon="map">
+  <Card title="引导概览" href="/start/onboarding-overview" icon="map">
     OpenClaw 引导流程如何协同工作。
   </Card>
-  <Card title="CLI setup reference" href="/start/wizard-cli-reference" icon="book">
+  <Card title="CLI 设置参考" href="/start/wizard-cli-reference" icon="book">
     输出、内部机制以及逐步行为。
   </Card>
-  <Card title="CLI automation" href="/start/wizard-cli-automation" icon="terminal">
+  <Card title="CLI 自动化" href="/start/wizard-cli-automation" icon="terminal">
     非交互式标志和脚本化设置。
   </Card>
-  <Card title="macOS app onboarding" href="/start/onboarding" icon="apple">
+  <Card title="macOS 应用引导" href="/start/onboarding" icon="apple">
     macOS 菜单栏应用的引导流程。
   </Card>
 </CardGroup>
@@ -47,9 +47,29 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 `--modern` 会启动 Crestodian 的对话式引导预览。不使用
 `--modern` 时，`openclaw onboard` 保持经典引导流程。
 
-对于明文的私有网络 `ws://` 目标（仅限受信任网络），请在引导进程环境中设置
-`OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。这里没有对应的 `openclaw.json` 形式用于这种客户端传输
-break-glass。
+对于 loopback、本地私有 IP 字面量、`.local`，以及 Tailnet `*.ts.net` gateway URL，可以接受明文 `ws://`。对于其他受信任的私有 DNS 名称，请在引导进程环境中设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
+
+## 语言环境
+
+交互式引导会使用 CLI wizard 语言环境来显示固定的设置文案。解析
+顺序为：
+
+1. `OPENCLAW_LOCALE`
+2. `LC_ALL`
+3. `LC_MESSAGES`
+4. `LANG`
+5. 英文回退
+
+支持的 wizard 语言环境为 `en`、`zh-CN` 和 `zh-TW`。语言环境值可以使用
+下划线或 POSIX 后缀形式，例如 `zh_CN.UTF-8`。产品名称、命令
+名称、配置键、URL、提供方 ID、模型 ID，以及插件/channel 标签
+均保持原样。
+
+示例：
+
+```bash
+OPENCLAW_LOCALE=zh-CN openclaw onboard
+```
 
 非交互式自定义提供方：
 
@@ -200,8 +220,8 @@ openclaw onboard --non-interactive \
 
   </Accordion>
   <Accordion title="其他行为">
-    - 本地引导 DM 范围行为：[CLI setup reference](/start/wizard-cli-reference#outputs-and-internals)。
-    - 最快的第一次聊天：`openclaw dashboard`（Control UI，无需 channel 设置）。
+    - 本地引导 DM 范围行为：[CLI 设置参考](/start/wizard-cli-reference#outputs-and-internals)。
+    - 最快的第一次聊天：`openclaw dashboard`（控制 UI，无需 channel 设置）。
     - 自定义提供方：连接任何与 OpenAI 或 Anthropic 兼容的端点，包括未列出的托管提供方。使用 Unknown 可自动检测。
     - 如果检测到 Hermes 状态，引导会提供迁移流程。使用 [Migrate](/cli/migrate) 可进行 dry-run 计划、覆盖模式、报告以及精确映射。
 

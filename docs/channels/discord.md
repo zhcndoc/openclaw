@@ -21,27 +21,27 @@ title: "Discord"
 
 ## 快速设置
 
-你需要创建一个带有 bot 的新应用，将 bot 添加到你的服务器，并将其配对到 OpenClaw。我们建议将 bot 添加到你自己的私人服务器。如果你还没有服务器，先[创建一个](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)（选择 **Create My Own > For me and my friends**）。
+你需要创建一个带有 bot 的新应用，将 bot 添加到你的服务器，并将其配对到 OpenClaw。我们建议将 bot 添加到你自己的私人服务器。如果你还没有服务器，先[创建一个](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)（选择 **创建自己的 > 给我和我的朋友**）。
 
 <Steps>
   <Step title="创建 Discord 应用和 bot">
-    前往 [Discord Developer Portal](https://discord.com/developers/applications)，点击 **New Application**。将其命名为类似 "OpenClaw" 的名称。
+    前往 [Discord 开发者门户](https://discord.com/developers/applications)，点击 **新建应用**。将其命名为类似 "OpenClaw" 的名称。
 
-    点击侧边栏中的 **Bot**。将 **Username** 设置为你给 OpenClaw 代理起的名称。
+    点击侧边栏中的 **Bot**。将 **用户名** 设置为你给 OpenClaw 代理起的名称。
 
   </Step>
 
   <Step title="启用特权 intents">
-    仍在 **Bot** 页面，向下滚动到 **Privileged Gateway Intents** 并启用：
+    仍在 **Bot** 页面，向下滚动到 **特权网关 Intents** 并启用：
 
-    - **Message Content Intent**（必需）
-    - **Server Members Intent**（推荐；角色白名单和名称到 ID 匹配所必需）
+    - **消息内容 Intent**（必需）
+    - **服务器成员 Intent**（推荐；角色白名单和名称到 ID 匹配所必需）
     - **Presence Intent**（可选；仅在需要 presence 更新时使用）
 
   </Step>
 
   <Step title="复制你的 bot token">
-    返回 **Bot** 页面顶部并点击 **Reset Token**。
+    返回 **Bot** 页面顶部并点击 **重置令牌**。
 
     <Note>
     尽管名字如此，这会生成你的第一个 token —— 并没有发生任何“重置”。
@@ -71,23 +71,23 @@ title: "Discord"
       - 添加表情反应（可选）
 
     这是普通文本频道的基础权限集合。如果你计划在 Discord 线程中发帖，包括会创建或继续线程的论坛或媒体频道工作流，也请启用 **在线程中发送消息**。
-    复制底部生成的 URL，将其粘贴到浏览器中，选择你的服务器，然后点击 **Continue** 进行连接。现在你应该可以在 Discord 服务器中看到你的 bot 了。
+    复制底部生成的 URL，将其粘贴到浏览器中，选择你的服务器，然后点击 **继续** 进行连接。现在你应该可以在 Discord 服务器中看到你的 bot 了。
 
   </Step>
 
   <Step title="启用开发者模式并收集你的 ID">
     回到 Discord 应用中，你需要启用开发者模式，以便复制内部 ID。
 
-    1. 点击 **User Settings**（头像旁的齿轮图标）→ **Advanced** → 打开 **Developer Mode**
-    2. 右键单击侧边栏中的 **server icon** → **Copy Server ID**
-    3. 右键单击你自己的 **avatar** → **Copy User ID**
+    1. 点击 **用户设置**（头像旁的齿轮图标）→ **高级** → 打开 **开发者模式**
+    2. 右键单击侧边栏中的 **服务器图标** → **复制服务器 ID**
+    3. 右键单击你自己的 **头像** → **复制用户 ID**
 
     将你的 **Server ID** 和 **User ID** 与 Bot Token 一起保存——下一步你会把这三者都发送给 OpenClaw。
 
   </Step>
 
   <Step title="允许来自服务器成员的私信">
-    为了让配对生效，Discord 需要允许你的 bot 向你发送私信。右键单击你的 **server icon** → **Privacy Settings** → 打开 **Direct Messages**。
+    为了让配对生效，Discord 需要允许你的 bot 向你发送私信。右键单击你的 **服务器图标** → **隐私设置** → 打开 **直接消息**。
 
     这允许服务器成员（包括 bot）向你发送私信。如果你希望使用 Discord 私信与 OpenClaw 交互，请保持启用此项。如果你只打算使用服务器频道，可以在配对后禁用私信。
 
@@ -250,9 +250,9 @@ openclaw pairing approve discord <CODE>
   <Step title="允许在没有 @mention 的情况下响应">
     默认情况下，你的代理只会在服务器频道中被 @mention 时才响应。对于私人服务器，你可能希望它响应每条消息。
 
-    在服务器频道中，普通助手的最终回复默认保持私有。可见的 Discord 输出必须通过 `message` 工具显式发送，这样代理就可以默认潜伏，只有在它认为频道回复有用时才发帖。
+    在 guild 频道中，默认应使用 `message` 工具来输出可见的 Discord 内容，这样代理就可以潜伏着，只在判断频道回复有用时才发帖。对于普通请求，当模型没有调用到工具时，OpenClaw 会回退到助手的最终文本；环境房间事件会保持静默，除非工具发送消息。
 
-    这意味着所选模型必须可靠地调用工具。如果 Discord 显示正在输入，但日志显示有 token 使用却没有发布消息，请检查会话日志中是否有 `didSendViaMessagingTool: false` 的助手文本。这意味着模型生成了私有最终答案，而不是调用 `message(action=send)`。请切换到更强的工具调用模型，或使用下面的配置恢复旧版自动最终回复。
+    这意味着所选模型应该能够稳定调用工具。如果 Discord 显示正在输入，日志中也显示了 token 使用但没有发布消息，请检查这一轮是否被配置为环境房间事件，或者使用下面的配置恢复旧版自动最终回复。
 
     <Tabs>
       <Tab title="向你的代理询问">
@@ -347,7 +347,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
 要限制谁可以点击按钮，请在该按钮上设置 `allowedUsers`（Discord 用户 ID、标签或 `*`）。配置后，不匹配的用户会收到一条临时拒绝提示。
 
-The `/model` and `/models` slash commands open an interactive model picker with provider, model, and compatible runtime dropdowns plus a Submit step. `/models add` is deprecated and now returns a deprecation message instead of registering models from chat. The picker reply is ephemeral and only the invoking user can use it. Discord select menus are limited to 25 options, so add `provider/*` entries to `agents.defaults.models` when you want the picker to show dynamically discovered models only for selected providers such as `openai-codex` or `vllm`.
+`/model` 和 `/models` 斜杠命令会打开一个交互式模型选择器，包含 provider、model 和兼容运行时的下拉菜单，以及一个提交步骤。`/models add` 已弃用，现在会返回一条弃用提示，而不是从聊天中注册模型。选择器回复是临时消息，只有发起者可以使用。Discord 的选择菜单最多只能有 25 个选项，因此当你希望选择器仅为某些 provider（例如 `openai-codex` 或 `vllm`）显示动态发现的模型时，请向 `agents.defaults.models` 添加 `provider/*` 条目。
 
 文件附件：
 
@@ -418,15 +418,15 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 ## 访问控制与路由
 
 <Tabs>
-  <Tab title="DM policy">
-    `channels.discord.dmPolicy` 控制 DM 访问。`channels.discord.allowFrom` 是标准的 DM 白名单。
+  <Tab title="DM 策略">
+    `channels.discord.dmPolicy` 控制 DM 访问。`channels.discord.allowFrom` 是标准的 DM 允许列表。
 
     - `pairing`（默认）
     - `allowlist`
     - `open`（要求 `channels.discord.allowFrom` 包含 `"*"`）
     - `disabled`
 
-    如果 DM policy 不是 open，未知用户会被阻止（或在 `pairing` 模式下提示配对）。
+    如果 DM 策略不是 open，未知用户会被阻止（或在 `pairing` 模式下提示配对）。
 
     多账号优先级：
 
@@ -446,7 +446,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Tab>
 
-  <Tab title="Access groups">
+  <Tab title="访问组">
     Discord DMs 和文本命令授权可以在 `channels.discord.allowFrom` 中使用动态 `accessGroup:<name>` 条目。
 
     访问组名称在消息频道之间共享。使用 `type: "message.senders"` 可定义一个静态组，其成员使用每个频道的常规 `allowFrom` 语法表达；或在 Discord 频道当前的 `ViewChannel` 受众应动态定义成员资格时使用 `type: "discord.channelAudience"`。共享访问组行为的文档见：[访问组](/channels/access-groups)。
@@ -517,11 +517,11 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
     查找会在失败时关闭。如果 Discord 返回 `Missing Access`、成员查找失败，或者频道属于不同的公会，则会将该 DM 发送者视为未授权。
 
-    当使用频道受众访问组时，请在 Discord Developer Portal 中为机器人启用 **Server Members Intent**。DM 不包含公会成员状态，因此 OpenClaw 会在授权时通过 Discord REST 解析成员。
+    当使用频道受众访问组时，请在 Discord 开发者门户中为机器人启用 **Server Members Intent**。DM 不包含公会成员状态，因此 OpenClaw 会在授权时通过 Discord REST 解析成员。
 
   </Tab>
 
-  <Tab title="Guild policy">
+  <Tab title="服务器策略">
     服务器处理由 `channels.discord.groupPolicy` 控制：
 
     - `open`
@@ -533,7 +533,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     `allowlist` 行为：
 
     - 服务器必须匹配 `channels.discord.guilds`（优先使用 `id`，也接受 slug）
-    - 可选发送者白名单：`users`（建议使用稳定 ID）和 `roles`（仅限角色 ID）；如果配置了任一项，当发送者匹配 `users` OR `roles` 时即允许
+    - 可选发送者允许列表：`users`（建议使用稳定 ID）和 `roles`（仅限角色 ID）；如果配置了任一项，当发送者匹配 `users` OR `roles` 时即允许
     - 默认禁用直接按名称/标签匹配；仅在紧急兼容模式下启用 `channels.discord.dangerouslyAllowNameMatching: true`
     - `users` 支持名称/标签，但 ID 更安全；`openclaw security audit` 会在使用名称/标签条目时发出警告
     - 如果某个服务器配置了 `channels`，未列出的频道会被拒绝
@@ -567,7 +567,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Tab>
 
-  <Tab title="Mentions and group DMs">
+  <Tab title="提及与群组 DM">
     服务器消息默认按提及进行门控。
 
     提及检测包括：
@@ -584,7 +584,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     群组 DM：
 
     - 默认：忽略（`dm.groupEnabled=false`）
-    - 可选白名单：通过 `dm.groupChannels`（频道 ID 或 slug）
+    - 可选允许列表：通过 `dm.groupChannels`（频道 ID 或 slug）
 
   </Tab>
 </Tabs>
@@ -623,7 +623,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 - 原生命令授权使用与普通消息处理相同的 Discord allowlist/策略。
 - 对于未授权用户，命令仍可能在 Discord UI 中可见；执行时仍会强制 OpenClaw 授权并返回 "not authorized"。
 
-命令目录和行为请参见 [Slash commands](/tools/slash-commands)。
+命令目录和行为请参见 [斜杠命令](/tools/slash-commands)。
 
 默认斜杠命令设置：
 
@@ -632,7 +632,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 ## 功能细节
 
 <AccordionGroup>
-  <Accordion title="Reply tags and native replies">
+  <Accordion title="回复标签与原生回复">
     Discord 支持代理输出中的回复标签：
 
     - `[[reply_to_current]]`
@@ -653,7 +653,24 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Live stream preview">
+  <Accordion title="链接预览">
+    Discord 默认会为 URL 生成富链接嵌入。OpenClaw 默认会抑制这些在外发 Discord 消息中生成的嵌入，因此代理发送的 URL 会保持为普通链接，除非你显式启用：
+
+```json5
+{
+  channels: {
+    discord: {
+      suppressEmbeds: false,
+    },
+  },
+}
+```
+
+    将 `channels.discord.accounts.<id>.suppressEmbeds` 设为可覆盖单个账号。代理通过消息工具发送时，也可以对单条消息传入 `suppressEmbeds: false`。显式的 Discord `embeds` 载荷不受默认链接预览设置影响。
+
+  </Accordion>
+
+  <Accordion title="实时流预览">
     OpenClaw 可以通过发送临时消息并在文本到达时编辑它来流式传输草稿回复。`channels.discord.streaming` 取值为 `off` | `partial` | `block` | `progress`（默认）。`progress` 会保留一条可编辑的状态草稿，并在工具进度更新时刷新，直到最终交付；共享的起始标签是一条滚动行，因此在内容足够多后它会像其他内容一样滚出视野。`streamMode` 是旧版运行时别名。运行 `openclaw doctor --fix` 可将持久化配置重写为规范键。
 
     将 `channels.discord.streaming.mode` 设为 `off` 可禁用 Discord 预览编辑。如果显式启用了 Discord block 流式传输，OpenClaw 会跳过预览流，以避免双重流式输出。
@@ -704,7 +721,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="History, context, and thread behavior">
+  <Accordion title="历史记录、上下文与线程行为">
     服务器历史上下文：
 
     - `channels.discord.historyLimit` 默认 `20`
@@ -724,11 +741,11 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     - 消息工具反应可以解析 `user:<id>` DM 目标。
     - `guilds.<guild>.channels.<channel>.requireMention: false` 会在回复阶段激活回退期间被保留。
 
-    频道主题会作为**不受信任**的上下文注入。白名单限制的是谁可以触发代理，而不是完整的补充上下文红action边界。
+    频道主题会作为**不受信任**的上下文注入。白名单限制的是谁可以触发代理，而不是完整的补充上下文删改边界。
 
   </Accordion>
 
-  <Accordion title="Thread-bound sessions for subagents">
+  <Accordion title="子代理的线程绑定会话">
     Discord 可以将线程绑定到会话目标，以便该线程中的后续消息继续路由到同一个会话（包括子代理会话）。
 
     命令：
@@ -773,11 +790,11 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     - 已弃用的 `spawnSubagentSessions`/`spawnAcpSessions` 键会由 `openclaw doctor --fix` 迁移。
     - 如果某个账号禁用了线程绑定，则 `/focus` 和相关线程绑定操作不可用。
 
-    参见 [Sub-agents](/tools/subagents)、[ACP Agents](/tools/acp-agents) 和 [Configuration Reference](/gateway/configuration-reference)。
+    参见 [子代理](/tools/subagents)、[ACP 代理](/tools/acp-agents) 和 [配置参考](/gateway/configuration-reference)。
 
   </Accordion>
 
-  <Accordion title="Persistent ACP channel bindings">
+  <Accordion title="持久 ACP 频道绑定">
     对于稳定的“始终在线” ACP 工作区，请配置指向 Discord 会话的顶层类型化 ACP 绑定。
 
     配置路径：
@@ -838,11 +855,11 @@ The `/model` and `/models` slash commands open an interactive model picker with 
     - 在已绑定的频道或线程中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话。临时线程绑定在激活时可以覆盖目标解析。
     - `spawnSessions` 通过 `--thread auto|here` 控制子线程的创建/绑定。
 
-    绑定行为详情请参见 [ACP Agents](/tools/acp-agents)。
+    绑定行为详情请参见 [ACP 代理](/tools/acp-agents)。
 
   </Accordion>
 
-  <Accordion title="Reaction notifications">
+  <Accordion title="反应通知">
     每个服务器的反应通知模式：
 
     - `off`
@@ -854,7 +871,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Ack reactions">
+  <Accordion title="确认反应">
     `ackReaction` 会在 OpenClaw 处理入站消息时发送一个确认表情。
 
     解析顺序：
@@ -871,7 +888,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Config writes">
+  <Accordion title="配置写入">
     默认启用由频道发起的配置写入。
 
     这会影响 `/config set|unset` 流程（当命令功能已启用时）。
@@ -890,7 +907,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Gateway proxy">
+  <Accordion title="网关代理">
     通过 `channels.discord.proxy` 将 Discord 网关 WebSocket 流量和启动时 REST 查询（application ID + allowlist 解析）路由经由 HTTP(S) 代理。
 
 ```json5
@@ -921,7 +938,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="PluralKit support">
+  <Accordion title="PluralKit 支持">
     启用 PluralKit 解析，将代理消息映射到系统成员身份：
 
 ```json5
@@ -946,7 +963,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Outbound mention aliases">
+  <Accordion title="发出提及别名">
     当代理需要对已知 Discord 用户进行可确定的发出提及时，请使用 `mentionAliases`。键是不带前导 `@` 的句柄；值是 Discord 用户 ID。未知句柄、`@everyone`、`@here`，以及 Markdown 代码跨度中的提及都会保持不变。
 
 ```json5
@@ -970,7 +987,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Presence configuration">
+  <Accordion title="状态配置">
     当你设置状态或活动字段，或者启用自动 presence 时，会应用 presence 更新。
 
     仅状态示例：
@@ -1014,12 +1031,12 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
     活动类型映射：
 
-    - 0：Playing
-    - 1：Streaming（需要 `activityUrl`）
-    - 2：Listening
-    - 3：Watching
-    - 4：Custom（使用活动文本作为状态值；表情可选）
-    - 5：Competing
+    - 0：正在游戏
+    - 1：直播中（需要 `activityUrl`）
+    - 2：正在收听
+    - 3：正在观看
+    - 4：自定义（使用活动文本作为状态值；表情可选）
+    - 5：比赛中
 
     自动 presence 示例（运行时健康信号）：
 
@@ -1046,7 +1063,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
   </Accordion>
 
-  <Accordion title="Approvals in Discord">
+  <Accordion title="Discord 中的审批">
     Discord 支持在 DM 中基于按钮的审批处理，也可以选择在发起的频道中发布审批提示。
 
     配置路径：
@@ -1068,7 +1085,7 @@ The `/model` and `/models` slash commands open an interactive model picker with 
 
     网关认证和审批解析遵循共享的 Gateway 客户端契约（`plugin:` ID 通过 `plugin.approval.resolve` 解析；其他 ID 通过 `exec.approval.resolve` 解析）。审批默认在 30 分钟后过期。
 
-    参见 [Exec approvals](/tools/exec-approvals)。
+    参见 [执行审批](/tools/exec-approvals)。
 
   </Accordion>
 </AccordionGroup>
@@ -1097,13 +1114,14 @@ Discord 消息动作包括消息发送、频道管理、审核、状态和元数
 | moderation                                                                                                                                                               | 已禁用 |
 | presence                                                                                                                                                                 | 已禁用 |
 
-## Components v2 UI
+## Components v2 界面
 
 OpenClaw 使用 Discord components v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来实现自定义 UI（高级功能；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不推荐使用。
 
-- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（十六进制）。
-- 可按账号通过 `channels.discord.accounts.<id>.ui.components.accentColor` 单独设置。
-- 当存在 components v2 时，`embeds` 会被忽略。
+- `channels.discord.ui.components.accentColor` 设置 Discord component 容器使用的强调色（十六进制）。
+- 使用 `channels.discord.accounts.<id>.ui.components.accentColor` 按账号设置。
+- 当存在 components v2 时，会忽略 `embeds`。
+- 默认会抑制普通 URL 预览。若单个外发链接应展开，可在消息动作上设置 `suppressEmbeds: false`。
 
 示例：
 
@@ -1379,48 +1397,48 @@ STT 加 TTS 管线：
 
 预期的语音日志：
 
-- On join: `discord voice: joining ... voiceSession=... supervisorSession=... agentSessionMode=... voiceModel=... realtimeModel=...`
-- On realtime start: `discord voice: realtime bridge starting ... autoRespond=false interruptResponse=false bargeIn=false minBargeInAudioEndMs=...`
-- On speaker audio: `discord voice: realtime speaker turn opened ...`, `discord voice: realtime input audio started ... outputAudioMs=... outputActive=...`, and `discord voice: realtime speaker turn closed ... chunks=... discordBytes=... realtimeBytes=... interruptedPlayback=...`
-- On skipped stale speech: `discord voice: realtime forced agent consult skipped reason=incomplete-transcript ...` or `reason=non-actionable-closing ...`
-- On realtime response completion: `discord voice: realtime audio playback finishing reason=response.done ... audioMs=... chunks=...`
-- On playback stop/reset: `discord voice: realtime audio playback stopped reason=... audioMs=... elapsedMs=... chunks=...`
-- On realtime consult: `discord voice: realtime consult requested ... voiceSession=... supervisorSession=... question=...`
-- On agent answer: `discord voice: agent turn answer ...`
-- On queued exact speech: `discord voice: realtime exact speech queued ... queued=... outputAudioMs=... outputActive=...`, followed by `discord voice: realtime exact speech dequeued reason=player-idle ...`
-- On barge-in detection: `discord voice: realtime barge-in detected source=speaker-start ...` or `discord voice: realtime barge-in detected source=active-speaker-audio ...`, followed by `discord voice: realtime barge-in requested reason=... outputAudioMs=... outputActive=...`
-- On realtime interruption: `discord voice: realtime model interrupt requested client:response.cancel reason=barge-in`, followed by either `discord voice: realtime model audio truncated client:conversation.item.truncate reason=barge-in audioEndMs=...` or `discord voice: realtime model interrupt confirmed server:response.done status=cancelled ...`
-- On ignored echo/noise: `discord voice: realtime model interrupt ignored client:conversation.item.truncate.skipped reason=barge-in audioEndMs=0 minAudioEndMs=250`
-- On disabled barge-in: `discord voice: realtime capture ignored during playback (barge-in disabled) ...`
-- On idle playback: `discord voice: realtime barge-in ignored reason=... outputActive=false ... playbackChunks=0`
+- 加入时：`discord voice: joining ... voiceSession=... supervisorSession=... agentSessionMode=... voiceModel=... realtimeModel=...`
+- 实时开始时：`discord voice: realtime bridge starting ... autoRespond=false interruptResponse=false bargeIn=false minBargeInAudioEndMs=...`
+- 说话者音频时：`discord voice: realtime speaker turn opened ...`、`discord voice: realtime input audio started ... outputAudioMs=... outputActive=...`，以及 `discord voice: realtime speaker turn closed ... chunks=... discordBytes=... realtimeBytes=... interruptedPlayback=...`
+- 跳过过时语音时：`discord voice: realtime forced agent consult skipped reason=incomplete-transcript ...` 或 `reason=non-actionable-closing ...`
+- 实时响应完成时：`discord voice: realtime audio playback finishing reason=response.done ... audioMs=... chunks=...`
+- 播放停止/重置时：`discord voice: realtime audio playback stopped reason=... audioMs=... elapsedMs=... chunks=...`
+- 实时咨询时：`discord voice: realtime consult requested ... voiceSession=... supervisorSession=... question=...`
+- agent 回答时：`discord voice: agent turn answer ...`
+- 排队的精确语音时：`discord voice: realtime exact speech queued ... queued=... outputAudioMs=... outputActive=...`，随后是 `discord voice: realtime exact speech dequeued reason=player-idle ...`
+- 检测到 barge-in 时：`discord voice: realtime barge-in detected source=speaker-start ...` 或 `discord voice: realtime barge-in detected source=active-speaker-audio ...`，随后是 `discord voice: realtime barge-in requested reason=... outputAudioMs=... outputActive=...`
+- 实时中断时：`discord voice: realtime model interrupt requested client:response.cancel reason=barge-in`，随后要么是 `discord voice: realtime model audio truncated client:conversation.item.truncate reason=barge-in audioEndMs=...`，要么是 `discord voice: realtime model interrupt confirmed server:response.done status=cancelled ...`
+- 忽略回声/噪声时：`discord voice: realtime model interrupt ignored client:conversation.item.truncate.skipped reason=barge-in audioEndMs=0 minAudioEndMs=250`
+- 禁用 barge-in 时：`discord voice: realtime capture ignored during playback (barge-in disabled) ...`
+- 空闲播放时：`discord voice: realtime barge-in ignored reason=... outputActive=false ... playbackChunks=0`
 
-To debug cut-off audio, read the realtime voice logs as a timeline:
+要调试音频截断，请将实时语音日志按时间线阅读：
 
-1. `realtime audio playback started` means Discord has begun playing assistant audio. The bridge starts counting assistant output chunks, Discord PCM bytes, provider realtime bytes, and synthesized audio duration from this point.
-2. `realtime speaker turn opened` marks a Discord speaker becoming active. If playback is already active and `bargeIn` is enabled, this can be followed by `barge-in detected source=speaker-start`.
-3. `realtime input audio started` marks the first actual audio frame received for that speaker turn. `outputActive=true` or a nonzero `outputAudioMs` here means the mic is sending input while assistant playback is still active.
-4. `barge-in detected source=active-speaker-audio` means OpenClaw saw live speaker audio while assistant playback was active. This is useful for distinguishing a real interruption from a Discord speaker-start event with no useful audio.
-5. `barge-in requested reason=...` means OpenClaw asked the realtime provider to cancel or truncate the active response. It includes `outputAudioMs`, `outputActive`, and `playbackChunks` so you can see how much assistant audio had actually played before the interruption.
-6. `realtime audio playback stopped reason=...` is the local Discord playback reset point. The reason says who stopped playback: `barge-in`, `player-idle`, `provider-clear-audio`, `forced-agent-consult`, `stream-close`, or `session-close`.
-7. `realtime speaker turn closed` summarizes the captured input turn. `chunks=0` or `hasAudio=false` means the speaker turn opened but no usable audio reached the realtime bridge. `interruptedPlayback=true` means that input turn overlapped assistant output and triggered barge-in logic.
+1. `realtime audio playback started` 表示 Discord 已开始播放助手音频。此时桥接开始统计助手输出块、Discord PCM 字节、提供方 realtime 字节以及合成音频时长。
+2. `realtime speaker turn opened` 表示 Discord 说话者变为活动状态。如果播放已经在进行且启用了 `bargeIn`，随后可能会出现 `barge-in detected source=speaker-start`。
+3. `realtime input audio started` 表示为该说话轮次接收到的第一帧实际音频。这里的 `outputActive=true` 或非零 `outputAudioMs` 表示在助手播放仍然活动时，麦克风正在发送输入。
+4. `barge-in detected source=active-speaker-audio` 表示 OpenClaw 在助手播放活动时看到了实时的说话者音频。这有助于区分真正的中断与没有有用音频的 Discord 说话开始事件。
+5. `barge-in requested reason=...` 表示 OpenClaw 请求实时提供方取消或截断当前响应。它包含 `outputAudioMs`、`outputActive` 和 `playbackChunks`，因此你可以看到在中断前助手音频实际播放了多少。
+6. `realtime audio playback stopped reason=...` 是本地 Discord 播放重置点。该原因说明是谁停止了播放：`barge-in`、`player-idle`、`provider-clear-audio`、`forced-agent-consult`、`stream-close` 或 `session-close`。
+7. `realtime speaker turn closed` 会汇总捕获到的输入轮次。`chunks=0` 或 `hasAudio=false` 表示说话轮次已打开，但没有有用音频到达 realtime 桥接。`interruptedPlayback=true` 表示该输入轮次与助手输出重叠，并触发了 barge-in 逻辑。
 
-Useful fields:
+有用字段：
 
-- `outputAudioMs`: assistant audio duration generated by the realtime provider before the log line.
-- `audioMs`: assistant audio duration that OpenClaw counted before playback stopped.
-- `elapsedMs`: wall-clock time between opening and closing the playback stream or speaker turn.
-- `discordBytes`: 48 kHz stereo PCM bytes sent to or received from Discord voice.
-- `realtimeBytes`: provider-format PCM bytes sent to or received from the realtime provider.
-- `playbackChunks`: assistant audio chunks forwarded to Discord for the active response.
-- `sinceLastAudioMs`: gap between the last captured speaker audio frame and the speaker turn closing.
+- `outputAudioMs`：该日志行之前实时提供方生成的助手音频时长。
+- `audioMs`：OpenClaw 在播放停止前统计到的助手音频时长。
+- `elapsedMs`：播放流或说话轮次打开与关闭之间的墙钟时间。
+- `discordBytes`：发送到或从 Discord 语音接收的 48 kHz 立体声 PCM 字节数。
+- `realtimeBytes`：发送到或从 realtime 提供方接收的提供方格式 PCM 字节数。
+- `playbackChunks`：当前响应转发给 Discord 的助手音频块数量。
+- `sinceLastAudioMs`：最后一个捕获到的说话者音频帧与说话轮次关闭之间的间隔。
 
-Common patterns:
+常见模式：
 
-- Immediate cut-off with `source=active-speaker-audio`, small `outputAudioMs`, and the same user nearby usually points to speaker echo entering the mic. Raise `voice.realtime.minBargeInAudioEndMs`, lower speaker volume, use headphones, or set `voice.realtime.providers.openai.interruptResponseOnInputAudio: false`.
-- `source=speaker-start` followed by `speaker turn closed ... hasAudio=false` means Discord reported a speaker start but no audio reached OpenClaw. That can be a transient Discord voice event, noise gate behavior, or a client briefly keying the mic.
-- `audio playback stopped reason=stream-close` without a nearby barge-in or `provider-clear-audio` means the local Discord playback stream ended unexpectedly. Check the preceding provider and Discord player logs.
-- `capture ignored during playback (barge-in disabled)` means OpenClaw intentionally dropped input while assistant audio was active. Enable `voice.realtime.bargeIn` if you want speech to interrupt playback.
-- `barge-in ignored ... outputActive=false` means Discord or provider VAD reported speech, but OpenClaw had no active playback to interrupt. This should not cut off audio.
+- 带有 `source=active-speaker-audio`、较小 `outputAudioMs`，且同一用户就在附近的立即截断，通常表示扬声器回声进入了麦克风。提高 `voice.realtime.minBargeInAudioEndMs`、降低扬声器音量、使用耳机，或设置 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false`。
+- `source=speaker-start` 后跟 `speaker turn closed ... hasAudio=false` 表示 Discord 报告了说话开始，但没有音频到达 OpenClaw。这可能是短暂的 Discord 语音事件、噪声门行为，或者客户端短暂地打开了麦克风。
+- `audio playback stopped reason=stream-close` 且附近没有 barge-in 或 `provider-clear-audio`，表示本地 Discord 播放流意外结束。请检查前面的提供方和 Discord 播放器日志。
+- `capture ignored during playback (barge-in disabled)` 表示 OpenClaw 在助手音频活动时故意丢弃了输入。如果你希望语音中断播放，请启用 `voice.realtime.bargeIn`。
+- `barge-in ignored ... outputActive=false` 表示 Discord 或提供方 VAD 报告了语音，但 OpenClaw 没有可中断的活动播放。这不应导致音频截断。
 
 凭据按组件解析：`voice.model` 使用 LLM 路由认证，`tools.media.audio` 使用 STT 认证，`messages.tts`/`voice.tts` 使用 TTS 认证，而 `voice.realtime.providers` 或提供方的常规认证配置则用于实时提供方认证。
 
@@ -1439,7 +1457,7 @@ message(action="send", channel="discord", target="channel:123", path="/path/to/a
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="使用了不允许的 intents 或 bot 看不到任何 guild 消息">
+  <Accordion title="使用了不允许的 intents 或 bot 看不到任何服务器消息">
 
     - 启用 Message Content Intent
     - 当你依赖用户/成员解析时，启用 Server Members Intent
@@ -1447,11 +1465,11 @@ message(action="send", channel="discord", target="channel:123", path="/path/to/a
 
   </Accordion>
 
-  <Accordion title="guild 消息被意外阻止">
+  <Accordion title="服务器消息被意外阻止">
 
     - 检查 `groupPolicy`
-    - 检查 `channels.discord.guilds` 下的 guild 允许名单
-    - 如果存在 guild `channels` 映射，则只允许列出的频道
+    - 检查 `channels.discord.guilds` 下的服务器允许名单
+    - 如果存在服务器 `channels` 映射，则只允许列出的频道
     - 检查 `requireMention` 行为和提及模式
 
     有用的检查：
@@ -1464,12 +1482,12 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="require mention 为 false 但仍被阻止">
+  <Accordion title="`require mention` 为 false 但仍被阻止">
     常见原因：
 
-    - `groupPolicy="allowlist"` 但没有匹配的 guild/channel 允许名单
+    - `groupPolicy="allowlist"` 但没有匹配的服务器/频道允许名单
     - `requireMention` 配置在错误位置（必须位于 `channels.discord.guilds` 或频道条目下）
-    - 发送者被 guild/channel `users` 允许名单阻止
+    - 发送者被服务器/频道 `users` 允许名单阻止
 
   </Accordion>
 
@@ -1484,7 +1502,7 @@ openclaw logs --follow
 
     - 单账号：`channels.discord.eventQueue.listenerTimeout`
     - 多账号：`channels.discord.accounts.<accountId>.eventQueue.listenerTimeout`
-    - 这只控制 Discord gateway 监听器工作，不控制 agent 回合生命周期
+    - 这只控制 Discord gateway 监听器的工作方式，不控制 agent 回合生命周期
 
     Discord 不会对排队中的 agent 回合应用 channel-owned 超时。消息监听器会立即移交，而排队中的 Discord 运行会保持每个会话的顺序，直到会话/工具/运行时生命周期完成或中止工作。
 
@@ -1518,7 +1536,7 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="Gateway READY timeout restarts">
+  <Accordion title="网关 READY 超时重启">
     OpenClaw 在启动期间以及运行时重新连接后都会等待 Discord 的 gateway `READY` 事件。带有启动错峰的多账号设置，可能需要比默认值更长的启动 READY 窗口。
 
     READY 超时参数：
@@ -1534,7 +1552,7 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="Permissions audit mismatches">
+  <Accordion title="权限审计不匹配">
     `channels status --probe` 权限检查只对数字频道 ID 有效。
 
     如果你使用 slug 键，运行时匹配仍可能工作，但 probe 无法完全验证权限。
@@ -1549,13 +1567,13 @@ openclaw logs --follow
 
   </Accordion>
 
-  <Accordion title="机器人互相循环">
+  <Accordion title="机器人之间循环">
     默认会忽略机器人发出的消息。
 
     如果你设置了 `channels.discord.allowBots=true`，请使用严格的提及和允许名单规则，以避免循环行为。
     建议使用 `channels.discord.allowBots="mentions"`，仅接受提及机器人的机器人消息。
 
-    OpenClaw 也提供了共享的 [bot loop protection](/channels/bot-loop-protection)。每当 `allowBots` 允许机器人作者消息进入调度时，Discord 会将入站事件映射为 `(account, channel, bot pair)` 事实，而通用配对保护器会在其超过配置的事件预算后抑制该配对。该保护器可防止曾经必须由 Discord 速率限制来阻止的失控双机器人循环；它不会影响单机器人部署，也不会影响低于预算的一次性机器人回复。
+    OpenClaw 也提供了共享的 [机器人循环保护](/channels/bot-loop-protection)。每当 `allowBots` 允许机器人作者消息进入调度时，Discord 会将入站事件映射为 `(account, channel, bot pair)` 事实，而通用配对保护器会在其超过配置的事件预算后抑制该配对。该保护器可防止曾经必须由 Discord 速率限制来阻止的失控双机器人循环；它不会影响单机器人部署，也不会影响低于预算的一次性机器人回复。
 
     默认设置（在设置 `allowBots` 时生效）：
 
@@ -1630,7 +1648,7 @@ openclaw logs --follow
 
 ## 配置参考
 
-主要参考：[Configuration reference - Discord](/gateway/config-channels#discord)。
+主要参考：[配置参考 - Discord](/gateway/config-channels#discord)。
 
 <Accordion title="高信号 Discord 字段">
 
@@ -1654,25 +1672,25 @@ openclaw logs --follow
 
 - 将 bot token 视为密钥（在受监管环境中优先使用 `DISCORD_BOT_TOKEN`）。
 - 授予最小权限的 Discord 权限。
-- 如果命令部署/状态已过期，重启 gateway，并使用 `openclaw channels status --probe` 重新检查。
+- 如果命令部署/状态已过期，重启网关，并使用 `openclaw channels status --probe` 重新检查。
 
 ## 相关内容
 
 <CardGroup cols={2}>
   <Card title="配对" icon="link" href="/channels/pairing">
-    将 Discord 用户与 gateway 配对。
+    将 Discord 用户与网关配对。
   </Card>
   <Card title="分组" icon="users" href="/channels/groups">
-    群聊和允许列表行为。
+    群聊和允许名单行为。
   </Card>
   <Card title="频道路由" icon="route" href="/channels/channel-routing">
-    将传入消息路由给 agents。
+    将传入消息路由给智能体。
   </Card>
   <Card title="安全" icon="shield" href="/gateway/security">
     威胁模型与加固。
   </Card>
-  <Card title="多 agent 路由" icon="sitemap" href="/concepts/multi-agent">
-    将 guilds 和 channels 映射到 agents。
+  <Card title="多智能体路由" icon="sitemap" href="/concepts/multi-agent">
+    将服务器和频道映射到智能体。
   </Card>
   <Card title="斜杠命令" icon="terminal" href="/tools/slash-commands">
     原生命令行为。

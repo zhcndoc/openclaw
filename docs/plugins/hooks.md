@@ -116,7 +116,7 @@ export default definePluginEntry({
 
 **Sessions 与压缩**
 
-- `session_start` / `session_end` - 跟踪 session 生命周期边界。该事件的 `reason` 取值为 `new`、`reset`、`idle`、`daily`、`compaction`、`deleted`、`shutdown`、`restart` 或 `unknown` 之一。`shutdown` 和 `restart` 的值会在 session 仍处于活动状态时进程停止或重启，由 Gateway shutdown finalizer 触发，因此下游插件（例如内存或转录存储）可以完成原本会在重启期间以打开状态遗留的 ghost 行。该 finalizer 受到边界限制，因此缓慢的插件不会阻塞 SIGTERM/SIGINT。
+- `session_start` / `session_end` - 跟踪 session 生命周期边界。该事件的 `reason` 取值为 `new`、`reset`、`idle`、`daily`、`compaction`、`deleted`、`shutdown`、`restart` 或 `unknown` 之一。`shutdown` 和 `restart` 的值会在 session 仍处于活动状态时进程停止或重启，由 Gateway shutdown finalizer 触发，因此下游插件（例如内存或转录存储）可以完成原本会在重启期间以打开状态遗留的幽灵行。该 finalizer 受到边界限制，因此缓慢的插件不会阻塞 SIGTERM/SIGINT。
 - `before_compaction` / `after_compaction` - 观察或标注压缩周期
 - `before_reset` - 观察 session 重置事件（`/reset`、程序化重置）
 
@@ -126,9 +126,10 @@ export default definePluginEntry({
 
 **生命周期**
 
-- `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件拥有的服务
-- `cron_changed` - 观察 Gateway 拥有的 cron 生命周期变更（添加、更新、移除、启动、完成、已调度）
-- **`before_install`** - 检查 skill 或插件安装扫描并可选择阻止
+- `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件自有服务
+- `deactivate` - `gateway_stop` 的已弃用兼容别名；新插件请使用 `gateway_stop`
+- `cron_changed` - 观察由 Gateway 管理的 cron 生命周期变更（已添加、已更新、已移除、已启动、已完成、已调度）
+- **`before_install`** - 检查 skill 或插件安装扫描，并可选择阻止
 
 ## 调试运行时钩子
 
@@ -172,11 +173,11 @@ type BeforeToolCallResult = {
 };
 ```
 
-Typed 生命周期钩子的守卫行为：
+类型化生命周期钩子的守卫行为：
 
 - `block: true` 是终止性的，会跳过低优先级处理器。
 - `block: false` 视为没有决策。
-- `params` 会为执行重写工具参数。
+- `params` 会用于执行时重写工具参数。
 - `requireApproval` 会暂停 agent 运行，并通过插件批准向用户请求。
   `/approve` 命令可以批准 exec 和插件批准。
 - 较低优先级的 `block: true` 仍然可以在较高优先级钩子请求批准后阻止执行。
@@ -185,9 +186,9 @@ Typed 生命周期钩子的守卫行为：
 
 需要主机级策略的捆绑插件可以用 `api.registerTrustedToolPolicy(...)` 注册受信任的 tool 策略。这些会在普通 `before_tool_call` 钩子和外部插件决策之前运行。仅将其用于主机信任的门禁，例如工作区策略、预算执行或保留工作流安全。外部插件应使用常规的 `before_tool_call` 钩子。
 
-### Tool 结果持久化
+### 工具结果持久化
 
-Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有元数据的结构化 `details`。请将 `details` 视为运行时元数据，而不是提示词内容：
+工具结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有元数据的结构化 `details`。请将 `details` 视为运行时元数据，而不是提示词内容：
 
 - OpenClaw 会在 provider 回放和压缩输入之前去除 `toolResult.details`，因此元数据不会变成模型上下文。
 - 持久化的 session 条目只保留有边界限制的 `details`。过大的 details 会被替换为紧凑摘要，并标记 `persistedDetailsTruncated: true`。
@@ -212,7 +213,7 @@ Tool 结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有�
 
 对于源自通道的运行，`ctx.messageProvider` 是诸如 `discord` 或 `telegram` 的提供方表面，而 `ctx.channelId` 是当 OpenClaw 能从 session key 或投递元数据推导出时的会话目标标识符。
 
-`agent_end` 是一个观察型钩子，并在回合结束后以 fire-and-forget 方式运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续执行；除非插件也使用自己的 abort signal，否则它不会取消插件拥有的网络工作。
+`agent_end` 是一个观察型钩子，并在回合结束后以即发即弃的方式运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续执行；除非插件也使用自己的 abort signal，否则它不会取消插件拥有的网络工作。
 
 使用 `model_call_started` 和 `model_call_ended` 来记录 provider 调用遥测，这些遥测不应接收原始提示词、历史、响应、标题、请求体或 provider 请求 id。这些钩子包含稳定的元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 id 哈希时提供的 `upstreamRequestIdHash`。当运行时已解析 context-window 元数据时，钩子事件和上下文还会包含 `contextTokenBudget`，即在模型/配置/agent 上限之后的有效 token 预算；如果应用了更低的上限，还会包含 `contextWindowSource` 和 `contextWindowReferenceTokens`。
 
@@ -315,25 +316,28 @@ type BeforeAgentFinalizeRetry = {
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道封装**。请读取
-  `BodyForAgent` 和结构化的用户上下文块，而不要解析扁平的封装文本。参见
-  [纯文本通道封装 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
-- **`before_agent_start`** 仍保留以兼容旧版。新插件应使用 `before_model_resolve`
-  和 `before_prompt_build`，而不是这个合并阶段。
-- **`before_tool_call` 中的 `onResolution`** 现在使用类型化的
+- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道信封**。请读取
+  `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见
+  [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
+- **`before_agent_start`** 仍保留以兼容旧版。新插件应使用
+  `before_model_resolve` 和 `before_prompt_build`，而不是这个合并
+  阶段。
+- **`deactivate`** 将作为已弃用的清理兼容别名保留，直到
+  2026-08-16 之后。新插件应使用 `gateway_stop`。
+- **`before_tool_call` 中的 `onResolution`** 现在使用带类型的
   `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
   `timeout` / `cancelled`），而不是自由形式的 `string`。
 
-有关完整列表——内存能力注册、provider thinking
-配置文件、外部认证提供方、provider 发现类型、任务运行时
+有关完整列表——内存能力注册、提供方思维
+配置文件、外部认证提供方、提供方发现类型、任务运行时
 访问器，以及 `command-auth` → `command-status` 重命名——请参见
-[Plugin SDK migration → Active deprecations](/plugins/sdk-migration#active-deprecations)。
+[插件 SDK 迁移 → 活跃弃用项](/plugins/sdk-migration#active-deprecations)。
 
 ## 相关内容
 
-- [Plugin SDK migration](/plugins/sdk-migration) - 活跃弃用项和移除时间线
-- [Building plugins](/plugins/building-plugins)
-- [Plugin SDK overview](/plugins/sdk-overview)
-- [Plugin entry points](/plugins/sdk-entrypoints)
-- [Internal hooks](/automation/hooks)
-- [Plugin architecture internals](/plugins/architecture-internals)
+- [插件 SDK 迁移](/plugins/sdk-migration) - 活跃弃用项和移除时间线
+- [构建插件](/plugins/building-plugins)
+- [插件 SDK 概览](/plugins/sdk-overview)
+- [插件入口点](/plugins/sdk-entrypoints)
+- [内部钩子](/automation/hooks)
+- [插件架构内部](/plugins/architecture-internals)

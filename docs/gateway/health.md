@@ -26,11 +26,11 @@ title: "健康检查"
 
 ## 深度诊断
 
-- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应该是最近的）。
-- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json`（路径可在配置中覆盖）。会话数量和最近接收者会通过 `status` 展示。
-- 重新关联流程：当日志中出现状态码 409–515 或 `loggedOut` 时，运行 `openclaw channels logout && openclaw channels login --verbose`。（注意：QR 登录流程在配对后，针对状态 515 会自动重启一次。）
-- 诊断默认已启用。除非设置 `diagnostics.enabled: false`，否则网关会记录运行事实。内存事件会记录 RSS/堆字节数、阈值压力和增长压力。存活性警告会在进程运行但已饱和时记录事件循环延迟、事件循环利用率、CPU 核心比率，以及活动/等待/排队中的会话数量。超大负载事件会记录被拒绝、被截断或被分块的内容，以及可用时的大小和限制。它们不会记录消息文本、附件内容、webhook 正文、原始请求或响应正文、令牌、cookie 或密钥值。相同的心跳还会启动有界稳定性记录器，可通过 `openclaw gateway stability` 或 `diagnostics.stability` Gateway RPC 使用。当存在事件时，致命的 Gateway 退出、关闭超时以及重启启动失败会将最新的记录器快照持久化到 `~/.openclaw/logs/stability/`；可使用 `openclaw gateway stability --bundle latest` 检查最新保存的 bundle。
-- 如需提交 bug 报告，请运行 `openclaw gateway diagnostics export` 并附上生成的 zip。导出内容包括 Markdown 摘要、最新的稳定性 bundle、已脱敏的日志元数据、已脱敏的 Gateway 状态/健康快照以及配置结构。其设计目的就是便于分享：聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符和密钥值都会被省略或打码。参见 [Diagnostics Export](/gateway/diagnostics)。
+- 磁盘上的凭据：`ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（mtime 应当是最近的）。
+- 会话存储：`ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json`（路径可在配置中覆盖）。计数和最近的收件人会通过 `status` 展示。
+- 重新关联流程：当日志中出现状态码 409–515 或 `loggedOut` 时，执行 `openclaw channels logout && openclaw channels login --verbose`。（注意：在配对后，二维码登录流程会针对状态 515 自动重启一次。）
+- 诊断默认启用。除非设置 `diagnostics.enabled: false`，否则网关会记录运行事实。内存事件会记录 RSS/heap 字节数、阈值压力和增长压力。关键内存压力会通过网关日志记录器输出。若设置了 `diagnostics.memoryPressureSnapshot: true`，关键内存压力还会写出一个预 OOM 稳定性包，其中包含 V8 heap 统计信息、可用时的 Linux cgroup 计数器、活动资源计数，以及按脱敏相对路径排序的最大会话/转录文件。存活性警告在进程仍在运行但已饱和时，会记录事件循环延迟、事件循环利用率、CPU 核心比率，以及活动/等待/排队中的会话数。超大负载事件会记录被拒绝、被截断或被分块的内容，以及可用时的大小和限制。它们不会记录消息文本、附件内容、webhook 正文、原始请求或响应正文、令牌、cookie 或密钥值。同一个 heartbeat 会启动有界稳定性记录器，该记录器可通过 `openclaw gateway stability` 或 `diagnostics.stability` Gateway RPC 获取。发生致命的 Gateway 退出、关停超时和重启启动失败时，只要存在事件，就会把最新的记录器快照持久化到 `~/.openclaw/logs/stability/`；只有在设置了 `diagnostics.memoryPressureSnapshot: true` 时，关键内存压力才会这样做。使用 `openclaw gateway stability --bundle latest` 检查最新保存的包。
+- 对于 bug 报告，请运行 `openclaw gateway diagnostics export` 并附上生成的 zip。导出内容包含 Markdown 摘要、最新的稳定性包、已脱敏的日志元数据、已脱敏的 Gateway 状态/健康快照以及配置结构。它的设计是可共享的：聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符以及密钥值都会被省略或脱敏。参见 [Diagnostics Export](/gateway/diagnostics)。
 
 ## 健康监控配置
 

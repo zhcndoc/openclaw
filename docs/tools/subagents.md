@@ -90,10 +90,12 @@ sidebarTitle: "子代理"
     发给请求者会话的完成交接是运行时生成的
     内部上下文（不是用户编写的文本），并包含：
 
-    - `Result` — 最新可见的 `assistant` 回复文本；否则为经过清理的最新 tool/toolResult 文本。终态失败的运行不会复用捕获到的回复文本。
-    - `Status` — `completed successfully` / `failed` / `timed out` / `unknown`。
-    - 紧凑的运行/令牌统计信息。
-    - 一条投递指令，要求请求者代理以正常助手语气重写内容（不要转发原始内部元数据）。
+    - `Result` — 最新可见的 `assistant` 回复文本，否则为经过清理的最新工具/工具结果文本。终端失败运行不会重用捕获到的回复文本。
+    - `Status` — `completed; ready for parent review` / `failed` / `timed out` / `unknown`。
+    - 紧凑的运行时/令牌统计信息。
+    - 一条审核指令，要求请求者代理在决定原始任务是否完成之前验证结果。
+    - 一条后续指导，告诉请求者代理在子结果留下更多待办时继续任务或记录后续事项。
+    - 一条用于无更多后续动作路径的最终更新指令，使用正常的助手语气撰写，不转发原始内部元数据。
 
   </Accordion>
   <Accordion title="模式和 ACP 运行时">
@@ -361,11 +363,11 @@ persistent thread-bound subagent sessions (`sessions_spawn` with
   agents: {
     defaults: {
       subagents: {
-        maxSpawnDepth: 2, // 允许子代理启动子级（默认：1）
-        maxChildrenPerAgent: 5, // 每个代理会话的最大活动子级数（默认：5）
-        maxConcurrent: 8, // 全局并发通道上限（默认：8）
-        runTimeoutSeconds: 900, // sessions_spawn 的默认超时（省略时生效，0 = 无超时）
-        announceTimeoutMs: 120000, // 每次调用的网关 announce 超时
+        maxSpawnDepth: 2, // Allow subagents to spawn children (default: 1)
+        maxChildrenPerAgent: 5, // Max active children per agent session (default: 5)
+        maxConcurrent: 8, // Global concurrency channel cap (default: 8)
+        runTimeoutSeconds: 900, // Default timeout for sessions_spawn (applies when omitted, 0 = no timeout)
+        announceTimeoutMs: 120000, // Gateway announce timeout for each call
       },
     },
   },

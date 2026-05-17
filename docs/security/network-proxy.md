@@ -36,16 +36,13 @@ OpenClaw 进程
 
 对外公开的契约是路由行为，而不是用于实现它的内部 Node 钩子。OpenClaw Gateway 控制平面 WebSocket 客户端在 Gateway URL 使用 `localhost` 或字面量回环 IP（例如 `127.0.0.1` 或 `[::1]`）时，会对本地回环 Gateway RPC 流量使用一条窄范围的直连路径。即使运维代理阻止回环目标，这条控制平面路径也必须能够访问回环 Gateway。正常的运行时 HTTP 和 WebSocket 请求仍然使用已配置的代理。
 
-内部上，OpenClaw 为此功能使用两种进程级路由钩子：
-
-- Undici dispatcher 路由覆盖 `fetch`、基于 undici 的客户端，以及提供自身 undici dispatcher 的传输。
-- `global-agent` 路由覆盖 Node 核心的 `node:http` 和 `node:https` 调用者，包括许多构建于 `http.request`、`https.request`、`http.get` 和 `https.get` 之上的库。受管代理模式会强制使用该全局代理，从而避免显式的 Node HTTP agent 误绕过运维代理。
+内部上，OpenClaw 会为此功能安装 Proxyline 作为进程级路由运行时。Proxyline 覆盖 `fetch`、基于 undici 的客户端、Node 核心 `node:http` / `node:https` 调用方、常见 WebSocket 客户端以及辅助创建的 CONNECT 隧道。受管代理模式会替换调用方提供的 Node HTTP agent，因此显式 agent 不会意外绕过运维代理。
 
 一些插件拥有自定义传输，即使存在进程级路由，也需要显式的代理接线。例如，Telegram 的 Bot API 传输使用其自身的 HTTP/1 undici dispatcher，因此会在该插件专用的传输路径中遵循进程代理环境以及受管的 `OPENCLAW_PROXY_URL` 回退。
 
 代理 URL 本身必须使用 `http://`。通过代理访问 HTTPS 目标时，仍然会通过 HTTP `CONNECT` 得到支持；这仅意味着 OpenClaw 期望的是一个普通的 HTTP 正向代理监听器，例如 `http://127.0.0.1:3128`。
 
-在代理生效期间，OpenClaw 会清除 `no_proxy`、`NO_PROXY` 和 `GLOBAL_AGENT_NO_PROXY`。这些绕过列表是基于目标的，因此如果保留 `localhost` 或 `127.0.0.1`，高风险 SSRF 目标就可能绕过过滤代理。
+在代理处于活动状态时，OpenClaw 会清除 `no_proxy` 和 `NO_PROXY`。这些绕过列表是基于目标的，因此如果将 `localhost` 或 `127.0.0.1` 保留在那里，就会让高风险的 SSRF 目标跳过过滤代理。
 
 关闭时，OpenClaw 会恢复之前的代理环境，并重置缓存的进程路由状态。
 
@@ -84,9 +81,9 @@ proxy:
   loopbackMode: gateway-only # gateway-only, proxy, or block
 ```
 
-- `gateway-only`（默认）：OpenClaw 会在活动的 `global-agent` `NO_PROXY` 控制器中注册 Gateway 回环权限，从而使本地 Gateway WebSocket 流量可以直接连接。自定义回环 Gateway 端口可以正常工作，因为当前活动 Gateway URL 的主机和端口会被注册。
-- `proxy`：OpenClaw 不会注册 Gateway 回环 `NO_PROXY` 权限，因此本地 Gateway 流量会通过受管代理发送。如果代理是远程的，它必须为 OpenClaw 主机的回环服务提供特殊路由，例如将其映射为代理可达的主机名、IP 或隧道。标准远程代理会从代理主机而不是从 OpenClaw 主机解析 `127.0.0.1` 和 `localhost`。
-- `block`：OpenClaw 会在打开套接字之前拒绝回环 Gateway 控制平面连接。
+- `gateway-only` (默认)：OpenClaw 会在 Proxyline 的受管绕过策略中注册 Gateway 回环 authority，因此本地 Gateway WebSocket 流量可以直接连接。自定义回环 Gateway 端口之所以可用，是因为当前 Gateway URL 的 host 和 port 已被注册。
+- `proxy`：OpenClaw 不会注册 Gateway 回环绕过，因此本地 Gateway 流量会通过受管代理发送。如果代理是远程代理，它必须为 OpenClaw 主机的回环服务提供特殊路由，例如将其映射到代理可达的主机名、IP 或隧道。标准远程代理会从代理主机而不是 OpenClaw 主机解析 `127.0.0.1` 和 `localhost`。
+- `block`：OpenClaw 会在打开 socket 之前拒绝回环 Gateway 控制平面连接。
 
 如果 `enabled=true` 但未配置有效的代理 URL，受保护的命令会在启动时失败，而不是回退到直接网络访问。
 
@@ -211,15 +208,15 @@ proxy:
 
 ## 限制
 
-- 代理提高了进程内 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是操作系统级别的网络沙箱。
-- 网关回环控制平面流量默认通过 `proxy.loopbackMode: "gateway-only"` 直接本地绕过。OpenClaw 通过在受管的 `global-agent` `NO_PROXY` 控制器中注册当前活动的 Gateway 回环权限来实现该绕过。运维人员可以设置 `proxy.loopbackMode: "proxy"` 让 Gateway 回环流量通过受管代理，或设置 `proxy.loopbackMode: "block"` 来拒绝回环 Gateway 连接。有关远程代理的注意事项，请参见 [Gateway Loopback Mode](#gateway-loopback-mode)。
-- 原始的 `net`、`tls` 和 `http2` 套接字、原生 addon，以及非 OpenClaw 的子进程，可能会绕过 Node 级别的代理路由，除非它们继承并遵守代理环境变量。fork 出来的 OpenClaw 子 CLI 会继承受管的代理 URL 和 `proxy.loopbackMode` 状态。
-- IRC 是一个位于运维人员管理的转发代理路由之外的原始 TCP/TLS 通道。在要求所有出站流量都必须经过该转发代理的部署中，除非明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
-- 本地调试代理是诊断工具；在受管代理模式处于活动状态时，其对代理请求和 CONNECT 隧道的直接上游转发默认被禁用；仅在获得批准的本地诊断场景下启用直接转发。
-- 如有需要，应在运维人员的代理策略中允许列出用户本地 WebUI 和本地模型服务器；OpenClaw 不为它们提供通用的本地网络绕过。
-- Gateway 控制平面的代理绕过有意仅限于 `localhost` 和字面量回环 IP URL。对于本地直接的 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通的基于主机名的流量一样路由。
+- 该代理提升了进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是 OS 级别的网络沙箱。
+- Gateway 回环控制平面流量默认通过 `proxy.loopbackMode: "gateway-only"` 直接本地绕过。OpenClaw 通过在 Proxyline 的受管绕过策略中注册活动的 Gateway 回环 authority 来实现该绕过。运维人员可以将 `proxy.loopbackMode: "proxy"` 设为让 Gateway 回环流量通过受管代理，或将 `proxy.loopbackMode: "block"` 设为拒绝回环 Gateway 连接。远程代理的注意事项请参见 [Gateway 回环模式](#gateway-loopback-mode)。
+- 原始 `net`、`tls` 和 `http2` socket、原生插件以及非 OpenClaw 子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。fork 出来的 OpenClaw 子 CLI 会继承受管代理 URL 和 `proxy.loopbackMode` 状态。
+- IRC 是位于运维管理的正向代理路由之外的原始 TCP/TLS 通道。在要求所有出站都通过该正向代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
+- 本地调试代理是诊断工具；在受管代理模式处于活动状态时，其对代理请求和 CONNECT 隧道的直接上游转发默认处于禁用状态；仅为已批准的本地诊断启用直接转发。
+- 在需要时，应将用户本地 WebUI 和本地模型服务器加入运维代理策略的允许列表；OpenClaw 不为它们提供通用的本地网络绕过。
+- Gateway 控制平面的代理绕过有意仅限于 `localhost` 和字面量回环 IP URL。对于本地直接 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通基于主机名的流量一样路由。
 - OpenClaw 不会检查、测试或认证你的代理策略。
-- 请将代理策略变更视为安全敏感的运维变更。
+- 将代理策略变更视为安全敏感的运维变更。
 
 | Surface                                                      | Managed proxy status                                                                               |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |

@@ -93,8 +93,8 @@ openclaw onboard \
 `lmstudio/<custom-model-id>`。当你提供 API 密钥时，设置还会写入
 `lmstudio:default` 身份验证配置文件。
 
-交互式设置可能会提示你输入一个可选的首选加载上下文长度，并将其应用到它保存到配置中的已发现 LM Studio 模型上。
-LM Studio 插件配置会信任已配置的 LM Studio 端点用于模型请求，包括 loopback、LAN 和 tailnet 主机。你可以通过设置 `models.providers.lmstudio.request.allowPrivateNetwork: false` 来选择退出。
+交互式设置可以提示输入一个可选的首选加载上下文长度，并将其应用到发现到的 LM Studio 模型中，随后保存到配置中。
+LM Studio 插件配置会信任已配置的 LM Studio 端点用于模型请求，包括回环、局域网和 tailnet 主机。元数据/链路本地来源仍然需要显式允许。你可以通过设置 `models.providers.lmstudio.request.allowPrivateNetwork: false` 来关闭该行为。
 
 ## 配置
 
@@ -118,7 +118,7 @@ LM Studio 与流式使用量兼容。当它没有发出 OpenAI 形式的
 
 当 LM Studio 的 `/api/v1/models` 发现结果报告特定于模型的推理
 选项时，OpenClaw 会在模型兼容性元数据中暴露匹配的、与 OpenAI 兼容的 `reasoning_effort`
-值。当前 LM Studio 构建版本可能会 الإعلان বাইনারি
+值。当前 LM Studio 构建版本可能会公开二元
 UI 选项，例如 `allowed_options: ["off", "on"]`，同时却会在 `/v1/chat/completions` 上拒绝这些值；在发送请求之前，OpenClaw 会将这种二元发现形状规范化为
 `none`、`minimal`、`low`、`medium`、`high` 和 `xhigh`。
 当加载目录时，包含 `off`/`on` 推理映射的旧版 LM Studio 保存配置也会以相同方式规范化。
@@ -213,7 +213,7 @@ LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加�
 }
 ```
 
-不同于通用的 OpenAI 兼容提供方，`lmstudio` 会自动信任其配置的本地/私有端点，用于受保护的模型请求。像 `localhost` 或 `127.0.0.1` 这样的自定义 loopback 提供方 ID 也会自动被信任；对于 LAN、tailnet 或私有 DNS 的自定义提供方 ID，请显式设置 `models.providers.<id>.request.allowPrivateNetwork: true`。
+`lmstudio` 会自动信任其配置的本地/私有端点，用于受保护的模型请求。自定义/本地 OpenAI 兼容提供方条目也会信任其精确配置的 `baseUrl` 源，元数据/链路本地来源除外；对不同的私有端口或目标的请求仍然需要 `models.providers.<id>.request.allowPrivateNetwork: true`。设置 `models.providers.<id>.request.allowPrivateNetwork: false` 可关闭这种精确来源信任。
 
 ## 相关内容
 

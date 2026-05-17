@@ -173,26 +173,27 @@ OpenClaw 可以暴露或隐藏模型推理：
 会剥离静默文本，但仍会投递媒体附件。
 OpenClaw 会按对话类型解析该行为：
 
-- 直接对话默认不允许静默，并会将裸静默
-  回复重写为简短的可见兜底文本。
-- 群组/频道默认允许静默。
+- 直接对话从不接收 `NO_REPLY` 提示引导。如果一次直接
+  运行意外返回一个裸静默令牌，OpenClaw 会直接抑制它，而不是重写或投递它。
+- 群组/频道默认仅允许自动群组回复静默。
+  在 `message_tool` 可见回复模式中，静默表示模型不会调用
+  `message(action=send)`。
 - 内部编排默认允许静默。
 
 OpenClaw 还会在非直接聊天中，针对任何助理回复之前发生的内部运行器故障使用静默回复，因此群组/频道不会看到
 网关错误样板。直接聊天默认显示简洁的失败文案；
 仅当 `/verbose` 为 `on` 或 `full` 时才显示原始运行器细节。
 
-默认值位于 `agents.defaults.silentReply` 和
-`agents.defaults.silentReplyRewrite`；`surfaces.<id>.silentReply` 和
-`surfaces.<id>.silentReplyRewrite` 可按 surface 进行覆盖。
+默认值位于 `agents.defaults.silentReply` 下；`surfaces.<id>.silentReply`
+可以按 surface 覆盖群组/内部策略。
 
-当父会话存在一个或多个待处理的已生成子代理运行时，所有 surface 上的裸
-静默回复都会被丢弃，而不是被重写，因此父会话会保持安静，直到子完成事件发送真实回复。
+所有 surface 上都会丢弃裸静默回复，因此父会话会保持安静，
+而不是把哨兵文本重写成回退闲聊。
 
 ## 相关内容
 
-- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) - 目标是持久化的发送和接收设计
-- [Streaming](/concepts/streaming) — 实时消息传递
-- [Retry](/concepts/retry) — 消息投递重试行为
-- [Queue](/concepts/queue) — 消息处理队列
-- [Channels](/channels) — 消息平台集成
+- [消息生命周期重构](/concepts/message-lifecycle-refactor) - 目标是持久化的发送和接收设计
+- [流式](/concepts/streaming) — 实时消息传递
+- [重试](/concepts/retry) — 消息投递重试行为
+- [队列](/concepts/queue) — 消息处理队列
+- [频道](/channels) — 消息平台集成

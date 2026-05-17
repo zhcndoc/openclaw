@@ -10,7 +10,7 @@ sidebarTitle: "音乐生成"
 
 `music_generate` 工具允许 agent 通过已配置的提供方使用共享的音乐生成能力来创建音乐或音频——当前支持 Google、MiniMax，以及通过工作流配置的 ComfyUI。
 
-对于有会话支持的 agent 运行，OpenClaw 会将音乐生成作为后台任务启动，在任务账本中跟踪它，然后在音轨就绪时再次唤醒 agent，以便 agent 告知用户并附加已完成的音频。在使用仅 message-tool 可见传递的群组/频道聊天中，agent 会通过 message tool 中继结果。如果完成 agent 只写入一条私有的最终回复，OpenClaw 会回退为直接渠道发送已生成的媒体。完成唤醒会明确警告 agent，在这些路径中普通最终回复是私有的。
+对于有会话支持的 agent 运行，OpenClaw 会将音乐生成作为后台任务启动，将其跟踪到任务账本中，然后在音轨就绪时再次唤醒 agent，以便 agent 告知用户并附加完成的音频。生成的媒体完成结果会由 agent 通过 message 工具传递；如果完成 agent 仅写入私有的最终回复，OpenClaw 不会在回退情况下自动发布文件。完成唤醒会明确提醒 agent：对于此路由，正常的最终回复是私有的。
 
 <Note>
 内置的共享工具只有在至少有一个音乐生成提供方可用时才会出现。如果你在 agent 的工具中看不到 `music_generate`，请配置 `agents.defaults.musicGenerationModel` 或设置提供方 API 密钥。
@@ -141,11 +141,14 @@ sidebarTitle: "音乐生成"
   当提供方支持时的输出格式提示。
 </ParamField>
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
-<ParamField path="timeoutMs" type="number">可选的提供方请求超时时间，单位为毫秒。若省略，OpenClaw 会在已配置时使用 `agents.defaults.musicGenerationModel.timeoutMs`。低于 10000ms 的值会被提升为 10000ms，并在工具结果中报告。</ParamField>
 
 <Note>
 并非所有提供方都支持所有参数。OpenClaw 仍会在提交前验证诸如输入数量之类的硬性限制。当某个提供方支持时长但其最大值小于请求值时，OpenClaw 会将其夹取到最接近的受支持时长。真正不受支持的可选提示会在所选提供方或模型无法满足时被忽略，并给出警告。工具结果会报告已应用的设置；`details.normalization` 会记录任何从请求值到应用值的映射。
 </Note>
+
+提供方请求超时时间仅由运维配置决定。OpenClaw 在配置了
+`agents.defaults.musicGenerationModel.timeoutMs` 时使用该值，将低于 120000ms 的值提升到 120000ms，否则默认将提供方请求超时设为
+300000ms。
 
 ## 异步行为
 
@@ -277,9 +280,7 @@ OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.liv
 pnpm test:live:media music
 ```
 
-This live file uses already-exported provider env vars ahead of stored auth
-profiles by default, and runs both `generate` and declared `edit` coverage when
-the provider enables edit mode. Coverage today:
+此实时文件默认优先使用已导出的 provider 环境变量，而不是存储的认证配置，并且在 provider 启用 edit 模式时会同时运行 `generate` 和已声明的 `edit` 覆盖。当前覆盖情况：
 
 - `google`：`generate` 加上 `edit`
 - `minimax`：仅 `generate`

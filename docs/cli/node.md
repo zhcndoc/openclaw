@@ -72,9 +72,14 @@ openclaw node run --host <gateway-host> --port 18789
 - 在 `gateway.mode=remote` 中，远程客户端字段（`gateway.remote.token` / `gateway.remote.password`）也会根据远程优先级规则具备资格。
 - 节点主机认证解析仅接受 `OPENCLAW_GATEWAY_*` 环境变量。
 
-对于连接到受信任私有网络上非回环 `ws://` Gateway 的节点，设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。没有它的话，节点启动会失败并要求你使用 `wss://`、SSH 隧道或 Tailscale。
-这是一个进程环境级别的显式启用，不是 `openclaw.json` 配置键。
-当 `openclaw node install` 的安装命令环境中存在它时，它会被持久化到受监督的节点服务中。
+对于连接到明文 `ws://` Gateway 的节点，允许使用回环地址、私有 IP
+字面量、`.local` 以及 Tailnet 的 `*.ts.net` 主机。对于其他
+受信任的私有 DNS 名称，请设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`；如果
+不设置，节点启动将以失败关闭的方式退出，并提示你使用 `wss://`、SSH 隧道或
+Tailscale。这是一个进程环境的显式启用选项，不是 `openclaw.json` 配置
+键。
+当 `openclaw node install` 命令环境中存在该变量时，
+它会将其持久化到受监督的节点服务中。
 
 ## 服务（后台）
 

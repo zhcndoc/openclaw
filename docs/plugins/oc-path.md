@@ -12,27 +12,27 @@ title: "OC Path 插件"
 `extensions/oc-path/` 下，但默认是可选启用的——安装/构建后它会保持
 未激活状态，直到你启用它为止。
 
-`oc://` 地址指向工作区文件中的单个叶子节点（或一组通配符叶子节点）。
-目前插件理解三种文件类型：
+`oc://` 地址指向工作区文件中的单个叶子节点（或一组通配叶子节点）。该插件目前理解四种文件类型：
 
-- **markdown** (`.md`, `.mdx`)：frontmatter、sections、items、fields
-- **jsonc** (`.jsonc`, `.json5`, `.json`)：保留注释和格式
-- **jsonl** (`.jsonl`, `.ndjson`)：按行组织的记录
+- **markdown** (`.md`, `.mdx`): frontmatter、sections、items、fields
+- **jsonc** (`.jsonc`, `.json5`, `.json`): 保留注释和格式
+- **jsonl** (`.jsonl`, `.ndjson`): 按行组织的记录
+- **yaml** (`.yaml`, `.yml`, `.lobster`): 通过 YAML 文档 API 处理 map/sequence/scalar 节点
 
 自托管用户和编辑器扩展使用该 CLI 来读取或写入单个叶子节点，而无需直接针对 SDK 编写脚本；代理和 hooks 将其视为确定性的底层基础，因此字节级一致的往返以及重写哨兵保护会一致地应用于各种类型。
 
 ## 为什么启用它
 
-当你希望脚本、hooks 或本地代理工具能够指向工作区状态中的某个精确位置，而无需为每种文件结构分别编写解析器时，就应启用 `oc-path`。一个 `oc://` 地址可以表示 markdown 的 frontmatter 键、某个 section item、一个 JSONC 配置叶子节点，或一个 JSONL 事件字段。
+当你希望脚本、hooks 或本地代理工具无需为每种文件形状分别发明解析器，就能精确指向工作区状态中的某个片段时，请启用 `oc-path`。一个 `oc://` 地址可以指向 markdown frontmatter 键、section 条目、JSONC 配置叶子、JSONL 事件字段，或 YAML 工作流步骤。
 
 这对维护者工作流很重要，因为变更应该尽量小、可审计、可重复：检查一个值，查找匹配记录，预演一次写入，然后只应用该叶子节点，同时保留注释、行尾和附近格式不变。将其作为可选插件，可以为高级用户提供寻址底层能力，而不会把解析器依赖或 CLI 表面暴露带入那些从不需要它的核心安装中。
 
 启用它的常见原因：
 
-- **本地自动化**：shell 脚本可以用 `openclaw path … --json` 解析或更新一个工作区值，而不必分别维护 markdown、JSONC 和 JSONL 的解析代码。
-- **代理可见编辑**：代理可以在写入前展示某个已寻址叶子节点的预演 diff，这比自由形式的文件重写更容易审查。
+- **本地自动化**：shell 脚本可以使用 `openclaw path … --json` 解析或更新一个工作区值，而无需分别编写 markdown、JSONC、JSONL 和 YAML 的解析代码。
+- **代理可见的编辑**：代理可以在写入前为一个被寻址的叶子节点展示 dry-run diff，这比自由格式的文件重写更容易审查。
 - **编辑器集成**：编辑器可以将 `oc://AGENTS.md/tools/gh` 映射到精确的 markdown 节点和行号，而无需根据标题文本猜测。
-- **诊断**：`emit` 会通过解析器和发射器对文件进行往返处理，因此你可以在依赖自动化编辑之前检查某种文件类型是否字节稳定。
+- **诊断**：`emit` 会通过解析器和生成器对文件进行往返，因此你可以在依赖自动化编辑之前检查某种文件类型是否具备字节稳定性。
 
 具体示例：
 
@@ -88,11 +88,12 @@ openclaw plugins disable oc-path
 
 所有解析器依赖都是插件本地的——启用 `oc-path` 不会向核心运行时引入新包：
 
-| 依赖           | 用途                                                             |
-| -------------- | ------------------------------------------------------------------- |
-| `commander`    | 为 `resolve`、`find`、`set`、`validate`、`emit` 提供子命令 wiring。 |
-| `jsonc-parser` | JSONC 解析 + 带注释和尾逗号保留的叶子编辑。                          |
-| `markdown-it`  | 用于 section / item / field 模型的 Markdown tokenization。        |
+| 依赖项         | 用途                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| `commander`    | 为 `resolve`、`find`、`set`、`validate`、`emit` 进行子命令绑定。       |
+| `jsonc-parser` | JSONC 解析 + 叶子节点编辑，并保留注释和尾随逗号。                       |
+| `markdown-it`  | 用于 section / item / field 模型的 Markdown 标记化。                   |
+| `yaml`         | 使用 YAML `Document` 进行 parse / emit / edit，并保留注释和 flow 样式。 |
 
 JSONL 仍然是手写实现——按行解析比任何依赖都更简单，而且逐行的 JSONC 解析本来就会通过 `jsonc-parser`。
 
@@ -102,7 +103,7 @@ JSONL 仍然是手写实现——按行解析比任何依赖都更简单，而�
 | ------------------------------ | ------------------------------------------------------- |
 | `openclaw path` CLI            | `extensions/oc-path/cli-registration.ts`                |
 | `oc://` parser / formatter     | `extensions/oc-path/src/oc-path/oc-path.ts`             |
-| 按类型 parse / emit / edit     | `extensions/oc-path/src/oc-path/{md,jsonc,jsonl}`       |
+| 按类型的 parse / emit / edit   | `extensions/oc-path/src/oc-path/{md,jsonc,jsonl,yaml}`  |
 | 通用 resolve / find / set      | `extensions/oc-path/src/oc-path/{resolve,find,edit}.ts` |
 | 重写哨兵保护                   | `extensions/oc-path/src/oc-path/sentinel.ts`            |
 

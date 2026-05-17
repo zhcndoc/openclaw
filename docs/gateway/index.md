@@ -70,13 +70,14 @@ Gateway 配置重载会监视当前活动配置文件路径（从 profile/state 
 
 ## 运行模型
 
-- 一个始终在线的进程，负责路由、控制平面和通道连接。
-- 单一多路复用端口，用于：
+- 仅有一个始终在线的进程，负责路由、控制平面和通道连接。
+- 单一复用端口用于：
   - WebSocket 控制/RPC
-  - HTTP API，兼容 OpenAI（`/v1/models`、`/v1/embeddings`、`/v1/chat/completions`、`/v1/responses`、`/tools/invoke`）
-  - 控制 UI 和 hooks
+  - HTTP API（`/v1/models`、`/v1/embeddings`、`/v1/chat/completions`、`/v1/responses`、`/tools/invoke`）
+  - 插件 HTTP 路由，例如可选的 `/api/v1/admin/rpc`
+  - 控制界面和钩子
 - 默认绑定模式：`loopback`。
-- 默认需要认证。共享密钥方案使用
+- 默认要求认证。共享密钥方案使用
   `gateway.auth.token` / `gateway.auth.password`（或
   `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`），而非 loopback 的
   反向代理方案可以使用 `gateway.auth.mode: "trusted-proxy"`。
@@ -105,6 +106,8 @@ OpenClaw 最高价值的兼容性接口现在是：
 
 所有这些端点都运行在主 Gateway 端口上，并使用与 Gateway 其余 HTTP API 相同的受信操作员认证边界。
 
+Admin HTTP RPC (`POST /api/v1/admin/rpc`) 是一个独立的、默认关闭的插件路由，供无法使用 WebSocket RPC 的主机工具使用。请参见 [Admin HTTP RPC](/plugins/admin-http-rpc)。
+
 ### 端口和绑定优先级
 
 | 设置         | 解析顺序                                                      |
@@ -114,7 +117,7 @@ OpenClaw 最高价值的兼容性接口现在是：
 
 已安装的 gateway 服务会在 supervisor 元数据中记录解析后的 `--port`。更改 `gateway.port` 后，请运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，以便 launchd/systemd/schtasks 在新端口上启动进程。
 
-Gateway 启动时会使用相同的有效端口和绑定方式来为非 loopback 绑定播种本地 Control UI 来源。例如，`--bind lan --port 3000` 会在运行时验证之前播种 `http://localhost:3000` 和 `http://127.0.0.1:3000`。请显式添加任何远程浏览器来源，例如 HTTPS 代理 URL，到 `gateway.controlUi.allowedOrigins` 中。
+Gateway 启动时会使用相同的有效端口和绑定方式来为非 loopback 绑定播种本地控制界面来源。例如，`--bind lan --port 3000` 会在运行时验证之前播种 `http://localhost:3000` 和 `http://127.0.0.1:3000`。请显式添加任何远程浏览器来源，例如 HTTPS 代理 URL，到 `gateway.controlUi.allowedOrigins` 中。
 
 ### 热重载模式
 
@@ -191,7 +194,7 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 SSH 隧道不会绕过 gateway 认证。对于共享密钥认证，即使通过隧道，客户端仍然必须发送 `token`/`password`。对于带身份的模式，请求仍然必须满足该认证路径。
 </Warning>
 
-参见：[Remote Gateway](/gateway/remote)、[Authentication](/gateway/authentication)、[Tailscale](/gateway/tailscale)。
+参见：[远程 Gateway](/gateway/remote)、[认证](/gateway/authentication)、[Tailscale](/gateway/tailscale)。
 
 ## 监督与服务生命周期
 
@@ -298,21 +301,21 @@ openclaw --dev status
 
 ## 协议快速参考（操作员视图）
 
-- 第一个客户端帧必须是 `connect`。
+- 首个客户端帧必须是 `connect`。
 - Gateway 返回 `hello-ok` 快照（`presence`、`health`、`stateVersion`、`uptimeMs`、限制/策略）。
-- `hello-ok.features.methods` / `events` 是保守的发现列表，不是
-  一个生成的、包含所有可调用 helper 路由的完整转储。
+- `hello-ok.features.methods` / `events` 是保守的发现列表，不是所有可调用辅助路由的生成式转储。
 - 请求：`req(method, params)` → `res(ok/payload|error)`。
 - 常见事件包括 `connect.challenge`、`agent`、`chat`、
-  `session.message`、`session.tool`、`sessions.changed`、`presence`、`tick`、
-  `health`、`heartbeat`、配对/审批生命周期事件，以及 `shutdown`。
+  `session.message`、`session.operation`、`session.tool`、`sessions.changed`、
+  `presence`、`tick`、`health`、`heartbeat`、配对/审批生命周期事件，
+  以及 `shutdown`。
 
 Agent 运行分为两个阶段：
 
 1. 立即返回已接受确认（`status:"accepted"`）
 2. 最终完成响应（`status:"ok"|"error"`），中间会有流式的 `agent` 事件。
 
-查看完整协议文档：[Gateway Protocol](/gateway/protocol)。
+查看完整协议文档：[Gateway 协议](/gateway/protocol)。
 
 ## 运行检查
 
@@ -337,10 +340,10 @@ openclaw health
 
 | 特征                                                     | 可能问题                                                                    |
 | -------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `refusing to bind gateway ... without auth`              | 在非回环地址绑定，但缺少有效的 gateway 认证路径                              |
-| `another gateway instance is already listening` / `EADDRINUSE` | 端口冲突                                                                   |
-| `Gateway start blocked: set gateway.mode=local`          | 配置被设为远程模式，或损坏的配置中缺少本地模式标记                          |
-| `unauthorized` during connect                            | 客户端与 gateway 之间的认证不匹配                                            |
+| `拒绝在没有认证的情况下绑定 gateway ...`                | 在非回环地址绑定，但缺少有效的 gateway 认证路径                              |
+| `另一个 gateway 实例已经在监听` / `EADDRINUSE`          | 端口冲突                                                                   |
+| `Gateway 启动被阻止：请将 gateway.mode 设为 local`      | 配置被设为远程模式，或损坏的配置中缺少本地模式标记                          |
+| 在 connect 期间出现 `unauthorized`                       | 客户端与 gateway 之间的认证不匹配                                            |
 
 如需完整诊断阶梯，请使用 [Gateway Troubleshooting](/gateway/troubleshooting)。
 
@@ -354,16 +357,16 @@ openclaw health
 
 相关：
 
-- [Troubleshooting](/gateway/troubleshooting)
-- [Background Process](/gateway/background-process)
-- [Configuration](/gateway/configuration)
-- [Health](/gateway/health)
+- [故障排查](/gateway/troubleshooting)
+- [后台进程](/gateway/background-process)
+- [配置](/gateway/configuration)
+- [健康状态](/gateway/health)
 - [Doctor](/gateway/doctor)
-- [Authentication](/gateway/authentication)
+- [认证](/gateway/authentication)
 
 ## 相关内容
 
-- [Configuration](/gateway/configuration)
-- [Gateway troubleshooting](/gateway/troubleshooting)
-- [Remote access](/gateway/remote)
-- [Secrets management](/gateway/secrets)
+- [配置](/gateway/configuration)
+- [Gateway 故障排查](/gateway/troubleshooting)
+- [远程访问](/gateway/remote)
+- [密钥管理](/gateway/secrets)

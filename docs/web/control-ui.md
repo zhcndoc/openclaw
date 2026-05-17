@@ -202,12 +202,14 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
 
 Control UI 随附 `manifest.webmanifest` 和 service worker，因此现代浏览器可以将其安装为独立的 PWA。Web Push 允许 Gateway 在标签页或浏览器窗口未打开时也能通过通知唤醒已安装的 PWA。
 
-| Surface                                               | 它的作用                                                       |
-| ----------------------------------------------------- | -------------------------------------------------------------- |
-| `ui/public/manifest.webmanifest`                      | PWA 清单。浏览器在可访问后会提供“安装应用”。   |
-| `ui/public/sw.js`                                     | 处理 `push` 事件和通知点击的 service worker。 |
-| `push/vapid-keys.json` (under the OpenClaw state dir) | 用于签署 Web Push 负载的自动生成 VAPID 密钥对。       |
-| `push/web-push-subscriptions.json`                    | 持久化的浏览器订阅端点。                          |
+如果页面在 OpenClaw 更新后立刻显示 **Protocol mismatch**，请先通过 `openclaw dashboard` 重新打开仪表盘，然后对页面执行硬刷新。如果仍然失败，请清除该仪表盘来源的站点数据，或在无痕浏览窗口中测试；旧标签页或浏览器 service-worker 缓存可能仍在使用更新前的 Control UI bundle 与较新的 Gateway 交互。
+
+| 表面                                               | 功能                                                       |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| `ui/public/manifest.webmanifest`                   | PWA 清单。浏览器在可访问后会提供“安装应用”。               |
+| `ui/public/sw.js`                                  | 处理 `push` 事件和通知点击的 service worker。              |
+| `push/vapid-keys.json`（位于 OpenClaw 状态目录下） | 自动生成的 VAPID 密钥对，用于签名 Web Push 载荷。          |
+| `push/web-push-subscriptions.json`                 | 持久化的浏览器订阅端点。                                   |
 
 当你想固定密钥时，通过 Gateway 进程上的环境变量覆盖 VAPID 密钥对（适用于多主机部署、密钥轮换或测试）：
 
@@ -260,9 +262,9 @@ Web Push 独立于 iOS APNS 中继路径（有关中继支持的推送，请参�
 
 默认情况下，绝对的外部 `http(s)` 嵌入 URL 会被阻止。如果你有意让 `[embed url="https://..."]` 加载第三方页面，请设置 `gateway.controlUi.allowExternalEmbedUrls: true`。
 
-## Chat message width
+## 聊天消息宽度
 
-Grouped chat messages use a readable default max-width. Wide-monitor deployments can override it without patching bundled CSS by setting `gateway.controlUi.chatMessageMaxWidth`:
+分组聊天消息使用可读性的默认最大宽度。宽屏部署可以通过设置 `gateway.controlUi.chatMessageMaxWidth` 来覆盖它，而无需修改打包后的 CSS：
 
 ```json5
 {
@@ -274,9 +276,9 @@ Grouped chat messages use a readable default max-width. Wide-monitor deployments
 }
 ```
 
-The value is validated before it reaches the browser. Supported values include plain lengths and percentages such as `960px` or `82%`, plus constrained `min(...)`, `max(...)`, `clamp(...)`, `calc(...)`, and `fit-content(...)` width expressions.
+该值会在送达浏览器之前经过校验。支持的值包括普通长度和百分比，例如 `960px` 或 `82%`，以及受限的 `min(...)`、`max(...)`、`clamp(...)`、`calc(...)` 和 `fit-content(...)` 宽度表达式。
 
-## Tailnet access (recommended)
+## Tailnet 访问（推荐）
 
 <Tabs>
   <Tab title="集成的 Tailscale Serve（首选）">
@@ -396,17 +398,17 @@ Control UI 采用严格的 `img-src` 策略：仅允许**同源**资源、`data:
 
 如果你禁用网关认证（不建议在共享主机上这样做），头像路由也会变为未认证，与网关其余部分保持一致。
 
-## Assistant media route auth
+## Assistant 媒体路由认证
 
-When gateway auth is configured, assistant local-media previews use a two-step route:
+当配置了网关认证时，assistant 本地媒体预览使用一个两步路由：
 
-- `GET /__openclaw__/assistant-media?meta=1&source=<path>` requires the normal Control UI operator auth. The browser sends the gateway token as a bearer header when checking availability.
-- Successful metadata responses include a short-lived `mediaTicket` scoped to that exact source path.
-- Browser-rendered image, audio, video, and document URLs use `mediaTicket=<ticket>` instead of the active gateway token or password. The ticket expires quickly and cannot authorize a different source.
+- `GET /__openclaw__/assistant-media?meta=1&source=<path>` 需要普通的 Control UI operator 认证。浏览器在检查可用性时会将网关令牌作为 bearer 头发送。
+- 成功的元数据响应会包含一个作用域限定到该确切源路径的短期 `mediaTicket`。
+- 浏览器渲染的图片、音频、视频和文档 URL 使用 `mediaTicket=<ticket>`，而不是活动的网关令牌或密码。该票据很快过期，且不能为不同源授权。
 
-This keeps normal media rendering compatible with browser-native media elements without putting reusable gateway credentials in visible media URLs.
+这使得正常的媒体渲染可以兼容浏览器原生媒体元素，同时不会在可见的媒体 URL 中暴露可复用的网关凭据。
 
-## Building the UI
+## 构建 UI
 
 网关会从 `dist/control-ui` 提供静态文件。使用以下命令构建：
 
@@ -428,19 +430,19 @@ pnpm ui:dev
 
 然后将 UI 指向你的网关 WS URL（例如 `ws://127.0.0.1:18789`）。
 
-## Blank Control UI page
+## 空白 Control UI 页面
 
-If the browser loads a blank dashboard and DevTools shows no useful error, an extension or early content script may have prevented the JavaScript module app from evaluating. The static page includes a plain HTML recovery panel that appears when `<openclaw-app>` is not registered after startup.
+如果浏览器加载了空白仪表盘，并且 DevTools 没有显示有用的错误，某个扩展或早期内容脚本可能阻止了 JavaScript 模块应用的执行。静态页面包含一个纯 HTML 恢复面板，当 `<openclaw-app>` 在启动后未注册时会出现。
 
-Use the panel's **Try again** action after changing the browser environment, or reload manually after these checks:
+在更改浏览器环境后，使用面板中的 **Try again** 操作，或在完成以下检查后手动重新加载：
 
-- Disable extensions that inject into all pages, especially extensions with `<all_urls>` content scripts.
-- Try a private window, a clean browser profile, or another browser.
-- Keep the Gateway running and verify the same dashboard URL after the browser change.
+- 禁用会注入到所有页面的扩展，尤其是带有 `<all_urls>` 内容脚本的扩展。
+- 尝试无痕窗口、干净的浏览器配置文件，或其他浏览器。
+- 保持 Gateway 运行，并在更改浏览器后验证同一个仪表盘 URL。
 
-## Debugging/testing: dev server + remote Gateway
+## 调试/测试：开发服务器 + 远程 Gateway
 
-Control UI 是静态文件；WebSocket 目标是可配置的，可以不同于 HTTP 源。当你希望本地运行 Vite 开发服务器、但网关运行在其他位置时，这会非常方便。
+Control UI 是静态文件；WebSocket 目标可配置，可以不同于 HTTP 源。当你希望本地运行 Vite 开发服务器、但网关运行在其他位置时，这会非常方便。
 
 <Steps>
   <Step title="启动 UI 开发服务器">
@@ -464,17 +466,17 @@ Control UI 是静态文件；WebSocket 目标是可配置的，可以不同于 H
 
 <AccordionGroup>
   <Accordion title="说明">
-    - `gatewayUrl` 会在加载后存储到 localStorage 中，并从 URL 中移除。
-    - 如果你通过 `gatewayUrl` 传入完整的 `ws://` 或 `wss://` 端点，请对 `gatewayUrl` 的值进行 URL 编码，以便浏览器正确解析查询字符串。
-    - 尽可能通过 URL 片段（`#token=...`）传递 `token`。片段不会发送到服务器，这可以避免请求日志和 Referer 泄漏。为兼容性保留的旧式 `?token=` 查询参数仍会被导入一次，但仅作为后备，并会在引导完成后立即被移除。
-    - `password` 仅保留在内存中。
+    - `gatewayUrl` 会在加载后存储到 localStorage，并从 URL 中移除。
+    - 如果你通过 `gatewayUrl` 传入完整的 `ws://` 或 `wss://` 端点，请对 `gatewayUrl` 值进行 URL 编码，以便浏览器正确解析查询字符串。
+    - 尽可能通过 URL 片段（`#token=...`）传递 `token`。片段不会发送到服务器，可避免请求日志和 Referer 泄露。出于兼容性，旧的 `?token=` 查询参数仍会被导入一次，但仅作为回退，并会在启动后立即清除。
+    - `password` 只保存在内存中。
     - 当设置了 `gatewayUrl` 时，UI 不会回退到配置或环境凭据。请显式提供 `token`（或 `password`）。缺少显式凭据会报错。
-    - 当网关位于 TLS 之后时，请使用 `wss://`（Tailscale Serve、HTTPS 代理等）。
-    - `gatewayUrl` 仅在顶层窗口中接受（不能嵌入），以防止点击劫持。
-    - 非回环的 Control UI 部署必须显式设置 `gateway.controlUi.allowedOrigins`（完整来源）。这也包括远程开发环境。
-    - 网关启动时会根据实际运行时绑定地址和端口，预置诸如 `http://localhost:<port>` 和 `http://127.0.0.1:<port>` 之类的本地来源，但远程浏览器来源仍然需要显式配置。
-    - 除非是在严格受控的本地测试中，否则不要使用 `gateway.controlUi.allowedOrigins: ["*"]`。这表示允许任何浏览器来源，而不是“匹配我正在使用的任意主机”。
-    - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 会启用 Host 头来源回退模式，但这是一个危险的安全模式。
+    - 当 Gateway 位于 TLS 之后时使用 `wss://`（Tailscale Serve、HTTPS 代理等）。
+    - `gatewayUrl` 仅在顶层窗口中被接受（不能嵌入），以防止点击劫持。
+    - 面向公网且非回环的 Control UI 部署必须显式设置 `gateway.controlUi.allowedOrigins`（完整来源）。来自回环、RFC1918/link-local、`.local`、`.ts.net` 或 Tailscale CGNAT 主机的私有同源 LAN/Tailnet 加载会被接受，而无需启用 Host 头回退。
+    - Gateway 启动时可以根据实际运行时绑定地址和端口预先填充本地来源，例如 `http://localhost:<port>` 和 `http://127.0.0.1:<port>`，但远程浏览器来源仍需要显式条目。
+    - 除了严格受控的本地测试外，不要使用 `gateway.controlUi.allowedOrigins: ["*"]`。这表示允许任意浏览器来源，而不是“匹配我正在使用的主机”。
+    - `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 会启用 Host 头来源回退模式，但这是危险的安全模式。
 
   </Accordion>
 </AccordionGroup>

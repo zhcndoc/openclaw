@@ -95,24 +95,37 @@ when the platform needs an explicit stop signal.
 
 大多数通道插件不需要审批相关的专门代码。
 
-- Core 负责同聊天 `/approve`、共享审批按钮负载以及通用回退投递。
-- 当通道需要审批特定行为时，优先在通道插件上使用一个 `approvalCapability` 对象。
-- `ChannelPlugin.approvals` 已移除。请把审批投递/原生/渲染/认证事实放到 `approvalCapability` 上。
-- `plugin.auth` 仅用于登录/登出；核心不再从该对象中读取审批认证钩子。
-- `approvalCapability.authorizeActorAction` 和 `approvalCapability.getActionAvailabilityState` 是标准的审批认证接口。
-- 对同聊天审批认证可用性，使用 `approvalCapability.getActionAvailabilityState`。
-- 如果你的通道暴露原生 exec 审批，请在其与同聊天审批认证不同的时候，对发起表面/原生客户端状态使用 `approvalCapability.getExecInitiatingSurfaceState`。核心会使用这个 exec 专用钩子来区分 `enabled` 与 `disabled`，判断发起通道是否支持原生 exec 审批，并将该通道纳入原生客户端回退指引。`createApproverRestrictedNativeApprovalCapability(...)` 可为常见情况补齐这些内容。
-- 对通道特定的负载生命周期行为，例如隐藏重复的本地审批提示或在投递前发送输入中指示器，请使用 `outbound.shouldSuppressLocalPayloadPrompt` 或 `outbound.beforeDeliverPayload`。
-- `approvalCapability.delivery` 仅用于原生审批路由或回退抑制。
-- `approvalCapability.nativeRuntime` 用于通道自有的原生审批事实。把它通过 `createLazyChannelApprovalNativeRuntimeAdapter(...)` 惰性化在高频通道入口上，这样它可以按需导入运行时模块，同时仍让核心组装审批生命周期。
-- 只有当基于能力的接口还不够表达时，才使用更底层的 `createChannelApprovalHandler` 或 `createChannelNativeApprovalRuntime`。
-- 原生审批通道必须通过这些帮助器同时路由 `accountId` 和 `approvalKind`。`accountId` 让多账号审批策略保持在正确的 bot 账号作用域内，而 `approvalKind` 则让 exec 与插件审批行为在不需要核心中硬编码分支的情况下对通道可用。
-- 核心现在也负责审批改路由通知。通道插件不应再从 `createChannelNativeApprovalRuntime` 发送自己的“审批已转到 DM / 其他通道”的后续消息；相反，应通过共享审批能力帮助器暴露准确的来源 + 审批者 DM 路由，并让核心在向发起聊天发布任何通知之前汇总实际投递。
-- 端到端保留已投递审批 id 的种类。原生客户端不应仅凭通道本地状态猜测或重写 exec 与插件审批路由。
-- 不同的审批种类可以有意暴露不同的原生界面。当前内置示例：
-  - Slack 对 exec 和插件 id 都保留原生审批路由可用。
-  - Matrix 对 exec 和插件审批都保留相同的原生 DM/通道路由和 reaction 交互体验，同时仍允许按审批种类进行不同的认证。
-- `createApproverRestrictedNativeApprovalAdapter` 仍然作为兼容性包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
+- Core 负责同聊天 `/approve`、共享审批按钮负载以及通用的回退投递。
+- 当通道需要与审批相关的行为时，优先在通道插件上使用一个 `approvalCapability` 对象。
+- `ChannelPlugin.approvals` 已移除。把审批投递/原生/渲染/认证事实放到 `approvalCapability` 上。
+- `plugin.auth` 仅用于登录/登出；核心不再从该对象读取审批认证钩子。
+- `approvalCapability.authorizeActorAction` 和 `approvalCapability.getActionAvailabilityState` 是规范的审批认证接缝。
+- 对于同聊天审批认证可用性，请使用 `approvalCapability.getActionAvailabilityState`。
+- 如果你的通道暴露原生 exec 审批，请在它与同聊天审批认证不同的时候，使用 `approvalCapability.getExecInitiatingSurfaceState` 来获取 initiating-surface/native-client 状态。核心会使用这个 exec 专用钩子来区分 `enabled` 与 `disabled`，判断 initiating channel 是否支持原生 exec 审批，并将该通道纳入原生客户端回退指引。`createApproverRestrictedNativeApprovalCapability(...)` 会在常见场景下补全这一点。
+- 使用 `outbound.shouldSuppressLocalPayloadPrompt` 或 `outbound.beforeDeliverPayload` 处理通道特定的负载生命周期行为，例如隐藏重复的本地审批提示，或在投递前发送输入中指示。
+- 仅在需要原生审批路由或回退抑制时，使用 `approvalCapability.delivery`。
+- 对于通道拥有的原生审批事实，请使用 `approvalCapability.nativeRuntime`。将其在高频通道入口上保持惰性，可使用 `createLazyChannelApprovalNativeRuntimeAdapter(...)`，它可以按需导入你的运行时模块，同时仍让核心组装审批生命周期。
+- 仅当通道确实需要自定义审批负载而不是共享渲染器时，才使用 `approvalCapability.render`。
+- 当通道希望禁用路径的回复解释启用原生 exec 审批所需的确切配置开关时，使用 `approvalCapability.describeExecApprovalSetup`。该钩子接收 `{ channel, channelLabel, accountId }`；命名账号通道应当渲染账号范围内的路径，例如 `channels.<channel>.accounts.<id>.execApprovals.*`，而不是顶层默认值。
+- 如果某个通道可以从现有配置中推断出稳定的、类似所有者的 DM 身份，请使用 `openclaw/plugin-sdk/approval-runtime` 中的 `createResolvedApproverActionAuthAdapter`，以限制同聊天 `/approve`，而无需添加审批专用的核心逻辑。
+- 如果通道需要原生审批投递，请将通道代码聚焦于目标规范化以及传输/呈现事实。请使用 `openclaw/plugin-sdk/approval-runtime` 中的 `createChannelExecApprovalProfile`、`createChannelNativeOriginTargetResolver`、`createChannelApproverDmTargetResolver` 和 `createApproverRestrictedNativeApprovalCapability`。把通道特定事实放在 `approvalCapability.nativeRuntime` 之后，最好通过 `createChannelApprovalNativeRuntimeAdapter(...)` 或 `createLazyChannelApprovalNativeRuntimeAdapter(...)`，这样核心就可以组装处理器并负责请求过滤、路由、去重、过期、网关订阅以及“已路由到别处”的通知。`nativeRuntime` 被拆分为几个更小的接缝：
+- `createChannelNativeOriginTargetResolver` 默认使用共享的 channel-route 匹配器处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则时才传入 `targetsMatch`，例如 Slack 的 timestamp 前缀匹配。
+- 当通道需要在默认路由匹配器或自定义 `targetsMatch` 回调运行之前，对提供商 id 进行标准化，同时保留原始目标用于投递时，请将 `normalizeTargetForMatch` 传给 `createChannelNativeOriginTargetResolver`。仅当解析后的投递目标本身也应被标准化时，才使用 `normalizeTarget`。
+- `availability` - 账户是否已配置，以及请求是否应被处理
+- `presentation` - 将共享审批视图模型映射为待处理/已解决/已过期的原生负载或最终动作
+- `transport` - 准备目标并发送/更新/删除原生审批消息
+- `interactions` - 用于原生按钮或反应的可选绑定/解绑/清理动作钩子，以及一个可选的 `cancelDelivered` 钩子。当 `deliverPending` 在进程内或持久化状态中注册了状态（例如反应目标存储）时，应实现 `cancelDelivered`，这样在处理器停止且在 `bindPending` 运行之前取消投递时，或者 `bindPending` 返回无句柄时，状态都能被释放
+- `observe` - 可选的投递诊断钩子
+- 如果通道需要运行时拥有的对象，例如客户端、token、Bolt app 或 webhook receiver，请通过 `openclaw/plugin-sdk/channel-runtime-context` 注册它们。通用的 runtime-context 注册表让核心可以从通道启动状态引导基于能力的处理器，而无需增加审批专用的包装胶水代码。
+- 只有当基于能力的接缝仍不够表达时，才使用更底层的 `createChannelApprovalHandler` 或 `createChannelNativeApprovalRuntime`。
+- 原生审批通道必须通过这些帮助器同时路由 `accountId` 和 `approvalKind`。`accountId` 将多账号审批策略限制在正确的 bot 账号范围内，`approvalKind` 则让 exec 与 plugin 审批行为无需在核心中写死分支即可对通道可用。
+- 核心现在也负责审批重路由通知。通道插件不应再从 `createChannelNativeApprovalRuntime` 发送自己的“审批被转到 DM / 另一个频道”的后续消息；相反，应通过共享审批能力帮助器暴露准确的 origin + approver-DM 路由，让核心在向发起聊天发布任何通知之前先聚合实际投递结果。
+- 端到端保留已投递审批 id 的种类。原生客户端不应从通道本地状态猜测或重写 exec 与 plugin 审批路由。
+- 不同的审批种类可以有意暴露不同的原生界面。
+  当前捆绑示例：
+  - Slack 保持对 exec 和 plugin id 都可用的原生审批路由。
+  - Matrix 对 exec 和 plugin 审批保持相同的原生 DM/频道路由和 reaction 体验，同时仍允许认证按审批种类不同而不同。
+- `createApproverRestrictedNativeApprovalAdapter` 仍然作为兼容包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
 
 对于高频通道入口，当你只需要这一组能力中的某一部分时，优先使用更窄的运行时子路径：
 
@@ -135,17 +148,17 @@ when the platform needs an explicit stop signal.
 
 特别是针对设置：
 
-- `openclaw/plugin-sdk/setup-runtime` covers the runtime-safe setup helpers:
-  import-safe setup patch adapters (`createPatchedAccountSetupAdapter`,
-  `createEnvPatchedAccountSetupAdapter`,
-  `createSetupInputPresenceValidator`), lookup-note output,
-  `promptResolvedAllowFrom`, `splitSetupEntries`, and the delegated
-  setup-proxy builders
-- `openclaw/plugin-sdk/setup-runtime` includes the env-aware adapter seam for
-  `createEnvPatchedAccountSetupAdapter`
-- `openclaw/plugin-sdk/channel-setup` covers the optional-install setup
-  builders plus a few setup-safe primitives:
-  `createOptionalChannelSetupSurface`, `createOptionalChannelSetupAdapter`,
+- `openclaw/plugin-sdk/setup-runtime` 覆盖运行时安全的设置帮助器：
+  `createSetupTranslator`、导入安全的设置补丁适配器（`createPatchedAccountSetupAdapter`、
+  `createEnvPatchedAccountSetupAdapter`、
+  `createSetupInputPresenceValidator`）、lookup-note 输出、
+  `promptResolvedAllowFrom`、`splitSetupEntries` 以及委派式
+  setup-proxy 构建器
+- `openclaw/plugin-sdk/setup-runtime` 包含用于
+  `createEnvPatchedAccountSetupAdapter` 的环境感知适配器接缝
+- `openclaw/plugin-sdk/channel-setup` 覆盖可选安装的设置
+  构建器，以及一些设置安全的原语：
+  `createOptionalChannelSetupSurface`、`createOptionalChannelSetupAdapter`，
 
 如果你的通道支持由环境驱动的设置或认证，并且通用启动/配置流程在运行时加载之前就应该知道这些环境名，请在插件 manifest 中通过 `channelEnvVars` 声明它们。仅将通道运行时的 `envVars` 或本地常量用于面向操作员的文案。
 
@@ -190,8 +203,7 @@ when the platform needs an explicit stop signal.
 - 共享策略评估
 
 对提及策略决策使用 `openclaw/plugin-sdk/channel-mention-gating`。
-仅当你需要更广泛的传入
-辅助入口时，才使用 `openclaw/plugin-sdk/channel-inbound`。
+仅当你需要更广泛的传入辅助入口时，才使用 `openclaw/plugin-sdk/channel-inbound`。
 
 适合放在插件本地逻辑中的内容：
 
@@ -252,8 +264,7 @@ const decision = resolveInboundMentionDecision({
 if (decision.shouldSkip) return;
 ```
 
-`api.runtime.channel.mentions` 为已经依赖运行时注入的
-打包频道插件暴露相同的共享提及辅助：
+`api.runtime.channel.mentions` 为已经依赖运行时注入的打包频道插件暴露相同的共享提及辅助：
 
 - `buildMentionRegexes`
 - `matchesMentionPatterns`
@@ -261,22 +272,16 @@ if (decision.shouldSkip) return;
 - `implicitMentionKindWhen`
 - `resolveInboundMentionDecision`
 
-如果你只需要 `implicitMentionKindWhen` 和
-`resolveInboundMentionDecision`，请从
-`openclaw/plugin-sdk/channel-mention-gating` 导入，以避免加载无关的传入
-运行时辅助。
+如果你只需要 `implicitMentionKindWhen` 和 `resolveInboundMentionDecision`，请从 `openclaw/plugin-sdk/channel-mention-gating` 导入，以避免加载无关的传入运行时辅助。
 
-较旧的 `resolveMentionGating*` 辅助仍然保留在
-`openclaw/plugin-sdk/channel-inbound` 上，仅作为兼容性导出。新代码
-应使用 `resolveInboundMentionDecision({ facts, policy })`。
+较旧的 `resolveMentionGating*` 辅助仍然保留在 `openclaw/plugin-sdk/channel-inbound` 上，仅作为兼容性导出。新代码应使用 `resolveInboundMentionDecision({ facts, policy })`。
 
 ## 操作指南
 
 <Steps>
   <a id="step-1-package-and-manifest"></a>
   <Step title="包与清单">
-    创建标准插件文件。`package.json` 中的 `channel` 字段
-    表明这是一个频道插件。关于完整的包元数据表面，请参见
+    创建标准插件文件。`package.json` 中的 `channel` 字段表明这是一个频道插件。有关完整的包元数据规范，请参见
     [插件设置与配置](/plugins/sdk-setup#openclaw-channel)：
 
     <CodeGroup>
@@ -334,16 +339,12 @@ if (decision.shouldSkip) return;
     ```
     </CodeGroup>
 
-    `configSchema` 验证 `plugins.entries.acme-chat.config`。将其用于
-    不属于频道账户配置的插件自有设置。`channelConfigs`
-    验证 `channels.acme-chat`，并且是在插件运行时加载之前，由配置
-    schema、设置和 UI 界面使用的冷路径来源。
+    `configSchema` 验证 `plugins.entries.acme-chat.config`。将其用于不属于频道账户配置的插件自有设置。`channelConfigs` 验证 `channels.acme-chat`，并且是在插件运行时加载之前，由配置 schema、设置和 UI 界面使用的冷路径来源。
 
   </Step>
 
   <Step title="构建频道插件对象">
-    `ChannelPlugin` 接口有许多可选的适配器表面。先从最小
-    配置开始——`id` 和 `setup`——然后按需添加适配器。
+    `ChannelPlugin` 接口有许多可选的适配器表面。先从最小配置开始——`id` 和 `setup`——然后按需添加适配器。
 
     创建 `src/channel.ts`：
 
@@ -453,7 +454,7 @@ if (decision.shouldSkip) return;
       如果你需要完全控制，也可以传入原始适配器对象，而不是声明式选项。
 
       原始发出适配器可以定义 `chunker(text, limit, ctx)` 函数。
-      可选的 `ctx.formatting` 携带投递时的格式化决策，例如 `maxLinesPerMessage`；发送前应先应用它，以便共享发出投递只解析一次回复线程和分块边界。
+      可选的 `ctx.formatting` 携带投递时的格式化决策，例如 `maxLinesPerMessage`；发送前应先应用它，以便共享发出投递只需解析一次回复线程和分块边界。
       当解析出了原生回复目标时，发送上下文还包括 `replyToIdSource`（`implicit` 或 `explicit`），这样负载辅助函数可以保留显式回复标签，而不会消耗隐式的一次性回复槽位。
     </Accordion>
 
@@ -495,17 +496,10 @@ if (decision.shouldSkip) return;
     });
     ```
 
-    将频道拥有的 CLI 描述符放在 `registerCliMetadata(...)` 中，这样 OpenClaw
-    就能在根帮助中显示它们，而无需激活完整的频道运行时，
-    同时正常的完整加载仍会获得相同的描述符用于真实的命令注册。将 `registerFull(...)`
-    保留给仅运行时工作。
-    如果 `registerFull(...)` 注册 gateway RPC 方法，请使用
-    插件特定前缀。核心管理命名空间（`config.*`、
-    `exec.approvals.*`、`wizard.*`、`update.*`）仍然保留，并且始终
-    解析为 `operator.admin`。
+    将频道拥有的 CLI 描述符放在 `registerCliMetadata(...)` 中，这样 OpenClaw 就能在根帮助中显示它们，而无需激活完整的频道运行时；同时正常的完整加载仍会获得相同的描述符用于真实的命令注册。将 `registerFull(...)` 保留给仅运行时工作。
+    如果 `registerFull(...)` 注册 gateway RPC 方法，请使用插件特定前缀。核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍然保留，并且始终解析为 `operator.admin`。
     `defineChannelPluginEntry` 会自动处理注册模式分离。请参见
-    [入口点](/plugins/sdk-entrypoints#definechannelpluginentry) 了解所有
-    选项。
+    [入口点](/plugins/sdk-entrypoints#definechannelpluginentry) 了解所有选项。
 
   </Step>
 
@@ -523,16 +517,12 @@ if (decision.shouldSkip) return;
     这样可避免在设置流程中拉取沉重的运行时代码。
     详见 [设置与配置](/plugins/sdk-setup#setup-entry)。
 
-    将设置安全导出拆分到 sidecar 模块的打包工作区频道，如果还需要一个
-    显式的设置期运行时 setter，可以使用
-    `openclaw/plugin-sdk/channel-entry-contract` 中的
-    `defineBundledChannelSetupEntry(...)`。
+    将设置安全导出拆分到 sidecar 模块的打包工作区频道，如果还需要一个显式的设置期运行时 setter，可以使用 `openclaw/plugin-sdk/channel-entry-contract` 中的 `defineBundledChannelSetupEntry(...)`。
 
   </Step>
 
   <Step title="处理传入消息">
-    你的插件需要接收来自平台的消息并将它们转发给
-    OpenClaw。典型模式是使用 webhook 验证请求，然后通过频道的传入处理器分发它：
+    你的插件需要接收来自平台的消息并将它们转发给 OpenClaw。典型模式是使用 webhook 验证请求，然后通过频道的传入处理器分发它：
 
     ```typescript
     registerFull(api) {
@@ -556,9 +546,7 @@ if (decision.shouldSkip) return;
     ```
 
     <Note>
-      传入消息处理是频道特定的。每个频道插件都拥有
-      自己的传入流水线。查看打包的频道插件
-      （例如 Microsoft Teams 或 Google Chat 插件包）以了解真实模式。
+      传入消息处理是频道特定的。每个频道插件都拥有自己的传入流水线。查看打包的频道插件（例如 Microsoft Teams 或 Google Chat 插件包）以了解真实模式。
     </Note>
 
   </Step>
@@ -640,24 +628,21 @@ if (decision.shouldSkip) return;
   <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
     通过 api.runtime 提供 TTS、STT、媒体、subagent
   </Card>
-  <Card title="Channel turn kernel" icon="bolt" href="/plugins/sdk-channel-turn">
+  <Card title="频道轮次内核" icon="bolt" href="/plugins/sdk-channel-turn">
     共享传入轮次生命周期：摄取、解析、记录、分发、完成
   </Card>
 </CardGroup>
 
 <Note>
-某些打包辅助接缝仍然存在，用于打包插件维护和
-兼容性。对于新的频道插件，它们不是推荐模式；
-除非你正在直接维护该打包插件家族，否则应优先使用通用 SDK
-表面的 channel/setup/reply/runtime 子路径。
+某些打包辅助接缝仍然存在，用于打包插件维护和兼容性。对于新的频道插件，它们不是推荐模式；除非你正在直接维护该打包插件家族，否则应优先使用通用 SDK 表面的 channel/setup/reply/runtime 子路径。
 </Note>
 
 ## 下一步
 
-- [Provider Plugins](/plugins/sdk-provider-plugins) - 如果你的插件也提供模型
-- [SDK Overview](/plugins/sdk-overview) - 完整的子路径导入参考
-- [SDK Testing](/plugins/sdk-testing) - 测试工具和契约测试
-- [Plugin Manifest](/plugins/manifest) - 完整的清单 schema
+- [提供方插件](/plugins/sdk-provider-plugins) - 如果你的插件也提供模型
+- [SDK 概览](/plugins/sdk-overview) - 完整的子路径导入参考
+- [SDK 测试](/plugins/sdk-testing) - 测试工具和契约测试
+- [插件清单](/plugins/manifest) - 完整的清单 schema
 
 ## 相关内容
 

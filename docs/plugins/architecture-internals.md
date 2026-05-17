@@ -140,7 +140,7 @@ export default {
 回调载荷字段：
 
 - `status`：`"approved"` 或 `"denied"`
-- `decision`：`"allow-once"`、`"allow-always"` 或 `"deny"`
+- `decision`：`"allow-once"`、`"allow-always"` 或 `"`deny"`
 - `binding`：批准请求的已解析绑定
 - `request`：原始请求摘要、detach 提示、发送者 id 和会话元数据
 
@@ -177,7 +177,7 @@ OpenClaw 不再调用的仅兼容性提供者字段，例如
 | --- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | `catalog`                         | 在 `models.json` 生成期间将提供者配置发布到 `models.providers`                                                  | 提供者拥有目录或基础 URL 默认值                                                                                                                 |
 | 2   | `applyConfigDefaults`             | 在配置物化期间应用提供者拥有的全局配置默认值                                                                    | 默认值取决于认证模式、环境或提供者模型家族语义                                                                                                 |
-| --  | _(built-in model lookup)_         | OpenClaw 先尝试正常的注册表/目录路径                                                                              | _(不是插件钩子)_                                                                                                                               |
+| --  | _(内置模型查找)_                  | OpenClaw 先尝试正常的注册表/目录路径                                                                              | _(不是插件钩子)_                                                                                                                               |
 | 3   | `normalizeModelId`                | 在查找之前规范化旧版或预览版的模型 id 别名                                                                         | 提供者在规范模型解析之前拥有别名清理                                                                                                           |
 | 4   | `normalizeTransport`              | 在通用模型组装之前规范化提供者家族的 `api` / `baseUrl`                                                         | 提供者拥有同一传输家族中自定义提供者 id 的传输清理                                                                                             |
 | 5   | `normalizeConfig`                 | 在运行时/提供者解析之前规范化 `models.providers.<id>`                                                            | 提供者需要应与插件共存的配置清理；捆绑的 Google 家族辅助工具也会兜底支持的 Google 配置条目                                                   |
@@ -845,7 +845,9 @@ export default function (api) {
 
 工厂函数 `ctx` 提供可选的 `config`、`agentDir` 和 `workspaceDir` 值，用于构造时初始化。
 
-如果你的引擎**不**负责压缩算法，请保持 `compact()` 的实现，并显式委托给运行时：
+`assemble()` 在当前宿主具有持久化后端线程时，可能返回 `contextProjection`。若是传统的按轮次投影，则省略它。当组装后的上下文应当只注入一次到后端线程中，并在 epoch 改变前重复使用时，返回 `{ mode: "thread_bootstrap", epoch }`。当引擎的语义上下文发生变化后，例如在引擎自有的压缩流程之后，应更改 epoch。宿主可以在 thread-bootstrap 投影中保留工具调用元数据、输入形状以及已脱敏的工具结果，这样新的后端线程就能保留工具连续性，而无需复制原始的含密钥载荷。
+
+如果你的引擎**不**负责压缩算法，请保留 `compact()` 的实现，并显式委托它：
 
 ```ts
 import {
@@ -919,14 +921,14 @@ export default function (api) {
 最小模式：
 
 ```ts
-// core contract
+// core 契约
 export type VideoGenerationProviderPlugin = {
   id: string;
   label: string;
   generateVideo: (req: VideoGenerationRequest) => Promise<VideoGenerationResult>;
 };
 
-// plugin API
+// 插件 API
 api.registerVideoGenerationProvider({
   id: "openai",
   label: "OpenAI",
@@ -935,7 +937,7 @@ api.registerVideoGenerationProvider({
   },
 });
 
-// shared runtime helper for feature/channel plugins
+// 供功能/渠道插件使用的共享运行时辅助函数
 const clip = await api.runtime.videoGeneration.generate({
   prompt: "Show the robot walking through the lab.",
   cfg,

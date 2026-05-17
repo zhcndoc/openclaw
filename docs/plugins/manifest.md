@@ -8,20 +8,20 @@ title: "插件清单"
 
 本页面仅适用于**原生 OpenClaw 插件清单**。
 
-有关兼容的 bundle 布局，请参见 [插件 bundles](/plugins/bundles)。
+有关兼容的 bundle 布局，请参见 [插件捆绑包](/plugins/bundles)。
 
 兼容的 bundle 格式使用不同的清单文件：
 
-- Codex bundle: `.codex-plugin/plugin.json`
-- Claude bundle: `.claude-plugin/plugin.json` 或默认的 Claude 组件
+- Codex 捆绑包: `.codex-plugin/plugin.json`
+- Claude 捆绑包: `.claude-plugin/plugin.json` 或默认的 Claude 组件
   布局（不带清单）
-- Cursor bundle: `.cursor-plugin/plugin.json`
+- Cursor 捆绑包: `.cursor-plugin/plugin.json`
 
 OpenClaw 也会自动检测这些 bundle 布局，但它们不会根据此处描述的
 `openclaw.plugin.json` schema 进行校验。
 
 对于兼容的 bundles，OpenClaw 当前会读取 bundle 元数据以及声明的
-skill roots、Claude command roots、Claude bundle `settings.json` 默认值、
+skill 根目录、Claude 命令根目录、Claude bundle `settings.json` 默认值、
 Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时支持的 hook packs。
 
 每个原生 OpenClaw 插件**必须**在**插件根目录**下提供一个
@@ -144,7 +144,7 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 | 字段                                 | 必需 | 类型                             | 含义                                                                                                                                                                                                                               |
 | ------------------------------------ | ---- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                 | 是   | `string`                         | 规范化的插件 id。此 id 用于 `plugins.entries.<id>`。                                                                                                                                                                               |
+| `id`                                 | 是   | `string`                         | 规范化后的插件 id。此 id 用于 `plugins.entries.<id>`。                                                                                                                                                                               |
 | `configSchema`                       | 是   | `object`                         | 此插件配置的内联 JSON Schema。                                                                                                                                                                                                     |
 | `enabledByDefault`                   | 否   | `true`                           | 将捆绑插件标记为默认启用。省略它，或设置任何非 `true` 值，都会使插件默认保持禁用。                                                                                                                                                |
 | `enabledByDefaultOnPlatforms`        | 否   | `string[]`                       | 仅在所列 Node.js 平台上将捆绑插件标记为默认启用，例如 `["darwin"]`。显式配置仍然优先。                                                                                                                                            |
@@ -260,20 +260,20 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 每个 `authSignals` 条目支持：
 
-| 字段             | 必填 | 类型     | 含义                                                                                                                                                                 |
-| ---------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`        | 是       | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
-| `providerBaseUrl` | 否       | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
+| 字段              | 必填 | 类型     | 含义                                                                                                                                                                 |
+| ----------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`        | 是   | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
+| `providerBaseUrl` | 否   | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
 
 每个 `providerBaseUrl` 守卫支持：
 
-| 字段             | 必填 | 类型       | 含义                                                                                                                                        |
-| ---------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`       | 是         | `string`   | 应检查其 `baseUrl` 的 provider 配置 id。                                                                                                |
-| `defaultBaseUrl` | 否         | `string`   | 当 provider 配置省略 `baseUrl` 时假定使用的 base URL。                                                                                   |
-| `allowedBaseUrls` | 是        | `string[]` | 该 auth 信号允许的 base URL。当已配置或默认的 base URL 与这些规范化后的值都不匹配时，该信号将被忽略。 |
+| 字段              | 必填 | 类型       | 含义                                                                                                                                        |
+| ----------------- | ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`        | 是         | `string`   | 应检查其 `baseUrl` 的 provider 配置 id。                                                                                                |
+| `defaultBaseUrl`  | 否         | `string`   | 当 provider 配置省略 `baseUrl` 时假定使用的 base URL。                                                                                   |
+| `allowedBaseUrls` | 是         | `string[]` | 该 auth 信号允许的 base URL。当已配置或默认的 base URL 与这些规范化后的值都不匹配时，该信号将被忽略。 |
 
-## Tool metadata reference
+## 工具元数据参考
 
 `toolMetadata` 使用与 generation provider 元数据相同的 `configSignals` 和 `authSignals` 形状，并以 tool 名称作为键。`contracts.tools` 声明所有权。`toolMetadata` 声明低成本的可用性证据，这样 OpenClaw 就可以避免仅仅为了让工具工厂返回 `null` 而导入插件运行时。
 
@@ -310,26 +310,26 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 每个 `providerAuthChoices` 条目描述一个 onboarding 或 auth 选择项。OpenClaw 在 provider runtime 加载之前会先读取这些内容。Provider setup 列表会使用这些 manifest 选择项、基于 descriptor 派生的 setup 选择项，以及 install-catalog 元数据，而无需加载 provider runtime。
 
-| 字段                 | 必填 | 类型                                            | 含义                                                                                                     |
-| -------------------- | ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `provider`           | 是   | `string`                                        | 此选择项所属的 provider id。                                                                              |
-| `method`            | 是   | `string`                                        | 要分发到的 auth method id。                                                                               |
-| `choiceId`          | 是   | `string`                                        | 由 onboarding 和 CLI 流程使用的稳定 auth-choice id。                                                     |
-| `choiceLabel`       | 否   | `string`                                        | 面向用户的标签。如果省略，OpenClaw 会回退到 `choiceId`。                                                  |
-| `choiceHint`        | 否   | `string`                                        | 用于选择器的简短帮助文本。                                                                                |
+| 字段                  | 必填 | 类型                                            | 含义                                                                                                     |
+| --------------------- | ---- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `provider`            | 是   | `string`                                        | 此选择项所属的 provider id。                                                                              |
+| `method`              | 是   | `string`                                        | 要分发到的 auth method id。                                                                               |
+| `choiceId`            | 是   | `string`                                        | 由 onboarding 和 CLI 流程使用的稳定 auth-choice id。                                                     |
+| `choiceLabel`         | 否   | `string`                                        | 面向用户的标签。如果省略，OpenClaw 会回退到 `choiceId`。                                                  |
+| `choiceHint`          | 否   | `string`                                        | 用于选择器的简短帮助文本。                                                                                |
 | `assistantPriority`   | 否   | `number`                                        | 较小的值会在助手驱动的交互式选择器中排得更靠前。                                                          |
 | `assistantVisibility` | 否   | `"visible"` \| `"manual-only"`                  | 在助手选择器中隐藏该选择项，同时仍允许通过手动 CLI 选择。                                                 |
 | `deprecatedChoiceIds` | 否   | `string[]`                                      | 应将用户重定向到此替代选择项的旧 choice id。                                                             |
-| `groupId`           | 否   | `string`                                        | 用于将相关选择项分组的可选 group id。                                                                     |
-| `groupLabel`        | 否   | `string`                                        | 该分组面向用户的标签。                                                                                    |
-| `groupHint`         | 否   | `string`                                        | 该分组的简短帮助文本。                                                                                    |
-| `optionKey`         | 否   | `string`                                        | 简单单标志 auth 流程使用的内部 option key。                                                               |
-| `cliFlag`            | 否   | `string`                                        | CLI 标志名，例如 `--openrouter-api-key`。                                                                 |
-| `cliOption`         | 否   | `string`                                        | 完整的 CLI option 形式，例如 `--openrouter-api-key <key>`。                                               |
-| `cliDescription`    | 否   | `string`                                        | 用于 CLI 帮助信息中的描述。                                                                               |
-| `onboardingScopes`  | 否   | `Array<"text-inference" \| "image-generation">` | 该选择项应出现在哪些 onboarding 界面中。如果省略，默认值为 `["text-inference"]`。                         |
+| `groupId`             | 否   | `string`                                        | 用于将相关选择项分组的可选 group id。                                                                     |
+| `groupLabel`          | 否   | `string`                                        | 该分组面向用户的标签。                                                                                    |
+| `groupHint`           | 否   | `string`                                        | 该分组的简短帮助文本。                                                                                    |
+| `optionKey`           | 否   | `string`                                        | 简单单标志 auth 流程使用的内部 option key。                                                               |
+| `cliFlag`             | 否   | `string`                                        | CLI 标志名，例如 `--openrouter-api-key`。                                                                 |
+| `cliOption`           | 否   | `string`                                        | 完整的 CLI option 形式，例如 `--openrouter-api-key <key>`。                                               |
+| `cliDescription`      | 否   | `string`                                        | 用于 CLI 帮助信息中的描述。                                                                               |
+| `onboardingScopes`    | 否   | `Array<"text-inference" \| "image-generation">` | 该选择项应出现在哪些 onboarding 界面中。如果省略，默认值为 `["text-inference"]`。                         |
 
-## commandAliases 参考
+## 命令别名参考
 
 当某个插件拥有一个运行时命令名，而用户可能会误把它填进 `plugins.allow`，
 或者试图将其作为根 CLI 命令运行时，请使用 `commandAliases`。OpenClaw
@@ -347,10 +347,10 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 }
 ```
 
-| 字段        | 必填 | 类型              | 含义                                                            |
-| ----------- | ----------------- | ----------------- | --------------------------------------------------------------- |
-| `name`      | 是   | `string`          | 属于此插件的命令名。                                             |
-| `kind`      | 否   | `"runtime-slash"` | 将该别名标记为聊天 slash 命令，而不是根 CLI 命令。               |
+| 字段         | 必填 | 类型              | 含义                                                            |
+| ------------ | ----------------- | ----------------- | --------------------------------------------------------------- |
+| `name`       | 是   | `string`          | 属于此插件的命令名。                                             |
+| `kind`       | 否   | `"runtime-slash"` | 将该别名标记为聊天 slash 命令，而不是根 CLI 命令。               |
 | `cliCommand` | 否   | `string`          | 如有相关的根 CLI 命令，则建议在 CLI 操作中使用该命令。           |
 
 ## activation 参考
@@ -402,19 +402,18 @@ activation 元数据。
 
 当前实时消费者：
 
-- Gateway startup planning uses `activation.onStartup` for explicit startup
-  import
-- command-triggered CLI planning falls back to legacy
-  `commandAliases[].cliCommand` or `commandAliases[].name`
-- agent-runtime startup planning uses `activation.onAgentHarnesses` for
-  embedded harnesses and top-level `cliBackends[]` for CLI runtime aliases
-- channel-triggered setup/channel planning falls back to legacy `channels[]`
-  ownership when explicit channel activation metadata is missing
-- startup plugin planning uses `activation.onConfigPaths` for non-channel root
-  config surfaces such as the bundled browser plugin's `browser` block
-- provider-triggered setup/runtime planning falls back to legacy
-  `providers[]` and top-level `cliBackends[]` ownership when explicit provider
-  activation metadata is missing
+- Gateway 启动规划会使用 `activation.onStartup` 进行显式启动
+  导入
+- 命令触发的 CLI 规划会回退到旧版
+  `commandAliases[].cliCommand` 或 `commandAliases[].name`
+- agent-runtime 启动规划会对
+  嵌入式 harness 使用 `activation.onAgentHarnesses`，对 CLI 运行时别名使用顶层 `cliBackends[]`
+- channel 触发的 setup/channel 规划在缺少显式 channel 激活元数据时会回退到旧版
+  `channels[]` 所有权
+- 启动插件规划会使用 `activation.onConfigPaths` 处理非 channel 的根级
+  配置表面，例如内置 browser 插件的 `browser` 块
+- provider 触发的 setup/runtime 规划在缺少显式 provider
+  激活元数据时会回退到旧版 `providers[]` 和顶层 `cliBackends[]` 所有权
 
 planner 诊断可以区分显式 activation 提示与 manifest 所有权回退。
 例如，`activation-command-hint` 表示匹配到了 `activation.onCommands`，
@@ -487,12 +486,12 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 
 ### setup.providers 参考
 
-| Field              | Required | Type       | 含义                                                                                    |
+| 字段              | 必需 | 类型       | 含义                                                                                    |
 | -------------- | -------- | ---------- | ------------------------------------------------------------------------------------------------ |
-| `id`           | Yes      | `string`   | 在 setup 或 onboarding 期间暴露的 provider id。请保持规范化 id 全局唯一。                         |
-| `authMethods`  | No       | `string[]` | 在无需加载完整运行时的情况下，该 provider 支持的 setup/auth 方法 id。                            |
-| `envVars`      | No       | `string[]` | 在插件运行时加载前，通用 setup/status 界面可以检查的环境变量。                                   |
-| `authEvidence` | No       | `object[]` | 适用于能通过非机密标记进行认证的 provider 的廉价本地认证证据检查。                              |
+| `id`           | 是       | `string`   | 在 setup 或 onboarding 期间暴露的 provider id。请保持规范化 id 全局唯一。                         |
+| `authMethods`  | 否       | `string[]` | 在无需加载完整运行时的情况下，该 provider 支持的 setup/auth 方法 id。                            |
+| `envVars`      | 否       | `string[]` | 在插件运行时加载前，通用 setup/status 界面可以检查的环境变量。                                   |
+| `authEvidence` | 否       | `object[]` | 适用于能通过非机密标记进行认证的 provider 的廉价本地认证证据检查。                              |
 
 `authEvidence` 用于可通过本地凭据标记验证的、由 provider 拥有的本地凭据标记。
 这些检查必须保持廉价且本地化：不能进行网络调用、不能读取 keychain 或 secret-manager、不能执行 shell 命令，也不能探测 provider API。
@@ -500,14 +499,14 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 支持的证据条目：
 
 | 字段              | 必需 | 类型              | 含义                                                                                                  |
-| -------- | ---- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `type`             | 是   | `string`   | 当前为 `local-file-with-env`。                                                                                 |
-| `fileEnvVar`       | 否   | `string`   | 包含显式凭据文件路径的环境变量。                                                                               |
-| `fallbackPaths`    | 否   | `string[]` | 当 `fileEnvVar` 缺失或为空时检查的本地凭据文件路径。支持 `${HOME}` 和 `${APPDATA}`。                            |
-| `requiresAnyEnv`   | 否   | `string[]` | 在该证据有效之前，所列环境变量中至少一个必须非空。                                                             |
-| `requiresAllEnv`   | 否   | `string[]` | 在该证据有效之前，所列环境变量都必须非空。                                                                     |
-| `credentialMarker` | 是   | `string`   | 证据存在时返回的非机密标记。                                                                                   |
-| `source`           | 否   | `string`   | 用于 auth/status 输出的面向用户的来源标签。                                                                    |
+| -------- | ------ | ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| `type`             | 是     | `string`          | 当前为 `local-file-with-env`。                                                                                 |
+| `fileEnvVar`       | 否     | `string`          | 包含显式凭据文件路径的环境变量。                                                                               |
+| `fallbackPaths`    | 否     | `string[]`        | 当 `fileEnvVar` 缺失或为空时检查的本地凭据文件路径。支持 `${HOME}` 和 `${APPDATA}`。                            |
+| `requiresAnyEnv`   | 否     | `string[]`        | 在该证据有效之前，所列环境变量中至少一个必须非空。                                                             |
+| `requiresAllEnv`   | 否     | `string[]`        | 在该证据有效之前，所列环境变量都必须非空。                                                                     |
+| `credentialMarker` | 是     | `string`          | 证据存在时返回的非机密标记。                                                                                   |
+| `source`           | 否     | `string`          | 用于 auth/status 输出的面向用户的来源标签。                                                                    |
 
 ### setup 字段
 
@@ -565,6 +564,7 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
     "webFetchProviders": ["firecrawl"],
     "webSearchProviders": ["gemini"],
     "migrationProviders": ["hermes"],
+    "gatewayMethodDispatch": ["authenticated-request"],
     "tools": ["firecrawl_search", "firecrawl_scrape"]
   }
 }
@@ -572,35 +572,34 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 
 每个列表都是可选的：
 
-| 字段                            | 类型       | 含义                                                                  |
-| -------------------------------- | ---------- | --------------------------------------------------------------------- |
-| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 id，目前为 `codex-app-server`。               |
-| `agentToolResultMiddleware`      | `string[]` | 打包插件可以为其注册工具结果中间件的运行时 id。                        |
-| `externalAuthProviders`          | `string[]` | 该插件拥有其外部认证配置文件钩子的 provider id。                       |
-| `speechProviders`                | `string[]` | 该插件拥有的语音 provider id。                                         |
-| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider id。                                     |
-| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider id。                                     |
-| `memoryEmbeddingProviders`       | `string[]` | 该插件拥有的记忆嵌入 provider id。                                     |
-| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider id。                                     |
-| `imageGenerationProviders`        | `string[]` | 该插件拥有的图像生成 provider id。                                     |
-| `videoGenerationProviders`        | `string[]` | 该插件拥有的视频生成 provider id。                                     |
-| `webFetchProviders`              | `string[]` | 该插件拥有的 Web 抓取 provider id。                                    |
-| `webSearchProviders`             | `string[]` | 该插件拥有的 Web 搜索 provider id。                                    |
-| `migrationProviders`             | `string[]` | 该插件为 `openclaw migrate` 拥有的导入 provider id。                   |
-| `tools`                          | `string[]` | 该插件拥有的代理工具名称。                                              |
+| 字段                            | 类型       | 含义                                                                                       |
+| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 id，目前为 `codex-app-server`。                                   |
+| `agentToolResultMiddleware`      | `string[]` | 打包插件可以注册工具结果中间件的运行时 id。                                                 |
+| `externalAuthProviders`          | `string[]` | 其外部认证配置钩子由该插件拥有的 provider id。                                              |
+| `speechProviders`                | `string[]` | 该插件拥有的语音 provider id。                                                             |
+| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider id。                                                         |
+| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider id。                                                         |
+| `memoryEmbeddingProviders`       | `string[]` | 该插件拥有的记忆嵌入 provider id。                                                         |
+| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider id。                                                         |
+| `imageGenerationProviders`       | `string[]` | 该插件拥有的图像生成 provider id。                                                         |
+| `videoGenerationProviders`       | `string[]` | 该插件拥有的视频生成 provider id。                                                         |
+| `webFetchProviders`              | `string[]` | 该插件拥有的网页抓取 provider id。                                                         |
+| `webSearchProviders`             | `string[]` | 该插件拥有的网页搜索 provider id。                                                         |
+| `migrationProviders`             | `string[]` | 该插件在 `openclaw migrate` 中拥有的导入 provider id。                                       |
+| `gatewayMethodDispatch`          | `string[]` | 供在进程内调度 Gateway 方法的已认证插件 HTTP 路由使用的保留权限。                           |
+| `tools`                          | `string[]` | 该插件拥有的 agent tool 名称。                                                              |
 
 `contracts.embeddedExtensionFactories` 保留给仅用于打包的 Codex 应用服务器扩展工厂。打包的工具结果转换应声明 `contracts.agentToolResultMiddleware`，并改为通过 `api.registerAgentToolResultMiddleware(...)` 注册。外部插件不能注册工具结果中间件，因为该接缝可以在模型看到之前重写高信任度的工具输出。
 
-Runtime `api.registerTool(...)` registrations must match `contracts.tools`.
-Tool discovery uses this list to load only the plugin runtimes that can own the
-requested tools.
+运行时 `api.registerTool(...)` 的注册必须与 `contracts.tools` 匹配。工具发现会使用此列表，只加载能够拥有所请求工具的插件运行时。
 
-Provider plugins that implement `resolveExternalAuthProfiles` should declare
-`contracts.externalAuthProviders`. Plugins without the declaration still run
-through a deprecated compatibility fallback, but that fallback is slower and
-will be removed after the migration window.
+实现 `resolveExternalAuthProfiles` 的 provider 插件应声明 `contracts.externalAuthProviders`。未声明的插件仍会通过已弃用的兼容性回退路径运行，但该回退更慢，并将在迁移窗口结束后移除。
 
-打包的记忆嵌入 provider 应为其暴露的每个适配器 id 声明 `contracts.memoryEmbeddingProviders`，包括诸如 `local` 之类的内置适配器。独立 CLI 路径使用此清单契约在完整 Gateway 运行时注册 provider 之前，仅加载对应拥有者插件。
+打包的记忆嵌入 provider 应为其暴露的每个适配器 id 声明 `contracts.memoryEmbeddingProviders`，包括诸如 `local` 之类的内置适配器。独立 CLI 路径会使用此清单契约，在完整 Gateway 运行时注册 provider 之前，仅加载对应拥有者插件。
+
+`contracts.gatewayMethodDispatch` 目前接受
+`"authenticated-request"`。它是用于原生插件 HTTP 路由的 API 整洁性门控，这些路由会故意在进程内调度 Gateway 控制平面方法，而不是针对恶意原生插件的沙箱。仅将其用于经过严格审查、且本就需要 Gateway HTTP 认证的打包/运营端面。
 
 ## mediaUnderstandingProviderMetadata 参考
 
@@ -966,9 +965,9 @@ Model 字段：
 | `passthroughProviderModel` | `boolean`          | 将包含斜杠的 model id 视为嵌套的 provider/model 引用，对 OpenRouter 等代理提供方很有用。                             |
 | `modelIdTransforms`        | `"version-dots"[]` | 额外的外部目录 model-id 变体。`version-dots` 会尝试带点的版本 id，例如 `claude-opus-4.6`。                         |
 
-### OpenClaw Provider Index
+### OpenClaw 提供方索引
 
-OpenClaw Provider Index 是由 OpenClaw 拥有的、面向尚未安装其插件的提供方的预览元数据。它不是插件清单的一部分。插件清单仍然是已安装插件的权威来源。Provider Index 是内部回退契约，未来的可安装提供方和预安装模型选择器界面会在提供方插件未安装时使用它。
+OpenClaw 提供方索引是由 OpenClaw 拥有的、面向尚未安装其插件的提供方的预览元数据。它不是插件清单的一部分。插件清单仍然是已安装插件的权威来源。Provider Index 是内部回退契约，未来的可安装提供方和预安装模型选择器界面会在提供方插件未安装时使用它。
 
 目录权威顺序：
 

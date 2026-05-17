@@ -51,7 +51,7 @@ title: "配置示例"
   messages: {
     visibleReplies: "automatic",
     groupChat: {
-      visibleReplies: "message_tool", // 默认值；对旧版房间回复可使用 "automatic"
+      visibleReplies: "message_tool", // 默认值；要显示输出需要 message(action=send)
     },
   },
 }
@@ -110,7 +110,7 @@ title: "配置示例"
     ackReactionScope: "group-mentions",
     groupChat: {
       historyLimit: 50,
-      visibleReplies: "message_tool", // 群组/频道中的正常最终回复保持私密
+      visibleReplies: "message_tool", // 优先使用 message 工具；最终文本会回退用于普通请求
     },
     queue: {
       mode: "followup",
@@ -153,7 +153,7 @@ title: "配置示例"
   // 会话行为
   session: {
     scope: "per-sender",
-    dmScope: "per-channel-peer", // 多用户收件箱推荐使用
+    dmScope: "per-channel-peer", // 推荐用于多用户收件箱
     reset: {
       mode: "daily",
       atHour: 4,
@@ -248,7 +248,7 @@ title: "配置示例"
         "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
         "openai/gpt-5.4": { alias: "gpt" },
       },
-      skills: ["github", "weather"], // 被省略 list[].skills 的 agents 继承
+      skills: ["github", "weather"], // 被省略 list[].skills 的 agent 将继承
       thinkingDefault: "low",
       verboseDefault: "off",
       toolProgressDetail: "explain",
@@ -318,7 +318,7 @@ title: "配置示例"
         groupChat: {
           mentionPatterns: ["@openclaw", "openclaw"],
         },
-        thinkingDefault: "high", // 每个 agent 的 thinking 覆盖
+        thinkingDefault: "high", // 覆盖每个 agent 的 thinking
         reasoningDefault: "on", // 每个 agent 的 reasoning 可见性
         fastModeDefault: false, // 每个 agent 的快速模式
       },
@@ -687,7 +687,7 @@ title: "配置示例"
 ## 提示
 
 - 如果你设置了 `dmPolicy: "open"`，匹配的 `allowFrom` 列表必须包含 `"*"`.
-- Provider ID 各不相同（电话号码、用户 ID、频道 ID）。请查阅 provider 文档以确认格式。
+- 提供方 ID 各不相同（电话号码、用户 ID、频道 ID）。请查阅提供方文档以确认格式。
 - 可稍后添加的可选部分：`web`、`browser`、`ui`、`discovery`、`plugins`、`talk`、`signal`、`imessage`。
 - 查看 [Providers](/providers) 和 [Troubleshooting](/gateway/troubleshooting) 以获取更深入的设置说明。
 

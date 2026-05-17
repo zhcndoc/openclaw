@@ -324,15 +324,17 @@ export default defineSetupPluginEntry(myChannelPlugin);
 
 对于热路径的仅设置场景，当你只需要设置面的部分能力时，优先使用更细粒度的 setup 辅助接口，而不是更宽泛的 `plugin-sdk/setup` 总入口：
 
-| Import path                        | Use it for                                                                                | Key exports                                                                                                                                                                                                                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plugin-sdk/setup-runtime`         | setup-time runtime helpers that stay available in `setupEntry` / deferred channel startup | `createPatchedAccountSetupAdapter`, `createEnvPatchedAccountSetupAdapter`, `createSetupInputPresenceValidator`, `noteChannelLookupFailure`, `noteChannelLookupSummary`, `promptResolvedAllowFrom`, `splitSetupEntries`, `createAllowlistSetupWizardProxy`, `createDelegatedSetupWizardProxy` |
-| `plugin-sdk/setup-adapter-runtime` | deprecated compatibility alias; use `plugin-sdk/setup-runtime`                            | `createEnvPatchedAccountSetupAdapter`                                                                                                                                                                                                                                                        |
-| `plugin-sdk/setup-tools`           | setup/install CLI/archive/docs helpers                                                    | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR`                                                                                                                                                                                |
+| 导入路径                         | 适用场景                                                                                 | 关键导出                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plugin-sdk/setup-runtime`         | 在 `setupEntry` / 延迟频道启动中仍然可用的设置期运行时辅助工具                             | `createSetupTranslator`、`createPatchedAccountSetupAdapter`、`createEnvPatchedAccountSetupAdapter`、`createSetupInputPresenceValidator`、`noteChannelLookupFailure`、`noteChannelLookupSummary`、`promptResolvedAllowFrom`、`splitSetupEntries`、`createAllowlistSetupWizardProxy`、`createDelegatedSetupWizardProxy` |
+| `plugin-sdk/setup-adapter-runtime` | 已弃用的兼容别名；请使用 `plugin-sdk/setup-runtime`                                        | `createEnvPatchedAccountSetupAdapter`                                                                                                                                                                                                                                                                                 |
+| `plugin-sdk/setup-tools`           | 设置/安装 CLI/归档/文档辅助工具                                                            | `formatCliCommand`、`detectBinary`、`extractArchive`、`resolveBrewExecutable`、`formatDocsLink`、`CONFIG_DIR`                                                                                                                                                                                                         |
 
 当你想要完整的共享设置工具箱时，请使用更宽泛的 `plugin-sdk/setup` 接口，包括诸如 `moveSingleAccountChannelSectionToDefaultAccount(...)` 之类的配置补丁辅助工具。
 
-这些 setup 补丁适配器在导入时对热路径安全。它们打包后的单账户提升契约面查找是惰性的，因此导入 `plugin-sdk/setup-runtime` 不会在适配器真正被使用之前就急切加载打包契约面的发现逻辑。
+对于固定的设置向导文案，请使用 `createSetupTranslator(...)`。它会遵循 CLI 向导的语言环境（先读取 `OPENCLAW_LOCALE`，再读取系统语言环境变量），并回退到英文。插件专有的设置文案应保留在插件自有代码中，仅将通用的设置标签、状态文本以及官方打包插件的设置文案放入共享目录键。
+
+setup 补丁适配器在导入时对热路径是安全的。其打包后的单账户提升契约面查找是懒加载的，因此导入 `plugin-sdk/setup-runtime` 不会在适配器真正被使用之前就急切地加载打包契约面的发现逻辑。
 
 ### 频道拥有的单账户提升
 
@@ -415,9 +417,9 @@ const configSchema = buildJsonChannelConfigSchema(
 
 对于第三方插件，冷路径契约仍然是插件清单：将生成的 JSON Schema 镜像到 `openclaw.plugin.json#channelConfigs` 中，这样配置 schema、setup 和 UI 界面就可以在不加载运行时代码的情况下检查 `channels.<id>`。
 
-## Setup 向导
+## 安装向导
 
-频道插件可以为 `openclaw onboard` 提供交互式 setup 向导。该向导是 `ChannelPlugin` 上的一个 `ChannelSetupWizard` 对象：
+频道插件可以为 `openclaw onboard` 提供交互式安装向导。该向导是 `ChannelPlugin` 上的一个 `ChannelSetupWizard` 对象：
 
 ```typescript
 import type { ChannelSetupWizard } from "openclaw/plugin-sdk/channel-setup";
@@ -492,7 +494,7 @@ const setupWizard: ChannelSetupWizard = {
 
 ## 发布与安装
 
-**External plugins:** 发布到 [ClawHub](/clawhub)，然后安装：
+**外部插件：** 发布到 [ClawHub](/clawhub)，然后安装：
 
 <Tabs>
   <Tab title="npm">
@@ -520,7 +522,7 @@ const setupWizard: ChannelSetupWizard = {
 
 **仓库内插件：** 将其放在打包插件工作区树下，它们会在构建期间自动被发现。
 
-**用户可以安装：**
+**用户可安装：**
 
 ```bash
 openclaw plugins install <package-name>

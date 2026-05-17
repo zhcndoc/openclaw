@@ -16,6 +16,20 @@ Linux 或 Windows（通过 WSL2；强烈推荐）上设置 OpenClaw 的**推荐*
 openclaw onboard
 ```
 
+## 语言环境
+
+CLI 向导会本地化固定的上手引导文案。它会依次从
+`OPENCLAW_LOCALE`、`LC_ALL`、`LC_MESSAGES`、`LANG` 中解析语言环境，并
+回退到英语。支持的向导语言环境为 `en`、`zh-CN` 和 `zh-TW`。
+
+```bash
+OPENCLAW_LOCALE=zh-CN openclaw onboard
+```
+
+名称和稳定标识符保持原样：`OpenClaw`、`Gateway`、`Tailscale`、
+命令、配置键、URL、提供方 ID、模型 ID，以及插件/通道标签
+都不会翻译。
+
 <Info>
 最快首次聊天：打开 Control UI（无需设置通道）。运行
 `openclaw dashboard`，然后在浏览器中聊天。文档：[Dashboard](/web/dashboard)。
@@ -40,7 +54,7 @@ API key，而另一些则无需 key。你也可以稍后使用
 `openclaw configure --section web` 进行配置。文档：[Web tools](/tools/web)。
 </Tip>
 
-## QuickStart 与 Advanced
+## 快速开始与高级
 
 上手引导从 **QuickStart**（默认值）与 **Advanced**（完全控制）开始。
 

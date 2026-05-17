@@ -18,13 +18,13 @@ title: "本地模型"
 
 ## 选择后端
 
-| Backend                                              | Use when                                                                    |
+| 后端                                                 | 适用场景                                                                    |
 | ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| [ds4](/providers/ds4)                                | Local DeepSeek V4 Flash on macOS Metal with OpenAI-compatible tool calls    |
-| [LM Studio](/providers/lmstudio)                     | First-time local setup, GUI loader, native Responses API                    |
-| LiteLLM / OAI-proxy / custom OpenAI-compatible proxy | You front another model API and need OpenClaw to treat it as OpenAI         |
-| MLX / vLLM / SGLang                                  | High-throughput self-hosted serving with an OpenAI-compatible HTTP endpoint |
-| [Ollama](/providers/ollama)                          | CLI workflow, model library, hands-off systemd service                      |
+| [ds4](/providers/ds4)                                | 在 macOS Metal 上本地运行 DeepSeek V4 Flash，并支持 OpenAI 兼容的工具调用   |
+| [LM Studio](/providers/lmstudio)                     | 首次本地搭建、GUI 加载器、原生 Responses API                                |
+| LiteLLM / OAI-proxy / 自定义 OpenAI 兼容代理         | 你在另一套模型 API 前面加了一层，并需要 OpenClaw 将其视为 OpenAI            |
+| MLX / vLLM / SGLang                                  | 高吞吐量自托管服务，提供 OpenAI 兼容的 HTTP 端点                            |
+| [Ollama](/providers/ollama)                          | CLI 工作流、模型库、免管理的 systemd 服务                                   |
 
 当后端支持 Responses API 时（LM Studio 支持），请使用 Responses API（`api: "openai-responses"`）。否则请坚持使用 Chat Completions（`api: "openai-completions"`）。
 
@@ -168,7 +168,7 @@ MLX（`mlx_lm.server`）、vLLM、SGLang、LiteLLM、OAI-proxy 或自定义网�
 }
 ```
 
-如果自定义 provider 在包含 `baseUrl` 时省略了 `api`，OpenClaw 默认使用 `openai-completions`。像 `127.0.0.1` 这样的回环端点会自动被视为受信任；局域网、tailnet 和私有 DNS 端点仍需要 `request.allowPrivateNetwork: true`。
+如果在带有 `baseUrl` 的自定义 provider 中省略 `api`，OpenClaw 默认使用 `openai-completions`。自定义/本地 provider 条目会信任其精确配置的 `baseUrl` 源用于受保护的模型请求，包括回环、局域网、tailnet 和私有 DNS 主机。对其他私有源的请求仍需要 `request.allowPrivateNetwork: true`；元数据/链路本地源在未显式启用时仍会被阻止。将其设为 `false` 可退出这种精确源信任。
 
 `models.providers.<id>.models[].id` 的值是 provider 本地的。不要在这里包含 provider 前缀。例如，用 `mlx_lm.server --model mlx-community/Qwen3-30B-A3B-6bit` 启动的 MLX 服务器应使用如下目录 ID 和模型引用：
 
@@ -177,7 +177,7 @@ MLX（`mlx_lm.server`）、vLLM、SGLang、LiteLLM、OAI-proxy 或自定义网�
 
 在本地或代理视觉模型上设置 `input: ["text", "image"]`，这样图像附件会被注入到 agent 回合中。交互式自定义 provider onboarding 会推断常见视觉模型 ID，并且只会询问未知名称。非交互式 onboarding 使用相同的推断；对于未知视觉 ID，请使用 `--custom-image-input`，或者当已知看起来像模型的名称在你的端点后面其实只是文本模型时，使用 `--custom-text-input`。
 
-保持 `models.mode: "merge"`，这样托管模型仍可作为回退方案。对于较慢的本地或远程模型服务器，请使用 `models.providers.<id>.timeoutSeconds`，再决定是否提高 `agents.defaults.timeoutSeconds`。provider 超时仅应用于模型 HTTP 请求，包括连接、响应头、流式响应体以及受保护的总抓取中止。
+保持 `models.mode: "merge"`，这样托管模型仍可作为回退可用。对于较慢的本地或远程模型服务器，请在提高 `agents.defaults.timeoutSeconds` 之前使用 `models.providers.<id>.timeoutSeconds`。provider 超时仅适用于模型 HTTP 请求，包括连接、响应头、正文流式传输，以及整体受保护 fetch 的中止。如果 agent 或运行超时更低，也要提高那个上限，因为 provider 超时无法延长整个 agent 运行时间。
 
 <Note>
 对于自定义 OpenAI 兼容 provider，当 `baseUrl` 解析到回环地址、私有局域网、`.local` 或裸主机名时，保留一个非敏感的本地标记，例如 `apiKey: "ollama-local"`，是被接受的。OpenClaw 会将其视为有效的本地凭据，而不会报告缺失密钥。对于任何接受公共主机名的 provider，请使用真实值。

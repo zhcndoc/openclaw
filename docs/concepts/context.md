@@ -124,7 +124,7 @@ Top tools (schema size):
 
 大文件会按文件使用 `agents.defaults.bootstrapMaxChars`（默认 `12000` 字符）进行截断。OpenClaw 还会在所有文件上强制执行一个总的启动注入上限 `agents.defaults.bootstrapTotalMaxChars`（默认 `60000` 字符）。`/context` 会显示 **原始 vs 注入后** 的大小，以及是否发生了截断。
 
-当发生截断时，运行时可以在项目上下文下注入一个提示块警告。通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `once`）进行配置。
+当发生截断时，运行时可以在项目上下文下方注入一个提示内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
 
 ## 技能：按需注入 vs 按需加载
 
@@ -184,16 +184,16 @@ Top tools (schema size):
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Context engine" href="/concepts/context-engine" icon="puzzle-piece">
+  <Card title="上下文引擎" href="/concepts/context-engine" icon="puzzle-piece">
     通过插件进行自定义上下文注入。
   </Card>
-  <Card title="Compaction" href="/concepts/compaction" icon="compress">
+  <Card title="压缩" href="/concepts/compaction" icon="compress">
     对长对话进行摘要，以使其保持在模型窗口内。
   </Card>
-  <Card title="System prompt" href="/concepts/system-prompt" icon="message-lines">
+  <Card title="系统提示词" href="/concepts/system-prompt" icon="message-lines">
     系统提示词如何构建，以及它在每轮中注入什么。
   </Card>
-  <Card title="Agent loop" href="/concepts/agent-loop" icon="arrows-rotate">
+  <Card title="代理循环" href="/concepts/agent-loop" icon="arrows-rotate">
     从传入消息到最终回复的完整代理执行周期。
   </Card>
 </CardGroup>

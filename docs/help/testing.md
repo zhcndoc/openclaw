@@ -2,7 +2,7 @@
 summary: "测试工具包：单元/e2e/live 套件、Docker 运行器，以及每类测试覆盖的内容"
 read_when:
   - 在本地或 CI 中运行测试时
-  - 为模型/提供方 bug 添加回归测试时
+  - 为模型/提供方错误添加回归测试时
   - 调试 gateway + agent 行为时
 title: "测试"
 ---
@@ -108,7 +108,7 @@ Docker 运行器。本文档是一份“我们如何测试”的指南：
 当你只需要一个失败案例时，优先使用下面描述的 allowlist 环境变量缩小 live 测试范围。
 </Tip>
 
-## QA-specific runners
+## QA 专用运行器
 
 当你需要更接近 QA-lab 真实环境时，这些命令可与主测试套件并列使用：
 
@@ -284,7 +284,7 @@ Mantis agent 会读取 PR，决定什么样的 Telegram 可见行为能够证明
   - Telegram Desktop 仍需要用户登录/配置文件。bot token 只用于配置 OpenClaw。使用 `--telegram-profile-archive-env <name>` 传入 base64 的 `.tgz` 配置文件归档，或使用 `--keep-lease` 并通过 VNC 手动登录一次。
   - 在输出目录下写入 `mantis-telegram-desktop-builder-report.md`、`mantis-telegram-desktop-builder-summary.json`、`telegram-desktop-builder.png` 和 `telegram-desktop-builder.mp4`。
 
-Live transport lanes share one standard contract so new transports do not drift; the per-lane coverage matrix lives in [QA overview → Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage). `qa-channel` is the broad synthetic suite and is not part of that matrix.
+Live transport lanes 共享一个标准契约，因此新的传输不会偏离；每个 lane 的覆盖矩阵位于 [QA 概览 → Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage)。`qa-channel` 是更广泛的合成套件，不属于该矩阵。
 
 ### 通过 Convex 共享 Telegram 凭证（v1）
 
@@ -335,12 +335,12 @@ endpoint prefix、HTTP timeout 以及 admin/list 可达性，而不会打印
 默认 endpoint 契约（`OPENCLAW_QA_CONVEX_SITE_URL` + `/qa-credentials/v1`）：
 
 - `POST /acquire`
-  - Request: `{ kind, ownerId, actorRole, leaseTtlMs, heartbeatIntervalMs }`
-  - Success: `{ status: "ok", credentialId, leaseToken, payload, leaseTtlMs?, heartbeatIntervalMs? }`
-  - Exhausted/retryable: `{ status: "error", code: "POOL_EXHAUSTED" | "NO_CREDENTIAL_AVAILABLE", ... }`
+  - 请求：`{ kind, ownerId, actorRole, leaseTtlMs, heartbeatIntervalMs }`
+  - 成功：`{ status: "ok", credentialId, leaseToken, payload, leaseTtlMs?, heartbeatIntervalMs? }`
+  - 耗尽/可重试：`{ status: "error", code: "POOL_EXHAUSTED" | "NO_CREDENTIAL_AVAILABLE", ... }`
 - `POST /payload-chunk`
-  - Request: `{ kind, ownerId, actorRole, credentialId, leaseToken, index }`
-  - Success: `{ status: "ok", index, data }`
+  - 请求：`{ kind, ownerId, actorRole, credentialId, leaseToken, index }`
+  - 成功：`{ status: "ok", index, data }`
 - `POST /heartbeat`
   - 请求：`{ kind, ownerId, actorRole, credentialId, leaseToken, leaseTtlMs }`
   - 成功：`{ status: "ok" }`（或空的 `2xx`）
@@ -364,14 +364,14 @@ Telegram kind 的 payload 结构：
 - `groupId` 必须是数字形式的 Telegram chat id 字符串。
 - `admin/add` 会校验 `kind: "telegram"` 的该结构，并拒绝格式错误的 payload。
 
-Payload shape for Telegram real-user kind:
+Telegram real-user kind 的 payload 结构：
 
 - `{ groupId: string, sutToken: string, testerUserId: string, testerUsername: string, telegramApiId: string, telegramApiHash: string, tdlibDatabaseEncryptionKey: string, tdlibArchiveBase64: string, tdlibArchiveSha256: string, desktopTdataArchiveBase64: string, desktopTdataArchiveSha256: string }`
-- `groupId`, `testerUserId`, and `telegramApiId` must be numeric strings.
-- `tdlibArchiveSha256` and `desktopTdataArchiveSha256` must be SHA-256 hex strings.
-- `kind: "telegram-user"` represents one Telegram burner account. Treat the lease as account-wide: the TDLib CLI driver and Telegram Desktop visual witness restore from the same payload, and only one job should hold the lease at a time.
+- `groupId`、`testerUserId` 和 `telegramApiId` 必须是数字字符串。
+- `tdlibArchiveSha256` 和 `desktopTdataArchiveSha256` 必须是 SHA-256 十六进制字符串。
+- `kind: "telegram-user"` 表示一个 Telegram 烧录账号。请将该租约视为账户级别：TDLib CLI 驱动和 Telegram Desktop 可视化见证都从同一份 payload 恢复，并且同一时间只能有一个作业持有该租约。
 
-Telegram real-user lease restore:
+Telegram real-user 租约恢复：
 
 ```bash
 tmp=$(mktemp -d /tmp/openclaw-telegram-user.XXXXXX)
@@ -384,9 +384,9 @@ TELEGRAM_USER_DRIVER_STATE_DIR="$tmp/user-driver" \
 node --import tsx scripts/e2e/telegram-user-credential.ts release --lease-file "$tmp/lease.json"
 ```
 
-Use the restored Desktop profile with `Telegram -workdir "$tmp/desktop"` when a visual recording is needed. In local operator environments, `scripts/e2e/telegram-user-credential.ts` reads `~/.codex/skills/custom/telegram-e2e-bot-to-bot/convex.local.env` by default if process env vars are absent.
+在需要可视化录制时，请使用恢复后的桌面配置文件和 `Telegram -workdir "$tmp/desktop"`。在本地操作员环境中，如果进程环境变量缺失，`scripts/e2e/telegram-user-credential.ts` 默认会读取 `~/.codex/skills/custom/telegram-e2e-bot-to-bot/convex.local.env`。
 
-Agent-driven Crabbox session:
+Agent 驱动的 Crabbox 会话：
 
 ```bash
 pnpm qa:telegram-user:crabbox -- start \
@@ -399,54 +399,44 @@ pnpm qa:telegram-user:crabbox -- finish \
   --session .artifacts/qa-e2e/telegram-user-crabbox/pr-review/session.json
 ```
 
-`start` leases the `telegram-user` credential, restores the same account into
-TDLib and Telegram Desktop on a Crabbox Linux desktop, starts a local mock SUT
-gateway from the current checkout, opens the visible Telegram chat, starts
-desktop recording, and writes a private `session.json`. While the session is
-alive, an agent can keep testing until satisfied:
+`start` 会租用 `telegram-user` 凭证，把同一个账号恢复到
+Crabbox Linux 桌面上的 TDLib 和 Telegram Desktop，启动本地 mock SUT
+gateway，打开可见的 Telegram 聊天，开始桌面录制，并写入一个私有的
+`session.json`。会话存活期间，agent 可以持续测试，直到满意为止：
 
-- `send --session <file> --text <message>` sends through the real TDLib user and waits for the SUT reply.
-- `run --session <file> -- <remote command>` runs an arbitrary command on the Crabbox and saves its output, for example `bash -lc 'source /tmp/openclaw-telegram-user-crabbox/env.sh && python3 /tmp/openclaw-telegram-user-crabbox/user-driver.py transcript --limit 20 --json'`.
-- `screenshot --session <file>` captures the current visible desktop.
-- `status --session <file>` prints the lease and WebVNC command.
-- `finish --session <file>` stops the recorder, captures screenshot/video/motion-trim artifacts, releases the Convex credential, stops local SUT processes, and stops the Crabbox lease unless `--keep-box` is passed.
-- `publish --session <file> --pr <number>` publishes a GIF-only PR comment by default. Pass `--full-artifacts` only when logs or JSON artifacts are intentionally needed.
+- `send --session <file> --text <message>` 通过真实的 TDLib 用户发送并等待 SUT 回复。
+- `run --session <file> -- <remote command>` 在 Crabbox 上运行任意命令并保存其输出，例如 `bash -lc 'source /tmp/openclaw-telegram-user-crabbox/env.sh && python3 /tmp/openclaw-telegram-user-crabbox/user-driver.py transcript --limit 20 --json'`。
+- `screenshot --session <file>` 捕获当前可见桌面。
+- `status --session <file>` 打印租约和 WebVNC 命令。
+- `finish --session <file>` 停止录制器，捕获截图/视频/motion-trim 产物，释放 Convex 凭证，停止本地 SUT 进程，并在未传入 `--keep-box` 时停止 Crabbox 租约。
+- `publish --session <file> --pr <number>` 默认发布仅含 GIF 的 PR 评论。仅当确实需要日志或 JSON 产物时才传入 `--full-artifacts`。
 
-For deterministic visual repros, pass `--mock-response-file <path>` to `start`
-or to the one-command `probe` shorthand. The runner defaults to a standard
-Crabbox class, 24fps recording, 24fps motion GIF previews, and 1920px GIF
-width. Override with `--class`, `--record-fps`, `--preview-fps`, and
-`--preview-width` only when the proof needs different capture settings.
+为了进行确定性的可视化复现，请在 `start`
+或单命令 `probe` 简写中传入 `--mock-response-file <path>`。该运行器默认使用标准的
+Crabbox 类别、24fps 录制、24fps motion GIF 预览以及 1920px 的 GIF
+宽度。只有在证明需要不同捕获设置时才覆盖 `--class`、`--record-fps`、`--preview-fps` 和
+`--preview-width`。
 
-One-command Crabbox proof:
+单命令 Crabbox 证明：
 
 ```bash
 pnpm qa:telegram-user:crabbox -- --text /status
 ```
 
-The default `probe` command is shorthand for one start/send/finish cycle. Use
-it for a quick `/status` smoke. Use the session commands for PR review,
-bug-reproduction work, or any case where the agent needs minutes of arbitrary
-experimentation before deciding the proof is complete. Use `--id <cbx_...>` to
-reuse a warm desktop lease, `--keep-box` to keep VNC open after finish,
-`--desktop-chat-title <name>` to pick the visible chat, and `--tdlib-url <tgz>`
-when using a prebaked Linux `libtdjson.so` archive instead of building TDLib on
-a fresh box. The runner verifies `--tdlib-url` with `--tdlib-sha256 <hex>` or,
-by default, a sibling `<url>.sha256` file.
+默认的 `probe` 命令是一次 start/send/finish 循环的简写。把它用于快速的 `/status` 冒烟测试。将会话命令用于 PR 审查、
+bug 复现工作，或任何需要 agent 在决定证明是否完成前进行数分钟任意实验的场景。使用 `--id <cbx_...>` 复用一个热桌面租约，使用 `--keep-box` 在结束后保持 VNC 打开，使用 `--desktop-chat-title <name>` 选择可见聊天，并在使用预打包的 Linux `libtdjson.so` 归档而不是在新盒子上构建 TDLib 时使用 `--tdlib-url <tgz>`。运行器会使用 `--tdlib-sha256 <hex>` 验证 `--tdlib-url`，或者默认验证一个同级的 `<url>.sha256` 文件。
 
-Broker-validated multi-channel payloads:
+经 broker 验证的多通道 payload：
 
 - Discord: `{ guildId: string, channelId: string, driverBotToken: string, sutBotToken: string, sutApplicationId: string, voiceChannelId?: string }`
 - WhatsApp: `{ driverPhoneE164: string, sutPhoneE164: string, driverAuthArchiveBase64: string, sutAuthArchiveBase64: string, groupJid?: string }`
 
-Slack lanes can also lease from the pool, but Slack payload validation currently
-lives in the Slack QA runner rather than the broker. Use
-`{ channelId: string, driverBotToken: string, sutBotToken: string, sutAppToken: string }`
-for Slack rows.
+Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Slack QA 运行器中，而不是 broker 中。Slack 行请使用
+`{ channelId: string, driverBotToken: string, sutBotToken: string, sutAppToken: string }`。
 
-### Adding a channel to QA
+### 向 QA 添加一个 channel
 
-新 channel adapter 的架构和 scenario-helper 名称位于 [QA 概览 → Adding a channel](/concepts/qa-e2e-automation#adding-a-channel)。最低要求：在共享的 `qa-lab` host seam 上实现传输运行器，在插件清单中声明 `qaRunners`，通过 `openclaw qa <runner>` 挂载，并在 `qa/scenarios/` 下编写场景。
+新 channel adapter 的架构和 scenario-helper 名称位于 [QA 概览 → 添加一个 channel](/concepts/qa-e2e-automation#adding-a-channel)。最低要求：在共享的 `qa-lab` host seam 上实现传输运行器，在插件清单中声明 `qaRunners`，通过 `openclaw qa <runner>` 挂载，并在 `qa/scenarios/` 下编写场景。
 
 ## 测试套件（在哪运行什么）
 
@@ -659,7 +649,22 @@ for Slack rows.
 
 这些 Docker 运行器分成两类：
 
-- Live-model runners: `test:docker:live-models` and `test:docker:live-gateway` run only their matching profile-key live file inside the repo Docker image (`src/agents/models.profiles.live.test.ts` and `src/gateway/gateway-models.profiles.live.test.ts`), mounting your local config dir, workspace, and optional profile env file. The matching local entrypoints are `test:live:models-profiles` and `test:live:gateway-profiles`.
+- Live-model 运行器：`test:docker:live-models` 和 `test:docker:live-gateway` 只在仓库 Docker 镜像中运行与其匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录、工作区和可选的 profile env 文件。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
+- Docker live 运行器默认使用更小的 smoke 上限，因此完整的 Docker 扫描仍然可行：
+  `test:docker:live-models` 默认 `OPENCLAW_LIVE_MAX_MODELS=12`，而
+  `test:docker:live-gateway` 默认 `OPENCLAW_LIVE_GATEWAY_SMOKE=1`、
+  `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`、
+  `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000` 和 `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`。只有当你
+  明确需要更大的穷举扫描时，才覆盖这些 env 变量。
+- `test:docker:all` 先通过 `test:docker:live-build` 构建一次 live Docker 镜像，再通过 `scripts/package-openclaw-for-docker.mjs` 将 OpenClaw 打包成一个 npm tarball，然后构建/复用两个 `scripts/e2e/Dockerfile` 镜像。裸镜像只是用于 install/update/plugin-dependency 通道的 Node/Git 运行器；这些通道会挂载预构建 tarball。功能镜像会将同一个 tarball 安装到 `/app`，用于已构建应用功能通道。Docker 通道定义位于 `scripts/lib/docker-e2e-scenarios.mjs`；规划逻辑位于 `scripts/lib/docker-e2e-plan.mjs`；`scripts/test-docker-all.mjs` 负责执行所选计划。聚合流程使用加权本地调度器：`OPENCLAW_DOCKER_ALL_PARALLELISM` 控制进程槽位，而资源上限会阻止过重的 live、npm-install 和多服务通道同时启动。如果单个通道比当前上限更重，调度器仍然可以在池为空时启动它，然后让它单独运行，直到再次有容量。默认值为 10 个槽位、`OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`、`OPENCLAW_DOCKER_ALL_NPM_LIMIT=10` 和 `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`；只有当 Docker 主机有更多余量时，才调整 `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` 或 `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT`。运行器默认会执行 Docker 预检，移除过期的 OpenClaw E2E 容器，每 30 秒打印状态，将成功的通道计时存储在 `.artifacts/docker-tests/lane-timings.json`，并利用这些计时在后续运行中优先启动更长的通道。使用 `OPENCLAW_DOCKER_ALL_DRY_RUN=1` 可在不构建或运行 Docker 的情况下打印加权通道清单，或使用 `node scripts/test-docker-all.mjs --plan-json` 打印所选通道、包/镜像需求和凭据的 CI 计划。
+- `Package Acceptance` 是 GitHub 原生的包门禁，用于判断“这个可安装 tarball 是否能作为产品工作？”它会从 `source=npm`、`source=ref`、`source=url` 或 `source=artifact` 中解析一个候选包，将其作为 `package-under-test` 上传，然后针对这个精确 tarball 运行可复用的 Docker E2E 通道，而不是重新打包所选 ref。Profile 按广度排序：`smoke`、`package`、`product` 和 `full`。有关包/更新/插件契约、已发布升级幸存者矩阵、发布默认值和失败分流，请参见 [Testing updates and plugins](/help/testing-updates-plugins)。
+- 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mjs`。该守卫从 `dist/entry.js` 和 `dist/cli/run-main.js` 追踪静态构建图，如果在命令分发之前的预分发启动导入了 Commander、prompt UI、undici 或日志记录等包依赖，就会失败；它还会将打包后的 gateway 运行 chunk 控制在预算内，并拒绝对已知冷门 gateway 路径的静态导入。打包后的 CLI smoke 还覆盖 root help、onboard help、doctor help、status、config schema 和 model-list 命令。
+- Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止点之前，harness 只容忍已发布包的元数据缺口：省略的 private QA 清单项、缺失的 `gateway install --wrapper`、tarball 派生的 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版插件安装记录位置、缺失的 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的包，这些路径都属于严格失败。
+- 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:release-user-journey`、`test:docker:release-typed-onboarding`、`test:docker:release-media-memory`、`test:docker:release-upgrade-user-journey`、`test:docker:release-plugin-marketplace`、`test:docker:skill-install`、`test:docker:update-channel-switch`、`test:docker:upgrade-survivor`、`test:docker:published-upgrade-survivor`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update`、`test:docker:plugin-lifecycle-matrix` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
+
+live-model Docker 运行器也只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
+
+- Direct models: `pnpm test:docker:live-models` and `pnpm test:docker:live-gateway` run only their matching profile-key live file inside the repo Docker image (`src/agents/models.profiles.live.test.ts` and `src/gateway/gateway-models.profiles.live.test.ts`), mounting your local config dir, workspace, and optional profile env file. The matching local entrypoints are `test:live:models-profiles` and `test:live:gateway-profiles`.
 - Docker live runners default to a smaller smoke cap so a full Docker sweep stays practical:
   `test:docker:live-models` defaults to `OPENCLAW_LIVE_MAX_MODELS=12`, and
   `test:docker:live-gateway` defaults to `OPENCLAW_LIVE_GATEWAY_SMOKE=1`,
@@ -670,195 +675,21 @@ for Slack rows.
 - `Package Acceptance` is the GitHub-native package gate for "does this installable tarball work as a product?" It resolves one candidate package from `source=npm`, `source=ref`, `source=url`, or `source=artifact`, uploads it as `package-under-test`, then runs the reusable Docker E2E lanes against that exact tarball instead of repacking the selected ref. Profiles are ordered by breadth: `smoke`, `package`, `product`, and `full`. See [Testing updates and plugins](/help/testing-updates-plugins) for the package/update/plugin contract, published-upgrade survivor matrix, release defaults, and failure triage.
 - Build and release checks run `scripts/check-cli-bootstrap-imports.mjs` after tsdown. The guard walks the static built graph from `dist/entry.js` and `dist/cli/run-main.js` and fails if pre-dispatch startup imports package dependencies such as Commander, prompt UI, undici, or logging before command dispatch; it also keeps the bundled gateway run chunk under budget and rejects static imports of known cold gateway paths. Packaged CLI smoke also covers root help, onboard help, doctor help, status, config schema, and a model-list command.
 - Package Acceptance legacy compatibility is capped at `2026.4.25` (`2026.4.25-beta.*` included). Through that cutoff, the harness tolerates only shipped-package metadata gaps: omitted private QA inventory entries, missing `gateway install --wrapper`, missing patch files in the tarball-derived git fixture, missing persisted `update.channel`, legacy plugin install-record locations, missing marketplace install-record persistence, and config metadata migration during `plugins update`. For packages after `2026.4.25`, those paths are strict failures.
-- Container smoke runners: `test:docker:openwebui`, `test:docker:onboard`, `test:docker:npm-onboard-channel-agent`, `test:docker:release-user-journey`, `test:docker:release-typed-onboarding`, `test:docker:release-media-memory`, `test:docker:release-upgrade-user-journey`, `test:docker:release-plugin-marketplace`, `test:docker:skill-install`, `test:docker:update-channel-switch`, `test:docker:upgrade-survivor`, `test:docker:published-upgrade-survivor`, `test:docker:session-runtime-context`, `test:docker:agents-delete-shared-workspace`, `test:docker:gateway-network`, `test:docker:browser-cdp-snapshot`, `test:docker:mcp-channels`, `test:docker:pi-bundle-mcp-tools`, `test:docker:cron-mcp-cleanup`, `test:docker:plugins`, `test:docker:plugin-update`, `test:docker:plugin-lifecycle-matrix`, and `test:docker:config-reload` boot one or more real containers and verify higher-level integration paths.
+- Container smoke runners: `test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:release-user-journey`、`test:docker:release-typed-onboarding`、`test:docker:release-media-memory`、`test:docker:release-upgrade-user-journey`、`test:docker:release-plugin-marketplace`、`test:docker:skill-install`、`test:docker:update-channel-switch`、`test:docker:upgrade-survivor`、`test:docker:published-upgrade-survivor`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update`、`test:docker:plugin-lifecycle-matrix` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
 
-live-model Docker 运行器也会只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
-
-- Direct models: `pnpm test:docker:live-models` (script: `scripts/test-live-models-docker.sh`)
-- ACP bind smoke: `pnpm test:docker:live-acp-bind` (script: `scripts/test-live-acp-bind-docker.sh`; covers Claude, Codex, and Gemini by default, with strict Droid/OpenCode coverage via `pnpm test:docker:live-acp-bind:droid` and `pnpm test:docker:live-acp-bind:opencode`)
-- CLI backend smoke: `pnpm test:docker:live-cli-backend` (script: `scripts/test-live-cli-backend-docker.sh`)
-- Codex app-server harness smoke: `pnpm test:docker:live-codex-harness` (script: `scripts/test-live-codex-harness-docker.sh`)
-- Gateway + dev agent: `pnpm test:docker:live-gateway` (script: `scripts/test-live-gateway-models-docker.sh`)
-- Observability smoke: `pnpm qa:otel:smoke` is a private QA source-checkout lane. It is intentionally not part of package Docker release lanes because the npm tarball omits QA Lab.
-- Open WebUI live smoke: `pnpm test:docker:openwebui` (script: `scripts/e2e/openwebui-docker.sh`)
-- Onboarding wizard (TTY, full scaffolding): `pnpm test:docker:onboard` (script: `scripts/e2e/onboard-docker.sh`)
-- Npm tarball onboarding/channel/agent smoke: `pnpm test:docker:npm-onboard-channel-agent` installs the packed OpenClaw tarball globally in Docker, configures OpenAI via env-ref onboarding plus Telegram by default, runs doctor, and runs one mocked OpenAI agent turn. Reuse a prebuilt tarball with `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz`, skip the host rebuild with `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0`, or switch channel with `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` or `OPENCLAW_NPM_ONBOARD_CHANNEL=slack`.
-
-- Release user journey smoke: `pnpm test:docker:release-user-journey` installs the packed OpenClaw tarball globally in a clean Docker home, runs onboarding, configures a mocked OpenAI provider, runs an agent turn, installs/uninstalls external plugins, configures ClickClack against a local fixture, verifies outbound/inbound messaging, restarts Gateway, and runs doctor.
-- Release typed onboarding smoke: `pnpm test:docker:release-typed-onboarding` installs the packed tarball, drives `openclaw onboard` through a real TTY, configures OpenAI as an env-ref provider, verifies no raw key persistence, and runs a mocked agent turn.
-- Release media/memory smoke: `pnpm test:docker:release-media-memory` installs the packed tarball, verifies image understanding from a PNG attachment, OpenAI-compatible image generation output, memory search recall, and recall survival across Gateway restart.
-- Release upgrade user journey smoke: `pnpm test:docker:release-upgrade-user-journey` installs `openclaw@latest` by default, configures provider/plugin/ClickClack state on the published package, upgrades to the candidate tarball, then reruns the core agent/plugin/channel journey. Override the baseline with `OPENCLAW_RELEASE_UPGRADE_BASELINE_SPEC=openclaw@<version>`.
-- Release plugin marketplace smoke: `pnpm test:docker:release-plugin-marketplace` installs from a local fixture marketplace, updates the installed plugin, uninstalls it, and verifies the plugin CLI disappears with install metadata pruned.
-- Skill install smoke: `pnpm test:docker:skill-install` installs the packed OpenClaw tarball globally in Docker, disables uploaded archive installs in config, resolves the current live ClawHub skill slug from search, installs it with `openclaw skills install`, and verifies the installed skill plus `.clawhub` origin/lock metadata.
-- Update channel switch smoke: `pnpm test:docker:update-channel-switch` installs the packed OpenClaw tarball globally in Docker, switches from package `stable` to git `dev`, verifies the persisted channel and plugin post-update work, then switches back to package `stable` and checks update status.
-- Upgrade survivor smoke: `pnpm test:docker:upgrade-survivor` installs the packed OpenClaw tarball over a dirty old-user fixture with agents, channel config, plugin allowlists, stale plugin dependency state, and existing workspace/session files. It runs package update plus non-interactive doctor without live provider or channel keys, then starts a loopback Gateway and checks config/state preservation plus startup/status budgets.
-- Published upgrade survivor smoke: `pnpm test:docker:published-upgrade-survivor` installs `openclaw@latest` by default, seeds realistic existing-user files, configures that baseline with a baked command recipe, validates the resulting config, updates that published install to the candidate tarball, runs non-interactive doctor, writes `.artifacts/upgrade-survivor/summary.json`, then starts a loopback Gateway and checks configured intents, state preservation, startup, `/healthz`, `/readyz`, and RPC status budgets. Override one baseline with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC`, ask the aggregate scheduler to expand exact local baselines with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS` such as `openclaw@2026.5.2 openclaw@2026.4.23 openclaw@2026.4.15`, and expand issue-shaped fixtures with `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` such as `reported-issues`; the reported-issues set includes `configured-plugin-installs` for automatic external OpenClaw plugin install repair. Package Acceptance exposes those as `published_upgrade_survivor_baseline`, `published_upgrade_survivor_baselines`, and `published_upgrade_survivor_scenarios`, resolves meta baseline tokens such as `last-stable-4` or `all-since-2026.4.23`, and Full Release Validation expands the release-soak package gate to `last-stable-4 2026.4.23 2026.5.2 2026.4.15` plus `reported-issues`.
-- Session runtime context smoke: `pnpm test:docker:session-runtime-context` verifies hidden runtime context transcript persistence plus doctor repair of affected duplicated prompt-rewrite branches.
-- Bun global install smoke: `bash scripts/e2e/bun-global-install-smoke.sh` packs the current tree, installs it with `bun install -g` in an isolated home, and verifies `openclaw infer image providers --json` returns bundled image providers instead of hanging. Reuse a prebuilt tarball with `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz`, skip the host build with `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0`, or copy `dist/` from a built Docker image with `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local`.
-- Installer Docker smoke: `bash scripts/test-install-sh-docker.sh` shares one npm cache across its root, update, and direct-npm containers. Update smoke defaults to npm `latest` as the stable baseline before upgrading to the candidate tarball. Override with `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` locally, or with the Install Smoke workflow's `update_baseline_version` input on GitHub. Non-root installer checks keep an isolated npm cache so root-owned cache entries do not mask user-local install behavior. Set `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` to reuse the root/update/direct-npm cache across local reruns.
-- Install Smoke CI skips the duplicate direct-npm global update with `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1`; run the script locally without that env when direct `npm install -g` coverage is needed.
-- Agents delete shared workspace CLI smoke: `pnpm test:docker:agents-delete-shared-workspace` (script: `scripts/e2e/agents-delete-shared-workspace-docker.sh`) builds the root Dockerfile image by default, seeds two agents with one workspace in an isolated container home, runs `agents delete --json`, and verifies valid JSON plus retained workspace behavior. Reuse the install-smoke image with `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1`.
-- Gateway networking (two containers, WS auth + health): `pnpm test:docker:gateway-network` (script: `scripts/e2e/gateway-network-docker.sh`)
-- Browser CDP snapshot smoke: `pnpm test:docker:browser-cdp-snapshot` (script: `scripts/e2e/browser-cdp-snapshot-docker.sh`) builds the source E2E image plus a Chromium layer, starts Chromium with raw CDP, runs `browser doctor --deep`, and verifies CDP role snapshots cover link URLs, cursor-promoted clickables, iframe refs, and frame metadata.
-- OpenAI Responses web_search minimal reasoning regression: `pnpm test:docker:openai-web-search-minimal` (script: `scripts/e2e/openai-web-search-minimal-docker.sh`) runs a mocked OpenAI server through Gateway, verifies `web_search` raises `reasoning.effort` from `minimal` to `low`, then forces the provider schema reject and checks the raw detail appears in Gateway logs.
-- MCP channel bridge (seeded Gateway + stdio bridge + raw Claude notification-frame smoke): `pnpm test:docker:mcp-channels` (script: `scripts/e2e/mcp-channels-docker.sh`)
-- Pi bundle MCP tools (real stdio MCP server + embedded Pi profile allow/deny smoke): `pnpm test:docker:pi-bundle-mcp-tools` (script: `scripts/e2e/pi-bundle-mcp-tools-docker.sh`)
-- Cron/subagent MCP cleanup (real Gateway + stdio MCP child teardown after isolated cron and one-shot subagent runs): `pnpm test:docker:cron-mcp-cleanup` (script: `scripts/e2e/cron-mcp-cleanup-docker.sh`)
-- Plugins (install/update smoke for local path, `file:`, npm registry with hoisted dependencies, git moving refs, ClawHub kitchen-sink, marketplace updates, and Claude-bundle enable/inspect): `pnpm test:docker:plugins` (script: `scripts/e2e/plugins-docker.sh`)
-  Set `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` to skip the ClawHub block, or override the default kitchen-sink package/runtime pair with `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` and `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID`. Without `OPENCLAW_CLAWHUB_URL`/`CLAWHUB_URL`, the test uses a hermetic local ClawHub fixture server.
-- Plugin update unchanged smoke: `pnpm test:docker:plugin-update` (script: `scripts/e2e/plugin-update-unchanged-docker.sh`)
-- Plugin lifecycle matrix smoke: `pnpm test:docker:plugin-lifecycle-matrix` installs the packed OpenClaw tarball in a bare container, installs an npm plugin, toggles enable/disable, upgrades and downgrades it through a local npm registry, deletes the installed code, then verifies uninstall still removes stale state while logging RSS/CPU metrics for each lifecycle phase.
-- Config reload metadata smoke: `pnpm test:docker:config-reload` (script: `scripts/e2e/config-reload-source-docker.sh`)
-- Plugins: `pnpm test:docker:plugins` covers install/update smoke for local path, `file:`, npm registry with hoisted dependencies, git moving refs, ClawHub fixtures, marketplace updates, and Claude-bundle enable/inspect. `pnpm test:docker:plugin-update` covers unchanged update behavior for installed plugins. `pnpm test:docker:plugin-lifecycle-matrix` covers resource-tracked npm plugin install, enable, disable, upgrade, downgrade, and missing-code uninstall.
-
-要手动预构建并复用共享功能镜像：
-
-```bash
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local pnpm test:docker:e2e-build
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels
-```
-
-像 `OPENCLAW_GATEWAY_NETWORK_E2E_IMAGE` 这样的特定套件镜像覆盖在设置时仍然优先。当 `OPENCLAW_SKIP_DOCKER_BUILD=1` 指向远程共享镜像时，如果本地尚不存在，脚本会拉取它。QR 和 installer 的 Docker 测试保留自己的 Dockerfile，因为它们验证的是包/安装行为，而不是共享的已构建应用运行时。
-
-live-model Docker 运行器也会只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
-
-- 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，并可通过 `pnpm test:docker:live-acp-bind:droid` 和 `pnpm test:docker:live-acp-bind:opencode` 严格覆盖 Droid/OpenCode）
-- CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
-- Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- Gateway + 开发代理：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 可观测性 smoke：`pnpm qa:otel:smoke` 是一条私有 QA 源码检出通道。它刻意不属于 package Docker 发布通道，因为 npm tarball 不包含 QA Lab。
-- Open WebUI live smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 上手向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- npm tarball 上手/通道/代理 smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包好的 OpenClaw tarball，默认通过 env-ref 上手配置 OpenAI 和 Telegram，运行 doctor，并执行一次模拟的 OpenAI 代理回合。可使用 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，使用 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 或 `OPENCLAW_NPM_ONBOARD_CHANNEL=slack` 切换通道。
-
-- 发布用户旅程 smoke：`pnpm test:docker:release-user-journey` 在干净的 Docker home 中全局安装打包好的 OpenClaw tarball，运行上手，配置一个模拟的 OpenAI 提供方，运行一次代理回合，安装/卸载外部插件，针对本地夹具配置 ClickClack，验证出站/入站消息，重启 Gateway，并运行 doctor。
-- 发布 typed onboarding smoke：`pnpm test:docker:release-typed-onboarding` 安装打包 tarball，通过真实 TTY 驱动 `openclaw onboard`，将 OpenAI 配置为 env-ref 提供方，验证不会保留原始密钥，并运行一次模拟代理回合。
-- 发布媒体/记忆 smoke：`pnpm test:docker:release-media-memory` 安装打包 tarball，验证从 PNG 附件进行图像理解、OpenAI 兼容的图像生成输出、记忆搜索召回，以及 Gateway 重启后召回保留。
-- 发布升级用户旅程 smoke：`pnpm test:docker:release-upgrade-user-journey` 默认安装 `openclaw@latest`，在已发布包上配置 provider/plugin/ClickClack 状态，升级到候选 tarball，然后重新运行核心代理/插件/通道旅程。可通过 `OPENCLAW_RELEASE_UPGRADE_BASELINE_SPEC=openclaw@<version>` 覆盖基线。
-- 发布插件市场 smoke：`pnpm test:docker:release-plugin-marketplace` 从本地夹具市场安装，更新已安装插件，卸载它，并验证插件 CLI 消失且安装元数据已修剪。
-- 技能安装 smoke：`pnpm test:docker:skill-install` 在 Docker 中全局安装打包好的 OpenClaw tarball，在配置中禁用上传归档安装，从搜索中解析当前 live ClawHub 技能 slug，用 `openclaw skills install` 安装它，并验证已安装技能以及 `.clawhub` 来源/锁定元数据。
-- 更新通道切换 smoke：`pnpm test:docker:update-channel-switch` 在 Docker 中全局安装打包好的 OpenClaw tarball，将通道从包 `stable` 切换到 git `dev`，验证持久化的通道和插件更新后工作，然后切回包 `stable` 并检查更新状态。
-- 升级幸存者 smoke：`pnpm test:docker:upgrade-survivor` 在一个脏旧用户夹具上安装打包好的 OpenClaw tarball，该夹具包含 agents、通道配置、插件允许列表、过期的插件依赖状态以及现有工作区/会话文件。它会在没有 live 提供方或通道密钥的情况下运行 package update 加非交互 doctor，然后启动 loopback Gateway 并检查配置/状态保留以及启动/状态预算。
-- 已发布升级幸存者 smoke：`pnpm test:docker:published-upgrade-survivor` 默认安装 `openclaw@latest`，种入真实的现有用户文件，用 baked command recipe 配置该基线，验证生成的配置，把该已发布安装更新到候选 tarball，运行非交互 doctor，写入 `.artifacts/upgrade-survivor/summary.json`，然后启动 loopback Gateway 并检查已配置的 intent、状态保留、启动、`/healthz`、`/readyz` 和 RPC 状态预算。可用 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` 覆盖一个基线，要求聚合调度器用 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS` 展开精确的本地基线，例如 `openclaw@2026.5.2 openclaw@2026.4.23 openclaw@2026.4.15`，并用 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS`（例如 `reported-issues`）展开问题形状的夹具；`reported-issues` 集合包含 `configured-plugin-installs`，用于自动修复外部 OpenClaw 插件安装。Package Acceptance 将这些暴露为 `published_upgrade_survivor_baseline`、`published_upgrade_survivor_baselines` 和 `published_upgrade_survivor_scenarios`，解析诸如 `last-stable-4` 或 `all-since-2026.4.23` 之类的元基线标记，而 Full Release Validation 会把 release-soak 包门禁扩展为 `last-stable-4 2026.4.23 2026.5.2 2026.4.15` 加上 `reported-issues`。
-- 会话运行时上下文 smoke：`pnpm test:docker:session-runtime-context` 验证隐藏运行时上下文转录持久化，以及 doctor 对受影响的重复 prompt-rewrite 分支的修复。
-- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 打包当前树，在隔离 home 中使用 `bun install -g` 安装，并验证 `openclaw infer image providers --json` 返回打包进来的图像提供方而不是卡住。可用 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，使用 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建 Docker 镜像复制 `dist/`。
-- 安装器 Docker smoke：`bash scripts/test-install-sh-docker.sh` 在 root、update 和 direct-npm 容器之间共享一个 npm 缓存。更新 smoke 默认使用 npm `latest` 作为稳定基线，然后升级到候选 tarball。可在本地用 `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` 覆盖，或在 GitHub 上通过 Install Smoke 工作流的 `update_baseline_version` 输入覆盖。非 root 安装器检查会保留隔离的 npm 缓存，因此 root 拥有的缓存条目不会掩盖用户本地安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重跑时复用 root/update/direct-npm 缓存。
-- Install Smoke CI 通过 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；当需要 direct `npm install -g` 覆盖时，请在本地运行脚本时不要设置该环境变量。
-- Agents 删除共享工作区 CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建根 Dockerfile 镜像，在隔离的容器 home 中为两个 agents 种入一个工作区，运行 `agents delete --json`，并验证有效 JSON 以及保留工作区行为。可使用 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用安装 smoke 镜像。
-- Gateway 网络（两个容器，WS auth + health）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- 浏览器 CDP 快照 smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）构建源码 E2E 镜像加 Chromium 层，启动带原始 CDP 的 Chromium，运行 `browser doctor --deep`，并验证 CDP 角色快照覆盖链接 URL、由光标提升的可点击项、iframe 引用和 frame 元数据。
-- OpenAI Responses web_search minimal reasoning 回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）通过 Gateway 运行一个模拟的 OpenAI 服务器，验证 `web_search` 会把 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制提供方 schema 拒绝并检查原始细节出现在 Gateway 日志中。
-- MCP 通道桥接（种子 Gateway + stdio bridge + 原始 Claude notification-frame smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
-- Pi bundle MCP 工具（真实 stdio MCP 服务器 + 内嵌 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
-- Cron/subagent MCP 清理（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后清理 stdio MCP 子进程）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
-- Plugins（本地路径、`file:`、带提升依赖的 npm registry、git 移动引用、ClawHub 大杂烩、市场更新以及 Claude-bundle 启用/检查的安装/更新 smoke）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
-  将 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 设为跳过 ClawHub 区块，或用 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认的大杂烩 package/runtime 对。若没有 `OPENCLAW_CLAWHUB_URL`/`CLAWHUB_URL`，测试会使用一个密封的本地 ClawHub 夹具服务器。
-- 插件更新不变 smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
-- 插件生命周期矩阵 smoke：`pnpm test:docker:plugin-lifecycle-matrix` 在一个空白容器中安装打包好的 OpenClaw tarball，安装一个 npm 插件，切换启用/禁用，通过本地 npm registry 升级和降级它，删除已安装代码，然后验证卸载仍会移除旧状态，同时为每个生命周期阶段记录 RSS/CPU 指标。
-- 配置重载元数据 smoke：`pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
-- Plugins：`pnpm test:docker:plugins` 覆盖本地路径、`file:`、带提升依赖的 npm registry、git 移动引用、ClawHub 夹具、市场更新以及 Claude-bundle 启用/检查的安装/更新 smoke。`pnpm test:docker:plugin-update` 覆盖已安装插件的不变更新行为。`pnpm test:docker:plugin-lifecycle-matrix` 覆盖带资源跟踪的 npm 插件安装、启用、禁用、升级、降级以及缺失代码卸载。
-
-要手动预构建并复用共享功能镜像：
-
-```bash
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local pnpm test:docker:e2e-build
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels
-```
-
-像 `OPENCLAW_GATEWAY_NETWORK_E2E_IMAGE` 这样的特定套件镜像覆盖在设置时仍然优先。当 `OPENCLAW_SKIP_DOCKER_BUILD=1` 指向远程共享镜像时，如果本地尚不存在，脚本会拉取它。QR 和 installer 的 Docker 测试保留自己的 Dockerfile，因为它们验证的是包/安装行为，而不是共享的已构建应用运行时。
-
-live-model Docker 运行器也会只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
-
-- 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，并可通过 `pnpm test:docker:live-acp-bind:droid` 和 `pnpm test:docker:live-acp-bind:opencode` 严格覆盖 Droid/OpenCode）
-- CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
-- Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- Gateway + 开发代理：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 可观测性 smoke：`pnpm qa:otel:smoke` 是一条私有 QA 源码检出通道。它刻意不属于 package Docker 发布通道，因为 npm tarball 不包含 QA Lab。
-- Open WebUI live smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 上手向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- npm tarball 上手/通道/代理 smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包好的 OpenClaw tarball，默认通过 env-ref 上手配置 OpenAI 和 Telegram，运行 doctor，并执行一次模拟的 OpenAI 代理回合。可使用 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，使用 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 或 `OPENCLAW_NPM_ONBOARD_CHANNEL=slack` 切换通道。
-
-- 发布用户旅程 smoke：`pnpm test:docker:release-user-journey` 在干净的 Docker home 中全局安装打包好的 OpenClaw tarball，运行上手，配置一个模拟的 OpenAI 提供方，运行一次代理回合，安装/卸载外部插件，针对本地夹具配置 ClickClack，验证出站/入站消息，重启 Gateway，并运行 doctor。
-- 发布 typed onboarding smoke：`pnpm test:docker:release-typed-onboarding` 安装打包 tarball，通过真实 TTY 驱动 `openclaw onboard`，将 OpenAI 配置为 env-ref 提供方，验证不会保留原始密钥，并运行一次模拟代理回合。
-- 发布媒体/记忆 smoke：`pnpm test:docker:release-media-memory` 安装打包 tarball，验证从 PNG 附件进行图像理解、OpenAI 兼容的图像生成输出、记忆搜索召回，以及 Gateway 重启后召回保留。
-- 发布升级用户旅程 smoke：`pnpm test:docker:release-upgrade-user-journey` 默认安装 `openclaw@latest`，在已发布包上配置 provider/plugin/ClickClack 状态，升级到候选 tarball，然后重新运行核心代理/插件/通道旅程。可通过 `OPENCLAW_RELEASE_UPGRADE_BASELINE_SPEC=openclaw@<version>` 覆盖基线。
-- 发布插件市场 smoke：`pnpm test:docker:release-plugin-marketplace` 从本地夹具市场安装，更新已安装插件，卸载它，并验证插件 CLI 消失且安装元数据已修剪。
-- 技能安装 smoke：`pnpm test:docker:skill-install` 在 Docker 中全局安装打包好的 OpenClaw tarball，在配置中禁用上传归档安装，从搜索中解析当前 live ClawHub 技能 slug，用 `openclaw skills install` 安装它，并验证已安装技能以及 `.clawhub` 来源/锁定元数据。
-- 更新通道切换 smoke：`pnpm test:docker:update-channel-switch` 在 Docker 中全局安装打包好的 OpenClaw tarball，将通道从包 `stable` 切换到 git `dev`，验证持久化的通道和插件更新后工作，然后切回包 `stable` 并检查更新状态。
-- 升级幸存者 smoke：`pnpm test:docker:upgrade-survivor` 在一个脏旧用户夹具上安装打包好的 OpenClaw tarball，该夹具包含 agents、通道配置、插件允许列表、过期的插件依赖状态以及现有工作区/会话文件。它会在没有 live 提供方或通道密钥的情况下运行 package update 加非交互 doctor，然后启动 loopback Gateway 并检查配置/状态保留以及启动/状态预算。
-- 已发布升级幸存者 smoke：`pnpm test:docker:published-upgrade-survivor` 默认安装 `openclaw@latest`，种入真实的现有用户文件，用 baked command recipe 配置该基线，验证生成的配置，把该已发布安装更新到候选 tarball，运行非交互 doctor，写入 `.artifacts/upgrade-survivor/summary.json`，然后启动 loopback Gateway 并检查已配置的 intent、状态保留、启动、`/healthz`、`/readyz` 和 RPC 状态预算。可用 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` 覆盖一个基线，要求聚合调度器用 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS` 展开精确的本地基线，例如 `openclaw@2026.5.2 openclaw@2026.4.23 openclaw@2026.4.15`，并用 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS`（例如 `reported-issues`）展开问题形状的夹具；`reported-issues` 集合包含 `configured-plugin-installs`，用于自动修复外部 OpenClaw 插件安装。Package Acceptance 将这些暴露为 `published_upgrade_survivor_baseline`、`published_upgrade_survivor_baselines` 和 `published_upgrade_survivor_scenarios`，解析诸如 `last-stable-4` 或 `all-since-2026.4.23` 之类的元基线标记，而 Full Release Validation 会把 release-soak 包门禁扩展为 `last-stable-4 2026.4.23 2026.5.2 2026.4.15` 加上 `reported-issues`。
-- 会话运行时上下文 smoke：`pnpm test:docker:session-runtime-context` 验证隐藏运行时上下文转录持久化，以及 doctor 对受影响的重复 prompt-rewrite 分支的修复。
-- Bun 全局安装 smoke：`bash scripts/e2e/bun-global-install-smoke.sh` 打包当前树，在隔离 home 中使用 `bun install -g` 安装，并验证 `openclaw infer image providers --json` 返回打包进来的图像提供方而不是卡住。可用 `OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，使用 `OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD=0` 跳过宿主机构建，或通过 `OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE=openclaw-dockerfile-smoke:local` 从已构建 Docker 镜像复制 `dist/`。
-- 安装器 Docker smoke：`bash scripts/test-install-sh-docker.sh` 在 root、update 和 direct-npm 容器之间共享一个 npm 缓存。更新 smoke 默认使用 npm `latest` 作为稳定基线，然后升级到候选 tarball。可在本地用 `OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE=2026.4.22` 覆盖，或在 GitHub 上通过 Install Smoke 工作流的 `update_baseline_version` 输入覆盖。非 root 安装器检查会保留隔离的 npm 缓存，因此 root 拥有的缓存条目不会掩盖用户本地安装行为。设置 `OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR=/path/to/cache` 可在本地重跑时复用 root/update/direct-npm 缓存。
-- Install Smoke CI 通过 `OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL=1` 跳过重复的 direct-npm 全局更新；当需要 direct `npm install -g` 覆盖时，请在本地运行脚本时不要设置该环境变量。
-- Agents 删除共享工作区 CLI smoke：`pnpm test:docker:agents-delete-shared-workspace`（脚本：`scripts/e2e/agents-delete-shared-workspace-docker.sh`）默认构建根 Dockerfile 镜像，在隔离的容器 home 中为两个 agents 种入一个工作区，运行 `agents delete --json`，并验证有效 JSON 以及保留工作区行为。可使用 `OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_IMAGE=openclaw-dockerfile-smoke:local OPENCLAW_AGENTS_DELETE_SHARED_WORKSPACE_E2E_SKIP_BUILD=1` 复用安装 smoke 镜像。
-- Gateway 网络（两个容器，WS auth + health）：`pnpm test:docker:gateway-network`（脚本：`scripts/e2e/gateway-network-docker.sh`）
-- 浏览器 CDP 快照 smoke：`pnpm test:docker:browser-cdp-snapshot`（脚本：`scripts/e2e/browser-cdp-snapshot-docker.sh`）构建源码 E2E 镜像加 Chromium 层，启动带原始 CDP 的 Chromium，运行 `browser doctor --deep`，并验证 CDP 角色快照覆盖链接 URL、由光标提升的可点击项、iframe 引用和 frame 元数据。
-- OpenAI Responses web_search minimal reasoning 回归：`pnpm test:docker:openai-web-search-minimal`（脚本：`scripts/e2e/openai-web-search-minimal-docker.sh`）通过 Gateway 运行一个模拟的 OpenAI 服务器，验证 `web_search` 会把 `reasoning.effort` 从 `minimal` 提升到 `low`，然后强制提供方 schema 拒绝并检查原始细节出现在 Gateway 日志中。
-- MCP 通道桥接（种子 Gateway + stdio bridge + 原始 Claude notification-frame smoke）：`pnpm test:docker:mcp-channels`（脚本：`scripts/e2e/mcp-channels-docker.sh`）
-- Pi bundle MCP 工具（真实 stdio MCP 服务器 + 内嵌 Pi profile allow/deny smoke）：`pnpm test:docker:pi-bundle-mcp-tools`（脚本：`scripts/e2e/pi-bundle-mcp-tools-docker.sh`）
-- Cron/subagent MCP 清理（真实 Gateway + 在隔离 cron 和一次性 subagent 运行后清理 stdio MCP 子进程）：`pnpm test:docker:cron-mcp-cleanup`（脚本：`scripts/e2e/cron-mcp-cleanup-docker.sh`）
-- Plugins（本地路径、`file:`、带提升依赖的 npm registry、git 移动引用、ClawHub 大杂烩、市场更新以及 Claude-bundle 启用/检查的安装/更新 smoke）：`pnpm test:docker:plugins`（脚本：`scripts/e2e/plugins-docker.sh`）
-  将 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 设为跳过 ClawHub 区块，或用 `OPENCLAW_PLUGINS_E2E_CLAWHUB_SPEC` 和 `OPENCLAW_PLUGINS_E2E_CLAWHUB_ID` 覆盖默认的大杂烩 package/runtime 对。若没有 `OPENCLAW_CLAWHUB_URL`/`CLAWHUB_URL`，测试会使用一个密封的本地 ClawHub 夹具服务器。
-- 插件更新不变 smoke：`pnpm test:docker:plugin-update`（脚本：`scripts/e2e/plugin-update-unchanged-docker.sh`）
-- 插件生命周期矩阵 smoke：`pnpm test:docker:plugin-lifecycle-matrix` 在一个空白容器中安装打包好的 OpenClaw tarball，安装一个 npm 插件，切换启用/禁用，通过本地 npm registry 升级和降级它，删除已安装代码，然后验证卸载仍会移除旧状态，同时为每个生命周期阶段记录 RSS/CPU 指标。
-- 配置重载元数据 smoke：`pnpm test:docker:config-reload`（脚本：`scripts/e2e/config-reload-source-docker.sh`）
-- Plugins：`pnpm test:docker:plugins` 覆盖本地路径、`file:`、带提升依赖的 npm registry、git 移动引用、ClawHub 夹具、市场更新以及 Claude-bundle 启用/检查的安装/更新 smoke。`pnpm test:docker:plugin-update` 覆盖已安装插件的不变更新行为。`pnpm test:docker:plugin-lifecycle-matrix` 覆盖带资源跟踪的 npm 插件安装、启用、禁用、升级、降级以及缺失代码卸载。
-
-要手动预构建并复用共享功能镜像：
-
-```bash
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local pnpm test:docker:e2e-build
-OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels
-```
-
-像 `OPENCLAW_GATEWAY_NETWORK_E2E_IMAGE` 这样的特定套件镜像覆盖在设置时仍然优先。当 `OPENCLAW_SKIP_DOCKER_BUILD=1` 指向远程共享镜像时，如果本地尚不存在，脚本会拉取它。QR 和 installer 的 Docker 测试保留自己的 Dockerfile，因为它们验证的是包/安装行为，而不是共享的已构建应用运行时。
-
-The live-model Docker runners also bind-mount the current checkout read-only and
-stage it into a temporary workdir inside the container. This keeps the runtime
-image slim while still running Vitest against your exact local source/config.
-The staging step skips large local-only caches and app build outputs such as
-`.pnpm-store`, `.worktrees`, `__openclaw_vitest__`, and app-local `.build` or
-Gradle output directories so Docker live runs do not spend minutes copying
-machine-specific artifacts.
-They also set `OPENCLAW_SKIP_CHANNELS=1` so gateway live probes do not start
-real Telegram/Discord/etc. channel workers inside the container.
-`test:docker:live-models` still runs `pnpm test:live`, so pass through
-`OPENCLAW_LIVE_GATEWAY_*` as well when you need to narrow or exclude gateway
-live coverage from that Docker lane.
-`test:docker:openwebui` is a higher-level compatibility smoke: it starts an
-OpenClaw gateway container with the OpenAI-compatible HTTP endpoints enabled,
-starts a pinned Open WebUI container against that gateway, signs in through
-Open WebUI, verifies `/api/models` exposes `openclaw/default`, then sends a
-real chat request through Open WebUI's `/api/chat/completions` proxy.
-Set `OPENWEBUI_SMOKE_MODE=models` for release-path CI checks that should stop
-after Open WebUI sign-in and model discovery, without waiting on a live model
-completion.
-The first run can be noticeably slower because Docker may need to pull the
-Open WebUI image and Open WebUI may need to finish its own cold-start setup.
-This lane expects a usable live model key. Provide it through the process
-environment, staged auth profiles, or an explicit `OPENCLAW_PROFILE_FILE`.
-Successful runs print a small JSON payload like `{ "ok": true, "model":
-"openclaw/default", ... }`.
-`test:docker:mcp-channels` is intentionally deterministic and does not need a
-real Telegram, Discord, or iMessage account. It boots a seeded Gateway
-container, starts a second container that spawns `openclaw mcp serve`, then
-verifies routed conversation discovery, transcript reads, attachment metadata,
-live event queue behavior, outbound send routing, and Claude-style channel +
-permission notifications over the real stdio MCP bridge. The notification check
-inspects the raw stdio MCP frames directly so the smoke validates what the
-bridge actually emits, not just what a specific client SDK happens to surface.
-`test:docker:pi-bundle-mcp-tools` is deterministic and does not need a live
-model key. It builds the repo Docker image, starts a real stdio MCP probe server
-inside the container, materializes that server through the embedded Pi bundle
-MCP runtime, executes the tool, then verifies `coding` and `messaging` keep
-`bundle-mcp` tools while `minimal` and `tools.deny: ["bundle-mcp"]` filter them.
-`test:docker:cron-mcp-cleanup` is deterministic and does not need a live model
-key. It starts a seeded Gateway with a real stdio MCP probe server, runs an
-isolated cron turn and a `/subagents spawn` one-shot child turn, then verifies
-the MCP child process exits after each run.
+live-model Docker 运行器还会 bind-mount 当前检出为只读，并将其暂存到容器内的临时 workdir 中。这样既能保持运行时镜像精简，又能让 Vitest 针对你精确的本地源码/配置运行。
+暂存步骤会跳过大型仅本地缓存和应用构建输出，例如 `.pnpm-store`、`.worktrees`、`__openclaw_vitest__`，以及应用本地的 `.build` 或 Gradle 输出目录，这样 Docker live 运行就不会花费几分钟复制机器特定的制品。
+它们还会设置 `OPENCLAW_SKIP_CHANNELS=1`，因此 gateway live 探测不会在容器内启动真实的 Telegram/Discord 等通道 worker。
+`test:docker:live-models` 仍然会运行 `pnpm test:live`，所以当你需要缩小或排除该 Docker 通道中的 gateway live 覆盖时，也请透传 `OPENCLAW_LIVE_GATEWAY_*`。
+`test:docker:openwebui` 是一个更高层级的兼容性 smoke：它会启动一个启用 OpenAI 兼容 HTTP 端点的 OpenClaw gateway 容器，针对该 gateway 启动一个固定版本的 Open WebUI 容器，通过 Open WebUI 登录，验证 `/api/models` 暴露 `openclaw/default`，然后通过 Open WebUI 的 `/api/chat/completions` 代理发送一次真实聊天请求。
+将 `OPENWEBUI_SMOKE_MODE=models` 设为用于发布路径 CI 检查，该检查应在 Open WebUI 登录和模型发现后停止，而无需等待 live 模型 completion。
+第一次运行可能会明显更慢，因为 Docker 可能需要拉取 Open WebUI 镜像，而且 Open WebUI 可能需要完成自身的冷启动设置。
+该通道需要可用的 live 模型密钥。请通过进程环境、暂存的 auth profile 或显式的 `OPENCLAW_PROFILE_FILE` 提供它。
+成功运行会打印一个小的 JSON 负载，例如 `{ "ok": true, "model":
+"openclaw/default", ... }`。
+`test:docker:mcp-channels` 是刻意确定性的，不需要真实的 Telegram、Discord 或 iMessage 账户。它启动一个带种子的 Gateway 容器，启动第二个容器来运行 `openclaw mcp serve`，然后验证路由后的对话发现、转录读取、附件元数据、实时事件队列行为、出站发送路由，以及通过真实 stdio MCP 桥的 Claude 风格通道 + 权限通知。通知检查会直接检查原始 stdio MCP 帧，因此该 smoke 验证的是桥实际发出的内容，而不仅是某个特定客户端 SDK 恰好展示出来的内容。
+`test:docker:pi-bundle-mcp-tools` 是确定性的，不需要 live 模型密钥。它构建仓库 Docker 镜像，在容器内启动一个真实的 stdio MCP 探针服务器，通过内嵌 Pi bundle MCP runtime 实例化该服务器，执行工具，然后验证 `coding` 和 `messaging` 会保留 `bundle-mcp` 工具，而 `minimal` 和 `tools.deny: ["bundle-mcp"]` 会将其过滤掉。
+`test:docker:cron-mcp-cleanup` 是确定性的，不需要 live 模型密钥。它使用真实 stdio MCP 探针服务器启动一个种子 Gateway，运行一次隔离的 cron 回合和一次 `/subagents spawn` 单次子回合，然后验证每次运行后 MCP 子进程都会退出。
 
 手动 ACP 纯文本线程 smoke（非 CI）：
 

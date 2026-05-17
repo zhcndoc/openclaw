@@ -1,20 +1,31 @@
 ---
-summary: "Configure the bundled LanceDB memory plugin, including local Ollama-compatible embeddings"
+summary: "配置官方外部 LanceDB 记忆插件，包括本地 Ollama 兼容嵌入"
 read_when:
-  - 你正在配置捆绑的 memory-lancedb 插件
-  - 你希望使用基于 LanceDB 的长期记忆，并具备自动召回或自动捕获功能
+  - 你正在配置 memory-lancedb 插件
+  - 你希望使用 LanceDB 支持的长期记忆，并启用自动召回或自动捕获
   - 你正在使用本地的 OpenAI 兼容嵌入，例如 Ollama
-title: "Memory LanceDB"
-sidebarTitle: "Memory LanceDB"
+title: "内存 LanceDB"
+sidebarTitle: "内存 LanceDB"
 ---
 
-`memory-lancedb` 是一个捆绑的内存插件，它将长期记忆存储在
-LanceDB 中，并使用嵌入向量进行召回。它可以在模型轮次之前自动召回相关
-记忆，并在回复后捕获重要事实。
+`memory-lancedb` 是一个官方外部记忆插件，它将长期记忆存储在
+LanceDB 中，并使用嵌入进行召回。它可以在模型轮次之前自动召回相关
+记忆，并在响应后捕获重要事实。
 
 当你需要一个用于记忆的本地向量数据库、需要一个
 OpenAI 兼容的嵌入端点，或者想要将记忆数据库保存在默认内置
 记忆存储之外时，请使用它。
+
+## 安装
+
+在设置 `plugins.slots.memory = "memory-lancedb"` 之前，请先安装 `memory-lancedb`：
+
+```bash
+openclaw plugins install @openclaw/memory-lancedb
+```
+
+该插件已发布到 npm，并未打包进 OpenClaw 运行时镜像中。
+当没有其他插件拥有该槽位时，安装器会写入插件条目并切换内存槽位。
 
 <Note>
 `memory-lancedb` 是一个处于激活状态的内存插件。通过选择内存
@@ -196,11 +207,11 @@ ZhiPu `embedding-3` 使用 `2048` 维：
 
 `memory-lancedb` 有两个独立的文本长度限制：
 
-| Setting           | Default | Range     | Applies to                                                |
-| ----------------- | ------- | --------- | --------------------------------------------------------- |
-| `recallMaxChars`  | `1000`  | 100-10000 | text sent to the embedding API for recall                 |
-| `captureMaxChars` | `500`   | 100-10000 | message length eligible for auto-capture                  |
-| `customTriggers`  | `[]`    | 0-50      | literal phrases that make auto-capture consider a message |
+| 设置               | 默认值   | 范围       | 适用于                                                     |
+| ------------------ | ------- | --------- | --------------------------------------------------------- |
+| `recallMaxChars`   | `1000`  | 100-10000 | 发送到嵌入 API 用于召回的文本                               |
+| `captureMaxChars`   | `500`   | 100-10000 | 适合自动捕获的消息长度                                     |
+| `customTriggers`    | `[]`    | 0-50      | 使自动捕获考虑某条消息的字面短语                            |
 
 `recallMaxChars` 控制自动召回、`memory_recall` 工具、
 `memory_forget` 查询路径以及 `openclaw ltm search`。自动召回会优先使用本轮中的最新用户消息，
@@ -210,11 +221,11 @@ ZhiPu `embedding-3` 使用 `2048` 维：
 `captureMaxChars` 控制回复是否足够短，从而可被考虑进行
 自动捕获。它不会限制召回查询的嵌入。
 
-`customTriggers` lets you add literal auto-capture phrases without writing
-regular expressions. The built-in triggers include common English, Czech,
-Chinese, Japanese, and Korean memory phrases.
+`customTriggers` 允许你添加字面量的自动捕获短语，而无需编写
+正则表达式。内置触发词包括常见的英文、捷克文、
+中文、日文和韩文记忆短语。
 
-## Commands
+## 命令
 
 当 `memory-lancedb` 是活动内存插件时，它会注册 `ltm` CLI
 命名空间：

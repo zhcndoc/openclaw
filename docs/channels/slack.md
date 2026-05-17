@@ -5,7 +5,7 @@ read_when:
 title: "Slack"
 ---
 
-通过 Slack 应用集成，为 DM 和频道提供生产可用支持。默认模式为 Socket Mode；也支持 HTTP Request URLs。
+通过 Slack 应用集成，为 DM 和频道提供可用于生产环境的支持。默认模式为 Socket Mode；也支持 HTTP Request URLs。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -23,17 +23,17 @@ title: "Slack"
 
 这两种传输方式都已可用于生产环境，并且在消息、斜杠命令、App Home 和交互功能上具有同等能力。请选择部署形态，而不是功能。
 
-| Concern                      | Socket Mode (default)                                                                                                                                | HTTP Request URLs                                                                                              |
+| 关注点                       | Socket Mode（默认）                                                                                                                                    | HTTP Request URLs                                                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Public Gateway URL           | 不需要                                                                                                                                               | 需要（DNS、TLS、反向代理或隧道）                                                                                |
-| Outbound network             | 必须能够向外建立到 `wss-primary.slack.com` 的 WSS 连接                                                                                               | 不需要出站 WS；仅入站 HTTPS                                                                                    |
-| Tokens needed                | Bot token (`xoxb-...`) + 具有 `connections:write` 权限的 App-Level Token (`xapp-...`)                                                              | Bot token (`xoxb-...`) + Signing Secret                                                                       |
-| Dev laptop / behind firewall | 可直接使用                                                                                                                                           | 需要一个公网隧道（ngrok、Cloudflare Tunnel、Tailscale Funnel）或 staging Gateway                               |
-| Horizontal scaling           | 每个 host、每个 app 维持一个 Socket Mode 会话；多个 Gateway 需要不同的 Slack app                                                                    | 无状态 POST 处理器；多个 Gateway 副本可以通过负载均衡器共享一个 app                                           |
-| Multi-account on one Gateway | 支持；每个账号都会打开自己的 WS                                                                                                                      | 支持；每个账号都需要唯一的 `webhookPath`（默认 `/slack/events`），以免注册冲突                                |
-| Slash command transport      | 通过 WS 连接传递；`slash_commands[].url` 会被忽略                                                                                                    | Slack 会向 `slash_commands[].url` 发送 POST；该字段是命令分发所必需的                                            |
-| Request signing              | 不使用（认证由 App-Level Token 负责）                                                                                                                | Slack 会对每个请求签名；OpenClaw 使用 `signingSecret` 验证                                                      |
-| Recovery on connection drop  | 已启用 Slack SDK 自动重连；OpenClaw 也会以有限回退重启失败的 Socket Mode 会话。适用 Pong 超时传输调优。                                                | 没有需要保持的持久连接；重试由 Slack 按请求级别执行                                                              |
+| 公网 Gateway URL             | 不需要                                                                                                                                               | 需要（DNS、TLS、反向代理或隧道）                                                                                |
+| 出站网络                     | 必须能够向外建立到 `wss-primary.slack.com` 的 WSS 连接                                                                                               | 不需要出站 WS；仅入站 HTTPS                                                                                    |
+| 所需令牌                     | Bot token (`xoxb-...`) + 具有 `connections:write` 权限的 App-Level Token (`xapp-...`)                                                              | Bot token (`xoxb-...`) + Signing Secret                                                                       |
+| 开发笔记本 / 位于防火墙后      | 可直接使用                                                                                                                                           | 需要一个公网隧道（ngrok、Cloudflare Tunnel、Tailscale Funnel）或 staging Gateway                               |
+| 横向扩展                     | 每个 host、每个 app 维持一个 Socket Mode 会话；多个 Gateway 需要不同的 Slack app                                                                    | 无状态 POST 处理器；多个 Gateway 副本可以通过负载均衡器共享一个 app                                           |
+| 单个 Gateway 上的多账号       | 支持；每个账号都会打开自己的 WS                                                                                                                      | 支持；每个账号都需要唯一的 `webhookPath`（默认 `/slack/events`），以免注册冲突                                |
+| 斜杠命令传输                 | 通过 WS 连接传递；`slash_commands[].url` 会被忽略                                                                                                    | Slack 会向 `slash_commands[].url` 发送 POST；该字段是命令分发所必需的                                            |
+| 请求签名                     | 不使用（认证由 App-Level Token 负责）                                                                                                                | Slack 会对每个请求签名；OpenClaw 使用 `signingSecret` 验证                                                      |
+| 连接断开后的恢复             | 已启用 Slack SDK 自动重连；OpenClaw 也会以有限回退重启失败的 Socket Mode 会话。适用 Pong 超时传输调优。                                                | 没有需要保持的持久连接；重试由 Slack 按请求级别执行                                                              |
 
 <Note>
   **选择 Socket Mode** 适用于单 Gateway 主机、开发笔记本，以及能够向外访问 `*.slack.com` 但不能接受入站 HTTPS 的本地/内网环境。
@@ -54,7 +54,7 @@ openclaw plugins install @openclaw/slack
 ## 快速设置
 
 <Tabs>
-  <Tab title="Socket Mode（默认）">
+  <Tab title="Socket 模式（默认）">
     <Steps>
       <Step title="创建新的 Slack 应用">
         打开 [api.slack.com/apps](https://api.slack.com/apps/new) → **Create New App** → **From a manifest** → 选择你的 workspace → 粘贴下面任一 manifest → **Next** → **Create**。
@@ -73,6 +73,17 @@ openclaw plugins install @openclaw/slack
       "home_tab_enabled": true,
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
+    },
+    "assistant_view": {
+      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "suggested_prompts": [
+        { "title": "What can you do?", "message": "What can you help me with?" },
+        {
+          "title": "Summarize this channel",
+          "message": "Summarize the recent activity in this channel."
+        },
+        { "title": "Draft a reply", "message": "Help me draft a reply." }
+      ]
     },
     "slash_commands": [
       {
@@ -117,6 +128,8 @@ openclaw plugins install @openclaw/slack
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "channel_rename",
         "member_joined_channel",
         "member_left_channel",
@@ -146,6 +159,17 @@ openclaw plugins install @openclaw/slack
       "home_tab_enabled": true,
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
+    },
+    "assistant_view": {
+      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "suggested_prompts": [
+        { "title": "What can you do?", "message": "What can you help me with?" },
+        {
+          "title": "Summarize this channel",
+          "message": "Summarize the recent activity in this channel."
+        },
+        { "title": "Draft a reply", "message": "Help me draft a reply." }
+      ]
     },
     "slash_commands": [
       {
@@ -179,6 +203,8 @@ openclaw plugins install @openclaw/slack
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "message.channels",
         "message.groups",
         "message.im"
@@ -191,7 +217,7 @@ openclaw plugins install @openclaw/slack
         </CodeGroup>
 
         <Note>
-          **Recommended** 与 Slack 插件的完整功能集一致：App Home、斜杠命令、文件、表情反应、置顶、群组 DM，以及 emoji/usergroup 读取。若 workspace 策略限制 scope，则选择 **Minimal** —— 它覆盖 DM、频道/群组历史、提及和斜杠命令，但会移除文件、reaction、pin、群组 DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。有关每个 scope 的原因以及附加选项（例如额外斜杠命令），请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
+          **推荐** 与 Slack 插件的完整功能集一致：App Home、斜杠命令、文件、表情反应、置顶、群组 DM，以及 emoji/usergroup 读取。若 workspace 策略限制 scope，则选择 **Minimal** —— 它覆盖 DM、频道/群组历史、提及和斜杠命令，但会移除文件、reaction、pin、群组 DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。有关每个 scope 的原因以及附加选项（例如额外斜杠命令），请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
         </Note>
 
         Slack 创建应用后：
@@ -233,7 +259,7 @@ SLACK_BOT_TOKEN=xoxb-...
 
       </Step>
 
-      <Step title="启动 gateway">
+      <Step title="启动网关">
 
 ```bash
 openclaw gateway
@@ -263,6 +289,17 @@ openclaw gateway
       "home_tab_enabled": true,
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
+    },
+    "assistant_view": {
+      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "suggested_prompts": [
+        { "title": "What can you do?", "message": "What can you help me with?" },
+        {
+          "title": "Summarize this channel",
+          "message": "Summarize the recent activity in this channel."
+        },
+        { "title": "Draft a reply", "message": "Help me draft a reply." }
+      ]
     },
     "slash_commands": [
       {
@@ -308,6 +345,8 @@ openclaw gateway
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "channel_rename",
         "member_joined_channel",
         "member_left_channel",
@@ -343,6 +382,17 @@ openclaw gateway
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
     },
+    "assistant_view": {
+      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "suggested_prompts": [
+        { "title": "What can you do?", "message": "What can you help me with?" },
+        {
+          "title": "Summarize this channel",
+          "message": "Summarize the recent activity in this channel."
+        },
+        { "title": "Draft a reply", "message": "Help me draft a reply." }
+      ]
+    },
     "slash_commands": [
       {
         "command": "/openclaw",
@@ -376,6 +426,8 @@ openclaw gateway
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "message.channels",
         "message.groups",
         "message.im"
@@ -393,7 +445,7 @@ openclaw gateway
         </CodeGroup>
 
         <Note>
-          **Recommended** 与 Slack 插件的完整功能集一致；**Minimal** 会为受限 workspace 移除文件、reaction、pin、群组 DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。有关每个 scope 的原因，请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
+          **推荐** 与 Slack 插件的完整功能集一致；**Minimal** 会为受限 workspace 移除文件、reaction、pin、群组 DM（`mpim:*`）、`emoji:read` 和 `usergroups:read`。有关每个 scope 的原因，请参见 [Manifest and scope checklist](#manifest-and-scope-checklist)。
         </Note>
 
         <Info>
@@ -439,7 +491,7 @@ openclaw config patch --file ./slack.http.patch.json5
 
       </Step>
 
-      <Step title="启动 gateway">
+      <Step title="启动网关">
 
 ```bash
 openclaw gateway
@@ -498,6 +550,17 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
       "messages_tab_enabled": true,
       "messages_tab_read_only_enabled": false
     },
+    "assistant_view": {
+      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "suggested_prompts": [
+        { "title": "What can you do?", "message": "What can you help me with?" },
+        {
+          "title": "Summarize this channel",
+          "message": "Summarize the recent activity in this channel."
+        },
+        { "title": "Draft a reply", "message": "Help me draft a reply." }
+      ]
+    },
     "slash_commands": [
       {
         "command": "/openclaw",
@@ -541,6 +604,8 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "channel_rename",
         "member_joined_channel",
         "member_left_channel",
@@ -578,6 +643,8 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
       "bot_events": [
         "app_home_opened",
         "app_mention",
+        "assistant_thread_context_changed",
+        "assistant_thread_started",
         "channel_rename",
         "member_joined_channel",
         "member_left_channel",
@@ -604,7 +671,7 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 
 启用不同功能以扩展上述默认配置。
 
-默认 manifest 会启用 Slack App Home 的 **Home** 选项卡，并订阅 `app_home_opened`。当工作区成员打开 Home 选项卡时，OpenClaw 会使用 `views.publish` 发布一个安全的默认 Home 视图；其中不包含对话负载或私有配置。**Messages** 选项卡仍对 Slack DM 保持启用。
+默认 manifest 启用 Slack App Home 的 **Home** 选项卡，并订阅 `app_home_opened`。当工作区成员打开 Home 选项卡时，OpenClaw 会通过 `views.publish` 发布一个安全的默认 Home 视图；其中不包含会话负载或私有配置。**Messages** 选项卡仍对 Slack 私信启用。该 manifest 还通过 `features.assistant_view`、`assistant:write`、`assistant_thread_started` 和 `assistant_thread_context_changed` 启用 Slack assistant threads；assistant threads 会路由到各自的 OpenClaw 线程会话，并让 Slack 提供的线程上下文可供代理使用。
 
 <AccordionGroup>
   <Accordion title="可选的原生斜杠命令">
@@ -831,21 +898,21 @@ Slack 操作由 `channels.slack.actions.*` 控制。
 ## 访问控制与路由
 
 <Tabs>
-  <Tab title="DM policy">
+  <Tab title="DM 策略">
     `channels.slack.dmPolicy` 控制 DM 访问。`channels.slack.allowFrom` 是规范的 DM 允许列表。
 
     - `pairing`（默认）
     - `allowlist`
-    - `open` (需要 `channels.slack.allowFrom` 包含 `"*"`)
+    - `open`（需要 `channels.slack.allowFrom` 包含 `"*"`）
     - `disabled`
 
     DM 标志：
 
-    - `dm.enabled` (默认 true)
+    - `dm.enabled`（默认 true）
     - `channels.slack.allowFrom`
-    - `dm.allowFrom` (旧版)
-    - `dm.groupEnabled` (群组 DM 默认 false)
-    - `dm.groupChannels` (可选的 MPIM 允许列表)
+    - `dm.allowFrom`（旧版）
+    - `dm.groupEnabled`（群组 DM 默认 false）
+    - `dm.groupChannels`（可选的 MPIM 允许列表）
 
     多账号优先级：
 
@@ -933,7 +1000,7 @@ Slack 操作由 `channels.slack.actions.*` 控制。
     - `systemPrompt`
     - `tools`, `toolsBySender`
     - `toolsBySender` key format: `channel:`, `id:`, `e164:`, `username:`, `name:`, or `"*"` wildcard
-      (legacy unprefixed keys still map to `id:` only)
+      (旧版未加前缀的键仍仅映射到 `id:`)
 
     对于频道和私有频道，`allowBots` 是保守的：只有当发送 bot 的房间消息的 bot 被显式列在该房间的 `users` 允许列表中，或者 `channels.slack.allowFrom` 中至少有一个显式 Slack owner ID 当前是该房间成员时，才会接受 bot 生成的房间消息。通配符和显示名 owner 条目都不能满足 owner 存在性要求。owner 存在性使用 Slack `conversations.members`; 请确保应用对该房间类型具有匹配的读取权限范围（公共频道使用 `channels:read`，私有频道使用 `groups:read`）。如果成员查询失败，OpenClaw 会丢弃该 bot 生成的房间消息。
 
@@ -1178,6 +1245,21 @@ Slack 可以渲染由 agent 生成的交互式回复控件，但该功能默认�
 - 交互回调值是 OpenClaw 生成的不透明令牌，而不是 agent 编写的原始值。
 - 如果生成的交互块会超过 Slack Block Kit 限制，OpenClaw 会回退为原始文本回复，而不是发送无效的 blocks 负载。
 
+### 插件拥有的模态提交
+
+注册了交互处理器的 Slack 插件，也可以在 OpenClaw 为 agent 可见的系统事件压缩负载之前，接收模态框的
+`view_submission` 和 `view_closed` 生命周期事件。在打开 Slack 模态框时，请使用以下一种路由模式：
+
+- 将 `callback_id` 设为 `openclaw:<namespace>:<payload>`。
+- 或保留现有的 `callback_id`，并在模态框的 `private_metadata` 中放入 `pluginInteractiveData:
+"<namespace>:<payload>"`。
+
+处理器会收到 `ctx.interaction.kind` 为 `view_submission` 或
+`view_closed`，规范化后的 `inputs`，以及来自
+Slack 的完整原始 `stateValues` 对象。仅使用 callback-id 路由就足以调用插件处理器；当模态框还应该生成一个 agent 可见的系统事件时，请包含现有模态框的 `private_metadata` 用户/会话路由字段。agent 会收到一个简洁、脱敏的 `Slack interaction: ...` 系统事件。如果处理器返回
+`systemEvent.summary`、`systemEvent.reference` 或 `systemEvent.data`，这些字段会包含在该简洁事件中，这样 agent 就可以引用
+插件拥有的存储，而无需看到完整的表单负载。
+
 ## Slack 中的执行审批
 
 Slack 可以作为原生审批客户端，通过交互式按钮和交互操作来处理审批，而不是回退到 Web UI 或终端。
@@ -1253,13 +1335,13 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
 <Accordion title="高信号 Slack 字段">
 
 - mode/auth: `mode`, `botToken`, `appToken`, `signingSecret`, `webhookPath`, `accounts.*`
-- DM access: `dm.enabled`, `dmPolicy`, `allowFrom` (legacy: `dm.policy`, `dm.allowFrom`), `dm.groupEnabled`, `dm.groupChannels`
-- compatibility toggle: `dangerouslyAllowNameMatching` (break-glass; keep off unless needed)
-- channel access: `groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
-- threading/history: `replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
-- delivery: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
-- unfurls: `unfurlLinks`, `unfurlMedia` for `chat.postMessage` link/media preview control
-- ops/features: `configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
+- DM 访问: `dm.enabled`, `dmPolicy`, `allowFrom` (旧版: `dm.policy`, `dm.allowFrom`), `dm.groupEnabled`, `dm.groupChannels`
+- 兼容性开关: `dangerouslyAllowNameMatching`（紧急开关；除非需要，否则保持关闭）
+- 频道访问: `groupPolicy`, `channels.*`, `channels.*.users`, `channels.*.requireMention`
+- 线程/历史: `replyToMode`, `replyToModeByChatType`, `thread.*`, `historyLimit`, `dmHistoryLimit`, `dms.*.historyLimit`
+- 投递: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `streaming`, `streaming.nativeTransport`, `streaming.preview.toolProgress`
+- 展开预览: `unfurlLinks`（默认：`false`），`unfurlMedia` 用于控制 `chat.postMessage` 链接/媒体预览；将 `unfurlLinks: true` 设回以启用链接预览
+- 运维/功能: `configWrites`, `commands.native`, `slashCommand.*`, `actions.*`, `userToken`, `userTokenReadOnly`
 
 </Accordion>
 
@@ -1270,10 +1352,10 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
     按以下顺序检查：
 
     - `groupPolicy`
-    - channel allowlist (`channels.slack.channels`) — **keys must be channel IDs** (`C12345678`), not names (`#channel-name`). Name-based keys silently fail under `groupPolicy: "allowlist"` because channel routing is ID-first by default. To find an ID: right-click the channel in Slack → **Copy link** — the `C...` value at the end of the URL is the channel ID.
+    - 频道 allowlist (`channels.slack.channels`) — **键必须是频道 ID** (`C12345678`)，而不是名称 (`#channel-name`)。基于名称的键在 `groupPolicy: "allowlist"` 下会静默失败，因为频道路由默认按 ID 优先。查找 ID：在 Slack 中右键点击频道 → **复制链接** — URL 末尾的 `C...` 值就是频道 ID。
     - `requireMention`
-    - per-channel `users` allowlist
-    - `messages.groupChat.visibleReplies`: if it is `"message_tool"` and logs show assistant text with no `message(action=send)` call, the turn was processed but the final answer was kept private. Set it to `"automatic"` if you want normal assistant final replies posted back to Slack channels.
+    - 每个频道的 `users` allowlist
+    - `messages.groupChat.visibleReplies`：如果它是 `"message_tool"`，且日志显示有助手文本但没有 `message(action=send)` 调用，说明模型错过了可见的 message-tool 路径。在该模式下，最终文本保持私有；请检查 gateway 详细日志中被抑制的 payload 元数据，或者如果你希望每个正常的助手最终回复都通过旧路径发布，请将其设置为 `"automatic"`。
 
 ```json5
 {
@@ -1299,7 +1381,7 @@ openclaw doctor
     检查：
 
     - `channels.slack.dm.enabled`
-    - `channels.slack.dmPolicy` (或旧版 `channels.slack.dm.policy`)
+    - `channels.slack.dmPolicy`（或旧版 `channels.slack.dm.policy`）
     - 配对审批 / allowlist 条目（`dmPolicy: "open"` 仍然需要 `channels.slack.allowFrom: ["*"]`）
     - 群组 DM 使用 MPIM 处理；启用 `channels.slack.dm.groupEnabled`，并且如果已配置，请将 MPIM 包含在 `channels.slack.dm.groupChannels` 中
     - Slack Assistant DM 事件：提到 `drop message_changed` 的详细日志
@@ -1311,7 +1393,7 @@ openclaw pairing list slack
 
   </Accordion>
 
-  <Accordion title="Socket mode not connecting">
+  <Accordion title="Socket mode 未连接">
     验证 bot + app token 以及 Slack app 设置中的 Socket Mode 启用状态。
     `xapp-...` App-Level Token 需要 `connections:write`，而 `xoxb-...`
     bot token 必须属于与 app token 相同的 Slack app/workspace。
@@ -1327,7 +1409,7 @@ openclaw pairing list slack
 
   </Accordion>
 
-  <Accordion title="HTTP mode 未接收到事件">
+  <Accordion title="HTTP 模式未接收到事件">
     验证：
 
     - signing secret

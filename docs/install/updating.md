@@ -93,6 +93,11 @@ npm i -g openclaw@latest
 
 当 `openclaw update` 管理一个全局 npm 安装时，它会先将目标安装到一个临时 npm 前缀中，验证打包的 `dist` 清单，然后将干净的包树交换到真实的全局前缀中。这样可以避免 npm 将新包覆盖到旧包的残留文件之上。如果安装命令失败，OpenClaw 会使用 `--omit=optional` 重试一次。该重试有助于原生可选依赖无法编译的主机，同时如果回退也失败，仍会保留原始失败信息可见。
 
+由 OpenClaw 管理的 npm 更新和插件更新命令还会为子 npm 进程清除 npm 的
+`min-release-age` 隔离。npm 可能会将该策略报告为一个派生的 `before` 截止时间；这两者都对通用的供应链
+隔离策略有用，但显式的 OpenClaw 更新意味着“现在安装所选的
+OpenClaw 发布版本”。
+
 ```bash
 pnpm add -g openclaw@latest
 ```
@@ -150,11 +155,13 @@ bun add -g openclaw@latest
 网关还会在启动时记录一条更新提示（可通过 `update.checkOnStart: false` 禁用）。
 对于降级或事故恢复，可在网关环境中设置 `OPENCLAW_NO_AUTO_UPDATE=1`，即使配置了 `update.auto.enabled` 也会阻止自动应用。除非同时禁用 `update.checkOnStart`，否则启动时的更新提示仍可能运行。
 
-由实时 Gateway 控制平面处理程序请求触发的包管理器更新，
-会在包交换后强制执行一次非延迟、无冷却时间的更新重启。这
-可避免旧的内存中进程持续存在足够长时间，从已被替换的包树中惰性加载代码块。
-对于受监督的安装，Shell `openclaw update`
-仍然是首选路径，因为它可以在更新前后停止并重启服务。
+通过实时 Gateway 控制平面处理器请求的包管理器更新，不会替换正在运行的 Gateway 进程中的包树。在受管理
+的服务安装上，Gateway 会启动一个分离的交接，退出，并让
+常规的 `openclaw update --yes --json` CLI 路径停止服务、替换
+包、刷新服务元数据、重启、验证 Gateway 版本和
+可达性，并在可能时恢复已安装但未加载的 macOS LaunchAgent。如果
+Gateway 无法安全地完成该交接，`update.run` 会返回一条
+安全的 shell 命令，而不是在进程内运行包管理器。
 
 ## 更新后
 

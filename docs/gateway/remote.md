@@ -1,19 +1,19 @@
 ---
-summary: "使用 SSH 隧道（Gateway WS）和 tailnet 的远程访问"
+summary: "使用 Gateway WS、SSH 隧道和 tailnet 进行远程访问"
 read_when:
   - 运行或排查远程网关设置时
 title: "远程访问"
 ---
 
-本仓库通过在专用主机（桌面/服务器）上运行单个 Gateway（主节点），并将客户端连接到它，从而支持“通过 SSH 远程访问”。
+此仓库通过在专用主机（桌面/服务器）上保持单个 Gateway（主节点）运行，并将客户端连接到它，来支持远程网关访问。
 
-- 对于 **操作员（你 / macOS 应用）**：SSH 隧道是通用的兜底方案。
-- 对于 **节点（iOS/Android 和未来设备）**：连接到 Gateway **WebSocket**（按需使用 LAN/tailnet 或 SSH 隧道）。
+- 对于 **操作者（你 / macOS 应用）**：当网关可达时，直接使用 LAN/Tailnet WebSocket 是最简单的；SSH 隧道是通用的兜底方案。
+- 对于 **节点（iOS/Android 和未来设备）**：连接到 Gateway **WebSocket**（按需通过 LAN/tailnet 或 SSH 隧道）。
 
 ## 核心思路
 
-- Gateway WebSocket 绑定到你配置端口上的 **loopback**（默认是 18789）。
-- 对于远程使用，你可以通过 SSH 转发这个 loopback 端口（或者使用 tailnet/VPN，从而减少隧道需求）。
+- Gateway WebSocket 通常绑定到你所配置端口上的 **loopback**（默认为 18789）。
+- 对于远程使用，可通过 Tailscale Serve 或受信任的 LAN/Tailnet 绑定将其暴露，或者通过 SSH 将 loopback 端口转发出去。
 
 ## 常见的 VPN 和 tailnet 方案
 
@@ -23,9 +23,10 @@ title: "远程访问"
 
 在持久化主机（VPS 或家用服务器）上运行 Gateway，并通过 **Tailscale** 或 SSH 访问它。
 
-- **最佳体验：** 保持 `gateway.bind: "loopback"`，并使用 **Tailscale Serve** 提供 Control UI。
-- **兜底：** 保持 loopback，再从任何需要访问的机器通过 SSH 隧道连接。
-- **示例：** [exe.dev](/install/exe-dev)（简单 VM）或 [Hetzner](/install/hetzner)（生产级 VPS）。
+- **最佳体验：** 保持 `gateway.bind: "loopback"`，并为 Control UI 使用 **Tailscale Serve**。
+- **受信任的 LAN/Tailnet：** 将 gateway 绑定到私有接口，并使用 `gateway.remote.transport: "direct"` 直接连接。
+- **兜底方案：** 保持 loopback，并从任何需要访问的机器建立 SSH 隧道。
+- **示例：** [exe.dev](/install/exe-dev)（易用的 VM）或 [Hetzner](/install/hetzner)（生产环境 VPS）。
 
 适用于你的笔记本经常休眠、但又希望 agent 一直在线的场景。
 
@@ -33,8 +34,8 @@ title: "远程访问"
 
 笔记本**不**运行 agent。它通过远程方式连接：
 
-- 使用 macOS 应用的 **Remote over SSH** 模式（Settings → General → OpenClaw runs）。
-- 应用会打开并管理隧道，因此 WebChat 和健康检查都能正常工作。
+- 使用 macOS 应用的远程模式（Settings → General → OpenClaw runs）。
+- 当网关在 LAN/Tailnet 上可达时，应用会直接连接；当你选择 SSH 时，则会打开并管理 SSH 隧道。
 
 运行手册：[macOS 远程访问](/platforms/mac/remote)。
 
@@ -101,8 +102,25 @@ ssh -N -L 18789:127.0.0.1:18789 user@host
 ```
 
 当 gateway 仅绑定 loopback 时，请保持 URL 为 `ws://127.0.0.1:18789`，并先打开 SSH 隧道。
-在 macOS 应用的 SSH 隧道传输中，发现到的 gateway 主机名应放在
-`gateway.remote.sshTarget`；`gateway.remote.url` 保持为本地隧道 URL。
+在 macOS 应用的 SSH 隧道传输中，检测到的 gateway 主机名应放在
+`gateway.remote.sshTarget` 中；`gateway.remote.url` 仍然是本地隧道 URL。
+如果这些端口不同，请将 `gateway.remote.remotePort` 设为
+SSH 主机上的 gateway 端口。
+
+对于已经能在受信任的 LAN 或 Tailnet 上访问的 gateway，请使用直接模式：
+
+```json5
+{
+  gateway: {
+    mode: "remote",
+    remote: {
+      transport: "direct",
+      url: "ws://192.168.0.202:18789",
+      token: "your-token",
+    },
+  },
+}
+```
 
 ## 凭据优先级
 
@@ -122,14 +140,15 @@ Gateway 凭据解析在 call/probe/status 路径以及 Discord exec-approval 监
 - 远程 probe/status 的 token 检查默认是严格的：当目标为远程模式时，它们只使用 `gateway.remote.token`（不回退到本地 token）。
 - Gateway 环境覆盖只使用 `OPENCLAW_GATEWAY_*`。
 
-## 通过 SSH 访问聊天 UI
+## Chat UI 远程访问
 
 WebChat 不再使用单独的 HTTP 端口。SwiftUI 聊天 UI 直接连接到 Gateway WebSocket。
 
 - 通过 SSH 转发 `18789`（见上文），然后将客户端连接到 `ws://127.0.0.1:18789`。
-- 在 macOS 上，优先使用应用的“Remote over SSH”模式，它会自动管理隧道。
+- 对于 LAN/Tailnet 直接模式，将客户端连接到已配置的私有 `ws://` 或安全的 `wss://` URL。
+- 在 macOS 上，优先使用应用的远程模式，它会自动管理所选传输方式。
 
-## macOS 应用 Remote over SSH
+## macOS 应用远程模式
 
 macOS 菜单栏应用可以端到端驱动同一套配置（远程状态检查、WebChat 和 Voice Wake 转发）。
 
@@ -139,18 +158,16 @@ macOS 菜单栏应用可以端到端驱动同一套配置（远程状态检查�
 
 简短版：**保持 Gateway 仅绑定 loopback**，除非你确定需要绑定到其他地址。
 
-- **Loopback + SSH/Tailscale Serve** 是最安全的默认选择（不会公开暴露）。
-- 明文 `ws://` 默认仅限 loopback 使用。对于受信任的私有网络，
-  可在客户端进程上设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`
-  作为应急开关。`openclaw.json` 没有对应项；这必须是建立 WebSocket 连接的客户端进程环境变量。
-- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或者在 loopback 不可用时的 `auto`）必须使用 gateway 身份验证：token、password，或带有 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
-- `gateway.remote.token` / `.password` 是客户端凭据来源。它们本身**不会**配置服务端认证。
-- 本地 call 路径只有在 `gateway.auth.*` 未设置时，才可将 `gateway.remote.*` 作为回退。
-- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置但未解析成功，解析会闭合失败（不会被远程回退掩盖）。
-- 使用 `wss://` 时，`gateway.remote.tlsFingerprint` 会固定远程 TLS 证书，包括 macOS 直接模式。若没有已配置或已存储的固定值，macOS 只会在正常系统信任通过后，对首次使用的证书进行固定；macOS 本身不信任的自签名或私有 CA gateway 需要显式 fingerprint 或通过 Remote over SSH。
-- **Tailscale Serve** 可以通过身份头为 Control UI/WebSocket 流量进行认证，当 `gateway.auth.allowTailscale: true` 时生效；HTTP API 端点不会使用该 Tailscale 头部认证，而是遵循 gateway 的正常 HTTP 认证模式。这个无 token 流程假定 gateway 主机是可信的。如果你希望所有地方都使用共享密钥认证，请将其设为 `false`。
-- **Trusted-proxy** 认证默认期望非 loopback 的身份感知代理部署。同主机 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-- 将浏览器控制视为操作员访问：仅限 tailnet + 明确的节点配对。
+- **Loopback + SSH/Tailscale Serve** 是最安全的默认方案（不会公开暴露）。
+- 明文 `ws://` 仅接受用于 loopback、LAN、link-local、`.local`、`.ts.net` 以及 Tailscale CGNAT 主机。公共远程主机必须使用 `wss://`。
+- **非 loopback 绑定**（`lan`/`tailnet`/`custom`，或在 loopback 不可用时的 `auto`）必须使用 gateway 身份验证：token、password，或带有 `gateway.auth.mode: "trusted-proxy"` 的身份感知反向代理。
+- `gateway.remote.token` / `.password` 是客户端凭据来源。它们本身**不会**配置服务器认证。
+- 本地 call 路径仅在 `gateway.auth.*` 未设置时才可将 `gateway.remote.*` 作为回退。
+- 如果 `gateway.auth.token` / `gateway.auth.password` 通过 SecretRef 显式配置且未解析，则解析会失败关闭（不会被远程回退掩盖）。
+- 在使用 `wss://` 时，`gateway.remote.tlsFingerprint` 会固定远程 TLS 证书，包括 macOS 直接模式。如果没有配置或之前已存储的 pin，macOS 只会在正常系统信任通过后固定首次使用的证书；自签名或私有 CA 的 gateway 若 macOS 尚不信任，则需要显式指纹或通过 SSH 的远程访问。
+- **Tailscale Serve** 可通过身份头认证 Control UI/WebSocket 流量，前提是 `gateway.auth.allowTailscale: true`；HTTP API 端点不会使用该 Tailscale 头认证，而是遵循 gateway 的常规 HTTP 认证模式。这种无 token 流程假设 gateway 主机是可信的。如果你希望所有地方都使用共享密钥认证，请将其设为 `false`。
+- **Trusted-proxy** 认证默认期望非 loopback 的身份感知代理配置。同主机 loopback 反向代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
+- 将浏览器控制视为操作者访问：仅限 tailnet + 有意配对节点。
 
 深入了解：[安全](/gateway/security)。
 

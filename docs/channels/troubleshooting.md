@@ -27,6 +27,20 @@ openclaw channels status --probe
 - `Capability: read-only`, `write-capable`, or `admin-capable`
 - 频道探测显示传输已连接，并且在支持的情况下显示 `works` 或 `audit ok`
 
+## 更新后
+
+当 Telegram、iMessage、BlueBubbles 时代的配置，或其他插件频道在更新后消失时使用此部分。
+
+```bash
+openclaw status --all
+openclaw doctor --fix
+openclaw gateway restart
+openclaw status --all
+```
+
+在 `openclaw status --all` 中查找 `plugin load failed: dependency tree corrupted; run openclaw doctor
+--fix`。这意味着频道已配置，但插件设置/加载路径遇到了损坏的依赖树，而不是成功注册该频道。`openclaw doctor --fix` 会移除过时的插件依赖暂存目录和过时的认证阴影，然后 `openclaw gateway restart` 会重新加载干净状态。
+
 ## WhatsApp
 
 ### WhatsApp 失败特征
@@ -61,12 +75,12 @@ openclaw channels status --probe
 
 ### Discord 失败特征
 
-| 症状                                   | 最快检查项                                                          | 修复方法                                                                                                                                                                     |
-| ----------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 机器人在线但没有服务器回复           | `openclaw channels status --probe`                                     | 允许该服务器/频道，并验证消息内容 intent。                                                                                                                  |
-| 群组消息被忽略                    | 检查日志中提及门控丢弃                                | 提及机器人，或将服务器/频道 `requireMention: false`。                                                                                                               |
-| 有打字/令牌使用，但没有 Discord 消息 | 会话日志显示 assistant 文本，且 `didSendViaMessagingTool: false` | 模型是私下回答的，而不是调用消息工具。请使用更可靠触发工具调用的模型，或将 `messages.groupChat.visibleReplies: "automatic"` 设置为自动发布。 |
-| DM 回复缺失                        | `openclaw pairing list discord`                                        | 批准 DM 配对或调整 DM 策略。                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 症状                                   | 最快检查项                                                                                                     | 修复方法                                                                                                                                                                                                                                                        |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 机器人在线但没有服务器回复           | `openclaw channels status --probe`                                                                                | 允许该服务器/频道并验证消息内容 intent。                                                                                                                                                                                                     |
+| 群组消息被忽略                    | 检查日志中提及门控的丢弃记录                                                                               | 提及机器人，或将服务器/频道 `requireMention: false`。                                                                                                                                                                                                  |
+| 有输入/令牌使用但没有 Discord 消息 | 检查 `messages.groupChat.visibleReplies` 是否为 `"message_tool"`，且代理未发送 `message(action=send)` | 检查网关详细日志中是否有被抑制的最终负载元数据，验证 `messages.groupChat.ambientTurns` 没有将该轮次路由为静默房间上下文，或将 `messages.groupChat.visibleReplies: "automatic"` 设为使用旧版最终回复路径。 |
+| DM 回复缺失                        | `openclaw pairing list discord`                                                                                   | 批准 DM 配对或调整 DM 策略。                                                                                                                                                                                                                    |
 
 完整故障排查：[Discord 故障排查](/channels/discord#troubleshooting)
 
@@ -84,7 +98,7 @@ openclaw channels status --probe
 
 ## iMessage
 
-### iMessage failure signatures
+### iMessage 失败特征
 
 | 症状                              | 最快检查项                                           | 修复方法                                                                   |
 | ------------------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -94,7 +108,7 @@ openclaw channels status --probe
 
 完整故障排查：
 
-- [iMessage troubleshooting](/channels/imessage#troubleshooting)
+- [iMessage 故障排查](/channels/imessage#troubleshooting)
 
 ## Signal
 

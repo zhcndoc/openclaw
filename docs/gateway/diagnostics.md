@@ -4,12 +4,12 @@ title: "诊断导出"
 read_when:
   - 准备错误报告或支持请求时
   - 调试 Gateway 崩溃、重启、内存压力或超大负载时
-  - 查看记录了哪些诊断数据或哪些数据被红acted时
+  - 查看记录了哪些诊断数据或哪些数据被遮蔽时
 ---
 
 OpenClaw 可以为错误报告创建本地诊断 zip 包。它会组合经过清理的 Gateway 状态、健康信息、日志、配置结构，以及最近的、无载荷的稳定性事件。
 
-在你审查之前，请将诊断包视为机密。它们旨在省略或遮蔽负载和凭据，但仍会汇总本地 Gateway 日志和主机级运行时状态。
+在你审查之前，请将诊断包视为机密。它们旨在省略或遮蔽载荷和凭据，但仍会汇总本地 Gateway 日志和主机级运行时状态。
 
 ## 快速开始
 
@@ -42,12 +42,7 @@ openclaw gateway diagnostics export --json
 
 当当前活动的 OpenClaw 会话使用原生 OpenAI Codex harness 时，同一次 exec 批准还会覆盖一项针对 OpenClaw 已知的 Codex 运行时线程的 OpenAI 反馈上传。该上传与本地 Gateway zip 是分开的，并且仅出现在 Codex harness 会话中。在批准之前，提示会说明批准诊断也会发送 Codex 反馈，但不会列出 Codex 会话或线程 id。批准之后，聊天回复会列出已发送到 OpenAI 服务器的通道、OpenClaw 会话 id、Codex 线程 id，以及这些线程的本地恢复命令。如果你拒绝或忽略该批准，OpenClaw 不会运行导出，不会发送 Codex 反馈，也不会打印 Codex id。
 
-That makes the common Codex debugging loop short: notice the bad behavior in
-Telegram, Discord, or another channel, run `/diagnostics`, approve once, share
-the report with support, then run the printed `codex resume <thread-id>` command
-locally if you want to inspect the native Codex thread yourself. See
-[Codex harness](/plugins/codex-harness#inspect-codex-threads-locally) for
-that inspection workflow.
+这使得常见的 Codex 调试流程变得很短：在 Telegram、Discord 或其他渠道中注意到异常行为，运行 `/diagnostics`，一次批准，向支持团队分享报告，然后如果你想自己检查原生 Codex 线程，再在本地运行打印出的 `codex resume <thread-id>` 命令。有关该检查工作流，请参阅 [Codex harness](/plugins/codex-harness#inspect-codex-threads-locally)。
 
 ## 导出内容
 
@@ -143,6 +138,18 @@ openclaw gateway diagnostics export \
 ```
 
 禁用诊断会减少错误报告的细节，但不会影响正常的 Gateway 日志记录。
+
+关键内存压力快照默认关闭。若要保留诊断事件并同时捕获 OOM 前的稳定性快照：
+
+```json5
+{
+  diagnostics: {
+    memoryPressureSnapshot: true,
+  },
+}
+```
+
+仅当主机能够承受在关键内存压力期间额外的文件系统扫描和快照写入时才使用此项。即使关闭快照，普通的内存压力事件仍会记录 RSS、堆、阈值和增长情况。
 
 ## 相关内容
 

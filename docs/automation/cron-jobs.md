@@ -40,21 +40,21 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
 
 ## Cron 的工作方式
 
-- Cron runs **inside the Gateway** process (not inside the model).
-- Job definitions persist at `~/.openclaw/cron/jobs.json` so restarts do not lose schedules.
-- Runtime execution state persists next to it in `~/.openclaw/cron/jobs-state.json`. If you track cron definitions in git, track `jobs.json` and gitignore `jobs-state.json`.
-- After the split, older OpenClaw versions can read `jobs.json` but may treat jobs as fresh because runtime fields now live in `jobs-state.json`.
-- When `jobs.json` is edited while the Gateway is running or stopped, OpenClaw compares the changed schedule fields with pending runtime slot metadata and clears stale `nextRunAtMs` values. Pure formatting or key-order-only rewrites preserve the pending slot.
-- All cron executions create [background task](/automation/tasks) records.
-- On Gateway startup, overdue isolated agent-turn jobs are rescheduled out of the channel-connect window instead of replaying immediately, so Discord/Telegram startup and native-command setup stay responsive after restarts.
-- One-shot jobs (`--at`) auto-delete after success by default.
-- Isolated cron runs best-effort close tracked browser tabs/processes for their `cron:<jobId>` session when the run completes, so detached browser automation does not leave orphaned processes behind.
-- Isolated cron runs that receive the narrow cron self-cleanup grant can still read scheduler status, a self-filtered list of their current job, and that job's run history, so status/heartbeat checks can inspect their own schedule without gaining broader cron mutation access.
-- Isolated cron runs also guard against stale acknowledgement replies. If the first result is just an interim status update (`on it`, `pulling everything together`, and similar hints) and no descendant subagent run is still responsible for the final answer, OpenClaw re-prompts once for the actual result before delivery.
-- Isolated cron runs prefer structured execution-denial metadata from the embedded run, then fall back to known final summary/output markers such as `SYSTEM_RUN_DENIED` and `INVALID_REQUEST`, so a blocked command is not reported as a green run.
-- Isolated cron runs also treat run-level agent failures as job errors even when no reply payload is produced, so model/provider failures increment error counters and trigger failure notifications instead of clearing the job as successful.
-- When an isolated agent-turn job reaches `timeoutSeconds`, cron aborts the underlying agent run and gives it a short cleanup window. If the run does not drain, Gateway-owned cleanup force-clears that run's session ownership before cron records the timeout, so queued chat work is not left behind a stale processing session.
-- If an isolated agent-turn stalls before the runner starts or before the first model call, cron records a phase-specific timeout such as `setup timed out before runner start` or `stalled before first model call (last phase: context-engine)`. These watchdogs cover embedded providers and CLI-backed providers before their external CLI process is actually started, and are capped independently from long `timeoutSeconds` values so cold-start/auth/context failures surface quickly instead of waiting for the full job budget.
+- Cron 运行在 **Gateway** 进程内部（不是在模型内部）。
+- 作业定义会持久化到 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
+- 运行时执行状态会与其一同持久化到 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json`，并将 `jobs-state.json` 加入 gitignore。
+- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会把作业视为新作业，因为运行时字段现在存放在 `jobs-state.json` 中。
+- 当 Gateway 正在运行或已停止时，如果编辑了 `jobs.json`，OpenClaw 会将变更后的调度字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅格式化或仅调整键顺序的重写会保留待处理槽位。
+- 所有 cron 执行都会创建[后台任务](/automation/tasks)记录。
+- 在 Gateway 启动时，逾期的独立 agent-turn 作业会被重新调度到 channel-connect 窗口之外，而不是立即重放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
+- 一次性作业（`--at`）在成功后默认自动删除。
+- 独立 cron 在完成时会尽最大努力关闭其 `cron:<jobId>` 会话关联的受跟踪浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
+- 接收到较窄的 cron 自清理授权的独立 cron 运行，仍然可以读取调度器状态、当前作业的自过滤列表以及该作业的运行历史，因此状态/heartbeat 检查可以检查自身计划，而不会获得更广泛的 cron 变更权限。
+- 独立 cron 运行还会防范过时的确认回复。如果第一条结果只是临时状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍负责最终答案，OpenClaw 会再提示一次以获取实际结果，然后再交付。
+- 独立 cron 运行会优先使用嵌入式运行中的结构化执行拒绝元数据，然后再回退到已知的最终摘要/输出标记，例如 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST`，以便被阻止的命令不会被报告为成功运行。
+- 独立 cron 运行还会将运行级 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方失败会递增错误计数并触发失败通知，而不是把作业清零为成功。
+- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行并给予其一小段清理窗口。如果该运行没有退出，Gateway 拥有的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此排队中的聊天工作不会被遗留在过时的处理会话后面。
+- 如果独立 agent-turn 在 runner 启动之前或第一次模型调用之前卡住，cron 会记录一个按阶段区分的超时，例如 `setup timed out before runner start` 或 `stalled before first model call (last phase: context-engine)`。这些看门狗会在外部 CLI 进程真正启动之前覆盖嵌入式提供方和 CLI 驱动的提供方，并且会独立于较长的 `timeoutSeconds` 值进行上限限制，因此冷启动/认证/上下文失败会快速暴露，而不是等待完整的作业预算。
 
 <a id="maintenance"></a>
 
@@ -372,11 +372,17 @@ openclaw cron edit <jobId> --message "Updated prompt" --model "opus"
 # 立即强制运行一个作业
 openclaw cron run <jobId>
 
+# 现在强制运行一个作业并等待其终态
+openclaw cron run <jobId> --wait --wait-timeout 10m --poll-interval 2s
+
 # 仅在到期时运行
 openclaw cron run <jobId> --due
 
 # 查看运行历史
 openclaw cron runs --id <jobId> --limit 50
+
+# 查看一次精确运行
+openclaw cron runs --id <jobId> --run-id <runId>
 
 # 删除一个作业
 openclaw cron remove <jobId>
@@ -385,6 +391,8 @@ openclaw cron remove <jobId>
 openclaw cron add --name "Ops sweep" --cron "0 6 * * *" --session isolated --message "Check ops queue" --agent ops
 openclaw cron edit <jobId> --clear-agent
 ```
+
+`openclaw cron run <jobId>` 会在将手动运行入队后返回。对于必须阻塞直到队列中的运行完成的关闭钩子、维护脚本或其他自动化任务，请使用 `--wait`。等待模式会轮询精确返回的 `runId`；当状态为 `ok` 时退出码为 `0`，当状态为 `error`、`skipped` 或等待超时时退出码为非 `0`。
 
 <Note>
 模型覆盖说明：
@@ -440,7 +448,7 @@ openclaw cron edit <jobId> --clear-agent
 
 ## 故障排除
 
-### 命令阶梯
+### 命令序列
 
 ```bash
 openclaw status
@@ -470,7 +478,7 @@ openclaw doctor
     - 如果应由 agent 自行向用户发送消息，请检查该任务是否具有可用路由（`channel: "last"` 且存在先前聊天，或显式的 channel/target）。
 
   </Accordion>
-  <Accordion title="Cron 或心跳似乎阻止了 /new-style rollover">
+  <Accordion title="Cron 或心跳似乎阻止了 /new-style 轮转">
     - 每日和空闲重置的新鲜度不基于 `updatedAt`；参见 [会话管理](/concepts/session#session-lifecycle)。
     - Cron 唤醒、heartbeat 运行、exec 通知以及 gateway 记账可能会更新会话行用于路由/状态，但它们不会延长 `sessionStartedAt` 或 `lastInteractionAt`。
     - 对于在这些字段存在之前创建的旧版记录，如果转录 JSONL 的会话头仍然可用，OpenClaw 可以从中恢复 `sessionStartedAt`。没有 `lastInteractionAt` 的旧版空闲记录会使用恢复出的开始时间作为其空闲基准。
@@ -486,7 +494,7 @@ openclaw doctor
 
 ## 相关内容
 
-- [Automation](/automation) — 一览所有自动化机制
-- [Background Tasks](/automation/tasks) — cron 执行的任务账本
+- [自动化](/automation) — 一览所有自动化机制
+- [后台任务](/automation/tasks) — cron 执行的任务账本
 - [Heartbeat](/gateway/heartbeat) — 周期性的主会话轮次
-- [Timezone](/concepts/timezone) — 时区配置
+- [时区](/concepts/timezone) — 时区配置

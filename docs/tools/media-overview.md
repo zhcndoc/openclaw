@@ -19,15 +19,14 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 <CardGroup cols={2}>
   <Card title="图像生成" href="/tools/image-generation" icon="image">
-    通过 `image_generate` 从文本提示或参考图像创建和编辑图像。同步——在回复中内联完成。
+    通过文本提示或参考图像，使用 `image_generate` 创建和编辑图像。聊天会话中异步运行——在后台运行，并在准备好时发布结果。
   </Card>
   <Card title="视频生成" href="/tools/video-generation" icon="video">
     通过 `video_generate` 实现文生视频、图生视频和视频转视频。
     异步——在后台运行，并在准备好时发布结果。
   </Card>
   <Card title="音乐生成" href="/tools/music-generation" icon="music">
-    通过 `music_generate` 生成音乐或音频轨道。在共享提供商上为异步；
-    ComfyUI 工作流路径则同步运行。
+    通过 `music_generate` 生成音乐或音轨。聊天会话中异步运行，使用共享的媒体生成任务生命周期。
   </Card>
   <Card title="文本转语音" href="/tools/tts" icon="microphone">
     通过 `tts` 工具加上 `messages.tts` 配置将外发回复转换为语音音频。同步。
@@ -73,30 +72,29 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 ## 异步与同步
 
-| 能力            | 模式         | 原因                                                                                                 |
-| --------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
-| 图像            | 同步         | 提供商响应通常在几秒内返回；在回复中内联完成。                                                        |
-| 文本转语音      | 同步         | 提供商响应通常在几秒内返回；音频会附加到回复中。                                                      |
-| 视频            | 异步         | 提供商处理需要 30 秒到数分钟；较慢的队列最多可运行到配置的超时限制。                                  |
-| 音乐（共享）    | 异步         | 与视频相同的提供商处理特性。                                                                          |
-| 音乐（ComfyUI） | 同步         | 本地工作流会在配置的 ComfyUI 服务器上内联运行。                                                       |
+| Capability     | Mode         | Why                                                                                                  |
+| -------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| Image          | Asynchronous | 提供商处理可能会超出一次聊天轮次；生成的附件使用共享完成路径。   |
+| Text-to-speech | Synchronous  | 提供商响应会在数秒内返回；附加到回复音频。                                   |
+| Video          | Asynchronous | 提供商处理需要 30 秒到数分钟；较慢的队列可运行到配置的超时。 |
+| Music          | Asynchronous | 与视频相同的提供商处理特性。                                                    |
 
-对于异步工具，OpenClaw 会将请求提交给提供商，立即返回任务
-id，并在任务账本中跟踪该作业。代理在作业运行期间会继续
-响应其他消息。当提供商完成后，OpenClaw 会携带生成的媒体路径唤醒代理，
-这样它就可以告诉用户，并在源投递策略要求时，通过
-消息工具转发结果。对于仅消息工具的群组/频道路由，OpenClaw 会将
-缺少消息工具投递证据视为一次失败的完成尝试，并将
-生成的媒体回退结果直接发送到原始频道。
+对于异步工具，OpenClaw 会将请求提交给提供商，立即返回一个任务
+id，并在任务账本中跟踪该作业。代理会继续
+响应其他消息，而作业在后台运行。提供商完成后，
+OpenClaw 会携带生成的媒体路径唤醒代理，以便它可以告知
+用户并通过消息工具转发结果。OpenClaw 将缺失
+消息工具投递证据视为一次失败的完成尝试，并且不会
+自动将生成的媒体作为回退进行发布。
 
 ## 语音转文本与 Voice Call
 
-Deepgram, DeepInfra, ElevenLabs, Mistral, OpenAI, OpenRouter, SenseAudio, and xAI can all transcribe
-inbound audio through the batch `tools.media.audio` path when configured.
-Channel plugins that preflight a voice note for mention gating or command
-parsing mark the transcribed attachment on the inbound context, so the shared
-media-understanding pass reuses that transcript instead of making a second
-STT call for the same audio.
+Deepgram、DeepInfra、ElevenLabs、Mistral、OpenAI、OpenRouter、SenseAudio 和 xAI 在配置后都可以通过批量 `tools.media.audio` 路径转录
+传入音频。
+在提及门控或命令
+解析前预检语音消息的频道插件，会将转录后的附件标记在传入上下文上，因此共享
+媒体理解流程会复用该转录内容，而不是对同一音频再次进行
+STT 调用。
 
 Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
 流式 STT 提供商，因此实时电话音频可以在无需等待录音完成的情况下

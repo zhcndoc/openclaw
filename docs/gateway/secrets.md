@@ -187,7 +187,7 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     响应负载（stdout）：
 
     ```jsonc
-    { "protocolVersion": 1, "values": { "providers/openai/apiKey": "<openai-api-key>" } } // pragma: allowlist secret
+    { "protocolVersion": 1, "values": { "providers/openai/apiKey": "<openai-api-key>" } } // pragma: 允许列表 secret
     ```
 
     可选的按 id 错误：
@@ -202,6 +202,37 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
 
   </Accordion>
 </AccordionGroup>
+
+## 基于文件的 API 密钥
+
+不要在配置的 `env` 块中放入 `file:...` 字符串。`env` 块是字面量且不可覆盖的，因此不会解析 `file:...`。
+
+请改为在受支持的凭据字段上使用文件类型的 SecretRef：
+
+```json5
+{
+  secrets: {
+    providers: {
+      xai_key_file: {
+        source: "file",
+        path: "~/.openclaw/secrets/xai-api-key.txt",
+        mode: "singleValue",
+      },
+    },
+  },
+  models: {
+    providers: {
+      xai: {
+        apiKey: { source: "file", provider: "xai_key_file", id: "value" },
+      },
+    },
+  },
+}
+```
+
+对于 `mode: "singleValue"`，SecretRef 的 `id` 为 `"value"`。对于 `mode: "json"`，请使用绝对 JSON pointer，例如 `"/providers/xai/apiKey"`。
+
+请参阅 [SecretRef 凭据表面](/reference/secretref-credential-surface)，了解哪些配置字段接受 SecretRef。
 
 ## Exec 集成示例
 
@@ -369,7 +400,7 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
 - 没有引用的字段：保持不变。
 - 带有引用的字段：在激活时对处于激活状态的范围内为必需。
 - 如果同时存在明文和引用，则在受支持的优先级路径中，引用优先。
-- 红action 哨兵 `__OPENCLAW_REDACTED__` 保留用于内部配置脱敏/恢复，并且作为提交的字面配置数据会被拒绝。
+- 脱敏哨兵 `__OPENCLAW_REDACTED__` 保留用于内部配置脱敏/恢复，并且作为提交的字面配置数据会被拒绝。
 
 警告和审计信号：
 
@@ -466,7 +497,7 @@ Google Chat 兼容性行为：
 </Steps>
 
 <AccordionGroup>
-  <Accordion title="secrets audit">
+  <Accordion title="secrets 审计">
     发现项包括：
 
     - 静态存放的明文值（`openclaw.json`、`auth-profiles.json`、`.env` 以及生成的 `agents/*/agent/models.json`）
@@ -485,7 +516,7 @@ Google Chat 兼容性行为：
     - 敏感提供方头部检测基于名称启发式（常见认证/凭据头名称及片段，例如 `authorization`、`x-api-key`、`token`、`secret`、`password` 和 `credential`）。
 
   </Accordion>
-  <Accordion title="secrets configure">
+  <Accordion title="secrets 配置">
     交互式助手，功能包括：
 
     - 先配置 `secrets.providers`（`env`/`file`/`exec`，添加/编辑/移除）
@@ -513,7 +544,7 @@ Google Chat 兼容性行为：
     - 清理 `<config-dir>/.env` 中匹配的已知密钥行
 
   </Accordion>
-  <Accordion title="secrets apply">
+  <Accordion title="secrets 应用">
     应用已保存的计划：
 
     ```bash
@@ -563,5 +594,5 @@ OpenClaw 故意不会写入包含历史明文密钥值的回滚备份。
 - [CLI：secrets](/cli/secrets) — CLI 命令
 - [环境变量](/help/environment) — 环境优先级
 - [SecretRef 凭据范围](/reference/secretref-credential-surface) — 凭据范围
-- [Secrets Apply Plan Contract](/gateway/secrets-plan-contract) — 计划契约详情
+- [Secrets 应用计划契约](/gateway/secrets-plan-contract) — 计划契约详情
 - [安全性](/gateway/security) — 安全态势

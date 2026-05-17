@@ -36,7 +36,34 @@ OpenClaw 会从多个来源拉取环境变量。规则是 **绝不覆盖已有�
 }
 ```
 
-## Shell env 导入
+配置中的 `env` 块只接受字面字符串值。它不会展开 `file:...` 值；例如，`XAI_API_KEY: "file:secrets/xai-api-key.txt"` 会作为该精确字符串传递给提供商。
+
+对于由文件支持的提供商密钥，请在支持它的凭据字段上使用 SecretRef：
+
+```json5
+{
+  secrets: {
+    providers: {
+      xai_key_file: {
+        source: "file",
+        path: "~/.openclaw/secrets/xai-api-key.txt",
+        mode: "singleValue",
+      },
+    },
+  },
+  models: {
+    providers: {
+      xai: {
+        apiKey: { source: "file", provider: "xai_key_file", id: "value" },
+      },
+    },
+  },
+}
+```
+
+有关受支持字段，请参见 [密钥管理](/gateway/secrets) 和 [SecretRef 凭据表面](/reference/secretref-credential-surface)。
+
+## Shell 环境导入
 
 `env.shellEnv` 会运行你的登录 shell，并且只导入**缺失的**预期键：
 
@@ -99,11 +126,13 @@ OpenClaw 支持两种基于环境变量的模式：
 - 配置值中的 `${VAR}` 字符串替换。
 - 用于支持 secrets 引用字段的 SecretRef 对象（`{ source: "env", provider: "default", id: "VAR" }`）。
 
-两者都会在激活时从进程环境中解析。SecretRef 的细节记载于 [Secrets Management](/gateway/secrets)。
+两者都会在激活时从进程环境中解析。SecretRef 的细节记录在 [密钥管理](/gateway/secrets) 中。
+配置中的 `env` 块本身不会解析 SecretRef 或 `file:...`
+简写值。
 
 ## 路径相关环境变量
 
-| Variable                 | Purpose                                                                                                                                                                          |
+| 变量                     | 用途                                                                                                                                                                          |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `OPENCLAW_HOME`          | 覆盖所有内部路径解析所使用的 home 目录（`~/.openclaw/`、agent 目录、sessions、credentials）。当将 OpenClaw 作为专用服务用户运行时很有用。 |
 | `OPENCLAW_STATE_DIR`     | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                            |
@@ -112,7 +141,7 @@ OpenClaw 支持两种基于环境变量的模式：
 
 ## 日志
 
-| Variable                         | Purpose                                                                                                                                                                                      |
+| 变量                           | 用途                                                                                                                                                                                      |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `OPENCLAW_LOG_LEVEL`             | 覆盖文件和控制台的日志级别（例如 `debug`、`trace`）。优先级高于配置中的 `logging.level` 和 `logging.consoleLevel`。无效值会被忽略并给出警告。 |
 | `OPENCLAW_DEBUG_MODEL_TRANSPORT` | 在不启用全局 debug 日志的情况下，以 `info` 级别输出针对性的模型请求/响应时序诊断。                                                                                  |
@@ -174,6 +203,6 @@ OpenClaw 只读取 `OPENCLAW_*` 环境变量。早期版本中的旧前缀
 
 ## 相关内容
 
-- [Gateway configuration](/gateway/configuration)
-- [FAQ: env vars and .env loading](/help/faq#env-vars-and-env-loading)
-- [Models overview](/concepts/models)
+- [Gateway 配置](/gateway/configuration)
+- [常见问题：env vars 和 .env 加载](/help/faq#env-vars-and-env-loading)
+- [模型概览](/concepts/models)

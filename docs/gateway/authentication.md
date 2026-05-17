@@ -19,10 +19,8 @@ OpenClaw 支持模型提供方的 OAuth 和 API 密钥。对于始终在线的�
 
 ## 推荐设置（API 密钥，任意提供方）
 
-If you're running a long-lived gateway, start with an API key for your chosen
-provider.
-For Anthropic specifically, API key auth is still the most predictable server
-setup, but OpenClaw also supports reusing a local Claude CLI login.
+如果你运行的是长期存在的网关，请先为你选择的提供方使用 API 密钥。
+对于 Anthropic 而言，API 密钥认证仍然是最可预测的服务端设置，但 OpenClaw 也支持复用本地 Claude CLI 登录。
 
 1. 在你的提供方控制台中创建一个 API 密钥。
 2. 将其放到**网关主机**上（运行 `openclaw gateway` 的机器）。
@@ -48,10 +46,9 @@ openclaw models status
 openclaw doctor
 ```
 
-If you'd rather not manage env vars yourself, onboarding can store
-API keys for daemon use: `openclaw onboard`.
+如果你不想自己管理环境变量，可以通过 onboarding 为守护进程使用存储 API 密钥：`openclaw onboard`。
 
-有关环境继承（`env.shellEnv`、`~/.openclaw/.env`、systemd/launchd）的详细信息，请参见 [Help](/help)。
+有关环境继承（`env.shellEnv`、`~/.openclaw/.env`、systemd/launchd）的详细信息，请参见 [帮助](/help)。
 
 ## Anthropic：Claude CLI 与 token 兼容性
 
@@ -106,9 +103,9 @@ openclaw models auth paste-token --provider openrouter
 
 OpenClaw 在运行时要求使用规范的 `version` + `profiles` 结构。如果旧安装仍然保留平面文件，例如 `{ "openrouter": { "apiKey": "..." } }`，请运行 `openclaw doctor --fix` 将其重写为 `openrouter:default` 的 API 密钥配置文件；doctor 会在原文件旁边保留一份 `.legacy-flat.*.bak` 备份。诸如 `baseUrl`、`api`、模型 id、headers 和 timeouts 等端点细节应放在 `openclaw.json` 或 `models.json` 中的 `models.providers.<id>` 下，而不是放在 `auth-profiles.json` 中。
 
-External auth routes such as Bedrock `auth: "aws-sdk"` are also not credentials. If you want a named Bedrock route, put `auth.profiles.<id>.mode: "aws-sdk"` in `openclaw.json`; do not write `type: "aws-sdk"` into `auth-profiles.json`. `openclaw doctor --fix` moves legacy AWS SDK markers from the credential store into config metadata.
+诸如 Bedrock `auth: "aws-sdk"` 之类的外部认证路由也不属于凭据。如果你想使用命名的 Bedrock 路由，请在 `openclaw.json` 中设置 `auth.profiles.<id>.mode: "aws-sdk"`；不要将 `type: "aws-sdk"` 写入 `auth-profiles.json`。`openclaw doctor --fix` 会把旧的 AWS SDK 标记从凭据存储迁移到配置元数据中。
 
-Auth profile refs are also supported for static credentials:
+静态凭据也支持 Auth profile 引用：
 
 - `api_key` 凭据可以使用 `keyRef: { source, provider, id }`
 - `token` 凭据可以使用 `tokenRef: { source, provider, id }`
@@ -137,7 +134,7 @@ openclaw models status --probe
   仍可能可用于同一提供方上的另一个兄弟模型。
 
 可选的运维脚本（systemd/Termux）文档在这里：
-[Auth monitoring scripts](/help/scripts#auth-monitoring-scripts)
+[认证监控脚本](/help/scripts#auth-monitoring-scripts)
 
 ## Anthropic 说明
 
@@ -172,7 +169,18 @@ requests`、`ThrottlingException`、`concurrency limit reached`，或
 - 非限流错误不会使用备用密钥重试。
 - 如果所有密钥都失败，则返回最后一次尝试的最终错误。
 
-## 控制使用哪个凭据
+## 网关运行时移除提供方认证
+
+当通过 Gateway 控制平面移除提供方认证时，OpenClaw 会删除
+该提供方已保存的认证 profile，并中止其所选模型提供方与被移除提供方匹配的
+活动聊天或代理运行。被中止的运行会发出
+带有 `stopReason: "auth-revoked"` 的常规聊天取消和生命周期事件，
+因此已连接的客户端可以显示该运行是因为凭据被移除而停止的。
+
+移除已保存的认证不会在提供方侧吊销密钥。若需要在提供方侧使密钥失效，
+请在提供方仪表板中轮换或吊销该密钥。
+
+## 控制使用哪一个凭据
 
 ### 按会话（聊天命令）
 
@@ -182,7 +190,7 @@ requests`、`ThrottlingException`、`concurrency limit reached`，或
 
 ### 按代理（CLI 覆盖）
 
-Set an explicit auth profile order override for an agent (stored in that agent's `auth-state.json`):
+为某个代理设置显式的 auth profile 顺序覆盖（存储在该代理的 `auth-state.json` 中）：
 
 ```bash
 openclaw models auth order get --provider anthropic
@@ -198,7 +206,7 @@ openclaw models auth order clear --provider anthropic
 
 ## 故障排除
 
-### “No credentials found”
+### “未找到凭据”
 
 如果 Anthropic profile 丢失，请在**网关主机**上配置 Anthropic API 密钥，
 或者设置 Anthropic setup-token 路径，然后重新检查：
@@ -215,5 +223,5 @@ Anthropic token profile 丢失或已过期，请通过 setup-token 刷新该设�
 ## 相关内容
 
 - [Secrets management](/gateway/secrets)
-- [Remote access](/gateway/remote)
-- [Auth storage](/concepts/oauth)
+- [远程访问](/gateway/remote)
+- [认证存储](/concepts/oauth)

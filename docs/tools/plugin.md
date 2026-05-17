@@ -22,10 +22,10 @@ doc-schema-version: 1
 
 在安装插件之前，请确保你具备：
 
-- 一个包含 `openclaw` CLI 的 OpenClaw 检出版本或安装
+- 一个已检出或已安装的 OpenClaw 环境，并可使用 `openclaw` CLI
 - 可访问所选来源的网络连接，例如 ClawHub、npm 或 git 主机
 - 该插件安装文档中列出的任何插件专用凭据、配置键或操作系统工具
-- 重启提供你通道服务的 Gateway 的权限
+- 重新加载或重启为你的通道提供服务的 Gateway 的权限
 
 ## 快速开始
 
@@ -77,13 +77,17 @@ doc-schema-version: 1
 
   </Step>
 
-  <Step title="重启 Gateway">
+  <Step title="让 Gateway 重新加载">
+    安装、更新或卸载插件代码需要重启 Gateway。
+    当已管理的 Gateway 正在运行且启用了配置重载时，OpenClaw 会检测到已更改的插件安装记录并自动重启 Gateway。
+    如果 Gateway 未受管理或禁用了重载，请手动重启：
+
     ```bash
     openclaw gateway restart
     ```
 
-    安装、更新或卸载插件代码都需要重启 Gateway。启用和禁用操作会更新配置并刷新冷注册表，
-    但重启仍然是验证实时运行时表面的最清晰路径。
+    启用和禁用操作会更新配置并刷新冷态注册表。
+    运行时检查仍然是验证活动运行时表面的最清晰路径。
 
   </Step>
 
@@ -177,8 +181,9 @@ openclaw plugins inspect <plugin-id> --runtime --json
 openclaw gateway restart
 ```
 
-在 VPS 或容器安装中，请确保你重启的是实际提供通道服务的
-`openclaw gateway run` 子进程，而不只是一个包装器或监督进程。
+受管理的 Gateway 会在插件安装、更新和卸载导致插件源发生变化后自动重启。
+在 VPS 或容器安装中，请确保任何手动重启都针对实际提供通道服务的 `openclaw gateway run` 子进程，
+而不仅仅是包装器或守护进程。
 
 ## 故障排查
 

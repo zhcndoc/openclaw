@@ -100,10 +100,23 @@ CLI 回合开始之前，预模型看门狗仍会保持活动，因此会话查�
 
 ### 手动运行
 
-`openclaw cron run` 会在手动运行排队后立即返回。成功响应包含 `{ ok: true, enqueued: true, runId }`。使用 `openclaw cron runs --id <job-id>` 跟踪最终结果。
+`openclaw cron run <job-id>` 默认会强制运行，并在手动运行排队后立即返回。成功响应包括 `{ ok: true, enqueued: true, runId }`。使用返回的 `runId` 来检查后续结果：
+
+```bash
+openclaw cron run <job-id>
+openclaw cron runs --id <job-id> --run-id <run-id>
+```
+
+当脚本需要阻塞，直到该精确排队运行记录到终态时，添加 `--wait`：
+
+```bash
+openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
+```
+
+使用 `--wait` 时，CLI 仍会先调用 `cron.run`，然后轮询 `cron.runs` 以获取返回的 `runId`。只有当运行以 `ok` 状态结束时，命令才会以 `0` 退出。当运行以 `error` 或 `skipped` 结束、Gateway 响应不包含 `runId`，或者 `--wait-timeout` 过期时，它会以非零状态退出。`--poll-interval` 必须大于零。
 
 <Note>
-`openclaw cron run <job-id>` 默认强制运行。使用 `--due` 可保留旧的“仅在到期时运行”行为。
+当你希望手动命令仅在作业当前到期时才运行，请使用 `--due`。如果 `--due --wait` 没有排队运行，命令会返回正常的非运行响应，而不是继续轮询。
 </Note>
 
 ## 模型
@@ -121,12 +134,14 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 - 空的按作业回退列表（作业负载/API 中的 `fallbacks: []`）会使 cron 运行保持严格。
 - 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传递一个显式的空回退覆盖，因此不会把代理主项作为隐藏的重试目标附加进去。
 
-### 隔离 cron 模型优先级
+`openclaw doctor` 会报告那些已经设置了 `payload.model` 的作业，包括提供方命名空间计数以及与 `agents.defaults.model` 的不匹配情况。当认证、提供方或计费行为在实时聊天和计划任务之间看起来不同时，请使用该检查。
+
+### 隔离 cron 的模型优先级
 
 隔离 cron 按以下顺序解析活动模型：
 
 1. Gmail-hook 覆盖。
-2. 按作业的 `--model`。
+2. 作业级 `--model`。
 3. 存储的 cron 会话模型覆盖（当用户选择了一个时）。
 4. 代理或默认模型选择。
 
@@ -142,7 +157,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 过时确认抑制
 
-隔离 cron turn 会抑制过时的仅确认回复。如果第一个结果只是一个中间状态更新，并且没有后代子代理运行负责最终答案，cron 会在投递前重新提示一次以获取真实结果。
+隔离 cron 回合会抑制过时的仅确认回复。如果第一个结果只是一个中间状态更新，并且没有后代子代理运行负责最终答案，cron 会在投递前重新提示一次以获取真实结果。
 
 ### 静默 token 抑制
 
@@ -224,7 +239,10 @@ openclaw cron get <job-id>
 openclaw cron show <job-id>
 openclaw cron run <job-id>
 openclaw cron run <job-id> --due
+openclaw cron run <job-id> --wait --wait-timeout 10m
+openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 openclaw cron runs --id <job-id> --limit 50
+openclaw cron runs --id <job-id> --run-id <run-id>
 ```
 
 `openclaw cron list` 默认显示所有匹配的作业。传入 `--agent <id>` 仅显示其有效规范化代理 id 匹配的作业；没有存储代理 id 的作业将计为已配置的默认代理。

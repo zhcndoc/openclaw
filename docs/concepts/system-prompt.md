@@ -103,17 +103,15 @@ OpenClaw 可以为子代理渲染更小的系统提示词。运行时会为每�
 当 `promptMode=minimal` 时，额外注入的提示词会标记为 **子代理
 上下文**，而不是 **群聊上下文**。
 
-对于通道自动回复运行，如果直接/群聊上下文已经包含已解析的、
-特定对话的 `NO_REPLY` 行为，OpenClaw 可以省略通用的 **静默回复**
-部分。这样可以避免在全局系统提示词和通道上下文中重复记号机制。
+对于通道自动回复运行，当直接、群组或仅消息工具上下文拥有可见回复合同时，OpenClaw 会省略通用的 **静默回复** 部分。只有旧的自动群组/通道模式才应显示 `NO_REPLY`；直接聊天和仅消息工具回复不会收到静默令牌指引。
 
-## Prompt snapshots
+## 提示词快照
 
-OpenClaw 为 Codex 运行时的 happy path 保留已提交的提示词快照，位于
+OpenClaw 为 Codex 运行时的正常路径保留已提交的提示词快照，位于
 `test/fixtures/agents/prompt-snapshots/codex-runtime-happy-path/`。它们会渲染
 选定的 app-server 线程/轮次参数，以及针对 Telegram 私聊、Discord 群组和心跳轮次重建的
 模型绑定提示层栈。该栈包括一个固定的 Codex `gpt-5.5` 模型提示词
-样例，该样例由 Codex 的模型目录/缓存形状生成，Codex 的 happy-path 权限开发者文本，
+样例，该样例由 Codex 的模型目录/缓存形状生成，Codex 的正常路径权限开发者文本，
 OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模式指令，
 用户轮次输入，以及动态工具规范的引用。
 
@@ -141,15 +139,12 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 - `BOOTSTRAP.md`（仅适用于全新的工作区）
 - `MEMORY.md`（如存在）
 
-All of these files are **injected into the context window** on every turn unless
-a file-specific gate applies. `HEARTBEAT.md` is omitted on normal runs when
-heartbeats are disabled for the default agent or
-`agents.defaults.heartbeat.includeSystemPromptSection` is false. Keep injected
-files concise, especially `MEMORY.md`. `MEMORY.md` is intended to stay a
-curated long-term summary; detailed daily notes belong in `memory/*.md` where
-`memory_search` and `memory_get` can retrieve them on demand. Oversized
-`MEMORY.md` files increase prompt usage and can be partially injected because of
-the bootstrap file limits below.
+这些文件中的所有内容都会在每一轮被**注入到上下文窗口中**，除非
+某个特定文件的门控规则生效。默认代理在心跳被禁用时，或
+`agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行会省略 `HEARTBEAT.md`。请保持注入
+文件简洁，尤其是 `MEMORY.md`。`MEMORY.md` 的设计目标是保持为
+经过整理的长期摘要；详细的日常笔记应放在 `memory/*.md` 中，便于 `memory_search` 和 `memory_get` 按需检索。过大的
+`MEMORY.md` 文件会增加提示词使用量，并可能因为下面的引导文件限制而被部分注入。
 
 当会话运行在原生 Codex 运行器上时，Codex 会通过其自身的项目文档发现机制加载 `AGENTS.md`。OpenClaw 仍然会解析其余引导文件并将它们作为 Codex 配置指令转发，因此 `SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md` 和 `MEMORY.md` 会保持相同的工作区上下文角色，而不会重复 `AGENTS.md`。
 
@@ -157,23 +152,22 @@ the bootstrap file limits below.
 `memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。
 </Note>
 
-大型文件会被截断并附带标记。每个文件的最大大小由
-`agents.defaults.bootstrapMaxChars` 控制（默认：12000）。跨文件的总注入引导
-内容上限为 `agents.defaults.bootstrapTotalMaxChars`
-（默认：60000）。缺失文件会注入一条简短的缺失文件标记。当发生截断
-时，OpenClaw 可以注入一条简洁的系统提示警告；通过
-`agents.defaults.bootstrapPromptTruncationWarning` 控制（`off`、`once`、`always`；
-默认：`once`）。详细的原始/注入计数会保留在诸如
+大文件会被截断并附加标记。每个文件的最大大小由
+`agents.defaults.bootstrapMaxChars` 控制（默认值：12000）。跨文件的总注入引导
+内容上限由 `agents.defaults.bootstrapTotalMaxChars`
+控制（默认值：60000）。缺失文件会注入一个简短的缺失文件标记。当发生截断
+时，OpenClaw 可以注入一条简洁的系统提示词警告；通过
+`agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；
+默认值：`always`）进行控制。详细的原始/注入计数会保留在诸如
 `/context`、`/status`、doctor 和日志等诊断信息中。
 
-For memory files, truncation is not data loss: the file remains intact on disk,
-but the model only sees the shortened injected copy until it reads or searches
-memory directly. If `MEMORY.md` is repeatedly truncated, distill it into a
-shorter durable summary and move detailed history into `memory/*.md`, or
-intentionally raise the bootstrap limits.
+对于记忆文件，截断并不意味着数据丢失：文件在磁盘上仍然完整，
+但模型只会看到被缩短后的注入副本，直到它直接读取或搜索
+记忆。如果 `MEMORY.md` 反复被截断，请将其提炼为一个
+更短的持久摘要，并把详细历史迁移到 `memory/*.md` 中，或者
+有意提高引导限制。
 
-Sub-agent sessions only inject `AGENTS.md` and `TOOLS.md` (other bootstrap files
-are filtered out to keep the sub-agent context small).
+子代理会话仅注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件会被过滤掉，以保持子代理上下文更小）。
 
 内部钩子可以通过 `agent:bootstrap` 拦截此步骤，以修改或替换
 注入的引导文件（例如将 `SOUL.md` 替换为另一个人格）。

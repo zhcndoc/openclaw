@@ -80,23 +80,23 @@ codex app-server --listen stdio://
 
 支持的 `appServer` 字段：
 
-| 字段                          | 默认值                                              | 含义                                                                                                                                                                                          |
-| ----------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `transport`                   | `"stdio"`                                            | `"stdio"` 会启动 Codex；`"websocket"` 连接到 `url`。                                                                                                                                          |
-| `command`                     | 托管的 Codex 二进制文件                               | stdio 传输所用的可执行文件。留空以使用托管二进制文件。                                                                                                                                        |
-| `args`                        | `["app-server", "--listen", "stdio://"]`             | stdio 传输的参数。                                                                                                                                                                             |
-| `url`                         | 未设置                                               | WebSocket app-server URL。                                                                                                                                                                     |
-| `authToken`                   | 未设置                                               | WebSocket 传输的 Bearer token。                                                                                                                                                                |
-| `headers`                     | `{}`                                                 | 额外的 WebSocket 标头。                                                                                                                                                                        |
-| `clearEnv`                    | `[]`                                                 | 在 OpenClaw 构建继承环境后，从启动的 stdio app-server 进程中移除的额外环境变量名。                                                                                                              |
-| `requestTimeoutMs`            | `60000`                                              | app-server 控制平面调用的超时时间。                                                                                                                                                            |
-| `turnCompletionIdleTimeoutMs` | `60000`                                              | 在一次 turn 范围内的 app-server 请求之后，OpenClaw 等待 `turn/completed` 时的静默窗口。                                                                                                         |
-| `mode`                        | `"yolo"`，除非本地 Codex 需求不允许 YOLO              | YOLO 或 guardian 审核执行的预设。                                                                                                                                                              |
-| `approvalPolicy`              | `"never"` 或允许的 guardian 审批策略                   | 发送给 thread start、resume 和 turn 的原生 Codex 审批策略。                                                                                                                                   |
-| `sandbox`                     | `"danger-full-access"` 或允许的 guardian 沙箱         | 发送给 thread start 和 resume 的原生 Codex 沙箱模式。                                                                                                                                         |
-| `approvalsReviewer`           | `"user"` 或允许的 guardian reviewer                   | 在允许时使用 `"auto_review"` 让 Codex 审核原生审批提示。                                                                                                                                      |
-| `defaultWorkspaceDir`         | 当前进程目录                                          | 当省略 `--cwd` 时，`/codex bind` 使用的工作区。                                                                                                                                               |
-| `serviceTier`                 | 未设置                                               | 可选的 Codex app-server 服务层级。`"priority"` 启用 fast-mode 路由，`"flex"` 请求 flex 处理，`null` 清除覆盖。旧的 `"fast"` 也可作为 `"priority"` 接受。 |
+| 字段                          | 默认值                                                 | 含义                                                                                                                                                                                         |
+| ----------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport`                  | `"stdio"`                                              | `"stdio"` 会启动 Codex；`"websocket"` 连接到 `url`。                                                                                                                                        |
+| `command`                    | 托管的 Codex 二进制文件                                 | stdio 传输所使用的可执行文件。留空可使用托管二进制文件。                                                                                                                                     |
+| `args`                       | `["app-server", "--listen", "stdio://"]`               | stdio 传输的参数。                                                                                                                                                                            |
+| `url`                        | 未设置                                                 | WebSocket app-server URL。                                                                                                                                                                    |
+| `authToken`                  | 未设置                                                 | WebSocket 传输的 Bearer token。                                                                                                                                                               |
+| `headers`                    | `{}`                                                   | 额外的 WebSocket 标头。                                                                                                                                                                      |
+| `clearEnv`                   | `[]`                                                   | 在 OpenClaw 构建继承环境后，从启动的 stdio app-server 进程中移除的额外环境变量名。                                                                                                          |
+| `requestTimeoutMs`           | `60000`                                                | app-server 控制平面调用的超时时间。                                                                                                                                                           |
+| `turnCompletionIdleTimeoutMs` | `60000`                                                | 在 Codex 接受一个 turn 之后，或在一次 turn 范围内的 app-server 请求之后，OpenClaw 等待 `turn/completed` 时的静默窗口。                                                                       |
+| `mode`                       | `"yolo"`，除非本地 Codex 需求不允许 YOLO               | YOLO 或 guardian 审核执行的预设。                                                                                                                                                            |
+| `approvalPolicy`             | `"never"` 或一个允许的 guardian 审批策略                | 发送到 thread start、resume 和 turn 的原生 Codex 审批策略。                                                                                                                                  |
+| `sandbox`                    | `"danger-full-access"` 或一个允许的 guardian sandbox   | 发送到 thread start 和 resume 的原生 Codex sandbox 模式。                                                                                                                                   |
+| `approvalsReviewer`          | `"user"` 或一个允许的 guardian reviewer                | 在允许时使用 `"auto_review"` 让 Codex 审核原生审批提示。                                                                                                                                     |
+| `defaultWorkspaceDir`        | 当前进程目录                                            | 当省略 `--cwd` 时，`/codex bind` 使用的工作区。                                                                                                                                               |
+| `serviceTier`                | 未设置                                                 | 可选的 Codex app-server service tier。`"priority"` 启用 fast-mode 路由，`"flex"` 请求 flex 处理，`null` 清除覆盖。旧的 `"fast"` 也会按 `"priority"` 接受。                               |
 
 该插件会阻止较旧或未版本化的 app-server 握手。Codex app-server 必须报告稳定版本 `0.125.0` 或更高版本。
 
@@ -202,9 +202,9 @@ OpenClaw 拥有的动态工具调用会独立于 `appServer.requestTimeoutMs` �
 
 动态工具预算上限为 600000 ms。超时时，OpenClaw 会在支持的情况下中止工具信号，并向 Codex 返回失败的动态工具响应，以便该轮次可以继续，而不是让会话停留在 `processing` 状态。
 
-在 OpenClaw 对一个 Codex 轮次范围内的 app-server 请求作出响应后，宿主环境还会期望 Codex 通过 `turn/completed` 完成原生轮次。如果在该响应之后，app-server 对于 `appServer.turnCompletionIdleTimeoutMs` 一直保持静默，OpenClaw 会尽力中断 Codex 轮次，记录诊断超时，并释放 OpenClaw 会话通道，从而使后续聊天消息不会排在一个过时的原生轮次之后。
+Codex 接受一个轮次后，以及 OpenClaw 对一次轮次作用域的 app-server 请求作出响应后，宿主会预期 Codex 推进当前轮次，并最终使用 `turn/completed` 完成原生轮次。如果 app-server 在 `appServer.turnCompletionIdleTimeoutMs` 时间内保持静默，OpenClaw 会尽最大努力中断 Codex 轮次，记录一条诊断超时信息，并释放 OpenClaw 会话车道，从而使后续聊天消息不会排在一个陈旧的原生轮次后面。
 
-同一轮次的任何非终止通知，包括 `rawResponseItem/completed`，都会解除该短时看门狗，因为 Codex 已证明该轮次仍然存活。更长的终止看门狗会继续保护真正卡住的轮次。超时诊断会包含最后一个 app-server 通知的方法；对于原始助手响应项，还会包含项类型、角色、id，以及一个有边界的助手文本预览。
+同一轮次的大多数非终态通知会解除这个短期看门狗，因为 Codex 已证明该轮次仍然存活。原始的 `custom_tool_call_output` 完成会保持短期的工具后看门狗处于启用状态，因为它们是轮次作用域内的工具结果交接。已完成的 `agentMessage` 项以及工具前的原始助手 `rawResponseItem/completed` 项会启动助手输出释放：如果随后 Codex 在没有 `turn/completed` 的情况下保持静默，OpenClaw 会尽最大努力中断原生轮次并释放会话车道。工具后的原始助手进度会继续等待 `turn/completed` 或终态看门狗。超时诊断会包含最后一次 app-server 通知的方法；对于原始助手响应项，还会包含项类型、角色、id，以及一个有限长度的助手文本预览。
 
 ## 模型发现
 
@@ -218,14 +218,14 @@ OpenClaw 拥有的动态工具调用会独立于 `appServer.requestTimeoutMs` �
 
 当前内置宿主为 `@openai/codex` `0.130.0`。针对该内置 app-server 的一次 `model/list` 探测返回了：
 
-| Model id              | Default | Hidden | Input modalities | Reasoning efforts        |
-| ------------------- | ------- | ------ | ---------------- | ------------------------ |
-| `gpt-5.5`             | Yes     | No     | text, image      | low, medium, high, xhigh |
-| `gpt-5.4`             | No      | No     | text, image      | low, medium, high, xhigh |
-| `gpt-5.4-mini`        | No      | No     | text, image      | low, medium, high, xhigh |
-| `gpt-5.3-codex`       | No      | No     | text, image      | low, medium, high, xhigh |
-| `gpt-5.3-codex-spark` | No      | No     | text             | low, medium, high, xhigh |
-| `gpt-5.2`             | No      | No     | text, image      | low, medium, high, xhigh |
+| 模型 ID              | 默认 | 隐藏 | 输入模态         | 推理强度                |
+| ------------------- | ---- | ---- | ---------------- | ------------------------ |
+| `gpt-5.5`             | 是   | 否   | 文本、图像       | 低、中、高、超高         |
+| `gpt-5.4`             | 否   | 否   | 文本、图像       | 低、中、高、超高         |
+| `gpt-5.4-mini`        | 否   | 否   | 文本、图像       | 低、中、高、超高         |
+| `gpt-5.3-codex`       | 否   | 否   | 文本、图像       | 低、中、高、超高         |
+| `gpt-5.3-codex-spark` | 否   | 否   | 文本             | 低、中、高、超高         |
+| `gpt-5.2`             | 否   | 否   | 文本、图像       | 低、中、高、超高         |
 
 隐藏模型可能会由 app-server 目录返回，用于内部或专门流程，但它们不是普通的模型选择项。
 

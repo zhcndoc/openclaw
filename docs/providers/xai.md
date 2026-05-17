@@ -11,14 +11,17 @@ OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
 ## 快速开始
 
 <Steps>
-  <Step title="创建 API 密钥">
-    在 [xAI 控制台](https://console.x.ai/) 中创建一个 API 密钥。
+  <Step title="选择认证方式">
+    可以使用来自 [xAI 控制台](https://console.x.ai/) 的 API key，或者
+    使用带有 SuperGrok 订阅的 xAI Grok OAuth。
   </Step>
-  <Step title="设置你的 API 密钥">
-    设置 `XAI_API_KEY`，或者运行：
+  <Step title="登录">
+    设置 `XAI_API_KEY`，运行 API key 向导，或者启动 OAuth 流程：
 
     ```bash
     openclaw onboard --auth-choice xai-api-key
+    openclaw onboard --auth-choice xai-oauth
+    openclaw models auth login --provider xai --method oauth
     ```
 
   </Step>
@@ -32,36 +35,35 @@ OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
 </Steps>
 
 <Note>
-OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。来自
-`openclaw onboard --auth-choice xai-api-key` 的同一
-API 密钥也可用于一流的 `x_search` 和远程 `code_execution`；`XAI_API_KEY` 或插件
-web-search 配置也可以为基于 Grok 的 `web_search` 提供支持。
-如果你将 xAI 密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
-捆绑的 xAI 模型提供方也会将该密钥作为回退使用。
-将 `plugins.entries.xai.config.webSearch.baseUrl` 设为通过运维方 xAI Responses 代理路由 Grok 的 `web_search`
-，并默认让 `x_search` 通过该代理。
+OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。通过
+`openclaw onboard --auth-choice xai-api-key` 或
+`openclaw onboard --auth-choice xai-oauth` 获取的同一凭据，也可以驱动一等公民的
+`x_search`、远程 `code_execution`，以及 xAI 图像/视频生成。
+语音和转录当前需要 `XAI_API_KEY` 或提供方配置。
+`XAI_API_KEY` 或插件 web-search 配置也可以驱动基于 Grok 的 `web_search`。
+如果你将 xAI key 存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
+捆绑的 xAI 模型提供方也会将该 key 作为回退使用。
+将 `plugins.entries.xai.config.webSearch.baseUrl` 设为通过某个 operator xAI Responses 代理路由 Grok 的 `web_search`
+以及默认情况下的 `x_search`。
 `code_execution` 的调优位于 `plugins.entries.xai.config.codeExecution` 下。
 </Note>
 
 ## 内置目录
 
-OpenClaw 默认包含以下 xAI 模型家族：
+OpenClaw 默认包含当前的 xAI 聊天模型，并在模型选择器中按
+最新优先排序：
 
 | 家族            | 模型 ID                                                                 |
 | -------------- | ------------------------------------------------------------------------ |
-| Grok 3         | `grok-3`, `grok-3-fast`, `grok-3-mini`, `grok-3-mini-fast`               |
 | Grok 4.3       | `grok-4.3`                                                               |
-| Grok 4         | `grok-4`, `grok-4-0709`                                                  |
-| Grok 4 Fast    | `grok-4-fast`, `grok-4-fast-non-reasoning`                               |
-| Grok 4.1 Fast  | `grok-4-1-fast`, `grok-4-1-fast-non-reasoning`                           |
 | Grok 4.20 Beta | `grok-4.20-beta-latest-reasoning`, `grok-4.20-beta-latest-non-reasoning` |
-| Grok Code      | `grok-code-fast-1`                                                       |
 
-当新的 `grok-4*` 和 `grok-code-fast*` ID 具有相同的 API 结构时，该插件也会向前解析它们。
+该插件仍会为已有配置向前解析旧的 Grok 3、Grok 4、Grok 4 Fast、Grok 4.1
+Fast 和 Grok Code slug，但 OpenClaw 不再在可选目录中显示这些已退役的上游 slug。
 
 <Tip>
-`grok-4.3`, `grok-4-fast`, `grok-4-1-fast`, 和 `grok-4.20-beta-*`
-这些变体是当前捆绑目录中具备图像能力的 Grok 引用。
+除非你明确需要一个 Grok 4.20 beta 别名，否则新建聊天和编码工作负载请使用
+`grok-4.3`。
 </Tip>
 
 ## OpenClaw 功能覆盖
@@ -72,16 +74,16 @@ OpenClaw 默认包含以下 xAI 模型家族：
 
 | xAI 能力                  | OpenClaw 接口                          | 状态                                                              |
 | -------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
-| Chat / Responses           | `xai/<model>` model provider              | Yes                                                                 |
-| Server-side web search     | `web_search` provider `grok`              | Yes                                                                 |
-| Server-side X search       | `x_search` tool                           | Yes                                                                 |
-| Server-side code execution | `code_execution` tool                     | Yes                                                                 |
-| Images                     | `image_generate`                          | Yes                                                                 |
-| Videos                    | `video_generate`                          | Yes                                                                 |
-| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | Yes                                                                 |
-| Streaming TTS              | -                                         | Not exposed; OpenClaw 的 TTS 契约返回完整音频缓冲区 |
-| Batch speech-to-text       | `tools.media.audio` / media understanding | Yes                                                                 |
-| Streaming speech-to-text   | Voice Call `streaming.provider: "xai"`    | Yes                                                                 |
+| Chat / Responses           | `xai/<model>` model provider              | 是                                                                 |
+| Server-side web search     | `web_search` provider `grok`              | 是                                                                 |
+| Server-side X search       | `x_search` tool                           | 是                                                                 |
+| Server-side code execution | `code_execution` tool                     | 是                                                                 |
+| Images                     | `image_generate`                          | 是                                                                 |
+| Videos                     | `video_generate`                          | 是                                                                 |
+| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | 是                                                                 |
+| Streaming TTS              | -                                         | 未暴露；OpenClaw 的 TTS 契约返回完整音频缓冲区 |
+| Batch speech-to-text       | `tools.media.audio` / media understanding | 是                                                                 |
+| Streaming speech-to-text   | Voice Call `streaming.provider: "xai"`    | 是                                                                 |
 | Realtime voice             | -                                         | 目前未暴露；不同的会话/WebSocket 契约               |
 | Files / batches            | Generic model API compatibility only      | 不是 OpenClaw 的一等公民工具                                     |
 
@@ -118,7 +120,7 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 ## 功能
 
 <AccordionGroup>
-  <Accordion title="Web search">
+  <Accordion title="网页搜索">
     捆绑的 `grok` 网页搜索提供方可以使用 `XAI_API_KEY` 或插件
     web-search 密钥：
 
@@ -171,7 +173,7 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
     `image_generate` 工具注册图像生成功能。
 
     - 默认图像模型：`xai/grok-imagine-image`
-    - 额外模型：`xai/grok-imagine-image-pro`
+    - 额外模型：`xai/grok-imagine-image-quality`
     - 模式：文本转图像和参考图像编辑
     - 参考输入：一个 `image` 或最多五个 `images`
     - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`2:3`、`3:2`
@@ -396,17 +398,17 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
   </Accordion>
 
-  <Accordion title="Known limits">
-    - 认证目前仅支持 API 密钥。API 密钥可以存储在 xAI 认证
-      配置文件、环境变量或插件配置中；OpenClaw 目前还没有 xAI OAuth 或
-      设备码流程。
-    - `grok-4.20-multi-agent-experimental-beta-0304` 不受
-      常规 xAI 提供方路径支持，因为它需要与标准 OpenClaw xAI 传输
-      不同的上游 API 表面。
-    - xAI Realtime 语音尚未注册为 OpenClaw 提供方。它
+  <Accordion title="已知限制">
+    - xAI 认证可以使用 API key、环境变量、插件配置回退，
+      或带有 SuperGrok 订阅的 xAI Grok OAuth。OAuth 会使用位于 `127.0.0.1:56121` 的本地
+      回调；如果是远程主机，请在打开登录 URL 之前转发该端口。
+    - `grok-4.20-multi-agent-experimental-beta-0304` 在
+      常规 xAI 提供方路径上不受支持，因为它需要与标准 OpenClaw xAI 传输不同的上游 API
+      表面。
+    - xAI Realtime voice 目前还没有注册为 OpenClaw 提供方。它
       需要与批量 STT 或流式转录不同的双向语音会话契约。
-    - xAI 图像的 `quality`、图像 `mask` 和额外的仅原生比例在共享的
-      `image_generate` 工具具有相应的跨提供方控制项之前不会暴露。
+    - xAI 图像 `quality`、图像 `mask` 和额外的仅原生宽高比在共享的
+      `image_generate` 工具拥有相应的跨提供方控制项之前不会暴露。
   </Accordion>
 
   <Accordion title="高级说明">

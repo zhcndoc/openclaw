@@ -34,23 +34,23 @@ OpenClaw 可以在 **沙箱后端中运行工具**，以减少影响范围。这
 - Gateway 进程本身。
 - 任何被显式允许在沙箱外运行的工具（例如 `tools.elevated`）。
   - **Elevated exec 会绕过沙箱化，并使用配置的逃逸路径（默认是 `gateway`，如果 exec 目标是 `node`，则为 `node`）。**
-  - 如果沙箱化关闭，`tools.elevated` 不会改变执行方式（因为本来就已经在主机上运行）。参见 [Elevated Mode](/tools/elevated)。
+  - 如果沙箱化关闭，`tools.elevated` 不会改变执行方式（因为本来就已经在主机上运行）。参见 [提升模式](/tools/elevated)。
 
 ## 模式
 
 `agents.defaults.sandbox.mode` 控制**何时**使用沙箱化：
 
 <Tabs>
-  <Tab title="off">
+  <Tab title="关闭">
     不使用沙箱化。
   </Tab>
-  <Tab title="non-main">
+  <Tab title="非主会话">
     只对**非主**会话使用沙箱（如果你希望普通聊天在主机上运行，这是默认选择）。
 
     `"non-main"` 基于 `session.mainKey`（默认 `"main"`），而不是 agent id。组/频道会话使用自己的 key，因此它们会被视为非主会话并被沙箱化。
 
   </Tab>
-  <Tab title="all">
+  <Tab title="全部">
     每个会话都在沙箱中运行。
   </Tab>
 </Tabs>
@@ -219,7 +219,7 @@ OpenShell 模式：
 OpenShell 有两种工作区模型。这是实践中最重要的部分。
 
 <Tabs>
-  <Tab title="mirror（本地为准）">
+  <Tab title="镜像（本地为准）">
     当你希望**本地工作区保持为准**时，请使用 `plugins.entries.openshell.config.mode: "mirror"`。
 
     行为：
@@ -237,7 +237,7 @@ OpenShell 有两种工作区模型。这是实践中最重要的部分。
     代价：exec 前后会有额外同步开销。
 
   </Tab>
-  <Tab title="remote（OpenShell 为准）">
+  <Tab title="远程（OpenShell 为准）">
     当你希望**OpenShell 工作区成为准则**时，请使用 `plugins.entries.openshell.config.mode: "remote"`。
 
     行为：
@@ -285,13 +285,13 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
 `agents.defaults.sandbox.workspaceAccess` 控制**沙箱能看到什么**：
 
 <Tabs>
-  <Tab title="none (default)">
+  <Tab title="无（默认）">
     工具会看到位于 `~/.openclaw/sandboxes` 下的沙箱工作区。
   </Tab>
-  <Tab title="ro">
+  <Tab title="只读">
     将代理工作区以只读方式挂载到 `/agent`（禁用 `write`/`edit`/`apply_patch`）。
   </Tab>
-  <Tab title="rw">
+  <Tab title="读写">
     将代理工作区以读写方式挂载到 `/workspace`。
   </Tab>
 </Tabs>
@@ -353,10 +353,10 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
 - OpenClaw 还会阻止常见的主目录凭据根目录，例如 `~/.aws`、`~/.cargo`、`~/.config`、`~/.docker`、`~/.gnupg`、`~/.netrc`、`~/.npm` 和 `~/.ssh`。
 - 绑定验证不只是字符串匹配。OpenClaw 会规范化源路径，然后通过最深的现有祖先再次解析它，之后重新检查被阻止路径和允许的根目录。
 - 这意味着，即使最终叶子节点尚不存在，符号链接父级逃逸也会失败关闭。示例：如果 `run-link` 指向 `/var/run/...`，那么 `/workspace/run-link/new-file` 仍会解析为 `/var/run/...`。
-- 允许的源根目录也会以同样方式规范化，因此仅在符号链接解析之前看起来位于允许列表内的路径，仍会被拒绝为 `outside allowed roots`。
+- 允许的源根目录也会以同样方式规范化，因此仅在符号链接解析之前看起来位于允许列表内的路径，仍会被拒绝为“超出允许的根目录”。
 - 敏感挂载（密钥、SSH 密钥、服务凭据）应使用 `:ro`，除非绝对必要。
 - 如果你只需要对工作区的读取访问，请结合使用 `workspaceAccess: "ro"`；绑定模式仍然彼此独立。
-- 有关绑定如何与工具策略和提升执行交互，请参见 [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated)。
+- 有关绑定如何与工具策略和提升执行交互，请参见 [沙箱、工具策略与提权](/gateway/sandbox-vs-tool-policy-vs-elevated)。
 
 </Warning>
 
@@ -480,12 +480,13 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 - 按代理：`agents.list[].sandbox.docker.setupCommand`
 
 <AccordionGroup>
-  <Accordion title="常见陷阱">
-    - 默认 `docker.network` 为 `"none"`（无外连），因此包安装会失败。
-    - `docker.network: "container:<id>"` 需要 `dangerouslyAllowContainerNamespaceJoin: true`，且仅用于紧急放行。
-    - `readOnlyRoot: true` 会阻止写入；请设置 `readOnlyRoot: false` 或构建自定义镜像。
-    - 进行包安装时 `user` 必须是 root（省略 `user` 或设置 `user: "0:0"`）。
-    - 沙箱 exec **不会**继承主机的 `process.env`。技能 API 密钥请使用 `agents.defaults.sandbox.docker.env`（或自定义镜像）。
+  <Accordion title="常见问题">
+    - 默认 `docker.network` 为 `"none"`（无外网出口），因此包安装会失败。
+    - `docker.network: "container:<id>"` 需要 `dangerouslyAllowContainerNamespaceJoin: true`，并且仅限紧急放行使用。
+    - `readOnlyRoot: true` 会阻止写入；请设置 `readOnlyRoot: false`，或预先构建自定义镜像。
+    - 进行包安装时，`user` 必须是 root（省略 `user`，或设置 `user: "0:0"`）。
+    - 沙箱执行**不会**继承宿主机的 `process.env`。请使用 `agents.defaults.sandbox.docker.env`（或自定义镜像）来提供技能所需的 API 密钥。
+    - `agents.defaults.sandbox.docker.env` 中的值会作为显式的 Docker 容器环境变量传入。任何能访问 Docker 守护进程的人都可以通过 Docker 元数据命令（例如 `docker inspect`）查看这些值。如果这种元数据暴露不可接受，请使用自定义镜像、挂载的密钥文件或其他密钥传递方式。
 
   </Accordion>
 </AccordionGroup>
@@ -494,18 +495,18 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 在沙箱规则之前，工具的允许/拒绝策略仍然适用。如果某个工具在全局或按代理层面被拒绝，沙箱化也不会把它恢复。
 
-`tools.elevated` 是一个显式逃生阀，会在沙箱外运行 `exec`（默认在 `gateway`，如果 exec 目标是 `node`，则在 `node` 中运行）。`/exec` 指令仅适用于授权发送者，并且按会话持久化；若要彻底禁用 `exec`，请使用工具策略拒绝（参见 [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated)）。
+`tools.elevated` 是一个显式逃生阀，会在沙箱外运行 `exec`（默认在 `gateway`，如果 exec 目标是 `node`，则在 `node` 中运行）。`/exec` 指令仅适用于授权发送者，并且按会话持久化；若要彻底禁用 `exec`，请使用工具策略拒绝（参见 [沙箱、工具策略与提权](/gateway/sandbox-vs-tool-policy-vs-elevated)）。
 
 调试：
 
 - 使用 `openclaw sandbox explain` 检查实际生效的沙箱模式、工具策略和修复配置键。
-- 有关“为什么这被阻止？”的思维模型，请参见 [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated)。
+- 有关“为什么这被阻止？”的思维模型，请参见 [沙箱、工具策略与提权](/gateway/sandbox-vs-tool-policy-vs-elevated)。
 
 保持锁定状态。
 
 ## 多代理覆盖
 
-每个代理都可以覆盖沙箱 + 工具：`agents.list[].sandbox` 和 `agents.list[].tools`（以及用于沙箱工具策略的 `agents.list[].tools.sandbox.tools`）。有关优先级，请参见 [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools)。
+每个代理都可以覆盖沙箱 + 工具：`agents.list[].sandbox` 和 `agents.list[].tools`（以及用于沙箱工具策略的 `agents.list[].tools.sandbox.tools`）。有关优先级，请参见 [多代理沙箱与工具](/tools/multi-agent-sandbox-tools)。
 
 ## 最小启用示例
 
@@ -525,8 +526,8 @@ Docker 安装和容器化网关位于此处：[Docker](/install/docker)
 
 ## 相关内容
 
-- [Multi-Agent Sandbox & Tools](/tools/multi-agent-sandbox-tools) — 按代理覆盖与优先级
+- [多代理沙箱与工具](/tools/multi-agent-sandbox-tools) — 按代理覆盖与优先级
 - [OpenShell](/gateway/openshell) — 托管沙箱后端设置、工作区模式和配置参考
-- [Sandbox configuration](/gateway/config-agents#agentsdefaultssandbox)
-- [Sandbox vs Tool Policy vs Elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) — 调试“为什么这被阻止？”
-- [Security](/gateway/security)
+- [沙箱配置](/gateway/config-agents#agentsdefaultssandbox)
+- [沙箱、工具策略与提权](/gateway/sandbox-vs-tool-policy-vs-elevated) — 调试“为什么这被阻止？”
+- [安全性](/gateway/security)

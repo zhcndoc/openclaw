@@ -1,14 +1,14 @@
 ---
-summary: "runtime.channel.turn -- bundled and third-party channel plugins 用于记录、分发和完成 agent turns 的共享 inbound turn kernel"
-title: "Channel turn kernel"
+summary: "runtime.channel.turn -- 适用于内置和第三方 channel 插件的、用于记录、分发和完成 agent turns 的共享入站 turn kernel"
+title: "Channel turn 内核"
 sidebarTitle: "Channel turn"
 read_when:
-  - 你正在构建一个 channel 插件，并希望使用共享的 inbound turn 生命周期
+  - 你正在构建一个 channel 插件，并希望使用共享的入站 turn 生命周期
   - 你正在将一个 channel monitor 从手写的 record/dispatch glue 迁移出去
   - 你需要了解 admission、ingest、classify、preflight、resolve、record、dispatch 和 finalize 阶段
 ---
 
-channel turn kernel 是共享的 inbound state machine，它将标准化的平台事件转换为一个 agent turn。Channel plugins 提供平台事实和 delivery callback。Core 负责 orchestration：ingest、classify、preflight、resolve、authorize、assemble、record、dispatch 和 finalize。
+channel turn kernel 是共享的入站 state machine，它将标准化的平台事件转换为一个 agent turn。Channel 插件提供平台事实和 delivery 回调。Core 负责编排：ingest、classify、preflight、resolve、authorize、assemble、record、dispatch 和 finalize。
 
 当你的插件处于 inbound message 热路径时使用它。对于非消息事件（slash commands、modals、button interactions、lifecycle events、reactions、voice state），请保持在插件本地处理。Kernel 只负责那些可能变成 agent text turn 的事件。
 
@@ -18,7 +18,7 @@ channel turn kernel 是共享的 inbound state machine，它将标准化的平�
 
 ## 为什么需要共享 kernel
 
-Channel plugins 会重复同样的 inbound flow：normalize、route、gate、build context、record session metadata、dispatch agent turn、finalize delivery state。如果没有共享 kernel，mention gating、tool-only visible replies、session metadata、pending history 或 dispatch finalization 的任何变更都必须按 channel 分别应用。
+Channel 插件会重复同样的 inbound flow：normalize、route、gate、build context、record session metadata、dispatch agent turn、finalize delivery state。如果没有共享 kernel，mention gating、tool-only visible replies、session metadata、pending history 或 dispatch finalization 的任何变更都必须按 channel 分别应用。
 
 Kernel 将四个概念刻意分离：
 
@@ -33,17 +33,17 @@ Slack DMs、Telegram topics、Matrix threads 和 Feishu topic sessions 在实践
 
 无论 channel 如何，kernel 都会运行同一条固定 pipeline：
 
-1. `ingest` -- adapter 将原始平台事件转换为 `NormalizedTurnInput`
-2. `classify` -- adapter 声明该事件是否可以启动一个 agent turn
-3. `preflight` -- adapter 执行 dedupe、self-echo、hydration、debounce、decryption、partial fact prefill
-4. `resolve` -- adapter 返回一个完整组装好的 turn（route、reply plan、message、delivery）
+1. `ingest` -- 适配器将原始平台事件转换为 `NormalizedTurnInput`
+2. `classify` -- 适配器声明该事件是否可以启动一个 agent turn
+3. `preflight` -- 适配器执行 dedupe、self-echo、hydration、防抖、解密、部分事实预填充
+4. `resolve` -- 适配器返回一个完整组装好的 turn（route、reply plan、message、delivery）
 5. `authorize` -- 对组装后的 facts 应用 DM、group、mention 和 command policy
 6. `assemble` -- 通过 `buildContext` 基于 facts 构建 `FinalizedMsgContext`
 7. `record` -- 持久化 inbound session metadata 和 last route
 8. `dispatch` -- 通过 buffered block dispatcher 执行 agent turn
-9. `finalize` -- 即使 dispatch 出错，adapter 的 `onFinalize` 也会运行
+9. `finalize` -- 即使 dispatch 出错，适配器的 `onFinalize` 也会运行
 
-当提供 `log` callback 时，每个阶段都会发出结构化日志事件。参见 [Observability](#observability)。
+当提供 `log` 回调时，每个阶段都会发出结构化日志事件。参见 [可观测性](#observability)。
 
 ## 接纳类型
 
@@ -52,7 +52,7 @@ Slack DMs、Telegram topics、Matrix threads 和 Feishu topic sessions 在实践
 | Kind          | When                                                                                                                                         |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dispatch`    | Turn 被接纳。Agent turn 运行，并且可见回复路径会被执行。                                                                                      |
-| `observeOnly` | Turn 完整运行，但 delivery adapter 不发送任何可见内容。用于 broadcast observer agents 和其他 passive multi-agent flows。                    |
+| `observeOnly` | Turn 完整运行，但 delivery 适配器不发送任何可见内容。用于 broadcast observer agents 和其他 passive multi-agent flows。                    |
 | `handled`     | 一个平台事件已在本地被消费（lifecycle、reaction、button、modal）。Kernel 跳过 dispatch。                                                     |
 | `drop`        | 跳过路径。可选地，`recordHistory: true` 会将消息保留在 pending group history 中，以便未来的 mention 具备上下文。                               |
 
@@ -199,7 +199,7 @@ const ctxPayload = runtime.channel.turn.buildContext({
   诸如 `dispatchInboundReplyWithBase` 之类已弃用的 SDK helpers 仍然通过 assembled-turn helper 进行桥接。新的插件代码应使用 `run` 或 `runPrepared`。
 </Note>
 
-## Fact 类型
+## 事实类型
 
 Kernel 从你的 adapter 消费的 facts 是平台无关的。在交给 kernel 之前，请先将平台对象转换为这些形状。
 
@@ -303,11 +303,136 @@ Kernel 从你的 adapter 消费的 facts 是平台无关的。在交给 kernel �
 
 ### SupplementalContextFacts
 
-Supplemental context 涵盖 quote、forwarded 和 thread-bootstrap 上下文。Kernel 会应用已配置的 `contextVisibility` policy。Channel adapter 只提供 facts 和 `senderAllowed` 标记，以便跨 channel policy 保持一致。
+补充上下文涵盖 quote、forwarded 和 thread-bootstrap 上下文。Kernel 会应用已配置的 `contextVisibility` policy。Channel adapter 只提供 facts 和 `senderAllowed` 标记，以便跨 channel policy 保持一致。
 
 ### InboundMediaFacts
 
-Media 以 fact 形状表示。平台下载、auth、SSRF policy、CDN rules 和 decryption 保持在 channel 本地。Kernel 将 facts 映射为 `MediaPath`、`MediaUrl`、`MediaType`、`MediaPaths`、`MediaUrls`、`MediaTypes` 和 `MediaTranscribedIndexes`。
+Media 以事实形状表示。平台下载、auth、SSRF policy、CDN 规则和解密保持在 channel 本地。Kernel 将 facts 映射为 `MediaPath`、`MediaUrl`、`MediaType`、`MediaPaths`、`MediaUrls`、`MediaTypes` 和 `MediaTranscribedIndexes`。
+
+当你的 channel 有一个已解析的 media 列表，并且只需要附加通用事实时，请使用 `openclaw/plugin-sdk/channel-inbound` 中的 `toInboundMediaFacts(...)`：
+
+```typescript
+media: toInboundMediaFacts(resolvedMedia, {
+  kind: "image",
+  messageId: input.id,
+});
+```
+
+如果 media 混合了本地文件和仅 URL 的条目，请将列表保留为 media facts。Core 在写入旧版 context 字段时会保留数组索引，因此下游的 media 理解、转录标记和 prompt notes 仍然会引用同一个附件。
+
+对于应该留给后续 mention 使用的被跳过 group 消息，请将 media facts 通过 turn 的 `preflight.media` 字段传入。Kernel 会在记录之前把这些 facts 转换为受限的历史 media 条目：
+
+```typescript
+preflight(input) {
+  return {
+    admission: { kind: "drop", reason: "missing_mention", recordHistory: true },
+    media: () => toInboundMediaFacts(resolveLocalImages(input), {
+      kind: "image",
+      messageId: input.id,
+    }),
+    history: {
+      key: historyKey,
+      limit: historyLimit,
+      mediaLimit: 4,
+      shouldRecord: () => stillCurrent(input),
+    },
+  };
+}
+```
+
+历史 media 的策略有意保持保守：当前只支持图片，只允许本地可读路径，受配置的 media 限制约束，并且仍然绑定到 channel history key。带认证的 provider URL 应在由插件下载后，才成为模型可见的 media。
+
+## 历史窗口
+
+消息轮次代码应使用 `createChannelHistoryWindow(...)`，而不是直接调用底层的 `reply-history` 映射辅助函数。旧的映射辅助函数仍然可以作为已弃用的兼容导出被导入，但新的插件运行时代码不应调用它们。窗口门面将文本上下文、结构化的 `InboundHistory`、历史媒体规范化以及清空操作封装在一个由核心拥有的 API 之后，同时仍允许频道决定历史行如何渲染。
+
+```typescript
+const history = createChannelHistoryWindow({ historyMap: groupHistories });
+
+await history.recordWithMedia({
+  historyKey,
+  limit: historyLimit,
+  entry,
+  media: () =>
+    toInboundMediaFacts(resolvedImages, {
+      kind: "image",
+      messageId: entry.messageId,
+    }),
+});
+
+const combinedBody = history.buildPendingContext({
+  historyKey,
+  limit: historyLimit,
+  currentMessage,
+  formatEntry: (entry) => `${entry.sender}: ${entry.body}`,
+});
+```
+
+较旧的 `buildPendingHistoryContextFromMap`、`buildInboundHistoryFromMap`、`recordPendingHistoryEntry*` 和 `clearHistoryEntries*` 导出仍然保留为已弃用的兼容接口，供尚未迁移的插件使用。新的频道工作应使用窗口或轮次内核的 record/finalize 选项。
+
+## 常见消息模式
+
+需要提及才能通过的纯文本群组：
+
+```typescript
+preflight(input) {
+  const decision = resolveInboundMentionDecision({ facts, policy });
+  if (decision.shouldSkip) {
+    return {
+      admission: { kind: "drop", reason: "missing_mention", recordHistory: true },
+      history: { key: historyKey, limit: historyLimit },
+    };
+  }
+  return { access: { mentions: decision } };
+}
+```
+
+先发送仅图片消息，随后再提及：
+
+```typescript
+preflight(input) {
+  if (!wasMentioned && resolvedImages.length > 0) {
+    return {
+      admission: { kind: "drop", reason: "missing_mention", recordHistory: true },
+      media: () => toInboundMediaFacts(resolvedImages, {
+        kind: "image",
+        messageId: input.id,
+      }),
+      history: { key: historyKey, limit: historyLimit, mediaLimit: 4 },
+    };
+  }
+  return {};
+}
+```
+
+显式回复图片：
+
+```typescript
+resolveTurn(input, _eventClass, preflight) {
+  return {
+    ...assembled,
+    media: toInboundMediaFacts([...currentMedia, ...referencedReplyMedia]),
+    supplemental: {
+      quote: preflight.supplemental?.quote,
+    },
+  };
+}
+```
+
+带历史的直接消息：
+
+```typescript
+resolveTurn(input) {
+  return {
+    ...assembled,
+    history: undefined,
+    message: {
+      rawBody: input.rawText,
+      bodyForAgent: input.textForAgent,
+    },
+  };
+}
+```
 
 ## 适配器契约
 
@@ -354,7 +479,7 @@ type ChannelDeliveryResult = {
 };
 ```
 
-`deliver` 每个缓冲的回复块会调用一次。在消息生命周期迁移期间，组装后的频道轮次投递默认由频道拥有：省略 `durable` 字段表示内核必须直接调用 `deliver`，且不得通过通用出站投递路径路由。只有在频道经过审计并证明通用发送路径能保持旧的投递行为后，才能设置 `durable`，包括回复/线程目标、媒体处理、已发送消息/自回显缓存、状态清理以及返回的消息 ID。`durable: false` 仍然是“使用频道拥有的回调”的兼容写法，但未迁移的频道不应需要添加它。如果频道有平台消息 ID，请返回它们，以便分发器保留线程锚点并在后续块中继续编辑；较新的投递路径还应返回 `receipt`，这样恢复、预览收尾和重复抑制就可以摆脱对 `messageIds` 的依赖。对于仅观察的轮次，返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelTurnDeliveryAdapter()`。
+`deliver` 会针对每个缓冲的回复块调用一次。在消息生命周期迁移期间，组装后的频道轮次投递默认由频道拥有：省略 `durable` 字段表示内核必须直接调用 `deliver`，且不得通过通用出站投递路径路由。只有在频道经过审计并证明通用发送路径能保持旧的投递行为后，才能设置 `durable`，包括回复/线程目标、媒体处理、已发送消息/自回显缓存、状态清理以及返回的消息 ID。`durable: false` 仍然是“使用频道拥有的回调”的兼容写法，但未迁移的频道不应需要添加它。如果频道有平台消息 ID，请返回它们，以便分发器保留线程锚点并在后续块中继续编辑；较新的投递路径还应返回 `receipt`，这样恢复、预览收尾和重复抑制就可以摆脱对 `messageIds` 的依赖。对于仅观察的轮次，返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelTurnDeliveryAdapter()`。
 
 使用 `runPrepared` 且完全由频道拥有分发器的频道没有 `ChannelTurnDeliveryAdapter`。这些分发器默认不是 durable。它们应继续使用直接投递路径，直到显式选择新的发送上下文，并且具备完整的目标、可重放安全的适配器、receipt 契约以及频道副作用钩子。
 
@@ -424,7 +549,7 @@ await runtime.channel.turn.run({
 
 ## 相关内容
 
-- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) for the planned send/receive/live lifecycle that will wrap this kernel
-- [Building channel plugins](/plugins/sdk-channel-plugins) for the broader channel plugin contract
-- [Plugin runtime helpers](/plugins/sdk-runtime) for other `runtime.*` surfaces
-- [Plugin internals](/plugins/architecture-internals) for load pipeline and registry mechanics
+- [Message lifecycle refactor](/concepts/message-lifecycle-refactor) 了解计划中的发送/接收/实时生命周期，它将包裹此内核
+- [Building channel plugins](/plugins/sdk-channel-plugins) 了解更广泛的频道插件契约
+- [Plugin runtime helpers](/plugins/sdk-runtime) 了解其他 `runtime.*` 表面
+- [Plugin internals](/plugins/architecture-internals) 了解加载流水线和注册表机制

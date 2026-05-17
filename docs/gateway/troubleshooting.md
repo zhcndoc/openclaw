@@ -27,6 +27,24 @@ openclaw channels status --probe
 - `openclaw doctor` 报告没有阻塞性的配置/服务问题。
 - `openclaw channels status --probe` 显示每个账户的实时传输状态，并在支持时显示探测/审计结果，例如 `works` 或 `audit ok`。
 
+## 更新后
+
+当更新完成但网关已关闭、通道为空，或模型调用开始因 401 失败时，请使用此项。
+
+```bash
+openclaw status --all
+openclaw update status --json
+openclaw gateway status --deep
+openclaw doctor --fix
+openclaw gateway restart
+```
+
+查看以下内容：
+
+- 在 `openclaw status` / `openclaw status --all` 中出现 `Update restart`。待处理或失败的交接会包含下一条要运行的命令。
+- 在 Channels 下出现 `plugin load failed: dependency tree corrupted; run openclaw doctor --fix`。这表示通道配置仍然存在，但插件注册在通道加载之前就失败了。
+- 重新认证后出现提供方 401。`openclaw doctor --fix` 会检查过期的按代理 OAuth 认证影子副本，并删除旧副本，从而让所有代理解析到当前共享配置文件。
+
 ## 分裂脑安装与较新配置保护
 
 当网关服务在更新后意外停止，或者日志显示某个 `openclaw` 二进制版本比最后写入 `openclaw.json` 的版本更旧时，使用此项。
@@ -114,7 +132,7 @@ openclaw config get agents.defaults.models
 
 查看以下内容：
 
-- 选中的 Anthropic Opus/Sonnet 模型具有 `params.context1m: true`。
+- 所选的 Anthropic Opus/Sonnet 模型具有 `params.context1m: true`。
 - 当前 Anthropic 凭据不具备长上下文使用资格。
 - 只有在需要 1M beta 路径的长会话/模型运行中请求才会失败。
 
@@ -165,12 +183,12 @@ openclaw logs --follow
 
 <AccordionGroup>
   <Accordion title="常见特征">
-    - `model_not_found` with a local MLX/vLLM-style server → verify `baseUrl` includes `/v1`, `api` is `"openai-completions"` for `/v1/chat/completions` backends, and `models.providers.<provider>.models[].id` is the bare provider-local id. Select it with the provider prefix once, for example `mlx/mlx-community/Qwen3-30B-A3-B-6bit`; keep the catalog entry as `mlx-community/Qwen3-30B-A3-B-6bit`.
-    - `messages[...].content: invalid type: sequence, expected a string` → backend rejects structured Chat Completions content parts. Fix: set `models.providers.<provider>.models[].compat.requiresStringContent: true`.
-    - `validation.keys` or allowed message keys like `["role","content"]` → backend rejects OpenAI-style replay metadata on Chat Completions messages. Fix: set `models.providers.<provider>.models[].compat.strictMessageKeys: true`.
+    - 带有本地 MLX/vLLM 风格服务器的 `model_not_found` → 验证 `baseUrl` 包含 `/v1`，对于 `/v1/chat/completions` 后端，`api` 应为 `"openai-completions"`，并且 `models.providers.<provider>.models[].id` 是裸的 provider 本地 id。首次选择时使用 provider 前缀，例如 `mlx/mlx-community/Qwen3-30B-A3-B-6bit`；目录条目仍保留为 `mlx-community/Qwen3-30B-A3-B-6bit`。
+    - `messages[...].content: invalid type: sequence, expected a string` → 后端拒绝结构化的 Chat Completions 内容片段。修复：设置 `models.providers.<provider>.models[].compat.requiresStringContent: true`。
+    - `validation.keys` 或允许的消息键如 `["role","content"]` → 后端拒绝 Chat Completions 消息上的 OpenAI 风格重放元数据。修复：设置 `models.providers.<provider>.models[].compat.strictMessageKeys: true`。
     - `incomplete turn detected ... stopReason=stop payloads=0` → 后端完成了 Chat Completions 请求，但该轮没有返回任何用户可见的助手文本。OpenClaw 会对可重放的空 OpenAI 兼容轮次重试一次；持续失败通常意味着后端正在输出空/非文本内容，或抑制了最终答案文本。
-    - direct tiny requests succeed, but OpenClaw agent runs fail with backend/model crashes (for example Gemma on some `inferrs` builds) → OpenClaw transport is likely already correct; the backend is failing on the larger agent-runtime prompt shape.
-    - failures shrink after disabling tools but do not disappear → tool schemas were part of the pressure, but the remaining issue is still upstream model/server capacity or a backend bug.
+    - 直接的小请求成功，但 OpenClaw 代理运行在后端/模型崩溃时失败（例如某些 `inferrs` 构建上的 Gemma）→ OpenClaw 传输层大概率已经正确；后端正在更大的代理运行时提示词形状上失败。
+    - 禁用工具后失败缩小但并未消失 → 工具 schema 是压力来源的一部分，但剩余问题仍然是上游模型/服务器容量或后端 bug。
 
   </Accordion>
   <Accordion title="修复选项">
@@ -260,11 +278,11 @@ openclaw gateway status --json
 
 | 详情代码                     | 含义                                                                                                                                                                                        | 建议操作                                                                                                                                                                                                                                                                               |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_TOKEN_MISSING`         | Client did not send a required shared token.                                                                                                                                                 | Paste/set token in the client and retry. For dashboard paths: `openclaw config get gateway.auth.token` then paste into Control UI settings.                                                                                                                                              |
-| `AUTH_TOKEN_MISMATCH`        | Shared token did not match gateway auth token.                                                                                                                                               | If `canRetryWithDeviceToken=true`, allow one trusted retry. Cached-token retries reuse stored approved scopes; explicit `deviceToken` / `scopes` callers keep requested scopes. If still failing, run the [token drift recovery checklist](/cli/devices#token-drift-recovery-checklist). |
-| `AUTH_DEVICE_TOKEN_MISMATCH` | Cached per-device token is stale or revoked.                                                                                                                                                 | Rotate/re-approve device token using [devices CLI](/cli/devices), then reconnect.                                                                                                                                                                                                        |
-| `AUTH_SCOPE_MISMATCH`        | Device token is valid, but its approved role/scopes do not cover this connect request.                                                                                                       | Re-pair the device or approve the requested scope contract; do not treat this as shared-token drift.                                                                                                                                                                                     |
-| `PAIRING_REQUIRED`           | Device identity needs approval. Check `error.details.reason` for `not-paired`, `scope-upgrade`, `role-upgrade`, or `metadata-upgrade`, and use `requestId` / `remediationHint` when present. | Approve pending request: `openclaw devices list` then `openclaw devices approve <requestId>`. Scope/role upgrades use the same flow after you review the requested access.                                                                                                               |
+| `AUTH_TOKEN_MISSING`         | 客户端未发送所需的共享 token。                                                                                                                                                               | 在客户端粘贴/设置 token，然后重试。对于仪表板路径：先运行 `openclaw config get gateway.auth.token`，然后粘贴到 Control UI 设置中。                                                                                                                                                        |
+| `AUTH_TOKEN_MISMATCH`        | 共享 token 与网关认证 token 不匹配。                                                                                                                                                         | 如果 `canRetryWithDeviceToken=true`，允许一次受信任重试。缓存 token 重试会复用已存储的已批准作用域；显式 `deviceToken` / `scopes` 调用方保留请求的作用域。如果仍然失败，请运行 [令牌漂移恢复检查清单](/cli/devices#token-drift-recovery-checklist)。                                            |
+| `AUTH_DEVICE_TOKEN_MISMATCH` | 按设备缓存的 token 已过期或被撤销。                                                                                                                                                           | 使用 [设备 CLI](/cli/devices) 轮换/重新批准设备 token，然后重新连接。                                                                                                                                                                                                                  |
+| `AUTH_SCOPE_MISMATCH`        | 设备 token 有效，但其已批准的角色/作用域不覆盖此次连接请求。                                                                                                                                  | 重新配对设备，或批准所请求的作用域契约；不要将其视为共享 token 漂移。                                                                                                                                                                                                                   |
+| `PAIRING_REQUIRED`           | 设备身份需要批准。检查 `error.details.reason` 是否为 `not-paired`、`scope-upgrade`、`role-upgrade` 或 `metadata-upgrade`，并在可用时使用 `requestId` / `remediationHint`。 | 批准待处理请求：`openclaw devices list` 然后 `openclaw devices approve <requestId>`。在审阅所请求的访问后，作用域/角色升级使用相同流程。                                                                                                                                                |
 
 <Note>
 使用共享网关 token/password 进行认证的直接 loopback 后端 RPC 不应依赖 CLI 的已配对设备作用域基线。如果子代理或其他内部调用仍然以 `scope-upgrade` 失败，请确认调用方使用的是 `client.id: "gateway-client"` 和 `client.mode: "backend"`，并且没有强制显式 `deviceIdentity` 或设备 token。
@@ -314,7 +332,7 @@ openclaw gateway status
 openclaw status
 openclaw logs --follow
 openclaw doctor
-openclaw gateway status --deep   # 也扫描系统级服务
+openclaw gateway status --deep   # 也会扫描系统级服务
 ```
 
 查看以下内容：
@@ -343,6 +361,42 @@ openclaw gateway status --deep   # 也扫描系统级服务
 - [配置](/gateway/configuration)
 - [Doctor](/gateway/doctor)
 
+## Gateway 在高内存使用时退出
+
+当 Gateway 在负载下消失、监督程序报告 OOM 风格的重启，或日志中提到 `critical memory pressure bundle written` 时使用此项。
+
+```bash
+openclaw gateway status --deep
+openclaw logs --follow
+openclaw gateway stability --bundle latest
+openclaw gateway diagnostics export
+```
+
+查看以下内容：
+
+- 最新稳定性包中的 `Reason: diagnostic.memory.pressure.critical`。
+- `Memory pressure:`，以及 `critical/rss_threshold`、`critical/heap_threshold` 或 `critical/rss_growth`。
+- 接近堆上限的 `V8 heap:` 数值。
+- `Largest session files:` 条目，例如 `agents/<agent>/sessions/<session>.jsonl` 或 `sessions/<session>.jsonl`。
+- 当 gateway 在容器或内存受限服务中运行时，Linux cgroup 内存计数器。
+
+常见特征：
+
+- `critical memory pressure bundle written` 出现在重启前不久 → OpenClaw 捕获了一个 OOM 前的稳定性包。使用 `openclaw gateway stability --bundle latest` 检查它。
+- gateway 日志中出现 `memory pressure: level=critical ... memoryPressureSnapshot=disabled` → OpenClaw 检测到严重内存压力，但 OOM 前的稳定性快照未开启。
+- `Largest session files:` 指向一个非常大的脱敏转录路径 → 在重启前减少保留的会话历史、检查会话增长，或将旧转录移出活动存储。
+- `V8 heap:` 已用字节接近堆上限 → 降低提示/会话压力、减少并发工作，或仅在确认工作负载确实如此之后再提高 Node 堆限制。
+- `Memory pressure: critical/rss_growth` → 内存在一个采样窗口内快速增长。检查最新日志中是否有大导入、失控的工具输出、重复重试，或一批排队的 agent 工作。
+- 日志中出现严重内存压力，但没有 bundle → 这是默认行为。将 `diagnostics.memoryPressureSnapshot: true` 设为开启，以便在未来严重内存压力事件中捕获 OOM 前稳定性包。
+
+稳定性包不包含有效载荷。它只包含运行中的内存证据和脱敏后的相对文件路径，不包含消息文本、webhook 正文、凭据、token、cookie 或原始 session id。请将诊断导出附加到 bug 报告中，而不是复制原始日志。
+
+相关：
+
+- [Gateway 健康状况](/gateway/health)
+- [诊断导出](/gateway/diagnostics)
+- [会话](/cli/sessions)
+
 ## Gateway 拒绝了无效配置
 
 当 Gateway 启动失败并显示 `Invalid config`，或者热重载日志显示它跳过了无效编辑时使用此项。
@@ -359,16 +413,18 @@ openclaw doctor
 - `Invalid config at ...`
 - `config reload skipped (invalid config): ...`
 - `Config write rejected: ...`
-- 活动配置旁带时间戳的 `openclaw.json.rejected.*` 文件
-- 如果 `doctor --fix` 修复了损坏的直接编辑，则会在活动配置旁生成带时间戳的 `openclaw.json.clobbered.*` 文件
+- 活动配置旁边带时间戳的 `openclaw.json.rejected.*` 文件
+- 如果 `doctor --fix` 修复了一个损坏的直接编辑，则会出现带时间戳的 `openclaw.json.clobbered.*` 文件
+- OpenClaw 为每个配置路径保留最新的 32 个 `.clobbered.*` 文件，并轮转更旧的文件
 
 <AccordionGroup>
   <Accordion title="发生了什么">
-    - 配置在启动、热重载或 OpenClaw 所有写入过程中未能通过验证。
-    - Gateway 启动会直接失败，而不是重写 `openclaw.json`。
-    - 热重载会跳过无效的外部编辑，并保持当前运行时配置有效。
-    - OpenClaw 所有的写入会在提交前拒绝无效/破坏性负载，并保存 `.rejected.*`。
-    - `openclaw doctor --fix` 负责修复。它可以移除非 JSON 前缀，或在保留被拒绝负载为 `.clobbered.*` 的同时恢复最后已知良好副本。
+    - 配置在启动、热重载或由 OpenClaw 管理的写入过程中未能通过验证。
+    - Gateway 启动时会失败关闭，而不会重写 `openclaw.json`。
+    - 热重载会跳过无效的外部编辑，并保持当前运行时配置生效。
+    - 由 OpenClaw 管理的写入会在提交前拒绝无效/破坏性负载，并保存 `.rejected.*`。
+    - `openclaw doctor --fix` 负责修复。它可以移除非 JSON 前缀，或恢复最后已知良好的副本，同时将被拒绝的负载保留为 `.clobbered.*`。
+    - 当同一个配置路径发生多次修复时，OpenClaw 会轮转较旧的 `.clobbered.*` 文件，以便最新修复后的负载仍然可用。
 
   </Accordion>
   <Accordion title="检查并修复">
@@ -554,13 +610,13 @@ openclaw doctor
 - `existing-session` / `user` 配置文件的本地 Chrome 是否可用。
 
 <AccordionGroup>
-  <Accordion title="Plugin / executable signatures">
-    - `unknown command "browser"` or `unknown command 'browser'` → bundled browser plugin is excluded by `plugins.allow`。
-    - browser tool missing / unavailable while `browser.enabled=true` → `plugins.allow` excludes `browser`，so the plugin never loaded.
-    - `Failed to start Chrome CDP on port` → browser process failed to launch.
-    - `browser.executablePath not found` → configured path is invalid.
-    - `browser.cdpUrl must be http(s) or ws(s)` → configured CDP URL uses an unsupported scheme such as `file:` or `ftp:`.
-    - `browser.cdpUrl has invalid port` → configured CDP URL has a bad or out-of-range port.
+  <Accordion title="插件 / 可执行文件签名">
+    - `unknown command "browser"` 或 `unknown command 'browser'` → bundled browser plugin 被 `plugins.allow` 排除了。
+    - 在 `browser.enabled=true` 时浏览器工具缺失 / 不可用 → `plugins.allow` 排除了 `browser`，因此插件从未加载。
+    - `Failed to start Chrome CDP on port` → 浏览器进程启动失败。
+    - `browser.executablePath not found` → 配置的路径无效。
+    - `browser.cdpUrl must be http(s) or ws(s)` → 配置的 CDP URL 使用了不支持的 scheme，例如 `file:` 或 `ftp:`。
+    - `browser.cdpUrl has invalid port` → 配置的 CDP URL 端口不正确或超出范围。
     - `Playwright is not available in this gateway build; '<feature>' is unsupported.` → 当前 gateway 安装缺少核心浏览器运行时依赖；请重新安装或更新 OpenClaw，然后重启 gateway。ARIA 快照和基础页面截图仍可正常工作，但导航、AI 快照、CSS 选择器元素截图和 PDF 导出将不可用。
 
   </Accordion>
