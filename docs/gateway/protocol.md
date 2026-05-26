@@ -127,19 +127,30 @@ Gateway → Client:
 }
 ```
 
-内置的 QR/setup-code 启动流程仅限节点。所有者批准待处理的节点请求后，`hello-ok.auth` 会包含主节点令牌：
+内置的 QR/setup-code 启动是一个新的移动端接入路径。成功的
+baseline setup-code connect 会返回一个主节点令牌以及一个受限的
+operator 令牌：
 
 ```json
 {
   "auth": {
     "deviceToken": "…",
     "role": "node",
-    "scopes": []
+    "scopes": [],
+    "deviceTokens": [
+      {
+        "deviceToken": "…",
+        "role": "operator",
+        "scopes": ["operator.approvals", "operator.read", "operator.talk.secrets", "operator.write"]
+      }
+    ]
   }
 }
 ```
 
-内置的 setup-code 流程不包含额外的 `deviceTokens` 条目，也不会下发 operator 令牌。客户端作者应将可选的 `hello-ok.auth.deviceTokens` 字段视为旧版/自定义启动扩展数据：仅在受信任的传输上出现时才持久化，并且不要将其作为内置配对的必需项。
+该 operator 接入被刻意限制，以便 QR onboarding 可以在不授予
+`operator.admin` 或 `operator.pairing` 的情况下启动 mobile operator 循环。
+它确实包含 `operator.talk.secrets`，这样原生客户端就能读取 bootstrap 之后所需的 Talk 配置。更广泛的 admin 和 pairing scope 需要单独审批的 operator 配对或 token 流程。客户端应仅在使用 trusted transport（如 `wss://`）或 loopback/local pairing 进行 bootstrap auth 时，持久化 `hello-ok.auth.deviceTokens`。
 
 ### 节点示例
 
@@ -320,41 +331,43 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="Talk 和 TTS">
-    - `talk.catalog` 返回用于语音、流式转写和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/语音 id、规范模式、传输、brain 策略以及实时音频/能力标志，但不会返回提供方密钥或修改全局配置。
-    - `talk.config` 返回生效中的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
-    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。对于 `stt-tts/managed-room`，传入 `sessionKey` 的 `operator.write` 调用方还必须传入 `spawnedBy`，以便实现作用域化的 session-key 可见性；无作用域的 `sessionKey` 创建和 `brain: "direct-tools"` 需要 `operator.admin`。
-    - `talk.session.join` 验证受管房间会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，但不返回明文令牌或存储的令牌哈希。
-    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转写会话。
-    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动受管房间的轮次生命周期，并在清除状态前拒绝过期轮次。
-    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控插话。
-    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。若最终结果随后会到来，可传入 `options: { willContinue: true }` 作为临时工具输出；若工具结果应满足提供方调用而无需启动另一段实时助手回复，则可传入 `options: { suppressResponse: true }`。
-    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、转写或受管房间会话，并发出终态 Talk 事件。
+  <Accordion title="Talk and TTS">
+    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/voice id、标准模式、传输、brain 策略以及实时音频/能力标志，但不会返回提供方 secrets 或修改全局配置。
+    - `talk.config` 返回生效的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
+    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。对于 `stt-tts/managed-room`，传入 `sessionKey` 的 `operator.write` 调用方还必须传入 `spawnedBy`，以便限定 session-key 可见性；无作用域的 `sessionKey` 创建以及 `brain: "direct-tools"` 需要 `operator.admin`。
+    - `talk.session.join` 验证一个 managed-room 会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不返回明文令牌或已存储令牌哈希。
+    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转录会话。
+    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动 managed-room 的轮次生命周期，并在清除状态前拒绝陈旧轮次。
+    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控 barging-in。
+    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。对于最终结果后续仍会到达的中间工具输出，请传入 `options: { willContinue: true }`；当工具结果应当满足提供方调用而无需启动另一轮实时助手响应时，请传入 `options: { suppressResponse: true }`。
+    - `talk.session.steer` 将活动运行的语音控制发送到一个由 Gateway 拥有且由 agent 驱动的 Talk 会话。它接受 `{ sessionId, text, mode? }`，其中 `mode` 为 `status`、`steer`、`cancel` 或 `followup`；省略 mode 时会根据口语文本进行分类。
+    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、transcription 或 managed-room 会话，并发出终止 Talk 事件。
     - `talk.mode` 为 WebChat/Control UI 客户端设置/广播当前 Talk 模式状态。
-    - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
-    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发到 Gateway 策略。第一个受支持的工具是 `openclaw_agent_consult`；客户端会收到一个运行 id，并在提交提供方特定的工具结果之前等待正常的 chat 生命周期事件。
-    - `talk.event` 是实时、转写、STT/TTS、受管房间、电信和会议适配器的单一 Talk 事件通道。
-    - `talk.speak` 通过活动的 Talk 语音提供方合成语音。
-    - `tts.status` 返回 TTS 启用状态、活动提供方、回退提供方以及提供方配置状态。
+    - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个由客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
+    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交提供方特定的工具结果之前等待正常的聊天生命周期事件。
+    - `talk.client.steer` 为客户端拥有的实时传输发送活动运行的语音控制。Gateway 会从 `sessionKey` 中解析活动的嵌入式运行，并返回结构化的接受/拒绝结果，而不是静默丢弃 steering。
+    - `talk.event` 是用于实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
+    - `talk.speak` 通过当前活跃的 Talk 语音提供方合成语音。
+    - `tts.status` 返回 TTS 启用状态、当前提供方、回退提供方以及提供方配置状态。
     - `tts.providers` 返回可见的 TTS 提供方清单。
-    - `tts.enable` 和 `tts.disable` 切换 TTS 首选项状态。
+    - `tts.enable` 和 `tts.disable` 切换 TTS prefs 状态。
     - `tts.setProvider` 更新首选 TTS 提供方。
     - `tts.convert` 执行一次性文本转语音转换。
 
   </Accordion>
 
-  <Accordion title="Secrets、配置、更新和向导">
-    - `secrets.reload` 仅在完全成功时重新解析当前 SecretRef，并切换运行时秘密状态。
-    - `secrets.resolve` 解析特定命令/目标集合的命令目标秘密分配。
+  <Accordion title="Secrets, config, update, and wizard">
+    - `secrets.reload` 仅在完全成功时重新解析活动 SecretRefs 并切换运行时 secret 状态。
+    - `secrets.resolve` 为特定命令/目标集合解析命令目标 secret 分配。
     - `config.get` 返回当前配置快照和 hash。
-    - `config.set` 写入经过验证的配置负载。
+    - `config.set` 写入已验证的配置负载。
     - `config.patch` 合并部分配置更新。
     - `config.apply` 验证并替换完整配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据；当运行时能够加载插件和通道 schema 元数据时，也会包含它们。该 schema 包含与 UI 使用的相同标签和帮助文本派生而来的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 为某个配置路径返回一个路径作用域的 lookup 负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`，以及用于 UI/CLI 下钻的直接子级摘要。lookup schema 节点会保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子级摘要会暴露 `key`、规范化后的 `path`、`type`、`required`、`hasChildren`，以及匹配到的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且只在更新本身成功时才安排重启；具有会话的调用方可以包含 `continuationMessage`，以便启动在重启续接队列中继续一次后续的 agent 回合。来自控制平面的包管理器更新会使用一个分离的受管服务交接，而不是直接替换正在运行的 Gateway 内部包树。已启动的交接会返回 `ok: true`，其中 `result.reason: "managed-service-handoff-started"` 且 `handoff.status: "started"`；不可用或失败的交接会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，在需要手动 shell 更新时还会附带 `handoff.command`。在进行中的交接期间，重启哨兵可能会短暂报告 `stats.reason: "restart-health-pending"`；续接会延迟到 CLI 验证重启后的 Gateway 并写入最终的 `ok` 哨兵之后。
-    - `update.status` 返回最新缓存的更新重启哨兵，在可用时包含重启后的运行版本。
-    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露引导向导。
+    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包含从 UI 使用的相同标签和帮助文本派生的字段 `title` / `description` 元数据，包括在匹配到字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`、可选 `reloadKind`，以及用于 UI/CLI 下钻的直接子项摘要。`reloadKind` 的值为 `restart`、`hot` 或 `none`，并与所请求路径的 Gateway 配置重新加载规划器一致。查找 schema 节点保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`、可选 `reloadKind`，以及匹配到的 `hint` / `hintPath`。
+    - `update.run` 运行网关更新流程，并且只有在更新本身成功时才安排重启；带有会话的调用方可以包含 `continuationMessage`，以便启动在重启 continuation 队列中恢复一个后续 agent turn。来自控制平面的包管理器更新会使用一个分离的 managed-service 接管路径，而不是直接替换 live Gateway 中的包树。已启动的接管会返回 `ok: true`，其中 `result.reason: "managed-service-handoff-started"` 且 `handoff.status: "started"`；不可用或失败的接管会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，如果需要手动 shell 更新，还会附带 `handoff.command`。在已启动接管期间，restart sentinel 可能会短暂报告 `stats.reason: "restart-health-pending"`；continuation 会延迟，直到 CLI 验证重启后的 Gateway 并写入最终的 `ok` sentinel。
+    - `update.status` 返回最新缓存的更新重启 sentinel，包括可用时重启后的运行版本。
+    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding wizard。
 
   </Accordion>
 
@@ -602,54 +615,102 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 ## 认证
 
-- Shared-secret gateway auth 使用 `connect.params.auth.token` 或
-  `connect.params.auth.password`，具体取决于配置的认证模式。
-- 具有身份信息的模式，如 Tailscale Serve
-  (`gateway.auth.allowTailscale: true`) 或非回环的
-  `gateway.auth.mode: "trusted-proxy"`，会通过请求头而不是
-  `connect.params.auth.*` 满足连接认证检查。
-- 私有入口的 `gateway.auth.mode: "none"` 会完全跳过 shared-secret 连接认证；
-  不要在公开/不受信任的入口上暴露该模式。
-- 配对后，Gateway 会颁发一个与连接角色 + 范围绑定的 **device token**。它会在 `hello-ok.auth.deviceToken` 中返回，并且应由客户端持久化以供后续连接使用。
-- 客户端应在任何成功连接后持久化主 `hello-ok.auth.deviceToken`。
-- 使用该 **已存储** 的 device token 重新连接时，也应复用该 token 对应的已存储批准范围集合。这可以保留已授予的 read/probe/status 访问权限，并避免重连时悄然收缩为更窄的隐式仅管理员范围。
-- 客户端侧连接认证组装（`src/gateway/client.ts` 中的 `selectConnectAuth`）：
-  - `auth.password` 是正交的，只要设置就会始终转发。
-  - `auth.token` 按优先级填充：先是显式共享 token，然后是显式 `deviceToken`，最后是按设备保存的 token（以 `deviceId` + `role` 为键）。
-  - 只有在以上都未解析出 `auth.token` 时，才会发送 `auth.bootstrapToken`。共享 token 或任何已解析的 device token 都会抑制它。
-  - 在一次性的 `AUTH_TOKEN_MISMATCH` 重试中，已存储 device token 的自动提升仅对 **受信任端点** 生效——回环，或带有固定 `tlsFingerprint` 的 `wss://`。未固定指纹的公开 `wss://` 不符合条件。
-- 内置 setup-code bootstrap 只返回主节点的 `hello-ok.auth.deviceToken`；客户端不应期待在 `hello-ok.auth.deviceTokens` 中还有额外的 operator token。
-- 当内置 setup-code bootstrap 正在等待批准时，`PAIRING_REQUIRED` 详情会包含 `recommendedNextStep: "wait_then_retry"`、`retryable: true` 和 `pauseReconnect: false`。客户端应继续使用相同的 bootstrap token 重连，直到请求被批准或 token 失效。
-- 如果较旧或自定义的受信任 bootstrap 流程包含可选的 `hello-ok.auth.deviceTokens` 条目，则仅在连接使用了受信任传输上的 bootstrap 认证时保存它们，例如 `wss://` 或回环/本地配对。
-- 如果客户端提供了显式的 `deviceToken` 或显式的 `scopes`，则该调用方请求的范围集合仍然具有权威性；只有当客户端正在复用已存储的按设备 token 时，才会复用缓存的范围。
-- 设备 token 可以通过 `device.token.rotate` 和
-  `device.token.revoke` 进行轮换/撤销（需要 `operator.pairing` 范围）。
-- `device.token.rotate` 返回轮换元数据。它只会在同设备调用且已使用该 device token 认证的情况下回显替换后的 bearer token，因此仅凭 token 的客户端可以在重新连接前持久化其替换值。共享/admin 轮换不会回显 bearer token。
-- Token 的签发、轮换和撤销始终受限于该设备配对条目中记录的已批准角色集合；token 变更不能扩展到配对批准从未授予的设备角色，也不能针对该角色。
-- 对于已配对设备的 token 会话，设备管理默认只作用于自身范围，除非调用方还具有 `operator.admin`：非管理员调用方只能移除/撤销/轮换自己的 **设备条目**。
-- `device.token.rotate` 和 `device.token.revoke` 也会将目标 operator token 范围集合与调用方当前会话范围进行检查。非管理员调用方不能轮换或撤销比自己已持有范围更宽的 operator token。
-- 认证失败会包含 `error.details.code` 以及恢复提示：
-  - `error.details.canRetryWithDeviceToken`（布尔值）
-  - `error.details.recommendedNextStep`（`retry_with_device_token`、`update_auth_configuration`、`update_auth_credentials`、`wait_then_retry`、`review_auth_configuration`）
-- `AUTH_TOKEN_MISMATCH` 的客户端行为：
-  - 受信任的客户端可以尝试一次有限重试，使用已缓存的按设备 token。
-  - 如果该重试失败，客户端应停止自动重连循环并展示操作员操作指引。
-- `AUTH_SCOPE_MISMATCH` 表示 device token 已被识别，但不覆盖请求的角色/范围。客户端不应将其表现为 token 无效；应提示操作员重新配对，或批准更窄/更宽的范围契约。
+- Shared-secret gateway auth uses `connect.params.auth.token` or
+  `connect.params.auth.password`, depending on the configured auth mode.
+- Identity-bearing modes such as Tailscale Serve
+  (`gateway.auth.allowTailscale: true`) or non-loopback
+  `gateway.auth.mode: "trusted-proxy"` satisfy the connect auth check from
+  request headers instead of `connect.params.auth.*`.
+- Private-ingress `gateway.auth.mode: "none"` skips shared-secret connect auth
+  entirely; do not expose that mode on public/untrusted ingress.
+- After pairing, the Gateway issues a **device token** scoped to the connection
+  role + scopes. It is returned in `hello-ok.auth.deviceToken` and should be
+  persisted by the client for future connects.
+- Clients should persist the primary `hello-ok.auth.deviceToken` after any
+  successful connect.
+- Reconnecting with that **stored** device token should also reuse the stored
+  approved scope set for that token. This preserves read/probe/status access
+  that was already granted and avoids silently collapsing reconnects to a
+  narrower implicit admin-only scope.
+- Client-side connect auth assembly (`selectConnectAuth` in
+  `src/gateway/client.ts`):
+  - `auth.password` is orthogonal and is always forwarded when set.
+  - `auth.token` is populated in priority order: explicit shared token first,
+    then an explicit `deviceToken`, then a stored per-device token (keyed by
+    `deviceId` + `role`).
+  - `auth.bootstrapToken` is sent only when none of the above resolved an
+    `auth.token`. A shared token or any resolved device token suppresses it.
+  - Auto-promotion of a stored device token on the one-shot
+    `AUTH_TOKEN_MISMATCH` retry is gated to **trusted endpoints only** —
+    loopback, or `wss://` with a pinned `tlsFingerprint`. Public `wss://`
+    without pinning does not qualify.
+- Built-in setup-code bootstrap returns the primary node
+  `hello-ok.auth.deviceToken` plus a bounded operator token in
+  `hello-ok.auth.deviceTokens` for trusted mobile handoff. The operator token
+  includes `operator.talk.secrets` for native Talk configuration reads and
+  excludes `operator.admin` and `operator.pairing`.
+- While a non-baseline setup-code bootstrap is waiting for approval, `PAIRING_REQUIRED`
+  details include `recommendedNextStep: "wait_then_retry"`, `retryable: true`,
+  and `pauseReconnect: false`. Clients should keep reconnecting with the same
+  bootstrap token until the request is approved or the token becomes invalid.
+- Persist `hello-ok.auth.deviceTokens` only when the connect used bootstrap auth
+  on a trusted transport such as `wss://` or loopback/local pairing.
+- If a client supplies an **explicit** `deviceToken` or explicit `scopes`, that
+  caller-requested scope set remains authoritative; cached scopes are only
+  reused when the client is reusing the stored per-device token.
+- Device tokens can be rotated/revoked via `device.token.rotate` and
+  `device.token.revoke` (requires `operator.pairing` scope).
+- `device.token.rotate` returns rotation metadata. It echoes the replacement
+  bearer token only for same-device calls that are already authenticated with
+  that device token, so token-only clients can persist their replacement before
+  reconnecting. Shared/admin rotations do not echo the bearer token.
+- Token issuance, rotation, and revocation stay bounded to the approved role set
+  recorded in that device's pairing entry; token mutation cannot expand or
+  target a device role that pairing approval never granted.
+- For paired-device token sessions, device management is self-scoped unless the
+  caller also has `operator.admin`: non-admin callers can remove/revoke/rotate
+  only their **own** device entry.
+- `device.token.rotate` and `device.token.revoke` also check the target operator
+  token scope set against the caller's current session scopes. Non-admin callers
+  cannot rotate or revoke a broader operator token than they already hold.
+- Auth failures include `error.details.code` plus recovery hints:
+  - `error.details.canRetryWithDeviceToken` (boolean)
+  - `error.details.recommendedNextStep` (`retry_with_device_token`, `update_auth_configuration`, `update_auth_credentials`, `wait_then_retry`, `review_auth_configuration`)
+- Client behavior for `AUTH_TOKEN_MISMATCH`:
+  - Trusted clients may attempt one bounded retry with a cached per-device token.
+  - If that retry fails, clients should stop automatic reconnect loops and surface operator action guidance.
+- `AUTH_SCOPE_MISMATCH` means the device token was recognized but does not cover
+  the requested role/scopes. Clients should not present this as a bad token;
+  prompt the operator to re-pair or approve the narrower/broader scope contract.
 
 ## 设备身份 + 配对
 
-- 节点应包含稳定的设备身份（`device.id`），其来源于密钥对指纹。
-- Gateway 按设备 + 角色签发 token。
-- 新设备 ID 需要配对批准，除非启用了本地自动批准。
-- 配对自动批准主要针对直接本地回环连接。
-- OpenClaw 还有一条狭窄的后端/容器本地自连接路径，用于受信任的共享密钥辅助流程。
-- 同主机 tailnet 或 LAN 连接在配对时仍被视为远程连接，并且需要批准。
-- WS 客户端通常会在 `connect` 时包含 `device` 身份（operator + node）。唯一的无设备 operator 例外是明确的信任路径：
-  - `gateway.controlUi.allowInsecureAuth=true`，用于仅 localhost 的不安全 HTTP 兼容。
-  - 成功的 `gateway.auth.mode: "trusted-proxy"` operator Control UI 认证。
-  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true`（紧急开关，严重降低安全性）。
-  - 使用共享 gateway token/password 认证的直接回环 `gateway-client` 后端 RPC。
-- 所有连接都必须对服务器提供的 `connect.challenge` nonce 进行签名。
+- Nodes should include a stable device identity (`device.id`) derived from a
+  keypair fingerprint.
+- Gateways issue tokens per device + role.
+- Pairing approvals are required for new device IDs unless local auto-approval
+  is enabled.
+- Pairing auto-approval is centered on direct local loopback connects.
+- OpenClaw also has a narrow backend/container-local self-connect path for
+  trusted shared-secret helper flows.
+- Same-host tailnet or LAN connects are still treated as remote for pairing and
+  require approval.
+- WS clients normally include `device` identity during `connect` (operator +
+  node). The only device-less operator exceptions are explicit trust paths:
+  - `gateway.controlUi.allowInsecureAuth=true` for localhost-only insecure HTTP compatibility.
+  - successful `gateway.auth.mode: "trusted-proxy"` operator Control UI auth.
+  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` (break-glass, severe security downgrade).
+  - direct-loopback `gateway-client` backend RPCs authenticated with the shared
+    gateway token/password.
+- Omitting device identity has scope consequences. When a Control UI connection
+  lacks device identity, `shouldClearUnboundScopesForMissingDeviceIdentity`
+  clears self-declared scopes to an empty set for token, password, and
+  trusted-proxy auth. The connection is allowed on explicit trust paths, but
+  scope-gated methods fail. The exception is local Control UI token/password
+  sessions with `allowInsecureAuth`, which preserve scopes. For other cases,
+  set `gateway.controlUi.dangerouslyDisableDeviceAuth=true` only as a
+  break-glass scope-preservation path.
+- All connections must sign the server-provided `connect.challenge` nonce.
 
 ### 设备认证迁移诊断
 
@@ -674,7 +735,7 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 - 首选签名负载为 `v3`，它除了 device/client/role/scopes/token/nonce 字段外，还会绑定 `platform` 和 `deviceFamily`。
 - 为兼容性，旧的 `v2` 签名仍然被接受，但已配对设备的元数据固定仍会在重连时控制命令策略。
 
-## TLS + pinning
+## TLS + 固定指纹
 
 - WS 连接支持 TLS。
 - 客户端可以选择固定网关证书指纹（参见 `gateway.tls`
@@ -689,4 +750,4 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 ## 相关
 
 - [Bridge protocol](/gateway/bridge-protocol)
-- [Gateway runbook](/gateway)
+- [网关运行手册](/gateway)

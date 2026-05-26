@@ -83,8 +83,7 @@ Anthropic 的公开 Claude Code 文档说明，直接使用 Claude Code 仍属�
 
 如果你想在 OpenClaw 中使用其他订阅式选项，请参见 [OpenAI
 Codex](/providers/openai)、[Qwen Cloud Coding
-Plan](/providers/qwen)、[MiniMax Coding Plan](/providers/minimax)，
-以及 [Z.AI / GLM Coding Plan](/providers/glm)。
+Plan](/providers/qwen)、[MiniMax Coding Plan](/providers/minimax)，以及 [Z.AI / GLM Coding Plan](/providers/zai)。
 </Warning>
 
 OpenClaw 还暴露了 Anthropic setup-token 作为受支持的 token-auth 路径，但在可用时现在更倾向于 Claude CLI 复用和 `claude -p`。

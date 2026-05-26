@@ -1,5 +1,5 @@
 ---
-summary: "openclaw backup 的 CLI 参考（创建本地备份归档）"
+summary: "openclaw 备份的 CLI 参考（创建本地备份归档）"
 read_when:
   - 你想为本地 OpenClaw 状态创建一个一等备份归档
   - 你想在重置或卸载之前预览会包含哪些路径
@@ -17,17 +17,18 @@ openclaw backup create --dry-run --json
 openclaw backup create --verify
 openclaw backup create --no-include-workspace
 openclaw backup create --only-config
-openclaw backup verify ./2026-03-09T00-00-00.000Z-openclaw-backup.tar.gz
+openclaw backup verify ./2026-03-09T08-00-00.000+08-00-openclaw-backup.tar.gz
 ```
 
 ## 注意
 
-- 归档包含一个 `manifest.json` 文件，其中列出了已解析的源路径和归档布局。
-- 默认输出是在当前工作目录中的一个带时间戳的 `.tar.gz` 归档。
-- 如果当前工作目录位于某个已备份的源树内部，OpenClaw 会退回到你的主目录作为默认归档位置。
+- 归档包含一个 `manifest.json` 文件，其中记录了解析后的源路径和归档布局。
+- 默认输出是在当前工作目录下带时间戳的 `.tar.gz` 归档。
+- 带时间戳的备份文件名会使用你机器的本地时区，并包含 UTC 偏移量。
+- 如果当前工作目录位于某个被备份的源树内部，OpenClaw 会回退到你的主目录作为默认归档位置。
 - 现有的归档文件绝不会被覆盖。
-- 源状态/工作区树内部的输出路径会被拒绝，以避免自我包含。
-- `openclaw backup verify <archive>` 会验证归档是否恰好包含一个根清单，拒绝遍历式归档路径，并检查清单声明的每个有效载荷是否都存在于 tarball 中。
+- 会拒绝位于源状态/工作区树内部的输出路径，以避免自我包含。
+- `openclaw backup verify <archive>` 会验证该归档是否恰好包含一个根清单，拒绝遍历式归档路径，并检查清单中声明的每个有效载荷是否都存在于 tarball 中。
 - `openclaw backup create --verify` 会在写入归档后立即运行该验证。
 - `openclaw backup create --only-config` 只备份当前激活的 JSON 配置文件。
 
@@ -88,4 +89,4 @@ OpenClaw 不会强制设置内置的最大备份大小或单文件大小限制�
 
 ## 相关
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)

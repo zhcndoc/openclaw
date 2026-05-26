@@ -40,21 +40,22 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
 
 ## Cron 的工作方式
 
-- Cron 运行在 **Gateway** 进程内部（不是在模型内部）。
+- Cron 在 **Gateway** 进程内运行（不在模型内部）。
 - 作业定义会持久化到 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
-- 运行时执行状态会与其一同持久化到 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json`，并将 `jobs-state.json` 加入 gitignore。
-- 在拆分之后，旧版 OpenClaw 可以读取 `jobs.json`，但可能会把作业视为新作业，因为运行时字段现在存放在 `jobs-state.json` 中。
-- 当 Gateway 正在运行或已停止时，如果编辑了 `jobs.json`，OpenClaw 会将变更后的调度字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅格式化或仅调整键顺序的重写会保留待处理槽位。
-- 所有 cron 执行都会创建[后台任务](/automation/tasks)记录。
-- 在 Gateway 启动时，逾期的独立 agent-turn 作业会被重新调度到 channel-connect 窗口之外，而不是立即重放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
+- 运行时执行状态会持久化在旁边的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json`，并将 `jobs-state.json` 加入 gitignore。
+- 在拆分之后，较旧的 OpenClaw 版本仍然可以读取 `jobs.json`，但可能会把作业视为新作业，因为运行时字段现在位于 `jobs-state.json` 中。
+- 当 Gateway 正在运行或已停止时编辑了 `jobs.json`，OpenClaw 会将已更改的调度字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅格式化或仅键顺序变化的重写会保留待处理的槽位。
+- 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
+- 在 Gateway 启动时，已逾期的独立 agent-turn 作业会被重新安排到 channel-connect 窗口之外，而不是立即重放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
 - 一次性作业（`--at`）在成功后默认自动删除。
-- 独立 cron 在完成时会尽最大努力关闭其 `cron:<jobId>` 会话关联的受跟踪浏览器标签页/进程，因此分离的浏览器自动化不会留下孤儿进程。
-- 接收到较窄的 cron 自清理授权的独立 cron 运行，仍然可以读取调度器状态、当前作业的自过滤列表以及该作业的运行历史，因此状态/heartbeat 检查可以检查自身计划，而不会获得更广泛的 cron 变更权限。
-- 独立 cron 运行还会防范过时的确认回复。如果第一条结果只是临时状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍负责最终答案，OpenClaw 会再提示一次以获取实际结果，然后再交付。
-- 独立 cron 运行会优先使用嵌入式运行中的结构化执行拒绝元数据，然后再回退到已知的最终摘要/输出标记，例如 `SYSTEM_RUN_DENIED` 和 `INVALID_REQUEST`，以便被阻止的命令不会被报告为成功运行。
-- 独立 cron 运行还会将运行级 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方失败会递增错误计数并触发失败通知，而不是把作业清零为成功。
-- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行并给予其一小段清理窗口。如果该运行没有退出，Gateway 拥有的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此排队中的聊天工作不会被遗留在过时的处理会话后面。
-- 如果独立 agent-turn 在 runner 启动之前或第一次模型调用之前卡住，cron 会记录一个按阶段区分的超时，例如 `setup timed out before runner start` 或 `stalled before first model call (last phase: context-engine)`。这些看门狗会在外部 CLI 进程真正启动之前覆盖嵌入式提供方和 CLI 驱动的提供方，并且会独立于较长的 `timeoutSeconds` 值进行上限限制，因此冷启动/认证/上下文失败会快速暴露，而不是等待完整的作业预算。
+- 独立 cron 运行会尽最大努力关闭为其 `cron:<jobId>` 会话跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会遗留孤儿进程。
+- 接收到狭窄的 cron 自清理授权的独立 cron 运行，仍然可以读取调度器状态、一个经过自我过滤的当前作业列表以及该作业的运行历史，因此状态/heartbeat 检查可以在不获得更广泛的 cron 变更权限的情况下检查自己的计划。
+- 独立 cron 运行也会防范过时的确认回复。如果第一个结果只是临时状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍然负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
+- 独立 cron 运行会使用嵌入式运行中的结构化执行拒绝元数据，包括带有嵌套错误消息且以 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 开头的 node-host `UNAVAILABLE` 包装，因此被阻止的命令不会被报告为成功运行，而普通的 assistant 叙述也不会被当作拒绝。
+- 独立 cron 运行还会将运行级 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方失败会递增错误计数并触发失败通知，而不是将作业清除为成功。
+- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行，并给它一个短暂的清理窗口。如果运行没有完成收尾，Gateway 拥有的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此队列中的聊天工作不会被一个过时的处理会话遗留。
+- 如果独立 agent-turn 在 runner 启动之前或第一次模型调用之前卡住，cron 会记录一个按阶段区分的超时，例如 `setup timed out before runner start` 或 `stalled before first model call (last phase: context-engine)`。这些看门狗会在外部 CLI 进程真正启动之前，覆盖嵌入式提供方和基于 CLI 的提供方，并且会独立于较长的 `timeoutSeconds` 值进行上限控制，因此冷启动/认证/上下文故障会快速暴露，而不是等满整个作业预算。
+- 如果你使用系统 cron 或其他外部调度器来运行 `openclaw agent`，请用硬杀死升级机制包装它，即使 CLI 会处理 `SIGTERM`/`SIGINT`。基于 Gateway 的运行会请求 Gateway 中止已接受的运行；本地和嵌入式回退运行会接收同样的中止信号。对于 GNU `timeout`，请优先使用 `timeout -k 60 600 openclaw agent ...`，而不是直接使用 `timeout 600 ...`；`-k` 值是进程无法收尾时的监督者后备。对于 systemd 单元，请通过使用 `SIGTERM` 停止信号以及诸如 `TimeoutStopSec` 之类的宽限窗口来保持相同的结构，然后再进行最终杀死。如果重试在原始 Gateway 运行仍处于活动状态时复用了 `--run-id`，该重复运行会被报告为 in-flight，而不是启动第二次运行。
 
 <a id="maintenance"></a>
 
@@ -88,16 +89,21 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当“月
 
 ## 执行样式
 
-| 样式            | `--session` 值      | 运行位置                 | 最适合                         |
-| --------------- | ------------------- | ------------------------ | ------------------------------ |
-| 主会话          | `main`              | 下一个 heartbeat turn    | 提醒、系统事件                |
-| 独立            | `isolated`          | 专用 `cron:<jobId>`      | 报告、后台杂务                |
-| 当前会话        | `current`           | 创建时绑定               | 具备上下文感知的重复工作      |
-| 自定义会话      | `session:custom-id` | 持久命名会话             | 基于历史构建的工作流          |
+| 样式            | `--session` 值      | 运行位置                   | 最适合                        |
+| --------------- | ------------------- | -------------------------- | ----------------------------- |
+| 主会话          | `main`              | 专用 cron 唤醒通道         | 提醒、系统事件                |
+| 独立            | `isolated`          | 专用 `cron:<jobId>`        | 报告、后台杂务                |
+| 当前会话        | `current`           | 在创建时绑定               | 上下文感知的循环任务          |
+| 自定义会话      | `session:custom-id` | 持久命名会话               | 基于历史记录构建的工作流      |
 
 <AccordionGroup>
-  <Accordion title="主会话 vs 独立 vs 自定义">
-    **主会话** 作业会入队一个系统事件，并可选地唤醒 heartbeat（`--wake now` 或 `--wake next-heartbeat`）。这些系统事件不会延长目标会话的每日/空闲重置新鲜度。**独立** 作业会以新的会话运行一个专用 agent turn。**自定义会话**（`session:xxx`）会在多次运行之间保留上下文，从而支持诸如每日站会这类基于之前总结继续推进的工作流。
+  <Accordion title="主会话、独立与自定义的区别">
+    **主会话** 作业会将系统事件排入一个由 cron 拥有的运行通道，并可选择唤醒 heartbeat（`--wake now` 或 `--wake next-heartbeat`）。它们可以使用目标主会话的最后一次交付上下文来回复，但不会将常规 cron 轮次追加到人工聊天通道，也不会延长目标会话的每日/空闲重置新鲜度。**独立** 作业会在一个新的会话中运行专用 agent turn。**自定义会话**（`session:xxx`）会在多次运行之间保留上下文，从而支持诸如日常站会这类基于前一轮摘要的工作流。
+
+    主会话 cron 事件是自包含的系统事件提醒。它们不会自动包含默认 heartbeat 提示中的“Read HEARTBEAT.md”指令。如果重复提醒应该查阅
+    `HEARTBEAT.md`，请在 cron 事件文本中或在
+    agent 自己的指令中明确说明。
+
   </Accordion>
   <Accordion title="“新鲜会话”对独立作业意味着什么">
     对于独立作业，“新鲜会话”意味着每次运行都会有一个新的 transcript/session id。OpenClaw 可能会沿用一些安全偏好，例如 thinking/fast/verbose 设置、标签，以及用户明确选择的模型/认证覆盖项，但它不会继承来自旧 cron 行的环境对话上下文：频道/群组路由、发送或排队策略、提升权限、来源或 ACP 运行时绑定。当重复作业应有意基于同一对话上下文构建时，请使用 `current` 或 `session:<id>`。
@@ -159,7 +165,7 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
 | `webhook`  | 将完成事件载荷 POST 到一个 URL                                   |
 | `none`     | 不进行运行器回退交付                                               |
 
-对频道交付使用 `--announce --channel telegram --to "-1001234567890"`。对于 Telegram 论坛主题，请使用 `-1001234567890:topic:123`；直接 RPC/config 调用者也可以将 `delivery.threadId` 作为字符串或数字传入。Slack/Discord/Mattermost 目标应使用显式前缀（`channel:<id>`、`user:<id>`）。Matrix 房间 ID 区分大小写；请使用精确的房间 ID，或使用来自 Matrix 的 `room:!room:server` 形式。
+使用 `--announce --channel telegram --to "-1001234567890"` 进行频道交付。对于 Telegram 论坛主题，请使用 `-1001234567890:topic:123`；OpenClaw 也接受 Telegram 专用的 `-1001234567890:123` 简写。直接的 RPC/config 调用者可以将 `delivery.threadId` 作为字符串或数字传入。Slack/Discord/Mattermost 目标应使用显式前缀（`channel:<id>`、`user:<id>`）。Matrix 房间 ID 区分大小写；请使用精确的房间 ID，或来自 Matrix 的 `room:!room:server` 形式。
 
 当 announce 交付使用 `channel: "last"` 或省略 `channel` 时，带有提供方前缀的目标（例如 `telegram:123`）可以在 cron 回退到会话历史或单个已配置频道之前选择频道。只有已加载插件声明的前缀才是提供方选择器。如果 `delivery.channel` 是显式指定的，则目标前缀必须命名同一提供方；例如，`channel: "whatsapp"` 配合 `to: "telegram:123"` 会被拒绝，而不会让 WhatsApp 将 Telegram ID 解释为电话号码。`channel:<id>`、`user:<id>`、`imessage:<handle>` 和 `sms:<number>` 等目标种类和服务前缀仍然是频道拥有的目标语法，而不是提供方选择器。
 
@@ -168,6 +174,17 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
 当代理从活动聊天创建一个隔离提醒时，OpenClaw 会为回退 announce 路由存储保留的实时交付目标。内部会话键可能是小写；当当前聊天上下文可用时，不会根据这些键重建提供方交付目标。
 
 隐式 announce 交付会使用已配置的频道允许列表来验证并重定向过时目标。DM 配对存储中的批准不是回退自动化接收者；当计划作业应主动发送到某个 DM 时，请设置 `delivery.to` 或配置频道的 `allowFrom` 条目。
+
+## 输出语言
+
+Cron 作业不会根据频道、区域设置或之前的消息推断回复语言。请把语言规则写入计划消息或模板中：
+
+```bash
+openclaw cron edit <jobId> \
+  --message "Summarize the updates. Respond in Chinese; keep URLs, code, and product names unchanged."
+```
+
+对于模板文件，请把语言说明保留在渲染后的提示词中，并在作业运行前确认诸如 `{{language}}` 之类的占位符已被填充。如果输出混杂了多种语言，请明确写出规则，例如：“叙述性文本使用中文，技术术语保持英文。”
 
 失败通知遵循单独的目标路径：
 
@@ -218,7 +235,7 @@ fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `p
   </Tab>
 </Tabs>
 
-## Webhooks
+## Webhook
 
 Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用：
 
@@ -413,7 +430,7 @@ openclaw cron edit <jobId> --clear-agent
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/jobs.json",
-    maxConcurrentRuns: 1,
+    maxConcurrentRuns: 8,
     retry: {
       maxAttempts: 3,
       backoffMs: [60000, 120000, 300000],
@@ -426,7 +443,7 @@ openclaw cron edit <jobId> --clear-agent
 }
 ```
 
-`maxConcurrentRuns` 同时限制计划中的 cron 派发和隔离代理轮次执行。隔离 cron 代理轮次在内部使用队列专用的 `cron-nested` 执行通道，因此提高该值可让彼此独立的 cron LLM 运行并行推进，而不只是启动它们各自外层的 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩展。
+`maxConcurrentRuns` 会同时限制计划中的 cron 派发和隔离代理轮次执行，默认值为 8。隔离 cron 代理轮次会在内部使用队列专用的 `cron-nested` 执行通道，因此提高该值会让独立的 cron LLM 运行并行推进，而不仅仅是启动各自的外层 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩宽。
 
 运行时状态侧车文件由 `cron.store` 派生：像 `~/clawd/cron/jobs.json` 这样的 `.json` 存储会使用 `~/clawd/cron/jobs-state.json`，而不带 `.json` 后缀的存储路径会追加 `-state.json`。
 
@@ -496,5 +513,5 @@ openclaw doctor
 
 - [自动化](/automation) — 一览所有自动化机制
 - [后台任务](/automation/tasks) — cron 执行的任务账本
-- [Heartbeat](/gateway/heartbeat) — 周期性的主会话轮次
+- [心跳](/gateway/heartbeat) — 周期性的主会话轮次
 - [时区](/concepts/timezone) — 时区配置

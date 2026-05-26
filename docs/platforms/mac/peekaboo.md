@@ -5,7 +5,7 @@ read_when:
   - 通过 Swift Package Manager 集成 Peekaboo
   - 更改 PeekabooBridge 协议/路径
   - 在 PeekabooBridge、Codex Computer Use 和 cua-driver MCP 之间做选择
-title: "Peekaboo bridge"
+title: "Peekaboo 桥接"
 ---
 
 OpenClaw 可以将 **PeekabooBridge** 作为本地、感知权限的 UI 自动化
@@ -64,12 +64,13 @@ socket path。你也可以通过以下方式覆盖：
 export PEEKABOO_BRIDGE_SOCKET=/path/to/bridge.sock
 ```
 
-## Security and permissions
+## 安全与权限
 
-- 该桥接会验证**调用者代码签名**；会强制执行 TeamID 白名单（Peekaboo 主机 TeamID + OpenClaw 应用 TeamID）。
-- 请求会在约 10 秒后超时。
-- 如果缺少所需权限，桥接会返回清晰的错误消息，
-  而不是启动系统设置。
+- 该桥接会验证 **调用方代码签名**；会强制执行 TeamID 白名单（Peekaboo 主机 TeamID + OpenClaw app TeamID）。
+- 对于 Accessibility，请优先使用已签名的桥接/app 身份，而不是通用的 `node` 运行时。向 `node` 授予 Accessibility 会让由该 Node 可执行文件启动的任何包继承 GUI 自动化访问权限；请参阅
+  [macOS permissions](/platforms/mac/permissions#accessibility-grants-for-node-and-cli-runtimes)。
+- 请求将在约 10 秒后超时。
+- 如果缺少所需权限，桥接会返回清晰的错误信息，而不是启动系统设置。
 
 ## 快照行为（自动化）
 

@@ -60,8 +60,9 @@ Quadlet 是仅限 Linux 的选项，因为它依赖 systemd 用户服务。
 
 可选的构建/设置环境变量：
 
-- `OPENCLAW_IMAGE` 或 `OPENCLAW_PODMAN_IMAGE` -- 使用现有/已拉取的镜像，而不是构建 `openclaw:local`
-- `OPENCLAW_DOCKER_APT_PACKAGES` -- 在镜像构建期间安装额外的 apt 包
+- `OPENCLAW_IMAGE` or `OPENCLAW_PODMAN_IMAGE` -- 使用现有/已拉取的镜像，而不是构建 `openclaw:local`
+- `OPENCLAW_IMAGE_APT_PACKAGES` -- 在镜像构建期间安装额外的 apt 包（也接受旧的 `OPENCLAW_DOCKER_APT_PACKAGES`）
+- `OPENCLAW_IMAGE_PIP_PACKAGES` -- 在镜像构建期间安装额外的 Python 包；请固定版本并且只使用你信任的包索引
 - `OPENCLAW_EXTENSIONS` -- 在构建时预安装插件依赖
 - `OPENCLAW_INSTALL_BROWSER` -- 为浏览器自动化预安装 Chromium 和 Xvfb（设为 `1` 以启用）
 
@@ -102,7 +103,7 @@ openclaw channels login
 
 <a id="podman--tailscale"></a>
 
-## Podman and Tailscale
+## Podman 和 Tailscale
 
 如需 HTTPS 或远程浏览器访问，请遵循主要的 Tailscale 文档。
 

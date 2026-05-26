@@ -9,8 +9,8 @@ title: "记忆"
 
 # `openclaw memory`
 
-管理语义记忆索引和搜索。
-由当前激活的记忆插件提供（默认：`memory-core`；可设置 `plugins.slots.memory = "none"` 以禁用）。
+管理语义记忆的索引与搜索。  
+由随附的 `memory-core` 插件提供。当 `plugins.slots.memory` 选择 `memory-core`（默认值）时，该命令可用；其他记忆插件会公开它们自己的 CLI 命名空间。
 
 相关内容：
 
@@ -125,8 +125,8 @@ openclaw memory rem-harness [--agent <id>] [--include-promoted] [--json]
 
 ## Dreaming
 
-Dreaming 是后台记忆巩固系统，包含三个协同
-阶段：**light**（对短期材料进行排序/分层）、**deep**（将持久
+Dreaming 是后台记忆巩固系统，包含三个协同  
+阶段：**light**（对短期材料进行排序/分层）、**deep**（将持久  
 事实提升到 `MEMORY.md`）、以及 **REM**（反思并呈现主题）。
 
 - 通过 `plugins.entries.memory-core.config.dreaming.enabled: true` 启用。

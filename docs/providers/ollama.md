@@ -620,12 +620,15 @@ OpenClaw 会拒绝对未标记为支持图像的模型发起图像描述请求�
     ```json5
     {
       agents: {
-        defaults: {
-          experimental: {
-            localModelLean: true,
+        list: [
+          {
+            id: "local",
+            experimental: {
+              localModelLean: true,
+            },
+            model: { primary: "ollama/gemma4" },
           },
-          model: { primary: "ollama/gemma4" },
-        },
+        ],
       },
       models: {
         providers: {
@@ -901,10 +904,23 @@ OpenClaw 支持 **Ollama Web Search**，作为内置的 `web_search` 提供程�
     和 API key，调用 Ollama 当前的 `/api/embed` 端点，并在可能时将
     多个记忆块批量合并为一个 `input` 请求。
 
-    | 属性           | 值                  |
-    | -------------- | ------------------- |
-    | 默认模型       | `nomic-embed-text`  |
-    | 自动拉取       | 是 — 如果本地不存在，嵌入模型会自动拉取 |
+    When `proxy.enabled=true`, Ollama memory embedding requests to the exact
+    host-local loopback origin derived from the configured `baseUrl` use
+    OpenClaw's guarded direct path instead of the managed forward proxy. The
+    configured hostname must itself be `localhost` or a loopback IP literal;
+    DNS names that merely resolve to loopback still use the managed proxy path.
+    LAN, tailnet, private-network, and public Ollama hosts also stay on the
+    managed proxy path. Redirects to another host or port do not inherit trust.
+    Operators can still set the global `proxy.loopbackMode: "proxy"` setting to
+    send loopback traffic through the proxy, or `proxy.loopbackMode: "block"`
+    to deny loopback connections before opening a connection; see
+    [Managed proxy](/security/network-proxy#gateway-loopback-mode) for the
+    process-wide effect of this setting.
+
+    | Property      | Value               |
+    | ------------- | ------------------- |
+    | Default model | `nomic-embed-text`  |
+    | Auto-pull     | Yes — the embedding model is pulled automatically if not present locally |
 
     查询时的嵌入会对需要或建议使用检索前缀的模型进行处理，包括 `nomic-embed-text`、`qwen3-embedding` 和 `mxbai-embed-large`。记忆文档批次会保持原始格式，因此现有索引无需迁移格式。
 

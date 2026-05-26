@@ -55,7 +55,7 @@ TTS 是 Talk 的 `stt-tts` 模式中的语音输出部分。原生提供商
 
 ## 支持的提供商
 
-| Provider          | Auth                                                                                                             | Notes                                                                                       |
+| 提供商            | 认证                                                                                                             | 说明                                                                                        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | **Azure Speech**  | `AZURE_SPEECH_KEY` + `AZURE_SPEECH_REGION` (also `AZURE_SPEECH_API_KEY`, `SPEECH_KEY`, `SPEECH_REGION`)          | 原生 Ogg/Opus 语音消息输出和电话功能。                                                      |
 | **DeepInfra**     | `DEEPINFRA_API_KEY`                                                                                              | 兼容 OpenAI 的 TTS。默认为 `hexgrad/Kokoro-82M`。                                           |
@@ -434,7 +434,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
 }
 ```
 
-## Persona
+## 人设
 
 **persona** 是一种稳定的口语身份，可在各个提供商之间以确定性方式应用。它可以偏好某个提供商，定义与提供商无关的提示意图，并携带用于声音、模型、提示模板、seed 和语音设置的提供商特定绑定。
 
@@ -752,7 +752,7 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
       来自 `personas` 的当前角色 id。会规范化为小写。
     </ParamField>
     <ParamField path="personas.<id>" type="object">
-      稳定的口语身份。字段：`label`、`description`、`provider`、`fallbackPolicy`、`prompt`、`providers.<provider>`。见 [Personas](#personas)。
+      稳定的口语身份。字段：`label`、`description`、`provider`、`fallbackPolicy`、`prompt`、`providers.<provider>`。见 [角色](#personas)。
     </ParamField>
     <ParamField path="summaryModel" type="string">
       用于自动摘要的便宜模型；默认值为 `agents.defaults.model.primary`。接受 `provider/model` 或已配置的模型别名。
@@ -804,7 +804,7 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
     <ParamField path="audioProfile" type="string">在发声文本之前预置的自然语言风格提示词。</ParamField>
     <ParamField path="speakerName" type="string">当你的提示词使用命名说话人时，可选地在发声文本之前预置说话人标签。</ParamField>
     <ParamField path="promptTemplate" type='"audio-profile-v1"'>设置为 `audio-profile-v1`，以将当前 persona 提示字段封装到确定性的 Gemini TTS 提示结构中。</ParamField>
-    <ParamField path="personaPrompt" type="string">Google 特定的额外 persona 提示文本，会附加到模板的 Director's Notes 中。</ParamField>
+    <ParamField path="personaPrompt" type="string">Google 特定的额外 persona 提示文本，会附加到模板的导演说明中。</ParamField>
     <ParamField path="baseUrl" type="string">仅接受 `https://generativelanguage.googleapis.com`。</ParamField>
   </Accordion>
 
@@ -896,7 +896,7 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
     <ParamField path="speed" type="number">提供方原生速度覆盖。</ParamField>
   </Accordion>
 
-  <Accordion title="Xiaomi MiMo">
+  <Accordion title="小米 MiMo">
     <ParamField path="apiKey" type="string">环境变量：`XIAOMI_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.xiaomimimo.com/v1`。环境变量：`XIAOMI_BASE_URL`。</ParamField>
     <ParamField path="model" type="string">默认 `mimo-v2.5-tts`。环境变量：`XIAOMI_TTS_MODEL`。也支持 `mimo-v2-tts`。</ParamField>
@@ -908,19 +908,13 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
 
 ## Agent 工具
 
-`tts` 工具将文本转换为语音，并返回一个音频附件用于
-回复传递。在飞书、Matrix、Telegram 和 WhatsApp 上，音频会
-以语音消息而不是文件附件的形式发送。飞书和 WhatsApp 可以在
-`ffmpeg` 可用时，将非 Opus 的 TTS 输出在此路径上转码。
+`tts` 工具将文本转换为语音，并返回一个音频附件用于回复传递。在飞书、Matrix、Telegram 和 WhatsApp 上，音频会以语音消息而不是文件附件的形式发送。飞书和 WhatsApp 可以在 `ffmpeg` 可用时，将非 Opus 的 TTS 输出在此路径上转码。
 
-WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
-`ptt: true`），并且会**单独**发送可见文本，而不是与 PTT 音频一起发送，
-因为客户端对语音备注上的字幕渲染并不稳定。
+WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且 `ptt: true`），并且会**单独**发送可见文本，而不是与 PTT 音频一起发送，因为客户端对语音备注上的字幕渲染并不稳定。
 
-该工具接受可选的 `channel` 和 `timeoutMs` 字段；`timeoutMs` 是
-单次调用的提供方请求超时时间，单位为毫秒。
+该工具接受可选的 `channel` 和 `timeoutMs` 字段；`timeoutMs` 是每次调用时提供方请求的超时时间，单位为毫秒。每次调用的值会覆盖 `messages.tts.timeoutMs`；已配置的 TTS 超时会覆盖插件作者设置的任何提供方默认值。
 
-## Gateway RPC
+## 网关 RPC
 
 | 方法              | 作用                                   |
 | ----------------- | -------------------------------------- |
@@ -934,7 +928,7 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 
 ## 服务链接
 
-- [OpenAI Text to Speech 指南](https://platform.openai.com/docs/guides/text-to-speech)
+- [OpenAI 文本转语音指南](https://platform.openai.com/docs/guides/text-to-speech)
 - [OpenAI 音频 API 参考](https://platform.openai.com/docs/api-reference/audio)
 - [Azure Speech REST 文本转语音](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech)
 - [Azure Speech 提供方](/providers/azure-speech)
@@ -946,7 +940,7 @@ WhatsApp 通过 Baileys 将音频作为 PTT 语音备注发送（`audio` 且
 - [Volcengine TTS HTTP API](/providers/volcengine#text-to-speech)
 - [Xiaomi MiMo 语音合成](/providers/xiaomi#text-to-speech)
 - [node-edge-tts](https://github.com/SchneeHertz/node-edge-tts)
-- [Microsoft Speech 输出格式](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
+- [Microsoft Speech 音频输出格式](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech#audio-outputs)
 - [xAI 文本转语音](https://docs.x.ai/developers/rest-api-reference/inference/voice#text-to-speech-rest)
 
 ## 相关内容

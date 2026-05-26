@@ -46,13 +46,13 @@ Heartbeat 是一个计划好的主会话回合——它**不会**创建 [后台�
     defaults: {
       heartbeat: {
         every: "30m",
-        target: "last", // 显式发送给最后一个联系人（默认是 "none"）
+        target: "last", // 明确发送给最后一个联系人（默认是 "none"）
         directPolicy: "allow", // 默认：允许直接/DM 目标；设置为 "block" 可抑制
         lightContext: true, // 可选：仅从 bootstrap 文件中注入 HEARTBEAT.md
         isolatedSession: true, // 可选：每次运行使用新会话（无对话历史）
         skipWhenBusy: true, // 可选：当该 agent 的子 agent 或嵌套通道繁忙时也延后
         // activeHours: { start: "08:00", end: "24:00" },
-        // includeReasoning: true, // 可选：也发送单独的 `Reasoning:` 消息
+        // includeReasoning: true, // 可选：同时发送单独的 `Thinking` 消息
       },
     },
   },
@@ -98,12 +98,12 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
       heartbeat: {
         every: "30m", // 默认：30m（0m 会禁用）
         model: "anthropic/claude-opus-4-6",
-        includeReasoning: false, // 默认：false（在可用时传递单独的 Reasoning: 消息）
+        includeReasoning: false, // 默认：false（在可用时发送单独的 Thinking 消息）
         lightContext: false, // 默认：false；为 true 时仅保留工作区 bootstrap 文件中的 HEARTBEAT.md
-        isolatedSession: false, // 默认：false；为 true 时每次 heartbeat 在新会话中运行（无对话历史）
+        isolatedSession: false, // 默认：false；为 true 时每次 heartbeat 都在新的会话中运行（无对话历史）
         skipWhenBusy: false, // 默认：false；为 true 时也会等待该 agent 的子 agent/嵌套通道
         target: "last", // 默认：none | 可选：last | none | <channel id>（核心或插件，例如 "imessage"）
-        to: "+15551234567", // 可选的按通道覆盖
+        to: "+15551234567", // 可选的按频道覆盖
         accountId: "ops-bot", // 可选的多账户 channel id
         prompt: "如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。",
         ackMaxChars: 300, // HEARTBEAT_OK 之后允许的最大字符数
@@ -226,7 +226,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
   heartbeat 运行的可选模型覆盖（`provider/model`）。
 </ParamField>
 <ParamField path="includeReasoning" type="boolean" default="false">
-  启用后，在可用时也会传递单独的 `Reasoning:` 消息（与 `/reasoning on` 的形状相同）。
+  启用时，还会在可用时发送单独的 `Thinking` 消息（与 `/reasoning on` 的形状相同）。
 </ParamField>
 <ParamField path="lightContext" type="boolean" default="false">
   为 true 时，heartbeat 运行使用轻量级 bootstrap 上下文，并且只保留工作区 bootstrap 文件中的 `HEARTBEAT.md`。
@@ -289,7 +289,7 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
 ## 投递行为
 
 <AccordionGroup>
-  <Accordion title="Session and target routing">
+  <Accordion title="会话和目标路由">
     - 心跳默认在代理的主会话中运行（`agent:<id>:<mainKey>`），或者在 `session.scope = "global"` 时使用 `global`。设置 `session` 可覆盖为特定的频道会话（Discord/WhatsApp 等）。
     - `session` 只影响运行上下文；投递由 `target` 和 `to` 控制。
     - 要投递到特定频道/收件人，请设置 `target` + `to`。使用 `target: "last"` 时，投递将使用该会话的最后一个外部频道。
@@ -376,11 +376,13 @@ channels:
 
 ## HEARTBEAT.md（可选）
 
-如果工作区中存在 `HEARTBEAT.md` 文件，默认提示会告诉代理读取它。可以把它看作你的“心跳检查清单”：简短、稳定，适合每 30 分钟都包含一次。
+如果工作区中存在 `HEARTBEAT.md` 文件，默认提示会告诉代理读取它。可以把它看作你的“心跳检查清单”：简短、稳定，并且每 30 分钟都可以安全地查看一次。
 
 在正常运行时，只有当默认代理启用了心跳指引时，才会注入 `HEARTBEAT.md`。通过 `0m` 禁用心跳节奏，或设置 `includeSystemPromptSection: false`，会使其不进入正常的启动上下文。
 
-如果 `HEARTBEAT.md` 存在但实际上为空（只有空白行和类似 `# Heading` 的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。该跳过会报告为 `reason=empty-heartbeat-file`。如果文件缺失，心跳仍会运行，由模型决定如何处理。
+在原生 Codex harness 中，`HEARTBEAT.md` 的内容不会被注入到当前轮次中。如果该文件存在且包含非空白内容，心跳协作模式指令会让 Codex 指向该文件，并要求它在继续之前先读取。
+
+如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行和诸如 `# Heading` 之类的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。该跳过会报告为 `reason=empty-heartbeat-file`。如果文件缺失，心跳仍会运行，由模型决定要做什么。
 
 保持它足够小（简短清单或提醒），以避免提示词膨胀。
 
@@ -465,7 +467,7 @@ openclaw system event --text "检查紧急跟进事项" --mode now
 
 - `agents.defaults.heartbeat.includeReasoning: true`
 
-启用后，心跳还会投递一条单独的消息，前缀为 `Reasoning:`（格式与 `/reasoning on` 相同）。当代理管理多个会话/codex，并且你想知道它为什么决定 ping 你时，这会很有用——但它也可能泄露比你希望更多的内部细节。群聊中建议保持关闭。
+启用后，心跳还会额外投递一条以 `Thinking` 为前缀的独立消息（与 `/reasoning on` 形式相同）。当代理在管理多个会话/codex 时，这有助于你了解它为什么决定向你发送 ping——但它也可能泄露比你想要的更多内部细节。在群聊中建议保持关闭。
 
 ## 成本意识
 

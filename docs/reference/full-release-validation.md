@@ -28,16 +28,22 @@ gh workflow run full-release-validation.yml \
 全面的 live/Docker soak。传入 `run_release_soak=true` 可在 stable 运行中包含
 soak 通道。`release_profile=full` 总是启用 soak 通道，因此广泛的建议型配置不会默默丢失覆盖范围。
 
-Package Acceptance 通常会基于解析后的 `ref` 构建候选 tarball，包括通过
-`pnpm ci:full-release` 触发的完整 SHA 运行。对于 beta 发布之后，请传入
-`release_package_spec=openclaw@YYYY.M.D-beta.N`，以便在发布检查、Package Acceptance、跨 OS、release-path Docker 和 package Telegram 中复用已发布的 npm 包。仅当 Package Acceptance 需要有意证明不同的包时，才使用 `package_acceptance_package_spec`。
+Package Acceptance 通常会根据解析后的 `ref` 构建候选 tarball，包括通过
+`pnpm ci:full-release` 触发的完整 SHA 运行。在 beta 发布后，传入
+`release_package_spec=openclaw@YYYY.M.D-beta.N`，即可在发布检查、Package Acceptance、
+跨操作系统、release-path Docker 和 package Telegram 中复用已发布的 npm 包。仅当
+Package Acceptance 需要有意证明不同包时，才使用 `package_acceptance_package_spec`。
+Codex 插件 live 包通道遵循相同状态：已发布的 `release_package_spec` 值会派生出
+`codex_plugin_spec=npm:@openclaw/codex@<version>`；SHA/制品运行会从所选 ref 打包 `extensions/codex`；
+并且操作员可以直接为 `npm:`、`npm-pack:` 或 `git:` 插件源设置 `codex_plugin_spec`。
+该通道会授予该插件所需的显式 Codex CLI 安装批准，然后运行 Codex CLI 预检和同会话的 OpenAI agent turn。
 
 ## 顶层阶段
 
 | Stage                | Details                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Target resolution    | **Job:** `Resolve target ref`<br />**Child workflow:** none<br />**Proves:** resolves the release branch, tag, or full commit SHA and records selected inputs.<br />**Rerun:** rerun the umbrella if this fails.                                                                                                                                                                                                                               |
-| Vitest and normal CI | **Job:** `Run normal full CI`<br />**Child workflow:** `CI`<br />**Proves:** manual full CI graph against the target ref, including Linux Node lanes, bundled plugin shards, channel contracts, Node 22 compatibility, `check`, `check-additional`, build smoke, docs checks, Python skills, Windows, macOS, Control UI i18n, and Android via the umbrella.<br />**Rerun:** `rerun_group=ci`.                                                  |
+| Vitest and normal CI | **Job:** `Run normal full CI`<br />**Child workflow:** `CI`<br />**Proves:** manual full CI graph against the target ref, including Linux Node lanes, bundled plugin shards, plugin and channel contract shards, Node 22 compatibility, `check-*`, `check-additional-*`, built-artifact smoke checks, docs checks, Python skills, Windows, macOS, Control UI i18n, and Android via the umbrella.<br />**Rerun:** `rerun_group=ci`.             |
 | Plugin prerelease    | **Job:** `Run plugin prerelease validation`<br />**Child workflow:** `Plugin Prerelease`<br />**Proves:** release-only plugin static checks, agentic plugin coverage, full extension batch shards, plugin prerelease Docker lanes, and a non-blocking `plugin-inspector-advisory` artifact for compatibility triage.<br />**Rerun:** `rerun_group=plugin-prerelease`.                                                                          |
 | Release checks       | **Job:** `Run release/live/Docker/QA validation`<br />**Child workflow:** `OpenClaw Release Checks`<br />**Proves:** install smoke, cross-OS package checks, Package Acceptance, QA Lab parity, live Matrix, and live Telegram. With `run_release_soak=true` or `release_profile=full`, also runs exhaustive live/E2E suites and Docker release-path chunks.<br />**Rerun:** `rerun_group=release-checks` or a narrower release-checks handle. |
 | Package artifact     | **Job:** `Prepare release package artifact`<br />**Child workflow:** none<br />**Proves:** creates the parent `release-package-under-test` tarball early enough for package-facing checks that do not need to wait for `OpenClaw Release Checks`.<br />**Rerun:** rerun the umbrella or provide `release_package_spec` for published-package reruns.                                                                                           |
@@ -48,15 +54,15 @@ Package Acceptance 通常会基于解析后的 `ref` 构建候选 tarball，包�
 
 当 `live_suite_filter` 为空时，Docker release-path 阶段运行以下分块：
 
-| Chunk                                                           | Coverage                                                                                          |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `core`                                                          | Core Docker release-path smoke lanes.                                                             |
-| `package-update-openai`                                         | OpenAI package install/update behavior, Codex on-demand install, and Chat Completions tool calls. |
-| `package-update-anthropic`                                      | Anthropic package install and update behavior.                                                    |
-| `package-update-core`                                           | Provider-neutral package and update behavior.                                                     |
-| `plugins-runtime-plugins`                                       | Plugin runtime lanes that exercise plugin behavior.                                               |
-| `plugins-runtime-services`                                      | Service-backed and live plugin runtime lanes; includes OpenWebUI when requested.                  |
-| `plugins-runtime-install-a` through `plugins-runtime-install-h` | Plugin install/runtime batches split for parallel release validation.                             |
+| Chunk                                                           | Coverage                                                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `core`                                                          | Core Docker release-path smoke lanes.                                                                                      |
+| `package-update-openai`                                         | OpenAI package install/update behavior, Codex on-demand install, Codex plugin live turns, and Chat Completions tool calls. |
+| `package-update-anthropic`                                      | Anthropic package install and update behavior.                                                                             |
+| `package-update-core`                                           | Provider-neutral package and update behavior.                                                                              |
+| `plugins-runtime-plugins`                                       | Plugin runtime lanes that exercise plugin behavior.                                                                        |
+| `plugins-runtime-services`                                       | Service-backed and live plugin runtime lanes; includes OpenWebUI when requested.                                           |
+| `plugins-runtime-install-a` through `plugins-runtime-install-h` | Plugin install/runtime batches split for parallel release validation.                                                      |
 
 当只有一个 Docker 通道失败时，请在可复用的 live/E2E 工作流中使用有针对性的 `docker_lanes=<lane[,lane]>`。发布制品在可用时包含每个通道的重新运行命令，以及包制品和镜像复用输入。
 
@@ -99,18 +105,18 @@ Anthropic 和 OpenCode Go model 分片。定向重跑仍然可以使用聚合的
 
 | Handle              | Scope                                                                                           |
 | ------------------- | ----------------------------------------------------------------------------------------------- |
-| `all`               | All Full Release Validation stages.                                                             |
-| `ci`                | Manual full CI child only.                                                                      |
-| `plugin-prerelease` | Plugin Prerelease child only.                                                                   |
-| `release-checks`    | All OpenClaw Release Checks stages.                                                             |
-| `install-smoke`     | Install Smoke through release checks.                                                           |
-| `cross-os`          | Cross-OS release checks.                                                                        |
-| `live-e2e`          | Repo/live E2E and Docker release-path validation.                                               |
-| `package`           | Package Acceptance.                                                                             |
-| `qa`                | QA parity plus QA live lanes.                                                                   |
-| `qa-parity`         | QA parity lanes and report only.                                                                |
-| `qa-live`           | QA live Matrix and Telegram only.                                                               |
-| `npm-telegram`      | Published-package Telegram E2E; requires `release_package_spec` or `npm_telegram_package_spec`. |
+| `all`               | 所有 Full Release Validation 阶段。                                                             |
+| `ci`               | 仅手动 full CI 子流程。                                                                        |
+| `plugin-prerelease` | 仅 Plugin Prerelease 子流程。                                                                   |
+| `release-checks`    | 所有 OpenClaw Release Checks 阶段。                                                             |
+| `install-smoke`     | 从 install smoke 到 release checks。                                                           |
+| `cross-os`          | Cross-OS release checks。                                                                      |
+| `live-e2e`          | 仓库/live E2E 和 Docker release-path 验证。                                                   |
+| `package`           | Package Acceptance。                                                                           |
+| `qa`                | QA parity 加上 QA live lanes。                                                                  |
+| `qa-parity`         | QA parity lanes，且仅报告。                                                                     |
+| `qa-live`           | 仅 QA live Matrix 和 Telegram。                                                                 |
+| `npm-telegram`      | 已发布包的 Telegram E2E；需要 `release_package_spec` 或 `npm_telegram_package_spec`。 |
 
 当一个 live 套件失败时，使用 `rerun_group=live-e2e` 搭配 `live_suite_filter`。有效的过滤器 id 定义在可复用的 live/E2E 工作流中，包括
 `docker-live-models`、`live-gateway-docker`、
@@ -124,8 +130,7 @@ Anthropic 和 OpenCode Go model 分片。定向重跑仍然可以使用聚合的
 当一个 cross-OS 通道失败时，使用 `rerun_group=cross-os` 搭配 `cross_os_suite_filter`。该过滤器接受 OS id、suite id 或 OS/suite 对，例如 `windows/packaged-upgrade`、`windows` 或 `packaged-fresh`。Cross-OS
 摘要包含 packaged upgrade 通道的每阶段耗时，并且长时间运行的命令会打印 heartbeat 行，因此卡住的 Windows 更新会在作业超时前可见。
 
-QA release-check 通道是建议性的。仅 QA 的失败会被报告为警告，并且不会阻塞 release-check 验证器；当你需要新的 QA 证据时，请重跑 `rerun_group=qa`、
-`qa-parity` 或 `qa-live`。
+QA release-check lanes 除了标准运行时工具覆盖门禁之外均为建议性。标准层级中所需的 OpenClaw 动态工具漂移会阻止 release-check 验证器；其他仅 QA 的失败会作为警告报告。当你需要新的 QA 证据时，重跑 `rerun_group=qa`、`qa-parity` 或 `qa-live`。
 
 ## 要保留的证据
 

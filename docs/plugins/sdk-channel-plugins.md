@@ -56,21 +56,13 @@ read_when:
 `dispatchInboundReplyWithBase` 和
 `recordInboundSessionAndDispatchReply`，仍可用于兼容性分发器。不要在新的通道代码中使用这些名称；新插件应从 `openclaw/plugin-sdk/channel-message` 上的 `message` 适配器、收据以及收发生命周期帮助器开始。
 
-Channels migrating inbound authorization can use the experimental
-`openclaw/plugin-sdk/channel-ingress-runtime` subpath from runtime receive
-paths. The subpath keeps platform lookup and side effects in the plugin, while
-sharing allowlist state resolution, route/sender/command/event/activation
-decisions, redacted diagnostics, and turn-admission mapping. Keep plugin
-identity normalization in the descriptor you pass to the resolver; do not
-serialize raw match values from the resolved state or decision. See
-[Channel ingress API](/plugins/sdk-channel-ingress) for the API design,
-ownership boundary, and test expectations.
+迁移入站授权的通道可以在运行时接收路径中使用实验性的
+`openclaw/plugin-sdk/channel-ingress-runtime` 子路径。该子路径将平台查找和副作用保留在插件内，同时共享允许列表状态解析、路由/发送者/命令/事件/激活决策、脱敏诊断以及轮次准入映射。请把插件身份规范化保留在传给解析器的描述符中；不要从已解析状态或决策中序列化原始匹配值。有关 API 设计、
+所有权边界和测试预期，请参见
+[Channel ingress API](/plugins/sdk-channel-ingress)。
 
-If your channel supports typing indicators outside inbound replies, expose
-`heartbeat.sendTyping(...)` on the channel plugin. Core calls it with the
-resolved heartbeat delivery target before the heartbeat model run starts and
-uses the shared typing keepalive/cleanup lifecycle. Add `heartbeat.clearTyping(...)`
-when the platform needs an explicit stop signal.
+如果你的通道在入站回复之外也支持输入中指示器，请在通道插件上暴露
+`heartbeat.sendTyping(...)`。核心会在心跳模型运行开始前，使用已解析的心跳投递目标调用它，并使用共享的输入中保持活动/清理生命周期。当平台需要显式停止信号时，请添加 `heartbeat.clearTyping(...)`。
 
 如果你的通道为消息工具参数添加了承载媒体来源的字段，请通过
 `describeMessageTool(...).mediaSourceParams` 暴露这些参数名。核心会使用这份显式列表做沙箱路径归一化和外发媒体访问策略，因此插件不需要在共享核心中为提供商特定的头像、附件或封面图参数编写特殊分支。
@@ -81,9 +73,8 @@ when the platform needs an explicit stop signal.
 
 如果你的平台将额外的作用域存储在会话 id 中，请使用 `messaging.resolveSessionConversation(...)` 在插件中完成这部分解析。这是将 `rawId` 映射到基础会话 id、可选线程 id、显式 `baseConversationId` 以及任何 `parentConversationCandidates` 的标准挂钩。当你返回 `parentConversationCandidates` 时，请按从最窄父级到最宽/基础会话的顺序排列。
 
-当插件代码需要规范化类似路由的字段、比较子线程与其父路由，或者从 `{ channel, to, accountId, threadId }` 构建稳定的去重键时，请使用 `openclaw/plugin-sdk/channel-route`。该帮助器会像核心一样规范化数值线程 id，因此插件应优先使用它，而不是临时性的 `String(threadId)` 比较。
-具有提供商特定目标语法的插件可以把自己的解析器注入到
-`resolveChannelRouteTargetWithParser(...)` 中，同时仍然获得与核心相同的路由目标形状和线程回退语义。
+当插件代码需要规范化类似路由的字段、比较子线程与其父路由，或从 `{ channel, to, accountId, threadId }` 构建稳定的去重键时，请使用 `openclaw/plugin-sdk/channel-route`。该帮助器会像核心一样规范化数字线程 id，因此插件应优先使用它，而不是临时的 `String(threadId)` 比较。
+具有提供商特定目标语法的插件应暴露 `messaging.resolveOutboundSessionRoute(...)`，这样核心就能获得提供商原生的会话和线程标识，而无需使用解析器 shim。
 
 打包后的插件如果在通道注册表启动之前就需要相同的解析逻辑，也可以暴露一个顶层的 `session-key-api.ts` 文件，并提供匹配的
 `resolveSessionConversation(...)` 导出。只有在运行时插件注册表尚不可用时，核心才会使用这个适用于引导阶段的接口。
@@ -178,20 +169,26 @@ when the platform needs an explicit stop signal.
 
 对于其他高频通道路径，在不需要更宽泛的遗留接入面时，优先使用更窄的帮助器：
 
-- `openclaw/plugin-sdk/account-core`、
-  `openclaw/plugin-sdk/account-id`、
-  `openclaw/plugin-sdk/account-resolution` 和
-  `openclaw/plugin-sdk/account-helpers`，用于多账号配置和默认账号回退
+- `openclaw/plugin-sdk/account-core`,
+  `openclaw/plugin-sdk/account-id`,
+  `openclaw/plugin-sdk/account-resolution`, 和
+  `openclaw/plugin-sdk/account-helpers` 用于多账号配置和
+  默认账号回退
 - `openclaw/plugin-sdk/inbound-envelope` 和
-  `openclaw/plugin-sdk/inbound-reply-dispatch`，用于入站路由/信封以及记录并分发接线
-- `openclaw/plugin-sdk/messaging-targets`，用于目标解析/匹配
+  `openclaw/plugin-sdk/inbound-reply-dispatch` 用于入站路由/信封以及
+  record-and-dispatch 接线
+- `openclaw/plugin-sdk/channel-targets` 用于目标解析帮助器
 - `openclaw/plugin-sdk/outbound-media` 和
-  `openclaw/plugin-sdk/outbound-runtime`，用于媒体加载以及外发身份/发送委托和负载规划
-- 来自
-  `openclaw/plugin-sdk/channel-core` 的 `buildThreadAwareOutboundSessionRoute(...)`，当外发路由应保留显式的 `replyToId`/`threadId`，或者在基础会话键仍然匹配后恢复当前 `:thread:` 会话时使用。若平台具有原生线程交付语义，提供商插件可以覆盖优先级、后缀行为和线程 id 规范化。
-- `openclaw/plugin-sdk/thread-bindings-runtime`，用于线程绑定生命周期和适配器注册
-- `openclaw/plugin-sdk/agent-media-payload`，仅当仍然需要遗留的 agent/media 负载字段布局时使用
-- `openclaw/plugin-sdk/telegram-command-config`，用于 Telegram 自定义命令规范化、重复/冲突校验以及稳定回退的命令配置契约
+  `openclaw/plugin-sdk/outbound-runtime` 用于媒体加载以及外发
+  身份/发送委派和负载规划
+- 来自 `openclaw/plugin-sdk/channel-core` 的 `buildThreadAwareOutboundSessionRoute(...)`，当外发路由应保留显式的 `replyToId`/`threadId`，或在基础会话键仍匹配后恢复当前的 `:thread:` 会话时使用。若平台具有原生线程投递语义，提供商插件可以覆盖优先级、后缀行为和线程 id 规范化。
+- `openclaw/plugin-sdk/thread-bindings-runtime` 用于线程绑定生命周期
+  和适配器注册
+- `openclaw/plugin-sdk/agent-media-payload` 仅在仍然需要旧式 agent/media
+  负载字段布局时使用
+- `openclaw/plugin-sdk/telegram-command-config` 用于 Telegram 自定义命令
+  规范化、重复/冲突校验以及稳定的回退命令
+  配置契约
 
 仅认证类的通道通常可以停留在默认路径：核心处理审批，插件只暴露外发/认证能力。像 Matrix、Slack、Telegram 和自定义聊天传输这类原生审批通道，应当使用共享的原生帮助器，而不是自己重新实现审批生命周期。
 
@@ -274,7 +271,7 @@ if (decision.shouldSkip) return;
 
 如果你只需要 `implicitMentionKindWhen` 和 `resolveInboundMentionDecision`，请从 `openclaw/plugin-sdk/channel-mention-gating` 导入，以避免加载无关的传入运行时辅助。
 
-较旧的 `resolveMentionGating*` 辅助仍然保留在 `openclaw/plugin-sdk/channel-inbound` 上，仅作为兼容性导出。新代码应使用 `resolveInboundMentionDecision({ facts, policy })`。
+使用 `resolveInboundMentionDecision({ facts, policy })` 进行提及门控。
 
 ## 操作指南
 
@@ -628,8 +625,8 @@ if (decision.shouldSkip) return;
   <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
     通过 api.runtime 提供 TTS、STT、媒体、subagent
   </Card>
-  <Card title="频道轮次内核" icon="bolt" href="/plugins/sdk-channel-turn">
-    共享传入轮次生命周期：摄取、解析、记录、分发、完成
+  <Card title="Channel turn kernel" icon="bolt" href="/plugins/sdk-channel-turn">
+    Shared inbound event lifecycle: ingest, resolve, record, dispatch, finalize
   </Card>
 </CardGroup>
 

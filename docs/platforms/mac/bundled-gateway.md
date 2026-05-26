@@ -13,7 +13,7 @@ OpenClaw.app 不再捆绑 Node/Bun 或 Gateway 运行时。macOS 应用
 
 ## 安装 CLI（本地模式必需）
 
-Mac 上默认运行时是 Node 24。为了兼容，Node 22 LTS（当前为 `22.16+`）仍然可用。然后全局安装 `openclaw`：
+Node 24 是 Mac 上的默认运行时。Node 22 LTS，当前为 `22.19+`，仍然可以用于兼容性。然后全局安装 `openclaw`：
 
 ```bash
 npm install -g openclaw@<version>
@@ -48,7 +48,8 @@ Plist 位置（按用户）：
 
 日志：
 
-- launchd 标准输出/错误：`/tmp/openclaw/openclaw-gateway.log`
+- launchd stdout: `~/Library/Logs/openclaw/gateway.log`（profiles 使用 `gateway-<profile>.log`）
+- launchd stderr: 已抑制
 
 ## 版本兼容性
 

@@ -62,6 +62,36 @@ openclaw devices approve <requestId>
 openclaw devices approve --latest
 ```
 
+## Paperclip / `openclaw_gateway` 首次运行批准
+
+当新的 Paperclip 代理首次通过 `openclaw_gateway` 适配器连接时，Gateway 可能会要求进行一次性的设备配对批准，之后运行才能成功。如果 Paperclip 报告 `openclaw_gateway_pairing_required`，请批准待处理设备并重试。
+
+对于本地 Gateway，请预览最新的待处理请求：
+
+```bash
+openclaw devices approve --latest
+```
+
+预览会打印出精确的 `openclaw devices approve <requestId>` 命令。请核对请求详情，然后使用该请求 ID 重新运行该命令以完成批准。
+
+对于远程 Gateway 或显式凭据，在预览和批准时传入相同的选项：
+
+```bash
+openclaw devices approve --latest --url <gateway-ws-url> --token <gateway-token>
+```
+
+为了避免在重启后重复批准，请在 Paperclip 适配器配置中保留一个持久化的设备密钥，而不是每次运行都生成新的临时身份：
+
+```json
+{
+  "adapterConfig": {
+    "devicePrivateKeyPem": "<ed25519-private-key-pkcs8-pem>"
+  }
+}
+```
+
+如果批准一直失败，请先运行 `openclaw devices list` 以确认是否存在待处理请求。
+
 ### `openclaw devices reject <requestId>`
 
 拒绝一个待处理的设备配对请求。

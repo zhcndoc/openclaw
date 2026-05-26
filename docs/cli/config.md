@@ -31,7 +31,7 @@ openclaw config get browser.executablePath
 openclaw config set browser.executablePath "/usr/bin/google-chrome"
 openclaw config set browser.profiles.work.executablePath "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 openclaw config set agents.defaults.heartbeat.every "2h"
-openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
+openclaw config set 'agents.list[0].tools.exec.node' "node-id-or-name"
 openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
 openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN
 openclaw config set secrets.providers.vaultfile --provider-source file --provider-path /etc/openclaw/secrets.json --provider-mode json
@@ -73,18 +73,18 @@ openclaw config schema > openclaw.schema.json
 
 ### 路径
 
-路径使用点号或方括号表示法：
+路径支持点号或方括号表示法。在 shell 示例中请将方括号路径加引号，以免 zsh 等 shell 在 OpenClaw 接收路径之前将 `[0]` 展开为 glob：
 
 ```bash
 openclaw config get agents.defaults.workspace
-openclaw config get agents.list[0].id
+openclaw config get 'agents.list[0].id'
 ```
 
 使用 agent 列表索引来定位特定 agent：
 
 ```bash
 openclaw config get agents.list
-openclaw config set agents.list[1].tools.exec.node "node-id-or-name"
+openclaw config set 'agents.list[1].tools.exec.node' "node-id-or-name"
 ```
 
 ## 值
@@ -424,7 +424,7 @@ openclaw config set channels.discord.token \
 `openclaw config set` 和其他 OpenClaw 自有的配置写入器会在提交到磁盘之前验证整个变更后的配置。如果新负载未通过 schema 验证，或者看起来像破坏性的覆盖，活动配置会保持不变，而被拒绝的负载会以 `openclaw.json.rejected.*` 的形式保存在其旁边。
 
 <Warning>
-活动配置路径必须是常规文件。通过符号链接的 `openclaw.json` 布局不支持写入；请改用 `OPENCLAW_CONFIG_PATH` 直接指向真实文件。
+活动配置路径必须是普通文件。通过符号链接的 `openclaw.json` 布局不支持写入；请改用 `OPENCLAW_CONFIG_PATH` 直接指向真实文件。
 </Warning>
 
 对于小改动，优先使用 CLI 写入：
@@ -443,13 +443,13 @@ ls -lt "$CONFIG".rejected.* 2>/dev/null | head
 openclaw config validate
 ```
 
-直接编辑器写入仍然被允许，但运行中的 Gateway 会将其视为不受信任，直到它们通过验证。无效的直接编辑会导致启动失败，或在热重载时被跳过；Gateway 不会重写 `openclaw.json`。运行 `openclaw doctor --fix` 可修复带前缀/被覆盖的配置，或恢复上一个已知可用的副本。参见 [Gateway 故障排查](/gateway/troubleshooting#gateway-rejected-invalid-config)。
+仍然允许直接编辑器写入，但运行中的 Gateway 会将其视为不受信任，直到它们通过验证。无效的直接编辑会导致启动失败，或在热重载时被跳过；Gateway 不会重写 `openclaw.json`。运行 `openclaw doctor --fix` 可修复带前缀/被覆盖的配置，或恢复上一个已知可用的副本。参见 [Gateway 故障排查](/gateway/troubleshooting#gateway-rejected-invalid-config)。
 
 整文件恢复仅保留给 doctor 修复使用。插件 schema 变更或 `minHostVersion` 不匹配会继续报错，而不会回滚无关的用户设置，例如模型、提供方、认证配置文件、渠道、gateway 暴露、工具、内存、浏览器或 cron 配置。
 
 ## 子命令
 
-- `config file`: 打印活动配置文件路径（从 `OPENCLAW_CONFIG_PATH` 或默认位置解析）。该路径应指向常规文件，而不是符号链接。
+- `config file`: 打印活动配置文件路径（从 `OPENCLAW_CONFIG_PATH` 或默认位置解析）。该路径应指向普通文件，而不是符号链接。
 
 编辑后重启 gateway。
 

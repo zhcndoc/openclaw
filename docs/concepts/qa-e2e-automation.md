@@ -25,26 +25,26 @@ title: "QA 概览"
 所有 QA 流程都通过 `pnpm openclaw qa <subcommand>` 运行。许多命令都有 `pnpm qa:*`
 脚本别名；这两种形式都受支持。
 
-| 命令                                                | 用途                                                                                                                                                                                                                                                                     |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `qa run`                                            | 打包后的 QA 自检；写出 Markdown 报告。                                                                                                                                                                                                                                  |
-| `qa suite`                                          | 在 QA gateway 线路上运行仓库支持的场景。别名：`pnpm openclaw qa suite --runner multipass` 用于一次性 Linux VM。                                                                                                                                  |
-| `qa coverage`                                       | 打印 markdown 场景覆盖清单（`--json` 可输出机器可读格式）。                                                                                                                                                                                           |
-| `qa parity-report`                                  | 比较两个 `qa-suite-summary.json` 文件并写出智能体一致性报告。                                                                                                                                                                                          |
-| `qa character-eval`                                 | 在多个实时模型上运行 character QA 场景并生成裁决报告。见 [报告](#reporting)。                                                                                                                                                            |
-| `qa manual`                                         | 针对所选 provider/model 线路运行一次性提示。                                                                                                                                                                                                          |
-| `qa ui`                                             | 启动 QA 调试器 UI 和本地 QA 总线（别名：`pnpm qa:lab:ui`）。                                                                                                                                                                                                    |
-| `qa docker-build-image`                             | 构建预烘焙的 QA Docker 镜像。                                                                                                                                                                                                                                     |
-| `qa docker-scaffold`                                | 为 QA 仪表盘 + gateway 线路生成 docker-compose 脚手架。                                                                                                                                                                                                    |
-| `qa up`                                             | 构建 QA 站点，启动基于 Docker 的堆栈，并打印 URL（别名：`pnpm qa:lab:up`；`:fast` 变体会附加 `--use-prebuilt-image --bind-ui-dist --skip-ui-build`）。                                                                                                  |
-| `qa aimock`                                         | 仅启动 AIMock provider 服务器。                                                                                                                                                                                                                                  |
-| `qa mock-openai`                                    | 仅启动具有关联场景感知的 `mock-openai` provider 服务器。                                                                                                                                                                                                            |
-| `qa credentials doctor` / `add` / `list` / `remove` | 管理共享的 Convex 凭据池。                                                                                                                                                                                                                               |
-| `qa matrix`                                         | 针对一次性 Tuwunel homeserver 的实时传输线路。见 [Matrix QA](/concepts/qa-matrix)。                                                                                                                                                                      |
-| `qa telegram`                                       | 针对真实私有 Telegram 群组的实时传输线路。                                                                                                                                                                                                              |
-| `qa discord`                                        | 针对真实私有 Discord guild 频道的实时传输线路。                                                                                                                                                                                                       |
-| `qa slack`                                          | 针对真实私有 Slack 频道的实时传输线路。                                                                                                                                                                                                               |
-| `qa mantis`                                         | 用于 live transport bug 的前后验证运行器，带有 Discord 状态反应证据、Crabbox 桌面/浏览器 smoke，以及 Slack-in-VNC smoke。见 [Mantis](/concepts/mantis) 和 [Mantis Slack Desktop Runbook](/concepts/mantis-slack-desktop-runbook)。 |
+| 命令                                                | 用途                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `qa run`                                            | 捆绑式 QA 自检；会写出一份 Markdown 报告。                                                                                                                                                                                                                             |
+| `qa suite`                                          | 在 QA gateway 线路上运行仓库支持的场景。别名：`pnpm openclaw qa suite --runner multipass`，用于可丢弃的 Linux VM。                                                                                                                                                 |
+| `qa coverage`                                       | 打印 Markdown 场景覆盖清单（`--json` 可输出机器可读格式）。                                                                                                                                                                                                           |
+| `qa parity-report`                                  | 比较两个 `qa-suite-summary.json` 文件并写出 agentic parity 报告；或使用 `--runtime-axis --token-efficiency` 从一个 runtime-pair summary 中生成 Codex-vs-Pi 运行时 parity 和 token 效率报告。                                                                       |
+| `qa character-eval`                                 | 在多个实时模型上运行字符 QA 场景，并生成裁决报告。见 [报告](#reporting)。                                                                                                                                                                                             |
+| `qa manual`                                         | 针对所选 provider/model 线路运行一次性提示。                                                                                                                                                                                                                           |
+| `qa ui`                                             | 启动 QA 调试器 UI 和本地 QA 总线（别名：`pnpm qa:lab:ui`）。                                                                                                                                                                                                           |
+| `qa docker-build-image`                             | 构建预烘焙的 QA Docker 镜像。                                                                                                                                                                                                                                          |
+| `qa docker-scaffold`                                | 为 QA 仪表盘 + gateway 线路写出 docker-compose 脚手架。                                                                                                                                                                                                               |
+| `qa up`                                             | 构建 QA 站点，启动 Docker 支持的堆栈，打印 URL（别名：`pnpm qa:lab:up`；`:fast` 变体会额外加入 `--use-prebuilt-image --bind-ui-dist --skip-ui-build`）。                                                                                                              |
+| `qa aimock`                                         | 仅启动 AIMock provider 服务器。                                                                                                                                                                                                                                        |
+| `qa mock-openai`                                    | 仅启动具备场景感知能力的 `mock-openai` provider 服务器。                                                                                                                                                                                                              |
+| `qa credentials doctor` / `add` / `list` / `remove` | 管理共享的 Convex 凭据池。                                                                                                                                                                                                                                              |
+| `qa matrix`                                         | 针对一次性 Tuwunel homeserver 的实时传输线路。见 [Matrix QA](/concepts/qa-matrix)。                                                                                                                                                                                    |
+| `qa telegram`                                       | 针对真实私有 Telegram 群组的实时传输线路。                                                                                                                                                                                                                             |
+| `qa discord`                                         | 针对真实私有 Discord guild 频道的实时传输线路。                                                                                                                                                                                                                        |
+| `qa slack`                                           | 针对真实私有 Slack 频道的实时传输线路。                                                                                                                                                                                                                               |
+| `qa mantis`                                         | 面向 live transport bug 的前后验证运行器，带有 Discord 状态反应证据、Crabbox 桌面/浏览器 smoke，以及 Slack-in-VNC smoke。见 [Mantis](/concepts/mantis) 和 [Mantis Slack Desktop Runbook](/concepts/mantis-slack-desktop-runbook)。 |
 
 ## 操作流程
 
@@ -78,24 +78,58 @@ pnpm qa:lab:watch
 会在变更时重建该 bundle，而当 QA Lab
 资源哈希变化时，浏览器会自动重新加载。
 
-若要进行本地 OpenTelemetry 追踪冒烟测试，运行：
+用于本地 OpenTelemetry 信号 smoke，请运行：
 
 ```bash
 pnpm qa:otel:smoke
 ```
 
-该脚本会启动一个本地 OTLP/HTTP 追踪接收器，使用启用
-`diagnostics-otel` 插件的 `otel-trace-smoke` QA 场景，然后
-解码导出的 protobuf spans，并断言发布关键形态：
+该脚本会启动本地 OTLP/HTTP 接收器，使用启用了 `diagnostics-otel` 插件的 `otel-trace-smoke` QA
+场景运行，然后断言 trace、metrics 和 logs 已导出。它会解码导出的 protobuf trace span
+并检查发布关键的形状：
 必须存在 `openclaw.run`、`openclaw.harness.run`、`openclaw.model.call`、
-`openclaw.context.assembled` 和 `openclaw.message.delivery`；成功回合中的模型调用不得导出 `StreamAbandoned`；原始诊断 ID 和
-`openclaw.content.*` 属性必须不出现在 trace 中。它会将
-`otel-smoke-summary.json` 写在 QA suite 产物旁边。
+`openclaw.context.assembled` 和 `openclaw.message.delivery`；模型调用在成功回合中不得导出 `StreamAbandoned`；原始诊断 ID 和
+`openclaw.content.*` 属性必须不出现在 trace 中。原始 OTLP
+载荷中也不得包含提示 sentinel、响应 sentinel 或 QA 会话
+key。它会在 QA suite 产物旁写出 `otel-smoke-summary.json`。
 
-可观测性 QA 仅限源代码检出环境。npm tarball 会刻意省略
-QA Lab，因此包级 Docker 发布通道不会运行 `qa` 命令。变更诊断
-埋点时，请在已构建的源代码检出环境中使用
-`pnpm qa:otel:smoke`。
+用于带 collector 的 OpenTelemetry smoke，请运行：
+
+```bash
+pnpm qa:otel:collector-smoke
+```
+
+该线路会在同一个本地接收器前放置一个真实的 OpenTelemetry Collector Docker 容器。
+当你在更改 endpoint 接线、collector 兼容性或进程内接收器可能掩盖的 OTLP 导出行为时，请使用它。
+
+对于受保护的 Prometheus 抓取 smoke，请运行：
+
+```bash
+pnpm qa:prometheus:smoke
+```
+
+该别名会运行启用了 `diagnostics-prometheus` 的 `docker-prometheus-smoke` QA 场景，
+验证未认证抓取会被拒绝，然后检查认证后的抓取是否包含发布关键的 metric family，
+且不包含提示内容、响应内容、原始诊断标识符、auth token 或本地路径。
+
+要连续运行两个 observability smoke，请使用：
+
+```bash
+pnpm qa:observability:smoke
+```
+
+对于带 collector 的 OpenTelemetry 线路以及受保护的 Prometheus 抓取
+smoke，请使用：
+
+```bash
+pnpm qa:observability:collector-smoke
+```
+
+Observability QA 仅支持源码检出环境。npm tarball 会刻意省略
+QA Lab，因此 package Docker 发布线路不会运行 `qa` 命令。在更改
+diagnostics instrumentation 时，请从已构建的源码检出环境中使用
+`pnpm qa:otel:smoke`、`pnpm qa:prometheus:smoke` 或
+`pnpm qa:observability:smoke`。
 
 若要运行一个真实传输的 Matrix 冒烟通道，运行：
 
@@ -154,7 +188,27 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 `--hydrate-mode prehydrated`；该模式会跳过昂贵的 install/build 步骤，并在工作区未就绪时失败并关闭。使用
 `--gateway-setup` 时，Mantis 会在 VM 内让一个持久的 OpenClaw Slack gateway 运行在端口 `38973`；不使用它时，该命令会运行正常的 bot-to-bot Slack QA 线路，并在产物捕获后退出。
 
-操作员检查清单、GitHub workflow 触发命令、证据评论契约、hydrate-mode 决策表、耗时解释和失败处理步骤见 [Mantis Slack Desktop Runbook](/concepts/mantis-slack-desktop-runbook)。
+要通过桌面证据证明原生 Slack 审批 UI，请运行 Mantis 审批
+checkpoint 模式：
+
+```bash
+pnpm openclaw qa mantis slack-desktop-smoke \
+  --approval-checkpoints \
+  --credential-source convex \
+  --credential-role maintainer
+```
+
+该模式与 `--gateway-setup` 互斥。它会运行 Slack
+审批场景，拒绝非审批场景 id，在每个待处理和
+已解决的审批状态处等待，将观察到的 Slack API 消息渲染到
+`approval-checkpoints/<scenario>-pending.png` 和
+`approval-checkpoints/<scenario>-resolved.png`，然后在任何 checkpoint、
+消息证据、acknowledgement 或渲染截图缺失或为空时失败。
+冷启动的 CI 租约可能仍会在 `slack-desktop-smoke.png` 中显示 Slack 登录界面；审批 checkpoint 图像才是这条线路的视觉证明。
+
+操作员检查清单、GitHub workflow dispatch 命令、证据评论
+契约、hydrate-mode 决策表、耗时解读以及失败
+处理步骤都记录在 [Mantis Slack Desktop Runbook](/concepts/mantis-slack-desktop-runbook) 中。
 
 对于 agent/CV 风格的桌面任务，运行：
 
@@ -162,7 +216,7 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 pnpm openclaw qa mantis visual-task \
   --browser-url https://example.net \
   --expect-text "Example Domain" \
-  --vision-model openai/gpt-5.4
+  --vision-model openai/gpt-5.5
 ```
 
 `visual-task` 会租用或重用一台 Crabbox 桌面/浏览器机器，启动
@@ -206,15 +260,23 @@ Telegram 以及未来的实时传输共享一份明确的传输契约
 pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline
 ```
 
-这会启动一个全新的 Multipass guest，安装依赖，在 guest 内部构建 OpenClaw，
-运行 `qa suite`，然后将正常的 QA 报告和
-摘要复制回宿主机上的 `.artifacts/qa-e2e/...`。
-它沿用与宿主机上的 `qa suite` 相同的场景选择行为。
-默认情况下，宿主机和 Multipass 的 suite 运行会并行执行多个所选场景，并使用隔离的 gateway worker。`qa-channel` 默认并发度为
-4，并受所选场景数量上限约束。使用 `--concurrency <count>` 可调整 worker 数量，或使用 `--concurrency 1` 进行串行执行。
-当任一场景失败时，该命令以非零状态退出。若你希望保留产物但不希望失败导致退出码为失败，请使用 `--allow-failures`。
-实时运行会转发对 guest 实用的受支持 QA 身份验证输入：基于环境变量的 provider 密钥、QA 实时 provider 配置路径，以及
-存在时的 `CODEX_HOME`。请将 `--output-dir` 保持在仓库根目录下，这样 guest 才能通过挂载的工作区写回。
+这会启动一个全新的 Multipass guest，安装依赖，在 guest 内构建 OpenClaw，
+运行 `qa suite`，然后把正常的 QA 报告和摘要复制回主机上的
+`.artifacts/qa-e2e/...`。
+它会复用与主机上 `qa suite` 相同的场景选择行为。
+主机和 Multipass 的 suite 运行默认会以并行方式执行多个已选场景，
+并使用隔离的 gateway worker。`qa-channel` 默认并发度为 4，且受所选场景数量限制。
+使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 进行串行执行。
+使用 `--pack personal-agent` 运行个人助理基准测试包。
+该包选择器与重复的 `--scenario` 标志是可叠加的：显式场景先运行，
+然后按包顺序运行包内场景，并去重。
+当自定义 QA 运行器已经提供了 OpenTelemetry collector 设置，并希望将 OpenTelemetry
+和 Prometheus 诊断 smoke 场景一起选中时，使用 `--pack observability`。
+当任一场景失败时，该命令会以非零状态退出。若你想要产物但不想要失败退出码，请使用
+`--allow-failures`。
+实时运行会转发适用于 guest 的受支持 QA 认证输入：
+基于环境变量的 provider key、QA live provider 配置路径，以及存在时的 `CODEX_HOME`。
+请将 `--output-dir` 保持在仓库根目录下，这样 guest 才能通过挂载的工作区写回数据。
 
 ## Telegram、Discord 和 Slack QA 参考
 
@@ -343,8 +405,8 @@ pnpm openclaw qa discord \
 pnpm openclaw qa discord \
   --scenario discord-status-reactions-tool-only \
   --provider-mode live-frontier \
-  --model openai/gpt-5.4 \
-  --alt-model openai/gpt-5.4 \
+  --model openai/gpt-5.5 \
+  --alt-model openai/gpt-5.5 \
   --fast
 ```
 
@@ -372,9 +434,11 @@ pnpm openclaw qa slack
 
 可选：
 
-- `OPENCLAW_QA_SLACK_CAPTURE_CONTENT=1` 会在观测消息产物中保留消息正文。
+- `OPENCLAW_QA_SLACK_CAPTURE_CONTENT=1` 会将消息正文保留在观测消息产物中。
+- `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` 会为 Mantis 启用视觉审批检查点。运行器会写入 `<scenario>.pending.json` 和 `<scenario>.resolved.json`，然后等待匹配的 `.ack.json` 文件。
+- `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_TIMEOUT_MS` 会覆盖检查点确认超时。默认值是 `120000`。
 
-场景（`extensions/qa-lab/src/live-transports/slack/slack-live.runtime.ts:39`）：
+场景（`extensions/qa-lab/src/live-transports/slack/slack-live.runtime.ts`）：
 
 - `slack-canary`
 - `slack-mention-gating`
@@ -383,12 +447,17 @@ pnpm openclaw qa slack
 - `slack-restart-resume`
 - `slack-thread-follow-up`
 - `slack-thread-isolation`
+- `slack-approval-exec-native` - 可选启用的原生 Slack exec 审批场景。它会通过 gateway 请求一次 exec 审批，验证 Slack 消息具有原生审批按钮，完成审批，并验证已解析的 Slack 更新。
+- `slack-approval-plugin-native` - 可选启用的原生 Slack plugin 审批场景。它会同时启用 exec 和 plugin 审批转发，使 plugin 事件不会被 exec 审批路由抑制，然后验证相同的待处理/已解析原生 Slack UI 路径。
 
 输出产物：
 
 - `slack-qa-report.md`
 - `slack-qa-summary.json`
 - `slack-qa-observed-messages.json` - 除非设置 `OPENCLAW_QA_SLACK_CAPTURE_CONTENT=1`，否则正文会被脱敏。
+- `approval-checkpoints/` - 仅在 Mantis 设置了
+  `OPENCLAW_QA_SLACK_APPROVAL_CHECKPOINT_DIR` 时存在；包含 checkpoint JSON、
+  acknowledgement JSON，以及 pending/resolved 截图。
 
 #### 设置 Slack 工作区
 
@@ -567,21 +636,19 @@ Telegram、Discord、Slack 和 WhatsApp 通道可以从共享的 Convex 池中�
 broker 在 `admin/add` 上验证的负载形状：
 
 - Telegram (`kind: "telegram"`): `{ groupId: string, driverToken: string, sutToken: string }` - `groupId` 必须是数字聊天 id 字符串。
-- Telegram 真人用户 (`kind: "telegram-user"`): `{ groupId: string, sutToken: string, testerUserId: string, testerUsername: string, telegramApiId: string, telegramApiHash: string, tdlibDatabaseEncryptionKey: string, tdlibArchiveBase64: string, tdlibArchiveSha256: string, desktopTdataArchiveBase64: string, desktopTdataArchiveSha256: string }` - 一个独占的 burner-account 租约，同时供 TDLib CLI driver 和 Telegram Desktop 视觉证据使用。
+- Telegram real user (`kind: "telegram-user"`): `{ groupId: string, sutToken: string, testerUserId: string, testerUsername: string, telegramApiId: string, telegramApiHash: string, tdlibDatabaseEncryptionKey: string, tdlibArchiveBase64: string, tdlibArchiveSha256: string, desktopTdataArchiveBase64: string, desktopTdataArchiveSha256: string }` - 仅用于 Mantis Telegram Desktop proof。通用 QA Lab 运行线不得申请此种类。
 - Discord (`kind: "discord"`): `{ guildId: string, channelId: string, driverBotToken: string, sutBotToken: string, sutApplicationId: string }`。
 - WhatsApp (`kind: "whatsapp"`): `{ driverPhoneE164: string, sutPhoneE164: string, driverAuthArchiveBase64: string, sutAuthArchiveBase64: string, groupJid?: string }` - 电话号码必须是不同的 E.164 字符串。
 
-对于 Telegram 的视觉真人用户证明，优先使用一个保留中的 Crabbox 会话：
+Mantis Telegram Desktop proof 工作流会为 TDLib CLI driver 和 Telegram Desktop witness 持有一个独占的 Convex
+`telegram-user` 租约，然后在发布 proof 后释放它。
 
-```bash
-pnpm qa:telegram-user:crabbox -- start --tdlib-url http://artifacts.openclaw.ai/tdlib-v1.8.0-linux-x64.tgz --output-dir .artifacts/qa-e2e/telegram-user-crabbox/pr-review
-pnpm qa:telegram-user:crabbox -- send --session .artifacts/qa-e2e/telegram-user-crabbox/pr-review/session.json --text /status
-pnpm qa:telegram-user:crabbox -- finish --session .artifacts/qa-e2e/telegram-user-crabbox/pr-review/session.json
-```
-
-`start` 会为 TDLib CLI driver 和 Telegram Desktop 证据各自占用一个独占的 Convex `telegram-user` 租约，开始桌面录制，并保持 Crabbox 运行，以便执行任意由 agent 驱动的复现步骤。agent 可以使用 `send`、`run`、`screenshot` 和 `status`，直到满意为止，然后 `finish` 会在释放凭证之前收集截图、视频、运动裁剪后的视频/GIF、TDLib 探针输出以及日志。`publish --session <file> --pr <number>` 默认只评论 motion GIF；`--full-artifacts` 是日志和 JSON 输出的显式启用选项。默认的 `probe` 命令仍然是快速 `/status` 烟测检查的一条命令式简写。
-
-当 PR 需要确定性的视觉 diff 时，请使用 `--mock-response-file <path>`：同一个模拟模型回复可以在 `main` 和 PR head 上运行，而 Telegram 格式化或投递层在变化。截图默认值针对 PR 评论进行了调整：标准 Crabbox 类别、24fps 桌面录制、24fps motion GIF，以及 1920px 预览宽度。前后对比评论应发布一个干净的 bundle，其中只包含预期的 GIF。
+当某个 PR 需要确定性的视觉 diff 时，Mantis 可以在 Telegram formatter 或 delivery
+层发生变化的同时，对 `main` 和 PR head 使用相同的 mock model reply。
+捕获默认值针对 PR 评论进行了调优：标准 Crabbox
+class、24fps 桌面录制、24fps motion GIF，以及 1920px 预览宽度。
+前后对比评论应发布一个仅包含
+预期 GIF 的干净 bundle。
 
 Slack 通道也可以使用该池。Slack payload 形状检查目前位于 Slack QA runner 内，而不是 broker 中；请使用 `{ channelId: string, driverBotToken: string, sutBotToken: string, sutAppToken: string }`，并提供类似 `Cxxxxxxxxxx` 的 Slack channel id。有关应用和作用域的配置，请参见[设置 Slack 工作区](#设置-slack-工作区)。
 
@@ -716,7 +783,10 @@ Runner 插件负责传输契约：
 - 哪些仍然被阻塞
 - 值得补充哪些后续场景
 
-如需了解可用场景清单——在评估后续工作量或接入新传输时很有用——请运行 `pnpm openclaw qa coverage`（加上 `--json` 可获得机器可读输出）。
+如需查看可用场景清单——在评估后续工作量或接入新传输时很有用——请运行 `pnpm openclaw qa coverage`（加上 `--json` 可获得机器可读输出）。
+当需要为某个已触及的行为或文件路径选择有针对性的证明时，请运行 `pnpm openclaw qa coverage --match <query>`。
+匹配报告会搜索场景元数据、文档引用、代码引用、覆盖 ID、插件和 provider 需求，然后打印匹配的 `qa suite --scenario ...` 目标。
+请将其视为发现辅助工具，而不是门禁替代；选中的场景仍然需要正确的 provider 模式、实时传输、Multipass、Testbox 或 release lane 来验证目标行为。
 
 如需进行角色和风格检查，请在多个在线模型  
 引用上运行同一个场景，并写出一份经过评判的 Markdown 报告：
@@ -726,47 +796,30 @@ pnpm openclaw qa character-eval \
   --model openai/gpt-5.5,thinking=medium,fast \
   --model openai/gpt-5.2,thinking=xhigh \
   --model openai/gpt-5,thinking=xhigh \
-  --model anthropic/claude-opus-4-6,thinking=high \
+  --model anthropic/claude-opus-4-7,thinking=high \
   --model anthropic/claude-sonnet-4-6,thinking=high \
   --model zai/glm-5.1,thinking=high \
   --model moonshot/kimi-k2.5,thinking=high \
   --model google/gemini-3.1-pro-preview,thinking=high \
   --judge-model openai/gpt-5.5,thinking=xhigh,fast \
-  --judge-model anthropic/claude-opus-4-6,thinking=high \
+  --judge-model anthropic/claude-opus-4-7,thinking=high \
   --blind-judge-models \
   --concurrency 16 \
   --judge-concurrency 16
 ```
 
-该命令运行本地 QA 网关子进程，而不是 Docker。角色评估  
-场景应通过 `SOUL.md` 设定 persona，然后运行普通用户回合，  
-例如聊天、工作区帮助和小文件任务。候选模型不应被告知自己正在接受评估。  
-该命令会保留每份完整对话记录，记录基本运行统计，然后在支持的情况下，  
-以 fast 模式并使用 `xhigh` 推理要求裁判模型按自然度、氛围和幽默感对运行结果进行排序。  
-在比较不同提供方时使用 `--blind-judge-models`：裁判提示仍然会获得每份对话和运行状态，  
-但候选引用会被替换为中性标签，例如 `candidate-01`；报告会在解析后将排序映射回真实引用。  
-候选运行默认使用 `high` thinking，而 GPT-5.5 使用 `medium`，支持该能力的较旧 OpenAI 评估引用使用 `xhigh`。  
-可通过 `--model provider/model,thinking=<level>` 为单个候选项内联覆盖。`--thinking <level>` 仍然会设置全局回退值，  
-而较旧的 `--model-thinking <provider/model=level>` 形式保留用于兼容性。  
-OpenAI 候选引用默认使用 fast 模式，因此在提供方支持时会启用优先处理。  
-当单个候选或裁判需要覆盖时，可在内联中添加 `,fast`、`,no-fast` 或 `,fast=false`。  
-只有在想要对所有候选模型强制开启 fast 模式时才使用 `--fast`。  
-报告中会记录候选和裁判的耗时以便进行基准分析，但裁判提示会明确说明不要按速度排序。  
-候选和裁判模型运行默认并发度都为 16。当提供方限制或本地网关压力使运行过于嘈杂时，  
-可降低 `--concurrency` 或 `--judge-concurrency`。  
-当未传入候选 `--model` 时，角色评估默认使用  
-`openai/gpt-5.5`、`openai/gpt-5.2`、`openai/gpt-5`、`anthropic/claude-opus-4-6`、  
-`anthropic/claude-sonnet-4-6`、`zai/glm-5.1`、  
-`moonshot/kimi-k2.5` 和  
-`google/gemini-3.1-pro-preview`。  
-当未传入 `--judge-model` 时，裁判默认使用  
-`openai/gpt-5.5,thinking=xhigh,fast` 和  
-`anthropic/claude-opus-4-6,thinking=high`。
+该命令运行的是本地 QA gateway 子进程，而不是 Docker。角色评估场景应通过 `SOUL.md` 设置 persona，然后执行普通用户轮次，例如聊天、工作区帮助和小文件任务。候选模型不应被告知自己正在接受评估。该命令会保留每段完整对话，记录基本运行统计，然后请评审模型在支持的情况下以 `xhigh` 推理、快速模式，对这些运行按自然度、氛围和幽默感进行排序。
+在比较 provider 时使用 `--blind-judge-models`：评审提示仍会拿到所有对话和运行状态，但候选引用会替换为诸如 `candidate-01` 之类的中性标签；报告在解析后会将排名映射回真实引用。
+候选运行默认使用 `high` thinking；对于支持的 GPT-5.5 则默认为 `medium`，对于较旧的、支持该模式的 OpenAI 评估引用则默认为 `xhigh`。如需覆盖某个候选，可在命令行内联使用 `--model provider/model,thinking=<level>`。`--thinking <level>` 仍然会设置全局回退值，而旧的 `--model-thinking <provider/model=level>` 形式则保留用于兼容。
+OpenAI 候选引用默认启用快速模式，以便在 provider 支持时使用优先处理。若单个候选或评审需要覆盖，可在内联时添加 `,fast`、`,no-fast` 或 `,fast=false`。只有当你希望对每个候选模型都强制启用快速模式时，才传入 `--fast`。候选和评审的耗时都会记录在报告中，便于基准分析，但评审提示会明确说明不要按速度排序。
+候选模型和评审模型的并发默认都是 16。当 provider 限制或本地 gateway 压力使运行过于嘈杂时，可降低 `--concurrency` 或 `--judge-concurrency`。
+当没有传入候选 `--model` 时，角色评估默认使用 `openai/gpt-5.5`、`openai/gpt-5.2`、`openai/gpt-5`、`anthropic/claude-opus-4-7`、`anthropic/claude-sonnet-4-6`、`zai/glm-5.1`、`moonshot/kimi-k2.5` 和 `google/gemini-3.1-pro-preview`。
+当没有传入 `--judge-model` 时，评审默认使用 `openai/gpt-5.5,thinking=xhigh,fast` 和 `anthropic/claude-opus-4-7,thinking=high`。
 
 ## 相关文档
 
 - [Matrix QA](/concepts/qa-matrix)
-- [Personal agent benchmark pack](/concepts/personal-agent-benchmark-pack)
+- [个人 agent 基准包](/concepts/personal-agent-benchmark-pack)
 - [QA Channel](/channels/qa-channel)
-- [Testing](/help/testing)
-- [Dashboard](/web/dashboard)
+- [测试](/help/testing)
+- [仪表盘](/web/dashboard)

@@ -93,6 +93,24 @@ YAML frontmatter 支持以下字段：
 | `metadata.openclaw.requires.bins`   | 否   | PATH 上必需的二进制文件                                 |
 | `metadata.openclaw.requires.config` | 否   | 必需的配置键                                           |
 
+## 高级功能
+
+一旦基础技能可用，这些字段有助于使其更可靠且可移植：
+
+- **条件激活** — 使用 `requires.bins`、`requires.env` 或
+  `requires.config`，仅在所需依赖可用时加载该技能。参见 [Skills reference: gating](/tools/skills#gating)。
+- **环境和 API 密钥绑定** — 使用 `skills.entries.<name>.env` 和
+  `skills.entries.<name>.apiKey` 为一次技能运行注入宿主侧环境。参见 [Skills reference: config wiring](/tools/skills#config-wiring)。
+- **调用控制** — 设置 `user-invocable: false` 以隐藏斜杠命令，
+  或设置 `disable-model-invocation: true` 以使命令式技能不进入模型提示词。
+  参见 [Skills reference: frontmatter](/tools/skills#frontmatter)。
+- **直接命令分发** — 当斜杠命令应直接调用工具而不是通过模型路由时，
+  使用 `command-dispatch: tool` 和 `command-tool`。
+- **可移植路径** — 在 `SKILL.md` 中引用脚本或技能目录内资产时使用 `{baseDir}`。
+- **发布** — 在准备发布技能时使用 ClawHub 技能。
+  它记录了当前的 `clawhub publish` 命令形式和所需的
+  元数据。
+
 ## 最佳实践
 
 - **保持简洁** — 指导模型要做什么，而不是如何成为一个 AI
@@ -108,7 +126,7 @@ YAML frontmatter 支持以下字段：
 | `\<workspace\>/.agents/skills/` | 高     | 每个工作区代理        |
 | `~/.agents/skills/`             | 中     | 共享代理配置文件      |
 | `~/.openclaw/skills/`           | 中     | 共享（所有代理）      |
-| Bundled (shipped with OpenClaw) | 低     | 全局                 |
+| Bundled (随 OpenClaw 一起提供) | 低     | 全局                 |
 | `skills.load.extraDirs`         | 最低   | 自定义共享文件夹      |
 
 ## 相关内容

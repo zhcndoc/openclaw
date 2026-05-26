@@ -73,28 +73,19 @@ export GROQ_API_KEY=gsk_...
 
 ## 内置目录
 
-OpenClaw 提供了一个由清单驱动的 Groq 目录，其中包含推理和非推理条目。运行 `openclaw models list --provider groq` 可查看你已安装版本对应的内置行，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
+OpenClaw 提供了一个由清单驱动的 Groq 目录，其中包含推理和非推理条目。运行 `openclaw models list --provider groq` 可查看你已安装版本对应的内置条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
 
-| 模型引用                                              | 名称                          | 推理   | 输入         | 上下文  |
-| ---------------------------------------------------- | ----------------------------- | ------ | ------------ | ------- |
-| `groq/llama-3.3-70b-versatile`                       | Llama 3.3 70B Versatile       | 否     | text         | 131,072 |
-| `groq/llama-3.1-8b-instant`                          | Llama 3.1 8B Instant          | 否     | text         | 131,072 |
-| `groq/meta-llama/llama-4-maverick-17b-128e-instruct` | Llama 4 Maverick 17B          | 否     | text + image | 131,072 |
-| `groq/meta-llama/llama-4-scout-17b-16e-instruct`     | Llama 4 Scout 17B             | 否     | text + image | 131,072 |
-| `groq/llama3-70b-8192`                               | Llama 3 70B                   | 否     | text         | 8,192   |
-| `groq/llama3-8b-8192`                                | Llama 3 8B                    | 否     | text         | 8,192   |
-| `groq/gemma2-9b-it`                                  | Gemma 2 9B                    | 否     | text         | 8,192   |
-| `groq/mistral-saba-24b`                              | Mistral Saba 24B              | 否     | text         | 32,768  |
-| `groq/moonshotai/kimi-k2-instruct`                   | Kimi K2 Instruct              | 否     | text         | 131,072 |
-| `groq/moonshotai/kimi-k2-instruct-0905`              | Kimi K2 Instruct 0905         | 否     | text         | 262,144 |
-| `groq/openai/gpt-oss-120b`                           | GPT OSS 120B                  | 是     | text         | 131,072 |
-| `groq/openai/gpt-oss-20b`                            | GPT OSS 20B                   | 是     | text         | 131,072 |
-| `groq/openai/gpt-oss-safeguard-20b`                  | Safety GPT OSS 20B            | 是     | text         | 131,072 |
-| `groq/qwen-qwq-32b`                                  | Qwen QwQ 32B                  | 是     | text         | 131,072 |
-| `groq/qwen/qwen3-32b`                                | Qwen3 32B                     | 是     | text         | 131,072 |
-| `groq/deepseek-r1-distill-llama-70b`                 | DeepSeek R1 Distill Llama 70B | 是     | text         | 131,072 |
-| `groq/groq/compound`                                 | Compound                      | 是     | text         | 131,072 |
-| `groq/groq/compound-mini`                            | Compound Mini                 | 是     | text         | 131,072 |
+| 模型引用                                        | 名称                    | 推理      | 输入         | 上下文  |
+| ------------------------------------------------ | ----------------------- | --------- | ------------ | ------- |
+| `groq/llama-3.3-70b-versatile`                   | Llama 3.3 70B Versatile | 否        | 文本         | 131,072 |
+| `groq/llama-3.1-8b-instant`                      | Llama 3.1 8B Instant    | 否        | 文本         | 131,072 |
+| `groq/meta-llama/llama-4-scout-17b-16e-instruct` | Llama 4 Scout 17B       | 否        | 文本 + 图像 | 131,072 |
+| `groq/openai/gpt-oss-120b`                       | GPT OSS 120B            | 是        | 文本         | 131,072 |
+| `groq/openai/gpt-oss-20b`                        | GPT OSS 20B             | 是        | 文本         | 131,072 |
+| `groq/openai/gpt-oss-safeguard-20b`              | Safety GPT OSS 20B      | 是        | 文本         | 131,072 |
+| `groq/qwen/qwen3-32b`                            | Qwen3 32B               | 是        | 文本         | 131,072 |
+| `groq/groq/compound`                             | Compound                | 是        | 文本         | 131,072 |
+| `groq/groq/compound-mini`                        | Compound Mini           | 是        | 文本         | 131,072 |
 
 <Tip>
   目录会随着每个 OpenClaw 版本演进。`openclaw models list --provider groq` 会显示你已安装版本已知的条目；请与 [console.groq.com/docs/models](https://console.groq.com/docs/models) 交叉核对新添加或已弃用的模型。
@@ -108,7 +99,7 @@ OpenClaw 会将其共享的 `/think` 等级映射到 Groq 各模型特定的 `re
 - 对于 Groq GPT OSS 推理模型（`openai/gpt-oss-*`），OpenClaw 会根据 `/think` 等级发送 `low`、`medium` 或 `high`。禁用思考时会省略 `reasoning_effort`，因为这些模型不支持禁用值。
 - DeepSeek R1 Distill、Qwen QwQ 和 Compound 使用 Groq 的原生推理接口；`/think` 只控制可见性，但模型始终会进行推理。
 
-有关共享的 `/think` 等级以及 OpenClaw 如何针对每个提供方进行转换，请参阅 [Thinking modes](/tools/thinking)。
+有关共享的 `/think` 等级以及 OpenClaw 如何针对每个提供方进行转换，请参阅 [思考模式](/tools/thinking)。
 
 ## 音频转录
 

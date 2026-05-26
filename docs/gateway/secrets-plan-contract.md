@@ -38,7 +38,42 @@ title: "Secrets apply 计划契约"
 }
 ```
 
-## 支持的目标范围
+## Provider upserts and deletes
+
+计划还可以包含另外两个可选的顶层字段，它们会在逐个目标写入的同时修改 `secrets.providers` 映射：
+
+- `providerUpserts` — 一个以 provider 别名为键的对象。每个值都是一个 provider 定义（与 `openclaw.json` 中 `secrets.providers.<alias>` 下接受的形状相同，例如 `exec` 或 `file` provider）。
+- `providerDeletes` — 一个要移除的 provider 别名数组。
+
+`providerUpserts` 会先于 `targets` 执行，因此 `target.ref.provider` 可以引用同一计划在 `providerUpserts` 中引入的 provider 别名。没有这一点时，引用了 `openclaw.json` 中尚未配置的别名的计划会失败，并报错 `provider "<alias>" is not configured`。
+
+```json5
+{
+  version: 1,
+  protocolVersion: 1,
+  providerUpserts: {
+    onepassword_anthropic: {
+      source: "exec",
+      command: "/usr/bin/op",
+      args: ["read", "op://Vault/Anthropic/credential"],
+    },
+  },
+  providerDeletes: ["legacy_unused_alias"],
+  targets: [
+    {
+      type: "models.providers.apiKey",
+      path: "models.providers.anthropic.apiKey",
+      pathSegments: ["models", "providers", "anthropic", "apiKey"],
+      providerId: "anthropic",
+      ref: { source: "exec", provider: "onepassword_anthropic", id: "credential" },
+    },
+  ],
+}
+```
+
+通过 `providerUpserts` 引入的 Exec provider 仍然受 [Exec provider consent behavior](#exec-provider-consent-behavior) 中的 exec 同意规则约束：包含 exec provider 的计划在写入模式下需要 `--allow-exec`。
+
+## Supported target scope
 
 计划目标在以下位置的受支持凭据路径上被接受：
 

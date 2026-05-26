@@ -145,7 +145,9 @@ EOF
 source ~/.bashrc
 ```
 
-**降低内存占用** -- 对于无头环境，释放 GPU 内存并禁用未使用的服务：
+`OPENCLAW_NO_RESPAWN=1` 会使常规 Gateway 重启在进程内完成，从而避免额外的进程切换，并让小型主机上的 PID 跟踪更简单。
+
+**降低内存使用** -- 对于无头设置，释放 GPU 内存并禁用未使用的服务：
 
 ```bash
 echo 'gpu_mem=16' | sudo tee -a /boot/config.txt

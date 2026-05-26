@@ -47,7 +47,14 @@ openclaw onboard --mode remote --remote-url wss://gateway-host:18789
 `--modern` 会启动 Crestodian 的对话式引导预览。不使用
 `--modern` 时，`openclaw onboard` 保持经典引导流程。
 
-对于 loopback、本地私有 IP 字面量、`.local`，以及 Tailnet `*.ts.net` gateway URL，可以接受明文 `ws://`。对于其他受信任的私有 DNS 名称，请在引导进程环境中设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
+在全新安装中，如果当前配置文件缺失或没有已编写
+的设置（为空或仅包含元数据），直接执行 `openclaw` 也会启动经典
+引导流程。一旦配置文件包含了已编写的设置，直接执行 `openclaw`
+就会改为打开 Crestodian。
+
+纯文本 `ws://` 适用于 loopback、私有 IP 字面量、`.local`，以及
+Tailnet `*.ts.net` gateway URL。对于其他受信任的私有 DNS 名称，请在
+引导进程环境中设置 `OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1`。
 
 ## 语言环境
 
@@ -215,8 +222,8 @@ openclaw onboard --non-interactive \
   <Accordion title="Web 搜索后续步骤">
     某些 web-search 提供方会触发特定于提供方的后续提示：
 
-    - **Grok** 可以提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY` 和一个 `x_search` 模型选择。
-    - **Kimi** 会询问 Moonshot API 区域（`api.moonshot.ai` vs `api.moonshot.cn`）以及默认的 Kimi web-search 模型。
+    - **Grok** 可以提供可选的 `x_search` 设置，使用相同的 xAI OAuth profile 或 API key，以及一个 `x_search` 模型选择。
+    - **Kimi** 可以询问 Moonshot API 区域（`api.moonshot.ai` 与 `api.moonshot.cn` 之间的选择）以及默认的 Kimi web-search 模型。
 
   </Accordion>
   <Accordion title="其他行为">

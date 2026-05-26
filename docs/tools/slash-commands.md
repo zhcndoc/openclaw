@@ -93,7 +93,7 @@ sidebarTitle: "斜杠命令"
   启用 `/restart` 以及 gateway 重启工具操作。
 </ParamField>
 <ParamField path="commands.ownerAllowFrom" type="string[]">
-  为仅 owner 的命令/工具界面设置显式的 owner 允许列表。这是可以批准危险操作并运行 `/diagnostics`、`/export-trajectory` 和 `/config` 等命令的人类操作员账号。它与 `commands.allowFrom` 以及 DM 配对访问是分开的。
+  为仅 owner 的命令界面和 owner 门控的频道操作设置显式的 owner 允许列表。这是可以批准危险操作并运行诸如 `/diagnostics`、`/export-trajectory` 和 `/config` 等命令的人类操作员账号。它独立于 `commands.allowFrom` 和 DM 配对访问。
 </ParamField>
 <ParamField path="channels.<channel>.commands.enforceOwnerForCommands" type="boolean" default="false">
   按频道：使仅 owner 的命令在该界面上运行时需要**owner 身份**。当为 `true` 时，发送者必须要么匹配一个已解析的 owner 候选项（例如 `commands.ownerAllowFrom` 中的一项或提供方原生 owner 元数据），要么在内部消息频道上拥有内部 `operator.admin` 范围。频道 `allowFrom` 中的通配符条目，或空/未解析的 owner 候选列表，都**不**足够——仅 owner 的命令会在该频道上失败并关闭。若你希望仅 owner 的命令只由 `ownerAllowFrom` 和标准命令允许列表进行门控，请保持关闭。
@@ -124,14 +124,14 @@ sidebarTitle: "斜杠命令"
 
 <AccordionGroup>
   <Accordion title="Sessions and runs">
-    - `/new [model]` 会启动一个新会话；`/reset` 是重置别名。
-    - 控制 UI 会拦截输入的 `/new` 来创建并切换到一个新的 dashboard 会话，除非配置了 `session.dmScope: "main"` 且当前父会话是代理的主会话；在这种情况下，`/new` 会就地重置主会话。输入的 `/reset` 仍然会运行 Gateway 的就地重置。
-    - `/reset soft [message]` 会保留当前转录，删除复用的 CLI 后端会话 id，并就地重新运行启动/系统提示词加载。
-    - `/compact [instructions]` 会压缩会话上下文。见 [Compaction](/concepts/compaction)。
-    - `/stop` 会中止当前运行。
+    - `/new [model]` 归档当前会话并开始一个新的会话；`/reset` 会就地清空当前会话。它们不是别名。
+    - 控制 UI 会拦截输入的 `/new`，以创建并切换到一个新的仪表板会话，除非配置了 `session.dmScope: "main"` 且当前父会话是代理的主会话；在这种情况下，`/new` 会就地重置主会话。输入的 `/reset` 仍会执行 Gateway 的就地重置。
+    - `/reset soft [message]` 保留当前转录，删除重复使用的 CLI 后端会话 id，并就地重新运行启动/系统提示词加载。
+    - `/compact [instructions]` 压缩会话上下文。见 [Compaction](/concepts/compaction)。
+    - `/stop` 中止当前运行。
     - `/session idle <duration|off>` 和 `/session max-age <duration|off>` 管理线程绑定过期。
     - `/export-session [path]` 将当前会话导出为 HTML。别名：`/export`。
-    - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出一个 JSONL [轨迹捆绑包](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
+    - `/export-trajectory [path]` 会请求 exec 批准，然后为当前会话导出 JSONL [trajectory bundle](/tools/trajectory)。当你需要某个 OpenClaw 会话的提示词、工具和转录时间线时使用它。在群聊中，批准提示和导出结果会私下发送给 owner。别名：`/trajectory`。
 
   </Accordion>
   <Accordion title="Model and run controls">
@@ -161,21 +161,19 @@ sidebarTitle: "斜杠命令"
     - `/usage off|tokens|full|cost` 控制每条响应的使用量页脚或打印本地成本摘要。
 
   </Accordion>
-  <Accordion title="技能、允许列表、审批">
+  <Accordion title="Skills, allowlists, approvals">
     - `/skill <name> [input]` 按名称运行一个技能。
     - `/allowlist [list|add|remove] ...` 管理允许列表条目。仅文本。
-    - `/approve <id> <decision>` 解决 exec 批准提示。
+    - `/approve <id> <decision>` 解决 exec 或插件批准提示。
     - `/btw <question>` 在不更改未来会话上下文的情况下提出一个旁支问题。别名：`/side`。见 [BTW](/tools/btw)。
 
   </Accordion>
-  <Accordion title="子代理和 ACP">
-    - `/subagents list|kill|log|info|send|steer|spawn` 管理当前会话的子代理运行。
+  <Accordion title="Subagents and ACP">
+    - `/subagents list|log|info` 检查当前会话的子代理运行。
     - `/acp spawn|cancel|steer|close|sessions|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|help` 管理 ACP 会话和运行时选项。
     - `/focus <target>` 将当前 Discord 线程或 Telegram 主题/对话绑定到一个会话目标。
     - `/unfocus` 移除当前绑定。
-    - `/agents` 列出当前会话中绑定到线程的代理。
-    - `/kill <id|#|all>` 中止一个或所有正在运行的子代理。
-    - `/subagents steer <id|#> <message>` 向正在运行的子代理发送引导。见 [Steer](/tools/steer)。
+    - `/agents` 列出当前会话中绑定线程的代理。
 
   </Accordion>
   <Accordion title="仅 owner 写入和管理">
@@ -244,15 +242,15 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
 
 <AccordionGroup>
   <Accordion title="Argument and parser notes">
-    - Commands accept an optional `:` between the command and args (e.g. `/think: high`, `/send: on`, `/help:`).
-    - `/new <model>` accepts a model alias, `provider/model`, or a provider name (fuzzy match); if no match, the text is treated as the message body.
-    - For full provider usage breakdown, use `openclaw status --usage`.
-    - `/allowlist add|remove` requires `commands.config=true` and honors channel `configWrites`.
-    - In multi-account channels, config-targeted `/allowlist --account <id>` and `/config set channels.<provider>.accounts.<id>...` also honor the target account's `configWrites`.
-    - `/usage` controls the per-response usage footer; `/usage cost` prints a local cost summary from OpenClaw session logs.
-    - `/restart` is enabled by default; set `commands.restart: false` to disable it.
-    - `/plugins install <spec>` accepts the same plugin specs as `openclaw plugins install`: local path/archive, npm package, `git:<repo>`, or `clawhub:<pkg>`. Managed Gateways restart automatically because plugin source modules changed.
-    - `/plugins enable|disable` updates plugin config and triggers Gateway plugin reload for new agent turns.
+    - 命令在命令与参数之间可选地接受一个 `:`（例如 `/think: high`、`/send: on`、`/help:`）。
+    - `/new <model>` 接受模型别名、`provider/model` 或提供方名称（模糊匹配）；如果没有匹配项，则将该文本视为消息正文。
+    - 如需完整的提供方用量明细，请使用 `openclaw status --usage`。
+    - `/allowlist add|remove` 需要 `commands.config=true`，并遵守频道 `configWrites`。
+    - 在多账号频道中，针对配置目标的 `/allowlist --account <id>` 和 `/config set channels.<provider>.accounts.<id>...` 也会遵守目标账号的 `configWrites`。
+    - `/usage` 控制每次响应的使用量页脚；`/usage cost` 会从 OpenClaw 会话日志中打印本地成本摘要。
+    - `/restart` 默认启用；设置 `commands.restart: false` 可将其禁用。
+    - `/plugins install <spec>` 接受与 `openclaw plugins install` 相同的插件规格：本地路径/归档、npm 包、`git:<repo>` 或 `clawhub:<pkg>`。托管 Gateway 会自动重启，因为插件源模块已更改。
+    - `/plugins enable|disable` 会更新插件配置，并触发 Gateway 插件重新加载，以便在新的代理回合生效。
 
   </Accordion>
   <Accordion title="频道特定行为">
@@ -261,19 +259,19 @@ Docking 只会改变活动会话路由。它不会创建频道账号、授予访
     - ACP 命令参考和运行时行为：[ACP agents](/tools/acp-agents)。
 
   </Accordion>
-  <Accordion title="详细 / trace / 快速 / reasoning 安全性">
-    - `/verbose` 主要用于调试和额外可见性；在正常使用中请保持**关闭**。
-    - `/trace` 比 `/verbose` 更窄：它只显示插件拥有的 trace/debug 行，并保持普通的详细工具聊天输出关闭。
+  <Accordion title="Verbose / trace / fast / reasoning safety">
+    - `/verbose` 旨在用于调试和增强可见性；在正常使用中请保持**关闭**。
+    - `/trace` 比 `/verbose` 更窄：它只显示插件拥有的 trace/debug 行，并保持正常的 verbose 工具输出关闭。
     - `/fast on|off` 会持久化一个会话覆盖。使用 Sessions UI 的 `inherit` 选项可清除它并回退到配置默认值。
-    - `/fast` 是提供方相关的：OpenAI/OpenAI Codex 会将其映射为原生 Responses 端点上的 `service_tier=priority`，而直接的公开 Anthropic 请求（包括发送到 `api.anthropic.com` 的 OAuth 认证流量）会映射为 `service_tier=auto` 或 `standard_only`。见 [OpenAI](/providers/openai) 和 [Anthropic](/providers/anthropic)。
-    - 相关时仍会显示工具失败摘要，但只有当 `/verbose` 为 `on` 或 `full` 时才会包含详细失败文本。
-    - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中有风险：它们可能泄露你不打算公开的内部推理、工具输出或插件诊断。建议保持关闭，尤其是在群聊中。
+    - `/fast` 是提供方特定的：OpenAI/OpenAI Codex 会将其映射到原生 Responses 端点上的 `service_tier=priority`，而直接的公开 Anthropic 请求（包括发送到 `api.anthropic.com` 的 OAuth 认证流量）会映射到 `service_tier=auto` 或 `standard_only`。见 [OpenAI](/providers/openai) 和 [Anthropic](/providers/anthropic)。
+    - 在相关情况下仍会显示工具失败摘要，但只有启用 `/verbose full` 时才会包含详细的失败文本。
+    - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中有风险：它们可能暴露你不打算公开的内部推理、工具输出或插件诊断。最好保持关闭，尤其是在群聊中。
 
   </Accordion>
   <Accordion title="模型切换">
     - `/model` 会立即持久化新的会话模型。
     - 如果代理处于空闲状态，下一次运行会立即使用它。
-    - 如果运行已经 সক动，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
+    - 如果运行已经活动，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
     - 如果工具活动或回复输出已经开始，待处理切换可能会保持排队，直到稍后的重试机会或下一次用户轮次。
     - 在本地 TUI 中，`/crestodian [request]` 会从普通代理 TUI 返回到 Crestodian。这与消息频道救援模式是分开的，并且不会授予远程配置权限。
 

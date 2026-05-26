@@ -15,7 +15,7 @@ title: "CLI 参考"
 - `openclaw configure` 会修改现有设置中的指定部分，例如模型认证、gateway、频道、插件或技能。
 - `openclaw channels add` 在基础配置存在后配置频道账户；不带标志运行时会进入引导式频道设置，带有频道特定标志时可用于脚本。
 
-## Command pages
+## 命令页面
 
 | 区域                 | 命令                                                                                                                                                                                                                                  |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,7 +32,7 @@ title: "CLI 参考"
 | Pairing and channels | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                                                                 |
 | Security and plugins | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins) · [`proxy`](/cli/proxy)                                                                                                     |
 | Legacy aliases       | [`daemon`](/cli/daemon)（gateway 服务）· [`clawbot`](/cli/clawbot)（命名空间）                                                                                                                                                         |
-| Plugins (optional)   | [`path`](/cli/path) · [`voicecall`](/cli/voicecall)（如果已安装）                                                                                                                                                                        |
+| Plugins (optional)   | [`meeting-notes`](/cli/meeting-notes) · [`path`](/cli/path) · [`policy`](/cli/policy) · [`voicecall`](/cli/voicecall)（如果已安装）                                                                                                      |
 
 ## 全局标志
 
@@ -124,6 +124,10 @@ openclaw [--dev] [--profile <name>] <command>
     status
     index
     search
+  meeting-notes
+    list
+    show
+    path
   path
     resolve
     find

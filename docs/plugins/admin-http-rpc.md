@@ -171,6 +171,7 @@ HTTP 状态会尽可能跟随 Gateway 错误。例如，`INVALID_REQUEST` 返回
 - gateway: `health`, `status`, `logs.tail`, `usage.status`, `usage.cost`, `gateway.restart.request`
 - config: `config.get`, `config.schema`, `config.schema.lookup`, `config.set`, `config.patch`, `config.apply`
 - channels: `channels.status`, `channels.start`, `channels.stop`, `channels.logout`
+- web: `web.login.start`, `web.login.wait`
 - models: `models.list`, `models.authStatus`
 - agents: `agents.list`, `agents.create`, `agents.update`, `agents.delete`
 - approvals: `exec.approvals.get`, `exec.approvals.set`, `exec.approvals.node.get`, `exec.approvals.node.set`

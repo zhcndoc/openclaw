@@ -153,8 +153,8 @@ provider id 会成为你的模型引用的左侧部分：
 捆绑的 Anthropic `claude-cli` 后端会通过两种方式接收 OpenClaw 的 skills 快照：
 一是附加到系统提示中的精简 OpenClaw skills 目录，二是通过 `--plugin-dir` 传递的临时 Claude Code 插件。该插件仅包含该 agent/session 允许使用的 skills，因此 Claude Code 的原生 skill 解析器看到的是与 OpenClaw 原本在提示中公布的相同的过滤后集合。skills 的环境变量/API key 覆盖仍会由 OpenClaw 在运行时应用到子进程环境中。
 
-Claude CLI 也有自己的非交互权限模式。OpenClaw 将其映射到现有的执行策略，而不是添加 Claude 专属配置：当有效请求的执行策略为 YOLO（`tools.exec.security: "full"` 且 `tools.exec.ask: "off"`）时，OpenClaw 会添加 `--permission-mode bypassPermissions`。
-每个 agent 的 `agents.list[].tools.exec` 设置会覆盖该 agent 的全局 `tools.exec`。如果你想强制使用不同的 Claude 模式，可以在 `agents.defaults.cliBackends.claude-cli.args` 和匹配的 `resumeArgs` 下设置显式的原始后端参数，例如 `--permission-mode default` 或 `--permission-mode acceptEdits`。
+Claude CLI 也有自己的非交互式权限模式。OpenClaw 将其映射到现有的执行策略，而不是添加 Claude 专用的策略配置。对于 OpenClaw 管理的 Claude 实时会话，有效的 OpenClaw 执行策略具有权威性：YOLO（`tools.exec.security: "full"` 且
+`tools.exec.ask: "off"`）会以 `--permission-mode bypassPermissions` 启动 Claude，而受限的有效执行策略会以 `--permission-mode default` 启动 Claude。按 agent 的 `agents.list[].tools.exec` 设置会覆盖该 agent 的全局 `tools.exec`。原始 Claude 后端参数仍可包含 `--permission-mode`，但实时 Claude 启动会将该标志规范化为与有效 OpenClaw 执行策略一致。
 
 捆绑的 Anthropic `claude-cli` 后端还会将 OpenClaw 的 `/think` 等级映射到 Claude Code 原生的 `--effort` 标志（适用于非关闭等级）。`minimal` 和
 `low` 映射到 `low`，`adaptive` 和 `medium` 映射到 `medium`，而 `high`、

@@ -83,10 +83,10 @@ sidebarTitle: "WhatsApp 群组"
 
 ## 已知注意事项
 
-- 群组会刻意跳过 Heartbeats，以避免产生噪声式广播。
-- Echo suppression 使用合并后的批次字符串；如果你在没有提及的情况下发送两次完全相同的文本，只有第一次会得到响应。
-- 会话存储条目会在会话存储中显示为 `agent:<agentId>:whatsapp:group:<jid>`（默认位于 `~/.openclaw/agents/<agentId>/sessions/sessions.json`）；缺少条目只意味着该群组尚未触发过一次运行。
-- 群组中的输入指示器遵循 `agents.defaults.typingMode`。当可见回复使用默认的仅消息工具模式时，默认情况下会立即开始输入，因此即使没有自动最终回复，群成员也能看到代理正在工作。显式的 typing-mode 配置仍然优先。
+- 群组的心跳会被刻意跳过，以避免产生噪声广播。
+- Echo 抑制使用合并后的批次字符串；如果你在没有提及的情况下发送两次相同文本，只有第一次会得到响应。
+- 会话存储中的条目会显示为 `agent:<agentId>:whatsapp:group:<jid>`（默认位于 `~/.openclaw/agents/<agentId>/sessions/sessions.json`）；缺失条目只意味着该群组尚未触发过一次运行。
+- 群组中的正在输入指示器遵循 `agents.defaults.typingMode`。当可见回复采用仅消息工具模式时，默认会立即开始输入，这样即使没有自动发送最终回复，群组成员也能看到代理正在工作。显式的 typing-mode 配置仍然优先生效。
 
 ## 相关内容
 

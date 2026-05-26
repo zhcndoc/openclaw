@@ -9,11 +9,11 @@ title: "思考级别"
 
 - 任意入站正文中的内联指令：`/t <level>`、`/think:<level>` 或 `/thinking <level>`。
 - 级别（别名）：`off | minimal | low | medium | high | xhigh | adaptive | max`
-  - minimal → "think"
-  - low → "think hard"
-  - medium → "think harder"
-  - high → "ultrathink"（最大预算）
-  - xhigh → "ultrathink+"（GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 effort）
+  - minimal → "思考"
+  - low → "深入思考"
+  - medium → "更深入思考"
+  - high → "超深度思考"（最大预算）
+  - xhigh → "超深度思考+"（GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7 effort）
   - adaptive → 提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7，以及 Google Gemini dynamic thinking）
   - max → 提供方最大推理（Anthropic Claude Opus 4.7；Ollama 会将其映射为其最高原生的 `think` effort）
   - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 都映射到 `xhigh`。
@@ -78,17 +78,17 @@ title: "思考级别"
 
 ## 详细日志指令（/verbose 或 /v）
 
-- 级别：`on`（minimal）| `full` | `off`（默认）。
-- 仅包含指令的消息会切换会话 verbose 并回复 `Verbose logging enabled.` / `Verbose logging disabled.`；无效级别会返回提示而不会更改状态。
-- `/verbose off` 会存储一个显式会话覆盖；可在 Sessions UI 中选择 `inherit` 来清除它。
-- 内联指令仅影响该消息；否则会应用会话/全局默认值。
-- 发送不带参数的 `/verbose`（或 `/verbose:`）可查看当前 verbose 级别。
-- 启用 verbose 时，会产出结构化工具结果的 agent（Pi、其他 JSON agents）会将每次工具调用作为各自的仅元数据消息回传，若可用则以前缀 `<emoji> <tool-name>: <arg>` 标记。这些工具摘要会在每个工具启动时立即发送（独立气泡），而不是作为流式增量发送。
-- 工具失败摘要在正常模式下仍可见，但原始错误详情后缀会被隐藏，除非 verbose 为 `on` 或 `full`。
-- 当 verbose 为 `full` 时，工具输出也会在完成后转发（独立气泡，截断到安全长度）。如果你在运行进行中切换 `/verbose on|full|off`，后续的工具气泡会遵循新设置。
-- `agents.defaults.toolProgressDetail` 控制 `/verbose` 工具摘要和 progress-draft 工具行的形式。使用 `"explain"`（默认）可获得简洁的人类标签，例如 `🛠️ Exec: checking JS syntax`；使用 `"raw"` 则会同时附加原始命令/详情以便调试。每个 agent 可通过 `agents.list[].toolProgressDetail` 覆盖默认值。
-  - `explain`：`🛠️ Exec: check JS syntax for /tmp/app.js`
-  - `raw`：`🛠️ Exec: check JS syntax for /tmp/app.js, node --check /tmp/app.js`
+- Levels: `on` (minimal) | `full` | `off` (default).
+- Directive-only message toggles session verbose and replies `Verbose logging enabled.` / `Verbose logging disabled.`; invalid levels return a hint without changing state.
+- `/verbose off` stores an explicit session override; clear it via the Sessions UI by choosing `inherit`.
+- Inline directive affects only that message; session/global defaults apply otherwise.
+- Send `/verbose` (or `/verbose:`) with no argument to see the current verbose level.
+- When verbose is on, agents that emit structured tool results (Pi, other JSON agents) send each tool call back as its own metadata-only message, prefixed with `<emoji> <tool-name>: <arg>` when available. These tool summaries are sent as soon as each tool starts (separate bubbles), not as streaming deltas.
+- Tool failure summaries remain visible in normal mode, but raw error detail suffixes are hidden unless verbose is `full`.
+- When verbose is `full`, tool outputs are also forwarded after completion (separate bubble, truncated to a safe length). If you toggle `/verbose on|full|off` while a run is in-flight, subsequent tool bubbles honor the new setting.
+- `agents.defaults.toolProgressDetail` controls the shape of `/verbose` tool summaries and progress-draft tool lines. Use `"explain"` (default) for compact human labels such as `🛠️ Exec: checking JS syntax`; use `"raw"` when you also want the raw command/detail appended for debugging. Per-agent `agents.list[].toolProgressDetail` overrides the default.
+  - `explain`: `🛠️ Exec: check JS syntax for /tmp/app.js`
+  - `raw`: `🛠️ Exec: check JS syntax for /tmp/app.js, node --check /tmp/app.js`
 
 ## 插件追踪指令（/trace）
 
@@ -101,13 +101,13 @@ title: "思考级别"
 
 ## 推理可见性（/reasoning）
 
-- 级别：`on|off|stream`。
-- 仅包含指令的消息会切换是否在回复中显示 thinking 块。
-- 启用后，reasoning 会作为一条**单独消息**发送，并以前缀 `Reasoning:` 标识。
-- `stream`（仅 Telegram）：在回复生成时将 reasoning 流式写入 Telegram 草稿气泡，然后在最终答案中不包含 reasoning。
-- 别名：`/reason`。
-- 发送不带参数的 `/reasoning`（或 `/reasoning:`）可查看当前 reasoning 级别。
-- 解析顺序：内联指令，其次是会话覆盖，然后是每个 agent 的默认值（`agents.list[].reasoningDefault`），再然后是全局默认值（`agents.defaults.reasoningDefault`），最后回退（`off`）。
+- Levels: `on|off|stream`.
+- Directive-only message toggles whether thinking blocks are shown in replies.
+- When enabled, reasoning is sent as a **separate message** prefixed with `Thinking`.
+- `stream` (Telegram only): streams reasoning into the Telegram draft bubble while the reply is generating, then sends the final answer without reasoning.
+- Alias: `/reason`.
+- Send `/reasoning` (or `/reasoning:`) with no argument to see the current reasoning level.
+- Resolution order: inline directive, then session override, then per-agent default (`agents.list[].reasoningDefault`), then global default (`agents.defaults.reasoningDefault`), then fallback (`off`).
 
 对格式错误的本地模型 reasoning 标签会采取保守处理。已闭合的 `<think>...</think>` 块在正常回复中会保持隐藏，而在已显示文本之后出现的未闭合 reasoning 也会被隐藏。如果一条回复完全包裹在一个未闭合的起始标签中，并且否则会以空文本交付，OpenClaw 会移除格式错误的起始标签并交付剩余文本。
 
@@ -117,17 +117,17 @@ title: "思考级别"
 
 ## 心跳
 
-- 心跳探测正文是已配置的心跳提示词（默认：`如果存在，请读取 HEARTBEAT.md（工作区上下文）。严格遵循它。不要从之前的聊天中推断或重复旧任务。如果没有需要处理的内容，请回复 HEARTBEAT_OK。`）。心跳消息中的内联指令会像往常一样生效（但避免在心跳中更改会话默认值）。
-- 心跳投递默认只发送最终载荷。若还要发送单独的 `Reasoning:` 消息（若可用），请设置 `agents.defaults.heartbeat.includeReasoning: true` 或针对单个 agent 设置 `agents.list[].heartbeat.includeReasoning: true`。
+- Heartbeat probe body is the configured heartbeat prompt (default: `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`). Inline directives in a heartbeat message apply as usual (but avoid changing session defaults from heartbeats).
+- Heartbeat delivery defaults to the final payload only. To also send the separate `Thinking` message (when available), set `agents.defaults.heartbeat.includeReasoning: true` or per-agent `agents.list[].heartbeat.includeReasoning: true`.
 
 ## Web chat UI
 
-- 网页聊天的思考选择器在页面加载时会镜像入站会话存储/配置中的会话已存储级别。
-- 选择其他级别会立即通过 `sessions.patch` 写入会话覆盖；它不会等到下一次发送，也不是一次性的 `thinkingOnce` 覆盖。
-- 第一个选项始终是清除覆盖的选项。当会话继承了一个非 `off` 的有效默认值时，它会显示 `Inherited: <resolved level>`；当继承的 thinking 被禁用时，则显示 `Off`。
-- 显式的选择器选项会标记为覆盖，同时在有提供方标签时保留它们（例如，对带有提供方标签的 `max` 选项显示 `Override: maximum`）。
-- 选择器使用 gateway session 行/defaults 返回的 `thinkingLevels`，而 `thinkingOptions` 仅作为旧版标签列表保留。浏览器 UI 不维护自己的提供方正则列表；各插件负责具体模型的级别集合。
-- `/think:<level>` 仍然可用，并会更新相同的已存储会话级别，因此聊天指令和选择器会保持同步。
+- The web chat thinking selector mirrors the session's stored level from the inbound session store/config when the page loads.
+- Picking another level writes the session override immediately via `sessions.patch`; it does not wait for the next send and it is not a one-shot `thinkingOnce` override.
+- The first option is always the clear-override choice. It shows `Inherited: <resolved level>`, including `Inherited: Off` when inherited thinking is disabled.
+- Explicit picker choices use their direct level labels while preserving provider labels when present (for example `Maximum` for a provider-labeled `max` option).
+- The picker uses `thinkingLevels` returned by the gateway session row/defaults, with `thinkingOptions` kept as a legacy label list. The browser UI does not keep its own provider regex list; plugins own model-specific level sets.
+- `/think:<level>` still works and updates the same stored session level, so chat directives and the picker stay in sync.
 
 ## Provider profiles
 

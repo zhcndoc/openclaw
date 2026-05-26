@@ -12,51 +12,76 @@ OpenClaw CI 会在每次推送到 `main` 以及每个 pull request 上运行。`
 
 ## 流水线概览
 
-| Job                              | Purpose                                                                                                   | When it runs                       |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `preflight`                      | 检测仅文档更改、已更改范围、已更改扩展，并构建 CI 清单                                                     | 始终在非草稿 push 和 PR 上运行     |
-| `security-scm-fast`              | 通过 `zizmor` 进行私钥检测和工作流审计                                                                    | 始终在非草稿 push 和 PR 上运行     |
-| `security-dependency-audit`      | 针对 npm 安全公告的无依赖生产 lockfile 审计                                                                | 始终在非草稿 push 和 PR 上运行     |
-| `security-fast`                  | 快速安全作业所需的聚合项                                                                                   | 始终在非草稿 push 和 PR 上运行     |
-| `check-dependencies`             | 生产 Knip 仅依赖扫描加上未使用文件允许列表守卫                                                             | 与 Node 相关的更改                 |
-| `build-artifacts`                | 构建 `dist/`、Control UI、构建产物检查，以及可复用的下游产物                                               | 与 Node 相关的更改                 |
-| `checks-fast-core`               | 快速的 Linux 正确性流水线，例如 bundled/plugin-contract/protocol 检查                                     | 与 Node 相关的更改                 |
-| `checks-fast-contracts-channels` | 分片的 channel 合约检查，带稳定的聚合检查结果                                                             | 与 Node 相关的更改                 |
-| `checks-node-core-test`          | 核心 Node 测试分片，不包括 channel、bundled、contract 和 extension 流水线                                  | 与 Node 相关的更改                 |
-| `check`                          | 分片的主要本地门禁等价项：生产类型、lint、守卫、测试类型和严格 smoke                                       | 与 Node 相关的更改                 |
-| `check-additional`               | 架构、分片边界/prompt 漂移、扩展守卫、包边界和 gateway watch                                              | 与 Node 相关的更改                 |
-| `build-smoke`                    | 构建后的 CLI smoke 测试和启动内存 smoke                                                                    | 与 Node 相关的更改                 |
-| `checks`                         | 构建产物 channel 测试的验证器                                                                               | 与 Node 相关的更改                 |
-| `checks-node-compat-node22`      | Node 22 兼容性构建和 smoke 流水线                                                                           | 用于发布的手动 CI 派发             |
-| `check-docs`                     | 文档格式化、lint 和断链检查                                                                                 | 文档已更改                         |
-| `skills-python`                  | 用于 Python 支持技能的 Ruff + pytest                                                                       | 与 Python 技能相关的更改           |
-| `checks-windows`                 | Windows 特有的进程/路径测试，以及共享运行时导入说明符回归                                                 | 与 Windows 相关的更改              |
-| `macos-node`                     | 使用共享构建产物的 macOS TypeScript 测试流水线                                                            | 与 macOS 相关的更改                |
-| `macos-swift`                    | macOS 应用的 Swift lint、构建和测试                                                                         | 与 macOS 相关的更改                |
-| `android`                        | 两个 flavor 的 Android 单元测试以及一个 debug APK 构建                                                     | 与 Android 相关的更改              |
-| `test-performance-agent`         | 在可信活动之后每日进行 Codex 慢测优化                                                                       | 主 CI 成功或手动派发                |
-| `openclaw-performance`           | 每日/按需的 Kova 运行时性能报告，包含 mock-provider、deep-profile 和 GPT 5.4 live 流水线                  | 定时和手动派发                      |
+| Job                                | Purpose                                                                                                   | When it runs                       |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `preflight`                        | 检测仅文档变更、已变更范围、已变更扩展，并构建 CI 清单                                                     | 在非草稿的 push 和 PR 上始终运行   |
+| `security-fast`                    | 私钥检测、通过 `zizmor` 进行工作流审计，以及生产 lockfile 审计                                              | 在非草稿的 push 和 PR 上始终运行   |
+| `check-dependencies`               | 生产 Knip 仅依赖扫描加上未使用文件允许列表守卫                                                             | 与 Node 相关的变更                 |
+| `build-artifacts`                  | 构建 `dist/`、Control UI、已构建 CLI 冒烟检查、内嵌构建产物检查，以及可复用产物                             | 与 Node 相关的变更                 |
+| `checks-fast-core`                 | 快速 Linux 正确性通道，例如 bundled、protocol 和 CI 路由检查                                               | 与 Node 相关的变更                 |
+| `checks-fast-contracts-plugins-*`  | 两个分片的插件契约检查                                                                                     | 与 Node 相关的变更                 |
+| `checks-fast-contracts-channels-*` | 两个分片的 channel 契约检查                                                                                | 与 Node 相关的变更                 |
+| `checks-node-core-*`               | 核心 Node 测试分片，不包括 channel、bundled、contract 和 extension 通道                                   | 与 Node 相关的变更                 |
+| `check-*`                          | 分片的主要本地门控等价项：prod types、lint、guards、test types 和 strict smoke                              | 与 Node 相关的变更                 |
+| `check-additional-*`               | 架构、分片边界/提示漂移、extension 守卫、包边界和运行时拓扑                                                 | 与 Node 相关的变更                 |
+| `checks-node-compat-node22`        | Node 22 兼容性构建和 smoke 通道                                                                             | 发布的手动 CI 派发                 |
+| `check-docs`                       | 文档格式化、lint 和断链检查                                                                                 | 文档已变更                         |
+| `skills-python`                    | 面向 Python 支持技能的 Ruff + pytest                                                                        | 与 Python-skill 相关的变更        |
+| `checks-windows`                   | Windows 特有的进程/路径测试，以及共享运行时导入说明符回归                                                   | 与 Windows 相关的变更             |
+| `macos-node`                       | 使用共享构建产物的 macOS TypeScript 测试通道                                                                 | 与 macOS 相关的变更               |
+| `macos-swift`                      | macOS 应用的 Swift lint、构建和测试                                                                          | 与 macOS 相关的变更               |
+| `android`                          | 两个 flavor 的 Android 单元测试以及一个 debug APK 构建                                                     | 与 Android 相关的变更             |
+| `test-performance-agent`           | 在可信活动之后每日进行 Codex 慢测试优化                                                                     | 主 CI 成功或手动派发               |
+| `openclaw-performance`             | 使用 mock-provider、deep-profile 和 GPT 5.5 live 通道的每日/按需 Kova 运行时性能报告                      | 定时和手动派发                     |
 
 ## 先失败顺序
 
-1. `preflight` 决定哪些流水线实际上存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业内部的步骤，不是独立作业。
-2. `security-scm-fast`、`security-dependency-audit`、`security-fast`、`check`、`check-additional`、`check-docs` 和 `skills-python` 会快速失败，而无需等待更重的产物和平台矩阵作业。
-3. `build-artifacts` 会与快速 Linux 流水线重叠执行，以便下游消费者在共享构建准备好后尽快开始。
-4. 更重的平台和运行时流水线随后展开：`checks-fast-core`、`checks-fast-contracts-channels`、`checks-node-core-test`、`checks`、`checks-windows`、`macos-node`、`macos-swift` 和 `android`。
+1. `preflight` 决定哪些通道根本存在。`docs-scope` 和 `changed-scope` 逻辑是这个作业中的步骤，而不是独立作业。
+2. `security-fast`、`check-*`、`check-additional-*`、`check-docs` 和 `skills-python` 会快速失败，而不会等待更重的产物和平台矩阵作业。
+3. `build-artifacts` 会与快速 Linux 通道重叠运行，因此下游消费者可以在共享构建准备好后尽快开始。
+4. 然后更重的平台和运行时通道会展开：`checks-fast-core`、`checks-fast-contracts-plugins-*`、`checks-fast-contracts-channels-*`、`checks-node-core-*`、`checks-windows`、`macos-node`、`macos-swift` 和 `android`。
 
-当新的推送落在同一个 PR 或 `main` ref 上时，GitHub 可能会将被取代的作业标记为 `cancelled`。除非同一 ref 的最新运行也失败，否则应将其视为 CI 噪音。聚合分片检查使用 `!cancelled() && always()`，因此它们仍会报告正常的分片失败，但在整个工作流已经被取代后不会再排队。自动 CI 并发键已版本化（`CI-v7-*`），因此 GitHub 端旧队列组中的僵尸任务不会无限期阻塞更新的 main 运行。手动全套运行使用 `CI-manual-v1-*`，并且不会取消进行中的运行。
+当同一个 PR 或 `main` 引用上有新的 push 到来时，GitHub 可能会把被取代的作业标记为 `cancelled`。除非同一引用的最新运行也失败，否则应将其视为 CI 噪声。矩阵作业使用 `fail-fast: false`，而 `build-artifacts` 会直接报告嵌入的 channel、core-support-boundary 和 gateway-watch 失败，而不是排队很小的验证器作业。自动 CI 并发键已版本化（`CI-v7-*`），因此 GitHub 端旧队列组里的僵尸任务不会无限期阻塞新的 main 运行。手动全套运行使用 `CI-manual-v1-*`，并且不会取消进行中的运行。
 
-`ci-timings-summary` 作业会为每次非草稿 CI 运行上传一个精简的 `ci-timings-summary` 产物。它会记录当前运行的总耗时、排队耗时、最慢作业和失败作业，因此 CI 健康检查无需反复抓取完整的 Actions 负载。
+`ci-timings-summary` 作业会为每个非草稿 CI 运行上传一个紧凑的 `ci-timings-summary` 产物。它会记录当前运行的墙钟时间、排队时间、最慢作业和失败作业，因此 CI 健康检查无需反复抓取完整的 Actions 负载。`build-artifacts` 作业还会运行阻塞性的 startup-memory 冒烟检查，并上传一个 `startup-memory` 产物，其中包含 `--help`、`status --json` 和 `gateway status` 的每条命令 RSS 值。
+
+## Real behavior proof
+
+外部贡献者 PR 会从
+`.github/workflows/real-behavior-proof.yml` 运行一个 `Real behavior proof` 门控。该工作流会检出受信任的
+base commit，并且只评估 PR 正文；它不会执行来自
+贡献者分支的代码。
+
+该门控适用于不是仓库所有者、成员、
+协作者或 bot 的 PR 作者。只要 PR 正文中包含一个
+`Real behavior proof` 部分，并为以下字段填写了值，就会通过：
+
+- `Behavior or issue addressed`
+- `Real environment tested`
+- `Exact steps or command run after this patch`
+- `Evidence after fix`
+- `Observed result after fix`
+- `What was not tested`
+
+证据必须展示补丁后在真实 OpenClaw
+设置中的变更行为。截图、录屏、终端捕获、控制台输出、复制的实时输出、脱敏的运行时日志以及链接的产物都算。单元测试、mock、快照、lint、类型检查和 CI 结果可作为有用的辅助验证，
+但它们本身并不能满足这个门控。
+
+当检查失败时，请更新 PR 正文，而不是再推送另一个代码提交。
+维护者只有在该 proof 门控不应
+适用于该 PR 时，才能应用 `proof: override`。
 
 ## 范围与路由
 
 范围逻辑位于 `scripts/ci-changed-scope.mjs`，并由 `src/scripts/ci-changed-scope.test.ts` 中的单元测试覆盖。手动派发会跳过变更范围检测，并让 preflight 清单表现得好像所有有范围的区域都已变更。
 
-- **CI 工作流编辑** 会验证 Node CI 图以及工作流 linting，但不会单独强制进行 Windows、Android 或 macOS 原生构建；这些平台流水线仍然仅对平台源代码变更进行范围控制。
-- **仅 CI 路由编辑、部分廉价核心测试 fixture 编辑，以及狭窄的插件合约 helper/test-routing 编辑** 会使用快速的仅 Node 清单路径：`preflight`、security，以及单个 `checks-fast-core` 任务。该路径会跳过构建产物、Node 22 兼容性、channel 合约、完整核心分片、bundled 插件分片，以及额外守卫矩阵，前提是变更仅限于快速任务直接执行的路由或 helper 表面。
-- **Windows Node 检查** 仅针对 Windows 特有的进程/路径包装器、npm/pnpm/UI 运行器 helper、包管理器配置，以及执行该流水线的 CI 工作流表面；无关源码、插件、安装 smoke 和仅测试的变更仍停留在 Linux Node 流水线上。
+- **CI workflow edits** 会验证 Node CI 图以及工作流 linting，但不会仅凭自身强制触发 Windows、Android 或 macOS 原生构建；这些平台通道仍然只针对平台源代码变更。
+- **`main` 上的 Docs push** 会由独立的 `Docs` 工作流检查，并使用与 CI 相同的 ClawHub 文档镜像，因此混合代码+文档的 push 不会再额外排队 CI 的 `check-docs` 分片。Pull request 和手动 CI 在文档变更时仍会从 CI 运行 `check-docs`。
+- **TUI PTY** 是一个面向 TUI 变更的专门工作流。它会在 Linux Node 24 上对 `src/tui/**`、watch harness、package script、lockfile 和工作流编辑运行 `node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts`。必需通道使用确定性的 `TuiBackend` fixture；较慢的 `tui --local` smoke 可通过 `OPENCLAW_TUI_PTY_INCLUDE_LOCAL=1` 选择性启用，并且只 mock 外部模型端点。
+- **仅 CI 路由编辑、选定的廉价 core-test fixture 编辑，以及窄范围的插件契约 helper/test-routing 编辑** 使用快速的仅 Node 清单路径：`preflight`、security，以及单个 `checks-fast-core` 任务。若变更仅限于该快速任务直接执行的路由或 helper 表面，这条路径会跳过构建产物、Node 22 兼容性、channel 契约、完整 core 分片、bundled-plugin 分片和额外守卫矩阵。
+- **Windows Node 检查** 仅针对 Windows 特有的进程/路径封装、npm/pnpm/UI 运行器 helper、包管理器配置，以及执行该通道的 CI 工作流表面；无关源码、插件、安装冒烟和仅测试的变更仍然留在 Linux Node 通道上。
 
-最慢的 Node 测试家族会被拆分或做平衡处理，这样每个作业都保持较小规模，而不会过度预留运行器：channel 合约以三个加权的 Blacksmith 支持分片运行，并带有标准 GitHub 运行器回退；核心单元快速/支持通道分开运行；核心运行时基础设施拆分为 state、process/config、cron 和 shared 分片；auto-reply 以平衡的 worker 运行（其中 reply 子树拆分为 agent-runner、dispatch 和 commands/state-routing 分片）；agentic gateway/server 配置则拆分为 chat/auth/model/http-plugin/runtime/startup 通道，而不是等待构建产物。广泛的 browser、QA、media 和杂项插件测试使用各自专用的 Vitest 配置，而不是共享的插件总包配置。包含模式分片使用 CI 分片名称记录时间条目，因此 `.artifacts/vitest-shard-timings.json` 可以区分完整配置和过滤后的分片。`check-additional` 会将包边界编译/canary 工作放在一起，并将运行时拓扑架构与 gateway watch 覆盖分离；边界守卫列表分布在四个矩阵分片上，每个分片并发运行选定的独立守卫并打印每个检查的耗时。昂贵的 Codex happy-path prompt snapshot 漂移检查会作为一个单独的额外作业运行，仅用于手动 CI 和影响 prompt 的更改，因此正常无关的 Node 更改不会排在冷启动 prompt snapshot 生成之后等待，而边界分片在 prompt 漂移仍然固定在触发它的 PR 上时也能保持平衡；同一个标志还会跳过构建产物 core support-boundary 分片中的 prompt snapshot Vitest 生成。gateway watch、channel 测试和 core support-boundary 分片会在 `build-artifacts` 内部并发运行，而此时 `dist/` 和 `dist-runtime/` 已经构建完成。
+最慢的 Node 测试家族会被拆分或平衡，以便每个作业保持较小规模而不会过度预留 runner：插件契约和 channel 契约各自作为两个加权的 Blacksmith 支持分片运行，并带有标准 GitHub runner 回退；core 单元快速/支持通道分开运行；core 运行时基础设施被拆分为 state、process/config、shared，以及三个 cron 域分片；auto-reply 作为平衡的 worker 运行（其中 reply 子树拆分为 agent-runner、dispatch 和 commands/state-routing 分片）；agentic gateway/server 配置则拆分为 chat/auth/model/http-plugin/runtime/startup 通道，而不是等待构建产物。广泛的浏览器、QA、媒体和杂项插件测试使用各自专用的 Vitest 配置，而不是共享的插件兜底配置。include-pattern 分片使用 CI 分片名称记录 timing 条目，因此 `.artifacts/vitest-shard-timings.json` 可以区分整个配置与被过滤的分片。`check-additional-*` 会把 package-boundary 的编译/canary 工作放在一起，并将 runtime topology 架构与 gateway watch 覆盖分开；边界守卫列表被分为一个提示密集分片和一个针对其余守卫条带的组合分片，每个分片都会并发运行选定的独立守卫并打印每项检查的计时。昂贵的 Codex happy-path 提示快照漂移检查作为一个独立的额外作业运行，仅用于手动 CI 和影响提示的变更，因此普通无关的 Node 变更不会因为冷提示快照生成而被阻塞，而边界分片也能保持平衡，同时提示漂移仍然锁定到引发它的 PR；同一个标志还会跳过 built-artifact core support-boundary 分片中的提示快照 Vitest 生成。在 `build-artifacts` 内部，gateway watch、channel 测试和 core support-boundary 分片会在 `dist/` 和 `dist-runtime/` 已经构建完成后并发运行。
 
 Android CI 会同时运行 `testPlayDebugUnitTest` 和 `testThirdPartyDebugUnitTest`，然后构建 Play debug APK。第三方 flavor 没有单独的 source set 或 manifest；其单元测试流水线仍会使用 SMS/call-log BuildConfig 标志编译该 flavor，同时避免在每次与 Android 相关的 push 上都重复进行 debug APK 打包作业。
 
@@ -81,7 +106,7 @@ Android CI 会同时运行 `testPlayDebugUnitTest` 和 `testThirdPartyDebugUnitT
 
 ## 手动派发
 
-手动 CI 派发会运行与正常 CI 相同的作业图，但会强制开启所有非 Android 范围的流水线：Linux Node 分片、bundled 插件分片、channel 合约、Node 22 兼容性、`check`、`check-additional`、build smoke、文档检查、Python 技能、Windows、macOS，以及 Control UI i18n。独立的手动 CI 派发只有在 `include_android=true` 时才运行 Android；完整发布总罩通过传入 `include_android=true` 启用 Android。插件预发布静态检查、仅发布使用的 `agentic-plugins` 分片、完整扩展批量扫描以及插件预发布 Docker 流水线都不包含在 CI 中。Docker 预发布套件仅在 `Full Release Validation` 使用已启用发布验证门控的单独 `Plugin Prerelease` 工作流进行派发时运行。
+手动 CI 派发运行与正常 CI 相同的作业图，但会强制开启所有非 Android 范围的流水线：Linux Node 分片、捆绑插件分片、插件和通道契约分片、Node 22 兼容性、`check-*`、`check-additional-*`、已构建产物冒烟检查、文档检查、Python skills、Windows、macOS，以及 Control UI i18n。独立的手动 CI 派发仅在 `include_android=true` 时运行 Android；完整发布总控会通过传入 `include_android=true` 启用 Android。插件预发布静态检查、仅发布时使用的 `agentic-plugins` 分片、完整扩展批量扫描，以及插件预发布 Docker 流水线都不包含在 CI 中。Docker 预发布套件仅在 `Full Release Validation` 派发启用发布验证门禁并另外触发 `Plugin Prerelease` 工作流时运行。
 
 手动运行使用唯一的并发组，因此发布候选的完整套件不会被同一 ref 上的另一次 push 或 PR 运行取消。可选的 `target_ref` 输入允许受信任的调用者针对某个分支、标签或完整 commit SHA 运行该图，同时使用所选派发 ref 的工作流文件。
 
@@ -93,17 +118,17 @@ gh workflow run full-release-validation.yml --ref main -f ref=<branch-or-sha>
 
 ## 运行器
 
-| Runner                           | Jobs                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ubuntu-24.04`                   | `preflight`, 快速安全作业和聚合（`security-scm-fast`、`security-dependency-audit`、`security-fast`）、快速协议/合约/bundled 检查、分片的 channel 合约检查、除 lint 外的 `check` 分片、`check-additional` 聚合、Node 测试聚合验证器、文档检查、Python 技能、workflow-sanity、labeler、auto-response；install-smoke preflight 也使用 GitHub 托管的 Ubuntu，以便 Blacksmith 矩阵能更早排队 |
-| `blacksmith-4vcpu-ubuntu-2404`   | `CodeQL Critical Quality`、较低权重的扩展分片、`checks-fast-core`、`checks-node-compat-node22`、`check-prod-types` 和 `check-test-types`                                                                                                                                                                                                                                                                                                        |
-| `blacksmith-8vcpu-ubuntu-2404`   | build-smoke、Linux Node 测试分片、bundled 插件测试分片、`check-additional` 分片、`android`                                                                                                                                                                                                                                                                                                                                                        |
-| `blacksmith-16vcpu-ubuntu-2404`  | `build-artifacts`、`check-lint`（对 CPU 敏感到 8 vCPU 的成本高于收益）；install-smoke Docker 构建（32-vCPU 队列等待时间的成本高于收益）                                                                                                                                                                                                                                                                                       |
-| `blacksmith-16vcpu-windows-2025` | `checks-windows`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `blacksmith-6vcpu-macos-latest`  | `openclaw/openclaw` 上的 `macos-node`；fork 会回退到 `macos-latest`                                                                                                                                                                                                                                                                                                                                                                                         |
-| `blacksmith-12vcpu-macos-latest` | `openclaw/openclaw` 上的 `macos-swift`；fork 会回退到 `macos-latest`                                                                                                                                                                                                                                                                                                                                                                                        |
+| Runner                           | Jobs                                                                                                                                                                                                                   |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ubuntu-24.04`                   | `preflight`、文档检查、Python skills、workflow-sanity、labeler、auto-response；install-smoke preflight 也使用 GitHub 托管的 Ubuntu，因此 Blacksmith 矩阵可以更早排队 |
+| `blacksmith-4vcpu-ubuntu-2404`   | `CodeQL Critical Quality`、`security-fast`、较低权重的扩展分片、`checks-fast-core`、插件/通道契约分片、`checks-node-compat-node22`、`check-guards`、`check-prod-types` 和 `check-test-types` |
+| `blacksmith-8vcpu-ubuntu-2404`   | Linux Node 测试分片、捆绑插件测试分片、`check-additional-*` 分片、`android`                                                                                                                             |
+| `blacksmith-16vcpu-ubuntu-2404`  | `build-artifacts`、`check-lint`（对 CPU 的敏感度足以让 8 vCPU 的成本高于收益）；install-smoke Docker 构建（32-vCPU 的排队时间成本高于收益）                                                 |
+| `blacksmith-16vcpu-windows-2025` | `checks-windows`                                                                                                                                                                                                       |
+| `blacksmith-6vcpu-macos-latest`  | `openclaw/openclaw` 上的 `macos-node`；fork 会回退到 `macos-latest`                                                                                                                                                 |
+| `blacksmith-12vcpu-macos-latest` | `openclaw/openclaw` 上的 `macos-swift`；fork 会回退到 `macos-latest`                                                                                                                                                |
 
-Canonical-repo CI 将 Blacksmith 保持为默认运行器路径。在 `preflight` 期间，`scripts/ci-runner-labels.mjs` 会检查近期已排队和正在进行的 Actions 运行，以查找排队中的 Blacksmith 任务。如果某个特定的 Blacksmith 标签已经有排队任务，那么本次运行中将使用该确切标签的下游任务会回退到匹配的 GitHub 托管运行器（`ubuntu-24.04`、`windows-2025` 或 `macos-latest`）。同一 OS 家族中的其他 Blacksmith 规格仍保持其主标签。如果 API 探测失败，则不会应用回退。
+规范仓库 CI 会将 Blacksmith 作为默认运行器路径。在 `preflight` 期间，`scripts/ci-runner-labels.mjs` 会检查近期已排队和正在进行的 Actions 运行，以查找排队中的 Blacksmith 任务。如果某个特定的 Blacksmith 标签已经有排队任务，那么本次运行中会使用该确切标签的下游任务将回退到匹配的 GitHub 托管运行器（`ubuntu-24.04`、`windows-2025` 或 `macos-latest`）。同一 OS 家族中的其他 Blacksmith 规格仍保持其主标签。如果 API 探测失败，则不会应用回退。
 
 ## 本地对应项
 
@@ -116,19 +141,22 @@ pnpm check:timed                              # 与上面相同的门禁，但�
 pnpm build:strict-smoke
 pnpm check:architecture
 pnpm test:gateway:watch-regression
+node scripts/run-vitest.mjs run --config test/vitest/vitest.tui-pty.config.ts
 pnpm test                                     # vitest 测试
-pnpm test:changed                             # 便宜且智能的 changed Vitest 目标
+pnpm test:changed                             # 低成本的智能变更 Vitest 目标
 pnpm test:channels
 pnpm test:contracts:channels
-pnpm check:docs                               # 文档格式 + lint + 断链检查
-pnpm build                                    # 当 CI artifact/build-smoke 车道很重要时构建 dist
+pnpm check:docs                               # 文档格式 + lint + 链接失效检查
+pnpm build                                    # 当 CI 产物/冒烟检查重要时构建 dist
 pnpm ci:timings                               # 汇总最近一次 origin/main push 的 CI 运行
 pnpm ci:timings:recent                        # 比较最近成功的 main CI 运行
-node scripts/ci-run-timings.mjs <run-id>      # 汇总总耗时、排队时间和最慢的任务
-node scripts/ci-run-timings.mjs --latest-main # 忽略 issue/comment 噪音并选择 origin/main push 的 CI
+node scripts/ci-run-timings.mjs <run-id>      # 汇总总耗时、排队耗时和最慢作业
+node scripts/ci-run-timings.mjs --latest-main # 忽略 issue/comment 噪音并选择 origin/main push CI
 node scripts/ci-run-timings.mjs --recent 10   # 比较最近成功的 main CI 运行
 pnpm test:perf:groups --full-suite --allow-failures --output .artifacts/test-perf/baseline-before.json
 pnpm test:perf:groups:compare .artifacts/test-perf/baseline-before.json .artifacts/test-perf/after-agent.json
+pnpm test:startup:memory
+pnpm test:extensions:memory -- --json .artifacts/openclaw-performance/source/mock-provider/extension-memory.json
 pnpm perf:kova:summary --report .artifacts/kova/reports/mock-provider/report.json --output .artifacts/kova/summary.md
 ```
 
@@ -138,7 +166,7 @@ pnpm perf:kova:summary --report .artifacts/kova/reports/mock-provider/report.jso
 
 ```bash
 gh workflow run openclaw-performance.yml --ref main -f profile=diagnostic -f repeat=3
-gh workflow run openclaw-performance.yml --ref main -f profile=smoke -f repeat=1 -f deep_profile=true -f live_gpt54=true
+gh workflow run openclaw-performance.yml --ref main -f profile=smoke -f repeat=1 -f deep_profile=true -f live_openai_candidate=true
 gh workflow run openclaw-performance.yml --ref main -f target_ref=v2026.5.2 -f profile=diagnostic -f repeat=3
 ```
 
@@ -146,17 +174,17 @@ gh workflow run openclaw-performance.yml --ref main -f target_ref=v2026.5.2 -f p
 
 该工作流会从固定版本中安装 OCM，并从 `openclaw/Kova` 中安装 Kova，使用固定的 `kova_ref` 输入，然后运行三条 lane：
 
-- `mock-provider`：针对本地构建运行时运行 Kova 诊断场景，使用确定性的 fake OpenAI 兼容认证。
-- `mock-deep-profile`：对启动、gateway 和 agent-turn 热点进行 CPU/heap/trace 分析。
-- `live-gpt54`：一次真实的 OpenAI `openai/gpt-5.4` agent turn；当 `OPENAI_API_KEY` 不可用时会跳过。
+- `mock-provider`：在本地构建的运行时上进行 Kova 诊断场景测试，使用确定性的伪造 OpenAI 兼容认证。
+- `mock-deep-profile`：对启动、网关和代理轮次热点进行 CPU/heap/trace 分析。
+- `live-openai-candidate`：一次真实的 OpenAI `openai/gpt-5.5` 代理轮次，在 `OPENAI_API_KEY` 不可用时跳过。
 
-`mock-provider` lane 在 Kova 通过后还会运行 OpenClaw 原生源代码探测：跨默认、hook 和 50-plugin 启动场景的 gateway 启动时间和内存；重复的 mock-OpenAI `channel-chat-baseline` hello 循环；以及针对已启动 gateway 的 CLI 启动命令。源代码探测的 Markdown 摘要位于报告包中的 `source/index.md`，其原始 JSON 紧随其后。
+`mock-provider` lane 在 Kova 通过后还会运行 OpenClaw 原生源代码探测：默认、hook 和 50 插件启动场景下的网关启动时间与内存；捆绑插件导入 RSS、重复的 mock-OpenAI `channel-chat-baseline` hello 循环，以及针对已启动网关的 CLI 启动命令。若针对被测试的 ref 存在上一次发布的 mock-provider 源报告，则源摘要会将当前 RSS 和 heap 值与该基线进行比较，并将较大的 RSS 增长标记为 `watch`。源探测的 Markdown 摘要位于报告包中的 `source/index.md`，其旁边是原始 JSON。
 
 每条 lane 都会上传 GitHub artifacts。配置了 `CLAWGRIT_REPORTS_TOKEN` 时，工作流还会将 `report.json`、`report.md`、bundles、`index.md` 和源代码探测 artifacts 提交到 `openclaw/clawgrit-reports`，路径为 `openclaw-performance/<tested-ref>/<run-id>-<attempt>/<lane>/`。当前 tested-ref 指针会写入为 `openclaw-performance/<tested-ref>/latest-<lane>.json`。
 
 ## 完整发布验证
 
-`Full Release Validation` 是用于“在发布前把所有内容都跑一遍”的手动总流程工作流。它接受分支、标签或完整提交 SHA，使用该目标派发手动的 `CI` 工作流，派发用于仅发布插件/包/静态资源/Docker 证明的 `Plugin Prerelease`，并派发用于安装 smoke、包接受、跨 OS 包检查、QA Lab parity、Matrix 和 Telegram lanes 的 `OpenClaw Release Checks`。稳定/默认运行会将详尽的 live/E2E 和 Docker 发布路径覆盖保留在 `run_release_soak=true` 之后；`release_profile=full` 会强制开启这些 soak 覆盖，从而保持广泛的 advisory 验证范围。配合 `rerun_group=all` 和 `release_profile=full`，它还会针对发布检查中的 `release-package-under-test` 工件运行 `NPM Telegram Beta E2E`。发布之后，传入 `release_package_spec` 可在 release checks、Package Acceptance、Docker、cross-OS 和 Telegram 中复用已发布的 npm 包，而无需重新构建。仅当 Telegram 必须证明不同的包时，才使用 `npm_telegram_package_spec`。
+`Full Release Validation` 是用于“在发布前运行一切”的手动总控工作流。它接受分支、标签或完整 commit SHA，使用该目标派发手动 `CI` 工作流，派发 `Plugin Prerelease` 用于仅发布的插件/包/静态/Docker 证明，并派发 `OpenClaw Release Checks` 用于安装冒烟检查、包接受度、跨 OS 包检查、QA Lab 一致性、Matrix 和 Telegram 流水线。稳定/默认运行会将详尽的 live/E2E 和 Docker 发布路径覆盖保留在 `run_release_soak=true` 之后；`release_profile=full` 会强制启用该 soak 覆盖，以便广泛的建议性验证仍保持广泛。使用 `rerun_group=all` 且 `release_profile=full` 时，它还会针对发布检查中的 `release-package-under-test` artifact 运行 `NPM Telegram Beta E2E`。发布后，传入 `release_package_spec` 可在 release checks、Package Acceptance、Docker、跨 OS 和 Telegram 之间复用已发布的 npm 包，而无需重新构建。仅当 Telegram 必须证明不同包时才使用 `npm_telegram_package_spec`。Codex 插件 live package lane 默认使用相同的已选状态：已发布的 `release_package_spec=openclaw@<tag>` 会派生出 `codex_plugin_spec=npm:@openclaw/codex@<tag>`，而 SHA/artifact 运行则会从所选 ref 打包 `extensions/codex`。对于自定义插件源，例如 `npm:`、`npm-pack:` 或 `git:` 规格，请显式设置 `codex_plugin_spec`。
 
 参见 [完整发布验证](/reference/full-release-validation) 以了解
 阶段矩阵、确切的工作流任务名称、配置差异、产物以及
@@ -198,9 +226,9 @@ GitHub workflow dispatch refs 必须是分支或标签，而不是原始 commit 
 
 这个总控会记录已触发的子运行 id，而最终的 `Verify full validation` 任务会重新检查当前子运行的结论，并为每个子运行附加最慢任务表。如果某个子工作流被重新运行并变为绿色，只需重新运行父级验证器任务即可刷新总控结果和耗时摘要。
 
-为恢复而言，`Full Release Validation` 和 `OpenClaw Release Checks` 都接受 `rerun_group`。对 release candidate 使用 `all`，对普通完整 CI 子流程仅使用 `ci`，对仅插件预发布子流程使用 `plugin-prerelease`，对所有 release 子流程使用 `release-checks`，或者在总流程中使用更窄的分组：`install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 或 `npm-telegram`。这能让失败的发布箱在局部修复后保持有限重跑范围。对于单个失败的 cross-OS lane，将 `rerun_group=cross-os` 与 `cross_os_suite_filter` 结合使用，例如 `windows/packaged-upgrade`；较长的 cross-OS 命令会输出 heartbeat 行，而 packaged-upgrade 摘要会包含各阶段耗时。QA 发布检查 lane 只是 advisory，因此仅 QA 失败会发出警告，但不会阻止 release-check 验证器。
+为恢复而设计，`Full Release Validation` 和 `OpenClaw Release Checks` 都接受 `rerun_group`。对发布候选使用 `all`，仅对正常的完整 CI 子流程使用 `ci`，仅对插件预发布子流程使用 `plugin-prerelease`，对所有发布子流程使用 `release-checks`，或者在总控上使用更窄的分组：`install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 或 `npm-telegram`。这使得在针对性修复后，失败的发布盒子重跑仍然保持有界。对于单个失败的跨 OS lane，可将 `rerun_group=cross-os` 与 `cross_os_suite_filter` 组合使用，例如 `windows/packaged-upgrade`；较长的跨 OS 命令会输出心跳行，而 packaged-upgrade 摘要会包含各阶段耗时。QA 发布检查 lane 仅具建议性，标准运行时工具覆盖门禁除外；当所需的 OpenClaw 动态工具从标准层摘要中漂移或消失时，该门禁会阻止通过。
 
-`OpenClaw Release Checks` 使用受信任的工作流 ref，将所选 ref 一次解析为 `release-package-under-test` tarball，然后在运行 soak 覆盖时把该工件传给 cross-OS 检查、Package Acceptance，以及 live/E2E 发布路径 Docker 工作流。这样可确保各发布箱中的包字节一致，并避免在多个子任务中重复打包同一个候选版本。
+`OpenClaw Release Checks` 使用受信任的工作流 ref 将所选 ref 一次性解析为 `release-package-under-test` tarball，然后将该 artifact 传递给跨 OS 检查和 Package Acceptance；当运行 soak 覆盖时，还会传递给 live/E2E 发布路径 Docker 工作流。这样可确保不同发布盒子之间的包字节一致，并避免在多个子作业中重复重新打包同一个候选版本。对于 Codex npm 插件 live lane，release checks 要么传递一个由 `release_package_spec` 派生的、匹配的已发布插件规格，要么传递操作员提供的 `codex_plugin_spec`，要么保持输入为空，以便 Docker 脚本对所选检出的 Codex 插件进行打包。
 
 对于 `ref=main` 且 `rerun_group=all` 的重复 `Full Release Validation` 运行，会取代较旧的总控流程。父级监控器在父流程被取消时会取消它已经触发的任何子工作流，因此较新的 main 验证不会排在一个陈旧的两小时发布检查运行之后。发布分支/标签验证和定向重跑分组保持 `cancel-in-progress: false`。
 
@@ -239,10 +267,11 @@ GitHub workflow dispatch refs 必须是分支或标签，而不是原始 commit 
 
 ### 候选来源
 
-- `source=npm` 只接受 `openclaw@beta`、`openclaw@latest`，或像 `openclaw@2026.4.27-beta.2` 这样的精确 OpenClaw 发布版本。用于已发布的预发布/稳定版接受。
-- `source=ref` 打包受信任的 `package_ref` 分支、标签或完整提交 SHA。解析器会获取 OpenClaw 的分支/标签，验证所选提交可从仓库分支历史或发布标签访问，在分离的 worktree 中安装依赖，并使用 `scripts/package-openclaw-for-docker.mjs` 进行打包。
-- `source=url` 下载一个 HTTPS `.tgz`；此时 `package_sha256` 是必需的。
-- `source=artifact` 从 `artifact_run_id` 和 `artifact_name` 下载一个 `.tgz`；`package_sha256` 可选，但对于外部共享工件应提供。
+- `source=npm` 仅接受 `openclaw@beta`、`openclaw@latest`，或一个精确的 OpenClaw 发布版本，例如 `openclaw@2026.4.27-beta.2`。用于已发布的预发布/稳定版接受。
+- `source=ref` 打包一个受信任的 `package_ref` 分支、标签或完整 commit SHA。解析器会获取 OpenClaw 分支/标签，验证所选提交可从仓库分支历史或发布标签到达，在分离的 worktree 中安装依赖，并使用 `scripts/package-openclaw-for-docker.mjs` 打包。
+- `source=url` 下载一个公共 HTTPS `.tgz`；`package_sha256` 为必需项。该路径会拒绝 URL 凭证、非默认 HTTPS 端口、私有/内部/特殊用途主机名或解析出的 IP，以及重定向到同一公共安全策略之外的地址。
+- `source=trusted-url` 从 `.github/package-trusted-sources.json` 中命名的受信任来源策略下载一个 HTTPS `.tgz`；`package_sha256` 和 `trusted_source_id` 为必需项。仅当维护者拥有的企业镜像或私有包仓库需要配置主机、端口、路径前缀、重定向主机或私有网络解析时才使用此项。如果策略声明了 bearer auth，工作流会使用固定的 `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret；URL 中嵌入的凭证仍会被拒绝。
+- `source=artifact` 从 `artifact_run_id` 和 `artifact_name` 下载一个 `.tgz`；`package_sha256` 是可选的，但如果来自外部共享工件则应提供。
 
 请将 `workflow_ref` 和 `package_ref` 分开。`workflow_ref` 是运行测试的受信任工作流/harness 代码。`package_ref` 是在 `source=ref` 时被打包的源代码提交。这样当前测试 harness 就可以验证较旧但受信任的源代码提交，而无需运行旧的工作流逻辑。
 
@@ -251,24 +280,24 @@ GitHub workflow dispatch refs 必须是分支或标签，而不是原始 commit 
 - `smoke` — `npm-onboard-channel-agent`, `gateway-network`, `config-reload`
 - `package` — `npm-onboard-channel-agent`, `doctor-switch`, `update-channel-switch`, `skill-install`, `update-corrupt-plugin`, `upgrade-survivor`, `published-upgrade-survivor`, `update-restart-auth`, `plugins-offline`, `plugin-update`
 - `product` — `package` plus `mcp-channels`, `cron-mcp-cleanup`, `openai-web-search-minimal`, `openwebui`
-- `full` — full Docker release-path chunks with OpenWebUI
-- `custom` — exact `docker_lanes`; required when `suite_profile=custom`
+- `full` — 带有 OpenWebUI 的完整 Docker release-path chunks
+- `custom` — 精确的 `docker_lanes`；当 `suite_profile=custom` 时为必需
 
 `package` profile 使用离线插件覆盖，因此已发布包的验证不会受制于线上 ClawHub 可用性。可选的 Telegram lane 在 `NPM Telegram Beta E2E` 中重用 `package-under-test` 工件，而已发布的 npm spec 路径仍保留给独立分发使用。
 
 关于专门的更新和插件测试策略，包括本地命令、Docker lanes、Package Acceptance 输入、发布默认值和失败排查，请参见 [Testing updates and plugins](/help/testing-updates-plugins)。
 
-Release checks call Package Acceptance with `source=artifact`, the prepared release package artifact, `suite_profile=custom`, `docker_lanes='doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update'`, and `telegram_mode=mock-openai`. This keeps package migration, update, live ClawHub skill install, stale-plugin-dependency cleanup, configured-plugin install repair, offline plugin, plugin-update, and Telegram proof on the same resolved package tarball. Set `release_package_spec` on Full Release Validation or OpenClaw Release Checks after publishing a beta to run the same matrix against the shipped npm package without rebuilding; set `package_acceptance_package_spec` only when Package Acceptance needs a different package from the rest of release validation. Cross-OS release checks still cover OS-specific onboarding, installer, and platform behavior; package/update product validation should start with Package Acceptance. The `published-upgrade-survivor` Docker lane validates one published package baseline per run in the blocking release path. In Package Acceptance, the resolved `package-under-test` tarball is always the candidate and `published_upgrade_survivor_baseline` selects the fallback published baseline, defaulting to `openclaw@latest`; failed-lane rerun commands preserve that baseline. Full Release Validation with `run_release_soak=true` or `release_profile=full` sets `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` and `published_upgrade_survivor_scenarios=reported-issues` to expand across the four latest stable npm releases plus pinned plugin-compatibility boundary releases and issue-shaped fixtures for Feishu config, preserved bootstrap/persona files, configured OpenClaw plugin installs, tilde log paths, and stale legacy plugin dependency roots. Multi-baseline published-upgrade survivor selections are sharded by baseline into separate targeted Docker runner jobs. The separate `Update Migration` workflow uses the `update-migration` Docker lane with `all-since-2026.4.23` and `plugin-deps-cleanup` when the question is exhaustive published update cleanup, not normal Full Release CI breadth. Local aggregate runs can pass exact package specs with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS`, keep a single lane with `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` such as `openclaw@2026.4.15`, or set `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` for the scenario matrix. The published lane configures the baseline with a baked `openclaw config set` command recipe, records recipe steps in `summary.json`, and probes `/healthz`, `/readyz`, plus RPC status after Gateway start. The Windows packaged and installer fresh lanes also verify that an installed package can import a browser-control override from a raw absolute Windows path. The OpenAI cross-OS agent-turn smoke defaults to `OPENCLAW_CROSS_OS_OPENAI_MODEL` when set, otherwise `openai/gpt-5.4`, so the install and gateway proof stays on a GPT-5 test model while avoiding GPT-4.x defaults.
+Release checks 调用 Package Acceptance 时使用 `source=artifact`、准备好的 release package 工件、`suite_profile=custom`、`docker_lanes='doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update'`，以及 `telegram_mode=mock-openai`。这会让包迁移、更新、live ClawHub 技能安装、陈旧插件依赖清理、已配置插件安装修复、离线插件、plugin-update 和 Telegram 证明都基于同一个已解析的包 tarball 运行。在发布 beta 后，可在 Full Release Validation 或 OpenClaw Release Checks 上设置 `release_package_spec`，以便对已发布的 npm 包运行同样的矩阵而无需重新构建；只有当 Package Acceptance 需要一个与其余发布验证不同的包时，才设置 `package_acceptance_package_spec`。跨 OS 的 release checks 仍然覆盖特定于 OS 的 onboarding、安装器和平台行为；包/更新产品验证应从 Package Acceptance 开始。在阻塞型发布路径中，`published-upgrade-survivor` Docker lane 每次运行都会验证一个已发布包基线。在 Package Acceptance 中，解析出的 `package-under-test` tarball 始终是候选包，而 `published_upgrade_survivor_baseline` 选择回退的已发布基线，默认为 `openclaw@latest`；失败 lane 的重新运行命令会保留该基线。启用 `run_release_soak=true` 或 `release_profile=full` 的 Full Release Validation 会设置 `published_upgrade_survivor_baselines='last-stable-4 2026.4.23 2026.5.2 2026.4.15'` 和 `published_upgrade_survivor_scenarios=reported-issues`，以扩展到最近四个稳定 npm 版本，再加上固定的插件兼容性边界版本，以及用于 Feishu 配置、保留的 bootstrap/persona 文件、已配置的 OpenClaw 插件安装、tilde 日志路径和陈旧旧版插件依赖根的 issue 形状 fixture。多基线的 published-upgrade survivor 选择会按基线分片到单独的目标 Docker runner 作业中。单独的 `Update Migration` 工作流在问题是穷举式的已发布更新清理，而不是常规 Full Release CI 广度时，会使用带有 `all-since-2026.4.23` 和 `plugin-deps-cleanup` 的 `update-migration` Docker lane。本地聚合运行可以通过 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS` 传递精确的包 spec，通过 `OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPEC` 保持单一路径，例如 `openclaw@2026.4.15`，或通过 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS` 设置场景矩阵。已发布的 lane 会使用内置的 `openclaw config set` 命令配方配置基线，在 `summary.json` 中记录配方步骤，并在 Gateway 启动后探测 `/healthz`、`/readyz` 以及 RPC 状态。Windows packaged 和 installer fresh lanes 还会验证已安装的包可以从原始绝对 Windows 路径导入 browser-control override。OpenAI 跨 OS agent-turn smoke 在设置了 `OPENCLAW_CROSS_OS_OPENAI_MODEL` 时默认使用它，否则使用 `openai/gpt-5.5`，因此安装和 gateway 证明会留在 GPT-5 测试模型上，同时避免 GPT-4.x 默认值。
 
 ### 旧版兼容窗口
 
 Package Acceptance 对已发布包提供有边界的旧版兼容窗口。对于 `2026.4.25` 及之前的包，包括 `2026.4.25-beta.*`，可以使用兼容路径：
 
-- known private QA entries in `dist/postinstall-inventory.json` may point at tarball-omitted files;
-- `doctor-switch` may skip the `gateway install --wrapper` persistence subcase when the package does not expose that flag;
-- `update-channel-switch` may prune missing pnpm `patchedDependencies` from the tarball-derived fake git fixture and may log missing persisted `update.channel`;
-- plugin smokes may read legacy install-record locations or accept missing marketplace install-record persistence;
-- `plugin-update` may allow config metadata migration while still requiring the install record and no-reinstall behavior to stay unchanged.
+- `dist/postinstall-inventory.json` 中已知的私有 QA 条目可以指向 tarball 中未包含的文件；
+- 当包未暴露该标志时，`doctor-switch` 可以跳过 `gateway install --wrapper` 持久化子用例；
+- `update-channel-switch` 可以从 tarball 派生的 fake git fixture 中清理缺失的 pnpm `patchedDependencies`，并且可以记录缺失的持久化 `update.channel`；
+- plugin smokes 可以读取旧版 install-record 位置，或接受缺失的 marketplace install-record 持久化；
+- `plugin-update` 可以允许配置元数据迁移，同时仍要求 install record 和 no-reinstall 行为保持不变。
 
 已发布的 `2026.4.26` 包也可能会对已经发布出去的本地构建元数据 stamp 文件发出警告。更晚的包必须满足现代契约；相同条件会导致失败，而不是警告或跳过。
 
@@ -302,7 +331,17 @@ gh workflow run package-acceptance.yml \
   -f package_sha256=<64-char-sha256> \
   -f suite_profile=smoke
 
-# 复用另一个 Actions 运行上传的 tarball。
+# 从命名的受信任私有镜像策略验证一个 tarball。
+gh workflow run package-acceptance.yml \
+  --ref main \
+  -f workflow_ref=main \
+  -f source=trusted-url \
+  -f trusted_source_id=enterprise-artifactory \
+  -f package_url=https://packages.example.internal:8443/artifactory/openclaw/openclaw-current.tgz \
+  -f package_sha256=<64-char-sha256> \
+  -f suite_profile=smoke
+
+# 重用由另一次 Actions 运行上传的 tarball。
 gh workflow run package-acceptance.yml \
   --ref main \
   -f workflow_ref=main \
@@ -362,7 +401,7 @@ Release Docker 覆盖会运行更小的分块作业，并设置 `OPENCLAW_SKIP_D
 - `OPENCLAW_DOCKER_ALL_PROFILE=release-path`
 - `OPENCLAW_DOCKER_ALL_CHUNK=core | package-update-openai | package-update-anthropic | package-update-core | plugins-runtime-plugins | plugins-runtime-services | plugins-runtime-install-a..h`
 
-当前的 release Docker 分块为 `core`、`package-update-openai`、`package-update-anthropic`、`package-update-core`、`plugins-runtime-plugins`、`plugins-runtime-services`，以及 `plugins-runtime-install-a` 到 `plugins-runtime-install-h`。`plugins-runtime-core`、`plugins-runtime` 和 `plugins-integrations` 仍然是聚合的 plugin/runtime 别名。`install-e2e` lane 别名仍然是两个 provider installer lanes 的聚合手动重跑别名。
+当前的 release Docker 分块为 `core`、`package-update-openai`、`package-update-anthropic`、`package-update-core`、`plugins-runtime-plugins`、`plugins-runtime-services`，以及 `plugins-runtime-install-a` 到 `plugins-runtime-install-h`。`package-update-openai` 包含 live Codex 插件 package lane，它会安装候选 OpenClaw package，从 `codex_plugin_spec` 或同一 ref 的 tarball 安装 Codex 插件并显式批准 Codex CLI 安装，运行 Codex CLI 预检，然后针对 OpenAI 运行多个同会话的 OpenClaw agent 回合。`plugins-runtime-core`、`plugins-runtime` 和 `plugins-integrations` 仍然是聚合的插件/runtime 别名。`install-e2e` lane 别名仍然是两个 provider installer lanes 的聚合手动重跑别名。
 
 当完整的 release-path 覆盖需要 OpenWebUI 时，它会被并入 `plugins-runtime-services`；只有在仅 OpenWebUI 的派发中，才保留独立的 `openwebui` 分块。捆绑渠道的更新 lanes 会在遇到临时 npm 网络故障时重试一次。
 
@@ -453,7 +492,7 @@ profile=all|agent-runtime-boundary|config-boundary|core-auth-secrets|channel-run
 
 ### 测试性能代理
 
-`Test Performance Agent` 工作流是一个事件驱动的 Codex 维护通道，用于处理慢测试。它没有纯定时调度：在 `main` 上一次成功的非机器人 push CI 运行可以触发它，但如果当天 UTC 时间内已有另一次 workflow-run 调用已经运行过或正在运行，它就会跳过。手动触发会绕过这个每日活动门槛。该通道会生成完整套件的分组 Vitest 性能报告，让 Codex 只进行小范围、保持覆盖率的测试性能修复，而不是大规模重构，然后重新运行完整套件报告，并拒绝会降低通过基线测试数量的更改。如果基线中存在失败测试，Codex 只能修复明显故障，并且在提交任何内容之前，代理后的完整套件报告必须通过。当 `main` 在机器人 push 落地之前继续前进时，该通道会对已验证的补丁执行 rebase，重新运行 `pnpm check:changed`，并重试 push；冲突的过期补丁会被跳过。它使用 GitHub 托管的 Ubuntu，因此 Codex action 可以与文档代理保持相同的 drop-sudo 安全姿态。
+`Test Performance Agent` 工作流是一个面向慢测试的事件驱动 Codex 维护通道。它没有纯定时计划：`main` 上一次成功的非机器人 push CI 运行可以触发它，但如果当天已经运行过或正在运行另一个 workflow-run 调用，它就会跳过。手动触发会绕过这个每日活动门槛。该通道会构建一份全套件分组的 Vitest 性能报告，只允许 Codex 进行尽量小、且不破坏覆盖率的测试性能修复，而不是大范围重构，然后重新运行全套件报告，并拒绝任何会降低通过基线测试数量的变更。分组报告会记录 Linux 和 macOS 上每个配置的墙钟时间和最大 RSS，因此前后对比除了时长差异，也能同时呈现测试内存差异。如果基线存在失败测试，Codex 只能修复明显故障，而且代理执行后的全套件报告必须通过，才能提交任何内容。当 `main` 在机器人推送落地之前继续前进时，该通道会对已验证的补丁重新基线、重新运行 `pnpm check:changed`，并重试推送；有冲突的过期补丁会被跳过。它使用 GitHub 托管的 Ubuntu，因此 Codex action 可以与文档代理保持相同的 drop-sudo 安全姿态。
 
 ### 合并后的重复 PR
 

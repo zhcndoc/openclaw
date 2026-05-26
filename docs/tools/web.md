@@ -90,18 +90,18 @@ OpenClaw 还包含用于 X（原 Twitter）帖子的 `x_search`，以及用于�
 
 | Provider                                  | Result style                                                   | Filters                                          | API key                                                                                 |
 | ----------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| [Brave](/tools/brave-search)              | Structured snippets                                            | Country, language, time, `llm-context` mode      | `BRAVE_API_KEY`                                                                         |
-| [DuckDuckGo](/tools/duckduckgo-search)    | Structured snippets                                            | --                                               | None (key-free)                                                                         |
-| [Exa](/tools/exa-search)                  | Structured + extracted                                         | Neural/keyword mode, date, content extraction    | `EXA_API_KEY`                                                                           |
-| [Firecrawl](/tools/firecrawl)             | Structured snippets                                            | Via `firecrawl_search` tool                      | `FIRECRAWL_API_KEY`                                                                     |
-| [Gemini](/tools/gemini-search)            | AI-synthesized + citations                                     | --                                               | `GEMINI_API_KEY`                                                                        |
-| [Grok](/tools/grok-search)                | AI-synthesized + citations                                     | --                                               | `XAI_API_KEY`                                                                           |
-| [Kimi](/tools/kimi-search)                | AI-synthesized + citations; fails on ungrounded chat fallbacks | --                                               | `KIMI_API_KEY` / `MOONSHOT_API_KEY`                                                     |
-| [MiniMax Search](/tools/minimax-search)   | Structured snippets                                            | Region (`global` / `cn`)                         | `MINIMAX_CODE_PLAN_KEY` / `MINIMAX_CODING_API_KEY` / `MINIMAX_OAUTH_TOKEN`              |
-| [Ollama Web Search](/tools/ollama-search) | Structured snippets                                            | --                                               | None for signed-in local hosts; `OLLAMA_API_KEY` for direct `https://ollama.com` search |
-| [Perplexity](/tools/perplexity-search)    | Structured snippets                                            | Country, language, time, domains, content limits | `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY`                                             |
-| [SearXNG](/tools/searxng-search)          | Structured snippets                                            | Categories, language                             | None (self-hosted)                                                                      |
-| [Tavily](/tools/tavily)                   | Structured snippets                                            | Via `tavily_search` tool                         | `TAVILY_API_KEY`                                                                        |
+| [Brave](/tools/brave-search)              | 结构化片段                                                     | 国家、语言、时间、`llm-context` 模式             | `BRAVE_API_KEY`                                                                         |
+| [DuckDuckGo](/tools/duckduckgo-search)    | 结构化片段                                                     | --                                               | 无（免密钥）                                                                            |
+| [Exa](/tools/exa-search)                  | 结构化 + 提取内容                                              | 神经网络/关键词模式、日期、内容提取              | `EXA_API_KEY`                                                                           |
+| [Firecrawl](/tools/firecrawl)             | 结构化片段                                                     | 通过 `firecrawl_search` 工具                     | `FIRECRAWL_API_KEY`                                                                     |
+| [Gemini](/tools/gemini-search)            | AI 综合生成 + 引用                                              | --                                               | `GEMINI_API_KEY`                                                                        |
+| [Grok](/tools/grok-search)                | AI 综合生成 + 引用                                              | --                                               | xAI OAuth、`XAI_API_KEY`，或 `plugins.entries.xai.config.webSearch.apiKey`              |
+| [Kimi](/tools/kimi-search)                | AI 综合生成 + 引用；在未接地的聊天回退时失败                     | --                                               | `KIMI_API_KEY` / `MOONSHOT_API_KEY`                                                     |
+| [MiniMax Search](/tools/minimax-search)   | 结构化片段                                                     | 区域（`global` / `cn`）                          | `MINIMAX_CODE_PLAN_KEY` / `MINIMAX_CODING_API_KEY` / `MINIMAX_OAUTH_TOKEN`              |
+| [Ollama Web Search](/tools/ollama-search) | 结构化片段                                                     | --                                               | 已登录的本地主机无需密钥；直接的 `https://ollama.com` 搜索需要 `OLLAMA_API_KEY`         |
+| [Perplexity](/tools/perplexity-search)    | 结构化片段                                                     | 国家、语言、时间、域名、内容限制                 | `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY`                                             |
+| [SearXNG](/tools/searxng-search)          | 结构化片段                                                     | 分类、语言                                       | 无（自托管）                                                                            |
+| [Tavily](/tools/tavily)                   | 结构化片段                                                     | 通过 `tavily_search` 工具                         | `TAVILY_API_KEY`                                                                        |
 
 ## 自动检测
 
@@ -161,7 +161,7 @@ OpenClaw 还包含用于 X（原 Twitter）帖子的 `x_search`，以及用于�
 1. **Brave** -- `BRAVE_API_KEY` or `plugins.entries.brave.config.webSearch.apiKey` (order 10)
 2. **MiniMax Search** -- `MINIMAX_CODE_PLAN_KEY` / `MINIMAX_CODING_API_KEY` / `MINIMAX_OAUTH_TOKEN` / `MINIMAX_API_KEY` or `plugins.entries.minimax.config.webSearch.apiKey` (order 15)
 3. **Gemini** -- `plugins.entries.google.config.webSearch.apiKey`, `GEMINI_API_KEY`, or `models.providers.google.apiKey` (order 20)
-4. **Grok** -- `XAI_API_KEY` or `plugins.entries.xai.config.webSearch.apiKey` (order 30)
+4. **Grok** -- xAI OAuth, `XAI_API_KEY`, or `plugins.entries.xai.config.webSearch.apiKey` (order 30)
 5. **Kimi** -- `KIMI_API_KEY` / `MOONSHOT_API_KEY` or `plugins.entries.moonshot.config.webSearch.apiKey` (order 40)
 6. **Perplexity** -- `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY` or `plugins.entries.perplexity.config.webSearch.apiKey` (order 50)
 7. **Firecrawl** -- `FIRECRAWL_API_KEY` or `plugins.entries.firecrawl.config.webSearch.apiKey` (order 60)
@@ -198,11 +198,12 @@ OpenClaw 还包含用于 X（原 Twitter）帖子的 `x_search`，以及用于�
 }
 ```
 
-提供商特定配置（API 密钥、base URL、模式）位于
-`plugins.entries.<plugin>.config.webSearch.*` 下。Gemini 还可以在其专用网页搜索配置和 `GEMINI_API_KEY` 之后，使用
-`models.providers.google.apiKey` 和 `models.providers.google.baseUrl` 作为较低优先级的
-回退。示例请参见
-提供商页面。
+特定提供商配置（API 密钥、base URL、模式）位于
+`plugins.entries.<plugin>.config.webSearch.*` 下。Gemini 还可以在其专用网页搜索配置和 `GEMINI_API_KEY` 之后，
+将 `models.providers.google.apiKey` 和 `models.providers.google.baseUrl` 作为优先级较低的
+回退项复用。示例请参见各提供商页面。
+Grok 还可以复用通过 `openclaw models auth login
+--provider xai --method oauth` 获取的 xAI OAuth 认证配置文件；API 密钥配置仍然是回退方案。
 
 `tools.web.search.provider` 会根据已捆绑和已安装插件清单中声明的网页搜索提供商 ID 进行验证。像 `"brvae"` 这样的拼写错误会导致配置验证失败，而不是静默回退到自动检测。如果某个已配置提供商只有过时的插件证据，例如卸载第三方插件后留下的
 `plugins.entries.<plugin>` 配置块，
@@ -223,15 +224,13 @@ OpenClaw 会保持启动过程的弹性并报告警告，以便你重新安装�
 - Moonshot API 区域（`https://api.moonshot.ai/v1` 或 `https://api.moonshot.cn/v1`）
 - 默认的 Kimi 网页搜索模型（默认为 `kimi-k2.6`）
 
-`x_search` 的配置位于 `plugins.entries.xai.config.xSearch.*` 下。它使用
-与聊天相同的 xAI 认证配置文件，或 Grok 网页搜索使用的
-`XAI_API_KEY` / 插件网页搜索
+用于 `x_search` 时，请配置 `plugins.entries.xai.config.xSearch.*`。它使用
+与聊天相同的 xAI 认证配置文件，或 Grok 网页搜索使用的 `XAI_API_KEY` / 插件网页搜索
 凭据。
-旧版 `tools.web.x_search.*` 配置会由 `openclaw doctor --fix`
-自动迁移。
-当你在 `openclaw onboard` 或 `openclaw configure --section web`
-期间选择 Grok 时，OpenClaw 也可以提供可选的 `x_search` 设置，并使用相同的密钥。
-这是在 Grok 路径中的一个单独后续步骤，不是单独的顶级
+旧版 `tools.web.x_search.*` 配置会由 `openclaw doctor --fix` 自动迁移。
+当你在 `openclaw onboard` 或 `openclaw configure --section web` 中选择 Grok 时，
+OpenClaw 还可以提供可选的 `x_search` 设置，并使用相同的凭据。
+这是 Grok 路径中的一个单独后续步骤，不是另一个顶层
 网页搜索提供商选择。如果你选择其他提供商，OpenClaw 不会
 显示 `x_search` 提示。
 
@@ -248,7 +247,7 @@ OpenClaw 会保持启动过程的弹性并报告警告，以便你重新安装�
           brave: {
             config: {
               webSearch: {
-                apiKey: "YOUR_KEY", // pragma: allowlist secret
+                apiKey: "YOUR_KEY", // 允许列表机密
               },
             },
           },

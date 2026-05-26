@@ -30,7 +30,7 @@ Anthropic 当前的公开文档：
 ## 开始使用
 
 <Tabs>
-  <Tab title="API key">
+  <Tab title="API 密钥">
     **最适合：** 标准 API 访问和按使用量计费。
 
     <Steps>
@@ -60,7 +60,7 @@ Anthropic 当前的公开文档：
 
     ```json5
     {
-      env: { ANTHROPIC_API_KEY: "sk-ant-..." },
+      env: { ANTHROPIC_API_KEY: "example-anthropic-key-not-real" },
       agents: { defaults: { model: { primary: "anthropic/claude-opus-4-6" } } },
     }
     ```
@@ -120,7 +120,7 @@ Anthropic 当前的公开文档：
     `anthropic/*`，并将执行后端放在 provider/model runtime policy 中。
 
     <Tip>
-    如果你想要最清晰的计费路径，建议改用 Anthropic API key。OpenClaw 也支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/glm) 的订阅式选项。
+    如果你想要最清晰的计费路径，请改用 Anthropic API key。OpenClaw 还支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/zai) 的订阅式选项。
     </Tip>
 
   </Tab>
@@ -263,37 +263,40 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
   </Accordion>
 
-  <Accordion title="1M 上下文窗口（beta）">
-    Anthropic 的 1M 上下文窗口处于 beta 限制中。按模型启用：
+  <Accordion title="1M 上下文窗口">
+    Anthropic 的 1M 上下文窗口适用于支持 GA 的 Claude 4.x 模型，
+    例如 Opus 4.6、Opus 4.7 和 Sonnet 4.6。OpenClaw 会自动将这些模型的大小设为
+    1M：
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
-            "anthropic/claude-opus-4-6": {
-              params: { context1m: true },
-            },
+            "anthropic/claude-opus-4-6": {},
           },
         },
       },
     }
     ```
 
-    OpenClaw 会在请求中将其映射为 `anthropic-beta: context-1m-2025-08-07`。
+    旧配置可以保留 `params.context1m: true`，但 OpenClaw 不再发送
+    已弃用的 `context-1m-2025-08-07` beta 头。旧的 `anthropicBeta` 配置
+    中带有该值的条目会在请求头解析时被忽略，未受支持的旧 Claude 模型则仍
+    保持其正常上下文窗口。
 
     `params.context1m: true` 也适用于 Claude CLI 后端
-    (`claude-cli/*`)，适用于符合条件的 Opus 和 Sonnet 模型，将这些 CLI 会话的运行时
-    上下文窗口扩展到与直接 API 行为一致。
+    （`claude-cli/*`）中符合条件、支持 GA 的 Opus 和 Sonnet 模型，以保留
+    这些 CLI 会话的运行时上下文窗口，使其与直接 API 的行为一致。
 
     <Warning>
-    需要你的 Anthropic 凭证拥有长上下文访问权限。旧版 token 认证（`sk-ant-oat-*`）会被 1M 上下文请求拒绝——OpenClaw 会记录警告并回退到标准上下文窗口。
+    需要你的 Anthropic 凭证具备长上下文访问权限。OAuth/订阅令牌认证会保留其所需的 Anthropic beta 头，但如果旧配置中仍保留了已废弃的 1M beta 头，OpenClaw 会将其移除。
     </Warning>
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 1M context">
-    `anthropic/claude-opus-4.7` 及其 `claude-cli` 变体默认拥有 1M 上下文
+  <Accordion title="Claude Opus 4.7 1M 上下文">
+    `anthropic/claude-opus-4-7` 及其 `claude-cli` 变体默认具有 1M 上下文
     窗口——无需 `params.context1m: true`。
   </Accordion>
 </AccordionGroup>
@@ -301,19 +304,19 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 ## 故障排除
 
 <AccordionGroup>
-  <Accordion title="401 errors / token suddenly invalid">
+  <Accordion title="401 错误 / 令牌突然失效">
     Anthropic token 认证会过期，也可能被撤销。对于新配置，建议改用 Anthropic API key。
   </Accordion>
 
-  <Accordion title='No API key found for provider "anthropic"'>
+  <Accordion title='未找到提供方 "anthropic" 的 API key'>
     Anthropic 认证是**按代理**生效的——新代理不会继承主代理的密钥。请为该代理重新运行初始化（或在网关主机上配置 API key），然后用 `openclaw models status` 验证。
   </Accordion>
 
-  <Accordion title='No credentials found for profile "anthropic:default"'>
+  <Accordion title='未找到配置文件 "anthropic:default" 的凭证'>
     运行 `openclaw models status` 查看当前激活的是哪个认证配置文件。重新运行初始化，或为该配置文件路径配置 API key。
   </Accordion>
 
-  <Accordion title="No available auth profile (all in cooldown)">
+  <Accordion title="没有可用的认证配置文件（全部处于冷却中）">
     检查 `openclaw models status --json` 中的 `auth.unusableProfiles`。Anthropic 的速率限制冷却可能是按模型范围生效的，因此同组中的另一个 Anthropic 模型也许仍可使用。添加另一个 Anthropic 配置文件，或等待冷却结束。
   </Accordion>
 </AccordionGroup>

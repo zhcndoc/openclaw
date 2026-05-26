@@ -36,10 +36,28 @@ title: "代码执行"
 ## 设置
 
 <Steps>
-  <Step title="提供 xAI API 密钥">
-    为 `code_execution` 和 `x_search` 运行 `openclaw onboard --auth-choice xai-api-key`，或者设置 `XAI_API_KEY` / 在 xAI 插件下配置密钥，当你还希望 Grok web 搜索使用相同凭据时：
+  <Step title="提供 xAI 凭证">
+    使用符合条件的 SuperGrok 或 X Premium 订阅通过 Grok OAuth 登录，
+    使用适用于远程场景的 device-code 流程，或存储 API 密钥。OAuth 可用于
+    `code_execution` 和 `x_search`；`XAI_API_KEY` 或插件 web-search
+    配置也可以驱动 Grok `web_search`。
 
     ```bash
+    openclaw models auth login --provider xai --method oauth
+    openclaw models auth login --provider xai --device-code
+    ```
+
+    在全新安装时，初始化流程中也可使用相同的认证选项：
+
+    ```bash
+    openclaw onboard --install-daemon
+    openclaw onboard --install-daemon --auth-choice xai-device-code
+    ```
+
+    或使用 API 密钥：
+
+    ```bash
+    openclaw models auth login --provider xai --method api-key
     export XAI_API_KEY=xai-...
     ```
 
@@ -63,8 +81,10 @@ title: "代码执行"
 
   </Step>
 
-  <Step title="启用并调优 code_execution">
-    该工具受 `plugins.entries.xai.config.codeExecution.enabled` 控制。默认关闭。
+  <Step title="启用并调整 code_execution">
+    当 xAI 凭证可用时，`code_execution` 即可使用。将
+    `plugins.entries.xai.config.codeExecution.enabled` 设置为 `false` 以禁用它，
+    或使用相同的配置块来调整模型和超时时间。
 
     ```json5
     {
@@ -122,7 +142,7 @@ title: "代码执行"
 ```json
 {
   "error": "missing_xai_api_key",
-  "message": "code_execution 需要一个 xAI API 密钥。运行 openclaw onboard --auth-choice xai-api-key，在 Gateway 环境中设置 XAI_API_KEY，或配置 plugins.entries.xai.config.webSearch.apiKey。",
+  "message": "code_execution 需要 xAI 凭证。运行 `openclaw onboard --auth-choice xai-oauth` 使用 Grok 登录，运行 `openclaw onboard --auth-choice xai-api-key`，在 Gateway 环境中设置 `XAI_API_KEY`，或配置 `plugins.entries.xai.config.webSearch.apiKey`。",
   "docs": "https://docs.openclaw.ai/tools/code-execution"
 }
 ```

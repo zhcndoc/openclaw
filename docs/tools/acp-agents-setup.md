@@ -165,9 +165,9 @@ openclaw plugins install ./path/to/local/acpx-plugin
 ### acpx 命令和版本配置
 
 默认情况下，`acpx` 插件会在 Gateway
-启动期间探测内嵌的 ACP 后端，并在网关发出 `ready` 信号之前等待该探测完成。将
-`OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=0` 设为跳过启动探测，并改为延迟注册
-后端。运行 `/acp doctor` 可进行显式按需探测。
+启动期间注册内嵌的 ACP 后端，并在网关
+`ready` 信号之前等待内嵌运行时启动探测。仅当脚本或环境故意保持启动探测禁用时，才设置 `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=0` 或
+`OPENCLAW_SKIP_ACPX_RUNTIME_PROBE=1`。运行 `/acp doctor` 可进行显式的按需探测。
 
 在插件配置中覆盖命令或版本：
 
@@ -267,15 +267,17 @@ openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 - 暴露选定的内置 OpenClaw 工具。初始服务器暴露 `cron`。
 - 保持核心工具暴露显式启用且默认关闭。
 
-### 运行时超时配置
+### Runtime operation timeout configuration
 
-`acpx` 插件默认将嵌入式运行时设置为 120 秒超时。这为 Gemini CLI 之类较慢的 harness 留出足够时间完成 ACP 启动和初始化。若你的主机需要不同的运行时限制，可覆盖它：
+默认情况下，`acpx` 插件会为内嵌运行时启动和控制操作提供 120
+秒。这为 Gemini CLI 之类较慢的 harness 留出足够时间完成 ACP 启动和初始化。如果你的主机需要不同的操作限制，请覆盖它：
 
 ```bash
 openclaw config set plugins.entries.acpx.config.timeoutSeconds 180
 ```
 
-更改该值后重启网关。
+运行时转向使用 OpenClaw 代理/运行超时，包括 `/acp timeout` 和
+`sessions_spawn.timeoutSeconds`。更改此值后请重启网关。
 
 ### 健康探测代理配置
 

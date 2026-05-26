@@ -41,8 +41,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)
 - [GitHub Copilot](/providers/github-copilot)
-- [GLM 模型](/providers/glm)
-- [Google（Gemini）](/providers/google)
+- [Google (Gemini)](/providers/google)
 - [Gradium](/providers/gradium)
 - [Groq（LPU 推理）](/providers/groq)
 - [Hugging Face（推理）](/providers/huggingface)
@@ -76,11 +75,11 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [Vydra](/providers/vydra)
 - [xAI](/providers/xai)
 - [Xiaomi](/providers/xiaomi)
-- [Z.AI](/providers/zai)
+- [Z.AI (GLM)](/providers/zai)
 
 ## 共享概览页面
 
-- [Additional bundled variants](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
+- [附加捆绑变体](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
 - [图像生成](/tools/image-generation) - 共享 `image_generate` 工具、提供商选择和故障转移
 - [音乐生成](/tools/music-generation) - 共享 `music_generate` 工具、提供商选择和故障转移
 - [视频生成](/tools/video-generation) - 共享 `video_generate` 工具、提供商选择和故障转移
@@ -96,7 +95,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 
 ## 社区工具
 
-- [Claude Max API Proxy](/providers/claude-max-api-proxy) - 用于 Claude 订阅凭证的社区代理（使用前请核实 Anthropic 政策/条款）
+- [Claude Max API 代理](/providers/claude-max-api-proxy) - 用于 Claude 订阅凭证的社区代理（使用前请核实 Anthropic 政策/条款）
 
 如需完整的提供商目录（xAI、Groq、Mistral 等）以及高级配置，
-请参见 [Model providers](/concepts/model-providers)。
+请参见 [模型提供商](/concepts/model-providers)。

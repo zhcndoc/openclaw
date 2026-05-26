@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw Gateway CLI (`openclaw gateway`) — 运行、查询和发现网关"
+summary: "OpenClaw Gateway CLI (`openclaw gateway`) —— 运行、查询和发现网关"
 read_when:
   - 从 CLI 运行 Gateway（开发或服务器）
   - 调试 Gateway 认证、绑定模式和连通性
@@ -38,12 +38,14 @@ openclaw gateway run
 
 <AccordionGroup>
   <Accordion title="启动行为">
-    - 默认情况下，除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则 Gateway 会拒绝启动。临时/开发运行请使用 `--allow-unconfigured`。
-    - `openclaw onboard --mode local` 和 `openclaw setup` 预计会写入 `gateway.mode=local`。如果文件存在但缺少 `gateway.mode`，应将其视为损坏或被覆盖的配置，并进行修复，而不是隐式地假定为本地模式。
-    - 如果文件存在且缺少 `gateway.mode`，Gateway 会将其视为可疑的配置损坏，并拒绝为你“猜测为本地模式”。
-    - 未经认证而绑定到 loopback 之外会被阻止（安全护栏）。
-    - 在获得授权时，`SIGUSR1` 会触发进程内重启（`commands.restart` 默认启用；将 `commands.restart: false` 可阻止手动重启，而 gateway 工具/配置 apply/update 仍然允许）。
-    - `SIGINT`/`SIGTERM` 处理器会停止 gateway 进程，但不会恢复任何自定义终端状态。如果你用 TUI 或 raw-mode 输入包装 CLI，请在退出前恢复终端。
+    - 默认情况下，除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则 Gateway 会拒绝启动。临时/开发运行时可使用 `--allow-unconfigured`。
+    - 预期 `openclaw onboard --mode local` 和 `openclaw setup` 会写入 `gateway.mode=local`。如果文件存在但缺少 `gateway.mode`，请将其视为损坏或被覆盖的配置，并修复它，而不是隐式假定为本地模式。
+    - 如果文件存在且缺少 `gateway.mode`，Gateway 会将其视为可疑的配置损坏，并拒绝替你“猜测为本地模式”。
+    - 在没有认证的情况下，绑定到 loopback 之外的地址会被阻止（安全护栏）。
+    - 目前 `lan`、`tailnet` 和 `custom` 仅通过仅限 IPv4 的 BYOH 路径解析。
+    - 目前这条路径不原生支持仅 IPv6 的 BYOH。如果主机本身只有 IPv6，请使用 IPv4 sidecar 或代理。
+    - 授权时，`SIGUSR1` 会触发进程内重启（`commands.restart` 默认启用；将 `commands.restart: false` 可阻止手动重启，但仍允许 gateway 工具/配置 apply/update）。
+    - `SIGINT`/`SIGTERM` 处理器会停止 gateway 进程，但不会恢复任何自定义终端状态。如果你把 CLI 包装在 TUI 或 raw-mode 输入中，请在退出前恢复终端。
 
   </Accordion>
 </AccordionGroup>
@@ -54,7 +56,7 @@ openclaw gateway run
   WebSocket 端口（默认来自配置/环境；通常为 `18789`）。
 </ParamField>
 <ParamField path="--bind <loopback|lan|tailnet|auto|custom>" type="string">
-  监听绑定模式。
+  监听器绑定模式。`lan`、`tailnet` 和 `custom` 目前仅通过仅限 IPv4 的路径解析。
 </ParamField>
 <ParamField path="--auth <token|password>" type="string">
   认证模式覆盖。
@@ -73,6 +75,9 @@ openclaw gateway run
 </ParamField>
 <ParamField path="--tailscale-reset-on-exit" type="boolean">
   在关闭时重置 Tailscale serve/funnel 配置。
+</ParamField>
+<ParamField path="--bind custom + gateway.customBindHost" type="string">
+  目前预期是 IPv4 地址。对于仅 IPv6 的 BYOH，请在 Gateway 前放置一个 IPv4 sidecar 或代理，并让 OpenClaw 指向该 IPv4 端点。
 </ParamField>
 <ParamField path="--allow-unconfigured" type="boolean">
   允许在配置中没有 `gateway.mode=local` 的情况下启动 gateway。仅绕过临时/开发引导的启动保护；不会写入或修复配置文件。
@@ -124,10 +129,12 @@ openclaw gateway restart --force
 
 ### Gateway 性能剖析
 
-- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1` 可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表耗时。
-- 设置 `OPENCLAW_GATEWAY_RESTART_TRACE=1` 可记录重启范围内的 `restart trace:` 行，涵盖重启信号处理、活动工作清空、关闭阶段、下一次启动、就绪时间以及内存指标。
-- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，可为外部 QA harness 写出一个尽力而为的 JSONL 启动诊断时间线。你也可以在配置中使用 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍需通过环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
-- 运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1` 可对 Gateway 启动进行基准测试。该基准会记录首个进程输出、`/healthz`、`/readyz`、启动追踪耗时、事件循环延迟以及插件查找表耗时细节。
+- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1`，可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表计时。
+- 设置 `OPENCLAW_GATEWAY_RESTART_TRACE=1`，可记录重启范围内的 `restart trace:` 行，用于重启信号处理、活动工作耗尽、关闭阶段、下次启动、就绪时间以及内存指标。
+- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，可为外部 QA harness 写出尽力而为的 JSONL 启动诊断时间线。你也可以在配置中通过 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍由环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
+- 先运行 `pnpm build`，然后运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1`，即可针对构建后的 CLI 入口对 Gateway 启动进行基准测试。该基准会记录首次进程输出、`/healthz`、`/readyz`、启动追踪时间、事件循环延迟以及插件查找表计时细节。
+- 先运行 `pnpm build`，然后在 macOS 或 Linux 上运行 `pnpm test:restart:gateway -- --case skipChannels --runs 1 --restarts 5`，即可针对构建后的 CLI 入口对进程内 Gateway 重启进行基准测试。重启基准会使用 SIGUSR1，在子进程中启用启动和重启追踪，并记录下一个 `/healthz`、下一个 `/readyz`、停机时间、就绪时间、CPU、RSS 以及重启追踪指标。
+- 将 `/healthz` 视为存活探针，将 `/readyz` 视为可用就绪状态。追踪行和基准输出用于归属定位；不要把单条追踪跨度或单个样本当作完整的性能结论。
 
 ## 查询正在运行的 Gateway
 
@@ -290,21 +297,22 @@ openclaw gateway status --require-rpc
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="Status 语义">
-    - `gateway status` 即使本地 CLI 配置缺失或无效，也仍可用于诊断。
-    - 默认的 `gateway status` 会证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作。
-    - 诊断探测对首次设备认证是非变更性的：当已有缓存设备令牌时会复用它，但不会为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
-    - `gateway status` 在可能时会解析已配置认证 SecretRef 以用于探测认证。
-    - 如果在此命令路径中必需的认证 SecretRef 未解析，而探测连通性/认证失败，则 `gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥源。
-    - 如果探测成功，则未解析的 auth-ref 警告会被抑制，以避免误报。
-    - 当监听服务还不够，而你还需要读范围 RPC 调用也正常时，请在脚本和自动化中使用 `--require-rpc`。
-    - `--deep` 会增加对额外 launchd/systemd/schtasks 安装的尽力而为扫描。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数设置应每台机器只运行一个 gateway。
-    - `--deep` 还会在服务进程为外部 supervisor 重启而正常退出时，报告最近一次 Gateway supervisor 重启交接。
-    - `--deep` 以插件感知模式运行配置验证（`pluginValidation: "full"`），并显示已配置的插件清单警告（例如缺少 channel 配置元数据），以便安装和更新的冒烟检查能够捕获它们。默认的 `gateway status` 保持快速只读路径，跳过插件验证。
-    - 人类可读输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或状态目录漂移。
+  <Accordion title="状态语义">
+    - 即使本地 CLI 配置缺失或无效，`gateway status` 仍可用于诊断。
+    - 默认的 `gateway status` 会证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作可用。
+    - 对于首次设备认证，诊断探测是非变更性的：如果存在已缓存的设备令牌，它会复用该令牌，但不会为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
+    - `gateway status` 会在可能的情况下解析配置中的认证 SecretRef 以用于探测认证。
+    - 如果在该命令路径中必需的认证 SecretRef 无法解析，而探测连接/认证失败，`gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password` 或先解析密钥来源。
+    - 如果探测成功，则会抑制未解析 auth-ref 的警告，以避免误报。
+    - 当启用探测时，如果正在运行的 Gateway 报告了版本，JSON 输出会包含 `gateway.version`；如果后续握手探测无法提供版本元数据，`--require-rpc` 可以回退到 `status.runtimeVersion` RPC 载荷。
+    - 当仅有监听服务还不够、你还需要读范围 RPC 调用也正常时，请在脚本和自动化中使用 `--require-rpc`。
+    - `--deep` 会尽力扫描额外的 launchd/systemd/schtasks 安装项。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数部署应该每台机器只运行一个 gateway。
+    - 如果服务进程因外部监督器重启而正常退出，`--deep` 还会报告最近一次 Gateway 监督器重启交接。
+    - `--deep` 会以插件感知模式运行配置验证（`pluginValidation: "full"`），并显示已配置的插件清单警告（例如缺失 channel 配置元数据），以便安装和更新冒烟检查能够发现问题。默认的 `gateway status` 保留快速只读路径，跳过插件验证。
+    - 人类输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
 
   </Accordion>
-  <Accordion title="Linux systemd auth-drift 检查">
+  <Accordion title="Linux systemd 认证漂移检查">
     - 在 Linux systemd 安装中，服务认证漂移检查会从 unit 中读取 `Environment=` 和 `EnvironmentFile=` 两种值（包括 `%h`、带引号的路径、多个文件以及可选的 `-` 文件）。
     - 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRef（先使用服务命令环境，再回退到进程环境）。
     - 如果令牌认证实际上未启用（显式的 `gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可能生效而没有令牌候选可以生效），则 token 漂移检查会跳过配置令牌解析。
@@ -337,7 +345,7 @@ openclaw gateway probe --json
 <AccordionGroup>
   <Accordion title="解释">
     - `Reachable: yes` 表示至少有一个目标接受了 WebSocket 连接。
-    - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` 报告探针能够证明的认证能力。这与可达性是分开的。
+    - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` 报告探测能够证明的认证能力。这与可达性是分开的。
     - `Read probe: ok` 表示读范围详细 RPC 调用（`health`/`status`/`system-presence`/`config.get`）也成功了。
     - `Read probe: limited - missing scope: operator.read` 表示连接成功，但读范围 RPC 受限。这被报告为**降级**可达性，而不是完全失败。
     - 在 `Connect: ok` 之后出现的 `Read probe: failed` 表示 Gateway 接受了 WebSocket 连接，但后续读诊断超时或失败。这同样是**降级**可达性，而不是不可达的 Gateway。

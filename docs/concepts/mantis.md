@@ -175,8 +175,11 @@ home，为所选频道打补丁 Slack Socket Mode
 - `--credential-source convex --credential-role ci` 使用共享凭据池，而不是直接使用 Slack 环境 token。
 - `--provider-mode`、`--model`、`--alt-model` 和 `--fast` 会透传到 Slack live 线路。
 
-GitHub smoke workflow 是 `Mantis Discord Smoke`。第一个真实场景的 before 和 after GitHub
-workflow 是 `Mantis Discord Status Reactions`。它接受：
+审批检查点运行会将 Slack API 消息快照渲染为检查点 PNG，
+用于 CI 安全的视觉证据。`slack-desktop-smoke.png` 仅在 lease 使用了已经登录的 warm browser profile 时，才算作 Slack Web 的证据。
+
+GitHub 烟雾工作流是 `Mantis Discord Smoke`。第一个真实场景的 before 和 after GitHub
+工作流是 `Mantis Discord Status Reactions`。它接受：
 
 - `baseline_ref`：预期复现仅队列行为的 ref。
 - `candidate_ref`：预期展示 `queued -> thinking -> done` 的 ref。
@@ -210,14 +213,13 @@ transcript HTML，使用 `crabbox media preview` 生成 motion-trimmed GIF，
 并在有 PR 编号时发布内联 PR 证据评论。该线路以 transcript-visual 为主，
 而不是已登录的 Telegram Web 证明：Telegram Bot API 能提供稳定的实时消息证据，但正常的 Mantis 自动化不需要 Telegram Web 登录状态。
 
-`Mantis Telegram Desktop Proof` 是 agentic 的原生 Telegram Desktop
-before/after 包装器。维护者可以从 PR 评论中使用 `@Mantis telegram desktop proof` 触发它，
-也可以在 Actions UI 中通过自由形式说明触发，或者通过通用的
-`Mantis Scenario` 分发器触发。该 workflow 会将 PR、baseline ref、candidate ref 和维护者说明交给 Codex。
-agent 读取 PR，决定什么 Telegram 可见行为可以证明该变化，针对 baseline 和
-candidate 运行真实用户的 Crabbox Telegram Desktop proof 线路，反复迭代直到原生 GIF 可用，
-将配对的 `motionPreview` 工件写入 `mantis-evidence.json`，上传 bundle，
-并在有 PR 编号时发布一个两列式 PR 证据表。
+`Mantis Telegram Desktop Proof` 是 agentic 原生 Telegram Desktop
+before/after 包装器。维护者可以通过 PR 评论中的
+`@openclaw-mantis telegram desktop proof`、Actions UI 中的自由格式指令，
+或通用的 `Mantis Scenario` 分发器来触发它。工作流会将 PR、baseline ref、candidate ref 和维护者指令交给 Codex。
+该 agent 会读取 PR，决定哪种 Telegram 可见行为能够证明
+改动，针对 baseline 和 candidate 运行真实用户的 Crabbox Telegram Desktop proof 线路，反复迭代直到原生 GIF 可用，向 `mantis-evidence.json` 写入成对的
+`motionPreview` 工件，上传整套内容，并在有 PR 编号时发布一个 2 列的 PR 证据表。
 
 对于有人参与的 Telegram desktop 设置，请使用场景构建器：
 
@@ -298,7 +300,7 @@ Artifact `path` 值是相对于 manifest 目录的。`targetPath`
 你也可以直接从 PR 评论触发 status-reactions 运行：
 
 ```text
-@Mantis discord status reactions
+@openclaw-mantis discord status reactions
 ```
 
 该评论触发器故意保持范围狭窄。它只对具有 write、maintain 或 admin 访问权限的用户所发出的 pull request 评论生效，
@@ -306,15 +308,15 @@ Artifact `path` 值是相对于 manifest 目录的。`targetPath`
 维护者可以覆盖任一 ref：
 
 ```text
-@Mantis discord status reactions baseline=origin/main candidate=HEAD
+@openclaw-mantis discord status reactions baseline=origin/main candidate=HEAD
 ```
 
 Telegram live QA 也可以从 PR 评论触发：
 
 ```text
-@Mantis telegram
-@Mantis telegram scenario=telegram-status-command
-@Mantis telegram scenarios=telegram-status-command,telegram-mentioned-message-reply
+@openclaw-mantis telegram
+@openclaw-mantis telegram scenario=telegram-status-command
+@openclaw-mantis telegram scenarios=telegram-status-command,telegram-mentioned-message-reply
 ```
 
 默认情况下，它使用当前 PR head SHA 作为候选，并运行
@@ -335,13 +337,13 @@ ClawSweeper 评审发现，将 PR 或 issue 映射到推荐的 Mantis 场景。
 ## 运行生命周期
 
 1. 获取凭据。
-2. 分配或复用一台 VM。
+2. 分配或复用一台虚拟机（VM）。
 3. 当场景需要 UI 证据时，准备桌面/浏览器配置文件。
-4. 为 baseline ref 准备一个干净的检出。
-5. 仅安装该场景需要的依赖并执行构建。
+4. 为基线 ref 准备一个干净的检出版本。
+5. 仅安装该场景所需的依赖并执行构建。
 6. 启动一个带有隔离状态目录的子 OpenClaw Gateway。
 7. 配置实时传输、provider、模型和浏览器配置文件。
-8. 运行场景并捕获 baseline 证据。
+8. 运行场景并捕获基线证据。
 9. 停止 gateway 并保留日志。
 10. 在同一台 VM 上准备 candidate ref。
 11. 运行相同的场景并捕获 candidate 证据。
@@ -352,10 +354,10 @@ ClawSweeper 评审发现，将 PR 或 issue 映射到推荐的 Mantis 场景。
 
 场景应当能够以两种不同方式失败：
 
-- **复现了缺陷**：baseline 以预期方式失败。
-- **harness 失败**：环境设置、凭据、Discord API、浏览器或 provider 在 bug oracle 有意义之前失败。
+- **复现了缺陷**：基线按预期方式失败。
+- **harness 失败**：环境设置、凭据、Discord API、浏览器或 provider 在 bug oracle 具有意义之前失败。
 
-最终报告必须区分这些情况，以免维护者将不稳定环境与产品行为混淆。
+最终报告必须区分这些情况，以免维护者将不稳定的环境与产品行为混淆。
 
 ## Discord 最小可行产品
 
@@ -399,7 +401,7 @@ evidence:
     screenshotMessageRow: true
 ```
 
-baseline 证据应显示队列确认 reaction，但在 tool-only 模式下没有生命周期转换。candidate 证据应显示当 `messages.statusReactions.enabled` 明确为 true 时，生命周期 status reactions 正在运行。
+基线证据应显示队列确认 reaction，但在 tool-only 模式下没有生命周期转换。candidate 证据应显示当 `messages.statusReactions.enabled` 明确为 true 时，生命周期 status reactions 正在运行。
 
 可执行的第一步切片是 opt-in 的 Discord live QA 场景：
 
@@ -461,9 +463,9 @@ Mantis 应当建立在现有的私有 QA 栈之上，而不是从零开始：
 - 传输和场景 id
 - 机器 provider 和机器 id 或 lease id
 - 不包含密钥值的凭据来源
-- baseline 结果
+- 基线结果
 - candidate 结果
-- 缺陷是否在 baseline 上复现
+- 缺陷是否在基线上复现
 - candidate 是否修复了它
 - 工件路径
 - 已净化的设置或清理问题
@@ -546,14 +548,14 @@ Mantis 运行器绝不能打印：
 - VNC 密码
 - 原始凭据载荷
 
-公开的产物上传也应当对 Discord 目标元数据进行脱敏，例如 bot、guild、channel 和 message id。GitHub smoke workflow 因此启用
+公开的工件上传也应当对 Discord 目标元数据进行脱敏，例如 bot、guild、channel 和 message id。GitHub smoke workflow 因此启用
 `OPENCLAW_QA_REDACT_PUBLIC_METADATA=1`。
 
 如果 token 不小心被粘贴到 issue、PR、聊天或日志中，应在新密钥存储完成后立即轮换。
 
-## GitHub 产物和 PR 评论
+## GitHub 工件和 PR 评论
 
-Mantis 工作流应将完整证据包作为短生命周期的 Actions 产物上传。当工作流用于 bug 报告或修复 PR 时，它还应将已脱敏的内联媒体发布到已配置的 Mantis R2/S3 bucket，并在该 bug 或修复 PR 上 upsert 一条包含内联前后截图的评论。不要只把主要证据发布在一个通用的 QA 自动化 PR 上。原始日志、observed messages 以及其他体量较大的证据应保留在 Actions 产物中。
+Mantis 工作流应将完整证据包作为短生命周期的 Actions 工件上传。当工作流用于 bug 报告或修复 PR 时，它还应将已脱敏的内联媒体发布到已配置的 Mantis R2/S3 bucket，并在该 bug 或修复 PR 上 upsert 一条包含内联前后截图的评论。不要只把主要证据发布在一个通用的 QA 自动化 PR 上。原始日志、observed messages 以及其他体量较大的证据应保留在 Actions 工件中。
 
 生产工作流应使用 Mantis GitHub App 发布这些评论，而不是使用 `github-actions[bot]`。将 app id 和私钥分别存为 `MANTIS_GITHUB_APP_ID` 和 `MANTIS_GITHUB_APP_PRIVATE_KEY` GitHub Actions secrets。工作流使用隐藏标记作为 upsert key，当 token 可以编辑该评论时更新它；当更旧的 bot-owned 标记无法被编辑时，则创建一条新的、归 Mantis 所有的评论。
 
@@ -618,7 +620,7 @@ Mantis Discord 状态反应 QA
 
 在 Discord 之后，同一个运行器还可以新增：
 
-- Slack：reactions、threads、应用提及、modal、文件上传。
+- Slack：reactions、threads、应用提及、模态框、文件上传。
 - Email：使用 `gog` 进行 Gmail 认证和消息线程化，当 connector 不够用时。
 - WhatsApp：QR 登录、重新识别、消息投递、媒体、reactions。
 - Telegram：群组提及门控、命令、reactions（如可用）。

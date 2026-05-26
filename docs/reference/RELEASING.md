@@ -43,28 +43,35 @@ OpenClaw 有三个公开发布通道：
 
 此检查清单是发布流程的公开形式。私有凭据、签名、notarization、dist-tag 恢复和紧急回滚细节保留在仅维护者可见的发布手册中。
 
-1. 从当前 `main` 开始：拉取最新代码，确认目标提交已推送，
-   并确认当前 `main` 的 CI 足够绿色，可以从其分支切出。
-2. 使用 `/changelog` 根据真实提交历史重写顶部 `CHANGELOG.md` 章节，
-   保持条目面向用户，提交、推送，并在分支切出前再次 rebase/pull 一次。
-3. 审查以下位置中的发布兼容性记录：
-   `src/plugins/compat/registry.ts` 和
-   `src/commands/doctor/shared/deprecation-compat.ts`。只有在升级路径仍然被覆盖时才移除已过期的兼容性，或者记录为什么要有意保留它。
-4. 从当前 `main` 创建 `release/YYYY.M.D`；不要直接在 `main` 上做常规发布工作。
-5. 将目标 tag 所需的每个版本位置都更新后，运行 `pnpm release:prep`。它会按正确顺序刷新插件版本、插件清单、配置 schema、捆绑的通道配置元数据、配置文档基线、插件 SDK 导出，以及插件 SDK API 基线。将任何生成的漂移在打 tag 前提交。然后运行本地确定性预检：
+1. 从当前 `main` 开始：拉取最新内容，确认目标提交已推送，
+   并确认当前 `main` 的 CI 足够绿色，可以从它切分支。
+2. 从最近可达的发布 tag 以来的已合并 PR 和所有直接提交生成顶部 `CHANGELOG.md`
+   部分。保持条目面向用户，去重重叠的 PR/直接提交条目，提交重写后的内容，推送它，
+   然后在分支前再 rebase/pull 一次。
+3. 查看 `src/plugins/compat/registry.ts` 和
+   `src/commands/doctor/shared/deprecation-compat.ts` 中的发布兼容性记录。只有在升级路径仍然受覆盖时才移除过期兼容性，或者记录为什么有意保留它。
+4. 从当前 `main` 创建 `release/YYYY.M.D`；不要直接在 `main` 上进行常规发布工作。
+5. 为目标 tag 提升所有必需的版本位置，然后运行 `pnpm release:prep`。它会按正确顺序刷新插件版本、插件清单、配置 schema、捆绑的通道配置元数据、配置文档基线、插件 SDK 导出，以及插件 SDK API 基线。打 tag 前提交任何生成的漂移。然后运行本地确定性预检：
    `pnpm check:test-types`、`pnpm check:architecture`、
    `pnpm build && pnpm ui:build`，以及 `pnpm release:check`。
-6. 使用 `preflight_only=true` 运行 `OpenClaw NPM Release`。在 tag 还不存在之前，允许使用完整的 40 字符发布分支 SHA 进行仅验证预检。预检会为精确检出的依赖图生成依赖发布证据，并将其存储在 npm 预检产物中。保存成功的 `preflight_run_id`。
-7. 使用针对发布分支、tag 或完整提交 SHA 的 `Full Release Validation` 启动所有预发布测试。这是四个大型发布测试盒子的唯一手动入口：Vitest、Docker、QA Lab 和 Package。
-8. 如果验证失败，在发布分支上修复，并重新运行能够证明修复的最小失败文件、lane、workflow job、package profile、provider 或 model allowlist。只有当变更范围使先前证据失效时，才重新运行完整的 umbrella。
-9. 对于 beta，先打 tag `vYYYY.M.D-beta.N`，然后从匹配的 `release/YYYY.M.D` 分支运行 `OpenClaw Release Publish`。它会验证 `pnpm plugins:sync:check`，并行将所有可发布的插件包发布到 npm，以及同一组发布到 ClawHub，然后在插件 npm 发布成功后立即将已准备好的 OpenClaw npm 预检产物用匹配的 dist-tag 提升。OpenClaw npm publish 子流程成功后，它会根据完整匹配的 `CHANGELOG.md` 章节创建或更新对应的 GitHub release/prerelease 页面。发布到 npm `latest` 的稳定版会成为 GitHub latest release；保留在 npm `beta` 的稳定维护版则使用 GitHub `latest=false` 创建。该 workflow 还会将预检依赖证据作为 `openclaw-<version>-dependency-evidence.zip` 上传到 GitHub release，用于发布后的事故响应。
-   在 OpenClaw npm 发布期间，ClawHub 发布可能仍在运行，但 release publish workflow 会立即打印子运行 ID。默认情况下，在派发后它不会等待 ClawHub，因此 OpenClaw npm 可用性不会被较慢的 ClawHub 审批或 registry 工作阻塞；当 ClawHub 必须阻塞 workflow 完成时，设置 `wait_for_clawhub=true`。ClawHub 路径会重试瞬时的 CLI 依赖安装失败，即使某个 preview cell 抖动也会发布通过 preview 的插件，并以每个预期插件版本的 registry 验证结束，使部分发布仍然可见且可重试。发布后，运行
-   `pnpm release:verify-beta -- YYYY.M.D-beta.N --openclaw-npm-run <run-id> --plugin-npm-run <run-id> --plugin-clawhub-run <run-id>`
-   来用一个命令验证 GitHub prerelease、npm `beta` dist-tag、npm 完整性、已发布安装路径、ClawHub 精确版本、ClawHub 产物，以及子 workflow 结论。若 ClawHub sidecar 只是在可重试的 job 中失败并且应原地重跑，则添加 `--rerun-failed-clawhub`。
-   然后对已发布的 `openclaw@YYYY.M.D-beta.N` 或
-   `openclaw@beta` 包运行发布后包验收。如果已推送或已发布的预发布需要修复，请切下一个匹配的预发布编号；不要删除或重写旧的预发布。
-10. 对于稳定版，只有在已验证的 beta 或 release candidate 具备所需验证证据后才继续。稳定 npm 发布也会通过 `OpenClaw Release Publish`，并通过 `preflight_run_id` 复用成功的预检产物；稳定 macOS 发布就绪还要求在 `main` 上存在已打包的 `.zip`、`.dmg`、`.dSYM.zip` 和更新后的 `appcast.xml`。私有 macOS 发布 workflow 会在发布资产验证通过后自动将已签名的 appcast 发布到公开的 `main`；如果分支保护阻止直接推送，则会打开或更新一个 appcast PR。
-11. 发布后，运行 npm 发布后验证器、在需要发布后通道证明时可选运行独立的已发布 npm Telegram E2E、在需要时进行 dist-tag 提升、验证生成的 GitHub release 页面，并运行发布公告步骤。
+6. 使用 `preflight_only=true` 运行 `OpenClaw NPM Release`。在 tag 尚不存在之前，可以使用完整的 40 字符发布分支 SHA 进行仅验证预检。预检会为精确检出的依赖图生成依赖发布证据，并将其存储在 npm 预检产物中。保存成功的 `preflight_run_id`。
+7. 使用针对发布分支、tag 或完整 commit SHA 的 `Full Release Validation` 启动所有预发布测试。这里是四个大型发布测试盒子的唯一手动入口：Vitest、Docker、QA Lab 和 Package。
+8. 如果验证失败，在发布分支上修复，并重新运行能证明修复有效的最小失败文件、lane、workflow job、package profile、provider 或 model allowlist。只有当变更范围使先前证据失效时，才重新运行完整的 umbrella。
+9. 对于 beta，先打 tag `vYYYY.M.D-beta.N`，然后从匹配的 `release/YYYY.M.D` 分支运行
+   `pnpm release:candidate -- --tag
+vYYYY.M.D-beta.N`。该辅助工具会运行本地生成发布检查，派发或验证完整发布验证和 npm 预检证据，运行 Parallels 和 Telegram 包证明，记录插件 npm 和 ClawHub 计划，并且仅在证据包通过后才打印精确的
+   `OpenClaw Release Publish` 命令。
+   `OpenClaw Release Publish` 会并行派发所选或所有可发布的插件包到 npm，以及同一组到 ClawHub，然后在插件 npm 发布成功后立即使用匹配的 dist-tag 提升已准备好的 OpenClaw npm 预检产物。
+   在 OpenClaw npm 发布子流程成功后，它会从完整匹配的
+   `CHANGELOG.md` 部分创建或更新对应的 GitHub release/prerelease 页面。发布到 npm `latest` 的稳定版会成为 GitHub latest release；保留在 npm `beta` 的稳定维护版会以 GitHub `latest=false` 创建。工作流还会将预检依赖证据以上传到 GitHub release，命名为
+   `openclaw-<version>-dependency-evidence.zip`，用于发布后事件响应。发布工作流会立即打印子运行 ID，自动批准工作流令牌被允许批准的发布环境门禁，总结失败的子作业日志尾部，在 OpenClaw npm 发布成功后尽快关闭 GitHub release 和依赖证据，在 OpenClaw npm 正在发布时等待 ClawHub，然后运行 `pnpm release:verify-beta`，并为 GitHub release、npm package、所选插件 npm packages、所选 ClawHub packages、子 workflow run IDs，以及可选的 NPM Telegram run ID 上传发布后证据。ClawHub 路径会重试临时性的 CLI 依赖安装失败，即使某个预览单元 flake 也会发布预览通过的插件，并以每个预期插件版本的 registry 验证结束，从而让部分发布保持可见且可重试。然后对已发布的
+   `openclaw@YYYY.M.D-beta.N` 或
+   `openclaw@beta` 包运行发布后包验收。如果已推送或已发布的预发布需要修复，切下一个匹配的预发布编号；不要删除或重写旧的预发布。
+10. 对于 stable，只有在经过验证的 beta 或 release candidate 具备所需验证证据后才继续。稳定 npm 发布也通过
+    `OpenClaw Release Publish`，并通过 `preflight_run_id` 复用成功的预检产物；稳定 macOS 发布就绪还要求
+    在 `main` 上存在打包好的 `.zip`、`.dmg`、`.dSYM.zip` 和更新后的 `appcast.xml`。
+    私有 macOS 发布工作流会在发布资产验证通过后自动将已签名的 appcast 发布到公共 `main`；如果分支保护阻止直接推送，它会打开或更新一个 appcast PR。
+11. 发布后，运行 npm 发布后验证器、在需要发布后通道证明时可选运行独立的已发布 npm Telegram E2E、需要时进行 dist-tag 提升、验证生成的 GitHub release 页面，并运行发布公告步骤。
 
 ## 发布预检
 
@@ -75,21 +82,29 @@ OpenClaw 有三个公开发布通道：
 - 在发布批准前运行手动的 `Full Release Validation` workflow，以便从一个入口启动所有预发布测试盒子。它接受分支、tag 或完整提交 SHA，派发手动 `CI`，并派发 `OpenClaw Release Checks` 以运行安装 smoke、包验收、跨 OS 包检查、QA Lab parity、Matrix 和 Telegram lanes。稳定/默认运行会将完整 live/E2E 和 Docker 发布路径 soak 保留在 `run_release_soak=true` 后；`release_profile=full` 会强制开启 soak。在 `release_profile=full` 和 `rerun_group=all` 下，它还会针对发布检查中的 `release-package-under-test` 产物运行 package Telegram E2E。在发布 beta 后提供 `release_package_spec`，可以在不重新构建发布 tarball 的情况下，在发布检查、Package Acceptance 和 package Telegram E2E 之间复用已发货的 npm 包。仅当 Telegram 应使用与其余发布验证不同的已发布包时，才提供 `npm_telegram_package_spec`。当 Package Acceptance 应使用与发布包规范不同的已发布包时，提供 `package_acceptance_package_spec`。当私有证据报告应证明验证与某个已发布 npm 包相匹配而不强制 Telegram E2E 时，提供 `evidence_package_spec`。
   示例：
   `gh workflow run full-release-validation.yml --ref main -f ref=release/YYYY.M.D`
-- 当你想在发布工作继续进行时为某个包候选获取侧信道证明，请运行手动的 `Package Acceptance` workflow。对 `openclaw@beta`、`openclaw@latest` 或精确的发布版本使用 `source=npm`；使用 `source=ref` 搭配当前 `workflow_ref` harness 打包受信任的 `package_ref` 分支/tag/SHA；对带有必需 SHA-256 的 HTTPS tarball 使用 `source=url`；或者对由另一个 GitHub Actions 运行上传的 tarball 使用 `source=artifact`。该 workflow 会将候选解析为 `package-under-test`，针对该 tarball 复用 Docker E2E 发布调度器，并且可以使用 `telegram_mode=mock-openai` 或 `telegram_mode=live-frontier` 针对同一个 tarball 运行 Telegram QA。当所选 Docker lanes 包括 `published-upgrade-survivor` 时，包产物就是候选包，而 `published_upgrade_survivor_baseline` 会选择已发布基线。`update-restart-auth` 会把候选包同时作为已安装 CLI 和 `package-under-test`，从而检验候选更新命令的托管重启路径。
+- 在你希望在发布工作继续进行时，为某个包候选提供侧信道证明时，运行手动 `Package Acceptance` workflow。对 `openclaw@beta`、`openclaw@latest` 或精确发布版本使用 `source=npm`；使用 `source=ref` 结合当前 `workflow_ref` harness 打包受信任的 `package_ref` 分支/tag/SHA；对带有必需 SHA-256 和严格公共 URL 策略的公共 HTTPS tarball 使用 `source=url`；对使用必需 `trusted_source_id` 和 SHA-256 的命名受信任来源策略使用 `source=trusted-url`；或者对由另一个 GitHub Actions run 上传的 tarball 使用 `source=artifact`。工作流会将候选解析为
+  `package-under-test`，针对该 tarball 复用 Docker E2E 发布调度器，并可使用
+  `telegram_mode=mock-openai` 或 `telegram_mode=live-frontier` 对同一 tarball 运行 Telegram QA。当所选 Docker lanes 包含 `published-upgrade-survivor` 时，包产物就是候选，而 `published_upgrade_survivor_baseline` 选择已发布基线。`update-restart-auth` 会将候选包同时作为已安装 CLI 和 package-under-test，因此它会测试候选更新命令的受管重启路径。
   示例：`gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product -f published_upgrade_survivor_baseline=openclaw@2026.4.26 -f telegram_mode=mock-openai`
-  常用 profile：
-  - `smoke`：安装/通道/agent、gateway 网络和 config reload lanes
-  - `package`：无 OpenWebUI 或 live ClawHub 的原生包/update/restart/plugin lanes
-  - `product`：package profile 外加 MCP channels、cron/subagent cleanup、OpenAI web search 和 OpenWebUI
+  常见配置：
+  - `smoke`：install/channel/agent、gateway network 和 config reload lanes
+  - `package`：不含 OpenWebUI 或 live ClawHub 的 artifact-native package/update/restart/plugin lanes
+  - `product`：package profile 加上 MCP channels、cron/subagent cleanup、
+    OpenAI web search 和 OpenWebUI
   - `full`：带 OpenWebUI 的 Docker 发布路径 chunks
-  - `custom`：用于聚焦重跑的精确 `docker_lanes` 选择
-- 当你只需要发布候选的完整常规 CI 覆盖时，直接运行手动的 `CI` workflow。手动 CI dispatch 会绕过变更范围并强制运行 Linux Node shards、捆绑插件 shards、通道契约、Node 22 兼容性、`check`、`check-additional`、build smoke、docs 检查、Python skills、Windows、macOS、Android 和 Control UI i18n lanes。
+  - `custom`：用于定向重跑的精确 `docker_lanes` 选择
+- 当你只需要发布候选的完整常规 CI 覆盖时，直接运行手动 `CI` workflow。手动 CI 派发会绕过变更范围，并强制运行 Linux Node shards、bundled-plugin shards、plugin 和 channel contract shards、Node 22 兼容性、`check-*`、`check-additional-*`、built-artifact smoke checks、docs checks、Python skills、Windows、macOS、Android 和 Control UI i18n lanes。
   示例：`gh workflow run ci.yml --ref release/YYYY.M.D`
-- 在验证发布遥测时运行 `pnpm qa:otel:smoke`。它会通过本地 OTLP/HTTP receiver 运行 QA-lab，并在不需要 Opik、Langfuse 或其他外部 collector 的情况下，验证导出的 trace span 名称、受限属性，以及内容/标识符脱敏。
+- 在验证发布遥测时运行 `pnpm qa:otel:smoke`。它通过本地 OTLP/HTTP receiver 运行 QA-lab，并验证 trace、metric 和 log 导出，以及有界 trace 属性和内容/标识符脱敏，而不需要 Opik、Langfuse 或其他外部 collector。
+- 在验证 collector 兼容性时运行 `pnpm qa:otel:collector-smoke`。它会先经过真实的 OpenTelemetry Collector Docker 容器，再运行与本地 receiver 相同的 QA-lab OTLP 导出断言。
+- 在验证受保护的 Prometheus scraping 时运行 `pnpm qa:prometheus:smoke`。它会运行 QA-lab，拒绝未认证的 scrape，并验证发布关键指标族不会包含 prompt 内容、原始标识符、auth tokens 和本地路径。
+- 当你想要连续运行 source-checkout 的 OpenTelemetry 和 Prometheus smoke lanes 时，运行 `pnpm qa:observability:smoke`。
 - 在每次带 tag 的发布前运行 `pnpm release:check`
-- `OpenClaw NPM Release` 预检会在打包 npm tarball 之前生成依赖发布证据。npm advisory 漏洞门禁是发布阻断项。传递性 manifest 风险、依赖所有权/安装面，以及依赖变更报告仅作为发布证据。依赖变更报告会将发布候选与上一个可达的发布 tag 进行比较。
-- 预检会将依赖证据上传为 `openclaw-release-dependency-evidence-<tag>`，并且还会将其嵌入到已准备好的 npm 预检产物内的 `dependency-evidence/` 下。真实发布路径会复用该预检产物，然后将相同证据作为 `openclaw-<version>-dependency-evidence.zip` 附加到 GitHub release。
-- 在 tag 存在后，运行 `OpenClaw Release Publish` 执行变更性的发布序列。从 `release/YYYY.M.D`（或在发布可从 `main` 到达的 tag 时从 `main`）派发它，传入 release tag 和成功的 OpenClaw npm `preflight_run_id`，并保持默认插件发布范围 `all-publishable`，除非你明确在执行聚焦修复。该 workflow 会串行化插件 npm 发布、插件 ClawHub 发布和 OpenClaw npm 发布，以确保核心包不会在外部化插件之前发布。
+- `OpenClaw NPM Release` 预检会在打包 npm tarball 之前生成依赖发布证据。npm advisory 漏洞门禁会阻止发布。传递依赖 manifest 风险、依赖所有权/安装面，以及依赖变更报告都只是发布证据。依赖变更报告将发布候选与前一个可达的发布 tag 进行比较。
+- 预检会将依赖证据上传为
+  `openclaw-release-dependency-evidence-<tag>`，并同时将其嵌入准备好的 npm 预检产物中的
+  `dependency-evidence/` 下。真实发布路径会复用该预检产物，然后将相同证据以上传到 GitHub release，命名为 `openclaw-<version>-dependency-evidence.zip`。
+- 在 tag 存在后，运行 `OpenClaw Release Publish` 执行会变更的发布序列。应从 `release/YYYY.M.D`（或在发布可从 main 到达的 tag 时从 `main`）派发它，传入发布 tag 和成功的 OpenClaw npm `preflight_run_id`，并保持默认插件发布范围 `all-publishable`，除非你有意运行定向修复。该工作流会串行化插件 npm 发布、插件 ClawHub 发布和 OpenClaw npm 发布，以确保在外部化插件之前不会发布核心包。
 - 发布检查现在在单独的手动 workflow 中运行：
   `OpenClaw Release Checks`
 - `OpenClaw Release Checks` 在发布批准前还会运行 QA Lab mock parity lane 以及快速 live Matrix profile 和 Telegram QA lane。live lanes 使用 `qa-live-shared` 环境；Telegram 还使用 Convex CI 凭据租约。当你需要完整的 Matrix 传输、媒体和 E2EE 清单并行运行时，运行手动的 `QA-Lab - All Lanes` 工作流，并设置 `matrix_profile=all` 和 `matrix_shards=true`。
@@ -216,11 +231,20 @@ gh workflow run full-release-validation.yml \
 
 不要在首次针对某个定点修复重跑时使用完整大总包。如果某个箱子失败，请在下次验证时使用失败的子工作流、作业、Docker 线路、包配置文件、模型提供方或 QA 线路。只有当修复改动了共享的发布编排，或使之前所有箱子的证据过期时，才再次运行完整大总包。大总包的最终 verifier 会重新检查记录的子工作流运行 id，因此在某个子工作流成功重跑后，只重跑失败的 `Verify full validation` 父作业即可。
 
-对于有界恢复，请将 `rerun_group` 传给总入口。`all` 是真正的发布候选运行，`ci` 只运行正常 CI 子项，`plugin-prerelease` 只运行仅发布插件子项，`release-checks` 运行所有发布箱，而更细的发布分组是 `install-smoke`、`cross-os`、`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 和 `npm-telegram`。聚焦的 `npm-telegram` 重跑需要 `release_package_spec` 或 `npm_telegram_package_spec`；在 `release_profile=full` 下的 full/all 运行会使用 release-checks 包制品。聚焦的跨 OS 重跑可以添加 `cross_os_suite_filter=windows/packaged-upgrade` 或其他 OS/套件过滤器。QA 发布检查失败只是建议性的；仅 QA 失败不会阻止发布验证。
+对于有界恢复，将 `rerun_group` 传给总入口。`all` 是真实的
+release-candidate 运行，`ci` 只运行普通 CI 子项，`plugin-prerelease`
+只运行仅发布插件子项，`release-checks` 运行所有发布
+箱子，而更细的发布分组包括 `install-smoke`、`cross-os`、
+`live-e2e`、`package`、`qa`、`qa-parity`、`qa-live` 和 `npm-telegram`。
+聚焦的 `npm-telegram` 重跑需要 `release_package_spec` 或
+`npm_telegram_package_spec`；在 `release_profile=full` 下运行的 full/all 会使用
+release-checks 包制品。聚焦的
+跨 OS 重跑可以添加 `cross_os_suite_filter=windows/packaged-upgrade` 或
+其他 OS/套件过滤器。QA release-check 失败属于建议性问题，标准运行时工具覆盖门禁除外；当必需的 OpenClaw 动态工具相对于标准层级摘要发生漂移或消失时，它会阻止发布验证。
 
 ### Vitest
 
-Vitest 箱子是手动的 `CI` 子工作流。手动 CI 故意绕过变更范围选择，并为发布候选强制执行正常测试图：Linux Node 分片、bundled-plugin 分片、channel contracts、Node 22 兼容性、`check`、`check-additional`、构建冒烟、文档检查、Python skills、Windows、macOS、Android，以及 Control UI i18n。
+Vitest 箱子是手动 `CI` 子工作流。手动 CI 有意绕过变更范围限制，并强制对发布候选运行正常测试图：Linux Node 分片、捆绑插件分片、插件和通道契约分片、Node 22 兼容性、`check-*`、`check-additional-*`、构建产物冒烟检查、文档检查、Python skills、Windows、macOS、Android 和 Control UI i18n。
 
 使用此箱来回答“源码树是否通过了完整的正常测试套件？”它不同于发布路径的产品验证。需要保留的证据：
 
@@ -273,11 +297,14 @@ QA Lab 箱子也是 `OpenClaw Release Checks` 的一部分。它是代理行为�
 
 发布 QA Lab 覆盖包括：
 
-- 使用 agentic parity pack 将 OpenAI 候选线路与 Opus 4.6
-  基线进行比较的 mock parity 线路
-- 使用 `qa-live-shared` 环境的快速实时 Matrix QA 配置文件
-- 使用 Convex CI 凭据租约的实时 Telegram QA 线路
-- 当发布遥测需要显式本地证明时使用 `pnpm qa:otel:smoke`
+- mock parity lane comparing the OpenAI candidate lane against the Opus 4.6
+  baseline using the agentic parity pack
+- fast live Matrix QA profile using the `qa-live-shared` environment
+- live Telegram QA lane using Convex CI credential leases
+- `pnpm qa:otel:smoke`, `pnpm qa:otel:collector-smoke`,
+  `pnpm qa:prometheus:smoke`, or
+  `pnpm qa:observability:smoke` when release telemetry needs explicit local
+  proof
 
 使用此箱来回答“该发布在 QA 场景和实时 channel 流程中是否表现正确？”在批准发布时保留 parity、Matrix 和 Telegram 线路的制品 URL。完整的 Matrix 覆盖仍可作为手动分片 QA-Lab 运行，而不是默认的发布关键线路。
 
@@ -289,18 +316,39 @@ Package 箱子是可安装产品的门禁。它由
 
 支持的候选来源：
 
-- `source=npm`：`openclaw@beta`、`openclaw@latest`，或精确的 OpenClaw 发布版本
-- `source=ref`：使用所选的 `workflow_ref` harness 打包受信任的 `package_ref` 分支、标签或完整提交 SHA
-- `source=url`：下载带有必需 `package_sha256` 的 HTTPS `.tgz`
-- `source=artifact`：复用由其他 GitHub Actions 运行上传的 `.tgz`
+- `source=npm`: `openclaw@beta`, `openclaw@latest`, or an exact OpenClaw release
+  version
+- `source=ref`: pack a trusted `package_ref` branch, tag, or full commit SHA
+  with the selected `workflow_ref` harness
+- `source=url`: download a public HTTPS `.tgz` with required `package_sha256`;
+  URL credentials, non-default HTTPS ports, private/internal/special-use
+  hostnames or resolved addresses, and unsafe redirects are rejected
+- `source=trusted-url`: download an HTTPS `.tgz` with required
+  `package_sha256` and `trusted_source_id` from a named policy in
+  `.github/package-trusted-sources.json`; use this for maintainer-owned
+  enterprise mirrors or private package repositories instead of adding an
+  input-level private-network bypass to `source=url`
+- `source=artifact`: reuse a `.tgz` uploaded by another GitHub Actions run
 
-`OpenClaw Release Checks` 使用 `source=artifact`、已准备好的发布包制品、`suite_profile=custom`、
-`docker_lanes=doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update`，
-`telegram_mode=mock-openai` 运行 Package Acceptance。Package Acceptance 会用同一个解析后的 tarball 覆盖迁移、更新、已配置认证的更新重启、实时 ClawHub 技能安装、过期插件依赖清理、离线插件
-fixture、插件更新以及 Telegram 包 QA。阻断发布检查使用默认的最新已发布包基线；`run_release_soak=true` 或
-`release_profile=full` 会扩展到从 `2026.4.23` 到 `latest` 的每个已发布稳定版 npm 基线，再加上已报告问题的 fixture。对于已发货的候选，请使用 `source=npm` 运行 Package Acceptance；对于发布前基于 SHA 的本地 npm tarball，请使用
-`source=ref`/`source=artifact`。它是 GitHub 原生的
-替代方案，替代了此前大部分需要 Parallels 的 package/update 覆盖。跨 OS 发布检查对于与操作系统相关的上手引导、安装器和平台行为仍然重要，但 package/update 产品验证应优先使用 Package Acceptance。
+`OpenClaw Release Checks` runs Package Acceptance with `source=artifact`, the
+prepared release package artifact, `suite_profile=custom`,
+`docker_lanes=doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update`,
+`telegram_mode=mock-openai`. Package Acceptance keeps migration, update,
+configured-auth update restart, live ClawHub skill install, stale plugin dependency cleanup, offline plugin
+fixtures, plugin update, and Telegram package QA against the same resolved
+tarball. Blocking release checks use the default latest published package
+baseline; `run_release_soak=true` or
+`release_profile=full` expands to every stable npm-published baseline from
+`2026.4.23` through `latest` plus reported-issue fixtures. Use
+Package Acceptance with `source=npm` for an already shipped candidate,
+`source=ref` for a SHA-backed local npm tarball before publish,
+`source=trusted-url` for a maintainer-owned enterprise/private mirror, or
+`source=artifact` for a prepared tarball uploaded by another GitHub Actions run.
+It is the GitHub-native
+replacement for most of the package/update coverage that previously required
+Parallels. Cross-OS release checks still matter for OS-specific onboarding,
+installer, and platform behavior, but package/update product validation should
+prefer Package Acceptance.
 
 更新和插件验证的权威检查清单是
 [Testing updates and plugins](/help/testing-updates-plugins)。在决定哪个本地、Docker、Package Acceptance 或 release-check 线路能证明插件安装/更新、doctor 清理或已发布包迁移变更时，请使用它。对每个稳定版 `2026.4.23+` 包进行穷尽式已发布更新迁移，是一个单独的手动 `Update Migration` 工作流，不属于 Full Release CI。

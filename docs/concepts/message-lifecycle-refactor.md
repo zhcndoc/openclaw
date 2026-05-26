@@ -2,7 +2,7 @@
 summary: "统一的持久化消息接收、发送、预览、编辑和流式生命周期设计方案"
 read_when:
   - 重构 channel 发送或接收行为时
-  - 更改 channel turn、reply 分发、出站队列、预览流、或插件 SDK 消息 API 时
+  - 更改 channel turn、reply 分发、出站队列、预览流，或插件 SDK 消息 API 时
   - 设计需要持久化发送、回执、预览、编辑或重试的新 channel 插件时
 title: "消息生命周期重构"
 ---
@@ -830,18 +830,24 @@ type DeliveryFailureKind =
 
 集成测试：
 
-- `channel.turn.run` 的简单适配器仍会记录并发送。
-- 旧的组装 turn 投递不会变成持久化，除非 channel 明确选择加入。
-- `channel.turn.runPrepared` 桥接仍会记录并最终化。
-- 默认情况下，公共兼容性帮助函数会调用调用方拥有的投递回调，并且不会在这些回调之前进行通用发送。
-- 持久化回退投递在重启后会重放整个投影载荷数组，并且不能在早期崩溃后留下后续载荷未被记录。
-- 持久化组装 turn 投递会将平台消息 id 返回给缓冲分发器。
-- 当关闭或不可用持久化投递时，自定义投递钩子仍会返回平台消息 id。
-- 在 assistant 完成与平台发送之间重启后，最终回复仍可保留。
-- 当允许时，预览草稿会原地最终化。
-- 当媒体/错误/回复目标不匹配需要正常投递时，预览草稿会被取消或删除。
-- 块流式传输和预览流式传输不会同时投递同一文本。
-- 早期流式传输的媒体不会在最终投递中重复。
+- `channel.turn.run` simple adapter still records and sends.
+- Legacy assembled-event delivery does not become durable unless the channel
+  explicitly opts in.
+- `channel.turn.runPrepared` bridge still records and finalizes.
+- Public compatibility helpers call caller-owned delivery callbacks by default
+  and do not generic-send before those callbacks.
+- Durable fallback delivery replays the whole projected payload array after
+  restart and cannot leave the later payloads unrecorded after an early crash.
+- Durable assembled-event delivery returns platform message ids to the buffered
+  dispatcher.
+- Custom delivery hooks still return platform message ids when durable delivery
+  is disabled or unavailable.
+- Final reply survives restart between assistant completion and platform send.
+- Preview draft finalizes in place when allowed.
+- Preview draft is cancelled or redacted when media/error/reply-target mismatch
+  requires normal delivery.
+- Block streaming and preview streaming do not both deliver the same text.
+- Media streamed early is not duplicated in final delivery.
 
 Channel 测试：
 

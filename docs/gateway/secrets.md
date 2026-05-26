@@ -14,7 +14,11 @@ OpenClaw 支持增量式 SecretRef，因此受支持的凭据不需要以明文�
 明文仍然可用。SecretRef 是按凭据可选启用的。
 </Note>
 
-## 目标和运行时模型
+<Warning>
+如果明文凭据存放在 agent 可检查的文件中，它们仍然对 agent 可读，包括 `openclaw.json`、`auth-profiles.json`、`.env`，或生成的 `agents/*/agent/models.json` 文件。只有在所有受支持的凭据都已迁移，并且 `openclaw secrets audit --check` 报告没有明文 secret 残留之后，SecretRef 才会减少本地爆炸半径。
+</Warning>
+
+## 目标与运行时模型
 
 Secrets 会被解析为内存中的运行时快照。
 
@@ -27,6 +31,23 @@ Secrets 会被解析为内存中的运行时快照。
 - 出站传递路径也会从该活动快照读取（例如 Discord 回复/线程传递和 Telegram 动作发送）；它们不会在每次发送时重新解析 SecretRef。
 
 这可以让 secret-provider 故障不影响热点请求路径。
+
+## Agent 可访问边界
+
+SecretRefs 可以防止凭据被持久化到受支持的配置和生成的模型表面中，但它们不是进程隔离边界。如果某个明文凭据仍然位于 agent 可读路径下的磁盘上，agent 就可以通过文件或 shell 工具检查该文件，从而绕过 API 级别的脱敏。
+
+对于 agent 可访问文件处于范围内的生产部署，只有在满足以下所有条件时，才应将 SecretRef 迁移视为完成：
+
+- 受支持的凭据使用 SecretRef，而不是明文值
+- 已清理 `openclaw.json`、`auth-profiles.json`、`.env` 和生成的 `models.json` 文件中的旧明文残留
+- 迁移完成后，`openclaw secrets audit --check` 结果干净
+- 任何剩余的不受支持或会轮换的凭据都受到操作系统隔离、容器隔离或外部凭据代理的保护
+
+这也是为什么 audit/configure/apply 工作流是安全迁移门槛，而不仅仅是一个便利工具。
+
+<Warning>
+SecretRef 不会让任意可读文件变得安全。备份、复制的配置、旧的生成模型目录，以及不受支持的凭据类别，都必须被视为生产机密，直到它们被删除、移出 agent 信任边界，或由单独的隔离层保护起来。
+</Warning>
 
 ## 活动表面过滤
 
@@ -88,6 +109,13 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     { source: "env", provider: "default", id: "OPENAI_API_KEY" }
     ```
 
+    受支持的 SecretInput 字段也接受完全相同的字符串简写：
+
+    ```json5
+    "${OPENAI_API_KEY}"
+    "$OPENAI_API_KEY"
+    ```
+
     校验：
 
     - `provider` 必须匹配 `^[a-z][a-z0-9_-]{0,63}$`
@@ -108,14 +136,14 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
   </Tab>
   <Tab title="exec">
     ```json5
-    { source: "exec", provider: "vault", id: "providers/openai/apiKey" }
+    { source: "exec", provider: "vault", id: "providers/openai/apiKey#value" }
     ```
 
     校验：
 
-    - `provider` 必须匹配 `^[a-z][a-z0-9_-]{0,63}$`
-    - `id` 必须匹配 `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$`
-    - `id` 不能包含作为斜杠分隔路径段的 `.` 或 `..`（例如 `a/../b` 会被拒绝）
+    - `provider` must match `^[a-z][a-z0-9_-]{0,63}$`
+    - `id` must match `^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$` (supports selectors such as `secret#json_key`)
+    - `id` must not contain `.` or `..` as slash-delimited path segments (for example `a/../b` is rejected)
 
   </Tab>
 </Tabs>
@@ -167,7 +195,7 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     - `mode: "json"` 期望 JSON 对象负载，并按 pointer 解析 `id`。
     - `mode: "singleValue"` 期望 ref id 为 `"value"`，并返回文件内容。
     - 路径必须通过所有权/权限检查。
-    - Windows fail-closed 说明：如果某个路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
+    - Windows 失败即关闭说明：如果某个路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
 
   </Accordion>
   <Accordion title="Exec 提供方">
@@ -176,7 +204,7 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     - 设置 `allowSymlinkCommand: true` 以允许符号链接形式的 command 路径（例如 Homebrew shim）。OpenClaw 会校验解析后的目标路径。
     - 对包管理器路径（例如 `["/opt/homebrew"]`）将 `allowSymlinkCommand` 与 `trustedDirs` 配对使用。
     - 支持超时、无输出超时、输出字节限制、env 白名单以及受信任目录。
-    - Windows fail-closed 说明：如果 command 路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
+    - Windows 失败即关闭说明：如果 command 路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
 
     请求负载（stdin）：
 
@@ -265,6 +293,50 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     }
     ```
   </Accordion>
+  <Accordion title="Bitwarden Secrets Manager (`bws`)">
+    当你希望 SecretRef id 直接映射到 Bitwarden Secrets Manager 条目键时，请使用一个解析器包装器。仓库包含 `scripts/secrets/openclaw-bws-resolver.mjs`；请将其安装或复制到运行 Gateway 的主机上一个绝对可信路径中。
+
+    要求：
+
+    - Gateway 主机上已安装 Bitwarden Secrets Manager CLI（`bws`）。
+    - `BWS_ACCESS_TOKEN` 可供 Gateway 服务使用。
+    - `PATH` 已传递给解析器，或者 `BWS_BIN` 已设置为绝对的 `bws` 二进制路径。
+
+    ```json5
+    {
+      secrets: {
+        providers: {
+          bws: {
+            source: "exec",
+            command: "/usr/local/bin/openclaw-bws-resolver.mjs",
+            passEnv: ["BWS_ACCESS_TOKEN", "PATH", "BWS_BIN"],
+            jsonOnly: true,
+          },
+        },
+      },
+      models: {
+        providers: {
+          openai: {
+            baseUrl: "https://api.openai.com/v1",
+            models: [{ id: "gpt-5", name: "gpt-5" }],
+            apiKey: {
+              source: "exec",
+              provider: "bws",
+              id: "openclaw/providers/openai/apiKey",
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    该解析器会批量处理请求的 id，运行 `bws secret list`，并返回匹配 secret `key` 字段的值。请使用满足 exec SecretRef id 合约的键，例如 `openclaw/providers/openai/apiKey`；带下划线的 env-var 风格键会在解析器运行前被拒绝。如果有多个可见的 Bitwarden secret 具有相同的请求键，解析器会将该 id 视为歧义并失败，而不是任选其一。更新配置后，请验证解析器路径：
+
+    ```bash
+    openclaw secrets audit --allow-exec
+    ```
+
+  </Accordion>
   <Accordion title="HashiCorp Vault CLI">
     ```json5
     {
@@ -292,6 +364,86 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
       },
     }
     ```
+  </Accordion>
+  <Accordion title="password-store (`pass`)">
+    当你希望 SecretRef id 直接映射到 `pass` 条目时，请使用一个小型解析器包装器。将其保存为一个可执行文件，路径需为绝对路径，并且能够通过你的 exec provider 路径检查，例如 `/usr/local/bin/openclaw-pass-resolver`。`#!/usr/bin/env node` shebang 会从解析器进程的 `PATH` 中解析 `node`，因此请将 `PATH` 包含在 `passEnv` 中。如果 `pass` 不在该 `PATH` 上，请在父环境中设置 `PASS_BIN`，并将其也包含在 `passEnv` 中：
+
+    ```js
+    #!/usr/bin/env node
+    const { spawnSync } = require("node:child_process");
+
+    let stdin = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => {
+      stdin += chunk;
+    });
+    process.stdin.on("error", (err) => {
+      process.stderr.write(`${err.message}\n`);
+      process.exit(1);
+    });
+    process.stdin.on("end", () => {
+      let request;
+      try {
+        request = JSON.parse(stdin || "{}");
+      } catch (err) {
+        process.stderr.write(`Failed to parse request: ${err.message}\n`);
+        process.exit(1);
+      }
+
+      const passBin = process.env.PASS_BIN || "pass";
+      const values = {};
+      const errors = {};
+
+      for (const id of request.ids ?? []) {
+        const result = spawnSync(passBin, ["show", id], { encoding: "utf8" });
+        if (result.status === 0) {
+          values[id] = result.stdout.split(/\r?\n/, 1)[0] ?? "";
+        } else {
+          errors[id] = { message: (result.stderr || `pass exited ${result.status}`).trim() };
+        }
+      }
+
+      process.stdout.write(JSON.stringify({ protocolVersion: 1, values, errors }));
+    });
+    ```
+
+    然后配置 exec provider，并将 `apiKey` 指向 `pass` 条目路径：
+
+    ```json5
+    {
+      secrets: {
+        providers: {
+          pass_store: {
+            source: "exec",
+            command: "/usr/local/bin/openclaw-pass-resolver",
+            passEnv: ["PATH", "HOME", "GNUPGHOME", "GPG_TTY", "PASSWORD_STORE_DIR", "PASS_BIN"],
+            jsonOnly: true,
+          },
+        },
+      },
+      models: {
+        providers: {
+          openai: {
+            baseUrl: "https://api.openai.com/v1",
+            models: [{ id: "gpt-5", name: "gpt-5" }],
+            apiKey: {
+              source: "exec",
+              provider: "pass_store",
+              id: "openclaw/providers/openai/apiKey",
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    请将 secret 保留在 `pass` 条目的第一行，或者如果你希望返回完整的 `pass show` 输出，则自定义该包装器。更新配置后，请同时验证静态审计和 exec 解析器路径：
+
+    ```bash
+    openclaw secrets audit --check
+    openclaw secrets audit --allow-exec
+    ```
+
   </Accordion>
   <Accordion title="sops">
     ```json5
@@ -484,9 +636,9 @@ Google Chat 兼容性行为：
     openclaw secrets audit --check
     ```
   </Step>
-  <Step title="配置 SecretRef">
+  <Step title="配置并应用 SecretRefs">
     ```bash
-    openclaw secrets configure
+    openclaw secrets configure --apply
     ```
   </Step>
   <Step title="重新审计">
@@ -495,6 +647,10 @@ Google Chat 兼容性行为：
     ```
   </Step>
 </Steps>
+
+在重新审计结果干净之前，不要将迁移视为完成。若审计仍然报告静态存放的明文值，则即使运行时 API 返回的是脱敏值，agent 访问风险仍然存在。
+
+如果你在 `configure` 期间保存了计划而不是直接应用，请先使用 `openclaw secrets apply --from <plan-path>` 应用该已保存的计划，然后再进行重新审计。
 
 <AccordionGroup>
   <Accordion title="secrets 审计">

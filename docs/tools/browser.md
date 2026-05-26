@@ -202,12 +202,13 @@ Gateway。
 
 <Accordion title="SSRF 策略">
 
-- 浏览器导航和打开标签页在导航前会进行 SSRF 防护，并在最终的 `http(s)` URL 上尽力再次检查。
+- 浏览器导航和打开标签页会在导航前进行 SSRF 保护，并在最终 `http(s)` URL 上尽力重新检查。
 - 在严格 SSRF 模式下，远程 CDP 端点发现和 `/json/version` 探测（`cdpUrl`）也会被检查。
-- Gateway/provider 的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY` 环境变量不会自动代理 OpenClaw 管理的浏览器。受管理 Chrome 默认直接启动，因此 provider 的代理设置不会削弱浏览器的 SSRF 检查。
-- 若要为受管理浏览器本身设置代理，请通过 `browser.extraArgs` 显式传递 Chrome 代理标志，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。严格 SSRF 模式会阻止显式的浏览器代理路由，除非明确启用了私有网络浏览器访问。
-- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；仅在私有网络浏览器访问被明确信任时启用。
-- `browser.ssrfPolicy.allowPrivateNetwork` 仍然作为旧别名受支持。
+- Gateway/provider 的 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 和 `NO_PROXY` 环境变量不会自动代理 OpenClaw 管理的浏览器。受管理的 Chrome 默认直接启动，因此提供方代理设置不会削弱浏览器的 SSRF 检查。
+- OpenClaw 管理的本地 CDP 就绪探测和 DevTools WebSocket 连接会绕过受管理网络代理，直接针对已启动的 loopback 端点，因此当运维代理阻止 loopback 出站时，`openclaw browser start` 仍可工作。
+- 若要代理受管理浏览器本身，请通过 `browser.extraArgs` 传入显式的 Chrome 代理标志，例如 `--proxy-server=...` 或 `--proxy-pac-url=...`。严格 SSRF 模式会阻止显式浏览器代理路由，除非已有意启用私有网络浏览器访问。
+- `browser.ssrfPolicy.dangerouslyAllowPrivateNetwork` 默认关闭；仅在明确信任私有网络浏览器访问时启用。
+- `browser.ssrfPolicy.allowPrivateNetwork` 仍作为旧别名受支持。
 
 </Accordion>
 
@@ -414,6 +415,9 @@ CDP URL 形式，并会自动选择正确的连接策略：
   升级，而托管提供商仍然可以在其发现端点广告一个不适合 Playwright CDP 的短期 URL 时，
   使用其根 WebSocket 端点。
 
+`openclaw browser doctor` 使用与运行时附加相同的先发现、后 WebSocket 回退
+逻辑，因此能够成功连接的裸根 URL 不会在诊断中被报告为不可达。
+
 ### Browserbase
 
 [Browserbase](https://www.browserbase.com) 是一个用于运行
@@ -598,9 +602,10 @@ Agent 使用方式：
 与受管理的 `openclaw` 配置文件相比，existing-session 驱动的限制更多：
 
 - **截图** - 页面捕获和 `--ref` 元素捕获可用；CSS `--element` 选择器不可用。`--full-page` 不能与 `--ref` 或 `--element` 组合。页面或基于 ref 的元素截图不需要 Playwright。
-- **操作** - `click`、`type`、`hover`、`scrollIntoView`、`drag` 和 `select` 需要 snapshot refs（不支持 CSS 选择器）。`click-coords` 会点击可见视口坐标，不需要 snapshot ref。`click` 仅支持左键。`type` 不支持 `slowly=true`；请使用 `fill` 或 `press`。`press` 不支持 `delayMs`。`type`、`hover`、`scrollIntoView`、`drag`、`select`、`fill` 和 `evaluate` 不支持按次调用超时。`select` 接受单个值。
-- **等待 / 上传 / 对话框** - `wait --url` 支持精确、子串和 glob 模式；不支持 `wait --load networkidle`。上传钩子需要 `ref` 或 `inputRef`，一次一个文件，不支持 CSS `element`。对话框钩子不支持超时覆盖。
-- **仅受管理功能** - 批量操作、PDF 导出、下载拦截和 `responsebody` 仍然需要受管理的浏览器路径。
+- **操作** - `click`、`type`、`hover`、`scrollIntoView`、`drag` 和 `select` 需要 snapshot refs（不支持 CSS 选择器）。`click-coords` 会点击可见视口坐标，不需要 snapshot ref。`click` 仅支持左键。`type` 不支持 `slowly=true`；请使用 `fill` 或 `press`。`press` 不支持 `delayMs`。`type`、`hover`、`scrollIntoView`、`drag`、`select`、`fill` 和 `evaluate` 不支持每次调用的超时。`select` 接受单个值。
+- **等待 / 上传 / 对话框** - `wait --url` 支持精确、子串和 glob 模式；不支持 `wait --load networkidle`。上传钩子需要 `ref` 或 `inputRef`，一次一个文件，不支持 CSS `element`。对话框钩子不支持超时覆盖或 `dialogId`。
+- **对话框可见性** - 当某个操作打开模态对话框时，受管理浏览器的操作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；快照也会包含待处理的对话框状态。在对话框待处理时，请使用 `browser dialog --accept/--dismiss --dialog-id <id>` 进行响应。OpenClaw 之外处理的对话框会显示在 `browserState.dialogs.recent` 下。
+- **仅受管理浏览器可用的功能** - 批量操作、PDF 导出、下载拦截和 `responsebody` 仍然需要受管理浏览器路径。
 
 </Accordion>
 
@@ -624,12 +629,11 @@ Agent 使用方式：
 
 平台：
 
-- macOS: checks `/Applications` and `~/Applications`.
-- Linux: checks common Chrome/Brave/Edge/Chromium locations under `/usr/bin`,
-  `/snap/bin`, `/opt/google`, `/opt/brave.com`, `/usr/lib/chromium`, and
-  `/usr/lib/chromium-browser`, plus Playwright-managed Chromium under
-  `PLAYWRIGHT_BROWSERS_PATH` or `~/.cache/ms-playwright`.
-- Windows: checks common install locations.
+- macOS：检查 `/Applications` 和 `~/Applications`。
+- Linux：检查 `/usr/bin`、`/snap/bin`、`/opt/google`、`/opt/brave.com`、`/usr/lib/chromium` 和
+  `/usr/lib/chromium-browser` 下常见的 Chrome/Brave/Edge/Chromium 位置，以及位于
+  `PLAYWRIGHT_BROWSERS_PATH` 或 `~/.cache/ms-playwright` 下由 Playwright 管理的 Chromium。
+- Windows：检查常见安装位置。
 
 ## 控制 API（可选）
 

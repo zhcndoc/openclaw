@@ -40,15 +40,16 @@ Agent 查找路径：在修改前，请使用 `gateway` 工具动作 `config.sch
 已移到专门页面 - 参见
 [Configuration - agents](/gateway/config-agents) 了解：
 
-- `agents.defaults.*`（workspace、model、thinking、heartbeat、memory、media、skills、sandbox）
-- `multiAgent.*`（多 agent 路由和绑定）
-- `session.*`（session 生命周期、压缩、修剪）
-- `messages.*`（消息投递、TTS、markdown 渲染）
-- `talk.*`（Talk 模式）
-  - `talk.consultThinkingLevel`：Control UI Talk 实时咨询背后完整 OpenClaw agent 运行的 thinking level 覆盖
-  - `talk.consultFastMode`：Control UI Talk 实时咨询的一次性 fast-mode 覆盖
-  - `talk.speechLocale`：用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
-  - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转录前保留平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
+- `agents.defaults.*` (workspace, model, thinking, heartbeat, memory, media, skills, sandbox)
+- `multiAgent.*` (multi-agent routing and bindings)
+- `session.*` (session lifecycle, compaction, pruning)
+- `messages.*` (message delivery, TTS, markdown rendering)
+- `talk.*` (Talk mode)
+  - `talk.consultThinkingLevel`: 用于 Control UI Talk 实时咨询背后完整 OpenClaw agent 运行的 thinking level 覆盖
+  - `talk.consultFastMode`: 用于 Control UI Talk 实时咨询的一次性 fast-mode 覆盖
+  - `talk.speechLocale`: 用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
+  - `talk.silenceTimeoutMs`: 未设置时，Talk 会在发送转录前保持平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
+  - `talk.realtime.consultRouting`: 对于跳过 `openclaw_agent_consult` 的已完成实时 Talk 转录，Gateway relay 回退路径
 
 ## 工具和自定义 provider
 
@@ -649,10 +650,11 @@ openclaw gateway --port 19001
 验证和安全说明：
 
 - `hooks.enabled=true` 需要一个非空的 `hooks.token`。
-- `hooks.token` 必须与 `gateway.auth.token` **不同**；重复使用 Gateway token 会被拒绝。
+- `hooks.token` 必须与 `gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 不同；重复使用 Gateway token 会导致启动时验证失败。
+- `openclaw security audit` 也会将 `hooks.token` 复用活动中的 Gateway 密码认证（`gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`，或 `--auth password --password <password>`）标记为严重问题；密码模式下的复用在启动时仍兼容，但应通过轮换其中一个密钥来修复。
 - `hooks.path` 不能是 `/`；请使用专用子路径，例如 `/hooks`。
 - 如果 `hooks.allowRequestSessionKey=true`，请限制 `hooks.allowedSessionKeyPrefixes`（例如 `["hook:"]`）。
-- 如果某个 mapping 或 preset 使用模板化的 `sessionKey`，请设置 `hooks.allowedSessionKeyPrefixes` 和 `hooks.allowRequestSessionKey=true`。静态 mapping key 不需要该显式开启。
+- 如果某个 mapping 或 preset 使用了模板化的 `sessionKey`，请设置 `hooks.allowedSessionKeyPrefixes` 和 `hooks.allowRequestSessionKey=true`。静态 mapping key 不需要该显式开启。
 
 **端点：**
 
@@ -841,10 +843,10 @@ openclaw gateway --port 19001
 验证：
 
 - `provider` 模式：`^[a-z][a-z0-9_-]{0,63}$`
-- `source: "env"` 的 `id` 模式：`^[A-Z][A-Z0-9_]{0,127}$`
-- `source: "file"` 的 `id`：绝对 JSON Pointer（例如 `"/providers/openai/apiKey"`）
-- `source: "exec"` 的 `id` 模式：`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$`
-- `source: "exec"` 的 `id` 不能包含 `.` 或 `..` 这类由斜杠分隔的路径段（例如 `a/../b` 会被拒绝）
+- `source: "env"` id 模式：`^[A-Z][A-Z0-9_]{0,127}$`
+- `source: "file"` id：绝对 JSON Pointer（例如 `"/providers/openai/apiKey"`）
+- `source: "exec"` id 模式：`^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$`（支持 AWS 风格的 `secret#json_key` 选择器）
+- `source: "exec"` 的 id 不能包含 `.` 或 `..` 这样的斜杠分隔路径段（例如 `a/../b` 会被拒绝）
 
 ### 支持的凭据范围
 
@@ -1195,10 +1197,10 @@ openclaw gateway --port 19001
 {
   cron: {
     enabled: true,
-    maxConcurrentRuns: 2, // cron 分发 + 隔离的 cron 代理轮次执行
-    webhook: "https://example.invalid/legacy", // 已弃用的、用于已存储 notify:true 作业的回退项
+    maxConcurrentRuns: 8, // 默认；cron 分发 + 隔离的 cron 代理轮次执行
+    webhook: "https://example.invalid/legacy", // 用于已存储 notify:true 作业的已弃用回退项
     webhookToken: "replace-with-dedicated-token", // 用于出站 webhook 认证的可选 bearer token
-    sessionRetention: "24h", // 持续时间字符串 或 false
+    sessionRetention: "24h", // 持续时间字符串或 false
     runLog: {
       maxBytes: "2mb", // 默认 2_000_000 字节
       keepLines: 2000, // 默认 2000
@@ -1329,14 +1331,14 @@ openclaw gateway --port 19001
 
 **合并行为：**
 
-- 单个文件：替换被包含的对象。
-- 文件数组：按顺序深度合并（后面的文件覆盖前面的）。
+- 单个文件：替换其所在的对象。
+- 文件数组：按顺序深度合并（后面的覆盖前面的）。
 - 同级键：在 include 之后合并（覆盖被包含的值）。
 - 嵌套 include：最多 10 层。
-- 路径：相对于包含它们的文件解析，但必须保持在顶级配置目录（`openclaw.json` 的 `dirname`）内。只有当绝对路径/`../` 形式仍然解析到该边界内时才允许。
-- OpenClaw 处理的写入会写回到被包含的文件中，前提是它们只更改一个由单文件 include 支持的顶级部分。例如，`plugins install` 会更新 `plugins: { $include: "./plugins.json5" }` 中的 `plugins.json5`，并保持 `openclaw.json` 不变。
-- 根级 include、include 数组以及带有同级覆盖项的 include 对于 OpenClaw 处理的写入都是只读的；这些写入不会进行配置扁平化，而是直接失败。
-- 错误：为缺失文件、解析错误和循环 include 提供清晰的消息。
+- 路径：相对于包含它的文件解析，但必须保留在顶级配置目录内（`openclaw.json` 所在的 `dirname`）。只有当绝对路径或 `../` 形式在解析后仍位于该边界内时才允许。路径不得包含空字节，并且在解析前后都必须严格短于 4096 个字符。
+- OpenClaw 所有的写入：如果只更改一个由单文件 include 支持的顶级部分，则会直接写回该包含文件。例如，`plugins install` 会更新 `plugins.json5` 中的 `plugins: { $include: "./plugins.json5" }`，并保持 `openclaw.json` 不变。
+- 根级 include、include 数组以及带同级覆盖的 include 对 OpenClaw 所有的写入都是只读的；这些写入会直接失败，而不是将配置拍平。
+- 错误：对于缺失文件、解析错误、循环 include、无效路径格式以及长度过长，提供清晰的消息。
 
 ---
 

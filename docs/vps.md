@@ -89,10 +89,10 @@ EOF
 source ~/.bashrc
 ```
 
-- `NODE_COMPILE_CACHE` 可提升重复命令的启动时间。
-- `OPENCLAW_NO_RESPAWN=1` 可避免自我重启路径带来的额外启动开销。
+- `NODE_COMPILE_CACHE` 可提升重复命令的启动速度。
+- `OPENCLAW_NO_RESPAWN=1` 会让常规的 Gateway 重启保持在进程内完成，从而避免额外的进程交接，并使小型主机上的 PID 跟踪更简单。
 - 第一次运行命令会预热缓存；后续运行会更快。
-- 有关 Raspberry Pi 的具体信息，请参见 [Raspberry Pi](/install/raspberry-pi)。
+- 有关 Raspberry Pi 的具体说明，请参见 [Raspberry Pi](/install/raspberry-pi)。
 
 ### systemd 调优检查清单（可选）
 

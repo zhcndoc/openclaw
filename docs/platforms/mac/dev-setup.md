@@ -13,8 +13,8 @@ title: "macOS 开发设置"
 
 在构建应用之前，请确保已安装以下内容：
 
-1. **Xcode 26.2+**: Swift 开发所必需。
-2. **Node.js 24 & pnpm**: 推荐用于 gateway、CLI 和打包脚本。当前仍支持 Node 22 LTS，即 `22.16+`，以保证兼容性。
+1. **Xcode 26.2+**：Swift 开发所必需。
+2. **Node.js 24 和 pnpm**：推荐用于 gateway、CLI 和打包脚本。为了兼容性，当前仍支持 Node 22 LTS，即 `22.19+`。
 
 ## 1. 安装依赖
 
@@ -47,7 +47,7 @@ macOS 应用需要全局安装 `openclaw` CLI 来管理后台任务。
 
 1. 打开 OpenClaw 应用。
 2. 进入 **General** 设置选项卡。
-3. 点击 **"Install CLI"**。
+3. 点击 **"安装 CLI"**。
 
 也可以手动安装：
 

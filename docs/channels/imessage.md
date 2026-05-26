@@ -118,6 +118,18 @@ exec ssh -T gateway-host imsg "$@"
     OpenClaw 对 SCP 使用严格的 host key 检查，因此中继主机的 host key 必须已经存在于 `~/.ssh/known_hosts` 中。
     附件路径会根据允许的根目录（`attachmentRoots` / `remoteAttachmentRoots`）进行验证。
 
+<Warning>
+Any `cliPath` wrapper or SSH proxy you put in front of `imsg` MUST behave like a transparent stdio pipe for long-lived JSON-RPC. OpenClaw exchanges small newline-framed JSON-RPC messages over the wrapper's stdin/stdout for the lifetime of the channel:
+
+- Forward each stdin chunk/line **as soon as bytes are available** — don't wait for EOF.
+- Forward each stdout chunk/line promptly in the reverse direction.
+- Preserve newlines.
+- Avoid fixed-size blocking reads (`read(4096)`, `cat | buffer`, default shell `read`) that can starve small frames.
+- Keep stderr separate from the JSON-RPC stdout stream.
+
+A wrapper that buffers stdin until a large block fills will produce symptoms that look like an iMessage outage — `imsg rpc timeout (chats.list)` or repeated channel restarts — even though `imsg rpc` itself is healthy. `ssh -T host imsg "$@"` (above) is safe because it forwards OpenClaw's `cliPath` arguments such as `rpc` and `--db`. Pipelines like `ssh host imsg | grep -v '^DEBUG'` are NOT — line-buffered tools can still hold frames; use `stdbuf -oL -eL` on every stage if you must filter.
+</Warning>
+
   </Tab>
 </Tabs>
 
@@ -327,7 +339,7 @@ imsg send <handle> "test"
 快速操作流程：
 
 - 在该私信或允许的群聊中运行 `/acp spawn codex --bind here`。
-- 之后同一 iMessage 会话中的消息会路由到生成的 ACP 会话。
+- 之后同一 iMessage 会话中的消息将路由到生成的 ACP 会话。
 - `/new` 和 `/reset` 会就地重置同一个已绑定的 ACP 会话。
 - `/acp close` 会关闭 ACP 会话并移除绑定。
 
@@ -552,6 +564,24 @@ imsg send <handle> "test"
     按账号覆盖使用 `channels.imessage.accounts.<id>.reactionNotifications`。
 
   </Accordion>
+
+  <Accordion title="Approval reactions (👍 / 👎)">
+    当 `approvals.exec.enabled` 或 `approvals.plugin.enabled` 为 true 且请求路由到 iMessage 时，网关会原生投递批准请求并接受 tapback 来解决它：
+
+    - `👍`（Like tapback）→ `allow-once`
+    - `👎`（Dislike tapback）→ `deny`
+    - `allow-always` 仍然是手动回退方式：作为普通回复发送 `/approve <id> allow-always`。
+
+    反应处理要求作出反应的用户 handle 明确属于审批人。审批人列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；请添加用户的 E.164 格式电话号码或其 Apple ID 电子邮件。通配符条目 `"*"` 会被接受，但会允许任何发送者进行批准。该反应快捷方式会刻意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式审批人允许列表才是批准解析真正需要的唯一门槛。
+
+    **此版本的行为变化：** 当 `channels.imessage.allowFrom` 非空时，`/approve <id> <decision>` 文本命令现在会依据该审批人列表进行授权（而不是更宽泛的 DM 允许列表）。虽然在 DM 允许列表中获准但不在 `allowFrom` 中的发送者将收到明确拒绝。请将所有应该能够通过 `/approve`（以及通过反应）进行批准的操作员添加到 `allowFrom` 中，以保留先前行为。当 `allowFrom` 为空时，旧的“同聊天回退”仍然生效，且 `/approve` 继续授权任何 DM 允许列表所允许的用户。
+
+    操作员说明：
+    - 该反应绑定会同时存储在内存中（TTL 与批准过期时间匹配）以及网关的持久键值存储中，因此在网关重启后不久到达的 tapback 仍可解析为该批准。
+    - 来自其他设备的 `is_from_me=true` tapback（操作者在已配对 Apple 设备上的自身反应）会被刻意忽略，因此机器人不能自我批准。
+    - 旧式文本风格 tapback（非常老旧 Apple 客户端发出的纯文本 `Liked "…"`）无法解析批准，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端发出的结构化 tapback 元数据。
+
+  </Accordion>
 </AccordionGroup>
 
 ## 配置写入
@@ -688,9 +718,10 @@ channels: {
 }
 ```
 
-- 每次成功分发后游标都会前进；如果某一行分发时抛出错误，则游标会保持不动——下次启动会从该保留游标再次尝试同一行。
-- 对同一个 `guid` 连续抛出达到 `maxFailureRetries` 次后，追赶会记录一条 `warn`，并强制将游标越过该卡住的消息，从而让后续启动能够继续推进。
-- 已经放弃的 guid 在之后的运行中会在发现时直接跳过（不再尝试分发），并在运行摘要中计入 `skippedGivenUp`。
+- 游标会在每次成功分发后前进；当某一行的分发抛出异常时，游标会保持不动——下次启动会从这个保持的游标位置重新尝试同一行。
+- 在启动时的 catchup 查询成功之后，后续实时处理的行也会推进同一个游标，这样网关重启时就不会重放那些已经在实时路径中处理过的消息。实时游标写入不会跳过仍低于 `maxFailureRetries` 的 catchup 失败项。
+- 对同一个 `guid` 连续抛出 `maxFailureRetries` 次之后，catchup 会记录一条 `warn`，并强制将游标推进到这条卡住的消息之后，这样后续启动就能继续前进。
+- 已经放弃的 `guid` 在后续运行中一看到就会跳过（不会尝试分发），并在运行摘要中计入 `skippedGivenUp`。
 
 ### 运维可见信号
 
@@ -786,16 +817,16 @@ openclaw channels status --probe --channel imessage
 
 ## 配置参考指针
 
-- [Configuration reference - iMessage](/gateway/config-channels#imessage)
-- [Gateway configuration](/gateway/configuration)
-- [Pairing](/channels/pairing)
+- [iMessage 配置参考](/gateway/config-channels#imessage)
+- [网关配置](/gateway/configuration)
+- [配对](/channels/pairing)
 
 ## 相关内容
 
-- [Channels Overview](/channels) — all supported channels
-- [BlueBubbles removal and the imsg iMessage path](/announcements/bluebubbles-imessage) — announcement and migration summary
-- [Coming from BlueBubbles](/channels/imessage-from-bluebubbles) — config translation table and step-by-step cutover
-- [Pairing](/channels/pairing) — DM authentication and pairing flow
-- [Groups](/channels/groups) — group chat behavior and mention gating
-- [Channel Routing](/channels/channel-routing) — session routing for messages
-- [Security](/gateway/security) — access model and hardening
+- [通道概览](/channels) — 所有受支持的通道
+- [BlueBubbles 移除与 imsg iMessage 路径](/announcements/bluebubbles-imessage) — 公告与迁移摘要
+- [从 BlueBubbles 迁移过来](/channels/imessage-from-bluebubbles) — 配置转换表与逐步切换
+- [配对](/channels/pairing) — DM 认证与配对流程
+- [群组](/channels/groups) — 群聊行为与提及门控
+- [通道路由](/channels/channel-routing) — 消息会话路由
+- [安全性](/gateway/security) — 访问模型与加固

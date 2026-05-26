@@ -12,7 +12,7 @@ title: "入门"
 
 ## 你需要什么
 
-- **Node.js** — 推荐使用 Node 24（也支持 Node 22.16+）
+- **Node.js** — 推荐使用 Node 24（也支持 Node 22.19+）
 - **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）— 引导过程会提示你
 
 <Tip>

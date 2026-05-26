@@ -27,22 +27,34 @@ openclaw security audit --json
 
 普通的 `security audit` 会保持在冷配置/文件系统/只读路径上。默认情况下，它不会发现插件运行时安全收集器，因此常规审计不会加载每个已安装插件的运行时。使用 `--deep` 可包含尽力而为的实时 Gateway 探测以及插件拥有的安全审计收集器；明确的内部调用者在已经具有适当运行时作用域时，也可以选择启用这些插件拥有的收集器。
 
-当多个 DM 发送者共享主会话时，审计会发出警告，并建议在共享收件箱中使用 **安全 DM 模式**：`session.dmScope="per-channel-peer"`（多账号频道则使用 `per-account-channel-peer`）。
-这适用于协作/共享收件箱的加固。由彼此不信任/对抗性的操作者共享同一个 Gateway 并不是推荐的方案；应通过独立的 gateways（或独立的 OS 用户/主机）拆分信任边界。
-当配置表明可能存在共享用户入口（例如开放的 DM/群组策略、已配置的群组目标，或通配符发送者规则）时，它也会发出 `security.trust_model.multi_user_heuristic`，并提醒你 OpenClaw 默认是个人助理信任模型。
-对于有意的共享用户设置，审计建议对所有会话进行沙箱隔离，将文件系统访问限制在工作区范围内，并让个人/私有身份或凭据远离该运行时。
-当使用小模型（`<=300B`）且未进行沙箱隔离并启用了 web/browser 工具时，它也会发出警告。
-对于 webhook 入口，当 `hooks.token` 复用了 Gateway token、`hooks.token` 很短、`hooks.path="/"`、`hooks.defaultSessionKey` 未设置、`hooks.allowedAgentIds` 不受限制、启用了请求 `sessionKey` 覆盖，或启用覆盖但未设置 `hooks.allowedSessionKeyPrefixes` 时，它会发出警告。
-当配置了沙箱 Docker 设置但关闭了沙箱模式时，它也会发出警告；当 `gateway.nodes.denyCommands` 使用了无效的模式样式/未知条目（仅支持精确的 node 命令名匹配，不支持 shell 文本过滤）时；当 `gateway.nodes.allowCommands` 明确启用危险的 node 命令时；当全局 `tools.profile="minimal"` 被 agent 工具配置文件覆盖时；当写入/编辑工具被禁用但 `exec` 仍可用且没有受约束的沙箱文件系统边界时；当开放群组在没有沙箱/工作区防护的情况下暴露运行时/文件系统工具时；以及当已安装的插件工具可能在宽松工具策略下可达时。
-它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置不当，存在头部伪造风险）以及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录泄漏元数据）。
-当沙箱浏览器使用 Docker `bridge` 网络且没有 `sandbox.browser.cdpSourceRange` 时，它也会发出警告。
+当多个 DM 发送者共享主会话时，审计会发出警告，并建议使用 **安全 DM 模式**：对于共享收件箱，设置 `session.dmScope="per-channel-peer"`（或在多账号频道中设置 `per-account-channel-peer`）。
+这是为了加固协作/共享收件箱。单个由彼此不信任/对抗性操作员共享的 Gateway 不是推荐的设置；应通过单独的 gateway（或单独的 OS 用户/主机）来分隔信任边界。
+当配置暗示可能存在共享用户入口时，它还会发出 `security.trust_model.multi_user_heuristic` 提示（例如开放的 DM/群组策略、已配置的群组目标，或通配符发送者规则），并提醒你 OpenClaw 默认是个人助手信任模型。
+对于有意的共享用户设置，审计建议将所有会话置于沙箱中，保持文件系统访问以工作区为作用域，并且不要在该运行时中保留个人/私密身份或凭据。
+当使用小模型（`<=300B`）且未进行沙箱隔离并启用网页/浏览器工具时，它也会发出警告。
+对于 webhook 入口，当出现以下情况时会发出警告：
+
+- `hooks.token` 复用了一个正在使用中的 Gateway 共享密钥认证值（`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 或 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`）
+- `hooks.token` 过短
+- `hooks.path="/"` 
+- `hooks.defaultSessionKey` 未设置
+- `hooks.allowedAgentIds` 不受限制
+- 允许请求中的 `sessionKey` 覆盖
+- 覆盖功能已启用，但未设置 `hooks.allowedSessionKeyPrefixes`
+
+如果 Gateway 密码认证只在启动时提供，请将同样的值传给 `openclaw security audit --auth password --password <password>`，这样审计就可以将其与 `hooks.token` 进行检查。
+密码模式复用对兼容性而言属于审计发现；应轮换其中一个密钥，而不是指望 Gateway 启动时拒绝该配置。
+
+当已配置沙箱 Docker 设置但沙箱模式关闭时，当 `gateway.nodes.denyCommands` 使用了无效的模式样式/未知条目时（仅支持精确的节点命令名匹配，不支持 shell 文本过滤），当 `gateway.nodes.allowCommands` 明确启用了危险的节点命令时，当全局 `tools.profile="minimal"` 被代理工具配置覆盖时，当写入/编辑工具被禁用但 `exec` 仍可用且没有约束性的沙箱文件系统边界时，当开放组在缺少沙箱/工作区保护的情况下暴露运行时/文件系统工具时，以及当已安装的插件工具在宽松工具策略下可能可达时，它也会发出警告。
+它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置不当，存在头部伪造风险）以及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录泄露元数据）。
+当沙箱浏览器使用 Docker `bridge` 网络且未设置 `sandbox.browser.cdpSourceRange` 时，它也会发出警告。
 它还会标记危险的沙箱 Docker 网络模式（包括 `host` 和 `container:*` 命名空间加入）。
-当现有的沙箱浏览器 Docker 容器缺少/过期的 hash 标签（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`）时，它也会发出警告，并建议运行 `openclaw sandbox recreate --browser --all`。
-当基于 npm 的插件/hook 安装记录未锁定、缺少完整性元数据，或与当前已安装包版本出现漂移时，它也会发出警告。
-当频道 allowlist 依赖可变的名称/邮箱/标签而不是稳定 ID（适用于 Discord、Slack、Google Chat、Microsoft Teams、Mattermost、IRC 作用域等）时，它会发出警告。
-当 `gateway.auth.mode="none"` 使 Gateway HTTP API 在没有共享密钥的情况下仍可访问时（`/tools/invoke` 以及任何已启用的 `/v1/*` 端点），它会发出警告。
-以前缀 `dangerous`/`dangerously` 的设置是明确的“破窗”式操作员覆盖；启用其中一项本身并不构成安全漏洞报告。
-关于完整的危险参数清单，请参阅 [Security](/gateway/security) 中的“Insecure or dangerous flags summary”部分。
+当现有沙箱浏览器 Docker 容器缺少或已过期的哈希标签时（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`）它也会发出警告，并建议运行 `openclaw sandbox recreate --browser --all`。
+当基于 npm 的插件/钩子安装记录未固定、缺少完整性元数据，或与当前已安装的包版本发生漂移时，它也会发出警告。
+当频道白名单依赖可变的名称/电子邮件/标签而不是稳定的 ID 时，它会发出警告（Discord、Slack、Google Chat、Microsoft Teams、Mattermost、IRC 范围，如适用）。
+当 `gateway.auth.mode="none"` 使 Gateway HTTP API 在没有共享密钥的情况下仍可访问时（`/tools/invoke` 以及任何启用的 `/v1/*` 端点），它会发出警告。
+以前缀 `dangerous`/`dangerously` 开头的设置属于明确的“破窗”操作员覆盖；仅启用其中之一本身并不构成安全漏洞报告。
+关于完整的危险参数清单，请参见 [Security](/gateway/security) 中的 “Insecure or dangerous flags summary” 部分。
 
 有意保留的现有发现可以通过 `security.audit.suppressions` 接受。
 每个 suppression 都会匹配一个精确的 `checkId`，并可通过

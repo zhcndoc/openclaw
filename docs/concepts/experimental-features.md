@@ -18,15 +18,16 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 
 ## 当前已文档化的标志
 
-| Surface                  | Key                                                       | Use it when                                                                                                    | More                                                                                          |
-| ------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 本地模型运行时           | `agents.defaults.experimental.localModelLean`             | 更小或更严格的本地后端在处理 OpenClaw 的完整默认工具集时无法正常工作                                             | [本地模型](/gateway/local-models)                                                             |
-| 内存搜索                 | `agents.defaults.memorySearch.experimental.sessionMemory` | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                      | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                   |
-| 结构化规划工具           | `tools.experimental.planTool`                             | 你希望在兼容的运行时和 UI 中公开结构化的 `update_plan` 工具，用于多步骤工作跟踪                                 | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
+| Surface                  | Key                                                                                        | Use it when                                                                                                                       | More                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Local model runtime      | `agents.defaults.experimental.localModelLean`, `agents.list[].experimental.localModelLean` | 更小或更严格的本地后端在处理 OpenClaw 的完整默认工具面板时会吃不消                                                               | [本地模型](/gateway/local-models)                                                             |
+| Memory search            | `agents.defaults.memorySearch.experimental.sessionMemory`                                  | 你希望 `memory_search` 为之前的会话转录建立索引，并接受额外的存储/索引成本                                                         | [内存配置参考](/reference/memory-config#session-memory-search-experimental)                  |
+| Codex harness            | `plugins.entries.codex.config.appServer.experimental.sandboxExecServer`                    | 你希望原生 Codex app-server 0.132.0 或更新版本将目标指向由 OpenClaw 沙箱支持的 exec-server，而不是禁用 Code Mode                | [Codex harness 参考](/plugins/codex-harness-reference#sandboxed-native-execution)           |
+| Structured planning tool | `tools.experimental.planTool`                                                              | 你希望在兼容的运行时和 UI 中暴露结构化的 `update_plan` 工具，用于多步骤工作跟踪                                                  | [网关配置参考](/gateway/config-tools#toolsexperimental)                                      |
 
 ## 本地模型精简模式
 
-`agents.defaults.experimental.localModelLean: true` 是一个针对较弱本地模型配置的缓冲阀。启用后，OpenClaw 会在每一轮中从代理的工具面板里移除三个默认工具 —— `browser`、`cron` 和 `message`。除此之外没有任何变化。
+`agents.defaults.experimental.localModelLean: true` 是弱本地模型设置的一个泄压阀。开启后，OpenClaw 会在每一轮中将三个默认工具 —— `browser`、`cron` 和 `message` —— 从代理的工具面板中移除。其他内容都不会改变。使用 `agents.list[].experimental.localModelLean` 可以为某个已配置代理单独启用或禁用相同行为。
 
 ### 为什么是这三个工具
 
@@ -66,7 +67,25 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 }
 ```
 
-更改标志后重启 Gateway，然后使用以下命令确认精简后的工具列表：
+仅针对一个代理：
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "local",
+        model: "lmstudio/gemma-4-e4b-it",
+        experimental: {
+          localModelLean: true,
+        },
+      },
+    ],
+  },
+}
+```
+
+更改标志后重启 Gateway，然后使用以下命令确认裁剪后的工具列表：
 
 ```bash
 openclaw status --deep

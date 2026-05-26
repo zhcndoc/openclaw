@@ -165,7 +165,9 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 结构化拒绝
 
-隔离 cron 运行会优先使用嵌入运行中的结构化执行拒绝元数据，然后再回退到最终输出中的已知拒绝标记，例如 `SYSTEM_RUN_DENIED`、`INVALID_REQUEST` 和审批绑定拒绝短语。
+Isolated cron runs use structured execution-denial metadata from the embedded run as the authoritative denial signal. They also honor node-host `UNAVAILABLE` wrappers when the nested structured error message starts with `SYSTEM_RUN_DENIED` or `INVALID_REQUEST`.
+
+Cron does not classify final-output prose or approval-looking refusal phrases as denials unless the embedded run also provides structured denial metadata, so ordinary assistant text is not treated as a blocked command.
 
 `cron list` 和运行历史会显示拒绝原因，而不是把被阻止的命令报告为 `ok`。
 

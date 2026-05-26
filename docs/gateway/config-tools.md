@@ -43,6 +43,38 @@ sidebarTitle: "工具和自定义提供方"
 | `group:agents`     | `agents_list`, `update_plan`                                                                                            |
 | `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                    |
 | `group:openclaw`   | 所有内置工具（不包括提供方插件）                                                                          |
+| `group:plugins`    | 已加载插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                            |
+
+### sandbox 工具策略中的 MCP 和插件工具
+
+已配置的 MCP 服务器会作为插件拥有的工具，通过 `bundle-mcp` 插件 id 暴露。普通工具配置文件可以允许它们，但 `tools.sandbox.tools` 是沙盒会话的额外闸门。如果 sandbox 模式是 `"all"` 或 `"non-main"`，当需要让 MCP/插件工具可见时，请在 sandbox 工具允许列表中包含以下条目之一：
+
+- `bundle-mcp`：适用于来自 `mcp.servers` 的 OpenClaw 管理 MCP 服务器
+- 某个特定原生插件的插件 id
+- `group:plugins`：适用于所有已加载的插件拥有工具
+- 精确的 MCP 服务器工具名或服务器通配符，例如 `outlook__send_mail` 或 `outlook__*`，当你只想要一个服务器时
+
+服务器通配符使用的是提供方安全的 MCP 服务器前缀，不一定等同于原始的 `mcp.servers` 键。不是 `[A-Za-z0-9_-]` 的字符会变成 `-`，不以字母开头的名称会加上 `mcp-` 前缀，而较长或重复的前缀可能会被截断或加后缀；例如，`mcp.servers["Outlook Graph"]` 会使用类似 `outlook-graph__*` 的通配符。
+
+```json5
+{
+  agents: { defaults: { sandbox: { mode: "all" } } },
+  mcp: {
+    servers: {
+      outlook: { command: "node", args: ["./outlook-mcp.js"] },
+    },
+  },
+  tools: {
+    sandbox: {
+      tools: {
+        alsoAllow: ["web_search", "web_fetch", "memory_search", "memory_get", "bundle-mcp"],
+      },
+    },
+  },
+}
+```
+
+如果没有该 sandbox 层条目，MCP 服务器仍可能成功加载，但在发送给提供方请求之前其工具会被过滤掉。使用 `openclaw doctor` 可以检查 `mcp.servers` 中 OpenClaw 管理服务器的这种结构。来自捆绑插件清单或 Claude `.mcp.json` 的 MCP 服务器使用相同的 sandbox 闸门，但此诊断尚不会枚举这些来源；如果它们的工具在 sandbox 会话中消失，也请使用相同的允许列表条目。
 
 ### `tools.allow` / `tools.deny`
 
@@ -400,11 +432,11 @@ sidebarTitle: "工具和自定义提供方"
 }
 ```
 
-- `model`：派生子代理的默认模型。若省略，子代理将继承调用者的模型。
-- `allowAgents`：当请求方 agent 未设置自己的 `subagents.allowAgents` 时，`sessions_spawn` 的目标 agent id 默认允许列表（`["*"]` = 任意；默认：仅同一 agent）。
+- `model`：spawn 出来的子 agent 的默认模型。如果省略，子 agent 将继承调用者的模型。
+- `allowAgents`：当请求方 agent 未设置自己的 `subagents.allowAgents` 时，`sessions_spawn` 可用的目标 agent id 默认允许列表（`["*"]` = 任何已配置目标；默认：仅同一 agent）。已删除 agent 配置的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 可清理它们。
 - `runTimeoutSeconds`：当工具调用省略 `runTimeoutSeconds` 时，`sessions_spawn` 的默认超时时间（秒）。`0` 表示无超时。
-- `announceTimeoutMs`：gateway `agent` 通知投递尝试的单次调用超时（毫秒）。默认：`120000`。重试可能使总等待时间超过单次配置超时。
-- 每个子代理的工具策略：`tools.subagents.tools.allow` / `tools.subagents.tools.deny`。
+- `announceTimeoutMs`：gateway `agent` announce 投递尝试的单次调用超时（毫秒）。默认：`120000`。临时重试可能会使总等待时间超过单个已配置超时。
+- 每个子 agent 的工具策略：`tools.subagents.tools.allow` / `tools.subagents.tools.deny`。
 
 ---
 
@@ -493,14 +525,14 @@ OpenClaw 使用内置的模型目录。可以通过配置中的 `models.provider
 
   </Accordion>
   <Accordion title="模型目录条目">
-    - `models.providers.*.models`：显式 provider 模型目录条目。
-    - `models.providers.*.models.*.input`：模型输入模态。仅文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型标记为支持图像时，才会将图像附件注入 agent 回合。
+    - `models.providers.*.models`：显式的 provider 模型目录条目。
+    - `models.providers.*.models.*.input`：模型输入模态。纯文本模型使用 `["text"]`，原生图像/视觉模型使用 `["text", "image"]`。只有当所选模型被标记为支持图像时，图像附件才会注入到 agent 回合中。
     - `models.providers.*.models.*.contextWindow`：原生模型上下文窗口元数据。它会覆盖该模型的 provider 级 `contextWindow`。
-    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时使用它；当二者不同，`openclaw models list` 会显示两个值。
-    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认 OpenAI 行为。
-    - `models.providers.*.models.*.compat.requiresStringContent`：针对仅支持字符串内容的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前把纯文本 `messages[].content` 数组压平成普通字符串。
-    - `models.providers.*.models.*.compat.strictMessageKeys`：针对严格的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为仅保留 `role` 和 `content`。
-    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 载荷提示。对于顶层 `enable_thinking` 使用 `"qwen"`，对于支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM），则使用 `chat_template_kwargs.enable_thinking` 对应的 `"qwen-chat-template"`。
+    - `models.providers.*.models.*.contextTokens`：可选的运行时上下文上限。它会覆盖 provider 级 `contextTokens`；当你希望有效上下文预算小于模型原生 `contextWindow` 时可使用它；当两者不同，`openclaw models list` 会显示这两个值。
+    - `models.providers.*.models.*.compat.supportsDeveloperRole`：可选的兼容性提示。对于 `api: "openai-completions"` 且 `baseUrl` 非空且非原生（主机不是 `api.openai.com`）的情况，OpenClaw 会在运行时强制将其设为 `false`。空的/省略的 `baseUrl` 会保留默认的 OpenAI 行为。
+    - `models.providers.*.models.*.compat.requiresStringContent`：适用于仅接受字符串的 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将纯文本 `messages[].content` 数组压平为普通字符串。
+    - `models.providers.*.models.*.compat.strictMessageKeys`：适用于严格 OpenAI 兼容聊天端点的可选兼容性提示。当为 `true` 时，OpenClaw 会在发送请求前将输出的 Chat Completions 消息对象裁剪为 `role` 和 `content`。
+    - `models.providers.*.models.*.compat.thinkingFormat`：可选的 thinking 负载提示。对 Together 风格的 `reasoning.enabled` 使用 `"together"`，对顶层 `enable_thinking` 使用 `"qwen"`，对支持请求级 chat-template kwargs 的 Qwen 系列 OpenAI 兼容服务器（如 vLLM）上的 `chat_template_kwargs.enable_thinking` 使用 `"qwen-chat-template"`。
 
   </Accordion>
   <Accordion title="Amazon Bedrock 发现">
@@ -558,7 +590,7 @@ OpenClaw 使用内置的模型目录。可以通过配置中的 `models.provider
     Cerebras 使用 `cerebras/zai-glm-4.7`；Z.AI 直连使用 `zai/glm-4.7`。
 
   </Accordion>
-  <Accordion title="Kimi Coding">
+  <Accordion title="Kimi 编码">
     ```json5
     {
       env: { KIMI_API_KEY: "sk-..." },

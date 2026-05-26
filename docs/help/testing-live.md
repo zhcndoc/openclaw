@@ -13,7 +13,7 @@ sidebarTitle: "实时测试"
 套件：模型矩阵、CLI 后端、ACP 和媒体提供商实时测试，以及
 凭据处理。
 
-## Live: local smoke commands
+## 实时：本地冒烟命令
 
 在进行临时实时检查之前，请先在进程环境中导出所需的提供商密钥。
 
@@ -63,34 +63,34 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
 
 ### 第 1 层：直接模型补全（无 gateway）
 
-- Test: `src/agents/models.profiles.live.test.ts`
-- Goal:
+- 测试：`src/agents/models.profiles.live.test.ts`
+- 目标：
   - 枚举发现的模型
   - 使用 `getApiKeyForModel` 选择你拥有凭据的模型
   - 对每个模型运行一次小型补全（必要时包含定向回归）
-- How to enable:
+- 如何启用：
   - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
-- Set `OPENCLAW_LIVE_MODELS=modern`（或 `all`，`modern` 的别名）以实际运行此套件；否则它会跳过，以保持 `pnpm test:live` 聚焦于 gateway 冒烟
-- How to select models:
+- 设置 `OPENCLAW_LIVE_MODELS=modern`（或 `all`，`modern` 的别名）以实际运行此套件；否则它会跳过，以保持 `pnpm test:live` 聚焦于 gateway 冒烟
+- 如何选择模型：
   - `OPENCLAW_LIVE_MODELS=modern` 运行现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4.3）
   - `OPENCLAW_LIVE_MODELS=all` 是现代白名单的别名
   - 或 `OPENCLAW_LIVE_MODELS="openai/gpt-5.5,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,..."`（逗号白名单）
   - Modern/all 扫描默认采用经过筛选的高信号上限；将 `OPENCLAW_LIVE_MAX_MODELS=0` 设为完整现代扫描，或设置为正数以使用更小的上限。
   - 完整扫描使用 `OPENCLAW_LIVE_TEST_TIMEOUT_MS` 作为整个直接模型测试超时。默认：60 分钟。
   - 直接模型探测默认以 20 路并行运行；设置 `OPENCLAW_LIVE_MODEL_CONCURRENCY` 可覆盖。
-- How to select providers:
+- 如何选择提供商：
   - `OPENCLAW_LIVE_PROVIDERS="google,google-antigravity,google-gemini-cli"`（逗号白名单）
-- Where keys come from:
+- 密钥来源：
   - 默认：配置文件存储和环境变量回退
   - 设置 `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以仅强制使用**配置文件存储**
-- Why this exists:
+- 为什么需要这个：
   - 将“提供商 API 坏了/密钥无效”和“gateway agent 流水线坏了”分离开来
   - 包含小而独立的回归问题（例如：OpenAI Responses/Codex Responses 的 reasoning replay + tool-call flows）
 
 ### 第 2 层：Gateway + 开发 agent 冒烟（即“@openclaw”实际执行的内容）
 
-- Test: `src/gateway/gateway-models.profiles.live.test.ts`
-- Goal:
+- 测试：`src/gateway/gateway-models.profiles.live.test.ts`
+- 目标：
   - 启动一个进程内 gateway
   - 创建/修补一个 `agent:dev:*` 会话（每次运行覆盖模型）
   - 遍历有密钥的模型并断言：
@@ -98,29 +98,29 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
     - 真实的工具调用可用（read probe）
     - 可选的额外工具探测（exec+read probe）
     - OpenAI 回归路径（仅 tool-call → follow-up）仍然正常
-- Probe details (so you can explain failures quickly):
-  - `read` probe: 测试会在工作区写入一个 nonce 文件，并要求 agent `read` 它，然后把 nonce 回显回来。
-  - `exec+read` probe: 测试要求 agent `exec` 将 nonce 写入临时文件，然后再 `read` 回来。
-  - image probe: 测试附加一个生成的 PNG（猫 + 随机代码），并期望模型返回 `cat <CODE>`。
-  - Implementation reference: `src/gateway/gateway-models.profiles.live.test.ts` 和 `src/gateway/live-image-probe.ts`。
-- How to enable:
+- 探测详情（便于你快速解释失败原因）：
+  - `read` probe：测试会在工作区写入一个 nonce 文件，并要求 agent `read` 它，然后把 nonce 回显回来。
+  - `exec+read` probe：测试要求 agent `exec` 将 nonce 写入临时文件，然后再 `read` 回来。
+  - image probe：测试会附加一张生成的 PNG（猫 + 随机代码），并期望模型返回 `cat <CODE>`。
+  - 实现参考：`src/gateway/gateway-models.profiles.live.test.ts` 和 `test/helpers/live-image-probe.ts`。
+- 如何启用：
   - `pnpm test:live`（如果直接调用 Vitest，则使用 `OPENCLAW_LIVE_TEST=1`）
-- How to select models:
-  - Default: modern allowlist (Opus/Sonnet 4.6+, GPT-5.2 + Codex, Gemini 3, DeepSeek V4, GLM 4.7, MiniMax M2.7, Grok 4.3)
-  - `OPENCLAW_LIVE_GATEWAY_MODELS=all` is an alias for the modern allowlist
-  - Or set `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"` (or comma list) to narrow
-  - Modern/all gateway sweeps default to a curated high-signal cap; set `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` for an exhaustive modern sweep or a positive number for a smaller cap.
-- How to select providers (avoid "OpenRouter everything"):
-  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"` (comma allowlist)
-- Tool + image probes are always on in this live test:
+- 如何选择模型：
+  - 默认：现代白名单（Opus/Sonnet 4.6+、GPT-5.2 + Codex、Gemini 3、DeepSeek V4、GLM 4.7、MiniMax M2.7、Grok 4.3）
+  - `OPENCLAW_LIVE_GATEWAY_MODELS=all` 是现代白名单的别名
+  - 或设置 `OPENCLAW_LIVE_GATEWAY_MODELS="provider/model"`（或逗号列表）进行缩小
+  - Modern/all gateway 扫描默认采用经过筛选的高信号上限；将 `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=0` 设为完整现代扫描，或设置为正数以使用更小的上限。
+- 如何选择提供商（避免“OpenRouter 全都跑”）：
+  - `OPENCLAW_LIVE_GATEWAY_PROVIDERS="google,google-antigravity,google-gemini-cli,openai,anthropic,zai,minimax"`（逗号白名单）
+- 工具 + 图像探测在此实时测试中始终开启：
   - `read` probe + `exec+read` probe（工具压力测试）
-  - image probe 在模型声明支持图像输入时运行
-  - Flow (high level):
-    - Test generates a tiny PNG with "CAT" + random code (`src/gateway/live-image-probe.ts`)
-    - Sends it via `agent` `attachments: [{ mimeType: "image/png", content: "<base64>" }]`
-    - Gateway parses attachments into `images[]` (`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`)
-    - Embedded agent forwards a multimodal user message to the model
-    - Assertion: reply contains `cat` + the code (OCR tolerance: minor mistakes allowed)
+  - 当模型声明支持图像输入时运行 image probe
+  - 流程（高层）：
+    - 测试生成一个带有 “CAT” + 随机代码 的小型 PNG（`test/helpers/live-image-probe.ts`）
+    - 通过 `agent` 的 `attachments: [{ mimeType: "image/png", content: "<base64>" }]` 发送
+    - Gateway 将附件解析为 `images[]`（`src/gateway/server-methods/agent.ts` + `src/gateway/chat-attachments.ts`）
+    - 内嵌 agent 将多模态用户消息转发给模型
+    - 断言：回复包含 `cat` + 该代码（OCR 容错：允许轻微错误）
 
 <Tip>
 要查看你机器上可以测试的内容（以及精确的 `provider/model` id），请运行：
@@ -132,7 +132,7 @@ openclaw models list --json
 
 </Tip>
 
-## Live: CLI backend smoke (Claude, Gemini, or other local CLIs)
+## 实时：CLI 后端冒烟（Claude、Gemini 或其他本地 CLI）
 
 - 测试：`src/gateway/gateway-cli-backend.live.test.ts`
 - 目标：使用本地 CLI 后端验证 Gateway + agent 流水线，而不触碰你的默认配置。
@@ -196,7 +196,7 @@ pnpm test:docker:live-cli-backend:gemini
 - 现在的实时 CLI 后端冒烟测试会对 Claude 和 Gemini 执行相同的端到端流程：文本轮次、图像分类轮次，然后通过 gateway CLI 验证 MCP `cron` 工具调用。
 - Claude 的默认冒烟测试还会将会话从 Sonnet 修补到 Opus，并验证恢复后的会话仍然记得之前的笔记。
 
-## Live: APNs HTTP/2 proxy reachability
+## 实时：APNs HTTP/2 代理可达性
 
 - 测试：`src/infra/push-apns-http2.live.test.ts`
 - 目标：通过本地 HTTP CONNECT 代理隧道连接到 Apple 的 sandbox APNs 端点，发送 APNs HTTP/2 验证请求，并断言 Apple 的真实 `403 InvalidProviderToken` 响应会经由代理路径返回。
@@ -205,7 +205,7 @@ pnpm test:docker:live-cli-backend:gemini
 - 可选超时：
   - `OPENCLAW_LIVE_APNS_TIMEOUT_MS=30000`
 
-## Live: ACP bind smoke (`/acp spawn ... --bind here`)
+## 实时：ACP 绑定冒烟（`/acp spawn ... --bind here`）
 
 - 测试：`src/gateway/gateway-acp-bind.live.test.ts`
 - 目标：使用一个真实的 ACP 代理验证真实的 ACP conversation-bind 流程：
@@ -450,10 +450,10 @@ Live 测试发现凭据的方式与 CLI 相同。实际影响：
 
 ## 图像生成 live
 
-- Test: `test/image-generation.runtime.live.test.ts`
-- Command: `pnpm test:live test/image-generation.runtime.live.test.ts`
-- Harness: `pnpm test:live:media image`
-- Scope:
+- 测试：`test/image-generation.runtime.live.test.ts`
+- 命令：`pnpm test:live test/image-generation.runtime.live.test.ts`
+- 运行器：`pnpm test:live:media image`
+- 范围：
   - 枚举每个已注册的图像生成 provider 插件
   - 探测前优先使用已导出的 provider 环境变量
   - 默认优先使用 live/env API key，而不是已存储的 auth profiles，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
@@ -494,10 +494,10 @@ openclaw infer image generate \
 
 ## 音乐生成 live
 
-- Test: `extensions/music-generation-providers.live.test.ts`
-- Enable: `OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
-- Harness: `pnpm test:live:media music`
-- Scope:
+- 测试：`extensions/music-generation-providers.live.test.ts`
+- 启用：`OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts`
+- 运行器：`pnpm test:live:media music`
+- 范围：
   - 练习共享的捆绑音乐生成 provider 路径
   - 当前覆盖 Google 和 MiniMax
   - 探测前优先使用已导出的 provider 环境变量
@@ -518,48 +518,48 @@ openclaw infer image generate \
 
 ## 视频生成 live
 
-- Test: `extensions/video-generation-providers.live.test.ts`
-- Enable: `OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts`
-- Harness: `pnpm test:live:media video`
-- Scope:
-  - Exercises the shared bundled video-generation provider path
-  - Defaults to the release-safe smoke path: non-FAL providers, one text-to-video request per provider, one-second lobster prompt, and a per-provider operation cap from `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS` (`180000` by default)
-  - Skips FAL by default because provider-side queue latency can dominate release time; pass `--video-providers fal` or `OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS="fal"` to run it explicitly
-  - Uses already-exported provider env vars before probing
-  - Uses live/env API keys ahead of stored auth profiles by default, so stale test keys in `auth-profiles.json` do not mask real shell credentials
-  - Skips providers with no usable auth/profile/model
-  - Runs only `generate` by default
-  - Set `OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES=1` to also run declared transform modes when available:
-    - `imageToVideo` when the provider declares `capabilities.imageToVideo.enabled` and the selected provider/model accepts buffer-backed local image input in the shared sweep
-    - `videoToVideo` when the provider declares `capabilities.videoToVideo.enabled` and the selected provider/model accepts buffer-backed local video input in the shared sweep
-  - Current declared-but-skipped `imageToVideo` providers in the shared sweep:
-    - `vydra` because bundled `veo3` is text-only and bundled `kling` requires a remote image URL
-  - Provider-specific Vydra coverage:
+- 测试：`extensions/video-generation-providers.live.test.ts`
+- 启用：`OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/video-generation-providers.live.test.ts`
+- 运行器：`pnpm test:live:media video`
+- 范围：
+  - 练习共享的捆绑视频生成 provider 路径
+  - 默认使用发布安全的烟雾路径：非 FAL provider、每个 provider 一次 text-to-video 请求、一个 one-second lobster 提示词，以及来自 `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS` 的每个 provider 操作上限（默认 `180000`）
+  - 默认跳过 FAL，因为 provider 端队列延迟可能主导发布时间；显式传入 `--video-providers fal` 或 `OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS="fal"` 可运行它
+  - 探测前优先使用已导出的 provider 环境变量
+  - 默认优先使用 live/env API key，而不是已存储的 auth profiles，因此 `auth-profiles.json` 中过期的测试密钥不会掩盖真实的 shell 凭据
+  - 跳过没有可用 auth/profile/model 的 provider
+  - 默认仅运行 `generate`
+  - 将 `OPENCLAW_LIVE_VIDEO_GENERATION_FULL_MODES=1` 设为开启时，也会在可用时运行声明的转换模式：
+    - 当 provider 声明 `capabilities.imageToVideo.enabled` 且所选 provider/model 在共享扫描中接受基于 buffer 的本地图像输入时，运行 `imageToVideo`
+    - 当 provider 声明 `capabilities.videoToVideo.enabled` 且所选 provider/model 在共享扫描中接受基于 buffer 的本地视频输入时，运行 `videoToVideo`
+  - 当前在共享扫描中已声明但跳过的 `imageToVideo` provider：
+    - `vydra`，因为捆绑的 `veo3` 仅支持文本，而捆绑的 `kling` 需要远程图像 URL
+  - Vydra 的特定 provider 覆盖：
     - `OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_VYDRA_VIDEO=1 pnpm test:live -- extensions/vydra/vydra.live.test.ts`
-    - 该文件默认运行 `veo3` 的 text-to-video，以及一个使用远程图片 URL fixture 的 `kling` 通道
-  - 当前 `videoToVideo` 的 live 覆盖：
-    - 仅在所选模型为 `runway/gen4_aleph` 时运行 `runway`
+    - 该文件默认运行 `veo3` text-to-video，以及一个使用远程图像 URL fixture 的 `kling` 线路
+  - 当前 `videoToVideo` live 覆盖：
+    - 仅当所选模型为 `runway/gen4_aleph` 时的 `runway`
   - 当前在共享扫描中已声明但跳过的 `videoToVideo` provider：
     - `alibaba`、`qwen`、`xai`，因为这些路径当前需要远程 `http(s)` / MP4 参考 URL
-    - `google`，因为当前共享的 Gemini/Veo 通道使用本地 buffer 输入，而该路径在共享扫描中不被接受
-    - `openai`，因为当前共享通道缺少 org 特定的视频 inpaint/remix 访问保证
+    - `google`，因为当前共享 Gemini/Veo 线路使用本地 buffer 输入，而该路径在共享扫描中不被接受
+    - `openai`，因为当前共享线路缺少组织特定的视频编辑访问保证
 - 可选缩小范围：
   - `OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS="deepinfra,google,openai,runway"`
   - `OPENCLAW_LIVE_VIDEO_GENERATION_MODELS="google/veo-3.1-fast-generate-preview,openai/sora-2,runway/gen4_aleph"`
   - `OPENCLAW_LIVE_VIDEO_GENERATION_SKIP_PROVIDERS=""` 以包含默认扫描中的每个 provider，包括 FAL
-  - `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS=60000` 以降低每个 provider 操作上限，进行更激进的冒烟运行
+  - `OPENCLAW_LIVE_VIDEO_GENERATION_TIMEOUT_MS=60000` 以降低每个 provider 操作上限，进行更激进的烟雾运行
 - 可选认证行为：
   - `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 以强制使用 profile 存储认证并忽略仅环境变量覆盖
 
 ## 媒体 live harness
 
-- Command: `pnpm test:live:media`
-- Purpose:
-  - Runs the shared image, music, and video live suites through one repo-native entrypoint
-  - Uses already-exported provider env vars
-  - Auto-narrows each suite to providers that currently have usable auth by default
-  - Reuses `scripts/test-live.mjs`, so heartbeat and quiet-mode behavior stay consistent
-- Examples:
+- 命令：`pnpm test:live:media`
+- 目的：
+  - 通过一个仓库原生入口运行共享的图像、音乐和视频 live 套件
+  - 使用已导出的 provider 环境变量
+  - 默认自动将每个套件缩小到当前拥有可用认证的 provider
+  - 复用 `scripts/test-live.mjs`，因此心跳和静默模式行为保持一致
+- 示例：
   - `pnpm test:live:media`
   - `pnpm test:live:media image video --providers openai,google,minimax`
   - `pnpm test:live:media video --video-providers openai,runway --all-providers`

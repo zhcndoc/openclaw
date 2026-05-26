@@ -1,5 +1,5 @@
 ---
-summary: "基于浏览器的 Gateway 控制 UI（聊天、节点、配置）"
+summary: "Gateway 的基于浏览器的控制 UI（聊天、活动、节点、配置）"
 read_when:
   - 你想通过浏览器操作 Gateway
   - 你想在不使用 SSH 隧道的情况下访问 Tailnet
@@ -56,6 +56,8 @@ Control UI 是一个由 Gateway 提供的、基于 **Vite + Lit** 的单页应�
 
 一旦批准，该设备就会被记住，除非你使用 `openclaw devices revoke --device <id> --role <role>` 撤销它，否则不会再次要求重新批准。有关令牌轮换和撤销，请参见 [Devices CLI](/cli/devices)。
 
+通过 `openclaw_gateway` 适配器连接的 Paperclip agents 使用相同的首次运行审批流程。在初始连接尝试之后，运行 `openclaw devices approve --latest` 以预览待处理请求，然后重新运行打印出的 `openclaw devices approve <requestId>` 命令进行批准。对于远程 gateway，请传入显式的 `--url` 和 `--token` 值。为了让审批在重启之间保持稳定，请在 Paperclip 中配置持久的 `adapterConfig.devicePrivateKeyPem`，而不是让它每次运行都生成一个新的临时设备身份。
+
 <Note>
 - 直接的本地回环浏览器连接（`127.0.0.1` / `localhost`）会被自动批准。
 - 当 `gateway.auth.allowTailscale: true`、Tailscale 身份验证通过，并且浏览器展示其设备身份时，Tailscale Serve 可以跳过 Control UI 操作会话的配对往返流程。
@@ -96,11 +98,12 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
 ## 它目前能做什么
 
 <AccordionGroup>
-  <Accordion title="聊天和对话">
-    - 通过 Gateway WS 与模型聊天（`chat.history`、`chat.send`、`chat.abort`、`chat.inject`）。
-    - 聊天历史刷新会请求一个有上限的最近窗口，并对每条消息设置文本上限，这样大型会话就不会在聊天变得可用之前强制浏览器渲染完整转录负载。
-    - 通过浏览器实时会话进行对话。OpenAI 使用直接 WebRTC，Google Live 使用通过 WebSocket 的受限一次性浏览器令牌，而仅后端的实时语音插件则使用 Gateway 中继传输。客户端拥有的提供方会话从 `talk.client.create` 开始；Gateway 中继会话从 `talk.session.create` 开始。该中继会将提供方凭据保留在 Gateway 上，同时浏览器通过 `talk.session.appendAudio` 传输麦克风 PCM，并将 `openclaw_agent_consult` 提供方工具调用通过 `talk.client.toolCall` 转发给 Gateway，以便进行策略控制并使用更大、已配置的 OpenClaw 模型。
-    - 在 Chat 中流式显示工具调用和实时工具输出卡片（代理事件）。
+  <Accordion title="Chat and Talk">
+    - 通过 Gateway WS 与模型聊天（`chat.history`, `chat.send`, `chat.abort`, `chat.inject`）。
+    - 聊天历史刷新会请求一个有界的最近窗口，并对每条消息设置文本上限，这样大型会话不会在聊天变得可用之前强迫浏览器渲染完整的转录负载。
+    - 通过浏览器实时会话进行对话。OpenAI 使用直接 WebRTC，Google Live 使用在 WebSocket 上的受限一次性浏览器令牌，而仅后端实时语音插件使用 Gateway 中继传输。由客户端拥有的提供方会话从 `talk.client.create` 开始；Gateway 中继会话从 `talk.session.create` 开始。中继会将提供方凭据保留在 Gateway 上，同时浏览器通过 `talk.session.appendAudio` 传输麦克风 PCM，将 `openclaw_agent_consult` 提供方工具调用通过 `talk.client.toolCall` 转发给 Gateway 策略和更大的已配置 OpenClaw 模型，并通过 `talk.client.steer` 或 `talk.session.steer` 路由活动运行的语音引导。
+    - 在 Chat 中流式显示工具调用 + 实时工具输出卡片（agent 事件）。
+    - Activity 标签页会基于现有的 `session.tool` / 工具事件传递，显示带有浏览器本地、先脱敏摘要的实时工具活动。
 
   </Accordion>
   <Accordion title="通道、实例、会话、梦境">
@@ -150,6 +153,12 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
   </Accordion>
 </AccordionGroup>
 
+## Activity 标签页
+
+Activity 标签页是一个临时的浏览器本地观察器，用于实时工具活动。它源自驱动 Chat 工具卡片的同一个 Gateway `session.tool` / 工具事件流；它不会额外引入新的 Gateway 事件族、端点、持久化活动存储、指标馈送或外部观察器流。
+
+Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览。工具参数值不会存储在 Activity 状态中；UI 会显示这些参数被隐藏，并且只记录参数字段数量。内存中的列表跟随当前浏览器标签页，在 Control UI 内导航时会保留，并在页面重新加载、会话切换或点击 **Clear** 时重置。
+
 ## 聊天行为
 
 <AccordionGroup>
@@ -173,8 +182,8 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
     - 当新的 Gateway 会话使用报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文使用指示器。在上下文压力较高时它会切换为警告样式，并在建议的压缩级别显示一个紧凑按钮，用于执行正常的会话压缩路径。在 Gateway 再次报告新的使用情况之前，过时的 token 快照会被隐藏。
 
   </Accordion>
-  <Accordion title="Talk 模式（浏览器实时）">
-    Talk 模式使用一个已注册的实时语音提供方。使用 `talk.realtime.provider: "openai"` 并配置 `talk.realtime.providers.openai.apiKey`、`OPENAI_API_KEY` 或 `openai-codex` OAuth 配置文件之一来配置 OpenAI；使用 `talk.realtime.provider: "google"` 并配置 `talk.realtime.providers.google.apiKey` 来配置 Google。浏览器永远不会接收标准提供方 API key。OpenAI 会收到用于 WebRTC 的一次性 Realtime 客户端密钥。Google Live 会收到一个仅限一次使用的受限 Live API auth token，用于浏览器 WebSocket 会话，指令和工具声明会由 Gateway 锁定进该 token。仅暴露后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商 socket 保持在服务端，而浏览器音频则通过经过身份验证的 Gateway RPC 传输。Realtime 会话提示由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
+  <Accordion title="Talk mode (browser realtime)">
+    Talk mode 使用一个已注册的实时语音提供方。配置 OpenAI 时，设置 `talk.realtime.provider: "openai"`，并同时提供 `talk.realtime.providers.openai.apiKey`、`OPENAI_API_KEY`，或 `openai-codex` OAuth 配置文件；配置 Google 时，设置 `talk.realtime.provider: "google"`，并同时提供 `talk.realtime.providers.google.apiKey`。对于托管的 GPT 实时模型，OpenClaw 会优先使用 `openai-codex` OAuth 配置文件，然后才是 `OPENAI_API_KEY`；显式的 OpenAI realtime `apiKey` 仍然是高级覆盖项。浏览器不会接收到标准的提供方 API key。OpenAI 会收到一个用于 WebRTC 的临时 Realtime 客户端密钥。Google Live 会收到一个可在浏览器 WebSocket 会话中一次性使用的受限 Live API auth token，其指令和工具声明会由 Gateway 锁定到该 token 中。仅提供后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商 socket 会保留在服务端，而浏览器音频则通过已认证的 Gateway RPC 传输。Realtime 会话提示词由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
 
     Chat 撰写器在 Talk 开始/停止按钮旁边包含一个 Talk 选项按钮。这些选项适用于下一次 Talk 会话，并且可以覆盖提供方、传输、模型、语音、推理力度、VAD 阈值、静默时长和前缀填充。当某个选项为空时，Gateway 会尽可能使用已配置的默认值，或者使用提供方默认值。选择 Gateway relay 会强制使用后端中继路径；选择 WebRTC 会保持会话归客户端所有，如果提供方无法创建浏览器会话，则会失败，而不是静默回退到 relay。
 
@@ -215,7 +224,7 @@ Control UI 随附 `manifest.webmanifest` 和 service worker，因此现代浏览
 
 - `OPENCLAW_VAPID_PUBLIC_KEY`
 - `OPENCLAW_VAPID_PRIVATE_KEY`
-- `OPENCLAW_VAPID_SUBJECT`（默认值为 `mailto:openclaw@localhost`）
+- `OPENCLAW_VAPID_SUBJECT` (默认为 `https://openclaw.ai`)
 
 Control UI 使用这些作用域受限的 Gateway 方法来注册和测试浏览器订阅：
 

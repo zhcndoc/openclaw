@@ -11,21 +11,24 @@ OpenClaw 可以在你已经在使用的任何聊天应用上与你交流。每�
 
 ## 传递说明
 
-- Telegram replies that contain markdown image syntax, such as `![alt](url)`,
-  are converted into media replies on the final outbound path when possible.
-- Slack multi-person DMs route as group chats, so group policy, mention
-  behavior, and group-session rules apply to MPIM conversations.
-- WhatsApp setup is install-on-demand: onboarding can show the setup flow before
-  the plugin package is installed, and the Gateway loads the external
-  ClawHub/npm plugin only when the channel is actually active.
-- Channels that accept bot-authored inbound messages can use shared
-  [bot loop protection](/channels/bot-loop-protection) to prevent bot pairs from
-  replying to each other indefinitely.
+- Telegram replies that contain markdown 图片语法，例如 `![alt](url)`,
+  会在最终出站路径中在可能时转换为媒体回复。
+- Slack 多人私信会按群聊路由，因此群组策略、提及
+  行为和群组会话规则都适用于 MPIM 对话。
+- WhatsApp 的设置采用按需安装：引导流程可以在
+  插件包尚未安装时显示，而 Gateway 只有在频道实际处于活动状态时才会加载外部
+  ClawHub/npm 插件。
+- 接受由机器人编写的入站消息的频道可以使用共享的
+  [机器人循环保护](/channels/bot-loop-protection)，以防止机器人配对彼此
+  无休止地回复。
+- 支持常驻房间的频道可以使用 [环境房间事件](/channels/ambient-room-events)，
+  这样未被提及的房间聊天就会成为安静的上下文，除非代理使用
+  `message` 工具发送。
 
 ## 支持的频道
 
-- [Discord](/channels/discord) - Discord Bot API + Gateway; 支持服务器、频道和私信。
-- [Feishu](/channels/feishu) - 通过 WebSocket 的 Feishu/Lark bot（捆绑插件）。
+- [Discord](/channels/discord) - Discord Bot API + Gateway；支持服务器、频道和私信。
+- [飞书](/channels/feishu) - 通过 WebSocket 的 Feishu/Lark bot（捆绑插件）。
 - [Google Chat](/channels/googlechat) - 通过 HTTP webhook 的 Google Chat API 应用（可下载插件）。
 - [iMessage](/channels/imessage) - 在已登录的 Mac 上通过 `imsg` 桥接实现原生 macOS 集成（或在 Gateway 运行于其他位置时使用 SSH 包装器），包括用于回复、tapback、效果、附件和群组管理的私有 API 操作。在主机权限和 Messages 访问权限满足时，适合作为新 OpenClaw iMessage 设置的首选。
 - [IRC](/channels/irc) - 经典 IRC 服务器；通过配对/允许名单控制的频道 + 私信。
@@ -42,20 +45,20 @@ OpenClaw 可以在你已经在使用的任何聊天应用上与你交流。每�
 - [Telegram](/channels/telegram) - 通过 grammY 的 Bot API；支持群组。
 - [Tlon](/channels/tlon) - 基于 Urbit 的消息工具（捆绑插件）。
 - [Twitch](/channels/twitch) - 通过 IRC 连接的 Twitch 聊天（捆绑插件）。
-- [Voice Call](/plugins/voice-call) - 通过 Plivo 或 Twilio 的电话服务（插件，需单独安装）。
-- [WebChat](/web/webchat) - 通过 WebSocket 的 Gateway WebChat UI。
-- [WeChat](/channels/wechat) - 通过二维码登录的腾讯 iLink Bot 插件；仅支持私聊（外部插件）。
+- [语音通话](/plugins/voice-call) - 通过 Plivo 或 Twilio 的电话服务（插件，需单独安装）。
+- [WebChat](/web/webchat) - 通过 WebSocket 的 Gateway WebChat 界面。
+- [微信](/channels/wechat) - 通过二维码登录的腾讯 iLink Bot 插件；仅支持私聊（外部插件）。
 - [WhatsApp](/channels/whatsapp) - 最受欢迎；使用 Baileys 并需要二维码配对。
-- [Yuanbao](/channels/yuanbao) - 腾讯元宝 bot（外部插件）。
+- [元宝](/channels/yuanbao) - 腾讯元宝 bot（外部插件）。
 - [Zalo](/channels/zalo) - Zalo Bot API；越南流行的消息工具（捆绑插件）。
-- [Zalo Personal](/channels/zalouser) - 通过二维码登录的 Zalo 个人账号（捆绑插件）。
+- [Zalo 个人版](/channels/zalouser) - 通过二维码登录的 Zalo 个人账号（捆绑插件）。
 
 ## 说明
 
 - 各频道可以同时运行；配置多个后，OpenClaw 会按聊天路由。
 - 通常最快的设置方式是 **Telegram**（简单的 bot token）。WhatsApp 需要二维码配对，并且
   会在磁盘上存储更多状态。
-- 各频道的群组行为不同；参见 [Groups](/channels/groups)。
-- 出于安全考虑，会强制执行私信配对和允许名单；参见 [Security](/gateway/security)。
-- 故障排除：[Channel troubleshooting](/channels/troubleshooting)。
-- 模型提供方会单独记录；参见 [Model Providers](/providers/models)。
+- 各频道的群组行为不同；参见 [群组](/channels/groups)。
+- 出于安全考虑，会强制执行私信配对和允许名单；参见 [安全](/gateway/security)。
+- 故障排除：[频道故障排除](/channels/troubleshooting)。
+- 模型提供方会单独记录；参见 [模型提供方](/providers/models)。

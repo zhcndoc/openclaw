@@ -239,10 +239,11 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     - 如果一个 binding 设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须满足（`AND` 语义）。
 
   </Accordion>
-  <Accordion title="账户作用域细节">
-    - 省略 `accountId` 的 binding 只匹配默认账户。
-    - 使用 `accountId: "*"` 可作为覆盖所有账户的通道级回退。
-    - 如果之后你为同一个 agent 添加了相同的 binding，并显式指定账户 id，OpenClaw 会将已有的仅通道 binding 升级为按账户作用域，而不会重复创建。
+  <Accordion title="账户范围细节">
+    - 省略 `accountId` 的 binding 仅匹配默认账户。它不会匹配所有账户。
+    - 使用 `accountId: "*"` 作为跨所有账户的通道级回退。
+    - 使用 `accountId: "<name>"` 匹配单个账户。
+    - 如果你后来为同一个 agent 添加了相同的 binding，并显式指定了账户 id，OpenClaw 会将现有的仅通道 binding 升级为账户作用域，而不是复制一份。
 
   </Accordion>
 </AccordionGroup>
@@ -351,6 +352,11 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
 
     - 使用 BotFather 为每个 agent 创建一个 bot，并复制每个 token。
     - 令牌存放在 `channels.telegram.accounts.<id>.botToken` 中（默认账号可以使用 `TELEGRAM_BOT_TOKEN`）。
+    - 若同一个 Telegram 群组中有多个 bot，邀请每个 bot，并 @ 提及应该响应的那个 bot。
+    - 对每个群组 bot 关闭 BotFather Privacy Mode，然后重新添加 bot 以便 Telegram 应用该设置。
+    - 使用 `channels.telegram.groups` 允许群组，或者仅在可信的群组部署中使用 `groupPolicy: "open"`。
+    - 将发送者用户 ID 放入 `groupAllowFrom`。群组和超级群组 ID 应放在 `channels.telegram.groups` 中，而不是 `groupAllowFrom`。
+    - 按 `accountId` 进行绑定，这样每个 bot 都会路由到它自己的 agent。
 
   </Accordion>
   <Accordion title="WhatsApp numbers per agent">
@@ -452,16 +458,16 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
         ],
       },
       bindings: [
-        { agentId: "chat", match: { channel: "whatsapp" } },
-        { agentId: "opus", match: { channel: "telegram" } },
+        { agentId: "chat", match: { channel: "whatsapp", accountId: "*" } },
+        { agentId: "opus", match: { channel: "telegram", accountId: "*" } },
       ],
     }
     ```
 
     说明：
 
-    - 如果你为某个频道有多个账号，请在 binding 中添加 `accountId`（例如 `{ channel: "whatsapp", accountId: "personal" }`）。
-    - 若要在其余消息仍走 chat 的情况下，将某个单独 DM/群组路由到 Opus，请为该 peer 添加 `match.peer` binding；peer 匹配始终优先于按频道的规则。
+    - 这些示例使用 `accountId: "*"`，这样即使你以后添加账户，绑定也仍然有效。
+    - 如果想将单个 DM/群组路由到 Opus，同时其余消息仍走 chat，请为该 peer 添加一个 `match.peer` binding；peer 匹配始终优先于通道级规则。
 
   </Tab>
   <Tab title="Same channel, one peer to Opus">
@@ -488,9 +494,9 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
       bindings: [
         {
           agentId: "opus",
-          match: { channel: "whatsapp", peer: { kind: "direct", id: "+15551234567" } },
+          match: { channel: "whatsapp", accountId: "*", peer: { kind: "direct", id: "+15551234567" } },
         },
-        { agentId: "chat", match: { channel: "whatsapp" } },
+        { agentId: "chat", match: { channel: "whatsapp", accountId: "*" } },
       ],
     }
     ```

@@ -18,7 +18,7 @@ title: "代理"
 ```bash
 openclaw proxy start [--host <host>] [--port <port>]
 openclaw proxy run [--host <host>] [--port <port>] -- <cmd...>
-openclaw proxy validate [--json] [--proxy-url <url>] [--allowed-url <url>] [--denied-url <url>] [--apns-reachable] [--apns-authority <url>] [--timeout-ms <ms>]
+openclaw proxy validate [--json] [--proxy-url <url>] [--proxy-ca-file <path>] [--allowed-url <url>] [--denied-url <url>] [--apns-reachable] [--apns-authority <url>] [--timeout-ms <ms>]
 openclaw proxy coverage
 openclaw proxy sessions [--limit <count>]
 openclaw proxy query --preset <name> [--session <id>]
@@ -28,16 +28,29 @@ openclaw proxy purge
 
 ## 验证
 
-`openclaw proxy validate` 会检查来自 `--proxy-url`、配置或 `OPENCLAW_PROXY_URL` 的实际运维管理代理 URL。当未启用和配置代理时，它会报告配置问题；在更改配置之前，可使用 `--proxy-url` 进行一次性预检。默认情况下，它会验证一个公共目标是否能通过代理成功访问，以及代理是否无法访问临时的回环 canary。自定义的拒绝目标采用 fail-closed：HTTP 响应和不明确的传输失败都会被判定为失败，除非你能另外验证部署特定的拒绝信号。添加 `--apns-reachable` 还会通过代理打开一个 APNs HTTP/2 CONNECT 隧道，并确认 sandbox APNs 有响应；该探测会使用故意无效的 provider token，因此 APNs 返回 `403 InvalidProviderToken` 即表示连通性验证成功。
+`openclaw proxy validate` 会检查来自
+`--proxy-url`、配置或 `OPENCLAW_PROXY_URL` 的实际运维管理代理 URL。运维管理的代理 URL 可以使用
+`http://` 作为普通正向代理监听器，或者在 OpenClaw 必须在发送代理请求之前先与代理端点建立 TLS 时使用
+`https://`。当未启用并配置代理时，它会报告一个
+配置问题；在更改配置之前，可使用 `--proxy-url` 进行一次性预检。添加 `--proxy-ca-file` 以信任
+HTTPS 代理端点 TLS 连接所使用的私有 CA。默认情况下，它会
+验证一个公共目标能否通过代理成功访问，以及代理
+无法访问临时回环 canary。自定义的拒绝目标采用 fail-closed 策略：HTTP 响应和含糊的传输失败都会判定为失败，除非
+你能单独验证某个部署特定的拒绝信号。添加
+`--apns-reachable` 还会通过代理打开一个 APNs HTTP/2 CONNECT 隧道，
+并确认 sandbox APNs 可响应；该探测使用了故意无效的
+provider token，因此 APNs 返回 `403 InvalidProviderToken` 响应可视为
+可达性的成功信号。
 
 选项：
 
 - `--json`: 以机器可读的 JSON 格式输出。
-- `--proxy-url <url>`: 使用此代理 URL 进行验证，而不是使用配置或环境变量。
-- `--allowed-url <url>`: 添加一个期望能通过代理成功访问的目标。可重复使用以检查多个目标。
-- `--denied-url <url>`: 添加一个期望被代理阻止的目标。可重复使用以检查多个目标。
-- `--apns-reachable`: 还验证 sandbox APNs 是否可通过代理访问 HTTP/2。
-- `--apns-authority <url>`: 在 `--apns-reachable` 下用于探测的 APNs authority（默认是 `https://api.sandbox.push.apple.com`；生产环境为 `https://api.push.apple.com`）。
+- `--proxy-url <url>`: 使用此 `http://` 或 `https://` 代理 URL 进行验证，而不是使用配置或环境变量。
+- `--proxy-ca-file <path>`: 信任此 PEM CA 文件，用于 HTTPS 代理端点的 TLS 验证。
+- `--allowed-url <url>`: 添加一个预计可通过代理成功访问的目标。可重复以检查多个目标。
+- `--denied-url <url>`: 添加一个预计会被代理阻止的目标。可重复以检查多个目标。
+- `--apns-reachable`: 还验证是否可通过代理访问 sandbox APNs HTTP/2。
+- `--apns-authority <url>`: 在 `--apns-reachable` 下用于探测的 APNs authority（默认 `https://api.sandbox.push.apple.com`；生产环境为 `https://api.push.apple.com`）。
 - `--timeout-ms <ms>`: 每个请求的超时时间，单位为毫秒。
 
 有关部署指导和拒绝语义，请参见 [Network Proxy](/security/network-proxy)。

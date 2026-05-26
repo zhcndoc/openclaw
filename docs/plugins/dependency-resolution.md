@@ -47,7 +47,18 @@ npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audi
 
 npm 可能会将传递依赖提升到插件包旁边的 `~/.openclaw/npm/node_modules`。OpenClaw 在信任安装前会扫描受管理的 npm 根目录，并在卸载时使用 npm 删除 npm 管理的包，因此被提升的运行时依赖仍然保留在受管理清理边界内。
 
-导入 `openclaw/plugin-sdk/*` 的插件会将 `openclaw` 声明为 peer 依赖。OpenClaw 不允许 npm 将宿主包的单独 registry 副本安装到受管理根目录中，因为过时的宿主包会影响后续插件安装期间的 npm peer 解析。受管理的 npm 安装会跳过共享根目录的 npm peer 解析/实例化，并且在安装、更新或卸载后，OpenClaw 会为声明了宿主 peer 的已安装包重新建立插件本地的 `node_modules/openclaw` 链接。
+已发布的 npm 插件包可以包含 `npm-shrinkwrap.json`。npm 会在安装期间使用该可发布 lockfile，而 OpenClaw 的受管理 npm 根目录通过正常的 npm install 路径支持它。OpenClaw 所拥有的可发布插件包必须包含从该插件包已发布依赖图生成的包本地 shrinkwrap：
+
+```bash
+pnpm deps:shrinkwrap:generate
+pnpm deps:shrinkwrap:check
+```
+
+生成器会移除插件的 `devDependencies`，应用工作区覆盖策略，并为每个 `publishToNpm` 插件写入 `extensions/<id>/npm-shrinkwrap.json`。第三方插件包也可以提供 shrinkwrap；OpenClaw 对社区包不强制要求，但 npm 在存在时会尊重它。
+
+OpenClaw 所拥有的 npm 插件包也可以通过显式的 `bundledDependencies` 发布。npm publish 路径会覆盖运行时依赖名称列表，从已发布的包清单中移除仅开发用的工作区元数据，对包本地运行时依赖执行无脚本的 npm install，然后在打包或发布插件 tarball 时包含这些依赖文件。包括 Codex 和 ACP 运行时在内的原生依赖较重的包会通过 `openclaw.release.bundleRuntimeDependencies: false` 退出该流程；这些包仍然会附带它们的 shrinkwrap，但 npm 会在安装期间解析运行时依赖，而不是将每个平台二进制都嵌入插件 tarball。根 `openclaw` 包不会捆绑其完整依赖树。
+
+导入 `openclaw/plugin-sdk/*` 的插件会将 `openclaw` 声明为 peer dependency。OpenClaw 不允许 npm 将宿主包的单独 registry 副本安装到受管理根目录中，因为过期的宿主包会影响后续插件安装期间的 npm peer 解析。受管理的 npm 安装会跳过共享根的 npm peer 解析/物化，而 OpenClaw 会在安装、更新或卸载后，对声明宿主 peer 的已安装包重新建立插件本地的 `node_modules/openclaw` 链接。
 
 git 安装会克隆或刷新仓库，然后运行：
 

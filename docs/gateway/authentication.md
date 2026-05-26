@@ -182,7 +182,20 @@ requests`、`ThrottlingException`、`concurrency limit reached`，或
 
 ## 控制使用哪一个凭据
 
-### 按会话（聊天命令）
+### During login (CLI)
+
+Use `openclaw models auth login --provider <id> --profile-id <profileId>` for
+providers that support named auth profiles during login.
+
+```bash
+openclaw models auth login --provider openai-codex --profile-id openai-codex:ritsuko
+openclaw models auth login --provider openai-codex --profile-id openai-codex:lain
+```
+
+This is the easiest way to keep multiple OAuth logins for the same provider
+separate inside one agent.
+
+### Per-session (chat command)
 
 使用 `/model <alias-or-id>@<profileId>` 为当前会话固定某个特定的提供方凭据（示例 profile id：`anthropic:default`、`anthropic:work`）。
 
@@ -204,7 +217,11 @@ openclaw models auth order clear --provider anthropic
 当你调试冷却问题时，请记住限流冷却可能只绑定到某个模型 id，
 而不是整个提供方 profile。
 
-## 故障排除
+If you change auth order or profile pinning for a chat that is already running,
+send `/new` or `/reset` in that chat to start a fresh session. Existing
+sessions can keep their current model/profile selection until reset.
+
+## Troubleshooting
 
 ### “未找到凭据”
 

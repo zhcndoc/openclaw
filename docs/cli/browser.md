@@ -165,9 +165,12 @@ openclaw browser select <ref> OptionA OptionB
 openclaw browser fill --fields '[{"ref":"1","value":"Ada"}]'
 openclaw browser wait --text "Done"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref <ref>
+openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.ready; return true; }'
 ```
 
-操作响应会在由操作触发页面替换后返回当前原始 `targetId`，前提是 OpenClaw 能证明替换后的标签页。脚本仍应为长期工作流存储并传递 `suggestedTargetId`/标签。
+当页面侧函数可能需要比默认 evaluate 超时时间更长时，请使用 `evaluate --timeout-ms <ms>`。
+
+动作响应会在动作触发页面替换后返回当前原始 `targetId`，前提是 OpenClaw 能证明替换后的标签页。脚本仍应在长期工作流中存储并传递 `suggestedTargetId`/标签。
 
 文件 + 对话框辅助：
 
@@ -176,9 +179,10 @@ openclaw browser upload /tmp/openclaw/uploads/file.pdf --ref <ref>
 openclaw browser waitfordownload
 openclaw browser download <ref> report.pdf
 openclaw browser dialog --accept
+openclaw browser dialog --dismiss --dialog-id d1
 ```
 
-托管 Chrome 配置文件会将普通点击触发的下载保存到 OpenClaw 下载目录（默认 `/tmp/openclaw/downloads`，或已配置的临时根目录）。当代理需要等待特定文件并返回其路径时，请使用 `waitfordownload` 或 `download`；这些显式等待器拥有下一次下载。
+受管 Chrome 配置文件会将普通点击触发的下载保存到 OpenClaw 下载目录（默认是 `/tmp/openclaw/downloads`，或配置的临时根目录）。当代理需要等待特定文件并返回其路径时，请使用 `waitfordownload` 或 `download`；这些显式等待器会接管下一次下载。当某个操作打开模态对话框时，动作响应会返回 `blockedByDialog` 和 `browserState.dialogs.pending`；传入 `--dialog-id` 可以直接应答。OpenClaw 外部处理的对话框会出现在 `browserState.dialogs.recent` 下。
 
 ## 状态和存储
 

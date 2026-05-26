@@ -44,10 +44,10 @@ curl -fsSL https://raw.githubusercontent.com/openclaw/openclaw-ansible/main/inst
 Ansible playbook 会安装并配置：
 
 1. **Tailscale** -- 用于安全远程访问的 mesh VPN
-2. **UFW firewall** -- 仅开放 SSH + Tailscale 端口
+2. **UFW firewall** -- 仅允许 SSH + Tailscale 端口
 3. **Docker CE + Compose V2** -- 用于默认的 agent 沙盒后端
-4. **Node.js 24 + pnpm** -- 运行时依赖（Node 22 LTS，目前 `22.16+` 仍受支持）
-5. **OpenClaw** -- 基于主机运行，而非容器化
+4. **Node.js 24 + pnpm** -- 运行时依赖（Node 22 LTS，目前 `22.19+`，仍受支持）
+5. **OpenClaw** -- 基于主机运行，不容器化
 6. **Systemd service** -- 自动启动并进行安全加固
 
 <Note>

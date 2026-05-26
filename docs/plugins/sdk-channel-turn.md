@@ -1,11 +1,11 @@
 ---
-summary: "runtime.channel.turn -- 适用于内置和第三方 channel 插件的、用于记录、分发和完成 agent turns 的共享入站 turn kernel"
-title: "Channel turn 内核"
+summary: "runtime.channel.turn -- 供捆绑和第三方 channel 插件使用的共享入站事件内核，用于记录、分发并完成 agent turn"
+title: "Channel turn kernel"
 sidebarTitle: "Channel turn"
 read_when:
-  - 你正在构建一个 channel 插件，并希望使用共享的入站 turn 生命周期
-  - 你正在将一个 channel monitor 从手写的 record/dispatch glue 迁移出去
-  - 你需要了解 admission、ingest、classify、preflight、resolve、record、dispatch 和 finalize 阶段
+  - You are building a channel plugin and want the shared inbound event lifecycle
+  - You are migrating a channel monitor off hand-rolled record/dispatch glue
+  - You need to understand admission, ingest, classify, preflight, resolve, record, dispatch, and finalize stages
 ---
 
 channel turn kernel 是共享的入站 state machine，它将标准化的平台事件转换为一个 agent turn。Channel 插件提供平台事实和 delivery 回调。Core 负责编排：ingest、classify、preflight、resolve、authorize、assemble、record、dispatch 和 finalize。
@@ -461,10 +461,10 @@ type ChannelTurnAdapter<TRaw> = {
 
 ## 投递适配器
 
-内核不会直接调用平台。频道会向内核提供一个 `ChannelTurnDeliveryAdapter`：
+内核不会直接调用平台。频道会向内核提供一个 `ChannelEventDeliveryAdapter`：
 
 ```typescript
-type ChannelTurnDeliveryAdapter = {
+type ChannelEventDeliveryAdapter = {
   deliver(payload: ReplyPayload, info: ChannelDeliveryInfo): Promise<ChannelDeliveryResult | void>;
   onError?(err: unknown, info: { kind: string }): void;
   durable?: false | DurableInboundReplyDeliveryOptions;
@@ -479,9 +479,9 @@ type ChannelDeliveryResult = {
 };
 ```
 
-`deliver` 会针对每个缓冲的回复块调用一次。在消息生命周期迁移期间，组装后的频道轮次投递默认由频道拥有：省略 `durable` 字段表示内核必须直接调用 `deliver`，且不得通过通用出站投递路径路由。只有在频道经过审计并证明通用发送路径能保持旧的投递行为后，才能设置 `durable`，包括回复/线程目标、媒体处理、已发送消息/自回显缓存、状态清理以及返回的消息 ID。`durable: false` 仍然是“使用频道拥有的回调”的兼容写法，但未迁移的频道不应需要添加它。如果频道有平台消息 ID，请返回它们，以便分发器保留线程锚点并在后续块中继续编辑；较新的投递路径还应返回 `receipt`，这样恢复、预览收尾和重复抑制就可以摆脱对 `messageIds` 的依赖。对于仅观察的轮次，返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelTurnDeliveryAdapter()`。
+`deliver` 会针对每个缓冲的回复块调用一次。在消息生命周期迁移期间，组装后的频道事件投递默认由频道拥有：省略 `durable` 字段意味着内核必须直接调用 `deliver`，且不得通过通用的外发投递路径。只有在频道完成审计并证明通用发送路径保留了旧的投递行为之后，才应设置 `durable`，包括回复/线程目标、媒体处理、已发送消息/自回显缓存、状态清理以及返回的消息 id。`durable: false` 仍然是“使用频道拥有的回调”的兼容写法，但尚未迁移的频道通常不需要添加它。当频道能够提供平台消息 id 时应返回它们，以便分发器保留线程锚点并在后续块中继续编辑；较新的投递路径也应返回 `receipt`，以便恢复、预览最终化和去重逻辑可以逐步脱离 `messageIds`。对于仅观察的轮次，请返回 `{ visibleReplySent: false }`，或者使用 `createNoopChannelEventDeliveryAdapter()`。
 
-使用 `runPrepared` 且完全由频道拥有分发器的频道没有 `ChannelTurnDeliveryAdapter`。这些分发器默认不是 durable。它们应继续使用直接投递路径，直到显式选择新的发送上下文，并且具备完整的目标、可重放安全的适配器、receipt 契约以及频道副作用钩子。
+使用 `runPrepared` 且拥有完全由频道掌控的分发器的频道，不会使用 `ChannelEventDeliveryAdapter`。这些分发器默认并不具备持久性。它们应继续沿用直接投递路径，直到显式选择新的发送上下文，并配备完整的目标、可回放安全的适配器、回执契约以及频道侧效应钩子。
 
 诸如 `recordInboundSessionAndDispatchReply`、`dispatchInboundReplyWithBase` 和直接 DM 辅助函数之类的公共兼容性辅助工具，在迁移期间必须保持行为不变。它们不应在调用方拥有的 `deliver` 或 `reply` 回调之前调用通用 durable 投递。
 

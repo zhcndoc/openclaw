@@ -766,7 +766,7 @@ Teams 最近在同一底层数据模型之上引入了两种频道 UI 样式：
 
 ### 线程上下文保留
 
-当 `replyStyle: "thread"` 生效，并且机器人是在频道线程中被 @提及时，OpenClaw 会将原始线程根重新附加到出站会话引用中（`19:…@thread.tacv2;messageid=<root>`），这样回复就会落在同一线程里。这对实时（in-turn）发送和 Bot Framework turn 上下文过期后的主动发送都适用（例如长时间运行的 agent、通过 `mcp__openclaw__message` 排队的工具调用回复）。
+当 `replyStyle: "thread"` 生效，并且机器人是在频道线程中被 @提及时，OpenClaw 会将原始线程根重新附加到出站会话引用中（`19:…@thread.tacv2;messageid=<root>`），这样回复就会落在同一线程里。这对实时（in-turn）发送和 Bot Framework turn 上下文过期后的主动发送都适用（例如长时间运行的 agent、通过 `mcp__openclaw__message` 队列的工具调用回复）。
 
 线程根会从会话引用中保存的 `threadId` 获取。更早期、尚未包含 `threadId` 的旧引用会回退到 `activityId`（即最近一次为会话提供上下文的入站 activity），因此现有部署无需重新播种也能继续工作。
 
@@ -866,9 +866,9 @@ OpenClaw 将 Teams 投票作为 Adaptive Cards 发送（没有原生的 Teams �
 
 ## 演示卡片
 
-使用 `message` 工具或 CLI 向 Teams 用户或会话发送语义化的演示载荷。OpenClaw 会根据通用的演示契约将其渲染为 Teams Adaptive Cards。
+使用 `message` 工具、CLI 或普通回复投递向 Teams 用户或会话发送语义化演示负载。OpenClaw 会将它们渲染为基于通用演示契约的 Teams Adaptive Cards。
 
-`presentation` 参数接受语义块。提供 `presentation` 时，消息文本是可选的。
+`presentation` 参数接受语义块。提供 `presentation` 时，消息文本为可选项。按钮会渲染为 Adaptive Card 的提交或 URL 操作。选择菜单目前不是 Teams 渲染器的原生支持，因此 OpenClaw 会在投递前将其降级为可读文本。
 
 **Agent tool:**
 
@@ -901,7 +901,7 @@ MSTeams 目标使用前缀来区分用户和会话：
 | 目标类型             | 格式                             | 示例                                                |
 | -------------------- | -------------------------------- | --------------------------------------------------- |
 | 用户（按 ID）        | `user:<aad-object-id>`           | `user:40a1a0ed-4ff2-4164-a219-55518990c197`         |
-| 用户（按名称）       | `user:<display-name>`            | `user:John Smith`（需要 Graph API）                 |
+| 用户（按名称）        | `user:<display-name>`            | `user:John Smith`（需要 Graph API）                 |
 | 群组/频道            | `conversation:<conversation-id>` | `conversation:19:abc123...@thread.tacv2`            |
 | 群组/频道（原始）     | `<conversation-id>`              | `19:abc123...@thread.tacv2`（如果包含 `@thread`）   |
 

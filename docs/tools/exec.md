@@ -128,18 +128,19 @@ title: "Exec 工具"
   被主机执行拒绝。守护进程本身仍使用最小 `PATH` 运行：
   - macOS: `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, `/bin`
   - Linux: `/usr/local/bin`, `/usr/bin`, `/bin`
-- `host=sandbox`：在容器内运行 `sh -lc`（登录 shell），因此 `/etc/profile` 可能会重置 `PATH`。
-  OpenClaw 会通过内部环境变量在 profile 加载后追加 `env.PATH`（无 shell 插值）；
-  `tools.exec.pathPrepend` 在此同样适用。
-- `host=node`：只会将你传递的、未被阻止的环境覆盖项发送到节点。`env.PATH` 覆盖项会
-  被主机执行拒绝，并被 node 主机忽略。如果你需要在节点上添加额外的 PATH 条目，请
-  配置节点主机服务环境（systemd/launchd）或将工具安装到标准位置。
+    - 为防止用户 shell 配置（如 `~/.zshenv` 或 `/etc/zshenv`）在启动期间覆盖优先级路径，`tools.exec.pathPrepend` 条目会在执行前被安全地预先添加到 shell 命令中的最终 `PATH`。
+- `host=sandbox`: 在容器内运行 `sh -lc`（登录 shell），因此 `/etc/profile` 可能会重置 `PATH`。
+  OpenClaw 会通过内部环境变量在 profile 加载后追加 `env.PATH`（不进行 shell 插值）；
+  `tools.exec.pathPrepend` 在这里同样适用。
+- `host=node`: 只会把你传入的、未被阻止的环境覆盖项发送到节点。`env.PATH` 覆盖项会
+  被主机执行拒绝，并且会被节点主机忽略。如果你需要在节点上添加额外的 PATH 条目，
+  请配置节点主机服务环境（systemd/launchd）或将工具安装到标准位置。
 
 按 agent 绑定节点（在配置中使用 agent 列表索引）：
 
 ```bash
 openclaw config get agents.list
-openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
+openclaw config set 'agents.list[0].tools.exec.node' "node-id-or-name"
 ```
 
 控制 UI：Nodes 选项卡包含一个小型“Exec 节点绑定”面板，用于相同设置。
@@ -168,12 +169,13 @@ openclaw config set agents.list[0].tools.exec.node "node-id-or-name"
 有关策略、允许列表和 UI 流程，请参见 [Exec approvals](/tools/exec-approvals)。
 
 当需要审批时，exec 工具会立即返回
-`status: "approval-pending"` 和一个审批 id。一旦获批（或被拒绝 / 超时），
-Gateway 会发出系统事件（`Exec finished` / `Exec denied`）。如果命令在
-`tools.exec.approvalRunningNoticeMs` 之后仍在运行，则会发出一次 `Exec running` 通知。
-在具有原生审批卡片/按钮的频道中，agent 应首先依赖该
-原生 UI，只有当工具结果明确说明聊天审批不可用，或者手动审批是
-唯一途径时，才包含手动的 `/approve` 命令。
+`status: "approval-pending"` 和一个审批 id。一旦被批准（或被拒绝 / 超时），
+Gateway 只会为已批准的运行发出命令进度和完成系统事件
+（`Exec running` / `Exec finished`）。被拒绝或超时的审批是终态，不会
+通过拒绝系统事件唤醒 agent 会话。
+在带有原生审批卡片/按钮的频道中，agent 应优先依赖该
+原生 UI，只有当工具结果明确说明聊天审批不可用或手动审批是
+唯一途径时，才应包含手动 `/approve` 命令。
 
 ## 允许列表 + 安全 bin
 
@@ -266,7 +268,7 @@ glob。裸名称只匹配通过 PATH 调用的命令，因此当命令是 `rg` �
 
 ## 相关内容
 
-- [Exec Approvals](/tools/exec-approvals) — shell 命令的审批门禁
+- [执行审批](/tools/exec-approvals) — shell 命令的审批门禁
 - [沙箱](/gateway/sandboxing) — 在沙箱环境中运行命令
 - [后台进程](/gateway/background-process) — 长时间运行的 exec 和 process 工具
 - [安全性](/gateway/security) — 工具策略和提升权限

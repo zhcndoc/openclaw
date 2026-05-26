@@ -54,7 +54,7 @@ OpenClaw 内部运行时代码遵循相同方向：在 CLI、gateway 或进程�
 
 provider 和 channel 的执行路径必须使用当前运行时配置快照，而不是用于配置回读或编辑的文件快照。文件快照会保留源值，例如用于 UI 和写入的 SecretRef 标记；provider 回调需要的是解析后的运行时视图。当某个辅助工具可能接收当前源快照或当前运行时快照中的任意一种时，请在读取凭据前通过 `selectApplicableRuntimeConfig()` 进行路由。
 
-## Reusable runtime utilities
+## 可复用运行时工具
 
 对机器人生成的入站消息使用 channel-turn 的 `botLoopProtection` 事实。Core 在 session 记录和分发之前会先应用共享的内存滑动窗口保护，而不会把策略绑定到某个单一 channel。该保护会跟踪 `(scopeId, conversationId, participant pair)` 键，将一对参与者的两个方向计为同一组，在窗口预算超出后应用冷却时间，并机会性地清理不活跃条目。
 
@@ -152,16 +152,18 @@ return {
     **会话存储辅助工具** 位于 `api.runtime.agent.session` 下：
 
     ```typescript
-    const storePath = api.runtime.agent.session.resolveStorePath(cfg);
-    const store = api.runtime.agent.session.loadSessionStore(storePath);
-    await api.runtime.agent.session.updateSessionStore(storePath, (nextStore) => {
-      // 在不使用陈旧状态替换整个文件的情况下，修补一条记录。
-      nextStore[sessionKey] = { ...nextStore[sessionKey], thinkingLevel: "high" };
+    const entry = api.runtime.agent.session.getSessionEntry({ agentId, sessionKey });
+    for (const { sessionKey, entry } of api.runtime.agent.session.listSessionEntries({ agentId })) {
+      // 在不依赖旧版 sessions.json 形状的情况下遍历会话行。
+    }
+    await api.runtime.agent.session.patchSessionEntry({
+      agentId,
+      sessionKey,
+      update: (entry) => ({ thinkingLevel: "high" }),
     });
-    const filePath = api.runtime.agent.session.resolveSessionFilePath(cfg, sessionId);
     ```
 
-    优先使用 `updateSessionStore(...)` 或 `updateSessionStoreEntry(...)` 进行运行时写入。它们通过 Gateway 托管的 session-store 写入器进行路由，保留并发更新，并复用热缓存。`saveSessionStore(...)` 仍保留用于兼容性和离线维护式重写。
+    会话工作流请优先使用 `getSessionEntry(...)`、`listSessionEntries(...)`、`patchSessionEntry(...)` 或 `upsertSessionEntry(...)`。这些辅助工具通过 agent/session 身份定位会话，因此插件不会依赖旧版 `sessions.json` 存储结构。对于不应刷新会话活动时间的仅元数据补丁，请使用 `preserveActivity: true`；仅当回调返回完整条目且被删除字段必须保持删除时，才使用 `replaceEntry: true`。`loadSessionStore(...)` 仍作为已弃用的兼容逃生口，供确实需要可变全量存储克隆的调用方使用。
 
   </Accordion>
   <Accordion title="api.runtime.agent.defaults">

@@ -15,6 +15,18 @@ OpenClaw 中有两种钩子：
 
 钩子也可以打包在插件中。`openclaw hooks list` 会同时显示独立钩子和由插件管理的钩子。
 
+## 选择合适的扩展面
+
+OpenClaw 有几个看起来相似但用途不同的扩展面：
+
+| 如果你想要...                                                                                                       | 使用...                               | 原因                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 在 `/new` 时保存快照、记录 `/reset`、在 `message:sent` 后调用外部 API，或添加粗粒度的运维自动化 | 内部钩子（`HOOK.md`，本页）            | 基于文件的钩子适合由运维管理的副作用和命令/生命周期自动化                                      |
+| 重写提示词、阻止工具、取消出站消息，或添加有序中间件/策略                                      | 通过 `api.on(...)` 的类型化插件钩子     | 类型化钩子具有明确的契约、优先级、合并规则以及阻止/取消语义                                    |
+| 仅添加遥测导出或可观测性                                                                                              | 诊断事件                               | 可观测性是单独的事件总线，而不是策略钩子面                                                      |
+
+当你需要像小型已安装集成一样运行的自动化时，使用内部钩子。当你需要运行时生命周期控制时，使用类型化插件钩子。
+
 ## 快速开始
 
 ```bash
@@ -101,14 +113,16 @@ const handler = async (event) => {
   console.log(`[my-hook] 新命令被触发`);
   // 你的逻辑写在这里
 
-  // 可选地向用户发送消息
-  event.messages.push("Hook 已执行！");
+  // 可选：在可回复的面上发送回复
+  event.messages.push("Hook executed!");
 };
 
 export default handler;
 ```
 
-每个事件都包含：`type`、`action`、`sessionKey`、`timestamp`、`messages`（使用 push 发送给用户）以及 `context`（事件特定数据）。代理和工具插件 hook 上下文还可以包含 `trace`，这是一个只读的、兼容 W3C 的诊断 trace 上下文，插件可将其传递给结构化日志以用于 OTEL 关联。
+每个事件都包括：`type`、`action`、`sessionKey`、`timestamp`、`messages`（仅在可回复的面上把回复推送到这里）以及 `context`（特定于事件的数据）。代理和工具插件钩子上下文还可以包含 `trace`，这是一个只读的、兼容 W3C 的诊断 trace 上下文，插件可将其传递给结构化日志以进行 OTEL 关联。
+
+`event.messages` 只会在 `command:*` 和 `message:received` 等可回复的面上自动送达。像 `agent:bootstrap`、`session:*`、`gateway:*` 或 `message:sent` 这样的仅生命周期事件没有回复通道，会忽略推送的消息。
 
 ### 事件上下文要点
 
@@ -252,7 +266,12 @@ Gateway 启动时运行当前工作区中的 `BOOT.md`。
 当你需要 `before_tool_call`、`before_agent_reply`、
 `before_install` 或其他进程内生命周期钩子时，请使用插件钩子。
 
-完整的插件 hook 参考请见 [Plugin hooks](/plugins/hooks)。
+Plugin-managed 内部钩子是不同的：它们参与此页面的
+粗粒度命令/生命周期事件系统，并在 `openclaw hooks list` 中显示为
+`plugin:<id>`。请将它们用于副作用和与 hook pack 的兼容性，而不是用于
+有序中间件或策略门控。
+
+完整的插件钩子参考请见 [Plugin hooks](/plugins/hooks)。
 
 ## 配置
 

@@ -59,9 +59,9 @@ read_when:
 
 负责：
 
-- 第一波 GPT-5.5 vs Opus 4.6 场景包
+- first-wave GPT-5.5 vs Opus 4.7 scenario pack
 - parity 文档
-- parity 报告和发布门控机制
+- parity 报告和 release-gate 机制
 
 不负责：
 
@@ -123,7 +123,7 @@ PR D 的预期产物：
 
 ## 发布门控
 
-在以下条件满足之前，不要声称 GPT-5.5 与 Opus 4.6 parity 或优于 Opus 4.6：
+在以下条件满足之前，不要声称 GPT-5.5 与 Opus 4.7 parity 或优于 Opus 4.7：
 
 - PR A、PR B 和 PR C 已合并
 - PR D 已干净地运行第一波 parity 包
@@ -133,7 +133,7 @@ PR D 的预期产物：
 ```mermaid
 flowchart LR
     A["PR A-C merged"] --> B["Run GPT-5.5 parity pack"]
-    A --> C["Run Opus 4.6 parity pack"]
+    A --> C["Run Opus 4.7 parity pack"]
     B --> D["qa-suite-summary.json"]
     C --> E["qa-suite-summary.json"]
     D --> F["qa parity-report"]
@@ -146,8 +146,8 @@ flowchart LR
 
 parity 运行器不是唯一的证据来源。请在审查中明确区分这两部分：
 
-- PR D 负责基于场景的 GPT-5.5 vs Opus 4.6 比较
-- PR B 的确定性套件仍负责 auth/proxy/DNS 和 full-access 真实性证据
+- PR D 负责基于场景的 GPT-5.5 vs Opus 4.7 比较
+- PR B 的确定性套件仍然负责 auth/proxy/DNS 和 full-access 真实性证据
 
 ## 快速维护者合并流程
 
@@ -173,13 +173,13 @@ parity 运行器不是唯一的证据来源。请在审查中明确区分这两�
 
 ## 目标到证据映射
 
-| 完成门槛项                           | 主要负责人 | 审查产物                                                               |
-| ------------------------------------ | ----------- | ---------------------------------------------------------------------- |
-| 不再出现仅靠 plan 的停滞            | PR A        | strict-agentic 运行时测试和 `approval-turn-tool-followthrough`         |
-| 不再出现假进度或假工具完成          | PR A + PR D  | parity fake-success 计数以及场景级报告细节                            |
-| 不再出现错误的 `/elevated full` 指引 | PR B        | 确定性的 runtime-truthfulness 套件                                      |
-| Replay/liveness 失败保持显式        | PR C + PR D  | 生命周期/replay 套件以及 `compaction-retry-mutating-tool`            |
-| GPT-5.5 与 Opus 4.6 相当或更优      | PR D        | `qa-agentic-parity-report.md` 和 `qa-agentic-parity-summary.json`     |
+| Completion gate item                     | Primary owner | Review artifact                                                     |
+| ---------------------------------------- | ------------- | ------------------------------------------------------------------- |
+| No plan-only stalls                      | PR A          | strict-agentic runtime tests and `approval-turn-tool-followthrough` |
+| No fake progress or fake tool completion | PR A + PR D   | parity fake-success count plus scenario-level report details        |
+| No false `/elevated full` guidance       | PR B          | deterministic runtime-truthfulness suites                           |
+| Replay/liveness failures remain explicit | PR C + PR D   | lifecycle/replay suites plus `compaction-retry-mutating-tool`       |
+| GPT-5.5 matches or beats Opus 4.7        | PR D          | `qa-agentic-parity-report.md` and `qa-agentic-parity-summary.json`  |
 
 ## 审查者速记：变更前 vs 变更后
 

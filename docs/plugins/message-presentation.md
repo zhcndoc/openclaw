@@ -54,7 +54,11 @@ type MessagePresentationButton = {
   value?: string;
   url?: string;
   webApp?: { url: string };
+  /** @deprecated 使用 webApp。仅接受旧版 JSON 载荷。 */
   web_app?: { url: string };
+  priority?: number;
+  disabled?: boolean;
+  reusable?: boolean;
   style?: "primary" | "secondary" | "success" | "danger";
 };
 
@@ -76,11 +80,14 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `value` 是一个应用动作值，当频道支持可点击控件时，会通过该频道现有的交互路径回传。
-- `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
-- `webApp` 和 `web_app` 描述频道原生的 Web App 按钮。Telegram 会将其渲染为 `web_app`，且只支持私聊。
-- `label` 是必填项，也用于文本回退。
-- `style` 仅供参考。渲染器应将不支持的样式映射到安全默认值，而不是发送失败。
+- `value` 是一个应用动作值；当频道支持可点击控件时，它会通过该频道现有的交互路径返回。
+- `url` 是一个链接按钮。它可以在没有 `value` 的情况下存在。
+- `webApp` 描述一个频道原生的 Web App 按钮。Telegram 会将其渲染为 `web_app`，且仅在私聊中支持。为兼容性起见，`web_app` 仍会在宽松 JSON 载荷中被接受，但 TypeScript 生产者应使用 `webApp`。
+- `label` 为必填项，也会用于文本回退。
+- `style` 仅为建议。渲染器应将不支持的样式映射为安全默认值，而不是使发送失败。
+- `priority` 为可选项。当频道声明动作限制并且必须丢弃部分控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序；当所有控件都能容纳时，则保持作者定义的顺序。
+- `disabled` 为可选项。频道必须通过 `supportsDisabled` 显式启用；否则 core 会将禁用控件降级为不可交互的回退文本。
+- `reusable` 为可选项。支持可复用原生回调的频道可以在一次成功交互后仍保持该动作可用。适用于刷新、查看详情等可重复或幂等动作；普通一次性审批和破坏性动作应保持未设置。
 
 选择器语义：
 
@@ -198,6 +205,27 @@ const adapter: ChannelOutboundAdapter = {
     selects: true,
     context: true,
     divider: true,
+    limits: {
+      actions: {
+        maxActions: 25,
+        maxActionsPerRow: 5,
+        maxRows: 5,
+        maxLabelLength: 80,
+        maxValueBytes: 100,
+        supportsStyles: true,
+        supportsDisabled: false,
+      },
+      selects: {
+        maxOptions: 25,
+        maxLabelLength: 100,
+        maxValueBytes: 100,
+      },
+      text: {
+        maxLength: 2000,
+        encoding: "characters",
+        markdownDialect: "discord-markdown",
+      },
+    },
   },
   deliveryCapabilities: {
     pin: true,
@@ -211,21 +239,58 @@ const adapter: ChannelOutboundAdapter = {
 };
 ```
 
-能力字段故意设计为简单的布尔值。它们描述的是渲染器能让什么内容具备交互性，而不是所有原生平台限制。渲染器仍然负责诸如最大按钮数、区块数和卡片大小之类的平台特定限制。
+能力布尔值描述了渲染器可以将哪些内容做成交互式。可选的
+`limits` 描述了 core 在调用渲染器之前可以适配的通用边界：
+
+```ts
+type ChannelPresentationCapabilities = {
+  supported?: boolean;
+  buttons?: boolean;
+  selects?: boolean;
+  context?: boolean;
+  divider?: boolean;
+  limits?: {
+    actions?: {
+      maxActions?: number;
+      maxActionsPerRow?: number;
+      maxRows?: number;
+      maxLabelLength?: number;
+      maxValueBytes?: number;
+      supportsStyles?: boolean;
+      supportsDisabled?: boolean;
+      supportsLayoutHints?: boolean;
+    };
+    selects?: {
+      maxOptions?: number;
+      maxLabelLength?: number;
+      maxValueBytes?: number;
+    };
+    text?: {
+      maxLength?: number;
+      encoding?: "characters" | "utf8-bytes" | "utf16-units";
+      markdownDialect?: "plain" | "markdown" | "html" | "slack-mrkdwn" | "discord-markdown";
+      supportsEdit?: boolean;
+    };
+  };
+};
+```
+
+core 会在渲染前将通用限制应用于语义化控件。渲染器仍然负责最终的提供方特定校验和裁剪，包括原生区块数量、卡片大小、URL 限制以及无法在通用契约中表达的提供方特殊行为。如果限制移除了某个区块中的所有控件，core 会保留这些标签作为不可交互的上下文文本，以便投递后的消息仍然拥有可见回退。
 
 ## 核心渲染流程
 
-当 `ReplyPayload` 或消息动作包含 `presentation` 时，核心会：
+当 `ReplyPayload` 或消息动作包含 `presentation` 时，core 会：
 
 1. 规范化展示载荷。
 2. 解析目标频道的出站适配器。
 3. 读取 `presentationCapabilities`。
-4. 当适配器可以渲染该载荷时调用 `renderPresentation`。
-5. 当适配器不存在或无法渲染时，回退为保守的文本。
-6. 通过正常的频道投递路径发送结果载荷。
-7. 在第一条成功发送的消息之后应用诸如 `delivery.pin` 之类的投递元数据。
+4. 在适配器声明支持时，应用通用能力限制，例如动作数量、标签长度和选择项数量。
+5. 当适配器可以渲染该载荷时调用 `renderPresentation`。
+6. 当适配器缺失或无法渲染时回退为保守文本。
+7. 通过正常的频道投递路径发送结果载荷。
+8. 在首条消息成功发送后应用诸如 `delivery.pin` 之类的投递元数据。
 
-核心负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
+core 负责回退行为，因此生产者可以保持与频道无关。频道插件负责原生渲染和交互处理。
 
 ## 降级规则
 
@@ -287,27 +352,54 @@ const adapter: ChannelOutboundAdapter = {
 
 ```ts
 import {
+  adaptMessagePresentationForChannel,
+  applyPresentationActionLimits,
   interactiveReplyToPresentation,
   normalizeMessagePresentation,
+  presentationPageSize,
   presentationToInteractiveControlsReply,
   presentationToInteractiveReply,
   renderMessagePresentationFallbackText,
 } from "openclaw/plugin-sdk/interactive-runtime";
 ```
 
-新代码应直接接收或生成 `MessagePresentation`。
+新代码应直接接收或生成 `MessagePresentation`。现有的
+`interactive` 载荷是 `presentation` 的已弃用子集；运行时
+仍会为旧生产者保留支持。
 
-`presentationToInteractiveReply(...)` 会通过将标题、文本、上下文、按钮和选择器映射到较早的
-`InteractiveReply` 形状来保留可见的展示文本。已经原生绘制标题、文本、
-上下文和分隔线区块的组件渲染器应改用
-`presentationToInteractiveControlsReply(...)`，然后只附加按钮和选择器控件。
+SDK 中旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
+`@deprecated`：
+
+- `InteractiveReply`、`InteractiveReplyBlock`、`InteractiveReplyButton`、
+  `InteractiveReplyOption`、`InteractiveReplySelectBlock` 和
+  `InteractiveReplyTextBlock`
+- `normalizeInteractiveReply(...)`
+- `hasInteractiveReplyBlocks(...)`
+- `interactiveReplyToPresentation(...)`
+- `presentationToInteractiveReply(...)`
+- `presentationToInteractiveControlsReply(...)`
+- `resolveInteractiveTextFallback(...)`
+- `reduceInteractiveReply(...)`
+
+`presentationToInteractiveReply(...)` 和
+`presentationToInteractiveControlsReply(...)` 仍可作为旧版频道实现的渲染
+桥接函数使用。新的生产者代码不应调用它们；发送 `presentation` 并让 core/频道适配处理渲染。
+
+审批辅助工具也有以 presentation 为优先的替代方案：
+
+- 使用 `buildApprovalPresentationFromActionDescriptors(...)` 代替
+  `buildApprovalInteractiveReplyFromActionDescriptors(...)`
+- 使用 `buildApprovalPresentation(...)` 代替
+  `buildApprovalInteractiveReply(...)`
+- 使用 `buildExecApprovalPresentation(...)` 代替
+  `buildExecApprovalInteractiveReply(...)`
 
 `renderMessagePresentationFallbackText(...)` 对于没有文本回退的
 展示区块会返回空字符串，例如仅包含分隔线的展示。需要非空发送正文的传输层可以传入
 `emptyFallback`，以在不改变默认回退
 契约的情况下使用最小正文。
 
-## Delivery pin
+## 投递置顶
 
 置顶属于投递行为，而不是展示。请使用 `delivery.pin`，而不是诸如 `channelData.telegram.pin` 之类的提供方原生字段。
 
@@ -324,14 +416,15 @@ import {
 
 ## 插件作者检查清单
 
-- 当通道可以渲染或安全降级语义化呈现时，从 `describeMessageTool(...)` 中声明 `presentation`。
-- 将 `presentationCapabilities` 添加到运行时出站适配器。
-- 在运行时代码中实现 `renderPresentation`，而不是在控制平面插件设置代码中。
-- 不要将原生 UI 库放入热路径的 setup/catalog 路径中。
-- 在渲染器和测试中保留平台限制。
-- 为不受支持的按钮、选择框、URL 按钮、标题/文本重复，以及混合发送 `message` 和 `presentation` 的情况添加回退测试。
-- 只有当提供方可以固定所发送消息的 id 时，才通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加送达固定支持。
-- 不要通过共享消息动作 schema 暴露新的 provider-native card/block/component/button 字段。
+- 当通道可以渲染语义化呈现，或能够安全降级时，从 `describeMessageTool(...)` 声明 `presentation`。
+- 在运行时 outbound adapter 中添加 `presentationCapabilities`。
+- 在运行时代码中实现 `renderPresentation`，不要放在控制平面插件初始化代码中。
+- 不要让原生 UI 库进入热路径的初始化/目录路径。
+- 当已知时，在 `presentationCapabilities.limits` 上声明通用能力限制。
+- 在渲染器和测试中保留最终的平台限制。
+- 为不支持的按钮、选择器、URL 按钮、标题/文本重复，以及同时发送 `message` 和 `presentation` 的情况添加回退测试。
+- 仅当提供方能够对已发送消息 id 进行置顶时，通过 `deliveryCapabilities.pin` 和 `pinDeliveredMessage` 添加投递置顶支持。
+- 不要通过共享的消息动作 schema 暴露新的提供方原生卡片/区块/组件/按钮字段。
 
 ## 相关文档
 

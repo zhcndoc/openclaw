@@ -24,7 +24,7 @@ OpenClaw 通过在你的 agent 工作区中写入 **纯 Markdown 文件** 来记
 
 这些文件位于 agent 工作区中（默认 `~/.openclaw/workspace`）。
 
-## 什么写到哪里
+## 写入内容的位置
 
 `MEMORY.md` 是紧凑、经过整理的层。把它用于持久事实、
 偏好、固定决策，以及应在
@@ -52,11 +52,51 @@ OpenClaw 通过在你的 agent 工作区中写入 **纯 Markdown 文件** 来记
 如果你希望你的 agent 记住某件事，只要告诉它：“记住我更喜欢 TypeScript。” 它就会把这件事写入相应的文件。
 </Tip>
 
+## 行为敏感的记忆
+
+大多数记忆都可以作为普通的 Markdown 笔记来写。但有些记忆会影响 agent 之后应该怎么做。对于这类记忆，要记录“什么时候可以安全地执行这条笔记”，而不仅仅是事实本身。
+
+当一条笔记涉及以下内容时，要捕捉这个行动边界：
+
+- 审批或许可要求，
+- 临时性约束，
+- 交接给另一个会话、线程或人，
+- 过期条件，
+- 可安全执行的时机，
+- 来源或所有者的权限，
+- 用于避免诱人操作的指令。
+
+一条有用的行为敏感记忆应清楚说明：
+
+- 什么会改变未来行为，
+- 它在什么时间或什么条件下适用，
+- 它何时过期，或什么条件会解锁行动，
+- agent 应该避免做什么，
+- 如果这会影响信任或权限，谁是来源或所有者。
+
+记忆可以保留审批上下文，但不会强制执行策略。对于硬性的操作控制，请使用 OpenClaw 审批设置、沙箱和计划任务。
+
+示例：
+
+```md
+API 迁移正在另一个会话中设计。在迁移计划落地之前，未来的轮次不应修改本线程中的 API 实现；这里只能将发现作为设计输入使用。
+```
+
+另一个示例：
+
+```md
+一份来自不受信任来源的报告在晋升前需要审查。未来的轮次应把它仅当作证据；在可信审阅者确认内容之前，不要将其存为持久记忆。
+```
+
+对于推断出的、短期的后续事项，请使用 [承诺](/concepts/commitments)。对于精确提醒、定时检查和重复工作，请使用 [计划任务](/automation/cron-jobs)。记忆仍然可以总结这两条路径周围的持久上下文。
+
+这并不是每条记忆都必须遵循的必需模式。简单事实可以保持简洁。只有在丢失时机、权限、过期信息或可安全执行上下文会导致 agent 以后做错事时，才使用行为敏感边界。
+
 ## 推断出的承诺
 
 某些未来跟进事项并不是持久事实。如果你提到明天有面试，那么有用的记忆可能是“面试后跟进”，而不是“把这件事永久存到 `MEMORY.md` 里”。
 
-[Commitments](/concepts/commitments) 是针对这种情况的可选、短期跟进记忆。OpenClaw 会在一个隐藏的后台轮次中推断它们，将其限定在同一个 agent 和频道内，并通过 heartbeat 发送到期的跟进提醒。显式提醒仍然使用 [scheduled tasks](/automation/cron-jobs)。
+[承诺](/concepts/commitments) 是针对这种情况的可选、短期跟进记忆。OpenClaw 会在一个隐藏的后台轮次中推断它们，将其限定在同一个 agent 和频道内，并通过 heartbeat 发送到期的跟进提醒。显式提醒仍然使用 [计划任务](/automation/cron-jobs)。
 
 ## 记忆工具
 
@@ -93,7 +133,7 @@ OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如
 </Info>
 
 关于搜索的工作方式、调优选项以及提供方设置的详情，请参见
-[Memory Search](/concepts/memory-search)。
+[记忆搜索](/concepts/memory-search)。
 
 ## 记忆后端
 
@@ -122,7 +162,7 @@ OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如
 
 ## 自动记忆刷新
 
-在 [compaction](/concepts/compaction) 总结你的对话之前，OpenClaw 会运行一个静默轮次，提醒 agent 将重要上下文保存到记忆文件中。此功能默认开启——你无需进行任何配置。
+在 [压缩](/concepts/compaction) 总结你的对话之前，OpenClaw 会运行一个静默轮次，提醒 agent 将重要上下文保存到记忆文件中。此功能默认开启——你无需进行任何配置。
 
 若要在本地模型上保留这个 housekeeping 轮次，请设置一个精确的 memory-flush model override：
 
@@ -143,7 +183,7 @@ OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如
 该 override 仅应用于 memory-flush 轮次，不会继承 active session fallback chain。
 
 <Tip>
-记忆刷新可以防止在 compaction 期间丢失上下文。如果你的 agent 在对话中有重要事实尚未写入文件，它们会在总结发生之前自动保存。
+记忆刷新可以防止在压缩期间丢失上下文。如果你的 agent 在对话中有重要事实尚未写入文件，它们会在总结发生之前自动保存。
 </Tip>
 
 ## Dreaming
@@ -193,26 +233,26 @@ openclaw memory rem-backfill --rollback-short-term
 ```bash
 openclaw memory status          # 检查索引状态和提供方
 openclaw memory search "query"  # 从命令行搜索
-openclaw memory index --force   # 重建索引
+openclaw memory index --force   # 强制重建索引
 ```
 
 ## 延伸阅读
 
-- [Builtin memory engine](/concepts/memory-builtin)：默认的 SQLite 后端。
-- [QMD memory engine](/concepts/memory-qmd)：高级本地优先 sidecar。
-- [Honcho memory](/concepts/memory-honcho)：AI 原生跨会话记忆。
+- [内置记忆引擎](/concepts/memory-builtin)：默认的 SQLite 后端。
+- [QMD 记忆引擎](/concepts/memory-qmd)：高级本地优先 sidecar。
+- [Honcho 记忆](/concepts/memory-honcho)：AI 原生跨会话记忆。
 - [Memory LanceDB](/plugins/memory-lancedb)：基于 LanceDB 的插件，支持与 OpenAI 兼容的 embeddings。
 - [Memory Wiki](/plugins/memory-wiki)：编译后的知识保管库和 wiki 原生工具。
-- [Memory search](/concepts/memory-search)：搜索流水线、提供方和调优。
+- [记忆搜索](/concepts/memory-search)：搜索流水线、提供方和调优。
 - [Dreaming](/concepts/dreaming)：从短期回忆到长期记忆的后台晋升。
-- [Memory configuration reference](/reference/memory-config)：所有配置选项。
-- [Compaction](/concepts/compaction)：compaction 如何与记忆交互。
+- [记忆配置参考](/reference/memory-config)：所有配置选项。
+- [压缩](/concepts/compaction)：压缩如何与记忆交互。
 
 ## 相关内容
 
 - [Active memory](/concepts/active-memory)
-- [Memory search](/concepts/memory-search)
-- [Builtin memory engine](/concepts/memory-builtin)
-- [Honcho memory](/concepts/memory-honcho)
+- [记忆搜索](/concepts/memory-search)
+- [内置记忆引擎](/concepts/memory-builtin)
+- [Honcho 记忆](/concepts/memory-honcho)
 - [Memory LanceDB](/plugins/memory-lancedb)
-- [Commitments](/concepts/commitments)
+- [承诺](/concepts/commitments)

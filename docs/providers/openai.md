@@ -162,7 +162,7 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ```json5
     {
-      env: { OPENAI_API_KEY: "sk-..." },
+      env: { OPENAI_API_KEY: "example-openai-key-not-real" },
       agents: { defaults: { model: { primary: "openai/gpt-5.5" } } },
     }
     ```
@@ -172,7 +172,7 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
 
     ```json5
     {
-      env: { OPENAI_API_KEY: "sk-..." },
+      env: { OPENAI_API_KEY: "example-openai-key-not-real" },
       agents: { defaults: { model: { primary: "openai/chat-latest" } } },
     }
     ```
@@ -183,7 +183,7 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     `medium` 文本冗长度，因此 OpenClaw 会为此模型规范化不兼容的 OpenAI 文本冗长度覆盖。
 
     <Warning>
-    OpenClaw **不**公开 `openai/gpt-5.3-codex-spark`。在线 OpenAI API 请求会拒绝该模型，当前的 Codex 目录也未公开它。
+    OpenClaw 不会公开 `openai/gpt-5.3-codex-spark`。实时 OpenAI API 请求会拒绝该直接提供方路由。只有当 Codex 目录在你的已登录账户中公开了它时，才使用 `openai-codex/gpt-5.3-codex-spark`。
     </Warning>
 
   </Tab>
@@ -238,10 +238,12 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     | `codex-cli/gpt-5.5` | repaired by doctor | 重写为 `openai/gpt-5.5` 的旧 CLI 路由 | Codex 应用服务器认证 |
 
     <Warning>
-    不要配置较旧的 `openai-codex/gpt-5.1*`、`openai-codex/gpt-5.2*` 或
-    `openai-codex/gpt-5.3*` 模型引用。ChatGPT/Codex OAuth 账户现在会拒绝
-    这些模型。请使用 `openai/gpt-5.5`；OpenAI 代理回合现在默认选择 Codex
-    运行时。
+    新的、基于订阅的代理配置请优先使用 `openai/gpt-5.5`。较旧的
+    `openai-codex/gpt-*` 引用是旧版 PI 路由，而不是原生 Codex 运行时
+    路径；当你想将它们迁移到规范的
+    `openai/*` 引用时，请运行 `openclaw doctor --fix`。`openai-codex/gpt-5.3-codex-spark` 是一个例外，
+    适用于其 Codex 目录公开了该模型的账户；它的直接 `openai/*` 和
+    Azure 引用仍会被抑制。
     </Warning>
 
     <Note>
@@ -326,8 +328,16 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     openclaw models status --probe --probe-provider openai-codex
     ```
 
-    `openai/*` 是通过 Codex 运行 OpenAI 代理回合的模型路由。  
-    `openai-codex` 认证/配置文件提供方 id 仍然被现有配置文件和 CLI 列表所接受。
+    当你想在同一个代理中使用多个 Codex OAuth 登录，并希望之后通过认证排序或 `/model ...@<profileId>` 来控制它们时，请使用 `--profile-id`：
+
+    ```bash
+    openclaw models auth login --provider openai-codex --profile-id openai-codex:ritsuko
+    openclaw models auth login --provider openai-codex --profile-id openai-codex:lain
+    ```
+
+    `openai/*` 是通过 Codex 运行 OpenAI 代理回合的模型路由。
+    `openai-codex` 认证/配置文件提供方 id 对现有
+    配置文件和 CLI 列表仍然被接受。
 
     ### 状态指示器
 
@@ -490,10 +500,14 @@ openclaw infer image generate \
 | 能力             | 值                                                                                |
 | ---------------- | --------------------------------------------------------------------------------- |
 | 默认模型         | `openai/sora-2`                                                                   |
-| 模式             | 文本生成视频、图像生成视频、单视频编辑                                              |
-| 参考输入         | 1 张图像或 1 段视频                                                               |
-| 尺寸覆盖         | 支持                                                                         |
-| 其他覆盖         | `aspectRatio`、`resolution`、`audio`、`watermark` 会被忽略，并给出工具警告 |
+| 模式             | 文本生成视频、图像生成视频、单视频编辑                                             |
+| 参考输入         | 1 张图像或 1 个视频                                                                |
+| 尺寸覆盖         | 支持文本生成视频和图像生成视频                                                     |
+| 其他覆盖         | `aspectRatio`、`resolution`、`audio`、`watermark` 会被忽略，并给出工具警告       |
+
+OpenAI 图像生成视频请求使用 `POST /v1/videos`，并带有图像
+`input_reference`。单视频编辑使用 `POST /v1/videos/edits`，并将
+上传的视频放在 `video` 字段中。
 
 ```json5
 {
@@ -511,11 +525,11 @@ openclaw infer image generate \
 
 ## GPT-5 提示贡献
 
-OpenClaw 为跨 provider 的 GPT-5 系列运行添加了共享的 GPT-5 提示贡献。它按模型 id 应用，因此 `openai/gpt-5.5`、修复前的旧引用如 `openai-codex/gpt-5.5`、`openrouter/openai/gpt-5.5`、`opencode/gpt-5.5` 以及其他兼容的 GPT-5 引用都会收到相同的叠加层。较旧的 GPT-4.x 模型不会。
+OpenClaw 为在 OpenClaw 组装的提示表面上运行的 GPT-5 系列，添加了一个共享的 GPT-5 提示贡献。它按模型 id 应用，因此像旧的修复前引用（`openai-codex/gpt-5.5`）、`openrouter/openai/gpt-5.5`、`opencode/gpt-5.5` 以及其他兼容的 GPT-5 引用都会收到相同的叠加层。更旧的 GPT-4.x 模型不会。
 
-捆绑的原生 Codex harness 通过 Codex app-server 开发者指令使用相同的 GPT-5 行为和 heartbeat 叠加层，因此通过 Codex 路由的 `openai/gpt-5.x` 会话即使其余 harness 提示由 Codex 控制，也仍保留相同的跟进与主动 heartbeat 指导。
+捆绑的原生 Codex harness 不会通过 Codex app-server 开发者指令接收这个 OpenClaw GPT-5 叠加层。原生 Codex 保持 Codex 自有的基础、模型和项目文档行为，而 OpenClaw 会为原生线程禁用 Codex 内置的人格，以便 agent 工作区人格文件保持权威。OpenClaw 只贡献运行时上下文，例如通道投递、OpenClaw 动态工具、ACP 委派、工作区上下文以及 OpenClaw 技能。
 
-GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、执行安全、工具纪律、输出形态、完成检查和验证。与频道相关的回复和静默消息行为仍保留在共享的 OpenClaw 系统提示和出站投递策略中。GPT-5 指导始终对匹配模型启用。友好交互风格层是独立的，并且可配置。
+GPT-5 贡献为在人格持久性、执行安全、工具纪律、输出形态、完成检查以及与 OpenClaw 组装的提示匹配时的验证方面，增加了一个带标签的行为契约。通道特定的回复和静默消息行为仍保留在共享的 OpenClaw 系统提示和出站投递策略中。友好交互风格层是独立且可配置的。
 
 | 值                   | 效果                               |
 | -------------------- | ---------------------------------- |
@@ -524,7 +538,7 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
 | `"off"`              | 仅禁用友好风格层                   |
 
 <Tabs>
-  <Tab title="Config">
+  <Tab title="配置">
     ```json5
     {
       agents: {
@@ -567,7 +581,7 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
     | 格式 | `messages.tts.providers.openai.responseFormat` | 语音备注为 `opus`，文件为 `mp3` |
     | API key | `messages.tts.providers.openai.apiKey` | 回退到 `OPENAI_API_KEY` |
     | Base URL | `messages.tts.providers.openai.baseUrl` | `https://api.openai.com/v1` |
-    | Extra body | `messages.tts.providers.openai.extraBody` / `extra_body` | （未设置） |
+    | 额外正文 | `messages.tts.providers.openai.extraBody` / `extra_body` | （未设置） |
 
     可用模型：`gpt-4o-mini-tts`、`tts-1`、`tts-1-hd`。可用声音：`alloy`、`ash`、`ballad`、`cedar`、`coral`、`echo`、`fable`、`juniper`、`marin`、`onyx`、`nova`、`sage`、`shimmer`、`verse`。
 
@@ -628,12 +642,12 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
 
     | 设置 | 配置路径 | 默认值 |
     |---------|------------|---------|
-    | Model | `plugins.entries.voice-call.config.streaming.providers.openai.model` | `gpt-4o-transcribe` |
-    | Language | `...openai.language` | (unset) |
-    | Prompt | `...openai.prompt` | (unset) |
-    | Silence duration | `...openai.silenceDurationMs` | `800` |
-    | VAD threshold | `...openai.vadThreshold` | `0.5` |
-    | Auth | `...openai.apiKey`, `OPENAI_API_KEY`, or `openai-codex` OAuth | API keys connect directly; OAuth mints a Realtime transcription client secret |
+    | 模型 | `plugins.entries.voice-call.config.streaming.providers.openai.model` | `gpt-4o-transcribe` |
+    | 语言 | `...openai.language` | （未设置） |
+    | 提示 | `...openai.prompt` | （未设置） |
+    | 静默时长 | `...openai.silenceDurationMs` | `800` |
+    | VAD 阈值 | `...openai.vadThreshold` | `0.5` |
+    | 认证 | `...openai.apiKey`、`OPENAI_API_KEY` 或 `openai-codex` OAuth | API key 可直接连接；OAuth 会签发 Realtime 转录客户端密钥 |
 
     <Note>
     使用到 `wss://api.openai.com/v1/realtime` 的 WebSocket 连接，并采用 G.711 u-law（`g711_ulaw` / `audio/pcmu`）音频。当仅配置了 `openai-codex` OAuth 时，Gateway 会在打开 WebSocket 之前签发一个临时的 Realtime 转录客户端密钥。此流式提供方用于 Voice Call 的实时转录路径；Discord 语音目前会录制短片段并使用批量的 `tools.media.audio` 转录路径。
@@ -646,14 +660,14 @@ GPT-5 贡献增加了一个带标签的行为契约，涵盖人格持久性、�
 
     | 设置 | 配置路径 | 默认值 |
     |---------|------------|---------|
-    | Model | `plugins.entries.voice-call.config.realtime.providers.openai.model` | `gpt-realtime-2` |
-    | Voice | `...openai.voice` | `alloy` |
-    | Temperature (Azure deployment bridge) | `...openai.temperature` | `0.8` |
-    | VAD threshold | `...openai.vadThreshold` | `0.5` |
-    | Silence duration | `...openai.silenceDurationMs` | `500` |
-    | Prefix padding | `...openai.prefixPaddingMs` | `300` |
-    | Reasoning effort | `...openai.reasoningEffort` | (unset) |
-    | Auth | `...openai.apiKey`, `OPENAI_API_KEY`, or `openai-codex` OAuth | Browser Talk 和非 Azure 后端桥接可使用 Codex OAuth |
+    | 模型 | `plugins.entries.voice-call.config.realtime.providers.openai.model` | `gpt-realtime-2` |
+    | 声音 | `...openai.voice` | `alloy` |
+    | 温度（Azure 部署桥接） | `...openai.temperature` | `0.8` |
+    | VAD 阈值 | `...openai.vadThreshold` | `0.5` |
+    | 静默时长 | `...openai.silenceDurationMs` | `500` |
+    | 前缀填充 | `...openai.prefixPaddingMs` | `300` |
+    | 推理强度 | `...openai.reasoningEffort` | （未设置） |
+    | 认证 | `...openai.apiKey`、`OPENAI_API_KEY` 或 `openai-codex` OAuth | Browser Talk 和非 Azure 后端桥接可使用 Codex OAuth |
 
     `gpt-realtime-2` 可用的内置 Realtime 声音：`alloy`、`ash`、
     `ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin`、`cedar`。

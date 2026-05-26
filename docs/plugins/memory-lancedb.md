@@ -236,12 +236,11 @@ openclaw ltm search "project preferences"
 openclaw ltm stats
 ```
 
-该插件还会通过一个非向量的 `query` 子命令扩展 `openclaw memory`，
-该命令直接针对 LanceDB 表运行：
+`query` 子命令会直接对 LanceDB 表运行非向量查询：
 
 ```bash
-openclaw memory query --cols id,text,createdAt --limit 20
-openclaw memory query --filter "category = 'preference'" --order-by createdAt:desc
+openclaw ltm query --cols id,text,createdAt --limit 20
+openclaw ltm query --filter "category = 'preference'" --order-by createdAt:desc
 ```
 
 - `--cols <columns>`：以逗号分隔的列白名单（默认 `id`、`text`、`importance`、`category`、`createdAt`）。

@@ -88,7 +88,7 @@ type MessagePresentationOption = {
 - `interactive` 按钮块映射到 `presentation.blocks[].type = "buttons"`。
 - `interactive` 选择块映射到 `presentation.blocks[].type = "select"`。
 
-外部 agent 和 CLI schema 现在使用 `presentation`；`interactive` 仍然作为现有回复生产者的内部旧版解析/渲染辅助工具。
+外部 agent 和 CLI schema 现在使用 `presentation`；`interactive` 仍然是现有回复生成者使用的内部遗留解析/渲染辅助工具。公开的生产方 API 将 `interactive` 视为已弃用。运行时支持仍然保留，以便现有审批辅助工具和旧插件在新代码输出 `presentation` 的同时继续工作。
 
 ## 投递元数据
 
@@ -127,6 +127,29 @@ type ChannelPresentationCapabilities = {
   context?: boolean;
   divider?: boolean;
   tones?: MessagePresentationTone[];
+  limits?: {
+    actions?: {
+      maxActions?: number;
+      maxActionsPerRow?: number;
+      maxRows?: number;
+      maxLabelLength?: number;
+      maxValueBytes?: number;
+      supportsStyles?: boolean;
+      supportsDisabled?: boolean;
+      supportsLayoutHints?: boolean;
+    };
+    selects?: {
+      maxOptions?: number;
+      maxLabelLength?: number;
+      maxValueBytes?: number;
+    };
+    text?: {
+      maxLength?: number;
+      encoding?: "characters" | "utf8-bytes" | "utf16-units";
+      markdownDialect?: "plain" | "markdown" | "html" | "slack-mrkdwn" | "discord-markdown";
+      supportsEdit?: boolean;
+    };
+  };
 };
 
 type ChannelDeliveryCapabilities = {
@@ -159,10 +182,10 @@ Core 行为：
 
 - 解析目标渠道和运行时适配器。
 - 请求展示能力。
-- 在渲染前降级不支持的块。
+- 在渲染前降级不支持的块并应用通用能力限制。
 - 调用 `renderPresentation`。
-- 如果不存在渲染器，则将 `presentation` 转换为文本回退。
-- 在成功发送后，当请求了 `delivery.pin` 且目标渠道支持时，调用 `pinDeliveredMessage`。
+- 如果不存在渲染器，则将展示内容转换为文本回退。
+- 在成功发送后，当请求了 `delivery.pin` 且受支持时，调用 `pinDeliveredMessage`。
 
 ## 渠道映射
 

@@ -9,9 +9,9 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 24**（推荐）或 Node 22.16+ - 安装脚本会自动处理这些
+- **Node 24**（推荐）或 Node 22.19+ - 安装脚本会自动处理这一点
 - **macOS、Linux 或 Windows** - 原生 Windows 和 WSL2 均受支持；WSL2 更稳定。参见 [Windows](/platforms/windows)。
-- 仅在你从源码构建时才需要 `pnpm`
+- `pnpm` 仅在你从源码构建时需要
 
 ## 推荐：安装脚本
 
@@ -107,16 +107,7 @@ curl -fsSL https://openclaw.ai/install-cli.sh | bash
   </Tab>
 </Tabs>
 
-<Accordion title="故障排查：sharp 构建错误（npm）">
-  如果 `sharp` 因全局安装的 libvips 而失败：
-
-```bash
-SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install -g openclaw@latest
-```
-
-</Accordion>
-
-### 从源码
+### 来自源码
 
 适用于贡献者或任何想要从本地检出版本运行的人：
 
@@ -130,10 +121,10 @@ openclaw onboard --install-daemon
 
 或者跳过链接，直接在仓库内使用 `pnpm openclaw ...`。请参阅 [设置](/start/setup) 获取完整的开发工作流。
 
-### 从 GitHub main 安装
+### 从 GitHub main 检出版本安装
 
 ```bash
-npm install -g github:openclaw/openclaw#main
+curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git --version main
 ```
 
 ### 容器和包管理器

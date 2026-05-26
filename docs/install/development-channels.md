@@ -1,5 +1,5 @@
 ---
-summary: "稳定、beta 和 dev 通道：语义、切换、固定和标签"
+summary: "stable、beta 和 dev 通道：语义、切换、固定和标签"
 read_when:
   - 你想在 stable/beta/dev 之间切换
   - 你想固定到特定版本、标签或 SHA
@@ -33,15 +33,11 @@ openclaw update --channel dev
 `--channel` 会将你的选择持久化到配置中（`update.channel`），并与
 安装方式保持一致：
 
-- **`stable`**（包安装）：通过 npm dist-tag `latest` 更新。
-- **`beta`**（包安装）：优先使用 npm dist-tag `beta`，但在
-  `beta` 缺失或比当前 stable 标签更旧时回退到 `latest`。
-- **`stable`**（git 安装）：检出最新的 stable git 标签。
-- **`beta`**（git 安装）：优先使用最新的 beta git 标签，但在
-  beta 缺失或更旧时回退到最新的 stable git 标签。
-- **`dev`**：确保存在一个 git 检出目录（默认 `~/openclaw`，可通过
-  `OPENCLAW_GIT_DIR` 覆盖），切换到 `main`，基于上游变基，构建，并
-  从该检出目录安装全局 CLI。
+- **`stable`** (包安装): 通过 npm dist-tag `latest` 更新。
+- **`beta`** (包安装): 优先使用 npm dist-tag `beta`，但当 `beta` 缺失或比当前 stable 标签更旧时，会回退到 `latest`。
+- **`stable`** (git 安装): 检出最新的 stable git 标签。
+- **`beta`** (git 安装): 优先使用最新的 beta git 标签，但当 beta 缺失或更旧时，会回退到最新的 stable git 标签。
+- **`dev`**: 确保存在一个 git 检出目录（默认是 `~/openclaw`，或者当设置了 `$OPENCLAW_HOME` 时为 `$OPENCLAW_HOME/openclaw`；可通过 `OPENCLAW_GIT_DIR` 覆盖），切换到 `main`，基于上游进行 rebase，构建，并从该检出目录安装全局 CLI。
 
 <Tip>
 如果你想同时保留 stable 和 dev，请保留两个克隆，并将你的网关指向 stable 那个。
@@ -59,22 +55,26 @@ openclaw update --tag 2026.4.1-beta.1
 # 从 beta dist-tag 安装（一次性，不会持久化）
 openclaw update --tag beta
 
-# 从 GitHub main 分支安装（npm tarball）
-openclaw update --tag main
+# 切换到不断变化的 GitHub main 检出
+openclaw update --channel dev
 
 # 安装特定的 npm 包规范
 openclaw update --tag openclaw@2026.4.1-beta.1
+
+# 从 GitHub main 安装一次，而不持久化通道
+openclaw update --tag main
 ```
 
 注意：
 
 - `--tag` 仅适用于**包（npm）安装**。git 安装会忽略它。
-- 该标签不会被持久化。你下一次运行 `openclaw update` 时会照常使用你配置的
+- 该标签不会被持久化。你的下一次 `openclaw update` 会照常使用你配置的
   通道。
-- 降级保护：如果目标版本比你当前版本更旧，OpenClaw 会提示确认（可用 `--yes` 跳过）。
-- `--channel beta` 与 `--tag beta` 不同：通道流程在 beta 缺失或更旧时可以回退到
-  stable/latest，而 `--tag beta` 仅针对那一次运行直接使用
-  原始的 `beta` dist-tag。
+- 对于包安装，OpenClaw 会在分阶段的 npm 安装之前，将 GitHub/git 源规范预打包为一个
+  临时 tarball。当你希望将不断变化的 `main`
+  检出作为持久安装时，请使用 `--channel dev` 或 `--install-method git --version main`。
+- 降级保护：如果目标版本比当前版本更旧，OpenClaw 会提示确认（可用 `--yes` 跳过）。
+- `--channel beta` 与 `--tag beta` 不同：通道流程在 beta 缺失或更旧时可以回退到 stable/latest，而 `--tag beta` 只针对那一次运行的原始 `beta` dist-tag。
 
 ## 试运行
 

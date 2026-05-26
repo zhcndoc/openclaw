@@ -24,6 +24,10 @@ OpenClaw 的安全指南假设一种 **个人助手** 部署：一个受信任�
 
 本页说明的是在 **该模型内** 的加固方法。它并不声称在一个共享网关上实现敌对多租户隔离。
 
+Before changing remote access, DM policy, reverse proxy, or public exposure,
+use the [Gateway exposure runbook](/gateway/security/exposure-runbook) as a
+pre-flight and rollback checklist.
+
 ## 快速检查：`openclaw security audit`
 
 另见：[形式化验证（安全模型）](/security/formal-verification)
@@ -49,7 +53,62 @@ OpenClaw 既是产品也是实验：你把前沿模型行为接到了真实的�
 
 先从仍然可用的最小权限开始，然后在建立信心后逐步放宽。
 
-### 部署与主机信任
+### Published package dependency lock
+
+OpenClaw 源码检出使用 `pnpm-lock.yaml`。发布的 `openclaw` npm
+包以及 OpenClaw 拥有的 npm 插件包包含 `npm-shrinkwrap.json`，
+即 npm 可发布的依赖锁定文件，因此包安装会使用发布版本中经过审查的
+传递依赖图，而不是在安装时重新解析一张新的依赖图。合适的 OpenClaw 拥有的 npm 插件包也可以使用显式的 `bundledDependencies` 进行发布，因此它们的运行时依赖文件
+会被带入插件 tarball，而不是只依赖安装时的解析结果。
+
+这是一种供应链加固措施：
+
+- 发布安装更可复现；
+- 传递依赖更新会变成可见的审查面；
+- 包 tarball 中包含了发布验证者检查过的依赖图；
+- 合适的 OpenClaw 拥有的插件 tarball 包含该依赖图中的依赖文件；
+- `package-lock.json` 不会出现在已发布包中，因为 npm 不把它视为可发布的锁定契约。
+
+Shrinkwrap 不是沙箱，也不能让每个依赖都变得可信。它
+不能替代 `openclaw security audit`、主机隔离、npm provenance、
+签名/审计检查，或在合适时使用 `--ignore-scripts` 的安装冒烟测试。
+应将其视为发布可复现性和审查控制边界。
+
+维护者应在根包或 OpenClaw 拥有的已发布插件包更改其已发布依赖图时更新并验证 shrinkwrap：
+
+```bash
+pnpm deps:shrinkwrap:generate
+pnpm deps:shrinkwrap:check
+```
+
+生成器会解析 npm 的可发布锁定格式，但会拒绝那些其生成的包版本尚未存在于 `pnpm-lock.yaml` 中的包，从而保留 pnpm 依赖年龄、覆盖和补丁审查边界。
+
+仅当你有意刷新根 `openclaw` 包而不触及插件包时，才使用 `pnpm deps:shrinkwrap:root:generate` 和
+`pnpm deps:shrinkwrap:root:check`。
+
+请将 `pnpm-lock.yaml`、`npm-shrinkwrap.json`、捆绑的插件依赖
+负载，以及任何 `package-lock.json` 差异视为安全敏感内容。包验证器要求新根包 tarball 中包含 shrinkwrap，并且插件 npm
+发布路径会检查插件本地 shrinkwrap、安装包本地的捆绑依赖，然后再打包或发布。包验证器会拒绝 `package-lock.json`。
+
+要检查已发布的包：
+
+```bash
+npm pack openclaw@<version> --json --pack-destination /tmp/openclaw-pack
+tar -tf /tmp/openclaw-pack/openclaw-<version>.tgz | grep '^package/npm-shrinkwrap.json$'
+```
+
+要检查 OpenClaw 拥有的插件包，请替换包规格并检查
+相同的 tar 条目：
+
+```bash
+npm pack @openclaw/discord@<version> --json --pack-destination /tmp/openclaw-plugin-pack
+tar -tf /tmp/openclaw-plugin-pack/openclaw-discord-<version>.tgz | grep '^package/npm-shrinkwrap.json$'
+tar -tf /tmp/openclaw-plugin-pack/openclaw-discord-<version>.tgz | grep '^package/node_modules/'
+```
+
+背景：[npm-shrinkwrap.json](https://docs.npmjs.com/cli/v11/configuring-npm/npm-shrinkwrap-json)。
+
+### 部署和主机信任
 
 OpenClaw 假定主机和配置边界是受信任的：
 
@@ -460,13 +519,12 @@ OpenClaw 的立场：
 - `gateway` 可以用 `config.schema.lookup` / `config.get` 检查配置，并可以用 `config.apply`、`config.patch` 和 `update.run` 进行持久性更改。
 - `cron` 可以创建计划任务，并在原始聊天/任务结束后继续运行。
 
-仅限所有者的 `gateway` 运行时工具仍然拒绝重写
+面向 agent 的 `gateway` 运行时工具仍然拒绝重写
 `tools.exec.ask` 或 `tools.exec.security`；旧版 `tools.bash.*` 别名在写入前会被
-规范化为同样受保护的 exec 路径。
+规范化为相同受保护的 exec 路径。
 由 agent 驱动的 `gateway config.apply` 和 `gateway config.patch` 编辑默认是
-fail-closed 的：只有一小部分提示、模型和提及门控
-路径是可由 agent 调整的。因此，新的敏感配置树会受到保护，
-除非它们被有意加入允许列表。
+失败关闭的：只有一小部分提示、模型和提及门控
+路径可由 agent 调整。因此，新的敏感配置树会在未被刻意加入允许列表时受到保护。
 
 对于任何处理不受信任内容的 agent/界面，默认拒绝这些功能：
 
@@ -856,13 +914,13 @@ loopback 接受明文，但私有局域网、链路本地、`.local` 和
 
 重要边界说明：
 
-- Gateway HTTP bearer auth 本质上等同于“全部或无”的操作者访问权限。
-- 请将能够调用 `/v1/chat/completions`、`/v1/responses`、诸如 `/api/v1/admin/rpc` 之类插件路由，或 `/api/channels/*` 的凭据，视为该 gateway 的完全访问操作者秘密。
-- 在 OpenAI 兼容的 HTTP 表面上，共享密钥 bearer 认证会恢复完整的默认操作者作用域（`operator.admin`、`operator.approvals`、`operator.pairing`、`operator.read`、`operator.talk.secrets`、`operator.write`）以及 agent 回合的所有者语义；较窄的 `x-openclaw-scopes` 值不会减少这条共享密钥路径的权限。
-- HTTP 上的按请求作用域语义，仅在请求来自具备身份的模式时适用，例如受信任代理认证，或显式的无认证私有入口。
-- 在这些具备身份的模式中，如果省略 `x-openclaw-scopes`，会回退到正常的操作者默认作用域集；当你需要更窄的作用域集时，请显式发送该头。
-- `/tools/invoke` 遵循相同的共享密钥规则：在这里 token/password bearer 认证也被视为完整操作者访问，而具备身份的模式仍会尊重声明的作用域。
-- 不要与不受信任的调用方共享这些凭据；优先按信任边界为每个网关单独部署。
+- Gateway HTTP bearer auth is effectively all-or-nothing operator access.
+- Treat credentials that can call `/v1/chat/completions`, `/v1/responses`, plugin routes such as `/api/v1/admin/rpc`, or `/api/channels/*` as full-access operator secrets for that gateway.
+- On the OpenAI-compatible HTTP surface, shared-secret bearer auth restores the full default operator scopes (`operator.admin`, `operator.approvals`, `operator.pairing`, `operator.read`, `operator.talk.secrets`, `operator.write`) and owner semantics for agent turns; narrower `x-openclaw-scopes` values do not reduce that shared-secret path.
+- Per-request scope semantics on HTTP only apply when the request comes from an identity-bearing mode such as trusted proxy auth, or from an explicitly no-auth private ingress.
+- In those identity-bearing modes, omitting `x-openclaw-scopes` falls back to the normal operator default scope set; send the header explicitly when you want a narrower scope set.
+- `/tools/invoke` and HTTP session history endpoints follow the same shared-secret rule: token/password bearer auth is treated as full operator access there too, while identity-bearing modes still honor declared scopes.
+- Do not share these credentials with untrusted callers; prefer separate gateways per trust boundary.
 
 **信任假设：** 无 token 的 Serve 认证假定 gateway 主机是可信的。不要把它当作对抗同主机恶意进程的保护。如果不受信任的本地代码可能在 gateway 主机上运行，请禁用 `gateway.auth.allowTailscale`，并要求通过 `gateway.auth.mode: "token"` 或 `"password"` 进行显式共享密钥认证。
 

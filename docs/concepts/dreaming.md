@@ -107,13 +107,19 @@ read_when:
 
 Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加一个小幅、随时间衰减的提升。
 
-## 调度
+## QA shadow trial report coverage
+
+QA 实验室包含一个仅报告的场景，用于探索未来的做梦 shadow trial 如何在提升前审查候选记忆。该场景会要求一个代理比较基线答案与一个可以使用候选记忆的答案，然后写出一份本地报告，包含结论、原因和风险标记。
+
+这部分覆盖范围有意限定在 QA 中。它验证报告工件会与 `MEMORY.md` 分离，并且代理不会声称候选项已被提升。它不会添加生产环境的 shadow-trial 行为，也不会更改深度阶段的提升引擎。
+
+## Scheduling
 
 启用后，`memory-core` 会自动管理一个用于完整做梦扫描的 cron 任务。每次扫描按顺序运行各阶段：light → REM → deep。
 
-The sweep includes the primary runtime workspace and any configured agent workspaces, deduped by path, so subagent workspace fan-out does not exclude the main agent's `DREAMS.md` and memory state.
+扫描会包含主运行时工作区以及任何已配置的代理工作区，并按路径去重，因此子代理工作区的扩散不会排除主代理的 `DREAMS.md` 和记忆状态。
 
-Default cadence behavior:
+默认频率行为：
 
 | 设置                 | 默认值        |
 | -------------------- | ------------- |

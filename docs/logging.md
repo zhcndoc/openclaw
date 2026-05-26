@@ -72,9 +72,11 @@ openclaw logs --follow
 - `notice`：截断 / 轮转提示
 - `raw`：未解析的日志行
 
-如果隐式的本地回环 Gateway 请求配对、在连接期间关闭，
-或在 `logs.tail` 响应前超时，`openclaw logs` 会自动回退到
-配置的 Gateway 文件日志。显式 `--url` 目标不会使用此回退。
+如果隐式的本地回环 Gateway 要求配对、在连接过程中关闭，或者在 `logs.tail` 响应之前超时，
+`openclaw logs` 会自动回退到已配置的 Gateway 文件日志。显式指定的 `--url`
+目标不会使用此回退机制。`openclaw logs --follow` 更严格：在 Linux 上，如果可用，
+它会按 PID 使用活动的 user-systemd Gateway journal；否则会持续重试实时 Gateway，
+而不是跟随一个可能已经过时的并排文件。
 
 如果 Gateway 不可达，CLI 会打印一条简短提示，建议运行：
 
@@ -117,7 +119,7 @@ Talk、实时语音以及托管房间活动也会通过同一文件日志管道�
 记录。这些记录在可用时包含事件类型、模式、传输、提供方以及大小/时间测量值，
 但不会包含转录文本、音频载荷、turn id、call id 和提供方 item id。
 
-### Console output
+### 控制台输出
 
 控制台日志具有 **TTY 感知**，并针对可读性进行了格式化：
 
@@ -202,7 +204,7 @@ OPENCLAW_DEBUG_MODEL_PAYLOAD=tools OPENCLAW_DEBUG_SSE=events openclaw gateway
 和 Control UI 的 Logs 选项卡都能显示它们。若不使用这些标志，相同的诊断信息
 仍可在 `debug` 级别下查看。
 
-### Trace correlation
+### 追踪关联
 
 文件日志是 JSONL。当日志调用携带有效的诊断追踪上下文时，
 OpenClaw 会将追踪字段写为顶层 JSON 键（`traceId`、`spanId`、

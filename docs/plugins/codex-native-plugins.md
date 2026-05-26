@@ -17,19 +17,19 @@ Codex app-server 负责基于应用的 MCP 执行。
 
 请在基础 [Codex harness](/plugins/codex-harness) 已正常工作后使用本页。
 
-## Requirements
+## 要求
 
 - 选定的 OpenClaw agent 运行时必须是原生 Codex harness。
 - `plugins.entries.codex.enabled` 必须为 true。
 - `plugins.entries.codex.config.codexPlugins.enabled` 必须为 true。
-- V1 仅支持 migration 观察到在源 Codex home 中为 source-installed 的 `openai-curated` 插件。
+- V1 仅支持迁移时在源 Codex home 中观察到为 source-installed 的 `openai-curated` 插件。
 - 目标 Codex app-server 必须能够看到预期的 marketplace、插件和应用清单。
 
 `codexPlugins` 对 PI 运行、普通 OpenAI provider 运行、ACP
 对话绑定或其他 harness 没有影响，因为这些路径不会创建带有原生 `apps` 配置的
 Codex app-server 线程。
 
-## Quickstart
+## 快速开始
 
 从源 Codex home 预览迁移：
 
@@ -37,7 +37,7 @@ Codex app-server 线程。
 openclaw migrate codex --dry-run
 ```
 
-当你希望迁移在规划原生插件启用之前检查源应用可访问性时，使用严格的源应用验证：
+当你希望在规划原生插件启用之前检查源应用可访问性时，使用严格的源应用验证：
 
 ```bash
 openclaw migrate codex --dry-run --verify-plugin-apps
@@ -78,8 +78,34 @@ Codex app-server 的 `plugin/install` 来安装所选插件。一个典型的迁
 }
 ```
 
-在更改 `codexPlugins` 后，使用 `/new`、`/reset`，或重启网关，以便
-未来的 Codex harness 会话使用更新后的应用集合启动。
+更改 `codexPlugins` 后，新的 Codex 对话会自动获取更新后的应用集。
+使用 `/new` 或 `/reset` 来刷新当前对话。
+插件启用或禁用的更改不需要重启网关。
+
+## 从聊天中管理插件
+
+当你想要在操作 Codex harness 的同一聊天中，检查或修改已配置的原生 Codex
+插件时，使用 `/codex plugins`：
+
+```text
+/codex plugins
+/codex plugins list
+/codex plugins disable google-calendar
+/codex plugins enable google-calendar
+```
+
+`/codex plugins` 是 `/codex plugins list` 的别名。列表输出会显示
+已配置的插件键、开/关状态、Codex 插件名称，以及来自
+`plugins.entries.codex.config.codexPlugins.plugins` 的 marketplace。
+
+`enable` 和 `disable` 只会写入 OpenClaw 配置，位于
+`~/.openclaw/openclaw.json`；它们不会编辑 `~/.codex/config.toml`，也不会安装
+新的 Codex 插件。只有所有者或具有
+`operator.admin` 作用域的网关客户端才能更改插件状态。
+
+启用已配置的插件也会打开全局的
+`codexPlugins.enabled` 开关。如果该插件因为迁移返回 `auth_required` 而被写入为禁用，
+请先在 Codex 中重新授权该应用，再在 OpenClaw 中启用它。
 
 ## 原生插件设置如何工作
 
@@ -102,10 +128,11 @@ app-server 账户响应是否为 ChatGPT 订阅账户。非 ChatGPT 或
 在该模式下，账户查找传输失败会落到源应用清单门槛。运行时应用清单是迁移后的目标会话可访问性检查。
 随后 Codex harness 会话设置会为已启用且可访问的插件应用计算一个限制性的线程应用配置。
 
-当 OpenClaw 建立 Codex harness 会话，或替换过时的 Codex 线程绑定时，会计算线程应用配置。
-它不会在每个回合都重新计算。
+OpenClaw 在建立 Codex harness 会话或替换失效的 Codex 线程绑定时，会计算线程应用配置。
+它不会在每个回合都重新计算，因此 `/codex plugins enable` 和 `/codex plugins disable` 会影响新的 Codex
+对话。当前对话需要获取更新后的应用集时，请使用 `/new` 或 `/reset`。
 
-## V1 support boundary
+## V1 支持边界
 
 V1 的范围有意保持狭窄：
 
@@ -119,7 +146,7 @@ V1 的范围有意保持狭窄：
 - 不存在 `plugins["*"]` 通配符，也没有授予任意安装权限的配置键。
 - 不支持的 marketplace、缓存的插件包、hooks 和 Codex 配置文件会保留在迁移报告中以供人工审查。
 
-## App inventory and ownership
+## 应用清单与所有权
 
 OpenClaw 通过 app-server 的 `app/list` 读取 Codex 应用清单，将其缓存一小时，并异步刷新过期或缺失的条目。
 该缓存仅存在于内存中；重启 CLI 或网关会清除它，而 OpenClaw 会从下一次 `app/list` 读取重新构建它。
@@ -137,7 +164,7 @@ OpenClaw 通过 app-server 的 `app/list` 读取 Codex 应用清单，将其缓�
 
 仅有显示名称或所有权不明确的情况会被排除，直到下一次清单刷新证明所有权。
 
-## Thread app config
+## 线程应用配置
 
 OpenClaw 会为 Codex 线程注入一个限制性的 `config.apps` 补丁：
 `_default` 被禁用，并且只有属于已启用迁移插件的应用才会被启用。
@@ -146,7 +173,7 @@ OpenClaw 会根据有效的全局或按插件 `allow_destructive_actions` 策略
 
 插件应用的工具审批模式默认是 automatic，因此非破坏性的读取工具可以在同一线程中无需审批 UI 运行。破坏性工具仍由每个应用的 `destructive_enabled` 策略控制。
 
-## Destructive action policy
+## 破坏性操作策略
 
 迁移后的 Codex 插件默认允许破坏性插件触发，而不安全的 schema 和有歧义的所有权仍然会失败并关闭：
 
@@ -156,7 +183,7 @@ OpenClaw 会根据有效的全局或按插件 `allow_destructive_actions` 策略
 - 当策略为 `true` 时，OpenClaw 只会自动接受它能映射为批准响应的安全 schema，例如布尔型 approve 字段。
 - 缺失的插件身份、所有权歧义、缺失的 turn id、错误的 turn id，或不安全的触发 schema 都会直接拒绝，而不是提示。
 
-## Troubleshooting
+## 故障排查
 
 **`auth_required`：** 迁移已安装插件，但其某个应用仍需要认证。显式插件条目会被写为禁用状态，直到你重新授权并启用它。
 
@@ -175,7 +202,10 @@ OpenClaw 会根据有效的全局或按插件 `allow_destructive_actions` 策略
 
 **`app_ownership_ambiguous`：** 应用清单只通过显示名称匹配，因此该应用不会暴露给 Codex 线程。
 
-**配置已更改但 agent 仍看不到插件：** 使用 `/new`、`/reset`，或重启网关。现有的 Codex 线程绑定会保留它们启动时的应用配置，直到 OpenClaw 建立新的 harness 会话或替换过时的绑定。
+**配置已更改，但 agent 看不到插件：** 使用 `/codex plugins
+list` 确认已配置状态，然后使用 `/new` 或 `/reset`。现有
+Codex 线程绑定会保留其启动时的应用配置，直到 OpenClaw
+建立新的 harness 会话或替换失效的绑定。
 
 **破坏性操作被拒绝：** 检查全局和按插件的 `allow_destructive_actions` 值。即使策略为 true，不安全的触发 schema 和有歧义的插件身份仍然会失败并关闭。
 

@@ -21,8 +21,7 @@ openclaw update
 ```bash
 openclaw update --channel beta
 openclaw update --channel dev
-openclaw update --tag main
-openclaw update --dry-run   # 预览，不实际应用
+openclaw update --dry-run   # 不实际应用，仅预览
 ```
 
 `openclaw update` 不接受 `--verbose`。如需更新诊断，请使用
@@ -35,9 +34,12 @@ openclaw update --dry-run   # 预览，不实际应用
 beta 标签不存在或比最新稳定版本更旧时，运行时会回退到 stable/latest。若你想在一次性包更新中使用原始的 npm beta dist-tag，请使用 `--tag beta`
 。
 
-对于受管理的插件，beta 渠道回退属于警告：核心更新
-仍可能成功，而插件会使用其记录的默认/latest 发布版本，因为没有
-可用的插件 beta 版本。
+对于持续跟随 GitHub `main` 的检出，请使用 `--channel dev`。对于包
+更新，`--tag main` 会在单次运行中映射到 `github:openclaw/openclaw#main`，并且
+GitHub/git 源规格会在分阶段的 npm 安装前被打包成临时 tarball。
+
+对于受管理的插件，beta 渠道回退会发出警告：核心更新仍然可能
+成功，而某个插件会使用其记录的默认/最新发布版本，因为没有可用的插件 beta。
 
 参见 [开发渠道](/install/development-channels) 了解渠道语义。
 
@@ -61,6 +63,8 @@ openclaw update --channel stable --dry-run
 ```
 
 `dev` 渠道会确保使用 git 检出，构建它，并从该检出中安装全局 CLI。`stable` 和 `beta` 渠道使用包安装。如果网关已经安装，`openclaw update` 会刷新服务元数据并重启它，除非你传入 `--no-restart`。
+
+对于带有受管理 Gateway 服务的包安装，`openclaw update` 会针对该服务使用的包根目录。如果 shell 中的 `openclaw` 命令来自不同的安装，更新器会打印两个根目录以及受管理服务的 Node 路径。包更新会使用拥有该服务根目录的包管理器，并在替换包之前检查受管理服务的 Node 是否与目标发布引擎匹配。
 
 ## 备选方案：重新运行安装器
 
@@ -89,9 +93,28 @@ curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm --ve
 npm i -g openclaw@latest
 ```
 
-对于受监督的安装，优先使用 `openclaw update`，因为它可以协调包交换与正在运行的 Gateway 服务。如果你在受管理的 Gateway 运行时手动更新，请在包管理器完成后立即重启 Gateway，以免旧进程继续从已替换的包文件中提供服务。
+对于受管理的安装，优先使用 `openclaw update`，因为它可以与正在运行的 Gateway 服务协调包切换。如果你在受管理安装上手动更新，请在包管理器开始之前停止受管理的 Gateway。包管理器会就地替换文件，否则正在运行的 Gateway 可能会在包树处于半替换状态时尝试加载核心或插件文件。包管理器完成后重启 Gateway，以便服务获取新的安装。
 
-当 `openclaw update` 管理一个全局 npm 安装时，它会先将目标安装到一个临时 npm 前缀中，验证打包的 `dist` 清单，然后将干净的包树交换到真实的全局前缀中。这样可以避免 npm 将新包覆盖到旧包的残留文件之上。如果安装命令失败，OpenClaw 会使用 `--omit=optional` 重试一次。该重试有助于原生可选依赖无法编译的主机，同时如果回退也失败，仍会保留原始失败信息可见。
+对于由 root 拥有的 Linux 系统全局安装，如果 `openclaw update` 因 `EACCES` 失败，并且你通过系统 npm 恢复，请在手动替换包期间保持 Gateway 停止。使用你通常为该 Gateway 使用的相同 `openclaw` 配置文件标志或环境变量。将 `/usr/bin/npm` 替换为在你的主机上拥有 root 全局前缀的系统 npm：
+
+```bash
+openclaw gateway stop
+sudo /usr/bin/npm i -g openclaw@latest
+openclaw gateway install --force
+openclaw gateway restart
+```
+
+然后验证服务：
+
+```bash
+openclaw --version
+curl -fsS http://127.0.0.1:18789/readyz
+openclaw plugins list --json
+openclaw gateway status --deep --json
+openclaw doctor --lint --json
+```
+
+当 `openclaw update` 管理全局 npm 安装时，它会先将目标安装到一个临时 npm 前缀中，验证打包的 `dist` 清单，然后将干净的包树交换到真实的全局前缀中。这样可以避免 npm 将新包覆盖到旧包的残留文件之上。如果安装命令失败，OpenClaw 会使用 `--omit=optional` 重试一次。该重试有助于原生可选依赖无法编译的主机，同时如果回退也失败，仍会保留原始失败信息可见。
 
 由 OpenClaw 管理的 npm 更新和插件更新命令还会为子 npm 进程清除 npm 的
 `min-release-age` 隔离。npm 可能会将该策略报告为一个派生的 `before` 截止时间；这两者都对通用的供应链

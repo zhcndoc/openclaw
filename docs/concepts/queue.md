@@ -19,7 +19,7 @@ title: "命令队列"
 - `runEmbeddedPiAgent` 按 **会话键** 入队（lane `session:<key>`），以保证每个会话同一时间只有一个活跃运行。
 - 然后每个会话运行会再进入一个 **全局 lane**（默认 `main`），因此整体并发由 `agents.defaults.maxConcurrent` 限制。
 - 启用详细日志时，如果排队等待超过约 2 秒才开始，队列中的运行会输出一条简短提示。
-- 当输入指示器受支持时，它仍会在入队后立即触发，因此在等待轮到我们时，用户体验不会改变。
+- 当输入指示器受支持时，它仍然会在入队后立即触发，因此在等待轮到我们时，用户体验不会改变。
 
 ## 默认值
 
@@ -63,8 +63,7 @@ title: "命令队列"
 
 ## 队列选项
 
-Options apply to queued delivery. `debounceMs` also sets the Codex steering
-quiet window in `steer` mode:
+选项适用于已排队的传递。`debounceMs` 在 `steer` 模式下也会设置 Codex 引导的静默窗口：
 
 - `debounceMs`: 在清空排队的后续消息或 collect 批次之前的静默窗口；在 Codex 的 `steer` 模式下，则是在发送批量 `turn/steer` 之前的静默窗口。裸数字表示毫秒；`/queue` 选项接受 `ms`、`s`、`m`、`h` 和 `d` 单位。
 - `cap`: 每个会话的最大排队消息数。小于 `1` 的值会被忽略。
@@ -73,6 +72,16 @@ quiet window in `steer` mode:
 - `drop: "new"`：当队列已满时拒绝最新消息。
 
 默认值：`debounceMs: 500`、`cap: 20`、`drop: summarize`。
+
+## 引导与流式输出
+
+当渠道流式输出为 `partial` 或 `block` 时，引导可能会表现为在活跃运行到达运行时边界之前出现若干条较短的可见回复：
+
+- `partial`: 预览可能会提前完成，然后在引导被接受后启动新的预览。
+- `block`: 草稿大小的块也可能产生相同的顺序外观。
+- 在没有流式输出时，当运行时无法接受同轮引导，引导会回退为活跃运行结束后的后续轮次。
+
+`steer` 不会中止正在执行中的工具。若最新消息应当中止当前运行，请使用 `/queue interrupt`。
 
 ## 优先级
 
@@ -111,4 +120,4 @@ quiet window in `steer` mode:
 - [会话管理](/concepts/session)
 - [Steering queue](/concepts/queue-steering)
 - [Steer](/tools/steer)
-- [Retry policy](/concepts/retry)
+- [重试策略](/concepts/retry)

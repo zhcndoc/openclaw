@@ -17,23 +17,23 @@ MiniMax 还提供：
 
 提供程序拆分：
 
-| Provider ID      | Auth    | Capabilities                                                                                        |
+| Provider ID      | 认证方式 | 功能                                                                                        |
 | ---------------- | ------- | --------------------------------------------------------------------------------------------------- |
 | `minimax`        | API key | 文本、图像生成、音乐生成、视频生成、图像理解、语音、网页搜索 |
 | `minimax-portal` | OAuth   | 文本、图像生成、音乐生成、视频生成、图像理解、语音             |
 
 ## 内置目录
 
-| Model                    | Type             | Description                              |
+| 模型                      | 类型              | 描述                              |
 | ------------------------ | ---------------- | ---------------------------------------- |
-| `MiniMax-M2.7`           | Chat (reasoning) | 默认托管推理模型           |
-| `MiniMax-M2.7-highspeed` | Chat (reasoning) | 更快的 M2.7 推理层               |
-| `MiniMax-VL-01`          | Vision           | 图像理解模型                |
-| `image-01`               | Image generation | 文生图和图生图编辑 |
-| `music-2.6`              | Music generation | 默认音乐模型                      |
-| `music-2.5`              | Music generation | 之前的音乐生成层             |
-| `music-2.0`              | Music generation | 旧版音乐生成层             |
-| `MiniMax-Hailuo-2.3`     | Video generation | 文本生成视频和图像参考流程  |
+| `MiniMax-M2.7`           | 对话（推理） | 默认托管推理模型           |
+| `MiniMax-M2.7-highspeed` | 对话（推理） | 更快的 M2.7 推理层               |
+| `MiniMax-VL-01`          | 视觉           | 图像理解模型                |
+| `image-01`               | 图像生成 | 文生图和图生图编辑 |
+| `music-2.6`              | 音乐生成 | 默认音乐模型                      |
+| `music-2.5`              | 音乐生成 | 之前的音乐生成层             |
+| `music-2.0`              | 音乐生成 | 旧版音乐生成层             |
+| `MiniMax-Hailuo-2.3`     | 视频生成 | 文本生成视频和图像参考流程  |
 
 ## 快速开始
 
@@ -192,7 +192,7 @@ MiniMax 还提供：
   <Step title="选择一个 MiniMax 认证选项">
     从可用的 MiniMax 选项中选择一个：
 
-    | Auth choice | Description |
+    | 认证选项 | 描述 |
     | --- | --- |
     | `minimax-global-oauth` | 国际版 OAuth（Coding Plan） |
     | `minimax-cn-oauth` | 中国版 OAuth（Coding Plan） |
@@ -248,7 +248,7 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
 通过插件拥有的 `MiniMax-VL-01` 媒体提供程序单独暴露。
 
 <Note>
-有关共享工具参数、提供程序选择和故障转移行为，请参见 [Image Generation](/tools/image-generation)。
+有关共享工具参数、提供程序选择和故障转移行为，请参见 [图像生成](/tools/image-generation)。
 </Note>
 
 ### 文本转语音
@@ -273,7 +273,7 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
   `file_type: "opus"` 作为原生音频消息。
 - MiniMax T2A 接受小数 `speed` 和 `vol`，但 `pitch` 以整数发送；OpenClaw 会在 API 请求前截断小数 `pitch` 值。
 
-| Setting                                  | Env var                | Default                       | Description                      |
+| 设置                                  | 环境变量                | 默认值                       | 描述                      |
 | ---------------------------------------- | ---------------------- | ----------------------------- | -------------------------------- |
 | `messages.tts.providers.minimax.baseUrl` | `MINIMAX_API_HOST`     | `https://api.minimax.io`      | MiniMax T2A API 主机。            |
 | `messages.tts.providers.minimax.model`   | `MINIMAX_TTS_MODEL`    | `speech-2.8-hd`               | TTS 模型 id。                    |
@@ -290,9 +290,9 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
 - 默认音乐模型：`minimax/music-2.6`
 - OAuth 音乐模型：`minimax-portal/music-2.6`
 - 也支持 `minimax/music-2.5` 和 `minimax/music-2.0`
-- 提示词控制：`lyrics`、`instrumental`、`durationSeconds`
+- 提示词控制：`lyrics`、`instrumental`
 - 输出格式：`mp3`
-- 基于会话的运行会通过共享任务/状态流程分离，包括 `action: "status"`
+- 基于会话的运行会通过共享的任务/状态流程拆离，包括 `action: "status"`
 
 要将 MiniMax 用作默认音乐提供程序：
 
@@ -309,7 +309,7 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
 ```
 
 <Note>
-有关共享工具参数、提供程序选择和故障转移行为，请参见 [Music Generation](/tools/music-generation)。
+有关共享工具参数、提供程序选择和故障转移行为，请参见 [音乐生成](/tools/music-generation)。
 </Note>
 
 ### 视频生成
@@ -337,14 +337,14 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
 ```
 
 <Note>
-有关共享工具参数、提供程序选择和故障转移行为，请参见 [Video Generation](/tools/video-generation)。
+有关共享工具参数、提供程序选择和故障转移行为，请参见 [视频生成](/tools/video-generation)。
 </Note>
 
 ### 图像理解
 
 MiniMax 插件将图像理解与文本目录分开注册：
 
-| Provider ID      | Default image model |
+| Provider ID      | 默认图像模型 |
 | ---------------- | ------------------- |
 | `minimax`        | `MiniMax-VL-01`     |
 | `minimax-portal` | `MiniMax-VL-01`     |
@@ -356,18 +356,18 @@ MiniMax 插件将图像理解与文本目录分开注册：
 MiniMax 插件还通过 MiniMax Token Plan
 搜索 API 注册了 `web_search`。
 
-- Provider id: `minimax`
-- Structured results: 标题、URL、摘要、相关查询
-- Preferred env var: `MINIMAX_CODE_PLAN_KEY`
-- Accepted env aliases: `MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN`
-- Compatibility fallback: 当 `MINIMAX_API_KEY` 已经指向 Token Plan 凭据时使用它
-- Region reuse: `plugins.entries.minimax.config.webSearch.region`，然后是 `MINIMAX_API_HOST`，然后是 MiniMax 提供程序基础 URL
-- Search stays on provider id `minimax`; OAuth CN/global setup can steer region indirectly through `models.providers.minimax-portal.baseUrl` and can provide bearer auth through `MINIMAX_OAUTH_TOKEN`
+- 提供程序 id：`minimax`
+- 结构化结果：标题、URL、摘要、相关查询
+- 首选环境变量：`MINIMAX_CODE_PLAN_KEY`
+- 接受的环境别名：`MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN`
+- 兼容性回退：当 `MINIMAX_API_KEY` 已经指向 Token Plan 凭据时使用它
+- 区域复用：先使用 `plugins.entries.minimax.config.webSearch.region`，然后是 `MINIMAX_API_HOST`，最后是 MiniMax 提供程序基础 URL
+- 搜索始终保持在提供程序 id `minimax` 上；OAuth CN/国际版设置可以通过 `models.providers.minimax-portal.baseUrl` 间接影响区域，并且可以通过 `MINIMAX_OAUTH_TOKEN` 提供 bearer 认证
 
 配置位于 `plugins.entries.minimax.config.webSearch.*` 下。
 
 <Note>
-有关完整的网页搜索配置和用法，请参见 [MiniMax Search](/tools/minimax-search)。
+有关完整的网页搜索配置和用法，请参见 [MiniMax 搜索](/tools/minimax-search)。
 </Note>
 
 ## 高级配置

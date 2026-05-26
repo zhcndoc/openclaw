@@ -122,24 +122,28 @@ docker compose up -d openclaw-gateway
 
 设置脚本接受以下可选环境变量：
 
-| Variable                                   | Purpose                                                         |
-| ------------------------------------------ | --------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                           | 使用远程镜像而不是本地构建                  |
-| `OPENCLAW_DOCKER_APT_PACKAGES`             | 在构建期间安装额外的 apt 包（以空格分隔）       |
-| `OPENCLAW_EXTENSIONS`                      | 在构建时包含选定的内置插件助手           |
-| `OPENCLAW_EXTRA_MOUNTS`                    | 额外挂载主机绑定卷（逗号分隔的 `source:target[:opts]`） |
-| `OPENCLAW_HOME_VOLUME`                     | 将 `/home/node` 持久化到命名 Docker 卷                   |
-| `OPENCLAW_SANDBOX`                         | 启用沙箱引导（`1`、`true`、`yes`、`on`）          |
-| `OPENCLAW_SKIP_ONBOARDING`                 | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`） |
-| `OPENCLAW_DOCKER_SOCKET`                   | 覆盖 Docker socket 路径                                     |
-| `OPENCLAW_DISABLE_BONJOUR`                 | 禁用 Bonjour/mDNS 广播（Docker 默认值为 `1`）   |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | 禁用内置插件源码绑定挂载覆盖层               |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`              | 供 OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点    |
-| `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | 用于 traces、metrics 或 logs 的信号特定 OTLP 端点     |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP 协议覆盖。目前仅支持 `http/protobuf` |
-| `OTEL_SERVICE_NAME`                        | 用于 OpenTelemetry 资源的服务名称                   |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`            | 启用最新的实验性 GenAI 语义属性         |
-| `OPENCLAW_OTEL_PRELOADED`                  | 当已有预加载时跳过启动第二个 OpenTelemetry SDK  |
+| Variable                                   | Purpose                                                               |
+| ------------------------------------------ | --------------------------------------------------------------------- |
+| `OPENCLAW_IMAGE`                           | 使用远程镜像而不是本地构建                                            |
+| `OPENCLAW_IMAGE_APT_PACKAGES`              | 在构建期间安装额外的 apt 包（以空格分隔）                              |
+| `OPENCLAW_IMAGE_PIP_PACKAGES`              | 在构建期间安装额外的 Python 包（以空格分隔）                          |
+| `OPENCLAW_EXTENSIONS`                      | 在构建时预安装插件依赖项（以空格分隔的名称）                          |
+| `OPENCLAW_EXTRA_MOUNTS`                    | 额外的主机绑定挂载（以逗号分隔的 `source:target[:opts]`）             |
+| `OPENCLAW_HOME_VOLUME`                     | 将 `/home/node` 持久化到命名 Docker 卷中                              |
+| `OPENCLAW_SANDBOX`                         | 启用沙箱引导（`1`、`true`、`yes`、`on`）                               |
+| `OPENCLAW_SKIP_ONBOARDING`                 | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`）                         |
+| `OPENCLAW_DOCKER_SOCKET`                   | 覆盖 Docker socket 路径                                               |
+| `OPENCLAW_DISABLE_BONJOUR`                 | 禁用 Bonjour/mDNS 广播（Docker 下默认为 `1`）                         |
+| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | 禁用捆绑的插件源码绑定挂载覆盖层                                      |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`              | OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                         |
+| `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | 用于 traces、metrics 或 logs 的信号特定 OTLP 端点                     |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP 协议覆盖。当前仅支持 `http/protobuf`                             |
+| `OTEL_SERVICE_NAME`                        | 用于 OpenTelemetry 资源的服务名称                                      |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`            | 采用最新的实验性 GenAI 语义属性                                         |
+| `OPENCLAW_OTEL_PRELOADED`                  | 当已预加载一个 OpenTelemetry SDK 时，跳过启动第二个                     |
+
+官方 Docker 镜像不包含 Homebrew。在入门配置期间，当 OpenClaw 运行在没有 `brew` 的 Linux 容器中时，它会隐藏仅适用于 brew 的技能依赖安装器；这些依赖必须通过自定义镜像提供或手动安装。对于 Debian 软件包可提供的依赖，请在镜像构建期间使用 `OPENCLAW_IMAGE_APT_PACKAGES`。旧的 `OPENCLAW_DOCKER_APT_PACKAGES` 名称仍被接受。
+对于 Python 依赖，请使用 `OPENCLAW_IMAGE_PIP_PACKAGES`。这会在镜像构建期间运行 `python3 -m pip install --break-system-packages`，因此请固定软件包版本，并且只使用你信任的软件包索引。
 
 维护者可以通过将一个插件源码目录挂载到其打包源码路径上，来测试打包镜像上的打包插件源码，例如
 `OPENCLAW_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`。
@@ -397,17 +401,18 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     默认镜像以安全优先为原则，并以非 root 的 `node` 运行。若要获得功能更完整的
     容器：
 
-    1. **持久化 `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
-    2. **内置系统依赖**: `export OPENCLAW_DOCKER_APT_PACKAGES="git curl jq"`
-    3. **内置 Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`
-    4. **或者将 Playwright 浏览器安装到持久化卷中**:
+    1. **Persist `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
+    2. **Bake system deps**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
+    3. **Bake Python deps**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
+    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`
+    5. **Or install Playwright browsers into a persisted volume**:
        ```bash
        docker compose run --rm openclaw-cli \
          node /app/node_modules/playwright-core/cli.js install chromium
        ```
-    5. **持久化浏览器下载**：使用 `OPENCLAW_HOME_VOLUME` 或
-       `OPENCLAW_EXTRA_MOUNTS`。OpenClaw 会在 Linux 上自动检测 Docker 镜像中
-       由 Playwright 管理的 Chromium。
+    6. **Persist browser downloads**: use `OPENCLAW_HOME_VOLUME` or
+       `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the Docker image's
+       Playwright-managed Chromium on Linux.
 
   </Accordion>
 
@@ -475,7 +480,7 @@ scripts/sandbox-setup.sh
   <Accordion title="镜像缺失或沙盒容器未启动">
     使用
     [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh)
-    (source checkout) 或 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install），
+    （源码检出）或 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install），
     或将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。
     容器会按会话按需自动创建。
   </Accordion>
@@ -495,7 +500,7 @@ scripts/sandbox-setup.sh
     虚拟机至少需要 2 GB 内存。请使用更大的机器规格并重试。
   </Accordion>
 
-  <Accordion title="Control UI 中未经授权或需要配对">
+  <Accordion title="控制界面中未经授权或需要配对">
     获取新的仪表盘链接并批准浏览器设备：
 
     ```bash
@@ -508,7 +513,7 @@ scripts/sandbox-setup.sh
 
   </Accordion>
 
-  <Accordion title="Gateway 目标显示 ws://172.x.x.x 或 Docker CLI 出现配对错误">
+  <Accordion title="网关目标显示 ws://172.x.x.x 或 Docker CLI 出现配对错误">
     重置 gateway 模式和绑定：
 
     ```bash

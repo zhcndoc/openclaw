@@ -41,30 +41,30 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 ## 提供商能力矩阵
 
-| Provider    | Image | Video | Music | TTS | STT | Realtime voice | Media understanding |
-| ----------- | :---: | :---: | :---: | :-: | :-: | :------------: | :-----------------: |
-| Alibaba     |       |   ✓   |       |     |     |                |                     |
-| BytePlus    |       |   ✓   |       |     |     |                |                     |
-| ComfyUI     |   ✓   |   ✓   |   ✓   |     |     |                |                     |
-| DeepInfra   |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
-| Deepgram    |       |       |       |     |  ✓  |       ✓        |                     |
-| ElevenLabs  |       |       |       |  ✓  |  ✓  |                |                     |
-| fal         |   ✓   |   ✓   |       |     |     |                |                     |
-| Google      |   ✓   |   ✓   |   ✓   |  ✓  |     |       ✓        |          ✓          |
-| Gradium     |       |       |       |  ✓  |     |                |                     |
-| Local CLI   |       |       |       |  ✓  |     |                |                     |
-| Microsoft   |       |       |       |  ✓  |     |                |                     |
-| MiniMax     |   ✓   |   ✓   |   ✓   |  ✓  |     |                |                     |
-| Mistral     |       |       |       |     |  ✓  |                |                     |
-| OpenAI      |   ✓   |   ✓   |       |  ✓  |  ✓  |       ✓        |          ✓          |
-| OpenRouter  |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
-| Qwen        |       |   ✓   |       |     |     |                |                     |
-| Runway      |       |   ✓   |       |     |     |                |                     |
-| SenseAudio  |       |       |       |     |  ✓  |                |                     |
-| Together    |       |   ✓   |       |     |     |                |                     |
-| Vydra       |   ✓   |   ✓   |       |  ✓  |     |                |                     |
-| xAI         |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
-| Xiaomi MiMo |   ✓   |       |       |  ✓  |     |                |          ✓          |
+| 提供商       | 图像 | 视频 | 音乐 | TTS | STT | 实时语音 | 媒体理解 |
+| ------------ | :--: | :--: | :--: | :-: | :-: | :------: | :------: |
+| Alibaba      |      |   ✓  |      |     |     |          |          |
+| BytePlus     |      |   ✓  |      |     |     |          |          |
+| ComfyUI      |  ✓   |   ✓  |  ✓   |     |     |          |          |
+| DeepInfra    |  ✓   |   ✓  |      |  ✓  |  ✓  |          |    ✓     |
+| Deepgram     |      |      |      |     |  ✓  |    ✓     |          |
+| ElevenLabs   |      |      |      |  ✓  |  ✓  |          |          |
+| fal          |  ✓   |   ✓  |  ✓   |     |     |          |          |
+| Google       |  ✓   |   ✓  |  ✓   |  ✓  |     |    ✓     |    ✓     |
+| Gradium      |      |      |      |  ✓  |     |          |          |
+| Local CLI    |      |      |      |  ✓  |     |          |          |
+| Microsoft    |      |      |      |  ✓  |     |          |          |
+| MiniMax      |  ✓   |   ✓  |  ✓   |  ✓  |     |          |          |
+| Mistral      |      |      |      |     |  ✓  |          |          |
+| OpenAI       |  ✓   |   ✓  |      |  ✓  |  ✓  |    ✓     |    ✓     |
+| OpenRouter   |  ✓   |   ✓  |  ✓   |  ✓  |  ✓  |          |    ✓     |
+| Qwen         |      |   ✓  |      |     |     |          |          |
+| Runway       |      |   ✓  |      |     |     |          |          |
+| SenseAudio   |      |      |      |     |  ✓  |          |          |
+| Together     |      |   ✓  |      |     |     |          |          |
+| Vydra        |  ✓   |   ✓  |      |  ✓  |     |          |          |
+| xAI          |  ✓   |   ✓  |      |  ✓  |  ✓  |          |    ✓     |
+| Xiaomi MiMo  |  ✓   |      |      |  ✓  |     |          |    ✓     |
 
 <Note>
 媒体理解使用在你的提供商配置中注册的任何具备视觉能力或音频能力的模型。上面的矩阵列出了具备专用媒体理解支持的提供商；大多数多模态 LLM 提供商（Anthropic、Google、OpenAI 等）在配置为当前回复模型时，也可以理解传入媒体。
@@ -72,20 +72,22 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 ## 异步与同步
 
-| Capability     | Mode         | Why                                                                                                  |
+| 能力            | 模式         | 原因                                                                                                 |
 | -------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
-| Image          | Asynchronous | 提供商处理可能会超出一次聊天轮次；生成的附件使用共享完成路径。   |
-| Text-to-speech | Synchronous  | 提供商响应会在数秒内返回；附加到回复音频。                                   |
-| Video          | Asynchronous | 提供商处理需要 30 秒到数分钟；较慢的队列可运行到配置的超时。 |
-| Music          | Asynchronous | 与视频相同的提供商处理特性。                                                    |
+| 图像           | 异步         | 提供商处理可能会超出一次聊天轮次；生成的附件使用共享完成路径。   |
+| 文本转语音     | 同步         | 提供商响应会在数秒内返回；附加到回复音频。                                   |
+| 视频           | 异步         | 提供商处理需要 30 秒到数分钟；较慢的队列可运行到配置的超时。 |
+| 音乐           | 异步         | 与视频相同的提供商处理特性。                                                    |
 
 对于异步工具，OpenClaw 会将请求提交给提供商，立即返回一个任务
-id，并在任务账本中跟踪该作业。代理会继续
-响应其他消息，而作业在后台运行。提供商完成后，
-OpenClaw 会携带生成的媒体路径唤醒代理，以便它可以告知
-用户并通过消息工具转发结果。OpenClaw 将缺失
-消息工具投递证据视为一次失败的完成尝试，并且不会
-自动将生成的媒体作为回退进行发布。
+ID，并在任务账本中跟踪该作业。代理在作业运行时会继续
+响应其他消息。提供商完成后，
+OpenClaw 会携带生成的媒体路径唤醒代理，以便它告知
+用户并通过消息工具转发结果。如果请求方会话
+不活跃，或其活动唤醒失败，并且仍有部分生成的媒体
+未通过消息工具交付，OpenClaw 会发送一个幂等的直接
+回退，仅包含缺失的媒体。已通过消息工具交付的媒体
+不会再次发布。
 
 ## 语音转文本与 Voice Call
 
@@ -101,9 +103,9 @@ Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
 转发给所选
 供应商。
 
-对于实时用户对话，请优先使用 [Talk mode](/nodes/talk)。批量音频附件仍保留在媒体路径上；浏览器实时、原生按住说话、电话和会议音频应使用 Talk 事件以及 Gateway 返回的会话作用域目录。
+对于实时用户对话，请优先使用 [Talk 模式](/nodes/talk)。批量音频附件仍保留在媒体路径上；浏览器实时、原生按住说话、电话和会议音频应使用 Talk 事件以及 Gateway 返回的会话作用域目录。
 
-## 提供商映射（供应商如何分布在各个表面）
+## 提供商映射（各供应商如何分布在各个表面）
 
 <AccordionGroup>
   <Accordion title="Google">
@@ -128,10 +130,10 @@ Deepgram、ElevenLabs、Mistral、OpenAI 和 xAI 也会注册 Voice Call
 
 ## 相关内容
 
-- [Image generation](/tools/image-generation)
-- [Video generation](/tools/video-generation)
-- [Music generation](/tools/music-generation)
-- [Text-to-speech](/tools/tts)
-- [Media understanding](/nodes/media-understanding)
-- [Audio nodes](/nodes/audio)
-- [Talk mode](/nodes/talk)
+- [图像生成](/tools/image-generation)
+- [视频生成](/tools/video-generation)
+- [音乐生成](/tools/music-generation)
+- [文本转语音](/tools/tts)
+- [媒体理解](/nodes/media-understanding)
+- [音频节点](/nodes/audio)
+- [Talk 模式](/nodes/talk)

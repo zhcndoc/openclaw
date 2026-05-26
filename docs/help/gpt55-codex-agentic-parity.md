@@ -1,19 +1,19 @@
 ---
-summary: "OpenClaw 如何为 GPT-5.5 和 Codex 风格模型弥合 agentic 执行差距"
+summary: "OpenClaw 如何弥合 GPT-5.5 和 Codex 风格模型之间的 agentic 执行差距"
 title: "GPT-5.5 / Codex agentic parity"
 read_when:
   - 调试 GPT-5.5 或 Codex 的代理行为
   - 比较 OpenClaw 在前沿模型之间的代理行为
-  - 回顾严格 agentic、工具 schema、提升权限与回放修复
+  - 回顾严格的 agentic、工具 schema、权限提升与回放修复
 ---
 
 OpenClaw 已经能很好地与使用工具的前沿模型配合，但 GPT-5.5 和 Codex 风格模型在一些实际方面仍表现不佳：
 
-- 它们可能在规划之后就停止，而不是继续完成工作
+- 它们可能在规划后就停下来，而不是实际去做工作
 - 它们可能错误地使用严格的 OpenAI/Codex 工具 schema
-- 它们可能在实际无法获得完全访问权限时仍然请求 `/elevated full`
-- 它们可能在回放或压缩过程中丢失长任务状态
-- 与 Claude Opus 4.6 的 parity 声称基于轶事，而不是可重复场景
+- 即使完全访问不可用，它们也可能请求 `/elevated full`
+- 它们可能在回放或压缩期间丢失长时间运行任务的状态
+- 针对 Claude Opus 4.7 的 parity 声称过去主要基于轶事，而不是可重复的场景
 
 这个 parity 项目通过四个可审查的切片修复了这些缺口。
 
@@ -51,17 +51,17 @@ OpenClaw 已经能很好地与使用工具的前沿模型配合，但 GPT-5.5 �
 
 ### PR D：parity harness
 
-这个切片增加了第一波 QA-lab parity 包，使 GPT-5.5 和 Opus 4.6 可以通过相同场景执行，并使用共享证据进行比较。
+这个切片加入了第一批 QA-lab parity 套件，因此可以用相同场景对 GPT-5.5 和 Opus 4.7 进行验证，并基于共享证据进行比较。
 
-parity 包是证据层。它本身不会改变运行时行为。
+parity 套件是证据层。它本身不会改变运行时行为。
 
 在你拥有两个 `qa-suite-summary.json` 产物之后，使用以下命令生成发布门禁对比：
 
 ```bash
 pnpm openclaw qa parity-report \
   --repo-root . \
-  --candidate-summary .artifacts/qa-e2e/gpt55/qa-suite-summary.json \
-  --baseline-summary .artifacts/qa-e2e/opus46/qa-suite-summary.json \
+  --candidate-summary .artifacts/qa-e2e/openai-candidate/qa-suite-summary.json \
+  --baseline-summary .artifacts/qa-e2e/anthropic-baseline/qa-suite-summary.json \
   --output-dir .artifacts/qa-e2e/parity
 ```
 
@@ -84,21 +84,21 @@ pnpm openclaw qa parity-report \
 
 这会把用户体验从：
 
-- "the model had a good plan but stopped"
+- "模型有一个不错的计划，但停住了"
 
 变成：
 
-- "the model either acted, or OpenClaw surfaced the exact reason it could not"
+- "模型要么真的行动了，要么 OpenClaw 明确地展示了它无法行动的原因"
 
 ## GPT-5.5 用户的前后对比
 
-| Before this program                                                                            | After PR A-D                                                                             |
-| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| GPT-5.5 could stop after a reasonable plan without taking the next tool step                   | PR A turns "plan only" into "act now or surface a blocked state"                         |
-| Strict tool schemas could reject parameter-free or OpenAI/Codex-shaped tools in confusing ways | PR C makes provider-owned tool registration and invocation more predictable              |
-| `/elevated full` guidance could be vague or wrong in blocked runtimes                          | PR B gives GPT-5.5 and the user truthful runtime and permission hints                    |
-| Replay or compaction failures could feel like the task silently disappeared                    | PR C surfaces paused, blocked, abandoned, and replay-invalid outcomes explicitly         |
-| "GPT-5.5 feels worse than Opus" was mostly anecdotal                                           | PR D turns that into the same scenario pack, the same metrics, and a hard pass/fail gate |
+| 本项目之前                                                                            | PR A-D 之后                                                                             |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GPT-5.5 可能在做出合理计划后就停下来，而不执行下一步工具动作                           | PR A 将“只计划”变为“现在行动，或者显式显示 blocked 状态”                               |
+| 严格的工具 schema 可能以令人困惑的方式拒绝无参数工具或 OpenAI/Codex 形状的工具        | PR C 让 provider 拥有的工具注册和调用更可预测                                            |
+| `/elevated full` 的指引在被阻塞的运行时中可能含糊或错误                                | PR B 为 GPT-5.5 和用户提供真实的运行时与权限提示                                        |
+| 回放或压缩失败可能让人感觉任务悄悄消失了                                               | PR C 明确展示 paused、blocked、abandoned 和 replay-invalid 结果                         |
+| “GPT-5.5 比 Opus 更差” 主要只是轶事                                                     | PR D 将其变成相同的场景包、相同的指标，以及硬性的 pass/fail 门禁                        |
 
 ## 架构
 
@@ -113,7 +113,7 @@ flowchart TD
     D --> G
     E --> G
     F --> G
-    G --> H["QA-lab parity 包"]
+    G --> H["QA-lab parity 套件"]
     H --> I["场景报告与 parity 门禁"]
 ```
 
@@ -121,8 +121,8 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A["合并运行时切片（PR A-C）"] --> B["运行 GPT-5.5 parity 包"]
-    A --> C["运行 Opus 4.6 parity 包"]
+    A["合并后的运行时切片（PR A-C）"] --> B["运行 GPT-5.5 parity 套件"]
+    A --> C["运行 Opus 4.7 parity 套件"]
     B --> D["qa-suite-summary.json"]
     C --> E["qa-suite-summary.json"]
     D --> F["openclaw qa parity-report"]
@@ -136,7 +136,7 @@ flowchart LR
 
 ## 场景包
 
-第一波 parity 包目前涵盖五个场景：
+第一波 parity 套件目前涵盖五个场景：
 
 ### `approval-turn-tool-followthrough`
 
@@ -170,15 +170,15 @@ flowchart LR
 
 ## 发布门禁
 
-只有当合并后的运行时同时通过 parity 包和运行时真实性回归测试时，GPT-5.5 才能被视为达到 parity 或更好。
+只有当合并后的运行时同时通过 parity 套件和运行时真实性回归测试时，GPT-5.5 才能被视为达到 parity 或更好。
 
 必需结果：
 
-- 当下一步工具动作明确时，不得只停留在计划上
-- 不得在没有真实执行的情况下伪装完成
-- 不得提供错误的 `/elevated full` 指引
-- 不得静默放弃回放或压缩
-- parity 包指标至少要与约定的 Opus 4.6 基线一样强
+- 当下一步工具动作很明确时，不会再出现只计划不执行的停滞
+- 不会在没有真实执行的情况下伪装完成
+- 不会给出错误的 `/elevated full` 指引
+- 不会出现静默的回放或压缩放弃
+- parity 套件指标至少与约定的 Opus 4.7 基线一样强
 
 对于第一波 harness，门禁比较的是：
 
@@ -189,27 +189,27 @@ flowchart LR
 
 parity 证据刻意分成两层：
 
-- PR D 用 QA-lab 证明 GPT-5.5 vs Opus 4.6 在相同场景下的行为
-- PR B 的确定性测试证明在 harness 之外的 auth、proxy、DNS 和 `/elevated full` 真实性
+- PR D 通过 QA-lab 证明 GPT-5.5 与 Opus 4.7 在相同场景下的行为
+- PR B 的确定性套件证明在 harness 之外的认证、代理、DNS 和 `/elevated full` 真实性
 
 ## 目标-证据矩阵
 
-| 完成门槛项                                               | 负责 PR      | 证据来源                                                           | 通过信号                                                                              |
-| -------------------------------------------------------- | ------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| GPT-5.5 不再在规划后停滞                                   | PR A         | `approval-turn-tool-followthrough` 以及 PR A 运行时套件            | approval turn 会触发真实工作，或明确的 blocked 状态                                      |
-| GPT-5.5 不再伪造进度或伪造工具完成                         | PR A + PR D  | parity report 场景结果和 fake-success 计数                         | 没有可疑的通过结果，也没有仅靠评论就完成的情况                                            |
-| GPT-5.5 不再给出错误的 `/elevated full` 指引               | PR B         | 确定性的真实性测试套件                                               | blocked 原因和 full-access 提示保持运行时准确                                              |
-| 重放/存活性失败保持显式                                    | PR C + PR D  | PR C 生命周期/重放套件以及 `compaction-retry-mutating-tool`        | 会变异工作的 replay-unsafety 仍然保持显式，而不是悄然消失                                |
-| GPT-5.5 在约定指标上与 Opus 4.6 持平或更好                 | PR D         | `qa-agentic-parity-report.md` 和 `qa-agentic-parity-summary.json`   | 场景覆盖相同，并且在完成、停止行为或有效工具使用方面没有回归                               |
+| 完成门禁项                                             | 负责 PR     | 证据来源                                                           | 通过信号                                                                               |
+| ------------------------------------------------------ | ----------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| GPT-5.5 不再在规划后停滞                               | PR A        | `approval-turn-tool-followthrough` 加上 PR A 运行时套件            | 批准轮次会触发真实工作或显式的 blocked 状态                                            |
+| GPT-5.5 不再伪造进度或伪造工具完成                     | PR A + PR D | parity 报告中的场景结果和虚假成功计数                               | 没有可疑的通过结果，也没有仅评论式完成                                                 |
+| GPT-5.5 不再提供错误的 `/elevated full` 指引          | PR B        | 确定性的真实性套件                                                 | blocked 原因和完全访问提示保持与运行时一致                                             |
+| 回放/存活失败保持显式                                  | PR C + PR D | PR C 生命周期/回放套件加上 `compaction-retry-mutating-tool`       | 变更写入工作会保持回放不安全性显式，而不是悄悄消失                                    |
+| GPT-5.5 在约定指标上与 Opus 4.7 持平或更好             | PR D        | `qa-agentic-parity-report.md` 和 `qa-agentic-parity-summary.json` | 相同的场景覆盖，并且在完成率、停止行为或有效工具使用方面没有回退                      |
 
 ## 如何阅读 parity 裁决
 
-将 `qa-agentic-parity-summary.json` 中的裁决作为第一波 parity 包的最终机器可读决定。
+将 `qa-agentic-parity-summary.json` 中的裁决作为第一波 parity 套件的最终机器可读决定。
 
-- `pass` 表示 GPT-5.5 覆盖了与 Opus 4.6 相同的场景，并且没有在约定的聚合指标上回归。
-- `fail` 表示至少触发了一个硬门槛：更弱的完成率、更差的非预期停止率、更弱的有效工具使用、任何虚假成功案例，或场景覆盖不匹配。
-- “共享/基础 CI 问题”本身不算 parity 结果。如果 PR D 之外的 CI 噪声阻塞了运行，裁决应等待干净的合并后运行，而不是根据分支时期日志推断。
-- auth、proxy、DNS 和 `/elevated full` 的真实性仍然来自 PR B 的确定性套件，因此最终发布声明需要两者都满足：通过的 PR D parity 裁决，以及绿色的 PR B 真实性覆盖。
+- `pass` 表示 GPT-5.5 覆盖了与 Opus 4.7 相同的场景，并且没有在约定的聚合指标上退化。
+- `fail` 表示至少有一个硬门禁被触发：完成度更弱、非预期停止更糟、有效工具使用更弱、存在任何虚假成功案例，或场景覆盖不匹配。
+- “共享/基础 CI 问题”本身不是 parity 结果。如果 PR D 之外的 CI 噪声阻止了一次运行，裁决应等待一次干净的合并运行时执行，而不是从分支时代的日志中推断。
+- 认证、代理、DNS 和 `/elevated full` 真实性仍然来自 PR B 的确定性套件，因此最终发布声明需要两者：一个通过的 PR D parity 裁决，以及绿色通过的 PR B 真实性覆盖。
 
 ## 谁应该启用 `strict-agentic`
 

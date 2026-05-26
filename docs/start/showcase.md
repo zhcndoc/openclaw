@@ -13,27 +13,7 @@ OpenClaw 项目并不是玩具演示。人们正在通过他们已经在使用�
 **想被展示出来吗？** 在 Discord 的 [#self-promotion](https://discord.gg/clawd) 分享你的项目，或在 X 上 [标记 @openclaw](https://x.com/openclaw)。
 </Info>
 
-## 视频
-
-如果你想最快从“这是什么？”到“好吧，我懂了”，就从这里开始。
-
-<CardGroup cols={3}>
-
-<Card title="完整设置演示" href="https://www.youtube.com/watch?v=SaWSPZoPX34">
-  VelvetShark，28 分钟。安装、入门，并端到端获得第一个可工作的助手。
-</Card>
-
-<Card title="社区展示集锦" href="https://www.youtube.com/watch?v=mMSKQvlmFuQ">
-  更快地浏览围绕 OpenClaw 构建的真实项目、界面和工作流。
-</Card>
-
-<Card title="野外中的项目" href="https://www.youtube.com/watch?v=5kkIJNUGFho">
-  来自社区的示例，从聊天原生编码循环到硬件和个人自动化。
-</Card>
-
-</CardGroup>
-
-## 来自 Discord 的新鲜内容
+## 来自 Discord 的新鲜动态
 
 跨编码、开发工具、移动端和聊天原生产品构建的近期亮点。
 

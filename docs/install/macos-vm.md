@@ -5,7 +5,7 @@ read_when:
   - 你想在沙箱中使用 iMessage 集成
   - 你想要一个可重置、可克隆的 macOS 环境
   - 你想比较本地与托管的 macOS VM 选项
-title: "macOS VMs"
+title: "macOS 虚拟机"
 ---
 
 ## 推荐默认方案（大多数用户）
@@ -105,10 +105,10 @@ lume create openclaw --os macos --ipsw latest
 3. 创建一个用户账户（记住用户名和密码）
 4. 跳过所有可选功能
 
-完成设置后，启用 SSH：
+设置完成后：
 
-1. 打开 系统设置 → 通用 → 共享
-2. 启用“远程登录”
+1. 启用 SSH：打开 系统设置 -> 通用 -> 共享，并启用“远程登录”。
+2. 若要无头使用 VM，请启用自动登录：打开 系统设置 -> 用户与群组，选择“自动以以下身份登录：”，然后选择该 VM 用户。
 
 ---
 
@@ -223,7 +223,7 @@ ssh youruser@192.168.64.X "openclaw status"
 
 重启 gateway。现在你的 agent 可以收发 iMessages 了。
 
-完整设置详情：[iMessage channel](/channels/imessage)
+完整设置详情：[iMessage 通道](/channels/imessage)
 
 ---
 
@@ -271,11 +271,11 @@ lume run openclaw --no-display
 
 ## 相关文档
 
-- [VPS hosting](/vps)
-- [Nodes](/nodes)
-- [Gateway remote](/gateway/remote)
-- [iMessage channel](/channels/imessage)
-- [Lume Quickstart](https://cua.ai/docs/lume/guide/getting-started/quickstart)
-- [Lume CLI Reference](https://cua.ai/docs/lume/reference/cli-reference)
-- [Unattended VM Setup](https://cua.ai/docs/lume/guide/fundamentals/unattended-setup) (advanced)
-- [Docker Sandboxing](/install/docker) (alternative isolation approach)
+- [VPS 托管](/vps)
+- [节点](/nodes)
+- [Gateway 远程](/gateway/remote)
+- [iMessage 通道](/channels/imessage)
+- [Lume 快速开始](https://cua.ai/docs/lume/guide/getting-started/quickstart)
+- [Lume CLI 参考](https://cua.ai/docs/lume/reference/cli-reference)
+- [无人值守 VM 设置](https://cua.ai/docs/lume/guide/fundamentals/unattended-setup)（高级）
+- [Docker 沙箱化](/install/docker)（替代隔离方案）

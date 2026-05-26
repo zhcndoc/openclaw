@@ -8,9 +8,10 @@ title: "Talk 模式"
 
 Talk 模式有两种运行形态：
 
-- 原生 macOS/iOS/Android Talk 使用本地语音识别、Gateway 聊天以及 `talk.speak` TTS。节点会声明 `talk` 能力，并声明它们支持的 `talk.*` 命令。
-- 浏览器 Talk 对客户端拥有的 `webrtc` 和 `provider-websocket` 会话使用 `talk.client.create`，或对 Gateway 拥有的 `gateway-relay` 会话使用 `talk.session.create`。`managed-room` 仅保留给 Gateway 接管和对讲房间使用。
-- 仅转写客户端在需要字幕或听写、但不需要助手语音回复时，使用 `talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后使用 `talk.session.appendAudio`、`talk.session.cancelTurn` 和 `talk.session.close`。
+- 原生 macOS/iOS/Android Talk 使用本地语音识别、Gateway 聊天和 `talk.speak` TTS。节点会声明 `talk` 能力，并声明其支持的 `talk.*` 命令。
+- Browser Talk 使用 `talk.client.create` 处理客户端拥有的 `webrtc` 和 `provider-websocket` 会话，或使用 `talk.session.create` 处理 Gateway 拥有的 `gateway-relay` 会话。`managed-room` 仅保留用于 Gateway 接管和对讲机房间。
+- Android Talk 可以选择通过 `talk.realtime.mode: "realtime"` 和 `talk.realtime.transport: "gateway-relay"` 接入 Gateway 拥有的实时中继会话。否则它将继续使用原生语音识别、Gateway 聊天和 `talk.speak`。
+- 仅转写客户端使用 `talk.session.create({ mode: "transcription", transport: "gateway-relay", brain: "none" })`，然后在需要字幕或听写且不需要助手语音回复时，使用 `talk.session.appendAudio`、`talk.session.cancelTurn` 和 `talk.session.close`。
 
 原生 Talk 是一个连续的语音对话循环：
 
@@ -19,7 +20,12 @@ Talk 模式有两种运行形态：
 3. 等待回复
 4. 通过已配置的 Talk 提供方（`talk.speak`）朗读出来
 
-浏览器实时 Talk 会通过 `talk.client.toolCall` 转发提供方工具调用；浏览器客户端不会直接调用 `chat.send` 来进行实时咨询。
+Browser realtime Talk 会通过 `talk.client.toolCall` 转发提供方工具调用；浏览器客户端不会为实时咨询直接调用 `chat.send`。
+当实时咨询处于活动状态时，Talk 客户端可以使用 `talk.client.steer` 或
+`talk.session.steer` 将口语输入分类为 `status`、`steer`、`cancel` 或
+`followup`。被接受的 steering 会排入活动的嵌入式运行中；被拒绝的
+steering 会返回结构化原因，例如 `no_active_run`、`not_streaming`，
+或 `compacting`。
 
 仅转写 Talk 会发出与实时和 STT/TTS 会话相同的通用 Talk 事件封装，但使用 `mode: "transcription"` 和 `brain: "none"`。它适用于字幕、听写和仅观察式语音捕获；一次性上传的语音笔记仍然使用 media/audio 路径。
 
@@ -98,22 +104,24 @@ Talk 模式有两种运行形态：
 
 - `interruptOnSpeech`: true
 - `silenceTimeoutMs`: 未设置时，Talk 会在发送转写内容前保持平台默认的停顿窗口（macOS 和 Android 上为 `700 ms`，iOS 上为 `900 ms`）
-- `provider`: 选择当前启用的 Talk 提供方。macOS 本地播放路径可使用 `elevenlabs`、`mlx` 或 `system`。
-- `providers.<provider>.voiceId`: ElevenLabs 会回退到 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（如果 API 密钥可用，则回退到第一个 ElevenLabs 语音）。
+- `provider`: 选择当前激活的 Talk 提供方。对于 macOS 本地播放路径，可使用 `elevenlabs`、`mlx` 或 `system`。
+- `providers.<provider>.voiceId`: 对 ElevenLabs 会回退到 `ELEVENLABS_VOICE_ID` / `SAG_VOICE_ID`（如果 API key 可用，则回退到第一个 ElevenLabs 语音）。
 - `providers.elevenlabs.modelId`: 未设置时默认为 `eleven_v3`。
 - `providers.mlx.modelId`: 未设置时默认为 `mlx-community/Soprano-80M-bf16`。
-- `providers.elevenlabs.apiKey`: 回退到 `ELEVENLABS_API_KEY`（或可用的 gateway shell 配置文件）。
+- `providers.elevenlabs.apiKey`: 回退到 `ELEVENLABS_API_KEY`（如果可用，则回退到 gateway shell profile）。
 - `consultThinkingLevel`: 可选的思考级别覆盖项，用于 realtime `openclaw_agent_consult` 调用背后的完整 OpenClaw agent 运行。
 - `consultFastMode`: 可选的快速模式覆盖项，用于 realtime `openclaw_agent_consult` 调用。
-- `realtime.provider`: 选择当前浏览器/服务端实时语音提供方。WebRTC 使用 `openai`，provider WebSocket 使用 `google`，或通过 Gateway relay 使用仅桥接提供方。
-- `realtime.providers.<provider>` 存储由提供方拥有的实时配置。浏览器只接收临时或受限的会话凭据，绝不会接收标准 API 密钥。
-- `realtime.providers.openai.voice`: 内置的 OpenAI Realtime 语音 ID。当前 `gpt-realtime-2` 的语音有 `alloy`、`ash`、`ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin` 和 `cedar`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。
-- `realtime.brain`: `agent-consult` 会通过 Gateway 策略路由实时工具调用；`direct-tools` 是仅所有者兼容行为；`none` 用于转写或外部编排。
-- `realtime.instructions`: 将提供方可见的系统指令附加到 OpenClaw 内置的实时提示词中。用于语音风格和语气；OpenClaw 会保留默认的 `openclaw_agent_consult` 指引。
-- `talk.catalog` 会公开每个提供方有效的模式、传输、brain 策略、实时音频格式和能力标志，以便第一方 Talk 客户端避免使用不受支持的组合。
-- 流式转写提供方通过 `talk.catalog.transcription` 发现。当前的 Gateway relay 在添加专用 Talk 转写配置界面之前，会使用 Voice Call 流式提供方配置。
-- `speechLocale`: iOS/macOS 设备端 Talk 语音识别可选的 BCP 47 语言环境 ID。留空则使用设备默认值。
-- `outputFormat`: macOS/iOS 默认 `pcm_44100`，Android 默认 `pcm_24000`（设置 `mp3_*` 可强制使用 MP3 流式传输）
+- `realtime.provider`: 选择当前激活的浏览器/服务器实时语音提供方。WebRTC 使用 `openai`，provider WebSocket 使用 `google`，或通过 Gateway relay 使用仅桥接提供方。
+- `realtime.providers.<provider>` 存储提供方拥有的实时配置。浏览器只接收一次性或受限的会话凭证，绝不会接收标准 API key。
+- `realtime.providers.openai.voice`: 内置的 OpenAI Realtime 语音 ID。当前 `gpt-realtime-2` 的语音包括 `alloy`、`ash`、`ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin` 和 `cedar`；推荐使用 `marin` 和 `cedar` 以获得最佳质量。
+- `realtime.transport`: `webrtc` 和 `provider-websocket` 是浏览器实时传输方式。Android 仅在此项为 `gateway-relay` 时使用实时中继；否则 Android Talk 使用其原生 STT/TTS 循环。
+- `realtime.brain`: `agent-consult` 通过 Gateway policy 路由实时工具调用；`direct-tools` 是旧版直接工具兼容行为；`none` 用于转写或外部编排。
+- `realtime.consultRouting`: `provider-direct` 在 provider 跳过 `openclaw_agent_consult` 时保留其直接回复；`force-agent-consult` 会让 Gateway relay 改为通过 OpenClaw 路由已完成的用户转写。
+- `realtime.instructions`: 将面向 provider 的系统指令附加到 OpenClaw 内置的实时提示词中。用于语音风格和语气；OpenClaw 会保留默认的 `openclaw_agent_consult` 指引。
+- `talk.catalog` 会暴露每个提供方的有效模式、传输方式、brain 策略、实时音频格式和能力标志，以便第一方 Talk 客户端避免不受支持的组合。
+- 流式转写提供方通过 `talk.catalog.transcription` 发现。当前 Gateway relay 使用 Voice Call 流式提供方配置，直到添加专门的 Talk 转写配置入口。
+- `speechLocale`: 用于 iOS/macOS 设备端 Talk 语音识别的可选 BCP 47 locale id。留空则使用设备默认值。
+- `outputFormat`: macOS/iOS 默认 `pcm_44100`，Android 默认 `pcm_24000`（设置 `mp3_*` 可强制 MP3 流式传输）
 
 ## macOS 界面
 

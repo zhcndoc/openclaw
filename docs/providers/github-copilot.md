@@ -84,8 +84,8 @@ openclaw onboard --non-interactive --accept-risk \
     设备登录流程需要交互式 TTY。请直接在终端中运行，不要在非交互式脚本或 CI 流水线中运行。
   </Accordion>
 
-  <Accordion title="模型可用性取决于你的套餐">
-    Copilot 模型的可用性取决于你的 GitHub 套餐。如果某个模型被拒绝，请尝试另一个 ID（例如 `github-copilot/gpt-4.1`）。
+  <Accordion title="Model availability depends on your plan">
+    Copilot 模型的可用性取决于你的 GitHub 套餐。如果某个模型被拒绝，请尝试另一个 ID（例如 `github-copilot/gpt-5.5`）。请参阅 GitHub 的 [每个 Copilot 套餐支持的模型](https://docs.github.com/en/copilot/reference/ai-models/supported-models#supported-ai-models-per-copilot-plan) 了解当前模型列表。
   </Accordion>
 
   <Accordion title="从 Copilot API 实时刷新目录">

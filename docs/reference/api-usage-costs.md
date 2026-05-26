@@ -4,7 +4,7 @@ read_when:
   - 你想了解哪些功能可能会调用付费 API
   - 你需要审计密钥、成本和使用情况可见性
   - 你在解释 /status 或 /usage 的成本报告
-title: "API usage and costs"
+title: "API 用量与成本"
 ---
 
 本文列出了**可以调用 API 密钥的功能**以及它们的成本会显示在哪里。重点介绍了
@@ -14,20 +14,24 @@ title: "API usage and costs"
 
 **单次会话成本快照**
 
-- `/status` 显示当前会话模型、上下文使用情况和上次回复的 token 数。
-- 如果模型使用的是 **API key 认证**，`/status` 还会显示上一条回复的**估算成本**。
-- 如果实时会话元数据较少，`/status` 可以从最近的 transcript 用量
-  条目中恢复 token/cache
-  计数器以及当前运行时模型标签。现有的非零实时值仍然优先，并且当存储的总计缺失或更小时，
-  以 prompt 规模的 transcript 总数为准的结果会胜出。
+- `/status` 会显示当前会话模型、上下文使用情况以及上一条回复的 token 数。
+- 如果 OpenClaw 具有使用情况元数据，并且当前活动模型有本地价格配置，
+  `/status` 还会显示上一条回复的**估算成本**。这也可以包含
+  明确按价格计费的非 API 密钥提供方，例如 Bedrock `aws-sdk` 模型。
+- 如果实时会话元数据较少，`/status` 可以从最新的转录使用
+  条目中恢复 token/cache 计数器和当前运行时模型标签。现有的非零实时值仍然优先，
+  当存储的总计缺失或更小时，按 prompt 规模统计的转录总量可以胜出。
 
 **单条消息成本页脚**
 
-- `/usage full` 会在每条回复后附加一个用量页脚，包括**估算成本**（仅限 API key）。
-- `/usage tokens` 只显示 token；订阅式 OAuth/token 和 CLI 流程会隐藏美元成本。
+- `/usage full` 会为每条回复附加使用情况页脚，包括在为当前模型配置了本地价格且
+  使用情况元数据可用时的**估算成本**。
+- `/usage tokens` 仅显示 token；订阅式 OAuth/token 和 CLI 流程
+  仍然只显示 token，除非该运行时提供兼容的使用情况元数据，
+  并且配置了明确的本地价格。
 - Gemini CLI 说明：当 CLI 返回 JSON 输出时，OpenClaw 会从
-  `stats` 中读取用量，将 `stats.cached` 规范化为 `cacheRead`，并在需要时从
-  `stats.input_tokens - stats.cached` 推导输入 token。
+  `stats` 中读取使用情况，将 `stats.cached` 规范化为 `cacheRead`，并在需要时
+  通过 `stats.input_tokens - stats.cached` 推导输入 token。
 
 Anthropic 说明：Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法
 已再次被允许，因此除非 Anthropic 发布新的政策，OpenClaw 会将 Claude CLI 复用和
@@ -117,18 +121,18 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 
 `web_search` 可能会根据你的提供方产生使用费用：
 
-- **Brave Search API**：`BRAVE_API_KEY` 或 `plugins.entries.brave.config.webSearch.apiKey`
-- **Exa**：`EXA_API_KEY` 或 `plugins.entries.exa.config.webSearch.apiKey`
-- **Firecrawl**：`FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webSearch.apiKey`
-- **Gemini（Google Search）**：`GEMINI_API_KEY` 或 `plugins.entries.google.config.webSearch.apiKey`
-- **Grok（xAI）**：`XAI_API_KEY` 或 `plugins.entries.xai.config.webSearch.apiKey`
-- **Kimi（Moonshot）**：`KIMI_API_KEY`、`MOONSHOT_API_KEY`，或 `plugins.entries.moonshot.config.webSearch.apiKey`
-- **MiniMax Search**：`MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`、`MINIMAX_API_KEY`，或 `plugins.entries.minimax.config.webSearch.apiKey`
-- **Ollama Web Search**：对于可访问的已登录本地 Ollama 主机可免密钥；直接 `https://ollama.com` 搜索使用 `OLLAMA_API_KEY`，并且受认证保护的主机可以复用正常的 Ollama 提供方 bearer 认证
-- **Perplexity Search API**：`PERPLEXITY_API_KEY`、`OPENROUTER_API_KEY`，或 `plugins.entries.perplexity.config.webSearch.apiKey`
-- **Tavily**：`TAVILY_API_KEY` 或 `plugins.entries.tavily.config.webSearch.apiKey`
-- **DuckDuckGo**：免密钥回退（无 API 计费，但非官方且基于 HTML）
-- **SearXNG**：`SEARXNG_BASE_URL` 或 `plugins.entries.searxng.config.webSearch.baseUrl`（免密钥/自托管；无托管 API 计费）
+- **Brave 搜索 API**: `BRAVE_API_KEY` 或 `plugins.entries.brave.config.webSearch.apiKey`
+- **Exa**: `EXA_API_KEY` 或 `plugins.entries.exa.config.webSearch.apiKey`
+- **Firecrawl**: `FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webSearch.apiKey`
+- **Gemini（Google 搜索）**: `GEMINI_API_KEY` 或 `plugins.entries.google.config.webSearch.apiKey`
+- **Grok（xAI）**: xAI OAuth 配置文件、`XAI_API_KEY`，或 `plugins.entries.xai.config.webSearch.apiKey`
+- **Kimi（Moonshot）**: `KIMI_API_KEY`、`MOONSHOT_API_KEY`，或 `plugins.entries.moonshot.config.webSearch.apiKey`
+- **MiniMax Search**: `MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`、`MINIMAX_API_KEY`，或 `plugins.entries.minimax.config.webSearch.apiKey`
+- **Ollama Web Search**: 对于可访问且已登录的本地 Ollama 主机可免密钥；直接的 `https://ollama.com` 搜索使用 `OLLAMA_API_KEY`，受认证保护的主机可以复用普通 Ollama 提供方 Bearer 认证
+- **Perplexity Search API**: `PERPLEXITY_API_KEY`、`OPENROUTER_API_KEY`，或 `plugins.entries.perplexity.config.webSearch.apiKey`
+- **Tavily**: `TAVILY_API_KEY` 或 `plugins.entries.tavily.config.webSearch.apiKey`
+- **DuckDuckGo**: 免密钥回退（无 API 计费，但属于非官方且基于 HTML）
+- **SearXNG**: `SEARXNG_BASE_URL` 或 `plugins.entries.searxng.config.webSearch.baseUrl`（免密钥/自托管；无托管 API 计费）
 
 旧的 `tools.web.search.*` 提供方路径仍会通过临时兼容层加载，但它们已不再是推荐的配置入口。
 
@@ -152,7 +156,7 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 ### 6) 提供方使用快照（status/health）
 
 某些状态命令会调用**提供方使用端点**来显示配额窗口或认证健康状态。
-这些通常是低频调用，但仍会访问提供方 API：
+这些通常是低频调用，但仍然会访问提供方 API：
 
 - `openclaw status --usage`
 - `openclaw models status --json`

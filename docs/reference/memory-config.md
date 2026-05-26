@@ -314,7 +314,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 全部位于 `memorySearch.query.hybrid` 下：
 
-| Key                   | Type      | Default | Description                        |
+| 键                   | 类型      | 默认值  | 描述                        |
 | --------------------- | --------- | ------- | ---------------------------------- |
 | `enabled`             | `boolean` | `true`  | 启用混合 BM25 + 向量搜索 |
 | `vectorWeight`        | `number`  | `0.7`   | 向量分数权重（0-1）     |
@@ -323,13 +323,13 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 <Tabs>
   <Tab title="MMR（多样性）">
-    | Key           | Type      | Default | Description                          |
+    | 键           | 类型      | 默认值  | 描述                          |
     | ------------- | --------- | ------- | ------------------------------------ |
     | `mmr.enabled` | `boolean` | `false` | 启用 MMR 重排序                |
     | `mmr.lambda`  | `number`  | `0.7`   | 0 = 最大多样性，1 = 最大相关性 |
   </Tab>
-  <Tab title="Temporal decay (recency)">
-    | Key                          | Type      | Default | Description               |
+  <Tab title="时间衰减（新近性）">
+    | 键                          | 类型      | 默认值  | 描述               |
     | ---------------------------- | --------- | ------- | ------------------------- |
     | `temporalDecay.enabled`      | `boolean` | `false` | 启用近期提升      |
     | `temporalDecay.halfLifeDays` | `number`  | `30`    | 分数每 N 天减半 |
@@ -364,7 +364,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 附加内存路径
 
-| Key          | Type       | Description                              |
+| 键          | 类型       | 描述                              |
 | ------------ | ---------- | ---------------------------------------- |
 | `extraPaths` | `string[]` | 要索引的额外目录或文件 |
 
@@ -390,7 +390,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 使用 Gemini Embedding 2 将图片和音频与 Markdown 一起建立索引：
 
-| Key                       | Type       | Default    | Description                            |
+| 键                       | 类型       | 默认值    | 描述                            |
 | ------------------------- | ---------- | ---------- | -------------------------------------- |
 | `multimodal.enabled`      | `boolean`  | `false`    | 启用多模态索引                         |
 | `multimodal.modalities`   | `string[]` | --         | `["image"]`、`["audio"]` 或 `["all"]` |
@@ -406,10 +406,10 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 嵌入缓存
 
-| Key                | Type      | Default | Description                      |
+| 键                | 类型      | 默认值      | 描述                      |
 | ------------------ | --------- | ------- | -------------------------------- |
-| `cache.enabled`    | `boolean` | `false` | 在 SQLite 中缓存分块嵌入向量 |
-| `cache.maxEntries` | `number`  | `50000` | 缓存嵌入向量的最大条目数      |
+| `cache.enabled`    | `boolean` | `true`  | 在 SQLite 中缓存分块嵌入 |
+| `cache.maxEntries` | `number`  | `50000` | 最大缓存嵌入数            |
 
 可防止在重新索引或会话记录更新期间，对未变化的文本重复生成嵌入向量。
 
@@ -417,7 +417,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 批量索引
 
-| Key                           | Type      | Default | Description                |
+| 键                           | 类型      | 默认值  | 描述                |
 | ----------------------------- | --------- | ------- | -------------------------- |
 | `remote.nonBatchConcurrency`  | `number`  | `4`     | 并行的内联嵌入调用           |
 | `remote.batch.enabled`        | `boolean` | `false` | 启用批量嵌入 API            |
@@ -438,7 +438,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 索引会话记录，并通过 `memory_search` 暴露它们：
 
-| Key                           | Type       | Default      | Description                             |
+| 键                           | 类型       | 默认值      | 描述                             |
 | ----------------------------- | ---------- | ------------ | --------------------------------------- |
 | `experimental.sessionMemory`  | `boolean`  | `false`      | 启用会话索引                           |
 | `sources`                     | `string[]` | `["memory"]` | 添加 `"sessions"` 以包含会话记录       |
@@ -453,7 +453,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## SQLite 向量加速（sqlite-vec）
 
-| Key                          | Type      | Default | Description                       |
+| 键                          | 类型      | 默认值 | 描述                       |
 | ---------------------------- | --------- | ------- | --------------------------------- |
 | `store.vector.enabled`       | `boolean` | `true`  | 使用 sqlite-vec 进行向量查询     |
 | `store.vector.extensionPath` | `string`  | bundled | 覆盖 sqlite-vec 路径              |
@@ -464,7 +464,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 索引存储
 
-| Key                   | Type     | Default                               | Description                                 |
+| 键                   | 类型     | 默认值                               | 描述                                 |
 | --------------------- | -------- | ------------------------------------- | ------------------------------------------- |
 | `store.path`          | `string` | `~/.openclaw/memory/{agentId}.sqlite` | 索引位置（支持 `{agentId}` 令牌）           |
 | `store.fts.tokenizer` | `string` | `unicode61`                           | FTS5 分词器（`unicode61` 或 `trigram`）     |
@@ -475,7 +475,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 设置 `memory.backend = "qmd"` 以启用。所有 QMD 设置都位于 `memory.qmd` 下：
 
-| Key                      | Type      | Default  | Description                                                                           |
+| 键                      | 类型      | 默认值  | 描述                                                                           |
 | ------------------------ | --------- | -------- | ------------------------------------------------------------------------------------- |
 | `command`                | `string`  | `qmd`    | QMD 可执行文件路径；当服务 `PATH` 与你的 shell 不同时，请设置绝对路径                |
 | `searchMode`             | `string`  | `search` | 搜索命令：`search`、`vsearch`、`query`                                                |
@@ -495,7 +495,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
 
 <AccordionGroup>
   <Accordion title="更新计划">
-    | Key                       | Type      | Default | Description                           |
+    | 键                       | 类型      | 默认值 | 描述                           |
     | ------------------------- | --------- | ------- | ------------------------------------- |
     | `update.interval`         | `string`  | `5m`    | 刷新间隔                              |
     | `update.debounceMs`       | `number`  | `15000` | 文件变更防抖                          |
@@ -509,7 +509,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
     | `update.embedTimeoutMs`   | `number`  | --      | QMD 嵌入操作超时                        |
   </Accordion>
   <Accordion title="限制">
-    | Key                       | Type     | Default | Description                |
+    | 键                       | 类型     | 默认值 | 描述                |
     | ------------------------- | -------- | ------- | -------------------------- |
     | `limits.maxResults`       | `number` | `6`     | 最大搜索结果数             |
     | `limits.maxSnippetChars`  | `number` | --      | 截断片段长度               |
@@ -540,9 +540,9 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
   <Accordion title="引用">
     `memory.citations` 适用于所有后端：
 
-    | Value            | Behavior                                            |
+    | 值               | 行为                                            |
     | ---------------- | --------------------------------------------------- |
-    | `auto` (default) | 在片段中包含 `Source: <path#line>` 页脚            |
+    | `auto`（默认） | 在片段中包含 `Source: <path#line>` 页脚            |
     | `on`             | 始终包含页脚                                       |
     | `off`            | 省略页脚（路径仍会在内部传递给 agent）             |
 

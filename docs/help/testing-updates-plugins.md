@@ -10,7 +10,7 @@ sidebarTitle: "更新和插件测试"
 
 这是用于更新和插件验证的专用检查清单。目标很简单：证明可安装的包能够更新真实用户状态，通过 `doctor` 修复过时的旧状态，并且仍然可以从受支持的来源安装、加载、更新和卸载插件。
 
-更全面的测试运行器地图请参见 [Testing](/help/testing)。关于实时 provider key 和会触发网络的套件，请参见 [Testing live](/help/testing-live)。
+更全面的测试运行器地图请参见 [测试](/help/testing)。关于实时 provider key 和会触发网络的套件，请参见 [实时测试](/help/testing-live)。
 
 ## 我们保护的内容
 
@@ -119,10 +119,19 @@ Package Acceptance 是 GitHub 原生的包门禁。它将一个候选包解析�
 
 候选来源：
 
-- `source=npm`：验证 `openclaw@beta`、`openclaw@latest` 或某个精确的已发布版本。
-- `source=ref`：使用所选的当前 harness 打包一个受信任的分支、tag 或 commit。
-- `source=url`：验证一个带有必需 `package_sha256` 的 HTTPS tarball。
-- `source=artifact`：复用另一个 Actions 运行上传的 tarball。
+- `source=npm`: 验证 `openclaw@beta`、`openclaw@latest` 或某个精确的
+  已发布版本。
+- `source=ref`: 使用选定的当前
+  harness 打包受信任的分支、标签或提交。
+- `source=url`: 验证一个公共 HTTPS tarball，并要求提供 `package_sha256`。
+  此路径会拒绝 URL 凭据、非默认 HTTPS 端口、私有/内部
+  主机名或 DNS/IP 结果、特殊用途 IP 空间以及不安全的重定向。
+- `source=trusted-url`: 根据维护者拥有的策略，
+  对 `.github/package-trusted-sources.json` 中的 `trusted_source_id`
+  验证一个带 `package_sha256` 和 `trusted_source_id` 的 HTTPS tarball。请将其用于企业/私有
+  镜像，而不是通过输入级的 allow-private 开关来弱化 `source=url`。当策略配置了 Bearer 认证时，
+  使用固定的 `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret。
+- `source=artifact`: 复用由另一个 Actions 运行上传的 tarball。
 
 Full Release Validation 默认使用 `source=artifact`，从
 已解析的发布 SHA 构建。对于发布后的证明，请传入

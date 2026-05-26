@@ -44,9 +44,9 @@ Shelling...
 进度草稿由两部分组成：
 
 | 部分           | 作用                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------ |
-| 标签           | 一行简短的起始/状态文本，例如 `Thinking...` 或 `Shelling...`。                      |
-| 进度行         | 使用与详细输出相同的工具图标和详细格式化器的简洁运行更新。                            |
+| -------------- | ------------------------------------------------------------------------------------- |
+| 标签           | 一个简短的起始/状态行，例如 `Working` 或 `Shelling`。                                 |
+| 进度行         | 使用与详细输出相同的工具图标和详情格式化器生成的紧凑运行更新。                         |
 
 标签会在代理开始有意义的工作后出现，并且要么持续忙碌五秒，要么发出第二个工作事件。它属于滚动的进度行列表，因此一旦出现足够具体的工作内容，起始状态就会滚动离开。纯文本回复不会显示进度草稿。只有当代理发出有用的工作更新时才会添加进度行，例如 `🛠️ Bash: run tests`、`🔎 Web Search: 用于 "discord edit message"`，或 `✍️ Write: to /tmp/file`。
 默认情况下，它们使用与 `/verbose` 相同的简洁 explain 模式；如果你在调试时还想附加原始命令/详情，可以设置 `agents.defaults.toolProgressDetail: "raw"`。
@@ -73,29 +73,29 @@ Shelling...
 
 进度标签位于 `channels.<channel>.streaming.progress` 下。
 
-默认标签为 `auto`，它会从 OpenClaw 内置的单词加省略号标签池中选择：
+默认标签为 `auto`，它会从 OpenClaw 内置的单词标签池中进行选择：
 
 ```text
-Thinking...
-Shelling...
-Scuttling...
-Clawing...
-Pinching...
-Molting...
-Bubbling...
-Tiding...
-Reefing...
-Cracking...
-Sifting...
-Brining...
-Nautiling...
-Krilling...
-Barnacling...
-Lobstering...
-Tidepooling...
-Pearling...
-Snapping...
-Surfacing...
+Working
+Shelling
+Scuttling
+Clawing
+Pinching
+Molting
+Bubbling
+Tiding
+Reefing
+Cracking
+Sifting
+Brining
+Nautiling
+Krilling
+Barnacling
+Lobstering
+Tidepooling
+Pearling
+Snapping
+Surfacing
 ```
 
 使用固定标签：
@@ -160,7 +160,7 @@ OpenClaw 对进度草稿和 `/verbose` 使用相同的格式化器：
 {
   agents: {
     defaults: {
-      toolProgressDetail: "explain", // explain | raw
+      toolProgressDetail: "explain", // 说明 | 原始
     },
   },
 }
@@ -196,7 +196,24 @@ OpenClaw 对进度草稿和 `/verbose` 使用相同的格式化器：
 
 进度行会自动压缩，以减少草稿编辑时聊天气泡的重新换行。
 
-默认情况下，OpenClaw 会截断较长的进度行，以免重复的草稿编辑在每次更新时都产生不同的换行。前缀会保持可读，而路径或原始命令等较长细节会用省略号缩短。
+OpenClaw 默认会截断较长的进度行，这样重复的草稿编辑就不会在每次更新时产生不同的换行。每行默认预算为 120 个字符。说明性文本会在单词边界处截断，而像路径或原始命令这类较长的细节则会用中间省略号缩短，以便后缀仍然可见。
+
+调整每行预算：
+
+```json5
+{
+  channels: {
+    discord: {
+      streaming: {
+        mode: "progress",
+        progress: {
+          maxLineChars: 160,
+        },
+      },
+    },
+  },
+}
+```
 
 Slack 可以将进度行渲染为结构化的 Block Kit 字段，而不是单个文本正文：
 

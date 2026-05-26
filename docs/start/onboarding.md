@@ -41,9 +41,9 @@ sidebarTitle: "上手引导：macOS 应用"
 
 **Gateway** 运行在哪里？
 
-- **这台 Mac（仅本地）：** 上手引导可以配置身份验证并将凭据写入本地。
-- **远程（通过 SSH/Tailnet）：** 上手引导**不会**配置本地身份验证；凭据必须已存在于 gateway 主机上。
-- **稍后配置：** 跳过设置并保持应用未配置。
+- **This Mac (Local only):** 上手引导可以配置身份验证并将凭据写入本地。
+- **Remote (over SSH/Tailnet):** 上手引导**不会**配置本地身份验证；凭据必须存在于 gateway 主机上。远程 gateway token 字段存储 macOS 应用用于连接该 Gateway 的 token；现有的非明文 `gateway.remote.token` 值会被保留，直到你将其替换。
+- **Configure later:** 跳过设置并保持应用未配置状态。
 
 <Tip>
 **Gateway 身份验证提示：**
@@ -76,7 +76,7 @@ sidebarTitle: "上手引导：macOS 应用"
   应用可以通过 npm、pnpm 或 bun 安装全局 `openclaw` CLI。
   它会优先使用 npm，然后是 pnpm，如果检测到的唯一包管理器是 bun，则使用 bun。对于 Gateway 运行时，Node 仍然是推荐路径。
 </Step>
-<Step title="Onboarding Chat (dedicated session)">
+<Step title="上手引导聊天（专用会话）">
   设置完成后，应用会打开一个专门的上手引导聊天会话，这样代理就可以
   自我介绍并指导后续步骤。这使首次运行的引导与
   你的常规对话分开。有关首次代理运行期间在 gateway 主机上发生的情况，请参阅 [Bootstrapping](/start/bootstrapping)。

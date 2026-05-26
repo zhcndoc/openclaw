@@ -44,7 +44,7 @@ Venice 提供两种隐私级别——理解这一点是选择模型的关键：
 <Steps>
   <Step title="获取你的 API 密钥">
     1. 在 [venice.ai](https://venice.ai) 注册
-    2. 前往 **Settings > API Keys > Create new key**
+    2. 前往 **设置 > API 密钥 > 创建新密钥**
     3. 复制你的 API 密钥（格式：`vapi_xxxxxxxxxxxx`）
   </Step>
   <Step title="配置 OpenClaw">
@@ -106,7 +106,7 @@ openclaw models set venice/claude-opus-4-6
 openclaw models list --all --provider venice
 ```
 
-你也可以运行 `openclaw configure`，选择 **Model/auth**，然后选择 **Venice AI**。
+你也可以运行 `openclaw configure`，选择 **模型/认证**，然后选择 **Venice AI**。
 
 <Tip>
 使用下表为你的使用场景选择合适的模型。
@@ -164,13 +164,11 @@ OpenClaw 会将该提供商特定的回放修复与原生 DeepSeek 提供商的 
     | `minimax-m25`                          | MiniMax M2.5                       | 198k    | 推理                    |
   </Accordion>
 
-  <Accordion title="匿名化模型（15）— 通过 Venice 代理">
+  <Accordion title="匿名化模型（12）— 通过 Venice 代理">
     | Model ID                        | Name                           | Context | Features                  |
     | ------------------------------- | ------------------------------ | ------- | ------------------------- |
     | `claude-opus-4-6`               | Claude Opus 4.6 (via Venice)   | 1M      | 推理、视觉         |
-    | `claude-opus-4-5`               | Claude Opus 4.5 (via Venice)   | 198k    | 推理、视觉         |
     | `claude-sonnet-4-6`             | Claude Sonnet 4.6 (via Venice) | 1M      | 推理、视觉         |
-    | `claude-sonnet-4-5`             | Claude Sonnet 4.5 (via Venice) | 198k    | 推理、视觉         |
     | `openai-gpt-54`                 | GPT-5.4 (via Venice)           | 1M      | 推理、视觉         |
     | `openai-gpt-53-codex`           | GPT-5.3 Codex (via Venice)     | 400k    | 推理、视觉、编程 |
     | `openai-gpt-52`                 | GPT-5.2 (via Venice)           | 256k    | 推理                 |
@@ -181,7 +179,6 @@ OpenClaw 会将该提供商特定的回放修复与原生 DeepSeek 提供商的 
     | `gemini-3-pro-preview`          | Gemini 3 Pro (via Venice)      | 198k    | 推理、视觉         |
     | `gemini-3-flash-preview`        | Gemini 3 Flash (via Venice)    | 256k    | 推理、视觉         |
     | `grok-41-fast`                  | Grok 4.1 Fast (via Venice)     | 1M      | 推理、视觉         |
-    | `grok-code-fast-1`              | Grok Code Fast 1 (via Venice)  | 256k    | 推理、编程         |
   </Accordion>
 </AccordionGroup>
 
@@ -238,7 +235,7 @@ openclaw agent --model venice/qwen3-coder-480b-a35b-instruct --message "重构�
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="API key not recognized">
+  <Accordion title="API 密钥未识别">
     ```bash
     echo $VENICE_API_KEY
     openclaw models list | grep venice
@@ -248,11 +245,11 @@ openclaw agent --model venice/qwen3-coder-480b-a35b-instruct --message "重构�
 
   </Accordion>
 
-  <Accordion title="Model not available">
+  <Accordion title="模型不可用">
     Venice 模型目录会动态更新。运行 `openclaw models list` 查看当前可用的模型。某些模型可能会暂时离线。
   </Accordion>
 
-  <Accordion title="Connection issues">
+  <Accordion title="连接问题">
     Venice API 位于 `https://api.venice.ai/api/v1`。请确保你的网络允许 HTTPS 连接。
   </Accordion>
 </AccordionGroup>
@@ -264,7 +261,7 @@ openclaw agent --model venice/qwen3-coder-480b-a35b-instruct --message "重构�
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Config file example">
+  <Accordion title="配置文件示例">
     ```json5
     {
       env: { VENICE_API_KEY: "vapi_..." },

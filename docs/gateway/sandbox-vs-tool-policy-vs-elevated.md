@@ -1,7 +1,7 @@
 ---
 summary: "工具为何被阻止：sandbox 运行时、工具允许/拒绝策略，以及 elevated 执行门控"
-title: Sandbox vs tool policy vs elevated
-read_when: "当你遇到“sandbox jail”或看到工具/elevated 拒绝，并且想知道要修改的确切配置键时。"
+title: "Sandbox 与 tool policy 以及 elevated"
+read_when: "当你遇到“sandbox jail”或看到工具/elevated 被拒绝，并且想知道要修改的确切配置键时。"
 status: active
 ---
 
@@ -61,12 +61,13 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 经验法则：
 
-- `deny` 总是优先生效。
-- 如果 `allow` 非空，则其他一切都视为被阻止。
+- `deny` 永远优先。
+- 如果 `allow` 非空，那么其他所有内容都视为被阻止。
 - Tool policy 是最终拦截：`/exec` 不能覆盖被拒绝的 `exec` 工具。
-- Tool policy 只按名称筛选工具可用性；它不会检查 `exec` 内部的副作用。如果 `exec` 被允许，拒绝 `write`、`edit` 或 `apply_patch` 并不会让 shell 命令变成只读。
+- Tool policy 只按名称过滤工具可用性；它不会检查 `exec` 内部的副作用。如果 `exec` 被允许，拒绝 `write`、`edit` 或 `apply_patch` 并不会让 shell 命令变成只读。
 - `/exec` 只会为被授权的发送者更改会话默认值；它不会授予工具访问权限。
-  Provider tool 键可以接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
+  Provider 工具键可以接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
+- 当工具策略步骤移除工具，或 sandbox 工具策略阻止调用时，Gateway 日志会包含 `agents/tool-policy` 审计条目。使用 `openclaw logs` 可以查看规则标签、配置键以及受影响的工具名称。
 
 ### 工具组（简写）
 
@@ -86,20 +87,24 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 可用的组：
 
-- `group:runtime`：`exec`、`process`、`code_execution`（`bash` 可作为
-  `exec` 的别名）
-- `group:fs`：`read`、`write`、`edit`、`apply_patch`
-  对于只读 agent，除非 sandbox 文件系统策略或单独的主机边界强制实施只读限制，否则应同时拒绝 `group:runtime` 以及会修改文件系统的工具。
-- `group:sessions`：`sessions_list`、`sessions_history`、`sessions_send`、`sessions_spawn`、`sessions_yield`、`subagents`、`session_status`
-- `group:memory`：`memory_search`、`memory_get`
-- `group:web`：`web_search`、`x_search`、`web_fetch`
-- `group:ui`：`browser`、`canvas`
-- `group:automation`：`heartbeat_respond`、`cron`、`gateway`
-- `group:messaging`：`message`
-- `group:nodes`：`nodes`
-- `group:agents`：`agents_list`、`update_plan`
-- `group:media`：`image`、`image_generate`、`music_generate`、`video_generate`、`tts`
-- `group:openclaw`：所有内置 OpenClaw 工具（不包括 provider 插件）
+- `group:runtime`: `exec`, `process`, `code_execution`（`bash` 也可作为 `exec` 的别名）
+- `group:fs`: `read`, `write`, `edit`, `apply_patch`
+  对于只读 agent，除了 sandbox 文件系统策略或其他主机边界已经强制只读约束外，也应拒绝 `group:runtime` 以及会修改文件系统的工具。
+- `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`
+- `group:memory`: `memory_search`, `memory_get`
+- `group:web`: `web_search`, `x_search`, `web_fetch`
+- `group:ui`: `browser`, `canvas`
+- `group:automation`: `heartbeat_respond`, `cron`, `gateway`
+- `group:messaging`: `message`
+- `group:nodes`: `nodes`
+- `group:agents`: `agents_list`, `update_plan`
+- `group:media`: `image`, `image_generate`, `music_generate`, `video_generate`, `tts`
+- `group:openclaw`: 所有内置 OpenClaw 工具（不包括 provider 插件）
+- `group:plugins`: 所有已加载的插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器
+
+对于被 sandbox 化的 MCP 服务器，sandbox 工具策略是第二道允许门。如果 `mcp.servers` 已配置，但在 sandbox 中只显示内置工具，请将 `bundle-mcp`、`group:plugins`，或者带服务器前缀的 MCP 工具名/glob（例如 `outlook__send_mail` 或 `outlook__*`）添加到 `tools.sandbox.tools.alsoAllow`，然后重启/重新加载 gateway 并重新捕获工具列表。服务器 glob 使用 provider-safe 的 MCP 服务器前缀：非 `[A-Za-z0-9_-]` 字符会变成 `-`，不以字母开头的名称会加上 `mcp-` 前缀，而较长或重复的前缀可能会被截断或加后缀。
+
+`openclaw doctor` 目前会检查 `mcp.servers` 中 OpenClaw 管理的服务器是否符合这种结构。来自捆绑插件清单或 Claude `.mcp.json` 的 MCP 服务器使用相同的 sandbox 门控，但此诊断暂时不会枚举这些来源；如果它们的工具在 sandbox 会话中消失，请使用相同的 allowlist 条目。
 
 ## Elevated：仅 exec 的“在主机上运行”
 
@@ -127,8 +132,9 @@ Elevated **不会** 授予额外工具；它只影响 `exec`。
 
 - 禁用 sandbox：`agents.defaults.sandbox.mode=off`（或按 agent 设置 `agents.list[].sandbox.mode=off`）
 - 在 sandbox 内允许该工具：
-  - 从 `tools.sandbox.tools.deny` 中移除它（或按 agent 设置 `agents.list[].tools.sandbox.tools.deny`）
-  - 或将其添加到 `tools.sandbox.tools.allow`（或按 agent 设置 allow）
+  - 从 `tools.sandbox.tools.deny` 中移除它（或对应的 `agents.list[].tools.sandbox.tools.deny`）
+  - 或将其添加到 `tools.sandbox.tools.allow`（或对应的 per-agent allow）
+- 检查 `openclaw logs` 中的 `agents/tool-policy` 条目。它会记录 sandbox 模式，以及是 allow 还是 deny 规则阻止了该工具。
 
 ### “我以为这是 main，为什么它被 sandbox 化了？”
 

@@ -206,12 +206,38 @@ export default function register(api) {
 
 | 成员                           | 类型   | 作用                                                                                                            |
 | ------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `bootstrap(params)`            | Method | 为某个会话初始化引擎状态。引擎第一次看到某个会话时调用一次（例如导入历史记录）。                                  |
-| `ingestBatch(params)`          | Method | 以批处理方式摄取一个已完成的轮次。运行完成后一次性传入该轮的所有消息。                                            |
-| `afterTurn(params)`            | Method | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                              |
-| `prepareSubagentSpawn(params)` | Method | 在子会话开始前为其设置共享状态。                                                                                  |
-| `onSubagentEnded(params)`      | Method | 子代理结束后进行清理。                                                                                           |
-| `dispose()`                    | Method | 释放资源。在网关关闭或插件重新加载期间调用——不是按会话调用。                                                     |
+| `bootstrap(params)`            | 方法 | 为某个会话初始化引擎状态。引擎第一次看到某个会话时调用一次（例如导入历史记录）。                                  |
+| `ingestBatch(params)`          | 方法 | 以批处理方式摄取一个已完成的轮次。运行完成后一次性传入该轮的所有消息。                                            |
+| `afterTurn(params)`            | 方法 | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                              |
+| `prepareSubagentSpawn(params)` | 方法 | 在子会话开始前为其设置共享状态。                                                                                  |
+| `onSubagentEnded(params)`      | 方法 | 子代理结束后进行清理。                                                                                           |
+| `dispose()`                    | 方法 | 释放资源。在网关关闭或插件重新加载期间调用——不是按会话调用。                                                     |
+
+### Host requirements
+
+上下文引擎可以在 `info.hostRequirements` 上声明宿主能力要求。
+OpenClaw 会在启动操作前检查这些要求，并在所选运行时无法满足时以描述性错误
+直接失败。
+
+对于代理运行，当引擎必须通过 `assemble()` 控制
+实际模型提示词时，请声明 `assemble-before-prompt`：
+
+```ts
+info: {
+  id: "my-context-engine",
+  name: "My Context Engine",
+  hostRequirements: {
+    "agent-run": {
+      requiredCapabilities: ["assemble-before-prompt"],
+      unsupportedMessage:
+        "Use the native Codex or Pi embedded runtime, or select the legacy context engine.",
+    },
+  },
+}
+```
+
+原生 Codex 和 Pi 嵌入式代理运行满足 `assemble-before-prompt`。
+通用 CLI 后端不满足，因此需要它的引擎会在 CLI 进程开始前被拒绝。
 
 ### ownsCompaction
 

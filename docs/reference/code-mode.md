@@ -10,7 +10,21 @@ read_when:
 
 代码模式是 OpenClaw agent-runtime 的一项实验性功能。它默认关闭。启用后，OpenClaw 会改变模型在一次运行中看到的内容：模型不再直接看到所有已启用工具的 schema，而只会看到 `exec` 和 `wait`。
 
-本文档介绍 OpenClaw 代码模式。它不是 Codex Code mode。Codex Code mode 是 Codex 编码 harness 的一部分，拥有自己独立的项目工作区、运行时、工具和执行语义。Codex Code mode 和 Codex 原生动态工具搜索是稳定的 Codex harness 能力。OpenClaw 代码模式是 OpenClaw 自有的、用于通用 OpenClaw 运行的实验性工具界面适配器。它使用 `quickjs-wasi`、隐藏的 OpenClaw 工具目录，以及正常的 OpenClaw 工具执行器。
+本页说明 OpenClaw 代码模式。它不是 Codex Code mode。二者
+名称相同，但由不同的运行时实现，并暴露不同的
+`exec` 合约：
+
+- Codex Code Mode 默认对 Codex app-server 线程启用，除非受限的
+  工具策略禁用了原生代码模式。它运行在 Codex coding harness 中，
+  模型通过 `exec.command` 合约编写 shell 命令。
+- OpenClaw code mode 默认关闭，除非配置了
+  `tools.codeMode.enabled: true`。它运行在 OpenClaw 通用 agent runtime 中，
+  模型通过 `exec.code` 合约编写 JavaScript 或 TypeScript 程序。
+
+Codex Code Mode 和 Codex 原生动态工具搜索是稳定的 Codex harness
+接口。OpenClaw 代码模式是 OpenClaw 自有的实验性工具表面适配器，面向
+通用 OpenClaw 运行。它使用 `quickjs-wasi`、一个隐藏的 OpenClaw
+工具目录，以及正常的 OpenClaw 工具执行器。
 
 ## 这是什么？
 
@@ -216,18 +230,27 @@ openclaw gateway
 
 ```typescript
 type CodeModeExecInput = {
-  code: string;
+  code?: string;
+  command?: string;
   language?: "javascript" | "typescript";
 };
 ```
 
 输入规则：
 
-- `code` 是必需项，且不能为空。
-- `language` 默认为 `"javascript"`。
-- 如果 `language` 是 `"typescript"`，OpenClaw 会在执行前进行转换。
-- `exec` 在 v1 中会拒绝 `import`、`require`、动态 import 以及模块加载器模式。
-- `exec` 不会递归地暴露正常的 shell `exec` 实现。
+- One of code or command must be non-empty.
+- code is the documented model-facing field.
+- command is accepted as an exec-compatible alias for hook policies and
+  trusted rewrites; when both are present, the values must match.
+- Outer code-mode exec hook events include toolKind: "code_mode_exec" and
+  include toolInputKind: "javascript" | "typescript" when the input language
+  is known, so policies can distinguish code-mode cells from shell-style exec
+  calls that share the same tool name.
+- language defaults to "javascript".
+- If language is "typescript", OpenClaw transpiles before evaluation.
+- exec rejects import, require, dynamic import, and module-loader patterns
+  in v1.
+- exec does not expose the normal shell exec implementation recursively.
 
 结果：
 
@@ -418,9 +441,9 @@ client:app:select_file
 - `tool_describe`
 - `tool_call`
 
-这可以防止递归，并保持面向模型的契约足够精简。
+这可以防止递归，并保持面向模型的合约足够精简。
 
-## Tool Search interaction
+## Tool Search 交互
 
 当 code mode 处于激活状态时，它会取代 PI Tool Search 的模型表面。
 
@@ -437,7 +460,7 @@ client:app:select_file
 目录桥接。对于可以使用 `exec` 和 `wait` 的运行，code mode 是通用的
 OpenClaw 替代方案。
 
-## Tool names and collisions
+## Tool 名称和冲突
 
 模型可见的 `exec` 工具是 code-mode 工具。如果常规的 OpenClaw
 shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样被收录
@@ -452,7 +475,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 如果两个工具归一化后得到相同的安全便捷名称，OpenClaw 会省略
 该便捷函数，并要求使用 `tools.call(id, input)`。
 
-## Nested tool execution
+## 嵌套工具执行
 
 每一次嵌套工具调用都会跨越主机桥接并重新进入 OpenClaw。
 
@@ -474,7 +497,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 
 允许并行嵌套调用，最多可达 `maxPendingToolCalls`。
 
-## Runtime state
+## 运行时状态
 
 每个 code-mode 运行都有一个状态机：
 
@@ -532,7 +555,7 @@ JavaScript 单元格和已禁用的 code mode 不会加载编译器。
 
 在可行的情况下，转换应尽量保留有用的行号。
 
-## Security boundary
+## 安全边界
 
 模型代码是不可信的。runtime 采用纵深防御：
 
@@ -553,7 +576,7 @@ JavaScript 单元格和已禁用的 code mode 不会加载编译器。
 sandbox 只是一个安全层。对于高风险部署，运维人员仍可能需要
 操作系统级加固。
 
-## Error codes
+## 错误代码
 
 ```typescript
 type CodeModeErrorCode =
@@ -578,7 +601,7 @@ type CodeModeErrorCode =
 返回给 guest 的错误是普通数据。主机 `Error` 实例、堆栈对象、原型
 和主机函数都不会进入 QuickJS。
 
-## Telemetry
+## 遥测
 
 code mode 会报告：
 

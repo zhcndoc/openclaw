@@ -58,12 +58,13 @@ OpenClaw 按以下顺序选择模型：
 
 同一个 `provider/model`，根据来源不同，含义也可能不同：
 
-- 已配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常的起点，并使用 `agents.defaults.model.fallbacks`。
-- 自动回退选择是临时恢复状态。它们会以 `modelOverrideSource: "auto"` 存储，因此后续轮次可以继续使用回退链，而不必每次都探测一个已知不可用的主模型；OpenClaw 会定期重新探测原始主模型，在恢复后清除自动选择，并在每次状态变化时宣布回退/恢复切换。
-- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到另一个已配置模型上。
-- Cron `--model` / 载荷 `model` 是每个作业的主模型。除非作业提供显式的载荷 `fallbacks`，否则它仍会使用已配置的回退（若要严格运行 cron，请使用 `fallbacks: []`）。
-- CLI 默认模型和白名单选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
-- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：如果存在 `agents.defaults.models`，就使用它，包括提供商级的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 加上具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"`，或 `openclaw models list --all`。
+- 配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常起点，并使用 `agents.defaults.model.fallbacks`。
+- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 存储，因此后续轮次可以继续使用回退链，而无需每次都探测一个已知失效的主模型；OpenClaw 会定期再次探测原始主模型，在恢复后清除自动选择，并且每次状态变化只宣布一次回退/恢复转换。
+- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到其他已配置模型。
+- 更改 `agents.defaults.model.primary` 不会重写现有会话选择。如果状态显示 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请使用 `/model Y` 切换当前会话，或使用 `/reset` 清除过期的会话状态。
+- Cron `--model` / payload `model` 是每个作业的主模型。除非作业提供显式的 payload `fallbacks`，否则它仍会使用已配置的回退（对严格的 cron 运行使用 `fallbacks: []`）。
+- CLI 默认模型和允许列表选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
+- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：如果存在 `agents.defaults.models`，则使用它，包括 provider-wide 的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 加上具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 搭配 `view: "all"` 或 `openclaw models list --all`。
 
 ## 快速模型策略
 

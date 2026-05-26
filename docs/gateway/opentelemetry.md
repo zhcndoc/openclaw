@@ -61,11 +61,11 @@ openclaw plugins enable diagnostics-otel
 
 ## 导出的信号
 
-| 信号        | 内容                                                                                                                                         |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **指标**    | 用于 token 使用量、成本、运行时长、消息流、Talk 事件、队列通道、会话状态/恢复、exec 和内存压力的计数器和直方图。 |
-| **链路**    | 用于模型使用、模型调用、harness 生命周期、工具执行、exec、webhook/消息处理、上下文组装和工具循环的 spans。              |
-| **日志**    | 当启用 `diagnostics.otel.logs` 时，通过 OTLP 导出的结构化 `logging.file` 记录。                                                           |
+| Signal      | What goes in it                                                                                                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Metrics** | 令牌使用量、成本、运行时长、技能使用、消息流、Talk 事件、队列车道、会话状态/恢复、工具执行、exec 和内存压力的计数器与直方图。 |
+| **Traces**  | 用于模型使用、模型调用、harness 生命周期、技能使用、工具执行、exec、webhook/消息处理、上下文组装和工具循环的 span。                              |
+| **Logs**    | 当 `diagnostics.otel.logs` 启用时，通过 OTLP 导出的结构化 `logging.file` 记录；除非显式启用内容捕获，否则会省略日志正文。                  |
 
 `traces`、`metrics` 和 `logs` 可独立切换。只要 `diagnostics.otel.enabled` 为 true，三者默认都启用。
 
@@ -115,8 +115,8 @@ openclaw plugins enable diagnostics-otel
 
 ## 隐私与内容捕获
 
-原始模型/工具内容默认**不会**导出。Spans 仅携带有界标识符（通道、provider、模型、错误类别、仅哈希的请求 id），绝不会包含 prompt 文本、响应文本、工具输入、工具输出或会话密钥。
-Talk 指标仅导出有界事件元数据，例如模式、传输方式、provider 和事件类型。它们不包含转写内容、音频载荷、会话 id、turn id、call id、room id 或接手 token。
+原始模型/工具内容默认**不会**导出。span 仅携带有界标识符（channel、provider、model、error category、仅哈希的 request id、tool source、tool owner 和 skill name/source），绝不会包含 prompt 文本、response 文本、tool inputs、tool outputs、skill 文件路径或 session keys。OTLP 日志记录默认保留严重级别、logger、代码位置、受信任的 trace 上下文和已清理的属性，但只有在 `diagnostics.otel.captureContent` 设置为布尔值 `true` 时，才会导出原始日志消息正文。粒度更细的 `captureContent.*` 子键不会启用日志正文。看起来像 scoped agent session keys 的标签会被替换为 `unknown`。
+Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 和事件类型。它们不包含 transcript、音频载荷、session ids、turn ids、call ids、room ids 或 handoff tokens。
 
 出站模型请求可能会包含 W3C `traceparent` header。该 header 仅由当前模型调用的、属于 OpenClaw 的诊断 trace 上下文生成。已有的、由调用方提供的 `traceparent` headers 会被替换，因此插件或自定义 provider 选项无法伪造跨服务的 trace 祖先关系。
 
@@ -128,7 +128,7 @@ Talk 指标仅导出有界事件元数据，例如模式、传输方式、provid
 - `toolOutputs` - 工具结果载荷。
 - `systemPrompt` - 组装后的 system/developer prompt。
 
-当任意子键启用时，模型和工具 span 仅会为该类内容添加有界、脱敏的 `openclaw.content.*` 属性。
+当启用任意子键时，模型和工具 span 会仅针对该类别获得有界、脱敏的 `openclaw.content.*` 属性。仅在需要进行广泛诊断采集且 OTLP 日志消息正文也已获准导出时，才使用布尔值 `captureContent: true`。
 
 ## 采样与刷新
 
@@ -143,27 +143,32 @@ Talk 指标仅导出有界事件元数据，例如模式、传输方式、provid
 
 ### 模型使用
 
-- `openclaw.tokens`（计数器，属性：`openclaw.token`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.agent`）
-- `openclaw.cost.usd`（计数器，属性：`openclaw.channel`, `openclaw.provider`, `openclaw.model`）
-- `openclaw.run.duration_ms`（直方图，属性：`openclaw.channel`, `openclaw.provider`, `openclaw.model`）
-- `openclaw.context.tokens`（直方图，属性：`openclaw.context`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`）
-- `gen_ai.client.token.usage`（直方图，GenAI 语义约定指标，属性：`gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`）
-- `gen_ai.client.operation.duration`（直方图，秒，GenAI 语义约定指标，属性：`gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, 可选 `error.type`）
-- `openclaw.model_call.duration_ms`（直方图，属性：`openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`，以及在分类错误上的 `openclaw.errorCategory` 和 `openclaw.failureKind`）
-- `openclaw.model_call.request_bytes`（直方图，最终模型请求载荷的 UTF-8 字节大小；不包含原始载荷内容）
-- `openclaw.model_call.response_bytes`（直方图，流式模型响应事件的 UTF-8 字节大小；不包含原始响应内容）
-- `openclaw.model_call.time_to_first_byte_ms`（直方图，首个流式响应事件之前的耗时）
+- `openclaw.tokens` (counter, attrs: `openclaw.token`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`, `openclaw.agent`)
+- `openclaw.cost.usd` (counter, attrs: `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `openclaw.run.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `openclaw.context.tokens` (histogram, attrs: `openclaw.context`, `openclaw.channel`, `openclaw.provider`, `openclaw.model`)
+- `gen_ai.client.token.usage` (histogram, GenAI semantic-conventions metric, attrs: `gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`)
+- `gen_ai.client.operation.duration` (histogram, seconds, GenAI semantic-conventions metric, attrs: `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, optional `error.type`)
+- `openclaw.model_call.duration_ms` (histogram, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, plus `openclaw.errorCategory` and `openclaw.failureKind` on classified errors)
+- `openclaw.model_call.request_bytes` (histogram, final model request payload 的 UTF-8 字节大小；不包含原始载荷内容)
+- `openclaw.model_call.response_bytes` (histogram, 流式模型响应事件的 UTF-8 字节大小；不包含原始响应内容)
+- `openclaw.model_call.time_to_first_byte_ms` (histogram, 首个流式响应事件之前的经过时间)
+- `openclaw.skill.used` (counter, attrs: `openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, optional `openclaw.agent`, optional `openclaw.toolName`)
 
 ### 消息流
 
-- `openclaw.webhook.received`（计数器，属性：`openclaw.channel`, `openclaw.webhook`）
-- `openclaw.webhook.error`（计数器，属性：`openclaw.channel`, `openclaw.webhook`）
-- `openclaw.webhook.duration_ms`（直方图，属性：`openclaw.channel`, `openclaw.webhook`）
-- `openclaw.message.queued`（计数器，属性：`openclaw.channel`, `openclaw.source`）
-- `openclaw.message.processed`（计数器，属性：`openclaw.channel`, `openclaw.outcome`）
-- `openclaw.message.duration_ms`（直方图，属性：`openclaw.channel`, `openclaw.outcome`）
-- `openclaw.message.delivery.started`（计数器，属性：`openclaw.channel`, `openclaw.delivery.kind`）
-- `openclaw.message.delivery.duration_ms`（直方图，属性：`openclaw.channel`, `openclaw.delivery.kind`, `openclaw.outcome`, `openclaw.errorCategory`）
+- `openclaw.webhook.received` (counter, attrs: `openclaw.channel`, `openclaw.webhook`)
+- `openclaw.webhook.error` (counter, attrs: `openclaw.channel`, `openclaw.webhook`)
+- `openclaw.webhook.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.webhook`)
+- `openclaw.message.queued` (counter, attrs: `openclaw.channel`, `openclaw.source`)
+- `openclaw.message.received` (counter, attrs: `openclaw.channel`, `openclaw.source`)
+- `openclaw.message.dispatch.started` (counter, attrs: `openclaw.channel`, `openclaw.source`)
+- `openclaw.message.dispatch.completed` (counter, attrs: `openclaw.channel`, `openclaw.outcome`, `openclaw.reason`, `openclaw.source`)
+- `openclaw.message.dispatch.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.outcome`, `openclaw.reason`, `openclaw.source`)
+- `openclaw.message.processed` (counter, attrs: `openclaw.channel`, `openclaw.outcome`)
+- `openclaw.message.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.outcome`)
+- `openclaw.message.delivery.started` (counter, attrs: `openclaw.channel`, `openclaw.delivery.kind`)
+- `openclaw.message.delivery.duration_ms` (histogram, attrs: `openclaw.channel`, `openclaw.delivery.kind`, `openclaw.outcome`, `openclaw.errorCategory`)
 
 ### Talk
 
@@ -173,17 +178,18 @@ Talk 指标仅导出有界事件元数据，例如模式、传输方式、provid
 
 ### 队列与会话
 
-- `openclaw.queue.lane.enqueue`（计数器，属性：`openclaw.lane`）
-- `openclaw.queue.lane.dequeue`（计数器，属性：`openclaw.lane`）
-- `openclaw.queue.depth`（直方图，属性：`openclaw.lane` 或 `openclaw.channel=heartbeat`）
-- `openclaw.queue.wait_ms`（直方图，属性：`openclaw.lane`）
-- `openclaw.session.state`（计数器，属性：`openclaw.state`, `openclaw.reason`）
-- `openclaw.session.stuck`（计数器，属性：`openclaw.state`；仅在没有活跃工作的陈旧会话记账时发出）
-- `openclaw.session.stuck_age_ms`（直方图，属性：`openclaw.state`；仅在没有活跃工作的陈旧会话记账时发出）
-- `openclaw.session.recovery.requested`（计数器，属性：`openclaw.state`, `openclaw.action`, `openclaw.active_work_kind`, `openclaw.reason`）
-- `openclaw.session.recovery.completed`（计数器，属性：`openclaw.state`, `openclaw.action`, `openclaw.status`, `openclaw.active_work_kind`, `openclaw.reason`）
-- `openclaw.session.recovery.age_ms`（直方图，属性同匹配的恢复计数器）
-- `openclaw.run.attempt`（计数器，属性：`openclaw.attempt`）
+- `openclaw.queue.lane.enqueue` (counter, attrs: `openclaw.lane`)
+- `openclaw.queue.lane.dequeue` (counter, attrs: `openclaw.lane`)
+- `openclaw.queue.depth` (histogram, attrs: `openclaw.lane` or `openclaw.channel=heartbeat`)
+- `openclaw.queue.wait_ms` (histogram, attrs: `openclaw.lane`)
+- `openclaw.session.state` (counter, attrs: `openclaw.state`, `openclaw.reason`)
+- `openclaw.session.stuck` (counter, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
+- `openclaw.session.stuck_age_ms` (histogram, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
+- `openclaw.session.turn.created` (counter, attrs: `openclaw.agent`, `openclaw.channel`, `openclaw.trigger`)
+- `openclaw.session.recovery.requested` (counter, attrs: `openclaw.state`, `openclaw.action`, `openclaw.active_work_kind`, `openclaw.reason`)
+- `openclaw.session.recovery.completed` (counter, attrs: `openclaw.state`, `openclaw.action`, `openclaw.status`, `openclaw.active_work_kind`, `openclaw.reason`)
+- `openclaw.session.recovery.age_ms` (histogram, attrs: same as the matching recovery counter)
+- `openclaw.run.attempt` (counter, attrs: `openclaw.attempt`)
 
 ### 会话存活遥测
 

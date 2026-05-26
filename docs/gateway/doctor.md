@@ -26,17 +26,26 @@ openclaw doctor
     在不提示的情况下接受默认值（如适用，包括重启/服务/沙箱修复步骤）。
 
   </Tab>
-  <Tab title="--repair">
+  <Tab title="--fix">
     ```bash
-    openclaw doctor --repair
+    openclaw doctor --fix
     ```
 
     在不提示的情况下应用建议的修复（安全范围内的修复 + 重启）。
 
   </Tab>
-  <Tab title="--repair --force">
+  <Tab title="--lint">
     ```bash
-    openclaw doctor --repair --force
+    openclaw doctor --lint
+    openclaw doctor --lint --json
+    ```
+
+    为 CI 或预检自动化运行结构化健康检查。此模式是只读的：不会提示、修复、迁移配置、重启服务或修改状态。
+
+  </Tab>
+  <Tab title="--fix --force">
+    ```bash
+    openclaw doctor --fix --force
     ```
 
     也应用激进修复（覆盖自定义的 supervisor 配置）。
@@ -66,7 +75,47 @@ openclaw doctor
 cat ~/.openclaw/openclaw.json
 ```
 
-## 它会做什么（摘要）
+## 只读 lint 模式
+
+`openclaw doctor --lint` 是 `openclaw doctor --fix` 的自动化友好版本。两者都使用 doctor 健康检查，但其行为不同：
+
+| 模式                     | 提示      | 写入配置/状态            | 输出                   | 适用场景                        |
+| ------------------------ | --------- | ------------------------ | ---------------------- | ------------------------------- |
+| `openclaw doctor`        | 是        | 否                       | 友好的健康报告         | 人工检查状态                    |
+| `openclaw doctor --fix`  | 有时      | 是，按修复策略写入       | 友好的修复日志         | 应用已批准的修复                |
+| `openclaw doctor --lint` | 否        | 否                       | 结构化结果             | CI、预检和审查门禁              |
+
+现代化的健康检查可以提供可选的 `repair()` 实现。
+`doctor --fix` 在这些修复存在时会应用它们，并继续对尚未迁移的检查使用现有的 doctor 修复流程。
+结构化修复约定还将修复报告与检测分离：
+`detect()` 只报告当前发现，而 `repair()` 可以报告变更、配置/文件 diff 以及非文件副作用。这为未来的 `doctor --fix --dry-run` 和 diff 输出保留了迁移路径，而不会让 lint 检查计划变更。
+
+示例：
+
+```bash
+openclaw doctor --lint
+openclaw doctor --lint --severity-min warning
+openclaw doctor --lint --json
+openclaw doctor --lint --only core/doctor/gateway-config --json
+```
+
+JSON 输出包括：
+
+- `ok`：是否有任何可见发现达到了所选严重级别阈值
+- `checksRun`：执行的健康检查数量
+- `checksSkipped`：被 `--only` 或 `--skip` 跳过的检查数量
+- `findings`：结构化诊断信息，包含 `checkId`、`severity`、`message`，以及可选的 `path`、`line`、`column`、`ocPath` 和 `fixHint`
+
+退出码：
+
+- `0`：没有达到所选阈值的发现
+- `1`：一个或多个发现达到了所选阈值
+- `2`：在输出 lint 结果之前发生命令/运行时失败
+
+使用 `--severity-min info|warning|error` 同时控制打印内容以及什么情况会导致 lint 以非零退出。使用 `--only <id>` 可设置狭窄的预检门禁，使用 `--skip <id>` 可临时排除某个噪声检查，同时保持其余 lint 运行正常。
+像 `--json`、`--severity-min`、`--only` 和 `--skip` 这样的 lint 输出选项必须与 `--lint` 配对使用；普通的 doctor 和 repair 运行会拒绝这些选项。
+
+## 它做什么（摘要）
 
 <AccordionGroup>
   <Accordion title="健康、UI 和更新">
@@ -190,7 +239,6 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - `routing.groupChat.historyLimit` → `messages.groupChat.historyLimit`
     - `routing.groupChat.mentionPatterns` → `messages.groupChat.mentionPatterns`
     - `channels.telegram.requireMention` → `channels.telegram.groups."*".requireMention`
-    - configured-channel configs missing visible reply policy → `messages.groupChat.visibleReplies: "message_tool"`
     - `routing.queue` → `messages.queue`
     - `routing.bindings` → 顶层 `bindings`
     - `routing.agents`/`routing.defaultAgentId` → `agents.list` + `agents.list[].default`
@@ -347,6 +395,8 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 短期冷却（速率限制/超时/认证失败）
     - 长期禁用（计费/信用失败）
 
+    旧版 Codex OAuth 配置文件的 token 存放在 macOS Keychain 中（更早的 onboarding，早于基于文件的 sidecar 布局），嵌入式运行时路径不会读取到它们——该路径运行时 `allowKeychainPrompt: false`，无法触发 Keychain 提示。受影响的用户会从旧版 sidecar 加载器收到一次性的 `log.warn`，其中会提到 `openclaw doctor --fix` 和 macOS Keychain（而不是凭据悄悄地落入下游的 `No API key found for provider "openai-codex"`）。请在交互式终端中运行一次 `openclaw doctor --fix`，将基于 Keychain 的旧 token 原地迁移到 `auth-profiles.json`；之后，嵌入式回合（Telegram、cron、sub-agent 分发）就会像解析其他内联 OAuth 配置文件一样解析它们。
+
   </Accordion>
   <Accordion title="6. Hooks 模型验证">
     如果设置了 `hooks.gmail.model`，doctor 会根据目录和允许列表验证模型引用，并在无法解析或不被允许时发出警告。
@@ -355,7 +405,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     启用沙箱时，doctor 会检查 Docker 镜像，并在当前镜像缺失时提供构建或切换到旧名称的选项。
   </Accordion>
   <Accordion title="7b. 插件安装清理">
-    Doctor 会在 `openclaw doctor --fix` / `openclaw doctor --repair` 模式下移除 OpenClaw 生成的旧插件依赖暂存状态。这包括陈旧的生成依赖根目录、旧的安装阶段目录、来自早期内置插件依赖修复代码的包本地残留，以及孤立或恢复出来的、受管的 bundled `@openclaw/*` 插件 npm 副本——这些副本可能会遮蔽当前的 bundled manifest。Doctor 还会把宿主机上的 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管 npm 插件中，以便像 `openclaw/plugin-sdk/*` 这样的包本地运行时导入在更新或 npm 修复后仍能继续解析。
+    Doctor 会在 `openclaw doctor --fix` / `openclaw doctor --repair` 模式下移除 OpenClaw 生成的旧插件依赖暂存状态。这包括陈旧的生成依赖根目录、旧的安装阶段目录、来自早期内置插件依赖修复代码的包本地残留，以及孤立或恢复出来的、受管的 bundled `@openclaw/*` 插件 npm 副本——这些副本可能会遮蔽当前的 bundled manifest。Doctor 还会把宿主机上的 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管 npm 插件中，以便像 `openclaw/plugin-sdk/*` 这样的包本地运行时导入在更新或 npm 修复后仍然能够继续解析。
 
     如果配置引用了可下载插件，但本地插件注册表找不到它们，Doctor 也会重新安装缺失的插件。示例包括 material `plugins.entries`、已配置的频道/provider/search 设置，以及已配置的 agent 运行时。在包更新期间，doctor 会避免在核心包切换时运行包管理器插件修复；如果某个已配置插件在更新后仍需要恢复，请再次运行 `openclaw doctor --fix`。Gateway 启动和配置重载不会运行包管理器；插件安装仍然是显式的 doctor/install/update 工作。
 
@@ -465,19 +515,19 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     说明：
 
     - `openclaw doctor` 会在重写 supervisor 配置前提示确认。
-    - `openclaw doctor --yes` 会接受默认修复提示。
-    - `openclaw doctor --repair` 会在不提示的情况下应用建议的修复。
-    - `openclaw doctor --repair --force` 会覆盖自定义的 supervisor 配置。
-    - `OPENCLAW_SERVICE_REPAIR_POLICY=external` 会让 doctor 对 gateway 服务生命周期保持只读。它仍会报告服务健康并运行非服务类修复，但会跳过服务安装/启动/重启/bootstrap、supervisor 配置重写以及旧服务清理，因为该生命周期由外部 supervisor 管理。
-    - 在 Linux 上，当匹配的 systemd gateway unit 处于活动状态时，doctor 不会重写命令/入口点元数据。它还会在重复服务扫描中忽略非旧式、非活动的额外类似 gateway 单元，以免 companion service 文件造成清理噪音。
-    - 如果 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理，doctor 的服务安装/修复会验证 SecretRef，但不会将解析后的明文 token 值持久化到 supervisor 服务环境元数据中。
-    - Doctor 会检测由托管 `.env`/SecretRef 支持的服务环境值，这些值在旧版 LaunchAgent、systemd 或 Windows Scheduled Task 安装中曾被内联嵌入，并会重写服务元数据，使这些值从运行时来源而不是 supervisor 定义中加载。
-    - Doctor 会检测当服务命令在 `gateway.port` 变更后仍然固定旧的 `--port`，并将服务元数据重写为当前端口。
-    - 如果 token 认证需要 token 且配置的 token SecretRef 未解析，doctor 会阻止安装/修复路径并给出可执行的指导。
-    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password` 且未设置 `gateway.auth.mode`，doctor 会阻止安装/修复，直到显式设置 mode。
-    - 对于 Linux user-systemd 单元，doctor 的 token 漂移检查现在在比较服务认证元数据时会同时包含 `Environment=` 和 `EnvironmentFile=` 来源。
-    - 当配置文件最后由较新版本写入，而服务仍由较旧的 OpenClaw 二进制运行时，doctor 的服务修复会拒绝重写、停止或重启该 gateway 服务。参见 [Gateway 故障排查](/gateway/troubleshooting#split-brain-installs-and-newer-config-guard)。
-    - 你始终可以通过 `openclaw gateway install --force` 强制执行完整重写。
+    - `openclaw doctor --yes` 会接受默认的修复提示。
+    - `openclaw doctor --fix` 会在不提示的情况下应用建议的修复（`--repair` 是别名）。
+    - `openclaw doctor --fix --force` 会覆盖自定义的 supervisor 配置。
+    - `OPENCLAW_SERVICE_REPAIR_POLICY=external` 会让 doctor 对 gateway 服务生命周期保持只读。它仍会报告服务健康状况并执行非服务类修复，但会跳过服务安装/启动/重启/bootstrap、supervisor 配置重写以及旧服务清理，因为该生命周期由外部 supervisor 接管。
+    - 在 Linux 上，当匹配的 systemd gateway unit 处于活动状态时，doctor 不会重写命令/入口元数据。它还会在重复服务扫描中忽略非旧版、非活动的额外 gateway-like units，这样 companion service 文件不会产生清理噪音。
+    - 如果 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理，doctor 的服务安装/修复会验证 SecretRef，但不会把解析出的明文 token 值持久化到 supervisor 服务环境元数据中。
+    - Doctor 会检测由受管 `.env`/SecretRef 支持的服务环境值；旧版 LaunchAgent、systemd 或 Windows Scheduled Task 安装曾将这些值内联嵌入，现在会重写服务元数据，使这些值从运行时源加载，而不是从 supervisor 定义中加载。
+    - Doctor 会检测当服务命令在 `gateway.port` 变更后仍然固定在旧的 `--port` 上，并将服务元数据重写为当前端口。
+    - 如果 token 认证需要 token，而配置的 token SecretRef 处于未解析状态，doctor 会阻止安装/修复流程并给出可执行的指导。
+    - 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，而且 `gateway.auth.mode` 未设置，doctor 会阻止安装/修复，直到显式设置模式。
+    - 对于 Linux user-systemd units，doctor 的 token 漂移检查现在在比较服务认证元数据时会同时包含 `Environment=` 和 `EnvironmentFile=` 来源。
+    - 当配置是由较新版本最后写入时，doctor 的服务修复会拒绝重写、停止或重启来自更旧 OpenClaw 二进制的 gateway 服务。参见 [Gateway 故障排除](/gateway/troubleshooting#split-brain-installs-and-newer-config-guard)。
+    - 你始终可以通过 `openclaw gateway install --force` 强制完全重写。
 
   </Accordion>
   <Accordion title="16. Gateway 运行时 + 端口诊断">

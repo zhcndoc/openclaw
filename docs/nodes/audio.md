@@ -21,19 +21,20 @@ title: "音频和语音笔记"
 如果你**没有配置模型**，并且 `tools.media.audio.enabled` **未**设置为 `false`，
 OpenClaw 会按以下顺序自动检测，并在第一个可用选项处停止：
 
-1. **当前活动回复模型**，当其提供方支持音频理解时。
+1. **当前回复模型**，当其提供方支持音频理解时。
 2. **本地 CLI**（如果已安装）
    - `sherpa-onnx-offline`（需要 `SHERPA_ONNX_MODEL_DIR`，其中包含 encoder/decoder/joiner/tokens）
    - `whisper-cli`（来自 `whisper-cpp`；使用 `WHISPER_CPP_MODEL` 或内置的 tiny 模型）
    - `whisper`（Python CLI；会自动下载模型）
-3. **Gemini CLI** (`gemini`)，使用 `read_many_files`
-4. **提供方认证**
-   - 先尝试已配置且支持音频的 `models.providers.*` 条目
-   - 内置备用顺序：OpenAI → Groq → xAI → Deepgram → Google → SenseAudio → ElevenLabs → Mistral
+3. **提供方认证**
+   - 首先尝试已配置的 `models.providers.*` 中支持音频的条目
+   - 内置回退顺序：OpenAI → Groq → xAI → Deepgram → Google → SenseAudio → ElevenLabs → Mistral
+
+截至 2026-05-22，Gemini CLI 已不再支持媒体理解的自动检测。Google 正在将 Gemini CLI 用户迁移到 Antigravity CLI；音频应使用本地或提供方转写，而图片/视频的 CLI 回退应迁移到 Antigravity CLI（`agy`）。
 
 要禁用自动检测，请设置 `tools.media.audio.enabled: false`。
 要自定义，请设置 `tools.media.audio.models`。
-注意：二进制文件检测在 macOS/Linux/Windows 上是尽力而为；请确保 CLI 在 `PATH` 中（我们会展开 `~`），或者使用完整命令路径显式设置一个 CLI 模型。
+注意：二进制检测在 macOS/Linux/Windows 上尽力而为；请确保 CLI 在 `PATH` 中（我们会展开 `~`），或者为 CLI 模型设置带完整命令路径的显式配置。
 
 ## 配置示例
 

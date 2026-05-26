@@ -26,7 +26,7 @@ OpenClaw 可以通过 pi-ai 的 **Bedrock Converse** 流式提供程序使用 **
     <Steps>
       <Step title="在网关主机上设置 AWS 凭证">
         ```bash
-        export AWS_ACCESS_KEY_ID="AKIA..."
+        export AWS_ACCESS_KEY_ID="EXAMPLE_AWS_ACCESS_KEY_ID"
         export AWS_SECRET_ACCESS_KEY="..."
         export AWS_REGION="us-east-1"
         # 可选：
@@ -241,31 +241,31 @@ openclaw models list
   </Accordion>
 
   <Accordion title="Service tier">
-    Some Bedrock models support a `service_tier` parameter to optimize for cost
-    or latency. The following tiers are available:
+    某些 Bedrock 模型支持 `service_tier` 参数，用于优化成本
+    或延迟。可用的层级如下：
 
     | Tier | Description |
     |------|-------------|
-    | `default` | Standard Bedrock tier |
-    | `flex` | Discounted processing for workloads that can tolerate longer latency |
-    | `priority` | Prioritized processing for latency-sensitive workloads |
-    | `reserved` | Reserved capacity for steady-state workloads |
+    | `default` | 标准 Bedrock 层级 |
+    | `flex` | 适用于可接受更长延迟的工作负载的折扣处理 |
+    | `priority` | 适用于对延迟敏感的工作负载的优先处理 |
+    | `reserved` | 适用于稳定态工作负载的预留容量 |
 
-    Set `serviceTier` (or `service_tier`) via `agents.defaults.params` for
-    Bedrock model requests, or per-model in
-    `agents.defaults.models["<model-key>"].params`:
+    通过 `agents.defaults.params` 为
+    Bedrock 模型请求设置 `serviceTier`（或 `service_tier`），或者在
+    `agents.defaults.models["<model-key>"].params` 中按模型设置：
 
     ```json5
     {
       agents: {
         defaults: {
           params: {
-            serviceTier: "flex", // applies to all models
+            serviceTier: "flex", // 适用于所有模型
           },
           models: {
             "amazon-bedrock/mistral.mistral-large-3-675b-instruct": {
               params: {
-                serviceTier: "priority", // per-model override
+                serviceTier: "priority", // 按模型覆盖
               },
             },
           },
@@ -274,12 +274,12 @@ openclaw models list
     }
     ```
 
-    Valid values are `default`, `flex`, `priority`, and `reserved`. Not all
-    models support all tiers — if an unsupported tier is requested, Bedrock will
-    return a validation error. Note: the error message is somewhat misleading;
-    it may say "The provided model identifier is invalid" rather than indicating
-    an unsupported service tier. If you see this error, check whether the model
-    supports the requested tier.
+    有效值为 `default`、`flex`、`priority` 和 `reserved`。并非所有
+    模型都支持所有层级——如果请求了不受支持的层级，Bedrock 将
+    返回校验错误。注意：错误信息可能有些误导；
+    它可能会显示“所提供的模型标识符无效”，而不是指出
+    不支持的服务层级。如果看到此错误，请检查模型是否
+    支持所请求的层级。
 
   </Accordion>
 

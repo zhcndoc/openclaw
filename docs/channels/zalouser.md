@@ -166,7 +166,25 @@ openclaw directory groups list --channel zalouser --query "work"
 }
 ```
 
-## 输入中显示、反应和送达确认
+## 环境变量
+
+Zalo Personal 插件也可以从环境变量中读取配置文件选择：
+
+- `ZALOUSER_PROFILE`：当通道或账号配置中未设置 `profile` 时使用的配置文件名称。
+- `ZCA_PROFILE`：旧版回退配置文件名称，仅在未设置 `ZALOUSER_PROFILE` 时使用。
+
+配置文件名称用于选择 OpenClaw 状态中已保存的 Zalo 登录凭据。解析顺序如下：
+
+1. 配置中的显式 `profile`。
+2. `ZALOUSER_PROFILE`。
+3. `ZCA_PROFILE`。
+4. 非默认账号使用账号 id，默认账号使用 `default`。
+
+对于多账号设置，建议在配置中为每个账号单独设置 `profile`，这样
+一个环境变量不会让多个账号共享同一个登录
+会话。
+
+## 打字、反应与送达确认
 
 - OpenClaw 会在发送回复前先发送一个输入中事件（尽力而为）。
 - 通道操作中支持 `zalouser` 的消息反应动作 `react`。

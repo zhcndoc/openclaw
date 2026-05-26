@@ -65,6 +65,9 @@ openclaw plugins install clawhub:@openclaw/whatsapp
 openclaw channels login --channel whatsapp
 ```
 
+    当前登录基于二维码。在远程或无头环境中，请确保在开始登录之前，
+    你有可靠的路径将实时二维码传送到将要扫描它的手机上。
+
     对于特定账号：
 
 ```bash
@@ -103,6 +106,10 @@ openclaw pairing approve whatsapp <CODE>
 <Note>
 OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（频道元数据和设置流程已针对这种配置进行了优化，但也支持个人号码配置。）
 </Note>
+
+<Warning>
+当前 WhatsApp 设置流程仅支持二维码。终端渲染的二维码、截图、PDF 或聊天附件在从远程机器转发过程中可能会过期或变得不可读。对于远程/无头主机，优先使用直接的二维码图片传递路径，而不是手动终端截取。
+</Warning>
 
 ## 部署模式
 
@@ -162,6 +169,32 @@ OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（�
 - WhatsApp Channels/Newsletters 可以作为显式出站目标，并使用其原生 `@newsletter` JID。出站 newsletter 发送使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 会话语义。
 - WhatsApp Web 传输会在 gateway 主机上遵循标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
 - 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复送达后清除 WhatsApp 的 ack 反应。
+
+## 审批提示
+
+WhatsApp 可以通过 `👍` / `👎` 反应来呈现 exec 和 plugin 的审批提示。投递由顶层审批转发配置控制：
+
+```json5
+{
+  approvals: {
+    exec: {
+      enabled: true,
+      mode: "session",
+    },
+    plugin: {
+      enabled: true,
+      mode: "targets",
+      targets: [{ channel: "whatsapp", to: "+15551234567" }],
+    },
+  },
+}
+```
+
+`approvals.exec` 和 `approvals.plugin` 相互独立。将 WhatsApp 作为频道启用只会连接传输；除非匹配的审批家族已启用并路由到 WhatsApp，否则不会发送审批提示。Session mode 只会为源自 WhatsApp 的审批投递原生 emoji 审批。Target mode 使用共享转发管道处理显式 WhatsApp 目标，不会创建单独的审批人-DM 扇出。
+
+WhatsApp 审批反应需要来自 `allowFrom` 或 `"*"` 的显式 WhatsApp 审批者。
+`defaultTo` 控制普通默认消息目标；它不是审批审批者。手动
+`/approve` 命令在审批解析之前仍会先经过正常的 WhatsApp 发送者授权路径。
 
 ## 插件钩子与隐私
 
@@ -383,24 +416,25 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
   </Accordion>
 
   <Accordion title="出站媒体行为">
-    - 支持图片、视频、音频（PTT 语音消息）和文档载荷
-    - 音频媒体通过 Baileys 的 `audio` 载荷发送，并设置 `ptt: true`，因此 WhatsApp 客户端会将其显示为按住说话语音消息
-    - 回复载荷会保留 `audioAsVoice`；即使提供方返回 MP3 或 WebM，面向 WhatsApp 的 TTS 语音消息输出仍会走这条 PTT 路径
-    - 原生 Ogg/Opus 音频会以 `audio/ogg; codecs=opus` 发送，以兼容语音消息
-    - 非 Ogg 音频（包括 Microsoft Edge TTS 的 MP3/WebM 输出）会在 PTT 投递前通过 `ffmpeg` 转码为 48 kHz 单声道 Ogg/Opus
-    - `/tts latest` 会将最新的助手回复作为一条语音消息发送，并抑制对同一回复的重复发送；`/tts chat on|off|default` 控制当前 WhatsApp 聊天的自动 TTS
-    - 通过在视频发送中使用 `gifPlayback: true` 支持动图 GIF 播放
-    - 发送多媒体回复载荷时，字幕会应用到第一个媒体项；但 PTT 语音消息会先发送音频，再单独发送可见文本，因为 WhatsApp 客户端不会一致地渲染语音消息字幕
+    - 支持图片、视频、音频（PTT 语音留言）和文档载荷
+    - 音频媒体通过 Baileys 的 `audio` 载荷发送，并带上 `ptt: true`，因此 WhatsApp 客户端会将其渲染为按键通话语音留言
+    - 回复载荷会保留 `audioAsVoice`；即使提供方返回 MP3 或 WebM，WhatsApp 的 TTS 语音留言输出也会继续走这条 PTT 路径
+    - 原生 Ogg/Opus 音频会以 `audio/ogg; codecs=opus` 发送，以保持语音留言兼容性
+    - 非 Ogg 音频，包括 Microsoft Edge TTS 的 MP3/WebM 输出，会在通过 PTT 投递前使用 `ffmpeg` 转码为 48 kHz 单声道 Ogg/Opus
+    - `/tts latest` 会将最新的助手回复作为一条语音留言发送，并阻止同一回复的重复发送；`/tts chat on|off|default` 控制当前 WhatsApp 聊天的自动 TTS
+    - 视频发送支持通过 `gifPlayback: true` 播放动画 GIF
+    - `forceDocument` / `asDocument` 会将出站图片、GIF 和视频通过 Baileys 文档载荷发送，以避免 WhatsApp 媒体压缩，同时保留解析后的文件名和 MIME 类型
+    - 在发送多媒体回复载荷时，字幕会应用到第一个媒体项上；但 PTT 语音留言会先发送音频、再单独发送可见文本，因为 WhatsApp 客户端不会一致地渲染语音留言字幕
     - 媒体来源可以是 HTTP(S)、`file://` 或本地路径
 
   </Accordion>
 
-  <Accordion title="媒体大小限制与回退行为">
+  <Accordion title="媒体大小限制和回退行为">
     - 入站媒体保存上限：`channels.whatsapp.mediaMaxMb`（默认 `50`）
     - 出站媒体发送上限：`channels.whatsapp.mediaMaxMb`（默认 `50`）
     - 按账号覆盖使用 `channels.whatsapp.accounts.<accountId>.mediaMaxMb`
-    - 图片会自动优化（调整大小/质量扫描）以适配限制
-    - 媒体发送失败时，会在第一项回退为发送文本警告，而不是静默丢弃回复
+    - 除非 `forceDocument` / `asDocument` 请求文档投递，否则图片会自动优化（调整尺寸/质量扫描）以符合限制
+    - 媒体发送失败时，首项回退会发送文本警告，而不是静默丢弃回复
 
   </Accordion>
 </AccordionGroup>
@@ -577,8 +611,20 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
     修复：
 
     ```bash
+    openclaw channels status --probe
     openclaw doctor
     openclaw logs --follow
+    openclaw gateway status
+    ```
+
+    如果在主机连接性和时序都修正后循环仍然存在，请备份
+    该账号的认证目录并重新关联该账号：
+
+    ```bash
+    cp -a ~/.openclaw/credentials/whatsapp/<accountId> \
+      ~/.openclaw/credentials/whatsapp/<accountId>.bak
+    openclaw channels logout --channel whatsapp --account <accountId>
+    openclaw channels login --channel whatsapp --account <accountId>
     ```
 
     如果 `~/.openclaw/logs/whatsapp-health.log` 显示 `Gateway inactive`，但
@@ -624,6 +670,8 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
     - `groups` 白名单条目
     - 提及门控（`requireMention` + 提及模式）
     - `openclaw.json` 中的重复键（JSON5）：后面的条目会覆盖前面的，因此每个作用域只保留一个 `groupPolicy`
+
+    如果存在 `channels.whatsapp.groups`，WhatsApp 仍然可以观察到其他群组中的消息，但 OpenClaw 会在会话路由之前将它们丢弃。将群组 JID 添加到 `channels.whatsapp.groups`，或添加 `groups["*"]` 以允许所有群组，同时仍通过 `groupPolicy` 和 `groupAllowFrom` 维护发送者授权。
 
   </Accordion>
 

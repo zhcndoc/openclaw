@@ -1,10 +1,11 @@
 ---
 summary: "使用 OpenRouter 的统一 API 在 OpenClaw 中访问众多模型"
 read_when:
-  - 你希望为许多 LLM 使用一个 API 密钥
-  - 你希望在 OpenClaw 中通过 OpenRouter 运行模型
-  - 你希望使用 OpenRouter 进行图像生成
-  - 你希望使用 OpenRouter 进行视频生成
+  - 你想为多个 LLM 使用一个 API 密钥
+  - 你想在 OpenClaw 中通过 OpenRouter 运行模型
+  - 你想使用 OpenRouter 进行图像生成
+  - 你想使用 OpenRouter 进行音乐生成
+  - 你想使用 OpenRouter 进行视频生成
 title: "OpenRouter"
 ---
 
@@ -100,7 +101,33 @@ OpenClaw 会将文本生成视频和图像生成视频任务提交给 OpenRouter
 返回的 `polling_url`，并从 OpenRouter 的 `unsigned_urls` 或文档中说明的任务内容端点下载已完成的视频。默认情况下，参考图像会作为首帧/尾帧图像发送；带有 `reference_image` 标记的图像会作为 OpenRouter 输入引用发送。内置的 `google/veo-3.1-fast` 默认项声明了当前支持的 4/6/8
 秒时长、`720P`/`1080P` 分辨率以及 `16:9`/`9:16` 宽高比。由于上游视频生成 API 目前仅接受文本和图像引用，因此 OpenRouter 上未注册视频转视频功能。
 
-## 文本转语音
+## Music generation
+
+OpenRouter 也可以通过 chat completions
+音频输出来支持 `music_generate` 工具。在
+`agents.defaults.musicGenerationModel` 下使用 OpenRouter 音频模型：
+
+```json5
+{
+  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  agents: {
+    defaults: {
+      musicGenerationModel: {
+        primary: "openrouter/google/lyria-3-pro-preview",
+        timeoutMs: 180_000,
+      },
+    },
+  },
+}
+```
+
+捆绑的 OpenRouter 音乐提供商默认使用
+`google/lyria-3-pro-preview`，并且还提供
+`google/lyria-3-clip-preview`。OpenClaw 会发送 `modalities: ["text",
+"audio"]`，启用流式传输，收集流式音频分片，并将结果保存为用于通道交付的生成媒体。Lyria 模型可通过共享的 `music_generate image=...`
+参数接受参考图像。
+
+## Text-to-speech
 
 OpenRouter 也可通过其兼容 OpenAI 的
 `/audio/speech` 端点作为 TTS 提供商使用。
@@ -233,8 +260,57 @@ OpenRouter 文档中定义的应用归属请求头：
     重放验证或 bootstrap 重写。
   </Accordion>
 
-  <Accordion title="提供商路由元数据">
-    如果你在模型参数中传入 OpenRouter 提供商路由，OpenClaw 会在共享流包装器运行之前将其作为 OpenRouter 路由元数据转发。
+  <Accordion title="Provider routing metadata">
+    OpenRouter 支持一个用于底层提供商路由的 `provider` 请求对象。通过
+    `models.providers.openrouter.params.provider` 为所有 OpenRouter 文本模型请求配置默认策略：
+
+    ```json5
+    {
+      models: {
+        providers: {
+          openrouter: {
+            params: {
+              provider: {
+                sort: "latency",
+                require_parameters: true,
+                data_collection: "deny",
+              },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    OpenClaw 会将该对象作为请求 `provider` 负载转发给 OpenRouter。请使用 OpenRouter 文档中的 snake_case 字段，包括 `sort`、
+    `only`、`ignore`、`order`、`allow_fallbacks`、`require_parameters`、
+    `data_collection`、`quantizations`、`max_price`、`preferred_max_latency`、
+    `preferred_min_throughput`、`zdr` 和 `enforce_distillable_text`。
+
+    按模型设置的参数仍然会覆盖全局提供商路由对象：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          models: {
+            "openrouter/anthropic/claude-sonnet-4-6": {
+              params: {
+                provider: {
+                  order: ["anthropic"],
+                  allow_fallbacks: false,
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    这只适用于 OpenRouter chat-completions 路由。直接的 Anthropic、
+    Google、OpenAI 或自定义提供商路由会忽略 OpenRouter 路由参数。
+
   </Accordion>
 </AccordionGroup>
 

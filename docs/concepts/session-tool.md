@@ -1,9 +1,9 @@
 ---
 summary: "用于跨会话状态、回忆、消息传递和子代理编排的代理工具"
 read_when:
-  - 你想了解代理有哪些会话工具
+  - 你想了解代理拥有哪些会话工具
   - 你想配置跨会话访问或子代理生成
-  - 你想检查状态或控制已生成的子代理
+  - 你想检查已生成子代理的状态
 title: "会话工具"
 ---
 
@@ -11,15 +11,15 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 ## 可用工具
 
-| 工具               | 作用                                                                     |
-| ------------------ | ------------------------------------------------------------------------ |
-| `sessions_list`    | 列出会话，可选过滤条件包括 kind、label、agent、recency、preview           |
-| `sessions_history` | 读取特定会话的对话记录                                                     |
-| `sessions_send`    | 向另一个会话发送消息，并可选择等待回复                                     |
+| Tool               | 功能说明                                                                  |
+| ------------------ | ------------------------------------------------------------------------- |
+| `sessions_list`    | 列出会话，可带可选过滤条件（kind、label、agent、最近活跃度、预览）        |
+| `sessions_history` | 读取特定会话的转录记录                                                     |
+| `sessions_send`    | 向另一个会话发送消息，并可选择等待响应                                       |
 | `sessions_spawn`   | 为后台工作生成一个隔离的子代理会话                                           |
-| `sessions_yield`   | 结束当前轮次，并等待后续子代理结果                                           |
-| `subagents`        | 列出、引导或终止此会话中已生成的子代理                                       |
-| `session_status`   | 显示一个类似 `/status` 的卡片，并可选设置按会话生效的模型覆盖值               |
+| `sessions_yield`   | 结束当前轮次并等待后续子代理结果                                             |
+| `subagents`        | 列出该会话中已生成的子代理状态                                               |
+| `session_status`   | 显示一个 `/status` 风格的信息卡，并可选设置每会话模型覆盖值                 |
 
 这些工具仍然受当前生效的工具配置文件以及允许/拒绝策略约束。`tools.profile: "coding"` 包含完整的会话编排工具集，包括 `sessions_spawn`、`sessions_yield` 和 `subagents`。`tools.profile: "messaging"` 包含跨会话消息工具（`sessions_list`、`sessions_history`、`sessions_send`、`session_status`），但不包含子代理生成。若要保留 messaging 配置文件，同时仍允许原生委派，请添加：
 
@@ -82,11 +82,7 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 `sessions_yield` 会有意结束当前轮次，以便下一条消息可以成为你正在等待的后续事件。在生成子代理后使用它，当你希望完成结果作为下一条消息到达，而不是建立轮询循环时尤其适合。
 
-`subagents` 是用于已生成 OpenClaw 子代理的控制平面辅助工具。它支持：
-
-- `action: "list"` 用于检查活跃/最近运行
-- `action: "steer"` 用于向正在运行的子任务发送后续指导
-- `action: "kill"` 用于停止单个子任务或 `all`
+`subagents` 是已生成 OpenClaw 子代理的可见性辅助工具。它支持 `action: "list"` 来检查活动/最近运行。
 
 ## 生成子代理
 
@@ -96,7 +92,7 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 关键选项：
 
-- `runtime: "subagent"` (默认) or `"acp"` 用于外部宿主代理。
+- `runtime: "subagent"` (默认) 或 `"acp"` 用于外部宿主代理。
 - `model` 和 `thinking` 可覆盖子会话设置。
 - `thread: true` 用于将生成操作绑定到聊天线程（Discord、Slack 等）。
 - `sandbox: "require"` 用于对子代理强制启用沙箱。

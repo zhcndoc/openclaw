@@ -95,11 +95,11 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 | Topic            | `tools.exec.safeBins`                                  | Allowlist (`exec-approvals.json`)                                                  |
 | ---------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Goal             | Auto-allow narrow stdin filters                        | Explicitly trust specific executables                                              |
-| Match type       | Executable name + safe-bin argv policy                 | Resolved executable path glob, or bare command-name glob for PATH-invoked commands |
-| Argument scope   | Restricted by safe-bin profile and literal-token rules | Path match by default; optional `argPattern` can restrict parsed argv              |
-| Typical examples | `head`, `tail`, `tr`, `wc`                             | `jq`, `python3`, `node`, `ffmpeg`, custom CLIs                                     |
-| Best use         | Low-risk text transforms in pipelines                  | Any tool with broader behavior or side effects                                     |
+| Goal             | 自动允许窄范围的 stdin 过滤器                         | 显式信任特定可执行文件                                                           |
+| Match type       | 可执行文件名 + 安全二进制 argv 策略                  | 已解析可执行文件路径通配，或 PATH 调用命令的裸命令名通配                           |
+| Argument scope   | 受安全二进制配置文件和字面标记规则限制               | 默认按路径匹配；可选 `argPattern` 可限制解析后的 argv                              |
+| Typical examples | `head`、`tail`、`tr`、`wc`                             | `jq`、`python3`、`node`、`ffmpeg`、自定义 CLI                                     |
+| Best use         | 管道中的低风险文本转换                               | 任何行为更广泛或具有副作用的工具                                                 |
 
 配置位置：
 
@@ -148,9 +148,10 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 - 对于这些工作流，请优先使用沙箱、单独的主机边界，或显式受信任的
   allowlist/完整工作流，由操作员接受更宽泛的运行时语义。
 
-当需要审批时，exec 工具会立即返回一个审批 id。使用该 id 来
-关联后续系统事件（`Exec finished` / `Exec denied`）。如果在超时前未收到决策，
-则该请求会被视为审批超时，并作为拒绝原因展示。
+When approvals are required, the exec tool returns immediately with an approval id. Use that id to
+correlate later approved-run system events (`Exec finished`, and `Exec running` when configured).
+If no decision arrives before the timeout, the request is treated as an approval timeout and
+surfaced as a terminal denial rather than an agent-waking system event.
 
 ### 后续投递行为
 
@@ -197,8 +198,9 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 ### 插件审批转发
 
-插件审批转发使用与 exec 审批相同的投递管道，但在 `approvals.plugin` 下有自己独立的配置。
-启用或禁用其中一个不会影响另一个。
+插件审批转发使用与 exec 审批相同的投递管道，但在 `approvals.plugin` 下有自己独立的
+配置。启用或禁用其中之一不会影响另一个。关于插件编写行为、请求字段和决策语义，请参见
+[插件权限请求](/plugins/plugin-permission-requests)。
 
 ```json5
 {
@@ -255,9 +257,14 @@ OpenClaw 会发送一条同聊回退通知，并附上精确的 `/approve <id> <
 
 通用模型：
 
-- 宿主 exec 策略仍然决定是否需要 exec 审批
-- `approvals.exec` 控制将审批提示转发到其他聊天目的地
-- `channels.<channel>.execApprovals` 控制该频道是否作为原生审批客户端
+- host exec policy still decides whether exec approval is required
+- `approvals.exec` controls forwarding approval prompts to other chat destinations
+- `channels.<channel>.execApprovals` controls whether that channel acts as a native approval client
+- Slack plugin approvals can use Slack's native approval client when the request comes from Slack
+  and Slack plugin approvers resolve; `approvals.plugin` can also route plugin approvals to Slack
+  sessions or targets even when Slack exec approvals are disabled
+- WhatsApp emoji approval delivery is gated by `approvals.exec` and `approvals.plugin`, while
+  approval reactions require explicit WhatsApp approvers from `channels.whatsapp.allowFrom` or `"*"`
 
 当满足以下条件时，原生审批客户端会自动启用“优先私信”投递：
 
@@ -271,35 +278,34 @@ OpenClaw 会发送一条同聊回退通知，并附上精确的 `/approve <id> <
 
 FAQ：[为什么聊天审批有两个 exec 审批配置？](/help/faq-first-run#why-are-there-two-exec-approval-configs-for-chat-approvals)
 
-- Discord：`channels.discord.execApprovals.*`
-- Slack：`channels.slack.execApprovals.*`
-- Telegram：`channels.telegram.execApprovals.*`
+- Discord: `channels.discord.execApprovals.*`
+- Slack: `channels.slack.execApprovals.*`
+- Telegram: `channels.telegram.execApprovals.*`
+- WhatsApp: 使用 `approvals.exec` 和 `approvals.plugin` 将审批提示路由到 WhatsApp
 
 这些原生审批客户端在共享的同聊 `/approve` 流程和共享审批按钮之上，增加了私信路由和可选的频道分发。
 
 共享行为：
 
-- Slack、Matrix、Microsoft Teams 以及类似的可投递聊天使用正常的频道认证模型来处理同聊 `/approve`
+- Slack、Matrix、Microsoft Teams 和类似的可投递聊天使用正常的频道认证模型
+  进行同聊 `/approve`
 - 当原生审批客户端自动启用时，默认原生投递目标为审批者私信
-- 对于 Discord 和 Telegram，只有解析出的审批者可以批准或拒绝
-- Discord 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断
-- Telegram 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断
-- Slack 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断
-- Slack 原生按钮会保留审批 id 类型，因此 `plugin:` id 可以解析插件审批，
-  而无需第二层 Slack 本地回退
-- Matrix 原生私信/频道路由和 reaction 快捷方式同时处理 exec 和插件审批；
-  插件授权仍来自 `channels.matrix.dm.allowFrom`
-- Matrix 原生提示会在第一个提示事件中包含 `com.openclaw.approval` 自定义事件内容，
-  这样支持 OpenClaw 的 Matrix 客户端就能读取结构化审批状态，而标准客户端
-  仍保留纯文本 `/approve` 回退
+- 对于 Discord 和 Telegram，只有已解析出的审批者才能批准或拒绝
+- Discord 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断而来
+- Telegram 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断而来
+- Slack 审批者可以是显式的（`execApprovals.approvers`）或从 `commands.ownerAllowFrom` 推断而来
+- Slack 插件审批私信使用来自 `allowFrom` 和账户默认路由的 Slack 插件审批者，而不是 Slack exec 审批者
+- Slack 原生按钮会保留审批 ID 类型，因此 `plugin:` ID 可以解析插件审批，而无需第二层 Slack 本地回退
+- WhatsApp 表情审批仅在匹配的顶层转发家族已启用并路由到 WhatsApp 时处理 exec 和 plugin 提示；仅目标的 WhatsApp 转发会停留在共享转发路径上，除非它匹配相同的原生起源目标
+- Matrix 原生 DM/频道路由和反应快捷方式同时处理 exec 和 plugin 审批；插件授权仍来自 `channels.matrix.dm.allowFrom`
+- Matrix 原生提示会在第一个提示事件中包含 `com.openclaw.approval` 自定义事件内容，这样感知 OpenClaw 的 Matrix 客户端就能读取结构化审批状态，而原生客户端仍保留纯文本 `/approve` 回退
 - 请求者不必是审批者
-- 当该聊天本身已支持命令和回复时，起源聊天可以直接使用 `/approve` 批准
-- 原生 Discord 审批按钮按审批 id 类型路由：`plugin:` id 会直接进入插件审批，
-  其他所有内容都进入 exec 审批
-- 原生 Telegram 审批按钮遵循与 `/approve` 相同的受限 exec-to-plugin 回退
+- 当起源聊天本身已经支持命令和回复时，该聊天可以直接用 `/approve` 批准
+- 原生 Discord 审批按钮按审批 ID 类型路由：`plugin:` ID 直接进入插件审批，其余全部进入 exec 审批
+- 原生 Telegram 审批按钮遵循与 `/approve` 相同的受限 exec 到 plugin 回退
 - 当原生 `target` 启用起源聊天投递时，审批提示会包含命令文本
 - 待处理的 exec 审批默认在 30 分钟后过期
-- 如果没有运维 UI 或配置的审批客户端可以接受该请求，提示会回退到 `askFallback`
+- 如果没有操作员 UI 或已配置的审批客户端可以接受该请求，提示会回退到 `askFallback`
 
 诸如 `/diagnostics` 和 `/export-trajectory` 之类的敏感 owner-only 组命令，对审批提示和最终结果使用私有的
 所有者路由。OpenClaw 会先尝试在所有者运行该命令的同一界面上进行私有路由。如果该界面没有私有所有者路由，
@@ -317,10 +323,10 @@ Telegram 默认使用审批者私信（`target: "dm"`）。当你希望审批提
 ### macOS IPC 流程
 
 ```
-Gateway -> Node Service (WS)
+Gateway -> Node 服务 (WS)
                  |  IPC (UDS + token + HMAC + TTL)
                  v
-             Mac App (UI + approvals + system.run)
+             Mac 应用（UI + 审批 + system.run）
 ```
 
 安全说明：
@@ -328,6 +334,57 @@ Gateway -> Node Service (WS)
 - Unix socket 模式为 `0600`，token 存储在 `exec-approvals.json` 中。
 - 同 UID 对等方检查。
 - 挑战/响应（nonce + HMAC token + request hash）+ 短 TTL。
+
+## 常见问题
+
+### 在审批目标上，什么时候会使用 `accountId` 和 `threadId`？
+
+当某个频道配置了多个身份，而审批提示必须通过其中一个特定账号发出时，使用 `accountId`。当目标支持话题或线程，并且提示应停留在该线程中而不是顶级聊天中时，使用 `threadId`。
+
+一个具体的 Telegram 场景是：带有论坛话题的运维超级群组，以及两个 Telegram 机器人账号。`to` 值指定超级群组，`accountId` 选择机器人账号，`threadId` 选择论坛话题：
+
+```json5
+{
+  approvals: {
+    exec: {
+      enabled: true,
+      mode: "targets",
+      targets: [
+        {
+          channel: "telegram",
+          to: "-1001234567890",
+          accountId: "ops-bot",
+          threadId: "77",
+        },
+      ],
+    },
+  },
+  channels: {
+    telegram: {
+      accounts: {
+        default: {
+          name: "Primary bot",
+          botToken: "env:TELEGRAM_PRIMARY_BOT_TOKEN",
+        },
+        "ops-bot": {
+          name: "Operations bot",
+          botToken: "env:TELEGRAM_OPS_BOT_TOKEN",
+        },
+      },
+    },
+  },
+}
+```
+
+在该配置下，转发的执行审批会由 `ops-bot` Telegram 账号发布到聊天 `-1001234567890` 的话题 `77` 中。没有 `accountId` 的目标会使用该频道的默认账号，而没有 `threadId` 的目标会发布到顶级目标位置。
+
+### 当审批发送到某个会话时，该会话中的任何人都可以批准吗？
+
+不可以。会话投递只决定提示出现在哪里，它本身并不会授权该聊天中的每个参与者都能批准。
+
+对于通用的同聊天 `/approve`，发送者必须已经被授权可在该频道会话中执行命令。如果频道暴露了明确的审批批准者，那么即使他们在该会话中并非其他命令的授权用户，也可以授权 `/approve` 动作。
+
+某些频道更严格。Discord、Telegram、Matrix、Slack 原生审批 DM，以及类似的原生审批客户端，会使用它们解析出的批准者列表来进行审批授权。例如，一个 Telegram 论坛话题中的审批提示可能对话题中的所有人可见，但只有从 `channels.telegram.execApprovals.approvers` 或 `commands.ownerAllowFrom` 解析出的数字 Telegram 用户 ID 才能批准或拒绝它。
 
 ## 相关内容
 

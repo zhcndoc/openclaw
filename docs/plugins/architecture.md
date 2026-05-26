@@ -37,15 +37,17 @@ sidebarTitle: "内部"
 | ---------------------- | ------------------------------------------------ | ------------------------------------ |
 | 文本推理               | `api.registerProvider(...)`                      | `openai`, `anthropic`                |
 | CLI 推理后端           | `api.registerCliBackend(...)`                    | `openai`, `anthropic`                |
+| 向量嵌入               | `api.registerEmbeddingProvider(...)`             | 由提供者拥有的向量插件                |
 | 语音                   | `api.registerSpeechProvider(...)`                | `elevenlabs`, `microsoft`            |
 | 实时转录               | `api.registerRealtimeTranscriptionProvider(...)` | `openai`                             |
 | 实时语音               | `api.registerRealtimeVoiceProvider(...)`         | `openai`                             |
 | 媒体理解               | `api.registerMediaUnderstandingProvider(...)`    | `openai`, `google`                   |
+| 会议纪要来源           | `api.registerMeetingNotesSourceProvider(...)`    | `discord`, `meeting-notes`           |
 | 图像生成               | `api.registerImageGenerationProvider(...)`       | `openai`, `google`, `fal`, `minimax` |
 | 音乐生成               | `api.registerMusicGenerationProvider(...)`       | `google`, `minimax`                  |
 | 视频生成               | `api.registerVideoGenerationProvider(...)`       | `qwen`                               |
-| Web 抓取               | `api.registerWebFetchProvider(...)`              | `firecrawl`                          |
-| Web 搜索               | `api.registerWebSearchProvider(...)`             | `google`                             |
+| 网页抓取               | `api.registerWebFetchProvider(...)`              | `firecrawl`                          |
+| 网页搜索               | `api.registerWebSearchProvider(...)`             | `google`                             |
 | 频道 / 消息            | `api.registerChannel(...)`                       | `msteams`, `matrix`                  |
 | 网关发现               | `api.registerGatewayDiscoveryService(...)`       | `bonjour`                            |
 
@@ -70,16 +72,16 @@ sidebarTitle: "内部"
 OpenClaw 会根据插件实际的注册行为（而不仅仅是静态元数据）将每个已加载插件归类为某种形态：
 
 <AccordionGroup>
-  <Accordion title="plain-capability">
+  <Accordion title="纯能力">
     恰好注册一种能力类型（例如像 `mistral` 这样的仅提供者插件）。
   </Accordion>
-  <Accordion title="hybrid-capability">
+  <Accordion title="混合能力">
     注册多种能力类型（例如 `openai` 同时拥有文本推理、语音、媒体理解和图像生成）。
   </Accordion>
-  <Accordion title="hook-only">
+  <Accordion title="仅 hooks">
     只注册 hooks（类型化或自定义），不注册能力、工具、命令或服务。
   </Accordion>
-  <Accordion title="non-capability">
+  <Accordion title="非能力型">
     注册工具、命令、服务或路由，但不注册能力。
   </Accordion>
 </AccordionGroup>
@@ -104,10 +106,10 @@ OpenClaw 会根据插件实际的注册行为（而不仅仅是静态元数据�
 
 | 信号                     | 含义                                                      |
 | -------------------------- | ------------------------------------------------------------ |
-| **config valid**           | 配置解析正常，插件可正常解析                       |
-| **compatibility advisory** | 插件使用了受支持但较旧的模式（例如 `hook-only`） |
-| **legacy warning**         | 插件使用了已弃用的 `before_agent_start`        |
-| **hard error**             | 配置无效或插件加载失败                   |
+| **配置有效**           | 配置解析正常，插件可正常解析                       |
+| **兼容性提示** | 插件使用了受支持但较旧的模式（例如 `hook-only`） |
+| **旧版警告**         | 插件使用了已弃用的 `before_agent_start`        |
+| **严重错误**             | 配置无效或插件加载失败                   |
 
 `hook-only` 和 `before_agent_start` 今天都不会破坏你的插件：`hook-only` 只是建议性质，`before_agent_start` 仅会触发警告。这些信号也会出现在 `openclaw status --all` 和 `openclaw plugins doctor` 中。
 

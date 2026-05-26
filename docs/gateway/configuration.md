@@ -169,15 +169,16 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
   </Accordion>
 
-  <Accordion title="设置群聊提及门控">
-    群消息默认 **需要提及**。请为每个代理配置触发模式，并保持可见房间回复走默认的 message-tool 路径，除非你有意让每个普通群回复都使用旧式自动最终回复路径：
+  <Accordion title="Set up group chat mention gating">
+    Group messages default to **require mention**. Configure trigger patterns per agent. Normal group/channel replies post automatically; opt into the message-tool path for shared rooms where the agent should decide when to speak:
 
     ```json5
     {
       messages: {
         visibleReplies: "automatic", // 设为 "message_tool" 可在全局要求 message-tool 发送
         groupChat: {
-          visibleReplies: "message_tool", // 默认；可见输出需要 message(action=send)
+          visibleReplies: "message_tool", // opt-in; visible output requires message(action=send)
+          unmentionedInbound: "room_event", // unmentioned always-on group chatter is quiet context
         },
       },
       agents: {
@@ -411,7 +412,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     {
       cron: {
         enabled: true,
-        maxConcurrentRuns: 2, // cron 分发 + 隔离的 cron 代理轮执行
+        maxConcurrentRuns: 8, // 默认；cron 分发 + 隔离的 cron 代理轮次执行
         sessionRetention: "24h",
         runLog: {
           maxBytes: "2mb",
@@ -451,14 +452,14 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    安全提示：
-    - 将所有 hook/webhook 负载内容视为不受信任的输入。
-    - 使用专用的 `hooks.token`；不要重复使用共享的 Gateway 令牌。
-    - Hook 身份验证仅限请求头（`Authorization: Bearer ...` 或 `x-openclaw-token`）；查询字符串令牌会被拒绝。
+    Security note:
+    - 将所有 hook/webhook 载荷内容视为不受信任的输入。
+    - 使用专用的 `hooks.token`；不要复用活动 Gateway 认证密钥（`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 或 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`）。
+    - Hook 认证仅支持请求头（`Authorization: Bearer ...` 或 `x-openclaw-token`）；查询字符串 token 会被拒绝。
     - `hooks.path` 不能是 `/`；请将 webhook 入口放在专用子路径下，例如 `/hooks`。
-    - 除非进行范围非常受限的调试，否则请保持不安全内容绕过标志为禁用（`hooks.gmail.allowUnsafeExternalContent`、`hooks.mappings[].allowUnsafeExternalContent`）。
-    - 如果启用 `hooks.allowRequestSessionKey`，还应设置 `hooks.allowedSessionKeyPrefixes` 来限定调用方可选择的会话键。
-    - 对于 hook 驱动的代理，优先使用更强的现代模型层级和严格的工具策略（例如尽可能仅消息 + 沙箱）。
+    - 除非在严格限定范围内调试，否则请保持不安全内容绕过标志为禁用状态（`hooks.gmail.allowUnsafeExternalContent`、`hooks.mappings[].allowUnsafeExternalContent`）。
+    - 如果启用 `hooks.allowRequestSessionKey`，还应设置 `hooks.allowedSessionKeyPrefixes` 以限制调用方可选择的会话键。
+    - 对于由 hook 驱动的代理，优先使用强健的现代模型档位和严格的工具策略（例如仅消息加上尽可能的沙箱）。
 
     有关所有映射选项和 Gmail 集成，请参阅[完整参考](/gateway/configuration-reference#hooks)。
 
@@ -500,18 +501,20 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - **单文件**：替换其包含的对象
-    - **文件数组**：按顺序深度合并（后者覆盖前者）
-    - **同级键**：在 includes 之后合并（覆盖被包含的值）
-    - **嵌套 includes**：支持最多 10 层深度
-    - **相对路径**：相对于包含文件解析
-    - **OpenClaw 所有的写入操作**：当一次写入只更改一个由单文件 include 支持的顶层部分时，例如 `plugins: { $include: "./plugins.json5" }`，
-      OpenClaw 会更新该包含文件并保持 `openclaw.json` 不变
-    - **不支持的透传写入**：根 include、include 数组以及带同级覆盖的 includes
-      对 OpenClaw 所有的写入操作会直接失败，而不会
-      扁平化配置
-    - **隔离**：`$include` 路径必须解析到 `openclaw.json` 所在目录下。若要在机器或用户之间共享树结构，请将 `OPENCLAW_INCLUDE_ROOTS` 设置为路径列表（POSIX 上用 `:`，Windows 上用 `;`），指向 includes 可引用的额外目录。符号链接会被解析并重新检查，因此即使某路径在字面上位于配置目录中，但其真实目标逃逸出所有允许根目录，也仍会被拒绝。
-    - **错误处理**：对缺失文件、解析错误和循环 includes 提供清晰错误
+    - **Single file**: 替换所包含的对象
+    - **Array of files**: 按顺序深度合并（后者覆盖前者）
+    - **Sibling keys**: 在 includes 之后合并（覆盖被包含的值）
+    - **Nested includes**: 支持最多 10 层嵌套
+    - **Relative paths**: 解析为相对于包含文件的路径
+    - **Path format**: include 路径不得包含空字节，并且在解析前后必须严格短于 4096 个字符
+    - **OpenClaw-owned writes**: 当某次写入只更改一个由单文件 include 支持的顶层部分时
+      例如 `plugins: { $include: "./plugins.json5" }`，
+      OpenClaw 会更新那个包含的文件，并保持 `openclaw.json` 不变
+    - **Unsupported write-through**: 根级 includes、include 数组以及带有同级覆盖的
+      includes 对于 OpenClaw 自身写入会失败关闭，而不是
+      展平配置
+    - **Confinement**: `$include` 路径必须解析到 `openclaw.json` 所在目录下。若要跨机器或用户共享树，请将 `OPENCLAW_INCLUDE_ROOTS` 设为一个路径列表（POSIX 上用 `:`，Windows 上用 `;`），其中包含可供 includes 引用的额外目录。符号链接会被解析并重新检查，因此一个在字面上位于配置目录中但其真实目标逃逸出所有允许根目录的路径仍会被拒绝。
+    - **Error handling**: 缺失文件、解析错误、循环包含、无效路径格式以及过长路径都会给出清晰错误
 
   </Accordion>
 </AccordionGroup>

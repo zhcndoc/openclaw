@@ -355,8 +355,8 @@ read_when:
       你可以直接使用这些函数：
 
       - `openclaw/plugin-sdk/provider-model-shared` - `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`).
-      - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
-      - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("gemini")`, and underlying Gemini schema helpers (`normalizeGeminiToolSchemas`, `inspectGeminiToolSchemas`).
+      - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), plain-text tool-call compat (`createPlainTextToolCallCompatWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
+      - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("deepseek" | "gemini" | "openai")`, and underlying provider schema helpers.
 
       某些 stream 辅助函数会刻意保持为提供方本地私有。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在自己的公共 `api.ts` / `contract-api.ts` 接口边界内，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件也将原生 xAI Responses 形状保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning 负载移除）。
 
@@ -496,9 +496,9 @@ read_when:
   <Step title="添加额外能力（可选）">
     ### 第 5 步：添加额外能力
 
-    一个提供方插件可以在文本推理之外，同时注册语音、实时转写、实时
-    语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将其归类为
-    **hybrid-capability** 插件——这是公司插件的推荐模式
+    提供方插件可以在文本推理之外同时注册 embeddings、语音、实时转写、
+    实时语音、媒体理解、图像生成、视频生成、网页抓取和网页搜索。OpenClaw 将这类插件归类为
+    **hybrid-capability** 插件——这是公司级插件的推荐模式
     （每个厂商一个插件）。参见
     [内部机制：能力所有权](/plugins/architecture#capability-ownership-model)。
 
@@ -516,6 +516,7 @@ read_when:
         api.registerSpeechProvider({
           id: "acme-ai",
           label: "Acme Speech",
+          defaultTimeoutMs: 120_000,
           isConfigured: ({ config }) => Boolean(config.messages?.tts),
           synthesize: async (req) => {
             const { response, release } = await postJsonRequest({
@@ -633,11 +634,43 @@ read_when:
         });
         ```
       </Tab>
+      <Tab title="Embeddings">
+        ```typescript
+        api.registerEmbeddingProvider({
+          id: "acme-ai",
+          defaultModel: "acme-embed",
+          transport: "remote",
+          authProviderId: "acme-ai",
+          create: async ({ model }) => ({
+            provider: {
+              id: "acme-ai",
+              model,
+              dimensions: 1536,
+              embed: async (input) => {
+                const text = typeof input === "string" ? input : input.text;
+                return fetchAcmeEmbedding(text);
+              },
+              embedBatch: async (inputs) =>
+                Promise.all(
+                  inputs.map((input) =>
+                    fetchAcmeEmbedding(typeof input === "string" ? input : input.text),
+                  ),
+                ),
+            },
+          }),
+        });
+        ```
+
+        在 `contracts.embeddingProviders` 中声明相同的 id。这是用于可复用向量生成的一般 embedding 契约。
+        只有面向 memory-engine 的适配器才使用 `registerMemoryEmbeddingProvider(...)`。
+      </Tab>
       <Tab title="图像和视频生成">
-        视频能力使用一种 **支持模式感知** 的结构：`generate`、
+        视频能力使用一种**模式感知**的形状：`generate`、
         `imageToVideo` 和 `videoToVideo`。像
         `maxInputImages` / `maxInputVideos` / `maxDurationSeconds` 这样的扁平聚合字段
-        并不足以清晰地声明转换模式支持或禁用模式。
+        不足以清晰地声明转换模式支持或禁用模式。
+        音乐生成遵循相同模式，使用显式的 `generate` /
+        `edit` 块。
 
         ```typescript
         api.registerImageGenerationProvider({
@@ -649,6 +682,7 @@ read_when:
         api.registerVideoGenerationProvider({
           id: "acme-ai",
           label: "Acme Video",
+          defaultTimeoutMs: 600_000,
           capabilities: {
             generate: { maxVideos: 1, maxDurationSeconds: 10, supportsResolution: true },
             imageToVideo: {
@@ -765,7 +799,7 @@ clawhub package publish your-org/your-plugin
 | --------- | ------------ | ----------------------------------------------- |
 | `simple`  | 第一轮       | 纯 API 密钥提供者                               |
 | `profile` | simple 之后 | 由认证配置文件控制的提供者                      |
-| `paired`   | profile 之后 | 合成多个相关条目                                |
+| `paired`  | profile 之后 | 合成多个相关条目                                |
 | `late`    | 最后一轮     | 覆盖现有提供者（冲突时获胜）                    |
 
 ## 下一步

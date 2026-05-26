@@ -32,7 +32,27 @@ openclaw logs --follow
 - `openclaw channels status --probe` → 可达的网关会返回每个账户的实时传输状态，以及诸如 `works` 或 `audit ok` 之类的探测/审计结果；如果网关不可达，该命令会回退为仅配置摘要。
 - `openclaw logs --follow` → 活动稳定，没有重复出现的致命错误。
 
-## Anthropic 长上下文 429
+## Assistant feels limited or missing tools
+
+如果 assistant 无法检查文件、运行命令、使用浏览器自动化，或
+看不到预期的工具，请先检查实际生效的工具配置文件：
+
+```bash
+openclaw status
+openclaw status --all
+openclaw doctor
+```
+
+常见原因：
+
+- `tools.profile: "messaging"` 是专门为仅聊天代理设计的窄配置。
+- `tools.profile: "coding"` 是用于仓库、文件、shell 和运行时工作流的常规配置。
+- `tools.profile: "full"` 暴露最广泛的工具集，应仅限于受信任的、由操作员控制的代理。
+- 按代理配置的 `agents.list[].tools` 覆盖项可以为单个代理缩小或扩展根配置文件。
+
+更改根级或按代理的工具配置文件，然后重启或重新加载 Gateway，再次运行 `openclaw status --all`。有关配置文件模型和 allow/deny 覆盖，请参见 [Tools](/tools)。
+
+## Anthropic long context 429
 
 如果你看到：
 `HTTP 429: rate_limit_error: Extra usage is required for long context requests`,

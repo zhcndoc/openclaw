@@ -100,10 +100,7 @@ Gateway WebSocket 客户端以一种角色连接：
 
 ## 共享密钥认证
 
-共享 gateway 令牌/密码认证会被视为该
-Gateway 的受信任操作员访问。OpenAI 兼容的 HTTP 接口和 `/tools/invoke`
-会为共享密钥 bearer 认证恢复正常的完整操作员默认作用域集，即使
-调用方发送了更窄的声明作用域也是如此。
+共享 Gateway 令牌/密码认证会被视为该 Gateway 的受信任操作员访问。OpenAI 兼容的 HTTP 表面、`/tools/invoke` 和 HTTP 会话历史端点会为共享密钥 bearer 认证恢复正常的完整操作员默认作用域集，即使调用方发送了更窄的声明作用域也是如此。
 
 带有身份信息的模式，例如受信任代理认证或 private-ingress `none`，
 仍然可以遵循显式声明的作用域。若要实现真正的信任边界隔离，请使用独立的 Gateway。

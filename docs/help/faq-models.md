@@ -142,26 +142,26 @@ sidebarTitle: "模型常见问题"
 
   </Accordion>
 
-  <Accordion title="If two providers expose the same model id, which one does /model use?">
-    `/model provider/model` selects that exact provider route for the session.
+  <Accordion title="如果两个 provider 暴露相同的 model id，/model 会使用哪一个？">
+    `/model provider/model` 会为该会话选择那个精确的 provider 路由。
 
-    For example, `qianfan/deepseek-v4-flash` and `deepseek/deepseek-v4-flash` are different model refs even though both contain `deepseek-v4-flash`. OpenClaw should not silently switch from one provider to the other just because the bare model id matches.
+    例如，`qianfan/deepseek-v4-flash` 和 `deepseek/deepseek-v4-flash` 是不同的模型引用，尽管二者都包含 `deepseek-v4-flash`。仅因为裸露的 model id 匹配，OpenClaw 不应在两个 provider 之间悄悄切换。
 
-    A user-selected `/model` ref is also strict for fallback policy. If that selected provider/model is unavailable, the reply fails visibly instead of answering from `agents.defaults.model.fallbacks`. Configured fallback chains still apply to configured defaults, cron job primaries, and auto-selected fallback state.
+    用户选择的 `/model` 引用对于回退策略同样是严格的。如果所选 provider/model 不可用，回复会明显失败，而不是从 `agents.defaults.model.fallbacks` 中回答。配置的回退链仍然适用于已配置的默认值、cron 任务主模型，以及自动选择的回退状态。
 
-    If a run that started from a non-session override is allowed to use fallback, OpenClaw tries the requested provider/model first, then configured fallbacks, and only then the configured primary. That prevents duplicate bare model ids from jumping directly back to the default provider.
+    如果一个从非会话覆盖开始的运行允许使用回退，OpenClaw 会先尝试请求的 provider/model，然后尝试已配置回退，最后才是已配置主模型。这可以防止重复的裸 model id 直接跳回默认 provider。
 
-    See [Models](/concepts/models) and [Model failover](/concepts/model-failover).
+    参见 [模型](/concepts/models) 和 [模型故障转移](/concepts/model-failover)。
 
   </Accordion>
 
-  <Accordion title="Can I use GPT 5.5 for daily tasks and Codex 5.5 for coding?">
-    Yes. Treat model choice and runtime choice separately:
+  <Accordion title="我可以日常任务使用 GPT 5.5，而编码使用 Codex 5.5 吗？">
+    可以。将模型选择和运行时选择分开看待：
 
-    - **Native Codex coding agent:** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
-    - **Direct OpenAI API tasks outside the agent loop:** 为 images、embeddings、speech、realtime 以及其他非 agent 的 OpenAI API 接口配置 `OPENAI_API_KEY`。
-    - **OpenAI agent API-key auth:** 使用 `/model openai/gpt-5.5` 并配合有序的 `openai-codex` API key 配置文件。
-    - **Sub-agents:** 将编码任务路由到一个专注 Codex 的 agent，并使用它自己的 `openai/gpt-5.5` 模型。
+    - **原生 Codex 编码 agent：** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
+    - **agent 循环外的直接 OpenAI API 任务：** 为 images、embeddings、speech、realtime 以及其他非 agent 的 OpenAI API 接口配置 `OPENAI_API_KEY`。
+    - **OpenAI agent API-key 认证：** 使用 `/model openai/gpt-5.5` 并配合有序的 `openai-codex` API key 配置文件。
+    - **Sub-agents：** 将编码任务路由到一个专注 Codex 的 agent，并使用它自己的 `openai/gpt-5.5` 模型。
 
     参见 [模型](/concepts/models) 和 [斜杠命令](/tools/slash-commands)。
 
@@ -288,7 +288,7 @@ sidebarTitle: "模型常见问题"
     - `gpt-nano` → `openai/gpt-5.4-nano`
     - `gemini` → `google/gemini-3.1-pro-preview`
     - `gemini-flash` → `google/gemini-3-flash-preview`
-    - `gemini-flash-lite` → `google/gemini-3.1-flash-lite-preview`
+    - `gemini-flash-lite` → `google/gemini-3.1-flash-lite`
 
     如果你自己设置了同名别名，你的值会优先生效。
 
@@ -305,7 +305,6 @@ sidebarTitle: "模型常见问题"
           models: {
             "anthropic/claude-opus-4-6": { alias: "opus" },
             "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
-            "anthropic/claude-haiku-4-5": { alias: "haiku" },
           },
         },
       },

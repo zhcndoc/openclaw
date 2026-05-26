@@ -13,11 +13,11 @@ title: "Android 应用"
 
 ## 支持概览
 
-- Role: 伴生节点应用（Android 不承载 Gateway）。
-- Gateway required: 是（在 macOS、Linux 或通过 WSL2 的 Windows 上运行）。
-- 安装：应用请见 [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN)，Gateway 请见 [Getting Started](/start/getting-started)，然后进行 [Pairing](/channels/pairing)。
-- Gateway： [Runbook](/gateway) + [Configuration](/gateway/configuration)。
-  - Protocols: [Gateway protocol](/gateway/protocol)（节点 + 控制平面）。
+- 角色：伴生节点应用（Android 不承载 Gateway）。
+- 需要 Gateway：是（在 macOS、Linux 或通过 WSL2 的 Windows 上运行）。
+- 安装：应用请见 [Google Play](https://play.google.com/store/apps/details?id=ai.openclaw.app&hl=en_IN)，Gateway 请见 [Getting Started](/start/getting-started)，然后进行 [配对](/channels/pairing)。
+- Gateway：[运行手册](/gateway) + [配置](/gateway/configuration)。
+  - 协议：[Gateway 协议](/gateway/protocol)（节点 + 控制平面）。
 
 ## 系统控制
 
@@ -207,13 +207,14 @@ Canvas 命令（仅前台）：
 
 ### 8) Voice + 扩展 Android 命令面
 
-- Voice 选项卡：Android 有两种显式采集模式。**Mic** 是一种手动 Voice-tab 会话，会将每次停顿作为一个 chat turn 发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是连续的 Talk Mode，会一直监听，直到被关闭或节点断开连接。
-- Talk Mode 在采集开始前会将现有前台服务从 `dataSync` 提升为 `dataSync|microphone`，然后在 Talk Mode 停止时降级。Android 14+ 需要 `FOREGROUND_SERVICE_MICROPHONE` 声明、`RECORD_AUDIO` 运行时授权，以及运行时的 microphone 服务类型。
-- 语音回复通过配置的 gateway Talk provider 使用 `talk.speak`。仅当 `talk.speak` 不可用时才使用本地系统 TTS。
-- Voice 唤醒在 Android 的 UX/runtime 中仍保持禁用。
+- Voice 选项卡：Android 有两种显式捕获模式。**Mic** 是一个手动的 Voice 选项卡会话，会将每次停顿作为一次聊天回合发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是连续的 Talk Mode，会持续监听，直到被切换关闭或节点断开连接。
+- Talk Mode 会在捕获开始前将现有前台服务从 `dataSync` 提升为 `dataSync|microphone`，然后在 Talk Mode 停止时降级。Android 14+ 需要 `FOREGROUND_SERVICE_MICROPHONE` 声明、`RECORD_AUDIO` 运行时授权，以及运行时的 microphone 服务类型。
+- 默认情况下，Android Talk 使用本地语音识别、Gateway chat，以及通过已配置的 gateway Talk 提供方的 `talk.speak`。仅当 `talk.speak` 不可用时，才使用本地系统 TTS。
+- 仅当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway relay。
+- 在 Android 的 UX/runtime 中，Voice wake 仍然是禁用的。
 - 其他 Android 命令族（可用性取决于设备 + 权限）：
   - `device.status`、`device.info`、`device.permissions`、`device.health`
-  - `notifications.list`、`notifications.actions`（见下方 [通知转发](#notification-forwarding)）
+  - `notifications.list`、`notifications.actions`（见下文 [通知转发](#notification-forwarding)）
   - `photos.latest`
   - `contacts.search`、`contacts.add`
   - `calendar.events`、`calendar.add`

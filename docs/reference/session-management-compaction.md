@@ -19,12 +19,12 @@ OpenClaw 在以下这些方面端到端管理会话：
 
 如果你想先看更高层的概览，可以从这里开始：
 
-- [Session management](/concepts/session)
-- [Compaction](/concepts/compaction)
-- [Memory overview](/concepts/memory)
-- [Memory search](/concepts/memory-search)
-- [Session pruning](/concepts/session-pruning)
-- [Transcript hygiene](/reference/transcript-hygiene)
+- [会话管理](/concepts/session)
+- [压缩](/concepts/compaction)
+- [内存概览](/concepts/memory)
+- [内存搜索](/concepts/memory-search)
+- [会话修剪](/concepts/session-pruning)
+- [转录卫生](/reference/transcript-hygiene)
 
 ---
 
@@ -86,9 +86,14 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 
 OpenClaw 不再在 Gateway 写入期间创建自动的 `sessions.json.bak.*` 轮转备份。旧的 `session.maintenance.rotateBytes` 键会被忽略，且 `openclaw doctor --fix` 会将其从旧配置中移除。
 
-转录变更在转录文件上使用 session 写锁。获取锁会等待最多
-`session.writeLock.acquireTimeoutMs`，之后才会抛出忙碌会话错误；默认值是 `60000`
-毫秒。只有在慢机器上合法的预处理、清理、压缩或转录镜像工作持续竞争更久时才提高这个值。陈旧锁检测和最大持有时长警告仍然是独立策略。
+Transcript mutations use a session write lock on the transcript file. Lock acquisition waits up to
+`session.writeLock.acquireTimeoutMs` before surfacing a busy-session error; the default is `60000`
+ms. Raise this only when legitimate prep, cleanup, compaction, or transcript mirror work contends
+longer on slow machines. `session.writeLock.staleMs` controls when an existing lock can be
+reclaimed as stale; the default is `1800000` ms. `session.writeLock.maxHoldMs` controls the
+in-process watchdog release threshold; the default is `300000` ms. Emergency env overrides are
+`OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS`, `OPENCLAW_SESSION_WRITE_LOCK_STALE_MS`, and
+`OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS`.
 
 磁盘预算清理（`mode: "enforce"`）的执行顺序：
 
@@ -231,7 +236,11 @@ OpenClaw 有意不会“修正”转录；Gateway 使用 `SessionManager` 读写
 - 压缩摘要
 - `firstKeptEntryId` 之后的消息
 
-压缩是**持久化**的（不同于 session pruning）。见 [/concepts/session-pruning](/concepts/session-pruning)。
+AGENTS.md section reinjection after compaction is opt-in via
+`agents.defaults.compaction.postCompactionSections`; when unset or `[]`,
+OpenClaw does not append AGENTS.md excerpts on top of the compaction summary.
+
+Compaction is **persistent** (unlike session pruning). See [/concepts/session-pruning](/concepts/session-pruning).
 
 ## 压缩块边界与工具配对
 
@@ -254,8 +263,17 @@ assistant 工具调用与其匹配的 `toolResult` 条目成对。
    (`request_too_large`, `context length exceeded`, `input exceeds the maximum
 number of tokens`, `input token count exceeds the maximum number of input
 tokens`, `input is too long for the model`, `ollama error: context length
-exceeded`，以及类似的 provider 形态变体) → 压缩 → 重试。
-2. **阈值维护**：在一次成功的轮次后，当：
+exceeded`, and similar provider-shaped variants) → compact → retry.
+   When the provider reports the attempted token count, OpenClaw forwards that
+   observed count into overflow recovery compaction. If the provider confirms
+   overflow but does not expose a parseable count, OpenClaw passes a minimally
+   over-budget synthetic count to compaction engines and diagnostics.
+   If overflow recovery still fails, OpenClaw surfaces explicit guidance to the
+   user and preserves the current session mapping instead of silently rotating
+   the session key to a fresh session id. The next step is operator-controlled:
+   retry the message, run `/compact`, or run `/new` when a fresh session is
+   preferred.
+2. **Threshold maintenance**：after a successful turn, when:
 
 `contextTokens > contextWindow - reserveTokens`
 
@@ -274,8 +292,8 @@ OpenClaw 会使用与回合开始时相同的预检预算逻辑来估算提示�
 该保护不会在 Pi 的 `transformContext` 钩子内进行压缩。它会发出结构化的
 中途预检信号，停止当前提示提交，并让外层运行循环使用现有的恢复路径：
 在这样做足够时截断过大的工具结果，或者触发配置的压缩模式并重试。该
-选项默认禁用，并且适用于 `default` 和 `safeguard` 两种压缩模式，
-包括基于 provider 的 safeguard 压缩。这与 `maxActiveTranscriptBytes`
+选项默认禁用，并且适用于 `default` 和 `safeguard` 两种
+压缩模式，包括基于 provider 的 safeguard 压缩。这与 `maxActiveTranscriptBytes`
 无关：字节大小保护在一轮开始前运行，而中途预检则在嵌入式 Pi 工具
 循环中、在新增工具结果已被追加之后稍后运行。
 
@@ -349,8 +367,8 @@ OpenClaw 也会为嵌入式运行强制一个安全下限：
 - `/status`（在任意聊天会话中）
 - `openclaw status`（CLI）
 - `openclaw sessions` / `sessions --json`
-- Gateway logs (`pnpm gateway:watch` or `openclaw logs --follow`): `embedded run auto-compaction start` + `complete`
-- Verbose mode: `🧹 Auto-compaction complete` + compaction count
+- Gateway 日志（`pnpm gateway:watch` 或 `openclaw logs --follow`）：`embedded run auto-compaction start` + `complete`
+- 详细模式：`🧹 自动压缩完成` + 压缩计数
 
 ---
 

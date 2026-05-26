@@ -107,37 +107,38 @@ title: "推理 CLI"
 
 此表将常见推理任务映射到相应的 infer 命令。
 
-| 任务                         | 命令                                                                                       | 备注                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| 运行文本/模型提示词           | `openclaw infer model run --prompt "..." --json`                                              | 默认使用正常的本地路径                 |
-| 在图像上运行模型提示词        | `openclaw infer model run --prompt "Describe this" --file ./image.png --model provider/model` | 对多个图像输入重复 `--file`             |
-| 生成图像                     | `openclaw infer image generate --prompt "..." --json`                                         | 从已有文件开始时使用 `image edit`  |
-| 描述图像文件                 | `openclaw infer image describe --file ./image.png --prompt "..." --json`                      | `--model` 必须是支持图像的 `<provider/model>` |
-| 转录音频                     | `openclaw infer audio transcribe --file ./memo.m4a --json`                                    | `--model` 必须是 `<provider/model>`                  |
-| 合成语音                     | `openclaw infer tts convert --text "..." --output ./speech.mp3 --json`                        | `tts status` 是面向 gateway 的                      |
-| 生成视频                     | `openclaw infer video generate --prompt "..." --json`                                         | 支持诸如 `--resolution` 的提供商提示        |
-| 描述视频文件                 | `openclaw infer video describe --file ./clip.mp4 --json`                                      | `--model` 必须是 `<provider/model>`                  |
-| 搜索网页                     | `openclaw infer web search --query "..." --json`                                              |                                                       |
-| 获取网页                     | `openclaw infer web fetch --url https://example.com --json`                                   |                                                       |
-| 创建嵌入                     | `openclaw infer embedding create --text "..." --json`                                         |                                                       |
+| Task                          | Command                                                                                       | Notes                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 运行文本/模型提示词            | `openclaw infer model run --prompt "..." --json`                                              | 默认使用正常的本地路径                                |
+| 在图像上运行模型提示词         | `openclaw infer model run --prompt "Describe this" --file ./image.png --model provider/model` | 对多个图像输入重复使用 `--file`                       |
+| 生成图像                       | `openclaw infer image generate --prompt "..." --json`                                         | 从现有文件开始时使用 `image edit`                     |
+| 描述图像文件或 URL             | `openclaw infer image describe --file ./image.png --prompt "..." --json`                      | `--model` 必须是支持图像的 `<provider/model>`         |
+| 转录音频                       | `openclaw infer audio transcribe --file ./memo.m4a --json`                                    | `--model` 必须是 `<provider/model>`                  |
+| 合成语音                       | `openclaw infer tts convert --text "..." --output ./speech.mp3 --json`                        | `tts status` 面向 gateway                            |
+| 生成视频                       | `openclaw infer video generate --prompt "..." --json`                                         | 支持诸如 `--resolution` 之类的提供商提示              |
+| 描述视频文件                   | `openclaw infer video describe --file ./clip.mp4 --json`                                      | `--model` 必须是 `<provider/model>`                  |
+| 搜索网页                       | `openclaw infer web search --query "..." --json`                                              |                                                       |
+| 抓取网页                       | `openclaw infer web fetch --url https://example.com --json`                                   |                                                       |
+| 创建嵌入                       | `openclaw infer embedding create --text "..." --json`                                         |                                                       |
 
 ## 行为
 
 - `openclaw infer ...` 是这些工作流的主要 CLI 表面。
 - 当输出将被另一个命令或脚本消费时，使用 `--json`。
 - 当需要特定后端时，使用 `--provider` 或 `--model provider/model`。
-- 使用 `model run --thinking <level>` 来传递一次性的思考/推理级别（`off`、`minimal`、`low`、`medium`、`high`、`adaptive`、`xhigh` 或 `max`），同时保持原始运行。
+- 使用 `model run --thinking <level>` 传递一次性的思考/推理级别（`off`、`minimal`、`low`、`medium`、`high`、`adaptive`、`xhigh` 或 `max`），同时保持原始运行方式。
 - 对于 `image describe`、`audio transcribe` 和 `video describe`，`--model` 必须使用 `<provider/model>` 形式。
-- 对于 `image describe`，显式的 `--model` 会直接运行该 provider/model。该模型必须在模型目录或提供商配置中支持图像。`codex/<model>` 会运行一次受限的 Codex app-server 图像理解轮次；`openai-codex/<model>` 使用 OpenAI Codex OAuth 提供商路径。
-- 无状态执行命令默认使用本地。
-- 由 Gateway 管理状态的命令默认使用 gateway。
-- 正常的本地路径不需要 gateway 运行。
-- 本地 `model run` 是一种轻量的一次性提供商补全。它会解析已配置的 agent 模型和认证，但不会启动聊天 agent 轮次、加载工具或打开捆绑的 MCP 服务器。
-- 本地 `model run --file` 接受图像文件，检测其 MIME 类型，并将它们与所提供的提示一起发送给所选模型。对多个图像重复 `--file`。
-- `model run --file` 会拒绝非图像输入。音频文件使用 `infer audio transcribe`，视频文件使用 `infer video describe`。
-- `model run --gateway` 会演练 Gateway 路由、已保存认证、提供商选择以及嵌入式运行时，但仍然作为原始模型探测运行：它会发送所提供的提示和任何图像附件，而不会带上先前的会话记录、bootstrap/AGENTS 上下文、上下文引擎组装、工具或捆绑的 MCP 服务器。
-- `model run --gateway --model <provider/model>` 需要受信任的 operator gateway 凭证，因为该请求要求 Gateway 运行一次性 provider/model 覆盖。
-- 本地 `model run --thinking` 使用轻量的提供商补全路径；诸如 `adaptive` 和 `max` 之类的提供商特定级别会映射到最接近的可移植简单补全级别。
+- 对于 `image describe`，`--file` 接受本地路径和 HTTP(S) 图像 URL。远程 URL 使用正常的媒体抓取 SSRF 策略。
+- 对于 `image describe`，显式的 `--model` 会直接运行该 provider/model。该模型必须在模型目录或提供商配置中支持图像。`codex/<model>` 运行一个受限的 Codex app-server 图像理解轮次；`openai-codex/<model>` 使用 OpenAI Codex OAuth 提供商路径。
+- 无状态执行命令默认为本地。
+- 由 gateway 管理状态的命令默认为 gateway。
+- 正常的本地路径不需要 gateway 正在运行。
+- 本地 `model run` 是一个轻量的一次性提供商补全。它会解析已配置的 agent 模型和认证，但不会启动聊天 agent 轮次、加载工具或打开捆绑的 MCP 服务器。
+- 本地 `model run --file` 接受图像文件，检测其 MIME 类型，并将它们与提供的提示一起发送给所选模型。对多个图像重复使用 `--file`。
+- 本地 `model run --file` 会拒绝非图像输入。音频文件请使用 `infer audio transcribe`，视频文件请使用 `infer video describe`。
+- `model run --gateway` 会演练 Gateway 路由、已保存认证、提供商选择以及嵌入式运行时，但仍然作为原始模型探测运行：它会发送提供的提示和任何图像附件，不包含预先的会话记录、bootstrap/AGENTS 上下文、上下文引擎组装、工具或捆绑的 MCP 服务器。
+- `model run --gateway --model <provider/model>` 需要受信任的操作员 gateway 凭据，因为该请求要求 Gateway 运行一次性的 provider/model 覆盖。
+- 本地 `model run --thinking` 使用轻量的 provider-completion 路径；诸如 `adaptive` 和 `max` 之类的提供商特定级别会映射到最接近的可移植简单完成级别。
 
 ## 模型
 
@@ -162,7 +163,7 @@ openclaw infer model run --local --model google/gemini-2.5-flash --prompt "Reply
 openclaw infer model run --local --model groq/llama-3.1-8b-instant --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model mistral/mistral-medium-3-5 --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model mistral/mistral-small-latest --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model openai/gpt-4.1 --prompt "Reply with exactly: pong" --json
+openclaw infer model run --local --model openai/gpt-5.5 --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe this image." --file ./photo.jpg --json
 ```
 
@@ -192,9 +193,10 @@ openclaw infer image generate --prompt "slow image backend" --timeout-ms 180000 
 openclaw infer image edit --file ./logo.png --model openai/gpt-image-1.5 --output-format png --background transparent --prompt "keep the logo, remove the background" --json
 openclaw infer image edit --file ./poster.png --prompt "make this a vertical story ad" --size 2160x3840 --aspect-ratio 9:16 --resolution 4K --json
 openclaw infer image describe --file ./photo.jpg --json
+openclaw infer image describe --file https://example.com/photo.png --json
 openclaw infer image describe --file ./receipt.jpg --prompt "Extract the merchant, date, and total" --json
 openclaw infer image describe-many --file ./before.png --file ./after.png --prompt "Compare the screenshots and list visible UI changes" --json
-openclaw infer image describe --file ./ui-screenshot.png --model openai/gpt-4.1-mini --json
+openclaw infer image describe --file ./ui-screenshot.png --model openai/gpt-5.4-mini --json
 openclaw infer image describe --file ./photo.jpg --model ollama/qwen2.5vl:7b --prompt "Describe the image in one sentence" --timeout-ms 300000 --json
 ```
 
@@ -262,7 +264,7 @@ openclaw infer tts status --json
 openclaw infer video generate --prompt "海洋上空的电影感日落" --json
 openclaw infer video generate --prompt "掠过森林湖泊的缓慢无人机镜头" --resolution 768P --duration 6 --json
 openclaw infer video describe --file ./clip.mp4 --json
-openclaw infer video describe --file ./clip.mp4 --model openai/gpt-4.1-mini --json
+openclaw infer video describe --file ./clip.mp4 --model openai/gpt-5.4-mini --json
 ```
 
 注意：

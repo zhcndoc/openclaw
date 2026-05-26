@@ -51,7 +51,8 @@ title: "配置示例"
   messages: {
     visibleReplies: "automatic",
     groupChat: {
-      visibleReplies: "message_tool", // 默认值；要显示输出需要 message(action=send)
+      visibleReplies: "message_tool", // opt-in；可见输出需要 message(action=send)
+      unmentionedInbound: "room_event",
     },
   },
 }
@@ -110,7 +111,8 @@ title: "配置示例"
     ackReactionScope: "group-mentions",
     groupChat: {
       historyLimit: 50,
-      visibleReplies: "message_tool", // 优先使用 message 工具；最终文本会回退用于普通请求
+      visibleReplies: "message_tool", // 在共享房间中启用，适用于工具可靠的模型
+      unmentionedInbound: "room_event",
     },
     queue: {
       mode: "followup",
@@ -383,7 +385,7 @@ title: "配置示例"
   cron: {
     enabled: true,
     store: "~/.openclaw/cron/cron.json",
-    maxConcurrentRuns: 2, // cron 调度 + 独立 cron agent-turn 执行
+    maxConcurrentRuns: 8, // 默认值；cron 调度 + 独立的 cron agent-turn 执行
     sessionRetention: "24h",
     runLog: {
       maxBytes: "2mb",

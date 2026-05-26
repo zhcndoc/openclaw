@@ -23,10 +23,10 @@ OpenClaw 使用 pi SDK 将一个 AI 编码代理嵌入到其消息网关架构�
 
 ```json
 {
-  "@earendil-works/pi-agent-core": "0.74.0",
-  "@earendil-works/pi-ai": "0.74.0",
-  "@earendil-works/pi-coding-agent": "0.74.0",
-  "@earendil-works/pi-tui": "0.74.0"
+  "@earendil-works/pi-agent-core": "0.75.1",
+  "@earendil-works/pi-ai": "0.75.1",
+  "@earendil-works/pi-coding-agent": "0.75.1",
+  "@earendil-works/pi-tui": "0.75.1"
 }
 ```
 
@@ -337,16 +337,16 @@ const compactResult = await compactEmbeddedPiSessionDirect({
 
 ## 认证与模型解析
 
-### 认证 profile
+### 认证配置
 
-OpenClaw 维护一个认证 profile 存储，为每个 provider 支持多个 API key：
+OpenClaw 维护一个认证配置存储，为每个提供方支持多个 API key：
 
 ```typescript
 const authStore = ensureAuthProfileStore(agentDir, { allowKeychainPrompt: false });
 const profileOrder = resolveAuthProfileOrder({ cfg, store: authStore, provider, preferredProfile });
 ```
 
-profile 会在失败时轮换，并带有冷却追踪：
+配置会在失败时轮换，并带有冷却追踪：
 
 ```typescript
 await markAuthProfileFailure({ store, profileId, reason, cfg, agentDir });
@@ -493,7 +493,7 @@ if (sandboxRoot) {
 }
 ```
 
-## provider 特定处理
+## 提供方特定处理
 
 ### Anthropic
 
@@ -529,7 +529,7 @@ import { ... } from "@earendil-works/pi-tui";
 | 工具           | 默认 coding 工具    | 自定义 OpenClaw 工具套件                                                                     |
 | 系统提示词   | AGENTS.md + prompts     | 按通道/上下文动态生成                                                                    |
 | 会话存储 | `~/.pi/agent/sessions/` | `~/.openclaw/agents/<agentId>/sessions/`（或 `$OPENCLAW_STATE_DIR/agents/<agentId>/sessions/`） |
-| 认证            | 单一凭证       | 带轮换的多 profile                                                                    |
+| 认证            | 单一凭证       | 带轮换的多配置                                                                     |
 | 扩展      | 从磁盘加载        | 程序化 + 磁盘路径                                                                      |
 | 事件处理  | TUI 渲染           | 基于回调（onBlockReply 等）                                                            |
 
@@ -541,7 +541,7 @@ import { ... } from "@earendil-works/pi-tui";
 2. **会话管理器包装**：`guardSessionManager` 增加了安全性，但也提高了复杂度
 3. **扩展加载**：可以更直接地使用 pi 的 `ResourceLoader`
 4. **流式处理器复杂性**：`subscribeEmbeddedPiSession` 已经变得很大
-5. **provider 特殊行为**：存在许多 provider 特定代码路径，而这些理论上可能由 pi 处理
+5. **提供方特殊行为**：存在许多提供方特定代码路径，而这些理论上可能由 pi 处理
 
 ## 测试
 

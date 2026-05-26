@@ -305,8 +305,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
   <Accordion title="实时流预览（消息编辑）">
     OpenClaw 可以实时流式发送部分回复：
 
-    - 直接聊天：预览消息 + `editMessageText`
-    - 群组/话题：预览消息 + `editMessageText`
+    - direct chats: preview message + `editMessageText`
+    - groups/topics: preview message + `editMessageText`
+    - direct-chat tool progress: optional native `sendMessageDraft` status preview when enabled and supported
 
     要求：
 
@@ -316,7 +317,28 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     - `streaming.preview.commandText` 控制这些工具进度行中的命令/执行细节：`raw`（默认，保留已发布行为）或 `status`（仅工具标签）
     - 已检测到旧版 `channels.telegram.streamMode` 和布尔类型的 `streaming` 值；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
 
-    工具进度预览更新是在工具运行期间显示的简短状态行，例如命令执行、文件读取、计划更新、补丁摘要，或 Codex app-server 模式下的 Codex 前言/注释文本。Telegram 默认保留这些内容，以匹配从 `v2026.4.22` 及之后版本发布的 OpenClaw 行为。若要保留用于答案文本的已编辑预览，但隐藏工具进度行，请设置：
+    Tool-progress preview updates are the short status lines shown while tools run, for example command execution, file reads, planning updates, patch summaries, or Codex preamble/commentary text in Codex app-server mode. Telegram keeps these enabled by default to match released OpenClaw behavior from `v2026.4.22` and later.
+
+    Direct chats can use native Telegram drafts for these tool-progress lines without persisting tool chatter into chat history. Native drafts stop before answer text starts; final answers stay on the normal persistent delivery path. This lane is off by default and should be gated to trusted DM IDs first:
+
+    ```json
+    {
+      "channels": {
+        "telegram": {
+          "streaming": {
+            "mode": "partial",
+            "preview": {
+              "toolProgress": true,
+              "nativeToolProgress": true,
+              "nativeToolProgressAllowFrom": ["123456789"]
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    To keep the edited preview for answer text but hide tool-progress lines, set:
 
     ```json
     {
@@ -335,38 +357,38 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     要保留工具进度可见，但隐藏命令/执行文本，请设置：
 
-    ```json
-    {
-      "channels": {
-        "telegram": {
-          "streaming": {
-            "mode": "partial",
-            "preview": {
-              "commandText": "status"
-            }
-          }
+```json
+{
+  "channels": {
+    "telegram": {
+      "streaming": {
+        "mode": "partial",
+        "preview": {
+          "commandText": "status"
         }
       }
     }
-    ```
+  }
+}
+```
 
     当你想要可见的工具进度，但不希望把最终答案编辑到同一条消息中时，请使用 `progress` 模式。将命令文本策略放在 `streaming.progress` 下：
 
-    ```json
-    {
-      "channels": {
-        "telegram": {
-          "streaming": {
-            "mode": "progress",
-            "progress": {
-              "toolProgress": true,
-              "commandText": "status"
-            }
-          }
+```json
+{
+  "channels": {
+    "telegram": {
+      "streaming": {
+        "mode": "progress",
+        "progress": {
+          "toolProgress": true,
+          "commandText": "status"
         }
       }
     }
-    ```
+  }
+}
+```
 
     仅当你希望只发送最终结果时使用 `streaming.mode: "off"`：Telegram 预览编辑会被禁用，通用工具/进度输出会被抑制，而不是作为独立状态消息发送。审批提示、媒体载荷和错误仍会通过正常的最终投递流程发送。当你只想保留答案预览编辑、同时隐藏工具进度状态行时，请使用 `streaming.preview.toolProgress: false`。
 
@@ -612,6 +634,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     话题继承：话题条目会继承群组设置，除非被覆盖（`requireMention`、`allowFrom`、`skills`、`systemPrompt`、`enabled`、`groupPolicy`）。
     `agentId` 仅适用于话题，不会从群组默认值继承。
+    `topics."*"` 会为该群组中的每个话题设置默认值；精确话题 ID 仍优先于 `"*"`。
 
     **按话题的代理路由**：每个话题都可以通过在话题配置中设置 `agentId` 路由到不同的代理。这样每个话题都有自己独立的工作区、记忆和会话。示例：
 
@@ -766,10 +789,10 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
   </Accordion>
 
-  <Accordion title="确认反应">
-    `ackReaction` 会在 OpenClaw 处理入站消息时发送一个确认表情。
+  <Accordion title="Ack reactions">
+    `ackReaction` 会在 OpenClaw 处理入站消息时发送一个确认表情。`ackReactionScope` 决定何时真正发送该表情。
 
-    解析顺序：
+    **Emoji（`ackReaction`）解析顺序：**
 
     - `channels.telegram.accounts.<accountId>.ackReaction`
     - `channels.telegram.ackReaction`
@@ -780,6 +803,16 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     - Telegram 期望使用 Unicode 表情符号（例如 "👀"）。
     - 使用 `""` 可为某个渠道或账号禁用该反应。
+
+    **Scope（`messages.ackReactionScope`）：**
+
+    Telegram provider 会从 `messages.ackReactionScope` 读取范围（默认 `"group-mentions"`）。当前没有 Telegram 账号级或渠道级覆盖。
+
+    取值：`"all"`（DM + 群组）、`"direct"`（仅 DM）、`"group-all"`（所有群消息，不含 DM）、`"group-mentions"`（机器人被提及时的群消息；**不含 DM** —— 这是默认值）、`"off"` / `"none"`（禁用）。
+
+    <Note>
+    默认范围（`"group-mentions"`）不会在直接消息中触发 ack reactions。若要在入站 Telegram DM 中获得 ack reaction，请将 `messages.ackReactionScope` 设为 `"direct"` 或 `"all"`。该值在 Telegram provider 启动时读取，因此需要重启 gateway 才会生效。
+    </Note>
 
   </Accordion>
 
@@ -1029,15 +1062,16 @@ dig +short api.telegram.org AAAA
 
 <Accordion title="高信号 Telegram 字段">
 
-- 启动/认证: `enabled`, `botToken`, `tokenFile`, `accounts.*`（`tokenFile` 必须指向普通文件；拒绝符号链接）
-- 访问控制: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`, `groups.*.topics.*`, 顶层 `bindings[]`（`type: "acp"`）
-- 执行审批: `execApprovals`, `accounts.*.execApprovals`
-- 命令/菜单: `commands.native`, `commands.nativeSkills`, `customCommands`
-- 线程/回复: `replyToMode`, `dm.threadReplies`, `direct.*.threadReplies`
-- 流式传输: `streaming`（预览），`streaming.preview.toolProgress`, `blockStreaming`
-- 格式化/投递: `textChunkLimit`, `chunkMode`, `linkPreview`, `responsePrefix`
-- 媒体/网络: `mediaMaxMb`, `mediaGroupFlushMs`, `timeoutSeconds`, `pollingStallThresholdMs`, `retry`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
-- 自定义 API 根地址: `apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）
+- startup/auth: `enabled`, `botToken`, `tokenFile`, `accounts.*`（`tokenFile` 必须指向一个普通文件；拒绝符号链接）
+- access control: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`, `groups.*.topics.*`, top-level `bindings[]` (`type: "acp"`)
+- topic defaults: `groups.<chatId>.topics."*"` 适用于未匹配的论坛主题；精确的主题 ID 会覆盖它
+- exec approvals: `execApprovals`, `accounts.*.execApprovals`
+- command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
+- threading/replies: `replyToMode`, `dm.threadReplies`, `direct.*.threadReplies`
+- streaming: `streaming`（预览）、`streaming.preview.toolProgress`、`blockStreaming`
+- formatting/delivery: `textChunkLimit`, `chunkMode`, `linkPreview`, `responsePrefix`
+- media/network: `mediaMaxMb`, `mediaGroupFlushMs`, `timeoutSeconds`, `pollingStallThresholdMs`, `retry`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
+- custom API root: `apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）
 - webhook: `webhookUrl`, `webhookSecret`, `webhookPath`, `webhookHost`
 - 动作/能力: `capabilities.inlineButtons`, `actions.sendMessage|editMessage|deleteMessage|reactions|sticker`
 - 反应: `reactionNotifications`, `reactionLevel`

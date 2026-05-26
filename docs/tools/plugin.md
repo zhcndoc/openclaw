@@ -1,9 +1,9 @@
 ---
 summary: "安装、配置和管理 OpenClaw 插件"
 read_when:
-  - Installing or configuring plugins
-  - Understanding plugin discovery and load rules
-  - Working with Codex/Claude-compatible plugin bundles
+  - 安装或配置插件
+  - 了解插件发现和加载规则
+  - 使用与 Codex/Claude 兼容的插件包
 title: "插件"
 sidebarTitle: "快速开始"
 doc-schema-version: 1
@@ -167,6 +167,22 @@ OpenClaw 识别两种插件格式：
 `openclaw plugins enable` 和 `openclaw plugins disable` 中。有关包兼容边界，请参见
 [插件包](/plugins/bundles)；有关原生插件作者指南，请参见
 [构建插件](/plugins/building-plugins)。
+
+## 插件钩子
+
+插件可以在运行时注册钩子，但有两种不同的 API，它们的职责也不同。
+
+- 对运行时生命周期钩子，请使用 `api.on(...)` 的类型化钩子。这是用于中间件、策略、消息重写、提示词塑形和工具控制的首选接口。
+- 仅当你想参与 [钩子](/automation/hooks) 中描述的内部钩子系统时，才使用 `api.registerHook(...)`。这主要用于粗粒度的命令/生命周期副作用，以及与现有 HOOK 风格自动化的兼容。
+
+快速规则：
+
+- 如果处理程序需要优先级、合并语义或阻止/取消行为，请使用类型化插件钩子。
+- 如果处理程序只是响应 `command:new`、`command:reset`、`message:sent` 或类似的粗粒度事件，`api.registerHook(...)` 就足够了。
+
+由插件管理的内部钩子会在 `openclaw hooks list` 中以
+`plugin:<id>` 的形式出现。你不能通过 `openclaw hooks` 启用或禁用它们；
+应改为启用或禁用该插件。
 
 ## 验证活动 Gateway
 

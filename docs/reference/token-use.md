@@ -14,19 +14,23 @@ OpenAI 风格的模型在英文文本中平均每个 token 约 4 个字符。
 OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
 - 工具列表 + 简短描述
-- 技能列表（仅元数据；说明会按需通过 `read` 加载）。
+- 技能列表（仅元数据；指令会按需通过 `read` 加载）。
   紧凑的技能块受 `skills.limits.maxSkillsPromptChars` 限制，
-  也可以在
-  `agents.list[].skillsLimits.maxSkillsPromptChars` 中为单个代理覆盖。
-- 自我更新说明
-- 工作区 + 引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新的 `BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。根目录下小写的 `memory.md` 不会被注入；它是与 `MEMORY.md` 搭配时供 `openclaw doctor --fix` 使用的遗留修复输入。大文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认：12000），而引导注入总量上限为 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）。`memory/*.md` 的每日文件不属于正常的引导提示；它们在普通轮次中仍可通过 memory 工具按需获取，但重置/启动模型运行可以在第一轮前附加一个一次性的启动上下文块，其中包含最近的每日记忆。纯聊天的 `/new` 和 `/reset` 命令会被确认，但不会调用模型。启动前导部分由 `agents.defaults.startupContext` 控制。
+  也可在
+  `agents.list[].skillsLimits.maxSkillsPromptChars` 处为单个代理覆盖。
+- 自更新指令
+- 工作区 + 启动引导文件（新的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。根目录下小写的 `memory.md` 不会被注入；它是与 `MEMORY.md` 配对时供 `openclaw doctor --fix` 使用的旧版修复输入。大型文件会由 `agents.defaults.bootstrapMaxChars` 截断（默认：12000），注入的引导总量由 `agents.defaults.bootstrapTotalMaxChars` 封顶（默认：60000）。`memory/*.md` 的每日文件不属于常规启动引导提示；它们会在普通轮次中通过 memory 工具按需读取，但 reset/startup 模型运行可以为第一次轮次预先附加一个一次性的启动上下文块，其中包含最近的每日记忆。仅输入裸聊天命令 `/new` 和 `/reset` 时会直接确认，而不会调用模型。启动前导由 `agents.defaults.startupContext` 控制。压缩后 AGENTS.md 摘录是独立的，并需要显式启用 `agents.defaults.compaction.postCompactionSections`。
 - 时间（UTC + 用户时区）
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
 
 完整拆解请参见 [System Prompt](/concepts/system-prompt)。
 
-## 上下文窗口中计入什么
+在记录凭证或认证片段时，请使用
+[Secret Placeholder Conventions](/reference/secret-placeholder-conventions) 以
+避免仅文档更改时触发 secret-scanner 的误报。
+
+## 什么计入上下文窗口
 
 模型接收到的所有内容都会计入上下文限制：
 
@@ -60,11 +64,12 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
 在聊天中使用这些命令：
 
-- `/status` → **带有丰富 emoji 的状态卡片**，显示会话模型、上下文使用量、
-  上次响应的输入/输出 token，以及 **估算成本**（仅 API key）。
-- `/usage off|tokens|full` → 在每次回复后附加一个 **每条响应的使用量页脚**。
-  - 每会话持久保存（存储为 `responseUsage`）。
-  - OAuth 认证 **隐藏成本**（仅显示 token）。
+- `/status` → **带有丰富表情的状态卡**，显示会话模型、上下文使用量、
+  上一次响应的输入/输出 token，以及在为当前模型配置了本地定价时的
+  **估算成本**。
+- `/usage off|tokens|full` → 为每个回复追加一个 **每响应使用量页脚**。
+  - 以会话为单位持久化（存储为 `responseUsage`）。
+  - `/usage full` 仅在 OpenClaw 拥有使用量元数据且当前模型有本地定价时显示估算成本。否则只显示 token。
 - `/usage cost` → 显示来自 OpenClaw 会话日志的本地成本摘要。
 
 其他表面：
@@ -106,8 +111,7 @@ OpenClaw 将提供方使用量核算与当前上下文
 models.providers.<provider>.models[].cost
 ```
 
-这些是 `input`、`output`、`cacheRead` 和
-`cacheWrite` 的 **每 100 万 token 的美元价格**。如果缺少定价，OpenClaw 只显示 token。OAuth token 从不显示美元成本。
+这些是 `input`、`output`、`cacheRead` 和 `cacheWrite` 的 **每 100 万 token 的美元成本**。如果缺少定价，OpenClaw 只显示 token。成本显示并不局限于 API key 认证：像 `aws-sdk` 这样的非 API key 提供方，只要其配置的模型条目包含本地定价且提供方返回使用量元数据，也可以显示估算成本。
 
 在 sidecars 和 channels 进入 Gateway ready 路径后，OpenClaw 会为尚未拥有本地定价的已配置模型引用启动一个可选的后台定价引导流程。该引导会获取远程 OpenRouter 和 LiteLLM 定价目录。将 `models.pricing.enabled: false` 设为 false 可在离线或受限网络中跳过这些目录获取；显式的 `models.providers.*.models[].cost` 条目仍会继续驱动本地成本估算。
 
@@ -172,30 +176,30 @@ agents:
 `agents.list[].params` 会在所选模型的 `params` 之上进行合并，因此你可以
 只覆盖 `cacheRetention`，并保持其他模型默认值不变。
 
-### 示例：启用 Anthropic 1M 上下文 beta 头部
+### Anthropic 1M context
 
-Anthropic 的 1M 上下文窗口目前处于 beta 门控状态。OpenClaw 可以在你对受支持的 Opus
-或 Sonnet 模型启用 `context1m` 时注入所需的 `anthropic-beta` 值。
+OpenClaw 会将 GA 级别的 Claude 4.x 模型（如 Opus 4.6、Opus 4.7 和
+Sonnet 4.6）按 Anthropic 的 1M 上下文窗口进行尺寸配置。对于这些模型，你无需
+`params.context1m: true`。
 
 ```yaml
 agents:
   defaults:
     models:
       "anthropic/claude-opus-4-6":
-        params:
-          context1m: true
+        alias: opus
 ```
 
-这会映射到 Anthropic 的 `context-1m-2025-08-07` beta 头部。
-
-这只适用于在该模型条目上设置了 `context1m: true` 的情况。
+较旧的配置可以继续保留 `context1m: true`，但 OpenClaw 不再为此设置发送
+Anthropic 已弃用的 `context-1m-2025-08-07` beta 头部，并且
+不会将不受支持的旧 Claude 模型扩展到 1M。
 
 要求：凭证必须具备长上下文使用资格。否则，
 Anthropic 会针对该请求返回提供方侧的速率限制错误。
 
 如果你使用 OAuth/订阅令牌（`sk-ant-oat-*`）对 Anthropic 进行认证，
-OpenClaw 会跳过 `context-1m-*` beta 头部，因为 Anthropic 目前
-会以 HTTP 401 拒绝该组合。
+OpenClaw 会在保留 OAuth 所需的 Anthropic beta 头部的同时，移除
+旧配置中仍保留的已弃用 `context-1m-*` beta 头部。
 
 ## 降低 token 压力的建议
 

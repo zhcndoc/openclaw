@@ -196,7 +196,7 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 - `{{MediaUrl}}`（伪 URL）
 - `{{Transcript}}`（如果启用了音频转录）
 
-代理发送的外发附件：在单独一行中包含 `MEDIA:<path-or-url>`（不要有空格）。例如：
+代理发出的外发附件：在单独一行中包含 `MEDIA:<path-or-url>`（不要有空格）。该指令必须作为纯文本从行首开始，位于代码围栏之外，且不能使用诸如粗体或行内代码之类的 Markdown 包裹。示例：
 
 ```
 这里是截图。
@@ -204,6 +204,14 @@ MEDIA:https://example.com/screenshot.png
 ```
 
 OpenClaw 会提取这些内容，并将它们作为媒体与文本一起发送。
+
+这些形式不是附件指令，会作为普通文本发送：
+
+```md
+**MEDIA:https://example.com/screenshot.png**
+`MEDIA:https://example.com/screenshot.png`
+这里是截图：MEDIA:https://example.com/screenshot.png
+```
 
 本地路径行为遵循与代理相同的文件读取信任模型：
 

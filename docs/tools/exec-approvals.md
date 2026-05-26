@@ -179,9 +179,18 @@ YOLO 是默认的主机行为，除非你显式收紧它：
 
 </Warning>
 
-提供自己非交互许可模式的 CLI 后端也可以遵循此策略。Claude CLI 在 OpenClaw 请求的 exec policy 为 YOLO 时会添加 `--permission-mode bypassPermissions`。可通过 `agents.defaults.cliBackends.claude-cli.args` / `resumeArgs` 中显式传入 Claude 参数来覆盖该后端行为——例如 `--permission-mode default`、`acceptEdits` 或 `bypassPermissions`。
+提供自身非交互式许可模式的 CLI 后端提供方
+可以遵循此策略。当 OpenClaw 的有效 exec
+策略为 YOLO 时，Claude CLI 会添加
+`--permission-mode bypassPermissions`。对于由 OpenClaw 管理的 Claude 实时会话，OpenClaw 的
+有效 exec 策略优先于 Claude 的原生许可模式：
+YOLO 会将实时启动规范化为 `--permission-mode bypassPermissions`，而
+受限的有效 exec 策略会将实时启动规范化为
+`--permission-mode default`，即使原始 Claude 后端参数指定了其他
+模式。
 
-如果你想要更保守的配置，可以将任一层收紧回 `allowlist` / `on-miss` 或 `deny`。
+如果你想要更保守的设置，请将 OpenClaw exec 策略收紧回
+`allowlist` / `on-miss` 或 `deny`。
 
 ### 持久化 gateway-host“永不提示”设置
 
@@ -355,15 +364,23 @@ CLI: `openclaw approvals` 支持 gateway 或 node 编辑 - 参见
 
 Exec 生命周期会作为系统消息显示：
 
-- `Exec running`（仅当命令超过运行提示阈值时）。
+- `Exec running` (仅当命令超过运行通知阈值时)。
 - `Exec finished`。
-- `Exec denied`。
 
-这些消息会在节点报告事件后发布到代理的会话中。Gateway 主机 exec approvals 在命令完成时（以及可选地在运行时间超过阈值时）会发出相同的生命周期事件。受审批门控的 exec 会在这些消息中重用审批 id 作为 `runId`，便于关联。
+这些消息会在节点报告事件后发布到代理的会话中。
+被拒绝的 exec 审批是终态：OpenClaw 可以将拒绝结果报告给
+操作员或直接聊天路由，但它不会把 `Exec denied` 再发布回
+代理会话中，也不会唤醒代理工作。
+当命令完成时，Gateway-host exec 审批会发出相同的生命周期事件
+（并且在运行时间超过阈值时也会发出运行中事件）。
+基于审批门控的 exec 会在这些消息中复用审批 id 作为 `runId`，以便于关联。
 
 ## 拒绝审批行为
 
-当异步 exec 审批被拒绝时，OpenClaw 会阻止代理在会话中复用同一命令任何更早一次运行的输出。拒绝原因会连同明确指引一起传递，说明没有可用的命令输出，这样可阻止代理声称有新的输出，或使用之前成功运行的过期结果重复被拒绝的命令。
+当异步 exec 审批被拒绝时，OpenClaw 会将该请求视为终态。
+它可以向操作员或直接聊天路由显示简洁的拒绝信息，但不会把
+拒绝指导重新发送回代理会话。这样可以防止被拒绝的命令变成另一个模型轮次，
+并避免代理重用同一命令上一次运行的输出。
 
 ## 影响
 

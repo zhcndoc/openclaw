@@ -45,12 +45,13 @@ title: "Signal"
 
 字段参考：
 
-| 字段         | 描述                                              |
+| 字段         | 说明                                              |
 | ------------ | ------------------------------------------------- |
-| `account`    | 机器人电话号码，E.164 格式（`+15551234567`）      |
-| `cliPath`    | `signal-cli` 的路径（如果在 `PATH` 中则为 `signal-cli`） |
-| `dmPolicy`   | 私信访问策略（推荐 `pairing`）                    |
-| `allowFrom`  | 允许私信的电话号码或 `uuid:<id>` 值              |
+| `account`    | 机器人的 E.164 格式电话号码（`+15551234567`） |
+| `cliPath`    | `signal-cli` 的路径（如果在 `PATH` 中则为 `signal-cli`）  |
+| `configPath` | 通过 `--config` 传递给 `signal-cli` 的配置目录        |
+| `dmPolicy`   | 私信访问策略（推荐使用 `pairing`）          |
+| `allowFrom`  | 允许私信的电话号码或 `uuid:<id>` 值 |
 
 ## 它是什么
 
@@ -247,7 +248,7 @@ OpenClaw 配置：
 - 可通过以下方式批准：
   - `openclaw pairing list signal`
   - `openclaw pairing approve signal <CODE>`
-- 对于 Signal 私信，配对是默认的令牌交换方式。详情： [Pairing](/channels/pairing)
+- 对于 Signal 私信，配对是默认的令牌交换方式。详情： [配对](/channels/pairing)
 - 仅 UUID 的发送者（来自 `sourceUuid`）会作为 `uuid:<id>` 存储在 `channels.signal.allowFrom` 中。
 
 群组：
@@ -357,32 +358,33 @@ grep -i "signal" "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" | tail -20
 
 ## 配置参考（Signal）
 
-完整配置：[Configuration](/gateway/configuration)
+完整配置：[配置](/gateway/configuration)
 
 提供程序选项：
 
 - `channels.signal.enabled`: 启用/禁用频道启动。
-- `channels.signal.apiMode`: `auto | native | container`（默认：auto）。参见[容器模式](#container-mode-bbernhardsignal-cli-rest-api)。
+- `channels.signal.apiMode`: `auto | native | container`（默认：auto）。参见 [容器模式](#container-mode-bbernhardsignal-cli-rest-api)。
 - `channels.signal.account`: 机器人账户的 E.164。
 - `channels.signal.cliPath`: `signal-cli` 的路径。
-- `channels.signal.httpUrl`: 完整守护进程 URL（覆盖主机/端口）。
+- `channels.signal.configPath`: 可选的 `signal-cli --config` 目录。
+- `channels.signal.httpUrl`: 完整的守护进程 URL（覆盖 host/port）。
 - `channels.signal.httpHost`, `channels.signal.httpPort`: 守护进程绑定地址（默认 127.0.0.1:8080）。
 - `channels.signal.autoStart`: 自动启动守护进程（如果未设置 `httpUrl`，默认 true）。
-- `channels.signal.startupTimeoutMs`: 启动等待超时时间，单位 ms（上限 120000）。
+- `channels.signal.startupTimeoutMs`: 启动等待超时，单位为 ms（上限 120000）。
 - `channels.signal.receiveMode`: `on-start | manual`。
 - `channels.signal.ignoreAttachments`: 跳过附件下载。
-- `channels.signal.ignoreStories`: 忽略来自守护进程的故事。
+- `channels.signal.ignoreStories`: 忽略来自守护进程的动态。
 - `channels.signal.sendReadReceipts`: 转发已读回执。
 - `channels.signal.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。
-- `channels.signal.allowFrom`: DM 允许列表（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`。Signal 不支持用户名；请使用电话号码/UUID 标识。
+- `channels.signal.allowFrom`: DM 白名单（E.164 或 `uuid:<id>`）。`open` 需要 `"*"`. Signal 不支持用户名；请使用电话号码/UUID 标识。
 - `channels.signal.groupPolicy`: `open | allowlist | disabled`（默认：allowlist）。
-- `channels.signal.groupAllowFrom`: 群组允许列表；接受 Signal 群组 ID（原始形式、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码，或 `uuid:<id>` 值。
-- `channels.signal.groups`: 以 Signal 群组 id 为键的每群组覆盖配置（或 `"*"`）。支持字段：`requireMention`、`tools`、`toolsBySender`。
-- `channels.signal.accounts.<id>.groups`: 在多账户设置中，`channels.signal.groups` 的按账户版本。
-- `channels.signal.historyLimit`: 作为上下文包含的群组消息最大数量（0 表示禁用）。
-- `channels.signal.dmHistoryLimit`: DM 历史限制，按用户轮次计算。每用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
+- `channels.signal.groupAllowFrom`: 群组白名单；接受 Signal 群组 ID（原始值、`group:<id>` 或 `signal:group:<id>`）、发送者 E.164 号码或 `uuid:<id>` 值。
+- `channels.signal.groups`: 以 Signal 群组 ID（或 `"*"`）为键的按群组覆盖配置。支持字段：`requireMention`、`tools`、`toolsBySender`。
+- `channels.signal.accounts.<id>.groups`: 多账户设置中 `channels.signal.groups` 的按账户版本。
+- `channels.signal.historyLimit`: 作为上下文包含的群消息最大数量（0 表示禁用）。
+- `channels.signal.dmHistoryLimit`: DM 历史记录在用户轮次中的限制。按用户覆盖：`channels.signal.dms["<phone_or_uuid>"].historyLimit`。
 - `channels.signal.textChunkLimit`: 出站分块大小（字符数）。
-- `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）再按长度分块。
+- `channels.signal.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）切分，再按长度分块。
 - `channels.signal.mediaMaxMb`: 入站/出站媒体上限（MB）。
 
 相关全局选项：

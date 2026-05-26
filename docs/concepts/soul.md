@@ -104,11 +104,11 @@ OpenClaw 工作区的路径已固定：使用 `SOUL.md`，不要用 `http://SOUL
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="代理工作区" href="/concepts/agent-workspace" icon="folder-open">
-    OpenClaw 注入到系统提示词中的工作区文件。
+  <Card title="Agent workspace" href="/concepts/agent-workspace" icon="folder-open">
+    工作区文件，OpenClaw 会将其注入模型上下文。
   </Card>
-  <Card title="系统提示词" href="/concepts/system-prompt" icon="message-lines">
-    `SOUL.md` 是如何被组合进每轮系统提示词中的。
+  <Card title="System prompt" href="/concepts/system-prompt" icon="message-lines">
+    `SOUL.md` 如何被组合进 OpenClaw 和 Codex 运行时上下文。
   </Card>
   <Card title="SOUL.md 模板" href="/reference/templates/SOUL" icon="file-lines">
     适用于个性文件的起始模板。

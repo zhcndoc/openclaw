@@ -155,7 +155,12 @@ macOS 应用可以在以下情况下选择性地尝试**静默批准**：
 
 ## 本地性与转发头
 
-Gateway 配对仅在原始 socket 和任何上游代理证据都一致时，才将连接视为回环连接。如果请求到达时是回环连接，但携带的 `X-Forwarded-For` / `X-Forwarded-Host` / `X-Forwarded-Proto` 头指向非本地来源，那么这些转发头证据会否定回环本地性的主张。此时配对路径需要显式批准，而不是静默地将该请求视为同主机连接。关于操作员认证的等价规则，请参见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)。
+Gateway 配对仅在原始套接字
+和任何上游代理证据都一致时，才将连接视为回环。如果请求在回环上到达，但
+携带 `Forwarded`、任何 `X-Forwarded-*` 或 `X-Real-IP` 头证据，那么该
+转发头证据会使回环本地性声明失效。此时配对
+路径需要显式批准，而不是静默地将请求视为
+同主机连接。关于操作员认证中的对应规则，请参见 [Trusted Proxy Auth](/gateway/trusted-proxy-auth)。
 
 ## 存储（本地，私有）
 

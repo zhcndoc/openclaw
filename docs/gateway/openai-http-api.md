@@ -38,8 +38,14 @@ OpenClaw 的 Gateway 可以提供一个小型的、兼容 OpenAI 的 Chat Comple
 
 - 当 `gateway.auth.mode="token"` 时，使用 `gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）。
 - 当 `gateway.auth.mode="password"` 时，使用 `gateway.auth.password`（或 `OPENCLAW_GATEWAY_PASSWORD`）。
-- 当 `gateway.auth.mode="trusted-proxy"` 时，HTTP 请求必须来自已配置的受信任代理来源；同主机回环代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-- 如果配置了 `gateway.auth.rateLimit` 且认证失败次数过多，端点会返回带有 `Retry-After` 的 `429`。
+- 当 `gateway.auth.mode="trusted-proxy"` 时，HTTP 请求必须来自
+  已配置的受信任代理来源；同主机 loopback 代理需要显式设置
+  `gateway.auth.trustedProxy.allowLoopback = true`。
+- 本机同主机的内部调用如果绕过代理，可以使用
+  `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` 作为本地直接
+  回退方案。任何 `Forwarded`、`X-Forwarded-*` 或 `X-Real-IP` 头的证据
+  都会让请求保持在 trusted-proxy 路径上。
+- 如果配置了 `gateway.auth.rateLimit` 且出现过多认证失败，端点会返回带有 `Retry-After` 的 `429`。
 
 ## 安全边界（重要）
 
@@ -71,7 +77,15 @@ OpenClaw 的 Gateway 可以提供一个小型的、兼容 OpenAI 的 Chat Comple
 
 参见 [Security](/gateway/security) 和 [Remote access](/gateway/remote)。
 
-## 以 agent 为先的模型契约
+## 何时使用此端点
+
+当你要把工具或受信任的应用侧后端集成到现有 gateway，并且可以安全地持有 gateway 运维者凭据时，请使用 `/v1/chat/completions`。
+
+- 当你的集成只是同一个 gateway 的另一个运维者/客户端表面时，优先使用它，而不是新增一个内建通道。
+- 对于直接连接远程 gateway 的原生移动客户端，优先使用 [WebChat](/web/webchat) 或 [Gateway Protocol](/gateway/protocol)，并实现配对设备启动/设备令牌流程，这样设备就不需要共享 HTTP token/password。
+- 如果你是在把外部消息网络与其自身的用户、房间、webhook 投递或出站传输集成起来，那么应改为构建一个通道插件。参见 [Building plugins](/plugins/building-plugins)。
+
+## 以 Agent 为先的模型契约
 
 OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是原始的 provider model id。
 
@@ -128,6 +142,8 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 默认情况下，此端点是**每次请求无状态**的（每次调用都会生成一个新的 session key）。
 
 如果请求包含 OpenAI 的 `user` 字符串，Gateway 会据此派生一个稳定的 session key，因此重复调用可以共享同一个 agent 会话。
+
+对于自定义应用，最安全的默认做法是在同一条对话线程中重复使用相同的 `user` 值。除非你明确希望多个对话或设备共享一个 OpenClaw 会话，否则不要使用账户级标识符。当你需要在多个客户端或线程之间进行显式路由控制时，请使用 `x-openclaw-session-key`。
 
 ## 为什么这个接口很重要
 
@@ -277,6 +293,21 @@ curl -sS http://127.0.0.1:18789/v1/models \
 
 ## 示例
 
+某个应用对话的稳定 session：
+
+```bash
+curl -sS http://127.0.0.1:18789/v1/chat/completions \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "openclaw/default",
+    "user": "conv:YOUR_CONVERSATION_ID",
+    "messages": [{"role":"user","content":"请总结我今天的任务"}]
+  }'
+```
+
+在后续对话调用中重复使用相同的 `user` 值，以继续同一个 agent 会话。
+
 非流式：
 
 ```bash
@@ -285,7 +316,7 @@ curl -sS http://127.0.0.1:18789/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "openclaw/default",
-    "messages": [{"role":"user","content":"hi"}]
+    "messages": [{"role":"user","content":"你好"}]
   }'
 ```
 
@@ -299,7 +330,7 @@ curl -N http://127.0.0.1:18789/v1/chat/completions \
   -d '{
     "model": "openclaw/research",
     "stream": true,
-    "messages": [{"role":"user","content":"hi"}]
+    "messages": [{"role":"user","content":"你好"}]
   }'
 ```
 

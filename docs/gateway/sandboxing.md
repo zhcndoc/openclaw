@@ -96,9 +96,11 @@ SSH 专属配置位于 `agents.defaults.sandbox.ssh` 下。OpenShell 专属配�
 
 如果你将 OpenClaw Gateway 本身部署为 Docker 容器，它会使用主机的 Docker socket（DooD）来编排同级沙箱容器。这会引入一个特定的路径映射约束：
 
-- **配置需要主机路径**：`openclaw.json` 中的 `workspace` 配置**必须**包含**主机的绝对路径**（例如 `/home/user/.openclaw/workspaces`），而不是 Gateway 容器内部路径。当 OpenClaw 请求 Docker 守护进程启动沙箱时，守护进程会在主机 OS 命名空间下而不是 Gateway 命名空间下解析路径。
-- **文件系统桥接一致性（完全相同的卷映射）**：OpenClaw Gateway 原生进程也会向 `workspace` 目录写入 heartbeat 和桥接文件。由于 Gateway 会在其容器化环境中评估完全相同的字符串（主机路径），因此 Gateway 部署**必须**包含一份相同的卷映射，将主机命名空间原生地链接起来（`-v /home/user/.openclaw:/home/user/.openclaw`）。
-- **Codex 代码模式**：当 OpenClaw 沙箱处于活动状态时，OpenClaw 会将 Codex app-server 的轮次限制为 Codex 的 `workspace-write` 沙箱模式，即使 Codex 插件默认值是 `danger-full-access`。不要把主机 Docker socket 挂载到 agent 沙箱容器或自定义 Codex 沙箱中。
+- **Config requires host paths**: `openclaw.json` 中的 `workspace` 配置必须包含**主机的绝对路径**（例如 `/home/user/.openclaw/workspaces`），而不是 Gateway 容器内部路径。当 OpenClaw 请求 Docker 守护进程启动一个沙箱时，守护进程会根据主机 OS 命名空间来解析路径，而不是 Gateway 命名空间。
+- **FS bridge parity (identical volume map)**: OpenClaw Gateway 原生进程也会向 `workspace` 目录写入 heartbeat 和 bridge 文件。由于 Gateway 会在其自身容器化环境中解析完全相同的字符串（主机路径），Gateway 部署必须包含一份相同的卷映射，将主机命名空间原生连接起来（`-v /home/user/.openclaw:/home/user/.openclaw`）。
+- **Codex code mode**: 当 OpenClaw 沙箱处于活动状态时，OpenClaw 会在该轮次禁用 Codex app-server 原生 Code Mode、用户 MCP 服务器以及 app-backed 插件执行，因为这些原生入口运行在 Gateway-host app-server 进程中，而不是 OpenClaw 沙箱后端。Shell 访问会通过 OpenClaw 沙箱支持的工具暴露，例如在常规 exec/process 工具可用时使用 `sandbox_exec` 和 `sandbox_process`。不要将主机 Docker socket 挂载到 agent 沙箱容器或自定义 Codex 沙箱中。
+
+在 Ubuntu/AppArmor 主机上，如果你有意在没有启用 OpenClaw 沙箱的情况下运行原生 Codex `workspace-write`，并且服务用户不允许创建非特权用户命名空间，那么 Codex `workspace-write` 可能会在 shell 启动前失败。当 Docker 沙箱的出站网络被禁用（`network: "none"`，默认值）时，Codex 还需要一个非特权网络命名空间。常见症状包括 `bwrap: setting up uid map: Permission denied` 和 `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`。运行 `openclaw doctor`；如果它报告 Codex bwrap 命名空间探测失败，建议使用一个允许 OpenClaw 服务进程所需命名空间的 AppArmor 配置文件。`kernel.apparmor_restrict_unprivileged_userns=0` 是一个全局范围的回退方案，但有安全方面的权衡；仅在该主机安全姿态可接受时使用它。
 
 如果你只是在内部映射路径，而没有主机绝对路径的一致性，OpenClaw 在尝试于容器环境中写入 heartbeat 时会原生抛出 `EACCES` 权限错误，因为完整限定路径字符串在原生环境中并不存在。
 </Warning>

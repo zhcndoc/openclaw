@@ -46,7 +46,10 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   覆盖源状态目录。Hermes 默认为 `~/.hermes`。
 </ParamField>
 <ParamField path="--include-secrets" type="boolean">
-  导入受支持的凭据。默认关闭。
+  在不提示的情况下导入受支持的凭据。交互式 apply 会在检测到身份验证凭据时询问是否导入，默认选中 yes；非交互式 `--yes` 需要 `--include-secrets` 才会导入它们。
+</ParamField>
+<ParamField path="--no-auth-credentials" type="boolean">
+  跳过身份验证凭据导入，包括交互式提示。
 </ParamField>
 <ParamField path="--overwrite" type="boolean">
   当计划报告冲突时，允许 apply 替换现有目标。
@@ -90,8 +93,8 @@ openclaw onboard --import-from hermes --import-source ~/.hermes
   <Accordion title="冲突">
     当计划存在冲突时，apply 会拒绝继续。请检查计划，然后在替换现有目标是有意为之时，使用 `--overwrite` 重新运行。提供程序仍可能会为迁移报告目录中被覆盖的文件写入逐项备份。
   </Accordion>
-  <Accordion title="密钥">
-    默认情况下绝不会导入密钥。使用 `--include-secrets` 可导入受支持的凭据。
+  <Accordion title="Secrets">
+    交互式 apply 会询问是否导入检测到的身份验证凭据，默认选中 yes。使用 `--no-auth-credentials` 可跳过它们，或在配合 `--yes` 的无人值守凭据导入中使用 `--include-secrets`。
   </Accordion>
 </AccordionGroup>
 
@@ -151,8 +154,8 @@ Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场、不是源安
 - `plugins.entries.codex.enabled: true`
 - `plugins.entries.codex.config.codexPlugins.enabled: true`
 - `plugins.entries.codex.config.codexPlugins.allow_destructive_actions: true`
-- one explicit plugin entry with `marketplaceName: "openai-curated"` and
-  `pluginName` for each selected plugin
+- 一个显式插件条目，其中 `marketplaceName: "openai-curated"`，并为每个选中的插件设置
+  `pluginName`
 
 迁移绝不会写入 `plugins["*"]`，也绝不会存储本地市场缓存路径。源侧订阅失败会在手动项上报告为带类型原因，例如 `codex_subscription_required`、`codex_account_unavailable`、`plugin_disabled` 或 `plugin_read_unavailable`。在使用 `--verify-plugin-apps` 时，源 app 清单失败也可能表现为 `app_inaccessible`、`app_disabled`、`app_missing` 或 `app_inventory_unavailable`。被跳过的插件不会写入目标配置。
 目标侧需要认证的安装会在受影响的插件项上报告，状态为 `status: "skipped"`、`reason: "auth_required"`，并使用已脱敏的 app 标识。其显式配置条目会保持禁用状态，直到你重新授权并启用它们。其他安装失败则作为按项范围的 `error` 结果。
@@ -166,18 +169,60 @@ Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场、不是源安
 ### Hermes 导入内容
 
 - 来自 `config.yaml` 的默认模型配置。
-- 来自 `providers` 和 `custom_providers` 的已配置模型提供程序以及自定义 OpenAI 兼容端点。
+- 来自 `providers` 和 `custom_providers` 的已配置模型提供程序以及自定义的 OpenAI 兼容端点。
 - 来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义。
 - 将 `SOUL.md` 和 `AGENTS.md` 导入到 OpenClaw 代理工作区。
 - 将 `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件。
-- OpenClaw 文件记忆的记忆配置默认值，以及来自 Honcho 等外部记忆提供程序的归档或人工审核项目。
+- OpenClaw 文件记忆的默认记忆配置，以及针对 Honcho 等外部记忆提供程序的归档或人工审核项。
 - 在 `skills/<name>/` 下包含 `SKILL.md` 文件的技能。
-- 来自 `skills.config` 的每项技能配置值。
-- 仅在使用 `--include-secrets` 时，从 `.env` 导入受支持的 API 密钥。
+- 来自 `skills.config` 的每技能配置值。
+- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `auth.json` 的受支持 OAuth 凭据，以及来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据。
+- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `.env` 和 OpenCode `auth.json` 的受支持 API 密钥和令牌。
 
 ### 支持的 `.env` 密钥
 
-`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`.
+- `AI_GATEWAY_API_KEY`
+- `ALIBABA_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `ARCEEAI_API_KEY`
+- `CEREBRAS_API_KEY`
+- `CHUTES_API_KEY`
+- `CLOUDFLARE_AI_GATEWAY_API_KEY`
+- `COPILOT_GITHUB_TOKEN`
+- `DASHSCOPE_API_KEY`
+- `DEEPINFRA_API_KEY`
+- `DEEPSEEK_API_KEY`
+- `FIREWORKS_API_KEY`
+- `GEMINI_API_KEY`
+- `GH_TOKEN`
+- `GITHUB_TOKEN`
+- `GLM_API_KEY`
+- `GOOGLE_API_KEY`
+- `GROQ_API_KEY`
+- `HF_TOKEN`
+- `HUGGINGFACE_HUB_TOKEN`
+- `KILOCODE_API_KEY`
+- `KIMICODE_API_KEY`
+- `KIMI_API_KEY`
+- `MINIMAX_API_KEY`
+- `MINIMAX_CODING_API_KEY`
+- `MISTRAL_API_KEY`
+- `MODELSTUDIO_API_KEY`
+- `MOONSHOT_API_KEY`
+- `NVIDIA_API_KEY`
+- `OPENAI_API_KEY`
+- `OPENCODE_API_KEY`
+- `OPENCODE_GO_API_KEY`
+- `OPENCODE_ZEN_API_KEY`
+- `OPENROUTER_API_KEY`
+- `QIANFAN_API_KEY`
+- `QWEN_API_KEY`
+- `TOGETHER_API_KEY`
+- `VENICE_API_KEY`
+- `XAI_API_KEY`
+- `XIAOMI_API_KEY`
+- `ZAI_API_KEY`
+- `Z_AI_API_KEY`
 
 ### 仅归档状态
 
@@ -188,7 +233,6 @@ OpenClaw 无法安全解释的 Hermes 状态会被复制到迁移报告中供人
 - `logs/`
 - `cron/`
 - `mcp-tokens/`
-- `auth.json`
 - `state.db`
 
 ### 应用后

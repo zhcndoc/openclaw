@@ -59,7 +59,20 @@ read_when:
 - 你的反向代理认证策略和 `allowUsers` 将成为实际的访问控制。
 - 将 gateway ingress 仅锁定为受信任代理 IP（`gateway.trustedProxies` + 防火墙）。
 
-## 配置
+**无设备身份时清除 scope：** 由于浏览器在普通 HTTP 下
+无法创建 OpenClaw 用于绑定 operator scope 的设备身份，
+缺少设备身份的 trusted-proxy WebSocket 连接会将其
+自声明的 scope 清空为一个空集合。连接会被允许，但
+受 scope 限制的方法（`operator.read`、`operator.write` 等）会失败并返回
+`missing scope`。
+
+若要在没有设备身份的 trusted-proxy WebSocket 连接中保留 operator scopes，
+请设置 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`。
+这是一个紧急开关（`openclaw security audit` 会将其报告为 critical）。
+仅当反向代理是到 Gateway 的唯一路径，且无法建立设备
+身份时才使用它。
+
+## Configuration
 
 ```json5
 {
@@ -93,12 +106,12 @@ read_when:
 <Warning>
 **重要运行规则**
 
-- 默认情况下，Trusted-proxy 认证会拒绝来自 loopback 源的请求（`127.0.0.1`、`::1`、loopback CIDR）。
-- 同主机 loopback 反向代理不会满足 trusted-proxy 认证，除非你明确设置 `gateway.auth.trustedProxy.allowLoopback = true` 并将 loopback 地址加入 `gateway.trustedProxies`。
-- `allowLoopback` 会将 Gateway 主机上的本地进程视为与反向代理同等受信任。仅当 Gateway 仍通过防火墙阻止直接远程访问，且本地代理会剥离或覆盖客户端提供的身份头时才启用它。
-- 不经过反向代理的内部 Gateway 客户端应使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`，而不是 trusted-proxy 身份头。
-- 非 loopback 的 Control UI 部署仍需要显式设置 `gateway.controlUi.allowedOrigins`。
-- **转发头证据会覆盖 loopback 本地性，用于本地直接回退。** 如果请求到达 loopback，但携带的 `X-Forwarded-For` / `X-Forwarded-Host` / `X-Forwarded-Proto` 请求头指向非本地来源，那么这些证据会使本地直接密码回退和设备身份门控失效。在 `allowLoopback: true` 下，trusted-proxy 认证仍可将该请求作为同主机代理请求接受，而 `requiredHeaders` 和 `allowUsers` 仍然生效。
+- Trusted-proxy auth 默认会拒绝来自 loopback 源的请求（`127.0.0.1`、`::1`、loopback CIDRs）。
+- 同主机 loopback 反向代理不会满足 trusted-proxy auth，除非你明确设置 `gateway.auth.trustedProxy.allowLoopback = true`，并将 loopback 地址包含在 `gateway.trustedProxies` 中。
+- `allowLoopback` 会将 Gateway 主机上的本地进程视为与反向代理同等可信。只有在 Gateway 仍然通过防火墙禁止直接远程访问，并且本地代理会剥离或覆盖客户端提供的身份头时才启用它。
+- 不经过反向代理的 Gateway 内部客户端应使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`，而不是 trusted-proxy 身份头。
+- 非 loopback 的 Control UI 部署仍然需要显式配置 `gateway.controlUi.allowedOrigins`。
+- **对于本地直接回退，转发头证据会覆盖 loopback 本地性。** 如果请求到达 loopback，但携带了 `Forwarded`、任何 `X-Forwarded-*` 或 `X-Real-IP` 头证据，这些证据会使本地直接密码回退和设备身份门控失效。启用 `allowLoopback: true` 后，trusted-proxy auth 仍然可以将该请求作为同主机代理请求接受，而 `requiredHeaders` 和 `allowUsers` 仍继续生效。
 
 </Warning>
 
@@ -311,7 +324,12 @@ loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者�
 
 受信任代理认证是一种 **带身份** 的 HTTP 模式，因此调用方可以选择使用 `x-openclaw-scopes` 声明 operator scopes。
 
-示例：
+Note: `x-openclaw-scopes` 仅适用于 HTTP 端点。WebSocket scopes 会
+由 Gateway 协议握手和设备身份绑定来决定。对于 trusted-proxy 的
+WebSocket scope 行为，请参见
+[Control UI 配对行为](#control-ui-配对行为)。
+
+Examples:
 
 - `x-openclaw-scopes: operator.read`
 - `x-openclaw-scopes: operator.read,operator.write`
@@ -406,6 +424,18 @@ loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者�
     - `gateway.controlUi.allowedOrigins` 是否包含精确的浏览器 origin。
     - 除非你有意启用全放行行为，否则不要依赖通配来源。
     - 如果你确实在使用 Host-header 回退模式，请明确设置 `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`。
+
+  </Accordion>
+  <Accordion title="Connection succeeds but methods report missing scope">
+    WebSocket 已连接，但 `chat.history` 或 `sessions.list` 失败，并提示
+    `missing scope: operator.read`。
+
+    这对于没有设备身份的受信任代理 WebSocket 连接是预期行为。缺少设备身份的连接会清空其作用域。浏览器无法通过普通 HTTP 生成设备身份。
+
+    解决方法：
+
+    - 设置 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`，以在受信任代理 WebSocket 连接上保留 operator 作用域，或者
+    - 使用设备身份配对，使作用域绑定到设备令牌。
 
   </Accordion>
   <Accordion title="WebSocket still failing">

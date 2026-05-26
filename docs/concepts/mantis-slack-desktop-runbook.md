@@ -1,5 +1,5 @@
 ---
-summary: "面向 Mantis Slack 桌面 QA 的操作手册：GitHub 派发、 本地 CLI、热 VNC 租约、hydrate 模式、时间解释、制品和失败处理。"
+summary: "面向 Mantis Slack 桌面 QA 的操作手册：GitHub 派发、本地 CLI、热 VNC 租约、hydrate 模式、时间解释、制品和失败处理。"
 read_when:
   - 从 GitHub 或本地运行 Mantis Slack 桌面 QA
   - 调试缓慢的 Mantis Slack 桌面运行
@@ -114,6 +114,22 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 仅当重用的远程工作区已经有 `node_modules` 和已构建的 `dist/` 时，
 才使用 `--hydrate-mode prehydrated`。如果这些缺失，Mantis 会闭合失败。
 
+证明原生 Slack 审批 UI：
+
+```bash
+pnpm openclaw qa mantis slack-desktop-smoke \
+  --provider aws \
+  --class standard \
+  --approval-checkpoints \
+  --credential-source convex \
+  --credential-role maintainer \
+  --hydrate-mode source
+```
+
+审批检查点模式与 `--gateway-setup` 互斥。除非你传入显式的审批检查点 `--scenario` 标志，否则它会运行可选启用的 `slack-approval-exec-native` 和 `slack-approval-plugin-native` 场景；其他 Slack 场景会在 VM 启动前被拒绝。Slack QA 运行器会根据它观察到的真实 Slack API 消息写入每个检查点的 JSON 文件，然后远程观察器将该消息快照渲染为 `approval-checkpoints/<scenario>-pending.png` 和 `approval-checkpoints/<scenario>-resolved.png`。如果任何检查点 JSON、消息证据、ack JSON 或渲染后的截图缺失或为空，运行都会失败。
+
+冷启动的 GitHub Actions 租约没有 Slack Web cookie，因此它们的浏览器捕获可能会落在 Slack 登录页上。对于审批检查点证明，请信任渲染后的检查点图片和 Slack QA 制品，而不是 `slack-desktop-smoke.png`。只有当浏览器截图本身必须显示 Slack Web 时，才使用带有手动登录 Slack Web 配置文件的保留热租约。
+
 ## Hydrate 模式
 
 | 模式          | 适用场景                                  | 远程行为                                                                       | 取舍                                                     |
@@ -135,9 +151,7 @@ pnpm store 会按操作系统、Node 版本和 lockfile 缓存。VM 的 source �
   hydrate 验证、网关启动、截图和视频捕获。
 - `artifacts.copy`：从 VM 通过 rsync 拷回。
 
-当 Crabbox 在 Mantis 已复制证明 OpenClaw 网关存活且设置完成的元数据后返回非零
-远程状态时，`crabbox.remote_run` 可能会被标记为 `accepted`。
-将 `accepted` 视为“通过但有解释”，而不是失败场景。
+当 Crabbox 返回非零远程状态，但 Mantis 已经复制了元数据，证明 OpenClaw 网关设置已完成或 Slack QA 命令本身已成功退出时，`crabbox.remote_run` 可以标记为 `accepted`。将 `accepted` 视为“通过但有说明”，而不是场景失败。
 
 如果运行很慢：
 
@@ -150,14 +164,14 @@ pnpm store 会按操作系统、Node 版本和 lockfile 缓存。VM 的 source �
 
 一条优秀的 PR 评论应展示：
 
-- scenario id 和 candidate SHA；
+- 场景 ID 和候选 SHA；
 - GitHub Actions 运行 URL；
 - 制品 URL；
-- 内联截图；
-- 可用时的内联动图预览；
-- 完整 MP4 和裁剪 MP4 链接；
+- 内联的审批检查点截图，或来自已登录热租约的 Slack Web 截图；
+- 如有可用，内联动画预览；
+- 完整 MP4 和裁剪后 MP4 链接；
 - 通过/失败状态；
-- 附加报告中的时间摘要。
+- 附带报告中的时间汇总。
 
 不要把截图或视频提交到仓库中。请将它们保留在 GitHub
 Actions 制品或 PR 评论里。

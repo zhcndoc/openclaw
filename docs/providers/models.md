@@ -32,7 +32,6 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后
 - [DeepInfra](/providers/deepinfra)
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)
-- [GLM 模型](/providers/glm)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
 - [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
@@ -47,13 +46,13 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后
 - [Vercel AI Gateway](/providers/vercel-ai-gateway)
 - [Venice（Venice AI）](/providers/venice)
 - [xAI](/providers/xai)
-- [Z.AI](/providers/zai)
+- [Z.AI (GLM)](/providers/zai)
 
-## Additional provider variants
+## 其他提供商变体
 
-- `anthropic-vertex` - install `@openclaw/anthropic-vertex-provider` for implicit Anthropic on Google Vertex support when Vertex credentials are available; no separate onboarding auth choice
-- `copilot-proxy` - local VS Code Copilot Proxy bridge; use `openclaw onboard --auth-choice copilot-proxy`
-- `google-gemini-cli` - unofficial Gemini CLI OAuth flow; requires a local `gemini` install (`brew install gemini-cli` or `npm install -g @google/gemini-cli`); default model `google-gemini-cli/gemini-3-flash-preview`; use `openclaw onboard --auth-choice google-gemini-cli` or `openclaw models auth login --provider google-gemini-cli --set-default`
+- `anthropic-vertex` - 当 Vertex 凭据可用时，安装 `@openclaw/anthropic-vertex-provider` 以支持在 Google Vertex 上隐式使用 Anthropic；无需单独的 onboarding 认证选项
+- `copilot-proxy` - 本地 VS Code Copilot Proxy 桥接；使用 `openclaw onboard --auth-choice copilot-proxy`
+- `google-gemini-cli` - 非官方 Gemini CLI OAuth 流程；需要本地安装 `gemini`（`brew install gemini-cli` 或 `npm install -g @google/gemini-cli`）；默认模型 `google-gemini-cli/gemini-3-flash-preview`；使用 `openclaw onboard --auth-choice google-gemini-cli` 或 `openclaw models auth login --provider google-gemini-cli --set-default`
 
 有关完整的提供商目录（xAI、Groq、Mistral 等）和高级配置，
 请参阅 [模型提供商](/concepts/model-providers)。

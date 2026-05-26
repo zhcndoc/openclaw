@@ -147,29 +147,33 @@ export default definePluginEntry({
 
 - `event.toolName`
 - `event.params`
-- 可选的 `event.derivedPaths`，其中包含尽力而为的、基于主机推导的目标路径提示，适用于诸如 `apply_patch` 之类的已知工具封装；如果存在，这些路径可能不完整，或者可能比工具实际会触及的范围更宽泛（例如，输入格式错误或不完整时）
+- 可选的 `event.toolKind` 和 `event.toolInputKind`，用于有意共享名称的工具的宿主权威区分器；例如，外层 code-mode `exec` 调用使用 `toolKind: "code_mode_exec"`，并在已知输入语言时包含 `toolInputKind: "javascript" | "typescript"`
+- 可选的 `event.derivedPaths`，包含对诸如 `apply_patch` 之类已知工具封装的宿主派生目标路径提示，尽力而为；在存在时，这些路径可能不完整，或者可能高估工具实际会触及的内容（例如，输入格式错误或不完整时）
 - 可选的 `event.runId`
 - 可选的 `event.toolCallId`
-- `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、`ctx.runId`、`ctx.jobId`（在 cron 驱动的运行中设置）以及诊断信息 `ctx.trace` 等上下文字段
+- 上下文字段，例如 `ctx.agentId`、`ctx.sessionKey`、`ctx.sessionId`、
+  `ctx.runId`、`ctx.jobId`（在 cron 驱动的运行中设置）、`ctx.toolKind`、
+  `ctx.toolInputKind`，以及诊断用 `ctx.trace`
 
 它可以返回：
 
 ```typescript
 type BeforeToolCallResult = {
-  params?: Record<string, unknown>;
-  block?: boolean;
-  blockReason?: string;
-  requireApproval?: {
-    title: string;
-    description: string;
-    severity?: "info" | "warning" | "critical";
-    timeoutMs?: number;
-    timeoutBehavior?: "allow" | "deny";
-    pluginId?: string;
-    onResolution?: (
-      decision: "allow-once" | "allow-always" | "deny" | "timeout" | "cancelled",
-    ) => Promise<void> | void;
-  };
+    params?: Record<string, unknown>;
+    block?: boolean;
+    blockReason?: string;
+    requireApproval?: {
+      title: string;
+      description: string;
+      severity?: "info" | "warning" | "critical";
+      timeoutMs?: number;
+      timeoutBehavior?: "allow" | "deny";
+      allowedDecisions?: Array<"allow-once" | "allow-always" | "deny">;
+      pluginId?: string;
+      onResolution?: (
+        decision: "allow-once" | "allow-always" | "deny" | "timeout" | "cancelled",
+      ) => Promise<void> | void;
+    };
 };
 ```
 
@@ -184,7 +188,9 @@ type BeforeToolCallResult = {
 - `onResolution` 接收已解析的批准决策 - `allow-once`、
   `allow-always`、`deny`、`timeout` 或 `cancelled`。
 
-需要主机级策略的捆绑插件可以用 `api.registerTrustedToolPolicy(...)` 注册受信任的 tool 策略。这些会在普通 `before_tool_call` 钩子和外部插件决策之前运行。仅将其用于主机信任的门禁，例如工作区策略、预算执行或保留工作流安全。外部插件应使用常规的 `before_tool_call` 钩子。
+有关批准路由、决策行为，以及何时使用 `requireApproval` 而不是可选工具或 exec 批准，请参见[插件权限请求](/plugins/plugin-permission-requests)。
+
+需要宿主级策略的捆绑插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略在普通 `before_tool_call` 钩子之前以及外部插件决策之前运行。仅将其用于宿主信任的门控，例如工作区策略、预算强制执行或保留工作流安全。外部插件应使用普通 `before_tool_call` 钩子。
 
 ### 工具结果持久化
 
@@ -213,7 +219,7 @@ type BeforeToolCallResult = {
 
 对于源自通道的运行，`ctx.messageProvider` 是诸如 `discord` 或 `telegram` 的提供方表面，而 `ctx.channelId` 是当 OpenClaw 能从 session key 或投递元数据推导出时的会话目标标识符。
 
-`agent_end` 是一个观察型钩子，并在回合结束后以即发即弃的方式运行。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续执行；除非插件也使用自己的 abort signal，否则它不会取消插件拥有的网络工作。
+`agent_end` 是一个观察钩子。Gateway 和持久化 harness 路径会在回合结束后以 fire-and-forget 方式运行它，而短生命周期的一次性 CLI 路径会在进程清理前等待钩子 promise，这样受信任的插件就可以刷新终端可观测性或捕获状态。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续；除非插件也使用自己的中止信号，否则不会取消插件拥有的网络工作。
 
 使用 `model_call_started` 和 `model_call_ended` 来记录 provider 调用遥测，这些遥测不应接收原始提示词、历史、响应、标题、请求体或 provider 请求 id。这些钩子包含稳定的元数据，例如 `runId`、`callId`、`provider`、`model`、可选的 `api`/`transport`、终态 `durationMs`/`outcome`，以及当 OpenClaw 能推导出受限的 provider 请求 id 哈希时提供的 `upstreamRequestIdHash`。当运行时已解析 context-window 元数据时，钩子事件和上下文还会包含 `contextTokenBudget`，即在模型/配置/agent 上限之后的有效 token 预算；如果应用了更低的上限，还会包含 `contextWindowSource` 和 `contextWindowReferenceTokens`。
 

@@ -1,14 +1,14 @@
 ---
-summary: "definePluginEntry、defineChannelPluginEntry 和 defineSetupPluginEntry 参考"
+summary: "defineToolPlugin、definePluginEntry、defineChannelPluginEntry 和 defineSetupPluginEntry 的参考"
 title: "插件入口点"
 sidebarTitle: "入口点"
 read_when:
-  - 你需要 `definePluginEntry` 或 `defineChannelPluginEntry` 的精确类型签名
-  - 你想了解注册模式（完整、setup 或 CLI 元数据）
+  - 你需要 defineToolPlugin、definePluginEntry 或 defineChannelPluginEntry 的精确类型签名
+  - 你想了解注册模式（完整 / setup / CLI 元数据）
   - 你正在查找入口点选项
 ---
 
-每个插件都会导出一个默认入口对象。SDK 提供了三个辅助函数用于创建它们。
+每个插件都会导出一个默认入口对象。SDK 提供了用于创建它们的辅助函数。
 
 对于已安装的插件，`package.json` 在可用时应将运行时加载指向构建后的 JavaScript：
 
@@ -36,14 +36,50 @@ TypeScript 编译。显式运行时入口是必需的：`runtimeSetupEntry`
 所有入口路径都必须保持在插件包目录内。运行时入口以及推断出的构建后 JavaScript 同级文件，不能让一个会越界的 `extensions` 或 `setupEntry` 源路径变得有效。
 
 <Tip>
-  **在寻找操作指南吗？** 请参见 [Channel Plugins](/plugins/sdk-channel-plugins) 或 [Provider Plugins](/plugins/sdk-provider-plugins) 获取逐步指南。
+  **想看一步步的讲解？** 请参见 [工具插件](/plugins/tool-plugins)、[通道插件](/plugins/sdk-channel-plugins) 或 [提供者插件](/plugins/sdk-provider-plugins)。
 </Tip>
+
+## `defineToolPlugin`
+
+**导入：** `openclaw/plugin-sdk/tool-plugin`
+
+适用于只添加代理工具的简单插件。`defineToolPlugin` 会保持作者编写的源代码尽可能精简，从 TypeBox schema 推断配置和工具参数类型，将普通返回值包装为 OpenClaw 工具结果格式，并暴露静态元数据，供 `openclaw plugins build` 写入插件清单。
+
+```typescript
+import { Type } from "typebox";
+import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
+
+export default defineToolPlugin({
+  id: "stock-quotes",
+  name: "Stock Quotes",
+  description: "Fetch stock quotes.",
+  configSchema: Type.Object({
+    apiKey: Type.Optional(Type.String({ description: "API key." })),
+  }),
+  tools: (tool) => [
+    tool({
+      name: "quote",
+      label: "Quote",
+      description: "Fetch a quote.",
+      parameters: Type.Object({
+        symbol: Type.String({ description: "Ticker symbol." }),
+      }),
+      execute: async ({ symbol }, config) => ({ symbol, hasKey: Boolean(config.apiKey) }),
+    }),
+  ],
+});
+```
+
+- `configSchema` 是可选的。省略时，OpenClaw 会使用严格的空对象 schema，并且生成的清单仍然会包含 `configSchema`。
+- `execute` 返回普通字符串或可 JSON 序列化的值。该辅助函数会将其包装为带有 `details` 的文本工具结果。
+- 工具名称是静态的。`openclaw plugins build` 会根据已声明的工具推导 `contracts.tools`，因此作者无需手动重复名称。
+- 运行时加载仍然保持严格。已安装插件仍然需要 `openclaw.plugin.json` 和 `package.json` 中的 `openclaw.extensions`；OpenClaw 不会执行插件代码来推断缺失的清单数据。
 
 ## `definePluginEntry`
 
 **导入：** `openclaw/plugin-sdk/plugin-entry`
 
-适用于 provider 插件、tool 插件、hook 插件，以及任何**不是**消息通道的内容。
+适用于提供者插件、高级工具插件、钩子插件，以及任何**不是**消息通道的内容。
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";

@@ -21,6 +21,7 @@ title: "Agents"
 openclaw agents list
 openclaw agents list --bindings
 openclaw agents add work --workspace ~/.openclaw/workspace-work
+openclaw agents add work --workspace ~/.openclaw/workspace-work --bind telegram:*
 openclaw agents add ops --workspace ~/.openclaw/workspace-ops --bind telegram:ops --non-interactive
 openclaw agents bindings
 openclaw agents bind --agent work --bind telegram:ops
@@ -50,27 +51,47 @@ openclaw agents bindings --json
 openclaw agents bind --agent work --bind telegram:ops --bind discord:guild-a
 ```
 
-如果你省略 `accountId`（`--bind <channel>`），OpenClaw 会在可用时从频道默认值和插件设置钩子中解析它。
+你也可以在创建 agent 时添加绑定：
+
+```bash
+openclaw agents add work --workspace ~/.openclaw/workspace-work --bind telegram:* --bind discord:*
+```
+
+如果你省略 `accountId`（`--bind <channel>`），OpenClaw 会从插件设置钩子、强制账户绑定或该频道配置的账户数量中解析它。
 
 如果你在 `bind` 或 `unbind` 中省略 `--agent`，OpenClaw 会将目标设为当前默认 agent。
 
-### 绑定范围行为
+### `--bind` 格式
 
-- 不带 `accountId` 的绑定只匹配频道默认账号。
-- `accountId: "*"` 是频道级兜底（所有账号），其优先级低于显式账号绑定。
-- 如果同一个 agent 已经有一个不带 `accountId` 的匹配频道绑定，而你之后又用显式或已解析的 `accountId` 进行绑定，OpenClaw 会直接升级现有绑定，而不是新增重复项。
+| 格式                         | 含义                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `--bind <channel>:*`         | 匹配该频道上的所有账户。                                                                |
+| `--bind <channel>:<account>` | 匹配一个账户。                                                                                |
+| `--bind <channel>`           | 仅匹配默认账户，除非 CLI 能安全解析出特定于插件的账户作用域。 |
+
+### 绑定作用域行为
+
+- 不带 `accountId` 的已存储绑定仅匹配该频道的默认账户。
+- `accountId: "*"` 是频道级回退（所有账户），其具体性低于显式账户绑定。
+- 如果同一个 agent 已经有一个不带 `accountId` 的匹配频道绑定，而你随后使用显式或已解析的 `accountId` 进行绑定，OpenClaw 会就地升级现有绑定，而不是添加重复项。
 
 示例：
 
 ```bash
-# 初始的仅频道绑定
+# 匹配该频道上的所有账户
+openclaw agents bind --agent work --bind telegram:*
+
+# 匹配特定账户
+openclaw agents bind --agent work --bind telegram:ops
+
+# 初始仅频道绑定
 openclaw agents bind --agent work --bind telegram
 
-# 之后升级为按账号范围的绑定
-openclaw agents bind --agent work --bind telegram:ops
+# 之后升级为账户作用域绑定
+openclaw agents bind --agent work --bind telegram:alerts
 ```
 
-升级后，该绑定的路由范围会限定为 `telegram:ops`。如果你也希望使用默认账号路由，请显式添加它（例如 `--bind telegram:default`）。
+升级后，该绑定的路由将限定为 `telegram:alerts`。如果你还想要默认账户路由，请显式添加它（例如 `--bind telegram:default`）。
 
 移除绑定：
 

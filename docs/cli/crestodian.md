@@ -1,7 +1,7 @@
 ---
 summary: "Crestodian 的 CLI 参考与安全模型，适用于无配置安全的设置和修复助手"
 read_when:
-  - 你在不带命令运行 openclaw，并希望了解 Crestodian
+  - 你在设置后运行 openclaw 且不带命令，并希望了解 Crestodian
   - 你需要一种无配置且安全的方式来检查或修复 OpenClaw
   - 你正在设计或启用消息通道救援模式
 title: "Crestodian"
@@ -11,8 +11,7 @@ title: "Crestodian"
 
 Crestodian 是 OpenClaw 的本地设置、修复和配置助手。它被设计为在正常代理路径损坏时仍保持可达。
 
-不带命令运行 `openclaw` 会在交互式终端中启动 Crestodian。
-运行 `openclaw crestodian` 会显式启动同一个助手。
+在主动配置文件缺失或没有已编写设置（为空或仅含元数据）时，运行不带命令的 `openclaw` 会先启动经典引导。配置文件已有已编写设置后，运行不带命令的 `openclaw` 会在交互式终端中启动 Crestodian。运行 `openclaw crestodian` 则会显式启动同一个助手。
 
 ## Crestodian 显示什么
 
@@ -82,8 +81,7 @@ Crestodian 的启动路径故意保持很小。它可以在以下情况下运行
 - 插件命令注册不可用
 - 尚未配置任何代理
 
-`openclaw --help` 和 `openclaw --version` 仍然使用正常的快速路径。
-非交互式 `openclaw` 会以简短消息退出，而不是打印根级帮助，因为无命令产品就是 Crestodian。
+`openclaw --help` 和 `openclaw --version` 仍然使用正常的快速路径。非交互式裸 `openclaw` 会以简短消息退出，而不是打印根帮助。在全新安装时，该消息会指向非交互式引导；在设置完成后，它会指向一次性 Crestodian 命令。
 
 ## 操作与审批
 
@@ -266,13 +264,13 @@ pnpm test:docker:crestodian-planner
 pnpm test:live:crestodian-rescue-channel
 ```
 
-通过 Crestodian 的全新无配置设置由以下测试覆盖：
+通过显式 Crestodian 命令进行的无配置设置由以下内容覆盖：
 
 ```bash
 pnpm test:docker:crestodian-first-run
 ```
 
-该流水线从一个空状态目录开始，将裸 `openclaw` 路由到 Crestodian，设置默认模型，创建一个额外代理，通过插件启用加 SecretRef 令牌来配置 Discord，验证配置，并检查审计日志。QA Lab 还为同一 Ring 0 流程提供了一个基于仓库的场景：
+该流程从空的状态目录开始，验证现代化 onboard Crestodian 入口点，设置默认模型，创建额外代理，通过插件启用和令牌 SecretRef 配置 Discord，验证配置，并检查审计日志。QA Lab 还提供了同一 Ring 0 流程的仓库支持场景：
 
 ```bash
 pnpm openclaw qa suite --scenario crestodian-ring-zero-setup

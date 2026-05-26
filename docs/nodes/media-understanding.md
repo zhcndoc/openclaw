@@ -137,6 +137,28 @@ OpenClaw 可以在**回复流水线运行之前汇总入站媒体**（图像/音
   </Tab>
 </Tabs>
 
+### 提供方凭据（`apiKey`）
+
+提供方媒体理解使用与常规模型调用相同的提供方认证解析方式：认证配置文件、环境变量，然后是
+`models.providers.<providerId>.apiKey`。
+
+`tools.media.*.models[]` 条目不接受内联的 `apiKey` 字段。媒体模型条目中的 `provider` 值，例如 `openai` 或 `moonshot`，必须通过标准提供方认证来源之一提供可用凭据。
+
+最小示例：
+
+```json5
+{
+  models: {
+    providers: {
+      openai: { apiKey: "<OPENAI_API_KEY>" },
+      moonshot: { apiKey: "<MOONSHOT_API_KEY>" },
+    },
+  },
+}
+```
+
+有关完整的提供方认证参考，包括配置文件、环境变量和自定义 base URL，请参见 [工具和自定义提供方](/gateway/config-tools)。
+
 ## 默认值和限制
 
 推荐默认值：
@@ -192,9 +214,9 @@ OpenClaw 可以在**回复流水线运行之前汇总入站媒体**（图像/音
 
     内置回退顺序：
 
-    - Audio: OpenAI → Groq → xAI → Deepgram → OpenRouter → Google → SenseAudio → ElevenLabs → Mistral
-    - Image: OpenAI → Anthropic → Google → MiniMax → MiniMax Portal → Z.AI
-    - Video: Google → Qwen → Moonshot
+    - 音频：OpenAI → Groq → xAI → Deepgram → OpenRouter → Google → SenseAudio → ElevenLabs → Mistral
+    - 图像：OpenAI → Anthropic → Google → MiniMax → MiniMax Portal → Z.AI
+    - 视频：Google → Qwen → Moonshot
 
   </Step>
 </Steps>
@@ -260,8 +282,8 @@ OpenClaw 可以在**回复流水线运行之前汇总入站媒体**（图像/音
 <Note>
 **MiniMax 说明**
 
-- `minimax` 和 `minimax-portal` 的图像理解来自插件所有的 `MiniMax-VL-01` 媒体提供方。
-- 内置的 MiniMax 文本目录仍然从纯文本开始；显式的 `models.providers.minimax` 条目会生成支持图像能力的 M2.7 聊天引用。
+- `minimax`, `minimax-cn`, `minimax-portal`, and `minimax-portal-cn` 图像理解来自插件拥有的 `MiniMax-VL-01` 媒体提供方。
+- 即使旧版 MiniMax M2.x 聊天元数据声称支持图像输入，自动图像路由仍会继续使用 `MiniMax-VL-01`。
 
 </Note>
 

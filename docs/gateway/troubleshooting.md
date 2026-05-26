@@ -80,7 +80,33 @@ openclaw config get meta.lastTouchedVersion
 仅在有意降级或紧急恢复时，为单个命令设置 `OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1`。正常运行时请保持其未设置。
 </Warning>
 
-## 技能符号链接因路径越界而跳过
+## 回滚后协议不匹配
+
+当你降级或回滚 OpenClaw 后，日志持续打印 `protocol mismatch` 时使用此项。这意味着较旧的 Gateway 正在运行，但较新的本地客户端进程仍在尝试以较旧 Gateway 无法理解的协议范围重新连接。
+
+```bash
+openclaw --version
+which -a openclaw
+openclaw gateway status --deep
+openclaw doctor --deep
+openclaw logs --follow
+```
+
+查看以下内容：
+
+- Gateway 日志中的 `protocol mismatch ... client=... v<version> min=<n> max=<n> expected=<n>`。
+- `openclaw gateway status --deep` 中的 `Established clients:`，或 `openclaw doctor --deep` 中的 `Gateway clients`。这会列出连接到 Gateway 端口的活动 TCP 客户端，包括操作系统允许时的 PID 和命令行。
+- 命令行指向你回滚前所用的较新 OpenClaw 安装或包装器的客户端进程。
+
+修复方法：
+
+1. 停止或重启 `gateway status --deep` 中显示的陈旧 OpenClaw 客户端进程。
+2. 重启嵌入 OpenClaw 的应用或包装器，例如本地仪表板、编辑器、应用服务器辅助进程，或长时间运行的 `openclaw logs --follow` shell。
+3. 重新运行 `openclaw gateway status --deep` 或 `openclaw doctor --deep`，确认陈旧客户端 PID 已消失。
+
+不要让较旧的 Gateway 接受较新的不兼容协议。协议升级是为了保护传输契约；回滚恢复是进程/版本清理问题。
+
+## 技能符号链接因路径逃逸而被跳过
 
 当日志包含以下内容时使用此项：
 
@@ -132,15 +158,15 @@ openclaw config get agents.defaults.models
 
 查看以下内容：
 
-- 所选的 Anthropic Opus/Sonnet 模型具有 `params.context1m: true`。
-- 当前 Anthropic 凭据不具备长上下文使用资格。
-- 只有在需要 1M beta 路径的长会话/模型运行中请求才会失败。
+- 所选 Anthropic 模型是支持 GA 的 1M Claude 4.x 模型，或者该模型具有旧版 `params.context1m: true`。
+- 当前 Anthropic 凭据不具备长上下文用量资格。
+- 请求只在需要 1M 上下文路径的长会话/模型运行中失败。
 
 修复选项：
 
 <Steps>
-  <Step title="禁用 context1m">
-    为该模型禁用 `context1m`，以回退到正常的上下文窗口。
+  <Step title="使用标准上下文窗口">
+    切换到标准窗口模型，或从不具备 1M 上下文 GA 能力的旧模型配置中移除旧版 `context1m`。
   </Step>
   <Step title="使用有资格的凭据">
     使用符合长上下文请求资格的 Anthropic 凭据，或切换为 Anthropic API key。
@@ -156,7 +182,39 @@ openclaw config get agents.defaults.models
 - [Token 使用与费用](/reference/token-use)
 - [为什么我从 Anthropic 看到了 HTTP 429？](/help/faq-first-run#why-am-i-seeing-http-429-ratelimiterror-from-anthropic)
 
-## 本地 OpenAI 兼容后端通过直接探测但代理运行失败
+## 上游 403 阻止响应
+
+当上游 LLM 提供方返回通用 `403`，例如
+`Your request was blocked` 时使用此项。
+
+不要假设这总是 OpenClaw 配置问题。该响应也可能来自上游安全层，例如位于 OpenAI 兼容端点前的 CDN、WAF、机器人管理规则或反向代理。
+
+```bash
+openclaw status
+openclaw gateway status
+openclaw logs --follow
+```
+
+查看以下内容：
+
+- 同一提供方下多个模型以相同方式失败
+- 普通提供方 API 错误之外的 HTML 或通用安全文本
+- 相同请求时间点的提供方侧安全事件
+- 一个很小的直接 `curl` 探测成功，而正常 SDK 形态请求失败
+
+当证据指向 WAF/CDN 阻断时，先修复提供方侧过滤。优先为 OpenClaw 使用的 API 路径设置范围很窄的允许或跳过规则，并避免对整个站点禁用保护。
+
+<Warning>
+成功的最小 `curl` 并不保证真实的 SDK 风格请求也能通过同一个上游安全层。
+</Warning>
+
+相关：
+
+- [OpenAI 兼容端点](/gateway/configuration-reference#openai-compatible-endpoints)
+- [提供方配置](/providers)
+- [日志](/logging)
+
+## 本地 OpenAI 兼容后端可通过直接探测，但代理运行失败
 
 当以下情况出现时使用此项：
 
@@ -253,6 +311,16 @@ openclaw gateway status --json
 - 正确的探测 URL 和仪表板 URL。
 - 客户端与网关之间的认证模式/令牌不匹配。
 - 需要设备身份时却使用了 HTTP。
+
+如果更新后本地浏览器无法连接到 `127.0.0.1:18789`，请先恢复本地 Gateway 服务，并确认它正在提供仪表板：
+
+```bash
+openclaw gateway restart
+lsof -i :18789
+curl http://127.0.0.1:18789
+```
+
+如果 `curl` 返回 OpenClaw HTML，则说明 Gateway 正常运行，剩余问题很可能是浏览器缓存、旧的深链接，或陈旧的标签页状态。请直接打开 `http://127.0.0.1:18789`，然后从仪表板继续导航。如果重启后服务没有保持运行，请运行 `openclaw gateway start` 并重新检查 `openclaw gateway status`。
 
 <AccordionGroup>
   <Accordion title="连接 / 认证特征">

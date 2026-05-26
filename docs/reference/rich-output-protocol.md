@@ -21,9 +21,29 @@ title: "富输出协议"
 相对于主目录的 `~/` 路径。它们在传递前仍会经过代理文件读取策略和
 媒体类型检查。
 
-普通 Markdown 图片语法默认保持为文本。那些有意
-将 Markdown 图片回复映射为媒体附件的频道，会在其出站
-适配器中启用该功能；Telegram 就是这样做的，因此 `![alt](url)` 仍然可以变成媒体回复。
+<Warning>
+`MEDIA:` 仅会被解析为纯文本。将该指令包裹在 Markdown
+格式中（粗体、行内代码、围栏代码块）会阻止解析器
+识别它，并且附件会在传递时静默丢失。
+
+有效：
+
+```text
+MEDIA:/workspace/image.png
+```
+
+无效（作为普通文本解析，不会传递附件）：
+
+```text
+**MEDIA:/workspace/image.png**
+`MEDIA:/workspace/image.png`
+Here is your image: MEDIA:/workspace/image.png
+```
+
+请将 `MEDIA:` 单独放在一行，使用纯文本形式，不要带任何周围格式。
+</Warning>
+
+普通 Markdown 图片语法默认仍作为文本处理。那些有意将 Markdown 图片回复映射为媒体附件的通道，会在其出站适配器中显式启用；Telegram 就是这样做的，因此 `![alt](url)` 仍然可以变成媒体回复。
 
 这些指令彼此独立。`MEDIA:` 和回复/语音标签仍然是传递元数据；`[embed ...]` 是仅用于 Web 的富渲染路径。
 受信任的工具结果媒体在传递前会使用相同的 `MEDIA:` / `[[audio_as_voice]]` 解析器，因此文本工具输出仍然可以将音频附件标记为语音备注。

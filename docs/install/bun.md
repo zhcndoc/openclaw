@@ -39,8 +39,8 @@ Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ..
 
 Bun 会阻止依赖生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
 
-- `baileys` `preinstall` -- 检查 Node 主版本是否 >= 20（OpenClaw 默认使用 Node 24，并且仍然支持 Node 22 LTS，目前为 `22.16+`）
-- `protobufjs` `postinstall` -- 发出关于不兼容版本方案的警告（无构建产物）
+- `baileys` `preinstall` -- 检查 Node 主版本是否 >= 20（OpenClaw 默认使用 Node 24，同时仍支持 Node 22 LTS，目前为 `22.19+`）
+- `protobufjs` `postinstall` -- 输出关于不兼容版本方案的警告（无构建产物）
 
 如果你遇到需要这些脚本的运行时问题，请显式信任它们：
 
@@ -50,7 +50,7 @@ bun pm trust baileys protobufjs
 
 ## 注意事项
 
-有些脚本仍然硬编码了 pnpm（例如 `docs:build`、`ui:*`、`protocol:check`）。目前请通过 pnpm 运行这些脚本。
+某些脚本仍然硬编码了 pnpm（例如 `check:docs`、`ui:*`、`protocol:check`）。目前请通过 pnpm 来运行这些脚本。
 
 ## 相关内容
 

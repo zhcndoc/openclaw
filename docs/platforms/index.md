@@ -28,7 +28,8 @@ Windows 的原生配套应用也在规划中；推荐通过 WSL2 使用 Gateway�
 - Hetzner (Docker): [Hetzner](/install/hetzner)
 - GCP (Compute Engine): [GCP](/install/gcp)
 - Azure (Linux VM): [Azure](/install/azure)
-- exe.dev (VM + HTTPS 代理): [exe.dev](/install/exe-dev)
+- exe.dev (VM + HTTPS proxy): [exe.dev](/install/exe-dev)
+- EasyRunner (Podman + Caddy): [EasyRunner](/platforms/easyrunner)
 
 ## 常用链接
 

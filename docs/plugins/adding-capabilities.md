@@ -15,7 +15,8 @@ sidebarTitle: "添加能力"
   请看 [插件内部](/plugins/architecture)。
 </Info>
 
-当 OpenClaw 需要一个新的共享领域时使用此指南，例如图像生成、视频生成，或未来某种由供应商支持的功能领域。
+当 OpenClaw 需要新的共享领域时使用，例如 embeddings、图像
+生成、视频生成，或某个未来的供应商支持功能领域。
 
 规则如下：
 
@@ -113,7 +114,18 @@ sidebarTitle: "添加能力"
 
 请将它们分开，以便回退和策略保持显式。
 
-## 审查清单
+## Embedding providers
+
+对可复用的向量嵌入提供者，请使用 `embeddingProviders`。这个契约
+有意比 memory 更宽：工具、搜索、检索、导入器，或未来的功能插件
+都可以消费 embeddings，而无需依赖 memory 引擎。
+
+对于 memory-engine 特定的适配器，请继续使用 `memoryEmbeddingProviders`。
+这些适配器拥有 memory 索引细节，例如查询/文档拆分、
+运行时元数据以及本地 memory 引擎设置。不要让通用的 embedding provider
+依赖于 memory 拥有的模块，除非该 provider 只能由 memory 使用。
+
+## Review checklist
 
 在发布新的能力之前，请确认：
 

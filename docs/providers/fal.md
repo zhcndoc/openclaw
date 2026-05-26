@@ -1,18 +1,19 @@
 ---
-summary: "OpenClaw 中 fal 图像和视频生成设置"
+summary: "OpenClaw 中的 fal 图像、视频和音乐生成设置"
 title: "Fal"
 read_when:
-  - 您想在 OpenClaw 中使用 fal 图像生成
-  - 您需要 FAL_KEY 认证流程
-  - 您想为 image_generate 或 video_generate 使用 fal 默认值
+  - "当您想在 OpenClaw 中使用 fal 图像生成功能时"
+  - "当您需要 FAL_KEY 认证流程时"
+  - "当您想了解 image_generate、video_generate 或 music_generate 的 fal 默认设置时"
 ---
 
-OpenClaw 自带一个 `fal` 提供程序，用于托管图像和视频生成。
+OpenClaw 提供了一个内置的 `fal` 提供程序，用于托管图像、视频和音乐
+生成。
 
-| Property | Value                                                         |
+| 属性     | 值                                                            |
 | -------- | ------------------------------------------------------------- |
-| Provider | `fal`                                                         |
-| Auth     | `FAL_KEY`（规范；`FAL_API_KEY` 也可作为回退使用） |
+| 提供程序 | `fal`                                                         |
+| 认证     | `FAL_KEY`（规范；`FAL_API_KEY` 也可作为回退使用） |
 | API      | fal 模型端点                                           |
 
 ## 开始使用
@@ -43,19 +44,19 @@ OpenClaw 自带一个 `fal` 提供程序，用于托管图像和视频生成。
 内置的 `fal` 图像生成提供程序默认使用
 `fal/fal-ai/flux/dev`。
 
-| Capability     | Value                                                       |
+| 能力           | 值                                                          |
 | -------------- | ----------------------------------------------------------- |
-| Max images     | 4 per request                                               |
-| Edit mode      | Flux: 1 reference image; GPT Image 2: 10; Nano Banana 2: 14 |
-| Size overrides | Supported                                                   |
-| Aspect ratio   | Supported for generate and GPT Image 2/Nano Banana 2 edit   |
-| Resolution     | Supported                                                   |
-| Output format  | `png` or `jpeg`                                             |
+| 每次请求最大图像数 | 4 张                                                     |
+| 编辑模式       | Flux：1 张参考图像；GPT Image 2：10；Nano Banana 2：14 |
+| 尺寸覆盖       | 支持                                                       |
+| 宽高比         | 支持用于生成以及 GPT Image 2/Nano Banana 2 编辑           |
+| 分辨率         | 支持                                                       |
+| 输出格式       | `png` 或 `jpeg`                                             |
 
 <Warning>
-Flux image-to-image requests do **not** support `aspectRatio` overrides. GPT
-Image 2 and Nano Banana 2 edit requests use fal's `/edit` endpoint and accept
-aspect-ratio hints.
+Flux 图像到图像请求**不**支持 `aspectRatio` 覆盖。GPT
+Image 2 和 Nano Banana 2 的编辑请求使用 fal 的 `/edit` 端点，并接受
+宽高比提示。
 </Warning>
 
 当您想要 PNG 输出时，请使用 `outputFormat: "png"`。fal 在 OpenClaw 中没有声明
@@ -81,10 +82,10 @@ aspect-ratio hints.
 内置的 `fal` 视频生成提供程序默认使用
 `fal/fal-ai/minimax/video-01-live`。
 
-| Capability | Value                                                              |
+| 能力       | 值                                                              |
 | ---------- | ------------------------------------------------------------------ |
-| Modes      | 文本生成视频、单图参考、Seedance 参考生成视频 |
-| Runtime    | 面向长时间运行任务的基于队列的提交/状态/结果流程       |
+| 模式       | 文本生成视频、单图参考、Seedance 参考生成视频 |
+| 运行时     | 面向长时间运行任务的基于队列的提交/状态/结果流程       |
 
 <AccordionGroup>
   <Accordion title="可用的视频模型">
@@ -151,6 +152,34 @@ aspect-ratio hints.
   </Accordion>
 </AccordionGroup>
 
+## 音乐生成
+
+内置的 `fal` 插件还为共享的 `music_generate` 工具注册了一个音乐生成提供程序。
+
+| 能力         | 值                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| 默认模型     | `fal/fal-ai/minimax-music/v2.6`                                                                        |
+| 模型         | `fal-ai/minimax-music/v2.6`, `fal-ai/ace-step/prompt-to-audio`, `fal-ai/stable-audio-25/text-to-audio` |
+| 运行时       | 同步请求加生成音频下载                                                      |
+
+将 fal 设为默认音乐提供程序：
+
+```json5
+{
+  agents: {
+    defaults: {
+      musicGenerationModel: {
+        primary: "fal/fal-ai/minimax-music/v2.6",
+      },
+    },
+  },
+}
+```
+
+`fal-ai/minimax-music/v2.6` 支持显式歌词和纯音乐模式。
+ACE-Step 和 Stable Audio 是 prompt-to-audio 端点；当您需要这些模型家族时，请使用
+`model` 覆盖项来选择它们。
+
 <Tip>
 使用 `openclaw models list --provider fal` 查看可用 fal
 模型的完整列表，包括最近新增的条目。
@@ -165,7 +194,10 @@ aspect-ratio hints.
   <Card title="视频生成" href="/tools/video-generation" icon="video">
     共享的视频工具参数和提供程序选择。
   </Card>
+  <Card title="音乐生成" href="/tools/music-generation" icon="music">
+    共享的音乐工具参数和提供程序选择。
+  </Card>
   <Card title="配置参考" href="/gateway/config-agents#agent-defaults" icon="gear">
-    代理默认值，包括图像和视频模型选择。
+    代理默认设置，包括图像、视频和音乐模型选择。
   </Card>
 </CardGroup>

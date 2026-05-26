@@ -39,6 +39,13 @@ title: "反应"
 
   </Accordion>
 
+  <Accordion title="Nextcloud Talk">
+    - 仅支持添加反应：`emoji` 为必需项，且必须非空。
+    - 目前不支持移除反应；带有 `remove: true`（或空 `emoji`）的调用会被明确报错拒绝，而不是静默无操作。
+    - 需要将 Talk 机器人注册为 `reaction` 功能（参见 [Nextcloud Talk channel docs](/channels/nextcloud-talk)）。
+
+  </Accordion>
+
   <Accordion title="Telegram">
     - 空的 `emoji` 会移除机器人的反应。
     - `remove: true` 也会移除反应，但工具校验仍要求 `emoji` 非空。

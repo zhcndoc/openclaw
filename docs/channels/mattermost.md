@@ -14,12 +14,12 @@ sidebarTitle: "Mattermost"
 在配置频道之前先安装 Mattermost：
 
 <Tabs>
-  <Tab title="npm registry">
+  <Tab title="npm 注册表">
     ```bash
     openclaw plugins install @openclaw/mattermost
     ```
   </Tab>
-  <Tab title="Local checkout">
+  <Tab title="本地检出">
     ```bash
     openclaw plugins install ./path/to/local/mattermost-plugin
     ```
@@ -127,7 +127,7 @@ sidebarTitle: "Mattermost"
 Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 
 <Tabs>
-  <Tab title="oncall (default)">
+  <Tab title="oncall（默认）">
     仅在频道中被 @ 提及时回复。
   </Tab>
   <Tab title="onmessage">
@@ -288,9 +288,9 @@ Mattermost 会将思考、工具活动和部分回复文本流式汇入单个**�
 
   </Accordion>
   <Accordion title="流式行为说明">
-    - 如果流无法就地完成（例如消息在流式过程中被删除），OpenClaw 会回退为发送一条新的最终消息，以确保回复不会丢失。
-    - 仅推理内容的载荷不会显示在频道消息中，包括以 `> Reasoning:` 引用块形式到达的文本。设置 `/reasoning on` 可在其他界面查看思考过程；Mattermost 最终消息只保留答案。
-    - 参见 [Streaming](/concepts/streaming#preview-streaming-modes) 了解频道映射矩阵。
+    - 如果流无法就地完成（例如帖子在流式过程中被删除），OpenClaw 会回退并发送一个新的最终帖子，以确保回复不会丢失。
+    - 仅思考内容的负载会被从频道帖子中抑制，包括作为 `> Thinking` 块引用到达的文本。设置 `/reasoning on` 可在其他界面中查看思考内容；Mattermost 最终帖子只保留答案。
+    - 请参见 [Streaming](/concepts/streaming#preview-streaming-modes) 了解通道映射矩阵。
 
   </Accordion>
 </AccordionGroup>
@@ -319,7 +319,9 @@ message action=react channel=mattermost target=channel:<channelId> messageId=<po
 
 发送带有可点击按钮的消息。当用户点击按钮时，agent 会收到所选内容并可以响应。
 
-通过向 channel capabilities 中添加 `inlineButtons` 来启用按钮：
+普通 agent 回复也可以包含语义化的 `presentation` 负载。OpenClaw 会将值按钮渲染为 Mattermost 交互式按钮，将 URL 按钮保留在消息文本中，并将选择菜单降级为可读文本。
+
+通过向 channel capabilities 添加 `inlineButtons` 来启用按钮：
 
 ```json5
 {

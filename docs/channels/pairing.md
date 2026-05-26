@@ -121,12 +121,15 @@ Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`
 
 该引导令牌携带内置的配对引导配置：
 
-- the built-in setup profile allows only the `node` role
-- after approval, the handed-off `node` token stays `scopes: []`
-- the built-in setup-code flow does not hand off an `operator` token
-- operator access requires a separate approved operator pairing or token flow
-- later token rotation/revocation remains bounded by both the device's approved
-  role contract and the caller session's operator scopes
+- 内置设置配置仅允许全新的二维码/设置码基础场景：
+  `node` 加上有范围限制的 `operator` 交接
+- 交接后的 `node` 令牌保持 `scopes: []`
+- 交接后的 `operator` 令牌仅限于 `operator.approvals`、
+  `operator.read` 和 `operator.write`
+- 二维码/设置码引导不会授予 `operator.admin` 和 `operator.pairing`；
+  它们需要单独批准的 operator 配对或令牌流程
+- 之后的令牌轮换/撤销仍受设备已批准
+  角色契约和调用方会话的 operator 范围双重限制
 
 在设置码有效期间，请将其视为密码。
 

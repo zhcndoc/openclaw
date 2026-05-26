@@ -3,9 +3,9 @@ summary: "在不更改队列模式的情况下引导一个正在运行的会话"
 read_when:
   - 使用 /steer 或 /tell 时，且已有代理正在运行
   - 比较 /steer 与 /queue 模式
-  - 决定是引导当前运行、子代理，还是 ACP 会话
-title: "Steer"
-sidebarTitle: "Steer"
+  - 决定是引导当前运行还是一个 ACP 会话
+title: "引导"
+sidebarTitle: "引导"
 ---
 
 `/steer` 首先会尝试向一个已经处于活动状态的运行发送指导。它适用于“在当前运行仍在工作时调整它”这类场景。如果当前运行时无法接受 steering，OpenClaw 会将该消息作为普通提示发送，而不是丢弃它。
@@ -41,13 +41,7 @@ sidebarTitle: "Steer"
 
 ## 子代理
 
-当目标是子运行时，使用 `/subagents steer`：
-
-```text
-/subagents steer 2 focus only on the API surface
-```
-
-顶层 `/steer` 不会按 id 或列表索引选择子代理。它始终针对当前会话中的活动运行。有关子代理 id、标签和控制命令，请参见 [Sub-agents](/tools/subagents)。
+顶层 `/steer` 目标是当前会话中的活动运行。子代理会向其父级/请求方会话回传；`/subagents` 仅用于可见性。
 
 ## ACP 会话
 

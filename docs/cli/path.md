@@ -150,18 +150,22 @@ oc://FILE/SECTION/ITEM/FIELD?session=SCOPE
 
 `set` 会写入一个具体目标：
 
-- Markdown frontmatter 值和 `- key: value` 项目字段都是字符串叶子节点。
-  Markdown 插入会追加章节、frontmatter 键或章节条目，并为变更后的文件
-  渲染规范化的 markdown 形状。
-- JSONC 叶子写入会将字符串值转换为现有叶子类型
-  （`string`、有限 `number`、`true`/`false` 或 `null`）。JSONC 对象和数组
-  插入会将 `<value>` 解析为 JSON，并对普通叶子写入使用 `jsonc-parser`
-  的编辑路径，保留注释和附近格式。
-- JSONL 叶子写入在行内会像 JSONC 一样进行类型转换。整行替换和追加会将 `<value>` 解析为 JSON。渲染后的 JSONL 会保留文件默认的 LF/CRLF 行尾约定。
-- YAML 叶子写入会转换为现有标量类型（`string`、有限
-  `number`、`true`/`false` 或 `null`）。YAML 插入会使用捆绑的
-  `yaml` 包的文档 API 进行映射/序列更新。解析器存在错误的损坏 YAML
-  文档会在修改前以 `parse-error` 拒绝。
+- Markdown frontmatter 值和 `- key: value` 项字段都是字符串叶子。
+  Markdown 插入会追加章节、frontmatter 键或章节条目，并
+  为变更后的文件渲染一种规范的 markdown 形态。
+- JSONC 叶子写入会将字符串值强制转换为现有叶子类型
+  （`string`、有限 `number`、`true`/`false` 或 `null`）。当 JSONC/JSON/JSONL 叶子替换应将 `<value>` 解析为 JSON 且
+  可能改变形态时，请使用 `--value-json`，例如将字符串 SecretRef 简写替换为一个对象。
+  JSONC 对象和数组插入会将 `<value>` 解析为 JSON，并在普通叶子写入时使用
+  `jsonc-parser` 编辑路径，从而保留注释和
+  附近格式。
+- JSONL 叶子写入在行内会像 JSONC 一样执行类型强制。整行替换和
+  追加会将 `<value>` 解析为 JSON。渲染后的 JSONL 会保留文件的主要
+  LF/CRLF 行尾约定。
+- YAML 叶子写入会强制转换为现有标量类型（`string`、有限
+  `number`、`true`/`false` 或 `null`）。YAML 插入使用捆绑的
+  `yaml` 包的文档 API 来进行映射/序列更新。带有解析器错误的损坏 YAML
+  文档会在变更前被拒绝，并返回 `parse-error`。
 
 当精确字节很重要时，在用户可见写入之前使用 `--dry-run`。该
 基底会为 parse/emit 往返保留字节完全一致的输出，但一次修改可能会根据类型对
@@ -199,7 +203,13 @@ openclaw path emit ./AGENTS.md
 # 对包含 / 或 . 的键使用引号
 openclaw path resolve 'oc://config.jsonc/agents.defaults.models/"anthropic/claude-opus-4-7"/alias'
 
-# 在 JSONC 子项上进行谓词搜索
+# Deep JSON/JSONC paths can use slash segments; they normalize to dotted subsegments
+openclaw path set 'oc://openclaw.json/agents/list/0/tools/exec/security' 'allowlist' --dry-run
+
+# Replace a JSONC leaf with a parsed object
+openclaw path set 'oc://openclaw.json/gateway/auth/token' '{"source":"file","provider":"secrets","id":"/test"}' --value-json --dry-run
+
+# Predicate search over JSONC children
 openclaw path find 'oc://config.jsonc/plugins/[enabled=true]/id'
 
 # 插入到 JSONC 数组中

@@ -84,21 +84,30 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 | 方法                                           | 注册内容                     |
 | ------------------------------------------------ | ------------------------------------- |
-| `api.registerProvider(...)`                  | 文本推理（LLM）                  |
-| `api.registerAgentHarness(...)`              | 实验性的底层 agent 执行器 |
-| `api.registerCliBackend(...)`                | 本地 CLI 推理后端           |
-| `api.registerChannel(...)`                   | 消息渠道                     |
-| `api.registerSpeechProvider(...)`            | 文本转语音 / STT 合成        |
-| `api.registerRealtimeTranscriptionProvider(...)` | 流式实时转写      |
-| `api.registerRealtimeVoiceProvider(...)`         | 双向实时语音会话        |
+| `api.registerProvider(...)`                      | 文本推理（LLM）                  |
+| `api.registerAgentHarness(...)`                  | 实验性的低级 agent 执行器 |
+| `api.registerCliBackend(...)`                    | 本地 CLI 推理后端           |
+| `api.registerChannel(...)`                       | 消息渠道                     |
+| `api.registerEmbeddingProvider(...)`             | 可复用的向量嵌入提供方    |
+| `api.registerSpeechProvider(...)`                | 文本转语音 / STT 合成        |
+| `api.registerRealtimeTranscriptionProvider(...)` | 流式实时转录      |
+| `api.registerRealtimeVoiceProvider(...)`         | 双工实时语音会话        |
 | `api.registerMediaUnderstandingProvider(...)`    | 图像/音频/视频分析            |
 | `api.registerImageGenerationProvider(...)`       | 图像生成                      |
 | `api.registerMusicGenerationProvider(...)`       | 音乐生成                      |
 | `api.registerVideoGenerationProvider(...)`       | 视频生成                      |
-| `api.registerWebFetchProvider(...)`              | Web 抓取 / 抓取提供方           |
+| `api.registerWebFetchProvider(...)`              | Web 获取 / 抓取提供方           |
 | `api.registerWebSearchProvider(...)`             | Web 搜索                            |
 
+通过 `api.registerEmbeddingProvider(...)` 注册的嵌入提供方还必须
+在插件清单的 `contracts.embeddingProviders` 中列出。这是用于可复用向量生成的
+通用嵌入面。仅限内存的适配器仍然使用 `api.registerMemoryEmbeddingProvider(...)` 和
+`contracts.memoryEmbeddingProviders`。
+
 ### 工具和命令
+
+对固定工具名称的简单仅工具插件，请使用 [`defineToolPlugin`](/plugins/tool-plugins)。
+对于混合插件或完全动态的工具注册，请直接使用 `api.registerTool(...)`。
 
 | 方法                          | 注册内容                             |
 | ------------------------------- | --------------------------------------------- |
@@ -107,11 +116,31 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 当 agent 需要一个简短的、由命令拥有的路由提示时，插件命令可以设置 `agentPromptGuidance`。该文本应仅与命令本身相关；不要将提供方或插件特定策略加入核心提示构建器中。
 
-### 基础设施
+Guidance entries may be legacy strings, which apply to every prompt surface, or
+structured entries:
+
+```ts
+agentPromptGuidance: [
+  "Global command hint.",
+  { text: "Only show this in the main PI prompt.", surfaces: ["pi_main"] },
+];
+```
+
+Structured `surfaces` may include `pi_main`, `codex_app_server`, `cli_backend`,
+`acp_backend`, or `subagent`. Omit `surfaces` for intentional all-surface
+guidance. Do not pass an empty `surfaces` array; it is rejected so accidental
+scope loss does not become global prompt text.
+
+Native Codex app-server developer instructions are stricter than other prompt
+surfaces: only guidance explicitly scoped to `codex_app_server` is promoted into
+that higher-priority lane. Legacy string guidance and unscoped structured
+guidance remain available to non-Codex prompt surfaces for compatibility.
+
+### Infrastructure
 
 | 方法                                         | 注册内容                       |
 | ---------------------------------------------- | --------------------------------------- |
-| `api.registerHook(events, handler, opts?)`     | Event hook                              |
+| `api.registerHook(events, handler, opts?)`     | 事件钩子                              |
 | `api.registerHttpRoute(params)`                | Gateway HTTP 端点                   |
 | `api.registerGatewayMethod(name, handler)`     | Gateway RPC 方法                      |
 | `api.registerGatewayDiscoveryService(service)` | 本地 Gateway 发现广播器      |
@@ -383,65 +412,65 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是轻量级、在完整入口启动/设置之前的窗口 |
 | `api.resolvePath(input)` | `(string) => string`      | 相对于插件根目录解析路径                                                        |
 
-## 内部模块约定
+## Internal Module Conventions
 
-在你的插件内，使用本地 barrel 文件进行内部导入：
+Within your plugin, use local barrel files for internal imports:
 
 ```
 my-plugin/
-  api.ts            # 面向外部消费者的公共导出
-  runtime-api.ts    # 仅供内部使用的运行时导出
-  index.ts          # 插件入口点
-  setup-entry.ts    # 轻量级仅用于设置的入口点（可选）
+  api.ts            # Public exports for external consumers
+  runtime-api.ts    # Runtime exports for internal use only
+  index.ts          # Plugin entry point
+  setup-entry.ts    # Lightweight setup-only entry point (optional)
 ```
 
 <Warning>
-  不要在生产代码中通过 `openclaw/plugin-sdk/<your-plugin>`
-  导入你自己的插件。内部导入应通过 `./api.ts` 或
-  `./runtime-api.ts` 进行路由。SDK 路径仅是外部契约。
+  Do not import your own plugin in production code via `openclaw/plugin-sdk/<your-plugin>`
+  Internal imports should be routed through `./api.ts` or
+  `./runtime-api.ts`. The SDK path is only an external contract.
 </Warning>
 
-面向已加载外观的打包插件公共表面（`api.ts`、`runtime-api.ts`、
-`index.ts`、`setup-entry.ts` 以及类似的公共入口文件），在 OpenClaw 已经运行时，
-优先使用当前运行时配置快照。如果尚不存在运行时快照，则回退到磁盘上解析后的配置文件。
-打包后的插件外观应通过 OpenClaw 的插件外观加载器加载；直接从 `dist/extensions/...` 导入会绕过清单和运行时 sidecar 检查，而这些检查是打包安装对插件自有代码所使用的。
+For packaged plugin public surfaces that are visible to loaded appearances (`api.ts`, `runtime-api.ts`,
+`index.ts`, `setup-entry.ts`, and similar public entry files), when OpenClaw is already running,
+prefer the current runtime configuration snapshot. If no runtime snapshot exists yet, fall back to the resolved configuration file on disk.
+Packaged plugin appearances should be loaded through OpenClaw's plugin appearance loader; importing directly from `dist/extensions/...` bypasses manifest and runtime sidecar checks, which are used by packaged installation for the plugin's own code.
 
-提供者插件可以在某个辅助工具有意仅适用于该提供者且尚不属于通用 SDK 子路径时，
-暴露一个窄范围、插件本地的 contract barrel。打包示例：
+Provider plugins may expose a narrow, plugin-local contract barrel when a helper is intentionally only applicable to that provider and is not yet part of a general SDK subpath.
+Packaged examples:
 
-- **Anthropic**：面向 Claude 的 `api.ts` / `contract-api.ts` 接口，
-  用于 beta-header 和 `service_tier` 流式辅助工具。
-- **`@openclaw/openai-provider`**：`api.ts` 导出提供者构建器、
-  默认模型辅助工具，以及实时提供者构建器。
-- **`@openclaw/openrouter-provider`**：`api.ts` 导出提供者构建器
-  以及引导/配置辅助工具。
+- **Anthropic**: `api.ts` / `contract-api.ts` interfaces for Claude,
+  used for beta-header and `service_tier` streaming helpers.
+- **`@openclaw/openai-provider`**: `api.ts` exports the provider builder,
+  default model helpers, and the live provider builder.
+- **`@openclaw/openrouter-provider`**: `api.ts` exports the provider builder
+  and bootstrap/configuration helpers.
 
 <Warning>
-  扩展的生产代码也应避免 `openclaw/plugin-sdk/<other-plugin>`
-  导入。如果某个辅助工具确实是共享的，应将其提升到一个中性的 SDK 子路径，
-  例如 `openclaw/plugin-sdk/speech`、`.../provider-model-shared`，或其他以能力为导向的表面，
-  而不是将两个插件耦合在一起。
+  Extended production code should also avoid `openclaw/plugin-sdk/<other-plugin>`
+  imports. If a helper is truly shared, elevate it to a neutral SDK subpath,
+  such as `openclaw/plugin-sdk/speech`, `.../provider-model-shared`, or another capability-oriented surface,
+  rather than coupling two plugins together.
 </Warning>
 
-## 相关内容
+## Related Content
 
 <CardGroup cols={2}>
-  <Card title="入口点" icon="door-open" href="/plugins/sdk-entrypoints">
-    `definePluginEntry` 和 `defineChannelPluginEntry` 选项。
+  <Card title="Entry Points" icon="door-open" href="/plugins/sdk-entrypoints">
+    `definePluginEntry` and `defineChannelPluginEntry` options.
   </Card>
-  <Card title="运行时辅助工具" icon="gears" href="/plugins/sdk-runtime">
-    完整的 `api.runtime` 命名空间参考。
+  <Card title="Runtime Helpers" icon="gears" href="/plugins/sdk-runtime">
+    Full `api.runtime` namespace reference.
   </Card>
-  <Card title="设置和配置" icon="sliders" href="/plugins/sdk-setup">
-    打包、清单和配置模式。
+  <Card title="Setup and Configuration" icon="sliders" href="/plugins/sdk-setup">
+    Packaging, manifests, and configuration patterns.
   </Card>
-  <Card title="测试" icon="vial" href="/plugins/sdk-testing">
-    测试工具和 lint 规则。
+  <Card title="Testing" icon="vial" href="/plugins/sdk-testing">
+    Test tools and lint rules.
   </Card>
-  <Card title="SDK 迁移" icon="arrows-turn-right" href="/plugins/sdk-migration">
-    从已弃用表面迁移。
+  <Card title="SDK Migration" icon="arrows-turn-right" href="/plugins/sdk-migration">
+    Migrate from deprecated surfaces.
   </Card>
-  <Card title="插件内部" icon="diagram-project" href="/plugins/architecture">
-    深层架构和能力模型。
+  <Card title="Plugin Internals" icon="diagram-project" href="/plugins/architecture">
+    Deep architecture and capability models.
   </Card>
 </CardGroup>

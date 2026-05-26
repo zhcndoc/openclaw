@@ -6,22 +6,69 @@ read_when:
 title: "xAI"
 ---
 
-OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
+OpenClaw 附带了一个内置的 `xai` 提供方插件，用于 Grok 模型。对于大多数
+用户，推荐的方式是使用符合条件的 SuperGrok 或 X Premium
+订阅进行 Grok OAuth。OpenClaw 保持本地优先：Gateway、配置、路由和
+工具都运行在你的机器上，而 Grok 模型请求则通过 xAI 进行身份验证，
+并发送到 xAI 的 API。
 
-## 快速开始
+OAuth 不需要 xAI API 密钥，也不需要 Grok Build
+应用。xAI 在同意页面上仍可能显示 Grok Build，因为 OpenClaw 使用了
+xAI 的共享 OAuth 客户端。
+
+## 选择你的设置路径
+
+使用与你的 OpenClaw 安装状态相匹配的路径：
 
 <Steps>
-  <Step title="选择认证方式">
-    可以使用来自 [xAI 控制台](https://console.x.ai/) 的 API key，或者
-    使用带有 SuperGrok 订阅的 xAI Grok OAuth。
-  </Step>
-  <Step title="登录">
-    设置 `XAI_API_KEY`，运行 API key 向导，或者启动 OAuth 流程：
+  <Step title="全新 OpenClaw 安装">
+    在设置新的本地 Gateway 时，运行带 daemon 安装的 onboarding，然后在模型/认证步骤中选择 xAI/Grok OAuth 选项：
 
     ```bash
-    openclaw onboard --auth-choice xai-api-key
-    openclaw onboard --auth-choice xai-oauth
+    openclaw onboard --install-daemon
+    ```
+
+    在 VPS 上或通过 SSH 时，请在 onboarding 期间使用 device-code：
+
+    ```bash
+    openclaw onboard --install-daemon --auth-choice xai-device-code
+    ```
+
+    OAuth 不需要 xAI API 密钥。OpenClaw 不需要 Grok
+    Build 应用。xAI 在同意页面上仍可能将应用标记为 Grok Build，因为
+    OpenClaw 使用了 xAI 的共享 OAuth 客户端。
+
+  </Step>
+  <Step title="现有 OpenClaw 安装">
+    如果 OpenClaw 已经配置好，只需登录 xAI。不要为了连接 Grok 而重新运行完整
+    onboarding 或重新安装 daemon：
+
+    ```bash
     openclaw models auth login --provider xai --method oauth
+    ```
+
+    当 Gateway 运行在 SSH、Docker 或 VPS 上，而 localhost 浏览器回调不方便时，请改用
+    device-code 流程：
+
+    ```bash
+    openclaw models auth login --provider xai --device-code
+    ```
+
+    如果你想在登录后将 Grok 设为默认模型，请单独应用：
+
+    ```bash
+    openclaw models set xai/grok-4.3
+    ```
+
+    只有在你有意更改 Gateway、daemon、channel、workspace 或其他设置选项时，才重新运行完整 onboarding。
+
+  </Step>
+  <Step title="API 密钥路径">
+    API 密钥设置仍然适用于 xAI Console 密钥，以及需要基于密钥的提供方配置的媒体表面：
+
+    ```bash
+    openclaw models auth login --provider xai --method api-key
+    export XAI_API_KEY=xai-...
     ```
 
   </Step>
@@ -35,18 +82,42 @@ OpenClaw 随附一个内置的 `xai` 提供方插件，用于 Grok 模型。
 </Steps>
 
 <Note>
-OpenClaw 使用 xAI Responses API 作为捆绑的 xAI 传输层。通过
-`openclaw onboard --auth-choice xai-api-key` 或
-`openclaw onboard --auth-choice xai-oauth` 获取的同一凭据，也可以驱动一等公民的
-`x_search`、远程 `code_execution`，以及 xAI 图像/视频生成。
-语音和转录当前需要 `XAI_API_KEY` 或提供方配置。
-`XAI_API_KEY` 或插件 web-search 配置也可以驱动基于 Grok 的 `web_search`。
-如果你将 xAI key 存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
-捆绑的 xAI 模型提供方也会将该 key 作为回退使用。
-将 `plugins.entries.xai.config.webSearch.baseUrl` 设为通过某个 operator xAI Responses 代理路由 Grok 的 `web_search`
-以及默认情况下的 `x_search`。
+OpenClaw 使用 xAI Responses API 作为内置的 xAI 传输层。通过
+`openclaw models auth login --provider xai --method oauth`、
+`openclaw models auth login --provider xai --device-code` 或
+`openclaw models auth login --provider xai --method api-key` 获取的同一凭证，也可以用于一等公民的
+`web_search`、`x_search`、远程 `code_execution` 以及 xAI 图像/视频生成。
+语音和转录目前需要 `XAI_API_KEY` 或提供方配置。
+基于 Grok 的 `web_search` 优先使用 xAI OAuth，并在没有时回退到 `XAI_API_KEY` 或
+插件 web-search 配置。
+如果你将 xAI 密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
+内置的 xAI 模型提供方也会将该密钥作为备用复用。
+将 `plugins.entries.xai.config.webSearch.baseUrl` 设置为通过运营商 xAI Responses 代理路由 Grok 的 `web_search`
+，并且默认情况下也会路由 `x_search`。
 `code_execution` 的调优位于 `plugins.entries.xai.config.codeExecution` 下。
 </Note>
+
+## OAuth 故障排查
+
+- 如果浏览器 OAuth 无法访问 `127.0.0.1:56121`，请使用
+  `openclaw models auth login --provider xai --device-code`。
+- 如果登录成功但 Grok 不是默认模型，请运行
+  `openclaw models set xai/grok-4.3`。
+- 要检查已保存的 xAI 认证配置文件，请运行：
+
+  ```bash
+  openclaw models auth list --provider xai
+  openclaw models status
+  ```
+
+- xAI 决定哪些账户可以接收 OAuth API 令牌。如果某个账户不符合
+  条件，请尝试 API 密钥路径，或检查 xAI 侧的订阅状态。
+
+<Tip>
+在通过 SSH、Docker 或 VPS 登录时，请使用 `xai-device-code`。OpenClaw
+会打印一个 xAI URL 和短代码；在任意本地浏览器中完成登录，而远程进程会轮询 xAI 以等待
+完成令牌交换。
+</Tip>
 
 ## 内置目录
 
@@ -55,15 +126,16 @@ OpenClaw 默认包含当前的 xAI 聊天模型，并在模型选择器中按
 
 | 家族            | 模型 ID                                                                 |
 | -------------- | ------------------------------------------------------------------------ |
+| Grok Build 0.1 | `grok-build-0.1`                                                         |
 | Grok 4.3       | `grok-4.3`                                                               |
 | Grok 4.20 Beta | `grok-4.20-beta-latest-reasoning`, `grok-4.20-beta-latest-non-reasoning` |
 
-该插件仍会为已有配置向前解析旧的 Grok 3、Grok 4、Grok 4 Fast、Grok 4.1
-Fast 和 Grok Code slug，但 OpenClaw 不再在可选目录中显示这些已退役的上游 slug。
+该插件仍会为现有配置正向解析旧的 Grok 3、Grok 4、Grok 4 Fast、Grok 4.1
+Fast 和 Grok Code slug。官方 Grok Code Fast 别名会规范化为 `grok-build-0.1`；OpenClaw 不再在可选目录中显示其他已退役的
+上游 slug。
 
 <Tip>
-除非你明确需要一个 Grok 4.20 beta 别名，否则新建聊天和编码工作负载请使用
-`grok-4.3`。
+一般聊天请使用 `grok-4.3`，构建/编码导向的工作负载请使用 `grok-build-0.1`，除非你明确需要 Grok 4.20 beta 别名。
 </Tip>
 
 ## OpenClaw 功能覆盖
@@ -112,6 +184,9 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
 | 旧别名                    | 标准 ID                               |
 | ------------------------- | ------------------------------------- |
+| `grok-code-fast-1`        | `grok-build-0.1`                      |
+| `grok-code-fast`          | `grok-build-0.1`                      |
+| `grok-code-fast-1-0825`   | `grok-build-0.1`                      |
 | `grok-4-fast-reasoning`   | `grok-4-fast`                         |
 | `grok-4-1-fast-reasoning` | `grok-4-1-fast`                       |
 | `grok-4.20-reasoning`     | `grok-4.20-beta-latest-reasoning`     |
@@ -120,11 +195,12 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 ## 功能
 
 <AccordionGroup>
-  <Accordion title="网页搜索">
-    捆绑的 `grok` 网页搜索提供方可以使用 `XAI_API_KEY` 或插件
-    web-search 密钥：
+  <Accordion title="Web search">
+    捆绑的 `grok` web-search 提供方优先使用 xAI OAuth，然后回退
+    到 `XAI_API_KEY` 或插件 web-search 密钥：
 
     ```bash
+    openclaw models auth login --provider xai --method oauth
     openclaw config set tools.web.search.provider grok
     ```
 
@@ -135,13 +211,15 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
     `video_generate` 工具注册视频生成功能。
 
     - 默认视频模型：`xai/grok-imagine-video`
-    - 模式：文本转视频、图像转视频、参考图像生成、远程
-      视频编辑，以及远程视频扩展
-    - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`
+    - 模式：text-to-video、image-to-video、reference-image generation、remote
+      video edit 和 remote video extension
+    - 长宽比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`3:2`、`2:3`
     - 分辨率：`480P`、`720P`
-    - 时长：生成/图像转视频时为 1-15 秒，使用
-      `reference_image` 角色时为 1-10 秒，扩展时为 2-10 秒
-    - 参考图像生成：将每个提供的图像的 `imageRoles` 设置为 `reference_image`；xAI 最多接受 7 张此类图像
+    - 时长：生成/image-to-video 为 1-15 秒，使用
+      `reference_image` 角色时为 1-10 秒，扩展为 2-10 秒
+    - 参考图像生成：将每个提供的图像的 `imageRoles` 设为 `reference_image`；xAI 最多接受 7 张此类图像
+    - 默认操作超时：600 秒，除非设置了 `video_generate.timeoutMs`
+      或 `agents.defaults.videoGenerationModel.timeoutMs`
 
     <Warning>
     不支持本地图像缓冲区。用于视频编辑/扩展输入时请使用远程 `http(s)` URL。
@@ -174,11 +252,13 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
     - 默认图像模型：`xai/grok-imagine-image`
     - 额外模型：`xai/grok-imagine-image-quality`
-    - 模式：文本转图像和参考图像编辑
+    - 模式：text-to-image 和 reference-image edit
     - 参考输入：一个 `image` 或最多五个 `images`
-    - 宽高比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`2:3`、`3:2`
+    - 长宽比：`1:1`、`16:9`、`9:16`、`4:3`、`3:4`、`2:3`、`3:2`
     - 分辨率：`1K`、`2K`
     - 数量：最多 4 张图像
+    - 默认操作超时：600 秒，除非设置了 `image_generate.timeoutMs`
+      或 `agents.defaults.imageGenerationModel.timeoutMs`
 
     OpenClaw 会向 xAI 请求 `b64_json` 图像响应，以便生成的媒体可以
     通过常规的频道附件路径进行存储和传递。本地参考图像会被转换为 data URL；远程 `http(s)` 参考会直接传递。
@@ -399,16 +479,19 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
   </Accordion>
 
   <Accordion title="已知限制">
-    - xAI 认证可以使用 API key、环境变量、插件配置回退，
-      或带有 SuperGrok 订阅的 xAI Grok OAuth。OAuth 会使用位于 `127.0.0.1:56121` 的本地
-      回调；如果是远程主机，请在打开登录 URL 之前转发该端口。
+    - xAI 认证可以使用 API 密钥、环境变量、插件配置回退、
+      浏览器 OAuth，或适用于符合条件的 xAI 账户的 device-code OAuth。浏览器
+      OAuth 使用 `127.0.0.1:56121` 上的本地回调；对于远程主机，请使用
+      `xai-device-code`，除非你想在打开登录 URL 之前转发该端口。xAI 决定哪些账户可以接收 OAuth API 令牌，而
+      同意页面可能会显示 Grok Build，尽管 OpenClaw 不需要
+      Grok Build 应用。
     - `grok-4.20-multi-agent-experimental-beta-0304` 在
-      常规 xAI 提供方路径上不受支持，因为它需要与标准 OpenClaw xAI 传输不同的上游 API
-      表面。
+      常规 xAI 提供方路径上不受支持，因为它需要与标准 OpenClaw xAI 传输
+      不同的上游 API 表面。
     - xAI Realtime voice 目前还没有注册为 OpenClaw 提供方。它
       需要与批量 STT 或流式转录不同的双向语音会话契约。
-    - xAI 图像 `quality`、图像 `mask` 和额外的仅原生宽高比在共享的
-      `image_generate` 工具拥有相应的跨提供方控制项之前不会暴露。
+    - xAI 图像的 `quality`、图像 `mask` 和额外的仅原生长宽比在共享的
+      `image_generate` 工具具备相应的跨提供方控制之前不会暴露。
   </Accordion>
 
   <Accordion title="高级说明">

@@ -226,10 +226,14 @@
     },
     {
       "source": "/glm",
-      "destination": "/providers/glm"
+      "destination": "/providers/zai"
     },
     {
       "source": "/zai",
+      "destination": "/providers/zai"
+    },
+    {
+      "source": "/providers/glm",
       "destination": "/providers/zai"
     },
     {
@@ -1040,7 +1044,8 @@
                   "install/oracle",
                   "install/railway",
                   "install/raspberry-pi",
-                  "install/render"
+                  "install/render",
+                  "install/upstash"
                 ]
               },
               {
@@ -1105,6 +1110,7 @@
                   "channels/access-groups",
                   "channels/group-messages",
                   "channels/groups",
+                  "channels/ambient-room-events",
                   "channels/broadcast-groups",
                   "channels/channel-routing",
                   "channels/location",
@@ -1203,8 +1209,10 @@
                 "group": "内置插件指南",
                 "pages": [
                   "plugins/codex-harness",
+                  "plugins/codex-native-plugins",
                   "plugins/codex-computer-use",
                   "plugins/google-meet",
+                  "plugins/meeting-notes",
                   "plugins/webhooks",
                   "plugins/admin-http-rpc",
                   "plugins/voice-call",
@@ -1219,10 +1227,12 @@
                 "group": "构建插件",
                 "pages": [
                   "plugins/building-plugins",
+                  "plugins/tool-plugins",
                   "plugins/sdk-channel-plugins",
                   "plugins/sdk-provider-plugins",
                   "plugins/cli-backend-plugins",
                   "plugins/hooks",
+                  "plugins/plugin-permission-requests",
                   "plugins/adding-capabilities"
                 ]
               },
@@ -1378,7 +1388,6 @@
                   "providers/fal",
                   "providers/fireworks",
                   "providers/github-copilot",
-                  "providers/glm",
                   "providers/google",
                   "providers/gradium",
                   "providers/groq",
@@ -1430,7 +1439,8 @@
                   "platforms/linux",
                   "platforms/windows",
                   "platforms/android",
-                  "platforms/ios"
+                  "platforms/ios",
+                  "platforms/easyrunner"
                 ]
               },
               {
@@ -1526,6 +1536,7 @@
                     "group": "安全与沙盒",
                     "pages": [
                       "gateway/security/index",
+                      "gateway/security/exposure-runbook",
                       "gateway/security/secure-file-operations",
                       "gateway/security/audit-checks",
                       "gateway/operator-scopes",
@@ -1666,7 +1677,7 @@
                   },
                   {
                     "group": "插件与技能",
-                    "pages": ["cli/plugins", "cli/path", "cli/skills"]
+                    "pages": ["cli/plugins", "cli/path", "cli/policy", "cli/skills"]
                   },
                   {
                     "group": "界面",
@@ -1701,8 +1712,7 @@
                 "group": "Codex 运行框架",
                 "pages": [
                   "plugins/codex-harness-reference",
-                  "plugins/codex-harness-runtime",
-                  "plugins/codex-native-plugins"
+                  "plugins/codex-harness-runtime"
                 ]
               },
               {

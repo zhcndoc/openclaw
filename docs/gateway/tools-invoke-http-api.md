@@ -30,8 +30,9 @@ OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，可直接调用单�
 
 - 当 `gateway.auth.mode="token"` 时，使用 `gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）。
 - 当 `gateway.auth.mode="password"` 时，使用 `gateway.auth.password`（或 `OPENCLAW_GATEWAY_PASSWORD`）。
-- 当 `gateway.auth.mode="trusted-proxy"` 时，HTTP 请求必须来自已配置的受信任代理源；同主机回环代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-- 如果配置了 `gateway.auth.rateLimit` 且认证失败次数过多，端点会返回 `429` 并带有 `Retry-After`。
+- 当 `gateway.auth.mode="trusted-proxy"` 时，HTTP 请求必须来自已配置的可信代理源；同主机回环代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
+- 直接绕过代理的同主机内部调用可以使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` 作为本地直连回退。任何 `Forwarded`、`X-Forwarded-*` 或 `X-Real-IP` 头部证据都会使请求继续走 trusted-proxy 路径。
+- 如果配置了 `gateway.auth.rateLimit` 且发生过多认证失败，端点会返回带有 `Retry-After` 的 `429`。
 
 ## 安全边界（重要）
 
@@ -40,7 +41,7 @@ OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，可直接调用单�
 - 此处的 HTTP bearer 认证不是狭义的按用户范围模型。
 - 此端点有效的 Gateway token/password 应被视为 owner/operator 凭据。
 - 对于共享密钥认证模式（`token` 和 `password`），即使调用方发送了更窄的 `x-openclaw-scopes` 头，端点也会恢复为正常的完整操作员默认值。
-- 共享密钥认证也会将此端点上的直接工具调用视为 owner-sender turn。
+- 共享密钥认证也会将此端点上的直接工具调用视为 owner-sender 回合。
 - 可信的、携带身份的 HTTP 模式（例如可信代理认证，或在私有入口上使用 `gateway.auth.mode="none"`）在存在 `x-openclaw-scopes` 时会予以遵守，否则回退到正常的操作员默认 scope 集。
 - 仅应将此端点放在 loopback/tailnet/私有入口上；不要直接暴露到公共互联网。
 
@@ -52,7 +53,7 @@ OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，可直接调用单�
   - 恢复完整的默认操作员 scope 集：
     `operator.admin`, `operator.approvals`, `operator.pairing`,
     `operator.read`, `operator.talk.secrets`, `operator.write`
-  - 将此端点上的直接工具调用视为 owner-sender turn
+  - 将此端点上的直接工具调用视为 owner-sender 回合
 - 可信的、携带身份的 HTTP 模式（例如可信代理认证，或在私有入口上使用 `gateway.auth.mode="none"`）
   - 认证某个外部受信任身份或部署边界
   - 在请求头存在时遵守 `x-openclaw-scopes`
@@ -93,9 +94,9 @@ OpenClaw 的 Gateway 提供了一个简单的 HTTP 端点，可直接调用单�
 
 重要边界说明：
 
-- Exec approvals are operator guardrails, not a separate authorization boundary for this HTTP endpoint. If a tool is reachable here via Gateway auth + tool policy, `/tools/invoke` does not add an extra per-call approval prompt.
-- If `exec` is reachable here, treat it as a mutating shell surface. Denying `write`, `edit`, `apply_patch`, or HTTP filesystem-write tools does not make shell execution read-only.
-- Do not share Gateway bearer credentials with untrusted callers. If you need separation across trust boundaries, run separate gateways (and ideally separate OS users/hosts).
+- Exec 审批是操作员护栏，不是此 HTTP 端点的独立授权边界。只要通过 Gateway 认证 + 工具策略在这里可达，`/tools/invoke` 就不会再额外弹出逐次调用审批提示。
+- 如果这里可以访问到 `exec`，应将其视为可变更的 shell 表面。即使拒绝 `write`、`edit`、`apply_patch` 或 HTTP 文件写入工具，也不意味着 shell 执行就变成只读。
+- 不要将 Gateway bearer 凭据分享给不受信任的调用方。如果需要跨信任边界隔离，请运行独立的 gateway（最好也使用独立的 OS 用户/主机）。
 
 Gateway HTTP 还会默认应用一个硬性拒绝列表（即使 session 策略允许该工具）：
 
@@ -121,7 +122,7 @@ Gateway HTTP 还会默认应用一个硬性拒绝列表（即使 session 策略�
     tools: {
       // 通过 HTTP /tools/invoke 额外阻止的工具
       deny: ["browser"],
-      // 从默认拒绝列表中移除工具
+      // 从默认拒绝列表中移除的工具
       allow: ["gateway"],
     },
   },

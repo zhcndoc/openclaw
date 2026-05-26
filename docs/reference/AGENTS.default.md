@@ -40,8 +40,9 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 
 ## 安全默认设置
 
-- 不要将目录或密钥转储到聊天中。
-- 除非明确要求，否则不要运行破坏性命令。
+- 不要把目录或密钥转储到聊天中。
+- 除非明确被要求，否则不要运行破坏性命令。
+- 在更改配置或调度器之前（例如 crontab、systemd 单元、nginx 配置或 shell rc 文件），先检查现有状态，并默认进行保留/合并。
 - 不要向外部消息界面发送部分/流式回复（仅发送最终回复）。
 
 ## 会话开始（必需）
@@ -63,17 +64,18 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 
 ## 记忆系统（推荐）
 
-- 每日日志：`memory/YYYY-MM-DD.md`（如需要，创建 `memory/`）。
-- 长期记忆：`MEMORY.md` 用于持久事实、偏好和决定。
-- 小写的 `memory.md` 仅作为遗留修复输入；不要故意同时保留两个根文件。
-- 会话开始时，读取今天 + 昨天 + `MEMORY.md`（如存在）。
+- 每日日志：`memory/YYYY-MM-DD.md`（如需要请创建 `memory/`）。
+- 长期记忆：`MEMORY.md`，用于保存持久化事实、偏好和决定。
+- 小写的 `memory.md` 只是旧版修复输入；不要刻意同时保留这两个根文件。
+- 在会话开始时，如存在，请读取今天、昨天以及 `MEMORY.md`。
+- 在写入记忆文件之前，先读取它们；只写入具体更新，不要写空占位符。
 - 记录：决定、偏好、约束、未完成事项。
-- 除非明确要求，否则避免记录密钥。
+- 除非明确要求，否则避免记录秘密。
 
 ## Tools and skills
 
-- Tools live in skills; follow each skill's `SKILL.md` when you need it.
-- Keep environment-specific notes in `TOOLS.md` (Notes for Skills).
+- 工具存在于技能中；当你需要时，请遵循每个技能的 `SKILL.md`。
+- 将环境相关的说明保留在 `TOOLS.md` 中（技能备注）。
 
 ## 备份提示（推荐）
 

@@ -250,9 +250,9 @@ openclaw pairing approve discord <CODE>
   <Step title="允许在没有 @mention 的情况下响应">
     默认情况下，你的代理只会在服务器频道中被 @mention 时才响应。对于私人服务器，你可能希望它响应每条消息。
 
-    在 guild 频道中，默认应使用 `message` 工具来输出可见的 Discord 内容，这样代理就可以潜伏着，只在判断频道回复有用时才发帖。对于普通请求，当模型没有调用到工具时，OpenClaw 会回退到助手的最终文本；环境房间事件会保持静默，除非工具发送消息。
+    在服务器频道中，正常回复默认会自动发送。对于共享的常驻房间，请启用 `messages.groupChat.visibleReplies: "message_tool"`，这样代理就可以潜伏，只在判断某个频道回复有价值时才发送。这与最新一代、工具可靠的模型（例如 GPT 5.5）配合效果最好。只要工具没有发送，环境中的房间事件就会保持安静。完整的潜伏模式配置请参见 [Ambient room events](/channels/ambient-room-events)。
 
-    这意味着所选模型应该能够稳定调用工具。如果 Discord 显示正在输入，日志中也显示了 token 使用但没有发布消息，请检查这一轮是否被配置为环境房间事件，或者使用下面的配置恢复旧版自动最终回复。
+    如果 Discord 显示正在输入、日志显示了 token 使用情况，但没有发出消息，请检查该轮是否被配置为环境房间事件，或者是否启用了 message-tool 可见回复。
 
     <Tabs>
       <Tab title="向你的代理询问">
@@ -275,7 +275,7 @@ openclaw pairing approve discord <CODE>
 }
 ```
 
-        要恢复群组/频道房间的旧版自动最终回复，请将 `messages.groupChat.visibleReplies` 设置为 `"automatic"`。
+        要强制群组/频道可见回复通过 message-tool 发送，请设置 `messages.groupChat.visibleReplies: "message_tool"`。
 
       </Tab>
     </Tabs>
@@ -347,7 +347,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 
 要限制谁可以点击按钮，请在该按钮上设置 `allowedUsers`（Discord 用户 ID、标签或 `*`）。配置后，不匹配的用户会收到一条临时拒绝提示。
 
-`/model` 和 `/models` 斜杠命令会打开一个交互式模型选择器，包含 provider、model 和兼容运行时的下拉菜单，以及一个提交步骤。`/models add` 已弃用，现在会返回一条弃用提示，而不是从聊天中注册模型。选择器回复是临时消息，只有发起者可以使用。Discord 的选择菜单最多只能有 25 个选项，因此当你希望选择器仅为某些 provider（例如 `openai-codex` 或 `vllm`）显示动态发现的模型时，请向 `agents.defaults.models` 添加 `provider/*` 条目。
+组件回调默认在 30 分钟后过期。可通过设置 `channels.discord.agentComponents.ttlMs` 来更改默认 Discord 账户的回调注册表生命周期，或者通过 `channels.discord.accounts.<accountId>.agentComponents.ttlMs` 在多账户设置中覆盖某个账户。该值以毫秒为单位，必须是正整数，并且上限为 `86400000`（24 小时）。更长的 TTL 对于需要按钮在较长时间内可用的审查或审批工作流很有帮助，但也会延长旧 Discord 消息仍可触发操作的窗口。请优先选择能满足工作流的最短 TTL，并在过期回调会让人意外时保持默认值。
+
+`/model` 和 `/models` 斜杠命令会打开一个交互式模型选择器，包含提供方、模型和兼容运行时的下拉菜单，以及一个提交步骤。`/models add` 已弃用，现在会返回一条弃用消息，而不是从聊天中注册模型。该选择器回复是临时消息，只有发起调用的用户可以使用。Discord 选择菜单最多只能包含 25 个选项，因此当你希望选择器仅为某些提供方（例如 `openai-codex` 或 `vllm`）显示动态发现的模型时，请将 `provider/*` 条目添加到 `agents.defaults.models` 中。
 
 文件附件：
 
@@ -371,42 +373,42 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
   message: "Optional fallback text",
   components: {
     reusable: true,
-    text: "Choose a path",
+    text: "选择一条路径",
     blocks: [
       {
         type: "actions",
         buttons: [
           {
-            label: "Approve",
+            label: "批准",
             style: "success",
             allowedUsers: ["123456789012345678"],
           },
-          { label: "Decline", style: "danger" },
+          { label: "拒绝", style: "danger" },
         ],
       },
       {
         type: "actions",
         select: {
           type: "string",
-          placeholder: "Pick an option",
+          placeholder: "选择一个选项",
           options: [
-            { label: "Option A", value: "a" },
-            { label: "Option B", value: "b" },
+            { label: "选项 A", value: "a" },
+            { label: "选项 B", value: "b" },
           ],
         },
       },
     ],
     modal: {
-      title: "Details",
-      triggerLabel: "Open form",
+      title: "详细信息",
+      triggerLabel: "打开表单",
       fields: [
-        { type: "text", label: "Requester" },
+        { type: "text", label: "请求人" },
         {
           type: "select",
-          label: "Priority",
+          label: "优先级",
           options: [
-            { label: "Low", value: "low" },
-            { label: "High", value: "high" },
+            { label: "低", value: "low" },
+            { label: "高", value: "high" },
           ],
         },
       ],
@@ -645,9 +647,9 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
     - `all`
     - `batched`
 
-    注意：`off` 会禁用隐式回复线程化。显式的 `[[reply_to_*]]` 标签仍会被保留。
-    `first` 总是将隐式原生回复引用附加到该轮中的第一条发出的 Discord 消息。
-    `batched` 只有在入站回合是由多条消息去抖后的批次时，才附加 Discord 的隐式原生回复引用。这在你主要想为含糊的爆发式聊天保留原生回复，而不是每个单消息回合都保留时很有用。
+    注意：`off` 会禁用隐式回复线程。显式的 `[[reply_to_*]]` 标签仍会被遵守。
+    `first` 始终会将隐式原生回复引用附加到该轮中发送的第一条 Discord 外发消息。
+    `batched` 只有在入站事件是多个消息的去抖批次时，才会附加 Discord 的隐式原生回复引用。这在你希望原生回复主要用于歧义较大的突发聊天，而不是每个单消息轮次时很有用。
 
     消息 ID 会在上下文/历史中暴露，以便代理可以针对特定消息。
 
@@ -684,6 +686,7 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
         progress: {
           label: "auto",
           maxLines: 8,
+          maxLineChars: 120,
           toolProgress: true,
         },
       },
@@ -693,10 +696,11 @@ OpenClaw 支持用于代理消息的 Discord components v2 容器。使用带有
 ```
 
     - `partial` 在 token 到达时编辑单条预览消息。
-    - `block` 发送草稿大小的分块（使用 `draftChunk` 调整大小和断点，并会被限制到 `textChunkLimit`）。
-    - 媒体、错误和显式回复的最终消息会取消待处理的预览编辑。
+    - `block` 发出草稿大小的分块（使用 `draftChunk` 调整大小和断点，并会被限制在 `textChunkLimit` 内）。
+    - 媒体、错误和显式回复最终结果会取消待处理的预览编辑。
     - `streaming.preview.toolProgress`（默认 `true`）控制工具/进度更新是否复用预览消息。
-    - 工具/进度行会在可用时以紧凑的 emoji + 标题 + 详情形式渲染，例如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"`。
+    - 工具/进度行在可用时会以紧凑的 emoji + 标题 + 详情形式渲染，例如 `🛠️ Bash: run tests` 或 `🔎 Web Search: for "query"`。
+    - `streaming.progress.maxLineChars` 控制每行进度预览预算。散文会在词边界处缩短；命令和路径详情会保留有用的后缀。
     - `streaming.preview.commandText` / `streaming.progress.commandText` 控制紧凑进度行中的命令/执行详情：`raw`（默认）或 `status`（仅工具标签）。
 
     隐藏原始命令/执行文本，同时保留紧凑进度行：
@@ -1118,10 +1122,11 @@ Discord 消息动作包括消息发送、频道管理、审核、状态和元数
 
 OpenClaw 使用 Discord components v2 进行执行审批和跨上下文标记。Discord 消息动作也可以接受 `components` 来实现自定义 UI（高级功能；需要通过 discord 工具构造 component payload），而旧版 `embeds` 仍然可用，但不推荐使用。
 
-- `channels.discord.ui.components.accentColor` 设置 Discord component 容器使用的强调色（十六进制）。
-- 使用 `channels.discord.accounts.<id>.ui.components.accentColor` 按账号设置。
-- 当存在 components v2 时，会忽略 `embeds`。
-- 默认会抑制普通 URL 预览。若单个外发链接应展开，可在消息动作上设置 `suppressEmbeds: false`。
+- `channels.discord.ui.components.accentColor` 设置 Discord 组件容器使用的强调色（十六进制）。
+- 可通过 `channels.discord.accounts.<id>.ui.components.accentColor` 按账号设置。
+- `channels.discord.agentComponents.ttlMs` 控制已发送 Discord 组件回调保持注册的时长（默认 `1800000`，最大 `86400000`）。可通过 `channels.discord.accounts.<id>.agentComponents.ttlMs` 按账号设置。
+- 当存在 components v2 时，`embeds` 会被忽略。
+- 默认会抑制纯 URL 预览。当某个消息动作只应展开单个外链时，请将 `suppressEmbeds: false` 设置在该消息动作上。
 
 示例：
 
@@ -1206,39 +1211,83 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 
 注意：
 
-- `voice.tts` 会覆盖 `stt-tts` 语音播放中的 `messages.tts`。实时模式使用 `voice.realtime.voice`。
-- `voice.mode` 控制对话路径。默认值是 `agent-proxy`：一个实时语音前端负责轮次时机、打断和播放，通过 `openclaw_agent_consult` 将实质性工作委托给路由后的 OpenClaw agent，并将结果视为来自该说话者的已输入 Discord 提示。`stt-tts` 保留旧的批处理 STT 加 TTS 流程。`bidi` 允许实时模型直接对话，同时向 OpenClaw 大脑暴露 `openclaw_agent_consult`。
-- `voice.agentSession` 控制哪一个 OpenClaw 对话接收语音轮次。若留空，则使用语音频道自己的会话；或设为 `{ mode: "target", target: "channel:<text-channel-id>" }`，使语音频道充当现有 Discord 文本频道会话（例如 `#maintainers`）的麦克风/扬声器扩展。
-- `voice.model` 会覆盖用于 Discord 语音响应和实时咨询的 OpenClaw agent 大脑。留空则继承路由后的 agent 模型。它与 `voice.realtime.model` 是分开的。
-- `agent-proxy` 通过 `discord-voice` 路由语音，它会为说话者和目标会话保留正常的 owner/tool 授权，但会隐藏 agent 的 `tts` 工具，因为 Discord 语音负责播放。默认情况下，`agent-proxy` 会为 owner 说话者让咨询获得完整的等同 owner 的工具访问权限（`voice.realtime.toolPolicy: "owner"`），并强烈偏向在实质性回答前先咨询 OpenClaw agent（`voice.realtime.consultPolicy: "always"`）。在该默认的 `always` 模式下，实时层不会在咨询答案前自动播报填充语句；它会捕获并转写语音，然后播报路由后的 OpenClaw 答案。如果多个强制咨询答案在 Discord 仍播放第一个答案时完成，后续的逐字答案会被排队，直到播放空闲为止，而不是在句中替换播报内容。
+- `voice.tts` 仅会覆盖 `stt-tts` 语音播放中的 `messages.tts`。实时模式使用 `voice.realtime.voice`。
+- `voice.mode` 控制对话路径。默认值是 `agent-proxy`：实时语音前端处理轮次时机、中断和播放，通过 `openclaw_agent_consult` 将实质工作委派给路由后的 OpenClaw agent，并将结果视为来自该说话者的类型化 Discord 提示。`stt-tts` 保留旧的批量 STT + TTS 流程。`bidi` 允许实时模型直接对话，同时通过 `openclaw_agent_consult` 暴露 OpenClaw 大脑。
+- `voice.agentSession` 控制哪个 OpenClaw 会话接收语音轮次。若不设置，则使用语音频道自身会话；或设置 `{ mode: "target", target: "channel:<text-channel-id>" }`，让语音频道充当现有 Discord 文本频道会话（例如 `#maintainers`）的麦克风/扬声器扩展。
+- `voice.model` 会覆盖 Discord 语音响应和实时咨询所使用的 OpenClaw agent 大脑。若不设置，则继承已路由的 agent 模型。它与 `voice.realtime.model` 是分开的。
+- `voice.followUsers` 允许机器人跟随选定用户加入、移动和离开 Discord 语音。行为规则和示例见 [在语音中跟随用户](#follow-users-in-voice)。
+- `agent-proxy` 通过 `discord-voice` 路由语音，它会为说话者和目标会话保留正常的所有者/工具授权，但会隐藏 agent 的 `tts` 工具，因为 Discord 语音负责播放。默认情况下，`agent-proxy` 会将咨询权限提升到与所有者等效的完整工具访问（针对所有者说话者：`voice.realtime.toolPolicy: "owner"`），并强烈倾向于在实质性回答前先咨询 OpenClaw agent（`voice.realtime.consultPolicy: "always"`）。在默认的 `always` 模式下，实时层不会在咨询答案前自动发出填充语音；它会捕获并转写语音，然后播报路由后的 OpenClaw 答案。如果多个强制咨询答案在 Discord 仍在播放第一个答案时完成，后续的逐字答案会排队等待播放空闲后再播，而不是在句中替换语音。
 - 在 `stt-tts` 模式下，STT 使用 `tools.media.audio`；`voice.model` 不影响转写。
 - 在实时模式下，`voice.realtime.provider`、`voice.realtime.model` 和 `voice.realtime.voice` 配置实时音频会话。对于 OpenAI Realtime 2 加 Codex 大脑，请使用 `voice.realtime.model: "gpt-realtime-2"` 和 `voice.model: "openai-codex/gpt-5.5"`。
-- OpenAI realtime 提供方接受当前的 Realtime 2 事件名以及旧版、与 Codex 兼容的音频输出和转写事件别名，因此兼容的提供方快照可以发生漂移而不会丢失助手音频。
-- `voice.realtime.bargeIn` 控制 Discord 说话开始事件是否会中断当前实时播放。如果未设置，它会遵循实时提供方的输入音频中断设置。
-- `voice.realtime.minBargeInAudioEndMs` 控制 OpenAI realtime barge-in 截断音频前的最短助手播放时长。默认值：`250`。在低回声房间中可设为 `0` 以实现立即中断，或者在回声严重的扬声器环境中将其调高。
-- 对于在 Discord 播放中的 OpenAI 语音，请设置 `voice.tts.provider: "openai"`，并在 `voice.tts.openai.voice` 或 `voice.tts.providers.openai.voice` 下选择一个文本转语音声音。`cedar` 是当前 OpenAI TTS 模型上一个较好的男性音色选择。
-- 按频道的 Discord `systemPrompt` 覆盖会应用到该语音频道的语音转写轮次。
-- 语音转写轮次会从 Discord `allowFrom`（或 `dm.allowFrom`）继承 owner 状态；非 owner 说话者无法访问仅限 owner 的工具（例如 `gateway` 和 `cron`）。
-- 对于仅文本配置，Discord 语音是可选开启的；设置 `channels.discord.voice.enabled=true`（或保留现有的 `channels.discord.voice` 块）以启用 `/vc` 命令、语音运行时和 `GuildVoiceStates` 网关 intent。
-- `channels.discord.intents.voiceStates` 可显式覆盖 voice-state intent 订阅。若留空，则该 intent 会跟随有效的语音启用状态。
-- 如果 `voice.autoJoin` 对同一个 guild 有多个条目，OpenClaw 会加入该 guild 最后配置的频道。
-- `voice.allowedChannels` 是一个可选的驻留允许名单。留空则允许 `/vc join` 加入任何已授权的 Discord 语音频道。设置后，`/vc join`、启动时自动加入和机器人 voice-state 移动都会被限制在列出的 `{ guildId, channelId }` 条目内。将其设置为空数组可拒绝所有 Discord 语音加入。如果 Discord 将机器人移出允许名单，OpenClaw 会离开该频道，并在可用时重新加入已配置的自动加入目标。
+- 默认情况下，实时语音模式会在 realtime provider 指令中附带小型 `IDENTITY.md`、`USER.md` 和 `SOUL.md` 配置文件，以便快速直接轮次保持与路由后的 OpenClaw agent 相同的身份、用户锚定和人格。可将 `voice.realtime.bootstrapContextFiles` 设置为其子集来自定义，或设置为 `[]` 以禁用。受支持的 realtime bootstrap 文件仅限这些配置文件；`AGENTS.md` 仍保留在普通 agent 上下文中。注入的配置文件上下文不会替代 `openclaw_agent_consult`，用于工作区工作、当前事实、记忆查询或工具驱动操作。
+- 在 OpenAI `agent-proxy` 实时模式下，设置 `voice.realtime.requireWakeName: true` 可让 Discord 实时语音在转写以唤醒名开头或结尾之前保持静音。配置的唤醒名必须是一到两个词。若未设置 `voice.realtime.wakeNames`，OpenClaw 会使用路由后的 agent `name` 加上 `OpenClaw`，若仍无则回退为 agent id 加上 `OpenClaw`。唤醒名门禁会禁用 realtime provider 自动响应，将接受的轮次路由到 OpenClaw agent 咨询路径，并在从部分转写中识别到前导唤醒名后，在最终转写到达前给出简短的口头确认。
+- OpenAI realtime provider 接受当前 Realtime 2 事件名以及兼容 Codex 的旧别名，用于输出音频和转写事件，因此兼容的 provider 快照可以漂移而不会丢失助手音频。
+- `voice.realtime.bargeIn` 控制 Discord 说话者开始事件是否打断活动中的实时播放。若未设置，则遵循 realtime provider 的输入音频中断设置。
+- `voice.realtime.minBargeInAudioEndMs` 控制 OpenAI realtime barge-in 截断音频前所需的最短助手播放时长。默认值：`250`。在低回声房间中可设为 `0` 以立即中断，或在回声较重的扬声器设置中提高该值。
+- 若要在 Discord 播放中使用 OpenAI 语音，请设置 `voice.tts.provider: "openai"`，并在 `voice.tts.openai.voice` 或 `voice.tts.providers.openai.voice` 下选择一个文本转语音声音。当前 OpenAI TTS 模型上，`cedar` 是一个不错的男性音色选择。
+- 按频道的 Discord `systemPrompt` 覆盖会应用于该语音频道的语音转写轮次。
+- 语音转写轮次会从 Discord `allowFrom`（或 `dm.allowFrom`）派生所有者状态，用于所有者门禁的命令和频道动作。agent 工具可见性遵循所路由会话配置的工具策略。
+- 对于仅文本配置，Discord 语音是可选启用的；设置 `channels.discord.voice.enabled=true`（或保留现有的 `channels.discord.voice` 块）即可启用 `/vc` 命令、语音运行时和 `GuildVoiceStates` 网关 intent。
+- `channels.discord.intents.voiceStates` 可以显式覆盖 voice-state intent 订阅。若不设置，则会随有效的语音启用状态而变化。
+- 如果 `voice.autoJoin` 对同一 guild 有多个条目，OpenClaw 会加入该 guild 最后配置的频道。
+- `voice.allowedChannels` 是一个可选的驻留允许名单。若不设置，则允许 `/vc join` 进入任何被授权的 Discord 语音频道。若设置，则 `/vc join`、启动时自动加入和机器人语音状态移动都会限制在列出的 `{ guildId, channelId }` 条目中。将其设为空数组可拒绝所有 Discord 语音加入。如果 Discord 将机器人移出允许名单之外，OpenClaw 会离开该频道，并在可用时重新加入已配置的自动加入目标。
 - `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 会透传到 `@discordjs/voice` 的加入选项。
-- 如果未设置，`@discordjs/voice` 的默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
-- OpenClaw 对 Discord 语音接收默认使用纯 JS 的 `opusscript` 解码器。可选的原生 `@discordjs/opus` 包会被仓库 pnpm 安装策略忽略，因此正常安装、Docker 线路和无关测试都不会编译原生插件。专门的语音性能主机可以在安装原生插件后通过 `OPENCLAW_DISCORD_OPUS_DECODER=native` 选择启用。
+- 若未设置，`@discordjs/voice` 的默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
+- OpenClaw 在 Discord 语音接收中默认使用纯 JS 的 `opusscript` 解码器。可选的原生 `@discordjs/opus` 包会被仓库的 pnpm 安装策略忽略，因此常规安装、Docker lane 和无关测试都不会编译原生插件。专用的语音性能主机可在安装原生插件后，通过 `OPENCLAW_DISCORD_OPUS_DECODER=native` 启用。
 - `voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 初始 Ready 等待时间。默认值：`30000`。
-- `voice.reconnectGraceMs` 控制 OpenClaw 在销毁一个断开的语音会话前，等待其开始重连的时长。默认值：`15000`。
-- 在 `stt-tts` 模式下，语音播放不会因为另一个用户开始说话而停止。为避免反馈回路，OpenClaw 在 TTS 播放时会忽略新的语音捕获；请在播放结束后再说下一轮。实时模式会把说话者开始事件作为 barge-in 信号转发给实时提供方。
-- 在实时模式下，扬声器声音通过打开的麦克风回灌可能看起来像 barge-in 并中断播放。对于回声严重的 Discord 房间，请将 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false`，以阻止 OpenAI 在输入音频上自动中断。如果你仍希望 Discord 说话开始事件中断当前播放，可再添加 `voice.realtime.bargeIn: true`。OpenAI realtime 桥接会忽略短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断，因为它们很可能是回声/噪声，并会将其记录为已跳过，而不是清除 Discord 播放。
-- `voice.captureSilenceGraceMs` 控制 Discord 报告说话者停止后，OpenClaw 等待多长时间才将该音频片段定稿用于 STT。默认值：`2500`；如果 Discord 把正常停顿拆成了断续的部分转写，请提高该值。
-- 当 ElevenLabs 是选定的 TTS 提供方时，Discord 语音播放使用流式 TTS，并从提供方响应流开始。没有流式支持的提供方会回退到合成的临时文件路径。
-- OpenClaw 还会监视接收解密失败，并在短时间内多次失败后通过离开/重新加入语音频道来自动恢复。
-- 如果更新后接收日志反复显示 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含来自 discord.js PR #11449 的上游 padding 修复，该修复关闭了 discord.js issue #11419。
-- `The operation was aborted` 接收事件在 OpenClaw 定稿一个捕获到的说话者片段时是预期内的；它们是冗长的诊断信息，不是警告。
-- 详细的 Discord 语音日志会为每个被接受的说话者片段包含一个有边界的单行 STT 转写预览，因此调试时既能看到用户侧，也能看到 agent 回复侧，而不会输出无边界的转写文本。
-- 在 `agent-proxy` 模式下，强制咨询回退会跳过很可能不完整的转写片段，例如以 `...` 结尾的文本，或以 `and` 之类的尾随连接词结尾的文本，以及诸如“be right back”或“bye”这类明显无操作性的收尾内容。如果这避免了一个过时的排队答案，日志会显示 `forced agent consult skipped reason=...`。
+- `voice.reconnectGraceMs` 控制 OpenClaw 在销毁一个已断开的语音会话前，等待其开始重连的时长。默认值：`15000`。
+- 在 `stt-tts` 模式下，仅因其他用户开始说话并不会停止语音播放。为避免反馈回路，OpenClaw 会在 TTS 播放期间忽略新的语音捕获；请在播放结束后再说话以进入下一轮。实时模式会将说话者开始信号作为 barge-in 信号转发给 realtime provider。
+- 在实时模式下，扬声器回声进入开放麦克风可能看起来像 barge-in 并打断播放。对于回声较重的 Discord 房间，将 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false` 以阻止 OpenAI 在输入音频上自动中断。若你仍希望 Discord 说话者开始事件打断活动播放，可再添加 `voice.realtime.bargeIn: true`。OpenAI realtime 桥接会将短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断视为可能的回声/噪声并忽略，并将其记录为已跳过，而不是清空 Discord 播放。
+- `voice.captureSilenceGraceMs` 控制 OpenClaw 在 Discord 报告说话者已停止后，等待多久再为 STT 完成该音频片段。默认值：`2000`；如果 Discord 将正常停顿切分成碎片化的部分转写，请提高此值。
+- 当 ElevenLabs 是选定的 TTS provider 时，Discord 语音播放会使用流式 TTS，并从 provider 响应流开始。没有流式支持的 provider 会回退到合成的临时文件路径。
+- OpenClaw 还会监视接收解密失败，并在短时间内多次失败后，通过离开/重新加入语音频道来自行恢复。
+- 如果更新后接收日志反复出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。内置的 `@discordjs/voice` 版本包含来自 discord.js PR #11449 的上游填充修复，该修复关闭了 discord.js issue #11419。
+- 当 OpenClaw 完成一个已捕获的说话者片段时，`The operation was aborted` 接收事件是预期现象；它们是详细诊断信息，不是警告。
+- 详细的 Discord 语音日志会为每个已接受的说话者片段包含一个受限的一行 STT 转写预览，因此调试时可以同时看到用户侧和 agent 回复侧，而不会倾倒无限长的转写文本。
+- 在 `agent-proxy` 模式下，强制咨询回退会跳过很可能不完整的转写片段，例如以 `...` 结尾的文本、以 `and` 之类的尾随连接词结尾的文本，以及明显不可执行的收尾语句如“马上回来”或“再见”。当这防止了一个过时的排队答案时，日志会显示 `forced agent consult skipped reason=...`。
 
-原生 opus 的源码检出设置：
+### 在语音中跟随用户
+
+当你希望 Discord 语音机器人跟随一个或多个已知 Discord 用户，而不是在启动时加入固定频道或等待 `/vc join` 时，请使用 `voice.followUsers`。
+
+```json5
+{
+  channels: {
+    discord: {
+      voice: {
+        enabled: true,
+        followUsersEnabled: true,
+        followUsers: ["discord:123456789012345678"],
+        allowedChannels: [
+          {
+            guildId: "123456789012345678",
+            channelId: "234567890123456789",
+          },
+        ],
+      },
+    },
+  },
+}
+```
+
+行为：
+
+- `followUsers` 接受原始 Discord 用户 ID 和 `discord:<id>` 值。OpenClaw 在匹配 voice-state 事件前会规范化这两种形式。
+- 当配置了 `followUsers` 时，`followUsersEnabled` 默认值为 `true`。将其设为 `false` 可保留已保存列表，但停止自动语音跟随。
+- 当被跟随用户加入允许的语音频道时，OpenClaw 会加入该频道；当该用户移动时，OpenClaw 会跟着移动；当当前被跟随用户断开连接时，OpenClaw 会离开。
+- 如果同一 guild 中有多个被跟随用户，且当前被跟随用户离开，OpenClaw 会在离开 guild 前先移动到另一个被跟随用户所在的频道。如果多个被跟随用户同时移动，则以最新观察到的 voice-state 事件为准。
+- `allowedChannels` 仍然适用。处于不允许频道中的被跟随用户会被忽略，且由跟随者拥有的会话会移动到另一个被跟随用户或离开。
+- OpenClaw 会在启动时以及按有限间隔对丢失的 voice-state 事件进行校正。校正会对配置的 guild 进行采样，并限制每轮 REST 查询数量，因此非常大的 `followUsers` 列表可能需要超过一个间隔才能收敛。
+- 如果 Discord 或管理员在机器人跟随用户时移动了机器人，OpenClaw 会重建语音会话，并在目标允许时保留跟随所有权；如果机器人被移动到 `allowedChannels` 之外，OpenClaw 会离开，并在存在目标时重新加入已配置的目标。
+- DAVE 接收恢复可能会在重复解密失败后离开并重新加入同一频道。由跟随者拥有的会话会在该恢复路径中保留其跟随所有权，因此后续的被跟随用户断开连接仍会离开该频道。
+
+在加入模式之间进行选择：
+
+- 对于希望机器人在你在语音中时自动也在语音中的个人或操作员设置，请使用 `followUsers`。
+- 对于即使没有被跟踪用户在语音中也应始终 присутствовать 的固定房间机器人，请使用 `autoJoin`。
+- 对于一次性加入或自动语音出现会令人意外的房间，请使用 `/vc join`。
+
+源码检出的原生 opus 设置：
 
 ```bash
 pnpm install
@@ -1272,6 +1321,8 @@ STT 加 TTS 管线：
       voice: {
         enabled: true,
         model: "openai-codex/gpt-5.5",
+        followUsersEnabled: true,
+        followUsers: ["123456789012345678"],
         realtime: {
           provider: "openai",
           model: "gpt-realtime-2",
@@ -1358,7 +1409,9 @@ STT 加 TTS 管线：
 
 在 `agent-proxy` 模式下，机器人会加入已配置的语音频道，但 OpenClaw agent 轮次会使用目标频道的正常路由会话和 agent。实时语音会话会把返回结果重新播回语音频道。监督 agent 仍然可以根据其工具策略使用正常的消息工具，包括在适当时发送单独的 Discord 消息。
 
-有用的目标格式：
+在一个委派的 OpenClaw 运行处于活动状态时，新的 Discord 语音转写会在开始另一个 agent 轮次之前被视为实时运行控制。诸如“status”、“cancel that”、“use the smaller fix” 或 “when you're done also check tests” 之类的短语会被归类为当前会话的状态、取消、引导或后续输入。状态、取消、已接受的引导和后续结果会以语音形式播回语音频道，以便调用者知道 OpenClaw 是否处理了请求。
+
+有用的目标形式：
 
 - `target: "channel:123456789012345678"` 会通过 Discord 文本频道会话路由。
 - `target: "123456789012345678"` 会被视为频道目标。
@@ -1615,7 +1668,7 @@ openclaw logs --follow
           // Molty 会监听所有机器人发送的 Discord 消息。
           allowBots: true,
           mentionAliases: {
-            // 允许 Molty 写出 "@Mantis" 并发送真正的 Discord 提及。
+            // 让 Molty 使用配置的用户 id 写入一个 Mantis 的 Discord 提及。
             Mantis: "MANTIS_DISCORD_USER_ID",
           },
           botLoopProtection: {
@@ -1664,7 +1717,7 @@ openclaw logs --follow
 - actions: `actions.*`
 - presence: `activity`、`status`、`activityType`、`activityUrl`
 - UI: `ui.components.accentColor`
-- features: `threadBindings`、顶层 `bindings[]`（`type: "acp"`）、`pluralkit`、`execApprovals`、`intents`、`agentComponents`、`heartbeat`、`responsePrefix`
+- features: `threadBindings`, top-level `bindings[]` (`type: "acp"`), `pluralkit`, `execApprovals`, `intents`, `agentComponents.enabled`, `agentComponents.ttlMs`, `heartbeat`, `responsePrefix`
 
 </Accordion>
 

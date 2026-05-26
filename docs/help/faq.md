@@ -213,9 +213,9 @@ title: "FAQ"
 
     所需配置：
 
-    - Global defaults: `session.threadBindings.enabled`, `session.threadBindings.idleHours`, `session.threadBindings.maxAgeHours`.
-    - Discord overrides: `channels.discord.threadBindings.enabled`, `channels.discord.threadBindings.idleHours`, `channels.discord.threadBindings.maxAgeHours`.
-    - Auto-bind on spawn: `channels.discord.threadBindings.spawnSessions` defaults to `true`; set it to `false` to disable thread-bound session spawns.
+    - 全局默认值：`session.threadBindings.enabled`、`session.threadBindings.idleHours`、`session.threadBindings.maxAgeHours`。
+    - Discord 覆盖项：`channels.discord.threadBindings.enabled`、`channels.discord.threadBindings.idleHours`、`channels.discord.threadBindings.maxAgeHours`。
+    - 生成时自动绑定：`channels.discord.threadBindings.spawnSessions` 默认为 `true`；将其设置为 `false` 可禁用线程绑定会话生成。
 
     文档：[子智能体](/tools/subagents)、[Discord](/channels/discord)、[配置参考](/gateway/configuration-reference)、[斜杠命令](/tools/slash-commands)。
 
@@ -224,12 +224,12 @@ title: "FAQ"
   <Accordion title="子智能体完成了，但完成更新发到了错误的位置，或者根本没发出去。我该检查什么？">
     先检查解析后的请求方路由：
 
-    - 完成模式的子智能体交付会优先使用任何已绑定的线程或会话路由（如果存在）。
-    - 如果完成来源只携带了一个频道，OpenClaw 会回退到请求方会话保存的路由（`lastChannel` / `lastTo` / `lastAccountId`），这样直接投递仍然可能成功。
-    - 如果既没有绑定路由，也没有可用的已保存路由，直接投递可能失败，结果会回退为排队的会话投递，而不是立即发到聊天里。
-    - 无效或过期的目标仍然可能强制回退到队列，或导致最终投递失败。
-    - 如果子进程最后一次可见的助手回复是精确的静默令牌 `NO_REPLY` / `no_reply`，或者正好是 `ANNOUNCE_SKIP`，OpenClaw 会有意抑制公告，而不是发布过时的早期进度。
-    - 如果子进程在仅有工具调用后超时，公告可以把它折叠成一段简短的部分进度摘要，而不是重放原始工具输出。
+    - 完成模式下的子智能体投递优先使用任何已绑定的线程或会话路由（如果存在）。
+    - 如果完成来源只携带了一个频道，OpenClaw 会回退到请求方会话中存储的路由（`lastChannel` / `lastTo` / `lastAccountId`），以便直接投递仍然可以成功。
+    - 如果既没有已绑定路由，也没有可用的已存储路由，直接投递可能失败，结果会回退到排队的会话投递，而不是立即发布到聊天中。
+    - 无效或过期的目标仍然可能强制回退到队列，或者导致最终投递失败。
+    - 如果子智能体最后一次可见的助手回复是精确的静默令牌 `NO_REPLY` / `no_reply`，或者正好是 `ANNOUNCE_SKIP`，OpenClaw 会故意抑制公告，而不是发布过时的早先进度。
+    - tool/toolResult 输出不会提升为子结果文本；结果取的是子智能体最近一次可见的助手回复。
 
     调试：
 
@@ -323,16 +323,18 @@ title: "FAQ"
     openclaw skills install <skill-slug>
     openclaw skills install <skill-slug> --version <version>
     openclaw skills install <skill-slug> --force
+    openclaw skills install <skill-slug> --global
     openclaw skills update --all
+    openclaw skills update --all --global
     openclaw skills list --eligible
     openclaw skills check
     ```
 
-    原生 `openclaw skills install` 会写入当前工作区的 `skills/`
-    目录。仅当你想发布或同步自己的技能时，才安装单独的 `clawhub` CLI。
-    对于跨代理共享安装，把技能放在 `~/.openclaw/skills` 下，如果你想缩小哪些代理可见，
-    可使用 `agents.defaults.skills` 或
-    `agents.list[].skills`。
+    原生 `openclaw skills install` 默认会写入当前工作区的 `skills/`
+    目录。添加 `--global` 可将其安装到共享的受管
+    skills 目录，供所有本地代理使用。只有当你想发布或同步自己的 skills 时，
+    才安装独立的 `clawhub` CLI。如果你想缩小哪些代理可以看到共享 skills 的范围，请使用
+    `agents.defaults.skills` 或 `agents.list[].skills`。
 
   </Accordion>
 
@@ -407,7 +409,7 @@ title: "FAQ"
     openclaw skills update --all
     ```
 
-    原生安装会落在当前工作区的 `skills/` 目录中。对于跨代理共享的技能，请将它们放在 `~/.openclaw/skills/<name>/SKILL.md`。如果只希望部分代理看到共享安装，请配置 `agents.defaults.skills` 或 `agents.list[].skills`。某些技能需要通过 Homebrew 安装的二进制文件；在 Linux 上这意味着要使用 Linuxbrew（参见上面的 Homebrew Linux FAQ 条目）。参见 [Skills](/tools/skills)、[Skills config](/tools/skills-config) 和 [ClawHub](/clawhub)。
+    原生安装会落到当前工作区的 `skills/` 目录。若要让所有本地代理共享 skills，请使用 `openclaw skills install <slug> --global`（或手动放到 `~/.openclaw/skills/<name>/SKILL.md`）。如果只希望某些代理看到共享安装，请配置 `agents.defaults.skills` 或 `agents.list[].skills`。某些 skills 需要通过 Homebrew 安装二进制文件；在 Linux 上这意味着使用 Linuxbrew（参见上面的 Homebrew Linux FAQ 条目）。参见 [Skills](/tools/skills), [Skills config](/tools/skills-config), 和 [ClawHub](/tools/clawhub)。
 
   </Accordion>
 
@@ -449,8 +451,8 @@ title: "FAQ"
     默认镜像以安全优先方式运行，并使用 `node` 用户，因此不包含
     系统包、Homebrew 或捆绑浏览器。若要更完整的设置：
 
-    - 使用 `OPENCLAW_HOME_VOLUME` 持久化 `/home/node`，以便缓存得以保留。
-    - 使用 `OPENCLAW_DOCKER_APT_PACKAGES` 将系统依赖烘焙进镜像。
+    - 通过 `OPENCLAW_HOME_VOLUME` 持久化 `/home/node`，这样缓存才能保留。
+    - 使用 `OPENCLAW_IMAGE_APT_PACKAGES` 将系统依赖烘焙进镜像。
     - 通过捆绑的 CLI 安装 Playwright 浏览器：
       `node /app/node_modules/playwright-core/cli.js install chromium`
     - 设置 `PLAYWRIGHT_BROWSERS_PATH` 并确保该路径被持久化。
@@ -638,7 +640,7 @@ title: "FAQ"
       },
     }
     ```
-
+    
   </Accordion>
 
   <Accordion title="Remote mode: where is the session store?">
@@ -728,9 +730,10 @@ title: "FAQ"
     `web_fetch` 无需 API key 即可使用。`web_search` 取决于你选择的
     provider：
 
-    - 基于 API 的 provider，如 Brave、Exa、Firecrawl、Gemini、Grok、Kimi、MiniMax Search、Perplexity 和 Tavily，需要按常规设置它们的 API key。
+    - API 驱动的 provider，例如 Brave、Exa、Firecrawl、Gemini、Kimi、MiniMax Search、Perplexity 和 Tavily，需要按其常规方式设置 API key。
+    - Grok 可以复用模型认证中的 xAI OAuth，或者回退到 `XAI_API_KEY` / 插件 web-search 配置。
     - Ollama Web Search 不需要 key，但它使用你配置的 Ollama 主机并需要 `ollama signin`。
-    - DuckDuckGo 不需要 key，但它是一个非官方的基于 HTML 的集成。
+    - DuckDuckGo 不需要 key，但它是一个非官方的、基于 HTML 的集成。
     - SearXNG 不需要 key/可自托管；请配置 `SEARXNG_BASE_URL` 或 `plugins.entries.searxng.config.webSearch.baseUrl`。
 
     **推荐：** 运行 `openclaw configure --section web` 并选择一个 provider。
@@ -740,10 +743,10 @@ title: "FAQ"
     - Exa: `EXA_API_KEY`
     - Firecrawl: `FIRECRAWL_API_KEY`
     - Gemini: `GEMINI_API_KEY`
-    - Grok: `XAI_API_KEY`
-    - Kimi: `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`
-    - MiniMax Search: `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, 或 `MINIMAX_API_KEY`
-    - Perplexity: `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`
+    - Grok: xAI OAuth, `XAI_API_KEY`
+    - Kimi: `KIMI_API_KEY` or `MOONSHOT_API_KEY`
+    - MiniMax Search: `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, or `MINIMAX_API_KEY`
+    - Perplexity: `PERPLEXITY_API_KEY` or `OPENROUTER_API_KEY`
     - SearXNG: `SEARXNG_BASE_URL`
     - Tavily: `TAVILY_API_KEY`
 
@@ -813,11 +816,11 @@ title: "FAQ"
 
     避免再次发生：
 
-    - 小改动请使用 `openclaw config set`。
-    - 交互式编辑请使用 `openclaw configure`。
-    - 不确定精确路径或字段结构时，先用 `config.schema.lookup`；它会返回一个浅层 schema 节点以及立即的子项摘要，方便继续深入。
-    - 部分 RPC 编辑请使用 `config.patch`；仅在需要完整配置替换时才用 `config.apply`。
-    - 如果你在代理运行中使用仅 owner 可用的 `gateway` 工具，它仍会拒绝写入 `tools.exec.ask` / `tools.exec.security`（包括归一化到相同受保护 exec 路径的旧 `tools.bash.*` 别名）。
+    - Use `openclaw config set` for small changes.
+    - Use `openclaw configure` for interactive edits.
+    - Use `config.schema.lookup` first when you are not sure about an exact path or field shape; it returns a shallow schema node plus immediate child summaries for drill-down.
+    - Use `config.patch` for partial RPC edits; keep `config.apply` for full-config replacement only.
+    - If you are using the agent-facing `gateway` tool from an agent run, it will still reject writes to `tools.exec.ask` / `tools.exec.security` (including legacy `tools.bash.*` aliases that normalize to the same protected exec paths).
 
     Docs: [Config](/cli/config), [Configure](/cli/configure), [Gateway troubleshooting](/gateway/troubleshooting#gateway-rejected-invalid-config), [Doctor](/gateway/doctor).
 
@@ -972,18 +975,18 @@ title: "FAQ"
   <Accordion title="Do nodes run a gateway service?">
     不。除非你有意运行隔离配置文件（参见 [Multiple gateways](/gateway/multiple-gateways)），否则每台主机上只应运行 **一个 gateway**。Nodes 是连接到 gateway 的外围设备（iOS/Android nodes，或菜单栏应用中的 macOS“node mode”）。对于无头 node 主机和 CLI 控制，参见 [Node host CLI](/cli/node)。
 
-    A full restart is required for `gateway`, `discovery`, and hosted plugin surface changes.
+    完整的重启对于 `gateway`、`discovery` 和托管插件表面的更改是必需的。
 
   </Accordion>
 
   <Accordion title="Is there an API / RPC way to apply config?">
     有。
 
-    - `config.schema.lookup`：在写入前检查一个配置子树及其浅层 schema 节点、匹配的 UI 提示和直接子项摘要
-    - `config.get`：获取当前快照 + hash
-    - `config.patch`：安全的部分更新（大多数 RPC 编辑首选）；尽可能热重载，需要时重启
-    - `config.apply`：验证并替换完整配置；尽可能热重载，需要时重启
-    - 仅 owner 可用的 `gateway` 运行时工具仍会拒绝重写 `tools.exec.ask` / `tools.exec.security`；旧的 `tools.bash.*` 别名会归一化到同样受保护的 exec 路径
+    - `config.schema.lookup`: 在写入前，检查一个配置子树及其浅层 schema 节点、匹配的 UI 提示和直接子摘要
+    - `config.get`: 获取当前快照 + hash
+    - `config.patch`: 安全的部分更新（大多数 RPC 编辑的首选）；在可能时热重载，必要时重启
+    - `config.apply`: 验证并替换完整配置；在可能时热重载，必要时重启
+    - 面向代理的 `gateway` 运行时工具仍然会拒绝重写 `tools.exec.ask` / `tools.exec.security`；旧的 `tools.bash.*` 别名会规范化为相同的受保护 exec 路径
 
   </Accordion>
 
@@ -1542,9 +1545,9 @@ title: "FAQ"
 
     服务/监督器日志（当 gateway 通过 launchd/systemd 运行时）：
 
-    - macOS：`$OPENCLAW_STATE_DIR/logs/gateway.log` 和 `gateway.err.log`（默认：`~/.openclaw/logs/...`; profiles 使用 `~/.openclaw-<profile>/logs/...`）
-    - Linux：`journalctl --user -u openclaw-gateway[-<profile>].service -n 200 --no-pager`
-    - Windows：`schtasks /Query /TN "OpenClaw Gateway (<profile>)" /V /FO LIST`
+    - macOS launchd stdout: `~/Library/Logs/openclaw/gateway.log` (profiles use `gateway-<profile>.log`; stderr is suppressed)
+    - Linux: `journalctl --user -u openclaw-gateway[-<profile>].service -n 200 --no-pager`
+    - Windows: `schtasks /Query /TN "OpenClaw Gateway (<profile>)" /V /FO LIST`
 
     更多内容参见 [Troubleshooting](/gateway/troubleshooting)。
 
@@ -1768,6 +1771,70 @@ title: "FAQ"
     - 沙箱和严格的工具 allowlist
 
     细节：[Security](/gateway/security)。
+
+  </Accordion>
+
+  <Accordion title="Is OpenClaw less safe because it uses TypeScript/Node instead of Rust/WASM?">
+    语言和运行时很重要，但它们并不是个人代理的主要风险。
+    OpenClaw 的实际风险是 gateway 暴露范围、谁可以给 bot 发消息、
+    prompt injection、工具范围、凭据处理、浏览器访问、exec
+    访问，以及第三方 skill 或插件的信任问题。
+
+    Rust 和 WASM 可以为某些代码类别提供更强的隔离，但
+    它们并不能解决 prompt injection、糟糕的 allowlist、公开的 gateway 暴露、
+    过宽的工具权限，或已经登录到敏感账号的浏览器配置文件。请把这些视为主要控制项：
+
+    - 保持 Gateway 私有或经过认证
+    - 对 DMs 和 groups 使用 pairing 和 allowlist
+    - 对不可信输入拒绝或沙箱化高风险工具
+    - 仅安装可信的 plugins 和 skills
+    - 在配置变更后运行 `openclaw security audit --deep`
+
+    详情：[Security](/gateway/security), [Sandboxing](/gateway/sandboxing)。
+
+  </Accordion>
+
+  <Accordion title="I saw reports about exposed OpenClaw instances. What should I check?">
+    首先检查你的实际部署：
+
+    ```bash
+    openclaw security audit --deep
+    openclaw gateway status
+    ```
+
+    更安全的基线是：
+
+    - Gateway 绑定到 `loopback`，或仅通过经过认证的私有
+      访问方式暴露，例如 tailnet、SSH 隧道、token/password 认证，或正确
+      配置的 trusted proxy
+    - DMs 处于 `pairing` 或 `allowlist` 模式
+    - groups 使用 allowlist，并启用 mention gate，除非每个成员都可信
+    - 对读取不可信内容的代理，拒绝高风险工具（`exec`、`browser`、`gateway`、`cron`）或严格
+      限制其范围
+    - 在工具执行需要更小爆炸半径时启用沙箱
+
+    没有认证的公开绑定、带工具的开放 DMs/groups，以及暴露的浏览器
+    控制，都是应首先修复的问题。详情：
+    [Security audit checklist](/gateway/security#security-audit-checklist)。
+
+  </Accordion>
+
+  <Accordion title="Are ClawHub skills and third-party plugins safe to install?">
+    把第三方 skills 和插件视为你选择信任的代码。
+    ClawHub skill 页面在安装前会公开扫描状态，OpenClaw 插件
+    安装/更新流程会运行内置的危险代码检查，但扫描并不是
+    完整的安全边界。
+
+    更安全的模式：
+
+    - 优先选择可信作者和固定版本
+    - 在启用 skill 或 plugin 前先阅读它
+    - 保持插件和 skills 的 allowlist 尽可能窄
+    - 将不可信输入工作流放到工具最少的沙箱中运行
+    - 避免给第三方代码过宽的文件系统、exec、浏览器或 secret 访问权限
+
+    详情：[Skills](/tools/skills), [Plugins](/tools/plugin),
+    [Security](/gateway/security)。
 
   </Accordion>
 

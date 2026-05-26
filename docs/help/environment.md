@@ -87,10 +87,11 @@ OpenClaw 会从多个来源拉取环境变量。规则是 **绝不覆盖已有�
 
 OpenClaw 还会向派生的子进程注入上下文标记：
 
-- `OPENCLAW_SHELL=exec`：通过 `exec` 工具运行的命令会设置该值。
-- `OPENCLAW_SHELL=acp`：ACP 运行时后端进程拉起时会设置该值（例如 `acpx`）。
-- `OPENCLAW_SHELL=acp-client`：`openclaw acp client` 拉起 ACP 桥接进程时会设置该值。
-- `OPENCLAW_SHELL=tui-local`：本地 TUI 的 `!` shell 命令会设置该值。
+- `OPENCLAW_SHELL=exec`：为通过 `exec` 工具运行的命令设置。
+- `OPENCLAW_SHELL=acp`：为 ACP 运行时后端进程派生设置（例如 `acpx`）。
+- `OPENCLAW_SHELL=acp-client`：为 `openclaw acp client` 派生 ACP 桥接进程时设置。
+- `OPENCLAW_SHELL=tui-local`：为本地 TUI `!` shell 命令设置。
+- `OPENCLAW_CLI=1`：为由 CLI 入口点派生的子进程设置。
 
 这些是运行时标记（不是必需的用户配置）。它们可用于 shell/profile 逻辑
 以应用特定于上下文的规则。
@@ -132,12 +133,12 @@ OpenClaw 支持两种基于环境变量的模式：
 
 ## 路径相关环境变量
 
-| 变量                     | 用途                                                                                                                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`          | 覆盖所有内部路径解析所使用的 home 目录（`~/.openclaw/`、agent 目录、sessions、credentials）。当将 OpenClaw 作为专用服务用户运行时很有用。 |
-| `OPENCLAW_STATE_DIR`     | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                            |
-| `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                             |
-| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可在其中解析配置目录之外文件的目录路径列表（默认：无——`$include` 仅限于配置目录）。会展开波浪号路径。  |
+| 变量                     | 用途                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_HOME`          | 覆盖内部 OpenClaw 路径默认值所使用的 home 目录（`~/.openclaw/`、agent 目录、会话、凭据、安装器引导，以及默认开发检出目录）。当 OpenClaw 作为专用服务用户运行时很有用。 |
+| `OPENCLAW_STATE_DIR`     | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                                                                                   |
+| `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                                                                                    |
+| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可以解析配置目录外文件的目录路径列表（默认：无——`$include` 仅限于配置目录）。会展开波浪号。                                                         |
 
 ## 日志
 
@@ -151,9 +152,9 @@ OpenClaw 支持两种基于环境变量的模式：
 
 ### `OPENCLAW_HOME`
 
-设置后，`OPENCLAW_HOME` 会在所有内部路径解析中替代系统 home 目录（`$HOME` / `os.homedir()`）。这使得无头服务账户可以实现完整的文件系统隔离。
+设置后，`OPENCLAW_HOME` 会替代系统 home 目录（`$HOME` / `os.homedir()`），用于内部 OpenClaw 路径默认值。这包括默认 state 目录、配置路径、agent 目录、凭据、安装器引导工作区，以及 `openclaw update --channel dev` 使用的默认开发检出目录。
 
-**优先级：** `OPENCLAW_HOME` > `$HOME` > `USERPROFILE` > `os.homedir()`
+**优先级：** `OPENCLAW_HOME` > `$HOME` > `USERPROFILE` > Android 上 Termux 的 `PREFIX` home 回退 > `os.homedir()`
 
 **示例**（macOS LaunchDaemon）：
 
@@ -165,7 +166,9 @@ OpenClaw 支持两种基于环境变量的模式：
 </dict>
 ```
 
-`OPENCLAW_HOME` 也可以设置为 tilde 路径（例如 `~/svc`），使用前会先通过 `$HOME` 展开。
+`OPENCLAW_HOME` 也可以设置为波浪号路径（例如 `~/svc`），使用前会通过相同的 OS home 回退链进行展开。
+
+像 `OPENCLAW_STATE_DIR`、`OPENCLAW_CONFIG_PATH` 和 `OPENCLAW_GIT_DIR` 这样的显式路径变量仍然具有更高优先级。诸如 shell 启动文件检测、包管理器设置以及主机 `~` 展开等 OS 账户任务，仍可能使用真实的系统 home。
 
 ## nvm 用户：web_fetch TLS 失败
 

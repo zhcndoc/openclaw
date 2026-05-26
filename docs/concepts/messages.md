@@ -180,9 +180,7 @@ OpenClaw 会按对话类型解析该行为：
   `message(action=send)`。
 - 内部编排默认允许静默。
 
-OpenClaw 还会在非直接聊天中，针对任何助理回复之前发生的内部运行器故障使用静默回复，因此群组/频道不会看到
-网关错误样板。直接聊天默认显示简洁的失败文案；
-仅当 `/verbose` 为 `on` 或 `full` 时才显示原始运行器细节。
+OpenClaw 还会在非直接聊天中、任何助手回复之前发生的内部运行器失败时使用静默回复，因此群组/频道不会看到网关错误说明。直接聊天默认显示精简的失败信息；仅在启用 `/verbose full` 时才显示原始运行器详情。
 
 默认值位于 `agents.defaults.silentReply` 下；`surfaces.<id>.silentReply`
 可以按 surface 覆盖群组/内部策略。

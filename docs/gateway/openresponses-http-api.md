@@ -19,17 +19,18 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
 
 运行行为与 [OpenAI Chat Completions](/gateway/openai-http-api) 一致：
 
-- 使用对应的网关 HTTP 认证路径：
+- 使用匹配的 Gateway HTTP 认证路径：
   - 共享密钥认证（`gateway.auth.mode="token"` 或 `"password"`）：`Authorization: Bearer <token-or-password>`
-  - 可信代理认证（`gateway.auth.mode="trusted-proxy"`）：来自已配置可信代理来源的身份感知代理头；同主机回环代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`
+  - 可信代理认证（`gateway.auth.mode="trusted-proxy"`）：来自已配置可信代理源的、可识别身份的代理头；同主机回环代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`
+  - 可信代理本地直接回退：没有 `Forwarded`、`X-Forwarded-*` 或 `X-Real-IP` 头的同主机调用方可以使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`
   - 私有入口开放认证（`gateway.auth.mode="none"`）：不需要认证头
-- 将该端点视为对网关实例的完整操作员访问
-- 对于共享密钥认证模式（`token` 和 `password`），忽略更窄的 bearer 声明 `x-openclaw-scopes` 值，并恢复正常的完整操作员默认值
-- 对于可信、携带身份的 HTTP 模式（例如可信代理认证或 `gateway.auth.mode="none"`），在存在时遵循 `x-openclaw-scopes`，否则回退到正常的操作员默认权限集
+- 将此端点视为该网关实例的完整操作员访问权限
+- 对于共享密钥认证模式（`token` 和 `password`），忽略更窄的、由 bearer 声明的 `x-openclaw-scopes` 值，并恢复正常的完整操作员默认值
+- 对于携带可信身份的 HTTP 模式（例如可信代理认证或 `gateway.auth.mode="none"`），当存在时遵循 `x-openclaw-scopes`，否则回退到正常的操作员默认权限集
 - 使用 `model: "openclaw"`、`model: "openclaw/default"`、`model: "openclaw/<agentId>"` 或 `x-openclaw-agent-id` 来选择代理
 - 当你想覆盖所选代理的后端模型时，使用 `x-openclaw-model`
-- 当你想显式进行会话路由时，使用 `x-openclaw-session-key`
-- 当你想使用非默认的合成入口通道上下文时，使用 `x-openclaw-message-channel`
+- 使用 `x-openclaw-session-key` 进行显式会话路由
+- 当你想要非默认的合成入口通道上下文时，使用 `x-openclaw-message-channel`
 
 认证矩阵：
 
@@ -259,7 +260,7 @@ URL 抓取默认值：
 - `images.maxBytes`: 10MB
 - `images.maxRedirects`: 3
 - `images.timeoutMs`: 10s
-- HEIC/HEIF `input_image` 来源会被接受，并在提供给模型前标准化为 JPEG。
+- HEIC/HEIF `input_image` 来源在系统转换器可用时会被接受，并在交付给提供方之前规范化为 JPEG。支持的转换器包括 macOS `sips`、ImageMagick、GraphicsMagick 或 ffmpeg。
 
 安全说明：
 

@@ -96,10 +96,15 @@ GET /api/diagnostics/prometheus
 | `openclaw_model_tokens_total`                 | counter   | `agent`, `channel`, `model`, `provider`, `token_type`                                     |
 | `openclaw_gen_ai_client_token_usage`          | histogram | `model`, `provider`, `token_type`                                                         |
 | `openclaw_model_cost_usd_total`               | counter   | `agent`, `channel`, `model`, `provider`                                                   |
-| `openclaw_tool_execution_total`               | counter   | `error_category`, `outcome`, `params_kind`, `tool`                                        |
-| `openclaw_tool_execution_duration_seconds`    | histogram | `error_category`, `outcome`, `params_kind`, `tool`                                        |
+| `openclaw_skill_used_total`                   | counter   | `activation`, `agent`, `skill`, `source`                                                  |
+| `openclaw_tool_execution_total`               | counter   | `error_category`, `outcome`, `params_kind`, `tool`, `tool_owner`, `tool_source`           |
+| `openclaw_tool_execution_duration_seconds`    | histogram | `error_category`, `outcome`, `params_kind`, `tool`, `tool_owner`, `tool_source`           |
 | `openclaw_harness_run_total`                  | counter   | `channel`, `error_category`, `harness`, `model`, `outcome`, `phase`, `plugin`, `provider` |
 | `openclaw_harness_run_duration_seconds`       | histogram | `channel`, `error_category`, `harness`, `model`, `outcome`, `phase`, `plugin`, `provider` |
+| `openclaw_message_received_total`             | counter   | `channel`, `source`                                                                       |
+| `openclaw_message_dispatch_started_total`     | counter   | `channel`, `source`                                                                       |
+| `openclaw_message_dispatch_completed_total`   | counter   | `channel`, `outcome`, `reason`, `source`                                                  |
+| `openclaw_message_dispatch_duration_seconds`  | histogram | `channel`, `outcome`, `reason`, `source`                                                  |
 | `openclaw_message_processed_total`            | counter   | `channel`, `outcome`, `reason`                                                            |
 | `openclaw_message_processed_duration_seconds` | histogram | `channel`, `outcome`, `reason`                                                            |
 | `openclaw_message_delivery_started_total`     | counter   | `channel`, `delivery_kind`                                                                |
@@ -112,6 +117,7 @@ GET /api/diagnostics/prometheus
 | `openclaw_queue_lane_wait_seconds`            | histogram | `lane`                                                                                    |
 | `openclaw_session_state_total`                | counter   | `reason`, `state`                                                                         |
 | `openclaw_session_queue_depth`                | gauge     | `state`                                                                                   |
+| `openclaw_session_turn_created_total`         | counter   | `agent`, `channel`, `trigger`                                                             |
 | `openclaw_session_recovery_total`             | counter   | `action`, `active_work_kind`, `state`, `status`                                           |
 | `openclaw_session_recovery_age_seconds`       | histogram | `action`, `active_work_kind`, `state`, `status`                                           |
 | `openclaw_memory_bytes`                       | gauge     | `kind`                                                                                    |
@@ -126,7 +132,7 @@ GET /api/diagnostics/prometheus
   <Accordion title="受限、低基数的标签">
     Prometheus 标签会保持受限且低基数。导出器不会输出原始诊断标识符，例如 `runId`、`sessionKey`、`sessionId`、`callId`、`toolCallId`、消息 ID、聊天 ID 或提供方请求 ID。
 
-    标签值会被脱敏，并且必须符合 OpenClaw 的低基数字符策略。不符合该策略的值会根据指标不同被替换为 `unknown`、`other` 或 `none`。
+    标签值会被脱敏，并且必须符合 OpenClaw 的低基数字符策略。不符合该策略的值会根据指标不同被替换为 `unknown`、`other` 或 `none`。看起来像带作用域的 agent session key 的标签也会被替换为 `unknown`。
 
   </Accordion>
   <Accordion title="系列上限与溢出计数">
@@ -167,7 +173,10 @@ histogram_quantile(
   sum by (le, lane) (rate(openclaw_queue_lane_wait_seconds_bucket[5m]))
 ) < 2
 
-# 丢弃的 Prometheus series（基数告警）
+# Skill 使用量，按受限 source 拆分
+sum by (skill, source) (increase(openclaw_skill_used_total[24h]))
+
+# 丢弃的 Prometheus 系列（基数告警）
 increase(openclaw_prometheus_series_dropped_total[15m]) > 0
 ```
 
@@ -207,7 +216,7 @@ OpenClaw 独立支持这两种方式。你可以运行其中一种、两种都�
 
   </Accordion>
   <Accordion title="401 / 未授权">
-    该端点要求 Gateway operator scope（`auth: "gateway"` 且 `gatewayRuntimeScopeSurface: "trusted-operator"`）。请使用 Prometheus 访问任何其他 Gateway operator 路由时所用的同一 token 或密码。没有公开的、无需认证的模式。
+    该端点要求 Gateway operator 范围（`auth: "gateway"` 且 `gatewayRuntimeScopeSurface: "trusted-operator"`）。请使用 Prometheus 访问任何其他 Gateway operator 路由时所用的同一 token 或密码。没有公开的、无需认证的模式。
   </Accordion>
   <Accordion title="`openclaw_prometheus_series_dropped_total` 持续上升">
     某个新属性正在超过 **2048** 个 series 的上限。请检查最近的指标中是否有意外的高基数标签，并在源头修复。导出器会有意丢弃新 series，而不是悄悄重写标签。

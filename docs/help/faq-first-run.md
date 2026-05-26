@@ -499,10 +499,10 @@ sidebarTitle: "首次运行 FAQ"
     **Qwen Cloud Coding Plan**、**MiniMax Coding Plan** 和
     **Z.AI / GLM Coding Plan**。
 
-    文档：[Anthropic](/providers/anthropic)、[OpenAI](/providers/openai)、
-    [Qwen Cloud](/providers/qwen)、
-    [MiniMax](/providers/minimax)、[GLM 模型](/providers/glm)、
-    [本地模型](/gateway/local-models)、[模型](/concepts/models)。
+    Docs: [Anthropic](/providers/anthropic), [OpenAI](/providers/openai),
+    [Qwen Cloud](/providers/qwen),
+    [MiniMax](/providers/minimax), [Z.AI (GLM)](/providers/zai),
+    [Local models](/gateway/local-models), [Models](/concepts/models).
 
   </Accordion>
 
@@ -523,12 +523,12 @@ sidebarTitle: "首次运行 FAQ"
     Claude CLI 复用和 `claude -p` 用法视为该集成的获准用法，
     除非 Anthropic 发布新政策。
 
-    Anthropic setup-token 仍然是受支持的 OpenClaw token 路径，但在可用时，OpenClaw 现在更倾向于使用 Claude CLI 复用和 `claude -p`。
-    对于生产环境或多用户工作负载，Anthropic API key 认证仍然是
-    更安全、更可预测的选择。如果你想在 OpenClaw 中使用其他订阅式托管
-    选项，请参阅 [OpenAI](/providers/openai)、[Qwen / Model
-    Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [GLM
-    模型](/providers/glm)。
+    Anthropic setup-token is still available as a supported OpenClaw token path, but OpenClaw now prefers Claude CLI reuse and `claude -p` when available.
+    For production or multi-user workloads, Anthropic API key auth is still the
+    safer, more predictable choice. If you want other subscription-style hosted
+    options in OpenClaw, see [OpenAI](/providers/openai), [Qwen / Model
+    Cloud](/providers/qwen), [MiniMax](/providers/minimax), and [GLM
+    Models](/providers/zai).
 
   </Accordion>
 
@@ -543,11 +543,12 @@ sidebarTitle: "首次运行 FAQ"
     **Anthropic API key**，请在 Anthropic Console 中检查使用量/账单，
     并根据需要提高限额。
 
-    如果消息具体是：
-    `Extra usage is required for long context requests`，说明请求正在尝试使用
-    Anthropic 的 1M 上下文 beta（`context1m: true`）。只有当你的凭据有资格
-    进行长上下文计费时它才可用（API key 计费或启用了 Extra Usage 的
-    OpenClaw Claude 登录路径）。
+    If the message is specifically:
+    `Extra usage is required for long context requests`, the request is trying to use
+    Anthropic's 1M context window (a GA-capable 1M Claude 4.x model or legacy
+    `context1m: true` config). That only works when your credential is eligible
+    for long-context billing (API key billing or the OpenClaw Claude-login path
+    with Extra Usage enabled).
 
     提示：设置一个**备用模型**，这样当某个提供商被限流时，OpenClaw 还能继续回复。
     参见 [模型](/cli/models)、[OAuth](/concepts/oauth)，以及

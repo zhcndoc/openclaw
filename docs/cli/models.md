@@ -164,6 +164,8 @@ openclaw models fallbacks list
 openclaw models auth add
 openclaw models auth list [--provider <id>] [--json]
 openclaw models auth login --provider <id>
+openclaw models auth login --provider openai --profile-id openai:work
+openclaw models auth paste-api-key --provider <id>
 openclaw models auth setup-token --provider <id>
 openclaw models auth paste-token
 ```
@@ -175,11 +177,11 @@ openclaw models auth paste-token
 打印 token、API 密钥或 OAuth 密钥材料。使用 `--provider <id>` 可
 筛选到单个提供方，例如 `openai-codex`，并使用 `--json` 便于脚本处理。
 
-`models auth login` 会运行提供方插件的认证流程（OAuth/API key）。使用
-`openclaw plugins list` 查看已安装了哪些提供方。
+`models auth login` 运行提供方插件的认证流程（OAuth/API 密钥）。使用
+`openclaw plugins list` 可查看已安装哪些提供方。
 使用 `openclaw models auth --agent <id> <subcommand>` 可将认证结果写入
-特定的已配置代理存储。父级 `--agent` 标志会被 `add`、`list`、
-`login`、`setup-token`、`paste-token` 和
+特定的已配置代理存储。父级 `--agent` 标志会被
+`add`、`list`、`login`、`paste-api-key`、`setup-token`、`paste-token` 和
 `login-github-copilot` 继承。
 
 对于 OpenAI 模型，`--provider openai` 默认使用 ChatGPT/Codex 账户登录。
@@ -192,22 +194,34 @@ openclaw models auth paste-token
 ```bash
 openclaw models auth login --provider openai --set-default
 openclaw models auth login --provider openai --method api-key
+openclaw models auth paste-api-key --provider openai-codex
 openclaw models auth list --provider openai
 ```
 
 注意：
 
-- `setup-token` 和 `paste-token` 仍然是通用的令牌命令，适用于
-  提供令牌认证方法的提供方。
+- `login` 接受 `--profile-id <id>`，适用于在登录期间支持命名
+  配置文件的提供方。使用它可以将同一
+  提供方的多个登录彼此分开。
+- `paste-api-key` 接受在别处生成的 API 密钥，提示输入密钥
+  值，并将其写入默认配置文件 id `<provider>:manual`，除非你
+  传入 `--profile-id`。在自动化中，可将密钥通过 stdin 传入，例如
+  `printf "%s\n" "$OPENAI_API_KEY" | openclaw models auth paste-api-key --provider openai-codex`。
+- `setup-token` 和 `paste-token` 仍然是面向暴露令牌认证方法的
+  提供方的通用令牌命令。
 - `setup-token` 需要交互式 TTY，并运行提供方的令牌认证
-  方法（当其暴露了该方法时，默认使用该提供方的 `setup-token` 方法）。
-- `paste-token` 接受在其他地方生成或来自自动化的令牌字符串。
-- `paste-token` 需要 `--provider`，会提示输入令牌值，并将其写入
+  方法（当该提供方暴露该方法时，默认为其 `setup-token` 方法）。
+- `paste-token` 接受在别处或通过自动化生成的令牌字符串。
+- `paste-token` 需要 `--provider`，提示输入令牌值，并将其写入
   默认配置文件 id `<provider>:manual`，除非你传入
   `--profile-id`。
-- `paste-token --expires-in <duration>` 会根据相对时长（如 `365d` 或 `12h`）存储一个绝对令牌过期时间。
-- Anthropic 说明：Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 使用现在再次被允许，因此 OpenClaw 会将 Claude CLI 复用和 `claude -p` 的使用视为该集成已获授权，除非 Anthropic 发布新政策。
-- Anthropic `setup-token` / `paste-token` 仍然作为受支持的 OpenClaw 令牌路径可用，但 OpenClaw 现在在可用时优先使用 Claude CLI 复用和 `claude -p`。
+- `paste-token --expires-in <duration>` 会将相对时长（如 `365d` 或 `12h`）
+  转换为绝对令牌过期时间并保存。
+- 对于 `openai-codex`，OpenAI API 密钥和 ChatGPT/OAuth 令牌材料属于
+  不同的认证形态。`sk-...` OpenAI API 密钥请使用 `paste-api-key`，
+  仅对令牌认证材料使用 `paste-token`。
+- Anthropic 注：Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许，因此除非 Anthropic 发布新政策，否则 OpenClaw 会将 Claude CLI 复用和 `claude -p` 用法视为该集成的受认可用法。
+- Anthropic `setup-token` / `paste-token` 仍可作为受支持的 OpenClaw 令牌路径使用，但 OpenClaw 现在在可用时更倾向于 Claude CLI 复用和 `claude -p`。
 
 ## 相关
 

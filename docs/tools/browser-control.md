@@ -7,7 +7,7 @@ read_when:
 title: "浏览器控制 API"
 ---
 
-有关安装、配置和故障排除，请参见 [Browser](/tools/browser)。
+有关安装、配置和故障排除，请参见 [浏览器](/tools/browser)。
 本页是本地控制 HTTP API、`openclaw browser`
 CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档。
 
@@ -150,7 +150,7 @@ openclaw browser close abcd1234
 ```bash
 openclaw browser screenshot
 openclaw browser screenshot --full-page
-openclaw browser screenshot --ref 12        # 或 --ref e12
+openclaw browser screenshot --ref 12        # 或使用 --ref e12
 openclaw browser screenshot --labels
 openclaw browser snapshot
 openclaw browser snapshot --format aria --limit 200
@@ -187,9 +187,11 @@ openclaw browser waitfordownload report.pdf
 openclaw browser upload /tmp/openclaw/uploads/file.pdf
 openclaw browser fill --fields '[{"ref":"1","type":"text","value":"Ada"}]'
 openclaw browser dialog --accept
+openclaw browser dialog --dismiss --dialog-id d1
 openclaw browser wait --text "Done"
 openclaw browser wait "#main" --url "**/dash" --load networkidle --fn "window.ready===true"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref 7
+openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.ready; return true; }'
 openclaw browser highlight e12
 openclaw browser trace start
 openclaw browser trace stop
@@ -222,10 +224,10 @@ openclaw browser set device "iPhone 14"
 
 注意：
 
-- `upload` 和 `dialog` 是**预先准备**调用；请在触发选择器/对话框的点击/按键之前运行它们。
-- `click`/`type` 等需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不支持用于操作。仅当可见视口位置是唯一可靠目标时，使用 `click-coords`。
-- 下载、trace 和上传路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads,/uploads}`（回退：`${os.tmpdir()}/openclaw/...`）。
-- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入。
+- `upload` 和 `dialog` 是**预先激活**调用；请在触发选择器/对话框的 click/press 之前运行它们。如果某个操作打开了模态框，该操作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；将该 `dialogId` 传入即可直接响应。OpenClaw 之外处理的对话框会显示在 `browserState.dialogs.recent` 下。
+- `click`/`type`/等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不支持用于操作。当可见视口位置是唯一可靠目标时，请使用 `click-coords`。
+- 下载、trace 和上传路径被限制在 OpenClaw 的临时根目录中：`/tmp/openclaw{,/downloads,/uploads}`（回退：`${os.tmpdir()}/openclaw/...`）。
+- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入框。
 
 当 OpenClaw 能够证明替换后的标签页时，例如相同 URL 或提交表单后单个旧标签页变成单个新标签页，稳定的标签页 id 和标签会在 Chromium 原始 target 替换时保持不变。原始 target id 仍然是易变的；在脚本中优先使用 `tabs` 返回的 `suggestedTargetId`。
 
@@ -240,14 +242,14 @@ openclaw browser set device "iPhone 14"
 
 ## 快照和 ref
 
-OpenClaw supports two "snapshot" styles:
+OpenClaw 支持两种“快照”样式：
 
-- **AI snapshot (numeric refs)**: `openclaw browser snapshot` (default; `--format ai`)
-  - Output: a text snapshot that includes numeric refs.
-  - Actions: `openclaw browser click 12`, `openclaw browser type 23 "hello"`.
-  - Internally, the ref is resolved via Playwright's `aria-ref`.
+- **AI 快照（数字 refs）**：`openclaw browser snapshot`（默认；`--format ai`）
+  - 输出：包含数字 refs 的文本快照。
+  - 操作：`openclaw browser click 12`、`openclaw browser type 23 "hello"`。
+  - 在内部，ref 通过 Playwright 的 `aria-ref` 解析。
 
-- **Role 快照（类似 `e12` 的 role refs）**: `openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
+- **Role 快照（类似 `e12` 的 role refs）**：`openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
   - 输出：带有 `[ref=e12]`（以及可选 `[nth=1]`）的基于 role 的列表/树。
   - 操作：`openclaw browser click e12`、`openclaw browser highlight e12`。
   - 在内部，ref 通过 `getByRole(...)` 解析（重复项还会加上 `nth()`）。
@@ -255,7 +257,7 @@ OpenClaw supports two "snapshot" styles:
   - 当链接文本含义不明确、且代理需要具体
     导航目标时，添加 `--urls`。
 
-- **ARIA 快照（类似 `ax12` 的 ARIA refs）**: `openclaw browser snapshot --format aria`
+- **ARIA 快照（类似 `ax12` 的 ARIA refs）**：`openclaw browser snapshot --format aria`
   - 输出：作为结构化节点的可访问性树。
   - 操作：当快照路径能够通过 Playwright 和 Chrome 后端 DOM id 绑定
     ref 时，`openclaw browser click ax12` 可正常工作。
@@ -346,11 +348,12 @@ JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/ch
 
 - openclaw browser 配置文件可能包含已登录会话；请将其视为敏感信息。
 - `browser act kind=evaluate` / `openclaw browser evaluate` 和 `wait --fn`
-  会在页面上下文中执行任意 JavaScript。提示注入可能会影响其行为。
-  如果不需要，请通过 `browser.evaluateEnabled=false` 禁用它。
-- 关于登录和反机器人提示（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
-- 保持 Gateway/node 主机私有（仅回环或仅 tailnet 可访问）。
-- 远程 CDP 端点能力很强；请通过隧道并加以保护。
+  会在页面上下文中执行任意 JavaScript。提示注入可能会对此进行引导。
+  如果你不需要它，请通过 `browser.evaluateEnabled=false` 将其禁用。
+- 当页面侧函数可能需要比默认 evaluate 超时时间更长时，请使用 `openclaw browser evaluate --timeout-ms <ms>`。
+- 有关登录和反爬提示（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
+- 保持 Gateway/node 主机私有（仅限 loopback 或 tailnet）。
+- 远程 CDP 端点功能强大；请通过隧道并做好保护。
 
 严格模式示例（默认阻止私有/内部目标）：
 

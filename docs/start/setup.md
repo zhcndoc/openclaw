@@ -1,8 +1,8 @@
 ---
 summary: "OpenClaw 的高级设置和开发工作流"
 read_when:
-  - Setting up a new machine
-  - You want "latest + greatest" without breaking your personal setup
+  - 设置新机器
+  - 你想要“最新 + 最强大”而不破坏你个人设置
 title: "设置"
 ---
 
@@ -21,9 +21,9 @@ title: "设置"
 
 ## 前置条件（从源码）
 
-- 推荐使用 Node 24（仍支持 Node 22 LTS，目前为 `22.16+`）
-- 源码检出需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载打包好的插件，因此根目录的 `npm install` 无法准备完整的源码树。
-- Docker（可选；仅用于容器化设置/e2e - 参见 [Docker](/install/docker)）
+- 推荐使用 Node 24（仍支持 Node 22 LTS，目前为 `22.19+`）
+- 从源码检出时需要 `pnpm`。OpenClaw 在开发模式下会从 `extensions/*` pnpm workspace 包中加载捆绑插件，因此根目录的 `npm install` 不会准备完整的源码树。
+- Docker（可选；仅用于容器化设置/e2e - 见 [Docker](/install/docker)）
 
 ## 定制化策略（让更新不会伤到你）
 
@@ -58,7 +58,7 @@ node openclaw.mjs gateway --port 18789 --verbose
 
 1. 安装并启动 **OpenClaw.app**（菜单栏应用）。
 2. 完成入门/权限检查清单（TCC 提示）。
-3. 确保 Gateway 处于 **Local** 且正在运行（由应用管理它）。
+3. 确保 Gateway 处于 **本地** 且正在运行（由应用管理它）。
 4. 连接各个渠道（示例：WhatsApp）：
 
 ```bash
@@ -103,7 +103,7 @@ pnpm gateway:watch
 
 在 **OpenClaw.app** 中：
 
-- Connection Mode: **Local**
+- Connection Mode: **本地**
   应用将连接到已在配置端口上运行的 gateway。
 
 ### 3) 验证

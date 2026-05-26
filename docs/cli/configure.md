@@ -26,9 +26,9 @@ title: "配置"
 对于网页搜索，`openclaw configure --section web` 允许你选择一个提供方
 并配置其凭据。某些提供方还会显示特定于提供方的后续提示：
 
-- **Grok** 可以提供可选的 `x_search` 设置，使用相同的 `XAI_API_KEY`，并
-  让你选择一个 `x_search` 模型。
-- **Kimi** 可能会询问 Moonshot API 区域（`api.moonshot.ai` 与
+- **Grok** 可以提供可选的 `x_search` 设置，使用相同的 xAI OAuth 配置文件
+  或 API key，并允许你选择一个 `x_search` 模型。
+- **Kimi** 会询问 Moonshot API 区域（`api.moonshot.ai` vs
   `api.moonshot.cn`）以及默认的 Kimi 网页搜索模型。
 
 相关内容：
@@ -54,12 +54,12 @@ title: "配置"
 
 说明：
 
-- 选择网关运行位置时，始终会更新 `gateway.mode`。如果你只需要这一项，可以在没有其他 section 的情况下选择“Continue”。
-- 在本地配置写入后，当所选设置路径需要时，configure 会安装选定的可下载插件。远程网关配置不会安装本地插件包。
+- 完整向导和与网关相关的各个部分会询问 Gateway 运行在哪里，并更新 `gateway.mode`。不包含 `gateway`、`daemon` 或 `health` 的 section 过滤器会直接进入请求的设置流程。
+- 在本地配置写入之后，如果所选设置路径需要，configure 会安装选中的可下载插件。远程网关配置不会安装本地插件包。
 - 面向频道的服务（Slack/Discord/Matrix/Microsoft Teams）在设置期间会提示配置频道/房间允许列表。你可以输入名称或 ID；向导会在可能时将名称解析为 ID。
-- 如果你运行守护进程安装步骤，令牌认证需要一个 token，并且 `gateway.auth.token` 由 SecretRef 管理，configure 会验证 SecretRef，但不会将已解析的明文 token 值持久化到 supervisor 服务环境元数据中。
-- 如果 token 认证需要一个 token，而已配置的 token SecretRef 未解析，configure 会阻止守护进程安装，并提供可操作的修复指导。
-- 如果 `gateway.auth.token` 和 `gateway.auth.password` 都已配置且 `gateway.auth.mode` 未设置，configure 会阻止守护进程安装，直到显式设置 mode。
+- 如果你运行 daemon 安装步骤，令牌认证需要一个 token，并且 `gateway.auth.token` 由 SecretRef 管理时，configure 会验证该 SecretRef，但不会将解析后的明文 token 值持久化到 supervisor 服务环境元数据中。
+- 如果令牌认证需要 token，而已配置的 token SecretRef 未解析，configure 会阻止 daemon 安装，并提供可执行的修复建议。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，configure 会阻止 daemon 安装，直到显式设置 mode。
 
 ## 示例
 

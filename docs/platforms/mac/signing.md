@@ -11,12 +11,12 @@ title: "macOS 签名"
 
 - 设置一个稳定的调试 bundle 标识符：`ai.openclaw.mac.debug`
 - 使用该 bundle id 写入 Info.plist（可通过 `BUNDLE_ID=...` 覆盖）
-- 调用 [`scripts/codesign-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/codesign-mac-app.sh) 对主二进制和 app bundle 进行签名，使 macOS 将每次重建视为同一个已签名的 bundle，并保留 TCC 权限（通知、辅助功能、屏幕录制、麦克风、语音识别）。为了获得稳定的权限，请使用真实签名身份；ad-hoc 为可选且不稳定（见 [macOS 权限](/platforms/mac/permissions)）。
+- 调用 [`scripts/codesign-mac-app.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/codesign-mac-app.sh) 对主二进制文件和 app bundle 进行签名，使 macOS 将每次重建视为同一个已签名 bundle，并保留 TCC 权限（通知、辅助功能、屏幕录制、麦克风、语音）。若要获得稳定的权限，请使用真实签名身份；ad-hoc 仅可显式启用且较脆弱（参见 [macOS permissions](/platforms/mac/permissions)）。
 - 默认使用 `CODESIGN_TIMESTAMP=auto`；它会为 Developer ID 签名启用受信任时间戳。设置 `CODESIGN_TIMESTAMP=off` 可跳过时间戳（离线调试构建）。
-- 将构建元数据注入 Info.plist：`OpenClawBuildTimestamp`（UTC）和 `OpenClawGitCommit`（短哈希），以便 About 面板可以显示构建、git 和 debug/release 通道。
-- **打包默认使用 Node 24**：脚本会运行 TS 构建和 Control UI 构建。当前仍支持 Node 22 LTS，`22.16+`，以保持兼容性。
+- 向 Info.plist 注入构建元数据：`OpenClawBuildTimestamp`（UTC）和 `OpenClawGitCommit`（短哈希），以便 About 面板显示构建、git 和 debug/release 渠道。
+- **打包默认使用 Node 24**：脚本会运行 TS 构建和 Control UI 构建。为了兼容性，仍支持 Node 22 LTS，目前为 `22.19+`。
 - 从环境中读取 `SIGN_IDENTITY`。将 `export SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"`（或你的 Developer ID Application 证书）添加到 shell rc 中，即可始终使用你的证书进行签名。ad-hoc 签名需要通过 `ALLOW_ADHOC_SIGNING=1` 或 `SIGN_IDENTITY="-"` 显式启用（不建议用于权限测试）。
-- 签名后执行 Team ID 审计，如果 app bundle 内任意 Mach-O 文件的签名 Team ID 与其他文件不同，则失败。设置 `SKIP_TEAM_ID_CHECK=1` 可跳过。
+- 签名后运行 Team ID 审核，如果 app bundle 内任何 Mach-O 的签名 Team ID 不同，则失败。设置 `SKIP_TEAM_ID_CHECK=1` 可绕过。
 
 ## 使用方法
 

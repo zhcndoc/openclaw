@@ -136,7 +136,7 @@ sidebarTitle: "CLI 参考"
     如果存在则使用 `ANTHROPIC_API_KEY`，否则提示输入 key，然后保存以供守护进程使用。
   </Accordion>
   <Accordion title="OpenAI Code 订阅（OAuth）">
-    浏览器流程；粘贴 `code#state`。
+    浏览器登录流程；粘贴 `code#state`。
 
     当模型未设置或已属于 OpenAI 系列时，通过 Codex 运行时将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
 
@@ -153,8 +153,18 @@ sidebarTitle: "CLI 参考"
     当模型未设置、为 `openai/*` 或为 `openai-codex/*` 时，会将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
 
   </Accordion>
-  <Accordion title="xAI (Grok) API key">
-    提示输入 `XAI_API_KEY`，并将 xAI 配置为模型提供方。
+  <Accordion title="xAI（Grok）OAuth">
+    适用于符合条件的 SuperGrok 或 X Premium 账户的浏览器登录。
+    这是大多数用户推荐的 xAI 路径。OpenClaw 会将生成的认证
+    profile 存储起来，用于 Grok 模型、Grok `web_search`、`x_search` 和 `code_execution`。
+  </Accordion>
+  <Accordion title="xAI（Grok）设备码">
+    面向远程场景的浏览器登录，使用短码而不是 localhost
+    回调。适用于 SSH、Docker 或 VPS 主机。
+  </Accordion>
+  <Accordion title="xAI（Grok）API key">
+    提示输入 `XAI_API_KEY` 并将 xAI 配置为模型提供方。适用于
+    你想使用 xAI Console API key 而不是订阅 OAuth 的情况。
   </Accordion>
   <Accordion title="OpenCode">
     提示输入 `OPENCODE_API_KEY`（或 `OPENCODE_ZEN_API_KEY`），并允许你选择 Zen 或 Go 目录。

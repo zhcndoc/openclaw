@@ -8,7 +8,7 @@ title: "图像生成"
 sidebarTitle: "图像生成"
 ---
 
-`image_generate` 工具允许 agent 使用你已配置的提供方创建和编辑图像。在聊天会话中，图像生成会异步运行：OpenClaw 会记录后台任务，立即返回任务 ID，并在提供方完成后唤醒 agent。完成后的 agent 必须通过 `message` 工具发送生成的图像；OpenClaw 不会作为回退自动发布私有的最终回复。
+`image_generate` 工具允许 agent 使用你配置的提供方创建和编辑图像。在聊天会话中，图像生成会异步运行：OpenClaw 会记录一个后台任务，立即返回任务 id，并在提供方完成后唤醒 agent。完成后的 agent 必须通过 `message` 工具发送生成的图像。如果请求者会话处于非活动状态，或者其活动唤醒失败，并且仍有一些生成的图像尚未通过 message 工具投递，OpenClaw 会发送一个幂等的直接回退，仅包含缺失的图像。
 
 <Note>
 只有在至少有一个图像生成提供方可用时，该工具才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.imageGenerationModel`，设置提供方 API 密钥，或者使用 OpenAI Codex OAuth 登录。
@@ -207,8 +207,12 @@ OpenClaw 会按以下顺序尝试提供方：
     `agents.defaults.mediaGenerationAutoProviderFallback: false` 设置为仅使用
     显式的 `model`、`primary` 和 `fallbacks` 条目。
   </Accordion>
-  <Accordion title="Timeouts">
-    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。每次调用的 `timeoutMs` 工具参数会覆盖已配置的默认值。Google、OpenRouter 和 xAI 托管的图像提供方使用 180 秒默认值；Azure OpenAI 图像生成使用 600 秒。Codex 动态工具调用遵循相同的超时预算，并受 OpenClaw 的 600000 ms 动态工具桥接最大值限制。
+  <Accordion title="超时">
+    为较慢的图像后端设置 `agents.defaults.imageGenerationModel.timeoutMs`。按次调用的
+    `timeoutMs` 工具参数会覆盖已配置的默认值，而已配置的默认值会覆盖插件作者提供的
+    提供方默认值。Google 和 OpenRouter 托管的图像提供方使用 180 秒默认值；xAI 和 Azure OpenAI
+    图像生成使用 600 秒。Codex 动态工具调用使用 120 秒的 `image_generate` 桥接默认值，
+    并在配置时遵循相同的超时预算，上限受 OpenClaw 的 600000 毫秒动态工具桥接最大值限制。
   </Accordion>
   <Accordion title="运行时检查">
     使用 `action: "list"` 检查当前已注册的提供方、
@@ -270,9 +274,10 @@ ComfyUI 支持 1 张。
     ```
 
     `openai.background` 接受 `transparent`、`opaque` 或 `auto`；
-    透明输出需要 `outputFormat` 为 `png` 或 `webp`，并且需要支持透明背景的 OpenAI 图像模型。OpenClaw 会将默认
-    `gpt-image-2` 的透明背景请求路由到 `gpt-image-1.5`。
-    `openai.outputCompression` 适用于 JPEG/WebP 输出。
+    透明输出需要 `outputFormat` 为 `png` 或 `webp`，并且需要支持透明背景的 OpenAI 图像模型。OpenClaw 会将默认的
+    `gpt-image-2` 透明背景请求路由到 `gpt-image-1.5`。
+    `openai.outputCompression` 适用于 JPEG/WebP 输出，并会在
+    PNG 输出时被忽略。
 
     顶层的 `background` 提示是与提供商无关的，目前在选择 OpenAI 提供商时会映射
     到相同的 OpenAI `background` 请求字段。对于不声明支持背景的提供商，会将其作为

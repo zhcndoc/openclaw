@@ -16,7 +16,7 @@ title: "fal 插件"
 
 ## 接口
 
-providers: fal; contracts: imageGenerationProviders, videoGenerationProviders
+providers: fal; contracts: imageGenerationProviders, musicGenerationProviders, videoGenerationProviders
 
 ## 相关文档
 

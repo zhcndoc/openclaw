@@ -52,16 +52,19 @@ TCP 桥接已被**移除**。当前 OpenClaw 构建版本不再包含桥接监�
 
 ## 执行生命周期事件
 
-节点可以发出 `exec.finished` 或 `exec.denied` 事件，以暴露 `system.run` 活动。
-这些会在网关中映射为系统事件。（旧版节点仍可能发出 `exec.started`。）
+Nodes can emit `exec.finished` events to surface completed `system.run` activity.
+These are mapped to system events in the gateway. (Legacy nodes may still emit `exec.started`.)
+Nodes may emit `exec.denied` for denied `system.run` attempts; the gateway accepts
+the event as a terminal denial and does not enqueue a system event or wake agent work.
 
 载荷字段（除非注明，否则全部可选）：
 
-- `sessionKey`（必需）：接收系统事件的代理会话。
-- `runId`：用于分组的唯一 exec id。
-- `command`：原始或格式化后的命令字符串。
-- `exitCode`、`timedOut`、`success`、`output`：完成详情（仅 finished）。
-- `reason`：拒绝原因（仅 denied）。
+- `sessionKey` (required): agent session for event correlation and, for
+  `exec.finished`, system event delivery.
+- `runId`: unique exec id for grouping.
+- `command`: raw or formatted command string.
+- `exitCode`, `timedOut`, `success`, `output`: completion details (finished only).
+- `reason`: denial reason (denied only).
 
 ## 历史上的 tailnet 用法
 

@@ -1,7 +1,8 @@
 ---
-summary: "openclaw 插件的 CLI 参考（列表、安装、marketplace、卸载、启用/禁用、doctor）"
+summary: "CLI 参考，适用于 `openclaw plugins`（init、build、validate、list、install、marketplace、uninstall、enable/disable、doctor）"
 read_when:
-  - 你想安装或管理 Gateway 插件或兼容的捆绑包
+  - 你想安装或管理 Gateway 插件或兼容捆绑包
+  - 你想为简单的工具插件搭建脚手架或验证
   - 你想调试插件加载失败问题
 title: "插件"
 sidebarTitle: "插件"
@@ -53,6 +54,11 @@ openclaw plugins update <id-or-npm-spec>
 openclaw plugins update --all
 openclaw plugins marketplace list <marketplace>
 openclaw plugins marketplace list <marketplace> --json
+openclaw plugins init <id>
+openclaw plugins init <id> --directory ./my-plugin --name "My Plugin"
+openclaw plugins build --entry ./dist/index.js
+openclaw plugins build --entry ./dist/index.js --check
+openclaw plugins validate --entry ./dist/index.js
 ```
 
 对于缓慢的安装、检查、卸载或 registry-refresh 排查，请使用
@@ -69,6 +75,26 @@ openclaw plugins marketplace list <marketplace> --json
 
 `plugins list` 会显示 `Format: openclaw` 或 `Format: bundle`。详细列表/信息输出还会显示 bundle 子类型（`codex`、`claude` 或 `cursor`）以及检测到的 bundle 能力。
 </Note>
+
+### 作者
+
+```bash
+openclaw plugins init stock-quotes --name "Stock Quotes"
+cd stock-quotes
+npm run plugin:build
+npm run plugin:validate
+```
+
+`plugins init` 会创建一个最小的 TypeScript 工具插件，使用
+`defineToolPlugin`。`plugins build` 会导入该入口，读取其静态工具
+元数据，写入 `openclaw.plugin.json`，并保持 `package.json`
+中的 `openclaw.extensions` 对齐。`plugins validate` 会检查生成的
+manifest、包元数据以及当前入口导出是否仍然一致。详见
+[工具插件](/plugins/tool-plugins) 以了解完整的创作流程。
+
+脚手架会写入 TypeScript 源码，但会从构建后的
+`./dist/index.js` 入口生成元数据，因此该流程也可与已发布的 CLI 配合使用。若入口不是默认包入口，请使用
+`--entry <path>`。在 CI 中使用 `plugins build --check`，当生成的元数据已过期时失败，但不重写文件。
 
 ### 安装
 
@@ -132,9 +158,9 @@ Beta 通道的安装和更新会优先在可用时使用 npm 的 `beta` dist-tag
 
     安装扫描会忽略常见的测试文件和目录，例如 `tests/`、`__tests__/`、`*.test.*` 和 `*.spec.*`，以避免阻止已打包的测试 mock；即使这些名称命中，声明的插件运行时入口点仍会被扫描。
 
-    此 CLI 标志适用于插件安装/更新流程。由 Gateway 驱动的 skill 依赖安装会使用匹配的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍然是一个独立的 ClawHub skill 下载/安装流程。
+    这个 CLI 标志适用于插件安装/更新流程。由 Gateway 驱动的 skill 依赖安装会使用匹配的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍然是一个独立的 ClawHub skill 下载/安装流程。
 
-    如果你发布到 ClawHub 的插件被 registry 扫描隐藏或阻止，请使用 [ClawHub publishing](/clawhub/publishing) 中的发布者步骤。`--dangerously-force-unsafe-install` 只影响你自己机器上的安装；它不会要求 ClawHub 重新扫描该插件，也不会让被阻止的发布公开。
+    如果你发布到 ClawHub 的插件被 registry 扫描隐藏或阻止，请使用 [ClawHub 发布](/clawhub/publishing) 中的发布者步骤。`--dangerously-force-unsafe-install` 只影响你自己机器上的安装；它不会要求 ClawHub 重新扫描该插件，也不会让被阻止的发布公开。
   </Accordion>
   <Accordion title="Hook 包和 npm spec">
     `plugins install` 也是安装暴露 `package.json` 中 `openclaw.hooks` 的 hook 包的入口。请使用 `openclaw hooks` 进行过滤后的 hook 可见性和单个 hook 启用，而不是用于包安装。
