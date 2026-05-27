@@ -508,10 +508,11 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 
 行为说明：
 
-- 在入站被接受后立即发送（回复前）
-- 失败会被记录，但不会阻止正常回复投递
-- 组模式 `mentions` 会在提及触发的轮次上进行反应；组激活 `always` 作为此检查的绕过条件
-- WhatsApp 使用 `channels.whatsapp.ackReaction`（此处不使用旧的 `messages.ackReaction`）
+- 入站消息被接受后立即发送（在回复之前）
+- 如果 `ackReaction` 存在但没有 `emoji`，WhatsApp 会使用路由到的 agent 身份 emoji，并回退到 "👀"；省略 `ackReaction` 或设置 `emoji: ""` 可不发送确认反应
+- 失败会被记录日志，但不会阻止正常回复投递
+- 群组模式 `mentions` 会在提及触发的轮次上进行反应；群组激活 `always` 会绕过此检查
+- WhatsApp 使用 `channels.whatsapp.ackReaction`（此处不使用旧版 `messages.ackReaction`）
 
 ## 生命周期状态反应
 
@@ -534,9 +535,10 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 
 行为说明：
 
-- `channels.whatsapp.ackReaction` 仍控制状态反应是否可用于私聊和群组。
-- WhatsApp 每条消息只有一个 bot 反应槽位，因此生命周期更新会直接替换当前反应。
-- `messages.removeAckAfterReply: true` 会在配置的 done/error 保持时间之后清除最终状态反应。
+- `channels.whatsapp.ackReaction` 仍然控制状态反应是否可用于私信和群组。
+- queued 状态反应使用与普通确认反应相同的有效 ack emoji。
+- WhatsApp 对每条消息只有一个机器人反应槽位，因此生命周期更新会就地替换当前反应。
+- `messages.removeAckAfterReply: true` 会在配置的 done/error 保持时间后清除最终状态反应。
 - 工具 emoji 分类包括 `tool`、`coding`、`web`、`deploy`、`build` 和 `concierge`。
 
 ## 多账号与凭据

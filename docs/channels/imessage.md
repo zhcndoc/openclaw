@@ -442,6 +442,13 @@ imsg send <handle> "test"
     每个账号都可以覆盖诸如 `cliPath`、`dbPath`、`allowFrom`、`groupPolicy`、`mediaMaxMb`、历史设置以及附件根目录允许列表等字段。
 
   </Accordion>
+
+  <Accordion title="直接消息历史">
+    将 `channels.imessage.dmHistoryLimit` 设为一个值，可使用该会话最近解码过的 `imsg` 历史为新的直接消息会话播种。使用 `channels.imessage.dms["<sender>"].historyLimit` 可按发送者覆盖，包括设置为 `0` 以禁用该发送者的历史。
+
+    iMessage DM 历史会按需从 `imsg` 获取。保持未设置 `dmHistoryLimit` 会禁用全局 DM 历史播种，但为某个发送者设置正值的 `channels.imessage.dms["<sender>"].historyLimit` 仍会为该发送者启用播种。
+
+  </Accordion>
 </AccordionGroup>
 
 ## 媒体、分块和投递目标
@@ -565,7 +572,7 @@ imsg send <handle> "test"
 
   </Accordion>
 
-  <Accordion title="Approval reactions (👍 / 👎)">
+  <Accordion title="审批反应（👍 / 👎）">
     当 `approvals.exec.enabled` 或 `approvals.plugin.enabled` 为 true 且请求路由到 iMessage 时，网关会原生投递批准请求并接受 tapback 来解决它：
 
     - `👍`（Like tapback）→ `allow-once`

@@ -210,16 +210,19 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 
 ### 支持的请求字段
 
-- `tools`: `{"type":"function","function":{...}}` 数组
-- `tool_choice`: `"auto"`、`"none"`
+- `tools`: array of `{ "type": "function", "function": { ... } }`
+- `tool_choice`: `"auto"`, `"none"`
 - `messages[*].role: "tool"` 后续轮次
 - `messages[*].tool_call_id` 用于将工具结果绑定回先前的工具调用
-- `max_completion_tokens`: 数字；每次调用的总 completion token 上限（包括 reasoning tokens）。这是当前 OpenAI Chat Completions 的字段名；当同时发送 `max_completion_tokens` 和 `max_tokens` 时优先使用它。
-- `max_tokens`: 数字；为向后兼容而接受的旧别名。当 `max_completion_tokens` 也存在时会被忽略。
-- `temperature`: 数字；尽力而为的采样温度，通过 agent stream-param 通道转发给上游 provider。
-- `top_p`: 数字；尽力而为的核采样，通过 agent stream-param 通道转发给上游 provider。
+- `max_completion_tokens`: number；每次调用的总完成 token 上限（包含推理 token）。这是当前 OpenAI Chat Completions 的字段名；当同时发送 `max_completion_tokens` 和 `max_tokens` 时优先使用它。
+- `max_tokens`: number；为向后兼容而接受的旧别名。若同时存在 `max_completion_tokens`，则忽略。
+- `temperature`: number；尽力将采样温度通过 agent stream-param 通道转发给上游提供方。
+- `top_p`: number；尽力将 nucleus 采样通过 agent stream-param 通道转发给上游提供方。
+- `frequency_penalty`: number；尽力将频率惩罚通过 agent stream-param 通道转发给上游提供方。有效范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
+- `presence_penalty`: number；尽力将存在惩罚通过 agent stream-param 通道转发给上游提供方。有效范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
+- `seed`: number（整数）；尽力将随机种子通过 agent stream-param 通道转发给上游提供方。非整数值返回 `400 invalid_request_error`。
 
-当任一 token 上限字段被设置时，该值会通过 agent stream-param 通道转发给上游 provider。发送给上游 provider 的实际 wire 字段名由 provider transport 决定：OpenAI 系列端点使用 `max_completion_tokens`，而只接受旧名称的 provider（例如 Mistral 和 Chutes）使用 `max_tokens`。采样字段（`temperature`、`top_p`）遵循相同的 stream-param 通道；基于 ChatGPT 的 Codex Responses 后端会在服务端将它们剥离，因为它使用固定采样。
+当任一 token 上限字段被设置时，该值会通过 agent stream-param 通道转发到上游提供方。发送给上游提供方的实际 wire 字段名由提供方传输层决定：对 OpenAI 系列端点使用 `max_completion_tokens`，对只接受旧名称的提供方（如 Mistral 和 Chutes）使用 `max_tokens`。采样字段（`temperature`、`top_p`、`frequency_penalty`、`presence_penalty`、`seed`）遵循相同的 stream-param 通道；基于 ChatGPT 的 Codex Responses 后端会在服务端将它们剥离，因为它使用固定采样。
 
 ### 不支持的变体
 

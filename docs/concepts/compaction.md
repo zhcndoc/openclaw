@@ -26,7 +26,7 @@ title: "压缩"
 
 - `embedded run auto-compaction start` / `complete` in normal Gateway logs.
 - `🧹 Auto-compaction complete` in verbose mode.
-- `/status` showing `🧹 Compactions: <count>`.
+- `/status` 显示 `🧹 Compactions: <count>`。
 
 <Info>
 在压缩之前，OpenClaw 会自动提醒代理将重要笔记保存到 [memory](/concepts/memory) 文件中。这可以防止上下文丢失。
@@ -106,10 +106,10 @@ title: "压缩"
 
 ### 后继转录
 
-当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。它会基于压缩摘要、保留状态和未摘要尾部创建一个新的活动后继转录，然后将之前的 JSONL 保留为归档检查点来源。
-后继转录还会丢弃在短重试窗口内到达的、完全重复的较长用户轮次，因此通道重试风暴不会在压缩后被带入下一个活动转录。
+当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，OpenClaw 不会就地重写现有转录。它会基于压缩摘要、保留状态以及未摘要的尾部创建一个新的活动后继转录，然后记录指向该压缩后继的分支/恢复流程检查点元数据。
+后继转录还会丢弃在短暂重试窗口内到达的完全重复的长用户轮次，因此通道重试风暴不会在压缩后被带入下一个活动转录。
 
-预压缩检查点仅在其大小低于 OpenClaw 的检查点大小上限时保留；超大的活动转录仍会压缩，但 OpenClaw 会跳过大型调试快照，而不是让磁盘使用量翻倍。
+OpenClaw 不再为新的压缩写入单独的 `.checkpoint.*.jsonl` 副本。现有的旧版检查点文件在仍被引用时仍可使用，并会在常规会话清理中被修剪。
 
 ### 压缩通知
 

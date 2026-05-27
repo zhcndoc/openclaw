@@ -50,6 +50,46 @@ OPENCLAW_DIAGNOSTICS=telegram.http,telegram.payload
 OPENCLAW_DIAGNOSTICS=0
 ```
 
+`OPENCLAW_DIAGNOSTICS=0` 是一个进程级的禁用覆盖：它会为该进程同时禁用来自环境变量和配置的标志。
+
+## 分析器标志
+
+分析器标志可在不提高全局日志级别的情况下启用定向计时跨度。默认情况下它们处于禁用状态。
+
+为一次网关运行启用所有受分析器控制的跨度：
+
+```bash
+OPENCLAW_DIAGNOSTICS=profiler openclaw gateway run
+```
+
+仅启用 reply-dispatch 分析器跨度：
+
+```bash
+OPENCLAW_DIAGNOSTICS=reply.profiler openclaw gateway run
+```
+
+仅启用 Codex app-server 启动/工具/线程分析器跨度：
+
+```bash
+OPENCLAW_DIAGNOSTICS=codex.profiler openclaw gateway run
+```
+
+从配置中启用分析器标志：
+
+```json
+{
+  "diagnostics": {
+    "flags": ["reply.profiler", "codex.profiler"]
+  }
+}
+```
+
+更改配置标志后，请重启网关。要禁用某个分析器标志，请将其从 `diagnostics.flags` 中移除并重启。若要在配置启用分析器标志时临时禁用所有诊断标志，请使用以下命令启动进程：
+
+```bash
+OPENCLAW_DIAGNOSTICS=0 openclaw gateway run
+```
+
 ## 时间线产物
 
 `timeline` 标志会为外部 QA 运行器写入结构化的启动和运行时计时事件：

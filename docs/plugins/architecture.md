@@ -35,21 +35,21 @@ sidebarTitle: "内部"
 
 | 能力                   | 注册方法                                         | 示例插件                               |
 | ---------------------- | ------------------------------------------------ | ------------------------------------ |
-| 文本推理               | `api.registerProvider(...)`                      | `openai`, `anthropic`                |
-| CLI 推理后端           | `api.registerCliBackend(...)`                    | `openai`, `anthropic`                |
-| 向量嵌入               | `api.registerEmbeddingProvider(...)`             | 由提供者拥有的向量插件                |
-| 语音                   | `api.registerSpeechProvider(...)`                | `elevenlabs`, `microsoft`            |
-| 实时转录               | `api.registerRealtimeTranscriptionProvider(...)` | `openai`                             |
-| 实时语音               | `api.registerRealtimeVoiceProvider(...)`         | `openai`                             |
-| 媒体理解               | `api.registerMediaUnderstandingProvider(...)`    | `openai`, `google`                   |
-| 会议纪要来源           | `api.registerMeetingNotesSourceProvider(...)`    | `discord`, `meeting-notes`           |
-| 图像生成               | `api.registerImageGenerationProvider(...)`       | `openai`, `google`, `fal`, `minimax` |
-| 音乐生成               | `api.registerMusicGenerationProvider(...)`       | `google`, `minimax`                  |
-| 视频生成               | `api.registerVideoGenerationProvider(...)`       | `qwen`                               |
-| 网页抓取               | `api.registerWebFetchProvider(...)`              | `firecrawl`                          |
-| 网页搜索               | `api.registerWebSearchProvider(...)`             | `google`                             |
-| 频道 / 消息            | `api.registerChannel(...)`                       | `msteams`, `matrix`                  |
-| 网关发现               | `api.registerGatewayDiscoveryService(...)`       | `bonjour`                            |
+| 文本推理         | `api.registerProvider(...)`                      | `openai`, `anthropic`                |
+| CLI 推理后端  | `api.registerCliBackend(...)`                    | `openai`, `anthropic`                |
+| 嵌入向量             | `api.registerEmbeddingProvider(...)`             | 由提供者拥有的向量插件        |
+| 语音                 | `api.registerSpeechProvider(...)`                | `elevenlabs`, `microsoft`            |
+| 实时转录 | `api.registerRealtimeTranscriptionProvider(...)` | `openai`                             |
+| 实时语音         | `api.registerRealtimeVoiceProvider(...)`         | `openai`                             |
+| 媒体理解    | `api.registerMediaUnderstandingProvider(...)`    | `openai`, `google`                   |
+| 转录来源     | `api.registerTranscriptSourceProvider(...)`      | `discord`                            |
+| 图像生成       | `api.registerImageGenerationProvider(...)`       | `openai`, `google`, `fal`, `minimax` |
+| 音乐生成       | `api.registerMusicGenerationProvider(...)`       | `google`, `minimax`                  |
+| 视频生成       | `api.registerVideoGenerationProvider(...)`       | `qwen`                               |
+| Web 抓取              | `api.registerWebFetchProvider(...)`              | `firecrawl`                          |
+| Web 搜索             | `api.registerWebSearchProvider(...)`              | `google`                             |
+| 频道 / 消息    | `api.registerChannel(...)`                       | `msteams`, `matrix`                  |
+| Gateway 发现       | `api.registerGatewayDiscoveryService(...)`       | `bonjour`                            |
 
 <Note>
 一个只注册零个能力、但提供 hooks、tools、discovery services 或后台服务的插件，是一个**仅 hook 的旧式**插件。该模式仍然完全受支持。

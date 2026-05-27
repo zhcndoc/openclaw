@@ -33,11 +33,19 @@ openclaw update --channel dev
 `--channel` 会将你的选择持久化到配置中（`update.channel`），并与
 安装方式保持一致：
 
-- **`stable`** (包安装): 通过 npm dist-tag `latest` 更新。
-- **`beta`** (包安装): 优先使用 npm dist-tag `beta`，但当 `beta` 缺失或比当前 stable 标签更旧时，会回退到 `latest`。
-- **`stable`** (git 安装): 检出最新的 stable git 标签。
-- **`beta`** (git 安装): 优先使用最新的 beta git 标签，但当 beta 缺失或更旧时，会回退到最新的 stable git 标签。
-- **`dev`**: 确保存在一个 git 检出目录（默认是 `~/openclaw`，或者当设置了 `$OPENCLAW_HOME` 时为 `$OPENCLAW_HOME/openclaw`；可通过 `OPENCLAW_GIT_DIR` 覆盖），切换到 `main`，基于上游进行 rebase，构建，并从该检出目录安装全局 CLI。
+- **`stable`** (package installs): 通过 npm dist-tag `latest` 更新。
+- **`beta`** (package installs): 优先使用 npm dist-tag `beta`，但当
+  `beta` 缺失或比当前 stable 标签更旧时，会回退到 `latest`。
+- **`stable`** (git installs): 检出最新的 stable git 标签，排除
+  诸如 `-alpha.N`、`-beta.N`、`-rc.N`、`-dev.N`、
+  `-next.N`、`-preview.N`、`-canary.N`、`-nightly.N` 等 semver 预发布
+  标签以及其他预发布后缀。
+- **`beta`** (git installs): 优先使用最新的 beta git 标签，但当 beta 缺失或更旧时，
+  回退到最新的 stable git 标签。
+- **`dev`**: 确保存在一个 git 检出目录（默认 `~/openclaw`，或
+  当设置了 `OPENCLAW_HOME` 时为 `$OPENCLAW_HOME/openclaw`；可用
+  `OPENCLAW_GIT_DIR` 覆盖），切换到 `main`，在上游基础上 rebase，构建，并
+  从该检出目录安装全局 CLI。
 
 <Tip>
 如果你想同时保留 stable 和 dev，请保留两个克隆，并将你的网关指向 stable 那个。
@@ -110,11 +118,14 @@ openclaw update status
 
 ## 标签最佳实践
 
-- 为你希望 git 检出使用的版本打标签（稳定版使用 `vYYYY.M.D`，beta 使用 `vYYYY.M.D-beta.N`）。
-- `vYYYY.M.D.beta.N` 也被识别以兼容旧格式，但建议使用 `-beta.N`。
-- 旧式 `vYYYY.M.D-<patch>` 标签仍会被识别为 stable（非 beta）。
-- 保持标签不可变：绝不要移动或重复使用标签。
-- npm dist-tags 仍然是 npm 安装的事实来源：
+- 将你希望 git 检出落到其上的发布打上标签（稳定版使用 `vYYYY.M.D`，
+  beta 使用 `vYYYY.M.D-beta.N`；命名的 semver 预发布后缀，如
+  `-alpha.N`、`-rc.N` 和 `-next.N` 不是稳定目标）。
+- 为兼容性，仍会识别旧的数字稳定标签，如 `vYYYY.M.D-1` 和 `v1.0.1-1`
+  作为稳定的 git 标签。
+- `vYYYY.M.D.beta.N` 也会为了兼容性被识别，但建议使用 `-beta.N`。
+- 保持标签不可变：永远不要移动或重复使用标签。
+- npm dist-tag 仍然是 npm 安装的事实来源：
   - `latest` -> stable
   - `beta` -> 候选构建或先 beta 后 stable 的构建
   - `dev` -> main 快照（可选）

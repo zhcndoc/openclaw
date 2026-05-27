@@ -100,7 +100,7 @@ manifest、包元数据以及当前入口导出是否仍然一致。详见
 
 ```bash
 openclaw plugins search "calendar"                   # 搜索 ClawHub 插件
-openclaw plugins install <package>                      # 默认使用 npm
+openclaw plugins install <package>                      # 源自动检测
 openclaw plugins install clawhub:<package>              # 仅 ClawHub
 openclaw plugins install npm:<package>                  # 仅 npm
 openclaw plugins install npm-pack:<path.tgz>            # 通过 npm install 语义安装本地 npm pack
@@ -120,7 +120,7 @@ openclaw plugins install <plugin> --marketplace https://github.com/<owner>/<repo
 [插件安装覆盖](/plugins/install-overrides)。
 
 <Warning>
-在启动切换期间，裸包名默认从 npm 安装。ClawHub 请使用 `clawhub:<package>`。请将插件安装视为运行代码，优先使用锁定版本。
+在启动切换期间，裸包名默认从 npm 安装，除非它们匹配官方插件 id。与捆绑插件匹配的原始 `@openclaw/*` 包 spec 会使用随当前 OpenClaw 构建一起发布的捆绑副本。若你明确需要外部 npm 包，请改用 `npm:<package>`。ClawHub 请使用 `clawhub:<package>`。把插件安装当作运行代码处理。优先使用已固定版本。
 </Warning>
 
 `plugins search` 会查询 ClawHub 中可安装的插件包，并打印
@@ -179,7 +179,13 @@ Beta 通道的安装和更新会优先在可用时使用 npm 的 `beta` dist-tag
 
     Git 安装会先克隆到临时目录，在存在 ref 时检出所请求的 ref，然后使用常规插件目录安装器。这意味着 manifest 验证、危险代码扫描、包管理器安装工作以及安装记录都表现得像 npm 安装。记录的 git 安装会包含源 URL/ref 以及解析后的提交，以便 `openclaw plugins update` 之后可以重新解析来源。
 
-    从 git 安装后，请使用 `openclaw plugins inspect <id> --runtime --json` 验证运行时注册，例如 gateway 方法和 CLI 命令。如果插件使用 `api.registerCli` 注册了 CLI 根命令，请通过 OpenClaw 根 CLI 直接执行该命令，例如 `openclaw demo-plugin ping`。
+    当你想显式使用 npm 解析时，请使用 `npm:<package>`。在启动切换期间，裸包 spec 也会直接从 npm 安装，除非它们匹配官方插件 id。
+
+    与捆绑插件匹配的原始 `@openclaw/*` 包 spec 会优先解析为镜像拥有的捆绑副本，然后才会回退到 npm。例如，`openclaw plugins install @openclaw/discord@2026.5.20 --pin` 会使用当前 OpenClaw 构建中的捆绑 Discord 插件，而不是创建受管理的 npm 覆盖。若要强制使用外部 npm 包，请改用 `openclaw plugins install npm:@openclaw/discord@2026.5.20 --pin`。
+
+    裸 spec 和 `@latest` 会保持在稳定通道。OpenClaw 带日期标记的修正版本（例如 `2026.5.3-1`）在此检查中被视为稳定发布。如果 npm 将它们解析为预发布版本，OpenClaw 会停止并要求你显式选择预发布标签（如 `@beta`/`@rc`）或精确的预发布版本（如 `@1.2.3-beta.4`）。
+
+    如果一个裸安装 spec 匹配到官方插件 id（例如 `diffs`），OpenClaw 会直接安装目录条目。若要安装同名的 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
 
   </Accordion>
   <Accordion title="压缩包">
@@ -199,7 +205,7 @@ openclaw plugins install clawhub:openclaw-codex-app-server
 openclaw plugins install clawhub:openclaw-codex-app-server@1.2.3
 ```
 
-裸的 npm 安全插件 spec 会在启动切换期间默认从 npm 安装：
+Bare npm-safe plugin specs install from npm by default during the launch cutover unless they match an official plugin id:
 
 ```bash
 openclaw plugins install openclaw-codex-app-server
@@ -209,6 +215,7 @@ openclaw plugins install openclaw-codex-app-server
 
 ```bash
 openclaw plugins install npm:openclaw-codex-app-server
+openclaw plugins install npm:@openclaw/discord@2026.5.20
 openclaw plugins install npm:@scope/plugin-name@1.0.1
 ```
 

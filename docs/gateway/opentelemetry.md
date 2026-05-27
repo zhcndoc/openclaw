@@ -61,13 +61,13 @@ openclaw plugins enable diagnostics-otel
 
 ## 导出的信号
 
-| Signal      | What goes in it                                                                                                                                                                      |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Metrics** | 令牌使用量、成本、运行时长、技能使用、消息流、Talk 事件、队列车道、会话状态/恢复、工具执行、exec 和内存压力的计数器与直方图。 |
-| **Traces**  | 用于模型使用、模型调用、harness 生命周期、技能使用、工具执行、exec、webhook/消息处理、上下文组装和工具循环的 span。                              |
-| **Logs**    | 当 `diagnostics.otel.logs` 启用时，通过 OTLP 导出的结构化 `logging.file` 记录；除非显式启用内容捕获，否则会省略日志正文。                  |
+| 信号        | 内容                                                                                                                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **指标**    | 用于 token 使用量、成本、运行时长、故障切换、技能使用、消息流、Talk 事件、队列 lane、会话状态/恢复、工具执行、超大载荷、exec 和内存压力的计数器与直方图。                                                         |
+| **链路**    | 用于模型使用、模型调用、harness 生命周期、技能使用、工具执行、exec、webhook/消息处理、上下文组装和工具循环的 spans。                                                                                        |
+| **日志**    | 当启用 `diagnostics.otel.logs` 时，通过 OTLP 导出的结构化 `logging.file` 记录；除非显式启用内容捕获，否则会省略日志正文。                                                                                       |
 
-`traces`、`metrics` 和 `logs` 可独立切换。只要 `diagnostics.otel.enabled` 为 true，三者默认都启用。
+`traces`、`metrics` 和 `logs` 可独立切换。当 `diagnostics.otel.enabled` 为 true 时，traces 和 metrics 默认开启。logs 默认关闭，只有当 `diagnostics.otel.logs` 显式为 `true` 时才会导出。
 
 ## 配置参考
 
@@ -96,6 +96,7 @@ openclaw plugins enable diagnostics-otel
         toolInputs: false,
         toolOutputs: false,
         systemPrompt: false,
+        toolDefinitions: false,
       },
     },
   },
@@ -104,14 +105,14 @@ openclaw plugins enable diagnostics-otel
 
 ### 环境变量
 
-| 变量                                                                                                              | 作用                                                                                                                                                                                                                                       |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                                                     | 覆盖 `diagnostics.otel.endpoint`。如果该值已经包含 `/v1/traces`、`/v1/metrics` 或 `/v1/logs`，则按原样使用。                                                                                                                               |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` / `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` / `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | 当对应的 `diagnostics.otel.*Endpoint` 配置键未设置时使用的、按信号区分的端点覆盖项。按信号区分的配置优先于按信号区分的环境变量，后者优先于共享端点。                                                                                         |
-| `OTEL_SERVICE_NAME`                                                                                               | 覆盖 `diagnostics.otel.serviceName`。                                                                                                                                                                                                      |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`                                                                                     | 覆盖传输协议（目前仅支持 `http/protobuf`）。                                                                                                                                                                                                |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`                                                                                   | 设置为 `gen_ai_latest_experimental` 时，输出最新的实验性 GenAI span 属性（`gen_ai.provider.name`），而不是旧的 `gen_ai.system`。无论如何，GenAI 指标始终使用有界的、低基数的语义属性。                                                            |
-| `OPENCLAW_OTEL_PRELOADED`                                                                                         | 当其他 preload 或宿主进程已经注册了全局 OpenTelemetry SDK 时设为 `1`。此时插件会跳过自身的 NodeSDK 生命周期，但仍会接入诊断监听器并遵循 `traces`/`metrics`/`logs`。                                                                        |
+| 变量                                                                                                              | 作用                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                                                                                     | 覆盖 `diagnostics.otel.endpoint`。如果该值已包含 `/v1/traces`、`/v1/metrics` 或 `/v1/logs`，则按原样使用。                                                                                                                                                                                                                                   |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` / `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` / `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | 当对应的 `diagnostics.otel.*Endpoint` 配置项未设置时，用于按信号覆盖端点。按信号的配置优先于按信号的环境变量，后者优先于共享端点。                                                                                                                                                                                                         |
+| `OTEL_SERVICE_NAME`                                                                                               | 覆盖 `diagnostics.otel.serviceName`。                                                                                                                                                                                                                                                                                                        |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                                                                                     | 覆盖传输协议（目前仅支持 `http/protobuf`）。                                                                                                                                                                                                                                                                                               |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`                                                                                   | 设为 `gen_ai_latest_experimental` 时，发出最新的实验性 GenAI 推理 span 形状，包括 `{gen_ai.operation.name} {gen_ai.request.model}` 的 span 名称、`CLIENT` span kind，以及 `gen_ai.provider.name`，而不是旧版的 `gen_ai.system`。无论如何，GenAI 指标始终使用有界、低基数的语义属性。 |
+| `OPENCLAW_OTEL_PRELOADED`                                                                                         | 当其他 preload 或宿主进程已经注册了全局 OpenTelemetry SDK 时，设为 `1`。此时插件会跳过自身的 NodeSDK 生命周期，但仍会接线诊断监听器并遵循 `traces`/`metrics`/`logs`。                                                                                                                              |
 
 ## 隐私与内容捕获
 
@@ -123,10 +124,11 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 只有当你的收集器和保留策略已批准 prompt、response、tool 或 system-prompt 文本时，才将 `diagnostics.otel.captureContent.*` 设为 `true`。每个子键都可独立启用：
 
 - `inputMessages` - 用户 prompt 内容。
-- `outputMessages` - 模型响应内容。
-- `toolInputs` - 工具参数载荷。
-- `toolOutputs` - 工具结果载荷。
+- `outputMessages` - 模型 response 内容。
+- `toolInputs` - tool 参数载荷。
+- `toolOutputs` - tool 结果载荷。
 - `systemPrompt` - 组装后的 system/developer prompt。
+- `toolDefinitions` - 模型 tool 名称、描述和 schema。
 
 当启用任意子键时，模型和工具 span 会仅针对该类别获得有界、脱敏的 `openclaw.content.*` 属性。仅在需要进行广泛诊断采集且 OTLP 日志消息正文也已获准导出时，才使用布尔值 `captureContent: true`。
 
@@ -151,8 +153,9 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 - `gen_ai.client.operation.duration` (histogram, seconds, GenAI semantic-conventions metric, attrs: `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, optional `error.type`)
 - `openclaw.model_call.duration_ms` (histogram, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, plus `openclaw.errorCategory` and `openclaw.failureKind` on classified errors)
 - `openclaw.model_call.request_bytes` (histogram, final model request payload 的 UTF-8 字节大小；不包含原始载荷内容)
-- `openclaw.model_call.response_bytes` (histogram, 流式模型响应事件的 UTF-8 字节大小；不包含原始响应内容)
-- `openclaw.model_call.time_to_first_byte_ms` (histogram, 首个流式响应事件之前的经过时间)
+- `openclaw.model_call.response_bytes` (histogram, streamed model response events 的 UTF-8 字节大小；不包含原始 response 内容)
+- `openclaw.model_call.time_to_first_byte_ms` (histogram, 第一条流式 response 事件到来前的耗时)
+- `openclaw.model.failover` (counter, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.failover.to_provider`, `openclaw.failover.to_model`, `openclaw.failover.reason`, `openclaw.failover.suspended`, `openclaw.lane`)
 - `openclaw.skill.used` (counter, attrs: `openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, optional `openclaw.agent`, optional `openclaw.toolName`)
 
 ### 消息流
@@ -209,9 +212,22 @@ OpenClaw 按其仍能观察到的工作对会话进行分类：
 只有 `session.stuck` 会发出 `openclaw.session.stuck` 计数器、`openclaw.session.stuck_age_ms` 直方图和 `openclaw.session.stuck` span。只要会话保持不变，重复的 `session.stuck` 诊断就会退避，因此仪表盘应关注持续增长而不是每个 heartbeat tick。关于配置项和默认值，请参阅
 [配置参考](/gateway/configuration-reference#diagnostics)。
 
+Liveness warnings 也会发出：
+
+- `openclaw.liveness.warning` (counter, attrs: `openclaw.liveness.reason`)
+- `openclaw.liveness.event_loop_delay_p99_ms` (histogram, attrs: `openclaw.liveness.reason`)
+- `openclaw.liveness.event_loop_delay_max_ms` (histogram, attrs: `openclaw.liveness.reason`)
+- `openclaw.liveness.event_loop_utilization` (histogram, attrs: `openclaw.liveness.reason`)
+- `openclaw.liveness.cpu_core_ratio` (histogram, attrs: `openclaw.liveness.reason`)
+
 ### Harness 生命周期
 
 - `openclaw.harness.duration_ms`（直方图，属性：`openclaw.harness.id`, `openclaw.harness.plugin`, `openclaw.outcome`, `openclaw.harness.phase`（在错误时））
+
+### 工具执行
+
+- `openclaw.tool.execution.duration_ms` (histogram, attrs: `gen_ai.tool.name`, `openclaw.toolName`, `openclaw.tool.source`, `openclaw.tool.owner`, `openclaw.tool.params.kind`, plus `openclaw.errorCategory` on errors)
+- `openclaw.tool.execution.blocked` (counter, attrs: `gen_ai.tool.name`, `openclaw.toolName`, `openclaw.tool.source`, `openclaw.tool.owner`, `openclaw.tool.params.kind`, `openclaw.deniedReason`)
 
 ### Exec
 
@@ -219,11 +235,13 @@ OpenClaw 按其仍能观察到的工作对会话进行分类：
 
 ### 诊断内部项（内存与工具循环）
 
-- `openclaw.memory.heap_used_bytes`（直方图，属性：`openclaw.memory.kind`）
-- `openclaw.memory.rss_bytes`（直方图）
-- `openclaw.memory.pressure`（计数器，属性：`openclaw.memory.level`）
-- `openclaw.tool.loop.iterations`（计数器，属性：`openclaw.toolName`, `openclaw.outcome`）
-- `openclaw.tool.loop.duration_ms`（直方图，属性：`openclaw.toolName`, `openclaw.outcome`）
+- `openclaw.payload.large` (counter, attrs: `openclaw.payload.surface`, `openclaw.payload.action`, `openclaw.channel`, `openclaw.plugin`, `openclaw.reason`)
+- `openclaw.payload.large_bytes` (histogram, attrs: same as `openclaw.payload.large`)
+- `openclaw.memory.heap_used_bytes` (histogram, attrs: `openclaw.memory.kind`)
+- `openclaw.memory.rss_bytes` (histogram)
+- `openclaw.memory.pressure` (counter, attrs: `openclaw.memory.level`)
+- `openclaw.tool.loop.iterations` (counter, attrs: `openclaw.toolName`, `openclaw.outcome`)
+- `openclaw.tool.loop.duration_ms` (histogram, attrs: `openclaw.toolName`, `openclaw.outcome`)
 
 ## 导出的 spans
 
@@ -239,7 +257,8 @@ OpenClaw 按其仍能观察到的工作对会话进行分类：
   - `gen_ai.request.model`, `gen_ai.operation.name`, `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`
   - 出错时包含 `openclaw.errorCategory` 和可选的 `openclaw.failureKind`
   - `openclaw.model_call.request_bytes`, `openclaw.model_call.response_bytes`, `openclaw.model_call.time_to_first_byte_ms`
-  - `openclaw.provider.request_id_hash`（上游提供方请求 ID 的受限、基于 SHA 的哈希；不会导出原始 ID）
+  - `openclaw.provider.request_id_hash`（上游提供方请求 ID 的有界 SHA 哈希；不会导出原始 ID）
+  - 当 `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental` 时，model-call spans 使用最新的 GenAI 推理 span 名称 `{gen_ai.operation.name} {gen_ai.request.model}`，并使用 `CLIENT` span kind，而不是 `openclaw.model.call`。
 - `openclaw.harness.run`
   - `openclaw.harness.id`, `openclaw.harness.plugin`, `openclaw.outcome`, `openclaw.provider`, `openclaw.model`, `openclaw.channel`
   - 完成时：`openclaw.harness.result_classification`, `openclaw.harness.yield_detected`, `openclaw.harness.items.started`, `openclaw.harness.items.completed`, `openclaw.harness.items.active`

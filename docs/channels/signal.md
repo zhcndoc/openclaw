@@ -306,7 +306,22 @@ message action=react channel=signal target=signal:group:<groupId> targetAuthor=u
   - `minimal`/`extensive` 会启用代理反应并设置指导级别。
 - 每账户覆盖：`channels.signal.accounts.<id>.actions.reactions`、`channels.signal.accounts.<id>.reactionLevel`。
 
-## 投递目标（CLI/cron）
+## 批准反应
+
+Signal exec 和插件批准提示使用顶层的 `approvals.exec` 和
+`approvals.plugin` 路由块。Signal 没有
+`channels.signal.execApprovals` 块。
+
+- `👍` 批准一次。
+- `👎` 拒绝。
+- 当请求提供持久批准时，使用 `/approve <id> allow-always`。
+
+批准反应解析需要来自
+`channels.signal.allowFrom`、`channels.signal.defaultTo` 或匹配的账户级字段的明确 Signal 批准者。
+直接的同聊天 exec 批准提示仍然可以在没有明确批准者的情况下抑制重复的本地 `/approve` 回退；
+没有批准者的群组批准会保留本地回退可见。
+
+## 传递目标（CLI/cron）
 
 - 私信：`signal:+15551234567`（或直接使用 E.164）。
 - UUID 私信：`uuid:<id>`（或裸 UUID）。

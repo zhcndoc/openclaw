@@ -37,8 +37,7 @@ doc-schema-version: 1
     openclaw plugins search "calendar"
     ```
 
-    ClawHub 是社区插件的主要发现入口。在发布切换期间，普通的裸包规范
-    仍会从 npm 安装。当你需要特定来源时，请使用显式前缀。
+    ClawHub 是社区插件的主要发现入口。在发布切换期间，普通的裸包规格仍然会从 npm 安装，除非它们匹配某个官方插件 id。与捆绑插件匹配的原始 `@openclaw/*` 包规格会使用当前 OpenClaw 构建中的捆绑副本。当你需要特定来源时，请使用显式前缀。
 
   </Step>
 
@@ -114,10 +113,7 @@ doc-schema-version: 1
 | local path  | 你正在同一台机器上开发或测试插件                                               | `openclaw plugins install --link ./my-plugin`                  |
 | marketplace | 你正在安装一个兼容 Claude 的 marketplace 插件                                   | `openclaw plugins install <plugin> --marketplace <source>`     |
 
-裸包规范具有特殊的兼容性行为。如果裸名称匹配某个内置插件 id，OpenClaw 会使用该内置来源。
-如果它匹配某个官方外部插件 id，OpenClaw 会使用官方包目录。其他普通裸包规范在发布切换期间
-通过 npm 安装。当你需要确定性的来源选择时，请使用 `clawhub:`、`npm:`、`git:` 或
-`npm-pack:`。完整命令契约请参见 [`openclaw plugins`](/cli/plugins#install)。
+裸包规格具有特殊的兼容行为。如果裸名称匹配某个捆绑插件 id，OpenClaw 会使用该捆绑来源。如果它匹配某个官方外部插件 id，OpenClaw 会使用官方包目录。其他普通裸包规格在发布切换期间会通过 npm 安装。与捆绑插件匹配的原始 `@openclaw/*` 包规格也会在回退到 npm 之前解析为捆绑副本。若你明确想要外部 npm 包而不是镜像自带的捆绑副本，请使用 `npm:@openclaw/<plugin>@<version>`。当你需要确定性的来源选择时，请使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:`。有关完整命令契约，请参见 [`openclaw plugins`](/cli/plugins#install)。
 
 ### 配置插件策略
 

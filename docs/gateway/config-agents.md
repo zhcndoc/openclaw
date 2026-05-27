@@ -220,7 +220,6 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
       contextLimits: {
         memoryGetMaxChars: 12000,
         memoryGetDefaultLines: 120,
-        toolResultMaxChars: 16000,
         postCompactionMaxChars: 1800,
       },
     },
@@ -228,10 +227,10 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
 }
 ```
 
-- `memoryGetMaxChars`：`memory_get` 摘录在添加截断元数据和续接提示前的默认上限。
-- `memoryGetDefaultLines`：省略 `lines` 时，`memory_get` 的默认行窗口。
-- `toolResultMaxChars`：用于持久化结果和溢出恢复的实时工具结果上限。
-- `postCompactionMaxChars`：压缩后刷新注入期间使用的 AGENTS.md 摘录上限。
+- `memoryGetMaxChars`：`memory_get` 摘录截断前的默认上限，之后会添加元数据和续接通知。
+- `memoryGetDefaultLines`：省略 `lines` 时 `memory_get` 的默认行窗口。
+- `toolResultMaxChars`：用于持久化结果和溢出恢复的高级实时工具结果上限。若不设置，则使用模型上下文自动上限：低于 100K tokens 时为 `16000` 字符，100K+ tokens 时为 `32000` 字符，200K+ tokens 时为 `64000` 字符。有效上限仍限制在模型上下文窗口的大约 30% 以内。`openclaw doctor --deep` 会打印有效上限，而 doctor 只会在显式覆盖已过期或不生效时发出警告。
+- `postCompactionMaxChars`：用于压缩后刷新注入的 AGENTS.md 摘录上限。
 
 #### `agents.list[].contextLimits`
 
@@ -243,7 +242,6 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
     defaults: {
       contextLimits: {
         memoryGetMaxChars: 12000,
-        toolResultMaxChars: 16000,
       },
     },
     list: [
@@ -251,7 +249,7 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
         id: "tiny-local",
         contextLimits: {
           memoryGetMaxChars: 6000,
-          toolResultMaxChars: 8000,
+          toolResultMaxChars: 8000, // 该代理的高级上限
         },
       },
     ],
@@ -579,17 +577,17 @@ Z.AI 模型默认启用 `tool_stream` 用于工具调用流式输出。将 `agen
   agents: {
     defaults: {
       heartbeat: {
-        every: "30m", // 0m disables
+        every: "30m", // 0m 禁用
         model: "openai/gpt-5.4-mini",
         includeReasoning: false,
-        includeSystemPromptSection: true, // default: true; false omits the Heartbeat section from the system prompt
-        lightContext: false, // default: false; true keeps only HEARTBEAT.md from workspace bootstrap files
-        isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
-        skipWhenBusy: false, // default: false; true also waits for this agent's subagent/nested lanes
+        includeSystemPromptSection: true, // 默认：true；false 会从系统提示词中省略 Heartbeat 章节
+        lightContext: false, // 默认：false；true 仅保留工作区引导文件中的 HEARTBEAT.md
+        isolatedSession: false, // 默认：false；true 在全新会话中运行每次心跳（无对话历史）
+        skipWhenBusy: false, // 默认：false；true 也会等待该代理的子代理/嵌套通道
         session: "main",
         to: "+15555550123",
-        directPolicy: "allow", // allow (default) | block
-        target: "none", // default: none | options: last | whatsapp | telegram | discord | ...
+        directPolicy: "allow", // allow（默认）| block
+        target: "none", // 默认：none | 可选：last | whatsapp | telegram | discord | ...
         prompt: "如果存在则读取 HEARTBEAT.md...",
         ackMaxChars: 300,
         suppressToolErrorWarnings: false,
@@ -744,7 +742,7 @@ Z.AI 模型默认启用 `tool_stream` 用于工具调用流式输出。将 `agen
       blockStreamingBreak: "text_end", // text_end | message_end
       blockStreamingChunk: { minChars: 800, maxChars: 1200 },
       blockStreamingCoalesce: { idleMs: 1000 },
-      humanDelay: { mode: "natural" }, // off | natural | custom (use minMs/maxMs)
+      humanDelay: { mode: "natural" }, // off | natural | custom (使用 minMs/maxMs)
     },
   },
 }
@@ -1243,7 +1241,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     resetTriggers: ["/new", "/reset"],
     store: "~/.openclaw/agents/{agentId}/sessions/sessions.json",
     maintenance: {
-      mode: "warn", // warn | enforce
+      mode: "warn", // 警告 | 强制执行
       pruneAfter: "30d",
       maxEntries: 500,
       resetArchiveRetention: "30d", // 持续时间或 false
@@ -1310,7 +1308,7 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
     ackReactionScope: "group-mentions", // 群组提及 | 群组全部 | 私聊 | 全部
     removeAckAfterReply: false,
     queue: {
-      mode: "followup", // steer | followup | collect | interrupt
+      mode: "followup", // 跟进 | 后续 | 收集 | 中断
       debounceMs: 500,
       cap: 20,
       drop: "summarize", // old | new | summarize

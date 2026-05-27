@@ -47,11 +47,10 @@ OpenClaw 通过两层来持久化会话：
    - 跟踪会话元数据（当前 session id、最后活动时间、开关、token 计数等）
 
 2. **转录（`<sessionId>.jsonl`）**
-   - 仅追加的转录，具有树状结构（条目包含 `id` + `parentId`）
+   - 追加写入式转录，具有树状结构（条目带有 `id` + `parentId`）
    - 存储实际对话 + 工具调用 + 压缩摘要
-   - 用于重建后续回合的模型上下文
-   - 当活动转录超过检查点大小上限后，会跳过大型预压缩调试检查点，从而避免生成第二份巨大的
-     `.checkpoint.*.jsonl` 副本。
+   - 用于为未来轮次重建模型上下文
+   - 压缩检查点是压缩后继转录上的元数据。新的压缩不会再写入第二份 `.checkpoint.*.jsonl` 副本。
 
 Gateway 历史读取器应避免在表面明确需要任意历史访问时才物化整个转录。第一页历史、嵌入式聊天历史、重启恢复以及 token/usage 检查都会使用有界尾部读取。完整转录扫描通过异步转录索引进行，该索引按文件路径以及 `mtimeMs`/`size` 缓存，并在并发读取器之间共享。
 
@@ -86,14 +85,13 @@ OpenClaw 通过 `src/config/sessions.ts` 解析这些路径。
 
 OpenClaw 不再在 Gateway 写入期间创建自动的 `sessions.json.bak.*` 轮转备份。旧的 `session.maintenance.rotateBytes` 键会被忽略，且 `openclaw doctor --fix` 会将其从旧配置中移除。
 
-Transcript mutations use a session write lock on the transcript file. Lock acquisition waits up to
-`session.writeLock.acquireTimeoutMs` before surfacing a busy-session error; the default is `60000`
-ms. Raise this only when legitimate prep, cleanup, compaction, or transcript mirror work contends
-longer on slow machines. `session.writeLock.staleMs` controls when an existing lock can be
-reclaimed as stale; the default is `1800000` ms. `session.writeLock.maxHoldMs` controls the
-in-process watchdog release threshold; the default is `300000` ms. Emergency env overrides are
-`OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS`, `OPENCLAW_SESSION_WRITE_LOCK_STALE_MS`, and
-`OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS`.
+转录修改会在转录文件上使用 session 写锁。获取锁会最多等待
+`session.writeLock.acquireTimeoutMs`，之后才会抛出会话繁忙错误；默认值是 `60000`
+毫秒。只有在低速机器上确实存在较长时间的准备、清理、压缩或转录镜像工作竞争时，才应提高这个值。`session.writeLock.staleMs` 控制现有锁何时可以
+被回收为陈旧锁；默认值是 `1800000` 毫秒。`session.writeLock.maxHoldMs` 控制
+进程内看门狗的释放阈值；默认值是 `300000` 毫秒。紧急环境变量覆盖为
+`OPENCLAW_SESSION_WRITE_LOCK_ACQUIRE_TIMEOUT_MS`、`OPENCLAW_SESSION_WRITE_LOCK_STALE_MS` 和
+`OPENCLAW_SESSION_WRITE_LOCK_MAX_HOLD_MS`。
 
 磁盘预算清理（`mode: "enforce"`）的执行顺序：
 
@@ -125,7 +123,7 @@ openclaw sessions cleanup --enforce
 
 ---
 
-## Session keys（`sessionKey`）
+## 会话键（`sessionKey`）
 
 `sessionKey` 用于标识 _你处于哪个会话桶_（路由 + 隔离）。
 
@@ -141,7 +139,7 @@ openclaw sessions cleanup --enforce
 
 ---
 
-## Session ids（`sessionId`）
+## 会话 id（`sessionId`）
 
 每个 `sessionKey` 都指向一个当前 `sessionId`（继续对话的转录文件）。
 
@@ -157,7 +155,7 @@ openclaw sessions cleanup --enforce
 
 ---
 
-## Session store schema（`sessions.json`）
+## 会话存储 schema（`sessions.json`）
 
 存储的值类型是 `src/config/sessions.ts` 中的 `SessionEntry`。
 
@@ -190,7 +188,7 @@ openclaw sessions cleanup --enforce
 
 ---
 
-## Transcript structure（`*.jsonl`）
+## 转录结构（`*.jsonl`）
 
 转录由 `@earendil-works/pi-coding-agent` 的 `SessionManager` 管理。
 
@@ -227,7 +225,7 @@ OpenClaw 有意不会“修正”转录；Gateway 使用 `SessionManager` 读写
 
 ---
 
-## Compaction：它是什么
+## 压缩：它是什么
 
 压缩会把较早的对话总结为转录中的一个持久化 `compaction` 条目，并保留最近的消息不变。
 
@@ -240,7 +238,7 @@ AGENTS.md section reinjection after compaction is opt-in via
 `agents.defaults.compaction.postCompactionSections`; when unset or `[]`,
 OpenClaw does not append AGENTS.md excerpts on top of the compaction summary.
 
-Compaction is **persistent** (unlike session pruning). See [/concepts/session-pruning](/concepts/session-pruning).
+压缩是**持久化的**（不同于会话修剪）。参见 [/concepts/session-pruning](/concepts/session-pruning)。
 
 ## 压缩块边界与工具配对
 
@@ -250,7 +248,7 @@ assistant 工具调用与其匹配的 `toolResult` 条目成对。
 - 如果按 token 占比分割的位置落在工具调用和其结果之间，OpenClaw
   会将边界移到 assistant 的工具调用消息处，而不是把这对内容分开。
 - 如果尾随的工具结果块本会把分块推过目标大小，OpenClaw 会保留该
- 待处理的工具块，并保持未总结的尾部完整。
+  待处理的工具块，并保持未总结的尾部完整。
 - 被中止/出错的工具调用块不会使待处理分割继续保持开启。
 
 ---
@@ -264,16 +262,9 @@ assistant 工具调用与其匹配的 `toolResult` 条目成对。
 number of tokens`, `input token count exceeds the maximum number of input
 tokens`, `input is too long for the model`, `ollama error: context length
 exceeded`, and similar provider-shaped variants) → compact → retry.
-   When the provider reports the attempted token count, OpenClaw forwards that
-   observed count into overflow recovery compaction. If the provider confirms
-   overflow but does not expose a parseable count, OpenClaw passes a minimally
-   over-budget synthetic count to compaction engines and diagnostics.
-   If overflow recovery still fails, OpenClaw surfaces explicit guidance to the
-   user and preserves the current session mapping instead of silently rotating
-   the session key to a fresh session id. The next step is operator-controlled:
-   retry the message, run `/compact`, or run `/new` when a fresh session is
-   preferred.
-2. **Threshold maintenance**：after a successful turn, when:
+   当 provider 报告尝试使用的 token 数时，OpenClaw 会将该观察到的计数传递到溢出恢复压缩中。如果 provider 确认了溢出但没有提供可解析的计数，OpenClaw 会向压缩引擎和诊断传递一个仅略微超出预算的合成计数。
+   如果溢出恢复仍然失败，OpenClaw 会向用户显示明确的指导，并保留当前会话映射，而不是静默地把 session key 轮换为一个新的 session id。下一步由操作员控制：重试该消息、运行 `/compact`，或者在需要新会话时运行 `/new`。
+2. **阈值维护**：在一次成功回合之后，当：
 
 `contextTokens > contextWindow - reserveTokens`
 
@@ -316,23 +307,26 @@ Pi 的压缩设置位于 Pi 配置中：
 OpenClaw 也会为嵌入式运行强制一个安全下限：
 
 - 如果 `compaction.reserveTokens < reserveTokensFloor`，OpenClaw 会将其提升。
-- 默认下限是 `20000` token。
+- 默认下限为 `20000` tokens。
 - 设置 `agents.defaults.compaction.reserveTokensFloor: 0` 可禁用该下限。
-- 如果已经更高，OpenClaw 会保持不变。
+- 如果它已经更高，OpenClaw 会保持不变。
 - 手动 `/compact` 会遵循显式的 `agents.defaults.compaction.keepRecentTokens`
-  并保留 Pi 的最近尾部切点。如果没有显式的保留预算，
-  手动压缩仍然是一个硬检查点，而重建上下文会从新的摘要开始。
+  并保留 Pi 的最近尾部切点。若没有显式的保留预算，
+  手动压缩仍然是一个硬检查点，重建后的上下文会从
+  新摘要开始。
 - 设置 `agents.defaults.compaction.midTurnPrecheck.enabled: true` 可在
-  新的工具结果追加后、下一次模型调用前运行可选的工具循环预检。
-  这只是一个触发器；摘要生成仍然使用已配置的压缩路径。它与
-  `maxActiveTranscriptBytes` 无关，后者是一个在轮次开始时生效的活动转录字节大小保护。
+  新工具结果返回后、下一次模型调用前运行
+  可选的工具循环预检查。这只是一个触发器；摘要生成仍然使用已配置的
+  压缩路径。它与 `maxActiveTranscriptBytes` 相互独立，后者是一个
+  轮次开始时的活动转录字节大小守卫。
 - 将 `agents.defaults.compaction.maxActiveTranscriptBytes` 设置为字节值或
-  像 `"20mb"` 这样的字符串，可在轮次开始前、当活动转录变大时运行本地压缩。
-  该保护仅在同时启用 `truncateAfterCompaction` 时生效。保持未设置或设为 `0`
+  诸如 `"20mb"` 之类的字符串，可在活动转录变大时在轮次前运行本地压缩。
+  只有在同时启用 `truncateAfterCompaction` 时，此守卫才会生效。保持未设置或设为 `0`
   可禁用。
 - 当启用 `agents.defaults.compaction.truncateAfterCompaction` 时，
-  OpenClaw 会在压缩后将活动转录轮转为一个压缩后的后继 JSONL。
-  旧的完整转录会保留为归档，并通过压缩检查点链接，而不是就地重写。
+  OpenClaw 会在压缩后将活动转录轮转为压缩后的后继 JSONL。
+  分支/恢复检查点操作会使用该压缩后的后继；在仍被引用时，
+  旧的压缩前检查点文件仍可读。
 
 原因：在压缩不可避免之前，为多轮“清理工作”（例如内存写入）留出足够的余量。
 

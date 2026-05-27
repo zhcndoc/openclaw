@@ -288,16 +288,20 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
 ## 运行时行为
 
-- Telegram 由 gateway 进程拥有。
-- 路由是确定性的：Telegram 入站回复回 Telegram（模型不会选择渠道）。
-- 入站消息会规范化为共享渠道信封，并带有回复元数据、媒体占位符，以及 gateway 已观察到的 Telegram 回复的持久化回复链上下文。
-- 群会话按群 ID 隔离。论坛话题会附加 `:topic:<threadId>` 以保持话题隔离。
-- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留该线程 ID 用于回复，但默认仍将 DM 保持在扁平会话中。若你有意让 DM 也进行话题会话隔离，可配置 `channels.telegram.dm.threadReplies: "inbound"`、`channels.telegram.direct.<chatId>.threadReplies: "inbound"`、`requireTopic: true`，或匹配的话题配置。
-- 长轮询使用 grammY runner，并按聊天/按线程顺序处理。整体 runner sink 并发度使用 `agents.defaults.maxConcurrent`。
-- 多账号启动会限制并发的 Telegram `getMe` 探测，因此大型机器人集群不会同时对所有账号进行探测。
-- 长轮询在每个 gateway 进程内受保护，因此同一时刻只能有一个活动轮询器使用某个 bot token。如果你仍然看到 `getUpdates` 409 冲突，通常说明另一个 OpenClaw gateway、脚本或外部轮询器正在使用相同 token。
-- 默认情况下，长轮询看门狗会在 120 秒未完成 `getUpdates` 活性检查后重启。只有在部署中仍然因长时间工作而出现误判的轮询卡死重启时，才增加 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
+- Telegram 由 gateway 进程所有。
+- 路由是确定性的：Telegram 入站会按原路回复到 Telegram（模型不会选择渠道）。
+- 入站消息会规范化为共享的渠道信封，包含回复元数据、媒体占位符，以及 gateway 已观察到的 Telegram 回复所对应的持久化回复链上下文。
+- 群会话按群 ID 隔离。论坛话题会追加 `:topic:<threadId>` 以保持话题隔离。
+- DM 消息可以携带 `message_thread_id`；OpenClaw 会保留它用于回复。仅当 Telegram `getMe` 为机器人报告 `has_topics_enabled: true` 时，DM 话题会话才会拆分；否则 DM 会保持在平面会话中。
+- 长轮询使用 grammY runner，并按聊天/按线程顺序处理。整体 runner sink 并发使用 `agents.defaults.maxConcurrent`。
+- 多账号启动会限制并发的 Telegram `getMe` 探测，因此大型机器人集群不会一次性展开每个账号探测。
+- 长轮询在每个 gateway 进程内部都有保护，因此同一时间只有一个活动轮询器可以使用某个 bot token。如果你仍然看到 `getUpdates` 409 冲突，可能是另一个 OpenClaw gateway、脚本或外部轮询器正在使用同一个 token。
+- 默认情况下，长轮询 watchdog 会在 120 秒内没有完成的 `getUpdates` 活性时重启。仅当你的部署在长时间运行任务期间仍出现误报轮询停滞重启时，才增加 `channels.telegram.pollingStallThresholdMs`。该值以毫秒为单位，允许范围为 `30000` 到 `600000`；支持按账号覆盖。
 - Telegram Bot API 不支持已读回执（`sendReadReceipts` 不适用）。
+
+<Note>
+  `channels.telegram.dm.threadReplies` 和 `channels.telegram.direct.<chatId>.threadReplies` 已被移除。升级后如果你的 config 里仍有这些键，请运行 `openclaw doctor --fix`。DM 话题路由现在遵循 Telegram `getMe.has_topics_enabled` 返回的机器人能力，这由 BotFather 的 threaded 模式控制：启用话题的机器人在 Telegram 发送 `message_thread_id` 时会使用按线程划分的 DM 会话；其他 DM 仍保持在平面会话中。
+</Note>
 
 ## 功能参考
 
@@ -317,9 +321,9 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     - `streaming.preview.commandText` 控制这些工具进度行中的命令/执行细节：`raw`（默认，保留已发布行为）或 `status`（仅工具标签）
     - 已检测到旧版 `channels.telegram.streamMode` 和布尔类型的 `streaming` 值；请运行 `openclaw doctor --fix` 将其迁移到 `channels.telegram.streaming.mode`
 
-    Tool-progress preview updates are the short status lines shown while tools run, for example command execution, file reads, planning updates, patch summaries, or Codex preamble/commentary text in Codex app-server mode. Telegram keeps these enabled by default to match released OpenClaw behavior from `v2026.4.22` and later.
+    工具进度预览更新是在工具运行时显示的短状态行，例如命令执行、文件读取、计划更新、补丁摘要，或 Codex app-server 模式中的 Codex 前言/注释文本。Telegram 默认保持这些功能启用，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。
 
-    Direct chats can use native Telegram drafts for these tool-progress lines without persisting tool chatter into chat history. Native drafts stop before answer text starts; final answers stay on the normal persistent delivery path. This lane is off by default and should be gated to trusted DM IDs first:
+    直接聊天可以对这些工具进度行使用原生 Telegram 草稿，而无需将工具对话持久化到聊天历史中。原生草稿会在答案文本开始前停止；最终答案仍走普通的持久化投递路径。该通道默认关闭，应先限制为受信任的 DM ID：
 
     ```json
     {
@@ -338,7 +342,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     }
     ```
 
-    To keep the edited preview for answer text but hide tool-progress lines, set:
+    要保留编辑后的答案预览，但隐藏工具进度行，请设置：
 
     ```json
     {
@@ -662,7 +666,8 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     **从聊天中按话题绑定的 ACP spawn**：`/acp spawn <agent> --thread here|auto` 会将当前话题绑定到一个新的 ACP 会话；后续消息会直接路由到那里。OpenClaw 会将 spawn 确认钉在话题中。需要保持 `channels.telegram.threadBindings.spawnSessions` 启用（默认：`true`）。
 
-    模板上下文会暴露 `MessageThreadId` 和 `IsForum`。带有 `message_thread_id` 的 DM 聊天默认仍保持 DM 路由和回复元数据在扁平会话中；只有在配置了 `threadReplies: "inbound"`、`threadReplies: "always"`、`requireTopic: true`，或匹配的话题配置时，才会使用线程感知的会话键。可使用顶层 `channels.telegram.dm.threadReplies` 作为账号默认值，或使用 `direct.<chatId>.threadReplies` 为单个 DM 设置。
+    模板上下文会暴露 `MessageThreadId` 和 `IsForum`。带有 `message_thread_id` 的 DM 聊天会保留回复元数据；只有当 Telegram `getMe` 为机器人报告 `has_topics_enabled: true` 时，它们才会使用按线程感知的会话键。
+    先前的 `dm.threadReplies` 和 `direct.*.threadReplies` 覆盖项已被正式移除；请使用 BotFather 的 threaded 模式作为唯一事实来源，并运行 `openclaw doctor --fix` 删除过时的配置键。
 
   </Accordion>
 
@@ -1067,8 +1072,8 @@ dig +short api.telegram.org AAAA
 - topic defaults: `groups.<chatId>.topics."*"` 适用于未匹配的论坛主题；精确的主题 ID 会覆盖它
 - exec approvals: `execApprovals`, `accounts.*.execApprovals`
 - command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
-- threading/replies: `replyToMode`, `dm.threadReplies`, `direct.*.threadReplies`
-- streaming: `streaming`（预览）、`streaming.preview.toolProgress`、`blockStreaming`
+- threading/replies: `replyToMode`
+- streaming: `streaming` (preview), `streaming.preview.toolProgress`, `blockStreaming`
 - formatting/delivery: `textChunkLimit`, `chunkMode`, `linkPreview`, `responsePrefix`
 - media/network: `mediaMaxMb`, `mediaGroupFlushMs`, `timeoutSeconds`, `pollingStallThresholdMs`, `retry`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
 - custom API root: `apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）

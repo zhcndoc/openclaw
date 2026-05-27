@@ -1212,39 +1212,39 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 注意：
 
 - `voice.tts` 仅会覆盖 `stt-tts` 语音播放中的 `messages.tts`。实时模式使用 `voice.realtime.voice`。
-- `voice.mode` 控制对话路径。默认值是 `agent-proxy`：实时语音前端处理轮次时机、中断和播放，通过 `openclaw_agent_consult` 将实质工作委派给路由后的 OpenClaw agent，并将结果视为来自该说话者的类型化 Discord 提示。`stt-tts` 保留旧的批量 STT + TTS 流程。`bidi` 允许实时模型直接对话，同时通过 `openclaw_agent_consult` 暴露 OpenClaw 大脑。
-- `voice.agentSession` 控制哪个 OpenClaw 会话接收语音轮次。若不设置，则使用语音频道自身会话；或设置 `{ mode: "target", target: "channel:<text-channel-id>" }`，让语音频道充当现有 Discord 文本频道会话（例如 `#maintainers`）的麦克风/扬声器扩展。
-- `voice.model` 会覆盖 Discord 语音响应和实时咨询所使用的 OpenClaw agent 大脑。若不设置，则继承已路由的 agent 模型。它与 `voice.realtime.model` 是分开的。
-- `voice.followUsers` 允许机器人跟随选定用户加入、移动和离开 Discord 语音。行为规则和示例见 [在语音中跟随用户](#follow-users-in-voice)。
-- `agent-proxy` 通过 `discord-voice` 路由语音，它会为说话者和目标会话保留正常的所有者/工具授权，但会隐藏 agent 的 `tts` 工具，因为 Discord 语音负责播放。默认情况下，`agent-proxy` 会将咨询权限提升到与所有者等效的完整工具访问（针对所有者说话者：`voice.realtime.toolPolicy: "owner"`），并强烈倾向于在实质性回答前先咨询 OpenClaw agent（`voice.realtime.consultPolicy: "always"`）。在默认的 `always` 模式下，实时层不会在咨询答案前自动发出填充语音；它会捕获并转写语音，然后播报路由后的 OpenClaw 答案。如果多个强制咨询答案在 Discord 仍在播放第一个答案时完成，后续的逐字答案会排队等待播放空闲后再播，而不是在句中替换语音。
+- `voice.mode` 控制对话路径。默认值是 `agent-proxy`：实时语音前端处理轮次时机、中断和播放，通过 `openclaw_agent_consult` 将实质性工作委派给路由后的 OpenClaw agent，并将结果视为来自该说话者的 Discord 文字提示。`stt-tts` 保留旧的批处理 STT 加 TTS 流程。`bidi` 允许实时模型直接对话，同时暴露 `openclaw_agent_consult` 供 OpenClaw 大脑使用。
+- `voice.agentSession` 控制哪个 OpenClaw 会话接收语音轮次。若不设置，则使用语音频道自身会话；或者设置 `{ mode: "target", target: "channel:<text-channel-id>" }`，使语音频道充当现有 Discord 文本频道会话（如 `#maintainers`）的麦克风/扬声器扩展。
+- `voice.model` 会覆盖用于 Discord 语音响应和实时咨询的 OpenClaw agent 大脑。若不设置，则继承路由后的 agent 模型。它与 `voice.realtime.model` 是分开的。
+- `voice.followUsers` 允许机器人跟随、移动和离开指定用户所在的 Discord 语音频道。行为规则和示例请参见 [在语音中跟随用户](#follow-users-in-voice)。
+- `agent-proxy` 通过 `discord-voice` 路由语音，它会为说话者和目标会话保留正常的 owner/工具授权，但会隐藏 agent 的 `tts` 工具，因为 Discord 语音负责播放。默认情况下，`agent-proxy` 会为 owner 说话者的咨询提供完整的 owner 等效工具访问权限（`voice.realtime.toolPolicy: "owner"`），并强烈倾向于在实质性回答前先咨询 OpenClaw agent（`voice.realtime.consultPolicy: "always"`）。在默认的 `always` 模式下，实时层在咨询答案返回前不会自动播报填充语音；它会捕获并转写语音，然后播报路由后的 OpenClaw 答案。如果多个强制咨询答案在 Discord 仍在播放第一个答案时完成，后续的精确语音答案会排队等待播放空闲，而不是在句中替换语音。
 - 在 `stt-tts` 模式下，STT 使用 `tools.media.audio`；`voice.model` 不影响转写。
-- 在实时模式下，`voice.realtime.provider`、`voice.realtime.model` 和 `voice.realtime.voice` 配置实时音频会话。对于 OpenAI Realtime 2 加 Codex 大脑，请使用 `voice.realtime.model: "gpt-realtime-2"` 和 `voice.model: "openai-codex/gpt-5.5"`。
-- 默认情况下，实时语音模式会在 realtime provider 指令中附带小型 `IDENTITY.md`、`USER.md` 和 `SOUL.md` 配置文件，以便快速直接轮次保持与路由后的 OpenClaw agent 相同的身份、用户锚定和人格。可将 `voice.realtime.bootstrapContextFiles` 设置为其子集来自定义，或设置为 `[]` 以禁用。受支持的 realtime bootstrap 文件仅限这些配置文件；`AGENTS.md` 仍保留在普通 agent 上下文中。注入的配置文件上下文不会替代 `openclaw_agent_consult`，用于工作区工作、当前事实、记忆查询或工具驱动操作。
-- 在 OpenAI `agent-proxy` 实时模式下，设置 `voice.realtime.requireWakeName: true` 可让 Discord 实时语音在转写以唤醒名开头或结尾之前保持静音。配置的唤醒名必须是一到两个词。若未设置 `voice.realtime.wakeNames`，OpenClaw 会使用路由后的 agent `name` 加上 `OpenClaw`，若仍无则回退为 agent id 加上 `OpenClaw`。唤醒名门禁会禁用 realtime provider 自动响应，将接受的轮次路由到 OpenClaw agent 咨询路径，并在从部分转写中识别到前导唤醒名后，在最终转写到达前给出简短的口头确认。
-- OpenAI realtime provider 接受当前 Realtime 2 事件名以及兼容 Codex 的旧别名，用于输出音频和转写事件，因此兼容的 provider 快照可以漂移而不会丢失助手音频。
-- `voice.realtime.bargeIn` 控制 Discord 说话者开始事件是否打断活动中的实时播放。若未设置，则遵循 realtime provider 的输入音频中断设置。
-- `voice.realtime.minBargeInAudioEndMs` 控制 OpenAI realtime barge-in 截断音频前所需的最短助手播放时长。默认值：`250`。在低回声房间中可设为 `0` 以立即中断，或在回声较重的扬声器设置中提高该值。
-- 若要在 Discord 播放中使用 OpenAI 语音，请设置 `voice.tts.provider: "openai"`，并在 `voice.tts.openai.voice` 或 `voice.tts.providers.openai.voice` 下选择一个文本转语音声音。当前 OpenAI TTS 模型上，`cedar` 是一个不错的男性音色选择。
-- 按频道的 Discord `systemPrompt` 覆盖会应用于该语音频道的语音转写轮次。
-- 语音转写轮次会从 Discord `allowFrom`（或 `dm.allowFrom`）派生所有者状态，用于所有者门禁的命令和频道动作。agent 工具可见性遵循所路由会话配置的工具策略。
+- 在实时模式下，`voice.realtime.provider`、`voice.realtime.model` 和 `voice.realtime.voice` 配置实时音频会话。若使用 OpenAI Realtime 2 加 Codex 大脑，请设置 `voice.realtime.model: "gpt-realtime-2"` 和 `voice.model: "openai-codex/gpt-5.5"`。
+- 实时语音模式默认会在实时提供方指令中包含小型 `IDENTITY.md`、`USER.md` 和 `SOUL.md` 资料文件，以便快速的直接轮次保持与路由后的 OpenClaw agent 相同的身份、用户约束和人格。将 `voice.realtime.bootstrapContextFiles` 设为其子集可自定义此行为，或设为 `[]` 以禁用。支持的实时引导文件仅限这些资料文件；`AGENTS.md` 仍保留在正常 agent 上下文中。注入的资料上下文不会替代用于工作区工作、当前事实、记忆检索或工具驱动操作的 `openclaw_agent_consult`。
+- 在 OpenAI `agent-proxy` 实时模式下，设置 `voice.realtime.requireWakeName: true` 可让 Discord 实时语音在转写以唤醒词开头或结尾之前保持静默。配置的唤醒词必须为一到两个单词。若未设置 `voice.realtime.wakeNames`，OpenClaw 会使用路由后 agent 的 `name` 加上 `OpenClaw`，若仍不可用则回退为 agent id 加上 `OpenClaw`。唤醒词门禁会禁用实时提供方的自动响应，将被接受的轮次通过 OpenClaw agent 咨询路径路由，并在从部分转写中识别到前置唤醒词且最终转写尚未到达时，给出简短的口头确认。
+- OpenAI 实时提供方接受当前的 Realtime 2 事件名称以及与旧版 Codex 兼容的输出音频和转写事件别名，因此兼容的提供方快照可以在不丢失助手音频的情况下漂移。
+- `voice.realtime.bargeIn` 控制 Discord 说话者开始事件是否会打断活动中的实时播放。若未设置，则遵循实时提供方的输入音频中断设置。
+- `voice.realtime.minBargeInAudioEndMs` 控制 OpenAI 实时 barge-in 截断音频前所需的最小时长。默认：`250`。在低回声房间中可设为 `0` 以实现即时中断，或在扬声器回声较重的场景中提高该值。
+- 若要在 Discord 播放中使用 OpenAI 语音，请设置 `voice.tts.provider: "openai"`，并在 `voice.tts.openai.voice` 或 `voice.tts.providers.openai.voice` 下选择文本转语音声音。`cedar` 是当前 OpenAI TTS 模型下一个不错的男性音色选择。
+- 按频道的 Discord `systemPrompt` 覆盖会应用到该语音频道的语音转写轮次。
+- 语音转写轮次会从 Discord `allowFrom`（或 `dm.allowFrom`）继承 owner 状态，用于 owner 门禁命令和频道动作。agent 工具可见性遵循所路由会话的已配置工具策略。
 - 对于仅文本配置，Discord 语音是可选启用的；设置 `channels.discord.voice.enabled=true`（或保留现有的 `channels.discord.voice` 块）即可启用 `/vc` 命令、语音运行时和 `GuildVoiceStates` 网关 intent。
-- `channels.discord.intents.voiceStates` 可以显式覆盖 voice-state intent 订阅。若不设置，则会随有效的语音启用状态而变化。
+- `channels.discord.intents.voiceStates` 可显式覆盖语音状态 intent 的订阅。若不设置，则该 intent 会跟随有效的语音启用状态。
 - 如果 `voice.autoJoin` 对同一 guild 有多个条目，OpenClaw 会加入该 guild 最后配置的频道。
-- `voice.allowedChannels` 是一个可选的驻留允许名单。若不设置，则允许 `/vc join` 进入任何被授权的 Discord 语音频道。若设置，则 `/vc join`、启动时自动加入和机器人语音状态移动都会限制在列出的 `{ guildId, channelId }` 条目中。将其设为空数组可拒绝所有 Discord 语音加入。如果 Discord 将机器人移出允许名单之外，OpenClaw 会离开该频道，并在可用时重新加入已配置的自动加入目标。
-- `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 会透传到 `@discordjs/voice` 的加入选项。
-- 若未设置，`@discordjs/voice` 的默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
-- OpenClaw 在 Discord 语音接收中默认使用纯 JS 的 `opusscript` 解码器。可选的原生 `@discordjs/opus` 包会被仓库的 pnpm 安装策略忽略，因此常规安装、Docker lane 和无关测试都不会编译原生插件。专用的语音性能主机可在安装原生插件后，通过 `OPENCLAW_DISCORD_OPUS_DECODER=native` 启用。
-- `voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 初始 Ready 等待时间。默认值：`30000`。
-- `voice.reconnectGraceMs` 控制 OpenClaw 在销毁一个已断开的语音会话前，等待其开始重连的时长。默认值：`15000`。
-- 在 `stt-tts` 模式下，仅因其他用户开始说话并不会停止语音播放。为避免反馈回路，OpenClaw 会在 TTS 播放期间忽略新的语音捕获；请在播放结束后再说话以进入下一轮。实时模式会将说话者开始信号作为 barge-in 信号转发给 realtime provider。
-- 在实时模式下，扬声器回声进入开放麦克风可能看起来像 barge-in 并打断播放。对于回声较重的 Discord 房间，将 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false` 以阻止 OpenAI 在输入音频上自动中断。若你仍希望 Discord 说话者开始事件打断活动播放，可再添加 `voice.realtime.bargeIn: true`。OpenAI realtime 桥接会将短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断视为可能的回声/噪声并忽略，并将其记录为已跳过，而不是清空 Discord 播放。
-- `voice.captureSilenceGraceMs` 控制 OpenClaw 在 Discord 报告说话者已停止后，等待多久再为 STT 完成该音频片段。默认值：`2000`；如果 Discord 将正常停顿切分成碎片化的部分转写，请提高此值。
-- 当 ElevenLabs 是选定的 TTS provider 时，Discord 语音播放会使用流式 TTS，并从 provider 响应流开始。没有流式支持的 provider 会回退到合成的临时文件路径。
-- OpenClaw 还会监视接收解密失败，并在短时间内多次失败后，通过离开/重新加入语音频道来自行恢复。
-- 如果更新后接收日志反复出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。内置的 `@discordjs/voice` 版本包含来自 discord.js PR #11449 的上游填充修复，该修复关闭了 discord.js issue #11419。
-- 当 OpenClaw 完成一个已捕获的说话者片段时，`The operation was aborted` 接收事件是预期现象；它们是详细诊断信息，不是警告。
-- 详细的 Discord 语音日志会为每个已接受的说话者片段包含一个受限的一行 STT 转写预览，因此调试时可以同时看到用户侧和 agent 回复侧，而不会倾倒无限长的转写文本。
-- 在 `agent-proxy` 模式下，强制咨询回退会跳过很可能不完整的转写片段，例如以 `...` 结尾的文本、以 `and` 之类的尾随连接词结尾的文本，以及明显不可执行的收尾语句如“马上回来”或“再见”。当这防止了一个过时的排队答案时，日志会显示 `forced agent consult skipped reason=...`。
+- `voice.allowedChannels` 是一个可选的驻留允许名单。若不设置，则允许 `/vc join` 加入任何已授权的 Discord 语音频道。设置后，`/vc join`、启动时自动加入以及机器人语音状态移动都会被限制在列出的 `{ guildId, channelId }` 条目中。将其设为空数组会拒绝所有 Discord 语音加入。如果 Discord 将机器人移出允许名单之外，OpenClaw 会离开该频道，并在存在可用目标时重新加入已配置的自动加入目标。
+- `voice.daveEncryption` 和 `voice.decryptionFailureTolerance` 会透传给 `@discordjs/voice` 的加入选项。
+- 若未设置，`@discordjs/voice` 默认值为 `daveEncryption=true` 和 `decryptionFailureTolerance=24`。
+- OpenClaw 使用捆绑的 `libopus-wasm` 编解码器处理 Discord 语音接收和实时原始 PCM 播放。它附带固定版本的 libopus WebAssembly 构建，不需要原生 opus addon。
+- `voice.connectTimeoutMs` 控制 `/vc join` 和自动加入尝试时 `@discordjs/voice` 初始 Ready 等待时间。默认：`30000`。
+- `voice.reconnectGraceMs` 控制 OpenClaw 在销毁一个断开的语音会话前，等待其开始重连的时长。默认：`15000`。
+- 在 `stt-tts` 模式下，语音播放不会仅因为其他用户开始说话就停止。为避免反馈回路，OpenClaw 在 TTS 播放期间会忽略新的语音捕获；请在播放结束后再说话，以触发下一轮。实时模式会将说话者开始事件作为 barge-in 信号转发给实时提供方。
+- 在实时模式下，扬声器回声进入开放麦克风可能看起来像 barge-in 并中断播放。对于回声较重的 Discord 房间，请设置 `voice.realtime.providers.openai.interruptResponseOnInputAudio: false`，以防止 OpenAI 在输入音频上自动中断。如果你仍希望 Discord 说话者开始事件中断活动播放，请再添加 `voice.realtime.bargeIn: true`。OpenAI 实时桥接会将短于 `voice.realtime.minBargeInAudioEndMs` 的播放截断视为可能的回声/噪声并忽略，并将其记录为已跳过，而不是清除 Discord 播放。
+- `voice.captureSilenceGraceMs` 控制 Discord 报告说话者停止后，OpenClaw 还会等待多久再将该音频片段定稿用于 STT。默认：`2000`；如果 Discord 将正常停顿切分成碎片化的部分转写，请提高该值。
+- 当 ElevenLabs 是所选 TTS 提供方时，Discord 语音播放会使用流式 TTS，并从提供方响应流开始。没有流式支持的提供方会回退到合成的临时文件路径。
+- OpenClaw 还会监视接收解密失败，并在短时间内重复失败后通过离开/重新加入语音频道自动恢复。
+- 如果更新后接收日志反复出现 `DecryptionFailed(UnencryptedWhenPassthroughDisabled)`，请收集依赖报告和日志。捆绑的 `@discordjs/voice` 版本包含 discord.js PR #11449 中的上游填充修复，该修复关闭了 discord.js issue #11419。
+- `The operation was aborted` 接收事件是在 OpenClaw 定稿已捕获的说话者片段时的预期行为；它们只是详细诊断信息，不是警告。
+- 详细的 Discord 语音日志会为每个已接受的说话者片段包含一个受限的一行 STT 转写预览，因此调试时可以同时看到用户侧和 agent 回复侧，而不会输出无限制的转写文本。
+- 在 `agent-proxy` 模式下，强制咨询回退会跳过很可能不完整的转写片段，例如以 `...` 结尾的文本、像 `and` 这样的尾随连接词，以及诸如 “be right back” 或 “bye” 这类明显无行动意义的结尾。如果这能阻止一个过时的排队答案，日志会显示 `forced agent consult skipped reason=...`。
 
 ### 在语音中跟随用户
 
@@ -1284,25 +1284,14 @@ openclaw channels capabilities --channel discord --target channel:<voice-channel
 在加入模式之间进行选择：
 
 - 对于希望机器人在你在语音中时自动也在语音中的个人或操作员设置，请使用 `followUsers`。
-- 对于即使没有被跟踪用户在语音中也应始终 присутствовать 的固定房间机器人，请使用 `autoJoin`。
+- 对于即使没有被跟踪用户在语音中也应始终存在的固定房间机器人，请使用 `autoJoin`。
 - 对于一次性加入或自动语音出现会令人意外的房间，请使用 `/vc join`。
 
-源码检出的原生 opus 设置：
+Discord voice codec:
 
-```bash
-pnpm install
-mise exec node@22 -- pnpm discord:opus:install
-```
-
-当你希望使用上游 macOS arm64 预构建原生插件时，请在网关中使用 Node 22。如果你使用其他 Node 运行时，可选安装器可能需要本地 `node-gyp` 源码构建工具链。
-
-安装原生插件后，使用以下命令启动 Gateway：
-
-```bash
-OPENCLAW_DISCORD_OPUS_DECODER=native pnpm gateway:watch
-```
-
-详细语音日志应显示 `discord voice: opus decoder: @discordjs/opus`。若未设置该环境变量，或者原生插件缺失或无法在主机上加载，OpenClaw 会记录 `discord voice: opus decoder: opusscript`，并继续通过纯 JS 回退接收语音。
+- Voice receive logs show `discord voice: opus decoder: libopus-wasm`.
+- Realtime playback encodes raw 48 kHz stereo PCM to Opus with the same bundled `libopus-wasm` package before handing packets to `@discordjs/voice`.
+- File and provider-stream playback transcodes to raw 48 kHz stereo PCM with ffmpeg, then uses `libopus-wasm` for the Opus packet stream sent to Discord.
 
 STT 加 TTS 管线：
 

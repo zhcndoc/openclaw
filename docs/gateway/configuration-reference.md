@@ -40,16 +40,16 @@ Agent 查找路径：在修改前，请使用 `gateway` 工具动作 `config.sch
 已移到专门页面 - 参见
 [Configuration - agents](/gateway/config-agents) 了解：
 
-- `agents.defaults.*` (workspace, model, thinking, heartbeat, memory, media, skills, sandbox)
-- `multiAgent.*` (multi-agent routing and bindings)
-- `session.*` (session lifecycle, compaction, pruning)
-- `messages.*` (message delivery, TTS, markdown rendering)
-- `talk.*` (Talk mode)
-  - `talk.consultThinkingLevel`: 用于 Control UI Talk 实时咨询背后完整 OpenClaw agent 运行的 thinking level 覆盖
-  - `talk.consultFastMode`: 用于 Control UI Talk 实时咨询的一次性 fast-mode 覆盖
-  - `talk.speechLocale`: 用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
-  - `talk.silenceTimeoutMs`: 未设置时，Talk 会在发送转录前保持平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
-  - `talk.realtime.consultRouting`: 对于跳过 `openclaw_agent_consult` 的已完成实时 Talk 转录，Gateway relay 回退路径
+- `agents.defaults.*`（workspace、model、thinking、heartbeat、memory、media、skills、sandbox）
+- `multiAgent.*`（多 agent 路由和绑定）
+- `session.*`（会话生命周期、压缩、修剪）
+- `messages.*`（消息投递、TTS、markdown 渲染）
+- `talk.*`（Talk 模式）
+  - `talk.consultThinkingLevel`：用于 Control UI Talk 实时咨询背后完整 OpenClaw agent 运行的 thinking level 覆盖
+  - `talk.consultFastMode`：用于 Control UI Talk 实时咨询的一次性 fast-mode 覆盖
+  - `talk.speechLocale`：用于 iOS/macOS 上 Talk 语音识别的可选 BCP 47 locale id
+  - `talk.silenceTimeoutMs`：未设置时，Talk 会在发送转录前保持平台默认的暂停窗口（macOS 和 Android 为 `700 ms`，iOS 为 `900 ms`）
+  - `talk.realtime.consultRouting`：对于跳过 `openclaw_agent_consult` 的已完成实时 Talk 转录，Gateway relay 回退路径
 
 ## 工具和自定义 provider
 
@@ -1009,6 +1009,7 @@ openclaw gateway --port 19001
         toolInputs: false,
         toolOutputs: false,
         systemPrompt: false,
+        toolDefinitions: false,
       },
     },
 
@@ -1023,27 +1024,27 @@ openclaw gateway --port 19001
 }
 ```
 
-- `enabled`：仪器化输出的总开关（默认：`true`）。
-- `flags`：用于启用定向日志输出的标志字符串数组（支持通配符，如 `"telegram.*"` 或 `"*"`）。
-- `stuckSessionWarnMs`：用于将长时间运行的处理会话归类为 `session.long_running`、`session.stalled` 或 `session.stuck` 的无进展年龄阈值（毫秒）。回复、工具、状态、块和 ACP 进度都会重置计时器；在状态未变化时，重复的 `session.stuck` 诊断会逐步退避。
-- `stuckSessionAbortMs`：在无进展达到该阈值（毫秒）后，符合条件的卡住活动工作可被中止并回收以恢复系统。未设置时，OpenClaw 会采用更安全的扩展嵌入式运行窗口，至少 5 分钟且为 `stuckSessionWarnMs` 的 3 倍。
-- `memoryPressureSnapshot`：当内存压力达到 `critical` 时，会捕获一份脱敏的 OOM 前稳定性快照（默认：`false`）。设为 `true` 可在保留常规内存压力事件的同时，增加稳定性捆绑文件的扫描/写入。
+- `enabled`：仪表化输出的主开关（默认：`true`）。
+- `flags`：用于启用定向日志输出的标志字符串数组（支持如 `"telegram.*"` 或 `"*"` 之类的通配符）。
+- `stuckSessionWarnMs`：用于将长时间运行的处理会话分类为 `session.long_running`、`session.stalled` 或 `session.stuck` 的无进度时长阈值（毫秒）。回复、工具、状态、阻塞以及 ACP 进度会重置计时器；在状态不变时，重复的 `session.stuck` 诊断会逐渐退避。
+- `stuckSessionAbortMs`：在符合条件的卡住活动工作可被 abort-drained 以进行恢复之前的无进度时长阈值（毫秒）。未设置时，OpenClaw 会使用更安全的扩展嵌入式运行窗口，至少 5 分钟且为 `stuckSessionWarnMs` 的 3 倍。
+- `memoryPressureSnapshot`：当内存压力达到 `critical` 时，会捕获一个脱敏的 OOM 前稳定性快照（默认：`false`）。设为 `true` 可在保留正常内存压力事件的同时，增加稳定性捆绑文件的扫描/写入。
 - `otel.enabled`：启用 OpenTelemetry 导出流水线（默认：`false`）。完整配置、信号目录和隐私模型请参见 [OpenTelemetry 导出](/gateway/opentelemetry)。
 - `otel.endpoint`：OTel 导出的收集器 URL。
-- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：按信号指定的可选 OTLP 端点。设置后，它们会仅对对应信号覆盖 `otel.endpoint`。
+- `otel.tracesEndpoint` / `otel.metricsEndpoint` / `otel.logsEndpoint`：按信号区分的可选 OTLP 端点。设置后，它们会仅针对对应信号覆盖 `otel.endpoint`。
 - `otel.protocol`：`"http/protobuf"`（默认）或 `"grpc"`。
 - `otel.headers`：随 OTel 导出请求发送的额外 HTTP/gRPC 元数据头。
-- `otel.serviceName`：资源属性使用的服务名。
-- `otel.traces` / `otel.metrics` / `otel.logs`：启用追踪、指标或日志导出。
-- `otel.sampleRate`：追踪采样率 `0`-`1`。
-- `otel.flushIntervalMs`：定期遥测刷新间隔（毫秒）。
-- `otel.captureContent`：用于 OTEL span 属性的原始内容捕获可选项。默认关闭。布尔值 `true` 会捕获非系统消息/工具内容；对象形式可显式启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs` 和 `systemPrompt`。
-- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：用于最新实验性 GenAI span 提供者属性的环境开关。默认情况下，span 会保留旧版的 `gen_ai.system` 属性以兼容；GenAI 指标使用受限语义属性。
-- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。OpenClaw 随后会跳过由插件拥有的 SDK 启动/关闭，同时保持诊断监听器处于活动状态。
-- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：在匹配的配置键未设置时使用的按信号端点环境变量。
-- `cacheTrace.enabled`：为嵌入式运行记录缓存跟踪快照日志（默认：`false`）。
-- `cacheTrace.filePath`：缓存跟踪 JSONL 的输出路径（默认：`$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl`）。
-- `cacheTrace.includeMessages` / `includePrompt` / `includeSystem`：控制缓存跟踪输出中包含哪些内容（默认均为：`true`）。
+- `otel.serviceName`：资源属性使用的服务名称。
+- `otel.traces` / `otel.metrics` / `otel.logs`：启用 trace、metrics 或 log 导出。
+- `otel.sampleRate`：trace 采样率 `0`-`1`。
+- `otel.flushIntervalMs`：周期性遥测刷新间隔，单位毫秒。
+- `otel.captureContent`：为 OTEL span 属性提供的原始内容捕获可选项。默认关闭。布尔值 `true` 会捕获非系统消息/工具内容；对象形式可显式启用 `inputMessages`、`outputMessages`、`toolInputs`、`toolOutputs`、`systemPrompt` 和 `toolDefinitions`。
+- `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`：用于最新实验性 GenAI 推理 span 形态的环境开关，包括 `{gen_ai.operation.name} {gen_ai.request.model}` 的 span 名称、`CLIENT` span kind，以及 `gen_ai.provider.name`，替代旧的 `gen_ai.system`。默认情况下，为了兼容性，span 仍保留 `openclaw.model.call` 和 `gen_ai.system`；GenAI 指标使用有界语义属性。
+- `OPENCLAW_OTEL_PRELOADED=1`：适用于已注册全局 OpenTelemetry SDK 的主机的环境开关。此时 OpenClaw 会跳过由插件拥有的 SDK 启停，但仍保留诊断监听器处于激活状态。
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`、`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` 和 `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`：当对应配置键未设置时使用的按信号区分端点环境变量。
+- `cacheTrace.enabled`：为嵌入式运行记录日志缓存轨迹快照（默认：`false`）。
+- `cacheTrace.filePath`：缓存轨迹 JSONL 的输出路径（默认：`$OPENCLAW_STATE_DIR/logs/cache-trace.jsonl`）。
+- `cacheTrace.includeMessages` / `includePrompt` / `includeSystem`：控制缓存轨迹输出中包含哪些内容（全部默认：`true`）。
 
 ---
 

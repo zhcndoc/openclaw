@@ -16,7 +16,7 @@ title: "Discord 插件"
 
 ## 接入层
 
-channels: discord; contracts: meetingNotesSourceProviders
+channels: discord; contracts: transcriptSourceProviders
 
 ## 相关文档
 

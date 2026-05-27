@@ -150,7 +150,7 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 | `enabledByDefaultOnPlatforms`        | 否   | `string[]`                       | 仅在列出的 Node.js 平台上将捆绑插件标记为默认启用，例如 `["darwin"]`。显式配置仍然优先生效。                                                                                                                                        |
 | `legacyPluginIds`                    | 否   | `string[]`                       | 归一化为此规范化插件 id 的旧 id。                                                                                                                                                                                                     |
 | `autoEnableWhenConfiguredProviders`  | 否   | `string[]`                       | 当认证、配置或模型引用提到这些 provider id 时，应自动启用此插件的 provider id。                                                                                                                                                      |
-| `kind`                               | 否   | `"memory"` \| `"context-engine"` |  घोषित一个由 `plugins.slots.*` 使用的互斥插件类型。                                                                                                                                                                                   |
+| `kind`                               | 否   | `"memory"` \| `"context-engine"` | 声明一个由 `plugins.slots.*` 使用的互斥插件类型。                                                                                                                                                                                    |
 | `channels`                           | 否   | `string[]`                       | 由此插件拥有的 channel id。用于发现和配置校验。                                                                                                                                                                                      |
 | `providers`                          | 否   | `string[]`                       | 由此插件拥有的 provider id。                                                                                                                                                                                                         |
 | `providerCatalogEntry`               | 否   | `string`                         | 轻量级 provider-catalog 模块路径，相对于插件根目录，用于可在不激活完整插件运行时的情况下加载的、以清单为作用域的 provider 目录元数据。                                                                                                   |
@@ -262,9 +262,9 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 每个 `authSignals` 条目支持：
 
 | 字段              | 必填 | 类型     | 含义                                                                                                                                                                 |
-| ----------------- | ---- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider`        | 是   | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
-| `providerBaseUrl` | 否   | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
+| ----------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider`        | 是         | `string` | 要在已配置 auth 配置文件中检查的 provider id。                                                                                                                       |
+| `providerBaseUrl` | 否         | `object` | 可选守卫：仅当引用的已配置 provider 使用允许的 base URL 时，该信号才计入。仅当某个 auth 别名只对特定 API 有效时使用。                                                |
 
 每个 `providerBaseUrl` 守卫支持：
 
@@ -358,7 +358,7 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 当插件能够以较低成本声明哪些控制平面事件应将其纳入 activation/load 计划时，请使用 `activation`。
 
-此块是 planner 元数据，不是生命周期 API。它不会注册运行时行为，不会替代 `register(...)`，也不保证
+此块是 planner 元数据，不是生命周期 API。它不会注册运行时行为，不会替代 `register(...)`，也不会保证
 插件代码已经执行。activation planner 会使用这些字段在回退到现有 manifest 所有权元数据之前先缩小候选插件范围，
 这些元数据包括 `providers`、`channels`、`commandAliases`、`setup.providers`、`contracts.tools` 和 hooks。
 
@@ -396,7 +396,7 @@ activation 元数据。
 | `onProviders`      | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 provider id。                                                                                                                      |
 | `onAgentHarnesses` | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的嵌入式 agent harness runtime id。CLI backend 别名请使用顶层 `cliBackends`。                                           |
 | `onCommands`       | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的命令 id。                                                                                                                       |
-| `onChannels`       | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 channel id。                                                                                                                       |
+| `onChannels`      | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 channel id。                                                                                                                       |
 | `onRoutes`         | 否       | `string[]`                                           | 在 activation/load 计划中应包含此插件的 route 类型。                                                                                                                       |
 | `onConfigPaths`    | 否       | `string[]`                                           | 当路径存在且未被显式禁用时，在 startup/load 计划中应包含此插件的根相对配置路径。                                                      |
 | `onCapabilities`   | 否       | `Array<"provider" \| "channel" \| "tool" \| "hook">` | 控制平面激活规划使用的宽泛能力提示。尽可能优先使用更窄的字段。                                                                                     |
@@ -574,25 +574,25 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 
 每个列表都是可选的：
 
-| 字段                            | 类型       | 含义                                                                                       |
-| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
-| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 id，目前为 `codex-app-server`。                                   |
-| `agentToolResultMiddleware`      | `string[]` | 打包插件可为其注册工具结果中间件的运行时 id。                                               |
-| `externalAuthProviders`          | `string[]` | 该插件拥有其外部认证 profile hook 的 provider id。                                         |
-| `embeddingProviders`             | `string[]` | 该插件拥有的通用 embedding provider id，用于 memory 之外的可复用向量嵌入。                 |
-| `speechProviders`                | `string[]` | 该插件拥有的语音 provider id。                                                             |
-| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider id。                                                         |
-| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider id。                                                         |
-| `memoryEmbeddingProviders`       | `string[]` | 该插件拥有的 memory embedding provider id。                                                |
-| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider id。                                                         |
-| `meetingNotesSourceProviders`    | `string[]` | 该插件拥有的会议笔记来源 provider id。                                                     |
-| `imageGenerationProviders`       | `string[]` | 该插件拥有的图像生成 provider id。                                                         |
-| `videoGenerationProviders`       | `string[]` | 该插件拥有的视频生成 provider id。                                                         |
-| `webFetchProviders`              | `string[]` | 该插件拥有的网页抓取 provider id。                                                         |
-| `webSearchProviders`             | `string[]` | 该插件拥有的网页搜索 provider id。                                                         |
-| `migrationProviders`             | `string[]` | 该插件为 `openclaw migrate` 拥有的导入 provider id。                                       |
-| `gatewayMethodDispatch`          | `string[]` | 保留给在进程内分发 Gateway 方法的已认证插件 HTTP 路由的授权项。                             |
-| `tools`                          | `string[]` | 该插件拥有的 agent tool 名称。                                                              |
+| Field                            | Type       | What it means                                                                                       |
+| -------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 ID，目前为 `codex-app-server`。                                             |
+| `agentToolResultMiddleware`      | `string[]` | 打包插件可以为其注册工具结果中间件的运行时 ID。                                                     |
+| `externalAuthProviders`          | `string[]` | 该插件拥有其外部认证配置文件钩子的 provider ID。                                                    |
+| `embeddingProviders`             | `string[]` | 该插件拥有的通用 embedding provider ID，用于记忆之外可复用的向量嵌入。                               |
+| `speechProviders`                | `string[]` | 该插件拥有的语音 provider ID。                                                                      |
+| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider ID。                                                                  |
+| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider ID。                                                                  |
+| `memoryEmbeddingProviders`       | `string[]` | 该插件拥有的记忆嵌入 provider ID。                                                                  |
+| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider ID。                                                                  |
+| `transcriptSourceProviders`      | `string[]` | 该插件拥有的转写来源 provider ID。                                                                  |
+| `imageGenerationProviders`       | `string[]` | 该插件拥有的图像生成 provider ID。                                                                  |
+| `videoGenerationProviders`       | `string[]` | 该插件拥有的视频生成 provider ID。                                                                  |
+| `webFetchProviders`              | `string[]` | 该插件拥有的网页抓取 provider ID。                                                                  |
+| `webSearchProviders`             | `string[]` | 该插件拥有的网页搜索 provider ID。                                                                  |
+| `migrationProviders`             | `string[]` | 该插件在 `openclaw migrate` 中拥有的导入 provider ID。                                               |
+| `gatewayMethodDispatch`          | `string[]` | 用于进程内分发 Gateway 方法的已认证插件 HTTP 路由的保留授权。                                       |
+| `tools`                          | `string[]` | 该插件拥有的 agent 工具名称。                                                                       |
 
 `contracts.embeddedExtensionFactories` 保留给仅用于打包的 Codex 应用服务器扩展工厂。打包的工具结果转换应声明 `contracts.agentToolResultMiddleware`，并改为通过 `api.registerAgentToolResultMiddleware(...)` 注册。外部插件不能注册工具结果中间件，因为该接缝可以在模型看到之前重写高信任度的工具输出。
 
@@ -806,7 +806,7 @@ OpenClaw 按以下优先级应用：
 
 顶层字段：
 
-| Field            | Type                                                     | What it means                                                                                               |
+| 字段            | 类型                                                     | 含义                                                                                               |
 | ---------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `providers`      | `Record<string, object>`                                 | 该插件拥有的 provider id 的 catalog 行。键也应出现在顶层 `providers` 中。                                  |
 | `aliases`        | `Record<string, object>`                                 | 应解析为所拥有 provider 的别名，用于 catalog 或抑制规划。                                                   |

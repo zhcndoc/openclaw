@@ -353,10 +353,12 @@ sidebarTitle: "工具和自定义提供方"
 <AccordionGroup>
   <Accordion title="可见性范围">
     - `self`：仅当前会话 key。
-    - `tree`：当前会话 + 由当前会话派生的会话（subagents）。
-    - `agent`：属于当前 agent id 的任何会话（如果你在同一 agent id 下按发送者运行会话，可能包括其他用户）。
-    - `all`：任何会话。跨 agent 定位仍需要 `tools.agentToAgent`。
-    - Sandbox clamp：当当前会话处于 sandbox 中且 `agents.defaults.sandbox.sessionToolsVisibility="spawned"` 时，即使 `tools.sessions.visibility="all"`，可见性也会被强制为 `tree`。
+    - `tree`：当前会话 + 当前会话派生的会话（subagents）。
+    - `agent`：属于当前 agent id 的任意会话（如果你在同一 agent id 下按 sender 运行会话，也可能包含其他用户）。
+    - `all`：任意会话。跨 agent 目标仍需要 `tools.agentToAgent`。
+    - Sandbox 限制：当当前会话处于 sandbox 状态且 `agents.defaults.sandbox.sessionToolsVisibility="spawned"` 时，即使 `tools.sessions.visibility="all"`，可见性也会被强制限制为 `tree`。
+    - 当不是 `all` 时，`sessions_list` 会包含一个简洁的 `visibility` 字段，
+      用于描述有效模式，以及某些会话可能因超出当前范围而被省略的警告。
 
   </Accordion>
 </AccordionGroup>

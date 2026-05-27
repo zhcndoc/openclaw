@@ -84,14 +84,19 @@ pnpm qa:lab:watch
 pnpm qa:otel:smoke
 ```
 
-该脚本会启动本地 OTLP/HTTP 接收器，使用启用了 `diagnostics-otel` 插件的 `otel-trace-smoke` QA
-场景运行，然后断言 trace、metrics 和 logs 已导出。它会解码导出的 protobuf trace span
-并检查发布关键的形状：
-必须存在 `openclaw.run`、`openclaw.harness.run`、`openclaw.model.call`、
-`openclaw.context.assembled` 和 `openclaw.message.delivery`；模型调用在成功回合中不得导出 `StreamAbandoned`；原始诊断 ID 和
-`openclaw.content.*` 属性必须不出现在 trace 中。原始 OTLP
-载荷中也不得包含提示 sentinel、响应 sentinel 或 QA 会话
-key。它会在 QA suite 产物旁写出 `otel-smoke-summary.json`。
+该脚本会启动一个本地 OTLP/HTTP 接收器，运行启用了 `diagnostics-otel` 插件的 `otel-trace-smoke` QA
+场景，然后断言 traces、
+metrics 和 logs 已被导出。它会解码导出的 protobuf trace spans
+并检查发布关键的形态：
+必须存在 `openclaw.run`、`openclaw.harness.run`、一个最新的 GenAI semantic-convention
+model-call span、`openclaw.context.assembled` 以及 `openclaw.message.delivery`。
+该 smoke 会强制设置
+`OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`，因此 model-call
+span 必须使用 `{gen_ai.operation.name} {gen_ai.request.model}` 这个名称；
+成功轮次中的 model calls 不得导出 `StreamAbandoned`；原始诊断 ID 和
+`openclaw.content.*` 属性必须留在 trace 之外。原始 OTLP
+payload 中不得包含 prompt sentinel、response sentinel 或 QA session
+key。它会在 QA suite 产物旁写入 `otel-smoke-summary.json`。
 
 用于带 collector 的 OpenTelemetry smoke，请运行：
 
@@ -204,7 +209,7 @@ pnpm openclaw qa mantis slack-desktop-smoke \
 `approval-checkpoints/<scenario>-pending.png` 和
 `approval-checkpoints/<scenario>-resolved.png`，然后在任何 checkpoint、
 消息证据、acknowledgement 或渲染截图缺失或为空时失败。
-冷启动的 CI 租约可能仍会在 `slack-desktop-smoke.png` 中显示 Slack 登录界面；审批 checkpoint 图像才是这条线路的视觉证明。
+冷启动的 CI 租约可能仍然会在 `slack-desktop-smoke.png` 中显示 Slack 登录界面；审批 checkpoint 图像才是这条线路的视觉证明。
 
 操作员检查清单、GitHub workflow dispatch 命令、证据评论
 契约、hydrate-mode 决策表、耗时解读以及失败

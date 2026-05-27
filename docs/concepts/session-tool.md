@@ -36,7 +36,13 @@ OpenClaw 为代理提供了跨会话工作、检查状态以及编排子代理�
 
 ## 列出和读取会话
 
-`sessions_list` 会返回会话及其 key、agentId、kind、channel、model、token 数量和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、`node`）、精确 `label`、精确 `agentId`、搜索文本或最近活跃时间（`activeMinutes`）进行过滤。当你需要类似邮箱的分拣时，它还可以请求一个按可见性范围派生的标题、最后一条消息的预览片段，或者每行受限的最近消息。派生标题和预览只会为调用方在已配置的会话工具可见性策略下本就可以看到的会话生成，因此无关会话会保持隐藏。
+`sessions_list` 返回会话及其 key、agentId、kind、channel、model、
+token 计数和时间戳。可按 kind（`main`、`group`、`cron`、`hook`、
+`node`）、精确 `label`、精确 `agentId`、搜索文本或最近活跃度
+（`activeMinutes`）进行过滤。当你需要类似邮箱的分流时，它还可以请求
+基于可见性作用域的派生标题、上一条消息预览片段，或每行有界的最近
+消息。派生标题和预览仅针对调用方在已配置的会话工具可见性策略下本就可以看到的会话生成，因此无关会话会保持隐藏。当可见性受限时，`sessions_list`
+会返回可选的 `visibility` 元数据，显示有效模式以及结果可能受作用域限制的警告。
 
 `sessions_history` 用于获取特定会话的对话记录。默认情况下会排除工具结果——传入 `includeTools: true` 以查看它们。返回视图经过有意的边界限制和安全过滤：
 
