@@ -108,7 +108,9 @@ docker compose up -d openclaw-gateway
 <Note>
 从仓库根目录运行 `docker compose`。如果你启用了 `OPENCLAW_EXTRA_MOUNTS`
 或 `OPENCLAW_HOME_VOLUME`，设置脚本会写入 `docker-compose.extra.yml`；
-请使用 `-f docker-compose.yml -f docker-compose.extra.yml` 将其包含进来。
+当两个覆盖文件都存在时，请将其放在任何标准覆盖文件之后，例如
+`-f docker-compose.yml -f docker-compose.override.yml -f docker-compose.extra.yml`
+。
 </Note>
 
 <Note>
@@ -277,8 +279,9 @@ auth-profile 机密密钥目录存储用于 OAuth 支持的 auth profile 令牌�
 关于 VM 部署的完整持久化细节，请参见
 [Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where)。
 
-**磁盘增长热点：**关注 `media/`、session JSONL 文件、
-`cron/runs/*.jsonl`、已安装插件包根目录，以及 `/tmp/openclaw/` 下的轮转日志文件。
+**Disk growth hotspots:** watch `media/`, session JSONL files, the shared
+SQLite state database, installed plugin package roots, and rolling file logs
+under `/tmp/openclaw/`.
 
 ### Shell 助手（可选）
 

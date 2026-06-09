@@ -125,19 +125,19 @@ JSON 输出包括：
     - Skills 状态摘要（符合条件/缺失/被阻止）和插件状态。
 
   </Accordion>
-  <Accordion title="配置和迁移">
-    - 旧值的配置规范化。
-    - 将旧式扁平 `talk.*` 字段迁移到 `talk.provider` + `talk.providers.<provider>`。
-    - 浏览器迁移检查：旧 Chrome 扩展配置和 Chrome MCP 就绪性。
+  <Accordion title="Config and migrations">
+    - 配置规范化，用于旧值。
+    - 从旧的扁平 `talk.*` 字段迁移 Talk 配置到 `talk.provider` + `talk.providers.<provider>`。
+    - 浏览器迁移检查：旧版 Chrome 扩展配置和 Chrome MCP 就绪性。
     - OpenCode provider 覆盖警告（`models.providers.opencode` / `models.providers.opencode-go`）。
-    - Codex OAuth 遮蔽警告（`models.providers.openai-codex`）。
+    - 旧版 OpenAI Codex provider/profile 迁移（`openai-codex` → `openai`）以及对陈旧 `models.providers.openai-codex` 的遮蔽警告。
     - OpenAI Codex OAuth 配置文件的 TLS 前置条件检查。
-    - 当 `plugins.allow` 过于严格而工具策略仍请求通配符或插件拥有的工具时发出插件/工具 allowlist 警告。
+    - 当 `plugins.allow` 受限但工具策略仍请求通配符或插件自有工具时，给出插件/工具 allowlist 警告。
     - 旧的磁盘状态迁移（sessions/agent 目录/WhatsApp 认证）。
-    - 旧插件 manifest 合约键迁移（`speechProviders`、`realtimeTranscriptionProviders`、`realtimeVoiceProviders`、`mediaUnderstandingProviders`、`imageGenerationProviders`、`videoGenerationProviders`、`webFetchProviders`、`webSearchProviders` → `contracts`）。
-    - 旧 cron 存储迁移（`jobId`、`schedule.cron`、顶层 delivery/payload 字段、payload `provider`、简单的 `notify: true` webhook 回退任务）。
-    - 旧的整体 agent 运行时策略清理；provider/model 运行时策略是当前有效的路由选择器。
-    - 当插件启用时清理陈旧的插件配置；当 `plugins.enabled=false` 时，陈旧的插件引用被视为无害的保留型配置并会保留。
+    - 旧插件 manifest 合同键迁移（`speechProviders`、`realtimeTranscriptionProviders`、`realtimeVoiceProviders`、`mediaUnderstandingProviders`、`imageGenerationProviders`、`videoGenerationProviders`、`webFetchProviders`、`webSearchProviders` → `contracts`）。
+    - 旧 cron 存储迁移（`jobId`、`schedule.cron`、顶层 delivery/payload 字段、payload `provider`、`notify: true` webhook 回退任务）。
+    - 旧的整 agent 运行时策略清理；provider/model 运行时策略是当前活动的路由选择器。
+    - 当插件已启用时清理陈旧插件配置；当 `plugins.enabled=false` 时，陈旧插件引用会被视为惰性的 containment 配置并予以保留。
 
   </Accordion>
   <Accordion title="状态和完整性">
@@ -150,17 +150,17 @@ JSON 输出包括：
     - 额外工作区目录检测（`~/openclaw`）。
 
   </Accordion>
-  <Accordion title="Gateway、服务和 supervisor">
-    - 启用沙箱时的沙箱镜像修复。
+  <Accordion title="Gateway, services, and supervisors">
+    - 沙箱镜像修复，当沙箱化已启用时。
     - 旧服务迁移和额外 gateway 检测。
     - Matrix 频道旧状态迁移（在 `--fix` / `--repair` 模式下）。
-    - Gateway 运行时检查（已安装但未运行的服务；缓存的 launchd 标签）。
+    - Gateway 运行时检查（服务已安装但未运行；缓存的 launchd 标签）。
     - 频道状态警告（从运行中的 gateway 探测）。
-    - 频道特定权限检查位于 `openclaw channels capabilities`；例如，Discord 语音频道权限可通过 `openclaw channels capabilities --channel discord --target channel:<channel-id>` 审计。
-    - 当本地 TUI 客户端仍在运行而 Gateway 事件循环健康状况下降时，WhatsApp 响应性检查会发出警告；`--fix` 只会停止已验证的本地 TUI 客户端。
-    - 针对主模型、回退、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及会话 route pin 中旧的 `openai-codex/*` 模型引用的 Codex 路由修复；`--fix` 会将它们重写为 `openai/*`，移除陈旧的会话/整体 agent 运行时 pin，并让规范化的 OpenAI agent 引用保持在默认 Codex harness 上。
-    - supervisor 配置审计（launchd/systemd/schtasks），并可选择修复。
-    - 修复 gateway 服务捕获安装或更新期间 shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 值的嵌入式代理环境清理问题。
+    - 频道特定权限检查位于 `openclaw channels capabilities` 下；例如，可用 `openclaw channels capabilities --channel discord --target channel:<channel-id>` 审计 Discord 语音频道权限。
+    - 当本地 TUI 客户端仍在运行且 Gateway 事件循环健康状况降级时，执行 WhatsApp 响应性检查；`--fix` 只会停止已验证的本地 TUI 客户端。
+    - 对旧的 `openai-codex/*` 模型引用进行 Codex 路由修复，覆盖主模型、回退、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及会话路由固定；`--fix` 会将它们重写为 `openai/*`，将 `openai-codex:*` 认证配置文件/顺序迁移到 `openai:*`，移除陈旧的会话/整 agent 运行时固定，并将规范化的 OpenAI agent 引用保留在默认 Codex harness 上。
+    - supervisor 配置审计（launchd/systemd/schtasks），并支持可选修复。
+    - gateway 服务在安装或更新期间捕获 shell `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` 值时的嵌入式代理环境清理。
     - Gateway 运行时最佳实践检查（Node vs Bun、版本管理器路径）。
     - Gateway 端口冲突诊断（默认 `18789`）。
 
@@ -218,7 +218,10 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
 
     这也包括旧式 Talk 扁平字段。当前公开的 Talk 语音配置是 `talk.provider` + `talk.providers.<provider>`，实时语音配置是 `talk.realtime.*`。Doctor 会将旧的 `talk.voiceId` / `talk.voiceAliases` / `talk.modelId` / `talk.outputFormat` / `talk.apiKey` 结构重写到 provider 映射中，并将旧的顶层实时选择器（`talk.mode`、`talk.transport`、`talk.brain`、`talk.model`、`talk.voice`）重写到 `talk.realtime`。
 
-    Doctor 还会在 `plugins.allow` 非空且工具策略使用通配符或插件拥有的工具条目时发出警告。`tools.allow: ["*"]` 只匹配实际加载的插件中的工具；它不会绕过独占插件 allowlist。Doctor 会为迁移后的旧 allowlist 配置写入 `plugins.bundledDiscovery: "compat"`，以保留现有的内置 provider 行为，然后再指向更严格的 `"allowlist"` 设置。
+    Doctor also warns when `plugins.allow` is non-empty and tool policy uses
+    wildcard or plugin-owned tool entries. `tools.allow: ["*"]` only matches tools
+    from plugins that actually load; it does not bypass the exclusive plugin
+    allowlist.
 
   </Accordion>
   <Accordion title="2. 旧配置键迁移">
@@ -239,6 +242,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - `routing.groupChat.historyLimit` → `messages.groupChat.historyLimit`
     - `routing.groupChat.mentionPatterns` → `messages.groupChat.mentionPatterns`
     - `channels.telegram.requireMention` → `channels.telegram.groups."*".requireMention`
+    - remove retired `channels.webchat` and `gateway.webchat`
     - `routing.queue` → `messages.queue`
     - `routing.bindings` → 顶层 `bindings`
     - `routing.agents`/`routing.defaultAgentId` → `agents.list` + `agents.list[].default`
@@ -246,12 +250,13 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - legacy top-level realtime Talk selectors (`talk.mode`/`talk.transport`/`talk.brain`/`talk.model`/`talk.voice`) + `talk.provider`/`talk.providers` → `talk.realtime`
     - `routing.agentToAgent` → `tools.agentToAgent`
     - `routing.transcribeAudio` → `tools.media.audio.models`
-    - `messages.tts.<provider>`（`openai`/`elevenlabs`/`microsoft`/`edge`）→ `messages.tts.providers.<provider>`
-    - `messages.tts.provider: "edge"` 和 `messages.tts.providers.edge` → `messages.tts.provider: "microsoft"` 和 `messages.tts.providers.microsoft`
-    - `channels.discord.voice.tts.<provider>`（`openai`/`elevenlabs`/`microsoft`/`edge`）→ `channels.discord.voice.tts.providers.<provider>`
-    - `channels.discord.accounts.<id>.voice.tts.<provider>`（`openai`/`elevenlabs`/`microsoft`/`edge`）→ `channels.discord.accounts.<id>.voice.tts.providers.<provider>`
-    - `plugins.entries.voice-call.config.tts.<provider>`（`openai`/`elevenlabs`/`microsoft`/`edge`）→ `plugins.entries.voice-call.config.tts.providers.<provider>`
-    - `plugins.entries.voice-call.config.tts.provider: "edge"` 和 `plugins.entries.voice-call.config.tts.providers.edge` → `provider: "microsoft"` 和 `providers.microsoft`
+    - `messages.tts.<provider>` (`openai`/`elevenlabs`/`microsoft`/`edge`) → `messages.tts.providers.<provider>`
+    - `messages.tts.provider: "edge"` and `messages.tts.providers.edge` → `messages.tts.provider: "microsoft"` and `messages.tts.providers.microsoft`
+    - TTS speaker selection fields (`voice`/`voiceName`/`voiceId`) → `speakerVoice`/`speakerVoiceId`
+    - `channels.discord.voice.tts.<provider>` (`openai`/`elevenlabs`/`microsoft`/`edge`) → `channels.discord.voice.tts.providers.<provider>`
+    - `channels.discord.accounts.<id>.voice.tts.<provider>` (`openai`/`elevenlabs`/`microsoft`/`edge`) → `channels.discord.accounts.<id>.voice.tts.providers.<provider>`
+    - `plugins.entries.voice-call.config.tts.<provider>` (`openai`/`elevenlabs`/`microsoft`/`edge`) → `plugins.entries.voice-call.config.tts.providers.<provider>`
+    - `plugins.entries.voice-call.config.tts.provider: "edge"` and `plugins.entries.voice-call.config.tts.providers.edge` → `provider: "microsoft"` and `providers.microsoft`
     - `plugins.entries.voice-call.config.provider: "log"` → `"mock"`
     - `plugins.entries.voice-call.config.twilio.from` → `plugins.entries.voice-call.config.fromNumber`
     - `plugins.entries.voice-call.config.streaming.sttProvider` → `plugins.entries.voice-call.config.streaming.provider`
@@ -274,8 +279,8 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 如果 `channels.<channel>.defaultAccount` 被设置为未知的账号 ID，doctor 会警告并列出已配置的账号 ID。
 
   </Accordion>
-  <Accordion title="2b. OpenCode provider 覆盖">
-    如果你手动添加了 `models.providers.opencode`、`opencode-zen` 或 `opencode-go`，它们会覆盖来自 `@earendil-works/pi-ai` 的内置 OpenCode 目录。这可能会把模型强制路由到错误的 API，或者把成本置零。Doctor 会发出警告，以便你移除覆盖并恢复按模型划分的 API 路由 + 成本。
+  <Accordion title="2b. OpenCode provider overrides">
+    如果你之前手动添加了 `models.providers.opencode`、`opencode-zen` 或 `opencode-go`，它会覆盖 `openclaw/plugin-sdk/llm` 中内置的 OpenCode 目录。这可能会把模型强制路由到错误的 API，或把成本置零。Doctor 会提醒你移除该覆盖，以恢复按模型的 API 路由和成本信息。
   </Accordion>
   <Accordion title="2c. 浏览器迁移和 Chrome MCP 就绪性">
     如果你的浏览器配置仍指向已移除的 Chrome 扩展路径，doctor 会将其规范化为当前的主机本地 Chrome MCP attach 模型：
@@ -307,18 +312,18 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="2e. Codex OAuth provider 覆盖">
     如果你之前在 `models.providers.openai-codex` 下添加了旧的 OpenAI 传输设置，它们可能会遮蔽新版发布自动使用的内置 Codex OAuth provider 路径。Doctor 在看到这些旧传输设置与 Codex OAuth 同时存在时会发出警告，方便你移除或重写过时的传输覆盖，并恢复内置的路由/回退行为。自定义代理和仅头部覆盖仍受支持，不会触发此警告。
   </Accordion>
-  <Accordion title="2f. Codex 路由修复">
-    Doctor 会检查旧的 `openai-codex/*` 模型引用。原生 Codex harness 路由使用规范化的 `openai/*` 模型引用；OpenAI agent 回合会通过 Codex app-server harness，而不是 OpenClaw PI OpenAI 路径。
+  <Accordion title="2f. Codex route repair">
+    Doctor 检查旧的 `openai-codex/*` 模型引用。原生 Codex harness 路由使用规范化的 `openai/*` 模型引用；OpenAI agent 回合会通过 Codex app-server harness，而不是走 OpenClaw 的 OpenAI provider 路径。
 
-    在 `--fix` / `--repair` 模式下，doctor 会重写受影响的默认 agent 和按 agent 的引用，包括主模型、回退、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及陈旧的持久化会话 route 状态：
+    在 `--fix` / `--repair` 模式下，doctor 会重写受影响的默认 agent 和按 agent 引用，包括主模型、回退、图像/视频生成模型、heartbeat/subagent/compaction 覆盖、hooks、频道模型覆盖以及陈旧的持久化会话路由状态：
 
     - `openai-codex/gpt-*` 变为 `openai/gpt-*`。
-    - Codex intent 迁移到按 provider/model 作用域的 `agentRuntime.id: "codex"` 条目，用于已修复的 agent 模型引用，这样在模型引用变为 `openai/*` 之后，`openai-codex:...` 认证配置文件仍然可以被选择。
-    - 陈旧的整 agent 运行时配置和持久化会话运行时 pin 会被移除，因为运行时选择是按 provider/model 作用域进行的。
-    - 除非修复旧模型引用需要 Codex 路由来保留旧的认证路径，否则会保留现有的 provider/model 运行时策略。
-    - 现有模型回退列表会被保留，并将其中的旧条目重写；复制的按模型设置会从旧键迁移到规范化的 `openai/*` 键。
-    - 持久化会话的 `modelProvider`/`providerOverride`、`model`/`modelOverride`、回退通知和 auth-profile pin 会在所有发现的 agent 会话存储中得到修复。
-    - `/codex ...` 表示“从 chat 中控制或绑定一个原生 Codex 对话”。
+    - Codex intent 会迁移到 provider/model 作用域的 `agentRuntime.id: "codex"` 条目，用于修复后的 agent 模型引用。
+    - 由于运行时选择是 provider/model 作用域的，因此会移除陈旧的整 agent 运行时配置和持久化会话运行时固定。
+    - 除非修复后的旧模型引用需要 Codex 路由来保持旧的认证路径，否则会保留现有的 provider/model 运行时策略。
+    - 现有模型回退列表会被保留，但其中的旧条目会被重写；从旧键复制过来的按模型设置会移动到规范化的 `openai/*` 键。
+    - 持久化会话中的 `modelProvider`/`providerOverride`、`model`/`modelOverride`、回退提示以及 auth-profile 固定，会在所有发现的 agent 会话存储中被修复。
+    - `/codex ...` 表示“从聊天中控制或绑定一个原生 Codex 对话”。
     - `/acp ...` 或 `runtime: "acp"` 表示“使用外部 ACP/acpx 适配器”。
 
   </Accordion>
@@ -355,15 +360,17 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 顶层 payload 字段（`message`、`model`、`thinking`、...）→ `payload`
     - 顶层 delivery 字段（`deliver`、`channel`、`to`、`provider`、...）→ `delivery`
     - payload `provider` delivery 别名 → 显式 `delivery.channel`
-    - 简单的旧式 `notify: true` webhook 回退任务 → 显式 `delivery.mode="webhook"` 且 `delivery.to=cron.webhook`
+    - 旧的 `notify: true` webhook 回退任务 → 来自 `cron.webhook` 的显式 webhook delivery；announce 任务保留其聊天 delivery，并获得 `delivery.completionDestination`
 
-    Doctor 只会在不改变行为的前提下自动迁移 `notify: true` 任务。如果某个任务把旧式 notify 回退与现有的非 webhook delivery 模式结合在一起，doctor 会警告并保留该任务供人工审查。
+    Gateway 也会在加载时清理格式错误的 cron 行，以确保有效任务继续运行。原始的格式错误行会在从 `jobs.json` 中移除之前复制到活动存储旁边的 `jobs-quarantine.json`；doctor 会报告被隔离的行，以便你手动审查或修复它们。
+
+    Doctor 和 Gateway 启动会在 scheduler 运行前使用相同的 `notify: true` 迁移。如果缺少 `cron.webhook`，doctor 会发出警告并保留旧的 notify 标记供手动修复。
 
     在 Linux 上，doctor 还会在用户的 crontab 仍调用旧版 `~/.openclaw/bin/ensure-whatsapp.sh` 时发出警告。这个宿主机本地脚本不受当前 OpenClaw 维护，而且当 cron 无法访问 systemd 用户总线时，可能会向 `~/.openclaw/logs/whatsapp-health.log` 写入虚假的 `Gateway inactive` 消息。请使用 `crontab -e` 删除过时的 crontab 条目；当前健康检查请使用 `openclaw channels status --probe`、`openclaw doctor` 和 `openclaw gateway status`。
 
   </Accordion>
-  <Accordion title="3c. 会话锁清理">
-    Doctor 会扫描每个 agent 会话目录中的过期写锁文件——这些文件通常是会话异常退出时遗留的。对于找到的每个锁文件，它会报告：路径、PID、该 PID 是否仍存活、锁的年龄，以及它是否被视为过期（死掉的 PID、超过 30 分钟，或者虽然 PID 存活但可证明属于非 OpenClaw 进程）。在 `--fix` / `--repair` 模式下，它会自动删除过期锁文件；否则会打印说明并提示你使用 `--fix` 重新运行。
+  <Accordion title="3c. Session lock cleanup">
+    Doctor scans every agent session directory for stale write-lock files — files left behind when a session exited abnormally. For each lock file found it reports: the path, PID, whether the PID is still alive, lock age, and whether it is considered stale (dead PID, malformed owner metadata, older than 30 minutes, or a live PID that can be proven to belong to a non-OpenClaw process). In `--fix` / `--repair` mode it removes locks with dead, orphaned, recycled, malformed-old, or non-OpenClaw owners automatically. Old locks that are still owned by a live OpenClaw process are reported but left in place so doctor does not cut off an active transcript writer.
   </Accordion>
   <Accordion title="3d. 会话转写分支修复">
     Doctor 会扫描 agent 会话 JSONL 文件，查找由 2026.4.24 prompt transcript rewrite bug 造成的重复分支结构：一个带有 OpenClaw 内部运行时上下文的已放弃 user turn，以及一个包含相同可见用户提示的活动同级分支。在 `--fix` / `--repair` 模式下，doctor 会在原文件旁边为每个受影响文件创建备份，并将转写重写为活动分支，这样 gateway 历史和 memory 读取器就不再会看到重复 turn。
@@ -395,7 +402,7 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
     - 短期冷却（速率限制/超时/认证失败）
     - 长期禁用（计费/信用失败）
 
-    旧版 Codex OAuth 配置文件的 token 存放在 macOS Keychain 中（更早的 onboarding，早于基于文件的 sidecar 布局），嵌入式运行时路径不会读取到它们——该路径运行时 `allowKeychainPrompt: false`，无法触发 Keychain 提示。受影响的用户会从旧版 sidecar 加载器收到一次性的 `log.warn`，其中会提到 `openclaw doctor --fix` 和 macOS Keychain（而不是凭据悄悄地落入下游的 `No API key found for provider "openai-codex"`）。请在交互式终端中运行一次 `openclaw doctor --fix`，将基于 Keychain 的旧 token 原地迁移到 `auth-profiles.json`；之后，嵌入式回合（Telegram、cron、sub-agent 分发）就会像解析其他内联 OAuth 配置文件一样解析它们。
+    Legacy Codex OAuth profiles whose tokens live in macOS Keychain (older onboarding before the file-based sidecar layout) are repaired only by doctor. Run `openclaw doctor --fix` once from an interactive terminal to migrate Keychain-backed legacy tokens inline into `auth-profiles.json`; after that, embedded turns (Telegram, cron, sub-agent dispatch) resolve them as canonical OpenAI OAuth profiles.
 
   </Accordion>
   <Accordion title="6. Hooks 模型验证">
@@ -496,10 +503,10 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="13b. 记忆搜索就绪性">
     Doctor 会检查为默认 agent 配置的记忆搜索 embedding provider 是否就绪。具体行为取决于配置的后端和 provider：
 
-    - **QMD 后端**：探测 `qmd` 二进制是否可用且可启动。如果不可用，会打印修复指导，包括 npm 包和手动二进制路径选项。
+    - **QMD backend**：探测 `qmd` 二进制是否可用且可启动。如果不可用，会打印修复指导，包括 npm 包和手动二进制路径选项。
     - **显式本地 provider**：检查本地模型文件或可识别的远程/可下载模型 URL。如果缺失，会建议切换到远程 provider。
-    - **显式远程 provider**（`openai`、`voyage` 等）：验证环境变量或认证存储中是否存在 API key。如果缺失，会打印可执行的修复提示。
-    - **自动 provider**：先检查本地模型可用性，然后按自动选择顺序尝试每个远程 provider。
+    - **显式远程 provider**（`openai`、`voyage` 等）：验证环境变量或 auth store 中是否存在 API key。如果缺失，会打印可操作的修复提示。
+    - **旧的自动 provider**：将 `memorySearch.provider: "auto"` 视为 OpenAI，检查 OpenAI 就绪性，并由 `doctor --fix` 将其重写为 `provider: "openai"`。
 
     当存在缓存的 gateway 探测结果时（即检查时 gateway 是健康的），doctor 会将其结果与 CLI 可见配置交叉引用，并指出任何差异。Doctor 不会在默认路径上发起新的 embedding ping；如需实时 provider 检查，请使用深度 memory 状态命令。
 

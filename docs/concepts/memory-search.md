@@ -11,21 +11,21 @@ read_when:
 
 ## 快速开始
 
-如果你已经配置了 GitHub Copilot 订阅、OpenAI、Gemini、Voyage 或 Mistral 的 API key，记忆搜索会自动工作。若要显式设置提供方：
+默认情况下，Memory search 使用 OpenAI 嵌入。若要使用其他嵌入后端，请显式设置提供方：
 
 ```json5
 {
   agents: {
     defaults: {
       memorySearch: {
-        provider: "openai", // 或 "gemini"、"local"、"ollama" 等。
+        provider: "openai", // 或 "gemini"、"local"、"ollama"、"openai-compatible" 等。
       },
     },
   },
 }
 ```
 
-对于多端点配置，`provider` 也可以是一个自定义的 `models.providers.<id>` 条目，例如 `ollama-5080`，前提是该提供方设置了 `api: "ollama"` 或其他嵌入适配器拥有者。
+对于带有 memory 专用提供方的多端点配置，`provider` 也可以是自定义的 `models.providers.<id>` 条目，例如 `ollama-5080`，前提是该提供方设置了 `api: "ollama"` 或其他 memory 嵌入适配器所有者。
 
 对于没有 API key 的本地嵌入，请设置 `provider: "local"`。源代码检出
 可能仍需要原生构建审批：`pnpm approve-builds` 然后
@@ -35,16 +35,18 @@ read_when:
 
 ## 支持的提供方
 
-| 提供方         | ID               | 需要 API key | 说明                                                 |
-| -------------- | ---------------- | ------------ | ---------------------------------------------------- |
-| Bedrock        | `bedrock`        | 否            | 当 AWS 凭证链解析成功时自动检测                     |
-| Gemini         | `gemini`        | 是           | 支持图像/音频索引                                    |
-| GitHub Copilot | `github-copilot` | 否            | 自动检测，使用 Copilot 订阅                          |
-| Local          | `local`          | 否            | GGUF 模型，约 0.6 GB 下载                           |
-| Mistral        | `mistral`        | 是           | 自动检测                                             |
-| Ollama         | `ollama`         | 否            | 本地，必须显式设置                                   |
-| OpenAI         | `openai`         | 是           | 自动检测，速度快                                     |
-| Voyage         | `voyage`         | 是           | 自动检测                                             |
+| Provider          | ID                  | Needs API key | Notes                         |
+| ----------------- | ------------------- | ------------- | ----------------------------- |
+| Bedrock           | `bedrock`           | No            | Uses AWS credential chain     |
+| DeepInfra         | `deepinfra`         | Yes           | Default: `BAAI/bge-m3`        |
+| Gemini            | `gemini`            | Yes           | Supports image/audio indexing |
+| GitHub Copilot    | `github-copilot`    | No            | Uses Copilot subscription     |
+| Local             | `local`             | No            | GGUF model, ~0.6 GB download  |
+| Mistral           | `mistral`           | Yes           |                               |
+| Ollama            | `ollama`            | No            | Local/self-hosted             |
+| OpenAI            | `openai`            | Yes           | Default                       |
+| OpenAI-compatible | `openai-compatible` | Usually       | Generic `/v1/embeddings`      |
+| Voyage            | `voyage`            | Yes           |                               |
 
 ## 搜索如何工作
 
@@ -64,9 +66,9 @@ flowchart LR
 - **向量搜索** 会找到语义相近的笔记（“gateway host” 可以匹配 “运行 OpenClaw 的机器”）。
 - **BM25 关键词搜索** 会找到精确匹配项（ID、错误字符串、配置键）。
 
-如果只有一条路径可用（没有嵌入或没有 FTS），则只会运行另一条路径。
+如果只有一条路径可用，另一条就会单独运行。刻意的仅 FTS 模式（`provider: "none"`）以及自动/默认提供方选择，在嵌入不可用时仍可使用词法排序。
 
-当嵌入不可用时，OpenClaw 仍会在 FTS 结果上使用词法排序，而不是仅仅回退到原始的精确匹配顺序。该降级模式会提升与查询词覆盖更强、文件路径更相关的块，即使没有 `sqlite-vec` 或嵌入提供方，也能保持有用的召回效果。
+显式的非本地嵌入提供方有所不同。如果你将 `memorySearch.provider` 设置为一个具体的远程提供方，而该提供方在运行时不可用，`memory_search` 会将记忆报告为不可用，而不是静默退回到仅 FTS 结果。这样可以让配置损坏的语义提供方保持可见。若要有意进行仅 FTS 的召回，请设置 `provider: "none"`；或者修复提供方/认证配置以恢复语义排序。
 
 ## 提升搜索质量
 

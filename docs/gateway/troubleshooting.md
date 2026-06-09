@@ -429,7 +429,59 @@ openclaw gateway status --deep   # 也会扫描系统级服务
 - [配置](/gateway/configuration)
 - [Doctor](/gateway/doctor)
 
-## Gateway 在高内存使用时退出
+## macOS gateway 静默停止响应，然后在你触碰 dashboard 时恢复
+
+当 macOS 主机上的 channel（Telegram、WhatsApp 等）会连续数分钟到数小时毫无动静，而你一打开 Control UI、通过 SSH 连接，或者以其他方式与主机交互时 gateway 似乎又立刻恢复时，使用此项。通常在 `openclaw status` 中没有明显症状，因为等你查看时 gateway 已经恢复运行了。
+
+```bash
+ls ~/.openclaw/logs/stability/ | tail -5
+openclaw gateway stability --bundle latest
+pmset -g log | grep -iE "sleep|wake|maintenance" | tail -50
+launchctl print gui/$UID/ai.openclaw.gateway | grep -E "state|last exit|runs"
+```
+
+查看以下内容：
+
+- `~/.openclaw/logs/stability/` 下存在一个或多个 `*-uncaught_exception.json` bundle，且 `error.code` 被设置为诸如 `ENETDOWN`、`ENETUNREACH`、`EHOSTUNREACH` 或 `ECONNREFUSED` 之类的瞬态网络错误码。
+- `pmset -g log` 中有类似 `Entering Sleep state due to 'Maintenance Sleep'` 或 `en0 driver is slow (msg: WillChangeState to 0)` 的行，并且与崩溃时间戳对齐。Power Nap / Maintenance Sleep 会短暂将 Wi-Fi 驱动置于 state 0；在该窗口内发生的任何出站 `connect()` 都可能返回 `ENETDOWN`，即使主机其他方面具有完整的网络连接。
+- `launchctl print` 输出显示 `state = not running`，并且有多次最近的 `runs` 和一个退出码，尤其是在崩溃与下一次启动之间的间隔大约是一小时而不是几秒钟时。macOS launchd 在一轮崩溃风暴后会应用一个未公开的 respawn-protection 门控，在外部触发（例如交互式登录、dashboard 连接或 `launchctl kickstart`）重新激活之前，可能不再响应 `KeepAlive=true`。
+
+常见特征：
+
+- 一个 `error.code` 为 `ENETDOWN` 或同类代码的稳定性包，调用栈指向 Node `net` 的 `lookupAndConnect` / `Socket.connect`。OpenClaw `2026.5.26` 及更新版本会将这些视为良性的瞬态网络错误，因此不再将其传播到顶层未捕获处理器；如果你使用的是更早版本，请先升级。
+- 漫长的静默期在你连接 Control UI 或通过 SSH 登录主机的瞬间结束：用户可见的活动是在重新为 launchd 的 respawn 门控上弦，而不是 dashboard 对 gateway 做了什么。
+- `runs` 计数在一天内不断增加，但 `~/Library/Logs/openclaw/gateway.log` 中没有对应的 `received SIG*; shutting down` 行：正常关闭会记录 signal；瞬态崩溃不会。
+
+处理方法：
+
+1. **升级 gateway**，如果你运行的是 `2026.5.26` 之前的版本。升级后，未来的 `ENETDOWN` 错误会被记录为 warning，而不是终止进程。
+2. **减少维护性睡眠活动**，适用于作为常开服务器运行的 Mac mini / 桌面主机：
+
+   ```bash
+   sudo pmset -a sleep 0 disksleep 0 standby 0 powernap 0
+   ```
+
+   这会显著降低底层驱动抖动，但不能完全消除。系统仍可能为了 TCP keepalive 和 mDNS 维护而执行某些维护性睡眠，无论这些标志如何设置。
+
+3. **添加一个存活监控**，以便在未来由 launchd 暂停的崩溃风暴能被迅速捕获：
+
+   ```bash
+   # 示例 launchd 感知的存活检查，适合 5 分钟 cron 或 LaunchAgent
+   state=$(launchctl print gui/$UID/ai.openclaw.gateway 2>/dev/null | awk -F'= ' '/state =/ {print $2; exit}')
+   if [ "$state" != "running" ]; then
+     launchctl kickstart -k gui/$UID/ai.openclaw.gateway
+   fi
+   ```
+
+   关键在于从外部重新为 respawn 门控上弦；仅靠 `KeepAlive=true` 在 macOS 崩溃风暴后并不充分。
+
+相关：
+
+- [macOS 平台说明](/platforms/macos)
+- [日志](/logging)
+- [Doctor](/gateway/doctor)
+
+## Gateway 在高内存使用期间退出
 
 当 Gateway 在负载下消失、监督程序报告 OOM 风格的重启，或日志中提到 `critical memory pressure bundle written` 时使用此项。
 
@@ -546,12 +598,12 @@ openclaw gateway probe --ssh user@gateway-host
 
 常见特征：
 
-- `SSH tunnel failed to start; falling back to direct probes.` → SSH 设置失败，但命令仍尝试直接探测已配置/loopback 目标。
-- `multiple reachable gateways detected` → 有多个目标响应。这通常意味着有意配置了多 gateway，或者存在陈旧/重复监听器。
-- `Read-probe diagnostics are limited by gateway scopes (missing operator.read)` → 连接成功，但详细 RPC 受 scope 限制；请配对设备身份或使用包含 `operator.read` 的凭据。
-- `Gateway accepted the WebSocket connection, but follow-up read diagnostics failed` → 连接成功，但完整的诊断 RPC 集超时或失败。将其视为可达但诊断降级的 Gateway；在 `--json` 输出中对比 `connect.ok` 和 `connect.rpcOk`。
-- `Capability: pairing-pending` 或 `gateway closed (1008): pairing required` → gateway 已响应，但此客户端在获得正常操作员访问权限前仍需配对/批准。
-- 未解析的 `gateway.auth.*` / `gateway.remote.*` SecretRef 警告文本 → 在此次命令路径中，失败目标的认证材料不可用。
+- `SSH tunnel failed to start; falling back to direct probes.` → SSH setup failed, but the command still tried direct configured/loopback targets.
+- `multiple reachable gateway identities detected` → distinct gateways answered, or OpenClaw could not prove reachable targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway is treated as one gateway with multiple transports, even when transport ports differ.
+- `Read-probe diagnostics are limited by gateway scopes (missing operator.read)` → connect worked, but detail RPC is scope-limited; pair device identity or use credentials with `operator.read`.
+- `Gateway accepted the WebSocket connection, but follow-up read diagnostics failed` → connect worked, but the full diagnostic RPC set timed out or failed. Treat this as a reachable Gateway with degraded diagnostics; compare `connect.ok` and `connect.rpcOk` in `--json` output.
+- `Capability: pairing-pending` or `gateway closed (1008): pairing required` → the gateway answered, but this client still needs pairing/approval before normal operator access.
+- unresolved `gateway.auth.*` / `gateway.remote.*` SecretRef warning text → auth material was unavailable in this command path for the failed target.
 
 相关：
 
@@ -609,14 +661,14 @@ openclaw logs --follow
 - Heartbeat 跳过原因（`quiet-hours`、`requests-in-flight`、`cron-in-progress`、`lanes-busy`、`alerts-disabled`、`empty-heartbeat-file`、`no-tasks-due`）。
 
 <AccordionGroup>
-  <Accordion title="常见特征">
+  <Accordion title="Common signatures">
     - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
     - `cron: timer tick failed` → 调度器 tick 失败；检查文件/日志/运行时错误。
-    - `heartbeat skipped` 且 `reason=quiet-hours` → 不在活跃时段窗口内。
-    - `heartbeat skipped` 且 `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空行 / markdown 标题，因此 OpenClaw 会跳过模型调用。
-    - `heartbeat skipped` 且 `reason=no-tasks-due` → `HEARTBEAT.md` 包含 `tasks:` 区块，但此刻没有任何任务到期。
-    - `heartbeat: unknown accountId` → 用于 heartbeat 投递目标的 account id 无效。
-    - `heartbeat skipped` 且 `reason=dm-blocked` → heartbeat 目标被解析为 DM 风格目的地，而 `agents.defaults.heartbeat.directPolicy`（或按 agent 的覆盖项）设置为 `block`。
+    - `heartbeat skipped` with `reason=quiet-hours` → 当前不在活跃时段窗口内。
+    - `heartbeat skipped` with `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空白、注释、标题、代码块，或空清单脚手架，因此 OpenClaw 会跳过模型调用。
+    - `heartbeat skipped` with `reason=no-tasks-due` → `HEARTBEAT.md` 包含 `tasks:` 区块，但在本次 tick 中没有任何任务到期。
+    - `heartbeat: unknown accountId` → heartbeat 投递目标的账户 ID 无效。
+    - `heartbeat skipped` with `reason=dm-blocked` → heartbeat 目标被解析为 DM 风格目的地，而 `agents.defaults.heartbeat.directPolicy`（或按 agent 覆盖）设置为 `block`。
 
   </Accordion>
 </AccordionGroup>

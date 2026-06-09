@@ -54,16 +54,16 @@ OpenClaw 有两层独立的流式传输机制：
 
 ### 使用区块流式传输的媒体投递
 
-`MEDIA:` 指令是正常的投递元数据。当区块流式传输提前发送一个
-媒体区块时，OpenClaw 会记住该轮次的投递。如果最终的
-助手载荷重复了相同的媒体 URL，最终投递会去掉
-重复媒体，而不会再次发送附件。
+Streaming media must use structured payload fields such as `mediaUrl` or
+`mediaUrls`; streamed text is not parsed as an attachment command. When block
+streaming sends media early, OpenClaw remembers that delivery for the turn. If
+the final assistant payload repeats the same media URL, the final delivery
+strips the duplicate media instead of sending the attachment again.
 
-完全相同的最终载荷会被抑制。如果最终载荷在已经流式发送过的媒体周围增加了
-不同的文本，OpenClaw 仍会发送
-新增文本，同时保持媒体只投递一次。这样可以防止在
-Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent 在
-流式传输期间发出 `MEDIA:`，而提供方在完整回复中也包含它时。
+Exact duplicate final payloads are suppressed. If the final payload adds
+distinct text around media that was already streamed, OpenClaw still sends the
+new text while keeping the media single-delivery. This prevents duplicate voice
+notes or files on channels such as Telegram.
 
 ## 分块算法（低/高边界）
 
@@ -71,7 +71,7 @@ Telegram 等频道中出现重复的语音备注或文件，尤其是在 agent �
 
 - **低边界：** 除非被强制，否则在缓冲区达到 `minChars` 之前不发出。
 - **高边界：** 优先在 `maxChars` 之前切分；如果被强制，则在 `maxChars` 处切分。
-- **断点偏好：** `paragraph` → `newline` → `sentence` → `whitespace` → hard break。
+- **断点偏好：** `paragraph` → `newline` → `sentence` → `whitespace` → hard break.
 - **代码围栏：** 不会在围栏内部拆分；如果在 `maxChars` 处被强制拆分，会先关闭再重新打开围栏，以保持 Markdown 有效。
 
 `maxChars` 会被限制到频道的 `textChunkLimit`，因此无法超过每个频道的上限。
@@ -192,7 +192,13 @@ Matrix：
 
 Preview streaming 也可以包含 **工具进度** 更新——例如“正在搜索网页”“正在读取文件”或“正在调用工具”之类的简短状态行——它们会在工具运行时显示在同一条预览消息中，并早于最终回复。在 Codex app-server 模式下，Codex 的前言/注释消息使用同一条预览路径，因此简短的“我正在检查……”进度说明可以流式进入可编辑草稿，而不会成为最终答案的一部分。这样可以让多步骤工具轮次在视觉上保持“活跃”，而不是在第一条思考预览和最终答案之间沉默。
 
-支持的界面：
+Long-running tools may emit typed progress before they return. For example,
+`web_fetch` arms a five-second timer when it starts: if the fetch is still
+pending, the preview can show `Fetching page content...`; if the fetch finishes
+or is canceled before then, no progress line is emitted. The later final tool
+result is still delivered normally to the model.
+
+Supported surfaces:
 
 - **Discord**、**Slack**、**Telegram** 和 **Matrix** 会在预览流式传输激活时，默认将工具进度和 Codex 前言更新流式写入实时预览编辑。Microsoft Teams 在个人聊天中使用其原生进度流。
 - Telegram 自 `v2026.4.22` 起已启用工具进度预览更新；保持启用可保留该已发布行为。

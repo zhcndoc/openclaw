@@ -132,10 +132,14 @@ sidebarTitle: "子代理"
 
 **默认值：**
 
-- **模型：** 继承调用方，除非你设置了 `agents.defaults.subagents.model`（或按代理设置 `agents.list[].subagents.model`）；显式的 `sessions_spawn.model` 仍然优先。
-- **思考：** 继承调用方，除非你设置了 `agents.defaults.subagents.thinking`（或按代理设置 `agents.list[].subagents.thinking`）；显式的 `sessions_spawn.thinking` 仍然优先。
-- **运行超时：** 如果省略 `sessions_spawn.runTimeoutSeconds`，OpenClaw 会在设置了 `agents.defaults.subagents.runTimeoutSeconds` 时使用它；否则回退到 `0`（无超时）。
-- **任务投递：** 原生子代理会在其第一条可见的 `[Subagent Task]` 消息中接收委派任务。子代理系统提示词携带运行时规则和路由上下文，而不是任务的隐藏重复副本。
+- **模型：** 原生子代理会继承调用方，除非你设置 `agents.defaults.subagents.model`（或按代理覆盖 `agents.list[].subagents.model`）。ACP 运行生成也会在存在时使用相同配置的子代理模型；否则 ACP 宿主保持自己的默认值。显式的 `sessions_spawn.model` 仍然优先。
+- **思考：** 原生子代理会继承调用方，除非你设置 `agents.defaults.subagents.thinking`（或按代理覆盖 `agents.list[].subagents.thinking`）。ACP 运行生成也会对所选模型应用 `agents.defaults.models["provider/model"].params.thinking`。显式的 `sessions_spawn.thinking` 仍然优先。
+- **运行超时：** 当设置了 `agents.defaults.subagents.runTimeoutSeconds` 时，OpenClaw 会使用它；否则回退到 `0`（无超时）。`sessions_spawn` 不接受按调用覆盖的超时设置。
+- **任务投递：** 原生子代理会在其首条可见的 `[Subagent Task]` 消息中接收委派任务。子代理系统提示包含运行时规则和路由上下文，而不是任务的隐藏副本。
+
+被接受的原生子代理生成会在工具结果中包含已解析的子模型元数据：
+`resolvedModel` 包含已应用的模型引用，
+`resolvedProvider` 在引用带有提供方前缀时包含该前缀。
 
 ### 委派提示模式
 
@@ -171,13 +175,16 @@ sidebarTitle: "子代理"
   子代理的任务描述。
 </ParamField>
 <ParamField path="taskName" type="string">
-  用于在后续状态输出中识别特定子任务的可选稳定标识。必须匹配 `[a-z][a-z0-9_]{0,63}`，且不能是诸如 `last` 或 `all` 之类的保留目标。
+  后续状态输出中用于标识特定子项的可选稳定句柄。必须匹配 `[a-z][a-z0-9_-]{0,63}`，且不能是 `last` 或 `all` 等保留目标。
 </ParamField>
 <ParamField path="label" type="string">
   可选的人类可读标签。
 </ParamField>
 <ParamField path="agentId" type="string">
   在 `subagents.allowAgents` 允许时，在另一个已配置的代理 ID 下生成。
+</ParamField>
+<ParamField path="cwd" type="string">
+  子运行的可选任务工作目录。原生子代理仍会从目标代理工作区加载引导文件；`cwd` 只会改变运行时工具和 CLI 宿主执行委派工作的目录。
 </ParamField>
 <ParamField path="runtime" type='"subagent" | "acp"' default="subagent">
   `acp` 仅用于外部 ACP 宿主（`claude`、`droid`、`gemini`、`opencode`，或显式请求的 Codex ACP/acpx）以及 `runtime.type` 为 `acp` 的 `agents.list[]` 条目。
@@ -193,9 +200,6 @@ sidebarTitle: "子代理"
 </ParamField>
 <ParamField path="thinking" type="string">
   覆盖子代理运行的思考级别。
-</ParamField>
-<ParamField path="runTimeoutSeconds" type="number">
-  默认情况下使用 `agents.defaults.subagents.runTimeoutSeconds`，否则为 `0`。设置后，子代理运行会在 N 秒后中止。
 </ParamField>
 <ParamField path="thread" type="boolean" default="false">
   当为 `true` 时，为该子代理会话请求频道线程绑定。
@@ -270,12 +274,12 @@ sidebarTitle: "子代理"
 
 ### 支持线程的通道
 
-**Discord** 目前是唯一受支持的通道。它支持
-持久的线程绑定子代理会话（`sessions_spawn` 搭配 `thread: true`），手动线程控制（`/focus`、`/unfocus`、`/agents`、`/session idle`、`/session max-age`），以及适配器键
-`channels.discord.threadBindings.enabled`、
-`channels.discord.threadBindings.idleHours`、
-`channels.discord.threadBindings.maxAgeHours` 和
-`channels.discord.threadBindings.spawnSessions`。
+Any channel with a session-binding adapter can support persistent
+thread-bound subagent sessions (`sessions_spawn` with `thread: true`).
+Bundled adapters currently include Discord threads, Matrix threads,
+Telegram forum topics, and current-conversation bindings for Feishu.
+Use the per-channel `threadBindings` config keys for enablement,
+timeouts, and `spawnSessions`.
 
 ### 快速流程
 
@@ -336,10 +340,7 @@ sidebarTitle: "子代理"
 
 ### 发现
 
-使用 `agents_list` 查看当前允许用于
-`sessions_spawn` 的代理 id。响应会包含每个列出的代理的有效
-模型和嵌入式运行时元数据，以便调用方区分 PI、Codex
-应用服务器以及其他已配置的原生运行时。
+使用 `agents_list` 查看当前允许用于 `sessions_spawn` 的代理 id。响应会包含每个已列出代理的有效模型和嵌入的运行时元数据，以便调用方区分 OpenClaw、Codex app-server 和其他已配置的原生运行时。
 
 `allowAgents` 条目必须指向 `agents.list[]` 中已配置的代理 id。
 `["*"]` 表示任意已配置目标代理以及请求者。如果某个代理配置
@@ -348,13 +349,13 @@ sidebarTitle: "子代理"
 
 ### 自动归档
 
-- 子代理会话会在 `agents.defaults.subagents.archiveAfterMinutes` 之后自动归档（默认 `60`）。
-- 归档会使用 `sessions.delete`，并将转录重命名为 `*.deleted.<timestamp>`（同一文件夹）。
-- `cleanup: "delete"` 会在 announce 之后立即归档（但仍通过重命名保留转录）。
-- 自动归档尽力而为；如果网关重启，待处理的计时器会丢失。
-- `runTimeoutSeconds` **不会** 自动归档；它只会停止运行。会话会一直保留到自动归档为止。
-- 自动归档同样适用于深度 1 和深度 2 的会话。
-- 浏览器清理与归档清理是分开的：在运行结束时，会尽力关闭被跟踪的浏览器标签页/进程，即使转录/会话记录被保留也一样。
+- 子代理会话会在 `agents.defaults.subagents.archiveAfterMinutes`（默认 `60`）后自动归档。
+- 归档使用 `sessions.delete`，并将转录重命名为 `*.deleted.<timestamp>`（同一文件夹）。
+- `cleanup: "delete"` 会在通知后立即归档（仍通过重命名保留转录）。
+- 自动归档尽力而为；如果网关重启，待处理的定时器会丢失。
+- 已配置的运行超时**不会**自动归档；它们只会停止运行。会话会一直保留，直到自动归档。
+- 自动归档同样适用于一级和二级会话。
+- 浏览器清理与归档清理是分开的：在运行结束时，会尽力关闭已跟踪的浏览器标签页/进程，即使转录/会话记录被保留。
 
 ## 嵌套子代理
 
@@ -368,10 +369,10 @@ sidebarTitle: "子代理"
   agents: {
     defaults: {
       subagents: {
-        maxSpawnDepth: 2, // 允许子代理启动子级（默认：1）
-        maxChildrenPerAgent: 5, // 每个代理会话同时最多活动子级数（默认：5）
-        maxConcurrent: 8, // 全局并发通道上限（默认：8）
-        runTimeoutSeconds: 900, // sessions_spawn 的默认超时时间（在省略时生效，0 = 无超时）
+        maxSpawnDepth: 2, // 允许子代理启动子级（默认值：1）
+        maxChildrenPerAgent: 5, // 每个代理会话的最大活动子级数（默认值：5）
+        maxConcurrent: 8, // 全局并发通道上限（默认值：8）
+        runTimeoutSeconds: 900, // sessions_spawn 的默认超时（0 = 不超时）
         announceTimeoutMs: 120000, // 每次调用的网关 announce 超时
       },
     },
@@ -579,13 +580,16 @@ OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。
 每个子会话的自动重启恢复都有边界。如果同一个子代理子会话在快速重新卡住窗口内被反复接受用于孤儿恢复，OpenClaw 会在该会话上持久化一个恢复墓碑，并在后续重启中停止自动恢复它。运行 `openclaw tasks maintenance --apply` 以协调任务记录，或运行 `openclaw doctor --fix` 清除墓碑会话上过期的中止恢复标记。
 
 <Note>
-如果子代理启动因 Gateway `PAIRING_REQUIRED` /
-`scope-upgrade` 而失败，请在编辑配对状态之前检查 RPC 调用方。
-内部 `sessions_spawn` 协调应通过直接环回共享令牌/密码认证，以
-`client.id: "gateway-client"` 且 `client.mode: "backend"` 连接；该路径不依赖
-CLI 的已配对设备作用域基线。远程调用方、显式的 `deviceIdentity`、
-显式设备令牌路径，以及浏览器/node 客户端，仍然需要正常的设备批准
-才能进行作用域升级。
+If a sub-agent spawn fails with Gateway `PAIRING_REQUIRED` /
+`scope-upgrade`, check the RPC caller before editing pairing state.
+Internal `sessions_spawn` coordination dispatches in process when the
+caller is already running inside the gateway request context, so it does
+not open a loopback WebSocket or depend on the CLI's paired-device scope
+baseline. Callers outside the gateway process still use the WebSocket
+fallback as `client.id: "gateway-client"` with `client.mode: "backend"`
+over direct loopback shared-token/password auth. Remote callers, explicit
+`deviceIdentity`, explicit device-token paths, and browser/node clients
+still need normal device approval for scope upgrades.
 </Note>
 
 ## 停止

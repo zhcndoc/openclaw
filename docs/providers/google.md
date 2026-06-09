@@ -300,8 +300,8 @@ Google 的批量 Gemini TTS 路径会在完成的 `generateContent` 响应中返
       providers: {
         google: {
           model: "gemini-3.1-flash-tts-preview",
-          voiceName: "Kore",
-          audioProfile: "以平静的语气专业地表达。",
+          speakerVoice: "Kore",
+          audioProfile: "Speak professionally with a calm tone.",
         },
       },
     },
@@ -362,7 +362,7 @@ Voice Call 实时配置示例：
             providers: {
               google: {
                 model: "gemini-2.5-flash-native-audio-preview-12-2025",
-                voice: "Kore",
+                speakerVoice: "Kore",
                 activityHandling: "start-of-activity-interrupts",
                 turnCoverage: "only-activity",
               },

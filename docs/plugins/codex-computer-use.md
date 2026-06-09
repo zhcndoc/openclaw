@@ -76,8 +76,8 @@ CUA 的驱动程序是 macOS 专用的，并且仍然需要其应用提示时请
 
 ## 快速设置
 
-当 Codex 模式轮次在线程开始前必须可用 Computer Use 时，请设置
-`plugins.entries.codex.config.computerUse`：
+在 Codex 模式轮次开始前必须可用 Computer Use 时，请设置 `plugins.entries.codex.config.computerUse`。`autoInstall: true` 会启用
+Computer Use，并允许 OpenClaw 在回合开始前安装或重新启用它：
 
 ```json5
 {
@@ -127,8 +127,9 @@ marketplace，OpenClaw 会请求 Codex app-server 安装或重新启用
 /codex computer-use install --marketplace <name>
 ```
 
-`status` 只读。它不会添加 marketplace 源、安装插件，或
-启用 Codex 插件支持。
+`status` 是只读的。它不会添加 marketplace 源、安装插件，也不会
+启用 Codex 插件支持。如果没有配置显式启用 Computer Use，`status`
+即使在执行过一次性安装命令后也可能报告为已禁用。
 
 `install` 会启用 Codex app-server 插件支持，可选地添加一个配置的
 marketplace 源，通过 Codex app-server 安装或重新启用配置的插件，重新加载 MCP 服务器，并
@@ -176,9 +177,10 @@ marketplace 根目录：
 codex plugin marketplace add /Applications/Codex.app/Contents/Resources/plugins/openai-bundled
 ```
 
-如果你使用的是非标准的 Codex 应用路径，请将 `computerUse.marketplacePath` 设置为
-本地 marketplace 文件路径，或者先运行一次 `/codex computer-use install --source
-<marketplace-source>`。
+如果你使用的是非标准的 Codex app 路径，请运行 `/codex computer-use install
+--source <marketplace-root>` 一次，或者将 `computerUse.marketplacePath` 设置为
+本地 marketplace 文件路径。仅当你拥有
+marketplace JSON 文件路径时才使用 `--marketplace-path`，不要使用捆绑的 marketplace 根目录。
 
 ## 远程目录限制
 
@@ -269,11 +271,12 @@ Codex app-server 安装会将插件配置写回为启用状态。
 但本地 Computer Use 桥没有响应。退出或重启 Codex Computer Use，必要时重新启动
 Codex Desktop，然后在一个新的 OpenClaw 会话中重试。
 
-**A Computer Use tool says `Native hook relay unavailable`.** Codex 原生的
-工具钩子无法通过本地桥接或
-Gateway 回退连接到一个活动的 OpenClaw 中继。请使用 `/new` 或 `/reset` 开始一个新的 OpenClaw 会话。如果它
-仍然反复出现，请重启网关，以便旧的 app-server 线程和钩子
-注册被清除，然后重试。
+**A Computer Use tool says `Native hook relay unavailable`.** The Codex-native
+tool hook could not reach an active OpenClaw relay through the local bridge or
+Gateway fallback. Start a fresh OpenClaw session with `/new` or `/reset`. If it
+works once and then fails again on a later tool call, `/new` is only clearing the
+current attempt; restart the Codex app-server or OpenClaw Gateway so old threads
+and hook registrations are dropped, then retry in a fresh session.
 
 **回合开始自动安装拒绝某个 source。** 这是预期行为。先使用显式的
 `/codex computer-use install --source <marketplace-source>`

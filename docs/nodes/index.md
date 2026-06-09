@@ -216,7 +216,7 @@ Windows 和 macOS 伴随节点默认允许安全的已声明命令，例如
 
 如果节点正在显示 Canvas（WebView），`canvas.snapshot` 会返回 `{ format, base64 }`。
 
-CLI 辅助工具（写入临时文件并打印 `MEDIA:<path>`）：
+CLI helper (writes to a temp file and prints the saved path):
 
 ```bash
 openclaw nodes canvas snapshot --node <idOrNameOrIp> --format png
@@ -247,7 +247,9 @@ openclaw nodes canvas a2ui reset --node <idOrNameOrIp>
 
 注意：
 
+- 移动节点使用捆绑的应用自有 A2UI 页面来进行可执行操作的渲染。
 - 仅支持 A2UI v0.8 JSONL（v0.9/createSurface 会被拒绝）。
+- iOS 和 Android 会渲染远程 Gateway Canvas 页面，但 A2UI 按钮操作只会从捆绑的应用自有 A2UI 页面发出。在这些移动客户端上，Gateway 托管的 HTTP/HTTPS A2UI 页面仅用于渲染。
 
 ## 照片 + 视频（node camera）
 
@@ -327,6 +329,7 @@ openclaw nodes invoke --node <idOrNameOrIp> --command sms.send --params '{"to":"
 可用族：
 
 - `device.status`, `device.info`, `device.permissions`, `device.health`
+- `device.apps` 在 Android 设置中启用 Installed Apps sharing 时
 - `notifications.list`, `notifications.actions`
 - `photos.latest`
 - `contacts.search`, `contacts.add`
@@ -339,13 +342,15 @@ openclaw nodes invoke --node <idOrNameOrIp> --command sms.send --params '{"to":"
 
 ```bash
 openclaw nodes invoke --node <idOrNameOrIp> --command device.status --params '{}'
+openclaw nodes invoke --node <idOrNameOrIp> --command device.apps --params '{"limit":10}'
 openclaw nodes invoke --node <idOrNameOrIp> --command notifications.list --params '{}'
 openclaw nodes invoke --node <idOrNameOrIp> --command photos.latest --params '{"limit":1}'
 ```
 
 注意：
 
-- 运动相关命令由可用传感器能力限制。
+- `device.apps` 默认启用 opt-in，并返回对启动器可见的应用。
+- 运动命令受可用传感器能力门控。
 
 ## 系统命令（节点宿主 / mac 节点）
 
@@ -361,21 +366,23 @@ openclaw nodes invoke --node <idOrNameOrIp> --command system.which --params '{"n
 
 注意：
 
-- `system.run` 会在负载中返回 stdout/stderr/退出代码。
-- Shell 执行现在通过带有 `host=node` 的 `exec` 工具进行；`nodes` 仍然是显式节点命令的直接 RPC 入口。
-- `nodes invoke` 不公开 `system.run` 或 `system.run.prepare`；它们仍然只走 exec 路径。
-- exec 路径会在审批前准备一个规范化的 `systemRunPlan`。一旦获得审批，网关会转发该已存储的计划，而不是任何后续由调用方编辑过的 command/cwd/session 字段。
-- `system.notify` 会尊重 macOS 应用中的通知权限状态。
+- `system.run` 会在负载中返回 stdout/stderr/退出码。
+- Shell 执行现在通过带有 `host=node` 的 `exec` 工具进行；`nodes` 仍然是显式节点命令的直接 RPC 接口。
+- `nodes invoke` 不暴露 `system.run` 或 `system.run.prepare`；它们仅保留在 exec 路径上。
+- exec 路径会在批准前准备一个规范的 `systemRunPlan`。一旦
+  获得批准，gateway 会转发该已存储的计划，而不是后续
+  调用者编辑过的 command/cwd/session 字段。
+- `system.notify` 遵循 macOS 应用中的通知权限状态。
 - 未识别的节点 `platform` / `deviceFamily` 元数据会使用保守的默认允许列表，其中不包含 `system.run` 和 `system.which`。如果你确实需要在未知平台上使用这些命令，请通过 `gateway.nodes.allowCommands` 显式添加。
 - `system.run` 支持 `--cwd`、`--env KEY=VAL`、`--command-timeout` 和 `--needs-screen-recording`。
-- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求作用域内的 `--env` 值会被缩减到一个显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
-- 对于 allow-always 决策，在 allowlist 模式下，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果展开不安全，则不会自动持久化 allowlist 条目。
-- 在 allowlist 模式下的 Windows 节点宿主中，经由 `cmd.exe /c` 的 shell 包装器运行需要审批（仅有 allowlist 条目不会自动允许该包装器形式）。
+- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的 `--env` 值会缩减为显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
+- 对于 allowlist 模式下的始终允许决策，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会保留内部可执行文件路径，而不是包装器路径。如果无法安全展开，则不会自动持久化任何 allowlist 条目。
+- 在 Windows 节点主机的 allowlist 模式下，通过 `cmd.exe /c` 运行 shell 包装器需要批准（仅有 allowlist 条目不会自动允许该包装器形式）。
 - `system.notify` 支持 `--priority <passive|active|timeSensitive>` 和 `--delivery <system|overlay|auto>`。
-- 节点宿主会忽略 `PATH` 覆盖，并剥离危险的启动/ shell 键（`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`）。如果你需要额外的 PATH 条目，请配置节点宿主服务环境（或将工具安装到标准位置），不要通过 `--env` 传入 `PATH`。
-- 在 macOS 节点模式下，`system.run` 由 macOS 应用中的 exec 审批进行限制（设置 → Exec approvals）。
-  ask/allowlist/full 的行为与无界面节点宿主相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
-- 在无界面节点宿主上，`system.run` 由 exec 审批（`~/.openclaw/exec-approvals.json`）进行限制。
+- 节点主机会忽略 `PATH` 覆盖，并移除危险的启动/ shell 键（`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`）。如果你需要额外的 PATH 条目，请配置节点主机服务环境（或将工具安装到标准位置），而不是通过 `--env` 传递 `PATH`。
+- 在 macOS node 模式下，`system.run` 受 macOS 应用中的 exec 批准（Settings → Exec approvals）限制。
+  ask/allowlist/full 的行为与无界面 node 主机相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
+- 在无界面 node 主机上，`system.run` 受 exec 批准（`~/.openclaw/exec-approvals.json`）限制。
 
 ## Exec 节点绑定
 

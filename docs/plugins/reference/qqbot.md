@@ -1,18 +1,18 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 QQ Bot 通道表面。"
+summary: "OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。"
 read_when:
-  - You are installing, configuring, or auditing the qqbot plugin
+  - 你正在安装、配置或审计 qqbot 插件
 title: "QQ Bot 插件"
 ---
 
 # QQ Bot 插件
 
-为发送和接收 OpenClaw 消息添加 QQ Bot 通道表面。
+OpenClaw QQ Bot 用于群聊和私信工作流的频道插件。
 
 ## 分发
 
-- Package: `@openclaw/qqbot`
-- Install route: npm; ClawHub
+- 包：`@openclaw/qqbot`
+- 安装路径：npm; ClawHub
 
 ## 表面
 

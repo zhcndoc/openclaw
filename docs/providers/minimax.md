@@ -6,7 +6,7 @@ read_when:
 title: "MiniMax"
 ---
 
-OpenClaw 的 MiniMax 提供程序默认使用 **MiniMax M2.7**。
+OpenClaw 的 MiniMax 提供程序默认使用 **MiniMax M3**。
 
 MiniMax 还提供：
 
@@ -26,14 +26,15 @@ MiniMax 还提供：
 
 | 模型                      | 类型              | 描述                              |
 | ------------------------ | ---------------- | ---------------------------------------- |
-| `MiniMax-M2.7`           | 对话（推理） | 默认托管推理模型           |
-| `MiniMax-M2.7-highspeed` | 对话（推理） | 更快的 M2.7 推理层               |
-| `MiniMax-VL-01`          | 视觉           | 图像理解模型                |
-| `image-01`               | 图像生成 | 文生图和图生图编辑 |
-| `music-2.6`              | 音乐生成 | 默认音乐模型                      |
-| `music-2.5`              | 音乐生成 | 之前的音乐生成层             |
-| `music-2.0`              | 音乐生成 | 旧版音乐生成层             |
-| `MiniMax-Hailuo-2.3`     | 视频生成 | 文本生成视频和图像参考流程  |
+| `MiniMax-M3`             | Chat (reasoning) | 默认托管推理模型           |
+| `MiniMax-M2.7`           | Chat (reasoning) | 之前的托管推理模型          |
+| `MiniMax-M2.7-highspeed` | Chat (reasoning) | 更快的 M2.7 推理等级               |
+| `MiniMax-VL-01`          | Vision           | 图像理解模型                |
+| `image-01`               | Image generation | 文生图和图生图编辑 |
+| `music-2.6`              | Music generation | 默认音乐模型                      |
+| `music-2.5`              | Music generation | 之前的音乐生成等级           |
+| `music-2.0`              | Music generation | 旧版音乐生成等级             |
+| `MiniMax-Hailuo-2.3`     | Video generation | 文生视频和图像参考流程  |
 
 ## 快速开始
 
@@ -79,7 +80,7 @@ MiniMax 还提供：
     </Tabs>
 
     <Note>
-    OAuth 设置使用 `minimax-portal` 提供程序 id。模型引用格式为 `minimax-portal/MiniMax-M2.7`。
+    OAuth 设置使用 `minimax-portal` 提供程序 id。模型引用遵循 `minimax-portal/MiniMax-M3` 这种形式。
     </Note>
 
     <Tip>
@@ -131,7 +132,7 @@ MiniMax 还提供：
     ```json5
     {
       env: { MINIMAX_API_KEY: "sk-..." },
-      agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
+      agents: { defaults: { model: { primary: "minimax/MiniMax-M3" } } },
       models: {
         mode: "merge",
         providers: {
@@ -140,6 +141,15 @@ MiniMax 还提供：
             apiKey: "${MINIMAX_API_KEY}",
             api: "anthropic-messages",
             models: [
+              {
+                id: "MiniMax-M3",
+                name: "MiniMax M3",
+                reasoning: true,
+                input: ["text", "image"],
+                cost: { input: 0.6, output: 2.4, cacheRead: 0.12, cacheWrite: 0 },
+                contextWindow: 1000000,
+                maxTokens: 131072,
+              },
               {
                 id: "MiniMax-M2.7",
                 name: "MiniMax M2.7",
@@ -166,11 +176,11 @@ MiniMax 还提供：
     ```
 
     <Warning>
-    在 Anthropic 兼容的流式路径中，除非你显式设置 `thinking`，否则 OpenClaw 默认会禁用 MiniMax thinking。MiniMax 的流式端点会在 OpenAI 风格的 delta 分块中输出 `reasoning_content`，而不是原生 Anthropic thinking 块；如果隐式保持启用，可能会将内部推理泄露到可见输出中。
+    在 Anthropic 兼容的流式路径中，OpenClaw 默认会禁用 MiniMax M2.x 的思考，除非你显式自行设置 `thinking`。M2.x 的流式端点以 OpenAI 风格的 delta 块输出 `reasoning_content`，而不是原生 Anthropic thinking 块；如果隐式启用，可能会把内部推理泄漏到可见输出中。MiniMax-M3（以及向前兼容的 M3.x）不受此默认限制：M3 会输出正确的 Anthropic thinking 块，并且需要启用 thinking 才能产生可见内容，因此 OpenClaw 会让 M3 走提供程序省略/自适应 thinking 路径。
     </Warning>
 
     <Note>
-    API key 设置使用 `minimax` 提供程序 id。模型引用格式为 `minimax/MiniMax-M2.7`。
+    API key 设置使用 `minimax` 提供程序 id。模型引用遵循 `minimax/MiniMax-M3` 这种形式。
     </Note>
 
   </Tab>
@@ -242,10 +252,7 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
 中国区端点；默认的国际端点为
 `https://api.minimax.io`。
 
-当初始化或 API key 设置写入显式的 `models.providers.minimax`
-条目时，OpenClaw 会将 `MiniMax-M2.7` 和
-`MiniMax-M2.7-highspeed` 实化为仅文本聊天模型。图像理解则
-通过插件拥有的 `MiniMax-VL-01` 媒体提供程序单独暴露。
+当写入显式的 `models.providers.minimax` 条目进行 onboarding 或 API key 设置时，OpenClaw 会将 `MiniMax-M3`、`MiniMax-M2.7` 和 `MiniMax-M2.7-highspeed` 实例化为聊天模型。M3 声明支持文本和图像输入；图像理解仍然通过插件拥有的 `MiniMax-VL-01` 媒体提供程序单独暴露。
 
 <Note>
 有关共享工具参数、提供程序选择和故障转移行为，请参见 [图像生成](/tools/image-generation)。
@@ -273,14 +280,14 @@ MiniMax 插件为 `image_generate` 工具注册了 `image-01` 模型。它支持
   `file_type: "opus"` 作为原生音频消息。
 - MiniMax T2A 接受小数 `speed` 和 `vol`，但 `pitch` 以整数发送；OpenClaw 会在 API 请求前截断小数 `pitch` 值。
 
-| 设置                                  | 环境变量                | 默认值                       | 描述                      |
-| ---------------------------------------- | ---------------------- | ----------------------------- | -------------------------------- |
-| `messages.tts.providers.minimax.baseUrl` | `MINIMAX_API_HOST`     | `https://api.minimax.io`      | MiniMax T2A API 主机。            |
-| `messages.tts.providers.minimax.model`   | `MINIMAX_TTS_MODEL`    | `speech-2.8-hd`               | TTS 模型 id。                    |
-| `messages.tts.providers.minimax.voiceId` | `MINIMAX_TTS_VOICE_ID` | `English_expressive_narrator` | 用于语音输出的音色 id。 |
-| `messages.tts.providers.minimax.speed`   |                        | `1.0`                         | 播放速度，`0.5..2.0`。      |
-| `messages.tts.providers.minimax.vol`     |                        | `1.0`                         | 音量，`(0, 10]`。               |
-| `messages.tts.providers.minimax.pitch`   |                        | `0`                           | 整数音高偏移，`-12..12`。  |
+| Setting                                         | Env var                | Default                       | Description                      |
+| ----------------------------------------------- | ---------------------- | ----------------------------- | -------------------------------- |
+| `messages.tts.providers.minimax.baseUrl`        | `MINIMAX_API_HOST`     | `https://api.minimax.io`      | MiniMax T2A API host.            |
+| `messages.tts.providers.minimax.model`          | `MINIMAX_TTS_MODEL`    | `speech-2.8-hd`               | TTS model id.                    |
+| `messages.tts.providers.minimax.speakerVoiceId` | `MINIMAX_TTS_VOICE_ID` | `English_expressive_narrator` | Voice id used for speech output. |
+| `messages.tts.providers.minimax.speed`          |                        | `1.0`                         | Playback speed, `0.5..2.0`.      |
+| `messages.tts.providers.minimax.vol`            |                        | `1.0`                         | Volume, `(0, 10]`.               |
+| `messages.tts.providers.minimax.pitch`          |                        | `0`                           | Integer pitch shift, `-12..12`.  |
 
 ### 音乐生成
 
@@ -349,7 +356,7 @@ MiniMax 插件将图像理解与文本目录分开注册：
 | `minimax`        | `MiniMax-VL-01`     |
 | `minimax-portal` | `MiniMax-VL-01`     |
 
-这就是为什么即使捆绑的文本提供程序目录仍然只显示仅文本的 M2.7 聊天引用，自动媒体路由也可以使用 MiniMax 图像理解。
+这就是为什么即使捆绑的文本提供程序目录也包含支持图像的 M3 聊天引用，自动媒体路由仍然可以使用 MiniMax 图像理解。
 
 ### 网页搜索
 
@@ -384,11 +391,12 @@ MiniMax 插件还通过 MiniMax Token Plan
     | `models.mode` | 如果你想在内置模型之外添加 MiniMax，请保持 `merge` |
   </Accordion>
 
-  <Accordion title="思考默认值">
-    在 `api: "anthropic-messages"` 下，OpenClaw 会注入 `thinking: { type: "disabled" }`，除非在参数/配置中已经显式设置了 thinking。
+  <Accordion title="Thinking 默认值">
+    在 `api: "anthropic-messages"` 下，OpenClaw 会为 MiniMax M2.x 模型注入 `thinking: { type: "disabled" }`，除非在 params/config 中已经显式设置了 thinking。
 
-    这可以防止 MiniMax 的流式端点在 OpenAI 风格的 delta chunk 中输出 `reasoning_content`，从而将内部推理泄露到可见输出中。
+    这可以防止 M2.x 的流式端点在 OpenAI 风格的 delta chunk 中输出 `reasoning_content`，从而将内部推理泄露到可见输出中。
 
+    MiniMax-M3（以及 M3.x）不受此影响：M3 会输出正确的 Anthropic thinking block，并且在禁用 thinking 时返回空的 `content` 数组和 `stop_reason: "end_turn"`，因此该包装器会让 M3 走提供商省略/adaptive thinking 路径。
   </Accordion>
 
   <Accordion title="快速模式">
@@ -424,21 +432,20 @@ MiniMax 插件还通过 MiniMax Token Plan
     - OpenClaw 会将 MiniMax coding-plan 使用量规范化为与其他提供商相同的 `% 剩余` 显示。MiniMax 原始的 `usage_percent` / `usagePercent` 字段表示剩余额度，而不是已消耗额度，因此 OpenClaw 会将其取反。若存在按数量统计的字段，则以其为准。
     - 当 API 返回 `model_remains` 时，OpenClaw 会优先选择 chat-model 条目，在需要时从 `start_time` / `end_time` 推导窗口标签，并在计划标签中包含所选模型名称，以便更容易区分 coding-plan 窗口。
     - 使用快照会将 `minimax`、`minimax-cn` 和 `minimax-portal` 视为同一个 MiniMax 配额面，并且会优先使用已存储的 MiniMax OAuth，然后再回退到 Coding Plan 密钥环境变量。
-
   </Accordion>
 </AccordionGroup>
 
 ## 注意事项
 
-- 模型引用遵循认证路径：
-  - API key 设置：`minimax/<model>`
-  - OAuth 设置：`minimax-portal/<model>`
-- 默认聊天模型：`MiniMax-M2.7`
-- 备用聊天模型：`MiniMax-M2.7-highspeed`
-- 入门流程和直接 API key 设置会为两个 M2.7 变体写入仅文本的模型定义
-- 图像理解使用由插件拥有的 `MiniMax-VL-01` 媒体提供商
-- 如果你需要精确的成本跟踪，请在 `models.json` 中更新定价值
-- 使用 `openclaw models list` 确认当前提供商 id，然后切换到 `openclaw models set minimax/MiniMax-M2.7` 或 `openclaw models set minimax-portal/MiniMax-M2.7`
+- Model refs follow the auth path:
+  - API-key setup: `minimax/<model>`
+  - OAuth setup: `minimax-portal/<model>`
+- Default chat model: `MiniMax-M3`
+- Alternate chat models: `MiniMax-M2.7`, `MiniMax-M2.7-highspeed`
+- Onboarding and direct API-key setup write model definitions for M3 and both M2.7 variants
+- Image understanding uses the plugin-owned `MiniMax-VL-01` media provider
+- Update pricing values in `models.json` if you need exact cost tracking
+- Use `openclaw models list` to confirm the current provider id, then switch with `openclaw models set minimax/MiniMax-M3` or `openclaw models set minimax-portal/MiniMax-M3`
 
 <Tip>
 MiniMax Coding Plan 推荐链接（立减 10%）：[MiniMax Coding Plan](https://platform.minimax.io/subscribe/coding-plan?code=DbXJTRClnb&source=link)
@@ -451,8 +458,8 @@ MiniMax Coding Plan 推荐链接（立减 10%）：[MiniMax Coding Plan](https:/
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title='"Unknown model: minimax/MiniMax-M2.7"'>
-    这通常意味着 **MiniMax 提供商未配置**（未找到匹配的提供商条目，也未找到 MiniMax 认证配置文件/环境变量密钥）。对此检测的修复已包含在 **2026.1.12** 中。可通过以下方式修复：
+  <Accordion title='"Unknown model: minimax/MiniMax-M3"'>
+    这通常意味着 **MiniMax provider 未配置**（没有匹配的 provider 条目，也没有找到 MiniMax auth profile/env key）。针对这一检测的修复已包含在 **2026.1.12** 中。修复方法：
 
     - 升级到 **2026.1.12**（或从源代码 `main` 运行），然后重启网关。
     - 运行 `openclaw configure` 并选择一个 **MiniMax** 认证选项，或
@@ -461,8 +468,8 @@ MiniMax Coding Plan 推荐链接（立减 10%）：[MiniMax Coding Plan](https:/
 
     请确保模型 id **区分大小写**：
 
-    - API key 路径：`minimax/MiniMax-M2.7` 或 `minimax/MiniMax-M2.7-highspeed`
-    - OAuth 路径：`minimax-portal/MiniMax-M2.7` 或 `minimax-portal/MiniMax-M2.7-highspeed`
+    - API-key path: `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7`, or `minimax/MiniMax-M2.7-highspeed`
+    - OAuth path: `minimax-portal/MiniMax-M3`, `minimax-portal/MiniMax-M2.7`, or `minimax-portal/MiniMax-M2.7-highspeed`
 
     然后重新检查：
 

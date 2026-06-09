@@ -1,37 +1,41 @@
 ---
-summary: "技能配置架构与示例"
+title: "Skills 配置"
+sidebarTitle: "Skills 配置"
+summary: "skills.* 配置模式、agent 白名单、工作坊设置以及沙箱环境变量处理的完整参考。"
 read_when:
-  - 添加或修改技能配置
-  - 调整捆绑白名单或安装行为
-title: "技能配置"
+  - 配置 skill 加载、安装或门控行为
+  - 设置按 agent 的 skill 可见性
+  - 调整 Skill Workshop 限制或审批策略
 ---
 
-大多数 skills 加载/安装配置都位于 `~/.openclaw/openclaw.json` 中的
-`skills` 下。与 agent 相关的技能可见性位于 `agents.defaults.skills` 和
-`agents.list[].skills` 下。
+大多数 skills 配置位于 `~/.openclaw/openclaw.json` 中的 `skills` 下。按 agent 的可见性位于 `agents.defaults.skills` 和 `agents.list[].skills` 下。
 
 ```json5
 {
   skills: {
     allowBundled: ["gemini", "peekaboo"],
     load: {
-      extraDirs: ["~/Projects/agent-scripts/skills", "~/Projects/oss/some-skill-pack/skills"],
+      extraDirs: ["~/Projects/agent-scripts/skills"],
       allowSymlinkTargets: ["~/Projects/manager/skills"],
       watch: true,
       watchDebounceMs: 250,
     },
     install: {
       preferBrew: true,
-      nodeManager: "npm", // npm | pnpm | yarn | bun（Gateway 运行时仍应使用 Node；不推荐 bun）
+      nodeManager: "npm",
       allowUploadedArchives: false,
+    },
+    workshop: {
+      autonomous: { enabled: false },
+      approvalPolicy: "pending",
+      maxPending: 50,
+      maxSkillBytes: 40000,
     },
     entries: {
       "image-lab": {
         enabled: true,
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // 或纯文本字符串
-        env: {
-          GEMINI_API_KEY: "GEMINI_KEY_HERE",
-        },
+        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" },
+        env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
       },
       peekaboo: { enabled: true },
       sag: { enabled: false },
@@ -40,85 +44,268 @@ title: "技能配置"
 }
 ```
 
-对于内置图像生成/编辑，优先使用 `agents.defaults.imageGenerationModel`
-加上核心的 `image_generate` 工具。`skills.entries.*` 仅用于自定义或第三方
-技能工作流。
+<Note>
+  对于内置图像生成，请使用 `agents.defaults.imageGenerationModel`
+  加上核心 `image_generate` 工具，而不是 `skills.entries`。Skill
+  条目仅用于自定义或第三方 skill 工作流。
+</Note>
 
-如果你选择了特定的图像提供商/模型，也要配置该提供商的认证/API 密钥。
-常见示例：`google/*` 使用 `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`，
-`openai/*` 使用 `OPENAI_API_KEY`，`fal/*` 使用 `FAL_KEY`。
+## 加载（`skills.load`）
 
-示例：
+<ParamField path="skills.load.extraDirs" type="string[]">
+  额外要扫描的 skill 目录，优先级最低（在捆绑和插件 skill 之后）。路径支持 `~` 展开。
+</ParamField>
 
-- 原生 Nano Banana Pro 风格设置：`agents.defaults.imageGenerationModel.primary: "google/gemini-3-pro-image-preview"`
-- 原生 fal 设置：`agents.defaults.imageGenerationModel.primary: "fal/fal-ai/flux/dev"`
+<ParamField path="skills.load.allowSymlinkTargets" type="string[]">
+  受信任的真实目标目录，符号链接的 skill 文件夹即使位于配置根目录之外，也可以解析到这些目录中。可用于有意的兄弟仓库布局，例如
+  `<workspace>/skills/manager -> ~/Projects/manager/skills`。请保持此列表范围很小——不要指向像 `~` 或 `~/Projects` 这样宽泛的根目录。
+</ParamField>
 
-## Agent 技能白名单
+<ParamField path="skills.load.watch" type="boolean" default="true">
+  监视 skill 文件夹，并在 `SKILL.md` 文件变更时刷新 skills 快照。覆盖分组 skill 根目录下的嵌套文件。
+</ParamField>
 
-当你希望同一台机器/工作区拥有相同的技能根目录，但每个 agent 的可见技能集不同
-时，请使用 agent 配置。
+<ParamField path="skills.load.watchDebounceMs" type="number" default="250">
+  skill 监视器事件的防抖窗口，单位为毫秒。
+</ParamField>
+
+## 安装（`skills.install`）
+
+<ParamField path="skills.install.preferBrew" type="boolean" default="true">
+  在 `brew` 可用时优先使用 Homebrew 安装器。
+</ParamField>
+
+<ParamField path="skills.install.nodeManager" type='"npm" | "pnpm" | "yarn" | "bun"' default='"npm"'>
+  skill 安装时偏好的 Node 包管理器。此项只影响 skill 安装——Gateway 运行时仍应使用 Node（不建议在 WhatsApp/Telegram 中使用 Bun）。使用 `openclaw setup --node-manager` 可设置 npm、pnpm 或 bun；为基于 Yarn 的 skill 安装请手动设置 `"yarn"`。
+</ParamField>
+
+<ParamField path="skills.install.allowUploadedArchives" type="boolean" default="false">
+  允许受信任的 `operator.admin` Gateway 客户端安装通过 `skills.upload.*` 暂存的私有 zip 压缩包。正常的 ClawHub 安装不需要此设置。
+</ParamField>
+
+## 操作员安装策略（`security.installPolicy`）
+
+当操作员需要一个受信任的本地命令来根据主机特定策略批准或阻止 skill 和插件安装时，请使用 `security.installPolicy`。该策略会在 OpenClaw 暂存源材料之后、安装或更新继续之前运行。它适用于 ClawHub skills、上传的 skills、Git/本地 skills、skill 依赖安装器，以及插件安装/更新源。
+
+```json5
+{
+  security: {
+    installPolicy: {
+      enabled: true,
+      // 省略 targets 可覆盖所有支持的目标。
+      targets: ["skill", "plugin"],
+      exec: {
+        source: "exec",
+        command: "/usr/local/bin/openclaw-install-policy",
+        args: ["--json"],
+        timeoutMs: 10000,
+        noOutputTimeoutMs: 10000,
+        maxOutputBytes: 1048576,
+        passEnv: ["OPENCLAW_STATE_DIR", "PATH"],
+        env: { POLICY_MODE: "strict" },
+        trustedDirs: ["/usr/local/bin"],
+      },
+    },
+  },
+}
+```
+
+<ParamField path="security.installPolicy.enabled" type="boolean" default="false">
+  启用操作员拥有的安装策略。启用但没有有效 `exec` 命令时，安装将失败并关闭。
+</ParamField>
+
+<ParamField path="security.installPolicy.targets" type='("skill" | "plugin")[]'>
+  可选的目标过滤器。省略时，策略会应用于每个受支持的目标，因此新的安装不会意外地失败并开放。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.command" type="string">
+  受信任策略可执行文件的绝对路径。OpenClaw 会在无 shell 的情况下运行它，并在使用前验证该路径。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.args" type="string[]">
+  在 `command` 之后传递的静态参数。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.timeoutMs" type="number" default="10000">
+  单次策略决策的最大墙钟运行时间。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.noOutputTimeoutMs" type="number" default="timeoutMs">
+  策略在没有 stdout 或 stderr 输出时，触发失败并关闭之前的最大时间。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.maxOutputBytes" type="number" default="1048576">
+  策略进程可接受的 stdout 和 stderr 合计最大字节数。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.env" type="Record<string, string>">
+  提供给策略进程的字面环境变量。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.passEnv" type="string[]">
+  从 OpenClaw 进程复制到策略进程的环境变量名。只会传递命名变量。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.trustedDirs" type="string[]">
+  可选的目录白名单，策略可执行文件可以位于其中。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.allowInsecurePath" type="boolean" default="false">
+  绕过命令路径所有权和权限检查。仅在该路径由其他机制保护时使用。
+</ParamField>
+
+<ParamField path="security.installPolicy.exec.allowSymlinkCommand" type="boolean" default="false">
+  允许配置的命令路径是符号链接。解析后的目标仍必须满足其他路径检查。解释器脚本参数必须是直接的普通文件，不能是符号链接。
+</ParamField>
+
+该策略在 stdin 上接收一个 JSON 对象，包含 `protocolVersion: 1`、`openclawVersion`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、可选的结构化 `source`、结构化 `origin` 和 `request`。它必须在 stdout 上写入一个 JSON 对象：`{ "protocolVersion": 1, "decision": "allow" }` 或 `{ "protocolVersion": 1, "decision": "block", "reason": "..." }`。非零退出、超时、JSON 格式错误、缺失字段或不支持的协议版本都会失败并关闭。
+
+OpenClaw 在正常 Gateway 启动期间不会执行安装策略。当策略已启用但不可用时，安装和更新会失败并关闭。`openclaw doctor` 执行静态验证，而 `openclaw doctor --deep` 会针对已配置的命令执行一个合成安装探针。
+
+批量更新会按目标分别应用策略：被阻止的 skill 或插件更新只会让该目标失败，不会禁用策略，也不会跳过批次中的后续目标。
+
+输入示例：
+
+```json
+{
+  "protocolVersion": 1,
+  "openclawVersion": "2026.6.1",
+  "targetType": "skill",
+  "targetName": "weather",
+  "sourcePath": "/var/folders/.../openclaw-skill-clawhub/root",
+  "sourcePathKind": "directory",
+  "source": {
+    "kind": "clawhub",
+    "authority": "openclaw",
+    "mutable": false,
+    "network": true
+  },
+  "origin": {
+    "type": "clawhub",
+    "registry": "https://clawhub.openclaw.ai",
+    "slug": "weather",
+    "version": "1.0.0"
+  },
+  "request": {
+    "kind": "skill-install",
+    "mode": "install",
+    "requestedSpecifier": "clawhub:weather@1.0.0"
+  },
+  "skill": {
+    "installId": "clawhub"
+  }
+}
+```
+
+最小策略命令：
+
+```js
+#!/usr/bin/env node
+
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  input += chunk;
+});
+process.stdin.on("end", () => {
+  const request = JSON.parse(input);
+  if (request.targetType === "plugin" && request.source?.kind === "local-path") {
+    process.stdout.write(
+      JSON.stringify({
+        protocolVersion: 1,
+        decision: "block",
+        reason: "本地主机上的插件路径未获批准",
+      }),
+    );
+    return;
+  }
+  process.stdout.write(JSON.stringify({ protocolVersion: 1, decision: "allow" }));
+});
+```
+
+## 捆绑 skill 白名单
+
+<ParamField path="skills.allowBundled" type="string[]">
+  仅适用于 **bundled** skills 的可选白名单。设置后，只有列表中的 bundled skills 才有资格。托管的、按 agent 的和 workspace skills 不受影响。
+</ParamField>
+
+## 按 skill 的条目（`skills.entries`）
+
+`entries` 下的键默认与 skill 的 `name` 匹配。如果某个 skill 定义了 `metadata.openclaw.skillKey`，则改用该键。带连字符的名称需要加引号（JSON5 允许带引号的键）。
+
+<ParamField path="skills.entries.<key>.enabled" type="boolean">
+  `false` 会禁用该 skill，即使它是 bundled 或已安装。`coding-agent` bundled skill 默认不启用——将其设为 `true`，并确保已安装并完成认证的 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一可用。
+</ParamField>
+
+<ParamField path="skills.entries.<key>.apiKey" type='string | { source, provider, id }'>
+  适用于声明了 `metadata.openclaw.primaryEnv` 的 skill 的便捷字段。支持明文字符串或 SecretRef：`{ source: "env", provider: "default", id: "VAR_NAME" }`。
+</ParamField>
+
+<ParamField path="skills.entries.<key>.env" type="Record<string, string>">
+  为 agent 运行注入的环境变量。仅在该变量尚未在进程中设置时才会注入。
+</ParamField>
+
+<ParamField path="skills.entries.<key>.config" type="object">
+  自定义按 skill 配置字段的可选对象。
+</ParamField>
+
+## Agent 允许列表（`agents`）
+
+当你希望使用相同的机器/工作区技能根目录，但为每个 agent 提供不同的可见技能集时，请使用 agent 配置。
 
 ```json5
 {
   agents: {
     defaults: {
-      skills: ["github", "weather"],
+      skills: ["github", "weather"], // 共享基线
     },
     list: [
-      { id: "writer" }, // 继承 defaults -> github, weather
-      { id: "docs", skills: ["docs-search"] }, // 替换 defaults
-      { id: "locked-down", skills: [] }, // 没有技能
+      { id: "writer" }, // 继承 github、weather
+      { id: "docs", skills: ["docs-search"] }, // 完全替换默认值
+      { id: "locked-down", skills: [] }, // 无技能
     ],
   },
 }
 ```
 
-规则：
+<ParamField path="agents.defaults.skills" type="string[]">
+  被 agent 继承的共享基线允许列表；适用于省略 `agents.list[].skills` 的 agent。
+  若完全省略，则默认不限制技能。
+</ParamField>
 
-- `agents.defaults.skills`：适用于未省略 `agents.list[].skills` 的 agent 的共享基础白名单。
-- 省略 `agents.defaults.skills` 可使默认情况下技能不受限制。
-- `agents.list[].skills`：该 agent 的显式最终技能集；它不会与 defaults 合并。
-- `agents.list[].skills: []`：为该 agent 暴露零个技能。
+<ParamField path="agents.list[].skills" type="string[]">
+  该 agent 的显式最终技能集。显式列表会**替换**继承的默认值，而不是合并。
+  设为 `[]` 可让该 agent 不暴露任何技能。
+</ParamField>
 
-## 字段
+## 工作室（`skills.workshop`）
 
-- 内置技能根目录始终包括 `~/.openclaw/skills`、`~/.agents/skills`、
-  `<workspace>/.agents/skills` 和 `<workspace>/skills`。
-- `allowBundled`：仅针对**捆绑**技能的可选白名单。设置后，只有列表中的
-  捆绑技能才有资格被使用（托管、agent 和工作区技能不受影响）。
-- `load.extraDirs`：要额外扫描的技能目录（优先级最低）。
-- `load.allowSymlinkTargets`：受信任的真实目标目录；符号链接的工作区、
-  project-agent 或 extra-dir 技能文件夹即使符号链接位于该目标根目录之外，
-  也可解析到这些目录中。适用于有意采用的相邻仓库布局，例如
-  `<workspace>/skills/manager -> ~/Projects/manager/skills`。托管的
-  `~/.openclaw/skills` 和个人的 `~/.agents/skills` 根目录默认可跟随来自本地技能管理器的
-  技能目录符号链接，但每个 `SKILL.md` 仍必须解析到其自身的技能目录内。
-- `load.watch`：监视技能文件夹并刷新技能快照（默认：true）。
-- `load.watchDebounceMs`：技能监视器事件的防抖时间，单位毫秒（默认：250）。
-- `install.preferBrew`：在可用时优先使用 brew 安装器（默认：true）。
-- `install.nodeManager`：Node 安装器偏好（`npm` | `pnpm` | `yarn` | `bun`，默认：npm）。
-  这只影响**技能安装**；Gateway 运行时仍应使用 Node
-  （WhatsApp/Telegram 不推荐使用 Bun）。
-  - `openclaw setup --node-manager` 范围更窄，目前接受 `npm`、
-    `pnpm` 或 `bun`。如果你想要基于 Yarn 的技能安装，请手动设置
-    `skills.install.nodeManager: "yarn"`。
-- `install.allowUploadedArchives`：允许受信任的 `operator.admin` Gateway
-  客户端安装通过 `skills.upload.*` 暂存的私有 zip 压缩包
-  （默认：false）。这只启用上传归档路径；正常的 ClawHub
-  安装不需要它。
-- `entries.<skillKey>`：每个技能的覆盖配置。
-- `agents.defaults.skills`：可选的默认技能白名单，由省略 `agents.list[].skills` 的 agent 继承。
-- `agents.list[].skills`：可选的每个 agent 最终技能白名单；显式
-  列表会替换继承的默认值，而不是合并。
+<ParamField path="skills.workshop.autonomous.enabled" type="boolean" default="false">
+  当为 `true` 时，agent 在成功轮次后可根据持久化对话信号创建待处理提案。
+  用户提示触发的技能创建始终会通过 Skill Workshop，不受此设置影响。
+</ParamField>
 
-## 符号链接的相邻仓库
+<ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"pending"'>
+  `pending` 需要操作员批准后，agent 才能发起 apply、reject 或 quarantine。
+  `auto` 则允许这些操作无需批准。
+</ParamField>
 
-默认情况下，工作区、project-agent、extra-dir 和捆绑技能根目录
-都是包含边界。如果 `<workspace>/skills` 下的某个技能文件夹是一个
-解析到 `<workspace>/skills` 之外的符号链接，OpenClaw 会跳过它并记录
-`Skipping escaped skill path outside its configured root`。
+<ParamField path="skills.workshop.maxPending" type="number" default="50">
+  每个工作区保留的待处理和已隔离提案上限。
+</ParamField>
 
-保留符号链接布局，并且仅允许受信任的目标根目录：
+<ParamField path="skills.workshop.maxSkillBytes" type="number" default="40000">
+  提案正文大小的最大字节数。由于提案描述会出现在发现和列表输出中，
+  因此其硬上限为 160 字节。
+</ParamField>
+
+## 符号链接的技能根目录
+
+默认情况下，workspace、project-agent、extra-dir 和 bundled 的技能根目录都属于
+内容边界。位于 `<workspace>/skills` 下、但解析后指向根目录之外的符号链接技能文件夹，
+会被跳过并记录日志。
+
+若要允许有意使用符号链接布局，请声明受信任目标：
 
 ```json5
 {
@@ -131,58 +318,67 @@ title: "技能配置"
 }
 ```
 
-使用此配置后，像
-`<workspace>/skills/manager -> ~/Projects/manager/skills` 这样的符号链接在
-realpath 解析后会被接受。`extraDirs` 也会直接扫描相邻仓库，而
-`allowSymlinkTargets` 则为现有的工作区技能布局保留符号链接路径。托管的
-`~/.openclaw/skills` 和个人的 `~/.agents/skills`
-目录已经允许技能目录符号链接，因为这些根目录属于用户拥有的本地技能管理器界面；但每个技能的 `SKILL.md` 仍然适用包含性限制。请保持目标条目足够窄；不要指向诸如 `~` 或
-`~/Projects` 之类的宽泛根目录，除非该根目录下的每个技能树都已被信任。
+使用此配置后，`<workspace>/skills/manager -> ~/Projects/manager/skills`
+在 realpath 解析后会被接受。`extraDirs` 会直接扫描同级仓库；
+`allowSymlinkTargets` 则为现有布局保留符号链接路径。
 
-按技能字段：
+受管理的 `~/.openclaw/skills` 和个人 `~/.agents/skills` 目录
+已经允许技能目录符号链接（但每个技能的 `SKILL.md` 仍受内容边界限制）。
 
-- `enabled`：即使技能已捆绑/安装，也可将其禁用时设为 `false`。
-- `env`：注入给 agent 运行时的环境变量（仅在尚未设置时生效）。
-- `apiKey`：适用于声明了主要环境变量的技能的可选便捷配置。
-  支持纯文本字符串或 SecretRef 对象（`{ source, provider, id }`）。
-
-## 说明
-
-- `entries` 下的键默认映射到技能名称。如果某个技能定义了
-  `metadata.openclaw.skillKey`，则使用该键代替。
-- 加载优先级为 `<workspace>/skills` → `<workspace>/.agents/skills` →
-  `~/.agents/skills` → `~/.openclaw/skills` → 捆绑技能 →
-  `skills.load.extraDirs`。
-- 在启用监视器时，对技能的更改会在下一个 agent 回合中被拾取。
-
-### 沙箱化的技能与环境变量
-
-当会话处于 **沙箱化** 状态时，技能进程会在配置好的沙箱后端内运行。该沙箱不会继承宿主机的 `process.env`。
+## 沙箱化技能与环境变量
 
 <Warning>
-  全局 `env` 和 `skills.entries.<skill>.env`/`apiKey` 仅适用于 **宿主机** 运行。在沙箱内部它们不起作用，因此依赖 `GEMINI_API_KEY` 的技能会失败并显示 `apiKey not configured`，除非沙箱单独提供了该变量。
+  `skills.entries.<skill>.env` 和 `apiKey` 仅适用于**主机**运行。在沙箱内它们无效——
+  依赖 `GEMINI_API_KEY` 的技能会因为 `apiKey not configured` 而失败，除非沙箱单独提供了该变量。
 </Warning>
 
-请使用以下之一：
+将密钥传入 Docker 沙箱：
 
-- `agents.defaults.sandbox.docker.env` 用于 Docker 后端（或按 agent 配置的 `agents.list[].sandbox.docker.env`）。
-- 将环境变量烘焙进你的自定义沙箱镜像或远程沙箱环境中。
+```json5
+{
+  agents: {
+    defaults: {
+      sandbox: {
+        docker: {
+          env: { GEMINI_API_KEY: "your-key-here" },
+        },
+      },
+    },
+  },
+}
+```
 
-对于 Docker 沙箱，配置的 `sandbox.docker.env` 值会成为显式的容器环境变量。具有 Docker 守护进程访问权限的用户可以通过 Docker 元数据检查它们，因此在无法接受这种暴露时，请使用挂载的密钥文件、自定义镜像或其他交付路径。
+<Note>
+  拥有 Docker 守护进程访问权限的用户可以通过 Docker 元数据检查 `sandbox.docker.env` 的值。
+  如果无法接受这种暴露方式，请使用挂载的密钥文件、自定义镜像或其他传递路径。
+</Note>
+
+## 加载顺序提醒
+
+```text
+workspace/skills      (最高)
+workspace/.agents/skills
+~/.agents/skills
+~/.openclaw/skills
+bundled skills
+skills.load.extraDirs (最低)
+```
+
+当启用 watcher 时，对技能和配置的更改会在下一次新会话时生效；当 watcher 检测到更改时，则会在下一次 agent 轮次生效。
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="技能" href="/tools/skills" icon="puzzle-piece">
-    技能是什么，以及它们如何加载。
+  <Card title="Skills reference" href="/tools/skills" icon="puzzle-piece">
+    技能是什么、加载顺序、门控以及 `SKILL.md` 格式。
   </Card>
-  <Card title="创建技能" href="/tools/creating-skills" icon="hammer">
-    编写自定义技能包。
+  <Card title="Creating skills" href="/tools/creating-skills" icon="hammer">
+    编写自定义工作区技能。
   </Card>
-  <Card title="斜杠命令" href="/tools/slash-commands" icon="terminal">
-    原生命令目录和聊天指令。
+  <Card title="Skill Workshop" href="/tools/skill-workshop" icon="flask">
+    agent 草拟技能的提案队列。
   </Card>
-  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
-    `skills` 和 `agents.skills` 的完整 schema。
+  <Card title="Slash commands" href="/tools/slash-commands" icon="terminal">
+    原生斜杠命令目录和聊天指令。
   </Card>
 </CardGroup>

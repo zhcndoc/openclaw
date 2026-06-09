@@ -1,5 +1,5 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 Zalo 个人频道界面。"
+summary: "通过原生 zca-js 集成的 OpenClaw Zalo 个人账号插件。"
 read_when:
   - 你正在安装、配置或审计 zalouser 插件
 title: "Zalo 个人插件"
@@ -7,7 +7,7 @@ title: "Zalo 个人插件"
 
 # Zalo 个人插件
 
-为发送和接收 OpenClaw 消息添加 Zalo 个人频道界面。
+通过原生 zca-js 集成的 OpenClaw Zalo 个人账号插件。
 
 ## 分发
 

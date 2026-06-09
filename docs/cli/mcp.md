@@ -10,15 +10,32 @@ sidebarTitle: "MCP"
 
 `openclaw mcp` 有两个职责：
 
-- 使用 `openclaw mcp serve` 将 OpenClaw 作为 MCP 服务器运行
-- 使用 `list`、`show`、`set` 和 `unset` 管理 OpenClaw 拥有的出站 MCP 服务器定义
+- 使用 `openclaw mcp serve` 将 OpenClaw 作为一个 MCP 服务器运行
+- 使用 `list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 管理 OpenClaw 拥有的出站 MCP 服务器定义
 
 换句话说：
 
 - `serve` 是 OpenClaw 作为 MCP 服务器运行
-- `list` / `show` / `set` / `unset` 是 OpenClaw 作为 MCP 客户端侧注册表，用于其运行时后续可能消费的其他 MCP 服务器
+- 其他子命令则是 OpenClaw 作为 MCP 客户端侧注册表，用于管理其运行时后续可能消费的 MCP 服务器
 
 当 OpenClaw 应该自行托管一个编码 harness 会话并通过 ACP 路由该运行时时，请改用 [`openclaw acp`](/cli/acp)。
+
+## 选择合适的 MCP 路径
+
+OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归属方相匹配的路径。
+
+| 目标                                                                | 使用                                                                  | 原因                                                                                                             |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 让外部 MCP 客户端读取/发送 OpenClaw 频道对话 | `openclaw mcp serve`                                                 | OpenClaw 作为 MCP 服务器，通过 stdio 暴露由 Gateway 支持的对话。                                 |
+| 为 OpenClaw 托管的代理运行保存第三方 MCP 服务器        | `openclaw mcp add`, `set`, `configure`, `tools`, `login`             | OpenClaw 作为 MCP 客户端侧注册表，之后会将这些服务器投影到符合条件的运行时中。               |
+| 在不运行代理回合的情况下检查已保存的服务器                  | `openclaw mcp status`, `doctor`, `probe`                             | `status` 和 `doctor` 检查配置；`probe` 打开真实的 MCP 连接并列出能力。               |
+| 在浏览器中编辑 MCP 配置                                      | 控制界面 `/mcp`                                                    | 该页面显示清单、启用状态、OAuth/过滤摘要、命令提示以及一个有作用域的 `mcp` 编辑器。         |
+| 为 Codex app-server 提供一个有作用域的原生 MCP 服务器                    | `mcp.servers.<name>.codex`                                           | `codex` 块只影响 Codex app-server 线程投影，并且在传递给原生配置之前会被剥离。 |
+| 运行 ACP 托管的 harness 会话                                     | [`openclaw acp`](/cli/acp) 和 [ACP Agents](/tools/acp-agents-setup) | ACP 桥接模式不接受按会话注入 MCP 服务器；请改为配置 gateway/plugin 桥接。     |
+
+<Tip>
+如果你不确定需要哪条路径，可以先运行 `openclaw mcp status --verbose`。它会显示 OpenClaw 已保存的内容，而不会启动任何 MCP 服务器。
+</Tip>
 
 ## OpenClaw 作为 MCP 服务器
 
@@ -346,27 +363,41 @@ pnpm test:docker:mcp-channels
   </Accordion>
 </AccordionGroup>
 
-## 作为 MCP 客户端注册表的 OpenClaw
+我会保留原始 Markdown/HTML 结构，只翻译可见文本，并确保代码块里只动注释。现在开始逐段处理并保持格式不变。## 作为 MCP 客户端注册表的 OpenClaw
 
-这是 `openclaw mcp list`、`show`、`set` 和 `unset` 的路径。
+这是 `openclaw mcp list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、
+`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 路径。
 
 这些命令不会通过 MCP 暴露 OpenClaw。它们管理 OpenClaw 配置中 `mcp.servers` 下由 OpenClaw 拥有的 MCP 服务器定义。
 
-这些已保存的定义适用于 OpenClaw 后续启动或配置的运行时，例如嵌入式 Pi 和其他运行时适配器。OpenClaw 将这些定义集中存储，因此这些运行时不需要维护自己重复的 MCP 服务器列表。
+这些已保存的定义适用于 OpenClaw 之后会启动或配置的运行时，例如嵌入式 OpenClaw 和其他运行时适配器。OpenClaw 将这些定义集中存储，因此这些运行时无需维护各自重复的 MCP 服务器列表。
 
 <AccordionGroup>
   <Accordion title="重要行为">
-    - 这些命令只读取或写入 OpenClaw 配置
-    - 它们不会连接到目标 MCP 服务器
-    - 它们不会验证当前命令、URL 或远程传输是否可达
-    - 运行时适配器会在执行时决定它们实际支持哪些传输形式
-    - 嵌入式 Pi 会在普通 `coding` 和 `messaging` 工具配置文件中暴露已配置的 MCP 工具；`minimal` 仍然会隐藏它们，而 `tools.deny: ["bundle-mcp"]` 会显式禁用它们
-    - 作用域为会话的捆绑 MCP 运行时会在空闲 `mcp.sessionIdleTtlMs` 毫秒后被清理（默认 10 分钟；设为 `0` 可禁用），一次性嵌入式运行会在运行结束时清理它们
+    - 这些命令只会读取或写入 OpenClaw 配置
+    - `status`、`list`、`show`、不带 `--probe` 的 `doctor`、`set`、`configure`、`tools`、`logout`、`reload` 和 `unset` 不会连接到目标 MCP 服务器
+    - `login` 会对已配置的 HTTP 服务器执行 MCP OAuth 网络流程，并保存生成的本地凭据
+    - `status --verbose` 在不连接的情况下打印已解析的传输、认证、超时、过滤器和并行工具调用提示
+    - `doctor` 会检查已保存的定义是否存在本地设置问题，例如缺少 stdio 命令、无效的工作目录、缺失的 TLS 文件、已禁用的服务器、字面量敏感头/环境变量值以及未完成的 OAuth 授权
+    - `doctor --probe` 在静态检查通过后增加与 `probe` 相同的实时连接验证
+    - `probe` 会连接到所选服务器或所有已配置服务器，列出工具，并报告能力/诊断信息
+    - `add` 会根据标志构建定义，并在保存前进行探测，除非设置了 `--no-probe` 或需要先完成 OAuth 授权
+    - 运行时适配器会在执行时决定它们实际支持哪些传输形态
+    - `enabled: false` 会保留已保存的服务器，但会将其排除在嵌入式运行时发现之外
+    - `timeout` 和 `connectTimeout` 以秒为单位设置每个服务器的请求和连接超时
+    - `supportsParallelToolCalls: true` 用于标记适配器可以并发调用的服务器
+    - HTTP 服务器可以使用静态头、OAuth 登录、TLS 验证控制以及 mTLS 证书/密钥路径
+    - 嵌入式 OpenClaw 会在正常的 `coding` 和 `messaging` 工具配置中暴露已配置的 MCP 工具；`minimal` 仍会隐藏它们，而 `tools.deny: ["bundle-mcp"]` 会显式禁用它们
+    - 每个服务器的 `toolFilter.include` 和 `toolFilter.exclude` 会在 MCP 工具成为 OpenClaw 工具之前对发现到的工具进行过滤
+    - 声明了 resources 或 prompts 的服务器还会暴露用于列出/读取资源以及列出/获取 prompts 的实用工具；这些生成的实用工具名称（`resources_list`、`resources_read`、`prompts_list`、`prompts_get`）使用相同的 include/exclude 过滤器
+    - 动态 MCP 工具列表变更会使该会话的缓存目录失效；下一次发现/使用会从服务器刷新
+    - 重复的 MCP 工具请求/协议失败会暂时暂停该服务器，以免单个损坏的服务器占用整个轮次
+    - 作用域为会话的打包 MCP 运行时会在 `mcp.sessionIdleTtlMs` 毫秒的空闲时间后被回收（默认 10 分钟；设为 `0` 可禁用），一次性嵌入式运行会在运行结束时清理它们
 
   </Accordion>
 </AccordionGroup>
 
-运行时适配器可能会将这个共享注册表规范化为其下游客户端所期望的形状。例如，嵌入式 Pi 直接使用 OpenClaw 的 `transport` 值，而 Claude Code 和 Gemini 接收 CLI 原生的 `type` 值，例如 `http`、`sse` 或 `stdio`。
+运行时适配器可能会将这个共享注册表规范化为其下游客户端所期望的形状。例如，嵌入式 OpenClaw 会直接消费 OpenClaw 的 `transport` 值，而 Claude Code 和 Gemini 则接收 CLI 原生的 `type` 值，例如 `http`、`sse` 或 `stdio`。
 
 Codex app-server 也支持每个服务器上的可选 `codex` 块。这是仅针对 Codex app-server 线程的 OpenClaw 投影元数据；它不会更改 ACP 会话、通用 Codex harness 配置或其他运行时适配器。使用非空的 `codex.agents` 可以将服务器仅投影到特定的 OpenClaw agent id。空的、空白的或无效的 agent 列表会被配置验证拒绝，并且会在运行时投影路径中被省略，而不是变成全局配置。使用 `codex.defaultToolsApprovalMode`（`auto`、`prompt` 或 `approve`）为受信任的服务器发出 Codex 原生的 `default_tools_approval_mode`。在将原生 `mcp_servers` 配置交给 Codex 之前，OpenClaw 会剥离 `codex` 元数据。
 
@@ -378,26 +409,213 @@ OpenClaw 还会在配置中存储一个轻量级的 MCP 服务器注册表，用
 
 - `openclaw mcp list`
 - `openclaw mcp show [name]`
+- `openclaw mcp status [--verbose]`
+- `openclaw mcp doctor [name] [--probe]`
+- `openclaw mcp probe [name]`
+- `openclaw mcp add <name> [flags]`
 - `openclaw mcp set <name> <json>`
+- `openclaw mcp configure <name> [flags]`
+- `openclaw mcp tools <name> [--include csv] [--exclude csv] [--clear]`
+- `openclaw mcp login <name> [--code code]`
+- `openclaw mcp logout <name>`
+- `openclaw mcp reload`
 - `openclaw mcp unset <name>`
 
 说明：
 
-- `list` 会按服务器名称排序。
+- `list` 会对服务器名称排序。
 - 不带名称的 `show` 会打印完整配置的 MCP 服务器对象。
-- `set` 期望在命令行中提供一个 JSON 对象值。
-- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。`openclaw mcp set` 还会将 CLI 原生的 `type: "http"` 规范化为相同的标准配置形状以兼容。
-- 如果指定名称的服务器不存在，`unset` 会失败。
+- `status` 会在不连接的情况下对已配置的传输进行分类。`--verbose` 会包含已解析的启动、超时、OAuth、过滤器和并行调用细节。
+- `doctor` 会在不连接的情况下执行静态检查。当命令还应验证已启用服务器是否能连接时，添加 `--probe`。
+- `probe` 会连接并报告工具数量、resources/prompts 支持、列表变更支持以及诊断信息。
+- `add` 接受 stdio 标志，例如 `--command`、`--arg`、`--env` 和 `--cwd`，或者 HTTP 标志，例如 `--url`、`--transport`、`--header`、`--auth oauth`、TLS、超时和工具选择标志。
+- `set` 期望在命令行上提供一个 JSON 对象值。
+- `configure` 会更新启用状态、工具过滤器、超时、OAuth、TLS 和并行工具调用提示，而不会替换整个服务器定义。
+- `tools` 会更新每个服务器的工具过滤器。include/exclude 条目是 MCP 工具名称和简单的 `*` 通配符。
+- `login` 会为配置了 `auth: "oauth"` 的 HTTP 服务器运行 OAuth 流程。首次运行会打印授权 URL；在批准后带上 `--code` 重新运行。
+- `logout` 会清除指定服务器已存储的 OAuth 凭据，但不会移除已保存的服务器定义。
+- `reload` 会释放缓存的进程内 MCP 运行时。另一个进程中的网关或代理进程仍然需要它们各自的 reload 或重启路径。
+- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。`openclaw mcp set` 也会为兼容性将 CLI 原生的 `type: "http"` 规范化为相同的规范配置形状。
+- 如果指定服务器不存在，`unset` 会失败。
 
 示例：
 
 ```bash
 openclaw mcp list
 openclaw mcp show context7 --json
+openclaw mcp status --verbose
+openclaw mcp doctor --probe
+openclaw mcp probe context7 --json
+openclaw mcp add memory --command npx --arg -y --arg @modelcontextprotocol/server-memory
 openclaw mcp set context7 '{"command":"uvx","args":["context7-mcp"]}'
+openclaw mcp tools context7 --include 'resolve-library-id,get-library-docs'
 openclaw mcp set docs '{"url":"https://mcp.example.com","transport":"streamable-http"}'
+openclaw mcp configure docs --timeout 20 --connect-timeout 5 --include 'search,read_*'
+openclaw mcp configure docs --auth oauth --oauth-scope 'docs.read'
+openclaw mcp login docs
+openclaw mcp logout docs
 openclaw mcp unset context7
 ```
+
+### 常见服务器配方
+
+这些示例只会保存服务器定义。之后运行 `openclaw mcp doctor --probe` 以证明服务器已启动并暴露工具。
+
+<Tabs>
+  <Tab title="文件系统">
+    ```bash
+    openclaw mcp add files \
+      --command npx \
+      --arg -y \
+      --arg @modelcontextprotocol/server-filesystem \
+      --arg "$HOME/Documents" \
+      --include 'read_file,list_directory,search_files'
+    openclaw mcp doctor files --probe
+    ```
+
+    将文件系统服务器的作用域限制在 agent 应该读取或编辑的最小目录树。
+
+  </Tab>
+  <Tab title="内存">
+    ```bash
+    openclaw mcp add memory \
+      --command npx \
+      --arg -y \
+      --arg @modelcontextprotocol/server-memory
+    openclaw mcp probe memory --json
+    ```
+
+    如果服务器暴露了不应向普通 agent 提供的写入工具，请使用工具过滤器。
+
+  </Tab>
+  <Tab title="本地脚本">
+    ```bash
+    openclaw mcp add local-tools \
+      --command node \
+      --arg ./dist/mcp-server.js \
+      --cwd /srv/openclaw-tools \
+      --env API_BASE=https://internal.example
+    openclaw mcp status --verbose
+    ```
+
+    `doctor` 会检查 `cwd` 是否存在，以及该命令是否能从已配置的环境中解析出来。
+
+  </Tab>
+  <Tab title="远程 HTTP">
+    ```bash
+    openclaw mcp add docs \
+      --url https://mcp.example.com/mcp \
+      --transport streamable-http \
+      --auth oauth \
+      --oauth-scope docs.read \
+      --timeout 20 \
+      --connect-timeout 5 \
+      --include 'search,read_*'
+    openclaw mcp doctor docs --probe
+    ```
+
+    当远程服务器支持 OAuth 时请使用它。如果服务器需要静态头，请避免提交字面量 bearer token。
+
+  </Tab>
+  <Tab title="桌面/CUA">
+    ```bash
+    openclaw mcp set cua-driver '{"command":"cua-driver","args":["mcp"]}'
+    openclaw mcp tools cua-driver --include 'list_apps,observe,click,type'
+    openclaw mcp doctor cua-driver --probe
+    ```
+
+    直接的桌面控制服务器会继承其启动进程的权限。请使用较窄的工具过滤器和操作系统级权限提示。
+
+  </Tab>
+</Tabs>
+
+### JSON 输出形状
+
+脚本和仪表盘请使用 `--json`。字段集可能会随着时间增长，因此消费者应忽略未知键。
+
+<AccordionGroup>
+  <Accordion title="status --json">
+    ```json
+    {
+      "path": "/home/user/.openclaw/openclaw.json",
+      "servers": [
+        {
+          "name": "docs",
+          "configured": true,
+          "enabled": true,
+          "ok": true,
+          "transport": "streamable-http",
+          "launch": "streamable-http https://mcp.example.com/mcp",
+          "auth": "oauth",
+          "authStatus": {
+            "hasTokens": true,
+            "hasClientInformation": true,
+            "hasCodeVerifier": false,
+            "hasDiscoveryState": true,
+            "hasLastAuthorizationUrl": false
+          },
+          "requestTimeoutMs": 20000,
+          "connectionTimeoutMs": 5000,
+          "toolFilter": {
+            "include": ["search", "read_*"],
+            "exclude": []
+          },
+          "supportsParallelToolCalls": true
+        }
+      ]
+    }
+    ```
+  </Accordion>
+  <Accordion title="doctor --json">
+    ```json
+    {
+      "ok": false,
+      "path": "/home/user/.openclaw/openclaw.json",
+      "servers": [
+        {
+          "name": "docs",
+          "ok": false,
+          "issues": [
+            {
+              "level": "error",
+              "message": "OAuth 凭据未授权；请运行 openclaw mcp login docs"
+            }
+          ]
+        }
+      ]
+    }
+    ```
+
+    当任何已启用且被检查的服务器存在错误时，`doctor --json` 会以非零状态退出。警告会被报告，但不会单独导致命令失败。
+
+  </Accordion>
+  <Accordion title="probe --json">
+    ```json
+    {
+      "path": "/home/user/.openclaw/openclaw.json",
+      "generatedAt": "2026-05-31T09:00:00.000Z",
+      "servers": {
+        "docs": {
+          "launch": "streamable-http https://mcp.example.com/mcp",
+          "tools": 2,
+          "resources": true,
+          "prompts": false,
+          "listChanged": {
+            "tools": true,
+            "resources": false,
+            "prompts": false
+          }
+        }
+      },
+      "tools": ["docs__read_page", "docs__search"],
+      "diagnostics": []
+    }
+    ```
+
+    `probe` 会打开一个实时 MCP 客户端会话。请将其用于可达性和能力证明，而不是用于静态配置审计。
+
+  </Accordion>
+</AccordionGroup>
 
 示例配置形状：
 
@@ -411,7 +629,21 @@ openclaw mcp unset context7
       },
       "docs": {
         "url": "https://mcp.example.com",
-        "transport": "streamable-http"
+        "transport": "streamable-http",
+        "timeout": 20,
+        "connectTimeout": 5,
+        "supportsParallelToolCalls": true,
+        "auth": "oauth",
+        "oauth": {
+          "scope": "docs.read"
+        },
+        "sslVerify": true,
+        "clientCert": "/path/to/client.crt",
+        "clientKey": "/path/to/client.key",
+        "toolFilter": {
+          "include": ["search_*"],
+          "exclude": ["admin_*"]
+        }
       }
     }
   }
@@ -432,7 +664,7 @@ openclaw mcp unset context7
 <Warning>
 **Stdio 环境变量安全过滤器**
 
-OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `NODE_OPTIONS`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4` 以及类似的运行时控制变量。启动时会因配置错误拒绝这些变量，因此它们不能注入隐式前置内容、替换解释器或针对 stdio 进程启用调试器。普通的凭据、代理和服务器特定环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
+OpenClaw 会拒绝那些可能在第一次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境变量键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4` 以及类似的运行时控制变量。启动时会以配置错误拒绝这些变量，这样它们就无法向 stdio 进程注入隐式前导代码、替换解释器、启用调试器或重定向运行时输出。普通的凭据、代理和服务器特定环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
 
 如果你的 MCP 服务器确实需要其中某个被阻止的变量，请将其设置在网关主机进程上，而不是放在 stdio 服务器的 `env` 下。
 </Warning>
@@ -441,11 +673,17 @@ OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启�
 
 通过 HTTP Server-Sent Events 连接到远程 MCP 服务器。
 
-| 字段                 | 说明                                                      |
-| --------------------- | --------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                    |
-| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                     |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）               |
+| 字段                          | 说明                                                      |
+| ----------------------------- | --------------------------------------------------------- |
+| `url`                         | 远程服务器的 HTTP 或 HTTPS URL（必需）                    |
+| `headers`                     | 可选的 HTTP 头键值映射（例如认证令牌）                    |
+| `connectionTimeoutMs`         | 每个服务器的连接超时，单位为 ms（可选）                  |
+| `connectTimeout`              | 每个服务器的连接超时，单位为秒（可选）                  |
+| `timeout` / `requestTimeoutMs` | 每个服务器的 MCP 请求超时，单位为秒或 ms                 |
+| `auth: "oauth"`               | 使用 MCP OAuth 令牌存储和 `openclaw mcp login`           |
+| `sslVerify`                   | 仅对显式信任的私有 HTTPS 端点设置为 false                 |
+| `clientCert` / `clientKey`    | mTLS 客户端证书和密钥路径                                |
+| `supportsParallelToolCalls`   | 提示此服务器可安全进行并发调用                            |
 
 示例：
 
@@ -455,6 +693,8 @@ OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启�
     "servers": {
       "remote-tools": {
         "url": "https://mcp.example.com",
+        "auth": "oauth",
+        "timeout": 20,
         "headers": {
           "Authorization": "Bearer <token>"
         }
@@ -464,20 +704,78 @@ OpenClaw 会拒绝那些可能在首次 RPC 之前改变 stdio MCP 服务器启�
 }
 ```
 
-`url` 中的敏感值（userinfo）和 `headers` 会在日志和状态输出中被隐藏。
+`url` 中的敏感值（userinfo）和 `headers` 会在日志和状态输出中被脱敏。`openclaw mcp doctor` 会在 `headers` 或 `env` 条目包含字面量值时发出警告，以便操作员将这些值移出已提交的配置。
+
+### OAuth 工作流
+
+OAuth 适用于声明了 MCP OAuth 流程的 HTTP MCP 服务器。在启用 `auth: "oauth"` 时，服务器上的静态 `Authorization` 头会被忽略。
+
+<Steps>
+  <Step title="保存服务器">
+    使用 `auth: "oauth"` 和任何可选的 OAuth 元数据添加或更新服务器。
+
+    ```bash
+    openclaw mcp set docs '{"url":"https://mcp.example.com/mcp","transport":"streamable-http","auth":"oauth","oauth":{"scope":"docs.read"}}'
+    ```
+
+  </Step>
+  <Step title="开始登录">
+    运行登录以创建授权请求。
+
+    ```bash
+    openclaw mcp login docs
+    ```
+
+    OpenClaw 会打印授权 URL，并将临时的 OAuth verifier 状态存储在 OpenClaw 状态目录下。
+
+  </Step>
+  <Step title="使用 code 完成">
+    在浏览器中批准后，将返回的 code 传回给 OpenClaw。
+
+    ```bash
+    openclaw mcp login docs --code abc123
+    ```
+
+  </Step>
+  <Step title="检查授权">
+    使用 status 或 doctor 确认令牌已存在。
+
+    ```bash
+    openclaw mcp status --verbose
+    openclaw mcp doctor docs --probe
+    ```
+
+  </Step>
+  <Step title="清除凭据">
+    Logout 会移除已存储的 OAuth 凭据，但会保留已保存的服务器定义。
+
+    ```bash
+    openclaw mcp logout docs
+    ```
+
+  </Step>
+</Steps>
+
+如果提供方轮换了令牌，或者授权状态卡住了，请运行 `openclaw mcp logout <name>`，然后重复 `login`。即使 `auth: "oauth"` 已从配置中移除，只要服务器名称和 URL 仍然能标识该凭据存储条目，`logout` 也可以清除已保存 HTTP 服务器的凭据。
 
 ### Streamable HTTP 传输
 
 `streamable-http` 是与 `sse` 和 `stdio` 并列的另一种传输选项。它使用 HTTP 流式传输与远程 MCP 服务器进行双向通信。
 
-| 字段                 | 说明                                                                            |
-| --------------------- | -------------------------------------------------------------------------------- |
-| `url`                 | 远程服务器的 HTTP 或 HTTPS URL（必需）                                          |
-| `transport`           | 设为 `"streamable-http"` 以选择此传输；如果省略，OpenClaw 将使用 `sse`          |
-| `headers`             | HTTP 头的可选键值映射（例如认证令牌）                                           |
-| `connectionTimeoutMs` | 每个服务器的连接超时时间，单位为 ms（可选）                                     |
+| 字段                          | 说明                                                                            |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `url`                         | 远程服务器的 HTTP 或 HTTPS URL（必需）                                           |
+| `transport`                   | 设为 `"streamable-http"` 以选择此传输；省略时，OpenClaw 使用 `sse`              |
+| `headers`                     | 可选的 HTTP 头键值映射（例如认证令牌）                                           |
+| `connectionTimeoutMs`         | 每个服务器的连接超时，单位为 ms（可选）                                         |
+| `connectTimeout`              | 每个服务器的连接超时，单位为秒（可选）                                         |
+| `timeout` / `requestTimeoutMs` | 每个服务器的 MCP 请求超时，单位为秒或 ms                                        |
+| `auth: "oauth"`               | 使用 MCP OAuth 令牌存储和 `openclaw mcp login`                                  |
+| `sslVerify`                   | 仅对显式信任的私有 HTTPS 端点设置为 false                                       |
+| `clientCert` / `clientKey`    | mTLS 客户端证书和密钥路径                                                       |
+| `supportsParallelToolCalls`   | 提示此服务器可安全进行并发调用                                                   |
 
-OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过 `openclaw mcp set` 保存时会接受 CLI 原生的 MCP `type: "http"` 值，并由 `openclaw doctor --fix` 修复现有配置，但 `transport` 才是嵌入式 Pi 直接使用的值。
+OpenClaw 配置使用 `transport: "streamable-http"` 作为规范写法。通过 `openclaw mcp set` 保存时会接受 CLI 原生的 `type: "http"` 值，并由 `openclaw doctor --fix` 在现有配置中修复，但 `transport` 才是嵌入式 OpenClaw 直接消费的内容。
 
 示例：
 
@@ -488,7 +786,8 @@ OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过
       "streaming-tools": {
         "url": "https://mcp.example.com/stream",
         "transport": "streamable-http",
-        "connectionTimeoutMs": 10000,
+        "connectTimeout": 10,
+        "timeout": 30,
         "headers": {
           "Authorization": "Bearer <token>"
         }
@@ -499,8 +798,31 @@ OpenClaw 配置使用 `transport: "streamable-http"` 作为标准写法。通过
 ```
 
 <Note>
-这些命令只管理已保存的配置。它们不会启动通道桥接、打开一个实时的 MCP 客户端会话，也不能证明目标服务器可达。
+注册表命令不会启动通道桥接。只有 `probe` 和 `doctor --probe` 会打开实时 MCP 客户端会话，以证明目标服务器可达。
 </Note>
+
+## 控制 UI
+
+浏览器 Control UI 包含一个专用的 MCP 设置页面，位于 `/mcp`。它展示已配置的服务器数量、已启用/OAuth/过滤摘要、每个服务器的传输行、启用/禁用控件、常见 CLI 命令，以及 `mcp` 配置段的作用域编辑器。
+
+将此页面用于运维修改和快速盘点。需要实时服务器证明时，请使用 `openclaw mcp doctor --probe` 或 `openclaw mcp probe`。
+
+运维工作流：
+
+1. 打开 Control UI 并选择 **MCP**。
+2. 查看摘要卡片中的总数、已启用、OAuth 和已过滤服务器。
+3. 使用每个服务器行查看传输、认证、过滤、超时和命令提示。
+4. 当你想保留定义但将其排除在运行时发现之外时，切换启用状态。
+5. 编辑作用域内的 `mcp` 配置段，以进行结构性更改，例如新增服务器、头部、TLS、OAuth 元数据或工具过滤器。
+6. 选择 **Save** 仅持久化配置，或选择 **Save & Publish** 通过 Gateway 配置路径应用。
+7. 当你需要该已编辑服务器已启动并列出工具的实时证明时，运行 `openclaw mcp doctor --probe`。
+
+说明：
+
+- 命令片段会给服务器名称加引号，因此即使是不常见的名称，在 shell 中也能方便复制
+- 当显示的类 URL 值包含嵌入式凭据时，会在渲染前进行脱敏
+- 该页面不会自行启动 MCP 传输
+- 活动运行时可能需要 `openclaw mcp reload`、Gateway 配置发布或进程重启，具体取决于哪个进程持有 MCP 客户端
 
 ## 当前限制
 

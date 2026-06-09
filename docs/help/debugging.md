@@ -62,8 +62,8 @@ OPENCLAW_PLUGIN_LIFECYCLE_TRACE=1 openclaw plugins install tokenjuice --force
 在使用 CPU 分析器之前，先用这个来调查插件生命周期。
 如果命令是从源码检出中运行的，优先在 `pnpm build` 之后通过 `node dist/entry.js ...` 测量构建后的运行时；`pnpm openclaw ...` 也会测量源码运行器的额外开销。
 
-For startup stalls that look like synchronous filesystem or module-loader work,
-add Node's sync I/O trace flag through the source runner:
+对于看起来像是同步文件系统或模块加载器工作的启动卡顿，
+可以通过源运行器添加 Node 的同步 I/O 跟踪标志：
 
 ```bash
 OPENCLAW_TRACE_SYNC_IO=1 pnpm openclaw gateway --force
@@ -233,27 +233,24 @@ OPENCLAW_RAW_STREAM_PATH=~/.openclaw/logs/raw-stream.jsonl
 
 `~/.openclaw/logs/raw-stream.jsonl`
 
-## 原始 chunk 日志（pi-mono）
+## Raw OpenAI-compatible chunk logging
 
-为了在块被解析之前捕获**原始 OpenAI 兼容 chunks**，
-pi-mono 提供了一个单独的日志记录器：
+To capture **raw OpenAI-compat chunks** before they are parsed into blocks,
+enable the transport logger:
 
 ```bash
-PI_RAW_STREAM=1
+OPENCLAW_RAW_STREAM=1
 ```
 
 可选路径：
 
 ```bash
-PI_RAW_STREAM_PATH=~/.pi-mono/logs/raw-openai-completions.jsonl
+OPENCLAW_RAW_STREAM_PATH=~/.openclaw/logs/raw-openai-completions.jsonl
 ```
 
 默认文件：
 
-`~/.pi-mono/logs/raw-openai-completions.jsonl`
-
-> Note: this is only emitted by processes using pi-mono's
-> `openai-completions` provider.
+`~/.openclaw/logs/raw-openai-completions.jsonl`
 
 ## 安全提示
 

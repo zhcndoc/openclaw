@@ -99,7 +99,7 @@ sidebarTitle: "代理工作区"
 </AccordionGroup>
 
 <Note>
-如果任何引导文件缺失，OpenClaw 会在会话中注入“缺失文件”标记并继续。注入时较大的引导文件会被截断；可使用 `agents.defaults.bootstrapMaxChars`（默认：12000）和 `agents.defaults.bootstrapTotalMaxChars`（默认：60000）调整限制。`openclaw setup` 可以在不覆盖现有文件的情况下重建缺失的默认文件。
+If any bootstrap file is missing, OpenClaw injects a "missing file" marker into the session and continues. Large bootstrap files are truncated when injected; adjust limits with `agents.defaults.bootstrapMaxChars` (default: 20000) and `agents.defaults.bootstrapTotalMaxChars` (default: 60000). `openclaw setup` can recreate missing defaults without overwriting existing files.
 </Note>
 
 ## 不属于工作区的内容

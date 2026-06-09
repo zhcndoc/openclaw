@@ -96,7 +96,58 @@ agent 轮次中失败：
 
 参考：[插件架构](/plugins/architecture)
 
-## 插件存在但因可疑所有权被阻止
+## Install policy blocks plugin installs or updates
+
+If an update finishes but plugins are stale, disabled, or show messages such as
+`blocked by install policy`, `install policy failed closed`, or
+`Disabled "<plugin>" after plugin update failure`, check
+`security.installPolicy`.
+
+Install policy runs on plugin installs and updates. OpenClaw-owned plugin
+versions normally move with the OpenClaw release, so an OpenClaw update can
+also need matching `@openclaw/*` plugin updates during post-update sync.
+
+Avoid these broad policy shapes unless you also maintain the matching upgrade
+rule:
+
+- Freezing OpenClaw-owned plugins to one exact old version, such as allowing
+  only `@openclaw/*@2026.5.3`.
+- Blocking by source kind alone, such as every npm, network, or
+  `request.mode: "update"` plugin request.
+- Treating the policy command as optional. When `security.installPolicy` is
+  enabled, a missing, slow, unreadable, or permission-blocked policy executable
+  fails closed.
+- Approving plugin versions without considering the policy request's
+  `openclawVersion` and the plugin candidate metadata.
+
+Safer policy rules allow trusted OpenClaw-owned plugin updates when the
+candidate is compatible with the current OpenClaw host, instead of pinning a
+single release forever. If you block npm by default, make a narrow exception
+for the trusted `@openclaw/*` plugin packages or plugin ids you use. If you
+differentiate install and update requests, apply the same trust rule to
+`request.mode: "update"`.
+
+Recovery:
+
+```bash
+openclaw doctor --deep
+openclaw plugins update --all
+openclaw status --all
+```
+
+If the policy is intentionally strict, relax it for the trusted OpenClaw upgrade
+window, rerun `openclaw plugins update --all`, then restore the stricter rule.
+If a plugin was disabled after update failure, inspect it and re-enable it only
+after the update succeeds:
+
+```bash
+openclaw plugins inspect <plugin-id> --runtime --json
+openclaw plugins enable <plugin-id>
+```
+
+Reference: [Operator install policy](/tools/skills-config#operator-install-policy-securityinstallpolicy)
+
+## 插件存在但被可疑所有权阻止
 
 如果 `openclaw doctor`、安装或启动警告显示：
 
@@ -292,11 +343,11 @@ flowchart TD
     常见日志特征：
 
     - `cron: scheduler disabled; jobs will not run automatically` → cron 已禁用。
-    - `heartbeat skipped` 且 `reason=quiet-hours` → 处于配置的活跃时段之外。
-    - `heartbeat skipped` 且 `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空白/仅标题的脚手架内容。
-    - `heartbeat skipped` 且 `reason=no-tasks-due` → `HEARTBEAT.md` 的任务模式已启用，但目前没有任何任务间隔到期。
-    - `heartbeat skipped` 且 `reason=alerts-disabled` → 所有心跳可见性都被禁用（`showOk`、`showAlerts` 和 `useIndicator` 都关闭）。
-    - `requests-in-flight` → 主通道繁忙；心跳唤醒被延后。
+    - `heartbeat skipped` with `reason=quiet-hours` → 在配置的活跃时段之外。
+    - `heartbeat skipped` with `reason=empty-heartbeat-file` → `HEARTBEAT.md` 存在，但只包含空内容、注释、标题、代码围栏或空检查清单脚手架。
+    - `heartbeat skipped` with `reason=no-tasks-due` → `HEARTBEAT.md` 任务模式已启用，但还没有任何任务间隔到期。
+    - `heartbeat skipped` with `reason=alerts-disabled` → 所有心跳可见性都已禁用（`showOk`、`showAlerts` 和 `useIndicator` 都关闭）。
+    - `requests-in-flight` → 主通道繁忙；心跳唤醒已延期。
     - `unknown accountId` → 心跳投递目标账户不存在。
 
     深层页面：

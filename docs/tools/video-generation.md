@@ -1,9 +1,9 @@
 ---
-summary: "通过 video_generate 从文本、图像或视频参考跨 16 个提供商后端生成视频"
+summary: "通过 `video_generate` 从文本、图像或视频参考跨 16 个提供商后端生成视频"
 read_when:
   - 通过代理生成视频
   - 配置视频生成提供商和模型
-  - 了解 video_generate 工具参数
+  - 了解 `video_generate` 工具参数
 title: "视频生成"
 sidebarTitle: "视频生成"
 ---
@@ -51,9 +51,10 @@ OpenClaw 将视频生成视为三种运行时模式：
 视频生成是异步的。当代理在一个会话中调用 `video_generate` 时：
 
 1. OpenClaw 将请求提交给提供商，并立即返回一个任务 ID。
-2. 提供商在后台处理该任务（通常需要 30 秒到几分钟，具体取决于提供商和分辨率；基于队列的慢速提供商最长可运行到配置的超时时间）。
-3. 当视频准备就绪时，OpenClaw 会通过内部完成事件唤醒同一个会话。
-4. 代理会通知用户，并通过消息工具附加完成的视频。如果请求者会话处于非活动状态，或其活动唤醒失败，且通过消息工具交付时仍有部分生成的视频缺失，OpenClaw 会仅针对缺失的视频发送一个幂等的直接兜底交付。
+2. 提供商在后台处理任务（通常需要 30 秒到几分钟，具体取决于提供商和分辨率；基于队列的慢速提供商最长可运行至配置的超时时间）。
+3. 当视频就绪时，OpenClaw 会通过内部完成事件唤醒同一会话。
+4. 代理会通过会话的常规可见回复模式告知用户：
+   自动模式下直接发送最终回复；如果会话需要消息工具，则使用 `message(action="send")`。如果请求方会话处于非活动状态，或其活动唤醒失败，并且完成回复中仍缺少部分生成的视频，OpenClaw 会发送一个幂等的直接回退，仅包含缺失的视频。
 
 在任务进行中时，同一会话里重复调用 `video_generate` 会返回当前任务状态，而不是启动另一个生成任务。使用 `openclaw tasks list` 或 `openclaw tasks show <taskId>` 可在 CLI 中查看进度。
 
@@ -82,24 +83,24 @@ openclaw tasks cancel <taskId>
 
 ## 支持的提供商
 
-| 提供商                | 默认模型                          | 文本 | 图像参考                                              | 视频参考                                       | 认证方式                                   |
-| --------------------- | --------------------------------- | :--: | ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| 阿里巴巴               | `wan2.6-t2v`                      |  ✓   | 是（远程 URL）                                        | 是（远程 URL）                                   | `MODELSTUDIO_API_KEY`                    |
-| BytePlus（1.0）       | `seedance-1-0-pro-250528`         |  ✓   | 最多 2 张图像（仅 I2V 模型；第一帧 + 最后一帧）         | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus Seedance 1.5 | `seedance-1-5-pro-251215`         |  ✓   | 最多 2 张图像（通过角色表示第一帧 + 最后一帧）         | -                                               | `BYTEPLUS_API_KEY`                       |
-| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`    |  ✓   | 最多 9 张参考图像                                    | 最多 3 段视频                                    | `BYTEPLUS_API_KEY`                       |
-| ComfyUI               | `workflow`                        |  ✓   | 1 张图像                                              | -                                               | `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` |
-| DeepInfra             | `Pixverse/Pixverse-T2V`           |  ✓   | -                                                    | -                                               | `DEEPINFRA_API_KEY`                      |
-| fal                   | `fal-ai/minimax/video-01-live`    |  ✓   | 1 张图像；使用 Seedance reference-to-video 时最多 9 张 | 使用 Seedance reference-to-video 时最多 3 段视频     | `FAL_KEY`                                |
-| Google                | `veo-3.1-fast-generate-preview`   |  ✓   | 1 张图像                                              | 1 段视频                                         | `GEMINI_API_KEY`                         |
-| MiniMax               | `MiniMax-Hailuo-2.3`              |  ✓   | 1 张图像                                              | -                                               | `MINIMAX_API_KEY` or MiniMax OAuth       |
-| OpenAI                | `sora-2`                          |  ✓   | 1 张图像                                              | 1 段视频                                         | `OPENAI_API_KEY`                         |
-| OpenRouter            | `google/veo-3.1-fast`             |  ✓   | 最多 4 张图像（第一帧/最后一帧或参考图）                 | -                                               | `OPENROUTER_API_KEY`                     |
-| Qwen                  | `wan2.6-t2v`                      |  ✓   | 是（远程 URL）                                        | 是（远程 URL）                                   | `QWEN_API_KEY`                           |
-| Runway                | `gen4.5`                          |  ✓   | 1 张图像                                              | 1 段视频                                         | `RUNWAYML_API_SECRET`                    |
-| Together              | `Wan-AI/Wan2.2-T2V-A14B`         |  ✓   | 1 张图像                                              | -                                               | `TOGETHER_API_KEY`                       |
-| Vydra                 | `veo3`                            |  ✓   | 1 张图像（`kling`）                                   | -                                               | `VYDRA_API_KEY`                          |
-| xAI                   | `grok-imagine-video`              |  ✓   | 1 张第一帧图像或最多 7 个 `reference_image`            | 1 段视频                                         | `XAI_API_KEY`                            |
+| Provider              | Default model                   | Text | Image ref                                            | Video ref                                       | Auth                                     |
+| --------------------- | ------------------------------- | :--: | ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
+| Alibaba               | `wan2.6-t2v`                    |  ✓   | Yes (remote URL)                                     | Yes (remote URL)                                | `MODELSTUDIO_API_KEY`                    |
+| BytePlus (1.0)        | `seedance-1-0-pro-250528`       |  ✓   | Up to 2 images (I2V models only; first + last frame) | -                                               | `BYTEPLUS_API_KEY`                       |
+| BytePlus Seedance 1.5 | `seedance-1-5-pro-251215`       |  ✓   | Up to 2 images (first + last frame via role)         | -                                               | `BYTEPLUS_API_KEY`                       |
+| BytePlus Seedance 2.0 | `dreamina-seedance-2-0-260128`  |  ✓   | Up to 9 reference images                             | Up to 3 videos                                  | `BYTEPLUS_API_KEY`                       |
+| ComfyUI               | `workflow`                      |  ✓   | 1 image                                              | -                                               | `COMFY_API_KEY` or `COMFY_CLOUD_API_KEY` |
+| DeepInfra             | `Pixverse/Pixverse-T2V`         |  ✓   | -                                                    | -                                               | `DEEPINFRA_API_KEY`                      |
+| fal                   | `fal-ai/minimax/video-01-live`  |  ✓   | 1 image; up to 9 with Seedance reference-to-video    | Up to 3 videos with Seedance reference-to-video | `FAL_KEY`                                |
+| Google                | `veo-3.1-fast-generate-preview` |  ✓   | 1 image                                              | 1 video                                         | `GEMINI_API_KEY`                         |
+| MiniMax               | `MiniMax-Hailuo-2.3`            |  ✓   | 1 image                                              | -                                               | `MINIMAX_API_KEY` or MiniMax OAuth       |
+| OpenAI                | `sora-2`                        |  ✓   | 1 image                                              | 1 video                                         | `OPENAI_API_KEY`                         |
+| OpenRouter            | `google/veo-3.1-fast`           |  ✓   | Up to 4 images (first/last frame or references)      | -                                               | `OPENROUTER_API_KEY`                     |
+| Qwen                  | `wan2.6-t2v`                    |  ✓   | Yes (remote URL)                                     | Yes (remote URL)                                | `QWEN_API_KEY`                           |
+| Runway                | `gen4.5`                        |  ✓   | 1 image                                              | 1 video                                         | `RUNWAYML_API_SECRET`                    |
+| Together              | `Wan-AI/Wan2.2-T2V-A14B`        |  ✓   | `Wan-AI/Wan2.2-I2V-A14B` only                        | -                                               | `TOGETHER_API_KEY`                       |
+| Vydra                 | `veo3`                          |  ✓   | 1 image (`kling`)                                    | -                                               | `VYDRA_API_KEY`                          |
+| xAI                   | `grok-imagine-video`            |  ✓   | 1 first-frame image or up to 7 `reference_image`s    | 1 video                                         | `XAI_API_KEY`                            |
 
 某些提供商还接受额外或替代的 API 密钥环境变量。详情请参见各个[提供商页面](#related)。
 
@@ -430,7 +431,7 @@ pnpm test:live:media video
 ```
 
 此实时文件默认优先使用已导出的提供方环境变量，而不是存储的认证
-配置文件，并默认执行发布安全的冒烟测试：
+配置文件，并默认执行发布安全的烟雾测试：
 
 - 对扫描中的每个非 FAL 提供商执行 `generate`。
 - 一秒钟的 lobster 提示词。

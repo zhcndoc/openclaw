@@ -1,33 +1,34 @@
 ---
 summary: "统一的持久化消息接收、发送、预览、编辑和流式生命周期设计方案"
 read_when:
-  - 重构 channel 发送或接收行为时
-  - 更改 channel turn、reply 分发、出站队列、预览流，或插件 SDK 消息 API 时
-  - 设计需要持久化发送、回执、预览、编辑或重试的新 channel 插件时
+  - Refactoring channel send or receive behavior
+  - Changing channel inbound, reply dispatch, outbound queue, preview streaming, or plugin SDK message APIs
+  - Designing a new channel plugin that needs durable sends, receipts, previews, edits, or retries
 title: "消息生命周期重构"
 ---
 
-本页是将零散的 channel turn、reply 分发、预览流和出站投递辅助方法替换为一个持久化消息生命周期的目标设计。
+本页是用一个持久化的消息生命周期，替换分散的 channel 入站、reply dispatch、preview streaming 和出站投递辅助方法的目标设计。
 
 简要版本：
 
 - 核心原语应该是 **receive** 和 **send**，而不是 **reply**。
 - reply 只是出站消息上的一种关系。
-- turn 是一个入站处理便利抽象，不是投递的所有者。
-- 发送必须基于上下文：`begin`、render、preview 或 stream、final send、commit、fail。
-- 接收也必须基于上下文：normalize、dedupe、route、record、dispatch、platform ack、fail。
-- 公共插件 SDK 应该收敛为一个小的 channel-message 接口面。
+- turn 是入站处理的便利概念，不是投递的所有者。
+- 发送必须是基于上下文的：`begin`、render、preview 或 stream、final send、commit、fail。
+- 接收也必须是基于上下文的：normalize、dedupe、route、record、dispatch、platform ack、fail。
+- 公共插件 SDK 应该收敛成一个小而统一的 channel-outbound 表面。
 
 ## 问题
 
 当前的 channel 栈是从几个本地上合理的需求逐步演化出来的：
 
-- 简单的入站适配器使用 `runtime.channel.turn.run`。
-- 丰富的适配器使用 `runtime.channel.turn.runPrepared`。
+- 简单的入站适配器使用 `runtime.channel.inbound.run`。
+- 丰富的适配器使用 `runtime.channel.inbound.runPreparedReply`。
 - 旧的辅助方法使用 `dispatchInboundReplyWithBase`、
-  `recordInboundSessionAndDispatchReply`、reply payload 辅助方法、reply 分块、reply 引用，以及出站运行时辅助方法。
-- 预览流存在于 channel 特定的分发器中。
-- 最终投递的持久性正在围绕现有的 reply payload 路径添加。
+  `recordInboundSessionAndDispatchReply`、reply payload helpers、reply chunking、
+  reply references，以及 outbound runtime helpers。
+- preview streaming 存在于 channel 专属的 dispatcher 中。
+- 最终投递的持久性正在围绕现有的 reply payload 路径补上。
 
 这种结构修复了局部 bug，但也让 OpenClaw 拥有了太多公共概念，以及太多投递语义可能漂移的地方。
 
@@ -46,23 +47,23 @@ Telegram 轮询更新被 ack
 
 ## 目标
 
-- 为所有 channel 消息接收和发送路径提供一套核心生命周期。
-- 在新的消息生命周期中，适配器声明可重放安全行为后，默认启用持久化最终发送。
-- 共享的预览、编辑、流式、终结、重试、恢复和回执语义。
-- 一个更小的插件 SDK 面，便于第三方插件学习和维护。
-- 在迁移期间与现有 `channel.turn` 调用方保持兼容。
+- 所有 channel 消息接收和发送路径共用一个核心生命周期。
+- 在新的消息生命周期中，只要适配器声明了可重放安全行为，默认就对最终发送进行持久化。
+- 共享预览、编辑、流式、最终化、重试、恢复和回执语义。
+- 一个小型插件 SDK 表面，便于第三方插件学习和维护。
+- 在迁移期间兼容现有的入站 reply 兼容调用方。
 - 为新的 channel 能力提供清晰的扩展点。
 - 核心中不出现平台特定分支。
-- 不要有 token-delta channel 消息。channel 流式仍然保持为消息预览、编辑、追加或已完成块投递。
-- 为运维/系统输出提供结构化的 OpenClaw 来源元数据，这样可见的网关失败就不会在启用 bot 的共享房间中作为新的提示词重新进入。
+- 不使用 token-delta channel 消息。Channel 流式仍然保持为 message preview、edit、append 或 completed block delivery。
+- 为运维/系统输出提供结构化的 OpenClaw-origin 元数据，这样可见的网关失败不会作为新的 prompt 重新进入共享的 bot-enabled 房间。
 
 ## 非目标
 
-- 第一阶段不要移除 `runtime.channel.turn.*`。
-- 不要强迫每个 channel 都采用相同的原生传输行为。
-- 不要让核心去理解 Telegram topics、Slack 原生流、Matrix redaction、飞书卡片、QQ 语音或 Teams activities。
-- 不要把所有内部迁移辅助方法都发布为稳定的 SDK API。
-- 不要通过重试去重放已完成的、非幂等的平台操作。
+- 不在第一阶段强制每个现有 channel 都使用持久化消息投递。
+- 不强制每个 channel 采用相同的原生传输行为。
+- 不在核心中直接教授 Telegram topics、Slack native streams、Matrix redactions、Feishu cards、QQ voice 或 Teams activities。
+- 不把所有内部迁移辅助方法都发布为稳定的 SDK API。
+- 不要让重试重放已完成的、非幂等的平台操作。
 
 ## 参考模型
 
@@ -469,7 +470,7 @@ type LiveMessageState = {
 公共 SDK 目标应当是一个子路径：
 
 ```typescript
-import { defineChannelMessageAdapter } from "openclaw/plugin-sdk/channel-message";
+import { defineChannelMessageAdapter } from "openclaw/plugin-sdk/channel-outbound";
 ```
 
 目标形状：
@@ -572,22 +573,24 @@ type MessageCapabilities = {
 
 兼容性子路径可以保留为包装器，但新的第三方插件不应需要它们。
 
-打包插件在迁移期间可以通过保留的运行时子路径继续内部导入辅助函数。公共文档应当在 `plugin-sdk/channel-message` 存在后，引导插件作者使用它。
+Bundled plugins may keep internal helper imports through reserved runtime
+subpaths while migrating. Public docs should steer plugin authors to
+`plugin-sdk/channel-outbound` once it exists.
 
-## 与频道轮次的关系
+## 与 channel inbound 的关系
 
-`runtime.channel.turn.*` 在迁移期间应保持存在。
+`runtime.channel.inbound.*` 是迁移期间的运行时桥接。
 
 它应当成为一个兼容性适配器：
 
 ```text
-channel.turn.run
+channel.inbound.run
   -> messages.receive context
   -> session dispatch
   -> messages.send context for visible output
 ```
 
-`channel.turn.runPrepared` 最初也应保留：
+`channel.inbound.runPreparedReply` should also remain initially:
 
 ```text
 channel-owned dispatcher
@@ -596,7 +599,7 @@ channel-owned dispatcher
   -> messages.send for final delivery
 ```
 
-在所有打包插件和已知第三方兼容路径都完成桥接之后，`channel.turn` 就可以被弃用。在发布了 SDK 迁移路径，并且有契约测试证明旧插件仍能工作，或在失败时给出清晰的版本错误之前，它不应被移除。
+旧的 `channel.turn` 运行时表面已被移除。运行时调用方使用 `channel.inbound.*`；频道文档和 SDK 子路径使用 inbound/message 名词。
 
 ## 兼容性护栏
 
@@ -604,9 +607,14 @@ channel-owned dispatcher
 
 旧入口点默认不是持久化的：
 
-- `channel.turn.run` 和 `dispatchAssembledChannelTurn` 会使用通道的发送回调，除非该通道显式提供了经过审计的持久化策略/选项对象。
-- `channel.turn.runPrepared` 会一直由通道拥有，直到 prepared dispatcher 显式调用发送上下文。
-- `recordInboundSessionAndDispatchReply`、`dispatchInboundReplyWithBase` 以及直接 DM 辅助函数等公共兼容性辅助函数，在调用者提供的 `deliver` 或 `reply` 回调之前，绝不会注入通用持久化投递。
+- `channel.inbound.run` 和 `dispatchChannelInboundReply` 使用通道自身的
+  投递回调，除非该通道显式提供经过审计的持久化
+  策略/选项对象。
+- `channel.inbound.runPreparedReply` 在 prepared dispatcher
+  显式调用发送上下文之前，仍由通道自身拥有。
+- 公共兼容性辅助函数，例如 `recordInboundSessionAndDispatchReply`、
+  `dispatchInboundReplyWithBase` 和直接 DM 辅助函数，绝不会在调用方提供的
+  `deliver` 或 `reply` 回调之前注入通用持久化投递。
 
 对于迁移桥接类型，`durable: undefined` 表示“非持久化”。只有通过显式的策略/选项值才会启用持久化路径。`durable: false` 可以继续作为一种兼容写法，但实现不应要求每个尚未迁移的通道都添加它。
 
@@ -715,7 +723,7 @@ type DeliveryFailureKind =
 | Discord         | 发送适配器封装现有的持久化有效载荷投递。live 适配器负责草稿编辑、进度草稿、媒体/错误预览取消、回复目标保留以及消息 id 回执。在共享房间中审计机器人生成的网关失败回声；如果 Discord 在普通消息上无法携带来源元数据，则使用出站注册表或其他原生等价方案。                                                                                  |
 | Slack           | 发送适配器处理普通聊天消息。live 适配器在线程形态支持时选择原生 stream，否则使用草稿预览。回执保留线程时间戳。来源适配器将 OpenClaw 网关失败映射到 Slack `chat.postMessage.metadata`，并在 `allowBots` 授权之前丢弃带标记的机器人房间回声。                                                                                           |
 | WhatsApp        | 发送适配器负责带持久化最终意图的文本/媒体发送。接收适配器处理群组提及和发送者身份。在 WhatsApp 拥有可编辑传输之前，live 可以保持不存在。                                                                                                                                                                                                                  |
-| Matrix          | live 适配器负责草稿事件编辑、最终化、删除内容、加密媒体约束以及回复目标不匹配回退。接收适配器负责加密事件 hydration 和去重。来源适配器应将 OpenClaw 网关失败来源编码到 Matrix 事件内容中，并在 `allowBots` 处理之前丢弃已配置机器人房间回声。                                                                              |
+| Matrix         | live 适配器负责草稿事件编辑、最终化、删除内容、加密媒体约束以及回复目标不匹配回退。接收适配器负责加密事件 hydration 和去重。来源适配器应将 OpenClaw 网关失败来源编码到 Matrix 事件内容中，并在 `allowBots` 处理之前丢弃已配置机器人房间回声。                                                                              |
 | Mattermost      | live 适配器负责单个草稿帖子、进度/工具折叠、原地最终化以及重新发送回退。                                                                                                                                                                                                                                                                                |
 | Microsoft Teams | live 适配器负责原生进度和块流行为。发送适配器负责活动和附件/卡片回执。                                                                                                                                                                                                                                                                                     |
 | Feishu          | 渲染适配器负责文本/卡片/原始渲染。live 适配器负责流式卡片和重复最终消息抑制。发送适配器负责评论、topic 会话、媒体以及语音抑制。                                                                                                                                                                                                                         |
@@ -748,26 +756,25 @@ type DeliveryFailureKind =
 
 ### 阶段 2：持久化发送核心
 
-- 将现有的出站队列从回复载荷持久化迁移到持久化
-  消息发送意图。
-- 让持久化发送意图承载一个投影后的载荷数组或批处理计划，而不只是
-  一个回复载荷。
+- 将现有出站队列从回复载荷持久化迁移到持久化的消息发送意图。
+- 让一个持久化发送意图携带投影后的载荷数组或批处理计划，而不只是单个回复载荷。
 - 通过兼容性转换保留当前的队列恢复行为。
 - 让 `deliverOutboundPayloads` 调用 `messages.send`。
-- 在适配器声明了可重放安全性后，当新的消息生命周期中无法写入持久化意图时，将最终发送持久化设为默认并失败关闭。现有的 channel-turn 和 SDK 兼容路径在此阶段仍默认直接发送。
+- 在适配器声明重放安全后，当新的消息生命周期中无法写入持久化意图时，将最终发送持久化设为默认并关闭失败。
+  在此阶段，现有的入站运行器和 SDK 兼容路径仍默认保持直接发送。
 - 一致地记录收据。
-- 将收据和投递结果返回给原始分发器调用者，而不是将持久化发送视为终态副作用。
-- 通过持久化发送意图保留消息来源，以便恢复、重放和分块发送保留 OpenClaw 的运行来源。
+- 将收据和投递结果返回给原始分发器调用方，而不是把持久化发送当作终态副作用。
+- 通过持久化发送意图保留消息来源，以便恢复、重放和分块发送都能保留 OpenClaw 的运行来源信息。
 
-### 阶段 3：Channel Turn 桥接
+### 第 3 阶段：Channel 入站桥接
 
-- 基于 `messages.receive` 和 `messages.send` 重新实现 `channel.turn.run` 和 `dispatchAssembledChannelTurn`。
+- 基于 `messages.receive` 和 `messages.send` 重写 `channel.inbound.run` 和 `dispatchChannelInboundReply`。
 - 保持当前事实类型稳定。
-- 默认保持旧行为。只有当其适配器通过明确选择带有可重放安全持久化策略时，组装后的 turn channel 才会变为持久化。
-- 将 `durable: false` 作为兼容性逃生口，用于那些完成原生编辑且目前无法安全重放的路径，但不要依赖 `false` 标记来保护尚未迁移的 channels。
-- 仅在新的消息生命周期中默认启用组装 turn 的持久化，并且要在 channel 映射证明通用发送路径保留了旧的 channel 投递语义之后。
+- 默认保持旧行为。只有当适配器显式选择带有重放安全持久化策略时，组装后的 turn channel 才会变为持久化。
+- 将 `durable: false` 保留为兼容性逃生阀，适用于那些会最终化原生编辑且尚不能安全重放的路径，但不要依赖 `false` 标记来保护尚未迁移的 channel。
+- 仅在新的消息生命周期中默认启用组装后的 turn 持久化，并且要在 channel 映射证明通用发送路径能保留旧的 channel 投递语义之后才这样做。
 
-### 阶段 4：预置分发器桥接
+### 第 4 阶段：预置分发器桥接
 
 - 用发送上下文桥接替换 `deliverDurableInboundReplyPayload`。
 - 保留旧帮助函数作为包装器。
@@ -775,7 +782,7 @@ type DeliveryFailureKind =
 - 将每个预置分发器都视为未覆盖，直到它明确选择启用发送上下文。文档和更新日志必须写明“组装后的 channel turns”或命名已迁移的 channel 路径，而不要声称所有自动最终回复都已覆盖。
 - 保持 `recordInboundSessionAndDispatchReply`、直接 DM 帮助函数以及类似的公共兼容性帮助函数行为不变。它们之后也许会显式暴露发送上下文的选择加入，但在调用方拥有的投递回调之前，绝不能自动尝试通用持久化投递。
 
-### 阶段 5：统一实时生命周期
+### 第 5 阶段：统一实时生命周期
 
 - 构建 `messages.live`，并使用两个证明适配器：
   - Telegram：发送 + 编辑 + 过期最终发送。
@@ -783,16 +790,16 @@ type DeliveryFailureKind =
 - 然后迁移 Discord、Slack、Mattermost、Teams、QQ Bot 和飞书。
 - 只有在每个 channel 都有对等测试之后，才删除重复的预览最终化代码。
 
-### 阶段 6：公共 SDK
+### 第 6 阶段：公共 SDK
 
-- 添加 `openclaw/plugin-sdk/channel-message`。
-- 将其文档说明为首选的 channel 插件 API。
-- 更新包导出、入口清单、生成的 API 基线和插件 SDK 文档。
-- 在 channel-message SDK 接口中包含 `MessageOrigin`、来源编解码钩子，以及共享的 `shouldDropOpenClawEcho` 谓词。
-- 为旧子路径保留兼容包装器。
+- 添加 `openclaw/plugin-sdk/channel-outbound`。
+- 将其文档化为首选的 channel 插件 API。
+- 更新包导出、入口清单、生成的 API 基线，以及插件 SDK 文档。
+- 在 `channel-outbound` SDK 暴露面中包含 `MessageOrigin`、origin 编码/解码钩子，以及共享的 `shouldDropOpenClawEcho` 谓词。
+- 为旧子路径保留兼容性包装器。
 - 在捆绑插件迁移后，在文档中将以 reply 命名的 SDK 帮助函数标记为已弃用。
 
-### 阶段 7：所有发送者
+### 第 7 阶段：所有发送者
 
 将所有非回复类出站生产者迁移到 `messages.send` 上：
 
@@ -805,14 +812,14 @@ type DeliveryFailureKind =
 - 显式 CLI 或 Control UI 发送
 - 自动化/广播路径
 
-这里模型将不再是“代理回复”，而变成“OpenClaw 发送消息”。
+这里模型将不再是“代理回复”，而会变成“OpenClaw 发送消息”。
 
-### 阶段 8：弃用 Turn
+### 第 8 阶段：移除以 turn 命名的兼容层
 
-- 至少保留一个兼容窗口期，将 `channel.turn` 作为包装器。
+- 将 inbound/message 命名的包装器保留为兼容窗口。
 - 发布迁移说明。
-- 针对旧导入运行插件 SDK 兼容性测试。
-- 只有在没有捆绑插件需要它们且第三方契约已有稳定替代方案后，才移除或隐藏旧的内部帮助函数。
+- 使用旧导入对插件 SDK 兼容性测试进行验证。
+- 仅在不再有捆绑插件需要它们且第三方契约已有稳定替代方案之后，才移除或隐藏旧的内部帮助函数。
 
 ## 测试计划
 
@@ -830,10 +837,10 @@ type DeliveryFailureKind =
 
 集成测试：
 
-- `channel.turn.run` simple adapter still records and sends.
+- `channel.inbound.run` simple adapter still records and sends.
 - Legacy assembled-event delivery does not become durable unless the channel
   explicitly opts in.
-- `channel.turn.runPrepared` bridge still records and finalizes.
+- `channel.inbound.runPreparedReply` bridge still records and finalizes.
 - Public compatibility helpers call caller-owned delivery callbacks by default
   and do not generic-send before those callbacks.
 - Durable fallback delivery replays the whole projected payload array after
@@ -882,36 +889,36 @@ Channel 测试：
 
 ## 未决问题
 
-- Telegram 是否最终应将 grammY runner 源替换为一个完全持久化的轮询源，以便控制平台级重投，而不仅仅是 OpenClaw 的持久化重启水位线。
-- 持久化实时预览状态是否应与最终发送意图存放在同一个队列记录中，还是存放在兄弟实时状态存储中。
-- `plugin-sdk/channel-message` 发布后，兼容包装器应在文档中保留多久。
-- 第三方插件应直接实现接收适配器，还是仅通过 `defineChannelMessageAdapter` 提供 normalize/send/live 钩子。
-- 哪些收据字段可以安全地暴露在公共 SDK 中，而哪些应保留在内部运行时状态中。
-- 自回显缓存和参与线程标记等副作用，应建模为发送上下文钩子、适配器拥有的最终化步骤，还是收据订阅者。
-- 哪些 channels 拥有原生来源元数据，哪些需要持久化出站注册表，以及哪些无法提供可靠的跨 bot 回显抑制。
+- Telegram 是否最终应该将 grammY 运行器源替换为一个完全持久化的轮询源，以便控制平台级重投递，而不只是 OpenClaw 持久化的重启水位线。
+- 持久化的实时预览状态应存储在与最终发送意图相同的队列记录中，还是存储在一个兄弟实时状态存储中。
+- `plugin-sdk/channel-outbound` 发布后，兼容性包装器还要文档化多久。
+- 第三方插件应直接实现 receive 适配器，还是只通过 `defineChannelMessageAdapter` 提供 normalize/send/live 钩子。
+- 哪些收据字段可以安全地在公共 SDK 中暴露，哪些应保留在内部运行时状态中。
+- 自身回显缓存和已参与线程标记等副作用，应建模为发送上下文钩子、适配器拥有的最终化步骤，还是收据订阅者。
+- 哪些 channel 有原生来源元数据，哪些需要持久化出站注册表，哪些无法提供可靠的跨 bot 回显抑制。
 
 ## 验收标准
 
 - 每个捆绑的消息 channel 都通过 `messages.send` 发送最终可见输出。
-- 每个入站消息 channel 都通过 `messages.receive` 或文档化的兼容包装器进入。
-- 每个预览/编辑/流式 channel 都使用 `messages.live` 管理草稿状态和最终化。
-- `channel.turn` 仅作为包装器存在。
+- 每个入站消息 channel 都通过 `messages.receive` 或已文档化的兼容性包装器进入。
+- 每个预览/编辑/流式 channel 都使用 `messages.live` 处理草稿状态和最终化。
+- `channel.inbound` 只是一个包装器。
 - 以 reply 命名的 SDK 帮助函数只是兼容性导出，而不是推荐路径。
-- 持久化恢复可以在重启后重放待处理的最终发送，而不会丢失最终响应或重复已经提交的发送；平台结果未知的发送会在重放前被协调，或者对该适配器文档化为至少一次语义。
-- 除非调用方显式选择了文档化的非持久化模式，否则当无法写入持久化意图时，持久化最终发送会失败关闭。
-- 旧的 channel-turn 和 SDK 兼容性帮助函数默认使用 channel 拥有的直接投递；通用持久化发送仅作为显式选择加入。
-- 收据会为多段投递保留所有平台消息 id，并为线程/编辑便利保留一个主 id。
-- 在替换直接投递回调之前，持久化包装器会保留 channel 级副作用。
-- 在其最终投递路径明确使用发送上下文之前，预置分发器不被计为持久化。
+- 持久化恢复可以在重启后重放待处理的最终发送，而不会丢失最终响应或重复已提交的发送；对于平台结果未知的发送，会在重放前完成协调，或者对该适配器文档化为至少一次语义。
+- 当无法写入持久化意图时，持久化最终发送会关闭失败，除非调用方显式选择了已文档化的非持久化模式。
+- 旧版 SDK 兼容性帮助函数默认使用 channel 自己拥有的直接投递；通用持久化发送仅作为显式选择加入。
+- 收据为多段投递保留所有平台消息 id，并保留一个用于线程/编辑便利的主 id。
+- 在替换直接投递回调之前，持久化包装器会保留 channel 本地副作用。
+- 预备分发器在其最终投递路径显式使用发送上下文之前，不算作持久化。
 - 回退投递会处理每一个投影载荷。
-- 持久化回退投递会将每一个投影载荷记录在一个可重放的意图或批处理计划中。
-- OpenClaw 发起的网关失败输出对人类可见，但在声明支持来源契约的 channels 上，带标签的 bot 作者房间回显会在 bot 授权之前被丢弃。
-- 文档说明发送、接收、实时、状态、收据、关系、失败策略、迁移和测试覆盖。
+- 持久化回退投递会在一个可重放的意图或批处理计划中记录每一个投影载荷。
+- OpenClaw 来源的网关失败输出对人类可见，但在声明支持来源契约的 channel 上，带标签的 bot 作者房间回显会在 bot 授权之前被丢弃。
+- 文档说明 send、receive、live、state、receipts、relations、failure policy、migration 和 test coverage。
 
 ## 相关
 
-- [消息](/concepts/messages)
-- [流式传输和分块](/concepts/streaming)
-- [进度草稿](/concepts/progress-drafts)
-- [重试策略](/concepts/retry)
-- [通道轮次内核](/plugins/sdk-channel-turn)
+- [Messages](/concepts/messages)
+- [Streaming and chunking](/concepts/streaming)
+- [Progress drafts](/concepts/progress-drafts)
+- [Retry policy](/concepts/retry)
+- [Channel inbound API](/plugins/sdk-channel-inbound)

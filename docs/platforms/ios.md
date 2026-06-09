@@ -7,7 +7,7 @@ read_when:
 title: "iOS 应用"
 ---
 
-可用性：内部预览。iOS 应用尚未公开分发。
+可用性：启用发布时，iPhone 应用构建会通过 Apple 渠道分发。也可以从源码运行本地开发构建。
 
 ## 它的作用
 
@@ -74,7 +74,9 @@ openclaw gateway call node.list --params "{}"
 官方分发的 iOS 构建使用外部推送 relay，而不是将原始 APNs
 token 发布给 gateway。
 
-Gateway 端要求：
+默认情况下，官方/TestFlight 构建和 gateway 使用托管 relay：`https://ios-push-relay.openclaw.ai`。
+
+自定义 relay 部署可以覆盖 gateway relay URL：
 
 ```json5
 {
@@ -93,25 +95,25 @@ Gateway 端要求：
 流程如下：
 
 - iOS 应用使用 App Attest 和 StoreKit 应用交易 JWS 向 relay 注册。
-- relay 返回一个不透明的 relay handle，以及一个作用域为该注册的发送授权。
-- iOS 应用获取已配对的 gateway 身份，并将其包含在 relay 注册中，因此该 relay-backed 注册会被委派给特定的 gateway。
-- 应用通过 `push.apns.register` 将该 relay-backed 注册转发给已配对的 gateway。
-- gateway 在 `push.test`、后台唤醒和唤醒提示中使用存储的 relay handle。
-- gateway 的 relay base URL 必须与官方/TestFlight iOS 构建中写入的 relay URL 匹配。
-- 如果应用之后连接到另一个 gateway，或连接到具有不同 relay base URL 的构建，它会刷新 relay 注册，而不是复用旧绑定。
+- relay 返回一个不透明的 relay handle 以及一个注册作用域内的发送授权。
+- iOS 应用获取已配对的 gateway 身份，并将其包含在 relay 注册中，因此 relay 支持的注册会委派给该特定 gateway。
+- 应用通过 `push.apns.register` 将该 relay 支持的注册转发给已配对的 gateway。
+- gateway 使用该已存储的 relay handle 处理 `push.test`、后台唤醒和唤醒提示。
+- 自定义 gateway relay URL 必须与官方/TestFlight iOS 构建中内置的 relay URL 匹配。
+- 如果应用之后连接到不同的 gateway，或连接到具有不同 relay base URL 的构建，它会刷新 relay 注册，而不是重用旧绑定。
 
 此路径下 gateway **不需要**：
 
 - 不需要全局部署级的 relay token。
-- 不需要官方/TestFlight relay-backed 发送的直接 APNs key。
+- 不需要官方/TestFlight relay 支持发送的直接 APNs key。
 
 预期的操作流程：
 
 1. 安装官方/TestFlight iOS 构建。
-2. 在 gateway 上设置 `gateway.push.apns.relay.baseUrl`。
-3. 将应用与 gateway 配对并让其完成连接。
-4. 应用在获得 APNs token、操作员会话连接成功且 relay 注册成功后，会自动发布 `push.apns.register`。
-5. 之后，`push.test`、重连唤醒和唤醒提示都可以使用存储的 relay-backed 注册。
+2. 可选：仅在使用自定义 relay 部署时，在 gateway 上设置 `gateway.push.apns.relay.baseUrl`。
+3. 将应用与 gateway 配对并等待其完成连接。
+4. 在应用获得 APNs token、操作员会话已连接且 relay 注册成功后，应用会自动发布 `push.apns.register`。
+5. 之后，`push.test`、重连唤醒和唤醒提示都可以使用已存储的 relay 支持注册。
 
 ## 后台存活信标
 
@@ -123,6 +125,7 @@ gateway 只有在已知经过认证的节点设备身份后，才会将此记录
 兼容性说明：
 
 - `OPENCLAW_APNS_RELAY_BASE_URL` 仍可作为 gateway 的临时环境变量覆盖。
+- `OPENCLAW_PUSH_RELAY_BASE_URL` 仍可作为官方/TestFlight iOS 构建的临时环境变量覆盖。
 
 ## 认证与信任流程
 
@@ -130,7 +133,7 @@ relay 的存在是为了强制执行两个约束，而直接在 gateway 上使�
 官方 iOS 构建提供这些约束：
 
 - 只有通过 Apple 分发的真实 OpenClaw iOS 构建才能使用托管 relay。
-- gateway 只能为与该特定 gateway 配对的 iOS 设备发送 relay-backed 推送。
+- gateway 只能为与该特定 gateway 配对的 iOS 设备发送 relay 支持的推送。
 
 逐跳说明：
 
@@ -163,7 +166,7 @@ relay 的存在是为了强制执行两个约束，而直接在 gateway 上使�
 
 5. `relay -> APNs`
    - relay 持有官方构建所需的生产 APNs 凭据和原始 APNs token。
-   - 对于 relay-backed 官方构建，gateway 从不存储原始 APNs token。
+   - 对于 relay 支持的官方构建，gateway 从不存储原始 APNs token。
    - relay 代表已配对的 gateway 将最终推送发送到 APNs。
 
 创建此设计的原因：
@@ -214,7 +217,7 @@ CoreDNS 示例请参见 [Bonjour](/gateway/bonjour)。
 
 ### 手动主机/端口
 
-在设置中启用 **Manual Host**，然后输入 gateway 主机 + 端口（默认 `18789`）。
+在设置中启用 **手动主机**，然后输入 gateway 主机 + 端口（默认 `18789`）。
 
 ## Canvas + A2UI
 
@@ -226,10 +229,11 @@ openclaw nodes invoke --node "iOS Node" --command canvas.navigate --params '{"ur
 
 说明：
 
-- Gateway canvas 主机提供 `/__openclaw__/canvas/` 和 `/__openclaw__/a2ui/`。
+- Gateway 画布主机提供 `/__openclaw__/canvas/` 和 `/__openclaw__/a2ui/`。
 - 它由 Gateway HTTP 服务器提供（与 `gateway.port` 相同的端口，默认 `18789`）。
-- 当广告了 canvas 主机 URL 时，iOS 节点在连接时会自动导航到 A2UI。
-- 使用 `canvas.navigate` 和 `{"url":""}` 可返回内置脚手架。
+- iOS 节点会保留内置脚手架作为已连接时的默认视图。`canvas.a2ui.push` 和 `canvas.a2ui.reset` 使用随应用捆绑、由应用拥有的 A2UI 页面。
+- 远程 Gateway A2UI 页面在 iOS 上仅用于渲染；原生 A2UI 按钮操作仅接受来自随应用捆绑、由应用拥有的页面。
+- 使用 `canvas.navigate` 和 `{"url":""}` 返回内置脚手架。
 
 ## 与 Computer Use 的关系
 
@@ -262,10 +266,10 @@ openclaw nodes invoke --node "iOS Node" --command canvas.snapshot --params '{"ma
 
 ## 常见错误
 
-- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用切到前台（画布/摄像头/屏幕命令需要它）。
-- `A2UI_HOST_NOT_CONFIGURED`：Gateway 未公布 Canvas 插件表面 URL；请检查 [Gateway configuration](/gateway/configuration) 中的 `plugins.entries.canvas.config.host`。
+- `NODE_BACKGROUND_UNAVAILABLE`：将 iOS 应用切换到前台（canvas/camera/screen 命令需要它）。
+- `A2UI_HOST_UNAVAILABLE`：随应用捆绑的 A2UI 页面在应用 WebView 中不可达；请保持应用位于前台并停留在 Screen 标签页，然后重试。
 - 配对提示始终不出现：运行 `openclaw devices list` 并手动批准。
-- 重新安装后重连失败：Keychain 配对令牌已被清除；请重新为该节点配对。
+- 重装后重新连接失败：Keychain 中的配对令牌已清除；请重新为节点配对。
 
 ## 相关文档
 

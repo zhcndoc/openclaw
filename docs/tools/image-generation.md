@@ -8,10 +8,10 @@ title: "图像生成"
 sidebarTitle: "图像生成"
 ---
 
-`image_generate` 工具允许 agent 使用你配置的提供方创建和编辑图像。在聊天会话中，图像生成会异步运行：OpenClaw 会记录一个后台任务，立即返回任务 id，并在提供方完成后唤醒 agent。完成后的 agent 必须通过 `message` 工具发送生成的图像。如果请求者会话处于非活动状态，或者其活动唤醒失败，并且仍有一些生成的图像尚未通过 message 工具投递，OpenClaw 会发送一个幂等的直接回退，仅包含缺失的图像。
+`image_generate` 工具允许 agent 使用已配置的提供方创建和编辑图像。在聊天会话中，图像生成是异步运行的：OpenClaw 会记录一个后台任务，立即返回任务 ID，并在提供方完成后唤醒 agent。完成代理遵循会话的常规可见回复模式：在已配置时自动发送最终回复，或者在会话需要消息工具时使用 `message(action="send")`。如果请求方会话处于非活动状态，或者其主动唤醒失败，并且某些生成的图像仍然缺失于完成回复中，OpenClaw 会发送一个幂等的直接回退，仅包含缺失的图像。
 
 <Note>
-只有在至少有一个图像生成提供方可用时，该工具才会显示。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.imageGenerationModel`，设置提供方 API 密钥，或者使用 OpenAI Codex OAuth 登录。
+只有在至少有一个图像生成提供方可用时，该工具才会出现。如果你在 agent 的工具中看不到 `image_generate`，请配置 `agents.defaults.imageGenerationModel`、设置提供方 API 密钥，或使用 OpenAI ChatGPT/Codex OAuth 登录。
 </Note>
 
 ## 快速开始
@@ -35,10 +35,10 @@ sidebarTitle: "图像生成"
     }
     ```
 
-    Codex OAuth 使用相同的 `openai/gpt-image-2` 模型引用。当配置了
-    `openai-codex` OAuth 配置文件时，OpenClaw 会通过该 OAuth 配置文件路由图像
-    请求，而不是先尝试 `OPENAI_API_KEY`。显式的 `models.providers.openai` 配置（API 密钥、
-    自定义/Azure base URL）会改为直接使用 OpenAI Images API 路由。
+    ChatGPT/Codex OAuth 使用相同的 `openai/gpt-image-2` 模型引用。当配置了
+    `openai` OAuth 配置文件时，OpenClaw 会通过该 OAuth 配置文件路由图像请求，而不是先尝试
+    `OPENAI_API_KEY`。显式的 `models.providers.openai` 配置（API 密钥、自定义/Azure base URL）
+    会改回直接使用 OpenAI Images API 路由。
 
   </Step>
   <Step title="让 agent 执行">
@@ -59,15 +59,16 @@ sidebarTitle: "图像生成"
 
 | 目标                                                 | 模型引用                                           | 认证                                   |
 | ---------------------------------------------------- | -------------------------------------------------- | -------------------------------------- |
-| 使用 API 计费进行 OpenAI 图像生成                    | `openai/gpt-image-2`                               | `OPENAI_API_KEY`                       |
-| 使用 Codex 订阅认证进行 OpenAI 图像生成              | `openai/gpt-image-2`                               | OpenAI Codex OAuth                     |
-| OpenAI 透明背景 PNG/WebP                            | `openai/gpt-image-1.5`                             | `OPENAI_API_KEY` 或 OpenAI Codex OAuth |
-| DeepInfra 图像生成                                   | `deepinfra/black-forest-labs/FLUX-1-schnell`       | `DEEPINFRA_API_KEY`                    |
-| OpenRouter 图像生成                                  | `openrouter/google/gemini-3.1-flash-image-preview` | `OPENROUTER_API_KEY`                   |
-| LiteLLM 图像生成                                     | `litellm/gpt-image-2`                              | `LITELLM_API_KEY`                      |
-| Google Gemini 图像生成                               | `google/gemini-3.1-flash-image-preview`            | `GEMINI_API_KEY` 或 `GOOGLE_API_KEY`   |
+| OpenAI image generation with API billing             | `openai/gpt-image-2`                               | `OPENAI_API_KEY`                       |
+| OpenAI image generation with Codex subscription auth | `openai/gpt-image-2`                               | OpenAI ChatGPT/Codex OAuth             |
+| OpenAI transparent-background PNG/WebP               | `openai/gpt-image-1.5`                             | `OPENAI_API_KEY` or OpenAI Codex OAuth |
+| DeepInfra image generation                           | `deepinfra/black-forest-labs/FLUX-1-schnell`       | `DEEPINFRA_API_KEY`                    |
+| fal Krea 2 expressive/style-directed generation      | `fal/krea/v2/medium/text-to-image`                 | `FAL_KEY`                              |
+| OpenRouter image generation                          | `openrouter/google/gemini-3.1-flash-image-preview` | `OPENROUTER_API_KEY`                   |
+| LiteLLM image generation                             | `litellm/gpt-image-2`                              | `LITELLM_API_KEY`                      |
+| Google Gemini image generation                       | `google/gemini-3.1-flash-image-preview`            | `GEMINI_API_KEY` or `GOOGLE_API_KEY`   |
 
-同一个 `image_generate` 工具既可以处理文本生成图像，也可以处理参考图像编辑。单个参考图像使用 `image`，多个参考图像使用 `images`。当提供方支持时，诸如 `quality`、`outputFormat` 和 `background` 等输出提示会被转发；如果提供方不支持，这些提示会被报告为已忽略。内置的透明背景支持是 OpenAI 特有的；其他提供方如果其后端输出了 PNG alpha 通道，仍可能保留该通道。
+同一个 `image_generate` 工具同时处理文本生成图像和参考图像编辑。单个参考图像使用 `image`，多个参考图像使用 `images`。对于 fal 上的 Krea 2 模型，这些参考图像会作为风格参考而不是编辑输入发送。提供方支持的输出提示，如 `quality`、`outputFormat` 和 `background`，会在可用时透传；当某个提供方不支持这些提示时，会报告为已忽略。内置的透明背景支持是 OpenAI 专属；其他提供方如果其后端输出了 PNG alpha，也可能保留该透明度。
 
 ## 支持的提供方
 
@@ -79,7 +80,7 @@ sidebarTitle: "图像生成"
 | Google     | `gemini-3.1-flash-image-preview`        | Yes                                | `GEMINI_API_KEY` or `GOOGLE_API_KEY`                  |
 | LiteLLM    | `gpt-image-2`                           | Yes (up to 5 input images)         | `LITELLM_API_KEY`                                     |
 | MiniMax    | `image-01`                              | Yes (subject reference)            | `MINIMAX_API_KEY` or MiniMax OAuth (`minimax-portal`) |
-| OpenAI     | `gpt-image-2`                           | Yes (up to 4 images)               | `OPENAI_API_KEY` or OpenAI Codex OAuth                |
+| OpenAI     | `gpt-image-2`                           | Yes (up to 4 images)               | `OPENAI_API_KEY` or OpenAI ChatGPT/Codex OAuth        |
 | OpenRouter | `google/gemini-3.1-flash-image-preview` | Yes (up to 5 input images)         | `OPENROUTER_API_KEY`                                  |
 | Vydra      | `grok-imagine`                          | No                                 | `VYDRA_API_KEY`                                       |
 | xAI        | `grok-imagine-image`                    | Yes (up to 5 images)               | `XAI_API_KEY`                                         |
@@ -98,13 +99,13 @@ sidebarTitle: "图像生成"
 
 ## 提供方能力
 
-| Capability            | ComfyUI            | DeepInfra | fal                       | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
-| --------------------- | ------------------ | --------- | ------------------------- | -------------- | --------------------- | -------------- | ----- | -------------- |
-| Generate (max count)  | Workflow-defined   | 4         | 4                         | 4              | 9                     | 4              | 1     | 4              |
-| Edit / reference      | 1 image (workflow) | 1 image   | Flux: 1; GPT: 10; NB2: 14 | Up to 5 images | 1 image (subject ref) | Up to 5 images | -     | Up to 5 images |
-| Size control          | -                  | ✓         | ✓                         | ✓              | -                     | Up to 4K       | -     | -              |
-| Aspect ratio          | -                  | -         | ✓                         | ✓              | ✓                     | -              | -     | ✓              |
-| Resolution (1K/2K/4K) | -                  | -         | ✓                         | ✓              | -                     | -              | -     | 1K, 2K         |
+| Capability            | ComfyUI            | DeepInfra | fal                                            | Google         | MiniMax               | OpenAI         | Vydra | xAI            |
+| --------------------- | ------------------ | --------- | ---------------------------------------------- | -------------- | --------------------- | -------------- | ----- | -------------- |
+| Generate (max count)  | Workflow-defined   | 4         | 4                                              | 4              | 9                     | 4              | 1     | 4              |
+| Edit / reference      | 1 image (workflow) | 1 image   | Flux: 1; GPT: 10; Krea style refs: 10; NB2: 14 | Up to 5 images | 1 image (subject ref) | Up to 5 images | -     | Up to 5 images |
+| Size control          | -                  | ✓         | ✓                                              | ✓              | -                     | Up to 4K       | -     | -              |
+| Aspect ratio          | -                  | -         | ✓                                              | ✓              | ✓                     | -              | -     | ✓              |
+| Resolution (1K/2K/4K) | -                  | -         | ✓                                              | ✓              | -                     | -              | -     | 1K, 2K         |
 
 ## 工具参数
 
@@ -123,13 +124,16 @@ sidebarTitle: "图像生成"
   用于编辑模式的单个参考图像路径或 URL。
 </ParamField>
 <ParamField path="images" type="string[]">
-  用于编辑模式的多个参考图像（支持的提供方最多 5 张）。
+  编辑模式或风格参考模型的多个参考图像（通过共享工具最多 10 张；
+  但仍受提供方特定限制约束）。
 </ParamField>
 <ParamField path="size" type="string">
   尺寸提示：`1024x1024`、`1536x1024`、`1024x1536`、`2048x2048`、`3840x2160`。
 </ParamField>
 <ParamField path="aspectRatio" type="string">
-  宽高比：`1:1`、`2:3`、`3:2`、`3:4`、`4:3`、`4:5`、`5:4`、`9:16`、`16:9`、`21:9`。
+  宽高比：`1:1`、`2:3`、`3:2`、`2.35:1`、`3:4`、`4:3`、`4:5`、
+  `5:4`、`9:16`、`16:9`、`21:9`、`4:1`、`1:4`、`8:1`、`1:8`。提供方
+  会验证其模型特定的子集。
 </ParamField>
 <ParamField path="resolution" type='"1K" | "2K" | "4K"'>分辨率提示。</ParamField>
 <ParamField path="quality" type='"low" | "medium" | "high" | "auto"'>
@@ -151,6 +155,9 @@ sidebarTitle: "图像生成"
 <ParamField path="filename" type="string">输出文件名提示。</ParamField>
 <ParamField path="openai" type="object">
   仅适用于 OpenAI 的提示：`background`、`moderation`、`outputCompression` 和 `user`。
+</ParamField>
+<ParamField path="fal.creativity" type='"raw" | "low" | "medium" | "high"'>
+  fal Krea 2 创造力控制。默认值为 `medium`。
 </ParamField>
 
 <Note>
@@ -223,28 +230,19 @@ OpenClaw 会按以下顺序尝试提供方：
 ### 图像编辑
 
 OpenAI、OpenRouter、Google、DeepInfra、fal、MiniMax、ComfyUI 和 xAI 支持编辑
-参考图像。传入参考图像路径或 URL：
+参考图像。fal 上的 Krea 2 模型使用相同的 `image` / `images` 字段作为风格参考，而不是编辑输入。传入参考图像路径或 URL：
 
 ```text
 "将这张照片生成水彩风格版本" + image: "/path/to/photo.jpg"
 ```
 
-OpenAI、OpenRouter、Google 和 xAI 支持通过
-`images` 参数传入最多 5 张参考图像。fal 支持用于 Flux image-to-image 的 1 张参考图像，
-用于 GPT Image 2 编辑最多 10 张，用于 Nano Banana 2 编辑最多 14 张。MiniMax 和
-ComfyUI 支持 1 张。
+OpenAI、OpenRouter、Google 和 xAI 通过 `images` 参数支持最多 5 张参考图像。fal 支持 1 张用于 Flux 图像到图像的参考图像、最多 10 张用于 GPT Image 2 编辑、最多 10 张用于 Krea 2 风格参考，以及最多 14 张用于 Nano Banana 2 编辑。MiniMax 和 ComfyUI 支持 1。
 
 ## 提供商深度解析
 
 <AccordionGroup>
-  <Accordion title="OpenAI gpt-image-2（以及 gpt-image-1.5）">
-    OpenAI 图像生成默认使用 `openai/gpt-image-2`。如果配置了
-    `openai-codex` OAuth 配置文件，OpenClaw 会重用 Codex 订阅聊天模型使用的
-    同一个 OAuth 配置文件，并通过 Codex Responses 后端发送图像请求。像
-    `https://chatgpt.com/backend-api` 这样的旧版 Codex base URL 会在图像请求中规范化为
-    `https://chatgpt.com/backend-api/codex`。OpenClaw 对该请求**不会**静默回退到
-    `OPENAI_API_KEY`——如需强制直接路由到 OpenAI Images API，请使用 API 密钥、
-    自定义 base URL 或 Azure 端点显式配置 `models.providers.openai`。
+  <Accordion title="OpenAI gpt-image-2 (and gpt-image-1.5)">
+    OpenAI 图像生成功能默认使用 `openai/gpt-image-2`。如果配置了 `openai` OAuth 配置文件，OpenClaw 会复用 Codex 订阅聊天模型所使用的同一 OAuth 配置文件，并通过 Codex Responses 后端发送图像请求。像 `https://chatgpt.com/backend-api` 这样的旧版 Codex 基础 URL 会在图像请求中规范化为 `https://chatgpt.com/backend-api/codex`。OpenClaw 不会为该请求静默回退到 `OPENAI_API_KEY` —— 若要强制直接路由到 OpenAI Images API，请显式配置 `models.providers.openai`，并提供 API key、自定义 base URL 或 Azure 端点。
 
     `openai/gpt-image-1.5`、`openai/gpt-image-1` 和
     `openai/gpt-image-1-mini` 模型仍然可以显式选择。对于透明背景 PNG/WebP 输出，请使用
@@ -312,8 +310,45 @@ ComfyUI 支持 1 张。
     `action: "list"` 查看你的已配置插件暴露了哪些内容。
 
   </Accordion>
-  <Accordion title="MiniMax 双重认证">
-    MiniMax 图像生成可通过以下两个内置的 MiniMax
+  <Accordion title="fal Krea 2">
+    fal 上的 Krea 2 模型使用 fal 原生的 Krea schema，而不是 Flux 使用的通用
+    `image_size` schema。OpenClaw 会发送：
+
+    - `aspect_ratio` 用于宽高比提示
+    - `creativity`，默认为 `medium`
+    - 在提供 `image` 或 `images` 时使用 `image_style_references`
+
+    选择 Krea 2 Medium 可获得更快的表现性插画，选择 Krea 2 Large
+    则可获得更慢但更细致的照片写实和纹理效果：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          imageGenerationModel: {
+            primary: "fal/krea/v2/medium/text-to-image",
+          },
+        },
+      },
+    }
+    ```
+
+    Krea 2 当前每次请求只返回一张图像。对 Krea 优先使用 `aspectRatio`；OpenClaw 会将 `size` 映射为最接近受支持的 Krea 宽高比，并且会为 Krea 拒绝 `resolution`，而不是将其丢弃。需要原生 Krea 创意等级时，请使用 `fal.creativity`：
+
+    ```json
+    {
+      "model": "fal/krea/v2/medium/text-to-image",
+      "prompt": "A cyber zine portrait with risograph texture",
+      "aspectRatio": "9:16",
+      "fal": {
+        "creativity": "high"
+      }
+    }
+    ```
+
+  </Accordion>
+  <Accordion title="MiniMax dual-auth">
+    MiniMax 图像生成可通过两个捆绑的 MiniMax
     认证路径使用：
 
     - `minimax/image-01` 用于 API key 配置
@@ -375,6 +410,11 @@ openclaw infer image generate \
   <Tab title="编辑（多个参考图）">
 ```text
 /tool image_generate action=generate model=openai/gpt-image-2 prompt="将第一张图像中的角色身份与第二张图像中的配色方案结合起来" images='["/path/to/character.png","/path/to/palette.jpg"]' size=1536x1024
+```
+  </Tab>
+  <Tab title="Krea 样式参考">
+```text
+/tool image_generate action=generate model=fal/krea/v2/medium/text-to-image prompt="An expressive editorial portrait using this color palette and print texture" images='["/path/to/palette.png","/path/to/texture.jpg"]' aspectRatio=9:16 fal='{"creativity":"high"}'
 ```
   </Tab>
 </Tabs>

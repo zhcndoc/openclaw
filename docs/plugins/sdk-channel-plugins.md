@@ -31,30 +31,9 @@ read_when:
 核心负责共享消息工具、提示词接线、外层会话键形状、
 通用的 `:thread:` 记账以及分发。
 
-新的通道插件也应当通过 `openclaw/plugin-sdk/channel-message` 暴露一个使用 `defineChannelMessageAdapter` 的 `message` 适配器。该适配器声明原生传输实际支持哪些可持久化的最终发送能力，并将文本/媒体发送指向与旧版 `outbound` 适配器相同的传输函数。只有当合同测试证明原生端副作用和返回的收据都成立时，才声明某项能力。
-完整的 API 契约、示例、能力矩阵、收据规则、实时预览最终化、接收确认策略、测试以及迁移表，请参见
-[Channel message API](/plugins/sdk-channel-message)。
-如果现有的 `outbound` 适配器已经具备正确的发送方法和能力元数据，请使用 `createChannelMessageAdapterFromOutbound(...)` 来派生 `message` 适配器，而不是手工编写另一层桥接。
-适配器发送应返回 `MessageReceipt` 值。当兼容性代码仍然需要遗留 id 时，请使用 `listMessageReceiptPlatformIds(...)`
-或 `resolveMessageReceiptPrimaryId(...)` 来推导，而不是在新的生命周期代码中保留并行的
-`messageIds` 字段。
-支持预览的通道还应声明 `message.live.capabilities`，并精确列出其拥有的实时生命周期，例如
-`draftPreview`、
-`previewFinalization`、
-`progressUpdates`、
-`nativeStreaming` 或
-`quietFinalization`。会在原位完成草稿预览最终化的通道还应声明 `message.live.finalizer.capabilities`，例如 `finalEdit`、
-`normalFallback`、
-`discardPending`、
-`previewReceipt` 和
-`retainOnAmbiguousFailure`，并通过 `defineFinalizableLivePreviewAdapter(...)` 以及
-`deliverWithFinalizableLivePreviewAdapter(...)` 将运行时逻辑路由过去。使用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 和
-`verifyChannelMessageLiveFinalizerProofs(...)` 测试来支撑这些能力，以避免原生预览、进度、编辑、回退/保留、清理和收据行为悄然漂移。
-延迟平台确认的入站接收器应声明 `message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是把确认时机隐藏在监控器本地状态中。用 `verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖每一种已声明的策略。
+新的通道插件还应通过来自 `openclaw/plugin-sdk/channel-outbound` 的 `defineChannelMessageAdapter` 暴露一个 `message` 适配器。该适配器声明本机传输实际支持哪些持久化的最终发送能力，并将文本/媒体发送指向与旧版 `outbound` 适配器相同的传输函数。只有当契约测试证明本机副作用和返回的回执时，才应声明某项能力。完整的 API 契约、示例、能力矩阵、回执规则、实时预览最终化、接收 ack 策略、测试和迁移表，请参见 [Channel outbound API](/plugins/sdk-channel-outbound)。如果现有的 `outbound` 适配器已经拥有正确的发送方法和能力元数据，则应使用 `createChannelMessageAdapterFromOutbound(...)` 派生 `message` 适配器，而不是手工编写另一层桥接。适配器发送应返回 `MessageReceipt` 值。当兼容性代码仍然需要旧版 id 时，应通过 `listMessageReceiptPlatformIds(...)` 或 `resolveMessageReceiptPrimaryId(...)` 派生它们，而不是在新的生命周期代码中保留并行的 `messageIds` 字段。支持预览的通道还应声明 `message.live.capabilities`，并精确列出其拥有的实时生命周期，例如 `draftPreview`、`previewFinalization`、`progressUpdates`、`nativeStreaming` 或 `quietFinalization`。会将草稿预览就地定稿的通道还应声明 `message.live.finalizer.capabilities`，例如 `finalEdit`、`normalFallback`、`discardPending`、`previewReceipt` 和 `retainOnAmbiguousFailure`，并通过 `defineFinalizableLivePreviewAdapter(...)` 加上 `deliverWithFinalizableLivePreviewAdapter(...)` 将运行时逻辑路由过去。请用 `verifyChannelMessageLiveCapabilityAdapterProofs(...)` 和 `verifyChannelMessageLiveFinalizerProofs(...)` 测试来支撑这些能力，以防本机预览、进度、编辑、回退/保留、清理和回执行为悄然漂移。延迟平台确认的入站接收器应声明 `message.receive.defaultAckPolicy` 和 `supportedAckPolicies`，而不是把 ack 时序隐藏在 monitor 本地状态中。为每一种声明的策略都要通过 `verifyChannelMessageReceiveAckPolicyAdapterProofs(...)` 覆盖。
 
-旧式的回复/轮次辅助器，例如 `createChannelTurnReplyPipeline`、
-`dispatchInboundReplyWithBase` 和
-`recordInboundSessionAndDispatchReply`，仍可用于兼容性分发器。不要在新的通道代码中使用这些名称；新插件应从 `openclaw/plugin-sdk/channel-message` 上的 `message` 适配器、收据以及收发生命周期帮助器开始。
+像 `createChannelTurnReplyPipeline`、`dispatchInboundReplyWithBase` 和 `recordInboundSessionAndDispatchReply` 这样的遗留回复帮助器仍可用于兼容性分发器。不要在新的通道代码中使用这些名称；新的插件应从 `message` 适配器、回执以及 `openclaw/plugin-sdk/channel-outbound` 上的接收/发送生命周期帮助器开始。
 
 迁移入站授权的通道可以在运行时接收路径中使用实验性的
 `openclaw/plugin-sdk/channel-ingress-runtime` 子路径。该子路径将平台查找和副作用保留在插件内，同时共享允许列表状态解析、路由/发送者/命令/事件/激活决策、脱敏诊断以及轮次准入映射。请把插件身份规范化保留在传给解析器的描述符中；不要从已解析状态或决策中序列化原始匹配值。有关 API 设计、
@@ -64,10 +43,9 @@ read_when:
 如果你的通道在入站回复之外也支持输入中指示器，请在通道插件上暴露
 `heartbeat.sendTyping(...)`。核心会在心跳模型运行开始前，使用已解析的心跳投递目标调用它，并使用共享的输入中保持活动/清理生命周期。当平台需要显式停止信号时，请添加 `heartbeat.clearTyping(...)`。
 
-如果你的通道为消息工具参数添加了承载媒体来源的字段，请通过
-`describeMessageTool(...).mediaSourceParams` 暴露这些参数名。核心会使用这份显式列表做沙箱路径归一化和外发媒体访问策略，因此插件不需要在共享核心中为提供商特定的头像、附件或封面图参数编写特殊分支。
-优先返回一个按动作键控的映射，例如
-`{ "set-profile": ["avatarUrl", "avatarPath"] }`，这样无关动作就不会继承另一个动作的媒体参数。对于那些被刻意在所有暴露动作之间共享的参数，扁平数组仍然可用。
+如果你的通道添加了携带媒体源的消息工具参数，请通过 `describeMessageTool(...).mediaSourceParams` 暴露这些参数名。核心会将该显式列表用于沙箱路径规范化和外发媒体访问策略，因此插件无需为提供商特定的头像、附件或封面图参数在共享核心中添加特殊处理。优先返回形如
+`{ "set-profile": ["avatarUrl", "avatarPath"] }` 的按动作键控映射，这样无关动作就不会继承其他动作的媒体参数。对于刻意在每个暴露动作间共享的参数，平面数组仍然可用。
+必须为平台侧媒体抓取暴露临时公共 URL 的通道，可以使用 `openclaw/plugin-sdk/outbound-media` 中的 `createHostedOutboundMediaStore(...)` 并结合插件状态存储。平台路由解析和令牌校验应保留在通道插件中；共享帮助器只负责媒体加载、过期元数据、分块行和清理。
 
 如果你的通道需要对 `message(action="send")` 进行提供商特定的形状处理，请优先使用 `actions.prepareSendPayload(...)`。将原生卡片、块、嵌入或其他持久化数据放到 `payload.channelData.<channel>` 下，并让核心通过 outbound/message 适配器执行实际发送。仅当负载无法序列化和重试时，才使用 `actions.handleAction(...)` 作为发送的兼容性回退。
 
@@ -86,37 +64,42 @@ read_when:
 
 大多数通道插件不需要审批相关的专门代码。
 
-- Core 负责同聊天 `/approve`、共享审批按钮负载以及通用的回退投递。
-- 当通道需要与审批相关的行为时，优先在通道插件上使用一个 `approvalCapability` 对象。
-- `ChannelPlugin.approvals` 已移除。把审批投递/原生/渲染/认证事实放到 `approvalCapability` 上。
-- `plugin.auth` 仅用于登录/登出；核心不再从该对象读取审批认证钩子。
-- `approvalCapability.authorizeActorAction` 和 `approvalCapability.getActionAvailabilityState` 是规范的审批认证接缝。
-- 对于同聊天审批认证可用性，请使用 `approvalCapability.getActionAvailabilityState`。
-- 如果你的通道暴露原生 exec 审批，请在它与同聊天审批认证不同的时候，使用 `approvalCapability.getExecInitiatingSurfaceState` 来获取 initiating-surface/native-client 状态。核心会使用这个 exec 专用钩子来区分 `enabled` 与 `disabled`，判断 initiating channel 是否支持原生 exec 审批，并将该通道纳入原生客户端回退指引。`createApproverRestrictedNativeApprovalCapability(...)` 会在常见场景下补全这一点。
-- 使用 `outbound.shouldSuppressLocalPayloadPrompt` 或 `outbound.beforeDeliverPayload` 处理通道特定的负载生命周期行为，例如隐藏重复的本地审批提示，或在投递前发送输入中指示。
-- 仅在需要原生审批路由或回退抑制时，使用 `approvalCapability.delivery`。
-- 对于通道拥有的原生审批事实，请使用 `approvalCapability.nativeRuntime`。将其在高频通道入口上保持惰性，可使用 `createLazyChannelApprovalNativeRuntimeAdapter(...)`，它可以按需导入你的运行时模块，同时仍让核心组装审批生命周期。
-- 仅当通道确实需要自定义审批负载而不是共享渲染器时，才使用 `approvalCapability.render`。
-- 当通道希望禁用路径的回复解释启用原生 exec 审批所需的确切配置开关时，使用 `approvalCapability.describeExecApprovalSetup`。该钩子接收 `{ channel, channelLabel, accountId }`；命名账号通道应当渲染账号范围内的路径，例如 `channels.<channel>.accounts.<id>.execApprovals.*`，而不是顶层默认值。
-- 如果某个通道可以从现有配置中推断出稳定的、类似所有者的 DM 身份，请使用 `openclaw/plugin-sdk/approval-runtime` 中的 `createResolvedApproverActionAuthAdapter`，以限制同聊天 `/approve`，而无需添加审批专用的核心逻辑。
-- 如果通道需要原生审批投递，请将通道代码聚焦于目标规范化以及传输/呈现事实。请使用 `openclaw/plugin-sdk/approval-runtime` 中的 `createChannelExecApprovalProfile`、`createChannelNativeOriginTargetResolver`、`createChannelApproverDmTargetResolver` 和 `createApproverRestrictedNativeApprovalCapability`。把通道特定事实放在 `approvalCapability.nativeRuntime` 之后，最好通过 `createChannelApprovalNativeRuntimeAdapter(...)` 或 `createLazyChannelApprovalNativeRuntimeAdapter(...)`，这样核心就可以组装处理器并负责请求过滤、路由、去重、过期、网关订阅以及“已路由到别处”的通知。`nativeRuntime` 被拆分为几个更小的接缝：
-- `createChannelNativeOriginTargetResolver` 默认使用共享的 channel-route 匹配器处理 `{ to, accountId, threadId }` 目标。只有当通道具有提供商特定的等价规则时才传入 `targetsMatch`，例如 Slack 的 timestamp 前缀匹配。
-- 当通道需要在默认路由匹配器或自定义 `targetsMatch` 回调运行之前，对提供商 id 进行标准化，同时保留原始目标用于投递时，请将 `normalizeTargetForMatch` 传给 `createChannelNativeOriginTargetResolver`。仅当解析后的投递目标本身也应被标准化时，才使用 `normalizeTarget`。
-- `availability` - 账户是否已配置，以及请求是否应被处理
-- `presentation` - 将共享审批视图模型映射为待处理/已解决/已过期的原生负载或最终动作
-- `transport` - 准备目标并发送/更新/删除原生审批消息
-- `interactions` - 用于原生按钮或反应的可选绑定/解绑/清理动作钩子，以及一个可选的 `cancelDelivered` 钩子。当 `deliverPending` 在进程内或持久化状态中注册了状态（例如反应目标存储）时，应实现 `cancelDelivered`，这样在处理器停止且在 `bindPending` 运行之前取消投递时，或者 `bindPending` 返回无句柄时，状态都能被释放
-- `observe` - 可选的投递诊断钩子
-- 如果通道需要运行时拥有的对象，例如客户端、token、Bolt app 或 webhook receiver，请通过 `openclaw/plugin-sdk/channel-runtime-context` 注册它们。通用的 runtime-context 注册表让核心可以从通道启动状态引导基于能力的处理器，而无需增加审批专用的包装胶水代码。
-- 只有当基于能力的接缝仍不够表达时，才使用更底层的 `createChannelApprovalHandler` 或 `createChannelNativeApprovalRuntime`。
-- 原生审批通道必须通过这些帮助器同时路由 `accountId` 和 `approvalKind`。`accountId` 将多账号审批策略限制在正确的 bot 账号范围内，`approvalKind` 则让 exec 与 plugin 审批行为无需在核心中写死分支即可对通道可用。
-- 核心现在也负责审批重路由通知。通道插件不应再从 `createChannelNativeApprovalRuntime` 发送自己的“审批被转到 DM / 另一个频道”的后续消息；相反，应通过共享审批能力帮助器暴露准确的 origin + approver-DM 路由，让核心在向发起聊天发布任何通知之前先聚合实际投递结果。
-- 端到端保留已投递审批 id 的种类。原生客户端不应从通道本地状态猜测或重写 exec 与 plugin 审批路由。
-- 不同的审批种类可以有意暴露不同的原生界面。
-  当前捆绑示例：
-  - Slack 保持对 exec 和 plugin id 都可用的原生审批路由。
-  - Matrix 对 exec 和 plugin 审批保持相同的原生 DM/频道路由和 reaction 体验，同时仍允许认证按审批种类不同而不同。
-- `createApproverRestrictedNativeApprovalAdapter` 仍然作为兼容包装器存在，但新代码应优先使用能力构建器，并在插件上暴露 `approvalCapability`。
+- Core owns same-chat `/approve`, shared approval button payloads, and generic fallback delivery.
+- Prefer one `approvalCapability` object on the channel plugin when the channel needs approval-specific behavior.
+- `ChannelPlugin.approvals` is removed. Put approval delivery/native/render/auth facts on `approvalCapability`.
+- `plugin.auth` is login/logout only; core no longer reads approval auth hooks from that object.
+- `approvalCapability.authorizeActorAction` and `approvalCapability.getActionAvailabilityState` are the canonical approval-auth seam.
+- Use `approvalCapability.getActionAvailabilityState` for same-chat approval auth availability.
+- If your channel exposes native exec approvals, use `approvalCapability.getExecInitiatingSurfaceState` for the initiating-surface/native-client state when it differs from same-chat approval auth. Core uses that exec-specific hook to distinguish `enabled` vs `disabled`, decide whether the initiating channel supports native exec approvals, and include the channel in native-client fallback guidance. `createApproverRestrictedNativeApprovalCapability(...)` fills this in for the common case.
+- Use `outbound.shouldSuppressLocalPayloadPrompt` or `outbound.beforeDeliverPayload` for channel-specific payload lifecycle behavior such as hiding duplicate local approval prompts or sending typing indicators before delivery.
+- Use `approvalCapability.delivery` only for native approval routing or fallback suppression.
+- Use `approvalCapability.nativeRuntime` for channel-owned native approval facts. Keep it lazy on hot channel entrypoints with `createLazyChannelApprovalNativeRuntimeAdapter(...)`, which can import your runtime module on demand while still letting core assemble the approval lifecycle.
+- Use `approvalCapability.render` only when a channel truly needs custom approval payloads instead of the shared renderer.
+- Use `approvalCapability.describeExecApprovalSetup` when the channel wants the disabled-path reply to explain the exact config knobs needed to enable native exec approvals. The hook receives `{ channel, channelLabel, accountId }`; named-account channels should render account-scoped paths such as `channels.<channel>.accounts.<id>.execApprovals.*` instead of top-level defaults.
+- If a channel can infer stable owner-like DM identities from existing config, use `createResolvedApproverActionAuthAdapter` from `openclaw/plugin-sdk/approval-runtime` to restrict same-chat `/approve` without adding approval-specific core logic.
+- If custom approval auth intentionally allows only same-chat fallback, return `markImplicitSameChatApprovalAuthorization({ authorized: true })` from `openclaw/plugin-sdk/approval-auth-runtime`; otherwise core treats the result as explicit approver authorization.
+- If a channel-owned native callback resolves approvals directly, use `isImplicitSameChatApprovalAuthorization(...)` before resolving so implicit fallback still goes through the channel's normal actor authorization.
+- If a channel needs native approval delivery, keep channel code focused on target normalization plus transport/presentation facts. Use `createChannelExecApprovalProfile`, `createChannelNativeOriginTargetResolver`, `createChannelApproverDmTargetResolver`, and `createApproverRestrictedNativeApprovalCapability` from `openclaw/plugin-sdk/approval-runtime`. Put the channel-specific facts behind `approvalCapability.nativeRuntime`, ideally via `createChannelApprovalNativeRuntimeAdapter(...)` or `createLazyChannelApprovalNativeRuntimeAdapter(...)`, so core can assemble the handler and own request filtering, routing, dedupe, expiry, gateway subscription, and routed-elsewhere notices. `nativeRuntime` is split into a few smaller seams:
+- Use `createNativeApprovalChannelRouteGates` from `openclaw/plugin-sdk/approval-native-runtime` when a channel supports both session-origin native delivery and explicit approval forwarding targets. The helper centralizes approval config selection, `mode` handling, agent/session filters, account binding, session-target matching, and target-list matching while callers still own the channel id, default forwarding mode, account lookup, transport-enabled check, target normalization, and turn-source target resolution. Do not use it to create core-owned channel policy defaults; pass the channel's documented default mode explicitly.
+- `createChannelNativeOriginTargetResolver` uses the shared channel-route matcher by default for `{ to, accountId, threadId }` targets. Pass `targetsMatch` only when a channel has provider-specific equivalence rules, such as Slack timestamp prefix matching.
+- Pass `normalizeTargetForMatch` to `createChannelNativeOriginTargetResolver` when the channel needs to canonicalize provider ids before the default route matcher or a custom `targetsMatch` callback runs, while preserving the original target for delivery. Use `normalizeTarget` only when the resolved delivery target itself should be canonicalized.
+- `availability` - whether the account is configured and whether a request should be handled
+- `presentation` - map the shared approval view model into pending/resolved/expired native payloads or final actions
+- `transport` - prepare targets plus send/update/delete native approval messages
+- `interactions` - optional bind/unbind/clear-action hooks for native buttons or reactions, plus an optional `cancelDelivered` hook. Implement `cancelDelivered` when `deliverPending` registers in-process or persistent state (such as a reaction target store) so that state can be released if a handler stop cancels the delivery before `bindPending` runs or when `bindPending` returns no handle
+- `observe` - optional delivery diagnostics hooks
+- If the channel needs runtime-owned objects such as a client, token, Bolt app, or webhook receiver, register them through `openclaw/plugin-sdk/channel-runtime-context`. The generic runtime-context registry lets core bootstrap capability-driven handlers from channel startup state without adding approval-specific wrapper glue.
+- Reach for the lower-level `createChannelApprovalHandler` or `createChannelNativeApprovalRuntime` only when the capability-driven seam is not expressive enough yet.
+- Native approval channels must route both `accountId` and `approvalKind` through those helpers. `accountId` keeps multi-account approval policy scoped to the right bot account, and `approvalKind` keeps exec vs plugin approval behavior available to the channel without hardcoded branches in core.
+- Core now owns approval reroute notices too. Channel plugins should not send their own "approval went to DMs / another channel" follow-up messages from `createChannelNativeApprovalRuntime`; instead, expose accurate origin + approver-DM routing through the shared approval capability helpers and let core aggregate actual deliveries before posting any notice back to the initiating chat.
+- Preserve the delivered approval id kind end-to-end. Native clients should not
+  guess or rewrite exec vs plugin approval routing from channel-local state.
+- Different approval kinds can intentionally expose different native surfaces.
+  Current bundled examples:
+  - Slack keeps native approval routing available for both exec and plugin ids.
+  - Matrix keeps the same native DM/channel routing and reaction UX for exec
+    and plugin approvals, while still letting auth differ by approval kind.
+- `createApproverRestrictedNativeApprovalAdapter` still exists as a compatibility wrapper, but new code should prefer the capability builder and expose `approvalCapability` on the plugin.
 
 对于高频通道入口，当你只需要这一组能力中的某一部分时，优先使用更窄的运行时子路径：
 
@@ -171,24 +154,29 @@ read_when:
 
 - `openclaw/plugin-sdk/account-core`,
   `openclaw/plugin-sdk/account-id`,
-  `openclaw/plugin-sdk/account-resolution`, 和
-  `openclaw/plugin-sdk/account-helpers` 用于多账号配置和
-  默认账号回退
-- `openclaw/plugin-sdk/inbound-envelope` 和
-  `openclaw/plugin-sdk/inbound-reply-dispatch` 用于入站路由/信封以及
-  record-and-dispatch 接线
-- `openclaw/plugin-sdk/channel-targets` 用于目标解析帮助器
-- `openclaw/plugin-sdk/outbound-media` 和
-  `openclaw/plugin-sdk/outbound-runtime` 用于媒体加载以及外发
-  身份/发送委派和负载规划
-- 来自 `openclaw/plugin-sdk/channel-core` 的 `buildThreadAwareOutboundSessionRoute(...)`，当外发路由应保留显式的 `replyToId`/`threadId`，或在基础会话键仍匹配后恢复当前的 `:thread:` 会话时使用。若平台具有原生线程投递语义，提供商插件可以覆盖优先级、后缀行为和线程 id 规范化。
-- `openclaw/plugin-sdk/thread-bindings-runtime` 用于线程绑定生命周期
-  和适配器注册
-- `openclaw/plugin-sdk/agent-media-payload` 仅在仍然需要旧式 agent/media
-  负载字段布局时使用
-- `openclaw/plugin-sdk/telegram-command-config` 用于 Telegram 自定义命令
-  规范化、重复/冲突校验以及稳定的回退命令
-  配置契约
+  `openclaw/plugin-sdk/account-resolution`, and
+  `openclaw/plugin-sdk/account-helpers` for multi-account config and
+  default-account fallback
+- `openclaw/plugin-sdk/inbound-envelope` and
+  `openclaw/plugin-sdk/channel-inbound` for inbound route/envelope and
+  record-and-dispatch wiring
+- `openclaw/plugin-sdk/channel-targets` for target parsing helpers
+- `openclaw/plugin-sdk/outbound-media` for media loading and
+  `openclaw/plugin-sdk/channel-outbound` for outbound identity/send delegates
+  and payload planning
+- `buildThreadAwareOutboundSessionRoute(...)` from
+  `openclaw/plugin-sdk/channel-core` when an outbound route should preserve an
+  explicit `replyToId`/`threadId` or recover the current `:thread:` session
+  after the base session key still matches. Provider plugins can override
+  precedence, suffix behavior, and thread id normalization when their platform
+  has native thread delivery semantics.
+- `openclaw/plugin-sdk/thread-bindings-runtime` for thread-binding lifecycle
+  and adapter registration
+- `openclaw/plugin-sdk/agent-media-payload` only when a legacy agent/media
+  payload field layout is still required
+- `openclaw/plugin-sdk/telegram-command-config` for Telegram custom-command
+  normalization, duplicate/conflict validation, and a fallback-stable command
+  config contract
 
 仅认证类的通道通常可以停留在默认路径：核心处理审批，插件只暴露外发/认证能力。像 Matrix、Slack、Telegram 和自定义聊天传输这类原生审批通道，应当使用共享的原生帮助器，而不是自己重新实现审批生命周期。
 
@@ -625,7 +613,7 @@ if (decision.shouldSkip) return;
   <Card title="运行时辅助" icon="settings" href="/plugins/sdk-runtime">
     通过 api.runtime 提供 TTS、STT、媒体、subagent
   </Card>
-  <Card title="Channel turn kernel" icon="bolt" href="/plugins/sdk-channel-turn">
+  <Card title="Channel inbound API" icon="bolt" href="/plugins/sdk-channel-inbound">
     Shared inbound event lifecycle: ingest, resolve, record, dispatch, finalize
   </Card>
 </CardGroup>

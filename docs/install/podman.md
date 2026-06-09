@@ -82,7 +82,13 @@ Quadlet 是仅限 Linux 的选项，因为它依赖 systemd 用户服务。
 
 然后打开 `http://127.0.0.1:18789/`，并使用 `~/.openclaw/.env` 中的 token。
 
-主机 CLI 默认设置：
+Model auth in Podman:
+
+- Use OpenClaw-managed auth during setup: Anthropic API keys for Anthropic, or OpenAI Codex browser OAuth/device-code auth for Codex-backed OpenAI.
+- The Podman launcher does not mount host CLI credential homes such as `~/.claude` or `~/.codex` into the setup or gateway container.
+- Existing host CLI logins are same-host convenience paths. For container installs, keep provider auth in the mounted `~/.openclaw` state that setup manages.
+
+Host CLI default:
 
 ```bash
 export OPENCLAW_CONTAINER=openclaw
@@ -99,7 +105,7 @@ openclaw channels login
 
 在 macOS 上，Podman machine 可能会使浏览器在网关看来像是非本地的。
 如果控制 UI 在启动后报告设备认证错误，请使用
-[Podman and Tailscale](#podman--tailscale) 中的 Tailscale 指南。
+[Podman 和 Tailscale](#podman--tailscale) 中的 Tailscale 指南。
 
 <a id="podman--tailscale"></a>
 

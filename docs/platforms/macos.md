@@ -47,7 +47,9 @@ launchctl bootout gui/$UID/ai.openclaw.gateway
 如果未安装 LaunchAgent，请在应用中启用它，或运行
 `openclaw gateway install`。
 
-## 节点能力（mac）
+If the gateway repeatedly disappears for minutes to hours and only resumes when you touch the Control UI or SSH into the host, see the troubleshooting note for macOS Maintenance Sleep / `ENETDOWN` crashes and launchd's respawn-protection gate in [Gateway troubleshooting](/gateway/troubleshooting#macos-gateway-silently-stops-responding-then-resumes-when-you-touch-the-dashboard).
+
+## Node capabilities (mac)
 
 macOS 应用将自身呈现为一个节点。常见命令：
 
@@ -102,12 +104,12 @@ security + ask + allowlist 存储在 Mac 本地：
 
 说明：
 
-- `allowlist` 条目是已解析二进制路径的 glob 模式，或者是通过 PATH 调用的命令的裸命令名。
-- 包含 shell 控制或展开语法（`&&`、`||`、`;`、`|`、`` ` ``、`$`、`<`、`>`、`(`、`)`）的原始 shell 命令文本会被视为 allowlist 未命中，并需要显式批准（或将 shell 二进制加入 allowlist）。
+- `allowlist` 条目是解析后的二进制路径的 glob 模式，或用于通过 PATH 调用命令的裸命令名。
+- 包含 shell 控制或展开语法（`&&`、`||`、`；`、`|`、`` ` ``、`$`、`<`、`>`、`(`、`)`）的原始 shell 命令文本会被视为未命中 allowlist，并且需要显式批准（或者将 shell 二进制加入 allowlist）。
 - 在提示中选择“始终允许”会将该命令添加到 allowlist。
-- `system.run` 的环境覆盖会被过滤（移除 `PATH`、`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`），然后与应用环境合并。
-- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的环境覆盖会被缩减为一个较小的显式 allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
-- 对于 allow-always 决策中的 allowlist 模式，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果无法安全解包，则不会自动持久化任何 allowlist 条目。
+- `system.run` 环境覆盖会被过滤（丢弃 `PATH`、`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`），然后与应用环境合并。
+- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的环境覆盖会缩减为一个较小的显式 allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
+- 对于 allowlist 模式下的允许始终决策，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，而不是包装器路径。如果展开不安全，则不会自动持久化 allowlist 条目。
 
 ## 深度链接
 

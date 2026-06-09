@@ -77,12 +77,12 @@ openclaw plugins install @openclaw/slack
     "assistant_view": {
       "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
       "suggested_prompts": [
-        { "title": "What can you do?", "message": "What can you help me with?" },
+        { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
           "title": "Summarize this channel",
-          "message": "Summarize the recent activity in this channel."
+          "message": "总结这个频道最近的活动。"
         },
-        { "title": "Draft a reply", "message": "Help me draft a reply." }
+        { "title": "Draft a reply", "message": "帮我起草一条回复。" }
       ]
     },
     "slash_commands": [
@@ -163,12 +163,12 @@ openclaw plugins install @openclaw/slack
     "assistant_view": {
       "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
       "suggested_prompts": [
-        { "title": "What can you do?", "message": "What can you help me with?" },
+        { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
           "title": "Summarize this channel",
-          "message": "Summarize the recent activity in this channel."
+          "message": "总结这个频道最近的活动。"
         },
-        { "title": "Draft a reply", "message": "Help me draft a reply." }
+        { "title": "Draft a reply", "message": "帮我起草一条回复。" }
       ]
     },
     "slash_commands": [
@@ -222,8 +222,8 @@ openclaw plugins install @openclaw/slack
 
         Slack 创建应用后：
 
-        - **Basic Information -> App-Level Tokens -> Generate Token and Scopes**: add `connections:write`, save, copy the App-Level Token.
-        - **Install App -> Install to Workspace**: copy the Bot User OAuth Token。
+        - **Basic Information -> App-Level Tokens -> Generate Token and Scopes**: 添加 `connections:write`，保存，并复制 App-Level Token。
+        - **Install App -> Install to Workspace**: 复制 Bot User OAuth Token。
 
       </Step>
 
@@ -293,12 +293,12 @@ openclaw gateway
     "assistant_view": {
       "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
       "suggested_prompts": [
-        { "title": "What can you do?", "message": "What can you help me with?" },
+        { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
           "title": "Summarize this channel",
-          "message": "Summarize the recent activity in this channel."
+          "message": "总结这个频道最近的活动。"
         },
-        { "title": "Draft a reply", "message": "Help me draft a reply." }
+        { "title": "Draft a reply", "message": "帮我起草一条回复。" }
       ]
     },
     "slash_commands": [
@@ -385,12 +385,12 @@ openclaw gateway
     "assistant_view": {
       "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
       "suggested_prompts": [
-        { "title": "What can you do?", "message": "What can you help me with?" },
+        { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
           "title": "Summarize this channel",
-          "message": "Summarize the recent activity in this channel."
+          "message": "总结这个频道最近的活动。"
         },
-        { "title": "Draft a reply", "message": "Help me draft a reply." }
+        { "title": "Draft a reply", "message": "帮我起草一条回复。" }
       ]
     },
     "slash_commands": [
@@ -454,8 +454,8 @@ openclaw gateway
 
         Slack 创建应用后：
 
-        - **Basic Information → App Credentials**: copy the **Signing Secret** for request verification.
-        - **Install App -> Install to Workspace**: copy the Bot User OAuth Token.
+        - **Basic Information → App Credentials**: 复制 **Signing Secret** 用于请求校验。
+        - **Install App -> Install to Workspace**: 复制 Bot User OAuth Token。
 
       </Step>
 
@@ -1119,12 +1119,14 @@ Slack 提供方从 `messages.ackReactionScope` 读取范围（默认 `"group-men
 
 当 `channels.slack.streaming.mode` 为 `partial` 时，`channels.slack.streaming.nativeTransport` 控制 Slack 原生文本流式传输（默认：`true`）。
 
-- 原生文本流式传输和 Slack assistant 线程状态显示时，必须有一个回复线程可用。线程选择仍遵循 `replyToMode`。
-- 当原生流式传输不可用或不存在回复线程时，频道、群聊和顶层 DM 根消息仍可以使用正常的草稿预览。
-- 顶层 Slack DMs 默认保持为非线程模式，因此不会显示 Slack 的线程式原生流/状态预览；OpenClaw 会在 DM 中发布并编辑草稿预览。
+Slack 原生进度任务卡片在 progress 模式下为可选启用。将 `channels.slack.streaming.progress.nativeTaskCards` 设为 `true`，并将 `channels.slack.streaming.mode` 设为 `"progress"`，即可在工作进行时发送 Slack 原生计划/任务卡片，然后在完成时更新同一张任务卡片。不启用该标志时，progress 模式会保留可移植的草稿预览行为。
+
+- 原生文本流式传输和 Slack assistant 线程状态要显示，必须有可用的回复线程。线程选择仍遵循 `replyToMode`。
+- 当原生流式传输不可用或不存在回复线程时，频道、群聊和顶层 DM 仍可使用常规草稿预览。
+- 顶层 Slack DMs 默认保持非线程化，因此不会显示 Slack 的线程式原生流/状态预览；OpenClaw 会改为在 DM 中发布并编辑草稿预览。
 - 媒体和非文本载荷会回退到正常投递。
-- 媒体/错误的最终结果会取消待处理的预览编辑；符合条件的文本/分块最终结果只会在可以原地编辑预览时刷新。
-- 如果流式传输在回复过程中途失败，OpenClaw 会对剩余载荷回退到正常投递。
+- 媒体/错误最终结果会取消待处理的预览编辑；符合条件的文本/Block 最终结果仅在能够就地编辑预览时才会刷新。
+- 如果流式传输在回复中途失败，OpenClaw 会对剩余载荷回退到正常投递。
 
 使用草稿预览而不是 Slack 原生文本流式传输：
 
@@ -1135,6 +1137,24 @@ Slack 提供方从 `messages.ackReactionScope` 读取范围（默认 `"group-men
       streaming: {
         mode: "partial",
         nativeTransport: false,
+      },
+    },
+  },
+}
+```
+
+选择启用 Slack 原生进度任务卡片：
+
+```json5
+{
+  channels: {
+    slack: {
+      streaming: {
+        mode: "progress",
+        progress: {
+          nativeTaskCards: true,
+          render: "rich",
+        },
       },
     },
   },

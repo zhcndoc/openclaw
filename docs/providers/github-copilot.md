@@ -1,14 +1,17 @@
 ---
 summary: "通过设备流或非交互式令牌导入，从 OpenClaw 登录 GitHub Copilot"
 read_when:
-  - 你想将 GitHub Copilot 用作模型提供方
+  - 你想将 GitHub Copilot 作为模型提供方使用
   - 你需要 `openclaw models auth login-github-copilot` 流程
+  - 你正在在内置 Copilot 提供方、Copilot SDK harness 和 Copilot Proxy 之间做选择
 title: "GitHub Copilot"
 ---
 
-GitHub Copilot 是 GitHub 的 AI 编程助手。它为你的 GitHub 账户和套餐提供对 Copilot 模型的访问。OpenClaw 可以通过两种不同方式将 Copilot 用作模型提供方。
+GitHub Copilot 是 GitHub 的 AI 编码助手。它为你的 GitHub 账户和套餐提供对 Copilot
+模型的访问。OpenClaw 可以通过三种不同方式将 Copilot 作为模型
+提供方或代理运行时使用。
 
-## 在 OpenClaw 中使用 Copilot 的两种方式
+## 在 OpenClaw 中使用 Copilot 的三种方式
 
 <Tabs>
   <Tab title="内置提供方（github-copilot）">
@@ -41,8 +44,37 @@ GitHub Copilot 是 GitHub 的 AI 编程助手。它为你的 GitHub 账户和套
 
   </Tab>
 
+  <Tab title="Copilot SDK harness 插件（copilot）">
+    当你希望 GitHub 的 Copilot CLI 和 SDK 为所选 `github-copilot/*` 模型接管底层代理循环时，请安装外部 `@openclaw/copilot` 插件。
+
+    ```bash
+    openclaw plugins install clawhub:@openclaw/copilot
+    ```
+
+    然后将某个模型或提供方切换到该运行时：
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          model: "github-copilot/gpt-5.5",
+          models: {
+            "github-copilot/gpt-5.5": {
+              agentRuntime: { id: "copilot" },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    当你希望这些代理轮次使用原生 Copilot CLI 会话、SDK 管理的线程状态以及 Copilot 自有的压缩时，请选择此方式。完整运行时契约请参阅 [Copilot SDK harness](/plugins/copilot)。
+
+  </Tab>
+
   <Tab title="Copilot Proxy 插件（copilot-proxy）">
-    将 **Copilot Proxy** VS Code 扩展用作本地桥接。OpenClaw 与代理的 `/v1` 端点通信，并使用你在其中配置的模型列表。
+    使用 **Copilot Proxy** VS Code 扩展作为本地桥接。OpenClaw 连接到
+    代理的 `/v1` 端点，并使用你在那里配置的模型列表。
 
     <Note>
     当你已经在 VS Code 中运行 Copilot Proxy，或者需要通过它进行路由时，请选择此方式。你必须启用该插件并保持 VS Code 扩展运行。
@@ -141,11 +173,9 @@ openclaw onboard --non-interactive --accept-risk \
 
 GitHub Copilot 也可以作为 [memory search](/concepts/memory-search) 的嵌入提供方。如果你有 Copilot 订阅并已登录，OpenClaw 可将其用于嵌入，而无需单独的 API 密钥。
 
-### 自动检测
+### Config
 
-当 `memorySearch.provider` 为 `"auto"`（默认值）时，GitHub Copilot 会以 15 的优先级尝试——位于本地嵌入之后、OpenAI 和其他付费提供方之前。如果可用 GitHub 令牌，OpenClaw 会从 Copilot API 发现可用的嵌入模型，并自动选择最佳模型。
-
-### 显式配置
+将 `memorySearch.provider` 明确设置为使用 GitHub Copilot 嵌入。如果有可用的 GitHub 令牌，OpenClaw 会从 Copilot API 发现可用的嵌入模型并自动选择最佳模型。
 
 ```json5
 {

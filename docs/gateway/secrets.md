@@ -141,9 +141,9 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
 
     校验：
 
-    - `provider` must match `^[a-z][a-z0-9_-]{0,63}$`
-    - `id` must match `^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$` (supports selectors such as `secret#json_key`)
-    - `id` must not contain `.` or `..` as slash-delimited path segments (for example `a/../b` is rejected)
+    - `provider` 必须匹配 `^[a-z][a-z0-9_-]{0,63}$`
+    - `id` 必须匹配 `^[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}$`（支持诸如 `secret#json_key` 之类的 selector）
+    - `id` 不能包含 `.` 或 `..` 作为由斜杠分隔的路径段（例如 `a/../b` 会被拒绝）
 
   </Tab>
 </Tabs>
@@ -168,6 +168,13 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
         args: ["--profile", "prod"],
         passEnv: ["PATH", "VAULT_ADDR"],
         jsonOnly: true,
+      },
+      "team-secrets": {
+        source: "exec",
+        pluginIntegration: {
+          pluginId: "acme-secrets",
+          integrationId: "secret-store",
+        },
       },
     },
     defaults: {
@@ -198,13 +205,14 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
     - Windows 失败即关闭说明：如果某个路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
 
   </Accordion>
-  <Accordion title="Exec 提供方">
-    - 运行配置的绝对二进制路径，不通过 shell。
-    - 默认情况下，`command` 必须指向普通文件（不能是符号链接）。
-    - 设置 `allowSymlinkCommand: true` 以允许符号链接形式的 command 路径（例如 Homebrew shim）。OpenClaw 会校验解析后的目标路径。
-    - 对包管理器路径（例如 `["/opt/homebrew"]`）将 `allowSymlinkCommand` 与 `trustedDirs` 配对使用。
-    - 支持超时、无输出超时、输出字节限制、env 白名单以及受信任目录。
-    - Windows 失败即关闭说明：如果 command 路径无法进行 ACL 验证，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
+  <Accordion title="Exec provider">
+    - 运行配置好的绝对二进制路径，不使用 shell。
+    - 默认情况下，`command` 必须指向常规文件（不是符号链接）。
+    - 设置 `allowSymlinkCommand: true` 以允许符号链接命令路径（例如 Homebrew shim）。OpenClaw 会验证解析后的目标路径。
+    - 将 `allowSymlinkCommand` 与 `trustedDirs` 搭配用于包管理器路径（例如 `["/opt/homebrew"]`）。
+    - 支持超时、无输出超时、输出字节限制、env allowlist 和可信目录。
+    - Windows 失败即关闭说明：如果无法为命令路径验证 ACL，则解析失败。仅对受信任路径，可在该提供方上设置 `allowInsecurePath: true` 以绕过路径安全检查。
+    - 由插件管理的 exec 提供方可以使用 `pluginIntegration`，而不是复制 `command`/`args`。OpenClaw 会在启动/重载期间从已安装的插件 manifest 中解析当前命令详情。如果插件被禁用、移除、不受信任，或不再声明该集成，使用该提供方的活动 SecretRef 会失败关闭。
 
     请求负载（stdin）：
 

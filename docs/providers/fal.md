@@ -44,24 +44,44 @@ OpenClaw 提供了一个内置的 `fal` 提供程序，用于托管图像、视�
 内置的 `fal` 图像生成提供程序默认使用
 `fal/fal-ai/flux/dev`。
 
-| 能力           | 值                                                          |
-| -------------- | ----------------------------------------------------------- |
-| 每次请求最大图像数 | 4 张                                                     |
-| 编辑模式       | Flux：1 张参考图像；GPT Image 2：10；Nano Banana 2：14 |
-| 尺寸覆盖       | 支持                                                       |
-| 宽高比         | 支持用于生成以及 GPT Image 2/Nano Banana 2 编辑           |
-| 分辨率         | 支持                                                       |
-| 输出格式       | `png` 或 `jpeg`                                             |
+| Capability     | Value                                                              |
+| -------------- | ------------------------------------------------------------------ |
+| Max images     | 4 per request; Krea 2: 1 per request                               |
+| Edit mode      | Flux: 1 reference image; GPT Image 2: 10; Nano Banana 2: 14        |
+| Style refs     | Krea 2: up to 10 style references via `image` / `images`           |
+| Size overrides | Supported                                                          |
+| Aspect ratio   | Supported for generate, Krea 2, and GPT Image 2/Nano Banana 2 edit |
+| Resolution     | Supported                                                          |
+| Output format  | `png` or `jpeg`                                                    |
 
 <Warning>
-Flux 图像到图像请求**不**支持 `aspectRatio` 覆盖。GPT
-Image 2 和 Nano Banana 2 的编辑请求使用 fal 的 `/edit` 端点，并接受
-宽高比提示。
+Flux 图像到图像请求不支持 `aspectRatio` 覆盖。GPT
+Image 2 和 Nano Banana 2 编辑请求使用 fal 的 `/edit` 端点并接受
+宽高比提示。Nano Banana 2 还接受额外的原生宽/高比例，
+例如 `4:1`、`1:4`、`8:1` 和 `1:8`；Krea 2 仅验证其自身更小的
+宽高比子集。
 </Warning>
 
-当您想要 PNG 输出时，请使用 `outputFormat: "png"`。fal 在 OpenClaw 中没有声明
-明确的透明背景控制，因此 `background:
-"transparent"` 会被标记为对 fal 模型已忽略的覆盖项。
+Krea 2 模型使用 fal 的原生 Krea 负载架构。OpenClaw 发送
+`aspect_ratio`、`creativity` 和 `image_style_references`，而不是 Flux 使用的
+通用 `image_size` / 编辑端点负载。模型引用为：
+
+- `fal/krea/v2/medium/text-to-image`
+- `fal/krea/v2/large/text-to-image`
+
+Medium 适合更快的表现型插画、动漫、绘画和艺术风格。Large 适合更慢的写实、
+原始纹理、胶片颗粒和更细致的效果。Krea 默认 `fal.creativity: "medium"`；
+支持的值为 `raw`、`low`、`medium` 和 `high`。
+
+Krea 2 在 fal 的请求架构中暴露的是宽高比，而不是 `image_size`。优先使用 `aspectRatio`；
+OpenClaw 会将 `size` 映射为最接近的 Krea 支持的宽高比，并拒绝 Krea 的 `resolution`
+覆盖项，而不是忽略它。
+
+当您希望从暴露 `output_format` 的 fal 模型获得 PNG 输出时，请使用
+`outputFormat: "png"`。fal 在 OpenClaw 中没有声明明确的透明背景控制，因此
+`background: "transparent"` 会被报告为 fal 模型被忽略的覆盖项。
+Krea 2 端点不会通过 fal 暴露 `output_format` 请求字段，因此
+OpenClaw 会拒绝 Krea 请求中的 `outputFormat` 覆盖项。
 
 要将 fal 设为默认图像提供程序：
 
@@ -71,6 +91,20 @@ Image 2 和 Nano Banana 2 的编辑请求使用 fal 的 `/edit` 端点，并接�
     defaults: {
       imageGenerationModel: {
         primary: "fal/fal-ai/flux/dev",
+      },
+    },
+  },
+}
+```
+
+要使用 Krea 2 Medium：
+
+```json5
+{
+  agents: {
+    defaults: {
+      imageGenerationModel: {
+        primary: "fal/krea/v2/medium/text-to-image",
       },
     },
   },

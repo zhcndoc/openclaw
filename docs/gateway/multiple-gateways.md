@@ -3,7 +3,7 @@ summary: "在一台主机上运行多个 OpenClaw Gateway（隔离、端口和�
 read_when:
   - 在同一台机器上运行多个 Gateway
   - 你需要为每个 Gateway 提供独立的配置/状态/端口
-title: "多个 gateways"
+title: "多个网关"
 ---
 
 大多数部署应该只使用一个 Gateway，因为单个 Gateway 可以处理多个消息连接和代理。如果你需要更强的隔离或冗余（例如，救援机器人），请使用隔离的配置文件/端口运行独立的 Gateways。
@@ -160,8 +160,8 @@ openclaw --profile rescue browser status
 
 解读：
 
-- `gateway status --deep` 有助于发现来自旧安装的陈旧 launchd/systemd/schtasks 服务。
-- `gateway probe` 的警告文本，例如 `multiple reachable gateways detected`，只有在你有意运行多个隔离的 gateway 时才是预期行为。
+- `gateway status --deep` helps catch stale launchd/systemd/schtasks services from older installs.
+- `gateway probe` warning text such as `multiple reachable gateway identities detected` is expected only when you intentionally run more than one isolated gateway, or when OpenClaw cannot prove reachable probe targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway is one gateway with multiple transports, even when transport ports differ.
 
 ## 相关内容
 

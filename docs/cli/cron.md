@@ -14,6 +14,44 @@ title: "Cron"
 运行 `openclaw cron --help` 查看完整命令集合。参见 [Cron jobs](/automation/cron-jobs) 获取概念性指南。
 </Tip>
 
+## 快速创建作业
+
+`openclaw cron create` 是 `openclaw cron add` 的别名。对于新作业，请先放置调度，再放置提示：
+
+```bash
+openclaw cron create "0 7 * * *" \
+  "总结夜间更新。" \
+  --name "Morning brief" \
+  --agent ops
+```
+
+当作业需要向 webhook POST 完成后的负载，而不是投递到聊天目标时，请使用 `--webhook <url>`：
+
+```bash
+openclaw cron create "0 18 * * 1-5" \
+  "将今天的部署总结为 JSON。" \
+  --name "Deploy digest" \
+  --webhook "https://example.invalid/openclaw/cron"
+```
+
+对于应在 OpenClaw cron 内运行、且不启动隔离代理/模型运行的确定性 shell 风格作业，请使用 `--command`：
+
+<Note>
+命令型 cron 作业是由管理员编写的 Gateway 自动化。创建、编辑、移除或手动运行它们需要 `operator.admin`；计划运行稍后会在 Gateway 进程中执行，而不是作为代理 `tools.exec` 工具调用执行。`tools.exec.*` 和 exec 审批仍然约束模型可见的 exec 工具。
+</Note>
+
+```bash
+openclaw cron create "*/15 * * * *" \
+  --name "Queue depth probe" \
+  --command "scripts/check-queue.sh" \
+  --command-cwd "/srv/app" \
+  --announce \
+  --channel telegram \
+  --to "-1001234567890"
+```
+
+`--command <shell>` 会存储为 `argv: ["sh", "-lc", <shell>]`。若要精确执行 argv，请使用 `--command-argv '["node","scripts/report.mjs"]'`。命令型作业会捕获 stdout/stderr，记录正常的 cron 历史，并通过与隔离作业相同的 `announce`、`webhook` 或 `none` 投递模式路由输出。若命令只打印 `NO_REPLY`，则会被抑制。
+
 ## 会话
 
 `--session` 接受 `main`、`isolated`、`current` 或 `session:<id>`。
@@ -50,7 +88,9 @@ title: "Cron"
 - `webhook` 会将完成后的负载发布到一个 URL。
 - `none` 会禁用运行器回退投递。
 
-`--announce` 是最终回复的运行器回退投递。`--no-deliver` 会禁用该回退，但当可用聊天路由存在时，不会移除代理的 `message` 工具。
+使用 `cron add|create --webhook <url>` 或 `cron edit <job-id> --webhook <url>` 来设置 webhook 投递。不要将 `--webhook` 与聊天投递标志一起使用，例如 `--announce`、`--no-deliver`、`--channel`、`--to`、`--thread-id` 或 `--account`。
+
+`--announce` 是用于最终回复的运行器回退投递。`--no-deliver` 会禁用该回退，但在存在聊天路由时不会移除代理的 `message` 工具。
 
 从活动聊天创建的提醒会保留实时聊天投递目标，用于回退 announce 投递。内部会话键可能是小写；不要把它们当作区分大小写的提供方 ID 的真实来源，例如 Matrix 房间 ID。
 
@@ -70,13 +110,17 @@ title: "Cron"
 没有生成回复负载，因此模型/提供方失败仍然会增加错误
 计数并触发失败通知。
 
-如果隔离运行在第一次模型请求之前超时，`openclaw cron show`
+命令型 cron 作业不会启动隔离的代理回合。零退出码会记录为
+`ok`；非零退出、信号、超时或无输出超时会记录为 `error`，并
+可能触发相同的失败通知路径。
+
+如果隔离运行在首次模型请求前超时，`openclaw cron show`
 和 `openclaw cron runs` 会包含特定阶段的错误，例如
 `setup timed out before runner start` 或
 `stalled before first model call (last phase: context-engine)`。
-对于基于 CLI 的提供方，在外部
-CLI 回合开始之前，预模型看门狗仍会保持活动，因此会话查找、钩子、认证、提示以及 CLI 设置卡顿会
-被报告为预模型 cron 失败。
+对于基于 CLI 的提供方，在外部 CLI 回合启动之前，预模型看门狗会保持激活，
+因此会话查找、钩子、认证、提示以及 CLI 设置卡住都会被
+报告为模型前的 cron 失败。
 
 ## 调度
 
@@ -96,7 +140,7 @@ CLI 回合开始之前，预模型看门狗仍会保持活动，因此会话查�
 
 对于目标为本地已配置模型提供方的隔离作业，cron 会在启动代理回合前执行一次轻量级的提供方预检。Loopback、私有网络以及 `.local` 的 `api: "ollama"` 提供方会在 `/api/tags` 上探测；像 vLLM、SGLang 和 LM Studio 这样的本地 OpenAI 兼容提供方会在 `/models` 上探测。如果端点不可达，该运行会被记录为 `skipped` 并在之后的计划中重试；匹配的失效端点会缓存 5 分钟，以避免大量作业反复轰击同一台本地服务器。
 
-注意：cron 作业定义位于 `jobs.json`，而待处理的运行时状态位于 `jobs-state.json`。如果 `jobs.json` 被外部编辑，Gateway 会重新加载已变更的计划并清除过期的待处理槽位；仅格式化层面的重写不会清除待处理槽位。
+注意：cron 作业、待处理的运行时状态以及运行历史都存储在共享的 SQLite 状态数据库中。旧版 `jobs.json`、`jobs-state.json` 和 `runs/*.jsonl` 文件会被导入一次，并以 `.migrated` 后缀重命名。导入后，请使用 `openclaw cron add|edit|remove` 编辑计划，而不是编辑 JSON 文件。
 
 ### 手动运行
 
@@ -129,10 +173,11 @@ openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆盖。这意味着：
 
-- 当所选作业模型失败时，已配置的模型回退仍然适用。
-- 当存在时，按作业负载的 `fallbacks` 会替换已配置的回退列表。
-- 空的按作业回退列表（作业负载/API 中的 `fallbacks: []`）会使 cron 运行保持严格。
-- 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传递一个显式的空回退覆盖，因此不会把代理主项作为隐藏的重试目标附加进去。
+- 当所选作业模型失败时，配置的模型回退仍然适用。
+- 当作业负载中存在 `fallbacks` 时，它会替换配置的回退列表。
+- 为空的作业级回退列表（作业负载/API 中的 `fallbacks: []`）会使 cron 运行变得严格。
+- 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传入一个显式的空回退覆盖，从而不会把代理主项作为隐藏的重试目标追加。
+- 本地提供方预检会在将 cron 运行标记为 `skipped` 之前依次检查已配置的回退。
 
 `openclaw doctor` 会报告那些已经设置了 `payload.model` 的作业，包括提供方命名空间计数以及与 `agents.defaults.model` 的不匹配情况。当认证、提供方或计费行为在实时聊天和计划任务之间看起来不同时，请使用该检查。
 
@@ -165,9 +210,9 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 结构化拒绝
 
-Isolated cron runs use structured execution-denial metadata from the embedded run as the authoritative denial signal. They also honor node-host `UNAVAILABLE` wrappers when the nested structured error message starts with `SYSTEM_RUN_DENIED` or `INVALID_REQUEST`.
+隔离 cron 运行会使用嵌入式运行中的结构化执行拒绝元数据作为权威拒绝信号。它们也会在嵌套的结构化错误消息以 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 开头时，尊重节点宿主的 `UNAVAILABLE` 包装。
 
-Cron does not classify final-output prose or approval-looking refusal phrases as denials unless the embedded run also provides structured denial metadata, so ordinary assistant text is not treated as a blocked command.
+除非嵌入式运行也提供了结构化拒绝元数据，否则 cron 不会将最终输出散文或看起来像审批拒绝的短语归类为拒绝，因此普通的助手文本不会被视为被阻止的命令。
 
 `cron list` 和运行历史会显示拒绝原因，而不是把被阻止的命令报告为 `ok`。
 
@@ -176,12 +221,12 @@ Cron does not classify final-output prose or approval-looking refusal phrases as
 保留和清理在配置中控制：
 
 - `cron.sessionRetention`（默认 `24h`）会清理已完成的隔离运行会话。
-- `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 会清理 `~/.openclaw/cron/runs/<jobId>.jsonl`。
+- `cron.runLog.keepLines` 会按作业清理保留的 SQLite 运行历史行。`cron.runLog.maxBytes` 仍然被接受，以兼容旧的文件后端运行日志。
 
 ## 迁移旧作业
 
 <Note>
-如果你有来自当前投递和存储格式之前的 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧的 `threadId`、负载 `provider` 投递别名），并在配置了 `cron.webhook` 时，将简单的 `notify: true` webhook 回退作业迁移为显式的 webhook 投递。
+如果你有来自当前投递和存储格式之前的 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧版 `threadId`、payload `provider` 投递别名），并将 `notify: true` 的 webhook 回退作业从 `cron.webhook` 迁移到显式的 webhook 投递。已经向聊天公告的作业会保留该投递，并获得一个完成时的 webhook 目标。
 </Note>
 
 ## 常见编辑
@@ -219,18 +264,32 @@ openclaw cron edit <job-id> --announce --channel telegram --to "-1001234567890" 
 创建一个带轻量级引导上下文的隔离作业：
 
 ```bash
-openclaw cron add \
-  --name "轻量级晨间简报" \
-  --cron "0 7 * * *" \
+openclaw cron create "0 7 * * *" \
+  "总结夜间更新。" \
+  --name "Lightweight morning brief" \
   --session isolated \
-  --message "总结昨夜更新。" \
   --light-context \
   --no-deliver
 ```
 
 `--light-context` 仅适用于隔离的代理回合作业。对于 cron 运行，轻量模式会保持引导上下文为空，而不是注入完整的工作区引导集合。
 
-## 常见管理命令
+创建一个带精确 argv、cwd、env、stdin 和输出限制的命令作业：
+
+```bash
+openclaw cron create "*/30 * * * *" \
+  --name "Position export" \
+  --command-argv '["node","scripts/export-position.mjs"]' \
+  --command-cwd "/srv/app" \
+  --command-env "NODE_ENV=production" \
+  --command-input '{"mode":"summary"}' \
+  --timeout-seconds 120 \
+  --no-output-timeout-seconds 30 \
+  --output-max-bytes 65536 \
+  --webhook "https://example.invalid/openclaw/cron"
+```
+
+## 常见管理员命令
 
 手动运行与检查：
 
@@ -270,6 +329,7 @@ openclaw cron edit <job-id> --session "session:daily-brief"
 
 ```bash
 openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
+openclaw cron edit <job-id> --webhook "https://example.invalid/openclaw/cron"
 openclaw cron edit <job-id> --best-effort-deliver
 openclaw cron edit <job-id> --no-best-effort-deliver
 openclaw cron edit <job-id> --no-deliver

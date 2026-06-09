@@ -80,13 +80,13 @@ openclaw models auth login --provider anthropic --method cli --set-default
 如果 `claude` 不在 `PATH` 中，请先安装 Claude Code，或者将
 `agents.defaults.cliBackends.claude-cli.command` 设置为真实的二进制路径。
 
-手动输入 token（任意提供方；会写入 `auth-profiles.json` 并更新配置）：
+Manual token entry (any provider; writes the per-agent SQLite auth store + updates config):
 
 ```bash
 openclaw models auth paste-token --provider openrouter
 ```
 
-`auth-profiles.json` 只存储凭据。其规范结构如下：
+The auth profile store keeps credentials only. Legacy `auth-profiles.json` files used this canonical shape:
 
 ```json
 {
@@ -101,9 +101,9 @@ openclaw models auth paste-token --provider openrouter
 }
 ```
 
-OpenClaw 在运行时要求使用规范的 `version` + `profiles` 结构。如果旧安装仍然保留平面文件，例如 `{ "openrouter": { "apiKey": "..." } }`，请运行 `openclaw doctor --fix` 将其重写为 `openrouter:default` 的 API 密钥配置文件；doctor 会在原文件旁边保留一份 `.legacy-flat.*.bak` 备份。诸如 `baseUrl`、`api`、模型 id、headers 和 timeouts 等端点细节应放在 `openclaw.json` 或 `models.json` 中的 `models.providers.<id>` 下，而不是放在 `auth-profiles.json` 中。
+OpenClaw now reads auth profiles from each agent's `openclaw-agent.sqlite`. If an older install still has `auth-profiles.json`, `auth-state.json`, or a flat auth profile file such as `{ "openrouter": { "apiKey": "..." } }`, run `openclaw doctor --fix` to import it into SQLite; doctor keeps timestamped backups beside the original JSON files. Endpoint details such as `baseUrl`, `api`, model ids, headers, and timeouts belong under `models.providers.<id>` in `openclaw.json` or `models.json`, not in auth profiles.
 
-诸如 Bedrock `auth: "aws-sdk"` 之类的外部认证路由也不属于凭据。如果你想使用命名的 Bedrock 路由，请在 `openclaw.json` 中设置 `auth.profiles.<id>.mode: "aws-sdk"`；不要将 `type: "aws-sdk"` 写入 `auth-profiles.json`。`openclaw doctor --fix` 会把旧的 AWS SDK 标记从凭据存储迁移到配置元数据中。
+External auth routes such as Bedrock `auth: "aws-sdk"` are also not credentials. If you want a named Bedrock route, put `auth.profiles.<id>.mode: "aws-sdk"` in `openclaw.json`; do not write `type: "aws-sdk"` into the auth profile store. `openclaw doctor --fix` moves legacy AWS SDK markers from the credential store into config metadata.
 
 静态凭据也支持 Auth profile 引用：
 
@@ -182,18 +182,48 @@ requests`、`ThrottlingException`、`concurrency limit reached`，或
 
 ## 控制使用哪一个凭据
 
+### OpenAI and legacy `openai-codex` ids
+
+OpenAI API-key profiles and ChatGPT/Codex OAuth profiles both use the canonical
+provider id `openai`. New config should use `openai:*` profile ids and
+`auth.order.openai`.
+
+If you see `openai-codex` in older config, auth profile ids, or
+`auth.order.openai-codex`, treat it as legacy migration input. Do not create new
+`openai-codex` profiles. Run:
+
+```bash
+openclaw doctor --fix
+openclaw models auth list --provider openai
+```
+
+Doctor rewrites legacy `openai-codex:*` profile ids and
+`auth.order.openai-codex` entries to the canonical `openai` auth route. For
+OpenAI-specific model/runtime routing, see [OpenAI](/providers/openai).
+
 ### During login (CLI)
 
 Use `openclaw models auth login --provider <id> --profile-id <profileId>` for
 providers that support named auth profiles during login.
 
 ```bash
-openclaw models auth login --provider openai-codex --profile-id openai-codex:ritsuko
-openclaw models auth login --provider openai-codex --profile-id openai-codex:lain
+openclaw models auth login --provider openai --profile-id openai:ritsuko
+openclaw models auth login --provider openai --profile-id openai:lain
 ```
 
 This is the easiest way to keep multiple OAuth logins for the same provider
 separate inside one agent.
+
+Use `--force` when a saved provider profile is stuck, expired, or tied to the
+wrong account and the normal login command keeps reusing it. `--force` deletes
+the saved auth profiles for that provider in the selected agent directory, then
+runs the same provider auth flow again. It does not revoke credentials at the
+provider; rotate or revoke them in the provider dashboard when you need
+provider-side invalidation.
+
+```bash
+openclaw models auth login --provider anthropic --force
+```
 
 ### Per-session (chat command)
 
@@ -203,7 +233,7 @@ separate inside one agent.
 
 ### 按代理（CLI 覆盖）
 
-为某个代理设置显式的 auth profile 顺序覆盖（存储在该代理的 `auth-state.json` 中）：
+Set an explicit auth profile order override for an agent (stored in that agent's SQLite auth state):
 
 ```bash
 openclaw models auth order get --provider anthropic

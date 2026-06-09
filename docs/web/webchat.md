@@ -23,51 +23,49 @@ title: "WebChat"
 ## 工作原理（行为）
 
 - UI 连接到 Gateway WebSocket，并使用 `chat.history`、`chat.send` 和 `chat.inject`。
-- `chat.history` 为稳定性设置了上限：Gateway 可能会截断较长的文本字段、忽略较重的元数据，并用 `[chat.history omitted: message too large]` 替换超大条目。
-- `chat.history` 会跟随现代仅追加会话文件中的活动转写分支，因此被放弃的重写分支和被后续内容取代的提示副本不会在 WebChat 中渲染。
-- 压缩条目会作为明确的“已压缩历史”分隔线渲染。该分隔线说明压缩后的转写被保留为检查点，并链接到 Sessions 检查点控制项；在权限允许时，操作者可从该压缩视图分支或恢复。
-- Control UI 会记住 `chat.history` 返回的底层 Gateway `sessionId`，并在后续 `chat.send` 调用中带上它，因此重新连接和页面刷新会继续同一个已存储的会话，除非用户启动或重置会话。
-- Control UI 会在为同一会话、同一消息和同一附件生成新的 `chat.send` 运行 id 之前，合并重复的进行中提交；Gateway 仍会对复用相同幂等键的重复请求去重。
-- 工作区启动文件和待处理的 `BOOTSTRAP.md` 指令会通过代理系统提示中的项目上下文提供，而不会复制到 WebChat 用户消息中。Bootstrap 截断只会添加简洁的系统提示恢复通知；详细计数和配置开关保留在诊断界面上。
-- `chat.history` 也会进行显示归一化：运行时专用的 OpenClaw 上下文、
-  入站信封包装、行内投递指令标签
-  例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
-  负载（包括 `<tool_call>...</tool_call>`、
+- `chat.history` 的长度会受限以保证稳定性：Gateway 可能会截断较长文本字段、省略较重的元数据，并将超大条目替换为 `[chat.history omitted: message too large]`。
+- 当可见的助手消息在 `chat.history` 中被截断时，Control UI 可以打开侧边阅读器，并按需通过 `chat.message.get` 获取完整的显示规范化条目，而不会增加默认历史负载。
+- `chat.history` 会遵循现代仅追加会话文件的活动转写分支，因此被放弃的重写分支和被替代的提示副本不会在 WebChat 中渲染。
+- 压缩条目会渲染为一个明确的已压缩历史分隔符。该分隔符说明压缩后的转写作为检查点保留，并链接到 Sessions 检查点控制；在权限允许时，操作者可以从该压缩视图分支或恢复。
+- Control UI 会记住 `chat.history` 返回的底层 Gateway `sessionId`，并在后续 `chat.send` 调用中带上它，因此重新连接和刷新页面会继续同一段已存储的对话，除非用户开始或重置会话。
+- Control UI 会在生成新的 `chat.send` run id 之前，合并同一会话、同一消息和同一附件的重复进行中提交；Gateway 仍会对重复使用相同幂等键的请求去重。
+- 工作区启动文件和待处理的 `BOOTSTRAP.md` 指令通过代理系统提示的 Project Context 提供，而不是复制到 WebChat 用户消息中。Bootstrap 截断只会添加一条简洁的系统提示恢复通知；详细计数和配置开关仍保留在诊断界面。
+- `chat.history` 也会进行显示规范化：运行时专用的 OpenClaw 上下文、
+  入站信封包装、内联投递指令标签
+  如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`、纯文本工具调用 XML
+  载荷（包括 `<tool_call>...</tool_call>`、
   `<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、
   `<function_calls>...</function_calls>` 以及被截断的工具调用块），以及
-  泄露的 ASCII/全角模型控制令牌都会从可见文本中移除，
-  而且其全部可见文本仅为精确静默
-  令牌 `NO_REPLY` / `no_reply` 的 assistant 条目会被省略。
-- 带有推理标记的回复负载（`isReasoning: true`）会从 WebChat 的 assistant 内容、转写回放文本和音频内容块中排除，因此仅用于思考的负载不会以可见 assistant 消息或可播放音频的形式出现。
-- `chat.inject` 会将一条 assistant 备注直接追加到转写中，并广播到 UI（不触发 agent 运行）。
-- 中止的运行可能会让部分 assistant 输出在 UI 中保持可见。
-- 如果存在缓冲输出，Gateway 会将中止的部分 assistant 文本持久化到转写历史中，并用中止元数据标记这些条目。
-- 历史始终从 gateway 获取（不进行本地文件监视）。
-- 如果 gateway 不可达，WebChat 将为只读。
+  泄漏的 ASCII/全角模型控制 token 都会从可见文本中移除，
+  而且如果助手条目的全部可见文本只是完全相同的静默
+  token `NO_REPLY` / `no_reply`，则会被省略。
+- 带有推理标记的回复载荷（`isReasoning: true`）会被排除在 WebChat 助手内容、转写回放文本和音频内容块之外，因此仅包含思考内容的载荷不会作为可见助手消息或可播放音频显示。
+- `chat.inject` 会直接向转写追加一条助手注释并将其广播到 UI（不启动 agent 运行）。
+- 已中止的运行可以让部分助手输出继续在 UI 中可见。
+- 当存在缓冲输出时，Gateway 会将中止的部分助手文本持久化到转写历史中，并为这些条目标记中止元数据。
+- 历史始终从 gateway 获取（不会本地监听文件）。
+- 如果 gateway 不可达，WebChat 只能只读。
 
 ### 转写与投递模型
 
 WebChat 有两条独立的数据路径：
 
-- session JSONL 文件是持久化的模型/运行时转写。对于正常的 agent 运行，Pi 会通过其会话管理器将对模型可见的 `user`、`assistant` 和 `toolResult` 消息持久化到该文件中。WebChat 不会将任意投递、状态或辅助文本写入该转写。
-- Gateway `ReplyPayload` 事件是实时投递投影。它们可以针对 WebChat/通道显示、块流式输出、指令标签、媒体嵌入、TTS/音频标志以及 UI 回退行为进行归一化。它们本身并不是权威的会话日志。
-- 需要通过 `tools.message` 显示回复的 harness 仍将 WebChat 作为当前运行的内部源回复接收端。来自该活动 WebChat 运行、且不带目标的 `message.send` 会被投影到同一聊天并镜像到会话转写；WebChat 不会变成可复用的出站通道，也不会继承 `lastChannel`。
-- WebChat 仅在 Gateway 负责显示了一个不属于正常 Pi assistant 轮次的消息时，才注入助手转写条目：`chat.inject`、非 agent 命令回复、中止的部分输出，以及 WebChat 管理的媒体转写补充。
-- `chat.history` 读取已存储的会话转写并应用 WebChat 显示投影。如果在运行期间出现的实时助手文本在历史重新加载后消失，先检查原始 JSONL 是否包含该助手文本，然后检查 `chat.history` 投影是否将其剥离，最后检查 Control UI 的乐观尾部合并是否用持久化快照替换了本地投递状态。
+- 会话 JSONL 文件是持久化的模型/运行转写。对于正常的 agent 运行，嵌入式 OpenClaw 运行时会通过其会话管理器持久化模型可见的 `user`、`assistant` 和 `toolResult` 消息。WebChat 不会把任意投递、状态或辅助文本写入该转写。
+- Gateway `ReplyPayload` 事件是实时投递投影。它们可以针对 WebChat/通道显示进行规范化、阻断流式输出、处理指令标签、媒体嵌入、TTS/音频标志以及 UI 回退行为。它们本身不是规范的会话日志。
+- 需要通过 `tools.message` 获得可见回复的 harness 仍将 WebChat 作为当前运行的内部源回复接收端。来自该活动 WebChat 运行的无目标 `message.send` 会投影到同一聊天并镜像到会话转写；WebChat 不会变成可复用的外发通道，也永远不会继承 `lastChannel`。
+- 当 Gateway 在正常的嵌入式 agent 回合之外拥有一个已显示消息时，WebChat 只会注入助手转写条目：`chat.inject`、非 agent 命令回复、中止的部分输出，以及由 WebChat 管理的媒体转写补充。
+- `chat.history` 会读取已存储的会话转写并应用 WebChat 显示投影。如果运行期间出现实时助手文本，但在历史重新加载后消失，先检查原始 JSONL 是否包含该助手文本，然后检查 `chat.history` 投影是否将其剥离，最后检查 Control UI 的乐观尾部合并是否用持久化快照替换了本地投递状态。
+- `chat.message.get` 使用与 `chat.history` 相同的转写分支和显示投影规则，包括活动 agent 范围控制，但会按 `messageId` 定位单个转写条目，并在完整内容不再可返回时给出真实的不可用原因。
 
-正常的 agent 运行最终答案应该是持久化的，因为 Pi 会写入助手 `message_end`。任何将已投递最终载荷镜像回转写的回退逻辑，必须先避免重复写入 Pi 已经写入的助手轮次。
+正常的 agent 运行最终答案应该是持久化的，因为嵌入式运行时会写入助手 `message_end`。任何将已投递的最终载荷回镜到转写中的回退逻辑，都必须先避免重复写入嵌入式运行时已经写过的助手回合。
 
-## Control UI agents tools 面板
+## Control UI agents 工具面板
 
 - Control UI 的 `/agents` Tools 面板有两个独立视图：
-  - **Available Right Now** 使用 `tools.effective(sessionKey=...)`，展示当前
-    会话在运行时实际可用的工具，包括 core、plugin 和 channel-owned 工具。
-  - **Tool Configuration** 使用 `tools.catalog`，并保持聚焦于 profiles、overrides 以及
-    catalog 语义。
-- 运行时可用性以会话为作用域。在同一 agent 上切换会话可能会改变
-  **Available Right Now** 列表。
-- 配置编辑器并不意味着运行时可用；实际生效的访问权限仍然遵循策略优先级
-  （`allow`/`deny`，按 agent 和 provider/channel 覆盖）。
+  - **Available Right Now** 使用 `tools.effective(sessionKey=...)`，显示当前会话库存的服务器派生只读投影，包括 core、plugin、channel-owned 以及已经发现的 MCP server 工具。
+  - **Tool Configuration** 使用 `tools.catalog`，重点关注 profile、override 和 catalog 语义。
+- 运行时可用性是按会话范围生效的。在同一个 agent 上切换会话可能会改变 **Available Right Now** 列表。如果已配置的 MCP server 尚未连接，或自上次发现后发生了变更，该面板会显示提示，而不是从读路径里静默启动 MCP transport。
+- 配置编辑器并不意味着运行时可用；有效访问仍遵循策略优先级（`allow`/`deny`，以及按 agent 和 provider/channel 的覆盖）。
 
 ## 远程使用
 
@@ -78,9 +76,7 @@ WebChat 有两条独立的数据路径：
 
 完整配置：[Configuration](/gateway/configuration)
 
-WebChat 选项：
-
-- `gateway.webchat.chatHistoryMaxChars`：`chat.history` 响应中文本字段的最大字符数。当某个转写条目超过此限制时，Gateway 会截断较长的文本字段，并可能用占位符替换超大消息。客户端也可以按请求发送 `maxChars` 来为单次 `chat.history` 调用覆盖此默认值。
+WebChat 没有持久化的配置段。Gateway 使用内置的 `chat.history` 显示上限；API 客户端可以针对单次 `chat.history` 调用发送按请求生效的 `maxChars` 以覆盖它。旧的 `channels.webchat` 和 `gateway.webchat` 配置已废弃；运行 `openclaw doctor --fix` 可将其移除。
 
 相关全局选项：
 

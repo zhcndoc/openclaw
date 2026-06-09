@@ -19,7 +19,15 @@ title: "卸载"
 openclaw uninstall
 ```
 
-非交互式（自动化 / npx）：
+使用 CLI 时，状态移除会保留已配置的工作区目录，除非你也选择 `--workspace`。
+
+预览将要移除的内容（安全）：
+
+```bash
+openclaw uninstall --dry-run --all
+```
+
+非交互式（自动化 / npx）。请谨慎使用，并且仅在确认作用域之后使用：
 
 ```bash
 openclaw uninstall --all --yes --non-interactive
@@ -46,7 +54,8 @@ openclaw gateway uninstall
 rm -rf "${OPENCLAW_STATE_DIR:-$HOME/.openclaw}"
 ```
 
-如果你把 `OPENCLAW_CONFIG_PATH` 设置到了状态目录之外的自定义位置，也要删除那个文件。
+如果你将 `OPENCLAW_CONFIG_PATH` 设置为状态目录之外的自定义位置，也请删除该文件。
+如果你想保留位于状态目录内的工作区，例如 `~/.openclaw/workspace`，请在运行 `rm -rf` 之前将其移走，或选择性删除状态内容。
 
 4. 删除你的工作区（可选，会移除 agent 文件）：
 

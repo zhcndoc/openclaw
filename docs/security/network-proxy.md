@@ -134,7 +134,7 @@ openclaw gateway start
 
 将此拒绝列表作为任何正向代理、防火墙或出站策略的起点。
 
-OpenClaw 应用层分类器逻辑位于 `src/infra/net/ssrf.ts` 和 `src/shared/net/ip.ts`。相关的对等钩子包括 `BLOCKED_HOSTNAMES`、`BLOCKED_IPV4_SPECIAL_USE_RANGES`、`BLOCKED_IPV6_SPECIAL_USE_RANGES`、`RFC2544_BENCHMARK_PREFIX`，以及对 NAT64、6to4、Teredo、ISATAP 和 IPv4 映射形式的嵌入式 IPv4 哨兵处理。在维护外部代理策略时，这些文件是有用的参考，但 OpenClaw 不会自动将这些规则导出到你的代理中，也不会在你的代理里强制执行它们。
+OpenClaw application-level classifier logic lives in `src/infra/net/ssrf.ts` and `packages/net-policy/src/ip.ts`. The relevant parity hooks are `BLOCKED_HOSTNAMES`, `BLOCKED_IPV4_SPECIAL_USE_RANGES`, `BLOCKED_IPV6_SPECIAL_USE_RANGES`, `RFC2544_BENCHMARK_PREFIX`, and the embedded IPv4 sentinel handling for NAT64, 6to4, Teredo, ISATAP, and IPv4-mapped forms. Those files are useful references when maintaining an external proxy policy, but OpenClaw does not automatically export or enforce those rules in your proxy.
 
 | Range or host                                                                        | 为什么阻止                                      |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------ |
@@ -248,7 +248,7 @@ proxy:
 
 ## 限制
 
-- 代理可提升进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是操作系统级的网络沙箱。
+- 代理可扩大进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是操作系统级的网络沙箱。
 - Gateway 回环控制平面流量默认通过 `proxy.loopbackMode: "gateway-only"` 直接本地绕过。OpenClaw 通过在 Proxyline 的受管绕过策略中注册活动的 Gateway 回环权限来实现该绕过。运维人员可以将 `proxy.loopbackMode` 设置为 `"proxy"`，让 Gateway 回环流量通过受管代理；也可以设置为 `"block"`，拒绝回环 Gateway 连接。有关远程代理注意事项，请参见 [Gateway Loopback Mode](#gateway-loopback-mode)。
 - 原始 `net`、`tls` 和 `http2` 套接字、原生 addon，以及非 OpenClaw 子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。fork 出来的 OpenClaw 子 CLI 会继承受管代理 URL 和 `proxy.loopbackMode` 状态。
 - IRC 是位于运维人员管理的前向代理路由之外的原始 TCP/TLS 通道。在要求所有出站流量都经过该前向代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。

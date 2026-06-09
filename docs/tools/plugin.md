@@ -115,7 +115,27 @@ doc-schema-version: 1
 
 裸包规格具有特殊的兼容行为。如果裸名称匹配某个捆绑插件 id，OpenClaw 会使用该捆绑来源。如果它匹配某个官方外部插件 id，OpenClaw 会使用官方包目录。其他普通裸包规格在发布切换期间会通过 npm 安装。与捆绑插件匹配的原始 `@openclaw/*` 包规格也会在回退到 npm 之前解析为捆绑副本。若你明确想要外部 npm 包而不是镜像自带的捆绑副本，请使用 `npm:@openclaw/<plugin>@<version>`。当你需要确定性的来源选择时，请使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:`。有关完整命令契约，请参见 [`openclaw plugins`](/cli/plugins#install)。
 
-### 配置插件策略
+For npm installs, unpinned package specs and `@latest` choose the newest stable
+package that advertises compatibility with this OpenClaw build. If npm's
+current latest release declares a newer `openclaw.compat.pluginApi` or
+`openclaw.install.minHostVersion`, OpenClaw scans older stable package versions
+and installs the newest one that fits. Exact versions and explicit channel tags
+such as `@beta` stay pinned to the selected package and fail when incompatible.
+
+### Operator install policy
+
+Configure `security.installPolicy` to run a trusted local policy command before
+plugin install or update proceeds. The policy receives metadata plus the staged
+source path and can allow or block the install. It runs before plugin
+`before_install` hooks. The deprecated `--dangerously-force-unsafe-install`
+flag is accepted for compatibility but does not bypass install policy, hooks, or
+OpenClaw's built-in plugin dependency denylist.
+
+See [Skills config](/tools/skills-config#operator-install-policy-securityinstallpolicy)
+for the shared `security.installPolicy` exec schema used by both skills and
+plugins.
+
+### Configure plugin policy
 
 常见的插件配置形状如下：
 
@@ -136,16 +156,33 @@ doc-schema-version: 1
 
 关键策略规则：
 
-- `plugins.enabled: false` 会禁用所有插件，并跳过插件发现/加载工作。处于此状态时，陈旧的插件引用不会起作用；当你希望移除陈旧 id 时，请在运行 doctor 清理之前重新启用插件。
-- `plugins.deny` 优先于 allow 和单个插件启用状态。
-- `plugins.allow` 是一个排他性允许列表。即使 `tools.allow` 包含 `"*"`，允许列表之外的插件拥有工具仍然不可用。
-- `plugins.entries.<id>.enabled: false` 会禁用某一个插件，同时保留其配置。
-- `plugins.load.paths` 用于添加显式的本地插件文件或目录。
-- 来自 workspace 的插件默认是禁用的；在使用本地 workspace 代码前，请显式启用它们或将它们加入允许列表。
-- 内置插件遵循其内建的默认启用/默认禁用元数据，除非配置显式覆盖它们。
-- `plugins.slots.<slot>` 会为 memory 和 context engines 等互斥类别选择一个插件。槽位选择会通过计为显式激活来强制启用该槽位所选中的插件；即使在原本需要显式启用的情况下，它也可以加载。`plugins.deny` 和 `plugins.entries.<id>.enabled: false` 仍然会阻止它。
-- 内置的可选启用插件可以在配置命名了它们拥有的某个表面时自动激活，例如 provider/model ref、channel config、CLI backend 或 agent harness runtime。
-- OpenAI 系列 Codex 路由会将 provider 和 runtime 插件边界分开：`openai-codex/*` 是旧式 OpenAI-provider 配置，而内置的 `codex` 插件拥有 canonical `openai/*` agent refs、显式 `agentRuntime.id: "codex"` 以及旧式 `codex/*` refs 的 Codex app-server runtime。
+- `plugins.enabled: false` disables all plugins and skips plugin discovery/load
+  work. Stale plugin references are inert while this is active; re-enable
+  plugins before running doctor cleanup when you want stale ids removed.
+- `plugins.deny` wins over allow and per-plugin enablement.
+- `plugins.allow` is an exclusive allowlist. Plugin-owned tools outside the
+  allowlist stay unavailable, even when `tools.allow` includes `"*"`.
+- `plugins.entries.<id>.enabled: false` disables one plugin while preserving its
+  config.
+- `plugins.load.paths` adds explicit local plugin files or directories. Managed
+  `plugins install` local paths must be plugin directories or archives; use
+  `plugins.load.paths` for standalone plugin files.
+- Workspace-origin plugins are disabled by default; explicitly enable or
+  allowlist them before using local workspace code.
+- Bundled plugins follow their built-in default-on/default-off metadata unless
+  config explicitly overrides them.
+- `plugins.slots.<slot>` chooses one plugin for exclusive categories such as
+  memory and context engines. Slot selection force-enables the selected plugin
+  for that slot by counting as explicit activation; it can load even when it
+  would otherwise be opt-in. `plugins.deny` and
+  `plugins.entries.<id>.enabled: false` still block it.
+- Bundled opt-in plugins can auto-activate when config names one of their owned
+  surfaces, such as a provider/model ref, channel config, CLI backend, or agent
+  harness runtime.
+- OpenAI-family Codex routing keeps provider and runtime plugin boundaries
+  separate: legacy Codex model refs are legacy config repaired by doctor, while the bundled
+  `codex` plugin owns Codex app-server runtime for canonical `openai/*` agent
+  refs, explicit `agentRuntime.id: "codex"`, and legacy `codex/*` refs.
 
 当配置校验报告陈旧插件 id、allowlist/工具不匹配或旧的内置插件路径时，请运行
 `openclaw doctor` 或 `openclaw doctor --fix`。

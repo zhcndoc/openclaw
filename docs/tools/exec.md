@@ -51,7 +51,8 @@ title: "Exec 工具"
 </ParamField>
 
 <ParamField path="ask" type="'off' | 'on-miss' | 'always'">
-`gateway` / `node` 执行的审批提示行为。
+基础 ask 模式来自 `tools.exec.ask` 和主机审批。
+对于 channel-origin 模型调用，当有效主机 ask 为 `off` 时，每次调用的 `ask` 会被忽略；否则它最多只能收紧到更严格的模式。通过显式 `ask` 值构造 exec 工具的受信任内部/API 调用保持不变。
 </ParamField>
 
 <ParamField path="node" type="string">
@@ -64,51 +65,46 @@ title: "Exec 工具"
 
 注意：
 
-- `host` 默认值为 `auto`：当会话的沙箱运行时处于活动状态时为 sandbox，否则为 gateway。
-- `host` 只接受 `auto`、`sandbox`、`gateway` 或 `node`。它不是主机名选择器；像主机名的值会在命令运行前被拒绝。
-- `auto` 是默认路由策略，不是通配符。从 `auto` 时，按调用设置 `host=node` 是允许的；只有在没有沙箱运行时处于活动状态时，按调用设置 `host=gateway` 才被允许。
-- 在没有额外配置的情况下，`host=auto` 仍然“照常可用”：没有沙箱时它解析为 `gateway`；有活动沙箱时则保留在沙箱中。
-- `elevated` 会从沙箱跳转到已配置的主机路径：默认是 `gateway`，或者当 `tools.exec.host=node`（或会话默认值为 `host=node`）时为 `node`。只有当当前会话/提供方已启用提升访问时才可用。
-- `gateway`/`node` 的审批由 `~/.openclaw/exec-approvals.json` 控制。
-- `node` 需要配对的节点（伴侣应用或无头 node 主机）。
-- 如果有多个节点可用，请设置 `exec.node` 或 `tools.exec.node` 来选择一个。
+- `host` 默认为 `auto`：当本次会话的沙箱运行时处于活动状态时使用 sandbox，否则使用 gateway。
+- `host` 只接受 `auto`、`sandbox`、`gateway` 或 `node`。它不是主机名选择器；类似主机名的值会在命令运行前被拒绝。
+- `auto` 是默认路由策略，不是通配符。从 `auto` 可以按调用使用 `host=node`；只有在没有沙箱运行时活动时，按调用使用 `host=gateway` 才被允许。
+- `tools.exec.mode` 是标准化的策略开关。可选值为 `deny`、`allowlist`、`ask`、`auto` 和 `full`。`auto` 会直接运行确定性的 allowlist/safe-bin 匹配，并将其余所有 exec 审批情况路由到 OpenClaw 的原生自动审阅器，然后再请求人工审批。`ask` / `ask=always` 仍然会每次都请求人工审批。
+- 在没有额外配置时，`host=auto` 仍然“开箱即用”：没有 sandbox 就解析为 `gateway`；有活动 sandbox 就保持在 sandbox 中。
+- `elevated` 会将沙箱切换到已配置的主机路径：默认是 `gateway`，如果 `tools.exec.host=node`（或会话默认是 `host=node`）则为 `node`。只有在当前会话/提供方启用了提升访问时才可用。
+- `gateway`/`node` 审批由 `~/.openclaw/exec-approvals.json` 控制。
+- `node` 需要配对的节点（配套应用或无头节点主机）。
+- 如果有多个节点可用，请设置 `exec.node` 或 `tools.exec.node` 选择其一。
 - `exec host=node` 是节点唯一的 shell 执行路径；旧的 `nodes.run` 包装器已移除。
-- `timeout` 适用于前台、后台、`yieldMs`、gateway、sandbox 和 node 的 `system.run` 执行。如果省略，OpenClaw 会使用 `tools.exec.timeoutSec`；显式 `timeout: 0` 会为该调用禁用 exec 进程超时。
-- 在非 Windows 主机上，exec 在设置了 `SHELL` 时会使用它；如果 `SHELL` 是 `fish`，则优先使用 `PATH` 中的 `bash`（或 `sh`），以避免 fish 不兼容脚本，然后如果两者都不存在再回退到 `SHELL`。
-- 在 Windows 主机上，exec 优先发现 PowerShell 7（`pwsh`）（Program Files、ProgramW6432，然后是 PATH），然后回退到 Windows PowerShell 5.1。
-- 主机执行（`gateway`/`node`）会拒绝 `env.PATH` 和加载器覆盖（`LD_*`/`DYLD_*`），以防止二进制劫持或注入代码。
-- OpenClaw 会在派生的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和 sandbox 执行），这样 shell/profile 规则就能检测 exec 工具上下文。
-- `openclaw channels login` 会被 `exec` 阻止，因为它是一个交互式频道认证流程；请在 gateway 主机上的终端中运行它，或者在有可用时使用聊天中的频道原生登录工具。
-- 重要：沙箱默认是**关闭**的。如果沙箱关闭，隐式 `host=auto`
-  会解析为 `gateway`。显式 `host=sandbox` 仍然会失败并关闭，而不会静默地
-  在 gateway 主机上运行。请启用沙箱或使用带审批的 `host=gateway`。
-- 脚本预检检查（用于常见的 Python/Node shell 语法错误）只检查
-  有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，则会跳过该文件的预检。
-- 对于从现在开始的长时间运行工作，请只启动一次，并依赖在启用后且命令输出或失败时的自动
-  完成唤醒。
-  使用 `process` 查看日志、状态、输入或干预；不要用 sleep 循环、timeout 循环或重复轮询来模拟
-  调度。
-- 对于应该稍后或按计划发生的工作，请改用 cron，而不是
-  `exec` 的 sleep/delay 模式。
+- `timeout` 适用于前台、后台、`yieldMs`、gateway、sandbox 和 node 的 `system.run` 执行。如果省略，OpenClaw 使用 `tools.exec.timeoutSec`；显式 `timeout: 0` 会为该次调用禁用 exec 进程超时。
+- 在非 Windows 主机上，exec 会在设置了 `SHELL` 时使用它；如果 `SHELL` 是 `fish`，则优先从 `PATH` 中选择 `bash`（或 `sh`），以避免 fish 不兼容脚本，然后在两者都不存在时回退到 `SHELL`。
+- 在 Windows 主机上，exec 优先发现 PowerShell 7（`pwsh`）（Program Files、ProgramW6432，然后 PATH），然后回退到 Windows PowerShell 5.1。
+- 在非 Windows 的 gateway 主机上，bash 和 zsh exec 命令使用启动快照。OpenClaw 会将可 source 的别名/函数和一小组安全环境变量从 shell 启动文件捕获到 `$OPENCLAW_STATE_DIR/cache/shell-snapshots/`，然后在每个 exec 命令之前 source 该快照；看起来像机密的变量会被排除；sandbox 和 node exec 不使用此快照。将 `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` 设置到 Gateway 进程环境中可禁用此快照路径。
+- 主机执行（`gateway`/`node`）会拒绝 `env.PATH` 和 loader 覆盖（`LD_*`/`DYLD_*`），以防止二进制劫持或注入代码。
+- OpenClaw 会在派生的命令环境中设置 `OPENCLAW_SHELL=exec`（包括 PTY 和 sandbox 执行），以便 shell/profile 规则可以检测 exec 工具上下文。
+- `openclaw channels login` 会被 `exec` 阻止，因为它是一个交互式 channel-auth 流程；请在 gateway 主机上的终端中运行它，或者在存在时使用聊天中的 channel 原生登录工具。
+- 重要：sandbox 默认是关闭的。如果 sandbox 关闭，隐式 `host=auto` 会解析为 `gateway`。显式 `host=sandbox` 仍然会失败关闭，而不是静默在 gateway 主机上运行。请启用 sandbox 或使用带审批的 `host=gateway`。
+- 脚本预检检查（针对常见的 Python/Node shell 语法错误）只会检查有效 `workdir` 边界内的文件。如果脚本路径解析到 `workdir` 之外，则会跳过该文件的预检。
+- 对于从现在开始的长时间运行工作，请只启动一次，并依赖自动完成唤醒（如果已启用且命令有输出或失败）。对日志、状态、输入或干预使用 `process`；不要用 sleep 循环、超时循环或重复轮询来模拟调度。
+- 对于应该稍后发生或按计划执行的工作，请使用 cron，而不是 `exec` 的 sleep/delay 模式。
 
 ## 配置
 
-- `tools.exec.notifyOnExit` (default: true): 当为 true 时，后台 exec 会话会在退出时排队一个系统事件并请求心跳。
-- `tools.exec.approvalRunningNoticeMs` (default: 10000): 当受审批门禁的 exec 运行时间超过此值时，发出一次“running”通知（设为 0 可禁用）。
-- `tools.exec.timeoutSec` (default: 1800): 默认的每条命令 exec 超时时间（秒）。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用 exec 进程超时。
-- `tools.exec.host` (default: `auto`; resolves to `sandbox` when sandbox runtime is active, `gateway` otherwise)
-- `tools.exec.security` (default: `deny` for sandbox, `full` for gateway + node when unset)
-- `tools.exec.ask` (default: `off`)
+- `tools.exec.notifyOnExit`（默认：true）：当为 true 时，后台 exec 会话会在退出时排队一个系统事件并请求心跳。
+- `tools.exec.approvalRunningNoticeMs`（默认：10000）：当受审批门禁的 exec 运行时间超过此值时，发出一次“running”通知（设为 0 可禁用）。
+- `tools.exec.timeoutSec`（默认：1800）：默认的每条命令 exec 超时时间（秒）。按调用的 `timeout` 会覆盖它；按调用的 `timeout: 0` 会禁用 exec 进程超时。
+- `tools.exec.host`（默认：`auto`；当 sandbox 运行时处于活动状态时解析为 `sandbox`，否则为 `gateway`）
+- `tools.exec.security`（默认：sandbox 为 `deny`，gateway + node 在未设置时为 `full`）
+- `tools.exec.ask`（默认：`off`）
 - 无审批的主机 exec 是 gateway + node 的默认行为。如果你想要审批/允许列表行为，请同时收紧 `tools.exec.*` 和主机上的 `~/.openclaw/exec-approvals.json`；参见 [Exec approvals](/tools/exec-approvals#yolo-mode-no-approval)。
 - YOLO 来自主机策略默认值（`security=full`、`ask=off`），而不是来自 `host=auto`。如果你想强制 gateway 或 node 路由，请设置 `tools.exec.host` 或使用 `/exec host=...`。
 - 在 `security=full` 且 `ask=off` 模式下，主机 exec 会直接遵循已配置策略；不会额外进行启发式命令混淆预过滤或脚本预检拒绝层。
-- `tools.exec.node` (default: unset)
-- `tools.exec.strictInlineEval` (default: false): 当为 true 时，内联解释器求值形式（如 `python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e`）始终需要显式批准。`allow-always` 仍可持久保留无害的解释器/脚本调用，但内联求值形式每次仍会提示。
-- `tools.exec.commandHighlighting` (default: false): 当为 true 时，审批提示可以在命令文本中高亮解析器提取的命令片段。全局或按 agent 将其设为 `true`，即可在不更改 exec 审批策略的情况下启用命令文本高亮。
-- `tools.exec.pathPrepend`: 要在 exec 运行中追加到 `PATH` 前面的目录列表（仅限 gateway + sandbox）。
-- `tools.exec.safeBins`: 仅 stdin 的安全二进制文件，可在不需要显式允许列表条目的情况下运行。有关行为细节，请参见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
-- `tools.exec.safeBinTrustedDirs`: 为 `safeBins` 路径检查额外显式信任的目录。`PATH` 条目绝不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
-- `tools.exec.safeBinProfiles`: 每个安全 bin 的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
+- `tools.exec.node`（默认：未设置）
+- `tools.exec.strictInlineEval`（默认：false）：当为 true 时，内联解释器 eval 形式（如 `python -c`、`node -e`、`ruby -e`、`perl -e`、`php -r`、`lua -e` 和 `osascript -e`）需要审阅者或显式批准。在 `mode=auto` 下，正常的 exec 审批路径可能会让原生自动审阅器放行一个明显低风险的一次性命令；直接的 node 主机 `system.run` 调用仍然需要显式批准，因为它们无法把命令交给人工审批路径。如果审阅者提出要求，请求会进入人工处理。`allow-always` 仍然可以持久化良性的解释器/脚本调用，但内联 eval 形式不会变成持久的允许规则。
+- `tools.exec.commandHighlighting`（默认：false）：当为 true 时，审批提示可以在命令文本中高亮解析器派生的命令片段。将其全局或按 agent 设为 `true`，即可启用命令文本高亮，而不改变 exec 审批策略。
+- `tools.exec.pathPrepend`：要为 exec 运行预先添加到 `PATH` 的目录列表（仅限 gateway + sandbox）。
+- `tools.exec.safeBins`：仅 stdin 的安全二进制文件，可在没有显式 allowlist 条目的情况下运行。行为细节见 [Safe bins](/tools/exec-approvals-advanced#safe-bins-stdin-only)。
+- `tools.exec.safeBinTrustedDirs`：用于 `safeBins` 路径检查的额外显式受信任目录。`PATH` 条目绝不会被自动信任。内置默认值为 `/bin` 和 `/usr/bin`。
+- `tools.exec.safeBinProfiles`：每个 safe bin 的可选自定义 argv 策略（`minPositional`、`maxPositional`、`allowedValueFlags`、`deniedFlags`）。
 
 示例：
 
@@ -129,10 +125,10 @@ title: "Exec 工具"
   - macOS: `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, `/bin`
   - Linux: `/usr/local/bin`, `/usr/bin`, `/bin`
     - 为防止用户 shell 配置（如 `~/.zshenv` 或 `/etc/zshenv`）在启动期间覆盖优先级路径，`tools.exec.pathPrepend` 条目会在执行前被安全地预先添加到 shell 命令中的最终 `PATH`。
-- `host=sandbox`: 在容器内运行 `sh -lc`（登录 shell），因此 `/etc/profile` 可能会重置 `PATH`。
+- `host=sandbox`：在容器内运行 `sh -lc`（登录 shell），因此 `/etc/profile` 可能会重置 `PATH`。
   OpenClaw 会通过内部环境变量在 profile 加载后追加 `env.PATH`（不进行 shell 插值）；
   `tools.exec.pathPrepend` 在这里同样适用。
-- `host=node`: 只会把你传入的、未被阻止的环境覆盖项发送到节点。`env.PATH` 覆盖项会
+- `host=node`：只会把你传入的、未被阻止的环境覆盖项发送到节点。`env.PATH` 覆盖项会
   被主机执行拒绝，并且会被节点主机忽略。如果你需要在节点上添加额外的 PATH 条目，
   请配置节点主机服务环境（systemd/launchd）或将工具安装到标准位置。
 
@@ -158,10 +154,10 @@ openclaw config set 'agents.list[0].tools.exec.node' "node-id-or-name"
 
 ## 授权模型
 
-只有对 **已授权发送者**（频道允许列表/配对加上 `commands.useAccessGroups`）才会处理 `/exec`。
-它只更新 **会话状态**，不会写入配置。要彻底禁用 exec，请通过工具
-策略将其拒绝（`tools.deny: ["exec"]` 或按 agent 拒绝）。主机审批仍然适用，除非你显式设置
-`security=full` 且 `ask=off`。
+`/exec` 仅对**授权发送者**生效（channel allowlists/pairing plus `commands.useAccessGroups`）。
+它只会更新**会话状态**，不会写入配置。授权的外部 channel 发送者可以
+设置这些会话默认值。内部 gateway/webchat 客户端需要 `operator.admin` 才能持久化这些值。
+要彻底禁用 exec，请通过工具策略将其拒绝（`tools.deny: ["exec"]` 或按 agent 配置）。主机审批仍然适用，除非你显式设置 `security=full` 和 `ask=off`。
 
 ## Exec 审批（伴侣应用 / node 主机）
 
@@ -197,10 +193,10 @@ glob。裸名称只匹配通过 PATH 调用的命令，因此当命令是 `rg` �
 - `tools.exec.safeBinProfiles`：为自定义安全 bin 显式指定 argv 策略。
 - 允许列表：对可执行路径的显式信任。
 
-不要把 `safeBins` 当作通用允许列表，也不要添加解释器/运行时二进制文件（例如 `python3`、`node`、`ruby`、`bash`）。如果你需要这些，请使用显式允许列表条目并保持审批提示启用。
-`openclaw security audit` 在解释器/运行时 `safeBins` 条目缺少显式配置文件时会发出警告，而 `openclaw doctor --fix` 可以为缺失的自定义 `safeBinProfiles` 条目生成脚手架。
-`openclaw security audit` 和 `openclaw doctor` 还会在你显式把 `jq` 这类行为较宽的 bin 重新添加到 `safeBins` 时发出警告。
-如果你显式允许列表中的解释器，请启用 `tools.exec.strictInlineEval`，这样内联代码求值形式仍然需要新的审批。
+Do not treat `safeBins` as a generic allowlist, and do not add interpreter/runtime binaries (for example `python3`, `node`, `ruby`, `bash`). If you need those, use explicit allowlist entries and keep approval prompts enabled.
+`openclaw security audit` warns when interpreter/runtime `safeBins` entries are missing explicit profiles, and `openclaw doctor --fix` can scaffold missing custom `safeBinProfiles` entries.
+`openclaw security audit` and `openclaw doctor` also warn when you explicitly add broad-behavior bins such as `jq` back into `safeBins`.
+If you explicitly allowlist interpreters, enable `tools.exec.strictInlineEval` so inline code-eval forms still require reviewer or explicit approval.
 
 有关完整的策略细节和示例，请参见 [Exec approvals](/tools/exec-approvals-advanced#safe-bins-stdin-only) 和 [Safe bins versus allowlist](/tools/exec-approvals-advanced#safe-bins-versus-allowlist)。
 

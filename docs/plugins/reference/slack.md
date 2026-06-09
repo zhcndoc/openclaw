@@ -1,5 +1,5 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加 Slack 渠道界面。"
+summary: "用于频道、私信、命令和应用事件的 OpenClaw Slack channel 插件。"
 read_when:
   - 您正在安装、配置或审计 slack 插件
 title: "Slack 插件"
@@ -7,7 +7,7 @@ title: "Slack 插件"
 
 # Slack 插件
 
-为发送和接收 OpenClaw 消息添加 Slack 渠道界面。
+用于频道、私信、命令和应用事件的 OpenClaw Slack channel 插件。
 
 ## 分发
 

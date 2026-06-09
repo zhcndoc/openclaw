@@ -10,23 +10,25 @@ title: "Claude Max API 代理"
 **claude-max-api-proxy** 是一个社区工具，它将你的 Claude Max/Pro 订阅暴露为一个 OpenAI 兼容的 API 端点。这样你就可以在任何支持 OpenAI API 格式的工具中使用你的订阅。
 
 <Warning>
-这条路径仅用于技术兼容性。Anthropic 过去曾阻止某些在 Claude Code 之外使用订阅的方式。你必须自行决定是否使用它，并在依赖它之前确认 Anthropic 的当前条款。
+此路径仅用于技术兼容。Anthropic 过去曾阻止 Claude Code 之外的一些订阅用法。你必须自行决定是否使用它，并在依赖之前核实 Anthropic 当前的计费规则。
+
+Anthropic 当前的支持文档将 `claude -p` 视为 Agent SDK/编程式用法。自 2026 年 6 月 15 日起，订阅计划下的 `claude -p` 用量会先从单独的每月 Agent SDK 额度中扣除；如果启用了用量额度，则再按标准 API 费率从用量额度中扣除。
 </Warning>
 
 ## 为什么要使用这个？
 
-| 方式                    | 成本                                                | 最适合                                   |
-| ----------------------- | --------------------------------------------------- | ------------------------------------------ |
-| Anthropic API           | 按 token 计费（Opus 约 $15/M 输入，$75/M 输出）      | 生产应用、高流量                          |
-| Claude Max 订阅         | 每月固定 $200                                     | 个人使用、开发、无限使用                  |
+| Approach                  | Cost route                                      | Best for                                   |
+| ------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| Anthropic API             | 通过 Claude Console 或云服务按 token 付费       | 生产应用、共享自动化、批量使用             |
+| Claude subscription proxy | Claude Code / `claude -p` 计划与额度规则        | 与兼容工具一起进行个人实验                 |
 
-如果你有 Claude Max 订阅，并希望将其与 OpenAI 兼容工具一起使用，这个代理可能会为某些工作流降低成本。对于生产环境使用，API 密钥仍然是更清晰的政策路径。
+如果你有 Claude Max 或 Pro 订阅，并希望将它用于 OpenAI 兼容工具，这个代理可能适合某些个人工作流。它不是无限固定费率的路径。对于生产用途，API 密钥仍然是更清晰的政策与计费路径。
 
 ## 工作原理
 
 ```
-你的应用 → claude-max-api-proxy → Claude Code CLI → Anthropic（通过订阅）
-     (OpenAI 格式)              (转换格式)            (使用你的登录)
+Your App → claude-max-api-proxy → Claude Code CLI / claude -p → Anthropic
+     (OpenAI format)              (converts format)          (uses your login)
 ```
 
 该代理：
@@ -39,7 +41,7 @@ title: "Claude Max API 代理"
 
 <Steps>
   <Step title="安装代理">
-    需要 Node.js 20+ 和 Claude Code CLI。
+    需要 Node.js 22+ 和 Claude Code CLI。
 
     ```bash
     npm install -g claude-max-api-proxy
@@ -153,9 +155,10 @@ title: "Claude Max API 代理"
 
 ## 说明
 
-- 这是一个**社区工具**，并非 Anthropic 或 OpenClaw 官方支持
-- 需要一个已启用 Claude Code CLI 身份验证的有效 Claude Max/Pro 订阅
-- 代理在本地运行，不会向任何第三方服务器发送数据
+- 这是一个 **社区工具**，并非 Anthropic 或 OpenClaw 官方支持
+- 需要已通过 Claude Code CLI 身份验证的有效 Claude Max/Pro 订阅
+- 继承 Claude Code `claude -p` 的计费、用量额度和速率限制行为
+- 该代理在本地运行，不会将数据发送到任何第三方服务器
 - 完全支持流式响应
 
 <Note>

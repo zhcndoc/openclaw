@@ -7,10 +7,7 @@ title: "上手引导（CLI）"
 sidebarTitle: "上手引导：CLI"
 ---
 
-CLI 上手引导是在 macOS、
-Linux 或 Windows（通过 WSL2；强烈推荐）上设置 OpenClaw 的**推荐**方式。
-它会在一个引导式流程中同时配置本地 Gateway 或远程 Gateway 连接，以及通道、技能
-和工作区默认值。
+CLI 上手引导是 OpenClaw 在 macOS、Linux 或 Windows 上的**推荐**终端设置方式。Windows 桌面用户也可以从 [Windows Hub](/platforms/windows) 开始。它会在一个引导流程中配置本地 Gateway 或远程 Gateway 连接，以及通道、技能和工作区默认值。
 
 ```bash
 openclaw onboard

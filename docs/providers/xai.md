@@ -305,7 +305,7 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
           provider: "xai",
           providers: {
             xai: {
-              voiceId: "eve",
+              speakerVoiceId: "eve",
             },
           },
         },

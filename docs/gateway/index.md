@@ -159,9 +159,13 @@ openclaw gateway probe
 
 预期结果：
 
-- `gateway status --deep` 可能会报告 `Other gateway-like services detected (best effort)`，并在仍存在过期的 launchd/systemd/schtasks 安装时打印清理提示。
-- `gateway probe` 在有多个目标响应时，可能会警告 `multiple reachable gateways`。
-- 如果这是有意为之，请为每个 gateway 隔离端口、配置/状态和工作区根目录。
+- `gateway status --deep` can report `Other gateway-like services detected (best effort)`
+  and print cleanup hints when stale launchd/systemd/schtasks installs are still around.
+- `gateway probe` can warn about `multiple reachable gateway identities` when distinct
+  gateways answer, or when OpenClaw cannot prove reachable targets are the same gateway.
+  An SSH tunnel, proxy URL, or configured remote URL to the same gateway is one
+  gateway with multiple transports, even when transport ports differ.
+- If that is intentional, isolate ports, config/state, and workspace roots per gateway.
 
 每个实例的检查清单：
 

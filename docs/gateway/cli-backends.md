@@ -150,8 +150,7 @@ provider id 会成为你的模型引用的左侧部分：
 捆绑的 Anthropic `claude-cli` 后端现已重新支持。Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法再次被允许，因此除非 Anthropic 发布新的政策，否则 OpenClaw 会将 `claude -p` 用法视为此集成的授权用法。
 </Note>
 
-捆绑的 Anthropic `claude-cli` 后端会通过两种方式接收 OpenClaw 的 skills 快照：
-一是附加到系统提示中的精简 OpenClaw skills 目录，二是通过 `--plugin-dir` 传递的临时 Claude Code 插件。该插件仅包含该 agent/session 允许使用的 skills，因此 Claude Code 的原生 skill 解析器看到的是与 OpenClaw 原本在提示中公布的相同的过滤后集合。skills 的环境变量/API key 覆盖仍会由 OpenClaw 在运行时应用到子进程环境中。
+捆绑的 Anthropic `claude-cli` 后端优先为 OpenClaw 技能使用 Claude Code 的原生技能解析器。当当前技能快照至少包含一个带物化路径的已选技能时，OpenClaw 会通过 `--plugin-dir` 传入一个临时的 Claude Code 插件，并从追加的系统提示中省略重复的 OpenClaw 技能目录。如果快照中没有物化的插件技能，OpenClaw 会保留该提示目录作为回退。技能环境变量/API key 覆盖仍会由 OpenClaw 应用于本次运行的子进程环境。
 
 Claude CLI 也有自己的非交互式权限模式。OpenClaw 将其映射到现有的执行策略，而不是添加 Claude 专用的策略配置。对于 OpenClaw 管理的 Claude 实时会话，有效的 OpenClaw 执行策略具有权威性：YOLO（`tools.exec.security: "full"` 且
 `tools.exec.ask: "off"`）会以 `--permission-mode bypassPermissions` 启动 Claude，而受限的有效执行策略会以 `--permission-mode default` 启动 Claude。按 agent 的 `agents.list[].tools.exec` 设置会覆盖该 agent 的全局 `tools.exec`。原始 Claude 后端参数仍可包含 `--permission-mode`，但实时 Claude 启动会将该标志规范化为与有效 OpenClaw 执行策略一致。
@@ -315,6 +314,24 @@ api.registerTextTransforms({
 对于输出 Claude Code stream-json 兼容 JSONL 的 CLI，在该后端配置上设置
 `jsonlDialect: "claude-stream-json"`。
 
+## 原生压缩所有权
+
+一些 CLI 后端运行的代理会压缩它们**自己的**转录，因此 OpenClaw
+不能再对它们运行防护性摘要器——这样做会干扰后端自身的压缩，并可能导致本轮失败。
+
+`claude-cli` 没有 harness 端点——Claude Code 会在内部压缩——因此它声明
+`ownsNativeCompaction: true`，而 OpenClaw 会在压缩路径上返回 no-op。
+像 Codex 这样的原生 harness 会话仍会改为路由到其 harness 压缩端点。
+
+由于该后端拥有压缩权，为了仅防止 OpenClaw 的防护逻辑在
+`claude-cli` 会话上触发而设置 `contextTokens: 1_000_000` 的旧权宜之计**不再需要**——这个显式退出选项已取而代之。
+
+```typescript
+api.registerCliBackend({ id: "my-cli", ownsNativeCompaction: true /* ... */ });
+```
+
+仅当后端确实拥有其压缩机制时，才声明 `ownsNativeCompaction`：它必须能在接近上下文窗口时可靠地限制自己的转录长度，并持久化一个可恢复的会话（例如 `--resume` / `--session-id`）；否则，延迟会话可能会一直超出预算。匹配的 `agentHarnessId` 会话仍会路由到 harness 端点。
+
 ## Bundle MCP 覆盖层
 
 CLI 后端不会直接接收 OpenClaw 工具调用，但后端可以通过
@@ -342,6 +359,21 @@ CLI 后端不会直接接收 OpenClaw 工具调用，但后端可以通过
 分钟；设为 `0` 可禁用）。一次性嵌入式运行，例如身份验证探测、
 slug 生成和活动记忆回忆，会在运行结束时请求清理，因此 stdio
 子进程和可流式 HTTP/SSE 流不会比运行时间更长。
+
+## 重设历史上限
+
+当新的 CLI 会话从先前的 OpenClaw 转录中播种时（例如在 `session_expired` 重试后），
+渲染出的 `<conversation_history>` 块会被设定上限，以避免重设提示
+膨胀。默认值为 `12288` 个字符（约 3000 个 token）。
+
+Claude CLI 后端会自动使用一个更大的上限，该上限由解析后的 Claude
+上下文层级推导得出。标准的 200K token Claude 运行会保留更大的转录片段，
+而 1M token 的 Claude 运行会再保留更大的片段，其他 CLI
+后端则保持保守的默认值。
+
+- 该上限只约束重设提示中的先前历史块。实时会话
+  输出限制会在 `reliability.outputLimits` 下单独调优
+  （参见 [Sessions](#sessions)）。
 
 ## 限制
 

@@ -29,15 +29,15 @@ sidebarTitle: "模型提供商"
   <Accordion title="OpenAI 提供商/运行时分离">
     OpenAI 系列路由以缀前区分：
 
-    - `openai/<model>` 默认使用原生 Codex app-server harness 处理代理轮次。这通常是 ChatGPT/Codex 订阅设置。
-    - `openai-codex/<model>` 是旧式配置，doctor 会将其重写为 `openai/<model>`。
-    - `openai/<model>` 加上 provider/model `agentRuntime.id: "pi"` 时，会使用 PI 处理显式 API key 或兼容性路由。
+    - `openai/<model>` 默认使用原生 Codex app-server 运行时处理代理回合。这通常是 ChatGPT/Codex 订阅配置。
+    - 旧式 Codex 模型引用是旧配置，doctor 会将其重写为 `openai/<model>`。
+    - `openai/<model>` 搭配 provider/model `agentRuntime.id: "openclaw"` 时，会使用 OpenClaw 内置运行时来处理显式 API key 或兼容性路由。
 
     参见 [OpenAI](/providers/openai) 和 [Codex harness](/plugins/codex-harness)。如果提供商/运行时分离让你感到困惑，请先阅读 [Agent runtimes](/concepts/agent-runtimes)。
 
     插件自动启用遵循相同边界：`openai/*` 代理引用会为默认路由启用 Codex 插件；显式 provider/model `agentRuntime.id: "codex"` 或旧式 `codex/<model>` 引用也同样需要它。
 
-    GPT-5.5 默认可通过原生 Codex app-server harness 在 `openai/gpt-5.5` 上使用；只有当 provider/model 运行时策略明确选择 `pi` 时，才通过 PI 使用。
+    GPT-5.5 默认可通过 `openai/gpt-5.5` 使用原生 Codex app-server 运行时获取；当 provider/model 运行时策略显式选择 `openclaw` 时，则通过 OpenClaw 运行时提供。
 
   </Accordion>
   <Accordion title="CLI 运行时">
@@ -80,26 +80,26 @@ sidebarTitle: "模型提供商"
   </Accordion>
 </AccordionGroup>
 
-## 内置提供商（pi-ai 目录）
+## 官方提供商插件
 
-OpenClaw 自带 pi-ai 目录。这些提供商**不需要** `models.providers` 配置；只需设置认证并选择模型即可。
+官方提供商插件会发布它们自己的模型目录行。这些提供商**不需要** `models.providers` 模型条目；只需启用提供商插件、完成认证并选择一个模型。只有在需要显式自定义提供商或设置较窄的请求参数（例如超时）时，才使用 `models.providers`。
 
 ### OpenAI
 
-- Provider: `openai`
-- Auth: `OPENAI_API_KEY`
-- Optional rotation: `OPENAI_API_KEYS`, `OPENAI_API_KEY_1`, `OPENAI_API_KEY_2`, plus `OPENCLAW_LIVE_OPENAI_KEY` (single override)
-- Example models: `openai/gpt-5.5`, `openai/gpt-5.4-mini`
-- Verify account/model availability with `openclaw models list --provider openai` if a specific install or API key behaves differently.
-- CLI: `openclaw onboard --auth-choice openai-api-key`
-- Default transport is `auto`; OpenClaw passes the transport choice to pi-ai.
-- Override per model via `agents.defaults.models["openai/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
-- OpenAI priority processing can be enabled via `agents.defaults.models["openai/<model>"].params.serviceTier`
-- `/fast` and `params.fastMode` map direct `openai/*` Responses requests to `service_tier=priority` on `api.openai.com`
-- Use `params.serviceTier` when you want an explicit tier instead of the shared `/fast` toggle
-- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) apply only on native OpenAI traffic to `api.openai.com`, not generic OpenAI-compatible proxies
-- Native OpenAI routes also keep Responses `store`, prompt-cache hints, and OpenAI reasoning-compat payload shaping; proxy routes do not
-- `openai/gpt-5.3-codex-spark` is intentionally suppressed in OpenClaw because live OpenAI API requests reject it; use `openai-codex/gpt-5.3-codex-spark` only when the Codex catalog exposes it for your account
+- 提供商：`openai`
+- 认证：`OPENAI_API_KEY`
+- 可选轮换：`OPENAI_API_KEYS`、`OPENAI_API_KEY_1`、`OPENAI_API_KEY_2`，以及 `OPENCLAW_LIVE_OPENAI_KEY`（单个覆盖）
+- 示例模型：`openai/gpt-5.5`、`openai/gpt-5.4-mini`
+- 如果某个具体安装或 API key 表现不同，可使用 `openclaw models list --provider openai` 验证账号/模型可用性。
+- CLI：`openclaw onboard --auth-choice openai-api-key`
+- 默认传输方式为 `auto`；OpenClaw 会将传输选择传递给共享模型运行时。
+- 可通过 `agents.defaults.models["openai/<model>"].params.transport` 按模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
+- 可通过 `agents.defaults.models["openai/<model>"].params.serviceTier` 启用 OpenAI 优先处理
+- `/fast` 和 `params.fastMode` 会将直接的 `openai/*` Responses 请求映射为 `api.openai.com` 上的 `service_tier=priority`
+- 当你想显式指定层级而不是使用共享的 `/fast` 开关时，请使用 `params.serviceTier`
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）只会应用于发往 `api.openai.com` 的原生 OpenAI 流量，不会应用于通用的 OpenAI 兼容代理
+- 原生 OpenAI 路由也会保留 Responses `store`、prompt-cache 提示，以及 OpenAI reasoning-compat 载荷形状；代理路由不会
+- `openai/gpt-5.3-codex-spark` 在 OpenClaw 中被有意屏蔽，因为实时 OpenAI API 请求会拒绝它，而当前 Codex 目录也未公开它
 
 ```json5
 {
@@ -114,10 +114,8 @@ OpenClaw 自带 pi-ai 目录。这些提供商**不需要** `models.providers` �
 - 可选轮换：`ANTHROPIC_API_KEYS`、`ANTHROPIC_API_KEY_1`、`ANTHROPIC_API_KEY_2`，以及 `OPENCLAW_LIVE_ANTHROPIC_KEY`（单个覆盖）
 - 示例模型：`anthropic/claude-opus-4-6`
 - CLI：`openclaw onboard --auth-choice apiKey`
-- 直接的公开 Anthropic 请求支持共享 `/fast` 切换和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API key 和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic `service_tier`（`auto` vs `standard_only`）
-- 推荐的 Claude CLI 配置会保持模型引用为规范形式，并单独选择 CLI 后端：`anthropic/claude-opus-4-7` 搭配
-  模型级 `agentRuntime.id: "claude-cli"`。旧式
-  `claude-cli/claude-opus-4-7` 引用仍可用于兼容性。
+- 直接的公共 Anthropic 请求支持共享的 `/fast` 开关和 `params.fastMode`，包括发送到 `api.anthropic.com` 的 API key 和 OAuth 认证流量；OpenClaw 会将其映射为 Anthropic `service_tier`（`auto` vs `standard_only`）
+- 推荐的 Claude CLI 配置会保持模型引用为规范形式，并单独选择 CLI 后端：`anthropic/claude-opus-4-8` 搭配按模型范围设置的 `agentRuntime.id: "claude-cli"`。旧式 `claude-cli/claude-opus-4-7` 引用仍可兼容使用。
 
 <Note>
 Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许，因此 OpenClaw 将 Claude CLI 复用和 `claude -p` 用法视为该集成的授权方式，除非 Anthropic 发布新的政策。Anthropic setup-token 仍然作为受支持的 OpenClaw token 路径可用，但 OpenClaw 现在在可用时优先使用 Claude CLI 复用和 `claude -p`。
@@ -129,27 +127,26 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
 }
 ```
 
-### OpenAI Codex OAuth
+### OpenAI ChatGPT/Codex OAuth
 
-- Provider: `openai-codex`
-- Auth: OAuth (ChatGPT)
-- Legacy PI model ref: `openai-codex/gpt-5.5`
-- Native Codex app-server harness ref: `openai/gpt-5.5`
-- Native Codex app-server harness docs: [Codex harness](/plugins/codex-harness)
-- Legacy model refs: `codex/gpt-*`
-- Plugin boundary: `openai-codex/*` loads the OpenAI plugin; the native Codex app-server plugin is selected only by the Codex harness runtime or legacy `codex/*` refs.
-- CLI: `openclaw onboard --auth-choice openai-codex` or `openclaw models auth login --provider openai-codex`
-- Default transport is `auto` (WebSocket-first, SSE fallback)
-- Override per PI model via `agents.defaults.models["openai-codex/<model>"].params.transport` (`"sse"`, `"websocket"`, or `"auto"`)
-- `params.serviceTier` is also forwarded on native Codex Responses requests (`chatgpt.com/backend-api`)
-- Hidden OpenClaw attribution headers (`originator`, `version`, `User-Agent`) are only attached on native Codex traffic to `chatgpt.com/backend-api`, not generic OpenAI-compatible proxies
-- Shares the same `/fast` toggle and `params.fastMode` config as direct `openai/*`; OpenClaw maps that to `service_tier=priority`
-- `openai-codex/gpt-5.5` uses the Codex catalog native `contextWindow = 400000` and default runtime `contextTokens = 272000`; override the runtime cap with `models.providers.openai-codex.models[].contextTokens`
-- Policy note: OpenAI Codex OAuth is explicitly supported for external tools/workflows like OpenClaw.
-- For the common subscription plus native Codex runtime route, sign in with `openai-codex` auth but configure `openai/gpt-5.5`; OpenAI agent turns select Codex by default.
-- Use provider/model `agentRuntime.id: "pi"` only when you want a compatibility route through PI; otherwise keep `openai/gpt-5.5` on the default Codex harness.
-- `openai-codex/gpt-*` refs remain a legacy PI route. Prefer `openai/gpt-5.5` on the native Codex runtime for new agent config, and run `openclaw doctor --fix` when you want to migrate old `openai-codex/*` refs to canonical `openai/*` refs.
-- `openai-codex/gpt-5.3-codex-spark` remains available only through Codex catalog discovery when the signed-in account advertises it; direct `openai/*` and Azure refs for that model stay suppressed.
+- 提供商：`openai`
+- 认证：OAuth（ChatGPT）
+- 旧式 OpenAI Codex 模型引用：`openai/gpt-5.5`
+- 原生 Codex app-server 运行时引用：`openai/gpt-5.5`
+- 原生 Codex app-server 运行时文档： [Codex harness](/plugins/codex-harness)
+- 旧式模型引用：`codex/gpt-*`
+- 插件边界：`openai/*` 会加载 OpenAI 插件；原生 Codex app-server 插件则由 Codex harness 运行时选择。
+- CLI：`openclaw onboard --auth-choice openai` 或 `openclaw models auth login --provider openai`
+- 默认传输方式为 `auto`（优先 WebSocket，回退 SSE）
+- 可通过 `agents.defaults.models["openai/<model>"].params.transport` 按 OpenAI Codex 模型覆盖（`"sse"`、`"websocket"` 或 `"auto"`）
+- `params.serviceTier` 也会转发到原生 Codex Responses 请求（`chatgpt.com/backend-api`）
+- 隐藏的 OpenClaw 归因请求头（`originator`、`version`、`User-Agent`）只会附加到发往 `chatgpt.com/backend-api` 的原生 Codex 流量，不会附加到通用的 OpenAI 兼容代理
+- 与直接 `openai/*` 一样，共享 `/fast` 开关和 `params.fastMode` 配置；OpenClaw 会将其映射为 `service_tier=priority`
+- `openai/gpt-5.5` 使用 Codex 目录中的原生 `contextWindow = 400000` 和默认运行时 `contextTokens = 272000`；可通过 `models.providers.openai.models[].contextTokens` 覆盖运行时上限
+- 政策说明：OpenAI Codex OAuth 明确支持像 OpenClaw 这样的外部工具/工作流。
+- 对于常见的订阅加原生 Codex 运行时路径，请使用 `openai` 认证登录并配置 `openai/gpt-5.5`；OpenAI 代理回合默认选择 Codex。
+- 只有当你希望使用内置的 OpenClaw 路径时，才使用 provider/model `agentRuntime.id: "openclaw"`；否则请让 `openai/gpt-5.5` 保持在默认 Codex harness 上。
+- 旧式 Codex GPT 引用属于旧状态，不是实时提供商路由。新代理配置请在原生 Codex 运行时上使用 `openai/gpt-5.5`，并运行 `openclaw doctor --fix` 将旧式 Codex 模型引用迁移为规范的 `openai/*` 引用。
 
 ```json5
 {
@@ -166,7 +163,7 @@ Anthropic 告诉我们，OpenClaw 风格的 Claude CLI 用法已再次被允许�
 {
   models: {
     providers: {
-      "openai-codex": {
+      openai: {
         models: [{ id: "gpt-5.5", contextTokens: 160000 }],
       },
     },
@@ -262,12 +259,12 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 
 ### Z.AI（GLM）
 
-- 提供商：`zai`
-- 认证：`ZAI_API_KEY`
-- 示例模型：`zai/glm-5.1`
-- CLI：`openclaw onboard --auth-choice zai-api-key`
-  - 别名：`z.ai/*` 和 `z-ai/*` 会规范化为 `zai/*`
-  - `zai-api-key` 会自动检测匹配的 Z.AI 端点；`zai-coding-global`、`zai-coding-cn`、`zai-global` 和 `zai-cn` 会强制使用特定入口
+- Provider: `zai`
+- Auth: `ZAI_API_KEY`
+- Example model: `zai/glm-5.1`
+- CLI: `openclaw onboard --auth-choice zai-api-key`
+  - 模型引用使用规范的 `zai/*` 提供商 ID。
+  - `zai-api-key` 会自动检测匹配的 Z.AI 端点；`zai-coding-global`、`zai-coding-cn`、`zai-global` 和 `zai-cn` 会强制使用特定表面
 
 ### Vercel AI Gateway
 
@@ -290,32 +287,36 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
 
 ### 其他捆绑的提供商插件
 
-| Provider                | Id                               | Auth env                                                     | Example model                                 |
-| ----------------------- | -------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
-| BytePlus                | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                           | `byteplus-plan/ark-code-latest`               |
-| Cerebras                | `cerebras`                       | `CEREBRAS_API_KEY`                                           | `cerebras/zai-glm-4.7`                        |
-| Cloudflare AI Gateway   | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                              | -                                             |
-| DeepInfra               | `deepinfra`                      | `DEEPINFRA_API_KEY`                                          | `deepinfra/deepseek-ai/DeepSeek-V3.2`         |
-| DeepSeek                | `deepseek`                       | `DEEPSEEK_API_KEY`                                           | `deepseek/deepseek-v4-flash`                  |
-| GitHub Copilot          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`         | -                                             |
-| Groq                    | `groq`                           | `GROQ_API_KEY`                                               | -                                             |
-| Hugging Face Inference  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                        | `huggingface/deepseek-ai/DeepSeek-R1`         |
-| Kilo Gateway            | `kilocode`                       | `KILOCODE_API_KEY`                                           | `kilocode/kilo/auto`                          |
-| Kimi Coding             | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                         | `kimi/kimi-for-coding`                        |
-| MiniMax                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                    | `minimax/MiniMax-M2.7`                        |
-| Mistral                 | `mistral`                        | `MISTRAL_API_KEY`                                            | `mistral/mistral-large-latest`                |
-| Moonshot                | `moonshot`                       | `MOONSHOT_API_KEY`                                           | `moonshot/kimi-k2.6`                          |
-| NVIDIA                  | `nvidia`                         | `NVIDIA_API_KEY`                                             | `nvidia/nvidia/nemotron-3-super-120b-a12b`    |
-| OpenRouter              | `openrouter`                     | `OPENROUTER_API_KEY`                                         | `openrouter/auto`                             |
-| Qianfan                 | `qianfan`                        | `QIANFAN_API_KEY`                                            | `qianfan/deepseek-v3.2`                       |
-| Qwen Cloud              | `qwen`                           | `QWEN_API_KEY` / `MODELSTUDIO_API_KEY` / `DASHSCOPE_API_KEY` | `qwen/qwen3.5-plus`                           |
-| StepFun                 | `stepfun` / `stepfun-plan`       | `STEPFUN_API_KEY`                                            | `stepfun/step-3.5-flash`                      |
-| Together                | `together`                       | `TOGETHER_API_KEY`                                           | `together/moonshotai/Kimi-K2.5`               |
-| Venice                  | `venice`                         | `VENICE_API_KEY`                                             | -                                             |
-| Vercel AI Gateway       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                         | `vercel-ai-gateway/anthropic/claude-opus-4.6` |
-| Volcano Engine (Doubao) | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                     | `volcengine-plan/ark-code-latest`             |
-| xAI                     | `xai`                            | SuperGrok/X Premium OAuth or `XAI_API_KEY`                   | `xai/grok-4.3`                                |
-| Xiaomi                  | `xiaomi`                         | `XIAOMI_API_KEY`                                             | `xiaomi/mimo-v2-flash`                        |
+| Provider                                | Id                               | Auth env                                                     | Example model                                              |
+| --------------------------------------- | -------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| BytePlus                                | `byteplus` / `byteplus-plan`     | `BYTEPLUS_API_KEY`                                           | `byteplus-plan/ark-code-latest`                            |
+| Cerebras                                | `cerebras`                       | `CEREBRAS_API_KEY`                                           | `cerebras/zai-glm-4.7`                                     |
+| Cloudflare AI Gateway                   | `cloudflare-ai-gateway`          | `CLOUDFLARE_AI_GATEWAY_API_KEY`                              | -                                                          |
+| DeepInfra                               | `deepinfra`                      | `DEEPINFRA_API_KEY`                                          | `deepinfra/deepseek-ai/DeepSeek-V4-Flash`                  |
+| DeepSeek                                | `deepseek`                       | `DEEPSEEK_API_KEY`                                           | `deepseek/deepseek-v4-flash`                               |
+| GitHub Copilot                          | `github-copilot`                 | `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN`         | -                                                          |
+| GMI Cloud                               | `gmi`                            | `GMI_API_KEY`                                                | `gmi/google/gemini-3.1-flash-lite`                         |
+| Groq                                    | `groq`                           | `GROQ_API_KEY`                                               | -                                                          |
+| Hugging Face Inference                  | `huggingface`                    | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                        | `huggingface/deepseek-ai/DeepSeek-R1`                      |
+| Kilo Gateway                            | `kilocode`                       | `KILOCODE_API_KEY`                                           | `kilocode/kilo/auto`                                       |
+| Kimi Coding                             | `kimi`                           | `KIMI_API_KEY` or `KIMICODE_API_KEY`                         | `kimi/kimi-for-coding`                                     |
+| MiniMax                                 | `minimax` / `minimax-portal`     | `MINIMAX_API_KEY` / `MINIMAX_OAUTH_TOKEN`                    | `minimax/MiniMax-M3`                                       |
+| Mistral                                 | `mistral`                        | `MISTRAL_API_KEY`                                            | `mistral/mistral-large-latest`                             |
+| Moonshot                                | `moonshot`                       | `MOONSHOT_API_KEY`                                           | `moonshot/kimi-k2.6`                                       |
+| NVIDIA                                  | `nvidia`                         | `NVIDIA_API_KEY`                                             | `nvidia/nvidia/nemotron-3-ultra-550b-a55b`                 |
+| NovitaAI                                | `novita`                         | `NOVITA_API_KEY`                                             | `novita/deepseek/deepseek-v3-0324`                         |
+| [Ollama Cloud](/providers/ollama-cloud) | `ollama-cloud`                   | `OLLAMA_API_KEY`                                             | `ollama-cloud/kimi-k2.6`                                   |
+| OpenRouter                              | `openrouter`                     | `OPENROUTER_API_KEY`                                         | `openrouter/auto`                                          |
+| Qianfan                                 | `qianfan`                        | `QIANFAN_API_KEY`                                            | `qianfan/deepseek-v3.2`                                    |
+| Qwen Cloud                              | `qwen`                           | `QWEN_API_KEY` / `MODELSTUDIO_API_KEY` / `DASHSCOPE_API_KEY` | `qwen/qwen3.5-plus`                                        |
+| [Qwen OAuth](/providers/qwen-oauth)     | `qwen-oauth`                     | `QWEN_API_KEY`                                               | `qwen-oauth/qwen3.5-plus`                                  |
+| StepFun                                 | `stepfun` / `stepfun-plan`       | `STEPFUN_API_KEY`                                            | `stepfun/step-3.5-flash`                                   |
+| Together                                | `together`                       | `TOGETHER_API_KEY`                                           | `together/meta-llama/Llama-3.3-70B-Instruct-Turbo`         |
+| Venice                                  | `venice`                         | `VENICE_API_KEY`                                             | -                                                          |
+| Vercel AI Gateway                       | `vercel-ai-gateway`              | `AI_GATEWAY_API_KEY`                                         | `vercel-ai-gateway/anthropic/claude-opus-4.6`              |
+| Volcano Engine (Doubao)                 | `volcengine` / `volcengine-plan` | `VOLCANO_ENGINE_API_KEY`                                     | `volcengine-plan/ark-code-latest`                          |
+| xAI                                     | `xai`                            | SuperGrok/X Premium OAuth or `XAI_API_KEY`                   | `xai/grok-4.3`                                             |
+| Xiaomi                                  | `xiaomi` / `xiaomi-token-plan`   | `XIAOMI_API_KEY` / `XIAOMI_TOKEN_PLAN_API_KEY`               | `xiaomi/mimo-v2-flash` / `xiaomi-token-plan/mimo-v2.5-pro` |
 
 #### 值得注意的特殊行为
 
@@ -327,7 +328,7 @@ Gemini CLI 的 JSON 回复会从 `response` 中解析；用量会回退到 `stat
     基于 Gemini 的引用遵循相同的代理-Gemini 清理路径；`kilocode/kilo/auto` 和其他不支持代理推理的引用会跳过代理推理注入。
   </Accordion>
   <Accordion title="MiniMax">
-    API key 上手会写入显式的仅文本 M2.7 聊天模型定义；图像理解仍保留在插件拥有的 `MiniMax-VL-01` 媒体提供商上。
+    API-key onboarding 会写入明确的 M3 和 M2.7 聊天模型定义；图像理解仍保留在插件拥有的 `MiniMax-VL-01` 媒体提供商上。
   </Accordion>
   <Accordion title="NVIDIA">
     模型 id 使用 `nvidia/<vendor>/<model>` 命名空间（例如 `nvidia/nvidia/nemotron-...`，以及 `nvidia/moonshotai/kimi-k2.5`）；选择器会保留字面上的 `<provider>/<model-id>` 组合，而发送到 API 的规范键仍保持单前缀。
@@ -528,15 +529,15 @@ MiniMax 通过 `models.providers` 配置，因为它使用自定义端点：
 请参见 [/providers/minimax](/providers/minimax) 获取设置详情、模型选项和配置片段。
 
 <Note>
-在 MiniMax 的 Anthropic 兼容流式路径中，OpenClaw 默认会禁用 thinking，除非你显式设置它，并且 `/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
+在 MiniMax 的 Anthropic 兼容流式路径上，OpenClaw 默认会为 M2.x 系列关闭 thinking，除非你显式设置；MiniMax-M3（以及 M3.x）默认保持提供商省略/自适应 thinking 路径。`/fast on` 会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
 </Note>
 
 插件拥有的能力划分：
 
-- 文本/聊天默认保持在 `minimax/MiniMax-M2.7`
-- 图像生成是 `minimax/image-01` 或 `minimax-portal/image-01`
-- 图像理解在两个 MiniMax 认证路径上都由插件拥有的 `MiniMax-VL-01` 提供
-- 网络搜索保持在提供商 ID `minimax`
+- Text/chat defaults stay on `minimax/MiniMax-M3`
+- Image generation is `minimax/image-01` or `minimax-portal/image-01`
+- Image understanding is plugin-owned `MiniMax-VL-01` on both MiniMax auth paths
+- Web search stays on provider id `minimax`
 
 ### LM Studio
 

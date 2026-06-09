@@ -44,7 +44,21 @@ openclaw sessions --json
 - `--store <path>`: 显式存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）
 - `--limit <n|all>`: 要输出的最大行数（默认 `100`；`all` 恢复完整输出）
 
-为已存储的会话导出 trajectory bundle：
+Tail human-readable trajectory progress for stored sessions:
+
+```bash
+openclaw sessions tail
+openclaw sessions tail --follow
+openclaw sessions tail --session-key "agent:main:telegram:direct:123" --tail 25
+openclaw sessions --agent work tail --follow
+openclaw sessions --all-agents tail --follow
+```
+
+`openclaw sessions tail` 将最近的轨迹 JSONL 事件渲染为紧凑的进度行。不指定 `--session-key` 时，它会先跟踪正在运行的会话，然后跟踪最新的存储会话。`--tail <count>` 控制在进入跟随模式前打印多少条现有事件；默认值是 `80`，`0` 表示从当前末尾开始。`--follow` 会持续监视所选轨迹文件，包括由 `<session>.trajectory-path.json` 引用的已移动文件。
+
+进度视图刻意保持保守：不会打印提示文本、工具参数或工具结果正文。工具调用仅显示工具名和 `{...redacted...}`；工具结果显示 `ok`、`error` 或 `done` 等状态；模型完成行显示提供方/模型和终止状态。
+
+为已存储会话导出轨迹包：
 
 ```bash
 openclaw sessions export-trajectory --session-key "agent:main:telegram:direct:123" --workspace .
@@ -95,19 +109,19 @@ openclaw sessions cleanup --json
 
 `openclaw sessions cleanup` 使用配置中的 `session.maintenance` 设置：
 
-- 范围说明：`openclaw sessions cleanup` 会维护会话存储、转录和 trajectory sidecar。它不会清理 cron 运行日志（`cron/runs/<jobId>.jsonl`），这些日志由 [Cron 配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.maxBytes` 和 `cron.runLog.keepLines` 管理，并在 [Cron 维护](/automation/cron-jobs#maintenance) 中解释。
-- 清理还会删除未被引用、且早于 `session.maintenance.pruneAfter` 的主转录、压缩检查点和 trajectory sidecar；仍被 `sessions.json` 引用的文件会被保留。
+- 范围说明：`openclaw sessions cleanup` 会维护会话存储、转录和轨迹侧车文件。它不会清理 cron 运行历史；这部分由 [Cron 配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.keepLines` 管理，并在 [Cron 维护](/automation/cron-jobs#maintenance) 中说明。
+- 清理还会删除未被引用的主转录、压缩检查点，以及早于 `session.maintenance.pruneAfter` 的轨迹侧车文件；仍被 `sessions.json` 引用的文件会被保留。
 
-- `--dry-run`: 预览将要修剪/截断的条目数量，而不写入。
-  - 在文本模式下，dry-run 会输出按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），这样你可以看到哪些会被保留、哪些会被移除。
-- `--enforce`: 即使 `session.maintenance.mode` 为 `warn` 也执行维护。
-- `--fix-missing`: 移除转录文件缺失的条目，即使它们通常还不会因时间/数量而被清理。
-- `--fix-dm-scope`: 当 `session.dmScope` 为 `main` 时，清理早期 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由遗留的、按对等方键控的陈旧直连 DM 行。请先使用 `--dry-run`；执行清理会将这些行从 `sessions.json` 中移除，并将其转录保留为已删除归档。
-- `--active-key <key>`: 保护特定的活动 key 不被磁盘预算驱逐。持久化的外部会话指针，例如群组会话和线程作用域聊天会话，也会因年龄/数量/磁盘预算维护而保留。
-- `--agent <id>`: 为一个已配置的代理存储运行清理。
-- `--all-agents`: 为所有已配置的代理存储运行清理。
-- `--store <path>`: 针对特定 `sessions.json` 文件运行。
-- `--json`: 打印 JSON 摘要。使用 `--all-agents` 时，输出会为每个存储包含一个摘要。
+- `--dry-run`：在不写入的情况下预览会被清理/截断的条目数量。
+  - 在文本模式下，dry-run 会打印按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），以便你查看哪些会被保留，哪些会被移除。
+- `--enforce`：即使 `session.maintenance.mode` 为 `warn`，也强制执行维护。
+- `--fix-missing`：移除转录文件缺失，或仅有表头/为空的条目，即使它们按年龄/数量本来还不会被清理。
+- `--fix-dm-scope`：当 `session.dmScope` 为 `main` 时，清理早先 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由留下的陈旧、按对端键控的直连 DM 行。请先使用 `--dry-run`；实际清理会从 `sessions.json` 中移除这些行，并将其转录保留为已删除归档。
+- `--active-key <key>`：保护某个活动键，避免在磁盘预算回收时被清除。持久化的外部对话指针，例如群组会话和线程作用域聊天会话，也会在年龄/数量/磁盘预算维护中保留。
+- `--agent <id>`：对一个已配置的代理存储执行清理。
+- `--all-agents`：对所有已配置的代理存储执行清理。
+- `--store <path>`：针对特定的 `sessions.json` 文件运行。
+- `--json`：打印 JSON 摘要。使用 `--all-agents` 时，输出会为每个存储包含一份摘要。
 
 当 Gateway 可用时，对已配置代理存储执行的非 dry-run 清理会通过 Gateway 发送，因此它与运行时流量共享同一个会话存储写入器。若要对某个存储文件进行显式离线修复，请使用 `--store <path>`。
 

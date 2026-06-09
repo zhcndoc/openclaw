@@ -79,15 +79,16 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 | 视频           | 异步         | 提供商处理需要 30 秒到数分钟；较慢的队列可运行到配置的超时。 |
 | 音乐           | 异步         | 与视频相同的提供商处理特性。                                                    |
 
-对于异步工具，OpenClaw 会将请求提交给提供商，立即返回一个任务
-ID，并在任务账本中跟踪该作业。代理在作业运行时会继续
-响应其他消息。提供商完成后，
-OpenClaw 会携带生成的媒体路径唤醒代理，以便它告知
-用户并通过消息工具转发结果。如果请求方会话
-不活跃，或其活动唤醒失败，并且仍有部分生成的媒体
-未通过消息工具交付，OpenClaw 会发送一个幂等的直接
-回退，仅包含缺失的媒体。已通过消息工具交付的媒体
-不会再次发布。
+For async tools, OpenClaw submits the request to the provider, returns a task
+id immediately, and tracks the job in the task ledger. The agent continues
+responding to other messages while the job runs. When the provider finishes,
+OpenClaw wakes the agent with the generated media paths so it can tell the
+user through the session's normal visible-reply mode: automatic final reply
+delivery when configured, or `message(action="send")` when the session requires
+the message tool. If the requester session is inactive or its active wake
+fails, and some generated media is still missing from the completion reply,
+OpenClaw sends an idempotent direct fallback with only the missing media. Media
+already delivered by the completion reply is not posted again.
 
 ## 语音转文本与 Voice Call
 

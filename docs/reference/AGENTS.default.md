@@ -72,7 +72,7 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 - 记录：决定、偏好、约束、未完成事项。
 - 除非明确要求，否则避免记录秘密。
 
-## Tools and skills
+## 工具和技能
 
 - 工具存在于技能中；当你需要时，请遵循每个技能的 `SKILL.md`。
 - 将环境相关的说明保留在 `TOOLS.md` 中（技能备注）。
@@ -91,9 +91,9 @@ git commit -m "添加 Clawd 工作区"
 
 ## OpenClaw 的作用
 
-- 运行 WhatsApp 网关 + Pi 编码代理，让助手可以读取/写入聊天、获取上下文，并通过主机 Mac 运行技能。
-- macOS 应用管理权限（屏幕录制、通知、麦克风），并通过其捆绑二进制文件提供 `openclaw` CLI。
-- 直接聊天默认会合并到代理的 `main` 会话；群组保持隔离，格式为 `agent:<agentId>:<channel>:group:<id>`（房间/频道：`agent:<agentId>:<channel>:channel:<id>`）；心跳保持后台任务存活。
+- Runs WhatsApp gateway + embedded OpenClaw agent so the assistant can read/write chats, fetch context, and run skills via the host Mac.
+- macOS app manages permissions (screen recording, notifications, microphone) and exposes the `openclaw` CLI via its bundled binary.
+- Direct chats collapse into the agent's `main` session by default; groups stay isolated as `agent:<agentId>:<channel>:group:<id>` (rooms/channels: `agent:<agentId>:<channel>:channel:<id>`); heartbeats keep background tasks alive.
 
 ## 核心技能（在 设置 → 技能 中启用）
 

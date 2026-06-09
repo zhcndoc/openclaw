@@ -1,5 +1,5 @@
 ---
-summary: "适用于智能体的只读差异查看器和文件渲染器。"
+summary: "OpenClaw 只读 diff 查看器插件和文件渲染器，面向代理。"
 read_when:
   - 你正在安装、配置或审计 diffs 插件
 title: "Diffs 插件"
@@ -7,7 +7,7 @@ title: "Diffs 插件"
 
 # Diffs 插件
 
-适用于智能体的只读差异查看器和文件渲染器。
+OpenClaw 只读 diff 查看器插件和文件渲染器，面向代理。
 
 ## 分发
 

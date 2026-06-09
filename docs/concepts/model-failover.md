@@ -60,14 +60,28 @@ OpenClaw 将所选的提供方/模型与其被选择的原因分开。该来源�
 
 - **已配置默认值**：`agents.defaults.model.primary` 使用 `agents.defaults.model.fallbacks`。
 - **Agent 主项**：`agents.list[].model` 默认是严格的，除非该 agent 的模型对象包含它自己的 `fallbacks`。使用 `fallbacks: []` 可以明确表示严格行为，或者提供一个非空列表，让该 agent 启用模型回退。
-- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"` 以及所选的原始模型。该自动覆盖可以继续沿着已配置的回退链向下走，而不必在每条消息上都探测主项，但 OpenClaw 会周期性地再次探测已配置的原始项，并在其恢复时清除自动覆盖。`/new`、`/reset` 和 `sessions.reset` 也会清除自动来源的覆盖。若未显式提供 `heartbeat.model`，心跳会在其原始项不再与当前已配置默认值匹配时清除直接的自动覆盖。
+- **自动回退覆盖**：运行时回退会在重试前写入 `providerOverride`、`modelOverride`、`modelOverrideSource: "auto"` 以及所选的原始模型。该自动覆盖可以继续沿着已配置的回退链向下走，而不必在每条消息上都去探测主项，但 OpenClaw 会周期性地再次探测已配置的原始项，并在其恢复时清除自动覆盖。`/new`、`/reset` 和 `sessions.reset` 也会清除自动来源的覆盖。若未显式提供 `heartbeat.model`，心跳会在其原始项不再与当前已配置默认值匹配时清除直接的自动覆盖。
 - **用户会话覆盖**：`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会写入 `modelOverrideSource: "user"`。这是一种精确的会话选择。如果所选提供方/模型在产生回复前失败，OpenClaw 会报告失败，而不是从无关的已配置回退中回答。
 - **旧版会话覆盖**：较旧的会话条目可能只有 `modelOverride` 而没有 `modelOverrideSource`。OpenClaw 会将这些视为用户覆盖，因此显式的旧选择不会被静默转换为回退行为。
 - **Cron 负载模型**：cron 作业的 `payload.model` / `--model` 是作业主项，而不是用户会话覆盖。它会使用已配置回退，除非作业提供了 `payload.fallbacks`；`payload.fallbacks: []` 会让 cron 运行保持严格。
 
 自动回退的主项探测间隔是五分钟，且不可配置。OpenClaw 会按会话和主模型记住最近的探测，因此不会在每一轮都重复探测失败的主项。OpenClaw 在会话切换到回退时会发送一次可见通知，在其返回所选主项时也会发送一次；对于持续停留在回退上的轮次，不会每次都重复通知。
 
-## 用户可见的回退通知
+## Auth failure skip cache
+
+默认情况下，每个新轮次都会保留现有的回退重试行为：OpenClaw 会再次尝试每个已配置的回退候选项，包括最近因 `auth` 或 `auth_permanent` 失败的非主候选项。
+
+希望抑制这些重复认证失败的运维人员可以启用：
+
+```bash
+OPENCLAW_FALLBACK_SKIP_TTL_MS=60000
+```
+
+启用后，OpenClaw 会在一次认证类失败后，为非主回退候选项记录一个以内存保存、按会话作用域生效的跳过标记。该标记以会话 ID、提供方和模型为键。主候选项永远不会被跳过，因此显式的用户模型选择仍会暴露真实的认证错误。该缓存仅在进程内生效，并会在 Gateway 重启后清空。
+
+该值是以毫秒为单位的 TTL。`0` 或未设置值会禁用缓存。正值会被限制在 1 秒到 10 分钟之间。
+
+## 面向用户的回退通知
 
 当会话切换到自动选择的回退时，OpenClaw 会在同一回复界面发送状态通知：
 
@@ -87,10 +101,10 @@ OpenClaw 将所选的提供方/模型与其被选择的原因分开。该来源�
 
 OpenClaw 对 API 密钥和 OAuth 令牌都使用**认证配置文件**。
 
-- 密钥存储在 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`（旧版：`~/.openclaw/agent/auth-profiles.json`）。
-- 运行时认证路由状态存储在 `~/.openclaw/agents/<agentId>/agent/auth-state.json`。
-- 配置 `auth.profiles` / `auth.order` 只是**元数据 + 路由**（不含密钥）。
-- 仅用于旧版导入的 OAuth 文件：`~/.openclaw/credentials/oauth.json`（首次使用时会导入到 `auth-profiles.json` 中）。
+- Secrets and runtime auth-routing state live in `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`.
+- Config `auth.profiles` / `auth.order` are **metadata + routing only** (no secrets).
+- Legacy import-only OAuth file: `~/.openclaw/credentials/oauth.json` (imported into the per-agent auth store on first use).
+- Legacy `auth-profiles.json`, `auth-state.json`, and per-agent `auth.json` files are imported by `openclaw doctor --fix`.
 
 更多详情：[OAuth](/concepts/oauth)
 
@@ -106,7 +120,7 @@ OAuth 登录会创建不同的配置文件，以便多个账户可以共存。
 - 默认：当没有可用邮箱时为 `provider:default`。
 - 带邮箱的 OAuth：`provider:<email>`（例如 `google-antigravity:user@gmail.com`）。
 
-配置文件位于 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` 的 `profiles` 下。
+Profiles live in the per-agent `openclaw-agent.sqlite` auth profile store.
 
 ## 轮换顺序
 
@@ -120,7 +134,7 @@ OAuth 登录会创建不同的配置文件，以便多个账户可以共存。
     按 provider 过滤后的 `auth.profiles`。
   </Step>
   <Step title="已存储的配置文件">
-    `auth-profiles.json` 中该 provider 的条目。
+    每个 agent 的 SQLite 认证配置文件条目。
   </Step>
 </Steps>
 
@@ -156,19 +170,13 @@ OpenAI API 密钥备用之间轮换。
 {
   auth: {
     order: {
-      openai: ["openai-codex:user@example.com", "openai:api-key-backup"],
+      openai: ["openai:user@example.com", "openai:api-key-backup"],
     },
   },
 }
 ```
 
-现有的 Codex 订阅配置文件仍可能使用旧版
-`openai-codex:*` 配置文件 ID。按顺序排列的 API 密钥备用可以是普通的
-`openai:*` API 密钥配置文件。当订阅达到 Codex 使用限制时，
-OpenClaw 会记录 Codex 提供的确切重置时间，尝试下一个
-按顺序排列的认证配置文件，并继续保持运行在 Codex harness 中。等重置
-时间过去后，订阅配置文件会再次变为可用，下一次自动
-选择可以回到它。
+对 ChatGPT/Codex OAuth 配置文件和 OpenAI API 密钥配置文件都使用 `openai:*`。当订阅达到 Codex 使用上限时，OpenClaw 会记录 Codex 提供的精确重置时间，尝试下一个按顺序排列的认证配置文件，并让运行保持在 Codex harness 内。重置时间过去后，该订阅配置文件会再次可用，下一次自动选择可以回到它。
 
 仅当你希望为该会话强制使用某个账户/密钥时，才使用用户固定的配置文件。
 用户固定的配置文件是故意设计为严格的，不会静默切换到
@@ -184,7 +192,7 @@ OpenClaw 会记录 Codex 提供的确切重置时间，尝试下一个
 
     格式/无效请求错误通常是终止性的，因为重试相同载荷会以同样方式失败，所以 OpenClaw 会直接呈现这些错误，而不是轮换认证配置文件。已知的重试修复路径可以显式启用：例如，Cloud Code Assist 工具调用 ID 验证失败会被清理并通过 `allowFormatRetry` 策略重试一次。类似 `Unhandled stop reason: error`、`stop reason: error` 和 `reason: error` 这样的 OpenAI 兼容 stop-reason 错误会被归类为超时/故障转移信号。
 
-    当来源匹配已知的瞬态模式时，通用服务器文本也可能进入该超时桶。例如，裸的 pi-ai stream-wrapper 消息 `An unknown error occurred` 会被视为所有提供方都可故障转移，因为当提供方流在没有具体细节的情况下以 `stopReason: "aborted"` 或 `stopReason: "error"` 结束时，pi-ai 会输出它。带有瞬态服务器文本的 JSON `api_error` 负载，例如 `internal server error`、`unknown error, 520`、`upstream error` 或 `backend error`，也会被视为可故障转移的超时。
+    Generic server text can also land in that timeout bucket when the source matches a known transient pattern. For example, the bare model runtime stream-wrapper message `An unknown error occurred` is treated as failover-worthy for every provider because the shared model runtime emits it when provider streams end with `stopReason: "aborted"` or `stopReason: "error"` without specific details. JSON `api_error` payloads with transient server text such as `internal server error`, `unknown error, 520`, `upstream error`, or `backend error` are also treated as failover-worthy timeouts.
 
     仅在提供方上下文确实是 OpenRouter 时，像裸的 `Provider returned error` 这样的 OpenRouter 特定通用上游文本才会被视为超时。像 `LLM request failed with an unknown error.` 这样的通用内部回退文本会保持保守，不会自行触发故障转移。
 
@@ -209,7 +217,7 @@ OpenClaw 会记录 Codex 提供的确切重置时间，尝试下一个
 - 25 分钟
 - 1 小时（上限）
 
-状态存储在 `auth-state.json` 的 `usageStats` 下：
+State is stored in the per-agent SQLite auth state under `usageStats`:
 
 ```json
 {
@@ -233,7 +241,7 @@ OpenClaw 会记录 Codex 提供的确切重置时间，尝试下一个
 与此同时，临时性的 `402` 使用窗口和组织/工作区支出上限错误，如果消息看起来可重试，则会被归类为 `rate_limit`（例如 `weekly usage limit exhausted`、`daily limit reached, resets tomorrow`，或 `organization spending limit exceeded`）。这些情况会走短冷却/故障转移路径，而不是长计费禁用路径。
 </Note>
 
-状态存储在 `auth-state.json` 中：
+State is stored in the per-agent SQLite auth state:
 
 ```json
 {

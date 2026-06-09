@@ -65,8 +65,8 @@ OpenClaw 通过内置的迁移提供器导入 Hermes 状态。该提供器会在
   <Accordion title="技能">
     位于 `skills/<name>/` 下、包含 `SKILL.md` 文件的技能会被复制，同时还会复制来自 `skills.config` 的每个技能的配置值。
   </Accordion>
-  <Accordion title="认证凭据">
-    交互式 `openclaw migrate` 会在导入认证凭据前询问你，默认选择“是”。可接受的导入包括：来自 Hermes `auth.json` 的受支持 OAuth 凭据、来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据、来自 OpenCode `auth.json` 的 OpenCode 和 GitHub Copilot 条目，以及[受支持的 `.env` 键](/cli/migrate#supported-env-keys)。在非交互式 `openclaw migrate` 中使用 `--include-secrets` 以导入凭据，使用 `--no-auth-credentials` 可跳过它；如果从入门向导导入，则使用 `--import-secrets`。
+  <Accordion title="Auth credentials">
+    交互式 `openclaw migrate` 会在导入认证凭据前询问，默认选择“是”。可接受的导入包括来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据、来自 OpenCode `auth.json` 的 OpenCode 和 GitHub Copilot 条目，以及[受支持的 `.env` 键](/cli/migrate#supported-env-keys)。Hermes `auth.json` 中的 OAuth 条目属于旧状态，会作为需要手动重新认证/修复的项目显示，而不会导入到当前认证中。对于非交互式 `openclaw migrate` 凭据导入，请使用 `--include-secrets`；跳过则使用 `--no-auth-credentials`；从入门向导导入时使用 `--import-secrets`。
   </Accordion>
 </AccordionGroup>
 
@@ -137,11 +137,11 @@ OpenClaw 会拒绝自动执行或信任这些状态，因为不同系统之间�
 
 交互式 `openclaw migrate` 会询问是否导入检测到的认证凭据，默认选择“是”。
 
-- 选择接受提示会导入受支持的 OAuth 凭据：来自 Hermes `auth.json` 的凭据、来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据、来自 OpenCode `auth.json` 的 OpenCode 和 GitHub Copilot 条目，以及[受支持的 `.env` 键](/cli/migrate#supported-env-keys)。
-- 使用 `--no-auth-credentials`，或者在提示时选择“否”，即可仅导入非秘密状态。
-- 当使用 `--yes` 进行无人值守运行时，请使用 `--include-secrets`。
-- 如果从入门向导导入凭据，请使用入门向导的 `--import-secrets`。
-- 对于由 SecretRef 管理的凭据，请在导入完成后配置 SecretRef 源。
+- 接受提示会导入来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据、来自 OpenCode `auth.json` 的 OpenCode 和 GitHub Copilot 条目，以及[受支持的 `.env` 键](/cli/migrate#supported-env-keys)。Hermes `auth.json` 中的 OAuth 条目会作为需要手动重新认证或修复的内容报告。
+- 使用 `--no-auth-credentials`，或在提示中选择“否”，即可只导入非秘密状态。
+- 在使用 `--yes` 无人值守运行时，使用 `--include-secrets`。
+- 从入门向导导入凭据时，使用 `--import-secrets`。
+- 对于由 SecretRef 管理的凭据，请在导入完成后配置 SecretRef 来源。
 
 ## 用于自动化的 JSON 输出
 

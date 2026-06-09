@@ -26,13 +26,13 @@ openclaw memory status
 openclaw memory status --deep
 openclaw memory status --fix
 openclaw memory index --force
-openclaw memory search "meeting notes"
-openclaw memory search --query "deployment" --max-results 20
+openclaw memory search "会议笔记"
+openclaw memory search --query "部署" --max-results 20
 openclaw memory promote --limit 10 --min-score 0.75
 openclaw memory promote --apply
 openclaw memory promote --json --min-recall-count 0 --min-unique-queries 0
-openclaw memory promote-explain "router vlan"
-openclaw memory promote-explain "router vlan" --json
+openclaw memory promote-explain "路由器 vlan"
+openclaw memory promote-explain "路由器 vlan" --json
 openclaw memory rem-harness
 openclaw memory rem-harness --json
 openclaw memory status --json
@@ -164,16 +164,16 @@ Dreaming 是后台记忆巩固系统，包含三个协同
 
 注意：
 
-- `memory index --verbose` 会输出各阶段详细信息（provider、model、sources、批处理活动）。
-- `memory status` 会包含通过 `memorySearch.extraPaths` 配置的任何额外路径。
-- 如果有效启用的 memory 远程 API key 字段被配置为 SecretRefs，则该命令会从当前 gateway 快照中解析这些值。如果 gateway 不可用，命令会快速失败。
-- gateway 版本偏差说明：此命令路径要求 gateway 支持 `secrets.resolve`；较旧的 gateway 会返回 unknown-method 错误。
-- 可通过 `dreaming.frequency` 调整计划扫描频率。deep 提升策略本身由内部控制；当你需要一次性的手动覆盖时，请在 `memory promote` 上使用 CLI 标志。
-- `memory rem-harness --path <file-or-dir> --grounded` 会在不写入任何内容的情况下，预览基于历史每日笔记的 grounded `What Happened`、`Reflections` 和 `Possible Lasting Updates`。
+- `memory index --verbose` 打印每个阶段的详细信息（provider、model、sources、batch activity）。
+- `memory status` 包含通过 `memorySearch.extraPaths` 配置的任何额外路径。
+- 如果有效启用的 memory remote API key 字段被配置为 SecretRefs，命令会从当前 gateway 快照中解析这些值。如果 gateway 不可用，命令会快速失败。
+- Gateway 版本偏差提示：此命令路径要求 gateway 支持 `secrets.resolve`；旧版 gateway 会返回 unknown-method 错误。
+- 可通过 `dreaming.frequency` 调整计划扫描频率。深度提升策略其余部分均为内部实现，唯一例外是 `dreaming.phases.deep.maxPromotedSnippetTokens`，它会在保留来源信息可见的同时限制提升片段的长度。需要一次性手动覆盖阈值时，请在 `memory promote` 上使用 CLI 标志。
+- `memory rem-harness --path <file-or-dir> --grounded` 可预览来自历史每日笔记的 grounded `What Happened`、`Reflections` 和 `Possible Lasting Updates`，不会写入任何内容。
 - `memory rem-backfill --path <file-or-dir>` 会将可回滚的 grounded 日记条目写入 `DREAMS.md` 供 UI 审阅。
-- `memory rem-backfill --path <file-or-dir> --stage-short-term` 还会将 grounded 的持久候选项注入实时短期提升存储，以便正常的 deep 阶段对其排序。
-- `memory rem-backfill --rollback` 会移除之前写入的 grounded 日记条目，`memory rem-backfill --rollback-short-term` 会移除之前暂存的 grounded 短期候选项。
-- 有关完整的阶段说明和配置参考，请参见 [Dreaming](/concepts/dreaming)。
+- `memory rem-backfill --path <file-or-dir> --stage-short-term` 也会将 grounded 的持久候选项注入到实时短期提升存储中，以便正常 deep 阶段进行排序。
+- `memory rem-backfill --rollback` 会移除先前写入的 grounded 日记条目，`memory rem-backfill --rollback-short-term` 会移除先前暂存的 grounded 短期候选项。
+- 参见 [Dreaming](/concepts/dreaming) 以获取完整的阶段说明和配置参考。
 
 ## 相关
 

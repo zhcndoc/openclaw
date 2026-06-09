@@ -75,7 +75,7 @@ openclaw logs --follow
 如果隐式的本地回环 Gateway 要求配对、在连接过程中关闭，或者在 `logs.tail` 响应之前超时，
 `openclaw logs` 会自动回退到已配置的 Gateway 文件日志。显式指定的 `--url`
 目标不会使用此回退机制。`openclaw logs --follow` 更严格：在 Linux 上，如果可用，
-它会按 PID 使用活动的 user-systemd Gateway journal；否则会持续重试实时 Gateway，
+它会按 PID 使用活动的 user-systemd Gateway journal；否则它会持续重试实时 Gateway，
 而不是跟随一个可能已经过时的并排文件。
 
 如果 Gateway 不可达，CLI 会打印一条简短提示，建议运行：
@@ -224,10 +224,12 @@ OTLP logs 流向相同的流程，使用与文件日志相同的有界属性。
 
 模型调用诊断会记录有界的请求/响应测量值，而不会捕获原始 prompt 或响应内容：
 
-- `requestPayloadBytes`：最终模型请求载荷的 UTF-8 字节大小
-- `responseStreamBytes`：流式模型响应事件的 UTF-8 字节大小
-- `timeToFirstByteMs`：第一个流式响应事件到达前经过的时间
-- `durationMs`：模型调用总时长
+- `requestPayloadBytes`: UTF-8 byte size of the final model request payload
+- `responseStreamBytes`: UTF-8 byte size of streamed model response chunk
+  payloads. High-frequency text, thinking, and tool-call delta events count
+  only the incremental `delta` bytes instead of full `partial` snapshots.
+- `timeToFirstByteMs`: elapsed time before the first streamed response event
+- `durationMs`: total model-call duration
 
 这些字段在启用诊断导出时，可用于诊断快照、模型调用插件钩子以及
 OTEL 模型调用 spans/metrics。

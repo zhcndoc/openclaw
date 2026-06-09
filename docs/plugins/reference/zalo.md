@@ -1,5 +1,5 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Zalo 渠道表面。"
+summary: "OpenClaw Zalo 频道插件，适用于 bot 和 webhook 聊天。"
 read_when:
   - 你正在安装、配置或审核 zalo 插件
 title: "Zalo 插件"
@@ -7,7 +7,7 @@ title: "Zalo 插件"
 
 # Zalo 插件
 
-添加用于发送和接收 OpenClaw 消息的 Zalo 渠道表面。
+OpenClaw Zalo 频道插件，适用于 bot 和 webhook 聊天。
 
 ## 分发
 

@@ -172,11 +172,11 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
 将 `agents.defaults.heartbeat.every: "0m"` 可将其禁用。
 
-- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行和像 `# Heading` 这样的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。
-- 如果文件缺失，心跳仍会运行，由模型决定如何处理。
-- 如果代理回复 `HEARTBEAT_OK`（可选地带少量填充内容；参见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发投递。
-- 默认情况下，允许将心跳投递到 DM 风格的 `user:<id>` 目标。设置 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时抑制直接目标投递。
-- 心跳会执行完整的代理轮次——间隔越短，消耗的 token 越多。
+- 如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行、Markdown/HTML 注释、Markdown 标题如 `# Heading`、fence 标记，或空的 checklist 模板），OpenClaw 会跳过心跳运行以节省 API 调用。
+- 如果该文件缺失，心跳仍会运行，由模型自行决定如何处理。
+- 如果代理回复 `HEARTBEAT_OK`（可附带少量填充；参见 `agents.defaults.heartbeat.ackMaxChars`），OpenClaw 会抑制该次心跳的外发投递。
+- 默认情况下，允许向 DM 风格的 `user:<id>` 目标投递心跳。将 `agents.defaults.heartbeat.directPolicy: "block"` 可在保持心跳运行的同时禁止直接目标投递。
+- 心跳会运行完整的代理轮次——间隔越短，消耗的 token 越多。
 
 ```json5
 {
@@ -196,31 +196,25 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 - `{{MediaUrl}}`（伪 URL）
 - `{{Transcript}}`（如果启用了音频转录）
 
-代理发出的外发附件：在单独一行中包含 `MEDIA:<path-or-url>`（不要有空格）。该指令必须作为纯文本从行首开始，位于代码围栏之外，且不能使用诸如粗体或行内代码之类的 Markdown 包裹。示例：
+代理发出的外发附件会在消息工具或回复负载中使用结构化媒体字段，例如 `media`、`mediaUrl`、`mediaUrls`、`path` 或 `filePath`。消息工具参数示例：
 
+```json
+{
+  "message": "这是截图。",
+  "mediaUrl": "https://example.com/screenshot.png"
+}
 ```
-这里是截图。
-MEDIA:https://example.com/screenshot.png
-```
 
-OpenClaw 会提取这些内容，并将它们作为媒体与文本一起发送。
-
-这些形式不是附件指令，会作为普通文本发送：
-
-```md
-**MEDIA:https://example.com/screenshot.png**
-`MEDIA:https://example.com/screenshot.png`
-这里是截图：MEDIA:https://example.com/screenshot.png
-```
+OpenClaw 会把结构化媒体与文本一起发送。为了兼容性，旧式的最终助手回复仍可能被规范化，但工具输出、浏览器输出、流式块和消息操作不会将文本解析为附件命令。
 
 本地路径行为遵循与代理相同的文件读取信任模型：
 
-- 如果 `tools.fs.workspaceOnly` 为 `true`，外发的 `MEDIA:` 本地路径仍仅限于 OpenClaw 临时根目录、媒体缓存、代理工作区路径以及沙箱生成的文件。
-- 如果 `tools.fs.workspaceOnly` 为 `false`，外发的 `MEDIA:` 可以使用代理已经被允许读取的本地主机文件。
-- 本地路径可以是绝对路径、相对于工作区的路径，或使用 `~/` 的相对主目录路径。
-- 本地主机发送仍仅允许媒体和安全文档类型（图像、音频、视频、PDF 和 Office 文档）。纯文本和类似机密的文件不被视为可发送的媒体。
+- 如果 `tools.fs.workspaceOnly` 为 `true`，外发的本地媒体路径将限制在 OpenClaw 临时根目录、媒体缓存、代理工作区路径以及沙盒生成的文件内。
+- 如果 `tools.fs.workspaceOnly` 为 `false`，外发的本地媒体可以使用代理已经被允许读取的主机本地文件。
+- 本地路径可以是绝对路径、相对工作区路径，或使用 `~/` 的主目录相对路径。
+- 主机本地发送仍只允许媒体和安全文档类型（图片、音频、视频、PDF、Office 文档，以及经过验证的文本文档，如 Markdown/MD、TXT、JSON、YAML 和 YML）。这是对现有主机读取信任边界的扩展，不是秘密扫描器：如果代理可以读取某个主机本地的 `secret.txt` 或 `config.json`，并且其扩展名与内容验证匹配，那么它就可以附加该文件。
 
-这意味着，在你的文件系统策略已经允许这些读取的情况下，工作区之外生成的图片/文件现在也可以发送，而无需重新开放任意主机文本附件外泄。
+这意味着，在你的 fs 策略已经允许这些读取的情况下，工作区外生成的图片/文件现在也可以发送，而任意主机本地文本扩展仍会被阻止。请将敏感文件放在代理可读文件系统之外，或者保持 `tools.fs.workspaceOnly=true` 以便更严格地限制本地路径发送。
 
 ## 运维检查清单
 
@@ -236,14 +230,14 @@ openclaw health --json   # gateway 健康快照（WS；默认可返回新的缓�
 ## 下一步
 
 - WebChat: [WebChat](/web/webchat)
-- Gateway 运维: [Gateway runbook](/gateway)
-- Cron + 唤醒: [Cron jobs](/automation/cron-jobs)
-- macOS 菜单栏伴侣: [OpenClaw macOS app](/platforms/macos)
-- iOS node 应用: [iOS app](/platforms/ios)
-- Android node 应用: [Android app](/platforms/android)
-- Windows 状态: [Windows (WSL2)](/platforms/windows)
-- Linux 状态: [Linux app](/platforms/linux)
-- 安全: [Security](/gateway/security)
+- Gateway ops: [Gateway runbook](/gateway)
+- Cron + wakeups: [Cron jobs](/automation/cron-jobs)
+- macOS menu bar companion: [OpenClaw macOS app](/platforms/macos)
+- iOS node app: [iOS app](/platforms/ios)
+- Android node app: [Android app](/platforms/android)
+- Windows Hub: [Windows](/platforms/windows)
+- Linux status: [Linux app](/platforms/linux)
+- Security: [Security](/gateway/security)
 
 ## 相关
 

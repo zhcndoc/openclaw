@@ -101,12 +101,12 @@ agents:
 ### OpenAI（直接 API）
 
 - 在受支持的较新模型上，提示缓存是自动的。OpenClaw 不需要注入块级缓存标记。
-- OpenClaw 使用 `prompt_cache_key` 来保持跨轮次的缓存路由稳定，并且仅当在直接 OpenAI 主机上选择 `cacheRetention: "long"` 时才使用 `prompt_cache_retention: "24h"`。
-- 兼容 OpenAI 的 Completions 提供方只有在其模型配置显式设置 `compat.supportsPromptCacheKey: true` 时才会收到 `prompt_cache_key`；`cacheRetention: "none"` 仍会抑制它。
-- OpenAI 响应通过 `usage.prompt_tokens_details.cached_tokens`（或 Responses API 事件中的 `input_tokens_details.cached_tokens`）暴露已缓存的提示 token。OpenClaw 将其映射为 `cacheRead`。
-- OpenAI 不会暴露单独的缓存写入 token 计数器，因此即使提供方正在预热缓存，OpenAI 路径上的 `cacheWrite` 仍保持为 `0`。
-- OpenAI 会返回有用的跟踪和速率限制标头，例如 `x-request-id`、`openai-processing-ms` 和 `x-ratelimit-*`，但缓存命中统计应来自 usage 负载，而不是来自标头。
-- 在实践中，OpenAI 往往更像是初始前缀缓存，而不是 Anthropic 风格的整段历史移动复用。在当前的实时探测中，稳定的长前缀文本轮次可能接近 `4864` 的已缓存 token 平台，而工具密集型或 MCP 风格的转录即使在完全重复时也通常会在接近 `4608` 个已缓存 token 处进入平台期。
+- OpenClaw 使用 `prompt_cache_key` 让跨轮次的缓存路由保持稳定。直接 OpenAI 主机在选择 `cacheRetention: "long"` 时会使用 `prompt_cache_retention: "24h"`。
+- OpenAI 兼容的 Completions 提供方只有在其模型配置显式设置 `compat.supportsPromptCacheKey: true` 时才会接收 `prompt_cache_key`。长保留转发是另一项能力：显式 `cacheRetention: "long"` 仅在该 compat 条目也支持长缓存保留时发送 `prompt_cache_retention: "24h"`。诸如 Mistral 之类的提供方可以选择支持缓存键，同时将 `compat.supportsLongCacheRetention: false` 设为禁止长保留字段。`cacheRetention: "none"` 会同时抑制这两个字段。
+- OpenAI 响应通过 `usage.prompt_tokens_details.cached_tokens`（或 Responses API 事件中的 `input_tokens_details.cached_tokens`）暴露缓存的提示 token。OpenClaw 会将其映射为 `cacheRead`。
+- OpenAI 不会暴露单独的缓存写入 token 计数器，因此即使提供方正在预热缓存，OpenAI 路径中的 `cacheWrite` 也保持为 `0`。
+- OpenAI 会返回有用的跟踪和限流标头，例如 `x-request-id`、`openai-processing-ms` 和 `x-ratelimit-*`，但缓存命中统计应来自 usage 负载，而不是标头。
+- 实际上，OpenAI 的行为常常更像初始前缀缓存，而不是 Anthropic 风格的可移动全历史复用。稳定的长前缀文本轮次在当前实时探测中可能接近 `4864` 的缓存 token 平台期，而工具繁重或 MCP 风格的转录即使在完全重复时也常常接近 `4608` 个缓存 token。
 
 ### Anthropic Vertex
 

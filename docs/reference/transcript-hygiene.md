@@ -31,9 +31,7 @@ OpenClaw 在一次运行前（构建模型上下文时）会对转录应用**特
 
 ## 全局规则：运行时上下文不是用户转录
 
-运行时/系统上下文可以作为某一轮的模型提示的一部分添加到模型中，但它
-不是终端用户编写的内容。OpenClaw 为 Gateway 回复、排队的后续跟进、ACP、CLI，以及嵌入式 Pi 运行保留了单独的、面向转录的提示正文。存储的可见用户轮次会使用该转录正文，而不是
-运行时增强后的提示。
+运行时/系统上下文可以添加到某一轮的模型提示中，但它不是终端用户创作的内容。OpenClaw 会为 Gateway 回复、排队的后续请求、ACP、CLI 以及嵌入式 OpenClaw 运行保留单独的、面向转录的提示正文。已存储的可见用户轮次使用该转录正文，而不是运行时增强后的提示。
 
 对于已经持久化了运行时包装器的旧会话，Gateway 历史界面会在将消息返回给 WebChat、
 TUI、REST 或 SSE 客户端之前应用显示投影。
@@ -44,8 +42,8 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 所有转录清理都集中在嵌入式运行器中：
 
-- 策略选择：`src/agents/transcript-policy.ts`
-- 清理/修复应用：`sanitizeSessionHistory`，位于 `src/agents/pi-embedded-runner/replay-history.ts`
+- Policy selection: `src/agents/transcript-policy.ts`
+- Sanitization/repair application: `sanitizeSessionHistory` in `src/agents/embedded-agent-runner/replay-history.ts`
 
 该策略使用 `provider`、`modelApi` 和 `modelId` 来决定应用哪些内容。
 
@@ -65,11 +63,12 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 实现：
 
-- `sanitizeSessionMessagesImages`，位于 `src/agents/pi-embedded-helpers/images.ts`
-- `sanitizeContentBlocksImages`，位于 `src/agents/tool-images.ts`
-- 最大图像边长可通过 `agents.defaults.imageMaxDimensionPx` 配置（默认：`1200`）。
-- 在此过程遍历回放内容时，会移除空文本块。变为空的 assistant
-  轮次会从回放副本中删除；变为空的 user 和 tool-result 轮次会接收一个非空的省略内容占位符。
+- `sanitizeSessionMessagesImages` in `src/agents/embedded-agent-helpers/images.ts`
+- `sanitizeContentBlocksImages` in `src/agents/tool-images.ts`
+- Max image side is configurable via `agents.defaults.imageMaxDimensionPx` (default: `1200`).
+- Blank text blocks are removed while this pass walks replay content. Assistant
+  turns that become empty are dropped from the replay copy; user and tool-result
+  turns that become empty receive a non-empty omitted-content placeholder.
 
 ---
 
@@ -80,8 +79,8 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 实现：
 
-- `sanitizeToolCallInputs`，位于 `src/agents/session-transcript-repair.ts`
-- 在 `src/agents/pi-embedded-runner/replay-history.ts` 中的 `sanitizeSessionHistory` 里应用
+- `sanitizeToolCallInputs` in `src/agents/session-transcript-repair.ts`
+- Applied in `sanitizeSessionHistory` in `src/agents/embedded-agent-runner/replay-history.ts`
 
 ---
 
@@ -104,24 +103,27 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 **OpenAI / OpenAI Codex**
 
-- 仅图像清理。
-- 丢弃孤立的 reasoning 签名（没有后续内容块的独立 reasoning 项），适用于 OpenAI Responses/Codex 转录；并在模型路由切换后丢弃可回放的 OpenAI reasoning。
-- 保留可回放的 OpenAI Responses reasoning 项负载，包括加密的空摘要项，以便手动/WebSocket 回放将必需的 `rs_*` 状态与 assistant 输出项正确配对。
-- 原生 ChatGPT Codex Responses 通过在保留会话 `prompt_cache_key` 的同时，回放先前的 Responses reasoning/message/function 负载（不包含先前项 id），遵循 Codex 的线协议一致性。
-- 不进行工具调用 id 清理。
-- 工具结果配对修复可以移动真实的匹配输出，并为缺失的工具调用综合生成 Codex 风格的 `aborted` 输出。
-- 不进行轮次验证或重排序。
-- 缺失的 OpenAI Responses 系列工具输出会被综合为 `aborted`，以匹配 Codex 回放规范化。
-- 不剥离 thought 签名。
+- Image sanitization only.
+- Drop orphaned reasoning signatures (standalone reasoning items without a following content block) for OpenAI Responses/Codex transcripts, and drop replayable OpenAI reasoning after a model route switch.
+- Preserve replayable OpenAI Responses reasoning item payloads, including encrypted empty-summary items, so manual/WebSocket replay keeps required `rs_*` state paired with assistant output items.
+- Native ChatGPT Codex Responses follows Codex wire parity by replaying prior Responses reasoning/message/function payloads without prior item IDs while preserving session `prompt_cache_key`.
+- OpenAI Responses-family replay preserves canonical `call_*|fc_*` same-model reasoning pairs, but deterministically normalizes malformed or overlong `call_id` / function-call item ids before pi-ai payload conversion.
+- Tool result pairing repair may move real matched outputs and synthesize Codex-style `aborted` outputs for missing tool calls.
+- No turn validation or reordering.
+- Missing OpenAI Responses-family tool outputs are synthesized as `aborted` to match Codex replay normalization.
+- No thought signature stripping.
 
 **OpenAI-compatible Chat Completions**
 
-- 历史 assistant 思考/reasoning 块会在回放前被剥离，因此
-  本地和代理式 OpenAI-compatible 服务器不会接收到上一轮的
-  reasoning 字段，例如 `reasoning` 或 `reasoning_content`。
-- 当前同轮次的工具调用续接会保留 assistant reasoning 块
-  附着在工具调用上，直到工具结果被回放。
-- 当提供商自有异常要求回放 reasoning 元数据时，可选择退出。
+- Historical assistant thinking/reasoning blocks are stripped before replay so
+  local and proxy-style OpenAI-compatible servers do not receive prior-turn
+  reasoning fields such as `reasoning` or `reasoning_content`.
+- Current same-turn tool-call continuations keep the assistant reasoning block
+  attached to the tool call until the tool result has been replayed.
+- Custom/self-hosted model entries with `reasoning: true` preserve replayed
+  reasoning metadata.
+- Provider-owned exceptions can opt out when their wire protocol requires
+  replayed reasoning metadata.
 
 **Google（Generative AI / Gemini CLI / Antigravity）**
 
@@ -133,21 +135,42 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 **Anthropic / Minimax（兼容 Anthropic）**
 
-- 工具结果配对修复和合成工具结果。
-- 轮次验证（合并连续 user 轮次以满足严格交替）。
-- 当启用 thinking 时，输出给 Anthropic Messages 负载的 trailing assistant prefill 轮次会被剥离，
-  包括 Cloudflare AI Gateway 路由。
-- 在转换为提供商格式之前，会剥离缺少、为空或为空白的 replay 签名的 thinking 块。若这会使某个 assistant 轮次变空，则 OpenClaw 会保留轮次形状，并使用非空的省略 reasoning 文本。
-- 需要剥离的旧 thinking-only assistant 轮次会被替换为非空的省略 reasoning 文本，以便提供商适配器不会丢弃回放轮次。
+- Tool result pairing repair and synthetic tool results.
+- Turn validation (merge consecutive user turns to satisfy strict alternation).
+- Trailing assistant prefill turns are stripped from outgoing Anthropic Messages
+  payloads when thinking is enabled, including Cloudflare AI Gateway routes.
+- Pre-compaction assistant thinking signatures are stripped before provider
+  replay when a session has been compacted. Thinking signatures are
+  cryptographically bound to the conversation prefix at generation time; after
+  compaction the prefix changes (summarized content is replaced by a compaction
+  summary), so replaying the original signatures causes Anthropic to reject the
+  request with "Invalid signature in thinking block". The thinking text is
+  preserved as an unsigned block and is then handled by the rule below.
+- Thinking blocks with missing, empty, or blank replay signatures are stripped
+  before provider conversion. If that empties an assistant turn, OpenClaw keeps
+  turn shape with non-empty omitted-reasoning text.
+- Older thinking-only assistant turns that must be stripped are replaced with
+  non-empty omitted-reasoning text so provider adapters do not drop the replay
+  turn.
 
 **Amazon Bedrock（Converse API）**
 
-- 在回放前，将空的 assistant stream-error 轮次修复为非空的回退文本块。Bedrock Converse 会拒绝 `content: []` 的 assistant 消息，因此持久化的、`stopReason: "error"` 且内容为空的 assistant 轮次也会在加载前于磁盘上修复。
-- 仅包含空白文本块的 assistant stream-error 轮次会从内存中的回放副本中删除，而不是回放无效的空白块。
-- 具有缺失、为空或为空白 replay 签名的 Claude thinking 块会在 Converse 回放前被剥离。如果这会使 assistant 轮次变空，则 OpenClaw 会保留轮次形状，并使用非空的省略 reasoning 文本。
-- 需要剥离的旧 thinking-only assistant 轮次会被替换为非空的省略 reasoning 文本，以便 Converse 回放保持严格的轮次形状。
-- 回放会过滤 OpenClaw delivery-mirror 和 gateway 注入的 assistant 轮次。
-- 图像清理适用全局规则。
+- Empty assistant stream-error turns are repaired to a non-empty fallback text block
+  before replay. Bedrock Converse rejects assistant messages with `content: []`, so
+  persisted assistant turns with `stopReason: "error"` and empty content are also
+  repaired on disk before load.
+- Assistant stream-error turns that contain only blank text blocks are dropped
+  from the in-memory replay copy instead of replaying an invalid blank block.
+- Pre-compaction assistant thinking signatures are stripped before Converse
+  replay when a session has been compacted, for the same reason as Anthropic
+  above.
+- Claude thinking blocks with missing, empty, or blank replay signatures are
+  stripped before Converse replay. If that empties an assistant turn, OpenClaw
+  keeps turn shape with non-empty omitted-reasoning text.
+- Older thinking-only assistant turns that must be stripped are replaced with
+  non-empty omitted-reasoning text so the Converse replay keeps strict turn shape.
+- Replay filters OpenClaw delivery-mirror and gateway-injected assistant turns.
+- Image sanitization applies through the global rule.
 
 **Mistral（包括基于 model-id 的检测）**
 

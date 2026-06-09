@@ -560,7 +560,7 @@ promptAppend: "优先考虑稳定的长期偏好，而不是一次性事件。"
 promptOverride: "你是一个记忆搜索代理。返回 NONE 或一个简洁的用户事实。"
 ```
 
-除非你有意测试不同的召回契约，否则不建议自定义提示词。默认提示词经过调优，会向主模型返回 `NONE` 或简洁的用户事实上下文。
+除非你有意测试不同的召回契约，否则不建议自定义提示词。默认提示词经过调优，会向主模型返回 `NONE` 或简洁的用户事实的上下文。
 
 ## 转录持久化
 
@@ -754,14 +754,14 @@ recall 异常其实是 embedding provider 问题，而不是 Active Memory 的 b
 列出了该插件实际注册的工具名称。
 
 <AccordionGroup>
-  <Accordion title="Embedding provider 切换了或停止工作">
-    如果 `memorySearch.provider` 未设置，OpenClaw 会自动检测第一个
-    可用的 embedding provider。新的 API key、配额耗尽，或受速率限制的托管 provider，
-    可能会导致不同运行之间解析到不同的 provider。如果没有可解析的 provider，
-    `memory_search` 可能会退化为仅词法检索；一旦运行时已经选定 provider，发生故障后不会自动回退。
+  <Accordion title="Embedding provider switched or stopped working">
+    如果 `memorySearch.provider` 未设置，OpenClaw 将使用 OpenAI embeddings。请为本地、Ollama、Gemini、Voyage、
+    Mistral、DeepInfra、Bedrock、GitHub Copilot 或兼容 OpenAI 的
+    embeddings 显式设置 `memorySearch.provider`。如果配置的提供方无法运行，`memory_search`
+    可能会降级为仅词法检索；一旦运行时已经选定了提供方，后续失败不会自动回退。
 
-    请显式固定 provider（以及可选的 fallback），以使选择具有确定性。
-    有关完整的 provider 列表和固定示例，请参见 [Memory Search](/concepts/memory-search)。
+    只有在你想要一个明确的单一回退时，才设置可选的 `memorySearch.fallback`。完整
+    提供方列表和示例请参见 [Memory Search](/concepts/memory-search)。
 
   </Accordion>
 

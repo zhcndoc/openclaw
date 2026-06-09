@@ -112,7 +112,7 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
               responseSystemPrompt: "你是一位简明扼要的棒球卡专家。",
               tts: {
                 providers: {
-                  openai: { voice: "alloy" },
+                  openai: { speakerVoice: "alloy" },
                 },
               },
             },
@@ -224,12 +224,12 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
 - `realtime.provider` 是可选项。如果未设置，Voice Call 会使用第一个已注册的实时语音提供商。
 - 内置实时语音提供商：Google Gemini Live（`google`）和 OpenAI（`openai`），由其提供商插件注册。
 - 提供商专属原始配置位于 `realtime.providers.<providerId>` 下。
-- Voice Call 默认暴露共享的 `openclaw_agent_consult` 实时工具。当呼叫者请求更深入的推理、当前信息或常规 OpenClaw 工具时，实时模型可以调用它。
-- `realtime.consultPolicy` 会为实时模型何时应调用 `openclaw_agent_consult` 额外添加指导。
-- `realtime.agentContext.enabled` 默认关闭。启用后，Voice Call 会在会话初始化时向实时提供商指令注入一个有边界的代理身份、system prompt 覆盖，以及选定的 workspace-file 片段。
-- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引的 memory/session context 中搜索咨询问题，并在 `realtime.fastContext.timeoutMs` 内将这些片段返回给实时模型；只有当 `realtime.fastContext.fallbackToConsult` 为 true 时，才会回退到完整的 consult agent。
+- Voice Call 默认公开共享的 `openclaw_agent_consult` 实时工具。当呼叫者要求更深层推理、当前信息或常规 OpenClaw 工具时，实时模型可以调用它。
+- `realtime.consultPolicy` 可选地为实时模型何时应调用 `openclaw_agent_consult` 添加指导。
+- `realtime.agentContext.enabled` 默认关闭。启用后，Voice Call 会在会话设置时向实时提供商指令注入受限的 agent 身份和所选 workspace 文件胶囊。
+- `realtime.fastContext.enabled` 默认关闭。启用后，Voice Call 会先在索引记忆/会话上下文中搜索 consult 问题，并在 `realtime.fastContext.timeoutMs` 内将这些片段返回给实时模型，然后仅在 `realtime.fastContext.fallbackToConsult` 为 true 时才回退到完整的 consult agent。
 - 如果 `realtime.provider` 指向未注册的提供商，或根本没有注册任何实时语音提供商，Voice Call 会记录警告并跳过实时媒体，而不是使整个插件失败。
-- Consult session key 在可用时会复用已存储的通话 session，然后回退到配置的 `sessionScope`（默认 `per-phone`，或隔离通话时用 `per-call`）。
+- consult 会话 key 会在可用时复用已存储的通话会话，然后回退到配置的 `sessionScope`（默认 `per-phone`，或 `per-call` 用于隔离通话）。
 
 ### 工具策略
 
@@ -269,7 +269,6 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
               enabled: true,
               maxChars: 6000,
               includeIdentity: true,
-              includeSystemPrompt: true,
               includeWorkspaceFiles: true,
               files: ["SOUL.md", "IDENTITY.md", "USER.md"],
             },
@@ -314,7 +313,7 @@ Gateway 启动日志会输出 setup-incomplete 警告，列出缺失的 key，�
                   google: {
                     apiKey: "${GEMINI_API_KEY}",
                     model: "gemini-2.5-flash-native-audio-preview-12-2025",
-                    voice: "Kore",
+                    speakerVoice: "Kore",
                     silenceDurationMs: 500,
                     startSensitivity: "high",
                   },
@@ -447,7 +446,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
     provider: "elevenlabs",
     providers: {
       elevenlabs: {
-        voiceId: "pMsXgVXv3BLzUgSXRplE",
+        speakerVoiceId: "pMsXgVXv3BLzUgSXRplE",
         modelId: "eleven_multilingual_v2",
       },
     },
@@ -478,7 +477,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
     tts: {
       provider: "openai",
       providers: {
-        openai: { voice: "alloy" },
+        openai: { speakerVoice: "alloy" },
       },
     },
   },
@@ -497,7 +496,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
             providers: {
               elevenlabs: {
                 apiKey: "elevenlabs_key",
-                voiceId: "pMsXgVXv3BLzUgSXRplE",
+                speakerVoiceId: "pMsXgVXv3BLzUgSXRplE",
                 modelId: "eleven_multilingual_v2",
               },
             },
@@ -520,7 +519,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
             providers: {
               openai: {
                 model: "gpt-4o-mini-tts",
-                voice: "marin",
+                speakerVoice: "marin",
               },
             },
           },
@@ -541,7 +540,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
 {
   inboundPolicy: "allowlist",
   allowFrom: ["+15550001234"],
-  inboundGreeting: "你好！我能帮你什么？",
+  inboundGreeting: "Hello! How can I help you?",
 }
 ```
 
@@ -576,7 +575,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
   tts: {
     provider: "openai",
     providers: {
-      openai: { voice: "coral" },
+      openai: { speakerVoice: "coral" },
     },
   },
   numbers: {
@@ -585,7 +584,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
       responseSystemPrompt: "You are a concise baseball card specialist.",
       tts: {
         providers: {
-          openai: { voice: "alloy" },
+          openai: { speakerVoice: "alloy" },
         },
       },
     },
@@ -729,7 +728,7 @@ p50/p90/p99。
 | `speak_to_user` | `callId`, `message`                        |
 | `send_dtmf`     | `callId`, `digits`                         |
 | `end_call`      | `callId`                                   |
-| `get_status`     | `callId`                                   |
+| `get_status`    | `callId`                                   |
 
 本仓库还提供了匹配的技能文档：`skills/voice-call/SKILL.md`。
 
@@ -776,9 +775,9 @@ Twilio notify 模式外拨呼叫会在创建呼叫请求中直接发送其初始
       "voice-call": {
         config: {
           publicUrl: "https://voice.example.com/voice/webhook",
-          // 或
+          // or
           tunnel: { provider: "ngrok" },
-          // 或
+          // or
           tailscale: { mode: "funnel", path: "/voice/webhook" },
         },
       },

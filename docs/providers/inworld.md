@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw 回复的 Inworld 流式文本转语音"
+summary: "OpenClaw 的 Inworld 流式文本转语音"
 read_when:
   - 你想为外发回复使用 Inworld 语音合成
   - 你需要来自 Inworld 的 PCM 语音通话或 OGG_OPUS 语音备注输出
@@ -49,7 +49,7 @@ base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音�
           provider: "inworld",
           providers: {
             inworld: {
-              voiceId: "Sarah",
+              speakerVoiceId: "Sarah",
               modelId: "inworld-tts-1.5-max",
             },
           },
@@ -67,13 +67,13 @@ base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音�
 
 ## 配置选项
 
-| 选项          | 路径                                         | 描述                                                         |
-| ------------- | -------------------------------------------- | ------------------------------------------------------------ |
-| `apiKey`      | `messages.tts.providers.inworld.apiKey`      | Base64 仪表盘凭证。回退到 `INWORLD_API_KEY`。                |
-| `baseUrl`     | `messages.tts.providers.inworld.baseUrl`     | 覆盖 Inworld API 基础 URL（默认 `https://api.inworld.ai`）。 |
-| `voiceId`     | `messages.tts.providers.inworld.voiceId`     | 音色标识符（默认 `Sarah`）。                                 |
-| `modelId`     | `messages.tts.providers.inworld.modelId`     | TTS 模型 id（默认 `inworld-tts-1.5-max`）。                 |
-| `temperature` | `messages.tts.providers.inworld.temperature` | 采样温度 `0..2`（可选）。                                     |
+| Option           | Path                                            | Description                                                       |
+| ---------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
+| `apiKey`         | `messages.tts.providers.inworld.apiKey`         | Base64 仪表盘凭证。回退到 `INWORLD_API_KEY`。     |
+| `baseUrl`        | `messages.tts.providers.inworld.baseUrl`        | 覆盖 Inworld API 基础 URL（默认 `https://api.inworld.ai`）。 |
+| `speakerVoiceId` | `messages.tts.providers.inworld.speakerVoiceId` | 语音标识符（默认 `Sarah`）。                               |
+| `modelId`        | `messages.tts.providers.inworld.modelId`        | TTS 模型 ID（默认 `inworld-tts-1.5-max`）。                     |
+| `temperature`    | `messages.tts.providers.inworld.temperature`    | 采样温度 `0..2`（可选）。                           |
 
 ## 说明
 

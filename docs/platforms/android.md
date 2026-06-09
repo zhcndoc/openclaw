@@ -190,13 +190,13 @@ openclaw nodes invoke --node "<Android Node>" --command canvas.navigate --params
 
 Tailscale（可选）：如果两台设备都在 Tailscale 上，请使用 MagicDNS 名称或 tailnet IP 替代 `.local`，例如 `http://<gateway-magicdns>:18789/__openclaw__/canvas/`。
 
-该服务器会向 HTML 注入一个 live-reload 客户端，并在文件变更时重新加载。
-A2UI 主机位于 `http://<gateway-host>:18789/__openclaw__/a2ui/`。
+这个服务器会向 HTML 注入实时重载客户端，并在文件变更时重新加载。
+Gateway 也会提供 `/__openclaw__/a2ui/`，但 Android 应用会将远程 A2UI 页面视为仅渲染。具备操作能力的 A2UI 命令会在应用自带的 A2UI 页面上使用后再应用消息。
 
 Canvas 命令（仅前台）：
 
-- `canvas.eval`、`canvas.snapshot`、`canvas.navigate`（使用 `{"url":""}` 或 `{"url":"/"}` 返回默认骨架）。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
-- A2UI：`canvas.a2ui.push`、`canvas.a2ui.reset`（`canvas.a2ui.pushJSONL` 为旧版别名）
+- `canvas.eval`、`canvas.snapshot`、`canvas.navigate`（使用 `{"url":""}` 或 `{"url":"/"}` 返回默认脚手架）。`canvas.snapshot` 返回 `{ format, base64 }`（默认 `format="jpeg"`）。
+- A2UI：`canvas.a2ui.push`、`canvas.a2ui.reset`（`canvas.a2ui.pushJSONL` 为旧别名）。这些命令使用应用自带的 A2UI 页面进行可操作渲染。
 
 摄像头命令（仅前台；受权限控制）：
 
@@ -207,13 +207,14 @@ Canvas 命令（仅前台）：
 
 ### 8) Voice + 扩展 Android 命令面
 
-- Voice 选项卡：Android 有两种显式捕获模式。**Mic** 是一个手动的 Voice 选项卡会话，会将每次停顿作为一次聊天回合发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是连续的 Talk Mode，会持续监听，直到被切换关闭或节点断开连接。
-- Talk Mode 会在捕获开始前将现有前台服务从 `dataSync` 提升为 `dataSync|microphone`，然后在 Talk Mode 停止时降级。Android 14+ 需要 `FOREGROUND_SERVICE_MICROPHONE` 声明、`RECORD_AUDIO` 运行时授权，以及运行时的 microphone 服务类型。
-- 默认情况下，Android Talk 使用本地语音识别、Gateway chat，以及通过已配置的 gateway Talk 提供方的 `talk.speak`。仅当 `talk.speak` 不可用时，才使用本地系统 TTS。
-- 仅当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway relay。
-- 在 Android 的 UX/runtime 中，Voice wake 仍然是禁用的。
-- 其他 Android 命令族（可用性取决于设备 + 权限）：
+- Voice 选项卡：Android 有两种显式采集模式。**Mic** 是手动的 Voice 选项卡会话，它会将每次停顿作为一次聊天回合发送，并在应用离开前台或用户离开 Voice 选项卡时停止。**Talk** 是连续的 Talk 模式，会持续监听，直到被切换关闭或节点断开连接。
+- Talk 模式在开始采集前，会将现有的前台服务从 `connectedDevice` 提升为 `connectedDevice|microphone`，并在 Talk 模式停止时将其降级。节点服务声明了带有 `CHANGE_NETWORK_STATE` 的 `FOREGROUND_SERVICE_CONNECTED_DEVICE`；Android 14+ 还需要 `FOREGROUND_SERVICE_MICROPHONE` 声明、`RECORD_AUDIO` 运行时授权，以及运行时的 microphone 服务类型。
+- 默认情况下，Android Talk 使用本地语音识别、Gateway 聊天，以及通过已配置的 gateway Talk 提供方进行 `talk.speak`。仅当 `talk.speak` 不可用时，才会使用本地系统 TTS。
+- 仅当 `talk.realtime.mode` 为 `realtime` 且 `talk.realtime.transport` 为 `gateway-relay` 时，Android Talk 才使用实时 Gateway 中继。
+- Voice 唤醒在 Android UX/运行时中仍保持禁用。
+- 其他 Android 命令族（可用性取决于设备、权限和用户设置）：
   - `device.status`、`device.info`、`device.permissions`、`device.health`
+  - 仅当 **设置 > 手机功能 > 已安装应用** 启用时才有 `device.apps`；默认列出对启动器可见的应用。
   - `notifications.list`、`notifications.actions`（见下文 [通知转发](#notification-forwarding)）
   - `photos.latest`
   - `contacts.search`、`contacts.add`

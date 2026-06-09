@@ -118,13 +118,13 @@ openclaw update status
 
 ## 标签最佳实践
 
-- 将你希望 git 检出落到其上的发布打上标签（稳定版使用 `vYYYY.M.D`，
-  beta 使用 `vYYYY.M.D-beta.N`；命名的 semver 预发布后缀，如
-  `-alpha.N`、`-rc.N` 和 `-next.N` 不是稳定目标）。
-- 为兼容性，仍会识别旧的数字稳定标签，如 `vYYYY.M.D-1` 和 `v1.0.1-1`
-  作为稳定的 git 标签。
-- `vYYYY.M.D.beta.N` 也会为了兼容性被识别，但建议使用 `-beta.N`。
-- 保持标签不可变：永远不要移动或重复使用标签。
+- 对你希望 git 检出落到其上的版本打标签（稳定版使用 `vYYYY.M.PATCH`，
+  beta 使用 `vYYYY.M.PATCH-beta.N`；诸如 `-alpha.N`、`-rc.N` 和
+  `-next.N` 这类命名的 semver 预发布后缀不是稳定目标）。
+- 兼容旧版的数字稳定标签，如 `vYYYY.M.PATCH-1` 和 `v1.0.1-1`，
+  仍会被识别为稳定的 git 标签。
+- `vYYYY.M.PATCH.beta.N` 也会为兼容性而被识别，但优先使用 `-beta.N`。
+- 保持标签不可变：切勿移动或复用标签。
 - npm dist-tag 仍然是 npm 安装的事实来源：
   - `latest` -> stable
   - `beta` -> 候选构建或先 beta 后 stable 的构建

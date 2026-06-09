@@ -61,6 +61,19 @@ trusted-proxy / private-ingress `none` 方案。
 
 打开：`https://<magicdns>/`（或你配置的 `gateway.controlUi.basePath`）
 
+要通过命名的 Tailscale Service 而不是设备主机名来暴露 Control UI，请将 `gateway.tailscale.serviceName` 设置为该 Service 名称：
+
+```json5
+{
+  gateway: {
+    bind: "loopback",
+    tailscale: { mode: "serve", serviceName: "svc:openclaw" },
+  },
+}
+```
+
+使用上面的示例后，启动时会将 Service URL 报告为 `https://openclaw.<tailnet-name>.ts.net/`，而不是设备主机名。Tailscale Services 要求主机必须是你 tailnet 中已批准的带标签节点。启用此选项前，请先在 Tailscale 中配置标签并批准该 Service，否则 `tailscale serve --service=...` 会在 gateway 启动期间失败。
+
 ### 仅限 Tailnet（绑定到 Tailnet IP）
 
 当你希望 Gateway 直接监听 Tailnet IP（不使用 Serve/Funnel）时，请使用此配置。
@@ -107,18 +120,13 @@ openclaw gateway --tailscale funnel --auth password
 ## 注意事项
 
 - Tailscale Serve/Funnel 需要安装并登录 `tailscale` CLI。
-- `tailscale.mode: "funnel"` 只有在认证模式为 `password` 时才会启动，否则会拒绝启动，以避免公开暴露。
-- 如果你希望 OpenClaw 在关闭时撤销 `tailscale serve`
-  或 `tailscale funnel` 配置，请设置 `gateway.tailscale.resetOnExit`。
-- 设置 `gateway.tailscale.preserveFunnel: true`，以便在 gateway 重启期间保持外部配置的
-  `tailscale funnel` 路由持续可用。启用后，当
-  gateway 运行在 `mode: "serve"` 时，OpenClaw 会在重新应用 Serve 之前检查
-  `tailscale funnel status`，并在 Funnel 路由已经覆盖 gateway 端口时跳过它。
-  OpenClaw 管理的仅密码 Funnel 策略保持不变。
-- `gateway.bind: "tailnet"` 是直接绑定到 Tailnet（不提供 HTTPS，也不使用 Serve/Funnel）。
-- `gateway.bind: "auto"` 优先使用回环地址；如果你希望仅使用 Tailnet，请改用 `tailnet`。
-- Serve/Funnel 只暴露 **Gateway 控制 UI + WS**。节点通过
-  相同的 Gateway WS 端点连接，因此 Serve 可用于节点访问。
+- `tailscale.mode: "funnel"` 会拒绝启动，除非认证模式为 `password`，以避免公开暴露。
+- `gateway.tailscale.serviceName` 仅适用于 Serve 模式，并会传递给 `tailscale serve --service=<name>`。该值必须使用 Tailscale 的 `svc:<dns-label>` Service 名称格式，例如 `svc:openclaw`。Tailscale 要求 Service 主机必须是带标签的节点，并且在 Serve 发布之前，Service 可能需要在管理控制台中批准。
+- 如果你希望 OpenClaw 在关闭时撤销 `tailscale serve` 或 `tailscale funnel` 配置，请设置 `gateway.tailscale.resetOnExit`。
+- 设置 `gateway.tailscale.preserveFunnel: true` 可以在 gateway 重启期间保持外部配置的 `tailscale funnel` 路由可用。启用后，当 gateway 以 `mode: "serve"` 运行时，OpenClaw 会在重新应用 Serve 之前检查 `tailscale funnel status`，如果已有 Funnel 路由覆盖了 gateway 端口，就会跳过它。OpenClaw 管理的仅密码 Funnel 策略保持不变。
+- `gateway.bind: "tailnet"` 是直接绑定到 Tailnet（无 HTTPS、无 Serve/Funnel）。
+- `gateway.bind: "auto"` 优先使用回环；如果你希望仅限 Tailnet，请使用 `tailnet`。
+- Serve/Funnel 只暴露 **Gateway control UI + WS**。节点通过相同的 Gateway WS 端点连接，因此 Serve 可用于节点访问。
 
 ## 浏览器控制（远程 Gateway + 本地浏览器）
 

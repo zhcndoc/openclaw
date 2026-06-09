@@ -158,10 +158,10 @@ sidebarTitle: "模型常见问题"
   <Accordion title="我可以日常任务使用 GPT 5.5，而编码使用 Codex 5.5 吗？">
     可以。将模型选择和运行时选择分开看待：
 
-    - **原生 Codex 编码 agent：** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai-codex` 登录。
-    - **agent 循环外的直接 OpenAI API 任务：** 为 images、embeddings、speech、realtime 以及其他非 agent 的 OpenAI API 接口配置 `OPENAI_API_KEY`。
-    - **OpenAI agent API-key 认证：** 使用 `/model openai/gpt-5.5` 并配合有序的 `openai-codex` API key 配置文件。
-    - **Sub-agents：** 将编码任务路由到一个专注 Codex 的 agent，并使用它自己的 `openai/gpt-5.5` 模型。
+    - **原生 Codex 编码 agent：** 将 `agents.defaults.model.primary` 设置为 `openai/gpt-5.5`。当你想使用 ChatGPT/Codex 订阅认证时，使用 `openclaw models auth login --provider openai` 登录。
+    - **agent 循环之外的直接 OpenAI API 任务：** 为图像、嵌入、语音、实时和其他非 agent OpenAI API 接口配置 `OPENAI_API_KEY`。
+    - **OpenAI agent API key 认证：** 使用带有有序 `openai` API key 配置文件的 `/model openai/gpt-5.5`。
+    - **子 agent：** 将编码任务路由到一个专注 Codex 的 agent，并使用其自己的 `openai/gpt-5.5` 模型。
 
     参见 [模型](/concepts/models) 和 [斜杠命令](/tools/slash-commands)。
 
@@ -213,23 +213,23 @@ sidebarTitle: "模型常见问题"
 
   </Accordion>
 
-  <Accordion title='为什么我会看到“Unknown model: minimax/MiniMax-M2.7”？'>
-    这意味着 **provider 未配置**（未找到 MiniMax provider 配置或认证
-    配置文件），因此无法解析该模型。
+  <Accordion title='Why do I see "Unknown model: minimax/MiniMax-M3"?'>
+    This means the **provider isn't configured** (no MiniMax provider config or auth
+    profile was found), so the model can't be resolved.
 
     修复检查清单：
 
-    1. 升级到当前的 OpenClaw 版本（或从源码 `main` 运行），然后重启 gateway。
-    2. 确保 MiniMax 已配置（向导或 JSON），或者 MiniMax 认证
-       已存在于 env/auth 配置文件中，以便可以注入匹配的 provider
-       （`MINIMAX_API_KEY` 用于 `minimax`，`MINIMAX_OAUTH_TOKEN` 或已存储的 MiniMax
-       OAuth 用于 `minimax-portal`）。
-    3. 针对你的认证路径使用精确的模型 id（区分大小写）：
-       API key
-       设置使用 `minimax/MiniMax-M2.7` 或 `minimax/MiniMax-M2.7-highspeed`，OAuth
-       设置使用 `minimax-portal/MiniMax-M2.7` /
-       `minimax-portal/MiniMax-M2.7-highspeed`。
-    4. 运行：
+    1. Upgrade to a current OpenClaw release (or run from source `main`), then restart the gateway.
+    2. Make sure MiniMax is configured (wizard or JSON), or that MiniMax auth
+       exists in env/auth profiles so the matching provider can be injected
+       (`MINIMAX_API_KEY` for `minimax`, `MINIMAX_OAUTH_TOKEN` or stored MiniMax
+       OAuth for `minimax-portal`).
+    3. Use the exact model id (case-sensitive) for your auth path:
+       `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7`, or
+       `minimax/MiniMax-M2.7-highspeed` for API-key setup, or
+       `minimax-portal/MiniMax-M3`, `minimax-portal/MiniMax-M2.7`, or
+       `minimax-portal/MiniMax-M2.7-highspeed` for OAuth setup.
+    4. Run:
 
        ```bash
        openclaw models list
@@ -252,9 +252,9 @@ sidebarTitle: "模型常见问题"
       env: { MINIMAX_API_KEY: "sk-...", OPENAI_API_KEY: "sk-..." },
       agents: {
         defaults: {
-          model: { primary: "minimax/MiniMax-M2.7" },
+          model: { primary: "minimax/MiniMax-M3" },
           models: {
-            "minimax/MiniMax-M2.7": { alias: "minimax" },
+            "minimax/MiniMax-M3": { alias: "minimax" },
             "openai/gpt-5.5": { alias: "gpt" },
           },
         },
@@ -281,7 +281,7 @@ sidebarTitle: "模型常见问题"
   <Accordion title="opus / sonnet / gpt 是内置快捷方式吗？">
     是的。OpenClaw 提供了一些默认的简写（仅在模型存在于 `agents.defaults.models` 中时生效）：
 
-    - `opus` → `anthropic/claude-opus-4-7`
+    - `opus` → `anthropic/claude-opus-4-8`
     - `sonnet` → `anthropic/claude-sonnet-4-6`
     - `gpt` → `openai/gpt-5.4`
     - `gpt-mini` → `openai/gpt-5.4-mini`
@@ -533,7 +533,7 @@ sidebarTitle: "模型常见问题"
   <Accordion title="OAuth 和 API key 有什么区别？">
     OpenClaw 支持两者：
 
-    - **OAuth** 通常利用订阅访问权限（如适用）。
+    - **OAuth / CLI 登录**通常利用订阅访问（如果 provider 支持）。对于 Anthropic，OpenClaw 的 Claude CLI 后端使用 Claude Code `claude -p`；Anthropic 目前将其视为 Agent SDK / 程序化使用，并自 2026 年 6 月 15 日起提供单独的每月 Agent SDK credit。
     - **API keys** 使用按 token 计费。
 
     向导明确支持 Anthropic Claude CLI、OpenAI Codex OAuth 和 API keys。

@@ -22,7 +22,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 | Onboarding flag | `--auth-choice vydra-api-key`                                             |
 | Direct CLI flag | `--vydra-api-key <key>`                                                   |
 | Contracts       | `imageGenerationProviders`, `videoGenerationProviders`, `speechProviders` |
-| Base URL        | `https://www.vydra.ai/api/v1` (use the `www` host)                        |
+| Base URL        | `https://www.vydra.ai/api/v1` (使用 `www` 主机)                           |
 
 <Warning>
   请使用 `https://www.vydra.ai/api/v1` 作为基础 URL。Vydra 的顶级域名主机（`https://vydra.ai/api/v1`）当前会重定向到 `www`。某些 HTTP 客户端会在这种跨主机重定向时丢弃 `Authorization`，从而把有效的 API 密钥变成误导性的身份验证失败。捆绑插件直接使用 `www` 基础 URL 以避免这种情况。
@@ -144,7 +144,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
           providers: {
             vydra: {
               apiKey: "${VYDRA_API_KEY}",
-              voiceId: "21m00Tcm4TlvDq8ikWAM",
+              speakerVoiceId: "21m00Tcm4TlvDq8ikWAM",
             },
           },
         },

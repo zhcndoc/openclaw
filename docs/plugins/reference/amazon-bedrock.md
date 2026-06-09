@@ -1,23 +1,23 @@
 ---
-summary: "Add Amazon Bedrock model provider support to OpenClaw."
+summary: "OpenClaw Amazon Bedrock 提供者插件，支持模型发现、嵌入和护栏。"
 read_when:
-  - You are installing, configuring, or auditing the amazon-bedrock plugin
-title: "Amazon Bedrock Plugin"
+  - 当你正在安装、配置或审计 amazon-bedrock 插件时
+title: "Amazon Bedrock 插件"
 ---
 
-# Amazon Bedrock Plugin
+# Amazon Bedrock 插件
 
-Add Amazon Bedrock model provider support to OpenClaw.
+OpenClaw Amazon Bedrock 提供者插件，支持模型发现、嵌入和护栏。
 
-## Distribution
+## 分发
 
-- Package: `@openclaw/amazon-bedrock-provider`
-- Install route: npm; ClawHub
+- 包：`@openclaw/amazon-bedrock-provider`
+- 安装方式：npm；ClawHub
 
-## Scope
+## 范围
 
 providers: amazon-bedrock; contracts: memoryEmbeddingProviders
 
-## Related documentation
+## 相关文档
 
 - [amazon-bedrock](/providers/bedrock)

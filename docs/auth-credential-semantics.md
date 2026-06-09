@@ -59,15 +59,9 @@ Agent 认证继承采用读穿透方式。当某个 agent 没有本地配置文�
 
 ## 仅配置的 auth 路由
 
-`auth.profiles` 中 `mode: "aws-sdk"` 的条目是路由元数据，而不是存储的
-凭据。当目标提供方使用
-`models.providers.<id>.auth: "aws-sdk"` 或内置的 Amazon Bedrock 默认
-AWS SDK 路由时，它们是有效的。即使 `auth-profiles.json` 中没有对应条目，这些配置文件 id 仍可能出现在 `auth.order` 和会话
-覆盖中。
+`auth.profiles` 中 `mode: "aws-sdk"` 的条目是路由元数据，不是已存储的凭据。当前目标提供方使用 `models.providers.<id>.auth: "aws-sdk"` 或插件拥有的 Amazon Bedrock 设置 AWS SDK 路由时，它们才有效。即使 `auth-profiles.json` 中没有匹配条目，这些配置文件 id 也可以出现在 `auth.order` 和会话覆盖中。
 
-不要将 `type: "aws-sdk"` 写入 `auth-profiles.json`。如果旧版安装
-中存在此类标记，`openclaw doctor --fix` 会将其移动到 `auth.profiles` 并
-从凭据存储中移除该标记。
+不要将 `type: "aws-sdk"` 写入 `auth-profiles.json`。如果旧版安装中存在此类标记，`openclaw doctor --fix` 会将其移动到 `auth.profiles` 并从凭据存储中移除该标记。
 
 ## 显式 auth 顺序过滤
 

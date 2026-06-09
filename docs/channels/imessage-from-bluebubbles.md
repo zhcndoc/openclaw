@@ -65,7 +65,7 @@ BlueBubbles 支持已被移除。OpenClaw 仅通过 `imsg` 支持 iMessage。本
    imsg rpc --help
    ```
 
-   将 `42` 替换为 `imsg chats` 返回的真实聊天 ID。发送需要 Messages.app 的自动化权限。如果 OpenClaw 会通过 SSH 运行，请使用 OpenClaw 将使用的同一个 SSH 包装器或用户上下文来执行这些命令。
+   将 `42` 替换为 `imsg chats` 中的真实 chat id。发送需要为 Messages.app 授予 Automation 权限。如果 OpenClaw 将通过 SSH 运行，请通过与 OpenClaw 将使用的相同 SSH 包装器或用户上下文运行这些命令。如果读取/探测正常但发送因 AppleEvents `-1743` 失败，请检查 Automation 是否落到了 `/usr/libexec/sshd-keygen-wrapper`；参见 [SSH wrapper sends fail with AppleEvents -1743](/channels/imessage#ssh-wrapper-sends-fail-with-appleevents-1743)。
 
 3. 在需要高级操作时启用私有 API 桥接：
 
@@ -221,22 +221,22 @@ DM 仍然可以工作，因为它们走的是不同的代码路径。
 
 ## 一览动作对齐
 
-| Action                                                     | legacy BlueBubbles                  | bundled iMessage                                                                                                        |
-| ---------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Send text / SMS fallback                                   | ✅                                  | ✅                                                                                                                      |
-| Send media (photo, video, file, voice)                     | ✅                                  | ✅                                                                                                                      |
-| Threaded reply (`reply_to_guid`)                           | ✅                                  | ✅ (关闭 [#51892](https://github.com/openclaw/openclaw/issues/51892))                                                 |
-| Tapback (`react`)                                          | ✅                                  | ✅                                                                                                                      |
-| Edit / unsend (macOS 13+ recipients)                       | ✅                                  | ✅                                                                                                                      |
-| Send with screen effect                                    | ✅                                  | ✅ (关闭 [#9394](https://github.com/openclaw/openclaw/issues/9394))                                                   |
-| Rich text bold / italic / underline / strikethrough        | ✅                                  | ✅（通过 attributedBody 的 typed-run 格式化）                                                                            |
-| Rename group / set group icon                              | ✅                                  | ✅                                                                                                                      |
-| Add / remove participant, leave group                      | ✅                                  | ✅                                                                                                                      |
-| Read receipts and typing indicator                         | ✅                                  | ✅（取决于 private API 探测）                                                                                         |
-| Same-sender DM coalescing                                  | ✅                                  | ✅（仅限 DM；通过 `channels.imessage.coalesceSameSenderDms` 选择启用）                                                      |
-| Catchup of inbound messages received while gateway is down | ✅（webhook replay + history fetch） | ✅（通过 `channels.imessage.catchup.enabled` 选择启用；关闭 [#78649](https://github.com/openclaw/openclaw/issues/78649)） |
+| Action                                              | legacy BlueBubbles                  | bundled iMessage                                                              |
+| --------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Send text / SMS fallback                            | ✅                                  | ✅                                                                            |
+| Send media (photo, video, file, voice)              | ✅                                  | ✅                                                                            |
+| Threaded reply (`reply_to_guid`)                    | ✅                                  | ✅ (closes [#51892](https://github.com/openclaw/openclaw/issues/51892))       |
+| Tapback (`react`)                                   | ✅                                  | ✅                                                                            |
+| Edit / unsend (macOS 13+ recipients)                | ✅                                  | ✅                                                                            |
+| Send with screen effect                             | ✅                                  | ✅ (closes part of [#9394](https://github.com/openclaw/openclaw/issues/9394)) |
+| Rich text bold / italic / underline / strikethrough | ✅                                  | ✅ (typed-run formatting via attributedBody)                                  |
+| Rename group / set group icon                       | ✅                                  | ✅                                                                            |
+| Add / remove participant, leave group               | ✅                                  | ✅                                                                            |
+| Read receipts and typing indicator                  | ✅                                  | ✅ (gated on private API probe)                                               |
+| Same-sender DM coalescing                           | ✅                                  | ✅ (DM-only; opt-in via `channels.imessage.coalesceSameSenderDms`)            |
+| Inbound recovery after a restart                    | ✅ (webhook replay + history fetch) | ✅ (automatic: replay missed via since_rowid + dedupe; wider window on local) |
 
-iMessage 补抓现在已作为捆绑插件的可选功能提供。在网关启动时，如果 `channels.imessage.catchup.enabled` 为 `true`，网关会使用与 `imsg watch` 相同的 JSON-RPC 客户端执行一次 `chats.list` + 按聊天分别执行 `messages.history`，将每条遗漏的入站记录重新走一遍实时分发路径（allowlist、群组策略、去抖、回声缓存），并为每个账号持久化一个游标，以便后续启动从上次中断处继续。有关调优请参见 [在网关停机后进行补抓](/channels/imessage#catching-up-after-gateway-downtime)。
+iMessage 会恢复网关停机期间遗漏的消息：启动时，它会通过 `imsg watch.subscribe` 的 `since_rowid` 从最后分发的 rowid 重新播放，并按 GUID 去重；同时，过期 backlog 年龄边界会抑制 Push-flush 的“backlog bomb”。这通过 `imsg` RPC 连接运行，因此也适用于远程 SSH `cliPath` 部署；本地部署可以读取 `chat.db`，因此恢复窗口更大。参见 [Bridge 或网关重启后的入站恢复](/channels/imessage#inbound-recovery-after-a-bridge-or-gateway-restart)。
 
 ## 配对、会话和 ACP 绑定
 
@@ -248,7 +248,7 @@ iMessage 补抓现在已作为捆绑插件的可选功能提供。在网关启�
 
 没有受支持的 BlueBubbles 运行时可以切回去。如果 iMessage 验证失败，请将 `channels.imessage.enabled: false`，重启 Gateway，修复 `imsg` 阻塞因素，然后重试切换。
 
-回复缓存位于 `~/.openclaw/state/imessage/reply-cache.jsonl`（模式 `0600`，父目录 `0700`）。如果你想要一个全新的状态，可以安全删除它。
+回复缓存位于 SQLite 插件状态中。`openclaw doctor --fix` 会在存在旧的 `imessage/reply-cache.jsonl` 旁车文件时导入并归档它。
 
 ## 相关
 

@@ -61,12 +61,13 @@ Heartbeat 是一个计划好的主会话回合——它**不会**创建 [后台�
 
 ## 默认值
 
-- 间隔：`30m`（如果检测到 Anthropic OAuth/token auth 模式，则为 `1h`，包括 Claude CLI 复用）。设置 `agents.defaults.heartbeat.every` 或按 agent 设置 `agents.list[].heartbeat.every`；使用 `0m` 可禁用。
-- 提示正文（可通过 `agents.defaults.heartbeat.prompt` 配置）：`如果存在 HEARTBEAT.md，请读取它（工作区上下文）。严格遵循其中内容。不要从之前的聊天中推断或重复旧任务。如果没有需要关注的内容，回复 HEARTBEAT_OK。`
-- heartbeat 提示会作为用户消息**原样**发送。仅当默认 agent 启用 heartbeats 时，系统提示中才会包含 “Heartbeat” 部分，并且该运行会被内部标记。
-- 当使用 `0m` 禁用 heartbeats 时，正常运行也会从 bootstrap 上下文中省略 `HEARTBEAT.md`，因此模型不会看到仅供 heartbeat 使用的指令。
-- 活跃时段（`heartbeat.activeHours`）会在配置的时区中检查。超出窗口时，heartbeats 会被跳过，直到下一个落入窗口内的 tick。
-- 当 cron 工作处于活动或排队状态时，heartbeats 会自动延后。设置 `heartbeat.skipWhenBusy: true` 可进一步在该 agent 自身的 session 绑定子 agent 或嵌套命令通道繁忙时也延后；仅仅因为另一个 agent 正在处理子 agent 工作，兄弟 agent 不再暂停。
+- Interval: `30m` (or `1h` when Anthropic OAuth/token auth is the detected auth mode, including Claude CLI reuse). Set `agents.defaults.heartbeat.every` or per-agent `agents.list[].heartbeat.every`; use `0m` to disable.
+- Prompt body (configurable via `agents.defaults.heartbeat.prompt`): `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
+- Timeout: unset heartbeat turns use `agents.defaults.timeoutSeconds` when set. Otherwise, they use the heartbeat cadence capped at 600 seconds. Set `agents.defaults.heartbeat.timeoutSeconds` or per-agent `agents.list[].heartbeat.timeoutSeconds` for longer heartbeat work.
+- The heartbeat prompt is sent **verbatim** as the user message. The system prompt includes a "Heartbeat" section only when heartbeats are enabled for the default agent, and the run is flagged internally.
+- When heartbeats are disabled with `0m`, normal runs also omit `HEARTBEAT.md` from bootstrap context so the model does not see heartbeat-only instructions.
+- Active hours (`heartbeat.activeHours`) are checked in the configured timezone. Outside the window, heartbeats are skipped until the next tick inside the window.
+- Heartbeats automatically defer while cron work is active or queued. Set `heartbeat.skipWhenBusy: true` to also defer an agent on its own session-keyed subagent or nested command lanes; sibling agents no longer pause just because another agent has subagent work in flight.
 
 ## heartbeat 提示的用途
 
@@ -275,6 +276,10 @@ Heartbeat 可以响应已完成的 [后台任务](/automation/tasks)，但 heart
   为 true 时，在 heartbeat 运行期间抑制工具错误警告负载。
 
 </ParamField>
+<ParamField path="timeoutSeconds" type="number" default="global timeout or min(every, 600)">
+  Maximum seconds allowed for a heartbeat agent turn before it is aborted. Leave unset to use `agents.defaults.timeoutSeconds` when set, otherwise the heartbeat cadence capped at 600 seconds.
+
+</ParamField>
 <ParamField path="activeHours" type="object">
   将 heartbeat 运行限制在一个时间窗口内。对象包含 `start`（HH:MM，含；日开始请用 `00:00`）、`end`（HH:MM，不含；允许使用 `24:00` 表示日结束）以及可选的 `timezone`。
 
@@ -382,7 +387,7 @@ channels:
 
 在原生 Codex harness 中，`HEARTBEAT.md` 的内容不会被注入到当前轮次中。如果该文件存在且包含非空白内容，心跳协作模式指令会让 Codex 指向该文件，并要求它在继续之前先读取。
 
-如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行和诸如 `# Heading` 之类的 markdown 标题），OpenClaw 会跳过心跳运行以节省 API 调用。该跳过会报告为 `reason=empty-heartbeat-file`。如果文件缺失，心跳仍会运行，由模型决定要做什么。
+If `HEARTBEAT.md` exists but is effectively empty (only blank lines, Markdown/HTML comments, Markdown headings like `# Heading`, fence markers, or empty checklist stubs), OpenClaw skips the heartbeat run to save API calls. That skip is reported as `reason=empty-heartbeat-file`. If the file is missing, the heartbeat still runs and the model decides what to do.
 
 保持它足够小（简短清单或提醒），以避免提示词膨胀。
 

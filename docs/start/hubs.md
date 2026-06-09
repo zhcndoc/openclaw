@@ -1,5 +1,5 @@
 ---
-summary: "链接到每个 OpenClaw 文档的中心"
+summary: "OpenClaw 文档的集中入口"
 read_when:
   - 你想要一份完整的文档地图
 title: "文档中心"
@@ -135,7 +135,7 @@ title: "文档中心"
 - [macOS](/platforms/macos)
 - [iOS](/platforms/ios)
 - [Android](/platforms/android)
-- [Windows（WSL2）](/platforms/windows)
+- [Windows Hub](/platforms/windows)
 - [Linux](/platforms/linux)
 - [Web 界面](/web)
 

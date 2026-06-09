@@ -148,7 +148,11 @@ Gateway 会在卸载更改插件来源时自动重启。
 | npm pack    | 你想通过 npm 安装语义来验证本地包产物                                       | `openclaw plugins install npm-pack:<path.tgz>`                 |
 | marketplace  | 你正在安装一个与 Claude 兼容的 marketplace 插件                            | `openclaw plugins install <plugin> --marketplace <source>`     |
 
-## 发布插件
+Managed local path installs must be plugin directories or archives. Put
+standalone plugin files in `plugins.load.paths` instead of installing them with
+`plugins install`.
+
+## Publish plugins
 
 ClawHub 是 OpenClaw 插件的主要公开发现入口。发布到这里，
 当你希望用户在安装前先看到插件元数据、版本历史、注册表

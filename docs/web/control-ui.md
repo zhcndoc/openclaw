@@ -1,4 +1,4 @@
----
+我会严格保留 Markdown 结构，只翻译可见文本内容，并保持代码/标签不变。先快速核对有没有额外仓库说明，然后直接翻译整段内容。---
 summary: "Gateway 的基于浏览器的控制 UI（聊天、活动、节点、配置）"
 read_when:
   - 你想通过浏览器操作 Gateway
@@ -123,14 +123,15 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
   </Accordion>
   <Accordion title="Config">
     - 查看/编辑 `~/.openclaw/openclaw.json`（`config.get`, `config.set`）。
-    - 使用验证进行应用 + 重启（`config.apply`），并唤醒最后一个活动会话。
-    - 写入包含 base-hash 防护，以防止覆盖并发编辑。
-    - 对已提交配置负载中的引用，写入（`config.set`/`config.apply`/`config.patch`）会在预检时解析活动的 SecretRef；未解析的活动已提交引用会在写入前被拒绝。
-    - 表单保存会丢弃无法从已保存配置中恢复的过期已脱敏占位符，同时保留仍可映射到已保存密钥的已脱敏值。
-    - Schema + 表单渲染（`config.schema` / `config.schema.lookup`，包括字段 `title` / `description`、匹配的 UI 提示、立即子摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，以及可用时的插件 + 通道 schema）；只有当快照具有安全的原始往返能力时，才提供 Raw JSON 编辑器。
-    - 如果快照无法安全地进行原始往返，Control UI 会强制使用表单模式，并为该快照禁用 Raw 模式。
-    - Raw JSON 编辑器中的“Reset to saved”会保留原始编写的形状（格式、注释、`$include` 布局），而不是重新渲染为扁平化快照，因此当快照能够安全往返时，外部编辑在重置后仍可保留。
-    - 结构化 SecretRef 对象值会在表单文本输入中以只读方式渲染，以防止意外的对象到字符串损坏。
+    - MCP 为已配置服务器、启用状态、OAuth/过滤/并行摘要、常见操作员命令以及作用域受限的 `mcp` 配置编辑器提供了专用设置页。
+    - 带验证的应用 + 重启（`config.apply`），并唤醒上一个活动会话。
+    - 写入包含 base-hash 防护，以避免覆盖并发编辑。
+    - 写入（`config.set`/`config.apply`/`config.patch`）会对提交配置负载中的引用进行预检的 Active SecretRef 解析；未解析的活动提交引用会在写入前被拒绝。
+    - 表单保存会丢弃无法从已保存配置中恢复的过期脱敏占位符，同时保留仍能映射到已保存密钥的脱敏值。
+    - Schema + 表单渲染（`config.schema` / `config.schema.lookup`，包括字段 `title` / `description`、匹配的 UI 提示、直接子摘要、嵌套对象/通配符/数组/组合节点上的文档元数据，以及可用时的插件 + 通道 schema）；只有当快照具备安全的原始往返能力时，Raw JSON 编辑器才可用。
+    - 如果某个快照无法安全地进行原始文本往返，Control UI 会强制使用 Form 模式，并为该快照禁用 Raw 模式。
+    - Raw JSON 编辑器中的“Reset to saved”会保留原始编写的形状（格式、注释、`$include` 布局），而不是重新渲染成扁平化快照，因此当快照可以安全往返时，外部编辑在重置后仍能保留。
+    - 结构化的 SecretRef 对象值会在表单文本输入中以只读方式呈现，以防止意外的对象到字符串损坏。
 
   </Accordion>
   <Accordion title="调试、日志、更新">
@@ -140,18 +141,34 @@ Appearance 还包括一个浏览器本地的文本大小设置。该设置会与
     - 更新：运行包/git 更新 + 重启（`update.run`），并附带重启报告，然后在重连后轮询 `update.status` 以验证正在运行的 gateway 版本。
 
   </Accordion>
-  <Accordion title="Cron 作业面板说明">
-    - 对于独立作业，投递方式默认是 announce summary。如果你只想内部运行，可以切换为 none。
-    - 当选择 announce 时，会显示 channel/target 字段。
+  <Accordion title="Cron jobs panel notes">
+    - 对于独立作业，交付方式默认是 announce summary。若你只想内部运行，可以切换为 none。
+    - 选择 announce 时会显示通道/目标字段。
     - Webhook 模式使用 `delivery.mode = "webhook"`，并将 `delivery.to` 设置为有效的 HTTP(S) webhook URL。
-    - 对于主会话作业，可使用 webhook 和 none 投递模式。
-    - 高级编辑控件包括运行后删除、清除 agent 覆盖、cron 精确/错峰选项、agent model/thinking 覆盖，以及尽力而为投递切换。
-    - 表单验证是行内进行的，并带有字段级错误；无效值会禁用保存按钮，直到修正为止。
-    - 设置 `cron.webhookToken` 以发送专用 bearer token；如果省略，则 webhook 发送时不带 auth header。
-    - 已弃用的回退方式：带有 `notify: true` 的已存储旧作业在迁移前仍可使用 `cron.webhook`。
+    - 对于主会话作业，可使用 webhook 和 none 交付模式。
+    - 高级编辑控件包括 delete-after-run、clear agent override、cron exact/stagger 选项、agent model/thinking 覆盖，以及 best-effort delivery 切换。
+    - 表单验证是内联的，并带有字段级错误；无效值会禁用保存按钮，直到修正为止。
+    - 设置 `cron.webhookToken` 可发送专用 bearer token；如果省略，则 webhook 将在没有 auth header 的情况下发送。
+    - 已弃用的回退方式：运行 `openclaw doctor --fix`，将存储的旧版作业中 `notify: true` 的记录从 `cron.webhook` 迁移到显式的每作业 webhook 或完成交付。
 
   </Accordion>
 </AccordionGroup>
+
+## MCP 页面
+
+专用的 MCP 页面是面向 OpenClaw 管理的 `mcp.servers` 下 MCP 服务器的操作员视图。它不会自行启动 MCP 传输；请用它来检查和编辑已保存配置，然后在需要实时服务器证明时使用 `openclaw mcp doctor --probe`。
+
+典型工作流：
+
+1. 从侧边栏打开 **MCP**。
+2. 检查摘要卡片中的总数、已启用、OAuth 和已过滤服务器数量。
+3. 查看每个服务器行的传输、启用、认证、过滤器、超时和命令提示。
+4. 当某个服务器需要保持配置但不应参与运行时发现时，切换其启用状态。
+5. 编辑作用域受限的 `mcp` 配置部分，以设置服务器定义、请求头、TLS/mTLS 路径、OAuth 元数据、工具过滤器和 Codex 投影元数据。
+6. 保存配置写入时使用 **Save**，当运行中的 Gateway 应应用已更改配置时使用 **Save & Publish**。
+7. 当编辑后的进程需要静态诊断、实时证明或缓存运行时清理时，在终端运行 `openclaw mcp status --verbose`、`openclaw mcp doctor --probe` 或 `openclaw mcp reload`。
+
+页面会在渲染前对包含凭据的类 URL 值进行脱敏，并在命令片段中为服务器名称加引号，以确保复制后的命令在包含空格或 shell 元字符时仍可正常工作。完整的 CLI 和配置参考位于 [MCP](/cli/mcp)。
 
 ## Activity 标签页
 
@@ -162,28 +179,29 @@ Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览�
 ## 聊天行为
 
 <AccordionGroup>
-  <Accordion title="发送和历史语义">
-    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，并通过 `chat` 事件流式返回响应。
-    - 聊天上传接受图片以及非视频文件。图片保留原生图片路径；其他文件会作为托管媒体存储，并在历史记录中显示为附件链接。
-    - 使用相同的 `idempotencyKey` 重新发送时，在运行中会返回 `{ status: "in_flight" }`，完成后返回 `{ status: "ok" }`。
-    - `chat.history` 响应的大小受限以确保 UI 安全。当转录条目过大时，Gateway 可能会截断较长的文本字段、省略较重的元数据块，并用占位符替换过大的消息（`[chat.history omitted: message too large]`）。
-    - 助手/生成的图片会作为托管媒体引用持久化，并通过经过身份验证的 Gateway 媒体 URL 返回，因此重新加载不依赖于原始 base64 图片负载仍保留在聊天历史响应中。
-    - 渲染 `chat.history` 时，Control UI 会从可见的助手文本中剥离仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）、泄漏的 ASCII/全角模型控制 token，并省略那些可见文本全部仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
-    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧快照，聊天视图会继续显示本地乐观的用户/助手消息；一旦 Gateway 历史赶上，规范转录会替换这些本地消息。
-    - 实时 `chat` 事件表示投递状态，而 `chat.history` 则从持久会话转录重建。在工具最终事件之后，Control UI 会重新加载历史，并且只合并一个小的乐观尾部；转录边界在 [WebChat](/web/webchat) 中有文档说明。
-    - `chat.inject` 会向会话转录追加一条助手注释，并广播一个 `chat` 事件用于仅 UI 更新（不触发 agent 运行，也不进行通道投递）。
-    - 聊天标题会在会话选择器之前显示 agent 过滤器，并且会话选择器会按所选 agent 进行范围限定。切换 agent 时只显示与该 agent 关联的会话，并在该 agent 尚无已保存仪表盘会话时回退到该 agent 的主会话。
-    - 在桌面宽度下，聊天控件会保持在一行紧凑布局，并在向下滚动转录时折叠；向上滚动、回到顶部或到达底部时会恢复控件。
-    - 连续重复的纯文本消息会渲染为一个带计数徽标的气泡。带有图片、附件、工具输出或画布预览的消息不会合并。
-    - 聊天标题中的模型和思考选择器会通过 `sessions.patch` 立即为活动会话打补丁；它们是持久的会话覆盖，而不是仅针对单次发送的选项。
-    - 如果你在同一会话的模型选择器变更仍在保存时发送消息，撰写器会等待该会话补丁完成，然后再调用 `chat.send`，以便发送使用所选模型。
-    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父会话是 agent 的主会话；在这种情况下，它会就地重置主会话。输入 `/reset` 会保留 Gateway 对当前会话显式的就地重置。
-    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，则该允许列表会驱动选择器，包括使提供方作用域目录保持动态的 `provider/*` 条目。否则，选择器会显示明确的 `models.providers.*.models` 条目以及具有可用 auth 的提供方。完整目录仍可通过调试 RPC `models.list` 且 `view: "all"` 访问。
-    - 当新的 Gateway 会话使用报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文使用指示器。在上下文压力较高时它会切换为警告样式，并在建议的压缩级别显示一个紧凑按钮，用于执行正常的会话压缩路径。在 Gateway 再次报告新的使用情况之前，过时的 token 快照会被隐藏。
+  <Accordion title="Send and history semantics">
+    - `chat.send` 是**非阻塞**的：它会立即以 `{ runId, status: "started" }` 确认，响应则通过 `chat` 事件流返回。受信任的 Control UI 客户端还可能收到可选的 ACK 时序元数据，用于本地诊断。
+    - 聊天上传支持图片以及非视频文件。图片保留原生图片路径；其他文件会作为受管媒体存储，并在历史记录中显示为附件链接。
+    - 使用相同的 `idempotencyKey` 重新发送时，在运行中会返回 `{ status: "in_flight" }`，完成后则返回 `{ status: "ok" }`。
+    - `chat.history` 响应在 UI 安全性上有大小限制。当转录条目过大时，Gateway 可能会截断较长的文本字段、省略较重的元数据块，并将超大消息替换为占位符（`[chat.history omitted: message too large]`）。
+    - 当可见的助手消息在 `chat.history` 中被截断时，侧边读取器可以通过 `chat.message.get` 按需获取完整的显示规范化转录条目；必要时通过 `sessionKey`、活动的 `agentId` 和转录 `messageId`。如果 Gateway 仍无法返回更多内容，读取器会显示明确的不可用状态，而不是静默重复截断后的预览。
+    - 助手/生成的图片会作为受管媒体引用持久化，并通过已认证的 Gateway 媒体 URL 返回，因此重新加载不依赖原始 base64 图片负载仍留在聊天历史响应中。
+    - 在渲染 `chat.history` 时，Control UI 会从可见的助手文本中去除仅用于显示的内联指令标签（例如 `[[reply_to_*]]` 和 `[[audio_as_voice]]`）、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块），以及泄漏的 ASCII/全角模型控制 token，并省略其全部可见文本仅为精确静默 token `NO_REPLY` / `no_reply` 或心跳确认 token `HEARTBEAT_OK` 的助手条目。
+    - 在活动发送和最终历史刷新期间，如果 `chat.history` 短暂返回较旧的快照，聊天视图会保留本地乐观的用户/助手消息可见；一旦 Gateway 历史追上，规范转录会替换这些本地消息。
+    - 实时 `chat` 事件代表交付状态，而 `chat.history` 则从持久化的会话转录重建。在工具最终事件之后，Control UI 会重新加载历史，只合并一小段乐观尾部；转录边界记录在 [WebChat](/web/webchat) 中。
+    - `chat.inject` 会向会话转录追加一条助手注释，并广播一个 `chat` 事件用于仅 UI 的更新（不触发 agent 运行，也不进行通道交付）。
+    - 聊天头部会在会话选择器之前显示 agent 过滤器，会话选择器的范围由所选 agent 限定。切换 agent 时只显示绑定到该 agent 的会话；如果该 agent 尚无已保存的仪表盘会话，则回退到该 agent 的主会话。
+    - 在桌面宽度下，聊天控件会保持在一行紧凑布局中，并在向下滚动转录时折叠；向上滚动、回到顶部或到达底部时会恢复控件。
+    - 连续重复的纯文本消息会渲染为一个带计数徽标的气泡。包含图片、附件、工具输出或画布预览的消息不会折叠。
+    - 聊天头部的模型和思考选择器会通过 `sessions.patch` 立即修补活动会话；它们是持久的会话覆盖项，而不是仅限一次发送的选项。
+    - 如果你在同一会话的模型选择器变更仍在保存时发送消息，撰写器会先等待该会话补丁完成，再调用 `chat.send`，以确保发送使用所选模型。
+    - 在 Control UI 中输入 `/new` 会创建并切换到与 New Chat 相同的新仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父会话是 agent 的主会话；在这种情况下，它会就地重置主会话。输入 `/reset` 则会保留 Gateway 对当前会话的显式就地重置。
+    - 聊天模型选择器请求的是 Gateway 配置的模型视图。如果存在 `agents.defaults.models`，该允许列表会驱动选择器，包括使提供方作用域目录保持动态的 `provider/*` 条目。否则，选择器会显示明确的 `models.providers.*.models` 条目以及具有可用认证的提供方。完整目录仍可通过调试 `models.list` RPC 并使用 `view: "all"` 获取。
+    - 当新的 Gateway 会话使用量报告包含当前上下文 token 时，聊天撰写器区域会显示一个紧凑的上下文用量指示器。在上下文压力较高时，它会切换为警告样式；在建议压缩级别时，会显示一个可运行常规会话压缩路径的紧凑按钮。过期的 token 快照会被隐藏，直到 Gateway 再次报告新的使用量。
 
   </Accordion>
   <Accordion title="Talk mode (browser realtime)">
-    Talk mode 使用一个已注册的实时语音提供方。配置 OpenAI 时，设置 `talk.realtime.provider: "openai"`，并同时提供 `talk.realtime.providers.openai.apiKey`、`OPENAI_API_KEY`，或 `openai-codex` OAuth 配置文件；配置 Google 时，设置 `talk.realtime.provider: "google"`，并同时提供 `talk.realtime.providers.google.apiKey`。对于托管的 GPT 实时模型，OpenClaw 会优先使用 `openai-codex` OAuth 配置文件，然后才是 `OPENAI_API_KEY`；显式的 OpenAI realtime `apiKey` 仍然是高级覆盖项。浏览器不会接收到标准的提供方 API key。OpenAI 会收到一个用于 WebRTC 的临时 Realtime 客户端密钥。Google Live 会收到一个可在浏览器 WebSocket 会话中一次性使用的受限 Live API auth token，其指令和工具声明会由 Gateway 锁定到该 token 中。仅提供后端实时桥接的提供方会通过 Gateway 中继传输运行，因此凭据和供应商 socket 会保留在服务端，而浏览器音频则通过已认证的 Gateway RPC 传输。Realtime 会话提示词由 Gateway 组装；`talk.client.create` 不接受调用方提供的指令覆盖。
+    Talk mode uses a registered realtime voice provider. Configure OpenAI with `talk.realtime.provider: "openai"` plus either `talk.realtime.providers.openai.apiKey`, `OPENAI_API_KEY`, or an `openai` OAuth profile; configure Google with `talk.realtime.provider: "google"` plus `talk.realtime.providers.google.apiKey`. For hosted GPT realtime models, OpenClaw prefers the `openai` OAuth profile before `OPENAI_API_KEY`; an explicit OpenAI realtime `apiKey` remains the advanced override. The browser never receives a standard provider API key. OpenAI receives an ephemeral Realtime client secret for WebRTC. Google Live receives a one-use constrained Live API auth token for a browser WebSocket session, with instructions and tool declarations locked into the token by the Gateway. Providers that only expose a backend realtime bridge run through the Gateway relay transport, so credentials and vendor sockets stay server-side while browser audio moves through authenticated Gateway RPCs. The Realtime session prompt is assembled by the Gateway; `talk.client.create` does not accept caller-provided instruction overrides.
 
     Chat 撰写器在 Talk 开始/停止按钮旁边包含一个 Talk 选项按钮。这些选项适用于下一次 Talk 会话，并且可以覆盖提供方、传输、模型、语音、推理力度、VAD 阈值、静默时长和前缀填充。当某个选项为空时，Gateway 会尽可能使用已配置的默认值，或者使用提供方默认值。选择 Gateway relay 会强制使用后端中继路径；选择 WebRTC 会保持会话归客户端所有，如果提供方无法创建浏览器会话，则会失败，而不是静默回退到 relay。
 
@@ -209,7 +227,7 @@ Activity 条目只保留已脱敏摘要和经过脱敏、截断的输出预览�
 
 ## PWA 安装与 Web Push
 
-Control UI 随附 `manifest.webmanifest` 和 service worker，因此现代浏览器可以将其安装为独立的 PWA。Web Push 允许 Gateway 在标签页或浏览器窗口未打开时也能通过通知唤醒已安装的 PWA。
+Control UI 附带 `manifest.webmanifest` 和 service worker，因此现代浏览器可以将其安装为独立的 PWA。Web Push 允许 Gateway 在标签页或浏览器窗口未打开时也能通过通知唤醒已安装的 PWA。
 
 如果页面在 OpenClaw 更新后立刻显示 **Protocol mismatch**，请先通过 `openclaw dashboard` 重新打开仪表盘，然后对页面执行硬刷新。如果仍然失败，请清除该仪表盘来源的站点数据，或在无痕浏览窗口中测试；旧标签页或浏览器 service-worker 缓存可能仍在使用更新前的 Control UI bundle 与较新的 Gateway 交互。
 

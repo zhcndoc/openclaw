@@ -1,7 +1,7 @@
 ---
 summary: "使用 DeepInfra 的统一 API，在 OpenClaw 中访问最受欢迎的开源和前沿模型"
 read_when:
-  - 你想要为最顶级的开源 LLM 使用一个统一的 API 密钥
+  - 你想为最顶级的开源 LLM 使用一个统一的 API 密钥
   - 你想在 OpenClaw 中通过 DeepInfra 的 API 运行模型
 title: "DeepInfra"
 ---
@@ -34,7 +34,7 @@ export DEEPINFRA_API_KEY="<your-deepinfra-api-key>" # pragma: allowlist secret
   env: { DEEPINFRA_API_KEY: "<your-deepinfra-api-key>" }, // pragma: allowlist secret
   agents: {
     defaults: {
-      model: { primary: "deepinfra/deepseek-ai/DeepSeek-V3.2" },
+      model: { primary: "deepinfra/deepseek-ai/DeepSeek-V4-Flash" },
     },
   },
 }
@@ -42,18 +42,17 @@ export DEEPINFRA_API_KEY="<your-deepinfra-api-key>" # pragma: allowlist secret
 
 ## 支持的 OpenClaw 接入面
 
-随附的插件会注册所有符合当前
-OpenClaw 提供方契约的 DeepInfra 接入面：
+打包的插件会注册所有符合当前 OpenClaw 提供方契约的 DeepInfra 接入面。聊天、图像生成和视频生成会在配置了 `DEEPINFRA_API_KEY` 时，通过 `/v1/openai/models?sort_by=openclaw&filter=with_meta` 实时刷新其模型目录；其他接入面则使用下面整理好的静态默认值。
 
-| 接入面                   | 默认模型                            | OpenClaw 配置/工具                                   |
-| ------------------------ | ---------------------------------- | -------------------------------------------------------- |
-| 聊天 / 模型提供方        | `deepseek-ai/DeepSeek-V3.2`        | `agents.defaults.model`                                  |
-| 图像生成/编辑            | `black-forest-labs/FLUX-1-schnell` | `image_generate`, `agents.defaults.imageGenerationModel` |
-| 媒体理解                 | `moonshotai/Kimi-K2.5` 用于图像     | inbound image understanding                              |
-| 语音转文本               | `openai/whisper-large-v3-turbo`     | inbound audio transcription                              |
-| 文本转语音               | `hexgrad/Kokoro-82M`               | `messages.tts.provider: "deepinfra"`                     |
-| 视频生成                 | `Pixverse/Pixverse-T2V`            | `video_generate`, `agents.defaults.videoGenerationModel` |
-| 记忆嵌入                 | `BAAI/bge-m3`                      | `agents.defaults.memorySearch.provider: "deepinfra"`     |
+| 接入面                   | 默认模型                                                                                              | OpenClaw 配置/工具                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 聊天 / 模型提供方        | 来自实时目录的第一个带 `chat` 标签的条目（清单回退 `deepseek-ai/DeepSeek-V4-Flash`）                 | `agents.defaults.model`                                  |
+| 图像生成/编辑            | 来自实时目录的第一个带 `image-gen` 标签的条目（静态回退 `black-forest-labs/FLUX-1-schnell`）        | `image_generate`, `agents.defaults.imageGenerationModel` |
+| 媒体理解                  | 图像使用 `moonshotai/Kimi-K2.5`                                                                        | 入站图像理解                                              |
+| 语音转文本               | `openai/whisper-large-v3-turbo`                                                                       | 入站音频转录                                              |
+| 文本转语音               | `hexgrad/Kokoro-82M`                                                                                  | `messages.tts.provider: "deepinfra"`                     |
+| 视频生成                 | 来自实时目录的第一个带 `video-gen` 标签的条目（静态回退 `Pixverse/Pixverse-T2V`）                    | `video_generate`, `agents.defaults.videoGenerationModel` |
+| 记忆嵌入                 | `BAAI/bge-m3`                                                                                         | `agents.defaults.memorySearch.provider: "deepinfra"`     |
 
 DeepInfra 还提供重排序、分类、目标检测以及其他
 原生模型类型。OpenClaw 目前还没有针对这些类别的一级提供方契约，
@@ -67,19 +66,21 @@ OpenClaw 会在启动时动态发现可用的 DeepInfra 模型。使用
 DeepInfra.com 上可用的任何模型都可以使用 `deepinfra/` 前缀：
 
 ```
-deepinfra/MiniMaxAI/MiniMax-M2.5
+deepinfra/deepseek-ai/DeepSeek-V4-Flash
 deepinfra/deepseek-ai/DeepSeek-V3.2
+deepinfra/MiniMaxAI/MiniMax-M2.5
 deepinfra/moonshotai/Kimi-K2.5
+deepinfra/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B
 deepinfra/zai-org/GLM-5.1
 ...还有更多
 ```
 
 ## 说明
 
-- 模型引用格式为 `deepinfra/<provider>/<model>`（例如，`deepinfra/Qwen/Qwen3-Max`）。
-- 默认模型：`deepinfra/deepseek-ai/DeepSeek-V3.2`
+- 模型引用格式为 `deepinfra/<provider>/<model>`（例如 `deepinfra/Qwen/Qwen3-Max`）。
+- 默认模型：`deepinfra/deepseek-ai/DeepSeek-V4-Flash`
 - Base URL: `https://api.deepinfra.com/v1/openai`
-- Native video generation uses `https://api.deepinfra.com/v1/inference/<model>`.
+- 原生视频生成功能使用 `https://api.deepinfra.com/v1/inference/<model>`。
 
 ## 相关链接
 

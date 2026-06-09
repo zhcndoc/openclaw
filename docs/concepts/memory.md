@@ -129,7 +129,9 @@ agent 有两个用于处理记忆的工具：
 当配置了 embedding 提供方时，`memory_search` 会使用 **混合搜索**——将向量相似度（语义含义）与关键词匹配（如 ID 和代码符号等精确术语）结合起来。只要你为任一支持的提供方配置了 API key，这项功能就会开箱即用。
 
 <Info>
-OpenClaw 会根据可用的 API key 自动检测你的 embedding 提供方。如果你配置了 OpenAI、Gemini、Voyage 或 Mistral 的 key，记忆搜索会自动启用。
+OpenClaw 默认使用 OpenAI embeddings。显式设置 `agents.defaults.memorySearch.provider` 即可改用 Gemini、Voyage、
+Mistral、本地、Ollama、Bedrock、GitHub Copilot 或兼容 OpenAI 的
+embeddings。
 </Info>
 
 关于搜索的工作方式、调优选项以及提供方设置的详情，请参见

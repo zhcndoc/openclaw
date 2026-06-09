@@ -17,9 +17,8 @@ title: "入门"
 
 <Tip>
 使用 `node --version` 检查你的 Node 版本。
-**Windows 用户：** 同时支持原生 Windows 和 WSL2。WSL2 更稳定，
-并且更推荐以获得完整体验。参见 [Windows](/platforms/windows)。
-需要安装 Node？参见 [Node 安装](/install/node)。
+**Windows 用户：** 原生 Windows Hub 应用是最简单的桌面路径。PowerShell 安装程序和 WSL2 Gateway 路径也受支持。参见 [Windows](/platforms/windows)。
+需要安装 Node？参见 [Node 设置](/install/node)。
 </Tip>
 
 ## 快速设置

@@ -67,19 +67,27 @@ Gateway WebSocket 客户端以一种角色连接：
 
 批准设备请求时：
 
-- 不包含操作员角色的请求不需要操作员令牌作用域批准。
-- 请求 `operator.read`、`operator.write`、`operator.approvals`、
-  `operator.pairing` 或 `operator.talk.secrets` 时，要求调用方持有
-  这些作用域，或者拥有 `operator.admin`。
-- 请求 `operator.admin` 需要 `operator.admin`。
-- 没有显式作用域的修复请求可以继承现有操作员
-  令牌作用域。如果该现有令牌具有 admin 作用域，批准仍然需要
-  `operator.admin`。
+- A request with no operator role does not need operator token scope approval.
+- A request for a non-operator device role, such as `node`, requires
+  `operator.admin`, even when `device.pair.approve` is reachable with
+  `operator.pairing`.
+- A request for `operator.read`, `operator.write`, `operator.approvals`,
+  `operator.pairing`, or `operator.talk.secrets` requires the caller to hold
+  those scopes, or `operator.admin`.
+- A request for `operator.admin` requires `operator.admin`.
+- A repair request with no explicit scopes can inherit the existing operator
+  token scopes. If that existing token is admin-scoped, approval still requires
+  `operator.admin`.
 
-对于已配对设备的令牌会话，管理默认按自身作用域限制，除非调用方
-同时拥有 `operator.admin`：非管理员调用方只能看到自己的配对条目，
-只能批准或拒绝自己的待处理请求，并且只能轮换、撤销或移除
-自己的设备条目。
+Non-admin shared-secret and trusted-proxy sessions can approve operator-device
+requests only inside their own declared operator scopes. Approving non-operator
+roles is admin-only even when those sessions can otherwise use
+`operator.pairing`.
+
+For paired-device token sessions, management is also self-scoped unless the
+caller has `operator.admin`: non-admin callers see only their own pairing
+entries, can approve or reject only their own pending request, and can rotate,
+revoke, or remove only their own device entry.
 
 ## 节点配对批准
 

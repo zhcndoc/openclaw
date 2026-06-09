@@ -15,12 +15,20 @@ OpenClaw 支持通过 OAuth 提供“订阅式认证”，适用于提供该能�
 - **Anthropic Claude CLI / OpenClaw 内的订阅认证**：Anthropic 员工
   告知我们此用法已再次被允许
 
-OpenAI Codex OAuth 明确支持用于 OpenClaw 这类外部工具。本页说明：
+OpenAI Codex OAuth 明确支持用于 OpenClaw 这类外部工具。
+
+OpenClaw 会将 OpenAI API key 认证和 ChatGPT/Codex OAuth 都存储在
+规范化的提供商 id `openai` 下。旧的 `openai-codex:*` 配置文件 id 和
+`auth.order.openai-codex` 条目属于旧状态，会由
+`openclaw doctor --fix` 修复；新配置请使用 `openai:*` 配置文件 id 和
+`auth.order.openai`。
 
 对于生产环境中的 Anthropic，API key 认证是更安全且更推荐的路径。
 
-- OAuth **令牌交换** 如何工作（PKCE）
-- 令牌**存储**在哪里（以及原因）
+本页说明：
+
+- OAuth **令牌交换** 的工作方式（PKCE）
+- 令牌**存储**的位置（以及原因）
 - 如何处理**多个账号**（配置文件 + 按会话覆盖）
 
 OpenClaw 也支持**提供商插件**，它们会自带自己的 OAuth 或 API key
@@ -40,17 +48,15 @@ OAuth 提供商在登录/刷新流程中通常会签发一个**新的刷新令�
 
 为降低这种情况，OpenClaw 将 `auth-profiles.json` 视为一个**令牌汇点**：
 
-- 运行时从**一个地方**读取凭据
-- 我们可以保留多个配置文件并进行确定性的路由
-- 外部 CLI 复用取决于具体提供商：Codex CLI 可以为一个空的
-  `openai-codex:default` 配置文件初始化引导，但一旦 OpenClaw 有了本地 OAuth 配置文件，
-  本地刷新令牌就是权威来源。如果该本地刷新令牌被拒绝，
-  OpenClaw 可以将一个可用的、同账号的 Codex CLI 令牌作为仅运行时
-  的回退；其他集成可以继续由外部管理，并重新读取它们的
-  CLI 认证存储
-- 状态和启动路径在已经知道已配置提供商集合的情况下，
-  会将外部 CLI 发现范围限制在该集合内，因此单提供商设置不会去探测
-  无关的 CLI 登录存储
+- 运行时从**同一个位置**读取凭据
+- 我们可以保留多个配置文件并以确定性方式进行路由
+- 外部 CLI 复用是按提供商区分的：Codex CLI 可以为一个空的
+  `openai:default` 配置文件初始化，但一旦 OpenClaw 拥有了本地 OAuth 配置文件，
+  本地刷新令牌就是规范来源。如果该本地刷新令牌被拒绝，
+  OpenClaw 可以在运行时回退使用同一账号、可用的 Codex CLI 令牌；
+  其他集成可以继续由外部管理，并重新读取它们各自的 CLI 认证存储
+- 已经知道已配置提供商集合的状态和启动路径，会将外部 CLI 发现范围
+  限定在该集合内，因此单提供商配置不会去探测无关的 CLI 登录存储
 
 ## 存储（令牌存放在哪里）
 
@@ -95,7 +101,7 @@ Claude 登录，上手/配置流程可以直接复用它。
 
 ## OAuth 交换（登录如何工作）
 
-OpenClaw 的交互式登录流程实现在 `@earendil-works/pi-ai` 中，并接入了向导/命令。
+OpenClaw 的交互式登录流程实现于 `openclaw/plugin-sdk/llm`，并由向导/命令接入。
 
 ### Anthropic setup-token
 
@@ -110,6 +116,14 @@ OpenClaw 的交互式登录流程实现在 `@earendil-works/pi-ai` 中，并接�
 
 OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工作流。
 
+登录命令仍然使用规范的 OpenAI provider id：
+
+```bash
+openclaw models auth login --provider openai
+```
+
+在同一个代理中使用多个 ChatGPT/Codex OAuth 账号时，请使用 `--profile-id openai:<name>`。新建配置文件不要使用 `openai-codex:<name>`。Doctor 会将该旧前缀迁移为无冲突的 `openai:*` 配置文件 id；修复后请运行 `openclaw models auth list --provider openai`，再把配置文件 id 复制到 `auth.order` 或 `/model ...@<profileId>` 中。
+
 流程形态（PKCE）：
 
 1. 生成 PKCE verifier/challenge + 随机 `state`
@@ -119,7 +133,7 @@ OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工�
 5. 在 `https://auth.openai.com/oauth/token` 交换令牌
 6. 从访问令牌中提取 `accountId` 并存储 `{ access, refresh, expires, accountId }`
 
-向导路径为 `openclaw onboard` → 认证选项 `openai-codex`。
+向导路径是 `openclaw onboard` → auth choice `openai`。
 
 ## 刷新 + 过期
 
@@ -128,17 +142,12 @@ OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工�
 运行时：
 
 - 如果 `expires` 在未来 → 使用已存储的访问令牌
-- 如果已过期 → 刷新（在文件锁保护下）并覆盖已存储的凭据
-- 如果次级代理读取的是继承来的主代理 OAuth 配置文件，刷新
-  会回写到主代理存储，而不是把刷新令牌复制到
-  次级代理存储
-- 例外：某些外部 CLI 凭据仍由外部管理；OpenClaw
-  会重新读取这些 CLI 认证存储，而不是消耗已复制的刷新令牌。
-  Codex CLI 引导有意更窄：它会为一个空的
-  `openai-codex:default` 配置文件播种初始化，然后由 OpenClaw 持有的刷新操作保持本地
-  配置文件为权威来源。如果本地 Codex 刷新失败，而 Codex CLI 对
-  同一账号拥有可用令牌，OpenClaw 可能会在当前
-  运行时请求中使用该令牌，而不将其写回 `auth-profiles.json`
+- 如果已过期 → 在文件锁保护下刷新，并覆盖已存储的凭据
+- 如果次级代理读取了继承的主代理 OAuth 配置文件，刷新会写回主代理存储，而不是把刷新令牌复制到次级代理存储
+- 例外：某些外部 CLI 凭据保持由外部管理；OpenClaw 会重新读取这些 CLI 认证存储，而不是消耗复制过来的刷新令牌。
+  Codex CLI 初始化的范围故意更窄：它先为 `openai:default` 配置一个空配置文件，然后由 OpenClaw 托管的刷新保持本地
+  配置文件为规范来源。如果本地 Codex 刷新失败，而 Codex CLI 对同一账号有可用令牌，OpenClaw 可以在当前
+  运行时请求中使用该令牌，而不将其写回 `auth-profiles.json`。
 
 刷新流程是自动的；你通常不需要手动管理令牌。
 

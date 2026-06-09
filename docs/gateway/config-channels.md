@@ -590,6 +590,8 @@ BlueBubbles support was removed. `channels.bluebubbles` is not a supported runti
 
 如果 Gateway 没有运行在已登录 Messages 的那台 Mac 上，请保持 `channels.imessage.enabled=true`，并将 `channels.imessage.cliPath` 设置为在那台 Mac 上运行 `imsg "$@"` 的 SSH 包装器。默认的本地 `imsg` 路径仅适用于 macOS。
 
+Before relying on an SSH wrapper for production sends, verify an outbound `imsg send` through that exact wrapper. Some macOS TCC states assign Messages Automation to `/usr/libexec/sshd-keygen-wrapper`, which can make reads and probes work while sends fail with AppleEvents `-1743`; see [SSH wrapper sends fail with AppleEvents -1743](/channels/imessage#ssh-wrapper-sends-fail-with-appleevents-1743).
+
 ```json5
 {
   channels: {
@@ -615,9 +617,6 @@ BlueBubbles support was removed. `channels.bluebubbles` is not a supported runti
         sendWithEffect: true,
         sendAttachment: true,
       },
-      catchup: {
-        enabled: false,
-      },
     },
   },
 }
@@ -625,17 +624,17 @@ BlueBubbles support was removed. `channels.bluebubbles` is not a supported runti
 
 - 可选的 `channels.imessage.defaultAccount` 会在其与已配置账号 id 匹配时覆盖默认账号选择。
 
-- 需要对 Messages 数据库授予完全磁盘访问权限。
-- 优先使用 `chat_id:<id>` 作为目标。使用 `imsg chats --limit 20` 列出聊天。
-- `cliPath` 可以指向 SSH 包装器；将 `remoteHost`（`host` 或 `user@host`）设置为用于通过 SCP 获取附件。
-- `attachmentRoots` 和 `remoteAttachmentRoots` 会限制入站附件路径（默认：`/Users/*/Library/Messages/Attachments`）。
-- SCP 使用严格的 host-key 检查，因此请确保 relay host key 已经存在于 `~/.ssh/known_hosts` 中。
-- `channels.imessage.configWrites`：允许或拒绝 iMessage 触发的配置写入。
-- `channels.imessage.actions.*`：启用私有 API 操作，这些操作也受 `imsg status` / `openclaw channels status --probe` 约束。
-- `channels.imessage.includeAttachments` 默认关闭；在期望 agent 回合中接收入站媒体之前请将其设为 `true`。
-- `channels.imessage.catchup.enabled`：选择性重放在 Gateway 关闭期间到达的入站消息。
-- `channels.imessage.groups`：群组注册表和每组设置。使用 `groupPolicy: "allowlist"` 时，请配置显式 `chat_id` 键或 `"*"` 通配符条目，以便群组消息可以通过 registry gate。
-- 顶层 `bindings[]` 中 `type: "acp"` 的条目可以将 iMessage 会话绑定到持久化 ACP 会话。在 `match.peer.id` 中使用规范化的 handle 或显式聊天目标（`chat_id:*`、`chat_guid:*`、`chat_identifier:*`）。共享字段语义见 [ACP Agents](/tools/acp-agents#persistent-channel-bindings)。
+- Requires Full Disk Access to the Messages DB.
+- Prefer `chat_id:<id>` targets. Use `imsg chats --limit 20` to list chats.
+- `cliPath` can point to an SSH wrapper; set `remoteHost` (`host` or `user@host`) for SCP attachment fetching.
+- `attachmentRoots` and `remoteAttachmentRoots` restrict inbound attachment paths (default: `/Users/*/Library/Messages/Attachments`).
+- SCP uses strict host-key checking, so ensure the relay host key already exists in `~/.ssh/known_hosts`.
+- `channels.imessage.configWrites`: allow or deny iMessage-initiated config writes.
+- `channels.imessage.actions.*`: enable private API actions that are also gated by `imsg status` / `openclaw channels status --probe`.
+- `channels.imessage.includeAttachments` is off by default; set it to `true` before expecting inbound media in agent turns.
+- Inbound recovery after a bridge/gateway restart is automatic (GUID dedupe plus a stale-backlog age fence). Existing `channels.imessage.catchup.enabled: true` configs are still honored as a deprecated compatibility profile.
+- `channels.imessage.groups`: group registry and per-group settings. With `groupPolicy: "allowlist"`, configure either explicit `chat_id` keys or a `"*"` wildcard entry so group messages can pass the registry gate.
+- Top-level `bindings[]` entries with `type: "acp"` can bind iMessage conversations to persistent ACP sessions. Use a normalized handle or explicit chat target (`chat_id:*`, `chat_guid:*`, `chat_identifier:*`) in `match.peer.id`. Shared field semantics: [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
 
 <Accordion title="iMessage SSH 包装器示例">
 
@@ -781,17 +780,19 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 
 群组消息默认需要**提及**（元数据提及或安全正则模式）。适用于 WhatsApp、Telegram、Discord、Google Chat 和 iMessage 群聊。
 
-可见回复是单独控制的。正常的群组和频道请求默认采用自动最终投递：最终的 assistant 文本会通过旧的可见回复路径发布。某些 harness（包括 Codex）会将 direct/source chats 默认设为 message-tool 投递，因此可见输出只会在 agent 调用 `message(action=send)` 后发布。如果模型返回最终文本但没有调用 message tool，则该最终文本会保持私有，gateway verbose log 会记录被抑制的载荷元数据。
+Visible replies are controlled separately. Normal group, channel, and internal WebChat direct requests default to automatic final delivery: final assistant text posts through the legacy visible reply path. Opt into `messages.visibleReplies: "message_tool"` or `messages.groupChat.visibleReplies: "message_tool"` when visible output should only post after the agent calls `message(action=send)`. If the model returns final text without calling the message tool in an opted-in tool-only mode, that final text stays private and the gateway verbose log records suppressed payload metadata.
 
-仅工具可见回复需要一个能可靠调用工具的 model/runtime，建议用于最新一代模型（如 GPT 5.5）上的共享环境房间。如果 session log 显示 assistant 文本的 `didSendViaMessagingTool: false`，说明模型生成了私有最终文本，而不是调用 message tool。请为该频道切换到更强的工具调用模型，检查 gateway verbose log 中被抑制的载荷摘要，或者将 `messages.groupChat.visibleReplies` 设为 `"automatic"`，为每个群组/频道请求使用可见的最终回复。
+Tool-only visible replies require a model/runtime that reliably calls tools, and are recommended for shared ambient rooms on latest-generation models such as GPT 5.5. Some weaker models can answer final text but fail to understand that source-visible output must be sent with `message(action=send)`. For those models, use `"automatic"` so the final assistant turn is the visible reply path. If the session log shows assistant text with `didSendViaMessagingTool: false`, the model produced private final text instead of calling the message tool. Switch to a stronger tool-calling model for that channel, inspect the gateway verbose log for the suppressed payload summary, or set `messages.groupChat.visibleReplies: "automatic"` to use visible final replies for every group/channel request.
 
 如果在当前工具策略下 message tool 不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。`openclaw doctor` 会对这种不匹配发出警告。
 
-**故障排查：群组 @mention 触发打字指示后沉默（无错误）**
+This rule applies to normal agent final text. Plugin-owned conversation bindings use the owning plugin's returned reply as the visible response for claimed bound-thread turns; the plugin does not need to call `message(action=send)` for those binding replies.
+
+**Troubleshooting: group @mention triggers typing then silence (no error)**
 
 症状：在群组/频道中 @mention 后出现 typing 指示，gateway log 报告 `dispatch complete (queuedFinal=false, replies=0)`，但房间里没有消息落地。对同一 agent 的 DM 则正常回复。
 
-原因：群组/频道的 visible-reply 模式解析为 `"message_tool"`，因此 OpenClaw 会执行这一轮，但除非 agent 调用 `message(action=send)`，否则会抑制最终的 assistant 文本。之所以没有错误，是因为这正是所配置的行为。正常群组和频道回合默认是 `"automatic"`，因此只有当 `messages.groupChat.visibleReplies`（或全局 `messages.visibleReplies`）显式设为 `"message_tool"` 时才会出现该症状。harness 的 `defaultVisibleReplies` 在这里不适用——group/channel resolver 会忽略它；它只影响 direct/source chats（Codex harness 会以这种方式抑制 direct-chat 的最终内容）。
+Cause: the group/channel visible-reply mode resolves to `"message_tool"`, so OpenClaw runs the turn but suppresses the final assistant text unless the agent calls `message(action=send)`. There is no `NO_REPLY` contract in this mode; no message-tool call means no source reply. There is no error because suppression is the configured behavior. Normal group and channel turns default to `"automatic"`, so this symptom only appears when `messages.groupChat.visibleReplies` (or global `messages.visibleReplies`) is explicitly set to `"message_tool"`. Harness `defaultVisibleReplies` does not apply here — the group/channel resolver ignores it; it only affects direct/source chats (the Codex harness suppresses direct-chat finals that way).
 
 修复方法：选择更强的工具调用模型，移除显式的 `"message_tool"` 覆盖以回退到 `"automatic"` 默认值，或者将 `messages.groupChat.visibleReplies: "automatic"` 设为对每个群组/频道请求强制可见回复。gateway 在文件保存后会热重载 `messages` 配置；只有在部署中禁用了文件监控或配置重载时，才需要重启 gateway。
 
@@ -821,7 +822,7 @@ IRC 由插件支持，并在 `channels.irc` 下配置。
 
 `messages.groupChat.unmentionedInbound: "room_event"` 会在受支持的频道上，把未提及的始终在线群组/频道消息作为静默房间上下文提交。被提及的消息、命令和直接消息仍然是用户请求。完整的 Discord、Slack 和 Telegram 示例见 [Ambient room events](/channels/ambient-room-events)。
 
-`messages.visibleReplies` 是全局 source-event 默认值；`messages.groupChat.visibleReplies` 会为群组/频道 source 事件覆盖它。当 `messages.visibleReplies` 未设置时，direct/source chats 使用所选 runtime 或 harness 默认值。Codex harness 会将 direct/source chats 默认设为 message-tool delivery；将 `messages.visibleReplies: "automatic"` 可使用自动最终投递。频道 allowlist 和提及门控仍会决定事件是否被处理。
+`messages.visibleReplies` is the global source-event default; `messages.groupChat.visibleReplies` overrides it for group/channel source events. When `messages.visibleReplies` is unset, direct/source chats use the selected runtime or harness default, but internal WebChat direct turns use automatic final delivery for Pi/Codex prompt parity. Set `messages.visibleReplies: "message_tool"` to intentionally require `message(action=send)` for visible output. Channel allowlists and mention gating still decide whether an event is processed.
 
 #### DM history limits
 

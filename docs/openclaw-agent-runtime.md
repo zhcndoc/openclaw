@@ -1,47 +1,47 @@
 ---
-summary: "Pi 集成的开发者工作流：构建、测试和实时验证"
-title: "Pi 开发工作流"
+summary: "OpenClaw 代理运行时的开发工作流：构建、测试和实时验证"
+title: "OpenClaw 代理运行时工作流"
 read_when:
-  - 正在处理 Pi 集成代码或测试
-  - 运行 Pi 特定的 lint、类型检查和实时测试流程
+  - 处理 OpenClaw 代理运行时代码或测试时
+  - 运行 agent-runtime 的 lint、typecheck 和实时测试流程时
 ---
 
-在 OpenClaw 中处理 Pi 集成的一种合理工作流。
+在 OpenClaw 中处理 OpenClaw 代理运行时的一个合理工作流。
 
 ## 类型检查和 lint
 
 - 默认本地门禁：`pnpm check`
-- 构建门禁：当变更可能影响构建产物、打包或懒加载/模块边界时，使用 `pnpm build`
-- 面向 Pi 重度变更的完整落地门禁：`pnpm check && pnpm test`
+- 构建门禁：当更改可能影响构建产物、打包或懒加载/模块边界时，运行 `pnpm build`
+- agent-runtime 更改的完整合入门禁：`pnpm check && pnpm test`
 
-## 运行 Pi 测试
+## 运行 Agent Runtime 测试
 
-直接使用 Vitest 运行以 Pi 为重点的测试集：
+直接使用 Vitest 运行 agent-runtime 测试集：
 
 ```bash
 pnpm test \
-  "src/agents/pi-*.test.ts" \
-  "src/agents/pi-embedded-*.test.ts" \
-  "src/agents/pi-tools*.test.ts" \
-  "src/agents/pi-settings.test.ts" \
-  "src/agents/pi-tool-definition-adapter*.test.ts" \
-  "src/agents/pi-hooks/**/*.test.ts"
+  "src/agents/agent-*.test.ts" \
+  "src/agents/embedded-agent-*.test.ts" \
+  "src/agents/agent-tools*.test.ts" \
+  "src/agents/agent-settings.test.ts" \
+  "src/agents/agent-tool-definition-adapter*.test.ts" \
+  "src/agents/agent-hooks/**/*.test.ts"
 ```
 
 要包含实时提供者演练：
 
 ```bash
-OPENCLAW_LIVE_TEST=1 pnpm test src/agents/pi-embedded-runner-extraparams.live.test.ts
+OPENCLAW_LIVE_TEST=1 pnpm test src/agents/embedded-agent-runner-extraparams.live.test.ts
 ```
 
-这覆盖了主要的 Pi 单元测试套件：
+这涵盖了主要的代理运行时单元测试套件：
 
-- `src/agents/pi-*.test.ts`
-- `src/agents/pi-embedded-*.test.ts`
-- `src/agents/pi-tools*.test.ts`
-- `src/agents/pi-settings.test.ts`
-- `src/agents/pi-tool-definition-adapter.test.ts`
-- `src/agents/pi-hooks/*.test.ts`
+- `src/agents/agent-*.test.ts`
+- `src/agents/embedded-agent-*.test.ts`
+- `src/agents/agent-tools*.test.ts`
+- `src/agents/agent-settings.test.ts`
+- `src/agents/agent-tool-definition-adapter.test.ts`
+- `src/agents/agent-hooks/*.test.ts`
 
 ## 手动测试
 
@@ -79,4 +79,4 @@ OPENCLAW_LIVE_TEST=1 pnpm test src/agents/pi-embedded-runner-extraparams.live.te
 
 ## 相关内容
 
-- [Pi 集成架构](/pi)
+- [OpenClaw agent runtime architecture](/agent-runtime-architecture)

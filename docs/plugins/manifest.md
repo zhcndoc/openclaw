@@ -97,8 +97,13 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
   },
   "cliBackends": ["openrouter-cli"],
   "syntheticAuthRefs": ["openrouter-cli"],
-  "providerAuthEnvVars": {
-    "openrouter": ["OPENROUTER_API_KEY"]
+  "setup": {
+    "providers": [
+      {
+        "id": "openrouter",
+        "envVars": ["OPENROUTER_API_KEY"]
+      }
+    ]
   },
   "providerAuthAliases": {
     "openrouter-coding": "openrouter"
@@ -111,13 +116,13 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
       "provider": "openrouter",
       "method": "api-key",
       "choiceId": "openrouter-api-key",
-      "choiceLabel": "OpenRouter API key",
+      "choiceLabel": "OpenRouter API 密钥",
       "groupId": "openrouter",
       "groupLabel": "OpenRouter",
       "optionKey": "openrouterApiKey",
       "cliFlag": "--openrouter-api-key",
       "cliOption": "--openrouter-api-key <key>",
-      "cliDescription": "OpenRouter API key",
+      "cliDescription": "OpenRouter API 密钥",
       "onboardingScopes": ["text-inference"]
     }
   ],
@@ -142,47 +147,49 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 ## 顶层字段参考
 
-| 字段                                 | 必需 | 类型                             | 含义                                                                                                                                                                                                                                   |
-| ------------------------------------ | ---- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                                 | 是   | `string`                         | 规范化的插件 id。这是用于 `plugins.entries.<id>` 的 id。                                                                                                                                                                             |
-| `configSchema`                       | 是   | `object`                         | 此插件配置的内联 JSON Schema。                                                                                                                                                                                                        |
-| `enabledByDefault`                   | 否   | `true`                           | 将捆绑插件标记为默认启用。省略它，或设置任何非 `true` 值，即可让插件默认保持禁用。                                                                                                                                                    |
-| `enabledByDefaultOnPlatforms`        | 否   | `string[]`                       | 仅在列出的 Node.js 平台上将捆绑插件标记为默认启用，例如 `["darwin"]`。显式配置仍然优先生效。                                                                                                                                        |
-| `legacyPluginIds`                    | 否   | `string[]`                       | 归一化为此规范化插件 id 的旧 id。                                                                                                                                                                                                     |
-| `autoEnableWhenConfiguredProviders`  | 否   | `string[]`                       | 当认证、配置或模型引用提到这些 provider id 时，应自动启用此插件的 provider id。                                                                                                                                                      |
-| `kind`                               | 否   | `"memory"` \| `"context-engine"` | 声明一个由 `plugins.slots.*` 使用的互斥插件类型。                                                                                                                                                                                    |
-| `channels`                           | 否   | `string[]`                       | 由此插件拥有的 channel id。用于发现和配置校验。                                                                                                                                                                                      |
-| `providers`                          | 否   | `string[]`                       | 由此插件拥有的 provider id。                                                                                                                                                                                                         |
-| `providerCatalogEntry`               | 否   | `string`                         | 轻量级 provider-catalog 模块路径，相对于插件根目录，用于可在不激活完整插件运行时的情况下加载的、以清单为作用域的 provider 目录元数据。                                                                                                   |
-| `modelSupport`                       | 否   | `object`                         | 由清单拥有的简写模型族元数据，用于在运行时之前自动加载插件。                                                                                                                                                                         |
-| `modelCatalog`                       | 否   | `object`                         | 由此插件拥有的 provider 的声明式模型目录元数据。这是面向未来的只读列表、引导、模型选择器、别名和抑制功能的控制平面契约，无需加载插件运行时。                                                                                           |
-| `modelPricing`                       | 否   | `object`                         | 由 provider 拥有的外部定价查询策略。可用于将本地/自托管 provider 排除在远程定价目录之外，或在不在核心中硬编码 provider id 的情况下，将 provider 引用映射到 OpenRouter/LiteLLM 目录 id。                                              |
-| `modelIdNormalization`               | 否   | `object`                         | 由 provider 拥有的模型 id 别名/前缀清理，必须在加载 provider 运行时之前执行。                                                                                                                                                        |
-| `providerEndpoints`                  | 否   | `object[]`                       | 由清单拥有的端点主机/baseUrl 元数据，用于核心必须在加载 provider 运行时之前分类的 provider 路由。                                                                                                                                      |
-| `providerRequest`                    | 否   | `object`                         | 在 provider 运行时加载之前，由通用请求策略使用的廉价 provider-family 和请求兼容性元数据。                                                                                                                                           |
-| `cliBackends`                        | 否   | `string[]`                       | 由此插件拥有的 CLI 推理后端 id。用于根据显式配置引用在启动时自动激活。                                                                                                                                                                |
-| `syntheticAuthRefs`                  | 否   | `string[]`                       | 其插件拥有的合成认证 hook 应在冷启动模型发现期间、运行时加载之前进行探测的 provider 或 CLI 后端引用。                                                                                                                                   |
-| `nonSecretAuthMarkers`               | 否   | `string[]`                       | 捆绑插件拥有的占位 API key 值，表示非密钥的本地、OAuth 或环境凭据状态。                                                                                                                                                              |
-| `commandAliases`                     | 否   | `object[]`                       | 由此插件拥有的命令名称，应在运行时加载之前产生具备插件感知的配置和 CLI 诊断。                                                                                                                                                         |
-| `providerAuthEnvVars`                | 否   | `Record<string, string[]>`       | 用于 provider 认证/状态查找的已弃用兼容性 env 元数据。新插件请优先使用 `setup.providers[].envVars`；OpenClaw 在弃用窗口期间仍会读取此项。                                                                                             |
-| `providerAuthAliases`                | 否   | `Record<string, string>`         | 在认证查找时应复用另一个 provider id 的 provider id，例如一个共享基础 provider API key 和认证配置文件的 coding provider。                                                                                                              |
-| `channelEnvVars`                     | 否   | `Record<string, string[]>`       | OpenClaw 可以在不加载插件代码的情况下检查的廉价 channel env 元数据。用于 env 驱动的 channel 设置或通用启动/配置辅助程序应看到的认证界面。                                                                                              |
-| `providerAuthChoices`                | 否   | `object[]`                       | 用于引导选择器、首选 provider 解析和简单 CLI 标志映射的廉价认证选项元数据。                                                                                                                                                             |
-| `activation`                         | 否   | `object`                         | 用于启动、provider、命令、channel、路由和能力触发加载的廉价激活规划器元数据。仅限元数据；插件运行时仍然拥有实际行为。                                                                                                                 |
-| `setup`                              | 否   | `object`                         | 发现和设置界面可以在不加载插件运行时的情况下检查的廉价设置/引导描述符。                                                                                                                                                               |
-| `qaRunners`                          | 否   | `object[]`                       | 共享 `openclaw qa` 主机在插件运行时加载之前使用的廉价 QA 运行器描述符。                                                                                                                                                              |
-| `contracts`                          | 否   | `object`                         | 用于外部 auth hook、embeddings、语音、实时转写、实时语音、媒体理解、图像生成、音乐生成、视频生成、web 获取、web 搜索和工具归属的静态能力归属快照。                                                                                         |
-| `mediaUnderstandingProviderMetadata` | 否   | `Record<string, object>`         | 针对在 `contracts.mediaUnderstandingProviders` 中声明的 provider id 的廉价媒体理解默认值。                                                                                                                                            |
-| `imageGenerationProviderMetadata`    | 否   | `Record<string, object>`         | 针对在 `contracts.imageGenerationProviders` 中声明的 provider id 的廉价图像生成认证元数据，包括 provider 拥有的认证别名和 base-url 守卫。                                                                                             |
-| `videoGenerationProviderMetadata`    | 否   | `Record<string, object>`         | 针对在 `contracts.videoGenerationProviders` 中声明的 provider id 的廉价视频生成认证元数据，包括 provider 拥有的认证别名和 base-url 守卫。                                                                                             |
-| `musicGenerationProviderMetadata`    | 否   | `Record<string, object>`         | 针对在 `contracts.musicGenerationProviders` 中声明的 provider id 的廉价音乐生成认证元数据，包括 provider 拥有的认证别名和 base-url 守卫。                                                                                             |
-| `toolMetadata`                       | 否   | `Record<string, object>`         | 针对在 `contracts.tools` 中声明的插件工具的廉价可用性元数据。当某个工具在配置、环境或认证证据存在之前不应加载运行时时使用它。                                                                                                        |
-| `channelConfigs`                     | 否   | `Record<string, object>`         | 在运行时加载之前合并到发现和校验界面的由清单拥有的 channel 配置元数据。                                                                                                                                                               |
-| `skills`                             | 否   | `string[]`                       | 要加载的 skill 目录，相对于插件根目录。                                                                                                                                                                                               |
-| `name`                               | 否   | `string`                         | 人类可读的插件名称。                                                                                                                                                                                                                   |
-| `description`                        | 否   | `string`                         | 在插件界面中显示的简短摘要。                                                                                                                                                                                                           |
-| `version`                            | 否   | `string`                         | 仅供参考的插件版本。                                                                                                                                                                                                                   |
-| `uiHints`                            | 否   | `Record<string, object>`         | 配置字段的 UI 标签、占位符和敏感性提示。                                                                                                                                                                                                |
+| Field                                | Required | Type                             | What it means                                                                                                                                                                                                                                   |
+| ------------------------------------ | -------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                 | Yes      | `string`                         | 规范插件 id。这是 `plugins.entries.<id>` 中使用的 id。                                                                                                                                                                                         |
+| `configSchema`                       | Yes      | `object`                         | 此插件配置的内联 JSON Schema。                                                                                                                                                                                                                  |
+| `requiresPlugins`                    | No       | `string[]`                       | 为使此插件生效而也必须安装的插件 id。发现过程会保持插件可加载，但在任何必需插件缺失时发出警告。                                                                                                                                               |
+| `enabledByDefault`                   | No       | `true`                           | 将捆绑插件标记为默认启用。省略它，或设置任何非 `true` 值，都会让插件默认保持禁用。                                                                                                                     |
+| `enabledByDefaultOnPlatforms`        | No       | `string[]`                       | 仅在列出的 Node.js 平台上将捆绑插件标记为默认启用，例如 `["darwin"]`。显式配置仍然优先生效。                                                                                                                                                  |
+| `legacyPluginIds`                    | No       | `string[]`                       | 归一化为此规范插件 id 的旧 id。                                                                                                                                                                                                                 |
+| `autoEnableWhenConfiguredProviders`  | No       | `string[]`                       | 当认证、配置或模型引用提及这些 provider id 时，应自动启用此插件。                                                                                                                                                                              |
+| `kind`                               | No       | `"memory"` \| `"context-engine"` | `plugins.slots.*` 使用的互斥插件类型。                                                                                                                                                                                                          |
+| `channels`                           | No       | `string[]`                       | 此插件拥有的 channel id。用于发现和配置校验。                                                                                                                                                                                                   |
+| `providers`                          | No       | `string[]`                       | 此插件拥有的 provider id。                                                                                                                                                                                                                      |
+| `providerCatalogEntry`               | No       | `string`                         | 轻量级 provider-catalog 模块路径，相对于插件根目录，用于可在不激活完整插件运行时的情况下加载的、清单作用域 provider catalog 元数据。                                                                                                        |
+| `modelSupport`                       | No       | `object`                         | 由清单拥有的简写模型族元数据，用于在运行时之前自动加载插件。                                                                                                                                                                                    |
+| `modelCatalog`                       | No       | `object`                         | 为此插件拥有的 provider 提供的声明式模型目录元数据。这是未来只读列表、引导、模型选择器、别名和抑制功能在不加载插件运行时情况下的控制平面契约。                                                                                                 |
+| `modelPricing`                       | No       | `object`                         | 提供方拥有的外部定价查询策略。可用它将本地/自托管提供方排除在远程定价目录之外，或将 provider 引用映射到 OpenRouter/LiteLLM 目录 id，而无需在核心中硬编码 provider id。                                                                       |
+| `modelIdNormalization`               | No       | `object`                         | 在 provider 运行时加载之前必须执行的、由 provider 拥有的模型 id 别名/前缀清理。                                                                                                                                                                |
+| `providerEndpoints`                  | No       | `object[]`                       | 由清单拥有的 endpoint 主机/baseUrl 元数据，供核心在 provider 运行时加载之前进行分类。                                                                                                                                                         |
+| `providerRequest`                    | No       | `object`                         | 供通用请求策略在 provider 运行时加载之前使用的、廉价的 provider-family 和请求兼容性元数据。                                                                                                                                                  |
+| `secretProviderIntegrations`         | No       | `Record<string, object>`         | 声明式 SecretRef exec provider 预设，供设置或安装界面提供，而无需在核心中硬编码特定 provider 集成。                                                                                                                                          |
+| `cliBackends`                        | No       | `string[]`                       | 此插件拥有的 CLI 推理后端 id。用于从显式配置引用进行启动时自动激活。                                                                                                                                                                           |
+| `syntheticAuthRefs`                  | No       | `string[]`                       | 其插件拥有的合成认证 hook 应在运行时加载前的冷模型发现期间探测的 provider 或 CLI backend 引用。                                                                                                                                               |
+| `nonSecretAuthMarkers`               | No       | `string[]`                       | 由捆绑插件拥有的占位 API key 值，表示非密钥的本地、OAuth 或环境凭证状态。                                                                                                                                                                      |
+| `commandAliases`                     | No       | `object[]`                       | 由此插件拥有、应在运行时加载前生成感知插件配置和 CLI 诊断的命令名称。                                                                                                                                                                         |
+| `providerAuthEnvVars`                | No       | `Record<string, string[]>`       | 用于 provider 认证/状态查找的已弃用兼容性环境变量元数据。新插件应优先使用 `setup.providers[].envVars`；OpenClaw 在弃用窗口期内仍会读取此项。                                                                                                |
+| `providerAuthAliases`                | No       | `Record<string, string>`         | 认证查找时应复用另一个 provider id 的 provider id，例如共享基础 provider API key 和认证配置文件的编码 provider。                                                                                                                              |
+| `channelEnvVars`                     | No       | `Record<string, string[]>`       | OpenClaw 可在不加载插件代码的情况下检查的廉价 channel 环境元数据。将其用于环境驱动的 channel 设置或通用启动/配置辅助程序应看到的认证界面。                                                                                                   |
+| `providerAuthChoices`                | No       | `object[]`                       | 用于引导选择器、首选 provider 解析和简单 CLI 标志接线的廉价认证选项元数据。                                                                                                                                                                    |
+| `activation`                         | No       | `object`                         | 用于启动、provider、命令、channel、route 和能力触发加载的廉价激活规划元数据。仅元数据；插件运行时仍负责实际行为。                                                                                                                              |
+| `setup`                              | No       | `object`                         | 发现和设置界面可在不加载插件运行时的情况下检查的廉价设置/引导描述符。                                                                                                                                                                          |
+| `qaRunners`                          | No       | `object[]`                       | 共享 `openclaw qa` 主机在插件运行时加载前使用的廉价 QA 运行器描述符。                                                                                                                                                                          |
+| `contracts`                          | No       | `object`                         | 外部认证 hook、embeddings、speech、实时转录、实时语音、媒体理解、图像生成、音乐生成、视频生成、web 获取、web 搜索和工具所有权的静态能力归属快照。                                                                                              |
+| `mediaUnderstandingProviderMetadata` | No       | `Record<string, object>`         | 为 `contracts.mediaUnderstandingProviders` 中声明的 provider id 提供的廉价媒体理解默认值。                                                                                                                                                     |
+| `imageGenerationProviderMetadata`    | No       | `Record<string, object>`         | 为 `contracts.imageGenerationProviders` 中声明的 provider id 提供的廉价图像生成认证元数据，包括 provider 拥有的认证别名和 base-url 保护。                                                                                                    |
+| `videoGenerationProviderMetadata`    | No       | `Record<string, object>`         | 为 `contracts.videoGenerationProviders` 中声明的 provider id 提供的廉价视频生成认证元数据，包括 provider 拥有的认证别名和 base-url 保护。                                                                                                    |
+| `musicGenerationProviderMetadata`    | No       | `Record<string, object>`         | 为 `contracts.musicGenerationProviders` 中声明的 provider id 提供的廉价音乐生成认证元数据，包括 provider 拥有的认证别名和 base-url 保护。                                                                                                    |
+| `toolMetadata`                       | No       | `Record<string, object>`         | 为 `contracts.tools` 中声明的插件拥有工具提供的廉价可用性元数据。适用于在配置、环境或认证证据存在之前工具不应加载运行时的场景。                                                                                                               |
+| `channelConfigs`                     | No       | `Record<string, object>`         | 在运行时加载之前合并到发现和校验界面的由清单拥有的 channel 配置元数据。                                                                                                                                                                        |
+| `skills`                             | No       | `string[]`                       | 要加载的技能目录，相对于插件根目录。                                                                                                                                                                                                            |
+| `name`                               | No       | `string`                         | 人类可读的插件名称。                                                                                                                                                                                                                            |
+| `description`                        | No       | `string`                         | 在插件界面中显示的简短摘要。                                                                                                                                                                                                                    |
+| `version`                            | No       | `string`                         | 信息性插件版本。                                                                                                                                                                                                                                |
+| `uiHints`                            | No       | `Record<string, object>`         | 配置字段的 UI 标签、占位符和敏感性提示。                                                                                                                                                                                                        |
 
 ## 生成 provider 元数据参考
 
@@ -242,13 +249,14 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 每个 `configSignals` 条目支持：
 
-| 字段         | 必填 | 类型       | 含义                                                                                                                                                                           |
-| ------------- | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `rootPath`    | 是   | `string`   | 指向插件拥有的、要检查的配置对象的点路径，例如 `plugins.entries.example.config`。                                                                                           |
-| `overlayPath` | 否   | `string`   | 根配置内的点路径，其对象应在评估信号之前覆盖根对象。用于 `image`、`video` 或 `music` 等特定能力的配置。                                                                      |
-| `required`    | 否   | `string[]` | 有效配置中必须具有已配置值的点路径。字符串必须非空；对象和数组不能为空。                                                                                                      |
-| `requiredAny` | 否   | `string[]` | 有效配置中至少有一个必须具有已配置值的点路径。                                                                                                                                |
-| `mode`        | 否   | `object`   | 有效配置内可选的字符串模式守卫。当仅在某一种模式下适用仅配置可用性时使用。                                                                                                    |
+| 字段            | Required | Type       | What it means                                                                                                                                                                             |
+| ---------------- | -------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rootPath`       | Yes      | `string`   | Dot path to the plugin-owned config object to inspect, for example `plugins.entries.example.config`.                                                                                      |
+| `overlayPath`    | No       | `string`   | Dot path inside the root config whose object should overlay the root object before evaluating the signal. Use this for capability-specific config such as `image`, `video`, or `music`.   |
+| `overlayMapPath` | No       | `string`   | Dot path inside the root config whose object values should each overlay the root object. Use this for named account maps such as `accounts`, where any configured account should qualify. |
+| `required`       | No       | `string[]` | Dot paths inside the effective config that must have configured values. Strings must be non-empty; objects and arrays must not be empty.                                                  |
+| `requiredAny`    | No       | `string[]` | Dot paths inside the effective config where at least one must have a configured value.                                                                                                    |
+| `mode`           | No       | `object`   | Optional string mode guard inside the effective config. Use this when config-only availability applies only to one mode.                                                                  |
 
 每个 `mode` 守卫支持：
 
@@ -280,8 +288,13 @@ Claude bundle LSP 默认值，以及在布局符合 OpenClaw 运行时预期时�
 
 ```json
 {
-  "providerAuthEnvVars": {
-    "example": ["EXAMPLE_API_KEY"]
+  "setup": {
+    "providers": [
+      {
+        "id": "example",
+        "envVars": ["EXAMPLE_API_KEY"]
+      }
+    ]
   },
   "contracts": {
     "tools": ["example_search"]
@@ -553,14 +566,14 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 ```json
 {
   "contracts": {
-    "agentToolResultMiddleware": ["pi", "codex"],
+    "agentToolResultMiddleware": ["openclaw", "codex"],
     "externalAuthProviders": ["acme-ai"],
     "embeddingProviders": ["openai-compatible"],
     "speechProviders": ["openai"],
     "realtimeTranscriptionProviders": ["openai"],
     "realtimeVoiceProviders": ["openai"],
     "memoryEmbeddingProviders": ["local"],
-    "mediaUnderstandingProviders": ["openai", "openai-codex"],
+    "mediaUnderstandingProviders": ["openai"],
     "imageGenerationProviders": ["openai"],
     "videoGenerationProviders": ["qwen"],
     "webFetchProviders": ["firecrawl"],
@@ -574,35 +587,33 @@ OpenClaw 也会将 `setup.providers[].envVars` 纳入通用的 provider 认证�
 
 每个列表都是可选的：
 
-| Field                            | Type       | What it means                                                                                       |
-| -------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 ID，目前为 `codex-app-server`。                                             |
-| `agentToolResultMiddleware`      | `string[]` | 打包插件可以为其注册工具结果中间件的运行时 ID。                                                     |
-| `externalAuthProviders`          | `string[]` | 该插件拥有其外部认证配置文件钩子的 provider ID。                                                    |
-| `embeddingProviders`             | `string[]` | 该插件拥有的通用 embedding provider ID，用于记忆之外可复用的向量嵌入。                               |
-| `speechProviders`                | `string[]` | 该插件拥有的语音 provider ID。                                                                      |
-| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider ID。                                                                  |
-| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider ID。                                                                  |
-| `memoryEmbeddingProviders`       | `string[]` | 该插件拥有的记忆嵌入 provider ID。                                                                  |
-| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider ID。                                                                  |
-| `transcriptSourceProviders`      | `string[]` | 该插件拥有的转写来源 provider ID。                                                                  |
-| `imageGenerationProviders`       | `string[]` | 该插件拥有的图像生成 provider ID。                                                                  |
-| `videoGenerationProviders`       | `string[]` | 该插件拥有的视频生成 provider ID。                                                                  |
-| `webFetchProviders`              | `string[]` | 该插件拥有的网页抓取 provider ID。                                                                  |
-| `webSearchProviders`             | `string[]` | 该插件拥有的网页搜索 provider ID。                                                                  |
-| `migrationProviders`             | `string[]` | 该插件在 `openclaw migrate` 中拥有的导入 provider ID。                                               |
-| `gatewayMethodDispatch`          | `string[]` | 用于进程内分发 Gateway 方法的已认证插件 HTTP 路由的保留授权。                                       |
-| `tools`                          | `string[]` | 该插件拥有的 agent 工具名称。                                                                       |
+| 字段                            | 类型       | 含义                                                                                        |
+| -------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `embeddedExtensionFactories`     | `string[]` | Codex 应用服务器扩展工厂 id，目前为 `codex-app-server`。                                    |
+| `agentToolResultMiddleware`      | `string[]` | 捆绑插件可以为其注册工具结果中间件的运行时 id。                                              |
+| `externalAuthProviders`          | `string[]` | 该插件拥有其外部认证配置文件挂钩的 provider id。                                             |
+| `embeddingProviders`             | `string[]` | 该插件拥有、用于可复用向量嵌入的通用 embedding provider id，包括 memory。                  |
+| `speechProviders`                | `string[]` | 该插件拥有的语音 provider id。                                                              |
+| `realtimeTranscriptionProviders` | `string[]` | 该插件拥有的实时转写 provider id。                                                          |
+| `realtimeVoiceProviders`         | `string[]` | 该插件拥有的实时语音 provider id。                                                          |
+| `memoryEmbeddingProviders`       | `string[]` | 已废弃的、该插件拥有的 memory 专用 embedding provider id。                                   |
+| `mediaUnderstandingProviders`    | `string[]` | 该插件拥有的媒体理解 provider id。                                                           |
+| `transcriptSourceProviders`      | `string[]` | 该插件拥有的转录源 provider id。                                                             |
+| `imageGenerationProviders`       | `string[]` | 该插件拥有的图像生成 provider id。                                                           |
+| `videoGenerationProviders`       | `string[]` | 该插件拥有的视频生成 provider id。                                                           |
+| `webFetchProviders`              | `string[]` | 该插件拥有的网页抓取 provider id。                                                           |
+| `webSearchProviders`             | `string[]` | 该插件拥有的网页搜索 provider id。                                                           |
+| `migrationProviders`             | `string[]` | 该插件为 `openclaw migrate` 拥有的导入 provider id。                                          |
+| `gatewayMethodDispatch`          | `string[]` | 为在进程内分发 Gateway 方法的已认证插件 HTTP 路由保留的权限。                                 |
+| `tools`                          | `string[]` | 该插件拥有的代理工具名称。                                                                   |
 
 `contracts.embeddedExtensionFactories` 保留给仅用于打包的 Codex 应用服务器扩展工厂。打包的工具结果转换应声明 `contracts.agentToolResultMiddleware`，并改为通过 `api.registerAgentToolResultMiddleware(...)` 注册。外部插件不能注册工具结果中间件，因为该接缝可以在模型看到之前重写高信任度的工具输出。
 
 运行时 `api.registerTool(...)` 的注册必须与 `contracts.tools` 匹配。工具发现会使用此列表，只加载能够拥有所请求工具的插件运行时。
 
-实现 `resolveExternalAuthProfiles` 的 provider 插件应声明 `contracts.externalAuthProviders`。未声明的插件仍会通过已弃用的兼容性回退路径运行，但该回退更慢，并将在迁移窗口结束后移除。
+实现 `resolveExternalAuthProfiles` 的 provider 插件应声明 `contracts.externalAuthProviders`；未声明的外部认证钩子会被忽略。
 
-打包的记忆嵌入 provider 应为其暴露的每个适配器 id 声明 `contracts.memoryEmbeddingProviders`，包括诸如 `local` 之类的内置适配器。独立 CLI 路径会使用此清单契约，在完整 Gateway 运行时注册 provider 之前，仅加载对应拥有者插件。
-
-通用 embedding provider 应为通过 `api.registerEmbeddingProvider(...)` 注册的每个适配器声明 `contracts.embeddingProviders`。当向量需要被多个功能、工具或插件消费时，请使用通用契约。将 `contracts.memoryEmbeddingProviders` 保留给那些形状和生命周期都特定于 OpenClaw memory 索引的适配器。
+通用 embedding provider 应为每个通过 `api.registerEmbeddingProvider(...)` 注册的适配器声明 `contracts.embeddingProviders`。通用契约用于可复用向量生成，包括 memory search 使用的 provider。`contracts.memoryEmbeddingProviders` 是已废弃的仅限 memory 的兼容项，只会保留到现有 provider 迁移到通用 embedding provider 接缝为止。
 
 `contracts.gatewayMethodDispatch` 当前接受
 `"authenticated-request"`。它是针对原生插件 HTTP 路由的 API 卫生门禁，这些路由会有意在进程内分发 Gateway 控制平面方法，而不是用来防御恶意原生插件的沙箱。仅将其用于经过严格审查、且本身已要求 Gateway HTTP 认证的打包/运营者界面。
@@ -935,6 +946,51 @@ Model 字段：
 | `compatibilityFamily` | `"moonshot"` | 用于共享请求辅助工具的可选提供方家族兼容性分组。                                     |
 | `openAICompletions`   | `object`     | OpenAI 兼容的 completions 请求标志，目前是 `supportsStreamingUsage`。                |
 
+## secretProviderIntegrations 参考
+
+当插件可以发布可复用的 SecretRef exec 提供方预设时，请使用 `secretProviderIntegrations`。OpenClaw 会在插件运行时加载之前读取这些元数据，将插件归属存储在 `secrets.providers.<alias>.pluginIntegration` 中，并将实际的密钥解析留给 SecretRef 运行时。
+预设仅对捆绑插件以及从受管理插件安装根目录中发现的已安装插件公开，例如 git 和 ClawHub 安装。
+
+```json
+{
+  "secretProviderIntegrations": {
+    "secret-store": {
+      "providerAlias": "team-secrets",
+      "displayName": "Team secrets",
+      "source": "exec",
+      "command": "${node}",
+      "args": ["./bin/resolve-secrets.mjs"]
+    }
+  }
+}
+```
+
+映射键是集成 id。如果省略 `providerAlias`，OpenClaw 会使用集成 id 作为 SecretRef 提供方别名。提供方别名必须匹配常规的 SecretRef 提供方别名模式，例如 `team-secrets` 或 `onepassword-work`。
+
+当操作员选择该预设时，OpenClaw 会写入类似这样的提供方引用：
+
+```json
+{
+  "secrets": {
+    "providers": {
+      "team-secrets": {
+        "source": "exec",
+        "pluginIntegration": {
+          "pluginId": "acme-secrets",
+          "integrationId": "secret-store"
+        }
+      }
+    }
+  }
+}
+```
+
+在启动/重新加载时，OpenClaw 会通过加载当前插件清单元数据来解析该提供方，检查拥有它的插件是否已安装并处于激活状态，并从清单中实例化 exec 命令。禁用或移除插件会撤销活动 SecretRef 的该提供方。希望使用独立 exec 配置的操作员仍然可以直接编写手动的 `command`/`args` 提供方。
+
+当前仅支持 `source: "exec"` 预设。`command` 必须是 `${node}`，并且 `args[0]` 必须是一个 `./` 插件根相对的解析器脚本。OpenClaw 会在启动/重新加载时将其实例化为当前 Node 可执行文件和插件内脚本的绝对路径。诸如 `--require`、`--import`、`--loader`、`--env-file`、`--eval` 和 `--print` 之类的 Node 选项不属于清单预设契约。需要非 Node 命令的操作员可以直接配置独立的手动 exec 提供方。
+
+OpenClaw 会根据插件根目录以及对于 `${node}` 预设时的当前 Node 可执行文件目录来推导清单预设的 `trustedDirs`。清单中作者提供的 `trustedDirs` 会被忽略。诸如 `timeoutMs`、`maxOutputBytes`、`jsonOnly`、`env`、`passEnv` 和 `allowInsecurePath` 等其他 exec 提供方选项会透传到常规 SecretRef exec 提供方配置。
+
 ## modelPricing 参考
 
 当某个提供方在运行时加载之前需要控制面定价行为时，请使用 `modelPricing`。Gateway 定价缓存会在不导入提供方运行时代码的情况下读取这些元数据。
@@ -1011,28 +1067,31 @@ Provider Index 条目也可以携带可安装插件元数据，适用于那些�
 
 重要示例：
 
-| 字段                                                                                      | 含义                                                                                                                                                                        |
-| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Field                                                                                      | What it means                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `openclaw.extensions`                                                                      | 声明原生插件入口点。必须保留在插件包目录内。                                                                                                   |
-| `openclaw.runtimeExtensions`                                                               | 声明为已安装包构建的 JavaScript 运行时入口点。必须保留在插件包目录内。                                                                 |
-| `openclaw.setupEntry`                                                                      | 仅用于设置的轻量入口点，在 onboarding、延迟的 channel 启动，以及只读的 channel 状态/SecretRef 发现期间使用。必须保留在插件包目录内。 |
-| `openclaw.runtimeSetupEntry`                                                               | 声明为已安装包构建的 JavaScript 设置入口点。需要 `setupEntry`，必须存在，并且必须保留在插件包目录内。                         |
-| `openclaw.channel`                                                                         | 便宜的 channel 目录元数据，如标签、文档路径、别名和选择文案。                                                                                                 |
-| `openclaw.channel.commands`                                                                | 在 channel 运行时加载之前，供配置、审计和命令列表界面使用的静态原生命令和原生技能自动默认元数据。                                          |
-| `openclaw.channel.configuredState`                                                         | 轻量级的已配置状态检查器元数据，可在不加载完整 channel 运行时的情况下回答“是否已经存在仅环境变量设置？”。                                         |
-| `openclaw.channel.persistedAuthState`                                                      | 轻量级的持久化认证检查器元数据，可在不加载完整 channel 运行时的情况下回答“是否已经有任何登录状态？”。                                               |
-| `openclaw.install.clawhubSpec` / `openclaw.install.npmSpec` / `openclaw.install.localPath` | 用于捆绑和外部发布插件的安装/更新提示。                                                                                                                   |
-| `openclaw.install.defaultChoice`                                                           | 当有多个安装来源可用时的首选安装路径。                                                                                                                  |
-| `openclaw.install.minHostVersion`                                                          | 使用类似 `>=2026.3.22` 或 `>=2026.5.1-beta.1` 的 semver 下限指定的最小受支持 OpenClaw 主机版本。                                                                             |
-| `openclaw.install.expectedIntegrity`                                                       | 预期的 npm dist 完整性字符串，例如 `sha512-...`；安装和更新流程会将获取到的工件与其进行校验。                                                            |
-| `openclaw.install.allowInvalidConfigRecovery`                                              | 当配置无效时，允许一条有限的捆绑插件重装恢复路径。                                                                                                       |
-| `openclaw.startup.deferConfiguredChannelFullLoadUntilAfterListen`                          | 允许在启动期间，先加载仅设置的 channel 界面，再加载完整的 channel 插件。                                                                                                 |
+| `openclaw.runtimeExtensions`                                                               | 声明已安装包的已构建 JavaScript 运行时入口点。必须保留在插件包目录内。                                                                 |
+| `openclaw.setupEntry`                                                                      | 轻量级仅设置入口点，在 onboarding、延迟的 channel 启动以及只读 channel 状态/SecretRef 发现期间使用。必须保留在插件包目录内。 |
+| `openclaw.runtimeSetupEntry`                                                               | 声明已安装包的已构建 JavaScript 设置入口点。需要 `setupEntry`，必须存在，并且必须保留在插件包目录内。                         |
+| `openclaw.channel`                                                                         | 诸如标签、文档路径、别名和选择文案之类的廉价 channel 目录元数据。                                                                                                 |
+| `openclaw.channel.commands`                                                                | 在 channel 运行时加载之前，由配置、审计和命令列表界面使用的静态原生命令和原生技能自动默认元数据。                                          |
+| `openclaw.channel.configuredState`                                                         | 轻量级已配置状态检查器元数据，可在不加载完整 channel 运行时的情况下回答“仅环境变量设置是否已经存在？”。                                         |
+| `openclaw.channel.persistedAuthState`                                                      | 轻量级已持久化认证状态检查器元数据，可在不加载完整 channel 运行时的情况下回答“是否已经有任何登录信息？”。                                               |
+| `openclaw.install.clawhubSpec` / `openclaw.install.npmSpec` / `openclaw.install.localPath` | 适用于捆绑和外部发布插件的安装/更新提示。                                                                                                                   |
+| `openclaw.install.defaultChoice`                                                           | 当存在多个安装来源时的首选安装路径。                                                                                                                  |
+| `openclaw.install.minHostVersion`                                                          | 最低支持的 OpenClaw 主机版本，使用诸如 `>=2026.3.22` 或 `>=2026.5.1-beta.1` 的 semver 下限。                                                                             |
+| `openclaw.compat.pluginApi`                                                                | 此包所需的最低 OpenClaw 插件 API 范围，使用诸如 `>=2026.5.27` 的 semver 下限。                                                                                 |
+| `openclaw.install.expectedIntegrity`                                                       | 期望的 npm dist integrity 字符串，例如 `sha512-...`；安装和更新流程会根据它验证获取到的工件。                                                            |
+| `openclaw.install.allowInvalidConfigRecovery`                                              | 在配置无效时，允许一条狭窄的捆绑插件重装恢复路径。                                                                                                       |
+| `openclaw.startup.deferConfiguredChannelFullLoadUntilAfterListen`                          | 允许设置运行时 channel 界面在 listen 之前加载，然后将完整的已配置 channel 插件延后到 listen 后激活。                                                 |
 
 清单元数据决定在运行时加载前哪些 provider/channel/setup 选项会出现在 onboarding 中。`package.json#openclaw.install` 告诉 onboarding 在用户选择这些选项之一时如何获取或启用该插件。不要把安装提示移到 `openclaw.plugin.json` 中。
 
 `openclaw.install.minHostVersion` 在非 bundled 插件来源的安装和清单注册表加载期间强制执行。无效值会被拒绝；较新但有效的值会在旧主机上跳过外部插件。bundled source 插件被假定与主机 checkout 同版本。
 
-官方按需安装元数据在插件发布到 ClawHub 时应使用 `clawhubSpec`；onboarding 会将其视为首选远程来源，并在安装后记录 ClawHub 工件事实。`npmSpec` 仍然是尚未迁移到 ClawHub 的包的兼容性回退。
+`openclaw.compat.pluginApi` 在非 bundled 插件来源的包安装期间强制执行。将其用于该包构建所基于的 OpenClaw 插件 SDK/运行时 API 下限。对于某个插件包需要更新的 API，但在其他流程中仍保持较低安装提示的情况，它可以比 `minHostVersion` 更严格。官方 OpenClaw 发布同步默认会将现有官方插件 API 下限提升到 OpenClaw 发布版本，但仅插件发布可以在包有意支持更旧主机时保留较低下限。不要仅以包版本作为兼容性契约。`peerDependencies.openclaw` 仍然是 npm 包元数据；OpenClaw 使用 `openclaw.compat.pluginApi` 契约来做安装兼容性判断。
+
+官方按需安装元数据应在插件发布到 ClawHub 时使用 `clawhubSpec`；onboarding 会将其视为首选远程来源，并在安装后记录 ClawHub 工件事实。`npmSpec` 仍然是尚未迁移到 ClawHub 的包的兼容性回退。
 
 精确的 npm 版本锁定已经存在于 `npmSpec` 中，例如 `"npmSpec": "@wecom/wecom-openclaw-plugin@1.2.3"`。官方外部目录条目应将精确规格与 `expectedIntegrity` 配对，这样如果获取到的 npm 工件不再匹配锁定的发布版本，更新流程就会关闭失败。为了兼容性，交互式 onboarding 仍然提供受信任注册表的 npm 规格，包括裸包名和 dist-tag。目录诊断可以区分精确、浮动、带完整性固定、缺失完整性、包名不匹配以及无效默认选择来源。它们还会在存在 `expectedIntegrity` 但没有可用来固定它的有效 npm 来源时发出警告。当存在 `expectedIntegrity` 时，安装/更新流程会强制执行它；当它省略时，注册表解析会被记录下来，但不会附加完整性固定。
 
@@ -1137,16 +1196,16 @@ order](/gateway/configuration-reference#plugin-scan-order)。如果两次发现
 
 ## 注意事项
 
-- 清单是 **原生 OpenClaw 插件所必需的**，包括本地文件系统加载。运行时仍会单独加载插件模块；清单仅用于发现和校验。
-- 原生清单使用 JSON5 解析，因此只要最终值仍然是对象，就可以接受注释、尾随逗号和未加引号的键。
-- 清单加载器只读取文档中说明的清单字段。避免使用自定义顶层键。
+- Manifest 是 **native OpenClaw 插件所必需的**，包括本地文件系统加载。运行时仍会单独加载插件模块；manifest 仅用于发现和验证。
+- 原生 manifest 使用 JSON5 解析，因此只要最终值仍然是对象，就支持注释、尾随逗号和未加引号的键。
+- 仅会读取 manifest loader 处理的已文档化字段。避免使用自定义顶层键。
 - 当插件不需要 `channels`、`providers`、`cliBackends` 和 `skills` 时，都可以省略。
-- `providerCatalogEntry` 必须保持轻量，不应导入宽泛的运行时代码；请将其用于静态的提供者目录元数据或狭义的发现描述符，而不是用于请求时执行。`providerDiscoveryEntry` 是旧写法，对现有插件仍然有效。
-- 独占插件类型通过 `plugins.slots.*` 选择：`kind: "memory"` 通过 `plugins.slots.memory`，`kind: "context-engine"` 通过 `plugins.slots.contextEngine`（默认 `legacy`）。
-- 请在此清单中声明独占插件类型。运行时入口 `OpenClawPluginDefinition.kind` 已弃用，仅作为旧插件的兼容回退。
-- 环境变量元数据（`setup.providers[].envVars`、已弃用的 `providerAuthEnvVars` 和 `channelEnvVars`）仅具声明性。状态、审计、cron 投递校验以及其他只读界面在将环境变量视为已配置之前，仍会应用插件信任和有效激活策略。
-- 有关需要提供者代码的运行时向导元数据，请参见 [Provider runtime hooks](/plugins/architecture-internals#provider-runtime-hooks)。
-- 如果你的插件依赖原生模块，请记录构建步骤以及任何包管理器白名单要求（例如，pnpm `allow-build-scripts` + `pnpm rebuild <package>`）。
+- `providerCatalogEntry` 必须保持轻量，不应导入宽泛的运行时代码；请将其用于静态 provider 目录元数据或窄范围发现描述符，而不是请求时执行。
+- 互斥插件类型通过 `plugins.slots.*` 选择：`kind: "memory"` 通过 `plugins.slots.memory`，`kind: "context-engine"` 通过 `plugins.slots.contextEngine`（默认 `legacy`）。
+- 在此 manifest 中声明互斥插件类型。运行时入口 `OpenClawPluginDefinition.kind` 已弃用，仅作为旧插件的兼容回退保留。
+- 环境变量元数据（`setup.providers[].envVars`、已弃用的 `providerAuthEnvVars` 和 `channelEnvVars`）仅为声明式。状态、审计、cron 投递验证以及其他只读表面在将 env var 视为已配置之前，仍会应用插件信任和有效激活策略。
+- 对于需要 provider 代码的运行时向导元数据，请参见 [Provider runtime hooks](/plugins/architecture-internals#provider-runtime-hooks)。
+- 如果你的插件依赖原生模块，请记录构建步骤以及任何包管理器 allowlist 要求（例如，pnpm `allow-build-scripts` + `pnpm rebuild <package>`）。
 
 ## 相关内容
 

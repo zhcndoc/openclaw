@@ -1,24 +1,24 @@
 ---
-summary: "工具搜索：通过搜索、描述和调用，将大型 PI 工具目录压缩隐藏"
+summary: "工具搜索：通过搜索、描述和调用，将庞大的 OpenClaw 工具目录压缩起来"
 title: "工具搜索"
 read_when:
-  - 你希望 PI 代理在不把每个工具 schema 都加入提示词的情况下使用大型工具目录
-  - 你希望通过一个紧凑的 PI 表面暴露 OpenClaw 工具、MCP 工具和客户端工具
-  - 你正在实现或调试 PI 运行中的工具发现功能
+  - 当你希望 OpenClaw 代理使用大型工具目录，但不想把每个工具 schema 都加入提示词时
+  - 当你希望通过一个紧凑的运行时入口同时暴露 OpenClaw 工具、MCP 工具和客户端工具时
+  - 当你正在实现或调试 OpenClaw 运行中的工具发现功能时
 ---
 
-工具搜索是一个实验性的 OpenClaw PI 代理功能。它为 PI 代理提供一种
-紧凑的方式来发现并调用大型工具目录。当一次运行中有很多可用工具，但模型
-可能只需要其中少数几个时，它非常有用。
+工具搜索是 OpenClaw 代理运行时的一项实验性功能。它为代理提供一种
+紧凑的方式来发现并调用大型工具目录。当一次运行中可用工具很多，
+但模型大概率只需要其中少数几个时，它会很有用。
 
-本页介绍的是 OpenClaw PI 工具搜索。它不是 Codex 原生的工具
-搜索或动态工具表面。Codex 原生代码模式、工具搜索、延迟
-动态工具以及嵌套工具调用，都是稳定的 Codex harness 表面，
-并不依赖 `tools.toolSearch`。
+本文档介绍 OpenClaw 工具搜索。它不是 Codex 原生工具
+搜索或动态工具接口。Codex 原生代码模式、工具搜索、延迟
+动态工具以及嵌套工具调用是稳定的 Codex harness 接口，
+不依赖 `tools.toolSearch`。
 
-当为 PI 启用时，模型默认接收一个 `tool_search_code` 工具。
-该工具会在隔离的 Node 子进程中运行一小段 JavaScript 主体，并通过
-`openclaw.tools` 桥接：
+在为 OpenClaw 运行启用后，模型默认会收到一个 `tool_search_code` 工具。
+该工具会在隔离的 Node 子进程中执行一段简短的 JavaScript 代码，并带有
+一个 `openclaw.tools` 桥接：
 
 ```js
 const hits = await openclaw.tools.search("创建一个 GitHub issue");
@@ -41,14 +41,14 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 
 ## 一次 turn 如何运行
 
-在规划阶段，PI 内嵌运行器会为本次运行构建有效目录：
+在规划阶段，OpenClaw 内嵌运行器会为该运行构建有效目录：
 
 1. 解析代理、配置文件、沙箱和会话的活动工具策略。
 2. 列出符合条件的 OpenClaw 和插件工具。
 3. 通过会话 MCP 运行时列出符合条件的 MCP 工具。
 4. 添加当前运行提供的符合条件的客户端工具。
-5. 为搜索索引紧凑描述符。
-6. 向模型暴露 PI 代码桥接或结构化回退工具之一。
+5. 为搜索建立紧凑描述符索引。
+6. 向模型暴露 OpenClaw 代码桥接或结构化回退工具之一。
 
 在执行阶段，每一次真实工具调用都会返回到 OpenClaw。隔离的 Node
 运行时不持有插件实现、MCP 客户端对象或密钥。
@@ -67,8 +67,8 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 如果当前运行时无法启动隔离的 Node
 代码模式子进程，默认的 `code` 模式会在目录压缩前回退到 `tools`。
 
-两种模式都是实验性的。对于较小的 PI 工具目录，优先直接暴露工具；
-对于 Codex harness 运行，优先使用 Codex 原生的稳定表面。
+两种模式都是实验性的。对于较小的 OpenClaw 工具目录，优先直接暴露工具；
+对于 Codex harness 运行，则优先使用 Codex 原生的稳定接口。
 
 没有单独的来源选择配置。启用工具搜索后，在正常策略
 过滤之后，目录会包含符合条件的 OpenClaw、MCP 和客户端工具。
@@ -153,7 +153,7 @@ await openclaw.tools.call(calendarCreate.id, {
 
 ## 配置
 
-使用默认代码桥接为 PI 运行启用工具搜索：
+为 OpenClaw 运行启用默认代码桥接的工具搜索：
 
 ```bash
 openclaw config set tools.toolSearch true
@@ -169,7 +169,7 @@ openclaw config set tools.toolSearch true
 }
 ```
 
-改为为 PI 运行使用结构化回退工具：
+改为在 OpenClaw 运行中使用结构化回退工具：
 
 ```json5
 {
@@ -225,7 +225,7 @@ openclaw config set tools.toolSearch true
 
 ## 端到端验证
 
-Gateway E2E 运行器使用 PI harness 证明两条路径：
+gateway E2E 运行器会借助 OpenClaw 运行时证明两条路径：
 
 ```bash
 node --import tsx scripts/tool-search-gateway-e2e.ts

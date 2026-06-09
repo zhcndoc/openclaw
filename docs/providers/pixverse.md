@@ -1,0 +1,163 @@
+---
+summary: "OpenClaw 中的 PixVerse 视频生成设置"
+title: "PixVerse"
+read_when:
+  - 你想在 OpenClaw 中使用 PixVerse 视频生成
+  - 你需要 PixVerse API 密钥 / 环境变量设置
+  - 你想将 PixVerse 设为默认视频提供方
+---
+
+OpenClaw 将 `pixverse` 作为官方外部插件提供，用于托管的 PixVerse 视频生成。该插件会在 `videoGenerationProviders` 合约上注册 `pixverse` 提供方。
+
+| 属性               | 值                                                                   |
+| ------------------ | -------------------------------------------------------------------- |
+| 提供方 id         | `pixverse`                                                           |
+| 插件包             | `@openclaw/pixverse-provider`                                        |
+| 认证环境变量       | `PIXVERSE_API_KEY`                                                   |
+| 引导标志           | `--auth-choice pixverse-api-key`                                     |
+| 直接 CLI 标志      | `--pixverse-api-key <key>`                                           |
+| API                | PixVerse Platform API v2（提交 `video_id` 并轮询结果）                |
+| 默认模型           | `pixverse/v6`                                                        |
+| 默认 API 区域      | 国际                                                                  |
+
+## 开始使用
+
+<Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install clawhub:@openclaw/pixverse-provider
+    openclaw gateway restart
+    ```
+  </Step>
+  <Step title="设置 API 密钥">
+    ```bash
+    openclaw onboard --auth-choice pixverse-api-key
+    ```
+
+    在写入 `region` 和 `baseUrl` 到提供方配置之前，向导会询问是使用国际端点
+    (`https://app-api.pixverse.ai/openapi/v2`) 还是 CN 端点
+    (`https://app-api.pixverseai.cn/openapi/v2`)。
+
+  </Step>
+  <Step title="将 PixVerse 设为默认视频提供方">
+    ```bash
+    openclaw config set agents.defaults.videoGenerationModel.primary "pixverse/v6"
+    ```
+  </Step>
+  <Step title="生成视频">
+    让代理生成一个视频。PixVerse 将自动被使用。
+  </Step>
+</Steps>
+
+## 支持的模式和模型
+
+该提供方通过 OpenClaw 的共享视频工具暴露 PixVerse 生成模型。
+
+| 模式           | 模型                 | 参考输入                |
+| -------------- | -------------------- | ----------------------- |
+| 文本生成视频    | `v6`（默认）、`c1`   | 无                      |
+| 图片生成视频    | `v6`（默认）、`c1`   | 1 张本地或远程图片      |
+
+本地图片引用会在图片生成视频请求之前上传到 PixVerse。远程图片 URL 会作为 `image_url` 传递到 PixVerse 图片上传端点。
+
+| 选项          | 支持的值                                                            |
+| ------------- | ------------------------------------------------------------------- |
+| 时长          | 1-15 秒                                                             |
+| 分辨率        | `360P`、`540P`、`720P`、`1080P`                                     |
+| 宽高比        | 文本生成视频支持 `16:9`、`4:3`、`1:1`、`3:4`、`9:16`、`2:3`、`3:2`、`21:9` |
+| 生成音频      | `audio: true`                                                       |
+
+<Note>
+PixVerse 图片模板生成功能尚未通过 `image_generate` 暴露。该 API 由 template-id 驱动，而 OpenClaw 的共享图片生成合约目前没有 PixVerse 专用的类型化选项包。
+</Note>
+
+## 提供方选项
+
+视频提供方接受以下可选的提供方专属键：
+
+| 选项                                  | 类型   | 作用                              |
+| ------------------------------------- | ------ | --------------------------------- |
+| `seed`                                | number | 在支持时使用确定性种子            |
+| `negativePrompt` / `negative_prompt`  | string | 负向提示词                        |
+| `quality`                             | string | PixVerse 质量，例如 `720p`       |
+| `motionMode` / `motion_mode`          | string | 图片生成视频运动模式              |
+| `cameraMovement` / `camera_movement`  | string | PixVerse 相机运动预设             |
+| `templateId` / `template_id`          | number | 已激活的 PixVerse 模板 id         |
+
+## 配置
+
+```json5
+{
+  agents: {
+    defaults: {
+      videoGenerationModel: {
+        primary: "pixverse/v6",
+      },
+    },
+  },
+}
+```
+
+## 高级配置
+
+<AccordionGroup>
+  <Accordion title="API 区域">
+    OpenClaw 默认使用国际版 PixVerse API。当你的密钥属于特定的 PixVerse 平台区域时，请手动设置 `models.providers.pixverse.region`，
+    或使用 `openclaw onboard --auth-choice pixverse-api-key` 在设置向导中选择一个区域：
+
+    | 区域值           | PixVerse API 基础 URL                      |
+    | --------------- | --------------------------------------------- |
+    | `international` | `https://app-api.pixverse.ai/openapi/v2`      |
+    | `cn`            | `https://app-api.pixverseai.cn/openapi/v2`    |
+
+    ```json5
+    {
+      models: {
+        providers: {
+          pixverse: {
+            region: "cn", // "international" 或 "cn"
+            baseUrl: "https://app-api.pixverseai.cn/openapi/v2",
+            models: [],
+          },
+        },
+      },
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="自定义基础 URL">
+    仅当通过受信任的兼容代理路由时，才设置 `models.providers.pixverse.baseUrl`。
+    `baseUrl` 的优先级高于 `region`。
+
+    ```json5
+    {
+      models: {
+        providers: {
+          pixverse: {
+            baseUrl: "https://app-api.pixverse.ai/openapi/v2",
+          },
+        },
+      },
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="任务轮询">
+    PixVerse 会在生成请求中返回一个 `video_id`。OpenClaw 会轮询
+    `/openapi/v2/video/result/{video_id}`，直到任务成功、失败，
+    或超时。
+  </Accordion>
+</AccordionGroup>
+
+## 相关内容
+
+<CardGroup cols={2}>
+  <Card title="视频生成" href="/tools/video-generation" icon="video">
+    共享工具参数、提供方选择和异步行为。
+  </Card>
+  <Card title="配置参考" href="/gateway/config-agents#agent-defaults" icon="gear">
+    包括视频生成模型在内的代理默认设置。
+  </Card>
+</CardGroup>

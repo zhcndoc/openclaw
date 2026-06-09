@@ -6,7 +6,7 @@ read_when:
 title: "Amazon Bedrock"
 ---
 
-OpenClaw 可以通过 pi-ai 的 **Bedrock Converse** 流式提供程序使用 **Amazon Bedrock** 模型。Bedrock 身份验证使用 **AWS SDK 默认凭证链**，而不是 API 密钥。
+OpenClaw 可以通过其 **Bedrock Converse** 流式 provider 使用 **Amazon Bedrock** 模型。Bedrock 身份验证使用 **AWS SDK 默认凭证链**，而不是 API 密钥。
 
 | Property | Value                                                       |
 | -------- | ----------------------------------------------------------- |
@@ -340,7 +340,7 @@ openclaw models list
     }
     ```
 
-    Bedrock embeddings 使用与推理相同的 AWS SDK 凭证链（实例角色、SSO、访问密钥、共享配置和 web identity）。不需要 API 密钥。当 `provider` 为 `"auto"` 时，如果该凭证链成功解析，Bedrock 会被自动检测到。
+    Bedrock embeddings 使用与 inference 相同的 AWS SDK 凭证链（实例角色、SSO、访问密钥、共享配置和 web identity）。无需 API 密钥。显式设置 `memorySearch.provider: "bedrock"` 以使用 Bedrock embeddings。
 
     支持的 embedding 模型包括 Amazon Titan Embed（v1、v2）、Amazon Nova Embed、Cohere Embed（v3、v4）以及 TwelveLabs Marengo。有关完整的模型列表和维度选项，请参见
     [Memory configuration reference -- Bedrock](/reference/memory-config#bedrock-embedding-config)。

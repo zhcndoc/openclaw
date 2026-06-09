@@ -43,7 +43,7 @@ title: "OpenClaw"
 
 ## 什么是 OpenClaw？
 
-OpenClaw 是一个**自托管网关**，将你最喜欢的聊天应用和通道接入点——包括内置通道以及捆绑或外部通道插件，例如 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等——连接到像 Pi 这样的 AI 编码代理。你在自己的机器（或服务器）上运行单个网关进程，它就会成为你的消息应用与始终在线的 AI 助手之间的桥梁。
+OpenClaw 是一个 **自托管网关**，将你喜欢的聊天应用和通道界面——包括内置通道，以及捆绑或外部通道插件，如 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等——连接到 AI 编码代理。你可以在自己的机器（或服务器）上运行一个网关进程，它就会成为你的消息应用与始终在线的 AI 助手之间的桥梁。
 
 **它适合谁？** 适合希望拥有一个可以随时发消息的个人 AI 助手的开发者和高级用户——而且不必放弃对数据的控制，也不依赖托管服务。
 
@@ -61,7 +61,7 @@ OpenClaw 是一个**自托管网关**，将你最喜欢的聊天应用和通道�
 ```mermaid
 flowchart LR
   A["聊天应用 + 插件"] --> B["网关"]
-  B --> C["Pi 代理"]
+  B --> C["OpenClaw agent"]
   B --> D["CLI"]
   B --> E["Web 控制 UI"]
   B --> F["macOS 应用"]
@@ -135,8 +135,8 @@ flowchart LR
 
 配置位于 `~/.openclaw/openclaw.json`。
 
-- 如果你**什么都不做**，OpenClaw 会在 RPC 模式下使用捆绑的 Pi 二进制文件，并为每个发送者维护会话。
-- 如果你想加强限制，请从 `channels.whatsapp.allowFrom` 开始设置，并且（对于群组）设置提及规则。
+- 如果你**什么都不做**，OpenClaw 会使用捆绑的 OpenClaw agent runtime，并按发送者分配会话。
+- 如果你想加强限制，可以从 `channels.whatsapp.allowFrom` 开始设置，并且（针对群组）配置提及规则。
 
 示例：
 

@@ -19,12 +19,12 @@ Context 并不等同于“记忆”：记忆可以存储在磁盘上并在之后
 
 ## 快速开始（检查上下文）
 
-- `/status` → 快速查看“我的窗口有多满？”以及会话设置。
+- `/status` → 快速查看“我的窗口有多满？” + 会话设置。
 - `/context list` → 注入了什么 + 大致大小（按文件 + 总计）。
-- `/context detail` → 更深入的拆分：按文件、按工具 schema 大小、按技能条目大小，以及系统提示词大小。
-- `/context map` → 以 WinDirStat 风格的矩形树图像显示当前会话中被追踪的上下文贡献项。
-- `/usage tokens` → 在正常回复后附加每次回复的 token 使用页脚。
-- `/compact` → 将较早的历史总结为一个紧凑条目，以释放窗口空间。
+- `/context detail` → 更深入的拆分：按文件、按工具 schema 大小、按技能条目大小、系统提示词大小，以及可压缩的转录消息数量。
+- `/context map` → 当前会话已跟踪的上下文贡献项的 WinDirStat 风格树图像。
+- `/usage tokens` → 在正常回复后附加每次回复的用量页脚。
+- `/compact` → 将较旧的历史摘要为一个压缩条目，以释放窗口空间。
 
 另见：[斜杠命令](/tools/slash-commands)、[Token 使用与成本](/reference/token-use)、[压缩](/concepts/compaction)。
 
@@ -122,7 +122,7 @@ Top tools (schema size):
 - `HEARTBEAT.md`
 - `BOOTSTRAP.md`（仅首次运行）
 
-大文件会按文件使用 `agents.defaults.bootstrapMaxChars`（默认 `12000` 字符）进行截断。OpenClaw 还会在所有文件上强制执行一个总的启动注入上限 `agents.defaults.bootstrapTotalMaxChars`（默认 `60000` 字符）。`/context` 会显示 **原始 vs 注入后** 的大小，以及是否发生了截断。
+大文件会按文件使用 `agents.defaults.bootstrapMaxChars`（默认 `20000` 字符）进行截断。OpenClaw 还会使用 `agents.defaults.bootstrapTotalMaxChars`（默认 `60000` 字符）对所有文件的总引导注入量设置上限。`/context` 会显示 **原始 vs 注入** 大小，以及是否发生了截断。
 
 当发生截断时，运行时可以在项目上下文下方注入一个提示内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
 
@@ -179,7 +179,7 @@ Top tools (schema size):
 - `System prompt (run)` = 从最后一次嵌入式（可使用工具的）运行中捕获，并持久化到会话存储中。
 - `System prompt (estimate)` = 当不存在运行报告时（或通过不会生成报告的 CLI 后端运行时）即时计算得到。
 
-无论哪种方式，它都会报告大小和主要贡献者；它**不会**输出完整的系统提示词或工具 schemas。
+无论哪种方式，它都会报告大小和主要贡献项；它不会转储完整的系统提示词或工具 schemas。在详细模式下，它还会使用与压缩相同的真实对话消息谓词对会话转录进行比较，因此更容易区分高提示词/缓存使用率与可压缩的对话历史。
 
 ## 相关内容
 

@@ -100,7 +100,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         "azure-speech": {
           apiKey: "${AZURE_SPEECH_KEY}",
           region: "eastus",
-          voice: "en-US-JennyNeural",
+          speakerVoice: "en-US-JennyNeural",
           lang: "en-US",
           outputFormat: "audio-24khz-48kbitrate-mono-mp3",
           voiceNoteOutputFormat: "ogg-24khz-16bit-mono-opus",
@@ -122,7 +122,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         elevenlabs: {
           apiKey: "${ELEVENLABS_API_KEY}",
           model: "eleven_multilingual_v2",
-          voiceId: "EXAVITQu4vr4xnSDxMaL",
+          speakerVoiceId: "EXAVITQu4vr4xnSDxMaL",
         },
       },
     },
@@ -141,9 +141,9 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         google: {
           apiKey: "${GEMINI_API_KEY}",
           model: "gemini-3.1-flash-tts-preview",
-          voiceName: "Kore",
+          speakerVoice: "Kore",
           // 可选的自然语言风格提示：
-          // audioProfile: "以平静、播客主持人的语气说话。",
+          // audioProfile: "以平静、播客主持人般的语气说话。",
           // speakerName: "Alex",
         },
       },
@@ -162,7 +162,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
       providers: {
         gradium: {
           apiKey: "${GRADIUM_API_KEY}",
-          voiceId: "YTpq7expH9539ERJ",
+          speakerVoiceId: "YTpq7expH9539ERJ",
         },
       },
     },
@@ -181,7 +181,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         inworld: {
           apiKey: "${INWORLD_API_KEY}",
           modelId: "inworld-tts-1.5-max",
-          voiceId: "Sarah",
+          speakerVoiceId: "Sarah",
           temperature: 0.7,
         },
       },
@@ -220,7 +220,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
       providers: {
         microsoft: {
           enabled: true,
-          voice: "en-US-MichelleNeural",
+          speakerVoice: "en-US-MichelleNeural",
           lang: "en-US",
           outputFormat: "audio-24khz-48kbitrate-mono-mp3",
           rate: "+0%",
@@ -243,7 +243,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         minimax: {
           apiKey: "${MINIMAX_API_KEY}",
           model: "speech-2.8-hd",
-          voiceId: "English_expressive_narrator",
+          speakerVoiceId: "English_expressive_narrator",
           speed: 1.0,
           vol: 1.0,
           pitch: 0,
@@ -267,12 +267,12 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         openai: {
           apiKey: "${OPENAI_API_KEY}",
           model: "gpt-4o-mini-tts",
-          voice: "alloy",
+          speakerVoice: "alloy",
         },
         elevenlabs: {
           apiKey: "${ELEVENLABS_API_KEY}",
           model: "eleven_multilingual_v2",
-          voiceId: "EXAVITQu4vr4xnSDxMaL",
+          speakerVoiceId: "EXAVITQu4vr4xnSDxMaL",
           voiceSettings: { stability: 0.5, similarityBoost: 0.75, style: 0.0, useSpeakerBoost: true, speed: 1.0 },
           applyTextNormalization: "auto",
           languageCode: "en",
@@ -294,7 +294,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         openrouter: {
           apiKey: "${OPENROUTER_API_KEY}",
           model: "hexgrad/kokoro-82m",
-          voice: "af_alloy",
+          speakerVoice: "af_alloy",
           responseFormat: "mp3",
         },
       },
@@ -314,7 +314,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         volcengine: {
           apiKey: "${VOLCENGINE_TTS_API_KEY}",
           resourceId: "seed-tts-1.0",
-          voice: "en_female_anna_mars_bigtts",
+          speakerVoice: "en_female_anna_mars_bigtts",
         },
       },
     },
@@ -332,7 +332,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
       providers: {
         xai: {
           apiKey: "${XAI_API_KEY}",
-          voiceId: "eve",
+          speakerVoiceId: "eve",
           language: "en",
           responseFormat: "mp3",
         },
@@ -353,7 +353,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         xiaomi: {
           apiKey: "${XIAOMI_API_KEY}",
           model: "mimo-v2.5-tts",
-          voice: "mimo_default",
+          speakerVoice: "mimo_default",
           format: "mp3",
         },
       },
@@ -364,7 +364,11 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
   </Tab>
 </Tabs>
 
-### 按代理覆盖语音
+For Xiaomi `mimo-v2.5-tts-voicedesign`, omit `speakerVoice` and set `style` to
+the voice-design prompt. OpenClaw sends that prompt as the TTS `user` message
+and does not send `audio.voice` for the voicedesign model.
+
+### Per-agent voice overrides
 
 当某个代理应使用不同的提供商、语音、模型、角色或自动 TTS 模式时，使用 `agents.list[].tts`。代理块会在 `messages.tts`
 之上进行深度合并，因此提供商凭据可以保留在全局提供商配置中：
@@ -386,7 +390,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         id: "reader",
         tts: {
           providers: {
-            elevenlabs: { voiceId: "EXAVITQu4vr4xnSDxMaL" },
+            elevenlabs: { speakerVoiceId: "EXAVITQu4vr4xnSDxMaL" },
           },
         },
       },
@@ -406,7 +410,10 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
 5. 本地机器上的 `/tts` 本地偏好设置
 6. 启用 [模型驱动指令](#model-driven-directives) 时的内联 `[[tts:...]]` 指令
 
-频道和账号覆盖使用与 `messages.tts` 相同的结构，并在较早层之上进行深度合并，因此共享的提供商凭据可以保留在 `messages.tts` 中，而频道或机器人账号只更改语音、模型、角色或自动模式：
+Channel and account overrides use the same shape as `messages.tts` and
+deep-merge over the earlier layers, so shared provider credentials can stay in
+`messages.tts` while a channel or bot account changes only speaker voice, model, persona,
+or auto mode:
 
 ```json5
 {
@@ -424,7 +431,7 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
         english: {
           tts: {
             providers: {
-              openai: { voice: "shimmer" },
+              openai: { speakerVoice: "shimmer" },
             },
           },
         },
@@ -451,7 +458,10 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
           label: "旁白",
           provider: "elevenlabs",
           providers: {
-            elevenlabs: { voiceId: "EXAVITQu4vr4xnSDxMaL", modelId: "eleven_multilingual_v2" },
+            elevenlabs: {
+              speakerVoiceId: "EXAVITQu4vr4xnSDxMaL",
+              modelId: "eleven_multilingual_v2",
+            },
           },
         },
       },
@@ -486,12 +496,12 @@ TTS 配置位于 `~/.openclaw/openclaw.json` 的 `messages.tts` 下。选择一�
           providers: {
             google: {
               model: "gemini-3.1-flash-tts-preview",
-              voiceName: "Algieba",
+              speakerVoice: "Algieba",
               promptTemplate: "audio-profile-v1",
             },
-            openai: { model: "gpt-4o-mini-tts", voice: "cedar" },
+            openai: { model: "gpt-4o-mini-tts", speakerVoice: "cedar" },
             elevenlabs: {
-              voiceId: "voice_id",
+              speakerVoiceId: "voice_id",
               modelId: "eleven_multilingual_v2",
               seed: 42,
               voiceSettings: {
@@ -578,8 +588,8 @@ Talk 会话提供商选择以会话为作用域。Talk 客户端应从 `talk.cat
 ```text
 给你。
 
-[[tts:voiceId=pMsXgVXv3BLzUgSXRplE model=eleven_v3 speed=1.1]]
-[[tts:text]]（笑）把这首歌再读一遍。[[/tts:text]]
+[[tts:speakerVoiceId=pMsXgVXv3BLzUgSXRplE model=eleven_v3 speed=1.1]]
+[[tts:text]](laughs) Read the song once more.[[/tts:text]]
 ```
 
 当 `messages.tts.auto` 为 `"tagged"` 时，**必须使用指令** 才会触发音频。
@@ -590,8 +600,8 @@ Talk 会话提供商选择以会话为作用域。Talk 客户端应从 `talk.cat
 
 **可用的指令键：**
 
-- `provider`（已注册的提供商 id；需要 `allowProvider: true`）
-- `voice` / `voiceName` / `voice_name` / `google_voice` / `voiceId`
+- `provider` (registered provider id; requires `allowProvider: true`)
+- `speakerVoice` / `speakerVoiceId` (legacy aliases: `voice`, `voiceName`, `voice_name`, `google_voice`, `voiceId`)
 - `model` / `google_model`
 - `stability`、`similarityBoost`、`style`、`speed`、`useSpeakerBoost`
 - `vol` / `volume`（MiniMax 音量，0–10）
@@ -692,18 +702,18 @@ OpenAI/ElevenLabs 的输出格式按通道固定（见上文）。
 
 当启用 `messages.tts.auto` 时，OpenClaw 会：
 
-- 如果回复已经包含媒体或 `MEDIA:` 指令，则跳过 TTS。
+- 如果回复已经包含结构化媒体，则跳过 TTS。
 - 跳过非常短的回复（少于 10 个字符）。
-- 当启用摘要时，使用 `summaryModel`（或 `agents.defaults.model.primary`）对长回复进行摘要。
+- 在启用摘要时，对长回复进行摘要，使用 `summaryModel`（或 `agents.defaults.model.primary`）。
 - 将生成的音频附加到回复中。
-- 在 `mode: "final"` 下，仍然会在文本流完成后，为流式最终回复发送仅音频的 TTS；生成的媒体会像普通回复附件一样经过相同的 channel media 规范化处理。
+- 在 `mode: "final"` 下，即使对于流式最终回复，在文本流完成后仍会发送仅音频的 TTS；生成的媒体会像普通回复附件一样经过相同的通道媒体规范化。
 
 如果回复超过 `maxLength` 且摘要关闭（或摘要模型没有 API key），则会跳过音频并发送普通文本回复。
 
 ```text
 Reply -> TTS enabled?
   no  -> send text
-  yes -> has media / MEDIA: / short?
+  yes -> has media / short?
           yes -> send text
           no -> length > limit?
                    no  -> TTS -> attach audio
@@ -732,7 +742,7 @@ Reply -> TTS enabled?
 
 OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
 
-## 字段参考
+我会严格保留原有 Markdown/HTML 结构，只翻译可见文本和注释类内容。先直接输出完整中文译文，不改标签、属性名或代码标识。## 字段参考
 
 <AccordionGroup>
   <Accordion title="顶层 messages.tts.*">
@@ -778,16 +788,16 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
     <ParamField path="apiKey" type="string">环境变量：`AZURE_SPEECH_KEY`、`AZURE_SPEECH_API_KEY` 或 `SPEECH_KEY`。</ParamField>
     <ParamField path="region" type="string">Azure Speech 区域（例如 `eastus`）。环境变量：`AZURE_SPEECH_REGION` 或 `SPEECH_REGION`。</ParamField>
     <ParamField path="endpoint" type="string">可选的 Azure Speech 端点覆盖（别名 `baseUrl`）。</ParamField>
-    <ParamField path="voice" type="string">Azure voice ShortName。默认 `en-US-JennyNeural`。</ParamField>
+    <ParamField path="speakerVoice" type="string">Azure 语音 ShortName。默认 `en-US-JennyNeural`。旧别名：`voice`。</ParamField>
     <ParamField path="lang" type="string">SSML 语言代码。默认 `en-US`。</ParamField>
-    <ParamField path="outputFormat" type="string">标准音频使用的 Azure `X-Microsoft-OutputFormat`。默认 `audio-24khz-48kbitrate-mono-mp3`。</ParamField>
-    <ParamField path="voiceNoteOutputFormat" type="string">语音笔记输出使用的 Azure `X-Microsoft-OutputFormat`。默认 `ogg-24khz-16bit-mono-opus`。</ParamField>
+    <ParamField path="outputFormat" type="string">用于标准音频的 Azure `X-Microsoft-OutputFormat`。默认 `audio-24khz-48kbitrate-mono-mp3`。</ParamField>
+    <ParamField path="voiceNoteOutputFormat" type="string">用于语音备注输出的 Azure `X-Microsoft-OutputFormat`。默认 `ogg-24khz-16bit-mono-opus`。</ParamField>
   </Accordion>
 
   <Accordion title="ElevenLabs">
     <ParamField path="apiKey" type="string">回退到 `ELEVENLABS_API_KEY` 或 `XI_API_KEY`。</ParamField>
     <ParamField path="model" type="string">模型 id（例如 `eleven_multilingual_v2`、`eleven_v3`）。</ParamField>
-    <ParamField path="voiceId" type="string">ElevenLabs voice id。</ParamField>
+    <ParamField path="speakerVoiceId" type="string">ElevenLabs 语音 id。旧别名：`voiceId`。</ParamField>
     <ParamField path="voiceSettings" type="object">
       `stability`、`similarityBoost`、`style`（均为 `0..1`）、`useSpeakerBoost`（`true|false`）、`speed`（`0.5..2.0`，`1.0` = 正常）。
     </ParamField>
@@ -800,18 +810,18 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
   <Accordion title="Google Gemini">
     <ParamField path="apiKey" type="string">回退到 `GEMINI_API_KEY` / `GOOGLE_API_KEY`。如果省略，在环境变量回退前，TTS 可以复用 `models.providers.google.apiKey`。</ParamField>
     <ParamField path="model" type="string">Gemini TTS 模型。默认 `gemini-3.1-flash-tts-preview`。</ParamField>
-    <ParamField path="voiceName" type="string">Gemini 预置 voice 名称。默认 `Kore`。别名：`voice`。</ParamField>
-    <ParamField path="audioProfile" type="string">在发声文本之前预置的自然语言风格提示词。</ParamField>
-    <ParamField path="speakerName" type="string">当你的提示词使用命名说话人时，可选地在发声文本之前预置说话人标签。</ParamField>
-    <ParamField path="promptTemplate" type='"audio-profile-v1"'>设置为 `audio-profile-v1`，以将当前 persona 提示字段封装到确定性的 Gemini TTS 提示结构中。</ParamField>
-    <ParamField path="personaPrompt" type="string">Google 特定的额外 persona 提示文本，会附加到模板的导演说明中。</ParamField>
+    <ParamField path="speakerVoice" type="string">Gemini 预设语音名称。默认 `Kore`。旧别名：`voiceName`、`voice`。</ParamField>
+    <ParamField path="audioProfile" type="string">在口语文本前添加的自然语言风格提示。</ParamField>
+    <ParamField path="speakerName" type="string">当你的提示使用了命名说话人时，可选地在口语文本前添加的说话人标签。</ParamField>
+    <ParamField path="promptTemplate" type='"audio-profile-v1"'>设置为 `audio-profile-v1`，可将当前角色提示字段包装进确定性的 Gemini TTS 提示结构中。</ParamField>
+    <ParamField path="personaPrompt" type="string">追加到模板 Director's Notes 的 Google 专用额外角色提示文本。</ParamField>
     <ParamField path="baseUrl" type="string">仅接受 `https://generativelanguage.googleapis.com`。</ParamField>
   </Accordion>
 
   <Accordion title="Gradium">
     <ParamField path="apiKey" type="string">环境变量：`GRADIUM_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.gradium.ai`。</ParamField>
-    <ParamField path="voiceId" type="string">默认 Emma（`YTpq7expH9539ERJ`）。</ParamField>
+    <ParamField path="speakerVoiceId" type="string">默认 Emma（`YTpq7expH9539ERJ`）。旧别名：`voiceId`。</ParamField>
   </Accordion>
 
   <Accordion title="Inworld">
@@ -819,8 +829,8 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
 
     <ParamField path="apiKey" type="string">环境变量：`INWORLD_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.inworld.ai`。</ParamField>
-    <ParamField path="modelId" type="string">默认 `inworld-tts-1.5-max`。此外还有：`inworld-tts-1.5-mini`、`inworld-tts-1-max`、`inworld-tts-1`。</ParamField>
-    <ParamField path="voiceId" type="string">默认 `Sarah`。</ParamField>
+    <ParamField path="modelId" type="string">默认 `inworld-tts-1.5-max`。另外还有：`inworld-tts-1.5-mini`、`inworld-tts-1-max`、`inworld-tts-1`。</ParamField>
+    <ParamField path="speakerVoiceId" type="string">默认 `Sarah`。旧别名：`voiceId`。</ParamField>
     <ParamField path="temperature" type="number">采样温度 `0..2`。</ParamField>
 
   </Accordion>
@@ -834,23 +844,23 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
     <ParamField path="env" type="Record<string, string>">命令的可选环境变量覆盖。</ParamField>
   </Accordion>
 
-  <Accordion title="Microsoft（无 API key）">
+  <Accordion title="Microsoft (no API key)">
     <ParamField path="enabled" type="boolean" default="true">允许使用 Microsoft 语音。</ParamField>
-    <ParamField path="voice" type="string">Microsoft 神经 voice 名称（例如 `en-US-MichelleNeural`）。</ParamField>
+    <ParamField path="speakerVoice" type="string">Microsoft 神经语音名称（例如 `en-US-MichelleNeural`）。旧别名：`voice`。</ParamField>
     <ParamField path="lang" type="string">语言代码（例如 `en-US`）。</ParamField>
-    <ParamField path="outputFormat" type="string">Microsoft 输出格式。默认 `audio-24khz-48kbitrate-mono-mp3`。并非所有格式都受内置 Edge 后端传输支持。</ParamField>
+    <ParamField path="outputFormat" type="string">Microsoft 输出格式。默认 `audio-24khz-48kbitrate-mono-mp3`。并非所有格式都受内置的 Edge 后端传输支持。</ParamField>
     <ParamField path="rate / pitch / volume" type="string">百分比字符串（例如 `+10%`、`-5%`）。</ParamField>
-    <ParamField path="saveSubtitles" type="boolean">将 JSON 字幕写入音频文件旁边。</ParamField>
+    <ParamField path="saveSubtitles" type="boolean">在音频文件旁写入 JSON 字幕。</ParamField>
     <ParamField path="proxy" type="string">Microsoft 语音请求的代理 URL。</ParamField>
     <ParamField path="timeoutMs" type="number">请求超时覆盖（毫秒）。</ParamField>
-    <ParamField path="edge.*" type="object" deprecated>旧别名。运行 `openclaw doctor --fix` 将持久化配置重写为 `providers.microsoft`。</ParamField>
+    <ParamField path="edge.*" type="object" deprecated>旧别名。运行 `openclaw doctor --fix` 可将持久化配置重写为 `providers.microsoft`。</ParamField>
   </Accordion>
 
   <Accordion title="MiniMax">
     <ParamField path="apiKey" type="string">回退到 `MINIMAX_API_KEY`。Token Plan 认证可通过 `MINIMAX_OAUTH_TOKEN`、`MINIMAX_CODE_PLAN_KEY` 或 `MINIMAX_CODING_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.minimax.io`。环境变量：`MINIMAX_API_HOST`。</ParamField>
     <ParamField path="model" type="string">默认 `speech-2.8-hd`。环境变量：`MINIMAX_TTS_MODEL`。</ParamField>
-    <ParamField path="voiceId" type="string">默认 `English_expressive_narrator`。环境变量：`MINIMAX_TTS_VOICE_ID`。</ParamField>
+    <ParamField path="speakerVoiceId" type="string">默认 `English_expressive_narrator`。环境变量：`MINIMAX_TTS_VOICE_ID`。旧别名：`voiceId`。</ParamField>
     <ParamField path="speed" type="number">`0.5..2.0`。默认 `1.0`。</ParamField>
     <ParamField path="vol" type="number">`(0, 10]`。默认 `1.0`。</ParamField>
     <ParamField path="pitch" type="number">整数 `-12..12`。默认 `0`。小数值会在请求前被截断。</ParamField>
@@ -859,9 +869,9 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
   <Accordion title="OpenAI">
     <ParamField path="apiKey" type="string">回退到 `OPENAI_API_KEY`。</ParamField>
     <ParamField path="model" type="string">OpenAI TTS 模型 id（例如 `gpt-4o-mini-tts`）。</ParamField>
-    <ParamField path="voice" type="string">Voice 名称（例如 `alloy`、`cedar`）。</ParamField>
-    <ParamField path="instructions" type="string">显式的 OpenAI `instructions` 字段。设置后，persona 提示字段**不会**自动映射。</ParamField>
-    <ParamField path="extraBody / extra_body" type="Record<string, unknown>">额外的 JSON 字段，会在生成 OpenAI TTS 字段后合并到 `/audio/speech` 请求体中。可用于 OpenAI 兼容端点（如 Kokoro）需要的提供方特定键，例如 `lang`；不安全的 prototype 键会被忽略。</ParamField>
+    <ParamField path="speakerVoice" type="string">语音名称（例如 `alloy`、`cedar`）。旧别名：`voice`。</ParamField>
+    <ParamField path="instructions" type="string">显式的 OpenAI `instructions` 字段。设置后，角色提示字段不会自动映射。</ParamField>
+    <ParamField path="extraBody / extra_body" type="Record<string, unknown>">在生成的 OpenAI TTS 字段之后合并到 `/audio/speech` 请求体中的额外 JSON 字段。用于 OpenAI 兼容端点，例如需要 provider 特定键（如 `lang`）的 Kokoro；不安全的原型键会被忽略。</ParamField>
     <ParamField path="baseUrl" type="string">
       覆盖 OpenAI TTS 端点。解析顺序：config → `OPENAI_TTS_BASE_URL` → `https://api.openai.com/v1`。非默认值会被视为 OpenAI 兼容的 TTS 端点，因此会接受自定义模型和 voice 名称。
     </ParamField>
@@ -869,28 +879,28 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
 
   <Accordion title="OpenRouter">
     <ParamField path="apiKey" type="string">环境变量：`OPENROUTER_API_KEY`。可复用 `models.providers.openrouter.apiKey`。</ParamField>
-    <ParamField path="baseUrl" type="string">默认 `https://openrouter.ai/api/v1`。旧的 `https://openrouter.ai/v1` 会被规范化。</ParamField>
+    <ParamField path="baseUrl" type="string">默认 `https://openrouter.ai/api/v1`。旧版 `https://openrouter.ai/v1` 会被规范化。</ParamField>
     <ParamField path="model" type="string">默认 `hexgrad/kokoro-82m`。别名：`modelId`。</ParamField>
-    <ParamField path="voice" type="string">默认 `af_alloy`。别名：`voiceId`。</ParamField>
+    <ParamField path="speakerVoice" type="string">默认 `af_alloy`。旧别名：`voice`、`voiceId`。</ParamField>
     <ParamField path="responseFormat" type='"mp3" | "pcm"'>默认 `mp3`。</ParamField>
     <ParamField path="speed" type="number">提供方原生速度覆盖。</ParamField>
   </Accordion>
 
-  <Accordion title="Volcengine（BytePlus Seed Speech）">
+  <Accordion title="Volcengine (BytePlus Seed Speech)">
     <ParamField path="apiKey" type="string">环境变量：`VOLCENGINE_TTS_API_KEY` 或 `BYTEPLUS_SEED_SPEECH_API_KEY`。</ParamField>
-    <ParamField path="resourceId" type="string">默认 `seed-tts-1.0`。环境变量：`VOLCENGINE_TTS_RESOURCE_ID`。如果你的项目拥有 TTS 2.0 许可，请使用 `seed-tts-2.0`。</ParamField>
-    <ParamField path="appKey" type="string">应用 key header。默认 `aGjiRDfUWi`。环境变量：`VOLCENGINE_TTS_APP_KEY`。</ParamField>
+    <ParamField path="resourceId" type="string">默认 `seed-tts-1.0`。环境变量：`VOLCENGINE_TTS_RESOURCE_ID`。当你的项目拥有 TTS 2.0 权限时，请使用 `seed-tts-2.0`。</ParamField>
+    <ParamField path="appKey" type="string">应用密钥头。默认 `aGjiRDfUWi`。环境变量：`VOLCENGINE_TTS_APP_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">覆盖 Seed Speech TTS HTTP 端点。环境变量：`VOLCENGINE_TTS_BASE_URL`。</ParamField>
-    <ParamField path="voice" type="string">voice 类型。默认 `en_female_anna_mars_bigtts`。环境变量：`VOLCENGINE_TTS_VOICE`。</ParamField>
-    <ParamField path="speedRatio" type="number">提供方原生速度比率。</ParamField>
-    <ParamField path="emotion" type="string">提供方原生情感标签。</ParamField>
-    <ParamField path="appId / token / cluster" type="string" deprecated>旧的 Volcengine Speech Console 字段。环境变量：`VOLCENGINE_TTS_APPID`、`VOLCENGINE_TTS_TOKEN`、`VOLCENGINE_TTS_CLUSTER`（默认 `volcano_tts`）。</ParamField>
+    <ParamField path="speakerVoice" type="string">语音类型。默认 `en_female_anna_mars_bigtts`。环境变量：`VOLCENGINE_TTS_VOICE`。旧别名：`voice`。</ParamField>
+    <ParamField path="speedRatio" type="number">提供方原生语速比例。</ParamField>
+    <ParamField path="emotion" type="string">提供方原生情绪标签。</ParamField>
+    <ParamField path="appId / token / cluster" type="string" deprecated>旧版 Volcengine Speech Console 字段。环境变量：`VOLCENGINE_TTS_APPID`、`VOLCENGINE_TTS_TOKEN`、`VOLCENGINE_TTS_CLUSTER`（默认 `volcano_tts`）。</ParamField>
   </Accordion>
 
   <Accordion title="xAI">
     <ParamField path="apiKey" type="string">环境变量：`XAI_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.x.ai/v1`。环境变量：`XAI_BASE_URL`。</ParamField>
-    <ParamField path="voiceId" type="string">默认 `eve`。可用 voice：`ara`、`eve`、`leo`、`rex`、`sal`、`una`。</ParamField>
+    <ParamField path="speakerVoiceId" type="string">默认 `eve`。可用语音：`ara`、`eve`、`leo`、`rex`、`sal`、`una`。旧别名：`voiceId`。</ParamField>
     <ParamField path="language" type="string">BCP-47 语言代码或 `auto`。默认 `en`。</ParamField>
     <ParamField path="responseFormat" type='"mp3" | "wav" | "pcm" | "mulaw" | "alaw"'>默认 `mp3`。</ParamField>
     <ParamField path="speed" type="number">提供方原生速度覆盖。</ParamField>
@@ -899,10 +909,10 @@ OpenAI 和 ElevenLabs 的输出格式按上表针对各 channel 固定。
   <Accordion title="小米 MiMo">
     <ParamField path="apiKey" type="string">环境变量：`XIAOMI_API_KEY`。</ParamField>
     <ParamField path="baseUrl" type="string">默认 `https://api.xiaomimimo.com/v1`。环境变量：`XIAOMI_BASE_URL`。</ParamField>
-    <ParamField path="model" type="string">默认 `mimo-v2.5-tts`。环境变量：`XIAOMI_TTS_MODEL`。也支持 `mimo-v2-tts`。</ParamField>
-    <ParamField path="voice" type="string">默认 `mimo_default`。环境变量：`XIAOMI_TTS_VOICE`。</ParamField>
+    <ParamField path="model" type="string">默认 `mimo-v2.5-tts`。环境变量：`XIAOMI_TTS_MODEL`。也支持 `mimo-v2-tts` 和 `mimo-v2.5-tts-voicedesign`。</ParamField>
+    <ParamField path="speakerVoice" type="string">用于预设语音模型的默认值 `mimo_default`。环境变量：`XIAOMI_TTS_VOICE`。旧别名：`voice`。在 `mimo-v2.5-tts-voicedesign` 中不会发送。</ParamField>
     <ParamField path="format" type='"mp3" | "wav"'>默认 `mp3`。环境变量：`XIAOMI_TTS_FORMAT`。</ParamField>
-    <ParamField path="style" type="string">可选的自然语言风格指令，会作为用户消息发送；不会被朗读出来。</ParamField>
+    <ParamField path="style" type="string">可选的自然语言风格指令，作为用户消息发送；不会被朗读。对于 `mimo-v2.5-tts-voicedesign`，这是语音设计提示；省略时 OpenClaw 会提供默认值。</ParamField>
   </Accordion>
 </AccordionGroup>
 

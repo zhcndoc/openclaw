@@ -4,7 +4,7 @@ title: "Codex harness 运行时"
 read_when:
   - 你需要 Codex harness 运行时支持契约
   - 你正在调试原生 Codex 工具、钩子、压缩或反馈上传
-  - 你正在更改 PI 和 Codex harness 回合之间的插件行为
+  - 你正在更改 OpenClaw 和 Codex harness 回合之间的插件行为
 ---
 
 本文档说明 Codex harness 回合的运行时契约。关于设置和
@@ -13,18 +13,26 @@ read_when:
 
 ## 概览
 
-Codex 模式并不是 PI，只是在底层换了一个不同的模型调用。Codex 拥有更多
-原生模型循环的控制权，而 OpenClaw 围绕这一边界调整其插件、工具、会话和
-诊断相关接口。
+Codex 模式并不是在 OpenClaw 下方换了一个不同的模型调用。Codex 拥有更多
+原生模型循环，而 OpenClaw 会围绕这个边界适配其插件、工具、会话和
+诊断面。
 
 OpenClaw 仍然负责通道路由、会话文件、可见消息投递、
 OpenClaw 动态工具、审批、媒体投递以及转录镜像。
 Codex 负责规范化的原生线程、原生模型循环、原生工具
 续接以及原生压缩。
 
-提示路由遵循所选运行时，而不只是提供方字符串。原生 Codex 回合会接收 Codex app-server 开发者指令，而显式的 PI 兼容路由即使使用 Codex 风格的 OpenAI 认证或传输，也会保留正常的 OpenClaw/PI 系统提示。
+提示路由遵循所选运行时，而不只是提供商字符串。原生 Codex 回合会接收
+Codex app-server 开发者指令，而显式的 OpenClaw 兼容路由会保持正常的
+OpenClaw 系统提示，即使它使用的是 Codex 风格的 OpenAI 认证或传输。
 
-原生 Codex 会根据当前激活的 Codex 线程配置保留 Codex 所拥有的基础/模型指令和项目文档行为。OpenClaw 启动和恢复原生 Codex 线程时，会禁用 Codex 内置个性，因此工作区个性文件和 OpenClaw 代理身份仍然保持权威。轻量级 OpenClaw 运行仍然保留其现有的项目文档抑制。OpenClaw 开发者指令覆盖 OpenClaw 运行时相关事项，例如源通道投递、OpenClaw 动态工具、ACP 委派、适配器上下文，以及当前激活的代理工作区配置文件。OpenClaw 技能目录以及 `MEMORY.md` 和当前激活的 `BOOTSTRAP.md` 内容，会作为转回输入参考上下文投射给原生 Codex。
+原生 Codex 会根据当前激活的 Codex 线程配置，保留由 Codex 拥有的基础/模型指令和项目文档行为。
+OpenClaw 启动并恢复原生 Codex 线程时，会禁用 Codex 内置个性，以便工作区个性文件和
+OpenClaw 代理身份保持权威。轻量级 OpenClaw 运行仍会保留其现有的项目文档抑制。
+OpenClaw 开发者指令涵盖 OpenClaw 运行时关注点，例如源通道投递、OpenClaw 动态工具、ACP 委派、
+适配器上下文以及当前代理工作区配置文件。OpenClaw 技能目录和由工具路由的
+`MEMORY.md` 指针会作为回合范围内的协作开发者指令投射给原生 Codex。活动的 `BOOTSTRAP.md`
+内容和完整的 `MEMORY.md` 回退注入仍然使用回合输入引用上下文。
 
 ## 线程绑定和模型变更
 
@@ -35,13 +43,13 @@ Codex 负责规范化的原生线程、原生模型循环、原生工具
 
 ## 可见回复和心跳
 
-当直接/源聊天回合通过 Codex harness 运行时，可见回复默认使用消息工具：最终助手文本保持私密，除非
-代理调用 `message(action="send")`。这与 GPT 模型很契合，因为它们可以决定源通道输出是否有用。设置
-`messages.visibleReplies: "automatic"` 可恢复旧模式，即最终
-助手文本会自动发布。
+当直接/源聊天回合通过 Codex harness 运行时，默认会为内部 WebChat 界面自动交付最终助手回复。
+这使 Codex 与 Pi harness 提示契约保持一致：代理正常回复，而 OpenClaw 将最终文本发布到源对话。
+如果直接/源聊天应刻意保持最终助手文本私密，除非代理调用 `message(action="send")`，则设置
+`messages.visibleReplies: "message_tool"`。
 
 Codex 心跳回合默认也会在可搜索的 OpenClaw
-工具目录中获得 `heartbeat_respond`，因此代理可以记录唤醒应保持安静还是通知，而无需把该控制流编码进最终文本中。
+工具目录中获得 `heartbeat_respond`，因此代理可以记录唤醒时应保持安静还是通知，而无需把该控制流编码进最终文本中。
 
 心跳特定的主动性指导会在心跳回合本身作为 Codex 协作模式开发者指令发送。普通聊天回合会恢复 Codex 默认模式，而不是在其常规运行时提示中携带心跳哲学。当存在非空的 `HEARTBEAT.md` 时，心跳协作模式指令会指向该文件，而不是将其内容内联。
 
@@ -49,11 +57,11 @@ Codex 心跳回合默认也会在可搜索的 OpenClaw
 
 Codex harness 有三层钩子：
 
-| 层级                                  | 所有者                   | 目的                                                             |
-| ------------------------------------- | ------------------------ | ---------------------------------------------------------------- |
-| OpenClaw 插件钩子                    | OpenClaw                 | 在 PI 和 Codex harness 之间保持产品/插件兼容性。                |
-| Codex app-server 扩展中间件          | OpenClaw bundled plugins | 围绕 OpenClaw 动态工具的逐回合适配器行为。                        |
-| Codex 原生钩子                       | Codex                    | 来自 Codex 配置的底层 Codex 生命周期和原生工具策略。             |
+| Layer                                 | Owner                    | Purpose                                                             |
+| ------------------------------------- | ------------------------ | ------------------------------------------------------------------- |
+| OpenClaw plugin hooks                 | OpenClaw                 | OpenClaw 和 Codex harness 之间的产品/插件兼容性。   |
+| Codex app-server extension middleware | OpenClaw bundled plugins | 围绕 OpenClaw 动态工具的每回合适配器行为。            |
+| Codex native hooks                    | Codex                    | 来自 Codex 配置的低层级 Codex 生命周期和原生工具策略。 |
 
 OpenClaw 不使用项目级或全局的 Codex `hooks.json` 文件来路由
 OpenClaw 插件行为。对于受支持的原生工具和权限桥接，
@@ -75,10 +83,15 @@ OpenClaw 可以镜像部分事件，但除非 Codex 通过 app-server 或原生�
 回调暴露该操作，否则它不能重写原生 Codex
 线程。
 
-Codex app-server 项目通知还会为未被
-原生 `PostToolUse` 转发覆盖的原生工具完成提供异步 `after_tool_call`
-观察。这些观察仅用于遥测和插件兼容性；它们不能阻塞、延迟或修改
-原生工具调用。
+Codex app-server report-mode `PreToolUse` 事件会将插件审批请求
+延后到匹配的 app-server 审批。如果 OpenClaw 的 `before_tool_call` 钩子
+在原始载荷设置为 report 审批模式（`openclaw_approval_mode` 为 `"report"`）时返回
+`requireApproval`，原生钩子转发会记录插件审批要求并且不返回原生决策。当 Codex 针对同一次工具使用发送
+app-server 审批请求时，OpenClaw 会打开插件审批提示并将决策映射回 Codex。Codex `PermissionRequest`
+事件是单独的审批路径，在运行时为该桥接配置时，仍然可以通过 OpenClaw 审批路由。
+
+Codex app-server item 通知还会为未被原生 `PostToolUse` 转发覆盖的原生工具完成提供异步
+`after_tool_call` 观察。这些观察仅用于遥测和插件兼容性；它们不能阻止、延迟或修改原生工具调用。
 
 压缩和 LLM 生命周期投影来自 Codex app-server
 通知和 OpenClaw 适配器状态，而不是来自原生 Codex 钩子命令。OpenClaw 的
@@ -95,28 +108,28 @@ Codex runtime v1 中支持：
 
 | Surface                                       | Support                                                                          | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenAI model loop through Codex               | 支持                                                                        | Codex app-server 负责 OpenAI 回合、原生线程恢复和原生工具续接。                                                                                                                                                                                                                                                                                                                                                                                          |
-| OpenClaw channel routing and delivery         | 支持                                                                        | Telegram、Discord、Slack、WhatsApp、iMessage 和其他通道都位于模型运行时之外。                                                                                                                                                                                                                                                                                                                                                                                    |
-| OpenClaw dynamic tools                        | 支持                                                                        | Codex 会请求 OpenClaw 执行这些工具，因此 OpenClaw 仍处于执行路径中。                                                                                                                                                                                                                                                                                                                                                                                                |
-| Prompt and context plugins                    | 支持                                                                        | OpenClaw 将 OpenClaw 特定的提示/上下文投射到 Codex 回合中，同时将由 Codex 所有的基础、模型和已配置的项目文档提示保留在原生 Codex 通道中。OpenClaw 会为原生线程禁用 Codex 的内置个性，使代理工作区个性文件保持权威。原生 Codex 开发者指令只接受明确限定为 `codex_app_server` 的命令指导；旧的全局命令提示仍保留给非 Codex 提示面。 |
-| Context engine lifecycle                      | 支持                                                                        | 组装、摄取以及回合后的维护都在 Codex 回合周围运行。上下文引擎不会替代原生 Codex 压缩。                                                                                                                                                                                                                                                                                                                                                        |
-| Dynamic tool hooks                            | 支持                                                                        | `before_tool_call`、`after_tool_call` 和工具结果中间件围绕 OpenClaw 所有的动态工具运行。                                                                                                                                                                                                                                                                                                                                                                          |
-| Lifecycle hooks                               | 作为适配器观察支持                                                | `llm_input`、`llm_output`、`agent_end`、`before_compaction` 和 `after_compaction` 会使用真实的 Codex 模式载荷触发。                                                                                                                                                                                                                                                                                                                                                           |
-| Final-answer revision gate                    | 通过原生钩子转发支持                                              | Codex `Stop` 会转发到 `before_agent_finalize`；`revise` 会在最终化前要求 Codex 再进行一次模型推理。                                                                                                                                                                                                                                                                                                                                                                |
-| Native shell, patch, and MCP block or observe | 通过原生钩子转发支持                                              | 对于已提交的原生工具面，包括 Codex app-server `0.125.0` 或更新版本上的 MCP 载荷，Codex `PreToolUse` 和 `PostToolUse` 会被转发。支持阻止；不支持参数重写。                                                                                                                                                                                                                                                                               |
-| Native permission policy                      | 通过 Codex app-server 审批和兼容性原生钩子转发支持 | Codex app-server 审批请求会在 Codex 审查后经由 OpenClaw 路由。`PermissionRequest` 原生钩子转发对原生审批模式是可选的，因为 Codex 会在守护者审查之前发出它。                                                                                                                                                                                                                                                                          |
-| App-server trajectory capture                 | 支持                                                                        | OpenClaw 会记录其发送给 app-server 的请求以及它收到的 app-server 通知。                                                                                                                                                                                                                                                                                                                                                                                    |
+| 通过 Codex 的 OpenAI 模型循环               | 支持                                                                        | Codex app-server 负责 OpenAI 回合、原生线程恢复和原生工具续接。                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| OpenClaw 通道路由和投递         | 支持                                                                        | Telegram、Discord、Slack、WhatsApp、iMessage 和其他通道都位于模型运行时之外。                                                                                                                                                                                                                                                                                                                                                                                    |
+| OpenClaw 动态工具                        | 支持                                                                        | Codex 会请求 OpenClaw 执行这些工具，因此 OpenClaw 仍处于执行路径中。                                                                                                                                                                                                                                                                                                                                                                                                |
+| 提示和上下文插件                    | 支持                                                                        | OpenClaw 将 OpenClaw 特定的提示/上下文投射到 Codex 回合中，同时将由 Codex 所有的基础、模型和已配置的项目文档提示保留在原生 Codex 通道中。OpenClaw 会为原生线程禁用 Codex 的内置个性，使代理工作区个性文件保持权威。原生 Codex 开发者指令只接受明确限定为 `codex_app_server` 的命令指导；旧的全局命令提示仍保留给非 Codex 提示面。 |
+| 上下文引擎生命周期                      | 支持                                                                        | 组装、摄取以及回合后的维护都在 Codex 回合周围运行。上下文引擎不会替代原生 Codex 压缩。                                                                                                                                                                                                                                                                                                                                                        |
+| 动态工具钩子                            | 支持                                                                        | `before_tool_call`、`after_tool_call` 和工具结果中间件围绕 OpenClaw 所有的动态工具运行。                                                                                                                                                                                                                                                                                                                                                                          |
+| 生命周期钩子                               | 作为适配器观察支持                                                | `llm_input`、`llm_output`、`agent_end`、`before_compaction` 和 `after_compaction` 会使用真实的 Codex 模式载荷触发。                                                                                                                                                                                                                                                                                                                                                           |
+| 最终答案修订门控                    | 通过原生钩子转发支持                                              | Codex `Stop` 会转发到 `before_agent_finalize`；`revise` 会在最终化前要求 Codex 再进行一次模型推理。                                                                                                                                                                                                                                                                                                                                                                |
+| 原生 shell、patch 和 MCP 阻止或观察 | 通过原生钩子转发支持                                              | 对于已提交的原生工具面，包括 Codex app-server `0.125.0` 或更新版本上的 MCP 载荷，Codex `PreToolUse` 和 `PostToolUse` 会被转发。支持阻止；不支持参数重写。                                                                                                                                                                                                                                                                               |
+| 原生权限策略                      | 通过 Codex app-server 审批和兼容性原生钩子转发支持 | Codex app-server 审批请求会在 Codex 审查后经由 OpenClaw 路由。`PermissionRequest` 原生钩子转发对原生审批模式是可选的，因为 Codex 会在守护者审查之前发出它。                                                                                                                                                                                                                                                                          |
+| App-server 轨迹捕获                 | 支持                                                                        | OpenClaw 会记录其发送给 app-server 的请求以及它收到的 app-server 通知。                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Codex runtime v1 中不支持：
 
 | Surface                                             | V1 boundary                                                                                                                                     | Future path                                                                               |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Native tool argument mutation                       | Codex 原生预工具钩子可以阻止，但 OpenClaw 不会重写 Codex 原生工具参数。                                               | 需要 Codex 钩子/模式支持来替换工具输入。                            |
-| Editable Codex-native transcript history            | Codex 负责规范化的原生线程历史。OpenClaw 负责镜像并可以投射未来上下文，但不应修改不受支持的内部结构。 | 如果需要原生线程手术，请添加显式的 Codex app-server API。                    |
-| `tool_result_persist` for Codex-native tool records | 该钩子转换的是 OpenClaw 所有的转录写入，而不是 Codex 原生工具记录。                                                           | 可以镜像转换后的记录，但规范化重写需要 Codex 支持。              |
-| Rich native compaction metadata                     | OpenClaw 可以请求原生压缩，但不会收到稳定的保留/丢弃列表、令牌增量、完成摘要或摘要载荷。   | 需要更丰富的 Codex 压缩事件。                                                     |
-| Compaction intervention                             | OpenClaw 不允许插件或上下文引擎否决、重写或替换原生 Codex 压缩。                                             | 如果插件需要否决或重写原生压缩，请添加 Codex 预/后压缩钩子。 |
-| Byte-for-byte model API request capture             | OpenClaw 可以捕获 app-server 请求和通知，但 Codex 核心会在内部构建最终的 OpenAI API 请求。                      | 需要一个 Codex 模型请求跟踪事件或调试 API。                                   |
+| 原生工具参数变更                       | Codex 原生预工具钩子可以阻止，但 OpenClaw 不会重写 Codex 原生工具参数。                                               | 需要 Codex 钩子/模式支持来替换工具输入。                            |
+| 可编辑的 Codex 原生转录历史            | Codex 负责规范化的原生线程历史。OpenClaw 负责镜像并可以投射未来上下文，但不应修改不受支持的内部结构。 | 如果需要原生线程手术，请添加显式的 Codex app-server API。                    |
+| 用于 Codex 原生工具记录的 `tool_result_persist` | 该钩子转换的是 OpenClaw 所有的转录写入，而不是 Codex 原生工具记录。                                                           | 可以镜像转换后的记录，但规范化重写需要 Codex 支持。              |
+| 丰富的原生压缩元数据                     | OpenClaw 可以请求原生压缩，但不会收到稳定的保留/丢弃列表、令牌增量、完成摘要或摘要载荷。   | 需要更丰富的 Codex 压缩事件。                                                     |
+| 压缩干预                             | OpenClaw 不允许插件或上下文引擎否决、重写或替换原生 Codex 压缩。                                             | 如果插件需要否决或重写原生压缩，请添加 Codex 预/后压缩钩子。 |
+| 按字节精确的模型 API 请求捕获             | OpenClaw 可以捕获 app-server 请求和通知，但 Codex 核心会在内部构建最终的 OpenAI API 请求。                      | 需要一个 Codex 模型请求跟踪事件或调试 API。                                   |
 
 ## 原生权限和 MCP 询问
 
@@ -163,7 +176,7 @@ Codex 审阅和手动压缩回合可以拒绝同回合引导。在这种情况�
 
 OpenClaw 继续负责媒体交付和媒体提供方选择。图像、视频、音乐、PDF、TTS 和媒体理解会使用匹配的提供方/模型设置，例如 `agents.defaults.imageGenerationModel`、`videoGenerationModel`、`pdfModel` 和 `messages.tts`。
 
-文本、图像、视频、音乐、TTS、批准以及消息工具输出都会继续通过正常的 OpenClaw 交付路径。媒体生成不需要 PI。当 Codex 发出带有 `savedPath` 的原生图像生成项时，OpenClaw 会通过正常的回复媒体路径转发该精确文件，即使 Codex 回合没有助手文本也是如此。
+文本、图像、视频、音乐、TTS、批准和消息工具输出继续通过正常的 OpenClaw 交付路径。媒体生成不需要旧版运行时。当 Codex 生成带有 `savedPath` 的原生图像生成项时，OpenClaw 会通过正常的回复媒体路径转发该精确文件，即使该 Codex 回合没有助手文本。
 
 ## 相关内容
 

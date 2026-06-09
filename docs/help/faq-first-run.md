@@ -58,10 +58,10 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="心跳一直被跳过。跳过原因是什么意思？">
     常见的心跳跳过原因：
 
-    - `quiet-hours`：当前不在配置的活跃时间窗口内
-    - `empty-heartbeat-file`：`HEARTBEAT.md` 存在，但只包含空白/只有标题的占位内容
-    - `no-tasks-due`：`HEARTBEAT.md` 任务模式已启用，但当前还没有任何任务到期
-    - `alerts-disabled`：所有心跳可见性都被禁用（`showOk`、`showAlerts` 和 `useIndicator` 都关闭）
+    - `quiet-hours`: 处于配置的活动时间窗口之外
+    - `empty-heartbeat-file`: `HEARTBEAT.md` 存在，但只包含空白、注释、标题、围栏，或空检查清单脚手架内容
+    - `no-tasks-due`: `HEARTBEAT.md` 任务模式已启用，但目前没有任何任务间隔到期
+    - `alerts-disabled`: 所有心跳可见性都已禁用（`showOk`、`showAlerts` 和 `useIndicator` 都关闭）
 
     在任务模式下，只有一次真实的心跳运行完成后，到期时间戳才会前进。被跳过的运行不会把任务标记为完成。
 
@@ -151,7 +151,8 @@ sidebarTitle: "首次运行 FAQ"
 
     如果你想要额外余量（日志、媒体、其他服务），**推荐 2GB**，但这不是硬性最低要求。
 
-    提示：小型 Pi/VPS 可以托管 Gateway，而你可以在笔记本/手机上配对**节点**，用于本地屏幕/摄像头/画布或命令执行。参见 [节点](/nodes)。
+    Tip: a small Raspberry Pi/VPS can host the Gateway, and you can pair **nodes** on your laptop/phone for
+    local screen/camera/canvas or command execution. See [Nodes](/nodes).
 
   </Accordion>
 
@@ -364,8 +365,9 @@ sidebarTitle: "首次运行 FAQ"
     - 把该目录加入你的用户 PATH（Windows 上不需要 `\bin` 后缀；大多数系统上它是 `%AppData%\npm`）。
     - 更新 PATH 后关闭并重新打开 PowerShell。
 
-    如果你想要最顺滑的 Windows 设置，请改用 **WSL2**，而不是原生 Windows。
-    文档：[Windows](/platforms/windows)。
+    For desktop setup, use the native **Windows Hub** app. For terminal-only
+    setup, the PowerShell installer and WSL2 Gateway paths are both supported.
+    Docs: [Windows](/platforms/windows).
 
   </Accordion>
 
@@ -561,28 +563,31 @@ sidebarTitle: "首次运行 FAQ"
   </Accordion>
 
   <Accordion title="How does Codex auth work?">
-    OpenClaw 支持通过 OAuth（ChatGPT 登录）使用 **OpenAI Code（Codex）**。常见设置请使用
-    `openai/gpt-5.5`：ChatGPT/Codex 订阅认证加上原生 Codex app-server 执行。`openai-codex/gpt-*`
-    模型引用是旧配置，可由 `openclaw doctor --fix` 修复。直接 OpenAI API key
-    访问仍然可用于非代理 OpenAI API 表面，也可通过按顺序排列的 `openai-codex`
-    API key 配置文件用于代理模型。
-    参见 [模型提供商](/concepts/model-providers) 和 [引导（CLI）](/start/wizard)。
+    OpenClaw supports **OpenAI Code (Codex)** via OAuth (ChatGPT sign-in). Use
+    `openai/gpt-5.5` for the common setup: ChatGPT/Codex subscription auth plus
+    native Codex app-server execution. Legacy Codex GPT refs are
+    legacy config repaired by `openclaw doctor --fix`. Direct OpenAI API-key
+    access remains available for non-agent OpenAI API surfaces and for agent
+    models through an ordered `openai` API-key profile.
+    See [Model providers](/concepts/model-providers) and [Onboarding (CLI)](/start/wizard).
   </Accordion>
 
-  <Accordion title="Why does OpenClaw still mention openai-codex?">
-    `openai-codex` 是 ChatGPT/Codex OAuth 的提供商和认证配置文件 id。
-    旧配置也曾把它当作模型前缀：
+  <Accordion title="Why does OpenClaw still mention legacy OpenAI Codex prefix?">
+    `openai` is the provider and auth-profile id for both OpenAI API keys and
+    ChatGPT/Codex OAuth. You may still see legacy OpenAI Codex prefix in legacy config and
+    migration warnings.
+    Older configs also used it as a model prefix:
 
-    - `openai/gpt-5.5` = ChatGPT/Codex 订阅认证，代理轮次使用原生 Codex 运行时
-    - `openai-codex/gpt-5.5` = 可由 `openclaw doctor --fix` 修复的旧模型路由
-    - `openai/gpt-5.5` 加上一个按顺序排列的 `openai-codex` API key 配置文件 = 用于 OpenAI 代理模型的 API key 认证
-    - `openai-codex:...` = 认证配置文件 id，不是模型引用
+    - `openai/gpt-5.5` = ChatGPT/Codex subscription auth with native Codex runtime for agent turns
+    - legacy Codex GPT-5.5 ref = legacy model route repaired by `openclaw doctor --fix`
+    - `openai/gpt-5.5` plus an ordered `openai` API-key profile = API-key auth for an OpenAI agent model
+    - legacy Codex auth profile ids = legacy auth profile id migrated by `openclaw doctor --fix`
 
-    如果你想要直接的 OpenAI Platform 计费/限额路径，请设置
-    `OPENAI_API_KEY`。如果你想要 ChatGPT/Codex 订阅认证，请使用
-    `openclaw models auth login --provider openai-codex` 登录。模型引用保持为
-    `openai/gpt-5.5`；`openai-codex/*` 模型引用属于旧配置，会被
-    `openclaw doctor --fix` 重写。
+    If you want the direct OpenAI Platform billing/limit path, set
+    `OPENAI_API_KEY`. If you want ChatGPT/Codex subscription auth, sign in with
+    `openclaw models auth login --provider openai`. Keep the model ref as
+    `openai/gpt-5.5`; legacy Codex model refs are legacy config that
+    `openclaw doctor --fix` rewrites.
 
   </Accordion>
 
@@ -782,8 +787,8 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="把 OpenClaw 运行在专用机器上有多重要？">
     不是必须，但**为了可靠性和隔离性，推荐这样做**。
 
-    - **专用主机（VPS/Mac mini/Pi）：** 常开、更少睡眠/重启中断、更干净的权限、更容易持续运行。
-    - **共享笔记本/台式机：** 做测试和主动使用完全没问题，但当机器睡眠或更新时要预期暂停。
+    - **Dedicated host (VPS/Mac mini/Raspberry Pi):** always-on, fewer sleep/reboot interruptions, cleaner permissions, easier to keep running.
+    - **Shared laptop/desktop:** totally fine for testing and active use, but expect pauses when the machine sleeps or updates.
 
     如果你想兼得两者，建议把 Gateway 放在专用主机上，并把笔记本作为**节点**配对，以便使用本地屏幕/摄像头/执行工具。参见 [节点](/nodes)。
     安全指导请阅读 [安全性](/gateway/security)。
@@ -812,8 +817,8 @@ sidebarTitle: "首次运行 FAQ"
     - **推荐：** 如果你运行多个频道、浏览器自动化或媒体工具，建议 2GB RAM 或更多。
     - **操作系统：** Ubuntu LTS 或其他现代 Debian/Ubuntu。
 
-    如果你在 Windows 上，**WSL2 是最容易的 VM 风格设置**，并且工具兼容性最好。参见 [Windows](/platforms/windows)、[VPS 托管](/vps)。
-    如果你在 VM 里运行 macOS，请参见 [macOS VM](/install/macos-vm)。
+    如果你在 Windows 上，请使用 **Windows Hub** 进行桌面设置，或者在你明确想要一个具备广泛工具兼容性的 Linux 风格 Gateway VM 时使用 WSL2。参见 [Windows](/platforms/windows)、[VPS 托管](/vps)。
+    如果你在 VM 中运行 macOS，请参见 [macOS VM](/install/macos-vm)。
 
   </Accordion>
 </AccordionGroup>

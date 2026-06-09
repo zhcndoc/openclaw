@@ -32,7 +32,9 @@ read_when:
     {
       agents: {
         defaults: {
-          model: { primary: "together/moonshotai/Kimi-K2.5" },
+          model: {
+            primary: "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+          },
         },
       },
     }
@@ -50,34 +52,31 @@ openclaw onboard --non-interactive \
 ```
 
 <Note>
-引导预设会将 `together/moonshotai/Kimi-K2.5` 设置为默认
-模型。
+引导预设会将
+`together/meta-llama/Llama-3.3-70B-Instruct-Turbo` 设置为默认模型。
 </Note>
 
 ## 内置目录
 
 OpenClaw 附带以下内置 Together 目录：
 
-| Model ref                                                    | Name                                   | Input       | Context    | Notes                            |
-| ------------------------------------------------------------ | -------------------------------------- | ----------- | ---------- | -------------------------------- |
-| `together/moonshotai/Kimi-K2.5`                              | Kimi K2.5                              | text, image | 262,144    | 默认模型；已启用推理            |
-| `together/zai-org/GLM-4.7`                                   | GLM 4.7 Fp8                            | text        | 202,752    | 通用文本模型                     |
-| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo`           | Llama 3.3 70B Instruct Turbo           | text        | 131,072    | 快速指令模型                     |
-| `together/meta-llama/Llama-4-Scout-17B-16E-Instruct`         | Llama 4 Scout 17B 16E Instruct         | text, image | 10,000,000 | 多模态                           |
-| `together/meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | Llama 4 Maverick 17B 128E Instruct FP8 | text, image | 20,000,000 | 多模态                           |
-| `together/deepseek-ai/DeepSeek-V3.1`                         | DeepSeek V3.1                          | text        | 131,072    | 通用文本模型                     |
-| `together/deepseek-ai/DeepSeek-R1`                           | DeepSeek R1                            | text        | 131,072    | 推理模型                         |
-| `together/moonshotai/Kimi-K2-Instruct-0905`                  | Kimi K2-Instruct 0905                  | text        | 262,144    | 次级 Kimi 文本模型               |
+| Model ref                                          | Name                         | Input       | Context | Notes                |
+| -------------------------------------------------- | ---------------------------- | ----------- | ------- | -------------------- |
+| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | Default model        |
+| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | Kimi reasoning model |
+| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | Reasoning text model |
+| `together/Qwen/Qwen2.5-7B-Instruct-Turbo`          | Qwen2.5 7B Instruct Turbo    | text        | 32,768  | Fast text model      |
+| `together/zai-org/GLM-5.1`                         | GLM 5.1 FP4                  | text        | 202,752 | Reasoning text model |
 
 ## 视频生成
 
 捆绑的 `together` 插件还通过共享的 `video_generate` 工具注册了视频生成。
 
-| Property             | Value                                 |
-| -------------------- | ------------------------------------- |
-| Default video model  | `together/Wan-AI/Wan2.2-T2V-A14B`     |
-| Modes                | text-to-video, single-image reference |
-| Supported parameters | `aspectRatio`, `resolution`           |
+| Property             | Value                                                                    |
+| -------------------- | ------------------------------------------------------------------------ |
+| Default video model  | `together/Wan-AI/Wan2.2-T2V-A14B`                                        |
+| Modes                | text-to-video; single-image reference only with `Wan-AI/Wan2.2-I2V-A14B` |
+| Supported parameters | `aspectRatio`, `resolution`                                              |
 
 要将 Together 用作默认视频提供方：
 

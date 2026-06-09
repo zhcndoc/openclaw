@@ -1,8 +1,8 @@
 ---
-summary: "从网关暴露一个与 OpenResponses 兼容的 /v1/responses HTTP 端点"
+summary: "Expose an OpenResponses-compatible `/v1/responses` HTTP endpoint from the gateway"
 read_when:
-  - 集成支持 OpenResponses API 的客户端
-  - 你需要基于条目的输入、客户端工具调用或 SSE 事件
+  - Integrate with clients that support the OpenResponses API
+  - You need item-based inputs, client tool calls, or SSE events
 title: "OpenResponses API"
 ---
 
@@ -71,11 +71,11 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
 - `input`: 字符串或条目对象数组。
 - `instructions`: 合并到系统提示中。
 - `tools`: 客户端工具定义（函数工具）。
-- `tool_choice`: 过滤或要求客户端工具。
+- `tool_choice`: `"auto"`、`"none"`、`"required"`，或 `{ "type": "function", "name": "..." }`，用于筛选或要求客户端工具。
 - `stream`: 启用 SSE 流式传输。
 - `max_output_tokens`: 尽力而为的输出上限（取决于提供方）。
-- `temperature`: 尽力而为的采样温度，转发给提供方。ChatGPT 相关的 Codex Responses 后端会忽略它，因为它使用固定的服务端采样。
-- `top_p`: 尽力而为的 nucleus 采样，转发给提供方。与 `temperature` 相同，Codex Responses 也有相同的注意事项。
+- `temperature`: 转发给提供方的尽力而为采样温度。ChatGPT 기반 Codex Responses 后端会忽略它，因为该后端使用固定的服务端采样。
+- `top_p`: 转发给提供方的尽力而为 nucleus sampling。与 `temperature` 一样适用于 Codex Responses 的注意事项。
 - `user`: 稳定的会话路由。
 
 已接受但**当前忽略**：
@@ -118,12 +118,14 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
 
 ## 工具（客户端侧函数工具）
 
-使用 `tools: [{ type: "function", function: { name, description?, parameters? } }]` 提供工具。
+通过 `tools: [{ type: "function", name, description?, parameters? }]` 提供工具。
 
 如果代理决定调用某个工具，响应会返回一个 `function_call` 输出条目。
 然后你需要发送后续请求并带上 `function_call_output` 来继续这一轮对话。
 
-## 图片（`input_image`）
+对于 `tool_choice: "required"` 和固定函数的 `tool_choice`，该端点会缩小暴露给客户端的函数工具集，指示运行时在响应前调用客户端工具，并在未包含匹配的结构化客户端工具调用时拒绝该轮请求。此契约适用于调用方提供的 HTTP `tools` 列表，而不是所有内部 OpenClaw 代理工具。非流式请求返回带有 `api_error` 的 `502`；流式请求发出 `response.failed` 事件。这与 `/v1/chat/completions` 契约一致。
+
+## 图像（`input_image`）
 
 支持 base64 或 URL 来源：
 
@@ -174,9 +176,9 @@ OpenClaw 的网关可以提供一个与 OpenResponses 兼容的 `POST /v1/respon
   光栅化为图像并传递给模型，而注入的文件块会使用占位符
   `[PDF content rendered to images]`。
 
-PDF 解析由捆绑的 `document-extract` 插件提供，该插件使用
-适用于 Node 的 `pdfjs-dist` 旧版构建（无 worker）。现代版 PDF.js 构建
-需要浏览器 worker/DOM 全局对象，因此在网关中不会使用它。
+PDF 解析由随附的 `document-extract` 插件提供，该插件使用
+`clawpdf` 及其打包的 PDFium WebAssembly 运行时进行文本提取和
+页面渲染。
 
 URL 抓取默认值：
 
@@ -266,7 +268,7 @@ URL 抓取默认值：
 
 - URL 允许列表会在抓取之前以及重定向跳转过程中执行。
 - 将主机名加入允许列表并不会绕过私有/内部 IP 阻止。
-- 对于面向互联网暴露的网关，除了应用层防护外，还应 लागू 网络出口控制。
+- 对于面向互联网暴露的网关，除了应用层防护外，还应进行网络出口控制。
   参见 [安全](/gateway/security)。
 
 ## 流式传输（SSE）

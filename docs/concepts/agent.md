@@ -38,7 +38,9 @@ OpenClaw 使用单个代理工作区目录（`agents.defaults.workspace`）作�
 
 `BOOTSTRAP.md` 仅会为**全新工作区**创建（不存在其他引导文件时）。在其待处理期间，OpenClaw 会将其保留在 Project Context 中，并为初始仪式添加系统提示词级别的引导说明，而不是把它复制到用户消息中。如果你在完成仪式后将其删除，那么在后续重启时它不应被重新创建。
 
-要完全禁用引导文件创建（适用于预置工作区），请设置：
+在观察到工作区后，OpenClaw 还会为该工作区路径保留一个 state-dir 证明标记。如果最近已证明的工作区消失或被清空，启动时会拒绝静默地重新播种 `BOOTSTRAP.md`；请恢复工作区，或使用完整的 onboard reset，这样工作区和标记会一起被清除。
+
+To disable bootstrap file creation entirely (for pre-seeded workspaces), set:
 
 ```json5
 { agents: { defaults: { skipBootstrap: true } } }
@@ -59,11 +61,17 @@ OpenClaw 会从以下位置加载技能（优先级从高到低）：
 - 内置（随安装包提供）
 - 额外技能目录：`skills.load.extraDirs`
 
-技能可以通过配置/环境变量进行门控（参见 [Gateway 配置](/gateway/configuration) 中的 `skills`）。
+Skill roots can contain grouped folders such as
+`<workspace>/skills/personal/foo/SKILL.md`; the skill is still exposed by its
+flat frontmatter name, for example `foo`.
+
+Skills can be gated by config/env (see `skills` in [Gateway configuration](/gateway/configuration)).
 
 ## 运行时边界
 
-这个内嵌代理运行时基于 Pi agent core（模型、工具和提示流水线）构建。会话管理、发现、工具绑定和通道投递是建立在该核心之上的 OpenClaw 自有层。
+The embedded agent runtime is OpenClaw-owned: model discovery, tool wiring,
+prompt assembly, session management, and channel delivery share one integrated
+runtime surface.
 
 ## 会话
 

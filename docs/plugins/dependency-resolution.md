@@ -32,22 +32,23 @@ OpenClaw 只负责插件生命周期：
 
 OpenClaw 为每种来源使用稳定的根目录：
 
-- npm 包安装到 `~/.openclaw/npm`
-- git 包克隆到 `~/.openclaw/git`
-- 本地/路径/归档安装会被复制或引用，不进行依赖修复
+- npm 包会安装到 `~/.openclaw/npm/projects/<encoded-package>` 下的每个插件项目中
+- git 包会克隆到 `~/.openclaw/git`
+- 本地/路径/归档安装会被复制或引用，而不会修复依赖
 
-npm 安装在 npm 根目录下运行：
+npm 安装会在该每插件项目根目录中运行：
 
 ```bash
-cd ~/.openclaw/npm
+cd ~/.openclaw/npm/projects/<encoded-package>
 npm install --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund
 ```
 
-`openclaw plugins install npm-pack:<path.tgz>` 使用相同的受管理 npm 根目录来处理本地 npm-pack tarball。OpenClaw 读取 tarball 的 npm 元数据，将其作为复制的 `file:` 依赖添加到受管理根目录中，运行正常的 npm install，然后在信任该插件之前验证已安装的 lockfile 元数据。此流程用于包验收和发布候选验证，以便本地 pack 产物的行为与其模拟的 registry 产物一致。
+`openclaw plugins install npm-pack:<path.tgz>` 会将该本地 npm-pack tarball 也使用同一个每插件 npm 项目根目录。OpenClaw 会读取该 tarball 的 npm 元数据，将其作为复制的 `file:` 依赖添加到受管理项目中，运行正常的 npm install，然后在信任插件之前验证已安装的 lockfile 元数据。
+这用于包验收和发布候选证明，即本地 pack 产物应当像它所模拟的注册表产物一样工作。
 
-npm 可能会将传递依赖提升到插件包旁边的 `~/.openclaw/npm/node_modules`。OpenClaw 在信任安装前会扫描受管理的 npm 根目录，并在卸载时使用 npm 删除 npm 管理的包，因此被提升的运行时依赖仍然保留在受管理清理边界内。
+npm 可能会将传递依赖提升到每插件项目的 `node_modules` 中，位于插件包旁边。OpenClaw 在信任安装前会扫描受管理项目根目录，并在卸载时删除该项目，因此提升上来的运行时依赖会留在该插件的清理边界内。
 
-已发布的 npm 插件包可以包含 `npm-shrinkwrap.json`。npm 会在安装期间使用该可发布 lockfile，而 OpenClaw 的受管理 npm 根目录通过正常的 npm install 路径支持它。OpenClaw 所拥有的可发布插件包必须包含从该插件包已发布依赖图生成的包本地 shrinkwrap：
+已发布的 npm 插件包可以携带 `npm-shrinkwrap.json`。npm 会在安装期间使用这个可发布的 lockfile，而 OpenClaw 的受管理 npm 项目根目录会通过正常的 npm install 路径支持它。OpenClaw 拥有的可发布插件包必须包含一个包本地的 shrinkwrap，它由该插件包已发布的依赖图生成：
 
 ```bash
 pnpm deps:shrinkwrap:generate
@@ -58,7 +59,7 @@ pnpm deps:shrinkwrap:check
 
 OpenClaw 所拥有的 npm 插件包也可以通过显式的 `bundledDependencies` 发布。npm publish 路径会覆盖运行时依赖名称列表，从已发布的包清单中移除仅开发用的工作区元数据，对包本地运行时依赖执行无脚本的 npm install，然后在打包或发布插件 tarball 时包含这些依赖文件。包括 Codex 和 ACP 运行时在内的原生依赖较重的包会通过 `openclaw.release.bundleRuntimeDependencies: false` 退出该流程；这些包仍然会附带它们的 shrinkwrap，但 npm 会在安装期间解析运行时依赖，而不是将每个平台二进制都嵌入插件 tarball。根 `openclaw` 包不会捆绑其完整依赖树。
 
-导入 `openclaw/plugin-sdk/*` 的插件会将 `openclaw` 声明为 peer dependency。OpenClaw 不允许 npm 将宿主包的单独 registry 副本安装到受管理根目录中，因为过期的宿主包会影响后续插件安装期间的 npm peer 解析。受管理的 npm 安装会跳过共享根的 npm peer 解析/物化，而 OpenClaw 会在安装、更新或卸载后，对声明宿主 peer 的已安装包重新建立插件本地的 `node_modules/openclaw` 链接。
+导入 `openclaw/plugin-sdk/*` 的插件会将 `openclaw` 声明为 peer 依赖。OpenClaw 不允许 npm 将宿主包的注册表副本单独安装到受管理项目中，因为过时的宿主包会影响该插件内部的 npm peer 解析。受管理的 npm 安装会跳过 npm peer 解析/实体化，并且 OpenClaw 会在安装或更新后，为声明了宿主 peer 的已安装包重新建立插件本地的 `node_modules/openclaw` 链接。
 
 git 安装会克隆或刷新仓库，然后运行：
 
@@ -113,11 +114,11 @@ workspace 依赖可用，并且编辑会被直接拾取。源码
 检出开发仅支持 pnpm；在仓库根目录直接执行 `npm install` 不是
 准备捆绑插件依赖的受支持方式。
 
-| 安装形态                    | 捆绑插件位置                    | 依赖所有者                                                     |
-| --------------------------- | -------------------------------- | -------------------------------------------------------------- |
-| `npm install -g openclaw`   | 包内构建时运行时树               | OpenClaw 包和显式的插件安装/更新/doctor 流程     |
-| Git 检出加 `pnpm install`   | `extensions/<id>` workspace 包   | pnpm workspace，包括每个插件包自身的依赖 |
-| `openclaw plugins install ...` | 受管理的 npm/git/ClawHub 插件根目录 | 插件安装/更新流程                                       |
+| Install shape                    | Bundled plugin location               | Dependency owner                                                     |
+| -------------------------------- | ------------------------------------- | -------------------------------------------------------------------- |
+| `npm install -g openclaw`        | Built runtime tree inside the package | OpenClaw 包和显式的插件安装/更新/doctor 流程     |
+| Git checkout plus `pnpm install` | `extensions/<id>` workspace packages  | pnpm 工作区，包括每个插件包自身的依赖 |
+| `openclaw plugins install ...`   | Managed npm project/git/ClawHub root  | 插件安装/更新流程                                       |
 
 ## 旧版清理
 
@@ -130,4 +131,5 @@ Node-prefix 包符号链接、`.openclaw-runtime-deps*` 清单、生成的插件
 也会在裁剪旧目标根目录之前移除这些全局符号链接，以避免升级后
 留下悬空的 ESM 包导入。
 
-这些路径只是历史遗留垃圾。新的安装不应创建它们。
+旧版 npm 安装也曾使用共享的 `~/.openclaw/npm/node_modules` 根目录。
+当前的 install、update、uninstall 和 doctor 流程仍然只将该旧的扁平根目录用于恢复和清理。新的 npm 安装应改为创建每插件项目根目录。

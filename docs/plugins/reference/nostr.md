@@ -1,13 +1,13 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Nostr 通道层。"
+summary: "OpenClaw Nostr 频道插件，用于 NIP-04 加密直接消息。"
 read_when:
-  - You are installing, configuring, or auditing the nostr plugin
+  - 你正在安装、配置或审计 nostr 插件
 title: "Nostr 插件"
 ---
 
 # Nostr 插件
 
-添加用于发送和接收 OpenClaw 消息的 Nostr 通道层。
+OpenClaw Nostr 频道插件，用于 NIP-04 加密直接消息。
 
 ## 分发
 

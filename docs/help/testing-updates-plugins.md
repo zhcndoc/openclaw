@@ -16,21 +16,20 @@ sidebarTitle: "更新和插件测试"
 
 更新和插件测试保护以下契约：
 
-- 包 tarball 是完整的，具有有效的 `dist/postinstall-inventory.json`，
-  并且不依赖于解包后的仓库文件。
+- 一个包 tarball 是完整的，具有有效的 `dist/postinstall-inventory.json`，
+  且不依赖未解包的仓库文件。
 - 用户可以从较旧的已发布包迁移到候选包，
-  而不会丢失配置、agents、sessions、workspaces、插件 allowlist，或
+  而不会丢失配置、agents、sessions、workspaces、插件 allowlist 或
   channel 配置。
 - `openclaw doctor --fix --non-interactive` 负责旧版清理和修复
-  路径。启动过程不应为过时的
-  插件状态增加隐藏的兼容性迁移。
-- 插件安装可从本地目录、git 仓库、npm 包以及
-  ClawHub registry 路径工作。
-- 插件 npm 依赖会安装到受管理的 npm 根目录中，在建立信任前进行扫描，
-  并在卸载时通过 npm 移除，这样提升的依赖就不会
-  残留。
-- 当没有变化时，插件更新应保持稳定：安装记录、已解析的
-  来源、已安装的依赖布局以及启用状态都应保持完好。
+  路径。启动阶段不应再为过时的插件状态引入隐藏的兼容性迁移。
+- 插件安装可来自本地目录、git 仓库、npm 包，以及
+  ClawHub registry 路径。
+- 插件的 npm 依赖会在每个插件对应的受管 npm 项目中安装，
+  在信任前进行扫描，并在卸载时通过 npm 删除，因此 hoisted
+  依赖不会残留。
+- 当没有任何变化时，插件更新是稳定的：安装记录、解析后的
+  来源、已安装的依赖布局以及启用状态都保持不变。
 
 ## 开发期间的本地验证
 
@@ -133,10 +132,10 @@ Package Acceptance 是 GitHub 原生的包门禁。它将一个候选包解析�
   使用固定的 `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret。
 - `source=artifact`: 复用由另一个 Actions 运行上传的 tarball。
 
-Full Release Validation 默认使用 `source=artifact`，从
-已解析的发布 SHA 构建。对于发布后的证明，请传入
-`package_acceptance_package_spec=openclaw@YYYY.M.D`，这样同一套升级矩阵
-就会改为针对已发布的 npm 包。
+Full Release Validation uses `source=artifact` by default, built from the
+resolved release SHA. For post-publish proof, pass
+`package_acceptance_package_spec=openclaw@YYYY.M.PATCH` so the same upgrade matrix
+targets the shipped npm package instead.
 
 发布检查会针对 package/update/restart/plugin 套件调用 Package Acceptance：
 
@@ -217,18 +216,18 @@ gh workflow run package-acceptance.yml \
 
 当更改更新或插件行为时，请在最可能以正确原因失败的最低层添加覆盖：
 
-- 纯路径或元数据逻辑：在源码旁边添加单元测试。
-- 包清单或打包文件行为：`package-dist-inventory` 或 tarball
-  检查器测试。
-- CLI 安装/更新行为：Docker lane 断言或 fixture。
-- 已发布版本迁移行为：`published-upgrade-survivor` 场景。
-- 由更新负责的重启行为：`update-restart-auth`。
-- registry/包源行为：`test:docker:plugins` fixture 或 ClawHub
-  fixture server。
-- 依赖布局或清理行为：同时断言运行时执行和
-  文件系统边界。npm 依赖可能会在受管理的 npm
-  根目录下被 hoist，所以测试应证明扫描/清理的是根目录，而不是假设存在
-  package-local 的 `node_modules` 树。
+- Pure path or metadata logic: unit test beside the source.
+- Package inventory or packed-file behavior: `package-dist-inventory` or tarball
+  checker test.
+- CLI install/update behavior: Docker lane assertion or fixture.
+- Published-release migration behavior: `published-upgrade-survivor` scenario.
+- Update-owned restart behavior: `update-restart-auth`.
+- Registry/package source behavior: `test:docker:plugins` fixture or ClawHub
+  fixture server.
+- Dependency layout or cleanup behavior: assert both runtime execution and the
+  filesystem boundary. npm dependencies may be hoisted inside the plugin's
+  managed npm project, so tests should prove that project is scanned/cleaned
+  instead of assuming only the plugin package-local `node_modules` tree.
 
 默认保持新的 Docker fixtures 为 hermetic。除非测试目标就是 live registry 行为，否则使用本地 fixture registry 和伪造包。
 

@@ -307,7 +307,7 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
 传入媒体会被复制到活动沙箱工作区（`media/inbound/*`）。
 
 <Note>
-**技能说明：** `read` 工具以沙箱为根。使用 `workspaceAccess: "none"` 时，OpenClaw 会将符合条件的技能镜像到沙箱工作区（`.../skills`），以便读取。使用 `"rw"` 时，工作区技能可从 `/workspace/skills` 读取。
+**技能说明：** `read` 工具以沙箱根目录为基础。对于 `workspaceAccess: "none"`，OpenClaw 会将符合条件的技能镜像到沙箱工作区（`.../skills`）中，以便读取。对于 `"rw"`，工作区技能可从 `/workspace/skills` 读取，而符合条件的受管、捆绑或插件技能会物化到生成的只读路径 `/workspace/.openclaw/sandbox-skills/skills`。
 </Note>
 
 ## 自定义绑定挂载
@@ -367,7 +367,7 @@ OpenShell 沙箱仍然通过正常的沙箱生命周期进行管理：
 默认 Docker 镜像：`openclaw-sandbox:bookworm-slim`
 
 <Note>
-**源代码检出 vs npm install**
+**源码检出 vs npm install**
 
 `scripts/sandbox-setup.sh`、`scripts/sandbox-common-setup.sh` 和 `scripts/sandbox-browser-setup.sh` 辅助脚本仅在从 [源码检出](https://github.com/openclaw/openclaw) 运行时可用。它们不包含在 npm 包中。
 

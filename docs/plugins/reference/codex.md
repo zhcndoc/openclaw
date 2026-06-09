@@ -1,5 +1,5 @@
 ---
-summary: "Codex 应用服务器 harness 和由 Codex 管理的 GPT 模型目录。"
+summary: "OpenClaw Codex app-server 运行时和模型提供方插件，带有由 Codex 管理的 GPT 目录。"
 read_when:
   - 你正在安装、配置或审计 codex 插件
 title: "Codex 插件"
@@ -7,7 +7,7 @@ title: "Codex 插件"
 
 # Codex 插件
 
-Codex 应用服务器 harness 和由 Codex 管理的 GPT 模型目录。
+OpenClaw Codex app-server 运行时和模型提供方插件，带有由 Codex 管理的 GPT 目录。
 
 ## 分发
 

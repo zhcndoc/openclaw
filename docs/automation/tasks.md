@@ -101,7 +101,7 @@ sidebarTitle: "后台任务"
   <Accordion title="Cron 和媒体的通知默认值">
     主会话 cron 任务默认使用 `silent` 通知策略——它们会创建记录用于跟踪，但不会生成通知。隔离 cron 任务也默认是 `silent`，但因为它们在自己的会话中运行，所以更显眼。
 
-    基于会话的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成结果会作为内部唤醒返回给原始代理会话，以便代理可以编写后续消息并自行附加已完成的媒体。生成媒体的完成事件需要通过消息工具投递：代理必须先使用 `message` 工具发送已完成的媒体，然后回复 `NO_REPLY`。如果请求者会话不再处于活动状态，或者其活动唤醒失败，并且完成代理遗漏了部分或全部生成的媒体，OpenClaw 会向原始通道目标发送幂等的直接回退投递，仅包含缺失的媒体。
+    基于会话的 `image_generate`、`music_generate` 和 `video_generate` 运行也使用 `silent` 通知策略。它们仍然会创建任务记录，但完成会作为一次内部唤醒交回原始代理会话，以便代理可以写出后续消息并自行附加已完成的媒体内容。请求者代理遵循其正常的可见回复约定：在配置时自动发送最终回复，或者在会话要求使用消息工具回复时使用 `message(action="send")` 加 `NO_REPLY`。如果请求者会话不再活跃，或者其活动唤醒失败，并且完成代理遗漏了部分或全部生成的媒体，OpenClaw 会向原始通道目标发送一次幂等的直接回退，仅包含缺失的媒体。
 
   </Accordion>
   <Accordion title="Concurrent media-generation guardrail">
@@ -343,8 +343,8 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
     详情参见 [任务流](/automation/taskflow)。
 
   </Accordion>
-  <Accordion title="任务与 cron">
-    cron 作业的 **定义** 存放在 `~/.openclaw/cron/jobs.json` 中；运行时执行状态存放在相邻的 `~/.openclaw/cron/jobs-state.json` 中。**每一次** cron 执行都会创建一条任务记录——无论是主会话还是隔离会话。主会话 cron 任务默认使用 `silent` 通知策略，因此它们会被跟踪，但不会生成通知。
+  <Accordion title="Tasks and cron">
+    Cron job definitions, runtime execution state, and run history live in OpenClaw's shared SQLite state database. **Every** cron execution creates a task record - both main-session and isolated. Main-session cron tasks default to `silent` notify policy so they track without generating notifications.
 
     详情参见 [Cron Jobs](/automation/cron-jobs)。
 

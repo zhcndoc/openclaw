@@ -1,13 +1,13 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Synology Chat 渠道界面。"
+summary: "OpenClaw 频道和私信的 Synology Chat 频道插件。"
 read_when:
-  - You are installing, configuring, or auditing the synology-chat plugin
+  - 你正在安装、配置或审计 synology-chat 插件
 title: "Synology Chat 插件"
 ---
 
 # Synology Chat 插件
 
-添加用于发送和接收 OpenClaw 消息的 Synology Chat 渠道界面。
+用于 OpenClaw 频道和私信的 Synology Chat 频道插件。
 
 ## 分发
 

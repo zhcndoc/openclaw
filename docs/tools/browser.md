@@ -177,6 +177,49 @@ Gateway。
 }
 ```
 
+### 截图视觉能力（仅文本模型支持）
+
+当主模型是纯文本模型（不具备视觉/多模态支持）时，浏览器
+截图会返回模型无法读取的图像块。浏览器截图会复用现有的图像理解配置，
+因此为媒体理解配置的图像模型可以将截图描述为文本，而无需任何
+浏览器专用模型设置。
+
+```json5
+{
+  tools: {
+    media: {
+      image: {
+        models: [
+          { provider: "bytedance", model: "doubao-seed-2.0-pro" },
+          // 添加回退候选；首个成功者生效
+          { provider: "openai", model: "gpt-4o" },
+        ],
+      },
+      // 当共享媒体模型带有图像支持标记时也可使用。
+      // models: [{ provider: "openai", model: "gpt-4o", capabilities: ["image"] }],
+    },
+  },
+  agents: {
+    defaults: {
+      // 现有的图像模型默认值也会被接受。
+      // imageModel: { primary: "openai/gpt-4o" },
+    },
+  },
+}
+```
+
+**工作方式：**
+
+1. 代理调用 `browser screenshot` → 像往常一样将图像捕获到磁盘。
+2. 浏览器工具询问现有的图像理解运行时，它是否可以使用已配置的媒体图像模型、共享媒体模型、图像模型默认值或带认证的图像提供方来描述该截图。
+3. 视觉模型返回文本描述，该描述会被 `wrapExternalContent`（提示注入防护）包装后，以文本块而非图像块的形式返回给代理。
+4. 如果图像理解不可用、被跳过或失败，浏览器会回退为返回原始图像块。
+
+请使用现有的 `tools.media.image` / `tools.media.models` 字段来配置模型
+回退、超时、字节限制、配置文件和提供方请求设置。
+
+如果当前主模型已经支持视觉，并且没有显式配置图像理解模型，OpenClaw 会保留正常的图像结果，以便主模型可以直接读取截图。
+
 <AccordionGroup>
 
 <Accordion title="端口与可达性">
@@ -451,7 +494,37 @@ CDP URL 形式，并会自动选择正确的连接策略：
 - 请参阅 [Browserbase 文档](https://docs.browserbase.com) 获取完整的 API
   参考、SDK 指南和集成示例。
 
-## 安全性
+### Notte
+
+[Notte](https://www.notte.cc) 是一个用于运行无头浏览器的云平台，
+内置隐身、住宅代理和一个原生 CDP 的 WebSocket 网关。
+
+```json5
+{
+  browser: {
+    enabled: true,
+    defaultProfile: "notte",
+    remoteCdpTimeoutMs: 3000,
+    remoteCdpHandshakeTimeoutMs: 5000,
+    profiles: {
+      notte: {
+        cdpUrl: "wss://us-prod.notte.cc/sessions/connect?token=<NOTTE_API_KEY>",
+        color: "#7C3AED",
+      },
+    },
+  },
+}
+```
+
+说明：
+
+- [注册](https://console.notte.cc)并从控制台设置页面复制你的 **API Key**。
+- 将 `<NOTTE_API_KEY>` 替换为你真实的 Notte API key。
+- Notte 会在 WebSocket 连接时自动创建浏览器会话，因此不需要手动创建会话步骤。WebSocket 断开连接时，会话会被销毁。
+- 免费层允许五个并发会话和 100 个浏览器小时。付费计划限制请参见 [定价](https://www.notte.cc/#pricing)。
+- 请参阅 [Notte 文档](https://docs.notte.cc) 获取完整的 API 参考、SDK 指南和集成示例。
+
+## Security
 
 核心要点：
 
@@ -609,15 +682,15 @@ Agent 使用方式：
 
 </Accordion>
 
-## 隔离保证
+## Isolation Guarantees
 
-- **专用用户数据目录**：绝不会触碰你的个人浏览器配置文件。
-- **专用端口**：避免使用 `9222`，以防与开发工作流冲突。
-- **确定性的标签页控制**：`tabs` 会先返回 `suggestedTargetId`，然后返回稳定的 `tabId` 句柄，如 `t1`、可选标签以及原始 `targetId`。Agent 应复用 `suggestedTargetId`；原始 ID 仍可用于调试和兼容性。
+- **Dedicated user data directory**: Never touches your personal browser profile.
+- **Dedicated port**: Avoids using `9222` to prevent conflicts with development workflows.
+- **Deterministic tab control**: `tabs` first returns `suggestedTargetId`, then a stable `tabId` handle such as `t1`, optional tags, and the original `targetId`. The Agent should reuse `suggestedTargetId`; the original ID remains available for debugging and compatibility.
 
-## 浏览器选择
+## Browser Selection
 
-在本地启动时，OpenClaw 按以下顺序选择第一个可用的浏览器：
+When starting locally, OpenClaw selects the first available browser in this order:
 
 1. Chrome
 2. Brave
@@ -625,46 +698,44 @@ Agent 使用方式：
 4. Chromium
 5. Chrome Canary
 
-你可以通过 `browser.executablePath` 覆盖它。
+You can override this with `browser.executablePath`.
 
-平台：
+Platforms:
 
-- macOS：检查 `/Applications` 和 `~/Applications`。
-- Linux：检查 `/usr/bin`、`/snap/bin`、`/opt/google`、`/opt/brave.com`、`/usr/lib/chromium` 和
-  `/usr/lib/chromium-browser` 下常见的 Chrome/Brave/Edge/Chromium 位置，以及位于
-  `PLAYWRIGHT_BROWSERS_PATH` 或 `~/.cache/ms-playwright` 下由 Playwright 管理的 Chromium。
-- Windows：检查常见安装位置。
+- macOS: checks `/Applications` and `~/Applications`.
+- Linux: checks common Chrome/Brave/Edge/Chromium locations under `/usr/bin`, `/snap/bin`, `/opt/google`, `/opt/brave.com`, `/usr/lib/chromium`, and `/usr/lib/chromium-browser`, as well as Playwright-managed Chromium under `PLAYWRIGHT_BROWSERS_PATH` or `~/.cache/ms-playwright`.
+- Windows: checks common installation locations.
 
-## 控制 API（可选）
+## Control API (Optional)
 
-用于脚本和调试，Gateway 提供一个小型的**仅限 loopback 的 HTTP 控制 API**，以及对应的 `openclaw browser` CLI（快照、refs、wait 增强、JSON 输出、调试工作流）。完整参考请见
-[浏览器控制 API](/tools/browser-control)。
+For scripting and debugging, Gateway provides a small **loopback-only HTTP control API** and the corresponding `openclaw browser` CLI (snapshots, refs, wait enhancements, JSON output, debugging workflows). See the full reference at
+[Browser Control API](/tools/browser-control).
 
-## 故障排查
+## Troubleshooting
 
-关于 Linux 特定问题（尤其是 snap Chromium），请参见
-[浏览器故障排查](/tools/browser-linux-troubleshooting)。
+For Linux-specific issues, especially snap Chromium, see
+[Browser Troubleshooting](/tools/browser-linux-troubleshooting).
 
-关于 WSL2 Gateway + Windows Chrome 分离主机部署，请参见
-[WSL2 + Windows + 远程 Chrome CDP 故障排查](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)。
+For WSL2 Gateway + Windows Chrome separated-host deployments, see
+[WSL2 + Windows + Remote Chrome CDP Troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting).
 
-### CDP 启动失败 vs 导航 SSRF 拦截
+### CDP Startup Failure vs Navigation SSRF Blocking
 
-这两类故障不同，对应的代码路径也不同。
+These two classes of failures are different, and they follow different code paths.
 
-- **CDP 启动或就绪失败** 表示 OpenClaw 无法确认浏览器控制平面是否健康。
-- **导航 SSRF 拦截** 表示浏览器控制平面是健康的，但某个页面导航目标被策略拒绝。
+- **CDP startup or readiness failure** means OpenClaw cannot confirm whether the browser control plane is healthy.
+- **Navigation SSRF blocking** means the browser control plane is healthy, but a page navigation target was denied by policy.
 
-常见示例：
+Common examples:
 
-- CDP 启动或就绪失败：
+- CDP startup or readiness failure:
   - `Chrome CDP websocket for profile "openclaw" is not reachable after start`
   - `Remote CDP for profile "<name>" is not reachable at <cdpUrl>`
-  - 在未配置 `attachOnly: true` 的情况下，若配置了 loopback 外部 CDP 服务，则会出现 `Port <port> is in use for profile "<name>" but not by openclaw`
-- 导航 SSRF 拦截：
-  - `open`、`navigate`、snapshot 或打开标签页的流程在浏览器/网络策略错误下失败，但 `start` 和 `tabs` 仍然可用
+  - When `attachOnly: true` is not configured, if an external loopback CDP service is configured, `Port <port> is in use for profile "<name>" but not by openclaw` will appear
+- Navigation SSRF blocking:
+  - Flows such as `open`, `navigate`, snapshot, or opening tabs fail due to browser/network policy errors, but `start` and `tabs` still work
 
-使用下面的最小流程来区分二者：
+Use the following minimal flow to distinguish between them:
 
 ```bash
 openclaw browser --browser-profile openclaw start
@@ -672,48 +743,48 @@ openclaw browser --browser-profile openclaw tabs
 openclaw browser --browser-profile openclaw open https://example.com
 ```
 
-如何解读结果：
+How to interpret the results:
 
-- 如果 `start` 失败并提示 `not reachable after start`，请先排查 CDP 就绪性。
-- 如果 `start` 成功但 `tabs` 失败，则控制平面仍不健康。将其视为 CDP 可达性问题，而不是页面导航问题。
-- 如果 `start` 和 `tabs` 成功，但 `open` 或 `navigate` 失败，则浏览器控制平面是正常的，失败发生在导航策略或目标页面上。
-- 如果 `start`、`tabs` 和 `open` 都成功，则基本的受管理浏览器控制路径是健康的。
+- If `start` fails with `not reachable after start`, investigate CDP readiness first.
+- If `start` succeeds but `tabs` fails, the control plane is still unhealthy. Treat it as a CDP reachability issue, not a page navigation issue.
+- If `start` and `tabs` succeed, but `open` or `navigate` fails, the browser control plane is healthy and the failure happened in navigation policy or the target page.
+- If `start`, `tabs`, and `open` all succeed, the basic managed browser control path is healthy.
 
-重要行为细节：
+Important behavioral details:
 
-- 即使你没有配置 `browser.ssrfPolicy`，浏览器配置默认也会使用 fail-closed 的 SSRF 策略对象。
-- 对于本地 loopback 的 `openclaw` 受管理配置文件，CDP 健康检查会有意跳过对 OpenClaw 自身本地控制平面的浏览器 SSRF 可达性强制检查。
-- 导航保护是独立的。`start` 或 `tabs` 成功并不意味着后续的 `open` 或 `navigate` 目标一定被允许。
+- Even if you do not configure `browser.ssrfPolicy`, the browser configuration uses a fail-closed SSRF policy object by default.
+- For the local loopback `openclaw` managed profile, CDP health checks intentionally skip browser-SSRF reachability enforcement for OpenClaw’s own local control plane.
+- Navigation protection is separate. A successful `start` or `tabs` does not mean later `open` or `navigate` targets are necessarily allowed.
 
-安全建议：
+Security recommendations:
 
-- 默认情况下不要放宽浏览器 SSRF 策略。
-- 优先使用更窄的主机例外，例如 `hostnameAllowlist` 或 `allowedHostnames`，而不是更宽泛的私有网络访问。
-- 仅在明确受信任、且确实需要并已审查过私有网络浏览器访问的环境中使用 `dangerouslyAllowPrivateNetwork: true`。
+- Do not relax browser SSRF policy by default.
+- Prefer narrower host exceptions such as `hostnameAllowlist` or `allowedHostnames` over broader private-network access.
+- Use `dangerouslyAllowPrivateNetwork: true` only in environments that are explicitly trusted, genuinely require it, and have had private-network browser access reviewed.
 
-## Agent 工具 + 控制方式
+## Agent Tools + Control Modes
 
-Agent 只有**一个工具**用于浏览器自动化：
+The Agent has only **one tool** for browser automation:
 
 - `browser` - doctor/status/start/stop/tabs/open/focus/close/snapshot/screenshot/navigate/act
 
-映射关系：
+Mappings:
 
-- `browser snapshot` 返回稳定的 UI 树（AI 或 ARIA）。
-- `browser act` 使用 snapshot 的 `ref` ID 来点击/输入/拖拽/选择。
-- `browser screenshot` 捕获像素（整页、元素或带标签的 refs）。
-- `browser doctor` 检查 Gateway、插件、配置文件、浏览器和标签页的就绪状态。
-- `browser` 接受：
-  - `profile` 用于选择命名的浏览器配置文件（openclaw、chrome，或远程 CDP）。
-  - `target`（`sandbox` | `host` | `node`）用于选择浏览器所在位置。
-  - 在沙箱会话中，`target: "host"` 需要 `agents.defaults.sandbox.browser.allowHostControl=true`。
-  - 如果省略 `target`：沙箱会话默认为 `sandbox`，非沙箱会话默认为 `host`。
-  - 如果连接了支持浏览器的节点，除非你固定 `target="host"` 或 `target="node"`，否则该工具可能会自动路由到该节点。
+- `browser snapshot` returns a stable UI tree (AI or ARIA).
+- `browser act` uses snapshot `ref` IDs to click/type/drag/select.
+- `browser screenshot` captures pixels (full page, elements, or tagged refs).
+- `browser doctor` checks Gateway, plugins, profiles, browser, and tab readiness.
+- `browser` accepts:
+  - `profile` to select a named browser profile (`openclaw`, `chrome`, or remote CDP).
+  - `target` (`sandbox` | `host` | `node`) to select where the browser runs.
+  - In sandbox sessions, `target: "host"` requires `agents.defaults.sandbox.browser.allowHostControl=true`.
+  - If `target` is omitted: sandbox sessions default to `sandbox`, and non-sandbox sessions default to `host`.
+  - If a browser-capable node is connected, the tool may automatically route to that node unless you pin `target="host"` or `target="node"`.
 
-这使得 agent 更具确定性，并避免脆弱的选择器。
+This makes the agent more deterministic and avoids brittle selectors.
 
-## 相关
+## Related
 
-- [Tools Overview](/tools) - 所有可用的 agent 工具
-- [Sandboxing](/gateway/sandboxing) - 沙箱环境中的浏览器控制
-- [Security](/gateway/security) - 浏览器控制风险与加固
+- [Tools Overview](/tools) - All available agent tools
+- [Sandboxing](/gateway/sandboxing) - Browser control in sandboxed environments
+- [Security](/gateway/security) - Browser control risks and hardening

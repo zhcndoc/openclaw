@@ -27,7 +27,7 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 
 ## 本地模型精简模式
 
-`agents.defaults.experimental.localModelLean: true` 是弱本地模型设置的一个泄压阀。开启后，OpenClaw 会在每一轮中将三个默认工具 —— `browser`、`cron` 和 `message` —— 从代理的工具面板中移除。其他内容都不会改变。使用 `agents.list[].experimental.localModelLean` 可以为某个已配置代理单独启用或禁用相同行为。
+`agents.defaults.experimental.localModelLean: true` 是较弱本地模型设置的一个压力释放阀。启用后，OpenClaw 会从每一轮代理工具面板中移除三个默认工具——`browser`、`cron` 和 `message`。当 `tools.toolSearch` 未显式配置时，它也会默认该运行使用结构化 Tool Search 控制，因此更大的插件、MCP 或客户端工具目录会停留在 `tool_search`、`tool_describe` 和 `tool_call` 之后，而不是被直接塞进提示词中。需要直接投递 `message` 的运行会保持该工具为直接可用，而不是启用精简模式下的 Tool Search 默认行为。可使用 `agents.list[].experimental.localModelLean` 为某个已配置代理单独启用或禁用同样的行为。
 
 ### 为什么是这三个工具
 
@@ -37,7 +37,7 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 - 模型能否选中正确的工具，还是因为相似 schema 太多而发出格式错误的工具调用。
 - Chat Completions 适配器能否保持在服务端结构化输出限制之内，还是会因工具调用负载大小触发 400 错误。
 
-移除它们不会悄悄重写 OpenClaw —— 只是让工具列表变短了。模型仍然可以使用 `read`、`write`、`edit`、`exec`、`apply_patch`、Web 搜索/获取（在已配置时）、memory，以及会话/代理工具。
+移除它们不会悄悄改写 OpenClaw——它只是让直接工具列表更短。模型仍然可以使用 `read`、`write`、`edit`、`exec`、`apply_patch`、Web 搜索/抓取（在已配置时）、memory 以及 session/agent 工具。额外目录仍可通过 Tool Search 调用，除非你明确设置了 `tools.toolSearch: false`。
 
 ### 何时启用
 
@@ -52,6 +52,8 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 如果你的后端能够干净地处理完整默认运行时，就保持关闭。精简模式是一种变通方案，不是默认设置。它之所以存在，是因为某些本地栈需要更小的工具面板才能正常工作；托管模型和资源充足的本地设备则不需要。
 
 精简模式也不能替代 `tools.profile`、`tools.allow`/`tools.deny`，或模型的 `compat.supportsTools: false` 逃逸阀。如果你需要为某个特定代理永久使用更窄的工具面板，应优先使用这些稳定选项，而不是实验性标志。
+
+如果你已经在全局调优 Tool Search，OpenClaw 会保持该 operator 配置不变。设置 `tools.toolSearch: false` 可退出精简模式下的 Tool Search 默认行为。
 
 ### 启用
 
@@ -91,7 +93,7 @@ OpenClaw 中的实验性功能是**可选启用的预览能力**。它们位于�
 openclaw status --deep
 ```
 
-深度状态输出会列出当前启用的代理工具；当精简模式开启时，`browser`、`cron` 和 `message` 应当不会出现。
+深度状态输出会列出当前启用的代理工具；当精简模式开启时，`browser`、`cron` 和 `message` 应该不会出现，除非当前投递模式强制直接回复 `message`。
 
 ## 实验性并不意味着隐藏
 

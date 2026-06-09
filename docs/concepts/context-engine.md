@@ -91,7 +91,7 @@ OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大�
 OpenClaw 会调用两个可选的子代理生命周期钩子：
 
 <ParamField path="prepareSubagentSpawn" type="method">
-  在子运行开始之前准备共享上下文状态。该钩子接收父/子会话键、`contextMode`（`isolated` 或 `fork`）、可用的转录 id/文件，以及可选的 TTL。如果它返回一个回滚句柄，OpenClaw 会在准备成功后 spawn 失败时调用它。
+  在子代理运行开始前准备共享上下文状态。该钩子接收父/子会话键、`contextMode`（`isolated` 或 `fork`）、可用的转录 id/文件，以及可选的 TTL。如果它返回一个回滚句柄，则当生成在准备成功后失败时，OpenClaw 会调用该句柄。请求 `lightContext` 且解析为 `contextMode="isolated"` 的原生子代理生成会刻意跳过此钩子，因此子代理会从轻量级启动上下文开始，而不会带有由上下文引擎管理的预生成状态。
 </ParamField>
 <ParamField path="onSubagentEnded" type="method">
   在子代理会话完成或被清理时进行清理。
@@ -230,25 +230,40 @@ info: {
     "agent-run": {
       requiredCapabilities: ["assemble-before-prompt"],
       unsupportedMessage:
-        "Use the native Codex or Pi embedded runtime, or select the legacy context engine.",
+        "Use the native Codex or OpenClaw embedded runtime, or select the legacy context engine.",
     },
   },
 }
 ```
 
-原生 Codex 和 Pi 嵌入式代理运行满足 `assemble-before-prompt`。
-通用 CLI 后端不满足，因此需要它的引擎会在 CLI 进程开始前被拒绝。
+Native Codex and OpenClaw embedded agent runs satisfy `assemble-before-prompt`.
+Generic CLI backends do not, so engines that require it are rejected before the
+CLI process starts.
+
+### Failure isolation
+
+OpenClaw isolates the selected plugin engine from the core reply path. If a
+non-legacy engine is missing, fails contract validation, throws during factory
+creation, or throws from a lifecycle method, OpenClaw quarantines that engine
+for the current Gateway process and downgrades context-engine work to the
+built-in `legacy` engine. The error is logged with the failed operation so the
+operator can repair, update, or disable the plugin without the agent going
+silent.
+
+Host requirement failures are different: when an engine declares that a runtime
+lacks a required capability, OpenClaw fails closed before starting the run. That
+protects engines that would corrupt state if they ran in an unsupported host.
 
 ### ownsCompaction
 
-`ownsCompaction` 控制 Pi 内置的单次尝试自动压缩在该运行中是否保持启用：
+`ownsCompaction` controls whether OpenClaw runtime's built-in in-attempt auto-compaction stays enabled for the run:
 
 <AccordionGroup>
   <Accordion title="ownsCompaction: true">
-    引擎拥有压缩行为。OpenClaw 会为该次运行禁用 Pi 内置的自动压缩，而引擎的 `compact()` 实现负责 `/compact`、溢出恢复压缩，以及它希望在 `afterTurn()` 中执行的任何主动压缩。OpenClaw 仍可能运行提示词前的溢出保护；当它预测完整转录会溢出时，恢复路径会在提交另一个提示词之前调用当前引擎的 `compact()`。
+    The engine owns compaction behavior. OpenClaw disables OpenClaw runtime's built-in auto-compaction for that run, and the engine's `compact()` implementation is responsible for `/compact`, overflow recovery compaction, and any proactive compaction it wants to do in `afterTurn()`. OpenClaw may still run the pre-prompt overflow safeguard; when it predicts the full transcript will overflow, the recovery path calls the active engine's `compact()` before submitting another prompt.
   </Accordion>
   <Accordion title="ownsCompaction: false or unset">
-    Pi 的内置自动压缩仍可能在提示词执行期间运行，但当前引擎的 `compact()` 方法仍会在 `/compact` 和溢出恢复时被调用。
+    OpenClaw runtime's built-in auto-compaction may still run during prompt execution, but the active engine's `compact()` method is still called for `/compact` and overflow recovery.
   </Accordion>
 </AccordionGroup>
 
@@ -297,7 +312,7 @@ info: {
   <Accordion title="压缩">
     压缩是上下文引擎的一项职责。legacy 引擎会委托给 OpenClaw 内置的摘要功能。插件引擎可以实现任何压缩策略（DAG 摘要、向量检索等）。
   </Accordion>
-  <Accordion title="Memory plugins">
+  <Accordion title="内存插件">
     内存插件（`plugins.slots.memory`）与上下文引擎是分开的。内存插件提供搜索/检索；上下文引擎控制模型能看到什么。它们可以协同工作——上下文引擎可能会在组装期间使用内存插件数据。希望使用活动内存提示词路径的插件引擎，应优先使用 `openclaw/plugin-sdk/core` 中的 `buildMemorySystemPromptAddition(...)`，它会将活动内存提示词分段转换为可直接前置的 `systemPromptAddition`。如果引擎需要更底层的控制，也仍然可以通过 `openclaw/plugin-sdk/memory-host-core` 中的 `buildActiveMemoryPromptSection(...)` 获取原始行。
   </Accordion>
   <Accordion title="会话裁剪">
@@ -308,9 +323,9 @@ info: {
 ## 提示
 
 - 使用 `openclaw doctor` 验证你的引擎是否正确加载。
-- 如果切换引擎，现有会话会继续保留其当前历史记录。新引擎会接管后续运行。
-- 引擎错误会记录并显示在诊断信息中。如果插件引擎注册失败，或者所选引擎 id 无法解析，OpenClaw 不会自动回退；运行会失败，直到你修复插件或将 `plugins.slots.contextEngine` 切回 `"legacy"`。
-- 开发时，使用 `openclaw plugins install -l ./my-engine` 来链接本地插件目录，而无需复制。
+- 如果切换引擎，现有会话会继续保留当前历史记录。新的引擎会接管后续运行。
+- 引擎错误会被记录，所选插件引擎会在当前 Gateway 进程中被隔离。OpenClaw 会在用户轮次回退到 `legacy` 以便回复继续进行，但你仍然应该修复、更新、禁用或卸载有问题的插件。
+- 在开发中，使用 `openclaw plugins install -l ./my-engine` 链接本地插件目录，而无需复制。
 
 ## 相关内容
 

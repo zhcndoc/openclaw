@@ -9,9 +9,8 @@ title: "平台"
 OpenClaw 核心采用 TypeScript 编写。**推荐使用 Node 作为运行时**。
 不建议在 Gateway 中使用 Bun——WhatsApp 和 Telegram 通道存在已知问题；详情请参见 [Bun（实验性）](/install/bun)。
 
-配套应用适用于 macOS（菜单栏应用）和移动节点（iOS/Android）。Windows 和
-Linux 的配套应用正在规划中，但 Gateway 目前已完全支持。
-Windows 的原生配套应用也在规划中；推荐通过 WSL2 使用 Gateway。
+Windows Hub、macOS（菜单栏应用）和移动节点（iOS/Android）都有配套应用。
+Linux 配套应用计划中，但 Gateway 目前已完全支持。在 Windows 上，桌面应用请选择 Windows Hub；若偏向终端优先，可使用原生 PowerShell 安装；或者使用 WSL2 以获得最兼容 Linux 的 Gateway 运行时。
 
 ## 选择你的操作系统
 
@@ -33,9 +32,10 @@ Windows 的原生配套应用也在规划中；推荐通过 WSL2 使用 Gateway�
 
 ## 常用链接
 
-- 安装指南: [快速开始](/start/getting-started)
+- 安装指南: [Getting Started](/start/getting-started)
+- Windows Hub: [Windows](/platforms/windows)
 - Gateway 运行手册: [Gateway](/gateway)
-- Gateway 配置: [配置](/gateway/configuration)
+- Gateway 配置: [Configuration](/gateway/configuration)
 - 服务状态: `openclaw gateway status`
 
 ## Gateway 服务安装（CLI）
@@ -56,5 +56,6 @@ Windows 的原生配套应用也在规划中；推荐通过 WSL2 使用 Gateway�
 ## 相关内容
 
 - [安装概览](/install)
+- [Windows Hub](/platforms/windows)
 - [macOS 应用](/platforms/macos)
 - [iOS 应用](/platforms/ios)

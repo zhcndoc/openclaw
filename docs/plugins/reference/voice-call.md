@@ -1,13 +1,13 @@
 ---
-summary: "添加可由代理调用的工具。"
+summary: "用于 Twilio、Telnyx 和 Plivo 电话通话的 OpenClaw 语音通话插件。"
 read_when:
-  - You are installing, configuring, or auditing the voice-call plugin
+  - 当你正在安装、配置或审计语音通话插件时
 title: "语音通话插件"
 ---
 
 # 语音通话插件
 
-添加可由代理调用的工具。
+用于 Twilio、Telnyx 和 Plivo 电话通话的 OpenClaw 语音通话插件。
 
 ## 分发
 

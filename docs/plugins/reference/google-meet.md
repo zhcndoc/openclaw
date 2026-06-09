@@ -1,5 +1,5 @@
 ---
-summary: "通过 Chrome 或 Twilio 传输加入 Google Meet 通话。"
+summary: "OpenClaw Google Meet 参与者插件，用于通过 Chrome 或 Twilio 传输加入通话。"
 read_when:
   - 你正在安装、配置或审核 google-meet 插件
 title: "Google Meet 插件"
@@ -7,7 +7,7 @@ title: "Google Meet 插件"
 
 # Google Meet 插件
 
-通过 Chrome 或 Twilio 传输加入 Google Meet 通话。
+OpenClaw Google Meet 参与者插件，用于通过 Chrome 或 Twilio 传输加入通话。
 
 ## 分发
 

@@ -38,11 +38,11 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 环境覆盖：
 
-- `PI_BASH_YIELD_MS`: 默认 yield（毫秒）
-- `PI_BASH_MAX_OUTPUT_CHARS`: 内存输出上限（字符）
-- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: 每个流的待处理 stdout/stderr 上限（字符）
-- `PI_BASH_JOB_TTL_MS`: 已完成会话的 TTL（毫秒，范围限制在 1 分钟到 3 小时）
-- `OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`: 可写后台会话在被标记为可能正在等待输入之前的空闲输出阈值（默认 15000 毫秒）
+- `OPENCLAW_BASH_YIELD_MS`: default yield (ms)
+- `OPENCLAW_BASH_MAX_OUTPUT_CHARS`: in-memory output cap (chars)
+- `OPENCLAW_BASH_PENDING_MAX_OUTPUT_CHARS`: pending stdout/stderr cap per stream (chars)
+- `OPENCLAW_BASH_JOB_TTL_MS`: TTL for finished sessions (ms, bounded to 1m–3h)
+- `OPENCLAW_PROCESS_INPUT_WAIT_IDLE_MS`: idle-output threshold before writable background sessions are marked as likely waiting for input (default 15000 ms)
 
 配置（推荐）：
 
@@ -69,25 +69,19 @@ OpenClaw 通过 `exec` 工具运行 shell 命令，并将长时间运行的任�
 
 说明：
 
-- Only backgrounded sessions are listed/persisted in memory.
-- Sessions are lost on process restart (no disk persistence).
-- Session logs are only saved to chat history if you run `process poll/log` and the tool result is recorded.
-- `process` is scoped per agent; it only sees sessions started by that agent.
-- Use `poll` / `log` for status, logs, quiet-success confirmation, or
-  completion confirmation when automatic completion wake is unavailable.
-- Use `log` before recovering an interactive CLI so the current transcript,
-  stdin state, and input-wait hint are visible together.
-- Use `write` / `send-keys` / `submit` / `paste` / `kill` when you need input
-  or intervention.
-- `process list` includes a derived `name` (command verb + target) for quick scans.
-- `process list`, `poll`, and `log` report `waitingForInput` only
-  when the session still has writable stdin and has been idle longer than the
-  input-wait threshold.
-- `process log` uses line-based `offset`/`limit`.
-- When both `offset` and `limit` are omitted, it returns the last 200 lines and includes a paging hint.
-- When `offset` is provided and `limit` is omitted, it returns from `offset` to the end (not capped to 200).
-- Polling is for on-demand status, not wait-loop scheduling. If the work should
-  happen later, use cron instead.
+- 只有后台会话会被列出并保存在内存中。
+- 会话会在进程重启后丢失（无磁盘持久化）。
+- 仅当你运行 `process poll/log` 且工具结果被记录到聊天历史中时，会话日志才会保存到聊天历史。
+- `process` 以 agent 为作用域；它只能看到该 agent 启动的会话。
+- 在自动完成唤醒不可用时，使用 `poll` / `log` 查看状态、日志、静默成功确认，或进行完成确认。
+- 在恢复交互式 CLI 之前使用 `log`，这样当前转录、stdin 状态和输入等待提示会一起显示。
+- 在需要输入或干预时，使用 `write` / `send-keys` / `submit` / `paste` / `kill`。
+- `process list` 会包含一个派生的 `name`（命令动词 + 目标），便于快速浏览。
+- 只有当会话仍有可写 stdin 且已空闲超过输入等待阈值时，`process list`、`poll` 和 `log` 才会报告 `waitingForInput`。
+- `process log` 使用按行计算的 `offset`/`limit`。
+- 当 `offset` 和 `limit` 都省略时，它会返回最后 200 行，并包含分页提示。
+- 当提供 `offset` 而省略 `limit` 时，它会返回从 `offset` 到末尾的内容（不会截断为 200 行）。
+- 轮询用于按需查看状态，不用于等待循环调度。如果工作应当稍后发生，请改用 cron。
 
 ## 示例
 

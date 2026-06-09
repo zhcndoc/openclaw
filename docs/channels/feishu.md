@@ -15,7 +15,7 @@ Feishu/Lark 是一个一体化协作平台，团队可以在这里聊天、共�
 ## 快速开始
 
 <Note>
-需要 OpenClaw 2026.4.25 或更高版本。运行 `openclaw --version` 检查。使用 `openclaw update` 升级。
+需要 OpenClaw 2026.5.29 或更高版本。运行 `openclaw --version` 检查。使用 `openclaw update` 升级。
 </Note>
 
 <Steps>
@@ -549,11 +549,11 @@ ls -la ~/.openclaw/workspace-*
 
 完整配置：[网关配置](/gateway/configuration)
 
-| Setting                                                  | Description                                                                      | Default                              |
+| 设置                                                   | 描述                                                                              | 默认值                               |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------ |
 | `channels.feishu.enabled`                                | 启用/禁用该通道                                                                  | `true`                               |
 | `channels.feishu.domain`                                 | API 域名（`feishu` 或 `lark`）                                                   | `feishu`                             |
-| `channels.feishu.connectionMode`                         | 事件传输方式（`websocket` 或 `webhook`）                                         | `websocket`                          |
+| `channels.feishu.connectionMode`                         | 事件传输方式（`websocket` 或 `webhook`）                                         | `websocket`                           |
 | `channels.feishu.defaultAccount`                         | 出站路由的默认账号                                                              | `default`                            |
 | `channels.feishu.verificationToken`                      | webhook 模式必需                                                                | -                                    |
 | `channels.feishu.encryptKey`                             | webhook 模式必需                                                                | -                                    |
@@ -562,25 +562,29 @@ ls -la ~/.openclaw/workspace-*
 | `channels.feishu.webhookPort`                            | Webhook 绑定端口                                                                | `3000`                               |
 | `channels.feishu.accounts.<id>.appId`                    | App ID                                                                           | -                                    |
 | `channels.feishu.accounts.<id>.appSecret`                | App Secret                                                                       | -                                    |
-| `channels.feishu.accounts.<id>.domain`                   | 单个账号的域名覆盖                                                              | `feishu`                             |
-| `channels.feishu.accounts.<id>.tts`                      | 单个账号的 TTS 覆盖                                                             | `messages.tts`                       |
+| `channels.feishu.accounts.<id>.domain`                   | 每个账号的域名覆盖                                                              | `feishu`                             |
+| `channels.feishu.accounts.<id>.tts`                      | 每个账号的 TTS 覆盖                                                              | `messages.tts`                       |
 | `channels.feishu.dmPolicy`                               | 私信策略                                                                         | `allowlist`                          |
-| `channels.feishu.allowFrom`                              | 私信允许名单（open_id 列表）                                                     | [BotOwnerId]                         |
+| `channels.feishu.allowFrom`                              | 私信允许列表（open_id 列表）                                                     | [BotOwnerId]                         |
 | `channels.feishu.groupPolicy`                            | 群组策略                                                                         | `allowlist`                          |
-| `channels.feishu.groupAllowFrom`                         | 群组允许名单                                                                    | -                                    |
-| `channels.feishu.requireMention`                         | 群组中是否需要 @ 提及                                                           | `true`                               |
-| `channels.feishu.groups.<chat_id>.requireMention`        | 单个群组的 @ 提及覆盖；显式 ID 在 allowlist 模式下也会将该群组纳入允许范围       | inherited                            |
+| `channels.feishu.groupAllowFrom`                         | 群组允许列表                                                                     | -                                    |
+| `channels.feishu.requireMention`                         | 群组中需要 @提及                                                                | `true`                               |
+| `channels.feishu.groups.<chat_id>.requireMention`        | 单个群组的 @提及覆盖；显式 ID 在允许列表模式下也会将该群组纳入允许范围             | inherited                            |
 | `channels.feishu.groups.<chat_id>.enabled`               | 启用/禁用特定群组                                                                | `true`                               |
-| `channels.feishu.dynamicAgentCreation.enabled`           | 启用按用户自动创建代理                                                          | `false`                              |
-| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | 动态代理工作区的路径模板                                                        | `~/.openclaw/workspace-{agentId}`    |
-| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | 代理目录名称模板                                                                | `~/.openclaw/agents/{agentId}/agent` |
-| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                                        | unlimited                            |
+| `channels.feishu.dynamicAgentCreation.enabled`           | 启用自动按用户创建代理                                                           | `false`                              |
+| `channels.feishu.dynamicAgentCreation.workspaceTemplate` | 动态代理工作区的路径模板                                                         | `~/.openclaw/workspace-{agentId}`    |
+| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | 代理目录名称模板                                                                 | `~/.openclaw/agents/{agentId}/agent` |
+| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                                         | unlimited                            |
 | `channels.feishu.textChunkLimit`                         | 消息分片大小                                                                     | `2000`                               |
 | `channels.feishu.mediaMaxMb`                             | 媒体大小限制                                                                     | `30`                                 |
 | `channels.feishu.streaming`                              | 流式卡片输出                                                                     | `true`                               |
 | `channels.feishu.blockStreaming`                         | 完成块回复流式输出                                                               | `false`                              |
 | `channels.feishu.typingIndicator`                        | 发送输入中反应                                                                   | `true`                               |
-| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名称                                                               | `true`                               |
+| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名                                                                 | `true`                               |
+| `channels.feishu.tools.bitable`                          | 启用 Bitable/Base 工具                                                           | `true`                               |
+| `channels.feishu.tools.base`                             | `channels.feishu.tools.bitable` 的别名；两者都设置时以 `bitable` 为准           | `true`                               |
+| `channels.feishu.accounts.<id>.tools.bitable`            | 每个账号的 Bitable/Base 工具开关                                                 | inherited                            |
+| `channels.feishu.accounts.<id>.tools.base`               | `tools.bitable` 的每账号别名                                                     | inherited                            |
 
 ---
 

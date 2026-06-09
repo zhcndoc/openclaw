@@ -175,14 +175,39 @@ title: "FAQ"
     可以。通过 `~/.openclaw/openclaw.json` 中的 `skills.load.extraDirs` 添加额外目录（最低优先级）。默认优先级是 `<workspace>/skills` → `<workspace>/.agents/skills` → `~/.agents/skills` → `~/.openclaw/skills` → 内置 → `skills.load.extraDirs`。`clawhub` 默认安装到 `./skills`，而 OpenClaw 会在下一次会话中将其视为 `<workspace>/skills`。如果某个技能只应对特定智能体可见，就把它与 `agents.defaults.skills` 或 `agents.list[].skills` 配合使用。
   </Accordion>
 
-  <Accordion title="如何针对不同任务使用不同模型？">
-    目前支持的模式有：
+  <Accordion title="如何针对不同任务使用不同的模型或设置？">
+    Today the supported patterns are:
 
-    - **Cron 任务**：独立任务可以为每个任务设置 `model` 覆盖。
-    - **子智能体**：将任务路由到不同的智能体，每个智能体使用不同的默认模型。
-    - **按需切换**：随时使用 `/model` 切换当前会话模型。
+    - **Cron jobs**: isolated jobs can set a `model` override per job.
+    - **Agents**: route tasks to separate agents with different default models, thinking levels, and stream params.
+    - **On-demand switch**: use `/model` to switch the current session model at any time.
 
-    参见 [Cron 任务](/automation/cron-jobs)、[多智能体路由](/concepts/multi-agent) 和 [斜杠命令](/tools/slash-commands)。
+    For example, use the same model with different per-agent settings:
+
+    ```json5
+    {
+      agents: {
+        list: [
+          {
+            id: "coder",
+            model: "xiaomi/mimo-v2.5-pro",
+            thinkingDefault: "high",
+            params: { temperature: 0.1 },
+          },
+          {
+            id: "chat",
+            model: "xiaomi/mimo-v2.5-pro",
+            thinkingDefault: "off",
+            params: { temperature: 0.8 },
+          },
+        ],
+      },
+    }
+    ```
+
+    Put shared per-model defaults in `agents.defaults.models["provider/model"].params`, then put agent-specific overrides in flat `agents.list[].params`. Do not define separate nested `agents.list[].models["provider/model"].params` entries for the same model; `agents.list[].models` is for per-agent model catalog and runtime overrides.
+
+    See [Cron jobs](/automation/cron-jobs), [Multi-Agent Routing](/concepts/multi-agent), [Configuration](/gateway/config-agents), and [Slash commands](/tools/slash-commands).
 
   </Accordion>
 
@@ -520,18 +545,17 @@ title: "FAQ"
     Codex CLI 登录）**不会**帮助语义 memory 搜索。OpenAI embeddings
     仍然需要真正的 API key（`OPENAI_API_KEY` 或 `models.providers.openai.apiKey`）。
 
-    如果你没有显式设置 provider，OpenClaw 会在能够解析出 API key 时自动选择 provider
-    （auth profiles、`models.providers.*.apiKey` 或环境变量）。如果能解析到 OpenAI key，
-    它会优先选择 OpenAI；否则如果能解析到 Gemini key，则选择 Gemini，然后是 Voyage，再然后是 Mistral。
-    如果没有可用的远程 key，memory 搜索会保持禁用，直到你进行配置。如果你配置并提供了本地模型路径，
-    OpenClaw 会优先选择 `local`。当你显式设置
-    `memorySearch.provider = "ollama"` 时，也支持 Ollama。
+    If you don't set a provider explicitly, OpenClaw uses OpenAI embeddings. Legacy
+    configs that still say `memorySearch.provider = "auto"` resolve to OpenAI too.
+    If no OpenAI API key is available, semantic memory search stays unavailable
+    until you configure a key or choose another provider explicitly.
 
-    如果你想完全保持本地，设置 `memorySearch.provider = "local"`（并可选
-    `memorySearch.fallback = "none"`）。如果你想使用 Gemini embeddings，设置
-    `memorySearch.provider = "gemini"` 并提供 `GEMINI_API_KEY`（或
-    `memorySearch.remote.apiKey`）。我们支持 **OpenAI、Gemini、Voyage、Mistral、Ollama 或本地** embedding
-    模型——设置细节参见 [Memory](/concepts/memory)。
+    If you'd rather stay local, set `memorySearch.provider = "local"` (and optionally
+    `memorySearch.fallback = "none"`). If you want Gemini embeddings, set
+    `memorySearch.provider = "gemini"` and provide `GEMINI_API_KEY` (or
+    `memorySearch.remote.apiKey`). We support **OpenAI, OpenAI-compatible, Gemini,
+    Voyage, Mistral, Bedrock, Ollama, LM Studio, GitHub Copilot, DeepInfra, or local**
+    embedding models - see [Memory](/concepts/memory) for the setup details.
 
   </Accordion>
 </AccordionGroup>
@@ -600,6 +624,48 @@ title: "FAQ"
     AGENTS.md 或 MEMORY.md**，不要只依赖聊天历史。
 
     参见 [Agent workspace](/concepts/agent-workspace) 和 [Memory](/concepts/memory)。
+
+  </Accordion>
+
+  <Accordion title="Can I make SOUL.md bigger?">
+    Yes. `SOUL.md` is one of the workspace bootstrap files injected into the
+    agent context. The default per-file injection limit is `20000` characters,
+    and the total bootstrap budget across files is `60000` characters.
+
+    Change the shared defaults in your OpenClaw config:
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          bootstrapMaxChars: 50000,
+          bootstrapTotalMaxChars: 300000,
+        },
+      },
+    }
+    ```
+
+    Or override one agent:
+
+    ```json5
+    {
+      agents: {
+        list: [
+          {
+            id: "main",
+            bootstrapMaxChars: 50000,
+            bootstrapTotalMaxChars: 300000,
+          },
+        ],
+      },
+    }
+    ```
+
+    Use `/context` to check raw vs injected sizes and whether truncation happened.
+    Keep `SOUL.md` focused on voice, stance, and personality; put operating rules
+    in `AGENTS.md` and durable facts in memory.
+
+    See [Context](/concepts/context) and [Agent config](/gateway/config-agents).
 
   </Accordion>
 
@@ -1070,7 +1136,10 @@ title: "FAQ"
     - 当前工作目录下的 `.env`
     - `~/.openclaw/.env`（即 `$OPENCLAW_STATE_DIR/.env`）中的全局后备 `.env`
 
-    这两个 `.env` 文件都不会覆盖已存在的环境变量。
+    Neither `.env` file overrides existing env vars.
+    Provider credential variables are an exception for workspace `.env`: keys such as
+    `GEMINI_API_KEY`, `XAI_API_KEY`, or `MISTRAL_API_KEY` are ignored from workspace
+    `.env` and should live in the process environment, `~/.openclaw/.env`, or config `env`.
 
     你也可以在配置中定义内联环境变量（仅在进程环境中缺失时应用）：
 
@@ -1265,9 +1334,10 @@ title: "FAQ"
     }
     ```
 
-    如果 `HEARTBEAT.md` 存在但实际上是空的（只有空行和像 `# Heading` 这样的 markdown
-    标题），OpenClaw 会跳过 heartbeat 运行以节省 API 调用。
-    如果该文件缺失，heartbeat 仍会运行，由模型决定要做什么。
+    If `HEARTBEAT.md` exists but is effectively empty (only blank lines,
+    Markdown/HTML comments, Markdown headings like `# Heading`, fence markers,
+    or empty checklist stubs), OpenClaw skips the heartbeat run to save API calls.
+    If the file is missing, the heartbeat still runs and the model decides what to do.
 
     每个代理的覆盖项使用 `agents.list[].heartbeat`。文档：[Heartbeat](/gateway/heartbeat)。
 
@@ -1566,9 +1636,14 @@ title: "FAQ"
   </Accordion>
 
   <Accordion title="I closed my terminal on Windows - how do I restart OpenClaw?">
-    Windows 有 **两种安装模式**：
+    There are **three Windows install modes**:
 
-    **1）WSL2（推荐）：** Gateway 运行在 Linux 内部。
+    **1) Windows Hub local setup:** the native app manages a local app-owned WSL Gateway.
+
+    Open **OpenClaw Companion** from the Start menu or tray, then use
+    **Gateway Setup** or the Connections tab.
+
+    **2) Manual WSL2 Gateway:** the Gateway runs inside Linux.
 
     打开 PowerShell，进入 WSL，然后重启：
 
@@ -1584,7 +1659,7 @@ title: "FAQ"
     openclaw gateway run
     ```
 
-    **2）原生 Windows（不推荐）：** Gateway 直接运行在 Windows 中。
+    **3) Native Windows CLI/Gateway:** the Gateway runs directly in Windows.
 
     打开 PowerShell 并运行：
 
@@ -1599,7 +1674,7 @@ title: "FAQ"
     openclaw gateway run
     ```
 
-    文档：[Windows (WSL2)](/platforms/windows), [Gateway service runbook](/gateway)。
+    Docs: [Windows](/platforms/windows), [Gateway service runbook](/gateway).
 
   </Accordion>
 
@@ -1718,7 +1793,7 @@ title: "FAQ"
 
 <AccordionGroup>
   <Accordion title="My skill generated an image/PDF, but nothing was sent">
-    来自代理的外发附件必须包含一行单独的 `MEDIA:<path-or-url>`。参见 [OpenClaw assistant setup](/start/openclaw) 和 [Agent send](/tools/agent-send)。
+    Outbound attachments from the agent must use structured media fields such as `media`, `mediaUrl`, `path`, or `filePath`. See [OpenClaw assistant setup](/start/openclaw) and [Agent send](/tools/agent-send).
 
     CLI 发送：
 
@@ -1728,10 +1803,10 @@ title: "FAQ"
 
     另外还要检查：
 
-    - 目标 channel 支持外发媒体，并且没有被 allowlist 阻止。
-    - 文件大小在提供方限制内（图片会缩放到最大 2048px）。
-    - `tools.fs.workspaceOnly=true` 会将本地路径发送限制在 workspace、temp/media-store 和沙箱验证过的文件中。
-    - `tools.fs.workspaceOnly=false` 会让 `MEDIA:` 发送代理已可读取的主机本地文件，但仅限媒体和安全文档类型（图片、音频、视频、PDF 和 Office 文档）。纯文本和类似机密的文件仍然会被阻止。
+    - The target channel supports outbound media and isn't blocked by allowlists.
+    - The file is within the provider's size limits (images are resized to max 2048px).
+    - `tools.fs.workspaceOnly=true` keeps local-path sends limited to workspace, temp/media-store, and sandbox-validated files.
+    - `tools.fs.workspaceOnly=false` lets structured local media sends use host-local files the agent can already read, but only for media plus safe document types (images, audio, video, PDF, Office docs, and validated text documents such as Markdown/MD, TXT, JSON, YAML, and YML). This is not a secret scanner: an agent-readable `secret.txt` or `config.json` can be attached when the extension and content validation match. Keep sensitive files outside agent-readable paths, or keep `tools.fs.workspaceOnly=true` for stricter local-path sends.
 
     参见 [Images](/nodes/images)。
 
@@ -1820,10 +1895,11 @@ title: "FAQ"
   </Accordion>
 
   <Accordion title="Are ClawHub skills and third-party plugins safe to install?">
-    把第三方 skills 和插件视为你选择信任的代码。
-    ClawHub skill 页面在安装前会公开扫描状态，OpenClaw 插件
-    安装/更新流程会运行内置的危险代码检查，但扫描并不是
-    完整的安全边界。
+    Treat third-party skills and plugins as code you are choosing to trust.
+    ClawHub skill pages expose scan state before install, but scans are not a
+    complete security boundary. OpenClaw does not run built-in local
+    dangerous-code blocking during plugin or skill install/update flows; use
+    operator-owned `security.installPolicy` for local allow/block decisions.
 
     更安全的模式：
 

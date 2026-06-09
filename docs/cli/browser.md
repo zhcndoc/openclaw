@@ -1,5 +1,5 @@
 ---
-summary: "openclaw browser 的 CLI 参考（生命周期、配置文件、标签页、操作、状态和调试）"
+summary: "openclaw browser 浏览器的 CLI 参考（生命周期、配置文件、标签页、操作、状态和调试）"
 read_when:
   - 你使用 `openclaw browser`，并希望查看常见任务示例
   - 你想通过 node host 远程控制运行在另一台机器上的浏览器
@@ -123,7 +123,7 @@ openclaw browser focus docs
 openclaw browser close t1
 ```
 
-`tabs` 会先返回 `suggestedTargetId`，然后是稳定的 `tabId`（例如 `t1`），接着是可选的标签和原始 `targetId`。代理应将 `suggestedTargetId` 传回 `focus`、`close`、快照和操作中。你可以通过 `open --label`、`tab new --label` 或 `tab label` 分配标签；标签、tab id、原始 target id 和唯一的 target-id 前缀都可以接受。当 Chromium 在导航或表单提交期间替换底层原始 target 时，只要 OpenClaw 能证明匹配关系，它就会将稳定的 `tabId`/标签附加到替换后的标签页上。原始 target id 仍然是易变的；优先使用 `suggestedTargetId`。
+`tabs` 先返回 `suggestedTargetId`，然后返回稳定的 `tabId`（如 `t1`）、可选标签以及原始 `targetId`。代理应将 `suggestedTargetId` 传回 `focus`、`close`、快照和操作。你可以使用 `open --label`、`tab new --label` 或 `tab label` 分配标签；标签、tab id、原始 target id 和唯一的 target-id 前缀都可接受。请求字段仍名为 `targetId` 以保持兼容，但它接受这些标签页引用。请将原始 target id 视为诊断句柄，而不是持久的代理记忆。当 Chromium 在导航或表单提交期间替换底层原始 target 时，OpenClaw 会在能够证明匹配时，将稳定的 `tabId`/标签附加到替换后的标签页。原始 target id 仍然会变化；优先使用 `suggestedTargetId`。
 
 ## 快照 / 截图 / 操作
 
@@ -165,10 +165,11 @@ openclaw browser select <ref> OptionA OptionB
 openclaw browser fill --fields '[{"ref":"1","value":"Ada"}]'
 openclaw browser wait --text "Done"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref <ref>
+openclaw browser evaluate --fn 'const title = document.title; return title;'
 openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.ready; return true; }'
 ```
 
-当页面侧函数可能需要比默认 evaluate 超时时间更长时，请使用 `evaluate --timeout-ms <ms>`。
+`evaluate --fn` 接受函数源代码、表达式或语句体。语句体会被包装为 async 函数，因此想要返回值时请使用 `return`。当页面侧函数可能需要比默认 evaluate 超时更长的时间时，请使用 `evaluate --timeout-ms <ms>`。
 
 动作响应会在动作触发页面替换后返回当前原始 `targetId`，前提是 OpenClaw 能证明替换后的标签页。脚本仍应在长期工作流中存储并传递 `suggestedTargetId`/标签。
 
@@ -176,13 +177,14 @@ openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.re
 
 ```bash
 openclaw browser upload /tmp/openclaw/uploads/file.pdf --ref <ref>
+openclaw browser upload media://inbound/file.pdf --ref <ref>
 openclaw browser waitfordownload
 openclaw browser download <ref> report.pdf
 openclaw browser dialog --accept
 openclaw browser dialog --dismiss --dialog-id d1
 ```
 
-受管 Chrome 配置文件会将普通点击触发的下载保存到 OpenClaw 下载目录（默认是 `/tmp/openclaw/downloads`，或配置的临时根目录）。当代理需要等待特定文件并返回其路径时，请使用 `waitfordownload` 或 `download`；这些显式等待器会接管下一次下载。当某个操作打开模态对话框时，动作响应会返回 `blockedByDialog` 和 `browserState.dialogs.pending`；传入 `--dialog-id` 可以直接应答。OpenClaw 外部处理的对话框会出现在 `browserState.dialogs.recent` 下。
+Managed Chrome profiles 会将普通点击触发的下载保存到 OpenClaw downloads 目录（默认 `/tmp/openclaw/downloads`，或配置的临时根目录）。当代理需要等待特定文件并返回其路径时，请使用 `waitfordownload` 或 `download`；这些显式等待器负责接管下一次下载。上传接受来自 OpenClaw 临时 uploads 根目录和 OpenClaw 管理的 inbound media 的文件，包括 `media://inbound/<id>` 和 sandbox 相对的 `media/inbound/<id>` 引用。嵌套 media 引用、路径穿越和任意本地路径仍会被拒绝。当操作打开模态对话框时，操作响应会返回 `blockedByDialog` 和 `browserState.dialogs.pending`；请传入 `--dialog-id` 直接应答。OpenClaw 之外处理的对话框会出现在 `browserState.dialogs.recent` 中。
 
 ## 状态和存储
 

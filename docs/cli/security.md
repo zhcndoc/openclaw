@@ -27,23 +27,22 @@ openclaw security audit --json
 
 普通的 `security audit` 会保持在冷配置/文件系统/只读路径上。默认情况下，它不会发现插件运行时安全收集器，因此常规审计不会加载每个已安装插件的运行时。使用 `--deep` 可包含尽力而为的实时 Gateway 探测以及插件拥有的安全审计收集器；明确的内部调用者在已经具有适当运行时作用域时，也可以选择启用这些插件拥有的收集器。
 
-当多个 DM 发送者共享主会话时，审计会发出警告，并建议使用 **安全 DM 模式**：对于共享收件箱，设置 `session.dmScope="per-channel-peer"`（或在多账号频道中设置 `per-account-channel-peer`）。
-这是为了加固协作/共享收件箱。单个由彼此不信任/对抗性操作员共享的 Gateway 不是推荐的设置；应通过单独的 gateway（或单独的 OS 用户/主机）来分隔信任边界。
-当配置暗示可能存在共享用户入口时，它还会发出 `security.trust_model.multi_user_heuristic` 提示（例如开放的 DM/群组策略、已配置的群组目标，或通配符发送者规则），并提醒你 OpenClaw 默认是个人助手信任模型。
-对于有意的共享用户设置，审计建议将所有会话置于沙箱中，保持文件系统访问以工作区为作用域，并且不要在该运行时中保留个人/私密身份或凭据。
-当使用小模型（`<=300B`）且未进行沙箱隔离并启用网页/浏览器工具时，它也会发出警告。
-对于 webhook 入口，当出现以下情况时会发出警告：
+审计会在多个 DM 发送者共享主会话时发出警告，并建议使用**安全 DM 模式**：`session.dmScope="per-channel-peer"`（对于多账号频道则使用 `per-account-channel-peer`）以适用于共享收件箱。
+这用于协作/共享收件箱加固。不建议将单个 Gateway 作为互不信任/对抗性操作员共享的设置；应通过单独的 gateway（或单独的 OS 用户/主机）拆分信任边界。
+当配置表明可能存在共享用户入口时（例如开放 DM/群组策略、已配置的群组目标或通配符发送者规则），它还会发出 `security.trust_model.multi_user_heuristic`，并提醒你 OpenClaw 默认采用的是个人助理信任模型。
+对于有意的共享用户设置，审计建议是：隔离所有会话，将文件系统访问限制在工作区范围内，并让个人/私密身份或凭据不要进入该运行时。
+当使用小型模型（`<=300B`）且未进行沙箱隔离并启用了 web/browser 工具时，它也会发出警告。
+对于 webhook 入口，启动时会记录一条非致命的安全警告；审计会标记 `hooks.token` 复用了活动 Gateway 共享密钥认证值的情况，包括 `gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 和 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。当以下情况发生时，它也会发出警告：
 
-- `hooks.token` 复用了一个正在使用中的 Gateway 共享密钥认证值（`gateway.auth.token` / `OPENCLAW_GATEWAY_TOKEN` 或 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`）
-- `hooks.token` 过短
+- `hooks.token` 很短
 - `hooks.path="/"` 
 - `hooks.defaultSessionKey` 未设置
 - `hooks.allowedAgentIds` 不受限制
-- 允许请求中的 `sessionKey` 覆盖
-- 覆盖功能已启用，但未设置 `hooks.allowedSessionKeyPrefixes`
+- 启用了请求 `sessionKey` 覆盖
+- 覆盖已启用但未配置 `hooks.allowedSessionKeyPrefixes`
 
-如果 Gateway 密码认证只在启动时提供，请将同样的值传给 `openclaw security audit --auth password --password <password>`，这样审计就可以将其与 `hooks.token` 进行检查。
-密码模式复用对兼容性而言属于审计发现；应轮换其中一个密钥，而不是指望 Gateway 启动时拒绝该配置。
+如果 Gateway 密码认证仅在启动时提供，请将相同的值传给 `openclaw security audit --auth password --password <password>`，以便审计将其与 `hooks.token` 进行检查。
+运行 `openclaw doctor --fix` 可轮换持久化复用的 `hooks.token`，然后更新外部 hook 发送方以使用新的 hook token。
 
 当已配置沙箱 Docker 设置但沙箱模式关闭时，当 `gateway.nodes.denyCommands` 使用了无效的模式样式/未知条目时（仅支持精确的节点命令名匹配，不支持 shell 文本过滤），当 `gateway.nodes.allowCommands` 明确启用了危险的节点命令时，当全局 `tools.profile="minimal"` 被代理工具配置覆盖时，当写入/编辑工具被禁用但 `exec` 仍可用且没有约束性的沙箱文件系统边界时，当开放组在缺少沙箱/工作区保护的情况下暴露运行时/文件系统工具时，以及当已安装的插件工具在宽松工具策略下可能可达时，它也会发出警告。
 它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置不当，存在头部伪造风险）以及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录泄露元数据）。

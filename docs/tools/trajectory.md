@@ -163,8 +163,8 @@ OpenClaw 会在代理清理期间刷写运行时轨迹侧车文件。默认
 export OPENCLAW_TRAJECTORY_FLUSH_TIMEOUT_MS=30000
 ```
 
-这会控制 OpenClaw 何时记录 `pi-trajectory-flush` 超时并继续。
-它不会改变轨迹大小上限。要调整所有未传入显式超时的代理清理步骤，
+这决定了 OpenClaw 何时记录 `openclaw-trajectory-flush` 超时并继续执行。
+它不会改变轨迹大小上限。若要调整所有未传入显式超时的代理清理步骤，
 请设置 `OPENCLAW_AGENT_CLEANUP_TIMEOUT_MS`。
 
 ## 隐私和限制

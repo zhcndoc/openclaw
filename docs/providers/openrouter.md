@@ -101,7 +101,7 @@ OpenClaw 会将文本生成视频和图像生成视频任务提交给 OpenRouter
 返回的 `polling_url`，并从 OpenRouter 的 `unsigned_urls` 或文档中说明的任务内容端点下载已完成的视频。默认情况下，参考图像会作为首帧/尾帧图像发送；带有 `reference_image` 标记的图像会作为 OpenRouter 输入引用发送。内置的 `google/veo-3.1-fast` 默认项声明了当前支持的 4/6/8
 秒时长、`720P`/`1080P` 分辨率以及 `16:9`/`9:16` 宽高比。由于上游视频生成 API 目前仅接受文本和图像引用，因此 OpenRouter 上未注册视频转视频功能。
 
-## Music generation
+## 音乐生成
 
 OpenRouter 也可以通过 chat completions
 音频输出来支持 `music_generate` 工具。在
@@ -127,7 +127,7 @@ OpenRouter 也可以通过 chat completions
 "audio"]`，启用流式传输，收集流式音频分片，并将结果保存为用于通道交付的生成媒体。Lyria 模型可通过共享的 `music_generate image=...`
 参数接受参考图像。
 
-## Text-to-speech
+## 文本转语音
 
 OpenRouter 也可通过其兼容 OpenAI 的
 `/audio/speech` 端点作为 TTS 提供商使用。
@@ -141,7 +141,7 @@ OpenRouter 也可通过其兼容 OpenAI 的
       providers: {
         openrouter: {
           model: "hexgrad/kokoro-82m",
-          voice: "af_alloy",
+          speakerVoice: "af_alloy",
           responseFormat: "mp3",
         },
       },
@@ -197,7 +197,7 @@ OpenRouter 文档中定义的应用归属请求头：
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Response caching">
+  <Accordion title="响应缓存">
     OpenRouter 响应缓存是可选启用的。可通过模型参数为每个 OpenRouter 模型单独启用：
 
     ```json5
@@ -228,29 +228,29 @@ OpenRouter 文档中定义的应用归属请求头：
 
   </Accordion>
 
-  <Accordion title="Anthropic cache markers">
+  <Accordion title="Anthropic 缓存标记">
     在已验证的 OpenRouter 路由上，Anthropic 模型引用会保留
     OpenRouter 特定的 Anthropic `cache_control` 标记，OpenClaw 会使用这些标记来
     更好地在 system/developer 提示块上复用提示缓存。
   </Accordion>
 
-  <Accordion title="Anthropic reasoning prefill">
+  <Accordion title="Anthropic 推理预填充">
     在已验证的 OpenRouter 路由上，启用推理的 Anthropic 模型引用会在请求到达 OpenRouter 之前移除末尾的 assistant prefill 回合，以符合 Anthropic 的要求：推理对话必须以 user 回合结束。
   </Accordion>
 
-  <Accordion title="Thinking / reasoning injection">
+  <Accordion title="思考 / 推理注入">
     在受支持的非 `auto` 路由上，OpenClaw 会将所选的思考级别映射到
     OpenRouter 代理推理负载。未受支持的模型提示和
     `openrouter/auto` 会跳过该推理注入。Hunter Alpha 也会为过期的已配置模型引用跳过代理推理，因为 OpenRouter 可能会针对该已退役路由在推理字段中返回最终答案文本。
   </Accordion>
 
-  <Accordion title="DeepSeek V4 reasoning replay">
+  <Accordion title="DeepSeek V4 推理重放">
     在已验证的 OpenRouter 路由上，`openrouter/deepseek/deepseek-v4-flash` 和
     `openrouter/deepseek/deepseek-v4-pro` 会在重放的 assistant 回合中补全缺失的 `reasoning_content`，以便思考/工具对话保持 DeepSeek V4 所需的后续形状。OpenClaw 会为这些路由发送 OpenRouter 支持的
     `reasoning_effort` 值；`xhigh` 是当前声明的最高级别，过时的 `max` 覆盖会映射为 `xhigh`。
   </Accordion>
 
-  <Accordion title="OpenAI-only request shaping">
+  <Accordion title="仅 OpenAI 的请求形状">
     OpenRouter 仍然通过代理式的 OpenAI 兼容路径运行，因此诸如 `serviceTier`、Responses `store`、OpenAI reasoning-compat 负载和提示缓存提示等原生 OpenAI 专属请求形状不会被转发。
   </Accordion>
 
@@ -260,7 +260,7 @@ OpenRouter 文档中定义的应用归属请求头：
     重放验证或 bootstrap 重写。
   </Accordion>
 
-  <Accordion title="Provider routing metadata">
+  <Accordion title="提供商路由元数据">
     OpenRouter 支持一个用于底层提供商路由的 `provider` 请求对象。通过
     `models.providers.openrouter.params.provider` 为所有 OpenRouter 文本模型请求配置默认策略：
 

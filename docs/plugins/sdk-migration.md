@@ -16,26 +16,29 @@ OpenClaw 已经从一个广泛的向后兼容层迁移到了现代插件架构�
 
 旧的插件系统提供了两个开放面，让插件可以从单一入口导入所需的任何内容：
 
-- **`openclaw/plugin-sdk/compat`** - 单一导入，重新导出了数十个
-  辅助工具。它的引入是为了在新插件架构构建期间，让更早的基于 hook 的插件继续工作。
-- **`openclaw/plugin-sdk/infra-runtime`** - 一个宽泛的运行时辅助工具总入口，
+- **`openclaw/plugin-sdk/compat`** - 单个导入，重新导出数十个
+  辅助工具。它的引入是为了在新插件架构构建期间让旧的基于 hook 的插件继续工作。
+- **`openclaw/plugin-sdk/infra-runtime`** - 一个宽泛的运行时辅助工具桶，
   混合了系统事件、心跳状态、投递队列、fetch/proxy 辅助工具、
-  文件辅助工具、审批类型以及无关的实用工具。
-- **`openclaw/plugin-sdk/config-runtime`** - 一个宽泛的配置兼容总入口，
-  在迁移窗口期间仍然保留已弃用的直接加载/写入辅助工具。
+  文件辅助工具、审批类型以及不相关的实用工具。
+- **`openclaw/plugin-sdk/config-runtime`** - 一个宽泛的配置兼容桶，
+  在迁移窗口期间仍保留已弃用的直接加载/写入辅助工具。
 - **`openclaw/extension-api`** - 一个桥接层，让插件可以直接访问
   主机侧辅助工具，例如嵌入式代理运行器。
-- **`api.registerEmbeddedExtensionFactory(...)`** - 一个已移除的仅 Pi 打包
-  扩展 hook，可观察嵌入式运行器事件，例如
-  `tool_result`。
+- **`api.registerEmbeddedExtensionFactory(...)`** - 一个已移除的仅适用于 embedded-runner 的捆绑
+  扩展 hook，可以观察诸如
+  `tool_result` 之类的 embedded-runner 事件。
 
-这些广泛的导入面现在都已**弃用**。它们在运行时仍然可用，但新插件不得使用它们，现有插件应在下一个大版本移除它们之前完成迁移。仅 Pi 的嵌入式扩展工厂注册 API 已经被移除；请改用 tool-result 中间件。
+这些宽泛的导入面现在都已经**弃用**。它们在运行时仍然可用，
+但新插件不得使用它们，现有插件也应在下一个大版本移除它们之前完成迁移。仅适用于 embedded-runner 的扩展工厂
+注册 API 已被移除；请改用 tool-result 中间件。
 
 OpenClaw 不会在引入替代方案的同一次变更中移除或重新解释已文档化的插件行为。任何破坏性契约变更都必须先经过兼容适配器、诊断、文档和弃用窗口。这适用于 SDK 导入、清单字段、设置 API、hook 以及运行时注册行为。
 
 <Warning>
-  这层向后兼容机制将在未来的大版本中移除。仍然从这些面导入的插件在那时会失效。
-  仅 Pi 的嵌入式扩展工厂注册现在已经不会再加载。
+  向后兼容层将在未来的一个大版本中移除。
+  仍然从这些表面导入的插件在那时会失效。
+  旧的嵌入式扩展工厂注册已经不会再加载。
 </Warning>
 
 ## 为什么会这样改
@@ -190,7 +193,7 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
     `api.runtime.config.writeConfigFile(...)`。优先使用已经传入当前调用路径的配置。
     需要当前进程快照的长生命周期处理器可以使用 `api.runtime.config.current()`。
     长生命周期 agent 工具应在 `execute` 中使用工具上下文的 `ctx.getRuntimeConfig()`，
-    这样即使某个工具是在配置写入之前创建的，也仍然能看到刷新后的运行时配置。
+    这样即使某个工具是在配置写入之前创建的，也仍然能够看到刷新后的运行时配置。
 
     配置写入必须通过事务型辅助工具，并选择写后策略：
 
@@ -235,16 +238,17 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
 
   </Step>
 
-  <Step title="将 Pi 的 tool-result 扩展迁移到中间件">
-    捆绑插件必须用运行时中立的中间件替换仅 Pi 可用的
-    `api.registerEmbeddedExtensionFactory(...)` tool-result 处理器。
+  <Step title="Migrate embedded tool-result extensions to middleware">
+    Bundled plugins must replace embedded-runner-only
+    `api.registerEmbeddedExtensionFactory(...)` tool-result handlers with
+    runtime-neutral middleware.
 
     ```typescript
-    // Pi 和 Codex 运行时动态工具
+    // OpenClaw 和 Codex 运行时动态工具
     api.registerAgentToolResultMiddleware(async (event) => {
       return compactToolResult(event);
     }, {
-      runtimes: ["pi", "codex"],
+      runtimes: ["openclaw", "codex"],
     });
     ```
 
@@ -253,7 +257,7 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
     ```json
     {
       "contracts": {
-        "agentToolResultMiddleware": ["pi", "codex"]
+        "agentToolResultMiddleware": ["openclaw", "codex"]
       }
     }
     ```
@@ -331,12 +335,12 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
     对于宿主侧辅助工具，请使用注入的插件运行时，而不是直接导入：
 
     ```typescript
-    // 之前（已弃用的 extension-api 桥接）
-    import { runEmbeddedPiAgent } from "openclaw/extension-api";
-    const result = await runEmbeddedPiAgent({ sessionId, prompt });
+    // Before (deprecated extension-api bridge)
+    import { runEmbeddedAgent } from "openclaw/extension-api";
+    const result = await runEmbeddedAgent({ sessionId, prompt });
 
-    // 之后（注入的运行时）
-    const result = await api.runtime.agent.runEmbeddedPiAgent({ sessionId, prompt });
+    // After (injected runtime)
+    const result = await api.runtime.agent.runEmbeddedAgent({ sessionId, prompt });
     ```
 
     同样的模式也适用于其他旧的桥接辅助工具：
@@ -421,171 +425,176 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
 <Accordion title="常见导入路径表">
   | 导入路径 | 用途 | 关键导出 |
   | --- | --- | --- |
-  | `plugin-sdk/plugin-entry` | 规范的插件入口辅助工具 | `definePluginEntry` |
-  | `plugin-sdk/core` | 用于通道入口定义/构建器的旧式总括重导出 | `defineChannelPluginEntry`, `createChatChannelPlugin` |
-  | `plugin-sdk/config-schema` | 根配置模式导出 | `OpenClawSchema` |
-  | `plugin-sdk/provider-entry` | 单 provider 入口辅助工具 | `defineSingleProviderPluginEntry` |
-  | `plugin-sdk/channel-core` | 聚焦的通道入口定义和构建器 | `defineChannelPluginEntry`, `defineSetupPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase` |
-  | `plugin-sdk/setup` | 共享 setup 向导辅助工具 | setup 翻译器、allowlist 提示、setup 状态构建器 |
-  | `plugin-sdk/setup-runtime` | setup 时运行时辅助工具 | `createSetupTranslator`、导入安全的 setup patch 适配器、lookup-note 辅助工具、`promptResolvedAllowFrom`、`splitSetupEntries`、委托式 setup 代理 |
-  | `plugin-sdk/setup-adapter-runtime` | 已弃用的 setup 适配器别名 | 使用 `plugin-sdk/setup-runtime` |
-  | `plugin-sdk/setup-tools` | setup 工具辅助工具 | `formatCliCommand`、`detectBinary`、`extractArchive`、`resolveBrewExecutable`、`formatDocsLink`、`CONFIG_DIR` |
-  | `plugin-sdk/account-core` | 多账号辅助工具 | 账号列表/配置/动作门控辅助工具 |
-  | `plugin-sdk/account-id` | 账号 ID 辅助工具 | `DEFAULT_ACCOUNT_ID`、账号 ID 规范化 |
-  | `plugin-sdk/account-resolution` | 账号查找辅助工具 | 账号查找 + 默认回退辅助工具 |
-  | `plugin-sdk/account-helpers` | 窄化的账号辅助工具 | 账号列表/账号动作辅助工具 |
-  | `plugin-sdk/channel-setup` | setup 向导适配器 | `createOptionalChannelSetupSurface`、`createOptionalChannelSetupAdapter`、`createOptionalChannelSetupWizard`，以及 `DEFAULT_ACCOUNT_ID`、`createTopLevelChannelDmPolicy`、`setSetupChannelEnabled`、`splitSetupEntries` |
-  | `plugin-sdk/channel-pairing` | DM 配对原语 | `createChannelPairingController` |
-  | `plugin-sdk/channel-reply-pipeline` | 回复前缀、输入中指示和来源投递连线 | `createChannelReplyPipeline`、`resolveChannelSourceReplyDeliveryMode` |
-  | `plugin-sdk/channel-config-helpers` | 配置适配器工厂和 DM 访问辅助工具 | `createHybridChannelConfigAdapter`、`resolveChannelDmAccess`、`resolveChannelDmAllowFrom`、`resolveChannelDmPolicy`、`normalizeChannelDmPolicy`、`normalizeLegacyDmAliases` |
-  | `plugin-sdk/channel-config-schema` | 配置模式构建器 | 共享通道配置模式原语和通用构建器 |
-  | `plugin-sdk/bundled-channel-config-schema` | 捆绑配置模式 | 仅供 OpenClaw 维护的捆绑插件使用；新插件必须定义插件本地模式 |
-  | `plugin-sdk/channel-config-schema-legacy` | 已弃用的捆绑配置模式 | 仅作为兼容别名；对受维护的捆绑插件请使用 `plugin-sdk/bundled-channel-config-schema` |
-  | `plugin-sdk/telegram-command-config` | Telegram 命令配置辅助工具 | 命令名规范化、描述裁剪、重复/冲突校验 |
-  | `plugin-sdk/channel-policy` | 组/DM 策略解析 | `resolveChannelGroupRequireMention` |
-  | `plugin-sdk/channel-lifecycle` | 账号状态和草稿流生命周期辅助工具 | `createAccountStatusSink`、草稿预览收尾辅助工具 |
-  | `plugin-sdk/inbound-envelope` | 入站信封辅助工具 | 共享 route + 信封构建器辅助工具 |
-  | `plugin-sdk/inbound-reply-dispatch` | 入站回复辅助工具 | 共享 record-and-dispatch 辅助工具 |
-  | `plugin-sdk/messaging-targets` | 已弃用的目标解析导入路径 | 通用目标解析辅助工具请使用 `plugin-sdk/channel-targets`，路由比较请使用 `plugin-sdk/channel-route`，provider 特定目标解析请使用插件拥有的 `messaging.targetResolver` / `messaging.resolveOutboundSessionRoute` |
-  | `plugin-sdk/outbound-media` | 出站媒体辅助工具 | 共享出站媒体加载 |
-  | `plugin-sdk/outbound-send-deps` | 出站发送依赖辅助工具 | 轻量级 `resolveOutboundSendDep` 查找，无需导入完整出站运行时 |
-  | `plugin-sdk/outbound-runtime` | 出站运行时辅助工具 | 出站投递、身份/发送代理、会话、格式化和负载规划辅助工具 |
-  | `plugin-sdk/thread-bindings-runtime` | 线程绑定辅助工具 | 线程绑定生命周期和适配器辅助工具 |
-  | `plugin-sdk/agent-media-payload` | 旧式媒体负载辅助工具 | 适用于旧字段布局的 agent 媒体负载构建器 |
-  | `plugin-sdk/channel-runtime` | 已弃用的兼容 shim | 仅供旧版通道运行时工具使用 |
-  | `plugin-sdk/channel-send-result` | 发送结果类型 | 回复结果类型 |
-  | `plugin-sdk/runtime-store` | 持久化插件存储 | `createPluginRuntimeStore` |
-  | `plugin-sdk/runtime` | 宽泛运行时辅助工具 | 运行时/日志/备份/插件安装辅助工具 |
-  | `plugin-sdk/runtime-env` | 窄化运行时环境辅助工具 | logger/运行时环境、超时、重试和退避辅助工具 |
-  | `plugin-sdk/plugin-runtime` | 共享插件运行时辅助工具 | 插件命令/hook/http/交互式辅助工具 |
-  | `plugin-sdk/hook-runtime` | hook 管道辅助工具 | 共享 webhook/内部 hook 管道辅助工具 |
-  | `plugin-sdk/lazy-runtime` | 惰性运行时辅助工具 | `createLazyRuntimeModule`、`createLazyRuntimeMethod`、`createLazyRuntimeMethodBinder`、`createLazyRuntimeNamedExport`、`createLazyRuntimeSurface` |
-  | `plugin-sdk/process-runtime` | 进程辅助工具 | 共享 exec 辅助工具 |
-  | `plugin-sdk/cli-runtime` | CLI 运行时辅助工具 | 命令格式化、等待、版本辅助工具 |
-  | `plugin-sdk/gateway-runtime` | gateway 辅助工具 | gateway 客户端、事件循环就绪启动辅助工具，以及通道状态 patch 辅助工具 |
-  | `plugin-sdk/config-runtime` | 已弃用的配置兼容 shim | 优先使用 `config-contracts`、`plugin-config-runtime`、`runtime-config-snapshot` 和 `config-mutation` |
-  | `plugin-sdk/telegram-command-config` | Telegram 命令辅助工具 | 当捆绑的 Telegram 契约面不可用时使用的稳定回退 Telegram 命令校验辅助工具 |
-  | `plugin-sdk/approval-runtime` | 审批提示辅助工具 | exec/plugin 审批负载、审批能力/资料辅助工具、原生审批路由/运行时辅助工具，以及结构化审批展示路径格式化 |
-  | `plugin-sdk/approval-auth-runtime` | 审批认证辅助工具 | 审批人解析、同聊动作认证 |
-  | `plugin-sdk/approval-client-runtime` | 审批客户端辅助工具 | 原生 exec 审批 profile/filter 辅助工具 |
-  | `plugin-sdk/approval-delivery-runtime` | 审批投递辅助工具 | 原生审批能力/投递适配器 |
-  | `plugin-sdk/approval-gateway-runtime` | 审批 gateway 辅助工具 | 共享审批 gateway 解析辅助工具 |
-  | `plugin-sdk/approval-handler-adapter-runtime` | 审批适配器辅助工具 | 用于热通道入口的轻量级原生审批适配器加载辅助工具 |
-  | `plugin-sdk/approval-handler-runtime` | 审批处理器辅助工具 | 更宽泛的审批处理器运行时辅助工具；当更窄的适配器/gateway 接口足够时优先使用它们 |
-  | `plugin-sdk/approval-native-runtime` | 审批目标辅助工具 | 原生审批目标/账号绑定辅助工具 |
-  | `plugin-sdk/approval-reply-runtime` | 审批回复辅助工具 | exec/plugin 审批回复负载辅助工具 |
-  | `plugin-sdk/channel-runtime-context` | 通道运行时上下文辅助工具 | 通用通道运行时上下文注册/获取/监听辅助工具 |
-  | `plugin-sdk/security-runtime` | 安全辅助工具 | 共享 trust、DM gate、root 限定文件/路径辅助工具、外部内容和 secret 收集辅助工具 |
-  | `plugin-sdk/ssrf-policy` | SSRF 策略辅助工具 | 主机 allowlist 和私网策略辅助工具 |
-  | `plugin-sdk/ssrf-runtime` | SSRF 运行时辅助工具 | 固定调度器、受保护 fetch、SSRF 策略辅助工具 |
-  | `plugin-sdk/system-event-runtime` | 系统事件辅助工具 | `enqueueSystemEvent`、`peekSystemEventEntries` |
-  | `plugin-sdk/heartbeat-runtime` | 心跳辅助工具 | 心跳唤醒、事件和可见性辅助工具 |
-  | `plugin-sdk/delivery-queue-runtime` | 投递队列辅助工具 | `drainPendingDeliveries` |
-  | `plugin-sdk/channel-activity-runtime` | 通道活动辅助工具 | `recordChannelActivity` |
-  | `plugin-sdk/dedupe-runtime` | 去重辅助工具 | 内存去重缓存 |
-  | `plugin-sdk/file-access-runtime` | 文件访问辅助工具 | 安全的本地文件/媒体路径辅助工具 |
-  | `plugin-sdk/transport-ready-runtime` | 传输就绪辅助工具 | `waitForTransportReady` |
-  | `plugin-sdk/collection-runtime` | 有界缓存辅助工具 | `pruneMapToMaxSize` |
-  | `plugin-sdk/diagnostic-runtime` | 诊断门控辅助工具 | `isDiagnosticFlagEnabled`、`isDiagnosticsEnabled` |
-  | `plugin-sdk/error-runtime` | 错误格式化辅助工具 | `formatUncaughtError`、`isApprovalNotFoundError`、错误图辅助工具 |
-  | `plugin-sdk/fetch-runtime` | 包装 fetch/代理辅助工具 | `resolveFetch`、代理辅助工具、EnvHttpProxyAgent 选项辅助工具 |
-  | `plugin-sdk/host-runtime` | 主机规范化辅助工具 | `normalizeHostname`、`normalizeScpRemoteHost` |
-  | `plugin-sdk/retry-runtime` | 重试辅助工具 | `RetryConfig`、`retryAsync`、策略运行器 |
-  | `plugin-sdk/allow-from` | allowlist 格式化和输入映射 | `formatAllowFromLowercase`、`mapAllowlistResolutionInputs` |
-  | `plugin-sdk/command-auth` | 命令门控和命令面辅助工具 | `resolveControlCommandGate`、发送者授权辅助工具、命令注册表辅助工具，包括动态参数菜单格式化 |
-  | `plugin-sdk/command-status` | 命令状态/帮助渲染器 | `buildCommandsMessage`、`buildCommandsMessagePaginated`、`buildHelpMessage` |
-  | `plugin-sdk/secret-input` | 密钥输入解析 | 密钥输入辅助工具 |
-  | `plugin-sdk/webhook-ingress` | Webhook 请求辅助工具 | Webhook 目标工具 |
-  | `plugin-sdk/webhook-request-guards` | Webhook body 守卫辅助工具 | 请求 body 读取/限制辅助工具 |
-  | `plugin-sdk/reply-runtime` | 共享回复运行时 | 入站分发、心跳、回复规划器、分块 |
-  | `plugin-sdk/reply-dispatch-runtime` | 窄化回复分发辅助工具 | finalize、provider 分发和会话标签辅助工具 |
-  | `plugin-sdk/reply-history` | 回复历史辅助工具 | `createChannelHistoryWindow`；已弃用的 map-helper 兼容导出，例如 `buildPendingHistoryContextFromMap`、`recordPendingHistoryEntry` 和 `clearHistoryEntriesIfEnabled` |
-  | `plugin-sdk/reply-reference` | 回复引用规划 | `createReplyReferencePlanner` |
-  | `plugin-sdk/reply-chunking` | 回复分块辅助工具 | 文本/markdown 分块辅助工具 |
-  | `plugin-sdk/session-store-runtime` | 会话存储辅助工具 | 存储路径 + updated-at 辅助工具 |
-  | `plugin-sdk/state-paths` | 状态路径辅助工具 | 状态和 OAuth 目录辅助工具 |
-  | `plugin-sdk/routing` | 路由/会话键辅助工具 | `resolveAgentRoute`、`buildAgentSessionKey`、`resolveDefaultAgentBoundAccountId`、会话键规范化辅助工具 |
-  | `plugin-sdk/status-helpers` | 通道状态辅助工具 | 通道/账号状态摘要构建器、运行时状态默认值、问题元数据辅助工具 |
-  | `plugin-sdk/target-resolver-runtime` | 目标解析器辅助工具 | 共享目标解析器辅助工具 |
-  | `plugin-sdk/string-normalization-runtime` | 字符串规范化辅助工具 | slug/字符串规范化辅助工具 |
-  | `plugin-sdk/request-url` | 请求 URL 辅助工具 | 从类请求输入中提取字符串 URL |
-  | `plugin-sdk/run-command` | 定时命令辅助工具 | 带规范化 stdout/stderr 的定时命令运行器 |
-  | `plugin-sdk/param-readers` | 参数读取器 | 常见工具/CLI 参数读取器 |
-  | `plugin-sdk/tool-payload` | 工具负载提取 | 从工具结果对象中提取规范化负载 |
-  | `plugin-sdk/tool-send` | 工具发送提取 | 从工具参数中提取规范化发送目标字段 |
-  | `plugin-sdk/temp-path` | 临时路径辅助工具 | 共享临时下载路径辅助工具 |
-  | `plugin-sdk/logging-core` | 日志辅助工具 | 子系统 logger 和脱敏辅助工具 |
-  | `plugin-sdk/markdown-table-runtime` | Markdown 表格辅助工具 | Markdown 表格模式辅助工具 |
-  | `plugin-sdk/reply-payload` | 消息回复类型 | 回复负载类型 |
-  | `plugin-sdk/provider-setup` | 经过筛选的本地/自托管 provider setup 辅助工具 | 自托管 provider 发现/配置辅助工具 |
-  | `plugin-sdk/self-hosted-provider-setup` | 聚焦的 OpenAI 兼容自托管 provider setup 辅助工具 | 相同的自托管 provider 发现/配置辅助工具 |
-  | `plugin-sdk/provider-auth-runtime` | provider 运行时认证辅助工具 | 运行时 API key 解析辅助工具 |
-  | `plugin-sdk/provider-auth-api-key` | provider API key setup 辅助工具 | API key onboarding/profile-write 辅助工具 |
-  | `plugin-sdk/provider-auth-result` | provider auth-result 辅助工具 | 标准 OAuth auth-result 构建器 |
-  | `plugin-sdk/provider-selection-runtime` | provider 选择辅助工具 | 已配置或自动 provider 选择和原始 provider 配置合并 |
-  | `plugin-sdk/provider-env-vars` | provider 环境变量辅助工具 | provider 认证环境变量查找辅助工具 |
-  | `plugin-sdk/provider-model-shared` | 共享 provider 模型/重放辅助工具 | `ProviderReplayFamily`、`buildProviderReplayFamilyHooks`、`normalizeModelCompat`、共享重放策略构建器、provider 端点辅助工具，以及模型 ID 规范化辅助工具 |
-  | `plugin-sdk/provider-catalog-shared` | 共享 provider 目录辅助工具 | `findCatalogTemplate`、`buildSingleProviderApiKeyCatalog`、`buildManifestModelProviderConfig`、`supportsNativeStreamingUsageCompat`、`applyProviderNativeStreamingUsageCompat` |
-  | `plugin-sdk/provider-onboard` | provider onboarding 补丁 | Onboarding 配置辅助工具 |
-  | `plugin-sdk/provider-http` | provider HTTP 辅助工具 | 通用 provider HTTP/端点能力辅助工具，包括音频转写 multipart form 辅助工具 |
-  | `plugin-sdk/provider-web-fetch` | provider web-fetch 辅助工具 | web-fetch provider 注册/缓存辅助工具 |
-  | `plugin-sdk/provider-web-search-config-contract` | provider web-search 配置辅助工具 | 面向不需要 plugin-enable 接线的 provider 的窄化 web-search 配置/凭据辅助工具 |
-  | `plugin-sdk/provider-web-search-contract` | provider web-search 契约辅助工具 | 窄化 web-search 配置/凭据契约辅助工具，例如 `createWebSearchProviderContractFields`、`enablePluginInConfig`、`resolveProviderWebSearchPluginConfig` 以及作用域化的凭据 setter/getter |
-  | `plugin-sdk/provider-web-search` | provider web-search 辅助工具 | web-search provider 注册/缓存/运行时辅助工具 |
-  | `plugin-sdk/provider-tools` | provider 工具/schema 兼容辅助工具 | `ProviderToolCompatFamily`、`buildProviderToolCompatFamilyHooks`，以及 DeepSeek/Gemini/OpenAI schema 清理 + 诊断 |
-  | `plugin-sdk/provider-usage` | provider 使用量辅助工具 | `fetchClaudeUsage`、`fetchGeminiUsage`、`fetchGithubCopilotUsage` 和其他 provider 使用量辅助工具 |
-  | `plugin-sdk/provider-stream` | provider 流包装器辅助工具 | `ProviderStreamFamily`、`buildProviderStreamFamilyHooks`、`composeProviderStreamWrappers`、流包装器类型，以及共享 Anthropic/Bedrock/DeepSeek V4/Google/Kilocode/Moonshot/OpenAI/OpenRouter/Z.A.I/MiniMax/Copilot 包装器辅助工具 |
-  | `plugin-sdk/provider-transport-runtime` | provider 传输辅助工具 | 原生 provider 传输辅助工具，例如受保护 fetch、传输消息转换，以及可写传输事件流 |
-  | `plugin-sdk/keyed-async-queue` | 有序异步队列 | `KeyedAsyncQueue` |
-  | `plugin-sdk/media-runtime` | 共享媒体辅助工具 | 媒体 fetch/transform/store 辅助工具、基于 ffprobe 的视频尺寸探测，以及媒体负载构建器 |
-  | `plugin-sdk/media-generation-runtime` | 共享媒体生成辅助工具 | 共享故障转移辅助工具、候选选择，以及图像/视频/音乐生成的缺失模型消息 |
-  | `plugin-sdk/media-understanding` | 媒体理解辅助工具 | 媒体理解 provider 类型，以及面向 provider 的图像/音频辅助工具导出 |
-  | `plugin-sdk/text-runtime` | 已弃用的宽泛文本兼容导出 | 使用 `string-coerce-runtime`、`text-chunking`、`text-utility-runtime` 和 `logging-core` |
-  | `plugin-sdk/text-chunking` | 文本分块辅助工具 | 出站文本分块辅助工具 |
-  | `plugin-sdk/speech` | 语音辅助工具 | 语音 provider 类型，以及面向 provider 的指令、注册表、校验辅助工具，和 OpenAI 兼容的 TTS 构建器 |
-  | `plugin-sdk/speech-core` | 共享语音核心 | 语音 provider 类型、注册表、指令、规范化 |
-  | `plugin-sdk/realtime-transcription` | 实时转写辅助工具 | provider 类型、注册表辅助工具，以及共享 WebSocket 会话辅助工具 |
-  | `plugin-sdk/realtime-voice` | 实时语音辅助工具 | provider 类型、注册/解析辅助工具、桥接会话辅助工具、共享 agent 口语队列、运行中 voice 控制、转录/事件健康、回声抑制、咨询问题匹配、强制咨询协调、轮次上下文跟踪、输出活动跟踪，以及快速上下文咨询辅助工具 |
-  | `plugin-sdk/image-generation` | 图像生成辅助工具 | 图像生成 provider 类型，以及图像资产/data URL 辅助工具和 OpenAI 兼容图像 provider 构建器 |
-  | `plugin-sdk/image-generation-core` | 共享图像生成核心 | 图像生成类型、故障转移、认证和注册表辅助工具 |
-  | `plugin-sdk/music-generation` | 音乐生成辅助工具 | 音乐生成 provider/请求/结果类型 |
-  | `plugin-sdk/music-generation-core` | 共享音乐生成核心 | 音乐生成类型、故障转移辅助工具、provider 查找和模型引用解析 |
-  | `plugin-sdk/video-generation` | 视频生成辅助工具 | 视频生成 provider/请求/结果类型 |
-  | `plugin-sdk/video-generation-core` | 共享视频生成核心 | 视频生成类型、故障转移辅助工具、provider 查找和模型引用解析 |
-  | `plugin-sdk/interactive-runtime` | 交互式回复辅助工具 | 交互式回复负载规范化/归约 |
-  | `plugin-sdk/channel-config-primitives` | 通道配置原语 | 窄化的通道配置模式原语 |
-  | `plugin-sdk/channel-config-writes` | 通道配置写入辅助工具 | 通道配置写入授权辅助工具 |
-  | `plugin-sdk/channel-plugin-common` | 共享通道前言 | 共享通道插件前言导出 |
-  | `plugin-sdk/channel-status` | 通道状态辅助工具 | 共享通道状态快照/摘要辅助工具 |
-  | `plugin-sdk/allowlist-config-edit` | allowlist 配置辅助工具 | allowlist 配置编辑/读取辅助工具 |
-  | `plugin-sdk/group-access` | 组访问辅助工具 | 共享组访问决策辅助工具 |
-  | `plugin-sdk/direct-dm` | 直接 DM 辅助工具 | 共享直接 DM 认证/守卫辅助工具 |
-  | `plugin-sdk/extension-shared` | 共享扩展辅助工具 | 被动通道/状态和环境代理辅助原语 |
-  | `plugin-sdk/webhook-targets` | Webhook 目标辅助工具 | Webhook 目标注册表和路由安装辅助工具 |
-  | `plugin-sdk/webhook-path` | 已弃用的 webhook 路径别名 | 使用 `plugin-sdk/webhook-ingress` |
-  | `plugin-sdk/web-media` | 共享 web 媒体辅助工具 | 远程/本地媒体加载辅助工具 |
-  | `plugin-sdk/zod` | 已弃用的 Zod 兼容重导出 | 直接从 `zod` 导入 `zod` |
-  | `plugin-sdk/memory-core` | 捆绑 memory-core 辅助工具 | Memory 管理器/配置/文件/CLI 辅助工具面 |
-  | `plugin-sdk/memory-core-engine-runtime` | Memory 引擎运行时门面 | Memory 索引/搜索运行时门面 |
-  | `plugin-sdk/memory-core-host-engine-foundation` | Memory host foundation 引擎 | Memory host foundation 引擎导出 |
-  | `plugin-sdk/memory-core-host-engine-embeddings` | Memory host embedding 引擎 | Memory embedding 契约、注册表访问、本地 provider，以及通用 batch/remote 辅助工具；具体 remote provider 位于其所属插件中 |
-  | `plugin-sdk/memory-core-host-engine-qmd` | Memory host QMD 引擎 | Memory host QMD 引擎导出 |
-  | `plugin-sdk/memory-core-host-engine-storage` | Memory host storage 引擎 | Memory host storage 引擎导出 |
-  | `plugin-sdk/memory-core-host-multimodal` | Memory host multimodal 辅助工具 | Memory host multimodal 辅助工具 |
-  | `plugin-sdk/memory-core-host-query` | Memory host query 辅助工具 | Memory host query 辅助工具 |
-  | `plugin-sdk/memory-core-host-secret` | Memory host secret 辅助工具 | Memory host secret 辅助工具 |
-  | `plugin-sdk/memory-core-host-events` | 已弃用的 memory event 别名 | 使用 `plugin-sdk/memory-host-events` |
-  | `plugin-sdk/memory-core-host-status` | Memory host status 辅助工具 | Memory host status 辅助工具 |
-  | `plugin-sdk/memory-core-host-runtime-cli` | Memory host CLI runtime | Memory host CLI runtime 辅助工具 |
-  | `plugin-sdk/memory-core-host-runtime-core` | Memory host core runtime | Memory host core runtime 辅助工具 |
-  | `plugin-sdk/memory-core-host-runtime-files` | Memory host file/runtime 辅助工具 | Memory host file/runtime 辅助工具 |
-  | `plugin-sdk/memory-host-core` | Memory host core runtime 别名 | 内存主机 core runtime 辅助工具的厂商中立别名 |
-  | `plugin-sdk/memory-host-events` | Memory host event journal 别名 | 内存主机 event journal 辅助工具的厂商中立别名 |
-  | `plugin-sdk/memory-host-files` | 已弃用的 memory file/runtime 别名 | 使用 `plugin-sdk/memory-core-host-runtime-files` |
-  | `plugin-sdk/memory-host-markdown` | 托管 markdown 辅助工具 | 面向 memory-adjacent 插件的共享 managed-markdown 辅助工具 |
-  | `plugin-sdk/memory-host-search` | 活跃 memory search 门面 | 懒加载 active-memory search-manager runtime 门面 |
-  | `plugin-sdk/memory-host-status` | 已弃用的 memory host status 别名 | 使用 `plugin-sdk/memory-core-host-status` |
-  | `plugin-sdk/testing` | 测试实用工具 | 仓库本地的已弃用兼容总入口；请使用聚焦的仓库本地测试子路径，例如 `plugin-sdk/plugin-test-runtime`、`plugin-sdk/channel-test-helpers`、`plugin-sdk/channel-target-testing`、`plugin-sdk/test-env` 和 `plugin-sdk/test-fixtures` |
+  | `plugin-sdk/plugin-entry` | Canonical plugin entry helper | `definePluginEntry` |
+  | `plugin-sdk/core` | Legacy umbrella re-export for channel entry definitions/builders | `defineChannelPluginEntry`, `createChatChannelPlugin` |
+  | `plugin-sdk/config-schema` | Root config schema export | `OpenClawSchema` |
+  | `plugin-sdk/provider-entry` | Single-provider entry helper | `defineSingleProviderPluginEntry` |
+  | `plugin-sdk/channel-core` | Focused channel entry definitions and builders | `defineChannelPluginEntry`, `defineSetupPluginEntry`, `createChatChannelPlugin`, `createChannelPluginBase` |
+  | `plugin-sdk/setup` | Shared setup wizard helpers | Setup translator, allowlist prompts, setup status builders |
+  | `plugin-sdk/setup-runtime` | Setup-time runtime helpers | `createSetupTranslator`, import-safe setup patch adapters, lookup-note helpers, `promptResolvedAllowFrom`, `splitSetupEntries`, delegated setup proxies |
+  | `plugin-sdk/setup-adapter-runtime` | Deprecated setup adapter alias | Use `plugin-sdk/setup-runtime` |
+  | `plugin-sdk/setup-tools` | Setup tooling helpers | `formatCliCommand`, `detectBinary`, `extractArchive`, `resolveBrewExecutable`, `formatDocsLink`, `CONFIG_DIR` |
+  | `plugin-sdk/account-core` | Multi-account helpers | Account list/config/action-gate helpers |
+  | `plugin-sdk/account-id` | Account-id helpers | `DEFAULT_ACCOUNT_ID`, account-id normalization |
+  | `plugin-sdk/account-resolution` | Account lookup helpers | Account lookup + default-fallback helpers |
+  | `plugin-sdk/account-helpers` | Narrow account helpers | Account list/account-action helpers |
+  | `plugin-sdk/channel-setup` | Setup wizard adapters | `createOptionalChannelSetupSurface`, `createOptionalChannelSetupAdapter`, `createOptionalChannelSetupWizard`, plus `DEFAULT_ACCOUNT_ID`, `createTopLevelChannelDmPolicy`, `setSetupChannelEnabled`, `splitSetupEntries` |
+  | `plugin-sdk/channel-pairing` | DM pairing primitives | `createChannelPairingController` |
+  | `plugin-sdk/channel-reply-pipeline` | Reply prefix, typing, and source-delivery wiring | `createChannelReplyPipeline`, `resolveChannelSourceReplyDeliveryMode` |
+  | `plugin-sdk/channel-config-helpers` | Config adapter factories and DM access helpers | `createHybridChannelConfigAdapter`, `resolveChannelDmAccess`, `resolveChannelDmAllowFrom`, `resolveChannelDmPolicy`, `normalizeChannelDmPolicy`, `normalizeLegacyDmAliases` |
+  | `plugin-sdk/channel-config-schema` | Config schema builders | Shared channel config schema primitives and the generic builder only |
+  | `plugin-sdk/bundled-channel-config-schema` | Bundled config schemas | OpenClaw-maintained bundled plugins only; new plugins must define plugin-local schemas |
+  | `plugin-sdk/channel-config-schema-legacy` | Deprecated bundled config schemas | Compatibility alias only; use `plugin-sdk/bundled-channel-config-schema` for maintained bundled plugins |
+  | `plugin-sdk/telegram-command-config` | Telegram command config helpers | Command-name normalization, description trimming, duplicate/conflict validation |
+  | `plugin-sdk/channel-policy` | Group/DM policy resolution | `resolveChannelGroupRequireMention` |
+  | `plugin-sdk/channel-lifecycle` | Deprecated compatibility facade | Use `plugin-sdk/channel-outbound` |
+  | `plugin-sdk/inbound-envelope` | Inbound envelope helpers | Shared route + envelope builder helpers |
+  | `plugin-sdk/channel-inbound` | Inbound receive helpers | Context building, formatting, roots, runners, prepared reply dispatch, and dispatch predicates |
+  | `plugin-sdk/messaging-targets` | Deprecated target parsing import path | Use `plugin-sdk/channel-targets` for generic target parsing helpers, `plugin-sdk/channel-route` for route comparison, and plugin-owned `messaging.targetResolver` / `messaging.resolveOutboundSessionRoute` for provider-specific target resolution |
+  | `plugin-sdk/outbound-media` | Outbound media helpers | Shared outbound media loading |
+  | `plugin-sdk/outbound-send-deps` | Deprecated compatibility facade | Use `plugin-sdk/channel-outbound` |
+  | `plugin-sdk/channel-outbound` | Outbound message lifecycle helpers | Message adapters, receipts, durable send helpers, live preview/streaming helpers, reply options, lifecycle helpers, outbound identity, and payload planning |
+  | `plugin-sdk/channel-streaming` | Deprecated compatibility facade | Use `plugin-sdk/channel-outbound` |
+  | `plugin-sdk/outbound-runtime` | Deprecated compatibility facade | Use `plugin-sdk/channel-outbound` |
+  | `plugin-sdk/thread-bindings-runtime` | Thread-binding helpers | Thread-binding lifecycle and adapter helpers |
+  | `plugin-sdk/agent-media-payload` | Legacy media payload helpers | Agent media payload builder for legacy field layouts |
+  | `plugin-sdk/channel-runtime` | Deprecated compatibility shim | Legacy channel runtime utilities only |
+  | `plugin-sdk/channel-send-result` | Send result types | Reply result types |
+  | `plugin-sdk/runtime-store` | Persistent plugin storage | `createPluginRuntimeStore` |
+  | `plugin-sdk/runtime` | Broad runtime helpers | Runtime/logging/backup/plugin-install helpers |
+  | `plugin-sdk/runtime-env` | Narrow runtime env helpers | Logger/runtime env, timeout, retry, and backoff helpers |
+  | `plugin-sdk/plugin-runtime` | Shared plugin runtime helpers | Plugin commands/hooks/http/interactive helpers |
+  | `plugin-sdk/hook-runtime` | Hook pipeline helpers | Shared webhook/internal hook pipeline helpers |
+  | `plugin-sdk/lazy-runtime` | Lazy runtime helpers | `createLazyRuntimeModule`, `createLazyRuntimeMethod`, `createLazyRuntimeMethodBinder`, `createLazyRuntimeNamedExport`, `createLazyRuntimeSurface` |
+  | `plugin-sdk/process-runtime` | Process helpers | Shared exec helpers |
+  | `plugin-sdk/cli-runtime` | CLI runtime helpers | Command formatting, waits, version helpers |
+  | `plugin-sdk/gateway-runtime` | Gateway helpers | Gateway client, event-loop-ready start helper, and channel-status patch helpers |
+  | `plugin-sdk/config-runtime` | Deprecated config compatibility shim | Prefer `config-contracts`, `plugin-config-runtime`, `runtime-config-snapshot`, and `config-mutation` |
+  | `plugin-sdk/telegram-command-config` | Telegram command helpers | Fallback-stable Telegram command validation helpers when the bundled Telegram contract surface is unavailable |
+  | `plugin-sdk/approval-runtime` | Approval prompt helpers | Exec/plugin approval payload, approval capability/profile helpers, native approval routing/runtime helpers, and structured approval display path formatting |
+  | `plugin-sdk/approval-auth-runtime` | Approval auth helpers | Approver resolution, same-chat action auth |
+  | `plugin-sdk/approval-client-runtime` | Approval client helpers | Native exec approval profile/filter helpers |
+  | `plugin-sdk/approval-delivery-runtime` | Approval delivery helpers | Native approval capability/delivery adapters |
+  | `plugin-sdk/approval-gateway-runtime` | Approval gateway helpers | Shared approval gateway-resolution helper |
+  | `plugin-sdk/approval-handler-adapter-runtime` | Approval adapter helpers | Lightweight native approval adapter loading helpers for hot channel entrypoints |
+  | `plugin-sdk/approval-handler-runtime` | Approval handler helpers | Broader approval handler runtime helpers; prefer the narrower adapter/gateway seams when they are enough |
+  | `plugin-sdk/approval-native-runtime` | Approval target helpers | Native approval target/account binding helpers |
+  | `plugin-sdk/approval-reply-runtime` | Approval reply helpers | Exec/plugin approval reply payload helpers |
+  | `plugin-sdk/channel-runtime-context` | Channel runtime-context helpers | Generic channel runtime-context register/get/watch helpers |
+  | `plugin-sdk/security-runtime` | Security helpers | Shared trust, DM gating, root-bounded file/path helpers, external-content, and secret-collection helpers |
+  | `plugin-sdk/ssrf-policy` | SSRF policy helpers | Host allowlist and private-network policy helpers |
+  | `plugin-sdk/ssrf-runtime` | SSRF runtime helpers | Pinned-dispatcher, guarded fetch, SSRF policy helpers |
+  | `plugin-sdk/system-event-runtime` | System event helpers | `enqueueSystemEvent`, `peekSystemEventEntries` |
+  | `plugin-sdk/heartbeat-runtime` | Heartbeat helpers | Heartbeat wake, event, and visibility helpers |
+  | `plugin-sdk/delivery-queue-runtime` | Delivery queue helpers | `drainPendingDeliveries` |
+  | `plugin-sdk/channel-activity-runtime` | Channel activity helpers | `recordChannelActivity` |
+  | `plugin-sdk/dedupe-runtime` | Dedupe helpers | In-memory dedupe caches |
+  | `plugin-sdk/file-access-runtime` | File access helpers | Safe local-file/media path helpers |
+  | `plugin-sdk/transport-ready-runtime` | Transport readiness helpers | `waitForTransportReady` |
+  | `plugin-sdk/exec-approvals-runtime` | Exec approval policy helpers | `loadExecApprovals`, `resolveExecApprovalsFromFile`, `ExecApprovalsFile` |
+  | `plugin-sdk/collection-runtime` | Bounded cache helpers | `pruneMapToMaxSize` |
+  | `plugin-sdk/diagnostic-runtime` | Diagnostic gating helpers | `isDiagnosticFlagEnabled`, `isDiagnosticsEnabled` |
+  | `plugin-sdk/error-runtime` | Error formatting helpers | `formatUncaughtError`, `isApprovalNotFoundError`, error graph helpers |
+  | `plugin-sdk/fetch-runtime` | Wrapped fetch/proxy helpers | `resolveFetch`, proxy helpers, EnvHttpProxyAgent option helpers |
+  | `plugin-sdk/host-runtime` | Host normalization helpers | `normalizeHostname`, `normalizeScpRemoteHost` |
+  | `plugin-sdk/retry-runtime` | Retry helpers | `RetryConfig`, `retryAsync`, policy runners |
+  | `plugin-sdk/allow-from` | Allowlist formatting and input mapping | `formatAllowFromLowercase`, `mapAllowlistResolutionInputs` |
+  | `plugin-sdk/command-auth` | Command gating and command-surface helpers | `resolveControlCommandGate`, sender-authorization helpers, command registry helpers including dynamic argument menu formatting |
+  | `plugin-sdk/command-status` | Command status/help renderers | `buildCommandsMessage`, `buildCommandsMessagePaginated`, `buildHelpMessage` |
+  | `plugin-sdk/secret-input` | Secret input parsing | Secret input helpers |
+  | `plugin-sdk/webhook-ingress` | Webhook request helpers | Webhook target utilities |
+  | `plugin-sdk/webhook-request-guards` | Webhook body guard helpers | Request body read/limit helpers |
+  | `plugin-sdk/reply-runtime` | Shared reply runtime | Inbound dispatch, heartbeat, reply planner, chunking |
+  | `plugin-sdk/reply-dispatch-runtime` | Narrow reply dispatch helpers | Finalize, provider dispatch, and conversation-label helpers |
+  | `plugin-sdk/reply-history` | Reply-history helpers | `createChannelHistoryWindow`; deprecated map-helper compatibility exports such as `buildPendingHistoryContextFromMap`, `recordPendingHistoryEntry`, and `clearHistoryEntriesIfEnabled` |
+  | `plugin-sdk/reply-reference` | Reply reference planning | `createReplyReferencePlanner` |
+  | `plugin-sdk/reply-chunking` | Reply chunk helpers | Text/markdown chunking helpers |
+  | `plugin-sdk/session-store-runtime` | Session store helpers | Store path + updated-at helpers |
+  | `plugin-sdk/state-paths` | State path helpers | State and OAuth dir helpers |
+  | `plugin-sdk/routing` | Routing/session-key helpers | `resolveAgentRoute`, `buildAgentSessionKey`, `resolveDefaultAgentBoundAccountId`, session-key normalization helpers |
+  | `plugin-sdk/status-helpers` | Channel status helpers | Channel/account status summary builders, runtime-state defaults, issue metadata helpers |
+  | `plugin-sdk/target-resolver-runtime` | Target resolver helpers | Shared target resolver helpers |
+  | `plugin-sdk/string-normalization-runtime` | String normalization helpers | Slug/string normalization helpers |
+  | `plugin-sdk/request-url` | Request URL helpers | Extract string URLs from request-like inputs |
+  | `plugin-sdk/run-command` | Timed command helpers | Timed command runner with normalized stdout/stderr |
+  | `plugin-sdk/param-readers` | Param readers | Common tool/CLI param readers |
+  | `plugin-sdk/tool-payload` | Tool payload extraction | Extract normalized payloads from tool result objects |
+  | `plugin-sdk/tool-send` | Tool send extraction | Extract canonical send target fields from tool args |
+  | `plugin-sdk/temp-path` | Temp path helpers | Shared temp-download path helpers |
+  | `plugin-sdk/logging-core` | Logging helpers | Subsystem logger and redaction helpers |
+  | `plugin-sdk/markdown-table-runtime` | Markdown-table helpers | Markdown table mode helpers |
+  | `plugin-sdk/reply-payload` | Message reply types | Reply payload types |
+  | `plugin-sdk/provider-setup` | Curated local/self-hosted provider setup helpers | Self-hosted provider discovery/config helpers |
+  | `plugin-sdk/self-hosted-provider-setup` | Focused OpenAI-compatible self-hosted provider setup helpers | Same self-hosted provider discovery/config helpers |
+  | `plugin-sdk/provider-auth-runtime` | Provider runtime auth helpers | Runtime API-key resolution helpers |
+  | `plugin-sdk/provider-auth-api-key` | Provider API-key setup helpers | API-key onboarding/profile-write helpers |
+  | `plugin-sdk/provider-auth-result` | Provider auth-result helpers | Standard OAuth auth-result builder |
+  | `plugin-sdk/provider-selection-runtime` | Provider selection helpers | Configured-or-auto provider selection and raw provider config merging |
+  | `plugin-sdk/provider-env-vars` | Provider env-var helpers | Provider auth env-var lookup helpers |
+  | `plugin-sdk/provider-model-shared` | Shared provider model/replay helpers | `ProviderReplayFamily`, `buildProviderReplayFamilyHooks`, `normalizeModelCompat`, shared replay-policy builders, provider-endpoint helpers, and model-id normalization helpers |
+  | `plugin-sdk/provider-catalog-shared` | Shared provider catalog helpers | `findCatalogTemplate`, `buildSingleProviderApiKeyCatalog`, `buildManifestModelProviderConfig`, `supportsNativeStreamingUsageCompat`, `applyProviderNativeStreamingUsageCompat` |
+  | `plugin-sdk/provider-onboard` | Provider onboarding patches | Onboarding config helpers |
+  | `plugin-sdk/provider-http` | Provider HTTP helpers | Generic provider HTTP/endpoint capability helpers, including audio transcription multipart form helpers |
+  | `plugin-sdk/provider-web-fetch` | Provider web-fetch helpers | Web-fetch provider registration/cache helpers |
+  | `plugin-sdk/provider-web-search-config-contract` | Provider web-search config helpers | Narrow web-search config/credential helpers for providers that do not need plugin-enable wiring |
+  | `plugin-sdk/provider-web-search-contract` | Provider web-search contract helpers | Narrow web-search config/credential contract helpers such as `createWebSearchProviderContractFields`, `enablePluginInConfig`, `resolveProviderWebSearchPluginConfig`, and scoped credential setters/getters |
+  | `plugin-sdk/provider-web-search` | Provider web-search helpers | Web-search provider registration/cache/runtime helpers |
+  | `plugin-sdk/provider-tools` | Provider tool/schema compat helpers | `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks`, and DeepSeek/Gemini/OpenAI schema cleanup + diagnostics |
+  | `plugin-sdk/provider-usage` | Provider usage helpers | `fetchClaudeUsage`, `fetchGeminiUsage`, `fetchGithubCopilotUsage`, and other provider usage helpers |
+  | `plugin-sdk/provider-stream` | Provider stream wrapper helpers | `ProviderStreamFamily`, `buildProviderStreamFamilyHooks`, `composeProviderStreamWrappers`, stream wrapper types, and shared Anthropic/Bedrock/DeepSeek V4/Google/Kilocode/Moonshot/OpenAI/OpenRouter/Z.A.I/MiniMax/Copilot wrapper helpers |
+  | `plugin-sdk/provider-transport-runtime` | Provider transport helpers | Native provider transport helpers such as guarded fetch, transport message transforms, and writable transport event streams |
+  | `plugin-sdk/keyed-async-queue` | Ordered async queue | `KeyedAsyncQueue` |
+  | `plugin-sdk/media-runtime` | Shared media helpers | Media fetch/transform/store helpers, ffprobe-backed video dimension probing, and media payload builders |
+  | `plugin-sdk/media-generation-runtime` | Shared media-generation helpers | Shared failover helpers, candidate selection, and missing-model messaging for image/video/music generation |
+  | `plugin-sdk/media-understanding` | Media-understanding helpers | Media understanding provider types plus provider-facing image/audio helper exports |
+  | `plugin-sdk/text-runtime` | Deprecated broad text compatibility export | Use `string-coerce-runtime`, `text-chunking`, `text-utility-runtime`, and `logging-core` |
+  | `plugin-sdk/text-chunking` | Text chunking helpers | Outbound text chunking helper |
+  | `plugin-sdk/speech` | Speech helpers | Speech provider types plus provider-facing directive, registry, validation helpers, and OpenAI-compatible TTS builder |
+  | `plugin-sdk/speech-core` | Shared speech core | Speech provider types, registry, directives, normalization |
+  | `plugin-sdk/realtime-transcription` | Realtime transcription helpers | Provider types, registry helpers, and shared WebSocket session helper |
+  | `plugin-sdk/realtime-voice` | Realtime voice helpers | Provider types, registry/resolution helpers, bridge session helpers, shared agent talk-back queues, active-run voice control, transcript/event health, echo suppression, consult question matching, forced-consult coordination, turn-context tracking, output activity tracking, and fast context consult helpers |
+  | `plugin-sdk/image-generation` | Image-generation helpers | Image generation provider types plus image asset/data URL helpers and the OpenAI-compatible image provider builder |
+  | `plugin-sdk/image-generation-core` | Shared image-generation core | Image-generation types, failover, auth, and registry helpers |
+  | `plugin-sdk/music-generation` | Music-generation helpers | Music-generation provider/request/result types |
+  | `plugin-sdk/music-generation-core` | Shared music-generation core | Music-generation types, failover helpers, provider lookup, and model-ref parsing |
+  | `plugin-sdk/video-generation` | Video-generation helpers | Video-generation provider/request/result types |
+  | `plugin-sdk/video-generation-core` | Shared video-generation core | Video-generation types, failover helpers, provider lookup, and model-ref parsing |
+  | `plugin-sdk/interactive-runtime` | Interactive reply helpers | Interactive reply payload normalization/reduction |
+  | `plugin-sdk/channel-config-primitives` | Channel config primitives | Narrow channel config-schema primitives |
+  | `plugin-sdk/channel-config-writes` | Channel config-write helpers | Channel config-write authorization helpers |
+  | `plugin-sdk/channel-plugin-common` | Shared channel prelude | Shared channel plugin prelude exports |
+  | `plugin-sdk/channel-status` | Channel status helpers | Shared channel status snapshot/summary helpers |
+  | `plugin-sdk/allowlist-config-edit` | Allowlist config helpers | Allowlist config edit/read helpers |
+  | `plugin-sdk/group-access` | Group access helpers | Shared group-access decision helpers |
+  | `plugin-sdk/direct-dm`, `plugin-sdk/direct-dm-access` | Deprecated compatibility facades | Use `plugin-sdk/channel-inbound` |
+  | `plugin-sdk/direct-dm-guard-policy` | Direct-DM guard helpers | Narrow pre-crypto guard policy helpers |
+  | `plugin-sdk/extension-shared` | Shared extension helpers | Passive-channel/status and ambient proxy helper primitives |
+  | `plugin-sdk/webhook-targets` | Webhook target helpers | Webhook target registry and route-install helpers |
+  | `plugin-sdk/webhook-path` | Deprecated webhook path alias | Use `plugin-sdk/webhook-ingress` |
+  | `plugin-sdk/web-media` | Shared web media helpers | Remote/local media loading helpers |
+  | `plugin-sdk/zod` | Deprecated Zod compatibility re-export | Import `zod` from `zod` directly |
+  | `plugin-sdk/memory-core` | Bundled memory-core helpers | Memory manager/config/file/CLI helper surface |
+  | `plugin-sdk/memory-core-engine-runtime` | Memory engine runtime facade | Memory index/search runtime facade |
+  | `plugin-sdk/memory-core-host-embedding-registry` | Memory embedding registry | Lightweight memory embedding provider registry helpers |
+  | `plugin-sdk/memory-core-host-engine-foundation` | Memory host foundation engine | Memory host foundation engine exports |
+  | `plugin-sdk/memory-core-host-engine-embeddings` | Memory host embedding engine | Memory embedding contracts, registry access, local provider, and generic batch/remote helpers; concrete remote providers live in their owning plugins |
+  | `plugin-sdk/memory-core-host-engine-qmd` | Memory host QMD engine | Memory host QMD engine exports |
+  | `plugin-sdk/memory-core-host-engine-storage` | Memory host storage engine | Memory host storage engine exports |
+  | `plugin-sdk/memory-core-host-multimodal` | Memory host multimodal helpers | Memory host multimodal helpers |
+  | `plugin-sdk/memory-core-host-query` | Memory host query helpers | Memory host query helpers |
+  | `plugin-sdk/memory-core-host-secret` | Memory host secret helpers | Memory host secret helpers |
+  | `plugin-sdk/memory-core-host-events` | Deprecated memory event alias | Use `plugin-sdk/memory-host-events` |
+  | `plugin-sdk/memory-core-host-status` | Memory host status helpers | Memory host status helpers |
+  | `plugin-sdk/memory-core-host-runtime-cli` | Memory host CLI runtime | Memory host CLI runtime helpers |
+  | `plugin-sdk/memory-core-host-runtime-core` | Memory host core runtime | Memory host core runtime helpers |
+  | `plugin-sdk/memory-core-host-runtime-files` | Memory host file/runtime helpers | Memory host file/runtime helpers |
+  | `plugin-sdk/memory-host-core` | Memory host core runtime alias | Vendor-neutral alias for memory host core runtime helpers |
+  | `plugin-sdk/memory-host-events` | Memory host event journal alias | Vendor-neutral alias for memory host event journal helpers |
+  | `plugin-sdk/memory-host-files` | Deprecated memory file/runtime alias | Use `plugin-sdk/memory-core-host-runtime-files` |
+  | `plugin-sdk/memory-host-markdown` | Managed markdown helpers | Shared managed-markdown helpers for memory-adjacent plugins |
+  | `plugin-sdk/memory-host-search` | Active memory search facade | Lazy active-memory search-manager runtime facade |
+  | `plugin-sdk/memory-host-status` | Deprecated memory host status alias | Use `plugin-sdk/memory-core-host-status` |
+  | `plugin-sdk/testing` | Test utilities | Repo-local deprecated compatibility barrel; use focused repo-local test subpaths such as `plugin-sdk/plugin-test-runtime`, `plugin-sdk/channel-test-helpers`, `plugin-sdk/channel-target-testing`, `plugin-sdk/test-env`, and `plugin-sdk/test-fixtures` |
 </Accordion>
 
 这个表格有意只包含常见迁移子集，而不是完整 SDK
@@ -682,8 +691,38 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
 
   </Accordion>
 
-  <Accordion title="Provider 发现类型 → provider catalog 类型">
-    四个发现类型别名现在只是 catalog 时代类型的薄包装：
+  <Accordion title="subagent_spawning hook → core thread binding">
+    **Old**: `api.on("subagent_spawning", handler)` returning
+    `threadBindingReady` or `deliveryOrigin`.
+
+    **New**: let core prepare `thread: true` subagent bindings through the
+    channel session-binding adapter. Use `api.on("subagent_spawned", handler)`
+    only for post-launch observation.
+
+    ```typescript
+    // Before
+    api.on("subagent_spawning", async () => ({
+      status: "ok",
+      threadBindingReady: true,
+      deliveryOrigin: { channel: "discord", to: "channel:123", threadId: "456" },
+    }));
+
+    // After
+    api.on("subagent_spawned", async (event) => {
+      await observeSubagentLaunch(event);
+    });
+    ```
+
+    `subagent_spawning`, `PluginHookSubagentSpawningEvent`,
+    `PluginHookSubagentSpawningResult`, and
+    `SubagentLifecycleHookRunner.runSubagentSpawning(...)` remain only as
+    deprecated compatibility surfaces while external plugins migrate.
+
+  </Accordion>
+
+  <Accordion title="Provider discovery types → provider catalog types">
+    Four discovery type aliases are now thin wrappers over the
+    catalog-era types:
 
     | 旧别名                 | 新类型                  |
     | ---------------------- | ----------------------- |
@@ -704,15 +743,22 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
 
     **新**：单个 `resolveThinkingProfile(ctx)`，返回一个带有标准 `id`、可选 `label` 和分级 level 列表的 `ProviderThinkingProfile`。OpenClaw 会根据 profile 等级自动降级陈旧的存储值。
 
-    请实现一个 hook，而不是三个。旧 hook 在弃用窗口期间仍可工作，但不会与 profile 结果组合。
+    The context includes `provider`, `modelId`, optional merged `reasoning`,
+    and optional merged model `compat` facts. Provider plugins can use those
+    catalog facts to expose a model-specific profile only when the configured
+    request contract supports it.
+
+    Implement one hook instead of three. The legacy hooks keep working during
+    the deprecation window but are not composed with the profile result.
 
   </Accordion>
 
-  <Accordion title="外部 OAuth provider 回退 → contracts.externalAuthProviders">
-    **旧**：在没有在插件清单中声明该 provider 的情况下实现 `resolveExternalOAuthProfiles(...)`。
+  <Accordion title="External auth providers → contracts.externalAuthProviders">
+    **Old**: implementing external auth hooks without declaring the provider
+    in the plugin manifest.
 
-    **新**：在插件清单中声明 `contracts.externalAuthProviders`
-    **并且**实现 `resolveExternalAuthProfiles(...)`。旧的“auth 回退”路径会在运行时发出警告，并将在以后移除。
+    **New**: declare `contracts.externalAuthProviders` in the plugin manifest
+    **and** implement `resolveExternalAuthProfiles(...)`.
 
     ```json
     {
@@ -743,9 +789,23 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
     **新**：在 memory-state API 上一次调用：
     `registerMemoryCapability(pluginId, { promptBuilder, flushPlanResolver, runtime })`。
 
-    位置相同，注册调用变为单次。增量 memory 辅助工具
-    (`registerMemoryPromptSupplement`、`registerMemoryCorpusSupplement`、
-    `registerMemoryEmbeddingProvider`) 不受影响。
+    Same slots, single registration call. Additive prompt and corpus helpers
+    (`registerMemoryPromptSupplement`, `registerMemoryCorpusSupplement`) are
+    not affected.
+
+  </Accordion>
+
+  <Accordion title="Memory embedding provider API">
+    **Old**: `api.registerMemoryEmbeddingProvider(...)` plus
+    `contracts.memoryEmbeddingProviders`.
+
+    **New**: `api.registerEmbeddingProvider(...)` plus
+    `contracts.embeddingProviders`.
+
+    The generic embedding provider contract is reusable outside memory and is
+    the supported path for new providers. The memory-specific registration API
+    remains wired as deprecated compatibility while existing providers migrate.
+    Plugin inspection reports non-bundled usage as compatibility debt.
 
   </Accordion>
 
@@ -775,12 +835,10 @@ Core 负责 Talk 会话语义。Provider 插件负责供应商会话初始化。
 
   </Accordion>
 
-  <Accordion title="嵌入式扩展工厂 → agent tool-result 中间件">
-    见上文“如何迁移 → 将 Pi 的 tool-result 扩展迁移到中间件”。此处仅为完整性重复说明：
-    已移除的仅 Pi 可用的 `api.registerEmbeddedExtensionFactory(...)` 路径，已由
-    `api.registerAgentToolResultMiddleware(...)` 替代，并在 `contracts.agentToolResultMiddleware`
-    中显式列出 runtime。
-
+  <Accordion title="Embedded extension factories → agent tool-result middleware">
+    上文“如何迁移 → 迁移嵌入式 tool-result 扩展到中间件”中已说明。此处仅为完整性列出：已移除的仅限嵌入式运行器的
+    `api.registerEmbeddedExtensionFactory(...)` 路径，已替换为
+    `api.registerAgentToolResultMiddleware(...)`，并在 `contracts.agentToolResultMiddleware` 中显式声明运行时列表。
   </Accordion>
 
   <Accordion title="OpenClawSchemaType 别名 → OpenClawConfig">

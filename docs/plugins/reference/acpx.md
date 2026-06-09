@@ -1,5 +1,5 @@
 ---
-summary: "带有插件拥有的会话和传输管理的嵌入式 ACP 运行时后端。"
+summary: "OpenClaw ACP 运行时后端，支持由插件管理会话和传输。"
 read_when:
   - 你正在安装、配置或审计 acpx 插件
 title: "ACPx 插件"
@@ -7,7 +7,7 @@ title: "ACPx 插件"
 
 # ACPx 插件
 
-带有插件拥有的会话和传输管理的嵌入式 ACP 运行时后端。
+OpenClaw ACP 运行时后端，支持由插件管理会话和传输。
 
 ## 分发
 

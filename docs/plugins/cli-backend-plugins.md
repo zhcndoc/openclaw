@@ -182,17 +182,35 @@ acme-cli/acme-large
 
 | 钩子                               | 用途                                                   |
 | ---------------------------------- | ------------------------------------------------------ |
-| `normalizeConfig(config, context)` | 在合并后重写旧版用户配置                                |
-| `resolveExecutionArgs(ctx)`        | 添加请求范围内的标志，例如思考力度                       |
-| `prepareExecution(ctx)`            | 启动前创建临时认证或配置桥接                              |
-| `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换                         |
-| `textTransforms`                   | 双向提示词/输出替换                                      |
-| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 认证配置文件                      |
-| `authEpochMode`                    | 决定认证变更如何使已存储的 CLI 会话失效                    |
-| `nativeToolMode`                   | 声明 CLI 是否具有始终开启的原生工具                        |
-| `bundleMcp` / `bundleMcpMode`      | 启用 OpenClaw 的回环 MCP 工具桥接                         |
+| `normalizeConfig(config, context)` | 在合并后重写旧版用户配置                 |
+| `resolveExecutionArgs(ctx)`        | 添加请求范围标志，如思考力度       |
+| `prepareExecution(ctx)`            | 启动前创建临时身份验证或配置桥接  |
+| `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换     |
+| `textTransforms`                   | 双向提示词/输出替换               |
+| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 身份验证配置文件                |
+| `authEpochMode`                    | 决定身份验证变更如何使已存储的 CLI 会话失效 |
+| `nativeToolMode`                   | 声明 CLI 是否始终启用原生工具     |
+| `bundleMcp` / `bundleMcpMode`      | 启用 OpenClaw 的回环 MCP 工具桥接           |
+| `ownsNativeCompaction`             | 后端拥有自身压缩能力 - OpenClaw 将延后处理      |
 
 请将这些钩子保持为后端所有。不要在核心中添加 CLI 特定分支，只要后端钩子能够表达该行为即可。
+
+### `ownsNativeCompaction`: 选择退出 OpenClaw 压缩
+
+如果你的后端运行的 agent 会压缩其**自身**的转录内容，请设置
+`ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就不会对其
+会话运行 - CLI 压缩生命周期会返回 no-op，当前轮次继续执行。`claude-cli`
+声明了这一点，因为 Claude Code 在内部压缩，而且没有 harness 端点。像 Codex 这样的原生 harness
+会话则继续路由到它们的 harness 压缩端点。
+
+**只有在同时满足以下所有条件时才声明它**，否则延迟的超预算会话可能会
+一直超预算 / 变得陈旧（OpenClaw 不再挽救它）：
+
+- 后端会在接近窗口上限时可靠地压缩或限制自身转录内容；
+- 它会保留可恢复的会话，以便压缩后的状态能跨轮次保留
+  （例如 `--resume` / `--session-id`）；
+- 它不是原生 harness 压缩会话 - 匹配 `agentHarnessId` 的会话
+  会改为路由到 harness 端点。
 
 ## MCP 工具桥接
 

@@ -13,13 +13,13 @@ OpenAI 风格的模型在英文文本中平均每个 token 约 4 个字符。
 
 OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
-- 工具列表 + 简短描述
+- 工具列表 + 简短说明
 - 技能列表（仅元数据；指令会按需通过 `read` 加载）。
-  紧凑的技能块受 `skills.limits.maxSkillsPromptChars` 限制，
-  也可在
-  `agents.list[].skillsLimits.maxSkillsPromptChars` 处为单个代理覆盖。
+  原生 Codex 回合会将紧凑的技能块作为回合作用域的协作开发者指令；
+  其他 harness 会在正常提示表面接收它。其长度受 `skills.limits.maxSkillsPromptChars` 约束，
+  并可通过 `agents.list[].skillsLimits.maxSkillsPromptChars` 按代理覆盖。
 - 自更新指令
-- 工作区 + 启动引导文件（新的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、`BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。根目录下小写的 `memory.md` 不会被注入；它是与 `MEMORY.md` 配对时供 `openclaw doctor --fix` 使用的旧版修复输入。大型文件会由 `agents.defaults.bootstrapMaxChars` 截断（默认：12000），注入的引导总量由 `agents.defaults.bootstrapTotalMaxChars` 封顶（默认：60000）。`memory/*.md` 的每日文件不属于常规启动引导提示；它们会在普通轮次中通过 memory 工具按需读取，但 reset/startup 模型运行可以为第一次轮次预先附加一个一次性的启动上下文块，其中包含最近的每日记忆。仅输入裸聊天命令 `/new` 和 `/reset` 时会直接确认，而不会调用模型。启动前导由 `agents.defaults.startupContext` 控制。压缩后 AGENTS.md 摘录是独立的，并需要显式启用 `agents.defaults.compaction.postCompactionSections`。
+- 工作区 + 启动文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新建时的 `BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。当该工作区可用记忆工具时，原生 Codex 回合不会从已配置的代理工作区直接粘贴原始 `MEMORY.md`；它们会在回合作用域的协作开发者指令中包含一个简短的记忆指针，并按需使用记忆工具。如果工具被禁用、记忆搜索不可用，或者活动工作区与代理记忆工作区不同，则 `MEMORY.md` 会走正常的有界回合上下文路径。小写的根目录 `memory.md` 不会被注入；它是 `openclaw doctor --fix` 在与 `MEMORY.md` 配对时使用的旧版修复输入。较大的注入文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认：20000），总启动注入受 `agents.defaults.bootstrapTotalMaxChars` 限制（默认：60000）。`memory/*.md` 日常文件不属于正常的启动提示；它们在普通回合中仍可通过记忆工具按需获取，但重置/启动模型运行可以在第一个回合前附加一个一次性的启动上下文块，包含最近的日常记忆。裸聊天 `/new` 和 `/reset` 命令会被确认，但不会调用模型。启动前导由 `agents.defaults.startupContext` 控制。压缩后的 AGENTS.md 摘录是独立的，并需要显式启用 `agents.defaults.compaction.postCompactionSections`。
 - 时间（UTC + 用户时区）
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
@@ -180,8 +180,7 @@ agents:
 
 ### Anthropic 1M context
 
-OpenClaw 会将 GA 级别的 Claude 4.x 模型（如 Opus 4.6、Opus 4.7 和
-Sonnet 4.6）按 Anthropic 的 1M 上下文窗口进行尺寸配置。对于这些模型，你无需
+OpenClaw 将 Claude 4.x 的 GA 级模型（如 Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6）按 Anthropic 的 1M 上下文窗口进行配置。对于这些模型，你不需要
 `params.context1m: true`。
 
 ```yaml

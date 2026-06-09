@@ -99,10 +99,7 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 | `api.registerWebFetchProvider(...)`              | Web 获取 / 抓取提供方           |
 | `api.registerWebSearchProvider(...)`             | Web 搜索                            |
 
-通过 `api.registerEmbeddingProvider(...)` 注册的嵌入提供方还必须
-在插件清单的 `contracts.embeddingProviders` 中列出。这是用于可复用向量生成的
-通用嵌入面。仅限内存的适配器仍然使用 `api.registerMemoryEmbeddingProvider(...)` 和
-`contracts.memoryEmbeddingProviders`。
+通过 `api.registerEmbeddingProvider(...)` 注册的 Embedding 提供方也必须列在插件清单的 `contracts.embeddingProviders` 中。这是用于可复用向量生成的通用 embedding 能力面。内存搜索可以消费这个通用提供方能力面。较旧的 `api.registerMemoryEmbeddingProvider(...)` 和 `contracts.memoryEmbeddingProviders` 接缝属于已弃用的兼容路径，供现有的内存专用提供方迁移使用。
 
 ### 工具和命令
 
@@ -121,15 +118,16 @@ structured entries:
 
 ```ts
 agentPromptGuidance: [
-  "Global command hint.",
-  { text: "Only show this in the main PI prompt.", surfaces: ["pi_main"] },
+  "全局命令提示。",
+  { text: "Only show this in the main OpenClaw prompt.", surfaces: ["openclaw_main"] },
 ];
 ```
 
-Structured `surfaces` may include `pi_main`, `codex_app_server`, `cli_backend`,
-`acp_backend`, or `subagent`. Omit `surfaces` for intentional all-surface
-guidance. Do not pass an empty `surfaces` array; it is rejected so accidental
-scope loss does not become global prompt text.
+Structured `surfaces` may include `openclaw_main`, `codex_app_server`,
+`cli_backend`, `acp_backend`, or `subagent`. `pi_main` remains a deprecated alias
+for `openclaw_main`. Omit `surfaces` for intentional all-surface guidance. Do
+not pass an empty `surfaces` array; it is rejected so accidental scope loss does
+not become global prompt text.
 
 Native Codex app-server developer instructions are stricter than other prompt
 surfaces: only guidance explicitly scoped to `codex_app_server` is promoted into
@@ -236,8 +234,11 @@ Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在�
   返回给模型之前重写工具结果时，可以使用 `api.registerAgentToolResultMiddleware(...)`。这是一种受信任的、与运行时无关的接口，适用于
   像 tokenjuice 这样的异步输出缩减器。
 
-捆绑插件必须为每个目标运行时声明 `contracts.agentToolResultMiddleware`，例如 `["pi", "codex"]`。外部插件
-不能注册此中间件；对于不需要在模型前调整工具结果时机的工作，请保留普通的 OpenClaw 插件钩子。旧的仅 Pi 可用的嵌入式扩展工厂注册路径已被移除。
+Bundled plugins must declare `contracts.agentToolResultMiddleware` for each
+targeted runtime, for example `["openclaw", "codex"]`. External plugins
+cannot register this middleware; keep normal OpenClaw plugin hooks for work
+that does not need pre-model tool-result timing. The old embedded-runner-only
+extension factory registration path has been removed.
 </Accordion>
 
 ### Gateway 发现注册
@@ -351,25 +352,28 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.registerMemoryFlushPlan(resolver)`    | 内存刷新计划解析器                                                                                                                                |
 | `api.registerMemoryRuntime(runtime)`       | 内存运行时适配器                                                                                                                                    |
 
-### 内存嵌入适配器
+### Deprecated memory embedding adapters
 
 | 方法                                         | 注册内容                              |
 | ---------------------------------------------- | ---------------------------------------------- |
 | `api.registerMemoryEmbeddingProvider(adapter)` | 当前插件的内存嵌入适配器 |
 
-- `registerMemoryCapability` 是首选的独占内存插件 API。
-- `registerMemoryCapability` 还可以暴露 `publicArtifacts.listArtifacts(...)`
-  以便伴随插件可以通过 `openclaw/plugin-sdk/memory-host-core` 消费导出的内存工件，而不是深入某个
-  内存插件的私有布局。
-- `registerMemoryPromptSection`、`registerMemoryFlushPlan` 和
-  `registerMemoryRuntime` 是兼容旧版的独占内存插件 API。
-- `MemoryFlushPlan.model` 可以将刷新回合固定到精确的 `provider/model`
-  引用，例如 `ollama/qwen3:8b`，而不会继承当前的回退链。
-- `registerMemoryEmbeddingProvider` 允许活动内存插件注册一个或多个嵌入适配器 id（例如 `openai`、`gemini` 或自定义的
-  插件定义 id）。
-- 诸如 `agents.defaults.memorySearch.provider` 和
-  `agents.defaults.memorySearch.fallback` 的用户配置，会针对这些已注册的
-  适配器 id 进行解析。
+- `registerMemoryCapability` is the preferred exclusive memory-plugin API.
+- `registerMemoryCapability` may also expose `publicArtifacts.listArtifacts(...)`
+  so companion plugins can consume exported memory artifacts through
+  `openclaw/plugin-sdk/memory-host-core` instead of reaching into a specific
+  memory plugin's private layout.
+- `registerMemoryPromptSection`, `registerMemoryFlushPlan`, and
+  `registerMemoryRuntime` are legacy-compatible exclusive memory-plugin APIs.
+- `MemoryFlushPlan.model` can pin the flush turn to an exact `provider/model`
+  reference, such as `ollama/qwen3:8b`, without inheriting the active fallback
+  chain.
+- `registerMemoryEmbeddingProvider` is deprecated. New embedding providers
+  should use `api.registerEmbeddingProvider(...)` and
+  `contracts.embeddingProviders`.
+- Existing memory-specific providers continue to work during the migration
+  window, but plugin inspection reports this as compatibility debt for
+  non-bundled plugins.
 
 ### 事件和生命周期
 
@@ -412,65 +416,65 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 | `api.registrationMode`   | `PluginRegistrationMode`  | 当前加载模式；`"setup-runtime"` 是轻量级、在完整入口启动/设置之前的窗口 |
 | `api.resolvePath(input)` | `(string) => string`      | 相对于插件根目录解析路径                                                        |
 
-## Internal Module Conventions
+## 内部模块约定
 
-Within your plugin, use local barrel files for internal imports:
+在你的插件中，内部导入请使用本地 barrel 文件：
 
 ```
 my-plugin/
-  api.ts            # Public exports for external consumers
-  runtime-api.ts    # Runtime exports for internal use only
-  index.ts          # Plugin entry point
-  setup-entry.ts    # Lightweight setup-only entry point (optional)
+  api.ts            # 面向外部使用者的公开导出
+  runtime-api.ts    # 仅供内部使用的运行时导出
+  index.ts          # 插件入口点
+  setup-entry.ts    # 轻量级的仅设置入口点（可选）
 ```
 
 <Warning>
-  Do not import your own plugin in production code via `openclaw/plugin-sdk/<your-plugin>`
-  Internal imports should be routed through `./api.ts` or
-  `./runtime-api.ts`. The SDK path is only an external contract.
+  不要在生产代码中通过 `openclaw/plugin-sdk/<your-plugin>` 导入你自己的插件
+  内部导入应通过 `./api.ts` 或
+  `./runtime-api.ts` 进行路由。SDK 路径只是一个外部契约。
 </Warning>
 
-For packaged plugin public surfaces that are visible to loaded appearances (`api.ts`, `runtime-api.ts`,
-`index.ts`, `setup-entry.ts`, and similar public entry files), when OpenClaw is already running,
-prefer the current runtime configuration snapshot. If no runtime snapshot exists yet, fall back to the resolved configuration file on disk.
-Packaged plugin appearances should be loaded through OpenClaw's plugin appearance loader; importing directly from `dist/extensions/...` bypasses manifest and runtime sidecar checks, which are used by packaged installation for the plugin's own code.
+对于对已加载外观可见的打包插件公开面（`api.ts`、`runtime-api.ts`、
+`index.ts`、`setup-entry.ts` 以及类似的公共入口文件），当 OpenClaw 已经运行时，
+优先使用当前运行时配置快照。如果还没有运行时快照，则回退到磁盘上已解析的配置文件。
+打包后的插件外观应通过 OpenClaw 的插件外观加载器加载；直接从 `dist/extensions/...` 导入会绕过清单和运行时 sidecar 检查，而这些检查会在插件自身代码的打包安装中使用。
 
-Provider plugins may expose a narrow, plugin-local contract barrel when a helper is intentionally only applicable to that provider and is not yet part of a general SDK subpath.
-Packaged examples:
+提供方插件可以暴露一个较窄、仅限插件本地的契约 barrel，当某个 helper 明确只适用于该提供方，并且尚未成为通用 SDK 子路径的一部分时。
+打包示例：
 
-- **Anthropic**: `api.ts` / `contract-api.ts` interfaces for Claude,
-  used for beta-header and `service_tier` streaming helpers.
-- **`@openclaw/openai-provider`**: `api.ts` exports the provider builder,
-  default model helpers, and the live provider builder.
-- **`@openclaw/openrouter-provider`**: `api.ts` exports the provider builder
-  and bootstrap/configuration helpers.
+- **Anthropic**: `api.ts` / `contract-api.ts` 接口用于 Claude，
+  适用于 beta-header 和 `service_tier` 流式处理 helper。
+- **`@openclaw/openai-provider`**: `api.ts` 导出 provider 构建器、
+  默认模型 helper，以及 live provider 构建器。
+- **`@openclaw/openrouter-provider`**: `api.ts` 导出 provider 构建器
+  以及 bootstrap/配置 helper。
 
 <Warning>
-  Extended production code should also avoid `openclaw/plugin-sdk/<other-plugin>`
-  imports. If a helper is truly shared, elevate it to a neutral SDK subpath,
-  such as `openclaw/plugin-sdk/speech`, `.../provider-model-shared`, or another capability-oriented surface,
-  rather than coupling two plugins together.
+  扩展的生产代码也应避免 `openclaw/plugin-sdk/<other-plugin>`
+  导入。如果某个 helper 确实是共享的，请将其提升到一个中性的 SDK 子路径，
+  例如 `openclaw/plugin-sdk/speech`、`.../provider-model-shared`，或其他面向能力的表面，
+  而不是将两个插件耦合在一起。
 </Warning>
 
-## Related Content
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Entry Points" icon="door-open" href="/plugins/sdk-entrypoints">
-    `definePluginEntry` and `defineChannelPluginEntry` options.
+  <Card title="入口点" icon="door-open" href="/plugins/sdk-entrypoints">
+    `definePluginEntry` 和 `defineChannelPluginEntry` 选项。
   </Card>
-  <Card title="Runtime Helpers" icon="gears" href="/plugins/sdk-runtime">
-    Full `api.runtime` namespace reference.
+  <Card title="运行时助手" icon="gears" href="/plugins/sdk-runtime">
+    `api.runtime` 命名空间完整参考。
   </Card>
-  <Card title="Setup and Configuration" icon="sliders" href="/plugins/sdk-setup">
-    Packaging, manifests, and configuration patterns.
+  <Card title="设置和配置" icon="sliders" href="/plugins/sdk-setup">
+    打包、清单和配置模式。
   </Card>
-  <Card title="Testing" icon="vial" href="/plugins/sdk-testing">
-    Test tools and lint rules.
+  <Card title="测试" icon="vial" href="/plugins/sdk-testing">
+    测试工具和 lint 规则。
   </Card>
-  <Card title="SDK Migration" icon="arrows-turn-right" href="/plugins/sdk-migration">
-    Migrate from deprecated surfaces.
+  <Card title="SDK 迁移" icon="arrows-turn-right" href="/plugins/sdk-migration">
+    从已弃用的表面迁移。
   </Card>
-  <Card title="Plugin Internals" icon="diagram-project" href="/plugins/architecture">
-    Deep architecture and capability models.
+  <Card title="插件内部" icon="diagram-project" href="/plugins/architecture">
+    深入的架构和能力模型。
   </Card>
 </CardGroup>

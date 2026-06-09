@@ -16,7 +16,7 @@ OpenClaw 直接使用带有 SSML 的 Azure Speech REST API，并通过
 | 详情                  | 值                                                                                                          |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------- |
 | 网站                 | [Azure AI Speech](https://azure.microsoft.com/products/ai-services/ai-speech)                                  |
-| 文档                    | [Speech REST text-to-speech](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech) |
+| 文档                    | [Speech REST 文本转语音](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech) |
 | 认证                    | `AZURE_SPEECH_KEY` 加上 `AZURE_SPEECH_REGION`                                                                  |
 | 默认语音           | `en-US-JennyNeural`                                                                                            |
 | 默认文件输出     | `audio-24khz-48kbitrate-mono-mp3`                                                                              |
@@ -44,7 +44,7 @@ OpenClaw 直接使用带有 SSML 的 Azure Speech REST API，并通过
           provider: "azure-speech",
           providers: {
             "azure-speech": {
-              voice: "en-US-JennyNeural",
+              speakerVoice: "en-US-JennyNeural",
               lang: "en-US",
             },
           },
@@ -67,7 +67,7 @@ OpenClaw 直接使用带有 SSML 的 Azure Speech REST API，并通过
 | `region`                | `messages.tts.providers.azure-speech.region`                | Azure Speech 资源区域。回退到 `AZURE_SPEECH_REGION` 或 `SPEECH_REGION`。                 |
 | `endpoint`              | `messages.tts.providers.azure-speech.endpoint`              | 可选的 Azure Speech 端点/基础 URL 覆盖。                                                     |
 | `baseUrl`               | `messages.tts.providers.azure-speech.baseUrl`               | 可选的 Azure Speech 基础 URL 覆盖。                                                              |
-| `voice`                 | `messages.tts.providers.azure-speech.voice`                 | Azure 语音 ShortName（默认 `en-US-JennyNeural`）。                                                  |
+| `speakerVoice`          | `messages.tts.providers.azure-speech.speakerVoice`          | Azure 语音 ShortName（默认 `en-US-JennyNeural`）。旧别名：`voice`。                           |
 | `lang`                  | `messages.tts.providers.azure-speech.lang`                  | SSML 语言代码（默认 `en-US`）。                                                                 |
 | `outputFormat`          | `messages.tts.providers.azure-speech.outputFormat`          | 音频文件输出格式（默认 `audio-24khz-48kbitrate-mono-mp3`）。                                 |
 | `voiceNoteOutputFormat` | `messages.tts.providers.azure-speech.voiceNoteOutputFormat` | 语音笔记输出格式（默认 `ogg-24khz-16bit-mono-opus`）。                                       |

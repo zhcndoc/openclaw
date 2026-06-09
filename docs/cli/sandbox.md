@@ -166,12 +166,12 @@ openclaw sandbox recreate --agent alfred
 
 ## Registry migration
 
-OpenClaw 将沙箱运行时元数据存储为沙箱状态目录下每个容器/浏览器条目一个 JSON 分片。旧版本安装可能仍然保留单体的旧文件：
+OpenClaw 将沙箱运行时元数据存储在共享的 SQLite 状态数据库中。旧版安装可能仍然保留以下旧式沙箱注册文件：
 
 - `~/.openclaw/sandbox/containers.json`
 - `~/.openclaw/sandbox/browsers.json`
 
-常规的沙箱运行时读取不会重写这些文件。运行 `openclaw doctor --fix` 可将有效的旧条目迁移到分片化的注册表目录中。无效的旧文件会被隔离，以免某个损坏的旧注册表掩盖当前的运行时条目。
+某些升级还可能在 `~/.openclaw/sandbox/containers/` 或 `~/.openclaw/sandbox/browsers/` 下为每个容器/浏览器保留一个 JSON 分片。常规的沙箱运行时读取不会重写这些旧来源。运行 `openclaw doctor --fix` 可将有效的旧条目迁移到 SQLite 中。无效的旧文件会被隔离，因此一个损坏的旧注册文件不会隐藏当前的运行时条目。
 
 ## Configuration
 

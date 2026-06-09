@@ -56,6 +56,10 @@ openclaw devices clear --yes --pending --json
 
 如果 Gateway 显式配置了 `gateway.nodes.pairing.autoApproveCidrs`，来自匹配客户端 IP 的首次 `role: node` 请求可以在它们出现在此列表之前就被批准。该策略默认禁用，并且从不适用于 operator/browser 客户端或升级请求。
 
+批准节点或其他非 operator 设备角色需要 `operator.admin`。
+仅当请求的 operator 范围仍在调用者自身范围内时，`operator.pairing` 才足以批准 operator 设备。有关批准时检查，请参见
+[Operator scopes](/gateway/operator-scopes)。
+
 ```
 openclaw devices approve
 openclaw devices approve <requestId>
@@ -141,24 +145,15 @@ openclaw devices revoke --device <deviceId> --role node
 
 ## 说明
 
-- 令牌轮换会返回一个新令牌（敏感信息）。请将其视为机密。
-- 这些命令需要 `operator.pairing`（或 `operator.admin`）范围。某些
-  批准还要求调用者持有目标
-  设备将铸造或继承的 operator 范围；请参阅 [Operator scopes](/gateway/operator-scopes)。
-- `gateway.nodes.pairing.autoApproveCidrs` 是一个可选启用的 Gateway 策略，仅适用于
-  新的 node 设备配对；它不会改变 CLI 的批准权限。
-- 令牌轮换和撤销会保持在该设备已批准的配对角色集合以及
-  已批准的范围基线之内。残留的缓存令牌条目不会
-  授予一个令牌管理目标。
-- 对于已配对设备令牌会话，跨设备管理仅限管理员：
-  `remove`、`rotate` 和 `revoke` 仅能操作自己的设备，除非调用者具有
-  `operator.admin`。
-- 令牌变更也受调用者范围约束：仅配对的会话不能
-  轮换或撤销当前携带 `operator.admin` 或
-  `operator.write` 的令牌。
-- `devices clear` 明确受 `--yes` 保护。
-- 如果本地回环上不可用配对范围（且未传入显式 `--url`），list/approve 可以使用本地配对回退。
-- `devices approve` 在铸造令牌前需要显式的请求 ID；省略 `requestId` 或传入 `--latest` 只会预览最新的待处理请求。
+- 令牌轮换会返回一个新令牌（敏感信息）。请将其视为秘密。
+- 这些命令需要 `operator.pairing`（或 `operator.admin`）范围。某些批准还要求调用者持有目标设备将铸造或继承的 operator 范围。非 operator 设备角色需要 `operator.admin`；请参见 [Operator scopes](/gateway/operator-scopes)。
+- `gateway.nodes.pairing.autoApproveCidrs` 是仅用于新节点设备配对的可选 Gateway 策略；它不会改变 CLI 的批准权限。
+- 令牌轮换和撤销始终限制在该设备已批准的配对角色集合和已批准的范围基线内。即使存在一个误留的缓存令牌条目，也不会赋予令牌管理目标权限。
+- 对于已配对设备的令牌会话，跨设备管理仅限管理员：除非调用者拥有 `operator.admin`，否则 `remove`、`rotate` 和 `revoke` 仅可用于自身。
+- 令牌变更也受调用者范围约束：仅配对会话不能轮换或撤销当前携带 `operator.admin` 或 `operator.write` 的令牌。
+- `devices clear` 刻意由 `--yes` 把关。
+- 如果在本地回环上不可用配对范围（且未传入显式 `--url`），`list`/`approve` 可以使用本地配对回退。
+- `devices approve` 在铸造令牌前需要显式请求 ID；省略 `requestId` 或传入 `--latest` 只会预览最新的待处理请求。
 
 ## 令牌漂移恢复检查清单
 

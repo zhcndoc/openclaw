@@ -2,16 +2,21 @@
 summary: "通过捆绑的 Codex app-server 验证器运行 OpenClaw 嵌入式代理轮次"
 title: "Codex 验证器"
 read_when:
-  - 你想使用捆绑的 Codex app-server 验证器
-  - 你需要 Codex 验证器配置示例
-  - 你希望仅 Codex 部署在失败时不要回退到 PI
+  - 你想使用捆绑的 Codex app-server harness
+  - 你需要 Codex harness 配置示例
+  - 你希望仅使用 Codex 的部署在失败时直接报错，而不是回退到 OpenClaw
 ---
 
-捆绑的 `codex` 插件让 OpenClaw 通过 Codex app-server 而不是内置的 PI harness 运行嵌入式 OpenAI 代理轮次。
+捆绑的 `codex` 插件让 OpenClaw 能通过 Codex app-server 运行嵌入式 OpenAI 代理轮次，
+而不是使用内置的 OpenClaw harness。
 
 当你希望由 Codex 接管底层代理会话时，请使用 Codex harness：原生线程恢复、原生工具续接、原生压缩，以及 app-server 执行。OpenClaw 仍然负责聊天通道、会话文件、模型选择、OpenClaw 动态工具、审批、媒体传递，以及可见的转录镜像。
 
-正常设置使用规范的 OpenAI 模型引用，例如 `openai/gpt-5.5`。不要配置 `openai-codex/gpt-*` 模型引用。将 OpenAI 代理认证顺序放在 `auth.order.openai` 下；较旧的 `openai-codex:*` 配置文件和 `auth.order.openai-codex` 条目仍对现有安装受支持。
+常规设置使用规范的 OpenAI 模型引用，例如 `openai/gpt-5.5`。
+不要配置旧版 Codex GPT 引用。将 OpenAI 代理认证顺序放在
+`auth.order.openai` 下；旧的 legacy Codex 认证配置文件 id 和
+legacy Codex 认证顺序条目属于遗留状态，会由
+`openclaw doctor --fix` 修复。
 
 当没有 OpenClaw 沙箱处于活动状态时，OpenClaw 会在启用 Codex 原生代码模式的情况下启动 Codex app-server 线程，同时默认保持仅代码模式关闭。这样可以让 Codex 原生工作区和代码能力可用，而 OpenClaw 动态工具则继续通过 app-server 的 `item/tool/call` 桥接运行。活动中的 OpenClaw 沙箱和受限工具策略会完全禁用原生代码模式，除非你选择实验性的 sandbox exec-server 路径。
 
@@ -25,10 +30,14 @@ read_when:
 
 ## 需求
 
-- 可使用捆绑 `codex` 插件的 OpenClaw。
+- 支持捆绑 `codex` 插件的 OpenClaw。
 - 如果你的配置使用 `plugins.allow`，请包含 `codex`。
-- Codex app-server 0.125.0 或更新版本。捆绑插件默认会管理一个兼容的 Codex app-server 二进制文件，因此 `PATH` 上的本地 `codex` 命令不会影响正常的 harness 启动。
-- 可通过 `openclaw models auth login --provider openai-codex`、代理的 Codex 主目录中的 app-server 账户，或显式的 Codex API 密钥认证配置文件获得 Codex 认证。
+- Codex app-server `0.125.0` 或更新版本。捆绑插件默认会管理一个兼容的
+  Codex app-server 二进制文件，因此 `PATH` 上本地的 `codex` 命令不会
+  影响正常的 harness 启动。
+- 可通过 `openclaw models auth login --provider openai` 使用的 Codex 认证，
+  或代理的 Codex home 中的 app-server 账户，或显式的 Codex API 密钥
+  认证配置文件。
 
 关于认证优先级、环境隔离、自定义 app-server 命令、模型发现以及所有配置字段，请参见
 [Codex harness 参考](/plugins/codex-harness-reference)。
@@ -40,7 +49,7 @@ read_when:
 使用 Codex OAuth 登录：
 
 ```bash
-openclaw models auth login --provider openai-codex
+openclaw models auth login --provider openai
 ```
 
 启用捆绑的 `codex` 插件并选择一个 OpenAI 代理模型：
@@ -85,18 +94,21 @@ openclaw models auth login --provider openai-codex
 
 | 需求                                   | 设置                                                                             | 位置                               |
 | -------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------- |
-| 启用 harness                          | `plugins.entries.codex.enabled: true`                                            | OpenClaw 配置                    |
-| 保留允许列表插件安装                  | 在 `plugins.allow` 中包含 `codex`                                                | OpenClaw 配置                    |
-| 通过 Codex 路由 OpenAI 代理轮次      | `agents.defaults.model` 或 `agents.list[].model` 使用 `openai/gpt-*`            | OpenClaw 代理配置              |
-| 使用 Codex OAuth 登录                 | `openclaw models auth login --provider openai-codex`                             | CLI 认证配置文件               |
-| 为 Codex 运行添加 API 密钥备用       | 在 `auth.order.openai` 中将 `openai:*` API 密钥配置文件列在订阅认证之后       | CLI 认证配置文件 + OpenClaw 配置 |
-| 当 Codex 不可用时关闭失败            | 提供方或模型 `agentRuntime.id: "codex"`                                           | OpenClaw 模型/提供方配置        |
-| 使用直接 OpenAI API 流量             | 提供方或模型 `agentRuntime.id: "pi"` 并使用正常的 OpenAI 认证                  | OpenClaw 模型/提供方配置        |
-| 调整 app-server 行为                  | `plugins.entries.codex.config.appServer.*`                                       | Codex 插件配置                 |
-| 启用原生 Codex 插件应用              | `plugins.entries.codex.config.codexPlugins.*`                                    | Codex 插件配置                 |
-| 启用 Codex Computer Use              | `plugins.entries.codex.config.computerUse.*`                                     | Codex 插件配置                 |
+| 启用 harness                           | `plugins.entries.codex.enabled: true`                                            | OpenClaw config                    |
+| 保持允许列表中的插件安装               | 在 `plugins.allow` 中包含 `codex`                                               | OpenClaw config                    |
+| 通过 Codex 路由 OpenAI 代理轮次        | `agents.defaults.model` 或 `agents.list[].model` 为 `openai/gpt-*`               | OpenClaw agent config              |
+| 使用 ChatGPT/Codex OAuth 登录          | `openclaw models auth login --provider openai`                                   | CLI auth profile                   |
+| 为 Codex 运行添加 API 密钥备用         | 在 `auth.order.openai` 中将 `openai:*` API 密钥配置文件放在订阅认证之后 | CLI auth profile + OpenClaw config |
+| 当 Codex 不可用时关闭失败              | 提供方或模型 `agentRuntime.id: "codex"`                                     | OpenClaw model/provider config     |
+| 使用直接 OpenAI API 流量               | 提供方或模型 `agentRuntime.id: "openclaw"` 并使用正常的 OpenAI 认证          | OpenClaw model/provider config     |
+| 调整 app-server 行为                   | `plugins.entries.codex.config.appServer.*`                                       | Codex plugin config                |
+| 启用原生 Codex 插件应用                | `plugins.entries.codex.config.codexPlugins.*`                                    | Codex plugin config                |
+| 启用 Codex Computer Use                | `plugins.entries.codex.config.computerUse.*`                                     | Codex plugin config                |
 
-对由 Codex 支持的 OpenAI 代理轮次，请使用 `openai/gpt-*` 模型引用。优先使用 `auth.order.openai` 进行“订阅优先/API 密钥备用”的排序。现有的 `openai-codex:*` 认证配置文件和 `auth.order.openai-codex` 仍然有效，但不要编写新的 `openai-codex/gpt-*` 模型引用。
+为 Codex 支持的 OpenAI 代理轮次使用 `openai/gpt-*` 模型引用。优先使用
+`auth.order.openai` 进行“订阅优先/API 密钥备用”排序。现有的
+legacy Codex 认证配置文件 id 和 legacy Codex 认证顺序都属于仅供 doctor 处理的
+遗留状态；不要写入新的 legacy Codex GPT 引用。
 
 不要在由 Codex 支持的代理上设置 `compaction.model` 或 `compaction.provider`。Codex 通过其原生 app-server 线程状态执行压缩，因此 OpenClaw 在运行时会忽略这些本地摘要器覆盖，并且当该代理使用 Codex 时，`openclaw doctor --fix` 会将它们移除。
 
@@ -114,13 +126,14 @@ Lossless 仍然支持作为 Codex 轮次周围的组装、摄取和维护的上�
 {
   auth: {
     order: {
-      openai: ["openai-codex:user@example.com", "openai:api-key-backup"],
+      openai: ["openai:user@example.com", "openai:api-key-backup"],
     },
   },
 }
 ```
 
-在这种结构下，这两个配置文件在 `openai/gpt-*` 代理轮次中仍然通过 Codex 运行。API 密钥只是认证备用，而不是要求切换到 PI 或纯 OpenAI Responses。
+在这种结构下，这两个配置文件仍然会通过 Codex 运行 `openai/gpt-*` 代理轮次。API 密钥只是认证备用，而不是切换到 OpenClaw 或
+原生 OpenAI Responses 的请求。
 
 本页其余部分涵盖用户必须在其中做出选择的常见变体：部署形态、关闭失败路由、guardian 审批策略、原生 Codex 插件，以及 Computer Use。完整选项列表、默认值、枚举、发现、环境隔离、超时以及 app-server 传输字段，请参见
 [Codex harness 参考](/plugins/codex-harness-reference)。
@@ -147,35 +160,39 @@ Runtime: OpenAI Codex
 
 将提供方引用和运行时策略分开：
 
-- 对于通过 Codex 运行的 OpenAI 代理轮次，使用 `openai/gpt-*`。
-- 不要在配置中使用 `openai-codex/gpt-*`。运行 `openclaw doctor --fix` 以修复旧引用和过时的会话路由固定。
-- `agentRuntime.id: "codex"` 对正常的 OpenAI 自动模式是可选的，但当部署在 Codex 不可用时应关闭失败时很有用。
-- `agentRuntime.id: "pi"` 会在该行为是有意的情况下，将提供方或模型切换为直接 PI 行为。
-- `/codex ...` 控制来自聊天的原生 Codex app-server 会话。
-- ACP/acpx 是一条单独的外部 harness 路径。仅当用户要求 ACP/acpx 或外部 harness 适配器时才使用它。
+- 对通过 Codex 运行的 OpenAI 代理轮次使用 `openai/gpt-*`。
+- 不要在配置中使用旧版 Codex GPT 引用。运行 `openclaw doctor --fix` 来
+  修复旧引用和过期的会话路由固定值。
+- `agentRuntime.id: "codex"` 对于正常的 OpenAI 自动模式是可选的，但在部署需要在 Codex 不可用时关闭失败时很有用。
+- `agentRuntime.id: "openclaw"` 会在这是预期行为时，将某个提供方或模型纳入 OpenClaw
+  嵌入式运行时。
+- `/codex ...` 从聊天中控制原生 Codex app-server 对话。
+- ACP/acpx 是一个单独的外部 harness 路径。只有当用户明确要求 ACP/acpx 或外部 harness 适配器时才使用它。
 
 常见命令路由：
 
-| User intent                                           | Use                                                                                                   |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Attach the current chat                               | `/codex bind [--cwd <path>]`                                                                          |
-| Resume an existing Codex thread                       | `/codex resume <thread-id>`                                                                           |
-| List or filter Codex threads                          | `/codex threads [filter]`                                                                             |
-| List native Codex plugins                             | `/codex plugins list`                                                                                 |
-| Enable or disable a configured native Codex plugin    | `/codex plugins enable <name>`, `/codex plugins disable <name>`                                       |
-| Attach an existing Codex CLI session on a paired node | `/codex sessions --host <node> [filter]`, then `/codex resume <session-id> --host <node> --bind here` |
-| Send Codex feedback only                              | `/codex diagnostics [note]`                                                                           |
-| Start an ACP/acpx task                                | ACP/acpx session commands, not `/codex`                                                               |
+| 用户意图                                           | 使用                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 绑定当前聊天                                       | `/codex bind [--cwd <path>]`                                                                          |
+| 恢复一个现有的 Codex 线程                           | `/codex resume <thread-id>`                                                                           |
+| 列出或过滤 Codex 线程                               | `/codex threads [filter]`                                                                             |
+| 列出原生 Codex 插件                                 | `/codex plugins list`                                                                                 |
+| 启用或禁用已配置的原生 Codex 插件                   | `/codex plugins enable <name>`, `/codex plugins disable <name>`                                       |
+| 附加到配对节点上的现有 Codex CLI 会话               | `/codex sessions --host <node> [filter]`, then `/codex resume <session-id> --host <node> --bind here` |
+| 仅发送 Codex 反馈                                   | `/codex diagnostics [note]`                                                                           |
+| 启动 ACP/acpx 任务                                  | ACP/acpx 会话命令，而不是 `/codex`                                                               |
 
-| 使用场景                                             | 配置                                                        | 验证                                  | 备注                              |
-| ------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------- | ---------------------------------- |
-| 使用 ChatGPT/Codex 订阅并采用原生 Codex 运行时 | `openai/gpt-*` 加上已启用的 `codex` 插件                       | `/status` 显示 `Runtime: OpenAI Codex` | 推荐路径                   |
-| 如果 Codex 不可用则关闭失败                  | 提供方或模型 `agentRuntime.id: "codex"`                     | 轮次失败而不是回退到 PI       | 用于仅 Codex 部署     |
-| 通过 PI 进行直接 OpenAI API 密钥流量             | 提供方或模型 `agentRuntime.id: "pi"` 并使用正常的 OpenAI 认证 | `/status` 显示 PI 运行时              | 仅在有意使用 PI 时采用    |
-| 旧版配置                                        | `openai-codex/gpt-*`                                             | `openclaw doctor --fix` 会重写它     | 不要以这种方式编写新配置   |
-| ACP/acpx Codex 适配器                               | ACP `sessions_spawn({ runtime: "acp" })`                         | ACP 任务/会话状态                 | 与原生 Codex harness 分离 |
+| 使用场景                                             | 配置                                                              | 验证                                  | 说明                                 |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------- | ------------------------------------- |
+| 使用 ChatGPT/Codex 订阅与原生 Codex 运行时         | `openai/gpt-*` 加上已启用的 `codex` 插件                             | `/status` 显示 `Runtime: OpenAI Codex` | 推荐路径                      |
+| 若 Codex 不可用则关闭失败                            | 提供方或模型 `agentRuntime.id: "codex"`                           | 轮次失败而不是嵌入式回退              | 适用于仅 Codex 部署        |
+| 通过 OpenClaw 直接使用 OpenAI API 密钥流量          | 提供方或模型 `agentRuntime.id: "openclaw"` 并使用正常的 OpenAI 认证 | `/status` 显示 OpenClaw runtime        | 仅在 OpenClaw 是预期行为时使用 |
+| 遗留配置                                            | legacy Codex GPT 引用                                                  | `openclaw doctor --fix` 会重写它     | 不要以这种方式写入新配置      |
+| ACP/acpx Codex 适配器                               | ACP `sessions_spawn({ runtime: "acp" })`                               | ACP 任务/会话状态                     | 与原生 Codex harness 分离    |
 
-`agents.defaults.imageModel` 遵循相同的前缀拆分。对于正常的 OpenAI 路由使用 `openai/gpt-*`，仅当图像理解应通过受限的 Codex app-server 轮次运行时才使用 `codex/gpt-*`。不要使用 `openai-codex/gpt-*`；doctor 会将该旧前缀重写为 `openai/gpt-*`。
+`agents.defaults.imageModel` 也遵循相同的前缀划分。正常的 OpenAI 路由使用 `openai/gpt-*`，
+只有在图像理解应通过受限的 Codex app-server 轮次运行时才使用 `codex/gpt-*`。不要使用
+旧版 Codex GPT 引用；doctor 会把该旧前缀重写为 `openai/gpt-*`。
 
 ## 部署模式
 
@@ -300,29 +317,28 @@ Runtime: OpenAI Codex
 OpenClaw 沙箱支持的动态工具暴露，例如 `sandbox_exec` 和
 `sandbox_process`，前提是常规 exec/process 工具可用。
 
-当你想要在沙箱逃逸前或额外权限前让 Codex 进行原生自动审查时，请使用 guardian 模式：
+当你希望在沙箱逃逸或额外权限之前使用 Codex 原生自动审查时，请使用规范化的 OpenClaw exec 模式：
 
 ```json5
 {
+  tools: {
+    exec: {
+      mode: "auto",
+    },
+  },
   plugins: {
     entries: {
       codex: {
         enabled: true,
-        config: {
-          appServer: {
-            mode: "guardian",
-            serviceTier: "priority",
-          },
-        },
       },
     },
   },
 }
 ```
 
-在本地要求允许这些值时，guardian 模式会扩展为 Codex app-server 的审批设置，通常为
-`approvalPolicy: "on-request"`、`approvalsReviewer: "auto_review"`，以及
-`sandbox: "workspace-write"`。
+对于 Codex app-server 会话，OpenClaw 会将 `tools.exec.mode: "auto"` 映射为 Codex Guardian 审核通过的授权，通常在本地要求允许这些值时为 `approvalPolicy: "on-request"`、`approvalsReviewer: "auto_review"`，以及 `sandbox: "workspace-write"`。在 `tools.exec.mode: "auto"` 中，OpenClaw 不会保留旧版不安全的 Codex `approvalPolicy: "never"` 或 `sandbox: "danger-full-access"` 覆盖；若你想要有意采用无审批的 Codex 姿态，请使用 `tools.exec.mode: "full"`。旧版 `plugins.entries.codex.config.appServer.mode: "guardian"` 预设仍然可用，但 `tools.exec.mode: "auto"` 才是规范化的 OpenClaw 表面。
+
+关于与主机 exec 授权和 ACPX 权限的模式级比较，请参见 [权限模式](/tools/permission-modes)。
 
 关于每个 app-server 字段、认证顺序、环境隔离、发现与超时行为，请参见 [Codex harness 参考](/plugins/codex-harness-reference)。
 
@@ -365,10 +381,12 @@ codex resume <thread-id>
 
 认证按以下顺序选择：
 
-1. 为该 agent 排序好的 OpenAI 认证配置文件，最好位于
-   `auth.order.openai` 下。现有 `openai-codex:*` 配置文件 id 仍然有效。
-2. 该 agent 的 Codex home 中 app-server 现有的账户。
-3. 仅对于本地 stdio app-server 启动：当不存在 app-server 账户且仍需要 OpenAI 认证时，先使用 `CODEX_API_KEY`，然后是 `OPENAI_API_KEY`。
+1. 适用于该 agent 的有序 OpenAI 认证配置文件，优先使用
+   `auth.order.openai` 下的配置。运行 `openclaw doctor --fix` 可迁移较旧
+   的传统 Codex 认证配置文件 id 和传统 Codex 认证顺序。
+2. 该 agent 的 Codex 主目录中 app-server 现有的账户。
+3. 对于仅本地 stdio app-server 启动，在没有 app-server 账户且仍需要 OpenAI 认证时，
+   依次使用 `CODEX_API_KEY`，然后是 `OPENAI_API_KEY`。
 
 当 OpenClaw 检测到 ChatGPT 订阅型 Codex 认证配置文件时，它会从启动的 Codex 子进程中移除 `CODEX_API_KEY` 和 `OPENAI_API_KEY`。这可以让 Gateway 级别的 API key 继续可用于 embeddings 或直接的 OpenAI 模型，而不会让原生 Codex app-server turn 意外地按 API 计费。显式的 Codex API key 配置文件以及本地 stdio 环境 key 回退会使用 app-server 登录，而不是继承的子进程环境。WebSocket app-server 连接不会获得 Gateway 环境 API key 回退；请使用显式认证配置文件或远程 app-server 自己的账户。
 
@@ -424,47 +442,74 @@ OpenClaw 或 ACP 委派仍可通过 `openclaw` 动态工具命名空间使用。
 
 支持的 `appServer` 字段：
 
-| Field                                         | Default                                                | Meaning                                                                                                                                                                                                                                                                                                                                               |
-| --------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `transport`                                   | `"stdio"`                                              | `"stdio"` 启动 Codex；`"websocket"` 连接到 `url`。                                                                                                                                                                                                                                                                                              |
-| `command`                                     | managed Codex binary                                   | stdio 传输所用的可执行文件。留空以使用托管二进制文件；仅在明确覆盖时设置。                                                                                                                                                                                                                                          |
-| `args`                                        | `["app-server", "--listen", "stdio://"]`               | stdio 传输所用参数。                                                                                                                                                                                                                                                                                                                        |
-| `url`                                         | unset                                                  | WebSocket app-server URL。                                                                                                                                                                                                                                                                                                                             |
-| `authToken`                                   | unset                                                  | WebSocket 传输的 Bearer 令牌。                                                                                                                                                                                                                                                                                                                 |
-| `headers`                                     | `{}`                                                   | 额外的 WebSocket 标头。                                                                                                                                                                                                                                                                                                                              |
-| `clearEnv`                                    | `[]`                                                   | OpenClaw 构建其继承环境后，从启动的 stdio app-server 进程中移除的额外环境变量名。OpenClaw 会为本地启动保留按 agent 区分的 `CODEX_HOME` 和继承的 `HOME`。                                                                                                                                    |
-| `codeModeOnly`                                | `false`                                                | 选择 Codex 的仅 code-mode 工具面。OpenClaw 动态工具仍会向 Codex 注册，因此嵌套的 `tools.*` 调用会通过 app-server `item/tool/call` 桥返回。                                                                                                                                                                    |
-| `requestTimeoutMs`                            | `60000`                                                | app-server 控制平面的调用超时时间。                                                                                                                                                                                                                                                                                                           |
-| `turnCompletionIdleTimeoutMs`                 | `60000`                                                | Codex 接受一次回合后，或 OpenClaw 等待 `turn/completed` 时一次回合范围内的 app-server 请求之后的安静窗口。对于缓慢的工具后或仅状态合成阶段，请提高该值。                                                                                                                                                           |
-| `postToolRawAssistantCompletionIdleTimeoutMs` | unset                                                  | 在工具交接后，如果 Codex 发出原始 assistant completion 或进度但未发送 `turn/completed`，则使用的 completion-idle 保护。未设置时默认为 assistant completion idle timeout。对于受信任或重负载工作流，当工具后的合成合理地保持更久静默时可使用此项。 |
-| `mode`                                        | `"yolo"` unless local Codex requirements disallow YOLO | YOLO 或经 guardian 审核执行的预设。本地 stdio 要求如果省略 `danger-full-access`、`never` 审批，或 `user` 审核者，则会使隐式默认变为 guardian。                                                                                                                                                                 |
-| `approvalPolicy`                              | `"never"` or an allowed guardian approval policy       | 发送给线程启动/恢复/回合的原生 Codex 审批策略。guardian 默认在允许时偏好 `"on-request"`。                                                                                                                                                                                                                                  |
-| `sandbox`                                     | `"danger-full-access"` or an allowed guardian sandbox  | 发送给线程启动/恢复的原生 Codex 沙箱模式。guardian 默认在允许时偏好 `"workspace-write"`，否则为 `"read-only"`。当 OpenClaw 沙箱处于激活状态时，`danger-full-access` 会在具有来自 OpenClaw 沙箱 egress 设置的网络访问情况下，改用 Codex `workspace-write`。                                           |
-| `approvalsReviewer`                           | `"user"` or an allowed guardian reviewer               | 在允许时使用 `"auto_review"` 让 Codex 审查原生审批提示，否则使用 `guardian_subagent` 或 `user`。`guardian_subagent` 仍然是一个旧别名。                                                                                                                                                                                    |
-| `serviceTier`                                 | unset                                                  | 可选的 Codex app-server 服务层。`"priority"` 启用 fast-mode 路由，`"flex"` 请求 flex 处理，`null` 清除覆盖，旧的 `"fast"` 会被接受为 `"priority"`。                                                                                                                                                       |
-| `experimental.sandboxExecServer`              | `false`                                                | 预览版可选功能，会向 Codex app-server 0.132.0 或更高版本注册一个由 OpenClaw 沙箱支持的 Codex 环境，从而使原生 Codex 执行可以在当前激活的 OpenClaw 沙箱内运行。                                                                                                                                                               |
+| Field                                         | Default                                                | Meaning                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport`                                   | `"stdio"`                                              | `"stdio"` spawns Codex; `"websocket"` connects to `url`.                                                                                                                                                                                                                                                                                                         |
+| `command`                                     | managed Codex binary                                   | Executable for stdio transport. Leave unset to use the managed binary; set it only for an explicit override.                                                                                                                                                                                                                                                     |
+| `args`                                        | `["app-server", "--listen", "stdio://"]`               | Arguments for stdio transport.                                                                                                                                                                                                                                                                                                                                   |
+| `url`                                         | unset                                                  | WebSocket app-server URL.                                                                                                                                                                                                                                                                                                                                        |
+| `authToken`                                   | unset                                                  | Bearer token for WebSocket transport.                                                                                                                                                                                                                                                                                                                            |
+| `headers`                                     | `{}`                                                   | Extra WebSocket headers.                                                                                                                                                                                                                                                                                                                                         |
+| `clearEnv`                                    | `[]`                                                   | Extra environment variable names removed from the spawned stdio app-server process after OpenClaw builds its inherited environment. OpenClaw keeps per-agent `CODEX_HOME` and inherited `HOME` for local launches.                                                                                                                                               |
+| `codeModeOnly`                                | `false`                                                | Opt into Codex's code-mode-only tool surface. OpenClaw dynamic tools remain registered with Codex so nested `tools.*` calls return through the app-server `item/tool/call` bridge.                                                                                                                                                                               |
+| `requestTimeoutMs`                            | `60000`                                                | Timeout for app-server control-plane calls.                                                                                                                                                                                                                                                                                                                      |
+| `turnCompletionIdleTimeoutMs`                 | `60000`                                                | Quiet window after Codex accepts a turn or after a turn-scoped app-server request while OpenClaw waits for `turn/completed`.                                                                                                                                                                                                                                     |
+| `postToolRawAssistantCompletionIdleTimeoutMs` | `300000`                                               | Completion-idle and progress guard used after a tool handoff, native tool completion, post-tool raw assistant progress, raw reasoning completion, or reasoning progress while OpenClaw waits for `turn/completed`. Use this for trusted or heavy workloads where post-tool synthesis can legitimately stay quiet longer than the final assistant release budget. |
+| `mode`                                        | `"yolo"` unless local Codex requirements disallow YOLO | Preset for YOLO or guardian-reviewed execution. Local stdio requirements that omit `danger-full-access`, `never` approval, or the `user` reviewer make the implicit default guardian.                                                                                                                                                                            |
+| `approvalPolicy`                              | `"never"` or an allowed guardian approval policy       | Native Codex approval policy sent to thread start/resume/turn. Guardian defaults prefer `"on-request"` when allowed.                                                                                                                                                                                                                                             |
+| `sandbox`                                     | `"danger-full-access"` or an allowed guardian sandbox  | Native Codex sandbox mode sent to thread start/resume. Guardian defaults prefer `"workspace-write"` when allowed, otherwise `"read-only"`. When an OpenClaw sandbox is active, `danger-full-access` turns use Codex `workspace-write` with network access derived from the OpenClaw sandbox egress setting.                                                      |
+| `approvalsReviewer`                           | `"user"` or an allowed guardian reviewer               | Use `"auto_review"` to let Codex review native approval prompts when allowed, otherwise `guardian_subagent` or `user`. `guardian_subagent` remains a legacy alias.                                                                                                                                                                                               |
+| `serviceTier`                                 | unset                                                  | Optional Codex app-server service tier. `"priority"` enables fast-mode routing, `"flex"` requests flex processing, `null` clears the override, and legacy `"fast"` is accepted as `"priority"`.                                                                                                                                                                  |
+| `experimental.sandboxExecServer`              | `false`                                                | Preview opt-in that registers an OpenClaw sandbox-backed Codex environment with Codex app-server 0.132.0 or newer so native Codex execution can run inside the active OpenClaw sandbox.                                                                                                                                                                          |
 
-OpenClaw 拥有的动态工具调用与 `appServer.requestTimeoutMs` 独立限时：默认情况下，Codex `item/tool/call` 请求使用 30 秒的 OpenClaw 看门狗。正的每次调用 `timeoutMs` 参数会延长或缩短该特定工具预算。`image_generate` 工具在工具调用未提供自己的超时时，会使用 `agents.defaults.imageGenerationModel.timeoutMs`，否则使用 120 秒的图像生成默认值。媒体理解的 `image` 工具使用
-`tools.media.image.timeoutSeconds` 或其 60 秒媒体默认值。动态工具预算上限为 600000 ms。超时时，OpenClaw 会在支持的情况下中止工具信号，并向 Codex 返回失败的动态工具响应，以便回合能够继续，而不是让会话停留在 `processing`。
+OpenClaw-owned dynamic tool calls are bounded independently from
+`appServer.requestTimeoutMs`: Codex `item/tool/call` requests use a 90 second
+OpenClaw watchdog by default. A positive per-call `timeoutMs` argument extends
+or shortens that specific tool budget. The `image_generate` tool uses
+`agents.defaults.imageGenerationModel.timeoutMs` when the tool call does not
+provide its own timeout, or a 120 second image-generation default otherwise.
+The media-understanding `image` tool uses
+`tools.media.image.timeoutSeconds` or its 60 second media default. Dynamic tool
+budgets are capped at 600000 ms. On timeout, OpenClaw aborts the tool signal
+where supported and returns a failed dynamic-tool response to Codex so the turn
+can continue instead of leaving the session in `processing`.
 
-在 Codex 接受一次回合之后，以及 OpenClaw 响应一次回合范围内的
-app-server 请求之后，harness 期望 Codex 推进当前回合并最终以
-`turn/completed` 完成原生回合。如果 app-server 在
-`appServer.turnCompletionIdleTimeoutMs` 时间内保持静默，OpenClaw 会尽力
-中断 Codex 回合，记录诊断超时，并释放
-OpenClaw 会话通道，以便后续聊天消息不会排在陈旧的原生回合之后。对于同一回合的大多数非终止通知，都会解除这个较短的
-看门狗，因为 Codex 已经证明该回合仍然活跃；原始的
-`custom_tool_call_output` 完成会保持较短的工具后看门狗处于激活状态，
-因为它们是回合范围内的工具结果交接。全局 app-server 通知，
-例如速率限制更新，不会重置回合空闲进度。已完成的 `agentMessage` 项和工具前原始 assistant 的
-`rawResponseItem/completed` 项会激活 assistant 输出释放：如果 Codex 随后
-在没有 `turn/completed` 的情况下保持静默，OpenClaw 会尽力中断原生
-回合并释放会话通道。工具后原始 assistant 进度会继续等待
-`turn/completed`，同时保持 completion-idle 保护处于激活状态；该保护在配置了
-`appServer.postToolRawAssistantCompletionIdleTimeoutMs` 时使用它，否则回退到
-assistant completion idle timeout。超时诊断会包含最后一个 app-server 通知方法，以及对于原始
-assistant 响应项，还会包含项目类型、角色、id 和一个受限长度的 assistant 文本
-预览。
+After Codex accepts a turn, and after OpenClaw responds to a turn-scoped
+app-server request, the harness expects Codex to make current-turn progress and
+eventually finish the native turn with `turn/completed`. If the app-server goes
+quiet for `appServer.turnCompletionIdleTimeoutMs`, OpenClaw best-effort
+interrupts the Codex turn, records a diagnostic timeout, and releases the
+OpenClaw session lane so follow-up chat messages are not queued behind a stale
+native turn. Most non-terminal notifications for the same turn disarm that short
+watchdog because Codex has proven the turn is still alive. Tool handoffs use a
+longer post-tool idle budget: after OpenClaw returns an `item/tool/call`
+response, after native tool items such as `commandExecution` complete, after raw
+`custom_tool_call_output` completions, and after post-tool raw assistant
+progress, raw reasoning completions, or reasoning progress. The guard uses
+`appServer.postToolRawAssistantCompletionIdleTimeoutMs` when configured and
+defaults to five minutes otherwise. That same post-tool budget also extends the
+progress watchdog for the silent synthesis window before Codex emits the next
+current-turn event. Global app-server notifications, such as rate-limit updates,
+do not reset turn-idle progress. Reasoning completions, commentary
+`agentMessage` completions, and pre-tool raw reasoning or assistant progress can
+be followed by an automatic final reply, so they use the post-progress reply
+guard instead of releasing the session lane immediately. Only
+final/non-commentary completed `agentMessage` items and pre-tool raw
+assistant completions arm the assistant-output release: if Codex then goes quiet
+without `turn/completed`, OpenClaw best-effort interrupts the native turn and
+releases the session lane. Replay-safe stdio app-server failures, including
+turn-completion idle timeouts without assistant, tool, active-item, or
+side-effect evidence, are retried once on a fresh app-server attempt. Unsafe
+timeouts still retire the stuck app-server client and release the OpenClaw
+session lane. They also clear the stale native thread binding instead of being
+replayed automatically. Completion-watch timeouts surface Codex-specific timeout
+text: replay-safe cases say the response may be incomplete, while unsafe cases
+tell the user to verify current state before retrying. Public timeout diagnostics
+include structural fields such as the last app-server notification method,
+raw assistant response item id/type/role, active request/item counts, and armed
+watch state. When the last notification is a raw assistant response item, they
+also include a bounded assistant text preview. They do not include raw prompt or
+tool content.
 
 本地测试仍可使用环境变量覆盖：
 
@@ -482,7 +527,7 @@ assistant 响应项，还会包含项目类型、角色、id 和一个受限长�
 
 原生 Codex 插件支持使用 Codex app-server 自身的 app 和插件能力，并且与 OpenClaw harness turn 处于同一个 Codex 线程中。OpenClaw 不会将 Codex 插件转换为合成的 `codex_plugin_*` OpenClaw 动态工具。
 
-`codexPlugins` 仅影响选择原生 Codex harness 的会话。它对 PI 运行、普通 OpenAI provider 运行、ACP conversation 绑定或其他 harness 没有影响。
+`codexPlugins` 仅影响选择原生 Codex harness 的会话。它对内置 harness 运行、普通 OpenAI provider 运行、ACP 对话绑定或其他 harness 没有影响。
 
 迁移后的最小配置：
 
@@ -516,7 +561,10 @@ assistant 响应项，还会包含项目类型、角色、id 和一个受限长�
 关于迁移资格、app 库存、破坏性操作策略、询问机制和原生插件诊断，请参见
 [原生 Codex 插件](/plugins/codex-native-plugins)。
 
-## 计算机使用
+OpenAI 侧的 app 和插件访问由登录的 Codex 账户控制；对于 Business 和 Enterprise/Edu 工作区，还受工作区 app 控制的约束。有关 OpenAI 账户和工作区控制的概览，请参见
+[在你的 ChatGPT 套餐中使用 Codex](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)。
+
+## Computer Use
 
 计算机使用在其单独的设置指南中有说明：
 [Codex 计算机使用](/plugins/codex-computer-use)。
@@ -540,13 +588,13 @@ Codex harness 只会改变底层嵌入式 agent 执行器。
 
 **Codex 没有作为普通的 `/model` provider 出现：** 对于新配置来说，这是预期行为。请选择 `openai/gpt-*` 模型，启用 `plugins.entries.codex.enabled`，并检查 `plugins.allow` 是否排除了 `codex`。
 
-**OpenClaw 使用 PI 而不是 Codex：** 请确保模型 ref 在官方 OpenAI provider 上为 `openai/gpt-*`，并且 Codex 插件已安装并启用。如果测试时需要严格证明，请将 provider 或 model 的 `agentRuntime.id` 设为 `"codex"`。强制使用 Codex runtime 时会直接失败，而不会回退到 PI。
+**OpenClaw 使用的是内置 harness，而不是 Codex：** 请确认模型引用在官方 OpenAI provider 上为 `openai/gpt-*`，并且 Codex 插件已安装且启用。如果在测试时需要严格证明，请将 provider 或 model 的 `agentRuntime.id` 设置为 `"codex"`。强制使用 Codex runtime 时如果失败，会直接报错，而不会回退到 OpenClaw。
 
 **OpenAI Codex runtime 回退到 API key 路径：** 收集一段已脱敏的网关摘录，显示模型、runtime、所选 provider 和失败信息。请受影响的协作者在其 OpenClaw 主机上运行以下只读命令：
 
 ```bash
 (
-  pattern='openai/gpt-5\.[45]|agentRuntime(\.id)?|harnessRuntime|Runtime: OpenAI Codex|openai-codex|resolveSelectedOpenAIPiRuntimeProvider|candidateProvider[": ]+openai|status[": ]+401|Incorrect API key|No API key|api-key path|API-key path|OAuth'
+  pattern='openai/gpt-5\.[45]|openai[-]codex|agentRuntime(\.id)?|harnessRuntime|Runtime: OpenAI Codex|legacy OpenAI Codex prefix|resolveSelectedOpenAIRuntimeProvider|candidateProvider[": ]+openai|status[": ]+401|Incorrect API key|No API key|api-key path|API-key path|OAuth'
 
   if ls /tmp/openclaw/openclaw-*.log >/dev/null 2>&1; then
     grep -E -i -n "$pattern" /tmp/openclaw/openclaw-*.log 2>/dev/null || true
@@ -564,9 +612,9 @@ Codex harness 只会改变底层嵌入式 agent 执行器。
   | tail -200
 ```
 
-有用的摘录通常包括 `openai/gpt-5.5` 或 `openai/gpt-5.4`、`Runtime: OpenAI Codex`、`agentRuntime.id` 或 `harnessRuntime`、`candidateProvider: "openai"`，以及 `401`、`Incorrect API key` 或 `No API key` 结果。修正后的运行应该显示 `openai-codex` OAuth 路径，而不是普通的 OpenAI API key 失败。
+有用的摘录通常包括 `openai/gpt-5.5` 或 `openai/gpt-5.4`、`Runtime: OpenAI Codex`、`agentRuntime.id` 或 `harnessRuntime`、`candidateProvider: "openai"`，以及 `401`、`Incorrect API key` 或 `No API key` 的结果。修正后的运行应显示 OpenAI OAuth 路径，而不是普通的 OpenAI API key 失败。
 
-**旧版 `openai-codex/*` 配置仍然存在：** 运行 `openclaw doctor --fix`。Doctor 会把旧的模型 ref 重写为 `openai/*`，移除过时的 session 和整个 agent 的 runtime 固定，并保留现有的 auth-profile 覆盖。
+**旧版 Codex 模型引用配置仍然存在：** 运行 `openclaw doctor --fix`。Doctor 会将旧版模型引用重写为 `openai/*`，移除过期的会话和整 agent runtime 固定配置，并保留现有的 auth-profile 覆盖。
 
 **app-server 被拒绝：** 请使用 Codex app-server `0.125.0` 或更高版本。同版本的预发布版本或带构建后缀的版本，例如 `0.125.0-alpha.2` 或 `0.125.0+custom`，都会被拒绝，因为 OpenClaw 会测试稳定的 `0.125.0` 协议下限。
 
@@ -577,22 +625,26 @@ Codex harness 只会改变底层嵌入式 agent 执行器。
 
 **WebSocket 传输立即失败：** 检查 `appServer.url`、`authToken`、headers，以及远程 app-server 是否支持相同的 Codex app-server 协议版本。
 
-**非 Codex 模型使用 PI：** 这是预期行为，除非 provider 或 model runtime policy 将其路由到另一个 harness。普通的非 OpenAI provider refs 在 `auto` 模式下会保持其正常 provider 路径。
+**原生 shell 或 patch 工具被 `Native hook relay unavailable` 阻止：**
+Codex 线程仍在尝试使用一个 OpenClaw 不再注册的原生 hook relay id。这是一个原生 Codex hook 传输问题，不是 ACP 后端、provider、GitHub 或 shell 命令故障。在受影响的聊天中使用 `/new` 或 `/reset` 开启新会话，然后重试一个无害命令。如果这一次可行，但下一次原生工具调用又失败，那么应将 `/new` 视为临时解决方案：在重启 Codex app-server 或 OpenClaw Gateway 后，将提示复制到新会话中，以便旧线程被丢弃并重新创建原生 hook 注册。
 
-**Computer Use 已安装但工具不运行：** 在一个新的会话中检查 `/codex computer-use status`。如果某个工具报告 `Native hook relay unavailable`，请使用 `/new` 或 `/reset`；如果问题仍然存在，请重启网关以清除过期的原生 hook 注册。请参见
-[Codex 计算机使用](/plugins/codex-computer-use#troubleshooting)。
+**非 Codex 模型使用的是内置 harness：** 除非 provider 或 model runtime policy 将其路由到其他 harness，否则这是预期行为。普通的非 OpenAI provider 引用在 `auto` 模式下会保持其正常的 provider 路径。
+
+**Computer Use 已安装但工具不运行：** 在新会话中检查 `/codex computer-use status`。如果工具报告 `Native hook relay unavailable`，请使用上面的原生 hook relay 恢复方法。请参见
+[Codex Computer Use](/plugins/codex-computer-use#troubleshooting)。
 
 ## 相关内容
 
-- [Codex harness 参考](/plugins/codex-harness-reference)
-- [Codex harness 运行时](/plugins/codex-harness-runtime)
-- [原生 Codex 插件](/plugins/codex-native-plugins)
-- [Codex 计算机使用](/plugins/codex-computer-use)
-- [Agent 运行时](/concepts/agent-runtimes)
-- [模型提供方](/concepts/model-providers)
-- [OpenAI 提供方](/providers/openai)
-- [Agent harness 插件](/plugins/sdk-agent-harness)
-- [插件 hooks](/plugins/hooks)
-- [诊断导出](/gateway/diagnostics)
-- [状态](/cli/status)
-- [测试](/help/testing-live#live-codex-app-server-harness-smoke)
+- [Codex harness reference](/plugins/codex-harness-reference)
+- [Codex harness runtime](/plugins/codex-harness-runtime)
+- [Native Codex plugins](/plugins/codex-native-plugins)
+- [Codex Computer Use](/plugins/codex-computer-use)
+- [Agent runtimes](/concepts/agent-runtimes)
+- [Model providers](/concepts/model-providers)
+- [OpenAI provider](/providers/openai)
+- [OpenAI Codex help](https://help.openai.com/en/collections/14937394-codex)
+- [Agent harness plugins](/plugins/sdk-agent-harness)
+- [Plugin hooks](/plugins/hooks)
+- [Diagnostics export](/gateway/diagnostics)
+- [Status](/cli/status)
+- [Testing](/help/testing-live#live-codex-app-server-harness-smoke)

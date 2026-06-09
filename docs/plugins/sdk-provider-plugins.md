@@ -59,8 +59,13 @@ read_when:
       "modelSupport": {
         "modelPrefixes": ["acme-"]
       },
-      "providerAuthEnvVars": {
-        "acme-ai": ["ACME_AI_API_KEY"]
+      "setup": {
+        "providers": [
+          {
+            "id": "acme-ai",
+            "envVars": ["ACME_AI_API_KEY"]
+          }
+        ]
       },
       "providerAuthAliases": {
         "acme-ai-coding": "acme-ai"
@@ -86,12 +91,11 @@ read_when:
     ```
     </CodeGroup>
 
-    清单中声明 `providerAuthEnvVars`，这样 OpenClaw 就可以在不加载你的插件运行时的情况下检测
-    凭据。当某个提供方变体应复用另一个提供方 id 的认证时，请添加 `providerAuthAliases`。
-    `modelSupport` 是可选项，它允许 OpenClaw 在运行时钩子出现之前，就通过诸如
-    `acme-large` 这样的简写模型 id 自动加载你的提供方插件。如果你把该
-    提供方发布到 ClawHub，则 `package.json` 中的这些 `openclaw.compat` 和 `openclaw.build` 字段
-    是必需的。
+    清单声明 `setup.providers[].envVars`，这样 OpenClaw 就能在不加载你的插件运行时的情况下检测
+    凭据。当某个提供方变体应复用另一个提供方 id 的认证时，添加 `providerAuthAliases`。`modelSupport`
+    是可选项，它允许 OpenClaw 在运行时钩子存在之前，就从像 `acme-large` 这样的简写
+    模型 id 自动加载你的提供方插件。如果你在 ClawHub 上发布该提供方，那么 `package.json` 中的
+    `openclaw.compat` 和 `openclaw.build` 字段是必需的。
 
   </Step>
 
@@ -196,8 +200,138 @@ read_when:
     `openclaw onboard --acme-ai-api-key <key>` 并选择
     `acme-ai/acme-large` 作为他们的模型。
 
-    如果上游提供方使用的控制 token 与 OpenClaw 不同，不要替换流路径，而是添加一个
-    小的双向文本转换：
+    ### Live model discovery
+
+    如果你的提供方暴露了一个 `/models` 风格的 API，请将提供方特定的
+    端点和行投影保留在插件中，并使用
+    `openclaw/plugin-sdk/provider-catalog-live-runtime` 来处理共享的获取生命周期。
+    该辅助函数为你提供受保护的 HTTP 获取、提供方认证头、
+    结构化 HTTP 错误、TTL 缓存和静态回退行为，而不会把提供方策略放进 OpenClaw 核心。
+
+    当 live API 只告诉你哪些由提供方拥有的静态目录行当前可用时，请使用 `buildLiveModelProviderConfig`：
+
+    ```typescript index.ts
+    import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+    import {
+      buildLiveModelProviderConfig,
+      type LiveModelCatalogFetchGuard,
+    } from "openclaw/plugin-sdk/provider-catalog-live-runtime";
+
+    const STATIC_MODELS = [
+      {
+        id: "acme-large",
+        name: "Acme Large",
+        reasoning: true,
+        input: ["text", "image"],
+        cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
+        contextWindow: 200000,
+        maxTokens: 32768,
+      },
+      {
+        id: "acme-small",
+        name: "Acme Small",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 },
+        contextWindow: 128000,
+        maxTokens: 8192,
+      },
+    ] as const;
+
+    async function buildAcmeLiveProvider(params: {
+      apiKey: string;
+      discoveryApiKey?: string;
+      fetchGuard?: LiveModelCatalogFetchGuard;
+    }) {
+      return await buildLiveModelProviderConfig({
+        providerId: "acme-ai",
+        endpoint: "https://api.acme-ai.com/v1/models",
+        providerConfig: {
+          baseUrl: "https://api.acme-ai.com/v1",
+          api: "openai-completions",
+        },
+        models: STATIC_MODELS,
+        apiKey: params.apiKey,
+        discoveryApiKey: params.discoveryApiKey,
+        fetchGuard: params.fetchGuard,
+        ttlMs: 60_000,
+        auditContext: "acme-ai-model-discovery",
+      });
+    }
+
+    export default definePluginEntry({
+      id: "acme-ai",
+      name: "Acme AI",
+      register(api) {
+        api.registerProvider({
+          id: "acme-ai",
+          label: "Acme AI",
+          catalog: {
+            order: "simple",
+            run: async (ctx) => {
+              const auth = ctx.resolveProviderAuth("acme-ai");
+              const apiKey =
+                auth.apiKey ?? ctx.resolveProviderApiKey("acme-ai").apiKey;
+              if (!apiKey) return null;
+              return {
+                provider: await buildAcmeLiveProvider({
+                  apiKey,
+                  discoveryApiKey: auth.discoveryApiKey,
+                }),
+              };
+            },
+          },
+          staticCatalog: {
+            order: "simple",
+            run: async () => ({
+              provider: {
+                baseUrl: "https://api.acme-ai.com/v1",
+                api: "openai-completions",
+                models: [...STATIC_MODELS],
+              },
+            }),
+          },
+        });
+      },
+    });
+    ```
+
+    当提供方 API 返回更丰富的元数据，而插件需要自行将行投影为 OpenClaw 模型定义时，请使用
+    `getCachedLiveProviderModelRows`：
+
+    ```typescript index.ts
+    import {
+      getCachedLiveProviderModelRows,
+      LiveModelCatalogHttpError,
+    } from "openclaw/plugin-sdk/provider-catalog-live-runtime";
+
+    async function discoverAcmeModels(apiKey: string) {
+      try {
+        const rows = await getCachedLiveProviderModelRows({
+          providerId: "acme-ai",
+          endpoint: "https://api.acme-ai.com/v1/models",
+          apiKey,
+          ttlMs: 60_000,
+          auditContext: "acme-ai-model-discovery",
+        });
+        return rows
+          .map((row) => projectAcmeModel(row))
+          .filter((model) => model !== null);
+      } catch (error) {
+        if (error instanceof LiveModelCatalogHttpError) {
+          return STATIC_MODELS;
+        }
+        throw error;
+      }
+    }
+    ```
+
+    `run` 应保持认证门控，并在没有可用凭据时返回 `null`。保留一个离线的 `staticRun` 或静态回退，
+    这样设置、文档、测试和选择器界面就不会依赖实时网络访问。使用适合模型列表新鲜度的 TTL，
+    避免请求时文件系统轮询，并且只有在上游响应不是 OpenAI 兼容的 `{ data: [{ id, object }] }`
+    形状时，才传入提供方特定的 `readRows` / `readModelId`。
+
+    如果上游提供方使用的控制标记与 OpenClaw 不同，请添加一个小型的双向文本变换，而不是替换流路径：
 
     ```typescript
     api.registerTextTransforms({
@@ -275,6 +409,9 @@ read_when:
     `applyProviderNativeStreamingUsageCompat(...)` 会根据端点能力映射检测支持情况，因此即使插件使用了自定义提供方 id，
     原生 Moonshot/DashScope 风格端点也仍然可以接入。
 
+    上面的 live discovery 示例涵盖了 `/models` 风格的提供方 API。请将该发现逻辑保留在 `catalog.run` 中，
+    并基于可用认证进行门控，同时让 `staticRun` 保持不依赖网络，以便离线生成目录。
+
   </Step>
 
   <Step title="添加动态模型解析">
@@ -332,23 +469,23 @@ read_when:
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `openai-compatible` | 面向 OpenAI 兼容传输的共享 OpenAI 风格 replay 策略，包括 tool-call-id 清理、assistant-first 顺序修复，以及在传输需要时进行通用的 Gemini turn 校验 | `moonshot`, `ollama`, `xai`, `zai` |
-    | `anthropic-by-model` | 由 `modelId` 选择的 Claude 感知 replay 策略，因此只有在解析出的模型确实是 Claude id 时，Anthropic 消息传输才会获得 Claude 专属的 thinking-block 清理 | `amazon-bedrock`, `anthropic-vertex` |
-    | `google-gemini` | 原生 Gemini replay 策略，加上 bootstrap replay 清理和标记的 reasoning 输出模式 | `google`, `google-gemini-cli` |
-    | `passthrough-gemini` | 用于通过 OpenAI 兼容代理传输运行的 Gemini 模型的 Gemini thought-signature 清理；不会启用原生 Gemini replay 校验或 bootstrap 重写 | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
-    | `hybrid-anthropic-openai` | 适用于在一个插件中混合 Anthropic 消息和 OpenAI 兼容模型表面的混合策略；可选的仅 Claude thinking-block 删除仍然只作用于 Anthropic 一侧 | `minimax` |
+    | `openai-compatible` | Shared OpenAI-style replay policy for OpenAI-compatible transports, including tool-call-id sanitation, assistant-first ordering fixes, and generic Gemini-turn validation where the transport needs it | `moonshot`, `ollama`, `xai`, `zai` |
+    | `anthropic-by-model` | Claude-aware replay policy chosen by `modelId`, so Anthropic-message transports only get Claude-specific thinking-block cleanup when the resolved model is actually a Claude id | `amazon-bedrock`, `anthropic-vertex` |
+    | `google-gemini` | Native Gemini replay policy plus bootstrap replay sanitation. The shared family keeps the text-output Gemini CLI on tagged reasoning; the direct `google` provider overrides `resolveReasoningOutputMode` to `native` because Gemini API thinking arrives as native thought parts. | `google`, `google-gemini-cli` |
+    | `passthrough-gemini` | Gemini thought-signature sanitation for Gemini models running through OpenAI-compatible proxy transports; does not enable native Gemini replay validation or bootstrap rewrites | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
+    | `hybrid-anthropic-openai` | Hybrid policy for providers that mix Anthropic-message and OpenAI-compatible model surfaces in one plugin; optional Claude-only thinking-block dropping stays scoped to the Anthropic side | `minimax` |
 
     当前可用的 stream 家族：
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `google-thinking` | 共享流路径上的 Gemini thinking 负载规范化 | `google`, `google-gemini-cli` |
-    | `kilocode-thinking` | 共享代理流路径上的 Kilo reasoning 包装器，对 `kilo/auto` 和不受支持的代理 reasoning ids 跳过注入的 thinking | `kilocode` |
-    | `moonshot-thinking` | 基于配置 + `/think` 级别的 Moonshot 二进制原生 thinking 负载映射 | `moonshot` |
-    | `minimax-fast-mode` | 共享流路径上的 MiniMax fast-mode 模型重写 | `minimax`, `minimax-portal` |
-    | `openai-responses-defaults` | 共享的原生 OpenAI/Codex Responses 包装器：归因 headers、`/fast`/`serviceTier`、文本详细程度、原生 Codex web search、reasoning-compat 负载塑形，以及 Responses 上下文管理 | `openai`, `openai-codex` |
-    | `openrouter-thinking` | 面向代理路由的 OpenRouter reasoning 包装器，不支持的模型/`auto` 跳过由中心处理 | `openrouter` |
-    | `tool-stream-default-on` | 面向 Z.AI 等希望默认启用工具流的提供方的 `tool_stream` 包装器，除非显式禁用 | `zai` |
+    | `google-thinking` | Gemini thinking payload normalization on the shared stream path | `google`, `google-gemini-cli` |
+    | `kilocode-thinking` | Kilo reasoning wrapper on the shared proxy stream path, with `kilo/auto` and unsupported proxy reasoning ids skipping injected thinking | `kilocode` |
+    | `moonshot-thinking` | Moonshot binary native-thinking payload mapping from config + `/think` level | `moonshot` |
+    | `minimax-fast-mode` | MiniMax fast-mode model rewrite on the shared stream path | `minimax`, `minimax-portal` |
+    | `openai-responses-defaults` | Shared native OpenAI/Codex Responses wrappers: attribution headers, `/fast`/`serviceTier`, text verbosity, native Codex web search, reasoning-compat payload shaping, and Responses context management | `openai` |
+    | `openrouter-thinking` | OpenRouter reasoning wrapper for proxy routes, with unsupported-model/`auto` skips handled centrally | `openrouter` |
+    | `tool-stream-default-on` | Default-on `tool_stream` wrapper for providers like Z.AI that want tool streaming unless explicitly disabled | `zai` |
 
     <Accordion title="驱动这些家族构建器的 SDK 接口">
       每个家族构建器都由同一软件包导出的更底层公共辅助函数组合而成；当某个提供方需要脱离通用模式时，
@@ -358,7 +495,11 @@ read_when:
       - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), plain-text tool-call compat (`createPlainTextToolCallCompatWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
       - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("deepseek" | "gemini" | "openai")`, and underlying provider schema helpers.
 
-      某些 stream 辅助函数会刻意保持为提供方本地私有。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在自己的公共 `api.ts` / `contract-api.ts` 接口边界内，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件也将原生 xAI Responses 形状保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning 负载移除）。
+      对于 Gemini 家族提供方，请让 reasoning-output 模式与传输保持一致。直接的 Google Gemini API 提供方应使用
+      `native` reasoning output，这样 OpenClaw 就会消费原生 thought parts，而不会额外加入 `<think>` / `<final>` 提示指令。
+      解析最终 JSON/text 响应的仅文本 Gemini CLI 风格后端则可以保留共享的 `google-gemini` 标记契约。
+
+      某些流式辅助函数有意保持为提供方本地。`@openclaw/anthropic-provider` 将 `wrapAnthropicProviderStream`、`resolveAnthropicBetas`、`resolveAnthropicFastMode`、`resolveAnthropicServiceTier` 以及更底层的 Anthropic 包装器构建器保留在其自己的公开 `api.ts` / `contract-api.ts` 接口中，因为它们编码了 Claude OAuth beta 处理和 `context1m` 门控。xAI 插件也将原生 xAI Responses 形态保留在自己的 `wrapStreamFn` 中（`/fast` 别名、默认 `tool_stream`、不支持的 strict-tool 清理、xAI 特定的 reasoning-payload 移除）。
 
       同样的 package-root 模式也支撑着 `@openclaw/openai-provider`（提供方构建器、默认模型辅助函数、realtime 提供方构建器）以及 `@openclaw/openrouter-provider`（提供方构建器加 onboarding/config 辅助函数）。
     </Accordion>
@@ -429,6 +570,13 @@ read_when:
           return await fetchAcmeUsage(ctx.token, ctx.timeoutMs);
         },
         ```
+
+        `resolveUsageAuth` has three outcomes. Return `{ token, accountId? }`
+        when the provider has a usage/billing credential. Return
+        `{ handled: true }` only when the provider has definitively handled usage
+        auth but has no usable usage token, and OpenClaw must skip generic
+        API-key/OAuth fallback. Return `null` or `undefined` when the provider did
+        not handle the request and OpenClaw should continue with generic fallback.
       </Tab>
     </Tabs>
 
@@ -439,54 +587,54 @@ read_when:
 
       | # | Hook | 适用场景 |
       | --- | --- | --- |
-      | 1 | `catalog` | 模型目录或 base URL 默认值 |
-      | 2 | `applyConfigDefaults` | 配置实例化期间由提供方拥有的全局默认值 |
-      | 3 | `normalizeModelId` | 查找前清理旧版/预览版 model-id 别名 |
-      | 4 | `normalizeTransport` | 生成通用模型前清理提供方家族 `api` / `baseUrl` |
-      | 5 | `normalizeConfig` | 规范化 `models.providers.<id>` 配置 |
-      | 6 | `applyNativeStreamingUsageCompat` | 配置提供方的原生流式 usage 兼容重写 |
-      | 7 | `resolveConfigApiKey` | 提供方拥有的 env-marker 认证解析 |
-      | 8 | `resolveSyntheticAuth` | 本地/自托管或由配置支持的合成认证 |
-      | 9 | `shouldDeferSyntheticProfileAuth` | 在 env/config 认证之下延后合成存储的 profile 占位符 |
-      | 10 | `resolveDynamicModel` | 接受任意上游模型 ID |
-      | 11 | `prepareDynamicModel` | 解析前的异步元数据获取 |
-      | 12 | `normalizeResolvedModel` | 运行器之前的传输重写 |
-      | 13 | `contributeResolvedModelCompat` | 位于另一个兼容传输之后的厂商模型兼容标志 |
-      | 14 | `normalizeToolSchemas` | 注册前由提供方拥有的 tool-schema 清理 |
-      | 15 | `inspectToolSchemas` | 由提供方拥有的 tool-schema 诊断 |
-      | 16 | `resolveReasoningOutputMode` | 标记式 vs 原生 reasoning-output 协议 |
-      | 17 | `prepareExtraParams` | 默认请求参数 |
-      | 18 | `createStreamFn` | 完全自定义的 StreamFn 传输 |
-      | 19 | `wrapStreamFn` | 常规流路径上的自定义请求头/请求体包装器 |
-      | 20 | `resolveTransportTurnState` | 原生的每轮请求头/元数据 |
-      | 21 | `resolveWebSocketSessionPolicy` | 原生 WS 会话头/冷却时间 |
-      | 22 | `formatApiKey` | 自定义运行时 token 形状 |
-      | 23 | `refreshOAuth` | 自定义 OAuth 刷新 |
-      | 24 | `buildAuthDoctorHint` | 认证修复指引 |
-      | 25 | `matchesContextOverflowError` | 提供方拥有的溢出检测 |
-      | 26 | `classifyFailoverReason` | 提供方拥有的限流/过载分类 |
-      | 27 | `isCacheTtlEligible` | 提示缓存 TTL 门控 |
-      | 28 | `buildMissingAuthMessage` | 自定义缺失认证提示 |
-      | 29 | `augmentModelCatalog` | 合成的前向兼容行 |
-      | 30 | `resolveThinkingProfile` | 模型特定的 `/think` 选项集 |
-      | 31 | `isBinaryThinking` | 二进制 thinking 开/关兼容性 |
-      | 32 | `supportsXHighThinking` | `xhigh` reasoning 支持兼容性 |
-      | 33 | `resolveDefaultThinkingLevel` | 默认 `/think` 策略兼容性 |
-      | 34 | `isModernModelRef` | 线上/冒烟测试模型匹配 |
-      | 35 | `prepareRuntimeAuth` | 推理前的 token 交换 |
-      | 36 | `resolveUsageAuth` | 自定义用量凭据解析 |
-      | 37 | `fetchUsageSnapshot` | 自定义用量端点 |
-      | 38 | `createEmbeddingProvider` | 面向 memory/search 的提供方拥有 embedding 适配器 |
-      | 39 | `buildReplayPolicy` | 自定义对话回放/压缩策略 |
-      | 40 | `sanitizeReplayHistory` | 通用清理之后的提供方特定回放重写 |
-      | 41 | `validateReplayTurns` | 嵌入式运行器之前的严格 replay-turn 校验 |
-      | 42 | `onModelSelected` | 选择后的回调（例如遥测） |
+      | 1 | `catalog` | Model catalog or base URL defaults |
+      | 2 | `applyConfigDefaults` | Provider-owned global defaults during config materialization |
+      | 3 | `normalizeModelId` | Legacy/preview model-id alias cleanup before lookup |
+      | 4 | `normalizeTransport` | Provider-family `api` / `baseUrl` cleanup before generic model assembly |
+      | 5 | `normalizeConfig` | Normalize `models.providers.<id>` config |
+      | 6 | `applyNativeStreamingUsageCompat` | Native streaming-usage compat rewrites for config providers |
+      | 7 | `resolveConfigApiKey` | Provider-owned env-marker auth resolution |
+      | 8 | `resolveSyntheticAuth` | Local/self-hosted or config-backed synthetic auth |
+      | 9 | `shouldDeferSyntheticProfileAuth` | Lower synthetic stored-profile placeholders behind env/config auth |
+      | 10 | `resolveDynamicModel` | Accept arbitrary upstream model IDs |
+      | 11 | `prepareDynamicModel` | Async metadata fetch before resolving |
+      | 12 | `normalizeResolvedModel` | Transport rewrites before the runner |
+      | 13 | `normalizeToolSchemas` | Provider-owned tool-schema cleanup before registration |
+      | 14 | `inspectToolSchemas` | Provider-owned tool-schema diagnostics |
+      | 15 | `resolveReasoningOutputMode` | Tagged vs native reasoning-output contract |
+      | 16 | `prepareExtraParams` | Default request params |
+      | 17 | `createStreamFn` | Fully custom StreamFn transport |
+      | 19 | `wrapStreamFn` | Custom headers/body wrappers on the normal stream path |
+      | 20 | `resolveTransportTurnState` | Native per-turn headers/metadata |
+      | 21 | `resolveWebSocketSessionPolicy` | Native WS session headers/cool-down |
+      | 22 | `formatApiKey` | Custom runtime token shape |
+      | 23 | `refreshOAuth` | Custom OAuth refresh |
+      | 24 | `buildAuthDoctorHint` | Auth repair guidance |
+      | 25 | `matchesContextOverflowError` | Provider-owned overflow detection |
+      | 26 | `classifyFailoverReason` | Provider-owned rate-limit/overload classification |
+      | 27 | `isCacheTtlEligible` | Prompt cache TTL gating |
+      | 28 | `buildMissingAuthMessage` | Custom missing-auth hint |
+      | 29 | `augmentModelCatalog` | Synthetic forward-compat rows |
+      | 30 | `resolveThinkingProfile` | Model-specific `/think` option set |
+      | 31 | `isBinaryThinking` | Binary thinking on/off compatibility |
+      | 32 | `supportsXHighThinking` | `xhigh` reasoning support compatibility |
+      | 33 | `resolveDefaultThinkingLevel` | Default `/think` policy compatibility |
+      | 34 | `isModernModelRef` | Live/smoke model matching |
+      | 35 | `prepareRuntimeAuth` | Token exchange before inference |
+      | 36 | `resolveUsageAuth` | Custom usage credential parsing |
+      | 37 | `fetchUsageSnapshot` | Custom usage endpoint |
+      | 38 | `createEmbeddingProvider` | Provider-owned embedding adapter for memory/search |
+      | 39 | `buildReplayPolicy` | Custom transcript replay/compaction policy |
+      | 40 | `sanitizeReplayHistory` | Provider-specific replay rewrites after generic cleanup |
+      | 41 | `validateReplayTurns` | Strict replay-turn validation before the embedded runner |
+      | 42 | `onModelSelected` | Post-selection callback (e.g. telemetry) |
 
       运行时回退说明：
 
-      - `normalizeConfig` 会先检查匹配到的提供方，然后再检查其他支持钩子的提供方插件，直到有一个真正修改了配置。如果没有任何提供方钩子重写受支持的 Google 家族配置项，打包的 Google 配置规范化器仍会生效。
-      - `resolveConfigApiKey` 会在暴露时使用提供方钩子。打包的 `amazon-bedrock` 路径在这里也有内置的 AWS env-marker 解析器，尽管 Bedrock 运行时认证本身仍然使用 AWS SDK 默认链。
-      - `resolveSystemPromptContribution` 允许提供方为某个模型家族注入支持缓存感知的系统提示指导。若行为属于某个单独的提供方/模型家族，并且应保留稳定/动态缓存拆分，则应优先使用它，而不是 `before_prompt_build`。
+      - `normalizeConfig` checks the matched provider first, then other hook-capable provider plugins until one actually changes the config. If no provider hook rewrites a supported Google-family config entry, the bundled Google config normalizer still applies.
+      - `resolveConfigApiKey` uses the provider hook when exposed. Amazon Bedrock keeps AWS env-marker resolution in its provider plugin; runtime auth itself still uses the AWS SDK default chain when configured with `auth: "aws-sdk"`.
+      - `resolveThinkingProfile(ctx)` receives the selected `provider`, `modelId`, optional merged `reasoning` catalog hint, and optional merged model `compat` facts. Use `compat` only to select the provider's thinking UI/profile.
+      - `resolveSystemPromptContribution` lets a provider inject cache-aware system-prompt guidance for a model family. Prefer it over `before_prompt_build` when the behavior belongs to one provider/model family and should preserve the stable/dynamic cache split.
 
       有关详细说明和真实示例，请参见 [内部机制：提供方运行时钩子](/plugins/architecture-internals#provider-runtime-hooks)。
     </Accordion>
@@ -633,6 +781,22 @@ read_when:
           transcribeAudio: async (req) => ({ text: "转写文本..." }),
         });
         ```
+
+        本地或自托管媒体提供方如果有意不需要凭据，可以暴露 `resolveAuth` 并返回 `kind: "none"`。
+        对于未明确选择加入的提供方，OpenClaw 仍然保留常规认证门控。现有提供方可以继续读取 `req.apiKey`；
+        新提供方应优先使用 `req.auth`。
+
+        ```typescript
+        api.registerMediaUnderstandingProvider({
+          id: "local-audio",
+          capabilities: ["audio"],
+          resolveAuth: () => ({
+            kind: "none",
+            source: "local-audio plugin no-auth",
+          }),
+          transcribeAudio: async (req) => ({ text: "Transcript..." }),
+        });
+        ```
       </Tab>
       <Tab title="Embeddings">
         ```typescript
@@ -661,8 +825,9 @@ read_when:
         });
         ```
 
-        在 `contracts.embeddingProviders` 中声明相同的 id。这是用于可复用向量生成的一般 embedding 契约。
-        只有面向 memory-engine 的适配器才使用 `registerMemoryEmbeddingProvider(...)`。
+        在 `contracts.embeddingProviders` 中声明相同的 id。这是用于可复用向量生成的通用 embedding
+        契约，包括 memory search。`registerMemoryEmbeddingProvider(...)` 是面向现有 memory 专用适配器的
+        弃用兼容方式。
       </Tab>
       <Tab title="图像和视频生成">
         视频能力使用一种**模式感知**的形状：`generate`、

@@ -1,4 +1,4 @@
----
+我会保持原始 Markdown 结构不变，只翻译可见文本内容，保留代码、标签和属性原样。现在开始直接输出完整中文翻译。---
 summary: "使用 Ollama 运行 OpenClaw（云端和本地模型）"
 read_when:
   - 你想通过 Ollama 使用云端或本地模型运行 OpenClaw
@@ -8,6 +8,11 @@ title: "Ollama"
 ---
 
 OpenClaw 通过 Ollama 的原生 API（`/api/chat`）集成了托管云端模型和本地/自托管的 Ollama 服务器。你可以通过三种模式使用 Ollama：通过可访问的 Ollama 主机进行 `Cloud + Local`，针对 `https://ollama.com` 的 `Cloud only`，或针对可访问的 Ollama 主机的 `Local only`。
+
+OpenClaw 还将 `ollama-cloud` 注册为一等托管提供方 id，供直接使用 Ollama Cloud。
+当你希望在不共享本地 `ollama` 提供方 id 的情况下进行仅云端路由时，请使用像 `ollama-cloud/kimi-k2.5:cloud` 这样的引用。
+
+关于专用的仅云端设置页面，请参见 [Ollama Cloud](/providers/ollama-cloud)。
 
 <Warning>
 **远程 Ollama 用户**：不要将 `/v1` 的 OpenAI 兼容 URL（`http://host:11434/v1`）与 OpenClaw 一起使用。这会破坏工具调用，并且模型可能会将原始工具 JSON 作为纯文本输出。请改用原生 Ollama API URL：`baseUrl: "http://host:11434"`（不要带 `/v1`）。
@@ -22,7 +27,7 @@ Ollama 提供方配置使用 `baseUrl` 作为规范键。为了兼容 OpenAI SDK
     本地和局域网 Ollama 主机不需要真正的 bearer token。OpenClaw 仅对回环地址、私有网络、`.local` 和裸主机名的 Ollama base URL 使用本地的 `ollama-local` 标记。
   </Accordion>
   <Accordion title="远程和 Ollama Cloud 主机">
-    远程公共主机和 Ollama Cloud（`https://ollama.com`）需要通过 `OLLAMA_API_KEY`、认证配置文件或提供方的 `apiKey` 提供真实凭据。
+    远程公共主机和 Ollama Cloud（`https://ollama.com`）需要通过 `OLLAMA_API_KEY`、认证配置文件或提供方的 `apiKey` 提供真实凭据。对于直接托管使用，优先选择提供方 `ollama-cloud`。
   </Accordion>
   <Accordion title="自定义提供方 id">
     设置了 `api: "ollama"` 的自定义提供方 id 遵循相同规则。例如，指向私有局域网 Ollama 主机的 `ollama-remote` 提供方可以使用 `apiKey: "ollama-local"`，子代理会通过 Ollama 提供方钩子解析该标记，而不是将其视为缺失的凭据。内存搜索也可以将 `agents.defaults.memorySearch.provider` 设置为该自定义提供方 id，这样嵌入就会使用匹配的 Ollama 端点。
@@ -167,6 +172,13 @@ Ollama 提供方配置使用 `baseUrl` 作为规范键。为了兼容 OpenAI SDK
 
     `openclaw onboard` 期间显示的云端模型列表会从 `https://ollama.com/api/tags` 实时填充，最多 500 个条目，因此选择器反映的是当前托管目录，而不是静态种子。如果在设置时 `ollama.com` 不可访问或未返回任何模型，OpenClaw 会回退到之前的硬编码建议，以确保引导仍能完成。
 
+    你也可以直接配置一等云端提供方：
+
+    ```bash
+    openclaw onboard --auth-choice ollama-cloud
+    openclaw models set ollama-cloud/kimi-k2.5:cloud
+    ```
+
   </Tab>
 
   <Tab title="Local only">
@@ -253,8 +265,8 @@ OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_OLLAMA=1 OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=0 \
   pnpm test:live -- extensions/ollama/ollama.live.test.ts
 ```
 
-For Ollama Cloud API-key smoke tests, point the live test at `https://ollama.com`
-and choose a hosted model from the current catalog:
+对于 Ollama Cloud API 密钥冒烟测试，请将实时测试指向 `https://ollama.com`
+并从当前目录中选择一个托管模型：
 
 ```bash
 export OLLAMA_API_KEY='<your-ollama-cloud-api-key>'
@@ -267,12 +279,12 @@ OPENCLAW_LIVE_OLLAMA_WEB_SEARCH=1 \
 pnpm test:live -- extensions/ollama/ollama.live.test.ts
 ```
 
-The cloud smoke runs text, native stream, and web search. It skips embeddings by
-default for `https://ollama.com` because Ollama Cloud API keys may not authorize
-`/api/embed`. Set `OPENCLAW_LIVE_OLLAMA_EMBEDDINGS=1` when you explicitly want
-the live test to fail if the configured cloud key cannot use the embed endpoint.
+云端冒烟测试会执行文本、原生流式和网页搜索。默认情况下，它会跳过
+`https://ollama.com` 的嵌入测试，因为 Ollama Cloud API 密钥可能不会授权
+`/api/embed`。当你明确希望实时测试在配置的云端密钥无法使用嵌入端点时失败，
+请设置 `OPENCLAW_LIVE_OLLAMA_EMBEDDINGS=1`。
 
-To add a new model, simply pull it with Ollama:
+要添加新模型，只需使用 Ollama 拉取它：
 
 ```bash
 ollama pull mistral
@@ -671,8 +683,7 @@ OpenClaw 会拒绝对未标记为支持图像的模型发起图像描述请求�
     }
     ```
 
-    只有当模型或服务器在工具模式上可靠失败时，才使用 `compat.supportsTools: false`。它以代理能力换取稳定性。
-    `localModelLean` 会从代理表面移除浏览器、cron 和消息工具，但不会改变 Ollama 的运行时上下文或思考模式。对于会循环或将响应预算消耗在隐藏推理上的小型 Qwen 风格思考模型，请将其与显式的 `params.num_ctx` 和 `params.thinking: false` 配合使用。
+    `compat.supportsTools: false` 仅在模型或服务器对工具模式可靠失败时使用。它以代理能力换取稳定性。`localModelLean` 会从直接代理表面移除浏览器、cron 和消息工具，并在结构化工具搜索控制之后默认启用更大的目录，除非某次运行必须保留直接消息传递语义，但它不会改变 Ollama 的运行时上下文或思考模式。对于会循环或把响应预算花在隐藏推理上的小型 Qwen 风格思考模型，请将它与显式的 `params.num_ctx` 和 `params.thinking: false` 配对使用。
 
   </Accordion>
 </AccordionGroup>
@@ -840,7 +851,7 @@ OpenClaw 支持 **Ollama Web Search**，作为内置的 `web_search` 提供程�
   <Accordion title="上下文窗口">
     对于自动发现的模型，OpenClaw 会在可用时使用 Ollama 报告的上下文窗口，包括来自自定义 Modelfile 的更大 `PARAMETER num_ctx` 值。否则会回退到 OpenClaw 使用的默认 Ollama 上下文窗口。
 
-    You can set provider-level `contextWindow`, `contextTokens`, and `maxTokens` defaults for every model under that Ollama provider, then override them per model when needed. `contextWindow` is OpenClaw's prompt and compaction budget. Native Ollama requests leave `options.num_ctx` unset unless you explicitly configure `params.num_ctx`, so Ollama can apply its own model, `OLLAMA_CONTEXT_LENGTH`, or VRAM-based default. To cap or force Ollama's per-request runtime context without rebuilding a Modelfile, set `params.num_ctx`; invalid, zero, negative, and non-finite values are ignored. If you upgraded an older config that used only `contextWindow` or `maxTokens` to force a native Ollama request context, run `openclaw doctor --fix` to copy those explicit provider or model budgets into `params.num_ctx`. The OpenAI-compatible Ollama adapter still injects `options.num_ctx` by default from the configured `params.num_ctx` or `contextWindow`; disable that with `injectNumCtxForOpenAICompat: false` if your upstream rejects `options`.
+    你可以为该 Ollama 提供程序下的每个模型设置提供程序级别的 `contextWindow`、`contextTokens` 和 `maxTokens` 默认值，然后在需要时按模型覆盖它们。`contextWindow` 是 OpenClaw 的提示词与压缩预算。原生 Ollama 请求会保持 `options.num_ctx` 为空，除非你显式配置了 `params.num_ctx`，这样 Ollama 就可以应用它自己的模型、`OLLAMA_CONTEXT_LENGTH` 或基于 VRAM 的默认值。若要在不重建 Modelfile 的情况下限制或强制 Ollama 的每次请求运行时上下文，请设置 `params.num_ctx`；无效、为零、负数以及非有限值都会被忽略。如果你从旧配置升级而来，旧配置只使用 `contextWindow` 或 `maxTokens` 来强制原生 Ollama 请求上下文，请运行 `openclaw doctor --fix`，将这些显式的提供程序或模型预算复制到 `params.num_ctx` 中。兼容 OpenAI 的 Ollama 适配器仍会默认根据已配置的 `params.num_ctx` 或 `contextWindow` 注入 `options.num_ctx`；如果你的上游拒绝 `options`，请使用 `injectNumCtxForOpenAICompat: false` 关闭此行为。
 
     原生 Ollama 模型条目也接受 `params` 下常见的 Ollama 运行时选项，包括 `temperature`、`top_p`、`top_k`、`min_p`、`num_predict`、`stop`、`repeat_penalty`、`num_batch`、`num_thread` 和 `use_mmap`。OpenClaw 只转发 Ollama 请求键，因此 OpenClaw 运行时参数（如 `streaming`）不会泄漏给 Ollama。使用 `params.think` 或 `params.thinking` 发送顶层 Ollama `think`；`false` 会为 Qwen 风格的思考模型禁用 API 级思考。
 
@@ -923,23 +934,12 @@ OpenClaw 支持 **Ollama Web Search**，作为内置的 `web_search` 提供程�
     和 API key，调用 Ollama 当前的 `/api/embed` 端点，并在可能时将
     多个记忆块批量合并为一个 `input` 请求。
 
-    When `proxy.enabled=true`, Ollama memory embedding requests to the exact
-    host-local loopback origin derived from the configured `baseUrl` use
-    OpenClaw's guarded direct path instead of the managed forward proxy. The
-    configured hostname must itself be `localhost` or a loopback IP literal;
-    DNS names that merely resolve to loopback still use the managed proxy path.
-    LAN, tailnet, private-network, and public Ollama hosts also stay on the
-    managed proxy path. Redirects to another host or port do not inherit trust.
-    Operators can still set the global `proxy.loopbackMode: "proxy"` setting to
-    send loopback traffic through the proxy, or `proxy.loopbackMode: "block"`
-    to deny loopback connections before opening a connection; see
-    [Managed proxy](/security/network-proxy#gateway-loopback-mode) for the
-    process-wide effect of this setting.
+    当 `proxy.enabled=true` 时，针对从配置的 `baseUrl` 派生出的完全相同的主机本地回环源发出的 Ollama 记忆嵌入请求，会使用 OpenClaw 受保护的直接路径，而不是托管转发代理。配置的主机名本身必须是 `localhost` 或回环 IP 字面量；仅仅解析到回环地址的 DNS 名称仍会使用托管代理路径。局域网、tailnet、私有网络和公网的 Ollama 主机也会继续使用托管代理路径。重定向到其他主机或端口不会继承信任。运维人员仍可将全局 `proxy.loopbackMode: "proxy"` 设置为让回环流量通过代理，或设置 `proxy.loopbackMode: "block"` 在建立连接前拒绝回环连接；请参阅 [Managed proxy](/security/network-proxy#gateway-loopback-mode) 了解此设置对整个进程的影响。
 
-    | Property      | Value               |
-    | ------------- | ------------------- |
-    | Default model | `nomic-embed-text`  |
-    | Auto-pull     | Yes — the embedding model is pulled automatically if not present locally |
+    | 属性           | 值                                   |
+    | -------------- | ------------------------------------ |
+    | 默认模型       | `nomic-embed-text`                  |
+    | 自动拉取       | 是 — 如果本地不存在，嵌入模型会自动拉取 |
 
     查询时的嵌入会对需要或建议使用检索前缀的模型进行处理，包括 `nomic-embed-text`、`qwen3-embedding` 和 `mxbai-embed-large`。记忆文档批次会保持原始格式，因此现有索引无需迁移格式。
 

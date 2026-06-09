@@ -1,5 +1,5 @@
 ---
-summary: "为发送和接收 OpenClaw 消息添加飞书渠道界面。"
+summary: "OpenClaw 飞书/Lark 频道插件，用于聊天和办公工具（由 @m1heng 社区维护）。"
 read_when:
   - 你正在安装、配置或审计 feishu 插件
 title: "飞书插件"
@@ -7,7 +7,7 @@ title: "飞书插件"
 
 # 飞书插件
 
-为发送和接收 OpenClaw 消息添加飞书渠道界面。
+OpenClaw 飞书/Lark 频道插件，用于聊天和办公工具（由 @m1heng 社区维护）。
 
 ## 分发
 

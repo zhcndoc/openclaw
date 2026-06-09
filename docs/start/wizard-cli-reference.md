@@ -150,7 +150,7 @@ sidebarTitle: "CLI 参考"
   <Accordion title="OpenAI API key">
     如果存在则使用 `OPENAI_API_KEY`，否则提示输入 key，然后将凭证存储在 auth profiles 中。
 
-    当模型未设置、为 `openai/*` 或为 `openai-codex/*` 时，会将 `agents.defaults.model` 设置为 `openai/gpt-5.5`。
+    Sets `agents.defaults.model` to `openai/gpt-5.5` when model is unset, `openai/*`, or legacy Codex model refs.
 
   </Accordion>
   <Accordion title="xAI（Grok）OAuth">
@@ -182,9 +182,9 @@ sidebarTitle: "CLI 参考"
     更多详情：[Cloudflare AI Gateway](/providers/cloudflare-ai-gateway).
   </Accordion>
   <Accordion title="MiniMax">
-    配置会自动写入。托管默认值为 `MiniMax-M2.7`；API key 设置使用
-    `minimax/...`，OAuth 设置使用 `minimax-portal/...`。
-    更多详情：[MiniMax](/providers/minimax).
+    Config is auto-written. Hosted default is `MiniMax-M3`; API-key setup uses
+    `minimax/...`, and OAuth setup uses `minimax-portal/...`.
+    More detail: [MiniMax](/providers/minimax).
   </Accordion>
   <Accordion title="StepFun">
     会为中国或全球端点上的 StepFun standard 或 Step Plan 自动写入配置。
@@ -217,10 +217,10 @@ sidebarTitle: "CLI 参考"
     - `--auth-choice custom-api-key`
     - `--custom-base-url`
     - `--custom-model-id`
-    - `--custom-api-key`（可选；回退到 `CUSTOM_API_KEY`）
-    - `--custom-provider-id`（可选）
-    - `--custom-compatibility <openai|anthropic>`（可选；默认 `openai`）
-    - `--custom-image-input` / `--custom-text-input`（可选；覆盖推断出的模型输入能力）
+    - `--custom-api-key` (optional; falls back to `CUSTOM_API_KEY`)
+    - `--custom-provider-id` (optional)
+    - `--custom-compatibility <openai|openai-responses|anthropic>` (optional; default `openai`)
+    - `--custom-image-input` / `--custom-text-input` (optional; override inferred model input capability)
 
   </Accordion>
   <Accordion title="跳过">
@@ -323,6 +323,6 @@ Signal 设置行为：
 
 ## 相关文档
 
-- 引导中心：[Onboarding (CLI)](/start/wizard)
-- 自动化与脚本：[CLI Automation](/start/wizard-cli-automation)
+- 引导中心：[CLI 入门](/start/wizard)
+- 自动化与脚本：[CLI 自动化](/start/wizard-cli-automation)
 - 命令参考：[`openclaw onboard`](/cli/onboard)

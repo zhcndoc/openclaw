@@ -1,5 +1,5 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Matrix 渠道表面。"
+summary: "用于房间和直接消息的 OpenClaw Matrix 频道插件。"
 read_when:
   - 你正在安装、配置或审计 matrix 插件
 title: "Matrix 插件"
@@ -7,7 +7,7 @@ title: "Matrix 插件"
 
 # Matrix 插件
 
-添加用于发送和接收 OpenClaw 消息的 Matrix 渠道表面。
+用于房间和直接消息的 OpenClaw Matrix 频道插件。
 
 ## 分发
 

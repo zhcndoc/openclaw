@@ -1,12 +1,13 @@
 ---
-summary: "跨表面的群聊行为（Discord/iMessage/Matrix/Microsoft Teams/Signal/Slack/Telegram/WhatsApp/Zalo）"
+summary: "跨界面的群聊行为（Discord/iMessage/Matrix/Microsoft Teams/QQBot/Signal/Slack/Telegram/WhatsApp/Zalo）"
 read_when:
-  - 更改群聊行为或提及门控
+  - 更改群聊行为或提及门控时
+  - 将 `mentionPatterns` 限定到特定群聊会话时
 title: "群组"
 sidebarTitle: "群组"
 ---
 
-OpenClaw 在各个平台上的群聊处理保持一致：Discord、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo。
+OpenClaw 会在各个界面上一致地处理群聊：Discord、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp、Zalo。
 
 有关应提供静默上下文、除非代理显式发送可见消息的始终在线房间，请参见 [Ambient room events](/channels/ambient-room-events)。
 
@@ -47,12 +48,15 @@ always-on group chatter -> user request, or room event when configured
 
 当共享房间应当让代理通过调用 `message(action=send)` 来决定何时发言时，请使用 `messages.groupChat.visibleReplies: "message_tool"`。这在由最新一代、工具可靠性高的模型（例如 GPT 5.5）驱动的群组房间中效果最佳。如果模型遗漏了该工具调用并返回了实质性的最终文本，OpenClaw 会将该最终文本保密，而不是发布到房间中。
 
-如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
-`openclaw doctor` 会提醒这种不匹配。
+对于较弱的模型或无法可靠理解仅工具交付的运行时，请使用 `"automatic"`。在自动模式下，代理的最终助手文本就是可见的源回复路径，因此无法始终一致调用 `message(action=send)` 的模型仍然可以正常回答。
 
-对于直接聊天以及任何其他来源事件，请使用 `messages.visibleReplies: "message_tool"` 以在全局范围内应用相同的仅工具可见回复行为。一些运行环境（包括 Codex）在此项未设置时，也会默认将直接/来源聊天通过 message-tool 交付。将 `messages.visibleReplies: "automatic"` 设为强制使用旧的自动最终回复路径。`messages.groupChat.visibleReplies` 仍然是针对群组/频道房间更具体的覆盖项。
+如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。`openclaw doctor` 会对此不匹配发出警告。
 
-这替代了旧的模式：在大多数潜伏模式轮次中强制模型回答 `NO_REPLY`。在仅工具模式下，不做任何可见输出就只是意味着不调用 message 工具。
+对于直接聊天和其他任何源事件，请使用 `messages.visibleReplies: "message_tool"` 在全局范围应用相同的仅工具可见回复行为。WebChat 的直接轮次默认使用自动最终回复交付，因此 Pi 和 Codex 会收到相同的可见回复契约。将 `messages.visibleReplies: "message_tool"` 设为显式要求 `message(action=send)` 以输出可见内容。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
+
+这取代了旧模式：在大多数 lurk 模式轮次中强制模型回答 `NO_REPLY`。在仅工具模式下，提示词不会定义 `NO_REPLY` 契约。什么都不做、且不产生可见输出，只意味着不调用 message 工具。
+
+插件拥有的会话绑定是例外。一旦插件绑定了一个线程并接管了传入轮次，插件返回的回复就是可见的绑定响应；它不需要 `message(action=send)`。该回复是插件运行时输出，而不是私有的模型最终文本。
 
 直接群组请求仍会发送输入指示。启用后，环境式 always-on 房间事件仍保持严格安静，除非代理调用 message 工具。
 
@@ -314,7 +318,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
   </Step>
 </Steps>
 
-## 提及门控（默认）
+## Mention 门控（默认）
 
 群组消息默认需要提及，除非按群组单独覆盖。默认值按子系统存放在 `*.groups."*"` 下。
 
@@ -356,19 +360,87 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 }
 ```
 
+## 已配置的提及模式范围
+
+已配置的 `mentionPatterns` 是正则回退触发器。当平台不暴露原生机器人提及时使用它们，或者当你希望像 `openclaw:` 这样的纯文本也算作提及时使用。原生平台提及是单独处理的：当 Discord、Slack、Telegram、Matrix 或其他渠道能够证明消息明确提到了机器人时，即使已配置的正则模式被拒绝，原生提及仍然会触发。
+
+默认情况下，已配置的提及模式会应用于该渠道将提供方和会话事实传入提及检测的所有位置。要避免宽泛模式在每个群组里都唤醒代理，请按渠道使用 `channels.<channel>.mentionPatterns` 进行作用域限制。
+
+当正则提及模式默认应对某个渠道关闭时，使用 `mode: "deny"`，然后通过 `allowIn` 为特定房间显式启用：
+
+```json5
+{
+  messages: {
+    groupChat: {
+      mentionPatterns: ["\\bopenclaw\\b", "\\bops bot\\b"],
+    },
+  },
+  channels: {
+    slack: {
+      mentionPatterns: {
+        mode: "deny",
+        allowIn: ["C0123OPS"],
+      },
+    },
+  },
+}
+```
+
+当正则提及模式应广泛生效时，使用默认的 `mode: "allow"`（或省略 `mode`），然后通过 `denyIn` 在嘈杂房间中将其关闭：
+
+```json5
+{
+  messages: {
+    groupChat: {
+      mentionPatterns: ["\\bopenclaw\\b"],
+    },
+  },
+  channels: {
+    telegram: {
+      mentionPatterns: {
+        denyIn: ["-1001234567890", "-1001234567890:topic:42"],
+      },
+    },
+  },
+}
+```
+
+策略解析：
+
+| 字段              | 作用                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `mode: "allow"`  | 除非会话 ID 在 `denyIn` 中，否则启用正则提及模式。这是默认值。                                                     |
+| `mode: "deny"`   | 除非会话 ID 在 `allowIn` 中，否则禁用正则提及模式。                                                              |
+| `allowIn`        | 在拒绝模式下启用正则提及模式的会话 ID。                                                                           |
+| `denyIn`         | 禁用正则提及模式的会话 ID。如果两者包含同一个 ID，`denyIn` 优先于 `allowIn`。                                     |
+
+当前支持的作用域正则策略：
+
+| 渠道     | `allowIn` / `denyIn` 使用的 ID                                     |
+| -------- | ------------------------------------------------------------------ |
+| Discord  | Discord 渠道 ID。                                                   |
+| Matrix   | Matrix 房间 ID。                                                     |
+| Slack    | Slack 渠道 ID。                                                     |
+| Telegram | 群聊 ID，或论坛主题使用 `chatId:topic:threadId`。                   |
+| WhatsApp | 例如 `123@g.us` 这样的 WhatsApp 会话 ID。                           |
+
+账户级渠道配置可以在 `channels.<channel>.accounts.<accountId>.mentionPatterns` 下设置相同策略，当该渠道支持多个账户时适用。账户策略会覆盖该账户的顶层渠道策略。
+
 <AccordionGroup>
   <Accordion title="提及门控说明">
-    - `mentionPatterns` 是不区分大小写的安全正则表达式模式；无效模式和不安全的嵌套重复形式会被忽略。
-    - 提供显式提及的界面仍然会通过；模式只是回退方案。
-    - 按代理覆盖：`agents.list[].groupChat.mentionPatterns`（当多个代理共享一个群组时很有用）。
-    - 只有在可进行提及检测时才会强制提及门控（原生提及或已配置 `mentionPatterns`）。
-    - 将群组或发送者加入允许名单不会取消提及门控；当所有消息都应触发时，将该群组的 `requireMention` 设为 `false`。
-    - 自动群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
-    - 允许自动静默回复的群组会将干净的空输出或仅推理输出的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指导，而仅工具群组回复则通过不调用 `message(action=send)` 来保持静默。
-    - 环境式始终在线群聊默认使用用户请求语义。将 `messages.groupChat.unmentionedInbound` 设为 `"room_event"` 可将其改为静默上下文提交。有关设置示例，请参见 [Ambient room events](/channels/ambient-room-events)。
-    - 房间事件不会被存储为伪造的用户请求，并且来自无 message-tool 房间事件的私有助手文本不会作为聊天历史重放。
-    - Discord 的默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
-    - 群组历史上下文在各渠道中均以统一方式包装。受提及门控的群组会保留待处理的跳过消息；始终在线的群组在渠道支持时也可能保留最近已处理的房间消息。全局默认值使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
+    - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。
+    - 提供显式提及的界面仍然会通过；配置的正则模式只是回退方案。
+    - `channels.<channel>.mentionPatterns.mode: "deny"` 会按该渠道默认禁用已配置的提及模式；可通过 `allowIn` 为选定会话重新启用。
+    - `channels.<channel>.mentionPatterns.denyIn` 会针对特定会话 ID 禁用已配置的提及模式，而原生平台 @ 提及仍然会通过。
+    - 按代理覆盖：`agents.list[].groupChat.mentionPatterns`（适用于多个代理共享一个群组时）。
+    - 只有在能够进行提及检测时才会强制执行提及门控（原生提及或已配置 `mentionPatterns`）。
+    - 将群组或发送者加入允许名单并不会禁用提及门控；如果所有消息都应触发，请将该群组的 `requireMention` 设为 `false`。
+    - 自动群聊提示上下文会在每一轮携带解析后的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
+    - 允许自动静默回复的群组会将干净的空回复或仅推理的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指导，而仅使用消息工具的群组回复会通过不调用 `message(action=send)` 来保持安静。
+    - 常驻的、始终开启的群聊默认使用用户请求语义。将 `messages.groupChat.unmentionedInbound: "room_event"` 设为以静默上下文提交。有关设置示例，请参阅[环境房间事件](/channels/ambient-room-events)。
+    - 房间事件不会被存储为伪造的用户请求，且来自无消息工具房间事件的私有助手文本不会作为聊天历史回放。
+    - Discord 默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
+    - 群组历史上下文在各渠道中统一包装。提及门控的群组会保留待处理的跳过消息；始终开启的群组在渠道支持时也可能保留最近处理过的房间消息。使用 `messages.groupChat.historyLimit` 作为全局默认值，使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）进行覆盖。设为 `0` 可禁用。
 
   </Accordion>
 </AccordionGroup>

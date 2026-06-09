@@ -15,9 +15,8 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
 <Steps>
   <Step title="添加一次性提醒">
     ```bash
-    openclaw cron add \
-      --name "Reminder" \
-      --at "2026-02-01T16:00:00Z" \
+    openclaw cron create "2026-02-01T16:00:00Z" \
+      --name "提醒" \
       --session main \
       --system-event "提醒：检查 cron 文档草稿" \
       --wake now \
@@ -40,22 +39,21 @@ Cron 是 Gateway 内置的调度器。它会持久化作业，在正确的时间
 
 ## Cron 的工作方式
 
-- Cron 在 **Gateway** 进程内运行（不在模型内部）。
-- 作业定义会持久化到 `~/.openclaw/cron/jobs.json`，因此重启不会丢失计划。
-- 运行时执行状态会持久化在旁边的 `~/.openclaw/cron/jobs-state.json`。如果你在 git 中跟踪 cron 定义，请跟踪 `jobs.json`，并将 `jobs-state.json` 加入 gitignore。
-- 在拆分之后，较旧的 OpenClaw 版本仍然可以读取 `jobs.json`，但可能会把作业视为新作业，因为运行时字段现在位于 `jobs-state.json` 中。
-- 当 Gateway 正在运行或已停止时编辑了 `jobs.json`，OpenClaw 会将已更改的调度字段与待处理的运行时槽位元数据进行比较，并清除过期的 `nextRunAtMs` 值。仅格式化或仅键顺序变化的重写会保留待处理的槽位。
+- Cron 在 Gateway 进程内部运行（不在模型内部）。
+- 作业定义、运行时状态和运行历史会持久化到 OpenClaw 共享的 SQLite 状态数据库中，因此重启不会丢失计划任务。
+- 升级时，运行 `openclaw doctor --fix` 可将旧的 `~/.openclaw/cron/jobs.json`、`jobs-state.json` 和 `runs/*.jsonl` 文件导入 SQLite，并以 `.migrated` 后缀重命名。格式异常的作业行会被跳过运行时处理，并复制到 `jobs-quarantine.json` 供后续修复或审查。
+- `cron.store` 仍然是逻辑 cron 存储键和 doctor 导入路径的名称。导入后，编辑该 JSON 文件将不再更改活动的 cron 作业；请改用 `openclaw cron add|edit|remove` 或 Gateway cron RPC 方法。
 - 所有 cron 执行都会创建 [后台任务](/automation/tasks) 记录。
-- 在 Gateway 启动时，已逾期的独立 agent-turn 作业会被重新安排到 channel-connect 窗口之外，而不是立即重放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
-- 一次性作业（`--at`）在成功后默认自动删除。
-- 独立 cron 运行会尽最大努力关闭为其 `cron:<jobId>` 会话跟踪的浏览器标签页/进程，因此分离的浏览器自动化不会遗留孤儿进程。
-- 接收到狭窄的 cron 自清理授权的独立 cron 运行，仍然可以读取调度器状态、一个经过自我过滤的当前作业列表以及该作业的运行历史，因此状态/heartbeat 检查可以在不获得更广泛的 cron 变更权限的情况下检查自己的计划。
-- 独立 cron 运行也会防范过时的确认回复。如果第一个结果只是临时状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍然负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
-- 独立 cron 运行会使用嵌入式运行中的结构化执行拒绝元数据，包括带有嵌套错误消息且以 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 开头的 node-host `UNAVAILABLE` 包装，因此被阻止的命令不会被报告为成功运行，而普通的 assistant 叙述也不会被当作拒绝。
-- 独立 cron 运行还会将运行级 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方失败会递增错误计数并触发失败通知，而不是将作业清除为成功。
-- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行，并给它一个短暂的清理窗口。如果运行没有完成收尾，Gateway 拥有的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此队列中的聊天工作不会被一个过时的处理会话遗留。
-- 如果独立 agent-turn 在 runner 启动之前或第一次模型调用之前卡住，cron 会记录一个按阶段区分的超时，例如 `setup timed out before runner start` 或 `stalled before first model call (last phase: context-engine)`。这些看门狗会在外部 CLI 进程真正启动之前，覆盖嵌入式提供方和基于 CLI 的提供方，并且会独立于较长的 `timeoutSeconds` 值进行上限控制，因此冷启动/认证/上下文故障会快速暴露，而不是等满整个作业预算。
-- 如果你使用系统 cron 或其他外部调度器来运行 `openclaw agent`，请用硬杀死升级机制包装它，即使 CLI 会处理 `SIGTERM`/`SIGINT`。基于 Gateway 的运行会请求 Gateway 中止已接受的运行；本地和嵌入式回退运行会接收同样的中止信号。对于 GNU `timeout`，请优先使用 `timeout -k 60 600 openclaw agent ...`，而不是直接使用 `timeout 600 ...`；`-k` 值是进程无法收尾时的监督者后备。对于 systemd 单元，请通过使用 `SIGTERM` 停止信号以及诸如 `TimeoutStopSec` 之类的宽限窗口来保持相同的结构，然后再进行最终杀死。如果重试在原始 Gateway 运行仍处于活动状态时复用了 `--run-id`，该重复运行会被报告为 in-flight，而不是启动第二次运行。
+- 在 Gateway 启动时，逾期的独立 agent-turn 作业会被重新安排到 channel-connect 窗口之外，而不是立即回放，因此 Discord/Telegram 启动和原生命令设置在重启后仍能保持响应。
+- 一次性作业（`--at`）默认在成功后自动删除。
+- 独立 cron 在完成时会尽最大努力关闭其 `cron:<jobId>` 会话下追踪到的浏览器标签页/进程，因此分离式浏览器自动化不会留下孤儿进程。
+- 收到狭义的 cron 自清理授权的独立 cron 运行，仍然可以读取调度器状态、当前作业的自过滤列表以及该作业的运行历史，因此状态/heartbeat 检查可以在不获得更广泛的 cron 修改权限的情况下检查自己的计划任务。
+- 独立 cron 运行还会防止过时的确认回复。如果第一个结果只是中间状态更新（`on it`、`pulling everything together` 以及类似提示），并且没有任何后代子 agent 运行仍负责最终答案，OpenClaw 会在交付前重新提示一次以获取实际结果。
+- 独立 cron 运行会使用来自嵌入式运行的结构化执行拒绝元数据，包括其嵌套错误消息以 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 开头的 node-host `UNAVAILABLE` 包装，因此被阻止的命令不会被报告为成功运行，而普通的助手文本也不会被当作拒绝。
+- 独立 cron 运行也会将运行级 agent 失败视为作业错误，即使没有产生回复载荷也是如此，因此模型/提供方失败会增加错误计数并触发失败通知，而不是将作业清空为成功状态。
+- 当独立 agent-turn 作业达到 `timeoutSeconds` 时，cron 会中止底层 agent 运行并给它一个短暂的清理窗口。如果运行没有退出，Gateway 托管的清理会在 cron 记录超时之前强制清除该运行的会话所有权，因此排队中的聊天工作不会因一个陈旧的处理会话而被遗留。
+- 如果独立 agent-turn 在 runner 启动前或首次模型调用前停滞，cron 会记录特定阶段的超时，例如 `setup timed out before runner start` 或 `stalled before first model call (last phase: context-engine)`。这些看门狗适用于嵌入式提供方和 CLI 后备提供方，在其外部 CLI 进程真正启动之前就会生效，并且与较长的 `timeoutSeconds` 值独立限额，因此冷启动/认证/上下文失败会更快暴露，而不是等待整个作业预算耗尽。
+- 如果你使用系统 cron 或其他外部调度器来运行 `openclaw agent`，即使 CLI 会处理 `SIGTERM`/`SIGINT`，也应给它包上一层硬杀升级。Gateway 托管的运行会请求 Gateway 中止已接受的运行；本地和嵌入式回退运行会收到相同的中止信号。对于 GNU `timeout`，应优先使用 `timeout -k 60 600 openclaw agent ...`，而不是单纯的 `timeout 600 ...`；其中 `-k` 值是当进程无法正常退出时的监督层后备。对于 systemd 单元，也应保持相同的形态：使用 `SIGTERM` 停止信号加上一个宽限窗口，例如 `TimeoutStopSec`，然后再进行最终 kill。如果某次重试在原始 Gateway 运行仍处于活动状态时复用了 `--run-id`，重复请求会被报告为正在进行中，而不会启动第二次运行。
 
 <a id="maintenance"></a>
 
@@ -122,7 +120,34 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当“月
   </Accordion>
 </AccordionGroup>
 
-### 独立作业的载荷选项
+### Command payloads
+
+Use command payloads for deterministic scripts that should run inside the Gateway scheduler without starting a model-backed isolated agent turn. Command jobs execute on the Gateway host, capture stdout/stderr, record the run in cron history, and reuse the same `announce`, `webhook`, and `none` delivery modes as isolated jobs.
+
+<Note>
+Command cron is an operator-admin Gateway automation surface, not an agent
+`tools.exec` call. Creating, updating, removing, or manually running cron jobs
+requires `operator.admin`; scheduled command runs later execute inside the
+Gateway process as that admin-authored automation. Agent exec policy such as
+`tools.exec.mode`, approval prompts, and per-agent tool allowlists governs
+model-visible exec tools, not command cron payloads.
+</Note>
+
+```bash
+openclaw cron create "*/15 * * * *" \
+  --name "Queue depth probe" \
+  --command "scripts/check-queue.sh" \
+  --command-cwd "/srv/app" \
+  --announce \
+  --channel telegram \
+  --to "-1001234567890"
+```
+
+`--command <shell>` stores `argv: ["sh", "-lc", <shell>]`. Use `--command-argv '["node","scripts/report.mjs"]'` when you want exact argv execution without shell parsing. Optional `--command-env KEY=VALUE`, `--command-input`, `--timeout-seconds`, `--no-output-timeout-seconds`, and `--output-max-bytes` fields control the process environment, stdin, and output bounds.
+
+If stdout is non-empty, that text is the delivered result. If stdout is empty and stderr is non-empty, stderr is delivered. If both streams are present, cron delivers a small `stdout:` / `stderr:` block. A zero exit code records the run as `ok`; non-zero exit, signal, timeout, or no-output timeout records `error` and can trigger failure alerts. A command that prints only `NO_REPLY` uses the normal cron silent-token suppression and posts nothing back to chat.
+
+### Payload options for isolated jobs
 
 <ParamField path="--message" type="string" required>
   提示文本（独立模式必需）。
@@ -144,7 +169,9 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当“月
 
 Cron 作业还可以携带载荷级别的 `fallbacks`。存在时，该列表会替换该作业的配置后备链。若希望只尝试所选模型的严格 cron 运行，请在作业载荷/API 中使用 `fallbacks: []`。如果作业有 `--model` 但既没有载荷后备也没有配置后备，OpenClaw 会传递一个显式的空后备覆盖，以便不会把 agent 主模型附加为隐藏的额外重试目标。
 
-独立作业的模型选择优先级为：
+Local-provider preflight checks walk configured fallbacks before marking a cron run `skipped`; `fallbacks: []` keeps that preflight path strict.
+
+Model-selection precedence for isolated jobs is:
 
 1. Gmail hook 模型覆盖（当运行来自 Gmail 且该覆盖被允许时）
 2. 每个作业的载荷 `model`
@@ -181,7 +208,7 @@ Cron 作业不会根据频道、区域设置或之前的消息推断回复语言
 
 ```bash
 openclaw cron edit <jobId> \
-  --message "Summarize the updates. Respond in Chinese; keep URLs, code, and product names unchanged."
+  --message "总结更新。请用中文回复；保留 URL、代码和产品名称不变。"
 ```
 
 对于模板文件，请把语言说明保留在渲染后的提示词中，并在作业运行前确认诸如 `{{language}}` 之类的占位符已被填充。如果输出混杂了多种语言，请明确写出规则，例如：“叙述性文本使用中文，技术术语保持英文。”
@@ -209,12 +236,11 @@ openclaw cron edit <jobId> \
   </Tab>
   <Tab title="循环隔离作业">
     ```bash
-    openclaw cron add \
+    openclaw cron create "0 7 * * *" \
+      "总结昨夜更新。" \
       --name "Morning brief" \
-      --cron "0 7 * * *" \
       --tz "America/Los_Angeles" \
       --session isolated \
-      --message "总结夜间更新。" \
       --announce \
       --channel slack \
       --to "channel:C1234567890"
@@ -231,6 +257,25 @@ openclaw cron edit <jobId> \
       --model "opus" \
       --thinking high \
       --announce
+    ```
+  </Tab>
+  <Tab title="Webhook 输出">
+    ```bash
+    openclaw cron create "0 18 * * 1-5" \
+      "将今天的部署总结为 JSON。" \
+      --name "Deploy digest" \
+      --webhook "https://example.invalid/openclaw/cron"
+    ```
+  </Tab>
+  <Tab title="命令输出">
+    ```bash
+    openclaw cron create "*/15 * * * *" \
+      --name "Queue depth probe" \
+      --command "scripts/check-queue.sh" \
+      --command-cwd "/srv/app" \
+      --announce \
+      --channel telegram \
+      --to "-1001234567890"
     ```
   </Tab>
 </Tabs>
@@ -290,7 +335,7 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
     字段：`message`（必填）、`name`、`agentId`、`wakeMode`、`deliver`、`channel`、`to`、`model`、`fallbacks`、`thinking`、`timeoutSeconds`。
 
   </Accordion>
-  <Accordion title="映射 hook（POST /hooks/<name>）">
+  <Accordion title="映射 hook（POST /hooks/&lt;name&gt;）">
     自定义 hook 名称通过配置中的 `hooks.mappings` 解析。映射可以使用模板或代码转换，将任意载荷转换为 `wake` 或 `agent` 动作。
   </Accordion>
 </AccordionGroup>
@@ -298,12 +343,12 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 <Warning>
 将 hook 端点置于 loopback、tailnet 或受信任的反向代理之后。
 
-- 使用专用的 hook token；不要复用 gateway 认证 token。
-- 将 `hooks.path` 保持在专用子路径下；`/` 会被拒绝。
-- 设置 `hooks.allowedAgentIds` 以限制显式 `agentId` 路由。
-- 保持 `hooks.allowRequestSessionKey=false`，除非你需要调用者选择会话。
-- 如果启用了 `hooks.allowRequestSessionKey`，还要设置 `hooks.allowedSessionKeyPrefixes` 以约束允许的会话键形状。
-- Hook 载荷默认会被安全边界包裹。
+- Use a dedicated hook token; do not reuse gateway auth tokens.
+- Keep `hooks.path` on a dedicated subpath; `/` is rejected.
+- Set `hooks.allowedAgentIds` to limit which effective agent a hook can target, including the default agent when `agentId` is omitted.
+- Keep `hooks.allowRequestSessionKey=false` unless you require caller-selected sessions.
+- If you enable `hooks.allowRequestSessionKey`, also set `hooks.allowedSessionKeyPrefixes` to constrain allowed session key shapes.
+- Hook payloads are wrapped with safety boundaries by default.
 
 </Warning>
 
@@ -384,7 +429,7 @@ openclaw cron get <jobId>
 openclaw cron show <jobId>
 
 # 编辑一个作业
-openclaw cron edit <jobId> --message "Updated prompt" --model "opus"
+openclaw cron edit <jobId> --message "已更新提示词" --model "opus"
 
 # 立即强制运行一个作业
 openclaw cron run <jobId>
@@ -405,21 +450,24 @@ openclaw cron runs --id <jobId> --run-id <runId>
 openclaw cron remove <jobId>
 
 # 代理选择（多代理设置）
-openclaw cron add --name "Ops sweep" --cron "0 6 * * *" --session isolated --message "Check ops queue" --agent ops
+openclaw cron create "0 6 * * *" "检查运维队列" --name "Ops sweep" --session isolated --agent ops
 openclaw cron edit <jobId> --clear-agent
 ```
 
 `openclaw cron run <jobId>` 会在将手动运行入队后返回。对于必须阻塞直到队列中的运行完成的关闭钩子、维护脚本或其他自动化任务，请使用 `--wait`。等待模式会轮询精确返回的 `runId`；当状态为 `ok` 时退出码为 `0`，当状态为 `error`、`skipped` 或等待超时时退出码为非 `0`。
 
+`openclaw cron create` 是 `openclaw cron add` 的别名，新作业可以使用位置式调度（`"0 9 * * 1"`、`"every 1h"`、`"20m"` 或 ISO 时间戳），后跟位置式代理提示词。可在 `cron add|create` 或 `cron edit` 上使用 `--webhook <url>` 将完成的运行载荷 POST 到 HTTP 端点。Webhook 交付不能与聊天交付标志同时使用，例如 `--announce`、`--channel`、`--to`、`--thread-id` 或 `--account`。
+
 <Note>
 模型覆盖说明：
 
-- `openclaw cron add|edit --model ...` 会更改作业选择的模型。
-- 如果该模型被允许，那么确切的提供方/模型会进入隔离代理运行。
+- `openclaw cron add|edit --model ...` 更改作业选定的模型。
+- 如果模型被允许，则该精确 provider/model 会传递到隔离代理运行。
 - 如果它不被允许或无法解析，cron 会以明确的验证错误使运行失败。
-- 已配置的回退链仍然适用，因为 cron 的 `--model` 是作业主模型，而不是会话 `/model` 覆盖。
-- 载荷 `fallbacks` 会替换该作业已配置的回退；`fallbacks: []` 会禁用回退并使运行严格执行。
-- 如果没有显式或已配置的回退列表，普通 `--model` 不会作为静默的额外重试目标回落到代理主模型。
+- API `cron.update` 载荷补丁可以将 `model: null` 设为清除已存储的作业模型覆盖。
+- 配置的回退链仍然适用，因为 cron `--model` 是作业主模型，而不是会话 `/model` 覆盖。
+- 载荷 `fallbacks` 会替换该作业的已配置回退；`fallbacks: []` 会禁用回退并使运行变为严格模式。
+- 仅使用普通 `--model` 且没有显式或已配置的回退列表时，不会作为静默的额外重试目标回落到代理主模型。
 
 </Note>
 
@@ -445,9 +493,7 @@ openclaw cron edit <jobId> --clear-agent
 
 `maxConcurrentRuns` 会同时限制计划中的 cron 派发和隔离代理轮次执行，默认值为 8。隔离 cron 代理轮次会在内部使用队列专用的 `cron-nested` 执行通道，因此提高该值会让独立的 cron LLM 运行并行推进，而不仅仅是启动各自的外层 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩宽。
 
-运行时状态侧车文件由 `cron.store` 派生：像 `~/clawd/cron/jobs.json` 这样的 `.json` 存储会使用 `~/clawd/cron/jobs-state.json`，而不带 `.json` 后缀的存储路径会追加 `-state.json`。
-
-如果你手动编辑 `jobs.json`，请不要将 `jobs-state.json` 纳入源代码管理。OpenClaw 使用该侧车文件保存待处理槽位、活动标记、上次运行元数据，以及调度器判断外部编辑的作业何时需要新的 `nextRunAtMs` 的调度身份信息。
+`cron.store` is a logical store key and legacy doctor import path. Run `openclaw doctor --fix` to import existing JSON stores into SQLite and archive them; future cron changes should go through the CLI or Gateway API.
 
 禁用 cron：`cron.enabled: false` 或 `OPENCLAW_SKIP_CRON=1`。
 
@@ -458,8 +504,8 @@ openclaw cron edit <jobId> --clear-agent
     **循环重试**：重试之间采用指数退避（30 秒到 60 分钟）。退避会在下一次成功运行后重置。
 
   </Accordion>
-  <Accordion title="维护">
-    `cron.sessionRetention`（默认 `24h`）会清理隔离运行会话条目。`cron.runLog.maxBytes` / `cron.runLog.keepLines` 会自动清理运行日志文件。
+  <Accordion title="Maintenance">
+    `cron.sessionRetention` (default `24h`) prunes isolated run-session entries. `cron.runLog.keepLines` limits retained SQLite run-history rows per job; `maxBytes` is retained for config compatibility with older file-backed run logs.
   </Accordion>
 </AccordionGroup>
 

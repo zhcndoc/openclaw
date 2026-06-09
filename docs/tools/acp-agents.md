@@ -11,7 +11,7 @@ sidebarTitle: "ACP 代理"
 ---
 
 [Agent Client Protocol (ACP)](https://agentclientprotocol.com/) 会话
-让 OpenClaw 通过 ACP 后端插件运行外部编码 harness（例如 Pi、Claude Code、
+让 OpenClaw 通过 ACP 后端插件运行外部编码 harness（例如 Claude Code、
 Cursor、Copilot、Droid、OpenClaw ACP、OpenCode、Gemini CLI，以及其他
 受支持的 ACPX harness）。
 
@@ -38,7 +38,7 @@ Codex 应用服务器插件负责 `/codex ...` 控制和用于 agent 回合的�
 
 ## 这开箱即用吗？
 
-Yes，安装官方 ACP 运行时插件后即可：
+是的，安装官方 ACP 运行时插件后即可：
 
 ```bash
 openclaw plugins install @openclaw/acpx
@@ -89,20 +89,19 @@ ACP harness。仅在 harness
 
 | Harness id | 典型后端                                       | 备注                                                                                |
 | ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `claude`   | Claude Code ACP 适配器                         | 需要主机上的 Claude Code 认证。                                                     |
-| `codex`    | Codex ACP 适配器                               | 仅在原生 `/codex` 不可用或请求 ACP 时作为显式 ACP 回退。                           |
-| `copilot`  | GitHub Copilot ACP 适配器                      | 需要 Copilot CLI/运行时认证。                                                       |
-| `cursor`   | Cursor CLI ACP (`cursor-agent acp`)            | 如果本地安装暴露了不同的 ACP 入口点，则覆盖 acpx 命令。                            |
-| `droid`    | Factory Droid CLI                              | 需要 Factory/Droid 认证或 harness 环境中的 `FACTORY_API_KEY`。                     |
-| `gemini`   | Gemini CLI ACP 适配器                          | 需要 Gemini CLI 认证或 API key 设置。                                              |
-| `iflow`    | iFlow CLI                                      | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
-| `kilocode` | Kilo Code CLI                                  | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
-| `kimi`     | Kimi/Moonshot CLI                              | 需要主机上的 Kimi/Moonshot 认证。                                                   |
-| `kiro`     | Kiro CLI                                       | 适配器可用性和模型控制取决于已安装的 CLI。                                          |
-| `opencode` | OpenCode ACP 适配器                            | 需要 OpenCode CLI/供应商认证。                                                      |
-| `openclaw` | 通过 `openclaw acp` 的 OpenClaw Gateway 桥接   | 让具备 ACP 感知的 harness 与 OpenClaw Gateway 会话双向通信。                        |
-| `pi`       | Pi/嵌入式 OpenClaw 运行时                       | 用于 OpenClaw 原生 harness 实验。                                                   |
-| `qwen`     | Qwen Code / Qwen CLI                           | 需要主机上的 Qwen 兼容认证。                                                        |
+| `claude`   | Claude Code ACP 适配器                        | 需要主机上的 Claude Code 认证。                                              |
+| `codex`    | Codex ACP 适配器                              | 仅在原生 `/codex` 不可用或请求 ACP 时才作为显式回退。 |
+| `copilot`  | GitHub Copilot ACP 适配器                     | 需要 Copilot CLI/runtime 认证。                                                  |
+| `cursor`   | Cursor CLI ACP（`cursor-agent acp`）            | 如果本地安装暴露了不同的 ACP 入口点，可覆盖 acpx 命令。    |
+| `droid`    | Factory Droid CLI                              | 需要 Factory/Droid 认证，或在 harness 环境中提供 `FACTORY_API_KEY`。        |
+| `gemini`   | Gemini CLI ACP 适配器                         | 需要 Gemini CLI 认证或 API key 配置。                                          |
+| `iflow`    | iFlow CLI                                      | 适配器可用性和模型控制取决于已安装的 CLI。                 |
+| `kilocode` | Kilo Code CLI                                  | 适配器可用性和模型控制取决于已安装的 CLI。                 |
+| `kimi`     | Kimi/Moonshot CLI                              | 需要主机上的 Kimi/Moonshot 认证。                                            |
+| `kiro`     | Kiro CLI                                       | 适配器可用性和模型控制取决于已安装的 CLI。                 |
+| `opencode` | OpenCode ACP 适配器                           | 需要 OpenCode CLI/provider 认证。                                                |
+| `openclaw` | 通过 `openclaw acp` 的 OpenClaw Gateway 桥接 | 让支持 ACP 的 harness 与 OpenClaw Gateway 会话双向通信。                 |
+| `qwen`     | Qwen Code / Qwen CLI                           | 需要主机上的 Qwen 兼容认证。                                          |
 
 可以在 acpx 本身中配置自定义 acpx agent 别名，但 OpenClaw
 策略在分发前仍会检查 `acp.allowedAgents` 以及任何
@@ -172,11 +171,11 @@ ACP harness。仅在 harness
     [Codex harness v1 support contract](/plugins/codex-harness-runtime#v1-support-contract)。
 
   </Accordion>
-  <Accordion title="模型 / 提供商 / 运行时选择速查表">
-    - `openai-codex/*` - 由 doctor 修复的旧版 Codex OAuth/订阅模型路由。
-    - `openai/*` - 用于 OpenAI agent 回合的原生 Codex 应用服务器内嵌运行时。
-    - `/codex ...` - 原生 Codex 对话控制。
-    - `/acp ...` 或 `runtime: "acp"` - 显式 ACP/acpx 控制。
+  <Accordion title="Model / provider / runtime selection cheat sheet">
+    - legacy Codex model refs - legacy Codex OAuth/subscription model route repaired by doctor.
+    - `openai/*` - native Codex app-server embedded runtime for OpenAI agent turns.
+    - `/codex ...` - native Codex conversation control.
+    - `/acp ...` or `runtime: "acp"` - explicit ACP/acpx control.
 
   </Accordion>
   <Accordion title="ACP 路由自然语言触发语句">
@@ -511,16 +510,41 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
   继续一个已有的 ACP 会话，而不是创建新的会话。agent 会通过 `session/load` 回放其对话历史。需要 `runtime: "acp"`。
 </ParamField>
 <ParamField path="streamTo" type='"parent"'>
-  `"parent"` 会把初始 ACP 运行进度摘要作为系统事件流回请求者会话。接受的响应包括指向会话作用域 JSONL 日志的 `streamLogPath`（`<sessionId>.acp-stream.jsonl`），你可以对其进行 tail 以查看完整的转发历史。
+  `"parent"` streams initial ACP run progress summaries back to the
+  requester session as system events. Accepted responses include
+  `streamLogPath` pointing to a session-scoped JSONL log
+  (`<sessionId>.acp-stream.jsonl`) you can tail for full relay history.
+  Parent progress streams show assistant commentary and ACP status progress by
+  default unless `streaming.progress.commentary=false`. Discord also defaults
+  parent previews to progress mode when no stream mode is configured. Status
+  progress still honors `acp.stream.tagVisibility`, so tags such as `plan`
+  remain hidden unless explicitly enabled.
 </ParamField>
-<ParamField path="runTimeoutSeconds" type="number">
-  在 N 秒后中止 ACP 子回合。`0` 会让该回合走网关的无超时路径。相同的值会同时应用于 Gateway 运行和 ACP 运行时，这样卡住/额度耗尽的 harness 不会无限期占用父 agent 线路。
-</ParamField>
+
+ACP `sessions_spawn` runs use `agents.defaults.subagents.runTimeoutSeconds` for
+their default child turn limit. The tool does not accept per-call timeout
+overrides.
+
 <ParamField path="model" type="string">
-  ACP 子会话的显式模型覆盖。Codex ACP spawn 会在 `session/new` 前，将 OpenClaw 中诸如 `openai-codex/gpt-5.4` 的 Codex 引用规范化为 Codex ACP 启动配置；像 `openai-codex/gpt-5.4/high` 这样的斜杠形式还会设置 Codex ACP 的推理力度。其他 harness 必须公开 ACP `models` 并支持 `session/set_model`；否则 OpenClaw/acpx 会明确失败，而不是静默回退到目标 agent 默认值。
+  Explicit model override for the ACP child session. Codex ACP spawns
+  normalize OpenAI refs such as `openai/gpt-5.4` to Codex ACP startup
+  config before `session/new`; slash forms such as `openai/gpt-5.4/high`
+  also set Codex ACP reasoning effort.
+  When omitted, `sessions_spawn({ runtime: "acp" })` uses existing
+  subagent model defaults (`agents.defaults.subagents.model` or
+  `agents.list[].subagents.model`) when configured; otherwise it lets the
+  ACP harness use its own default model.
+  Other harnesses must advertise ACP `models` and support
+  `session/set_model`; otherwise OpenClaw/acpx fails clearly instead of
+  silently falling back to the target agent default.
 </ParamField>
 <ParamField path="thinking" type="string">
-  显式的思考/推理力度。对于 Codex ACP，`minimal` 映射到低力度，`low`/`medium`/`high`/`xhigh` 直接映射，而 `off` 则省略推理力度的启动覆盖。
+  Explicit thinking/reasoning effort. For Codex ACP, `minimal` maps to
+  low effort, `low`/`medium`/`high`/`xhigh` map directly, and `off`
+  omits the reasoning-effort startup override.
+  When omitted, ACP spawns use existing subagent thinking defaults and
+  per-model `agents.defaults.models["provider/model"].params.thinking`
+  for the selected model.
 </ParamField>
 
 ## Spawn 的 bind 和 thread 模式
@@ -722,7 +746,7 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 
 | Command                      | Maps to                              | Notes                                                                                                                                                                                                      |
 | ---------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/acp model <id>`            | runtime config key `model`           | For Codex ACP, OpenClaw normalizes `openai-codex/<model>` to the adapter model id and maps slash reasoning suffixes such as `openai-codex/gpt-5.4/high` to `reasoning_effort`.                             |
+| `/acp model <id>`            | runtime config key `model`           | For Codex ACP, OpenClaw normalizes `openai/<model>` to the adapter model id and maps slash reasoning suffixes such as `openai/gpt-5.4/high` to `reasoning_effort`.                                         |
 | `/acp set thinking <level>`  | canonical option `thinking`          | OpenClaw sends the backend-advertised equivalent when present, preferring `thinking`, then `effort`, `reasoning_effort`, or `thought_level`. For Codex ACP, the adapter maps values to `reasoning_effort`. |
 | `/acp permissions <profile>` | canonical option `permissionProfile` | OpenClaw sends the backend-advertised equivalent when present, such as `approval_policy`, `permission_profile`, `permissions`, or `permission_mode`.                                                       |
 | `/acp timeout <seconds>`     | canonical option `timeoutSeconds`    | OpenClaw sends the backend-advertised equivalent when present, such as `timeout` or `timeout_seconds`.                                                                                                     |
@@ -764,13 +788,21 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 | ACP session stalls indefinitely after completing work                       | harness 进程已结束，但 ACP 会话未报告完成。                                                    | 更新 OpenClaw；当前的 acpx 清理会在关闭和 Gateway 启动时回收属于 OpenClaw 的陈旧 wrapper 和 adapter 进程。                                             |
 | Harness sees `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>`                        | 内部事件封装泄漏到了 ACP 边界之外。                                                                | 更新 OpenClaw 并重新运行完成流程；外部 harness 应只接收纯粹的完成提示。                                                          |
 
+<Note>
+`Command blocked by PreToolUse hook: Native hook relay unavailable` belongs to
+the native Codex hook relay, not ACP/acpx. In a bound Codex chat, start a fresh
+session with `/new` or `/reset`; if it works once and then returns on the next
+native tool call, restart the Codex app-server or OpenClaw Gateway instead of
+repeating `/new`. See [Codex harness troubleshooting](/plugins/codex-harness#troubleshooting).
+</Note>
+
 ## 相关内容
 
 - [ACP agents - 设置](/tools/acp-agents-setup)
 - [Agent 发送](/tools/agent-send)
 - [CLI 后端](/gateway/cli-backends)
 - [Codex harness](/plugins/codex-harness)
-- [Codex harness runtime](/plugins/codex-harness-runtime)
-- [Multi-agent sandbox tools](/tools/multi-agent-sandbox-tools)
+- [Codex harness 运行时](/plugins/codex-harness-runtime)
+- [多代理沙箱工具](/tools/multi-agent-sandbox-tools)
 - [`openclaw acp` (桥接模式)](/cli/acp)
 - [子代理](/tools/subagents)

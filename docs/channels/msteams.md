@@ -471,7 +471,7 @@ teams app doctor <teamsAppId>
 - `MSTEAMS_APP_ID`
 - `MSTEAMS_APP_PASSWORD`
 - `MSTEAMS_TENANT_ID`
-- `MSTEAMS_AUTH_TYPE`（可选：`"secret"` 或 `"federated"`）
+- `MSTEAMS_AUTH_TYPE`（可选：`"secret"` 或 ` "federated"`）
 - `MSTEAMS_CERTIFICATE_PATH`（联邦 + 证书）
 - `MSTEAMS_CERTIFICATE_THUMBPRINT`（可选，认证不需要）
 - `MSTEAMS_USE_MANAGED_IDENTITY`（联邦 + 托管标识）
@@ -665,7 +665,59 @@ Teams 通过 HTTP webhook 传递消息。如果处理耗时过长（例如 LLM �
 
 OpenClaw 通过快速返回并主动发送回复来处理这一点，但过慢的响应仍可能引发问题。
 
-### 格式化
+### Teams cloud and service URL support
+
+This SDK-backed Teams path is live-validated for Microsoft Teams public cloud.
+
+Inbound replies use the incoming Teams SDK turn context. Out-of-context proactive operations - sends, edits, deletes, cards, polls, file-consent messages, and queued long-running replies - use the stored conversation reference `serviceUrl`. Public cloud defaults to the Teams SDK public cloud environment and allows stored references on the public Teams Connector host: `https://smba.trafficmanager.net/`.
+
+Public cloud is the default. You do not need to set `channels.msteams.cloud` or `channels.msteams.serviceUrl` for normal public-cloud bots.
+
+For non-public Teams clouds, set `cloud` and the matching proactive boundary when Microsoft publishes one:
+
+- `channels.msteams.cloud` selects the Teams SDK cloud preset for authentication, JWT validation, token services, and Graph scope.
+- `channels.msteams.serviceUrl` selects the Bot Connector endpoint boundary used to validate stored conversation references before proactive sends, edits, deletes, cards, polls, file-consent messages, and queued long-running replies. It is required for USGov and DoD SDK clouds. For China/21Vianet, OpenClaw uses the SDK `China` preset and accepts stored/configured service URLs only on Azure China Bot Framework channel hosts.
+
+Microsoft publishes the global proactive Bot Connector endpoints in the [Create the conversation](https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/conversations/send-proactive-messages?tabs=dotnet#create-the-conversation) section of the Teams proactive messaging docs. Use the incoming activity's `serviceUrl` when available; if you need a global proactive endpoint, use Microsoft's table.
+
+| Teams environment | OpenClaw config                                             | Proactive `serviceUrl`                             |
+| ----------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| Public            | no cloud/serviceUrl config needed                           | `https://smba.trafficmanager.net/teams`            |
+| GCC               | set `serviceUrl`; no separate Teams SDK cloud preset exists | `https://smba.infra.gcc.teams.microsoft.com/teams` |
+| GCC High          | `cloud: "USGov"` + `serviceUrl`                             | `https://smba.infra.gov.teams.microsoft.us/teams`  |
+| DoD               | `cloud: "USGovDoD"` + `serviceUrl`                          | `https://smba.infra.dod.teams.microsoft.us/teams`  |
+| China/21Vianet    | `cloud: "China"`                                            | use the incoming activity's `serviceUrl`           |
+
+Example for GCC, where Microsoft documents a separate proactive service URL but the Teams SDK does not expose a separate GCC cloud preset:
+
+```json
+{
+  "channels": {
+    "msteams": {
+      "serviceUrl": "https://smba.infra.gcc.teams.microsoft.com/teams"
+    }
+  }
+}
+```
+
+Example for GCC High:
+
+```json
+{
+  "channels": {
+    "msteams": {
+      "cloud": "USGov",
+      "serviceUrl": "https://smba.infra.gov.teams.microsoft.us/teams"
+    }
+  }
+}
+```
+
+`channels.msteams.serviceUrl` is restricted to supported Microsoft Teams Bot Connector hosts. When a service URL is configured, OpenClaw checks that the stored conversation `serviceUrl` uses the same host before proactive sends, edits, deletes, cards, polls, or queued long-running replies run. With the default public-cloud config, OpenClaw fails closed if a stored conversation points outside the public Teams Connector host. Receive a fresh message from the conversation after changing cloud/service URL settings so the stored conversation reference is current.
+
+China/21Vianet does not have a separate global proactive `smba` URL in Microsoft's Teams proactive endpoint table. Configure `cloud: "China"` so the Teams SDK uses Azure China auth, token, and JWT endpoints. Proactive sends then require a stored conversation reference from an incoming China Teams activity, or an explicitly configured service URL, on the Azure China Bot Framework channel boundary (`*.botframework.azure.cn`). Graph-backed Teams helpers are currently disabled for `cloud: "China"` until OpenClaw routes Graph requests through the Azure China Graph endpoint.
+
+### 格式
 
 Teams 的 markdown 比 Slack 或 Discord 更受限：
 
@@ -673,31 +725,33 @@ Teams 的 markdown 比 Slack 或 Discord 更受限：
 - 复杂 markdown（表格、嵌套列表）可能无法正确渲染
 - Adaptive Cards 支持用于投票和语义化展示发送（见下文）
 
-## 配置
+## Configuration
 
-关键设置（共享频道模式见 `/gateway/configuration`）：
+Key settings (see `/gateway/configuration` for shared-channel mode):
 
-- `channels.msteams.enabled`: 启用/禁用该通道。
-- `channels.msteams.appId`, `channels.msteams.appPassword`, `channels.msteams.tenantId`: bot 凭据。
-- `channels.msteams.webhook.port` (默认 `3978`)
-- `channels.msteams.webhook.path` (默认 `/api/messages`)
-- `channels.msteams.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）
-- `channels.msteams.allowFrom`: DM allowlist（建议使用 AAD 对象 ID）。在可用 Graph 访问时，向导会在设置过程中将名称解析为 ID。
-- `channels.msteams.dangerouslyAllowNameMatching`: 紧急开关，用于重新启用可变 UPN/显示名称匹配以及直接的团队/频道名称路由。
-- `channels.msteams.textChunkLimit`: 发出的文本分块大小。
-- `channels.msteams.chunkMode`: `length`（默认）或 `newline`，在按长度分块前先按空行（段落边界）拆分。
-- `channels.msteams.mediaAllowHosts`: 入站附件主机 allowlist（默认 Microsoft/Teams 域）。
-- `channels.msteams.mediaAuthAllowHosts`: 在媒体重试时附加 Authorization 头的 allowlist（默认 Graph + Bot Framework 主机）。
-- `channels.msteams.requireMention`: 在频道/群组中要求 @mention（默认 true）。
-- `channels.msteams.replyStyle`: `thread | top-level`（见 [回复样式](#reply-style-threads-vs-posts)）。
-- `channels.msteams.teams.<teamId>.replyStyle`: 按团队覆盖。
-- `channels.msteams.teams.<teamId>.requireMention`: 按团队覆盖。
-- `channels.msteams.teams.<teamId>.tools`: 默认的按团队工具策略覆盖（`allow`/`deny`/`alsoAllow`），当频道覆盖缺失时使用。
-- `channels.msteams.teams.<teamId>.toolsBySender`: 默认的按团队按发送者工具策略覆盖（支持 `"*"` 通配符）。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`: 按频道覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`: 按频道覆盖。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`: 按频道工具策略覆盖（`allow`/`deny`/`alsoAllow`）。
-- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`: 按频道按发送者工具策略覆盖（支持 `"*"` 通配符）。
+- `channels.msteams.enabled`: enable/disable the channel.
+- `channels.msteams.appId`, `channels.msteams.appPassword`, `channels.msteams.tenantId`: bot credentials.
+- `channels.msteams.cloud`: Teams SDK cloud environment (`Public`, `USGov`, `USGovDoD`, or `China`; default `Public`). Set this with `serviceUrl` for USGov/DoD SDK clouds; China uses the SDK preset and stored Azure China Bot Framework conversation references, with Graph-backed helpers disabled until Azure China Graph routing is implemented.
+- `channels.msteams.serviceUrl`: Bot Connector service URL boundary for SDK proactive operations. Public cloud uses the SDK default; set this for GCC (`https://smba.infra.gcc.teams.microsoft.com/teams`), GCC High, or DoD. China accepts Azure China Bot Framework channel hosts when the stored conversation reference comes from Teams operated by 21Vianet.
+- `channels.msteams.webhook.port` (default `3978`)
+- `channels.msteams.webhook.path` (default `/api/messages`)
+- `channels.msteams.dmPolicy`: `pairing | allowlist | open | disabled` (default: pairing)
+- `channels.msteams.allowFrom`: DM allowlist (AAD object IDs recommended). The wizard resolves names to IDs during setup when Graph access is available.
+- `channels.msteams.dangerouslyAllowNameMatching`: break-glass toggle to re-enable mutable UPN/display-name matching and direct team/channel name routing.
+- `channels.msteams.textChunkLimit`: outbound text chunk size.
+- `channels.msteams.chunkMode`: `length` (default) or `newline` to split on blank lines (paragraph boundaries) before length chunking.
+- `channels.msteams.mediaAllowHosts`: allowlist for inbound attachment hosts (defaults to Microsoft/Teams domains).
+- `channels.msteams.mediaAuthAllowHosts`: allowlist for attaching Authorization headers on media retries (defaults to Graph + Bot Framework hosts).
+- `channels.msteams.requireMention`: require @mention in channels/groups (default true).
+- `channels.msteams.replyStyle`: `thread | top-level` (see [Reply Style](#reply-style-threads-vs-posts)).
+- `channels.msteams.teams.<teamId>.replyStyle`: per-team override.
+- `channels.msteams.teams.<teamId>.requireMention`: per-team override.
+- `channels.msteams.teams.<teamId>.tools`: default per-team tool policy overrides (`allow`/`deny`/`alsoAllow`) used when a channel override is missing.
+- `channels.msteams.teams.<teamId>.toolsBySender`: default per-team per-sender tool policy overrides (`"*"` wildcard supported).
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`: per-channel override.
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.requireMention`: per-channel override.
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.tools`: per-channel tool policy overrides (`allow`/`deny`/`alsoAllow`).
+- `channels.msteams.teams.<teamId>.channels.<conversationId>.toolsBySender`: per-channel per-sender tool policy overrides (`"*"` wildcard supported).
 - `toolsBySender` keys should use explicit prefixes:
   `channel:`, `id:`, `e164:`, `username:`, `name:` (legacy unprefixed keys still map to `id:` only).
 - `channels.msteams.actions.memberInfo`: enable or disable the Graph-backed member info action (default: enabled when Graph credentials are available).
@@ -708,29 +762,29 @@ Teams 的 markdown 比 Slack 或 Discord 更受限：
 - `channels.msteams.managedIdentityClientId`: client ID for user-assigned managed identity.
 - `channels.msteams.sharePointSiteId`: SharePoint site ID for file uploads in group chats/channels (see [Sending files in group chats](#sending-files-in-group-chats)).
 
-## 路由和会话
+## Routing and Sessions
 
-- 会话键遵循标准代理格式（见 [/concepts/session](/concepts/session)）：
-  - 直接消息共享主会话（`agent:<agentId>:<mainKey>`）。
-  - 频道/群组消息使用 conversation id：
+- Session keys follow the standard agent format (see [/concepts/session](/concepts/session)):
+  - Direct messages share the main session (`agent:<agentId>:<mainKey>`).
+  - Channel/group messages use the conversation id:
     - `agent:<agentId>:msteams:channel:<conversationId>`
     - `agent:<agentId>:msteams:group:<conversationId>`
 
-## 回复样式：线程 vs 帖子
+## Reply Style: Threads vs Posts
 
-Teams 最近在同一底层数据模型之上引入了两种频道 UI 样式：
+Teams recently introduced two channel UI styles on top of the same underlying data model:
 
-| 样式                     | 描述                                                   | 推荐的 `replyStyle` |
-| ------------------------ | ------------------------------------------------------ | -------------------- |
-| **Posts**（经典）        | 消息以卡片形式显示，下面带有线程回复                    | `thread`（默认）     |
-| **Threads**（类似 Slack）| 消息线性流动，更像 Slack                              | `top-level`          |
+| Style                     | Description                                                   | Recommended `replyStyle` |
+| ------------------------- | ------------------------------------------------------------- | ------------------------ |
+| **Posts**（经典）        | Messages appear as cards with threaded replies underneath     | `thread`（default）      |
+| **Threads**（类似 Slack）| Messages flow linearly, more like Slack                       | `top-level`              |
 
-**问题：** Teams API 不会暴露频道使用的是哪种 UI 样式。如果你使用了错误的 `replyStyle`：
+**Problem:** The Teams API does not expose which UI style a channel uses. If you use the wrong `replyStyle`:
 
-- 在 Threads 风格频道中使用 `thread` → 回复会嵌套得很别扭
-- 在 Posts 风格频道中使用 `top-level` → 回复会显示为单独的顶层帖子，而不是线程内回复
+- In Threads-style channels, using `thread` → replies nest awkwardly
+- In Posts-style channels, using `top-level` → replies appear as separate top-level posts instead of in-thread replies
 
-**解决方案：** 根据频道的设置情况，按频道配置 `replyStyle`：
+**Solution:** Set `replyStyle` per channel based on the channel’s configuration:
 
 ```json5
 {
@@ -751,124 +805,125 @@ Teams 最近在同一底层数据模型之上引入了两种频道 UI 样式：
 }
 ```
 
-### 优先级顺序
+### Priority Order
 
-当机器人向频道发送回复时，`replyStyle` 会从最具体的覆盖项逐级解析到默认值。第一个非 `undefined` 的值生效：
+When the bot sends a reply to a channel, `replyStyle` is resolved from the most specific override down to the default. The first non-`undefined` value wins:
 
-1. **按频道** — `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`
-2. **按团队** — `channels.msteams.teams.<teamId>.replyStyle`
-3. **全局** — `channels.msteams.replyStyle`
-4. **隐式默认值** — 由 `requireMention` 推导：
+1. **Per channel** — `channels.msteams.teams.<teamId>.channels.<conversationId>.replyStyle`
+2. **Per team** — `channels.msteams.teams.<teamId>.replyStyle`
+3. **Global** — `channels.msteams.replyStyle`
+4. **Implicit default** — inferred from `requireMention`:
    - `requireMention: true` → `thread`
    - `requireMention: false` → `top-level`
 
-如果你在全局设置了 `requireMention: false`，但没有显式设置 `replyStyle`，那么 Posts 风格频道中的提及消息会作为顶层帖子显示，即使入站消息是线程回复。为了避免意外，请在全局、团队或频道级别固定设置 `replyStyle: "thread"`。
+If you set `requireMention: false` globally but do not explicitly set `replyStyle`, then mention messages in Posts-style channels will appear as top-level posts, even if the incoming message was a thread reply. To avoid surprises, pin `replyStyle: "thread"` at the global, team, or channel level.
 
-### 线程上下文保留
+### Thread Context Preservation
 
-当 `replyStyle: "thread"` 生效，并且机器人是在频道线程中被 @提及时，OpenClaw 会将原始线程根重新附加到出站会话引用中（`19:…@thread.tacv2;messageid=<root>`），这样回复就会落在同一线程里。这对实时（in-turn）发送和 Bot Framework turn 上下文过期后的主动发送都适用（例如长时间运行的 agent、通过 `mcp__openclaw__message` 队列的工具调用回复）。
+When `replyStyle: "thread"` is in effect and the bot is mentioned inside a channel thread, OpenClaw reattaches the original thread root to the outbound conversation reference (`19:…@thread.tacv2;messageid=<root>`), so replies land in the same thread. This applies both to in-turn sends and proactive sends after the Bot Framework turn context has expired (for example, long-running agents or tool-call replies queued through `mcp__openclaw__message`).
 
-线程根会从会话引用中保存的 `threadId` 获取。更早期、尚未包含 `threadId` 的旧引用会回退到 `activityId`（即最近一次为会话提供上下文的入站 activity），因此现有部署无需重新播种也能继续工作。
+The thread root is taken from the `threadId` stored on the conversation reference. Older references that do not yet include `threadId` fall back to `activityId` (the most recent inbound activity that provided context for the conversation), so existing deployments keep working without reseeding.
 
-当 `replyStyle: "top-level"` 生效时，来自频道线程的入站消息会被有意作为新的顶层帖子来回复——不会附加线程后缀。这对于 Threads 风格频道来说是正确行为；如果你看到本应是线程回复的消息却变成了顶层帖子，那么说明该频道的 `replyStyle` 配置错误。
+When `replyStyle: "top-level"` is in effect, inbound messages from channel threads are intentionally replied to as new top-level posts — no thread suffix is attached. This is correct behavior for Threads-style channels; if you see a message that should have been a thread reply become a top-level post, the channel’s `replyStyle` is misconfigured.
 
-## 附件和图片
+## Attachments and Images
 
-**当前限制：**
+**Current limitations:**
 
-- **DM：** 图片和文件附件可通过 Teams bot 文件 API 使用。
-- **频道/群组：** 附件存储在 M365 存储中（SharePoint/OneDrive）。webhook payload 只包含 HTML 占位片段，不包含实际文件字节。**下载频道附件需要 Graph API 权限**。
-- 对于显式“先文件”发送，请使用 `action=upload-file` 配合 `media` / `filePath` / `path`；可选的 `message` 会成为随附文本/评论，而 `filename` 会覆盖上传名称。
+- **DMs:** Images and file attachments can be used via the Teams bot file API.
+- **Channels/Groups:** Attachments are stored in M365 storage (SharePoint/OneDrive). The webhook payload includes only an HTML placeholder fragment, not the actual file bytes. **Downloading channel attachments requires Graph API permissions**.
+- For explicit “file-first” sends, use `action=upload-file` with `media` / `filePath` / `path`; optional `message` becomes the accompanying text/comment, and `filename` overrides the upload name.
 
-没有 Graph 权限时，带图片的频道消息会以纯文本接收（机器人无法访问图片内容）。
-默认情况下，OpenClaw 仅从 Microsoft/Teams 主机名下载媒体。可通过 `channels.msteams.mediaAllowHosts` 覆盖（使用 `["*"]` 可允许任何主机）。
-只有在 `channels.msteams.mediaAuthAllowHosts` 中列出的主机才会附加 Authorization 头（默认 Graph + Bot Framework 主机）。请保持此列表严格（避免使用多租户后缀）。
+Without Graph permissions, channel messages with images are received as plain text (the bot cannot access the image content).
+By default, OpenClaw downloads media only from Microsoft/Teams hostnames. Override via `channels.msteams.mediaAllowHosts` (use `["*"]` to allow any host).
+Only hosts listed in `channels.msteams.mediaAuthAllowHosts` get an Authorization header attached (Graph + Bot Framework hosts by default). Keep this list strict (avoid multi-tenant suffixes).
 
-## 在群聊中发送文件
+## Sending Files in Group Chats
 
-机器人可以使用 FileConsentCard 流程在 DM 中发送文件（内置支持）。不过，**在群聊/频道中发送文件** 需要额外配置：
+The bot can send files in DMs using the FileConsentCard flow (built in). However, **sending files in group chats/channels** requires extra configuration:
 
-| 场景                     | 文件发送方式                                      | 所需配置                                      |
+| Scenario                 | File sending method                               | Required config                               |
 | ------------------------ | ------------------------------------------------- | --------------------------------------------- |
-| **DMs**                  | FileConsentCard → 用户接受 → 机器人上传           | 开箱即用                                      |
-| **群聊/频道**            | 上传到 SharePoint → 分享链接                       | 需要 `sharePointSiteId` + Graph 权限          |
-| **图片（任意场景）**     | Base64 编码内联                                   | 开箱即用                                      |
+| **DMs**                  | FileConsentCard → user accepts → bot uploads      | Works out of the box                           |
+| **Group chats/Channels** | Upload to SharePoint → share link                 | Requires `sharePointSiteId` + Graph permissions |
+| **Images (any scenario)**| Base64 inline encoding                           | Works out of the box                           |
 
-### 为什么群聊需要 SharePoint
+### Why Group Chats Need SharePoint
 
-机器人没有个人 OneDrive（`/me/drive` Graph API 端点对应用身份不起作用）。要在群聊/频道中发送文件，机器人会将文件上传到一个 **SharePoint site** 并创建分享链接。
+The bot does not have a personal OneDrive (`/me/drive` Graph API endpoints do not work with application identity). To send files in group chats/channels, the bot uploads the file to a **SharePoint site** and creates a share link.
 
-### 设置
+### Setup
 
-1. 在 Entra ID（Azure AD）→ 应用注册中 **添加 Graph API 权限**：
-   - `Sites.ReadWrite.All`（Application）- 将文件上传到 SharePoint
-   - `Chat.Read.All`（Application）- 可选，启用按用户共享链接
+1. In Entra ID (Azure AD) → App registrations, **add Graph API permissions**:
+   - `Sites.ReadWrite.All` (Application) - upload files to SharePoint
+   - `Chat.Read.All` (Application) - optional, enables user-specific sharing links
 
-2. 为租户 **授予管理员同意**。
+2. **Grant admin consent** for the tenant.
 
-3. **获取你的 SharePoint site ID：**
+3. **Get your SharePoint site ID:**
 
    ```bash
-   # 通过 Graph Explorer 或使用有效 token 的 curl：
+   # Via Graph Explorer or using curl with a valid token:
    curl -H "Authorization: Bearer $TOKEN" \
      "https://graph.microsoft.com/v1.0/sites/{hostname}:/{site-path}"
 
-   # 示例：站点位于 "contoso.sharepoint.com/sites/BotFiles"
+   # Example: site is located at "contoso.sharepoint.com/sites/BotFiles"
    curl -H "Authorization: Bearer $TOKEN" \
      "https://graph.microsoft.com/v1.0/sites/contoso.sharepoint.com:/sites/BotFiles"
 
-   # 响应包含："id": "contoso.sharepoint.com,guid1,guid2"
+   # Response includes: "id": "contoso.sharepoint.com,guid1,guid2"
    ```
 
-4. **配置 OpenClaw：**
+4. **Configure OpenClaw:**
 
    ```json5
    {
      channels: {
        msteams: {
-         // ... 其他配置 ...
+         // ... other configuration ...
          sharePointSiteId: "contoso.sharepoint.com,guid1,guid2",
        },
      },
    }
    ```
 
-### 分享行为
+### Sharing Behavior
 
-| 权限                                  | 分享行为                                                 |
-| ------------------------------------- | -------------------------------------------------------- |
-| `Sites.ReadWrite.All` 仅此一项        | 组织范围分享链接（组织内任何人都可访问）                  |
-| `Sites.ReadWrite.All` + `Chat.Read.All` | 按用户分享链接（只有聊天成员可访问）                     |
+| Permission                             | Sharing behavior                                      |
+| -------------------------------------- | ----------------------------------------------------- |
+| `Sites.ReadWrite.All` only              | Organization-wide share link (anyone in org can access) |
+| `Sites.ReadWrite.All` + `Chat.Read.All` | User-specific share link (only chat members can access) |
 
-按用户分享更安全，因为只有聊天参与者可以访问该文件。如果缺少 `Chat.Read.All` 权限，机器人会回退为组织范围分享。
+User-specific sharing is more secure because only chat participants can access the file. If `Chat.Read.All` is missing, the bot falls back to organization-wide sharing.
 
-### 回退行为
+### Fallback Behavior
 
-| 场景                                             | 结果                                               |
-| ------------------------------------------------ | -------------------------------------------------- |
-| 群聊 + 文件 + 已配置 `sharePointSiteId`          | 上传到 SharePoint，发送分享链接                    |
-| 群聊 + 文件 + 未配置 `sharePointSiteId`          | 尝试 OneDrive 上传（可能失败），仅发送文本         |
-| 个人聊天 + 文件                                  | FileConsentCard 流程（无需 SharePoint 也可工作）    |
-| 任意场景 + 图片                                  | Base64 编码内联（无需 SharePoint 也可工作）         |
+| Scenario                                         | Result                                              |
+| ----------------------------------------------- | --------------------------------------------------- |
+| Group chat + file + configured `sharePointSiteId` | Upload to SharePoint, send share link              |
+| Group chat + file + no `sharePointSiteId`        | Try OneDrive upload (may fail), send text only      |
+| Personal chat + file                            | FileConsentCard flow (works without SharePoint too) |
+| Any scenario + image                            | Base64 inline encoding (works without SharePoint too) |
 
-### 文件存储位置
+### File Storage Location
 
-上传的文件会存储在所配置 SharePoint site 的默认文档库中的 `/OpenClawShared/` 文件夹内。
+Uploaded files are stored in the `/OpenClawShared/` folder in the default document library of the configured SharePoint site.
 
-## 投票（Adaptive Cards）
+## Polls (Adaptive Cards)
 
-OpenClaw 将 Teams 投票作为 Adaptive Cards 发送（没有原生的 Teams 投票 API）。
+OpenClaw sends Teams polls as Adaptive Cards (no native Teams poll API).
 
 - CLI: `openclaw message poll --channel msteams --target conversation:<id> ...`
-- 票数由网关记录到 `~/.openclaw/msteams-polls.json`。
-- 网关必须保持在线才能记录投票。
-- 投票目前不会自动发布结果摘要（如有需要，请查看存储文件）。
+- 投票由 gateway 记录到 OpenClaw 插件状态 SQLite 中，位于 `state/openclaw.sqlite`。
+- Existing `msteams-polls.json` files are imported by `openclaw doctor --fix`, not by the running plugin.
+- The gateway must stay online to record votes.
+- Polls do not auto-post result summaries yet, and there is no supported poll-results CLI yet.
 
-## 演示卡片
+## Presentation Cards
 
-使用 `message` 工具、CLI 或普通回复投递向 Teams 用户或会话发送语义化演示负载。OpenClaw 会将它们渲染为基于通用演示契约的 Teams Adaptive Cards。
+Use the `message` tool, CLI, or a normal reply to deliver semantic presentation payloads to Teams users or conversations. OpenClaw renders them as Teams Adaptive Cards based on the common presentation contract.
 
-`presentation` 参数接受语义块。提供 `presentation` 时，消息文本为可选项。按钮会渲染为 Adaptive Card 的提交或 URL 操作。选择菜单目前不是 Teams 渲染器的原生支持，因此 OpenClaw 会在投递前将其降级为可读文本。
+`presentation` parameters accept semantic blocks. When `presentation` is provided, message text is optional. Buttons render as Adaptive Card submit or URL actions. Choice menus are not natively supported by the Teams renderer yet, so OpenClaw degrades them to readable text before delivery.
 
 **Agent tool:**
 
@@ -892,7 +947,7 @@ openclaw message send --channel msteams \
   --presentation '{"title":"你好","blocks":[{"type":"text","text":"你好！"}]}'
 ```
 
-有关目标格式的详细信息，请参见下面的[目标格式](#target-formats)。
+For details on target formats, see [Target Formats](#target-formats) below.
 
 ## 目标格式
 

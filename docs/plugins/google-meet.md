@@ -406,7 +406,6 @@ openclaw googlemeet join https://meet.google.com/abc-defg-hij \
   --transport twilio \
   --dial-in-number +15551234567 \
   --dtmf-sequence ww123456#
-```
 
 ## OAuth 和预检
 
@@ -820,7 +819,7 @@ export GEMINI_API_KEY=...
 默认值：
 
 - `defaultTransport: "chrome"`
-- `defaultMode: "agent"` (`"realtime"` 仅作为 `"agent"` 的旧版兼容别名接受；新的工具调用应使用 `"agent"`）
+- `defaultMode: "agent"` (`"realtime"` 仅作为 `"agent"` 的旧版兼容别名接受；新的工具调用应使用 `"agent"`)
 - `chromeNode.node`: `chrome-node` 的可选节点 id/名称/IP
 - `chrome.audioBackend: "blackhole-2ch"`
 - `chrome.guestName: "OpenClaw Agent"`：在未登录的 Meet 来宾界面上使用的名称
@@ -831,7 +830,7 @@ export GEMINI_API_KEY=...
 - `chrome.audioBufferBytes: 4096`：用于生成 Chrome 命令对音频命令的 SoX 处理缓冲区。这是 SoX 默认 8192 字节缓冲区的一半，在保留忙碌主机上可调高空间的同时降低默认管道延迟。低于 SoX 最小值的值会被钳制为 17 字节。
 - `chrome.audioInputCommand`：从 CoreAudio `BlackHole 2ch` 读取并以 `chrome.audioFormat` 写入音频的 SoX 命令
 - `chrome.audioOutputCommand`：以 `chrome.audioFormat` 读取音频并写入 CoreAudio `BlackHole 2ch` 的 SoX 命令
-- `chrome.bargeInInputCommand`：可选的本地麦克风命令，在助手播放 सक्रिय 时写出有符号 16 位小端单声道 PCM，用于检测人工插话。目前这适用于 Gateway 托管的 `chrome` 命令对桥接。
+- `chrome.bargeInInputCommand`：可选的本地麦克风命令，在助手播放活动时写出有符号 16 位小端单声道 PCM，用于检测人工插话。目前这适用于 Gateway 托管的 `chrome` 命令对桥接。
 - `chrome.bargeInRmsThreshold: 650`：在 `chrome.bargeInInputCommand` 上被视为人工打断的 RMS 电平
 - `chrome.bargeInPeakThreshold: 2500`：在 `chrome.bargeInInputCommand` 上被视为人工打断的峰值电平
 - `chrome.bargeInCooldownMs: 900`：重复人工打断清除之间的最小延迟
@@ -892,7 +891,7 @@ export GEMINI_API_KEY=...
     introMessage: "请准确说：I'm here.",
     providers: {
       google: {
-        voice: "Kore",
+        speakerVoice: "Kore",
       },
     },
   },
@@ -909,7 +908,7 @@ ElevenLabs 同时用于 agent 模式的听和说：
       providers: {
         elevenlabs: {
           modelId: "eleven_v3",
-          voiceId: "pMsXgVXv3BLzUgSXRplE",
+          speakerVoiceId: "pMsXgVXv3BLzUgSXRplE",
         },
       },
     },
@@ -936,7 +935,8 @@ ElevenLabs 同时用于 agent 模式的听和说：
 }
 ```
 
-持久化的 Meet 语音来自 `messages.tts.providers.elevenlabs.voiceId`。当启用 TTS 模型覆盖时，agent 回复也可以使用逐条回复的 `[[tts:voiceId=... model=eleven_v3]]` 指令，但配置是会议的确定性默认值。加入时，日志应显示 `transcriptionProvider=elevenlabs`，并且每条播报的回复都应记录 `provider=elevenlabs model=eleven_v3 voice=<voiceId>`。
+持久化的 Meet 声音来自
+`messages.tts.providers.elevenlabs.speakerVoiceId`。在启用 TTS 模型覆盖时，agent 回复也可以使用按回复的 `[[tts:speakerVoiceId=... model=eleven_v3]]` 指令，但配置是会议的确定性默认值。加入时，日志应显示 `transcriptionProvider=elevenlabs`，并且每条口语回复都应记录 `provider=elevenlabs model=eleven_v3 speakerVoiceId=<voiceId>`。
 
 仅 Twilio 配置：
 
@@ -981,7 +981,7 @@ Agent 可以使用 `google_meet` 工具：
 - `providerConnected` / `realtimeReady`: 实时语音桥接状态
 - `lastInputAt` / `lastOutputAt`: 来自桥接或发送到桥接的最近音频
 - `audioOutputRouted` / `audioOutputDeviceLabel`: Meet 标签页的媒体输出是否正在主动路由到桥接使用的 BlackHole 设备
-- `lastSuppressedInputAt` / `suppressedInputBytes`: 助手播放 सक्रिय 时被忽略的回环输入
+- `lastSuppressedInputAt` / `suppressedInputBytes`: 助手播放活动时被忽略的回环输入
 
 ```json
 {

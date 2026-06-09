@@ -6,22 +6,15 @@ read_when:
 title: "Qwen"
 ---
 
-<Warning>
-
-**Qwen OAuth 已被移除。** 使用 `portal.qwen.ai` 端点的免费层 OAuth 集成
-（`qwen-portal`）现已不可用。
-背景请参见 [Issue #49557](https://github.com/openclaw/openclaw/issues/49557)。
-
-</Warning>
-
 OpenClaw 现在将 Qwen 视为一等内置提供方，规范 id 为
-`qwen`。该内置提供方面向 Qwen Cloud / Alibaba DashScope 和
-Coding Plan 端点，并保留旧的 `modelstudio` id 作为
-兼容别名继续可用。
+`qwen`。这个内置提供方面向 Qwen Cloud / Alibaba DashScope 和
+Coding Plan 端点，保留旧的 `modelstudio` id 作为兼容
+别名，并且还将 Qwen Portal 令牌流程暴露为提供方 `qwen-oauth`。
 
-- Provider: `qwen`
+- 提供方: `qwen`
+- Portal 提供方: [`qwen-oauth`](/providers/qwen-oauth)
 - 首选环境变量: `QWEN_API_KEY`
-- 为兼容性也接受: `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY`
+- 兼容接受的环境变量: `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY`
 - API 风格: 兼容 OpenAI
 
 <Tip>
@@ -131,16 +124,55 @@ Coding Plan 的支持可能会滞后于公开目录。
     </Note>
 
   </Tab>
+
+  <Tab title="Qwen OAuth / Portal">
+    **最适合：** 针对 `https://portal.qwen.ai/v1` 的 Qwen Portal 令牌。
+
+    请参见 [Qwen OAuth / Portal](/providers/qwen-oauth) 了解专用提供方
+    页面和迁移说明。
+
+    <Steps>
+      <Step title="提供你的 Portal 令牌">
+        ```bash
+        openclaw onboard --auth-choice qwen-oauth
+        ```
+      </Step>
+      <Step title="设置默认模型">
+        ```json5
+        {
+          agents: {
+            defaults: {
+              model: { primary: "qwen-oauth/qwen3.5-plus" },
+            },
+          },
+        }
+        ```
+      </Step>
+      <Step title="验证模型是否可用">
+        ```bash
+        openclaw models list --provider qwen-oauth
+        ```
+      </Step>
+    </Steps>
+
+    <Note>
+    `qwen-oauth` 使用与 DashScope 提供方相同的 `QWEN_API_KEY` 环境变量名，
+    但在通过 OpenClaw 引导配置时，会将认证信息存储在 `qwen-oauth`
+    提供方 id 下。
+    </Note>
+
+  </Tab>
 </Tabs>
 
 ## 计划类型和端点
 
 | 计划                       | 区域   | 认证选项                   | 端点                                             |
 | -------------------------- | ------ | -------------------------- | ------------------------------------------------ |
-| Standard（按量付费）       | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
-| Standard（按量付费）       | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
-| Coding Plan（订阅制）      | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`               |
-| Coding Plan（订阅制）      | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`          |
+| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
+| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
+| Coding Plan (subscription) | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`               |
+| Coding Plan (subscription) | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`          |
+| Qwen Portal                | Global | `qwen-oauth`               | `portal.qwen.ai/v1`                              |
 
 该提供方会根据你的认证选项自动选择端点。规范的
 选项使用 `qwen-*` 系列；`modelstudio-*` 仍然仅用于兼容。
@@ -156,17 +188,18 @@ Coding Plan 的支持可能会滞后于公开目录。
 OpenClaw 当前提供以下内置 Qwen 目录。已配置的目录会感知端点：
 Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
 
-| 模型引用                   | 输入        | 上下文    | 备注                                               |
-| -------------------------- | ----------- | --------- | -------------------------------------------------- |
-| `qwen/qwen3.5-plus`         | 文本, 图片  | 1,000,000 | 默认模型                                           |
-| `qwen/qwen3.6-plus`         | 文本, 图片  | 1,000,000 | 需要此模型时优先使用 Standard 端点                |
-| `qwen/qwen3-max-2026-01-23` | 文本        | 262,144   | Qwen Max 系列                                      |
-| `qwen/qwen3-coder-next`     | 文本        | 262,144   | 编程                                               |
-| `qwen/qwen3-coder-plus`     | 文本        | 1,000,000 | 编程                                               |
-| `qwen/MiniMax-M2.5`         | 文本        | 1,000,000 | 支持推理                                           |
-| `qwen/glm-5`                | 文本        | 202,752   | GLM                                                |
-| `qwen/glm-4.7`              | 文本        | 202,752   | GLM                                                |
-| `qwen/kimi-k2.5`            | 文本, 图片  | 262,144   | 通过 Alibaba 提供的 Moonshot AI                      |
+| Model ref                   | 输入         | 上下文    | 说明                                               |
+| --------------------------- | ------------ | --------- | -------------------------------------------------- |
+| `qwen/qwen3.5-plus`         | 文本, 图像    | 1,000,000 | 默认模型                                           |
+| `qwen/qwen3.6-plus`         | 文本, 图像    | 1,000,000 | 当你需要该模型时，优先使用 Standard 端点           |
+| `qwen/qwen3-max-2026-01-23` | 文本         | 262,144   | Qwen Max 系列                                      |
+| `qwen/qwen3-coder-next`     | 文本         | 262,144   | 编程                                               |
+| `qwen/qwen3-coder-plus`     | 文本         | 1,000,000 | 编程                                               |
+| `qwen/MiniMax-M2.5`         | 文本         | 1,000,000 | 支持推理                                           |
+| `qwen/glm-5`                | 文本         | 202,752   | GLM                                                |
+| `qwen/glm-4.7`              | 文本         | 202,752   | GLM                                                |
+| `qwen/kimi-k2.5`            | 文本, 图像    | 262,144   | 通过 Alibaba 提供的 Moonshot AI                    |
+| `qwen-oauth/qwen3.5-plus`   | 文本, 图像    | 1,000,000 | Qwen Portal 默认                                   |
 
 <Note>
 即使模型出现在内置目录中，实际可用性仍可能因端点和计费计划而异。

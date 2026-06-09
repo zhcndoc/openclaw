@@ -55,7 +55,7 @@ openclaw plugins update --all
 openclaw plugins marketplace list <marketplace>
 openclaw plugins marketplace list <marketplace> --json
 openclaw plugins init <id>
-openclaw plugins init <id> --directory ./my-plugin --name "My Plugin"
+openclaw plugins init <id> --directory ./my-plugin --name "我的插件"
 openclaw plugins build --entry ./dist/index.js
 openclaw plugins build --entry ./dist/index.js --check
 openclaw plugins validate --entry ./dist/index.js
@@ -79,7 +79,7 @@ openclaw plugins validate --entry ./dist/index.js
 ### 作者
 
 ```bash
-openclaw plugins init stock-quotes --name "Stock Quotes"
+openclaw plugins init stock-quotes --name "股票报价"
 cd stock-quotes
 npm run plugin:build
 npm run plugin:validate
@@ -154,30 +154,17 @@ Beta 通道的安装和更新会优先在可用时使用 npm 的 `beta` dist-tag
     `--pin` 仅适用于 npm 安装。不支持 `git:` 安装；当你想要锁定来源时，请使用显式 git ref，例如 `git:github.com/acme/plugin@v1.2.3`。它也不支持 `--marketplace`，因为 marketplace 安装会持久化 marketplace 源元数据，而不是 npm spec。
   </Accordion>
   <Accordion title="--dangerously-force-unsafe-install">
-    `--dangerously-force-unsafe-install` 是一个用于内置危险代码扫描器误报的“破窗”选项。即使内置扫描器报告 `critical` 发现，它也会允许安装继续，但它**不会**绕过插件 `before_install` 钩子策略阻断，也**不会**绕过扫描失败。
+    `--dangerously-force-unsafe-install` 已弃用，现在不再起作用。OpenClaw 不再对插件安装运行内置的危险代码拦截。
 
-    安装扫描会忽略常见的测试文件和目录，例如 `tests/`、`__tests__/`、`*.test.*` 和 `*.spec.*`，以避免阻止已打包的测试 mock；即使这些名称命中，声明的插件运行时入口点仍会被扫描。
+    当需要主机特定的安装策略时，请使用共享的、由 operator 拥有的 `security.installPolicy` 接口。插件的 `before_install` hooks 和 `security.installPolicy` 仍然可以阻止安装。
 
-    这个 CLI 标志适用于插件安装/更新流程。由 Gateway 驱动的 skill 依赖安装会使用匹配的 `dangerouslyForceUnsafeInstall` 请求覆盖，而 `openclaw skills install` 仍然是一个独立的 ClawHub skill 下载/安装流程。
-
-    如果你发布到 ClawHub 的插件被 registry 扫描隐藏或阻止，请使用 [ClawHub 发布](/clawhub/publishing) 中的发布者步骤。`--dangerously-force-unsafe-install` 只影响你自己机器上的安装；它不会要求 ClawHub 重新扫描该插件，也不会让被阻止的发布公开。
-  </Accordion>
-  <Accordion title="Hook 包和 npm spec">
-    `plugins install` 也是安装暴露 `package.json` 中 `openclaw.hooks` 的 hook 包的入口。请使用 `openclaw hooks` 进行过滤后的 hook 可见性和单个 hook 启用，而不是用于包安装。
-
-    Npm spec **仅限 registry**（包名 + 可选的**精确版本**或 **dist-tag**）。`git`/URL/file spec 和 semver 范围都会被拒绝。依赖安装会在项目本地运行，并为安全起见使用 `--ignore-scripts`，即使你的 shell 配置了全局 npm install 设置。受管理的插件 npm 根目录会继承 OpenClaw 包级别的 npm `overrides`，因此宿主安全 pin 也会应用到 hoisted 的插件依赖。
-
-    当你想显式使用 npm 解析时，请使用 `npm:<package>`。在启动切换期间，裸包 spec 也会直接从 npm 安装。
-
-    裸 spec 和 `@latest` 会保持在稳定通道。OpenClaw 带日期标记的修正版本（例如 `2026.5.3-1`）在此检查中被视为稳定发布。如果 npm 将它们解析为预发布版本，OpenClaw 会停止并要求你显式选择预发布标签（如 `@beta`/`@rc`）或精确的预发布版本（如 `@1.2.3-beta.4`）。
-
-    如果一个裸安装 spec 匹配到官方插件 id（例如 `diffs`），OpenClaw 会直接安装目录条目。若要安装同名的 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
+    如果你发布到 ClawHub 的插件被 registry 扫描隐藏或阻止，请使用 [ClawHub 发布](/clawhub/publishing) 中的发布者步骤。`--dangerously-force-unsafe-install` 不会要求 ClawHub 重新扫描插件，也不会将被阻止的发布公开。
 
   </Accordion>
   <Accordion title="Git 仓库">
     使用 `git:<repo>` 直接从 git 仓库安装。支持的形式包括 `git:github.com/owner/repo`、`git:owner/repo`、完整的 `https://`、`ssh://`、`git://`、`file://`，以及 `git@host:owner/repo.git` 克隆 URL。安装前可添加 `@<ref>` 或 `#<ref>` 来检出分支、标签或提交。
 
-    Git 安装会先克隆到临时目录，在存在 ref 时检出所请求的 ref，然后使用常规插件目录安装器。这意味着 manifest 验证、危险代码扫描、包管理器安装工作以及安装记录都表现得像 npm 安装。记录的 git 安装会包含源 URL/ref 以及解析后的提交，以便 `openclaw plugins update` 之后可以重新解析来源。
+    npm spec 仅限 registry（包名 + 可选的精确版本或 dist-tag）。`git:`、URL、file spec 以及 semver 范围都会被拒绝。依赖安装会在每个插件一个受管理的 npm 项目中运行，并使用 `--ignore-scripts` 以保证安全，即使你的 shell 已配置全局 npm 安装设置也是如此。受管理的插件 npm 项目会继承 OpenClaw 的包级 npm `overrides`，因此宿主安全固定也会作用于 hoist 上来的插件依赖。
 
     当你想显式使用 npm 解析时，请使用 `npm:<package>`。在启动切换期间，裸包 spec 也会直接从 npm 安装，除非它们匹配官方插件 id。
 
@@ -185,15 +172,29 @@ Beta 通道的安装和更新会优先在可用时使用 npm 的 `beta` dist-tag
 
     裸 spec 和 `@latest` 会保持在稳定通道。OpenClaw 带日期标记的修正版本（例如 `2026.5.3-1`）在此检查中被视为稳定发布。如果 npm 将它们解析为预发布版本，OpenClaw 会停止并要求你显式选择预发布标签（如 `@beta`/`@rc`）或精确的预发布版本（如 `@1.2.3-beta.4`）。
 
-    如果一个裸安装 spec 匹配到官方插件 id（例如 `diffs`），OpenClaw 会直接安装目录条目。若要安装同名的 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
+    对于没有精确版本的 npm 安装（`npm:<package>` 或 `npm:<package>@latest`），OpenClaw 会在安装前检查解析后的包元数据。如果最新稳定包需要更新的 OpenClaw 插件 API 或更高的主机最低版本，OpenClaw 会检查更早的稳定版本并改为安装最新兼容发布。精确版本和显式 dist-tag（例如 `@beta`）仍然严格遵守：如果所选包不兼容，命令会失败并要求你升级 OpenClaw 或选择兼容版本。
+
+    如果裸安装 spec 匹配官方插件 id（例如 `diffs`），OpenClaw 会直接安装目录条目。若要安装同名 npm 包，请使用显式的作用域 spec（例如 `@scope/diffs`）。
 
   </Accordion>
   <Accordion title="压缩包">
     支持的压缩包：`.zip`、`.tgz`、`.tar.gz`、`.tar`。原生 OpenClaw 插件压缩包必须在解压后的插件根目录中包含有效的 `openclaw.plugin.json`；仅包含 `package.json` 的压缩包会在 OpenClaw 写入安装记录之前被拒绝。
 
-    当文件是 npm-pack tarball 且你想测试与 registry 安装使用的同一受管理 npm 根安装路径时，请使用 `npm-pack:<path.tgz>`，包括 `package-lock.json` 验证、hoisted 依赖扫描和 npm install 记录。普通归档路径仍然会作为本地归档安装到插件扩展根目录下。
+    Git installs clone into a temporary directory, check out the requested ref when present, then use the normal plugin directory installer. That means manifest validation, operator install policy, package-manager install work, and install records behave like npm installs. Recorded git installs include the source URL/ref plus the resolved commit so `openclaw plugins update` can re-resolve the source later.
 
-    也支持 Claude marketplace 安装。
+    After installing from git, use `openclaw plugins inspect <id> --runtime --json` to verify runtime registrations such as gateway methods and CLI commands. If the plugin registered a CLI root with `api.registerCli`, execute that command directly through the OpenClaw root CLI, for example `openclaw demo-plugin ping`.
+
+  </Accordion>
+  <Accordion title="Archives">
+    Supported archives: `.zip`, `.tgz`, `.tar.gz`, `.tar`. Native OpenClaw plugin archives must contain a valid `openclaw.plugin.json` at the extracted plugin root; archives that only contain `package.json` are rejected before OpenClaw writes install records.
+
+    Use `npm-pack:<path.tgz>` when the file is an npm-pack tarball and you want
+    to test the same per-plugin managed npm project path used by registry
+    installs, including `package-lock.json` verification, hoisted dependency
+    scanning, and npm install records. Plain archive paths still install as local
+    archives under the plugin extensions root.
+
+    Claude marketplace installs are also supported.
 
   </Accordion>
 </AccordionGroup>
@@ -261,6 +262,10 @@ openclaw plugins install <plugin-name> --marketplace ./my-marketplace
 - 兼容 Claude 的捆绑包（`.claude-plugin/plugin.json` 或默认 Claude component 布局）
 - 兼容 Cursor 的捆绑包（`.cursor-plugin/plugin.json`）
 
+Managed local installs must be plugin directories or archives. Standalone `.js`,
+`.mjs`, `.cjs`, and `.ts` plugin files are not copied into the managed plugin
+root by `plugins install`; list them explicitly in `plugins.load.paths` instead.
+
 <Note>
 兼容捆绑包会安装到常规插件根目录，并参与相同的 list/info/enable/disable 流程。当前支持 bundle skills、Claude 命令技能、Claude `settings.json` 默认项、Claude `.lsp.json` / manifest 声明的 `lspServers` 默认项、Cursor 命令技能，以及兼容的 Codex hook 目录；其他已检测到的 bundle 能力会在诊断/info 中显示，但尚未接入运行时执行。
 </Note>
@@ -310,21 +315,40 @@ ClawHub 包名、family、channel、version、summary，以及类似 `openclaw p
 - `openclaw gateway status --deep --require-rpc` 确认可达的 Gateway URL/profile、服务/进程提示、配置路径和 RPC 健康状态。
 - 非捆绑的 conversation hooks（`llm_input`、`llm_output`、`before_model_resolve`、`before_agent_reply`、`before_agent_run`、`before_agent_finalize`、`agent_end`）需要 `plugins.entries.<id>.hooks.allowConversationAccess=true`。
 
-使用 `--link` 可避免复制本地目录（会添加到 `plugins.load.paths`）：
+Use `--link` to avoid copying a local plugin directory (adds to `plugins.load.paths`):
 
 ```bash
 openclaw plugins install -l ./my-plugin
 ```
 
+Standalone plugin files must be listed in `plugins.load.paths` rather than
+installed with `plugins install` or placed directly in `~/.openclaw/extensions`
+or `<workspace>/.openclaw/extensions`. Those auto-discovered roots load plugin
+package or bundle directories, while top-level script files are treated as local
+helpers and skipped.
+
 <Note>
-`--force` 不能与 `--link` 同用，因为链接安装会复用源路径，而不是覆盖到一个受管理的安装目标上。
+Workspace-origin plugins discovered from a workspace extensions root are not
+imported or executed until they are explicitly enabled. For local development,
+run `openclaw plugins enable <plugin-id>` or set
+`plugins.entries.<plugin-id>.enabled: true`; if your config uses
+`plugins.allow`, include the same plugin id there too. This fail-closed rule
+also applies when channel setup explicitly targets a workspace-origin plugin for
+setup-only loading, so local channel plugin setup code will not run while that
+workspace plugin remains disabled or excluded from the allowlist. Linked installs
+and explicit `plugins.load.paths` entries follow the normal policy for their
+resolved plugin origin. See
+[Configure plugin policy](/tools/plugin#configure-plugin-policy)
+and [Configuration reference](/gateway/configuration-reference#plugins).
+
+`--force` is not supported with `--link` because linked installs reuse the source path instead of copying over a managed install target.
 
 在 npm 安装上使用 `--pin` 会将解析得到的精确 spec（`name@version`）保存到受管理的插件索引中，同时保留默认的不锁定行为。
 </Note>
 
 ### 插件索引
 
-插件安装元数据是机器管理的状态，不是用户配置。安装和更新会将其写入活动 OpenClaw 状态目录下的 `plugins/installs.json`。其顶层的 `installRecords` map 是安装元数据的持久来源，包括损坏或缺失插件 manifest 的记录。`plugins` 数组是基于 manifest 派生的冷 registry 缓存。该文件包含“请勿编辑”警告，并被 `openclaw plugins update`、uninstall、diagnostics 以及冷插件 registry 使用。
+Plugin install metadata is machine-managed state, not user config. Installs and updates write it to the shared SQLite state database under the active OpenClaw state directory. The `installed_plugin_index` row stores durable `installRecords` metadata, including records for broken or missing plugin manifests, plus a manifest-derived cold registry cache used by `openclaw plugins update`, uninstall, diagnostics, and the cold plugin registry.
 
 当 OpenClaw 看到配置中附带的旧版 `plugins.installs` 记录时，运行时读取会将其视为兼容性输入，而不会重写 `openclaw.json`。显式的插件写入和 `openclaw doctor --fix` 会在允许配置写入时把这些记录移到插件索引中并移除该配置键；如果任一写入失败，则会保留配置中的记录，以免丢失安装元数据。
 
@@ -372,8 +396,14 @@ openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-ins
     当存储的完整性哈希存在且获取到的产物哈希发生变化时，OpenClaw 会将其视为 npm 产物漂移。交互式的 `openclaw plugins update` 命令会打印预期和实际哈希，并在继续之前要求确认。非交互式更新助手会失败关闭，除非调用方提供明确的继续策略。
 
   </Accordion>
-  <Accordion title="更新时的 --dangerously-force-unsafe-install">
-    `--dangerously-force-unsafe-install` 也可用于 `plugins update`，作为插件更新期间内置危险代码扫描误报的破窗覆盖。它仍然不会绕过插件 `before_install` 策略阻断或扫描失败阻断，并且它只适用于插件更新，不适用于 hook 包更新。
+  <Accordion title="Version checks and integrity drift">
+    Before a live npm update, OpenClaw checks the installed package version against the npm registry metadata. If the installed version and recorded artifact identity already match the resolved target, the update is skipped without downloading, reinstalling, or rewriting `openclaw.json`.
+
+    When a stored integrity hash exists and the fetched artifact hash changes, OpenClaw treats that as npm artifact drift. The interactive `openclaw plugins update` command prints the expected and actual hashes and asks for confirmation before proceeding. Non-interactive update helpers fail closed unless the caller supplies an explicit continuation policy.
+
+  </Accordion>
+  <Accordion title="--dangerously-force-unsafe-install on update">
+    `--dangerously-force-unsafe-install` is also accepted on `plugins update` for compatibility, but it is deprecated and no longer changes plugin update behavior. Operator `security.installPolicy` and plugin `before_install` hooks can still block updates.
   </Accordion>
 </AccordionGroup>
 
@@ -426,7 +456,7 @@ openclaw plugins registry --json
 
 使用 `plugins registry` 来检查持久化 registry 是否存在、是否最新或是否过期。使用 `--refresh` 可根据持久化插件索引、配置策略以及 manifest/package 元数据重建它。这是一条修复路径，不是运行时激活路径。
 
-`openclaw doctor --fix` 还会修复 registry 附近已管理的 npm 漂移：如果受管理插件 npm 根目录下某个孤立或恢复的 `@openclaw/*` 包遮蔽了一个捆绑插件，doctor 会移除那个过期包并重建 registry，从而使启动时针对捆绑 manifest 的验证能够通过。Doctor 还会把宿主 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管理 npm 插件中，以便更新或 npm 修复后，诸如 `openclaw/plugin-sdk/*` 之类的包内运行时导入能够正常解析。
+`openclaw doctor --fix` 还会修复 registry 相关的受管理 npm 漂移：如果受管理插件 npm 项目或旧的扁平受管理 npm 根目录下一个孤立或恢复的 `@openclaw/*` 包遮蔽了捆绑插件，doctor 会移除该旧包并重建 registry，以便启动时按捆绑清单进行验证。Doctor 还会把主机 `openclaw` 包重新链接到声明了 `peerDependencies.openclaw` 的受管理 npm 插件中，因此诸如 `openclaw/plugin-sdk/*` 之类的包本地运行时导入在更新或 npm 修复后也能解析成功。
 
 <Warning>
 `OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY=1` 是一个已弃用的、用于 registry 读取失败的“破窗”兼容开关。请优先使用 `plugins registry --refresh` 或 `openclaw doctor --fix`；环境变量回退只用于迁移过程中的紧急启动恢复。

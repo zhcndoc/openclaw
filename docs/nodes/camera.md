@@ -59,9 +59,9 @@ OpenClaw 支持用于代理工作流的**摄像头采集**：
 
 与 `canvas.*` 一样，iOS 节点只允许在**前台**执行 `camera.*` 命令。后台调用会返回 `NODE_BACKGROUND_UNAVAILABLE`。
 
-### CLI 辅助工具（临时文件 + MEDIA）
+### CLI helper
 
-获取附件的最简单方式是使用 CLI 辅助工具，它会将解码后的媒体写入临时文件并打印 `MEDIA:<path>`。
+获取媒体文件的最简单方式是使用 CLI helper，它会将解码后的媒体写入临时文件并打印保存路径。
 
 示例：
 
@@ -125,13 +125,13 @@ macOS 配套应用提供一个复选框：
 示例：
 
 ```bash
-openclaw nodes camera list --node <id>            # 列出 camera id
-openclaw nodes camera snap --node <id>            # 打印 MEDIA:<path>
+openclaw nodes camera list --node <id>            # 列出摄像头 ID
+openclaw nodes camera snap --node <id>            # 打印保存路径
 openclaw nodes camera snap --node <id> --max-width 1280
 openclaw nodes camera snap --node <id> --delay-ms 2000
 openclaw nodes camera snap --node <id> --device-id <id>
-openclaw nodes camera clip --node <id> --duration 10s          # 打印 MEDIA:<path>
-openclaw nodes camera clip --node <id> --duration-ms 3000      # 打印 MEDIA:<path>（旧参数）
+openclaw nodes camera clip --node <id> --duration 10s          # 打印保存路径
+openclaw nodes camera clip --node <id> --duration-ms 3000      # 打印保存路径（旧版标志）
 openclaw nodes camera clip --node <id> --device-id <id>
 openclaw nodes camera clip --node <id> --no-audio
 ```
@@ -152,7 +152,7 @@ openclaw nodes camera clip --node <id> --no-audio
 对于 _屏幕_ 视频（不是摄像头），请使用 macOS 配套应用：
 
 ```bash
-openclaw nodes screen record --node <id> --duration 10s --fps 15   # 打印 MEDIA:<path>
+openclaw nodes screen record --node <id> --duration 10s --fps 15   # 打印保存路径
 ```
 
 注意：

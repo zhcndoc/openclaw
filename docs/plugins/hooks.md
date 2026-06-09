@@ -100,19 +100,21 @@ export default definePluginEntry({
 
 **工具**
 
-- **`before_tool_call`** - 重写工具参数、阻止执行或要求批准
+- **`before_tool_call`** - 重写工具参数、阻止执行，或要求批准
 - `after_tool_call` - 观察工具结果、错误和持续时间
+- `resolve_exec_env` - 向 `exec` 提供插件拥有的环境变量
 - **`tool_result_persist`** - 重写由工具结果生成的 assistant 消息
-- **`before_message_write`** - 检查或阻止正在进行的消息写入（较少见）
+- **`before_message_write`** - 检查或阻止正在进行中的消息写入（较少见）
 
 **消息与传递**
 
-- **`inbound_claim`** - 在 agent 路由前认领传入消息（合成回复）
-- `message_received` - 观察传入内容、发送者、线程和元数据
-- **`message_sending`** - 重写传出内容或取消投递
-- `message_sent` - 观察传出投递成功或失败
-- **`before_dispatch`** - 在通道交接前检查或重写传出分发
-- **`reply_dispatch`** - 参与最终回复分发流水线
+- **`inbound_claim`** - 在 agent 路由前声明进入消息的处理权（合成回复）
+- `message_received` — 观察进入内容、发送者、线程和元数据
+- **`message_sending`** — 重写发出的内容或取消投递
+- **`reply_payload_sending`** — 在投递前修改或取消规范化的回复负载
+- `message_sent` — 观察发出投递的成功或失败
+- **`before_dispatch`** - 在通道交接前检查或重写发出调度
+- **`reply_dispatch`** - 参与最终的回复调度管道
 
 **Sessions 与压缩**
 
@@ -122,14 +124,17 @@ export default definePluginEntry({
 
 **Subagent**
 
-- `subagent_spawning` / `subagent_delivery_target` / `subagent_spawned` / `subagent_ended` - 协调 subagent 路由和完成投递
+- `subagent_spawned` / `subagent_ended` - 观察 subagent 启动和完成。
+- `subagent_delivery_target` - 当没有核心 session 绑定能够投影路由时，用于完成投递的兼容钩子。
+- `subagent_spawning` - 已弃用的兼容钩子。核心现在会在 `subagent_spawned` 触发前，通过通道 session-binding 适配器准备 `thread: true` 的 subagent 绑定。
+- 当 OpenClaw 在启动前已解析出子 session 的原生模型时，`subagent_spawned` 会包含 `resolvedModel` 和 `resolvedProvider`。
 
 **生命周期**
 
-- `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件自有服务
+- `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件拥有的服务
 - `deactivate` - `gateway_stop` 的已弃用兼容别名；新插件请使用 `gateway_stop`
-- `cron_changed` - 观察由 Gateway 管理的 cron 生命周期变更（已添加、已更新、已移除、已启动、已完成、已调度）
-- **`before_install`** - 检查 skill 或插件安装扫描，并可选择阻止
+- `cron_changed` - 观察 Gateway 拥有的 cron 生命周期变化（added、updated、removed、started、finished、scheduled）
+- **`before_install`** - 检查 skill 或插件安装上下文，并可选择阻止
 
 ## 调试运行时钩子
 
@@ -179,20 +184,32 @@ type BeforeToolCallResult = {
 
 类型化生命周期钩子的守卫行为：
 
-- `block: true` 是终止性的，会跳过低优先级处理器。
-- `block: false` 视为没有决策。
-- `params` 会用于执行时重写工具参数。
-- `requireApproval` 会暂停 agent 运行，并通过插件批准向用户请求。
-  `/approve` 命令可以批准 exec 和插件批准。
-- 较低优先级的 `block: true` 仍然可以在较高优先级钩子请求批准后阻止执行。
-- `onResolution` 接收已解析的批准决策 - `allow-once`、
-  `allow-always`、`deny`、`timeout` 或 `cancelled`。
+- `block: true` 为终态，会跳过更低优先级的处理器。
+- `block: false` 视为未作决定。
+- `params` 会重写用于执行的工具参数。
+- `requireApproval` 会暂停 agent 运行，并通过插件批准向用户请求。`/approve` 命令可以同时批准 exec 和插件批准。在 Codex app-server report-mode 的原生 `PreToolUse` 中继里，这会延迟到匹配的 app-server 批准请求；参见 [Codex harness runtime](/plugins/codex-harness-runtime#hook-boundaries)。
+- 更低优先级的 `block: true` 即使在更高优先级钩子请求批准后仍然可以阻止。
+- `onResolution` 接收已解析的批准决策 - `allow-once`、`allow-always`、`deny`、`timeout` 或 `cancelled`。
 
 有关批准路由、决策行为，以及何时使用 `requireApproval` 而不是可选工具或 exec 批准，请参见[插件权限请求](/plugins/plugin-permission-requests)。
 
 需要宿主级策略的捆绑插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略在普通 `before_tool_call` 钩子之前以及外部插件决策之前运行。仅将其用于宿主信任的门控，例如工作区策略、预算强制执行或保留工作流安全。外部插件应使用普通 `before_tool_call` 钩子。
 
-### 工具结果持久化
+### Exec environment hook
+
+`resolve_exec_env` 允许插件在基础 exec 环境构建完成后、命令运行前，为 `exec` 工具调用贡献环境变量。它接收：
+
+- `event.sessionKey`
+- `event.toolName`，当前始终为 `"exec"`
+- `event.host`，取值为 `"gateway"`、`"sandbox"` 或 `"node"`
+- 上下文字段，例如 `ctx.agentId`、`ctx.sessionKey`、
+  `ctx.messageProvider` 和 `ctx.channelId`
+
+返回一个 `Record<string, string>` 以合并进 exec 环境。处理器按优先级顺序运行，后续钩子结果会覆盖相同键的先前结果。
+
+钩子输出在合并前会先经过宿主 exec 环境键策略过滤。无效键、`PATH`，以及像 `LD_*`、`DYLD_*`、`NODE_OPTIONS`、代理变量和 TLS 覆盖变量这类危险的宿主覆盖键都会被丢弃。过滤后的插件环境会包含在 Gateway 批准/审计元数据中，并转发给 node-host 执行请求。
+
+### Tool result persistence
 
 工具结果可以包含用于 UI 渲染、诊断、媒体路由或插件自有元数据的结构化 `details`。请将 `details` 视为运行时元数据，而不是提示词内容：
 
@@ -270,36 +287,55 @@ type BeforeAgentFinalizeRetry = {
 
 将消息钩子用于通道级路由和投递策略：
 
-- `message_received`：观察入站内容、发送者、`threadId`、`messageId`、
-  `senderId`、可选的运行/会话关联信息以及元数据。
-- `message_sending`：重写 `content` 或返回 `{ cancel: true }`。
-- `message_sent`：观察最终成功或失败。
+- `message_received`: 观察入站内容、发送者、`threadId`、`messageId`,
+  `senderId`、可选的运行/会话关联以及元数据。
+- `message_sending`: 重写 `content` 或返回 `{ cancel: true }`。
+- `reply_payload_sending`: 重写规范化后的 `ReplyPayload` 对象（包括
+  `presentation`、`delivery`、媒体引用和文本），或返回 `{ cancel: true }`。
+- `message_sent`: 观察最终成功或失败。
 
 对于仅音频的 TTS 回复，即使通道负载中没有可见文本/说明文字，
 `content` 也可能包含隐藏的口语转写。重写该 `content` 只会更新钩子可见的转写；
 它不会作为媒体说明文字渲染。
 
-当可用时，消息钩子上下文会暴露稳定的关联字段：
-`ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、
-`ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 和 `ctx.callDepth`。优先使用这些
-一等字段，再读取旧版元数据。
+Message hook contexts expose stable correlation fields when available:
+`ctx.sessionKey`, `ctx.runId`, `ctx.messageId`, `ctx.senderId`, `ctx.trace`,
+`ctx.traceId`, `ctx.spanId`, `ctx.parentSpanId`, and `ctx.callDepth`. Inbound
+and `before_dispatch` contexts also expose reply metadata when the channel has
+visibility-filtered quoted message data: `replyToId`, `replyToBody`, and
+`replyToSender`. Prefer these first-class fields before reading legacy metadata.
 
 优先使用类型化的 `threadId` 和 `replyToId` 字段，然后再使用特定于通道的元数据。
 
 决策规则：
 
-- `message_sending` 中的 `cancel: true` 是终止性的。
-- `message_sending` 中的 `cancel: false` 视为没有决策。
-- 重写后的 `content` 会继续传递给更低优先级的钩子，除非后续钩子取消投递。
-- `message_sending` 可以在取消时返回 `cancelReason` 和有边界限制的 `metadata`。新的消息生命周期 API 会将其暴露为一个被抑制的投递结果，原因是 `cancelled_by_message_sending_hook`；旧版直接投递仍会为了兼容返回空结果数组。
-- `message_sent` 仅用于观察。处理器失败会被记录，但不会改变投递结果。
+- `message_sending` with `cancel: true` is terminal.
+- `message_sending` with `cancel: false` is treated as no decision.
+- Rewritten `content` continues to lower-priority hooks unless a later hook
+  cancels delivery.
+- `reply_payload_sending` runs after payload normalization and before channel
+  delivery, including replies routed back to the originating channel. Handlers
+  run sequentially and each handler sees the latest payload produced by
+  higher-priority handlers.
+- `reply_payload_sending` payloads do not expose runtime trust markers such as
+  `trustedLocalMedia`; plugins can edit payload shape but cannot grant local
+  media trust.
+- `message_sending` can return `cancelReason` and bounded `metadata` with a
+  cancellation. New message lifecycle APIs expose this as a suppressed delivery
+  outcome with reason `cancelled_by_message_sending_hook`; legacy direct
+  delivery keeps returning an empty result array for compatibility.
+- `message_sent` is observation-only. Handler failures are logged and do not
+  change the delivery result.
 
 ## 安装钩子
 
-`before_install` 在内置的技能和插件安装扫描之后运行。
-返回额外的发现结果，或返回 `{ block: true, blockReason }` 以停止安装。
+`before_install` 在配置了由操作者拥有的 `security.installPolicy` 检查后运行。
+`builtinScan` 字段仍保留在事件载荷中以兼容旧版，但 OpenClaw 不再执行内置的安装时危险代码阻止，
+因此它是一个空的 `ok` 结果。返回额外的发现项或
+`{ block: true, blockReason }` 以停止安装。
 
-`block: true` 为终态。`block: false` 视为没有决策。
+`block: true` 是终止性的。`block: false` 会被视为没有决定。
+处理器失败会以 fail-closed 方式阻止安装。
 
 ## 网关生命周期
 
@@ -322,17 +358,22 @@ type BeforeAgentFinalizeRetry = {
 
 有少数与钩子相邻的接口已弃用，但仍受支持。请在下一次重大版本发布前迁移：
 
-- **`inbound_claim` 和 `message_received` 处理器中的纯文本通道信封**。请读取
-  `BodyForAgent` 和结构化的用户上下文块，而不是解析扁平的信封文本。参见
-  [纯文本通道信封 → BodyForAgent](/plugins/sdk-migration#active-deprecations)。
-- **`before_agent_start`** 仍保留以兼容旧版。新插件应使用
-  `before_model_resolve` 和 `before_prompt_build`，而不是这个合并
-  阶段。
-- **`deactivate`** 将作为已弃用的清理兼容别名保留，直到
-  2026-08-16 之后。新插件应使用 `gateway_stop`。
-- **`before_tool_call` 中的 `onResolution`** 现在使用带类型的
-  `PluginApprovalResolution` 联合类型（`allow-once` / `allow-always` / `deny` /
-  `timeout` / `cancelled`），而不是自由形式的 `string`。
+- **Plaintext channel envelopes** in `inbound_claim` and `message_received`
+  handlers. Read `BodyForAgent` and the structured user-context blocks
+  instead of parsing flat envelope text. See
+  [Plaintext channel envelopes → BodyForAgent](/plugins/sdk-migration#active-deprecations).
+- **`before_agent_start`** remains for compatibility. New plugins should use
+  `before_model_resolve` and `before_prompt_build` instead of the combined
+  phase.
+- **`subagent_spawning`** remains for compatibility with older plugins, but
+  new plugins should not return thread routing from it. Core prepares
+  `thread: true` subagent bindings through channel session-binding adapters
+  before `subagent_spawned` fires.
+- **`deactivate`** remains as a deprecated cleanup compatibility alias until
+  after 2026-08-16. New plugins should use `gateway_stop`.
+- **`onResolution` in `before_tool_call`** now uses the typed
+  `PluginApprovalResolution` union (`allow-once` / `allow-always` / `deny` /
+  `timeout` / `cancelled`) instead of a free-form `string`.
 
 有关完整列表——内存能力注册、提供方思维
 配置文件、外部认证提供方、提供方发现类型、任务运行时

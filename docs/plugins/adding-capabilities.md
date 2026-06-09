@@ -120,10 +120,10 @@ sidebarTitle: "添加能力"
 有意比 memory 更宽：工具、搜索、检索、导入器，或未来的功能插件
 都可以消费 embeddings，而无需依赖 memory 引擎。
 
-对于 memory-engine 特定的适配器，请继续使用 `memoryEmbeddingProviders`。
-这些适配器拥有 memory 索引细节，例如查询/文档拆分、
-运行时元数据以及本地 memory 引擎设置。不要让通用的 embedding provider
-依赖于 memory 拥有的模块，除非该 provider 只能由 memory 使用。
+Memory search can consume generic `embeddingProviders`. The older
+`memoryEmbeddingProviders` contract is deprecated compatibility while existing
+memory-specific providers migrate; new reusable embedding providers should use
+`embeddingProviders`.
 
 ## Review checklist
 

@@ -140,9 +140,29 @@ GET http://127.0.0.1:8000/v1/models
 
   </Accordion>
 
-  <Accordion title="Qwen 思考控制">
-    对于通过 vLLM 提供的 Qwen 模型，当服务器期望 Qwen chat-template kwargs 时，请在模型条目上设置
-    `params.qwenThinkingFormat: "chat-template"`。OpenClaw 会将 `/think off` 映射为：
+  <Accordion title="Qwen thinking controls">
+    对于通过 vLLM 提供的 Qwen 模型，当服务器期望 Qwen chat-template kwargs 时，请在已配置的提供方模型行上设置 `compat.thinkingFormat: "qwen-chat-template"`。按这种方式配置的模型会暴露二元 `/think` 配置文件（`off`、`on`），因为 Qwen 模板思考是一个开/关请求标志，而不是类似 OpenAI 的 effort 档位。
+
+    ```json5
+    {
+      models: {
+        providers: {
+          vllm: {
+            models: [
+              {
+                id: "Qwen/Qwen3-8B",
+                name: "Qwen3 8B",
+                reasoning: true,
+                compat: { thinkingFormat: "qwen-chat-template" },
+              },
+            ],
+          },
+        },
+      },
+    }
+    ```
+
+    OpenClaw 将 `/think off` 映射为：
 
     ```json
     {
@@ -154,9 +174,8 @@ GET http://127.0.0.1:8000/v1/models
     ```
 
     非 `off` 的思考级别会发送 `enable_thinking: true`。如果你的端点
-    期望的是 DashScope 风格的顶层标志，则使用
-    `params.qwenThinkingFormat: "top-level"` 在请求根部发送 `enable_thinking`。
-    也支持蛇形写法 `params.qwen_thinking_format`。
+    期望的是 DashScope 风格的顶层标志，请改用
+    `compat.thinkingFormat: "qwen"` 在请求根部发送 `enable_thinking`。
 
   </Accordion>
 

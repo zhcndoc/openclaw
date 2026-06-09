@@ -64,8 +64,8 @@ pnpm openclaw onboard --mode local
 在状态目录下验证已安装的包：
 
 ```bash
-find "$OPENCLAW_STATE_DIR/npm/node_modules" -maxdepth 3 -name package.json -print
-grep -R '"@openclaw/codex"' "$OPENCLAW_STATE_DIR/npm/package-lock.json"
+find "$OPENCLAW_STATE_DIR/npm/projects" -path '*/node_modules/@openclaw/codex/package.json' -print
+grep -R '"@openclaw/codex"' "$OPENCLAW_STATE_DIR/npm/projects"/*/package-lock.json
 ```
 
 对于实时提供方 E2E，在启动测试命令之前，请从可信 shell 或 CI 密钥中获取真实的 API 密钥。

@@ -11,7 +11,7 @@ title: "策略"
 
 `openclaw policy` 由捆绑的 Policy 插件提供。Policy 是对现有 OpenClaw 设置之上的企业级一致性层。它不会添加第二套配置系统。`policy.jsonc` 定义编写的要求，OpenClaw 将当前工作区作为证据进行观察，而 policy 健康检查会通过 `doctor --lint` 报告偏差。最终的一致性信号是一次干净的 `doctor --lint` 运行；policy 通过向该共享 lint 表面提供发现结果来贡献，而不是创建单独的健康门禁。
 
-Policy 目前管理已配置的 channels、MCP servers、模型提供方、网络 SSRF 姿态、Gateway 暴露姿态、agent 工作区姿态、OpenClaw 配置 secret provider/auth profile 姿态，以及受治理的工具声明。例如，IT 或工作区运维人员可以记录 Telegram 不是被批准的 channel provider，限制 MCP servers 和模型引用只能使用已批准条目，要求私有网络 fetch/browser 访问保持禁用，要求 Gateway 绑定/auth/HTTP 暴露保持在审查过的范围内，要求 agent 工作区访问和工具拒绝保持在审查过的姿态，要求 OpenClaw 配置 SecretRefs 使用受管 provider，要求配置 auth profile 携带 provider/mode 元数据，要求受治理工具携带风险和敏感性元数据，然后使用 `doctor --lint` 作为共享一致性门禁。
+当前，Policy 管理已配置的 channels、MCP servers、模型提供方、网络 SSRF 姿态、入口/channel 访问姿态、Gateway 暴露姿态、agent 工作区姿态、数据处理姿态、OpenClaw 配置 secret provider/auth profile 姿态，以及受治理的 tool 声明。例如，IT 或工作区操作员可以记录 Telegram 不是被批准的 channel provider，限制 MCP servers 和 model refs 仅使用批准条目，要求私有网络 fetch/browser 访问保持禁用，要求 direct-message 会话隔离和 channel ingress 姿态保持在已审查范围内，要求 Gateway 绑定/auth/HTTP 暴露保持在已审查范围内，要求 agent 工作区访问和 tool 拒绝保持在已审查姿态，要求 OpenClaw config SecretRefs 使用受管 provider，要求 config auth profiles 携带 provider/mode 元数据，要求受治理工具携带 risk 和 sensitivity 元数据，要求敏感日志脱敏，禁止遥测内容捕获，要求会话保留维护，禁止会话 transcript 内存索引，然后使用 `doctor --lint` 作为共享的一致性门禁。
 
 当某个工作区需要一条持久声明，例如“这些 channels 不能启用”或“受治理工具必须声明批准元数据”，并且需要一种可重复的方式证明 OpenClaw 仍符合该声明时，请使用 policy。仅当你只需要本地行为，而不需要 policy 发现结果或证明输出时，单独使用常规配置和工作区文档即可。
 
@@ -25,7 +25,7 @@ openclaw plugins enable policy
 
 启用 policy 后，doctor 可以在不激活任意插件的情况下加载 policy 健康检查。即使 `policy.jsonc` 缺失，该插件仍保持启用状态，因此 doctor 可以报告缺失的工件。
 
-Policy 是手工编写的，而不是从用户当前设置生成的。一个涵盖 channels、MCP servers、模型提供方、网络姿态、Gateway 暴露、agent 工作区姿态、OpenClaw 配置 secret provider/auth profile 姿态以及工具元数据的最小 policy 如下所示：
+Policy 是编写出来的，而不是从用户当前设置生成的。一个用于 channels、MCP servers、模型提供方、网络姿态、入口/channel access、Gateway 暴露、agent 工作区姿态、已配置 sandbox runtime 姿态、OpenClaw 数据处理姿态、config secret provider/auth profile 姿态，以及 tool 元数据的最小 policy 如下：
 
 ```jsonc
 {
@@ -55,6 +55,16 @@ Policy 是手工编写的，而不是从用户当前设置生成的。一个涵�
       "allow": false,
     },
   },
+  "ingress": {
+    "session": {
+      "requireDmScope": "per-channel-peer",
+    },
+    "channels": {
+      "allowDmPolicies": ["pairing", "allowlist", "disabled"],
+      "denyOpenGroups": true,
+      "requireMentionInGroups": true,
+    },
+  },
   "gateway": {
     "exposure": {
       "allowNonLoopbackBind": false,
@@ -79,6 +89,20 @@ Policy 是手工编写的，而不是从用户当前设置生成的。一个涵�
     "workspace": {
       "allowedAccess": ["none", "ro"],
       "denyTools": ["exec", "process", "write", "edit", "apply_patch"],
+    },
+  },
+  "dataHandling": {
+    "sensitiveLogging": {
+      "requireRedaction": true,
+    },
+    "telemetry": {
+      "denyContentCapture": true,
+    },
+    "retention": {
+      "requireSessionMaintenance": true,
+    },
+    "memory": {
+      "denySessionTranscriptIndexing": true,
     },
   },
   "secrets": {
@@ -113,13 +137,93 @@ Policy 是手工编写的，而不是从用户当前设置生成的。一个涵�
 }
 ```
 
-这些规则才是权威。类别块只是一个命名空间；只有在存在具体规则时才会运行检查。OpenClaw 读取当前 `channels.*` 设置、`mcp.servers.*`、`models.providers.*`、选定的 agent 模型引用、网络 SSRF 设置、Gateway 绑定/auth/Control UI/Tailscale/remote/HTTP 姿态、OpenClaw 配置 agent sandbox 工作区访问和工具拒绝姿态、配置 secret provider 和 SecretRef 来源证明、配置 auth profile 元数据、已配置的全局/按 agent 工具姿态，以及 `TOOLS.md` 声明作为证据，然后报告不符合规范的观察状态。如果 policy 禁止非 loopback 的 Gateway 绑定，只有当你愿意审查运行时默认值时才省略 `gateway.bind`；要实现严格的配置一致性，请将 `gateway.bind=loopback`。对于只读 agent 姿态，请在适用的默认值或 agent 上配置 sandbox 模式，并将 `workspaceAccess` 设置为 `none` 或 `ro`；省略或 `off` 的 sandbox 模式不满足只读/禁止写入的 policy。`agents.workspace.denyTools` 支持 `exec`、`process`、`write`、`edit` 和 `apply_patch`；OpenClaw 配置 `group:fs` 覆盖文件修改工具，`group:runtime` 覆盖 shell/process 工具。工具姿态 policy 会观察 `tools.profile`、`tools.allow`、`tools.alsoAllow`、`tools.deny`、`tools.fs.workspaceOnly`、`tools.exec.security`、`tools.exec.ask`、`tools.exec.host`、`tools.elevated.enabled`，以及相同的按 agent `agents.list[].tools.*` 覆盖项。它不会读取运行时/操作员批准状态，例如 exec-approvals.json，也不会在运行时强制执行工具调用。Secret 证据只记录 provider/source 姿态和 SecretRef 元数据，绝不会包含原始 secret 值。Policy 不会读取或证明按 agent 的凭据存储，例如 `auth-profiles.json`；这些存储仍由现有的 auth 和凭据流程负责。
+规则才是权威。类别块只是命名空间；只有当存在具体规则时才会运行检查。OpenClaw 会将当前 `channels.*` 设置、`mcp.servers.*`、`models.providers.*`、选定的 agent model refs、网络 SSRF 设置、direct-message 会话作用域、channel DM policy、channel group policy、channel/group mention gate、Gateway bind/auth/Control UI/Tailscale/remote/HTTP 姿态、OpenClaw config agent sandbox 工作区访问和 tool 拒绝姿态、数据处理配置姿态、config secret provider 和 SecretRef 来源、config auth profile 元数据、已配置的全局/按 agent tool 姿态，以及 `TOOLS.md` 声明作为证据读取，然后报告不符合的观察状态。如果某个 policy 拒绝非 loopback 的 Gateway 绑定，那么只有当你愿意审查运行时默认值时才省略 `gateway.bind`；若要严格的配置一致性，请将 `gateway.bind=loopback`。对于只读 agent 姿态，请在适用的默认值或 agent 上配置 sandbox mode，并将 `workspaceAccess` 设为 `none` 或 `ro`；省略或 `off` 的 sandbox mode 不满足只读/无写入 policy。`agents.workspace.denyTools` 支持 `exec`、`process`、`write`、`edit` 和 `apply_patch`；OpenClaw config 的 `group:fs` 覆盖文件变更工具，`group:runtime` 覆盖 shell/process 工具。Tool 姿态 policy 会观察 `tools.profile`、`tools.allow`、`tools.alsoAllow`、`tools.deny`、`tools.fs.workspaceOnly`、`tools.exec.security`、`tools.exec.ask`、`tools.exec.host`、`tools.elevated.enabled`，以及相同的按 agent `agents.list[].tools.*` 覆盖项。它不会读取运行时/操作员批准状态，例如 `exec-approvals.json`，也不会在运行时强制 tool 调用。Secret 证据只记录 provider/source 姿态和 SecretRef 元数据，绝不记录原始 secret 值。Policy 不读取也不证明按 agent 的凭据存储，例如 `auth-profiles.json`；这些存储仍由现有 auth 和 credential 流程负责。数据处理证据只限于配置级姿态：它检查已配置的脱敏模式、遥测内容捕获开关、会话保留模式，以及会话 transcript 内存索引设置。它不会检查原始日志、遥测导出、transcript 内容、内存文件，也不会证明不存在个人数据或 secret。
 
 ### Policy 规则参考
 
-下面每个 policy 字段都是可选的。只有当 `policy.jsonc` 中存在匹配规则时，检查才会运行。观察到的状态是现有的 OpenClaw 配置或工作区元数据；policy 会报告偏差，但不会重写运行时行为，除非明确提供并启用了修复路径。
+下面每个 policy 字段都是可选的。只有当 `policy.jsonc` 中存在对应规则时，才会运行检查。观察到的状态是现有的 OpenClaw 配置或工作区元数据；policy 会报告偏移，但不会重写运行时行为，除非存在并启用了显式的修复路径。
+Policy 文件是严格的：不支持的部分或规则键会被报告为 `policy/policy-jsonc-invalid`，而不是被忽略。
 
-按 agent 的 policy 覆盖会将宽泛的 `tools.*` 和 `agents.workspace` 姿态保持为全局，然后允许命名作用域块在 `scopes.<scopeName>` 下为显式 `agentIds` 添加更严格的常规 policy 部分。最初的作用域部分是 `tools` 和 `agents.workspace`；一旦其证据可归属于某个 agent，sandbox 和 ingress 也可以使用同一个容器。作用域字段携带严格性元数据，例如允许列表子集、拒绝列表超集、必需布尔值和精确列表语义，以便未来的 policy 文件一致性可以重用相同的规则清单，而不是猜测。覆盖是叠加式的：全局声明仍会运行，而作用域声明可以针对同一观察到的配置发出自己的发现。请参见 [Agent-scoped policy overlays](/plan/policy-agent-scoped-overlays)。`policy.jsonc` 中存在的每个 scope 都必须有效且可执行。当前 scopes 需要 `agentIds`，并且该选择器只支持 `tools.*` 和 `agents.workspace.*`。如果某个 `agentIds` 条目不存在于 `agents.list[]` 中，则对该运行时 agent id，会以继承的全局/默认姿态来评估作用域规则，而不是跳过它。
+Policy overlays 会保持宽泛的顶层规则为全局规则，然后允许命名作用域块为显式 selector 添加更严格的常规 policy 部分。scope 名称只是描述性分组；匹配使用 scope 内的 selector 值。overlay 是累加式的：全局声明仍然运行，而 scoped 声明可以针对相同观察配置发出自己的发现。
+
+#### Scoped overlays
+
+当一组 agent 或 channels 需要比顶层基线更严格的 policy 时，请使用 `scopes.<scopeName>`。按 agent 作用域的部分使用 `agentIds`，它支持 `tools.*`、`agents.workspace.*`、`sandbox.*` 和 `dataHandling.memory.*`。按 channel 作用域的 ingress 使用 `channelIds`，它支持 `ingress.channels.*`。不支持的部分会被拒绝，而不是被忽略。如果某个 `agentIds` 条目不在 `agents.list[]` 中，OpenClaw 会针对该运行时 agent id 的继承全局/默认姿态评估 scoped 规则。
+
+```jsonc
+{
+  "tools": {
+    "exec": {
+      "allowHosts": ["sandbox", "node"],
+    },
+  },
+  "sandbox": {
+    "requireMode": ["all", "non-main"],
+  },
+  "scopes": {
+    "release-workspace": {
+      "agentIds": ["release-agent", "review-agent"],
+      "agents": {
+        "workspace": {
+          "allowedAccess": ["none", "ro"],
+        },
+      },
+    },
+    "release-lockdown": {
+      "agentIds": ["release-agent"],
+      "tools": {
+        "exec": {
+          "allowHosts": ["sandbox"],
+          "allowSecurity": ["deny", "allowlist"],
+          "requireAsk": ["always"],
+        },
+        "denyTools": ["exec", "process", "write", "edit", "apply_patch"],
+      },
+      "sandbox": {
+        "requireMode": ["all"],
+        "allowBackends": ["docker"],
+      },
+      "dataHandling": {
+        "memory": {
+          "denySessionTranscriptIndexing": true,
+        },
+      },
+    },
+    "shell-sandbox": {
+      "agentIds": ["shell-agent"],
+      "sandbox": {
+        "allowBackends": ["openshell"],
+        "containers": {
+          "requireReadOnlyMounts": false,
+        },
+      },
+    },
+    "telegram-ingress": {
+      "channelIds": ["telegram"],
+      "ingress": {
+        "channels": {
+          "allowDmPolicies": ["pairing"],
+          "denyOpenGroups": true,
+          "requireMentionInGroups": true,
+        },
+      },
+    },
+  },
+}
+```
+
+同一个 agent 可以出现在多个 scope 中，只要每个 scope 管辖不同字段，如上所示。同一 agent 的重复 scoped 字段必须根据 policy 元数据保持相同或更严格；更弱的重复声明会被拒绝。严格性元数据将 allow-list 视为子集，将 deny-list 视为超集，将 required 布尔值视为固定要求。
+
+Container 姿态 policy 只根据 OpenClaw 能为匹配 agent 观察到的证据进行评估。如果一个启用的 `sandbox.containers.*` 规则应用于其 sandbox backend 无法暴露该字段的 agent，policy 会报告 `policy/sandbox-container-posture-unobservable`，而不是将该声明视为通过。请为使用不同 sandbox backend 的 agent 组使用单独的 `agentIds` scope，并为那些无法观察这些字段的组保留未设置或 false 的不支持 container 规则。
+
+顶层的 `ingress.session.requireDmScope` 仍然是全局的，因为 `session.dmScope` 不是可归因于 channel 的证据。
+
+| 选择器       | 支持的部分                                                       | 适用场景                                          |
+| ------------ | ---------------------------------------------------------------- | ------------------------------------------------- |
+| `agentIds`   | `tools`、`agents.workspace`、`sandbox` 和 `dataHandling.memory` | 一个或多个运行时 agent 需要更严格的规则。         |
+| `channelIds` | `ingress.channels`                                               | 一个或多个 channels 需要更严格的 ingress 规则。  |
+
+`policy.jsonc` 中出现的每个 scope 都必须有效且可执行。
 
 #### Channels
 
@@ -148,6 +252,15 @@ Policy 是手工编写的，而不是从用户当前设置生成的。一个涵�
 | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------ |
 | `network.privateNetwork.allow` | 私有网络 SSRF 逃逸通道              | 设置为 `false` 以要求私有网络访问保持禁用。                       |
 
+#### Ingress and channel access
+
+| Policy field                              | Observed state                                                 | Use when                                                           |
+| ----------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `ingress.session.requireDmScope`          | `session.dmScope`                                              | Require a reviewed direct-message isolation scope.                 |
+| `ingress.channels.allowDmPolicies`        | `channels.*.dmPolicy` and legacy channel DM policy fields      | Allow only reviewed direct-message channel policies.               |
+| `ingress.channels.denyOpenGroups`         | Channel, account, and group ingress policy                     | Deny open group ingress for configured channels and accounts.      |
+| `ingress.channels.requireMentionInGroups` | Channel, account, group, guild, and nested mention gate config | Require mention gates when group ingress is open or mention-gated. |
+
 #### Gateway
 
 | Policy 字段                            | 观察到的状态                                 | 适用场景                                                     |
@@ -167,6 +280,32 @@ Policy 是手工编写的，而不是从用户当前设置生成的。一个涵�
 | -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `agents.workspace.allowedAccess` | `agents.defaults.sandbox.workspaceAccess` 和 `agents.list[].sandbox.workspaceAccess` | 仅允许诸如 `none` 或 `ro` 之类的 sandbox 工作区访问值。                                                            |
 | `agents.workspace.denyTools`     | 全局和按 agent 的工具拒绝配置                                                          | 要求将 `exec`、`process`、`write`、`edit` 或 `apply_patch` 之类的工作区/运行时变更工具设为拒绝。                   |
+
+#### Sandbox posture
+
+| Policy field                                          | Observed state                                          | Use when                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| `sandbox.requireMode`                                 | `agents.defaults.sandbox.mode` and per-agent mode       | Allow only reviewed sandbox modes such as `all` or `non-main`. |
+| `sandbox.allowBackends`                               | `agents.defaults.sandbox.backend` and per-agent backend | Allow only reviewed sandbox backends such as `docker`.         |
+| `sandbox.containers.denyHostNetwork`                  | Container-backed sandbox/browser network mode           | Deny host network mode.                                        |
+| `sandbox.containers.denyContainerNamespaceJoin`       | Container-backed sandbox/browser network mode           | Deny joining another container network namespace.              |
+| `sandbox.containers.requireReadOnlyMounts`            | Container-backed sandbox/browser mount mode             | Require mounts to be read-only.                                |
+| `sandbox.containers.denyContainerRuntimeSocketMounts` | Container-backed sandbox/browser mount targets          | Deny container runtime socket mounts.                          |
+| `sandbox.containers.denyUnconfinedProfiles`           | Container security profile posture                      | Deny unconfined container security profiles.                   |
+| `sandbox.browser.requireCdpSourceRange`               | Sandbox browser CDP source range                        | Require browser CDP exposure to declare a source range.        |
+
+Policy treats missing `sandbox.mode` as the implicit default `off`, so
+`sandbox.requireMode` reports a fresh or unconfigured sandbox as outside an
+allowlist such as `["all"]`.
+
+#### Data Handling
+
+| Policy field                                        | Observed state                                                                       | Use when                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `dataHandling.sensitiveLogging.requireRedaction`    | `logging.redactSensitive`                                                            | Set to `true` to reject `logging.redactSensitive: "off"`.              |
+| `dataHandling.telemetry.denyContentCapture`         | `diagnostics.otel.captureContent`                                                    | Set to `true` to reject telemetry content capture.                     |
+| `dataHandling.retention.requireSessionMaintenance`  | `session.maintenance.mode`                                                           | Set to `true` to require effective session maintenance mode `enforce`. |
+| `dataHandling.memory.denySessionTranscriptIndexing` | `memory.qmd.sessions.enabled` and `agents.*.memorySearch.experimental.sessionMemory` | Set to `true` to reject session transcript indexing into memory.       |
 
 #### Secrets
 
@@ -212,7 +351,30 @@ openclaw policy check --severity-min error
 
 `policy check` 只运行 policy 检查集，并输出证据、发现和证明哈希。当启用了 Policy 插件时，相同的发现也会出现在 `openclaw doctor --lint` 中。
 
-干净的 JSON 输出示例包含可由操作员或主管记录的稳定哈希：
+比较 operator policy 文件与已编写的 baseline policy 文件：
+
+```bash
+openclaw policy compare --baseline official.policy.jsonc
+openclaw policy compare --baseline official.policy.jsonc --policy policy.jsonc --json
+```
+
+`policy compare` 比较的是 policy 文件语法与 policy 文件语法。它不会检查 OpenClaw 运行时状态、证据、凭据或 secrets。该命令使用与 scoped overlays 相同的 policy 规则元数据：allowlist 必须保持相同或更窄，denylist 必须保持相同或更宽，required 布尔值必须保持其要求值，排序字符串只能朝配置顺序中更严格的一端移动，精确列表必须匹配。
+
+基线文件可以是组织编写的 policy。被检查的 policy 可以使用更严格的值或添加额外的 policy 规则。顶层的被检查规则也可以满足 scoped baseline 规则，只要它同样或更严格，因为顶层 policy 适用于更广范围。scope 名称不需要匹配；scoped 比较按 selector 值（例如 `agentIds` 或 `channelIds`）以及被检查的 policy 字段进行。
+
+清洁的 compare JSON 输出示例只报告 policy 文件比较状态：
+
+```json
+{
+  "ok": true,
+  "baselinePath": "official.policy.jsonc",
+  "policyPath": "policy.jsonc",
+  "rulesChecked": 3,
+  "findings": []
+}
+```
+
+清洁的 `policy check --json` 输出示例包含可由操作员或主管记录的稳定哈希：
 
 ```json
 {
@@ -432,47 +594,67 @@ openclaw policy watch --json
 
 当前策略会验证：
 
-| 检查 id                                     | 发现说明                                                                          |
-| -------------------------------------------- | --------------------------------------------------------------------------------- |
-| `policy/policy-jsonc-missing`                | 已启用策略，但缺少 `policy.jsonc`。                                               |
-| `policy/policy-jsonc-invalid`                | 无法解析策略，或包含格式错误的规则条目。                                          |
-| `policy/policy-hash-mismatch`                | 策略与配置的 `expectedHash` 不匹配。                                              |
-| `policy/attestation-hash-mismatch`           | 当前策略证据不再匹配已接受的 attestation。                                        |
-| `policy/channels-denied-provider`            | 某个已启用通道匹配了通道拒绝规则。                                                |
-| `policy/mcp-denied-server`                   | 配置的 MCP 服务器被策略拒绝。                                                     |
-| `policy/mcp-unapproved-server`               | 配置的 MCP 服务器不在允许列表中。                                                 |
-| `policy/models-denied-provider`              | 配置的模型提供方或模型引用使用了被拒绝的提供方。                                  |
-| `policy/models-unapproved-provider`          | 配置的模型提供方或模型引用不在允许列表中。                                        |
-| `policy/network-private-access-enabled`      | 在策略禁止的情况下，启用了私有网络 SSRF 逃逸开关。                                |
-| `policy/gateway-non-loopback-bind`           | 在策略禁止的情况下，网关绑定姿态允许非 loopback 暴露。                            |
-| `policy/gateway-auth-disabled`               | 在策略要求认证时，网关认证被禁用。                                                |
-| `policy/gateway-rate-limit-missing`          | 在策略要求时，网关认证速率限制姿态没有显式配置。                                  |
-| `policy/gateway-control-ui-insecure`         | 网关 Control UI 的不安全暴露开关已启用。                                          |
-| `policy/gateway-tailscale-funnel`            | 在策略禁止的情况下，网关 Tailscale Funnel 暴露已启用。                            |
-| `policy/gateway-remote-enabled`              | 在策略禁止的情况下，网关远程模式处于激活状态。                                    |
-| `policy/gateway-http-endpoint-enabled`       | 网关 HTTP API 端点已启用，而策略禁止它。                                           |
-| `policy/gateway-http-url-fetch-unrestricted` | 网关 HTTP URL-fetch 输入缺少所需的 URL 允许列表。                                  |
-| `policy/agents-workspace-access-denied`      | 代理沙箱模式或工作区访问超出了策略允许列表。                                       |
-| `policy/agents-tool-not-denied`              | 某个代理或默认配置未拒绝策略要求拒绝的工具。                                       |
-| `policy/tools-profile-unapproved`            | 配置的全局或按代理工具配置文件不在允许列表中。                                     |
-| `policy/tools-fs-workspace-only-required`    | 文件系统工具未配置为仅工作区路径姿态。                                             |
-| `policy/tools-exec-security-unapproved`      | exec 安全模式超出了策略允许列表。                                                 |
-| `policy/tools-exec-ask-unapproved`           | exec ask 模式超出了策略允许列表。                                                 |
-| `policy/tools-exec-host-unapproved`          | exec 主机路由超出了策略允许列表。                                                 |
-| `policy/tools-elevated-enabled`              | 在策略禁止的情况下，提升权限工具模式已启用。                                      |
-| `policy/tools-also-allow-missing`            | 配置的 `alsoAllow` 列表缺少策略要求的条目。                                       |
-| `policy/tools-also-allow-unexpected`         | 配置的 `alsoAllow` 列表包含策略未预期的条目。                                     |
-| `policy/tools-required-deny-missing`         | 全局或按代理工具拒绝列表未包含所需的被拒绝工具。                                   |
-| `policy/secrets-unmanaged-provider`          | 某个配置 SecretRef 引用了未在 `secrets.providers` 下声明的提供方。                 |
-| `policy/secrets-denied-provider-source`      | 配置的 secret 提供方或 SecretRef 使用了策略拒绝的来源。                           |
-| `policy/secrets-insecure-provider`           | 在策略禁止的情况下，secret 提供方选择了不安全姿态。                               |
-| `policy/auth-profile-invalid-metadata`       | 配置的认证配置文件缺少有效的提供方或模式元数据。                                   |
-| `policy/auth-profile-unapproved-mode`        | 配置的认证配置文件模式超出了策略允许列表。                                        |
-| `policy/tools-missing-risk-level`            | 受治理的工具声明缺少风险元数据。                                                  |
-| `policy/tools-unknown-risk-level`            | 受治理的工具声明使用了未知的风险值。                                              |
-| `policy/tools-missing-sensitivity-token`     | 受治理的工具声明缺少敏感性元数据。                                                |
-| `policy/tools-missing-owner`                 | 受治理的工具声明缺少 owner 元数据。                                               |
-| `policy/tools-unknown-sensitivity-token`     | 受治理的工具声明使用了未知的敏感性值。                                            |
+| Check id                                                 | Finding                                                                           |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `policy/policy-jsonc-missing`                            | 策略已启用，但 `policy.jsonc` 缺失。                                              |
+| `policy/policy-jsonc-invalid`                            | 策略无法解析，或包含格式错误的规则条目。                                          |
+| `policy/policy-hash-mismatch`                            | 策略与配置的 `expectedHash` 不匹配。                                               |
+| `policy/attestation-hash-mismatch`                       | 当前策略证据不再匹配已接受的声明。                                                |
+| `policy/policy-conformance-invalid`                      | 基线或已检查的策略文件包含无效的比较语法。                                        |
+| `policy/policy-conformance-missing`                      | 已检查的策略文件缺少基线策略文件所需的规则。                                      |
+| `policy/policy-conformance-weaker`                       | 已检查的策略文件的取值弱于基线策略文件。                                          |
+| `policy/channels-denied-provider`                        | 某个已启用的 channel 匹配到 channel 拒绝规则。                                    |
+| `policy/mcp-denied-server`                               | 某个已配置的 MCP server 被策略拒绝。                                               |
+| `policy/mcp-unapproved-server`                           | 某个已配置的 MCP server 不在允许列表中。                                           |
+| `policy/models-denied-provider`                          | 某个已配置的 model provider 或 model ref 使用了被拒绝的 provider。               |
+| `policy/models-unapproved-provider`                      | 某个已配置的 model provider 或 model ref 不在允许列表中。                         |
+| `policy/network-private-access-enabled`                  | 当策略禁止时，启用了 private-network SSRF 逃逸开关。                               |
+| `policy/ingress-dm-policy-unapproved`                    | 某个 channel DM policy 不在策略允许列表中。                                        |
+| `policy/ingress-dm-scope-unapproved`                     | `session.dmScope` 不符合策略要求的 DM 隔离范围。                                   |
+| `policy/ingress-open-groups-denied`                      | 当策略禁止开放 group 入口时，某个 channel group policy 为 `open`。                |
+| `policy/ingress-group-mention-required`                  | 当策略要求时，某个 channel 或 group 条目禁用了 mention gate。                     |
+| `policy/gateway-non-loopback-bind`                       | 当策略禁止时，Gateway bind 姿态允许非 loopback 暴露。                              |
+| `policy/gateway-auth-disabled`                           | 当策略要求认证时，Gateway 认证被禁用。                                            |
+| `policy/gateway-rate-limit-missing`                      | 当策略要求时，Gateway auth rate-limit 姿态不明确。                                |
+| `policy/gateway-control-ui-insecure`                     | Gateway Control UI 的不安全暴露开关已启用。                                       |
+| `policy/gateway-tailscale-funnel`                        | 当策略禁止时，Gateway Tailscale Funnel 暴露已启用。                               |
+| `policy/gateway-remote-enabled`                          | 当策略禁止时，Gateway remote 模式处于活动状态。                                   |
+| `policy/gateway-http-endpoint-enabled`                   | 在策略禁止时，Gateway HTTP API endpoint 已启用。                                   |
+| `policy/gateway-http-url-fetch-unrestricted`             | Gateway HTTP URL-fetch 输入缺少必需的 URL 允许列表。                               |
+| `policy/agents-workspace-access-denied`                  | Agent sandbox mode 或 workspace access 超出了策略允许列表。                       |
+| `policy/agents-tool-not-denied`                          | Agent 或默认配置未拒绝策略要求的某个工具。                                        |
+| `policy/tools-profile-unapproved`                        | 某个已配置的全局或按 agent 工具 profile 不在允许列表中。                           |
+| `policy/tools-fs-workspace-only-required`                | 文件系统工具未配置为仅工作区路径姿态。                                             |
+| `policy/tools-exec-security-unapproved`                  | Exec 安全模式不在策略允许列表中。                                                  |
+| `policy/tools-exec-ask-unapproved`                       | Exec ask 模式不在策略允许列表中。                                                  |
+| `policy/tools-exec-host-unapproved`                      | Exec host 路由不在策略允许列表中。                                                 |
+| `policy/tools-elevated-enabled`                          | 当策略禁止时，已启用提升权限的工具模式。                                           |
+| `policy/tools-also-allow-missing`                        | 配置的 `alsoAllow` 列表缺少策略要求的条目。                                        |
+| `policy/tools-also-allow-unexpected`                     | 配置的 `alsoAllow` 列表包含策略未预期的条目。                                      |
+| `policy/tools-required-deny-missing`                     | 全局或按 agent 的工具拒绝列表不包含策略要求拒绝的工具。                            |
+| `policy/sandbox-mode-unapproved`                         | Sandbox mode 不在策略允许列表中。                                                  |
+| `policy/sandbox-backend-unapproved`                      | Sandbox backend 不在策略允许列表中。                                               |
+| `policy/sandbox-container-posture-unobservable`          | 对于无法观测它的 backend，启用了 container 姿态规则。                              |
+| `policy/sandbox-container-host-network-denied`           | 由容器支持的 sandbox 或 browser 使用了 host network mode。                        |
+| `policy/sandbox-container-namespace-join-denied`         | 由容器支持的 sandbox 或 browser 加入了另一个容器 namespace。                      |
+| `policy/sandbox-container-mount-mode-required`           | 由容器支持的 sandbox 或 browser mount 不是只读的。                                 |
+| `policy/sandbox-container-runtime-socket-mount`          | 由容器支持的 sandbox 或 browser mount 暴露了容器 runtime socket。                 |
+| `policy/sandbox-container-unconfined-profile`            | 当策略禁止时，Container sandbox profile 处于 unconfined。                          |
+| `policy/sandbox-browser-cdp-source-range-missing`        | 当策略要求时，Sandbox browser CDP source range 缺失。                              |
+| `policy/data-handling-redaction-disabled`                | 当策略要求时，敏感日志脱敏被禁用。                                                |
+| `policy/data-handling-telemetry-content-capture`         | 当策略禁止时，Telemetry 内容捕获已启用。                                           |
+| `policy/data-handling-session-retention-not-enforced`    | 当策略要求时，未强制执行 session retention maintenance。                           |
+| `policy/data-handling-session-transcript-memory-enabled` | 当策略禁止时，session transcript memory indexing 已启用。                         |
+| `policy/secrets-unmanaged-provider`                      | 某个 config SecretRef 引用了未在 `secrets.providers` 下声明的 provider。          |
+| `policy/secrets-denied-provider-source`                  | 某个 config secret provider 或 SecretRef 使用了被策略禁止的 source。              |
+| `policy/secrets-insecure-provider`                       | 某个 secret provider 在策略禁止时选择了 insecure 姿态。                           |
+| `policy/auth-profile-invalid-metadata`                   | 某个 config auth profile 缺少有效的 provider 或 mode 元数据。                      |
+| `policy/auth-profile-unapproved-mode`                    | 某个 config auth profile mode 不在策略允许列表中。                                |
+| `policy/tools-missing-risk-level`                        | 某个受治理的工具声明缺少 risk 元数据。                                             |
+| `policy/tools-unknown-risk-level`                        | 某个受治理的工具声明使用了未知的 risk 值。                                         |
+| `policy/tools-missing-sensitivity-token`                 | 某个受治理的工具声明缺少 sensitivity 元数据。                                     |
+| `policy/tools-missing-owner`                             | 某个受治理的工具声明缺少 owner 元数据。                                            |
+| `policy/tools-unknown-sensitivity-token`                 | 某个受治理的工具声明使用了未知的 sensitivity 值。                                  |
 
 策略发现项可以同时包含 `target` 和 `requirement`。`target` 是观察到的、未符合要求的工作区对象。`requirement` 是使其成为发现项的已编写策略规则。当前这两个值都是地址，通常是 `oc://` 路径，但字段名描述的是它们在策略中的角色，而不是地址格式。
 
@@ -607,10 +789,11 @@ openclaw policy watch --json
 
 ## 退出代码
 
-| 命令           | `0`                          | `1`                              | `2`                    |
-| -------------- | ---------------------------- | -------------------------------- | ---------------------- |
-| `policy check` | 未达到阈值的发现。           | 一个或多个发现达到阈值。         | 参数错误或运行时失败。  |
-| `policy watch` | 无发现且已接受的哈希是最新的。 | 存在发现，或已接受的证明已过期。 | 参数错误或运行时失败。  |
+| Command          | `0`                                                    | `1`                                                                 | `2`                          |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------- | ---------------------------- |
+| `policy check`   | 阈值下无发现项。                                       | 一项或多项发现达到了阈值。                                           | 参数或运行时失败。           |
+| `policy compare` | 策略文件至少与基线一样严格。                           | 策略文件无效、缺失，或比基线规则更宽松。                             | 参数或运行时失败。           |
+| `policy watch`   | 无发现项且已接受的哈希仍为最新。                       | 存在发现项或已接受的证明已过期。                                     | 参数或运行时失败。           |
 
 ## 相关
 

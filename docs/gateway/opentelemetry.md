@@ -152,9 +152,9 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 - `gen_ai.client.token.usage` (histogram, GenAI semantic-conventions metric, attrs: `gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`)
 - `gen_ai.client.operation.duration` (histogram, seconds, GenAI semantic-conventions metric, attrs: `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, optional `error.type`)
 - `openclaw.model_call.duration_ms` (histogram, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, plus `openclaw.errorCategory` and `openclaw.failureKind` on classified errors)
-- `openclaw.model_call.request_bytes` (histogram, final model request payload 的 UTF-8 字节大小；不包含原始载荷内容)
-- `openclaw.model_call.response_bytes` (histogram, streamed model response events 的 UTF-8 字节大小；不包含原始 response 内容)
-- `openclaw.model_call.time_to_first_byte_ms` (histogram, 第一条流式 response 事件到来前的耗时)
+- `openclaw.model_call.request_bytes` (histogram, UTF-8 byte size of the final model request payload; no raw payload content)
+- `openclaw.model_call.response_bytes` (histogram, UTF-8 byte size of streamed response chunk payloads; high-frequency text, thinking, and tool-call deltas count only incremental `delta` bytes; no raw response content)
+- `openclaw.model_call.time_to_first_byte_ms` (histogram, elapsed time before the first streamed response event)
 - `openclaw.model.failover` (counter, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.failover.to_provider`, `openclaw.failover.to_model`, `openclaw.failover.reason`, `openclaw.failover.suspended`, `openclaw.lane`)
 - `openclaw.skill.used` (counter, attrs: `openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, optional `openclaw.agent`, optional `openclaw.toolName`)
 
@@ -186,8 +186,8 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 - `openclaw.queue.depth` (histogram, attrs: `openclaw.lane` or `openclaw.channel=heartbeat`)
 - `openclaw.queue.wait_ms` (histogram, attrs: `openclaw.lane`)
 - `openclaw.session.state` (counter, attrs: `openclaw.state`, `openclaw.reason`)
-- `openclaw.session.stuck` (counter, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
-- `openclaw.session.stuck_age_ms` (histogram, attrs: `openclaw.state`; emitted only for stale session bookkeeping with no active work)
+- `openclaw.session.stuck` (counter, attrs: `openclaw.state`; emitted for recoverable stale session bookkeeping)
+- `openclaw.session.stuck_age_ms` (histogram, attrs: `openclaw.state`; emitted for recoverable stale session bookkeeping)
 - `openclaw.session.turn.created` (counter, attrs: `openclaw.agent`, `openclaw.channel`, `openclaw.trigger`)
 - `openclaw.session.recovery.requested` (counter, attrs: `openclaw.state`, `openclaw.action`, `openclaw.active_work_kind`, `openclaw.reason`)
 - `openclaw.session.recovery.completed` (counter, attrs: `openclaw.state`, `openclaw.action`, `openclaw.status`, `openclaw.active_work_kind`, `openclaw.reason`)
@@ -200,12 +200,17 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 
 OpenClaw 按其仍能观察到的工作对会话进行分类：
 
-- `session.long_running`: 活跃的嵌入式工作、模型调用或工具调用仍在推进。
-- `session.stalled`: 存在活跃工作，但当前运行尚未报告最近进展。
-  停滞的嵌入式运行起初仅观察不干预，随后在 `diagnostics.stuckSessionAbortMs` 之后执行 abort-drain，以便该 lane 后面的排队轮次可以继续。若未设置，中止阈值默认采用更安全的扩展窗口：至少 5 分钟且为
-  `diagnostics.stuckSessionWarnMs` 的 3 倍。
-- `session.stuck`: 没有活跃工作的陈旧会话记账项。这会立即释放
-  受影响的会话 lane。
+- `session.long_running`: active embedded work, model calls, or tool calls are
+  still making progress.
+- `session.stalled`: active work exists, but the active run has not reported
+  recent progress. Stalled embedded runs stay observe-only at first, then
+  abort-drain after `diagnostics.stuckSessionAbortMs` with no progress so queued
+  turns behind the lane can resume. When unset, the abort threshold defaults to
+  the safer extended window of at least 5 minutes and 3x
+  `diagnostics.stuckSessionWarnMs`.
+- `session.stuck`: stale session bookkeeping with no active work, or an idle
+  queued session with stale ownerless model/tool activity. This releases the
+  affected session lane immediately after recovery gates pass.
 
 恢复会发出结构化的 `session.recovery.requested` 和 `session.recovery.completed` 事件。诊断会话状态只有在发生会改变状态的恢复结果（`aborted` 或 `released`）之后，并且仅当相同的处理 generation 仍然是当前时，才会被标记为空闲。
 

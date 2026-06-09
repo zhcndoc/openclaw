@@ -31,6 +31,10 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 
 所有端点都接受 `?profile=<name>`。`POST /start?headless=true` 会请求一次性无头启动，仅适用于本地托管配置文件，且不会更改持久化的浏览器配置；仅附加、远程 CDP 和现有会话配置文件会拒绝该覆盖，因为 OpenClaw 不会启动这些浏览器进程。
 
+对于标签页端点，`targetId` 是兼容字段名。优先传递来自 `GET /tabs` 或 `POST /tabs/open` 的 `suggestedTargetId`；标签和 `tabId`
+句柄（如 `t1`）也被接受。原始 CDP target id 和唯一的原始
+target-id 前缀仍然可用，但它们是易变的诊断句柄。
+
 如果配置了共享密钥网关认证，浏览器 HTTP 路由也需要认证：
 
 - `Authorization: Bearer <gateway token>`
@@ -185,12 +189,14 @@ openclaw browser select 9 OptionA OptionB
 openclaw browser download e12 report.pdf
 openclaw browser waitfordownload report.pdf
 openclaw browser upload /tmp/openclaw/uploads/file.pdf
+openclaw browser upload media://inbound/file.pdf
 openclaw browser fill --fields '[{"ref":"1","type":"text","value":"Ada"}]'
 openclaw browser dialog --accept
 openclaw browser dialog --dismiss --dialog-id d1
 openclaw browser wait --text "Done"
 openclaw browser wait "#main" --url "**/dash" --load networkidle --fn "window.ready===true"
 openclaw browser evaluate --fn '(el) => el.textContent' --ref 7
+openclaw browser evaluate --fn 'const title = document.title; return title;'
 openclaw browser evaluate --timeout-ms 30000 --fn 'async () => { await window.ready; return true; }'
 openclaw browser highlight e12
 openclaw browser trace start
@@ -224,21 +230,22 @@ openclaw browser set device "iPhone 14"
 
 注意：
 
-- `upload` 和 `dialog` 是**预先激活**调用；请在触发选择器/对话框的 click/press 之前运行它们。如果某个操作打开了模态框，该操作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；将该 `dialogId` 传入即可直接响应。OpenClaw 之外处理的对话框会显示在 `browserState.dialogs.recent` 下。
-- `click`/`type`/等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不支持用于操作。当可见视口位置是唯一可靠目标时，请使用 `click-coords`。
-- 下载、trace 和上传路径被限制在 OpenClaw 的临时根目录中：`/tmp/openclaw{,/downloads,/uploads}`（回退：`${os.tmpdir()}/openclaw/...`）。
-- `upload` 也可以通过 `--input-ref` 或 `--element` 直接设置文件输入框。
+- `upload` 和 `dialog` 是**预置**调用；请在触发选择器/对话框的 click/press 之前运行它们。如果某个操作打开了模态窗口，动作响应会包含 `blockedByDialog` 和 `browserState.dialogs.pending`；将该 `dialogId` 传入即可直接响应。在 OpenClaw 外部处理的对话框会出现在 `browserState.dialogs.recent` 中。
+- `click`/`type` 等操作需要来自 `snapshot` 的 `ref`（数字 `12`、role ref `e12`，或可操作的 ARIA ref `ax12`）。CSS 选择器有意不支持用于操作。只有可见视口位置是唯一可靠目标时，请使用 `click-coords`。
+- 下载和 trace 路径受 OpenClaw 临时根目录限制：`/tmp/openclaw{,/downloads}`（回退：`${os.tmpdir()}/openclaw/...`）。
+- `upload` 接受来自 OpenClaw 临时上传根目录以及 OpenClaw 管理的传入媒体中的文件。管理的传入媒体可通过 `media://inbound/<id>`、沙箱相对路径 `media/inbound/<id>` 或受管传入媒体目录中的解析路径来引用。嵌套媒体引用、路径遍历、符号链接、硬链接以及任意本地路径仍会被拒绝。
+- `upload` 还可通过 `--input-ref` 或 `--element` 直接设置文件输入。
 
 当 OpenClaw 能够证明替换后的标签页时，例如相同 URL 或提交表单后单个旧标签页变成单个新标签页，稳定的标签页 id 和标签会在 Chromium 原始 target 替换时保持不变。原始 target id 仍然是易变的；在脚本中优先使用 `tabs` 返回的 `suggestedTargetId`。
 
 快照标志一览：
 
-- `--format ai`（使用 Playwright 时默认）：带数字 refs 的 AI 快照（`aria-ref="<n>"`）。
-- `--format aria`：带 `axN` refs 的可访问性树。可用 Playwright 时，OpenClaw 会将 refs 与后端 DOM id 绑定到实时页面，因此后续操作可以使用它们；否则请将输出视为仅供检查。
-- `--efficient`（或 `--mode efficient`）：紧凑的角色快照预设。将 `browser.snapshotDefaults.mode: "efficient"` 设为默认值（参见 [Gateway 配置](/gateway/configuration-reference#browser)）。
-- `--interactive`、`--compact`、`--depth`、`--selector` 会强制使用带 `ref=e12` refs 的角色快照。`--frame "<iframe>"` 将角色快照限定到 iframe。
-- `--labels` 会添加带覆盖 ref 标签的仅视口截图（打印 `MEDIA:<path>`）。
-- `--urls` 会在 AI 快照中附加已发现的链接目的地。
+- `--format ai` (default with Playwright): AI snapshot with numeric refs (`aria-ref="<n>"`).
+- `--format aria`: accessibility tree with `axN` refs. When Playwright is available, OpenClaw binds refs with backend DOM ids to the live page so follow-up actions can use them; otherwise treat the output as inspection-only.
+- `--efficient` (or `--mode efficient`): compact role snapshot preset. Set `browser.snapshotDefaults.mode: "efficient"` to make this the default (see [Gateway configuration](/gateway/configuration-reference#browser)).
+- `--interactive`, `--compact`, `--depth`, `--selector` force a role snapshot with `ref=e12` refs. `--frame "<iframe>"` scopes role snapshots to an iframe.
+- `--labels` adds a viewport-only screenshot with overlayed ref labels and prints the saved path.
+- `--urls` appends discovered link destinations to AI snapshots.
 
 ## 快照和 ref
 
@@ -300,7 +307,7 @@ openclaw browser wait "#main" \
 
 ## 调试工作流
 
-当操作失败时（例如“not visible”、“strict mode violation”、“covered”）：
+当操作失败时（例如“不可见”、“严格模式违规”、“被遮挡”）：
 
 1. `openclaw browser snapshot --interactive`
 2. 使用 `click <ref>` / `type <ref>`（在交互模式下优先使用 role refs）
@@ -348,12 +355,15 @@ JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/ch
 
 - openclaw browser 配置文件可能包含已登录会话；请将其视为敏感信息。
 - `browser act kind=evaluate` / `openclaw browser evaluate` 和 `wait --fn`
-  会在页面上下文中执行任意 JavaScript。提示注入可能会对此进行引导。
-  如果你不需要它，请通过 `browser.evaluateEnabled=false` 将其禁用。
-- 当页面侧函数可能需要比默认 evaluate 超时时间更长时，请使用 `openclaw browser evaluate --timeout-ms <ms>`。
-- 有关登录和反爬提示（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
+  会在页面上下文中执行任意 JavaScript。提示注入可能会影响它。
+  如果不需要，可通过 `browser.evaluateEnabled=false` 禁用它。
+- `openclaw browser evaluate --fn` 接受函数源码、表达式或
+  语句体。语句体会被包装为异步函数，因此要使用 `return`
+  返回你想要的值。当前端函数可能比默认 evaluate 超时需要更长时间时，
+  请使用 `--timeout-ms <ms>`。
+- 有关登录和反机器人说明（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
 - 保持 Gateway/node 主机私有（仅限 loopback 或 tailnet）。
-- 远程 CDP 端点功能强大；请通过隧道并做好保护。
+- 远程 CDP 端点权限很高；请通过隧道并做好保护。
 
 严格模式示例（默认阻止私有/内部目标）：
 

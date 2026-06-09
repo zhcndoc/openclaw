@@ -90,10 +90,10 @@ Gateway → Client:
 
 当 Gateway 仍在完成启动 sidecar 时，`connect` 请求可以返回一个可重试的 `UNAVAILABLE` 错误，其中 `details.reason` 设为 `"startup-sidecars"`，并带有 `retryAfterMs`。客户端应在其整体连接预算内重试该响应，而不是将其作为终态握手失败上报。
 
-`server`、`features`、`snapshot` 和 `policy` 都是 schema
-（`src/gateway/protocol/schema/frames.ts`）所必需的。`auth` 也是必需的，并报告
-协商后的 role/scopes。`pluginSurfaceUrls` 是可选项，它会把插件
-表面名称（例如 `canvas`）映射到带作用域的托管 URL。
+`server`, `features`, `snapshot`, and `policy` are all required by the schema
+(`packages/gateway-protocol/src/schema/frames.ts`). `auth` is also required and reports
+the negotiated role/scopes. `pluginSurfaceUrls` is optional and maps plugin
+surface names, such as `canvas`, to scoped hosted URLs.
 
 带作用域的插件表面 URL 可能会过期。节点可以调用
 `node.pluginSurface.refresh`，传入 `{ "surface": "canvas" }`，以在
@@ -302,15 +302,18 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="模型与用量">
-    - `models.list` 返回运行时允许使用的模型目录。传入 `{ "view": "configured" }` 可获取适合选择器大小的已配置模型（先取 `agents.defaults.models`，再取 `models.providers.*.models`），或传入 `{ "view": "all" }` 获取完整目录。
-    - `usage.status` 返回提供方用量窗口/剩余额度摘要。
-    - `usage.cost` 返回指定日期范围内的聚合成本用量摘要。
-    - `doctor.memory.status` 返回当前默认 agent 工作区的向量记忆 / 缓存 embedding 就绪状态。仅当调用方明确需要一次实时 embedding provider ping 时，才传入 `{ "probe": true }` 或 `{ "deep": true }`。
-    - `doctor.memory.remHarness` 为远程控制平面客户端返回一个有边界、只读的 REM harness 预览。它可能包含工作区路径、记忆片段、渲染后的 grounded markdown，以及深度提升候选项，因此调用方需要 `operator.read`。
-    - `sessions.usage` 返回按会话划分的用量摘要。
-    - `sessions.usage.timeseries` 返回某个会话的时间序列用量。
-    - `sessions.usage.logs` 返回某个会话的用量日志条目。
+  <Accordion title="Models and usage">
+    - `models.list` returns the runtime-allowed model catalog. Pass `{ "view": "configured" }` for picker-sized configured models (`agents.defaults.models` first, then `models.providers.*.models`), or `{ "view": "all" }` for the full catalog.
+    - `usage.status` returns provider usage windows/remaining quota summaries.
+    - `usage.cost` returns aggregated cost usage summaries for a date range.
+      Pass `agentId` for one agent, or `agentScope: "all"` to aggregate configured agents.
+    - `doctor.memory.status` returns vector-memory / cached embedding readiness for the active default agent workspace. Pass `{ "probe": true }` or `{ "deep": true }` only when the caller explicitly wants a live embedding provider ping. Dreaming-aware clients may also pass `{ "agentId": "agent-id" }` to scope Dreaming store stats to a selected agent workspace; omitting `agentId` keeps the default-agent fallback and aggregates configured Dreaming workspaces.
+    - `doctor.memory.dreamDiary`, `doctor.memory.backfillDreamDiary`, `doctor.memory.resetDreamDiary`, `doctor.memory.resetGroundedShortTerm`, `doctor.memory.repairDreamingArtifacts`, and `doctor.memory.dedupeDreamDiary` accept optional `{ "agentId": "agent-id" }` params for selected-agent Dreaming views/actions. When `agentId` is omitted, they operate on the configured default agent workspace.
+    - `doctor.memory.remHarness` returns a bounded, read-only REM harness preview for remote control-plane clients. It can include workspace paths, memory snippets, rendered grounded markdown, and deep promotion candidates, so callers need `operator.read`.
+    - `sessions.usage` returns per-session usage summaries. Pass `agentId` for one
+      agent, or `agentScope: "all"` to list configured agents together.
+    - `sessions.usage.timeseries` returns timeseries usage for one session.
+    - `sessions.usage.logs` returns usage log entries for one session.
 
   </Accordion>
 
@@ -383,21 +386,22 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="会话控制">
-    - `sessions.list` 返回当前会话索引，包括在配置了 agent runtime 后端时每行的 `agentRuntime` 元数据。
-    - `sessions.subscribe` 和 `sessions.unsubscribe` 切换当前 WS 客户端的会话变更事件订阅。
-    - `sessions.messages.subscribe` 和 `sessions.messages.unsubscribe` 切换单个会话的 transcript/message 事件订阅。
-    - `sessions.preview` 返回特定会话键的有边界 transcript 预览。
-    - `sessions.describe` 返回一个精确会话键对应的 Gateway 会话行。
-    - `sessions.resolve` 解析或规范化一个会话目标。
-    - `sessions.create` 创建一个新的会话条目。
-    - `sessions.send` 向现有会话发送一条消息。
-    - `sessions.steer` 是对活动会话的中断并引导变体。
-    - `sessions.abort` 中止会话的活动工作。调用方可以传入 `key` 加可选 `runId`，或者仅传入 `runId`，用于 Gateway 可解析为会话的活动运行。
-    - `sessions.patch` 更新会话元数据/覆盖项，并报告已解析的规范模型以及生效的 `agentRuntime`。
-    - `sessions.reset`、`sessions.delete` 和 `sessions.compact` 执行会话维护。
-    - `sessions.get` 返回完整的已存储会话行。
-    - Chat 执行仍使用 `chat.history`、`chat.send`、`chat.abort` 和 `chat.inject`。`chat.history` 对 UI 客户端进行了显示规范化：可见文本中的内联指令标签会被移除，纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）和泄露的 ASCII/全角模型控制 token 会被移除，纯静默 token 的 assistant 行（例如精确的 `NO_REPLY` / `no_reply`）会被省略，过大的行可以被占位符替换。
+  <Accordion title="Session control">
+    - `sessions.list` returns the current session index, including per-row `agentRuntime` metadata when an agent runtime backend is configured.
+    - `sessions.subscribe` and `sessions.unsubscribe` toggle session change event subscriptions for the current WS client.
+    - `sessions.messages.subscribe` and `sessions.messages.unsubscribe` toggle transcript/message event subscriptions for one session.
+    - `sessions.preview` returns bounded transcript previews for specific session keys.
+    - `sessions.describe` returns one Gateway session row for an exact session key.
+    - `sessions.resolve` resolves or canonicalizes a session target.
+    - `sessions.create` creates a new session entry.
+    - `sessions.send` sends a message into an existing session.
+    - `sessions.steer` is the interrupt-and-steer variant for an active session.
+    - `sessions.abort` aborts active work for a session. A caller may pass `key` plus optional `runId`, or pass `runId` alone for active runs the Gateway can resolve to a session.
+    - `sessions.patch` updates session metadata/overrides and reports the resolved canonical model plus effective `agentRuntime`.
+    - `sessions.reset`, `sessions.delete`, and `sessions.compact` perform session maintenance.
+    - `sessions.get` returns the full stored session row.
+    - Chat execution still uses `chat.history`, `chat.send`, `chat.abort`, and `chat.inject`. `chat.history` is display-normalized for UI clients: inline directive tags are stripped from visible text, plain-text tool-call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks) and leaked ASCII/full-width model control tokens are stripped, pure silent-token assistant rows such as exact `NO_REPLY` / `no_reply` are omitted, and oversized rows can be replaced with placeholders.
+    - `chat.message.get` is the additive bounded full-message reader for a single visible transcript entry. Clients pass `sessionKey`, optional `agentId` when the session selection is agent-scoped, plus a transcript `messageId` previously surfaced through `chat.history`, and the Gateway returns the same display-normalized projection without the lightweight history truncation cap when the stored entry is still available and not oversized.
 
   </Accordion>
 
@@ -496,69 +500,87 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 ### Operator 辅助方法
 
-- Operator 可以调用 `commands.list`（`operator.read`）来获取某个 agent 的运行时
-  命令清单。
-  - `agentId` 为可选；省略它可读取默认 agent workspace。
-  - `scope` 控制主 `name` 所指向的表面：
-    - `text` 返回不带前导 `/` 的主文本命令 token
-    - `native` 和默认的 `both` 路径在可用时返回感知提供方的原生名称
-  - `textAliases` 包含精确的斜杠别名，例如 `/model` 和 `/m`。
-  - `nativeName` 在存在时包含感知提供方的原生命令名。
-  - `provider` 为可选项，仅影响原生命名以及原生插件命令可用性。
-  - `includeArgs=false` 会从响应中省略序列化的参数元数据。
-- Operator 可以调用 `tools.catalog`（`operator.read`）来获取某个
-  agent 的运行时工具目录。响应包含分组工具和来源元数据：
-  - `source`: `core` 或 `plugin`
-  - `pluginId`: 当 `source="plugin"` 时的插件所有者
-  - `optional`: 插件工具是否可选
-- Operator 可以调用 `tools.effective`（`operator.read`）来获取某个会话的运行时生效工具
-  清单。
-  - `sessionKey` 是必需的。
-  - Gateway 从会话服务端派生受信任的运行时上下文，而不是接受调用方提供的认证或投递上下文。
-  - 响应按会话作用域返回，并反映当前活动对话此刻可用的内容，
-    包括核心、插件和通道工具。
-- Operator 可以调用 `tools.invoke`（`operator.write`）通过与 `/tools/invoke`
-  相同的 gateway policy 路径调用一个可用工具。
-  - `name` 是必需的。`args`、`sessionKey`、`agentId`、`confirm` 和
-    `idempotencyKey` 为可选。
-  - 如果同时存在 `sessionKey` 和 `agentId`，解析后的会话 agent 必须与
-    `agentId` 匹配。
-  - 响应是面向 SDK 的信封，包含 `ok`、`toolName`、可选 `output` 和类型化
-    `error` 字段。审批或策略拒绝会在 payload 中返回 `ok:false`，而不是
-    绕过 gateway 工具策略管道。
-- Operator 可以调用 `skills.status`（`operator.read`）来获取某个 agent 的可见
-  技能清单。
-  - `agentId` 为可选；省略它可读取默认 agent workspace。
-  - 响应包含资格、缺失要求、配置检查，以及
-    净化后的安装选项，而不会暴露原始 secret 值。
-- Operator 可以调用 `skills.search` 和 `skills.detail`（`operator.read`）获取
-  ClawHub 发现元数据。
-- Operator 可以调用 `skills.upload.begin`、`skills.upload.chunk` 和
-  `skills.upload.commit`（`operator.admin`）在安装前暂存一个私有技能归档文件。
-  这是面向受信任客户端的独立管理上传路径，不是普通的 ClawHub 技能安装流程，且默认禁用，除非
-  启用了 `skills.install.allowUploadedArchives`。
+- Operators may call `commands.list` (`operator.read`) to fetch the runtime
+  command inventory for an agent.
+  - `agentId` is optional; omit it to read the default agent workspace.
+  - `scope` controls which surface the primary `name` targets:
+    - `text` returns the primary text command token without the leading `/`
+    - `native` and the default `both` path return provider-aware native names
+      when available
+  - `textAliases` carries exact slash aliases such as `/model` and `/m`.
+  - `nativeName` carries the provider-aware native command name when one exists.
+  - `provider` is optional and only affects native naming plus native plugin
+    command availability.
+  - `includeArgs=false` omits serialized argument metadata from the response.
+- Operators may call `tools.catalog` (`operator.read`) to fetch the runtime tool catalog for an
+  agent. The response includes grouped tools and provenance metadata:
+  - `source`: `core` or `plugin`
+  - `pluginId`: plugin owner when `source="plugin"`
+  - `optional`: whether a plugin tool is optional
+- Operators may call `tools.effective` (`operator.read`) to fetch the runtime-effective tool
+  inventory for a session.
+  - `sessionKey` is required.
+  - The gateway derives trusted runtime context from the session server-side instead of accepting
+    caller-supplied auth or delivery context.
+  - The response is a session-scoped server-derived projection of the active inventory,
+    including core, plugin, channel, and already-discovered MCP server tools.
+  - `tools.effective` is read-only for MCP: it may project a warm session MCP catalog through the
+    final tool policy, but it does not create MCP runtimes, connect transports, or issue
+    `tools/list`. If no matching warm catalog exists, the response may include a notice such as
+    `mcp-not-yet-connected`, `mcp-not-yet-listed`, or `mcp-stale-catalog`.
+  - Effective tool entries use `source="core"`, `source="plugin"`, `source="channel"`, or
+    `source="mcp"`.
+- Operators may call `tools.invoke` (`operator.write`) to invoke one available tool through the
+  same gateway policy path as `/tools/invoke`.
+  - `name` is required. `args`, `sessionKey`, `agentId`, `confirm`, and
+    `idempotencyKey` are optional.
+  - If both `sessionKey` and `agentId` are present, the resolved session agent must match
+    `agentId`.
+  - Owner-only core wrappers such as `cron`, `gateway`, and `nodes` require
+    owner/admin identity (`operator.admin`) even though the `tools.invoke`
+    method itself is `operator.write`.
+  - The response is an SDK-facing envelope with `ok`, `toolName`, optional `output`, and typed
+    `error` fields. Approval or policy refusals return `ok:false` in the payload rather than
+    bypassing the gateway tool policy pipeline.
+- Operators may call `skills.status` (`operator.read`) to fetch the visible
+  skill inventory for an agent.
+  - `agentId` is optional; omit it to read the default agent workspace.
+  - The response includes eligibility, missing requirements, config checks, and
+    sanitized install options without exposing raw secret values.
+- Operators may call `skills.search` and `skills.detail` (`operator.read`) for
+  ClawHub discovery metadata.
+- Operators may call `skills.upload.begin`, `skills.upload.chunk`, and
+  `skills.upload.commit` (`operator.admin`) to stage a private skill archive
+  before installing it. This is a separate admin upload path for trusted clients,
+  not the normal ClawHub skill install flow, and is disabled by default unless
+  `skills.install.allowUploadedArchives` is enabled.
   - `skills.upload.begin({ kind: "skill-archive", slug, sizeBytes, sha256?, force?, idempotencyKey? })`
-    创建一个绑定到该 slug 和 force 值的上传。
-  - `skills.upload.chunk({ uploadId, offset, dataBase64 })` 以
-    精确的解码偏移追加字节。
-  - `skills.upload.commit({ uploadId, sha256? })` 验证最终大小和
-    SHA-256。Commit 只会完成上传；不会安装该技能。
-  - 上传的技能归档是包含 `SKILL.md` 根目录的 zip 归档文件。该
-    归档内部的目录名不会决定安装目标。
-- Operator 可以以三种模式调用 `skills.install`（`operator.admin`）：
-  - ClawHub 模式：`{ source: "clawhub", slug, version?, force? }` 将一个
-    技能文件夹安装到默认 agent workspace 的 `skills/` 目录。
-  - 上传模式：`{ source: "upload", uploadId, slug, force?, sha256?, timeoutMs? }`
-    将已提交的上传安装到默认 agent workspace 的 `skills/<slug>`
-    目录。slug 和 force 值必须与原始的
-    `skills.upload.begin` 请求一致。除非启用了
-    `skills.install.allowUploadedArchives`，否则该模式会被拒绝。此设置不会影响 ClawHub 安装。
-  - Gateway 安装器模式：`{ name, installId, dangerouslyForceUnsafeInstall?, timeoutMs? }`
-    在 gateway 主机上运行一个声明的 `metadata.openclaw.install` 动作。
-- Operator 可以以两种模式调用 `skills.update`（`operator.admin`）：
-  - ClawHub 模式会更新一个已跟踪的 slug，或更新默认 agent workspace 中所有已跟踪的 ClawHub 安装。
-  - 配置模式会补丁式更新 `skills.entries.<skillKey>` 值，例如 `enabled`、
-    `apiKey` 和 `env`。
+    creates an upload bound to that slug and force value.
+  - `skills.upload.chunk({ uploadId, offset, dataBase64 })` appends bytes at
+    the exact decoded offset.
+  - `skills.upload.commit({ uploadId, sha256? })` verifies the final size and
+    SHA-256. Commit only finalizes the upload; it does not install the skill.
+  - Uploaded skill archives are zip archives containing a `SKILL.md` root. The
+    archive's internal directory name never selects the install target.
+- Operators may call `skills.install` (`operator.admin`) in three modes:
+  - ClawHub mode: `{ source: "clawhub", slug, version?, force? }` installs a
+    skill folder into the default agent workspace `skills/` directory.
+  - Upload mode: `{ source: "upload", uploadId, slug, force?, sha256?, timeoutMs? }`
+    installs a committed upload into the default agent workspace `skills/<slug>`
+    directory. The slug and force value must match the original
+    `skills.upload.begin` request. This mode is rejected unless
+    `skills.install.allowUploadedArchives` is enabled. The setting does not
+    affect ClawHub installs.
+  - Gateway installer mode: `{ name, installId, timeoutMs? }`
+    runs a declared `metadata.openclaw.install` action on the gateway host.
+    Older clients may still send `dangerouslyForceUnsafeInstall`; this field is
+    deprecated, accepted only for protocol compatibility, and ignored. Use
+    `security.installPolicy` for operator-owned install decisions.
+- Operators may call `skills.update` (`operator.admin`) in two modes:
+  - ClawHub mode updates one tracked slug or all tracked ClawHub installs in
+    the default agent workspace.
+  - Config mode patches `skills.entries.<skillKey>` values such as `enabled`,
+    `apiKey`, and `env`.
 
 ### `models.list` 视图
 
@@ -585,9 +607,9 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 ## 版本管理
 
-- `PROTOCOL_VERSION` 位于 `src/gateway/protocol/version.ts`。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝那些不包含其当前协议版本的范围。当前客户端和服务器需要 protocol v4。
-- Schemas + models are generated from TypeBox definitions:
+- `PROTOCOL_VERSION` 位于 `packages/gateway-protocol/src/version.ts`。
+- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝不包含其当前协议版本的范围。当前客户端和服务器要求协议 v4。
+- 模式 + 模型由 TypeBox 定义生成：
   - `pnpm protocol:gen`
   - `pnpm protocol:gen:swift`
   - `pnpm protocol:check`
@@ -598,8 +620,8 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 | 常量                                      | 默认值                                                | 来源                                                                                     |
 | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `PROTOCOL_VERSION`                        | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
-| `MIN_CLIENT_PROTOCOL_VERSION`             | `4`                                                   | `src/gateway/protocol/version.ts`                                                          |
+| `PROTOCOL_VERSION`                        | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                 |
+| `MIN_CLIENT_PROTOCOL_VERSION`             | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                 |
 | Request timeout (per RPC)                 | `30_000` ms                                           | `src/gateway/client.ts` (`requestTimeoutMs`)                                               |
 | Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (配置/环境可以提高配对的服务器/客户端预算) |
 | Initial reconnect backoff                 | `1_000` ms                                            | `src/gateway/client.ts` (`backoffMs`)                                                      |
@@ -659,7 +681,8 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
   caller-requested scope set remains authoritative; cached scopes are only
   reused when the client is reusing the stored per-device token.
 - Device tokens can be rotated/revoked via `device.token.rotate` and
-  `device.token.revoke` (requires `operator.pairing` scope).
+  `device.token.revoke` (requires `operator.pairing` scope). Rotating or
+  revoking a node or other non-operator role also requires `operator.admin`.
 - `device.token.rotate` returns rotation metadata. It echoes the replacement
   bearer token only for same-device calls that are already authenticated with
   that device token, so token-only clients can persist their replacement before
@@ -668,8 +691,9 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
   recorded in that device's pairing entry; token mutation cannot expand or
   target a device role that pairing approval never granted.
 - For paired-device token sessions, device management is self-scoped unless the
-  caller also has `operator.admin`: non-admin callers can remove/revoke/rotate
-  only their **own** device entry.
+  caller also has `operator.admin`: non-admin callers can manage only the
+  operator token for their **own** device entry. Node and other non-operator
+  token management is admin-only, even for the caller's own device.
 - `device.token.rotate` and `device.token.revoke` also check the target operator
   token scope set against the caller's current session scopes. Non-admin callers
   cannot rotate or revoke a broader operator token than they already hold.
@@ -743,9 +767,9 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
 
 ## 范围
 
-此协议公开了**完整的网关 API**（状态、通道、模型、聊天、
-代理、会话、节点、审批等）。具体接口由
-`src/gateway/protocol/schema.ts` 中的 TypeBox schemas 定义。
+此协议暴露 **完整的网关 API**（status、channels、models、chat、
+agent、sessions、nodes、approvals 等）。确切的接口由
+`packages/gateway-protocol/src/schema.ts` 中的 TypeBox schemas 定义。
 
 ## 相关
 

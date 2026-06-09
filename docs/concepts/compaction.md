@@ -54,7 +54,7 @@ title: "压缩"
 /compact Focus on the API design decisions
 ```
 
-当设置了 `agents.defaults.compaction.keepRecentTokens` 时，手动压缩会遵守该 Pi 截断点，并在重建后的上下文中保留最近的尾部。若没有显式的保留预算，手动压缩会表现为一个硬检查点，并仅从新的摘要继续。
+当设置了 `agents.defaults.compaction.keepRecentTokens` 时，手动压缩会遵循 OpenClaw 的该截断点，并在重建后的上下文中保留最近的尾部。如果没有显式的保留额度，手动压缩会作为一个硬性检查点，仅从新的摘要继续。
 
 ## 配置
 

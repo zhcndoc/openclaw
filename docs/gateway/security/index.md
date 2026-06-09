@@ -24,9 +24,9 @@ OpenClaw 的安全指南假设一种 **个人助手** 部署：一个受信任�
 
 本页说明的是在 **该模型内** 的加固方法。它并不声称在一个共享网关上实现敌对多租户隔离。
 
-Before changing remote access, DM policy, reverse proxy, or public exposure,
-use the [Gateway exposure runbook](/gateway/security/exposure-runbook) as a
-pre-flight and rollback checklist.
+在更改远程访问、DM 策略、反向代理或公网暴露之前，
+请先使用 [网关暴露运行手册](/gateway/security/exposure-runbook) 作为
+预检查和回滚清单。
 
 ## 快速检查：`openclaw security audit`
 
@@ -53,60 +53,16 @@ OpenClaw 既是产品也是实验：你把前沿模型行为接到了真实的�
 
 先从仍然可用的最小权限开始，然后在建立信心后逐步放宽。
 
-### Published package dependency lock
+### 发布包依赖锁定
 
 OpenClaw 源码检出使用 `pnpm-lock.yaml`。发布的 `openclaw` npm
-包以及 OpenClaw 拥有的 npm 插件包包含 `npm-shrinkwrap.json`，
-即 npm 可发布的依赖锁定文件，因此包安装会使用发布版本中经过审查的
-传递依赖图，而不是在安装时重新解析一张新的依赖图。合适的 OpenClaw 拥有的 npm 插件包也可以使用显式的 `bundledDependencies` 进行发布，因此它们的运行时依赖文件
-会被带入插件 tarball，而不是只依赖安装时的解析结果。
+包以及 OpenClaw 维护的 npm 插件包会包含 `npm-shrinkwrap.json`，
+这是 npm 可发布的依赖锁文件，因此包安装会使用该发布版本中经过审查的
+传递依赖图，而不是在安装时重新解析一个新的依赖图。
 
-这是一种供应链加固措施：
-
-- 发布安装更可复现；
-- 传递依赖更新会变成可见的审查面；
-- 包 tarball 中包含了发布验证者检查过的依赖图；
-- 合适的 OpenClaw 拥有的插件 tarball 包含该依赖图中的依赖文件；
-- `package-lock.json` 不会出现在已发布包中，因为 npm 不把它视为可发布的锁定契约。
-
-Shrinkwrap 不是沙箱，也不能让每个依赖都变得可信。它
-不能替代 `openclaw security audit`、主机隔离、npm provenance、
-签名/审计检查，或在合适时使用 `--ignore-scripts` 的安装冒烟测试。
-应将其视为发布可复现性和审查控制边界。
-
-维护者应在根包或 OpenClaw 拥有的已发布插件包更改其已发布依赖图时更新并验证 shrinkwrap：
-
-```bash
-pnpm deps:shrinkwrap:generate
-pnpm deps:shrinkwrap:check
-```
-
-生成器会解析 npm 的可发布锁定格式，但会拒绝那些其生成的包版本尚未存在于 `pnpm-lock.yaml` 中的包，从而保留 pnpm 依赖年龄、覆盖和补丁审查边界。
-
-仅当你有意刷新根 `openclaw` 包而不触及插件包时，才使用 `pnpm deps:shrinkwrap:root:generate` 和
-`pnpm deps:shrinkwrap:root:check`。
-
-请将 `pnpm-lock.yaml`、`npm-shrinkwrap.json`、捆绑的插件依赖
-负载，以及任何 `package-lock.json` 差异视为安全敏感内容。包验证器要求新根包 tarball 中包含 shrinkwrap，并且插件 npm
-发布路径会检查插件本地 shrinkwrap、安装包本地的捆绑依赖，然后再打包或发布。包验证器会拒绝 `package-lock.json`。
-
-要检查已发布的包：
-
-```bash
-npm pack openclaw@<version> --json --pack-destination /tmp/openclaw-pack
-tar -tf /tmp/openclaw-pack/openclaw-<version>.tgz | grep '^package/npm-shrinkwrap.json$'
-```
-
-要检查 OpenClaw 拥有的插件包，请替换包规格并检查
-相同的 tar 条目：
-
-```bash
-npm pack @openclaw/discord@<version> --json --pack-destination /tmp/openclaw-plugin-pack
-tar -tf /tmp/openclaw-plugin-pack/openclaw-discord-<version>.tgz | grep '^package/npm-shrinkwrap.json$'
-tar -tf /tmp/openclaw-plugin-pack/openclaw-discord-<version>.tgz | grep '^package/node_modules/'
-```
-
-背景：[npm-shrinkwrap.json](https://docs.npmjs.com/cli/v11/configuring-npm/npm-shrinkwrap-json)。
+Shrinkwrap 是供应链加固和发布可复现性的边界，
+不是沙箱。关于易懂的模型、维护者命令和包检查步骤，请参见
+[npm shrinkwrap](/gateway/security/shrinkwrap)。
 
 ### 部署和主机信任
 
@@ -519,12 +475,14 @@ OpenClaw 的立场：
 - `gateway` 可以用 `config.schema.lookup` / `config.get` 检查配置，并可以用 `config.apply`、`config.patch` 和 `update.run` 进行持久性更改。
 - `cron` 可以创建计划任务，并在原始聊天/任务结束后继续运行。
 
-面向 agent 的 `gateway` 运行时工具仍然拒绝重写
-`tools.exec.ask` 或 `tools.exec.security`；旧版 `tools.bash.*` 别名在写入前会被
-规范化为相同受保护的 exec 路径。
-由 agent 驱动的 `gateway config.apply` 和 `gateway config.patch` 编辑默认是
-失败关闭的：只有一小部分提示、模型和提及门控
-路径可由 agent 调整。因此，新的敏感配置树会在未被刻意加入允许列表时受到保护。
+The agent-facing `gateway` runtime tool still refuses to rewrite
+`tools.exec.ask` or `tools.exec.security`; legacy `tools.bash.*` aliases are
+normalized to the same protected exec paths before the write.
+Agent-driven `gateway config.apply` and `gateway config.patch` edits are
+fail-closed by default: only a narrow set of low-risk runtime tuning,
+mention-gating, and visible-reply paths are agent-tunable. Global model defaults
+and prompt overlays stay operator-controlled. New sensitive config trees
+are therefore protected unless they are deliberately added to the allowlist.
 
 对于任何处理不受信任内容的 agent/界面，默认拒绝这些功能：
 
@@ -542,17 +500,17 @@ OpenClaw 的立场：
 
 插件与网关**同进程**运行。请将其视为受信任代码：
 
-- 仅从你信任的来源安装插件。
-- 优先使用显式的 `plugins.allow` 允许列表。
-- 启用前审查插件配置。
-- 插件变更后重启 Gateway。
-- 如果你安装或更新插件（`openclaw plugins install <package>`、`openclaw plugins update <id>`），请将其视为运行不受信任的代码：
-  - 安装路径是当前插件安装根目录下按插件划分的目录。
-  - OpenClaw 会在安装/更新前运行内置的危险代码扫描。`critical` 结果默认会阻止安装。
-  - npm 和 git 插件安装仅在显式安装/更新流程中执行包管理器依赖收敛。本地路径和压缩包会被视为自包含的插件包；OpenClaw 会复制/引用它们，而不会运行 `npm install`。
-  - 优先使用固定的精确版本（`@scope/pkg@1.2.3`），并在启用前检查磁盘上解压后的代码。
-  - `--dangerously-force-unsafe-install` 仅用于插件安装/更新流程中内置扫描的误报“破窗”处理。它不会绕过插件 `before_install` 钩子策略阻断，也不会绕过扫描失败。
-  - 由 Gateway 支持的技能依赖安装遵循相同的危险/可疑划分：内置的 `critical` 结果会阻止安装，除非调用方显式设置 `dangerouslyForceUnsafeInstall`，而可疑结果仍然只会发出警告。`openclaw skills install` 仍然是单独的 ClawHub 技能下载/安装流程。
+- Only install plugins from sources you trust.
+- Prefer explicit `plugins.allow` allowlists.
+- Review plugin config before enabling.
+- Restart the Gateway after plugin changes.
+- If you install or update plugins (`openclaw plugins install <package>`, `openclaw plugins update <id>`), treat it like running untrusted code:
+  - The install path is the per-plugin directory under the active plugin install root.
+  - OpenClaw does not run built-in local dangerous-code blocking during install/update. Use `security.installPolicy` for operator-owned local allow/block decisions and `openclaw security audit --deep` for diagnostic scanning.
+  - npm and git plugin installs run package-manager dependency convergence only during the explicit install/update flow. Local paths and archives are treated as self-contained plugin packages; OpenClaw copies/references them without running `npm install`.
+  - Prefer pinned, exact versions (`@scope/pkg@1.2.3`), and inspect the unpacked code on disk before enabling.
+  - `--dangerously-force-unsafe-install` is deprecated and no longer changes plugin install/update behavior.
+  - Configure `security.installPolicy` when operators need a trusted local command to make host-specific allow/block decisions for skill and plugin installs. This policy runs after source material is staged but before installation continues, applies to ClawHub skills too, and is not bypassed by deprecated unsafe flags.
 
 详情： [插件](/tools/plugin)
 
@@ -973,12 +931,13 @@ loopback 接受明文，但私有局域网、链路本地、`.local` 和
 
 OpenClaw 会为 agents 和 tools 载入工作区本地的 `.env` 文件，但绝不会让这些文件无声地覆盖 gateway 运行时控制。
 
-- 任何以 `OPENCLAW_*` 开头的键都会被来自不受信任工作区 `.env` 文件的内容阻止。
-- Matrix、Mattermost、IRC 和 Synology Chat 的通道端点设置也会被工作区 `.env` 覆盖所阻止，因此克隆的工作区不能通过本地端点配置重定向捆绑的连接器流量。端点环境键（例如 `MATRIX_HOMESERVER`、`MATTERMOST_URL`、`IRC_HOST`、`SYNOLOGY_CHAT_INCOMING_URL`）必须来自 gateway 进程环境或 `env.shellEnv`，不能来自工作区加载的 `.env`。
-- 该阻止是 fail-closed：未来版本中新增的运行时控制变量不能从已提交或攻击者提供的 `.env` 继承；该键会被忽略，gateway 保持自己的值。
-- 受信任的进程/OS 环境变量（gateway 自己的 shell、launchd/systemd 单元、应用包）仍然适用——这里仅约束 `.env` 文件加载。
+- Provider credential environment variables are blocked from untrusted workspace `.env` files. Examples include `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `PERPLEXITY_API_KEY`, `BRAVE_API_KEY`, `TAVILY_API_KEY`, `EXA_API_KEY`, `FIRECRAWL_API_KEY`, and provider auth keys declared by installed trusted plugins. Put provider credentials in the Gateway process environment, `~/.openclaw/.env` (`$OPENCLAW_STATE_DIR/.env`), the config `env` block, or optional login-shell import.
+- Any key that starts with `OPENCLAW_*` is blocked from untrusted workspace `.env` files.
+- Channel endpoint settings for Matrix, Mattermost, IRC, and Synology Chat are also blocked from workspace `.env` overrides, so cloned workspaces cannot redirect bundled connector traffic through local endpoint config. Endpoint env keys (such as `MATRIX_HOMESERVER`, `MATTERMOST_URL`, `IRC_HOST`, `SYNOLOGY_CHAT_INCOMING_URL`) must come from the gateway process environment or `env.shellEnv`, not from a workspace-loaded `.env`.
+- The block is fail-closed: a new runtime-control variable added in a future release cannot be inherited from a checked-in or attacker-supplied `.env`; the key is ignored and the gateway keeps its own value.
+- Trusted process/OS environment variables, global runtime dotenv, config `env`, and enabled login-shell import still apply - this only constrains workspace `.env` file loading.
 
-原因：工作区 `.env` 文件经常与 agent 代码放在一起，可能被意外提交，或由工具写入。阻止整个 `OPENCLAW_*` 前缀意味着以后新增的 `OPENCLAW_*` 标志永远不会悄悄从工作区状态继承，从而避免回归。
+Why: workspace `.env` files frequently live next to agent code, get committed by accident, or get written by tools. Blocking provider credentials prevents a cloned workspace from substituting attacker-controlled provider accounts. Blocking the whole `OPENCLAW_*` prefix means adding a new `OPENCLAW_*` flag later can never regress into silent inheritance from workspace state.
 
 ### 日志和转录（脱敏与保留）
 

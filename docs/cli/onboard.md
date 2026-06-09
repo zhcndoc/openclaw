@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw onboard 的 CLI 参考（交互式引导）"
+summary: "OpenClaw 上机引导的 CLI 参考（交互式引导）"
 read_when:
   - 你需要关于 gateway、workspace、auth、channels 和 skills 的引导式设置
 title: "引导"
@@ -92,7 +92,8 @@ openclaw onboard --non-interactive \
 ```
 
 `--custom-api-key` 在非交互式模式下是可选的。如果省略，引导会检查 `CUSTOM_API_KEY`。
-OpenClaw 会自动将常见的视觉模型 ID 标记为支持图像输入。对于未知的自定义视觉 ID，请传入 `--custom-image-input`；或者使用 `--custom-text-input` 强制仅文本元数据。
+OpenClaw 会自动将常见视觉模型 ID 标记为支持图像输入。对于未知的自定义视觉 ID，请传入 `--custom-image-input`；或者传入 `--custom-text-input` 以强制仅文本元数据。
+对于支持 `/v1/responses` 但不支持 `/v1/chat/completions` 的 OpenAI 兼容端点，请使用 `--custom-compatibility openai-responses`。
 
 LM Studio 在非交互式模式下也支持特定于提供方的 key 标志：
 

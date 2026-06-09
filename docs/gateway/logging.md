@@ -18,7 +18,7 @@ OpenClaw 有两个日志“输出面”：
 在启动时，网关会打印已解析的默认代理模型，以及影响新会话的模式默认值，例如：
 
 ```text
-agent model: openai-codex/gpt-5.5 (thinking=medium, fast=on)
+agent model: openai/gpt-5.5 (thinking=medium, fast=on)
 ```
 
 `thinking` 来自默认代理、模型参数或全局代理默认值；

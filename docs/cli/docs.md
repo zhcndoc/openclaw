@@ -1,14 +1,14 @@
 ---
 summary: "openclaw docs 的 CLI 参考（搜索在线文档索引）"
 read_when:
-  - 你想从终端搜索实时的 OpenClaw 文档
-  - 你需要知道 docs CLI 会调用哪些辅助二进制文件
-title: "文档"
+  - 你想从终端搜索在线 OpenClaw 文档
+  - 你需要知道 docs CLI 调用的是哪个托管搜索 API
+title: "Docs"
 ---
 
 # `openclaw docs`
 
-从终端搜索实时的 OpenClaw 文档索引。该命令会通过 shell 调用公共的、由 Mintlify 托管的 docs MCP 搜索端点 `https://docs.openclaw.ai/mcp.search_open_claw`，并将结果渲染到你的终端中。
+从终端搜索在线 OpenClaw 文档索引。该命令调用 OpenClaw 托管在 Cloudflare 上的文档搜索 API，并将结果渲染到你的终端中。
 
 ## 用法
 
@@ -35,17 +35,7 @@ openclaw docs gateway token secretref
 
 ## 工作原理
 
-`openclaw docs` 会调用 `mcporter` CLI 来调用 docs 搜索 MCP 工具，然后将工具输出中的 `Title: / Link: / Content:` 块解析为结果列表。
-
-为了解析 `mcporter`，OpenClaw 按以下顺序检查：
-
-1. `PATH` 上的 `mcporter`（如果存在，则直接使用）。
-2. 如果安装了 `pnpm`，则使用 `pnpm dlx mcporter ...`。
-3. 如果安装了 `npx`，则使用 `npx -y mcporter ...`。
-
-如果都不可用，命令会失败，并提示安装 `pnpm`（`npm install -g pnpm`）。
-
-搜索调用使用固定的 30 秒超时。每条结果摘要会被截断到大约 220 个字符。
+`openclaw docs` 调用 `https://docs.openclaw.ai/api/search` 并渲染 JSON 结果。搜索调用使用固定的 30 秒超时。
 
 ## 输出
 
@@ -62,10 +52,10 @@ openclaw docs gateway token secretref
 
 ## 退出码
 
-| Code | Meaning                                             |
-| ---- | --------------------------------------------------- |
-| `0`  | 搜索成功（包括零结果响应）。 |
-| `1`  | MCP 工具调用失败；stderr 会内联打印。 |
+| Code | Meaning                                                           |
+| ---- | ----------------------------------------------------------------- |
+| `0`  | 搜索成功（包括零结果响应）。               |
+| `1`  | 托管的文档搜索 API 调用失败；stderr 会就地打印。 |
 
 ## 相关
 

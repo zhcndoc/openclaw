@@ -10,6 +10,9 @@ sidebarTitle: "Exec 许可"
 
 Exec 许可是用于让一个沙箱化 agent 在真实主机（`gateway` 或 `node`）上运行命令的 **配套应用 / node 主机护栏**。这是一个安全联锁：只有当策略 + 允许列表 +（可选）用户许可都一致时，命令才会被允许。Exec 许可会在工具策略和 elevated gating **之上叠加**（除非 elevated 被设置为 `full`，这会跳过许可）。
 
+有关 `deny`、`allowlist`、`ask`、`auto`、`full` 的模式优先概览、Codex Guardian 映射以及 ACPX harness 权限，请参见
+[权限模式](/tools/permission-modes)。
+
 <Note>
 有效策略是 `tools.exec.*` 与 approvals defaults 中**更严格的**那个；如果省略了某个 approvals 字段，则使用 `tools.exec` 的值。Host exec 也使用该机器上的本地 approvals 状态——`~/.openclaw/exec-approvals.json` 中本地的 `ask: "always"` 即使 session 或 config 默认要求 `ask: "on-miss"`，也会持续弹出提示。
 </Note>
@@ -99,6 +102,18 @@ Exec 许可在执行主机本地强制执行：
 
 ## 策略开关
 
+### `tools.exec.mode`
+
+`tools.exec.mode` 是 host exec 首选的标准化策略面。可用值为：
+
+- `deny` - 阻止 host exec。
+- `allowlist` - 仅在不询问的情况下运行允许列表中的命令。
+- `ask` - 使用允许列表策略，并在未命中时询问。
+- `auto` - 使用允许列表策略，直接运行确定性匹配项，并将许可未命中通过 OpenClaw 的原生自动审查器处理，然后再回退到人工许可流程。
+- `full` - 运行 host exec 而不弹出许可提示。
+
+旧版 `tools.exec.security` / `tools.exec.ask` 仍然受支持，并且当它们设置在更窄的 session 或 agent 作用域时仍然优先生效。
+
 ### `exec.security`
 
 <ParamField path="security" type='"deny" | "allowlist" | "full"'>
@@ -111,9 +126,11 @@ Exec 许可在执行主机本地强制执行：
 ### `exec.ask`
 
 <ParamField path="ask" type='"off" | "on-miss" | "always"'>
-  - `off` - 从不提示。
-  - `on-miss` - 仅在允许列表不匹配时提示。
-  - `always` - 每条命令都提示。即使有效 ask 模式为 `always`，`allow-always` 的持久化信任也**不会**抑制提示。
+  为 host exec 配置的 ask 策略。控制来自 `tools.exec.ask` 和 host approvals defaults 的基础许可提示行为。每次调用的 `ask` 工具参数（见 [Exec tool](/tools/exec#parameters)）只能在此基础上进一步收紧，而当有效的 host ask 为 `off` 时，来自通道的模型调用会忽略它。
+
+- `off` - 从不提示。
+- `on-miss` - 仅当允许列表未命中时提示。
+- `always` - 每次命令都提示。即使有效 ask 模式为 `always`，`allow-always` 的持久信任也**不会**抑制提示。
 
 </ParamField>
 
@@ -260,8 +277,8 @@ EOF
 
 ### 仅会话快捷方式
 
-- `/exec security=full ask=off` 只会更改当前会话。
-- `/elevated full` 是一个紧急开关快捷方式，也会为该会话跳过 exec 许可。
+- `/exec security=full ask=off` 仅更改当前 session。
+- `/elevated full` 是一个破窗快捷方式，仅当请求的策略和主机 approvals 文件都解析为 `security: "full"` 且 `ask: "off"` 时，才会跳过 exec 许可。更严格的主机文件，例如 `ask: "always"`，仍然会提示。
 
 如果主机许可文件比 config 更严格，那么更严格的主机策略仍然会生效。
 
@@ -367,20 +384,11 @@ Exec 生命周期会作为系统消息显示：
 - `Exec running` (仅当命令超过运行通知阈值时)。
 - `Exec finished`。
 
-这些消息会在节点报告事件后发布到代理的会话中。
-被拒绝的 exec 审批是终态：OpenClaw 可以将拒绝结果报告给
-操作员或直接聊天路由，但它不会把 `Exec denied` 再发布回
-代理会话中，也不会唤醒代理工作。
-当命令完成时，Gateway-host exec 审批会发出相同的生命周期事件
-（并且在运行时间超过阈值时也会发出运行中事件）。
-基于审批门控的 exec 会在这些消息中复用审批 id 作为 `runId`，以便于关联。
+这些消息会在节点报告事件后发布到代理的会话中。被拒绝的 exec 审批对主机命令本身是终态的：命令不会运行。对于带有来源会话的主代理异步审批，OpenClaw 会将拒绝作为内部后续消息发布回该会话，以便代理可以停止等待异步命令并避免缺失结果修复。如果没有会话或会话无法恢复，OpenClaw 仍可在存在安全路径时向操作员或直接聊天路由报告简洁的拒绝信息。子代理会话的拒绝不会回传到子代理中。Gateway 主机 exec 审批在命令结束时（以及可选地在运行超过阈值时）会发出相同的生命周期事件。受审批门控的 exec 会在这些消息中重用审批 id 作为 `runId`，以便轻松关联。
 
 ## 拒绝审批行为
 
-当异步 exec 审批被拒绝时，OpenClaw 会将该请求视为终态。
-它可以向操作员或直接聊天路由显示简洁的拒绝信息，但不会把
-拒绝指导重新发送回代理会话。这样可以防止被拒绝的命令变成另一个模型轮次，
-并避免代理重用同一命令上一次运行的输出。
+当异步 exec 审批被拒绝时，OpenClaw 会将主机命令视为终态并以失败关闭。对于主代理会话，拒绝会作为内部会话后续消息送达，告知代理该异步命令未运行。这样可以在不暴露过时命令输出的情况下保持转录连续性。如果会话送达不可用，OpenClaw 会在存在安全路径时回退为简洁的操作员或直接聊天拒绝。
 
 ## 影响
 

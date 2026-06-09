@@ -140,10 +140,10 @@ openclaw migrate apply codex --yes --plugin google-calendar
 
 ### Codex 导入内容
 
-- `$CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
-- 位于 `$HOME/.agents/skills` 下的个人 AgentSkills，在你希望按代理拥有时会复制到当前 OpenClaw 代理工作区。
-- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex 插件。规划会为每个已启用的已安装插件读取 `plugin/read`。基于 app 的插件要求源 Codex app-server 的账户响应是 ChatGPT 订阅账户；非 ChatGPT 或缺失的账户响应会以 `codex_subscription_required` 跳过。默认情况下，迁移不会调用源 `app/list`，因此通过账户门禁的基于 app 的插件会在没有源 app 可访问性验证的情况下进行规划，而账户查询传输失败会以 `codex_account_unavailable` 跳过。当你希望迁移强制获取新的源 `app/list` 快照，并要求在规划原生激活之前每个拥有的 app 都存在、已启用且可访问时，请传入 `--verify-plugin-apps`。在该模式下，账户查询传输失败会继续进入源 app 清单验证。源 app 清单快照仅保留在当前进程内存中；不会写入迁移输出或目标配置。已禁用的插件、无法读取的插件详情、受订阅门禁限制的源账户，以及在请求验证时缺失的 app、已禁用的 app、无法访问的 app 或源 app 清单失败，都会变成带类型原因的手动跳过项，而不是目标配置条目。
-  对于每个选中的符合条件的插件，apply 都会调用 app-server `plugin/install`，即使目标 app-server 已报告该插件已安装并启用。迁移后的 Codex 插件仅可在选择原生 Codex harness 的会话中使用；它们不会暴露给 Pi、普通 OpenAI 提供程序运行、ACP 会话绑定或其他 harness。
+- `CODEX_HOME/skills` 下的 Codex CLI 技能目录，不包括 Codex 的 `.system` 缓存。
+- `$HOME/.agents/skills` 下的个人 AgentSkills，在你希望按代理拥有时会复制到当前 OpenClaw 代理工作区。
+- 通过 Codex app-server `plugin/list` 发现的源安装 `openai-curated` Codex 插件。规划会为每个已启用的已安装插件读取 `plugin/read`。受 app 支持的插件要求源 Codex app-server 账户响应为 ChatGPT 订阅账户；非 ChatGPT 或缺少账户响应的插件会以 `codex_subscription_required` 跳过。默认情况下，迁移不会调用源 `app/list`，因此即使通过账户门禁的受 app 支持插件也会在未验证源 app 可访问性的情况下进行规划，而账户查找传输失败会以 `codex_account_unavailable` 跳过。当你希望迁移强制获取新的源 `app/list` 快照，并要求在规划原生激活之前每个归属应用都必须存在、启用且可访问时，请传入 `--verify-plugin-apps`。在该模式下，账户查找传输失败会继续进入源 app 清单验证。源 app 清单快照仅保存在当前进程内存中；它不会写入迁移输出或目标配置。已禁用的插件、不可读取的插件详情、受订阅门禁限制的源账户，以及在请求验证时缺失的应用、已禁用的应用、不可访问的应用或源 app 清单失败，都会变成带类型原因的人工跳过项，而不是目标配置条目。
+  apply 会为每个选中的符合条件插件调用 app-server `plugin/install`，即使目标 app-server 已报告该插件已安装并启用。迁移后的 Codex 插件仅可在选择原生 Codex harness 的会话中使用；它们不会暴露给 OpenClaw provider 运行、ACP 对话绑定或其他 harness。
 
 ### 需要人工审核的 Codex 状态
 
@@ -168,16 +168,16 @@ Codex `config.toml`、原生 `hooks/hooks.json`、非精选市场、不是源安
 
 ### Hermes 导入内容
 
-- 来自 `config.yaml` 的默认模型配置。
-- 来自 `providers` 和 `custom_providers` 的已配置模型提供程序以及自定义的 OpenAI 兼容端点。
-- 来自 `mcp_servers` 或 `mcp.servers` 的 MCP 服务器定义。
-- 将 `SOUL.md` 和 `AGENTS.md` 导入到 OpenClaw 代理工作区。
-- 将 `memories/MEMORY.md` 和 `memories/USER.md` 追加到工作区记忆文件。
-- OpenClaw 文件记忆的默认记忆配置，以及针对 Honcho 等外部记忆提供程序的归档或人工审核项。
-- 在 `skills/<name>/` 下包含 `SKILL.md` 文件的技能。
-- 来自 `skills.config` 的每技能配置值。
-- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `auth.json` 的受支持 OAuth 凭据，以及来自 OpenCode `auth.json` 的 OpenCode OpenAI OAuth 凭据。
-- 当接受交互式凭据迁移时，或设置了 `--include-secrets` 时，来自 Hermes `.env` 和 OpenCode `auth.json` 的受支持 API 密钥和令牌。
+- Default model configuration from `config.yaml`.
+- Configured model providers and custom OpenAI-compatible endpoints from `providers` and `custom_providers`.
+- MCP server definitions from `mcp_servers` or `mcp.servers`.
+- `SOUL.md` and `AGENTS.md` into the OpenClaw agent workspace.
+- `memories/MEMORY.md` and `memories/USER.md` appended to workspace memory files.
+- Memory config defaults for OpenClaw file memory, plus archive or manual-review items for external memory providers such as Honcho.
+- Skills that include a `SKILL.md` file under `skills/<name>/`.
+- Per-skill config values from `skills.config`.
+- OpenCode OpenAI OAuth credentials from OpenCode `auth.json` when interactive credential migration is accepted, or when `--include-secrets` is set. Hermes `auth.json` OAuth entries are legacy state reported for manual OpenAI reauth or doctor repair.
+- Supported API keys and tokens from Hermes `.env` and OpenCode `auth.json` when interactive credential migration is accepted, or when `--include-secrets` is set.
 
 ### 支持的 `.env` 密钥
 

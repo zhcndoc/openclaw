@@ -1,5 +1,5 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Discord 渠道接入层。"
+summary: "OpenClaw Discord 频道插件，用于频道、私信、命令和应用事件。"
 read_when:
   - 你正在安装、配置或审计 discord 插件
 title: "Discord 插件"
@@ -7,7 +7,7 @@ title: "Discord 插件"
 
 # Discord 插件
 
-添加用于发送和接收 OpenClaw 消息的 Discord 渠道接入层。
+OpenClaw Discord 频道插件，用于频道、私信、命令和应用事件。
 
 ## 分发
 

@@ -36,12 +36,13 @@ title: "TUI"
 注意：
 
 - `chat` 和 `terminal` 是 `openclaw tui --local` 的别名。
-- `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
-- 当可能时，`tui` 会解析为 token/password 认证配置的 Gateway auth SecretRefs（`env`/`file`/`exec` 提供器）。
-- 当从已配置的 agent 工作区目录内部启动时，TUI 会自动为会话 key 默认选择该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
-- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具可用，但仅 Gateway 可用的功能不可用。
+- `--local` 不能与 `--url`、`--token` 或 `--password` 一起使用。
+- `tui` 会在可能时解析为 token/password 认证配置的 Gateway auth SecretRefs（`env`/`file`/`exec` 提供程序）。
+- 当从已配置的 agent 工作区目录内启动时，TUI 会为会话 key 默认值自动选择该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
+- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具都可用，但 Gateway 专属功能不可用。
 - 本地模式会在 TUI 命令界面中增加 `/auth [provider]`。
-- 插件审批门禁在本地模式下仍然适用。需要审批的工具会在终端中提示你做出决策；不会因为没有 Gateway 参与而悄悄自动批准任何内容。
+- 插件审批门控在本地模式下仍然适用。需要审批的工具会在终端中提示决策；由于未经过 Gateway，不会静默自动批准。
+- 会话 [目标](/tools/goal) 会显示在页脚中，并可通过 `/goal` 管理。
 
 ## 示例
 
@@ -81,3 +82,4 @@ openclaw chat
 
 - [CLI reference](/cli)
 - [TUI](/web/tui)
+- [Goal](/tools/goal)

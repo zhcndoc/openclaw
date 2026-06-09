@@ -9,13 +9,17 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 24**（推荐）或 Node 22.19+ - 安装脚本会自动处理这一点
-- **macOS、Linux 或 Windows** - 原生 Windows 和 WSL2 均受支持；WSL2 更稳定。参见 [Windows](/platforms/windows)。
+- **Node 24**（推荐）或 Node 22.19+ - 安装脚本会自动处理
+- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。参见 [Windows](/platforms/windows)。
 - `pnpm` 仅在你从源码构建时需要
 
 ## 推荐：安装脚本
 
 最快的安装方式。它会检测你的操作系统，如有需要会安装 Node，安装 OpenClaw，并启动引导流程。
+
+<Note>
+Windows 桌面用户也可以安装原生的 [Windows Hub](/platforms/windows#recommended-windows-hub) 配套应用，其中包括设置、托盘状态、聊天、node 模式和本地 MCP 模式。
+</Note>
 
 <Tabs>
   <Tab title="macOS / Linux / WSL2">
@@ -166,16 +170,36 @@ openclaw gateway status # 验证 Gateway 正在运行
 将 OpenClaw 部署到云服务器或 VPS：
 
 <CardGroup cols={3}>
-  <Card title="VPS" href="/vps">任意 Linux VPS</Card>
-  <Card title="Docker VM" href="/install/docker-vm-runtime">通用 Docker 步骤</Card>
-  <Card title="Kubernetes" href="/install/kubernetes">K8s</Card>
-  <Card title="Fly.io" href="/install/fly">Fly.io</Card>
-  <Card title="Hetzner" href="/install/hetzner">Hetzner</Card>
-  <Card title="GCP" href="/install/gcp">Google Cloud</Card>
-  <Card title="Azure" href="/install/azure">Azure</Card>
-  <Card title="Railway" href="/install/railway">Railway</Card>
-  <Card title="Render" href="/install/render">Render</Card>
-  <Card title="Northflank" href="/install/northflank">Northflank</Card>
+  <Card title="VPS" href="/vps">
+    任何 Linux VPS。
+  </Card>
+  <Card title="Docker VM" href="/install/docker-vm-runtime">
+    共享 Docker 步骤。
+  </Card>
+  <Card title="Kubernetes" href="/install/kubernetes">
+    K8s 部署。
+  </Card>
+  <Card title="Fly.io" href="/install/fly">
+    在 Fly.io 上部署。
+  </Card>
+  <Card title="Hetzner" href="/install/hetzner">
+    Hetzner 部署。
+  </Card>
+  <Card title="GCP" href="/install/gcp">
+    Google Cloud 部署。
+  </Card>
+  <Card title="Azure" href="/install/azure">
+    Azure 部署。
+  </Card>
+  <Card title="Railway" href="/install/railway">
+    Railway 部署。
+  </Card>
+  <Card title="Render" href="/install/render">
+    Render 部署。
+  </Card>
+  <Card title="Northflank" href="/install/northflank">
+    Northflank 部署。
+  </Card>
 </CardGroup>
 
 ## 更新、迁移或卸载

@@ -11,8 +11,8 @@ title: "Gradium"
 | Property      | Value                                |
 | ------------- | ------------------------------------ |
 | Provider id   | `gradium`                            |
-| Auth          | `GRADIUM_API_KEY` or config `apiKey` |
-| Base URL      | `https://api.gradium.ai` (default)   |
+| Auth          | `GRADIUM_API_KEY` 或配置 `apiKey`    |
+| Base URL      | `https://api.gradium.ai`（默认）      |
 | Default voice | `Emma` (`YTpq7expH9539ERJ`)          |
 
 ## 设置
@@ -57,7 +57,7 @@ title: "Gradium"
       provider: "gradium",
       providers: {
         gradium: {
-          voiceId: "YTpq7expH9539ERJ",
+          speakerVoiceId: "YTpq7expH9539ERJ",
           // apiKey: "${GRADIUM_API_KEY}",
           // baseUrl: "https://api.gradium.ai",
         },
@@ -67,11 +67,11 @@ title: "Gradium"
 }
 ```
 
-| Key                                      | Type   | Description                                                                                   |
-| ---------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
-| `messages.tts.providers.gradium.apiKey`  | string | 解析后的 API 密钥。支持 `${ENV}` 和密钥引用。                                                  |
-| `messages.tts.providers.gradium.baseUrl` | string | 覆盖 API 源地址。会去除尾部斜杠。默认值为 `https://api.gradium.ai`。                            |
-| `messages.tts.providers.gradium.voiceId` | string | 当没有指令覆盖时使用的默认语音 ID。                                                            |
+| Key                                             | Type   | Description                                                                                   |
+| ----------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和 secret 引用。                                               |
+| `messages.tts.providers.gradium.baseUrl`        | string | 覆盖 API 源地址。会移除末尾斜杠。默认值为 `https://api.gradium.ai`。                            |
+| `messages.tts.providers.gradium.speakerVoiceId` | string | 当没有指令覆盖时使用的默认语音 ID。                                                             |
 
 输出音频格式会由运行时根据目标场景自动选择，不能通过 `openclaw.json` 配置。参见下方的 [输出](#output)。
 
@@ -91,7 +91,7 @@ title: "Gradium"
 
 ### 每条消息的语音覆盖
 
-当当前语音策略允许语音覆盖时，你可以使用指令令牌在行内切换语音。以下写法都会解析为同一个 `voiceId` 覆盖：
+当当前语音策略允许语音覆盖时，你可以使用指令令牌在行内切换语音。对于提供商原生语音 ID，请使用 `speakerVoiceId`。
 
 ```text
 /voice:LFZvm12tW_z0xfGo

@@ -100,13 +100,17 @@ OpenClaw 不应在引入替代方案的同一个发布版本中移除已文档�
   `api.runtime.config.loadConfig()` / `api.runtime.config.writeConfigFile(...)`
 - memory 插件拆分注册的旧版形式，同时 memory 插件迁移到
   `registerMemoryCapability`
-- 处理原生消息 schema、mention gating、入站 envelope 格式，以及 approval capability 嵌套的旧版 channel SDK helper
-- 旧版 channel route key 和可比目标 helper 别名，同时插件迁移到
-  `openclaw/plugin-sdk/channel-route`
+- 旧版 memory 专用 embedding provider 注册，同时 embedding
+  providers 迁移到 `api.registerEmbeddingProvider(...)` 和
+  `contracts.embeddingProviders`
+- 旧版 channel SDK 辅助函数，用于 native message schema、mention gating、
+  inbound envelope 格式化，以及 approval capability 嵌套
+- 旧版 channel route key 和 comparable-target 辅助函数别名，同时插件
+  迁移到 `openclaw/plugin-sdk/channel-route`
 - 正在被 manifest contribution ownership 替代的 activation hints
-- `setup-api` 运行时回退，同时 setup 描述符迁移到冷路径
+- `setup-api` 运行时回退，同时 setup 描述符迁移到 cold
   `setup.requiresRuntime: false` 元数据
-- provider `discovery` hook，同时 provider catalog hook 迁移到
+- provider `discovery` hooks，同时 provider catalog hooks 迁移到
   `catalog.run(...)`
 - channel `showConfigured` / `showInSetup` 元数据，同时 channel 包迁移到
   `openclaw.channel.exposure`

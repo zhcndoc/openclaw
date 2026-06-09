@@ -1,8 +1,8 @@
 ---
-summary: "从 Gateway 暴露一个兼容 OpenAI 的 /v1/chat/completions HTTP 端点"
+summary: "Expose an OpenAI-compatible /v1/chat/completions HTTP endpoint from Gateway"
 read_when:
-  - 集成期望 OpenAI Chat Completions 的工具
-title: "OpenAI 聊天补全"
+  - Tools that expect OpenAI Chat Completions in integrations
+title: "OpenAI Chat Completions"
 ---
 
 OpenClaw 的 Gateway 可以提供一个小型的、兼容 OpenAI 的 Chat Completions 端点。
@@ -211,32 +211,33 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 ### 支持的请求字段
 
 - `tools`: array of `{ "type": "function", "function": { ... } }`
-- `tool_choice`: `"auto"`, `"none"`
-- `messages[*].role: "tool"` 后续轮次
-- `messages[*].tool_call_id` 用于将工具结果绑定回先前的工具调用
-- `max_completion_tokens`: number；每次调用的总完成 token 上限（包含推理 token）。这是当前 OpenAI Chat Completions 的字段名；当同时发送 `max_completion_tokens` 和 `max_tokens` 时优先使用它。
-- `max_tokens`: number；为向后兼容而接受的旧别名。若同时存在 `max_completion_tokens`，则忽略。
-- `temperature`: number；尽力将采样温度通过 agent stream-param 通道转发给上游提供方。
-- `top_p`: number；尽力将 nucleus 采样通过 agent stream-param 通道转发给上游提供方。
-- `frequency_penalty`: number；尽力将频率惩罚通过 agent stream-param 通道转发给上游提供方。有效范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
-- `presence_penalty`: number；尽力将存在惩罚通过 agent stream-param 通道转发给上游提供方。有效范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
-- `seed`: number（整数）；尽力将随机种子通过 agent stream-param 通道转发给上游提供方。非整数值返回 `400 invalid_request_error`。
+- `tool_choice`: `"auto"`, `"none"`, `"required"`, or `{ "type": "function", "function": { "name": "..." } }`
+- `messages[*].role: "tool"` follow-up turns
+- `messages[*].tool_call_id` for binding tool results back to a prior tool call
+- `max_completion_tokens`: number; per-call cap for total completion tokens (reasoning tokens included). Current OpenAI Chat Completions field name; preferred when both `max_completion_tokens` and `max_tokens` are sent.
+- `max_tokens`: number; legacy alias accepted for backwards compatibility. Ignored when `max_completion_tokens` is also present.
+- `temperature`: number; best-effort sampling temperature forwarded to the upstream provider via the agent stream-param channel.
+- `top_p`: number; best-effort nucleus sampling forwarded to the upstream provider via the agent stream-param channel.
+- `frequency_penalty`: number; best-effort frequency penalty forwarded to the upstream provider via the agent stream-param channel. Validated range: -2.0 to 2.0. Returns `400 invalid_request_error` for out-of-range values.
+- `presence_penalty`: number; best-effort presence penalty forwarded to the upstream provider via the agent stream-param channel. Validated range: -2.0 to 2.0. Returns `400 invalid_request_error` for out-of-range values.
+- `seed`: number (integer); best-effort seed forwarded to the upstream provider via the agent stream-param channel. Returns `400 invalid_request_error` for non-integer values.
+- `stop`: string or array of up to 4 strings; best-effort stop sequences forwarded to the upstream provider via the agent stream-param channel. Returns `400 invalid_request_error` for more than 4 sequences or non-string/empty entries.
 
-当任一 token 上限字段被设置时，该值会通过 agent stream-param 通道转发到上游提供方。发送给上游提供方的实际 wire 字段名由提供方传输层决定：对 OpenAI 系列端点使用 `max_completion_tokens`，对只接受旧名称的提供方（如 Mistral 和 Chutes）使用 `max_tokens`。采样字段（`temperature`、`top_p`、`frequency_penalty`、`presence_penalty`、`seed`）遵循相同的 stream-param 通道；基于 ChatGPT 的 Codex Responses 后端会在服务端将它们剥离，因为它使用固定采样。
+When either token-cap field is set, the value is forwarded to the upstream provider via the agent stream-param channel. The actual wire field name sent to the upstream provider is chosen by the provider transport: `max_completion_tokens` for OpenAI-family endpoints, and `max_tokens` for providers that only accept the legacy name (such as Mistral and Chutes). Sampling fields (`temperature`, `top_p`, `frequency_penalty`, `presence_penalty`, `seed`) follow the same stream-param channel; the ChatGPT-based Codex Responses backend strips them server-side since it uses fixed sampling. `stop` also rides the stream-param channel and maps to the transport's stop field (`stop` for Chat Completions backends, `stop_sequences` for Anthropic); the OpenAI Responses API has no stop parameter, so `stop` is not applied on Responses-backed models.
 
 ### 不支持的变体
 
 端点会针对不支持的工具变体返回 `400 invalid_request_error`，包括：
 
-- 非数组 `tools`
-- 非 function 的工具条目
-- 缺少 `tool.function.name`
-- `tool_choice` 变体，例如 `allowed_tools` 和 `custom`
-- `tool_choice: "required"`（运行时尚未强制；在实现硬性强制后将支持）
-- `tool_choice: { "type": "function", "function": { "name": "..." } }`（与 `required` 的理由相同）
-- `tool_choice.function.name` 的值与提供的 `tools` 不匹配
+- non-array `tools`
+- non-function tool entries
+- missing `tool.function.name`
+- `tool_choice` variants such as `allowed_tools` and `custom`
+- `tool_choice.function.name` values that do not match provided `tools`
 
-### 非流式工具响应形状
+For `tool_choice: "required"` and function-pinned `tool_choice`, the endpoint narrows the exposed client function-tool set, instructs the runtime to call a client tool before responding, and returns an error if the agent response does not include a matching structured client-tool call. This contract applies to the caller-supplied HTTP `tools` list, not every internal OpenClaw agent tool.
+
+### Non-streaming tool response shape
 
 当 agent 决定调用工具时，响应使用：
 

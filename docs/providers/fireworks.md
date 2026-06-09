@@ -15,7 +15,7 @@ read_when:
 | Plugin          | bundled, `enabledByDefault: true`                      |
 | Auth env var    | `FIREWORKS_API_KEY`                                    |
 | Onboarding flag | `--auth-choice fireworks-api-key`                      |
-| Direct CLI flag | `--fireworks-api-key <key>`                            |
+| Direct CLI flag  | `--fireworks-api-key <key>`                            |
 | API             | OpenAI-compatible (`openai-completions`)               |
 | Base URL        | `https://api.fireworks.ai/inference/v1`                |
 | Default model   | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` |
@@ -82,7 +82,7 @@ openclaw onboard --non-interactive \
 
 ## 自定义 Fireworks 模型 id
 
-OpenClaw 在运行时接受任意 Fireworks 模型或路由 id。使用 Fireworks 显示的准确 id，并在前面加上 `fireworks/`。动态解析会克隆 Fire Pass 模板（文本 + 图像输入、OpenAI 兼容 API、默认成本为零），并在 id 匹配 Kimi 模式时自动禁用 thinking。
+OpenClaw 接受运行时的任意 Fireworks 模型或路由 id。请使用 Fireworks 显示的准确 id，并以前缀 `fireworks/` 添加。动态解析会克隆 Fire Pass 模板（文本 + 图像输入、OpenAI 兼容 API、默认成本为零），并在 id 匹配 Kimi 模式时自动禁用 thinking。GLM 动态 id 默认标记为仅文本，除非你配置带图像输入的自定义模型条目。
 
 ```json5
 {

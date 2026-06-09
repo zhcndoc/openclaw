@@ -18,7 +18,9 @@ read_when:
 
 ## 快速开始
 
-如果你有 OpenAI、Gemini、Voyage、Mistral 或 DeepInfra 的 API 密钥，内置引擎会自动检测并启用向量搜索。无需配置。
+默认情况下，内置引擎使用 OpenAI embeddings。如果你已经配置了
+`OPENAI_API_KEY` 或 `models.providers.openai.apiKey`，向量搜索
+无需额外的内存配置即可工作。
 
 要显式设置提供商：
 
@@ -58,17 +60,20 @@ read_when:
 
 ## 支持的 embedding 提供商
 
-| 提供商     | ID          | 自动检测 | 说明                                |
-| --------- | ----------- | -------- | ----------------------------------- |
-| OpenAI    | `openai`    | 是       | 默认：`text-embedding-3-small`      |
-| Gemini    | `gemini`    | 是       | 支持多模态（图像 + 音频）            |
-| Voyage    | `voyage`    | 是       |                                     |
-| Mistral   | `mistral`   | 是       |                                     |
-| DeepInfra | `deepinfra` | 是       | 默认：`BAAI/bge-m3`                 |
-| Ollama    | `ollama`    | 否       | 本地，需显式设置                    |
-| Local     | `local`     | 是（优先） | 可选的 `node-llama-cpp` 运行时     |
+| Provider          | ID                  | Notes                               |
+| ----------------- | ------------------- | ----------------------------------- |
+| Bedrock           | `bedrock`           | 使用 AWS 凭证链                      |
+| DeepInfra         | `deepinfra`         | 默认：`BAAI/bge-m3`                 |
+| Gemini            | `gemini`            | 支持多模态（图像 + 音频）            |
+| GitHub Copilot    | `github-copilot`    | 使用 Copilot 订阅                    |
+| Local             | `local`             | 可选 `node-llama-cpp` 运行时         |
+| Mistral           | `mistral`           |                                     |
+| Ollama            | `ollama`            | 本地/自托管                          |
+| OpenAI            | `openai`            | 默认：`text-embedding-3-small`       |
+| OpenAI-compatible | `openai-compatible` | 通用 `/v1/embeddings` 端点           |
+| Voyage            | `voyage`            |                                     |
 
-自动检测会按上表顺序，选择第一个可解析出 API 密钥的提供商。设置 `memorySearch.provider` 可覆盖此行为。
+将 `memorySearch.provider` 设置为非 OpenAI 提供商。
 
 ## 索引如何工作
 
@@ -109,8 +114,8 @@ openclaw memory status --deep --agent main
 openclaw memory index --force --agent main
 ```
 
-独立的 CLI 命令和 Gateway 使用相同的 `local` 提供商 ID。
-如果提供商设置为 `auto`，则只有当 `memorySearch.local.modelPath` 指向一个存在的本地文件时，才会优先考虑本地 embeddings。
+本地 CLI 命令和 Gateway 使用相同的 `local` 提供商 ID。
+当你想使用本地 embeddings 时，将 `memorySearch.provider` 设置为 `"local"`。
 
 **结果过时？** 运行 `openclaw memory index --force` 进行重建。监视器在极少数边缘情况下可能会漏掉更改。
 

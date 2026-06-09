@@ -18,10 +18,9 @@ OpenClaw 插件的测试工具、模式和 lint 约束参考。
 
 ## 测试工具
 
-These test-helper subpaths are repo-local source entrypoints for OpenClaw's own
-bundled plugin tests. They are not package exports for third-party plugins.
+这些测试辅助子路径是仅限仓库内部的源入口点，用于 OpenClaw 自带的插件测试。它们不是面向第三方插件的包导出，并且可能会导入 Vitest 或其他仅限仓库内部的测试依赖。
 
-**Plugin API mock import:** `openclaw/plugin-sdk/plugin-test-api`
+**插件 API mock 导入：** `openclaw/plugin-sdk/plugin-test-api`
 
 **Agent 运行时契约导入：** `openclaw/plugin-sdk/agent-runtime-test-contracts`
 
@@ -45,11 +44,10 @@ bundled plugin tests. They are not package exports for third-party plugins.
 
 **Node 内置 mock 导入：** `openclaw/plugin-sdk/test-node-mocks`
 
-新插件测试请优先使用下面这些更聚焦的子路径。宽泛的
-`openclaw/plugin-sdk/testing` 聚合入口仅用于向后兼容。
-仓库的 guardrail 会拒绝新的、真实的 `plugin-sdk/testing` 和
-`plugin-sdk/test-utils` 导入；这些名称仅作为已弃用的兼容
-表面，供 compatibility-record 测试使用。
+在 OpenClaw 仓库内，新内置插件测试请优先使用下方这些更聚焦的子路径。宽泛的
+`openclaw/plugin-sdk/testing` 入口仅用于旧版兼容。
+仓库 guardrail 会拒绝从 `plugin-sdk/testing` 和
+`plugin-sdk/test-utils` 新增真实导入；这些名称仅作为兼容性记录测试的已弃用兼容表面保留。
 
 ```typescript
 import {

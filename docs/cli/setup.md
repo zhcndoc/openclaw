@@ -20,11 +20,12 @@ title: "设置"
 | Flag                       | Description                                                                                         |
 | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | `--workspace <dir>`        | 代理工作区目录（默认 `~/.openclaw/workspace`；存储为 `agents.defaults.workspace`）。 |
-| `--wizard`                 | 运行交互式引导。                                                                         |
-| `--non-interactive`        | 无提示运行引导。                                                                     |
-| `--mode <mode>`            | 引导模式：`local` 或 `remote`。                                                               |
+| `--wizard`                 | 运行交互式入门引导。                                                                         |
+| `--non-interactive`        | 无提示运行入门引导。                                                                     |
+| `--accept-risk`            | 确认完整系统代理访问风险；与 `--non-interactive` 一起使用时必需。                       |
+| `--mode <mode>`            | 入门引导模式：`local` 或 `remote`。                                                               |
 | `--import-from <provider>` | 在引导期间运行的迁移提供方。                                                        |
-| `--import-source <path>`   | `--import-from` 的源代理主目录。                                                              |
+| `--import-source <path>`   | `--import-from` 的源代理主目录。                                               |
 | `--import-secrets`         | 在引导迁移期间导入受支持的密钥。                                               |
 | `--remote-url <url>`       | 远程 Gateway WebSocket URL。                                                                       |
 | `--remote-token <token>`   | 远程 Gateway 令牌（可选）。                                                                    |
@@ -33,7 +34,7 @@ title: "设置"
 
 当以下任一标志被显式传入时，即使没有 `--wizard`，`openclaw setup` 也会运行向导：
 
-`--wizard`, `--non-interactive`, `--mode`, `--import-from`, `--import-source`, `--import-secrets`, `--remote-url`, `--remote-token`。
+`--wizard`, `--non-interactive`, `--accept-risk`, `--mode`, `--import-from`, `--import-source`, `--import-secrets`, `--remote-url`, `--remote-token`.
 
 ## 示例
 
@@ -42,7 +43,7 @@ openclaw setup
 openclaw setup --workspace ~/.openclaw/workspace
 openclaw setup --wizard
 openclaw setup --wizard --import-from hermes --import-source ~/.hermes
-openclaw setup --non-interactive --mode remote --remote-url wss://gateway-host:18789 --remote-token <token>
+openclaw setup --non-interactive --accept-risk --mode remote --remote-url wss://gateway-host:18789 --remote-token <token>
 ```
 
 ## Notes

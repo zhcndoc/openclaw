@@ -334,7 +334,7 @@ openclaw gateway status --require-rpc
 - `Local loopback`
 
 <Note>
-如果可以到达多个 gateway，它会全部打印出来。当你使用隔离的 profile/端口（例如 rescue bot）时，支持多个 gateway，但大多数安装仍然只运行一个 gateway。
+如果多个探测目标都可达，它会全部打印出来。SSH 隧道、TLS/proxy URL 和已配置的远程 URL 即使传输端口不同，也可能指向同一个 gateway；`multiple_gateways` 仅保留给彼此不同或身份上无法区分的可达 gateway。使用隔离配置文件（例如救援 bot）时支持多个 gateway，但大多数安装仍只运行一个 gateway。
 </Note>
 
 ```bash
@@ -377,11 +377,11 @@ openclaw gateway probe --json
     - `capability`：该目标显示出的认证能力分类。
 
   </Accordion>
-  <Accordion title="常见警告代码">
-    - `ssh_tunnel_failed`：SSH 隧道设置失败；命令回退到直接探测。
-    - `multiple_gateways`：有多个目标可达；除非你有意运行隔离 profile（例如 rescue bot），这通常不寻常。
-    - `auth_secretref_unresolved`：已配置的认证 SecretRef 无法为失败的目标解析。
-    - `probe_scope_limited`：WebSocket 连接成功，但读探测因缺少 `operator.read` 而受限。
+  <Accordion title="Common warning codes">
+    - `ssh_tunnel_failed`: SSH 隧道设置失败；命令回退到直接探测。
+    - `multiple_gateways`: 探测到了不同的 gateway 身份，或者 OpenClaw 无法证明可达目标属于同一个 gateway。指向同一 gateway 的 SSH 隧道、代理 URL 或已配置远程 URL 不会触发此警告。
+    - `auth_secretref_unresolved`: 失败目标所配置的认证 SecretRef 无法解析。
+    - `probe_scope_limited`: WebSocket 连接成功，但读探测因缺少 `operator.read` 而受限。
 
   </Accordion>
 </AccordionGroup>

@@ -17,17 +17,15 @@ macOS 应用通过网关展示 OpenClaw skills；它不会在本地解析 skills
 ## 安装操作
 
 - `metadata.openclaw.install` 定义安装选项（brew/node/go/uv）。
-- 应用调用 `skills.install` 在网关主机上运行安装程序。
-- 内置的 dangerous-code `critical` 发现会默认阻止 `skills.install`；suspicious 发现仍然只会警告。dangerous override 存在于网关请求中，但默认的应用流程仍然是 fail-closed。
-- 如果所有安装选项都是 `download`，网关会展示所有下载
-  选项。
-- 否则，网关会根据当前
-  安装偏好和主机二进制文件选择一个首选安装器：当
-  `skills.install.preferBrew` 启用且 `brew` 存在时优先使用 Homebrew，然后是
-  `uv`，再然后是
-  `skills.install.nodeManager` 中配置的 node 管理器，最后是
-  `go` 或 `download` 等后续回退方案。
-- Node 安装标签会反映已配置的 node 管理器，包括 `yarn`。
+- 应用调用 `skills.install` 在网关主机上运行安装器。
+- 由操作者拥有的 `security.installPolicy` 可以在安装器元数据运行前
+  阻止由网关支持的 skill 安装。安装时的内置危险代码阻止不属于 skill 安装流程。
+- 如果每个安装选项都是 `download`，网关会展示所有下载选项。
+- 否则，网关会使用当前安装偏好和主机二进制文件选择一个首选安装器：
+  当启用 `skills.install.preferBrew` 且 `brew` 存在时优先使用 Homebrew，
+  然后是 `uv`，再然后是 `skills.install.nodeManager` 中配置的 node 管理器，
+  最后才是 `go` 或 `download` 等后备选项。
+- Node 安装标签会反映配置的 node 管理器，包括 `yarn`。
 
 ## 环境/API 密钥
 

@@ -6,7 +6,7 @@ read_when:
 title: "Matrix"
 ---
 
-Matrix 是 OpenClaw 的一个可下载频道插件。
+Matrix 是 OpenClaw 的一个可下载频道插件。  
 它使用官方的 `matrix-js-sdk`，并支持 DM、房间、线程、媒体、反应、投票、位置以及 E2EE。
 
 ## 安装
@@ -232,7 +232,21 @@ Matrix 回复流式传输是可选功能。`streaming` 控制 OpenClaw 如何传
 - 当 Matrix 预览流式传输处于启用状态时，工具进度预览更新默认启用。将 `streaming.preview.toolProgress: false` 设为仅对答案文本保留预览编辑，而让工具进度走正常传递路径。
 - 预览编辑会额外消耗 Matrix API 调用。如果你希望采用最保守的限流策略，请保持 `streaming: "off"`。
 
-## 审批元数据
+## Voice messages
+
+Inbound Matrix voice notes are transcribed before the room mention gate. This lets a voice note that says the bot name trigger the agent in a `requireMention: true` room, and it gives the agent the transcript instead of only an audio attachment placeholder.
+
+Matrix uses the shared audio media provider configured under `tools.media.audio`, such as OpenAI `gpt-4o-mini-transcribe`. See [Media tools overview](/tools/media-overview) for provider setup and limits.
+
+Behavior details:
+
+- `m.audio` events and `m.file` events with an `audio/*` MIME type are eligible.
+- In encrypted rooms, OpenClaw decrypts the attachment through the existing Matrix media path before transcription.
+- The transcript is marked as machine-generated and untrusted in the agent prompt.
+- The attachment is marked as already transcribed so downstream media tools do not transcribe the same voice note again.
+- Set `tools.media.audio.enabled: false` to disable audio transcription globally.
+
+## Approval metadata
 
 Matrix 原生审批提示是普通的 `m.room.message` 事件，其中 OpenClaw 特定的自定义事件内容位于 `com.openclaw.approval` 下。Matrix 允许自定义事件内容键，因此标准客户端仍会渲染文本正文，而支持 OpenClaw 的客户端可以读取结构化的审批 id、类型、状态、可用决策以及 exec/plugin 详情。
 

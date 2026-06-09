@@ -10,11 +10,11 @@ OpenClaw 将时间戳标准化，使模型看到的是一个**单一参考时间
 
 ## 三个时区位置
 
-| Surface           | 它显示的内容                                                                                         | 默认值                                | 配置方式                                                |
-| ----------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------- |
-| Message envelopes | 包裹传入的频道消息：`[Signal +1555 2026-01-18 00:19 PST] hello`                                      | 主机本地                              | `agents.defaults.envelopeTimezone`                      |
-| Tool payloads     | `readMessages` 风格的频道工具返回原始提供方时间 + 规范化的 `timestampMs` / `timestampUtc`            | 始终提供 UTC 字段                      | 不可配置——保留提供方原生时间戳                          |
-| System prompt     | 一个小的 `Current Date & Time` 区块，只包含**时区**（不含时钟值，以保持缓存稳定）                     | 若未设置 `userTimezone`，则为主机时区 | `agents.defaults.userTimezone`                          |
+| Surface           | 它显示什么                                                                                              | 默认值                                | 通过以下方式配置                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| Message envelopes | 包装传入的频道消息：`[Signal +1555 Sun 2026-01-18 00:19:42 PST] hello`                               | 主机本地时区                          | `agents.defaults.envelopeTimezone`                    |
+| Tool payloads     | 频道 `readMessages` 风格的工具会返回原始提供方时间 + 归一化的 `timestampMs` / `timestampUtc`         | 始终包含 UTC 字段                     | 不可配置——保留提供方原生时间戳                       |
+| System prompt     | 一个小型 `Current Date & Time` 块，仅包含**时区**（不含具体时钟值，以保持缓存稳定）                   | 若未设置 `userTimezone`，则使用主机时区 | `agents.defaults.userTimezone`                        |
 
 系统提示词有意省略实时钟表，以便在多轮对话中保持提示词缓存稳定。当代理需要当前时间时，它会调用 `session_status`。
 

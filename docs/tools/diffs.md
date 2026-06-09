@@ -136,8 +136,9 @@ read_when:
   before 和 after 模式下显示的文件名。
 </ParamField>
 <ParamField path="lang" type="string">
-  before 和 after 模式下的语言覆盖提示。未知值会回退为纯文本。
+  before 和 after 模式的语言覆盖提示。未知值以及默认查看器集之外的语言会回退为纯文本，除非安装了 Diff Viewer Language Pack 插件。
 </ParamField>
+
 <ParamField path="title" type="string">
   查看器标题覆盖。
 </ParamField>
@@ -199,6 +200,24 @@ read_when:
 
   </Accordion>
 </AccordionGroup>
+
+## Syntax highlighting
+
+OpenClaw 包含对常见源代码、配置和文档语言的语法高亮：
+
+`javascript`, `typescript`, `tsx`, `jsx`, `json`, `markdown`, `yaml`, `css`, `html`, `sh`, `python`, `go`, `rust`, `java`, `c`, `cpp`, `csharp`, `php`, `sql`, `docker`, `ruby`, `swift`, `kotlin`, `r`, `dart`, `lua`, `powershell`, `xml`, 和 `toml`。
+
+常见别名如 `js`, `ts`, `bash`, `md`, `yml`, `c++`, `dockerfile`, `rb`, `kt`, 和 `ps1` 会被规范化为这些默认语言。
+
+安装 Diff Viewer Language Pack 插件以高亮其他语言：
+
+```bash
+openclaw plugins install clawhub:@openclaw/diffs-language-pack
+```
+
+启用语言包后，OpenClaw 可以高亮更多语言。如果未安装该语言包，默认列表之外的文件仍会以可读的纯文本形式渲染。示例包括 Astro、Vue、Svelte、MDX、GraphQL、Terraform/HCL、Nix、Clojure、Elixir、Haskell、OCaml、Scala、Zig、Solidity、Verilog/VHDL、Fortran、MATLAB、LaTeX、Mermaid、Sass/Less/SCSS、Nginx、Apache、CSV、dotenv、INI 和 diff 文件。
+
+详见 [Diffs Language Pack plugin](/plugins/reference/diffs-language-pack) 和 [Shiki languages](https://shiki.style/languages) 以了解 Shiki 的上游语言与别名目录。
 
 ## 输出详情契约
 
@@ -385,6 +404,7 @@ Viewer 资源：
 
 - `/plugins/diffs/assets/viewer.js`
 - `/plugins/diffs/assets/viewer-runtime.js`
+- `/plugins/diffs-language-pack/assets/viewer.js` 当 diff 使用了 Diff Viewer Language Pack 中的某种语言时
 
 Viewer 文档会相对于 viewer URL 解析这些资源，因此可选的 `baseUrl` 路径前缀也会同时保留给这两种资源请求。
 

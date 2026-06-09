@@ -1,9 +1,9 @@
 ---
-summary: "defineToolPlugin、definePluginEntry、defineChannelPluginEntry 和 defineSetupPluginEntry 的参考"
+summary: "定义 `defineToolPlugin`、`definePluginEntry`、`defineChannelPluginEntry` 和 `defineSetupPluginEntry` 的参考"
 title: "插件入口点"
 sidebarTitle: "入口点"
 read_when:
-  - 你需要 defineToolPlugin、definePluginEntry 或 defineChannelPluginEntry 的精确类型签名
+  - 你需要 `defineToolPlugin`、`definePluginEntry` 或 `defineChannelPluginEntry` 的精确类型签名
   - 你想了解注册模式（完整 / setup / CLI 元数据）
   - 你正在查找入口点选项
 ---
@@ -51,18 +51,18 @@ import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
 
 export default defineToolPlugin({
   id: "stock-quotes",
-  name: "Stock Quotes",
-  description: "Fetch stock quotes.",
+  name: "股票报价",
+  description: "获取股票报价。",
   configSchema: Type.Object({
-    apiKey: Type.Optional(Type.String({ description: "API key." })),
+    apiKey: Type.Optional(Type.String({ description: "API 密钥。" })),
   }),
   tools: (tool) => [
     tool({
       name: "quote",
-      label: "Quote",
-      description: "Fetch a quote.",
+      label: "报价",
+      description: "获取报价。",
       parameters: Type.Object({
-        symbol: Type.String({ description: "Ticker symbol." }),
+        symbol: Type.String({ description: "股票代码。" }),
       }),
       execute: async ({ symbol }, config) => ({ symbol, hasKey: Boolean(config.apiKey) }),
     }),
@@ -218,10 +218,22 @@ export default defineBundledChannelSetupEntry({
     specifier: "./runtime-api.js",
     exportName: "setMyChannelRuntime",
   },
+  registerSetupRuntime(api) {
+    api.registerHttpRoute({
+      path: "/my-channel/events",
+      auth: "plugin",
+      handler: async (req, res) => {
+        /* 仅限 setup 的安全路由 */
+      },
+    });
+  },
 });
 ```
 
-只有在 setup 流程确实需要在完整通道入口加载之前提供一个轻量级运行时 setter 时，才使用这个打包契约。
+仅在 setup 流程确实需要一个轻量级运行时
+setter 或在完整通道入口加载之前需要 setup 安全的 gateway 表面时，才使用这个 bundled contract。
+`registerSetupRuntime` 仅在 `"setup-runtime"` 加载时运行；请将其限制为
+仅配置路由或在延迟的完整激活之前必须存在的方法。
 
 ## 注册模式
 

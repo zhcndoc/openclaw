@@ -39,13 +39,14 @@ OpenClaw 会在 `~/.openclaw/agents/<agentId>/qmd/` 下创建一个自包含的 
 
 ## 侧车的工作方式
 
-- OpenClaw 会根据你的工作区记忆文件以及任何已配置的 `memory.qmd.paths` 创建集合，然后在 QMD 管理器打开时以及之后定期运行 `qmd update`（默认每 5 分钟一次）。这些刷新通过 QMD 子进程执行，而不是通过进程内的文件系统遍历。语义模式还会运行 `qmd embed`。
-- 默认的工作区集合会跟踪 `MEMORY.md` 以及 `memory/` 目录树。小写的 `memory.md` 不会作为根记忆文件被索引。
-- QMD 自带的扫描器会忽略隐藏路径和常见的依赖/构建目录，例如 `.git`、`.cache`、`node_modules`、`vendor`、`dist` 和 `build`。gateway 启动时默认不会初始化 QMD，因此冷启动会避免在首次使用记忆之前导入记忆运行时或创建长生命周期 watcher。
-- 如果你仍然希望在 gateway 启动时刷新，请将 `memory.qmd.update.startup` 设置为 `idle` 或 `immediate`。这个可选的启动刷新使用一次性的 QMD 子进程路径，而不会创建完整的长生命周期进程内 watcher。
-- 搜索会使用配置的 `searchMode`（默认：`search`；也支持 `vsearch` 和 `query`）。`search` 仅使用 BM25，因此在该模式下 OpenClaw 会跳过语义向量就绪探测和嵌入维护。如果某种模式失败，OpenClaw 会改用 `qmd query` 重试。
-- 对于支持多集合过滤器的 QMD 版本，OpenClaw 会把同源集合分组到一次 QMD 搜索调用中。较旧的 QMD 版本则保留兼容的按集合回退方式。
-- 如果 QMD 完全失败，OpenClaw 会回退到内置 SQLite 引擎。连续的聊天轮次尝试会在打开失败后短暂退避，这样缺失的二进制文件或损坏的侧车依赖就不会引发重试风暴；`openclaw memory status` 和一次性 CLI 探测仍会直接重新检查 QMD。
+- OpenClaw 会从你的工作区记忆文件以及任何已配置的 `memory.qmd.paths` 创建集合，然后在 QMD 管理器打开时以及之后定期运行 `qmd update`（默认每 5 分钟一次）。这些刷新通过 QMD 子进程完成，而不是在进程内进行文件系统遍历。语义模式还会运行 `qmd embed`。
+- 默认的工作区集合会跟踪 `MEMORY.md` 以及 `memory/` 目录树。小写的 `memory.md` 不会被作为根记忆文件索引。
+- QMD 自己的扫描器会忽略隐藏路径以及常见的依赖/构建目录，例如 `.git`、`.cache`、`node_modules`、`vendor`、`dist` 和 `build`。gateway 启动时默认不会初始化 QMD，因此冷启动会避免导入记忆运行时，或在首次使用记忆之前创建长期驻留的 watcher。
+- 如果你仍希望在 gateway 启动时刷新，可以将 `memory.qmd.update.startup` 设为 `idle` 或 `immediate`。这个可选的启动刷新会使用一次性的 QMD 子进程路径，而不是创建完整的长期驻留进程内 watcher。
+- 搜索会使用配置的 `searchMode`（默认：`search`；也支持 `vsearch` 和 `query`）。`search` 仅使用 BM25，因此 OpenClaw 会跳过语义向量就绪探测以及该模式下的嵌入维护。如果某种模式失败，OpenClaw 会重试 `qmd query`。
+- 当 `searchMode` 为 `query` 时，将 `memory.qmd.rerank` 设为 `false`，以在不使用重排序器的情况下使用 QMD 的混合查询路径。OpenClaw 会在直接的 QMD CLI 路径中传递 `--no-rerank`，并在 QMD 的 MCP 查询工具中传递 `rerank: false`。此选项需要 QMD 2.1 或更新版本。
+- 对于声明支持多集合过滤器的 QMD 版本，OpenClaw 会将同源集合分组到一次 QMD 搜索调用中。较旧的 QMD 版本则保留兼容的按集合回退方式。
+- 如果 QMD 完全失败，OpenClaw 会回退到内置 SQLite 引擎。连续的聊天回合尝试会在打开失败后短暂退避，以免缺失二进制文件或损坏的侧车依赖造成重试风暴；`openclaw memory status` 和一次性的 CLI 探测仍会直接重新检查 QMD。
 
 <Info>
 第一次搜索可能会很慢——QMD 会在首次运行 `qmd query` 时自动下载用于重排序和查询扩展的 GGUF 模型（约 2 GB）。

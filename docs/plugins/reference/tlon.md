@@ -1,5 +1,5 @@
 ---
-summary: "添加用于发送和接收 OpenClaw 消息的 Tlon 渠道表面。"
+summary: "用于聊天工作流的 OpenClaw Tlon/Urbit 频道插件。"
 read_when:
   - 你正在安装、配置或审计 tlon 插件
 title: "Tlon 插件"
@@ -7,7 +7,7 @@ title: "Tlon 插件"
 
 # Tlon 插件
 
-添加用于发送和接收 OpenClaw 消息的 Tlon 渠道表面。
+用于聊天工作流的 OpenClaw Tlon/Urbit 频道插件。
 
 ## 分发
 

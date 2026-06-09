@@ -124,8 +124,8 @@ openclaw plugins list
 }
 ```
 
-OpenAI Codex / ChatGPT OAuth（`openai-codex`）不是 OpenAI Platform
-嵌入凭据。对于 OpenAI 嵌入，请使用 OpenAI API 密钥认证配置文件、
+OpenAI Codex / ChatGPT OAuth 不是 OpenAI Platform 嵌入凭据。
+对于 OpenAI 嵌入，请使用 OpenAI API key 认证配置文件、
 `OPENAI_API_KEY`，或 `models.providers.openai.apiKey`。仅使用 OAuth 的用户可以使用
 其他支持嵌入的提供商，例如 GitHub Copilot 或 Ollama。
 

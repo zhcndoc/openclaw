@@ -152,7 +152,7 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
         "*": {
           requireMention: true,
           historyLimit: 50,
-          toolPolicy: "restricted",
+          tools: { deny: ["exec", "read", "write"] },
         },
         GROUP_OPENID: {
           name: "Release room",
@@ -171,16 +171,19 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
 `groups.GROUP_OPENID` 条目会覆盖该群的默认值。群组
 设置包括：
 
-- `requireMention`：在 bot 回复之前要求先 @提及。默认：`true`。
-- `ignoreOtherMentions`：丢弃提到了其他人但没有提到 bot 的消息。
-- `historyLimit`：保留最近未提及的群消息，作为下一次被提及时的上下文。设为 `0` 可禁用。
-- `toolPolicy`：群作用域工具的 `full`、`restricted` 或 `none`。
-- `name`：用于日志和群上下文中的友好标签。
-- `prompt`：附加到 agent 上下文中的每群行为提示。
+- `requireMention`: 在 bot 回复前需要 @提及。默认值：`true`。
+- `ignoreOtherMentions`: 丢弃提到了其他人但没有提到 bot 的消息。
+- `historyLimit`: 将最近未提及的群消息保留为下一次被提及时的上下文。设为 `0` 可禁用。
+- `tools`: 为整个群允许/拒绝工具。
+- `toolsBySender`: 按发送者覆盖群工具设置；参见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。
+- `name`: 日志和群上下文中使用的友好标签。
+- `prompt`: 追加到 agent 上下文中的每个群行为提示。
 
-激活模式有 `mention` 和 `always`。`requireMention: true` 映射到
-`mention`；`requireMention: false` 映射到 `always`。如果存在会话级激活
-覆盖，则以该覆盖为准。
+旧版 QQBot `toolPolicy` 条目已废弃。运行 `openclaw doctor --fix` 将其迁移为 `tools`。
+
+激活模式为 `mention` 和 `always`。`requireMention: true` 映射到
+`mention`；`requireMention: false` 映射到 `always`。当存在会话级激活
+覆盖时，其优先级高于配置。
 
 入站队列按对端分开。群对端获得更大的队列上限，在满载时优先保留人类
 消息而不是 bot 自己发出的消息，并将正常群消息的突发合并为一个带归属的
@@ -266,7 +269,12 @@ channel/global TTS 配置之上进行深度合并。
 
 管理命令 (`/bot-me`, `/bot-upgrade`, `/bot-logs`, `/bot-clear-storage`, `/bot-streaming`, `/bot-approve`) 仅限私聊，并要求发送者的 openid 明确位于非通配符的 `allowFrom` 列表中。通配符 `allowFrom: ["*"]` 允许聊天，但不授予管理命令访问权限。群消息先匹配 `groupAllowFrom`，再回退到 `allowFrom`。在群里运行管理命令会返回提示，而不是静默丢弃。
 
-## 引擎架构
+When QQ Bot exec approvals use the default same-chat fallback, native approval
+button clicks follow the same explicit non-wildcard command allowlist. To grant
+approval-only access without broader command access, configure
+`channels.qqbot.execApprovals.approvers`.
+
+## Engine architecture
 
 QQ Bot 作为一个自包含引擎随插件发布：
 

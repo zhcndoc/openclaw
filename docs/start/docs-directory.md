@@ -6,13 +6,13 @@ title: "文档目录"
 ---
 
 <Note>
-本页是一个精选索引。如果你是新手，请从 [Getting Started](/start/getting-started) 开始。
-有关文档的完整地图，请参阅 [Docs hubs](/start/hubs)。
+本页是一个精选索引。如果你是新手，请从 [快速入门](/start/getting-started) 开始。
+有关文档的完整地图，请参阅 [文档中心](/start/hubs)。
 </Note>
 
 ## 从这里开始
 
-- [Docs hubs（所有页面链接）](/start/hubs)
+- [文档中心（所有页面链接）](/start/hubs)
 - [帮助](/help)
 - [配置](/gateway/configuration)
 - [配置示例](/gateway/configuration-examples)
@@ -48,11 +48,11 @@ title: "文档目录"
 
 ## 配套应用
 
-- [macOS 应用](/platforms/macos)
-- [iOS 应用](/platforms/ios)
-- [Android 应用](/platforms/android)
-- [Windows（WSL2）](/platforms/windows)
-- [Linux 应用](/platforms/linux)
+- [macOS app](/platforms/macos)
+- [iOS app](/platforms/ios)
+- [Android app](/platforms/android)
+- [Windows Hub](/platforms/windows)
+- [Linux app](/platforms/linux)
 
 ## 运营与安全
 
@@ -65,5 +65,5 @@ title: "文档目录"
 
 ## 相关
 
-- [Getting started](/start/getting-started)
-- [Docs hubs](/start/hubs)
+- [快速入门](/start/getting-started)
+- [文档中心](/start/hubs)

@@ -154,7 +154,42 @@ Surfacing
 
 在进度模式下，进度行默认启用。它们来自真实的运行事件：工具开始、项目更新、任务计划、批准、命令输出、补丁摘要以及类似的代理活动。
 
-OpenClaw 对进度草稿和 `/verbose` 使用相同的格式化器：
+工具也可以在单个工具调用仍在运行时发出类型化进度。这样，缓慢的获取或搜索就能在工具返回最终结果之前更新可见草稿。进度更新是一个部分工具结果，具有空的模型内容和显式的公共频道元数据：
+
+```json
+{
+  "content": [],
+  "progress": {
+    "text": "正在获取页面内容...",
+    "visibility": "channel",
+    "privacy": "public",
+    "id": "web_fetch:fetching"
+  }
+}
+```
+
+OpenClaw 只会在频道进度 UI 中渲染 `progress.text`。正常的工具结果仍然会稍后以 `content` 和 `details` 的形式到达，并且是唯一返回给模型的部分。
+
+为工具添加进度时，请使用简短、通用的消息，并将其延迟到操作已挂起足够长时间、足以产生价值之后：
+
+```typescript
+const clearProgressTimer = scheduleToolProgress(
+  onUpdate,
+  { text: "正在获取页面内容...", id: "web_fetch:fetching" },
+  5_000,
+  { signal },
+);
+
+try {
+  return await runToolWork();
+} finally {
+  clearProgressTimer();
+}
+```
+
+这种模式意味着快速调用不会显示进度行，长时间调用会在仍处于挂起状态时显示一条，而被取消的调用会在过时进度出现之前清除计时器。进度文本是一条公共 UI 旁路信道，因此不能包含密钥、原始参数、获取到的内容、命令输出或页面文本。
+
+OpenClaw 为进度草稿和 `/verbose` 使用相同的格式化器：
 
 ```json5
 {

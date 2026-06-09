@@ -7,23 +7,21 @@ title: "Anthropic"
 
 Anthropic 构建了 **Claude** 模型家族。OpenClaw 支持两种认证方式：
 
-- **API key** — 直接访问 Anthropic API，并按使用量计费（`anthropic/*` 模型）
-- **Claude CLI** — 复用同一主机上现有的 Claude CLI 登录
+- **API key** — Anthropic API 直接访问，按使用量计费（`anthropic/*` 模型）
+- **Claude CLI** — 复用同一主机上现有的 Claude Code 登录
 
 <Warning>
-Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法现在再次被允许，因此
-OpenClaw 会将 Claude CLI 复用和 `claude -p` 的使用视为被认可的，除非
-Anthropic 发布新的政策。
+OpenClaw 的 Claude CLI 后端会以非交互式打印模式运行已安装的 Claude Code CLI。Anthropic 目前的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化用法。自 2026 年 6 月 15 日起，Anthropic 表示订阅计划中的 `claude -p` 使用不再从普通 Claude 订阅额度中扣除；它会先从单独的每月 Agent SDK credit 中扣除，之后在这些 credit 启用时再按标准 API 费率从 usage credits 中扣除。
 
-对于长期运行的网关主机，Anthropic API 密钥仍然是最清晰、最
-可预测的生产路径。
+交互式 Claude Code 仍然会从已登录的 Claude 订阅额度中扣除。API key 认证仍然是直接的按量付费 API 计费。对于长期运行的网关主机、共享自动化和可预测的生产支出，请使用 Anthropic API key。
 
 Anthropic 当前的公开文档：
 
-- [Claude Code CLI 参考](https://code.claude.com/docs/en/cli-reference)
-- [Claude Agent SDK 概览](https://platform.claude.com/docs/en/agent-sdk/overview)
-- [使用你的 Pro 或 Max 计划运行 Claude Code](https://support.claude.com/en/articles/11145838-using-claude-code-with-your-pro-or-max-plan)
-- [使用你的 Team 或 Enterprise 计划运行 Claude Code](https://support.anthropic.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan/)
+- [Claude Code CLI reference](https://code.claude.com/docs/en/cli-usage)
+- [Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
+- [Use Claude Code with your Pro or Max plan](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan)
+- [Use Claude Code with your Team or Enterprise plan](https://support.claude.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan)
+- [Manage Claude Code costs](https://code.claude.com/docs/en/costs)
 
 </Warning>
 
@@ -61,7 +59,7 @@ Anthropic 当前的公开文档：
     ```json5
     {
       env: { ANTHROPIC_API_KEY: "example-anthropic-key-not-real" },
-      agents: { defaults: { model: { primary: "anthropic/claude-opus-4-6" } } },
+      agents: { defaults: { model: { primary: "anthropic/claude-opus-4-8" } } },
     }
     ```
 
@@ -97,6 +95,10 @@ Anthropic 当前的公开文档：
     Claude CLI 后端的设置和运行时细节见 [CLI 后端](/gateway/cli-backends)。
     </Note>
 
+    <Warning>
+    Claude CLI 复用要求 OpenClaw 进程与 Claude CLI 登录运行在同一主机上。像 [Podman](/install/podman) 这样的容器安装不会在设置或运行时挂载主机上的 `~/.claude`；在这种情况下请使用 Anthropic API key，或选择 OpenClaw 托管 OAuth 的提供方，例如 [OpenAI Codex](/providers/openai)。
+    </Warning>
+
     ### 配置示例
 
     建议使用规范的 Anthropic 模型引用，并通过 CLI 运行时覆盖：
@@ -105,9 +107,9 @@ Anthropic 当前的公开文档：
     {
       agents: {
         defaults: {
-          model: { primary: "anthropic/claude-opus-4-7" },
+          model: { primary: "anthropic/claude-opus-4-8" },
           models: {
-            "anthropic/claude-opus-4-7": {
+            "anthropic/claude-opus-4-8": {
               agentRuntime: { id: "claude-cli" },
             },
           },
@@ -116,19 +118,28 @@ Anthropic 当前的公开文档：
     }
     ```
 
-    旧版 `claude-cli/claude-opus-4-7` 模型引用仍然可用于兼容性，但新的配置应将提供方/模型选择保持为
-    `anthropic/*`，并将执行后端放在 provider/model runtime policy 中。
+    旧版 `claude-cli/claude-opus-4-7` 模型引用仍然可用于兼容性，但新的配置应将提供方/模型选择保持为 `anthropic/*`，并将执行后端放在 provider/model runtime policy 中。
+
+    ### 计费与 `claude -p`
+
+    OpenClaw 在 Claude CLI 运行中使用 Claude Code 的非交互式 `claude -p` 路径。Anthropic 目前将该路径视为 Agent SDK/程序化用法：
+
+    - 直到 2026 年 6 月 15 日，订阅计划的处理方式遵循 Anthropic 针对已登录账户的当前 Claude Code 规则。
+    - 自 2026 年 6 月 15 日起，订阅计划中的 `claude -p` 使用会先从用户的每月 Agent SDK credit 中扣除，然后在启用 usage credits 时按标准 API 费率从 usage credits 中扣除。
+    - Console/API key 登录使用按量付费的 API 计费，不会获得订阅版 Agent SDK credit。
+
+    Anthropic 可能会在不发布 OpenClaw 版本的情况下更改 Claude Code 的计费和速率限制行为。若计费可预测性很重要，请检查 `claude auth status`、`/status` 以及 Anthropic 链接的文档。
 
     <Tip>
-    如果你想要最清晰的计费路径，请改用 Anthropic API key。OpenClaw 还支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/zai) 的订阅式选项。
+    对于共享的生产自动化，请使用 Anthropic API key，而不是 Claude CLI。OpenClaw 也支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/zai) 的订阅式选项。
     </Tip>
 
   </Tab>
 </Tabs>
 
-## Thinking 默认值（Claude 4.6）
+## 思考默认值（Claude 4.8 和 4.6）
 
-当未显式设置 thinking 等级时，Claude 4.6 模型在 OpenClaw 中默认使用 `adaptive` thinking。
+Claude Opus 4.8 在 OpenClaw 中默认关闭思考。 当你显式启用自适应思考并使用 `/think high|xhigh|max` 时，OpenClaw 会发送 Anthropic 的 Opus 4.8 effort 值；Claude 4.6 模型默认使用 `adaptive`。
 
 可通过 `/think:<level>` 按消息覆盖，或在模型参数中设置：
 
@@ -137,8 +148,8 @@ Anthropic 当前的公开文档：
   agents: {
     defaults: {
       models: {
-        "anthropic/claude-opus-4-6": {
-          params: { thinking: "adaptive" },
+        "anthropic/claude-opus-4-8": {
+          params: { thinking: "high" },
         },
       },
     },
@@ -256,17 +267,15 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
     | 属性            | 值                    |
     | --------------- | --------------------- |
-    | 默认模型        | `claude-opus-4-7`     |
-    | 支持的输入      | 图片、PDF 文档         |
+    | Default model   | `claude-opus-4-8`     |
+    | Supported input | Images, PDF documents |
 
     当图片或 PDF 附加到对话中时，OpenClaw 会自动通过 Anthropic 媒体理解提供方进行路由。
 
   </Accordion>
 
-  <Accordion title="1M 上下文窗口">
-    Anthropic 的 1M 上下文窗口适用于支持 GA 的 Claude 4.x 模型，
-    例如 Opus 4.6、Opus 4.7 和 Sonnet 4.6。OpenClaw 会自动将这些模型的大小设为
-    1M：
+  <Accordion title="1M context window">
+    Anthropic 的 1M 上下文窗口可用于具备 GA 能力的 Claude 4.x 模型，例如 Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6。OpenClaw 会自动将这些模型的上下文大小设为 1M：
 
     ```json5
     {
@@ -280,14 +289,9 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     }
     ```
 
-    旧配置可以保留 `params.context1m: true`，但 OpenClaw 不再发送
-    已弃用的 `context-1m-2025-08-07` beta 头。旧的 `anthropicBeta` 配置
-    中带有该值的条目会在请求头解析时被忽略，未受支持的旧 Claude 模型则仍
-    保持其正常上下文窗口。
+    旧配置可以保留 `params.context1m: true`，但 OpenClaw 不再发送已弃用的 `context-1m-2025-08-07` beta 头。旧的 `anthropicBeta` 配置中带有该值的条目会在请求头解析时被忽略，未受支持的旧 Claude 模型则仍保持其正常上下文窗口。
 
-    `params.context1m: true` 也适用于 Claude CLI 后端
-    （`claude-cli/*`）中符合条件、支持 GA 的 Opus 和 Sonnet 模型，以保留
-    这些 CLI 会话的运行时上下文窗口，使其与直接 API 的行为一致。
+    `params.context1m: true` 也适用于 Claude CLI 后端（`claude-cli/*`）中符合条件、支持 GA 的 Opus 和 Sonnet 模型，以保留这些 CLI 会话的运行时上下文窗口，使其与直接 API 的行为一致。
 
     <Warning>
     需要你的 Anthropic 凭证具备长上下文访问权限。OAuth/订阅令牌认证会保留其所需的 Anthropic beta 头，但如果旧配置中仍保留了已废弃的 1M beta 头，OpenClaw 会将其移除。
@@ -295,9 +299,8 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 1M 上下文">
-    `anthropic/claude-opus-4-7` 及其 `claude-cli` 变体默认具有 1M 上下文
-    窗口——无需 `params.context1m: true`。
+  <Accordion title="Claude Opus 4.8 1M context">
+    `anthropic/claude-opus-4-8` 及其 `claude-cli` 变体默认具有 1M 上下文窗口——无需 `params.context1m: true`。
   </Accordion>
 </AccordionGroup>
 

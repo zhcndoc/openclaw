@@ -329,10 +329,10 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
   </Accordion>
 
-  <Accordion title="为官方 iOS 构建启用中继支持的推送">
-    中继支持的推送在 `openclaw.json` 中配置。
+  <Accordion title="Enable relay-backed push for official iOS builds">
+    Relay-backed push uses the hosted OpenClaw relay by default: `https://ios-push-relay.openclaw.ai`.
 
-    在 gateway 配置中设置：
+    To use a custom relay, set this in gateway config:
 
     ```json5
     {
@@ -366,11 +366,11 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
     端到端流程：
 
-    1. 安装一个使用相同中继基础 URL 编译的官方/TestFlight iOS 构建。
-    2. 在 gateway 上配置 `gateway.push.apns.relay.baseUrl`。
-    3. 将 iOS 应用配对到 gateway，并让 node 和 operator 会话都连接起来。
-    4. iOS 应用获取 gateway 身份，使用 App Attest 加应用收据向中继注册，然后将中继支持的 `push.apns.register` 载荷发布到已配对的 gateway。
-    5. Gateway 存储中继句柄和发送授权，然后将它们用于 `push.test`、唤醒提示和重连唤醒。
+    1. Install an official/TestFlight iOS build.
+    2. Optional: configure `gateway.push.apns.relay.baseUrl` on the gateway only when using a custom relay deployment.
+    3. Pair the iOS app to the gateway and let both node and operator sessions connect.
+    4. The iOS app fetches the gateway identity, registers with the relay using App Attest plus the app receipt, and then publishes the relay-backed `push.apns.register` payload to the paired gateway.
+    5. The gateway stores the relay handle and send grant, then uses them for `push.test`, wake nudges, and reconnect wakes.
 
     运维说明：
 
@@ -379,8 +379,9 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
     兼容性说明：
 
-    - `OPENCLAW_APNS_RELAY_BASE_URL` 和 `OPENCLAW_APNS_RELAY_TIMEOUT_MS` 仍可作为临时环境变量覆盖。
-    - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` 仍然是仅限回环的开发逃生口；不要在配置中持久保存 HTTP 中继 URL。
+    - `OPENCLAW_APNS_RELAY_BASE_URL` and `OPENCLAW_APNS_RELAY_TIMEOUT_MS` still work as temporary env overrides.
+    - Custom gateway relay URLs must match the relay base URL baked into the official/TestFlight iOS build.
+    - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` remains a loopback-only development escape hatch; do not persist HTTP relay URLs in config.
 
     有关端到端流程，请参阅 [iOS 应用](/platforms/ios#relay-backed-push-for-official-builds)；有关中继安全模型，请参阅 [认证与信任流程](/platforms/ios#authentication-and-trust-flow)。
 
@@ -422,9 +423,9 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - `sessionRetention`：从 `sessions.json` 中清理已完成的隔离运行会话（默认 `24h`；设为 `false` 可禁用）。
-    - `runLog`：按大小和保留行数清理 `cron/runs/<jobId>.jsonl`。
-    - 有关功能概览和 CLI 示例，请参阅 [Cron 作业](/automation/cron-jobs)。
+    - `sessionRetention`: prune completed isolated run sessions from `sessions.json` (default `24h`; set `false` to disable).
+    - `runLog`: prune retained cron run-history rows per job. `maxBytes` remains accepted for older file-backed run logs.
+    - See [Cron jobs](/automation/cron-jobs) for feature overview and CLI examples.
 
   </Accordion>
 

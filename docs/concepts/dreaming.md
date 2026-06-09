@@ -107,11 +107,26 @@ read_when:
 
 Light 和 REM 阶段命中会从 `memory/.dreams/phase-signals.json` 中增加一个小幅、随时间衰减的提升。
 
+Shadow-trial results can be layered on top of that base score as a review
+signal before any durable write. A helpful trial gives the candidate a small
+bounded boost, a neutral trial keeps it deferred, and a harmful trial marks it
+as rejected for that scoring pass. This signal is still report-only: it can
+change candidate ordering or review metadata, but it does not write to
+`MEMORY.md` or promote the candidate by itself.
+
 ## QA shadow trial report coverage
 
 QA 实验室包含一个仅报告的场景，用于探索未来的做梦 shadow trial 如何在提升前审查候选记忆。该场景会要求一个代理比较基线答案与一个可以使用候选记忆的答案，然后写出一份本地报告，包含结论、原因和风险标记。
 
 这部分覆盖范围有意限定在 QA 中。它验证报告工件会与 `MEMORY.md` 分离，并且代理不会声称候选项已被提升。它不会添加生产环境的 shadow-trial 行为，也不会更改深度阶段的提升引擎。
+
+The `memory-core` shadow-trial runner keeps that same report-only contract for
+code paths that need a stable artifact. It accepts the candidate, trial prompt,
+baseline outcome, candidate outcome, verdict, reason, risk flags, and evidence
+references, then writes a report with `promotion action: report-only`. Helpful
+verdicts map to a `promote` recommendation, neutral verdicts map to `defer`, and
+harmful verdicts map to `reject`; none of those recommendations writes to
+`MEMORY.md` or applies deep-phase promotion.
 
 ## Scheduling
 
@@ -223,13 +238,16 @@ QA 实验室包含一个仅报告的场景，用于探索未来的做梦 shadow 
 <ParamField path="model" type="string">
   可选的 Dream Diary 子代理模型覆盖。若同时设置了子代理 `allowedModels` 允许列表，请使用规范的 `provider/model` 值。
 </ParamField>
+<ParamField path="phases.deep.maxPromotedSnippetTokens" type="number" default="160">
+  Maximum estimated token count kept from each short-term recall snippet promoted into `MEMORY.md`. Ranking provenance remains visible.
+</ParamField>
 
 <Warning>
 `dreaming.model` 需要 `plugins.entries.memory-core.subagent.allowModelOverride: true`。若要限制它，还要设置 `plugins.entries.memory-core.subagent.allowedModels`。信任或允许列表失败会保持可见，而不会静默回退；重试只覆盖模型不可用错误。
 </Warning>
 
 <Note>
-阶段策略、阈值和存储行为都是内部实现细节（不是面向用户的配置）。完整键列表请参见 [记忆配置参考](/reference/memory-config#dreaming)。
+Most phase policy, thresholds, and storage behavior are internal implementation details. See [Memory configuration reference](/reference/memory-config#dreaming) for the full key list.
 </Note>
 
 ## Dreams UI

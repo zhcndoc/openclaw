@@ -56,7 +56,7 @@ provider 和 channel 的执行路径必须使用当前运行时配置快照，�
 
 ## 可复用运行时工具
 
-对机器人生成的入站消息使用 channel-turn 的 `botLoopProtection` 事实。Core 在 session 记录和分发之前会先应用共享的内存滑动窗口保护，而不会把策略绑定到某个单一 channel。该保护会跟踪 `(scopeId, conversationId, participant pair)` 键，将一对参与者的两个方向计为同一组，在窗口预算超出后应用冷却时间，并机会性地清理不活跃条目。
+Use inbound `botLoopProtection` facts for bot-authored inbound messages. Core applies the shared in-memory sliding-window guard before session record and dispatch, without tying the policy to one channel. The guard tracks `(scopeId, conversationId, participant pair)` keys, counts both directions of a pair together, applies a cooldown once the window budget is exceeded, and prunes inactive entries opportunistically.
 
 向操作员暴露此行为的 channel 插件应优先使用共享的 `channels.defaults.botLoopProtection` 结构作为基础预算，然后再叠加 channel/provider 特定覆盖。共享配置使用秒作为单位，因为它面向用户：
 
@@ -91,7 +91,7 @@ return {
 };
 ```
 
-仅当你要实现不经过共享 channel-turn 内核的自定义双方事件循环时，才直接使用 `openclaw/plugin-sdk/pair-loop-guard-runtime`。
+仅将 `openclaw/plugin-sdk/pair-loop-guard-runtime` 直接用于不经由共享入站回复运行器的自定义双人事件循环。
 
 ## 运行时命名空间
 
@@ -143,7 +143,7 @@ return {
 
     `runEmbeddedAgent(...)` 是从插件代码中启动正常 OpenClaw agent 回合的中性辅助工具。它使用与 channel 触发回复相同的 provider/model 解析和 agent-harness 选择。
 
-    `runEmbeddedPiAgent(...)` 仍然作为兼容别名保留。
+    `runEmbeddedPiAgent(...)` 仍然作为现有插件的已弃用兼容别名保留。新代码应使用 `runEmbeddedAgent(...)`。
 
     `resolveThinkingPolicy(...)` 返回 provider/model 支持的思考级别以及可选默认值。provider 插件通过其思考钩子拥有特定于模型的 profile，因此工具插件应调用这个运行时辅助工具，而不是导入或重复 provider 列表。
 
@@ -514,7 +514,7 @@ return {
     await store.clear();
     ```
 
-    键控存储可在重启后保留，并按运行时绑定的插件 id 隔离。使用 `registerIfAbsent(...)` 进行原子去重声明：当键缺失或已过期并已注册时返回 `true`；当已存在有效值且不会覆盖其值、创建时间或 TTL 时返回 `false`。限制：每个命名空间 `maxEntries`、每个插件 1,000 条有效行、64KB 以下的 JSON 值，以及可选的 TTL 过期。
+    Keyed stores survive restarts and are isolated by the runtime-bound plugin id. Use `registerIfAbsent(...)` for atomic dedupe claims: it returns `true` when the key was missing or expired and registered, or `false` when a live value already exists without overwriting its value, creation time, or TTL. Limits: `maxEntries` per namespace, 6,000 live rows per plugin, JSON values under 64KB, and optional TTL expiry. When a write would exceed the plugin row cap, the runtime may evict the oldest live rows from the namespace being written; sibling namespaces are not evicted for that write, and the write still fails if the namespace cannot free enough rows.
 
     <Warning>
     仅限本版本中的打包插件。

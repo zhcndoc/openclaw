@@ -96,7 +96,9 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
 <Card title="R2 上传（Send Me My Files）" icon="cloud-arrow-up" href="https://clawhub.ai/skills/r2-upload">
   **@julianengel** • `files` `r2` `presigned-urls`
 
-上传到 Cloudflare R2/S3 并生成安全的预签名下载链接。适用于远程 OpenClaw 实例。
+上传到 Cloudflare R2/S3，并生成安全的预签名下载链接。适用于远程 OpenClaw 实例。
+
+  <img src="/assets/showcase/r2-upload.png" alt="ClawHub 上的 R2 上传技能" />
 </Card>
 
 <Card title="通过 Telegram 构建 iOS 应用" icon="mobile">
@@ -264,7 +266,9 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 <Card title="OpenRouter 转录" icon="microphone" href="https://clawhub.ai/obviyus/openrouter-transcribe">
   **@obviyus** • `transcription` `multilingual` `skill`
 
-通过 OpenRouter（Gemini 等）进行多语言音频转录。在 ClawHub 上提供。
+多语言音频转录，通过 OpenRouter（Gemini 等）实现。可在 ClawHub 上使用。
+
+  <img src="/assets/showcase/openrouter-transcribe.png" alt="ClawHub 上的 OpenRouter 转录技能" />
 </Card>
 
 </CardGroup>
@@ -285,6 +289,8 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
   **ClawHub** • `homeassistant` `skill` `automation`
 
 通过自然语言控制和自动化 Home Assistant 设备。
+
+  <img src="/assets/showcase/homeassistant.png" alt="ClawHub 上的 Home Assistant 技能" />
 </Card>
 
 <Card title="Nix 打包" icon="snowflake" href="https://github.com/openclaw/nix-openclaw">
@@ -297,6 +303,8 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
   **ClawHub** • `calendar` `caldav` `skill`
 
 使用 khal 和 vdirsyncer 的日历技能。自托管日历集成。
+
+  <img src="/assets/showcase/caldav-calendar.png" alt="ClawHub 上的 CalDAV 日历技能" />
 </Card>
 
 </CardGroup>

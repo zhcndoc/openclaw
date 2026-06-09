@@ -25,9 +25,13 @@ Codex app-server 负责基于应用的 MCP 执行。
 - V1 仅支持迁移时在源 Codex home 中观察到为 source-installed 的 `openai-curated` 插件。
 - 目标 Codex app-server 必须能够看到预期的 marketplace、插件和应用清单。
 
-`codexPlugins` 对 PI 运行、普通 OpenAI provider 运行、ACP
-对话绑定或其他 harness 没有影响，因为这些路径不会创建带有原生 `apps` 配置的
+`codexPlugins` 对 OpenClaw 运行、普通 OpenAI provider 运行、ACP
+会话绑定或其他 harness 没有影响，因为这些路径不会创建带有原生 `apps` 配置的
 Codex app-server 线程。
+
+OpenAI 侧的 Codex 访问权限、应用可用性，以及工作区应用/插件控制
+均来自已登录的 Codex 账户。关于 OpenAI 账户和管理员模型，
+请参阅 [在 ChatGPT 计划中使用 Codex](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)。
 
 ## 快速开始
 

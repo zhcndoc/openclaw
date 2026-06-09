@@ -49,8 +49,14 @@ type MessagePresentationBlock =
   | { type: "buttons"; buttons: MessagePresentationButton[] }
   | { type: "select"; placeholder?: string; options: MessagePresentationOption[] };
 
+type MessagePresentationAction =
+  | { type: "command"; command: string }
+  | { type: "callback"; value: string };
+
 type MessagePresentationButton = {
   label: string;
+  action?: MessagePresentationAction;
+  /** 旧版回调值。新控件优先使用 action。 */
   value?: string;
   url?: string;
   webApp?: { url: string };
@@ -64,7 +70,9 @@ type MessagePresentationButton = {
 
 type MessagePresentationOption = {
   label: string;
-  value: string;
+  action?: MessagePresentationAction;
+  /** 旧版选择值。新控件优先使用 action。 */
+  value?: string;
 };
 
 type ReplyPayloadDelivery = {
@@ -80,20 +88,23 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `value` 是一个应用动作值；当频道支持可点击控件时，它会通过该频道现有的交互路径返回。
-- `url` 是一个链接按钮。它可以在没有 `value` 的情况下存在。
-- `webApp` 描述一个频道原生的 Web App 按钮。Telegram 会将其渲染为 `web_app`，且仅在私聊中支持。为兼容性起见，`web_app` 仍会在宽松 JSON 载荷中被接受，但 TypeScript 生产者应使用 `webApp`。
-- `label` 为必填项，也会用于文本回退。
-- `style` 仅为建议。渲染器应将不支持的样式映射为安全默认值，而不是使发送失败。
-- `priority` 为可选项。当频道声明动作限制并且必须丢弃部分控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序；当所有控件都能容纳时，则保持作者定义的顺序。
-- `disabled` 为可选项。频道必须通过 `supportsDisabled` 显式启用；否则 core 会将禁用控件降级为不可交互的回退文本。
-- `reusable` 为可选项。支持可复用原生回调的频道可以在一次成功交互后仍保持该动作可用。适用于刷新、查看详情等可重复或幂等动作；普通一次性审批和破坏性动作应保持未设置。
+- `action.type: "command"` 通过核心的命令路径运行原生斜杠命令。用于内置命令按钮和菜单。
+- `action.type: "callback"` 通过频道的交互路径传递不透明的插件数据。频道插件不得将回调数据重新解释为斜杠命令。
+- `value` 是旧版的不透明回调值。新控件应使用 `action`，这样频道插件就能无需猜测文本即可映射命令和回调。
+- `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
+- `webApp` 描述频道原生的 Web 应用按钮。Telegram 会将其渲染为 `web_app`，且仅支持私聊。为了兼容性，`web_app` 仍可在宽松 JSON 载荷中接受，但 TypeScript 生产者应使用 `webApp`。
+- `label` 是必需项，并且也用于文本回退。
+- `style` 仅供参考。渲染器应将不支持的样式映射为安全默认值，而不是发送失败。
+- `priority` 是可选项。当频道声明动作限制且必须丢弃部分控件时，核心会优先保留更高优先级的按钮，并在相同优先级之间保留原始顺序。当所有控件都能容纳时，则保留作者编排的顺序。
+- `disabled` 是可选项。频道必须通过 `supportsDisabled` 显式启用；否则核心会将禁用控件降级为不可交互的回退文本。
+- `reusable` 是可选项。支持可复用原生回调的频道可以在一次成功交互后继续保留该动作。用于可重复或幂等的动作，例如刷新、查看详情或更多信息；对普通的一次性审批和破坏性动作则不要设置。
 
 选择器语义：
 
-- `options[].value` 是被选中的应用值。
-- `placeholder` 仅作建议，某些没有原生选择器支持的频道可以忽略它。
-- 如果某个频道不支持选择器，则回退文本会列出这些标签。
+- `options[].action` 与按钮 `action` 具有相同的 command/callback 含义。
+- `options[].value` 是旧版的所选应用值。
+- `placeholder` 仅供参考，缺少原生选择支持的频道可以忽略它。
+- 如果频道不支持选择器，回退文本会列出这些标签。
 
 ## 生产者示例
 
@@ -331,7 +342,7 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 
 提供方原生载荷兼容性是为现有回复生产者提供的过渡性便利。它不是新增共享原生字段的理由。
 
-## Presentation vs InteractiveReply
+## 展示 vs 交互回复
 
 `InteractiveReply` 是较早的内部子集，由审批和交互辅助工具使用。它支持：
 

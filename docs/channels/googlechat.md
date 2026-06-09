@@ -161,7 +161,8 @@ your-domain.com {
    - 空间使用会话键 `agent:<agentId>:googlechat:group:<spaceId>`。
 4. 默认私信访问采用配对机制。未知发送者会收到一个配对码；使用以下命令批准：
    - `openclaw pairing approve googlechat <code>`
-5. Group spaces 默认需要 @ 提及。若提及检测需要应用的用户名，请使用 `botUser`。
+5. 群聊空间默认需要 @ 提及。若提及检测需要应用的用户名，请使用 `botUser`。
+6. 当来自 Google Chat 的 exec 或插件审批请求启动，并且配置了稳定的 `users/<id>` 审批者时，OpenClaw 会在发起空间或线程中发布原生的 Google Chat 审批卡。卡片按钮使用不透明的回调令牌；仅当无法投递原生审批时，才会显示手动的 `/approve <id> <decision>` 提示。
 
 ## 目标对象
 
@@ -209,15 +210,16 @@ your-domain.com {
 
 说明：
 
-- Service account 凭据也可以通过内联的 `serviceAccount` 传入（JSON 字符串）。
-- 也支持 `serviceAccountRef`（env/file SecretRef），包括 `channels.googlechat.accounts.<id>.serviceAccountRef` 下的按账号引用。
+- 服务账号凭据也可以以内联方式通过 `serviceAccount` 传入（JSON 字符串）。
+- 也支持 `serviceAccountRef`（环境变量/文件 SecretRef），包括 `channels.googlechat.accounts.<id>.serviceAccountRef` 下的按账号引用。
 - 如果未设置 `webhookPath`，默认 webhook 路径为 `/googlechat`。
-- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体匹配以用于 allowlist（紧急兼容模式）。
-- 当启用 `actions.reactions` 时，可通过 `reactions` 工具和 `channels action` 使用反应功能。
-- 消息操作暴露了用于文本的 `send` 以及用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程目标。
-- `typingIndicator` 支持 `none`、`message`（默认）和 `reaction`（reaction 需要用户 OAuth）。
+- `dangerouslyAllowNameMatching` 会重新启用可变邮箱主体的 allowlist 匹配（应急兼容模式）。
+- 启用 `actions.reactions` 后，可通过 `reactions` 工具和 `channels action` 使用 reactions。
+- 原生审批卡使用 Google Chat 的 `cardsV2` 按钮点击，而不是 reaction 事件。审批人来自 `dm.allowFrom` 或 `defaultTo`，并且必须是稳定的数值型 `users/<id>` 值。
+- 消息动作提供用于文本的 `send` 和用于显式附件发送的 `upload-file`。`upload-file` 接受 `media` / `filePath` / `path`，以及可选的 `message`、`filename` 和线程目标。
+- `typingIndicator` 支持 `message`（默认）、`none` 和 `reaction`（reaction 需要用户 OAuth）。
 - 附件会通过 Chat API 下载，并存储在媒体管道中（大小上限由 `mediaMaxMb` 限制）。
-- 默认会忽略机器人生成的 Google Chat 消息。如果你有意设置 `allowBots: true`，被接受的机器人消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)。先配置 `channels.defaults.botLoopProtection`，然后在某个空间需要不同预算时，用 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
+- 默认会忽略由机器人发送的 Google Chat 消息。如果你有意设置 `allowBots: true`，被接受的机器人消息会使用共享的 [bot loop protection](/channels/bot-loop-protection)。请先配置 `channels.defaults.botLoopProtection`，然后在某个空间需要不同预算时，用 `channels.googlechat.botLoopProtection` 或 `channels.googlechat.groups.<space>.botLoopProtection` 覆盖。
 
 密钥引用详情：[Secrets Management](/gateway/secrets)。
 

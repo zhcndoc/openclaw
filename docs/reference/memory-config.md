@@ -46,49 +46,42 @@ read_when:
 
 ## 提供方选择
 
-| Key        | Type      | Default          | Description                                                                                                                                                                                                                        |
-| ---------- | --------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `provider` | `string`  | auto-detected    | 嵌入适配器 ID，例如 `bedrock`、`deepinfra`、`gemini`、`github-copilot`、`local`、`mistral`、`ollama`、`openai` 或 `voyage`；也可以是已配置的 `models.providers.<id>`，其 `api` 指向这些适配器之一 |
-| `model`    | `string`  | provider default | 嵌入模型名称                                                                                                                                                                                                               |
-| `fallback` | `string`  | `"none"`         | 主提供方失败时的回退适配器 ID                                                                                                                                                                                         |
-| `enabled`  | `boolean` | `true`           | 启用或禁用内存搜索                                                                                                                                                                                                    |
+| Key        | Type      | Default          | Description                                                                                                                                                                                                                                                                                 |
+| ---------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `provider` | `string`  | `"openai"`       | 嵌入适配器 ID，例如 `bedrock`、`deepinfra`、`gemini`、`github-copilot`、`local`、`mistral`、`ollama`、`openai`、`openai-compatible` 或 `voyage`；也可以是已配置的 `models.providers.<id>`，其 `api` 指向内存嵌入适配器或 OpenAI 兼容的模型 API |
+| `model`    | `string`  | provider default | 嵌入模型名称                                                                                                                                                                                                                                                                        |
+| `fallback` | `string`  | `"none"`         | 主提供方失败时使用的回退适配器 ID                                                                                                                                                                                                                                                  |
+| `enabled`  | `boolean` | `true`           | 启用或禁用内存搜索                                                                                                                                                                                                                                                             |
 
-### 自动检测顺序
+当未设置 `provider` 时，OpenClaw 使用 OpenAI 嵌入。显式设置 `provider`
+即可使用 Gemini、Voyage、Mistral、DeepInfra、Bedrock、GitHub Copilot、
+Ollama、本地 GGUF 模型或 OpenAI 兼容的 `/v1/embeddings` 端点。
+仍保留 `provider: "auto"` 的旧配置会解析为 `openai`。
 
-当未设置 `provider` 时，OpenClaw 会按以下顺序选择第一个可用项：
+<Warning>
+更改嵌入提供方、模型、提供方设置、来源、作用域、
+分块或分词器，可能使现有的 SQLite 向量索引不兼容。
+OpenClaw 会暂停向量搜索并报告索引身份警告，而不是
+自动为全部内容重新嵌入。准备好后可使用
+`openclaw memory status --index --agent <id>` 或
+`openclaw memory index --force --agent <id>` 重建。
+</Warning>
 
-<Steps>
-  <Step title="local">
-    如果配置了 `memorySearch.local.modelPath` 且文件存在，则被选中。
-  </Step>
-  <Step title="github-copilot">
-    如果可以解析出 GitHub Copilot 令牌（环境变量或认证配置文件），则被选中。
-  </Step>
-  <Step title="openai">
-    如果可以解析出 OpenAI 密钥，则被选中。
-  </Step>
-  <Step title="gemini">
-    如果可以解析出 Gemini 密钥，则被选中。
-  </Step>
-  <Step title="voyage">
-    如果可以解析出 Voyage 密钥，则被选中。
-  </Step>
-  <Step title="mistral">
-    如果可以解析出 Mistral 密钥，则被选中。
-  </Step>
-  <Step title="deepinfra">
-    如果可以解析出 DeepInfra 密钥，则被选中。
-  </Step>
-  <Step title="bedrock">
-    如果 AWS SDK 凭证链能够解析成功（实例角色、访问密钥、配置文件、SSO、Web Identity 或共享配置），则被选中。
-  </Step>
-</Steps>
+当 `provider` 未设置、保留了旧的 `provider: "auto"`，或
+`provider: "none"` 用于有意选择仅 FTS 模式时，内存召回在嵌入不可用时仍可
+使用词法 FTS 排名。
 
-`ollama` 支持，但不会被自动检测到（请显式设置）。
+显式的非本地提供方会失败关闭。如果你将 `memorySearch.provider` 设置为
+诸如 OpenAI、Gemini、Voyage、Mistral、
+Bedrock、GitHub Copilot、DeepInfra、Ollama、LM Studio 或 OpenAI 兼容
+自定义提供方这样的具体远程后端，而该提供方在运行时不可用，`memory_search`
+会返回不可用结果，而不会静默退回到仅 FTS 召回。请修复
+提供方/认证配置，切换到可访问的提供方，或在你希望明确使用仅 FTS 召回时
+设置 `provider: "none"`。
 
 ### 自定义 provider id
 
-`memorySearch.provider` 可以指向一个自定义的 `models.providers.<id>` 条目。OpenClaw 会解析该提供方的 `api` 所属方作为嵌入适配器，同时保留自定义提供方 id 用于端点、认证和模型前缀处理。这让多 GPU 或多主机部署可以将内存嵌入专门分配给某个本地端点：
+`memorySearch.provider` 可以指向自定义的 `models.providers.<id>` 条目，用于内存专用的提供方适配器，例如 `ollama`，或用于 OpenAI 兼容的模型 API，例如 `openai-responses` / `openai-completions`。OpenClaw 会解析该提供方的 `api` 所属方以用于嵌入适配器，同时保留自定义提供方 id 以处理端点、认证和模型前缀逻辑。这使多 GPU 或多主机部署可以将内存嵌入专门指向某个本地端点：
 
 ```json5
 {
@@ -136,7 +129,8 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 远程端点配置
 
-用于自定义 OpenAI 兼容端点或覆盖提供方默认值：
+对于不应继承全局 OpenAI 聊天凭证的通用 OpenAI 兼容
+`/v1/embeddings` 服务，请使用 `provider: "openai-compatible"`。
 
 <ParamField path="remote.baseUrl" type="string">
   自定义 API 基础 URL。
@@ -153,7 +147,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
   agents: {
     defaults: {
       memorySearch: {
-        provider: "openai",
+        provider: "openai-compatible",
         model: "text-embedding-3-small",
         remote: {
           baseUrl: "https://api.example.com/v1/",
@@ -177,7 +171,8 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     | `outputDimensionality` | `number` | `3072`                 | 对于 Embedding 2：768、1536 或 3072        |
 
     <Warning>
-    更改模型或 `outputDimensionality` 会触发自动全量重建索引。
+    更改模型或 `outputDimensionality` 会改变索引身份。OpenClaw
+    会暂停向量搜索，直到你显式重建内存索引。
     </Warning>
 
   </Accordion>
@@ -195,10 +190,10 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
       agents: {
         defaults: {
           memorySearch: {
-            provider: "openai",
+            provider: "openai-compatible",
             remote: {
               baseUrl: "https://embeddings.example/v1",
-              apiKey: "env:EMBEDDINGS_API_KEY",
+              apiKey: "${EMBEDDINGS_API_KEY}",
             },
             model: "asymmetric-embedder",
             queryInputType: "query",
@@ -295,7 +290,7 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     openclaw memory index --force --agent main
     ```
 
-    如果 `provider` 为 `auto`，只有当 `local.modelPath` 指向一个现有的本地文件时，才会选择 `local`。`hf:` 和 HTTP(S) 模型引用仍然可以在 `provider: "local"` 时显式使用，但在模型尚未落盘可用之前，它们不会让 `auto` 提前选择 local。
+    对于本地 GGUF 嵌入，请显式设置 `provider: "local"`。`hf:` 和 HTTP(S) 模型引用在显式本地配置中受支持，但不会改变默认 provider。
 
   </Accordion>
 </AccordionGroup>
@@ -477,17 +472,20 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 | 键                      | 类型      | 默认值  | 描述                                                                           |
 | ------------------------ | --------- | -------- | ------------------------------------------------------------------------------------- |
-| `command`                | `string`  | `qmd`    | QMD 可执行文件路径；当服务 `PATH` 与你的 shell 不同时，请设置绝对路径                |
-| `searchMode`             | `string`  | `search` | 搜索命令：`search`、`vsearch`、`query`                                                |
-| `includeDefaultMemory`   | `boolean` | `true`   | 自动索引 `MEMORY.md` + `memory/**/*.md`                                               |
-| `paths[]`                | `array`   | --       | 额外路径：`{ name, path, pattern? }`                                                   |
-| `sessions.enabled`       | `boolean` | `false`  | 索引会话记录                                                                           |
-| `sessions.retentionDays` | `number`  | --       | 会话记录保留天数                                                                       |
-| `sessions.exportDir`     | `string`   | --       | 导出目录                                                                               |
+| `command`                | `string`  | `qmd`    | QMD 可执行文件路径；当服务 `PATH` 与你的 shell 不同时，请设置绝对路径 |
+| `searchMode`             | `string`  | `search` | 搜索命令：`search`、`vsearch`、`query`                                          |
+| `rerank`                 | `boolean` | --       | 与 `searchMode: "query"` 和 QMD 2.1+ 一起设为 `false` 可跳过 QMD 重排序          |
+| `includeDefaultMemory`   | `boolean` | `true`   | 自动索引 `MEMORY.md` + `memory/**/*.md`                                             |
+| `paths[]`                | `array`   | --       | 额外路径：`{ name, path, pattern? }`                                               |
+| `sessions.enabled`       | `boolean` | `false`  | 索引会话转录                                                             |
+| `sessions.retentionDays` | `number`  | --       | 转录保留时间                                                                  |
+| `sessions.exportDir`     | `string`  | --       | 导出目录                                                                      |
 
 `searchMode: "search"` 仅支持词法/BM25。OpenClaw 不会为该模式运行语义向量就绪探测或 QMD 嵌入维护，包括在 `memory status --deep` 期间；`vsearch` 和 `query` 仍然需要 QMD 向量就绪和嵌入。
 
-OpenClaw 更偏好当前的 QMD 集合和 MCP 查询形状，但会在需要时通过尝试兼容的集合模式标志以及较旧的 MCP 工具名称来兼容旧版 QMD。当 QMD 声明支持多个集合过滤器时，同源集合会通过一个 QMD 进程进行搜索；较旧的 QMD 构建则保留按集合的兼容路径。所谓同源，是指持久内存集合会被分组在一起，而会话记录集合则保持为单独分组，这样来源多样化仍然会同时使用两类输入。
+`rerank: false` 仅会更改 QMD `query` 模式，并且需要 QMD 2.1 或更新版本。在直接 CLI 模式下，OpenClaw 传递 `--no-rerank`；在由 mcporter 支持的 MCP 模式下，它会将 `rerank: false` 传递给 QMD 的统一查询工具。保持其未设置即可使用 QMD 默认的查询重排序行为。
+
+OpenClaw 优先使用当前的 QMD 集合和 MCP 查询形态，但在需要时也会通过尝试兼容的集合模式标志和较旧的 MCP 工具名称来兼容旧版 QMD。当 QMD 声明支持多个集合过滤器时，同源集合会由一个 QMD 进程一起搜索；较旧的 QMD 构建版本则保留按集合的兼容路径。同源指的是持久化内存集合会被归为一组，而会话转录集合仍保持为单独一组，因此来源多样化仍然同时包含两类输入。
 
 <Note>
 QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需要全局覆盖 QMD 的模型，请在网关运行时环境中设置 `QMD_EMBED_MODEL`、`QMD_RERANK_MODEL` 和 `QMD_GENERATE_MODEL` 等环境变量。
@@ -584,11 +582,12 @@ Dreaming 作为一次计划性扫描运行，并将内部的浅层/深层/REM �
 
 ### 用户设置
 
-| 键          | 类型       | 默认值        | 描述                         |
-| ----------- | ---------- | ------------- | ---------------------------- |
-| `enabled`   | `boolean`  | `false`       | 完全启用或禁用 dreaming      |
-| `frequency` | `string`   | `0 3 * * *`   | 可选的完整 dreaming 扫描 cron 频率 |
-| `model`     | `string`   | default model | 可选的 Dream Diary 子代理模型覆盖 |
+| Key                                    | Type      | Default       | Description                                                                                                                      |
+| -------------------------------------- | --------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                              | `boolean` | `false`       | 完全启用或禁用 dreaming                                                                                                           |
+| `frequency`                            | `string`  | `0 3 * * *`   | 可选的完整 dreaming 扫描 cron 频率                                                                                               |
+| `model`                                | `string`  | default model | 可选的 Dream Diary 子代理模型覆盖                                                                                              |
+| `phases.deep.maxPromotedSnippetTokens` | `number`  | `160`         | 每个提升到 `MEMORY.md` 的短期回忆片段所保留的最大估计 token 数；来源元数据仍保持可见 |
 
 ### 示例
 

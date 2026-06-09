@@ -127,7 +127,7 @@ OpenClaw 的默认模式是**个人助理**——一个人，一个代理。委�
 
 在委派者处理任何真实数据之前，先配置日志记录：
 
-- Cron 运行历史：`~/.openclaw/cron/runs/<jobId>.jsonl`
+- Cron 运行历史：OpenClaw 共享 SQLite 状态数据库
 - 会话转录：`~/.openclaw/agents/delegate/sessions`
 - 身份提供方审计日志（Exchange、Google Workspace）
 

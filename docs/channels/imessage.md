@@ -9,7 +9,7 @@ title: "iMessage"
 <Note>
 对于 OpenClaw iMessage 部署，请在已登录的 macOS Messages 主机上使用 `imsg`。如果你的 Gateway 运行在 Linux 或 Windows 上，请将 `channels.imessage.cliPath` 指向一个通过 SSH 在 Mac 上运行 `imsg` 的包装器。
 
-**Gateway 停机后的补抓是可选功能。** 启用后（`channels.imessage.catchup.enabled: true`），网关会在下次启动时重放在其离线期间（崩溃、重启、Mac 睡眠）落入 `chat.db` 的入站消息。默认禁用——参见 [网关停机后的补抓](#catching-up-after-gateway-downtime)。关闭 [openclaw#78649](https://github.com/openclaw/openclaw/issues/78649)。
+**入站恢复是自动的。** 在桥接或网关重启后，iMessage 会重放停机期间遗漏的消息，并抑制 Apple 在 Push 恢复后可能刷出的过时“积压炸弹”，通过去重确保不会重复分发任何内容。无需启用任何配置——请参见[桥接或网关重启后的入站恢复](#inbound-recovery-after-a-bridge-or-gateway-restart)。
 </Note>
 
 <Warning>
@@ -119,15 +119,15 @@ exec ssh -T gateway-host imsg "$@"
     附件路径会根据允许的根目录（`attachmentRoots` / `remoteAttachmentRoots`）进行验证。
 
 <Warning>
-Any `cliPath` wrapper or SSH proxy you put in front of `imsg` MUST behave like a transparent stdio pipe for long-lived JSON-RPC. OpenClaw exchanges small newline-framed JSON-RPC messages over the wrapper's stdin/stdout for the lifetime of the channel:
+任何放在 `imsg` 前面的 `cliPath` 包装器或 SSH 代理都必须在长生命周期 JSON-RPC 场景下表现得像透明的 stdio 管道。OpenClaw 会在通道的整个生命周期内，通过包装器的 stdin/stdout 交换以换行分帧的小型 JSON-RPC 消息：
 
-- Forward each stdin chunk/line **as soon as bytes are available** — don't wait for EOF.
-- Forward each stdout chunk/line promptly in the reverse direction.
-- Preserve newlines.
-- Avoid fixed-size blocking reads (`read(4096)`, `cat | buffer`, default shell `read`) that can starve small frames.
-- Keep stderr separate from the JSON-RPC stdout stream.
+- 一旦字节可用就立即转发每个 stdin 块/行——不要等到 EOF。
+- 及时将每个 stdout 块/行按相反方向转发。
+- 保留换行符。
+- 避免固定大小的阻塞读取（`read(4096)`、`cat | buffer`、默认 shell `read`），它们可能会饿死小帧。
+- 保持 stderr 与 JSON-RPC stdout 流分离。
 
-A wrapper that buffers stdin until a large block fills will produce symptoms that look like an iMessage outage — `imsg rpc timeout (chats.list)` or repeated channel restarts — even though `imsg rpc` itself is healthy. `ssh -T host imsg "$@"` (above) is safe because it forwards OpenClaw's `cliPath` arguments such as `rpc` and `--db`. Pipelines like `ssh host imsg | grep -v '^DEBUG'` are NOT — line-buffered tools can still hold frames; use `stdbuf -oL -eL` on every stage if you must filter.
+一个会把 stdin 缓冲到大块填满才输出的包装器，会产生看起来像 iMessage 故障的症状——`imsg rpc timeout (chats.list)` 或通道反复重启——尽管 `imsg rpc` 本身是健康的。`ssh -T host imsg "$@"`（上方）是安全的，因为它会转发 OpenClaw 的 `cliPath` 参数，例如 `rpc` 和 `--db`。像 `ssh host imsg | grep -v '^DEBUG'` 这样的管道则不行——行缓冲工具仍可能扣住帧；如果必须过滤，请在每一环节上使用 `stdbuf -oL -eL`。
 </Warning>
 
   </Tab>
@@ -150,6 +150,29 @@ imsg send <handle> "test"
 ```
 
 </Tip>
+
+<Accordion title="SSH wrapper sends fail with AppleEvents -1743">
+  远程 SSH 设置可以读取聊天、通过 `channels status --probe`，并处理入站消息，但外发发送仍会因 AppleEvents 授权错误而失败：
+
+```text
+Not authorized to send Apple events to Messages. (-1743)
+```
+
+检查已登录 Mac 用户的 TCC 数据库或“系统设置” > “隐私与安全性” > “自动化”。如果自动化条目记录在 `/usr/libexec/sshd-keygen-wrapper` 而不是 `imsg` 或本地 shell 进程上，macOS 可能不会为该 SSH 服务端客户端暴露可用的 Messages 开关：
+
+```text
+kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.apple.MobileSMS
+```
+
+在这种状态下，重复执行 `tccutil reset AppleEvents` 或通过同一个 SSH 包装器重新运行 `imsg send` 可能仍会失败，因为需要 Messages Automation 的进程上下文是 SSH 包装器，而不是 UI 可以授予权限的某个应用。
+
+请改用受支持的 `imsg` 进程上下文之一：
+
+- 在已登录的 Messages 用户本地会话中运行 Gateway，或至少运行 `imsg` bridge。
+- 在授予同一会话中的完全磁盘访问权限和自动化权限后，使用该用户的 LaunchAgent 启动 Gateway。
+- 如果你保留双用户 SSH 拓扑，请在启用通道之前，验证一次真实的外发 `imsg send` 是否能通过确切的包装器成功。如果无法授予 Automation，请改为单用户 `imsg` 设置，而不要依赖 SSH 包装器来发送消息。
+
+</Accordion>
 
 ## 启用 imsg 私有 API
 
@@ -182,11 +205,24 @@ imsg send <handle> "test"
 
    `imsg status --json` 的输出会报告 `bridge_version`、`rpc_methods` 以及每个方法的 `selectors`，这样你就能在开始之前看到当前构建支持哪些能力。
 
-2. **禁用系统完整性保护。** 这与 macOS 版本相关，因为底层 Apple 要求取决于操作系统和硬件：
-   - **macOS 10.13–10.15（Sierra–Catalina）：** 通过终端禁用 Library Validation，重启进入恢复模式，运行 `csrutil disable`，然后重启。
-   - **macOS 11+（Big Sur 及更新版本），Intel：** 恢复模式（或互联网恢复），`csrutil disable`，重启。
-   - **macOS 11+，Apple Silicon：** 通过电源按钮启动流程进入恢复模式；在较新的 macOS 版本上，点击 Continue 时按住 **左 Shift** 键，然后运行 `csrutil disable`。虚拟机环境遵循单独流程——先创建 VM 快照。
-   - **macOS 26 / Tahoe：** library-validation 策略和 `imagent` 私有权限检查进一步收紧；`imsg` 可能需要更新构建才能跟上。如果在 macOS 大版本升级后，`imsg launch` 注入或某些特定 `selectors` 开始返回 false，请先查看 `imsg` 的发布说明，再假设 SIP 步骤已成功。
+2. **禁用系统完整性保护，并且（在现代 macOS 上）禁用 Library Validation。** 将非 Apple 的 helper dylib 注入到 Apple 签名的 `Messages.app` 需要关闭 SIP **并且**放宽 library validation。Recovery 模式下的 SIP 步骤取决于 macOS 版本：
+   - **macOS 10.13-10.15（Sierra-Catalina）：** 通过 Terminal 禁用 Library Validation，重启进入 Recovery Mode，运行 `csrutil disable`，然后重启。
+   - **macOS 11+（Big Sur 及更高版本），Intel：** 进入 Recovery Mode（或 Internet Recovery），运行 `csrutil disable`，然后重启。
+   - **macOS 11+，Apple Silicon：** 使用电源键启动流程进入 Recovery；在较新的 macOS 版本上，点击 Continue 时按住 **Left Shift** 键，然后运行 `csrutil disable`。虚拟机环境遵循单独流程，因此请先拍摄 VM 快照。
+
+   **在 macOS 11 及更高版本上，单独执行 `csrutil disable` 通常还不够。** Apple 仍然会将 `Messages.app` 作为平台二进制文件执行 library validation，因此即使关闭 SIP，adhoc 签名的 helper 也会被拒绝（`Library Validation failed: ... platform binary, but mapped file is not`）。在禁用 SIP 之后，还要禁用 library validation 并重启：
+
+   ```bash
+   sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true
+   ```
+
+   **macOS 26（Tahoe），已在 26.5.1 上验证：** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 当注入失败时，plist 是决定性因素，也是 Tahoe 上最常见的遗漏步骤：
+   - **有 plist：** `imsg launch` 会注入，且 `imsg status` 会报告 `advanced_features: true`。
+   - **没有 plist（即使关闭了 SIP）：** `imsg launch` 会失败并报出 `Failed to launch: Timeout waiting for Messages.app to initialize`。AMFI 在加载时拒绝该 adhoc helper，因此 bridge 永远无法就绪，启动也会超时。这个超时是 Tahoe 上大多数人遇到的症状，修复方法就是上面的 plist，而不是采取更激进的措施。
+
+   这一点已在 macOS 26.5.1（Apple Silicon）上通过受控的前后对比得到确认：有 plist 时，dylib 会映射进 `Messages.app`，bridge 会启动；移除 plist 并重启后，`imsg launch` 会产生上面的超时失败，并且 dylib 不会被映射。
+
+   如果在 macOS 升级后，`imsg launch` 注入或某些特定 `selectors` 开始返回 false，通常就是这个门槛导致的。在假设 SIP 步骤本身失败之前，请先检查你的 SIP 和 library-validation 状态。如果这些设置都正确，但 bridge 仍然无法注入，请收集 `imsg status --json` 和 `imsg launch` 的输出并反馈给 `imsg` 项目，而不是进一步削弱系统级安全控制。
 
    在运行 `imsg launch` 之前，请按照 Apple 针对你的 Mac 的恢复模式流程禁用 SIP。
 
@@ -532,8 +568,8 @@ imsg send <handle> "test"
 
   </Accordion>
 
-  <Accordion title="消息 ID">
-    入站 iMessage 上下文在可用时同时包含简短 `MessageSid` 值和完整消息 GUID。简短 ID 的作用域仅限于最近的内存回复缓存，并且在使用前会针对当前聊天进行检查。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
+  <Accordion title="Message IDs">
+    入站 iMessage 上下文在可用时会同时包含简短的 `MessageSid` 值和完整的消息 GUID。简短 ID 的作用域限定在最近的 SQLite 后端回复缓存中，并且在使用前会先检查当前聊天。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
 
   </Accordion>
 
@@ -618,14 +654,14 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 
 在大多数环境中，这两条记录会在约 0.8-2.0 秒内先后到达 OpenClaw。若不进行合并，代理会在第 1 轮只收到命令，随后回复（通常是“把 URL 发给我”），而直到第 2 轮才看到 URL——此时命令上下文已经丢失。这是 Apple 的发送流程导致的，不是 OpenClaw 或 `imsg` 引入的行为。
 
-`channels.imessage.coalesceSameSenderDms` 可将一个 DM 配置为把同一发送者连续出现的记录合并为一次代理轮次。群聊仍按每条消息分发，从而保留多用户轮次结构。
+`channels.imessage.coalesceSameSenderDms` 会将 DM 纳入对同一发送者连续行的缓冲。当 `imsg` 在某条源记录上暴露结构化的 URL 预览标记 `balloon_bundle_id: "com.apple.messages.URLBalloonProvider"` 时，OpenClaw 只合并那次真实的拆分发送，并保持其他缓冲记录作为独立轮次。在较旧、完全不输出 balloon 元数据的 `imsg` 版本上，OpenClaw 无法区分拆分发送和独立发送，因此会回退为合并整个缓冲桶。这样可以保留元数据引入前的行为，而不是把 `Dump <url>` 的拆分发送退化成两轮。群聊仍按每条消息分发，以保留多用户轮次结构。
 
 <Tabs>
   <Tab title="何时启用">
     在以下情况下启用：
 
-    - 你提供的技能期望 `command + payload` 出现在同一条消息中（dump、paste、save、queue 等）。
-    - 用户会在命令旁粘贴 URL、图片或长内容。
+    - 你提供的技能期望在同一条消息里同时包含 `command + payload`（dump、paste、save、queue 等）。
+    - 你的用户会把 URL 和命令一起粘贴。
     - 你可以接受额外的 DM 轮次延迟（见下文）。
 
     在以下情况下保持关闭：
@@ -665,87 +701,51 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
     ```
 
   </Tab>
-  <Tab title="权衡">
-    - **DM 消息会增加延迟。** 启用该标志后，每条 DM（包括独立控制命令和单文本后续消息）在分发前都会最多等待防抖窗口时长，以便可能到来的负载行一并合并。群聊消息仍会立即分发。
-    - **合并输出有上限。** 合并后的文本上限为 4000 个字符，并会显式标记 `…[truncated]`；附件上限为 20；来源条目上限为 10（超过后保留最早和最新的项）。每个来源 GUID 都会记录在 `coalescedMessageGuids` 中，用于下游遥测。
-    - **仅限 DM。** 群聊会继续按每条消息分发，因此当多人同时发言时机器人仍然保持响应。
-    - **按频道启用。** 其他频道（Telegram、WhatsApp、Slack、…）不受影响。将 `channels.bluebubbles.coalesceSameSenderDms` 设为启用的旧版 BlueBubbles 配置应把该值迁移到 `channels.imessage.coalesceSameSenderDms`。
+  <Tab title="取舍">
+    - **精确合并依赖当前 `imsg` 的 payload 元数据。** 当 URL 行包含 `balloon_bundle_id` 时，只有那次真实的拆分发送会被合并，而其他缓冲行保持独立。在较旧、完全不暴露 balloon 元数据的 `imsg` 版本上，OpenClaw 会回退为合并缓冲桶，这样 `Dump <url>` 的拆分发送不会退化成两轮（这是临时的兼容行为；等 `imsg` 在上游把拆分发送合并后会移除）。
+    - **DM 消息会增加延迟。** 打开该标志后，每条 DM（包括独立控制命令和单条文本后续消息）都会在调度前最多等待一个防抖窗口，以便判断是否有 URL 预览行即将到来。群聊消息仍会立即分发。
+    - **合并输出有上限。** 合并后的文本最多 4000 个字符，并带有显式的 `…[truncated]` 标记；附件最多 20 个；源条目最多 10 个（超过后保留最早和最新）。每个源 GUID 都会记录在 `coalescedMessageGuids` 中，供下游遥测使用。
+    - **仅限 DM。** 群聊会继续按每条消息分发，因此当多人同时发言时机器人仍能保持响应。
+    - **按通道启用。** 其他通道（Telegram、WhatsApp、Slack、…）不受影响。仍使用旧 BlueBubbles 配置的 `channels.bluebubbles.coalesceSameSenderDms` 应迁移到 `channels.imessage.coalesceSameSenderDms`。
 
   </Tab>
 </Tabs>
 
 ### 场景以及代理看到的内容
 
-| 用户输入内容                                                     | `chat.db` 产出          | 关闭标志（默认）                         | 开启标志 + 2500 ms 窗口                                             |
-| ---------------------------------------------------------------- | ----------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
-| `Dump https://example.com`（一次发送）                            | 约 1 秒间隔的 2 行       | 两次代理轮次：“Dump” 单独出现，然后是 URL | 一次轮次：合并后的文本 `Dump https://example.com`                  |
-| `Save this 📎image.jpg caption`（附件 + 文本）                     | 2 行                     | 两次轮次（合并时附件被丢弃）              | 一次轮次：保留文本 + 图片                                            |
-| `/status`（独立命令）                                            | 1 行                     | 立即分发                                 | **最多等待窗口时间，然后分发**                                      |
-| 单独粘贴的 URL                                                     | 1 行                     | 立即分发                                 | 立即分发（桶中只有一条记录）                                        |
-| 文本 + URL 作为两条有意分开发送的消息，间隔数分钟                | 窗口外的 2 行            | 两次轮次                                 | 两次轮次（窗口会在两次之间过期）                                     |
-| 短时间内快速洪泛（窗口内 >10 条小 DM）                             | N 行                     | N 次轮次                                  | 一次轮次，输出受限（保留最早 + 最新，应用文本/附件上限）            |
-| 群聊中两个人同时输入                                              | 来自 M 个发送者的 N 行    | M+ 次轮次（每个发送者桶一次）            | M+ 次轮次——群聊不会被合并                                           |
+“启用标志”列显示的是在会输出 `balloon_bundle_id` 的 `imsg` 构建版本上的行为。在更旧、完全不输出 balloon 元数据的 `imsg` 构建上，下方标记为“两轮”/“N 轮”的行会回退为旧式合并（1 轮）：OpenClaw 无法从结构上区分拆分发送和独立发送，因此会保留元数据引入前的合并行为。只有当构建版本开始输出 balloon 元数据后，精确分离才会启用。
 
-## 网关停机后的追赶
+| 用户输入内容                                                     | `chat.db` 产出                        | 关闭标志（默认）                          | 启用标志 + 窗口（imsg 输出 balloon 元数据） |
+| ------------------------------------------------------------------ | ----------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| `Dump https://example.com`（一次发送）                              | 约 1 秒内产生 2 行                   | 两轮代理交互：先单独收到 "Dump"，再收到 URL | 一轮：合并后的文本 `Dump https://example.com` |
+| `Save this 📎image.jpg caption`（附件 + 文本）                | 2 行，且没有 URL balloon 元数据 | 两轮                               | 两轮（在无元数据构建上采用旧式合并） |
+| `/status`（独立命令）                                     | 1 行                               | 立即分发                        | **最多等待一个窗口，然后分发**             |
+| 单独粘贴的 URL                                                  | 1 行                               | 立即分发                        | 最多等待一个窗口，然后分发                 |
+| 文本 + URL 被刻意拆成两条独立消息发送，且相隔几分钟 | 窗口外的 2 行               | 两轮                               | 两轮（窗口在它们之间过期）          |
+| 在窗口内快速突发发送超过 10 条小 DM                          | 2 行，没有 URL balloon 元数据 | N 轮                                 | N 轮（在无元数据构建上采用旧式合并）   |
+| 群聊里有两个人同时输入                                  | 来自 M 个发送者的 N 行               | M+ 轮（每个发送者桶一轮）        | M+ 轮——群聊不会被合并         |
 
-当网关离线时（崩溃、重启、Mac 休眠、机器关机），`imsg watch` 会在网关恢复后从当前 `chat.db` 状态继续运行——在这段空窗期间到达的内容，默认情况下都不会被看到。追赶机制会在下次启动时重放这些消息，这样代理就不会静默漏掉入站流量。
+## 桥接器或网关重启后的入站恢复
 
-追赶功能默认**关闭**。按频道启用：
+iMessage 会恢复网关停机期间遗漏的消息，同时抑制 Apple 在 Push 恢复后可能一次性刷出的陈旧“积压爆发”。默认行为始终开启，建立在入站去重之上。
 
-```ts
-channels: {
-  imessage: {
-    catchup: {
-      enabled: true,             // 总开关（默认：false）
-      maxAgeMinutes: 120,        // 跳过早于现在 - 2 小时的行（默认：120，范围限制 1..720）
-      perRunLimit: 50,           // 每次启动最多重放的行数（默认：50，范围限制 1..500）
-      firstRunLookbackMinutes: 30, // 首次运行且没有游标：回看 30 分钟（默认：30）
-      maxFailureRetries: 10,     // 对同一个卡住的 guid 失败 10 次后放弃（默认：10）
-    },
-  },
-}
-```
+- **重放去重。** 每条已分发的入站消息都会通过其 Apple GUID 记录到持久化插件状态（`imessage.inbound-dedupe`）中，在接收时认领，并在处理完成后提交（若发生临时失败则释放，以便重试）。任何已经处理过的内容都会被丢弃，而不会重复分发。这使得恢复可以激进地重放，而无需逐条记录状态。
+- **停机恢复。** 启动时，监控会记住最后一次分发的 `chat.db` 行号（每个账户持久化的游标），并将其作为 `since_rowid` 传给 `imsg watch.subscribe`，这样 `imsg` 就会重放网关停机期间到达的那些行，然后继续追踪实时流。重放范围限制在最近的若干行以及约 2 小时内的消息，去重机制会丢弃任何已经处理过的内容。
+- **陈旧积压年龄防线。** 启动边界之上的行是真正实时的；其中发送时间比到达时间早超过约 15 分钟的，则是 Push 刷出的积压消息，会被抑制。重放的行（处于边界之上或之下）则使用更宽的恢复窗口，因此最近遗漏的消息会被投递，而更早的历史消息不会。
 
-### 运行方式
-
-每次 `monitorIMessageProvider` 启动只执行一轮，顺序为 `imsg launch` ready → `watch.subscribe` → `performIMessageCatchup` → live dispatch loop。追赶本身使用与 `imsg watch` 相同的 JSON-RPC 客户端，通过 `chats.list` + 按聊天的 `messages.history` 进行回放。追赶轮次中到达的内容会正常进入实时分发流程；现有的入站去重缓存会吸收与重放行的任何重叠。
-
-每条重放的行都会经过实时分发路径（`evaluateIMessageInbound` + `dispatchInboundMessage`），因此允许列表、群组策略、去抖器、回显缓存和已读回执在重放消息与实时消息上表现一致。
-
-### 游标与重试语义
-
-追赶会为每个账号在 `<openclawStateDir>/imessage/catchup/<account>__<hash>.json` 维护一个游标（OpenClaw 状态目录默认是 `~/.openclaw`，可通过 `OPENCLAW_STATE_DIR` 覆盖）：
-
-```json
-{
-  "lastSeenMs": 1717900800000,
-  "lastSeenRowid": 482910,
-  "updatedAt": 1717900801234,
-  "failureRetries": { "<guid>": 1 }
-}
-```
-
-- 游标会在每次成功分发后前进；当某一行的分发抛出异常时，游标会保持不动——下次启动会从这个保持的游标位置重新尝试同一行。
-- 在启动时的 catchup 查询成功之后，后续实时处理的行也会推进同一个游标，这样网关重启时就不会重放那些已经在实时路径中处理过的消息。实时游标写入不会跳过仍低于 `maxFailureRetries` 的 catchup 失败项。
-- 对同一个 `guid` 连续抛出 `maxFailureRetries` 次之后，catchup 会记录一条 `warn`，并强制将游标推进到这条卡住的消息之后，这样后续启动就能继续前进。
-- 已经放弃的 `guid` 在后续运行中一看到就会跳过（不会尝试分发），并在运行摘要中计入 `skippedGivenUp`。
+恢复机制同时适用于本地和远程 `cliPath`，因为 `since_rowid` 重放通过同一个 `imsg` RPC 连接运行。区别在于窗口：当网关能够读取 `chat.db`（本地）时，它会锚定启动时的行号边界，限制重放跨度，并投递最多几小时前遗漏的消息；通过远程 SSH `cliPath` 时则无法读取数据库，因此重放不设上限，所有行都使用实时年龄防线——它仍会恢复最近遗漏的消息，也仍会抑制旧积压，只是使用更窄的实时窗口。要获得更宽的恢复窗口，请在 Messages 所在的 Mac 上运行网关。
 
 ### 运维可见信号
 
+被抑制的积压会按默认级别记录日志，不会静默丢弃（`recovery` 标志会显示当前使用了哪个窗口）：
+
 ```
-imessage catchup: replayed=N skippedFromMe=… skippedGivenUp=… failed=… givenUp=… fetchedCount=…
-imessage catchup: giving up on guid=<guid> after <N> failures; advancing cursor past it
-imessage catchup: fetched <X> rows across chats, capped to perRunLimit=<Y>
+imessage: suppressed stale inbound backlog account=<id> sent=<iso> recovery=<bool> (<N> suppressed since start)
 ```
 
-出现 `WARN ... capped to perRunLimit` 表示一次启动并未清空全部积压。如果你的空窗期经常超过默认的 50 行处理量，请提高 `perRunLimit`（最大 500）。
+### 迁移
 
-### 何时关闭它
-
-- 网关持续运行，并通过 watchdog 自动重启，且空窗通常少于几秒——默认关闭即可。
-- DM 量很低，漏消息也不会改变代理行为——首次启用时 `firstRunLookbackMinutes` 的初始窗口可能会意外派发较旧的上下文。
-
-当你开启 catchup 后，第一次没有游标的启动只会回看 `firstRunLookbackMinutes`（默认 30 分钟），而不会回看完整的 `maxAgeMinutes` 窗口——这样可以避免重放大量启用前的历史消息。
+`channels.imessage.catchup.*` 已弃用——现在停机恢复已自动开启，新配置无需任何设置。现有配置中 `catchup.enabled: true` 仍会作为兼容性配置文件，保留用于恢复重放窗口。已禁用的 catchup 块（`enabled: false` 或未设置 `enabled: true`）已退役；`openclaw doctor --fix` 会将其移除。
 
 ## 故障排查
 

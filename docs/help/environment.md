@@ -7,19 +7,35 @@ read_when:
 title: "环境变量"
 ---
 
-OpenClaw 会从多个来源拉取环境变量。规则是 **绝不覆盖已有值**。
+OpenClaw 从多个来源加载环境变量。规则是**绝不覆盖现有值**。
+Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则前，会忽略 workspace `.env` 中的提供商凭据和受保护的运行时控制项。
 
 ## 优先级（从高到低）
 
-1. **进程环境**（Gateway 进程从父 shell/守护进程已经继承到的内容）。
-2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖）。
-3. **全局 `.env`**，位于 `~/.openclaw/.env`（也就是 `$OPENCLAW_STATE_DIR/.env`；不会覆盖）。
-4. **`~/.openclaw/openclaw.json` 中的配置 `env` 块**（仅在缺失时应用）。
-5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅对缺失的预期键应用。
+1. **进程环境**（Gateway 进程从父 shell/daemon 已继承到的内容）。
+2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖；会忽略提供商凭据和受保护的运行时控制项）。
+3. **全局 `.env`**：`~/.openclaw/.env`（也就是 `$OPENCLAW_STATE_DIR/.env`；推荐用于提供商 API key；不会覆盖）。
+4. **`~/.openclaw/openclaw.json` 中的 `env` 块**（仅在缺失时应用）。
+5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅应用于缺失的预期键。
 
 在使用默认 state dir 的 Ubuntu 全新安装上，OpenClaw 还会将 `~/.config/openclaw/gateway.env` 视为全局 `.env` 之后的兼容回退。如果两个文件都存在且内容不一致，OpenClaw 会保留 `~/.openclaw/.env` 并打印警告。
 
 如果配置文件完全缺失，则跳过第 4 步；如果启用了 shell 导入，第 5 步仍会运行。
+
+## 提供商凭据与 workspace `.env`
+
+不要只把提供商 API key 放在 workspace `.env` 里。OpenClaw 会忽略 workspace `.env` 文件中的提供商凭据环境变量，包括常见的 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY` 和 `FIRECRAWL_API_KEY`。
+
+请使用以下受信任来源之一来存放提供商凭据：
+
+- Gateway 进程环境，例如 shell、launchd/systemd 单元、容器 secret 或 CI secret。
+- 全局运行时 dotenv 文件：`~/.openclaw/.env` 或 `$OPENCLAW_STATE_DIR/.env`。
+- `~/.openclaw/openclaw.json` 中的 `env` 块。
+- 在启用 `env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1` 时，可选的登录 shell 导入。
+
+如果你之前只把提供商密钥存放在 workspace `.env` 中，请将它们迁移到上述受信任来源之一。Workspace `.env` 仍然可以提供普通的项目变量，这些变量不是凭据、端点重定向、主机覆盖或 `OPENCLAW_*` 运行时控制项。
+
+请参见 [Workspace `.env` files](/gateway/security#workspace-env-files) 了解安全原因。
 
 ## 配置 `env` 块
 
@@ -82,6 +98,12 @@ OpenClaw 会从多个来源拉取环境变量。规则是 **绝不覆盖已有�
 
 - `OPENCLAW_LOAD_SHELL_ENV=1`
 - `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`
+
+## Exec shell snapshots
+
+在非 Windows 的 Gateway 主机上，bash 和 zsh 的 `exec` 命令默认使用启动快照。
+在 Gateway 进程环境中设置 `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` 可禁用此路径。
+`false`、`no` 和 `off` 也会禁用它。单次调用的 `exec.env` 值不能切换快照或重定向快照缓存。
 
 ## 运行时注入的环境变量
 

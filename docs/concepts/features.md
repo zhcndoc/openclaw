@@ -20,8 +20,8 @@ title: "功能"
   <Card title="媒体" icon="image" href="/nodes/images">
     图片、音频、视频、文档，以及图像/视频生成。
   </Card>
-  <Card title="应用和界面" icon="monitor" href="/web/control-ui">
-    Web 控制 UI 和 macOS 配套应用。
+  <Card title="应用和界面" icon="monitor" href="/platforms">
+    Windows Hub、Web Control UI、macOS 应用和移动节点。
   </Card>
   <Card title="移动节点" icon="smartphone" href="/nodes">
     支持配对、语音/聊天以及丰富设备命令的 iOS 和 Android 节点。

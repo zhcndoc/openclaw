@@ -3,9 +3,10 @@ summary: "OpenClaw 代码模式：由 QuickJS-WASI 和隐藏的运行范围工�
 title: "代码模式"
 sidebarTitle: "代码模式"
 read_when:
-  - 你希望为某次 agent 运行启用 OpenClaw 代码模式
+  - 你想为某次代理运行启用 OpenClaw 代码模式
   - 你需要解释为什么代码模式不同于 Codex Code mode
   - 你正在审查 exec/wait 合约、QuickJS-WASI 沙箱、TypeScript 转换，或隐藏的工具目录桥接
+  - 你正在添加或审查内部代码模式命名空间注册表集成
 ---
 
 代码模式是 OpenClaw agent-runtime 的一项实验性功能。它默认关闭。启用后，OpenClaw 会改变模型在一次运行中看到的内容：模型不再直接看到所有已启用工具的 schema，而只会看到 `exec` 和 `wait`。
@@ -32,11 +33,12 @@ OpenClaw 代码模式允许模型编写一小段 JavaScript 或 TypeScript 程�
 
 当代码模式处于激活状态时：
 
-- 模型可见的工具列表只有 `exec` 和 `wait`。
+- 模型可见的工具列表恰好是 `exec` 和 `wait`。
 - `exec` 在受限的 QuickJS-WASI worker 中执行模型生成的 JavaScript 或 TypeScript。
-- 正常的 OpenClaw 工具对模型提示是隐藏的，并通过 `ALL_TOOLS` 和 `tools` 暴露到 guest 程序中。
-- guest 代码可以搜索隐藏目录、描述某个工具，并通过与正常 agent 回合相同的 OpenClaw 执行路径调用工具。
-- 当嵌套工具调用仍在等待时，`wait` 会恢复一个挂起的代码模式运行。
+- 正常的 OpenClaw 工具对模型提示是隐藏的，并通过 `ALL_TOOLS` 和 `tools` 在 guest 程序内部暴露。
+- guest 代码可以搜索隐藏目录、描述某个工具，并通过正常 agent 回合使用的同一 OpenClaw 执行路径调用工具。
+- MCP 工具按 `MCP` 命名空间分组。在代码模式中，这是调用 MCP 工具的唯一受支持方式。
+- 当嵌套工具调用仍在等待时，`wait` 会恢复一个暂停的代码模式运行。
 
 关键区别在于：代码模式改变的是面向模型的编排界面。它不会替代 OpenClaw 工具、插件工具、MCP 工具、认证、审批策略、通道行为或模型选择。
 
@@ -78,7 +80,10 @@ OpenClaw 代码模式允许模型编写一小段 JavaScript 或 TypeScript 程�
 
 当 `tools.codeMode` 被省略、设置为 `false`，或者是一个不含 `enabled: true` 的对象时，代码模式保持关闭。
 
-当你希望更严格的边界时，请使用显式限制：
+当你在使用配置了 MCP 服务器的沙箱化 agent 时，也要确保沙箱工具策略允许捆绑的 MCP 插件，例如使用 `tools.sandbox.tools.alsoAllow: ["bundle-mcp"]`。参见
+[Configuration - tools and custom providers](/gateway/config-tools#mcp-and-plugin-tools-inside-sandbox-tool-policy)。
+
+当你想要更严格的边界时，请使用显式限制：
 
 ```json5
 {
@@ -238,19 +243,14 @@ type CodeModeExecInput = {
 
 输入规则：
 
-- One of code or command must be non-empty.
-- code is the documented model-facing field.
-- command is accepted as an exec-compatible alias for hook policies and
-  trusted rewrites; when both are present, the values must match.
-- Outer code-mode exec hook events include toolKind: "code_mode_exec" and
-  include toolInputKind: "javascript" | "typescript" when the input language
-  is known, so policies can distinguish code-mode cells from shell-style exec
-  calls that share the same tool name.
-- language defaults to "javascript".
-- If language is "typescript", OpenClaw transpiles before evaluation.
-- exec rejects import, require, dynamic import, and module-loader patterns
-  in v1.
-- exec does not expose the normal shell exec implementation recursively.
+- `code` 或 `command` 其中之一必须非空。
+- `code` 是文档中面向模型的字段。
+- `command` 作为 `exec` 兼容别名被接受，用于钩子策略和可信重写；当两者都存在时，值必须一致。
+- 外层代码模式 `exec` 钩子事件包含 `toolKind: "code_mode_exec"`，并在输入语言已知时包含 `toolInputKind: "javascript" | "typescript"`，以便策略区分代码模式单元和共享同一工具名称的 shell 风格 `exec` 调用。
+- `language` 默认为 `"javascript"`。
+- 如果 `language` 是 `"typescript"`，OpenClaw 会在求值前进行转译。
+- `exec` 在 v1 中拒绝 `import`、`require`、动态 `import` 和模块加载器模式。
+- `exec` 不会递归地暴露正常的 shell `exec` 实现。
 
 结果：
 
@@ -282,7 +282,7 @@ type CodeModeFailedResult = {
 };
 ```
 
-当 QuickJS VM 以可恢复状态挂起时，`exec` 返回 `waiting`。该结果包含供 `wait` 使用的 `runId`。
+当 QuickJS VM 挂起并带有仍需要模型可见续接的可恢复状态时，`exec` 会返回 `waiting`。结果包含一个用于 `wait` 的 `runId`。命名空间桥接调用，包括 MCP 命名空间调用，会在同一个 `exec`/`wait` 调用内于就绪时自动排空，因此一个紧凑的代码块可以检查 `$api()` 并调用一个 MCP 工具，而不必为每次命名空间 `await` 触发一次模型工具调用。
 
 当 guest VM 没有待处理工作，并且在 OpenClaw 的输出适配器运行后最终值与 JSON 兼容时，`exec` 才返回 `completed`。
 
@@ -330,6 +330,8 @@ guest runtime 暴露一个小型全局 API：
 ```typescript
 declare const ALL_TOOLS: ToolCatalogEntry[];
 declare const tools: ToolCatalog;
+declare const MCP: Record<string, unknown>;
+declare const namespaces: Record<string, unknown>;
 
 declare function text(value: unknown): void;
 declare function json(value: unknown): void;
@@ -379,9 +381,199 @@ const content = await tools.call(fileRead.id, { path: "README.md" });
 const hits = await tools.web_search({ query: "OpenClaw code mode" });
 ```
 
-guest runtime 不得直接暴露主机对象。输入和输出通过 JSON 兼容值跨越桥接，并带有明确的大小上限。
+MCP 目录条目不能通过 `tools.call(...)` 或代码模式中的便捷函数调用。它们仅通过生成的 `MCP` 命名空间暴露。TypeScript 风格的声明文件可通过只读的 `API` 虚拟文件表面获得，因此 agent 可以在不把 MCP schema 加入提示词的情况下检查 MCP 签名：
 
-## Output API
+```typescript
+const files = await API.list("mcp");
+const githubApi = await API.read("mcp/github.d.ts");
+
+const issue = await MCP.github.createIssue({
+  owner: "openclaw",
+  repo: "openclaw",
+  title: "Investigate gateway logs",
+});
+
+const snapshot = await MCP.chromeDevtools.takeSnapshot({ output: "markdown" });
+const resource = await MCP.docs.resources.read({ uri: "memo://one" });
+const prompt = await MCP.docs.prompts.get({
+  name: "brief",
+  arguments: { topic: "release" },
+});
+```
+
+`API.read("mcp/<server>.d.ts")` 返回由 MCP 工具元数据推导出的紧凑声明：
+
+```typescript
+type McpToolResult = {
+  content?: unknown[];
+  structuredContent?: unknown;
+  isError?: boolean;
+  [key: string]: unknown;
+};
+
+declare namespace MCP.github {
+  /** 返回这个 TypeScript 风格的 API 头。 */
+  function $api(toolName?: string, options?: { schema?: boolean }): Promise<McpApiHeader>;
+
+  /**
+   * 创建一个 GitHub issue。
+   * @param owner 仓库所有者
+   * @param repo 仓库名称
+   * @param title issue 标题
+   */
+  function createIssue(input: {
+    owner: string;
+    repo: string;
+    title: string;
+    body?: string;
+  }): Promise<McpToolResult>;
+}
+```
+
+这些声明文件是虚拟的，不是写入工作区或状态目录下的文件。对于每次代码模式 `exec` 调用，OpenClaw 都会构建运行范围内的工具目录，保留可见的 MCP 条目，渲染 `mcp/index.d.ts` 以及每个可见服务器对应的一个 `mcp/<server>.d.ts` 声明文件，并将这个小型只读表注入到 QuickJS worker 中。guest 代码只会看到 `API` 对象：`API.list(prefix?)` 返回文件元数据，`API.read(path)` 返回所选的声明内容。未知路径以及 `.` / `..` 段会被拒绝。
+
+这使得大型 MCP schema 不会进入模型提示词。agent 通过 `exec` 工具描述得知虚拟 API 的存在，仅读取所需的声明文件，然后以一个对象参数调用 `MCP.<server>.<tool>()`。当 agent 需要在程序内部获得单个工具的 schema 响应时，`MCP.<server>.$api()` 仍可作为内联备用方案。
+
+guest runtime 不能直接暴露 host 对象。输入和输出通过 JSON 兼容值跨桥传递，并带有显式大小上限。
+
+## 内部命名空间
+
+内部命名空间让 code mode 在不增加更多模型可见工具的情况下，获得简洁的领域 API。由加载器拥有的集成可以注册诸如 `Issues`、`Fictions` 或 `Calendar` 这样的命名空间；随后 guest 代码会在 QuickJS 程序中调用该命名空间，而 OpenClaw 对模型仍然只展示 `exec` 和 `wait`。
+
+命名空间目前仍是内部能力。这里没有公开的插件 SDK 命名空间 API：外部插件命名空间需要一个由加载器拥有的契约，这样插件身份、已安装清单、认证状态以及缓存的目录描述符才不会偏离支撑该命名空间的插件工具。Core code mode 只负责沙箱、序列化、目录门控以及桥接分发。
+
+随后 guest 代码可以使用直接全局变量，或者使用 `namespaces` 映射：
+
+```javascript
+const open = await Issues.list({ state: "open" });
+const alsoOpen = await namespaces.Issues.list({ state: "open" });
+return { count: open.length, alsoCount: alsoOpen.length };
+```
+
+### 注册表生命周期
+
+命名空间注册表是进程本地的，并按命名空间 id 进行键控。一次典型运行会经历以下路径：
+
+1. 受信任的加载器调用 `registerCodeModeNamespaceForPlugin(pluginId, registration)`。
+2. Code mode 为本次运行创建隐藏的 `ToolSearchRuntime`，并读取其运行作用域的目录。
+3. `createCodeModeNamespaceRuntime(ctx, catalog)` 只保留那些 `requiredToolNames` 全部可见且归同一个 `pluginId` 所有的注册项。
+4. 每个可见命名空间都会为当前运行调用 `createScope(ctx)`。该作用域会接收诸如 `agentId`、`sessionKey`、`sessionId`、`runId`、配置以及中止状态等运行上下文。
+5. 作用域数据会被序列化为普通描述符，并作为直接全局变量以及 `namespaces.<globalName>` 注入到 QuickJS 中。
+6. guest 调用会通过 worker bridge 挂起，在主机端解析命名空间路径，将调用映射到声明的、插件拥有的目录工具，并通过 `ToolSearchRuntime.call` 执行该工具。
+7. OpenClaw 会在活动的 `exec`/`wait` 工具调用内自动清空就绪的命名空间桥接调用。如果命名空间工作在超时前仍未完成，或者 guest 显式让出执行权，则 `wait` 会稍后恢复同一个命名空间运行时。
+8. 插件回滚或卸载会调用 `clearCodeModeNamespacesForPlugin(pluginId)`，这样失败的插件加载就不会遗留陈旧的全局变量。
+
+一个重要的不变量：命名空间调用就是目录工具调用。它们使用与 `tools.call(...)` 相同的策略钩子、审批、中止处理、遥测、转录投影以及挂起/恢复行为。
+
+### 注册形状
+
+从拥有底层工具的集成中注册命名空间。保持作用域尽量小，只暴露那些映射到已声明目录工具的领域动词。
+
+```typescript
+import {
+  createCodeModeNamespaceTool,
+  registerCodeModeNamespaceForPlugin,
+} from "../agents/code-mode-namespaces.js";
+
+const pluginId = "github";
+
+registerCodeModeNamespaceForPlugin(pluginId, {
+  id: "github-issues",
+  globalName: "Issues",
+  description: "GitHub issue helpers for the current repository.",
+  requiredToolNames: ["github_list_issues", "github_update_issue"],
+  prompt: "Use Issues.list(params) and Issues.update(number, patch).",
+  createScope: (ctx) => ({
+    repository: ctx.config,
+    list: createCodeModeNamespaceTool("github_list_issues", ([params]) => params ?? {}),
+    update: createCodeModeNamespaceTool("github_update_issue", ([number, patch]) => ({
+      number,
+      patch,
+    })),
+  }),
+});
+```
+
+`createCodeModeNamespaceTool(toolName, inputMapper)` 会把作用域成员标记为可调用的命名空间函数。可选的 `inputMapper` 会接收 guest 参数，并返回底层目录工具所需的输入对象。若没有输入映射器，则使用 guest 的第一个参数；若未提供参数，则使用 `{}`。
+
+原始主机函数会在 guest 代码运行前被拒绝：
+
+```typescript
+createScope: () => ({
+  // 错误：这会绕过目录工具生命周期，因此会被拒绝。
+  list: async () => githubClient.listIssues(),
+});
+```
+
+### 所有权与可见性
+
+命名空间所有权绑定到注册调用者的 `pluginId`。`requiredToolNames` 同时充当可见性门和所有权检查：
+
+- 每个必需工具都必须存在于运行目录中
+- 每个必需工具都必须具有 `sourceName === pluginId`
+- 当任何必需工具缺失或归属其他插件时，命名空间会被隐藏
+- 每条可调用路径只能指向 `requiredToolNames` 中命名的工具
+
+这可以防止另一个插件通过注册同名工具来暴露某个命名空间。它也让命名空间与普通代理策略保持一致：如果本次运行看不到底层工具，就看不到该命名空间。
+
+例如，GitHub 命名空间应当位于一个 GitHub 拥有的扩展之后，该扩展负责 GitHub 认证、REST 或 GraphQL 客户端、速率限制、写入审批和测试。Core code mode 不应嵌入 GitHub 专用 API、令牌处理或提供方策略。
+
+### 作用域序列化规则
+
+`createScope(ctx)` 可以返回一个普通对象，其中包含 JSON 兼容值、数组、嵌套对象以及 `createCodeModeNamespaceTool(...)` 调用标记。主机对象绝不会直接进入 QuickJS。
+
+序列化器会拒绝：
+
+- 原始函数
+- 循环对象图
+- 不安全的路径段：`__proto__`、`constructor`、`prototype`、空键，或包含内部路径分隔符的键
+- 不是 JavaScript 标识符的 `globalName` 值
+- 与内置 code-mode 全局变量冲突的 `globalName`，例如 `tools`、`namespaces`、`text`、`json`、`yield_control` 或 `__openclaw*`
+
+无法进行 JSON 序列化的值会在跨越桥接之前转换为 JSON 安全的回退值。二进制数据、句柄、套接字、客户端和类实例应当保留在普通目录工具之后。
+
+### 提示词
+
+只有当命名空间在该运行中可见时，命名空间的 `description` 和可选 `prompt` 才会追加到模型可见的 `exec` schema 中。请用它们来教授最小但有用的表面：
+
+```typescript
+{
+  description: "Fiction production service helpers.",
+  prompt:
+    "Use Fictions.riskAudit(), Fictions.promoteIfReady(id, status), and Fictions.unpaidOver(amount).",
+}
+```
+
+提示词应当围绕命名空间契约，而不是认证设置、实现历史或无关的插件行为。
+
+### 清理
+
+命名空间是进程本地注册项。请在拥有它们的插件被禁用、卸载或回滚时移除它们：
+
+```typescript
+clearCodeModeNamespacesForPlugin(pluginId);
+```
+
+仅在移除一个已知命名空间时使用 `unregisterCodeModeNamespace(namespaceId)`。测试可以调用 `clearCodeModeNamespacesForTest()`，以避免跨用例泄漏注册项。
+
+### 测试清单
+
+命名空间变更应覆盖安全边界和 guest 行为：
+
+- 只有在底层工具可见时，命名空间提示文本才会出现
+- 来自其他 `sourceName` 的同名工具不会暴露该命名空间
+- 原始作用域函数会被拒绝
+- 伪造的命名空间 id 和伪造的路径会被拒绝
+- 可调用路径不能指向未声明的工具
+- 嵌套对象和共享引用会被正确序列化
+- 命名空间调用通过目录工具执行并返回 JSON 安全的细节
+- guest 代码可以捕获失败
+- 挂起的命名空间调用会通过 `wait` 恢复
+- 插件回滚会清除其拥有的命名空间注册项
+
+命名空间是通用 `tools.search` / `tools.call` 目录的补充。对任意已启用的 OpenClaw、插件和客户端工具使用目录；对 MCP 工具使用 `MCP`；对插件拥有、已文档化的领域 API 使用其他命名空间，在这些场景下，简洁代码比反复查找 schema 更可靠。
+
+## 输出 API
 
 `text(value)` 会将可读文本追加到 `output` 数组。
 
@@ -404,7 +596,7 @@ type CodeModeOutput = { type: "text"; text: string } | { type: "json"; value: un
 - 图像和文件通过普通 OpenClaw 工具传递，而不是通过
   code-mode bridge
 
-## Tool catalog
+## 工具目录
 
 隐藏目录在经过有效策略过滤后包含以下工具：
 
@@ -443,28 +635,25 @@ client:app:select_file
 
 这可以防止递归，并保持面向模型的合约足够精简。
 
+MCP 条目会保留在运行作用域目录中，因此策略、审批、钩子、遥测、转录投影以及精确工具 id 仍与正常工具执行共享。guest 可见的 `ALL_TOOLS`、`tools.search(...)`、`tools.describe(...)` 和 `tools.call(...)` 视图会省略 MCP 条目。生成的 `MCP.<server>.<tool>({ ...input })` 命名空间会解析回精确的目录 id，然后通过相同的执行器路径分发。
+
 ## Tool Search 交互
 
-当 code mode 处于激活状态时，它会取代 PI Tool Search 的模型表面。
+对于 code mode 处于活动状态的运行，Code mode 会取代 OpenClaw Tool Search 的模型表面。
 
 当 `tools.codeMode.enabled` 为 true 且 code mode 激活时：
 
-- OpenClaw 不会将 `tool_search_code`、`tool_search`、`tool_describe`
-  或 `tool_call` 作为模型可见工具暴露出来。
-- 同样的目录化思路会迁移到 guest runtime 内部。
-- guest runtime 会接收紧凑的 `ALL_TOOLS` 元数据，以及 search、describe
-  和 call 辅助函数。
-- 嵌套调用通过 Tool Search 使用的同一 OpenClaw 执行路径进行分发。
+- OpenClaw 不会将 `tool_search_code`、`tool_search`、`tool_describe` 或 `tool_call` 作为模型可见工具暴露出来。
+- 同样的目录化思路会转移到 guest runtime 内部。
+- guest runtime 会接收紧凑的 `ALL_TOOLS` 元数据，以及针对非 MCP 工具的搜索、描述和调用辅助函数。
+- MCP 调用使用生成的 `MCP` 命名空间及其 `$api()` 头信息，而不是 `tools.call(...)`。
+- 嵌套调用会通过 Tool Search 所使用的同一 OpenClaw 执行器路径分发。
 
-现有的 [Tool Search](/tools/tool-search) 页面描述的是 PI 紧凑
-目录桥接。对于可以使用 `exec` 和 `wait` 的运行，code mode 是通用的
-OpenClaw 替代方案。
+现有的 [Tool Search](/tools/tool-search) 页面描述了 OpenClaw 紧凑目录桥接。对于可以使用 `exec` 和 `wait` 的运行，Code mode 是通用的 OpenClaw 替代方案。
 
-## Tool 名称和冲突
+## 工具名称和冲突
 
-模型可见的 `exec` 工具是 code-mode 工具。如果常规的 OpenClaw
-shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样被收录
-到目录中。
+模型可见的 `exec` 工具是 code-mode 工具。如果常规的 OpenClaw shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样被收录到目录中。
 
 在 guest runtime 内部：
 
@@ -472,8 +661,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 - 只有当 shell exec 目录条目有一个无歧义的安全名称时，才会安装 `tools.exec(...)`。
 - code-mode 的 `exec` 工具绝不会通过 `tools` 递归可用。
 
-如果两个工具归一化后得到相同的安全便捷名称，OpenClaw 会省略
-该便捷函数，并要求使用 `tools.call(id, input)`。
+如果两个工具归一化后得到相同的安全便捷名称，OpenClaw 会省略该便捷函数，并要求使用 `tools.call(id, input)`。
 
 ## 嵌套工具执行
 
@@ -491,9 +679,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 - 可用时的流式更新
 - 轨迹和审计事件
 
-嵌套调用会作为真实的工具调用投影到对话记录中，这样支持包
-可以展示发生了什么。该投影会标识父级 code-mode 工具调用以及
-嵌套工具 id。
+嵌套调用会作为真实的工具调用投影到对话记录中，这样支持包可以展示发生了什么。该投影会标识父级 code-mode 工具调用以及嵌套工具 id。
 
 允许并行嵌套调用，最多可达 `maxPendingToolCalls`。
 
@@ -508,8 +694,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 - `expired`：快照或挂起状态超过保留期；无法恢复。
 - `aborted`：父运行/会话已取消；快照已删除。
 
-状态按 agent 运行、会话和工具调用 id 进行作用域划分。来自不同
-运行或会话的 `wait` 调用会失败。
+状态按 agent 运行、会话和工具调用 id 进行作用域划分。来自不同运行或会话的 `wait` 调用会失败。
 
 快照存储是有边界的：
 
@@ -521,8 +706,7 @@ shell `exec` 工具已启用，它会对模型隐藏，并像其他工具一样�
 
 ## QuickJS-WASI runtime
 
-OpenClaw 会在所属包中将 `quickjs-wasi` 作为直接依赖加载。该
-runtime 不依赖于为代理、PAC 或其他无关依赖安装的传递副本。
+OpenClaw 会在所属包中将 `quickjs-wasi` 作为直接依赖加载。该 runtime 不依赖于为代理、PAC 或其他无关依赖安装的传递副本。
 
 runtime 职责：
 
@@ -536,8 +720,7 @@ runtime 职责：
 - 为 `wait` 恢复快照
 - 在终态后释放 VM 句柄和快照
 
-runtime 在 worker 中运行，位于 OpenClaw 主事件循环之外。guest 的
-无限循环不应无限期阻塞 Gateway 进程。
+runtime 在 worker 中运行，位于 OpenClaw 主事件循环之外。guest 的无限循环不应无限期阻塞 Gateway 进程。
 
 ## TypeScript
 
@@ -550,8 +733,7 @@ TypeScript 支持仅通过源代码转换实现：
 - v1 中不支持 `import` 或 `require`
 - 诊断结果以 `failed` 结果返回
 
-TypeScript 编译器仅会在 TypeScript 单元格中按需加载。纯
-JavaScript 单元格和已禁用的 code mode 不会加载编译器。
+TypeScript 编译器仅会在 TypeScript 单元格中按需加载。纯 JavaScript 单元格和已禁用的 code mode 不会加载编译器。
 
 在可行的情况下，转换应尽量保留有用的行号。
 
@@ -560,10 +742,8 @@ JavaScript 单元格和已禁用的 code mode 不会加载编译器。
 模型代码是不可信的。runtime 采用纵深防御：
 
 - 在主事件循环之外运行 QuickJS-WASI
-- 将 `quickjs-wasi` 作为直接依赖加载，而不是通过 Codex 或传递
-  包
-- guest 中不提供文件系统、网络、子进程、模块导入、环境变量或
-  主机全局对象
+- 将 `quickjs-wasi` 作为直接依赖加载，而不是通过 Codex 或传递包
+- guest 中不提供文件系统、网络、子进程、模块导入、环境变量或主机全局对象
 - 使用 QuickJS 内存和中断限制
 - 强制执行父进程墙钟超时
 - 强制执行输出、快照、日志和挂起调用上限
@@ -573,8 +753,7 @@ JavaScript 单元格和已禁用的 code mode 不会加载编译器。
 - 拒绝对 `exec`、`wait` 和 Tool Search 控制工具的递归访问
 - 防止便捷名称冲突覆盖目录辅助函数
 
-sandbox 只是一个安全层。对于高风险部署，运维人员仍可能需要
-操作系统级加固。
+sandbox 只是一个安全层。对于高风险部署，运维人员仍可能需要操作系统级加固。
 
 ## 错误代码
 
@@ -598,8 +777,7 @@ type CodeModeErrorCode =
   | "internal_error";
 ```
 
-返回给 guest 的错误是普通数据。主机 `Error` 实例、堆栈对象、原型
-和主机函数都不会进入 QuickJS。
+返回给 guest 的错误是普通数据。主机 `Error` 实例、堆栈对象、原型和主机函数都不会进入 QuickJS。
 
 ## 遥测
 
@@ -613,8 +791,7 @@ code mode 会报告：
 - 超时、内存、快照和输出上限失败
 - 快照生命周期事件
 
-遥测不得包含秘密、原始环境值，或超出既有 OpenClaw 轨迹策略范围的
-未脱敏工具输入。
+遥测不得包含秘密、原始环境值，或超出既有 OpenClaw 轨迹策略范围的未脱敏工具输入。
 
 ## 调试
 
@@ -628,8 +805,7 @@ OPENCLAW_DEBUG_SSE=events \
 openclaw gateway
 ```
 
-对于有效载荷形状调试，请使用 `OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted`。
-这会记录模型请求的一个有上限、已脱敏的 JSON 快照；它只应在调试时使用，因为提示词和消息文本仍然可能出现。
+对于有效载荷形状调试，请使用 `OPENCLAW_DEBUG_MODEL_PAYLOAD=full-redacted`。这会记录模型请求的一个有上限、已脱敏的 JSON 快照；它只应在调试时使用，因为提示词和消息文本仍然可能出现。
 
 对于流调试，请使用 `OPENCLAW_DEBUG_SSE=peek` 来记录前五个脱敏的 SSE 事件。如果代码模式表面已激活，但最终提供方有效载荷不包含且仅包含 `exec` 和 `wait`，代码模式也会失败关闭。
 
@@ -654,45 +830,50 @@ openclaw gateway
 
 代码模式覆盖应证明：
 
-- 禁用配置不会改变现有工具暴露
-- 不带 `enabled: true` 的对象配置会使代码模式保持禁用
-- 启用配置在运行中工具激活时，只向模型暴露 `exec` 和 `wait`
-- 原始无工具运行、`disableTools` 和空白名单不会触发代码模式有效载荷强制检查
-- 所有有效工具都会出现在 `ALL_TOOLS` 中
-- 被拒绝的工具不会出现在 `ALL_TOOLS` 中
-- `tools.search`、`tools.describe` 和 `tools.call` 可用于 OpenClaw 工具
-- Tool Search 控制工具对模型表面和隐藏目录都不可见
-- 嵌套调用会保留审批和钩子行为
-- shell `exec` 对模型隐藏，但在允许时可通过目录 id 调用
-- 递归的代码模式 `exec` 和 `wait` 不能从来宾代码中调用
-- TypeScript 输入会被转换并求值，而不会在禁用或仅 JavaScript 路径上加载 TypeScript
-- `import`、`require`、文件系统、网络和环境访问都会失败
-- 无限循环会超时且不能阻塞 Gateway
-- 内存上限失败会终止来宾 VM
-- 对于已完成和已挂起的调用，输出和快照上限都会被强制执行
-- `wait` 会恢复一个已挂起的快照并返回最终值
-- 过期、已中止、错误会话以及未知的 `runId` 值都会失败
-- 转录重放和持久化会保留代码模式控制调用
-- 转录和遥测会清晰展示嵌套工具调用
+- disabled config leaves existing tool exposure unchanged
+- object config without `enabled: true` leaves code mode disabled
+- enabled config exposes only `exec` and `wait` to the model when tools are active for the run
+- raw no-tool runs, `disableTools`, and empty allowlists do not trigger code-mode payload enforcement
+- all effective non-MCP tools appear in `ALL_TOOLS`
+- denied tools do not appear in `ALL_TOOLS`
+- `tools.search`, `tools.describe`, and `tools.call` work for OpenClaw tools
+- `API.list("mcp")` and `API.read("mcp/<server>.d.ts")` expose TypeScript-style MCP declarations without a bridge/tool call
+- MCP namespace `$api()` remains available as an inline fallback for schemas
+- MCP namespace calls work for visible MCP tools with one object input, while direct MCP catalog entries are absent from `tools.*`
+- Tool Search control tools are hidden from both the model surface and the hidden catalog
+- nested calls preserve approval and hook behavior
+- shell `exec` is hidden from the model but callable by catalog id when allowed
+- recursive code-mode `exec` and `wait` are not callable from guest code
+- TypeScript input is transformed and evaluated without loading TypeScript on disabled or JavaScript-only paths
+- `import`, `require`, filesystem, network, and environment access fail
+- infinite loops time out and cannot block the Gateway
+- memory cap failures terminate the guest VM
+- output and snapshot caps are enforced for completed and suspended calls
+- `wait` resumes a suspended snapshot and returns the final value
+- expired, aborted, wrong-session, and unknown `runId` values fail
+- transcript replay and persistence preserve code-mode control calls
+- transcript and telemetry show nested tool calls clearly
 
 ## 端到端测试计划
 
 在更改运行时时，请将以下内容作为集成或端到端测试运行：
 
-1. 使用 `tools.codeMode.enabled: false` 启动一个 Gateway。
-2. 发送一个带有小型直接工具集的 agent 回合。
-3. 断言模型可见工具保持不变。
-4. 以 `tools.codeMode.enabled: true` 重新启动。
-5. 发送一个带有 OpenClaw、插件、MCP 和客户端测试工具的 agent 回合。
-6. 断言模型可见工具列表恰好是 `exec`、`wait`。
-7. 在 `exec` 中读取 `ALL_TOOLS` 并断言存在有效的测试工具。
-8. 在 `exec` 中调用 `tools.search`、`tools.describe` 和 `tools.call`。
-9. 断言被拒绝的工具缺失，且不能通过猜测的 id 调用。
-10. 启动一个嵌套工具调用，在 `exec` 返回 `waiting` 后解析完成。
-11. 调用 `wait` 并断言恢复的 VM 收到了工具结果。
-12. 断言最终答案包含恢复后产生的输出。
-13. 断言超时、中止和快照过期会清理运行时状态。
-14. 导出轨迹并断言嵌套调用在父代码模式调用下可见。
+1. Start a Gateway with `tools.codeMode.enabled: false`.
+2. Send an agent turn with a small direct tool set.
+3. Assert the model-visible tools are unchanged.
+4. Restart with `tools.codeMode.enabled: true`.
+5. Send an agent turn with OpenClaw, plugin, MCP, and client test tools.
+6. Assert the model-visible tool list is exactly `exec`, `wait`.
+7. In `exec`, read `ALL_TOOLS` and assert the effective test tools are present.
+8. In `exec`, call OpenClaw/plugin/client tools through `tools.search`, `tools.describe`, and `tools.call`.
+9. In `exec`, call `API.list("mcp")` and `API.read("mcp/<server>.d.ts")` and assert the declaration files describe visible MCP tools.
+10. In `exec`, call MCP tools through `MCP.<server>.<tool>({ ...input })` and assert direct MCP catalog entries are absent from `ALL_TOOLS` and `tools.*`.
+11. Assert denied tools are absent and cannot be called by guessed id.
+12. Start a nested tool call that resolves after `exec` returns `waiting`.
+13. Call `wait` and assert the restored VM receives the tool result.
+14. Assert the final answer contains output produced after restore.
+15. Assert timeout, abort, and snapshot expiry clean up runtime state.
+16. Export trajectory and assert nested calls are visible under the parent code-mode call.
 
 仅限文档的对此页面的更改仍应运行 `pnpm check:docs`。
 

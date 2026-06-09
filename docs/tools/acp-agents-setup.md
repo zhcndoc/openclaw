@@ -41,7 +41,6 @@ Codex 有两条 OpenClaw 路径：
 - `kiro`
 - `openclaw`
 - `opencode`
-- `pi`
 - `qwen`
 
 当 OpenClaw 使用 acpx 后端时，除非你的 acpx 配置定义了自定义代理别名，否则优先为 `agentId` 使用这些值。
@@ -79,7 +78,7 @@ ACP 核心基线：
       "kiro",
       "openclaw",
       "opencode",
-      "pi",
+      "openclaw",
       "qwen",
     ],
     maxConcurrentSessions: 8,
@@ -276,8 +275,9 @@ openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 openclaw config set plugins.entries.acpx.config.timeoutSeconds 180
 ```
 
-运行时转向使用 OpenClaw 代理/运行超时，包括 `/acp timeout` 和
-`sessions_spawn.timeoutSeconds`。更改此值后请重启网关。
+Runtime turns use OpenClaw agent/run timeouts, including `/acp timeout`.
+`sessions_spawn` does not accept per-call timeout overrides. Restart the
+gateway after changing this value.
 
 ### 健康探测代理配置
 
@@ -296,6 +296,10 @@ openclaw config set plugins.entries.acpx.config.probeAgent claude
 ACP 会话以非交互方式运行——没有 TTY 可用于批准或拒绝文件写入和 shell 执行权限提示。acpx 插件提供两个配置键来控制权限处理方式：
 
 这些 ACPX 运行时权限与 OpenClaw exec 审批以及 CLI 后端厂商绕过标志（例如 Claude CLI `--permission-mode bypassPermissions`）是分开的。ACPX `approve-all` 是 ACP 会话的运行时紧急开关。
+
+For the broader comparison between OpenClaw `tools.exec.mode`, Codex Guardian
+approvals, and ACPX harness permissions, see
+[Permission modes](/tools/permission-modes)。
 
 ### `permissionMode`
 

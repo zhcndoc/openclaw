@@ -15,15 +15,15 @@ sidebarTitle: "模型 CLI"
   <Card title="模型提供商" href="/concepts/model-providers">
     供应商概览和快速示例。
   </Card>
-  <Card title="Agent 运行时" href="/concepts/agent-runtimes">
-    PI、Codex，以及其他 agent 循环运行时。
+  <Card title="Agent runtimes" href="/concepts/agent-runtimes">
+    OpenClaw、Codex 和其他 agent 循环运行时。
   </Card>
   <Card title="配置参考" href="/gateway/config-agents#agent-defaults">
     模型配置键。
   </Card>
 </CardGroup>
 
-模型引用会选择提供商和模型。它们通常不会选择底层的 agent 运行时。OpenAI agent 引用是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。显式的运行时覆盖应放在提供商/模型策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着 API key 计费；认证可以来自 Codex 账户或 `openai-codex` 认证配置文件。参见 [Agent 运行时](/concepts/agent-runtimes)。
+模型引用会选择提供商和模型。它们通常不会选择底层 agent 运行时。OpenAI agent 引用是主要例外：在官方 OpenAI 提供商上，`openai/gpt-5.5` 默认通过 Codex app-server 运行时运行。订阅版 Copilot 引用（`github-copilot/*`）还可以选择接入外部 GitHub Copilot agent runtime 插件——这条路径保持显式（不会 `auto` 回退）。显式的运行时覆盖应放在提供商/模型策略上，而不是整个 agent 或会话上。在 Codex 运行时模式下，`openai/gpt-*` 引用并不意味着按 API key 计费；认证可以来自 Codex 账户或 `openai` OAuth 配置文件。参见 [Agent runtimes](/concepts/agent-runtimes) 和 [GitHub Copilot agent runtime](/plugins/copilot)。
 
 ## 模型选择如何工作
 
@@ -93,7 +93,7 @@ openclaw onboard
 - `models.providers`（写入 `models.json` 的自定义提供商）
 
 <Note>
-模型引用会规范化为小写。像 `z.ai/*` 这样的提供商别名会规范化为 `zai/*`。
+模型引用会归一化为小写。提供商 ID 其他方面保持精确；请使用插件公布的提供商 ID。
 
 包括 OpenCode 在内的提供商配置示例位于 [OpenCode](/providers/opencode)。
 </Note>
@@ -148,7 +148,7 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
   agents: {
     defaults: {
       models: {
-        "openai-codex/*": {},
+        "openai/*": {},
         "vllm/*": {},
       },
     },
@@ -335,7 +335,7 @@ OpenRouter 的 `/models` 目录是公开的，因此仅元数据扫描无需密�
 
 ## 模型注册表（`models.json`）
 
-`models.providers` 中的自定义提供方会写入代理目录下的 `models.json`（默认 `~/.openclaw/agents/<agentId>/agent/models.json`）。除非将 `models.mode` 设置为 `replace`，否则此文件默认会被合并。
+Custom providers in `models.providers` are written into `models.json` under the agent directory (default `~/.openclaw/agents/<agentId>/agent/models.json`). Provider-plugin catalogs are stored as generated plugin-owned catalog shards under the agent's plugin state and loaded automatically. This file is merged by default unless `models.mode` is set to `replace`.
 
 <AccordionGroup>
   <Accordion title="合并模式优先级">
@@ -357,10 +357,10 @@ OpenRouter 的 `/models` 目录是公开的，因此仅元数据扫描无需密�
 
 ## 相关内容
 
-- [代理运行时](/concepts/agent-runtimes) — PI、Codex 和其他代理循环运行时
-- [配置参考](/gateway/config-agents#agent-defaults) — 模型配置键
-- [图像生成](/tools/image-generation) — 图像模型配置
-- [模型故障转移](/concepts/model-failover) — 回退链
-- [模型提供方](/concepts/model-providers) — 提供方路由和认证
-- [音乐生成](/tools/music-generation) — 音乐模型配置
-- [视频生成](/tools/video-generation) — 视频模型配置
+- [Agent runtimes](/concepts/agent-runtimes) — OpenClaw, Codex, and other agent loop runtimes
+- [Configuration reference](/gateway/config-agents#agent-defaults) — model config keys
+- [Image generation](/tools/image-generation) — image model configuration
+- [Model failover](/concepts/model-failover) — fallback chains
+- [Model providers](/concepts/model-providers) — provider routing and auth
+- [Music generation](/tools/music-generation) — music model configuration
+- [Video generation](/tools/video-generation) — video model configuration

@@ -50,6 +50,10 @@ read_when:
 页面过滤器，如 `1-5` 或 `1,3,7-9`。
 </ParamField>
 
+<ParamField path="password" type="string">
+加密 PDF 在提取回退模式下的密码。
+</ParamField>
+
 <ParamField path="model" type="string">
 可选的模型覆盖，格式为 `provider/model`。
 </ParamField>
@@ -62,7 +66,8 @@ read_when:
 
 - `pdf` 和 `pdfs` 会在加载前合并并去重。
 - 如果未提供 PDF 输入，工具会报错。
-- `pages` 以从 1 开始的页码解析，会去重、排序，并裁剪到配置的最大页数。
+- `pages` 会按从 1 开始的页码解析、去重、排序，并裁剪到配置的最大页数。
+- `password` 会应用于请求中的每个 PDF，并且仅用于提取回退模式。
 - `maxBytesMb` 默认为 `agents.defaults.pdfMaxBytesMb` 或 `10`。
 
 ## 支持的 PDF 引用
@@ -88,8 +93,10 @@ read_when:
 
 原生模式限制：
 
-- 不支持 `pages`。如果设置了该参数，工具会返回错误。
-- 支持多 PDF 输入；每个 PDF 会在提示之前作为原生文档块 / 内联 PDF 部分发送。
+- `pages` 不受支持。如果设置了该参数，工具会返回错误。
+- `password` 不受支持。请使用非原生模型来分析加密 PDF。
+- 支持多 PDF 输入；每个 PDF 会在提示前作为原生文档块 /
+  内联 PDF 部分发送。
 
 ### 提取回退模式
 
@@ -104,10 +111,10 @@ read_when:
 回退细节：
 
 - 页面图像提取使用 `4,000,000` 的像素预算。
+- 加密 PDF 可以使用顶层 `password` 参数打开。
 - 如果目标模型不支持图像输入且没有可提取文本，工具会报错。
 - 如果文本提取成功，但图像提取在仅文本模型上需要视觉能力，OpenClaw 会丢弃渲染图像并继续使用提取文本。
-- 提取回退使用内置的 `document-extract` 插件。该插件拥有
-  `pdfjs-dist`；`@napi-rs/canvas` 仅在可用图像渲染回退时使用。
+- 提取回退使用内置的 `document-extract` 插件。该插件拥有 `clawpdf`，它通过 PDFium WebAssembly 提供文本提取和图像渲染。
 
 ## 配置
 
@@ -182,7 +189,18 @@ read_when:
 }
 ```
 
+加密 PDF 的提取回退：
+
+```json
+{
+  "pdf": "/tmp/locked.pdf",
+  "password": "example-password",
+  "model": "openai/gpt-5.4-mini",
+  "prompt": "总结这份合同"
+}
+```
+
 ## 相关内容
 
 - [工具概览](/tools) - 所有可用的代理工具
-- [配置参考](/gateway/config-agents#agent-defaults) - pdfMaxBytesMb 和 pdfMaxPages 配置
+- [配置参考](/gateway/config-agents#agent-defaults) - `pdfMaxBytesMb` 和 `pdfMaxPages` 配置
