@@ -388,8 +388,8 @@ openclaw matrix verify bootstrap
 
 实用标志：
 
-- `--recovery-key-stdin`（配合 `printf '%s\n' "$MATRIX_RECOVERY_KEY" | …` 使用）或 `--recovery-key <key>`
-- `--force-reset-cross-signing` 放弃当前交叉签名身份（仅在有意时使用）
+- `--recovery-key-stdin` (pair with `printf '%s\n' "$MATRIX_RECOVERY_KEY" | …`) or `--recovery-key <key>`
+- `--force-reset-cross-signing` to discard the current cross-signing identity (intentional only; requires the active recovery key to be stored or supplied with `--recovery-key-stdin`)
 
 ### 房间密钥备份
 
@@ -594,9 +594,9 @@ Matrix 支持外发反应、入站反应通知和确认反应。
 
 | 设置                    | 顺序                                                                                 |
 | ----------------------- | ------------------------------------------------------------------------------------ |
-| `ackReaction`           | per-account → channel → `messages.ackReaction` → agent identity emoji fallback      |
-| `ackReactionScope`      | per-account → channel → `messages.ackReactionScope` → default `"group-mentions"`    |
-| `reactionNotifications` | per-account → channel → default `"own"`                                              |
+| `ackReaction`           | 按账户 → 通道 → `messages.ackReaction` → 代理身份表情回退      |
+| `ackReactionScope`      | 按账户 → 通道 → `messages.ackReactionScope` → 默认 `"group-mentions"`    |
+| `reactionNotifications` | 按账户 → 通道 → 默认 `"own"`                                              |
 
 `reactionNotifications: "own"` 会转发新增的 `m.reaction` 事件，当它们针对的是机器人撰写的 Matrix 消息时；`"off"` 会禁用反应系统事件。反应移除不会被合成为系统事件，因为 Matrix 将其表现为 redaction，而不是独立的 `m.reaction` 移除。
 
@@ -696,7 +696,7 @@ Matrix 可以作为原生批准客户端使用。请在 `channels.matrix.execApp
 - `enabled`: 通过 Matrix 原生提示传递批准。当未设置或为 `"auto"` 时，只要至少能解析出一个批准者，Matrix 就会自动启用。显式设为 `false` 可禁用。
 - `approvers`: 允许批准 exec 请求的 Matrix 用户 ID（`@owner:example.org`）。可选 - 回退到 `channels.matrix.dm.allowFrom`。
 - `target`: 提示发送到哪里。`"dm"`（默认）发送到批准者的 DM；`"channel"` 发送到发起的 Matrix 房间或 DM；`"both"` 同时发送到两者。
-- `agentFilter` / `sessionFilter`: 可选允许名单，用于指定哪些代理/会话会触发 Matrix 投递。
+- `agentFilter` / `sessionFilter`：可选允许名单，用于指定哪些代理/会话会触发 Matrix 投递。
 
 不同批准类型的授权略有差异：
 

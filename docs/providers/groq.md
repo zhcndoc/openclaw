@@ -7,38 +7,37 @@ read_when:
   - 你正在配置 Groq 上的 Whisper 音频转录
 ---
 
-[Groq](https://groq.com) 使用自定义 LPU 硬件，在开放权重模型（Llama、Gemma、Kimi、Qwen、GPT OSS 等）上提供超快推理。OpenClaw 包含一个内置的 Groq 插件，注册了一个兼容 OpenAI 的聊天提供方和一个音频媒体理解提供方。
+[Groq](https://groq.com) 基于定制的 LPU 硬件，为开权重模型（Llama、Gemma、Kimi、Qwen、GPT OSS 等）提供超高速推理。Groq 插件同时注册了一个兼容 OpenAI 的聊天提供方和一个音频媒体理解提供方。
 
-| 属性                 | 值                                       |
-| -------------------- | ---------------------------------------- |
-| 提供方 ID            | `groq`                                   |
-| 插件                 | 内置，`enabledByDefault: true`           |
-| 认证环境变量         | `GROQ_API_KEY`                           |
-| 上手标志             | `--auth-choice groq-api-key`             |
-| API                  | 兼容 OpenAI（`openai-completions`）      |
-| 基础 URL             | `https://api.groq.com/openai/v1`         |
-| 音频转录             | `whisper-large-v3-turbo`（默认）         |
-| 建议的聊天默认值     | `groq/llama-3.3-70b-versatile`           |
+| Property               | Value                                    |
+| ---------------------- | ---------------------------------------- |
+| Provider id            | `groq`                                   |
+| Plugin                 | official external package                |
+| Auth env var           | `GROQ_API_KEY`                           |
+| API                    | OpenAI-compatible (`openai-completions`) |
+| Base URL               | `https://api.groq.com/openai/v1`         |
+| Audio transcription    | `whisper-large-v3-turbo` (default)       |
+| Suggested chat default | `groq/llama-3.3-70b-versatile`           |
 
-## 开始使用
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/groq-provider
+openclaw gateway restart
+```
+
+## 入门
 
 <Steps>
   <Step title="获取 API 密钥">
     在 [console.groq.com/keys](https://console.groq.com/keys) 创建 API 密钥。
   </Step>
   <Step title="设置 API 密钥">
-    <CodeGroup>
-
-```bash Onboarding
-openclaw onboard --auth-choice groq-api-key
-```
-
-```bash Env only
+    ```bash
 export GROQ_API_KEY=gsk_...
 ```
-
-    </CodeGroup>
-
   </Step>
   <Step title="设置默认模型">
     ```json5
@@ -73,7 +72,7 @@ export GROQ_API_KEY=gsk_...
 
 ## 内置目录
 
-OpenClaw 提供了一个由清单驱动的 Groq 目录，其中包含推理和非推理条目。运行 `openclaw models list --provider groq` 可查看你已安装版本对应的内置条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
+OpenClaw 会随附一个由清单支持的 Groq 目录，其中既包含推理模型，也包含非推理模型。运行 `openclaw models list --provider groq` 可查看你已安装版本的静态条目，或查看 [console.groq.com/docs/models](https://console.groq.com/docs/models) 获取 Groq 的权威列表。
 
 | 模型引用                                        | 名称                    | 推理      | 输入         | 上下文  |
 | ------------------------------------------------ | ----------------------- | --------- | ------------ | ------- |
@@ -103,7 +102,7 @@ OpenClaw 会将其共享的 `/think` 等级映射到 Groq 各模型特定的 `re
 
 ## 音频转录
 
-Groq 的内置插件还注册了一个**音频媒体理解提供方**，因此语音消息可以通过共享的 `tools.media.audio` 接口进行转录。
+Groq 插件还会注册一个 **音频媒体理解提供方**，因此语音消息可以通过共享的 `tools.media.audio` 接口进行转录。
 
 | 属性             | 值                                        |
 | ---------------- | ----------------------------------------- |
@@ -138,7 +137,7 @@ Groq 的内置插件还注册了一个**音频媒体理解提供方**，因此�
   </Accordion>
 
   <Accordion title="自定义 Groq 模型 id">
-    OpenClaw 在运行时接受任何 Groq 模型 id。使用 Groq 显示的精确 id，并在前面加上 `groq/`。内置目录覆盖常见场景；未收录的 id 会回退到默认的兼容 OpenAI 模板。
+    OpenClaw 在运行时接受任意 Groq 模型 id。请使用 Groq 显示的精确 id，并在前面加上 `groq/`。静态目录覆盖常见情况；未收录的 id 会回退到默认的兼容 OpenAI 模板。
 
     ```json5
     {

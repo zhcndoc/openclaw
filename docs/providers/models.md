@@ -27,6 +27,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后
 - [Anthropic（API + Claude CLI）](/providers/anthropic)
 - [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Chutes](/providers/chutes)
+- [Cohere](/providers/cohere)
 - [ComfyUI](/providers/comfy)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [DeepInfra](/providers/deepinfra)

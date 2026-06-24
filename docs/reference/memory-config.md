@@ -274,14 +274,15 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
     ```
 
   </Accordion>
-  <Accordion title="Local (GGUF + node-llama-cpp)">
+  <Accordion title="Local (GGUF + llama.cpp)">
     | Key                   | Type               | Default                | Description                                                                                                                                                                                                                                                                                                          |
     | --------------------- | ------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
     | `local.modelPath`     | `string`           | auto-downloaded        | GGUF 模型文件路径                                                                                                                                                                                                                                                                                              |
     | `local.modelCacheDir` | `string`           | node-llama-cpp default | 下载模型的缓存目录                                                                                                                                                                                                                                                                                      |
     | `local.contextSize`   | `number \| "auto"` | `4096`                 | 嵌入上下文的上下文窗口大小。4096 可覆盖典型分块（128–512 tokens），同时限制非权重显存。受限主机上可降至 1024–2048。`"auto"` 使用模型训练的最大值——不建议用于 8B+ 模型（Qwen3-Embedding-8B：40 960 tokens → 约 32 GB VRAM，而在 4096 时约为 8.8 GB）。 |
 
-    默认模型：`embeddinggemma-300m-qat-Q8_0.gguf`（约 0.6 GB，自动下载）。源代码检出版本仍需要本地原生构建审批：先执行 `pnpm approve-builds`，再执行 `pnpm rebuild node-llama-cpp`。
+    安装官方 llama.cpp 提供方：`openclaw plugins install @openclaw/llama-cpp-provider`。
+    默认模型：`embeddinggemma-300m-qat-Q8_0.gguf`（约 0.6 GB，自动下载）。源码检出仍需要本地构建授权：`pnpm approve-builds` 然后 `pnpm rebuild node-llama-cpp`。
 
     使用独立 CLI 验证 Gateway 使用的相同 provider 路径：
 
@@ -459,10 +460,12 @@ Codex OAuth 仅覆盖聊天/补全，不满足嵌入请求。
 
 ## 索引存储
 
-| 键                   | 类型     | 默认值                               | 描述                                 |
-| --------------------- | -------- | ------------------------------------- | ------------------------------------------- |
-| `store.path`          | `string` | `~/.openclaw/memory/{agentId}.sqlite` | 索引位置（支持 `{agentId}` 令牌）           |
-| `store.fts.tokenizer` | `string` | `unicode61`                           | FTS5 分词器（`unicode61` 或 `trigram`）     |
+内置内存索引位于每个 agent 的 OpenClaw SQLite 数据库中：
+`agents/<agentId>/agent/openclaw-agent.sqlite`。
+
+| 键                   | 类型     | 默认值     | 描述                               |
+| --------------------- | -------- | ----------- | ----------------------------------------- |
+| `store.fts.tokenizer` | `string` | `unicode61` | FTS5 分词器（`unicode61` 或 `trigram`） |
 
 ---
 
@@ -495,16 +498,16 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
   <Accordion title="更新计划">
     | 键                       | 类型      | 默认值 | 描述                           |
     | ------------------------- | --------- | ------- | ------------------------------------- |
-    | `update.interval`         | `string`  | `5m`    | 刷新间隔                              |
-    | `update.debounceMs`       | `number`  | `15000` | 文件变更防抖                          |
-    | `update.onBoot`           | `boolean` | `true`  | 当长期运行的 QMD 管理器打开时刷新；也控制显式启用的启动刷新 |
-    | `update.startup`          | `string`  | `off`   | 可选的网关启动刷新：`off`、`idle` 或 `immediate` |
-    | `update.startupDelayMs`   | `number`  | `120000` | `startup: "idle"` 刷新开始前的延迟    |
-    | `update.waitForBootSync`  | `boolean` | `false` | 在初始刷新完成前阻塞管理器打开         |
-    | `update.embedInterval`    | `string`  | --      | 单独的嵌入节奏                          |
-    | `update.commandTimeoutMs` | `number`  | --      | QMD 命令超时                            |
-    | `update.updateTimeoutMs`  | `number`  | --      | QMD 更新操作超时                        |
-    | `update.embedTimeoutMs`   | `number`  | --      | QMD 嵌入操作超时                        |
+    | `update.interval`         | `string`  | `5m`    | 刷新间隔                      |
+    | `update.debounceMs`       | `number`  | `15000` | 文件变更防抖                 |
+    | `update.onBoot`           | `boolean` | `true`  | 当长期运行的 QMD 管理器打开时刷新；设为 false 可跳过启动时的即时更新 |
+    | `update.startup`          | `string`  | `off`   | 可选的网关启动时 QMD 初始化：`off`、`idle` 或 `immediate` |
+    | `update.startupDelayMs`   | `number`  | `120000` | `startup: "idle"` 刷新运行前的延迟 |
+    | `update.waitForBootSync`  | `boolean` | `false` | 在初始刷新完成前阻止管理器打开 |
+    | `update.embedInterval`    | `string`  | --      | 单独的嵌入周期                |
+    | `update.commandTimeoutMs` | `number`  | --      | QMD 命令超时时间              |
+    | `update.updateTimeoutMs`  | `number`  | --      | QMD 更新操作超时时间     |
+    | `update.embedTimeoutMs`   | `number`  | --      | QMD 嵌入操作超时时间      |
   </Accordion>
   <Accordion title="限制">
     | 键                       | 类型     | 默认值 | 描述                |
@@ -547,7 +550,7 @@ QMD 模型覆盖保留在 QMD 侧，而不是 OpenClaw 配置中。如果你需�
   </Accordion>
 </AccordionGroup>
 
-QMD 启动刷新在网关启动期间使用一次性子进程路径。当内存搜索被打开用于交互式使用时，长期运行的 QMD 管理器仍然负责常规文件监听器和间隔计时器。
+当启用 gateway-start QMD 初始化时，OpenClaw 仅为符合条件的 agent 启动 QMD。如果 `update.onBoot` 为 true 且未配置间隔/嵌入维护，则启动时会使用一次性管理器执行启动刷新并关闭它。如果配置了更新或嵌入间隔，则启动时会打开长期运行的 QMD 管理器，使其接管 watcher 和间隔计时器；`update.onBoot: false` 只会跳过立即的启动刷新。
 
 ### 完整 QMD 示例
 
@@ -572,7 +575,7 @@ QMD 启动刷新在网关启动期间使用一次性子进程路径。当内存�
 
 ---
 
-## Dreaming
+## 梦境
 
 Dreaming 配置在 `plugins.entries.memory-core.config.dreaming` 下，而不是在 `agents.defaults.memorySearch` 下。
 

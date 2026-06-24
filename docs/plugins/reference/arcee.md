@@ -12,7 +12,7 @@ title: "Arcee 插件"
 ## 分发
 
 - 包：`@openclaw/arcee-provider`
-- 安装方式：包含在 OpenClaw 中
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/arcee-provider`
 
 ## 接口
 

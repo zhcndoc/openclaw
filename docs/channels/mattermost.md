@@ -32,7 +32,7 @@ sidebarTitle: "Mattermost"
 
 <Steps>
   <Step title="确保插件可用">
-    当前打包版 OpenClaw 版本已经内置它。较旧/自定义安装可以使用上面的命令手动添加。
+    使用上面的命令安装 `@openclaw/mattermost`，然后如果 Gateway 已在运行，请重启它。
   </Step>
   <Step title="创建 Mattermost bot">
     创建一个 Mattermost bot 账号并复制 **bot token**。
@@ -153,8 +153,9 @@ Mattermost 会自动回复私信。频道行为由 `chatmode` 控制：
 
 说明：
 
-- `onchar` 仍然会响应显式的 @ 提及。
-- `channels.mattermost.requireMention` 对旧版配置仍然有效，但更推荐使用 `chatmode`。
+- `onchar` 仍会响应显式的 @ 提及。
+- `channels.mattermost.requireMention` 对旧版配置仍然有效，但推荐使用 `chatmode`。
+- 在 bot 于频道线程中发送可见回复后，该线程中的后续消息会在没有新的 @ 提及或 `onchar` 前缀的情况下得到回复，因此多轮线程对话可以持续进行。参与状态会在 7 天线程无活动后过期（每次回复都会刷新），并且会在网关重启后保留。bot 仅观察过的线程不受影响；要再次要求显式提及，请发起新的顶层消息。
 
 ## 线程和会话
 

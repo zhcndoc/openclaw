@@ -1,5 +1,5 @@
 ---
-summary: "通过 diagnostics-otel 插件将 OpenClaw 诊断导出到任意 OpenTelemetry 收集器（OTLP/HTTP）"
+summary: "将 OpenClaw 诊断导出到 OpenTelemetry 收集器，或通过 diagnostics-otel 插件导出为 stdout JSONL"
 title: "OpenTelemetry 导出"
 read_when:
   - 你想将 OpenClaw 的模型使用情况、消息流或会话指标发送到 OpenTelemetry 收集器
@@ -7,13 +7,16 @@ read_when:
   - 你需要精确的指标名称、span 名称或属性形状来构建仪表盘或告警
 ---
 
-OpenClaw 通过官方 `diagnostics-otel` 插件使用 **OTLP/HTTP (protobuf)** 导出诊断。任何接受 OTLP/HTTP 的收集器或后端都无需代码更改即可使用。关于本地文件日志及其读取方式，请参阅 [日志](/logging)。
+OpenClaw 通过官方 `diagnostics-otel` 插件导出诊断信息，
+使用 **OTLP/HTTP (protobuf)**。日志也可以写入 stdout JSONL，
+用于容器和沙箱日志管道。任何接受 OTLP/HTTP 的收集器或后端都可直接使用，
+无需代码修改。关于本地文件日志及其读取方式，请参见 [Logging](/logging)。
 
 ## 工作原理
 
-- **诊断事件** 是 Gateway 和内置插件在模型运行、消息流、会话、队列和 exec 过程中发出的结构化进程内记录。
-- **`diagnostics-otel` 插件** 订阅这些事件，并通过 OTLP/HTTP 将它们导出为 OpenTelemetry 的 **指标**、**链路** 和 **日志**。
-- **Provider 调用** 在 provider 传输支持自定义 header 时，会从 OpenClaw 受信任的模型调用 span 上下文接收 W3C `traceparent` header。插件发出的 trace 上下文不会被传播。
+- **诊断事件** 是由 Gateway 和捆绑插件在进程内发出的结构化记录，涵盖模型运行、消息流、会话、队列和 exec。
+- **`diagnostics-otel` 插件** 订阅这些事件，并通过 OTLP/HTTP 将其导出为 OpenTelemetry 的 **metrics**、**traces** 和 **logs**。它还可以将诊断日志记录镜像到 stdout JSONL。
+- **Provider 调用** 会在 provider 传输支持自定义 headers 时，接收来自 OpenClaw 受信任的模型调用 span 上下文的 W3C `traceparent` header。插件发出的 trace 上下文不会传播。
 - 只有当诊断面和插件都启用时，导出器才会挂载，因此默认情况下进程内开销几乎为零。
 
 ## 快速开始
@@ -61,13 +64,13 @@ openclaw plugins enable diagnostics-otel
 
 ## 导出的信号
 
-| 信号        | 内容                                                                                                                                                                                                           |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **指标**    | 用于 token 使用量、成本、运行时长、故障切换、技能使用、消息流、Talk 事件、队列 lane、会话状态/恢复、工具执行、超大载荷、exec 和内存压力的计数器与直方图。                                                         |
-| **链路**    | 用于模型使用、模型调用、harness 生命周期、技能使用、工具执行、exec、webhook/消息处理、上下文组装和工具循环的 spans。                                                                                        |
-| **日志**    | 当启用 `diagnostics.otel.logs` 时，通过 OTLP 导出的结构化 `logging.file` 记录；除非显式启用内容捕获，否则会省略日志正文。                                                                                       |
+| Signal      | What goes in it                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Metrics** | 用于 token 使用量、成本、运行时长、故障切换、技能使用、消息流、Talk 事件、队列通道、会话状态/恢复、工具执行、超大载荷、exec 和内存压力的计数器与直方图。 |
+| **Traces**  | 用于模型使用、模型调用、harness 生命周期、技能使用、工具执行、exec、webhook/消息处理、上下文组装以及工具循环的 spans。                                                            |
+| **Logs**    | 当 `diagnostics.otel.logs` 启用时，通过 OTLP 导出或输出到 stdout JSONL 的结构化 `logging.file` 记录；除非显式启用内容捕获，否则日志正文会被省略。                                |
 
-`traces`、`metrics` 和 `logs` 可独立切换。当 `diagnostics.otel.enabled` 为 true 时，traces 和 metrics 默认开启。logs 默认关闭，只有当 `diagnostics.otel.logs` 显式为 `true` 时才会导出。
+可以独立切换 `traces`、`metrics` 和 `logs`。当 `diagnostics.otel.enabled` 为 true 时，traces 和 metrics 默认开启。Logs 默认关闭，只有在 `diagnostics.otel.logs` 显式为 `true` 时才会导出。日志导出默认使用 OTLP；将 `diagnostics.otel.logsExporter` 设为 `stdout` 可在 stdout 输出 JSONL，设为 `both` 则会把每条诊断日志记录同时发送到 OTLP 和 stdout。
 
 ## 配置参考
 
@@ -87,8 +90,9 @@ openclaw plugins enable diagnostics-otel
       traces: true,
       metrics: true,
       logs: true,
-      sampleRate: 0.2, // root-span 采样器，0.0 丢弃全部，1.0 保留全部
-      flushIntervalMs: 60000, // 指标导出间隔（最小 1000ms）
+      logsExporter: "otlp", // otlp | stdout | both
+      sampleRate: 0.2, // root-span sampler, 0.0..1.0
+      flushIntervalMs: 60000, // metric export interval (min 1000ms)
       captureContent: {
         enabled: false,
         inputMessages: false,
@@ -132,14 +136,21 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 
 当启用任意子键时，模型和工具 span 会仅针对该类别获得有界、脱敏的 `openclaw.content.*` 属性。仅在需要进行广泛诊断采集且 OTLP 日志消息正文也已获准导出时，才使用布尔值 `captureContent: true`。
 
-## 采样与刷新
+`toolInputs`/`toolOutputs` content is captured for the built-in agent runtime's
+tool executions (`openclaw.content.tool_input` on completed/error spans,
+`openclaw.content.tool_output` on completed spans). External harness tool calls
+(Codex, Claude CLI) emit `tool.execution.*` spans without content payloads.
+Captured content travels on a trusted, listener-only channel and is never placed
+on the public diagnostic event bus.
 
-- **Traces：** `diagnostics.otel.sampleRate`（仅 root-span，`0.0` 表示全部丢弃，
-  `1.0` 表示全部保留）。
-- **Metrics：** `diagnostics.otel.flushIntervalMs`（最小值 `1000`）。
-- **Logs：** OTLP logs 会遵循 `logging.level`（文件日志级别）。它们使用诊断 log-record 脱敏路径，而不是控制台格式化。高流量部署应优先使用 OTLP 收集器的采样/过滤，而不是本地采样。
-- **文件日志关联：** 当日志调用携带有效的诊断 trace 上下文时，JSONL 文件日志会包含顶层的 `traceId`、`spanId`、`parentSpanId` 和 `traceFlags`，这使得日志处理器可以将本地日志行与已导出的 spans 关联起来。
-- **请求关联：** Gateway HTTP 请求和 WebSocket 帧会创建一个内部请求 trace 作用域。该作用域内的日志和诊断事件默认继承请求 trace，而 agent run 和 model-call spans 会作为子 span 创建，以便 provider 的 `traceparent` headers 保持在同一条 trace 上。
+## Sampling and flushing
+
+- **Traces:** `diagnostics.otel.sampleRate`（仅 root-span，`0.0` 会丢弃全部，
+  `1.0` 保留全部）。
+- **Metrics:** `diagnostics.otel.flushIntervalMs`（最小值 `1000`）。
+- **Logs:** OTLP logs 遵循 `logging.level`（文件日志级别）。它们使用诊断日志记录的脱敏路径，而不是控制台格式化。高流量安装应优先使用 OTLP 收集器进行采样/过滤，而不是本地采样。当你的平台已经将 stdout/stderr 发送到日志处理器，且你没有 OTLP logs 收集器时，将 `diagnostics.otel.logsExporter: "stdout"`。stdout 记录为每行一个 JSON 对象，包含 `ts`、`signal`、`service.name`、严重级别、body、已脱敏属性，以及可用时的受信任 trace 字段。
+- **文件日志关联：** 当日志调用携带有效的诊断 trace 上下文时，JSONL 文件日志会包含顶层 `traceId`、`spanId`、`parentSpanId` 和 `traceFlags`，这使日志处理器可以将本地日志行与已导出的 spans 关联起来。
+- **请求关联：** Gateway HTTP 请求和 WebSocket 帧会创建一个内部请求 trace 作用域。该作用域中的日志和诊断事件默认继承请求 trace，而 agent 运行和模型调用 spans 会作为其子 span 创建，因此 provider `traceparent` headers 会保持在同一条 trace 上。
 
 ## 已导出的指标
 
@@ -152,9 +163,9 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 - `gen_ai.client.token.usage` (histogram, GenAI semantic-conventions metric, attrs: `gen_ai.token.type` = `input`/`output`, `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`)
 - `gen_ai.client.operation.duration` (histogram, seconds, GenAI semantic-conventions metric, attrs: `gen_ai.provider.name`, `gen_ai.operation.name`, `gen_ai.request.model`, optional `error.type`)
 - `openclaw.model_call.duration_ms` (histogram, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.api`, `openclaw.transport`, plus `openclaw.errorCategory` and `openclaw.failureKind` on classified errors)
-- `openclaw.model_call.request_bytes` (histogram, UTF-8 byte size of the final model request payload; no raw payload content)
-- `openclaw.model_call.response_bytes` (histogram, UTF-8 byte size of streamed response chunk payloads; high-frequency text, thinking, and tool-call deltas count only incremental `delta` bytes; no raw response content)
-- `openclaw.model_call.time_to_first_byte_ms` (histogram, elapsed time before the first streamed response event)
+- `openclaw.model_call.request_bytes` (histogram, UTF-8 字节大小的最终模型请求载荷；不包含原始载荷内容)
+- `openclaw.model_call.response_bytes` (histogram, 流式响应分块载荷的 UTF-8 字节大小；高频文本、思考和工具调用增量仅按新增的 `delta` 字节计数；不包含原始响应内容)
+- `openclaw.model_call.time_to_first_byte_ms` (histogram, 首个流式响应事件之前的耗时)
 - `openclaw.model.failover` (counter, attrs: `openclaw.provider`, `openclaw.model`, `openclaw.failover.to_provider`, `openclaw.failover.to_model`, `openclaw.failover.reason`, `openclaw.failover.suspended`, `openclaw.lane`)
 - `openclaw.skill.used` (counter, attrs: `openclaw.skill.name`, `openclaw.skill.source`, `openclaw.skill.activation`, optional `openclaw.agent`, optional `openclaw.toolName`)
 
@@ -201,12 +212,18 @@ Talk 指标仅导出受限的事件元数据，例如模式、传输、provider 
 OpenClaw 按其仍能观察到的工作对会话进行分类：
 
 - `session.long_running`: active embedded work, model calls, or tool calls are
-  still making progress.
+  still making progress. Owned model calls that stay silent past
+  `diagnostics.stuckSessionWarnMs` also report as long-running before
+  `diagnostics.stuckSessionAbortMs` so slow or non-streaming model providers do
+  not look like stalled gateway sessions while they remain abort-observable.
 - `session.stalled`: active work exists, but the active run has not reported
-  recent progress. Stalled embedded runs stay observe-only at first, then
-  abort-drain after `diagnostics.stuckSessionAbortMs` with no progress so queued
-  turns behind the lane can resume. When unset, the abort threshold defaults to
-  the safer extended window of at least 5 minutes and 3x
+  recent progress. Owned model calls switch from `session.long_running` to
+  `session.stalled` at or after `diagnostics.stuckSessionAbortMs`; ownerless
+  stale model/tool activity is not treated as harmless long-running work.
+  Stalled embedded runs stay observe-only at first, then abort-drain after
+  `diagnostics.stuckSessionAbortMs` with no progress so queued turns behind the
+  lane can resume. When unset, the abort threshold defaults to the safer
+  extended window of at least 5 minutes and 3x
   `diagnostics.stuckSessionWarnMs`.
 - `session.stuck`: stale session bookkeeping with no active work, or an idle
   queued session with stale ownerless model/tool activity. This releases the

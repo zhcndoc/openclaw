@@ -165,9 +165,14 @@ openclaw gateway restart --force
 
 ```bash
 openclaw gateway health --url ws://127.0.0.1:18789
+openclaw gateway health --port 18789
 ```
 
 HTTP `/healthz` 端点是一个存活探针：当服务器能够响应 HTTP 时就会返回。HTTP `/readyz` 端点更严格，在启动插件 sidecar、channels 或已配置 hooks 仍在就绪过程中时会保持红色。本地或已认证的详细就绪响应包含一个 `eventLoop` 诊断块，其中包含事件循环延迟、事件循环利用率、CPU 核心比率以及 `degraded` 标志。
+
+<ParamField path="--port <port>" type="number">
+  以该端口上的本地 loopback Gateway 为目标。此项会覆盖此次 health 调用的 `OPENCLAW_GATEWAY_URL` 和 `OPENCLAW_GATEWAY_PORT`。
+</ParamField>
 
 ### `gateway usage-cost`
 
@@ -176,11 +181,19 @@ HTTP `/healthz` 端点是一个存活探针：当服务器能够响应 HTTP 时�
 ```bash
 openclaw gateway usage-cost
 openclaw gateway usage-cost --days 7
+openclaw gateway usage-cost --agent work --json
+openclaw gateway usage-cost --all-agents
 openclaw gateway usage-cost --json
 ```
 
 <ParamField path="--days <days>" type="number" default="30">
   要包含的天数。
+</ParamField>
+<ParamField path="--agent <id>" type="string">
+  将成本摘要限定到一个已配置的 agent id。
+</ParamField>
+<ParamField path="--all-agents" type="boolean">
+  汇总所有已配置 agent 的成本摘要。不能与 `--agent` 组合使用。
 </ParamField>
 
 ### `gateway stability`
@@ -340,7 +353,12 @@ openclaw gateway status --require-rpc
 ```bash
 openclaw gateway probe
 openclaw gateway probe --json
+openclaw gateway probe --port 18789
 ```
+
+<ParamField path="--port <port>" type="number">
+  将此端口用于本地 loopback 探测目标和 SSH 隧道远程端口。若不带 `--url`，则此项会选择本地 loopback 目标，而不是已配置的 gateway 环境 URL、环境端口或远程目标。
+</ParamField>
 
 <AccordionGroup>
   <Accordion title="解释">

@@ -22,7 +22,16 @@ title: "Agent send"
 
   </Step>
 
-  <Step title="指定特定的 agent 或会话">
+  <Step title="从文件发送多行提示">
+    ```bash
+    openclaw agent --agent ops --message-file ./task.md
+    ```
+
+    这会将一个有效的 UTF-8 文件作为 agent 消息正文读取。
+
+  </Step>
+
+  <Step title="指定特定 agent 或会话">
     ```bash
     # 指定特定的 agent
     openclaw agent --agent ops --message "总结日志"
@@ -31,10 +40,10 @@ title: "Agent send"
     openclaw agent --to +15555550123 --message "状态更新"
 
     # 复用一个现有会话
-    openclaw agent --session-id abc123 --message "Continue the task"
+    openclaw agent --session-id abc123 --message "继续任务"
 
     # 目标指定一个精确的 session key
-    openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"
+    openclaw agent --session-key agent:ops:incident-42 --message "总结状态"
     ```
 
   </Step>
@@ -56,41 +65,43 @@ title: "Agent send"
 
 | Flag                          | Description                                                 |
 | ----------------------------- | ----------------------------------------------------------- |
-| `--message \<text\>`          | 要发送的消息（必填）                                         |
-| `--to \<dest\>`               | 从目标（电话、聊天 id）派生 session key                      |
-| `--session-key \<key\>`       | 使用显式的 session key                                       |
+| `--message \<text\>`          | 内联发送的消息                                              |
+| `--message-file \<path\>`     | 从有效的 UTF-8 文件读取消息                                 |
+| `--to \<dest\>`               | 从目标（电话、聊天 ID）派生 session key                     |
+| `--session-key \<key\>`       | 使用显式 session key                                        |
 | `--agent \<id\>`              | 目标为已配置的 agent（使用其 `main` 会话）                  |
-| `--session-id \<id\>`         | 按 id 复用一个现有会话                                        |
-| `--local`                     | 强制使用本地嵌入式运行时（跳过 Gateway）                      |
-| `--deliver`                   | 将回复发送到聊天渠道                                           |
-| `--channel \<name\>`          | 投递渠道（whatsapp、telegram、discord、slack 等）            |
-| `--reply-to \<target\>`       | 覆盖投递目标                                                 |
-| `--reply-channel \<name\>`    | 覆盖投递渠道                                                 |
-| `--reply-account \<id\>`      | 覆盖投递账号 id                                              |
-| `--thinking \<level\>`        | 为所选模型配置文件设置 thinking 级别                         |
-| `--verbose \<on\|full\|off\>` | 设置 verbose 级别                                            |
+| `--session-id \<id\>`         | 通过 id 复用现有会话                                        |
+| `--local`                     | 强制使用本地嵌入式运行时（跳过 Gateway）                    |
+| `--deliver`                   | 将回复发送到聊天渠道                                        |
+| `--channel \<name\>`          | 投递渠道（whatsapp、telegram、discord、slack 等）          |
+| `--reply-to \<target\>`       | 投递目标覆盖                                                |
+| `--reply-channel \<name\>`    | 投递渠道覆盖                                                |
+| `--reply-account \<id\>`      | 投递账户 id 覆盖                                             |
+| `--thinking \<level\>`        | 为所选模型配置文件设置 thinking 级别                        |
+| `--verbose \<on\|full\|off\>` | 设置详细级别                                                |
 | `--timeout \<seconds\>`       | 覆盖 agent 超时时间                                          |
-| `--json`                      | 输出结构化 JSON                                              |
+| `--json`                      | 输出结构化 JSON                                             |
 
 ## 行为
 
-- 默认情况下，CLI 会 **通过 Gateway** 运行。添加 `--local` 可强制在当前机器上使用
+- 默认情况下，CLI 会**通过 Gateway** 运行。添加 `--local` 可强制在当前机器上使用
   嵌入式运行时。
-- 如果 Gateway 无法访问，CLI 会 **回退** 到本地嵌入式运行。
+- 精确传入 `--message` 或 `--message-file` 之一。文件消息在移除可选的 UTF-8 BOM 后会保留
+  多行内容。
+- 如果 Gateway 不可达，CLI 会**回退**到本地嵌入式运行。
 - 会话选择：`--to` 会派生 session key（群组/频道目标
-  保持隔离；直接聊天会折叠为 `main`）。
-- `--session-key` 选择一个显式 key。带 agent 前缀的 key 必须使用
-  `agent:<agent-id>:<session-key>`，并且当两者都提供时，`--agent` 必须与该 agent id
-  匹配。裸露的非 sentinel key 在提供 `--agent` 时会被限定到 `--agent` 的作用域；例如，
+  保持隔离；直接聊天会折叠到 `main`）。
+- `--session-key` 选择一个显式 key。以 agent 前缀开头的 key 必须使用
+  `agent:<agent-id>:<session-key>`，并且在同时提供时 `--agent` 必须与该 agent id 匹配。
+  裸的非 sentinel key 在提供 `--agent` 时会限定到 `--agent`；例如，
   `--agent ops --session-key incident-42` 会路由到
-  `agent:ops:incident-42`。如果没有 `--agent`，裸露的非 sentinel key 会限定到
-  配置的默认 agent。字面量 `global` 和 `unknown` 只有在未提供 `--agent` 时才保持
-  不加作用域；在这种情况下，嵌入式回退和存储归属会使用配置的默认 agent。
-- Thinking 和 verbose 标志会持久化到 session store 中。
-- 输出：默认是纯文本，或者使用 `--json` 输出结构化载荷 + 元数据。
-- 使用 `--json --deliver` 时，JSON 会包含已发送、
-  被抑制、部分发送和发送失败的投递状态。请参见
-  [JSON delivery status](/cli/agent#json-delivery-status)。
+  `agent:ops:incident-42`。如果没有 `--agent`，裸的非 sentinel key 会限定到
+  已配置的默认 agent。字面量 `global` 和 `unknown` 仅在未提供 `--agent`
+  时保持不加范围；在这种情况下，嵌入式回退和存储归属会使用已配置的默认 agent。
+- thinking 和 verbose 标志会持久化到 session store。
+- 输出：默认是纯文本，或使用 `--json` 输出结构化 payload + metadata。
+- 使用 `--json --deliver` 时，JSON 包含已发送、已抑制、部分发送和发送失败的投递状态。
+  参见 [JSON delivery status](/cli/agent#json-delivery-status)。
 
 ## 示例
 
@@ -101,14 +112,17 @@ openclaw agent --to +15555550123 --message "跟踪日志" --verbose on --json
 # 指定 thinking 级别的回合
 openclaw agent --session-id 1234 --message "总结收件箱" --thinking medium
 
-# 精确的 session key
-openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"
+# 从文件发送多行提示
+openclaw agent --agent ops --message-file ./task.md
+
+# 精确 session key
+openclaw agent --session-key agent:ops:incident-42 --message "总结状态"
 
 # 限定到某个 agent 的旧式 key
-openclaw agent --agent ops --session-key incident-42 --message "Summarize status"
+openclaw agent --agent ops --session-key incident-42 --message "总结状态"
 
 # 投递到与会话不同的渠道
-openclaw agent --agent ops --message "Alert" --deliver --reply-channel telegram --reply-to "@admin"
+openclaw agent --agent ops --message "警报" --deliver --reply-channel telegram --reply-to "@admin"
 ```
 
 ## 相关内容

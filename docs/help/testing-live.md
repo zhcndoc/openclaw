@@ -72,7 +72,7 @@ Plivo，成功的就绪检查需要一个公开的 webhook URL；本地回环/�
   - `pnpm test:live` (or `OPENCLAW_LIVE_TEST=1` if invoking Vitest directly)
 - Set `OPENCLAW_LIVE_MODELS=modern`, `small`, or `all` (alias for modern) to actually run this suite; otherwise it skips to keep `pnpm test:live` focused on gateway smoke
 - How to select models:
-  - `OPENCLAW_LIVE_MODELS=modern` to run the modern allowlist (Opus/Sonnet 4.6+, GPT-5.2 + Codex, Gemini 3, DeepSeek V4, GLM 4.7, MiniMax M3, Grok 4.3)
+  - `OPENCLAW_LIVE_MODELS=modern` to run the modern allowlist (Opus/Sonnet 4.6+, GPT-5.2 + Codex, Gemini 3, DeepSeek V4, GLM 5.1, MiniMax M3, Grok 4.3)
   - `OPENCLAW_LIVE_MODELS=small` to run the constrained small-model allowlist (Qwen 8B/9B local-compatible routes, Ollama Gemma, OpenRouter Qwen/GLM, and Z.AI GLM)
   - `OPENCLAW_LIVE_MODELS=all` is an alias for the modern allowlist
   - or `OPENCLAW_LIVE_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,..."` (comma allowlist)
@@ -340,9 +340,12 @@ Docker 说明：
 - 跨多个提供方的工具调用：
   - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M3" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
-- Google 重点（Gemini API key + Antigravity）：
-  - Gemini（API key）：`OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3-flash-preview" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
-  - Antigravity（OAuth）：`OPENCLAW_LIVE_GATEWAY_MODELS="google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-pro-high" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+- Z.AI Coding Plan GLM-5.2 direct smoke:
+  - `ZAI_CODING_LIVE_TEST=1 pnpm test:live src/agents/zai.live.test.ts`
+
+- Google focus (Gemini API key + Antigravity):
+  - Gemini (API key): `OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3-flash-preview" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+  - Antigravity (OAuth): `OPENCLAW_LIVE_GATEWAY_MODELS="google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-pro-high" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Google 自适应思考 smoke：
   - Gemini 3 动态默认：`pnpm openclaw qa manual --provider-mode live-frontier --model google/gemini-3.1-pro-preview --alt-model google/gemini-3.1-pro-preview --message '/think adaptive Reply exactly: GEMINI_ADAPTIVE_OK' --timeout-ms 180000`
@@ -367,12 +370,12 @@ Docker 说明：
 
 - OpenAI (non-Codex): `openai/gpt-5.5`
 - OpenAI ChatGPT/Codex OAuth: `openai/gpt-5.5`
-- Anthropic: `anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
-- Google（Gemini API）：`google/gemini-3.1-pro-preview` 和 `google/gemini-3-flash-preview`（避免较旧的 Gemini 2.x 模型）
-- Google（Antigravity）：`google-antigravity/claude-opus-4-6-thinking` 和 `google-antigravity/gemini-3-flash`
-- DeepSeek：`deepseek/deepseek-v4-flash` 和 `deepseek/deepseek-v4-pro`
-- Z.AI（GLM）：`zai/glm-5.1`
-- MiniMax：`minimax/MiniMax-M3`
+- Anthropic: `anthropic/claude-opus-4-6` (or `anthropic/claude-sonnet-4-6`)
+- Google (Gemini API): `google/gemini-3.1-pro-preview` and `google/gemini-3-flash-preview` (avoid older Gemini 2.x models)
+- Google (Antigravity): `google-antigravity/claude-opus-4-6-thinking` and `google-antigravity/gemini-3-flash`
+- DeepSeek: `deepseek/deepseek-v4-flash` and `deepseek/deepseek-v4-pro`
+- Z.AI (GLM): `zai/glm-5.1` (general API) or `zai/glm-5.2` (Coding Plan)
+- MiniMax: `minimax/MiniMax-M3`
 
 用工具 + 图像运行网关冒烟：
 `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,deepseek/deepseek-v4-flash,zai/glm-5.1,minimax/MiniMax-M3" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
@@ -385,8 +388,8 @@ Docker 说明：
 - Anthropic: `anthropic/claude-opus-4-6`（或 `anthropic/claude-sonnet-4-6`）
 - Google: `google/gemini-3-flash-preview`（或 `google/gemini-3.1-pro-preview`）
 - DeepSeek: `deepseek/deepseek-v4-flash`
-- Z.AI（GLM）：`zai/glm-5.1`
-- MiniMax：`minimax/MiniMax-M3`
+- Z.AI (GLM): `zai/glm-5.1` (general API) or `zai/glm-5.2` (Coding Plan)
+- MiniMax: `minimax/MiniMax-M3`
 
 可选的额外覆盖（有则更好）：
 
@@ -568,4 +571,4 @@ openclaw infer image generate \
 
 ## 相关
 
-- [Testing](/help/testing) - 单元、集成、QA 和 Docker 套件
+- [测试](/help/testing) - 单元、集成、QA 和 Docker 套件

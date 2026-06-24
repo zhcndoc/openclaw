@@ -16,7 +16,7 @@ OpenClaw Discord 频道插件，用于频道、私信、命令和应用事件。
 
 ## 接入层
 
-channels: discord; contracts: transcriptSourceProviders
+channels: discord; contracts: transcriptSourceProviders; skills
 
 ## 相关文档
 

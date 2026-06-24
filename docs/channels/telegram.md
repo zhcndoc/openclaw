@@ -111,6 +111,10 @@ Token 的解析顺序会考虑账号。实际上，config 值会优先于 env �
 
 ## 访问控制与激活
 
+### Group bot identity
+
+在 Telegram 群组和论坛话题中，对已配置机器人句柄（例如 `@my_bot`）的显式提及，会被视为在直接对选定的 OpenClaw agent 说话，即使该 agent 的 persona 名称与 Telegram 用户名不同。群组静默策略仍然适用于无关的群消息，但机器人句柄本身不被视为“别人”。
+
 <Tabs>
   <Tab title="DM 策略">
     `channels.telegram.dmPolicy` 控制直接消息访问：
@@ -276,6 +280,18 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 }
 ```
 
+    群历史上下文默认是 `mention-only`：仅当先前群消息是发给机器人的、回复机器人消息的，或是机器人自己的消息时，才会被包含。将 `includeGroupHistoryContext: "recent"` 可在受信任的群组中包含最近的房间历史。将 `includeGroupHistoryContext: "none"` 可在下一轮中不发送任何先前的 Telegram 群历史。
+
+```json5
+{
+  channels: {
+    telegram: {
+      includeGroupHistoryContext: "recent",
+    },
+  },
+}
+```
+
     获取群聊 ID：
 
     - 将群消息转发到 `@userinfobot` / `@getidsbot`
@@ -311,39 +327,20 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     - direct chats: preview message + `editMessageText`
     - groups/topics: preview message + `editMessageText`
-    - direct-chat tool progress: optional native `sendMessageDraft` status preview when enabled and supported
 
     要求：
 
     - `channels.telegram.streaming` is `off | partial | block | progress` (default: `partial`)
-    - `progress` keeps one editable status draft for tool progress, clears it at completion, and sends the final answer as a normal message
+    - short initial answer previews are debounced, then materialized after a bounded delay if the run is still active
+    - `progress` keeps one editable status draft for tool progress, shows the stable status label when answer activity arrives before tool progress, clears it at completion, and sends the final answer as a normal message
     - `streaming.preview.toolProgress` controls whether tool/progress updates reuse the same edited preview message (default: `true` when preview streaming is active)
     - `streaming.preview.commandText` controls command/exec detail inside those tool-progress lines: `raw` (default, preserves released behavior) or `status` (tool label only)
     - `streaming.progress.commentary` (default: `false`) opts into assistant commentary/preamble text in the temporary progress draft
-    - legacy `channels.telegram.streamMode` and boolean `streaming` values are detected; run `openclaw doctor --fix` to migrate them to `channels.telegram.streaming.mode`
+    - legacy `channels.telegram.streamMode`, boolean `streaming` values, and retired native draft preview keys are detected; run `openclaw doctor --fix` to migrate them to current streaming config
 
     工具进度预览更新是在工具运行时显示的短状态行，例如命令执行、文件读取、计划更新、补丁摘要，或 Codex app-server 模式中的 Codex 前言/注释文本。Telegram 默认保持这些功能启用，以匹配 `v2026.4.22` 及之后发布的 OpenClaw 行为。
 
-    直接聊天可以对这些工具进度行使用原生 Telegram 草稿，而无需将工具对话持久化到聊天历史中。原生草稿会在答案文本开始前停止；最终答案仍走普通的持久化投递路径。该通道默认关闭，应先限制为受信任的 DM ID：
-
-    ```json
-    {
-      "channels": {
-        "telegram": {
-          "streaming": {
-            "mode": "partial",
-            "preview": {
-              "toolProgress": true,
-              "nativeToolProgress": true,
-              "nativeToolProgressAllowFrom": ["123456789"]
-            }
-          }
-        }
-      }
-    }
-    ```
-
-    要保留编辑后的答案预览，但隐藏工具进度行，请设置：
+    为了保留答案文本的已编辑预览但隐藏工具进度行，请设置：
 
     ```json
     {
@@ -412,22 +409,41 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     预览流与块流是分开的。当 Telegram 显式启用了块流时，OpenClaw 会跳过预览流，以避免双重流式发送。
 
-    Reasoning stream behavior:
+    推理流行为：
 
-    - `/reasoning stream` uses a supported channel's reasoning-preview path; on Telegram, it streams reasoning into the live preview while generating
-    - the reasoning preview is deleted after final delivery; use `/reasoning on` when reasoning should remain visible
-    - final answer is sent without reasoning text
+    - `/reasoning stream` 使用受支持渠道的推理预览路径；在 Telegram 上，它会在生成时将推理流式输出到实时预览中
+    - 推理预览会在最终投递后删除；当推理需要保持可见时，请使用 `/reasoning on`
+    - 最终答案发送时不包含推理文本
 
   </Accordion>
 
-  <Accordion title="格式化和 HTML 回退">
-    发出的文本使用 Telegram `parse_mode: "HTML"`。
+  <Accordion title="丰富消息格式">
+    默认情况下，出站文本使用标准 Telegram HTML 消息，因此回复在当前 Telegram 客户端中都能保持可读。此兼容模式支持常规的加粗、斜体、链接、代码、剧透和引用块，但不支持 Bot API 10.1 的富文本专有块，例如原生表格、details、富媒体和公式。
 
-    - Markdown 风格文本会被渲染为 Telegram 安全的 HTML。
-    - 会保留受支持的 Telegram HTML 标签；不受支持的 HTML 会被转义。
-    - 如果 Telegram 拒绝解析后的 HTML，OpenClaw 会重试为纯文本。
+    将 `channels.telegram.richMessages: true` 可启用 Bot API 10.1 富消息：
 
-    链接预览默认启用，可通过 `channels.telegram.linkPreview: false` 禁用。
+```json5
+{
+  channels: {
+    telegram: {
+      richMessages: true,
+    },
+  },
+}
+```
+
+    启用后：
+
+    - agent 会被告知该 bot/account 可用 Telegram 富消息。
+    - Markdown 文本会通过 OpenClaw 的 Markdown IR 渲染，并作为 Telegram 富 HTML 发送。
+    - 显式富 HTML 载荷会保留受支持的 Bot API 10.1 标签，例如标题、表格、details、富媒体和公式。
+    - 媒体 caption 仍然使用 Telegram HTML caption，因为富消息不会替代 caption。
+
+    这会让模型文本避开 Telegram Rich Markdown 符号，因此像 `$400-600K` 这样的货币不会被解析成数学表达式。长富文本会自动按 Telegram 的富文本和富块限制拆分。超出 Telegram 列限制的表格会作为代码块发送。
+
+    默认：为兼容客户端而关闭。富消息需要兼容的 Telegram 客户端；当前一些 Desktop、Web、Android 以及第三方客户端会将已接受的富消息显示为不受支持。除非机器人所用的每个客户端都能渲染它们，否则请保持此选项禁用。`/status` 会显示当前 Telegram 会话是否开启了富消息。
+
+    链接预览默认启用。`channels.telegram.linkPreview: false` 可跳过富文本的自动实体检测。
 
   </Accordion>
 
@@ -727,7 +743,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     - `Sticker.fileUniqueId`
     - `Sticker.cachedDescription`
 
-    Sticker descriptions are cached in OpenClaw SQLite plugin state to reduce repeated vision calls.
+    贴纸描述会缓存在 OpenClaw SQLite 插件状态中，以减少重复的视觉调用。
 
     启用贴纸动作：
 
@@ -852,17 +868,17 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
   </Accordion>
 
-  <Accordion title="Limits, retry, and CLI targets">
-    - `channels.telegram.textChunkLimit` default is 4000.
-    - `channels.telegram.chunkMode="newline"` prefers paragraph boundaries (blank lines) before length splitting.
-    - `channels.telegram.mediaMaxMb` (default 100) caps inbound and outbound Telegram media size.
-    - `channels.telegram.mediaGroupFlushMs` (default 500) controls how long Telegram albums/media groups are buffered before OpenClaw dispatches them as one inbound message. Increase it if album parts arrive late; decrease it to reduce album reply latency.
-    - `channels.telegram.timeoutSeconds` overrides Telegram API client timeout (if unset, grammY default applies). Bot clients clamp configured values below the 60-second outbound text/typing request guard so grammY does not abort visible reply delivery before OpenClaw's transport guard and fallback can run. Long polling still uses a 45-second `getUpdates` request guard so idle polls are not abandoned indefinitely.
-    - `channels.telegram.pollingStallThresholdMs` defaults to `120000`; tune between `30000` and `600000` only for false-positive polling-stall restarts.
-    - group context history uses `channels.telegram.historyLimit` or `messages.groupChat.historyLimit` (default 50); `0` disables.
-    - reply/quote/forward supplemental context is normalized into one selected conversation context window when the gateway has observed the parent messages; the observed-message cache lives in OpenClaw SQLite plugin state, and `openclaw doctor --fix` imports legacy sidecars. Telegram only includes one shallow `reply_to_message` in updates, so chains older than the cache are limited to Telegram's current update payload.
-    - Telegram allowlists primarily gate who can trigger the agent, not a full supplemental-context redaction boundary.
-    - DM history controls:
+  <Accordion title="限制、重试和 CLI 目标">
+    - `channels.telegram.textChunkLimit` 默认值为 4000。
+    - `channels.telegram.chunkMode="newline"` 会优先按段落边界（空行）拆分，然后再按长度拆分。
+    - `channels.telegram.mediaMaxMb`（默认 100）限制入站和出站 Telegram 媒体大小。
+    - `channels.telegram.mediaGroupFlushMs`（默认 500）控制 Telegram album/media group 在 OpenClaw 作为一条入站消息分发前会缓冲多长时间。如果 album 部件到达较晚可增大此值；若要降低 album 回复延迟可减小此值。
+    - `channels.telegram.timeoutSeconds` 会覆盖 Telegram API 客户端超时时间（若未设置则使用 grammY 默认值）。Bot 客户端会将低于 60 秒的出站文本/typing 请求保护值配置进行截断，以免 grammY 在 OpenClaw 的传输保护和回退运行前中止可见回复投递。长轮询仍使用 45 秒的 `getUpdates` 请求保护，因此空闲轮询不会被无限期放弃。
+    - `channels.telegram.pollingStallThresholdMs` 默认值为 `120000`；仅在轮询停滞误报重启时，将其调到 `30000` 到 `600000` 之间。
+    - 群上下文历史使用 `channels.telegram.historyLimit` 或 `messages.groupChat.historyLimit`（默认 50）；`0` 表示禁用。
+    - reply/quote/forward 的补充上下文会在 gateway 已观察到父消息时，规范化为一个选定的对话上下文窗口；已观察消息缓存位于 OpenClaw SQLite 插件状态中，`openclaw doctor --fix` 会导入旧版 sidecar。Telegram 在更新中只包含一个浅层的 `reply_to_message`，因此超出缓存的更旧链路会受限于 Telegram 当前的更新载荷。
+    - Telegram allowlist 主要用于限制谁可以触发 agent，而不是完整的补充上下文脱敏边界。
+    - DM 历史控制：
       - `channels.telegram.dmHistoryLimit`
       - `channels.telegram.dms["<user_id>"].historyLimit`
     - `channels.telegram.retry` 配置适用于 Telegram 发送辅助工具（CLI/工具/动作）在处理可恢复的出站 API 错误时使用。入站最终回复投递也会对 Telegram 预连接失败使用有界的安全发送重试，但不会重试可能导致可见消息重复的歧义性发送后网络封包。
@@ -1071,7 +1087,7 @@ dig +short api.telegram.org AAAA
 - command/menu: `commands.native`, `commands.nativeSkills`, `customCommands`
 - threading/replies: `replyToMode`
 - streaming: `streaming` (preview), `streaming.preview.toolProgress`, `blockStreaming`
-- formatting/delivery: `textChunkLimit`, `chunkMode`, `linkPreview`, `responsePrefix`
+- formatting/delivery: `textChunkLimit`, `chunkMode`, `richMessages`, `linkPreview`, `responsePrefix`
 - media/network: `mediaMaxMb`, `mediaGroupFlushMs`, `timeoutSeconds`, `pollingStallThresholdMs`, `retry`, `network.autoSelectFamily`, `network.dangerouslyAllowPrivateNetwork`, `proxy`
 - custom API root: `apiRoot`（仅 Bot API 根地址；不要包含 `/bot<TOKEN>`）
 - webhook: `webhookUrl`, `webhookSecret`, `webhookPath`, `webhookHost`

@@ -37,8 +37,8 @@ OpenClaw 默认对**传输时间戳使用主机本地时间**，并且**仅在�
 - `envelopeTimezone: "local"` 使用主机时区。
 - `envelopeTimezone: "user"` 使用 `agents.defaults.userTimezone`（回退到主机时区）。
 - 使用明确的 IANA 时区（例如 `"America/Chicago"`）可固定时区。
-- `envelopeTimestamp: "off"` 会从信封标题中移除绝对时间戳。
-- `envelopeElapsed: "off"` 会移除经过时间后缀（`+2m` 这种格式）。
+- `envelopeTimestamp: "off"` 会从信封标题、直接代理提示前缀以及嵌入式模型输入前缀中移除绝对时间戳。
+- `envelopeElapsed: "off"` 会移除经过时间后缀（`+2m` 这种样式）。
 
 ### 示例
 

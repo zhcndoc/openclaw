@@ -11,8 +11,8 @@ title: "DeepSeek 插件"
 
 ## 分发
 
-- 包：`@openclaw/deepseek-provider`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/deepseek-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/deepseek-provider`
 
 ## 接入点
 

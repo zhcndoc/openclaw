@@ -170,8 +170,9 @@ sidebarTitle: "模型常见问题"
   <Accordion title="如何为 GPT 5.5 配置快速模式？">
     使用会话切换或配置默认值中的任意一种：
 
-    - **每会话：** 当会话正在使用 `openai/gpt-5.5` 时发送 `/fast on`。
-    - **每模型默认值：** 将 `agents.defaults.models["openai/gpt-5.5"].params.fastMode` 设置为 `true`。
+    - **每个会话：** 当会话正在使用 `openai/gpt-5.5` 时发送 `/fast on`。
+    - **每个模型默认值：** 将 `agents.defaults.models["openai/gpt-5.5"].params.fastMode` 设为 `true`。
+    - **自动截止：** 使用 `/fast auto` 或 `params.fastMode: "auto"` 让新的模型调用在自动截止前以快速模式启动，然后让后续的重试、回退、工具结果或续写调用不使用快速模式。截止时间默认为 60 秒；可在当前模型上设置 `params.fastAutoOnSeconds` 来更改。
 
     示例：
 
@@ -182,7 +183,8 @@ sidebarTitle: "模型常见问题"
           models: {
             "openai/gpt-5.5": {
               params: {
-                fastMode: true,
+                fastMode: "auto",
+                fastAutoOnSeconds: 30,
               },
             },
           },
@@ -191,7 +193,7 @@ sidebarTitle: "模型常见问题"
     }
     ```
 
-    对于 OpenAI，快速模式会映射为受支持的原生 Responses 请求中的 `service_tier = "priority"`。会话中的 `/fast` 会覆盖配置默认值。
+    对于 OpenAI，快速模式会在支持的原生 Responses 请求中映射为 `service_tier = "priority"`。会话级 `/fast` 的优先级高于配置默认值。Codex app-server 的轮次只能在轮次开始时接收该层级，因此 `auto` 会在下一次由 OpenClaw 启动的模型轮次生效，而不是在已经运行中的 app-server 轮次内生效。
 
     参见 [思考与快速模式](/tools/thinking) 和 [OpenAI 快速模式](/providers/openai#fast-mode)。
 
@@ -213,23 +215,23 @@ sidebarTitle: "模型常见问题"
 
   </Accordion>
 
-  <Accordion title='Why do I see "Unknown model: minimax/MiniMax-M3"?'>
-    This means the **provider isn't configured** (no MiniMax provider config or auth
-    profile was found), so the model can't be resolved.
+  <Accordion title='为什么我会看到“Unknown model: minimax/MiniMax-M3”？'>
+    这意味着**provider 未配置**（未找到 MiniMax provider 配置或认证
+    配置文件），因此无法解析该模型。
 
     修复检查清单：
 
-    1. Upgrade to a current OpenClaw release (or run from source `main`), then restart the gateway.
-    2. Make sure MiniMax is configured (wizard or JSON), or that MiniMax auth
-       exists in env/auth profiles so the matching provider can be injected
-       (`MINIMAX_API_KEY` for `minimax`, `MINIMAX_OAUTH_TOKEN` or stored MiniMax
-       OAuth for `minimax-portal`).
-    3. Use the exact model id (case-sensitive) for your auth path:
-       `minimax/MiniMax-M3`, `minimax/MiniMax-M2.7`, or
-       `minimax/MiniMax-M2.7-highspeed` for API-key setup, or
-       `minimax-portal/MiniMax-M3`, `minimax-portal/MiniMax-M2.7`, or
-       `minimax-portal/MiniMax-M2.7-highspeed` for OAuth setup.
-    4. Run:
+    1. 升级到当前的 OpenClaw 版本（或从源代码 `main` 运行），然后重启 gateway。
+    2. 确保 MiniMax 已配置（向导或 JSON），或者 MiniMax 认证
+       存在于 env/auth 配置文件中，以便可以注入匹配的 provider
+       (`MINIMAX_API_KEY` 用于 `minimax`，`MINIMAX_OAUTH_TOKEN` 或已保存的 MiniMax
+       OAuth 用于 `minimax-portal`)。
+    3. 对你的认证路径使用准确的模型 ID（区分大小写）：
+       `minimax/MiniMax-M3`、`minimax/MiniMax-M2.7`，或
+       `minimax/MiniMax-M2.7-highspeed` 用于 API key 设置；或
+       `minimax-portal/MiniMax-M3`、`minimax-portal/MiniMax-M2.7`，或
+       `minimax-portal/MiniMax-M2.7-highspeed` 用于 OAuth 设置。
+    4. 运行：
 
        ```bash
        openclaw models list

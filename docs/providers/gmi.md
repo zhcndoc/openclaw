@@ -6,10 +6,11 @@ read_when:
 title: "GMI Cloud"
 ---
 
-GMI Cloud 是一个托管推理平台，提供面向前沿模型和开源权重模型的
-OpenAI 兼容 API。在 OpenClaw 中，它是一个捆绑的模型提供方，
-这意味着你可以使用提供方 id `gmi` 来选择它，通过常规模型认证保存凭据，
-并使用类似 `gmi/google/gemini-3.1-flash-lite` 的模型引用。
+GMI Cloud 是一个为前沿模型和开源权重模型提供托管推理的平台，
+通过 OpenAI 兼容的 API 提供服务。在 OpenClaw 中，它是一个官方的外部提供方
+插件，这意味着你只需安装一次，将提供方 id 设为 `gmi`，
+通过常规模型认证存储凭据，并使用类似
+`gmi/google/gemini-3.1-flash-lite` 的模型引用。
 
 当你希望用一个 API 密钥访问多个托管模型系列时，可以使用 GMI，包括
 Google、Anthropic、OpenAI、DeepSeek、Moonshot，以及 GMI 目录中公开的 Z.AI 路由。
@@ -22,7 +23,14 @@ id、认证配置文件、别名、模型目录种子和基础 URL；GMI 负责�
 
 ## 设置
 
-在 GMI Cloud 中创建一个 API 密钥，然后运行：
+Install the plugin, restart the gateway, then create an API key in GMI Cloud:
+
+```bash
+openclaw plugins install @openclaw/gmi-provider
+openclaw gateway restart
+```
+
+Then run:
 
 ```bash
 openclaw onboard --auth-choice gmi-api-key
@@ -56,7 +64,7 @@ GPU 控制比托管便利性更重要时，请使用本地提供方，例如 Oll
 
 ## 模型
 
-捆绑目录种子包含 GMI Cloud 常见可用的路由 id，包括：
+The plugin catalog seeds commonly available GMI Cloud route ids, including:
 
 - `gmi/zai-org/GLM-5.1-FP8`
 - `gmi/deepseek-ai/DeepSeek-V3.2`

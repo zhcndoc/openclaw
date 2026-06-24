@@ -15,15 +15,18 @@ OpenClaw 将 **唤醒词视为由 **Gateway** 拥有的单一全局列表**。
 
 ## 存储（Gateway 主机）
 
-唤醒词存储在 gateway 机器上的：
+唤醒词和路由规则存储在 gateway 状态数据库中：
 
-- `~/.openclaw/settings/voicewake.json`
+- `~/.openclaw/state/openclaw.sqlite`
 
-结构：
+当前生效的表有：
 
-```json
-{ "triggers": ["openclaw", "claude", "computer"], "updatedAtMs": 1730000000000 }
-```
+- `voicewake_triggers`
+- `voicewake_routing_config`
+- `voicewake_routing_routes`
+
+旧版的 `settings/voicewake.json` 和 `settings/voicewake-routing.json` 文件
+仅作为 doctor 迁移输入；运行时会读写 SQLite 表。
 
 ## 协议
 

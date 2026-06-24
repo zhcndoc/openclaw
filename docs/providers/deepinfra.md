@@ -9,6 +9,15 @@ title: "DeepInfra"
 DeepInfra 提供了一个**统一 API**，通过单一的
 端点和 API 密钥将请求路由到最受欢迎的开源和前沿模型。它与 OpenAI 兼容，因此只需切换 base URL，大多数 OpenAI SDK 都可以直接使用。
 
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/deepinfra-provider
+openclaw gateway restart
+```
+
 ## 获取 API 密钥
 
 1. 前往 [https://deepinfra.com/](https://deepinfra.com/)
@@ -42,7 +51,7 @@ export DEEPINFRA_API_KEY="<your-deepinfra-api-key>" # pragma: allowlist secret
 
 ## 支持的 OpenClaw 接入面
 
-打包的插件会注册所有符合当前 OpenClaw 提供方契约的 DeepInfra 接入面。聊天、图像生成和视频生成会在配置了 `DEEPINFRA_API_KEY` 时，通过 `/v1/openai/models?sort_by=openclaw&filter=with_meta` 实时刷新其模型目录；其他接入面则使用下面整理好的静态默认值。
+该插件注册了所有与当前 OpenClaw 提供方契约匹配的 DeepInfra 接入面。聊天、图像生成和视频生成会在配置了 `DEEPINFRA_API_KEY` 时，从 `/v1/openai/models?sort_by=openclaw&filter=with_meta` 实时刷新其模型目录；其他接入面则使用下面精选的静态默认值。
 
 | 接入面                   | 默认模型                                                                                              | OpenClaw 配置/工具                                      |
 | ------------------------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |

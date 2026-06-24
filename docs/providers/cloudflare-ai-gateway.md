@@ -23,7 +23,16 @@ Cloudflare AI Gateway 位于提供方 API 之前，让你可以添加分析、�
 Anthropic 会拒绝在 extended thinking 下进行 response prefilling，而普通的
 non-thinking prefill 仍然可用。
 
-## Getting started
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/cloudflare-ai-gateway-provider
+openclaw gateway restart
+```
+
+## 入门
 
 <Steps>
   <Step title="设置提供方 API key 和 Gateway 详情">
@@ -57,7 +66,7 @@ non-thinking prefill 仍然可用。
   </Step>
 </Steps>
 
-## Non-interactive example
+## 非交互式示例
 
 对于脚本或 CI 环境，请在命令行中传入所有值：
 
@@ -70,10 +79,10 @@ openclaw onboard --non-interactive \
   --cloudflare-ai-gateway-api-key "$CLOUDFLARE_AI_GATEWAY_API_KEY"
 ```
 
-## Advanced configuration
+## 高级配置
 
 <AccordionGroup>
-  <Accordion title="Authenticated gateways">
+  <Accordion title="已认证的网关">
     如果你在 Cloudflare 中启用了 Gateway 认证，请添加 `cf-aig-authorization` 标头。这是**额外添加的**，不同于你的提供方 API key。
 
     ```json5
@@ -96,7 +105,7 @@ openclaw onboard --non-interactive \
 
   </Accordion>
 
-  <Accordion title="Environment note">
+  <Accordion title="环境说明">
     如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `CLOUDFLARE_AI_GATEWAY_API_KEY` 对该进程可用。
 
     <Warning>
@@ -106,13 +115,13 @@ openclaw onboard --non-interactive \
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Model selection" href="/concepts/model-providers" icon="layers">
+  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     选择提供方、模型引用和故障切换行为。
   </Card>
-  <Card title="Troubleshooting" href="/help/troubleshooting" icon="wrench">
+  <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     常规故障排查和 FAQ。
   </Card>
 </CardGroup>

@@ -489,8 +489,9 @@ title: "配置示例"
 }
 ```
 
-- `extraDirs` 会将兄弟仓库作为显式技能根目录进行扫描。
-- `allowSymlinkTargets` 允许软链接的技能文件夹解析到该受信任的真实目标根目录，而不会允许任意的软链接逃逸。
+- `extraDirs` 扫描兄弟仓库，作为显式的技能根目录。
+- `allowSymlinkTargets` 允许软链接的技能文件夹解析到该受信任的真实目标根目录，而不允许任意软链接逃逸。
+- 如需让 Skill Workshop 通过同一受信任的软链接目标应用写入，请设置 `skills.workshop.allowSymlinkTargetWrites: true`。
 
 ## 常见模式
 

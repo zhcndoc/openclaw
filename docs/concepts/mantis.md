@@ -205,13 +205,11 @@ motion-trimmed GIF 预览，链接到对应的 motion-trimmed MP4 片段，并�
 `crabbox media preview` 生成 motion-trimmed 预览，上传完整工件
 目录，并可选择在目标 PR 上发布内联证据评论。它默认使用 AWS 作为 desktop lease 提供方，并暴露一个手动 provider 输入，以便操作员在 AWS 容量缓慢或不可用时切换到 Hetzner。当你想要的是“带 Slack 和 claw 正在运行的 Linux desktop”，而不是仅仅一个 bot-to-bot Slack 转录时，请使用这条线路。
 
-`Mantis Telegram Live` 将现有的 Telegram live QA 线路封装进同一条 PR
-证据管道中。它在独立 worktree 中检出受信任的 candidate ref，运行 `pnpm openclaw qa telegram --credential-source convex
---credential-role ci`，从 Telegram QA 摘要和 observed-message 工件生成一个
-`mantis-evidence.json` 清单，通过 Crabbox desktop browser 渲染去敏后的
-transcript HTML，使用 `crabbox media preview` 生成 motion-trimmed GIF，
-并在有 PR 编号时发布内联 PR 证据评论。该线路以 transcript-visual 为主，
-而不是已登录的 Telegram Web 证明：Telegram Bot API 能提供稳定的实时消息证据，但正常的 Mantis 自动化不需要 Telegram Web 登录状态。
+`Mantis Telegram Live` 将现有的 Telegram live QA 线路包装进同一条 PR
+证据流水线。它在独立 worktree 中检出受信任的 candidate ref，运行 `pnpm openclaw qa telegram --credential-source convex
+--credential-role ci`，从 Telegram QA 摘要、`qa-evidence.json` 和报告工件中写出一个 `mantis-evidence.json` 清单，通过 Crabbox desktop browser 渲染脱敏后的证据 HTML，使用 `crabbox media preview` 生成 motion-trimmed GIF，并在有 PR 编号时发布内联 PR
+证据评论。这条线路是 QA 证据可视化，而不是登录后的 Telegram Web 证明：Telegram Bot API 提供稳定的实时
+消息证据，但正常的 Mantis 自动化并不需要 Telegram Web 登录状态。
 
 `Mantis Telegram Desktop Proof` 是 agentic 原生 Telegram Desktop
 before/after 包装器。维护者可以通过 PR 评论中的
@@ -425,11 +423,13 @@ pnpm openclaw qa discord \
 
 Mantis 应当建立在现有的私有 QA 栈之上，而不是从零开始：
 
-- `pnpm openclaw qa discord` 已经运行了一个带 driver 和 SUT bots 的 live Discord 通道。
-- live transport runner 已经在 `.artifacts/qa-e2e/` 下写入报告和 observed-message 工件。
-- Convex credential lease 已经为共享的 live transport 凭据提供了独占访问。
-- 浏览器控制服务已经支持截图、snapshot、headless managed profiles 和远程 CDP profiles。
-- QA Lab 已经拥有用于 transport 形态测试的 debugger UI 和 bus。
+- `pnpm openclaw qa discord` 已经运行了一个带有 driver 和
+  SUT bots 的 live Discord lane。
+- 现有的 live transport runner 已经在 `.artifacts/qa-e2e/` 下写入报告、QA 证据和
+  传输特定工件。
+- Convex 凭据租约已经为共享的 live transport 凭据提供了独占访问。
+- 浏览器控制服务已经支持截图、快照、无头托管配置文件和远程 CDP 配置文件。
+- QA Lab 已经具备用于 transport 形态测试的调试器 UI 和 bus。
 
 第一个 Mantis 实现可以是在这些组件之上的一个薄的 before/after runner，再加上一层视觉证据。
 

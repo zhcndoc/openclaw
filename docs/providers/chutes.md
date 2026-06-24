@@ -7,7 +7,7 @@ read_when:
   - 你想了解默认模型、别名或发现行为
 ---
 
-[Chutes](https://chutes.ai) 通过一个与 OpenAI 兼容的 API 提供开源模型目录。OpenClaw 为内置的 `chutes` 提供程序同时支持浏览器 OAuth 和直接 API 密钥认证。
+[Chutes](https://chutes.ai) 通过一个与 OpenAI 兼容的 API 提供开源模型目录。OpenClaw 同时支持 `chutes` 提供程序的浏览器 OAuth 和直接 API 密钥认证。
 
 | 属性     | 值                           |
 | -------- | ---------------------------- |
@@ -16,7 +16,16 @@ read_when:
 | 基础 URL | `https://llm.chutes.ai/v1`   |
 | 认证     | OAuth 或 API 密钥（见下文） |
 
-## 入门
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/chutes-provider
+openclaw gateway restart
+```
+
+## 开始使用
 
 <Tabs>
   <Tab title="OAuth">
@@ -28,8 +37,8 @@ read_when:
         OpenClaw 会在本地启动浏览器流程，或在远程/无头主机上显示 URL + 重定向粘贴流程。OAuth 令牌会通过 OpenClaw 认证配置文件自动刷新。
       </Step>
       <Step title="验证默认模型">
-        完成引导后，默认模型会设置为
-        `chutes/zai-org/GLM-4.7-TEE`，并注册内置的 Chutes 目录。
+        引导完成后，默认模型会设置为
+        `chutes/zai-org/GLM-4.7-TEE`，并注册 Chutes 静态目录。
       </Step>
     </Steps>
   </Tab>
@@ -45,26 +54,26 @@ read_when:
         ```
       </Step>
       <Step title="验证默认模型">
-        完成引导后，默认模型会设置为
-        `chutes/zai-org/GLM-4.7-TEE`，并注册内置的 Chutes 目录。
+        引导完成后，默认模型会设置为
+        `chutes/zai-org/GLM-4.7-TEE`，并注册 Chutes 静态目录。
       </Step>
     </Steps>
   </Tab>
 </Tabs>
 
 <Note>
-这两种认证方式都会注册内置的 Chutes 目录，并将默认模型设置为
-`chutes/zai-org/GLM-4.7-TEE`。运行时环境变量：`CHUTES_API_KEY`,
+两种认证方式都会注册 Chutes 静态目录，并将默认模型设置为
+`chutes/zai-org/GLM-4.7-TEE`。运行时环境变量：`CHUTES_API_KEY`、
 `CHUTES_OAUTH_TOKEN`。
 </Note>
 
 ## 发现行为
 
-当 Chutes 认证可用时，OpenClaw 会使用该凭据查询 Chutes 目录并采用发现到的模型。如果发现失败，OpenClaw 会回退到内置的静态目录，以便引导和启动仍然可用。
+当 Chutes 认证可用时，OpenClaw 会使用该凭据查询 Chutes 目录并采用发现到的模型。如果发现失败，OpenClaw 会回退到静态目录，因此引导和启动仍可正常工作。
 
 ## 默认别名
 
-OpenClaw 为内置的 Chutes 目录注册了三个便捷别名：
+OpenClaw 会为 Chutes 静态目录注册三个便捷别名：
 
 | 别名            | 目标模型                                            |
 | --------------- | --------------------------------------------------- |
@@ -74,7 +83,7 @@ OpenClaw 为内置的 Chutes 目录注册了三个便捷别名：
 
 ## 内置起始目录
 
-内置的回退目录包含当前的 Chutes 引用：
+静态回退目录包含当前 Chutes 引用：
 
 | 模型引用                                              |
 | ----------------------------------------------------- |
@@ -118,10 +127,10 @@ OpenClaw 为内置的 Chutes 目录注册了三个便捷别名：
 
   </Accordion>
 
-  <Accordion title="说明">
-    - API 密钥和 OAuth 发现都使用相同的 `chutes` 提供程序 id。
+  <Accordion title="备注">
+    - API 密钥和 OAuth 发现都使用相同的 `chutes` 提供程序 ID。
     - Chutes 模型会注册为 `chutes/<model-id>`。
-    - 如果启动时发现失败，则会自动使用内置的静态目录。
+    - 如果启动时发现失败，会自动使用静态目录。
 
   </Accordion>
 </AccordionGroup>

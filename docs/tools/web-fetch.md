@@ -40,18 +40,18 @@ await web_fetch({ url: "https://example.com/article" });
 ## 工作原理
 
 <Steps>
-  <Step title="Fetch">
+  <Step title="获取">
     使用类似 Chrome 的 User-Agent 和 `Accept-Language`
     请求头发送 HTTP GET。会阻止私有/内部主机名，并重新检查重定向。
   </Step>
-  <Step title="Extract">
+  <Step title="提取">
     在 HTML 响应上运行 Readability（主内容提取）。
   </Step>
-  <Step title="Fallback (optional)">
-    如果 Readability 失败且已配置 Firecrawl，则通过
-    Firecrawl API 以反机器人绕过模式重试。
+  <Step title="回退（可选）">
+    如果 Readability 失败且选择了 Firecrawl，则通过
+    Firecrawl API 使用反机器人绕过模式重试。
   </Step>
-  <Step title="Cache">
+  <Step title="缓存">
     结果会缓存 15 分钟（可配置），以减少对同一 URL 的重复
     获取。
   </Step>
@@ -118,7 +118,7 @@ await web_fetch({ url: "https://example.com/article" });
         enabled: true,
         config: {
           webFetch: {
-            apiKey: "fc-...", // 如果已设置 FIRECRAWL_API_KEY，则可选
+            // apiKey: "fc-...", // 可选；省略则使用无密钥入门访问
             baseUrl: "https://api.firecrawl.dev",
             onlyMainContent: true,
             maxAgeMs: 86400000, // 缓存时长（1 天）
@@ -131,11 +131,11 @@ await web_fetch({ url: "https://example.com/article" });
 }
 ```
 
-`plugins.entries.firecrawl.config.webFetch.apiKey` 支持 SecretRef 对象。
-旧版 `tools.web.fetch.firecrawl.*` 配置会通过 `openclaw doctor --fix` 自动迁移。
+`plugins.entries.firecrawl.config.webFetch.apiKey` 是可选的，并支持 SecretRef 对象。
+旧版 `tools.web.fetch.firecrawl.*` 配置会由 `openclaw doctor --fix` 自动迁移。
 
 <Note>
-  如果 Firecrawl 已启用，但其 SecretRef 未解析且没有
+  如果你配置了 Firecrawl API key 的 SecretRef，但它未解析且没有
   `FIRECRAWL_API_KEY` 环境变量回退，网关启动将快速失败。
 </Note>
 
@@ -147,15 +147,17 @@ await web_fetch({ url: "https://example.com/article" });
 
 当前运行时行为：
 
-- `tools.web.fetch.provider` 明确选择抓取回退提供方。
-- 如果省略 `provider`，OpenClaw 会根据可用凭据自动检测第一个就绪的 web-fetch
-  提供方。非沙箱化的 `web_fetch` 可以使用声明了 `contracts.webFetchProviders` 的
-  已安装插件，并在运行时注册匹配的提供方。当前捆绑的提供方是 Firecrawl。
-- 沙箱化的 `web_fetch` 调用仍仅限于捆绑提供方。
+- `tools.web.fetch.provider` 显式选择获取回退提供方。
+- 如果省略 `provider`，OpenClaw 会从已配置凭据中自动检测第一个就绪的 web-fetch
+  提供方。非沙箱化的 `web_fetch` 可以使用声明了 `contracts.webFetchProviders` 并在运行时注册
+  匹配提供方的已安装插件。官方 Firecrawl 插件提供了此
+  回退。
+- 沙箱化的 `web_fetch` 调用允许使用内置提供方以及其官方 npm 或 ClawHub 来源已验证的已安装提供方。
+  目前这意味着允许官方 Firecrawl 插件；第三方外部获取插件仍被排除在外。
 - 如果禁用了 Readability，`web_fetch` 会直接跳到所选
-  提供方回退。如果没有可用提供方，则会安全失败。
+  提供方回退。如果没有可用提供方，则会以失败关闭。
 
-## Trusted env proxy
+## 受信任的环境代理
 
 如果你的部署要求 `web_fetch` 通过受信任的外部
 HTTP(S) 代理，请设置 `tools.web.fetch.useTrustedEnvProxy: true`。

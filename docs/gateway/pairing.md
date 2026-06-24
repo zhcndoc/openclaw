@@ -49,11 +49,17 @@ openclaw nodes rename --node <id|name|ip> --name "客厅 iPad"
 
 方法：
 
-- `node.pair.request` - 创建或复用一个待处理请求。
+- `node.pair.request` - 创建或重用一个待处理请求。
 - `node.pair.list` - 列出待处理 + 已配对节点（`operator.pairing`）。
 - `node.pair.approve` - 批准一个待处理请求（签发令牌）。
 - `node.pair.reject` - 拒绝一个待处理请求。
-- `node.pair.remove` - 移除一个过期的已配对节点条目。
+- `node.pair.remove` - 移除一个已配对节点。对于设备支持的配对，这会
+  撤销该设备的 `node` 角色：它会修改 `devices/paired.json`，并
+  使该设备的 node 角色会话失效/断开。**混合角色**设备（例如同时拥有 `operator`）
+  会保留其行记录，只失去 `node` 角色；仅有 node 的设备行会被删除。
+  它还会移除任何匹配的旧版网关拥有节点配对条目。授权：
+  `operator.pairing` 可以移除非 operator 的 node 行；如果一个设备令牌调用者在
+  混合角色设备上撤销其**自身**的 node 角色，还额外需要 `operator.admin`。
 - `node.pair.verify` - 验证 `{ nodeId, token }`。
 
 注意：

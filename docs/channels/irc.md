@@ -6,13 +6,19 @@ read_when:
   - 你正在配置 IRC 白名单、组策略或提及门控
 ---
 
-当你希望在经典频道（`#room`）和直接消息中使用 OpenClaw 时，请使用 IRC。
-IRC 作为捆绑插件提供，但在主配置中的 `channels.irc` 下进行配置。
+当你希望 OpenClaw 出现在经典频道（`#room`）和直接消息中时，请使用 IRC。  
+安装官方 IRC 插件，然后在 `channels.irc` 下进行配置。
 
 ## 快速开始
 
-1. 在 `~/.openclaw/openclaw.json` 中启用 IRC 配置。
-2. 至少设置：
+1. 安装插件：
+
+```bash
+openclaw plugins install @openclaw/irc
+```
+
+2. 在 `~/.openclaw/openclaw.json` 中启用 IRC 配置。
+3. 至少设置以下内容：
 
 ```json5
 {
@@ -31,7 +37,7 @@ IRC 作为捆绑插件提供，但在主配置中的 `channels.irc` 下进行配
 
 建议为机器人协作使用私有 IRC 服务器。如果你有意使用公共 IRC 网络，常见选择包括 Libera.Chat、OFTC 和 Snoonet。避免使用可预测的公共频道来承载机器人或 swarm 的后端流量。
 
-3. 启动/重启网关：
+4. 启动/重启网关：
 
 ```bash
 openclaw gateway run
@@ -129,7 +135,7 @@ IRC 频道有两个独立的“门”：
 
 ## 安全说明（公共频道推荐）
 
-如果你在公共频道中允许 `allowFrom: ["*"]`，任何人都可以向机器人发起提示。
+如果你在公共频道中允许 `allowFrom: ["*"]`，任何人都可以向机器人发起提示。  
 为降低风险，请限制该频道可用的工具。
 
 ### 频道中的所有人使用相同工具

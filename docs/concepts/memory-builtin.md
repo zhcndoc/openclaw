@@ -38,9 +38,12 @@ read_when:
 
 如果没有 embedding 提供商，则只能使用关键词搜索。
 
-要强制使用内置的本地 embedding 提供商，请在 OpenClaw 旁边安装可选的
-`node-llama-cpp` 运行时包，然后将 `local.modelPath`
-指向一个 GGUF 文件：
+要强制使用本地 GGUF embeddings，请安装官方 llama.cpp 提供商插件，
+然后将 `local.modelPath` 指向一个 GGUF 文件：
+
+```bash
+openclaw plugins install @openclaw/llama-cpp-provider
+```
 
 ```json5
 {
@@ -60,13 +63,13 @@ read_when:
 
 ## 支持的 embedding 提供商
 
-| Provider          | ID                  | Notes                               |
+| 提供商            | ID                  | 备注                                |
 | ----------------- | ------------------- | ----------------------------------- |
-| Bedrock           | `bedrock`           | 使用 AWS 凭证链                      |
-| DeepInfra         | `deepinfra`         | 默认：`BAAI/bge-m3`                 |
-| Gemini            | `gemini`            | 支持多模态（图像 + 音频）            |
-| GitHub Copilot    | `github-copilot`    | 使用 Copilot 订阅                    |
-| Local             | `local`             | 可选 `node-llama-cpp` 运行时         |
+| Bedrock           | `bedrock`           | 使用 AWS 凭证链                    |
+| DeepInfra         | `deepinfra`         | 默认：`BAAI/bge-m3`                |
+| Gemini            | `gemini`            | 支持多模态（图像 + 音频）           |
+| GitHub Copilot    | `github-copilot`    | 使用 Copilot 订阅                  |
+| Local             | `local`             | `@openclaw/llama-cpp-provider`      |
 | Mistral           | `mistral`           |                                     |
 | Ollama            | `ollama`            | 本地/自托管                          |
 | OpenAI            | `openai`            | 默认：`text-embedding-3-small`       |
@@ -79,11 +82,14 @@ read_when:
 
 OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（约 400 个 token，重叠 80 个 token），并将它们存储在每个代理各自的 SQLite 数据库中。
 
-- **索引位置：** `~/.openclaw/memory/<agentId>.sqlite`
-- **存储维护：** SQLite WAL 侧车文件会通过定期检查点和关闭时检查点进行限流。
-- **文件监视：** 内存文件的更改会触发去抖重新索引（1.5 秒）。
-- **自动重新索引：** 当 embedding 提供商、模型或分块配置发生变化时，整个索引会自动重建。
-- **按需重新索引：** `openclaw memory index --force`
+- **索引位置：** 拥有该索引的代理数据库位于
+  `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
+- **存储维护：** SQLite WAL 辅助文件会通过定期和
+  关闭时检查点进行限制。
+- **文件监听：** 内存文件的更改会触发去抖动重建索引（1.5 秒）。
+- **自动重建索引：** 当 embedding 提供商、模型或分块配置
+  发生变化时，整个索引会自动重建。
+- **按需重建索引：** `openclaw memory index --force`
 
 <Info>
 你也可以使用 `memorySearch.extraPaths` 索引工作区外的 Markdown 文件。请参阅

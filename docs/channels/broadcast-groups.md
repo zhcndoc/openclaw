@@ -161,17 +161,20 @@ sidebarTitle: "广播组"
   <Step title="接收到传入消息">
     一条 WhatsApp 群消息或私信到达。
   </Step>
-  <Step title="广播检查">
-    系统检查对端 ID 是否在 `broadcast` 中。
+  <Step title="Route and admission">
+    OpenClaw 会应用渠道白名单、群组激活规则以及已配置的 ACP 绑定所有权。
   </Step>
-  <Step title="如果在广播列表中">
-    - 所有列出的代理都会处理该消息。
-    - 每个代理都有自己的会话键和隔离的上下文。
-    - 代理会并行（默认）或按顺序处理。
+  <Step title="Broadcast check">
+    如果没有配置的 ACP 绑定拥有该路由，OpenClaw 会检查对端 ID 是否在 `broadcast` 中。
+  </Step>
+  <Step title="If broadcast applies">
+    - 列出的所有代理都会处理该消息。
+    - 每个代理都有自己的会话键和隔离上下文。
+    - 代理按并行（默认）或顺序方式处理。
 
   </Step>
-  <Step title="如果不在广播列表中">
-    应用正常路由（第一个匹配的绑定）。
+  <Step title="If broadcast does not apply">
+    OpenClaw 会分发普通路由或在路由期间选定的已配置 ACP 会话路由。
   </Step>
 </Steps>
 
@@ -204,18 +207,18 @@ sidebarTitle: "广播组"
 <Tabs>
   <Tab title="Alfred 的上下文">
     ```
-    Session: agent:alfred:whatsapp:group:120363403215116621@g.us
-    History: [user message, alfred's previous responses]
-    Workspace: /Users/user/openclaw-alfred/
-    Tools: read, write, exec
+    会话: agent:alfred:whatsapp:group:120363403215116621@g.us
+    历史: [user message, alfred's previous responses]
+    工作区: /Users/user/openclaw-alfred/
+    工具: read, write, exec
     ```
   </Tab>
   <Tab title="Bärbel 的上下文">
     ```
-    Session: agent:baerbel:whatsapp:group:120363403215116621@g.us
-    History: [user message, baerbel's previous responses]
-    Workspace: /Users/user/openclaw-baerbel/
-    Tools: read only
+    会话: agent:baerbel:whatsapp:group:120363403215116621@g.us
+    历史: [user message, baerbel's previous responses]
+    工作区: /Users/user/openclaw-baerbel/
+    工具: 仅可读取
     ```
   </Tab>
 </Tabs>
@@ -322,7 +325,7 @@ sidebarTitle: "广播组"
 - `GROUP_B`：agent1 和 agent2 都会回复（广播）。
 
 <Note>
-**优先级：** `broadcast` 的优先级高于 `bindings`。
+**优先级：** `broadcast` 优先于普通路由绑定。已配置的 ACP 绑定（`bindings[].type="acp"`）是独占的：当某个绑定匹配时，OpenClaw 会将其分发到已配置的 ACP 会话，而不是进行扇出广播。
 </Note>
 
 ## 故障排除
@@ -342,10 +345,10 @@ sidebarTitle: "广播组"
     ```
 
   </Accordion>
-  <Accordion title="只有一个代理在响应">
-    **原因：** 对端 ID 可能在 `bindings` 中，但不在 `broadcast` 中。
+  <Accordion title="Only one agent responding">
+    **原因：** 对端 ID 可能在普通路由绑定中，但不在 `broadcast` 中；或者它可能匹配某个独占的已配置 ACP 绑定。
 
-    **修复：** 将其添加到 broadcast 配置中，或从 bindings 中移除。
+    **修复：** 将普通路由绑定的对端添加到广播配置中，或者如果需要扇出广播，则移除/更改已配置的 ACP 绑定。
 
   </Accordion>
   <Accordion title="性能问题">

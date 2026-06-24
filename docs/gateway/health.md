@@ -41,6 +41,21 @@ title: "健康检查"
 - `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`：多账户覆盖项，优先级高于通道级设置。
 - 这些每通道覆盖项适用于当前已暴露它们的内置通道监控：Discord、Google Chat、iMessage、Microsoft Teams、Signal、Slack、Telegram 和 WhatsApp。
 
+## 正常运行时间监控
+
+外部正常运行时间监控服务应使用专用的 `/health` 端点，而不是 `/v1/chat/completions`。
+
+- **应使用：** `GET /health` — 立即响应，不创建会话，不调用 LLM，返回 `{"ok":true,"status":"live"}`
+- **不要使用：** 用于健康检查的 `/v1/chat/completions` — 每个请求都会创建一个完整的 agent 会话，包括技能快照、上下文组装和 LLM 调用
+
+当没有提供 `x-openclaw-session-key` 请求头或 `user` 字段时，`/v1/chat/completions` 会为每个请求生成一个新的随机会话。每 15 分钟 ping 一次的监控服务会每天创建约 96 个会话，每个占用 4–22KB。随着时间推移，这会导致会话存储膨胀，并可能引发上下文窗口溢出。
+
+### 监控服务配置示例
+
+- **BetterStack：** 将健康检查 URL 设置为 `https://<your-gateway-host>:<port>/health`
+- **UptimeRobot：** 添加一个新的 HTTP 监控，URL 为 `https://<your-gateway-host>:<port>/health`
+- **通用：** 任何对 `/health` 的 HTTP GET，在网关健康时都会返回 200 和 `{"ok":true}`
+
 ## 当出现故障时
 
 - `logged out` 或状态 409–515 → 使用 `openclaw channels logout` 然后 `openclaw channels login` 重新关联。

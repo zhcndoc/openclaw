@@ -18,7 +18,7 @@ platform event -> inbound facts/context -> agent reply -> message delivery
 `openclaw/plugin-sdk/channel-outbound` 用于原生
 发送、回执、持久化投递和实时预览行为。
 
-## Core Helpers
+## 核心辅助函数
 
 ```ts
 import {
@@ -28,11 +28,14 @@ import {
 } from "openclaw/plugin-sdk/channel-inbound";
 ```
 
-- `buildChannelInboundEventContext(...)`：将规范化的频道事实投影到
-  提示/会话上下文中。
-- `runChannelInboundEvent(...)`：对单个入站平台事件执行 ingest、classify、preflight、resolve、
-  record、dispatch 和 finalize。
-- `dispatchChannelInboundReply(...)`：使用投递适配器记录并派发一个已经组装好的
+- `buildChannelInboundEventContext(...)`：将规范化后的频道事实投射到
+  提示词/会话上下文中。使用 `channelContext` 将频道拥有的
+  发送者/聊天元数据传递给插件钩子 `ctx.channelContext`；从此
+  子路径扩展 `PluginHookChannelSenderContext` 或 `PluginHookChannelChatContext`
+  以支持频道特定字段。
+- `runChannelInboundEvent(...)`：对单个入站平台事件执行摄取、
+  分类、预检、解析、记录、派发和收尾。
+- `dispatchChannelInboundReply(...)`：使用投递适配器记录并派发一个已组装好的
   入站回复。
 
 注入的插件运行时会在 `runtime.channel.inbound.*` 下暴露相同的高层辅助函数，
@@ -53,7 +56,7 @@ await runtime.channel.inbound.run({
 兼容性派发器应组装 `dispatchChannelInboundReply(...)`
 输入，并将平台投递保留在投递适配器中。新的发送路径应优先使用消息适配器和持久化消息辅助函数。
 
-## Migration
+## 迁移
 
 旧的 `runtime.channel.turn.*` 运行时别名已被移除。请改用：
 

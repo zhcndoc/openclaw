@@ -145,10 +145,26 @@ openclaw browser screenshot --labels
 
 说明：
 
-- `--full-page` 仅用于整页捕获；它不能与 `--ref` 或 `--element` 组合使用。
-- `existing-session` / `user` 配置文件支持整页截图和来自快照输出的 `--ref` 截图，但不支持 CSS `--element` 截图。
-- `--labels` 会在截图上叠加当前快照 ref。
-- `snapshot --urls` 会将发现的链接目标附加到 AI 快照中，以便代理可以直接选择导航目标，而不是仅凭链接文本猜测。
+- `--full-page` 仅适用于页面截图；它不能与 `--ref`
+  或 `--element` 组合使用。
+- `existing-session` / `user` 配置文件支持页面截图和来自快照输出的 `--ref`
+  截图，但不支持 CSS `--element` 截图。
+- `--labels` 会在截图上叠加当前快照 refs。对于基于
+  Playwright 的配置文件，它可与 `--full-page`（整页标签
+  叠加）、`--ref`（按 ARIA ref 的元素裁剪标签叠加）以及 `--element`
+  （按 CSS 选择器的元素裁剪标签叠加）一起使用；在元素裁剪模式下，标签
+  会相对于元素进行投影。响应还会包含一个 `annotations`
+  数组，其中包括每个 ref 的边界框。每一项都有 `ref`、
+  `number`、`role`、可选 `name` 和 `box: {x, y, width, height}`；
+  坐标位于所捕获图像的空间中（视口 / 整页 /
+  相对元素）。字段为空时会省略。
+  `existing-session` 配置文件会在页面截图上渲染 chrome-mcp 叠加层，
+  但不会使用 Playwright 投影辅助，也不会包含
+  `annotations`；那里也不支持 CSS `--element` 截图。没有
+  Playwright 或 chrome-mcp 时，不支持带标签的截图。之前的版本会忽略
+  带标签的 Playwright 截图上的 `--full-page`、`--ref` 和 `--element`，
+  并始终返回视口捕获；现在带标签的截图会遵循这些范围。
+- `snapshot --urls` 会将发现的链接目标附加到 AI 快照中，以便代理可以选择直接导航目标，而不是仅凭链接文本猜测。
 
 导航/点击/输入（基于 ref 的 UI 自动化）：
 
@@ -235,25 +251,32 @@ openclaw browser trace stop --out trace.zip
 openclaw browser --browser-profile user tabs
 openclaw browser create-profile --name chrome-live --driver existing-session
 openclaw browser create-profile --name brave-live --driver existing-session --user-data-dir "~/Library/Application Support/BraveSoftware/Brave-Browser"
+openclaw browser create-profile --name chrome-port --driver existing-session --cdp-url http://127.0.0.1:9222
 openclaw browser --browser-profile chrome-live tabs
 ```
 
-此路径仅适用于主机本地。对于 Docker、无头服务器、Browserless 或其他远程部署，请改用 CDP 配置文件。
+默认的 existing-session 路径是仅主机可用的 Chrome MCP 自动连接。如果浏览器已经
+使用 DevTools 端点运行，请传入 `--cdp-url`，这样 Chrome MCP 会改为连接到该端点。
+对于 Docker、Browserless 或其他不需要 Chrome MCP 语义的远程环境，请使用
+CDP 配置文件。
 
 当前 existing-session 限制：
 
-- 基于快照的操作使用 ref，而不是 CSS 选择器
-- 当调用方省略 `timeoutMs` 时，`browser.actionTimeoutMs` 会将受支持的 `act` 请求的默认超时时间设为 60000 ms；单次调用的 `timeoutMs` 仍然优先。
-- `click` 仅支持左键点击
+- 基于快照的操作使用 refs，而不是 CSS 选择器
+- 当调用方省略 `timeoutMs` 时，`browser.actionTimeoutMs` 会将受支持的 `act` 请求默认设置为 60000 ms；逐次调用的 `timeoutMs` 仍然优先。
+- `click` 仅支持左键单击
 - `type` 不支持 `slowly=true`
 - `press` 不支持 `delayMs`
-- `hover`、`scrollintoview`、`drag`、`select`、`fill` 和 `evaluate` 不接受单次调用的超时覆盖
+- `hover`、`scrollintoview`、`drag`、`select`、`fill` 和 `evaluate` 会拒绝
+  逐次调用的超时覆盖
 - `select` 仅支持一个值
-- `wait --load networkidle` 不受支持
-- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS `--element`，且当前一次只支持一个文件
+- `wait --load networkidle` 在 existing-session 配置文件上不受支持（在 managed 和原始/远程 CDP 上可用）
+- 文件上传需要 `--ref` / `--input-ref`，不支持 CSS
+  `--element`，且当前一次只支持一个文件
 - 对话框钩子不支持 `--timeout`
-- 截图支持整页捕获和 `--ref`，但不支持 CSS `--element`
-- `responsebody`、下载拦截、PDF 导出和批量操作仍需要托管浏览器或原始 CDP 配置文件
+- 截图支持页面捕获和 `--ref`，但不支持 CSS `--element`
+- `responsebody`、下载拦截、PDF 导出和批量操作仍然
+  需要 managed 浏览器或原始 CDP 配置文件
 
 ## 远程浏览器控制（node host 代理）
 

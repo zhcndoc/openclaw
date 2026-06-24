@@ -1,4 +1,4 @@
-我会严格保留 Markdown 结构，只翻译可见文本内容，并保持代码/标签/属性不变。先直接完成整段翻译，再快速检查格式一致性。---
+---
 title: "斜杠命令"
 sidebarTitle: "斜杠命令"
 summary: "所有可用的斜杠命令、指令和行内快捷方式——配置、路由以及按界面的行为。"
@@ -149,19 +149,22 @@ plugins.
   <Accordion title="Sessions and runs">
     | 命令 | 描述 |
     | --- | --- |
-    | `/new [model]` | 归档当前会话并启动一个新的会话 |
-    | `/reset [soft [message]]` | 原地重置当前会话。`soft` 会保留对话记录，移除复用的 CLI 后端会话 id，并重新运行启动流程 |
-    | `/compact [instructions]` | 压缩会话上下文。参见 [Compaction](/concepts/compaction) |
+    | `/new [model]` | 将当前会话归档并开始一个新会话 |
+    | `/reset [soft [message]]` | 原地重置当前会话。`soft` 会保留转录内容，丢弃复用的 CLI 后端会话 id，并重新运行启动流程 |
+    | `/name <title>` | 为当前会话命名或重命名。省略标题可查看当前名称和建议 |
+    | `/compact [instructions]` | 压缩会话上下文。参见 [压缩](/concepts/compaction) |
     | `/stop` | 中止当前运行 |
     | `/session idle <duration\|off>` | 管理线程绑定的空闲过期时间 |
-    | `/session max-age <duration\|off>` | 管理线程绑定的最大生存期过期时间 |
+    | `/session max-age <duration\|off>` | 管理线程绑定的最大存活过期时间 |
     | `/export-session [path]` | 将当前会话导出为 HTML。别名：`/export` |
-    | `/export-trajectory [path]` | 将当前会话导出为 JSONL 轨迹包。别名：`/trajectory` |
+    | `/export-trajectory [path]` | 为当前会话导出 JSONL 轨迹包。别名：`/trajectory` |
 
     <Note>
-      控制 UI 会拦截输入的 `/new`，以创建并切换到一个新的
-      仪表盘会话，除非配置了 `session.dmScope: "main"` 且当前父级是代理的主会话——在这种情况下，`/new`
-      会原地重置主会话。输入的 `/reset` 仍然会执行 Gateway 的原地重置。
+      控制界面会拦截输入的 `/new`，以创建并切换到新的
+      仪表盘会话，除非配置了 `session.dmScope: "main"`，
+      且当前父级是代理的主会话——在这种情况下，`/new`
+      会原地重置主会话。输入的 `/reset` 仍会运行 Gateway 的
+      原地重置。当你想清除固定的会话模型选择时，请使用 `/model default`。
     </Note>
 
   </Accordion>
@@ -172,22 +175,22 @@ plugins.
     | `/think <level\|default>` | 设置思考级别或清除会话覆盖。别名：`/thinking`、`/t` |
     | `/verbose on\|off\|full` | 切换详细输出。别名：`/v` |
     | `/trace on\|off` | 切换当前会话的插件跟踪输出 |
-    | `/fast [status\|on\|off\|default]` | 显示、设置或清除快速模式 |
+    | `/fast [status\|auto\|on\|off\|default]` | 显示、设置或清除快速模式 |
     | `/reasoning [on\|off\|stream]` | 切换推理可见性。别名：`/reason` |
     | `/elevated [on\|off\|ask\|full]` | 切换提升模式。别名：`/elev` |
     | `/exec host=<auto\|sandbox\|gateway\|node> security=<deny\|allowlist\|full> ask=<off\|on-miss\|always> node=<id>` | 显示或设置 exec 默认值 |
     | `/model [name\|#\|status]` | 显示或设置模型 |
-    | `/models [provider] [page] [limit=<n>\|all]` | 列出已配置/已授权可用的提供方或模型 |
-    | `/queue <mode>` | 管理活跃运行的队列行为。参见 [Queue](/concepts/queue) 和 [Queue steering](/concepts/queue-steering) |
-    | `/steer <message>` | 将指导注入当前运行。别名：`/tell`。参见 [Steer](/tools/steer) |
+    | `/models [provider] [page] [limit=<n>\|all]` | 列出已配置/可认证使用的提供方或模型 |
+    | `/queue <mode>` | 管理活动运行队列行为。参见 [队列](/concepts/queue) 和 [队列引导](/concepts/queue-steering) |
+    | `/steer <message>` | 向活动运行注入指导。别名：`/tell`。参见 [引导](/tools/steer) |
 
     <AccordionGroup>
       <Accordion title="verbose / trace / fast / reasoning safety">
         - `/verbose` 用于调试——正常使用时请保持**关闭**。
-        - `/trace` 只会显示插件拥有的 trace/debug 行；正常的详细聊天内容仍保持关闭。
-        - `/fast on|off` 会持久化一个会话覆盖；使用 Sessions UI 的 `inherit` 选项可清除它。
-        - `/fast` 具有提供方特定映射：OpenAI/Codex 将其映射为 `service_tier=priority`；直接 Anthropic 请求将其映射为 `service_tier=auto` 或 `standard_only`。
-        - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中有风险——它们可能泄露内部推理或插件诊断信息。在群聊中请保持关闭。
+        - `/trace` 只会显示插件拥有的跟踪/调试行；普通的 verbose 输出仍保持关闭。
+        - `/fast auto|on|off` 会持久化会话覆盖；使用 Sessions UI 的 `inherit` 选项可清除它。
+        - `/fast` 具有提供方特定行为：OpenAI/Codex 将其映射为 `service_tier=priority`；直接 Anthropic 请求映射为 `service_tier=auto` 或 `standard_only`。
+        - `/reasoning`、`/verbose` 和 `/trace` 在群组场景中存在风险——它们可能泄露内部推理或插件诊断信息。请在群聊中保持关闭。
 
       </Accordion>
       <Accordion title="Model switching details">
@@ -205,15 +208,16 @@ plugins.
     | --- | --- |
     | `/help` | 显示简短帮助摘要 |
     | `/commands` | 显示生成的命令目录 |
-    | `/tools [compact\|verbose]` | 显示当前代理此刻可使用的内容 |
-    | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间，以及提供方用量/配额 |
-    | `/goal [status\|start\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [goal](/tools/goal) |
+    | `/tools [compact\|verbose]` | 显示当前代理此刻可以使用什么 |
+    | `/status` | 显示执行/运行时状态、Gateway 和系统运行时间、插件健康状况，以及提供方使用量/配额 |
+    | `/status plugins` | 显示详细的插件健康信息：加载错误、隔离、频道故障、依赖问题、兼容性通知 |
+    | `/goal [status\|start\|pause\|resume\|complete\|block\|clear] ...` | 管理当前会话的持久化 [目标](/tools/goal) |
     | `/diagnostics [note]` | 仅限 owner 的支持报告流程。每次都会请求 exec 批准 |
-    | `/crestodian <request>` | 以 owner DM 身份运行 Crestodian 设置和修复助手 |
-    | `/tasks` | 列出当前会话活跃/最近的后台任务 |
-    | `/context [list\|detail\|map\|json]` | 解释上下文是如何组装的 |
+    | `/crestodian <request>` | 从 owner DM 中运行 Crestodian 设置和修复助手 |
+    | `/tasks` | 列出当前会话的活动/最近后台任务 |
+    | `/context [list\|detail\|map\|json]` | 解释上下文如何组装 |
     | `/whoami` | 显示你的发送者 id。别名：`/id` |
-    | `/usage off\|tokens\|full\|cost` | 控制每次响应的用量页脚或打印本地成本摘要 |
+    | `/usage off\|tokens\|full\|cost` | 控制每次响应的使用量页脚或打印本地成本摘要 |
   </Accordion>
 
   <Accordion title="Skills, allowlists, approvals">
@@ -274,7 +278,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 
 ### 内置插件命令
 
-| Command                                                                                      | Description                                                                       |
+| 命令                                                                                      | 描述                                                                       |
 | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `/dreaming [on\|off\|status\|help]`                                                          | 切换记忆做梦。参见 [Dreaming](/concepts/dreaming)                        |
 | `/pair [qr\|status\|pending\|approve\|cleanup\|notify]`                                      | 管理设备配对。参见 [Pairing](/channels/pairing)                           |
@@ -328,6 +332,7 @@ Dock 命令需要 `session.identityLinks`。源发送者和目标对端
 /model 3           # 从选择器中按编号选择
 /model openai/gpt-5.4
 /model opus@anthropic:default
+/model default     # 清除会话模型选择
 /model status      # 带端点和 API 模式的详细视图
 ```
 

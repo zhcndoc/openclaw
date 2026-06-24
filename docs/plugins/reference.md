@@ -15,5 +15,5 @@ title: "插件参考"
 pnpm plugins:inventory:gen
 ```
 
-使用 [插件清单](/plugins/plugin-inventory) 浏览全部 126
+使用 [插件清单](/plugins/plugin-inventory) 浏览全部 129
 个按发行版、包和描述生成的插件参考页面。

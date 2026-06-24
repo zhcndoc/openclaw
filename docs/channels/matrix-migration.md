@@ -17,6 +17,11 @@ title: "Matrix 迁移"
 - 运行时状态仍然位于 `~/.openclaw/matrix/`
 
 你不需要重命名配置键，也不需要以新名称重新安装插件。
+根 `openclaw` 包现在不再捆绑 Matrix 运行时代码或 Matrix SDK
+依赖项。如果 `openclaw channels status` 显示 Matrix 已配置但更新后
+插件缺失，请运行 `openclaw doctor --fix` 或
+`openclaw plugins install @openclaw/matrix`；不要把 Matrix SDK 包
+安装到根 OpenClaw 包中。
 
 ## 迁移会自动执行的内容
 

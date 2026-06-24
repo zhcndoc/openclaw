@@ -44,7 +44,7 @@ openclaw sessions --json
 - `--store <path>`: 显式存储路径（不能与 `--agent` 或 `--all-agents` 组合使用）
 - `--limit <n|all>`: 要输出的最大行数（默认 `100`；`all` 恢复完整输出）
 
-Tail human-readable trajectory progress for stored sessions:
+跟踪已存储会话的人类可读轨迹进度：
 
 ```bash
 openclaw sessions tail
@@ -112,16 +112,16 @@ openclaw sessions cleanup --json
 - 范围说明：`openclaw sessions cleanup` 会维护会话存储、转录和轨迹侧车文件。它不会清理 cron 运行历史；这部分由 [Cron 配置](/automation/cron-jobs#configuration) 中的 `cron.runLog.keepLines` 管理，并在 [Cron 维护](/automation/cron-jobs#maintenance) 中说明。
 - 清理还会删除未被引用的主转录、压缩检查点，以及早于 `session.maintenance.pruneAfter` 的轨迹侧车文件；仍被 `sessions.json` 引用的文件会被保留。
 
-- `--dry-run`：在不写入的情况下预览会被清理/截断的条目数量。
-  - 在文本模式下，dry-run 会打印按会话划分的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），以便你查看哪些会被保留，哪些会被移除。
+- `--dry-run`：预览在不写入的情况下会修剪/上限截断多少条目。
+  - 在文本模式下，dry-run 会打印按会话的操作表（`Action`、`Key`、`Age`、`Model`、`Flags`），以及按会话标签分组的摘要，这样你可以看到哪些会被保留、哪些会被移除。
 - `--enforce`：即使 `session.maintenance.mode` 为 `warn`，也强制执行维护。
-- `--fix-missing`：移除转录文件缺失，或仅有表头/为空的条目，即使它们按年龄/数量本来还不会被清理。
-- `--fix-dm-scope`：当 `session.dmScope` 为 `main` 时，清理早先 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由留下的陈旧、按对端键控的直连 DM 行。请先使用 `--dry-run`；实际清理会从 `sessions.json` 中移除这些行，并将其转录保留为已删除归档。
-- `--active-key <key>`：保护某个活动键，避免在磁盘预算回收时被清除。持久化的外部对话指针，例如群组会话和线程作用域聊天会话，也会在年龄/数量/磁盘预算维护中保留。
-- `--agent <id>`：对一个已配置的代理存储执行清理。
-- `--all-agents`：对所有已配置的代理存储执行清理。
+- `--fix-missing`：移除转录文件缺失或仅有头部/为空的条目，即使它们按通常规则还不会因年龄/数量超限。
+- `--fix-dm-scope`：当 `session.dmScope` 为 `main` 时，清理早先 `per-peer`、`per-channel-peer` 或 `per-account-channel-peer` 路由遗留的、按对端键控的过期直聊（direct-DM）行。请先使用 `--dry-run`；应用清理会将这些行从 `sessions.json` 中移除，并将其转录保留为已删除归档。
+- `--active-key <key>`：保护某个特定活动 key，避免其被磁盘预算回收。持久化的外部对话指针，例如群组会话和线程作用域聊天会话，也会按年龄/数量/磁盘预算维护保留。
+- `--agent <id>`：对一个已配置的代理存储运行清理。
+- `--all-agents`：对所有已配置的代理存储运行清理。
 - `--store <path>`：针对特定的 `sessions.json` 文件运行。
-- `--json`：打印 JSON 摘要。使用 `--all-agents` 时，输出会为每个存储包含一份摘要。
+- `--json`：打印 JSON 摘要。使用 `--all-agents` 时，输出会包含每个存储的一个摘要。
 
 当 Gateway 可用时，对已配置代理存储执行的非 dry-run 清理会通过 Gateway 发送，因此它与运行时流量共享同一个会话存储写入器。若要对某个存储文件进行显式离线修复，请使用 `--store <path>`。
 
@@ -157,11 +157,62 @@ openclaw sessions cleanup --json
 }
 ```
 
-相关：
+## 压缩会话
 
-- 会话配置：[配置参考](/gateway/config-agents#session)
+为卡住或过大的会话回收上下文预算。`openclaw sessions compact <key>` 是对 `sessions.compact` Gateway RPC 的一层首要封装，并且需要正在运行的 Gateway。
+
+```bash
+openclaw sessions compact "agent:main:main"
+openclaw sessions compact "agent:main:main" --max-lines 200
+openclaw sessions compact "agent:work:main" --agent work --json
+```
+
+- 不带 `--max-lines` 时，gateway 会对转录进行 LLM 总结。这可能比较慢，因此默认 `--timeout` 为 `180000` 毫秒。
+- 使用 `--max-lines <n>` 时，它会截断为最后 `n` 行转录，并将之前的转录归档为 `.bak` sidecar。
+- `--agent <id>`：拥有该会话的代理；对于 `global` keys 是必需的。
+- `--url` / `--token` / `--password`：gateway 连接覆盖项。
+- `--timeout <ms>`：以毫秒为单位的 RPC 超时。
+- `--json`：打印原始 RPC 载荷。
+
+当 gateway 报告压缩失败或无法连接时，该命令会以非零状态退出，因此 cron 和脚本永远不会把静默的 no-op 误认为成功。
+
+> 注意：`openclaw agent --message '/compact ...'` **不是**压缩路径。来自 CLI 的斜杠命令会被授权发送者检查拒绝；该调用会以非零状态退出，并给出指向此处的提示，而不是静默地 no-op。
+
+### sessions.compact RPC
+
+`openclaw gateway call sessions.compact --params '<json>'` 接受：
+
+| 字段       | 类型          | 必需 | 说明                                                     |
+| ---------- | ------------- | ---- | -------------------------------------------------------- |
+| `key`      | string        | yes  | 要压缩的会话 key（例如 `agent:main:main`）。             |
+| `agentId`  | string        | no   | 拥有该会话的代理 id（用于 `global` keys）。             |
+| `maxLines` | integer ≥ 1   | no   | 截断为最后 N 行，而不是进行 LLM 总结。                  |
+
+LLM 总结响应示例：
+
+```json
+{
+  "ok": true,
+  "key": "agent:main:main",
+  "compacted": true,
+  "result": { "tokensBefore": 243868, "tokensAfter": 34941 }
+}
+```
+
+截断响应示例（`--max-lines 200`）：
+
+```json
+{
+  "ok": true,
+  "key": "agent:main:main",
+  "compacted": true,
+  "archived": "/home/user/.openclaw/agents/main/sessions/transcripts/<id>.jsonl.bak",
+  "kept": 200
+}
+```
 
 ## 相关
 
-- [CLI 参考](/cli)
-- [会话管理](/concepts/session)
+- Session config: [Configuration reference](/gateway/config-agents#session)
+- [CLI reference](/cli)
+- [Session management](/concepts/session)

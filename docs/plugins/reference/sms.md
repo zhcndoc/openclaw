@@ -11,8 +11,8 @@ title: "Sms 插件"
 
 ## 分发
 
-- 包：`@openclaw/sms`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/sms`
+- Install route: npm; ClawHub: `clawhub:@openclaw/sms`
 
 ## 接口
 

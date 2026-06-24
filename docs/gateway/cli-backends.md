@@ -31,10 +31,12 @@ title: "CLI 后端"
 你可以在**无需任何配置**的情况下使用 Claude Code CLI（捆绑的 Anthropic 插件会注册一个默认后端）：
 
 ```bash
-openclaw agent --message "hi" --model claude-cli/claude-sonnet-4-6
+openclaw agent --agent main --message "hi" --model claude-cli/claude-sonnet-4-6
 ```
 
-如果你的网关运行在 launchd/systemd 下且 PATH 很简洁，只需添加命令路径：
+`main` 是在未配置显式 agent 列表时的默认 agent id。如果你使用多个 agent，请将其替换为你想要运行的 agent id。
+
+如果你的网关运行在 launchd/systemd 下且 PATH 很简短，请只添加命令路径：
 
 ```json5
 {
@@ -230,9 +232,12 @@ OpenClaw 会把 base64 图片写入临时文件。如果设置了 `imageArg`，�
 
 ## 输入 / 输出
 
-- `output: "json"` (默认) 会尝试解析 JSON 并提取文本 + 会话 id。
-- 对于 Gemini CLI 的 JSON 输出，当 `usage` 缺失或为空时，OpenClaw 会从 `response` 中读取回复文本，并从 `stats` 中读取用量信息。
-- `output: "jsonl"` 会解析 JSONL 流，并在存在时提取最终的 agent 消息和会话标识符。
+- `output: "json"`（默认）会尝试解析 JSON 并提取文本 + 会话 id。
+- 对于 Gemini CLI 的 JSON 输出，如果 `usage` 缺失或为空，OpenClaw 会从 `response` 中读取回复文本，并从 `stats` 中读取用量。
+  捆绑的 Gemini CLI 默认使用 `stream-json`，但旧的 `--output-format json` 覆盖仍然会使用
+  JSON 解析器。
+- `output: "jsonl"` 会解析 JSONL 流，并在存在时提取最终 agent 消息以及会话
+  标识符。
 - `output: "text"` 会将 stdout 视为最终响应。
 
 输入模式：
@@ -260,8 +265,11 @@ agent 运行通过 `openai/*` 使用 Codex app-server harness；OpenClaw
 捆绑的 Google 插件还会为 `google-gemini-cli` 注册一个默认值：
 
 - `command: "gemini"`
-- `args: ["--output-format", "json", "--prompt", "{prompt}"]`
-- `resumeArgs: ["--resume", "{sessionId}", "--output-format", "json", "--prompt", "{prompt}"]`
+- `args: ["--skip-trust", "--approval-mode", "auto_edit", "--output-format", "stream-json", "--prompt", "{prompt}"]`
+- `resumeArgs: ["--skip-trust", "--approval-mode", "auto_edit", "--resume", "{sessionId}", "--output-format", "stream-json", "--prompt", "{prompt}"]`
+- `output: "jsonl"`
+- `resumeOutput: "jsonl"`
+- `jsonlDialect: "gemini-stream-json"`
 - `imageArg: "@"`
 - `imagePathScope: "workspace"`
 - `modelArg: "--model"`
@@ -272,12 +280,16 @@ agent 运行通过 `openai/*` 使用 Codex app-server harness；OpenClaw
 `gemini` 访问（`brew install gemini-cli` 或
 `npm install -g @google/gemini-cli`）。
 
-Gemini CLI JSON 说明：
+Gemini CLI 输出说明：
 
-- 回复文本从 JSON 的 `response` 字段中读取。
-- 当 `usage` 缺失或为空时，使用 `stats` 作为回退。
-- `stats.cached` 会被规范化为 OpenClaw 的 `cacheRead`。
-- 如果 `stats.input` 缺失，OpenClaw 会通过
+- 默认的 `stream-json` 解析器会读取 assistant 的 `message` 事件、工具事件、
+  最终 `result` 用量，以及致命的 Gemini 错误事件。
+- 如果你将 Gemini 参数覆盖为 `--output-format json`，OpenClaw 会将该
+  后端规范化回 `output: "json"`，并从 JSON 的 `response`
+  字段读取回复文本。
+- 当 `usage` 缺失或为空时，用量会回退到 `stats`。
+- `stats.cached` 会规范化为 OpenClaw 的 `cacheRead`。
+- 如果 `stats.input` 缺失，OpenClaw 会从
   `stats.input_tokens - stats.cached` 推导输入 token。
 
 仅在需要时覆盖（常见情况：绝对 `command` 路径）。
@@ -311,8 +323,8 @@ api.registerTextTransforms({
 `input` 会重写传递给 CLI 的系统提示和用户提示。`output`
 会在 OpenClaw 处理自身的控制标记和通道传递之前，重写流式助手增量和解析后的最终文本。
 
-对于输出 Claude Code stream-json 兼容 JSONL 的 CLI，在该后端配置上设置
-`jsonlDialect: "claude-stream-json"`。
+对于发出 provider 特定 JSONL 事件的 CLI，请在该后端配置上设置 `jsonlDialect`。支持的方言包括适用于 Claude Code 兼容流的 `claude-stream-json`，以及适用于 Gemini CLI `stream-json`
+事件的 `gemini-stream-json`。
 
 ## 原生压缩所有权
 

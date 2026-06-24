@@ -1,5 +1,5 @@
 ---
-summary: "Parallel Search -- 从网页来源提取并针对 LLM 优化的密集摘要"
+summary: "Parallel 搜索——从网页来源提取并针对 LLM 优化的密集摘要"
 read_when:
   - 你想在无需 API 密钥的情况下进行网页搜索
   - 你想使用 Parallel 的付费 Search API
@@ -7,14 +7,14 @@ read_when:
 title: "Parallel 搜索"
 ---
 
-OpenClaw 捆绑了两个 [Parallel](https://parallel.ai/) `web_search` 提供方：
+Parallel 插件提供两个 [Parallel](https://parallel.ai/) `web_search` 提供方：
 
-- **Parallel Search（免费）**（`parallel-free`）-- Parallel 的免费
+- **Parallel Search (Free)** (`parallel-free`) -- Parallel 的免费
   [Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)。无需
-  账户或 API 密钥。当未配置其他网页搜索提供方时，OpenClaw 会自动选择它，因此
-  `web_search` 无需设置即可工作。
-- **Parallel Search**（`parallel`）-- Parallel 的付费 Search API。需要
-  `PARALLEL_API_KEY`，并提供更高的速率限制和目标调优。
+  账户或 API 密钥。当你想使用 Parallel 托管的
+  无密钥搜索路径时，请显式选择它。
+- **Parallel Search** (`parallel`) -- Parallel 的付费 Search API。需要
+  `PARALLEL_API_KEY`，并提供更高的速率限制和更精细的调优。
 
 两者都会从为 AI 代理构建的网页索引中返回排序后的、针对 LLM 优化的摘要。
 将 `tools.web.search.provider` 设置为 `parallel-free` 或 `parallel` 即可显式选择其一。
@@ -25,10 +25,19 @@ OpenClaw 捆绑了两个 [Parallel](https://parallel.ai/) `web_search` 提供方
   可让它们通过 Parallel 路由。
 </Note>
 
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/parallel-plugin
+openclaw gateway restart
+```
+
 ## API 密钥（付费提供方）
 
-`parallel-free` 无需任何设置。付费的 `parallel` 提供方需要 API
-密钥：
+`parallel-free` 不需要 API 密钥，但仍然必须被选为
+托管提供方。付费的 `parallel` 提供方需要 API 密钥：
 
 <Steps>
   <Step title="创建账户">
@@ -64,6 +73,8 @@ OpenClaw 捆绑了两个 [Parallel](https://parallel.ai/) `web_search` 提供方
   tools: {
     web: {
       search: {
+        // 对免费的 Search MCP 使用 "parallel-free"，或使用这里展示的
+        // 基于付费 API 的提供方 "parallel"。
         provider: "parallel",
       },
     },

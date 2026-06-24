@@ -11,8 +11,8 @@ title: "Gradium 插件"
 
 ## 分发
 
-- Package: `@openclaw/gradium-speech`
-- Install route: included in OpenClaw
+- 包：`@openclaw/gradium-speech`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/gradium-speech`
 
 ## 接口
 

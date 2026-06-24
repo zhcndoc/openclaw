@@ -189,6 +189,7 @@ openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe 
 openclaw infer image generate --prompt "friendly lobster illustration" --json
 openclaw infer image generate --prompt "cinematic product photo of headphones" --json
 openclaw infer image generate --model openai/gpt-image-1.5 --output-format png --background transparent --prompt "simple red circle sticker on a transparent background" --json
+openclaw infer image generate --model openai/gpt-image-2 --quality low --openai-moderation low --prompt "low-cost draft poster" --json
 openclaw infer image generate --prompt "slow image backend" --timeout-ms 180000 --json
 openclaw infer image edit --file ./logo.png --model openai/gpt-image-1.5 --output-format png --background transparent --prompt "keep the logo, remove the background" --json
 openclaw infer image edit --file ./poster.png --prompt "make this a vertical story ad" --size 2160x3840 --aspect-ratio 9:16 --resolution 4K --json
@@ -202,12 +203,12 @@ openclaw infer image describe --file ./photo.jpg --model ollama/qwen2.5vl:7b --p
 
 备注：
 
-- 从现有输入文件开始时，使用 `image edit`。
-- 对支持参考图像编辑几何提示的提供商/模型，在 `image edit` 中使用 `--size`、`--aspect-ratio` 或 `--resolution`。
-- 对于 `--model openai/gpt-image-1.5`，使用 `--output-format png --background transparent` 来输出透明背景的 OpenAI PNG；
-  `--openai-background` 仍然可用，作为 OpenAI 特定别名。未声明背景支持的提供商会将该提示报告为被忽略的覆盖项。
-- 使用 `image providers --json` 来验证哪些捆绑的图像提供商可发现、已配置、已选中，以及每个提供商暴露了哪些生成/编辑能力。
-- 使用 `image generate --model <provider/model> --json` 作为图像生成变更的最窄在线 CLI 冒烟测试。示例：
+- 使用 `image edit` 来从现有输入文件开始。
+- 对于支持基于参考图像编辑几何提示的提供商/模型，在 `image edit` 中使用 `--size`、`--aspect-ratio` 或 `--resolution`。
+- 对于 OpenAI 的透明背景 PNG 输出，配合 `--model openai/gpt-image-1.5` 使用 `--output-format png --background transparent`；`--openai-background` 仍可作为 OpenAI 特定别名使用。不声明背景支持的提供商会将该提示报告为被忽略的覆盖项。
+- 对于支持图像质量提示的提供商，包括 OpenAI，使用 `--quality low|medium|high|auto`。OpenAI 还接受 `--openai-moderation low|auto` 作为提供商特定的审核提示。
+- 使用 `image providers --json` 来验证哪些捆绑的图像提供商可被发现、已配置、已选择，以及每个提供商暴露了哪些生成/编辑能力。
+- 将 `image generate --model <provider/model> --json` 用作图像生成变更的最窄在线 CLI 冒烟测试。示例：
 
   ```bash
   openclaw infer image providers --json

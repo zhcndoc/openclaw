@@ -11,8 +11,8 @@ title: "Cloudflare AI Gateway 插件"
 
 ## 分发
 
-- 包名：`@openclaw/cloudflare-ai-gateway-provider`
-- 安装路径：已包含在 OpenClaw 中
+- Package: `@openclaw/cloudflare-ai-gateway-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/cloudflare-ai-gateway-provider`
 
 ## 接口
 

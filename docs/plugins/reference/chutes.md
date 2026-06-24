@@ -11,8 +11,8 @@ title: "Chutes 插件"
 
 ## 分发
 
-- 包：`@openclaw/chutes-provider`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/chutes-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/chutes-provider`
 
 ## 接口
 

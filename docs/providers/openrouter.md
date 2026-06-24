@@ -14,24 +14,52 @@ OpenRouter 提供了一个 **统一 API**，可通过单一
 
 ## 开始使用
 
-<Steps>
-  <Step title="获取你的 API 密钥">
-    在 [openrouter.ai/keys](https://openrouter.ai/keys) 创建一个 API 密钥。
-  </Step>
-  <Step title="运行引导">
-    ```bash
-    openclaw onboard --auth-choice openrouter-api-key
-    ```
-  </Step>
-  <Step title="（可选）切换到特定模型">
-    引导过程默认使用 `openrouter/auto`。之后可选择一个具体模型：
+<Tabs>
+  <Tab title="OAuth">
+    <Steps>
+      <Step title="运行 OAuth 引导">
+        ```bash
+        openclaw onboard --auth-choice openrouter-oauth
+        ```
 
-    ```bash
-    openclaw models set openrouter/<provider>/<model>
-    ```
+        OpenClaw 会打开 OpenRouter 的浏览器登录流程，将 PKCE
+        代码兑换为 OpenRouter API 密钥，并将该密钥存储在默认的
+        OpenRouter 认证配置文件中。在远程/无头主机上，OpenClaw 会打印
+        登录 URL，并要求你在登录后粘贴重定向 URL。
+      </Step>
+      <Step title="（可选）切换到特定模型">
+        引导默认使用 `openrouter/auto`。之后可选择具体模型：
 
-  </Step>
-</Steps>
+        ```bash
+        openclaw models set openrouter/<provider>/<model>
+        ```
+
+      </Step>
+    </Steps>
+
+  </Tab>
+  <Tab title="API key">
+    <Steps>
+      <Step title="获取你的 API 密钥">
+        在 [openrouter.ai/keys](https://openrouter.ai/keys) 创建一个 API 密钥。
+      </Step>
+      <Step title="运行 API 密钥引导">
+        ```bash
+        openclaw onboard --auth-choice openrouter-api-key
+        ```
+      </Step>
+      <Step title="（可选）切换到特定模型">
+        引导默认使用 `openrouter/auto`。之后可选择具体模型：
+
+        ```bash
+        openclaw models set openrouter/<provider>/<model>
+        ```
+
+      </Step>
+    </Steps>
+
+  </Tab>
+</Tabs>
 
 ## 配置示例
 
@@ -56,9 +84,10 @@ OpenRouter 提供了一个 **统一 API**，可通过单一
 
 | Model ref                         | 说明                         |
 | --------------------------------- | ---------------------------- |
-| `openrouter/auto`                 | OpenRouter 自动路由          |
-| `openrouter/moonshotai/kimi-k2.6` | 通过 MoonshotAI 的 Kimi K2.6 |
-| `openrouter/moonshotai/kimi-k2.5` | 通过 MoonshotAI 的 Kimi K2.5 |
+| `openrouter/auto`                 | OpenRouter 自动路由 |
+| `openrouter/openrouter/fusion`    | OpenRouter Fusion 路由器     |
+| `openrouter/moonshotai/kimi-k2.6` | 通过 MoonshotAI 使用 Kimi K2.6     |
+| `openrouter/moonshotai/kimi-k2.5` | 通过 MoonshotAI 使用 Kimi K2.5     |
 
 ## 图像生成
 
@@ -176,9 +205,89 @@ OpenRouter 可以通过其 STT 端点（`/audio/transcriptions`），使用共�
 OpenClaw 会将 OpenRouter STT 请求作为 JSON 发送，并在
 `input_audio` 下附带 base64 音频（OpenRouter STT 合约），而不是作为 multipart OpenAI 表单上传。
 
+## Fusion 路由器
+
+当你想让一个 OpenClaw 模型引用并行询问多个
+OpenRouter 模型、由 OpenRouter 评判它们的答案，并通过常规 OpenRouter 提供商端点返回
+单个最终响应时，请使用 OpenRouter Fusion。由于
+上游模型 slug 是 `openrouter/fusion`，OpenClaw 模型引用同时包含
+OpenClaw 提供商前缀和上游 OpenRouter 命名空间：
+
+```bash
+openclaw models set openrouter/openrouter/fusion
+```
+
+通过模型的 `params.extraBody` 配置 Fusion 的 panel 和 judge。这些
+字段会被转发到 OpenRouter chat-completions 请求体中。Fusion
+既可与 OpenRouter OAuth 引导配合使用，也可与 API 密钥引导配合使用；如果你使用
+OAuth，请从下面的示例中省略 `env.OPENROUTER_API_KEY` 这一行。
+
+```json5
+{
+  env: { OPENROUTER_API_KEY: "sk-or-..." },
+  agents: {
+    defaults: {
+      model: { primary: "openrouter/openrouter/fusion" },
+      models: {
+        "openrouter/openrouter/fusion": {
+          params: {
+            extraBody: {
+              plugins: [
+                {
+                  id: "fusion",
+                  analysis_models: [
+                    "google/gemini-3.5-flash",
+                    "moonshotai/kimi-k2.6",
+                    "deepseek/deepseek-v4-pro",
+                  ],
+                  model: "google/gemini-3.5-flash",
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+`analysis_models` 列表是并行面板，Fusion
+插件配置中的 `model` 是 judge 模型。不要在普通的 OpenClaw 代理/聊天回合中将顶层 `tool_choice` 设置为
+`"required"` 以尝试强制使用 Fusion；OpenClaw 回合可能包含 OpenClaw 工具定义，而顶层 required 工具选择可能会要求其中一个工具而不是 Fusion 路由器。当前面存在该 Fusion 插件配置时，OpenClaw 还会添加一条经过清理的
+system 提示注释，其中包含已配置的分析模型和 judge 模型，以便
+代理可以回答有关其当前 Fusion 面板的问题。其他 `extraBody`
+字段不会被复制到提示中。
+
+Fusion 的设计本来就更慢。OpenRouter 可能会将相同的 OpenClaw 提示发送给
+多个分析模型，然后执行最终的 judge/合成步骤，因此延迟通常
+高于直接的单模型请求。Fusion 适合用于慎重的、高质量的回答或升级路径，而不是作为
+延迟敏感型聊天的默认选择。若想更快响应，请保持面板较小，并选择
+更快的分析模型和 judge 模型。
+
+使用一次性本地模型调用测试已配置的引用：
+
+```bash
+openclaw infer model run --local \
+  --model openrouter/openrouter/fusion \
+  --prompt "Reply with exactly: FUSION_OK" \
+  --json
+```
+
 ## 身份验证和请求头
 
-OpenRouter 在底层使用带有你的 API 密钥的 Bearer token。
+OpenRouter 底层使用你的 API 密钥作为 Bearer token。OpenRouter
+OAuth 是一个 PKCE 登录流程，会颁发 OpenRouter API 密钥，因此 OpenClaw 会将
+结果存储为与手动 API 密钥设置路径相同的 `openrouter:default` API 密钥认证配置文件。
+
+对于已存在的安装，可在不重新运行完整引导的情况下登录或轮换已存储的 OpenRouter 密钥：
+
+```bash
+openclaw models auth login --provider openrouter --method oauth
+```
+
+当你想粘贴自己在 OpenRouter 手动创建的密钥时，请使用
+`openclaw models auth login --provider openrouter --method api-key`。
 
 在真实的 OpenRouter 请求（`https://openrouter.ai/api/v1`）中，OpenClaw 还会添加
 OpenRouter 文档中定义的应用归属请求头：

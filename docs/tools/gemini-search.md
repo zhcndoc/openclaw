@@ -4,7 +4,7 @@ read_when:
   - 你想使用 Gemini 进行 web_search
   - 你需要一个 GEMINI_API_KEY 或 models.providers.google.apiKey
   - 你想使用 Google Search grounding
-title: "Gemini search"
+title: "Gemini 搜索"
 ---
 
 OpenClaw 支持内置
@@ -84,10 +84,11 @@ Gemini search 支持 `query`、`freshness`、`date_after` 和 `date_before`。
 `count` 被接受用于共享 `web_search` 兼容性，但 Gemini grounding
 仍然只返回一个带引用的综合答案，而不是包含 N 个结果的列表。
 
-`freshness` 支持 `day`、`week`、`month`、`year`，以及共享快捷方式
-`pd`、`pw`、`pm` 和 `py`。OpenClaw 会将这些值，或显式的
-`date_after`/`date_before` 范围，转换为 Gemini Google Search grounding 的
-`timeRangeFilter`。`country`、`language` 和 `domain_filter` 不受支持。
+`freshness` 接受 `day`、`week`、`month`、`year`，以及共享快捷方式
+`pd`、`pw`、`pm` 和 `py`。`day`/`pd` 会向 Gemini
+查询添加新近性指令，而不是硬性的 24 小时范围。`week`、`month`、`year`，以及显式的
+`date_after`/`date_before` 范围会设置 Gemini Google Search grounding 的
+`timeRangeFilter`。不支持 `country`、`language` 和 `domain_filter`。
 
 ## 模型选择
 

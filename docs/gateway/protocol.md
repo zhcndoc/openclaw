@@ -303,17 +303,17 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
   </Accordion>
 
   <Accordion title="Models and usage">
-    - `models.list` returns the runtime-allowed model catalog. Pass `{ "view": "configured" }` for picker-sized configured models (`agents.defaults.models` first, then `models.providers.*.models`), or `{ "view": "all" }` for the full catalog.
-    - `usage.status` returns provider usage windows/remaining quota summaries.
-    - `usage.cost` returns aggregated cost usage summaries for a date range.
-      Pass `agentId` for one agent, or `agentScope: "all"` to aggregate configured agents.
-    - `doctor.memory.status` returns vector-memory / cached embedding readiness for the active default agent workspace. Pass `{ "probe": true }` or `{ "deep": true }` only when the caller explicitly wants a live embedding provider ping. Dreaming-aware clients may also pass `{ "agentId": "agent-id" }` to scope Dreaming store stats to a selected agent workspace; omitting `agentId` keeps the default-agent fallback and aggregates configured Dreaming workspaces.
-    - `doctor.memory.dreamDiary`, `doctor.memory.backfillDreamDiary`, `doctor.memory.resetDreamDiary`, `doctor.memory.resetGroundedShortTerm`, `doctor.memory.repairDreamingArtifacts`, and `doctor.memory.dedupeDreamDiary` accept optional `{ "agentId": "agent-id" }` params for selected-agent Dreaming views/actions. When `agentId` is omitted, they operate on the configured default agent workspace.
-    - `doctor.memory.remHarness` returns a bounded, read-only REM harness preview for remote control-plane clients. It can include workspace paths, memory snippets, rendered grounded markdown, and deep promotion candidates, so callers need `operator.read`.
-    - `sessions.usage` returns per-session usage summaries. Pass `agentId` for one
-      agent, or `agentScope: "all"` to list configured agents together.
-    - `sessions.usage.timeseries` returns timeseries usage for one session.
-    - `sessions.usage.logs` returns usage log entries for one session.
+    - `models.list` 返回运行时允许的模型目录。传入 `{ "view": "configured" }` 可返回适合选择器大小的已配置模型（先 `agents.defaults.models`，再 `models.providers.*.models`），或传入 `{ "view": "all" }` 获取完整目录。
+    - `usage.status` 返回提供方使用窗口/剩余额度摘要。
+    - `usage.cost` 返回某个日期范围内的聚合成本使用摘要。
+      传入 `agentId` 表示单个 agent，或传入 `agentScope: "all"` 以聚合已配置的 agents。
+    - `doctor.memory.status` 返回当前默认 agent workspace 的向量记忆 / 缓存 embedding 就绪状态。仅当调用方明确需要一次实时 embedding 提供方 ping 时才传入 `{ "probe": true }` 或 `{ "deep": true }`。支持 Dreaming 的客户端也可以传入 `{ "agentId": "agent-id" }` 将 Dreaming 存储统计范围限定到选定的 agent workspace；省略 `agentId` 时会保留默认 agent 回退并聚合已配置的 Dreaming workspaces。
+    - `doctor.memory.dreamDiary`、`doctor.memory.backfillDreamDiary`、`doctor.memory.resetDreamDiary`、`doctor.memory.resetGroundedShortTerm`、`doctor.memory.repairDreamingArtifacts` 和 `doctor.memory.dedupeDreamDiary` 接受可选的 `{ "agentId": "agent-id" }` 参数，用于选定 agent 的 Dreaming 视图/操作。省略 `agentId` 时，它们会作用于已配置的默认 agent workspace。
+    - `doctor.memory.remHarness` 为远程控制平面客户端返回一个有边界、只读的 REM harness 预览。它可能包含 workspace 路径、记忆片段、渲染后的 grounded markdown 和深度提升候选项，因此调用方需要 `operator.read`。
+    - `sessions.usage` 返回按会话划分的使用摘要。传入 `agentId` 表示单个
+      agent，或传入 `agentScope: "all"` 以一起列出已配置的 agents。
+    - `sessions.usage.timeseries` 返回某个会话的时序使用数据。
+    - `sessions.usage.logs` 返回某个会话的使用日志条目。
 
   </Accordion>
 
@@ -360,16 +360,18 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
   </Accordion>
 
   <Accordion title="Secrets, config, update, and wizard">
-    - `secrets.reload` 仅在完全成功时重新解析活动 SecretRefs 并切换运行时 secret 状态。
-    - `secrets.resolve` 为特定命令/目标集合解析命令目标 secret 分配。
-    - `config.get` 返回当前配置快照和 hash。
-    - `config.set` 写入已验证的配置负载。
-    - `config.patch` 合并部分配置更新。
-    - `config.apply` 验证并替换完整配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包含从 UI 使用的相同标签和帮助文本派生的字段 `title` / `description` 元数据，包括在匹配到字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、浅层 schema 节点、匹配到的 hint + `hintPath`、可选 `reloadKind`，以及用于 UI/CLI 下钻的直接子项摘要。`reloadKind` 的值为 `restart`、`hot` 或 `none`，并与所请求路径的 Gateway 配置重新加载规划器一致。查找 schema 节点保留面向用户的文档和常见验证字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子项摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`、可选 `reloadKind`，以及匹配到的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且只有在更新本身成功时才安排重启；带有会话的调用方可以包含 `continuationMessage`，以便启动在重启 continuation 队列中恢复一个后续 agent turn。来自控制平面的包管理器更新会使用一个分离的 managed-service 接管路径，而不是直接替换 live Gateway 中的包树。已启动的接管会返回 `ok: true`，其中 `result.reason: "managed-service-handoff-started"` 且 `handoff.status: "started"`；不可用或失败的接管会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，如果需要手动 shell 更新，还会附带 `handoff.command`。在已启动接管期间，restart sentinel 可能会短暂报告 `stats.reason: "restart-health-pending"`；continuation 会延迟，直到 CLI 验证重启后的 Gateway 并写入最终的 `ok` sentinel。
-    - `update.status` 返回最新缓存的更新重启 sentinel，包括可用时重启后的运行版本。
+    - `secrets.reload` 重新解析活动的 SecretRefs，并且仅在完全成功时切换运行时密钥状态。
+    - `secrets.resolve` 解析特定命令/目标集的命令目标密钥分配。
+    - `config.get` 返回当前配置快照和哈希值。
+    - `config.set` 写入一个已验证的配置负载。
+    - `config.patch` 合并一个部分配置更新。破坏性的数组
+      替换需要在 `replacePaths` 中包含受影响的路径；数组项下的嵌套数组
+      使用 `[]` 路径，例如 `agents.list[].skills`。
+    - `config.apply` 验证并替换完整的配置负载。
+    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包含由 UI 使用的相同标签和帮助文本派生出的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
+    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、浅层 schema 节点、匹配的 hint + `hintPath`、可选的 `reloadKind`，以及用于 UI/CLI 下钻的直接子摘要。`reloadKind` 取值为 `restart`、`hot` 或 `none`，并与所请求路径的 Gateway 配置重载规划器一致。查找 schema 节点保留用户可见文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`、可选 `reloadKind`，以及匹配的 `hint` / `hintPath`。
+    - `update.run` 运行网关更新流程，并且只在更新本身成功时安排重启；带有会话的调用方可以包含 `continuationMessage`，以便启动过程通过重启续接队列恢复一个后续的 agent turn。来自控制平面的包管理器更新和受监督的 git-checkout 更新使用分离的 managed-service handoff，而不是替换包树或在运行中的 Gateway 内修改 checkout/build 输出。已启动的 handoff 会返回 `ok: true`，并带有 `result.reason: "managed-service-handoff-started"` 和 `handoff.status: "started"`；不可用或失败的 handoff 会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，以及在需要手动 shell 更新时的 `handoff.command`。不可用的 handoff 表示 OpenClaw 缺少安全的 supervisor 边界或持久化的服务身份，例如 systemd 的 `OPENCLAW_SYSTEMD_UNIT`。在已启动的 handoff 期间，重启哨兵可能会短暂报告 `stats.reason: "restart-health-pending"`；续接会延迟，直到 CLI 验证重启后的 Gateway 并写入最终的 `ok` 哨兵。
+    - `update.status` 刷新并返回最新的更新重启哨兵，包括重启后的运行版本（若可用）。
     - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding wizard。
 
   </Accordion>
@@ -402,6 +404,7 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
     - `sessions.get` returns the full stored session row.
     - Chat execution still uses `chat.history`, `chat.send`, `chat.abort`, and `chat.inject`. `chat.history` is display-normalized for UI clients: inline directive tags are stripped from visible text, plain-text tool-call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks) and leaked ASCII/full-width model control tokens are stripped, pure silent-token assistant rows such as exact `NO_REPLY` / `no_reply` are omitted, and oversized rows can be replaced with placeholders.
     - `chat.message.get` is the additive bounded full-message reader for a single visible transcript entry. Clients pass `sessionKey`, optional `agentId` when the session selection is agent-scoped, plus a transcript `messageId` previously surfaced through `chat.history`, and the Gateway returns the same display-normalized projection without the lightweight history truncation cap when the stored entry is still available and not oversized.
+    - `chat.send` accepts one-turn `fastMode: "auto"` to use fast mode for model calls started before the auto cutoff, then start later retry, fallback, tool-result, or continuation calls without fast mode. The cutoff defaults to 60 seconds and can be configured per model with `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds`. A `chat.send` caller can pass one-turn `fastAutoOnSeconds` to override the cutoff for that request.
 
   </Accordion>
 
@@ -493,10 +496,12 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
   - `found` 表示账本中是否存在匹配任务。`cancelled`
     表示运行时是否接受或记录了取消请求。
 
-`TaskSummary` 包括 `id`、`status`，以及可选元数据，例如 `kind`、
-`runtime`、`title`、`agentId`、`sessionKey`、`childSessionKey`、`ownerKey`、
-`runId`、`taskId`、`flowId`、`parentTaskId`、`sourceId`、时间戳、进度、
-终态摘要和净化后的错误文本。
+`TaskSummary` includes `id`, `status`, and optional metadata such as `kind`,
+`runtime`, `title`, `agentId`, `sessionKey`, `childSessionKey`, `ownerKey`,
+`runId`, `taskId`, `flowId`, `parentTaskId`, `sourceId`, timestamps, progress,
+terminal summary, and sanitized error text. `agentId` identifies the agent
+executing the task; `sessionKey` and `ownerKey` preserve requester and control
+context.
 
 ### Operator 辅助方法
 
@@ -724,16 +729,19 @@ Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任
   - `gateway.controlUi.allowInsecureAuth=true` for localhost-only insecure HTTP compatibility.
   - successful `gateway.auth.mode: "trusted-proxy"` operator Control UI auth.
   - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` (break-glass, severe security downgrade).
-  - direct-loopback `gateway-client` backend RPCs authenticated with the shared
-    gateway token/password.
-- Omitting device identity has scope consequences. When a Control UI connection
-  lacks device identity, `shouldClearUnboundScopesForMissingDeviceIdentity`
-  clears self-declared scopes to an empty set for token, password, and
-  trusted-proxy auth. The connection is allowed on explicit trust paths, but
-  scope-gated methods fail. The exception is local Control UI token/password
-  sessions with `allowInsecureAuth`, which preserve scopes. For other cases,
-  set `gateway.controlUi.dangerouslyDisableDeviceAuth=true` only as a
-  break-glass scope-preservation path.
+  - direct-loopback `gateway-client` backend RPCs on the reserved internal
+    helper path.
+- Omitting device identity has scope consequences. When a device-less operator
+  connection is allowed through an explicit trust path, OpenClaw still clears
+  self-declared scopes to an empty set unless that path has a named
+  scope-preservation exception. Scope-gated methods then fail with
+  `missing scope`.
+- `gateway.controlUi.dangerouslyDisableDeviceAuth=true` is a Control UI
+  break-glass scope-preservation path. It does not grant scopes to arbitrary
+  custom backend or CLI-shaped WebSocket clients.
+- The reserved direct-loopback `gateway-client` backend helper path preserves
+  scopes only for internal local control-plane RPCs; custom backend IDs do not
+  receive this exception.
 - All connections must sign the server-provided `connect.challenge` nonce.
 
 ### 设备认证迁移诊断
@@ -773,5 +781,5 @@ agent、sessions、nodes、approvals 等）。确切的接口由
 
 ## 相关
 
-- [Bridge protocol](/gateway/bridge-protocol)
+- [Bridge 协议](/gateway/bridge-protocol)
 - [网关运行手册](/gateway)

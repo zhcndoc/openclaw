@@ -15,16 +15,25 @@ base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音�
 
 | 属性          | 值                                                              |
 | ------------- | --------------------------------------------------------------- |
-| 提供商 ID      | `inworld`                                                       |
-| 插件          | bundled, `enabledByDefault: true`                               |
-| 合约          | `speechProviders` (仅 TTS)                                      |
-| 认证环境变量    | `INWORLD_API_KEY` (HTTP Basic, Base64 仪表盘凭证)                |
-| 基础 URL      | `https://api.inworld.ai`                                        |
-| 默认音色       | `Sarah`                                                         |
-| 默认模型       | `inworld-tts-1.5-max`                                           |
-| 输出          | MP3（默认）、OGG_OPUS（语音备注）、PCM 22050 Hz（电话）         |
-| 网站          | [inworld.ai](https://inworld.ai)                                |
-| 文档          | [docs.inworld.ai/tts/tts](https://docs.inworld.ai/tts/tts)      |
+| Provider id   | `inworld`                                                       |
+| Plugin        | 官方外部包                                                      |
+| Contract      | `speechProviders` (仅 TTS)                                     |
+| Auth env var  | `INWORLD_API_KEY` (HTTP Basic，Base64 仪表盘凭证)              |
+| Base URL      | `https://api.inworld.ai`                                        |
+| Default voice | `Sarah`                                                         |
+| Default model | `inworld-tts-1.5-max`                                           |
+| Output        | MP3（默认）、OGG_OPUS（语音备注）、PCM 22050 Hz（电话）         |
+| Website       | [inworld.ai](https://inworld.ai)                                |
+| Docs          | [docs.inworld.ai/tts/tts](https://docs.inworld.ai/tts/tts)      |
+
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/inworld-speech
+openclaw gateway restart
+```
 
 ## 开始使用
 
@@ -110,8 +119,8 @@ base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音�
   <Card title="配置" href="/gateway/configuration" icon="gear">
     包含 `messages.tts` 设置在内的完整配置参考。
   </Card>
-  <Card title="提供商" href="/providers" icon="grid">
-    所有内置的 OpenClaw 提供商。
+  <Card title="Providers" href="/providers" icon="grid">
+    All supported OpenClaw providers.
   </Card>
   <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
     常见问题和调试步骤。

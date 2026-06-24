@@ -19,7 +19,16 @@ Search API 或通过 OpenRouter 的 Perplexity Sonar 提供网页搜索能力。
 | 认证        | `PERPLEXITY_API_KEY`（直连）或 `OPENROUTER_API_KEY`（通过 OpenRouter） |
 | 配置路径    | `plugins.entries.perplexity.config.webSearch.apiKey`                   |
 
-## 快速开始
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/perplexity-plugin
+openclaw gateway restart
+```
+
+## 入门
 
 <Steps>
   <Step title="设置 API 密钥">

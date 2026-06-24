@@ -71,7 +71,7 @@ sidebarTitle: "添加能力"
 
 当行为属于模型提供者契约，而不是通用 agent 循环时，请使用**提供者钩子**。示例包括：在传输选择之后的提供者特定请求参数、认证配置文件偏好、提示词覆盖，以及模型/配置文件失败切换后的后续回退路由。
 
-当行为属于执行某个回合的运行时时，请使用**agent harness 钩子**。harness 可以将“成功但不可用”的尝试结果分类，例如空响应、仅推理响应或仅规划响应，从而让外层模型回退策略决定是否重试。
+当行为属于执行某个回合的运行时时，请使用 **agent harness hooks**。harness 可以对显式协议结果进行分类，例如空输出、无可见输出的推理，或没有最终答案的结构化计划，这样外层模型回退策略就可以做出重试决定。
 
 保持这两个边界都尽量窄：
 
@@ -120,10 +120,10 @@ sidebarTitle: "添加能力"
 有意比 memory 更宽：工具、搜索、检索、导入器，或未来的功能插件
 都可以消费 embeddings，而无需依赖 memory 引擎。
 
-Memory search can consume generic `embeddingProviders`. The older
-`memoryEmbeddingProviders` contract is deprecated compatibility while existing
-memory-specific providers migrate; new reusable embedding providers should use
-`embeddingProviders`.
+Memory search 可以消费通用的 `embeddingProviders`。较旧的
+`memoryEmbeddingProviders` 契约是为向后兼容而保留的，适用于现有
+面向 memory 的提供者迁移；新的可复用 embedding 提供者应使用
+`embeddingProviders`。
 
 ## Review checklist
 

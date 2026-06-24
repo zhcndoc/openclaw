@@ -17,11 +17,11 @@ OpenClaw 的 Claude CLI 后端会以非交互式打印模式运行已安装的 C
 
 Anthropic 当前的公开文档：
 
-- [Claude Code CLI reference](https://code.claude.com/docs/en/cli-usage)
-- [Use the Claude Agent SDK with your Claude plan](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
-- [Use Claude Code with your Pro or Max plan](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan)
-- [Use Claude Code with your Team or Enterprise plan](https://support.claude.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan)
-- [Manage Claude Code costs](https://code.claude.com/docs/en/costs)
+- [Claude Code CLI 参考](https://code.claude.com/docs/en/cli-usage)
+- [将 Claude Agent SDK 与你的 Claude 套餐一起使用](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
+- [使用你的 Pro 或 Max 套餐来使用 Claude Code](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan)
+- [使用你的 Team 或 Enterprise 套餐来使用 Claude Code](https://support.claude.com/en/articles/11845131-using-claude-code-with-your-team-or-enterprise-plan)
+- [管理 Claude Code 成本](https://code.claude.com/docs/en/costs)
 
 </Warning>
 
@@ -137,7 +137,12 @@ Anthropic 当前的公开文档：
   </Tab>
 </Tabs>
 
-## 思考默认值（Claude 4.8 和 4.6）
+## Thinking defaults (Claude Fable 5, 4.8, and 4.6)
+
+`anthropic/claude-fable-5` 始终使用自适应思考，并默认 `high`
+effort。由于 Anthropic 不允许为该模型禁用思考，
+`/think off` 和 `/think minimal` 使用 `low` effort。OpenClaw 也会省略 Fable 5 请求中的自定义
+temperature 值。
 
 Claude Opus 4.8 在 OpenClaw 中默认关闭思考。 当你显式启用自适应思考并使用 `/think high|xhigh|max` 时，OpenClaw 会发送 Anthropic 的 Opus 4.8 effort 值；Claude 4.6 模型默认使用 `adaptive`。
 
@@ -159,8 +164,8 @@ Claude Opus 4.8 在 OpenClaw 中默认关闭思考。 当你显式启用自适�
 
 <Note>
 相关 Anthropic 文档：
-- [Adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
-- [Extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
+- [自适应思考](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking)
+- [扩展思考](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
 
 </Note>
 
@@ -268,7 +273,7 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     | 属性            | 值                    |
     | --------------- | --------------------- |
     | Default model   | `claude-opus-4-8`     |
-    | Supported input | Images, PDF documents |
+    | Supported input | 图片、PDF 文档 |
 
     当图片或 PDF 附加到对话中时，OpenClaw 会自动通过 Anthropic 媒体理解提供方进行路由。
 

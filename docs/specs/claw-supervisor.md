@@ -1,10 +1,10 @@
 ---
 title: Claw Supervisor
-description: 由 OpenClaw 控制的 Codex app-server 会话舰队监督方案。
-readWhen:
+summary: "由 OpenClaw 控制的 Codex app-server 会话舰队监督方案。"
+read_when:
   - 设计 Codex 舰队监督
-  - 构建用于读取、引导或生成 Codex 会话的 OpenClaw 工具
-  - 在受监督的 Codex 之间选择本地、Cloudflare 和 VPS 部署
+  - 构建读取、引导或生成 Codex 会话的 OpenClaw 工具
+  - 在受监督的 Codex 中选择本地、Cloudflare 和 VPS 部署
 ---
 
 # Claw Supervisor

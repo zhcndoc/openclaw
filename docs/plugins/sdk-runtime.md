@@ -163,7 +163,11 @@ return {
     });
     ```
 
-    会话工作流请优先使用 `getSessionEntry(...)`、`listSessionEntries(...)`、`patchSessionEntry(...)` 或 `upsertSessionEntry(...)`。这些辅助工具通过 agent/session 身份定位会话，因此插件不会依赖旧版 `sessions.json` 存储结构。对于不应刷新会话活动时间的仅元数据补丁，请使用 `preserveActivity: true`；仅当回调返回完整条目且被删除字段必须保持删除时，才使用 `replaceEntry: true`。`loadSessionStore(...)` 仍作为已弃用的兼容逃生口，供确实需要可变全量存储克隆的调用方使用。
+    优先在会话工作流中使用 `getSessionEntry(...)`、`listSessionEntries(...)`、`patchSessionEntry(...)` 或 `upsertSessionEntry(...)`。这些辅助工具通过 agent/session 身份定位会话，因此插件不必依赖旧版 `sessions.json` 的存储形状。对于不应刷新会话活动时间的仅元数据补丁，请使用 `preserveActivity: true`；仅当回调返回完整条目且必须保留已删除字段确实被删除时，才使用 `replaceEntry: true`。
+
+    对于转录内容的读取和写入，请导入 `openclaw/plugin-sdk/session-transcript-runtime`，并在传入 `{ agentId, sessionKey, sessionId }` 时使用 `resolveSessionTranscriptIdentity(...)`、`resolveSessionTranscriptTarget(...)`、`readSessionTranscriptEvents(...)`、`appendSessionTranscriptMessageByIdentity(...)`、`publishSessionTranscriptUpdateByIdentity(...)` 或 `withSessionTranscriptWriteLock(...)`。这些 API 允许插件识别转录、读取其事件、追加消息、发布更新，并在相同的转录写锁下运行相关操作。仅当适配已经接收活动转录工件且需要每个辅助工具都对同一工件生效的代码时，才传入 `sessionFile`。
+
+    `loadSessionStore(...)`、`saveSessionStore(...)`、`updateSessionStore(...)` 和 `resolveSessionFilePath(...)` 是仍有意依赖旧版整个存储或转录文件形状的插件所使用的兼容辅助工具。新的插件代码不得使用这些辅助工具，现有调用方应迁移到条目级辅助工具。
 
   </Accordion>
   <Accordion title="api.runtime.agent.defaults">
@@ -460,6 +464,8 @@ return {
     const output = await api.runtime.system.runCommandWithTimeout(cmd, args, opts);
     const hint = api.runtime.system.formatNativeDependencyHint(pkg);
     ```
+
+    `runCommandWithTimeout(...)` 返回捕获的 `stdout` 和 `stderr`，以及可选的截断计数、`code`、`signal`、`killed`、`termination` 和 `noOutputTimedOut`。当子进程未提供非零退出码时，超时和无输出超时结果会报告 `code: 124`。非超时的信号退出仍可能返回 `code: null`，因此请使用 `termination` 和 `noOutputTimedOut` 来区分超时原因。
 
   </Accordion>
   <Accordion title="api.runtime.events">

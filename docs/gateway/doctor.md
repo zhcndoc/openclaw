@@ -140,14 +140,13 @@ JSON 输出包括：
     - 当插件已启用时清理陈旧插件配置；当 `plugins.enabled=false` 时，陈旧插件引用会被视为惰性的 containment 配置并予以保留。
 
   </Accordion>
-  <Accordion title="状态和完整性">
-    - 会话锁文件检查和过期锁清理。
-    - 修复受 2026.4.24 构建影响而产生的重复 prompt-rewrite 分支的会话转写。
-    - 检测卡住的 subagent 重启恢复墓碑，并支持使用 `--fix` 清除过期的已中止恢复标记，以避免启动时持续将子进程视为重启中止。
-    - 状态完整性和权限检查（sessions、transcripts、state 目录）。
-    - 本地运行时检查配置文件权限（chmod 600）。
-    - 模型认证健康：检查 OAuth 过期情况、可刷新即将过期的 token，并报告认证配置文件的冷却/禁用状态。
-    - 额外工作区目录检测（`~/openclaw`）。
+  <Accordion title="State and integrity">
+    - Session lock file inspection and stale lock cleanup.
+    - Session transcript repair for duplicated prompt-rewrite branches created by affected 2026.4.24 builds.
+    - Wedged subagent restart-recovery tombstone detection, with `--fix` support for clearing stale aborted recovery flags so startup does not keep treating the child as restart-aborted.
+    - State integrity and permissions checks (sessions, transcripts, state dir).
+    - Config file permission checks (chmod 600) when running locally.
+    - Model auth health: checks OAuth expiry, can refresh expiring tokens, and reports auth-profile cooldown/disabled states.
 
   </Accordion>
   <Accordion title="Gateway, services, and supervisors">
@@ -357,14 +356,14 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
 
     - `jobId` → `id`
     - `schedule.cron` → `schedule.expr`
-    - 顶层 payload 字段（`message`、`model`、`thinking`、...）→ `payload`
-    - 顶层 delivery 字段（`deliver`、`channel`、`to`、`provider`、...）→ `delivery`
-    - payload `provider` delivery 别名 → 显式 `delivery.channel`
-    - 旧的 `notify: true` webhook 回退任务 → 来自 `cron.webhook` 的显式 webhook delivery；announce 任务保留其聊天 delivery，并获得 `delivery.completionDestination`
+    - top-level payload fields (`message`, `model`, `thinking`, ...) → `payload`
+    - top-level delivery fields (`deliver`, `channel`, `to`, `provider`, ...) → `delivery`
+    - payload `provider` delivery aliases → explicit `delivery.channel`
+    - legacy `notify: true` webhook fallback jobs → explicit webhook delivery from `cron.webhook` when set; announce jobs keep their chat delivery and get `delivery.completionDestination`. When `cron.webhook` is unset, the inert top-level `notify` marker is removed for no-target jobs (existing delivery, including announce, is preserved) since runtime delivery never reads it
 
     Gateway 也会在加载时清理格式错误的 cron 行，以确保有效任务继续运行。原始的格式错误行会在从 `jobs.json` 中移除之前复制到活动存储旁边的 `jobs-quarantine.json`；doctor 会报告被隔离的行，以便你手动审查或修复它们。
 
-    Doctor 和 Gateway 启动会在 scheduler 运行前使用相同的 `notify: true` 迁移。如果缺少 `cron.webhook`，doctor 会发出警告并保留旧的 notify 标记供手动修复。
+    Gateway startup normalizes the runtime projection and ignores the top-level `notify` marker, but leaves the persisted cron config for doctor repair. When `cron.webhook` is unset, doctor removes the inert marker for jobs with no migration target (`delivery.mode` none/absent, an unusable webhook target, or existing announce/chat delivery), leaving the existing delivery untouched, so repeated `doctor --fix` runs no longer re-warn about the same job. If `cron.webhook` is set but not a valid HTTP(S) URL, doctor still warns and leaves the marker so you can fix the URL.
 
     在 Linux 上，doctor 还会在用户的 crontab 仍调用旧版 `~/.openclaw/bin/ensure-whatsapp.sh` 时发出警告。这个宿主机本地脚本不受当前 OpenClaw 维护，而且当 cron 无法访问 systemd 用户总线时，可能会向 `~/.openclaw/logs/whatsapp-health.log` 写入虚假的 `Gateway inactive` 消息。请使用 `crontab -e` 删除过时的 crontab 条目；当前健康检查请使用 `openclaw channels status --probe`、`openclaw doctor` 和 `openclaw gateway status`。
 
@@ -380,16 +379,17 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
 
     Doctor 会检查：
 
-    - **状态目录缺失**：警告灾难性的状态丢失，提示重新创建目录，并提醒它无法恢复缺失数据。
-    - **状态目录权限**：验证可写性；提供修复权限的选项（如果检测到所有者/组不匹配，还会给出 `chown` 提示）。
-    - **macOS 云同步状态目录**：当状态解析到 iCloud Drive（`~/Library/Mobile Documents/com~apple~CloudDocs/...`）或 `~/Library/CloudStorage/...` 下时发出警告，因为同步支持的路径可能导致更慢的 I/O 以及锁/同步竞争。
-    - **Linux SD 或 eMMC 状态目录**：当状态解析到 `mmcblk*` 挂载源时发出警告，因为基于 SD 或 eMMC 的随机 I/O 在会话和凭据写入场景下可能更慢且磨损更快。
-    - **会话目录缺失**：`sessions/` 和 session 存储目录对于持久化历史并避免 `ENOENT` 崩溃是必需的。
-    - **转写不匹配**：当最近的会话条目缺少转写文件时发出警告。
-    - **主会话“1 行 JSONL”**：当主转写只有一行时标记（历史没有累积）。
-    - **多个状态目录**：当 home 目录中存在多个 `~/.openclaw` 文件夹，或者 `OPENCLAW_STATE_DIR` 指向其他位置时发出警告（历史可能在安装之间分裂）。
-    - **远程模式提醒**：如果 `gateway.mode=remote`，doctor 会提醒你在远程主机上运行它（状态存放在那里）。
-    - **配置文件权限**：如果 `~/.openclaw/openclaw.json` 对组/所有人可读，会发出警告并提供收紧到 `600` 的选项。
+    - **State dir missing**: warns about catastrophic state loss, prompts to recreate the directory, and reminds you that it cannot recover missing data.
+    - **State dir permissions**: verifies writability; offers to repair permissions (and emits a `chown` hint when owner/group mismatch is detected).
+    - **macOS cloud-synced state dir**: warns when state resolves under iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/...`) or `~/Library/CloudStorage/...` because sync-backed paths can cause slower I/O and lock/sync races.
+    - **Linux SD or eMMC state dir**: warns when state resolves to an `mmcblk*` mount source, because SD or eMMC-backed random I/O can be slower and wear faster under session and credential writes.
+    - **Linux volatile state dir**: warns when state resolves to `tmpfs` or `ramfs`, because sessions, credentials, config, and SQLite state with its WAL/journal sidecars will disappear on reboot. Docker `overlay` mounts are intentionally not flagged because their writable layers persist across host reboots while the container remains.
+    - **Session dirs missing**: `sessions/` and the session store directory are required to persist history and avoid `ENOENT` crashes.
+    - **Transcript mismatch**: warns when recent session entries have missing transcript files.
+    - **Main session "1-line JSONL"**: flags when the main transcript has only one line (history is not accumulating).
+    - **Multiple state dirs**: warns when multiple `~/.openclaw` folders exist across home directories or when `OPENCLAW_STATE_DIR` points elsewhere (history can split between installs).
+    - **Remote mode reminder**: if `gateway.mode=remote`, doctor reminds you to run it on the remote host (the state lives there).
+    - **Config file permissions**: warns if `~/.openclaw/openclaw.json` is group/world readable and offers to tighten to `600`.
 
   </Accordion>
   <Accordion title="5. 模型认证健康（OAuth 过期）">
@@ -455,14 +455,14 @@ openclaw memory rem-backfill --path ./memory --stage-short-term
   <Accordion title="10. systemd linger（Linux）">
     如果作为 systemd 用户服务运行，doctor 会确保启用 lingering，以便 gateway 在退出登录后仍保持存活。
   </Accordion>
-  <Accordion title="11. 工作区状态（skills、插件和旧目录）">
+  <Accordion title="11. Workspace status (skills, plugins, and TaskFlows)">
     Doctor 会打印默认 agent 的工作区状态摘要：
 
-    - **Skills 状态**：统计符合条件、缺少依赖、被 allowlist 阻止的 skills。
-    - **旧工作区目录**：当 `~/openclaw` 或其他旧工作区目录与当前工作区并存时发出警告。
-    - **插件状态**：统计启用/禁用/出错的插件；列出任何错误的插件 ID；报告 bundle 插件能力。
-    - **插件兼容性警告**：标记与当前运行时有兼容性问题的插件。
+    - **Skills 状态**：统计符合条件、缺少要求、被 allowlist 阻止的 skills。
+    - **插件状态**：统计已启用/已禁用/出错的插件；列出任何错误的插件 ID；报告 bundled 插件能力。
+    - **插件兼容性警告**：标记与当前运行时存在兼容性问题的插件。
     - **插件诊断**：显示插件注册表在加载时发出的任何警告或错误。
+    - **TaskFlow 恢复**：显示需要人工检查或取消的可疑受管 TaskFlow。
 
   </Accordion>
   <Accordion title="11b. Bootstrap 文件大小">

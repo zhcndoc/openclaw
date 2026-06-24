@@ -125,16 +125,17 @@ export default definePluginEntry({
 **Subagent**
 
 - `subagent_spawned` / `subagent_ended` - 观察 subagent 启动和完成。
-- `subagent_delivery_target` - 当没有核心 session 绑定能够投影路由时，用于完成投递的兼容钩子。
-- `subagent_spawning` - 已弃用的兼容钩子。核心现在会在 `subagent_spawned` 触发前，通过通道 session-binding 适配器准备 `thread: true` 的 subagent 绑定。
+- `subagent_delivery_target` - 当没有核心 session 绑定可以投影路由时，用于完成投递的兼容钩子。
+- `subagent_spawning` - 已废弃的兼容钩子。现在，Core 会在 `subagent_spawned` 触发前，通过通道 session-binding 适配器为 `thread: true` 的 subagent 绑定做准备。
 - 当 OpenClaw 在启动前已解析出子 session 的原生模型时，`subagent_spawned` 会包含 `resolvedModel` 和 `resolvedProvider`。
+- `subagent_ended` 携带 `targetSessionKey`（身份——这与 `subagent_spawned.childSessionKey` 相匹配）、`targetKind`（`"subagent"` 或 `"acp"`）、`reason`、可选的 `outcome`（`"ok"`、`"error"`、`"timeout"`、`"killed"`、`"reset"` 或 `"deleted"`）、可选的 `error`、`runId`、`endedAt`、`accountId` 和 `sendFarewell`。它不包含 `agentId` 或 `childSessionKey`；请使用 `targetSessionKey` 与对应的 `subagent_spawned` 事件进行关联。
 
 **生命周期**
 
 - `gateway_start` / `gateway_stop` - 随 Gateway 启动或停止插件拥有的服务
-- `deactivate` - `gateway_stop` 的已弃用兼容别名；新插件请使用 `gateway_stop`
-- `cron_changed` - 观察 Gateway 拥有的 cron 生命周期变化（added、updated、removed、started、finished、scheduled）
-- **`before_install`** - 检查 skill 或插件安装上下文，并可选择阻止
+- `deactivate` - `gateway_stop` 的已废弃兼容别名；新插件请使用 `gateway_stop`
+- `cron_changed` - 观察 gateway 拥有的 cron 生命周期变化（added、updated、removed、started、finished、scheduled）
+- **`before_install`** - 检查从已加载插件运行时中暂存的 skill 或插件安装材料
 
 ## 调试运行时钩子
 
@@ -193,9 +194,9 @@ type BeforeToolCallResult = {
 
 有关批准路由、决策行为，以及何时使用 `requireApproval` 而不是可选工具或 exec 批准，请参见[插件权限请求](/plugins/plugin-permission-requests)。
 
-需要宿主级策略的捆绑插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略在普通 `before_tool_call` 钩子之前以及外部插件决策之前运行。仅将其用于宿主信任的门控，例如工作区策略、预算强制执行或保留工作流安全。外部插件应使用普通 `before_tool_call` 钩子。
+需要宿主级策略的插件可以通过 `api.registerTrustedToolPolicy(...)` 注册受信任的工具策略。这些策略会在普通的 `before_tool_call` 钩子之前以及正常钩子决策之前运行。捆绑的受信任策略最先运行；已安装插件的受信任策略随后按插件加载顺序运行；普通的 `before_tool_call` 钩子在它们之后运行。捆绑插件保留现有的受信任策略路径。已安装插件必须显式启用，并在 `contracts.trustedToolPolicies` 中声明每个策略 id；未声明的 id 会在注册前被拒绝。策略 id 仅在注册该策略的插件范围内有效，因此不同插件可以重用相同的本地 id。仅在工作区策略、预算执行或保留工作流安全等宿主信任的门控场景中使用这一层。
 
-### Exec environment hook
+### Exec 环境钩子
 
 `resolve_exec_env` 允许插件在基础 exec 环境构建完成后、命令运行前，为 `exec` 工具调用贡献环境变量。它接收：
 
@@ -234,7 +235,41 @@ type BeforeToolCallResult = {
 
 当 OpenClaw 能识别活动运行时，`before_agent_start` 和 `agent_end` 会包含 `event.runId`。同样的值也可在 `ctx.runId` 中获得。由 cron 驱动的运行还会暴露 `ctx.jobId`（来源 cron 作业 id），以便插件钩子可以将指标、副作用或状态限定到特定的计划作业。
 
-对于源自通道的运行，`ctx.messageProvider` 是诸如 `discord` 或 `telegram` 的提供方表面，而 `ctx.channelId` 是当 OpenClaw 能从 session key 或投递元数据推导出时的会话目标标识符。
+对于来自通道的运行，`ctx.channel` 和 `ctx.messageProvider` 会标识提供方表面，例如 `discord` 或 `telegram`，而 `ctx.channelId` 则是在 OpenClaw 能从 session key 或投递元数据中推导出会话目标时的目标标识符。
+
+当发送者身份可用时，agent 钩子上下文还包括：
+
+- `ctx.senderId` — 通道范围内的发送者 ID（例如 Feishu 的 `open_id`、Discord 用户 ID）。当运行源自带有已知发送者元数据的用户消息时会填充。
+- `ctx.chatId` — 传输原生的会话标识符（例如 Feishu 的 `chat_id`、Telegram 的 `chat_id`）。当源通道提供原生会话 ID 时会填充。
+- `ctx.channelContext.sender.id` — 与 `ctx.senderId` 相同的发送者 ID，位于一个由通道拥有的对象下，插件可以用通道特定字段扩展它。
+- `ctx.channelContext.chat.id` — 与 `ctx.chatId` 相同的会话 ID，位于一个由通道拥有的对象下，插件可以用通道特定字段扩展它。
+
+Core 只定义嵌套的 `id` 字段。通过 inbound helper 传递更丰富发送者或聊天元数据的通道插件，可以从 `openclaw/plugin-sdk/channel-inbound` 扩展 `PluginHookChannelSenderContext` 或 `PluginHookChannelChatContext`：
+
+```ts
+declare module "openclaw/plugin-sdk/channel-inbound" {
+  interface PluginHookChannelSenderContext {
+    unionId?: string;
+    userId?: string;
+  }
+}
+```
+
+通道插件通过 inbound SDK helper 传递这些字段：
+
+```ts
+buildChannelInboundEventContext({
+  // ...
+  channelContext: {
+    sender: { id: senderOpenId, unionId, userId },
+    chat: { id: chatId },
+  },
+});
+```
+
+这些字段是可选的，对于系统发起的运行（heartbeat、cron、exec-event）则不存在。
+
+`ctx.senderExternalId` 仍保留为旧插件的已废弃源兼容字段。Core 不会填充它；新的通道特定发送者身份应通过模块扩展放在 `ctx.channelContext.sender` 下。
 
 `agent_end` 是一个观察钩子。Gateway 和持久化 harness 路径会在回合结束后以 fire-and-forget 方式运行它，而短生命周期的一次性 CLI 路径会在进程清理前等待钩子 promise，这样受信任的插件就可以刷新终端可观测性或捕获状态。钩子运行器会应用 30 秒超时，因此卡住的插件或嵌入端点不会让钩子 promise 永远挂起。超时会被记录，OpenClaw 会继续；除非插件也使用自己的中止信号，否则不会取消插件拥有的网络工作。
 
@@ -298,41 +333,33 @@ type BeforeAgentFinalizeRetry = {
 `content` 也可能包含隐藏的口语转写。重写该 `content` 只会更新钩子可见的转写；
 它不会作为媒体说明文字渲染。
 
-Message hook contexts expose stable correlation fields when available:
-`ctx.sessionKey`, `ctx.runId`, `ctx.messageId`, `ctx.senderId`, `ctx.trace`,
-`ctx.traceId`, `ctx.spanId`, `ctx.parentSpanId`, and `ctx.callDepth`. Inbound
-and `before_dispatch` contexts also expose reply metadata when the channel has
-visibility-filtered quoted message data: `replyToId`, `replyToBody`, and
-`replyToSender`. Prefer these first-class fields before reading legacy metadata.
+`reply_payload_sending` 事件可能包含 `usageState`，这是对每次 turn 的模型/用量/上下文的尽力而为的实时快照。持久化投递、恢复回放以及没有精确运行关联的回复会省略它。
+
+消息钩子上下文在可用时会暴露稳定的关联字段：
+`ctx.sessionKey`、`ctx.runId`、`ctx.messageId`、`ctx.senderId`、`ctx.trace`、
+`ctx.traceId`、`ctx.spanId`、`ctx.parentSpanId` 以及 `ctx.callDepth`。入站和
+`before_dispatch` 上下文在通道对经过可见性过滤的引用消息数据具有可见性时，
+也会暴露回复元数据：`replyToId`、`replyToIdFull`、
+`replyToBody`、`replyToSender` 和 `replyToIsQuote`。在读取旧版元数据之前，
+优先使用这些一等字段。
 
 优先使用类型化的 `threadId` 和 `replyToId` 字段，然后再使用特定于通道的元数据。
 
 决策规则：
 
-- `message_sending` with `cancel: true` is terminal.
-- `message_sending` with `cancel: false` is treated as no decision.
-- Rewritten `content` continues to lower-priority hooks unless a later hook
-  cancels delivery.
-- `reply_payload_sending` runs after payload normalization and before channel
-  delivery, including replies routed back to the originating channel. Handlers
-  run sequentially and each handler sees the latest payload produced by
-  higher-priority handlers.
-- `reply_payload_sending` payloads do not expose runtime trust markers such as
-  `trustedLocalMedia`; plugins can edit payload shape but cannot grant local
-  media trust.
-- `message_sending` can return `cancelReason` and bounded `metadata` with a
-  cancellation. New message lifecycle APIs expose this as a suppressed delivery
-  outcome with reason `cancelled_by_message_sending_hook`; legacy direct
-  delivery keeps returning an empty result array for compatibility.
-- `message_sent` is observation-only. Handler failures are logged and do not
-  change the delivery result.
+- `message_sending` 的 `cancel: true` 是终止性的。
+- `message_sending` 的 `cancel: false` 会被视为没有决定。
+- 重写后的 `content` 会继续传递给低优先级钩子，除非后续钩子取消投递。
+- `reply_payload_sending` 在载荷规范化之后、通道投递之前运行，包括路由回源通道的回复。处理器按顺序运行，每个处理器看到的都是高优先级处理器产生的最新载荷。
+- `reply_payload_sending` 载荷不暴露运行时信任标记，例如 `trustedLocalMedia`；插件可以编辑载荷形状，但不能授予本地媒体信任。
+- `message_sending` 可以在取消时返回 `cancelReason` 和有界的 `metadata`。新的消息生命周期 API 会将其暴露为一个被抑制的投递结果，原因是 `cancelled_by_message_sending_hook`；为了兼容，旧式直接投递仍会返回空结果数组。
+- `message_sent` 仅用于观察。处理器失败只会被记录，不会改变投递结果。
 
 ## 安装钩子
 
-`before_install` 在配置了由操作者拥有的 `security.installPolicy` 检查后运行。
-`builtinScan` 字段仍保留在事件载荷中以兼容旧版，但 OpenClaw 不再执行内置的安装时危险代码阻止，
-因此它是一个空的 `ok` 结果。返回额外的发现项或
-`{ block: true, blockReason }` 以停止安装。
+对由操作员拥有的允许/阻止决策，请使用 `security.installPolicy`。该策略运行于 OpenClaw 配置中，覆盖 CLI 安装和更新路径，并且在启用但不可用时会默认失败关闭。
+
+`before_install` 是插件运行时生命周期钩子。它在 `security.installPolicy` 之后运行，并且只在已经加载了插件钩子的 OpenClaw 进程中运行，例如由 Gateway 支持的安装流程。它适用于插件自有的观察、警告和兼容性检查，但它不是安装方面的主要企业级或宿主安全边界。`builtinScan` 字段仍保留在事件载荷中以保证兼容性，但 OpenClaw 不再执行内置的安装时危险代码阻断，因此它是一个空的 `ok` 结果。返回额外的发现结果或 `{ block: true, blockReason }` 可在该进程中停止安装。
 
 `block: true` 是终止性的。`block: false` 会被视为没有决定。
 处理器失败会以 fail-closed 方式阻止安装。

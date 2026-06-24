@@ -42,9 +42,14 @@ Venice 提供两种隐私级别——理解这一点是选择模型的关键：
 ## 开始使用
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/venice-provider
+    ```
+  </Step>
   <Step title="获取你的 API 密钥">
     1. 在 [venice.ai](https://venice.ai) 注册
-    2. 前往 **设置 > API 密钥 > 创建新密钥**
+    2. 前往 **Settings > API Keys > Create new key**
     3. 复制你的 API 密钥（格式：`vapi_xxxxxxxxxxxx`）
   </Step>
   <Step title="配置 OpenClaw">

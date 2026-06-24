@@ -37,6 +37,19 @@ Mantle 的 OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的�
         export AWS_REGION="us-west-2"
         ```
       </Step>
+      <Step title="为 Claude Fable 5 启用提供程序数据共享">
+        Claude Fable 5 和 Claude Mythos 系列 Bedrock 模型在调用前需要先启用 Mantle 数据保留 API 模式 `provider_data_share`。此可选加入允许 Bedrock 与 Anthropic 共享提示词和生成结果，并将其保留最多 30 天，以用于信任与安全审查。
+
+        ```bash
+        AWS_REGION="${AWS_REGION:-us-east-1}"
+        curl -X PUT "https://bedrock-mantle.${AWS_REGION}.api.aws/v1/data_retention" \
+          -H "Authorization: Bearer $AWS_BEARER_TOKEN_BEDROCK" \
+          -H "Content-Type: application/json" \
+          -d '{ "mode": "provider_data_share" }'
+        ```
+
+        如果你无法接受该保留模式，请在配置中使用其他 Bedrock 模型。
+      </Step>
       <Step title="验证模型已被发现">
         ```bash
         openclaw models list

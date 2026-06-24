@@ -183,10 +183,10 @@ harness。显式的 OpenClaw runtime 配置仍然是 `openai/*` agent 轮次的�
 }
 ```
 
-该 harness 在 `extensions/copilot/doctor-contract-api.ts` 中声明其提供商、运行时、CLI 会话键和 auth profile
-前缀，`openclaw doctor` 会自动加载该文件。关于配置、auth、转录镜像、
-压缩、doctor 探测面，以及更广泛的 PI vs Codex vs Copilot
-SDK 决策，请参见 [GitHub Copilot agent runtime](/plugins/copilot)。
+该 harness 在 `extensions/copilot/doctor-contract-api.ts` 中声明其提供方、运行时、CLI 会话键和 auth profile
+前缀，`openclaw doctor` 会自动加载该文件。关于配置、身份验证、转录镜像、
+压缩、声明式 doctor 契约，以及更广泛的 PI vs Codex vs
+Copilot SDK 决策，请参见 [GitHub Copilot agent runtime](/plugins/copilot)。
 
 ## 兼容性契约
 
@@ -207,7 +207,7 @@ SDK 决策，请参见 [GitHub Copilot agent runtime](/plugins/copilot)。
 Codex 运行时支持契约记录在
 [Codex harness runtime](/plugins/codex-harness-runtime#v1-support-contract)。
 
-## 状态标签
+## Status Tags
 
 状态输出可能同时显示 `Execution` 和 `Runtime` 标签。请将它们视为诊断信息，而不是提供商名称。
 

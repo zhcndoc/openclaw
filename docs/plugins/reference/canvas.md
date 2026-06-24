@@ -16,4 +16,4 @@ title: "Canvas 插件"
 
 ## 表面
 
-contracts: tools
+contracts: tools; skills

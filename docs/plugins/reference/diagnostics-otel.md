@@ -1,5 +1,5 @@
 ---
-summary: "OpenClaw 用于指标和追踪的诊断 OpenTelemetry 导出器。"
+summary: "用于指标、追踪和日志的 OpenClaw 诊断 OpenTelemetry 导出器。"
 read_when:
   - 你正在安装、配置或审计 diagnostics-otel 插件
 title: "诊断 OpenTelemetry 插件"
@@ -7,7 +7,7 @@ title: "诊断 OpenTelemetry 插件"
 
 # 诊断 OpenTelemetry 插件
 
-OpenClaw 用于指标和追踪的诊断 OpenTelemetry 导出器。
+用于指标、追踪和日志的 OpenClaw 诊断 OpenTelemetry 导出器。
 
 ## 分发
 

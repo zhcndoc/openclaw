@@ -27,8 +27,9 @@ read_when:
 
 对于带有 memory 专用提供方的多端点配置，`provider` 也可以是自定义的 `models.providers.<id>` 条目，例如 `ollama-5080`，前提是该提供方设置了 `api: "ollama"` 或其他 memory 嵌入适配器所有者。
 
-对于没有 API key 的本地嵌入，请设置 `provider: "local"`。源代码检出
-可能仍需要原生构建审批：`pnpm approve-builds` 然后
+对于没有 API 密钥的本地嵌入，请安装
+`@openclaw/llama-cpp-provider` 并设置 `provider: "local"`。源码检出
+可能仍需要本机构建批准：`pnpm approve-builds` 然后
 `pnpm rebuild node-llama-cpp`。
 
 某些与 OpenAI 兼容的嵌入端点需要不对称标签，例如用于搜索的 `input_type: "query"`，以及用于已索引块的 `input_type: "document"` 或 `"passage"`。请通过 `memorySearch.queryInputType` 和 `memorySearch.documentInputType` 进行配置；参见 [Memory 配置参考](/reference/memory-config#provider-specific-config)。

@@ -90,7 +90,9 @@ openclaw cron create "*/15 * * * *" \
 
 使用 `cron add|create --webhook <url>` 或 `cron edit <job-id> --webhook <url>` 来设置 webhook 投递。不要将 `--webhook` 与聊天投递标志一起使用，例如 `--announce`、`--no-deliver`、`--channel`、`--to`、`--thread-id` 或 `--account`。
 
-`--announce` 是用于最终回复的运行器回退投递。`--no-deliver` 会禁用该回退，但在存在聊天路由时不会移除代理的 `message` 工具。
+`cron edit <job-id>` 可以使用 `--clear-channel`、`--clear-to`、`--clear-thread-id` 和 `--clear-account` 取消单个投递路由字段（每个选项若与其对应的 set 标志一起使用都会被拒绝）。不同于 `--no-deliver` 仅禁用运行器回退投递，这些选项会移除已存储字段，使作业再次从默认值解析该路由部分。
+
+`--announce` 是最终回复的运行器回退投递。`--no-deliver` 会禁用该回退，但当聊天路由可用时，不会移除代理的 `message` 工具。
 
 从活动聊天创建的提醒会保留实时聊天投递目标，用于回退 announce 投递。内部会话键可能是小写；不要把它们当作区分大小写的提供方 ID 的真实来源，例如 Matrix 房间 ID。
 
@@ -165,7 +167,7 @@ openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 ## 模型
 
-`cron add|edit --model <ref>` 会为作业选择一个允许的模型。
+`cron add|edit --model <ref>` 选择该作业允许使用的模型。`cron add|edit --fallbacks <list>` 设置每个作业的回退模型，例如 `--fallbacks openrouter/gpt-4.1-mini,openai/gpt-5`；若要严格运行且没有回退，请传入 `--fallbacks ""`。`cron edit <job-id> --clear-fallbacks` 会移除每作业的回退覆盖。`cron edit <job-id> --clear-model` 会移除每作业的模型覆盖，使作业遵循正常的 cron 模型选择优先级（若存在则使用已存储的 cron 会话覆盖，否则使用代理/默认模型）；它不能与 `--model` 组合使用。
 
 <Warning>
 如果模型不被允许或无法解析，cron 会以明确的验证错误使运行失败，而不是回退到作业的代理或默认模型选择。
@@ -173,10 +175,10 @@ openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆盖。这意味着：
 
-- 当所选作业模型失败时，配置的模型回退仍然适用。
-- 当作业负载中存在 `fallbacks` 时，它会替换配置的回退列表。
-- 为空的作业级回退列表（作业负载/API 中的 `fallbacks: []`）会使 cron 运行变得严格。
-- 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传入一个显式的空回退覆盖，从而不会把代理主项作为隐藏的重试目标追加。
+- 配置的模型回退仍会在所选作业模型失败时生效。
+- 每作业负载的 `fallbacks` 会在存在时替换配置的回退列表。
+- 空的每作业回退列表（`--fallbacks ""` 或作业负载/API 中的 `fallbacks: []`）会使 cron 运行变为严格模式。
+- 当作业有 `--model` 但未配置回退列表时，OpenClaw 会传入显式的空回退覆盖，因此不会把代理主模型附加为隐藏的重试目标。
 - 本地提供方预检会在将 cron 运行标记为 `skipped` 之前依次检查已配置的回退。
 
 `openclaw doctor` 会报告那些已经设置了 `payload.model` 的作业，包括提供方命名空间计数以及与 `agents.defaults.model` 的不匹配情况。当认证、提供方或计费行为在实时聊天和计划任务之间看起来不同时，请使用该检查。
@@ -192,7 +194,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 快速模式
 
-隔离 cron 的快速模式遵循已解析的实时模型选择。模型配置 `params.fastMode` 默认适用，但存储的会话 `fastMode` 覆盖仍会优先于配置。
+隔离 cron 快速模式遵循解析后的实时模型选择。模型配置 `params.fastMode` 默认生效，但已存储的会话 `fastMode` 覆盖仍优先于配置。当解析出的模式为 `auto` 时，截止点使用所选模型的 `params.fastAutoOnSeconds` 值，默认 60 秒。
 
 ### 实时模型切换重试
 
@@ -226,7 +228,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 ## 迁移旧作业
 
 <Note>
-如果你有来自当前投递和存储格式之前的 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧版 `threadId`、payload `provider` 投递别名），并将 `notify: true` 的 webhook 回退作业从 `cron.webhook` 迁移到显式的 webhook 投递。已经向聊天公告的作业会保留该投递，并获得一个完成时的 webhook 目标。
+如果你在当前投递和存储格式之前已有 cron 作业，请运行 `openclaw doctor --fix`。Doctor 会规范化旧版 cron 字段（`jobId`、`schedule.cron`、顶层投递字段，包括旧的 `threadId`、payload `provider` 投递别名），并将 `notify: true` 的 webhook 回退作业从 `cron.webhook` 迁移到显式 webhook 投递。已经向聊天发送公告的作业会保留该投递，并获得一个完成 webhook 目标。当 `cron.webhook` 未设置时，对于没有迁移目标的作业，会移除无效的顶层 `notify` 标记（现有投递保持不变），因此 `doctor --fix` 不会再反复提醒这些作业。
 </Note>
 
 ## 常见编辑

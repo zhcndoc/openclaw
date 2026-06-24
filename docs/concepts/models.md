@@ -58,13 +58,13 @@ OpenClaw 按以下顺序选择模型：
 
 同一个 `provider/model`，根据来源不同，含义也可能不同：
 
-- 配置的默认值（`agents.defaults.model.primary` 和特定 agent 的主模型）是正常起点，并使用 `agents.defaults.model.fallbacks`。
-- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 存储，因此后续轮次可以继续使用回退链，而无需每次都探测一个已知失效的主模型；OpenClaw 会定期再次探测原始主模型，在恢复后清除自动选择，并且每次状态变化只宣布一次回退/恢复转换。
-- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选的提供商/模型不可达，OpenClaw 会显式失败，而不是继续落到其他已配置模型。
-- 更改 `agents.defaults.model.primary` 不会重写现有会话选择。如果状态显示 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请使用 `/model Y` 切换当前会话，或使用 `/reset` 清除过期的会话状态。
-- Cron `--model` / payload `model` 是每个作业的主模型。除非作业提供显式的 payload `fallbacks`，否则它仍会使用已配置的回退（对严格的 cron 运行使用 `fallbacks: []`）。
-- CLI 默认模型和允许列表选择器会遵守 `models.mode: "replace"`，通过列出显式的 `models.providers.*.models`，而不是加载完整的内置目录。
-- Control UI 模型选择器会向 Gateway 请求其配置的模型视图：如果存在 `agents.defaults.models`，则使用它，包括 provider-wide 的 `provider/*` 条目；否则使用显式的 `models.providers.*.models` 加上具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 搭配 `view: "all"` 或 `openclaw models list --all`。
+- 配置的默认值（`agents.defaults.model.primary` 和 agent 特定的 primary）是正常起点，并使用 `agents.defaults.model.fallbacks`。
+- 自动回退选择是临时恢复状态。它们以 `modelOverrideSource: "auto"` 的形式存储，因此后续轮次可以继续使用回退链，而不必每次都探测已知不可用的主模型；OpenClaw 会定期重新探测原始主模型，在其恢复后清除自动选择，并且每次状态变化只宣布一次回退/恢复转换。
+- 用户会话选择是精确的。`/model`、模型选择器、`session_status(model=...)` 和 `sessions.patch` 会存储 `modelOverrideSource: "user"`；如果所选提供商/模型无法访问，OpenClaw 会显式失败，而不会继续落到另一个已配置模型上。
+- 更改 `agents.defaults.model.primary` 不会重写现有会话选择。如果状态显示 `This session is pinned to X; config primary Y will apply to new/unpinned sessions.`，请用 `/model default` 清除当前会话选择，以便它再次继承已配置的主模型。
+- Cron 的 `--model` / payload `model` 是每个作业的主模型。除非作业显式提供 payload `fallbacks`，否则它仍会使用已配置的回退（若要严格运行 cron，请使用 `fallbacks: []`）。
+- CLI 默认模型和允许列表选择器会尊重 `models.mode: "replace"`，此时会列出明确的 `models.providers.*.models`，而不是加载完整的内置目录。
+- Control UI 的模型选择器会请求 Gateway 的已配置模型视图：如果存在 `agents.defaults.models`，则包括 provider 级别的 `provider/*` 条目；否则使用明确的 `models.providers.*.models` 加上具有可用认证的提供商。完整的内置目录仅保留给显式浏览视图，例如 `models.list` 且 `view: "all"`，或 `openclaw models list --all`。
 
 ## 快速模型策略
 
@@ -183,6 +183,7 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
 /model list
 /model 3
 /model openai/gpt-5.4
+/model default
 /model status
 ```
 
@@ -195,13 +196,14 @@ Add it with: openclaw config set agents.defaults.models '{"provider/model":{}}' 
     - `/model <#>` 会从该选择器中进行选择。
 
   </Accordion>
-  <Accordion title="持久化与在线切换">
+  <Accordion title="持久化与实时切换">
     - `/model` 会立即持久化新的会话选择。
-    - 如果 agent 处于空闲状态，下一次运行会立刻使用新模型。
-    - 如果某次运行已经在进行中，OpenClaw 会将在线切换标记为待处理，并只会在一个干净的重试点重新启动到新模型。
-    - 如果工具活动或回复输出已经开始，待处理切换可能会继续排队，直到后续某次重试机会或下一轮用户交互。
-    - 用户选择的 `/model` 引用对于该会话是严格的：如果所选的提供商/模型不可达，回复会显式失败，而不是静默地从 `agents.defaults.model.fallbacks` 回答。这与已配置的默认值和 cron 任务主模型不同，它们仍然可以使用回退链。
-    - `/model status` 是详细视图（认证候选项，以及在已配置时的提供商端点 `baseUrl` + `api` 模式）。
+    - 如果 agent 处于空闲状态，下一次运行会立即使用新模型。
+    - 如果运行已经在进行中，OpenClaw 会将实时切换标记为待处理，并且只会在干净的重试点重启到新模型。
+    - 如果工具活动或回复输出已经开始，待处理的切换可能会一直排队，直到后续的重试机会或下一次用户轮次。
+    - `/model default` 会清除会话选择并将会话恢复为已配置的默认模型。
+    - 用户选择的 `/model` 引用对该会话是严格的：如果所选提供商/模型无法访问，回复会显式失败，而不会静默地从 `agents.defaults.model.fallbacks` 回答。这与已配置默认值和 cron 作业主模型不同，后者仍可以使用回退链。
+    - `/model status` 是详细视图（认证候选，以及在已配置时，提供商端点 `baseUrl` + `api` 模式）。
 
   </Accordion>
   <Accordion title="引用解析">
@@ -335,7 +337,7 @@ OpenRouter 的 `/models` 目录是公开的，因此仅元数据扫描无需密�
 
 ## 模型注册表（`models.json`）
 
-Custom providers in `models.providers` are written into `models.json` under the agent directory (default `~/.openclaw/agents/<agentId>/agent/models.json`). Provider-plugin catalogs are stored as generated plugin-owned catalog shards under the agent's plugin state and loaded automatically. This file is merged by default unless `models.mode` is set to `replace`.
+`models.providers` 中的自定义提供方会写入代理目录下的 `models.json`（默认 `~/.openclaw/agents/<agentId>/agent/models.json`）。提供方插件目录会作为生成的、由插件拥有的目录分片存储在代理的插件状态中，并自动加载。默认情况下会合并此文件，除非将 `models.mode` 设置为 `replace`。
 
 <AccordionGroup>
   <Accordion title="合并模式优先级">
@@ -357,10 +359,10 @@ Custom providers in `models.providers` are written into `models.json` under the 
 
 ## 相关内容
 
-- [Agent runtimes](/concepts/agent-runtimes) — OpenClaw, Codex, and other agent loop runtimes
-- [Configuration reference](/gateway/config-agents#agent-defaults) — model config keys
-- [Image generation](/tools/image-generation) — image model configuration
-- [Model failover](/concepts/model-failover) — fallback chains
-- [Model providers](/concepts/model-providers) — provider routing and auth
-- [Music generation](/tools/music-generation) — music model configuration
-- [Video generation](/tools/video-generation) — video model configuration
+- [Agent runtimes](/concepts/agent-runtimes) — OpenClaw、Codex 和其他代理循环运行时
+- [Configuration reference](/gateway/config-agents#agent-defaults) — 模型配置键
+- [Image generation](/tools/image-generation) — 图像模型配置
+- [Model failover](/concepts/model-failover) — 回退链
+- [Model providers](/concepts/model-providers) — 提供方路由和认证
+- [Music generation](/tools/music-generation) — 音乐模型配置
+- [Video generation](/tools/video-generation) — 视频模型配置

@@ -23,51 +23,54 @@ title: "代理"
 
 ## 选项
 
-- `-m, --message <text>`: 必填消息正文
-- `-t, --to <dest>`: 用于派生 session key 的收件人
-- `--session-key <key>`: 用于路由的显式 session key
-- `--session-id <id>`: 显式 session id
-- `--agent <id>`: agent id；会覆盖路由绑定
-- `--model <id>`: 本次运行的模型覆盖项（`provider/model` 或 model id）
+- `-m, --message <text>`: 消息正文
+- `--message-file <path>`: 从 UTF-8 文件中读取消息正文
+- `-t, --to <dest>`: 用于派生会话键的收件人
+- `--session-key <key>`: 明确指定要用于路由的会话键
+- `--session-id <id>`: 明确指定会话 ID
+- `--agent <id>`: agent ID；覆盖路由绑定
+- `--model <id>`: 本次运行的模型覆盖项（`provider/model` 或模型 ID）
 - `--thinking <level>`: agent 思考级别（`off`、`minimal`、`low`、`medium`、`high`，以及提供方支持的自定义级别，如 `xhigh`、`adaptive` 或 `max`）
-- `--verbose <on|off>`: 为该会话持久化详细级别
+- `--verbose <on|off>`: 为会话持久化详细级别
 - `--channel <channel>`: 投递通道；省略则使用主会话通道
 - `--reply-to <target>`: 投递目标覆盖项
 - `--reply-channel <channel>`: 投递通道覆盖项
-- `--reply-account <id>`: 投递账号覆盖项
-- `--local`: 直接运行嵌入式 agent（在插件注册表预加载之后）
-- `--deliver`: 将回复发送回所选通道/目标
+- `--reply-account <id>`: 投递账户覆盖项
+- `--local`: 直接在本地运行嵌入式 agent（在插件注册表预加载之后）
+- `--deliver`: 将回复发送回选定的通道/目标
 - `--timeout <seconds>`: 覆盖 agent 超时时间（默认 600 或配置值）
 - `--json`: 输出 JSON
 
 ## 示例
 
 ```bash
-openclaw agent --to +15555550123 --message "status update" --deliver
-openclaw agent --agent ops --message "Summarize logs"
-openclaw agent --agent ops --model openai/gpt-5.4 --message "Summarize logs"
-openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"
-openclaw agent --agent ops --session-key incident-42 --message "Summarize status"
-openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium
-openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json
-openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"
-openclaw agent --agent ops --message "Run locally" --local
+openclaw agent --to +15555550123 --message "状态更新" --deliver
+openclaw agent --agent ops --message "总结日志"
+openclaw agent --agent ops --message-file ./task.md
+openclaw agent --agent ops --model openai/gpt-5.4 --message "总结日志"
+openclaw agent --session-key agent:ops:incident-42 --message "总结状态"
+openclaw agent --agent ops --session-key incident-42 --message "总结状态"
+openclaw agent --session-id 1234 --message "总结收件箱" --thinking medium
+openclaw agent --to +15555550123 --message "追踪日志" --verbose on --json
+openclaw agent --agent ops --message "生成报告" --deliver --reply-channel slack --reply-to "#reports"
+openclaw agent --agent ops --message "在本地运行" --local
 ```
 
 ## 说明
 
-- Gateway 模式在 Gateway 请求失败时会回退到嵌入式 agent。使用 `--local` 可以在一开始就强制使用嵌入式执行。
-- `--local` 仍然会先预加载插件注册表，因此插件提供的 providers、tools 和 channels 在嵌入式运行期间仍然可用。
-- `--local` 和嵌入式回退运行都被视为一次性运行。为该本地进程打开的打包 MCP loopback 资源和 warm Claude stdio 会话会在回复后回收，因此脚本化调用不会让本地子进程持续存活。
-- 基于 Gateway 的运行会让由 Gateway 持有的 MCP loopback 资源留在运行中的 Gateway 进程中；旧客户端可能仍会发送历史清理标志，但 Gateway 会将其作为兼容性空操作接受。
-- `--channel`、`--reply-channel` 和 `--reply-account` 影响的是回复投递，而不是会话路由。
-- `--session-key` 用于选择显式 session key。以 `agent:` 开头的 key 必须使用 `agent:<agent-id>:<session-key>` 格式，而且当同时提供 `--agent` 时，`--agent` 必须与 key 中的 agent id 一致。未带前缀的普通非哨兵 key 会在提供 `--agent` 时限定到该 `--agent`，否则限定到配置的默认 agent；例如，`--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面量 `global` 和 `unknown` 仅在未提供 `--agent` 时才保持不加作用域；在这种情况下，嵌入式回退和存储归属都会使用配置的默认 agent。
-- `--json` 会让 stdout 专门用于 JSON 响应。Gateway、插件以及嵌入式回退的诊断信息会发送到 stderr，因此脚本可以直接解析 stdout。
-- 嵌入式回退 JSON 包含 `meta.transport: "embedded"` 和 `meta.fallbackFrom: "gateway"`，以便脚本区分回退运行与 Gateway 运行。
-- 如果 Gateway 接受了某次 agent 运行，但 CLI 在等待最终回复时超时，嵌入式回退会使用新的显式 `gateway-fallback-*` session/run id，并报告 `meta.fallbackReason: "gateway_timeout"` 以及回退 session 字段。这样可以避免与 Gateway 持有的 transcript 锁发生竞争，或在无提示的情况下替换原始路由会话。
-- 对于基于 Gateway 的运行，`SIGTERM` 和 `SIGINT` 会中断正在等待的 CLI 请求。如果 Gateway 已经接受了该运行，CLI 在退出前还会针对该已接受的 run id 发送 `chat.abort`。本地 `--local` 运行和嵌入式回退运行会接收相同的中止信号，但不会发送 `chat.abort`。如果重复的 `--run-id` 在原始 agent 运行仍处于活动状态时到达 Gateway，重复响应会报告 `status: "in_flight"`，而非 JSON 的 CLI 则会在 stderr 中输出诊断信息，而不是返回空回复。对于外部 cron/systemd 包装器，请保留一个外层硬终止后备，例如 `timeout -k 60 600 openclaw agent ...`，这样当关闭过程无法完成回收时，supervisor 仍然可以清理该进程。
-- 当此命令触发 `models.json` 重新生成时，SecretRef 管理的 provider 凭据会以非敏感标记的形式持久化（例如环境变量名、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不是已解析的明文密钥。
-- 标记写入以源为准：OpenClaw 持久化的是来自当前源配置快照的标记，而不是来自已解析运行时密钥值的内容。
+- `--message` 和 `--message-file` 必须且只能传入一个。`--message-file` 会在移除可选的 UTF-8 BOM 后保留多行文件内容，并拒绝不是有效 UTF-8 的文件。
+- 当 Gateway 请求失败时，Gateway 模式会回退到嵌入式 agent。使用 `--local` 可在一开始就强制执行嵌入式运行。
+- `--local` 仍会先预加载插件注册表，因此由插件提供的 provider、工具和通道在嵌入式运行期间依然可用。
+- `--local` 和嵌入式回退运行都被视为一次性运行。为该本地进程打开的捆绑 MCP loopback 资源和预热的 Claude stdio 会话会在回复后释放，因此脚本化调用不会让本地子进程一直存活。
+- 基于 Gateway 的运行会将 Gateway 所拥有的 MCP loopback 资源保留在正在运行的 Gateway 进程中；旧客户端可能仍会发送历史清理标志，但 Gateway 会将其作为兼容性空操作接受。
+- `--channel`、`--reply-channel` 和 `--reply-account` 影响回复投递，而不是会话路由。
+- `--session-key` 选择一个显式会话键。以 agent 为前缀的键必须使用 `agent:<agent-id>:<session-key>`，且当同时提供时，`--agent` 必须与该键的 agent id 匹配。普通的非哨兵键在提供 `--agent` 时会限定到 `--agent`，否则限定到已配置的默认 agent；例如，`--agent ops --session-key incident-42` 会路由到 `agent:ops:incident-42`。字面量 `global` 和 `unknown` 仅在未提供 `--agent` 时才保持不加作用域；在这种情况下，嵌入式回退和存储归属会使用已配置的默认 agent。
+- `--json` 会将 stdout 保留给 JSON 响应。Gateway、插件和嵌入式回退诊断信息会输出到 stderr，因此脚本可以直接解析 stdout。
+- 嵌入式回退的 JSON 包含 `meta.transport: "embedded"` 和 `meta.fallbackFrom: "gateway"`，以便脚本区分回退运行和 Gateway 运行。
+- 如果 Gateway 接受了 agent 运行，但 CLI 在等待最终回复时超时，嵌入式回退会使用一个新的显式 `gateway-fallback-*` session/run id，并报告 `meta.fallbackReason: "gateway_timeout"` 以及回退会话字段。这样可以避免与 Gateway 所拥有的 transcript 锁发生竞争，或无声地替换原始路由会话。
+- 对于基于 Gateway 的运行，`SIGTERM` 和 `SIGINT` 会中断等待中的 CLI 请求。如果 Gateway 已经接受了该运行，CLI 还会在退出前为该已接受的 run id 发送 `chat.abort`。本地 `--local` 运行和嵌入式回退运行也会接收相同的中止信号，但不会发送 `chat.abort`。如果重复的 `--run-id` 在原始 agent 运行仍处于活动状态时到达 Gateway，重复响应会报告 `status: "in_flight"`，而非 JSON 的 CLI 会打印 stderr 诊断信息，而不是空回复。对于外部 cron/systemd 包装器，请保留一个外层的强制终止后备，例如 `timeout -k 60 600 openclaw agent ...`，以便在无法正常结束时，监督进程仍可回收该进程。
+- 当该命令触发 `models.json` 重新生成时，SecretRef 管理的提供方凭据会以非秘密标记的形式持久化（例如环境变量名、`secretref-env:ENV_VAR_NAME` 或 `secretref-managed`），而不是解析后的秘密明文。
+- 标记写入以源配置为权威：OpenClaw 持久化的是来自活动源配置快照中的标记，而不是来自解析后的运行时秘密值。
 
 ## JSON 投递状态
 

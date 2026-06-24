@@ -11,8 +11,8 @@ title: "Z.AI 插件"
 
 ## 分发
 
-- 包：`@openclaw/zai-provider`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/zai-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/zai-provider`
 
 ## 表面
 

@@ -11,8 +11,8 @@ title: "Moonshot 插件"
 
 ## 分发
 
-- 包：`@openclaw/moonshot-provider`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/moonshot-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/moonshot-provider`
 
 ## 接口
 

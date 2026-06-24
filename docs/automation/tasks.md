@@ -307,9 +307,8 @@ Tasks: 3 queued · 2 running · 1 issues
 $OPENCLAW_STATE_DIR/tasks/runs.sqlite
 ```
 
-注册表在 gateway 启动时加载到内存，并将写入同步到 SQLite，以确保跨重启的持久性。  
-Gateway 通过使用 SQLite 默认的
-autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限制 SQLite 写前日志的大小。
+注册表在 gateway 启动时加载到内存中，并将写入同步到 SQLite，以便在重启后保持持久性。
+Gateway 通过使用 SQLite 默认的自动检查点阈值以及周期性的 `PASSIVE` 检查点来限制 SQLite 写前日志的大小。关机和显式维护检查点仍然使用 `TRUNCATE`，这样正常关闭时即可回收 WAL 空间，而不会让后台清理线程等待活跃读者。
 
 ### 自动维护
 
@@ -343,8 +342,8 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
     详情参见 [任务流](/automation/taskflow)。
 
   </Accordion>
-  <Accordion title="Tasks and cron">
-    Cron job definitions, runtime execution state, and run history live in OpenClaw's shared SQLite state database. **Every** cron execution creates a task record - both main-session and isolated. Main-session cron tasks default to `silent` notify policy so they track without generating notifications.
+  <Accordion title="任务与 cron">
+    Cron 作业定义、运行时执行状态和运行历史都存放在 OpenClaw 共享的 SQLite 状态数据库中。**每一次** cron 执行都会创建一条任务记录——包括主会话和隔离会话。主会话 cron 任务默认使用 `silent` 通知策略，因此它们只会跟踪而不会生成通知。
 
     详情参见 [Cron Jobs](/automation/cron-jobs)。
 
@@ -355,8 +354,8 @@ autocheckpoint 阈值以及定期和关闭时的 `TRUNCATE` 检查点，来限�
     详情参见 [Heartbeat](/gateway/heartbeat)。
 
   </Accordion>
-  <Accordion title="任务与会话">
-    任务可以引用 `childSessionKey`（工作运行的位置）和 `requesterSessionKey`（发起者）。会话是对话上下文；任务是在此之上的活动跟踪。
+  <Accordion title="任务与 sessions">
+    任务可能会引用 `childSessionKey`（工作运行的位置）和 `requesterSessionKey`（启动它的人）。其 `agentId` 标识执行工作的 agent，而 requester 和 owner 字段保留启动与控制上下文。Sessions 是对话上下文；tasks 是建立在其上的活动跟踪。
   </Accordion>
   <Accordion title="任务与 Agent 运行">
     任务的 `runId` 连接到正在执行工作的 agent run。Agent 生命周期事件（开始、结束、错误）会自动更新任务状态——你无需手动管理生命周期。

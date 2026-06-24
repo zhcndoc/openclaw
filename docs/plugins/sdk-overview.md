@@ -11,7 +11,7 @@ read_when:
 插件 SDK 是插件与核心之间的类型化契约。此页面是关于**导入什么**以及**可以注册什么**的参考。
 
 <Note>
-  此页面适用于在 OpenClaw 内部使用 `openclaw/plugin-sdk/*` 的插件作者。对于希望通过 Gateway 运行 agent 的外部应用、脚本、仪表盘、CI 作业和 IDE 扩展，请改用 [OpenClaw App SDK](/concepts/openclaw-sdk) 和 `@openclaw/sdk` 包。
+  此页面面向在 OpenClaw 内部使用 `openclaw/plugin-sdk/*` 的插件作者。对于希望通过 Gateway 运行 agent 的外部应用、脚本、仪表板、CI 作业和 IDE 扩展，请改用 [面向外部应用的 Gateway 集成](/gateway/external-apps)。
 </Note>
 
 <Tip>
@@ -101,7 +101,17 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 通过 `api.registerEmbeddingProvider(...)` 注册的 Embedding 提供方也必须列在插件清单的 `contracts.embeddingProviders` 中。这是用于可复用向量生成的通用 embedding 能力面。内存搜索可以消费这个通用提供方能力面。较旧的 `api.registerMemoryEmbeddingProvider(...)` 和 `contracts.memoryEmbeddingProviders` 接缝属于已弃用的兼容路径，供现有的内存专用提供方迁移使用。
 
-### 工具和命令
+Memory-specific providers that still expose a runtime `batchEmbed(...)` stay on
+the existing per-file batching contract unless their runtime explicitly sets
+`sourceWideBatchEmbed: true`. That opt-in lets the memory host submit chunks from
+multiple dirty memory files and enabled sources in one `batchEmbed(...)` call up
+to the host batch limits. Batch adapters that upload JSONL request files must
+split provider jobs before their upload-size cap as well as their request-count
+cap. The provider must return one embedding per input chunk in the same order as
+`batch.chunks`; omit the flag when the provider expects file-local batches or
+cannot preserve input ordering across a larger source-wide job.
+
+### Tools and commands
 
 对固定工具名称的简单仅工具插件，请使用 [`defineToolPlugin`](/plugins/tool-plugins)。
 对于混合插件或完全动态的工具注册，请直接使用 `api.registerTool(...)`。
@@ -159,19 +169,19 @@ guidance remain available to non-Codex prompt surfaces for compatibility.
 
 | 方法                                                                               | 契约所有内容                                                                                                                  |
 | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `api.session.state.registerSessionExtension(...)`                                    | 由插件拥有、与 JSON 兼容的会话状态，通过 Gateway 会话进行投影                                                    |
-| `api.session.workflow.enqueueNextTurnInjection(...)`                                 | 持久化的、exactly-once 的上下文，注入到一个会话的下一次 agent 回合中                                                    |
-| `api.registerTrustedToolPolicy(...)`                                                 | 捆绑/受信任的、插件前置的工具策略，可阻止或重写工具参数                                                      |
-| `api.registerToolMetadata(...)`                                                      | 不改变工具实现的工具目录显示元数据                                                            |
-| `api.registerCommand(...)`                                                           | 作用域化插件命令；命令结果可以设置 `continueAgent: true`；Discord 原生命令支持 `descriptionLocalizations` |
-| `api.session.controls.registerControlUiDescriptor(...)`                              | 会话、工具、运行或设置界面的 Control UI 贡献描述符                                                  |
-| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | 用于插件拥有的运行时资源在重置/删除/重载路径上的清理回调                                                 |
-| `api.agent.events.registerAgentEventSubscription(...)`                               | 用于工作流状态和监视器的已净化事件订阅                                                                     |
-| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | 每次运行的插件临时状态，在终止性运行生命周期中清除                                                                    |
-| `api.session.workflow.registerSessionSchedulerJob(...)`                              | 插件拥有的调度器作业的清理元数据；不会调度工作或创建任务记录                                   |
-| `api.session.workflow.sendSessionAttachment(...)`                                    | 仅捆绑插件可用的、由宿主中介的文件附件投递到活动的直接出站会话路由                                   |
-| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | 仅捆绑插件可用的、由 Cron 支持的计划会话回合以及基于标签的清理                                                           |
-| `api.session.controls.registerSessionAction(...)`                                    | 类型化会话动作，客户端可以通过 Gateway 分发                                                                    |
+| `api.session.state.registerSessionExtension(...)`                                    | Plugin-owned, JSON-compatible session state projected through Gateway sessions                                                    |
+| `api.session.workflow.enqueueNextTurnInjection(...)`                                 | Durable exactly-once context injected into the next agent turn for one session                                                    |
+| `api.registerTrustedToolPolicy(...)`                                                 | Manifest-gated trusted pre-plugin tool policy that can block or rewrite tool params                                               |
+| `api.registerToolMetadata(...)`                                                      | Tool catalog display metadata without changing the tool implementation                                                            |
+| `api.registerCommand(...)`                                                           | Scoped plugin commands; command results can set `continueAgent: true`; Discord native commands support `descriptionLocalizations` |
+| `api.session.controls.registerControlUiDescriptor(...)`                              | Control UI contribution descriptors for session, tool, run, or settings surfaces                                                  |
+| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | Cleanup callbacks for plugin-owned runtime resources on reset/delete/reload paths                                                 |
+| `api.agent.events.registerAgentEventSubscription(...)`                               | Sanitized event subscriptions for workflow state and monitors                                                                     |
+| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | Per-run plugin scratch state cleared on terminal run lifecycle                                                                    |
+| `api.session.workflow.registerSessionSchedulerJob(...)`                              | Cleanup metadata for plugin-owned scheduler jobs; does not schedule work or create task records                                   |
+| `api.session.workflow.sendSessionAttachment(...)`                                    | Bundled-only host-mediated file attachment delivery to the active direct-outbound session route                                   |
+| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | Bundled-only Cron-backed scheduled session turns plus tag-based cleanup                                                           |
+| `api.session.controls.registerSessionAction(...)`                                    | Typed session actions clients can dispatch through the Gateway                                                                    |
 
 新插件代码请使用分组命名空间：
 
@@ -204,15 +214,19 @@ Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在�
 
 这些契约刻意分离了权限：
 
-- 外部插件可以拥有会话扩展、UI 描述符、命令、工具
-  元数据、下一回合注入以及普通钩子。
-- 受信任的工具策略在普通 `before_tool_call` 钩子之前运行，并且仅限捆绑插件，因为它们参与宿主安全策略。
-- 保留命令所有权仅限捆绑插件。外部插件应使用它们
-  自己的命令名称或别名。
-- `allowPromptInjection=false` 会禁用会改变提示词的钩子，包括
-  `agent_turn_prepare`、`before_prompt_build`、`heartbeat_prompt_contribution`、
-  旧版 `before_agent_start` 中的提示词字段，以及
-  `enqueueNextTurnInjection`。
+- External plugins can own session extensions, UI descriptors, commands, tool
+  metadata, next-turn injections, and normal hooks.
+- Trusted tool policies run before ordinary `before_tool_call` hooks and are
+  host-trusted. Bundled policies run first; installed-plugin policies require
+  explicit enablement plus their local ids in
+  `contracts.trustedToolPolicies`, and run next in plugin-load order. Policy ids
+  are scoped to the registering plugin.
+- Reserved command ownership is bundled-only. External plugins should use their
+  own command names or aliases.
+- `allowPromptInjection=false` disables prompt-mutating hooks including
+  `agent_turn_prepare`, `before_prompt_build`, `heartbeat_prompt_contribution`,
+  prompt fields from legacy `before_agent_start`, and
+  `enqueueNextTurnInjection`.
 
 非 Plan 消费者的示例：
 
@@ -229,16 +243,10 @@ Cron 调度器之上的会话作用域便捷封装。Cron 负责时序，并在�
   Gateway 方法作用域。优先为插件拥有的方法使用插件特定前缀。
 </Note>
 
-<Accordion title="何时使用工具结果中间件">
-  捆绑插件在需要在工具执行后、运行时将该结果
-  返回给模型之前重写工具结果时，可以使用 `api.registerAgentToolResultMiddleware(...)`。这是一种受信任的、与运行时无关的接口，适用于
-  像 tokenjuice 这样的异步输出缩减器。
+<Accordion title="何时使用 tool-result 中间件">
+  捆绑插件以及显式启用、且清单契约匹配的已安装插件，在需要于执行后、运行时将结果回传给模型之前重写工具结果时，可以使用 `api.registerAgentToolResultMiddleware(...)`。这是用于 tokenjuice 等异步输出归约器的受信任、与运行时无关的接缝。
 
-Bundled plugins must declare `contracts.agentToolResultMiddleware` for each
-targeted runtime, for example `["openclaw", "codex"]`. External plugins
-cannot register this middleware; keep normal OpenClaw plugin hooks for work
-that does not need pre-model tool-result timing. The old embedded-runner-only
-extension factory registration path has been removed.
+插件必须针对每个目标运行时声明 `contracts.agentToolResultMiddleware`，例如 `["openclaw", "codex"]`。没有该契约或未显式启用的已安装插件不能注册此中间件；对于不需要在模型前进行工具结果时序控制的工作，请保留使用普通 OpenClaw 插件钩子。旧的仅嵌入式运行器扩展工厂注册路径已被移除。
 </Accordion>
 
 ### Gateway 发现注册
@@ -331,49 +339,43 @@ api.registerCli(
 `api.registerCliBackend(...)` 允许插件拥有本地
 AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
-- 后端 `id` 会成为模型引用中的提供方前缀，例如 `my-cli/gpt-5`。
-- 后端 `config` 的形状与 `agents.defaults.cliBackends.<id>` 相同。
-- 用户配置仍然优先。OpenClaw 会在运行 CLI 前，将 `agents.defaults.cliBackends.<id>` 叠加在插件默认值之上。
-- 当后端在合并后需要兼容性重写时，请使用 `normalizeConfig`
-  （例如规范化旧的标志形状）。
-- 当需要属于 CLI 方言的、请求作用域的 argv 重写时，请使用 `resolveExecutionArgs`，
-  例如将 OpenClaw 的思考级别映射到原生的 effort 标志。
+- 后端 `id` 会成为诸如 `my-cli/gpt-5` 这样的模型引用中的提供方前缀。
+- 后端 `config` 使用与 `agents.defaults.cliBackends.<id>` 相同的结构。
+- 用户配置仍然优先。OpenClaw 在运行 CLI 之前，会将插件默认值之上的 `agents.defaults.cliBackends.<id>` 进行合并。
+- 当后端在合并后需要兼容性重写时使用 `normalizeConfig`（例如规范化旧的标志形状）。
+- 当需要属于 CLI 方言、且基于请求作用域的 argv 重写时使用 `resolveExecutionArgs`，例如将 OpenClaw 的思考等级映射为原生的 effort 标志。该钩子会接收 `ctx.executionMode`；对于临时 `/btw` 调用，请使用 `"side-question"` 来添加后端原生的隔离标志。如果这些标志能可靠地为原本始终开启的 CLI 禁用原生工具，也请声明 `sideQuestionToolMode: "disabled"`。
 
 有关端到端编写指南，请参见
 [CLI backend plugins](/plugins/cli-backend-plugins)。
 
 ### 独占槽位
 
-| 方法                                     | 注册内容                                                                                                                                         |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api.registerContextEngine(id, factory)`   | 上下文引擎（一次仅一个处于活动状态）。`assemble()` 回调会接收 `availableTools` 和 `citationsMode`，以便引擎可以定制提示词附加内容。 |
-| `api.registerMemoryCapability(capability)` | 统一内存能力                                                                                                                                 |
-| `api.registerMemoryPromptSection(builder)` | 内存提示词部分构建器                                                                                                                             |
-| `api.registerMemoryFlushPlan(resolver)`    | 内存刷新计划解析器                                                                                                                                |
-| `api.registerMemoryRuntime(runtime)`       | 内存运行时适配器                                                                                                                                    |
+| 方法                                     | 注册内容                                                                                                                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.registerContextEngine(id, factory)`   | 上下文引擎（一次仅可有一个处于活动状态）。当宿主能够提供模型/提供方/模式诊断时，生命周期回调会收到 `runtimeSettings`；旧的严格引擎会在没有该键的情况下重试。 |
+| `api.registerMemoryCapability(capability)` | 统一的内存能力                                                                                                                                                                          |
+| `api.registerMemoryPromptSection(builder)` | 内存提示词部分构建器                                                                                                                                                                      |
+| `api.registerMemoryFlushPlan(resolver)`    | 内存清空计划解析器                                                                                                                                                                         |
+| `api.registerMemoryRuntime(runtime)`       | 内存运行时适配器                                                                                                                                                                             |
 
-### Deprecated memory embedding adapters
+### 已弃用的 memory embedding 适配器
 
 | 方法                                         | 注册内容                              |
 | ---------------------------------------------- | ---------------------------------------------- |
 | `api.registerMemoryEmbeddingProvider(adapter)` | 当前插件的内存嵌入适配器 |
 
-- `registerMemoryCapability` is the preferred exclusive memory-plugin API.
-- `registerMemoryCapability` may also expose `publicArtifacts.listArtifacts(...)`
-  so companion plugins can consume exported memory artifacts through
-  `openclaw/plugin-sdk/memory-host-core` instead of reaching into a specific
-  memory plugin's private layout.
-- `registerMemoryPromptSection`, `registerMemoryFlushPlan`, and
-  `registerMemoryRuntime` are legacy-compatible exclusive memory-plugin APIs.
-- `MemoryFlushPlan.model` can pin the flush turn to an exact `provider/model`
-  reference, such as `ollama/qwen3:8b`, without inheriting the active fallback
-  chain.
-- `registerMemoryEmbeddingProvider` is deprecated. New embedding providers
-  should use `api.registerEmbeddingProvider(...)` and
-  `contracts.embeddingProviders`.
-- Existing memory-specific providers continue to work during the migration
-  window, but plugin inspection reports this as compatibility debt for
-  non-bundled plugins.
+- `registerMemoryCapability` 是首选的独占内存插件 API。
+- `registerMemoryCapability` 还可以暴露 `publicArtifacts.listArtifacts(...)`
+  以便伴随插件通过 `openclaw/plugin-sdk/memory-host-core` 消费导出的内存工件，而无需深入某个特定内存插件的私有布局。
+- `registerMemoryPromptSection`、`registerMemoryFlushPlan` 和
+  `registerMemoryRuntime` 是与旧版兼容的独占内存插件 API。
+- `MemoryFlushPlan.model` 可以将清空回合固定为一个精确的 `provider/model`
+  引用，例如 `ollama/qwen3:8b`，而不会继承当前的回退链。
+- `registerMemoryEmbeddingProvider` 已弃用。新的 embedding 提供方
+  应使用 `api.registerEmbeddingProvider(...)` 和
+  `contracts.embeddingProviders`。
+- 现有的内存专用提供方在迁移窗口期间仍可继续工作，但插件检查会将其报告为
+  非捆绑插件的兼容性债务。
 
 ### 事件和生命周期
 
@@ -387,17 +389,20 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 ### 钩子决策语义
 
-- `before_tool_call`：返回 `{ block: true }` 是终止性的。一旦任何处理器设置了它，更低优先级的处理器会被跳过。
-- `before_tool_call`：返回 `{ block: false }` 被视为没有决策（等同于省略 `block`），而不是覆盖。
-- `before_install`：返回 `{ block: true }` 是终止性的。一旦任何处理器设置了它，更低优先级的处理器会被跳过。
-- `before_install`：返回 `{ block: false }` 被视为没有决策（等同于省略 `block`），而不是覆盖。
-- `reply_dispatch`：返回 `{ handled: true, ... }` 是终止性的。一旦任何处理器声明了派发，更低优先级的处理器和默认模型派发路径会被跳过。
-- `message_sending`：返回 `{ cancel: true }` 是终止性的。一旦任何处理器设置了它，更低优先级的处理器会被跳过。
-- `message_sending`：返回 `{ cancel: false }` 被视为没有决策（等同于省略 `cancel`），而不是覆盖。
-- `message_received`：当你需要传入线程/话题路由时，请使用类型化的 `threadId` 字段。将 `metadata` 保留给渠道特定的额外信息。
-- `message_sending`：在回退到渠道特定的 `metadata` 之前，请使用类型化的 `replyToId` / `threadId` 路由字段。
-- `gateway_start`：请使用 `ctx.config`、`ctx.workspaceDir` 和 `ctx.getCron?.()` 获取 gateway 拥有的启动状态，而不要依赖内部的 `gateway:startup` 钩子。
-- `cron_changed`：观察 gateway 拥有的 cron 生命周期变化。在同步外部唤醒调度器时，请使用 `event.job?.state?.nextRunAtMs` 和 `ctx.getCron?.()`，并让 OpenClaw 作为到期检查和执行的真实来源。
+`before_install` 是插件运行时生命周期钩子，而不是 operator 安装
+策略面。当允许/阻止决策必须覆盖 CLI 和由 Gateway 支持的安装或更新路径时，请使用 `security.installPolicy`。
+
+- `before_tool_call`：返回 `{ block: true }` 是终局性的。一旦任一处理器设置了它，低优先级处理器将被跳过。
+- `before_tool_call`：返回 `{ block: false }` 会被视为没有决策（与省略 `block` 相同），而不是覆盖。
+- `before_install`：返回 `{ block: true }` 是终局性的。一旦任一处理器设置了它，低优先级处理器将被跳过。
+- `before_install`：返回 `{ block: false }` 会被视为没有决策（与省略 `block` 相同），而不是覆盖。
+- `reply_dispatch`：返回 `{ handled: true, ... }` 是终局性的。一旦任一处理器声明处理分发，低优先级处理器和默认的模型分发路径都会被跳过。
+- `message_sending`：返回 `{ cancel: true }` 是终局性的。一旦任一处理器设置了它，低优先级处理器将被跳过。
+- `message_sending`：返回 `{ cancel: false }` 会被视为没有决策（与省略 `cancel` 相同），而不是覆盖。
+- `message_received`：当你需要入站线程/主题路由时，请使用类型化的 `threadId` 字段。将 `metadata` 保留给渠道特定的额外信息。
+- `message_sending`：在退回到渠道特定的 `metadata` 之前，请使用类型化的 `replyToId` / `threadId` 路由字段。
+- `gateway_start`：使用 `ctx.config`、`ctx.workspaceDir` 和 `ctx.getCron?.()` 获取 Gateway 拥有的启动状态，而不是依赖内部的 `gateway:startup` 钩子。
+- `cron_changed`：观察 Gateway 拥有的 cron 生命周期变化。在同步外部唤醒调度器时，请使用 `event.job?.state?.nextRunAtMs` 和 `ctx.getCron?.()`，并保持 OpenClaw 作为到期检查和执行的事实来源。
 
 ### API 对象字段
 

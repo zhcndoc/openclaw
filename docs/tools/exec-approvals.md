@@ -14,7 +14,7 @@ Exec 许可是用于让一个沙箱化 agent 在真实主机（`gateway` 或 `no
 [权限模式](/tools/permission-modes)。
 
 <Note>
-有效策略是 `tools.exec.*` 与 approvals defaults 中**更严格的**那个；如果省略了某个 approvals 字段，则使用 `tools.exec` 的值。Host exec 也使用该机器上的本地 approvals 状态——`~/.openclaw/exec-approvals.json` 中本地的 `ask: "always"` 即使 session 或 config 默认要求 `ask: "on-miss"`，也会持续弹出提示。
+生效策略是 `tools.exec.*` 和 approvals 默认值中**更严格**的那个；如果省略了 approvals 字段，则使用 `tools.exec` 的值。Host exec 还会使用该机器上的本地 approvals 状态——execution host approvals 文件中的主机本地 `ask: "always"` 会持续提示，即使 session 或 config 默认值请求的是 `ask: "on-miss"`。
 </Note>
 
 ## 检查生效策略
@@ -57,11 +57,19 @@ Exec 许可在执行主机本地强制执行：
 
 ## 设置与存储
 
-许可存放在执行主机上的一个本地 JSON 文件中：
+批准项保存在执行主机上的本地 JSON 文件中。当设置了
+`OPENCLAW_STATE_DIR` 时，该文件会遵循该状态目录；
+否则使用默认的 OpenClaw 状态目录：
 
 ```text
+$OPENCLAW_STATE_DIR/exec-approvals.json
+# otherwise
 ~/.openclaw/exec-approvals.json
 ```
+
+默认的批准 socket 也遵循相同根目录：
+`$OPENCLAW_STATE_DIR/exec-approvals.sock`，或者当该变量未设置时使用
+`~/.openclaw/exec-approvals.sock`。
 
 示例 schema：
 
@@ -137,7 +145,7 @@ Exec 许可在执行主机本地强制执行：
 ### `askFallback`
 
 <ParamField path="askFallback" type='"deny" | "allowlist" | "full"'>
-  当需要提示但无法到达任何 UI 时的处理方式。
+  当需要提示但无法访问任何 UI 时的处理方式。如果省略此字段，OpenClaw 默认为 `deny`。
 
 - `deny` - 阻止。
 - `allowlist` - 仅当允许列表匹配时才允许。
@@ -171,14 +179,14 @@ Exec 许可在执行主机本地强制执行：
 
 此设置不会更改 `security`、`ask`、允许列表匹配、严格内联求值行为、许可转发或命令执行。它可以全局设置为 `tools.exec.commandHighlighting`，也可以按 agent 设置为 `agents.list[].tools.exec.commandHighlighting`。
 
-## YOLO mode (no-approval)
+## YOLO 模式（无需许可）
 
-如果你希望 host exec 在没有批准提示的情况下运行，你必须同时打开
-OpenClaw 配置中的**两层**策略：
-请求的 exec policy（`tools.exec.*`）以及
-`~/.openclaw/exec-approvals.json` 中的本地主机 approvals policy。
+如果你希望 host exec 在不弹出许可提示的情况下运行，你必须同时打开
+**两层**策略：OpenClaw 配置中的请求 exec 策略
+（`tools.exec.*`）**以及**执行主机许可文件中的主机本地批准策略。
 
-YOLO 是默认的主机行为，除非你显式收紧它：
+OpenClaw 默认将省略的 `askFallback` 设为 `deny`。当无 UI 的许可提示应该
+回退为允许时，请显式将主机的 `askFallback` 设为 `full`。
 
 | 层                   | YOLO 设置                    |
 | -------------------- | ---------------------------- |
@@ -245,7 +253,7 @@ openclaw exec-policy preset yolo
 这个本地快捷方式会同时更新：
 
 - 本地 `tools.exec.host/security/ask`。
-- 本地 `~/.openclaw/exec-approvals.json` 默认值。
+- 本地 approvals 文件 defaults，包括 `askFallback: "full"`。
 
 它刻意仅限本地。若要远程更改 gateway-host 或 node-host 的许可，请使用 `openclaw approvals set --gateway` 或 `openclaw approvals set --node <id|name|ip>`。
 
@@ -356,9 +364,9 @@ EOF
 
 使用 **Control UI → Nodes → Exec approvals** 卡片来编辑默认值、按代理覆盖项以及允许名单。选择一个范围（Defaults 或某个代理），调整策略，添加/移除允许名单模式，然后点击 **Save**。UI 会显示每个模式最近使用的元数据，方便你保持列表整洁。
 
-目标选择器可选择 **Gateway**（本地审批）或 **Node**。节点必须公开 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。如果某个节点尚未公开 exec approvals，请直接编辑其本地的 `~/.openclaw/exec-approvals.json`。
+目标选择器会选择 **Gateway**（本地审批）或某个 **Node**。节点必须公开 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。如果节点尚未公开 exec approvals，请直接编辑其本地审批文件。
 
-CLI: `openclaw approvals` 支持 gateway 或 node 编辑 - 参见
+CLI：`openclaw approvals` 支持 gateway 或 node 编辑 - 参见
 [Approvals CLI](/cli/approvals)。
 
 ## 审批流程

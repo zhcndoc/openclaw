@@ -13,7 +13,7 @@ title: "Qwen OAuth / Portal"
 
 对于新的 Qwen Cloud 配置，建议使用 [Qwen](/providers/qwen) 和 Standard ModelStudio 端点，除非你明确拥有当前的 Qwen Portal token。
 
-## Setup
+## 设置
 
 通过引导流程提供你的 portal token：
 
@@ -27,7 +27,7 @@ openclaw onboard --auth-choice qwen-oauth
 export QWEN_API_KEY="<your-qwen-portal-token>" # pragma: allowlist secret
 ```
 
-## Defaults
+## 默认值
 
 - Provider: `qwen-oauth`
 - Aliases: `qwen-portal`, `qwen-cli`
@@ -36,7 +36,7 @@ export QWEN_API_KEY="<your-qwen-portal-token>" # pragma: allowlist secret
 - API style: OpenAI-compatible
 - Default model: `qwen-oauth/qwen3.5-plus`
 
-## How this differs from Qwen
+## 与 Qwen 的区别
 
 OpenClaw 有两个面向 Qwen 的 provider id：
 
@@ -47,17 +47,17 @@ OpenClaw 有两个面向 Qwen 的 provider id：
 
 两个 provider 都使用兼容 OpenAI 的请求结构，但它们是彼此独立的认证面。为 `qwen-oauth` 存储的 token 不应被当作 DashScope 或 ModelStudio key；新的 DashScope key 应改用标准的 `qwen` provider。
 
-## When to choose Qwen OAuth / Portal
+## 何时选择 Qwen OAuth / Portal
 
 - 你已经有可用的 Qwen Portal token。
 - 你在迁移到 OpenClaw 的 provider model 时，希望保留旧的 Qwen OAuth 或 Qwen CLI 工作流。
 - 你需要专门测试与 Qwen Portal 端点的兼容性。
 
-对于新的 setup、更广泛的端点选择、Standard ModelStudio、Coding Plan，以及完整打包的 Qwen 目录，请选择 [Qwen](/providers/qwen)。
+新的设置请选用 [Qwen](/providers/qwen)，以获得更广泛的端点选择、Standard ModelStudio、Coding Plan，以及完整的 Qwen 插件目录。
 
-## Models
+## 模型
 
-内置目录会为 Qwen Portal 默认值提供种子：
+Qwen 插件目录会为 Qwen Portal 注入默认值：
 
 - `qwen-oauth/qwen3.5-plus`
 
@@ -68,7 +68,7 @@ openclaw onboard --auth-choice qwen-standard-api-key
 openclaw models set qwen/qwen3-coder-plus
 ```
 
-## Migration
+## 迁移
 
 旧版 Qwen Portal OAuth profile 可能无法刷新。如果某个 portal profile 停止工作，请使用当前 token 重新认证，或者切换到标准的 Qwen provider：
 
@@ -82,13 +82,13 @@ Standard global ModelStudio 使用：
 https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 ```
 
-## Troubleshooting
+## 故障排查
 
 - Portal OAuth 刷新失败：旧版 Qwen Portal OAuth profile 可能无法刷新。请使用当前 token 重新运行引导流程。
 - 端点错误：在使用 portal token 时，请确认 model ref 以 `qwen-oauth/` 开头。仅在使用标准 Qwen provider 时才使用 `qwen/` refs。
 - `QWEN_API_KEY` 混淆：两个 Qwen 页面都提到了这个 env var，但引导流程会将凭据存储在所选的 provider id 下。当你希望在同一台机器上同时保留 `qwen` 和 `qwen-oauth` 时，优先使用引导流程。
 
-## Related
+## 相关
 
 - [Qwen](/providers/qwen)
 - [Alibaba Model Studio](/providers/alibaba)

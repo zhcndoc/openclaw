@@ -16,7 +16,7 @@ title: "语音通话插件"
 
 ## 接口
 
-contracts: tools
+contracts: tools; skills
 
 ## 相关文档
 

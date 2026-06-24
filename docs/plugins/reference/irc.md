@@ -11,8 +11,8 @@ title: "IRC 插件"
 
 ## 分发
 
-- 包：`@openclaw/irc`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/irc`
+- Install route: npm; ClawHub: `clawhub:@openclaw/irc`
 
 ## 接口
 

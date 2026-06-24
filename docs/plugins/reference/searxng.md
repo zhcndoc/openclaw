@@ -12,7 +12,7 @@ title: "SearXNG 插件"
 ## 分发
 
 - Package: `@openclaw/searxng-plugin`
-- Install route: 包含在 OpenClaw 中
+- Install route: npm; ClawHub: `clawhub:@openclaw/searxng-plugin`
 
 ## 接口
 

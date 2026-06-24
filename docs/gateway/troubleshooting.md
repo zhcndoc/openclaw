@@ -141,9 +141,11 @@ openclaw config get skills.load
 
 不要使用过于宽泛的目标，例如 `~`、`/`，或整个同步项目文件夹。请将 `allowSymlinkTargets` 的范围限制在包含受信任 `SKILL.md` 目录的真实技能根。
 
+如果 Skill Workshop 应用也应将写入内容通过这些受信任的符号链接工作区技能路径写入，请启用 `skills.workshop.allowSymlinkTargetWrites`。对于只读共享技能根，请保持其禁用。
+
 相关：
 
-- [技能配置](/tools/skills-config#symlinked-sibling-repos)
+- [技能配置](/tools/skills-config#symlinked-skill-roots)
 - [配置示例](/gateway/configuration-examples#symlinked-sibling-skill-repo)
 
 ## Anthropic 429 长上下文需要额外用量
@@ -694,7 +696,7 @@ openclaw status
 查看以下内容：
 
 - 节点在线且具备预期能力。
-- 摄像头/麦克风/位置/屏幕的操作系统权限授予。
+- 摄像头/麦克风/位置/屏幕的操作系统权限已授予。
 - 执行批准和 allowlist 状态。
 
 常见特征：

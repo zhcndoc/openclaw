@@ -15,31 +15,28 @@ Copilot agent 回合，而不是使用内置的 PI harness。
 OpenClaw 仍然负责聊天通道、会话文件、模型选择、OpenClaw
 动态工具（桥接）、审批、媒体传递、可见的转录
 镜像、`/btw` 侧边问题（由内置的 PI 回退处理——参见
-[Side questions (`/btw`)](#side-questions-btw)），以及 `openclaw doctor`。
+[侧边问题（`/btw`）](#side-questions-btw)），以及 `openclaw doctor`。
 
 关于更广泛的模型 / provider / runtime 拆分，请从
 [Agent runtimes](/concepts/agent-runtimes) 开始。
 
 ## Requirements
 
-- 已安装 `@openclaw/copilot` 插件的 OpenClaw。
-- 如果你的配置使用了 `plugins.allow`，请包含 `copilot`（即插件声明的 manifest
-  id）。如果只允许列表使用 npm 风格的 `@openclaw/copilot` 包名，
-  该插件仍会被阻止，运行时也不会加载，
-  即使设置了 `agentRuntime.id: "copilot"` 也一样。
-- 一个能够驱动 Copilot CLI 的 GitHub Copilot 订阅（或者用于无头 / cron 运行的
-  `gitHubToken` 环境变量 / 认证 profile 条目）。
-- 一个可写的 `copilotHome` 目录。该 harness 默认使用
-  `~/.openclaw/agents/<agentId>/copilot`，以便为每个 agent 提供完全隔离。平台默认值
-  （Windows 上为 `%APPDATA%\copilot`，`$XDG_CONFIG_HOME/copilot`
-  或其他平台上的 `~/.config/copilot`）会在未显式设置 home 时，
-  作为 doctor 探测的回退值。
+- 安装了 `@openclaw/copilot` 插件的 OpenClaw。
+- 如果你的配置使用 `plugins.allow`，请包含 `copilot`（由插件声明的 manifest
+  id）。如果使用 npm 风格 `@openclaw/copilot` 包名的严格
+  allowlist，就会阻止该插件，运行时即使设置了 `agentRuntime.id: "copilot"` 也不会加载。
+- 一个可驱动 Copilot CLI 的 GitHub Copilot 订阅（或者一个
+  `gitHubToken` 环境变量 / auth-profile 条目，用于无头 / cron 运行）。
+- 一个可写的 `copilotHome` 目录。如果 OpenClaw 提供了 agent 目录，harness 默认使用
+  `<agentDir>/copilot`，否则对每个 agent 完全隔离时使用
+  `~/.openclaw/agents/<agentId>/copilot`。
 
-`openclaw doctor` 会为该扩展运行插件的
-[doctor contract](#doctor-and-probes)；在将 agent 接入之前，那里出现的失败
-就是确认环境是否就绪的权威方式。
+`openclaw doctor` 会运行插件的
+[doctor contract](#doctor)，用于声明式会话状态所有权和未来
+兼容性迁移。它不会运行 Copilot CLI 环境探测。
 
-## Plugin install
+## 插件安装
 
 Copilot 运行时是外部插件，因此核心 `openclaw` 包不包含
 `@github/copilot-sdk` 依赖，也不包含其平台相关的
@@ -66,7 +63,7 @@ provider）通过 `agentRuntime: { id: "copilot" }` 接入 Copilot agent runtime
 缺失 SDK 时会以单个错误暴露，错误码为 `COPILOT_SDK_MISSING`
 ，并提示使用上面的插件重新安装命令。
 
-## Quickstart
+## 快速开始
 
 将一个模型（或一个 provider）固定到该 harness：
 
@@ -74,9 +71,9 @@ provider）通过 `agentRuntime: { id: "copilot" }` 接入 Copilot agent runtime
 {
   agents: {
     defaults: {
-      model: "github-copilot/gpt-5.5",
+      model: "github-copilot/auto",
       models: {
-        "github-copilot/gpt-5.5": {
+        "github-copilot/auto": {
           agentRuntime: { id: "copilot" },
         },
       },
@@ -89,7 +86,10 @@ provider）通过 `agentRuntime: { id: "copilot" }` 接入 Copilot agent runtime
 `agentRuntime.id`；如果某个 provider 下的所有模型都应使用它，则在 provider 上设置
 `agentRuntime.id`。
 
-## Supported providers
+`github-copilot/auto` 是可移植的起点。命名的 Copilot 模型
+取决于账号和组织策略，因此只有在确认已认证的 Copilot CLI 暴露了它之后才固定其中一个。
+
+## 支持的 provider
 
 该 harness 声明支持规范的 `github-copilot` provider
 （也就是 `extensions/github-copilot` 所拥有的同一个 id）：
@@ -99,7 +99,7 @@ provider）通过 `agentRuntime: { id: "copilot" }` 接入 Copilot agent runtime
 超出该集合的内容都会在 `selection.ts` 的 `auto_pi` 分支中回退到
 PI。
 
-## Auth
+## 认证
 
 按每个 agent 的优先级，在 `runCopilotAttempt` 中应用：
 
@@ -138,39 +138,50 @@ PI。
 当你需要自定义位置时（例如迁移时使用共享挂载），可在尝试输入中用
 `copilotHome: <path>` 覆盖。
 
-`probeCopilotAuthShape`（见 [Doctor and probes](#doctor-and-probes)）是
-纯形状检查，用来验证上面哪些模式会被使用。
-它不会执行真实的 SDK 握手。
+Live harness tests use `OPENCLAW_COPILOT_AGENT_LIVE_TOKEN` when a direct token
+is needed. The shared live-test setup intentionally scrubs `COPILOT_GITHUB_TOKEN`,
+`GH_TOKEN`, and `GITHUB_TOKEN` after staging real auth profiles into the isolated
+test home, so passing a `gh auth token` value through the dedicated live-test
+variable avoids false skips without exposing the token to unrelated suites.
 
-## Configuration surface
+## 配置面
 
 该 harness 从每次尝试的输入
 （`runCopilotAttempt({...})`）以及 `extensions/copilot/src/` 内的一小组环境变量默认值中读取配置：
 
-- `copilotHome` — 每个 agent 的 CLI 状态目录（默认值见上文）。
-- `model` — 字符串或 `{ provider, id, api? }`。省略时，OpenClaw 会使用
-  agent 的常规模型选择，而 harness 会验证解析出的
-  provider 是否属于受支持集合。
+- `copilotHome` — 每个 agent 的 CLI 状态目录（默认值如上所述）。
+- `model` — 字符串或 `{ provider, id, api? }`。省略时，OpenClaw 使用
+  agent 的常规模型选择，harness 会验证解析出的
+  provider 是否在支持集合中。
 - `reasoningEffort` — `"low" | "medium" | "high" | "xhigh"`。映射自
-  OpenClaw 的 `ThinkLevel` / `ReasoningLevel` 解析，
-  位于 `auto-reply/thinking.ts`。
-- `infiniteSessionConfig` — 可选覆盖，针对由 `harness.compact` 驱动的 SDK
-  `infiniteSessions` 块。默认值可以安全保持不变。
-- `hooksConfig` — 可选桥接配置，将 OpenClaw
-  的消息写入前 / 后钩子暴露给 SDK 循环。
-- `permissionPolicy` — 可选覆盖，用于 SDK 的
-  `onPermissionRequest` 处理器，供内置 SDK 工具类型使用
-  （`shell`、`write`、`read`、`url`、`mcp`、`memory`、`hook`）。默认
-  使用 `rejectAllPolicy` 作为安全网；实际上 SDK 永远不会调用这些类型中的任何一种，
-  因为每个已桥接的 OpenClaw 工具都会注册为 `overridesBuiltInTool: true` 且
-  `skipPermission: true`，因此 100% 的工具调用都会经过 OpenClaw 的封装版 `execute()`。
-  参见 [Permissions and ask_user](#permissions-and-ask_user)。
-- `enableSessionTelemetry` — 通过 `telemetry-bridge.ts` 选择加入 OpenTelemetry 路由。
+  OpenClaw 在 `auto-reply/thinking.ts` 中的 `ThinkLevel` / `ReasoningLevel` 解析结果。
+- `infiniteSessionConfig` — 可选的 SDK
+  `infiniteSessions` 块覆盖，由 `harness.compact` 驱动。默认值是安全的，
+  可以保持不变。
+- `hooksConfig` — 可选的原生 Copilot SDK `SessionHooks` 兼容
+  配置，用于 tool/MCP、user-prompt、session 和 error 回调。
+  它与 OpenClaw 的可移植生命周期钩子是分开的。
+- `permissionPolicy` — 可选的 SDK
+  `onPermissionRequest` 处理器覆盖，用于内建 SDK 工具类型
+  (`shell`, `write`, `read`, `url`, `mcp`, `memory`, `hook`)。默认
+  使用 `rejectAllPolicy` 作为安全网；实际上 SDK 从不
+  调用这些类型中的任何一种，因为每个桥接的 OpenClaw 工具都以
+  `overridesBuiltInTool: true` 和 `skipPermission: true` 注册，因此 100% 的工具调用都通过 OpenClaw 的
+  包装 `execute()`。参见 [权限和 ask_user](#permissions-and-ask_user)。
+- `enableSessionTelemetry` — 可选的 SDK 会话遥测标志。
+
+OpenClaw 插件钩子不需要 Copilot 特定的尝试配置。该
+harness 会通过标准 harness helper 运行 `before_prompt_build`（以及遗留的
+`before_agent_start` 兼容钩子）、`llm_input`、`llm_output` 和 `agent_end`。
+成功的 SDK 压缩也会运行
+`before_compaction` 和 `after_compaction`。桥接的 OpenClaw 工具会继续运行
+`before_tool_call` 并报告 `after_tool_call`；`hooksConfig` 仍用于
+没有可移植等价物的原生 SDK 专属回调。
 
 OpenClaw 的其余部分都无需了解这些字段。其他插件、通道以及核心代码只会看到标准的
 `AgentHarnessAttemptParams` / `AgentHarnessAttemptResult` 形状。
 
-## Compaction
+## 压缩
 
 当 `harness.compact` 运行时，Copilot SDK harness 会：
 
@@ -182,7 +193,7 @@ OpenClaw 的其余部分都无需了解这些字段。其他插件、通道以�
 OpenClaw 侧的转录镜像（见下文）会继续接收
 压缩后的消息，因此面向用户的聊天历史会保持一致。
 
-## Transcript mirroring
+## 转录镜像
 
 `runCopilotAttempt` 会通过
 `extensions/copilot/src/dual-write-transcripts.ts` 将每一轮可镜像消息双写到
@@ -193,7 +204,7 @@ OpenClaw 审计转录中。该镜像按会话范围作用（`copilot:${sessionId
 该镜像被两层失败隔离包裹，因此转录写入失败不会导致尝试失败：一层是内部尽力而为的包装，
 另一层是尝试级别的防御性 `.catch(...)`。失败会被记录，但不会上浮。
 
-## Side questions (`/btw`)
+## 侧边问题（`/btw`）
 
 `/btw` 在该 harness 上**不是原生支持**的。`createCopilotAgentHarness()`
 刻意让 `harness.runSideQuestion` 保持未定义，因此 OpenClaw 的 `/btw`
@@ -206,7 +217,7 @@ OpenClaw 审计转录中。该镜像按会话范围作用（`copilot:${sessionId
 [`extensions/copilot/harness.test.ts`](https://github.com/openclaw/openclaw/blob/main/extensions/copilot/harness.test.ts)
 的 `describe("runSideQuestion")` 下进行了断言。
 
-## Doctor 和探针
+## Doctor
 
 `extensions/copilot/doctor-contract-api.ts` 会被 `src/plugins/doctor-contract-registry.ts` 自动加载。它提供：
 
@@ -214,24 +225,20 @@ OpenClaw 审计转录中。该镜像按会话范围作用（`copilot:${sessionId
 - 一个空操作的 `normalizeCompatibilityConfig`（保留它是为了让未来字段退役时有一个稳定的树内落点）。
 - 一条 `sessionRouteStateOwners` 条目，声明 provider 为 `github-copilot`；runtime 为 `copilot`；CLI session key 为 `copilot`；auth profile 前缀为 `github-copilot:`。
 
-`extensions/copilot/src/doctor-probes.ts` 导出三个命令式探针，宿主（包括 `openclaw doctor`）可以调用它们来验证环境：
+## 局限性
 
-| Probe                      | 检查内容                                                                          | 可能失败的原因                                                             |
-| -------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `probeCopilotCliVersion`   | `copilot --version` 以 0 退出，并返回非空版本字符串                               | `non-zero-exit`, `empty-version`, `spawn-failed`, `spawn-error`, `probe-timeout` |
-| `probeCopilotHomeWritable` | `mkdir -p copilotHome` + 写入 + 删除一个标记文件                                    | `copilothome-not-writable`（`details.rawError` 中包含底层 fs 错误）       |
-| `probeCopilotAuthShape`    | 至少满足 `useLoggedInUser`、`gitHubToken`、或 `profileId`+`profileVersion` 之一 | `no-auth-source`                                                           |
+- 该 harness 在 MVP 阶段只声明支持规范的 `github-copilot` provider。
+  其他 provider（BYOK 或其他）应在后续 PR 中与适配器一并交付。
+- 该 harness 不提供 TUI；PI 的 TUI 不受影响，并仍然是
+  对于没有同类界面的运行时的回退方案。
+- 当 agent 切换到 `copilot` 时，不会迁移 PI 的会话状态。
+  选择按每次尝试进行；已有的 PI 会话仍然有效。
+- `ask_user` 使用与 Codex
+  harness 相同的 OpenClaw 提示-回复路径。当 Copilot SDK 请求用户输入时，OpenClaw 会向活动通道/TUI 发送一个
+  阻塞式提示，而下一个排队的用户
+  消息会解析该 SDK 请求。
 
-每个探针都接受一个 DI seam（`spawnFn`、`fsApi`），这样测试就不会真的启动 Copilot CLI 或触碰宿主机 fs。
-
-## 限制
-
-- 该 harness 在 MVP 里只声明 canonical 的 `github-copilot` provider。其他 provider（BYOK 或其他）应在后续 PR 中接入，并与 wire-up 一起交付适配器。
-- 该 harness 不提供 TUI；PI 的 TUI 不受影响，仍然是那些没有 peer surface 的 runtime 的回退方案。
-- 当 agent 切换到 `copilot` 时，PI session state 不会迁移。选择是按 attempt 维度进行的；已有的 PI session 仍然有效。
-- **交互式 `ask_user` 目前尚未接线。** SDK 的 `onUserInputRequest` handler 故意没有注册，因此按照 SDK contract，`ask_user` tool 会被模型完全隐藏。运行在该 harness 下的 agents 会基于初始提示做最优判断，而不是在中途请求澄清问题。后续会把位于 `extensions/codex/src/app-server/user-input-bridge.ts` 的 codex 模式移植过来，通过 OpenClaw channel/TUI prompt 路径转发 SDK `UserInputRequest`s；`extensions/copilot/src/user-input-bridge.ts` 中休眠的脚手架就是这项后续工作要接线的表面。
-
-## Permissions 和 ask_user
+## 权限和 ask_user
 
 桥接的 OpenClaw tools 的权限 enforcement 发生在 **tool wrapper 内部**，而不是通过 SDK 的 `onPermissionRequest` callback。与 PI 使用的同一个 `wrapToolWithBeforeToolCallHook`（`src/agents/pi-tools.before-tool-call.ts`）会被 `createOpenClawCodingTools` 应用于每个 coding tool：loop detection、trusted plugin policies、before-tool-call hooks，以及通过 gateway（`plugin.approval.request`）进行的两阶段 plugin approvals，全部都走与原生 PI attempts 完全相同的代码路径。
 
@@ -242,16 +249,42 @@ OpenClaw 审计转录中。该镜像按会话范围作用（`copilot:${sessionId
 
 仓内的 codex harness 也采用同样的拆分：桥接的 OpenClaw tools 会被包裹（`extensions/codex/src/app-server/dynamic-tools.ts`），而 codex-app-server 自己的原生 approval kinds（`item/commandExecution/requestApproval`、`item/fileChange/requestApproval`、`item/permissions/requestApproval`）则通过 `plugin.approval.request` 路由（`extensions/codex/src/app-server/approval-bridge.ts`）。Copilot SDK 的对应机制——对任何可能进入 `onPermissionRequest` 的非 `custom-tool` kind 使用 fail-closed 的 `rejectAllPolicy`——同样是一道安全网，而且在实践中不会触发，因为 `overridesBuiltInTool: true` 已经把每个 built-in 都挤掉了。
 
-为了让 wrapped-tool 层做出的 policy decision 与 PI 等价，harness 会把完整的 PI attempt-tool context 传给 `createOpenClawCodingTools`——身份信息（`senderIsOwner`、`memberRoleIds`、`ownerOnlyToolAllowlist` 等）、channel/routing（`groupId`、`currentChannelId`、`replyToMode`、message-tool toggles）、auth（`authProfileStore`）、run identity（由 `sandboxSessionKey`、`runId` 派生的 `sessionKey`/`runSessionKey`）、model context（`modelApi`、`modelContextWindowTokens`、`modelCompat`、`modelHasVision`）以及 run hooks（`onToolOutcome`、`onYield`）。如果缺少这些字段，owner-only allowlists 会悄悄退化为 deny-by-default，plugin-trust policies 无法解析到正确作用域，而 `session_status: "current"` 会解析到过时的 sandbox key。bridge builder 位于 `extensions/copilot/src/tool-bridge.ts`，并镜像了 PI 的 authoritative call：`src/agents/pi-embedded-runner/run/attempt.ts:1029-1117`。有两个 PI 字段在 MVP 阶段刻意**不**向下传递，并作为后续事项跟踪：`sandbox`（harness 还没有通过 `resolveSandboxContext` 路由）以及 PI 的 tool-search/code-mode 机制（`toolSearchCatalogRef`、`includeCoreTools`、`includeToolSearchControls`、`toolSearchCatalogExecutor`、`toolConstructionPlan`），这些在 SDK 边界没有对应物。
+为了让包装后的 tool 层做出的策略决策与 PI 等价，
+harness 会将完整的 PI attempt-tool 上下文转发给
+`createOpenClawCodingTools` — 身份信息（`senderIsOwner`、
+`memberRoleIds`、`ownerOnlyToolAllowlist`、…），通道/路由
+（`groupId`、`currentChannelId`、`replyToMode`、message-tool 开关），认证
+（`authProfileStore`），运行身份
+（由 `sandboxSessionKey`、
+`runId` 派生的 `sessionKey`/`runSessionKey`），模型上下文（`modelApi`、`modelContextWindowTokens`、
+`modelCompat`、`modelHasVision`），以及运行钩子（`onToolOutcome`、
+`onYield`）。如果没有这些字段，仅限所有者的 allowlist 会悄悄地
+表现为默认拒绝，插件信任策略无法解析到正确作用域，而
+`session_status: "current"` 会解析到过时的沙箱 key。桥接构建器位于
+`extensions/copilot/src/tool-bridge.ts`，并映射 PI 的权威调用：
+`src/agents/pi-embedded-runner/run/attempt.ts:1029-1117`。`runAttempt`
+已经通过共享的 `resolveSandboxContext` 连接解析 sandbox 上下文，向 SDK 传递有效的工作目录，并将
+`sandbox` 以及子 agent 启动工作区转发到
+工具桥接中。该桥接还会转发它能在 SDK 边界执行的受限工具构建控制：`includeCoreTools`、运行时工具 allowlist，以及 `toolConstructionPlan`。
+
+该桥接还使用来自
+`openclaw/plugin-sdk/agent-harness-tool-runtime` 的共享 harness 工具面辅助实现 PI parity。启用
+tool-search 时，SDK 会看到紧凑的控制工具加一个隐藏的
+catalog 执行器，而不是每一个 OpenClaw 工具 schema。启用代码模式时，helper 会构建与其他 agent harness 使用的相同代码模式控制面和 catalog 生命周期。轻量本地模型默认值、
+运行时兼容的 schema 过滤、目录 hydration，以及 catalog
+清理都保留在共享 helper 中，这样 Copilot 和 Codex 相关
+harness 就不会分叉。
 
 ### 会话级 GitHub token
 
 Copilot SDK contract 区分 **client-level** GitHub token（`CopilotClientOptions.gitHubToken`，用于认证 CLI 进程本身）和 **session-level** token（`SessionConfig.gitHubToken`，决定该 session 的内容排除、模型路由和配额，并在 `createSession` 和 `resumeSession` 上都生效）。harness 会通过 `resolveCopilotAuth` 统一解析 auth，并在 auth mode 为 `gitHubToken` 时同时设置这两个字段（来源可以是显式的 `auth.gitHubToken`，也可以是 contract 解析得到的、来自配置好的 `github-copilot` auth profile 的 `resolvedApiKey`）。当解析后的 mode 为 `useLoggedInUser` 时，会省略 session-level 字段，这样 SDK 就会继续从已登录身份推导 identity。
 
-`ask_user` 是故意隐藏的——见上面的 Limitation。
+`ask_user` 使用 `SessionConfig.onUserInputRequest`。该桥接支持
+固定选项请求的索引或标签，在 SDK 请求允许时接受自由格式
+回答，并在 OpenClaw 尝试被中止时取消挂起的请求。
 
 ## 相关
 
-- [Agent runtimes](/concepts/agent-runtimes)
+- [Agent 运行时](/concepts/agent-runtimes)
 - [Codex harness](/plugins/codex-harness)
-- [Agent harness plugins (SDK reference)](/plugins/sdk-agent-harness)
+- [Agent harness 插件（SDK 参考）](/plugins/sdk-agent-harness)

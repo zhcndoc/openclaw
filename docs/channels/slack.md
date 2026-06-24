@@ -1,11 +1,11 @@
 ---
-summary: "Slack 设置与运行时行为（Socket Mode + HTTP Request URLs）"
+summary: "Slack 设置和运行时行为（Socket Mode、HTTP Request URLs 和 relay 模式）"
 read_when:
-  - 设置 Slack 或排查 Slack socket/HTTP 模式问题
+  - 设置 Slack 或调试 Slack socket、HTTP 或 relay 模式
 title: "Slack"
 ---
 
-通过 Slack 应用集成，为 DM 和频道提供可用于生产环境的支持。默认模式为 Socket Mode；也支持 HTTP Request URLs。
+通过 Slack 应用集成，为 DM 和频道提供生产就绪支持。默认模式是 Socket Mode；也支持 HTTP Request URLs。Relay mode 适用于受管部署场景，其中受信任的路由器负责 Slack 入口流量。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -41,6 +41,34 @@ title: "Slack"
 **选择 HTTP Request URLs** 适用于在负载均衡器后运行多个 Gateway 副本、出站 WSS 被阻止但允许入站 HTTPS、或者你已经在反向代理处终结 Slack webhook 的场景。
 </Note>
 
+### Relay mode
+
+Relay mode 将 Slack 入口流量与 OpenClaw 网关分离。受信任的路由器持有
+单一的 Slack Socket Mode 连接，选择目标网关，并通过经过认证的 websocket 转发
+类型化事件。网关继续使用自己的 bot token 进行出站 Slack Web API 调用。
+
+```json5
+{
+  channels: {
+    slack: {
+      mode: "relay",
+      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
+      relay: {
+        url: "wss://router.example.com/gateway/ws",
+        authToken: { source: "env", provider: "default", id: "SLACK_RELAY_AUTH_TOKEN" },
+        gatewayId: "team-gateway",
+      },
+    },
+  },
+}
+```
+
+除非目标是 localhost，否则 relay URL 必须使用 `wss://`。将 bearer token 和
+路由器路由表视为 Slack 授权边界的一部分：被路由的事件会作为已授权的激活进入
+正常的 Slack 消息处理程序。路由器在 websocket `hello` 帧中提供的 `slack_identity`
+可以设置默认的出站用户名和图标；调用方显式提供的身份仍然优先。Relay 连接会使用与 Socket Mode 相同的受限退避节奏重新连接，并在
+断开时清除路由器提供的身份。
+
 ## 安装
 
 在配置 channel 之前先安装 Slack：
@@ -65,7 +93,7 @@ openclaw plugins install @openclaw/slack
 {
   "display_information": {
     "name": "OpenClaw",
-    "description": "Slack connector for OpenClaw"
+    "description": "OpenClaw 的 Slack 连接器"
   },
   "features": {
     "bot_user": { "display_name": "OpenClaw", "always_online": true },
@@ -75,7 +103,7 @@ openclaw plugins install @openclaw/slack
       "messages_tab_read_only_enabled": false
     },
     "assistant_view": {
-      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "assistant_description": "OpenClaw 将 Slack assistant threads 连接到 OpenClaw agents。",
       "suggested_prompts": [
         { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
@@ -151,7 +179,7 @@ openclaw plugins install @openclaw/slack
 {
   "display_information": {
     "name": "OpenClaw",
-    "description": "Slack connector for OpenClaw"
+    "description": "OpenClaw 的 Slack 连接器"
   },
   "features": {
     "bot_user": { "display_name": "OpenClaw", "always_online": true },
@@ -161,7 +189,7 @@ openclaw plugins install @openclaw/slack
       "messages_tab_read_only_enabled": false
     },
     "assistant_view": {
-      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "assistant_description": "OpenClaw 将 Slack assistant threads 连接到 OpenClaw agents。",
       "suggested_prompts": [
         { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
@@ -281,7 +309,7 @@ openclaw gateway
 {
   "display_information": {
     "name": "OpenClaw",
-    "description": "Slack connector for OpenClaw"
+    "description": "OpenClaw 的 Slack 连接器"
   },
   "features": {
     "bot_user": { "display_name": "OpenClaw", "always_online": true },
@@ -291,7 +319,7 @@ openclaw gateway
       "messages_tab_read_only_enabled": false
     },
     "assistant_view": {
-      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "assistant_description": "OpenClaw 将 Slack assistant threads 连接到 OpenClaw agents。",
       "suggested_prompts": [
         { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
@@ -373,7 +401,7 @@ openclaw gateway
 {
   "display_information": {
     "name": "OpenClaw",
-    "description": "Slack connector for OpenClaw"
+    "description": "OpenClaw 的 Slack 连接器"
   },
   "features": {
     "bot_user": { "display_name": "OpenClaw", "always_online": true },
@@ -383,7 +411,7 @@ openclaw gateway
       "messages_tab_read_only_enabled": false
     },
     "assistant_view": {
-      "assistant_description": "OpenClaw connects Slack assistant threads to OpenClaw agents.",
+      "assistant_description": "OpenClaw 将 Slack assistant threads 连接到 OpenClaw agents。",
       "suggested_prompts": [
         { "title": "What can you do?", "message": "你能帮我做什么？" },
         {
@@ -527,9 +555,9 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 注意：
 
 - `socketMode` 在 HTTP Request URL 模式中会被忽略。
-- 基础 `channels.slack.socketMode` 设置适用于所有 Slack 账号，除非被覆盖。按账号覆盖使用 `channels.slack.accounts.<accountId>.socketMode`；由于这是对象覆盖，请包含该账号所需的每一项 socket 调优字段。
+- 基础 `channels.slack.socketMode` 设置适用于所有 Slack 账号，除非被覆盖。按账号覆盖使用 `channels.slack.accounts.<accountId>.socketMode`；由于这是对象覆盖，因此该账号需要包含你希望设置的所有 socket 调优字段。
 - 只有 `clientPingTimeout` 有 OpenClaw 默认值（`15000`）。`serverPingTimeout` 和 `pingPongLoggingEnabled` 仅在配置后才会传递给 Slack SDK。
-- Socket Mode 重启退避时间从约 2 秒开始，最高约 30 秒。连续的可恢复启动/启动等待失败会在 12 次尝试后停止；在成功连接后，后续可恢复断开会开启新的重试周期。不可恢复的 Slack 认证错误，例如 `invalid_auth`、已撤销的 token 或缺少作用域，会快速失败，而不是永远重试。
+- Socket Mode 重启退避大约从 2 秒开始，并封顶在大约 30 秒。可恢复的启动、启动等待和断开连接失败会重试，直到通道停止为止。永久性的账号和凭据错误，例如无效认证、令牌被撤销或缺少作用域，会快速失败，而不是永远重试。
 
 ## Manifest 和作用域清单
 
@@ -863,10 +891,11 @@ OpenClaw 默认将 Slack SDK 客户端的 pong 超时设置为 15 秒，适用�
 
 - `botToken` + `appToken` 是 Socket Mode 所必需的。
 - HTTP 模式需要 `botToken` + `signingSecret`。
-- `botToken`, `appToken`, `signingSecret`, 和 `userToken` 接受明文字符串或 SecretRef 对象。
+- Relay 模式需要 `botToken` 以及 `relay.url`、`relay.authToken` 和 `relay.gatewayId`；它不使用 app token 或 signing secret。
+- `botToken`、`appToken`、`signingSecret`、`relay.authToken` 和 `userToken` 接受明文字符串或 SecretRef 对象。
 - 配置中的 token 会覆盖环境变量回退。
 - `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` 环境变量回退仅适用于默认账号。
-- `userToken` 仅可在配置中设置（没有环境变量回退），并默认采用只读行为（`userTokenReadOnly: true`）。
+- `userToken` 仅可通过配置提供（无环境变量回退），默认采用只读行为（`userTokenReadOnly: true`）。
 
 状态快照行为：
 
@@ -1377,18 +1406,22 @@ Slack 可以作为原生审批客户端，通过交互式按钮和交互操作�
 
 ## 事件与运行行为
 
-- 消息编辑/删除会映射为系统事件。
-- 线程广播（“也发送到频道”的线程回复）会被当作普通用户消息处理。
-- reaction 的添加/移除事件会映射为系统事件。
-- 成员加入/离开、频道创建/重命名，以及 pin 的添加/移除事件会映射为系统事件。
-- 启用 `configWrites` 时，`channel_id_changed` 可迁移频道配置键。
-- 频道 topic/purpose 元数据会被视为不受信任的上下文，并可能被注入到路由上下文中。
-- 线程起始消息和初始线程历史上下文种子在适用时会按配置的发送者白名单过滤。
-- Block actions 和 modal 交互会发出结构化的 `Slack interaction: ...` 系统事件，并带有丰富的 payload 字段：
-  - block actions：所选值、标签、选择器值，以及 `workflow_*` 元数据
-  - modal `view_submission` 和 `view_closed` 事件，包含路由后的频道元数据和表单输入
+- Message edits/deletes 映射为系统事件。
+- Thread broadcasts（“Also send to channel” 线程回复）按正常用户消息处理。
+- Reaction add/remove 事件映射为系统事件。
+- Member join/leave、channel created/renamed，以及 pin add/remove 事件映射为系统事件。
+- `channel_id_changed` 在启用 `configWrites` 时可以迁移频道配置键。
+- 频道 topic/purpose 元数据被视为不可信上下文，并且可以被注入到路由上下文中。
+- 线程发起者和初始线程历史上下文种子在适用时会按已配置的发送者 allowlist 过滤。
+- Block actions、shortcuts 和 modal interactions 会发出结构化的 `Slack interaction: ...` 系统事件，并携带丰富的负载字段：
+  - block actions：所选值、标签、picker 值，以及 `workflow_*` 元数据
+  - global shortcuts：callback 和 actor 元数据，路由到 actor 的直接会话
+  - message shortcuts：callback、actor、channel、thread，以及所选消息上下文
+  - modal `view_submission` 和 `view_closed` 事件，包含已路由的频道元数据和表单输入
 
-## 配置参考
+在你的 Slack 应用配置中定义全局或消息快捷方式，并使用任意非空的 callback ID。OpenClaw 会确认匹配的快捷方式负载，应用与其他 Slack 交互相同的 DM/频道发送者策略，并将已清理的事件排队到所路由的 agent 会话。trigger IDs 和 response URLs 会从 agent 上下文中脱敏移除。
+
+## Configuration reference
 
 主要参考：[/gateway/config-channels#slack](/gateway/config-channels#slack)。
 
@@ -1455,9 +1488,9 @@ openclaw pairing list slack
   </Accordion>
 
   <Accordion title="Socket mode not connecting">
-    Validate bot + app tokens and Socket Mode enablement in Slack app settings.
-    The App-Level Token needs `connections:write`, and the Bot User OAuth Token
-    bot token must belong to the same Slack app/workspace as the app token.
+    验证 Slack 应用设置中的 bot + app tokens 和 Socket Mode 启用状态。
+    App-Level Token 需要 `connections:write`，并且 Bot User OAuth Token
+    必须属于与 app token 相同的 Slack app/workspace。
 
     如果 `openclaw channels status --probe --json` 显示 `botTokenStatus` 或
     `appTokenStatus: "configured_unavailable"`，说明 Slack 账号已

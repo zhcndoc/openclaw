@@ -330,10 +330,10 @@ sidebarTitle: "工具与自定义提供方"
 
     **通用字段：**
 
-    - `capabilities`：可选列表（`image`、`audio`、`video`）。默认值：`openai`/`anthropic`/`minimax` → image，`google` → image+audio+video，`groq` → audio。
-    - `prompt`、`maxChars`、`maxBytes`、`timeoutSeconds`、`language`：每个条目的覆盖项。
-    - 当代理调用显式 `image` 工具时，`tools.media.image.timeoutSeconds` 以及匹配的图像模型 `timeoutSeconds` 条目也会生效。
-    - 失败会回退到下一条目。
+    - `capabilities`: 可选列表（`image`、`audio`、`video`）。默认值：`openai`/`anthropic`/`minimax` → image，`google` → image+audio+video，`groq` → audio。
+    - `prompt`、`maxChars`、`maxBytes`、`timeoutSeconds`、`language`：每项覆盖。
+    - 当代理调用显式的 `image` 工具时，`tools.media.image.timeoutSeconds` 和匹配的图像模型 `timeoutSeconds` 条目也同样适用。对于图像理解，此超时适用于请求本身，不会被前置准备工作缩减。
+    - 失败时回退到下一项。
 
     提供方认证遵循标准顺序：`auth-profiles.json` → 环境变量 → `models.providers.*.apiKey`。
 
@@ -476,7 +476,7 @@ sidebarTitle: "工具与自定义提供方"
 ```json5
 {
   models: {
-    mode: "merge", // merge (default) | replace
+    mode: "merge", // 合并（默认） | 替换
     providers: {
       "custom-proxy": {
         baseUrl: "http://localhost:4000/v1",
@@ -581,8 +581,8 @@ sidebarTitle: "工具与自定义提供方"
 ### 提供商示例
 
 <AccordionGroup>
-  <Accordion title="Cerebras（GLM 4.7 / GPT OSS）">
-    内置的 `cerebras` provider 插件可以通过 `openclaw onboard --auth-choice cerebras-api-key` 进行配置。只有在需要覆盖默认值时才使用显式 provider 配置。
+  <Accordion title="Cerebras (GLM 4.7 / GPT OSS)">
+    官方外部 `cerebras` 提供商插件可以通过 `openclaw onboard --auth-choice cerebras-api-key` 进行配置。只有在覆盖默认值时才使用显式 provider 配置。
 
     ```json5
     {

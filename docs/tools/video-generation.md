@@ -110,22 +110,22 @@ openclaw tasks cancel <taskId>
 
 `video_generate`、契约测试和共享 live sweep 使用的显式模式契约：
 
-| 提供商      | `generate` | `imageToVideo` | `videoToVideo` | 当前共享 live lane                                                                                                                |
-| ---------- | :--------: | :------------: | :------------: | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 阿里巴巴    |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 被跳过，因为该提供商需要远程 `http(s)` 视频 URL                                         |
-| BytePlus   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                         |
-| ComfyUI    |     ✓      |       ✓        |       -        | 不在共享 sweep 中；特定工作流的覆盖在 Comfy 测试中维护                                                                            |
-| DeepInfra  |     ✓      |       -        |       -        | `generate`；打包契约中的原生 DeepInfra 视频 schema 为文本到视频                                                                    |
-| fal        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 仅在使用 Seedance reference-to-video 时支持 `videoToVideo`                                            |
-| Google     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 共享 `videoToVideo` 被跳过，因为当前基于 buffer 的 Gemini/Veo sweep 不接受该输入                        |
-| MiniMax    |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                         |
-| OpenAI     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 共享 `videoToVideo` 被跳过，因为当前该组织/输入路径需要提供商侧的视频编辑权限                            |
-| OpenRouter |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                         |
-| Qwen       |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 被跳过，因为该提供商需要远程 `http(s)` 视频 URL                                           |
-| Runway     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; 仅当所选模型为 `runway/gen4_aleph` 时运行 `videoToVideo`                                               |
-| Together   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                         |
-| Vydra      |     ✓      |       ✓        |       -        | `generate`；共享 `imageToVideo` 被跳过，因为打包的 `veo3` 仅支持文本，而打包的 `kling` 需要远程图像 URL                                |
-| xAI        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` 被跳过，因为该提供商当前需要远程 MP4 URL                                                 |
+| Provider   | `generate` | `imageToVideo` | `videoToVideo` | Shared live lanes today                                                                                                                 |
+| ---------- | :--------: | :------------: | :------------: | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Alibaba    |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` skipped because this provider needs remote `http(s)` video URLs                              |
+| BytePlus   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
+| ComfyUI    |     ✓      |       ✓        |       -        | Not in the shared sweep; workflow-specific coverage lives with Comfy tests                                                              |
+| DeepInfra  |     ✓      |       -        |       -        | `generate`; native DeepInfra video schemas are text-to-video in the plugin contract                                                     |
+| fal        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` only when using Seedance reference-to-video                                                  |
+| Google     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; shared `videoToVideo` skipped because the current buffer-backed Gemini/Veo sweep does not accept that input |
+| MiniMax    |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
+| OpenAI     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; shared `videoToVideo` skipped because this org/input path currently needs provider-side video edit access   |
+| OpenRouter |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
+| Qwen       |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` skipped because this provider needs remote `http(s)` video URLs                              |
+| Runway     |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` runs only when the selected model is `runway/gen4_aleph`                                     |
+| Together   |     ✓      |       ✓        |       -        | `generate`, `imageToVideo`                                                                                                              |
+| Vydra      |     ✓      |       ✓        |       -        | `generate`; shared `imageToVideo` skipped because bundled `veo3` is text-only and bundled `kling` requires a remote image URL           |
+| xAI        |     ✓      |       ✓        |       ✓        | `generate`, `imageToVideo`; `videoToVideo` skipped because this provider currently needs a remote MP4 URL                               |
 
 ## 工具参数
 

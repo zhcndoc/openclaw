@@ -154,15 +154,16 @@ read_when:
 
 `openclaw.install` 是包元数据，不是清单元数据。
 
-| 字段                         | 类型                                | 含义                                                                     |
+| 字段                        | 类型                                | 含义                                                                     |
 | ---------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
-| `clawhubSpec`                | `string`                            | 安装/更新和引导按需安装流程的规范化 ClawHub 规格。                        |
-| `npmSpec`                    | `string`                            | 安装/更新回退流程的规范化 npm 规格。                                      |
-| `localPath`                  | `string`                            | 本地开发或打包后的安装路径。                                              |
-| `defaultChoice`              | `"clawhub"` \| `"npm"` \| `"local"` | 当有多个来源可用时的首选安装来源。                                         |
-| `minHostVersion`             | `string`                            | 最低支持的 OpenClaw 版本，格式为 `>=x.y.z` 或 `>=x.y.z-prerelease`。     |
-| `expectedIntegrity`          | `string`                            | 预期的 npm dist integrity 字符串，通常为 `sha512-...`，用于固定安装。     |
-| `allowInvalidConfigRecovery` | `boolean`                           | 允许捆绑插件重装流程从特定的过期配置失败中恢复。                            |
+| `clawhubSpec`                | `string`                            | 用于安装/更新和引导式按需安装流程的规范化 ClawHub spec。                 |
+| `npmSpec`                    | `string`                            | 用于安装/更新回退流程的规范化 npm spec。                                 |
+| `localPath`                  | `string`                            | 本地开发或捆绑安装路径。                                                 |
+| `defaultChoice`              | `"clawhub"` \| `"npm"` \| `"local"` | 多个来源可用时的首选安装来源。                                           |
+| `minHostVersion`             | `string`                            | 最低受支持的 OpenClaw 版本，格式为 `>=x.y.z` 或 `>=x.y.z-prerelease`。 |
+| `expectedIntegrity`          | `string`                            | 预期的 npm dist integrity 字符串，通常为 `sha512-...`，用于固定安装。   |
+| `allowInvalidConfigRecovery` | `boolean`                           | 允许捆绑插件的重装流程从某些旧配置失败中恢复。                           |
+| `requiredPlatformPackages`   | `string[]`                          | 在 npm 安装期间验证的必需平台相关 npm 别名。                             |
 
 <AccordionGroup>
   <Accordion title="引导行为">
@@ -350,9 +351,9 @@ setup 补丁适配器在导入时对热路径是安全的。其打包后的单�
 Matrix 是当前的打包示例。如果已经恰好存在一个命名的 Matrix 账户，或者 `defaultAccount` 指向一个现有的非规范键，例如 `Ops`，那么提升会保留该账户，而不是创建一个新的 `accounts.default` 条目。
 </Note>
 
-## Configuration Schema
+## 配置模式
 
-Plugin configuration is validated against the JSON Schema in the manifest. Users configure plugins in the following way:
+插件配置会根据 manifest 中的 JSON Schema 进行校验。用户按如下方式配置插件：
 
 ```json5
 {
@@ -368,9 +369,9 @@ Plugin configuration is validated against the JSON Schema in the manifest. Users
 }
 ```
 
-During registration, your plugin receives this configuration as `api.pluginConfig`.
+在注册期间，你的插件会将此配置作为 `api.pluginConfig` 接收。
 
-For channel-specific configuration, use the channel configuration section instead:
+对于特定于频道的配置，请改用频道配置部分：
 
 ```json5
 {
@@ -383,9 +384,9 @@ For channel-specific configuration, use the channel configuration section instea
 }
 ```
 
-### Build Channel Config Schema
+### 构建频道配置 Schema
 
-Use `buildChannelConfigSchema` to convert a Zod schema into the `ChannelConfigSchema` wrapper used by plugin-owned configuration artifacts:
+使用 `buildChannelConfigSchema` 将 Zod schema 转换为插件拥有的配置工件所使用的 `ChannelConfigSchema` 包装器：
 
 ```typescript
 import { z } from "zod";
@@ -401,7 +402,7 @@ const accountSchema = z.object({
 const configSchema = buildChannelConfigSchema(accountSchema);
 ```
 
-If you have already authored the contract as JSON Schema or TypeBox, use the direct helper so OpenClaw can skip the Zod-to-JSON-Schema conversion on metadata paths:
+如果你已经将契约编写为 JSON Schema 或 TypeBox，请使用直接辅助函数，这样 OpenClaw 就可以在元数据路径上跳过 Zod 到 JSON Schema 的转换：
 
 ```typescript
 import { Type } from "typebox";
@@ -415,11 +416,11 @@ const configSchema = buildJsonChannelConfigSchema(
 );
 ```
 
-For third-party plugins, the cold-path contract remains the plugin manifest: mirror the generated JSON Schema into `openclaw.plugin.json#channelConfigs` so config schema, setup, and UI surfaces can inspect `channels.<id>` without loading runtime code.
+对于第三方插件，冷路径契约仍然是插件 manifest：将生成的 JSON Schema 镜像到 `openclaw.plugin.json#channelConfigs`，这样配置 schema、设置和 UI 界面就可以在不加载运行时代码的情况下检查 `channels.<id>`。
 
-## Installation Wizard
+## 安装向导
 
-Channel plugins can provide an interactive installation wizard for `openclaw onboard`. The wizard is a `ChannelSetupWizard` object on `ChannelPlugin`:
+频道插件可以为 `openclaw onboard` 提供一个交互式安装向导。该向导是 `ChannelPlugin` 上的一个 `ChannelSetupWizard` 对象：
 
 ```typescript
 import type { ChannelSetupWizard } from "openclaw/plugin-sdk/channel-setup";
@@ -427,19 +428,19 @@ import type { ChannelSetupWizard } from "openclaw/plugin-sdk/channel-setup";
 const setupWizard: ChannelSetupWizard = {
   channel: "my-channel",
   status: {
-    configuredLabel: "Connected",
-    unconfiguredLabel: "Not configured",
+    configuredLabel: "已连接",
+    unconfiguredLabel: "未配置",
     resolveConfigured: ({ cfg }) => Boolean((cfg.channels as any)?.["my-channel"]?.token),
   },
   credentials: [
     {
       inputKey: "token",
       providerHint: "my-channel",
-      credentialLabel: "Bot token",
+      credentialLabel: "机器人令牌",
       preferredEnvVar: "MY_CHANNEL_BOT_TOKEN",
-      envPrompt: "Use MY_CHANNEL_BOT_TOKEN from the environment?",
-      keepPrompt: "Keep the current token?",
-      inputPrompt: "Enter your bot token:",
+      envPrompt: "是否使用环境中的 MY_CHANNEL_BOT_TOKEN？",
+      keepPrompt: "保留当前令牌吗？",
+      inputPrompt: "请输入你的机器人令牌：",
       inspect: ({ cfg, accountId }) => {
         const token = (cfg.channels as any)?.["my-channel"]?.token;
         return {
@@ -452,49 +453,49 @@ const setupWizard: ChannelSetupWizard = {
 };
 ```
 
-The `ChannelSetupWizard` type supports more, including `credentials`, `textInputs`, `dmPolicy`, `allowFrom`, `groupAccess`, `prepare`, and `finalize`. See the packaged plugin package for a complete example (for example, the Discord plugin's `src/channel.setup.ts`).
+`ChannelSetupWizard` 类型支持更多内容，包括 `credentials`、`textInputs`、`dmPolicy`、`allowFrom`、`groupAccess`、`prepare` 和 `finalize`。完整示例请参阅打包的插件包（例如 Discord 插件的 `src/channel.setup.ts`）。
 
 <AccordionGroup>
-  <Accordion title="Shared allowFrom prompts">
-    For DM allowlist prompts that only need the standard `note -> prompt -> parse -> merge -> patch` flow, prefer the shared setup helpers in `openclaw/plugin-sdk/setup`: `createPromptParsedAllowFromForAccount(...)`, `createTopLevelChannelParsedAllowFromPrompt(...)`, and `createNestedChannelParsedAllowFromPrompt(...)`.
+  <Accordion title="共享 allowFrom 提示">
+    对于只需要标准 `note -> prompt -> parse -> merge -> patch` 流程的 DM allowlist 提示，优先使用 `openclaw/plugin-sdk/setup` 中共享的设置辅助函数：`createPromptParsedAllowFromForAccount(...)`、`createTopLevelChannelParsedAllowFromPrompt(...)` 和 `createNestedChannelParsedAllowFromPrompt(...)`。
   </Accordion>
-  <Accordion title="Standard channel setup status">
-    For channel setup status blocks that differ only in label, score, and optional extra lines, prefer `createStandardChannelSetupStatus(...)` in `openclaw/plugin-sdk/setup` instead of hand-writing the same `status` object in every plugin.
+  <Accordion title="标准频道设置状态">
+    对于仅在标签、分数和可选附加行上有所不同的频道设置状态块，优先使用 `openclaw/plugin-sdk/setup` 中的 `createStandardChannelSetupStatus(...)`，而不是在每个插件里手写相同的 `status` 对象。
   </Accordion>
-  <Accordion title="Optional channel setup surfaces">
-    For optional setup surfaces that should only appear in certain contexts, use `createOptionalChannelSetupSurface` from `openclaw/plugin-sdk/channel-setup`:
+  <Accordion title="可选频道设置界面">
+    对于只应出现在特定上下文中的可选设置界面，请使用 `openclaw/plugin-sdk/channel-setup` 中的 `createOptionalChannelSetupSurface`：
 
     ```typescript
     import { createOptionalChannelSetupSurface } from "openclaw/plugin-sdk/channel-setup";
 
     const setupSurface = createOptionalChannelSetupSurface({
       channel: "my-channel",
-      label: "My Channel",
+      label: "我的频道",
       npmSpec: "@myorg/openclaw-my-channel",
       docsPath: "/channels/my-channel",
     });
-    // Returns { setupAdapter, setupWizard }
+    // 返回 { setupAdapter, setupWizard }
     ```
 
-    When you only need one half of this optional installation surface, `plugin-sdk/channel-setup` also exposes lower-level `createOptionalChannelSetupAdapter(...)` and `createOptionalChannelSetupWizard(...)` builders.
+    当你只需要这个可选安装界面的其中一半时，`plugin-sdk/channel-setup` 也提供更底层的 `createOptionalChannelSetupAdapter(...)` 和 `createOptionalChannelSetupWizard(...)` 构建器。
 
-    Generated optional adapters/wizards fail closed when writing real configuration. They reuse the same "installation required" message in `validateInput`, `applyAccountConfig`, and `finalize`, and append a docs link when `docsPath` is set.
+    生成的可选 adapter/wizard 在写入真实配置时会默认失败关闭。它们会在 `validateInput`、`applyAccountConfig` 和 `finalize` 中复用相同的“需要安装”消息，并在设置了 `docsPath` 时附加文档链接。
 
   </Accordion>
-  <Accordion title="Binary-driven setup helpers">
-    For binary-driven setup UIs, prefer shared delegation helpers instead of duplicating the same binary/state glue in every channel:
+  <Accordion title="基于二进制的设置辅助">
+    对于基于二进制的设置 UI，优先使用共享的委派辅助函数，而不是在每个频道里重复同样的二进制/状态粘合代码：
 
-    - `createDetectedBinaryStatus(...)`: for status blocks that differ only in label, hint, score, and binary detection
-    - `createCliPathTextInput(...)`: for path-based text inputs
-    - `createDelegatedSetupWizardStatusResolvers(...)`, `createDelegatedPrepare(...)`, `createDelegatedFinalize(...)`, and `createDelegatedResolveConfigured(...)`: when `setupEntry` needs to lazily forward to a heavier full wizard
-    - `createDelegatedTextInputShouldPrompt(...)`: when `setupEntry` only needs to delegate `textInputs[*].shouldPrompt`
+    - `createDetectedBinaryStatus(...)`：用于仅在标签、提示、分数和二进制检测上不同的状态块
+    - `createCliPathTextInput(...)`：用于基于路径的文本输入
+    - `createDelegatedSetupWizardStatusResolvers(...)`、`createDelegatedPrepare(...)`、`createDelegatedFinalize(...)` 和 `createDelegatedResolveConfigured(...)`：当 `setupEntry` 需要懒加载地转发给更重的完整向导时
+    - `createDelegatedTextInputShouldPrompt(...)`：当 `setupEntry` 只需要委派 `textInputs[*].shouldPrompt` 时
 
   </Accordion>
 </AccordionGroup>
 
-## Release and Installation
+## 发布与安装
 
-**External plugins:** Publish to [ClawHub](/clawhub), then install:
+**外部插件：** 发布到 [ClawHub](/clawhub)，然后安装：
 
 <Tabs>
   <Tab title="npm">
@@ -502,16 +503,16 @@ The `ChannelSetupWizard` type supports more, including `credentials`, `textInput
     openclaw plugins install @myorg/openclaw-my-plugin
     ```
 
-    Bare package specs are installed from npm during startup switching.
+    纯包规格会在启动切换期间从 npm 安装。
 
   </Tab>
-  <Tab title="ClawHub only">
+  <Tab title="仅 ClawHub">
     ```bash
     openclaw plugins install clawhub:@myorg/openclaw-my-plugin
     ```
   </Tab>
-  <Tab title="npm package spec">
-    Use npm when a package has not yet migrated to ClawHub, or when you need a direct npm installation path during migration:
+  <Tab title="npm 包规格">
+    当某个包尚未迁移到 ClawHub，或者你在迁移期间需要直接的 npm 安装路径时，请使用 npm：
 
     ```bash
     openclaw plugins install npm:@myorg/openclaw-my-plugin
@@ -520,26 +521,26 @@ The `ChannelSetupWizard` type supports more, including `credentials`, `textInput
   </Tab>
 </Tabs>
 
-**In-repo plugins:** Place them under the packaged plugin workspace tree, and they are discovered automatically during builds.
+**仓库内插件：** 将它们放在已打包插件工作区树下，构建期间会自动发现。
 
-**User-installable:**
+**用户可安装：**
 
 ```bash
 openclaw plugins install <package-name>
 ```
 
 <Info>
-For npm-sourced installs, `openclaw plugins install` installs the package into a per-plugin project under `~/.openclaw/npm/projects` with lifecycle scripts disabled. Keep plugin dependency trees pure JS/TS and avoid packages that require `postinstall` builds.
+对于从 npm 源安装的插件，`openclaw plugins install` 会在 `~/.openclaw/npm/projects` 下为每个插件创建一个项目并安装该包，同时禁用生命周期脚本。请保持插件依赖树为纯 JS/TS，并避免使用需要 `postinstall` 构建的包。
 </Info>
 
 <Note>
-Gateway startup does not install plugin dependencies. The npm/git/ClawHub install flows handle dependency resolution; local plugins must already have their dependencies installed.
+网关启动时不会安装插件依赖。npm/git/ClawHub 安装流程会负责依赖解析；本地插件必须已经安装好其依赖。
 </Note>
 
-Packaged package metadata is explicit and is not inferred from built JavaScript at gateway startup. Runtime dependencies should live in the plugin package that owns them; the packaged OpenClaw startup flow does not repair or mirror plugin dependencies.
+打包后的包元数据是显式指定的，不会在网关启动时从构建出的 JavaScript 中推断得出。运行时依赖应位于拥有它们的插件包中；打包的 OpenClaw 启动流程不会修复或镜像插件依赖。
 
-## Related Content
+## 相关内容
 
-- [Building Plugins](/plugins/building-plugins) — step-by-step getting started guide
-- [Plugin Manifest](/plugins/manifest) — full manifest schema reference
-- [SDK Entry Points](/plugins/sdk-entrypoints) — `definePluginEntry` and `defineChannelPluginEntry`
+- [构建插件](/plugins/building-plugins) — 分步入门指南
+- [插件 Manifest](/plugins/manifest) — 完整的 manifest schema 参考
+- [SDK 入口点](/plugins/sdk-entrypoints) — `definePluginEntry` 和 `defineChannelPluginEntry`

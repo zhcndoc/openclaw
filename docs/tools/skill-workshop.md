@@ -164,6 +164,7 @@ action: create | update | revise | list | inspect | apply | reject | quarantine
       autonomous: {
         enabled: false,
       },
+      allowSymlinkTargetWrites: false,
       approvalPolicy: "pending",
       maxPending: 50,
       maxSkillBytes: 40000,
@@ -172,10 +173,11 @@ action: create | update | revise | list | inspect | apply | reject | quarantine
 }
 ```
 
-- `autonomous.enabled`：允许 OpenClaw 在成功轮次后的持久对话信号基础上创建待处理提案。默认值：`false`。
+- `autonomous.enabled`：允许 OpenClaw 在成功轮次后，根据持久化的对话信号创建待处理提案。默认值：`false`。
+- `allowSymlinkTargetWrites`：允许 apply 通过工作区技能符号链接写入，其真实目标已列在 `skills.load.allowSymlinkTargets` 中。默认值：`false`。
 - `approvalPolicy: "pending"`：在代理发起的 `apply`、`reject` 或 `quarantine` 之前需要审批提示。
-- `approvalPolicy: "auto"`：跳过该审批提示。代理仍必须调用该操作。
-- `maxPending`：限制每个工作区中的待处理和已隔离提案数量。
+- `approvalPolicy: "auto"`：跳过该审批提示。代理仍必须调用该动作。
+- `maxPending`：限制每个工作区的待处理和已隔离提案数量。
 - `maxSkillBytes`：限制提案正文大小。默认值：`40000`。
 
 提案描述始终限制为 160 字节。
@@ -233,11 +235,12 @@ skills.proposals.quarantine
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Skill proposal description is too large`      | 将 `description` 缩短到 160 字节或更少。                                                                                                                                                                 |
 | `Skill proposal content is too large`          | 缩短提案正文，或提高 `skills.workshop.maxSkillBytes`。                                                                                                                                         |
-| `Target skill changed after proposal creation` | 依据当前目标修订提案，或创建新的提案。                                                                                                                                   |
+| `Target skill changed after proposal creation` | 根据当前目标修订提案，或创建一个新提案。                                                                                                                                   |
 | `Proposal scan failed`                         | 检查扫描器发现的问题，然后修订或隔离该提案。                                                                                                                                           |
-| `Support file paths must be under one of...`   | 将支持文件移动到 `assets/`、`examples/`、`references/`、`scripts/` 或 `templates/` 下。                                                                                                                |
+| `untrusted symlink target`                     | 仅对有意共享的技能根目录配置 `skills.load.allowSymlinkTargets` 并启用 `skills.workshop.allowSymlinkTargetWrites`。                                                                  |
+| `Support file paths must be under one of...`   | 将支持文件移至 `assets/`、`examples/`、`references/`、`scripts/` 或 `templates/` 下。                                                                                                                |
 | Proposal does not show in list                 | 检查所选的 `--agent` 工作区和 `OPENCLAW_STATE_DIR`。                                                                                                                                            |
-| Agent cannot call `skill_workshop`             | 检查当前工具策略和运行模式。`coding` 包含该工具；限制性的 `tools.allow` 策略必须显式列出它，而沙箱运行必须使用正常的宿主侧代理会话或 CLI。 |
+| Agent cannot call `skill_workshop`             | 检查当前工具策略和运行模式。`coding` 包含该工具；限制性 `tools.allow` 策略必须显式列出它，而沙箱运行必须使用正常的宿主侧代理会话或 CLI。 |
 
 ## 相关内容
 

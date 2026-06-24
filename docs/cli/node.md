@@ -153,7 +153,8 @@ openclaw devices approve <requestId>
 
 `system.run` 受本地 exec 批准控制：
 
-- `~/.openclaw/exec-approvals.json`
+- `$OPENCLAW_STATE_DIR/exec-approvals.json`, or
+  `~/.openclaw/exec-approvals.json` when the variable is unset
 - [Exec approvals](/tools/exec-approvals)
 - `openclaw approvals --node <id|name|ip>`（从 Gateway 编辑）
 

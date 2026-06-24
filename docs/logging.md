@@ -204,7 +204,12 @@ OPENCLAW_DEBUG_MODEL_PAYLOAD=tools OPENCLAW_DEBUG_SSE=events openclaw gateway
 和 Control UI 的 Logs 选项卡都能显示它们。若不使用这些标志，相同的诊断信息
 仍可在 `debug` 级别下查看。
 
-### 追踪关联
+`[model-fetch]` start 和 response 元数据（provider、API、model、status、
+latency，以及 method、URL、timeout、proxy 和 policy 等请求字段）
+始终会在 `info` 级别输出，不受
+`OPENCLAW_DEBUG_MODEL_TRANSPORT` 影响，因此即使没有 debug 标志，也能看到基本的模型传输健康信息。
+
+### Trace correlation
 
 文件日志是 JSONL。当日志调用携带有效的诊断追踪上下文时，
 OpenClaw 会将追踪字段写为顶层 JSON 键（`traceId`、`spanId`、
@@ -217,19 +222,18 @@ Gateway HTTP 请求和 Gateway WebSocket 帧会建立一个内部请求追踪
 因此本地日志、诊断快照、OTEL spans，以及可信 provider 的 `traceparent`
 头部都可以通过 `traceId` 关联起来，而无需记录原始请求或模型内容。
 
-Talk 生命周期日志记录在启用 OpenTelemetry 日志导出时，也会通过
-OTLP logs 流向相同的流程，使用与文件日志相同的有界属性。
+Talk 生命周期日志记录在启用 OpenTelemetry 日志导出时，也会流向 diagnostics-otel 日志导出，
+并使用与文件日志相同的有界属性。请配置 `diagnostics.otel.logsExporter` 来选择 OTLP、stdout JSONL
+或两者作为输出目标。
 
 ### 模型调用大小和时序
 
 模型调用诊断会记录有界的请求/响应测量值，而不会捕获原始 prompt 或响应内容：
 
-- `requestPayloadBytes`: UTF-8 byte size of the final model request payload
-- `responseStreamBytes`: UTF-8 byte size of streamed model response chunk
-  payloads. High-frequency text, thinking, and tool-call delta events count
-  only the incremental `delta` bytes instead of full `partial` snapshots.
-- `timeToFirstByteMs`: elapsed time before the first streamed response event
-- `durationMs`: total model-call duration
+- `requestPayloadBytes`: UTF-8 字节大小，表示最终模型请求载荷
+- `responseStreamBytes`: 流式模型响应分块载荷的 UTF-8 字节大小。高频文本、思考和工具调用 delta 事件只计算增量 `delta` 字节，而不是完整的 `partial` 快照。
+- `timeToFirstByteMs`: 第一个流式响应事件到达前经过的时间
+- `durationMs`: 模型调用总耗时
 
 这些字段在启用诊断导出时，可用于诊断快照、模型调用插件钩子以及
 OTEL 模型调用 spans/metrics。

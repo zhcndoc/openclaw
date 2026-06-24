@@ -131,17 +131,17 @@ openclaw skills workshop apply <proposal-id>
 发布和同步。
 
 | 操作                               | 命令                                                |
-| ---------------------------------- | ------------------------------------------------------ |
-| 将技能安装到工作区                 | `openclaw skills install <slug>`                       |
+| ---------------------------------- | ---------------------------------------------- |
+| 将技能安装到工作区                 | `openclaw skills install @owner/<slug>`                |
 | 从 Git 仓库安装                   | `openclaw skills install git:owner/repo@ref`           |
-| 安装本地技能目录                   | `openclaw skills install ./path/to/skill --as my-tool` |
-| 为所有本地代理安装                 | `openclaw skills install <slug> --global`              |
-| 更新所有工作区技能                 | `openclaw skills update --all`                         |
-| 更新共享托管技能                   | `openclaw skills update <slug> --global`               |
-| 更新所有共享托管技能               | `openclaw skills update --all --global`                |
-| 验证技能的信任包络                 | `openclaw skills verify <slug>`                        |
-| 打印生成的 Skill Card              | `openclaw skills verify <slug> --card`                 |
-| 通过 ClawHub CLI 发布 / 同步       | `clawhub sync --all`                                   |
+| 安装本地技能目录                 | `openclaw skills install ./path/to/skill --as my-tool` |
+| 为所有本地代理安装               | `openclaw skills install @owner/<slug> --global`       |
+| 更新所有工作区技能               | `openclaw skills update --all`                         |
+| 更新共享托管技能                 | `openclaw skills update @owner/<slug> --global`        |
+| 更新所有共享托管技能             | `openclaw skills update --all --global`                |
+| 验证技能的信任封装               | `openclaw skills verify @owner/<slug>`                 |
+| 打印生成的 Skill Card          | `openclaw skills verify @owner/<slug> --card`          |
+| 通过 ClawHub CLI 发布 / 同步      | `clawhub sync --all`                                   |
 
 <AccordionGroup>
   <Accordion title="安装详情">
@@ -157,14 +157,16 @@ openclaw skills workshop apply <proposal-id>
 
   </Accordion>
   <Accordion title="验证和安全扫描">
-    `openclaw skills verify <slug>` 会向 ClawHub 请求该技能的
-    `clawhub.skill.verify.v1` 信任包络。已安装的 ClawHub 技能会根据
-    `.clawhub/origin.json` 中记录的版本和注册中心进行验证。
+    `openclaw skills verify @owner/<slug>` 会向 ClawHub 请求该技能的
+    `clawhub.skill.verify.v1` 信任封装。已安装的 ClawHub 技能会根据
+    `.clawhub/origin.json` 中记录的版本和注册表进行验证。
+    对于已存在的已安装技能或无歧义技能，裸 slug 仍然可接受，但
+    带所有者限定的引用可避免发布者歧义。
 
-    ClawHub 技能页面在安装前会显示最新的安全扫描状态，
-    详细页面包含 VirusTotal、ClawScan 和静态分析。当天然
-    命令将 ClawHub 标记为验证失败时，会以非零状态退出。发布者可通过 ClawHub 仪表板或
-    `clawhub skill rescan <slug>` 处理误报。
+    ClawHub 技能页面会在安装前展示最新的安全扫描状态，并提供
+    VirusTotal、ClawScan 和静态分析的详细页面。当 ClawHub 将验证标记为失败时，
+    该命令会以非零状态退出。发布者可通过 ClawHub 仪表板或
+    `clawhub skill rescan @owner/<slug>` 处理误报。
 
   </Accordion>
   <Accordion title="私有归档安装">
@@ -183,11 +185,15 @@ openclaw skills workshop apply <proposal-id>
 </Warning>
 
 <AccordionGroup>
-  <Accordion title="路径约束">
-    工作区、项目代理和额外目录的技能发现只接受其解析后的真实路径仍位于配置根目录内的技能根目录，除非
-    `skills.load.allowSymlinkTargets` 明确信任某个目标根目录。
-    托管的 `~/.openclaw/skills` 和个人的 `~/.agents/skills` 可以包含
-    通过符号链接指向的技能文件夹，但每个 `SKILL.md` 的真实路径仍必须位于其解析后的技能目录内。
+  <Accordion title="Path containment">
+    Workspace, project-agent, and extra-dir skill discovery only accepts skill
+    roots whose resolved realpath stays inside the configured root, unless
+    `skills.load.allowSymlinkTargets` explicitly trusts a target root.
+    Skill Workshop writes through those trusted targets only when
+    `skills.workshop.allowSymlinkTargetWrites` is enabled.
+    Managed `~/.openclaw/skills` and personal `~/.agents/skills` may contain
+    symlinked skill folders, but every `SKILL.md` realpath must still stay
+    inside its resolved skill directory.
   </Accordion>
   <Accordion title="操作者安装策略">
     配置 `security.installPolicy` 可在技能安装继续之前运行一个受信任的本地策略命令。该策略会接收元数据和暂存的源路径，适用于 ClawHub、上传、Git、本地、更新和
@@ -460,8 +466,9 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
     }
     ```
 
-    对于有意使用符号链接的布局，如果某个 skill 根符号链接指向了配置根目录之外的路径，请使用 `allowSymlinkTargets`，例如
-    `<workspace>/skills/manager -> ~/Projects/manager/skills`。
+    对于有意使用符号链接布局的场景，其中 skill 根目录的符号链接指向已配置根目录之外的位置，例如
+    `<workspace>/skills/manager -> ~/Projects/manager/skills`，请使用 `allowSymlinkTargets`。
+    仅当 Skill Workshop 也应通过这些受信任的符号链接路径应用提案时，才启用 `skills.workshop.allowSymlinkTargetWrites`。
 
   </Accordion>
   <Accordion title="远程 macOS 节点（Linux gateway）">

@@ -11,8 +11,8 @@ title: "Signal 插件"
 
 ## 分发
 
-- 包：`@openclaw/signal`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/signal`
+- Install route: npm; ClawHub: `clawhub:@openclaw/signal`
 
 ## 表面
 

@@ -11,8 +11,8 @@ title: "Exa 插件"
 
 ## 分发
 
-- 包：`@openclaw/exa-plugin`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/exa-plugin`
+- Install route: npm; ClawHub: `clawhub:@openclaw/exa-plugin`
 
 ## 接口
 

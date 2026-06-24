@@ -43,7 +43,18 @@ Telegram、WhatsApp、Matrix、iMessage 和其他捆绑频道插件的每频道�
 
 ### Channel model overrides
 
-使用 `channels.modelByChannel` 将特定频道 ID 固定到某个模型。值可以是 `provider/model` 或已配置的模型别名。当会话已经没有模型覆盖时（例如通过 `/model` 设置），会应用频道映射。
+Use `channels.modelByChannel` to pin specific channel IDs or direct-message peers to a model. Values accept `provider/model` or configured model aliases. The channel mapping applies when a session does not already have a model override (for example, set via `/model`).
+
+For group/thread conversations, keys are channel-specific group IDs, topic IDs, or channel names. For direct-message (DM) conversations, keys are peer identifiers derived from the channel's sender identity (`nativeDirectUserId`, `origin.from`, `origin.to`, `OriginatingTo`, `From`, or `SenderId`). The exact key form depends on the channel:
+
+| Channel  | DM key form         | Example                                      |
+| -------- | ------------------- | -------------------------------------------- |
+| Slack    | `user:U...`         | `user:U12345`                                |
+| Telegram | raw user ID         | `123456789`                                  |
+| Discord  | raw user ID         | `987654321`                                  |
+| WhatsApp | phone number or JID | `15551234567`                                |
+| Matrix   | Matrix user ID      | `@user:matrix.org`                           |
+| Feishu   | `feishu:ou_...`     | `feishu:ou_a8b6cab7e945387de5f253775d9b4d85` |
 
 ```json5
 {
@@ -54,15 +65,19 @@ Telegram、WhatsApp、Matrix、iMessage 和其他捆绑频道插件的每频道�
       },
       slack: {
         C1234567890: "openai/gpt-5.5",
+        "user:U12345": "openai/gpt-5.4-mini",
       },
       telegram: {
         "-1001234567890": "openai/gpt-5.4-mini",
         "-1001234567890:topic:99": "anthropic/claude-sonnet-4-6",
+        "123456789": "openai/gpt-4.1",
       },
     },
   },
 }
 ```
+
+DM-specific keys only match in direct-message conversations; they do not affect group/thread routing.
 
 ### Channel defaults and heartbeat
 
@@ -130,7 +145,9 @@ WhatsApp 通过 gateway 的 web channel（Baileys Web）运行。只要存在已
 }
 ```
 
-<Accordion title="多账号 WhatsApp">
+- Top-level `bindings[]` entries with `type: "acp"` configure persistent ACP bindings for WhatsApp DMs and groups. Use an E.164 direct number or WhatsApp group JID in `match.peer.id`. Field semantics are shared in [ACP Agents](/tools/acp-agents#persistent-channel-bindings).
+
+<Accordion title="Multi-account WhatsApp">
 
 ```json5
 {
@@ -608,6 +625,7 @@ Before relying on an SSH wrapper for production sends, verify an outbound `imsg 
       remoteAttachmentRoots: ["/Users/*/Library/Messages/Attachments"],
       mediaMaxMb: 16,
       service: "auto",
+      sendTransport: "auto",
       region: "US",
       actions: {
         reactions: true,
@@ -630,6 +648,7 @@ Before relying on an SSH wrapper for production sends, verify an outbound `imsg 
 - `attachmentRoots` and `remoteAttachmentRoots` restrict inbound attachment paths (default: `/Users/*/Library/Messages/Attachments`).
 - SCP uses strict host-key checking, so ensure the relay host key already exists in `~/.ssh/known_hosts`.
 - `channels.imessage.configWrites`: allow or deny iMessage-initiated config writes.
+- `channels.imessage.sendTransport`: preferred `imsg` RPC send transport for normal outbound replies. `auto` (default) uses the IMCore bridge for existing chats when it is running, then falls back to AppleScript; `bridge` requires private-API delivery; `applescript` forces the public Messages automation path.
 - `channels.imessage.actions.*`: enable private API actions that are also gated by `imsg status` / `openclaw channels status --probe`.
 - `channels.imessage.includeAttachments` is off by default; set it to `true` before expecting inbound media in agent turns.
 - Inbound recovery after a bridge/gateway restart is automatic (GUID dedupe plus a stale-backlog age fence). Existing `channels.imessage.catchup.enabled: true` configs are still honored as a deprecated compatibility profile.

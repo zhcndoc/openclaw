@@ -21,13 +21,13 @@ ClawHub 发布采用所有者作用域：每次发布都面向某个发布者，
 技能从一个技能文件夹中发布。公开页面是：
 
 ```text
-https://clawhub.ai/<owner>/<slug>
+https://clawhub.ai/<owner>/skills/<slug>
 ```
 
 示例：
 
 ```text
-https://clawhub.ai/alice/review-helper
+https://clawhub.ai/alice/skills/review-helper
 ```
 
 发布请求包含所选所有者、slug、版本、更新日志和文件。服务器会在创建发布之前验证该行为者是否可以以该所有者身份发布。

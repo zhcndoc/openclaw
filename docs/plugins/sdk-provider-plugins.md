@@ -469,23 +469,23 @@ read_when:
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `openai-compatible` | Shared OpenAI-style replay policy for OpenAI-compatible transports, including tool-call-id sanitation, assistant-first ordering fixes, and generic Gemini-turn validation where the transport needs it | `moonshot`, `ollama`, `xai`, `zai` |
-    | `anthropic-by-model` | Claude-aware replay policy chosen by `modelId`, so Anthropic-message transports only get Claude-specific thinking-block cleanup when the resolved model is actually a Claude id | `amazon-bedrock`, `anthropic-vertex` |
-    | `google-gemini` | Native Gemini replay policy plus bootstrap replay sanitation. The shared family keeps the text-output Gemini CLI on tagged reasoning; the direct `google` provider overrides `resolveReasoningOutputMode` to `native` because Gemini API thinking arrives as native thought parts. | `google`, `google-gemini-cli` |
-    | `passthrough-gemini` | Gemini thought-signature sanitation for Gemini models running through OpenAI-compatible proxy transports; does not enable native Gemini replay validation or bootstrap rewrites | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
-    | `hybrid-anthropic-openai` | Hybrid policy for providers that mix Anthropic-message and OpenAI-compatible model surfaces in one plugin; optional Claude-only thinking-block dropping stays scoped to the Anthropic side | `minimax` |
+    | `openai-compatible` | OpenAI 兼容传输的共享 OpenAI 风格 replay 策略，包括 tool-call-id 清理、assistant-first 排序修复，以及在传输需要时的通用 Gemini turn 校验 | `moonshot`, `ollama`, `xai`, `zai` |
+    | `anthropic-by-model` | 根据 `modelId` 选择、感知 Claude 的 replay 策略，因此 Anthropic-message 传输只有在解析出的模型确实是 Claude id 时，才会执行 Claude 专属 thinking-block 清理 | `amazon-bedrock`, `anthropic-vertex` |
+    | `google-gemini` | 原生 Gemini replay 策略加上启动阶段 replay 清理。共享家族让 text-output Gemini CLI 在标记 reasoning 上保持一致；直接的 `google` 提供方会将 `resolveReasoningOutputMode` 覆盖为 `native`，因为 Gemini API 的 thinking 以原生 thought parts 形式到达。 | `google`, `google-gemini-cli` |
+    | `passthrough-gemini` | 适用于通过 OpenAI 兼容代理传输运行的 Gemini 模型的 Gemini thought-signature 清理；不会启用原生 Gemini replay 校验或启动阶段重写 | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
+    | `hybrid-anthropic-openai` | 混合策略，适用于在一个插件中同时混用 Anthropic-message 和 OpenAI 兼容模型表面的提供方；可选的仅 Claude thinking-block 删除仍然仅限于 Anthropic 一侧 | `minimax` |
 
     当前可用的 stream 家族：
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `google-thinking` | Gemini thinking payload normalization on the shared stream path | `google`, `google-gemini-cli` |
-    | `kilocode-thinking` | Kilo reasoning wrapper on the shared proxy stream path, with `kilo/auto` and unsupported proxy reasoning ids skipping injected thinking | `kilocode` |
-    | `moonshot-thinking` | Moonshot binary native-thinking payload mapping from config + `/think` level | `moonshot` |
-    | `minimax-fast-mode` | MiniMax fast-mode model rewrite on the shared stream path | `minimax`, `minimax-portal` |
-    | `openai-responses-defaults` | Shared native OpenAI/Codex Responses wrappers: attribution headers, `/fast`/`serviceTier`, text verbosity, native Codex web search, reasoning-compat payload shaping, and Responses context management | `openai` |
-    | `openrouter-thinking` | OpenRouter reasoning wrapper for proxy routes, with unsupported-model/`auto` skips handled centrally | `openrouter` |
-    | `tool-stream-default-on` | Default-on `tool_stream` wrapper for providers like Z.AI that want tool streaming unless explicitly disabled | `zai` |
+    | `google-thinking` | 共享流路径上的 Gemini thinking 载荷规范化 | `google`, `google-gemini-cli` |
+    | `kilocode-thinking` | 共享代理流路径上的 Kilo reasoning 包装器，带有 `kilo/auto` 和不受支持的代理 reasoning id 跳过注入 thinking 的处理 | `kilocode` |
+    | `moonshot-thinking` | 来自配置 + `/think` 等级的 Moonshot 二进制原生 thinking 载荷映射 | `moonshot` |
+    | `minimax-fast-mode` | 共享流路径上的 MiniMax fast-mode 模型重写 | `minimax`, `minimax-portal` |
+    | `openai-responses-defaults` | 共享的原生 OpenAI/Codex Responses 包装器：归因头、`/fast`/`serviceTier`、文本详细程度、原生 Codex 网页搜索、reasoning-compat 载荷塑形，以及 Responses 上下文管理 | `openai` |
+    | `openrouter-thinking` | 用于代理路由的 OpenRouter reasoning 包装器，集中处理不支持模型/`auto` 跳过 | `openrouter` |
+    | `tool-stream-default-on` | 适用于 Z.AI 等默认启用 `tool_stream` 的提供方的默认开启 `tool_stream` 包装器，除非明确禁用 | `zai` |
 
     <Accordion title="驱动这些家族构建器的 SDK 接口">
       每个家族构建器都由同一软件包导出的更底层公共辅助函数组合而成；当某个提供方需要脱离通用模式时，
@@ -493,6 +493,7 @@ read_when:
 
       - `openclaw/plugin-sdk/provider-model-shared` - `ProviderReplayFamily`, `buildProviderReplayFamilyHooks(...)`, and the raw replay builders (`buildOpenAICompatibleReplayPolicy`, `buildAnthropicReplayPolicyForModel`, `buildGoogleGeminiReplayPolicy`, `buildHybridAnthropicOrOpenAIReplayPolicy`). Also exports Gemini replay helpers (`sanitizeGoogleGeminiReplayHistory`, `resolveTaggedReasoningOutputMode`) and endpoint/model helpers (`resolveProviderEndpoint`, `normalizeProviderId`, `normalizeGooglePreviewModelId`).
       - `openclaw/plugin-sdk/provider-stream` - `ProviderStreamFamily`, `buildProviderStreamFamilyHooks(...)`, `composeProviderStreamWrappers(...)`, plus the shared OpenAI/Codex wrappers (`createOpenAIAttributionHeadersWrapper`, `createOpenAIFastModeWrapper`, `createOpenAIServiceTierWrapper`, `createOpenAIResponsesContextManagementWrapper`, `createCodexNativeWebSearchWrapper`), DeepSeek V4 OpenAI-compatible wrapper (`createDeepSeekV4OpenAICompatibleThinkingWrapper`), Anthropic Messages thinking prefill cleanup (`createAnthropicThinkingPrefillPayloadWrapper`), plain-text tool-call compat (`createPlainTextToolCallCompatWrapper`), and shared proxy/provider wrappers (`createOpenRouterWrapper`, `createToolStreamWrapper`, `createMinimaxFastModeWrapper`).
+      - `openclaw/plugin-sdk/provider-stream-shared` - lightweight payload and event wrappers for hot provider paths, including `createOpenAICompatibleCompletionsThinkingOffWrapper`, `createPayloadPatchStreamWrapper`, `createPlainTextToolCallCompatWrapper`, `normalizeOpenAICompatibleReasoningPayload(...)`, and `setQwenChatTemplateThinking(...)`.
       - `openclaw/plugin-sdk/provider-tools` - `ProviderToolCompatFamily`, `buildProviderToolCompatFamilyHooks("deepseek" | "gemini" | "openai")`, and underlying provider schema helpers.
 
       对于 Gemini 家族提供方，请让 reasoning-output 模式与传输保持一致。直接的 Google Gemini API 提供方应使用
@@ -571,12 +572,10 @@ read_when:
         },
         ```
 
-        `resolveUsageAuth` has three outcomes. Return `{ token, accountId? }`
-        when the provider has a usage/billing credential. Return
-        `{ handled: true }` only when the provider has definitively handled usage
-        auth but has no usable usage token, and OpenClaw must skip generic
-        API-key/OAuth fallback. Return `null` or `undefined` when the provider did
-        not handle the request and OpenClaw should continue with generic fallback.
+        `resolveUsageAuth` 有三种结果。当提供方具备用量/计费凭据时，返回 `{ token, accountId? }`。
+        只有当提供方已经明确处理了用量认证但没有可用的用量 token，并且 OpenClaw 必须跳过通用
+        API 密钥/OAuth 回退时，才返回 `{ handled: true }`。当提供方没有处理该请求，而 OpenClaw
+        应继续使用通用回退时，返回 `null` 或 `undefined`。
       </Tab>
     </Tabs>
 
@@ -587,54 +586,54 @@ read_when:
 
       | # | Hook | 适用场景 |
       | --- | --- | --- |
-      | 1 | `catalog` | Model catalog or base URL defaults |
-      | 2 | `applyConfigDefaults` | Provider-owned global defaults during config materialization |
-      | 3 | `normalizeModelId` | Legacy/preview model-id alias cleanup before lookup |
-      | 4 | `normalizeTransport` | Provider-family `api` / `baseUrl` cleanup before generic model assembly |
-      | 5 | `normalizeConfig` | Normalize `models.providers.<id>` config |
-      | 6 | `applyNativeStreamingUsageCompat` | Native streaming-usage compat rewrites for config providers |
-      | 7 | `resolveConfigApiKey` | Provider-owned env-marker auth resolution |
-      | 8 | `resolveSyntheticAuth` | Local/self-hosted or config-backed synthetic auth |
-      | 9 | `shouldDeferSyntheticProfileAuth` | Lower synthetic stored-profile placeholders behind env/config auth |
-      | 10 | `resolveDynamicModel` | Accept arbitrary upstream model IDs |
-      | 11 | `prepareDynamicModel` | Async metadata fetch before resolving |
-      | 12 | `normalizeResolvedModel` | Transport rewrites before the runner |
-      | 13 | `normalizeToolSchemas` | Provider-owned tool-schema cleanup before registration |
-      | 14 | `inspectToolSchemas` | Provider-owned tool-schema diagnostics |
-      | 15 | `resolveReasoningOutputMode` | Tagged vs native reasoning-output contract |
-      | 16 | `prepareExtraParams` | Default request params |
-      | 17 | `createStreamFn` | Fully custom StreamFn transport |
-      | 19 | `wrapStreamFn` | Custom headers/body wrappers on the normal stream path |
-      | 20 | `resolveTransportTurnState` | Native per-turn headers/metadata |
-      | 21 | `resolveWebSocketSessionPolicy` | Native WS session headers/cool-down |
-      | 22 | `formatApiKey` | Custom runtime token shape |
-      | 23 | `refreshOAuth` | Custom OAuth refresh |
-      | 24 | `buildAuthDoctorHint` | Auth repair guidance |
-      | 25 | `matchesContextOverflowError` | Provider-owned overflow detection |
-      | 26 | `classifyFailoverReason` | Provider-owned rate-limit/overload classification |
-      | 27 | `isCacheTtlEligible` | Prompt cache TTL gating |
-      | 28 | `buildMissingAuthMessage` | Custom missing-auth hint |
-      | 29 | `augmentModelCatalog` | Synthetic forward-compat rows |
-      | 30 | `resolveThinkingProfile` | Model-specific `/think` option set |
-      | 31 | `isBinaryThinking` | Binary thinking on/off compatibility |
-      | 32 | `supportsXHighThinking` | `xhigh` reasoning support compatibility |
-      | 33 | `resolveDefaultThinkingLevel` | Default `/think` policy compatibility |
-      | 34 | `isModernModelRef` | Live/smoke model matching |
-      | 35 | `prepareRuntimeAuth` | Token exchange before inference |
-      | 36 | `resolveUsageAuth` | Custom usage credential parsing |
-      | 37 | `fetchUsageSnapshot` | Custom usage endpoint |
-      | 38 | `createEmbeddingProvider` | Provider-owned embedding adapter for memory/search |
-      | 39 | `buildReplayPolicy` | Custom transcript replay/compaction policy |
-      | 40 | `sanitizeReplayHistory` | Provider-specific replay rewrites after generic cleanup |
-      | 41 | `validateReplayTurns` | Strict replay-turn validation before the embedded runner |
-      | 42 | `onModelSelected` | Post-selection callback (e.g. telemetry) |
+      | 1 | `catalog` | 模型目录或 base URL 默认值 |
+      | 2 | `applyConfigDefaults` | 配置实例化期间提供方拥有的全局默认值 |
+      | 3 | `normalizeModelId` | 查找前的旧版/预览版 model-id 别名清理 |
+      | 4 | `normalizeTransport` | 通用模型组装前的提供方家族 `api` / `baseUrl` 清理 |
+      | 5 | `normalizeConfig` | 规范化 `models.providers.<id>` 配置 |
+      | 6 | `applyNativeStreamingUsageCompat` | 配置提供方的原生流式 usage 兼容重写 |
+      | 7 | `resolveConfigApiKey` | 提供方拥有的 env-marker 认证解析 |
+      | 8 | `resolveSyntheticAuth` | 本地/自托管或配置支持的合成认证 |
+      | 9 | `shouldDeferSyntheticProfileAuth` | 将合成存储的 profile 占位符置于 env/config 认证之后 |
+      | 10 | `resolveDynamicModel` | 接受任意上游模型 ID |
+      | 11 | `prepareDynamicModel` | 在解析前异步获取元数据 |
+      | 12 | `normalizeResolvedModel` | 运行器之前的传输重写 |
+      | 13 | `normalizeToolSchemas` | 注册前提供方拥有的工具 schema 清理 |
+      | 14 | `inspectToolSchemas` | 提供方拥有的工具 schema 诊断 |
+      | 15 | `resolveReasoningOutputMode` | 标记式与原生 reasoning-output 契约 |
+      | 16 | `prepareExtraParams` | 默认请求参数 |
+      | 17 | `createStreamFn` | 完全自定义的 StreamFn 传输 |
+      | 19 | `wrapStreamFn` | 常规流路径上的自定义头/请求体包装器 |
+      | 20 | `resolveTransportTurnState` | 原生每轮头/元数据 |
+      | 21 | `resolveWebSocketSessionPolicy` | 原生 WS 会话头/冷却时间 |
+      | 22 | `formatApiKey` | 自定义运行时 token 形态 |
+      | 23 | `refreshOAuth` | 自定义 OAuth 刷新 |
+      | 24 | `buildAuthDoctorHint` | 认证修复指引 |
+      | 25 | `matchesContextOverflowError` | 提供方拥有的溢出检测 |
+      | 26 | `classifyFailoverReason` | 提供方拥有的速率限制/过载分类 |
+      | 27 | `isCacheTtlEligible` | 提示缓存 TTL 门控 |
+      | 28 | `buildMissingAuthMessage` | 自定义缺失认证提示 |
+      | 29 | `augmentModelCatalog` | 合成的前向兼容行 |
+      | 30 | `resolveThinkingProfile` | 模型特定的 `/think` 选项集 |
+      | 31 | `isBinaryThinking` | 二进制 thinking 开/关兼容性 |
+      | 32 | `supportsXHighThinking` | `xhigh` reasoning 支持兼容性 |
+      | 33 | `resolveDefaultThinkingLevel` | 默认 `/think` 策略兼容性 |
+      | 34 | `isModernModelRef` | Live/smoke 模型匹配 |
+      | 35 | `prepareRuntimeAuth` | 推理前 token 交换 |
+      | 36 | `resolveUsageAuth` | 自定义用量凭据解析 |
+      | 37 | `fetchUsageSnapshot` | 自定义用量端点 |
+      | 38 | `createEmbeddingProvider` | 用于 memory/search 的提供方拥有 embedding 适配器 |
+      | 39 | `buildReplayPolicy` | 自定义对话回放/压缩策略 |
+      | 40 | `sanitizeReplayHistory` | 通用清理后的提供方特定回放重写 |
+      | 41 | `validateReplayTurns` | 嵌入式运行器前的严格 replay-turn 校验 |
+      | 42 | `onModelSelected` | 选择后回调（例如遥测） |
 
       运行时回退说明：
 
-      - `normalizeConfig` checks the matched provider first, then other hook-capable provider plugins until one actually changes the config. If no provider hook rewrites a supported Google-family config entry, the bundled Google config normalizer still applies.
-      - `resolveConfigApiKey` uses the provider hook when exposed. Amazon Bedrock keeps AWS env-marker resolution in its provider plugin; runtime auth itself still uses the AWS SDK default chain when configured with `auth: "aws-sdk"`.
-      - `resolveThinkingProfile(ctx)` receives the selected `provider`, `modelId`, optional merged `reasoning` catalog hint, and optional merged model `compat` facts. Use `compat` only to select the provider's thinking UI/profile.
-      - `resolveSystemPromptContribution` lets a provider inject cache-aware system-prompt guidance for a model family. Prefer it over `before_prompt_build` when the behavior belongs to one provider/model family and should preserve the stable/dynamic cache split.
+      - `normalizeConfig` 会先检查匹配的提供方，然后再检查其他具备钩子能力的提供方插件，直到某个插件真正修改了配置。如果没有任何提供方钩子重写受支持的 Google 家族配置条目，打包的 Google 配置规范化器仍会生效。
+      - `resolveConfigApiKey` 在暴露时会使用提供方钩子。Amazon Bedrock 会将 AWS env-marker 解析保留在其提供方插件中；当配置为 `auth: "aws-sdk"` 时，运行时认证本身仍使用 AWS SDK 默认链。
+      - `resolveThinkingProfile(ctx)` 会接收所选的 `provider`、`modelId`、可选的合并后 `reasoning` 目录提示，以及可选的合并后模型 `compat` 事实。仅使用 `compat` 来选择提供方的 thinking UI/profile。
+      - `resolveSystemPromptContribution` 允许提供方为某个模型家族注入具备缓存感知的系统提示指导。若行为属于某一个提供方/模型家族，并且应保留稳定/动态缓存拆分，请优先使用它，而不是 `before_prompt_build`。
 
       有关详细说明和真实示例，请参见 [内部机制：提供方运行时钩子](/plugins/architecture-internals#provider-runtime-hooks)。
     </Accordion>

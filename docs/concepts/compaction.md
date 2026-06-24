@@ -24,8 +24,8 @@ title: "压缩"
 
 你会看到：
 
-- `embedded run auto-compaction start` / `complete` in normal Gateway logs.
-- `🧹 Auto-compaction complete` in verbose mode.
+- `embedded run auto-compaction start` / `complete` 在普通 Gateway 日志中。
+- `🧹 Auto-compaction complete` 在详细模式中。
 - `/status` 显示 `🧹 Compactions: <count>`。
 
 <Info>
@@ -62,7 +62,7 @@ title: "压缩"
 
 ### 使用不同模型
 
-默认情况下，压缩使用代理的主模型。设置 `agents.defaults.compaction.model` 可将摘要生成委托给更强大或更专业的模型。该覆盖项接受任意 `provider/model-id` 字符串：
+默认情况下，压缩使用代理的主模型。将 `agents.defaults.compaction.model` 设为其他值，可将摘要任务委托给更强大或更专门化的模型。该覆盖项接受 `provider/model-id` 字符串，或者在 `agents.defaults.models` 下配置的裸别名：
 
 ```json
 {
@@ -76,7 +76,9 @@ title: "压缩"
 }
 ```
 
-这同样适用于本地模型，例如一个专用于摘要的第二个 Ollama 模型：
+裸配置别名会在压缩开始前解析为其规范的提供方和模型。如果一个裸值同时匹配别名和已配置的字面模型 ID，则字面模型 ID 优先生效。未匹配的裸值会保留为当前活动提供方上的模型 ID。
+
+这同样适用于本地模型，例如专用于摘要的第二个 Ollama 模型：
 
 ```json
 {

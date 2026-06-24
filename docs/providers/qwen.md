@@ -1,15 +1,15 @@
 ---
-summary: "通过 OpenClaw 内置的 qwen 提供方使用 Qwen Cloud"
+summary: "通过其 OpenClaw 插件使用 Qwen Cloud"
 read_when:
   - 你想在 OpenClaw 中使用 Qwen
   - 你之前使用过 Qwen OAuth
 title: "Qwen"
 ---
 
-OpenClaw 现在将 Qwen 视为一等内置提供方，规范 id 为
-`qwen`。这个内置提供方面向 Qwen Cloud / Alibaba DashScope 和
-Coding Plan 端点，保留旧的 `modelstudio` id 作为兼容
-别名，并且还将 Qwen Portal 令牌流程暴露为提供方 `qwen-oauth`。
+OpenClaw 现在将 Qwen 视为一级提供方插件，其规范 id 为
+`qwen`。该提供方插件面向 Qwen Cloud / Alibaba DashScope 和
+Coding Plan 端点，保留 `modelstudio` 旧 id 作为兼容
+别名，同时也将 Qwen Portal 令牌流程暴露为提供方 `qwen-oauth`。
 
 - 提供方: `qwen`
 - Portal 提供方: [`qwen-oauth`](/providers/qwen-oauth)
@@ -22,7 +22,16 @@ Coding Plan 端点，保留旧的 `modelstudio` id 作为兼容
 Coding Plan 的支持可能会滞后于公开目录。
 </Tip>
 
-## 快速开始
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/qwen-provider
+openclaw gateway restart
+```
+
+## 入门
 
 选择你的计划类型并按照设置步骤进行。
 
@@ -185,8 +194,8 @@ Coding Plan 的支持可能会滞后于公开目录。
 
 ## 内置目录
 
-OpenClaw 当前提供以下内置 Qwen 目录。已配置的目录会感知端点：
-Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
+OpenClaw 目前随附此 Qwen 静态目录。已配置的目录会感知
+端点：Coding Plan 配置会省略那些仅已知可在 Standard 端点上工作的模型。
 
 | Model ref                   | 输入         | 上下文    | 说明                                               |
 | --------------------------- | ------------ | --------- | -------------------------------------------------- |
@@ -202,14 +211,14 @@ Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
 | `qwen-oauth/qwen3.5-plus`   | 文本, 图像    | 1,000,000 | Qwen Portal 默认                                   |
 
 <Note>
-即使模型出现在内置目录中，实际可用性仍可能因端点和计费计划而异。
+即使某个模型存在于静态目录中，可用性仍可能因端点和计费计划而异。
 </Note>
 
 ## 思考控制
 
-对于支持推理的 Qwen Cloud 模型，内置提供方会将 OpenClaw 的
-思考级别映射到 DashScope 顶层的 `enable_thinking` 请求标志。关闭
-思考会发送 `enable_thinking: false`；其他思考级别会发送
+对于支持推理的 Qwen Cloud 模型，该提供方会将 OpenClaw 的
+thinking 级别映射到 DashScope 顶层的 `enable_thinking` 请求标志。禁用
+thinking 时发送 `enable_thinking: false`；其他 thinking 级别发送
 `enable_thinking: true`。
 
 ## 多模态附加能力
@@ -239,8 +248,8 @@ Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
 
 <AccordionGroup>
   <Accordion title="图像和视频理解">
-    内置 Qwen 插件会在 **Standard** DashScope 端点上注册图像和视频
-    理解能力（不包含 Coding Plan 端点）。
+    Qwen 插件会在 **Standard** DashScope 端点上注册媒体理解能力，适用于图像和视频
+    （不适用于 Coding Plan 端点）。
 
     | 属性         | 值                    |
     | ------------- | --------------------- |
@@ -263,10 +272,10 @@ Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
     请切换到 Standard（按量付费）而不是 Coding Plan
     端点/密钥对。
 
-    OpenClaw 的内置 Qwen 目录不会在 Coding Plan 端点上宣传
-    `qwen3.6-plus`，但如果你在
-    `models.providers.qwen.models` 下显式配置了 `qwen/qwen3.6-plus` 条目，
-    并且使用 Coding Plan baseUrl，那么该配置会被接受，这样如果阿里云在你的订阅中启用该模型，你就可以选择使用它。是否成功调用仍然由上游 API 决定。
+    OpenClaw 的 Qwen 静态目录不会在 Coding
+    Plan 端点上声明 `qwen3.6-plus`，但如果你在
+    `models.providers.qwen.models` 下为 `qwen/qwen3.6-plus` 显式配置了条目，并且该
+    条目使用的是 Coding Plan baseUrl，那么只要阿里云在你的订阅中启用了它，该模型就会被接受。上游 API 仍然会决定调用是否成功。
 
   </Accordion>
 
@@ -274,13 +283,13 @@ Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
     `qwen` 插件正被定位为完整 Qwen
     Cloud 入口的厂商主页，而不只是编程/文本模型。
 
-    - **文本/聊天模型：** 目前已内置
+    - **文本/聊天模型：** 通过插件提供
     - **工具调用、结构化输出、思考：** 继承自兼容 OpenAI 的传输层
-    - **图像生成：** 计划在提供方插件层实现
-    - **图像/视频理解：** 目前已在 Standard 端点内置
-    - **语音/音频：** 计划在提供方插件层实现
-    - **记忆嵌入/重排序：** 计划通过嵌入适配器层提供
-    - **视频生成：** 目前已通过共享的视频生成能力内置
+    - **图像生成：** 计划在提供方插件层支持
+    - **图像/视频理解：** 在 Standard 端点上可通过插件使用
+    - **语音/音频：** 计划在提供方插件层支持
+    - **记忆嵌入/重排序：** 计划通过 embedding 适配器表面支持
+    - **视频生成：** 可通过共享视频生成能力经由插件使用
 
   </Accordion>
 
@@ -295,7 +304,7 @@ Coding Plan 配置会省略那些只在 Standard 端点上可用的模型。
     `models.providers.qwen.baseUrl` 仍会让视频生成使用正确的
     区域 DashScope 视频端点。
 
-    当前内置 Qwen 视频生成限制：
+    当前 Qwen 视频生成限制：
 
     - 每次请求最多 **1** 个输出视频
     - 最多 **1** 张输入图片

@@ -227,10 +227,19 @@ OpenClaw 具有多个高容量的提示词/上下文预算，它们被有意按�
 }
 ```
 
-- `memoryGetMaxChars`：`memory_get` 摘录截断前的默认上限，之后会添加元数据和续接通知。
-- `memoryGetDefaultLines`：省略 `lines` 时 `memory_get` 的默认行窗口。
-- `toolResultMaxChars`：用于持久化结果和溢出恢复的高级实时工具结果上限。若不设置，则使用模型上下文自动上限：低于 100K tokens 时为 `16000` 字符，100K+ tokens 时为 `32000` 字符，200K+ tokens 时为 `64000` 字符。有效上限仍限制在模型上下文窗口的大约 30% 以内。`openclaw doctor --deep` 会打印有效上限，而 doctor 只会在显式覆盖已过期或不生效时发出警告。
-- `postCompactionMaxChars`：用于压缩后刷新注入的 AGENTS.md 摘录上限。
+- `memoryGetMaxChars`: default `memory_get` excerpt cap before truncation
+  metadata and continuation notice are added.
+- `memoryGetDefaultLines`: default `memory_get` line window when `lines` is
+  omitted.
+- `toolResultMaxChars`: advanced live tool-result ceiling used for persisted
+  results and overflow recovery. Leave unset for the model-context auto cap:
+  `16000` chars below 100K tokens, `32000` chars at 100K+ tokens, and `64000`
+  chars at 200K+ tokens. Explicit values up to `1000000` are accepted for
+  long-context models, but the effective cap is still limited to about 30% of
+  the model context window. `openclaw doctor --deep` prints the effective cap,
+  and doctor warns only when an explicit override is stale or has no effect.
+- `postCompactionMaxChars`: AGENTS.md excerpt cap used during post-compaction
+  refresh injection.
 
 #### `agents.list[].contextLimits`
 
@@ -412,7 +421,7 @@ OpenClaw adapts the resize ladder to the selected image model. For example, Clau
   - Typical values: `qwen/wan2.6-t2v`, `qwen/wan2.6-i2v`, `qwen/wan2.6-r2v`, `qwen/wan2.6-r2v-flash`, or `qwen/wan2.7-r2v`.
   - If omitted, `video_generate` can still infer an auth-backed provider default. It tries the current default provider first, then the remaining registered video-generation providers in provider-id order.
   - If you select a provider/model directly, configure the matching provider auth/API key too.
-  - The bundled Qwen video-generation provider supports up to 1 output video, 1 input image, 4 input videos, 10 seconds duration, and provider-level `size`, `aspectRatio`, `resolution`, `audio`, and `watermark` options.
+  - The official Qwen video-generation plugin supports up to 1 output video, 1 input image, 4 input videos, 10 seconds duration, and provider-level `size`, `aspectRatio`, `resolution`, `audio`, and `watermark` options.
 - `pdfModel`: accepts either a string (`"provider/model"`) or an object (`{ primary, fallbacks }`).
   - Used by the `pdf` tool for model routing.
   - If omitted, the PDF tool falls back to `imageModel`, then to the resolved session/default model.
@@ -604,8 +613,8 @@ Provider-independent prompt overlays applied by model family on OpenClaw-assembl
     defaults: {
       compaction: {
         mode: "safeguard", // default | safeguard
-        provider: "my-provider", // 已注册压缩提供方插件的 id（可选）
-        timeoutSeconds: 900,
+        provider: "my-provider", // id of a registered compaction provider plugin (optional)
+        timeoutSeconds: 180,
         reserveTokensFloor: 24000,
         keepRecentTokens: 50000,
         identifierPolicy: "strict", // strict | off | custom
@@ -632,14 +641,14 @@ Provider-independent prompt overlays applied by model family on OpenClaw-assembl
 
 - `mode`: `default` or `safeguard` (chunked summarization for long histories). See [Compaction](/concepts/compaction).
 - `provider`: id of a registered compaction provider plugin. When set, the provider's `summarize()` is called instead of built-in LLM summarization. Falls back to built-in on failure. Setting a provider forces `mode: "safeguard"`. See [Compaction](/concepts/compaction).
-- `timeoutSeconds`: maximum seconds allowed for a single compaction operation before OpenClaw aborts it. Default: `900`.
+- `timeoutSeconds`: maximum seconds allowed for a single compaction operation before OpenClaw aborts it. Default: `180`.
 - `keepRecentTokens`: agent cut-point budget for keeping the most recent transcript tail verbatim. Manual `/compact` honors this when explicitly set; otherwise manual compaction is a hard checkpoint.
 - `identifierPolicy`: `strict` (default), `off`, or `custom`. `strict` prepends built-in opaque identifier retention guidance during compaction summarization.
 - `identifierInstructions`: optional custom identifier-preservation text used when `identifierPolicy=custom`.
 - `qualityGuard`: retry-on-malformed-output checks for safeguard summaries. Enabled by default in safeguard mode; set `enabled: false` to skip the audit.
 - `midTurnPrecheck`: optional tool-loop pressure check. When `enabled: true`, OpenClaw checks context pressure after tool results are appended and before the next model call. If the context no longer fits, it aborts the current attempt before submitting the prompt and reuses the existing precheck recovery path to truncate tool results or compact and retry. Works with both `default` and `safeguard` compaction modes. Default: disabled.
 - `postCompactionSections`: optional AGENTS.md H2/H3 section names to re-inject after compaction. Reinjection is disabled when unset or set to `[]`. Explicitly setting `["Session Startup", "Red Lines"]` enables that pair and preserves the legacy `Every Session`/`Safety` fallback. Enable this only when the extra context is worth the risk of duplicating project guidance already captured in the compaction summary.
-- `model`: optional `provider/model-id` override for compaction summarization only. Use this when the main session should keep one model but compaction summaries should run on another; when unset, compaction uses the session's primary model.
+- `model`: optional `provider/model-id` or bare alias from `agents.defaults.models` for compaction summarization only. Bare aliases resolve before dispatch; configured literal model IDs retain precedence on collisions. Use this when the main session should keep one model but compaction summaries should run on another; when unset, compaction uses the session's primary model.
 - `maxActiveTranscriptBytes`: optional byte threshold (`number` or strings like `"20mb"`) that triggers normal local compaction before a run when the active JSONL grows past the threshold. Requires `truncateAfterCompaction` so successful compaction can rotate to a smaller successor transcript. Disabled when unset or `0`.
 - `notifyUser`: when `true`, sends brief notices to the user when compaction starts and when it completes (for example, "Compacting context..." and "Compaction complete"). Disabled by default to keep compaction silent.
 - `memoryFlush`: silent agentic turn before auto-compaction to store durable memories. Set `model` to an exact provider/model such as `ollama/qwen3:8b` when this housekeeping turn should stay on a local model; the override does not inherit the active session fallback chain. Skipped when workspace is read-only.
@@ -1048,22 +1057,23 @@ scripts/sandbox-browser-setup.sh   # 可选的浏览器镜像
 }
 ```
 
-- `id`：稳定的代理 id（必填）。
-- `default`：当设置了多个默认时，最先设置的生效（会记录警告）。如果都未设置，则列表中的第一个条目为默认。
-- `model`：字符串形式会设置严格的逐代理主模型，不带模型回退；对象形式 `{ primary }` 也同样是严格的，除非你添加 `fallbacks`。使用 `{ primary, fallbacks: [...] }` 可为该代理启用回退，或使用 `{ primary, fallbacks: [] }` 显式表示严格行为。仅覆盖 `primary` 的 cron 任务仍会继承默认回退，除非你设置 `fallbacks: []`。
-- `params`：逐代理流参数，会覆盖 `agents.defaults.models` 中所选模型条目。可用于诸如 `cacheRetention`、`temperature` 或 `maxTokens` 之类的代理特定覆盖，而无需复制整个模型目录。
-- `tts`：可选的逐代理文字转语音覆盖。该块会在 `messages.tts` 之上进行深度合并，因此请将共享的提供方凭据和回退策略保留在 `messages.tts` 中，并只在此处设置与角色相关的值，例如提供方、声音、模型、风格或自动模式。
-- `skills`：可选的逐代理技能允许列表。若省略，则在设置了 `agents.defaults.skills` 时继承它；显式列表会替换默认值而不是合并，`[]` 表示没有技能。
-- `thinkingDefault`：可选的逐代理默认思考级别（`off | minimal | low | medium | high | xhigh | adaptive | max`）。当没有逐消息或会话覆盖时，会覆盖该代理的 `agents.defaults.thinkingDefault`。所选提供方/模型配置文件决定哪些值有效；对于 Google Gemini，`adaptive` 会保留提供方拥有的动态思考（Gemini 3/3.1 上省略 `thinkingLevel`，Gemini 2.5 上 `thinkingBudget: -1`）。
-- `reasoningDefault`：可选的逐代理默认推理可见性（`on | off | stream`）。当没有逐消息或会话推理覆盖时，会覆盖该代理的 `agents.defaults.reasoningDefault`。
-- `fastModeDefault`：可选的逐代理快速模式默认值（`true | false`）。在没有逐消息或会话快速模式覆盖时生效。
-- `models`：可选的逐代理模型目录/运行时覆盖，按完整的 `provider/model` id 键入。使用 `models["provider/model"].agentRuntime` 表示逐代理运行时例外。
-- `runtime`：可选的逐代理运行时描述符。若代理默认应使用 ACP 框架会话，可使用带有 `runtime.acp` 默认值（`agent`、`backend`、`mode`、`cwd`）的 `type: "acp"`。
-- `identity.avatar`：工作区相对路径、`http(s)` URL 或 `data:` URI。
-- `identity` 派生默认值：`ackReaction` 来自 `emoji`，`mentionPatterns` 来自 `name`/`emoji`。
-- `subagents.allowAgents`：用于显式 `sessions_spawn.agentId` 目标的已配置代理 id 允许列表（`["*"]` = 任意已配置目标；默认：仅同一代理）。如果允许自我目标 `agentId` 调用，请包含请求者 id。已删除其代理配置的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 可清理它们，或者如果希望该目标仍可在继承默认值的同时保持可生成，可添加一个最小的 `agents.list[]` 条目。
-- 沙箱继承保护：如果请求者会话已经处于沙箱中，`sessions_spawn` 会拒绝那些会在非沙箱中运行的目标。
-- `subagents.requireAgentId`：为 `true` 时，阻止省略 `agentId` 的 `sessions_spawn` 调用（强制显式配置文件选择；默认：`false`）。
+- `id`: stable agent id (required).
+- `default`: when multiple are set, first wins (warning logged). If none set, first list entry is default.
+- `model`: string form sets a strict per-agent primary with no model fallback; object form `{ primary }` is also strict unless you add `fallbacks`. Use `{ primary, fallbacks: [...] }` to opt that agent into fallback, or `{ primary, fallbacks: [] }` to make strict behavior explicit. Cron jobs that only override `primary` still inherit default fallbacks unless you set `fallbacks: []`.
+- `params`: per-agent stream params merged over the selected model entry in `agents.defaults.models`. Use this for agent-specific overrides like `cacheRetention`, `temperature`, or `maxTokens` without duplicating the whole model catalog.
+- `tts`: optional per-agent text-to-speech overrides. The block deep-merges over `messages.tts`, so keep shared provider credentials and fallback policy in `messages.tts` and set only persona-specific values such as provider, voice, model, style, or auto mode here.
+- `skills`: optional per-agent skill allowlist. If omitted, the agent inherits `agents.defaults.skills` when set; an explicit list replaces defaults instead of merging, and `[]` means no skills.
+- `thinkingDefault`: optional per-agent default thinking level (`off | minimal | low | medium | high | xhigh | adaptive | max`). Overrides `agents.defaults.thinkingDefault` for this agent when no per-message or session override is set. The selected provider/model profile controls which values are valid; for Google Gemini, `adaptive` keeps provider-owned dynamic thinking (`thinkingLevel` omitted on Gemini 3/3.1, `thinkingBudget: -1` on Gemini 2.5).
+- `reasoningDefault`: optional per-agent default reasoning visibility (`on | off | stream`). Overrides `agents.defaults.reasoningDefault` for this agent when no per-message or session reasoning override is set.
+- `fastModeDefault`: optional per-agent default for fast mode (`"auto" | true | false`). Applies when no per-message or session fast-mode override is set.
+- `models`: optional per-agent model catalog/runtime overrides keyed by full `provider/model` ids. Use `models["provider/model"].agentRuntime` for per-agent runtime exceptions.
+- `runtime`: optional per-agent runtime descriptor. Use `type: "acp"` with `runtime.acp` defaults (`agent`, `backend`, `mode`, `cwd`) when the agent should default to ACP harness sessions.
+- `identity.avatar`: workspace-relative path, `http(s)` URL, or `data:` URI.
+- Local workspace-relative `identity.avatar` image files are limited to 2 MB. `http(s)` URLs and `data:` URIs are not checked with the local file-size limit.
+- `identity` derives defaults: `ackReaction` from `emoji`, `mentionPatterns` from `name`/`emoji`.
+- `subagents.allowAgents`: allowlist of configured agent ids for explicit `sessions_spawn.agentId` targets (`["*"]` = any configured target; default: same agent only). Include the requester id when self-targeted `agentId` calls should be allowed. Stale entries whose agent config was deleted are rejected by `sessions_spawn` and omitted from `agents_list`; run `openclaw doctor --fix` to clean them up, or add a minimal `agents.list[]` entry if that target should remain spawnable while inheriting defaults.
+- Sandbox inheritance guard: if the requester session is sandboxed, `sessions_spawn` rejects targets that would run unsandboxed.
+- `subagents.requireAgentId`: when true, block `sessions_spawn` calls that omit `agentId` (forces explicit profile selection; default: false).
 
 ## 多代理路由
 

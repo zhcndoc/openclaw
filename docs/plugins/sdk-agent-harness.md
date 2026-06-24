@@ -121,16 +121,24 @@ OpenClaw 要求 Codex app-server `0.125.0` 或更高版本。Codex 插件会检�
 
 ### 工具结果中间件
 
-捆绑插件可以通过 `api.registerAgentToolResultMiddleware(...)` 附加与运行时无关的工具结果中间件，前提是其 manifest 在 `contracts.agentToolResultMiddleware` 中声明了目标 runtime id。这个受信任的接入点用于在 OpenClaw 或 Codex 将工具输出回传给模型之前运行的异步工具结果转换。
+已捆绑插件以及显式启用的、其 manifest 合同匹配的已安装插件，可以通过 `api.registerAgentToolResultMiddleware(...)` 附加与运行时无关的工具结果中间件，只要它们的 manifest 在 `contracts.agentToolResultMiddleware` 中声明了目标运行时 id。这个受信任的接入点用于异步工具结果转换，这些转换必须在 OpenClaw 或 Codex 将工具输出反馈给模型之前运行。
 
 旧式捆绑插件仍可使用 `api.registerCodexAppServerExtensionFactory(...)` 作为仅面向 Codex app-server 的中间件，但新的结果转换应使用与运行时无关的 API。
 仅嵌入式运行器的 `api.registerEmbeddedExtensionFactory(...)` hook 已被移除；嵌入式工具结果转换必须使用与运行时无关的中间件。
 
 ### 终态分类
 
-拥有自己协议投影的原生 harness，可以在完成的 turn 未产生可见 assistant 文本时，使用
-`openclaw/plugin-sdk/agent-harness-runtime` 中的 `classifyAgentHarnessTerminalOutcome(...)`。该辅助函数会返回 `empty`、`reasoning-only` 或
-`planning-only`，以便 OpenClaw 的 fallback 策略决定是否改用其他模型重试。它有意不会对 prompt 错误、进行中的 turn，以及诸如 `NO_REPLY` 之类的刻意静默回复进行分类。
+拥有自身协议投影的原生 harness 可以在一个已完成的 turn 没有产生可见助手文本时，使用来自 `openclaw/plugin-sdk/agent-harness-runtime` 的 `classifyAgentHarnessTerminalOutcome(...)`。该辅助函数会返回 `empty`、`reasoning-only` 或 `planning-only`，以便 OpenClaw 的回退策略决定是否在不同模型上重试。`planning-only` 需要 harness 显式提供 `planText` 字段；OpenClaw 不会从助手正文中推断它。该辅助函数有意不对 prompt 错误、进行中的 turn，以及诸如 `NO_REPLY` 之类的刻意静默回复进行分类。
+
+### Agent-end side effects
+
+原生 harness 在完成一次 attempt 后必须调用来自 `openclaw/plugin-sdk/agent-harness-runtime` 的 `runAgentEndSideEffects(...)`。它会分发可移植的 `agent_end` hook 和 OpenClaw 的研究捕获，而不会延迟交互式回复。对于本地、非交互式运行，请使用 `awaitAgentEndSideEffects(...)`，此时 attempt 在这些副作用完成之前不得解析结束。两个辅助函数都接受与 `runAgentHarnessAgentEndHook(...)` 相同的 `{ event, ctx }` 载荷；它们的失败不会改变已完成的 attempt 结果。
+
+### 用户输入与工具界面
+
+公开 runtime 级用户输入请求的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-runtime` 中的用户输入辅助函数来格式化提示，通过 OpenClaw 的阻塞回复路径传递，并将选择/自由形式答案规范化回该 runtime 的原生响应形状。该辅助函数会保持通道/TUI 展现一致，而每个 harness 仍保留自己的协议解析和待处理请求生命周期。
+
+需要类似 PI 的紧凑工具路由的原生 harness 应使用 `openclaw/plugin-sdk/agent-harness-tool-runtime` 中的 `createAgentHarnessToolSurfaceRuntime(...)`。它负责工具搜索/代码模式控制选择、本地模型精简默认值、与运行时兼容的 schema 过滤、隐藏目录执行、目录 hydration 以及目录清理。harness 仍然负责其 SDK 特定的工具转换和原生执行回调。
 
 ### 原生 Codex harness 模式
 

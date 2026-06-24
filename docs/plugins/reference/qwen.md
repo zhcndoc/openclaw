@@ -11,8 +11,8 @@ title: "Qwen 插件"
 
 ## 分发
 
-- 包：`@openclaw/qwen-provider`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/qwen-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/qwen-provider`
 
 ## 范围
 

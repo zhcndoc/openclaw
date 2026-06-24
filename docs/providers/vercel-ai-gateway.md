@@ -8,12 +8,13 @@ read_when:
 
 [Vercel AI Gateway](https://vercel.com/ai-gateway) 提供了一个统一的 API，可通过单一端点访问数百种模型。
 
-| 属性          | 值                               |
-| ------------- | -------------------------------- |
-| 提供方        | `vercel-ai-gateway`              |
-| 认证          | `AI_GATEWAY_API_KEY`             |
-| API           | 兼容 Anthropic Messages          |
-| 模型目录      | 通过 `/v1/models` 自动发现       |
+| Property      | Value                                  |
+| ------------- | -------------------------------------- |
+| Provider      | `vercel-ai-gateway`                    |
+| Package       | `@openclaw/vercel-ai-gateway-provider` |
+| Auth          | `AI_GATEWAY_API_KEY`                   |
+| API           | Anthropic Messages compatible          |
+| Model catalog | Auto-discovered via `/v1/models`       |
 
 <Tip>
 OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
@@ -25,8 +26,13 @@ OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
 ## 开始使用
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/vercel-ai-gateway-provider
+    ```
+  </Step>
   <Step title="设置 API key">
-    运行初始化并选择 AI Gateway 认证选项：
+    运行 onboarding 并选择 AI Gateway 认证选项：
 
     ```bash
     openclaw onboard --auth-choice ai-gateway-api-key

@@ -25,9 +25,9 @@ title: "审批"
 
 当你想要以下操作时使用它：
 
-- 检查本地 requested policy、主机审批文件以及最终合并结果
+- 检查本地请求的 policy、主机审批文件以及最终合并结果
 - 应用本地预设，例如 YOLO 或 deny-all
-- 同步本地 `tools.exec.*` 和本地 `~/.openclaw/exec-approvals.json`
+- 同步本地 `tools.exec.*` 与本地主机审批文件
 
 示例：
 
@@ -83,7 +83,7 @@ openclaw approvals get --gateway
 ```bash
 openclaw approvals set --file ./exec-approvals.json
 openclaw approvals set --stdin <<'EOF'
-{ version: 1, defaults: { security: "full", ask: "off" } }
+{ version: 1, defaults: { security: "full", ask: "off", askFallback: "full" } }
 EOF
 openclaw approvals set --node <id|name|ip> --file ./exec-approvals.json
 openclaw approvals set --gateway --file ./exec-approvals.json
@@ -137,7 +137,7 @@ openclaw config set tools.exec.ask off
 - YOLO 关注的是审批，而不是路由。
 - 如果你希望即使配置了 sandbox 也使用主机 exec，请使用 `gateway` 或 `/exec host=gateway` 明确指定主机选择。
 
-这与当前的主机默认 YOLO 行为一致。如果你想要审批，请收紧它。
+省略的 `askFallback` 默认值为 `deny`。在升级一个应保持永不提示行为的无 UI 主机时，请显式设置 `askFallback: "full"`。
 
 本地快捷方式：
 
@@ -177,10 +177,12 @@ openclaw approvals allowlist remove "~/Projects/**/bin/rg"
 
 ## 说明
 
-- `--node` 使用与 `openclaw nodes` 相同的解析器（id、名称、ip 或 id 前缀）。
-- `--agent` 默认值为 `"*"`，这会应用于所有 agent。
-- node 主机必须公开 `system.execApprovals.get/set`（macOS 应用或无头 node 主机）。
-- 审批文件按主机存储在 `~/.openclaw/exec-approvals.json`。
+- `--node` 使用与 `openclaw nodes` 相同的解析器（id、名称、IP 或 id 前缀）。
+- `--agent` 默认为 `"*"`，这会应用于所有 agent。
+- node 主机必须声明 `system.execApprovals.get/set`（macOS 应用或无头 node 主机）。
+- 审批文件按主机存储在 OpenClaw 状态目录中
+  (`$OPENCLAW_STATE_DIR/exec-approvals.json`，或者
+  在变量未设置时为 `~/.openclaw/exec-approvals.json`)。
 
 ## 相关
 

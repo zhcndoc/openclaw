@@ -1,5 +1,5 @@
 ---
-summary: "memory-wiki: 一个带有来源、声明、仪表盘和桥接模式的编译知识库"
+summary: "memory-wiki：一个带有来源、声明、仪表盘和桥接模式的编译知识库"
 read_when:
   - 你希望在普通 MEMORY.md 笔记之外保留持久知识
   - 你正在配置捆绑的 memory-wiki 插件
@@ -20,12 +20,13 @@ title: "Memory wiki"
 
 ## 它增加了什么
 
-- 带有确定性页面布局的专用 wiki 库
-- 结构化声明和证据元数据，而不仅仅是散文
-- 页面级来源、置信度、矛盾和开放问题
-- 面向代理/运行时消费者的编译摘要
-- 原生 wiki 的 search/get/apply/lint 工具
-- 可选的桥接模式，从活动记忆插件导入公开制品
+- 一个专用的 wiki 库，具有确定性的页面布局
+- 结构化的声明和证据元数据，而不只是散文
+- 页面级来源、置信度、矛盾和未解决问题
+- 供代理/运行时消费者使用的编译摘要
+- wiki 原生的 search/get/apply/lint 工具
+- 可导入到编译后 wiki 概念中的 Open Knowledge Format
+- 可选的桥接模式，可从活动记忆插件导入公开制品
 - 可选的 Obsidian 友好渲染模式和 CLI 集成
 
 ## 它如何与记忆配合
@@ -129,6 +130,33 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
 - `concepts/`：用于想法、抽象、模式和策略
 - `syntheses/`：用于编译摘要和维护中的汇总
 - `reports/`：用于生成的仪表盘
+
+## Open Knowledge Format 导入
+
+`memory-wiki` 可以使用以下命令导入解包后的 Open Knowledge Format 捆绑包：
+
+```bash
+openclaw wiki okf import ./bundles/ga4
+```
+
+当数据目录、文档爬虫或丰富化代理已经生成 OKF 时，这是最合适的方式：
+保留 OKF 作为可移植的交换制品，然后让 `memory-wiki` 将其转换为
+OpenClaw 原生的概念页面和编译摘要。
+
+导入器遵循 OKF v0.1 结构：
+
+- 非保留的 `.md` 文件会被视为概念文档
+- 每个导入的概念都需要一个非空的 `type` frontmatter 字段
+- 未知的 OKF `type` 值也会被接受
+- 保留的 `index.md` 和 `log.md` 文件不会作为概念导入
+- 断开的或外部的 markdown 链接会被保留
+
+导入的概念页面会平铺到 `concepts/` 下，因此现有的编译、
+搜索、get、仪表盘和提示摘要路径都能看到它们，而无需添加第二棵
+wiki 树。每个页面都会保留原始 OKF 概念 ID、源路径、`type`、
+`resource`、`tags`、时间戳以及完整的生产者 frontmatter。内部 OKF 链接
+会重写为生成的 wiki 概念页面，并且也会作为结构化的 `relationships`
+条目输出，`kind: okf-link`。
 
 ## 结构化声明和证据
 
@@ -511,7 +539,7 @@ Markdown，并且可以选择使用官方的 `obsidian` CLI。
 4. 当需要关注来源时，使用 `wiki_search` / `wiki_get`。
 5. 对于较小的综合或元数据更新，使用 `wiki_apply`。
 6. 在有意义的更改后运行 `wiki_lint`。
-7. 如果你想查看过期信息/冲突，可打开 dashboards。
+7. 如果你想查看过期信息/冲突，可打开仪表板。
 
 ## 相关文档
 

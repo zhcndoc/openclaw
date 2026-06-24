@@ -11,8 +11,8 @@ title: "Perplexity 插件"
 
 ## 分发
 
-- 包：`@openclaw/perplexity-plugin`
-- 安装方式：OpenClaw 内置
+- Package: `@openclaw/perplexity-plugin`
+- Install route: npm; ClawHub: `clawhub:@openclaw/perplexity-plugin`
 
 ## 接口
 

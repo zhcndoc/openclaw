@@ -50,7 +50,10 @@ always-on group chatter -> user request, or room event when configured
 
 对于较弱的模型或无法可靠理解仅工具交付的运行时，请使用 `"automatic"`。在自动模式下，代理的最终助手文本就是可见的源回复路径，因此无法始终一致调用 `message(action=send)` 的模型仍然可以正常回答。
 
-如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。`openclaw doctor` 会对此不匹配发出警告。
+在自动模式下，普通文本形式的最终回复会直接发布到房间中。如果可见回复需要文件、图片或其他附件，代理仍然可以使用 `message(action=send)` 来发送该附件，而不是试图把它强行塞进最终文本回复里。
+
+如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
+`openclaw doctor` 会对此不匹配发出警告。
 
 对于直接聊天和其他任何源事件，请使用 `messages.visibleReplies: "message_tool"` 在全局范围应用相同的仅工具可见回复行为。WebChat 的直接轮次默认使用自动最终回复交付，因此 Pi 和 Codex 会收到相同的可见回复契约。将 `messages.visibleReplies: "message_tool"` 设为显式要求 `message(action=send)` 以输出可见内容。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
 
@@ -570,7 +573,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 - `WasMentioned`（提及门控结果）
 - Telegram 论坛主题还会包含 `MessageThreadId` 和 `IsForum`。
 
-代理系统提示在新群组会话的首次轮次中包含一个群组简介。它会提醒模型像人类一样回复，避免使用 Markdown 表格，尽量减少空行并遵循正常的聊天间距，以及避免输入字面上的 `\n` 序列。来自渠道的群组名称和参与者标签会被渲染为带围栏的未受信元数据，而不是内联系统指令。
+代理系统提示在新群组会话的第一轮中包含群组简介。它会提醒模型像人类一样回复，尽量减少空行并遵循正常的聊天间距，避免输入字面的 `\n` 序列。非 Telegram 群组也会避免使用 Markdown 表格；Telegram 的富文本指导来自 Telegram 渠道提示。来自渠道的群组名称和参与者标签会作为带边界的未受信元数据呈现，而不是内联系统指令。
 
 ## iMessage 细节
 

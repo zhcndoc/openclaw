@@ -15,7 +15,16 @@ read_when:
 | API      | OpenAI-compatible          |
 | Base URL | `https://api.deepseek.com` |
 
-## 开始使用
+## Install plugin
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/deepseek-provider
+openclaw gateway restart
+```
+
+## Getting started
 
 <Steps>
   <Step title="获取你的 API 密钥">
@@ -34,7 +43,7 @@ read_when:
     openclaw models list --provider deepseek
     ```
 
-    要在不需要运行中的 Gateway 的情况下查看内置静态目录，
+    要在不运行 Gateway 的情况下查看插件的静态目录，
     请使用：
 
     ```bash
@@ -76,11 +85,10 @@ read_when:
 | `deepseek/deepseek-reasoner` | DeepSeek Reasoner | text  | 131,072   | 65,536     | 支持推理的 V3.2 接口                      |
 
 <Tip>
-V4 models support DeepSeek's `thinking` control. OpenClaw also replays
-DeepSeek `reasoning_content` on follow-up turns so thinking sessions with tool
-calls can continue.
-Use `/think xhigh` or `/think max` with DeepSeek V4 models to request DeepSeek's
-maximum `reasoning_effort`.
+V4 模型支持 DeepSeek 的 `thinking` 控制。OpenClaw 也会在后续轮次中重放
+DeepSeek 的 `reasoning_content`，因此带工具调用的 thinking 会话可以继续。
+使用 DeepSeek V4 模型时，可通过 `/think xhigh` 或 `/think max` 请求 DeepSeek 的
+最大 `reasoning_effort`。
 </Tip>
 
 ## Thinking 与工具

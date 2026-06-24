@@ -82,27 +82,28 @@ OpenClaw 有两套 hook 系统：
 
 这些 hook 在 agent loop 或 gateway pipeline 内部运行：
 
-- **`before_model_resolve`**：在会话前运行（没有 `messages`），用于在模型解析前确定性地覆盖 provider/model。
-- **`before_prompt_build`**：在 session 加载后运行（带有 `messages`），用于在提示提交前注入 `prependContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`。对每轮动态文本使用 `prependContext`，对应放在 system prompt 空间中的稳定指引使用 system-context 字段。
-- **`before_agent_start`**：兼容旧逻辑的 hook，可能在任一阶段运行；优先使用上面的显式 hooks。
-- **`before_agent_reply`**：在内联动作之后、LLM 调用之前运行，让插件可以接管该轮并返回合成回复，或完全静默该轮。
+- **`before_model_resolve`**：在 session 之前运行（没有 `messages`），用于在模型解析之前确定性地覆盖 provider/model。
+- **`before_prompt_build`**：在 session 加载之后运行（带有 `messages`），用于在提交 prompt 之前注入 `prependContext`、`systemPrompt`、`prependSystemContext` 或 `appendSystemContext`。对每轮动态文本使用 `prependContext`，对适合放在 system prompt 空间中的稳定指导使用 system-context 字段。
+- **`before_agent_start`**：遗留兼容 hook，可能在任一阶段运行；优先使用上面的显式 hook。
+- **`before_agent_reply`**：在内联动作之后、LLM 调用之前运行，允许插件接管该轮并返回合成回复，或者完全静默该轮。
 - **`agent_end`**：在完成后检查最终消息列表和运行元数据。
-- **`before_compaction` / `after_compaction`**：观察或标注 compaction 周期。
+- **`before_compaction` / `after_compaction`**：观察或注释 compaction 周期。
 - **`before_tool_call` / `after_tool_call`**：拦截工具参数/结果。
-- **`before_install`**：检查安装上下文，并在 operator install policy 运行后选择性阻止 skill 或 plugin 安装。
-- **`tool_result_persist`**：在工具结果写入 OpenClaw 所拥有的 session transcript 之前，同步转换这些结果。
+- **`before_install`**：在运维安装策略运行之后、当前 OpenClaw 进程中加载了插件 hooks 时，检查已分阶段的 skill 或插件安装材料。
+- **`tool_result_persist`**：在工具结果写入 OpenClaw 拥有的 session transcript 之前，同步转换这些结果。
 - **`message_received` / `message_sending` / `message_sent`**：入站 + 出站消息 hooks。
 - **`session_start` / `session_end`**：session 生命周期边界。
 - **`gateway_start` / `gateway_stop`**：gateway 生命周期事件。
 
 出站/工具守卫的 hook 决策规则：
 
-- `before_tool_call`：`{ block: true }` 是终止性的，并停止低优先级处理器。
-- `before_tool_call`：`{ block: false }` 是无操作，不会清除之前的 block。
-- `before_install`：`{ block: true }` 是终止性的，并停止低优先级处理器。
-- `before_install`：`{ block: false }` 是无操作，不会清除之前的 block。
-- `message_sending`：`{ cancel: true }` 是终止性的，并停止低优先级处理器。
-- `message_sending`：`{ cancel: false }` 是无操作，不会清除之前的 cancel。
+- `before_tool_call`: `{ block: true }` 是终止性的，并会停止低优先级处理器。
+- `before_tool_call`: `{ block: false }` 是无操作，不会清除先前的 block。
+- `before_install`: `{ block: true }` 是终止性的，并会停止低优先级处理器。
+- `before_install`: `{ block: false }` 是无操作，不会清除先前的 block。
+- 对于必须覆盖 CLI 安装和更新路径的、由运维拥有的安装允许/阻止决策，请使用 `security.installPolicy`，而不是 `before_install`。
+- `message_sending`: `{ cancel: true }` 是终止性的，并会停止低优先级处理器。
+- `message_sending`: `{ cancel: false }` 是无操作，不会清除先前的 cancel。
 
 参见 [Plugin hooks](/plugins/hooks) 了解 hook API 和注册细节。
 
@@ -151,12 +152,12 @@ Harness 可能会以不同方式适配这些 hooks。Codex app-server harness �
 
 ## 超时
 
-- `agent.wait` 默认：30s（仅等待）。`timeoutMs` 参数会覆盖此值。
-- Agent runtime：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；在 `runEmbeddedAgent` 的 abort 定时器中强制执行。
-- Cron runtime：隔离的 agent-turn `timeoutSeconds` 由 cron 持有。调度器在执行开始时启动该计时器，在配置的截止时间中止底层运行，然后在记录超时之前执行有界清理，以免失控的子 session 将 lane 卡住。
-- Session liveness diagnostics：启用 diagnostics 时，`diagnostics.stuckSessionWarnMs` 会将长时间 `processing` 且未观察到回复、工具、状态、块或 ACP 进度的 session 归类。活跃的嵌入式运行、模型调用和工具调用会报告为 `session.long_running`；存在活跃工作但近期没有进度的会报告为 `session.stalled`；`session.stuck` 仅保留给可恢复的过期 session bookkeeping，包括带有过期无主模型/工具活动的空闲排队 session。恢复性 session bookkeeping 在恢复门槛通过后会立即释放受影响的 session lane；卡住的嵌入式运行只有在 `diagnostics.stuckSessionAbortMs` 之后才会进行 abort-drain（默认：至少 5 分钟且为警告阈值的 3 倍），这样排队工作可以继续而不会仅仅因为运行缓慢就被切断。恢复会发出结构化的 requested/completed 结果，并且仅当相同的 processing generation 仍然是当前值时，诊断状态才会标记为空闲。只要 session 未变化，重复的 `session.stuck` 诊断就会退避。
-- Model idle timeout：OpenClaw 会在响应分片在空闲窗口到达前没有返回时中止模型请求。`models.providers.<id>.timeoutSeconds` 会为缓慢的本地/自托管 provider 延长这个空闲看门狗，但它仍然受任何更低的 `agents.defaults.timeoutSeconds` 或运行级超时约束，因为这些控制的是整个 agent 运行。否则 OpenClaw 在配置时使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。没有显式模型或 agent 超时的 cron 触发运行会禁用空闲看门狗，并依赖 cron 外层超时。
-- Provider HTTP request timeout：`models.providers.<id>.timeoutSeconds` 适用于该 provider 的模型 HTTP fetch，包括连接、headers、body、SDK 请求超时、total guarded-fetch abort handling 和 model stream idle watchdog。对于慢速本地/自托管 provider（如 Ollama），应优先使用它，而不是提高整个 agent runtime 超时；当模型请求需要更长时间运行时，请确保 agent/runtime 超时至少同样高。
+- `agent.wait` 默认值：30s（仅等待）。`timeoutMs` 参数可覆盖。
+- Agent runtime：`agents.defaults.timeoutSeconds` 默认 172800s（48 小时）；由 `runEmbeddedAgent` 中的 abort 定时器强制执行。
+- Cron runtime：隔离的 agent-turn `timeoutSeconds` 由 cron 拥有。调度器会在执行开始时启动该定时器，在配置的截止时间到达时中止底层运行，然后在记录超时前执行有界清理，这样陈旧的子 session 就不会让 lane 卡住。
+- Session 生命体征诊断：启用诊断后，`diagnostics.stuckSessionWarnMs` 会将长时间 `processing` 且未观察到回复、工具、状态、block 或 ACP 进度的 session 归类。活动中的嵌入式运行、模型调用和工具调用会报告为 `session.long_running`；有主的静默模型调用也会保持为 `session.long_running`，直到 `diagnostics.stuckSessionAbortMs`，这样慢速或不流式的提供方不会过早被报告为卡住。没有最近进度的活动工作会报告为 `session.stalled`；有主的模型调用会在或超过中止阈值时切换为 `session.stalled`，而无主的陈旧模型/工具活动只要仍然存在，就不会被隐藏为 long-running。`session.stuck` 保留给可恢复的陈旧 session 记账，包括带有陈旧无主模型/工具活动的空闲排队 session。陈旧 session 记账在恢复门通过后会立即释放受影响的 session lane；卡住的嵌入式运行只会在 `diagnostics.stuckSessionAbortMs` 之后进行中止清理（默认：至少 5 分钟且为警告阈值的 3 倍），这样排队工作可以恢复，而不会仅仅因为运行缓慢就被切断。恢复会发出结构化的 requested/completed 结果，并且只有在同一 processing generation 仍然是当前代时，诊断状态才会标记为空闲。只要 session 保持不变，重复的 `session.stuck` 诊断就会退避。
+- 模型空闲超时：当在空闲窗口结束前没有到达响应分块时，OpenClaw 会中止模型请求。`models.providers.<id>.timeoutSeconds` 会为缓慢的本地/自托管提供方延长这个空闲看门狗，但它仍然受更低的 `agents.defaults.timeoutSeconds` 或运行特定超时的约束，因为这些控制的是整个 agent 运行。否则，OpenClaw 在配置时会使用 `agents.defaults.timeoutSeconds`，默认上限为 120s。没有显式模型或 agent 超时的 cron 触发云模型运行会使用相同的默认空闲看门狗；cron 触发的本地或自托管模型运行会禁用隐式看门狗，除非配置了显式超时，因此较慢的本地提供方应设置 `models.providers.<id>.timeoutSeconds`。
+- 提供方 HTTP 请求超时：`models.providers.<id>.timeoutSeconds` 适用于该提供方的模型 HTTP fetch，包括连接、headers、body、SDK 请求超时、总受保护 fetch 中止处理以及模型流空闲看门狗。对于像 Ollama 这样的缓慢本地/自托管提供方，在提高整个 agent 运行时超时之前应优先使用此项；当模型请求需要运行更久时，agent/runtime 超时应至少保持同样高。
 
 ## 何时会更早结束
 

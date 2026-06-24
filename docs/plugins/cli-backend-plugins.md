@@ -180,22 +180,29 @@ acme-cli/acme-large
 
 `CliBackendPlugin` 还可以定义：
 
-| 钩子                               | 用途                                                   |
-| ---------------------------------- | ------------------------------------------------------ |
-| `normalizeConfig(config, context)` | 在合并后重写旧版用户配置                 |
-| `resolveExecutionArgs(ctx)`        | 添加请求范围标志，如思考力度       |
-| `prepareExecution(ctx)`            | 启动前创建临时身份验证或配置桥接  |
-| `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换     |
-| `textTransforms`                   | 双向提示词/输出替换               |
-| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 身份验证配置文件                |
-| `authEpochMode`                    | 决定身份验证变更如何使已存储的 CLI 会话失效 |
-| `nativeToolMode`                   | 声明 CLI 是否始终启用原生工具     |
-| `bundleMcp` / `bundleMcpMode`      | 启用 OpenClaw 的回环 MCP 工具桥接           |
-| `ownsNativeCompaction`             | 后端拥有自身压缩能力 - OpenClaw 将延后处理      |
+| Hook                               | Use                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| `normalizeConfig(config, context)` | 合并后重写旧版用户配置                                      |
+| `resolveExecutionArgs(ctx)`        | 添加请求作用域标志，例如思考力度或 side-question 隔离 |
+| `prepareExecution(ctx)`            | 启动前创建临时认证或配置桥接                       |
+| `transformSystemPrompt(ctx)`       | 应用最终的 CLI 特定系统提示词转换                          |
+| `textTransforms`                   | 双向提示词/输出替换                                    |
+| `defaultAuthProfileId`             | 优先使用特定的 OpenClaw 认证配置文件                                     |
+| `authEpochMode`                    | 决定认证变更如何使已存储的 CLI 会话失效                      |
+| `nativeToolMode`                    | 声明 CLI 是否始终启用原生工具                          |
+| `sideQuestionToolMode`             | 声明 `/btw` side question 的已禁用原生工具                     |
+| `bundleMcp` / `bundleMcpMode`      | 选择加入 OpenClaw 的 loopback MCP 工具桥接                                |
+| `ownsNativeCompaction`              | 后端自行负责压缩 - OpenClaw 让出                           |
 
 请将这些钩子保持为后端所有。不要在核心中添加 CLI 特定分支，只要后端钩子能够表达该行为即可。
 
-### `ownsNativeCompaction`: 选择退出 OpenClaw 压缩
+`ctx.executionMode` 在正常轮次时为 `"agent"`，在临时 `/btw` 调用时为
+`"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果
+后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv
+会可靠地禁用这些工具，也请设置 `sideQuestionToolMode: "disabled"`；
+否则当 BTW 需要无工具的 CLI 运行时，OpenClaw 会安全失败。
+
+### `ownsNativeCompaction`: 放弃 OpenClaw 压缩
 
 如果你的后端运行的 agent 会压缩其**自身**的转录内容，请设置
 `ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就不会对其
@@ -280,7 +287,7 @@ pnpm test extensions/acme-cli
 
 ```bash
 openclaw plugins inspect acme-cli --runtime --json
-openclaw agent --message "reply exactly: backend ok" --model acme-cli/acme-large
+openclaw agent --message "回复必须完全是：backend ok" --model acme-cli/acme-large
 ```
 
 如果后端支持图像或 MCP，请添加一个实时冒烟测试，使用真实 CLI 证明这些路径可用。不要仅依赖静态检查来验证 prompt、图像、MCP 或 session-resume 行为。
@@ -291,7 +298,7 @@ openclaw agent --message "reply exactly: backend ok" --model acme-cli/acme-large
 <Check>`openclaw.plugin.json` 声明了 `cliBackends` 和有意设置的 `activation.onStartup`</Check>
 <Check>当 setup/model 发现应在冷启动时看到后端时，`setup.cliBackends` 已存在</Check>
 <Check>`api.registerCliBackend(...)` 使用与 manifest 相同的后端 id</Check>
-<Check>`agents.defaults.cliBackends.<id>` 下的用户覆盖仍然优先生效</Check>
+<Check>`agents.defaults.cliBackends.<id>` 下的用户覆盖仍然优先级更高</Check>
 <Check>Session、system prompt、image 和 output parser 设置与真实 CLI 合约一致</Check>
 <Check>有针对性的测试以及至少一个实时 CLI 冒烟测试证明了后端路径</Check>
 

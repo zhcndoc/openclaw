@@ -125,17 +125,16 @@ Cron 表达式由 [croner](https://github.com/Hexagon/croner) 解析。当“月
 Use command payloads for deterministic scripts that should run inside the Gateway scheduler without starting a model-backed isolated agent turn. Command jobs execute on the Gateway host, capture stdout/stderr, record the run in cron history, and reuse the same `announce`, `webhook`, and `none` delivery modes as isolated jobs.
 
 <Note>
-Command cron is an operator-admin Gateway automation surface, not an agent
-`tools.exec` call. Creating, updating, removing, or manually running cron jobs
-requires `operator.admin`; scheduled command runs later execute inside the
-Gateway process as that admin-authored automation. Agent exec policy such as
-`tools.exec.mode`, approval prompts, and per-agent tool allowlists governs
-model-visible exec tools, not command cron payloads.
+命令 cron 是面向运维管理员的 Gateway 自动化能力，而不是 agent 的
+`tools.exec` 调用。创建、更新、删除或手动运行 cron 作业
+需要 `operator.admin`；计划中的命令运行随后会在
+Gateway 进程内部作为该管理员授权的自动化执行。agent exec 策略，例如
+`tools.exec.mode`、审批提示以及按 agent 的工具白名单，约束的是模型可见的 exec 工具，而不是命令 cron 载荷。
 </Note>
 
 ```bash
 openclaw cron create "*/15 * * * *" \
-  --name "Queue depth probe" \
+  --name "队列深度探测" \
   --command "scripts/check-queue.sh" \
   --command-cwd "/srv/app" \
   --announce \
@@ -155,6 +154,15 @@ If stdout is non-empty, that text is the delivered result. If stdout is empty an
 <ParamField path="--model" type="string">
   模型覆盖；为该作业使用所选的允许模型。
 </ParamField>
+<ParamField path="--fallbacks" type="string">
+  每个作业的后备模型列表，例如 `--fallbacks openrouter/gpt-4.1-mini,openai/gpt-5`。传入 `--fallbacks ""` 可进行不带后备的严格运行。
+</ParamField>
+<ParamField path="--clear-fallbacks" type="boolean">
+  在 `cron edit` 中，移除每作业的后备覆盖，使作业遵循已配置的后备优先级。不能与 `--fallbacks` 同时使用。
+</ParamField>
+<ParamField path="--clear-model" type="boolean">
+  在 `cron edit` 中，移除每作业的模型覆盖，使作业遵循正常的 cron 模型选择优先级（若已设置则使用已存储的 cron 会话覆盖，否则使用 agent/default 模型）。不能与 `--model` 同时使用。
+</ParamField>
 <ParamField path="--thinking" type="string">
   thinking 级别覆盖。
 </ParamField>
@@ -169,16 +177,16 @@ If stdout is non-empty, that text is the delivered result. If stdout is empty an
 
 Cron 作业还可以携带载荷级别的 `fallbacks`。存在时，该列表会替换该作业的配置后备链。若希望只尝试所选模型的严格 cron 运行，请在作业载荷/API 中使用 `fallbacks: []`。如果作业有 `--model` 但既没有载荷后备也没有配置后备，OpenClaw 会传递一个显式的空后备覆盖，以便不会把 agent 主模型附加为隐藏的额外重试目标。
 
-Local-provider preflight checks walk configured fallbacks before marking a cron run `skipped`; `fallbacks: []` keeps that preflight path strict.
+本地提供方的预检会在将 cron 运行标记为 `skipped` 之前遍历已配置的后备；`fallbacks: []` 会让该预检路径保持严格。
 
-Model-selection precedence for isolated jobs is:
+独立作业的模型选择优先级是：
 
 1. Gmail hook 模型覆盖（当运行来自 Gmail 且该覆盖被允许时）
 2. 每个作业的载荷 `model`
 3. 用户选择的已存储 cron 会话模型覆盖
 4. Agent/default 模型选择
 
-fast 模式也遵循解析后的实时选择。如果所选模型配置具有 `params.fastMode`，独立 cron 会默认使用它。已存储的会话 `fastMode` 覆盖仍然会在任一方向上压过配置。
+Fast mode 也遵循解析后的实时选择。如果所选模型配置具有 `params.fastMode`，独立 cron 会默认使用它。在任一方向上，已存储会话的 `fastMode` 覆盖仍然优先于配置。自动模式在存在时使用所选模型的 `params.fastAutoOnSeconds` 截止值，默认值为 60 秒。
 
 如果独立运行遇到实时模型切换交接，cron 会使用切换后的提供方/模型重试，并在重试前为当前运行持久化该实时选择。当切换还携带新的认证配置文件时，cron 也会为当前运行持久化该认证配置文件覆盖。重试次数有限：在初始尝试加 2 次切换重试之后，cron 会中止，而不是无限循环。
 
@@ -343,12 +351,12 @@ Gateway 可以为外部触发器暴露 HTTP webhook 端点。在配置中启用�
 <Warning>
 将 hook 端点置于 loopback、tailnet 或受信任的反向代理之后。
 
-- Use a dedicated hook token; do not reuse gateway auth tokens.
-- Keep `hooks.path` on a dedicated subpath; `/` is rejected.
-- Set `hooks.allowedAgentIds` to limit which effective agent a hook can target, including the default agent when `agentId` is omitted.
-- Keep `hooks.allowRequestSessionKey=false` unless you require caller-selected sessions.
-- If you enable `hooks.allowRequestSessionKey`, also set `hooks.allowedSessionKeyPrefixes` to constrain allowed session key shapes.
-- Hook payloads are wrapped with safety boundaries by default.
+- 使用专用的 hook token；不要重复使用 Gateway 认证 token。
+- 将 `hooks.path` 保持在专用子路径下；`/` 会被拒绝。
+- 设置 `hooks.allowedAgentIds` 以限制 hook 可针对的有效 agent，包括在省略 `agentId` 时的默认 agent。
+- 除非你确实需要调用者选择会话，否则请保持 `hooks.allowRequestSessionKey=false`。
+- 如果启用 `hooks.allowRequestSessionKey`，还要设置 `hooks.allowedSessionKeyPrefixes` 来约束允许的会话键形状。
+- 默认情况下，hook 载荷会被安全边界包装。
 
 </Warning>
 
@@ -456,18 +464,21 @@ openclaw cron edit <jobId> --clear-agent
 
 `openclaw cron run <jobId>` 会在将手动运行入队后返回。对于必须阻塞直到队列中的运行完成的关闭钩子、维护脚本或其他自动化任务，请使用 `--wait`。等待模式会轮询精确返回的 `runId`；当状态为 `ok` 时退出码为 `0`，当状态为 `error`、`skipped` 或等待超时时退出码为非 `0`。
 
-`openclaw cron create` 是 `openclaw cron add` 的别名，新作业可以使用位置式调度（`"0 9 * * 1"`、`"every 1h"`、`"20m"` 或 ISO 时间戳），后跟位置式代理提示词。可在 `cron add|create` 或 `cron edit` 上使用 `--webhook <url>` 将完成的运行载荷 POST 到 HTTP 端点。Webhook 交付不能与聊天交付标志同时使用，例如 `--announce`、`--channel`、`--to`、`--thread-id` 或 `--account`。
+代理 `cron` 工具会从 `cron(action: "list")` 返回紧凑的作业摘要（`id`、`name`、`enabled`、`nextRunAtMs`、`scheduleKind`、`lastRunStatus`）；对一个完整作业定义请使用 `cron(action: "get", jobId: "...")`。直接的 Gateway 调用者可以向 `cron.list` 传入 `compact: true`；省略它则保留现有的完整响应以及交付预览。
+
+`openclaw cron create` 是 `openclaw cron add` 的别名，新作业可以使用位置参数形式的调度（`"0 9 * * 1"`、`"every 1h"`、`"20m"` 或 ISO 时间戳），后跟一个位置参数形式的代理提示词。在 `cron add|create` 或 `cron edit` 中使用 `--webhook <url>` 可将完成的运行载荷 POST 到 HTTP 端点。Webhook 交付不能与聊天交付标志一起使用，例如 `--announce`、`--channel`、`--to`、`--thread-id` 或 `--account`。在 `cron edit` 中，`--clear-channel`、`--clear-to`、`--clear-thread-id` 和 `--clear-account` 会分别取消这些路由字段的设置（每个都会与其对应的 set 标志一起被拒绝），这与 `--no-deliver` 禁用运行器回退交付不同。
 
 <Note>
 模型覆盖说明：
 
-- `openclaw cron add|edit --model ...` 更改作业选定的模型。
-- 如果模型被允许，则该精确 provider/model 会传递到隔离代理运行。
-- 如果它不被允许或无法解析，cron 会以明确的验证错误使运行失败。
+- `openclaw cron add|edit --model ...` 会更改作业选定的模型。
+- 如果该模型被允许，那么该精确的提供方/模型会用于隔离代理运行。
+- 如果它不被允许或无法解析，cron 会以明确的校验错误使该运行失败。
 - API `cron.update` 载荷补丁可以将 `model: null` 设为清除已存储的作业模型覆盖。
-- 配置的回退链仍然适用，因为 cron `--model` 是作业主模型，而不是会话 `/model` 覆盖。
-- 载荷 `fallbacks` 会替换该作业的已配置回退；`fallbacks: []` 会禁用回退并使运行变为严格模式。
-- 仅使用普通 `--model` 且没有显式或已配置的回退列表时，不会作为静默的额外重试目标回落到代理主模型。
+- `openclaw cron edit <job-id> --clear-model` 会从 CLI 中清除该覆盖（与 `model: null` 补丁效果相同），且不能与 `--model` 同时使用。
+- 已配置的回退链仍然适用，因为 cron `--model` 是作业主模型，而不是会话 `/model` 覆盖。
+- `openclaw cron add|edit --fallbacks ...` 会设置载荷 `fallbacks`，替换该作业已配置的回退；`--fallbacks ""` 会禁用回退并使运行变为严格模式。`openclaw cron edit <job-id> --clear-fallbacks` 会清除该按作业覆盖。
+- 仅有一个普通的 `--model`，而没有显式或已配置的回退列表，不会默默退回到代理主模型作为额外重试目标。
 
 </Note>
 
@@ -493,7 +504,7 @@ openclaw cron edit <jobId> --clear-agent
 
 `maxConcurrentRuns` 会同时限制计划中的 cron 派发和隔离代理轮次执行，默认值为 8。隔离 cron 代理轮次会在内部使用队列专用的 `cron-nested` 执行通道，因此提高该值会让独立的 cron LLM 运行并行推进，而不仅仅是启动各自的外层 cron 包装器。共享的非 cron `nested` 通道不会因该设置而扩宽。
 
-`cron.store` is a logical store key and legacy doctor import path. Run `openclaw doctor --fix` to import existing JSON stores into SQLite and archive them; future cron changes should go through the CLI or Gateway API.
+`cron.store` 是一个逻辑存储键和旧版 doctor 导入路径。运行 `openclaw doctor --fix` 可将现有 JSON 存储导入 SQLite 并归档；未来的 cron 更改应通过 CLI 或 Gateway API 进行。
 
 禁用 cron：`cron.enabled: false` 或 `OPENCLAW_SKIP_CRON=1`。
 
@@ -504,8 +515,8 @@ openclaw cron edit <jobId> --clear-agent
     **循环重试**：重试之间采用指数退避（30 秒到 60 分钟）。退避会在下一次成功运行后重置。
 
   </Accordion>
-  <Accordion title="Maintenance">
-    `cron.sessionRetention` (default `24h`) prunes isolated run-session entries. `cron.runLog.keepLines` limits retained SQLite run-history rows per job; `maxBytes` is retained for config compatibility with older file-backed run logs.
+  <Accordion title="维护">
+    `cron.sessionRetention`（默认 `24h`）会清理隔离运行会话条目。`cron.runLog.keepLines` 限制每个作业保留的 SQLite 运行历史行数；`maxBytes` 为了与旧的文件后端运行日志保持配置兼容而保留。
   </Accordion>
 </AccordionGroup>
 

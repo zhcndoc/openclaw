@@ -681,7 +681,7 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
     }
     ```
 
-    启用该标志且未显式设置 `messages.inbound.byChannel.imessage` 时，防抖窗口会扩大到 **2500 ms**（旧默认值为 0 ms——不进行防抖）。需要更大的窗口，因为 Apple 的拆分发送节奏 0.8-2.0 秒无法适应更紧的默认值。
+    打开该标志且未显式设置 `messages.inbound.byChannel.imessage` 或全局 `messages.inbound.debounceMs` 时，防抖窗口会扩大到 **7000 ms**（旧默认值为 0 ms —— 不防抖）。之所以需要更大的窗口，是因为 Apple 的 URL 预览拆分发送节奏在 Messages.app 输出预览行时可能会持续数秒。
 
     如需自行调整窗口：
 
@@ -690,10 +690,8 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
       messages: {
         inbound: {
           byChannel: {
-            // 2500 ms 适用于大多数环境；如果你的 Mac
-            // 比较慢或内存压力较大（观测到的间隔此时可能超过 2 秒），
-            // 可提高到 4000 ms。
-            imessage: 2500,
+            // 7000 ms covers observed Messages.app URL-preview delays.
+            imessage: 7000,
           },
         },
       },
@@ -715,15 +713,15 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 
 “启用标志”列显示的是在会输出 `balloon_bundle_id` 的 `imsg` 构建版本上的行为。在更旧、完全不输出 balloon 元数据的 `imsg` 构建上，下方标记为“两轮”/“N 轮”的行会回退为旧式合并（1 轮）：OpenClaw 无法从结构上区分拆分发送和独立发送，因此会保留元数据引入前的合并行为。只有当构建版本开始输出 balloon 元数据后，精确分离才会启用。
 
-| 用户输入内容                                                     | `chat.db` 产出                        | 关闭标志（默认）                          | 启用标志 + 窗口（imsg 输出 balloon 元数据） |
-| ------------------------------------------------------------------ | ----------------------------------- | --------------------------------------- | ------------------------------------------------ |
-| `Dump https://example.com`（一次发送）                              | 约 1 秒内产生 2 行                   | 两轮代理交互：先单独收到 "Dump"，再收到 URL | 一轮：合并后的文本 `Dump https://example.com` |
-| `Save this 📎image.jpg caption`（附件 + 文本）                | 2 行，且没有 URL balloon 元数据 | 两轮                               | 两轮（在无元数据构建上采用旧式合并） |
-| `/status`（独立命令）                                     | 1 行                               | 立即分发                        | **最多等待一个窗口，然后分发**             |
-| 单独粘贴的 URL                                                  | 1 行                               | 立即分发                        | 最多等待一个窗口，然后分发                 |
-| 文本 + URL 被刻意拆成两条独立消息发送，且相隔几分钟 | 窗口外的 2 行               | 两轮                               | 两轮（窗口在它们之间过期）          |
-| 在窗口内快速突发发送超过 10 条小 DM                          | 2 行，没有 URL balloon 元数据 | N 轮                                 | N 轮（在无元数据构建上采用旧式合并）   |
-| 群聊里有两个人同时输入                                  | 来自 M 个发送者的 N 行               | M+ 轮（每个发送者桶一轮）        | M+ 轮——群聊不会被合并         |
+| User composes                                                      | `chat.db` produces                  | Flag off (default)                      | Flag on + window (imsg emits balloon metadata)                                                      |
+| ------------------------------------------------------------------ | ----------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Dump https://example.com` (one send)                              | 2 rows ~1 s apart                   | Two agent turns: "Dump" alone, then URL | One turn: merged text `Dump https://example.com`                                                    |
+| `Save this 📎image.jpg caption` (attachment + text)                | 2 rows without URL balloon metadata | Two turns                               | Two turns after metadata is observed; one merged turn on old/pre-latch metadata-less sessions       |
+| `/status` (standalone command)                                     | 1 row                               | Instant dispatch                        | **Wait up to window, then dispatch**                                                                |
+| URL pasted alone                                                   | 1 row                               | Instant dispatch                        | Wait up to window, then dispatch                                                                    |
+| Text + URL sent as two deliberate separate messages, minutes apart | 2 rows outside window               | Two turns                               | Two turns (window expires between them)                                                             |
+| Rapid flood (>10 small DMs inside window)                          | N rows without URL balloon metadata | N turns                                 | N turns after metadata is observed; one bounded merged turn on old/pre-latch metadata-less sessions |
+| Two people typing in a group chat                                  | N rows from M senders               | M+ turns (one per sender bucket)        | M+ turns — group chats are not coalesced                                                            |
 
 ## 桥接器或网关重启后的入站恢复
 
@@ -763,8 +761,33 @@ imessage: suppressed stale inbound backlog account=<id> sent=<iso> recovery=<boo
 
   </Accordion>
 
-  <Accordion title="Gateway 未在 macOS 上运行">
-    默认的 `cliPath: "imsg"` 必须在登录到 Messages 的 Mac 上运行。在 Linux 或 Windows 上，将 `channels.imessage.cliPath` 设置为一个包装脚本，通过 SSH 连接到那台 Mac 并运行 `imsg "$@"`。
+  <Accordion title="Messages 发送了消息，但入站 iMessage 没有到达">
+    首先确认消息是否到达了本地 Mac。如果 `chat.db` 没有变化，即使 `imsg status --json` 报告桥接器健康，OpenClaw 也无法收到该消息。
+
+```bash
+imsg chats --limit 10 --json
+imsg watch --chat-id <chat-id> --json
+sqlite3 ~/Library/Messages/chat.db \
+  "select datetime(max(date)/1000000000 + 978307200, 'unixepoch', 'localtime'), max(ROWID) from message;"
+```
+
+    如果手机发送的消息没有创建新的行，请先修复 macOS Messages 和 Apple Push 层，再修改 OpenClaw 配置。一次性的服务刷新通常就足够了：
+
+```bash
+launchctl kickstart -k system/com.apple.apsd
+launchctl kickstart -k gui/$(id -u)/com.apple.CommCenter
+launchctl kickstart -k gui/$(id -u)/com.apple.identityservicesd
+launchctl kickstart -k gui/$(id -u)/com.apple.imagent
+imsg launch
+openclaw gateway restart
+```
+
+    从手机发送一条新的 iMessage，并在调试 OpenClaw 会话之前确认出现了新的 `chat.db` 行或 `imsg watch` 事件。不要把这当作周期性的桥接器重启循环来运行；在工作进行中反复执行 `imsg launch` 加上网关重启，可能会中断投递并让正在运行中的通道会话悬空。
+
+  </Accordion>
+
+  <Accordion title="网关没有在 macOS 上运行">
+    默认的 `cliPath: "imsg"` 必须运行在登录 Messages 的 Mac 上。在 Linux 或 Windows 上，请将 `channels.imessage.cliPath` 设置为一个包装脚本，让它通过 SSH 连接到那台 Mac 并运行 `imsg "$@"`。
 
 ```bash
 #!/usr/bin/env bash

@@ -27,6 +27,7 @@ read_when:
     },
     workshop: {
       autonomous: { enabled: false },
+      allowSymlinkTargetWrites: false,
       approvalPolicy: "pending",
       maxPending: 50,
       maxSkillBytes: 40000,
@@ -290,6 +291,10 @@ process.stdin.on("end", () => {
   `auto` 则允许这些操作无需批准。
 </ParamField>
 
+<ParamField path="skills.workshop.allowSymlinkTargetWrites" type="boolean" default="false">
+  允许 Skill Workshop apply 通过工作区 skill 符号链接进行写入，只要其真实目标已被 `skills.load.allowSymlinkTargets` 信任。除非生成的提案应用需要修改该共享 skill 根目录，否则请保持此项禁用。
+</ParamField>
+
 <ParamField path="skills.workshop.maxPending" type="number" default="50">
   每个工作区保留的待处理和已隔离提案上限。
 </ParamField>
@@ -322,14 +327,30 @@ process.stdin.on("end", () => {
 在 realpath 解析后会被接受。`extraDirs` 会直接扫描同级仓库；
 `allowSymlinkTargets` 则为现有布局保留符号链接路径。
 
-受管理的 `~/.openclaw/skills` 和个人 `~/.agents/skills` 目录
-已经允许技能目录符号链接（但每个技能的 `SKILL.md` 仍受内容边界限制）。
+Skill Workshop apply 默认不会通过这些符号链接写入。若要让
+Workshop apply 修改已受信任的符号链接目标下的 skills，请单独启用：
+
+```json5
+{
+  skills: {
+    load: {
+      allowSymlinkTargets: ["~/Projects/manager/skills"],
+    },
+    workshop: {
+      allowSymlinkTargetWrites: true,
+    },
+  },
+}
+```
+
+受管的 `~/.openclaw/skills` 和个人 `~/.agents/skills` 目录
+已经接受 skill 目录的符号链接（但仍会应用按 skill 的 `SKILL.md` 约束）。
 
 ## 沙箱化技能与环境变量
 
 <Warning>
   `skills.entries.<skill>.env` 和 `apiKey` 仅适用于**主机**运行。在沙箱内它们无效——
-  依赖 `GEMINI_API_KEY` 的技能会因为 `apiKey not configured` 而失败，除非沙箱单独提供了该变量。
+  依赖 `GEMINI_API_KEY` 的技能会因为 `apiKey 未配置` 而失败，除非沙箱单独提供了该变量。
 </Warning>
 
 将密钥传入 Docker 沙箱：

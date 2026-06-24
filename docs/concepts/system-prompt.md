@@ -139,51 +139,17 @@ OpenClaw 开发者指令，当 OpenClaw 提供它们时的轮次范围协作模�
 - `BOOTSTRAP.md`（仅适用于全新的工作区）
 - `MEMORY.md`（如存在）
 
-On the native Codex harness, OpenClaw avoids repeating stable workspace files
-in every user turn. Codex loads `AGENTS.md` through its own project-doc
-discovery. `SOUL.md`, `IDENTITY.md`, `TOOLS.md`, and `USER.md` are forwarded as
-Codex developer instructions. The compact OpenClaw skills list is also forwarded
-as turn-scoped collaboration developer instructions. `HEARTBEAT.md` content is
-not injected; heartbeat turns get a collaboration-mode note pointing to the file
-when it exists and is non-empty. `MEMORY.md` content from the configured agent
-workspace is not pasted into every native Codex turn; when memory tools are
-available for that workspace, Codex turns get a small workspace-memory note in
-turn-scoped collaboration developer instructions and should use `memory_search`
-or `memory_get` when durable memory is relevant. If tools are disabled, memory
-search is unavailable, or the active workspace differs from the agent memory
-workspace, `MEMORY.md` falls back to the normal bounded turn-context path. Active
-`BOOTSTRAP.md` content keeps the normal turn-context role for now.
+在原生 Codex 运行时中，OpenClaw 避免在每个用户轮次中重复稳定的工作区文件。Codex 通过其自身的项目文档发现机制加载 `AGENTS.md`。`SOUL.md`、`IDENTITY.md`、`TOOLS.md` 和 `USER.md` 作为 Codex 开发者指令转发。紧凑的 OpenClaw 技能列表也作为按轮次作用域的协作开发者指令转发。`HEARTBEAT.md` 内容不会被注入；当其存在且非空时，心跳轮次会获得一个指向该文件的协作模式说明。来自已配置代理工作区的 `MEMORY.md` 内容不会被粘贴到每个原生 Codex 轮次中；当该工作区可用记忆工具时，Codex 轮次会在按轮次作用域的协作开发者指令中获得一条简短的工作区记忆说明，并且在记忆相关时应使用 `memory_search` 或 `memory_get`。如果工具被禁用、记忆搜索不可用，或者活动工作区与代理记忆工作区不同，`MEMORY.md` 会回退到正常的受限轮次上下文路径。当前的 `BOOTSTRAP.md` 内容暂时保留正常的轮次上下文角色。
 
-On non-Codex harnesses, bootstrap files continue to be composed into the
-OpenClaw prompt according to their existing gates. `HEARTBEAT.md` is omitted on
-normal runs when heartbeats are disabled for the default agent or
-`agents.defaults.heartbeat.includeSystemPromptSection` is false. Keep injected
-files concise, especially non-Codex `MEMORY.md`. `MEMORY.md` is intended to stay
-a curated long-term summary; detailed daily notes belong in `memory/*.md` where
-`memory_search` and `memory_get` can retrieve them on demand. Oversized
-non-Codex `MEMORY.md` files increase prompt usage and can be partially injected
-because of the bootstrap file limits below.
+在非 Codex 运行时中，引导文件会继续按照其现有门控组合进 OpenClaw 提示词。默认代理启用心跳时，或者 `agents.defaults.heartbeat.includeSystemPromptSection` 为 false 时，正常运行会省略 `HEARTBEAT.md`。保持注入文件简洁，尤其是非 Codex 的 `MEMORY.md`。`MEMORY.md` 旨在保持为精选的长期摘要；详细的日常笔记应放在 `memory/*.md` 中，以便 `memory_search` 和 `memory_get` 按需检索。过大的非 Codex `MEMORY.md` 文件会增加提示词占用，并且由于下面的引导文件限制，可能只被部分注入。
 
 <Note>
 `memory/*.md` 日常文件**不**属于正常引导的项目上下文。普通轮次中，它们通过 `memory_search` 和 `memory_get` 工具按需访问，因此除非模型显式读取，否则它们不会计入上下文窗口。裸 `/new` 和 `/reset` 轮次是例外：运行时可以在该第一轮之前预先附加最近的日常记忆，作为一次性的启动上下文块。
 </Note>
 
-Large files are truncated with a marker. The max per-file size is controlled by
-`agents.defaults.bootstrapMaxChars` (default: 20000). Total injected bootstrap
-content across files is capped by `agents.defaults.bootstrapTotalMaxChars`
-(default: 60000). Missing files inject a short missing-file marker. When truncation
-occurs, OpenClaw can inject a concise system-prompt warning notice; control this with
-`agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`;
-default: `always`). Detailed raw/injected counts stay in diagnostics such as
-`/context`, `/status`, doctor, and logs.
+大型文件会被截断并附带标记。每个文件的最大大小由 `agents.defaults.bootstrapMaxChars` 控制（默认：20000）。跨文件注入的引导内容总量上限由 `agents.defaults.bootstrapTotalMaxChars` 控制（默认：60000）。缺失文件会注入一条简短的缺失文件标记。发生截断时，OpenClaw 可以注入一条简洁的系统提示警告；通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认：`always`）进行控制。详细的原始/注入计数会保留在 `/context`、`/status`、doctor 和日志等诊断信息中。
 
-For memory files, truncation is not data loss: the file remains intact on disk.
-On native Codex, `MEMORY.md` is read on demand through memory tools when
-available, with bounded prompt fallback when tools cannot run. On other
-harnesses, the model only sees the shortened injected copy until it reads or
-searches memory directly. If `MEMORY.md` is repeatedly truncated there, distill
-it into a shorter durable summary and move detailed history into `memory/*.md`,
-or intentionally raise the bootstrap limits.
+对于记忆文件，截断不等于数据丢失：文件在磁盘上仍然完整。 在原生 Codex 中，当可用时，`MEMORY.md` 会通过记忆工具按需读取；当工具无法运行时，则回退到有界提示词。 在其他运行时中，模型只会看到缩短后的注入副本，直到它直接读取或搜索记忆。 如果 `MEMORY.md` 在那里反复被截断，请将其提炼为更短的持久摘要，并将详细历史移到 `memory/*.md`，或有意提高引导限制。
 
 子代理会话仅注入 `AGENTS.md` 和 `TOOLS.md`（其他引导文件会被过滤掉，以保持子代理上下文更小）。
 
@@ -211,21 +177,13 @@ or intentionally raise the bootstrap limits.
 
 ## 技能
 
-When eligible skills exist, OpenClaw injects a compact **available skills list**
-(`formatSkillsForPrompt`) that includes the **file path** and content-derived
-`<version>` marker for each skill. The prompt instructs the model to use `read`
-to load the SKILL.md at the listed location (workspace, managed, or bundled),
-and to re-read a skill when its `<version>` differs from a previous turn. If no
-skills are eligible, the Skills section is omitted.
+当存在符合条件的技能时，OpenClaw 会注入一个紧凑的 **可用技能列表**
+（`formatSkillsForPrompt`），其中包含每个技能的 **文件路径** 和基于内容生成的
+`<version>` 标记。提示词会指示模型使用 `read` 读取列出的 `SKILL.md`（工作区、托管或内置），并在其 `<version>` 与前一轮不同时时重新读取该技能。如果没有符合条件的技能，则省略 Skills 部分。
 
-Native Codex turns receive this list as turn-scoped collaboration developer
-instructions instead of per-turn user input, except lightweight cron turns that
-preserve the exact scheduled prompt. Other harnesses keep the normal prompt
-section.
+原生 Codex 轮次会将此列表作为按轮次作用域的协作开发者指令接收，而不是每轮用户输入；轻量级 cron 轮次除外，它们会保留精确的已调度提示词。其他运行时保留正常的提示词部分。
 
-The location can point at a nested skill, such as
-`skills/personal/foo/SKILL.md`. Nesting is only organizational; the prompt still
-uses the flat skill name from `SKILL.md` frontmatter.
+该位置可以指向嵌套技能，例如 `skills/personal/foo/SKILL.md`。嵌套仅用于组织；提示词仍使用 `SKILL.md` frontmatter 中的平面技能名称。
 
 符合条件包括技能元数据门控、运行时环境/配置检查，
 以及在配置了 `agents.defaults.skills` 或 `agents.list[].skills` 时生效的代理技能允许列表。
@@ -244,7 +202,7 @@ uses the flat skill name from `SKILL.md` frontmatter.
 </available_skills>
 ```
 
-这在保持基础提示词较小的同时，仍然支持有针对性的技能使用。
+这在保持基础提示词更小的同时，仍然支持有针对性的技能使用。
 
 技能列表预算由技能子系统拥有：
 
@@ -262,7 +220,8 @@ uses the flat skill name from `SKILL.md` frontmatter.
 
 系统提示词包含一个 **文档** 部分。当本地文档可用时，它会指向本地 OpenClaw 文档目录（Git 检出中的 `docs/`，或随 npm 包附带的文档）。如果本地文档不可用，它会回退到 [https://docs.openclaw.ai](https://docs.openclaw.ai)。
 
-同一部分还包含 OpenClaw 源码位置。Git 检出会暴露本地源码根目录，以便代理可以直接检查代码。包安装则包含 GitHub 源码 URL，并告知代理在文档不完整或过时时，优先在那里审查源码。提示词还注明了公开文档镜像、社区 Discord，以及用于发现技能的 ClawHub（[https://clawhub.ai](https://clawhub.ai)）。它会告诉模型在了解 OpenClaw 的行为、命令、配置或架构时，先查阅文档，并在可能的情况下自行运行 `openclaw status`（仅在无法访问时才询问用户）。对于配置部分，它会将代理指向 `gateway` 工具动作 `config.schema.lookup`，以获取精确的字段级文档和约束，然后再查看 `docs/gateway/configuration.md` 和 `docs/gateway/configuration-reference.md` 以获得更广泛的指导。
+同一部分还包含 OpenClaw 源码位置。Git 检出会暴露本地源码根目录，以便代理可以直接检查代码。包安装会包含 GitHub 源码 URL，并告诉代理在文档不完整或过时时去那里查看源码。提示词还会注明公共文档镜像、社区 Discord，以及用于技能发现的 ClawHub ([https://clawhub.ai](https://clawhub.ai))。在模型理解 OpenClaw 的工作方式之前，它将文档定位为 OpenClaw 自我认知的权威来源，包括记忆/日常笔记、会话、工具、Gateway、配置、命令或项目上下文。提示词会告诉模型优先使用本地文档（如果本地文档不可用，则使用文档镜像），并将 AGENTS.md、项目上下文、工作区/配置文件/记忆笔记，以及 `memory_search` 视为指令上下文或用户记忆，而不是 OpenClaw 的设计或实现知识。如果文档保持沉默或已经过时，模型应明确说明并检查源码。提示词还会告诉模型在可能时自行运行 `openclaw status`，仅在没有权限访问时才询问用户。
+对于配置，提示词会将代理指向 `gateway` 工具动作 `config.schema.lookup` 以获取精确的字段级文档和约束，然后再查看 `docs/gateway/configuration.md` 和 `docs/gateway/configuration-reference.md` 以获得更广泛的指导。
 
 ## 相关内容
 

@@ -15,14 +15,16 @@ OpenClaw 提供原生 **Windows Hub** 配套应用以及 Windows CLI 支持。
 Windows Hub 是面向 Windows 10 20H2+ 和 Windows 11 的原生 WinUI 配套应用。它无需管理员权限即可安装，并随 OpenClaw 发布版提供已签名的
 x64 和 ARM64 安装包。
 
-下载最新稳定版安装程序：
+从 [OpenClaw 发布页面](https://github.com/openclaw/openclaw/releases) 下载最新稳定版安装程序：
 
-- [OpenClawCompanion-Setup-x64.exe](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-Setup-x64.exe)
-- [OpenClawCompanion-Setup-arm64.exe](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-Setup-arm64.exe)
-- [Checksums](https://github.com/openclaw/openclaw/releases/latest/download/OpenClawCompanion-SHA256SUMS.txt)
+- [OpenClawCompanion-Setup-x64.exe](https://github.com/openclaw/openclaw/releases/download/v2026.6.5/OpenClawCompanion-Setup-x64.exe)
+- [OpenClawCompanion-Setup-arm64.exe](https://github.com/openclaw/openclaw/releases/download/v2026.6.5/OpenClawCompanion-Setup-arm64.exe)
+- [Checksums](https://github.com/openclaw/openclaw/releases/download/v2026.6.5/OpenClawCompanion-SHA256SUMS.txt)
+
+如果上面的下载链接返回 404，请访问 [发布页面](https://github.com/openclaw/openclaw/releases)，并在最新发布中查找 `OpenClawCompanion-Setup-*` 资源。
 
 安装后，从开始菜单或系统托盘启动 **OpenClaw Companion**。安装程序还会添加 Gateway Setup、Chat、Settings、
-Check for Updates 和卸载的快捷方式。
+检查更新和卸载的快捷方式。
 
 ### Windows Hub 包含内容
 
@@ -110,9 +112,11 @@ openclaw doctor
 openclaw gateway status --json
 ```
 
-原生 Windows CLI 和 Gateway 流程均受支持，并且仍在持续改进。
-在可用时，托管启动会使用 Windows 计划任务；若任务创建被拒绝，则回退为
-每用户 Startup 文件夹登录项。
+支持原生 Windows CLI 和 Gateway 流程，并且持续改进中。
+受管启动在可用时使用 Windows 计划任务。该任务会将可读的
+`gateway.cmd` 脚本保留在 OpenClaw 状态目录中，但会通过生成的
+`gateway.vbs` WScript 包装器启动它，因此后台 Gateway 不会打开可见的控制台窗口。
+如果任务创建被拒绝，OpenClaw 会回退为按用户的启动文件夹登录项。
 
 要安装 Gateway 服务：
 
@@ -171,6 +175,7 @@ openclaw gateway status
 在 WSL 中：
 
 ```bash
+sudo apt-get install -y dbus-x11
 sudo loginctl enable-linger "$(whoami)"
 openclaw gateway install
 ```
@@ -178,7 +183,7 @@ openclaw gateway install
 在 PowerShell 中以管理员身份：
 
 ```powershell
-schtasks /create /tn "WSL Boot" /tr "wsl.exe -d Ubuntu --exec /bin/true" /sc onstart /ru SYSTEM
+schtasks /create /tn "WSL Boot" /tr "wsl.exe -d Ubuntu --exec dbus-launch true" /sc onstart /ru "$env:USERNAME"
 ```
 
 将 `Ubuntu` 替换为你的发行版名称，可通过以下命令查看：
@@ -186,6 +191,11 @@ schtasks /create /tn "WSL Boot" /tr "wsl.exe -d Ubuntu --exec /bin/true" /sc ons
 ```powershell
 wsl --list --verbose
 ```
+
+> **注意：** 与旧方案相比有两个变化：
+>
+> - **使用 `dbus-launch true` 而不是 `/bin/true`** — 在 WSL ≥ 2.6.1.0 上，一个回归问题 ([microsoft/WSL #13416](https://github.com/microsoft/WSL/issues/13416)) 会导致在最后一个客户端退出后 15–20 秒发行版就空闲终止，即使已启用 linger 也是如此。`dbus-launch true` 通过保持一个 init 的子进程存活来作为变通方案 ([社区讨论，microsoft/WSL #9245](https://github.com/microsoft/WSL/discussions/9245))。
+> - **使用 `/ru "$env:USERNAME"` 而不是 `/ru SYSTEM`** — 按用户的 WSL 发行版（默认设置）对 SYSTEM 账户不可见；任务看起来会运行，但发行版实际上从未启动。以你自己的账户运行可以避免这个问题。Windows 在创建任务时会提示你输入密码。
 
 重启后，从 WSL 中验证：
 

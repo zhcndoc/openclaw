@@ -42,8 +42,8 @@ Feishu/Lark 是一个一体化协作平台，团队可以在这里聊天、共�
 配置 `dmPolicy` 来控制谁可以给机器人发私信：
 
 - `"pairing"` - 未知用户会收到配对码；通过 CLI 批准
-- `"allowlist"` - 只有 `allowFrom` 中列出的用户可以聊天（默认：仅机器人所有者）
-- `"open"` - 仅当 `allowFrom` 包含 `"*"` 时允许公开私信；若条目限制较严格，则只有匹配的用户可以聊天
+- `"allowlist"` - 仅 `allowFrom` 中列出的用户可以聊天
+- `"open"` - 仅当 `allowFrom` 包含 `"*"` 时允许公开私信；如果是限制性条目，则只有匹配的用户可以聊天
 - `"disabled"` - 禁用所有私信
 
 **批准配对请求：**
@@ -413,7 +413,9 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
 对于希望每个用户都拥有自己私有 AI 助手体验的公共机器人来说，这一点至关重要。
 
 <Note>
-**账户限制**：`dynamicAgentCreation` 目前仅适用于**默认飞书账户**。尚不完全支持命名/多账户配置——动态绑定创建时不带 `accountId`，因此发往命名账户的消息仍可能路由到 `agent:main`。进展请见 [Issue #42837](https://github.com/openclaw/openclaw/issues/42837)。
+动态绑定包含规范化后的飞书 `accountId`，因此默认账户和命名账户会将每个发送者路由到正确的动态智能体。
+
+如果某个命名账户在旧版本中创建了一个未限定范围的动态智能体，该旧智能体仍会计入 `maxAgents`。在删除它之前，请确认默认账户不会使用它，或者临时提高 `maxAgents`；OpenClaw 无法安全地推断哪个账户拥有这种歧义的旧状态。
 </Note>
 
 ### 快速设置
@@ -444,10 +446,10 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
 
 当新用户发送第一条私信时：
 
-1. 频道生成一个唯一的 `agentId` = `feishu-{user_open_id}`
+1. 该频道会生成一个唯一的 `agentId`：默认账户为 `feishu-{user_open_id}`，命名账户则为带有账户前缀的受限身份摘要
 2. 在 `workspaceTemplate` 路径下创建新的工作区
-3. 注册该智能体并为该用户创建绑定
-4. 工作区辅助程序在首次访问时确保引导文件（`AGENTS.md`、`SOUL.md`、`USER.md` 等）存在
+3. 注册该智能体并为此用户创建绑定
+4. 工作区辅助程序会在首次访问时确保引导文件（`AGENTS.md`、`SOUL.md`、`USER.md` 等）存在
 5. 将该用户未来的所有消息路由到其专属智能体
 
 ### 配置选项
@@ -461,22 +463,23 @@ Feishu/Lark 支持用于私信和群组线程消息的 ACP。Feishu/Lark ACP 采
 
 模板变量：
 
-- `{agentId}` - 生成的智能体 ID（例如 `feishu-ou_xxxxxx`）
-- `{userId}` - 发送者的飞书 open_id（例如 `ou_xxxxxx`）
+- `{agentId}` - 生成的智能体 ID（例如：`feishu-ou_xxxxxx` 或 `feishu-support-<identity_digest>`）
+- `{userId}` - 发送者的飞书 open_id（例如：`ou_xxxxxx`）
 
 ### 会话范围
 
 `session.dmScope` 控制私信如何映射到智能体会话。这是一个**全局设置**，会影响所有频道。
 
-| 值                   | 行为                                              | 适用场景                                                         |
-| -------------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
-| `"main"`             | 每个用户的私信映射到其智能体的主会话             | 单用户机器人，希望自动加载 `USER.md` / `SOUL.md`                |
-| `"per-channel-peer"` | 每个（频道 + 用户）组合使用单独会话              | 需要更强隔离的公共多用户机器人                                   |
+| 值                         | 行为                                                            | 最适合                                                          |
+| -------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| `"main"`                   | 每个用户的私信映射到其智能体的主会话                            | 需要自动加载 `USER.md` / `SOUL.md` 的单用户机器人              |
+| `"per-channel-peer"`       | 每个（频道 + 用户）组合获得一个单独的会话                       | 需要更强隔离的公共多用户机器人                                  |
+| `"per-account-channel-peer"` | 每个（账户 + 频道 + 用户）组合获得一个单独的会话               | 需要账户级会话隔离的多账户机器人                                 |
 
 **权衡**：使用 `"main"` 可以启用引导文件的自动加载（`USER.md`、`SOUL.md`、`MEMORY.md`），但这意味着所有频道的所有私信都会共享相同的会话键模式。对于更看重隔离而不是引导自动加载的公共多用户机器人，建议使用 `"per-channel-peer"` 并手动管理引导文件。
 
 <Note>
-不建议在 `dynamicAgentCreation` 中使用 `"per-account-channel-peer"`，因为动态绑定创建时不带 `accountId`。仅在手动绑定时使用它。
+当命名的飞书账户需要为同一发送者保持独立会话时，请使用 `"per-account-channel-peer"`。动态绑定会保留账户范围。
 </Note>
 
 ```json5
@@ -562,29 +565,29 @@ ls -la ~/.openclaw/workspace-*
 | `channels.feishu.webhookPort`                            | Webhook 绑定端口                                                                | `3000`                               |
 | `channels.feishu.accounts.<id>.appId`                    | App ID                                                                           | -                                    |
 | `channels.feishu.accounts.<id>.appSecret`                | App Secret                                                                       | -                                    |
-| `channels.feishu.accounts.<id>.domain`                   | 每个账号的域名覆盖                                                              | `feishu`                             |
-| `channels.feishu.accounts.<id>.tts`                      | 每个账号的 TTS 覆盖                                                              | `messages.tts`                       |
-| `channels.feishu.dmPolicy`                               | 私信策略                                                                         | `allowlist`                          |
-| `channels.feishu.allowFrom`                              | 私信允许列表（open_id 列表）                                                     | [BotOwnerId]                         |
+| `channels.feishu.accounts.<id>.domain`                   | 每个账号的域名覆盖                                                               | `feishu`                             |
+| `channels.feishu.accounts.<id>.tts`                      | 每个账号的 TTS 覆盖                                                               | `messages.tts`                       |
+| `channels.feishu.dmPolicy`                               | 私信策略                                                                         | `pairing`                            |
+| `channels.feishu.allowFrom`                              | 私信允许列表（open_id 列表）                                                      | -                                    |
 | `channels.feishu.groupPolicy`                            | 群组策略                                                                         | `allowlist`                          |
 | `channels.feishu.groupAllowFrom`                         | 群组允许列表                                                                     | -                                    |
-| `channels.feishu.requireMention`                         | 群组中需要 @提及                                                                | `true`                               |
-| `channels.feishu.groups.<chat_id>.requireMention`        | 单个群组的 @提及覆盖；显式 ID 在允许列表模式下也会将该群组纳入允许范围             | inherited                            |
-| `channels.feishu.groups.<chat_id>.enabled`               | 启用/禁用特定群组                                                                | `true`                               |
-| `channels.feishu.dynamicAgentCreation.enabled`           | 启用自动按用户创建代理                                                           | `false`                              |
+| `channels.feishu.requireMention`                         | 在群组中要求 @ 提及                                                               | `true`                               |
+| `channels.feishu.groups.<chat_id>.requireMention`        | 每个群组的 @ 提及覆盖；显式 ID 在允许列表模式下也会被视为允许该群组               | 继承                                 |
+| `channels.feishu.groups.<chat_id>.enabled`               | 启用/禁用特定群组                                                                 | `true`                               |
+| `channels.feishu.dynamicAgentCreation.enabled`           | 启用按用户自动创建代理                                                            | `false`                              |
 | `channels.feishu.dynamicAgentCreation.workspaceTemplate` | 动态代理工作区的路径模板                                                         | `~/.openclaw/workspace-{agentId}`    |
-| `channels.feishu.dynamicAgentCreation.agentDirTemplate`  | 代理目录名称模板                                                                 | `~/.openclaw/agents/{agentId}/agent` |
-| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                                         | unlimited                            |
+| `channels.feishu.dynamicAgentCreation.agentDirTemplate`   | 代理目录名称模板                                                                 | `~/.openclaw/agents/{agentId}/agent` |
+| `channels.feishu.dynamicAgentCreation.maxAgents`         | 可创建的动态代理最大数量                                                          | 不限                                 |
 | `channels.feishu.textChunkLimit`                         | 消息分片大小                                                                     | `2000`                               |
 | `channels.feishu.mediaMaxMb`                             | 媒体大小限制                                                                     | `30`                                 |
 | `channels.feishu.streaming`                              | 流式卡片输出                                                                     | `true`                               |
 | `channels.feishu.blockStreaming`                         | 完成块回复流式输出                                                               | `false`                              |
 | `channels.feishu.typingIndicator`                        | 发送输入中反应                                                                   | `true`                               |
-| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名                                                                 | `true`                               |
-| `channels.feishu.tools.bitable`                          | 启用 Bitable/Base 工具                                                           | `true`                               |
-| `channels.feishu.tools.base`                             | `channels.feishu.tools.bitable` 的别名；两者都设置时以 `bitable` 为准           | `true`                               |
-| `channels.feishu.accounts.<id>.tools.bitable`            | 每个账号的 Bitable/Base 工具开关                                                 | inherited                            |
-| `channels.feishu.accounts.<id>.tools.base`               | `tools.bitable` 的每账号别名                                                     | inherited                            |
+| `channels.feishu.resolveSenderNames`                     | 解析发送者显示名称                                                               | `true`                               |
+| `channels.feishu.tools.bitable`                          | 启用 Bitable/Base 工具                                                            | `true`                               |
+| `channels.feishu.tools.base`                             | `channels.feishu.tools.bitable` 的别名；两者都设置时，以显式 `bitable` 为准      | `true`                               |
+| `channels.feishu.accounts.<id>.tools.bitable`            | 每个账号的 Bitable/Base 工具开关                                                  | 继承                                 |
+| `channels.feishu.accounts.<id>.tools.base`               | `tools.bitable` 的每账号别名                                                     | 继承                                 |
 
 ---
 

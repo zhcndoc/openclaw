@@ -20,12 +20,18 @@ title: "Signal"
 ## 快速设置（入门）
 
 1. 为机器人使用一个**单独的 Signal 号码**（推荐）。
-2. 安装 `signal-cli`（如果使用 JVM 构建版本，则需要 Java）。
-3. 选择一种设置路径：
-   - **路径 A（QR 连接）：**`signal-cli link -n "OpenClaw"`，然后用 Signal 扫描。
-   - **路径 B（短信注册）：**使用验证码 + 短信验证注册一个专用号码。
-4. 配置 OpenClaw 并重启网关。
-5. 发送第一条私信并批准配对（`openclaw pairing approve signal <CODE>`）。
+2. 安装 OpenClaw 插件：
+
+```bash
+openclaw plugins install @openclaw/signal
+```
+
+3. 安装 `signal-cli`（如果使用 JVM 构建版本，则需要 Java）。
+4. 选择一种设置路径：
+   - **路径 A（QR 绑定）：** `signal-cli link -n "OpenClaw"`，然后用 Signal 扫码。
+   - **路径 B（短信注册）：** 通过验证码 + 短信验证注册一个专用号码。
+5. 配置 OpenClaw 并重启网关。
+6. 发送第一条私信并批准配对（`openclaw pairing approve signal <CODE>`）。
 
 最小配置：
 

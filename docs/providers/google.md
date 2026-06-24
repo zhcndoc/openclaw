@@ -427,15 +427,17 @@ Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上�
 
   </Accordion>
 
-  <Accordion title="Gemini CLI JSON 使用说明">
-    使用 `google-gemini-cli` OAuth 提供方时，OpenClaw 会按如下方式
-    规范化 CLI JSON 输出：
+  <Accordion title="Gemini CLI 使用说明">
+    当使用 `google-gemini-cli` OAuth 提供方时，OpenClaw 默认使用 Gemini CLI 的
+    `stream-json` 输出，并从最终的 `stats` 负载中规范化用量。旧版的 `--output-format json`
+    覆盖方式仍会使用 JSON 解析器。
 
-    - 回复文本来自 CLI JSON 的 `response` 字段。
-    - 当 CLI 将 `usage` 留空时，使用 `stats` 作为回退。
-    - `stats.cached` 会被归一化为 OpenClaw 的 `cacheRead`。
-    - 如果 `stats.input` 缺失，OpenClaw 会从
-      `stats.input_tokens - stats.cached` 推导输入 token 数。
+    - 流式回复文本来自 assistant 的 `message` 事件。
+    - 对于旧版 JSON 输出，回复文本来自 CLI JSON 的 `response` 字段。
+    - 当 CLI 的 `usage` 为空时，用量会回退到 `stats`。
+    - `stats.cached` 会被规范化为 OpenClaw 的 `cacheRead`。
+    - 如果缺少 `stats.input`，OpenClaw 会根据 `stats.input_tokens - stats.cached`
+      推导输入 token 数。
 
   </Accordion>
 

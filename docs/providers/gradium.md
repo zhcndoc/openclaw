@@ -6,7 +6,7 @@ read_when:
 title: "Gradium"
 ---
 
-[Gradium](https://gradium.ai) 是 OpenClaw 的捆绑式文本转语音提供商。该插件可以渲染普通音频回复（WAV）、适用于语音笔记的 Opus 输出，以及用于电话场景的 8 kHz u-law 音频。
+[Gradium](https://gradium.ai) 是 OpenClaw 的一个文本转语音提供商。该插件可以渲染普通音频回复（WAV）、兼容语音笔记的 Opus 输出，以及用于电话场景的 8 kHz u-law 音频。
 
 | Property      | Value                                |
 | ------------- | ------------------------------------ |
@@ -14,6 +14,15 @@ title: "Gradium"
 | Auth          | `GRADIUM_API_KEY` 或配置 `apiKey`    |
 | Base URL      | `https://api.gradium.ai`（默认）      |
 | Default voice | `Emma` (`YTpq7expH9539ERJ`)          |
+
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/gradium-speech
+openclaw gateway restart
+```
 
 ## 设置
 

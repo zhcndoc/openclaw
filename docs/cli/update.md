@@ -19,6 +19,7 @@ title: "更新"
 ```bash
 openclaw update
 openclaw update status
+openclaw update repair
 openclaw update wizard
 openclaw update --channel beta
 openclaw update --channel dev
@@ -75,6 +76,30 @@ openclaw update status --timeout 10
 - `--json`：输出机器可读的状态 JSON。
 - `--timeout <seconds>`：检查超时时间（默认 3 秒）。
 
+## `update repair`
+
+在核心包已经更改，但后续修复工作未能干净完成后，重新运行更新收尾流程。这是在 `openclaw update` 已安装新核心包，但核心包之后的插件同步、受管 npm 插件元数据、注册表刷新或 doctor 修复仍需要收敛时的受支持恢复路径。
+
+```bash
+openclaw update repair
+openclaw update repair --channel beta
+openclaw update repair --json
+```
+
+选项：
+
+- `--channel <stable|beta|dev>`：在修复前持久化更新渠道，并针对该渠道运行插件收敛。
+- `--json`：打印机器可读的收尾 JSON。
+- `--timeout <seconds>`：修复步骤的超时时间（默认 `1800`）。
+- `--yes`：跳过确认提示。
+- `--no-restart`：为与 update 命令保持一致而接受；repair 从不重启 Gateway。
+
+`openclaw update repair` 会运行 `openclaw doctor --fix`，重新加载已修复的
+配置和安装记录，针对当前更新渠道同步已跟踪插件，
+更新受管的 npm 插件安装，修复缺失的已配置插件负载，
+刷新插件注册表，并写入已收敛的安装记录元数据。
+它不会安装新的核心包，也不会重启 Gateway。
+
 ## `update wizard`
 
 交互式流程，用于选择更新渠道，并确认在更新后是否重启 Gateway
@@ -95,10 +120,14 @@ openclaw update status --timeout 10
 - `stable` → 使用 `latest` 从 npm 安装。
 - `beta` → 优先使用 npm dist-tag `beta`，但如果 beta 缺失或比当前 stable 版本更旧，则回退到 `latest`。
 
-Gateway 核心自动更新器（通过配置启用时）会在实际运行的 Gateway 请求处理程序之外启动 CLI 更新流程。
-控制平面中的 `update.run` 包管理器更新也会使用受管服务交接，而不是在实际运行的 Gateway 进程内替换包树。
-Gateway 会启动一个分离的辅助进程，退出，然后该辅助进程会从 Gateway 进程树之外运行正常的 `openclaw update --yes --json` CLI 流程。
-如果无法进行该交接，`update.run` 会返回一个结构化响应，其中包含需要手动运行的安全 shell 命令。
+当通过配置启用 Gateway 核心自动更新器时，它会在实时 Gateway 请求处理程序之外启动 CLI 更新路径。
+控制平面 `update.run`
+包管理器更新和受监督的 git 检出更新也使用
+受管服务交接，而不是在实时 Gateway 进程内替换包树或重建
+`dist/`。Gateway 会启动一个分离的辅助进程，
+退出，然后辅助进程在 Gateway 进程树之外运行正常的 `openclaw update --yes --json` CLI 路径。
+如果该交接不可用，
+`update.run` 会返回一个结构化响应，附带可手动运行的安全 shell 命令。
 
 对于包管理器安装，`openclaw update` 会在调用包管理器之前先解析目标包
 版本。npm 全局安装使用分阶段安装：OpenClaw 先将新包安装到一个临时的 npm 前缀中，验证
@@ -111,39 +140,55 @@ Gateway 会启动一个分离的辅助进程，退出，然后该辅助进程会
 已安装的 OpenClaw 构建保持一致，同时将完整的插件命令补全重建留给
 显式的 `openclaw completion --write-state` 运行。
 
-当安装了本地受管的 Gateway 服务且启用了重启时，
-包管理器更新会在替换包树之前先停止正在运行的服务，然后从更新后的安装中刷新服务元数据，重启服务，
-并在报告 `Gateway: restarted and verified.` 之前验证重启后的 Gateway 报告的是预期版本。
-在 macOS 上，更新后的检查还会验证当前配置文件的 LaunchAgent 已加载/运行，
-并且配置的回环端口是健康的。如果 plist 已安装但 launchd 未监督它，OpenClaw 会自动重新引导该 LaunchAgent，
-然后重新运行健康状态/版本/渠道就绪性检查。新的引导会直接加载 RunAtLoad 作业，
-因此更新恢复不会立即对新启动的 Gateway 执行 `kickstart -k`。
-如果 Gateway 仍然没有变为健康状态，命令会以非零状态退出，并打印重启日志路径以及明确的重启、重装和包回滚说明。
-如果无法执行重启，命令会打印 `Gateway: restart skipped (...)` 或 `Gateway: restart failed: ...`，并给出手动 `openclaw gateway restart` 提示。
-使用 `--no-restart` 时，包替换仍会执行，但受管服务不会停止或重启，因此正在运行的 Gateway 可能会继续使用旧代码，直到你手动重启它。
+当安装了本地受管 Gateway 服务且启用了重启时，
+包管理器和 git 检出更新会在替换包树或修改检出/构建输出之前停止正在运行的服务。
+然后更新器会从更新后的安装中刷新服务元数据，重启该服务，
+并在报告
+`Gateway: restarted and verified.` 之前验证重启后的 Gateway。
+包管理器更新还会额外验证重启后的 Gateway 报告的是预期的软件包版本；git 检出更新
+会在重建后验证 gateway 健康状态和服务就绪状态。在 macOS 上，
+更新后的检查还会验证 LaunchAgent 已针对活动
+配置文件加载/运行，并且配置的回环端口健康。如果 plist 已安装
+但 launchd 没有监管它，OpenClaw 会自动重新引导 LaunchAgent，
+然后重新运行健康/版本/渠道就绪检查。全新的
+引导会直接加载 RunAtLoad 作业，因此更新恢复不会
+立即对新启动的 Gateway 执行 `kickstart -k`。如果 Gateway 仍然没有
+变得健康，命令会以非零状态退出，并打印重启日志路径以及明确的重启、重新安装和
+包回滚说明。如果重启无法运行，命令会打印 `Gateway: restart skipped (...)` 或
+`Gateway: restart failed: ...`，并附带手动 `openclaw gateway restart` 提示。
+使用 `--no-restart` 时，包替换或 git 重建仍会运行，但
+受管服务不会停止或重启，因此正在运行的 Gateway 可能会继续使用旧代码，直到你手动重启它。
 
 ### 控制平面响应形式
 
-当通过 Gateway 控制平面在包管理器安装上调用 `update.run` 时，处理器会将交接启动与在 Gateway 退出后继续进行的 CLI 更新分开报告：
+当通过 Gateway 控制平面在
+包管理器安装或受监督的 git 检出上调用 `update.run` 时，处理程序会将
+交接启动与 Gateway 退出后继续执行的 CLI 更新分开报告：
 
-- `ok: true`, `result.status: "skipped"`，
-  `result.reason: "managed-service-handoff-started"`，以及
-  `handoff.status: "started"` 表示 Gateway 已创建受管服务
-  交接并安排了自身重启，以便分离的辅助进程可以在实际服务进程之外运行
-  `openclaw update --yes --json`。
-- `ok: false`, `result.reason: "managed-service-handoff-unavailable"`，以及
-  `handoff.status: "unavailable"` 表示 OpenClaw 未能找到用于安全交接的监督
-  服务边界。响应中会包含
-  `handoff.command`，也就是需要从 Gateway 外部运行的 shell 命令。
-- `ok: false`, `result.reason: "managed-service-handoff-failed"` 表示
-  Gateway 尝试创建交接，但无法启动分离的辅助进程。
+- `ok: true`, `result.status: "skipped"`,
+  `result.reason: "managed-service-handoff-started"`, and
+  `handoff.status: "started"` mean the Gateway created the managed-service
+  handoff and scheduled its own restart so the detached helper can run
+  `openclaw update --yes --json` outside the live service process.
+- `ok: false`, `result.reason: "managed-service-handoff-unavailable"`, and
+  `handoff.status: "unavailable"` mean OpenClaw could not find a supervising
+  service boundary and durable service identity for a safe handoff. For
+  example, systemd handoff requires the OpenClaw unit identity
+  (`OPENCLAW_SYSTEMD_UNIT`), not only ambient systemd process markers. The
+  response includes `handoff.command`, the shell command to run from outside the
+  Gateway.
+- `ok: false`, `result.reason: "managed-service-handoff-failed"` means the
+  Gateway tried to create the handoff but could not spawn the detached helper.
 
-`sentinel` 负载仍会在 Gateway 退出前写入，而 CLI
-交接会在受管服务重启健康检查完成后更新同一个重启 sentinel。在交接期间，sentinel 可以携带
-`stats.reason: "restart-health-pending"`，且没有成功后的继续动作；重启后的 Gateway 会持续轮询它，并且只会在 CLI
-验证服务健康状态并用最终的 `ok`
-结果重写 sentinel 之后才触发继续动作。`openclaw status` 和 `openclaw status --all` 会在该 sentinel 处于待定或失败时显示一条 `Update restart`
-行，而 `update.status` 会返回最新缓存的 sentinel。
+The `sentinel` payload is still written before the Gateway exits, and the CLI
+handoff updates the same restart sentinel after the managed-service restart
+health checks complete. During the handoff, the sentinel can carry
+`stats.reason: "restart-health-pending"` with no success continuation; the
+restarted Gateway keeps polling it and only fires the continuation after the CLI
+has verified service health and rewritten the sentinel with the final `ok`
+result. `openclaw status` and `openclaw status --all` show an `Update restart`
+row while that sentinel is pending or failed, and `update.status` refreshes and
+returns the latest sentinel.
 
 ## Git 检出流程
 
@@ -192,9 +237,9 @@ Gateway 会启动一个分离的辅助进程，退出，然后该辅助进程会
 </Warning>
 
 <Note>
-更新后插件同步失败中，若其范围仅限于某个受管插件，并且同步路径可以绕开它们（例如某个非关键插件的 npm registry 不可达），则会在核心更新成功后作为警告报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json` 的指导。意外的更新器或同步异常仍然会使更新结果失败。修复插件安装或更新错误，然后重新运行 `openclaw doctor --fix` 或 `openclaw update`。
+更新后插件同步失败如果仅限于某个受管插件，且同步路径可以绕开（例如某个非关键插件的 npm 注册表不可达），则会在核心更新成功后作为警告报告。JSON 结果会保留顶层更新 `status: "ok"`，并报告 `postUpdate.plugins.status: "warning"`，同时给出 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json` 的指引。意外的更新器或同步异常仍会使更新结果失败。请修复插件安装或更新错误，然后重新运行 `openclaw update repair`。
 
-在逐个插件同步步骤之后，`openclaw update` 会在 gateway 重启之前运行一个强制的 **post-core convergence** 过程：它会修复缺失的已配置插件载荷，验证磁盘上每个_活动的_已跟踪安装记录，并静态验证其 `package.json` 可解析（且任何显式声明的 `main` 都存在）。该过程的失败——以及无效的 OpenClaw 配置快照——会返回 `postUpdate.plugins.status: "error"`，并将顶层更新 `status` 置为 `"error"`，因此 `openclaw update` 会以非零状态退出，并且 gateway _不会_ 使用未经验证的插件集重启。错误信息会包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向后续处理所需的 `openclaw doctor --fix` 和 `openclaw plugins inspect <id> --runtime --json`。此处会跳过已禁用的插件条目以及那些不是受信任来源关联的官方同步目标的记录，这与缺失载荷检查所使用的 `skipDisabledPlugins` 策略一致，因此过时的已禁用插件记录不会阻止一次本来有效的更新。
+在每个插件的同步步骤之后，`openclaw update` 会在 gateway 重启前运行一个必需的 **post-core convergence** 过程：它会修复缺失的已配置插件负载，验证磁盘上每个 _active_ 已跟踪安装记录，并静态验证其 `package.json` 可解析（且任何显式声明的 `main` 都存在）。此过程中的失败——以及无效的 OpenClaw 配置快照——会返回 `postUpdate.plugins.status: "error"` 并将顶层更新 `status` 置为 `"error"`，因此 `openclaw update` 会以非零状态退出，并且 gateway 不会在未验证的插件集合下重启。错误中包含结构化的 `postUpdate.plugins.warnings[].guidance` 行，指向 `openclaw update repair` 和 `openclaw plugins inspect <id> --runtime --json` 以便后续处理。此处会跳过已禁用插件条目以及那些未链接到受信任来源的官方同步目标的记录，这与缺失负载检查使用的 `skipDisabledPlugins` 策略一致，因此过期的已禁用插件记录不会阻止一次本应有效的更新。
 
 更新后的 Gateway 启动时，插件加载仅进行验证：启动过程中不会运行包管理器，也不会修改依赖树。包管理器的 `update.run` 重启会交由 CLI 的受管服务路径处理，因此包替换发生在旧 Gateway 进程之外，而服务健康检查将决定该更新是否可以报告为完成。
 

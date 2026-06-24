@@ -44,16 +44,16 @@ openclaw security audit --json
 如果 Gateway 密码认证仅在启动时提供，请将相同的值传给 `openclaw security audit --auth password --password <password>`，以便审计将其与 `hooks.token` 进行检查。
 运行 `openclaw doctor --fix` 可轮换持久化复用的 `hooks.token`，然后更新外部 hook 发送方以使用新的 hook token。
 
-当已配置沙箱 Docker 设置但沙箱模式关闭时，当 `gateway.nodes.denyCommands` 使用了无效的模式样式/未知条目时（仅支持精确的节点命令名匹配，不支持 shell 文本过滤），当 `gateway.nodes.allowCommands` 明确启用了危险的节点命令时，当全局 `tools.profile="minimal"` 被代理工具配置覆盖时，当写入/编辑工具被禁用但 `exec` 仍可用且没有约束性的沙箱文件系统边界时，当开放组在缺少沙箱/工作区保护的情况下暴露运行时/文件系统工具时，以及当已安装的插件工具在宽松工具策略下可能可达时，它也会发出警告。
-它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置不当，存在头部伪造风险）以及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录泄露元数据）。
+它还会在以下情况发出警告：沙箱 Docker 设置已配置但沙箱模式已关闭；`gateway.nodes.denyCommands` 使用了无效的类似模式/未知条目（仅支持精确的节点命令名匹配，不支持 shell 文本过滤）；`gateway.nodes.allowCommands` 显式启用了危险的节点命令；全局 `tools.profile="minimal"` 被代理工具配置文件覆盖；写入/编辑工具已禁用但 `exec` 仍可用且没有受限的沙箱文件系统边界；开放 DM 或群组在没有沙箱/工作区保护的情况下暴露运行时/文件系统工具；已安装插件工具在宽松的工具策略下可能可达。
+它还会标记 `gateway.allowRealIpFallback=true`（如果代理配置不当，存在头部欺骗风险）以及 `discovery.mdns.mode="full"`（通过 mDNS TXT 记录泄露元数据）。
 当沙箱浏览器使用 Docker `bridge` 网络且未设置 `sandbox.browser.cdpSourceRange` 时，它也会发出警告。
 它还会标记危险的沙箱 Docker 网络模式（包括 `host` 和 `container:*` 命名空间加入）。
-当现有沙箱浏览器 Docker 容器缺少或已过期的哈希标签时（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`）它也会发出警告，并建议运行 `openclaw sandbox recreate --browser --all`。
-当基于 npm 的插件/钩子安装记录未固定、缺少完整性元数据，或与当前已安装的包版本发生漂移时，它也会发出警告。
-当频道白名单依赖可变的名称/电子邮件/标签而不是稳定的 ID 时，它会发出警告（Discord、Slack、Google Chat、Microsoft Teams、Mattermost、IRC 范围，如适用）。
-当 `gateway.auth.mode="none"` 使 Gateway HTTP API 在没有共享密钥的情况下仍可访问时（`/tools/invoke` 以及任何启用的 `/v1/*` 端点），它会发出警告。
-以前缀 `dangerous`/`dangerously` 开头的设置属于明确的“破窗”操作员覆盖；仅启用其中之一本身并不构成安全漏洞报告。
-关于完整的危险参数清单，请参见 [Security](/gateway/security) 中的 “Insecure or dangerous flags summary” 部分。
+当现有的沙箱浏览器 Docker 容器缺少/过期哈希标签时（例如迁移前的容器缺少 `openclaw.browserConfigEpoch`），它也会发出警告，并建议运行 `openclaw sandbox recreate --browser --all`。
+它还会在 npm 基础的插件/钩子安装记录未固定、缺少完整性元数据，或与当前已安装包版本不一致时发出警告。
+当频道允许列表依赖可变的名称/邮箱/标签而不是稳定 ID 时，它会发出警告（Discord、Slack、Google Chat、Microsoft Teams、Mattermost，以及适用的 IRC 作用域）。
+当 `gateway.auth.mode="none"` 使 Gateway HTTP API 在没有共享密钥的情况下仍可访问时，它会发出警告（`/tools/invoke` 以及任何已启用的 `/v1/*` 端点）。
+以前缀 `dangerous`/`dangerously` 开头的设置是显式的“打破玻璃”式操作员覆盖；仅启用其中之一并不构成安全漏洞报告。
+有关完整的危险参数清单，请参见 [安全](/gateway/security) 中的“Insecure or dangerous flags summary”部分。
 
 有意保留的现有发现可以通过 `security.audit.suppressions` 接受。
 每个 suppression 都会匹配一个精确的 `checkId`，并可通过

@@ -35,6 +35,7 @@ openclaw wiki status
 openclaw wiki doctor
 openclaw wiki init
 openclaw wiki ingest ./notes/alpha.md
+openclaw wiki okf import ./knowledge-catalog/okf/bundles/ga4
 openclaw wiki compile
 openclaw wiki lint
 openclaw wiki search "alpha"
@@ -97,6 +98,23 @@ openclaw wiki obsidian daily
 - URL 导入受 `ingest.allowUrlIngest` 控制
 - 导入的源页面会在 frontmatter 中保留来源信息
 - 启用后，导入完成后可自动编译
+
+### `wiki okf import <path>`
+
+将一个已解包的 Open Knowledge Format bundle 导入到 wiki 概念页面中。
+
+导入器会读取 OKF 目录树中每个未保留的 `.md` 概念文档，要求 `type` 字段非空，并将未知的 OKF `type` 值视为通用概念。保留的 OKF `index.md` 和 `log.md` 文件不会作为概念导入。
+
+导入后的页面会扁平化放置到 `concepts/` 下，因此现有的 wiki compile、search、get、digest 和 dashboard 流程会立即看到它们。原始 OKF 概念 ID、`type`、`resource`、`tags`、时间戳、源路径以及完整 frontmatter 都会保留在页面 frontmatter 中。内部 OKF markdown 链接会重写为生成的 wiki 页面；损坏或外部链接则保持不变。
+
+示例：
+
+```bash
+openclaw wiki okf import ./bundles/ga4
+openclaw wiki okf import ./bundles/ga4 --json
+openclaw wiki search "BigQuery Table" --mode source-evidence --json
+openclaw wiki get <path-from-json-result>
+```
 
 ### `wiki compile`
 
@@ -211,11 +229,12 @@ openclaw wiki get syntheses/alpha-summary.md --from 1 --lines 80
 
 ## 实际使用指南
 
-- 当来源信息和页面身份很重要时，使用 `wiki search` + `wiki get`。
-- 不要手动编辑受管理的生成区块，应使用 `wiki apply`。
-- 在信任有矛盾或低置信度内容之前，先运行 `wiki lint`。
-- 在批量导入或源内容变更后，如果你希望立即获得最新仪表板和编译摘要，请运行 `wiki compile`。
-- 当 bridge 模式依赖新导出的 memory artifacts 时，使用 `wiki bridge import`。
+- 当来源可追溯性和页面身份很重要时，使用 `wiki search` + `wiki get`。
+- 不要手动编辑受管理的生成区块，而应使用 `wiki apply`。
+- 在信任矛盾或低置信度内容之前，先运行 `wiki lint`。
+- 在批量导入或源变更之后，如果你希望立即获得新的仪表板和编译后的摘要，请运行 `wiki compile`。
+- 当数据目录、文档导出或 agent 增强流水线已经输出 OKF markdown bundles 时，使用 `wiki okf import`。
+- 当 bridge 模式依赖于新导出的 memory artifacts 时，使用 `wiki bridge import`。
 
 ## 配置关联
 

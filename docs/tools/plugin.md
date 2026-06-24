@@ -126,10 +126,12 @@ such as `@beta` stay pinned to the selected package and fail when incompatible.
 
 Configure `security.installPolicy` to run a trusted local policy command before
 plugin install or update proceeds. The policy receives metadata plus the staged
-source path and can allow or block the install. It runs before plugin
-`before_install` hooks. The deprecated `--dangerously-force-unsafe-install`
-flag is accepted for compatibility but does not bypass install policy, hooks, or
-OpenClaw's built-in plugin dependency denylist.
+source path and can allow or block the install. It covers CLI and Gateway-backed
+plugin install/update paths. Plugin `before_install` hooks run later only in
+OpenClaw processes where plugin hooks are loaded, so use `security.installPolicy`
+for operator-owned install decisions. The deprecated
+`--dangerously-force-unsafe-install` flag is accepted for compatibility but does
+not bypass install policy or OpenClaw's built-in plugin dependency denylist.
 
 See [Skills config](/tools/skills-config#operator-install-policy-securityinstallpolicy)
 for the shared `security.installPolicy` exec schema used by both skills and
@@ -156,36 +158,26 @@ plugins.
 
 关键策略规则：
 
-- `plugins.enabled: false` disables all plugins and skips plugin discovery/load
-  work. Stale plugin references are inert while this is active; re-enable
-  plugins before running doctor cleanup when you want stale ids removed.
-- `plugins.deny` wins over allow and per-plugin enablement.
-- `plugins.allow` is an exclusive allowlist. Plugin-owned tools outside the
-  allowlist stay unavailable, even when `tools.allow` includes `"*"`.
-- `plugins.entries.<id>.enabled: false` disables one plugin while preserving its
-  config.
-- `plugins.load.paths` adds explicit local plugin files or directories. Managed
-  `plugins install` local paths must be plugin directories or archives; use
-  `plugins.load.paths` for standalone plugin files.
-- Workspace-origin plugins are disabled by default; explicitly enable or
-  allowlist them before using local workspace code.
-- Bundled plugins follow their built-in default-on/default-off metadata unless
-  config explicitly overrides them.
-- `plugins.slots.<slot>` chooses one plugin for exclusive categories such as
-  memory and context engines. Slot selection force-enables the selected plugin
-  for that slot by counting as explicit activation; it can load even when it
-  would otherwise be opt-in. `plugins.deny` and
-  `plugins.entries.<id>.enabled: false` still block it.
-- Bundled opt-in plugins can auto-activate when config names one of their owned
-  surfaces, such as a provider/model ref, channel config, CLI backend, or agent
-  harness runtime.
-- OpenAI-family Codex routing keeps provider and runtime plugin boundaries
-  separate: legacy Codex model refs are legacy config repaired by doctor, while the bundled
-  `codex` plugin owns Codex app-server runtime for canonical `openai/*` agent
-  refs, explicit `agentRuntime.id: "codex"`, and legacy `codex/*` refs.
+- `plugins.enabled: false` 会禁用所有插件并跳过插件发现/加载工作。在此状态下，陈旧的插件引用不会生效；如果你希望移除陈旧 id，请先重新启用插件，再运行 doctor 清理。
+- `plugins.deny` 的优先级高于 allow 和单个插件启用状态。
+- `plugins.allow` 是一个排他性允许列表。允许列表之外的插件拥有工具仍不可用，即使 `tools.allow` 包含 `"*"` 也是如此。
+- `plugins.entries.<id>.enabled: false` 会禁用某个插件，同时保留其配置。
+- `plugins.load.paths` 会添加显式的本地插件文件或目录。受管理的 `plugins install` 本地路径必须是插件目录或归档；若要加载独立插件文件，请使用 `plugins.load.paths`。
+- 来自 workspace 的插件默认处于禁用状态；在使用本地 workspace 代码之前，请显式启用它们或将其加入允许列表。
+- 捆绑插件遵循其内置的默认开启/默认关闭元数据，除非配置显式覆盖它们。
+- `plugins.slots.<slot>` 会为 memory 和 context engines 等独占类别选择一个插件。槽位选择通过计为显式激活来强制启用该槽位所选的插件；即使它原本需要显式选择，也仍可加载。`plugins.deny` 和 `plugins.entries.<id>.enabled: false` 仍会阻止它。
+- 当配置命名了其拥有的某个 surface（例如 provider/model ref、channel config、CLI backend 或 agent harness runtime）时，捆绑的可选启用插件可以自动激活。
+- OpenAI 家族的 Codex 路由将 provider 和 runtime 插件边界分开：旧版 Codex model refs 属于由 doctor 修复的旧配置，而捆绑的 `codex` 插件拥有针对规范 `openai/*` agent refs、显式 `agentRuntime.id: "codex"` 和旧版 `codex/*` refs 的 Codex app-server runtime。
 
-当配置校验报告陈旧插件 id、allowlist/工具不匹配或旧的内置插件路径时，请运行
-`openclaw doctor` 或 `openclaw doctor --fix`。
+当 `plugins.allow` 未设置且非捆绑插件从 workspace 或全局插件根目录自动发现时，启动日志会输出
+`plugins.allow is empty; discovered non-bundled plugins may auto-load: ...`。
+该警告会包含发现的插件 id，对于较短列表，还会给出一个最小的 `plugins.allow` 片段。请在将受信插件复制到 `openclaw.json` 之前，先运行
+[`openclaw plugins list --enabled --verbose`](/cli/plugins#list) 或
+[`openclaw plugins inspect <id>`](/cli/plugins#inspect) 并使用列出的插件 id。
+当诊断信息指出某个插件是
+`without install/load-path provenance` 加载时，也适用同样的信任固定建议：先检查该插件 id，然后将受信 id 固定到 `plugins.allow` 中，或从受信来源重新安装，以便 OpenClaw 记录安装溯源。
+
+当配置校验报告陈旧插件 id、允许列表/工具不匹配，或旧版捆绑插件路径时，请运行 `openclaw doctor` 或 `openclaw doctor --fix`。
 
 ## 了解插件格式
 

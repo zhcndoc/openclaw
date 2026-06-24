@@ -52,7 +52,7 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 有界的运行时摘录和注入的运行时拥有块。它们与引导限制、启动上下文限制以及技能提示
 限制是分开的。
 
-`toolResultMaxChars` 是一个高级上限。当它未设置时，OpenClaw 会根据有效模型上下文窗口选择实时工具结果上限：在 100K token 以下为 `16000` 个字符，在 100K+ token 时为 `32000` 个字符，在 200K+ token 时为 `64000` 个字符，但仍受运行时上下文份额保护限制。
+`toolResultMaxChars` 是一个高级上限（最高可达 `1000000`` 字符）。当它未设置时，OpenClaw 会根据有效模型上下文窗口选择实时工具结果上限：低于 100K token 时为 `16000` 个字符，100K+ token 时为 `32000` 个字符，200K+ token 时为 `64000` 个字符，同时仍受运行时上下文共享保护限制。
 
 对于图像，OpenClaw 会在调用提供方之前对转录/工具图像载荷进行缩放。
 使用 `agents.defaults.imageMaxDimensionPx`（默认：`1200`）来调整此项：
@@ -82,22 +82,30 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
   当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、
   OpenAI Codex、MiniMax、小米和 z.ai。
 
-使用量表面在显示前会先规范化常见的提供方原生字段别名。
-对于 OpenAI 家族 Responses 流量，这包括 `input_tokens` /
-`output_tokens` 以及 `prompt_tokens` / `completion_tokens`，因此传输特定的
-字段名不会改变 `/status`、`/usage` 或会话摘要。
-Gemini CLI 的 JSON 使用量也会被规范化：回复文本来自 `response`，并且
-`stats.cached` 映射到 `cacheRead`，当 CLI 省略显式的 `stats.input` 字段时，
-使用 `stats.input_tokens - stats.cached`。
-对于原生 OpenAI 家族 Responses 流量，WebSocket/SSE 使用量别名也会
-以相同方式规范化，而在缺少 `total_tokens` 或其为 `0` 时，总数会回退到规范化后的输入 + 输出。
-当当前会话快照较稀疏时，`/status` 和 `session_status` 还可以
-从最近的转录使用日志中恢复 token/cache 计数器和活动运行时模型标签。
-现有的非零实时值仍然优先于转录回退值，而当存储的总数缺失或更小时，
-更大的、以提示为导向的转录总数可以获胜。
-提供方配额窗口的使用权限认证在可用时来自提供方特定钩子；否则 OpenClaw 会回退到
-从 auth profile、环境变量或配置中匹配 OAuth/API key 凭证。
-助手转录条目会持久化相同的规范化使用量形状，包括 `usage.cost`，当活动模型配置了定价且提供方返回使用量元数据时。这为 `/usage cost` 和基于转录的会话状态提供了稳定来源，即使实时运行时状态已经消失。
+Usage surfaces normalize common provider-native field aliases before display.
+For OpenAI-family Responses traffic, that includes both `input_tokens` /
+`output_tokens` and `prompt_tokens` / `completion_tokens`, so transport-specific
+field names do not change `/status`, `/usage`, or session summaries.
+Gemini CLI usage is normalized too: the default `stream-json` parser reads
+assistant `message` events, and `stats.cached` maps to `cacheRead` with
+`stats.input_tokens - stats.cached` used when the CLI omits an explicit
+`stats.input` field. Legacy JSON overrides still read reply text from
+`response`.
+For native OpenAI-family Responses traffic, WebSocket/SSE usage aliases are
+normalized the same way, and totals fall back to normalized input + output when
+`total_tokens` is missing or `0`.
+When the current session snapshot is sparse, `/status` and `session_status` can
+also recover token/cache counters and the active runtime model label from the
+most recent transcript usage log. Existing nonzero live values still take
+precedence over transcript fallback values, and larger prompt-oriented
+transcript totals can win when stored totals are missing or smaller.
+Usage auth for provider quota windows comes from provider-specific hooks when
+available; otherwise OpenClaw falls back to matching OAuth/API-key credentials
+from auth profiles, env, or config.
+Assistant transcript entries persist the same normalized usage shape, including
+`usage.cost` when the active model has pricing configured and the provider
+returns usage metadata. This gives `/usage cost` and transcript-backed session
+status a stable source even after the live runtime state is gone.
 
 OpenClaw 将提供方使用量核算与当前上下文
 快照分开。提供方 `usage.total` 可能包含缓存输入、输出以及多次

@@ -169,7 +169,7 @@ what wings should i order?
 预期的可见回复形式：
 
 ```text
-...normal assistant reply...
+...正常的助手回复...
 
 🧩 Active Memory: status=ok elapsed=842ms query=recent summary=34 chars
 🔎 Active Memory Debug: Lemon pepper wings with blue cheese.
@@ -433,13 +433,10 @@ modelFallback: "google/gemini-3-flash"
 `config.toolsAllow` 未设置时，主动记忆会保留现有的 LanceDB 行为，
 并改用 `memory_recall`。
 
-如果你使用另一个记忆插件，请将 `config.toolsAllow` 设置为该插件注册的精确工具
-名称。主动记忆会在召回
-提示中列出这些工具，并将同样的列表传递给嵌入式子代理。如果没有任何已配置的
-工具可用，或者记忆子代理失败，主动记忆会跳过该轮召回，主回复将继续而不带记忆上下文。
+如果你使用的是其他记忆插件，请将 `config.toolsAllow` 设置为该插件注册的精确工具名称。主动记忆会在召回提示中列出这些工具，并将同样的列表传递给嵌入式子代理。如果没有任何已配置工具可用，或者记忆子代理失败，主动记忆会跳过该轮召回，主回复将继续生成而不带记忆上下文。对于自定义召回工具，非空且对模型可见的工具输出会被视为召回证据，除非结构化结果字段明确报告为空结果或失败。
 `toolsAllow` 只接受具体的记忆工具名称。通配符、`group:*`
 条目，以及 `read`、`exec`、`message` 和
-`web_search` 等核心代理工具，会在隐藏的记忆子代理启动前被忽略。
+`web_search` 等核心代理工具，都会在隐藏记忆子代理启动前被忽略。
 
 默认行为说明：主动记忆不再将 `memory_recall` 包含在
 memory-core 的默认允许列表中。现有的 `memory-lancedb` 配置在
@@ -686,11 +683,7 @@ plugins.entries.active-memory
 
 ### 冷启动宽限
 
-在 v2026.5.2 之前，插件会在冷启动期间默默将你配置的 `timeoutMs` 额外延长
-30000 毫秒，这样模型预热、embedding 索引加载以及
-首次 recall 就可以共用一个更大的预算。v2026.5.2 将这段宽限移到了一个显式的
-`setupGraceTimeoutMs` 配置之后——默认情况下，你配置的 `timeoutMs`
-现在就是预算，除非你主动启用它。
+在 v2026.5.2 之前，插件会在冷启动期间无声地将你配置的 `timeoutMs` 额外延长 30000 毫秒，因此模型预热、embedding 索引加载以及首次 recall 可以共享一个更大的预算。v2026.5.2 将这段宽限移动到了显式的 `setupGraceTimeoutMs` 配置下——默认情况下，你配置的 `timeoutMs` 现在就是 recall 工作预算，除非你显式启用它。阻塞式 hook 在该预算前后使用两个有上限的阶段：在 recall 开始前，最多 1500 毫秒用于会话/配置预检；在 recall 工作停止后，另外固定 1500 毫秒用于 abort 结算和转录恢复。这两项额度都不会延长模型或工具执行时间。
 
 如果你是从 v2026.4.x 升级而来，并且你把 `timeoutMs` 设为了适配
 旧的隐式宽限世界的值（推荐的入门 `timeoutMs: 15000` 就是一个
@@ -712,14 +705,9 @@ plugins.entries.active-memory
 }
 ```
 
-根据 v2026.5.2 的更新日志：_"默认将已配置的 recall 超时用作
-阻塞式 prompt-build hook 的预算，并将冷启动初始化宽限移到显式的
-`setupGraceTimeoutMs` 配置之后，因此插件不再会悄悄把主通道上的
-15000 毫秒配置延长到 45000 毫秒。"_
+v2026.5.2 的更改移除了旧的隐式 30000 毫秒冷启动延长。除了已配置的 recall 工作预算外，hook 最多还可以使用 1500 毫秒进行 preflight，以及另外 1500 毫秒用于 post-recall 完成。因此，其最坏情况下的阻塞时间为 `timeoutMs + setupGraceTimeoutMs + 3000` 毫秒。
 
-嵌入式 recall 运行器使用相同的有效超时预算，因此
-`setupGraceTimeoutMs` 同时覆盖外层的 prompt-build watchdog 和内层的
-阻塞式 recall 运行。
+嵌入式 recall 运行器使用相同的有效超时预算，因此 `setupGraceTimeoutMs` 同时覆盖外层 prompt-build watchdog 和内层阻塞式 recall 运行。preflight 上限覆盖在该预算开始前的会话/配置检查。post-recall 额度允许外层 hook 完成 abort 清理并读取任何最终转录状态。
 
 对于资源紧张且冷启动延迟是已知取舍的网关，较低的值（5000–15000 毫秒）也可行——
 代价是网关重启后第一次 recall 在预热完成前返回空结果的概率更高。
@@ -754,7 +742,7 @@ recall 异常其实是 embedding provider 问题，而不是 Active Memory 的 b
 列出了该插件实际注册的工具名称。
 
 <AccordionGroup>
-  <Accordion title="Embedding provider switched or stopped working">
+  <Accordion title="Embedding 提供方已切换或停止工作">
     如果 `memorySearch.provider` 未设置，OpenClaw 将使用 OpenAI embeddings。请为本地、Ollama、Gemini、Voyage、
     Mistral、DeepInfra、Bedrock、GitHub Copilot 或兼容 OpenAI 的
     embeddings 显式设置 `memorySearch.provider`。如果配置的提供方无法运行，`memory_search`

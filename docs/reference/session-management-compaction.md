@@ -145,11 +145,12 @@ openclaw sessions cleanup --enforce
 
 经验法则：
 
-- **Reset** (`/new`, `/reset`) 会为该 `sessionKey` 创建一个新的 `sessionId`。
-- **Daily reset**（默认在 gateway 主机本地时间凌晨 4:00）会在重置边界后的下一条消息时创建新的 `sessionId`。
-- **Idle expiry**（`session.reset.idleMinutes` 或旧版 `session.idleMinutes`）会在消息于空闲窗口之后到达时创建新的 `sessionId`。当 daily 和 idle 同时配置时，哪个先过期就以哪个为准。
-- **System events**（heartbeat、cron 唤醒、exec 通知、gateway 记账）可能会修改会话行，但不会延长 daily/idle reset 的新鲜度。重置轮换会在构建新提示词之前丢弃上一会话的排队系统事件通知。
-- **Parent fork policy** 在创建线程或 subagent fork 时使用 OpenClaw 的活动分支。如果该分支过大，OpenClaw 会为子级启动隔离上下文，而不是失败或继承不可用的历史。分支大小策略是自动的；旧的 `session.parentForkMaxTokens` 配置已被 `openclaw doctor --fix` 移除。
+- **重置** (`/new`, `/reset`) 会为该 `sessionKey` 创建一个新的 `sessionId`。
+- **每日重置**（默认 Gateway 主机本地时间凌晨 4:00）会在跨过重置边界后的下一条消息时创建新的 `sessionId`。
+- **空闲过期**（`session.reset.idleMinutes` 或旧版 `session.idleMinutes`）会在消息于空闲窗口之后到达时创建新的 `sessionId`。当同时配置了 daily 和 idle 时，先过期的那个规则生效。
+- **Control UI 重新连接恢复** 可以在 Gateway 从操作员 UI 客户端收到匹配的 `sessionId` 时，为一次重新连接发送保留当前可见会话。普通的过期发送仍会创建新的 `sessionId`。
+- **系统事件**（heartbeat、cron 唤醒、exec 通知、Gateway 记账）可能会修改会话行，但不会延长 daily/idle 重置的新鲜度。重置轮换会在新提示构建前丢弃上一会话中排队的系统事件通知。
+- **父分叉策略** 在创建线程或 subagent 分叉时使用 OpenClaw 的活动分支。如果该分支过大，OpenClaw 会用隔离上下文启动子进程，而不是失败或继承不可用的历史。该大小策略是自动的；旧版 `session.parentForkMaxTokens` 配置已被 `openclaw doctor --fix` 移除。
 
 实现细节：该决策发生在 `src/auto-reply/reply/session.ts` 中的 `initSessionState()`。
 
@@ -253,7 +254,7 @@ assistant 工具调用与其匹配的 `toolResult` 条目成对。
 
 ---
 
-## When auto-compaction happens (OpenClaw runtime)
+## 何时发生自动压缩（OpenClaw 运行时）
 
 在嵌入式 OpenClaw agent 中，自动压缩会在两种情况下触发：
 
@@ -323,8 +324,8 @@ OpenClaw 也会为嵌入式运行强制一个安全下限：
 
 原因：在压缩不可避免之前，为多轮“清理工作”（例如内存写入）留出足够的余量。
 
-Implementation: `ensureAgentCompactionReserveTokens()` in `src/agents/agent-settings.ts`
-(called from `src/agents/embedded-agent-runner.ts`).
+Implementation: `applyAgentCompactionSettingsFromConfig()` in `src/agents/agent-settings.ts`
+(called from embedded-runner turn and compaction setup paths)。
 
 ---
 

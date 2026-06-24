@@ -46,8 +46,25 @@ Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docke
 
   </Step>
 
-  <Step title="完成入门配置">
-    设置脚本会自动运行入门配置。它会：
+  <Step title="Airgapped rerun">
+    在离线主机上，请先传输并加载镜像：
+
+    ```bash
+    docker load -i openclaw-image.tar
+    export OPENCLAW_IMAGE="ghcr.io/openclaw/openclaw:latest"
+    ./scripts/docker/setup.sh --offline
+    ```
+
+    `--offline` 会验证 `OPENCLAW_IMAGE` 已经存在于本地，禁用隐式的 Compose 拉取和构建，然后运行正常的设置流程，例如
+    `.env` 同步、权限修复、入门配置、网关配置同步，以及 Compose 启动。
+
+    如果 `OPENCLAW_SANDBOX=1`，离线设置还会检查配置的默认沙箱镜像以及位于
+    `OPENCLAW_DOCKER_SOCKET` 后的 daemon 上按代理启用的沙箱镜像。基于 Docker 的浏览器镜像也必须携带当前 OpenClaw 浏览器契约标签。当所需镜像缺失或不兼容时，设置会退出，并且不会更改沙箱配置，而不是在沙箱不可用的情况下报告成功。
+
+  </Step>
+
+  <Step title="Complete onboarding">
+    设置脚本会自动运行入门配置。它将：
 
     - 提示输入提供商 API 密钥
     - 生成网关令牌并将其写入 `.env`
@@ -108,7 +125,7 @@ docker compose up -d openclaw-gateway
 <Note>
 从仓库根目录运行 `docker compose`。如果你启用了 `OPENCLAW_EXTRA_MOUNTS`
 或 `OPENCLAW_HOME_VOLUME`，设置脚本会写入 `docker-compose.extra.yml`；
-当两个覆盖文件都存在时，请将其放在任何标准覆盖文件之后，例如
+当两个覆盖文件都存在时，请将它们放在任何标准覆盖文件之后，例如
 `-f docker-compose.yml -f docker-compose.override.yml -f docker-compose.extra.yml`
 。
 </Note>
@@ -219,8 +236,7 @@ docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLA
 ### 主机本地提供商
 
 当 OpenClaw 在 Docker 中运行时，容器内的 `127.0.0.1` 指的是容器
-本身，而不是你的主机。对于运行在主机上的 AI 提供商，请使用
-`host.docker.internal`：
+本身，而不是你的主机。对于运行在主机上的 AI 提供商，请使用 `host.docker.internal`：
 
 | 提供商     | 主机默认 URL              | Docker 设置 URL                     |
 | ---------- | -------------------------- | ------------------------------------ |
@@ -279,9 +295,8 @@ auth-profile 机密密钥目录存储用于 OAuth 支持的 auth profile 令牌�
 关于 VM 部署的完整持久化细节，请参见
 [Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where)。
 
-**Disk growth hotspots:** watch `media/`, session JSONL files, the shared
-SQLite state database, installed plugin package roots, and rolling file logs
-under `/tmp/openclaw/`.
+**磁盘增长热点：** 关注 `media/`、session JSONL 文件、共享的
+SQLite 状态数据库、已安装插件包根目录，以及 `/tmp/openclaw/` 下的滚动日志文件。
 
 ### Shell 助手（可选）
 
@@ -440,8 +455,8 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 ## Agent 沙箱
 
 当使用 Docker 后端启用 `agents.defaults.sandbox` 时，网关会将代理工具执行（shell、文件读写等）
-放在隔离的 Docker 容器中运行，而网关本身仍保留在主机上。这为不受信任或多租户的代理会话提供了
-一道硬隔离墙，而无需将整个网关容器化。
+放在隔离的 Docker 容器中运行，而网关本身仍保留在主机上。这为不受信任或多租户的代理会话提供了一道
+硬隔离墙，而无需将整个网关容器化。
 
 沙箱作用域可以是按代理（默认）、按会话或共享。每个作用域
 都有自己挂载在 `/workspace` 的工作区。你还可以配置

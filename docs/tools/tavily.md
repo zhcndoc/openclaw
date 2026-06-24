@@ -15,18 +15,24 @@ title: "Tavily"
 
 Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索深度、主题过滤、域名过滤、AI 生成的答案摘要，以及从 URL 中提取内容（包括 JavaScript 渲染的页面）。
 
-| Property      | Value                               |
-| ------------- | ----------------------------------- |
-| Plugin id     | `tavily`                            |
-| Auth          | `TAVILY_API_KEY` or config `apiKey` |
-| Base URL      | `https://api.tavily.com` (default)  |
-| Bundled tools | `tavily_search`, `tavily_extract`   |
+| Property  | Value                               |
+| --------- | ----------------------------------- |
+| Plugin id | `tavily`                            |
+| Package   | `@openclaw/tavily-plugin`           |
+| Auth      | `TAVILY_API_KEY` or config `apiKey` |
+| Base URL  | `https://api.tavily.com` (default)  |
+| Tools     | `tavily_search`, `tavily_extract`   |
 
-## Getting started
+## 入门
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/tavily-plugin
+    ```
+  </Step>
   <Step title="获取 API 密钥">
-    在 [tavily.com](https://tavily.com) 创建 Tavily 账号，然后在控制面板中生成 API 密钥。
+    在 [tavily.com](https://tavily.com) 创建 Tavily 账户，然后在控制台中生成 API 密钥。
   </Step>
   <Step title="配置插件和提供方">
     ```json5
@@ -60,7 +66,7 @@ Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索�
 </Steps>
 
 <Tip>
-在引导流程中选择 Tavily，或运行 `openclaw configure --section web`，即可自动启用内置的 Tavily 插件。
+在引导流程中选择 Tavily，或运行 `openclaw configure --section web`，会在需要时安装并启用官方 Tavily 插件。
 </Tip>
 
 ## 工具参考

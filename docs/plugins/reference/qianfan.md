@@ -11,8 +11,8 @@ title: "Qianfan 插件"
 
 ## 分发
 
-- Package: `@openclaw/qianfan-provider`
-- Install route: 已包含在 OpenClaw 中
+- 包：`@openclaw/qianfan-provider`
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/qianfan-provider`
 
 ## 接口
 

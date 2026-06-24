@@ -46,7 +46,7 @@ OpenClaw 代码模式允许模型编写一小段 JavaScript 或 TypeScript 程�
 
 代码模式让大型工具目录更易于模型使用。
 
-- 更小的提示面：提供方接收到的是两个控制工具，而不是数十或数百个完整的工具 schema。
+- 更小的提示面：提供方接收到的是两个控制工具，而不是数十个或数百个完整的工具 schema。
 - 更好的编排：模型可以在一个代码单元中使用循环、连接、小型转换、条件逻辑和并行的嵌套工具调用。
 - 提供方中立：它适用于 OpenClaw、插件、MCP 和客户端工具，而不依赖提供方原生的代码执行。
 - 现有策略保持生效：嵌套工具调用仍然会经过 OpenClaw 的策略、审批、钩子、会话上下文和审计路径。
@@ -554,7 +554,7 @@ createScope: () => ({
 clearCodeModeNamespacesForPlugin(pluginId);
 ```
 
-仅在移除一个已知命名空间时使用 `unregisterCodeModeNamespace(namespaceId)`。测试可以调用 `clearCodeModeNamespacesForTest()`，以避免跨用例泄漏注册项。
+代码模式清理由插件负责；当插件生命周期结束时，应清除该插件的命名空间注册，而不是为每个命名空间单独保留清理句柄。测试可以调用 `clearCodeModeNamespacesForTest()`，以避免在各个用例之间泄漏注册项。
 
 ### 测试清单
 
@@ -858,22 +858,22 @@ openclaw gateway
 
 在更改运行时时，请将以下内容作为集成或端到端测试运行：
 
-1. Start a Gateway with `tools.codeMode.enabled: false`.
-2. Send an agent turn with a small direct tool set.
-3. Assert the model-visible tools are unchanged.
-4. Restart with `tools.codeMode.enabled: true`.
-5. Send an agent turn with OpenClaw, plugin, MCP, and client test tools.
-6. Assert the model-visible tool list is exactly `exec`, `wait`.
-7. In `exec`, read `ALL_TOOLS` and assert the effective test tools are present.
-8. In `exec`, call OpenClaw/plugin/client tools through `tools.search`, `tools.describe`, and `tools.call`.
-9. In `exec`, call `API.list("mcp")` and `API.read("mcp/<server>.d.ts")` and assert the declaration files describe visible MCP tools.
-10. In `exec`, call MCP tools through `MCP.<server>.<tool>({ ...input })` and assert direct MCP catalog entries are absent from `ALL_TOOLS` and `tools.*`.
-11. Assert denied tools are absent and cannot be called by guessed id.
-12. Start a nested tool call that resolves after `exec` returns `waiting`.
-13. Call `wait` and assert the restored VM receives the tool result.
-14. Assert the final answer contains output produced after restore.
-15. Assert timeout, abort, and snapshot expiry clean up runtime state.
-16. Export trajectory and assert nested calls are visible under the parent code-mode call.
+1. 使用 `tools.codeMode.enabled: false` 启动一个 Gateway。
+2. 使用一个较小的直接工具集发送一次 agent 回合。
+3. 断言模型可见的工具保持不变。
+4. 使用 `tools.codeMode.enabled: true` 重新启动。
+5. 使用 OpenClaw、plugin、MCP 和 client 测试工具发送一次 agent 回合。
+6. 断言模型可见的工具列表恰好是 `exec`、`wait`。
+7. 在 `exec` 中，读取 `ALL_TOOLS` 并断言有效测试工具存在。
+8. 在 `exec` 中，通过 `tools.search`、`tools.describe` 和 `tools.call` 调用 OpenClaw/plugin/client 工具。
+9. 在 `exec` 中，调用 `API.list("mcp")` 和 `API.read("mcp/<server>.d.ts")`，并断言声明文件描述了可见的 MCP 工具。
+10. 在 `exec` 中，通过 `MCP.<server>.<tool>({ ...input })` 调用 MCP 工具，并断言直接 MCP 目录条目不存在于 `ALL_TOOLS` 和 `tools.*` 中。
+11. 断言被拒绝的工具不存在，且不能通过猜测的 id 被调用。
+12. 启动一个嵌套工具调用，使其在 `exec` 返回 `waiting` 后才完成。
+13. 调用 `wait` 并断言恢复后的 VM 收到了工具结果。
+14. 断言最终答案包含在恢复后生成的输出。
+15. 断言超时、abort 和 snapshot 过期会清理运行时状态。
+16. 导出轨迹并断言嵌套调用在父级代码模式调用下可见。
 
 仅限文档的对此页面的更改仍应运行 `pnpm check:docs`。
 

@@ -32,7 +32,7 @@ status: active
 绝不要在多个 agent 之间复用 `agentDir`（这会导致认证/会话冲突）。当本地没有配置文件时，agents 可以读取默认/主 agent 的认证配置文件，但 OpenClaw 不会把 OAuth 刷新令牌克隆到次级 agent 存储中。如果你想要一个独立的 OAuth 账户，请从该 agent 中登录；如果你手动复制凭据，请只复制可移植的静态 `api_key` 或 `token` 配置文件。
 </Warning>
 
-技能会从每个 agent 的工作区以及共享根目录（例如 `~/.openclaw/skills`）加载，然后在配置了有效 agent 技能白名单时，按其进行过滤。使用 `agents.defaults.skills` 作为共享基础，使用 `agents.list[].skills` 进行每个 agent 的替换。参见 [Skills: per-agent vs shared](/tools/skills#per-agent-vs-shared-skills) 和 [Skills: agent skill allowlists](/tools/skills#agent-skill-allowlists)。
+技能会从每个 agent 工作区以及共享根目录（如 `~/.openclaw/skills`）加载，然后在配置了有效 agent 技能白名单时按其过滤。使用 `agents.defaults.skills` 作为共享基线，使用 `agents.list[].skills` 作为每个 agent 的替换。参见 [Skills: per-agent vs shared](/tools/skills#per-agent-vs-shared-skills) 和 [Skills: agent skill allowlists](/tools/skills#agent-allowlists)。
 
 Gateway 可以托管 **一个 agent**（默认）或 **多个 agent** 并排运行。
 

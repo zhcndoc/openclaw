@@ -11,8 +11,8 @@ title: "Tencent 插件"
 
 ## 分发
 
-- 包：`@openclaw/tencent-provider`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/tencent-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/tencent-provider`
 
 ## 接口
 

@@ -480,33 +480,35 @@ OpenClaw 使用 xAI 的 REST 图像/视频/TTS/STT API 来进行媒体生成、�
 
   <Accordion title="已知限制">
     - xAI 认证可以使用 API 密钥、环境变量、插件配置回退、
-      浏览器 OAuth，或适用于符合条件的 xAI 账户的 device-code OAuth。浏览器
+      浏览器 OAuth 或适用于符合条件的 xAI 账户的 device-code OAuth。浏览器
       OAuth 使用 `127.0.0.1:56121` 上的本地回调；对于远程主机，请使用
-      `xai-device-code`，除非你想在打开登录 URL 之前转发该端口。xAI 决定哪些账户可以接收 OAuth API 令牌，而
-      同意页面可能会显示 Grok Build，尽管 OpenClaw 不需要
-      Grok Build 应用。
-    - `grok-4.20-multi-agent-experimental-beta-0304` 在
-      常规 xAI 提供方路径上不受支持，因为它需要与标准 OpenClaw xAI 传输
-      不同的上游 API 表面。
-    - xAI Realtime voice 目前还没有注册为 OpenClaw 提供方。它
+      `xai-device-code`，除非你想在打开登录 URL 前转发该端口。xAI 决定哪些账户可以接收 OAuth API 令牌，而
+      同意页面即使 OpenClaw 不需要 Grok Build 应用，也可能显示 Grok Build。
+    - OpenClaw 目前不暴露 xAI 多代理模型家族。xAI 通过 Responses API 提供这些模型，但它们不接受
+      OpenClaw 共享代理循环使用的客户端侧或自定义工具。请参见
+      [xAI 多代理限制](https://docs.x.ai/developers/model-capabilities/text/multi-agent#limitations)。
+    - xAI Realtime 语音尚未注册为 OpenClaw 提供方。它
       需要与批量 STT 或流式转录不同的双向语音会话契约。
-    - xAI 图像的 `quality`、图像 `mask` 和额外的仅原生长宽比在共享的
-      `image_generate` 工具具备相应的跨提供方控制之前不会暴露。
+    - xAI 图像 `quality`、图像 `mask` 以及额外仅原生的长宽比
+      在共享 `image_generate` 工具具有相应的跨提供方控制项之前不会暴露。
   </Accordion>
 
   <Accordion title="高级说明">
-    - OpenClaw 会在共享运行器路径上自动应用 xAI 特定的工具 schema 和工具调用兼容性修复。
+    - OpenClaw 会自动在共享运行路径上应用 xAI 专用的工具模式和工具调用兼容性修复。
     - 原生 xAI 请求默认 `tool_stream: true`。将
-      `agents.defaults.models["xai/<model>"].params.tool_stream` 设为 `false` 可
+      `agents.defaults.models["xai/<model>"].params.tool_stream` 设为 `false` 以
       禁用它。
-    - 捆绑的 xAI 包装器会在发送原生 xAI 请求之前移除不受支持的严格工具 schema 标志和
-      推理负载键。
+    - 随附的 xAI 包装器会在发送原生 xAI 请求前移除不受支持的严格工具模式标志和推理 *effort* 载荷键。只有
+      `grok-4.3` / `grok-4.3-*` 声明可配置的推理 effort；所有
+      其他具备推理能力的 xAI 模型仍会请求
+      `include: ["reasoning.encrypted_content"]`，以便之前加密的推理可以在后续轮次中重放。
     - `web_search`、`x_search` 和 `code_execution` 作为 OpenClaw
-      工具暴露。OpenClaw 会在每个工具请求中启用其所需的特定 xAI 内置能力，而不是把所有原生工具都附加到每一轮聊天中。
-    - Grok 的 `web_search` 会读取 `plugins.entries.xai.config.webSearch.baseUrl`。
-      `x_search` 会读取 `plugins.entries.xai.config.xSearch.baseUrl`，然后
-      回退到 Grok 网页搜索基础 URL。
-    - `x_search` 和 `code_execution` 由捆绑的 xAI 插件负责，而不是硬编码到核心模型运行时中。
+      工具暴露。OpenClaw 会在每个工具请求内启用所需的特定 xAI 内置能力，而不是将所有原生工具都附加到每一轮聊天中。
+    - Grok `web_search` 读取 `plugins.entries.xai.config.webSearch.baseUrl`。
+      `x_search` 读取 `plugins.entries.xai.config.xSearch.baseUrl`，然后
+      回退到 Grok web-search 基础 URL。
+    - `x_search` 和 `code_execution` 归随附的 xAI 插件所有，
+      而不是硬编码到核心模型运行时中。
     - `code_execution` 是远程 xAI 沙箱执行，不是本地
       [`exec`](/tools/exec)。
   </Accordion>

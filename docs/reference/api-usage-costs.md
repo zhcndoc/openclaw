@@ -24,14 +24,14 @@ title: "API 用量与成本"
 
 **单条消息成本页脚**
 
-- `/usage full` 会为每条回复附加使用情况页脚，包括在为当前模型配置了本地价格且
-  使用情况元数据可用时的**估算成本**。
+- `/usage full` 会在每条回复后附加使用情况页脚，包括在为活动模型配置了本地价格且
+  可获得使用情况元数据时显示的**估算成本**。
 - `/usage tokens` 仅显示 token；订阅式 OAuth/token 和 CLI 流程
-  仍然只显示 token，除非该运行时提供兼容的使用情况元数据，
-  并且配置了明确的本地价格。
-- Gemini CLI 说明：当 CLI 返回 JSON 输出时，OpenClaw 会从
-  `stats` 中读取使用情况，将 `stats.cached` 规范化为 `cacheRead`，并在需要时
-  通过 `stats.input_tokens - stats.cached` 推导输入 token。
+  仍然只显示 token，除非该运行时提供兼容的使用情况元数据
+  且显式配置了本地价格。
+- Gemini CLI 说明：默认的 `stream-json` 输出和旧版 JSON 覆盖
+  都会从 `stats` 读取使用情况，将 `stats.cached` 归一化为 `cacheRead`，并在需要时
+  从 `stats.input_tokens - stats.cached` 推导输入 token。
 
 Anthropic 说明：Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法
 已再次被允许，因此除非 Anthropic 发布新的政策，OpenClaw 会将 Claude CLI 复用和
@@ -121,18 +121,18 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 
 `web_search` 可能会根据你的提供方产生使用费用：
 
-- **Brave 搜索 API**: `BRAVE_API_KEY` 或 `plugins.entries.brave.config.webSearch.apiKey`
-- **Exa**: `EXA_API_KEY` 或 `plugins.entries.exa.config.webSearch.apiKey`
-- **Firecrawl**: `FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webSearch.apiKey`
-- **Gemini（Google 搜索）**: `GEMINI_API_KEY` 或 `plugins.entries.google.config.webSearch.apiKey`
-- **Grok（xAI）**: xAI OAuth 配置文件、`XAI_API_KEY`，或 `plugins.entries.xai.config.webSearch.apiKey`
-- **Kimi（Moonshot）**: `KIMI_API_KEY`、`MOONSHOT_API_KEY`，或 `plugins.entries.moonshot.config.webSearch.apiKey`
-- **MiniMax Search**: `MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`、`MINIMAX_API_KEY`，或 `plugins.entries.minimax.config.webSearch.apiKey`
-- **Ollama Web Search**: 对于可访问且已登录的本地 Ollama 主机可免密钥；直接的 `https://ollama.com` 搜索使用 `OLLAMA_API_KEY`，受认证保护的主机可以复用普通 Ollama 提供方 Bearer 认证
-- **Perplexity Search API**: `PERPLEXITY_API_KEY`、`OPENROUTER_API_KEY`，或 `plugins.entries.perplexity.config.webSearch.apiKey`
-- **Tavily**: `TAVILY_API_KEY` 或 `plugins.entries.tavily.config.webSearch.apiKey`
-- **DuckDuckGo**: 免密钥回退（无 API 计费，但属于非官方且基于 HTML）
-- **SearXNG**: `SEARXNG_BASE_URL` 或 `plugins.entries.searxng.config.webSearch.baseUrl`（免密钥/自托管；无托管 API 计费）
+- **Brave Search API**: `BRAVE_API_KEY` or `plugins.entries.brave.config.webSearch.apiKey`
+- **Exa**: `EXA_API_KEY` or `plugins.entries.exa.config.webSearch.apiKey`
+- **Firecrawl**: `FIRECRAWL_API_KEY` or `plugins.entries.firecrawl.config.webSearch.apiKey`
+- **Gemini (Google Search)**: `GEMINI_API_KEY` or `plugins.entries.google.config.webSearch.apiKey`
+- **Grok (xAI)**: xAI OAuth profile, `XAI_API_KEY`, or `plugins.entries.xai.config.webSearch.apiKey`
+- **Kimi (Moonshot)**: `KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `plugins.entries.moonshot.config.webSearch.apiKey`
+- **MiniMax Search**: `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, `MINIMAX_API_KEY`, or `plugins.entries.minimax.config.webSearch.apiKey`
+- **Ollama Web Search**: key-free for a reachable signed-in local Ollama host; direct `https://ollama.com` search uses `OLLAMA_API_KEY`, and auth-protected hosts can reuse normal Ollama provider bearer auth
+- **Perplexity Search API**: `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, or `plugins.entries.perplexity.config.webSearch.apiKey`
+- **Tavily**: `TAVILY_API_KEY` or `plugins.entries.tavily.config.webSearch.apiKey`
+- **DuckDuckGo**: key-free provider when explicitly selected (no API billing, but unofficial and HTML-based)
+- **SearXNG**: `SEARXNG_BASE_URL` or `plugins.entries.searxng.config.webSearch.baseUrl` (key-free/self-hosted; no hosted API billing)
 
 旧的 `tools.web.search.*` 提供方路径仍会通过临时兼容层加载，但它们已不再是推荐的配置入口。
 
@@ -145,7 +145,8 @@ Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
 
 ### 5) 网页抓取工具（Firecrawl）
 
-`web_fetch` 在存在 API key 时可以调用 **Firecrawl**：
+`web_fetch` 可以使用带有免费入门访问权限的 **Firecrawl**。添加 API 密钥
+可获得更高额度：
 
 - `FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webFetch.apiKey`
 

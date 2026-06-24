@@ -1,8 +1,9 @@
 ---
 summary: "Firecrawl 搜索、抓取和 web_fetch 回退"
 read_when:
-  - 你希望使用 Firecrawl 支持的网页提取
-  - 你需要 Firecrawl API 密钥
+  - 你想要使用 Firecrawl 支持的网页提取
+  - 你想要无需密钥的 Firecrawl web_fetch
+  - 你需要 Firecrawl API 密钥来进行搜索或获取更高限额
   - 你想将 Firecrawl 作为 web_search 提供方
   - 你想为 web_fetch 使用反爬虫提取
 title: "Firecrawl"
@@ -17,10 +18,20 @@ OpenClaw 可以通过三种方式使用 **Firecrawl**：
 它是一项托管式提取/搜索服务，支持绕过机器人检测和缓存，
 这有助于处理 JS 密集型站点或阻止普通 HTTP 抓取的页面。
 
-## 获取 API 密钥
+## 安装插件
 
-1. 创建 Firecrawl 账户并生成一个 API 密钥。
-2. 将其存储在配置中，或在网关环境中设置 `FIRECRAWL_API_KEY`。
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/firecrawl-plugin
+openclaw gateway restart
+```
+
+## 无密钥 web_fetch 和 API 密钥
+
+显式选择的托管 Firecrawl `web_fetch` 回退支持无需 API 密钥的入门访问。可在 gateway 环境中添加 `FIRECRAWL_API_KEY`，
+或者在需要更高限额时进行配置。Firecrawl `web_search` 和
+`firecrawl_scrape` 需要 API 密钥。
 
 ## 配置 Firecrawl 搜索
 
@@ -51,23 +62,29 @@ OpenClaw 可以通过三种方式使用 **Firecrawl**：
 
 注意：
 
-- 在 onboarding 中选择 Firecrawl，或使用 `openclaw configure --section web`，会自动启用捆绑的 Firecrawl 插件。
+- 在 onboarding 中选择 Firecrawl，或使用 `openclaw configure --section web`，会自动启用已安装的 Firecrawl 插件。
 - 使用 Firecrawl 的 `web_search` 支持 `query` 和 `count`。
-- 若需使用 Firecrawl 特有的控制项，如 `sources`、`categories` 或结果抓取，请使用 `firecrawl_search`。
-- `baseUrl` 默认指向托管版 Firecrawl：`https://api.firecrawl.dev`。仅允许将自托管覆盖用于私有/内部端点；只有针对这些私有目标时才接受 HTTP。
-- `FIRECRAWL_BASE_URL` 是 Firecrawl 搜索和抓取 base URL 的共享环境变量回退值。
+- 对于 `sources`、`categories` 或结果抓取等 Firecrawl 特定控制，请使用 `firecrawl_search`。
+- `baseUrl` 默认指向托管的 Firecrawl：`https://api.firecrawl.dev`。仅允许针对私有/内部端点使用自托管覆盖；HTTP 仅对这些私有目标被接受。
+- `FIRECRAWL_BASE_URL` 是 Firecrawl 搜索和抓取 base URL 的共享环境变量回退。
 
-## 配置 Firecrawl 抓取 + web_fetch 回退
+## 配置 Firecrawl web_fetch 回退
 
 ```json5
 {
+  tools: {
+    web: {
+      fetch: {
+        provider: "firecrawl", // 显式选择会启用无密钥回退
+      },
+    },
+  },
   plugins: {
     entries: {
       firecrawl: {
         enabled: true,
         config: {
           webFetch: {
-            apiKey: "FIRECRAWL_API_KEY_HERE",
             baseUrl: "https://api.firecrawl.dev",
             onlyMainContent: true,
             maxAgeMs: 172800000,
@@ -82,13 +99,15 @@ OpenClaw 可以通过三种方式使用 **Firecrawl**：
 
 注意：
 
-- 只有在可用 API 密钥时，才会执行 Firecrawl 回退尝试（`plugins.entries.firecrawl.config.webFetch.apiKey` 或 `FIRECRAWL_API_KEY`）。
-- `maxAgeMs` 控制缓存结果可有多旧（毫秒）。默认值为 2 天。
+- 显式选择的 Firecrawl `web_fetch` 回退无需 API 密钥即可工作。配置后，OpenClaw 会发送 `plugins.entries.firecrawl.config.webFetch.apiKey` 或 `FIRECRAWL_API_KEY` 以获取更高限额。
+- 在 onboarding 期间选择 Firecrawl，或使用 `openclaw configure --section web`，会启用该插件并为 `web_fetch` 选择 Firecrawl，除非已配置了其他 fetch 提供方。
+- `firecrawl_scrape` 需要 API 密钥。
+- `maxAgeMs` 控制缓存结果可有多旧（毫秒）。默认是 2 天。
 - 旧版 `tools.web.fetch.firecrawl.*` 配置会由 `openclaw doctor --fix` 自动迁移。
-- Firecrawl 抓取/base URL 覆盖遵循与搜索相同的托管/私有规则：公开托管流量使用 `https://api.firecrawl.dev`；自托管覆盖必须解析到私有/内部端点。
-- `firecrawl_scrape` 在将目标 URL 转发给 Firecrawl 之前，会拒绝明显的私有、回环、元数据以及非 HTTP(S) 目标 URL，这与显式 Firecrawl 抓取调用的 `web_fetch` 目标安全契约一致。
+- Firecrawl 抓取/base URL 覆盖遵循与搜索相同的托管/私有规则：公共托管流量使用 `https://api.firecrawl.dev`；自托管覆盖必须解析到私有/内部端点。
+- `firecrawl_scrape` 在转发到 Firecrawl 之前，会拒绝明显的私有、回环、元数据以及非 HTTP(S) 目标 URL，这与显式 Firecrawl 抓取调用的 `web_fetch` 目标安全契约一致。
 
-`firecrawl_scrape` 会复用相同的 `plugins.entries.firecrawl.config.webFetch.*` 设置和环境变量。
+`firecrawl_scrape` 会复用相同的 `plugins.entries.firecrawl.config.webFetch.*` 设置和环境变量，包括其必需的 API 密钥。
 
 ### 自托管 Firecrawl
 
@@ -138,12 +157,11 @@ OpenClaw 对 Firecrawl 请求始终使用 `proxy: "auto"` 并附带 `storeInCach
 `web_fetch` 提取顺序：
 
 1. Readability（本地）
-2. Firecrawl（如果被选中，或被自动检测为当前的 web-fetch 回退）
-3. 基础 HTML 清理（最后回退）
+2. Firecrawl（在被选择时，或从已配置凭据中自动检测到时）
+3. 基础 HTML 清理（最后的回退）
 
-选择开关是 `tools.web.fetch.provider`。如果你省略它，OpenClaw 会根据可用凭据
-自动检测第一个可用的 web-fetch 提供方。
-目前内置提供方是 Firecrawl。
+选择开关是 `tools.web.fetch.provider`。如果你省略它，OpenClaw 会从可用凭据中自动检测第一个可用的 web-fetch 提供方。
+官方 Firecrawl 插件提供了该回退。
 
 ## 相关内容
 

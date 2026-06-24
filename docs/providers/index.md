@@ -33,6 +33,7 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Cerebras](/providers/cerebras)
 - [Chutes](/providers/chutes)
+- [Cohere](/providers/cohere)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [ComfyUI](/providers/comfy)
 - [DeepSeek](/providers/deepseek)

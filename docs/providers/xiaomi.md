@@ -84,8 +84,8 @@ Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 内置了一个 Xiaomi 
 
 | Model ref                         | Input       | Context   | Max output | Reasoning | Notes         |
 | --------------------------------- | ----------- | --------- | ---------- | --------- | ------------- |
-| `xiaomi-token-plan/mimo-v2.5-pro` | text        | 1,048,576 | 32,000     | Yes       | 默认模型      |
-| `xiaomi-token-plan/mimo-v2.5`     | text, image | 1,048,576 | 32,000     | Yes       | 多模态       |
+| `xiaomi-token-plan/mimo-v2.5-pro` | text        | 1,048,576 | 131,072    | Yes       | 默认模型       |
+| `xiaomi-token-plan/mimo-v2.5`     | text, image | 1,048,576 | 131,072    | Yes       | 多模态       |
 
 <Tip>
 Token Plan onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按需付费路径，或将 `sk-...` 密钥输入 Token Plan 路径时发出警告。
@@ -221,7 +221,7 @@ Token Plan：
             reasoning: true,
             input: ["text"],
             contextWindow: 1048576,
-            maxTokens: 32000,
+            maxTokens: 131072,
           },
           {
             id: "mimo-v2.5",
@@ -229,7 +229,7 @@ Token Plan：
             reasoning: true,
             input: ["text", "image"],
             contextWindow: 1048576,
-            maxTokens: 32000,
+            maxTokens: 131072,
           },
         ],
       },

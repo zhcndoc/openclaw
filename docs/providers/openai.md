@@ -92,21 +92,23 @@ OpenClaw 运行时配置仍可作为可选的兼容路线使用。当 OpenClaw �
 | 嵌入                    | 内存嵌入提供方                                                                                 | 是                                                                     |
 
 <Note>
-  OpenAI Realtime 语音（由 Voice Call 的 `realtime.provider: "openai"` 和
-  使用 `talk.realtime.provider: "openai"` 的 Control UI Talk）通过
-  公开的 **OpenAI Platform Realtime API** 运行，费用计入 OpenAI
-  Platform credits，而不是 Codex/ChatGPT 订阅额度。即使一个账户的 OpenAI OAuth 正常，
-  能够无问题运行基于 Codex 的聊天模型，若同一个 OpenAI 组织没有设置 Platform 计费，
-  在第一次 Realtime 回合时仍然可能遇到 `insufficient_quota` / "You exceeded your current
-  quota"。
+  OpenAI Realtime voice (used by Voice Call's `realtime.provider: "openai"` and
+  Control UI Talk with `talk.realtime.provider: "openai"`) goes through the
+  public **OpenAI Platform Realtime API**, which is billed against OpenAI
+  Platform credits rather than Codex/ChatGPT subscription quota. An account
+  with healthy OpenAI OAuth that runs Codex-backed chat models without issue
+  still needs an OpenAI API-key auth profile or a Platform API key with funded
+  Platform billing for Realtime voice.
 
 修复方法：为支持你的 realtime 凭据的组织在
 [platform.openai.com/account/billing](https://platform.openai.com/account/billing)
-补充 Platform credits。Realtime 既可以接受 Platform `OPENAI_API_KEY`（通过
-`talk.realtime.providers.openai.apiKey` 为 Control UI Talk 配置，或通过
-`plugins.entries.voice-call.config.realtime.providers.openai.apiKey`
-为 Voice Call 配置），也可以接受底层组织已开通 Platform 计费的 `openai` OAuth 配置文件——两种路径都会通过 Platform API 生成 Realtime 客户端密钥，因此无论哪种方式，组织都需要有足额的 Platform credits。对于聊天回合，你仍然可以在同一个
-OpenClaw 安装中使用基于 Codex 的 `openai/*` 模型；Realtime 是唯一需要 Platform 计费的路径。
+for the organization backing your realtime credentials. Realtime voice accepts
+the `openai` API-key auth profile created by `openclaw onboard --auth-choice openai-api-key`,
+a Platform `OPENAI_API_KEY` configured via `talk.realtime.providers.openai.apiKey`
+for Control UI Talk, `plugins.entries.voice-call.config.realtime.providers.openai.apiKey`
+for Voice Call, or the `OPENAI_API_KEY` environment variable. OpenAI OAuth
+profiles can still run Codex-backed `openai/*` chat models in the same
+OpenClaw install, but they do not configure Realtime voice.
 </Note>
 
 ## 内存嵌入
@@ -168,7 +170,7 @@ OpenClaw 可以使用 OpenAI，或 OpenAI 兼容的嵌入端点，来进行
     | ---------------------- | -------------------------- | --------------------------- | ---------------- |
     | `openai/gpt-5.5`      | omitted / provider/model `agentRuntime.id: "codex"` | Codex app-server harness | 与 Codex 兼容的 OpenAI 配置文件 |
     | `openai/gpt-5.4-mini` | omitted / provider/model `agentRuntime.id: "codex"` | Codex app-server harness | 与 Codex 兼容的 OpenAI 配置文件 |
-    | `openai/gpt-5.5`      | provider/model `agentRuntime.id: "openclaw"`              | OpenClaw embedded runtime      | 选定的 `openai` 配置文件 |
+    | `openai/gpt-5.5`      | provider/model `agentRuntime.id: "openclaw"`              | OpenClaw 嵌入式运行时      | 选定的 `openai` 配置文件 |
 
     <Note>
     `openai/*` 代理模型使用 Codex app-server 宿主。若要为代理模型使用 API 密钥
@@ -480,9 +482,11 @@ openclaw infer image generate \
   --json
 ```
 
-当从输入文件开始进行编辑时，请在
-`openclaw infer image edit` 中使用相同的 `--output-format` 和 `--background` 标志。
-`--openai-background` 仍然可作为 OpenAI 专用别名使用。
+在从输入文件开始时，对 `openclaw infer image edit` 使用相同的 `--output-format` 和 `--background` 标志。
+`--openai-background` 仍然可以作为 OpenAI 专用别名使用。
+当你需要控制 OpenAI Images 质量和成本时，请使用 `--quality low|medium|high|auto`。
+使用 `--openai-moderation low|auto` 以从 `image generate` 或 `image edit` 传递 OpenAI 的
+提供方特定审核提示。
 
 对于 ChatGPT/Codex OAuth 安装，请保持相同的 `openai/gpt-image-2` 引用。当
 配置了 `openai` OAuth 配置文件时，OpenClaw 会解析该存储的 OAuth
@@ -620,7 +624,7 @@ GPT-5 贡献为在人格持久性、执行安全、工具纪律、输出形态�
     ```
 
     <Note>
-    将 `OPENAI_TTS_BASE_URL` 设置为可在不影响聊天 API 端点的情况下覆盖 TTS base URL。OpenAI TTS 仍通过 API key 配置；对于仅 OAuth 的实时对话，请改用 Realtime 语音路径，而不是 agent 模式的 STT -> TTS 语音。
+    将 `OPENAI_TTS_BASE_URL` 设置为可在不影响聊天 API 端点的情况下覆盖 TTS base URL。OpenAI TTS 和 Realtime 语音都通过 OpenAI Platform API key 配置；仅 OAuth 安装仍然可以使用 Codex 支持的聊天模型，但不能使用 OpenAI live talk-back。
     </Note>
 
   </Accordion>
@@ -687,7 +691,7 @@ GPT-5 贡献为在人格持久性、执行安全、工具纪律、输出形态�
     | Silence duration | `...openai.silenceDurationMs` | `500` |
     | Prefix padding | `...openai.prefixPaddingMs` | `300` |
     | Reasoning effort | `...openai.reasoningEffort` | (unset) |
-    | Auth | `...openai.apiKey`, `OPENAI_API_KEY`，或 `openai` OAuth | Browser Talk 和非 Azure backend bridges 可使用 OpenAI OAuth |
+    | Auth | `openai` API-key auth profile, `...openai.apiKey`, or `OPENAI_API_KEY` | OpenAI Platform API key required; OpenAI OAuth does not configure Realtime voice |
 
     `gpt-realtime-2` 可用的内置 Realtime 声音：`alloy`、`ash`、
     `ballad`、`coral`、`echo`、`sage`、`shimmer`、`verse`、`marin`、`cedar`。
@@ -706,12 +710,7 @@ GPT-5 贡献为在人格持久性、执行安全、工具纪律、输出形态�
     </Note>
 
     <Note>
-    Control UI Talk 使用 OpenAI 浏览器 realtime 会话，配合 Gateway 生成的
-    临时 client secret，以及直接浏览器 WebRTC SDP 与
-    OpenAI Realtime API 的交换。当未配置直接的 OpenAI API key 时，
-    Gateway 可以使用所选的 `openai` OAuth 配置文件生成该 client secret。
-    Gateway relay 和 Voice Call backend realtime WebSocket 桥接在原生
-    OpenAI 端点上使用相同的 OAuth 回退。维护者可通过
+    Control UI Talk 使用带有 Gateway 签发的临时 client secret 的 OpenAI 浏览器 realtime 会话，并通过直接的浏览器 WebRTC SDP 交换连接到 OpenAI Realtime API。Gateway 使用所选的 `openai` API-key auth profile 或已配置的 OpenAI Platform API key 签发该 client secret。Gateway relay 和 Voice Call backend realtime WebSocket 桥接对原生 OpenAI 端点使用相同的仅 API key 认证路径。维护者在线验证可通过
     `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`;
     进行在线验证；OpenAI 路径会在不记录密钥的情况下验证后端 WebSocket 桥接和浏览器 WebRTC SDP 交换。
     </Note>
@@ -871,17 +870,17 @@ OpenClaw 的隐藏归因请求头——请参见 [高级配置](#advanced-config
   <Accordion title="快速模式">
     OpenClaw 为 `openai/*` 提供一个共享的快速模式开关：
 
-    - **聊天/UI：** `/fast status|on|off`
-    - **配置：** `agents.defaults.models["<provider>/<model>"].params.fastMode`
+    - **Chat/UI:** `/fast status|auto|on|off`
+    - **Config:** `agents.defaults.models["<provider>/<model>"].params.fastMode`
 
-    启用后，OpenClaw 会将快速模式映射为 OpenAI 的优先处理（`service_tier = "priority"`）。现有的 `service_tier` 值会被保留，并且快速模式不会重写 `reasoning` 或 `text.verbosity`。
+    启用后，OpenClaw 会将快速模式映射为 OpenAI 优先处理（`service_tier = "priority"`）。现有的 `service_tier` 值会被保留，快速模式不会重写 `reasoning` 或 `text.verbosity`。`fastMode: "auto"` 会让新的模型调用在自动截止时间之前保持快速模式，然后让后续的重试、回退、工具结果或续接调用不再使用快速模式。截止时间默认是 60 秒；可在活动模型上设置 `params.fastAutoOnSeconds` 来修改。
 
     ```json5
     {
       agents: {
         defaults: {
           models: {
-            "openai/gpt-5.5": { params: { fastMode: true } },
+            "openai/gpt-5.5": { params: { fastMode: "auto", fastAutoOnSeconds: 30 } },
           },
         },
       },
@@ -998,11 +997,12 @@ OpenClaw 的隐藏归因请求头——请参见 [高级配置](#advanced-config
     }
     ```
 
-    使用 `strict-agentic` 时，OpenClaw：
-    - 当存在可用工具操作时，不再将仅规划的一轮视为成功进展
-    - 使用“立即执行”引导重试该轮
-    - 为较大的工作自动启用 `update_plan`
-    - 如果模型持续规划而不执行，则显示明确的阻塞状态
+    在 `strict-agentic` 下，OpenClaw：
+    - 自动为大量工作启用 `update_plan`
+    - 使用可见答案的续接方式重试结构上为空或仅推理的轮次
+    - 当所选执行框架提供显式框架计划事件时，使用这些事件
+
+    OpenClaw 不会根据助手的自然语言内容来判断某一轮是计划、进度更新还是最终答案。
 
     <Note>
     仅适用于 OpenAI 和 Codex 的 GPT-5 系列运行。其他提供程序和较旧的模型系列保持默认行为。

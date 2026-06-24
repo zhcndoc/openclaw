@@ -74,9 +74,9 @@ openclaw gateway call node.list --params "{}"
 官方分发的 iOS 构建使用外部推送 relay，而不是将原始 APNs
 token 发布给 gateway。
 
-默认情况下，官方/TestFlight 构建和 gateway 使用托管 relay：`https://ios-push-relay.openclaw.ai`。
+官方/TestFlight 构建来自公开 App Store 发布通道时，会使用托管 relay：`https://ios-push-relay.openclaw.ai`。
 
-自定义 relay 部署可以覆盖 gateway relay URL：
+自定义 relay 部署需要一条刻意分离的 iOS 构建/部署路径，其 relay URL 必须与 gateway relay URL 匹配。公开 App Store 发布通道不接受自定义 relay URL 覆盖。如果你使用的是自定义 relay 构建，请设置匹配的 gateway relay URL：
 
 ```json5
 {
@@ -95,12 +95,12 @@ token 发布给 gateway。
 流程如下：
 
 - iOS 应用使用 App Attest 和 StoreKit 应用交易 JWS 向 relay 注册。
-- relay 返回一个不透明的 relay handle 以及一个注册作用域内的发送授权。
-- iOS 应用获取已配对的 gateway 身份，并将其包含在 relay 注册中，因此 relay 支持的注册会委派给该特定 gateway。
-- 应用通过 `push.apns.register` 将该 relay 支持的注册转发给已配对的 gateway。
-- gateway 使用该已存储的 relay handle 处理 `push.test`、后台唤醒和唤醒提示。
-- 自定义 gateway relay URL 必须与官方/TestFlight iOS 构建中内置的 relay URL 匹配。
-- 如果应用之后连接到不同的 gateway，或连接到具有不同 relay base URL 的构建，它会刷新 relay 注册，而不是重用旧绑定。
+- relay 返回一个不透明的 relay handle，以及一个以注册为作用域的发送授权。
+- iOS 应用获取已配对的 gateway 身份，并将其包含在 relay 注册中，因此基于 relay 的注册会委派给该特定 gateway。
+- 应用通过 `push.apns.register` 将该基于 relay 的注册转发给已配对的 gateway。
+- gateway 对 `push.test`、后台唤醒和唤醒提示使用该已存储的 relay handle。
+- 自定义 gateway relay URL 必须与写入 iOS 构建中的 relay URL 一致。
+- 如果应用之后连接到另一个 gateway，或连接到使用不同 relay base URL 的构建，它会刷新 relay 注册，而不是重用旧绑定。
 
 此路径下 gateway **不需要**：
 
@@ -110,10 +110,10 @@ token 发布给 gateway。
 预期的操作流程：
 
 1. 安装官方/TestFlight iOS 构建。
-2. 可选：仅在使用自定义 relay 部署时，在 gateway 上设置 `gateway.push.apns.relay.baseUrl`。
-3. 将应用与 gateway 配对并等待其完成连接。
-4. 在应用获得 APNs token、操作员会话已连接且 relay 注册成功后，应用会自动发布 `push.apns.register`。
-5. 之后，`push.test`、重连唤醒和唤醒提示都可以使用已存储的 relay 支持注册。
+2. 可选：仅当使用刻意分离的自定义 relay 构建时，才在 gateway 上设置 `gateway.push.apns.relay.baseUrl`。
+3. 将应用与 gateway 配对，并让其完成连接。
+4. 当应用获得 APNs token、操作员会话已连接且 relay 注册成功后，应用会自动发布 `push.apns.register`。
+5. 之后，`push.test`、重连唤醒和唤醒提示都可以使用已存储的基于 relay 的注册。
 
 ## 后台存活信标
 
@@ -125,7 +125,7 @@ gateway 只有在已知经过认证的节点设备身份后，才会将此记录
 兼容性说明：
 
 - `OPENCLAW_APNS_RELAY_BASE_URL` 仍可作为 gateway 的临时环境变量覆盖。
-- `OPENCLAW_PUSH_RELAY_BASE_URL` 仍可作为官方/TestFlight iOS 构建的临时环境变量覆盖。
+- 公共 App Store 发布通道会拒绝 iOS 构建使用 `OPENCLAW_PUSH_RELAY_BASE_URL`。
 
 ## 认证与信任流程
 
@@ -185,9 +185,9 @@ export OPENCLAW_APNS_KEY_ID="KEYID"
 export OPENCLAW_APNS_PRIVATE_KEY_P8="$(cat /path/to/AuthKey_KEYID.p8)"
 ```
 
-这些是 gateway 主机的运行时环境变量，不是 Fastlane 设置。`apps/ios/fastlane/.env` 只存储
-App Store Connect / TestFlight 认证信息，例如 `ASC_KEY_ID` 和 `ASC_ISSUER_ID`；
-它不为本地 iOS 构建配置直接 APNs 投递。
+这些是 gateway 主机运行时环境变量，不是 Fastlane 设置。`apps/ios/fastlane/.env` 只存储
+App Store Connect / TestFlight 认证信息，例如 `APP_STORE_CONNECT_KEY_ID` 和
+`APP_STORE_CONNECT_ISSUER_ID`；它不会为本地 iOS 构建配置直接 APNs 投递。
 
 推荐的 gateway 主机存储方式：
 

@@ -59,6 +59,14 @@ export CLICKCLACK_BOT_TOKEN="ccb_..."
 openclaw gateway
 ```
 
+如果 `plugins.allow` 是一个非空的受限列表，在频道设置中显式选择
+ClickClack，或运行 `openclaw plugins enable clickclack`
+会把 `clickclack` 追加到该列表。引导安装使用相同的
+显式选择行为。这些路径不会覆盖 `plugins.deny` 或
+全局的 `plugins.enabled: false` 设置。直接执行
+`openclaw plugins install @openclaw/clickclack` 会遵循正常的
+插件安装策略，并且也会在现有 allowlist 中记录 ClickClack。
+
 ## 多个 bot
 
 每个账户都会打开自己的 ClickClack 实时连接，并使用各自的 bot token。

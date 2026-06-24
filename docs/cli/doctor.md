@@ -165,9 +165,7 @@ repair?(ctx, findings) -> HealthRepairResult
 | `ocPath`          | 当检查可以指向一个精确 `oc://` 地址时使用。            |
 | `fixHint`         | 建议的操作员动作或修复摘要。                           |
 
-此版本在结构化健康路径上注册了现代化的核心 doctor 检查。
-`openclaw/plugin-sdk/health` 子路径为捆绑的后续消费者暴露相同契约，
-但基于插件的检查只有在其所属包在当前命令路径中注册后才会运行。
+现代化核心 doctor 检查仍然附着在其所属的有序 doctor 贡献项上，并由其负责对应的人类可见 `doctor` / `doctor --fix` 行为。共享的结构化健康注册表是扩展点：当内置检查和由插件支持的检查在其所属包向当前命令路径注册后，它们会在核心 doctor 检查之后运行。`openclaw/plugin-sdk/health` 子路径为这些扩展消费者暴露了相同的契约。
 
 ## 检查选择
 
@@ -184,7 +182,7 @@ id 未被注册，则该 id 不会运行任何检查；请使用命令的 `check
 
 ## 升级后模式
 
-`openclaw doctor --post-upgrade` 会运行面向构建或升级后串联使用的插件兼容性探测。发现项会输出到 stdout；如果任何发现项的 `level` 为 `"error"`，命令将以退出码 1 退出。添加 `--json` 可接收适合 CI、社区 `fork-upgrade` 技能以及其他升级后冒烟工具使用的机器可读封装（`{ probesRun, findings }`）。如果已安装的插件索引缺失或格式错误，JSON 模式仍会输出该封装，并附带一个 `plugin.index_unavailable` 错误发现。
+`openclaw doctor --post-upgrade` 会运行面向构建或升级后串联使用的插件兼容性探测。发现项会输出到 stdout；如果任何发现项的 `level` 为 `"error"`，命令将以退出码 1 退出。添加 `--json` 可接收适合 CI、社区 `fork-upgrade` 技能以及其他升级后烟雾测试工具使用的机器可读封装（`{ probesRun, findings }`）。如果已安装的插件索引缺失或格式错误，JSON 模式仍会输出该封装，并附带一个 `plugin.index_unavailable` 错误发现。
 
 注意：
 
@@ -223,7 +221,7 @@ id 未被注册，则该 id 不会运行任何检查；请使用命令的 `check
 
 ## macOS: `launchctl` 环境变量覆盖
 
-如果你之前运行过 `launchctl setenv OPENCLAW_GATEWAY_TOKEN ...`（或 `...PASSWORD`），该值会覆盖你的配置文件，并可能导致持续的“未经授权”错误。
+如果你之前运行过 `launchctl setenv OPENCLAW_GATEWAY_TOKEN ...`（或 `...PASSWORD`），该值会覆盖你的配置文件，并可能导致持续的“未授权”错误。
 
 ```bash
 launchctl getenv OPENCLAW_GATEWAY_TOKEN

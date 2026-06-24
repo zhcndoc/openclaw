@@ -10,15 +10,19 @@ sidebarTitle: "MCP"
 
 `openclaw mcp` 有两个职责：
 
-- 使用 `openclaw mcp serve` 将 OpenClaw 作为一个 MCP 服务器运行
-- 使用 `list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 管理 OpenClaw 拥有的出站 MCP 服务器定义
+- 使用 `openclaw mcp serve` 将 OpenClaw 作为 MCP 服务器运行
+- 使用 `list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 管理 OpenClaw 托管的出站 MCP 服务器定义
 
 换句话说：
 
 - `serve` 是 OpenClaw 作为 MCP 服务器运行
 - 其他子命令则是 OpenClaw 作为 MCP 客户端侧注册表，用于管理其运行时后续可能消费的 MCP 服务器
 
-当 OpenClaw 应该自行托管一个编码 harness 会话并通过 ACP 路由该运行时时，请改用 [`openclaw acp`](/cli/acp)。
+<Note>
+  `list`、`show`、`set` 和 `unset` 只会读取和写入 OpenClaw 配置中的 OpenClaw 托管 `mcp.servers` 条目。它们不包含来自 `config/mcporter.json` 的 mcporter 服务器；请使用 `mcporter list` 查看该注册表。
+</Note>
+
+当 OpenClaw 应该自行托管编码 harness 会话，并将该运行时通过 ACP 路由时，请使用 [`openclaw acp`](/cli/acp)。
 
 ## 选择合适的 MCP 路径
 
@@ -363,12 +367,11 @@ pnpm test:docker:mcp-channels
   </Accordion>
 </AccordionGroup>
 
-我会保留原始 Markdown/HTML 结构，只翻译可见文本，并确保代码块里只动注释。现在开始逐段处理并保持格式不变。## 作为 MCP 客户端注册表的 OpenClaw
+## 作为 MCP 客户端注册表的 OpenClaw
 
-这是 `openclaw mcp list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、
-`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 路径。
+这是 `openclaw mcp list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 路径。
 
-这些命令不会通过 MCP 暴露 OpenClaw。它们管理 OpenClaw 配置中 `mcp.servers` 下由 OpenClaw 拥有的 MCP 服务器定义。
+这些命令不会通过 MCP 暴露 OpenClaw。它们管理 OpenClaw 配置中 `mcp.servers` 下由 OpenClaw 托管的 MCP 服务器定义。它们不会从 `config/mcporter.json` 读取 mcporter 服务器。
 
 这些已保存的定义适用于 OpenClaw 之后会启动或配置的运行时，例如嵌入式 OpenClaw 和其他运行时适配器。OpenClaw 将这些定义集中存储，因此这些运行时无需维护各自重复的 MCP 服务器列表。
 
@@ -664,7 +667,7 @@ openclaw mcp unset context7
 <Warning>
 **Stdio 环境变量安全过滤器**
 
-OpenClaw 会拒绝那些可能在第一次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境变量键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4` 以及类似的运行时控制变量。启动时会以配置错误拒绝这些变量，这样它们就无法向 stdio 进程注入隐式前导代码、替换解释器、启用调试器或重定向运行时输出。普通的凭据、代理和服务器特定环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
+OpenClaw 会拒绝那些会在第一次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境变量键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `BASHOPTS`、`FPATH`、`KSH_ENV`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4`、`TCLLIBPATH` 以及类似的运行时控制变量。启动时会以配置错误拒绝这些变量，因此它们不能注入隐式前导、替换解释器、启用调试器，或将运行时输出重定向到 stdio 进程之外。普通凭据、代理和特定服务器的环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
 
 如果你的 MCP 服务器确实需要其中某个被阻止的变量，请将其设置在网关主机进程上，而不是放在 stdio 服务器的 `env` 下。
 </Warning>
@@ -819,7 +822,7 @@ OpenClaw 配置使用 `transport: "streamable-http"` 作为规范写法。通过
 
 说明：
 
-- 命令片段会给服务器名称加引号，因此即使是不常见的名称，在 shell 中也能方便复制
+- 命令片段会给服务器名称加引号，因此即使是不常见的名称，在 shell 中也很方便复制
 - 当显示的类 URL 值包含嵌入式凭据时，会在渲染前进行脱敏
 - 该页面不会自行启动 MCP 传输
 - 活动运行时可能需要 `openclaw mcp reload`、Gateway 配置发布或进程重启，具体取决于哪个进程持有 MCP 客户端

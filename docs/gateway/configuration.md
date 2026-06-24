@@ -330,9 +330,9 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
   </Accordion>
 
   <Accordion title="Enable relay-backed push for official iOS builds">
-    Relay-backed push uses the hosted OpenClaw relay by default: `https://ios-push-relay.openclaw.ai`.
+    Relay-backed push for public App Store/TestFlight builds uses the hosted OpenClaw relay: `https://ios-push-relay.openclaw.ai`.
 
-    To use a custom relay, set this in gateway config:
+    Custom relay deployments require a deliberately separate iOS build/deployment path whose relay URL matches the gateway relay URL. If you are using a custom relay build, set this in gateway config:
 
     ```json5
     {
@@ -358,16 +358,16 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
     这会做什么：
 
-    - 让 gateway 可以通过外部中继发送 `push.test`、唤醒提示以及重连唤醒。
-    - 使用由配对的 iOS 应用转发的注册范围发送授权。Gateway 不需要部署范围的中继令牌。
-    - 将每个中继支持的注册绑定到 iOS 应用所配对的 gateway 身份，因此其他 gateway 不能复用已存储的注册。
-    - 让本地/手动 iOS 构建继续直接使用 APNs。中继支持的发送仅适用于通过中继注册的官方分发构建。
-    - 必须与官方/TestFlight iOS 构建中内置的中继基础 URL 匹配，因此注册和发送流量会到达同一个中继部署。
+    - Lets the gateway send `push.test`, wake nudges, and reconnect wakes through the external relay.
+    - Uses a registration-scoped send grant forwarded by the paired iOS app. The gateway does not need a deployment-wide relay token.
+    - Binds each relay-backed registration to the gateway identity that the iOS app paired with, so another gateway cannot reuse the stored registration.
+    - Keeps local/manual iOS builds on direct APNs. Relay-backed sends apply only to official distributed builds that registered through the relay.
+    - Must match the relay base URL baked into the iOS build, so registration and send traffic reach the same relay deployment.
 
     端到端流程：
 
     1. Install an official/TestFlight iOS build.
-    2. Optional: configure `gateway.push.apns.relay.baseUrl` on the gateway only when using a custom relay deployment.
+    2. Optional: configure `gateway.push.apns.relay.baseUrl` on the gateway only when using a deliberately separate custom relay build.
     3. Pair the iOS app to the gateway and let both node and operator sessions connect.
     4. The iOS app fetches the gateway identity, registers with the relay using App Attest plus the app receipt, and then publishes the relay-backed `push.apns.register` payload to the paired gateway.
     5. The gateway stores the relay handle and send grant, then uses them for `push.test`, wake nudges, and reconnect wakes.
@@ -380,7 +380,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     兼容性说明：
 
     - `OPENCLAW_APNS_RELAY_BASE_URL` and `OPENCLAW_APNS_RELAY_TIMEOUT_MS` still work as temporary env overrides.
-    - Custom gateway relay URLs must match the relay base URL baked into the official/TestFlight iOS build.
+    - Custom gateway relay URLs must match the relay base URL baked into the iOS build. The public App Store release lane rejects custom iOS relay URL overrides.
     - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` remains a loopback-only development escape hatch; do not persist HTTP relay URLs in config.
 
     有关端到端流程，请参阅 [iOS 应用](/platforms/ios#relay-backed-push-for-official-builds)；有关中继安全模型，请参阅 [认证与信任流程](/platforms/ios#authentication-and-trust-flow)。
@@ -583,13 +583,11 @@ doctor --fix` 进行修复。请参阅 [Gateway 故障排查](/gateway/troublesh
 
 对于通过 gateway API 写入配置的工具，建议使用以下流程：
 
-- `config.schema.lookup` 用于检查一个子树（浅层 schema 节点 + 子节点
-  摘要）
+- `config.schema.lookup` 用于检查某个子树（浅层 schema 节点 + 子节点摘要）
 - `config.get` 用于获取当前快照以及 `hash`
-- `config.patch` 用于部分更新（JSON merge patch：对象合并，`null`
-  删除，数组替换）
+- `config.patch` 用于部分更新（JSON merge patch：对象合并，`null` 删除，数组在通过 `replacePaths` 明确确认且条目会被移除时才替换）
 - `config.apply` 仅在你打算替换整个配置时使用
-- `update.run` 用于显式自更新并重启；当重启后的会话应运行一次后续回合时，请包含 `continuationMessage`
+- `update.run` 用于显式自更新并重启；如果重启后的会话应继续执行一次后续轮次，请包含 `continuationMessage`
 - `update.status` 用于检查最新的更新重启哨兵，并在重启后验证正在运行的版本
 
 Agents 应将 `config.schema.lookup` 视为获取精确
@@ -616,6 +614,9 @@ openclaw gateway call config.patch --params '{
 `config.apply` 和 `config.patch` 都接受 `raw`、`baseHash`、`sessionKey`、
 `note` 和 `restartDelayMs`。当
 配置已存在时，这两种方法都需要 `baseHash`。
+
+`config.patch` 还接受 `replacePaths`，这是一个配置路径数组，用于表明数组替换是有意为之的。如果某个补丁会用更少的条目替换或删除现有数组，除非该精确路径出现在 `replacePaths` 中，否则 Gateway 会拒绝写入；数组条目下的嵌套数组使用 `[]` 表示，例如
+`agents.list[].skills`。这可以防止被截断的 `config.get` 快照在不知不觉中覆盖路由或 allowlist 数组。若你打算替换完整配置，请使用 `config.apply`。
 
 ## 环境变量
 

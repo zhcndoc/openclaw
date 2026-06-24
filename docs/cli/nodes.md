@@ -1,9 +1,9 @@
 ---
-summary: "openclaw nodes 的 CLI 参考（状态、配对、调用、摄像头/画布/屏幕）"
+summary: "openclaw nodes CLI 参考（状态、配对、调用、摄像头/画布/屏幕）"
 read_when:
   - 你正在管理已配对的节点（摄像头、屏幕、画布）
   - 你需要批准请求或调用节点命令
-title: "Nodes"
+title: "节点"
 ---
 
 # `openclaw nodes`
@@ -36,10 +36,14 @@ openclaw nodes status --connected
 openclaw nodes status --last-connected 24h
 ```
 
-`nodes list` 会输出待处理/已配对的表格。已配对的行会包含最近一次连接的时长（Last Connect）。
+`nodes list` 会打印待处理/已配对表。已配对行包含最近一次连接时长（Last Connect）。
 使用 `--connected` 仅显示当前已连接的节点。使用 `--last-connected <duration>` 可
-筛选在某个时长内连接过的节点（例如 `24h`、`7d`）。
-使用 `nodes remove --node <id|name|ip>` 可删除过时的、由网关持有的节点配对记录。
+筛选在指定时长内连接过的节点（例如 `24h`、`7d`）。
+使用 `nodes remove --node <id|name|ip>` 可移除节点配对。对于由设备支持的节点，这会撤销
+设备在 `devices/paired.json` 中的 `node` 角色，并断开其 node-role 会话（混合角色设备会保留
+其记录行，仅失去 `node` 角色；仅 node 设备会被删除）；同时也会清除任何匹配的旧版
+gateway 拥有的节点配对记录。`operator.pairing` 可以移除非 operator 的节点记录；设备令牌调用方
+若在混合角色设备上撤销自己的 node 角色，则还需要 `operator.admin`。
 
 批准说明：
 
@@ -66,9 +70,9 @@ openclaw nodes invoke --node <id|name|ip> --command <command> --params <json>
 - `--idempotency-key <key>`：可选的幂等键。
 - `system.run` 和 `system.run.prepare` 在这里被阻止；请使用带 `host=node` 的 `exec` 工具执行 shell。
 
-For shell execution on a node, use the `exec` tool with `host=node` instead of `openclaw nodes run`.
-The `nodes` CLI is now capability-focused: direct RPC via `nodes invoke`, plus pairing, camera,
-screen, location, Canvas, and notifications. Canvas commands are implemented by the bundled experimental Canvas plugin; core keeps a compatibility hook so they remain under `openclaw nodes canvas`.
+对于节点上的 shell 执行，请使用带 `host=node` 的 `exec` 工具，而不是 `openclaw nodes run`。
+`nodes` CLI 现在以能力为中心：通过 `nodes invoke` 直接 RPC，以及配对、摄像头、
+屏幕、位置、Canvas 和通知。Canvas 命令由捆绑的实验性 Canvas 插件实现；核心保留了兼容性钩子，因此它们仍然位于 `openclaw nodes canvas` 下。
 
 ## 相关
 

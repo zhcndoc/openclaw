@@ -110,10 +110,10 @@ title: "命令队列"
 
 ## 故障排查
 
-- 如果命令看起来卡住了，请启用详细日志并查找 “queued for ...ms” 行，以确认队列正在清空。
-- 如果需要队列深度，请启用详细日志并观察队列计时行。
-- 接受一个 turn 之后就停止输出进度的 Codex app-server 运行，会被 Codex 适配器中断，这样活跃会话 lane 就能释放，而不是一直等到外层运行超时。
-- 启用诊断后，若会话在 `diagnostics.stuckSessionWarnMs` 之后仍处于 `processing`，且没有观察到回复、工具、状态、块或 ACP 进度，则会按当前活动类型分类。活跃工作会记录为 `session.long_running`；没有近期进度的活跃工作会记录为 `session.stalled`；`session.stuck` 仅保留给可恢复的陈旧会话账本状态，包括处于空闲排队且存在陈旧无主模型/工具活动的会话，并且只有该路径才能释放受影响的会话 lane 以便排队工作继续流动。当会话保持不变时，重复的 `session.stuck` 诊断会退避。
+- 如果命令看起来卡住了，请启用详细日志并查看 “queued for ...ms” 行，以确认队列正在被清空。
+- 如果你需要队列深度，请启用详细日志并查看队列计时行。
+- 接受了一个轮次然后停止输出进度的 Codex app-server 运行会被 Codex 适配器中断，这样活动会话 lane 就可以释放，而不是等待外层运行超时。
+- 启用诊断后，若会话在 `diagnostics.stuckSessionWarnMs` 之后仍处于 `processing`，且没有观测到回复、工具、状态、块或 ACP 进度，则会根据当前活动进行分类。活跃工作会记录为 `session.long_running`；受控的静默模型调用在 `diagnostics.stuckSessionAbortMs` 之前也会保持为 `session.long_running`，以免过早将缓慢或非流式提供方报告为卡住。没有近期进度的活跃工作会记录为 `session.stalled`；受控模型调用在达到或超过中止阈值后切换为 `session.stalled`，而无主的过期模型/工具活动只要不是长期运行就不会被隐藏。`session.stuck` 仅保留给可恢复的过期会话账本状态，包括带有过期无主模型/工具活动的空闲排队会话，且只有这一路径才能释放受影响的会话 lane，以便排队工作得以继续清空。只要会话未发生变化，重复的 `session.stuck` 诊断会退避。
 
 ## 相关内容
 

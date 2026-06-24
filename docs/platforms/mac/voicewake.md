@@ -7,6 +7,10 @@ title: "语音唤醒（macOS）"
 
 # 语音唤醒与按住说话
 
+## 要求
+
+语音唤醒和按住说话需要 macOS 26 或更高版本。在较旧的 macOS 版本中，这些控件会从 Voice 设置页面中隐藏，页面会显示 macOS 26 的要求。
+
 ## 模式
 
 - **唤醒词模式**（默认）：始终开启的语音识别器等待触发标记（`swabbleTriggerWords`）。匹配后它会开始捕获，显示带有部分文本的浮层，并在静音后自动发送。
@@ -14,13 +18,13 @@ title: "语音唤醒（macOS）"
 
 ## 运行时行为（唤醒词）
 
-- Speech recognizer lives in `VoiceWakeRuntime`.
-- Trigger only fires when there's a **meaningful pause** between the wake word and the next word (~0.55s gap). The overlay/chime can start on the pause even before the command begins.
-- Silence windows: 2.0s when speech is flowing, 5.0s if only the trigger was heard.
-- Hard stop: 120s to prevent runaway sessions.
-- Debounce between sessions: 350ms.
-- Overlay is driven via `VoiceWakeOverlayController` with committed/volatile coloring.
-- After send, recognizer restarts cleanly to listen for the next trigger.
+- 语音识别器运行在 `VoiceWakeRuntime` 中。
+- 仅当唤醒词和下一个词之间存在**明显停顿**时才会触发（约 0.55 秒间隔）。浮层/提示音可以在停顿期间开始，甚至在命令开始之前。
+- 静音窗口：在语音持续流动时为 2.0 秒；如果只听到了触发词，则为 5.0 秒。
+- 强制停止：120 秒，防止会话失控。
+- 会话之间的防抖：350 毫秒。
+- 浮层由 `VoiceWakeOverlayController` 驱动，使用已提交/临时文本着色。
+- 发送后，识别器会干净地重启，以便监听下一个触发词。
 
 ## 生命周期不变量
 
@@ -29,7 +33,7 @@ title: "语音唤醒（macOS）"
 
 ## 卡住的浮层失败模式（之前）
 
-Previously, if the overlay got stuck visible and you manually closed it, Voice Wake could appear "dead" because the runtime's restart attempt could be blocked by overlay visibility and no subsequent restart was scheduled.
+此前，如果浮层卡在可见状态，而你手动关闭它，Voice Wake 可能看起来像“死掉了”，因为运行时的重启尝试会被浮层可见性阻止，并且不会安排后续重启。
 
 加固措施：
 
@@ -47,10 +51,10 @@ Previously, if the overlay got stuck visible and you manually closed it, Voice W
 ## 面向用户的设置
 
 - **Voice Wake** 开关：启用唤醒词运行时。
-- **Hold Cmd+Fn to talk**：启用按住说话监视器。macOS < 26 上禁用。
-- 语言与麦克风选择器、实时电平表、触发词表、测试器（仅本地；不会转发）。
-- 如果设备断开连接，麦克风选择器会保留上一次选择，显示断开提示，并临时回退到系统默认，直到设备恢复。
-- **Sounds**：触发检测和发送时的提示音；默认使用 macOS 的 “Glass” 系统声音。你可以为每个事件选择任何可被 `NSSound` 加载的文件（例如 MP3/WAV/AIFF），或选择 **No Sound**。
+- **按住右侧 Option 说话**：启用按住说话监视器。
+- 语言和麦克风选择器、实时电平表、触发词表、测试器（仅本地；不会转发）。
+- 如果设备断开连接，麦克风选择器会保留上次选择，显示断开提示，并在设备恢复前临时回退到系统默认设备。
+- **声音**：在检测到触发词和发送时播放提示音；默认使用 macOS 的“Glass”系统声音。你可以为每个事件选择任何可由 `NSSound` 加载的文件（例如 MP3/WAV/AIFF），或者选择 **无声音**。
 
 ## 转发行为
 
@@ -63,8 +67,8 @@ Previously, if the overlay got stuck visible and you manually closed it, Voice W
 
 ## 快速验证
 
-- 打开按住说话，按住 Cmd+Fn，说话，松开：浮层应先显示部分结果，然后发送。
-- 按住时，菜单栏耳朵图标应保持放大（使用 `triggerVoiceEars(ttl:nil)`）；松开后会恢复。
+- 打开按住说话，按住右侧 Option，说话，松开：浮层应先显示部分识别结果，然后发送。
+- 按住期间，菜单栏 ears 应保持放大（使用 `triggerVoiceEars(ttl:nil)`）；松开后会恢复。
 
 ## 相关
 

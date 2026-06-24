@@ -16,7 +16,7 @@ title: "WhatsApp 插件"
 
 ## 接入层
 
-channels: whatsapp
+channels: whatsapp; skills
 
 ## 相关文档
 

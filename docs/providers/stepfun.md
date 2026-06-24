@@ -6,7 +6,7 @@ read_when:
 title: "StepFun"
 ---
 
-OpenClaw 包含一个内置的 StepFun 提供方插件，并提供两个 provider id：
+StepFun 提供方插件支持两个 provider id：
 
 - `stepfun` 用于标准端点
 - `stepfun-plan` 用于 Step Plan 端点
@@ -15,7 +15,16 @@ OpenClaw 包含一个内置的 StepFun 提供方插件，并提供两个 provide
 标准版和 Step Plan 是**独立的提供方**，它们的端点和模型 ref 前缀不同（`stepfun/...` vs `stepfun-plan/...`）。`.com` 端点请使用中国密钥，`.ai` 端点请使用全球密钥。
 </Warning>
 
-## 区域与端点概览
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/stepfun-provider
+openclaw gateway restart
+```
+
+## 区域和端点概览
 
 | Endpoint  | China (`.com`)                         | Global (`.ai`)                        |
 | --------- | -------------------------------------- | ------------------------------------- |
@@ -198,10 +207,10 @@ Step Plan (`stepfun-plan`)：
     ```
   </Accordion>
 
-  <Accordion title="说明">
-    - 该提供方已随 OpenClaw 一起打包，因此无需单独安装插件。
-    - `step-3.5-flash-2603` 目前仅在 `stepfun-plan` 上开放。
-    - 一次认证流程会为 `stepfun` 和 `stepfun-plan` 写入区域匹配的配置文件，因此两个入口可以一起被发现。
+  <Accordion title="备注">
+    - 该提供方是一个官方外部包；请在设置前先安装。
+    - `step-3.5-flash-2603` 当前仅在 `stepfun-plan` 上可用。
+    - 单一认证流程会为 `stepfun` 和 `stepfun-plan` 都写入与区域匹配的配置文件，因此两个入口可以一起被发现。
     - 使用 `openclaw models list` 和 `openclaw models set <provider/model>` 来查看或切换模型。
 
   </Accordion>

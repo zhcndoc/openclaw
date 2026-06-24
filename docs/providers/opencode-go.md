@@ -10,11 +10,11 @@ OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。
 它使用与 Zen 目录相同的 `OPENCODE_API_KEY`，但保留运行时
 提供方 id `opencode-go`，以便上游按模型路由保持正确。
 
-| Property         | Value                           |
-| ---------------- | ------------------------------- |
-| Runtime provider | `opencode-go`                   |
-| Auth             | `OPENCODE_API_KEY`              |
-| Parent setup     | [OpenCode](/providers/opencode) |
+| 属性              | 值                              |
+| ----------------- | ------------------------------- |
+| 运行时提供方      | `opencode-go`                   |
+| 认证              | `OPENCODE_API_KEY`              |
+| 父级设置          | [OpenCode](/providers/opencode) |
 
 ## 内置目录
 
@@ -24,12 +24,14 @@ OpenClaw 大部分 Go 目录行来自内置的 OpenClaw 模型注册表，
 
 该提供方包含：
 
-| Model ref                       | Name                  |
+| 模型引用                        | 名称                  |
 | ------------------------------- | --------------------- |
 | `opencode-go/glm-5`             | GLM-5                 |
 | `opencode-go/glm-5.1`           | GLM-5.1               |
+| `opencode-go/glm-5.2`           | GLM-5.2               |
 | `opencode-go/kimi-k2.5`         | Kimi K2.5             |
 | `opencode-go/kimi-k2.6`         | Kimi K2.6 (3x limits) |
+| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 Code        |
 | `opencode-go/deepseek-v4-pro`   | DeepSeek V4 Pro       |
 | `opencode-go/deepseek-v4-flash` | DeepSeek V4 Flash     |
 | `opencode-go/mimo-v2-omni`      | MiMo V2 Omni          |
@@ -38,6 +40,8 @@ OpenClaw 大部分 Go 目录行来自内置的 OpenClaw 模型注册表，
 | `opencode-go/minimax-m2.7`      | MiniMax M2.7          |
 | `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus          |
 | `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus          |
+
+GLM-5.2 使用 1M-token 上下文窗口，并支持最多 131K 输出 token。
 
 ## 入门
 

@@ -53,7 +53,7 @@ openclaw gateway install
 openclaw configure
 ```
 
-出现提示时选择 **Gateway service**。
+出现提示时选择 **Gateway 服务**。
 
 修复/迁移：
 
@@ -85,6 +85,7 @@ RestartSec=5
 TimeoutStopSec=30
 TimeoutStartSec=30
 SuccessExitStatus=0 143
+OOMPolicy=continue
 KillMode=control-group
 
 [Install]
@@ -125,7 +126,10 @@ cat /proc/<child-pid>/oom_score_adj
 
 受覆盖子进程的预期值为 `1000`。Gateway 进程应保持其正常分数，通常为 `0`。
 
-这不能替代正常的内存调优。如果 VPS 或容器反复杀死子进程，请提高内存限制、降低并发度，或添加更强的资源控制，例如 systemd `MemoryMax=` 或容器级内存限制。
+推荐的 systemd 单元还设置了 `OOMPolicy=continue`。当 OOM 杀手选择了一个短暂的子进程时，这会保持 Gateway 单元存活；
+子命令/会话可以失败并报告错误，而不会让 systemd 将整个 gateway 服务标记为失败并重启所有通道。
+
+这并不能替代正常的内存调优。如果 VPS 或容器反复杀死子进程，请增加内存限制、降低并发，或添加更强的资源控制，例如 systemd `MemoryMax=` 或容器级内存限制。
 
 ## 相关内容
 

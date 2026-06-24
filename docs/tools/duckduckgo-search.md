@@ -1,9 +1,9 @@
 ---
-summary: "DuckDuckGo 网页搜索 -- 无密钥回退提供程序（实验性，基于 HTML）"
+summary: "DuckDuckGo 网络搜索 -- 无密钥提供程序（实验性，基于 HTML）"
 read_when:
-  - 你想要一个不需要 API 密钥的网页搜索提供程序
-  - 你想将 DuckDuckGo 用于 web_search
-  - 你需要一个零配置的搜索回退方案
+  - 你想要一个不需要 API 密钥的网络搜索提供程序
+  - 你想在 web_search 中使用 DuckDuckGo
+  - 你想显式选择一个无密钥搜索提供程序
 title: "DuckDuckGo 搜索"
 ---
 
@@ -51,7 +51,7 @@ OpenClaw 支持 DuckDuckGo 作为一个**无密钥**的 `web_search` 提供程�
         config: {
           webSearch: {
             region: "us-en", // DuckDuckGo 地区代码
-            safeSearch: "moderate", // "strict"、"moderate" 或 "off"
+            safeSearch: "moderate", // "严格"、"适中" 或 "关闭"
           },
         },
       },
@@ -83,15 +83,15 @@ SafeSearch 级别。
 
 ## 注意事项
 
-- **无需 API 密钥** - 开箱即用，零配置
+- **无 API 密钥** - 选择 DuckDuckGo 作为你的 `web_search`
+  提供程序后即可使用
 - **实验性** - 从 DuckDuckGo 的非 JavaScript HTML
-  搜索页面中收集结果，不是官方 API 或 SDK
-- **存在机器人挑战风险** - 在高负载或自动化使用下，DuckDuckGo 可能会提供 CAPTCHA 或阻止请求
-- **HTML 解析** - 结果依赖于页面结构，可能会在没有
-  通知的情况下发生变化
-- **自动检测顺序** - DuckDuckGo 是自动检测中第一个无密钥回退项
-  （顺序 100）。带已配置密钥的 API 提供程序会先运行，然后是 Ollama Web Search（顺序 110），再然后是 SearXNG（顺序 200）
-- **SafeSearch 默认为 moderate**，当未配置时
+  搜索页面获取结果，而不是官方 API 或 SDK
+- **机器人挑战风险** - DuckDuckGo 可能在高频或自动化使用时返回 CAPTCHA 或阻止请求
+- **HTML 解析** - 结果依赖于页面结构，而页面结构可能在没有
+  通知的情况下更改
+- **显式选择** - 当没有配置基于 API 的提供程序时，OpenClaw 不会自动选择 DuckDuckGo
+- **未配置时 SafeSearch 默认为适中**
 
 <Tip>
   对于生产环境使用，建议考虑 [Brave Search](/tools/brave-search)（提供免费层级）

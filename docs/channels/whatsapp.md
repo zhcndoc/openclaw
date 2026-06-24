@@ -158,17 +158,17 @@ OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（�
 ## 运行时模型
 
 - Gateway 拥有 WhatsApp socket 和重连循环。
-- 重连看门狗使用 WhatsApp Web 传输活动，而不只是入站应用消息量，因此安静的已链接设备会话不会仅因为最近没人发消息就被重启。更长的应用静默上限仍会在传输帧持续到达但在看门狗窗口内没有处理应用消息时强制重连；对于最近活跃的会话发生临时重连后，该应用静默检查会在第一个恢复窗口中使用正常消息超时。
-- Baileys socket 时序在 `web.whatsapp.*` 下是显式配置的：`keepAliveIntervalMs` 控制 WhatsApp Web 应用 ping，`connectTimeoutMs` 控制打开握手超时，`defaultQueryTimeoutMs` 控制 Baileys 查询超时。
+- 重连看门狗使用的是 WhatsApp Web 传输活动，而不仅仅是入站 app-message 数量，因此静默的已链接设备会话不会因为最近没人发消息就被重启。更长的应用静默上限仍会在传输帧持续到达但在看门狗窗口内没有处理任何应用消息时强制重连；对于近期活跃会话发生一次短暂重连后，该应用静默检查会在第一个恢复窗口中使用普通消息超时。
+- Baileys socket 时序在 `web.whatsapp.*` 下显式配置：`keepAliveIntervalMs` 控制 WhatsApp Web 应用 ping，`connectTimeoutMs` 控制建立连接握手超时，`defaultQueryTimeoutMs` 控制 Baileys 查询等待时间以及 OpenClaw 本地出站发送/presence 和入站已读回执操作边界。
 - 出站发送需要目标账号处于活动的 WhatsApp 监听状态。
-- 群组发送会在文本和媒体字幕中为 `@+<digits>` 和 `@<digits>` 标记附加原生提及元数据，只要该标记与当前 WhatsApp 参与者元数据匹配即可，包括基于 LID 的群组。
+- 群组发送会在文本和媒体说明中的 `@+<digits>` 与 `@<digits>` 标记匹配当前 WhatsApp 参与者元数据时附加原生提及元数据，包括基于 LID 的群组。
 - 状态和广播聊天会被忽略（`@status`、`@broadcast`）。
-- 重连看门狗跟随 WhatsApp Web 传输活动，而不只是入站应用消息量：在传输帧持续时，安静的已链接设备会话会保持在线，但传输停滞会在后续远程断开路径之前很早触发重连。
-- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DM 折叠到代理主会话）。
-- 群组会话彼此隔离（`agent:<agentId>:whatsapp:group:<jid>`）。
-- WhatsApp Channels/Newsletters 可以作为显式出站目标，并使用其原生 `@newsletter` JID。出站 newsletter 发送使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 会话语义。
-- WhatsApp Web 传输会在 gateway 主机上遵循标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
-- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复送达后清除 WhatsApp 的 ack 反应。
+- 重连看门狗遵循的是 WhatsApp Web 传输活动，而不仅仅是入站 app-message 数量：只要传输帧持续，安静的已链接设备会话就会保持在线，但如果传输停滞，则会在稍后远程断开路径之前很久就强制重连。
+- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DMs 折叠到代理主会话）。
+- 群组会话是隔离的（`agent:<agentId>:whatsapp:group:<jid>`）。
+- WhatsApp 频道/新闻简报可以作为显式出站目标，使用其原生 `@newsletter` JID。出站新闻简报发送使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 会话语义。
+- WhatsApp Web 传输会遵守 gateway 主机上的标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
+- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复投递后清除 WhatsApp ack 反应。
 
 ## 审批提示
 
@@ -306,6 +306,40 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
 
   </Tab>
 </Tabs>
+
+## 已配置的 ACP 绑定
+
+WhatsApp 支持带顶层 `bindings[]` 条目的持久化 ACP 绑定：
+
+```json5
+{
+  bindings: [
+    {
+      type: "acp",
+      agentId: "codex",
+      match: {
+        channel: "whatsapp",
+        accountId: "work",
+        peer: { kind: "direct", id: "+15555550123" },
+      },
+    },
+    {
+      type: "acp",
+      agentId: "codex",
+      match: {
+        channel: "whatsapp",
+        accountId: "work",
+        peer: { kind: "group", id: "120363424282127706@g.us" },
+      },
+    },
+  ],
+}
+```
+
+- 直接聊天匹配 E.164 号码，例如 `+15555550123`。
+- 群组匹配 WhatsApp 群组 JID，例如 `120363424282127706@g.us`。
+- 群组白名单、发送者策略以及提及或激活门控会在 OpenClaw 确保已配置的 ACP 会话存在之前运行。
+- 匹配到的已配置 ACP 绑定拥有该路由。WhatsApp 广播群组不会将该轮扇出到普通 WhatsApp 会话。
 
 ## 个人号码与自聊行为
 

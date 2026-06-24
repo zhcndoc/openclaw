@@ -17,7 +17,16 @@ read_when:
 | API      | 与 OpenAI 兼容                                                                     |
 | 基础 URL | `https://api.arcee.ai/api/v1`（直接）或 `https://openrouter.ai/api/v1`（OpenRouter） |
 
-## 开始使用
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/arcee-provider
+openclaw gateway restart
+```
+
+## 快速开始
 
 <Tabs>
   <Tab title="直接方式（Arcee 平台）">
@@ -96,7 +105,7 @@ read_when:
 
 ## 内置目录
 
-OpenClaw 当前附带以下内置的 Arcee 目录：
+OpenClaw 目前随附此 Arcee 静态目录：
 
 | 模型引用                      | 名称                   | 输入 | 上下文 | 成本（每 100 万输入/输出） | 备注                                     |
 | ------------------------------ | ---------------------- | ----- | ------- | -------------------- | ----------------------------------------- |
@@ -112,10 +121,10 @@ OpenClaw 当前附带以下内置的 Arcee 目录：
 
 | 功能                                       | 支持情况                                    |
 | --------------------------------------------- | -------------------------------------------- |
-| 流式输出                                     | Yes                                          |
-| 工具使用 / 函数调用                   | Yes (Trinity Mini, Trinity Large Preview)    |
-| 结构化输出（JSON 模式和 JSON Schema） | Yes                                          |
-| 扩展思考                             | Yes (Trinity Large Thinking; tools disabled) |
+| 流式输出                                     | 是                                          |
+| 工具使用 / 函数调用                   | 是（Trinity Mini、Trinity Large Preview）    |
+| 结构化输出（JSON 模式和 JSON Schema） | 是                                          |
+| 扩展思考                             | 是（Trinity Large Thinking；已禁用工具） |
 
 <AccordionGroup>
   <Accordion title="环境说明">

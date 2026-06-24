@@ -10,6 +10,15 @@ title: "Exa 搜索"
 OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
 提供神经、关键词和混合搜索模式，并内置内容提取（高亮、文本、摘要）。
 
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/exa-plugin
+openclaw gateway restart
+```
+
 ## 获取 API 密钥
 
 <Steps>
@@ -108,7 +117,7 @@ await web_search({
 });
 ```
 
-| Contents option | Type                                                                  | Description            |
+| 内容选项 | 类型                                                                  | 描述            |
 | --------------- | --------------------------------------------------------------------- | ---------------------- |
 | `text`          | `boolean \| { maxCharacters }`                                        | 提取完整页面文本 |
 | `highlights`    | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | 提取关键句子  |
@@ -116,7 +125,7 @@ await web_search({
 
 ### 搜索模式
 
-| Mode             | Description                       |
+| 模式             | 描述                       |
 | ---------------- | --------------------------------- |
 | `auto`           | Exa 选择最佳模式（默认） |
 | `neural`         | 语义/基于含义的搜索     |

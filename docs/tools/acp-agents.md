@@ -313,7 +313,8 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
 - **Discord channel/thread:** `match.channel="discord"` + `match.peer.id="<channelOrThreadId>"`
 - **Slack channel/DM:** `match.channel="slack"` + `match.peer.id="<channelId|channel:<channelId>|#<channelId>|userId|user:<userId>|slack:<userId>|<@userId>>"`. 优先使用稳定的 Slack id；频道绑定也会匹配该频道线程中的回复。
 - **Telegram forum topic:** `match.channel="telegram"` + `match.peer.id="<chatId>:topic:<topicId>"`
-- **iMessage DM/group:** `match.channel="imessage"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`。稳定的群组绑定优先使用 `chat_id:*`。
+- **WhatsApp DM/group:** `match.channel="whatsapp"` + `match.peer.id="<E.164|group JID>"`. 直接聊天请使用 E.164 号码，例如 `+15555550123`；群组请使用 WhatsApp 群组 JID，例如 `120363424282127706@g.us`。
+- **iMessage DM/group:** `match.channel="imessage"` + `match.peer.id="<handle|chat_id:*|chat_guid:*|chat_identifier:*>"`. 稳定的群组绑定优先使用 `chat_id:*`。
 
 </ParamField>
 <ParamField path="bindings[].agentId" type="string">
@@ -430,12 +431,13 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
 
 ### 行为
 
-- OpenClaw 会确保配置的 ACP 会话在使用前已存在。
-- 该频道或主题中的消息会路由到配置的 ACP 会话。
-- 在绑定对话中，`/new` 和 `/reset` 会在原地重置同一个 ACP 会话 key。
-- 临时运行时绑定（例如由 thread-focus 流程创建的绑定）在存在时仍然适用。
-- 对于没有显式 `cwd` 的跨 agent ACP spawn，OpenClaw 会从 agent 配置继承目标 agent 工作区。
-- 缺失的继承工作区路径会回退到后端默认 cwd；非缺失的访问失败会作为 spawn 错误返回。
+- OpenClaw 确保在特定频道接入检查之后、使用之前，配置的 ACP 会话已经存在。
+- 该频道、主题或聊天中的消息会路由到配置的 ACP 会话。
+- 已配置的 ACP 绑定拥有其会话路由。频道广播扇出不会替代匹配绑定所对应的配置 ACP 会话。
+- 在已绑定的对话中，`/new` 和 `/reset` 会就地重置同一个 ACP 会话 key。
+- 临时运行时绑定（例如由 thread-focus 流程创建）在存在时仍然适用。
+- 对于未显式指定 `cwd` 的跨 agent ACP spawn，OpenClaw 会从 agent 配置继承目标 agent 工作区。
+- 缺失的继承工作区路径会回退到后端默认 cwd；真实的访问失败会作为 spawn 错误暴露出来。
 
 ## 启动 ACP 会话
 
@@ -510,41 +512,27 @@ CLI 后端是独立的纯文本本地回退运行时 - 另见
   继续一个已有的 ACP 会话，而不是创建新的会话。agent 会通过 `session/load` 回放其对话历史。需要 `runtime: "acp"`。
 </ParamField>
 <ParamField path="streamTo" type='"parent"'>
-  `"parent"` streams initial ACP run progress summaries back to the
-  requester session as system events. Accepted responses include
-  `streamLogPath` pointing to a session-scoped JSONL log
-  (`<sessionId>.acp-stream.jsonl`) you can tail for full relay history.
-  Parent progress streams show assistant commentary and ACP status progress by
-  default unless `streaming.progress.commentary=false`. Discord also defaults
-  parent previews to progress mode when no stream mode is configured. Status
-  progress still honors `acp.stream.tagVisibility`, so tags such as `plan`
-  remain hidden unless explicitly enabled.
+  `"parent"` 会将初始 ACP 运行进度摘要作为系统事件流回请求者会话。接受的响应包括
+  `streamLogPath`，它指向一个会话范围的 JSONL 日志
+  （`<sessionId>.acp-stream.jsonl`），你可以 tail 它来查看完整的转发历史。
+  默认情况下，父级进度流会显示助手评论和 ACP 状态进展，除非 `streaming.progress.commentary=false`。在未配置流模式时，Discord 也会默认将父级预览切换为进度模式。状态进度仍然遵循 `acp.stream.tagVisibility`，因此像 `plan` 这样的标签会保持隐藏，除非显式启用。
 </ParamField>
 
-ACP `sessions_spawn` runs use `agents.defaults.subagents.runTimeoutSeconds` for
-their default child turn limit. The tool does not accept per-call timeout
-overrides.
+ACP `sessions_spawn` 运行会使用 `agents.defaults.subagents.runTimeoutSeconds` 作为
+其默认子回合时限。该工具不接受按调用设置的超时覆盖。
 
 <ParamField path="model" type="string">
-  Explicit model override for the ACP child session. Codex ACP spawns
-  normalize OpenAI refs such as `openai/gpt-5.4` to Codex ACP startup
-  config before `session/new`; slash forms such as `openai/gpt-5.4/high`
-  also set Codex ACP reasoning effort.
-  When omitted, `sessions_spawn({ runtime: "acp" })` uses existing
-  subagent model defaults (`agents.defaults.subagents.model` or
-  `agents.list[].subagents.model`) when configured; otherwise it lets the
-  ACP harness use its own default model.
-  Other harnesses must advertise ACP `models` and support
-  `session/set_model`; otherwise OpenClaw/acpx fails clearly instead of
-  silently falling back to the target agent default.
+  ACP 子会话的显式模型覆盖。Codex ACP spawn 会在 `session/new` 之前将 `openai/gpt-5.4` 之类的 OpenAI 引用规范化为 Codex ACP 启动配置；像 `openai/gpt-5.4/high` 这样的斜杠形式还会设置 Codex ACP 的推理力度。
+  如果省略，`sessions_spawn({ runtime: "acp" })` 会在已配置时使用现有的子代理模型默认值（`agents.defaults.subagents.model` 或
+  `agents.list[].subagents.model`）；否则它会让 ACP harness 使用自己的默认模型。
+  其他 harness 必须声明 ACP `models` 并支持 `session/set_model`；否则 OpenClaw/acpx 会清晰失败，而不会静默回退到目标 agent 默认值。
 </ParamField>
 <ParamField path="thinking" type="string">
-  Explicit thinking/reasoning effort. For Codex ACP, `minimal` maps to
-  low effort, `low`/`medium`/`high`/`xhigh` map directly, and `off`
-  omits the reasoning-effort startup override.
-  When omitted, ACP spawns use existing subagent thinking defaults and
-  per-model `agents.defaults.models["provider/model"].params.thinking`
-  for the selected model.
+  显式的思考/推理力度。对于 Codex ACP，`minimal` 映射到
+  low effort，`low`/`medium`/`high`/`xhigh` 直接映射，而 `off`
+  则省略推理力度启动覆盖。
+  如果省略，ACP spawn 会使用现有子代理的思考默认值，以及所选模型对应的
+  每模型 `agents.defaults.models["provider/model"].params.thinking`。
 </ParamField>
 
 ## Spawn 的 bind 和 thread 模式
@@ -746,12 +734,12 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 
 | Command                      | Maps to                              | Notes                                                                                                                                                                                                      |
 | ---------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/acp model <id>`            | runtime config key `model`           | For Codex ACP, OpenClaw normalizes `openai/<model>` to the adapter model id and maps slash reasoning suffixes such as `openai/gpt-5.4/high` to `reasoning_effort`.                                         |
-| `/acp set thinking <level>`  | canonical option `thinking`          | OpenClaw sends the backend-advertised equivalent when present, preferring `thinking`, then `effort`, `reasoning_effort`, or `thought_level`. For Codex ACP, the adapter maps values to `reasoning_effort`. |
-| `/acp permissions <profile>` | canonical option `permissionProfile` | OpenClaw sends the backend-advertised equivalent when present, such as `approval_policy`, `permission_profile`, `permissions`, or `permission_mode`.                                                       |
-| `/acp timeout <seconds>`     | canonical option `timeoutSeconds`    | OpenClaw sends the backend-advertised equivalent when present, such as `timeout` or `timeout_seconds`.                                                                                                     |
-| `/acp cwd <path>`            | runtime cwd override                 | Direct update.                                                                                                                                                                                             |
-| `/acp set <key> <value>`     | generic                              | `key=cwd` uses the cwd override path.                                                                                                                                                                      |
+| `/acp model <id>`            | runtime config key `model`           | 对于 Codex ACP，OpenClaw 会将 `openai/<model>` 规范化为适配器模型 id，并将诸如 `openai/gpt-5.4/high` 之类带斜杠的推理后缀映射到 `reasoning_effort`。                                         |
+| `/acp set thinking <level>`  | canonical option `thinking`          | OpenClaw 会在后端公开对应项时发送其等价配置，优先使用 `thinking`，然后是 `effort`、`reasoning_effort` 或 `thought_level`。对于 Codex ACP，适配器会将值映射到 `reasoning_effort`。 |
+| `/acp permissions <profile>` | canonical option `permissionProfile` | OpenClaw 会在后端公开对应项时发送其等价配置，例如 `approval_policy`、`permission_profile`、`permissions` 或 `permission_mode`。                                                       |
+| `/acp timeout <seconds>`     | canonical option `timeoutSeconds`    | OpenClaw 会在后端公开对应项时发送其等价配置，例如 `timeout` 或 `timeout_seconds`。                                                                                                     |
+| `/acp cwd <path>`            | runtime cwd override                 | 直接更新。                                                                                                                                                                                             |
+| `/acp set <key> <value>`     | generic                              | `key=cwd` 使用 cwd 覆盖路径。                                                                                                                                                                      |
 | `/acp reset-options`         | clears all runtime overrides         | -                                                                                                                                                                                                          |
 
 ## acpx 运行器、插件设置和权限
@@ -789,17 +777,14 @@ ACP 会话当前运行在主机运行时中，**不**在 OpenClaw 沙箱内部�
 | Harness sees `<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>`                        | 内部事件封装泄漏到了 ACP 边界之外。                                                                | 更新 OpenClaw 并重新运行完成流程；外部 harness 应只接收纯粹的完成提示。                                                          |
 
 <Note>
-`Command blocked by PreToolUse hook: Native hook relay unavailable` belongs to
-the native Codex hook relay, not ACP/acpx. In a bound Codex chat, start a fresh
-session with `/new` or `/reset`; if it works once and then returns on the next
-native tool call, restart the Codex app-server or OpenClaw Gateway instead of
-repeating `/new`. See [Codex harness troubleshooting](/plugins/codex-harness#troubleshooting).
+`Command blocked by PreToolUse hook: Native hook relay unavailable` 属于
+原生 Codex hook relay，而不是 ACP/acpx。在已绑定的 Codex 聊天中，使用 `/new` 或 `/reset` 开启一个新会话；如果它第一次可用但在下一次原生工具调用时又返回此错误，请重启 Codex app-server 或 OpenClaw Gateway，而不是重复执行 `/new`。参见 [Codex harness troubleshooting](/plugins/codex-harness#troubleshooting)。
 </Note>
 
 ## 相关内容
 
-- [ACP agents - 设置](/tools/acp-agents-setup)
-- [Agent 发送](/tools/agent-send)
+- [ACP 代理 - 设置](/tools/acp-agents-setup)
+- [代理发送](/tools/agent-send)
 - [CLI 后端](/gateway/cli-backends)
 - [Codex harness](/plugins/codex-harness)
 - [Codex harness 运行时](/plugins/codex-harness-runtime)

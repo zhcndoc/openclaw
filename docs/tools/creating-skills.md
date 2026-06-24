@@ -210,7 +210,7 @@ openclaw skills workshop apply <proposal-id>
     ClawHub skill 会记录当前发布命令的格式和所需元数据：
 
     ```bash
-    openclaw skills install clawhub-publish
+    openclaw skills install @openclaw/clawhub-publish
     ```
 
   </Step>

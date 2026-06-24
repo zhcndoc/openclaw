@@ -11,8 +11,8 @@ title: "Firecrawl 插件"
 
 ## 分发
 
-- 包：`@openclaw/firecrawl-plugin`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/firecrawl-plugin`
+- Install route: npm; ClawHub: `clawhub:@openclaw/firecrawl-plugin`
 
 ## 接口
 

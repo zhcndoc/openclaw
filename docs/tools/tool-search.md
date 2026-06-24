@@ -16,9 +16,9 @@ read_when:
 动态工具以及嵌套工具调用是稳定的 Codex harness 接口，
 不依赖 `tools.toolSearch`。
 
-在为 OpenClaw 运行启用后，模型默认会收到一个 `tool_search_code` 工具。
-该工具会在隔离的 Node 子进程中执行一段简短的 JavaScript 代码，并带有
-一个 `openclaw.tools` 桥接：
+启用 OpenClaw 运行时，模型默认会接收一个 `tool_search_code` 工具。
+该工具会在一个隔离的 Node 子进程中运行一小段 JavaScript 主体，并提供
+`openclaw.tools` 桥接：
 
 ```js
 const hits = await openclaw.tools.search("创建一个 GitHub issue");
@@ -46,9 +46,10 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 1. 解析代理、配置文件、沙箱和会话的活动工具策略。
 2. 列出符合条件的 OpenClaw 和插件工具。
 3. 通过会话 MCP 运行时列出符合条件的 MCP 工具。
-4. 添加当前运行提供的符合条件的客户端工具。
-5. 为搜索建立紧凑描述符索引。
-6. 向模型暴露 OpenClaw 代码桥接或结构化回退工具之一。
+4. 添加为当前运行提供的符合条件的客户端工具。
+5. 为搜索索引紧凑描述符。
+6. 向模型暴露 OpenClaw 代码桥接、结构化回退工具，或
+   紧凑目录表面。
 
 在执行阶段，每一次真实工具调用都会返回到 OpenClaw。隔离的 Node
 运行时不持有插件实现、MCP 客户端对象或密钥。
@@ -57,18 +58,25 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 
 ## 模式
 
-`tools.toolSearch` 有两种面向模型的模式：
+`tools.toolSearch` 有三种面向模型的模式：
 
 - `code`：暴露 `tool_search_code`，默认的紧凑 JavaScript 桥接。
-- `tools`：将 `tool_search`、`tool_describe` 和 `tool_call` 作为普通
-  结构化工具暴露，适用于不应接收代码的提供方。
+- `tools`：将 `tool_search`、`tool_describe` 和 `tool_call` 暴露为纯
+  结构化工具，适用于不应接收代码的提供方。
+- `directory`：将 `tool_search`、`tool_describe` 和 `tool_call` 暴露出来，并提供
+  一个有界的提示词目录，列出可用工具名称和描述，适用于
+  希望看到工具名称但不需要每个完整 schema 的提供方。OpenClaw 也可以
+  为当前 turn 直接暴露一小组有界的可能或必需工具 schema。
 
-两种模式使用相同的目录和执行路径。唯一的区别是模型看到的形态。
-如果当前运行时无法启动隔离的 Node
-代码模式子进程，默认的 `code` 模式会在目录压缩前回退到 `tools`。
+所有模式都使用相同的、经过策略过滤的目录和正常的 OpenClaw 执行
+路径。如果当前运行时无法启动隔离的 Node 代码模式子进程，默认的 `code`
+模式会在目录压缩之前回退到 `tools`。在 `directory` 模式下，客户端提供的工具
+在当前运行中保持直接可见，而 OpenClaw 工具、插件工具和 MCP 工具可以
+被压缩到目录目录之后。对某个精确隐藏目录名称的直接调用，会先从
+同一经过授权的目录中填充后再执行。
 
-两种模式都是实验性的。对于较小的 OpenClaw 工具目录，优先直接暴露工具；
-对于 Codex harness 运行，则优先使用 Codex 原生的稳定接口。
+所有模式都是实验性的。对于较小的 OpenClaw 工具目录，优先直接暴露工具；
+对于 Codex harness 运行，优先使用 Codex 原生的稳定表面。
 
 没有单独的来源选择配置。启用工具搜索后，在正常策略
 过滤之后，目录会包含符合条件的 OpenClaw、MCP 和客户端工具。
@@ -80,12 +88,15 @@ Codex 负责稳定的原生代码模式、原生工具搜索、延迟动态
 
 工具搜索改变了这种形态：
 
-- 直接工具：模型在第一个 token 之前看到每个选中的 schema
-- 工具搜索代码模式：模型看到一个紧凑的代码工具和一份简短的 API
-  合同
+- 直接工具：模型在第一个 token 之前就能看到每个选中的 schema
+- 工具搜索代码模式：模型只看到一个紧凑的代码工具和一份简短的 API
+  约定
 - 工具搜索工具模式：模型看到三个紧凑的结构化回退
   工具
-- 在 turn 过程中：模型只加载它实际需要的工具 schema
+- 工具搜索目录模式：模型看到一个有界目录，以及
+  search/describe/call 控制和一小组有界的可能或必需
+  schema
+- 在 turn 过程中：模型可以按需加载其余 schema
 
 对于小型目录，直接暴露工具仍然是正确的默认方案。对于一次运行中
 可能看到很多工具的场景，尤其是来自 MCP 服务器或
@@ -126,6 +137,19 @@ await openclaw.tools.call(calendarCreate.id, {
 - `tool_search`
 - `tool_describe`
 - `tool_call`
+
+目录模式暴露：
+
+- `tool_search`
+- `tool_describe`
+- `tool_call`
+
+它还会让客户端提供的工具保持直接可见，并且可能为当前
+turn 直接暴露一小组有界的可能或必需目录工具 schema。如果有界目录省略了条目，请使用 `tool_search` 找到它们。如果
+模型直接请求一个精确的隐藏目录工具名称，OpenClaw
+会在正常执行前从经过授权的目录中填充它。
+目录模式下的客户端工具名称不得与 OpenClaw、插件或 MCP
+工具名称冲突，因为精确的延迟分发会使用这些名称。
 
 ## 运行时边界
 
@@ -176,6 +200,18 @@ openclaw config set tools.toolSearch true
   tools: {
     toolSearch: {
       mode: "tools",
+    },
+  },
+}
+```
+
+改为在 OpenClaw 运行中使用紧凑目录表面：
+
+```json5
+{
+  tools: {
+    toolSearch: {
+      mode: "directory",
     },
   },
 }

@@ -12,7 +12,7 @@ title: "Kilocode 插件"
 ## 分发
 
 - 包：`@openclaw/kilocode-provider`
-- 安装方式：包含在 OpenClaw 中
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/kilocode-provider`
 
 ## 作用范围
 

@@ -15,7 +15,16 @@ Qianfan 是百度的 MaaS 平台，提供一个**统一 API**，通过单一端�
 | API      | 兼容 OpenAI                       |
 | 基础 URL | `https://qianfan.baidubce.com/v2` |
 
-## 开始使用
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/qianfan-provider
+openclaw gateway restart
+```
+
+## 快速开始
 
 <Steps>
   <Step title="创建百度云账号">
@@ -44,7 +53,7 @@ Qianfan 是百度的 MaaS 平台，提供一个**统一 API**，通过单一端�
 | `qianfan/ernie-5.0-thinking-preview` | text, image | 119,000 | 64,000   | Yes  | 多模态        |
 
 <Tip>
-默认捆绑的模型引用是 `qianfan/deepseek-v3.2`。只有在需要自定义基础 URL 或模型元数据时，才需要覆盖 `models.providers.qianfan`。
+默认模型引用是 `qianfan/deepseek-v3.2`。只有在需要自定义基础 URL 或模型元数据时，才需要覆盖 `models.providers.qianfan`。
 </Tip>
 
 ## 配置示例
@@ -97,7 +106,7 @@ Qianfan 是百度的 MaaS 平台，提供一个**统一 API**，通过单一端�
   </Accordion>
 
   <Accordion title="目录和覆盖">
-    当前捆绑的目录包括 `deepseek-v3.2` 和 `ernie-5.0-thinking-preview`。只有在需要自定义基础 URL 或模型元数据时，才添加或覆盖 `models.providers.qianfan`。
+    当前静态目录包含 `deepseek-v3.2` 和 `ernie-5.0-thinking-preview`。仅当你需要自定义基础 URL 或模型元数据时，才添加或覆盖 `models.providers.qianfan`。
 
     <Note>
     模型引用使用 `qianfan/` 前缀（例如 `qianfan/deepseek-v3.2`）。

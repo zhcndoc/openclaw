@@ -11,8 +11,8 @@ Inworld 流式文本转语音（MP3、OGG_OPUS、PCM 电话）。
 
 ## 分发
 
-- 包：`@openclaw/inworld-speech`
-- 安装方式：包含在 OpenClaw 中
+- Package: `@openclaw/inworld-speech`
+- Install route: npm; ClawHub: `clawhub:@openclaw/inworld-speech`
 
 ## 接口
 

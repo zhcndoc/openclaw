@@ -287,6 +287,24 @@ openclaw models list
     Bedrock 会拒绝 Claude Opus 4.7 的 `temperature` 参数。OpenClaw 会自动省略任何 Opus 4.7 Bedrock 引用的 `temperature`，包括基础模型 id、命名推理配置文件、其底层模型通过 `bedrock:GetInferenceProfile` 解析为 Opus 4.7 的应用推理配置文件，以及带可选区域前缀（`us.`、`eu.`、`ap.`、`apac.`、`au.`、`jp.`、`global.`）的带点形式 `opus-4.7` 变体。无需配置开关，该省略同时适用于请求 options 对象和 `inferenceConfig` 负载字段。
   </Accordion>
 
+  <Accordion title="Claude Fable 5">
+    在 `us-east-1` 中使用 `amazon-bedrock/anthropic.claude-fable-5`，或使用
+    区域推理 id，例如 `us.anthropic.claude-fable-5`。
+    OpenClaw 会应用 Fable 的 100 万上下文窗口、128K 输出上限、始终开启的
+    自适应思考，以及受支持的 effort 映射。`/think off` 和
+    `/think minimal` 映射为 `low`；不支持的 temperature 和强制工具选择控制会被省略。
+    流式输出会在 Bedrock 返回终态之前保持，避免中途拒绝时暴露部分文本。
+    Fable 仅支持标准 service tier；OpenClaw 会忽略为此模型配置的
+    `flex`、`priority` 和 `reserved` 层级。
+
+    AWS 要求在 Fable 可用之前显式选择加入 `provider_data_share` 数据保留。
+    提示和补全内容会与 Anthropic 共享，并最多保留 30 天用于信任与安全。
+    在启用该模型前，请先查看并配置
+    [Bedrock data retention](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html)
+    。
+
+  </Accordion>
+
   <Accordion title="Guardrails">
     你可以通过在 `amazon-bedrock` 插件配置中添加一个 `guardrail` 对象，
     将 [Amazon Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html)

@@ -13,29 +13,29 @@ title: "思考级别"
   - low → "think hard"
   - medium → "think harder"
   - high → "ultrathink"（最大预算）
-  - xhigh → "ultrathink+"（GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7+ effort）
-  - adaptive → 由提供方管理的自适应思考（支持 Anthropic/Bedrock 上的 Claude 4.6、Anthropic Claude Opus 4.7+，以及 Google Gemini dynamic thinking）
-  - max → 提供方最大推理（Anthropic Claude Opus 4.7+；Ollama 会将其映射为最高原生 `think` effort）
-  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 映射为 `xhigh`。
-  - `highest` 映射为 `high`。
+  - xhigh → "ultrathink+"（GPT-5.2+ 和 Codex 模型，以及 Anthropic Claude Opus 4.7+ 的 effort）
+  - adaptive → 由提供方管理的自适应思考（Anthropic/Bedrock 上支持 Claude 4.6、Anthropic Claude Opus 4.7+，以及 Google Gemini 动态思考）
+  - max → 提供方最大推理（Anthropic Claude Opus 4.7+；Ollama 会将其映射为其最高的原生 `think` effort）
+  - `x-high`、`x_high`、`extra-high`、`extra high` 和 `extra_high` 都映射到 `xhigh`。
+  - `highest` 映射到 `high`。
 - 提供方说明：
   - Thinking 菜单和选择器由提供方配置文件驱动。提供方插件会为所选模型声明精确的级别集合，包括诸如二元 `on` 之类的标签。
-  - `adaptive`、`xhigh` 和 `max` 仅对支持它们的提供方/模型配置文件可见。对不支持级别输入的指令会被拒绝，并给出该模型的有效选项。
-  - 已存储但不受支持的级别会按提供方配置文件等级重映射。`adaptive` 在不支持自适应的模型上回退为 `medium`，而 `xhigh` 和 `max` 会回退为所选模型支持的最大非 `off` 级别。
-  - Anthropic Claude 4.6 模型在未显式设置 thinking 级别时默认使用 `adaptive`。
-  - Anthropic Claude Opus 4.8 和 Opus 4.7 会保持 thinking 关闭，除非你显式设置 thinking 级别。启用自适应 thinking 后，Opus 4.8 的提供方所有 effort 默认值为 `high`。
-  - Anthropic Claude Opus 4.7+ 会将 `/think xhigh` 映射为自适应 thinking 加上 `output_config.effort: "xhigh"`，因为 `/think` 是一个 thinking 指令，而 `xhigh` 是 Opus 的 effort 设置。
-  - Anthropic Claude Opus 4.7+ 也暴露 `/think max`；它会映射到同样的提供方所有 max effort 路径。
-  - 直接使用 DeepSeek V4 模型时会暴露 `/think xhigh|max`；二者都会映射为 DeepSeek `reasoning_effort: "max"`，而较低的非 `off` 级别会映射为 `high`。
-  - 通过 OpenRouter 路由的 DeepSeek V4 模型会暴露 `/think xhigh`，并发送 OpenRouter 支持的 `reasoning_effort` 值。已存储的 `max` 覆盖会回退为 `xhigh`。
-  - 支持 thinking 的 Ollama 模型会暴露 `/think low|medium|high|max`；`max` 会映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` effort 字符串。
-  - OpenAI GPT 模型通过模型特定的 Responses API effort 支持来映射 `/think`。只有当目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略被禁用的 reasoning 负载，而不是发送不受支持的值。
-  - 自定义 OpenAI 兼容目录项可通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用了相同的 compat 元数据来映射出站的 OpenAI reasoning effort 负载，因此菜单、会话校验、agent CLI 和 `llm-task` 都会与传输行为保持一致。
-  - 过时配置的 OpenRouter Hunter Alpha 参考会跳过代理 reasoning 注入，因为该已退役路由可能会通过 reasoning 字段返回最终答案文本。
-  - Google Gemini 会将 `/think adaptive` 映射为 Gemini 由提供方管理的动态 thinking。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍会映射为该模型家族中最接近的 Gemini `thinkingLevel` 或 budget。
-  - 在 Anthropic 兼容流式路径上的 MiniMax M2.x（`minimax/MiniMax-M2*`）默认使用 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置 thinking。这样可避免 M2.x 非原生 Anthropic 流格式中泄漏的 `reasoning_content` 增量。MiniMax-M3（以及 M3.x）不受此限制：M3 会发出正确的 Anthropic thinking blocks，并在 thinking 关闭时返回空内容，因此 OpenClaw 会让 M3 继续走提供方省略式/adaptive thinking 路径。
-  - Z.AI（`zai/*`）只支持二元 thinking（`on`/`off`）。任何非 `off` 级别都会被视为 `on`（映射为 `low`）。
-  - Moonshot（`moonshot/*`）会将 `/think off` 映射为 `thinking: { type: "disabled" }`，并将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。启用 thinking 时，Moonshot 只接受 `tool_choice` `auto|none`；OpenClaw 会将不兼容值规范化为 `auto`。
+  - `adaptive`、`xhigh` 和 `max` 仅在支持它们的提供方/模型配置中展示。对不支持级别输入的指令会被拒绝，并返回该模型的有效选项。
+  - 已存储的不受支持级别会按提供方配置文件等级重新映射。`adaptive` 在非自适应模型上回退为 `medium`，而 `xhigh` 和 `max` 会回退到所选模型支持的最大非 `off` 级别。
+  - Anthropic Claude 4.6 模型在未设置明确 thinking 级别时，默认使用 `adaptive`。
+  - Anthropic Claude Opus 4.8 和 Opus 4.7 在你未显式设置 thinking 级别时保持关闭。启用自适应 thinking 后，Opus 4.8 由提供方控制的 effort 默认值为 `high`。
+  - Anthropic Claude Opus 4.7+ 会将 `/think xhigh` 映射为自适应 thinking 加上 `output_config.effort: "xhigh"`，因为 `/think` 是 thinking 指令，而 `xhigh` 是 Opus 的 effort 设置。
+  - Anthropic Claude Opus 4.7+ 也暴露 `/think max`；它会映射到同一条由提供方控制的 max effort 路径。
+  - 直接的 DeepSeek V4 模型暴露 `/think xhigh|max`；二者都映射到 DeepSeek `reasoning_effort: "max"`，而较低的非 `off` 级别映射到 `high`。
+  - 通过 OpenRouter 路由的 DeepSeek V4 模型暴露 `/think xhigh`，并发送 OpenRouter 支持的 `reasoning_effort` 值。已存储的 `max` 覆盖会回退到 `xhigh`。
+  - 支持 thinking 的 Ollama 模型暴露 `/think low|medium|high|max`；`max` 会映射为原生 `think: "high"`，因为 Ollama 的原生 API 接受 `low`、`medium` 和 `high` effort 字符串。
+  - OpenAI GPT 模型通过模型特定的 Responses API effort 支持来映射 `/think`。只有当目标模型支持时，`/think off` 才会发送 `reasoning.effort: "none"`；否则 OpenClaw 会省略已禁用的 reasoning 负载，而不是发送不受支持的值。
+  - 自定义 OpenAI 兼容目录项可以通过将 `models.providers.<provider>.models[].compat.supportedReasoningEfforts` 设置为包含 `"xhigh"` 来启用 `/think xhigh`。这使用了相同的兼容元数据来映射出站 OpenAI reasoning effort 负载，因此菜单、会话验证、agent CLI 和 `llm-task` 会与传输行为保持一致。
+  - 过期的已配置 OpenRouter Hunter Alpha 引用会跳过代理推理注入，因为该已退役路由可能会通过 reasoning 字段返回最终答案文本。
+  - Google Gemini 将 `/think adaptive` 映射为 Gemini 由提供方控制的动态思考。Gemini 3 请求会省略固定的 `thinkingLevel`，而 Gemini 2.5 请求会发送 `thinkingBudget: -1`；固定级别仍会映射到该模型系列中最接近的 Gemini `thinkingLevel` 或 budget。
+  - MiniMax M2.x（`minimax/MiniMax-M2*`）在 Anthropic 兼容流式路径上，默认 `thinking: { type: "disabled" }`，除非你在模型参数或请求参数中显式设置 thinking。这样可避免从 M2.x 的非原生 Anthropic 流格式中泄漏 `reasoning_content` 增量。MiniMax-M3（以及 M3.x）是例外：M3 会发出正确的 Anthropic thinking 块，并在 thinking 关闭时返回空内容，因此 OpenClaw 会让 M3 走提供方省略/adaptive thinking 路径。
+  - Z.AI（`zai/*`）对于大多数 GLM 模型是二元（`on`/`off`）的。GLM-5.2 是例外：它暴露 `/think off|low|high|max`，将 `low` 和 `high` 映射为 Z.AI `reasoning_effort: "high"`，并将 `max` 映射为 `reasoning_effort: "max"`。
+  - Moonshot Kimi K2.7 Code（`moonshot/kimi-k2.7-code`）始终会思考。其配置文件只暴露 `on`，并且 OpenClaw 会按 Moonshot 要求省略出站 `thinking` 字段。其他 `moonshot/*` 模型会将 `/think off` 映射为 `thinking: { type: "disabled" }`，将任何非 `off` 级别映射为 `thinking: { type: "enabled" }`。当 thinking 启用时，Moonshot 只接受 `tool_choice` 为 `auto|none`；OpenClaw 会将不兼容值规范化为 `auto`。
 
 ## 解析顺序
 
@@ -60,21 +60,22 @@ title: "思考级别"
 
 ## 快速模式（/fast）
 
-- 级别：`on|off|default`。
-- 仅包含指令的消息会切换会话 fast-mode 覆盖并回复 `Fast mode enabled.` / `Fast mode disabled.`。使用 `/fast default` 可清除会话覆盖并继承已配置的默认值；别名包括 `inherit`、`clear`、`reset` 和 `unpin`。
+- 级别：`auto|on|off|default`。
+- 仅包含指令的消息会切换会话 fast-mode 覆盖，并回复 `Fast mode set to auto.`、`Fast mode enabled.` 或 `Fast mode disabled.`。使用 `/fast default` 可清除会话覆盖并继承已配置的默认值；别名包括 `inherit`、`clear`、`reset` 和 `unpin`。
 - 发送不带模式的 `/fast`（或 `/fast status`）可查看当前生效的 fast-mode 状态。
 - OpenClaw 按以下顺序解析 fast mode：
-  1. 内联/仅指令的 `/fast on|off` 覆盖（`/fast default` 清除这一层）
+  1. 内联/仅指令的 `/fast auto|on|off` 覆盖（`/fast default` 会清除此层）
   2. 会话覆盖
   3. 每个 agent 的默认值（`agents.list[].fastModeDefault`）
-  4. 每个模型配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
+  4. 每模型配置：`agents.defaults.models["<provider>/<model>"].params.fastMode`
   5. 回退：`off`
-- 对于 `openai/*`，fast mode 通过在受支持的 Responses 请求上发送 `service_tier=priority` 映射为 OpenAI priority processing。
-- 对于基于 Codex 的 `openai/*` 模型，fast mode 会在 Codex Responses 上发送相同的 `service_tier=priority` 标志。OpenClaw 在这两条认证路径之间保持一个共享的 `/fast` 切换。
-- 对于直接的公共 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，fast mode 映射为 Anthropic service tiers：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
+- `auto` 会保持会话/配置模式为 auto，但会独立解析每次新的模型调用。那些在 auto 截止时间之前开始的调用会启用 fast mode；稍后的重试、回退、工具结果或续接调用会以关闭 fast mode 的状态开始。截止时间默认是 60 秒；在活动模型上设置 `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds` 可更改它。
+- 对于 `openai/*`，fast mode 会在受支持的 Responses 请求上发送 `service_tier=priority`，从而映射到 OpenAI 的优先级处理。
+- 对于基于 Codex 的 `openai/*` / `openai-codex/*` 模型，fast mode 会在 Codex Responses 上发送相同的 `service_tier=priority` 标志。原生 Codex app-server 轮次只会在 `turn/start` 或线程开始/恢复时接收该 tier，因此 `auto` 无法给一个已经运行中的 app-server 轮次重新分层；它会应用于 OpenClaw 启动的下一个模型轮次。
+- 对于直接的公开 `anthropic/*` 请求，包括发送到 `api.anthropic.com` 的 OAuth 认证流量，fast mode 会映射到 Anthropic 服务层：`/fast on` 设置 `service_tier=auto`，`/fast off` 设置 `service_tier=standard_only`。
 - 对于 Anthropic 兼容路径上的 `minimax/*`，`/fast on`（或 `params.fastMode: true`）会将 `MiniMax-M2.7` 重写为 `MiniMax-M2.7-highspeed`。
-- 当同时设置了显式的 Anthropic `serviceTier` / `service_tier` 模型参数时，它们会覆盖 fast-mode 默认值。OpenClaw 仍会对非 Anthropic 代理基础 URL 跳过 Anthropic service-tier 注入。
-- `/status` 仅在 fast mode 启用时显示 `Fast`。
+- 当两者都设置时，显式的 Anthropic `serviceTier` / `service_tier` 模型参数会覆盖 fast-mode 默认值。OpenClaw 仍会对非 Anthropic 代理基础 URL 跳过 Anthropic 服务层注入。
+- `/status` 会在 fast mode 启用时显示 `Fast`，在配置模式为 auto 时显示 `Fast:auto`。
 
 ## 详细日志指令（/verbose 或 /v）
 

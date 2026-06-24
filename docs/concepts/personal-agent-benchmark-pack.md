@@ -7,7 +7,7 @@ read_when:
 title: "个人代理基准包"
 ---
 
-个人代理基准包是一个用于本地个人助手工作流的小型、由仓库支持的 QA 场景包。它不是通用模型基准，也不需要新的运行器。该包复用了 [QA 概览](/concepts/qa-e2e-automation) 中描述的私有 QA 栈、合成的 [QA 通道](/channels/qa-channel) 以及现有的 `qa/scenarios` markdown 目录。
+个人代理基准包是一个体量较小、由仓库支持的 QA 场景包，用于本地个人助手工作流。它不是通用模型基准，也不需要新的运行器。该包重用 [QA 概览](/concepts/qa-e2e-automation) 中描述的私有 QA 栈、合成的 [QA channel](/channels/qa-channel) 以及现有的 `qa/scenarios` YAML 目录。
 
 第一版包有意保持范围很窄：
 
@@ -47,7 +47,8 @@ OPENCLAW_ENABLE_PRIVATE_QA_CLI=1 pnpm openclaw qa suite \
 
 ## 扩展该包
 
-在 `qa/scenarios/personal/` 下添加新案例，然后将场景 id 添加到 `QA_PERSONAL_AGENT_SCENARIO_IDS`。保持每个案例小巧、本地、在 `mock-openai` 中确定性，并聚焦于一种个人助手行为。
+在 `qa/scenarios/personal/` 下添加新的 `.yaml` 案例，然后将场景 id
+加入 `QA_PERSONAL_AGENT_SCENARIO_IDS`。保持每个案例都足够小、在 `mock-openai` 中本地且确定性，并专注于一种个人助手行为。
 
 合适的后续候选：
 

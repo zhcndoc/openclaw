@@ -540,7 +540,7 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
 {
   inboundPolicy: "allowlist",
   allowFrom: ["+15550001234"],
-  inboundGreeting: "Hello! How can I help you?",
+  inboundGreeting: "你好！我能为你做些什么？",
 }
 ```
 
@@ -570,8 +570,8 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
 
 ```json5
 {
-  inboundGreeting: "Hello from the main line.",
-  responseSystemPrompt: "You are the default voice assistant.",
+  inboundGreeting: "来自主线路的问候。",
+  responseSystemPrompt: "你是默认的语音助手。",
   tts: {
     provider: "openai",
     providers: {
@@ -580,8 +580,8 @@ Voice Call 在通话中使用核心 `messages.tts` 配置来进行
   },
   numbers: {
     "+15550001111": {
-      inboundGreeting: "Silver Fox Cards, how can I help?",
-      responseSystemPrompt: "You are a concise baseball card specialist.",
+      inboundGreeting: "Silver Fox Cards，有什么可以帮您？",
+      responseSystemPrompt: "你是一位简洁的棒球卡专家。",
       tts: {
         providers: {
           openai: { speakerVoice: "alloy" },
@@ -730,7 +730,7 @@ p50/p90/p99。
 | `end_call`      | `callId`                                   |
 | `get_status`    | `callId`                                   |
 
-本仓库还提供了匹配的技能文档：`skills/voice-call/SKILL.md`。
+voice-call 插件附带一个匹配的 agent 技能。
 
 ## Gateway RPC
 
@@ -775,9 +775,9 @@ Twilio notify 模式外拨呼叫会在创建呼叫请求中直接发送其初始
       "voice-call": {
         config: {
           publicUrl: "https://voice.example.com/voice/webhook",
-          // or
+          // 或
           tunnel: { provider: "ngrok" },
-          // or
+          // 或
           tailscale: { mode: "funnel", path: "/voice/webhook" },
         },
       },

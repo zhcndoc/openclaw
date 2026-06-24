@@ -213,7 +213,23 @@ export default function register(api) {
 | `onSubagentEnded(params)`      | 方法 | 子代理结束后进行清理。                                                                                           |
 | `dispose()`                    | 方法 | 释放资源。在网关关闭或插件重新加载期间调用——不是按会话调用。                                                     |
 
-### Host requirements
+### 运行时设置
+
+在 OpenClaw 内部运行的生命周期钩子会接收一个可选的 `runtimeSettings`
+对象。它是一个带版本的、只读的内部生产者/消费者 API 接口：OpenClaw 为所选上下文引擎生成它，而上下文引擎在生命周期钩子中消费它。它不会直接呈现给用户，也不会创建专用的报告界面。
+
+- `schemaVersion`：当前为 `1`
+- `runtime`：OpenClaw 主机、运行时模式（`normal`、`fallback` 或
+  `degraded`），以及可选的 harness/运行时 id
+- `contextEngineSelection`：所选上下文引擎 id 和选择来源
+- `executionHost`：调用该钩子的表面对应的主机 id 和标签
+- `model`：请求的模型、已解析的模型、提供方，以及可选的模型家族
+- `limits`：已知时的提示词令牌预算和最大输出令牌数
+- `diagnostics`：已知时的关闭式回退和降级原因代码
+
+未知字段会表示为 `null`；诸如运行时模式和选择来源之类的区分字段仍保持非空。旧版引擎仍然兼容：如果严格的 legacy 引擎将 `runtimeSettings` 作为未知属性而拒绝，OpenClaw 会在不带它的情况下重试生命周期调用，而不是将该引擎隔离。
+
+### 主机要求
 
 上下文引擎可以在 `info.hostRequirements` 上声明宿主能力要求。
 OpenClaw 会在启动操作前检查这些要求，并在所选运行时无法满足时以描述性错误
@@ -230,40 +246,31 @@ info: {
     "agent-run": {
       requiredCapabilities: ["assemble-before-prompt"],
       unsupportedMessage:
-        "Use the native Codex or OpenClaw embedded runtime, or select the legacy context engine.",
+        "请使用原生 Codex 或 OpenClaw 嵌入式运行时，或者选择 legacy 上下文引擎。",
     },
   },
 }
 ```
 
-Native Codex and OpenClaw embedded agent runs satisfy `assemble-before-prompt`.
-Generic CLI backends do not, so engines that require it are rejected before the
-CLI process starts.
+原生 Codex 和 OpenClaw 嵌入式代理运行满足 `assemble-before-prompt`。
+通用 CLI 后端不满足，因此需要该能力的引擎会在 CLI 进程启动前被拒绝。
 
-### Failure isolation
+### 故障隔离
 
-OpenClaw isolates the selected plugin engine from the core reply path. If a
-non-legacy engine is missing, fails contract validation, throws during factory
-creation, or throws from a lifecycle method, OpenClaw quarantines that engine
-for the current Gateway process and downgrades context-engine work to the
-built-in `legacy` engine. The error is logged with the failed operation so the
-operator can repair, update, or disable the plugin without the agent going
-silent.
+OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 legacy 引擎缺失、合同验证失败、在工厂创建期间抛出异常，或在生命周期方法中抛出异常，OpenClaw 会为当前 Gateway 进程隔离该引擎，并将上下文引擎工作降级为内置的 `legacy` 引擎。错误会与失败的操作一起记录，因此操作员可以修复、更新或禁用该插件，而不会导致代理静默失效。
 
-Host requirement failures are different: when an engine declares that a runtime
-lacks a required capability, OpenClaw fails closed before starting the run. That
-protects engines that would corrupt state if they ran in an unsupported host.
+主机要求失败则不同：当引擎声明某个运行时缺少所需能力时，OpenClaw 会在运行开始前以关闭式失败。这样可保护那些在不受支持主机上运行会破坏状态的引擎。
 
 ### ownsCompaction
 
-`ownsCompaction` controls whether OpenClaw runtime's built-in in-attempt auto-compaction stays enabled for the run:
+`ownsCompaction` 控制 OpenClaw 运行时内置的单次尝试自动压缩是否在该运行中保持启用：
 
 <AccordionGroup>
   <Accordion title="ownsCompaction: true">
-    The engine owns compaction behavior. OpenClaw disables OpenClaw runtime's built-in auto-compaction for that run, and the engine's `compact()` implementation is responsible for `/compact`, overflow recovery compaction, and any proactive compaction it wants to do in `afterTurn()`. OpenClaw may still run the pre-prompt overflow safeguard; when it predicts the full transcript will overflow, the recovery path calls the active engine's `compact()` before submitting another prompt.
+    引擎拥有压缩行为。OpenClaw 会为该次运行禁用 OpenClaw 运行时内置的自动压缩，而引擎的 `compact()` 实现负责 `/compact`、溢出恢复压缩以及它希望在 `afterTurn()` 中执行的任何主动压缩。OpenClaw 仍可能运行预提示词溢出保护；当它预测完整转录将溢出时，恢复路径会在提交另一个提示词之前调用当前激活引擎的 `compact()`。
   </Accordion>
   <Accordion title="ownsCompaction: false or unset">
-    OpenClaw runtime's built-in auto-compaction may still run during prompt execution, but the active engine's `compact()` method is still called for `/compact` and overflow recovery.
+    OpenClaw 运行时内置的自动压缩仍可能在提示词执行期间运行，但当前激活引擎的 `compact()` 方法仍会在 `/compact` 和溢出恢复时被调用。
   </Accordion>
 </AccordionGroup>
 

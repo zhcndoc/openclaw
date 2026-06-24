@@ -11,8 +11,8 @@ title: "Groq 插件"
 
 ## 分发
 
-- 包：`@openclaw/groq-provider`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/groq-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/groq-provider`
 
 ## 表面
 

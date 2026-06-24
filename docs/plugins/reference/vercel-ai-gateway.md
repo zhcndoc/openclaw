@@ -11,8 +11,8 @@ title: "Vercel AI Gateway 插件"
 
 ## 分发
 
-- 包：`@openclaw/vercel-ai-gateway-provider`
-- 安装路径：包含在 OpenClaw 中
+- Package: `@openclaw/vercel-ai-gateway-provider`
+- Install route: npm; ClawHub: `clawhub:@openclaw/vercel-ai-gateway-provider`
 
 ## 接口
 

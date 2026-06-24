@@ -11,8 +11,8 @@ title: "Mattermost 插件"
 
 ## 分发
 
-- 包：`@openclaw/mattermost`
-- 安装方式：已包含在 OpenClaw 中
+- Package: `@openclaw/mattermost`
+- Install route: npm; ClawHub: `clawhub:@openclaw/mattermost`
 
 ## 界面
 

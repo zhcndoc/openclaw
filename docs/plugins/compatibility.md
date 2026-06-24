@@ -98,13 +98,19 @@ OpenClaw 不应在引入替代方案的同一个发布版本中移除已文档�
 - 旧版 runtime 别名，如 `api.runtime.taskFlow`、
   `api.runtime.subagent.getSession`、`api.runtime.stt`，以及已弃用的
   `api.runtime.config.loadConfig()` / `api.runtime.config.writeConfigFile(...)`
-- memory 插件拆分注册的旧版形式，同时 memory 插件迁移到
-  `registerMemoryCapability`
+- WhatsApp `WebInboundMessage` 扁平回调字段，例如 `body`、`chatId`、
+  `reply(...)` 和 `mediaPath`，同时回调消费者迁移到嵌套的
+  `WebInboundCallbackMessage` `event`、`payload`、`quote`、`group` 和
+  `platform` 上下文
+- WhatsApp `WebInboundMessage` 顶层 admission 字段，例如 `from`、
+  `conversationId`、`accountId`、`accessControlPassed` 和 `chatType`，同时
+  回调消费者迁移到 `admission` 封套
+- 在 memory 插件迁移到 `registerMemoryCapability` 时的旧版拆分注册
 - 旧版 memory 专用 embedding provider 注册，同时 embedding
   providers 迁移到 `api.registerEmbeddingProvider(...)` 和
   `contracts.embeddingProviders`
-- 旧版 channel SDK 辅助函数，用于 native message schema、mention gating、
-  inbound envelope 格式化，以及 approval capability 嵌套
+- 旧版 channel SDK 辅助函数，用于原生消息 schema、mention gating、
+  inbound 封套格式化，以及 approval capability 嵌套
 - 旧版 channel route key 和 comparable-target 辅助函数别名，同时插件
   迁移到 `openclaw/plugin-sdk/channel-route`
 - 正在被 manifest contribution ownership 替代的 activation hints
@@ -127,6 +133,46 @@ OpenClaw 不应在引入替代方案的同一个发布版本中移除已文档�
   别名，同时安装元数据迁移到状态管理的插件账本中
 
 新的插件代码应优先使用注册表和具体迁移指南中列出的替代方案。现有插件可以继续使用兼容路径，直到文档、诊断和发布说明宣布移除窗口。
+
+### WhatsApp Inbound Callback 扁平别名
+
+WhatsApp runtime 回调会传递 `WebInboundMessage`：即规范的嵌套
+`event`、`payload`、`quote`、`group` 和 `platform` 上下文，以及已弃用的
+已发布回调字段的扁平别名。新的回调代码应读取这些嵌套上下文。
+构造干净的嵌套回调消息的代码可以使用
+`WebInboundCallbackMessage`；仍会注入旧扁平测试或插件消息的兼容监听器应
+使用 `LegacyFlatWebInboundMessage` 或 `WebInboundMessageInput`。
+
+这些扁平别名会保留到 **2026-08-30**。该移除窗口
+仅适用于扁平别名访问；嵌套回调形状才是规范的运行时契约。每个扁平别名上的 TypeScript `@deprecated`
+注释都标明了其精确的嵌套替代项。常见示例如下：
+
+- `id`、`timestamp` 和 `isBatched` 移到 `event` 下。
+- `body`、`mediaPath`、`mediaType`、`mediaFileName`、`mediaUrl`、`location` 和
+  `untrustedStructuredContext` 移到 `payload` 下。
+- `to`、`chatId`、发送者/自身字段、`sendComposing`、`reply(...)` 和
+  `sendMedia(...)` 移到 `platform` 下。
+- `replyTo*` 字段移到 `quote` 下，群组主题/参与者/提及
+  字段移到 `group` 下。
+
+`payload.untrustedStructuredContext` 从入站 provider 载荷中提取。
+插件在将其 `payload` 视为权威信息之前，应检查其 `label`、`source` 和 `type`。
+
+### WhatsApp Inbound Admission 字段
+
+已接受的 WhatsApp 回调消息现在携带 `admission`，这是一个面向公众安全的
+封套，用于表示接纳该消息的访问控制决策。新的回调
+代码应从 `msg.admission` 读取 admission 事实，而不是使用旧的顶层
+admission 字段。
+
+这些顶层字段会保留到 **2026-08-30**。TypeScript
+`@deprecated` 注释会标明每个替代项：
+
+- `from` 和 `conversationId` 移到 `admission.conversation.id`。
+- `accountId` 移到 `admission.accountId`。
+- `accessControlPassed` 是 `admission.ingress.decision === "allow"` 的派生兼容视图；对于已经携带
+  `admission` 的消息，写入旧布尔值不会重写 ingress 图。
+- `chatType` 移到 `admission.conversation.kind`。
 
 ## 发布说明
 

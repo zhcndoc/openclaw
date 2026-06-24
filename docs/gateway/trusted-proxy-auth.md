@@ -53,26 +53,25 @@ read_when:
 
 当 `gateway.auth.mode = "trusted-proxy"` 处于活动状态且请求通过 trusted-proxy 检查时，Control UI 的 WebSocket 会话可以在没有设备配对身份的情况下连接。
 
+范围影响：
+
+- 无设备的 Control UI WebSocket 会话可以连接，但默认不会获得任何操作员范围。OpenClaw 会将请求的范围列表清空为 `[]`，因此未绑定到已批准配对设备/令牌的会话无法自行声明权限。
+- 如果在成功建立 WebSocket 连接后方法仍因 `missing scope` 失败，请使用 HTTPS，以便浏览器可以生成设备身份并完成配对。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
+- 仅限紧急解锁：`gateway.controlUi.dangerouslyDisableDeviceAuth=true` 会在没有设备身份的情况下保留请求的范围。这会严重降低安全性；请尽快恢复。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
+
+反向代理范围上限控制：
+
+- 如果你的代理在 Control UI WebSocket 升级请求上发送 `x-openclaw-scopes`，OpenClaw 会将会话范围限制为请求范围与声明范围的交集。此请求头不会授予范围；它只会缩小会话可持有的范围。
+
 影响：
 
 - 在此模式下，配对不再是 Control UI 访问的主要门禁。
 - 你的反向代理认证策略和 `allowUsers` 将成为实际的访问控制。
 - 将 gateway ingress 仅锁定为受信任代理 IP（`gateway.trustedProxies` + 防火墙）。
 
-**无设备身份时清除 scope：** 由于浏览器在普通 HTTP 下
-无法创建 OpenClaw 用于绑定 operator scope 的设备身份，
-缺少设备身份的 trusted-proxy WebSocket 连接会将其
-自声明的 scope 清空为一个空集合。连接会被允许，但
-受 scope 限制的方法（`operator.read`、`operator.write` 等）会失败并返回
-`missing scope`。
+自定义 WebSocket 客户端不是 Control UI 会话。`gateway.controlUi.dangerouslyDisableDeviceAuth` 不会为任意 `client.mode: "backend"` 或类似 CLI 的客户端授予范围。自定义自动化应使用设备身份/配对、保留的直连本地 `client.id: "gateway-client"` 后端辅助路径，或在 HTTP 请求/响应更适合时使用 [admin HTTP RPC 插件](/plugins/admin-http-rpc)。
 
-若要在没有设备身份的 trusted-proxy WebSocket 连接中保留 operator scopes，
-请设置 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`。
-这是一个紧急开关（`openclaw security audit` 会将其报告为 critical）。
-仅当反向代理是到 Gateway 的唯一路径，且无法建立设备
-身份时才使用它。
-
-## Configuration
+## 配置
 
 ```json5
 {
@@ -320,16 +319,13 @@ read_when:
 
 loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者不会被静默认证为代理用户。不经过代理的内部 OpenClaw 调用者可以改为使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` 进行认证。在 trusted-proxy 模式下，令牌回退仍然被有意不支持。
 
-## Operator scopes header
+## 操作员范围请求头
 
-受信任代理认证是一种 **带身份** 的 HTTP 模式，因此调用方可以选择使用 `x-openclaw-scopes` 声明 operator scopes。
+Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以在 HTTP API 请求中选择性地通过 `x-openclaw-scopes` 声明操作员范围。
 
-Note: `x-openclaw-scopes` 仅适用于 HTTP 端点。WebSocket scopes 会
-由 Gateway 协议握手和设备身份绑定来决定。对于 trusted-proxy 的
-WebSocket scope 行为，请参见
-[Control UI 配对行为](#control-ui-配对行为)。
+注意：WebSocket 范围由 Gateway 协议握手和设备身份绑定决定。在 Control UI WebSocket 升级请求上，`x-openclaw-scopes` 只是对协商后会话范围的上限限制，而不是授权。有关 trusted-proxy 下的 WebSocket 范围行为，请参见 [Control UI 配对行为](#control-ui-配对行为)。
 
-Examples:
+示例：
 
 - `x-openclaw-scopes: operator.read`
 - `x-openclaw-scopes: operator.read,operator.write`
@@ -337,11 +333,12 @@ Examples:
 
 行为：
 
-- 当该头存在时，OpenClaw 会遵循所声明的 scope 集合。
-- 当该头存在但为空时，请求声明 **没有** operator scopes。
-- 当该头不存在时，常规带身份的 HTTP API 会回退到标准的 operator 默认 scope 集合。
-- Gateway-auth **插件 HTTP 路由** 默认更窄：当 `x-openclaw-scopes` 不存在时，它们运行时的 scope 会回退到 `operator.write`。
-- 即使受信任代理认证成功，来自浏览器的 HTTP 请求仍然必须通过 `gateway.controlUi.allowedOrigins`（或有意启用的 Host-header 回退模式）。
+- 当该请求头存在时，OpenClaw 会遵循声明的范围集合。
+- 当该请求头存在但为空时，请求声明**没有**操作员范围。
+- 当该请求头缺失时，正常的带身份 HTTP API 会回退到标准的操作员默认范围集合。
+- Gateway-auth **插件 HTTP 路由**默认更窄：当 `x-openclaw-scopes` 缺失时，它们的运行时范围会回退到 `operator.write`。
+- 即使 trusted-proxy auth 成功，来自浏览器源的 HTTP 请求仍然必须通过 `gateway.controlUi.allowedOrigins`（或有意启用的 Host 头回退模式）。
+- 对于 Control UI WebSocket 会话，`x-openclaw-scopes` 在升级请求中存在时就是范围上限。空值则不会授予任何范围。
 
 实用规则：当你希望受信任代理请求比默认值更窄，或者当某个 gateway-auth 插件路由需要比 write scope 更强的权限时，请显式发送 `x-openclaw-scopes`。
 
@@ -427,15 +424,20 @@ Examples:
 
   </Accordion>
   <Accordion title="Connection succeeds but methods report missing scope">
-    WebSocket 已连接，但 `chat.history` 或 `sessions.list` 失败，并提示
-    `missing scope: operator.read`。
+    WebSocket 已连接，但 `chat.history`、`sessions.list` 或
+    `models.list` 因 `missing scope: operator.read` 而失败。
 
-    这对于没有设备身份的受信任代理 WebSocket 连接是预期行为。缺少设备身份的连接会清空其作用域。浏览器无法通过普通 HTTP 生成设备身份。
+    常见原因：
+
+    - 无设备的 Control UI 会话：受信任代理认证可以在没有设备身份的情况下允许 WebSocket 连接，但 OpenClaw 出于设计会清除无设备会话的作用域。
+    - 自定义后端客户端：`gateway.controlUi.dangerouslyDisableDeviceAuth` 仅作用于 Control UI，不会向任意后端或 CLI 风格的 WebSocket 客户端授予作用域。
+    - `x-openclaw-scopes` 过于狭窄：如果你的代理在 Control UI 的 WebSocket 升级请求中注入了该头，会上限为该集合的作用域。空头值会导致没有作用域。
 
     解决方法：
 
-    - 设置 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`，以在受信任代理 WebSocket 连接上保留 operator 作用域，或者
-    - 使用设备身份配对，使作用域绑定到设备令牌。
+    - 对于 Control UI，请使用 HTTPS，以便浏览器可以生成设备身份并完成配对。
+    - 对于自定义自动化，请使用设备身份/配对、保留的本地直接 `gateway-client` 后端辅助路径，或 [admin HTTP RPC](/plugins/admin-http-rpc)。
+    - 仅在临时为 Control UI 开启应急通道时使用 `gateway.controlUi.dangerouslyDisableDeviceAuth: true`。
 
   </Accordion>
   <Accordion title="WebSocket still failing">

@@ -13,7 +13,11 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 
 ## 控制 API（可选）
 
-仅用于本地集成时，Gateway 提供了一个小型回环 HTTP API：
+仅用于本地集成。Gateway 会暴露一个小型回环 HTTP API。
+该独立服务器是可选启用的——在 gateway 服务环境中设置环境变量
+`OPENCLAW_EAGER_BROWSER_CONTROL_SERVER=1`，
+并在 HTTP 端点可用之前重启 gateway。若不设置此变量，浏览器控制运行时仍可通过 CLI 和
+代理工具工作，但不会有任何服务监听回环控制端口。
 
 - 状态/启动/停止：`GET /`, `POST /start`, `POST /stop`
 - 标签页：`GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`
@@ -240,12 +244,17 @@ openclaw browser set device "iPhone 14"
 
 快照标志一览：
 
-- `--format ai` (default with Playwright): AI snapshot with numeric refs (`aria-ref="<n>"`).
-- `--format aria`: accessibility tree with `axN` refs. When Playwright is available, OpenClaw binds refs with backend DOM ids to the live page so follow-up actions can use them; otherwise treat the output as inspection-only.
-- `--efficient` (or `--mode efficient`): compact role snapshot preset. Set `browser.snapshotDefaults.mode: "efficient"` to make this the default (see [Gateway configuration](/gateway/configuration-reference#browser)).
-- `--interactive`, `--compact`, `--depth`, `--selector` force a role snapshot with `ref=e12` refs. `--frame "<iframe>"` scopes role snapshots to an iframe.
-- `--labels` adds a viewport-only screenshot with overlayed ref labels and prints the saved path.
-- `--urls` appends discovered link destinations to AI snapshots.
+- `--format ai` (默认，使用 Playwright)：带数字 refs 的 AI 快照（`aria-ref="<n>"`）。
+- `--format aria`：带 `axN` refs 的可访问性树。在 Playwright 可用时，OpenClaw 会将 refs 与后端 DOM id 绑定到实时页面，因此后续操作可以使用它们；否则应将输出仅视为检查用途。
+- `--efficient`（或 `--mode efficient`）：紧凑的 role 快照预设。设置 `browser.snapshotDefaults.mode: "efficient"` 可将其设为默认值（参见 [Gateway 配置](/gateway/configuration-reference#browser)）。
+- `--interactive`、`--compact`、`--depth`、`--selector` 会强制使用带 `ref=e12` refs 的 role 快照。`--frame "<iframe>"` 会将 role 快照限定到某个 iframe。
+- 在使用 Playwright 时，`--labels` 会添加带有叠加 ref 标签的截图
+  （输出 `MEDIA:<path>`），并附带一个 `annotations` 数组，其中包含每个 ref 的边界
+  框。在 `screenshot` 中，基于 Playwright 的标签支持 `--full-page`、`--ref` 和 `--element`；在 `snapshot` 中，附带的截图仍然
+  仅限视口。现有会话/chrome-mcp 配置文件会在页面截图上渲染叠加标签，但不会返回 `annotations` 或使用 Playwright 的
+  full-page/ref/element 投影助手。没有 Playwright 或 chrome-mcp 时，
+  不可用带标签的截图。
+- `--urls` 会将发现的链接目标附加到 AI 快照中。
 
 ## 快照和 ref
 
@@ -256,13 +265,14 @@ OpenClaw 支持两种“快照”样式：
   - 操作：`openclaw browser click 12`、`openclaw browser type 23 "hello"`。
   - 在内部，ref 通过 Playwright 的 `aria-ref` 解析。
 
-- **Role 快照（类似 `e12` 的 role refs）**：`openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
+- **Role snapshot（类似 `e12` 的 role refs）**：`openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
   - 输出：带有 `[ref=e12]`（以及可选 `[nth=1]`）的基于 role 的列表/树。
   - 操作：`openclaw browser click e12`、`openclaw browser highlight e12`。
-  - 在内部，ref 通过 `getByRole(...)` 解析（重复项还会加上 `nth()`）。
-  - 添加 `--labels` 以包含带有叠加 `e12` 标签的视口截图。
-  - 当链接文本含义不明确、且代理需要具体
-    导航目标时，添加 `--urls`。
+  - 在内部，ref 通过 `getByRole(...)`（以及重复项的 `nth()`）解析。
+  - 添加 `--labels` 可包含一张带叠加 `e12` 标签的截图。在
+    基于 Playwright 的配置文件中，这还会返回每个 ref 的边界框元数据
+    （`annotations[]`）。
+  - 当链接文本含糊且代理需要明确的导航目标时，添加 `--urls`。
 
 - **ARIA 快照（类似 `ax12` 的 ARIA refs）**：`openclaw browser snapshot --format aria`
   - 输出：作为结构化节点的可访问性树。
@@ -282,20 +292,21 @@ Ref 行为：
 - 如果 role 快照是用 `--frame` 生成的，那么在下一次 role 快照之前，role refs 都限定在该 iframe 内。
 - 未知或过期的 `axN` refs 会快速失败，而不会退回到 Playwright 的 `aria-ref` 选择器。发生这种情况时，请在同一标签页上运行新的快照。
 
-## 等待增强功能
+## Waiting for enhancements
 
-你可以等待的不只是时间/文本：
+You can wait for more than just time/text:
 
-- 等待 URL（Playwright 支持 glob）：
+- Wait for URL (Playwright supports glob):
   - `openclaw browser wait --url "**/dash"`
-- 等待加载状态：
+- Wait for load state:
   - `openclaw browser wait --load networkidle`
-- 等待 JS 谓词：
+  - Supported on managed `openclaw` and raw/remote CDP profiles. The `user` and `existing-session` profiles reject `networkidle`; use `--url`, `--text`, a selector, or `--fn` waits there.
+- Wait for a JS predicate:
   - `openclaw browser wait --fn "window.ready===true"`
-- 等待某个选择器变为可见：
+- Wait for a selector to become visible:
   - `openclaw browser wait "#main"`
 
-这些可以组合使用：
+These can be combined:
 
 ```bash
 openclaw browser wait "#main" \
@@ -305,26 +316,26 @@ openclaw browser wait "#main" \
   --timeout-ms 15000
 ```
 
-## 调试工作流
+## Debugging workflow
 
-当操作失败时（例如“不可见”、“严格模式违规”、“被遮挡”）：
+When an action fails (for example, “not visible”, “strict mode violation”, “obscured”):
 
 1. `openclaw browser snapshot --interactive`
-2. 使用 `click <ref>` / `type <ref>`（在交互模式下优先使用 role refs）
-3. 如果仍然失败：`openclaw browser highlight <ref>` 查看 Playwright 正在定位什么
-4. 如果页面行为异常：
+2. Use `click <ref>` / `type <ref>` (prefer role refs in interactive mode)
+3. If it still fails: `openclaw browser highlight <ref>` to see what Playwright is targeting
+4. If the page behaves strangely:
    - `openclaw browser errors --clear`
    - `openclaw browser requests --filter api --clear`
-5. 进行深度调试：录制 trace：
+5. Deep debug: record a trace:
    - `openclaw browser trace start`
-   - 复现问题
-   - `openclaw browser trace stop`（打印 `TRACE:<path>`）
+   - Reproduce the issue
+   - `openclaw browser trace stop` (prints `TRACE:<path>`)
 
-## JSON 输出
+## JSON output
 
-`--json` 用于脚本和结构化工具。
+`--json` is for scripts and structured tools.
 
-示例：
+Examples:
 
 ```bash
 openclaw browser status --json
@@ -333,39 +344,39 @@ openclaw browser requests --filter api --json
 openclaw browser cookies --json
 ```
 
-JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/chars/refs/interactive），方便工具推断负载大小和密度。
+The Role snapshot in JSON includes `refs`, plus a small `stats` block (lines/chars/refs/interactive), which helps tools infer payload size and density.
 
-## 状态和环境开关
+## State and environment switches
 
-这些对“让网站表现得像 X”之类的工作流很有用：
+These are useful for workflows like “make the site behave like X”:
 
-- Cookies：`cookies`、`cookies set`、`cookies clear`
-- 存储：`storage local|session get|set|clear`
-- 离线：`set offline on|off`
-- 请求头：`set headers --headers-json '{"X-Debug":"1"}'`（旧的 `set headers --json '{"X-Debug":"1"}'` 仍受支持）
-- HTTP basic auth：`set credentials user pass`（或 `--clear`）
-- 地理位置：`set geo <lat> <lon> --origin "https://example.com"`（或 `--clear`）
-- 媒体：`set media dark|light|no-preference|none`
-- 时区 / 区域设置：`set timezone ...`、`set locale ...`
-- 设备 / 视口：
-  - `set device "iPhone 14"`（Playwright 设备预设）
+- Cookies: `cookies`, `cookies set`, `cookies clear`
+- Storage: `storage local|session get|set|clear`
+- Offline: `set offline on|off`
+- Request headers: `set headers --headers-json '{"X-Debug":"1"}'` (the older `set headers --json '{"X-Debug":"1"}'` is still supported)
+- HTTP basic auth: `set credentials user pass` (or `--clear`)
+- Geolocation: `set geo <lat> <lon> --origin "https://example.com"` (or `--clear`)
+- Media: `set media dark|light|no-preference|none`
+- Timezone / locale: `set timezone ...`, `set locale ...`
+- Device / viewport:
+  - `set device "iPhone 14"` (Playwright device preset)
   - `set viewport 1280 720`
 
-## 安全与隐私
+## Security and privacy
 
-- openclaw browser 配置文件可能包含已登录会话；请将其视为敏感信息。
-- `browser act kind=evaluate` / `openclaw browser evaluate` 和 `wait --fn`
-  会在页面上下文中执行任意 JavaScript。提示注入可能会影响它。
-  如果不需要，可通过 `browser.evaluateEnabled=false` 禁用它。
-- `openclaw browser evaluate --fn` 接受函数源码、表达式或
-  语句体。语句体会被包装为异步函数，因此要使用 `return`
-  返回你想要的值。当前端函数可能比默认 evaluate 超时需要更长时间时，
-  请使用 `--timeout-ms <ms>`。
-- 有关登录和反机器人说明（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
-- 保持 Gateway/node 主机私有（仅限 loopback 或 tailnet）。
-- 远程 CDP 端点权限很高；请通过隧道并做好保护。
+- openclaw browser profiles may contain logged-in sessions; treat them as sensitive.
+- `browser act kind=evaluate` / `openclaw browser evaluate` and `wait --fn`
+  execute arbitrary JavaScript in the page context. Prompt injection may affect them.
+  If not needed, disable it with `browser.evaluateEnabled=false`.
+- `openclaw browser evaluate --fn` accepts function source, expressions, or
+  statement bodies. Statement bodies are wrapped as async functions, so use `return`
+  to return the value you want. When your frontend function may need longer than the default evaluate timeout,
+  use `--timeout-ms <ms>`.
+- For login and anti-bot notes (X/Twitter etc.), see [Browser login + X/Twitter posting](/tools/browser-login).
+- Keep Gateway/node hosts private (loopback or tailnet only).
+- Remote CDP endpoints are highly privileged; tunnel them and protect them carefully.
 
-严格模式示例（默认阻止私有/内部目标）：
+Strict mode example (defaults to blocking private/internal targets):
 
 ```json5
 {
@@ -373,15 +384,15 @@ JSON 中的 Role 快照包含 `refs`，以及一个小的 `stats` 块（lines/ch
     ssrfPolicy: {
       dangerouslyAllowPrivateNetwork: false,
       hostnameAllowlist: ["*.example.com", "example.com"],
-      allowedHostnames: ["localhost"], // 可选的精确允许
+      allowedHostnames: ["localhost"], // optional exact allow
     },
   },
 }
 ```
 
-## 相关内容
+## Related
 
-- [Browser](/tools/browser) - 概述、配置、配置文件、安全性
-- [Browser login](/tools/browser-login) - 登录网站
+- [Browser](/tools/browser) - overview, configuration, profiles, security
+- [Browser login](/tools/browser-login) - log in to websites
 - [Browser Linux troubleshooting](/tools/browser-linux-troubleshooting)
 - [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

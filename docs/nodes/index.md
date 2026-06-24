@@ -7,9 +7,9 @@ read_when:
 title: "节点"
 ---
 
-**node** 是一个伴随设备（macOS/iOS/Android/headless），它以 `role: "node"` 连接到 Gateway 的 **WebSocket**（与 operators 使用同一端口），并通过 `node.invoke` 暴露一组命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。协议细节：[Gateway protocol](/gateway/protocol)。
+**node** 是一个伴随设备（macOS/iOS/Android/headless），它以 `role: "node"` 连接到 Gateway 的 **WebSocket**（与 operators 使用同一端口），并通过 `node.invoke` 暴露一组命令接口（例如 `canvas.*`、`camera.*`、`device.*`、`notifications.*`、`system.*`）。协议细节：[Gateway 协议](/gateway/protocol)。
 
-旧版传输：[Bridge protocol](/gateway/bridge-protocol)（TCP JSONL；
+旧版传输：[Bridge 协议](/gateway/bridge-protocol)（TCP JSONL；
 仅适用于历史上的当前节点）。
 
 macOS 也可以在 **node 模式** 下运行：菜单栏应用连接到 Gateway 的
@@ -45,14 +45,17 @@ openclaw nodes describe --node <idOrNameOrIp>
 
 注意：
 
-- 当设备配对角色包含 `node` 时，`nodes status` 会将节点标记为**已配对**。
+- `nodes status` 在节点的设备配对角色包含 `node` 时会将其标记为 **已配对**。
 - 设备配对记录是持久化的已批准角色契约。令牌
-  轮换仍在该契约内部；它不能将已配对节点升级为
-  配对批准从未授予的其他角色。
-- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/remove/rename`）是一个独立的、由 gateway 持有的
-  节点配对存储；它不会约束 WS 的 `connect` 握手。
-- `openclaw nodes remove --node <id|name|ip>` 会从该
-  独立的、由 gateway 持有的节点配对存储中删除过期条目。
+  轮换始终停留在该契约内；它不能把已配对节点升级为配对批准从未授予的
+  其他角色。
+- `node.pair.*`（CLI：`openclaw nodes pending/approve/reject/remove/rename`）是一个单独的、由 gateway 拥有的
+  节点配对存储；它**不会**阻止 WS `connect` 握手。
+- `openclaw nodes remove --node <id|name|ip>` 会移除一个节点配对。对于
+  受设备支持的节点，它会撤销 `devices/paired.json` 中该设备的 `node` 角色，并断开该设备的 node-role 会话——
+  混合角色设备会保留其行并仅失去 `node` 角色，而仅节点设备的行会被
+  删除。它还会清除由 gateway 单独拥有的节点配对存储中的任何匹配条目。`operator.pairing` 可以移除非 operator 的节点行；设备令牌调用者在混合角色设备上撤销自身 node 角色时，
+  另外还需要 `operator.admin`。
 - 批准范围遵循待处理请求声明的命令：
   - 无命令请求：`operator.pairing`
   - 非 exec 节点命令：`operator.pairing` + `operator.write`
@@ -174,8 +177,8 @@ node 允许列表/批准约束）。
 相关：
 
 - [Node host CLI](/cli/node)
-- [Exec tool](/tools/exec)
-- [Exec approvals](/tools/exec-approvals)
+- [Exec 工具](/tools/exec)
+- [Exec 批准](/tools/exec-approvals)
 
 ## 调用命令
 
@@ -212,11 +215,63 @@ Windows 和 macOS 伴随节点默认允许安全的已声明命令，例如
 当节点更改其声明的命令列表后，请拒绝旧的设备配对
 并批准新的请求，以便 gateway 存储更新后的命令快照。
 
+## Config (`openclaw.json`)
+
+Node 相关设置位于 `gateway.nodes` 和 `tools.exec` 下：
+
+```json5
+{
+  gateway: {
+    nodes: {
+      // 从受信任网络（CIDR 列表）自动批准首次节点配对。
+      // 未设置时禁用。仅适用于无请求 scopes 的首次 role:node 请求；
+      // 不会自动批准升级。
+      pairing: {
+        autoApproveCidrs: ["192.168.1.0/24"],
+      },
+      // 允许危险/高隐私开销的节点命令（camera.snap 等）。
+      allowCommands: ["camera.snap", "screen.record"],
+      // 即使默认值或 allowCommands 包含，也阻止精确命令名。
+      denyCommands: ["camera.clip"],
+    },
+  },
+  tools: {
+    exec: {
+      // 默认 exec host："node" 将所有 exec 调用路由到已配对的节点。
+      host: "node",
+      // 节点 exec 的安全模式：仅允许已批准/已加入允许列表的命令。
+      security: "allowlist",
+      // 将 exec 固定到特定节点（id 或 name）。省略则允许任意节点。
+      node: "build-node",
+    },
+  },
+}
+```
+
+使用精确的节点命令名。即使平台默认值或 `allowCommands` 条目原本会允许某个命令，`denyCommands` 也会将其移除。参见
+[Gateway 配置参考](/gateway/configuration-reference#gateway-field-details)
+了解 gateway 节点配对和命令策略字段详情。
+
+按 agent 覆盖 exec 节点：
+
+```json5
+{
+  agents: {
+    list: [
+      {
+        id: "main",
+        tools: { exec: { node: "build-node" } },
+      },
+    ],
+  },
+}
+```
+
 ## 截图（canvas 快照）
 
 如果节点正在显示 Canvas（WebView），`canvas.snapshot` 会返回 `{ format, base64 }`。
 
-CLI helper (writes to a temp file and prints the saved path):
+CLI 辅助工具（写入临时文件并打印保存路径）：
 
 ```bash
 openclaw nodes canvas snapshot --node <idOrNameOrIp> --format png
@@ -360,29 +415,29 @@ macOS 节点公开 `system.run`、`system.notify` 和 `system.execApprovals.get/
 示例：
 
 ```bash
-openclaw nodes notify --node <idOrNameOrIp> --title "Ping" --body "Gateway ready"
+openclaw nodes notify --node <idOrNameOrIp> --title "Ping" --body "网关已就绪"
 openclaw nodes invoke --node <idOrNameOrIp> --command system.which --params '{"name":"git"}'
 ```
 
 注意：
 
-- `system.run` 会在负载中返回 stdout/stderr/退出码。
-- Shell 执行现在通过带有 `host=node` 的 `exec` 工具进行；`nodes` 仍然是显式节点命令的直接 RPC 接口。
-- `nodes invoke` 不暴露 `system.run` 或 `system.run.prepare`；它们仅保留在 exec 路径上。
-- exec 路径会在批准前准备一个规范的 `systemRunPlan`。一旦
-  获得批准，gateway 会转发该已存储的计划，而不是后续
-  调用者编辑过的 command/cwd/session 字段。
-- `system.notify` 遵循 macOS 应用中的通知权限状态。
-- 未识别的节点 `platform` / `deviceFamily` 元数据会使用保守的默认允许列表，其中不包含 `system.run` 和 `system.which`。如果你确实需要在未知平台上使用这些命令，请通过 `gateway.nodes.allowCommands` 显式添加。
+- `system.run` 在负载中返回 stdout/stderr/退出码。
+- Shell 执行现在通过 `exec` 工具进行，并使用 `host=node`；`nodes` 仍然是显式节点命令的直接 RPC 表面。
+- `nodes invoke` 不会暴露 `system.run` 或 `system.run.prepare`；这些只保留在 exec 路径上。
+- exec 路径在审批前会先准备一个规范化的 `systemRunPlan`。一旦
+  审批通过，网关转发的是保存下来的计划，而不是之后
+  调用方编辑过的命令/cwd/session 字段。
+- `system.notify` 会遵循 macOS 应用中的通知权限状态。
+- 对于未识别的节点 `platform` / `deviceFamily` 元数据，默认使用保守的允许列表，不包含 `system.run` 和 `system.which`。如果你确实需要在未知平台上使用这些命令，请通过 `gateway.nodes.allowCommands` 显式添加。
 - `system.run` 支持 `--cwd`、`--env KEY=VAL`、`--command-timeout` 和 `--needs-screen-recording`。
-- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的 `--env` 值会缩减为显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
-- 对于 allowlist 模式下的始终允许决策，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）会保留内部可执行文件路径，而不是包装器路径。如果无法安全展开，则不会自动持久化任何 allowlist 条目。
-- 在 Windows 节点主机的 allowlist 模式下，通过 `cmd.exe /c` 运行 shell 包装器需要批准（仅有 allowlist 条目不会自动允许该包装器形式）。
+- 对于 shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的 `--env` 值会收缩为显式允许列表（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
+- 在允许列表模式下的始终允许决策中，已知的分发包装器（`env`、`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久保存内部可执行文件路径，而不是包装器路径。如果展开不安全，则不会自动持久保存允许列表项。
+- 在允许列表模式下的 Windows 节点宿主中，通过 `cmd.exe /c` 运行的 shell 包装器需要审批（仅有允许列表项不会自动放行该包装器形式）。
 - `system.notify` 支持 `--priority <passive|active|timeSensitive>` 和 `--delivery <system|overlay|auto>`。
-- 节点主机会忽略 `PATH` 覆盖，并移除危险的启动/ shell 键（`DYLD_*`、`LD_*`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`）。如果你需要额外的 PATH 条目，请配置节点主机服务环境（或将工具安装到标准位置），而不是通过 `--env` 传递 `PATH`。
-- 在 macOS node 模式下，`system.run` 受 macOS 应用中的 exec 批准（Settings → Exec approvals）限制。
-  ask/allowlist/full 的行为与无界面 node 主机相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
-- 在无界面 node 主机上，`system.run` 受 exec 批准（`~/.openclaw/exec-approvals.json`）限制。
+- 节点宿主会忽略 `PATH` 覆盖，并移除危险的启动/ shell 键（`DYLD_*`、`LD_*`、`BASHOPTS`、`FPATH`、`KSH_ENV`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHON*`、`PERL*`、`RUBYOPT`、`SHELLOPTS`、`PS4`、`TCLLIBPATH`）。如果你需要额外的 PATH 条目，请配置节点宿主服务环境（或将工具安装到标准位置），而不要通过 `--env` 传递 `PATH`。
+- 在 macOS 节点模式下，`system.run` 受 macOS 应用中的 exec 审批控制（设置 → Exec approvals）。
+  Ask/allowlist/full 的行为与无界面节点宿主相同；被拒绝的提示会返回 `SYSTEM_RUN_DENIED`。
+- 在无界面节点宿主上，`system.run` 受 exec 审批控制（`~/.openclaw/exec-approvals.json`）。
 
 ## Exec 节点绑定
 

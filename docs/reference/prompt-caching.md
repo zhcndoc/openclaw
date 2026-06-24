@@ -9,7 +9,7 @@ read_when:
 
 提示缓存意味着模型提供方可以在不同轮次之间复用未变化的提示前缀（通常是 system/developer 指令和其他稳定上下文），而不是每次都重新处理它们。OpenClaw 将提供方的使用情况归一化为 `cacheRead` 和 `cacheWrite`，其中上游 API 会直接暴露这些计数器。
 
-当实时会话快照缺少它们时，状态界面也可以从最近的转录使用日志中恢复缓存计数器，因此 `/status` 在部分会话元数据丢失后仍能继续显示缓存行。现有的非零实时缓存值仍然优先于转录回退值。
+当实时会话快照缺少它们时，状态界面也可以从最近的转录使用日志中恢复缓存计数器，因此 `/status` 在部分会话元数据丢失后仍然可以继续显示缓存行。现有的非零实时缓存值仍然优先于转录回退值。
 
 这很重要的原因在于：更低的 token 成本、更快的响应，以及更可预测的长会话性能。没有缓存时，即使大部分输入没有变化，重复的提示也会在每一轮都支付完整的提示成本。
 
@@ -146,11 +146,11 @@ DeepSeek 的缓存构建尽力而为，可能需要几秒钟。立即的后续�
 - 你仍然可以在已配置的模型上通过 `params.cachedContent`（或旧版的 `params.cached_content`）传入现有的 Gemini cached-content 句柄。
 - 这与 Anthropic/OpenAI 的提示前缀缓存是分开的。对于 Gemini，OpenClaw 管理的是提供方原生的 `cachedContents` 资源，而不是向请求中注入缓存标记。
 
-### Gemini CLI JSON 使用情况
+### Gemini CLI usage
 
-- Gemini CLI 的 JSON 输出也可以通过 `stats.cached` 显示缓存命中；OpenClaw 将其映射为 `cacheRead`。
-- 如果 CLI 省略了直接的 `stats.input` 值，OpenClaw 会根据 `stats.input_tokens - stats.cached` 推导输入 token。
-- 这只是使用情况归一化。它并不意味着 OpenClaw 正在为 Gemini CLI 创建 Anthropic/OpenAI 风格的提示缓存标记。
+- Gemini CLI `stream-json` 输出可通过 `stats.cached` 暴露缓存命中；OpenClaw 将其映射为 `cacheRead`。旧版 `--output-format json` 覆盖使用相同的 usage 归一化。
+- 如果 CLI 省略了直接的 `stats.input` 值，OpenClaw 会从 `stats.input_tokens - stats.cached` 推导输入 token。
+- 这只是 usage 归一化。它并不意味着 OpenClaw 正在为 Gemini CLI 创建 Anthropic/OpenAI 风格的提示缓存标记。
 
 ## 系统提示缓存边界
 

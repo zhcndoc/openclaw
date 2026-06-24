@@ -210,8 +210,9 @@ openclaw agents unbind --agent work --all
 
 说明：
 
-- 可使用 `--agent` 或 `--workspace` 来选择目标 agent。
-- 如果你依赖 `--workspace`，而多个 agent 共享该工作区，命令会失败并要求你传入 `--agent`。
+- `--agent` 或 `--workspace` 可用于选择目标 agent。
+- 如果你依赖 `--workspace`，且有多个 agent 共享该工作区，命令会失败并要求你传入 `--agent`。
+- 本地、相对于工作区的头像图片文件大小限制为 2 MB。HTTP(S) URL 和 `data:` URI 不受本地文件大小限制检查。
 - 当未提供显式身份字段时，命令会从 `IDENTITY.md` 读取身份数据。
 
 从 `IDENTITY.md` 加载：

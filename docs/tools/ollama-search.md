@@ -128,22 +128,23 @@ Ollama 模型提供商将 `baseUrl` 作为规范键。web-search 提供商也会
 
 ## 注意事项
 
-- 该提供商不需要单独的 web-search 专用 API 密钥字段。
+- 此提供商不需要单独的 web-search 专用 API 密钥字段。
 - 如果 Ollama 主机受认证保护，OpenClaw 会在可用时复用常规 Ollama
   提供商 API 密钥。
-- 如果 `baseUrl` 为 `https://ollama.com`，OpenClaw 会直接调用
+- 如果 `baseUrl` 是 `https://ollama.com`，OpenClaw 会直接调用
   `https://ollama.com/api/web_search`，并将已配置的 Ollama
   API 密钥作为 bearer 认证发送。
 - 如果已配置的主机不提供 web search 且设置了 `OLLAMA_API_KEY`，
   OpenClaw 可以回退到 `https://ollama.com/api/web_search`，而不会将
   该环境变量密钥发送到本地主机。
-- OpenClaw 会在设置期间警告 Ollama 不可达或未登录，但
+- 如果 Ollama 无法访问或未登录，OpenClaw 会在设置期间发出警告，但
   不会阻止选择。
-- 当未配置更高优先级的凭据型提供商时，运行时自动检测可以回退到 Ollama Web Search。
-- 本地 Ollama 守护进程主机使用本地代理端点
+- 当未配置更高优先级的已认证提供商时，OpenClaw 不会自动选择 Ollama Web Search；
+  请通过 `tools.web.search.provider: "ollama"` 显式选择它。
+- 本地 Ollama 守护进程主机会使用本地代理端点
   `/api/experimental/web_search`，该端点会签名并转发到 Ollama Cloud。
-- `https://ollama.com` 主机会使用公共托管端点
-  `/api/web_search`，并直接使用 bearer API key 认证。
+- `https://ollama.com` 主机会直接使用公共托管端点
+  `/api/web_search`，并通过 bearer API 密钥认证。
 
 ## 相关
 

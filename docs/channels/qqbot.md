@@ -151,6 +151,7 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
       groups: {
         "*": {
           requireMention: true,
+          commandLevel: "all",
           historyLimit: 50,
           tools: { deny: ["exec", "read", "write"] },
         },
@@ -158,6 +159,7 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
           name: "Release room",
           requireMention: false,
           ignoreOtherMentions: true,
+          commandLevel: "safety",
           historyLimit: 20,
           prompt: "保持回复简短且以操作为主。",
         },
@@ -171,15 +173,26 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
 `groups.GROUP_OPENID` 条目会覆盖该群的默认值。群组
 设置包括：
 
-- `requireMention`: 在 bot 回复前需要 @提及。默认值：`true`。
-- `ignoreOtherMentions`: 丢弃提到了其他人但没有提到 bot 的消息。
-- `historyLimit`: 将最近未提及的群消息保留为下一次被提及时的上下文。设为 `0` 可禁用。
-- `tools`: 为整个群允许/拒绝工具。
-- `toolsBySender`: 按发送者覆盖群工具设置；参见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。
-- `name`: 日志和群上下文中使用的友好标签。
-- `prompt`: 追加到 agent 上下文中的每个群行为提示。
+- `requireMention`: 在 bot 回复前是否必须先 @提及。默认值：`true`。
+- `commandLevel`: 控制哪些内置斜杠命令可在群组中运行。
+  默认值：`all`，在省略该设置时保持现有 QQBot 群行为不变。
+- `ignoreOtherMentions`: 丢弃提及了其他人但没有提及 bot 的消息。
+- `historyLimit`: 保留最近的非提及群消息，作为下一次被提及时的上下文。设为 `0` 可禁用。
+- `tools`: 为整个群组允许/拒绝工具。
+- `toolsBySender`: 按发送者覆盖群组工具限制；参见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。
+- `name`: 用于日志和群上下文中的友好名称。
+- `prompt`: 附加到代理上下文中的按群行为提示。
 
-旧版 QQBot `toolPolicy` 条目已废弃。运行 `openclaw doctor --fix` 将其迁移为 `tools`。
+`commandLevel` 接受：
+
+- `all`: 像以前一样保留已识别的内置命令可用。某些命令可能
+  仍会在菜单中隐藏，但授权用户仍可在群里运行它们。
+- `safety`: 允许常见协作命令，如 `/help`、`/btw` 和 `/stop`；对于
+  `/config`、`/tools` 和 `/bash` 等敏感命令，要求用户在私聊中运行。
+- `strict`: 仅允许严格群组运行所需的群会话控制。`/stop` 仍保持紧急，
+  因此授权发送者可以中断正在进行的运行。
+
+旧版 QQBot 的 `toolPolicy` 条目已弃用。运行 `openclaw doctor --fix` 将其迁移到 `tools`。
 
 激活模式为 `mention` 和 `always`。`requireMention: true` 映射到
 `mention`；`requireMention: false` 映射到 `always`。当存在会话级激活
@@ -269,12 +282,9 @@ channel/global TTS 配置之上进行深度合并。
 
 管理命令 (`/bot-me`, `/bot-upgrade`, `/bot-logs`, `/bot-clear-storage`, `/bot-streaming`, `/bot-approve`) 仅限私聊，并要求发送者的 openid 明确位于非通配符的 `allowFrom` 列表中。通配符 `allowFrom: ["*"]` 允许聊天，但不授予管理命令访问权限。群消息先匹配 `groupAllowFrom`，再回退到 `allowFrom`。在群里运行管理命令会返回提示，而不是静默丢弃。
 
-When QQ Bot exec approvals use the default same-chat fallback, native approval
-button clicks follow the same explicit non-wildcard command allowlist. To grant
-approval-only access without broader command access, configure
-`channels.qqbot.execApprovals.approvers`.
+当 QQ Bot exec 审批使用默认的同聊天回退时，原生审批按钮点击会遵循相同的显式非通配符命令允许列表。若要授予仅审批访问权限而不开放更广泛的命令访问，请配置 `channels.qqbot.execApprovals.approvers`。
 
-## Engine architecture
+## 引擎架构
 
 QQ Bot 作为一个自包含引擎随插件发布：
 

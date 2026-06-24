@@ -1,7 +1,7 @@
 ---
-summary: "Expose an OpenAI-compatible /v1/chat/completions HTTP endpoint from Gateway"
+summary: "从 Gateway 暴露一个兼容 OpenAI 的 /v1/chat/completions HTTP 端点"
 read_when:
-  - Tools that expect OpenAI Chat Completions in integrations
+  - 期望在集成中使用 OpenAI Chat Completions 的工具
 title: "OpenAI Chat Completions"
 ---
 
@@ -68,12 +68,13 @@ OpenClaw 的 Gateway 可以提供一个小型的、兼容 OpenAI 的 Chat Comple
   - 恢复完整的默认运维者 scope 集：
     `operator.admin`, `operator.approvals`, `operator.pairing`,
     `operator.read`, `operator.talk.secrets`, `operator.write`
-  - 将此端点上的聊天轮次视为 owner-sender 轮次
-- 可信、携带身份的 HTTP 模式（例如 trusted proxy 认证，或私有入口上的 `gateway.auth.mode="none"`）
-  - 认证某个外层受信任身份或部署边界
-  - 当头部存在时，尊重 `x-openclaw-scopes`
-  - 当头部不存在时，回退到正常的运维者默认 scope 集
-  - 只有当调用方显式缩窄 scopes 且省略 `operator.admin` 时，才会失去 owner 语义
+  - 将此端点上的 chat turns 视为 owner-sender turns
+- trusted identity-bearing HTTP modes (for example trusted proxy auth, or `gateway.auth.mode="none"` on private ingress)
+  - authenticate some outer trusted identity or deployment boundary
+  - honor `x-openclaw-scopes` when the header is present
+  - fall back to the normal operator default scope set when the header is absent
+  - only lose owner semantics when the caller explicitly narrows scopes and omits `operator.admin`
+  - require `operator.admin` for owner-level request controls such as `x-openclaw-model`
 
 参见 [Security](/gateway/security) 和 [Remote access](/gateway/remote)。
 
@@ -95,10 +96,10 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 
 可选请求头：
 
-- `x-openclaw-model: <provider/model-or-bare-id>` 为所选 agent 覆盖后端模型。
-- `x-openclaw-agent-id: <agentId>` 仍然受支持，作为兼容性覆盖。
-- `x-openclaw-session-key: <sessionKey>` 完全控制会话路由。
-- `x-openclaw-message-channel: <channel>` 为感知 channel 的提示词和策略设置合成的入口 channel 上下文。
+- `x-openclaw-model: <provider/model-or-bare-id>` 会覆盖所选 agent 的后端模型。共享密钥 bearer 调用方可以使用此头。身份携带型调用方，例如 trusted-proxy 或带有 `x-openclaw-scopes` 的私有免认证入口请求，需要 `operator.admin`；仅写权限的调用方会收到 `403 missing scope: operator.admin`。
+- `x-openclaw-agent-id: <agentId>` 仍作为兼容性覆盖项受支持。
+- `x-openclaw-session-key: <sessionKey>` 显式控制会话路由。该值不得使用保留的内部会话命名空间，例如 `subagent:`、`cron:` 或 `acp:`；这类请求会以 `400 invalid_request_error` 被拒绝。
+- `x-openclaw-message-channel: <channel>` 为感知通道的提示词和策略设置合成的入口通道上下文。
 
 仍接受的兼容别名：
 
@@ -143,7 +144,7 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 
 如果请求包含 OpenAI 的 `user` 字符串，Gateway 会据此派生一个稳定的 session key，因此重复调用可以共享同一个 agent 会话。
 
-对于自定义应用，最安全的默认做法是在同一条对话线程中重复使用相同的 `user` 值。除非你明确希望多个对话或设备共享一个 OpenClaw 会话，否则不要使用账户级标识符。当你需要在多个客户端或线程之间进行显式路由控制时，请使用 `x-openclaw-session-key`。
+对于自定义应用，最安全的默认做法是在同一个对话线程中重复使用相同的 `user` 值。除非你明确希望多个对话或设备共享一个 OpenClaw 会话，否则不要使用账户级标识符。仅在你需要跨多个客户端或线程进行显式路由控制时使用 `x-openclaw-session-key`，并选择不以保留内部命名空间开头的应用自有键，例如 `subagent:`、`cron:` 或 `acp:`。
 
 ## 为什么这个接口很重要
 
@@ -177,7 +178,7 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 
   </Accordion>
   <Accordion title="如何覆盖后端模型？">
-    使用 `x-openclaw-model`。
+    使用 `x-openclaw-model`。这是一个 owner 级别的覆盖项：它可与 Gateway 的共享密钥 bearer token/password 路径配合使用，并且在 trusted proxy auth 等带身份的 HTTP 路径上需要 `operator.admin`。
 
     示例：
     `x-openclaw-model: openai/gpt-5.4`
@@ -190,8 +191,8 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
     `/v1/embeddings` 使用相同的 agent 目标 `model` ids。
 
     使用 `model: "openclaw/default"` 或 `model: "openclaw/<agentId>"`。
-    当你需要特定的 embedding 模型时，请将其放在 `x-openclaw-model` 中。
-    如果没有该头，请求会传递到所选 agent 的正常 embedding 配置。
+    当你需要指定某个 embedding 模型时，请从共享密钥调用方，或带有 `operator.admin` 的身份携带型调用方发送 `x-openclaw-model`。
+    如果没有该头，请求会透传到所选 agent 的正常 embedding 配置。
 
   </Accordion>
 </AccordionGroup>
@@ -212,32 +213,32 @@ OpenClaw 将 OpenAI 的 `model` 字段视为一个**agent 目标**，而不是�
 
 - `tools`: array of `{ "type": "function", "function": { ... } }`
 - `tool_choice`: `"auto"`, `"none"`, `"required"`, or `{ "type": "function", "function": { "name": "..." } }`
-- `messages[*].role: "tool"` follow-up turns
-- `messages[*].tool_call_id` for binding tool results back to a prior tool call
-- `max_completion_tokens`: number; per-call cap for total completion tokens (reasoning tokens included). Current OpenAI Chat Completions field name; preferred when both `max_completion_tokens` and `max_tokens` are sent.
-- `max_tokens`: number; legacy alias accepted for backwards compatibility. Ignored when `max_completion_tokens` is also present.
-- `temperature`: number; best-effort sampling temperature forwarded to the upstream provider via the agent stream-param channel.
-- `top_p`: number; best-effort nucleus sampling forwarded to the upstream provider via the agent stream-param channel.
-- `frequency_penalty`: number; best-effort frequency penalty forwarded to the upstream provider via the agent stream-param channel. Validated range: -2.0 to 2.0. Returns `400 invalid_request_error` for out-of-range values.
-- `presence_penalty`: number; best-effort presence penalty forwarded to the upstream provider via the agent stream-param channel. Validated range: -2.0 to 2.0. Returns `400 invalid_request_error` for out-of-range values.
-- `seed`: number (integer); best-effort seed forwarded to the upstream provider via the agent stream-param channel. Returns `400 invalid_request_error` for non-integer values.
-- `stop`: string or array of up to 4 strings; best-effort stop sequences forwarded to the upstream provider via the agent stream-param channel. Returns `400 invalid_request_error` for more than 4 sequences or non-string/empty entries.
+- `messages[*].role: "tool"` 后续轮次
+- `messages[*].tool_call_id` 用于将工具结果绑定回先前的工具调用
+- `max_completion_tokens`: number; 每次调用的总 completion token 上限（包含 reasoning token）。这是当前 OpenAI Chat Completions 的字段名；当同时发送 `max_completion_tokens` 和 `max_tokens` 时优先使用它。
+- `max_tokens`: number; 为向后兼容而接受的旧别名。如果同时存在 `max_completion_tokens`，则会被忽略。
+- `temperature`: number; 最佳努力地将采样温度通过 agent stream-param 通道转发给上游 provider。
+- `top_p`: number; 最佳努力地将 nucleus sampling 通过 agent stream-param 通道转发给上游 provider。
+- `frequency_penalty`: number; 最佳努力地将频率惩罚通过 agent stream-param 通道转发给上游 provider。校验范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
+- `presence_penalty`: number; 最佳努力地将存在惩罚通过 agent stream-param 通道转发给上游 provider。校验范围：-2.0 到 2.0。超出范围时返回 `400 invalid_request_error`。
+- `seed`: number (integer); 最佳努力地将 seed 通过 agent stream-param 通道转发给上游 provider。非整数值会返回 `400 invalid_request_error`。
+- `stop`: string 或最多 4 个字符串的数组；最佳努力地将停止序列通过 agent stream-param 通道转发给上游 provider。超过 4 个序列或包含非字符串/空项时返回 `400 invalid_request_error`。
 
-When either token-cap field is set, the value is forwarded to the upstream provider via the agent stream-param channel. The actual wire field name sent to the upstream provider is chosen by the provider transport: `max_completion_tokens` for OpenAI-family endpoints, and `max_tokens` for providers that only accept the legacy name (such as Mistral and Chutes). Sampling fields (`temperature`, `top_p`, `frequency_penalty`, `presence_penalty`, `seed`) follow the same stream-param channel; the ChatGPT-based Codex Responses backend strips them server-side since it uses fixed sampling. `stop` also rides the stream-param channel and maps to the transport's stop field (`stop` for Chat Completions backends, `stop_sequences` for Anthropic); the OpenAI Responses API has no stop parameter, so `stop` is not applied on Responses-backed models.
+当设置了任一 token 上限字段时，该值会通过 agent stream-param 通道转发给上游 provider。发送给上游 provider 的实际 wire 字段名由 provider transport 决定：OpenAI 系列端点使用 `max_completion_tokens`，而只接受旧名称的 provider（例如 Mistral 和 Chutes）则使用 `max_tokens`。采样字段（`temperature`、`top_p`、`frequency_penalty`、`presence_penalty`、`seed`）遵循相同的 stream-param 通道；基于 ChatGPT 的 Codex Responses 后端会在服务端将它们剥离，因为它使用固定采样。`stop` 也走 stream-param 通道，并映射到 transport 的 stop 字段（Chat Completions 后端使用 `stop`，Anthropic 使用 `stop_sequences`）；OpenAI Responses API 没有 stop 参数，因此在基于 Responses 的模型上不会应用 `stop`。
 
 ### 不支持的变体
 
 端点会针对不支持的工具变体返回 `400 invalid_request_error`，包括：
 
-- non-array `tools`
-- non-function tool entries
-- missing `tool.function.name`
-- `tool_choice` variants such as `allowed_tools` and `custom`
-- `tool_choice.function.name` values that do not match provided `tools`
+- 非数组 `tools`
+- 非函数工具条目
+- 缺少 `tool.function.name`
+- `tool_choice` 变体，如 `allowed_tools` 和 `custom`
+- 与所提供 `tools` 不匹配的 `tool_choice.function.name` 值
 
-For `tool_choice: "required"` and function-pinned `tool_choice`, the endpoint narrows the exposed client function-tool set, instructs the runtime to call a client tool before responding, and returns an error if the agent response does not include a matching structured client-tool call. This contract applies to the caller-supplied HTTP `tools` list, not every internal OpenClaw agent tool.
+对于 `tool_choice: "required"` 和固定函数的 `tool_choice`，端点会缩小暴露给客户端的函数工具集，指示运行时在响应前调用一个客户端工具，并在 agent 响应未包含匹配的结构化客户端工具调用时返回错误。该契约适用于调用方提供的 HTTP `tools` 列表，而不是每一个内部 OpenClaw agent 工具。
 
-### Non-streaming tool response shape
+### 非流式工具响应形状
 
 当 agent 决定调用工具时，响应使用：
 
@@ -282,9 +283,9 @@ For `tool_choice: "required"` and function-pinned `tool_choice`, the endpoint na
 
 预期行为：
 
-- `GET /v1/models` 应该列出 `openclaw/default`
+- `GET /v1/models` 应列出 `openclaw/default`
 - Open WebUI 应使用 `openclaw/default` 作为聊天模型 id
-- 如果你希望该 agent 使用特定的后端 provider/model，请设置该 agent 的正常默认模型，或发送 `x-openclaw-model`
+- 如果你想为该 agent 指定特定的后端提供方/模型，请设置该 agent 的普通默认模型，或者由共享密钥调用方发送 `x-openclaw-model`，或由带有 `operator.admin` 身份的调用方发送该头
 
 快速自检：
 
@@ -367,10 +368,10 @@ curl -sS http://127.0.0.1:18789/v1/embeddings \
 
 注意：
 
-- `/v1/models` 返回的是 OpenClaw agent 目标，而不是原始 provider 目录。
-- `openclaw/default` 始终存在，因此同一个稳定 id 可以跨环境工作。
-- 后端 provider/model 覆盖应放在 `x-openclaw-model` 中，而不是 OpenAI 的 `model` 字段里。
-- `/v1/embeddings` 支持 `input` 为字符串或字符串数组。
+- `/v1/models` 返回的是 OpenClaw agent 目标，而不是原始提供方目录。
+- `openclaw/default` 始终存在，因此在不同环境中都可以使用同一个稳定 id。
+- 后端提供方/模型覆盖应放在 `x-openclaw-model` 中，而不是 OpenAI 的 `model` 字段中。在带身份的 HTTP auth 路径上，此头需要 `operator.admin`。
+- `/v1/embeddings` 支持将 `input` 作为字符串或字符串数组。
 
 ## 相关
 

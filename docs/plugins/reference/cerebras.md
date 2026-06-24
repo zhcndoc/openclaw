@@ -12,7 +12,7 @@ title: "Cerebras 插件"
 ## 分发
 
 - 包：`@openclaw/cerebras-provider`
-- 安装方式：已包含在 OpenClaw 中
+- 安装方式：npm；ClawHub：`clawhub:@openclaw/cerebras-provider`
 
 ## 接口
 

@@ -84,7 +84,7 @@ export const messageAdapter = createChannelMessageAdapterFromOutbound({
 - `sendDurableMessageBatch(...)`
 - `withDurableMessageSendContext(...)`
 - `deliverInboundReplyWithMessageSendContext(...)`
-- 草稿流式/进度辅助工具，例如 `resolveChannelStreamingPreviewChunk(...)`
+- draft streaming/progress helpers such as `resolveChannelDraftStreamingChunking(...)`
 
 `sendDurableMessageBatch(...)` 返回一个明确结果：
 

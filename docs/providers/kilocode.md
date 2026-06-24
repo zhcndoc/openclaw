@@ -16,7 +16,16 @@ Kilo Gateway 提供一个 **统一 API**，通过单个
 | API      | OpenAI-compatible                  |
 | Base URL | `https://api.kilo.ai/api/gateway/` |
 
-## Getting started
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/kilocode-provider
+openclaw gateway restart
+```
+
+## 快速开始
 
 <Steps>
   <Step title="创建账户">
@@ -41,7 +50,7 @@ Kilo Gateway 提供一个 **统一 API**，通过单个
   </Step>
 </Steps>
 
-## Default model
+## 默认模型
 
 默认模型是 `kilocode/kilo/auto`，这是由 Kilo Gateway 管理的、提供方拥有的智能路由
 模型。
@@ -52,7 +61,7 @@ OpenClaw 将 `kilocode/kilo/auto` 视为稳定的默认引用，但不会
 上游路由由 Kilo Gateway 拥有，而不是在 OpenClaw 中硬编码。
 </Note>
 
-## Built-in catalog
+## 内置目录
 
 OpenClaw 会在启动时从 Kilo Gateway 动态发现可用模型。使用
 `/models kilocode` 查看你账户可用的完整模型列表。
@@ -68,13 +77,13 @@ OpenClaw 会在启动时从 Kilo Gateway 动态发现可用模型。使用
 | ...and many more                         | 使用 `/models kilocode` 列出全部 |
 
 <Tip>
-在启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models`，并将
-发现的模型优先于静态回退目录进行合并。内置回退始终
+启动时，OpenClaw 会查询 `GET https://api.kilo.ai/api/gateway/models` 并将发现的模型
+合并到静态回退目录之前。静态回退始终
 包含 `kilocode/kilo/auto`（`Kilo Auto`），其 `input: ["text", "image"]`，
 `reasoning: true`，`contextWindow: 1000000`，以及 `maxTokens: 128000`。
 </Tip>
 
-## Config example
+## 配置示例
 
 ```json5
 {
@@ -111,15 +120,15 @@ OpenClaw 会在启动时从 Kilo Gateway 动态发现可用模型。使用
 
   </Accordion>
 
-  <Accordion title="故障排除">
-    - 如果启动时模型发现失败，OpenClaw 会回退到包含 `kilocode/kilo/auto` 的内置静态目录。
+  <Accordion title="故障排查">
+    - 如果模型发现在启动时失败，OpenClaw 会回退到包含 `kilocode/kilo/auto` 的静态目录。
     - 确认你的 API 密钥有效，并且你的 Kilo 账户已启用所需的模型。
     - 当 Gateway 作为守护进程运行时，确保 `KILOCODE_API_KEY` 对该进程可用（例如在 `~/.openclaw/.env` 中或通过 `env.shellEnv`）。
 
   </Accordion>
 </AccordionGroup>
 
-## Related
+## 相关内容
 
 <CardGroup cols={2}>
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">

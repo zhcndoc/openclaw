@@ -51,27 +51,35 @@ openclaw tui --local
 
 ## 你会看到什么
 
-- 标题栏：连接 URL、当前 agent、当前会话。
-- 聊天记录：用户消息、助手回复、系统通知、工具卡片。
-- 状态行：连接/运行状态（connecting、running、streaming、idle、error）。
-- 页脚：连接状态 + agent + 会话 + 模型 + 目标状态 + think/fast/verbose/trace/reasoning + token 计数 + deliver。
-- 输入区：带自动补全的文本编辑器。
+- Header：连接 URL、当前 agent、当前会话。
+- Chat log：用户消息、助手回复、系统通知、工具卡片。
+- Status line：连接/运行状态（connecting、running、streaming、idle、error）。
+- Footer：agent + 会话 + 模型 + 目标状态 + think/fast/verbose/trace/reasoning + token 数 + deliver。当启用 `tui.footer.showRemoteHost` 时，远程 Gateway 连接还会显示连接主机。
+- Input：带自动补全的文本编辑器。
 
 ## 心智模型：agents + sessions
 
-- Agents 是唯一的 slug（例如 `main`、`research`）。Gateway 会公开其列表。
-- Sessions 属于当前 agent。
-- Session 键存储为 `agent:<agentId>:<sessionKey>`。
-  - 如果输入 `/session main`，TUI 会将其展开为 `agent:<currentAgent>:main`。
-  - 如果输入 `/session agent:other:main`，则会显式切换到该 agent 会话。
-- Session 范围：
-  - `per-sender`（默认）：每个 agent 拥有多个 session。
-  - `global`：TUI 始终使用 `global` session（选择器可能为空）。
-- 当前 agent + session 始终显示在页脚中。
-- 如果 session 有一个 [goal](/tools/goal)，页脚会显示其紧凑状态，
+- Agents 是唯一的 slug（例如 `main`、`research`）。Gateway 会暴露这个列表。
+- Sessions 归属于当前 agent。
+- 会话键存储为 `agent:<agentId>:<sessionKey>`。
+  - 如果你输入 `/session main`，TUI 会将其展开为 `agent:<currentAgent>:main`。
+  - 如果你输入 `/session agent:other:main`，你将明确切换到那个 agent 的会话。
+- 会话作用域：
+  - `per-sender`（默认）：每个 agent 有多个会话。
+  - `global`：TUI 始终使用 `global` 会话（选择器可能为空）。
+- 当前 agent + 会话始终会显示在页脚中。
+- 若要为非本地的、基于 URL 的连接显示 Gateway 主机，请按如下方式启用：
+
+  ```bash
+  openclaw config set tui.footer.showRemoteHost true
+  ```
+
+  回环连接和嵌入式本地连接绝不会显示主机标签。
+
+- 如果会话具有 [goal](/tools/goal)，页脚会显示其紧凑状态，
   例如 `Pursuing goal`、`Goal paused (/goal resume)` 或
   `Goal achieved`。
-- 如果在未指定 `--session` 的情况下启动，gateway 模式的 TUI 会在该 session 仍然存在时，恢复同一 gateway、agent 和 session 范围下上一次选择的 session。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式行为。
+- 在未使用 `--session` 启动时，gateway 模式下的 TUI 会恢复同一 gateway、agent 和会话作用域下最后一次选中的会话，前提是该会话仍然存在。传入 `--session`、`/session`、`/new` 或 `/reset` 仍然是显式行为。
 
 ## 发送 + 交付
 
@@ -120,7 +128,7 @@ openclaw tui --local
 - `/reasoning <on|off|stream>`
 - `/usage <off|tokens|full>`
 - `/goal [status] | /goal start <objective> | /goal pause|resume|complete|block|clear`
-- `/elevated <on|off|ask|full>` (alias: `/elev`)
+- `/elevated <on|off|ask|full>`（别名：`/elev`）
 - `/activation <mention|always>`
 - `/deliver <on|off>`
 

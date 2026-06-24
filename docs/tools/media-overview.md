@@ -41,30 +41,31 @@ OpenClaw 可生成图像、视频和音乐，理解传入媒体
 
 ## 提供商能力矩阵
 
-| 提供商       | 图像 | 视频 | 音乐 | TTS | STT | 实时语音 | 媒体理解 |
-| ------------ | :--: | :--: | :--: | :-: | :-: | :------: | :------: |
-| Alibaba      |      |   ✓  |      |     |     |          |          |
-| BytePlus     |      |   ✓  |      |     |     |          |          |
-| ComfyUI      |  ✓   |   ✓  |  ✓   |     |     |          |          |
-| DeepInfra    |  ✓   |   ✓  |      |  ✓  |  ✓  |          |    ✓     |
-| Deepgram     |      |      |      |     |  ✓  |    ✓     |          |
-| ElevenLabs   |      |      |      |  ✓  |  ✓  |          |          |
-| fal          |  ✓   |   ✓  |  ✓   |     |     |          |          |
-| Google       |  ✓   |   ✓  |  ✓   |  ✓  |     |    ✓     |    ✓     |
-| Gradium      |      |      |      |  ✓  |     |          |          |
-| Local CLI    |      |      |      |  ✓  |     |          |          |
-| Microsoft    |      |      |      |  ✓  |     |          |          |
-| MiniMax      |  ✓   |   ✓  |  ✓   |  ✓  |     |          |          |
-| Mistral      |      |      |      |     |  ✓  |          |          |
-| OpenAI       |  ✓   |   ✓  |      |  ✓  |  ✓  |    ✓     |    ✓     |
-| OpenRouter   |  ✓   |   ✓  |  ✓   |  ✓  |  ✓  |          |    ✓     |
-| Qwen         |      |   ✓  |      |     |     |          |          |
-| Runway       |      |   ✓  |      |     |     |          |          |
-| SenseAudio   |      |      |      |     |  ✓  |          |          |
-| Together     |      |   ✓  |      |     |     |          |          |
-| Vydra        |  ✓   |   ✓  |      |  ✓  |     |          |          |
-| xAI          |  ✓   |   ✓  |      |  ✓  |  ✓  |          |    ✓     |
-| Xiaomi MiMo  |  ✓   |      |      |  ✓  |     |          |    ✓     |
+| Provider          | Image | Video | Music | TTS | STT | Realtime voice | Media understanding |
+| ----------------- | :---: | :---: | :---: | :-: | :-: | :------------: | :-----------------: |
+| Alibaba           |       |   ✓   |       |     |     |                |                     |
+| BytePlus          |       |   ✓   |       |     |     |                |                     |
+| ComfyUI           |   ✓   |   ✓   |   ✓   |     |     |                |                     |
+| DeepInfra         |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
+| Deepgram          |       |       |       |     |  ✓  |       ✓        |                     |
+| ElevenLabs        |       |       |       |  ✓  |  ✓  |                |                     |
+| fal               |   ✓   |   ✓   |   ✓   |     |     |                |                     |
+| Google            |   ✓   |   ✓   |   ✓   |  ✓  |     |       ✓        |          ✓          |
+| Gradium           |       |       |       |  ✓  |     |                |                     |
+| Local CLI         |       |       |       |  ✓  |     |                |                     |
+| Microsoft         |       |       |       |  ✓  |     |                |                     |
+| Microsoft Foundry |   ✓   |       |       |     |     |                |                     |
+| MiniMax           |   ✓   |   ✓   |   ✓   |  ✓  |     |                |                     |
+| Mistral           |       |       |       |     |  ✓  |                |                     |
+| OpenAI            |   ✓   |   ✓   |       |  ✓  |  ✓  |       ✓        |          ✓          |
+| OpenRouter        |   ✓   |   ✓   |   ✓   |  ✓  |  ✓  |                |          ✓          |
+| Qwen              |       |   ✓   |       |     |     |                |                     |
+| Runway            |       |   ✓   |       |     |     |                |                     |
+| SenseAudio        |       |       |       |     |  ✓  |                |                     |
+| Together          |       |   ✓   |       |     |     |                |                     |
+| Vydra             |   ✓   |   ✓   |       |  ✓  |     |                |                     |
+| xAI               |   ✓   |   ✓   |       |  ✓  |  ✓  |                |          ✓          |
+| Xiaomi MiMo       |   ✓   |       |       |  ✓  |     |                |          ✓          |
 
 <Note>
 媒体理解使用在你的提供商配置中注册的任何具备视觉能力或音频能力的模型。上面的矩阵列出了具备专用媒体理解支持的提供商；大多数多模态 LLM 提供商（Anthropic、Google、OpenAI 等）在配置为当前回复模型时，也可以理解传入媒体。

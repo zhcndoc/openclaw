@@ -37,7 +37,7 @@ legacy Codex 认证顺序条目属于遗留状态，会由
   影响正常的 harness 启动。
 - 可通过 `openclaw models auth login --provider openai` 使用的 Codex 认证，
   或代理的 Codex home 中的 app-server 账户，或显式的 Codex API 密钥
-  认证配置文件。
+ 认证配置文件。
 
 关于认证优先级、环境隔离、自定义 app-server 命令、模型发现以及所有配置字段，请参见
 [Codex harness 参考](/plugins/codex-harness-reference)。
@@ -388,7 +388,11 @@ codex resume <thread-id>
 3. 对于仅本地 stdio app-server 启动，在没有 app-server 账户且仍需要 OpenAI 认证时，
    依次使用 `CODEX_API_KEY`，然后是 `OPENAI_API_KEY`。
 
-当 OpenClaw 检测到 ChatGPT 订阅型 Codex 认证配置文件时，它会从启动的 Codex 子进程中移除 `CODEX_API_KEY` 和 `OPENAI_API_KEY`。这可以让 Gateway 级别的 API key 继续可用于 embeddings 或直接的 OpenAI 模型，而不会让原生 Codex app-server turn 意外地按 API 计费。显式的 Codex API key 配置文件以及本地 stdio 环境 key 回退会使用 app-server 登录，而不是继承的子进程环境。WebSocket app-server 连接不会获得 Gateway 环境 API key 回退；请使用显式认证配置文件或远程 app-server 自己的账户。
+当 OpenClaw 看到 ChatGPT 订阅式的 Codex 认证配置文件时，它会从启动的 Codex 子进程中移除
+`CODEX_API_KEY` 和 `OPENAI_API_KEY`。这样可以让 Gateway 级 API 密钥继续可用于嵌入或直接 OpenAI 模型，
+而不会让原生 Codex app-server 回合意外通过 API 计费。
+显式的 Codex API 密钥配置文件以及本地 stdio 环境密钥回退会使用 app-server 登录，而不是继承子进程环境。WebSocket app-server 连接不会接收 Gateway 环境 API 密钥回退；请使用显式认证配置文件或远程 app-server 自身的账户。
+当配置了原生 Codex 插件时，OpenClaw 会先通过已连接的 app-server 安装或刷新这些插件，然后才向 Codex 线程暴露由插件拥有的应用。
 
 如果某个订阅配置文件遇到 Codex 使用限制，OpenClaw 会在 Codex 报告时记录重置时间，并为同一次 Codex 运行尝试下一个按顺序排列的认证配置文件。当重置时间过去后，无需更改所选的 `openai/gpt-*` 模型或 Codex 运行时，该订阅配置文件就会再次具备资格。
 
@@ -419,16 +423,26 @@ codex resume <thread-id>
 
 Codex 动态工具默认使用 `searchable` 加载。OpenClaw 不会暴露
 与 Codex 原生工作区操作重复的动态工具：`read`、`write`、
-`edit`、`apply_patch`、`exec`、`process` 和 `update_plan`。大多数其余的
-OpenClaw 集成工具，如消息、媒体、cron、浏览器、节点、
-gateway、`heartbeat_respond` 和 `web_search`，都可通过 Codex 工具
-搜索在 `openclaw` 命名空间下使用，从而保持初始模型上下文
-更小。
-`sessions_yield` 和仅消息工具的源回复仍保持直接返回，因为
-它们属于回合控制契约。`sessions_spawn` 保持可搜索，因此 Codex 的
-原生 `spawn_agent` 仍然是主要的 Codex 子代理入口，而显式的
-OpenClaw 或 ACP 委派仍可通过 `openclaw` 动态工具命名空间使用。Heartbeat 协作说明会告诉 Codex 在结束 heartbeat 回合前，
-当该工具尚未加载时先搜索 `heartbeat_respond`。
+`edit`、`apply_patch`、`exec`、`process` 和 `update_plan`。其余大多数
+OpenClaw 集成工具，例如 messaging、media、cron、browser、nodes、
+gateway，以及 `heartbeat_respond`，都可通过 Codex 工具搜索在
+`openclaw` 命名空间下使用，从而保持初始模型上下文更小。Web 搜索
+在启用搜索且未选择托管提供方时，默认使用 Codex 托管的 `web_search`
+工具。原生托管搜索与 OpenClaw 的托管
+`web_search` 动态工具互斥，因此托管搜索不能绕过原生域名限制。
+当托管搜索不可用、明确禁用或被选定的托管提供方替代时，OpenClaw 会使用托管工具。
+OpenClaw 保持禁用 Codex 独立的 `web.run` 扩展，因为
+生产 app-server 流量会拒绝其用户定义的 `web` 命名空间。
+`tools.web.search.enabled: false` 会同时禁用这两条路径，禁用工具的仅 LLM 运行也是如此。
+Codex 将 `"cached"` 视为一种偏好，并在不受限制的 app-server 回合中将其解析为实时外部访问。
+当设置了原生 `allowedDomains` 时，自动托管回退会失败关闭，因此 allowlist 不会被绕过。
+持久的有效搜索策略更改会在下一次回合前轮换绑定的 Codex
+线程。每回合的临时限制使用临时受限线程，并保留现有绑定以便稍后恢复。
+`sessions_yield` 和仅消息工具的源回复保持直接，因为
+这些是回合控制契约。`sessions_spawn` 保持可搜索，因此 Codex 的
+原生 `spawn_agent` 仍是主要的 Codex 子代理表面，而显式的 OpenClaw 或 ACP 委派仍可通过
+`openclaw` 动态工具命名空间使用。心跳协作指令会告诉 Codex 在工具尚未
+加载时，于结束一个心跳回合前搜索 `heartbeat_respond`。
 
 仅当连接到一个无法搜索延迟动态工具的自定义 Codex app-server，或在调试完整工具负载时，才将 `codexDynamicToolsLoading: "direct"` 设为直连。
 
@@ -442,74 +456,109 @@ OpenClaw 或 ACP 委派仍可通过 `openclaw` 动态工具命名空间使用。
 
 支持的 `appServer` 字段：
 
-| Field                                         | Default                                                | Meaning                                                                                                                                                                                                                                                                                                                                                          |
-| --------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `transport`                                   | `"stdio"`                                              | `"stdio"` spawns Codex; `"websocket"` connects to `url`.                                                                                                                                                                                                                                                                                                         |
-| `command`                                     | managed Codex binary                                   | Executable for stdio transport. Leave unset to use the managed binary; set it only for an explicit override.                                                                                                                                                                                                                                                     |
-| `args`                                        | `["app-server", "--listen", "stdio://"]`               | Arguments for stdio transport.                                                                                                                                                                                                                                                                                                                                   |
-| `url`                                         | unset                                                  | WebSocket app-server URL.                                                                                                                                                                                                                                                                                                                                        |
-| `authToken`                                   | unset                                                  | Bearer token for WebSocket transport.                                                                                                                                                                                                                                                                                                                            |
-| `headers`                                     | `{}`                                                   | Extra WebSocket headers.                                                                                                                                                                                                                                                                                                                                         |
-| `clearEnv`                                    | `[]`                                                   | Extra environment variable names removed from the spawned stdio app-server process after OpenClaw builds its inherited environment. OpenClaw keeps per-agent `CODEX_HOME` and inherited `HOME` for local launches.                                                                                                                                               |
-| `codeModeOnly`                                | `false`                                                | Opt into Codex's code-mode-only tool surface. OpenClaw dynamic tools remain registered with Codex so nested `tools.*` calls return through the app-server `item/tool/call` bridge.                                                                                                                                                                               |
-| `requestTimeoutMs`                            | `60000`                                                | Timeout for app-server control-plane calls.                                                                                                                                                                                                                                                                                                                      |
-| `turnCompletionIdleTimeoutMs`                 | `60000`                                                | Quiet window after Codex accepts a turn or after a turn-scoped app-server request while OpenClaw waits for `turn/completed`.                                                                                                                                                                                                                                     |
-| `postToolRawAssistantCompletionIdleTimeoutMs` | `300000`                                               | Completion-idle and progress guard used after a tool handoff, native tool completion, post-tool raw assistant progress, raw reasoning completion, or reasoning progress while OpenClaw waits for `turn/completed`. Use this for trusted or heavy workloads where post-tool synthesis can legitimately stay quiet longer than the final assistant release budget. |
-| `mode`                                        | `"yolo"` unless local Codex requirements disallow YOLO | Preset for YOLO or guardian-reviewed execution. Local stdio requirements that omit `danger-full-access`, `never` approval, or the `user` reviewer make the implicit default guardian.                                                                                                                                                                            |
-| `approvalPolicy`                              | `"never"` or an allowed guardian approval policy       | Native Codex approval policy sent to thread start/resume/turn. Guardian defaults prefer `"on-request"` when allowed.                                                                                                                                                                                                                                             |
-| `sandbox`                                     | `"danger-full-access"` or an allowed guardian sandbox  | Native Codex sandbox mode sent to thread start/resume. Guardian defaults prefer `"workspace-write"` when allowed, otherwise `"read-only"`. When an OpenClaw sandbox is active, `danger-full-access` turns use Codex `workspace-write` with network access derived from the OpenClaw sandbox egress setting.                                                      |
-| `approvalsReviewer`                           | `"user"` or an allowed guardian reviewer               | Use `"auto_review"` to let Codex review native approval prompts when allowed, otherwise `guardian_subagent` or `user`. `guardian_subagent` remains a legacy alias.                                                                                                                                                                                               |
-| `serviceTier`                                 | unset                                                  | Optional Codex app-server service tier. `"priority"` enables fast-mode routing, `"flex"` requests flex processing, `null` clears the override, and legacy `"fast"` is accepted as `"priority"`.                                                                                                                                                                  |
-| `experimental.sandboxExecServer`              | `false`                                                | Preview opt-in that registers an OpenClaw sandbox-backed Codex environment with Codex app-server 0.132.0 or newer so native Codex execution can run inside the active OpenClaw sandbox.                                                                                                                                                                          |
+| 字段                                         | 默认值                                                | 含义                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transport`                                   | `"stdio"`                                              | `"stdio"` 会启动 Codex；`"websocket"` 会连接到 `url`。                                                                                                                                                                                                                                                                                                                                        |
+| `command`                                     | managed Codex binary                                   | 用于 stdio 传输的可执行文件。保留未设置以使用托管二进制文件；仅在需要显式覆盖时设置。                                                                                                                                                                                                                                                                                    |
+| `args`                                        | `["app-server", "--listen", "stdio://"]`               | stdio 传输的参数。                                                                                                                                                                                                                                                                                                                                                                  |
+| `url`                                         | unset                                                  | WebSocket app-server URL。                                                                                                                                                                                                                                                                                                                                                                       |
+| `authToken`                                   | unset                                                  | WebSocket 传输的 Bearer 令牌。接受字面字符串或 SecretInput，例如 `${CODEX_APP_SERVER_TOKEN}`。                                                                                                                                                                                                                                                                              |
+| `headers`                                     | `{}`                                                   | 额外的 WebSocket 标头。标头值接受字面字符串或 SecretInput 值，例如 `x-codex-client-session-token: "${CODEX_CLIENT_SESSION_TOKEN}"`。                                                                                                                                                                                                                               |
+| `clearEnv`                                    | `[]`                                                   | OpenClaw 构建继承环境后，从启动的 stdio app-server 进程中移除的额外环境变量名。OpenClaw 在本地启动时保留每个 agent 独立的 `CODEX_HOME` 和继承的 `HOME`。                                                                                                                                                                              |
+| `codeModeOnly`                                | `false`                                                | 启用 Codex 的仅代码模式工具表面。OpenClaw 动态工具仍会注册到 Codex，因此嵌套的 `tools.*` 调用会通过 app-server 的 `item/tool/call` 桥返回。                                                                                                                                                                                                              |
+| `remoteWorkspaceRoot`                         | unset                                                  | 远程 Codex app-server 工作区根目录。设置后，OpenClaw 会从解析后的 OpenClaw 工作区推断本地工作区根目录，在该远程根目录下保留当前 cwd 后缀，并仅将最终的 app-server cwd 发送给 Codex。若 cwd 位于解析后的 OpenClaw 工作区根目录之外，OpenClaw 会失败关闭，而不是向远程 app-server 发送 gateway 本地路径。 |
+| `requestTimeoutMs`                            | `60000`                                                | app-server 控制平面调用的超时时间。                                                                                                                                                                                                                                                                                                                                                     |
+| `turnCompletionIdleTimeoutMs`                 | `60000`                                                | Codex 接受一次回合之后，或在 OpenClaw 等待 `turn/completed` 时一次回合范围内的 app-server 请求之后的安静窗口。                                                                                                                                                                                                                                                                    |
+| `postToolRawAssistantCompletionIdleTimeoutMs` | `300000`                                               | 在工具交接、原生工具完成、工具后原始助手进度、原始推理完成，或在 OpenClaw 等待 `turn/completed` 时的推理进度之后使用的完成-空闲与进度守卫。对于受信任或重负载工作，这很有用，因为工具后的综合整理可以合理地比最终助手释放预算更久地保持安静。                                |
+| `mode`                                        | 本地 Codex 要求不允许 YOLO 时为 `"yolo"` | YOLO 或经 guardian 审核执行的预设。本地 stdio 要求若未包含 `danger-full-access`、`never` 审批或 `user` 审核者，则隐式默认变为 guardian。                                                                                                                                                                                                           |
+| `approvalPolicy`                              | `"never"` 或允许的 guardian 审批策略       | 发送给线程启动/恢复/回合的原生 Codex 审批策略。guardian 默认在允许时偏好 `"on-request"`。                                                                                                                                                                                                                                                                            |
+| `sandbox`                                     | `"danger-full-access"` 或允许的 guardian 沙箱  | 发送给线程启动/恢复的原生 Codex 沙箱模式。guardian 默认在允许时偏好 `"workspace-write"`，否则为 `"read-only"`。当 OpenClaw 沙箱处于激活状态时，`danger-full-access` 会在使用 Codex `workspace-write` 的同时，采用由 OpenClaw 沙箱出口设置导出的网络访问。                                                                                     |
+| `approvalsReviewer`                           | `"user"` 或允许的 guardian 审核者               | 在允许时使用 `"auto_review"` 让 Codex 审核原生审批提示，否则使用 `guardian_subagent` 或 `user`。`guardian_subagent` 仍是旧版别名。                                                                                                                                                                                                                              |
+| `serviceTier`                                 | unset                                                  | 可选的 Codex app-server 服务等级。`"priority"` 启用快速模式路由，`"flex"` 请求 flex 处理，`null` 清除覆盖，旧版 `"fast"` 会按 `"priority"` 接受。                                                                                                                                                                                                 |
+| `networkProxy`                                | disabled                                               | 为 app-server 命令启用 Codex 权限配置文件网络。OpenClaw 定义所选的 `permissions.<profile>.network` 配置，并使用 `default_permissions` 选择它，而不是发送 `sandbox`。                                                                                                                                                                             |
+| `experimental.sandboxExecServer`              | `false`                                                | 预览性可选项，用于在 Codex app-server 0.132.0 或更新版本中注册一个由 OpenClaw 沙箱支持的 Codex 环境，从而使原生 Codex 执行可以运行在当前激活的 OpenClaw 沙箱内。                                                                                                                                                                                                         |
 
-OpenClaw-owned dynamic tool calls are bounded independently from
-`appServer.requestTimeoutMs`: Codex `item/tool/call` requests use a 90 second
-OpenClaw watchdog by default. A positive per-call `timeoutMs` argument extends
-or shortens that specific tool budget. The `image_generate` tool uses
-`agents.defaults.imageGenerationModel.timeoutMs` when the tool call does not
-provide its own timeout, or a 120 second image-generation default otherwise.
-The media-understanding `image` tool uses
-`tools.media.image.timeoutSeconds` or its 60 second media default. Dynamic tool
-budgets are capped at 600000 ms. On timeout, OpenClaw aborts the tool signal
-where supported and returns a failed dynamic-tool response to Codex so the turn
-can continue instead of leaving the session in `processing`.
+`appServer.networkProxy` 之所以是显式配置，是因为它会改变 Codex 沙箱
+契约。启用后，OpenClaw 还会在 Codex 线程配置中设置 `features.network_proxy.enabled` 和
+`default_permissions`，以便生成的权限配置文件可以启动 Codex 托管网络。
+默认情况下，OpenClaw 会根据配置文件主体生成一个抗冲突的
+`openclaw-network-<fingerprint>` 配置文件名；仅当需要稳定的本地名称时才使用 `profileName`。
 
-After Codex accepts a turn, and after OpenClaw responds to a turn-scoped
-app-server request, the harness expects Codex to make current-turn progress and
-eventually finish the native turn with `turn/completed`. If the app-server goes
-quiet for `appServer.turnCompletionIdleTimeoutMs`, OpenClaw best-effort
-interrupts the Codex turn, records a diagnostic timeout, and releases the
-OpenClaw session lane so follow-up chat messages are not queued behind a stale
-native turn. Most non-terminal notifications for the same turn disarm that short
-watchdog because Codex has proven the turn is still alive. Tool handoffs use a
-longer post-tool idle budget: after OpenClaw returns an `item/tool/call`
-response, after native tool items such as `commandExecution` complete, after raw
-`custom_tool_call_output` completions, and after post-tool raw assistant
-progress, raw reasoning completions, or reasoning progress. The guard uses
-`appServer.postToolRawAssistantCompletionIdleTimeoutMs` when configured and
-defaults to five minutes otherwise. That same post-tool budget also extends the
-progress watchdog for the silent synthesis window before Codex emits the next
-current-turn event. Global app-server notifications, such as rate-limit updates,
-do not reset turn-idle progress. Reasoning completions, commentary
-`agentMessage` completions, and pre-tool raw reasoning or assistant progress can
-be followed by an automatic final reply, so they use the post-progress reply
-guard instead of releasing the session lane immediately. Only
-final/non-commentary completed `agentMessage` items and pre-tool raw
-assistant completions arm the assistant-output release: if Codex then goes quiet
-without `turn/completed`, OpenClaw best-effort interrupts the native turn and
-releases the session lane. Replay-safe stdio app-server failures, including
-turn-completion idle timeouts without assistant, tool, active-item, or
-side-effect evidence, are retried once on a fresh app-server attempt. Unsafe
-timeouts still retire the stuck app-server client and release the OpenClaw
-session lane. They also clear the stale native thread binding instead of being
-replayed automatically. Completion-watch timeouts surface Codex-specific timeout
-text: replay-safe cases say the response may be incomplete, while unsafe cases
-tell the user to verify current state before retrying. Public timeout diagnostics
-include structural fields such as the last app-server notification method,
-raw assistant response item id/type/role, active request/item counts, and armed
-watch state. When the last notification is a raw assistant response item, they
-also include a bounded assistant text preview. They do not include raw prompt or
-tool content.
+```js
+export default {
+  plugins: {
+    entries: {
+      codex: {
+        config: {
+          appServer: {
+            sandbox: "workspace-write",
+            networkProxy: {
+              enabled: true,
+              domains: {
+                "api.openai.com": "allow",
+                "blocked.example.com": "deny",
+              },
+              unixSockets: {
+                "/tmp/proxy.sock": "allow",
+                "/tmp/blocked.sock": "none",
+              },
+              allowUpstreamProxy: true,
+              proxyUrl: "http://127.0.0.1:3128",
+            },
+          },
+        },
+      },
+    },
+  },
+};
+```
+
+如果正常的 app-server 运行时本应是 `danger-full-access`，启用
+`networkProxy` 会为生成的权限配置文件使用工作区风格的文件系统访问。
+Codex 托管网络强制执行的是沙箱化网络，因此完全访问配置文件不会保护出站流量。
+域条目使用 `allow` 或 `deny`；Unix 套接字条目使用 Codex 的
+`allow` 或 `none` 值。
+
+OpenClaw 拥有的动态工具调用与
+`appServer.requestTimeoutMs` 独立设限：Codex `item/tool/call` 请求默认使用 90 秒的
+OpenClaw 看门狗。正的每次调用 `timeoutMs` 参数会扩展或缩短该特定工具预算。
+`image_generate` 工具在工具调用未提供自己的超时时，会使用
+`agents.defaults.imageGenerationModel.timeoutMs`，否则默认使用 120 秒的图像生成超时。
+媒体理解的 `image` 工具使用
+`tools.media.image.timeoutSeconds` 或其 60 秒媒体默认值。对于图像理解，
+该超时适用于请求本身，不会因之前的准备工作而缩短。
+动态工具预算上限为 600000 毫秒。超时时，OpenClaw 会在支持的情况下中止工具信号，
+并向 Codex 返回失败的动态工具响应，以便回合可以继续，
+而不是让会话停留在 `processing` 中。
+该看门狗是外层动态 `item/tool/call` 预算；提供方特定的
+请求超时在该调用内部运行并保持各自的超时语义。
+
+在 Codex 接受一个回合之后，以及 OpenClaw 对一次回合范围内的
+app-server 请求作出响应之后，harness 预期 Codex 会推进当前回合并
+最终以 `turn/completed` 完成原生回合。如果 app-server 在
+`appServer.turnCompletionIdleTimeoutMs` 时长内保持安静，OpenClaw 会尽力
+中断 Codex 回合，记录诊断超时，并释放
+OpenClaw 会话通道，以便后续聊天消息不会排在一个过时的
+原生回合后面。同一回合的大多数非终态通知都会解除这个短
+看门狗，因为 Codex 已证明该回合仍然活跃。工具交接使用
+更长的 post-tool 空闲预算：在 OpenClaw 返回一个 `item/tool/call`
+响应后，在诸如 `commandExecution` 之类的原生工具项完成后，在原始
+`custom_tool_call_output` 完成后，以及在工具后的原始助手
+进度、原始推理完成或推理进度之后。若已配置，守卫使用
+`appServer.postToolRawAssistantCompletionIdleTimeoutMs`，否则默认五分钟。
+同样的 post-tool 预算也会在 Codex 发出下一个当前回合事件之前，延长静默综合窗口的进度看门狗。
+全局 app-server 通知，例如速率限制更新，不会重置回合空闲进度。
+推理完成、评论性 `agentMessage` 完成，以及工具前原始推理或助手进度之后，可能会自动跟随最终回复，因此它们使用 post-progress 回复守卫，而不是立即释放会话通道。
+只有最终的/非评论性的已完成 `agentMessage` 项和工具前原始
+助手完成才会触发助手输出释放：如果 Codex 之后保持安静而没有 `turn/completed`，OpenClaw 会尽力中断原生回合并释放会话通道。可重放安全的 stdio app-server 失败，包括在没有助手、工具、活动项或
+副作用证据时发生的回合完成空闲超时，都会在新的 app-server 尝试中重试一次。
+不安全的超时仍会终止卡住的 app-server 客户端并释放 OpenClaw
+会话通道。它们还会清除过时的原生线程绑定，而不是自动重放。
+完成监控超时会显示 Codex 特定的超时文本：可重放安全的情况会说明响应可能不完整，而不安全的情况会提示用户在重试前验证当前状态。
+公开的超时诊断包括结构化字段，例如最后一个 app-server 通知方法、
+原始助手响应项 id/类型/角色、活动请求/项计数，以及已激活的监控状态。
+当最后一条通知是原始助手响应项时，它们还会包含一个受限的助手文本预览。
+它们不包含原始提示或工具内容。
 
 本地测试仍可使用环境变量覆盖：
 

@@ -6,18 +6,27 @@ read_when:
   - 你需要 Cerebras API 密钥环境变量或 CLI 认证选项
 ---
 
-[Cerebras](https://www.cerebras.ai) 提供在定制推理硬件上的高速、兼容 OpenAI 的推理服务。OpenClaw 包含一个内置的 Cerebras 提供方插件，带有一个静态的四模型目录。
+[Cerebras](https://www.cerebras.ai) 提供在定制推理硬件上的高速、兼容 OpenAI 的推理服务。Cerebras 提供方插件包含一个静态的四模型目录。
 
 | Property        | Value                                    |
 | --------------- | ---------------------------------------- |
 | Provider id     | `cerebras`                               |
-| Plugin          | bundled, `enabledByDefault: true`        |
+| Plugin          | official external package                |
 | Auth env var    | `CEREBRAS_API_KEY`                       |
 | Onboarding flag | `--auth-choice cerebras-api-key`         |
 | Direct CLI flag | `--cerebras-api-key <key>`               |
 | API             | OpenAI-compatible (`openai-completions`) |
 | Base URL        | `https://api.cerebras.ai/v1`             |
 | Default model   | `cerebras/zai-glm-4.7`                   |
+
+## 安装插件
+
+安装官方插件，然后重启 Gateway：
+
+```bash
+openclaw plugins install @openclaw/cerebras-provider
+openclaw gateway restart
+```
 
 ## 快速开始
 
@@ -50,7 +59,7 @@ export CEREBRAS_API_KEY=csk-...
     openclaw models list --provider cerebras
     ```
 
-    列表中应包含全部四个内置模型。如果 `CEREBRAS_API_KEY` 未解析，`openclaw models status --json` 会在 `auth.unusableProfiles` 下报告缺失的凭据。
+    列表应包含全部四个静态模型。如果 `CEREBRAS_API_KEY` 未解析，`openclaw models status --json` 会在 `auth.unusableProfiles` 下报告缺失的凭据。
 
   </Step>
 </Steps>
@@ -81,7 +90,7 @@ OpenClaw 提供了一个静态的 Cerebras 目录，与公开的 OpenAI 兼容�
 
 ## 手动配置
 
-内置插件通常意味着你只需要 API 密钥。当你想覆盖模型元数据或在 `mode: "merge"` 下针对静态目录运行时，请使用显式的 `models.providers.cerebras` 配置：
+该插件通常意味着你只需要 API 密钥。当你想覆盖模型元数据，或在 `mode: "merge"` 下相对于静态目录运行时，请使用显式的 `models.providers.cerebras` 配置：
 
 ```json5
 {

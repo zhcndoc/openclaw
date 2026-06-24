@@ -11,17 +11,18 @@ OpenClaw 在一次运行前（构建模型上下文时）会对转录应用**特
 
 范围包括：
 
-- 仅运行时提示上下文，不进入用户可见的转录轮次
+- 运行时专用提示上下文不应出现在用户可见的转录轮次中
 - 工具调用 id 清理
 - 工具调用输入验证
 - 工具结果配对修复
 - 轮次验证 / 排序
 - 思考签名清理
-- 思维签名清理
+- 推理签名清理
 - 图像负载清理
-- 在提供商回放前清理空文本块
+- 向提供商回放前的空文本块清理
+- 向提供商回放前的不完整仅推理长度轮次清理
 - 用户输入来源标记（用于会话间路由提示）
-- Bedrock Converse 回放的空 assistant 错误轮次修复
+- Bedrock Converse 回放中空 assistant 错误轮次修复
 
 如果你需要转录存储详情，请参阅：
 
@@ -42,14 +43,14 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 所有转录清理都集中在嵌入式运行器中：
 
-- Policy selection: `src/agents/transcript-policy.ts`
-- Sanitization/repair application: `sanitizeSessionHistory` in `src/agents/embedded-agent-runner/replay-history.ts`
+- 策略选择：`src/agents/transcript-policy.ts`
+- 清理/修复应用：`src/agents/embedded-agent-runner/replay-history.ts` 中的 `sanitizeSessionHistory`
 
 该策略使用 `provider`、`modelApi` 和 `modelId` 来决定应用哪些内容。
 
 与转录清理分开，会话文件会在加载前（如有需要）进行修复：
 
-- `repairSessionFileIfNeeded`，位于 `src/agents/session-file-repair.ts`
+- `src/agents/session-file-repair.ts` 中的 `repairSessionFileIfNeeded`
 - 由 `run/attempt.ts` 和 `compact.ts`（嵌入式运行器）调用
 
 ---
@@ -63,12 +64,10 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 实现：
 
-- `sanitizeSessionMessagesImages` in `src/agents/embedded-agent-helpers/images.ts`
-- `sanitizeContentBlocksImages` in `src/agents/tool-images.ts`
-- Max image side is configurable via `agents.defaults.imageMaxDimensionPx` (default: `1200`).
-- Blank text blocks are removed while this pass walks replay content. Assistant
-  turns that become empty are dropped from the replay copy; user and tool-result
-  turns that become empty receive a non-empty omitted-content placeholder.
+- `src/agents/embedded-agent-helpers/images.ts` 中的 `sanitizeSessionMessagesImages`
+- `src/agents/tool-images.ts` 中的 `sanitizeContentBlocksImages`
+- 最大图像边长可通过 `agents.defaults.imageMaxDimensionPx` 配置（默认：`1200`）。
+- 此遍历回放内容时会移除空文本块。变为空的 assistant 轮次会从回放副本中删除；变为空的 user 和 tool-result 轮次会接收一个非空的省略内容占位符。
 
 ---
 
@@ -79,8 +78,23 @@ TUI、REST 或 SSE 客户端之前应用显示投影。
 
 实现：
 
-- `sanitizeToolCallInputs` in `src/agents/session-transcript-repair.ts`
-- Applied in `sanitizeSessionHistory` in `src/agents/embedded-agent-runner/replay-history.ts`
+- `src/agents/session-transcript-repair.ts` 中的 `sanitizeToolCallInputs`
+- 在 `src/agents/embedded-agent-runner/replay-history.ts` 中的 `sanitizeSessionHistory` 里应用
+
+---
+
+## 全局规则：不完整的仅推理轮次
+
+当 assistant 轮次达到提供商输出限制，且只有 thinking 或
+redacted-thinking 内容时，这些轮次会从内存中的回放副本中省略。此类轮次
+包含不完整的提供商状态，并可能带有部分 thinking 签名。
+
+空长度轮次保持不变，带有可见文本、工具
+调用或未知内容块的长度轮次也保持不变。已存储的转录不会被重写。
+
+实现：
+
+- `src/agents/embedded-agent-runner/replay-history.ts` 中的 `normalizeAssistantReplayContent`
 
 ---
 
@@ -103,27 +117,22 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 **OpenAI / OpenAI Codex**
 
-- Image sanitization only.
-- Drop orphaned reasoning signatures (standalone reasoning items without a following content block) for OpenAI Responses/Codex transcripts, and drop replayable OpenAI reasoning after a model route switch.
-- Preserve replayable OpenAI Responses reasoning item payloads, including encrypted empty-summary items, so manual/WebSocket replay keeps required `rs_*` state paired with assistant output items.
-- Native ChatGPT Codex Responses follows Codex wire parity by replaying prior Responses reasoning/message/function payloads without prior item IDs while preserving session `prompt_cache_key`.
-- OpenAI Responses-family replay preserves canonical `call_*|fc_*` same-model reasoning pairs, but deterministically normalizes malformed or overlong `call_id` / function-call item ids before pi-ai payload conversion.
-- Tool result pairing repair may move real matched outputs and synthesize Codex-style `aborted` outputs for missing tool calls.
-- No turn validation or reordering.
-- Missing OpenAI Responses-family tool outputs are synthesized as `aborted` to match Codex replay normalization.
-- No thought signature stripping.
+- 仅图像清理。
+- 对 OpenAI Responses/Codex 转录，删除孤立的 reasoning 签名（即没有后续内容块的独立 reasoning 项），并在模型路由切换后删除可回放的 OpenAI reasoning。
+- 保留可回放的 OpenAI Responses reasoning 项载荷，包括加密的空摘要项，以便手动/WebSocket 回放将所需的 `rs_*` 状态与 assistant 输出项保持配对。
+- 原生 ChatGPT Codex Responses 按照 Codex 线协议一致性，回放先前的 Responses reasoning/message/function 载荷，但不包含先前的 item IDs，同时保留会话 `prompt_cache_key`。
+- OpenAI Responses 系列回放会保留规范化的 `call_*|fc_*` 同模型 reasoning 配对，但会在 pi-ai 载荷转换前，确定性地规范化格式错误或过长的 `call_id` / function-call item ids。
+- 工具结果配对修复可能会移动真实匹配输出，并为缺失的工具调用合成 Codex 风格的 `aborted` 输出。
+- 不进行轮次验证或重排序。
+- 缺失的 OpenAI Responses 系列工具输出会被合成为 `aborted`，以匹配 Codex 回放规范化。
+- 不剥离 thought 签名。
 
 **OpenAI-compatible Chat Completions**
 
-- Historical assistant thinking/reasoning blocks are stripped before replay so
-  local and proxy-style OpenAI-compatible servers do not receive prior-turn
-  reasoning fields such as `reasoning` or `reasoning_content`.
-- Current same-turn tool-call continuations keep the assistant reasoning block
-  attached to the tool call until the tool result has been replayed.
-- Custom/self-hosted model entries with `reasoning: true` preserve replayed
-  reasoning metadata.
-- Provider-owned exceptions can opt out when their wire protocol requires
-  replayed reasoning metadata.
+- 在回放前剥离历史 assistant thinking/reasoning 块，这样本地和代理式的 OpenAI-compatible 服务器就不会收到上一轮的 reasoning 字段，例如 `reasoning` 或 `reasoning_content`。
+- 当前同轮次的工具调用续接会将 assistant reasoning 块附加在工具调用上，直到工具结果被回放。
+- 自定义/自托管且带有 `reasoning: true` 的模型条目会保留回放的 reasoning 元数据。
+- 当提供商自有异常要求回放的 reasoning 元数据时，可以选择退出该行为。
 
 **Google（Generative AI / Gemini CLI / Antigravity）**
 
@@ -135,42 +144,24 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 **Anthropic / Minimax（兼容 Anthropic）**
 
-- Tool result pairing repair and synthetic tool results.
-- Turn validation (merge consecutive user turns to satisfy strict alternation).
-- Trailing assistant prefill turns are stripped from outgoing Anthropic Messages
-  payloads when thinking is enabled, including Cloudflare AI Gateway routes.
-- Pre-compaction assistant thinking signatures are stripped before provider
-  replay when a session has been compacted. Thinking signatures are
-  cryptographically bound to the conversation prefix at generation time; after
-  compaction the prefix changes (summarized content is replaced by a compaction
-  summary), so replaying the original signatures causes Anthropic to reject the
-  request with "Invalid signature in thinking block". The thinking text is
-  preserved as an unsigned block and is then handled by the rule below.
-- Thinking blocks with missing, empty, or blank replay signatures are stripped
-  before provider conversion. If that empties an assistant turn, OpenClaw keeps
-  turn shape with non-empty omitted-reasoning text.
-- Older thinking-only assistant turns that must be stripped are replaced with
-  non-empty omitted-reasoning text so provider adapters do not drop the replay
-  turn.
+- 工具结果配对修复和合成工具结果。
+- 轮次验证（合并连续 user 轮次以满足严格交替）。
+- 当启用 thinking 时，向外发 Anthropic Messages 载荷中会剥离末尾的 assistant 预填充轮次，包括 Cloudflare AI Gateway 路由。
+- 当会话已被压缩时，在向提供商回放前会剥离压缩前的 assistant thinking 签名。thinking 签名在生成时与对话前缀通过加密方式绑定；压缩后前缀会改变（摘要内容会被压缩摘要替换），因此回放原始签名会导致 Anthropic 以“Invalid signature in thinking block”拒绝请求。thinking 文本会被保留为无签名块，然后由下述规则处理。
+- 对于缺失、空白或回放签名为空的 thinking 块，会在向提供商转换前将其剥离。如果这会使 assistant 轮次变空，OpenClaw 会保留轮次形状，并使用非空的 omitted-reasoning 文本。
+- 更旧的、必须剥离的仅 thinking assistant 轮次会被替换为非空的 omitted-reasoning 文本，以便提供商适配器不会丢弃回放轮次。
 
 **Amazon Bedrock（Converse API）**
 
-- Empty assistant stream-error turns are repaired to a non-empty fallback text block
-  before replay. Bedrock Converse rejects assistant messages with `content: []`, so
-  persisted assistant turns with `stopReason: "error"` and empty content are also
-  repaired on disk before load.
-- Assistant stream-error turns that contain only blank text blocks are dropped
-  from the in-memory replay copy instead of replaying an invalid blank block.
-- Pre-compaction assistant thinking signatures are stripped before Converse
-  replay when a session has been compacted, for the same reason as Anthropic
-  above.
-- Claude thinking blocks with missing, empty, or blank replay signatures are
-  stripped before Converse replay. If that empties an assistant turn, OpenClaw
-  keeps turn shape with non-empty omitted-reasoning text.
-- Older thinking-only assistant turns that must be stripped are replaced with
-  non-empty omitted-reasoning text so the Converse replay keeps strict turn shape.
-- Replay filters OpenClaw delivery-mirror and gateway-injected assistant turns.
-- Image sanitization applies through the global rule.
+- 空的 assistant stream-error 轮次会在回放前修复为一个非空的备用文本块。
+  Bedrock Converse 会拒绝 `content: []` 的 assistant 消息，因此在加载前，持久化的、`stopReason: "error"` 且内容为空的 assistant 轮次也会在磁盘上修复。
+- 仅包含空白文本块的 assistant stream-error 轮次会从内存中的回放副本中删除，而不是回放一个无效的空白块。
+- 当会话已被压缩时，压缩前的 assistant thinking 签名会在 Converse
+  回放前被剥离，原因与上面的 Anthropic 相同。
+- 缺失、空白或回放签名为空的 Claude thinking 块会在 Converse 回放前被剥离。如果这会使 assistant 轮次变空，OpenClaw 会保留轮次形状，并使用非空的 omitted-reasoning 文本。
+- 更旧的、必须剥离的仅 thinking assistant 轮次会被替换为非空的 omitted-reasoning 文本，以便 Converse 回放保持严格的轮次形状。
+- 回放会过滤 OpenClaw delivery-mirror 和 gateway 注入的 assistant 轮次。
+- 图像清理通过全局规则应用。
 
 **Mistral（包括基于 model-id 的检测）**
 
@@ -184,7 +175,7 @@ OpenClaw 还会在路由提示文本之前，预先添加一个同轮次的 `[In
 
 - 启用 reasoning 时，会从已验证的 OpenRouter OpenAI 兼容 Anthropic 模型负载中剥离结尾的 assistant 前置填充轮次，这与直接 Anthropic 和 Cloudflare Anthropic 的回放行为一致。
 
-**Everything else**
+**其他所有情况**
 
 - 仅图像清理。
 

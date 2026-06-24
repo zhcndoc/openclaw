@@ -345,10 +345,10 @@ title: "FAQ"
     ```bash
     openclaw skills search "calendar"
     openclaw skills search --limit 20
-    openclaw skills install <skill-slug>
-    openclaw skills install <skill-slug> --version <version>
-    openclaw skills install <skill-slug> --force
-    openclaw skills install <skill-slug> --global
+    openclaw skills install @owner/<skill-slug>
+    openclaw skills install @owner/<skill-slug> --version <version>
+    openclaw skills install @owner/<skill-slug> --force
+    openclaw skills install @owner/<skill-slug> --global
     openclaw skills update --all
     openclaw skills update --all --global
     openclaw skills list --eligible
@@ -430,11 +430,11 @@ title: "FAQ"
     安装技能：
 
     ```bash
-    openclaw skills install <skill-slug>
+    openclaw skills install @owner/<skill-slug>
     openclaw skills update --all
     ```
 
-    原生安装会落到当前工作区的 `skills/` 目录。若要让所有本地代理共享 skills，请使用 `openclaw skills install <slug> --global`（或手动放到 `~/.openclaw/skills/<name>/SKILL.md`）。如果只希望某些代理看到共享安装，请配置 `agents.defaults.skills` 或 `agents.list[].skills`。某些 skills 需要通过 Homebrew 安装二进制文件；在 Linux 上这意味着使用 Linuxbrew（参见上面的 Homebrew Linux FAQ 条目）。参见 [Skills](/tools/skills), [Skills config](/tools/skills-config), 和 [ClawHub](/tools/clawhub)。
+    Native installs land in the active workspace `skills/` directory. For shared skills across all local agents, use `openclaw skills install @owner/<skill-slug> --global` (or place them manually in `~/.openclaw/skills/<name>/SKILL.md`). If only some agents should see a shared install, configure `agents.defaults.skills` or `agents.list[].skills`. Some skills expect binaries installed via Homebrew; on Linux that means Linuxbrew (see the Homebrew Linux FAQ entry above). See [Skills](/tools/skills), [Skills config](/tools/skills-config), and [ClawHub](/tools/clawhub).
 
   </Accordion>
 
@@ -851,10 +851,10 @@ title: "FAQ"
 
     注意：
 
-    - 如果你使用 allowlist，请添加 `web_search`/`web_fetch`/`x_search` 或 `group:web`。
-    - `web_fetch` 默认启用（除非显式禁用）。
-    - 如果省略 `tools.web.fetch.provider`，OpenClaw 会从可用凭据中自动检测第一个可用的 fetch 回退 provider。当前捆绑的 provider 是 Firecrawl。
-    - 守护进程会从 `~/.openclaw/.env`（或服务环境）读取环境变量。
+    - If you use allowlists, add `web_search`/`web_fetch`/`x_search` or `group:web`.
+    - `web_fetch` is enabled by default (unless explicitly disabled).
+    - If `tools.web.fetch.provider` is omitted, OpenClaw auto-detects the first ready fetch fallback provider from available credentials. The official Firecrawl plugin provides that fallback.
+    - Daemons read env vars from `~/.openclaw/.env` (or the service environment).
 
     文档：[Web tools](/tools/web)。
 

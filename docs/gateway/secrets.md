@@ -306,9 +306,12 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
 
     要求：
 
-    - Gateway 主机上已安装 Bitwarden Secrets Manager CLI（`bws`）。
+    - Bitwarden Secrets Manager CLI (`bws`) 已安装在 Gateway 主机上。
     - `BWS_ACCESS_TOKEN` 可供 Gateway 服务使用。
-    - `PATH` 已传递给解析器，或者 `BWS_BIN` 已设置为绝对的 `bws` 二进制路径。
+    - 将 `PATH` 传递给解析器，或设置 `BWS_BIN` 为绝对的 `bws`
+      二进制路径。
+    - 使用自托管
+      Bitwarden 实例时，必须在环境中设置 `BWS_SERVER_URL`。
 
     ```json5
     {
@@ -317,7 +320,7 @@ SecretRef 仅在实际上处于活动状态的表面上进行校验。
           bws: {
             source: "exec",
             command: "/usr/local/bin/openclaw-bws-resolver.mjs",
-            passEnv: ["BWS_ACCESS_TOKEN", "PATH", "BWS_BIN"],
+            passEnv: ["BWS_ACCESS_TOKEN", "BWS_SERVER_URL", "PATH", "BWS_BIN"],
             jsonOnly: true,
           },
         },

@@ -110,14 +110,16 @@ systemctl --user daemon-reload
 ### Windows（计划任务）
 
 默认任务名称是 `OpenClaw Gateway`（或 `OpenClaw Gateway (<profile>)`）。
-任务脚本位于你的状态目录下。
+任务脚本位于你的状态目录下，名为 `gateway.cmd`；当前安装版本还可能会创建一个无窗口的 `gateway.vbs` 启动器，供任务计划程序运行，而不是直接打开 `gateway.cmd`。
 
 ```powershell
 schtasks /Delete /F /TN "OpenClaw Gateway"
-Remove-Item -Force "$env:USERPROFILE\.openclaw\gateway.cmd"
+Remove-Item -Force "$env:USERPROFILE\.openclaw\gateway.cmd" -ErrorAction SilentlyContinue
+Remove-Item -Force "$env:USERPROFILE\.openclaw\gateway.vbs" -ErrorAction SilentlyContinue
 ```
 
-如果你使用了 profile，请删除对应的任务名称和 `~\.openclaw-<profile>\gateway.cmd`。
+如果你使用了 profile，请删除匹配的任务名称，以及位于 `~\.openclaw-<profile>` 下的 `gateway.cmd` /
+`gateway.vbs` 文件。
 
 ## 正常安装 vs 源码检出
 

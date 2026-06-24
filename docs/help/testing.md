@@ -42,7 +42,34 @@ Docker 运行器。本文档是一份“我们如何测试”的指南：
 - 覆盖率门禁：`pnpm test:coverage`
 - E2E 套件：`pnpm test:e2e`
 
-当你调试真实提供方/模型（需要真实凭证）时：
+## 测试临时目录
+
+对于由测试拥有的临时目录，优先使用 `test/helpers/temp-dir.ts` 中的共享辅助函数。它们会明确所有权，并将清理保持在同一测试生命周期内：
+
+```ts
+import { afterEach } from "vitest";
+import { createTempDirTracker } from "../helpers/temp-dir.js";
+
+const tempDirs = createTempDirTracker();
+
+afterEach(tempDirs.cleanup);
+
+it("uses a temp workspace", () => {
+  const workspace = tempDirs.make("openclaw-example-");
+  // 使用 workspace
+});
+```
+
+当测试已经拥有一个路径数组或集合时，请使用 `makeTempDir(tempDirs, prefix)` 和 `cleanupTempDirs(tempDirs)`。除非某个用例明确是在验证原始临时目录行为，否则避免在测试中新增裸 `fs.mkdtemp*` 调用。若某个测试确实需要裸临时目录，请添加一条可审计的 allow 注释并给出具体原因：
+
+```ts
+// openclaw-temp-dir: allow verifies raw fs cleanup behavior
+const workspace = fs.mkdtempSync(prefix);
+```
+
+为了便于迁移可见性，`node scripts/report-test-temp-creations.mjs` 会在新增 diff 行中报告新的裸临时目录创建，而不会阻止现有的清理方式。它的文件范围有意沿用与 `scripts/changed-lanes.mjs` 相同的测试路径分类，而不是维护单独的 test-helper 文件名启发式，同时会跳过共享辅助实现本身。`check:changed` 会针对变更的测试路径运行此报告，作为仅警告的 CI 信号；发现项会以 GitHub 警告注解的形式呈现，而不是失败。
+
+当调试真实提供方/模型（需要真实凭证）时：
 
 - Live 套件（模型 + gateway 工具/图像探针）：`pnpm test:live`
 - Quiet 地定位单个 live 文件：`pnpm test:live -- src/agents/models.profiles.live.test.ts`
@@ -117,10 +144,17 @@ gateway 会禁用 memory search；memory 行为仍由 QA parity 套件覆盖。
 然后通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 拉取，而不是在每个分片内重新构建。
 
 - `pnpm openclaw qa suite`
-  - 直接在主机上运行仓库支持的 QA 场景。
-  - 默认使用隔离的 gateway worker 并行运行多个已选场景。`qa-channel` 默认并发为 4（受所选场景数量限制）。使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 进入旧的串行 lane。
-  - 当任一场景失败时以非零退出。若想保留产物但不以失败码退出，可使用 `--allow-failures`。
-  - 支持提供方模式 `live-frontier`、`mock-openai` 和 `aimock`。`aimock` 会启动一个本地、基于 AIMock 的提供方服务器，用于实验性 fixture 和协议 mock 覆盖，而不会替代具备场景感知的 `mock-openai` lane。
+  - 直接在主机上运行由仓库支持的 QA 场景。
+  - 为所选场景集写出顶层的 `qa-evidence.json`、`qa-suite-summary.json` 和
+    `qa-suite-report.md` 产物，包括混合流程、Vitest 和 Playwright 场景选择。
+  - 当通过 `pnpm openclaw qa run --qa-profile <profile>` 分发时，会将所选 taxonomy profile 评分卡嵌入同一个 `qa-evidence.json` 中。
+    `smoke-ci` 会写入精简 evidence，设置 `evidenceMode: "slim"` 并省略
+    每条记录的 `execution`。`release` 覆盖经过筛选的发布就绪切片；
+    `all` 选择所有活跃成熟度类别，适用于需要完整评分卡产物的显式 QA
+    Profile Evidence 工作流分发。
+  - 默认使用隔离的 gateway worker 并行运行多个已选场景。`qa-channel` 默认并发为 4（受所选场景数量限制）。使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 走旧的串行 lane。
+  - 当任一场景失败时以非零状态退出。需要产物但不想让退出码失败时，使用 `--allow-failures`。
+  - 支持 provider 模式 `live-frontier`、`mock-openai` 和 `aimock`。`aimock` 会启动一个本地 AIMock 支持的 provider server，用于实验性 fixture 和 protocol-mock 覆盖，而不会替代具备场景感知能力的 `mock-openai` lane。
 - `pnpm openclaw qa coverage --match <query>`
   - 搜索场景 ID、标题、surface、coverage ID、文档引用、代码引用、插件和提供方要求，然后打印匹配的 suite 目标。
   - 当你知道受影响的行为或文件路径，但不知道最小场景时，在运行 QA Lab 之前先用它。它仅供参考；仍然应根据被修改的行为选择 mock、live、Multipass、Matrix 或 transport proof。
@@ -155,28 +189,19 @@ gateway 会禁用 memory search；memory 行为仍由 QA parity 套件覆盖。
     然后构造一个受影响的损坏 session JSONL，并验证
     `openclaw doctor --fix` 会将其重写到当前分支并带有备份。
 - `pnpm test:docker:npm-telegram-live`
-  - 在 Docker 中安装一个 OpenClaw package 候选版本，运行已安装包的
-    onboarding，通过已安装的 CLI 配置 Telegram，然后复用
-    live Telegram QA lane，将该已安装包作为 SUT Gateway。
-  - 包装器只从 checkout 挂载 `qa-lab` harness 源码；已安装包拥有 `dist`、`openclaw/plugin-sdk` 和 bundled plugin
-    runtime，因此该 lane 不会把当前 checkout 的插件混入被测包中。
-  - 默认值为 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`；设置
-    `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或
-    `OPENCLAW_CURRENT_PACKAGE_TGZ` 可测试一个已解析的本地 tarball，而不是
-    从 registry 安装。
-  - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram 环境凭证或 Convex 凭证源。用于 CI/release 自动化时，设置
-    `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex`，再加上
-    `OPENCLAW_QA_CONVEX_SITE_URL` 和角色密钥。如果
-    `OPENCLAW_QA_CONVEX_SITE_URL` 和一个 Convex 角色密钥在 CI 中可用，
-    Docker 包装器会自动选择 Convex。
-  - 包装器会在 Docker build/install 之前先在主机上验证 Telegram 或 Convex 凭证环境。仅在你明确调试凭证前置步骤时才设置
-    `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1`。
-  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 仅为此 lane 覆盖共享的
-    `OPENCLAW_QA_CREDENTIAL_ROLE`。
-  - GitHub Actions 将此 lane 作为手动维护者工作流
-    `NPM Telegram Beta E2E` 暴露。它不会在合并时运行。该 workflow 使用
-    `qa-live-shared` 环境和 Convex CI 凭证租约。
-- GitHub Actions 还提供 `Package Acceptance`，用于针对单个候选包做旁路产品证明。它接受受信任的 ref、已发布的 npm spec、HTTPS tarball URL 加 SHA-256，或来自其他 run 的 tarball artifact，上传规范化后的 `openclaw-current.tgz` 作为 `package-under-test`，然后运行现有的 Docker E2E 调度器，使用 smoke、package、product、full 或 custom lane profiles。设置 `telegram_mode=mock-openai` 或 `live-frontier` 可针对同一 `package-under-test` artifact 运行 Telegram QA workflow。
+  - 在 Docker 中安装 OpenClaw 包候选版本，运行已安装包的 onboarding，通过已安装的 CLI 配置 Telegram，然后复用 live Telegram QA lane，并将该已安装包作为 SUT Gateway。
+  - 包装器仅从 checkout 挂载 `qa-lab` harness 源；已安装包拥有 `dist`、`openclaw/plugin-sdk` 和捆绑的插件运行时，因此该 lane 不会将当前 checkout 的插件混入被测包中。
+  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`。设置 `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或 `OPENCLAW_CURRENT_PACKAGE_TGZ` 可测试已解析的本地 tarball，而不是从 registry 安装。
+  - 默认通过 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES=20` 在 `qa-evidence.json` 中输出重复 RTT 计时。可覆盖 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`、
+    `OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS` 或
+    `OPENCLAW_NPM_TELEGRAM_RTT_MAX_FAILURES` 来调整 RTT 运行。
+    `OPENCLAW_NPM_TELEGRAM_RTT_CHECKS` 接受一个以逗号分隔的 Telegram QA 检查 ID 列表用于采样；未设置时，默认可用于 RTT 的检查是 `telegram-mentioned-message-reply`。
+  - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram env 凭证或 Convex 凭证来源。用于 CI/release 自动化时，设置 `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex` 以及
+    `OPENCLAW_QA_CONVEX_SITE_URL` 和角色密钥。如果 `OPENCLAW_QA_CONVEX_SITE_URL` 和 Convex 角色密钥在 CI 中可用，Docker wrapper 会自动选择 Convex。
+  - 包装器会在 Docker build/install 工作之前在主机上验证 Telegram 或 Convex 凭证环境。仅在你有意调试预凭证设置时，才将 `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1` 设为 1。
+  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 会覆盖仅对此 lane 生效的共享 `OPENCLAW_QA_CREDENTIAL_ROLE`。当选择 Convex 凭证且未设置角色时，wrapper 在 CI 中使用 `ci`，在 CI 外使用 `maintainer`。
+  - GitHub Actions 将此 lane 作为手动维护者工作流 `NPM Telegram Beta E2E` 暴露。它不会在合并时运行。该工作流使用 `qa-live-shared` 环境和 Convex CI 凭证租约。
+- GitHub Actions 还提供 `Package Acceptance`，用于对单个候选包进行旁路产品证明。它接受受信任的 ref、已发布的 npm spec、带 SHA-256 的 HTTPS tarball URL，或来自另一次运行的 tarball artifact，上传规范化的 `openclaw-current.tgz` 作为 `package-under-test`，然后运行现有的 Docker E2E 调度器，并使用 smoke、package、product、full 或 custom lane profile。将 `telegram_mode=mock-openai` 或 `live-frontier` 设为对同一个 `package-under-test` artifact 运行 Telegram QA 工作流。
   - 最新 beta 产品证明：
 
 ```bash
@@ -252,16 +277,17 @@ gh workflow run package-acceptance.yml --ref main \
   - 在一个可丢弃的、由 Docker 支持的 Tuwunel homeserver 上运行 Matrix live QA lane。仅限源码 checkout——已打包安装不包含 `qa-lab`。
   - 完整 CLI、profile/scenario 目录、环境变量和产物布局： [Matrix QA](/concepts/qa-matrix)。
 - `pnpm openclaw qa telegram`
-  - 使用来自环境变量的 driver 和 SUT bot tokens，在真实私有群组上运行 Telegram live QA lane。
+  - 使用来自 env 的 driver 和 SUT bot token 运行针对真实私有群组的 Telegram live QA lane。
   - 需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、`OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN` 和 `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`。group id 必须是数字形式的 Telegram chat id。
   - 支持 `--credential-source convex` 以使用共享的池化凭证。默认使用 env 模式，或设置 `OPENCLAW_QA_CREDENTIAL_SOURCE=convex` 以启用池化租约。
-  - 默认覆盖 canary、mention gating、command addressing、`/status`、bot-to-bot mentioned replies，以及核心 native command replies。`mock-openai` 默认值还覆盖确定性的 reply-chain 和 Telegram final-message streaming 回归。使用 `--list-scenarios` 查看可选探针，例如 `session_status`。
-  - 当任一场景失败时退出非零。想保留产物但不以失败码退出时使用 `--allow-failures`。
-  - 需要同一个私有群组中的两个不同机器人，并且 SUT bot 必须暴露 Telegram username。
-  - 为了稳定地观察 bot-to-bot 行为，请在两个机器人上都于 `@BotFather` 启用 Bot-to-Bot Communication Mode，并确保 driver bot 可以观察群组机器人流量。
-  - 在 `.artifacts/qa-e2e/...` 下写入 Telegram QA 报告、摘要以及 observed-messages 产物。回复类场景会包含从 driver 发送请求到观察到 SUT 回复的 RTT。
+  - 默认覆盖 canary、mention gating、命令寻址、`/status`、bot-to-bot mentioned replies 以及核心原生命令回复。`mock-openai` 默认还覆盖确定性的 reply-chain 和 Telegram final-message streaming 回归。对于可选探针（例如 `session_status`），请使用 `--list-scenarios`。
+  - 当任一场景失败时以非零状态退出。需要产物但不想让退出码失败时，使用 `--allow-failures`。
+  - 需要同一个私有群组中的两个不同 bot，且 SUT bot 需要暴露一个 Telegram 用户名。
+  - 为了稳定观测 bot-to-bot 行为，请在 `@BotFather` 中为两个 bot 都启用 Bot-to-Bot Communication Mode，并确保 driver bot 可以观察群组 bot 流量。
+  - 在 `.artifacts/qa-e2e/...` 下写入 Telegram QA 报告、摘要和 `qa-evidence.json`。回复类场景会包含从 driver 发送请求到观测到 SUT 回复的 RTT。
 
-`Mantis Telegram Live` 是此 lane 的 PR 证据包装器。它会使用 Convex 租用的 Telegram 凭证运行候选 ref，在 Crabbox 桌面浏览器中渲染脱敏后的 observed-message 转录，录制 MP4 证据，生成 motion-trim GIF，上传产物包，并在设置了 `pr_number` 时通过 Mantis GitHub App 以内联方式发布 PR 证据。维护者可以通过 Actions UI 中的 `Mantis Scenario`（`scenario_id: telegram-live`）启动它，或直接在 pull request 评论中触发：
+`Mantis Telegram Live` 是该 lane 的 PR 证据包装器。它会使用 Convex 租用的 Telegram 凭证运行候选 ref，在 Crabbox 桌面浏览器中渲染脱敏后的 QA 报告/evidence bundle，记录 MP4 证据，生成带运动裁剪的 GIF，上传 artifact bundle，并在设置 `pr_number` 时通过 Mantis GitHub App 发布内联 PR 证据。维护者可以通过 Actions UI 中的 `Mantis Scenario`（`scenario_id:
+telegram-live`）启动它，或者直接通过拉取请求评论启动：
 
 ```text
 @openclaw-mantis telegram
@@ -644,16 +670,6 @@ live-model Docker 运行器也只挂载所需的 CLI auth homes（如果运行�
 - 构建和发布检查会在 tsdown 之后运行 `scripts/check-cli-bootstrap-imports.mjs`。该守卫从 `dist/entry.js` 和 `dist/cli/run-main.js` 追踪静态构建图，如果在命令分发之前的预分发启动导入了 Commander、prompt UI、undici 或日志记录等包依赖，就会失败；它还会将打包后的 gateway 运行 chunk 控制在预算内，并拒绝对已知冷门 gateway 路径的静态导入。打包后的 CLI smoke 还覆盖 root help、onboard help、doctor help、status、config schema 和 model-list 命令。
 - Package Acceptance 的旧版兼容性上限为 `2026.4.25`（包含 `2026.4.25-beta.*`）。在该截止点之前，harness 只容忍已发布包的元数据缺口：省略的 private QA 清单项、缺失的 `gateway install --wrapper`、tarball 派生的 git fixture 中缺失的 patch 文件、缺失的持久化 `update.channel`、旧版插件安装记录位置、缺失的 marketplace 安装记录持久化，以及 `plugins update` 期间的配置元数据迁移。对于 `2026.4.25` 之后的包，这些路径都属于严格失败。
 - 容器 smoke 运行器：`test:docker:openwebui`、`test:docker:onboard`、`test:docker:npm-onboard-channel-agent`、`test:docker:release-user-journey`、`test:docker:release-typed-onboarding`、`test:docker:release-media-memory`、`test:docker:release-upgrade-user-journey`、`test:docker:release-plugin-marketplace`、`test:docker:skill-install`、`test:docker:update-channel-switch`、`test:docker:upgrade-survivor`、`test:docker:published-upgrade-survivor`、`test:docker:session-runtime-context`、`test:docker:agents-delete-shared-workspace`、`test:docker:gateway-network`、`test:docker:browser-cdp-snapshot`、`test:docker:mcp-channels`、`test:docker:pi-bundle-mcp-tools`、`test:docker:cron-mcp-cleanup`、`test:docker:plugins`、`test:docker:plugin-update`、`test:docker:plugin-lifecycle-matrix` 和 `test:docker:config-reload` 会启动一个或多个真实容器，并验证更高层级的集成路径。
-
-- 直接模型：`pnpm test:docker:live-models`（脚本：`scripts/test-live-models-docker.sh`）
-- ACP 绑定 smoke：`pnpm test:docker:live-acp-bind`（脚本：`scripts/test-live-acp-bind-docker.sh`；默认覆盖 Claude、Codex 和 Gemini，并通过 `pnpm test:docker:live-acp-bind:droid` 与 `pnpm test:docker:live-acp-bind:opencode` 提供严格的 Droid/OpenCode 覆盖）
-- CLI 后端 smoke：`pnpm test:docker:live-cli-backend`（脚本：`scripts/test-live-cli-backend-docker.sh`）
-- Codex app-server harness smoke：`pnpm test:docker:live-codex-harness`（脚本：`scripts/test-live-codex-harness-docker.sh`）
-- Gateway + 开发 agent：`pnpm test:docker:live-gateway`（脚本：`scripts/test-live-gateway-models-docker.sh`）
-- 可观测性 smoke：`pnpm qa:otel:smoke`、`pnpm qa:prometheus:smoke` 和 `pnpm qa:observability:smoke` 是私有 QA 源码检出通道。它们故意不属于 package Docker 发布通道，因为 npm tarball 不包含 QA Lab。
-- Open WebUI live smoke：`pnpm test:docker:openwebui`（脚本：`scripts/e2e/openwebui-docker.sh`）
-- 上手向导（TTY，完整脚手架）：`pnpm test:docker:onboard`（脚本：`scripts/e2e/onboard-docker.sh`）
-- npm tarball 上手/通道/agent smoke：`pnpm test:docker:npm-onboard-channel-agent` 会在 Docker 中全局安装打包好的 OpenClaw tarball，默认通过 env-ref 上手并配置 OpenAI + Telegram，运行 doctor，然后运行一次模拟的 OpenAI agent 回合。可用 `OPENCLAW_CURRENT_PACKAGE_TGZ=/path/to/openclaw-*.tgz` 复用预构建 tarball，用 `OPENCLAW_NPM_ONBOARD_HOST_BUILD=0` 跳过宿主机重建，或通过 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 或 `OPENCLAW_NPM_ONBOARD_CHANNEL=slack` 切换通道。
 
 - 发布用户旅程 smoke：`pnpm test:docker:release-user-journey` 会在干净的 Docker home 中全局安装打包好的 OpenClaw tarball，运行 onboarding，配置一个模拟的 OpenAI provider，运行一次 agent 回合，安装/卸载外部插件，针对本地 fixture 配置 ClickClack，验证出站/入站消息，重启 Gateway，并运行 doctor。
 - 发布类型化 onboarding smoke：`pnpm test:docker:release-typed-onboarding` 安装打包好的 tarball，通过真实 TTY 驱动 `openclaw onboard`，将 OpenAI 配置为 env-ref provider，验证不会持久化原始密钥，并运行一次模拟的 agent 回合。

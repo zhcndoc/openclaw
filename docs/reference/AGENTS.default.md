@@ -45,7 +45,11 @@ cp docs/reference/AGENTS.default.md ~/.openclaw/workspace/AGENTS.md
 - 在更改配置或调度器之前（例如 crontab、systemd 单元、nginx 配置或 shell rc 文件），先检查现有状态，并默认进行保留/合并。
 - 不要向外部消息界面发送部分/流式回复（仅发送最终回复）。
 
-## 会话开始（必需）
+## Existing solutions preflight
+
+Before proposing or building a custom system, feature, workflow, tool, integration, or automation, do a brief check for open-source projects, maintained libraries, existing OpenClaw plugins, or free platforms that already solve it well enough. Prefer those when adequate. Build custom only when existing options are unsuitable, too expensive, unmaintained, unsafe, non-compliant, or the user explicitly asks for custom. Avoid paid-service recommendations unless the user explicitly approves spend. Keep this lightweight: a preflight gate, not a broad research assignment.
+
+## Session start (required)
 
 - 读取 `SOUL.md`、`USER.md`，以及 `memory/` 中今天和昨天的内容。
 - 如存在，读取 `MEMORY.md`。
@@ -91,9 +95,9 @@ git commit -m "添加 Clawd 工作区"
 
 ## OpenClaw 的作用
 
-- Runs WhatsApp gateway + embedded OpenClaw agent so the assistant can read/write chats, fetch context, and run skills via the host Mac.
-- macOS app manages permissions (screen recording, notifications, microphone) and exposes the `openclaw` CLI via its bundled binary.
-- Direct chats collapse into the agent's `main` session by default; groups stay isolated as `agent:<agentId>:<channel>:group:<id>` (rooms/channels: `agent:<agentId>:<channel>:channel:<id>`); heartbeats keep background tasks alive.
+- 运行 WhatsApp 网关 + 内嵌 OpenClaw 代理，使助手可以读取/写入聊天、获取上下文，并通过宿主 Mac 运行技能。
+- macOS 应用管理权限（屏幕录制、通知、麦克风），并通过其捆绑二进制文件暴露 `openclaw` CLI。
+- 默认情况下，直接聊天会合并到代理的 `main` 会话中；群组保持隔离，格式为 `agent:<agentId>:<channel>:group:<id>`（房间/频道：`agent:<agentId>:<channel>:channel:<id>`）；心跳保持后台任务存活。
 
 ## 核心技能（在 设置 → 技能 中启用）
 

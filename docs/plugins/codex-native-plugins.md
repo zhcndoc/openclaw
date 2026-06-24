@@ -173,7 +173,13 @@ OpenClaw 通过 app-server 的 `app/list` 读取 Codex 应用清单，将其缓�
 OpenClaw 会为 Codex 线程注入一个限制性的 `config.apps` 补丁：
 `_default` 被禁用，并且只有属于已启用迁移插件的应用才会被启用。
 
-OpenClaw 会根据有效的全局或按插件 `allow_destructive_actions` 策略设置应用级的 `destructive_enabled`，并让 Codex 从其原生应用工具注解中强制执行破坏性工具元数据。`_default` 应用配置被禁用且 `open_world_enabled: false`。已启用的插件应用会以 `open_world_enabled: true` 输出；OpenClaw 不会暴露单独的插件 open-world 策略开关，也不会维护按插件的破坏性工具名称拒绝列表。
+OpenClaw 根据生效的全局或
+每插件 `allow_destructive_actions` 策略设置应用级 `destructive_enabled`，并让 Codex 依据其原生应用工具注释强制执行
+破坏性工具元数据。`true` 和
+`"auto"` 都会设置 `destructive_enabled: true`；`false` 会将其设为 false。`_default`
+应用配置使用 `open_world_enabled: false` 禁用。已启用
+的插件应用会被输出为 `open_world_enabled: true`；OpenClaw 不提供单独的插件 open-world 策略开关，也不维护
+按插件划分的破坏性工具名拒绝列表。
 
 插件应用的工具审批模式默认是 automatic，因此非破坏性的读取工具可以在同一线程中无需审批 UI 运行。破坏性工具仍由每个应用的 `destructive_enabled` 策略控制。
 
@@ -181,11 +187,15 @@ OpenClaw 会根据有效的全局或按插件 `allow_destructive_actions` 策略
 
 迁移后的 Codex 插件默认允许破坏性插件触发，而不安全的 schema 和有歧义的所有权仍然会失败并关闭：
 
-- 全局 `allow_destructive_actions` 默认值为 `true`。
-- 按插件的 `allow_destructive_actions` 会覆盖该插件的全局策略。
-- 当策略为 `false` 时，OpenClaw 会返回确定性的拒绝。
-- 当策略为 `true` 时，OpenClaw 只会自动接受它能映射为批准响应的安全 schema，例如布尔型 approve 字段。
-- 缺失的插件身份、所有权歧义、缺失的 turn id、错误的 turn id，或不安全的触发 schema 都会直接拒绝，而不是提示。
+- 全局 `allow_destructive_actions` 默认为 `true`。
+- 每插件 `allow_destructive_actions` 会覆盖该插件的全局策略。
+- 当策略为 `false` 时，OpenClaw 会返回确定性的拒绝结果。
+- 当策略为 `true` 时，OpenClaw 只会自动接受它能映射为审批响应的安全 schema，例如布尔值审批字段。
+- 当策略为 `"auto"` 时，OpenClaw 会将破坏性插件操作暴露给
+  Codex，但会在返回 Codex 审批响应之前，将基于所有权证明的 MCP 审批触发转换为 OpenClaw
+  插件审批。
+- 缺失的插件身份、歧义的所有权、缺失的回合 id、错误的回合
+  id，或不安全的触发 schema 都会直接拒绝，而不是提示用户。
 
 ## 故障排查
 
@@ -211,7 +221,9 @@ list` 确认已配置状态，然后使用 `/new` 或 `/reset`。现有
 Codex 线程绑定会保留其启动时的应用配置，直到 OpenClaw
 建立新的 harness 会话或替换失效的绑定。
 
-**破坏性操作被拒绝：** 检查全局和按插件的 `allow_destructive_actions` 值。即使策略为 true，不安全的触发 schema 和有歧义的插件身份仍然会失败并关闭。
+**破坏性操作被拒绝：** 检查全局和每插件的
+`allow_destructive_actions` 值。即使策略为 true 或 `"auto"`，
+不安全的触发 schema 和歧义的插件身份仍然会失败并关闭。
 
 ## 相关
 

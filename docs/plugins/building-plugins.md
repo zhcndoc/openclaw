@@ -104,7 +104,13 @@ openclaw plugins install clawhub:<package-name>
     必须出现在 `contracts.tools` 中，这样 OpenClaw 才能在不急于加载所有插件运行时的情况下发现其归属。请有意设置 `activation.onStartup`。
     此示例会在 Gateway 启动时启动。
 
-    有关每个清单字段，请参见 [插件清单](/plugins/manifest)。
+    Host-trusted plugin surfaces 也受清单门控，并且需要对已安装插件显式启用。如果已安装插件注册了
+    `api.registerAgentToolResultMiddleware(...)`，请在
+    `contracts.agentToolResultMiddleware` 中声明每个目标运行时。如果它注册了
+    `api.registerTrustedToolPolicy(...)`，请在
+    `contracts.trustedToolPolicies` 中声明每个策略 id。这些声明可使安装时检查与运行时注册保持一致。
+
+    每个清单字段的说明请参见 [插件清单](/plugins/manifest)。
 
   </Step>
 

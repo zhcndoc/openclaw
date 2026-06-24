@@ -24,18 +24,24 @@ OpenClaw 可以通过 Twilio 电话号码或 Messaging Service 接收和发送 S
 
 你需要：
 
-- 一个具备 SMS 功能的 Twilio 账号和电话号码，或一个 Twilio Messaging Service。
+- 安装官方 SMS 插件：`openclaw plugins install @openclaw/sms`。
+- 一个 Twilio 账号，以及一个支持 SMS 的电话号码，或一个 Twilio Messaging Service。
 - Twilio Account SID 和 Auth Token。
-- 一个可以访问你的 OpenClaw Gateway 的公共 HTTPS URL。
-- 一个发送方策略选择：用于私人使用的 `pairing`，用于预先批准电话号码的 `allowlist`，或仅用于有意公开的 SMS 访问的 `open`。
+- 一个可公开访问、能够连到你的 OpenClaw Gateway 的 HTTPS URL。
+- 一个发送方策略选择：`pairing` 用于私人使用，`allowlist` 用于预先批准的电话号码，`open` 仅用于有意公开的 SMS 访问。
 
 如果同一个号码同时具备 SMS 和 Voice Call 功能，就把它同时用于两者。请在 Twilio 中分别配置 SMS webhook 和 Voice webhook；本页只涵盖 SMS webhook。
 
 ## 快速设置
 
 <Steps>
-  <Step title="创建或选择 Twilio 发送方">
-    在 Twilio 中，打开 **Phone Numbers > Manage > Active numbers**，并选择一个支持 SMS 的号码。保存：
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/sms
+    ```
+  </Step>
+  <Step title="创建或选择一个 Twilio 发送方">
+    在 Twilio 中，打开 **Phone Numbers > Manage > Active numbers**，并选择一个支持 SMS 的号码。保存以下信息：
 
     - Account SID，例如 `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
     - Auth Token

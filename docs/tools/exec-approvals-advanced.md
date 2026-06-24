@@ -15,7 +15,7 @@ title: "Exec 审批 — 高级"
 `tools.exec.safeBins` 定义了一小组**仅 stdin** 的二进制程序（例如
 `cut`），它们可以在 allowlist 模式下运行，**无需**显式的 allowlist
 条目。安全二进制会拒绝位置文件参数和类似路径的标记，因此它们
-只能作用于传入的流。请将其视为面向流过滤器的狭窄快速路径，
+只能作用于传入的流。请将其视为面向流过滤器的窄快速路径，
 而不是通用信任列表。
 
 <Warning>
@@ -82,10 +82,11 @@ allowlist 条目。对于安全二进制模式下的 `grep`，请使用 `-e`/`--
 对于 Shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的环境变量覆盖会被缩减为一个小的显式
 allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
 
-对于 allowlist 模式下的 `allow-always` 决策，已知的分发包装器（`env`、`nice`、`nohup`、`stdbuf`、`timeout`）
-会持久化内部可执行文件路径，而不是包装器路径。Shell 多路复用器（`busybox`、`toybox`）
-在处理 Shell 小程序（`sh`、`ash` 等）时也会以同样方式展开。如果某个包装器或多路复用器无法安全展开，
-则不会自动持久化 allowlist 条目。
+对于 allowlist 模式下的 `allow-always` 决策，已知的分发包装器（`env`、
+`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，
+而不是包装器路径。Shell 多路复用器（`busybox`、`toybox`）在 shell applet（`sh`、`ash` 等）上会
+以相同方式解除包装。如果包装器或多路复用器无法安全解除包装，则不会自动持久化任何
+allowlist 条目。
 
 如果你将 `python3` 或 `node` 之类的解释器加入 allowlist，请优先设置
 `tools.exec.strictInlineEval=true`，这样内联 eval 仍需要显式审批。在 strict 模式下，
@@ -103,12 +104,12 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 
 配置位置：
 
-- `safeBins` 来自配置（`tools.exec.safeBins` 或按 agent 的 `agents.list[].tools.exec.safeBins`）。
-- `safeBinTrustedDirs` 来自配置（`tools.exec.safeBinTrustedDirs` 或按 agent 的 `agents.list[].tools.exec.safeBinTrustedDirs`）。
-- `safeBinProfiles` 来自配置（`tools.exec.safeBinProfiles` 或按 agent 的 `agents.list[].tools.exec.safeBinProfiles`）。按 agent 的配置文件键会覆盖全局键。
-- allowlist 条目位于宿主本地的 `~/.openclaw/exec-approvals.json` 中的 `agents.<id>.allowlist` 下（或通过 Control UI / `openclaw approvals allowlist ...`）。
+- `safeBins` 来自配置（`tools.exec.safeBins` 或 per-agent `agents.list[].tools.exec.safeBins`）。
+- `safeBinTrustedDirs` 来自配置（`tools.exec.safeBinTrustedDirs` 或 per-agent `agents.list[].tools.exec.safeBinTrustedDirs`）。
+- `safeBinProfiles` 来自配置（`tools.exec.safeBinProfiles` 或 per-agent `agents.list[].tools.exec.safeBinProfiles`）。per-agent 配置文件键会覆盖全局键。
+- allowlist 条目保存在主机本地审批文件中的 `agents.<id>.allowlist` 下（或通过 Control UI / `openclaw approvals allowlist ...`）。
 - 当解释器/运行时二进制出现在 `safeBins` 中但没有显式配置文件时，`openclaw security audit` 会以 `tools.exec.safe_bins_interpreter_unprofiled` 发出警告。
-- `openclaw doctor --fix` 可以将缺失的自定义 `safeBinProfiles.<bin>` 条目脚手架化为 `{}`（之后请自行审查并收紧）。解释器/运行时二进制不会自动脚手架化。
+- `openclaw doctor --fix` 可以将缺失的自定义 `safeBinProfiles.<bin>` 条目脚手架化为 `{}`（之后请复查并收紧）。解释器/运行时二进制不会自动脚手架化。
 
 自定义配置文件示例：
 
@@ -148,19 +149,18 @@ allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`�
 - 对于这些工作流，请优先使用沙箱、单独的主机边界，或显式受信任的
   allowlist/完整工作流，由操作员接受更宽泛的运行时语义。
 
-When approvals are required, the exec tool returns immediately with an approval id. Use that id to
-correlate later approved-run system events (`Exec finished`, and `Exec running` when configured).
-If no decision arrives before the timeout, the request is treated as an approval timeout and
-surfaced as a terminal host-command denial. For main-agent async approvals with an originating
-session, OpenClaw also resumes that session with an internal followup so the agent observes that
-the command did not run instead of later repairing a missing result.
+当需要审批时，exec 工具会立即返回一个 approval id。使用该 id 来
+关联之后已批准运行的系统事件（`Exec finished`，以及在已配置时的 `Exec running`）。
+如果在超时前未收到任何决定，请求会被视为审批超时，并
+作为终态主机命令拒绝返回。对于带来源
+会话的主 agent 异步审批，OpenClaw 还会用内部 followup 恢复该会话，因此 agent 会观察到
+命令未运行，而不是稍后去修复缺失结果。
 
 ### 后续投递行为
 
-After an approved async exec finishes, OpenClaw sends a followup `agent` turn to the same session.
-Denied async approvals use the same main-session followup path for the denial status, but they do
-not register elevated runtime handoffs and they do not run the command. Denials without a resumable
-main session are either suppressed or reported through a safe direct route when one exists.
+已批准的异步 exec 完成后，OpenClaw 会向同一会话发送一个 followup `agent` 回合。
+被拒绝的异步审批会使用相同的主会话 followup 路径来传递拒绝状态，但它们不会注册
+更高权限的运行时交接，也不会运行命令。没有可恢复主会话的拒绝会被抑制，或者在存在安全直达路由时通过该路由报告。
 
 - 如果存在有效的外部投递目标（可投递频道加上目标 `to`），后续投递会使用该频道。
 - 在仅 webchat 或无外部目标的内部会话流程中，后续投递保持仅会话内（`deliver: false`）。

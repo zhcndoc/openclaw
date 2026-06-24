@@ -37,7 +37,7 @@ title: "ACP"
 
 ## 兼容性矩阵
 
-| ACP area                                                              | Status      | Notes                                                                                                                                                                                                                                            |
+| ACP area                                                              | 状态      | Notes                                                                                                                                                                                                                                            |
 | --------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `initialize`, `newSession`, `prompt`, `cancel`                        | 已实现      | 通过 stdio 到 Gateway chat/send + abort 的核心桥接流程。                                                                                                                                                                                        |
 | `listSessions`, slash commands                                        | 已实现      | 会话列表针对 Gateway 会话状态工作，支持有限游标分页和 `cwd` 过滤；当 Gateway 会话行携带工作区元数据时；命令通过 `available_commands_update` 进行通告。                                                                                           |
@@ -56,12 +56,12 @@ title: "ACP"
 
 ## 已知限制
 
-- `loadSession` 仅能为桥接创建的会话回放完整的 ACP 事件账本历史。较旧/无账本的会话仍会使用转录回退，并且不会重建历史工具调用或系统通知。
-- 如果多个 ACP 客户端共享同一个 Gateway 会话键，事件和取消路由最多只是尽力而为，而不是严格按客户端隔离。需要干净的编辑器本地轮次时，请优先使用默认隔离的 `acp:<uuid>` 会话。
-- Gateway 停止状态会被转换为 ACP 停止原因，但这种映射不如完整的 ACP 原生运行时那样具有表现力。
-- 初始会话控制项当前只暴露了 Gateway 按钮的一部分：思考级别、工具详细程度、推理、使用详情和提升权限操作。模型选择和 exec-host 控制尚未作为 ACP 配置选项暴露。
-- `session_info_update` 和 `usage_update` 取自 Gateway 会话快照，而不是实时的 ACP 原生运行时记账。使用量是近似值，不包含成本数据，并且仅在 Gateway 将总 token 数据标记为最新时发出。
-- 工具跟随数据是尽力而为的。桥接可以暴露出已知工具参数/结果中出现的文件路径，但目前还不会发出 ACP 终端或结构化文件 diff。
+- `loadSession` 仅能为桥接创建的会话回放完整的 ACP 事件账本历史。较旧/无账本的会话仍会使用会话记录回退，并且不会重建历史工具调用或系统通知。
+- 如果多个 ACP 客户端共享同一个 Gateway 会话键，事件和取消路由只能尽力而为，而不是按客户端严格隔离。需要干净的编辑器本地轮次时，请优先使用默认隔离的 `acp-bridge:<uuid>` 会话。
+- Gateway 停止状态会转换为 ACP 停止原因，但该映射不如完整的 ACP 原生运行时那样丰富。
+- 初始会话控制当前仅暴露 Gateway 按钮中的一小部分：思考级别、工具详细程度、推理、使用详情和提升权限操作。模型选择和 exec-host 控制项目前还未作为 ACP 配置选项暴露。
+- `session_info_update` 和 `usage_update` 来源于 Gateway 会话快照，而不是实时的 ACP 原生运行时计费。使用量是近似值，不包含费用数据，并且仅在 Gateway 将总 token 数据标记为最新时发送。
+- 工具跟随数据尽力而为。桥接可以暴露出现在已知工具参数/结果中的文件路径，但目前还不会发出 ACP 终端或结构化文件 diff。
 - Exec 审批转发仅限于当前活跃的 ACP 提示轮次；来自其他 Gateway 会话的审批会被忽略。
 
 ## 用法
@@ -187,9 +187,9 @@ openclaw acp --session agent:design:main
 openclaw acp --session agent:qa:bug-123
 ```
 
-每个 ACP 会话都会映射到一个单独的 Gateway 会话键。一个 agent 可以拥有多个
-会话；ACP 默认使用隔离的 `acp:<uuid>` 会话，除非你覆盖
-该键或标签。
+Each ACP session maps to a single Gateway session key. One agent can have many
+sessions; ACP defaults to an isolated `acp-bridge:<uuid>` session unless you override
+the key or label.
 
 桥接模式不支持每会话 `mcpServers`。如果 ACP 客户端在 `newSession` 或 `loadSession` 期间发送它们，
 桥接会返回清晰的错误，而不是静默忽略。
@@ -290,8 +290,7 @@ env OPENCLAW_HIDE_BANNER=1 OPENCLAW_SUPPRESS_NOTES=1 node openclaw.mjs acp ...
 
 ## 会话映射
 
-默认情况下，ACP 会话会获得一个带有 `acp:` 前缀的独立 Gateway 会话键。
-要复用已知会话，请传入会话键或标签：
+默认情况下，ACP bridge 会话会获得一个带有 `acp-bridge:` 前缀的独立 Gateway 会话键。这些普通模型的 bridge 会话是合成的，并且会受到过期条目清理和条目数量上限的影响。若要复用已知会话，请传入会话键或标签：
 
 - `--session <key>`：使用特定的 Gateway 会话键。
 - `--session-label <label>`：通过标签解析现有会话。

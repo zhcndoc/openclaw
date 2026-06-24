@@ -7,23 +7,28 @@ read_when:
   - 你正在排查 Fireworks 上的 Kimi thinking-off 行为
 ---
 
-[Fireworks](https://fireworks.ai) 通过与 OpenAI 兼容的 API 提供开放权重模型和路由模型。OpenClaw 包含一个内置的 Fireworks 提供方插件，默认附带两个预先收录的 Kimi 模型，并且在运行时接受任意 Fireworks 模型或路由 id。
+[Fireworks](https://fireworks.ai) 通过与 OpenAI 兼容的 API 提供开放权重模型和路由模型。安装官方 Fireworks 提供方插件后，即可在运行时使用两个预先收录的 Kimi 模型，以及任意 Fireworks 模型或路由 id。
 
-| Property        | Value                                                  |
+| 属性            | 值                                                     |
 | --------------- | ------------------------------------------------------ |
-| Provider id     | `fireworks` (alias: `fireworks-ai`)                    |
-| Plugin          | bundled, `enabledByDefault: true`                      |
-| Auth env var    | `FIREWORKS_API_KEY`                                    |
-| Onboarding flag | `--auth-choice fireworks-api-key`                      |
-| Direct CLI flag  | `--fireworks-api-key <key>`                            |
-| API             | OpenAI-compatible (`openai-completions`)               |
-| Base URL        | `https://api.fireworks.ai/inference/v1`                |
-| Default model   | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` |
-| Default alias   | `Kimi K2.5 Turbo`                                      |
+| 提供方 id      | `fireworks`（别名：`fireworks-ai`）                   |
+| 包             | `@openclaw/fireworks-provider`                         |
+| 认证环境变量    | `FIREWORKS_API_KEY`                                    |
+| 入门标志        | `--auth-choice fireworks-api-key`                      |
+| 直接 CLI 标志   | `--fireworks-api-key <key>`                            |
+| API             | 与 OpenAI 兼容（`openai-completions`）                |
+| 基础 URL        | `https://api.fireworks.ai/inference/v1`                |
+| 默认模型        | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` |
+| 默认别名        | `Kimi K2.5 Turbo`                                      |
 
 ## 入门
 
 <Steps>
+  <Step title="安装插件">
+    ```bash
+    openclaw plugins install @openclaw/fireworks-provider
+    ```
+  </Step>
   <Step title="设置 Fireworks API key">
     <CodeGroup>
 
@@ -71,10 +76,10 @@ openclaw onboard --non-interactive \
 
 ## 内置目录
 
-| Model ref                                              | Name                        | Input        | Context | Max output | Thinking             |
+| Model ref                                              | 名称                        | 输入         | 上下文   | 最大输出   | Thinking             |
 | ------------------------------------------------------ | --------------------------- | ------------ | ------- | ---------- | -------------------- |
-| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6                   | text + image | 262,144 | 262,144    | 强制关闭           |
-| `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` | Kimi K2.5 Turbo (Fire Pass) | text + image | 256,000 | 256,000    | 强制关闭（默认） |
+| `fireworks/accounts/fireworks/models/kimi-k2p6`        | Kimi K2.6                   | 文本 + 图像  | 262,144 | 262,144    | 强制关闭           |
+| `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` | Kimi K2.5 Turbo (Fire Pass) | 文本 + 图像  | 256,000 | 256,000    | 强制关闭（默认） |
 
 <Note>
   OpenClaw 将所有 Fireworks Kimi 模型固定为 `thinking: off`，因为 Fireworks 在生产环境中会拒绝 Kimi 的 thinking 参数。通过 [Moonshot](/providers/moonshot) 直接路由同一模型，可以保留 Kimi 的推理输出。有关在提供方之间切换，请参见 [thinking modes](/tools/thinking)。
@@ -107,8 +112,8 @@ OpenClaw 接受运行时的任意 Fireworks 模型或路由 id。请使用 Firew
 
   </Accordion>
 
-  <Accordion title="为什么 Kimi 的 thinking 被强制关闭">
-    即使 Kimi 通过 Moonshot 自己的 API 支持 thinking，Fireworks K2.6 在请求携带 `reasoning_*` 参数时也会返回 400。内置策略（`extensions/fireworks/thinking-policy.ts`）只为 Kimi 模型 id 声明 `off` 这一 thinking 级别，因此手动 `/think` 切换和提供方策略界面会与运行时契约保持一致。
+  <Accordion title="为什么 Kimi 会强制关闭 thinking">
+    尽管 Kimi 可以通过 Moonshot 自己的 API 使用 thinking，但如果请求携带 `reasoning_*` 参数，Fireworks K2.6 会返回 400。提供方策略（`extensions/fireworks/thinking-policy.ts`）仅为 Kimi 模型 id 声明 `off` 这一 thinking 级别，因此手动的 `/think` 切换和提供方策略层会与运行时契约保持一致。
 
     若要端到端使用 Kimi 推理，请配置 [Moonshot 提供方](/providers/moonshot) 并通过它路由同一个模型。
 
