@@ -8,15 +8,9 @@ read_when:
   - 你需要为仅工具插件搭建脚手架、生成、验证、测试或发布
 ---
 
-工具插件会向 OpenClaw 添加可由 agent 调用的工具，而不会添加 channel、模型提供方、hook、service 或 setup 后端。插件拥有一组固定工具，并且你希望 OpenClaw 生成能让这些工具在不加载运行时代码的情况下仍可被发现的清单元数据时，请使用 `defineToolPlugin`。
-
-推荐流程如下：
-
-1. 使用 `openclaw plugins init` 搭建一个包。
-2. 使用 `defineToolPlugin` 编写工具。
-3. 构建 JavaScript。
-4. 使用 `openclaw plugins build` 生成 `openclaw.plugin.json` 和 `package.json` 元数据。
-5. 在发布或安装前验证生成的元数据。
+`defineToolPlugin` 构建一个仅添加 agent 可调用工具的插件：不包含
+channel、model provider、hook、service 或 setup backend。它会生成
+OpenClaw 发现工具所需的清单元数据，而无需加载插件运行时代码。
 
 对于 provider、channel、hook、service 或混合能力插件，请改从
 [构建插件](/plugins/building-plugins)、[Channel Plugins](/plugins/sdk-channel-plugins)，或
@@ -24,17 +18,13 @@ read_when:
 
 ## 要求
 
-- Node >= 22。
+- Node 22.19+、Node 23.11+ 或 Node 24+。
 - TypeScript ESM 包输出。
-- 用于配置和工具参数 schema 的 `typebox`。
-- `openclaw >=2026.5.17`，这是第一个导出 `openclaw/plugin-sdk/tool-plugin` 的 OpenClaw 版本。
-- 一个可以发布 `dist/`、`openclaw.plugin.json` 和 `package.json` 的包根目录。
-
-生成的插件会在运行时导入 `typebox`，因此请将 `typebox` 保留在 `dependencies` 中，而不只是 `devDependencies`。
+- `dependencies` 中包含 `typebox`（不能只放在 `devDependencies` 中——生成的插件会在运行时导入它）。
+- `openclaw >=2026.5.17`，这是第一个导出 `openclaw/plugin-sdk/tool-plugin` 的版本。
+- 一个包根目录，包含 `dist/`、`openclaw.plugin.json` 和 `package.json`。
 
 ## 快速开始
-
-创建一个新的插件包：
 
 ```bash
 openclaw plugins init stock-quotes --name "股票报价"
@@ -45,23 +35,38 @@ npm run plugin:validate
 npm test
 ```
 
-脚手架会创建：
+`plugins init` 会生成以下内容：
 
-- `src/index.ts`：一个带有 `echo` 工具的 `defineToolPlugin` 入口。
-- `src/index.test.ts`：一个小型的元数据测试。
-- `tsconfig.json`：输出到 `dist/` 的 NodeNext TypeScript。
-- `package.json`：脚本、运行时依赖，以及 `openclaw.extensions: ["./dist/index.js"]`。
-- `openclaw.plugin.json`：初始工具的生成清单元数据。
+| 文件                   | 作用                                                              |
+| ---------------------- | ----------------------------------------------------------------- |
+| `src/index.ts`         | `defineToolPlugin` 入口，包含一个 `echo` 工具                     |
+| `src/index.test.ts`    | 元数据测试，断言工具列表                                           |
+| `tsconfig.json`        | 输出到 `dist/` 的 NodeNext TypeScript 配置                         |
+| `vitest.config.ts`     | `src/**/*.test.ts` 的 Vitest 配置                                  |
+| `package.json`         | 脚本、运行时依赖、`openclaw.extensions: ["./dist/index.js"]`      |
+| `openclaw.plugin.json` | 为初始工具生成的清单元数据                                         |
 
-预期的验证输出：
+`npm run plugin:build` 先运行 `npm run build`（tsc），然后
+运行 `openclaw plugins build --entry ./dist/index.js`。`npm run plugin:validate`
+会重新构建并运行 `openclaw plugins validate --entry ./dist/index.js`。
+验证成功时会输出：
 
 ```text
 插件 stock-quotes 有效。
 ```
 
+`openclaw plugins init <id>` 选项：
+
+| 标志                  | 默认值             | 作用                                   |
+| --------------------- | ------------------ | -------------------------------------- |
+| `--directory <path>` | `<id>`             | 输出目录                               |
+| `--name <name>`      | Title-cased `<id>` | 显示名称                               |
+| `--type <type>`      | `tool`             | 脚手架类型：`tool` 或 `provider`       |
+| `--force`            | off                | 覆盖已存在的输出目录                   |
+
 ## 编写工具
 
-`defineToolPlugin` 接受插件标识、一个可选的配置 schema，以及一个静态工具列表。参数和配置类型会从 TypeBox schemas 中推断。
+`defineToolPlugin` 接受插件标识、一个可选的配置模式，以及一个静态的工具列表。参数和配置类型会根据 TypeBox 模式进行推断。
 
 ```typescript
 import { Type } from "typebox";
@@ -100,7 +105,7 @@ export default defineToolPlugin({
 
 ## 可选工具和工厂工具
 
-当用户应该在工具发送给模型之前显式允许列表化时，将 `optional: true` 设为开启：
+当用户应当显式将工具加入允许列表后才将其发送给模型时，设置 `optional: true`。`openclaw plugins build` 会写入匹配的 `toolMetadata.<tool>.optional` 清单条目，因此 OpenClaw 无需加载插件运行时代码就能知道该工具是可选的。
 
 ```typescript
 tool({
@@ -112,9 +117,7 @@ tool({
 });
 ```
 
-`openclaw plugins build` 会写入匹配的 `toolMetadata.<tool>.optional` 清单条目，这样 OpenClaw 就可以在不加载插件运行时代码的情况下发现该工具。
-
-当工具在创建之前需要运行时工具上下文时，请使用 `factory`。工厂会保持元数据静态，同时允许工具针对特定运行选择退出、检查沙箱状态，或绑定运行时辅助函数。
+当工具在创建之前需要运行时工具上下文时，使用 `factory`——例如为了针对特定运行选择退出、检查沙箱状态，或绑定运行时辅助函数。尽管具体工具是在运行时构建的，元数据仍然保持静态。
 
 ```typescript
 tool({
@@ -131,7 +134,7 @@ tool({
 });
 ```
 
-工厂仍然只适用于固定的工具名称。当插件动态计算工具名称，或将工具与 hooks、services、providers、commands 或其他运行时表面组合时，请直接使用 `definePluginEntry`。
+工厂仍然会预先声明一个固定的工具名称。当插件动态计算工具名称，或将工具与 hooks、services、providers 或 commands 组合时，直接使用 `definePluginEntry`。
 
 ## 返回值
 
@@ -162,11 +165,12 @@ tool({
 });
 ```
 
-当你需要返回自定义的 `AgentToolResult`，或重用已有的 `api.registerTool` 实现时，请使用工厂工具。当你需要完全动态的工具或混合插件能力时，请使用 `definePluginEntry`，而不是 `defineToolPlugin`。
+当你需要自定义 `AgentToolResult`，或者希望复用现有的 `api.registerTool` 实现时，请使用工厂工具。
 
 ## 配置
 
-`configSchema` 是可选的。如果省略它，OpenClaw 会使用严格的空对象 schema，生成的清单中仍然会包含 `configSchema`。
+`configSchema` 是可选的。省略它时，OpenClaw 会应用严格的空对象
+schema；生成的 manifest 仍然包含 `configSchema`。
 
 ```typescript
 export default defineToolPlugin({
@@ -177,7 +181,7 @@ export default defineToolPlugin({
 });
 ```
 
-当你包含 `configSchema` 时，第二个 `execute` 参数会从该 schema 中进行类型推断：
+如果提供了 `configSchema`，第二个 `execute` 参数会根据它进行类型推导：
 
 ```typescript
 const configSchema = Type.Object({
@@ -200,20 +204,23 @@ export default defineToolPlugin({
 });
 ```
 
-OpenClaw 从 Gateway 配置中的插件条目读取插件配置。不要在源码或文档示例中硬编码密钥。请根据插件的安全模型使用 config、环境变量或 SecretRefs。
+OpenClaw 会从 Gateway 配置中该插件的条目读取插件配置。请勿
+在源码或文档示例中硬编码密钥；请根据插件的安全模型使用 config、环境
+变量或 SecretRefs。
 
 ## 生成的元数据
 
-OpenClaw 通过冷元数据发现已安装插件。它必须能够在导入插件运行时代码之前读取插件清单。`defineToolPlugin` 因此会暴露静态元数据，而 `openclaw plugins build` 会将该元数据写入包中。
-
-在更改插件 id、名称、描述、配置 schema、激活方式或工具名称后，请运行生成器：
+OpenClaw 必须先读取插件清单，然后才能导入插件运行时代码。
+`defineToolPlugin` 为此暴露了静态元数据，而
+`openclaw plugins build` 会将其写入包中。更改插件 id、名称、描述、配置模式、激活方式或工具名称后，
+请重新运行生成器：
 
 ```bash
 npm run build
 openclaw plugins build --entry ./dist/index.js
 ```
 
-对于单工具插件，生成的清单如下所示：
+单工具插件生成的清单：
 
 ```json
 {
@@ -235,11 +242,13 @@ openclaw plugins build --entry ./dist/index.js
 }
 ```
 
-`contracts.tools` 是重要的发现契约。它会告诉 OpenClaw 每个工具由哪个插件拥有，而无需加载每个已安装插件的运行时。如果清单过期，工具可能无法被发现，或者注册错误可能会被归咎到错误的插件。
+`contracts.tools` 是重要的发现契约：它告诉 OpenClaw 在不加载每个已安装插件的运行时的情况下，
+每个工具分别属于哪个插件。过期的清单会导致工具在发现过程中丢失，或者把注册错误归咎于错误的插件。
 
 ## 包元数据
 
-对于简单的工具插件工作流，`openclaw plugins build` 会将 `package.json` 对齐到选定的单一运行时入口：
+`openclaw plugins build` 也会将 `package.json` 对齐到所选的运行时
+入口：
 
 ```json
 {
@@ -257,11 +266,12 @@ openclaw plugins build --entry ./dist/index.js
 }
 ```
 
-已安装包请使用诸如 `./dist/index.js` 这样的构建后 JavaScript。源文件入口在工作区开发中很有用，但已发布的包不应依赖于 TypeScript 运行时加载。
+发布构建后的 JavaScript（`./dist/index.js`），不要使用 TypeScript 源码入口。
+源码入口仅适用于工作区本地开发。
 
 ## 在 CI 中验证
 
-使用 `plugins build --check` 在生成元数据过期时让 CI 失败，而不重写文件：
+当生成的元数据已过期时，`plugins build --check` 会在不重写文件的情况下失败：
 
 ```bash
 npm run build
@@ -287,7 +297,7 @@ openclaw plugins install ./stock-quotes
 openclaw plugins inspect stock-quotes --runtime
 ```
 
-对于打包后的快速验证，先打包并安装 tarball：
+对于打包后的冒烟测试，先执行打包并安装 tarball：
 
 ```bash
 npm pack
@@ -295,15 +305,17 @@ openclaw plugins install npm-pack:./openclaw-plugin-stock-quotes-0.1.0.tgz
 openclaw plugins inspect stock-quotes --runtime --json
 ```
 
-安装后，启动或重启 Gateway，并让 agent 使用该工具。如果你正在调试工具可见性，在更改代码之前，请检查插件运行时和实际生效的工具目录。
+安装后，重启或重新加载 Gateway，并让代理使用该工具。如果工具不可见，请在修改代码之前检查插件运行时和实际生效的工具目录（请参见 [Troubleshooting](#troubleshooting)）。
 
 ## 发布
 
-当包准备就绪时，通过 ClawHub 发布：
+当包准备就绪后，通过 ClawHub 发布。`clawhub package publish`
+接受以下来源：本地文件夹、GitHub 仓库（`owner/repo[@ref]`）或
+tarball URL。
 
 ```bash
-clawhub package publish your-org/stock-quotes --dry-run
-clawhub package publish your-org/stock-quotes
+clawhub package publish ./stock-quotes --dry-run
+clawhub package publish ./stock-quotes
 ```
 
 使用显式的 ClawHub 定位器进行安装：
@@ -312,7 +324,9 @@ clawhub package publish your-org/stock-quotes
 openclaw plugins install clawhub:your-org/stock-quotes
 ```
 
-在发布切换期间，裸 npm 包规范仍然受支持，但 ClawHub 是 OpenClaw 插件首选的发现和分发入口。
+在启动切换期间，裸 npm 包规范仍然会从 npm 安装，但
+ClawHub 是 OpenClaw 插件首选的发现和分发入口。有关 owner 范围和
+发布审核，请参见 [ClawHub 发布](/clawhub/publishing)。
 
 ## 故障排查
 
@@ -324,9 +338,8 @@ openclaw plugins install clawhub:your-org/stock-quotes
 
 ### `plugin entry does not expose defineToolPlugin metadata`
 
-该入口没有导出由 `defineToolPlugin` 创建的值。请检查
-模块的默认导出是否为 `defineToolPlugin(...)` 的结果，或者通过 `--entry`
-传入正确的入口。
+入口未导出由 `defineToolPlugin` 创建的值。确认模块的默认导出是
+`defineToolPlugin(...)` 的结果，或者通过 `--entry` 传入正确的入口。
 
 ### `openclaw.plugin.json generated metadata is stale`
 
@@ -342,13 +355,12 @@ openclaw plugins build --entry ./dist/index.js
 ### `package.json openclaw.extensions must include ./dist/index.js`
 
 包元数据指向了不同的运行时入口。运行
-`openclaw plugins build --entry ./dist/index.js`，这样生成器就会将
-包元数据与您打算发布的入口对齐。
+`openclaw plugins build --entry ./dist/index.js`，以便生成器使包元数据与您打算发布的入口保持一致。
 
 ### `Cannot find package 'typebox'`
 
-构建后的插件在运行时导入了 `typebox`。请将 `typebox` 保持在
-`dependencies` 中，重新安装包依赖，重新构建，并再次运行验证。
+构建后的插件在运行时导入了 `typebox`。请将其保留在
+`dependencies` 中，重新安装、重新构建并重新运行验证。
 
 ### 安装后工具没有出现
 

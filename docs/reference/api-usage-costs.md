@@ -7,187 +7,133 @@ read_when:
 title: "API 用量与成本"
 ---
 
-本文列出了**可以调用 API 密钥的功能**以及它们的成本会显示在哪里。重点介绍了
-能够产生提供方用量或付费 API 调用的 OpenClaw 功能。
+OpenClaw 功能中可调用付费提供商 API 的部分、各自读取凭据的位置，以及产生的成本会显示在哪里。
 
-## 成本显示位置（聊天 + CLI）
+## 成本显示位置
 
-**单次会话成本快照**
+**`/status`**（每个会话的快照）
 
-- `/status` 会显示当前会话模型、上下文使用情况以及上一条回复的 token 数。
-- 如果 OpenClaw 具有使用情况元数据，并且当前活动模型有本地价格配置，
-  `/status` 还会显示上一条回复的**估算成本**。这也可以包含
-  明确按价格计费的非 API 密钥提供方，例如 Bedrock `aws-sdk` 模型。
-- 如果实时会话元数据较少，`/status` 可以从最新的转录使用
-  条目中恢复 token/cache 计数器和当前运行时模型标签。现有的非零实时值仍然优先，
-  当存储的总计缺失或更小时，按 prompt 规模统计的转录总量可以胜出。
+- 显示当前会话模型、上下文使用情况以及上一条回复的 token 数。
+- 当 OpenClaw 拥有使用元数据以及当前模型的本地定价时，会为上一条回复添加**估算成本**，包括像 Bedrock `aws-sdk` 模型这类明确标价的非 API key 提供方。
+- 如果实时会话快照信息较少，`/status` 会从最近的 transcript usage 条目中恢复 token/cache 计数器和当前模型标签。现有的非零实时值优先于 transcript 数据；当存储的总计缺失或更小时，按提示大小计算的 transcript 总计仍可能胜出。
 
-**单条消息成本页脚**
+**`/usage`**（每条消息的页脚）
 
-- `/usage full` 会在每条回复后附加使用情况页脚，包括在为活动模型配置了本地价格且
-  可获得使用情况元数据时显示的**估算成本**。
-- `/usage tokens` 仅显示 token；订阅式 OAuth/token 和 CLI 流程
-  仍然只显示 token，除非该运行时提供兼容的使用情况元数据
-  且显式配置了本地价格。
-- Gemini CLI 说明：默认的 `stream-json` 输出和旧版 JSON 覆盖
-  都会从 `stats` 读取使用情况，将 `stats.cached` 归一化为 `cacheRead`，并在需要时
-  从 `stats.input_tokens - stats.cached` 推导输入 token。
+- `/usage full` 会在每条回复后附加使用情况页脚，包括在配置了本地定价且有使用元数据可用时的**估算成本**。
+- `/usage tokens` 只显示 token。订阅式 OAuth/token 和 CLI 运行时只显示 token，除非它们提供兼容的使用元数据以及明确的本地价格。
+- `/usage cost` 输出本地成本摘要；`/usage off` 禁用页脚。
+- Gemini CLI 说明：`stream-json` 和旧版 `json` 输出都会在 `stats` 中携带使用信息。OpenClaw 会将 `stats.cached` 规范化为 `cacheRead`，并在需要时根据 `stats.input_tokens - stats.cached` 推导输入 token。
 
-Anthropic 说明：Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法
-已再次被允许，因此除非 Anthropic 发布新的政策，OpenClaw 会将 Claude CLI 复用和
-`claude -p` 用法视为对此集成的授权使用。
-不过 Anthropic 仍然不会公开 OpenClaw 能在 `/usage full` 中显示的
-逐条消息美元估算。
+**控制界面 → 使用情况**（跨会话分析）
 
-**CLI 使用窗口（提供方配额）**
+- 显示所选日期范围内基于 transcript 的 token 总数和估算成本总计，并按提供方、模型、agent、渠道以及 token 类型进行细分。
+- 对比以所选范围结束日期为终点的更短日历窗口。缺失日期按零使用量的日历日计算；不会被跳过以生成更密集的窗口。
+- 直接标注每日图表刻度。`√` 徽标表示平方根压缩正在保持低使用量日期可见。
+- 这些总计描述的是可用的本地会话历史，不是提供方账单或终身计费台账。对于某些条目缺少定价时，界面会发出警告。
 
-- `openclaw status --usage` 和 `openclaw channels list` 会显示提供方**使用窗口**
-  （配额快照，不是单条消息成本）。
-- 人类可读输出会在不同提供方之间统一为 `X% left`。
-- 当前支持使用窗口的提供方：Anthropic、GitHub Copilot、Gemini CLI、
-  OpenAI Codex、MiniMax、小米和 z.ai。
-- MiniMax 说明：其原始的 `usage_percent` / `usagePercent` 字段表示剩余
-  配额，因此 OpenClaw 在显示前会反转它们。基于数量的字段在存在时仍然优先。如果提供方返回
-  `model_remains`，OpenClaw 会优先使用聊天模型条目，在需要时根据时间戳推导窗口标签，
-  并在计划标签中包含模型名称。
-- 这些配额窗口的使用认证会在可用时来自提供方特定的钩子；否则 OpenClaw 会回退到从 auth 配置文件、环境变量或配置中匹配 OAuth/API key 凭据。
+**CLI 使用窗口**（提供方配额，不是每条消息成本）
 
-详见 [Token 使用与成本](/reference/token-use) 以获取更多细节和示例。
+- `openclaw status --usage` 和 `openclaw channels list` 会以 `X% left` 的形式显示提供方**使用窗口**。
+- 当前的使用窗口提供方：Anthropic、ClawRouter、DeepSeek、GitHub Copilot、Gemini CLI、MiniMax、OpenAI（涵盖 ChatGPT/Codex OAuth/token 认证）、Xiaomi 和 z.ai。请参阅 [Models CLI](/cli/models) 和 [Channels CLI](/cli/channels) 获取完整的提供方/标志列表。
+- MiniMax 的原始 `usage_percent` / `usagePercent` 字段表示剩余额度，因此 OpenClaw 会对其取反；当存在按次数计数的字段时，以它们为准。如果响应包含 `model_remains` 数组，OpenClaw 会选择聊天模型条目，在需要时根据时间戳推导窗口标签，并将模型名称包含在计划标签中。
+- 使用情况认证在可用时来自提供方特定的钩子，否则 OpenClaw 会回退到从认证配置文件、环境变量或配置中匹配 OAuth/API key 凭据。
+
+参见 [Token use and costs](/reference/token-use) 获取详细示例。
+
+<Note>
+Anthropic 已确认 Claude CLI 复用（包括 `claude -p`）是一种被认可的集成模式，除非其发布新的政策。Anthropic 不提供每条消息的美元估算，因此 `/usage full` 无法显示 Claude CLI 使用的成本。
+</Note>
 
 ## 密钥如何被发现
 
-OpenClaw 可以从以下来源获取凭据：
-
-- **Auth 配置文件**（按代理存储，保存在 `auth-profiles.json` 中）。
-- **环境变量**（例如 `OPENAI_API_KEY`、`BRAVE_API_KEY`、`FIRECRAWL_API_KEY`）。
-- **配置**（`models.providers.*.apiKey`、`plugins.entries.*.config.webSearch.apiKey`、
-  `plugins.entries.firecrawl.config.webFetch.apiKey`、`memorySearch.*`、
-  `talk.providers.*.apiKey`）。
-- **技能**（`skills.entries.<name>.apiKey`），它们可能会将密钥导出到技能进程的环境变量中。
+- **Auth profiles**：按代理存储在 `auth-profiles.json` 中。
+- **Environment variables**：例如 `OPENAI_API_KEY`、`BRAVE_API_KEY`、`FIRECRAWL_API_KEY`。
+- **Config**：`models.providers.*.apiKey`、`plugins.entries.*.config.webSearch.apiKey`、`plugins.entries.firecrawl.config.webFetch.apiKey`、`agents.defaults.memorySearch.*`、`talk.providers.*.apiKey`。
+- **Skills**：`skills.entries.<name>.apiKey`，它可能会将密钥导出到技能进程的环境变量中。
 
 ## 会花费密钥的功能
 
-### 1) 核心模型回复（聊天 + 工具）
+### Core model responses (chat + tools)
 
-每次回复或工具调用都会使用**当前模型提供方**（OpenAI、Anthropic 等）。这是
-用量和成本的主要来源。
+每次回复或工具调用都会在当前模型提供商上运行。这是使用量和成本的主要来源，包括在 OpenClaw 本地 UI 之外计费的订阅式托管计划：OpenAI Codex、Alibaba Cloud Model Studio Coding Plan、MiniMax Coding Plan、Z.AI/GLM Coding Plan，以及启用了 Extra Usage 的 Anthropic Claude 登录路径。
 
-这也包括仍然在 OpenClaw 本地界面之外计费的订阅式托管提供方，例如 **OpenAI Codex**、**阿里云 Model Studio Coding Plan**、**MiniMax Coding Plan**、**Z.AI / GLM Coding Plan**，以及
-Anthropic 的 OpenClaw Claude 登录路径并启用 **Extra Usage** 的情况。
+参见 [Models](/providers/models) 了解价格配置，参见 [Token use and costs](/reference/token-use) 了解展示方式。
 
-有关价格配置请参见 [Models](/providers/models)，有关显示请参见 [Token 使用与成本](/reference/token-use)。
+### Media understanding (audio/image/video)
 
-### 2) 媒体理解（音频/图片/视频）
+传入的媒体可在回复流水线运行前，通过提供商 API 进行摘要或转写。提供商支持按插件注册，并会随着插件增加而变化；参见 [Media understanding](/nodes/media-understanding) 获取当前列表和配置。
 
-传入的媒体在回复运行前可以被总结/转录。这会使用模型/提供方 API。
+### Image and video generation
 
-- 音频：OpenAI / Groq / Deepgram / DeepInfra / Google / Mistral。
-- 图片：OpenAI / OpenRouter / Anthropic / DeepInfra / Google / MiniMax / Moonshot / Qwen / Z.AI。
-- 视频：Google / Qwen / Moonshot。
+`image_generate` 和 `video_generate` 会路由到当前可用的任一已配置提供商。若未设置 `agents.defaults.imageGenerationModel`，图像生成可推断带认证的提供商默认值；视频生成则需要显式设置 `agents.defaults.videoGenerationModel`（例如 `qwen/wan2.6-t2v`）。
 
-参见 [媒体理解](/nodes/media-understanding)。
+参见 [Image generation](/tools/image-generation) 和 [Video generation](/tools/video-generation) 获取当前提供商列表。
 
-### 3) 图片和视频生成
+### Memory embeddings and semantic search
 
-共享生成能力也可能会消耗提供方密钥：
-
-- 图片生成：OpenAI / Google / DeepInfra / fal / MiniMax
-- 视频生成：DeepInfra / Qwen
-
-当 `agents.defaults.imageGenerationModel` 未设置时，图片生成可以推断一个由认证支持的提供方默认值。视频生成目前
-需要显式设置 `agents.defaults.videoGenerationModel`，例如
-`qwen/wan2.6-t2v`。
-
-参见 [图片生成](/tools/image-generation)、[Qwen Cloud](/providers/qwen) 和 [Models](/concepts/models)。
-
-### 4) 记忆嵌入 + 语义搜索
-
-当为远程提供方配置时，语义记忆搜索会使用**嵌入 API**：
-
-- `memorySearch.provider = "openai"` → OpenAI embeddings
-- `memorySearch.provider = "gemini"` → Gemini embeddings
-- `memorySearch.provider = "voyage"` → Voyage embeddings
-- `memorySearch.provider = "mistral"` → Mistral embeddings
-- `memorySearch.provider = "deepinfra"` → DeepInfra embeddings
-- `memorySearch.provider = "lmstudio"` → LM Studio embeddings（本地/自托管）
-- `memorySearch.provider = "ollama"` → Ollama embeddings（本地/自托管；通常没有托管 API 计费）
-- 如果本地嵌入失败，可选地回退到远程提供方
-
-你可以将其保持为本地模式：`memorySearch.provider = "local"`（无 API 用量）。
+当 `agents.defaults.memorySearch.provider` 指定远程适配器时，语义记忆搜索会使用 embedding API（例如 `openai`、`gemini`、`voyage`、`mistral`、`deepinfra`、`github-copilot`、`amazon-bedrock`）。`memorySearch.provider = "lmstudio"` 或 `"ollama"` 会在本地/自托管服务器上运行，通常不会产生托管计费。`memorySearch.provider = "local"` 则完全在设备上运行，不使用任何 API。可选的 `memorySearch.fallback` 提供商可用于覆盖本地 embedding 失败的情况。
 
 参见 [Memory](/concepts/memory)。
 
-### 5) 网页搜索工具
+### Web search tool
 
-`web_search` 可能会根据你的提供方产生使用费用：
+`web_search` 的使用费用取决于所选提供商。每个提供商会先从环境变量读取密钥，然后再读取 `plugins.entries.<id>.config.webSearch.apiKey`：
 
-- **Brave Search API**: `BRAVE_API_KEY` or `plugins.entries.brave.config.webSearch.apiKey`
-- **Exa**: `EXA_API_KEY` or `plugins.entries.exa.config.webSearch.apiKey`
-- **Firecrawl**: `FIRECRAWL_API_KEY` or `plugins.entries.firecrawl.config.webSearch.apiKey`
-- **Gemini (Google Search)**: `GEMINI_API_KEY` or `plugins.entries.google.config.webSearch.apiKey`
-- **Grok (xAI)**: xAI OAuth profile, `XAI_API_KEY`, or `plugins.entries.xai.config.webSearch.apiKey`
-- **Kimi (Moonshot)**: `KIMI_API_KEY`, `MOONSHOT_API_KEY`, or `plugins.entries.moonshot.config.webSearch.apiKey`
-- **MiniMax Search**: `MINIMAX_CODE_PLAN_KEY`, `MINIMAX_CODING_API_KEY`, `MINIMAX_API_KEY`, or `plugins.entries.minimax.config.webSearch.apiKey`
-- **Ollama Web Search**: key-free for a reachable signed-in local Ollama host; direct `https://ollama.com` search uses `OLLAMA_API_KEY`, and auth-protected hosts can reuse normal Ollama provider bearer auth
-- **Perplexity Search API**: `PERPLEXITY_API_KEY`, `OPENROUTER_API_KEY`, or `plugins.entries.perplexity.config.webSearch.apiKey`
-- **Tavily**: `TAVILY_API_KEY` or `plugins.entries.tavily.config.webSearch.apiKey`
-- **DuckDuckGo**: key-free provider when explicitly selected (no API billing, but unofficial and HTML-based)
-- **SearXNG**: `SEARXNG_BASE_URL` or `plugins.entries.searxng.config.webSearch.baseUrl` (key-free/self-hosted; no hosted API billing)
+| Provider               | Env var(s)                                                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Brave Search           | `BRAVE_API_KEY`                                                                                                                                                        |
+| DuckDuckGo             | 无需密钥；非官方、基于 HTML、无计费                                                                                                                                    |
+| Exa                    | `EXA_API_KEY`                                                                                                                                                          |
+| Firecrawl              | `FIRECRAWL_API_KEY`                                                                                                                                                    |
+| Gemini (Google Search) | `GEMINI_API_KEY`                                                                                                                                                       |
+| Grok (xAI)             | xAI OAuth profile 或 `XAI_API_KEY`                                                                                                                                     |
+| Kimi (Moonshot)        | `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`                                                                                                                                   |
+| MiniMax Search         | `MINIMAX_CODE_PLAN_KEY`、`MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN` 或 `MINIMAX_API_KEY`                                                                         |
+| Ollama Web Search      | 对于可访问且已登录的本地主机无需密钥；直接 `https://ollama.com` 搜索使用 `OLLAMA_API_KEY`；受认证保护的主机会复用正常的 Ollama 提供商 bearer 认证 |
+| Parallel               | `PARALLEL_API_KEY`                                                                                                                                                     |
+| Perplexity Search API  | `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`                                                                                                                           |
+| SearXNG                | `SEARXNG_BASE_URL`；无需密钥/自托管，无托管计费                                                                                                                         |
+| Tavily                 | `TAVILY_API_KEY`                                                                                                                                                       |
 
-旧的 `tools.web.search.*` 提供方路径仍会通过临时兼容层加载，但它们已不再是推荐的配置入口。
+旧版 `tools.web.search.*` 配置路径仍会通过兼容层加载，但已不再是推荐方式。
 
-**Brave Search 免费额度：** 每个 Brave 套餐都包含每月 \$5 的可续期
-免费额度。Search 套餐的价格是每 1,000 次请求 \$5，因此该额度可覆盖
-每月 1,000 次请求且无需额外付费。请在 Brave 控制台中设置使用上限，
-以避免意外收费。
-
-参见 [Web 工具](/tools/web)。
-
-### 5) 网页抓取工具（Firecrawl）
-
-`web_fetch` 可以使用带有免费入门访问权限的 **Firecrawl**。添加 API 密钥
-可获得更高额度：
-
-- `FIRECRAWL_API_KEY` 或 `plugins.entries.firecrawl.config.webFetch.apiKey`
-
-如果未配置 Firecrawl，该工具会回退到直接抓取以及捆绑的 `web-readability` 插件（无付费 API）。禁用 `plugins.entries.web-readability.enabled` 可跳过本地 Readability 提取。
+**Brave Search free credit**：每个计划都包含每月 5 美元的可续期免费额度。Search 计划的价格为每 1,000 次请求 5 美元，因此该额度可覆盖每月 1,000 次请求且无需额外付费。请在 Brave 仪表板中设置使用上限，以避免意外收费。
 
 参见 [Web 工具](/tools/web)。
 
-### 6) 提供方使用快照（status/health）
+### Web fetch tool (Firecrawl)
 
-某些状态命令会调用**提供方使用端点**来显示配额窗口或认证健康状态。
-这些通常是低频调用，但仍然会访问提供方 API：
+`web_fetch` 可通过 Firecrawl 使用免密钥的入门访问；如需更高限额，请添加 `FIRECRAWL_API_KEY`（或 `plugins.entries.firecrawl.config.webFetch.apiKey`）。如果未配置 Firecrawl，该工具会回退为直接抓取，并使用捆绑的 `web-readability` 插件（不使用付费 API）。禁用 `plugins.entries.web-readability.enabled` 可跳过本地 Readability 提取。
 
-- `openclaw status --usage`
-- `openclaw models status --json`
+参见 [Web 工具](/tools/web)。
+
+### Provider usage snapshots (status/health)
+
+`openclaw status --usage` 和 `openclaw models status --json` 会调用提供商使用量端点，以显示配额窗口或认证健康状态。这些调用量较低，但仍会访问提供商 API。
 
 参见 [Models CLI](/cli/models)。
 
-### 7) 处理压缩保护的摘要生成
+### Compaction safeguard summarization
 
-处理压缩保护可以使用**当前模型**来总结会话历史，这会在运行时调用提供方 API。
+压缩保护机制可以使用当前模型对会话历史进行摘要，因此在运行时会调用提供商 API。
 
-参见 [会话管理 + 处理压缩](/reference/session-management-compaction)。
+See [Session management and compaction](/reference/session-management-compaction).
 
-### 8) 模型扫描 / 探测
+### Model scan / probe
 
 `openclaw models scan` 可以探测 OpenRouter 模型，并在启用探测时使用 `OPENROUTER_API_KEY`。
 
 参见 [Models CLI](/cli/models)。
 
-### 9) Talk（语音）
+### Talk (speech)
 
-在配置后，Talk 模式可以调用 **ElevenLabs**：
-
-- `ELEVENLABS_API_KEY` 或 `talk.providers.elevenlabs.apiKey`
+在已配置的情况下，Talk 模式可以调用 ElevenLabs：`ELEVENLABS_API_KEY` 或 `talk.providers.elevenlabs.apiKey`。
 
 参见 [Talk 模式](/nodes/talk)。
 
-### 10) 技能（第三方 API）
+### Skills (third-party APIs)
 
-Skills 可以将 `apiKey` 存储在 `skills.entries.<name>.apiKey` 中。如果某个技能将该密钥用于外部
-API，则会根据该技能的提供方产生费用。
+Skills 可以将 `apiKey` 存储在 `skills.entries.<name>.apiKey` 中。如果某个 skill 使用该密钥访问外部 API，则费用取决于该 skill 的提供商。
 
 参见 [Skills](/tools/skills)。
 

@@ -20,12 +20,14 @@ sidebarTitle: "工具与自定义提供方"
 本地入门在新建本地配置且未设置时，默认使用 `tools.profile: "coding"`（已存在的显式配置档案会保留）。
 </Note>
 
-| 配置档案   | 包含内容                                                                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minimal`   | 仅 `session_status`                                                                                                                              |
-| `coding`    | `group:fs`、`group:runtime`、`group:web`、`group:sessions`、`group:memory`、`cron`、`image`、`image_generate`、`skill_workshop`、`video_generate` |
-| `messaging` | `group:messaging`、`sessions_list`、`sessions_history`、`sessions_send`、`session_status`                                                         |
-| `full`      | 无限制（与未设置相同）                                                                                                                             |
+| Profile     | Includes                                                                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minimal`   | `session_status` only                                                                                                                                                                                                        |
+| `coding`    | `group:fs`, `group:runtime`, `group:web`, `group:sessions`, `group:memory`, `cron`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`, `image`, `image_generate`, `music_generate`, `video_generate` |
+| `messaging` | `group:messaging`, `sessions_list`, `sessions_history`, `sessions_send`, `session_status`                                                                                                                                    |
+| `full`      | No restriction (same as unset)                                                                                                                                                                                               |
+
+`coding` and `messaging` also implicitly allow `bundle-mcp` (configured MCP servers).
 
 ### 工具组
 
@@ -40,10 +42,10 @@ sidebarTitle: "工具与自定义提供方"
 | `group:automation` | `heartbeat_respond`、`cron`、`gateway`                                                                                  |
 | `group:messaging`  | `message`                                                                                                               |
 | `group:nodes`      | `nodes`                                                                                                                 |
-| `group:agents`     | `agents_list`、`update_plan`                                                                                            |
-| `group:media`      | `image`、`image_generate`、`music_generate`、`video_generate`、`tts`                                                    |
-| `group:openclaw`   | 所有内置工具（不包括提供方插件）                                                                                           |
-| `group:plugins`    | 已加载插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                    |
+| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`                                |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                    |
+| `group:openclaw`   | All built-in tools above except `read`/`write`/`edit`/`apply_patch`/`exec`/`process`/`canvas` (excludes plugin tools)   |
+| `group:plugins`    | Tools owned by loaded plugins, including configured MCP servers exposed through `bundle-mcp`                            |
 
 ### 沙箱工具策略中的 MCP 与插件工具
 
@@ -118,6 +120,10 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
+<Note>
+`allow` and `alsoAllow` cannot both be set in the same scope (`tools`, `tools.byProvider.<id>`, `agents.list[].tools`) — config validation rejects it. Merge `alsoAllow` entries into `allow`, or drop `allow` and use `profile` + `alsoAllow` instead.
+</Note>
+
 ### `tools.byProvider`
 
 进一步限制特定提供方或模型可用的工具。顺序：基础配置档案 → 提供方配置档案 → allow/deny。
@@ -185,17 +191,20 @@ sidebarTitle: "工具与自定义提供方"
       backgroundMs: 10000,
       timeoutSec: 1800,
       cleanupMs: 1800000,
+      approvalRunningNoticeMs: 10000,
       notifyOnExit: true,
       notifyOnExitEmptySuccess: false,
       commandHighlighting: false,
       applyPatch: {
-        enabled: false,
+        enabled: true,
         allowModels: ["gpt-5.5"],
       },
     },
   },
 }
 ```
+
+Values shown are defaults except `applyPatch.allowModels` (empty/unset by default, meaning any compatible model may use `apply_patch`). `approvalRunningNoticeMs` emits a running notice when approval-backed exec runs long; `0` disables it.
 
 ### `tools.loopDetection`
 
@@ -208,12 +217,16 @@ sidebarTitle: "工具与自定义提供方"
       enabled: true,
       historySize: 30,
       warningThreshold: 10,
+      unknownToolThreshold: 10,
       criticalThreshold: 20,
       globalCircuitBreakerThreshold: 30,
       detectors: {
         genericRepeat: true,
         knownPollNoProgress: true,
         pingPong: true,
+      },
+      postCompactionGuard: {
+        windowSize: 3,
       },
     },
   },
@@ -225,6 +238,9 @@ sidebarTitle: "工具与自定义提供方"
 </ParamField>
 <ParamField path="warningThreshold" type="number">
   用于警告的无进展重复模式阈值。
+</ParamField>
+<ParamField path="unknownToolThreshold" type="number">
+  Blocks repeated calls to the same unavailable/unknown tool name after this many misses.
 </ParamField>
 <ParamField path="criticalThreshold" type="number">
   用于阻止严重循环的更高重复阈值。
@@ -241,6 +257,9 @@ sidebarTitle: "工具与自定义提供方"
 <ParamField path="detectors.pingPong" type="boolean">
   对交替出现的无进展成对模式发出警告/阻止。
 </ParamField>
+<ParamField path="postCompactionGuard.windowSize" type="number">
+  Number of attempts after auto-compaction the guard stays armed for; aborts if the agent repeats the same (tool, args, result) inside that window.
+</ParamField>
 
 <Warning>
 如果 `warningThreshold >= criticalThreshold` 或 `criticalThreshold >= globalCircuitBreakerThreshold`，验证将失败。
@@ -254,17 +273,17 @@ sidebarTitle: "工具与自定义提供方"
     web: {
       search: {
         enabled: true,
-        apiKey: "brave_api_key", // 或 BRAVE_API_KEY 环境变量
+        apiKey: "brave_api_key", // or BRAVE_API_KEY env (Brave provider)
         maxResults: 5,
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
       },
       fetch: {
         enabled: true,
-        provider: "firecrawl", // 可选；省略则自动检测
-        maxChars: 50000,
-        maxCharsCap: 50000,
-        maxResponseBytes: 2000000,
+        provider: "firecrawl", // optional; omit for auto-detect
+        maxChars: 20000,
+        maxCharsCap: 20000,
+        maxResponseBytes: 750000,
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
         maxRedirects: 3,
@@ -275,6 +294,8 @@ sidebarTitle: "工具与自定义提供方"
   },
 }
 ```
+
+Values shown are defaults except `provider` and `userAgent`. `maxResponseBytes` clamps to 32000–10000000; `maxChars` clamps to `maxCharsCap` (raise `maxCharsCap` to allow larger responses).
 
 ### `tools.media`
 
@@ -315,6 +336,8 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
+`concurrency` (default `2`), `audio.maxBytes` (default 20 MB), and `video.maxBytes` (default 50 MB) are shown at their defaults; `image.maxBytes` defaults to 10 MB. Per-capability request timeout defaults: image/audio `60`s, video `120`s.
+
 <AccordionGroup>
   <Accordion title="媒体模型条目字段">
     **提供方条目**（`type: "provider"` 或省略）：
@@ -330,10 +353,10 @@ sidebarTitle: "工具与自定义提供方"
 
     **通用字段：**
 
-    - `capabilities`: 可选列表（`image`、`audio`、`video`）。默认值：`openai`/`anthropic`/`minimax` → image，`google` → image+audio+video，`groq` → audio。
-    - `prompt`、`maxChars`、`maxBytes`、`timeoutSeconds`、`language`：每项覆盖。
-    - 当代理调用显式的 `image` 工具时，`tools.media.image.timeoutSeconds` 和匹配的图像模型 `timeoutSeconds` 条目也同样适用。对于图像理解，此超时适用于请求本身，不会被前置准备工作缩减。
-    - 失败时回退到下一项。
+    - `capabilities`: optional list (`image`, `audio`, `video`). Each provider plugin declares its own default capability set; for example the bundled `openai` provider defaults to image+audio, `anthropic`/`minimax` to image, `google` to image+audio+video, and `groq` to audio.
+    - `prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`: per-entry overrides.
+    - `tools.media.image.timeoutSeconds` and matching image model `timeoutSeconds` entries also apply when the agent calls the explicit `image` tool. For image understanding, this timeout applies to the request itself and is not reduced by earlier preparation work.
+    - Failures fall back to the next entry.
 
     提供方认证遵循标准顺序：`auth-profiles.json` → 环境变量 → `models.providers.*.apiKey`。
 
@@ -375,14 +398,15 @@ sidebarTitle: "工具与自定义提供方"
 ```
 
 <AccordionGroup>
-  <Accordion title="可见性范围">
-    - `self`：仅当前会话键。
-    - `tree`：当前会话 + 由当前会话派生的会话（子代理）。
-    - `agent`：属于当前代理 id 的任意会话（如果你在同一代理 id 下为不同用户运行按发送者划分的会话，也可能包含其他用户）。
-    - `all`：任意会话。跨代理目标仍需要 `tools.agentToAgent`。
-    - 沙箱约束：当当前会话处于沙箱中且 `agents.defaults.sandbox.sessionToolsVisibility="spawned"` 时，即使 `tools.sessions.visibility="all"`，可见性也会强制为 `tree`。
-    - 当不是 `all` 时，`sessions_list` 会包含一个简洁的 `visibility` 字段，
-      说明有效模式以及某些会话可能会在当前范围之外被省略的警告。
+  <Accordion title="Visibility scopes">
+    - `self`: only the current session key.
+    - `tree`: current session + sessions spawned by the current session (subagents).
+    - `agent`: any session belonging to the current agent id (can include other users if you run per-sender sessions under the same agent id).
+    - `all`: any session. Cross-agent targeting still requires `tools.agentToAgent`.
+    - Sandbox clamp: when the current session is sandboxed and `agents.defaults.sandbox.sessionToolsVisibility="spawned"` (the default), visibility is forced to `tree` even if `tools.sessions.visibility="all"`.
+    - When not `all`, `sessions_list` includes a compact `visibility` field
+      describing the effective mode and a warning that some sessions may be
+      omitted outside the current scope.
 
   </Accordion>
 </AccordionGroup>
@@ -436,9 +460,9 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
-- `planTool`：为非平凡的多步骤工作追踪启用结构化的 `update_plan` 工具。
-- 默认值：`false`，除非针对 OpenAI 或 OpenAI Codex GPT-5 系列运行设置了 `agents.defaults.embeddedAgent.executionContract`（或每个代理的覆盖项）为 `"strict-agentic"`。在该范围之外可设为 `true` 以强制启用，或设为 `false` 以即使在严格代理式 GPT-5 运行中也保持关闭。
-- 启用后，系统提示词还会添加使用指导，使模型仅在处理重要工作时使用它，并且最多保持一个步骤处于 `in_progress`。
+- `planTool`: enables the structured `update_plan` tool for non-trivial multi-step work tracking.
+- Default: `false` unless `agents.defaults.embeddedAgent.executionContract` (or a per-agent override) is set to `"strict-agentic"` for an `openai` provider run against a GPT-5-family model id (this covers OpenAI Codex CLI runs too, since Codex auth/model routing lives under the `openai` provider). Set `true` to force the tool on outside that scope, or `false` to keep it off even for strict-agentic GPT-5 runs.
+- When enabled, the system prompt also adds usage guidance so the model only uses it for substantial work and keeps at most one step `in_progress`.
 
 ### `agents.defaults.subagents`
 
@@ -459,11 +483,13 @@ sidebarTitle: "工具与自定义提供方"
 }
 ```
 
-- `model`：生成子代理的默认模型。如果省略，子代理会继承调用者的模型。
-- `allowAgents`：当请求者代理没有设置自己的 `subagents.allowAgents` 时，`sessions_spawn` 可用的已配置目标代理 id 默认允许列表（`["*"]` = 任意已配置目标；默认值：仅同一代理）。已删除代理配置的过期条目会被 `sessions_spawn` 拒绝，并从 `agents_list` 中省略；运行 `openclaw doctor --fix` 可清理它们。
-- `runTimeoutSeconds`：`sessions_spawn` 的默认超时时间（秒）。`0` 表示无超时。
-- `announceTimeoutMs`：gateway `agent` 通知投递尝试的单次超时（毫秒）。默认值：`120000`。瞬时重试可能使总通知等待时间超过单个配置的超时值。
-- 每个子代理的工具策略：`tools.subagents.tools.allow` / `tools.subagents.tools.deny`。
+- `model`: default model for spawned sub-agents. If omitted, sub-agents inherit the caller's model.
+- `allowAgents`: default allowlist of configured target agent ids for `sessions_spawn` when the requester agent does not set its own `subagents.allowAgents` (`["*"]` = any configured target; default: same agent only). Stale entries whose agent config was deleted are rejected by `sessions_spawn` and omitted from `agents_list`; run `openclaw doctor --fix` to clean them up.
+- `maxConcurrent`: max concurrent sub-agent runs. Default: `8`.
+- `runTimeoutSeconds`: timeout (seconds) for `sessions_spawn` when the caller does not pass its own override. Default: `0` (no timeout); the `900` shown above is a common opt-in value, not the built-in default.
+- `announceTimeoutMs`: per-call timeout (milliseconds) for gateway `agent` announce delivery attempts. Default: `120000`. Transient retries can make the total announce wait longer than one configured timeout.
+- `archiveAfterMinutes`: minutes after a sub-agent session completes before it is auto-archived. Default: `60`; `0` disables auto-archive.
+- Per-subagent tool policy: `tools.subagents.tools.allow` / `tools.subagents.tools.deny`.
 
 ---
 
@@ -481,7 +507,7 @@ sidebarTitle: "工具与自定义提供方"
       "custom-proxy": {
         baseUrl: "http://localhost:4000/v1",
         apiKey: "LITELLM_KEY",
-        api: "openai-completions", // openai-completions | openai-responses | anthropic-messages | google-generative-ai
+        api: "openai-completions", // openai-completions | openai-responses | anthropic-messages | google-generative-ai | etc.
         models: [
           {
             id: "llama-3.1-8b",
@@ -501,20 +527,20 @@ sidebarTitle: "工具与自定义提供方"
 ```
 
 <AccordionGroup>
-  <Accordion title="认证与合并优先级">
-    - 使用 `authHeader: true` + `headers` 来满足自定义认证需求。
-    - 通过 `OPENCLAW_AGENT_DIR` 覆盖 agent 配置根目录。
-    - 匹配 provider ID 时的合并优先级：
-      - 非空的 agent `models.json` 中 `baseUrl` 值优先。
-      - 非空的 agent `apiKey` 值仅在该 provider 在当前配置/认证配置文件上下文中不是由 SecretRef 管理时才优先。
-      - 由 SecretRef 管理的 provider `apiKey` 值会从源标记刷新（环境变量引用使用 `ENV_VAR_NAME`，文件/exec 引用使用 `secretref-managed`），而不是持久化解析后的密钥。
-      - 由 SecretRef 管理的 provider header 值会从源标记刷新（环境变量引用使用 `secretref-env:ENV_VAR_NAME`，文件/exec 引用使用 `secretref-managed`）。
-      - agent 中空或缺失的 `apiKey`/`baseUrl` 会回退到配置中的 `models.providers`。
-      - 匹配的模型 `contextWindow`/`maxTokens` 会采用显式配置与隐式目录值中的较大值。
-      - 匹配的模型 `contextTokens` 在存在显式运行时上限时会保留该值；可用它限制有效上下文，而不改变原生模型元数据。
-      - provider-plugin 目录会作为生成的、由插件拥有的目录分片存储在 agent 的插件状态中。
-      - 当你希望配置完全重写 `models.json` 和活动的插件目录分片时，请使用 `models.mode: "replace"`。
-      - 标记持久化以源为准：标记会根据当前源配置快照（解析前）写入，而不是来自解析后的运行时密钥值。
+  <Accordion title="Auth and merge precedence">
+    - Use `authHeader: true` + `headers` for custom auth needs.
+    - Override agent config root with `OPENCLAW_AGENT_DIR`.
+    - Merge precedence for matching provider IDs:
+      - Non-empty agent `models.json` `baseUrl` values win.
+      - Non-empty agent `apiKey` values win only when that provider is not SecretRef-managed in current config/auth-profile context.
+      - SecretRef-managed provider `apiKey` values are refreshed from source markers (`ENV_VAR_NAME` for env refs, `secretref-managed` for file/exec refs) instead of persisting resolved secrets.
+      - SecretRef-managed provider header values are refreshed from source markers (`secretref-env:ENV_VAR_NAME` for env refs, `secretref-managed` for file/exec refs).
+      - Empty or missing agent `apiKey`/`baseUrl` fall back to `models.providers` in config.
+      - Matching model `contextWindow`/`maxTokens`: the explicit config value wins when present and valid (a positive finite number); otherwise the implicit/generated catalog value is used.
+      - Matching model `contextTokens` follows the same explicit-wins-else-implicit rule; use it to limit effective context without changing native model metadata.
+      - Provider-plugin catalogs are stored as generated plugin-owned catalog shards under the agent's plugin state.
+      - Use `models.mode: "replace"` when you want config to fully rewrite `models.json` and skip merging in plugin-owned catalog shards.
+      - Marker persistence is source-authoritative: markers are written from the active source config snapshot (pre-resolution), not from resolved runtime secret values.
 
   </Accordion>
 </AccordionGroup>
@@ -528,18 +554,18 @@ sidebarTitle: "工具与自定义提供方"
       - 安全编辑：使用 `openclaw config set models.providers.<id> '<json>' --strict-json --merge` 或 `openclaw config set models.providers.<id>.models '<json-array>' --strict-json --merge` 进行增量更新。`config set` 会拒绝破坏性替换，除非你传入 `--replace`。
 
   </Accordion>
-  <Accordion title="提供商连接与认证">
-    - `models.providers.*.api`：请求适配器（`openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai` 等）。对于自托管的 `/v1/chat/completions` 后端，例如 MLX、vLLM、SGLang 以及大多数 OpenAI 兼容的本地服务器，请使用 `openai-completions`。带有 `baseUrl` 但没有 `api` 的自定义提供商默认使用 `openai-completions`；只有后端支持 `/v1/responses` 时才设置 `openai-responses`。
-    - `models.providers.*.apiKey`：provider 凭据（优先使用 SecretRef/环境变量替换）。
-    - `models.providers.*.auth`：认证策略（`api-key`、`token`、`oauth`、`aws-sdk`）。
-    - `models.providers.*.contextWindow`：当模型条目未设置 `contextWindow` 时，该 provider 下模型的默认原生上下文窗口。
-    - `models.providers.*.contextTokens`：当模型条目未设置 `contextTokens` 时，该 provider 下模型的默认运行时有效上下文上限。
-    - `models.providers.*.maxTokens`：当模型条目未设置 `maxTokens` 时，该 provider 下模型的默认输出 token 上限。
-    - `models.providers.*.timeoutSeconds`：可选的按 provider 配置的模型 HTTP 请求超时时间（秒），包括连接、响应头、响应体以及总请求中止处理。
-    - `models.providers.*.injectNumCtxForOpenAICompat`：针对 Ollama + `openai-completions`，将 `options.num_ctx` 注入请求（默认：`true`）。
-    - `models.providers.*.authHeader`：在需要时强制将凭据通过 `Authorization` 头传输。
-    - `models.providers.*.baseUrl`：上游 API 基础 URL。
-    - `models.providers.*.headers`：用于代理/租户路由的额外静态头。
+  <Accordion title="Provider connection and auth">
+    - `models.providers.*.api`: request adapter (`openai-completions`, `openai-responses`, `openai-chatgpt-responses`, `anthropic-messages`, `google-generative-ai`, `google-vertex`, `github-copilot`, `bedrock-converse-stream`, `ollama`, `azure-openai-responses`). For self-hosted `/v1/chat/completions` backends such as MLX, vLLM, SGLang, and most OpenAI-compatible local servers, use `openai-completions`. A custom provider with `baseUrl` but no `api` defaults to `openai-completions`; set `openai-responses` only when the backend supports `/v1/responses`.
+    - `models.providers.*.apiKey`: provider credential (prefer SecretRef/env substitution).
+    - `models.providers.*.auth`: auth strategy (`api-key`, `token`, `oauth`, `aws-sdk`).
+    - `models.providers.*.contextWindow`: default native context window for models under this provider when the model entry does not set `contextWindow`.
+    - `models.providers.*.contextTokens`: default effective runtime context cap for models under this provider when the model entry does not set `contextTokens`.
+    - `models.providers.*.maxTokens`: default output-token cap for models under this provider when the model entry does not set `maxTokens`.
+    - `models.providers.*.timeoutSeconds`: optional per-provider model HTTP request timeout in seconds, including connect, headers, body, and total request abort handling.
+    - `models.providers.*.injectNumCtxForOpenAICompat`: for Ollama + `openai-completions`, inject `options.num_ctx` into requests (default: `true`).
+    - `models.providers.*.authHeader`: force credential transport in the `Authorization` header when required.
+    - `models.providers.*.baseUrl`: upstream API base URL.
+    - `models.providers.*.headers`: extra static headers for proxy/tenant routing.
 
   </Accordion>
   <Accordion title="请求传输覆盖">
@@ -576,7 +602,7 @@ sidebarTitle: "工具与自定义提供方"
   </Accordion>
 </AccordionGroup>
 
-交互式自定义 provider 引导会为常见视觉模型 ID 推断图像输入，例如 GPT-4o、Claude、Gemini、Qwen-VL、LLaVA、Pixtral、InternVL、Mllama、MiniCPM-V 和 GLM-4V；对于已知的纯文本系列，则会跳过额外提问。未知模型 ID 仍会询问是否支持图像输入。非交互式引导使用相同的推断；传入 `--custom-image-input` 可强制使用支持图像的元数据，或传入 `--custom-text-input` 强制使用纯文本元数据。
+Interactive custom-provider onboarding infers image input for known vision-model-id patterns, including GPT-4o/GPT-4.1/GPT-5+, the `o1`/`o3`/`o4` reasoning families, Claude, Gemini, any `-vl`-suffixed id (Qwen-VL and similar), and named families such as LLaVA, Pixtral, InternVL, Mllama, MiniCPM-V, and GLM-4V; it skips the extra question for known text-only families (Llama, DeepSeek, Mistral/Mixtral, Kimi/Moonshot, Codestral, Devstral, Phi, QwQ, CodeLlama, and bare Qwen ids without a vl/vision suffix). Unknown model IDs still prompt for image support. Non-interactive onboarding uses the same inference; pass `--custom-image-input` to force image-capable metadata or `--custom-text-input` to force text-only metadata.
 
 ### 提供商示例
 
@@ -781,9 +807,10 @@ sidebarTitle: "工具与自定义提供方"
 
     设置 `ZAI_API_KEY`。模型引用使用规范的 `zai/*` provider ID。快捷方式：`openclaw onboard --auth-choice zai-api-key`。
 
-    - 通用端点：`https://api.z.ai/api/paas/v4`
-    - 编程端点（默认）：`https://api.z.ai/api/coding/paas/v4`
-    - 对于通用端点，定义一个带基础 URL 覆盖的自定义 provider。
+    - General endpoint: `https://api.z.ai/api/paas/v4`
+    - Coding endpoint: `https://api.z.ai/api/coding/paas/v4`
+    - The default `zai-api-key` auth choice probes your key and auto-detects which endpoint it belongs to (falling back to a prompt, defaulting to Global, if detection is inconclusive). Dedicated CN and Coding-Plan auth choices are also available for explicit selection.
+    - For the general endpoint, define a custom provider with the base URL override.
 
   </Accordion>
 </AccordionGroup>

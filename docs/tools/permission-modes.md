@@ -7,7 +7,7 @@ read_when:
 title: "权限模式"
 ---
 
-权限模式决定了代理在运行主机命令、写入文件或向后端 harness 请求额外访问之前拥有多少权限。当你希望 OpenClaw 先使用 allowlist，再对未命中的情况走 Codex 原生自动审核或人工审批路径时，从 `tools.exec.mode: "auto"` 开始。
+权限模式决定了代理在运行主机命令、写入文件或向后端 harness 请求额外访问权限之前拥有多少权限。
 
 <Note>
   权限模式与 `tools.exec.host=auto` 是分开的。`tools.exec.host`
@@ -31,33 +31,33 @@ openclaw gateway restart
 openclaw exec-policy show
 ```
 
-在 `auto` 模式下，OpenClaw 会直接运行确定性的 allowlist 匹配。审批未命中的情况会先经过 OpenClaw 的原生自动审核器，然后在需要时回退到已配置的人工审批路径。
+## OpenClaw 主机 exec 模式
 
-## OpenClaw host exec 模式
+`tools.exec.mode` 是主机 `exec` 的规范化策略面。每种模式都会解析为一个底层的 `security`（allowlist 严格度）和 `ask`（命中缺失时提示）配对：
 
-`tools.exec.mode` 是主机 `exec` 的规范化策略面。
+| 模式        | security / ask          | 行为                                                                                          | 适用场景                                              |
+| ----------- | ----------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `deny`      | `deny` / `off`          | 完全阻止主机 exec。                                                                             | 不允许任何主机命令。                                  |
+| `allowlist` | `allowlist` / `off`     | 仅运行在 allowlist 中的命令；静默拒绝未命中的命令。                                              | 你有一组已知安全的命令集。                            |
+| `ask`       | `allowlist` / `on-miss` | 运行 allowlist 匹配项；对未命中的命令询问人工确认。                                               | 每个新命令都应由人工审核。                            |
+| `auto`      | `allowlist` / `on-miss` | 运行 allowlist 匹配项；未命中的命令先经过自动审核，再在需要时转交人工批准。                      | 编码会话需要实用且受保护的访问。                      |
+| `full`      | `full` / `off`          | 无提示地运行主机 exec。                                                                         | 这个受信任的主机/会话应跳过审批门禁。                |
 
-| Mode        | Behavior                                     | Use when                                              |
-| ----------- | -------------------------------------------- | ----------------------------------------------------- |
-| `deny`      | 阻止主机 exec。                              | 不允许任何主机命令。                                  |
-| `allowlist` | 仅运行 allowlist 中的命令。                  | 你有一组已知安全的命令集合。                          |
-| `ask`       | 运行 allowlist 匹配项，并在未命中时询问。     | 需要由人工审核新命令。                                |
-| `auto`      | 运行 allowlist 匹配项，然后使用自动审核。     | 编码会话需要实用且受保护的访问。                      |
-| `full`      | 运行主机 exec，不显示提示。                  | 这个受信任的主机/会话应跳过审批门控。                |
+`ask` 和 `auto` 共享相同的 allowlist/ask 设置；`auto` 额外启用了原生自动审核器，它会自行决定未命中的命令，只有在无法安全批准时才会转交到配置的人类审批流程。
 
 关于完整的主机 exec 策略、本地审批文件、allowlist 方案、安全二进制文件以及转发行为，请参见 [Exec approvals](/tools/exec-approvals)。
 
 ## Codex Guardian 映射
 
-对于原生 Codex app-server 会话，当本地 Codex 要求允许时，`tools.exec.mode: "auto"` 会映射为经 Codex Guardian 审核的审批。OpenClaw 通常会发送：
+对于原生 Codex app-server 会话，`tools.exec.mode: "auto"` 会在本地 Codex 要求允许时，引导 Codex 走向经 Guardian 审核的批准流程。典型结果值如下：
 
-| Codex field         | Typical value     |
+| Codex 字段           | 典型值              |
 | ------------------- | ----------------- |
 | `approvalPolicy`    | `on-request`      |
 | `approvalsReviewer` | `auto_review`     |
 | `sandbox`           | `workspace-write` |
 
-在 `auto` 模式下，OpenClaw 不会保留旧的、不安全的 Codex 覆盖项，例如 `approvalPolicy: "never"` 或 `sandbox: "danger-full-access"`。只有在你明确想要无审批状态时，才使用 `tools.exec.mode: "full"`。
+`auto` 模式会优先于任何已配置的 Codex sandbox/approval 覆盖项，因此它不会保留诸如 `approvalPolicy: "never"` 搭配 `sandbox: "danger-full-access"` 之类的旧式不安全组合。`tools.exec.mode: "deny"` 和 `"allowlist"` 会完全阻止 Codex app-server 的本地执行。仅当你有意希望采用无需批准的姿态时，才使用 `tools.exec.mode: "full"`。
 
 关于 app-server 设置、认证顺序以及原生 Codex 运行时细节，请参见 [Codex harness](/plugins/codex-harness)。
 
@@ -65,7 +65,7 @@ openclaw exec-policy show
 
 ACPX 会话是非交互式的，因此不能点击 TTY 权限提示。ACPX 使用 `plugins.entries.acpx.config` 下单独的 harness 级设置：
 
-| Setting                     | Common value    | Meaning                                     |
+| 设置                        | 值              | 含义                                        |
 | --------------------------- | --------------- | ------------------------------------------- |
 | `permissionMode`            | `approve-reads` | 仅自动批准读取。                              |
 | `permissionMode`            | `approve-all`   | 自动批准写入和 shell 命令。                  |
@@ -105,7 +105,7 @@ openclaw exec-policy show
 
 ## 相关内容
 
-- [Exec approvals](/tools/exec-approvals)
-- [Exec approvals - advanced](/tools/exec-approvals-advanced)
-- [Codex harness](/plugins/codex-harness)
-- [ACP agents setup](/tools/acp-agents-setup#permission-configuration)
+- [执行审批](/tools/exec-approvals)
+- [执行审批 - 高级](/tools/exec-approvals-advanced)
+- [Codex 运行环境](/plugins/codex-harness)
+- [ACP 代理设置](/tools/acp-agents-setup#permission-configuration)

@@ -8,13 +8,18 @@ read_when:
 
 # AGENTS.md - OpenClaw 工作区
 
-此文件夹是助手的工作目录。
+这个文件夹是助手的工作目录，由 `openclaw gateway --dev` 初始化。
 
-## 首次运行（一次性）
+## 你的身份已预先设定
 
-- 如果 BOOTSTRAP.md 存在，请遵循其中的仪式，并在完成后将其删除。
-- 你的代理身份位于 IDENTITY.md。
-- 你的个人资料位于 USER.md。
+与全新的 `openclaw onboard` 工作区不同，这个 `--dev` 工作区跳过了交互式的
+BOOTSTRAP.md 仪式——它启动时就已经放入了完整的身份信息：
+
+- 你的代理身份位于 IDENTITY.md 中。
+- 用户资料位于 USER.md 中。
+- 你的个性位于 SOUL.md 中。
+
+如果你想要不同的开发身份，可以直接编辑其中任意一个。
 
 ## 备份提示（推荐）
 
@@ -39,7 +44,7 @@ git commit -m "Add agent workspace"
 
 ## 每日记忆（推荐）
 
-- 在 memory/YYYY-MM-DD.md 保持一份简短的每日日志（如有需要请创建 memory/）。
+- 在 memory/YYYY-MM-DD.md 中保留一份简短的每日日志（如有需要请创建 memory/）。
 - 在会话开始时，如果存在，请先阅读今天和昨天的记录。
 - 在写入记忆文件之前，请先读取它们；只写入具体更新，绝不写空占位符。
 - 记录持久的事实、偏好和决定；避免记录机密。

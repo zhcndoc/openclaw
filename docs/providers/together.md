@@ -6,7 +6,9 @@ read_when:
   - 你需要 API 密钥环境变量或 CLI 认证选项
 ---
 
-[Together AI](https://together.ai) 通过统一的 API 提供对包括 Llama、DeepSeek、Kimi 等在内的领先开源模型的访问。
+[Together AI](https://together.ai) 提供对领先的开源
+模型的访问，包括 Llama、DeepSeek、Kimi 等，并通过统一的 API 提供服务。
+OpenClaw 将其打包为 `together` 提供方。
 
 | Property | Value                         |
 | -------- | ----------------------------- |
@@ -52,31 +54,33 @@ openclaw onboard --non-interactive \
 ```
 
 <Note>
-引导预设会将
-`together/meta-llama/Llama-3.3-70B-Instruct-Turbo` 设置为默认模型。
+引导会将 `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` 设置为
+默认模型。
 </Note>
 
 ## 内置目录
 
-OpenClaw 附带以下内置 Together 目录：
+每百万 tokens 的费用以美元计。
 
-| Model ref                                          | Name                         | Input       | Context | Notes                |
-| -------------------------------------------------- | ---------------------------- | ----------- | ------- | -------------------- |
-| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | Default model        |
-| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | Kimi reasoning model |
-| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | Reasoning text model |
-| `together/Qwen/Qwen2.5-7B-Instruct-Turbo`          | Qwen2.5 7B Instruct Turbo    | text        | 32,768  | Fast text model      |
-| `together/zai-org/GLM-5.1`                         | GLM 5.1 FP4                  | text        | 202,752 | Reasoning text model |
+| Model ref                                          | Name                         | Input       | Context | Max output | Cost (in/out) | Notes               |
+| -------------------------------------------------- | ---------------------------- | ----------- | ------- | ---------- | ------------- | ------------------- |
+| `together/meta-llama/Llama-3.3-70B-Instruct-Turbo` | Llama 3.3 70B Instruct Turbo | text        | 131,072 | 8,192      | 0.88 / 0.88   | 默认模型            |
+| `together/moonshotai/Kimi-K2.6`                    | Kimi K2.6 FP4                | text, image | 262,144 | 32,768     | 1.20 / 4.50   | 推理模型            |
+| `together/deepseek-ai/DeepSeek-V4-Pro`             | DeepSeek V4 Pro              | text        | 512,000 | 8,192      | 2.10 / 4.40   | 推理模型            |
+| `together/Qwen/Qwen2.5-7B-Instruct-Turbo`          | Qwen2.5 7B Instruct Turbo    | text        | 32,768  | 8,192      | 0.30 / 0.30   | 快速，非推理模型    |
+| `together/zai-org/GLM-5.1`                         | GLM 5.1 FP4                  | text        | 202,752 | 8,192      | 1.40 / 4.40   | 推理模型            |
 
 ## 视频生成
 
 捆绑的 `together` 插件还通过共享的 `video_generate` 工具注册了视频生成。
 
-| Property             | Value                                                                    |
-| -------------------- | ------------------------------------------------------------------------ |
-| Default video model  | `together/Wan-AI/Wan2.2-T2V-A14B`                                        |
-| Modes                | text-to-video; single-image reference only with `Wan-AI/Wan2.2-I2V-A14B` |
-| Supported parameters | `aspectRatio`, `resolution`                                              |
+| 属性                | 值                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| 默认视频模型        | `Wan-AI/Wan2.2-T2V-A14B`                                                                  |
+| 其他模型            | `Wan-AI/Wan2.2-I2V-A14B`, `minimax/Hailuo-02`, `Kwai/Kling-2.1-Master`                    |
+| 模式                | 文本转视频；仅 `Wan-AI/Wan2.2-I2V-A14B` 支持图像转视频（单张参考图像）                |
+| 时长                | 1-10 秒                                                                                   |
+| 支持的参数          | `size`（解析为 `<width>x<height>`）；不读取 `aspectRatio`/`resolution`                  |
 
 要将 Together 用作默认视频提供方：
 
@@ -93,7 +97,8 @@ OpenClaw 附带以下内置 Together 目录：
 ```
 
 <Tip>
-有关共享工具参数、提供方选择和故障转移行为，请参阅 [视频生成](/tools/video-generation)。
+查看 [视频生成](/tools/video-generation) 了解共享工具参数、
+提供方选择以及故障转移行为。
 </Tip>
 
 <AccordionGroup>
@@ -122,8 +127,8 @@ OpenClaw 附带以下内置 Together 目录：
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    提供方规则、模型引用和故障转移行为。
+  <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
+    提供方规则、模型引用和故障切换行为。
   </Card>
   <Card title="视频生成" href="/tools/video-generation" icon="video">
     共享的视频生成工具参数和提供方选择。

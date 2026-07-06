@@ -7,12 +7,11 @@ read_when:
 title: "Exa 搜索"
 ---
 
-OpenClaw 支持 [Exa AI](https://exa.ai/) 作为 `web_search` 提供方。Exa
-提供神经、关键词和混合搜索模式，并内置内容提取（高亮、文本、摘要）。
+[Exa AI](https://exa.ai/) 是一个 `web_search` 提供方，支持神经、关键词和
+混合搜索模式，并内置内容提取（高亮、文本、
+摘要）。
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/exa-plugin
@@ -62,13 +61,13 @@ openclaw gateway restart
 }
 ```
 
-**环境替代方案：** 在 Gateway 环境中设置 `EXA_API_KEY`。
-对于 gateway 安装，将其放入 `~/.openclaw/.env`。
+**环境替代方案：** 在 Gateway 环境中设置 `EXA_API_KEY`。对于
+Gateway 安装，请将其放入 `~/.openclaw/.env`。参见
+[环境变量](/help/faq#env-vars-and-env-loading)。
 
 ## 基础 URL 覆盖
 
-当 Exa 搜索请求需要通过兼容代理或其他 Exa 端点时，设置 `plugins.entries.exa.config.webSearch.baseUrl`。OpenClaw
-会通过在裸主机名前加上 `https://` 来规范化，并在路径尚未以 `/search` 结尾时追加该路径。解析后的端点会包含在搜索缓存键中，因此来自不同 Exa 端点的结果不会共享。
+将 `plugins.entries.exa.config.webSearch.baseUrl` 设置为通过兼容的代理或其他端点路由 Exa 搜索请求。OpenClaw 会通过添加 `https://` 来规范化裸主机名，并在路径未以 `/search` 结尾时追加 `/search`。解析后的端点会作为搜索缓存键的一部分，因此来自不同端点的结果绝不会共享。
 
 ## 工具参数
 
@@ -76,8 +75,8 @@ openclaw gateway restart
 搜索查询。
 </ParamField>
 
-<ParamField path="count" type="number">
-要返回的结果数（1–100）。
+<ParamField path="count" type="number" default="5">
+返回结果数量（1-100，受 Exa 搜索类型限制）。
 </ParamField>
 
 <ParamField path="type" type="'auto' | 'neural' | 'fast' | 'deep' | 'deep-reasoning' | 'instant'">
@@ -85,7 +84,7 @@ openclaw gateway restart
 </ParamField>
 
 <ParamField path="freshness" type="'day' | 'week' | 'month' | 'year'">
-时间筛选。
+时间筛选。不能与 `date_after`/`date_before` 组合使用。
 </ParamField>
 
 <ParamField path="date_after" type="string">
@@ -102,8 +101,7 @@ openclaw gateway restart
 
 ### 内容提取
 
-Exa 可以在搜索结果旁返回提取的内容。传入一个 `contents`
-对象即可启用：
+传入一个 `contents` 对象来控制结果中提取的内容：
 
 ```javascript
 await web_search({
@@ -123,6 +121,11 @@ await web_search({
 | `highlights`    | `boolean \| { maxCharacters, query, numSentences, highlightsPerUrl }` | 提取关键句子  |
 | `summary`       | `boolean \| { query }`                                                | AI 生成的摘要   |
 
+如果省略 `contents`，Exa 默认使用 `{ highlights: true }`，因此结果会
+包含关键句子摘录。结果描述会优先取自 highlights，其次是 summary，再次是 full text——
+以可用的最先项为准。结果还会在可用时保留来自 Exa API
+响应的原始 `highlightScores` 和 `summary` 字段。
+
 ### 搜索模式
 
 | 模式             | 描述                       |
@@ -136,19 +139,11 @@ await web_search({
 
 ## 注意事项
 
-- 如果未提供 `contents` 选项，Exa 默认使用 `{ highlights: true }`
-  因此结果会包含关键句摘录
-- 当可用时，结果会保留来自 Exa API
-  响应的 `highlightScores` 和 `summary` 字段
-- 结果描述会优先从高亮内容解析，其次是摘要，然后是
-  完整文本 —— 以可用者为准
-- `freshness` 不能与 `date_after`/`date_before` 组合使用 — 请使用一种
-  时间筛选模式
-- 每个查询最多可返回 100 条结果（受 Exa 搜索类型
-  限制）
-- 结果默认缓存 15 分钟（可通过
-  `cacheTtlMinutes` 配置）
-- Exa 是带有结构化 JSON 响应的官方 API 集成
+- `count` 最多可接受 100，受 Exa 搜索类型限制约束。
+- 结果默认缓存 15 分钟。可配置共享的
+  `tools.web.search.cacheTtlMinutes`（分钟）和
+  `tools.web.search.timeoutSeconds`（默认 30 秒），以更改所有 `web_search` 提供方（包括 Exa）的缓存和
+  请求超时。
 
 ## 相关内容
 

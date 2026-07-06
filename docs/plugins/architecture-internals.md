@@ -7,7 +7,7 @@ read_when:
 title: "插件架构内部"
 ---
 
-关于公共能力模型、插件形态以及所有权/执行契约，请参见 [插件架构](/plugins/architecture)。本页是内部机制的参考：加载流水线、注册表、运行时钩子、Gateway HTTP 路由、导入路径和模式表。
+有关公开能力模型、插件形态以及所有权/执行约定，请参见 [插件架构](/plugins/architecture)。本页介绍内部机制：加载流水线、注册表、运行时钩子、Gateway HTTP 路由、导入路径和 schema 表。
 
 ## 加载流水线
 
@@ -28,11 +28,15 @@ title: "插件架构内部"
 `activate` 是 `register` 的旧别名 —— 加载器会解析两者中的任意一个（`def.register ?? def.activate`），并在同一时刻调用它。所有捆绑插件都使用 `register`；新插件请优先使用 `register`。
 </Note>
 
-安全检查发生在**运行时执行之前**。当入口逃逸出插件根目录、路径可被全局写入，或者非捆绑插件的路径所有权看起来可疑时，候选项会被阻止。
+安全门会在**运行时执行之前**运行。当满足以下任一条件时，发现流程会阻止某个候选项：
 
-被阻止的候选项仍会与其插件 id 绑定，以便诊断。如果配置
-仍然引用该 id，验证会报告该插件已存在但被阻止，
-并指回路径安全警告，而不是将该配置项视为过期。
+- 其解析后的入口逃逸出了插件根目录
+- 其路径（或其根目录）是全局可写的
+- 对于非捆绑插件，其路径所有权与当前 uid（或 root）不匹配
+
+全局可写的捆绑目录会先尝试就地 `chmod` 修复（npm/全局安装可能会以 `0777` 提供包目录），然后安全门才会重新检查；所有权检查对捆绑来源会完全跳过。
+
+当已知插件 id 时，被阻止的候选项在发出的诊断信息中仍会携带该 id（包括从一个在其他方面被拒绝的目录中的清单解析出的 id），因此引用该 id 的配置会看到一个与路径安全警告绑定的已阻止插件，而不是无关的“未知插件”错误。
 
 ### 清单优先行为
 
@@ -47,27 +51,36 @@ title: "插件架构内部"
 
 对于原生插件，运行时模块是数据面部分。它负责注册实际行为，例如钩子、工具、命令或提供者流程。
 
-可选的清单 `activation` 和 `setup` 块保留在控制面上。它们是仅元数据的描述符，用于激活规划和设置发现；它们不能替代运行时注册、`register(...)` 或 `setupEntry`。最早的实时激活消费者现在会使用清单中的命令、通道和提供者提示，在更广泛的注册表物化之前缩小插件加载范围：
+可选的清单 `activation` 和 `setup` 块仍然留在控制面。它们是用于激活规划和设置发现的纯元数据描述符；它们不会替代运行时注册、`register(...)` 或 `setupEntry`。实时激活消费者会使用清单中的命令、通道和提供者提示，在更大范围的注册表物化之前缩小插件加载范围：
 
 - CLI 加载会缩小到拥有所请求主命令的插件
-- 通道设置/插件解析会缩小到拥有所请求
-  通道 id 的插件
+- 通道设置/插件解析会缩小到拥有所请求通道 id 的插件
 - 显式提供者设置/运行时解析会缩小到拥有所请求提供者 id 的插件
-- Gateway 启动规划会使用 `activation.onStartup` 进行显式启动
-  导入和启动退出；没有启动元数据的插件只会通过更窄的激活触发加载
+- Gateway 启动规划会对显式启动导入使用 `activation.onStartup`；没有启动元数据的插件只会通过更窄的激活触发器加载
 
-请求时运行时预加载如果要求广泛的 `all` 范围，仍会从配置、启动规划、已配置通道、槽位和自动启用规则推导出一个显式的有效插件 id 集。若该推导集合为空，OpenClaw 会加载一个空的运行时注册表，而不是扩展到每一个可发现的插件。
+激活规划器同时为现有调用方提供仅 ids 的 API，以及用于诊断的 plan API。计划条目会报告插件被选中的原因，将显式的 `activation.*` 提示与清单所有权回退区分开来：
 
-激活规划器同时为现有调用方提供仅 ids 的 API，以及为新诊断提供 plan API。计划条目会报告插件被选中的原因，将显式的 `activation.*` 规划器提示与清单所有权回退区分开来，例如 `providers`、`channels`、`commandAliases`、`setup.providers`、`contracts.tools` 和 hooks。这个原因拆分就是兼容性边界：现有插件元数据继续有效，而新代码可以在不改变运行时加载语义的情况下检测宽泛提示或回退行为。
+| 原因（来自 `activation.*` 提示）   | 原因（来自清单所有权）                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `activation-agent-harness-hint`      | —                                                                                     |
+| `activation-capability-hint`        | —                                                                                     |
+| `activation-channel-hint`          | `manifest-channel-owner`（`channels`）                                                |
+| `activation-command-hint`          | `manifest-command-alias`（`commandAliases`）                                          |
+| `activation-provider-hint`         | `manifest-provider-owner`（`providers`）、`manifest-setup-provider-owner`（`setup.providers`） |
+| `activation-route-hint`            | —                                                                                     |
+| —（hook 触发没有 hint 变体）        | `manifest-hook-owner`（`hooks`）、`manifest-tool-contract`（`contracts.tools`）       |
 
-设置发现现在优先使用描述符拥有的 ids，例如 `setup.providers` 和 `setup.cliBackends`，在回退到 `setup-api` 之前缩小候选插件范围，适用于那些仍然需要设置期运行时钩子的插件。提供者设置列表会使用清单 `providerAuthChoices`、描述符派生的设置选项以及安装目录元数据，而不加载提供者运行时。显式 `setup.requiresRuntime: false` 是仅描述符的截断条件；省略 `requiresRuntime` 会保留旧的 `setup-api` 回退以兼容。若发现的多个插件声称拥有相同的标准化设置提供者或 CLI 后端 id，设置查找会拒绝歧义所有者，而不是依赖发现顺序。当设置运行时确实执行时，注册表诊断会报告 `setup.providers` / `setup.cliBackends` 与由 `setup-api` 注册的提供者或 CLI 后端之间的漂移，但不会阻止旧插件。
+这种原因拆分就是兼容边界：现有插件元数据继续可用，而新代码可以在不改变运行时加载语义的情况下检测更宽泛的提示或回退行为。
+
+请求时的运行时预加载如果请求的是宽泛的 `all` 范围，仍会从配置、启动规划、已配置通道、slots 和自动启用规则中推导出一个显式的有效插件 id 集合（`src/plugins/effective-plugin-ids.ts` 中的 `resolveEffectivePluginIds`）。如果推导出的集合为空，OpenClaw 会保持该范围为空，而不是扩大到所有可发现的插件。
+
+设置发现会优先使用描述符拥有的 ids，例如 `setup.providers` 和 `setup.cliBackends`，先缩小候选插件范围，然后才回退到 `setup-api`，以处理那些仍然需要设置时运行时钩子的插件。提供者设置列表会使用清单 `providerAuthChoices`、描述符派生的设置选项以及安装目录元数据，而无需加载提供者运行时。显式的 `setup.requiresRuntime: false` 是一个仅描述符级别的截止条件；省略 `requiresRuntime` 会保留旧版的 `setup-api` 回退，以兼容旧行为。如果有多个发现的插件声称拥有同一个规范化后的设置提供者或 CLI backend id，设置查找会拒绝这个有歧义的所有者，而不是依赖发现顺序。当设置运行时确实执行时，注册表诊断会报告 `setup.providers` / `setup.cliBackends` 与实际由 `setup-api` 注册的 providers 或 CLI backends 之间的漂移，但不会阻止旧插件。
 
 ### 插件缓存边界
 
-OpenClaw 不会在基于墙钟时间的窗口之后缓存插件发现结果或直接的清单注册表数据。安装、清单编辑和加载路径变更必须在下一次显式元数据读取或快照重建时可见。清单文件解析器可以保留一个有界的文件签名缓存，键由已打开的清单路径、inode、大小和时间戳组成；该缓存只用于避免对未变化字节重复解析，绝不能缓存发现、注册表、所有者或策略答案。
+OpenClaw 不会在基于墙钟时间的窗口内缓存插件发现结果或直接的清单注册表数据。安装、清单编辑和加载路径变更必须在下一次显式的元数据读取或快照重建时可见。清单文件解析器维护一个有界的文件签名缓存，该缓存以已打开的清单路径以及设备/inode、大小和 mtime/ctime 为键；该缓存只用于避免对未变更字节的重复解析，绝不能缓存发现、注册表、所有者或策略答案。
 
-安全的元数据快速路径是显式对象所有权，而不是隐藏缓存。Gateway 启动的热点路径应在调用链中传递当前的 `PluginMetadataSnapshot`、派生的 `PluginLookUpTable` 或显式清单注册表。配置验证、启动自动启用、插件引导和提供者选择可以复用这些对象，只要它们代表当前配置和插件库存。设置查找仍会按需重建清单元数据，除非特定设置路径接收了显式清单注册表；请将其作为冷路径回退，而不是添加隐藏的查找缓存。当输入发生变化时，应重建并替换快照，而不是修改它或保留历史副本。
-对活动插件注册表和捆绑通道引导辅助工具的视图，应从当前注册表/根目录重新计算。一次调用内可以使用短生命周期的 map 来去重或防止重入；但它们不能演变为进程级元数据缓存。
+安全的元数据快路径是显式对象所有权，而不是隐藏缓存。Gateway 启动的热路径应在调用链中传递当前的 `PluginMetadataSnapshot`、派生的 `PluginLookUpTable` 或显式清单注册表。配置验证、启动自动启用、插件引导和提供者选择可以在这些对象代表当前配置和插件库存时复用它们。设置查找仍会按需重建清单元数据，除非特定设置路径接收到了显式的清单注册表；请将其保留为冷路径回退，而不是添加隐藏的查找缓存。当输入变化时，应重建并替换快照，而不是变异它或保留历史副本。活动插件注册表以及捆绑通道引导辅助视图应根据当前注册表/根目录重新计算。在一次调用内用于去重工作或防止重入的短生命周期 map 是可以的；它们不能变成进程级元数据缓存。
 
 对于插件加载，持久缓存层是运行时加载。它可以在代码或已安装工件实际被加载时重用加载器状态，例如：
 
@@ -91,27 +104,23 @@ OpenClaw 不会在基于墙钟时间的窗口之后缓存插件发现结果或�
 
 ## 注册表模型
 
-已加载的插件不会直接修改随机的核心全局变量。它们会注册到一个中心插件注册表中。
+已加载的插件不会直接修改随机的核心全局变量。它们会注册到一个
+中心插件注册表（`src/plugins/registry-types.ts` 中的 `PluginRegistry`），
+该注册表会跟踪插件记录（身份、来源、出处、状态、诊断信息）
+以及每种能力对应的数组：工具、旧式 hooks 和类型化 hooks、
+通道、提供者、网关 RPC 处理器、HTTP 路由、CLI 注册器、
+后台服务、插件拥有的命令，以及数十种更多的类型化提供者
+家族（语音、嵌入、图像/视频/音乐生成、Web
+抓取/搜索、代理控制器、会话操作，等等）。
 
-注册表跟踪：
-
-- 插件记录（标识、来源、origin、状态、诊断）
-- 工具
-- 旧式 hooks 和类型化 hooks
-- 通道
-- 提供者
-- Gateway RPC 处理器
-- HTTP 路由
-- CLI 注册器
-- 后台服务
-- 插件拥有的命令
-
-然后核心功能会从该注册表中读取，而不是直接与插件模块对话。这使得加载保持单向：
+核心功能随后会从该注册表中读取，而不是直接与插件
+模块交互。这使得加载方向保持单向：
 
 - 插件模块 -> 注册表注册
 - 核心运行时 -> 注册表消费
 
-这种分离对可维护性很重要。它意味着大多数核心界面只需要一个集成点：“读取注册表”，而不是“为每个插件模块做特殊处理”。
+这种分离对可维护性很重要。它意味着大多数核心表面只需要
+一个集成点：“读取注册表”，而不是“为每个插件模块做特殊处理”。
 
 ## 会话绑定回调
 
@@ -150,19 +159,19 @@ export default {
 
 提供者插件有三层：
 
-- **清单元数据**：用于廉价的运行前查找：
+- **清单元数据** 用于在运行时前进行廉价查找：
   `setup.providers[].envVars`、已弃用的兼容项 `providerAuthEnvVars`、
   `providerAuthAliases`、`providerAuthChoices` 和 `channelEnvVars`。
-- **配置期钩子**：`catalog`（旧名 `discovery`）以及
+- **配置期钩子**：`catalog`（旧版 `discovery`）以及
   `applyConfigDefaults`。
-- **运行时钩子**：40 多个可选钩子，覆盖认证、模型解析、
-  流包装、思考层级、回放策略和使用量端点。完整列表见
+- **运行时钩子**：40+ 个可选钩子，涵盖认证、模型解析、
+  流包装、thinking 级别、回放策略和 usage 端点。请参见
   [钩子顺序与使用](#hook-order-and-usage)。
 
 OpenClaw 仍然负责通用代理循环、故障转移、转录处理和工具策略。
 这些钩子是提供者特定行为的扩展面，无需整个自定义推理传输。
 
-当提供者拥有基于环境变量的凭据，并且通用认证/状态/模型选择路径应在不加载插件运行时的情况下看到它们时，请使用清单 `setup.providers[].envVars`。已弃用的 `providerAuthEnvVars` 在弃用窗口内仍会被兼容适配器读取，使用它的非捆绑插件会收到清单诊断。当一个提供者 id 需要复用另一个提供者 id 的环境变量、认证配置文件、基于配置的认证和 API 密钥引导选择时，请使用清单 `providerAuthAliases`。当入门/认证选择的 CLI 界面应在不加载提供者运行时的情况下知道提供者的选择 id、组标签和简单的一键认证接线时，请使用清单 `providerAuthChoices`。将提供者运行时 `envVars` 保留给面向运维者的提示，例如入门标签或 OAuth client-id/client-secret 设置变量。
+当提供者拥有基于环境变量的凭据，并且通用认证/状态/模型选择路径应在不加载插件运行时的情况下看到它们时，请使用清单 `setup.providers[].envVars`。已弃用的 `providerAuthEnvVars` 在弃用窗口内仍会被兼容适配器读取，使用它的非捆绑插件会收到清单诊断。当一个提供者 id 需要复用另一个提供者 id 的环境变量、认证配置文件、基于配置的认证和 API 密钥引导选择时，请使用清单 `providerAuthAliases`。当入门/认证选择的 CLI 界面应在不加载提供者运行时的情况下知道提供者的选择 id、组标签和简单一键认证接线时，请使用清单 `providerAuthChoices`。将提供者运行时 `envVars` 保留给面向运维者的提示，例如入门标签或 OAuth client-id/client-secret 设置变量。
 
 当某个通道具有由环境变量驱动的认证或设置，而通用 shell-env 回退、配置/状态检查或设置提示应在不加载通道运行时的情况下看到它们时，请使用清单 `channelEnvVars`。
 
@@ -173,65 +182,62 @@ OpenClaw 仍然负责通用代理循环、故障转移、转录处理和工具�
 OpenClaw 不再调用的仅兼容性提供者字段，例如
 `ProviderPlugin.capabilities` 和 `suppressBuiltInModel`，故意不列在此处。
 
-| #   | Hook                              | What it does                                                                                                   | When to use                                                                                                                                   |
-| --- | --------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `catalog`                         | Publish provider config into `models.providers` during `models.json` generation                                | Provider owns a catalog or base URL defaults                                                                                                  |
-| 2   | `applyConfigDefaults`             | Apply provider-owned global config defaults during config materialization                                      | Defaults depend on auth mode, env, or provider model-family semantics                                                                         |
-| --  | _(built-in model lookup)_         | OpenClaw tries the normal registry/catalog path first                                                          | _(not a plugin hook)_                                                                                                                         |
-| 3   | `normalizeModelId`                | Normalize legacy or preview model-id aliases before lookup                                                     | Provider owns alias cleanup before canonical model resolution                                                                                 |
-| 4   | `normalizeTransport`              | Normalize provider-family `api` / `baseUrl` before generic model assembly                                      | Provider owns transport cleanup for custom provider ids in the same transport family                                                          |
-| 5   | `normalizeConfig`                 | Normalize `models.providers.<id>` before runtime/provider resolution                                           | Provider needs config cleanup that should live with the plugin; bundled Google-family helpers also backstop supported Google config entries   |
-| 6   | `applyNativeStreamingUsageCompat` | Apply native streaming-usage compat rewrites to config providers                                               | Provider needs endpoint-driven native streaming usage metadata fixes                                                                          |
-| 7   | `resolveConfigApiKey`             | Resolve env-marker auth for config providers before runtime auth loading                                       | Providers expose their own env-marker API-key resolution hooks                                                                                |
-| 8   | `resolveSyntheticAuth`            | Surface local/self-hosted or config-backed auth without persisting plaintext                                   | Provider can operate with a synthetic/local credential marker                                                                                 |
-| 9   | `resolveExternalAuthProfiles`     | Overlay provider-owned external auth profiles; default `persistence` is `runtime-only` for CLI/app-owned creds | Provider reuses external auth credentials without persisting copied refresh tokens; declare `contracts.externalAuthProviders` in the manifest |
-| 10  | `shouldDeferSyntheticProfileAuth` | Lower stored synthetic profile placeholders behind env/config-backed auth                                      | Provider stores synthetic placeholder profiles that should not win precedence                                                                 |
-| 11  | `resolveDynamicModel`             | Sync fallback for provider-owned model ids not in the local registry yet                                       | Provider accepts arbitrary upstream model ids                                                                                                 |
-| 12  | `prepareDynamicModel`             | Async warm-up, then `resolveDynamicModel` runs again                                                           | Provider needs network metadata before resolving unknown ids                                                                                  |
-| 13  | `normalizeResolvedModel`          | Final rewrite before the embedded runner uses the resolved model                                               | Provider needs transport rewrites but still uses a core transport                                                                             |
-| 14  | `normalizeToolSchemas`            | Normalize tool schemas before the embedded runner sees them                                                    | Provider needs transport-family schema cleanup                                                                                                |
-| 15  | `inspectToolSchemas`              | Surface provider-owned schema diagnostics after normalization                                                  | Provider wants keyword warnings without teaching core provider-specific rules                                                                 |
-| 16  | `resolveReasoningOutputMode`      | Select native vs tagged reasoning-output contract                                                              | Provider needs tagged reasoning/final output instead of native fields                                                                         |
-| 17  | `prepareExtraParams`              | Request-param normalization before generic stream option wrappers                                              | Provider needs default request params or per-provider param cleanup                                                                           |
-| 18  | `createStreamFn`                  | Fully replace the normal stream path with a custom transport                                                   | Provider needs a custom wire protocol, not just a wrapper                                                                                     |
-| 20  | `wrapStreamFn`                    | Stream wrapper after generic wrappers are applied                                                              | Provider needs request headers/body/model compat wrappers without a custom transport                                                          |
-| 21  | `resolveTransportTurnState`       | Attach native per-turn transport headers or metadata                                                           | Provider wants generic transports to send provider-native turn identity                                                                       |
-| 22  | `resolveWebSocketSessionPolicy`   | Attach native WebSocket headers or session cool-down policy                                                    | Provider wants generic WS transports to tune session headers or fallback policy                                                               |
-| 23  | `formatApiKey`                    | Auth-profile formatter: stored profile becomes the runtime `apiKey` string                                     | Provider stores extra auth metadata and needs a custom runtime token shape                                                                    |
-| 24  | `refreshOAuth`                    | OAuth refresh override for custom refresh endpoints or refresh-failure policy                                  | Provider does not fit the shared OpenClaw refreshers                                                                                          |
-| 25  | `buildAuthDoctorHint`             | Repair hint appended when OAuth refresh fails                                                                  | Provider needs provider-owned auth repair guidance after refresh failure                                                                      |
-| 26  | `matchesContextOverflowError`     | Provider-owned context-window overflow matcher                                                                 | Provider has raw overflow errors generic heuristics would miss                                                                                |
-| 27  | `classifyFailoverReason`          | Provider-owned failover reason classification                                                                  | Provider can map raw API/transport errors to rate-limit/overload/etc                                                                          |
-| 28  | `isCacheTtlEligible`              | Prompt-cache policy for proxy/backhaul providers                                                               | Provider needs proxy-specific cache TTL gating                                                                                                |
-| 29  | `buildMissingAuthMessage`         | Replacement for the generic missing-auth recovery message                                                      | Provider needs a provider-specific missing-auth recovery hint                                                                                 |
-| 30  | `augmentModelCatalog`             | Synthetic/final catalog rows appended after discovery                                                          | Provider needs synthetic forward-compat rows in `models list` and pickers                                                                     |
-| 31  | `resolveThinkingProfile`          | Model-specific `/think` level set, display labels, and default                                                 | Provider exposes a custom thinking ladder or binary label for selected models                                                                 |
-| 32  | `isBinaryThinking`                | On/off reasoning toggle compatibility hook                                                                     | Provider exposes only binary thinking on/off                                                                                                  |
-| 33  | `supportsXHighThinking`           | `xhigh` reasoning support compatibility hook                                                                   | Provider wants `xhigh` on only a subset of models                                                                                             |
-| 34  | `resolveDefaultThinkingLevel`     | Default `/think` level compatibility hook                                                                      | Provider owns default `/think` policy for a model family                                                                                      |
-| 35  | `isModernModelRef`                | Modern-model matcher for live profile filters and smoke selection                                              | Provider owns live/smoke preferred-model matching                                                                                             |
-| 36  | `prepareRuntimeAuth`              | Exchange a configured credential into the actual runtime token/key just before inference                       | Provider needs a token exchange or short-lived request credential                                                                             |
-| 37  | `resolveUsageAuth`                | Resolve usage/billing credentials for `/usage` and related status surfaces                                     | Provider needs custom usage/quota token parsing or a different usage credential                                                               |
-| 38  | `fetchUsageSnapshot`              | Fetch and normalize provider-specific usage/quota snapshots after auth is resolved                             | Provider needs a provider-specific usage endpoint or payload parser                                                                           |
-| 39  | `createEmbeddingProvider`         | Build a provider-owned embedding adapter for memory/search                                                     | Memory embedding behavior belongs with the provider plugin                                                                                    |
-| 40  | `buildReplayPolicy`               | Return a replay policy controlling transcript handling for the provider                                        | Provider needs custom transcript policy (for example, thinking-block stripping)                                                               |
-| 41  | `sanitizeReplayHistory`           | Rewrite replay history after generic transcript cleanup                                                        | Provider needs provider-specific replay rewrites beyond shared compaction helpers                                                             |
-| 42  | `validateReplayTurns`             | Final replay-turn validation or reshaping before the embedded runner                                           | Provider transport needs stricter turn validation after generic sanitation                                                                    |
-| 43  | `onModelSelected`                 | Run provider-owned post-selection side effects                                                                 | Provider needs telemetry or provider-owned state when a model becomes active                                                                  |
+| Hook                              | 它的作用                                                                                                   | 何时使用                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catalog`                         | 在 `models.json` 生成期间将提供者配置发布到 `models.providers`                                | 提供者拥有目录或基础 URL 默认值                                                                                                  |
+| `applyConfigDefaults`             | 在配置物化期间应用提供者拥有的全局配置默认值                                      | 默认值取决于认证模式、环境变量或提供者模型家族语义                                                                         |
+| _(内置模型查找)_         | OpenClaw 先尝试正常的注册表/目录路径                                                          | _(不是插件钩子)_                                                                                                                         |
+| `normalizeModelId`                | 在查找之前规范化旧版或预览版模型 id 别名                                                     | 提供者在规范模型解析之前负责别名清理                                                                                 |
+| `normalizeTransport`              | 在通用模型组装之前规范化提供者家族的 `api` / `baseUrl`                                      | 提供者在同一传输家族中为自定义提供者 id 负责传输清理                                                          |
+| `normalizeConfig`                 | 在运行时/提供者解析之前规范化 `models.providers.<id>`                                           | 提供者需要与插件共存的配置清理；捆绑的 Google 家族辅助工具也会兜底受支持的 Google 配置条目   |
+| `applyNativeStreamingUsageCompat` | 将原生 streaming-usage 兼容性重写应用到配置提供者                                               | 提供者需要基于端点的原生 streaming usage 元数据修复                                                                          |
+| `resolveConfigApiKey`             | 在加载运行时认证之前，为配置提供者解析环境标记认证                                       | 提供者公开自己的环境标记 API key 解析钩子                                                                                |
+| `resolveSyntheticAuth`            | 在不持久化明文的情况下暴露本地/自托管或基于配置的认证                                   | 提供者可以使用合成/本地凭据标记                                                                                 |
+| `resolveExternalAuthProfiles`     | 覆盖提供者拥有的外部认证配置文件；CLI/应用拥有凭据的默认 `persistence` 为 `runtime-only` | 提供者复用外部认证凭据而不持久化复制的刷新令牌；在清单中声明 `contracts.externalAuthProviders` |
+| `shouldDeferSyntheticProfileAuth` | 将存储的合成配置文件占位符排在基于环境变量/配置的认证之后                                      | 提供者存储的合成占位配置文件不应获得优先级                                                                                 |
+| `resolveDynamicModel`             | 为本地注册表中尚不存在的提供者自有模型 id 提供同步回退                                       | 提供者接受任意上游模型 id                                                                                                 |
+| `prepareDynamicModel`             | 异步预热，然后再次运行 `resolveDynamicModel`                                                           | 提供者在解析未知 id 之前需要网络元数据                                                                                  |
+| `normalizeResolvedModel`          | 嵌入式运行器使用已解析模型之前的最终重写                                               | 提供者需要传输重写，但仍使用核心传输                                                                             |
+| `normalizeToolSchemas`            | 嵌入式运行器看到工具 schema 之前进行规范化                                                    | 提供者需要传输家族的 schema 清理                                                                                                |
+| `inspectToolSchemas`              | 规范化后暴露提供者拥有的 schema 诊断                                                  | 提供者希望有关键字警告，而无需让核心了解提供者特定规则                                                                 |
+| `resolveReasoningOutputMode`      | 选择原生 vs 标记化 reasoning-output 契约                                                              | 提供者需要标记化的 reasoning/最终输出，而不是原生字段                                                                         |
+| `prepareExtraParams`              | 在通用流选项包装器之前进行请求参数规范化                                              | 提供者需要默认请求参数或按提供者进行参数清理                                                                           |
+| `createStreamFn`                  | 用自定义传输完全替换正常流路径                                                   | 提供者需要自定义线协议，而不只是包装器                                                                                     |
+| `wrapStreamFn`                    | 在应用通用包装器之后包装流                                                              | 提供者需要请求头/正文/模型兼容包装，而不需要自定义传输                                                          |
+| `resolveTransportTurnState`       | 绑定原生的按轮次传输头或元数据                                                           | 提供者希望通用传输发送提供者原生的轮次身份                                                                       |
+| `resolveWebSocketSessionPolicy`   | 绑定原生 WebSocket 头或会话冷却策略                                                    | 提供者希望通用 WS 传输调整会话头或回退策略                                                               |
+| `formatApiKey`                    | 认证配置文件格式化器：存储的配置文件变为运行时 `apiKey` 字符串                                     | 提供者存储额外认证元数据，并需要自定义运行时令牌形状                                                                    |
+| `refreshOAuth`                    | 自定义刷新端点或刷新失败策略的 OAuth 刷新覆盖                                  | 提供者不适用于共享的 OpenClaw 刷新器                                                                                          |
+| `buildAuthDoctorHint`             | OAuth 刷新失败时附加的修复提示                                                                  | 刷新失败后提供者需要提供者拥有的认证修复指导                                                                      |
+| `matchesContextOverflowError`     | 提供者拥有的上下文窗口溢出匹配器                                                                 | 提供者存在通用启发式方法会漏掉的原始溢出错误                                                                                |
+| `classifyFailoverReason`          | 提供者拥有的故障转移原因分类器                                                                  | 提供者可将原始 API/传输错误映射到速率限制/过载等                                                                          |
+| `isCacheTtlEligible`              | 代理/回传提供者的提示缓存策略                                                               | 提供者需要代理特定的缓存 TTL 门控                                                                                                |
+| `buildMissingAuthMessage`         | 通用缺失认证恢复消息的替代方案                                                      | 提供者需要提供者特定的缺失认证恢复提示                                                                                 |
+| `augmentModelCatalog`             | 在发现之后附加合成/最终目录行（已弃用，见下文）                                  | 提供者需要在 `models list` 和选择器中加入合成的前向兼容行                                                                     |
+| `resolveThinkingProfile`          | 模型特定的 `/think` 级别集合、显示标签和默认值                                                 | 提供者为所选模型暴露自定义的 thinking 阶梯或二元标签                                                                 |
+| `isBinaryThinking`                | 开/关推理切换兼容性钩子                                                                     | 提供者只暴露二元 thinking 开/关                                                                                                  |
+| `supportsXHighThinking`           | `xhigh` 推理支持兼容性钩子                                                                   | 提供者只希望在部分模型上启用 `xhigh`                                                                                             |
+| `resolveDefaultThinkingLevel`     | 默认 `/think` 级别兼容性钩子                                                                      | 提供者拥有某个模型家族的默认 `/think` 策略                                                                                      |
+| `isModernModelRef`                | 用于实时配置文件过滤和 smoke 选择的现代模型匹配器                                              | 提供者拥有实时/smoke 首选模型匹配                                                                                             |
+| `prepareRuntimeAuth`              | 在推理前将已配置凭据交换为实际运行时令牌/密钥                       | 提供者需要令牌交换或短期请求凭据                                                                             |
+| `resolveUsageAuth`                | 为 `/usage` 和相关状态界面解析 usage/billing 凭据                                     | 提供者需要自定义 usage/quota 令牌解析或不同的 usage 凭据                                                               |
+| `fetchUsageSnapshot`              | 在认证解析后获取并规范化提供者特定的 usage/quota 快照                             | 提供者需要提供者特定的 usage 端点或负载解析器                                                                           |
+| `createEmbeddingProvider`         | 构建一个提供者拥有的用于内存/搜索的 embedding 适配器                                                     | 内存 embedding 行为属于提供者插件                                                                                    |
+| `buildReplayPolicy`               | 返回一个控制该提供者转录处理的回放策略                                        | 提供者需要自定义转录策略（例如，去除 thinking 块）                                                               |
+| `sanitizeReplayHistory`           | 在通用转录清理后重写回放历史                                                        | 提供者需要超出共享压缩辅助工具范围的提供者特定回放重写                                                             |
+| `validateReplayTurns`             | 嵌入式运行器之前的最终回放轮次验证或重塑                                           | 提供者传输在通用清理后需要更严格的轮次验证                                                                    |
+| `onModelSelected`                 | 运行提供者拥有的选择后副作用                                                                 | 模型变为活动状态时提供者需要遥测或提供者拥有的状态                                                                  |
 
 `normalizeModelId`、`normalizeTransport` 和 `normalizeConfig` 会先检查
 匹配到的提供者插件，然后继续回退到其他具备钩子能力的提供者插件，直到有某个插件真正改变模型 id 或传输/配置为止。这样可以让别名/兼容性提供者 shim 继续工作，而无需调用方知道哪个捆绑插件负责该重写。如果没有任何提供者钩子重写受支持的 Google 家族配置条目，捆绑的 Google 配置规范化器仍然会应用那种兼容性清理。
 
 如果提供者需要完全自定义的线协议或自定义请求执行器，那就是另一类扩展。这些钩子面向仍然运行在 OpenClaw 正常推理循环上的提供者行为。
 
-`resolveUsageAuth` decides whether OpenClaw should call `fetchUsageSnapshot` or
-fall back to generic credential resolution for usage/status surfaces. Return
-`{ token, accountId? }` when the provider has a usage credential, return
-`{ handled: true }` when provider-owned usage auth has handled the request and
-must suppress generic API-key/OAuth fallback, and return `null` or `undefined`
-when the provider did not handle usage auth.
+`resolveUsageAuth` 决定 OpenClaw 是否应调用 `fetchUsageSnapshot`，或者针对 usage/status 界面回退到通用凭据解析。当提供者拥有 usage 凭据时返回
+`{ token, accountId? }`；当提供者拥有的 usage 认证已处理请求且必须抑制通用 API key/OAuth 回退时返回
+`{ handled: true }`；当提供者未处理 usage 认证时返回 `null` 或 `undefined`。
 
-### Provider example
+### 提供者示例
 
 ```ts
 api.registerProvider({
@@ -447,16 +453,11 @@ const { text } = await api.runtime.mediaUnderstanding.transcribeAudioFile({
 
 注释：
 
-- `api.runtime.mediaUnderstanding.*` 是用于
-  图像/音频/视频理解的首选共享接口。
-- `extractStructuredWithModel(...)` 是面向插件的受限
-  供应商拥有的图像优先抽取接缝。至少包含一个图像输入；
-  文本输入只是补充上下文。
-  产品插件拥有它们的路由和 schema，而 OpenClaw 拥有
-  提供方/运行时边界。
+- `api.runtime.mediaUnderstanding.*` 是用于图像/音频/视频理解的首选共享接口。
+- `extractStructuredWithModel(...)` 是面向插件的边界，用于受限的、由提供方拥有的、以图像优先的抽取。至少包含一个图像输入；文本输入只是补充上下文。产品插件拥有自己的路由和 schema，而 OpenClaw 拥有提供方/运行时边界。
 - 使用核心媒体理解音频配置（`tools.media.audio`）和提供方回退顺序。
-- 当未生成任何转写输出时返回 `{ text: undefined }`（例如跳过/不支持的输入）。
-- `api.runtime.stt.transcribeAudioFile(...)` 仍作为兼容别名保留。
+- 当未生成转写输出时，返回 `{ text: undefined }`（例如跳过/不支持的输入）。
+- `api.runtime.stt.transcribeAudioFile(...)` 仍然作为兼容别名保留。
 
 插件还可以通过 `api.runtime.subagent` 启动后台子代理运行：
 
@@ -539,26 +540,28 @@ api.registerHttpRoute({
 
 路由字段：
 
-- `path`：Gateway HTTP 服务器下的路由路径。
-- `auth`：必填。使用 `"gateway"` 需要普通 Gateway 认证，或使用 `"plugin"` 进行插件管理的认证/ webhook 验证。
-- `match`：可选。`"exact"`（默认）或 `"prefix"`。
-- `replaceExisting`：可选。允许同一插件替换其自己的现有路由注册。
-- `handler`：当路由已处理请求时返回 `true`。
+- `path`: 网关 HTTP 服务器下的路由路径。
+- `auth`: 必填，`"gateway"` 或 `"plugin"`。使用 `"gateway"` 表示需要正常的网关认证，使用 `"plugin"` 表示由插件管理认证/ webhook 校验。
+- `match`: 可选。`"exact"`（默认）或 `"prefix"`。
+- `handleUpgrade`: 可选，用于同一路由上的 WebSocket 升级请求的处理器。
+- `replaceExisting`: 可选。允许同一个插件替换其自身已存在的路由注册。
+- `handler`: 当该路由已处理请求时返回 `true`。
 
 注释：
 
-- `api.registerHttpHandler(...)` 已被移除，会导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
+- `api.registerHttpHandler(...)` 已被移除，并会导致插件加载错误。请改用 `api.registerHttpRoute(...)`。
 - 插件路由必须显式声明 `auth`。
-- 精确的 `path + match` 冲突会被拒绝，除非使用 `replaceExisting: true`，且一个插件不能替换另一个插件的路由。
-- 不同 `auth` 级别的重叠路由会被拒绝。仅在相同 auth 级别上保留 `exact`/`prefix` 兜底链。
-- `auth: "plugin"` 路由不会自动接收操作员运行时范围。它们用于插件管理的 webhooks/签名验证，而不是特权的 Gateway 辅助调用。
-- `auth: "gateway"` 路由运行在 Gateway 请求运行时范围内，但该范围是有意保守的：
-  - 共享密钥 bearer 认证（`gateway.auth.mode = "token"` / `"password"`）会将插件路由运行时范围固定为 `operator.write`，即使调用方发送了 `x-openclaw-scopes` 也是如此
-  - 受信任的、带身份的 HTTP 模式（例如 `trusted-proxy`，或私有入口上的 `gateway.auth.mode = "none"`）仅在显式存在该头时才接受 `x-openclaw-scopes`
-  - 如果这些带身份的插件路由请求中缺少 `x-openclaw-scopes`，运行时范围会回退到 `operator.write`
-- 实用规则：不要把 gateway-auth 插件路由当作隐式管理员入口。如果你的路由需要仅管理员行为，请要求使用带身份的认证模式，并记录显式的 `x-openclaw-scopes` 头部契约。
+- 相同的 `path + match` 冲突会被拒绝，除非使用 `replaceExisting: true`，且一个插件不能替换另一个插件的路由。
+- 具有不同 `auth` 等级的重叠路由会被拒绝。仅在同一 `auth` 等级下保留 `exact`/`prefix` 的回退链。
+- `auth: "plugin"` 路由**不会**自动接收操作员运行时作用域。它们用于插件管理的 webhook/签名校验，而不是特权的 Gateway 辅助调用。
+- `auth: "gateway"` 路由会在 Gateway 请求运行时作用域中执行。默认表面（`gatewayRuntimeScopeSurface: "write-default"`）是刻意保守的：
+  - 共享密钥 bearer 认证（`gateway.auth.mode = "token"` / `"password"`）以及任何非可信代理认证方式，即使调用方发送了 `x-openclaw-scopes`，也只会获得一个 `operator.write` 作用域
+  - 没有显式 `x-openclaw-scopes` 头的 `trusted-proxy` 调用方也仍然保持旧版仅 `operator.write` 的表面
+  - 发送了 `x-openclaw-scopes` 的 `trusted-proxy` 调用方则会获得声明的作用域
+  - 路由可以选择 `gatewayRuntimeScopeSurface: "trusted-operator"`，以便始终为具有身份的认证模式尊重 `x-openclaw-scopes`（如果头部缺失，则回退到完整的 CLI 默认作用域集合）
+- 实践规则：不要假设一个 gateway-auth 插件路由就是隐式的管理员入口。如果你的路由需要仅管理员可用的行为，请启用 `trusted-operator` 作用域表面，要求具备身份的认证模式，并明确记录 `x-openclaw-scopes` 头部契约。
 
-## Plugin SDK 导入路径
+## 插件 SDK 导入路径
 
 在编写新插件时，请使用更窄的 SDK 子路径，而不是单体的 `openclaw/plugin-sdk` 根 barrel。核心子路径：
 
@@ -569,13 +572,13 @@ api.registerHttpRoute({
 | `openclaw/plugin-sdk/core`          | 通用共享辅助工具和总括契约                           |
 | `openclaw/plugin-sdk/config-schema` | 根 `openclaw.json` Zod 模式（`OpenClawSchema`） |
 
-Channel plugins pick from a family of narrow seams — `channel-setup`,
-`setup-runtime`, `setup-tools`, `channel-pairing`,
-`channel-contract`, `channel-feedback`, `channel-inbound`, `channel-outbound`,
-`command-auth`, `secret-input`, `webhook-ingress`,
-`channel-targets`, and `channel-actions`. Approval behavior should consolidate
-on one `approvalCapability` contract rather than mixing across unrelated
-plugin fields. See [Channel plugins](/plugins/sdk-channel-plugins).
+通道插件会从一组更窄的接入点中选择——`channel-setup`、
+`setup-runtime`、`setup-tools`、`channel-pairing`、
+`channel-contract`、`channel-feedback`、`channel-inbound`、`channel-outbound`、
+`command-auth`、`secret-input`、`webhook-ingress`、
+`channel-targets` 和 `channel-actions`。审批行为应当收敛到单一的
+`approvalCapability` 契约上，而不是分散在互不相关的插件字段中。请参见
+[Channel plugins](/plugins/sdk-channel-plugins)。
 
 运行时和配置辅助工具位于对应的聚焦 `*-runtime` 子路径下
 （`approval-runtime`、`agent-runtime`、`lazy-runtime`、`directory-runtime`、
@@ -586,10 +589,9 @@ plugin fields. See [Channel plugins](/plugins/sdk-channel-plugins).
 
 <Info>
 `openclaw/plugin-sdk/channel-runtime`, `openclaw/plugin-sdk/channel-lifecycle`,
-small channel helper facades, `openclaw/plugin-sdk/outbound-runtime`,
+小型通道辅助 facades，`openclaw/plugin-sdk/outbound-runtime`,
 `openclaw/plugin-sdk/outbound-send-deps`, `openclaw/plugin-sdk/config-runtime`,
-and `openclaw/plugin-sdk/infra-runtime` are deprecated compatibility shims for
-older plugins. New code should import narrower generic primitives instead.
+以及 `openclaw/plugin-sdk/infra-runtime` 都是为旧插件保留的弃用兼容 shim。新代码应改为导入更窄的通用原语。
 </Info>
 
 仓库内部入口点（按打包插件包根目录）：
@@ -618,10 +620,11 @@ Core 决定是原生渲染该展示，还是将其降级为文本。不要通过
 
 渠道插件应拥有渠道特定的目标语义。保持共享的 outbound host 通用化，并使用 messaging adapter 接口来处理 provider 规则：
 
-- `messaging.inferTargetChatType({ to })` 在目录查找前决定归一化后的目标应被视为 `direct`、`group` 还是 `channel`。
-- `messaging.targetResolver.looksLikeId(raw, normalized)` 告诉 core 输入是否应直接跳过目录搜索，进入类 id 的解析。
-- `messaging.targetResolver.resolveTarget(...)` 是插件级回退逻辑，在 core 在归一化之后或目录未命中之后需要进行最终的 provider 拥有的解析时使用。
-- `messaging.resolveOutboundSessionRoute(...)` 在目标解析完成后负责构建 provider 特定的会话路由。
+- `messaging.inferTargetChatType({ to })` 决定一个规范化目标在目录查找之前应被视为 `direct`、`group` 还是 `channel`。
+- `messaging.targetResolver.looksLikeId(raw, normalized)` 告诉核心层输入是否应直接跳过目录搜索，进入类似 id 的解析。
+- `messaging.targetResolver.reservedLiterals` 列出该 provider 中作为渠道/会话引用的裸词。解析会优先保留已配置的目录条目，再拒绝保留字面量，然后在目录未命中时关闭式失败。
+- `messaging.targetResolver.resolveTarget(...)` 是插件回退逻辑：当核心在规范化之后或目录未命中之后需要进行最终的、由 provider 拥有的解析时使用。
+- `messaging.resolveOutboundSessionRoute(...)` 在目标解析完成后，负责构建 provider 特定的会话路由。
 
 推荐拆分方式：
 
@@ -670,13 +673,20 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 后面的 provider 在键冲突时获胜，因此插件可以有意用相同的 provider id 覆盖内置 provider 条目。
 
 插件还可以通过
-`api.registerModelCatalogProvider({ provider, kinds, staticCatalog, liveCatalog })` 发布只读模型行。这是列表/帮助/选择器界面的前进路径，并支持 `text`、`image_generation`、`video_generation` 和 `music_generation` 行。provider 插件仍然拥有实时端点调用、令牌交换和供应商响应映射；core 拥有通用行形状、来源标签和媒体工具帮助格式。媒体生成 provider 注册会根据 `defaultModel`、`models` 和 `capabilities` 自动生成静态目录行。
+`api.registerModelCatalogProvider({ provider, kinds, staticCatalog, liveCatalog
+})` 发布只读模型行。这是用于列表/帮助/选择器界面的前进路径，并支持
+`text`、`voice`、`image_generation`、`video_generation` 和 `music_generation`
+行。provider 插件仍然负责实时端点调用、令牌交换以及
+厂商响应映射；核心负责通用行结构、来源标签以及
+媒体工具帮助格式。媒体生成 provider 注册会自动根据
+`defaultModel`、`models` 和 `capabilities` 合成静态目录行。
 
 兼容性：
 
-- `discovery` 仍然作为旧别名可用，但会发出弃用警告
+- `discovery` 仍可作为旧别名使用，但会发出弃用警告
 - 如果同时注册了 `catalog` 和 `discovery`，OpenClaw 会使用 `catalog`
-- `augmentModelCatalog` 已弃用；打包的 provider 应通过 `registerModelCatalogProvider` 发布补充行
+  并发出警告
+- `augmentModelCatalog` 已弃用；内置 provider 应通过 `registerModelCatalogProvider` 发布补充行
 
 ## 只读渠道检查
 
@@ -715,7 +725,8 @@ provider 插件可以通过 `registerProvider({ catalog: { run(...) { ... } } })
 }
 ```
 
-每个条目都会成为一个插件。如果该包列出多个扩展，插件 id 变为 `name/<fileBase>`。
+每个条目都会成为一个插件。如果包列出了多个扩展，插件
+id 变为 `<manifestOrPackageName>/<fileBase>`（存在 manifest id 时以它为准；否则使用未作用域化的 `package.json` 名称）。
 
 如果你的插件导入 npm 依赖，请在该目录中安装它们，以便 `node_modules` 可用（`npm install` / `pnpm install`）。
 
@@ -818,20 +829,17 @@ OpenClaw 还可以合并**外部渠道目录**（例如 MPM registry 导出）�
 生成的渠道目录条目和 provider 安装目录条目，会在原始 `openclaw.install` 块旁边暴露归一化后的安装源事实。归一化事实会标识 npm spec 是精确版本还是浮动选择器、是否存在预期的完整性元数据，以及是否也可用本地源路径。当目录/包身份已知时，归一化事实会在解析出的 npm 包名与该身份不一致时发出警告。当 `defaultChoice` 无效或指向不可用来源时，以及当 npm 完整性元数据存在但没有有效 npm 来源时，它们也会发出警告。消费者应将 `installSource` 视为附加的可选字段，这样手工构建的条目和目录 shim 就不必自行合成它。
 这使 onboarding 和诊断可以解释 source-plane 状态，而无需导入插件运行时。
 
-Official external npm entries should prefer an exact `npmSpec` plus
-`expectedIntegrity`. Bare package names and dist-tags still work for
-compatibility, but they surface source-plane warnings so the catalog can move
-toward pinned, integrity-checked installs without breaking existing plugins.
-When onboarding installs from a local catalog path, it records a managed plugin
-plugin index entry with `source: "path"` and a workspace-relative
-`sourcePath` when possible. The absolute operational load path stays in
-`plugins.load.paths`; the install record avoids duplicating local workstation
-paths into long-lived config. This keeps local development installs visible to
-source-plane diagnostics without adding a second raw filesystem-path disclosure
-surface. The persisted `installed_plugin_index` SQLite row is the install
-source of truth and can be refreshed without loading plugin runtime modules.
-Its `installRecords` map is durable even when a plugin manifest is missing or
-invalid; its `plugins` payload is a rebuildable manifest view.
+官方外部 npm 条目应优先使用精确的 `npmSpec` 加上
+`expectedIntegrity`。裸包名和 dist-tag 仍然可以用于兼容，
+但它们会暴露 source-plane 警告，这样目录就可以朝着固定版本、带完整性校验的安装方式演进，而不会破坏现有插件。
+当从本地目录路径进行 onboarding 安装时，它会记录一个受管理的插件
+插件索引条目，带有 `source: "path"`，并在可能时带有一个相对于工作区的
+`sourcePath`。绝对的运行加载路径仍保留在
+`plugins.load.paths` 中；安装记录避免把本地工作站路径复制进长期配置。
+这使得本地开发安装对 source-plane 诊断仍然可见，同时不会增加第二个原始文件系统路径泄露面。
+持久化的 `installed_plugin_index` SQLite 表是安装
+源的事实来源，并且可以在不加载插件运行时模块的情况下刷新。
+即使插件 manifest 丢失或无效，它的 `installRecords` 映射仍然是持久的；它的 `plugins` 载荷是一个可重建的 manifest 视图。
 
 ## 上下文引擎插件
 
@@ -910,16 +918,16 @@ export default function (api) {
 
 推荐顺序：
 
-1. 定义核心契约  
-   决定核心应负责哪些共享行为：策略、回退、配置合并、生命周期、面向通道的语义，以及运行时辅助函数的形状。
-2. 添加带类型的插件注册/运行时表面  
-   在 `OpenClawPluginApi` 和/或 `api.runtime` 上扩展最小且有用的类型化能力表面。
-3. 连接 core + channel/feature 消费方  
-   通道和功能插件应通过 core 消费新能力，而不是直接导入某个厂商实现。
-4. 注册厂商实现  
-   然后由厂商插件针对该能力注册其后端实现。
-5. 添加契约覆盖  
-   添加测试，使所有权和注册形式能够长期保持明确。
+1. **定义核心契约。** 决定 core 应当拥有哪些共享行为：
+   策略、回退、配置合并、生命周期、面向通道的语义，以及
+   运行时辅助函数的形态。
+2. **添加带类型的插件注册/运行时表面。** 扩展
+   `OpenClawPluginApi` 和/或 `api.runtime`，提供最小且有用的带类型
+   能力表面。
+3. **连接 core + 通道/功能消费者。** 通道和功能插件
+   应当通过 core 消费新能力，而不是直接导入某个厂商实现。
+4. **注册厂商实现。** 然后由厂商插件围绕该能力注册它们的后端。
+5. **添加契约覆盖。** 添加测试，使所有权和注册形态在长期内保持明确。
 
 这就是 OpenClaw 在保持明确立场的同时，又不会变成对某个提供商世界观的硬编码的方式。参见 [能力食谱](/tools/capability-cookbook)，其中包含具体的文件清单和完整示例。
 
@@ -961,15 +969,17 @@ api.registerVideoGenerationProvider({
 
 // 供功能/渠道插件使用的共享运行时辅助函数
 const clip = await api.runtime.videoGeneration.generate({
-  prompt: "Show the robot walking through the lab.",
+  prompt: "展示机器人在实验室中行走。",
   cfg,
 });
 ```
 
-契约测试模式：
+契约测试模式（`src/plugins/contracts/registry.ts` 暴露诸如
+`providerContractPluginIds` 之类的所有权查找；测试断言某个插件的
+`contracts.videoGenerationProviders` 列表与其实际注册内容一致）：
 
 ```ts
-expect(findVideoGenerationProviderIdsForPlugin("openai")).toEqual(["openai"]);
+expect(pluginManifest.contracts?.videoGenerationProviders).toEqual(["openai"]);
 ```
 
 这样可以让规则保持简单：

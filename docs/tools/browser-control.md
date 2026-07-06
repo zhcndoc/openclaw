@@ -19,21 +19,28 @@ CLI 以及脚本模式（快照、ref、等待、调试流程）的参考文档�
 并在 HTTP 端点可用之前重启 gateway。若不设置此变量，浏览器控制运行时仍可通过 CLI 和
 代理工具工作，但不会有任何服务监听回环控制端口。
 
-- 状态/启动/停止：`GET /`, `POST /start`, `POST /stop`
-- 标签页：`GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`
-- 快照/截图：`GET /snapshot`, `POST /screenshot`
-- 操作：`POST /navigate`, `POST /act`
-- 钩子：`POST /hooks/file-chooser`, `POST /hooks/dialog`
-- 下载：`POST /download`, `POST /wait/download`
-- 权限：`POST /permissions/grant`
-- 调试：`GET /console`, `POST /pdf`
-- 调试：`GET /errors`, `GET /requests`, `POST /trace/start`, `POST /trace/stop`, `POST /highlight`
-- 网络：`POST /response/body`
-- 状态：`GET /cookies`, `POST /cookies/set`, `POST /cookies/clear`
-- 状态：`GET /storage/:kind`, `POST /storage/:kind/set`, `POST /storage/:kind/clear`
-- 设置：`POST /set/offline`, `POST /set/headers`, `POST /set/credentials`, `POST /set/geolocation`, `POST /set/media`, `POST /set/timezone`, `POST /set/locale`, `POST /set/device`
+- 状态/启动/停止: `GET /`, `GET /doctor`, `POST /start`, `POST /stop`, `POST /reset-profile`
+- 配置文件: `GET /profiles`, `POST /profiles/create`, `DELETE /profiles/:name`
+- 标签页: `GET /tabs`, `POST /tabs/open`, `POST /tabs/focus`, `DELETE /tabs/:targetId`, `POST /tabs/action`
+- 快照/截图: `GET /snapshot`, `POST /screenshot`
+- 操作: `POST /navigate`, `POST /act`
+- 钩子: `POST /hooks/file-chooser`, `POST /hooks/dialog`
+- 下载: `POST /download`, `POST /wait/download`
+- 权限: `POST /permissions/grant`
+- 调试: `GET /console`, `POST /pdf`
+- 调试: `GET /errors`, `GET /requests`, `GET /dialogs`, `POST /trace/start`, `POST /trace/stop`, `POST /highlight`
+- 网络: `POST /response/body`
+- 状态: `GET /cookies`, `POST /cookies/set`, `POST /cookies/clear`
+- 状态: `GET /storage/:kind`, `POST /storage/:kind/set`, `POST /storage/:kind/clear`
+- 设置: `POST /set/offline`, `POST /set/headers`, `POST /set/credentials`, `POST /set/geolocation`, `POST /set/media`, `POST /set/timezone`, `POST /set/locale`, `POST /set/device`
 
-所有端点都接受 `?profile=<name>`。`POST /start?headless=true` 会请求一次性无头启动，仅适用于本地托管配置文件，且不会更改持久化的浏览器配置；仅附加、远程 CDP 和现有会话配置文件会拒绝该覆盖，因为 OpenClaw 不会启动这些浏览器进程。
+`POST /tabs/action` 是 CLI 内部用于
+`browser tab` 子命令的批处理形式（`{"action":"new"|"label"|"select"|"close"|"list", ...}`）；
+直接编写脚本时，优先使用上面的单一用途标签页路由。
+
+所有端点都接受 `?profile=<name>`。`POST /start?headless=true` 会为本地托管配置文件请求一次性的无头启动，而不会更改已持久化的
+浏览器配置；仅附加、远程 CDP 和现有会话配置文件会拒绝
+该覆盖，因为 OpenClaw 不会启动这些浏览器进程。
 
 对于标签页端点，`targetId` 是兼容字段名。优先传递来自 `GET /tabs` 或 `POST /tabs/open` 的 `suggestedTargetId`；标签和 `tabId`
 句柄（如 `t1`）也被接受。原始 CDP target id 和唯一的原始
@@ -138,12 +145,17 @@ Chromium。参见 [Docker](/install/docker)。
 
 ```bash
 openclaw browser status
+openclaw browser doctor
+openclaw browser doctor --deep    # 添加一个实时快照探针
 openclaw browser start
-openclaw browser start --headless # 本地托管的一次性无头启动
-openclaw browser stop            # 也会清除附加仅/远程 CDP 的仿真
+openclaw browser start --headless # 一次性本地托管的无头启动
+openclaw browser stop            # 也会在仅附加/远程 CDP 时清除模拟设置
+openclaw browser reset-profile   # 将该配置文件的浏览器数据移到废纸篓
 openclaw browser tabs
 openclaw browser tab             # 当前标签页的快捷方式
 openclaw browser tab new
+openclaw browser tab new --label research
+openclaw browser tab label abcd1234 research
 openclaw browser tab select 2
 openclaw browser tab close 2
 openclaw browser open https://example.com
@@ -153,7 +165,18 @@ openclaw browser close abcd1234
 
 </Accordion>
 
-<Accordion title="检查：截图、快照、控制台、错误、请求">
+<Accordion title="Profiles: list, create, delete">
+
+```bash
+openclaw browser profiles
+openclaw browser create-profile --name research --color "#0066CC"
+openclaw browser create-profile --name attach --driver existing-session --cdp-url http://127.0.0.1:9222
+openclaw browser delete-profile --name research
+```
+
+</Accordion>
+
+<Accordion title="Inspection: screenshot, snapshot, console, errors, requests">
 
 ```bash
 openclaw browser screenshot
@@ -168,6 +191,7 @@ openclaw browser snapshot --labels
 openclaw browser snapshot --urls
 openclaw browser snapshot --selector "#main" --interactive
 openclaw browser snapshot --frame "iframe#main" --interactive
+openclaw browser snapshot --out snapshot.txt
 openclaw browser console --level error
 openclaw browser errors --clear
 openclaw browser requests --filter api --clear
@@ -265,7 +289,7 @@ OpenClaw 支持两种“快照”样式：
   - 操作：`openclaw browser click 12`、`openclaw browser type 23 "hello"`。
   - 在内部，ref 通过 Playwright 的 `aria-ref` 解析。
 
-- **Role snapshot（类似 `e12` 的 role refs）**：`openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
+- **Role 快照（类似 `e12` 的 role refs）**：`openclaw browser snapshot --interactive`（或 `--compact`、`--depth`、`--selector`、`--frame`）
   - 输出：带有 `[ref=e12]`（以及可选 `[nth=1]`）的基于 role 的列表/树。
   - 操作：`openclaw browser click e12`、`openclaw browser highlight e12`。
   - 在内部，ref 通过 `getByRole(...)`（以及重复项的 `nth()`）解析。
@@ -292,21 +316,21 @@ Ref 行为：
 - 如果 role 快照是用 `--frame` 生成的，那么在下一次 role 快照之前，role refs 都限定在该 iframe 内。
 - 未知或过期的 `axN` refs 会快速失败，而不会退回到 Playwright 的 `aria-ref` 选择器。发生这种情况时，请在同一标签页上运行新的快照。
 
-## Waiting for enhancements
+## 等待增强功能
 
-You can wait for more than just time/text:
+你可以等待的不仅仅是时间/文本：
 
-- Wait for URL (Playwright supports glob):
+- 等待 URL（Playwright 支持 glob）：
   - `openclaw browser wait --url "**/dash"`
-- Wait for load state:
+- 等待加载状态：
   - `openclaw browser wait --load networkidle`
-  - Supported on managed `openclaw` and raw/remote CDP profiles. The `user` and `existing-session` profiles reject `networkidle`; use `--url`, `--text`, a selector, or `--fn` waits there.
-- Wait for a JS predicate:
+  - 适用于受管理的 `openclaw` 和原始/远程 CDP 配置文件。使用 `existing-session` 驱动的配置文件（包括默认的 `user` 配置文件）会拒绝 `networkidle`；在这些情况下请使用 `--url`、`--text`、选择器或 `--fn` 等待。
+- 等待 JS 谓词：
   - `openclaw browser wait --fn "window.ready===true"`
-- Wait for a selector to become visible:
+- 等待选择器变为可见：
   - `openclaw browser wait "#main"`
 
-These can be combined:
+这些可以组合使用：
 
 ```bash
 openclaw browser wait "#main" \
@@ -316,26 +340,26 @@ openclaw browser wait "#main" \
   --timeout-ms 15000
 ```
 
-## Debugging workflow
+## 调试工作流
 
-When an action fails (for example, “not visible”, “strict mode violation”, “obscured”):
+当某个操作失败时（例如，“not visible”、“strict mode violation”、“obscured”）：
 
 1. `openclaw browser snapshot --interactive`
-2. Use `click <ref>` / `type <ref>` (prefer role refs in interactive mode)
-3. If it still fails: `openclaw browser highlight <ref>` to see what Playwright is targeting
-4. If the page behaves strangely:
+2. 使用 `click <ref>` / `type <ref>`（在交互模式中优先使用 role refs）
+3. 如果仍然失败：`openclaw browser highlight <ref>` 查看 Playwright 正在定位什么
+4. 如果页面行为异常：
    - `openclaw browser errors --clear`
    - `openclaw browser requests --filter api --clear`
-5. Deep debug: record a trace:
+5. 深度调试：记录 trace：
    - `openclaw browser trace start`
-   - Reproduce the issue
-   - `openclaw browser trace stop` (prints `TRACE:<path>`)
+   - 复现问题
+   - `openclaw browser trace stop`（输出 `TRACE:<path>`）
 
-## JSON output
+## JSON 输出
 
-`--json` is for scripts and structured tools.
+`--json` 适用于脚本和结构化工具。
 
-Examples:
+示例：
 
 ```bash
 openclaw browser status --json
@@ -344,39 +368,39 @@ openclaw browser requests --filter api --json
 openclaw browser cookies --json
 ```
 
-The Role snapshot in JSON includes `refs`, plus a small `stats` block (lines/chars/refs/interactive), which helps tools infer payload size and density.
+JSON 中的 Role 快照包含 `refs`，以及一个小型 `stats` 块（lines/chars/refs/interactive），这有助于工具推断负载大小和密度。
 
-## State and environment switches
+## 状态和环境开关
 
-These are useful for workflows like “make the site behave like X”:
+这些对类似“让站点表现得像 X”的工作流很有用：
 
-- Cookies: `cookies`, `cookies set`, `cookies clear`
-- Storage: `storage local|session get|set|clear`
-- Offline: `set offline on|off`
-- Request headers: `set headers --headers-json '{"X-Debug":"1"}'` (the older `set headers --json '{"X-Debug":"1"}'` is still supported)
-- HTTP basic auth: `set credentials user pass` (or `--clear`)
-- Geolocation: `set geo <lat> <lon> --origin "https://example.com"` (or `--clear`)
-- Media: `set media dark|light|no-preference|none`
-- Timezone / locale: `set timezone ...`, `set locale ...`
-- Device / viewport:
-  - `set device "iPhone 14"` (Playwright device preset)
+- Cookies：`cookies`、`cookies set`、`cookies clear`
+- 存储：`storage local|session get|set|clear`
+- 离线：`set offline on|off`
+- 请求头：`set headers --headers-json '{"X-Debug":"1"}'`（或位置参数形式 `set headers '{"X-Debug":"1"}'`）
+- HTTP 基本认证：`set credentials user pass`（或 `--clear`）
+- 地理位置：`set geo <lat> <lon> --origin "https://example.com"`（或 `--clear`）
+- 媒体：`set media dark|light|no-preference|none`
+- 时区 / 区域设置：`set timezone ...`、`set locale ...`
+- 设备 / 视口：
+  - `set device "iPhone 14"`（Playwright 设备预设）
   - `set viewport 1280 720`
 
-## Security and privacy
+## 安全与隐私
 
-- openclaw browser profiles may contain logged-in sessions; treat them as sensitive.
-- `browser act kind=evaluate` / `openclaw browser evaluate` and `wait --fn`
-  execute arbitrary JavaScript in the page context. Prompt injection may affect them.
-  If not needed, disable it with `browser.evaluateEnabled=false`.
-- `openclaw browser evaluate --fn` accepts function source, expressions, or
-  statement bodies. Statement bodies are wrapped as async functions, so use `return`
-  to return the value you want. When your frontend function may need longer than the default evaluate timeout,
-  use `--timeout-ms <ms>`.
-- For login and anti-bot notes (X/Twitter etc.), see [Browser login + X/Twitter posting](/tools/browser-login).
-- Keep Gateway/node hosts private (loopback or tailnet only).
-- Remote CDP endpoints are highly privileged; tunnel them and protect them carefully.
+- openclaw browser profiles 可能包含已登录会话；请将它们视为敏感信息。
+- `browser act kind=evaluate` / `openclaw browser evaluate` 和 `wait --fn`
+  会在页面上下文中执行任意 JavaScript。提示注入可能会影响它们。
+  如果不需要，请使用 `browser.evaluateEnabled=false` 将其禁用。
+- `openclaw browser evaluate --fn` 接受函数源码、表达式或
+  语句体。语句体会被包装为异步函数，因此请使用 `return`
+  返回你想要的值。当你的前端函数可能需要比默认 evaluate 超时更长的时间时，
+  请使用 `--timeout-ms <ms>`。
+- 关于登录和反机器人说明（X/Twitter 等），请参见 [Browser login + X/Twitter posting](/tools/browser-login)。
+- 保持 Gateway/node 主机私有（仅限 loopback 或 tailnet）。
+- 远程 CDP 端点具有极高权限；请通过隧道访问并妥善保护它们。
 
-Strict mode example (defaults to blocking private/internal targets):
+严格模式示例（默认会阻止私有/内部目标）：
 
 ```json5
 {
@@ -384,15 +408,15 @@ Strict mode example (defaults to blocking private/internal targets):
     ssrfPolicy: {
       dangerouslyAllowPrivateNetwork: false,
       hostnameAllowlist: ["*.example.com", "example.com"],
-      allowedHostnames: ["localhost"], // optional exact allow
+      allowedHostnames: ["localhost"], // 可选的精确允许
     },
   },
 }
 ```
 
-## Related
+## 相关内容
 
-- [Browser](/tools/browser) - overview, configuration, profiles, security
-- [Browser login](/tools/browser-login) - log in to websites
-- [Browser Linux troubleshooting](/tools/browser-linux-troubleshooting)
-- [Browser WSL2 troubleshooting](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)
+- [浏览器](/tools/browser) - 概览、配置、配置文件、安全性
+- [浏览器登录](/tools/browser-login) - 登录网站
+- [浏览器 Linux 故障排除](/tools/browser-linux-troubleshooting)
+- [浏览器 WSL2 故障排除](/tools/browser-wsl2-windows-remote-cdp-troubleshooting)

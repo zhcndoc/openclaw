@@ -8,28 +8,15 @@ title: "审批"
 
 # `openclaw approvals`
 
-管理 **本地主机**、**gateway 主机** 或 **node 主机** 的执行审批。
-默认情况下，命令会针对磁盘上的本地审批文件。使用 `--gateway` 以针对 gateway，或使用 `--node` 以针对特定 node。
+管理 **本地主机**、**gateway 主机** 或 **node 主机** 的执行审批。未指定目标标志时，命令会读取/写入磁盘上的本地审批文件。使用 `--gateway` 可针对 gateway，或使用 `--node <id|name|ip>` 可针对特定 node。
 
 别名：`openclaw exec-approvals`
 
-相关内容：
-
-- 执行审批： [Exec approvals](/tools/exec-approvals)
-- 节点： [Nodes](/nodes)
+相关内容：[Exec approvals](/tools/exec-approvals), [Nodes](/nodes)
 
 ## `openclaw exec-policy`
 
-`openclaw exec-policy` 是一个本地便捷命令，用于一步完成 requested
-`tools.exec.*` 配置与本地主机审批文件的一致性维护。
-
-当你想要以下操作时使用它：
-
-- 检查本地请求的 policy、主机审批文件以及最终合并结果
-- 应用本地预设，例如 YOLO 或 deny-all
-- 同步本地 `tools.exec.*` 与本地主机审批文件
-
-示例：
+`openclaw exec-policy` 是一个**仅限本地**的便捷命令，可在一步中保持所请求的 `tools.exec.*` 配置与本地主机审批文件同步：
 
 ```bash
 openclaw exec-policy show
@@ -41,21 +28,15 @@ openclaw exec-policy preset cautious --json
 openclaw exec-policy set --host gateway --security full --ask off --ask-fallback full
 ```
 
-输出模式：
+预设（`yolo`、`cautious`、`deny-all`）会同时应用 `host`、`security`、`ask` 和 `askFallback`。`set` 只应用你传入的标志；每个被接受的值都会经过校验（`--host auto|sandbox|gateway|node`、`--security deny|allowlist|full`、`--ask off|on-miss|always`、`--ask-fallback deny|allowlist|full`）。
 
-- 不带 `--json`：打印可读性更强的表格视图
-- `--json`：打印机器可读的结构化输出
+范围：
 
-当前范围：
+- 同时更新本地配置文件和本地审批文件；不会将策略推送到 gateway 或 node 主机。
+- `--host node` 会被拒绝：node exec 审批会在运行时从 node 获取，因此本地 `exec-policy` 无法同步它们。请改用 `openclaw approvals set --node <id|name|ip>`。
+- `exec-policy show` 会将 `host=node` 范围在运行时标记为由 node 管理，而不是从本地审批文件推导有效策略。
 
-- `exec-policy` 仅限本地
-- 它会同时更新本地配置文件和本地审批文件
-- 它不会将 policy 推送到 gateway 主机或 node 主机
-- 此命令会拒绝 `--host node`，因为 node 执行审批会在运行时从 node 获取，必须通过面向 node 的审批命令来管理
-- `openclaw exec-policy show` 会在运行时将 `host=node` 范围标记为由 node 管理，而不是从本地审批文件推导有效 policy
-
-如果你需要直接编辑远程主机审批，请继续使用 `openclaw approvals set --gateway`
-或 `openclaw approvals set --node <id|name|ip>`。
+对于远程主机审批，请直接使用 `openclaw approvals set --gateway` 或 `openclaw approvals set --node <id|name|ip>`。
 
 ## 常用命令
 
@@ -65,18 +46,14 @@ openclaw approvals get --node <id|name|ip>
 openclaw approvals get --gateway
 ```
 
-`openclaw approvals get` 现在会显示本地、gateway 和 node 目标的有效执行 policy：
+`get` 会显示目标的有效 exec 策略：请求的 `tools.exec` 策略、主机 approvals-file 策略，以及合并后的有效结果。
 
-- requested `tools.exec` policy
-- 主机审批文件 policy
-- 应用优先级规则后的有效结果
+优先级：
 
-优先级是有意这样设计的：
-
-- 主机审批文件是可执行的事实来源
-- requested `tools.exec` policy 可以收紧或放宽意图，但最终有效结果仍由主机规则推导
-- `--node` 会将 node 主机审批文件与 gateway 的 `tools.exec` policy 组合起来，因为二者在运行时都会生效
-- 如果 gateway 配置不可用，CLI 会回退到 node 审批快照，并注明无法计算最终运行时 policy
+- 主机 approvals 文件是具有强制效力的事实来源。
+- 请求的 `tools.exec` 策略可以收窄或放宽意图，但最终有效结果由主机规则决定。
+- `--node` 会将节点主机 approvals 文件与网关 `tools.exec` 策略结合起来（运行时两者都生效）。
+- 如果网关配置不可用，CLI 会回退到节点 approvals 快照，并注明无法计算最终的运行时策略。
 
 ## 从文件替换审批
 
@@ -93,7 +70,7 @@ openclaw approvals set --gateway --file ./exec-approvals.json
 
 ## “永不提示” / YOLO 示例
 
-对于一个在执行审批上绝不应停止的主机，将主机审批默认值设为 `full` + `off`：
+将某个绝不应在执行审批时停止的主机的主机审批默认值设置为 `full` + `off`：
 
 ```bash
 openclaw approvals set --stdin <<'EOF'
@@ -108,22 +85,9 @@ openclaw approvals set --stdin <<'EOF'
 EOF
 ```
 
-node 变体：
+Node 变体：使用 `openclaw approvals set --node <id|name|ip> --stdin`，正文相同。
 
-```bash
-openclaw approvals set --node <id|name|ip> --stdin <<'EOF'
-{
-  version: 1,
-  defaults: {
-    security: "full",
-    ask: "off",
-    askFallback: "full"
-  }
-}
-EOF
-```
-
-这只会更改 **主机审批文件**。为了保持 requested OpenClaw policy 一致，也要设置：
+这只会更改 **主机审批文件**。为了保持请求的 OpenClaw 策略一致，也要设置：
 
 ```bash
 openclaw config set tools.exec.host gateway
@@ -131,23 +95,17 @@ openclaw config set tools.exec.security full
 openclaw config set tools.exec.ask off
 ```
 
-为什么在这个示例中使用 `tools.exec.host=gateway`：
+这里明确指定 `tools.exec.host=gateway`，因为 `host=auto` 仍然表示“可用时使用沙箱，否则使用网关”：YOLO 关注的是审批，而不是路由。 当你希望即使配置了沙箱也使用主机执行时，请使用 `gateway`（或 `/exec host=gateway`）。
 
-- `host=auto` 仍然表示“在可用时使用 sandbox，否则使用 gateway”。
-- YOLO 关注的是审批，而不是路由。
-- 如果你希望即使配置了 sandbox 也使用主机 exec，请使用 `gateway` 或 `/exec host=gateway` 明确指定主机选择。
+如果省略 `askFallback`，默认值是 `deny`。当升级一个无 UI 的主机并且希望保持永不提示行为时，请显式设置 `askFallback: "full"`。
 
-省略的 `askFallback` 默认值为 `deny`。在升级一个应保持永不提示行为的无 UI 主机时，请显式设置 `askFallback: "full"`。
-
-本地快捷方式：
+同样意图的本地快捷方式，仅在本机上使用：
 
 ```bash
 openclaw exec-policy preset yolo
 ```
 
-这个本地快捷方式会同时更新本地 requested `tools.exec.*` 配置和本地审批默认值。其意图上等同于上面的手动两步设置，但仅适用于本机。
-
-## 允许列表辅助命令
+## 白名单助手
 
 ```bash
 openclaw approvals allowlist add "~/Projects/**/bin/rg"
@@ -161,30 +119,20 @@ openclaw approvals allowlist remove "~/Projects/**/bin/rg"
 
 `get`、`set` 和 `allowlist add|remove` 都支持：
 
-- `--node <id|name|ip>`
+- `--node <id|name|ip>`（解析 id、名称、IP 或 id 前缀；与 `openclaw nodes` 使用相同的解析器）
 - `--gateway`
 - 共享的 node RPC 选项：`--url`、`--token`、`--timeout`、`--json`
 
-目标说明：
+不指定目标标志时，表示磁盘上的本地审批文件。
 
-- 不带目标标志表示磁盘上的本地审批文件
-- `--gateway` 针对 gateway 主机审批文件
-- `--node` 在解析 id、名称、IP 或 id 前缀后，针对某个 node 主机
-
-`allowlist add|remove` 还支持：
-
-- `--agent <id>`（默认为 `*`）
+`allowlist add|remove` 还支持 `--agent <id>`（默认为 `"*"`，应用于所有 agent）。
 
 ## 说明
 
-- `--node` 使用与 `openclaw nodes` 相同的解析器（id、名称、IP 或 id 前缀）。
-- `--agent` 默认为 `"*"`，这会应用于所有 agent。
-- node 主机必须声明 `system.execApprovals.get/set`（macOS 应用或无头 node 主机）。
-- 审批文件按主机存储在 OpenClaw 状态目录中
-  (`$OPENCLAW_STATE_DIR/exec-approvals.json`，或者
-  在变量未设置时为 `~/.openclaw/exec-approvals.json`)。
+- 节点主机必须声明 `system.execApprovals.get/set`（macOS 应用或无头节点主机）。
+- 审批文件按主机存储在 OpenClaw 状态目录中：`$OPENCLAW_STATE_DIR/exec-approvals.json`，如果未设置该变量，则为 `~/.openclaw/exec-approvals.json`。
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Exec approvals](/tools/exec-approvals)
+- [CLI 参考](/cli)
+- [执行审批](/tools/exec-approvals)

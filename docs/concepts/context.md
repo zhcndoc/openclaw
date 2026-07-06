@@ -34,45 +34,45 @@ Context 并不等同于“记忆”：记忆可以存储在磁盘上并在之后
 
 ### `/context list`
 
-```
-🧠 上下文拆分
-Workspace: <workspaceDir>
-Bootstrap max/file: 12,000 chars
-Sandbox: mode=non-main sandboxed=false
-System prompt (run): 38,412 chars (~9,603 tok) (Project Context 23,901 chars (~5,976 tok))
+```text
+🧠 上下文分解
+工作区：<workspaceDir>
+Bootstrap 最大/文件：12,000 字符
+Sandbox：模式=non-main sandboxed=false
+系统提示词（运行时）：38,412 字符（约 9,603 token）（项目上下文 23,901 字符（约 5,976 token））
 
-Injected workspace files:
-- AGENTS.md: OK | raw 1,742 chars (~436 tok) | injected 1,742 chars (~436 tok)
-- SOUL.md: OK | raw 912 chars (~228 tok) | injected 912 chars (~228 tok)
-- TOOLS.md: TRUNCATED | raw 54,210 chars (~13,553 tok) | injected 20,962 chars (~5,241 tok)
-- IDENTITY.md: OK | raw 211 chars (~53 tok) | injected 211 chars (~53 tok)
-- USER.md: OK | raw 388 chars (~97 tok) | injected 388 chars (~97 tok)
-- HEARTBEAT.md: MISSING | raw 0 | injected 0
-- BOOTSTRAP.md: OK | raw 0 chars (~0 tok) | injected 0 chars (~0 tok)
+注入的工作区文件：
+- AGENTS.md：OK | 原始 1,742 字符（约 436 token）| 注入 1,742 字符（约 436 token）
+- SOUL.md：OK | 原始 912 字符（约 228 token）| 注入 912 字符（约 228 token）
+- TOOLS.md：截断 | 原始 54,210 字符（约 13,553 token）| 注入 20,962 字符（约 5,241 token）
+- IDENTITY.md：OK | 原始 211 字符（约 53 token）| 注入 211 字符（约 53 token）
+- USER.md：OK | 原始 388 字符（约 97 token）| 注入 388 字符（约 97 token）
+- HEARTBEAT.md：缺失 | 原始 0 | 注入 0
+- BOOTSTRAP.md：OK | 原始 0 字符（约 0 token）| 注入 0 字符（约 0 token）
 
-Skills list (system prompt text): 2,184 chars (~546 tok) (12 skills)
-Tools: read, edit, write, exec, process, browser, message, sessions_send, …
-Tool list (system prompt text): 1,032 chars (~258 tok)
-Tool schemas (JSON): 31,988 chars (~7,997 tok) (counts toward context; not shown as text)
-Tools: (same as above)
+技能列表（系统提示词文本）：2,184 字符（约 546 token）（12 项技能）
+工具：read、edit、write、exec、process、browser、message、sessions_send、…
+工具列表（系统提示词文本）：1,032 字符（约 258 token）
+工具 schema（JSON）：31,988 字符（约 7,997 token）（计入上下文；未以文本形式展示）
+工具：（同上）
 
-Session tokens (cached): 14,250 total / ctx=32,000
+会话 token（缓存）：14,250 总计 / ctx=32,000
 ```
 
 ### `/context detail`
 
-```
-🧠 上下文拆分（详细）
+```text
+🧠 上下文分解（详细）
 …
-Top skills (prompt entry size):
-- frontend-design: 412 chars (~103 tok)
-- oracle: 401 chars (~101 tok)
-… (+10 more skills)
+顶级技能（提示词条目大小）：
+- frontend-design：412 字符（约 103 token）
+- oracle：401 字符（约 101 token）
+…（另外还有 10 项技能）
 
-Top tools (schema size):
-- browser: 9,812 chars (~2,453 tok)
-- exec: 6,240 chars (~1,560 tok)
-… (+N more tools)
+顶级工具（schema 大小）：
+- browser：9,812 字符（约 2,453 token）
+- exec：6,240 字符（约 1,560 token）
+…（另外还有 N 个工具）
 ```
 
 ### `/context map`
@@ -110,9 +110,9 @@ Top tools (schema size):
 
 完整拆分：[系统提示词](/concepts/system-prompt)。
 
-## 注入的工作区文件（项目上下文）
+## Injected Workspace Files (Project Context)
 
-默认情况下，OpenClaw 会注入一组固定的工作区文件（如果存在）：
+By default, OpenClaw injects a fixed set of workspace files (if they exist):
 
 - `AGENTS.md`
 - `SOUL.md`
@@ -120,11 +120,11 @@ Top tools (schema size):
 - `IDENTITY.md`
 - `USER.md`
 - `HEARTBEAT.md`
-- `BOOTSTRAP.md`（仅首次运行）
+- `BOOTSTRAP.md` (first run only)
 
-大文件会按文件使用 `agents.defaults.bootstrapMaxChars`（默认 `20000` 字符）进行截断。OpenClaw 还会使用 `agents.defaults.bootstrapTotalMaxChars`（默认 `60000` 字符）对所有文件的总引导注入量设置上限。`/context` 会显示 **原始 vs 注入** 大小，以及是否发生了截断。
+Large files are truncated on a per-file basis using `agents.defaults.bootstrapMaxChars` (default `20000` characters). OpenClaw also applies an upper limit to the total bootstrap injection volume for all files using `agents.defaults.bootstrapTotalMaxChars` (default `60000` characters). `/context` will show the **raw vs injected** size and whether truncation occurred.
 
-当发生截断时，运行时可以在项目上下文下方注入一个提示内警告块。可通过 `agents.defaults.bootstrapPromptTruncationWarning`（`off`、`once`、`always`；默认 `always`）进行配置。
+When truncation occurs, the runtime can inject an in-context warning block below the project context. This can be configured via `agents.defaults.bootstrapPromptTruncationWarning` (`off`, `once`, `always`; default `always`).
 
 ## 技能：按需注入 vs 按需加载
 
@@ -137,7 +137,7 @@ Top tools (schema size):
 工具会通过两种方式影响上下文：
 
 1. 系统提示词中的 **工具列表文本**（你看到的“工具信息”）。
-2. **工具 schemas**（JSON）。这些会发送给模型，以便它可以调用工具。即使你看不到它们的纯文本形式，它们也会计入上下文。
+2. **工具 schema**（JSON）。这些会发送给模型，以便它可以调用工具。即使你看不到它们的纯文本形式，它们也会计入上下文。
 
 `/context detail` 会拆分出最大的工具 schema，以便你看到哪些占用最多。
 
@@ -145,11 +145,11 @@ Top tools (schema size):
 
 斜杠命令由 Gateway 处理。有几种不同的行为：
 
-- **独立命令**：仅为 `/...` 的消息会作为命令执行。
-- **指令**：`/think`、`/verbose`、`/trace`、`/reasoning`、`/elevated`、`/model`、`/queue` 会在模型看到消息之前被移除。
-  - 仅指令消息会保留会话设置。
-  - 普通消息中的内联指令会作为每条消息的提示。
-- **内联快捷方式**（仅允许名单中的发送者）：普通消息中的某些 `/...` 标记可以立即执行（例如：“hey /status”），并且会在模型看到剩余文本之前被移除。
+- **独立命令**：仅为 `/...` 的消息会作为命令运行。
+- **指令**：`/think`、`/fast`、`/verbose`、`/trace`、`/reasoning`、`/elevated`、`/exec`、`/model`、`/queue` 会在模型看到消息之前被移除。
+  - 仅包含指令的消息会持久化会话设置。
+  - 普通消息中的内联指令会作为按消息生效的提示。
+- **内联快捷方式**（仅允许名单中的发送者）：普通消息中的某些 `/...` 标记可以立即运行（例如：“hey /status”），并会在模型看到剩余文本之前被移除。
 
 详情：[斜杠命令](/tools/slash-commands)。
 

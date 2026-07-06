@@ -6,46 +6,33 @@ read_when:
 title: "语音唤醒"
 ---
 
-OpenClaw 将 **唤醒词视为由 **Gateway** 拥有的单一全局列表**。
+唤醒词是**由 Gateway 持有的一个全局列表**——不存在每个节点各自的自定义列表。任何节点或应用 UI 都可以编辑该列表；Gateway 会持久化该更改，并将其广播给每个已连接的客户端。
 
-- **不存在按节点分别配置的自定义唤醒词**。
-- **任何节点/应用 UI 都可以编辑**该列表；更改会由 Gateway 持久化并广播给所有人。
-- macOS 和 iOS 保留本地的 **Voice Wake 启用/禁用** 开关（本地 UX + 权限不同）。
-- Android 目前保持 Voice Wake 关闭，并在 Voice 选项卡中使用手动麦克风流程。
+- **macOS**：本地 Voice Wake 启用/禁用开关。需要 macOS 26+；运行时/PTT 详情请参见 [Voice wake (macOS)](/platforms/mac/voicewake)。
+- **iOS**：设置中的本地 Voice Wake 启用/禁用开关。
+- **Android**：Voice Wake 在运行时被强制禁用。Voice 选项卡使用手动麦克风采集，而不是唤醒词触发。
 
-## 存储（Gateway 主机）
+## 存储
 
-唤醒词和路由规则存储在 gateway 状态数据库中：
-
-- `~/.openclaw/state/openclaw.sqlite`
-
-当前生效的表有：
-
-- `voicewake_triggers`
-- `voicewake_routing_config`
-- `voicewake_routing_routes`
-
-旧版的 `settings/voicewake.json` 和 `settings/voicewake-routing.json` 文件
-仅作为 doctor 迁移输入；运行时会读写 SQLite 表。
+唤醒词和路由规则存储在 Gateway 状态数据库中，默认位于 `~/.openclaw/state/openclaw.sqlite`（可通过 `OPENCLAW_STATE_DIR` 覆盖），表为 `voicewake_triggers`、`voicewake_routing_config`、`voicewake_routing_routes`。旧版 `settings/voicewake.json` 和 `settings/voicewake-routing.json` 仅作为 `openclaw doctor --fix` 的迁移输入——运行时不会读取它们。
 
 ## 协议
 
-### 方法
+### 触发词列表
 
-- `voicewake.get` → `{ triggers: string[] }`
-- `voicewake.set` 携带参数 `{ triggers: string[] }` → `{ triggers: string[] }`
+| 方法          | 参数                     | 结果                     |
+| --------------- | ------------------------ | ------------------------ |
+| `voicewake.get` | none                     | `{ triggers: string[] }` |
+| `voicewake.set` | `{ triggers: string[] }` | `{ triggers: string[] }` |
 
-说明：
+`voicewake.set` 会规范化输入：去除首尾空白、丢弃空条目、最多保留 32 个触发词，并将每个触发词截断为 64 个字符。若结果为空，则回退到内置默认值（`openclaw`、`claude`、`computer`）。
 
-- 触发词会被规范化（去除首尾空白，丢弃空项）。空列表会回退到默认值。
-- 出于安全考虑会强制限制（数量/长度上限）。
+### 路由（触发词到目标）
 
-### 路由方法（触发词 → 目标）
-
-- `voicewake.routing.get` → `{ config: VoiceWakeRoutingConfig }`
-- `voicewake.routing.set` 携带参数 `{ config: VoiceWakeRoutingConfig }` → `{ config: VoiceWakeRoutingConfig }`
-
-`VoiceWakeRoutingConfig` 结构：
+| 方法                  | 参数                               | 结果                               |
+| ----------------------- | ------------------------------------ | ------------------------------------ |
+| `voicewake.routing.get` | none                                 | `{ config: VoiceWakeRoutingConfig }` |
+| `voicewake.routing.set` | `{ config: VoiceWakeRoutingConfig }` | `{ config: VoiceWakeRoutingConfig }` |
 
 ```json
 {
@@ -56,38 +43,28 @@ OpenClaw 将 **唤醒词视为由 **Gateway** 拥有的单一全局列表**。
 }
 ```
 
-路由目标仅支持以下三种之一：
+每个路由的 `target` 恰好支持以下之一：
 
 - `{ "mode": "current" }`
 - `{ "agentId": "main" }`
 - `{ "sessionKey": "agent:main:main" }`
 
+限制：最多 32 条路由，触发词文本最多 64 个字符。路由触发词在匹配和重复检测时会进行规范化：将每个单词转换为小写，去除每个单词首尾的标点符号，并折叠空白字符（`"Hey, Bot!!"` 和 `"hey bot"` 会匹配且会被视为重复）——这比上面全局触发词列表仅做简单 trim 的规范化更严格。
+
 ### 事件
 
-- `voicewake.changed` 负载 `{ triggers: string[] }`
-- `voicewake.routing.changed` 负载 `{ config: VoiceWakeRoutingConfig }`
+| 事件                       | 负载                              |
+| --------------------------- | ------------------------------------ |
+| `voicewake.changed`         | `{ triggers: string[] }`             |
+| `voicewake.routing.changed` | `{ config: VoiceWakeRoutingConfig }` |
 
-接收者：
-
-- 所有 WebSocket 客户端（macOS 应用、WebChat 等）
-- 所有已连接节点（iOS/Android），并且在节点连接时也会作为初始“当前状态”推送。
+两者都会广播给每个具有读取权限的 WebSocket 客户端（macOS 应用、WebChat 及类似客户端）以及每个已连接的节点。节点在连接后还会立即收到这两个事件作为初始快照推送。
 
 ## 客户端行为
 
-### macOS 应用
-
-- 使用全局列表来控制 `VoiceWakeRuntime` 触发。
-- 在 Voice Wake 设置中编辑“触发词”会调用 `voicewake.set`，然后依赖广播来让其他客户端保持同步。
-
-### iOS 节点
-
-- 使用全局列表进行 `VoiceWakeManager` 触发检测。
-- 在设置中编辑唤醒词会调用 `voicewake.set`（通过 Gateway WS），并且也会保持本地唤醒词检测响应及时。
-
-### Android 节点
-
-- Voice Wake 目前在 Android 运行时/设置中被禁用。
-- Android 语音使用 Voice 选项卡中的手动麦克风采集，而不是唤醒词触发。
+- **macOS**: 调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以与其他客户端保持同步。
+- **iOS**: 调用 `voicewake.set`/`voicewake.get`，并监听 `voicewake.changed` 以保持本地唤醒词检测的响应性。
+- **Android**: `VoiceWakeMode`（`Off`/`Foreground`/`Always`）和网关同步代码已存在，但应用在启动时会强制将该模式设为 `Off`——目前无法从 Android 设置中访问 Voice Wake。
 
 ## 相关内容
 

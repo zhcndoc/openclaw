@@ -25,7 +25,9 @@ register(api) {
 }
 ```
 
-## 配置加载与写入
+`api.runtime.version` is the current OpenClaw product version, sourced from the shared version resolver so plugins see the same value the CLI reports.
+
+## Config loading and writes
 
 优先使用已经传入当前调用路径的配置，例如注册期间的 `api.config`，或者 channel/provider 回调中的 `cfg` 参数。这样可以让单次进程快照贯穿整个工作流程，而不是在热点路径上重复解析配置。
 
@@ -41,16 +43,13 @@ register(api) {
 
 这些修改辅助工具会返回 `afterWrite` 以及带类型的 `followUp` 摘要，因此调用方可以记录或测试自己是否请求了重启。gateway 仍然负责决定重启何时真正发生。
 
-`api.runtime.config.loadConfig()` 和 `api.runtime.config.writeConfigFile(...)` 是 `runtime-config-load-write` 下的弃用兼容辅助工具。它们会在运行时警告一次，并在迁移窗口内继续供旧版外部插件使用。打包后的插件不得使用它们；如果插件代码调用这些辅助工具，或从插件 SDK 子路径导入它们，配置边界保护会失败。
+<Warning>
+`api.runtime.config.loadConfig()` and `api.runtime.config.writeConfigFile(...)` are deprecated. They warn once per plugin at runtime and remain available only for old external plugins during the migration window. Bundled plugins must not use them: an internal config boundary guard fails the build if plugin code calls them or imports those helpers from plugin SDK subpaths. Use `current()`, a passed-in `cfg`, `mutateConfigFile(...)`, or `replaceConfigFile(...)` instead.
+</Warning>
 
-对于直接的 SDK 导入，请改用更聚焦的 config 子路径，而不是宽泛的
-`openclaw/plugin-sdk/config-runtime` 兼容入口：`config-contracts`
-用于类型，`plugin-config-runtime` 用于已加载配置断言和插件
-入口查找，`runtime-config-snapshot` 用于当前进程快照，以及
-`config-mutation` 用于写入。打包后的插件测试应直接模拟这些聚焦的
-子路径，而不是模拟宽泛的兼容入口。
+For direct SDK imports, prefer the focused config subpaths over the broad `openclaw/plugin-sdk/config-runtime` compatibility barrel: `config-contracts` for types, `plugin-config-runtime` for already-loaded config assertions and plugin entry lookup, `runtime-config-snapshot` for current process snapshots, and `config-mutation` for writes. Bundled plugin tests should mock these focused subpaths directly instead of mocking the broad compatibility barrel.
 
-OpenClaw 内部运行时代码遵循相同方向：在 CLI、gateway 或进程边界只加载一次配置，然后将该值向下传递。成功的修改写入会刷新进程运行时快照并推进其内部修订版本；长生命周期缓存应使用运行时拥有的缓存键，而不是在本地序列化配置。长生命周期运行时模块对环境中的 `loadConfig()` 调用实行零容忍扫描；请使用传入的 `cfg`、请求的 `context.getRuntimeConfig()`，或在明确的进程边界使用 `getRuntimeConfig()`。
+Internal OpenClaw runtime code follows the same direction: load config once at the CLI, gateway, or process boundary, then pass that value through. Successful mutation writes refresh the process runtime snapshot and advance its internal revision; long-lived caches should key off the runtime-owned cache key instead of serializing config locally. Long-lived runtime modules have a zero-tolerance scanner for ambient `loadConfig()` calls; use a passed `cfg`, a request `context.getRuntimeConfig()`, or `getRuntimeConfig()` at an explicit process boundary.
 
 provider 和 channel 的执行路径必须使用当前运行时配置快照，而不是用于配置回读或编辑的文件快照。文件快照会保留源值，例如用于 UI 和写入的 SecretRef 标记；provider 回调需要的是解析后的运行时视图。当某个辅助工具可能接收当前源快照或当前运行时快照中的任意一种时，请在读取凭据前通过 `selectApplicableRuntimeConfig()` 进行路由。
 
@@ -100,11 +99,11 @@ return {
     Agent 身份、目录和会话管理。
 
     ```typescript
-    // 解析 agent 的工作目录
-    const agentDir = api.runtime.agent.resolveAgentDir(cfg);
+    // Resolve the agent's working directory (agentId is required)
+    const agentDir = api.runtime.agent.resolveAgentDir(cfg, agentId);
 
-    // 解析 agent 工作区
-    const workspaceDir = api.runtime.agent.resolveAgentWorkspaceDir(cfg);
+    // Resolve agent workspace
+    const workspaceDir = api.runtime.agent.resolveAgentWorkspaceDir(cfg, agentId);
 
     // 获取 agent 身份
     const identity = api.runtime.agent.resolveAgentIdentity(cfg);
@@ -129,14 +128,12 @@ return {
     // 确保工作区存在
     await api.runtime.agent.ensureAgentWorkspace(cfg);
 
-    // 运行一次嵌入式 agent 回合
-    const agentDir = api.runtime.agent.resolveAgentDir(cfg);
+    // Run an embedded agent turn
     const result = await api.runtime.agent.runEmbeddedAgent({
       sessionId: "my-plugin:task-1",
       runId: crypto.randomUUID(),
-      sessionFile: path.join(agentDir, "sessions", "my-plugin-task-1.jsonl"),
-      workspaceDir: api.runtime.agent.resolveAgentWorkspaceDir(cfg),
-      prompt: "总结最新更改",
+      workspaceDir: api.runtime.agent.resolveAgentWorkspaceDir(cfg, agentId),
+      prompt: "Summarize the latest changes",
       timeoutMs: api.runtime.agent.resolveAgentTimeoutMs(cfg),
     });
     ```
@@ -161,21 +158,33 @@ return {
       sessionKey,
       update: (entry) => ({ thinkingLevel: "high" }),
     });
+
+    const storePath = api.runtime.agent.session.resolveStorePath(cfg.session?.store, { agentId });
+    await api.runtime.agent.session.runWithWorkAdmission(
+      { storePath, sessionKey },
+      async (signal) => {
+        // Create or update the session, then pass signal to the admitted agent run.
+      },
+    );
     ```
 
     优先在会话工作流中使用 `getSessionEntry(...)`、`listSessionEntries(...)`、`patchSessionEntry(...)` 或 `upsertSessionEntry(...)`。这些辅助工具通过 agent/session 身份定位会话，因此插件不必依赖旧版 `sessions.json` 的存储形状。对于不应刷新会话活动时间的仅元数据补丁，请使用 `preserveActivity: true`；仅当回调返回完整条目且必须保留已删除字段确实被删除时，才使用 `replaceEntry: true`。
 
-    对于转录内容的读取和写入，请导入 `openclaw/plugin-sdk/session-transcript-runtime`，并在传入 `{ agentId, sessionKey, sessionId }` 时使用 `resolveSessionTranscriptIdentity(...)`、`resolveSessionTranscriptTarget(...)`、`readSessionTranscriptEvents(...)`、`appendSessionTranscriptMessageByIdentity(...)`、`publishSessionTranscriptUpdateByIdentity(...)` 或 `withSessionTranscriptWriteLock(...)`。这些 API 允许插件识别转录、读取其事件、追加消息、发布更新，并在相同的转录写锁下运行相关操作。仅当适配已经接收活动转录工件且需要每个辅助工具都对同一工件生效的代码时，才传入 `sessionFile`。
+    Use `runWithWorkAdmission(...)` when a plugin starts work on a persisted session. The callback rejects archived or concurrently replaced sessions, keeps archive/reset/delete mutations coordinated through completion, and receives an `AbortSignal` that must be forwarded to the agent run.
 
-    `loadSessionStore(...)`、`saveSessionStore(...)`、`updateSessionStore(...)` 和 `resolveSessionFilePath(...)` 是仍有意依赖旧版整个存储或转录文件形状的插件所使用的兼容辅助工具。新的插件代码不得使用这些辅助工具，现有调用方应迁移到条目级辅助工具。
+    For transcript reads and writes, import `openclaw/plugin-sdk/session-transcript-runtime` and use `resolveSessionTranscriptIdentity(...)`, `resolveSessionTranscriptTarget(...)`, `readSessionTranscriptEvents(...)`, `appendSessionTranscriptMessageByIdentity(...)`, `publishSessionTranscriptUpdateByIdentity(...)`, or `withSessionTranscriptWriteLock(...)` with `{ agentId, sessionKey, sessionId }`. These APIs let plugins identify a transcript, read its events, append messages, publish updates, and run related operations under the same transcript write lock. Passing `sessionFile`, using `resolveSessionTranscriptLegacyFileTarget(...)`, or importing low-level `appendSessionTranscriptMessage(...)` / `emitSessionTranscriptUpdate(...)` from `openclaw/plugin-sdk/agent-harness-runtime` is deprecated; those paths exist only for legacy code that already receives an active transcript artifact.
+
+    `resolveStorePath(...)` and `updateSessionStoreEntry(...)` round out the session helpers: `resolveStorePath` resolves the session store path for a given scope, and `updateSessionStoreEntry({ storePath, sessionKey, update })` patches one entry directly by store path when the caller already knows it.
+
+    `loadSessionStore(...)`, `saveSessionStore(...)`, `updateSessionStore(...)`, and `resolveSessionFilePath(...)` are deprecated compatibility helpers for plugins that still intentionally depend on the legacy whole-store or transcript-file shape. New plugin code must not use those helpers, and existing callers should migrate to entry helpers and transcript identity helpers.
 
   </Accordion>
   <Accordion title="api.runtime.agent.defaults">
     默认模型和 provider 常量：
 
     ```typescript
-    const model = api.runtime.agent.defaults.model; // 例如 "anthropic/claude-sonnet-4-6"
-    const provider = api.runtime.agent.defaults.provider; // 例如 "anthropic"
+    const model = api.runtime.agent.defaults.model; // e.g. "gpt-5.5"
+    const provider = api.runtime.agent.defaults.provider; // e.g. "openai"
     ```
 
   </Accordion>
@@ -206,9 +215,9 @@ return {
     // 开始一个 subagent 运行
     const { runId } = await api.runtime.subagent.run({
       sessionKey: "agent:main:subagent:search-helper",
-      message: "把这个查询扩展为聚焦的后续搜索。",
-      provider: "openai", // 可选覆盖
-      model: "gpt-4.1-mini", // 可选覆盖
+      message: "Expand this query into focused follow-up searches.",
+      provider: "openai", // optional override
+      model: "gpt-5.5", // optional override
       deliver: false,
     });
 
@@ -252,9 +261,17 @@ return {
 
     暴露危险节点主机命令的插件应使用 `api.registerNodeInvokePolicy(...)` 注册节点调用策略。该策略会在 Gateway 中运行，先于命令被转发到节点之前执行，且在命令允许列表检查之后，因此直接的 `node.invoke` 调用和更高层级的插件工具共享相同的强制执行路径。
 
+    <Warning>
+    The optional `scopes` field requests Gateway operator scopes for the invocation. OpenClaw honors it only for bundled plugins and trusted official plugin installations; requests from other plugins do not elevate the call. Use it only when a trusted plugin must invoke a node command with a stricter Gateway scope, such as `operator.admin`.
+    </Warning>
+
   </Accordion>
-  <Accordion title="api.runtime.tasks.managedFlows">
-    将 Task Flow 运行时绑定到现有的 OpenClaw 会话键或受信任的工具上下文，然后在不必每次调用都传入 owner 的情况下创建和管理 Task Flow。
+  <Accordion title="api.runtime.tasks">
+    Bind Task Flow and Task Run state to an existing OpenClaw session key or trusted tool context.
+
+    - `api.runtime.tasks.managedFlows` is mutation-capable: create, advance, and cancel Task Flows.
+    - `api.runtime.tasks.flows` and `api.runtime.tasks.runs` are read-only DTO views for listing and status lookups; both expose `bindSession(...)` / `fromToolContext(...)` plus `get`, `list`, `findLatest`, and `resolve`.
+    - `api.runtime.tasks.flow` is a deprecated alias for `managedFlows`.
 
     Task Flow 跟踪持久的多步骤工作流状态。它不是调度器：
     对未来唤醒请使用 Cron 或 `api.session.workflow.scheduleSessionTurn(...)`，然后在该计划回合中使用
@@ -311,7 +328,7 @@ return {
     });
     ```
 
-    使用核心 `messages.tts` 配置和 provider 选择。返回 PCM 音频缓冲区 + 采样率。
+    Uses core `messages.tts` configuration and provider selection. Returns PCM audio buffer + sample rate. `textToSpeechStream` is also available for streaming synthesis.
 
   </Accordion>
   <Accordion title="api.runtime.mediaUnderstanding">
@@ -375,6 +392,8 @@ return {
 
     当未产生任何输出时返回 `{ text: undefined }`（例如跳过输入）。
 
+    `describeImageFileWithModel(...)` describes an already-known image through a specific provider/model, bypassing the default active-model resolution that `describeImageFile(...)` uses.
+
     <Info>
     `api.runtime.stt.transcribeAudioFile(...)` 仍然作为 `api.runtime.mediaUnderstanding.transcribeAudioFile(...)` 的兼容别名保留。
     </Info>
@@ -390,6 +409,32 @@ return {
     });
 
     const providers = api.runtime.imageGeneration.listProviders({ cfg: api.config });
+    ```
+
+  </Accordion>
+  <Accordion title="api.runtime.videoGeneration">
+    Video generation, mirroring the image generation shape.
+
+    ```typescript
+    const result = await api.runtime.videoGeneration.generate({
+      prompt: "A drone shot flying over a coastline at sunrise",
+      cfg: api.config,
+    });
+
+    const providers = api.runtime.videoGeneration.listProviders({ cfg: api.config });
+    ```
+
+  </Accordion>
+  <Accordion title="api.runtime.musicGeneration">
+    Music generation, mirroring the image generation shape.
+
+    ```typescript
+    const result = await api.runtime.musicGeneration.generate({
+      prompt: "An upbeat lo-fi track for a coding session",
+      cfg: api.config,
+    });
+
+    const providers = api.runtime.musicGeneration.listProviders({ cfg: api.config });
     ```
 
   </Accordion>
@@ -460,12 +505,22 @@ return {
       intent: "event",
       reason: "plugin-event",
     });
-    api.runtime.system.requestHeartbeatNow({ reason: "plugin-event" }); // 已弃用的兼容别名。
+    api.runtime.system.requestHeartbeatNow({ reason: "plugin-event" }); // Deprecated compatibility alias.
+    const heartbeatResult = await api.runtime.system.runHeartbeatOnce({
+      reason: "plugin-triggered-check",
+    });
     const output = await api.runtime.system.runCommandWithTimeout(cmd, args, opts);
     const hint = api.runtime.system.formatNativeDependencyHint(pkg);
     ```
 
-    `runCommandWithTimeout(...)` 返回捕获的 `stdout` 和 `stderr`，以及可选的截断计数、`code`、`signal`、`killed`、`termination` 和 `noOutputTimedOut`。当子进程未提供非零退出码时，超时和无输出超时结果会报告 `code: 124`。非超时的信号退出仍可能返回 `code: null`，因此请使用 `termination` 和 `noOutputTimedOut` 来区分超时原因。
+    `runHeartbeatOnce(...)` runs a single heartbeat cycle immediately, bypassing the normal coalesce timer. Pass `{ heartbeat: { target: "last" } }` to force delivery to the last active channel instead of the default `target: "none"` suppression.
+
+    `runCommandWithTimeout(...)` returns captured `stdout` and `stderr`, optional
+    truncation counts, `code`, `signal`, `killed`, `termination`, and
+    `noOutputTimedOut`. Timeout and no-output-timeout results report `code: 124`
+    when the child process does not provide a non-zero exit code. Non-timeout
+    signal exits can still return `code: null`, so use `termination` and
+    `noOutputTimedOut` to distinguish timeout reasons.
 
   </Accordion>
   <Accordion title="api.runtime.events">
@@ -495,6 +550,10 @@ return {
 
     ```typescript
     const auth = await api.runtime.modelAuth.getApiKeyForModel({ model, cfg });
+
+    // Request-ready auth, including provider runtime exchanges (e.g. OAuth refresh)
+    const runtimeAuth = await api.runtime.modelAuth.getRuntimeAuthForModel({ model, cfg });
+
     const providerAuth = await api.runtime.modelAuth.resolveApiKeyForProvider({
       provider: "openai",
       cfg,
@@ -520,25 +579,38 @@ return {
     await store.clear();
     ```
 
-    Keyed stores survive restarts and are isolated by the runtime-bound plugin id. Use `registerIfAbsent(...)` for atomic dedupe claims: it returns `true` when the key was missing or expired and registered, or `false` when a live value already exists without overwriting its value, creation time, or TTL. Limits: `maxEntries` per namespace, 6,000 live rows per plugin, JSON values under 64KB, and optional TTL expiry. When a write would exceed the plugin row cap, the runtime may evict the oldest live rows from the namespace being written; sibling namespaces are not evicted for that write, and the write still fails if the namespace cannot free enough rows.
+    Keyed stores survive restarts and are isolated by the runtime-bound plugin id. Use `registerIfAbsent(...)` for atomic dedupe claims: it returns `true` when the key was missing or expired and registered, or `false` when a live value already exists without overwriting its value, creation time, or TTL. Limits: `maxEntries` per namespace, 50,000 live rows per plugin, JSON values under 64KB, and optional TTL expiry. When a write would exceed the plugin row cap, the runtime sheds the oldest live rows from the namespace being written; sibling namespaces are not evicted for that write, and the write still fails if the namespace cannot free enough rows.
+
+    `openSyncKeyedStore<T>(...)` returns the same store shape with synchronous methods (`register`, `registerIfAbsent`, `lookup`, `consume`, `clear` all return values directly instead of promises) for callers that cannot await.
+
+    `openChannelIngressQueue<TPayload>(...)` opens a persisted ingress queue scoped to the calling plugin, for buffering inbound events that need at-least-once processing across restarts.
 
     <Warning>
-    仅限本版本中的打包插件。
+    `openKeyedStore`, `openSyncKeyedStore`, and `openChannelIngressQueue` are available only to bundled plugins and trusted official plugin installations in this release.
     </Warning>
 
   </Accordion>
-  <Accordion title="api.runtime.tools">
-    内存工具工厂和 CLI。
-
-    ```typescript
-    const getTool = api.runtime.tools.createMemoryGetTool(/* ... */);
-    const searchTool = api.runtime.tools.createMemorySearchTool(/* ... */);
-    api.runtime.tools.registerMemoryCli(/* ... */);
-    ```
-
-  </Accordion>
   <Accordion title="api.runtime.channel">
-    channel 特定的运行时辅助工具（在加载了 channel 插件时可用）。
+    Channel-specific runtime helpers (available when a channel plugin is loaded). Grouped by concern:
+
+    | Group | Purpose |
+    | --- | --- |
+    | `text` | Chunking (`chunkText`, `chunkMarkdownText`, `resolveChunkMode`), control-command detection, Markdown table conversion. |
+    | `reply` | Buffered-block reply dispatch, envelope formatting, effective messages/human-delay config resolution. |
+    | `routing` | `buildAgentSessionKey`, `resolveAgentRoute`. |
+    | `pairing` | `buildPairingReply`, allowlist reads, pairing-request upserts. |
+    | `media` | Remote media download/save (see below). |
+    | `activity` | Record/read last channel activity. |
+    | `session` | Session metadata from inbound events, last-route updates. |
+    | `mentions` | Mention-policy helpers (see below). |
+    | `reactions` | Ack-reaction handles for in-flight processing indicators. |
+    | `groups` | Group policy and require-mention resolution. |
+    | `debounce` | Inbound message debouncing. |
+    | `commands` | Command authorization and text-command gating. |
+    | `outbound` | Load a channel's outbound adapter. |
+    | `inbound` | Build inbound event context and run the shared inbound-event/reply kernel. |
+    | `threadBindings` | Adjust idle-timeout/max-age for bound session threads. |
+    | `runtimeContexts` | Register, read, and watch process-local per-channel/account/capability context. |
 
     `api.runtime.channel.media` 是 channel 媒体下载和存储的首选接口：
 
@@ -589,6 +661,8 @@ return {
     - `resolveInboundMentionDecision`
 
     `api.runtime.channel.mentions` 刻意不暴露旧的 `resolveMentionGating*` 兼容辅助工具。请优先使用规范化的 `{ facts, policy }` 路径。
+
+    Several fields under `reply`, `session`, and `inbound` carry per-field `@deprecated` notes pointing at the current channel-turn kernel or channel-outbound adapters; check the inline JSDoc on the specific helper before building new code on it.
 
   </Accordion>
 </AccordionGroup>
@@ -659,7 +733,7 @@ return {
   作用域日志记录器（`debug`、`info`、`warn`、`error`）。
 </ParamField>
 <ParamField path="api.registrationMode" type="PluginRegistrationMode">
-  当前加载模式；`"setup-runtime"` 是轻量级的、完整入口点启动/设置前窗口。
+  Current load mode: `"full"` (live activation), `"discovery"` / `"tool-discovery"` (read-only capability discovery), `"setup-only"` (lightweight setup entry), `"setup-runtime"` (setup flow that also needs the runtime channel entry), or `"cli-metadata"` (CLI command metadata collection).
 </ParamField>
 <ParamField path="api.resolvePath(input)" type="(string) => string">
   解析相对于插件根目录的路径。

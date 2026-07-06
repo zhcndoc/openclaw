@@ -8,7 +8,7 @@ title: "Webhook"
 
 # `openclaw webhooks`
 
-Webhook 辅助工具和集成。当前此功能范围仅限于与内置 `gog` watcher 集成的 Gmail Pub/Sub 流程。
+Webhook 辅助工具和集成。目前这个接口范围限定为基于内置 `gog` watcher 构建的 Gmail Pub/Sub 流程。
 
 ## 子命令
 
@@ -17,14 +17,16 @@ openclaw webhooks gmail setup --account <email> [...]
 openclaw webhooks gmail run   [--account <email>] [...]
 ```
 
-| 子命令         | 描述                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------ |
-| `gmail setup` | 配置 Gmail 监听、Pub/Sub 主题/订阅，以及 OpenClaw webhook 投递目标。 |
-| `gmail run`   | 运行 `gog watch serve` 以及监听自动续订循环。                                       |
+| 子命令 | 描述                                                                           |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `gmail setup` | 一次性向导：Gmail 监控、Pub/Sub 主题/订阅，以及 OpenClaw hook 投递。 |
+| `gmail run`   | 在前台运行 `gog watch serve` 以及监控自动续期循环。               |
+
+<Note>
+Gateway 还会在启动时自动启动 `gog gmail watch serve`，前提是设置了 `hooks.enabled=true` 和 `hooks.gmail.account`（由 `gmail setup` 设置）。`gmail run` 在前台执行相同逻辑，适用于调试或当 Gateway watcher 被禁用时。有关自动启动详情以及 `OPENCLAW_SKIP_GMAIL_WATCHER` 退出选项，请参见 [Gmail Pub/Sub 集成](/automation/cron-jobs#gmail-pubsub-integration)。
+</Note>
 
 ## `webhooks gmail setup`
-
-配置 Gmail 监听、Pub/Sub 和 OpenClaw webhook 投递。
 
 ```bash
 openclaw webhooks gmail setup --account you@example.com
@@ -32,40 +34,42 @@ openclaw webhooks gmail setup --account you@example.com --project my-gcp-project
 openclaw webhooks gmail setup --account you@example.com --hook-url https://gateway.example.com/hooks/gmail
 ```
 
-### 必需项
+安装缺失的 `gcloud` 和 `gog`，对 `gcloud` 进行身份验证，创建 Pub/Sub 主题和订阅，启动 Gmail 监听，并写入 `hooks.gmail` 配置且设置 `hooks.enabled=true`。打印 `Next: openclaw webhooks gmail run`。
 
-| 标志                | 描述            |
-| ------------------- | --------------- |
+### 必需
+
+| 标志                | 描述                  |
+| ------------------- | --------------------- |
 | `--account <email>` | 要监听的 Gmail 账户。 |
 
 ### Pub/Sub 选项
 
-| 标志                    | 默认值                | 描述                                          |
-| ----------------------- | ---------------------- | -------------------------------------------- |
-| `--project <id>`        | （无）                | GCP 项目 ID（OAuth 客户端所有者）。            |
-| `--topic <name>`        | `gog-gmail-watch`      | Pub/Sub 主题名称。                            |
-| `--subscription <name>` | `gog-gmail-watch-push` | Pub/Sub 订阅名称。                            |
-| `--label <label>`       | `INBOX`                | 要监听的 Gmail 标签。                         |
-| `--push-endpoint <url>` | （无）                | 显式指定的 Pub/Sub 推送端点。会覆盖 Tailscale。 |
+| Flag                    | Default                | Description                                                                                                                             |
+| ----------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--project <id>`        | (none)                 | GCP project id（OAuth 客户端所有者）。优先回退到 topic 自身的 project id，然后回退到从 `gog` 凭据解析出的 project。 |
+| `--topic <name>`        | `gog-gmail-watch`      | Pub/Sub topic 名称。                                                                                                                    |
+| `--subscription <name>` | `gog-gmail-watch-push` | Pub/Sub subscription 名称。                                                                                                             |
+| `--label <label>`       | `INBOX`                | 要监听的 Gmail label。                                                                                                                  |
+| `--push-endpoint <url>` | (none)                 | 显式指定的 Pub/Sub push endpoint。会覆盖 Tailscale。                                                                                    |
 
 ### OpenClaw 投递选项
 
-| 标志                   | 默认值 | 描述                                |
-| ---------------------- | ------ | ----------------------------------- |
-| `--hook-url <url>`     | （无） | OpenClaw webhook URL。             |
-| `--hook-token <token>` | （无） | OpenClaw webhook token。           |
-| `--push-token <token>` | （无） | 传递给 `gog watch serve` 的推送 token。 |
+| Flag                   | Default                                      | Description                                |
+| ---------------------- | -------------------------------------------- | ------------------------------------------ |
+| `--hook-url <url>`     | Built from `hooks.path` and the Gateway port | OpenClaw webhook URL。                      |
+| `--hook-token <token>` | `hooks.token`, or a generated token          | OpenClaw webhook token。                    |
+| `--push-token <token>` | Generated token                              | 传递给 `gog watch serve` 的 push token。     |
 
 ### `gog watch serve` 选项
 
-| 标志                  | 默认值          | 描述                                                       |
-| --------------------- | --------------- | ---------------------------------------------------------- |
-| `--bind <host>`       | `127.0.0.1`     | `gog watch serve` 绑定主机。                               |
-| `--port <port>`       | `8788`          | `gog watch serve` 端口。                                   |
-| `--path <path>`       | `/gmail-pubsub` | `gog watch serve` 路径。                                   |
-| `--include-body`      | `true`          | 包含邮件正文片段。传入 `--no-include-body` 可禁用。         |
-| `--max-bytes <n>`     | `20000`         | 每个正文片段的最大字节数。                                 |
-| `--renew-minutes <n>` | `720` (12h)     | 每 N 分钟续订一次 Gmail 监听。                             |
+| Flag                  | Default         | Description                                                                                                                                  |
+| --------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--bind <host>`       | `127.0.0.1`     | `gog watch serve` 绑定 host。                                                                                                                |
+| `--port <port>`       | `8788`          | `gog watch serve` 端口。                                                                                                                     |
+| `--path <path>`       | `/gmail-pubsub` | `gog watch serve` 路径。在未显式指定目标且启用 Tailscale 时强制为 `/`，因为 Tailscale 在反向代理前会去掉路径。                              |
+| `--include-body`      | `true`          | 包含邮件正文片段。没有可用于关闭它的 CLI 标志；请改为在配置中设置 `hooks.gmail.includeBody: false`。                                          |
+| `--max-bytes <n>`     | `20000`         | 每个正文片段的最大字节数。                                                                                                                   |
+| `--renew-minutes <n>` | `720` (12h)     | 每 N 分钟续订一次 Gmail watch。                                                                                                              |
 
 ### Tailscale 暴露
 
@@ -83,17 +87,17 @@ openclaw webhooks gmail setup --account you@example.com --hook-url https://gatew
 
 ## `webhooks gmail run`
 
-在前台运行 `gog watch serve` 以及监听自动续订循环。
-
 ```bash
 openclaw webhooks gmail run --account you@example.com
 ```
 
-`run` 接受与 `setup` 相同的 `gog watch serve`、OpenClaw 投递、Pub/Sub 和 Tailscale 标志，除了：
+在前台运行 `gog watch serve` 以及 watch 自动续订循环；如果它意外退出，则在 2 秒延迟后重启 `gog watch serve`。
 
-- `run` 上的 `--account` 是**可选**的（它会回退到已配置的账户）。
+`run` 接受与 `setup` 相同的 Pub/Sub、OpenClaw 投递、`gog watch serve` 和 Tailscale 标志，但有以下例外：
+
+- `--account` 在 `run` 中是**可选**的；它会回退到 `hooks.gmail.account`。
 - `run` **不**接受 `--project`、`--push-endpoint` 或 `--json`。
-- `run` 标志没有内置默认值；缺失的值会回退到 `setup` 写入的值。
+- 每个标志都会回退到匹配的 `hooks.gmail.*` 配置值（由 `setup` 写入），然后回退到 `setup` 使用的相同内置默认值，但有一个例外：当标志和 `hooks.gmail.tailscale.mode` 都未设置时，`--tailscale` 在 `run` 中默认为 `off`（而不是 `funnel`）。
 
 | 类别             | 标志                                                                             |
 | ---------------- | -------------------------------------------------------------------------------- |
@@ -106,12 +110,8 @@ openclaw webhooks gmail run --account you@example.com
 对于 `run`，`--topic` 的值是完整的 Pub/Sub 主题路径（`projects/.../topics/...`），而不只是短主题名。
 </Note>
 
-## 端到端流程
-
-有关与这些 CLI 命令配套的 GCP 项目、OAuth 和网关侧设置，请参见 [Gmail Pub/Sub 集成](/automation/cron-jobs#gmail-pubsub-integration)。
-
-## 相关内容
+## 相关
 
 - [CLI 参考](/cli)
 - [Webhook 自动化](/automation/webhook)
-- [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
+- [Gmail Pub/Sub 集成](/automation/cron-jobs#gmail-pubsub-integration)

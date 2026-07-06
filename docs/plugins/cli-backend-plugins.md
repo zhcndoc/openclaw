@@ -14,7 +14,7 @@ CLI 后端插件让 OpenClaw 可以将本地 AI CLI 作为文本推理后端来�
 acme-cli/acme-large
 ```
 
-当上游集成已经以本地命令的形式提供、当 CLI 自己管理本地登录状态，或者当 API 提供方不可用时 CLI 作为一个有用的回退方案时，请使用 CLI 后端。
+当上游集成已经以本地命令的形式暴露出来、当 CLI 自身管理本地登录状态时，或者当 API 提供方不可用时，请使用 CLI 后端作为回退方案。
 
 <Info>
   如果上游服务提供了标准的 HTTP 模型 API，请改为编写一个 [提供方插件](/plugins/sdk-provider-plugins)。如果上游运行时拥有完整的 agent 会话、工具事件、压缩或后台任务状态，请使用一个 [agent harness](/plugins/sdk-agent-harness)。
@@ -30,7 +30,7 @@ acme-cli/acme-large
 | 清单所有权           | `openclaw.plugin.json` | 在运行时加载之前声明后端 id                                |
 | 运行时注册           | `index.ts`             | 使用命令默认值调用 `api.registerCliBackend(...)`          |
 
-清单是发现元数据。它不会执行 CLI，也不会注册运行时行为。运行时行为从插件入口调用 `api.registerCliBackend(...)` 时开始。
+清单是发现元数据：它不会执行 CLI，也不会注册运行时行为。运行时行为从插件入口调用 `api.registerCliBackend(...)` 时开始。
 
 ## 最小后端插件
 
@@ -61,7 +61,7 @@ acme-cli/acme-large
     }
     ```
 
-    已发布的包必须包含已构建的 JavaScript 运行时文件。如果你的源码入口是 `./src/index.ts`，请添加指向已构建 JavaScript 对应文件的 `openclaw.runtimeExtensions`。参见 [入口点](/plugins/sdk-entrypoints)。
+    已发布的包必须包含已构建的 JavaScript 运行时文件。如果你的源入口是 `./src/index.ts`，请添加 `openclaw.runtimeExtensions`，指向构建后的 JavaScript 同级文件。参见 [入口点](/plugins/sdk-entrypoints)。
 
   </Step>
 
@@ -86,9 +86,9 @@ acme-cli/acme-large
     }
     ```
 
-    `cliBackends` 是运行时所有权列表。它使 OpenClaw 能在配置或模型选择提到 `acme-cli/...` 时自动加载该插件。
+    `cliBackends` 是运行时所有权列表；当配置或模型选择提到 `acme-cli/...` 时，它会让 OpenClaw 自动加载该插件。
 
-    `setup.cliBackends` 是面向描述信息优先的安装界面。当模型发现、引导或状态应该在不加载插件运行时的情况下识别该后端时，请添加它。仅当这些静态描述信息足以完成安装时，才使用 `requiresRuntime: false`。
+    `setup.cliBackends` 是仅基于描述符的 setup 接口。若模型发现、引导流程或状态需要在不加载插件运行时的情况下识别该后端，请添加它。仅当这些静态描述符已足够用于 setup 时，才使用 `requiresRuntime: false`。
 
   </Step>
 
@@ -147,7 +147,7 @@ acme-cli/acme-large
     });
     ```
 
-    后端 id 必须与清单中的 `cliBackends` 条目一致。注册的 `config` 只是默认值；运行时，`agents.defaults.cliBackends.acme-cli` 下的用户配置会覆盖并合并到它之上。
+    后端 id 必须与 manifest 中的 `cliBackends` 条目匹配。注册的 `config` 只是默认值；运行时用户配置中的 `agents.defaults.cliBackends.acme-cli` 会覆盖并合并到它之上。
 
   </Step>
 </Steps>
@@ -156,23 +156,32 @@ acme-cli/acme-large
 
 `CliBackendConfig` 描述了 OpenClaw 应该如何启动并解析 CLI：
 
-| 字段                                     | 用途                                                        |
-| ----------------------------------------- | ----------------------------------------------------------- |
-| `command`                                 | 二进制名称或绝对命令路径                                     |
-| `args`                                    | 新会话运行的基础 argv                                         |
-| `resumeArgs`                              | 恢复会话时的替代 argv；支持 `{sessionId}`                     |
-| `output` / `resumeOutput`                 | 解析器：`json`、`jsonl` 或 `text`                             |
-| `input`                                   | 提示词传输方式：`arg` 或 `stdin`                              |
-| `modelArg`                                | 模型 id 前使用的标志                                           |
-| `modelAliases`                            | 将 OpenClaw 模型 id 映射到 CLI 原生 id                         |
-| `sessionArg` / `sessionArgs`              | 传递会话 id 的方式                                              |
-| `sessionMode`                             | `always`、`existing` 或 `none`                                |
-| `sessionIdFields`                         | OpenClaw 从 CLI 输出中读取的 JSON 字段                        |
-| `systemPromptArg` / `systemPromptFileArg` | 系统提示词传输方式                                              |
-| `systemPromptWhen`                        | `first`、`always` 或 `never`                                   |
-| `imageArg` / `imageMode`                  | 图像路径支持                                                   |
-| `serialize`                               | 保持同一后端运行按顺序执行                                     |
-| `reliability.watchdog`                    | 无输出超时调优                                                |
+| Field                                                     | Use                                                                               |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `command`                                                 | 二进制名称或绝对命令路径                                                          |
+| `args`                                                    | 新运行的基础 argv                                                                   |
+| `resumeArgs`                                              | 恢复会话时的替代 argv；支持 `{sessionId}`                                           |
+| `output` / `resumeOutput`                                 | 解析器：`json`、`jsonl` 或 `text`                                                  |
+| `jsonlDialect`                                            | JSONL 事件方言：`claude-stream-json` 或 `gemini-stream-json`                       |
+| `liveSession`                                             | 长生命周期 CLI 进程模式（`claude-stdio`）                                          |
+| `input`                                                   | 提示传输方式：`arg` 或 `stdin`                                                     |
+| `maxPromptArgChars`                                       | 在回退到 stdin 之前，`arg` 模式下提示词的最大长度                                  |
+| `env` / `clearEnv`                                        | 要注入的额外环境变量，或在启动前要移除的变量名                                      |
+| `modelArg`                                                | 在模型 id 之前使用的标志                                                           |
+| `modelAliases`                                            | 将 OpenClaw 模型 id 映射到 CLI 原生 id                                             |
+| `sessionArg` / `sessionArgs`                              | 传递会话 id 的方式                                                                  |
+| `sessionMode`                                             | `always`、`existing` 或 `none`                                                     |
+| `sessionIdFields`                                         | OpenClaw 从 CLI 输出中读取的 JSON 字段                                             |
+| `systemPromptArg` / `systemPromptFileArg`                 | 系统提示词传输方式                                                                  |
+| `systemPromptFileConfigArg` / `systemPromptFileConfigKey` | 系统提示词文件的配置覆盖传输方式（例如 `-c`）                                       |
+| `systemPromptMode`                                        | `append` 或 `replace`                                                              |
+| `systemPromptWhen`                                        | `first`、`always` 或 `never`                                                       |
+| `imageArg` / `imageMode`                                  | 图片路径标志，以及如何传递多张图片（`repeat` 或 `list`）                            |
+| `imagePathScope`                                          | 交接前暂存图片文件所在位置：`temp` 或 `workspace`                                   |
+| `serialize`                                               | 保持同一后端的运行顺序                                                              |
+| `reseedFromRawTranscriptWhenUncompacted`                  | 选择启用在压缩前基于有界原始转录内容重新播种，以便安全重置会话                        |
+| `reliability.outputLimits`                                | 单次 live CLI 轮次保留的原始 JSONL 最大字符数/行数（live-session 后端）              |
+| `reliability.watchdog`                                    | 无输出超时调优，分别适用于新运行和恢复运行                                          |
 
 优先选择与 CLI 匹配的最小静态配置。仅为真正属于后端的行为添加插件回调。
 
@@ -194,34 +203,24 @@ acme-cli/acme-large
 | `bundleMcp` / `bundleMcpMode`      | 选择加入 OpenClaw 的 loopback MCP 工具桥接                                |
 | `ownsNativeCompaction`              | 后端自行负责压缩 - OpenClaw 让出                           |
 
-请将这些钩子保持为后端所有。不要在核心中添加 CLI 特定分支，只要后端钩子能够表达该行为即可。
+保持这些钩子的提供方所有权。不要在核心中为 CLI 添加特定分支，若某个后端钩子可以表达该行为。
 
-`ctx.executionMode` 在正常轮次时为 `"agent"`，在临时 `/btw` 调用时为
-`"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果
-后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv
-会可靠地禁用这些工具，也请设置 `sideQuestionToolMode: "disabled"`；
-否则当 BTW 需要无工具的 CLI 运行时，OpenClaw 会安全失败。
+`ctx.executionMode` 在普通轮次时为 `"agent"`，在临时的 `/btw` 调用时为 `"side-question"`。当 CLI 需要不同的一次性标志时使用它，例如为 BTW 禁用原生工具、会话持久化或恢复行为。如果某个后端通常具有 `nativeToolMode: "always-on"`，但其 side-question argv 可靠地禁用了这些工具，也要将 `sideQuestionToolMode` 设为 `"disabled"`；否则当 BTW 需要无工具的 CLI 运行时，OpenClaw 会默认失败。
 
 ### `ownsNativeCompaction`: 放弃 OpenClaw 压缩
 
-如果你的后端运行的 agent 会压缩其**自身**的转录内容，请设置
-`ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就不会对其
-会话运行 - CLI 压缩生命周期会返回 no-op，当前轮次继续执行。`claude-cli`
-声明了这一点，因为 Claude Code 在内部压缩，而且没有 harness 端点。像 Codex 这样的原生 harness
-会话则继续路由到它们的 harness 压缩端点。
+如果你的后端运行的代理会压缩它**自己的**对话记录，请设置 `ownsNativeCompaction: true`，这样 OpenClaw 的保护性摘要器就绝不会对其会话运行——CLI 的压缩生命周期会返回一个 no-op，当前轮次继续执行。`claude-cli` 声明了它，因为 Claude Code 会在内部压缩，而且没有 harness 端点。像 Codex 这样的 native-harness 会话则继续路由到它们各自的 harness 压缩端点。
 
-**只有在同时满足以下所有条件时才声明它**，否则延迟的超预算会话可能会
-一直超预算 / 变得陈旧（OpenClaw 不再挽救它）：
+**只有在以下所有条件都满足时才声明它**，否则一个延后且超出预算的会话可能会继续超预算或变得陈旧（OpenClaw 将不再对其进行挽救）：
 
-- 后端会在接近窗口上限时可靠地压缩或限制自身转录内容；
-- 它会保留可恢复的会话，以便压缩后的状态能跨轮次保留
-  （例如 `--resume` / `--session-id`）；
-- 它不是原生 harness 压缩会话 - 匹配 `agentHarnessId` 的会话
-  会改为路由到 harness 端点。
+- 后端在接近其窗口上限时能够可靠地压缩或限制自己的对话记录；
+- 它会持久化一个可恢复的会话，以便压缩后的状态能跨轮次保留（例如 `--resume` / `--session-id`）；
+- 它不是一个 native-harness 压缩会话——与 `agentHarnessId` 匹配的会话会改为路由到 harness 端点。
 
 ## MCP 工具桥接
 
-CLI 后端默认不会接收 OpenClaw 工具。如果 CLI 能够消费 MCP 配置，请显式启用：
+CLI 后端默认不会接收 OpenClaw 工具。如果 CLI 可以消费
+MCP 配置，请显式启用：
 
 ```typescript
 return {
@@ -236,7 +235,7 @@ return {
 };
 ```
 
-支持的桥接模式有：
+支持的桥接模式：
 
 | 模式                     | 用途                                                              |
 | ------------------------ | ---------------------------------------------------------------- |
@@ -244,8 +243,10 @@ return {
 | `codex-config-overrides` | 接受通过 argv 传入配置覆盖项的 CLI                                |
 | `gemini-system-settings` | 从其系统设置目录读取 MCP 设置的 CLI                               |
 
-只有在 CLI 确实能够消费时才启用该桥接。如果 CLI 有其自身内置且无法禁用的工具层，请设置 `nativeToolMode:
-"always-on"`，这样当调用方要求不使用原生工具时，OpenClaw 可以安全失败。
+仅当 CLI 确实可以消费时才启用桥接。如果 CLI 有
+其自身内置且无法禁用的工具层，请设置 `nativeToolMode:
+"always-on"`，这样当调用方要求不使用本地
+工具时，OpenClaw 才能安全失败。
 
 ## 用户配置
 
@@ -273,7 +274,7 @@ return {
 }
 ```
 
-请记录用户最可能需要覆盖的最小项。通常只需要在二进制不在 `PATH` 中时覆盖 `command`。
+请记录用户最可能需要的最小覆盖项——通常只有当二进制文件不在 `PATH` 中时才需要设置 `command`。
 
 ## 验证
 
@@ -290,7 +291,7 @@ openclaw plugins inspect acme-cli --runtime --json
 openclaw agent --message "回复必须完全是：backend ok" --model acme-cli/acme-large
 ```
 
-如果后端支持图像或 MCP，请添加一个实时冒烟测试，使用真实 CLI 证明这些路径可用。不要仅依赖静态检查来验证 prompt、图像、MCP 或 session-resume 行为。
+如果后端支持图像或 MCP，请添加一个实时冒烟测试，使用真实 CLI 证明这些路径可用。不要依赖静态检查来验证 prompt、图像、MCP 或会话恢复行为。
 
 ## 清单
 
@@ -304,8 +305,8 @@ openclaw agent --message "回复必须完全是：backend ok" --model acme-cli/a
 
 ## 相关内容
 
-- [CLI backends](/gateway/cli-backends) - 用户配置和运行时行为
-- [Building plugins](/plugins/building-plugins) - 包和 manifest 基础
-- [Plugin SDK overview](/plugins/sdk-overview) - 注册 API 参考
-- [Plugin manifest](/plugins/manifest) - `cliBackends` 和 setup 描述符
+- [CLI 后端](/gateway/cli-backends) - 用户配置和运行时行为
+- [构建插件](/plugins/building-plugins) - 包和 manifest 基础
+- [插件 SDK 概览](/plugins/sdk-overview) - 注册 API 参考
+- [插件清单](/plugins/manifest) - `cliBackends` 和 setup 描述符
 - [Agent harness](/plugins/sdk-agent-harness) - 完整的外部 agent 运行时

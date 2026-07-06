@@ -6,7 +6,7 @@ read_when:
   - 你需要 Cohere API 密钥环境变量或 CLI 认证选项
 ---
 
-[Cohere](https://cohere.com) 通过其 Compatibility API 提供与 OpenAI 兼容的推理能力。OpenClaw 在其外部化迁移期间随附 Cohere provider，并且还将其作为官方外部插件发布，提供 Command A 模型目录。
+[Cohere](https://cohere.com) 通过其兼容性 API 提供与 OpenAI 兼容的推理。OpenClaw 在外部化迁移期间捆绑了 Cohere 提供程序，并将其作为官方外部插件发布。
 
 | Property        | Value                                                |
 | --------------- | ---------------------------------------------------- |
@@ -18,10 +18,11 @@ read_when:
 | API             | 与 OpenAI 兼容（`openai-completions`）                |
 | Base URL        | `https://api.cohere.ai/compatibility/v1`             |
 | Default model   | `cohere/command-a-03-2025`                           |
+| Context window  | 256,000 tokens                                       |
 
 ## 开始使用
 
-1. 当前 OpenClaw 包中已包含 Cohere。如果不可用，请安装外部包并重启 Gateway：
+1. Cohere 随附当前的 OpenClaw 包。如果缺少，请安装外部包并重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/cohere-provider
@@ -43,7 +44,7 @@ openclaw onboard --non-interactive \
 openclaw models list --provider cohere
 ```
 
-默认模型仅在尚未配置主模型时设置。
+仅当尚未配置主模型时，onboarding 才会将 Cohere 设为主模型。
 
 ## 仅使用环境变量的设置
 
@@ -60,11 +61,11 @@ openclaw models list --provider cohere
 ```
 
 <Note>
-如果 Gateway 作为守护进程或在 Docker 中运行，请为该服务配置 `COHERE_API_KEY`。仅在交互式 shell 中导出它，不会让已运行的 Gateway 访问到它。
+如果 Gateway 作为守护进程或在 Docker 中运行，请为该服务设置 `COHERE_API_KEY`。仅在交互式 shell 中导出它，并不会让它对已经运行的 Gateway 可用。
 </Note>
 
 ## 相关内容
 
 - [模型提供方](/concepts/model-providers)
 - [Models CLI](/cli/models)
-- [提供方目录](/providers)
+- [提供方目录](/providers/index)

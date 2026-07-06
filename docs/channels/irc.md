@@ -17,8 +17,7 @@ read_when:
 openclaw plugins install @openclaw/irc
 ```
 
-2. 在 `~/.openclaw/openclaw.json` 中启用 IRC 配置。
-3. 至少设置以下内容：
+2. 至少在 `~/.openclaw/openclaw.json` 中设置 host、nick，以及要加入的频道：
 
 ```json5
 {
@@ -35,51 +34,65 @@ openclaw plugins install @openclaw/irc
 }
 ```
 
-建议为机器人协作使用私有 IRC 服务器。如果你有意使用公共 IRC 网络，常见选择包括 Libera.Chat、OFTC 和 Snoonet。避免使用可预测的公共频道来承载机器人或 swarm 的后端流量。
-
-4. 启动/重启网关：
+3. 启动/重启网关：
 
 ```bash
 openclaw gateway run
 ```
 
+建议为机器人协调使用私有 IRC 服务器。如果你有意使用公共 IRC 网络，常见选择包括 Libera.Chat、OFTC 和 Snoonet。避免将机器人或 swarm 后端通信流量放在可预测的公共频道中。
+
+## 连接设置
+
+| Key                           | Default                       | Notes                                                       |
+| ----------------------------- | ----------------------------- | ----------------------------------------------------------- |
+| `host`                        | none (required)               | IRC 服务器主机名                                            |
+| `port`                        | `6697` with TLS, `6667` plain | 1-65535                                                     |
+| `tls`                         | `true`                        | 仅在有意使用明文时设置为 `false`                           |
+| `nick`                        | none (required)               | Bot 昵称                                                    |
+| `username`                    | nick, else `openclaw`         | IRC 用户名                                                  |
+| `realname`                    | `OpenClaw`                    | Realname/GECOS 字段                                         |
+| `password` / `passwordFile`   | none                          | 服务器密码；文件必须是普通文件                              |
+| `channels`                    | none                          | 要加入的频道（`["#openclaw"]`）                             |
+| `accounts` / `defaultAccount` | none                          | 多账户设置；环境变量仅填充默认账户                          |
+
 ## 安全默认值
 
-- IRC 使用原始 TCP/TLS 套接字，运行在 OpenClaw 运营者管理的转发代理路由之外。在需要所有出站流量都通过该转发代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
-- `channels.irc.dmPolicy` 默认为 `"pairing"`。
-- `channels.irc.groupPolicy` 默认为 `"allowlist"`。
+- IRC 使用原始 TCP/TLS 套接字，不经过 OpenClaw 运维管理的前向代理路由。在要求所有出站流量都必须经过该前向代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
+- `channels.irc.dmPolicy` 默认值为 `"pairing"`：未知的 DM 发送者会获得一个配对代码，您可使用 `openclaw pairing approve irc <code>` 批准该代码。
+- `channels.irc.groupPolicy` 默认值为 `"allowlist"`。
 - 当 `groupPolicy="allowlist"` 时，请设置 `channels.irc.groups` 以定义允许的频道。
-- 除非你有意接受明文传输，否则请使用 TLS（`channels.irc.tls=true`）。
+- 除非您有意接受明文传输，否则请使用 TLS（`channels.irc.tls=true`）。
 
-## 访问控制
+## Access Control
 
-IRC 频道有两个独立的“门”：
+IRC channels have two separate “gates”:
 
-1. **频道访问**（`groupPolicy` + `groups`）：机器人是否完全接受来自某个频道的消息。
-2. **发送者访问**（`groupAllowFrom` / 按频道的 `groups["#channel"].allowFrom`）：谁可以在该频道中触发机器人。
+1. **Channel access** (`groupPolicy` + `groups`): whether the bot accepts messages from a channel at all.
+2. **Sender access** (`groupAllowFrom` / per-channel `groups["#channel"].allowFrom`): who can trigger the bot in that channel.
 
-配置键：
+Configuration keys:
 
-- DM 白名单（DM 发送者访问）：`channels.irc.allowFrom`
-- 组发送者白名单（频道发送者访问）：`channels.irc.groupAllowFrom`
-- 每个频道的控制项（频道 + 发送者 + 提及规则）：`channels.irc.groups["#channel"]`
-- `channels.irc.groupPolicy="open"` 允许未配置的频道（**默认情况下仍然受提及门控限制**）
+- DM allowlist (DM sender access): `channels.irc.allowFrom`
+- Group sender allowlist (channel sender access): `channels.irc.groupAllowFrom`
+- Per-channel controls (channel + sender + mention rules): `channels.irc.groups["#channel"]` with `requireMention`, `allowFrom`, `enabled`, `tools`, `toolsBySender`, `skills`, and `systemPrompt`
+- `channels.irc.groupPolicy="open"` allows unconfigured channels (**still mention-gated by default**)
 
-白名单条目应使用稳定的发送者身份（`nick!user@host`）。
-仅使用裸 nick 匹配是可变的，并且只有在 `channels.irc.dangerouslyAllowNameMatching: true` 时才启用。
+Allowlist entries should use stable sender identities (`nick!user@host`).
+Matching by bare nick only is volatile and is enabled only when `channels.irc.dangerouslyAllowNameMatching: true`.
 
-### 常见坑：`allowFrom` 用于 DM，不用于频道
+### Common pitfall: `allowFrom` is for DMs, not channels
 
-如果你看到类似这样的日志：
+If you see a log like this:
 
 - `irc: drop group sender alice!ident@host (policy=allowlist)`
 
-...这意味着该发送者未被允许用于**组/频道**消息。你可以通过以下方式修复：
+...that means the sender is not allowed for **group/channel** messages. You can fix it by either:
 
-- 设置 `channels.irc.groupAllowFrom`（对所有频道全局生效），或
-- 为每个频道设置发送者白名单：`channels.irc.groups["#channel"].allowFrom`
+- setting `channels.irc.groupAllowFrom` (applies globally to all channels), or
+- setting a sender allowlist per channel: `channels.irc.groups["#channel"].allowFrom`
 
-示例（允许 `#tuirc-dev` 中任何人和机器人交谈）：
+Example (allow anyone in `#openclaw` to talk to the bot):
 
 ```json5
 {
@@ -87,7 +100,7 @@ IRC 频道有两个独立的“门”：
     irc: {
       groupPolicy: "allowlist",
       groups: {
-        "#tuirc-dev": { allowFrom: ["*"] },
+        "#openclaw": { allowFrom: ["*"] },
       },
     },
   },
@@ -96,7 +109,7 @@ IRC 频道有两个独立的“门”：
 
 ## 回复触发（提及）
 
-即使某个频道已被允许（通过 `groupPolicy` + `groups`），且发送者也已被允许，OpenClaw 在组上下文中默认仍会启用**提及门控**。
+即使某个频道是允许的（通过 `groupPolicy` + `groups`），并且发送者也是允许的，OpenClaw 在群组上下文中默认仍会启用**提及门控**。当消息包含已连接机器人的昵称，或匹配你配置的提及模式时，机器人就会被视为已被提及。
 
 这意味着你可能会看到类似 `drop channel … (missing-mention)` 的日志，除非消息中包含与机器人匹配的提及模式。
 
@@ -108,7 +121,7 @@ IRC 频道有两个独立的“门”：
     irc: {
       groupPolicy: "allowlist",
       groups: {
-        "#tuirc-dev": {
+        "#openclaw": {
           requireMention: false,
           allowFrom: ["*"],
         },
@@ -145,7 +158,7 @@ IRC 频道有两个独立的“门”：
   channels: {
     irc: {
       groups: {
-        "#tuirc-dev": {
+        "#openclaw": {
           allowFrom: ["*"],
           tools: {
             deny: ["group:runtime", "group:fs", "gateway", "nodes", "cron", "browser"],
@@ -166,13 +179,13 @@ IRC 频道有两个独立的“门”：
   channels: {
     irc: {
       groups: {
-        "#tuirc-dev": {
+        "#openclaw": {
           allowFrom: ["*"],
           toolsBySender: {
             "*": {
               deny: ["group:runtime", "group:fs", "gateway", "nodes", "cron", "browser"],
             },
-            "id:eigen": {
+            "id:alice": {
               deny: ["gateway", "nodes", "cron"],
             },
           },
@@ -185,10 +198,9 @@ IRC 频道有两个独立的“门”：
 
 注意：
 
-- `toolsBySender` 的键应使用 `id:` 作为 IRC 发送者身份值：
-  `id:eigen` 或 `id:eigen!~eigen@174.127.248.171`，以获得更强的匹配。
-- 旧式未加前缀的键仍然被接受，但只会按 `id:` 进行匹配。
-- 首个匹配到的发送者策略生效；`"*"` 是通配符回退。
+- `toolsBySender` 键应使用显式前缀（`channel:`、`id:`、`e164:`、`username:`、`name:`）。对于 IRC，请使用发送者身份值的 `id:`：`id:alice`，或者 `id:alice!~alice@203.0.113.7` 以获得更强的匹配。
+- 旧式未加前缀的键仍然可接受，但只按 `id:` 匹配，并会发出弃用警告。
+- 首个匹配到的发送者策略生效；`"*"` 是通配符回退项。
 
 关于组访问与提及门控的更多信息（以及它们如何交互），请参见：[/channels/groups](/channels/groups)。
 
@@ -210,7 +222,9 @@ IRC 频道有两个独立的“门”：
 }
 ```
 
-连接时可选的一次性注册：
+当设置了密码时，NickServ identify 默认会运行（只需将 `enabled` 设为 `false` 即可选择退出）。`service` 默认值为 `NickServ`；`passwordFile` 是内联 `password` 的替代方案。
+
+可选的一次性连接注册（`register: true` 需要 `registerEmail`）：
 
 ```json5
 {

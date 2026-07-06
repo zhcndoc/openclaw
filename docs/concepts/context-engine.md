@@ -10,7 +10,7 @@ sidebarTitle: "上下文引擎"
 
 **上下文引擎** 控制 OpenClaw 在每次运行时如何构建模型上下文：包含哪些消息、如何总结较早的历史，以及如何在子代理边界之间管理上下文。
 
-OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大多数用户从不需要更改这一点。仅当你想要不同的组装、压缩或跨会话回忆行为时，才安装并选择一个插件引擎。
+OpenClaw 自带一个内置的 `legacy` 引擎，并默认使用它。只有当你希望获得不同的组装、压缩或跨会话记忆行为时，才安装并选择插件引擎。
 
 ## 快速开始
 
@@ -84,7 +84,9 @@ OpenClaw 自带一个内置的 `legacy` 引擎，并且默认使用它——大�
   </Accordion>
 </AccordionGroup>
 
-对于捆绑的非 ACP Codex harness，OpenClaw 通过将组装后的上下文投射到 Codex 开发者指令和当前轮提示中来应用相同的生命周期。Codex 仍然拥有其原生线程历史和原生压缩器。
+引擎还可以实现一个可选的 `maintain()` 方法，用于在引导完成后、某次成功回合后或压缩后进行转录维护（通过 `runtimeContext.rewriteTranscriptEntries()` 进行安全重写）。将 `info.turnMaintenanceMode` 设为 `"background"`，即可让它作为延迟任务运行，而不是阻塞回复。
+
+对于捆绑的非 ACP Codex harness，OpenClaw 通过将组装后的上下文投影到 Codex 开发者指令和当前回合提示中来应用相同的生命周期。Codex 仍然负责其原生线程历史和原生压缩器。
 
 ### 子代理生命周期（可选）
 
@@ -197,21 +199,25 @@ export default function register(api) {
   前置到系统提示中。
 </ParamField>
 <ParamField path="promptAuthority" type='"assembled" | "preassembly_may_overflow"'>
-  控制运行器用于预先溢出预检查的令牌估计值。默认值为 `"assembled"`，这意味着只检查组装后提示词的估计值——适用于返回窗口化、自包含上下文的引擎。仅当你的组装视图可能掩盖底层转录中的溢出风险时，才将其设为 `"preassembly_may_overflow"`；此时，运行器在决定是否提前压缩时，会取组装后估计值与组装前（未窗口化）的会话历史估计值中的较大者。无论哪种方式，你返回的消息仍然是模型实际看到的内容——`promptAuthority` 只影响预检查。
+  控制运行器用于预防性溢出预检查的令牌估计值。默认值为 `"assembled"`，这意味着对于不拥有压缩控制权的引擎，只检查组装后提示词的估计值。设置了 `ownsCompaction: true` 的引擎会自行管理提示词准入，因此 OpenClaw 默认会跳过通用的预提示词预检查。仅当你的组装视图可能掩盖底层转录本中的溢出风险时，才将其设为 `"preassembly_may_overflow"`；此时运行器会继续保持通用预检查启用，并在决定是否进行预防性压缩时，取组装估计值与预组装（未窗口化）会话历史估计值中的较大者。无论哪种情况，你返回的消息仍然是模型实际看到的内容——`promptAuthority` 只影响预检查。
+</ParamField>
+<ParamField path="contextProjection" type="ContextEngineProjection">
+  适用于具有持久后端线程的主机的可选投影生命周期（例如 Codex app-server）。`mode: "thread_bootstrap"` 搭配稳定的 `epoch` 会要求主机在每个 epoch 只注入一次组装后的上下文，并在 epoch 变化前重用后端线程，而不是每轮都重新投影。对于正常的逐轮投影，请省略此字段。
 </ParamField>
 
 `compact` 返回一个 `CompactResult`。当压缩轮换活动转录时，`result.sessionId` 和 `result.sessionFile` 会标识下一个重试或下一轮必须使用的后继会话。
 
 可选成员：
 
-| 成员                           | 类型   | 作用                                                                                                            |
-| ------------------------------ | ------ | --------------------------------------------------------------------------------------------------------------- |
-| `bootstrap(params)`            | 方法 | 为某个会话初始化引擎状态。引擎第一次看到某个会话时调用一次（例如导入历史记录）。                                  |
-| `ingestBatch(params)`          | 方法 | 以批处理方式摄取一个已完成的轮次。运行完成后一次性传入该轮的所有消息。                                            |
-| `afterTurn(params)`            | 方法 | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                              |
-| `prepareSubagentSpawn(params)` | 方法 | 在子会话开始前为其设置共享状态。                                                                                  |
-| `onSubagentEnded(params)`      | 方法 | 子代理结束后进行清理。                                                                                           |
-| `dispose()`                    | 方法 | 释放资源。在网关关闭或插件重新加载期间调用——不是按会话调用。                                                     |
+| Member                         | Kind   | Purpose                                                                                                                                      |
+| ------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bootstrap(params)`            | Method | 初始化会话的引擎状态。引擎首次看到某个会话时调用一次（例如导入历史记录）。                              |
+| `maintain(params)`             | Method | 引导后、成功轮次后或压缩后的转录维护。使用 `runtimeContext.rewriteTranscriptEntries()` 进行安全重写。 |
+| `ingestBatch(params)`          | Method | 以批处理方式摄取已完成的一轮。运行结束后调用，一次性接收该轮中的所有消息。                                  |
+| `afterTurn(params)`            | Method | 运行后的生命周期工作（持久化状态、触发后台压缩）。                                                                      |
+| `prepareSubagentSpawn(params)` | Method | 在子会话启动前为其设置共享状态。                                                                                    |
+| `onSubagentEnded(params)`      | Method | 子代理结束后的清理工作。                                                                                                              |
+| `dispose()`                    | Method | 释放资源。Gateway 关闭或插件重新加载期间调用——不是按会话调用。                                                        |
 
 ### 运行时设置
 
@@ -267,7 +273,7 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
 
 <AccordionGroup>
   <Accordion title="ownsCompaction: true">
-    引擎拥有压缩行为。OpenClaw 会为该次运行禁用 OpenClaw 运行时内置的自动压缩，而引擎的 `compact()` 实现负责 `/compact`、溢出恢复压缩以及它希望在 `afterTurn()` 中执行的任何主动压缩。OpenClaw 仍可能运行预提示词溢出保护；当它预测完整转录将溢出时，恢复路径会在提交另一个提示词之前调用当前激活引擎的 `compact()`。
+    引擎拥有压缩行为。OpenClaw 会为该运行禁用 OpenClaw 运行时内置的自动压缩和通用的预提示词溢出预检查，而引擎的 `compact()` 实现负责 `/compact`、提供方溢出恢复压缩，以及它希望在 `afterTurn()` 中执行的任何主动压缩。如果引擎在 `assemble()` 中返回 `promptAuthority: "preassembly_may_overflow"`，OpenClaw 仍会运行预提示词溢出保护。
   </Accordion>
   <Accordion title="ownsCompaction: false or unset">
     OpenClaw 运行时内置的自动压缩仍可能在提示词执行期间运行，但当前激活引擎的 `compact()` 方法仍会在 `/compact` 和溢出恢复时被调用。
@@ -336,8 +342,8 @@ OpenClaw 将所选插件引擎与核心回复路径隔离。如果一个非 lega
 
 ## 相关内容
 
-- [Compaction](/concepts/compaction) - 压缩长对话
-- [Context](/concepts/context) - 上下文如何为代理轮次构建
-- [Plugin Architecture](/plugins/architecture) - 注册上下文引擎插件
-- [Plugin manifest](/plugins/manifest) - 插件清单字段
-- [Plugins](/tools/plugin) - 插件概览
+- [压缩](/concepts/compaction) - 压缩长对话
+- [上下文](/concepts/context) - 上下文如何为代理轮次构建
+- [插件架构](/plugins/architecture) - 注册上下文引擎插件
+- [插件清单](/plugins/manifest) - 插件清单字段
+- [插件](/tools/plugin) - 插件概览

@@ -8,20 +8,14 @@ title: "位置命令"
 
 ## TL;DR
 
-- `location.get` 是一个节点命令（通过 `node.invoke`）。
+- `location.get` 是一个节点命令，可通过 `node.invoke` 或 `openclaw nodes location get` 调用。
 - 默认关闭。
-- Android 应用设置使用一个选择器：关闭 / 使用期间。
-- 单独的开关：精确位置。
+- Android 应用设置使用一个选择项：关闭 / 使用期间。
+- 精确位置是一个单独的开关。
 
 ## 为什么要用选择器（而不只是一个开关）
 
-操作系统权限是多级的。我们可以在应用内暴露一个选择器，但实际授予的权限仍由操作系统决定。
-
-- iOS/macOS 可能会在系统提示/设置中显示 **使用期间** 或 **始终**。
-- Android 应用目前仅支持前台位置。
-- 精确位置是单独授予的权限（iOS 14+ 的“精确”，Android 的“fine”与“coarse”）。
-
-UI 中的选择器驱动我们请求的模式；实际授予的权限保留在操作系统设置中。
+操作系统的位置权限是多级的（iOS/macOS 提供“使用期间”和“始终允许”；Android 目前仅支持前台定位）。精确位置也是单独的操作系统授权（iOS 14+ 的“精确”，Android 的“精细”与“粗略”）。应用内的选择器决定请求的模式，但最终实际授予的权限仍由操作系统决定。
 
 ## 设置模型
 
@@ -33,17 +27,22 @@ UI 中的选择器驱动我们请求的模式；实际授予的权限保留在�
 UI 行为：
 
 - 选择 `whileUsing` 会请求前台权限。
-- 如果操作系统拒绝请求的级别，则回退到已授予的最高级别并显示状态。
+- 如果操作系统拒绝所请求的级别，应用会恢复到已授予的最高级别并显示状态。
 
 ## 权限映射（node.permissions）
 
-可选。macOS 节点通过权限映射报告 `location`；iOS/Android 可能省略它。
+可选。macOS 节点会通过 `node.list`/`node.describe` 上的 `permissions` 映射报告 `location`；iOS/Android 可能会省略它。
 
 ## 命令：`location.get`
 
-通过 `node.invoke` 调用。
+通过 `node.invoke` 调用，或使用 CLI 辅助命令：
 
-参数（建议）：
+```bash
+openclaw nodes location get --node <idOrNameOrIp>
+openclaw nodes location get --node <idOrNameOrIp> --accuracy precise --max-age 15000 --location-timeout 10000
+```
+
+参数：
 
 ```json
 {
@@ -53,7 +52,9 @@ UI 行为：
 }
 ```
 
-返回载荷：
+CLI 标志直接映射：`--location-timeout` -> `timeoutMs`，`--max-age` -> `maxAgeMs`，`--accuracy` -> `desiredAccuracy`。
+
+响应负载：
 
 ```json
 {
@@ -73,21 +74,20 @@ UI 行为：
 
 - `LOCATION_DISABLED`: 选择器已关闭。
 - `LOCATION_PERMISSION_REQUIRED`: 请求的模式缺少权限。
-- `LOCATION_BACKGROUND_UNAVAILABLE`: 应用处于后台，但只允许使用期间。
-- `LOCATION_TIMEOUT`: 在规定时间内未获取到定位。
-- `LOCATION_UNAVAILABLE`: 系统故障 / 无可用提供者。
+- `LOCATION_BACKGROUND_UNAVAILABLE`: 应用处于后台，但仅授予了“使用期间”权限。
+- `LOCATION_TIMEOUT`: 未能在规定时间内获取定位。
+- `LOCATION_UNAVAILABLE`: 系统故障或没有可用提供者。
 
 ## 后台行为
 
-- Android 应用在后台时拒绝 `location.get`。
-- 在 Android 上请求位置时请保持 OpenClaw 处于打开状态。
-- 其他节点平台可能不同。
+- Android 应用在后台时会拒绝 `location.get`；在 Android 上请求定位时请保持 OpenClaw 处于打开状态。
+- 其他节点平台可能有所不同。
 
 ## 模型/工具集成
 
-- 工具面：`nodes` 工具添加 `location_get` 动作（需要节点）。
+- Agent 工具：`nodes` 工具的 `location_get` 操作（需要节点）。
 - CLI：`openclaw nodes location get --node <id>`。
-- 代理指南：仅在用户已启用位置并理解其范围时调用。
+- Agent 指南：仅在用户启用了位置并理解作用范围时调用。
 
 ## UX 文案（建议）
 
@@ -97,6 +97,7 @@ UI 行为：
 
 ## 相关
 
+- [节点概览](/nodes)
 - [频道位置解析](/channels/location)
-- [摄像头拍摄](/nodes/camera)
-- [对话模式](/nodes/talk)
+- [摄像头捕获](/nodes/camera)
+- [对讲模式](/nodes/talk)

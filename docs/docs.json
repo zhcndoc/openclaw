@@ -1015,7 +1015,11 @@
             "groups": [
               {
                 "group": "概览",
-                "pages": ["index", "start/showcase", "concepts/features"]
+                "pages": [
+                  "index",
+                  "start/showcase",
+                  "concepts/features"
+                ]
               },
               {
                 "group": "第一步",
@@ -1041,7 +1045,11 @@
             "groups": [
               {
                 "group": "安装概览",
-                "pages": ["install/index", "install/installer", "install/node"]
+                "pages": [
+                  "install/index",
+                  "install/installer",
+                  "install/node"
+                ]
               },
               {
                 "group": "维护",
@@ -1094,7 +1102,10 @@
               },
               {
                 "group": "高级设置",
-                "pages": ["start/setup", "openclaw-agent-runtime"]
+                "pages": [
+                  "start/setup",
+                  "openclaw-agent-runtime"
+                ]
               }
             ]
           },
@@ -1103,7 +1114,10 @@
             "groups": [
               {
                 "group": "概览",
-                "pages": ["channels/index", "announcements/bluebubbles-imessage"]
+                "pages": [
+                  "channels/index",
+                  "announcements/bluebubbles-imessage"
+                ]
               },
               {
                 "group": "主流消息平台",
@@ -1240,7 +1254,9 @@
             "groups": [
               {
                 "group": "概览",
-                "pages": ["tools/index"]
+                "pages": [
+                  "tools/index"
+                ]
               },
               {
                 "group": "插件",
@@ -1257,6 +1273,7 @@
                   "plugins/codex-harness",
                   "plugins/codex-native-plugins",
                   "plugins/codex-computer-use",
+                  "plugins/logbook",
                   "plugins/google-meet",
                   "plugins/workboard",
                   "plugins/webhooks",
@@ -1381,7 +1398,11 @@
             "groups": [
               {
                 "group": "概览",
-                "pages": ["clawhub/index", "clawhub/quickstart", "clawhub/how-it-works"]
+                "pages": [
+                  "clawhub/index",
+                  "clawhub/quickstart",
+                  "clawhub/how-it-works"
+                ]
               },
               {
                 "group": "使用 ClawHub",
@@ -1411,11 +1432,18 @@
             "groups": [
               {
                 "group": "概览",
-                "pages": ["providers/index", "providers/models"]
+                "pages": [
+                  "providers/index",
+                  "providers/models"
+                ]
               },
               {
                 "group": "概念与配置",
-                "pages": ["concepts/models", "concepts/model-providers", "concepts/model-failover"]
+                "pages": [
+                  "concepts/models",
+                  "concepts/model-providers",
+                  "concepts/model-failover"
+                ]
               },
               {
                 "group": "提供商",
@@ -1428,6 +1456,7 @@
                   "providers/azure-speech",
                   "providers/cerebras",
                   "providers/chutes",
+                  "providers/clawrouter",
                   "providers/cohere",
                   "providers/claude-max-api-proxy",
                   "providers/cloudflare-ai-gateway",
@@ -1618,13 +1647,22 @@
                   },
                   {
                     "group": "网络与发现",
-                    "pages": ["network", "gateway/pairing", "gateway/discovery", "gateway/bonjour"]
+                    "pages": [
+                      "network",
+                      "gateway/pairing",
+                      "gateway/discovery",
+                      "gateway/bonjour"
+                    ]
                   }
                 ]
               },
               {
                 "group": "远程访问",
-                "pages": ["gateway/remote", "gateway/remote-gateway-readme", "gateway/tailscale"]
+                "pages": [
+                  "gateway/remote",
+                  "gateway/remote-gateway-readme",
+                  "gateway/tailscale"
+                ]
               },
               {
                 "group": "安全",
@@ -1652,13 +1690,23 @@
                   },
                   {
                     "group": "节点功能",
-                    "pages": ["nodes/talk", "nodes/voicewake", "nodes/location-command"]
+                    "pages": [
+                      "nodes/talk",
+                      "nodes/voicewake",
+                      "nodes/location-command"
+                    ]
                   }
                 ]
               },
               {
                 "group": "网页界面",
-                "pages": ["web/index", "web/control-ui", "web/dashboard", "web/webchat", "web/tui"]
+                "pages": [
+                  "web/index",
+                  "web/control-ui",
+                  "web/dashboard",
+                  "web/webchat",
+                  "web/tui"
+                ]
               }
             ]
           },
@@ -1731,7 +1779,11 @@
                   },
                   {
                     "group": "配置",
-                    "pages": ["cli/config", "cli/configure", "cli/webhooks"]
+                    "pages": [
+                      "cli/config",
+                      "cli/configure",
+                      "cli/webhooks"
+                    ]
                   },
                   {
                     "group": "插件与技能",
@@ -1745,7 +1797,11 @@
                   },
                   {
                     "group": "界面",
-                    "pages": ["cli/dashboard", "cli/tui"]
+                    "pages": [
+                      "cli/attach",
+                      "cli/dashboard",
+                      "cli/tui"
+                    ]
                   },
                   {
                     "group": "实用工具",
@@ -1834,6 +1890,7 @@
                   "reference/wizard",
                   "reference/token-use",
                   "reference/secretref-credential-surface",
+                  "reference/openclaw-ai",
                   "reference/prompt-caching",
                   "reference/api-usage-costs",
                   "reference/transcript-hygiene",
@@ -1855,11 +1912,21 @@
               },
               {
                 "group": "项目",
-                "pages": ["reference/application-modernization-plan", "reference/credits"]
+                "pages": [
+                  "reference/application-modernization-plan",
+                  "reference/credits"
+                ]
               },
               {
                 "group": "发布与 CI",
                 "pages": [
+                  {
+                    "group": "Release notes",
+                    "pages": [
+                      "releases/index",
+                      "releases/2026.6.11"
+                    ]
+                  },
                   "maturity/scorecard",
                   "maturity/taxonomy",
                   "reference/RELEASING",
@@ -1877,23 +1944,43 @@
             "groups": [
               {
                 "group": "从这里开始",
-                "pages": ["help/index", "help/troubleshooting", "help/debugging"]
+                "pages": [
+                  "help/index",
+                  "help/troubleshooting",
+                  "help/debugging"
+                ]
               },
               {
                 "group": "常见问题",
-                "pages": ["help/faq", "help/faq-first-run", "help/faq-models"]
+                "pages": [
+                  "help/faq",
+                  "help/faq-first-run",
+                  "help/faq-models"
+                ]
               },
               {
                 "group": "测试",
-                "pages": ["help/testing", "help/testing-updates-plugins", "help/testing-live"]
+                "pages": [
+                  "help/testing",
+                  "help/testing-updates-plugins",
+                  "help/testing-live"
+                ]
               },
               {
                 "group": "诊断",
-                "pages": ["help/environment", "diagnostics/flags", "debug/node-issue"]
+                "pages": [
+                  "help/environment",
+                  "diagnostics/flags",
+                  "debug/node-issue"
+                ]
               },
               {
                 "group": "社区与元信息",
-                "pages": ["start/lore", "start/hubs", "start/docs-directory"]
+                "pages": [
+                  "start/lore",
+                  "start/hubs",
+                  "start/docs-directory"
+                ]
               }
             ]
           }

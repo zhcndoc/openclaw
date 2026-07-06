@@ -6,22 +6,22 @@ read_when:
 title: "提升模式"
 ---
 
-当代理在沙箱内运行时，它的 `exec` 命令会被限制在沙箱环境中。**提升模式** 允许代理突破沙箱，改为在沙箱外运行命令，并可配置审批门控。
+当代理在沙箱中运行时，其 `exec` 命令仅限于沙箱环境。**提升模式**允许代理突破沙箱，并在其外部运行命令，同时支持可配置的审批门控。
 
 <Info>
-  只有当代理处于**沙箱化**状态时，提升模式才会改变行为。对于未沙箱化的代理，exec 本来就会在宿主机上运行。
+  提升模式仅在代理处于**沙箱化**状态时才会改变行为。对于未沙箱化的代理，exec 已经在宿主机上运行。
 </Info>
 
 ## 指令
 
 通过斜杠命令按会话控制提升模式：
 
-| 指令             | 作用                                                                 |
-| ---------------- | -------------------------------------------------------------------- |
-| `/elevated on`   | 在配置的宿主路径上于沙箱外运行，并保留审批                           |
-| `/elevated ask`  | 与 `on` 相同（别名）                                                 |
-| `/elevated full` | 在配置的宿主路径上于沙箱外运行，并跳过审批                           |
-| `/elevated off`  | 恢复为仅在沙箱内执行                                                 |
+| 指令 | 作用 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `/elevated on`   | 在配置的主机路径上于沙箱外运行，保留审批                                                             |
+| `/elevated ask`  | 与 `on` 相同（别名）                                                                                                            |
+| `/elevated full` | 在配置的主机路径上于沙箱外运行，并在模式/主机审批策略已经宽松时跳过审批 |
+| `/elevated off`  | 返回到受沙箱限制的执行                                                                                            |
 
 也可使用 `/elev on|off|ask|full`。
 
@@ -64,9 +64,12 @@ title: "提升模式"
 
   </Step>
 
-  <Step title="命令在沙箱外运行">
-    启用 elevated 后，`exec` 调用会离开沙箱。有效宿主默认为
-    `gateway`，但当配置/会话的 exec 目标为 `node` 时则使用 `node`。在 `full` 模式下，会跳过 exec 审批。在 `on`/`ask` 模式下，仍会应用已配置的审批规则。
+  <Step title="在沙箱外运行命令">
+    启用 elevated 后，`exec` 调用会离开沙箱。默认情况下，有效主机是
+    `gateway`；当配置/会话的 exec 目标为
+    `node` 时，有效主机为 `node`。在 `full` 模式下，如果解析后的 exec
+    模式/主机审批策略已经是完全宽松（安全级别 `full`，`ask` 为 `off`），则会跳过 exec 审批；否则仍适用正常的审批策略。在
+    `on`/`ask` 模式下，始终适用已配置的审批规则。
   </Step>
 </Steps>
 
@@ -78,12 +81,12 @@ title: "提升模式"
 
 ## 可用性和允许列表
 
-- **全局门控**：`tools.elevated.enabled`（必须为 `true`）
-- **发送者允许列表**：`tools.elevated.allowFrom`，按频道分别配置列表
-- **每个代理的门控**：`agents.list[].tools.elevated.enabled`（只能进一步限制）
-- **每个代理的允许列表**：`agents.list[].tools.elevated.allowFrom`（发送者必须同时匹配全局 + 每个代理的规则）
-- **Discord 回退**：如果省略 `tools.elevated.allowFrom.discord`，则使用 `channels.discord.allowFrom` 作为回退
-- **所有门控都必须通过**；否则 elevated 会被视为不可用
+- **全局开关**: `tools.elevated.enabled`（必须为 `true`）
+- **发送者允许列表**: `tools.elevated.allowFrom`，按频道分别配置列表
+- **每个代理的开关**: `agents.list[].tools.elevated.enabled`（只能进一步限制；全局和每个代理的开关都必须为 `true`）
+- **每个代理的允许列表**: `agents.list[].tools.elevated.allowFrom`（发送者必须同时匹配全局 + 每个代理）
+- **频道提供的回退允许列表**: 频道插件可以通过 SDK 适配器钩子可选地提供一个回退允许列表，当 `tools.elevated.allowFrom.<provider>` 未配置时使用。目前没有内置频道实现此钩子，因此实际上现在每个提供方都需要显式配置 `tools.elevated.allowFrom.<provider>` 条目。
+- **所有开关都必须通过**；否则 elevated 会被视为不可用
 
 允许列表条目格式：
 
@@ -97,9 +100,9 @@ title: "提升模式"
 
 ## elevated 不控制的内容
 
-- **工具策略**：如果 `exec` 被工具策略拒绝，elevated 无法覆盖。
-- **宿主选择策略**：elevated 不会将 `auto` 变成可自由跨宿主覆盖的选项。它会使用已配置/会话的 exec 目标规则，仅当目标本身已经是 `node` 时才选择 `node`。
-- **与 `/exec` 分离**：`/exec` 指令会为授权发送者调整每个会话的 exec 默认值，并不需要 elevated 模式。
+- **工具策略**：如果工具策略拒绝 `exec`，elevated 也无法覆盖。
+- **主机选择策略**：elevated 不会把 `auto` 变成可自由跨主机覆盖。它使用已配置/会话中的 exec 目标规则，只有在目标本来就是 `node` 时才选择 `node`。
+- **与 `/exec` 分离**：`/exec` 指令会为被授权的发送者调整每个会话的 exec 默认值（主机、安全性、ask、node），并且不需要 elevated 模式。
 
 <Note>
   bash 聊天命令（`!` 前缀；`/bash` 别名）是一个独立门控，除了其自身的 `tools.bash.enabled` 标志外，还要求启用 `tools.elevated`。禁用 elevated 也会将 `!` shell 命令一并锁定。

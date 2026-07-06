@@ -65,18 +65,18 @@ title: "文档中心"
 
 ## 提供者 + 接入
 
-- [聊天渠道中心](/channels)
-- [模型提供者中心](/providers/models)
-- [WhatsApp](/channels/whatsapp)
-- [Telegram](/channels/telegram)
-- [Slack](/channels/slack)
+- [聊天频道中心](/channels)
+- [模型提供商中心](/providers/models)
 - [Discord](/channels/discord)
-- [Mattermost](/channels/mattermost)
-- [Signal](/channels/signal)
-- [QQ Bot](/channels/qqbot)
 - [iMessage](/channels/imessage)
-- [位置解析](/channels/location)
+- [Mattermost](/channels/mattermost)
+- [QQ 机器人](/channels/qqbot)
+- [Signal](/channels/signal)
+- [Slack](/channels/slack)
+- [Telegram](/channels/telegram)
 - [WebChat](/web/webchat)
+- [WhatsApp](/channels/whatsapp)
+- [位置解析](/channels/location)
 - [Webhooks](/automation/cron-jobs#webhooks)
 - [Gmail Pub/Sub](/automation/cron-jobs#gmail-pub-sub-integration)
 
@@ -100,24 +100,24 @@ title: "文档中心"
 - [安全性](/gateway/security)
 - [故障排除](/gateway/troubleshooting)
 
-## 工具 + 自动化
+## Tools + Automation
 
-- [工具入口](/tools)
+- [Tool Entry](/tools)
 - [OpenProse](/prose)
-- [CLI 参考](/cli)
-- [Exec 工具](/tools/exec)
-- [PDF 工具](/tools/pdf)
-- [提升模式](/tools/elevated)
-- [Cron 作业](/automation/cron-jobs)
-- [自动化](/automation)
-- [思考 + 详细模式](/tools/thinking)
-- [模型](/concepts/models)
-- [子代理](/tools/subagents)
+- [CLI Reference](/cli)
+- [Exec Tool](/tools/exec)
+- [PDF Tool](/tools/pdf)
+- [Elevated Mode](/tools/elevated)
+- [Cron Jobs](/automation/cron-jobs)
+- [Automation](/automation)
+- [Thinking + Detailed Mode](/tools/thinking)
+- [Models](/concepts/models)
+- [Subagents](/tools/subagents)
 - [Agent send CLI](/tools/agent-send)
-- [终端 UI](/web/tui)
-- [浏览器控制](/tools/browser)
-- [浏览器（Linux 故障排除）](/tools/browser-linux-troubleshooting)
-- [投票](/cli/message)
+- [Terminal UI](/web/tui)
+- [Browser Control](/tools/browser)
+- [Browser (Linux Troubleshooting)](/tools/browser-linux-troubleshooting)
+- [Voting](/cli/message)
 
 ## 节点、媒体、语音
 

@@ -6,70 +6,69 @@ read_when:
 title: "LM Studio"
 ---
 
-LM Studio 是一款友好且强大的应用，可在你自己的硬件上运行开源权重模型。它支持运行 llama.cpp（GGUF）或 MLX 模型（Apple Silicon）。既有 GUI 版本，也有无头守护进程（`llmster`）版本。有关产品和安装文档，请参见 [lmstudio.ai](https://lmstudio.ai/)。
+LM Studio 在本地运行 llama.cpp（GGUF）或 MLX 模型，可作为 GUI 应用或无头 `llmster`
+守护进程运行。有关安装和产品文档，请参见 [lmstudio.ai](https://lmstudio.ai/)。
 
 ## 快速开始
 
-1. 安装 LM Studio（桌面版）或 `llmster`（无头版），然后启动本地服务器：
+<Steps>
+  <Step title="安装并启动服务器">
+    安装 LM Studio（桌面版）或 `llmster`（无头模式），然后启动服务器：
 
-```bash
-curl -fsSL https://lmstudio.ai/install.sh | bash
-```
+    ```bash
+    lms server start --port 1234
+    ```
 
-2. 启动服务器
+    或运行无头守护进程：
 
-确保你已经启动桌面应用，或者使用以下命令运行守护进程：
+    ```bash
+    lms daemon up
+    ```
 
-```bash
-lms daemon up
-```
+    如果使用桌面应用程序，请启用 JIT 以实现平滑的模型加载；请参阅
+    [LM Studio JIT and TTL guide](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict)。
 
-```bash
-lms server start --port 1234
-```
+  </Step>
+  <Step title="如果启用了身份验证，请设置 API 密钥">
+    ```bash
+    export LM_API_TOKEN="your-lm-studio-api-token"
+    ```
 
-如果你正在使用应用，请确保已启用 JIT 以获得流畅体验。可在 [LM Studio JIT and TTL 指南](https://lmstudio.ai/docs/developer/core/ttl-and-auto-evict) 中了解更多。
+    如果已禁用 LM Studio 身份验证，则在设置过程中将 API 密钥留空。请参阅
+    [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication)。
 
-3. 如果启用了 LM Studio 身份验证，请设置 `LM_API_TOKEN`：
+  </Step>
+  <Step title="运行引导">
+    ```bash
+    openclaw onboard
+    ```
 
-```bash
-export LM_API_TOKEN="your-lm-studio-api-token"
-```
+    选择 `LM Studio`，然后在 `Default model` 提示处选择一个模型。
 
-如果未启用 LM Studio 身份验证，你可以在交互式 OpenClaw 设置过程中将 API 密钥留空。
+  </Step>
+</Steps>
 
-有关 LM Studio 身份验证设置的详细信息，请参见 [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication)。
-
-4. 运行 onboarding 并选择 `LM Studio`：
-
-```bash
-openclaw onboard
-```
-
-5. 在 onboarding 中，使用 `Default model` 提示选择你的 LM Studio 模型。
-
-你也可以稍后设置或更改它：
+稍后更改默认模型：
 
 ```bash
 openclaw models set lmstudio/qwen/qwen3.5-9b
 ```
 
-LM Studio 模型键遵循 `author/model-name` 格式（例如 `qwen/qwen3.5-9b`）。OpenClaw
-模型引用会在前面加上提供方名称：`lmstudio/qwen/qwen3.5-9b`。你可以通过运行 `curl http://localhost:1234/api/v1/models` 并查看 `key` 字段来找到
-模型的准确键值。
+LM Studio 的模型键使用 `author/model-name` 格式（例如 `qwen/qwen3.5-9b`）；OpenClaw 的模型引用会
+在前面加上提供方：`lmstudio/qwen/qwen3.5-9b`。要查找某个模型的准确键，请运行下面的
+命令并查看 `key` 字段：
+
+```bash
+curl http://localhost:1234/api/v1/models
+```
 
 ## 非交互式 onboarding
 
-当你想通过脚本进行设置（CI、预配、远程引导）时，请使用非交互式 onboarding：
-
 ```bash
-openclaw onboard \
-  --non-interactive \
-  --accept-risk \
-  --auth-choice lmstudio
+openclaw onboard --non-interactive --accept-risk --auth-choice lmstudio
 ```
 
-或者指定基础 URL、模型，以及可选的 API 密钥：
+或者显式指定基础 URL、模型和 API key：
 
 ```bash
 openclaw onboard \
@@ -81,47 +80,34 @@ openclaw onboard \
   --custom-model-id qwen/qwen3.5-9b
 ```
 
-`--custom-model-id` 接受 LM Studio 返回的模型键值（例如 `qwen/qwen3.5-9b`），不包含
-`lmstudio/` 提供方前缀。
+`--custom-model-id` 使用 LM Studio 返回的模型键（例如 `qwen/qwen3.5-9b`），不包含
+`lmstudio/` 提供方前缀。对需要认证的服务器传入 `--lmstudio-api-key`（或设置 `LM_API_TOKEN`）；
+对于未认证的服务器则省略它，OpenClaw 会改为存储一个本地的非机密标记。
+`--custom-api-key` 仍然可为兼容性而接受，但优先使用 `--lmstudio-api-key`。
 
-对于已认证的 LM Studio 服务器，请传入 `--lmstudio-api-key` 或设置 `LM_API_TOKEN`。
-对于未认证的 LM Studio 服务器，请省略该密钥；OpenClaw 会存储一个本地的非机密标记。
+这会写入 `models.providers.lmstudio`，并将默认模型设置为 `lmstudio/<custom-model-id>`。
+如果提供了 API key，还会写入 `lmstudio:default` 认证配置文件。
 
-`--custom-api-key` 仍然为兼容性保留支持，但对于 LM Studio，更推荐使用 `--lmstudio-api-key`。
-
-这会写入 `models.providers.lmstudio` 并将默认模型设置为
-`lmstudio/<custom-model-id>`。当你提供 API 密钥时，设置还会写入
-`lmstudio:default` 身份验证配置文件。
-
-交互式设置可以提示输入一个可选的首选加载上下文长度，并将其应用到发现到的 LM Studio 模型中，随后保存到配置中。
-LM Studio 插件配置会信任已配置的 LM Studio 端点用于模型请求，包括回环、局域网和 tailnet 主机。元数据/链路本地来源仍然需要显式允许。你可以通过设置 `models.providers.lmstudio.request.allowPrivateNetwork: false` 来关闭该行为。
+交互式设置还可以额外提示输入首选的加载上下文长度，并将其应用于
+它保存到配置中的已发现模型。
 
 ## 配置
 
 ### 流式使用量兼容性
 
-LM Studio 与流式使用量兼容。当它没有发出 OpenAI 形式的
-`usage` 对象时，OpenClaw 会改为从 llama.cpp 风格的
-`timings.prompt_n` / `timings.predicted_n` 元数据中恢复 token 数量。
-
-以下 OpenAI 兼容的本地后端也适用相同的流式使用量行为：
-
-- vLLM
-- SGLang
-- llama.cpp
-- LocalAI
-- Jan
-- TabbyAPI
-- text-generation-webui
+LM Studio 并不总是在流式响应中发出 OpenAI 风格的 `usage` 对象。OpenClaw
+会改为从 llama.cpp 风格的 `timings.prompt_n` / `timings.predicted_n` 元数据中
+恢复 token 计数。任何被解析为本地端点（回环主机）的 OpenAI 兼容端点都会获得同样的
+回退逻辑，这也涵盖了其他本地后端，例如 vLLM、SGLang、llama.cpp、LocalAI、Jan、TabbyAPI，
+以及 text-generation-webui。
 
 ### 思考兼容性
 
-当 LM Studio 的 `/api/v1/models` 发现结果报告特定于模型的推理
-选项时，OpenClaw 会在模型兼容性元数据中暴露匹配的、与 OpenAI 兼容的 `reasoning_effort`
-值。当前 LM Studio 构建版本可能会公开二元
-UI 选项，例如 `allowed_options: ["off", "on"]`，同时却会在 `/v1/chat/completions` 上拒绝这些值；在发送请求之前，OpenClaw 会将这种二元发现形状规范化为
-`none`、`minimal`、`low`、`medium`、`high` 和 `xhigh`。
-当加载目录时，包含 `off`/`on` 推理映射的旧版 LM Studio 保存配置也会以相同方式规范化。
+当 LM Studio 的 `/api/v1/models` 发现结果报告了模型特定的推理选项时，OpenClaw
+会在模型兼容性元数据中暴露对应的 `reasoning_effort` 值（`none`、`minimal`、`low`、`medium`、`high`、`xhigh`）。
+某些 LM Studio 构建版会声明一个二元 UI 选项（`allowed_options: ["off",
+"on"]`），但在 `/v1/chat/completions` 上会拒绝这些字面值；OpenClaw 会在发送请求前
+将这种二元形态规范化为六级尺度，包括那些仍然保留 `off`/`on` 推理映射的旧版已保存配置。
 
 ### 显式配置
 
@@ -150,34 +136,11 @@ UI 选项，例如 `allowed_options: ["off", "on"]`，同时却会在 `/v1/chat/
 }
 ```
 
-## 故障排除
+### 禁用预加载
 
-### 未检测到 LM Studio
-
-确保 LM Studio 正在运行。如果启用了身份验证，也请设置 `LM_API_TOKEN`：
-
-```bash
-# 通过桌面应用启动，或者无头模式：
-lms server start --port 1234
-```
-
-验证 API 可访问：
-
-```bash
-curl http://localhost:1234/api/v1/models
-```
-
-### 身份验证错误（HTTP 401）
-
-如果设置报告 HTTP 401，请验证你的 API 密钥：
-
-- 检查 `LM_API_TOKEN` 是否与 LM Studio 中配置的密钥匹配。
-- 有关 LM Studio 身份验证设置的详细信息，请参见 [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication)。
-- 如果你的服务器不需要身份验证，请在设置过程中将密钥留空。
-
-### 即时模型加载
-
-LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加载。默认情况下，OpenClaw 会通过 LM Studio 的原生加载端点预加载模型，这在禁用 JIT 时很有帮助。要让 LM Studio 的 JIT、空闲 TTL 和自动回收行为接管模型生命周期，请禁用 OpenClaw 的预加载步骤：
+LM Studio 支持即时（JIT）模型加载，即在首次请求时加载模型。默认情况下，OpenClaw
+会通过 LM Studio 的原生加载端点预加载模型，这在 JIT 被禁用时很有帮助。若要让 LM Studio 的 JIT、空闲 TTL 和自动逐出行为自行管理模型生命周期，
+请禁用 OpenClaw 的预加载步骤：
 
 ```json5
 {
@@ -194,9 +157,9 @@ LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加�
 }
 ```
 
-### LAN 或 tailnet 上的 LM Studio 主机
+### 局域网或 tailnet 主机
 
-使用 LM Studio 主机可访问的地址，保留 `/v1`，并确保该机器上的 LM Studio 绑定到 loopback 之外：
+使用 LM Studio 主机可访问的地址，保留 `/v1`，并确保该机器上的 LM Studio 绑定到了回环地址之外：
 
 ```json5
 {
@@ -213,7 +176,31 @@ LM Studio 支持即时（JIT）模型加载，即模型会在首次请求时加�
 }
 ```
 
-`lmstudio` 会自动信任其配置的本地/私有端点，用于受保护的模型请求。自定义/本地 OpenAI 兼容提供方条目也会信任其精确配置的 `baseUrl` 源，元数据/链路本地来源除外；对不同的私有端口或目标的请求仍然需要 `models.providers.<id>.request.allowPrivateNetwork: true`。设置 `models.providers.<id>.request.allowPrivateNetwork: false` 可关闭这种精确来源信任。
+`lmstudio` 会自动信任其配置的模型请求端点，包括回环、局域网和 tailnet 主机（元数据/链路本地来源除外）。任何自定义/本地的 OpenAI 兼容
+提供方条目都会获得同样的同源信任。对不同私有主机或端口的请求仍然需要
+`models.providers.<id>.request.allowPrivateNetwork: true`；将其设置为 `false` 可退出默认信任。
+
+## 故障排查
+
+### 未检测到 LM Studio
+
+请确保 LM Studio 正在运行：
+
+```bash
+lms server start --port 1234
+```
+
+如果启用了身份验证，还需要设置 `LM_API_TOKEN`。验证 API 是否可访问：
+
+```bash
+curl http://localhost:1234/api/v1/models
+```
+
+### 身份验证错误（HTTP 401）
+
+- 检查 `LM_API_TOKEN` 是否与 LM Studio 中配置的密钥一致。
+- 参见 [LM Studio Authentication](https://lmstudio.ai/docs/developer/core/authentication)。
+- 如果服务器不需要身份验证，请在设置过程中将密钥留空。
 
 ## 相关内容
 

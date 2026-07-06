@@ -7,10 +7,10 @@ title: "Bun（实验性）"
 ---
 
 <Warning>
-Bun **不建议用于 gateway 运行时**（与 WhatsApp 和 Telegram 相关的已知问题）。生产环境请使用 Node。
+不建议在网关运行时使用 Bun（已知与 WhatsApp 和 Telegram 存在问题）。生产环境请使用 Node。
 </Warning>
 
-Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ...`、`bun --watch ...`）。默认包管理器仍然是 `pnpm`，它已得到完全支持，并被 docs 工具链使用。Bun 不能使用 `pnpm-lock.yaml`，并会忽略它。
+Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ...`、`bun --watch ...`）。默认的包管理器仍然是 `pnpm`，它获得完全支持，并被文档工具链使用。Bun 不能使用 `pnpm-lock.yaml`，并且会忽略它。
 
 ## 安装
 
@@ -39,8 +39,8 @@ Bun 是一个可选的本地运行时，可直接运行 TypeScript（`bun run ..
 
 Bun 会阻止依赖生命周期脚本，除非显式信任它们。对于这个仓库，常见会被阻止的脚本并不需要：
 
-- `baileys` `preinstall` -- 检查 Node 主版本是否 >= 20（OpenClaw 默认使用 Node 24，同时仍支持 Node 22 LTS，目前为 `22.19+`）
-- `protobufjs` `postinstall` -- 输出关于不兼容版本方案的警告（无构建产物）
+- `baileys` `preinstall`：检查 Node 主版本是否 >= 20（OpenClaw 需要 Node 22.19+ 或 23.11+，推荐使用 Node 24）
+- `protobufjs` `postinstall`：发出关于不兼容版本方案的警告（没有构建产物）
 
 如果你遇到需要这些脚本的运行时问题，请显式信任它们：
 
@@ -50,7 +50,7 @@ bun pm trust baileys protobufjs
 
 ## 注意事项
 
-某些脚本仍然硬编码了 pnpm（例如 `check:docs`、`ui:*`、`protocol:check`）。目前请通过 pnpm 来运行这些脚本。
+某些包脚本在内部硬编码了 `pnpm`（例如 `check:docs`、`ui:*`、`protocol:check`）。即使通过 `bun run` 运行，它们仍然会调用 `pnpm`，所以请直接使用 `pnpm` 运行这些脚本。
 
 ## 相关内容
 

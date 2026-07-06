@@ -7,17 +7,34 @@ read_when:
 title: "网关协议"
 ---
 
-Gateway WS 协议是 OpenClaw 的**单一控制平面 + 节点传输**。所有客户端（CLI、Web UI、macOS 应用、iOS/Android 节点、无头节点）都通过 WebSocket 连接，并在握手时声明其**角色** + **作用域**。
+The Gateway WS protocol is the single control plane and node transport for
+OpenClaw. Every client (CLI, web UI, macOS app, iOS/Android nodes, headless
+nodes) connects over WebSocket and declares a **role** and **scope** at
+handshake time.
 
-## 传输
+## Transport and framing
 
-- WebSocket，使用 JSON 负载的文本帧。
-- 第一帧**必须**是 `connect` 请求。
-- 连接前的帧上限为 64 KiB。成功完成握手后，客户端应遵循 `hello-ok.policy.maxPayload` 和 `hello-ok.policy.maxBufferedBytes` 限制。启用诊断后，过大的入站帧和过慢的出站缓冲会在网关关闭或丢弃受影响帧之前发出 `payload.large` 事件。这些事件会保留大小、限制、表面和安全原因代码。它们不会保留消息正文、附件内容、原始帧正文、令牌、cookie 或密钥值。
+- WebSocket, text frames, JSON payloads.
+- First frame **must** be a `connect` request.
+- Pre-connect frames are capped at 64 KiB (`MAX_PREAUTH_PAYLOAD_BYTES`). After
+  handshake, follow `hello-ok.policy.maxPayload` and
+  `hello-ok.policy.maxBufferedBytes`. With diagnostics enabled, oversized
+  inbound frames and slow outbound buffers emit `payload.large` events before
+  the gateway closes or drops the frame. These events carry `surface`, byte
+  sizes, limits, and a safe reason code, never message bodies, attachment
+  contents, raw frame bytes, tokens, cookies, or secrets.
 
-## 握手（connect）
+Frame shapes:
 
-Gateway → Client（连接前挑战）：
+- Request: `{type:"req", id, method, params}`
+- Response: `{type:"res", id, ok, payload|error}`
+- Event: `{type:"event", event, payload, seq?, stateVersion?}`
+
+Side-effecting methods require idempotency keys (see schema).
+
+## Handshake
+
+Gateway sends a pre-connect challenge:
 
 ```json
 {
@@ -27,7 +44,7 @@ Gateway → Client（连接前挑战）：
 }
 ```
 
-Client → Gateway:
+Client replies with `connect`:
 
 ```json
 {
@@ -35,7 +52,7 @@ Client → Gateway:
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 3,
+    "minProtocol": 4,
     "maxProtocol": 4,
     "client": {
       "id": "cli",
@@ -62,7 +79,7 @@ Client → Gateway:
 }
 ```
 
-Gateway → Client:
+Gateway responds with `hello-ok`:
 
 ```json
 {
@@ -88,34 +105,21 @@ Gateway → Client:
 }
 ```
 
-当 Gateway 仍在完成启动 sidecar 时，`connect` 请求可以返回一个可重试的 `UNAVAILABLE` 错误，其中 `details.reason` 设为 `"startup-sidecars"`，并带有 `retryAfterMs`。客户端应在其整体连接预算内重试该响应，而不是将其作为终态握手失败上报。
+`server`, `features`, `snapshot`, `policy`, and `auth` are all required by
+`HelloOkSchema` (`packages/gateway-protocol/src/schema/frames.ts`). `auth`
+reports the negotiated role/scopes even when no device token is issued (shape
+above). `pluginSurfaceUrls` is optional and maps plugin surface names (e.g.
+`canvas`) to scoped hosted URLs; it may expire, so nodes call
+`node.pluginSurface.refresh` with `{ "surface": "canvas" }` for a fresh entry.
+The deprecated `canvasHostUrl` / `canvasCapability` / `node.canvas.capability.refresh`
+path is not supported; use plugin surfaces.
 
-`server`, `features`, `snapshot`, and `policy` are all required by the schema
-(`packages/gateway-protocol/src/schema/frames.ts`). `auth` is also required and reports
-the negotiated role/scopes. `pluginSurfaceUrls` is optional and maps plugin
-surface names, such as `canvas`, to scoped hosted URLs.
+While the gateway is still finishing startup sidecars, `connect` can return a
+retryable `UNAVAILABLE` error with `details.reason: "startup-sidecars"` and
+`retryAfterMs`. Retry within your connection budget instead of treating it as
+a terminal handshake failure.
 
-带作用域的插件表面 URL 可能会过期。节点可以调用
-`node.pluginSurface.refresh`，传入 `{ "surface": "canvas" }`，以在
-`pluginSurfaceUrls` 中获得一条新的条目。实验性的 Canvas 插件重构不
-支持已弃用的 `canvasHostUrl`、`canvasCapability` 或
-`node.canvas.capability.refresh` 兼容路径；当前的原生客户端和
-网关必须使用插件表面。
-
-当未签发设备令牌时，`hello-ok.auth` 会报告协商后的权限，但不包含令牌字段：
-
-```json
-{
-  "auth": {
-    "role": "operator",
-    "scopes": ["operator.read", "operator.write"]
-  }
-}
-```
-
-受信任的同进程后端客户端（`client.id: "gateway-client"`、`client.mode: "backend"`）在使用共享的网关 token/password 进行认证时，可以在直接 loopback 连接上省略 `device`。此路径仅保留给内部控制平面 RPC，并可防止过期的 CLI/设备配对基线阻塞本地后端工作，例如 subagent 会话更新。远程客户端、浏览器来源客户端、节点客户端以及显式设备令牌/设备身份客户端仍然使用正常的配对和 scope 升级检查。
-
-当签发了设备令牌时，`hello-ok` 还会包含：
+When a device token is issued, `hello-ok.auth` adds it:
 
 ```json
 {
@@ -127,9 +131,9 @@ surface names, such as `canvas`, to scoped hosted URLs.
 }
 ```
 
-内置的 QR/setup-code 启动是一个新的移动端接入路径。成功的
-baseline setup-code connect 会返回一个主节点令牌以及一个受限的
-operator 令牌：
+Built-in QR/setup-code bootstrap is a mobile handoff path. A successful
+baseline setup-code connect returns a primary node token plus one bounded
+operator token:
 
 ```json
 {
@@ -148,11 +152,22 @@ operator 令牌：
 }
 ```
 
-该 operator 接入被刻意限制，以便 QR onboarding 可以在不授予
-`operator.admin` 或 `operator.pairing` 的情况下启动 mobile operator 循环。
-它确实包含 `operator.talk.secrets`，这样原生客户端就能读取 bootstrap 之后所需的 Talk 配置。更广泛的 admin 和 pairing scope 需要单独审批的 operator 配对或 token 流程。客户端应仅在使用 trusted transport（如 `wss://`）或 loopback/local pairing 进行 bootstrap auth 时，持久化 `hello-ok.auth.deviceTokens`。
+This operator handoff is bounded on purpose: enough to start the mobile
+operator loop and native setup, including `operator.talk.secrets` for Talk
+config reads, but no pairing-mutation scopes and no `operator.admin`. Broader
+pairing/admin access needs a separate approved pairing or token flow. Persist
+`hello-ok.auth.deviceTokens` only when bootstrap auth ran over a trusted
+transport (`wss://` or loopback/local pairing).
 
-### 节点示例
+Trusted same-process backend clients (`client.id: "gateway-client"`,
+`client.mode: "backend"`) may omit `device` on direct loopback connections when
+authenticating with the shared gateway token/password. This path is reserved
+for internal control-plane RPCs (e.g. subagent session updates) and avoids
+stale CLI/device pairing baselines blocking local backend work. Remote,
+browser-origin, node, and explicit device-token/device-identity clients still
+go through normal pairing and scope-upgrade checks.
+
+### Node connect example
 
 ```json
 {
@@ -160,7 +175,7 @@ operator 令牌：
   "id": "…",
   "method": "connect",
   "params": {
-    "minProtocol": 3,
+    "minProtocol": 4,
     "maxProtocol": 4,
     "client": {
       "id": "ios-node",
@@ -187,26 +202,25 @@ operator 令牌：
 }
 ```
 
-## 帧格式
+Nodes declare capability claims at connect time:
 
-- **请求**：`{type:"req", id, method, params}`
-- **响应**：`{type:"res", id, ok, payload|error}`
-- **事件**：`{type:"event", event, payload, seq?, stateVersion?}`
+- `caps`: high-level categories such as `camera`, `canvas`, `screen`,
+  `location`, `voice`, `talk`.
+- `commands`: command allowlist for invoke.
+- `permissions`: granular toggles (e.g. `screen.record`, `camera.capture`).
 
-会产生副作用的方法需要**幂等键**（见 schema）。
+The gateway treats these as claims and enforces server-side allowlists.
 
-## 角色 + scopes
+## Roles and scopes
 
 有关完整的 operator scope 模型、审批时检查以及共享密钥语义，请参见 [Operator scopes](/gateway/operator-scopes)。
 
-### 角色
+Roles:
 
-- `operator` = 控制平面客户端（CLI/UI/自动化）。
-- `node` = 能力宿主（camera/screen/canvas/system.run）。
+- `operator`: control-plane client (CLI/UI/automation).
+- `node`: capability host (camera/screen/canvas/system.run).
 
-### Scopes（operator）
-
-常见 scopes：
+Operator scopes (`src/gateway/operator-scopes.ts`), the full closed set:
 
 - `operator.read`
 - `operator.write`
@@ -215,40 +229,44 @@ operator 令牌：
 - `operator.pairing`
 - `operator.talk.secrets`
 
-带有 `includeSecrets: true` 的 `talk.config` 需要 `operator.talk.secrets`
-（或 `operator.admin`）。
+`talk.config` with `includeSecrets: true` requires `operator.talk.secrets` (or
+`operator.admin`). When secrets are included, read the active Talk provider
+credential from `talk.resolved.config.apiKey`; `talk.providers.<id>.apiKey`
+stays source-shaped and may be a SecretRef object or a redacted string.
 
-插件注册的网关 RPC 方法可以请求其自己的 operator scope，但保留的核心管理前缀（`config.*`、`exec.approvals.*`、`wizard.*`、
-`update.*`）始终解析为 `operator.admin`。
+Plugin-registered gateway RPC methods may request their own operator scope,
+but these reserved core prefixes always resolve to `operator.admin`
+(`src/shared/gateway-method-policy.ts`): `config.*`, `exec.approvals.*`,
+`wizard.*`, `update.*`.
 
-方法 scope 只是第一道门槛。通过 `chat.send` 到达的一些斜杠命令会在此基础上施加更严格的命令级检查。例如，持久化的 `/config set` 和 `/config unset` 写入需要 `operator.admin`。
+Method scope is only the first gate. Some slash commands reached through
+`chat.send` apply stricter command-level checks: persistent `/config set` and
+`/config unset` writes require `operator.admin` even for gateway clients that
+already hold a lower operator scope.
 
-`node.pair.approve` 在基础方法 scope 之上还有额外的审批时 scope 检查：
+`node.pair.approve` has an extra approval-time scope check on top of the base
+method scope (`operator.pairing`), based on the pending request's declared
+`commands` (`src/infra/node-pairing-authz.ts`):
 
-- 无命令请求：`operator.pairing`
-- 带有非 exec 节点命令的请求：`operator.pairing` + `operator.write`
-- 包含 `system.run`、`system.run.prepare` 或 `system.which` 的请求：
-  `operator.pairing` + `operator.admin`
-
-### Caps/commands/permissions（node）
-
-节点在 connect 时声明能力主张：
-
-- `caps`: camera、canvas、screen、location、voice 和 talk 等高级能力类别。
-- `commands`: 调用的命令允许列表。
-- `permissions`: 细粒度开关（例如 `screen.record`、`camera.capture`）。
-
-Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
+| Declared commands                                              | Required scopes                       |
+| -------------------------------------------------------------- | ------------------------------------- |
+| none                                                           | `operator.pairing`                    |
+| non-exec commands                                              | `operator.pairing` + `operator.write` |
+| includes `system.run`, `system.run.prepare`, or `system.which` | `operator.pairing` + `operator.admin` |
 
 ## 在线状态
 
-- `system-presence` 返回以设备身份为键的条目。
-- 在线状态条目包含 `deviceId`、`roles` 和 `scopes`，因此 UI 即使在同一设备同时以**operator**和**node**身份连接时，也能显示单行。
-- `node.list` 包含可选的 `lastSeenAtMs` 和 `lastSeenReason` 字段。已连接的节点会将其当前连接时间作为 `lastSeenAtMs` 并以 `connect` 作为原因上报；已配对的节点在受信任的节点事件更新其配对元数据时，也可以上报持久化的后台在线状态。
+- `system-presence` returns entries keyed by device identity, including
+  `deviceId`, `roles`, and `scopes`, so UIs can show one row per device even
+  when it connects as both operator and node.
+- `node.list` includes optional `lastSeenAtMs` and `lastSeenReason`. Connected
+  nodes report current connection time with reason `connect`; paired nodes can
+  also report durable background presence via a trusted node event.
 
 ### 节点后台存活事件
 
-节点可以调用带有 `event: "node.presence.alive"` 的 `node.event`，以记录某个已配对节点在后台唤醒期间是存活的，但不将其标记为已连接。
+Nodes call `node.event` with `event: "node.presence.alive"` to record that a
+paired node was alive during a background wake, without marking it connected:
 
 ```json
 {
@@ -257,9 +275,11 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 }
 ```
 
-`trigger` 是一个封闭枚举：`background`、`silent_push`、`bg_app_refresh`、
-`significant_location`、`manual` 或 `connect`。未知的 trigger 字符串会在持久化前由网关规范化为 `background`。该事件仅对经过身份验证的节点
-设备会话具有持久性；无设备或未配对会话会返回 `handled: false`。
+`trigger` is a closed enum: `background`, `silent_push`, `bg_app_refresh`,
+`significant_location`, `manual`, `connect`. Unknown values normalize to
+`background` (`src/shared/node-presence.ts`). The event only persists for
+authenticated node device sessions; device-less or unpaired sessions return
+`handled: false`.
 
 成功的网关会返回结构化结果：
 
@@ -272,59 +292,76 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 }
 ```
 
-较旧的网关在处理 `node.event` 时可能仍返回 `{ "ok": true }`；客户端应将其视为一个已确认的 RPC，而不是持久化在线状态的存储成功。
+Older gateways may return only `{ "ok": true }` for `node.event`; treat that
+as an acknowledged RPC, not durable presence persistence.
 
 ## 广播事件作用域
 
-服务器推送的 WebSocket 广播事件会进行 scope 门控，因此配对作用域或仅节点会话不会被动接收会话内容。
+Server-pushed broadcast events are scope-gated so pairing-scoped or node-only
+sessions do not passively receive session content
+(`src/gateway/server-broadcast.ts`):
 
-- **聊天、agent 和 tool-result 帧**（包括流式 `agent` 事件和工具调用结果）至少需要 `operator.read`。没有 `operator.read` 的会话会完全跳过这些帧。
-- **插件定义的 `plugin.*` 广播** 会根据插件注册方式，被门控为 `operator.write` 或 `operator.admin`。
-- **状态和传输事件**（`heartbeat`、`presence`、`tick`、连接/断开生命周期等）保持不受限制，以便每个已认证会话都能观察传输健康状况。
-- **未知的广播事件族** 默认进行 scope 门控（fail-closed），除非注册的处理器显式放宽它们。
+- Chat, agent, and tool-result frames (streamed `agent` events, tool-result
+  events) require at least `operator.read`. Sessions without it skip these
+  frames entirely.
+- Plugin-defined `plugin.*` broadcasts are gated to `operator.write` or
+  `operator.admin` by default; explicit entries such as
+  `plugin.approval.requested` / `plugin.approval.resolved` use
+  `operator.approvals` instead.
+- Status/transport events (`heartbeat`, `presence`, `tick`, connect/disconnect
+  lifecycle) stay unrestricted so transport health is observable to every
+  authenticated session.
+- Unknown broadcast event families are scope-gated by default (fail-closed)
+  unless a registered handler explicitly relaxes them.
 
-每个客户端连接都会保留其自己的按客户端序列号，因此即使不同客户端看到的是不同的、经过 scope 过滤的事件流子集，广播在该 socket 上仍能保持单调顺序。
+Each client connection keeps its own per-client sequence number, so broadcasts
+stay monotonically ordered on that socket even when different clients see
+different scope-filtered subsets of the event stream.
 
-## 常见 RPC 方法族
+## RPC method families
 
-上面的公共 WS 接口面比握手/认证示例更广。这不是生成的完整导出清单 — `hello-ok.features.methods` 是一个保守的发现列表，由 `src/gateway/server-methods-list.ts` 以及已加载的插件/通道方法导出构建而成。应将其视为功能发现，而不是 `src/gateway/server-methods/*.ts` 的完整枚举。
+`hello-ok.features.methods` is a conservative discovery list built from
+`src/gateway/server-methods-list.ts` plus loaded plugin/channel method
+exports — it is not a generated dump of every method, and some methods (for
+example `push.test`, `web.login.start`, `web.login.wait`, `sessions.usage`)
+are intentionally excluded from discovery even though they are real, callable
+methods. Treat this as feature discovery, not a full enumeration of
+`src/gateway/server-methods/*.ts`.
 
 <AccordionGroup>
-  <Accordion title="系统与身份">
-    - `health` 返回缓存的或新近探测到的网关健康状态快照。
-    - `diagnostics.stability` 返回最近的、有边界的诊断稳定性记录器。它保留事件名称、计数、字节大小、内存读数、队列/会话状态、通道/插件名称以及会话 id 等运行元数据。它不会保留聊天文本、webhook 主体、工具输出、原始请求或响应主体、令牌、cookie 或秘密值。需要 operator read 范围。
-    - `status` 返回 `/status` 风格的网关摘要；敏感字段仅对具有 admin 范围的 operator 客户端包含。
-    - `gateway.identity.get` 返回 relay 和配对流程使用的网关设备身份。
-    - `system-presence` 返回已连接 operator/node 设备的当前 presence 快照。
-    - `system-event` 追加一个系统事件，并且可以更新/广播 presence 上下文。
-    - `last-heartbeat` 返回最近一次持久化的 heartbeat 事件。
-    - `set-heartbeats` 切换网关上的 heartbeat 处理。
+  <Accordion title="System and identity">
+    - `health` returns the cached or freshly probed gateway health snapshot.
+    - `diagnostics.stability` returns the recent bounded diagnostic stability recorder: event names, counts, byte sizes, memory readings, queue/session state, channel/plugin names, session ids. No chat text, webhook bodies, tool outputs, raw request/response bodies, tokens, cookies, or secrets. Requires `operator.read`.
+    - `status` returns the `/status`-style gateway summary; sensitive fields only for admin-scoped operator clients.
+    - `gateway.identity.get` returns the gateway device identity used by relay and pairing flows.
+    - `system-presence` returns the current presence snapshot for connected operator/node devices.
+    - `system-event` appends a system event and can update/broadcast presence context.
+    - `last-heartbeat` returns the latest persisted heartbeat event.
+    - `set-heartbeats` toggles heartbeat processing on the gateway.
 
   </Accordion>
 
   <Accordion title="Models and usage">
-    - `models.list` 返回运行时允许的模型目录。传入 `{ "view": "configured" }` 可返回适合选择器大小的已配置模型（先 `agents.defaults.models`，再 `models.providers.*.models`），或传入 `{ "view": "all" }` 获取完整目录。
-    - `usage.status` 返回提供方使用窗口/剩余额度摘要。
-    - `usage.cost` 返回某个日期范围内的聚合成本使用摘要。
-      传入 `agentId` 表示单个 agent，或传入 `agentScope: "all"` 以聚合已配置的 agents。
-    - `doctor.memory.status` 返回当前默认 agent workspace 的向量记忆 / 缓存 embedding 就绪状态。仅当调用方明确需要一次实时 embedding 提供方 ping 时才传入 `{ "probe": true }` 或 `{ "deep": true }`。支持 Dreaming 的客户端也可以传入 `{ "agentId": "agent-id" }` 将 Dreaming 存储统计范围限定到选定的 agent workspace；省略 `agentId` 时会保留默认 agent 回退并聚合已配置的 Dreaming workspaces。
-    - `doctor.memory.dreamDiary`、`doctor.memory.backfillDreamDiary`、`doctor.memory.resetDreamDiary`、`doctor.memory.resetGroundedShortTerm`、`doctor.memory.repairDreamingArtifacts` 和 `doctor.memory.dedupeDreamDiary` 接受可选的 `{ "agentId": "agent-id" }` 参数，用于选定 agent 的 Dreaming 视图/操作。省略 `agentId` 时，它们会作用于已配置的默认 agent workspace。
-    - `doctor.memory.remHarness` 为远程控制平面客户端返回一个有边界、只读的 REM harness 预览。它可能包含 workspace 路径、记忆片段、渲染后的 grounded markdown 和深度提升候选项，因此调用方需要 `operator.read`。
-    - `sessions.usage` 返回按会话划分的使用摘要。传入 `agentId` 表示单个
-      agent，或传入 `agentScope: "all"` 以一起列出已配置的 agents。
-    - `sessions.usage.timeseries` 返回某个会话的时序使用数据。
-    - `sessions.usage.logs` 返回某个会话的使用日志条目。
+    - `models.list` returns the runtime-allowed model catalog. See "`models.list` views" below.
+    - `usage.status` returns provider usage windows/remaining quota summaries.
+    - `usage.cost` returns aggregated cost usage summaries for a date range. Pass `agentId` for one agent, or `agentScope: "all"` to aggregate configured agents.
+    - `doctor.memory.status` returns vector-memory / cached embedding readiness for the active default agent workspace. Pass `{ "probe": true }` or `{ "deep": true }` only for an explicit live embedding provider ping. Pass `{ "agentId": "agent-id" }` to scope Dreaming store stats to one agent workspace; omitting it aggregates configured Dreaming workspaces.
+    - `doctor.memory.dreamDiary`, `doctor.memory.backfillDreamDiary`, `doctor.memory.resetDreamDiary`, `doctor.memory.resetGroundedShortTerm`, `doctor.memory.repairDreamingArtifacts`, and `doctor.memory.dedupeDreamDiary` accept optional `{ "agentId": "agent-id" }`; omitted, they operate on the configured default agent workspace.
+    - `doctor.memory.remHarness` returns a bounded, read-only REM harness preview for remote control-plane clients, including workspace paths, memory snippets, rendered grounded markdown, and deep promotion candidates. Requires `operator.read`.
+    - `sessions.usage` returns per-session usage summaries. Pass `agentId` for one agent, or `agentScope: "all"` to list configured agents together.
+    - `sessions.usage.timeseries` returns timeseries usage for one session.
+    - `sessions.usage.logs` returns usage log entries for one session.
 
   </Accordion>
 
-  <Accordion title="通道与登录助手">
-    - `channels.status` 返回内置 + 打包通道/插件的状态摘要。
-    - `channels.logout` 在通道支持登出时，登出指定通道/账户。
-    - `web.login.start` 为当前支持 QR 的 web 通道提供方启动 QR/web 登录流程。
-    - `web.login.wait` 等待该 QR/web 登录流程完成，并在成功后启动通道。
-    - `push.test` 向已注册的 iOS 节点发送一条测试 APNs 推送。
-    - `voicewake.get` 返回已存储的唤醒词触发器。
-    - `voicewake.set` 更新唤醒词触发器并广播该变更。
+  <Accordion title="Channels and login helpers">
+    - `channels.status` returns built-in + bundled channel/plugin status summaries.
+    - `channels.logout` logs out a specific channel/account where the channel supports it.
+    - `web.login.start` starts a QR/web login flow for the current QR-capable web channel provider.
+    - `web.login.wait` waits for that flow to complete and starts the channel on success.
+    - `push.test` sends a test APNs push to a registered iOS node.
+    - `voicewake.get` returns the stored wake-word triggers.
+    - `voicewake.set` updates wake-word triggers and broadcasts the change.
 
   </Accordion>
 
@@ -334,57 +371,65 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
+  <Accordion title="Operator terminal">
+    - `terminal.open` starts a host PTY for an explicit `agentId` or the default agent and returns the resolved agent, working directory, shell, and confinement state.
+    - `terminal.input`, `terminal.resize`, and `terminal.close` operate only on sessions owned by the calling connection.
+    - `terminal.data` and `terminal.exit` events stream only to the connection that owns the session.
+    - Sessions whose connection drops are detached, not killed: they stay reattachable for `gateway.terminal.detachedSessionTimeoutSeconds` (default 300; `0` restores kill-on-disconnect) while recent output accumulates in a bounded server-side buffer.
+    - `terminal.list` returns attachable sessions; `terminal.attach` rebinds a live-or-detached session to the calling connection and returns the replay buffer (tmux-style take-over — a previous live owner receives `terminal.exit` with reason `detached`); `terminal.text` reads the buffer as plain text without attaching.
+    - Every terminal method requires `operator.admin`; `gateway.terminal.enabled` must be explicitly true. Fully sandboxed agents are refused, and an agent policy change closes existing and in-flight PTYs, detached ones included.
+
+  </Accordion>
+
   <Accordion title="Talk and TTS">
-    - `talk.catalog` 返回用于语音、流式转录和实时语音的只读 Talk 提供方目录。它包含提供方 id、标签、已配置状态、暴露的模型/voice id、标准模式、传输、brain 策略以及实时音频/能力标志，但不会返回提供方 secrets 或修改全局配置。
-    - `talk.config` 返回生效的 Talk 配置负载；`includeSecrets` 需要 `operator.talk.secrets`（或 `operator.admin`）。
-    - `talk.session.create` 为 `realtime/gateway-relay`、`transcription/gateway-relay` 或 `stt-tts/managed-room` 创建一个由 Gateway 拥有的 Talk 会话。对于 `stt-tts/managed-room`，传入 `sessionKey` 的 `operator.write` 调用方还必须传入 `spawnedBy`，以便限定 session-key 可见性；无作用域的 `sessionKey` 创建以及 `brain: "direct-tools"` 需要 `operator.admin`。
-    - `talk.session.join` 验证一个 managed-room 会话令牌，在需要时发出 `session.ready` 或 `session.replaced` 事件，并返回房间/会话元数据以及最近的 Talk 事件，而不返回明文令牌或已存储令牌哈希。
-    - `talk.session.appendAudio` 将 base64 PCM 输入音频追加到 Gateway 拥有的实时 relay 和转录会话。
-    - `talk.session.startTurn`、`talk.session.endTurn` 和 `talk.session.cancelTurn` 驱动 managed-room 的轮次生命周期，并在清除状态前拒绝陈旧轮次。
-    - `talk.session.cancelOutput` 停止助手音频输出，主要用于 Gateway relay 会话中的 VAD 门控 barging-in。
-    - `talk.session.submitToolResult` 完成由 Gateway 拥有的实时 relay 会话发出的提供方工具调用。对于最终结果后续仍会到达的中间工具输出，请传入 `options: { willContinue: true }`；当工具结果应当满足提供方调用而无需启动另一轮实时助手响应时，请传入 `options: { suppressResponse: true }`。
-    - `talk.session.steer` 将活动运行的语音控制发送到一个由 Gateway 拥有且由 agent 驱动的 Talk 会话。它接受 `{ sessionId, text, mode? }`，其中 `mode` 为 `status`、`steer`、`cancel` 或 `followup`；省略 mode 时会根据口语文本进行分类。
-    - `talk.session.close` 关闭一个由 Gateway 拥有的 relay、transcription 或 managed-room 会话，并发出终止 Talk 事件。
-    - `talk.mode` 为 WebChat/Control UI 客户端设置/广播当前 Talk 模式状态。
-    - `talk.client.create` 使用 `webrtc` 或 `provider-websocket` 创建一个由客户端拥有的实时提供方会话，同时由 Gateway 拥有配置、凭据、指令和工具策略。
-    - `talk.client.toolCall` 允许客户端拥有的实时传输将提供方工具调用转发给 Gateway 策略。第一个支持的工具是 `openclaw_agent_consult`；客户端会收到一个 run id，并在提交提供方特定的工具结果之前等待正常的聊天生命周期事件。
-    - `talk.client.steer` 为客户端拥有的实时传输发送活动运行的语音控制。Gateway 会从 `sessionKey` 中解析活动的嵌入式运行，并返回结构化的接受/拒绝结果，而不是静默丢弃 steering。
-    - `talk.event` 是用于实时、转录、STT/TTS、managed-room、电话和会议适配器的单一 Talk 事件通道。
-    - `talk.speak` 通过当前活跃的 Talk 语音提供方合成语音。
-    - `tts.status` 返回 TTS 启用状态、当前提供方、回退提供方以及提供方配置状态。
-    - `tts.providers` 返回可见的 TTS 提供方清单。
-    - `tts.enable` 和 `tts.disable` 切换 TTS prefs 状态。
-    - `tts.setProvider` 更新首选 TTS 提供方。
-    - `tts.convert` 执行一次性文本转语音转换。
+    - `talk.catalog` returns the read-only Talk provider catalog for speech, streaming transcription, and realtime voice: canonical provider ids, registry aliases, labels, configured state, an optional group-level `ready` result, exposed model/voice ids, canonical modes, transports, brain strategies, and realtime audio/capability flags, without returning provider secrets or mutating global config. Current gateways set `ready` after applying runtime provider selection; treat its absence as unverified on older gateways.
+    - `talk.config` returns the effective Talk config payload; `includeSecrets` requires `operator.talk.secrets` (or `operator.admin`).
+    - `talk.session.create` creates a gateway-owned Talk session for `realtime/gateway-relay`, `transcription/gateway-relay`, or `stt-tts/managed-room`. For `stt-tts/managed-room`, `operator.write` callers that pass `sessionKey` must also pass `spawnedBy` for scoped session-key visibility; unscoped `sessionKey` creation and `brain: "direct-tools"` require `operator.admin`.
+    - `talk.session.join` validates a managed-room session token, emits `session.ready` or `session.replaced` as needed, and returns room/session metadata plus recent Talk events, never the plaintext token or its hash.
+    - `talk.session.appendAudio` appends base64 PCM input audio to gateway-owned realtime relay and transcription sessions.
+    - `talk.session.startTurn`, `talk.session.endTurn`, and `talk.session.cancelTurn` drive managed-room turn lifecycle with stale-turn rejection before state clears.
+    - `talk.session.cancelOutput` stops assistant audio output, primarily for VAD-gated barge-in in gateway relay sessions.
+    - `talk.session.submitToolResult` completes a provider tool call emitted by a gateway-owned realtime relay session. Pass `options: { willContinue: true }` for interim tool output when a final result follows, or `options: { suppressResponse: true }` when the tool result should satisfy the provider call without starting another realtime response.
+    - `talk.session.steer` sends active-run voice control into a gateway-owned agent-backed Talk session: `{ sessionId, text, mode? }`, where `mode` is `status`, `steer`, `cancel`, or `followup`; omitted mode is classified from the spoken text.
+    - `talk.session.close` closes a gateway-owned relay, transcription, or managed-room session and emits terminal Talk events.
+    - `talk.mode` sets/broadcasts the current Talk mode state for WebChat/Control UI clients.
+    - `talk.client.create` creates a client-owned realtime provider session using `webrtc` or `provider-websocket` while the gateway owns config, credentials, instructions, and tool policy.
+    - `talk.client.toolCall` lets client-owned realtime transports forward provider tool calls to gateway policy. The first supported tool is `openclaw_agent_consult`; clients get a run id and wait for normal chat lifecycle events before submitting the provider-specific tool result.
+    - `talk.client.steer` sends active-run voice control for client-owned realtime transports. The gateway resolves the active embedded run from `sessionKey` and returns a structured accepted/rejected result instead of silently dropping steering.
+    - `talk.event` is the single Talk event channel for realtime, transcription, STT/TTS, managed-room, telephony, and meeting adapters.
+    - `talk.speak` synthesizes speech through the active Talk speech provider.
+    - `tts.status` returns TTS enabled state, active provider, fallback providers, and provider config state.
+    - `tts.providers` returns the visible TTS provider inventory.
+    - `tts.enable` and `tts.disable` toggle TTS prefs state.
+    - `tts.setProvider` updates the preferred TTS provider.
+    - `tts.convert` runs one-shot text-to-speech conversion.
 
   </Accordion>
 
   <Accordion title="Secrets, config, update, and wizard">
-    - `secrets.reload` 重新解析活动的 SecretRefs，并且仅在完全成功时切换运行时密钥状态。
-    - `secrets.resolve` 解析特定命令/目标集的命令目标密钥分配。
-    - `config.get` 返回当前配置快照和哈希值。
-    - `config.set` 写入一个已验证的配置负载。
-    - `config.patch` 合并一个部分配置更新。破坏性的数组
-      替换需要在 `replacePaths` 中包含受影响的路径；数组项下的嵌套数组
-      使用 `[]` 路径，例如 `agents.list[].skills`。
-    - `config.apply` 验证并替换完整的配置负载。
-    - `config.schema` 返回 Control UI 和 CLI 工具使用的实时配置 schema 负载：schema、`uiHints`、版本和生成元数据，包括运行时可加载时的插件 + 通道 schema 元数据。该 schema 包含由 UI 使用的相同标签和帮助文本派生出的字段 `title` / `description` 元数据，包括在存在匹配字段文档时的嵌套对象、通配符、数组项以及 `anyOf` / `oneOf` / `allOf` 组合分支。
-    - `config.schema.lookup` 返回某个配置路径的路径作用域查找负载：规范化路径、浅层 schema 节点、匹配的 hint + `hintPath`、可选的 `reloadKind`，以及用于 UI/CLI 下钻的直接子摘要。`reloadKind` 取值为 `restart`、`hot` 或 `none`，并与所请求路径的 Gateway 配置重载规划器一致。查找 schema 节点保留用户可见文档和常见校验字段（`title`、`description`、`type`、`enum`、`const`、`format`、`pattern`、数值/字符串/数组/对象边界，以及 `additionalProperties`、`deprecated`、`readOnly`、`writeOnly` 等标志）。子摘要暴露 `key`、规范化 `path`、`type`、`required`、`hasChildren`、可选 `reloadKind`，以及匹配的 `hint` / `hintPath`。
-    - `update.run` 运行网关更新流程，并且只在更新本身成功时安排重启；带有会话的调用方可以包含 `continuationMessage`，以便启动过程通过重启续接队列恢复一个后续的 agent turn。来自控制平面的包管理器更新和受监督的 git-checkout 更新使用分离的 managed-service handoff，而不是替换包树或在运行中的 Gateway 内修改 checkout/build 输出。已启动的 handoff 会返回 `ok: true`，并带有 `result.reason: "managed-service-handoff-started"` 和 `handoff.status: "started"`；不可用或失败的 handoff 会返回 `ok: false`，并带有 `managed-service-handoff-unavailable` 或 `managed-service-handoff-failed`，以及在需要手动 shell 更新时的 `handoff.command`。不可用的 handoff 表示 OpenClaw 缺少安全的 supervisor 边界或持久化的服务身份，例如 systemd 的 `OPENCLAW_SYSTEMD_UNIT`。在已启动的 handoff 期间，重启哨兵可能会短暂报告 `stats.reason: "restart-health-pending"`；续接会延迟，直到 CLI 验证重启后的 Gateway 并写入最终的 `ok` 哨兵。
-    - `update.status` 刷新并返回最新的更新重启哨兵，包括重启后的运行版本（若可用）。
-    - `wizard.start`、`wizard.next`、`wizard.status` 和 `wizard.cancel` 通过 WS RPC 暴露 onboarding wizard。
+    - `secrets.reload` re-resolves active SecretRefs and swaps runtime secret state only on full success.
+    - `secrets.resolve` resolves command-target secret assignments for a specific command/target set.
+    - `config.get` returns the current config snapshot and hash.
+    - `config.set` writes a validated config payload.
+    - `config.patch` merges a partial config update. Destructive array replacement requires the affected path in `replacePaths`; nested arrays under array entries use `[]` paths such as `agents.list[].skills`.
+    - `config.apply` validates + replaces the full config payload.
+    - `config.schema` returns the live config schema payload used by Control UI and CLI tooling: schema, `uiHints`, version, generation metadata, plugin + channel schema metadata when loadable. It includes `title` / `description` metadata from the same labels/help text as the UI, including nested object, wildcard, array-item, and `anyOf` / `oneOf` / `allOf` composition branches when matching field documentation exists.
+    - `config.schema.lookup` returns a path-scoped lookup payload for one config path: normalized path, a shallow schema node, matched hint + `hintPath`, optional `reloadKind`, and immediate child summaries for UI/CLI drill-down. `reloadKind` is one of `restart`, `hot`, or `none` (`src/config/schema.ts`) and mirrors the gateway config reload planner for the requested path. Lookup schema nodes keep the user-facing docs and common validation fields (`title`, `description`, `type`, `enum`, `const`, `format`, `pattern`, numeric/string/array/object bounds, `additionalProperties`, `deprecated`, `readOnly`, `writeOnly`). Child summaries expose `key`, normalized `path`, `type`, `required`, `hasChildren`, optional `reloadKind`, plus the matched `hint` / `hintPath`.
+    - `update.run` runs the gateway update flow and schedules a restart only if the update succeeded; callers with a session can include `continuationMessage` so startup resumes one follow-up agent turn through the restart continuation queue. Package-manager updates and supervised git-checkout updates from the control plane use a detached managed-service handoff instead of replacing the package tree or mutating checkout/build output inside the live gateway. A started handoff returns `ok: true` with `result.reason: "managed-service-handoff-started"` and `handoff.status: "started"`; unavailable or failed handoffs return `ok: false` with `managed-service-handoff-unavailable` or `managed-service-handoff-failed`, plus `handoff.command` when a manual shell update is required. Unavailable means OpenClaw lacks a safe supervisor boundary or durable service identity, such as `OPENCLAW_SYSTEMD_UNIT` for systemd. During a started handoff, the restart sentinel may briefly report `stats.reason: "restart-health-pending"`; the continuation is delayed until the CLI verifies the restarted gateway and writes the final `ok` sentinel.
+    - `update.status` refreshes and returns the latest update restart sentinel, including the post-restart running version when available.
+    - `wizard.start`, `wizard.next`, `wizard.status`, and `wizard.cancel` expose the onboarding wizard over WS RPC.
 
   </Accordion>
 
-  <Accordion title="Agent 和 workspace 助手">
-    - `agents.list` 返回已配置的 agent 条目，包括生效模型和运行时元数据。
-    - `agents.create`、`agents.update` 和 `agents.delete` 管理 agent 记录和 workspace 绑定。
-    - `agents.files.list`、`agents.files.get` 和 `agents.files.set` 管理为某个 agent 暴露的 bootstrap workspace 文件。
-    - `tasks.list`、`tasks.get` 和 `tasks.cancel` 向 SDK 和 operator 客户端暴露 Gateway 任务账本。
-    - `artifacts.list`、`artifacts.get` 和 `artifacts.download` 为显式的 `sessionKey`、`runId` 或 `taskId` 作用域暴露由 transcript 派生的 artifact 摘要和下载内容。Run 和 task 查询会在服务端解析归属会话，并且只返回来源匹配的 transcript 媒体；不安全或本地 URL 来源返回不支持的下载，而不会在服务端抓取。
-    - `environments.list` 和 `environments.status` 为 SDK 客户端暴露只读的 Gateway 本地和节点环境发现能力。
-    - `agent.identity.get` 返回某个 agent 或会话的生效助手身份。
-    - `agent.wait` 等待某个运行结束，并在可用时返回终态快照。
+  <Accordion title="Agent and workspace helpers">
+    - `agents.list` returns configured agent entries, including effective model and runtime metadata.
+    - `agents.create`, `agents.update`, and `agents.delete` manage agent records and workspace wiring.
+    - `agents.files.list`, `agents.files.get`, and `agents.files.set` manage the bootstrap workspace files exposed for an agent.
+    - `tasks.list`, `tasks.get`, and `tasks.cancel` expose the gateway task ledger to SDK and operator clients. See [Task ledger RPCs](#task-ledger-rpcs) below.
+    - `artifacts.list`, `artifacts.get`, and `artifacts.download` expose transcript-derived artifact summaries and downloads for an explicit `sessionKey`, `runId`, or `taskId` scope. Run and task queries resolve the owning session server-side and only return transcript media with matching provenance; unsafe or local URL sources return unsupported downloads instead of fetching server-side.
+    - `environments.list` and `environments.status` expose read-only gateway-local and node environment discovery for SDK clients.
+    - `agent.identity.get` returns the effective assistant identity for an agent or session.
+    - `agent.wait` waits for a run to finish and returns the terminal snapshot when available.
 
   </Accordion>
 
@@ -393,26 +438,30 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
     - `sessions.subscribe` and `sessions.unsubscribe` toggle session change event subscriptions for the current WS client.
     - `sessions.messages.subscribe` and `sessions.messages.unsubscribe` toggle transcript/message event subscriptions for one session.
     - `sessions.preview` returns bounded transcript previews for specific session keys.
-    - `sessions.describe` returns one Gateway session row for an exact session key.
+    - `sessions.describe` returns one gateway session row for an exact session key.
     - `sessions.resolve` resolves or canonicalizes a session target.
     - `sessions.create` creates a new session entry.
     - `sessions.send` sends a message into an existing session.
     - `sessions.steer` is the interrupt-and-steer variant for an active session.
-    - `sessions.abort` aborts active work for a session. A caller may pass `key` plus optional `runId`, or pass `runId` alone for active runs the Gateway can resolve to a session.
+    - `sessions.abort` aborts active work for a session. Pass `key` plus optional `runId`, or `runId` alone for active runs the gateway can resolve to a session.
     - `sessions.patch` updates session metadata/overrides and reports the resolved canonical model plus effective `agentRuntime`.
     - `sessions.reset`, `sessions.delete`, and `sessions.compact` perform session maintenance.
     - `sessions.get` returns the full stored session row.
-    - Chat execution still uses `chat.history`, `chat.send`, `chat.abort`, and `chat.inject`. `chat.history` is display-normalized for UI clients: inline directive tags are stripped from visible text, plain-text tool-call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks) and leaked ASCII/full-width model control tokens are stripped, pure silent-token assistant rows such as exact `NO_REPLY` / `no_reply` are omitted, and oversized rows can be replaced with placeholders.
-    - `chat.message.get` is the additive bounded full-message reader for a single visible transcript entry. Clients pass `sessionKey`, optional `agentId` when the session selection is agent-scoped, plus a transcript `messageId` previously surfaced through `chat.history`, and the Gateway returns the same display-normalized projection without the lightweight history truncation cap when the stored entry is still available and not oversized.
-    - `chat.send` accepts one-turn `fastMode: "auto"` to use fast mode for model calls started before the auto cutoff, then start later retry, fallback, tool-result, or continuation calls without fast mode. The cutoff defaults to 60 seconds and can be configured per model with `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds`. A `chat.send` caller can pass one-turn `fastAutoOnSeconds` to override the cutoff for that request.
+    - Chat execution still uses `chat.history`, `chat.send`, `chat.abort`, and `chat.inject`. `chat.history` is display-normalized for UI clients: inline directive tags are stripped from visible text, plain-text tool-call XML payloads (`<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool-call blocks) and leaked ASCII/full-width model control tokens are stripped, pure silent-token assistant rows (exact `NO_REPLY` / `no_reply`) are omitted, and oversized rows can be replaced with placeholders.
+    - `chat.message.get` is the additive bounded full-message reader for a single visible transcript entry. Pass `sessionKey`, optional `agentId` when session selection is agent-scoped, and a transcript `messageId` previously surfaced through `chat.history`; the gateway returns the same display-normalized projection without the lightweight history truncation cap when the stored entry is still available and not oversized.
+    - `chat.send` accepts one-turn `fastMode: "auto"` to use fast mode for model calls started before the auto cutoff, then start later retry, fallback, tool-result, or continuation calls without fast mode. The cutoff defaults to 60 seconds (`DEFAULT_FAST_MODE_AUTO_ON_SECONDS`) and can be configured per model with `agents.defaults.models["<provider>/<model>"].params.fastAutoOnSeconds`. A `chat.send` caller can pass one-turn `fastAutoOnSeconds` to override the cutoff for that request.
 
   </Accordion>
 
-  <Accordion title="设备配对与设备令牌">
-    - `device.pair.list` 返回待处理和已批准的已配对设备。
-    - `device.pair.approve`、`device.pair.reject` 和 `device.pair.remove` 管理设备配对记录。
-    - `device.token.rotate` 在其已批准角色和调用方作用域边界内轮换一个已配对设备令牌。
-    - `device.token.revoke` 在其已批准角色和调用方作用域边界内撤销一个已配对设备令牌。
+  <Accordion title="Device pairing and device tokens">
+    - `device.pair.list` returns pending and approved paired devices.
+    - `device.pair.setupCode` creates a mobile setup code and, by default, a PNG QR data URL. It requires `operator.admin` and is intentionally omitted from advertised discovery. The result includes `setupCode`, optional `qrDataUrl`, `gatewayUrl`, the non-secret `auth` label, and `urlSource`.
+    - `device.pair.approve`, `device.pair.reject`, and `device.pair.remove` manage device-pairing records.
+    - `device.token.rotate` rotates a paired device token within its approved role and caller scope bounds.
+    - `device.token.revoke` revokes a paired device token within its approved role and caller scope bounds.
+
+    The setup code embeds a short-lived bootstrap credential. Clients must not
+    log or persist it beyond the pairing flow.
 
   </Accordion>
 
@@ -437,127 +486,131 @@ Gateway 将这些视为**主张**，并在服务器端执行 allowlist。
 
   </Accordion>
 
-  <Accordion title="自动化、技能和工具">
-    - 自动化：`wake` 会安排一次立即或下一次 heartbeat 的唤醒文本注入；`cron.get`、`cron.list`、`cron.status`、`cron.add`、`cron.update`、`cron.remove`、`cron.run`、`cron.runs` 管理定时工作。
-    - `cron.run` 仍然是用于手动运行的入队式 RPC。需要完成语义的客户端应读取返回的 `runId` 并轮询 `cron.runs`。
-    - `cron.runs` 接受一个可选的非空 `runId` 过滤器，以便客户端可以跟踪某个已排队的手动运行，而不会与同一作业的其他历史条目竞争。
-    - 技能与工具：`commands.list`、`skills.*`、`tools.catalog`、`tools.effective`、`tools.invoke`。
+  <Accordion title="Automation, skills, and tools">
+    - Automation: `wake` schedules an immediate or next-heartbeat wake text injection; `cron.get`, `cron.list`, `cron.status`, `cron.add`, `cron.update`, `cron.remove`, `cron.run`, `cron.runs` manage scheduled work.
+    - `cron.run` remains an enqueue-style RPC for manual runs. Clients that need completion semantics should read the returned `runId` and poll `cron.runs`.
+    - `cron.runs` accepts an optional non-empty `runId` filter so clients can follow one queued manual run without racing against other history entries for the same job.
+    - Skills and tools: `commands.list`, `skills.*`, `tools.catalog`, `tools.effective`, `tools.invoke`. See [Operator helper methods](#operator-helper-methods) below.
 
   </Accordion>
 </AccordionGroup>
 
 ### 常见事件族
 
-- `chat`：UI 聊天更新，例如 `chat.inject` 和其他仅 transcript 的聊天
-  事件。在协议 v4 中，delta 负载携带 `deltaText`；`message` 仍然是
-  累积的 assistant 快照。非前缀替换会设置 `replace=true`，并使用
-  `deltaText` 作为替换文本。
-- `session.message`、`session.operation` 和 `session.tool`：订阅的
-  会话的 transcript、进行中的会话操作，以及事件流更新。
-- `sessions.changed`：会话索引或元数据已更改。
-- `presence`：系统 presence 快照更新。
-- `tick`：周期性 keepalive / 存活事件。
-- `health`：网关健康快照更新。
-- `heartbeat`：heartbeat 事件流更新。
-- `cron`：cron 运行/作业变更事件。
-- `shutdown`：网关关闭通知。
-- `node.pair.requested` / `node.pair.resolved`：节点配对生命周期。
-- `node.invoke.request`：节点 invoke 请求广播。
-- `device.pair.requested` / `device.pair.resolved`：已配对设备生命周期。
-- `voicewake.changed`：唤醒词触发配置已更改。
-- `exec.approval.requested` / `exec.approval.resolved`：exec 审批
-  生命周期。
-- `plugin.approval.requested` / `plugin.approval.resolved`：插件审批
-  生命周期。
+- `chat`: UI chat updates such as `chat.inject` and other transcript-only chat
+  events. In protocol v4, delta payloads carry `deltaText`; `message` remains
+  the cumulative assistant snapshot. Non-prefix replacements set
+  `replace=true` and use `deltaText` as the replacement text.
+- `session.message`, `session.operation`, `session.tool`: transcript, in-flight
+  session operation, and event-stream updates for a subscribed session.
+- `sessions.changed`: session index or metadata changed.
+- `presence`: system presence snapshot updates.
+- `tick`: periodic keepalive/liveness event.
+- `health`: gateway health snapshot update.
+- `heartbeat`: heartbeat event stream update.
+- `cron`: cron run/job change event.
+- `shutdown`: gateway shutdown notification.
+- `node.pair.requested` / `node.pair.resolved`: node pairing lifecycle.
+- `node.invoke.request`: node invoke request broadcast.
+- `device.pair.requested` / `device.pair.resolved`: paired-device lifecycle.
+- `voicewake.changed`: wake-word trigger config changed.
+- `exec.approval.requested` / `exec.approval.resolved`: exec approval
+  lifecycle.
+- `plugin.approval.requested` / `plugin.approval.resolved`: plugin approval
+  lifecycle.
 
 ### 节点助手方法
 
-- 节点可以调用 `skills.bins` 来获取当前技能可执行文件列表，用于自动放行检查。
+Nodes may call `skills.bins` to fetch the current list of skill executables
+for auto-allow checks.
 
-### Task 账本 RPC
+## Task ledger RPCs
 
-Operator 客户端可以通过 task ledger RPC 检查和取消 Gateway 后台任务记录。
-这些方法返回的是经过净化的任务摘要，而不是原始运行时状态。
+Operator clients inspect and cancel gateway background task records through
+the task ledger RPCs (`packages/gateway-protocol/src/schema/tasks.ts`). These
+return sanitized task summaries, not raw runtime state.
 
-- `tasks.list` 需要 `operator.read`。
-  - 参数：可选 `status`（`"queued"`、`"running"`、`"completed"`、
-    `"failed"`、`"cancelled"` 或 `"timed_out"`）或这些状态的数组，
-    可选 `agentId`，可选 `sessionKey`，可选范围为
-    `1` 到 `500` 的 `limit`，以及可选字符串 `cursor`。
-  - 结果：`{ "tasks": TaskSummary[], "nextCursor"?: string }`。
-- `tasks.get` 需要 `operator.read`。
-  - 参数：`{ "taskId": string }`。
-  - 结果：`{ "task": TaskSummary }`。
-  - 缺失的 task id 会返回 Gateway 的 not-found 错误形状。
-- `tasks.cancel` 需要 `operator.write`。
-  - 参数：`{ "taskId": string, "reason"?: string }`。
-  - 结果：
-    `{ "found": boolean, "cancelled": boolean, "reason"?: string, "task"?: TaskSummary }`。
-  - `found` 表示账本中是否存在匹配任务。`cancelled`
-    表示运行时是否接受或记录了取消请求。
+- `tasks.list` requires `operator.read`.
+  - Params: optional `status` (`"queued"`, `"running"`, `"completed"`,
+    `"failed"`, `"cancelled"`, or `"timed_out"`) or an array of those statuses,
+    optional `agentId`, optional `sessionKey`, optional `limit` from `1` to
+    `500`, and optional string `cursor`.
+  - Result: `{ "tasks": TaskSummary[], "nextCursor"?: string }`.
+- `tasks.get` requires `operator.read`.
+  - Params: `{ "taskId": string }`.
+  - Result: `{ "task": TaskSummary }`.
+  - Missing task ids return the gateway not-found error shape.
+- `tasks.cancel` requires `operator.write`.
+  - Params: `{ "taskId": string, "reason"?: string }`.
+  - Result: `{ "found": boolean, "cancelled": boolean, "reason"?: string, "task"?: TaskSummary }`.
+  - `found` reports whether the ledger had a matching task. `cancelled`
+    reports whether the runtime accepted or recorded cancellation.
 
-`TaskSummary` includes `id`, `status`, and optional metadata such as `kind`,
+`TaskSummary` includes `id`, `status`, and optional metadata: `kind`,
 `runtime`, `title`, `agentId`, `sessionKey`, `childSessionKey`, `ownerKey`,
 `runId`, `taskId`, `flowId`, `parentTaskId`, `sourceId`, timestamps, progress,
 terminal summary, and sanitized error text. `agentId` identifies the agent
 executing the task; `sessionKey` and `ownerKey` preserve requester and control
 context.
 
-### Operator 辅助方法
+## Operator helper methods
 
-- Operators may call `commands.list` (`operator.read`) to fetch the runtime
-  command inventory for an agent.
+- `commands.list` (`operator.read`) fetches the runtime command inventory for
+  an agent.
   - `agentId` is optional; omit it to read the default agent workspace.
-  - `scope` controls which surface the primary `name` targets:
-    - `text` returns the primary text command token without the leading `/`
-    - `native` and the default `both` path return provider-aware native names
-      when available
+  - `scope` controls which surface the primary `name` targets: `text` returns
+    the primary text command token without the leading `/`; `native` and the
+    default `both` path return provider-aware native names when available.
   - `textAliases` carries exact slash aliases such as `/model` and `/m`.
-  - `nativeName` carries the provider-aware native command name when one exists.
+  - `nativeName` carries the provider-aware native command name when one
+    exists.
   - `provider` is optional and only affects native naming plus native plugin
     command availability.
   - `includeArgs=false` omits serialized argument metadata from the response.
-- Operators may call `tools.catalog` (`operator.read`) to fetch the runtime tool catalog for an
+- `tools.catalog` (`operator.read`) fetches the runtime tool catalog for an
   agent. The response includes grouped tools and provenance metadata:
   - `source`: `core` or `plugin`
   - `pluginId`: plugin owner when `source="plugin"`
   - `optional`: whether a plugin tool is optional
-- Operators may call `tools.effective` (`operator.read`) to fetch the runtime-effective tool
+- `tools.effective` (`operator.read`) fetches the runtime-effective tool
   inventory for a session.
   - `sessionKey` is required.
-  - The gateway derives trusted runtime context from the session server-side instead of accepting
-    caller-supplied auth or delivery context.
-  - The response is a session-scoped server-derived projection of the active inventory,
-    including core, plugin, channel, and already-discovered MCP server tools.
-  - `tools.effective` is read-only for MCP: it may project a warm session MCP catalog through the
-    final tool policy, but it does not create MCP runtimes, connect transports, or issue
-    `tools/list`. If no matching warm catalog exists, the response may include a notice such as
-    `mcp-not-yet-connected`, `mcp-not-yet-listed`, or `mcp-stale-catalog`.
-  - Effective tool entries use `source="core"`, `source="plugin"`, `source="channel"`, or
-    `source="mcp"`.
-- Operators may call `tools.invoke` (`operator.write`) to invoke one available tool through the
+  - The gateway derives trusted runtime context from the session server-side
+    instead of accepting caller-supplied auth or delivery context.
+  - The response is a session-scoped server-derived projection of the active
+    inventory, including core, plugin, channel, and already-discovered MCP
+    server tools.
+  - `tools.effective` is read-only for MCP: it may project a warm session MCP
+    catalog through the final tool policy, but does not create MCP runtimes,
+    connect transports, or issue `tools/list`. If no matching warm catalog
+    exists, the response may include a notice such as `mcp-not-yet-connected`,
+    `mcp-not-yet-listed`, or `mcp-stale-catalog`.
+  - Effective tool entries use `source="core"`, `source="plugin"`,
+    `source="channel"`, or `source="mcp"`.
+- `tools.invoke` (`operator.write`) invokes one available tool through the
   same gateway policy path as `/tools/invoke`.
   - `name` is required. `args`, `sessionKey`, `agentId`, `confirm`, and
     `idempotencyKey` are optional.
-  - If both `sessionKey` and `agentId` are present, the resolved session agent must match
-    `agentId`.
+  - If both `sessionKey` and `agentId` are present, the resolved session agent
+    must match `agentId`.
   - Owner-only core wrappers such as `cron`, `gateway`, and `nodes` require
-    owner/admin identity (`operator.admin`) even though the `tools.invoke`
-    method itself is `operator.write`.
-  - The response is an SDK-facing envelope with `ok`, `toolName`, optional `output`, and typed
-    `error` fields. Approval or policy refusals return `ok:false` in the payload rather than
-    bypassing the gateway tool policy pipeline.
-- Operators may call `skills.status` (`operator.read`) to fetch the visible
-  skill inventory for an agent.
+    owner/admin identity (`operator.admin`) even though `tools.invoke` itself
+    is `operator.write`.
+  - The response is an SDK-facing envelope with `ok`, `toolName`, optional
+    `output`, and typed `error` fields. Approval or policy refusals return
+    `ok:false` in the payload rather than bypassing the gateway tool policy
+    pipeline.
+- `skills.status` (`operator.read`) fetches the visible skill inventory for an
+  agent.
   - `agentId` is optional; omit it to read the default agent workspace.
-  - The response includes eligibility, missing requirements, config checks, and
-    sanitized install options without exposing raw secret values.
-- Operators may call `skills.search` and `skills.detail` (`operator.read`) for
-  ClawHub discovery metadata.
-- Operators may call `skills.upload.begin`, `skills.upload.chunk`, and
-  `skills.upload.commit` (`operator.admin`) to stage a private skill archive
-  before installing it. This is a separate admin upload path for trusted clients,
-  not the normal ClawHub skill install flow, and is disabled by default unless
+  - The response includes eligibility, missing requirements, config checks,
+    and sanitized install options without exposing raw secret values.
+- `skills.search` and `skills.detail` (`operator.read`) return ClawHub
+  discovery metadata.
+- `skills.upload.begin`, `skills.upload.chunk`, and `skills.upload.commit`
+  (`operator.admin`) stage a private skill archive before installing it. This
+  is a separate admin upload path for trusted clients, not the normal ClawHub
+  skill install flow, and is disabled by default unless
   `skills.install.allowUploadedArchives` is enabled.
   - `skills.upload.begin({ kind: "skill-archive", slug, sizeBytes, sha256?, force?, idempotencyKey? })`
     creates an upload bound to that slug and force value.
@@ -567,21 +620,21 @@ context.
     SHA-256. Commit only finalizes the upload; it does not install the skill.
   - Uploaded skill archives are zip archives containing a `SKILL.md` root. The
     archive's internal directory name never selects the install target.
-- Operators may call `skills.install` (`operator.admin`) in three modes:
+- `skills.install` (`operator.admin`) has three modes:
   - ClawHub mode: `{ source: "clawhub", slug, version?, force? }` installs a
     skill folder into the default agent workspace `skills/` directory.
   - Upload mode: `{ source: "upload", uploadId, slug, force?, sha256?, timeoutMs? }`
-    installs a committed upload into the default agent workspace `skills/<slug>`
-    directory. The slug and force value must match the original
-    `skills.upload.begin` request. This mode is rejected unless
-    `skills.install.allowUploadedArchives` is enabled. The setting does not
+    installs a committed upload into the default agent workspace
+    `skills/<slug>` directory. The slug and force value must match the
+    original `skills.upload.begin` request. Rejected unless
+    `skills.install.allowUploadedArchives` is enabled; the setting does not
     affect ClawHub installs.
-  - Gateway installer mode: `{ name, installId, timeoutMs? }`
-    runs a declared `metadata.openclaw.install` action on the gateway host.
-    Older clients may still send `dangerouslyForceUnsafeInstall`; this field is
-    deprecated, accepted only for protocol compatibility, and ignored. Use
+  - Gateway installer mode: `{ name, installId, timeoutMs? }` runs a declared
+    `metadata.openclaw.install` action on the gateway host. Older clients may
+    still send `dangerouslyForceUnsafeInstall`; this field is deprecated,
+    accepted only for protocol compatibility, and ignored. Use
     `security.installPolicy` for operator-owned install decisions.
-- Operators may call `skills.update` (`operator.admin`) in two modes:
+- `skills.update` (`operator.admin`) has two modes:
   - ClawHub mode updates one tracked slug or all tracked ClawHub installs in
     the default agent workspace.
   - Config mode patches `skills.entries.<skillKey>` values such as `enabled`,
@@ -589,164 +642,204 @@ context.
 
 ### `models.list` 视图
 
-`models.list` 接受一个可选的 `view` 参数：
+`models.list` accepts an optional `view` parameter
+(`src/agents/model-catalog-visibility.ts`):
 
-- 省略或 `"default"`：当前运行时行为。如果配置了 `agents.defaults.models`，响应为允许的目录，包括动态发现的 `provider/*` 条目模型。否则响应为完整的 Gateway 目录。
-- `"configured"`：适合选择器大小的行为。如果配置了 `agents.defaults.models`，它仍然生效，包括 `provider/*` 条目的 provider 作用域发现。若没有 allowlist，响应会使用显式的 `models.providers.*.models` 条目，仅在不存在任何已配置模型行时才回退到完整目录。
-- `"all"`：完整的 Gateway 目录，绕过 `agents.defaults.models`。用于诊断和发现 UI，而不是普通模型选择器。
+- Omitted or `"default"`: if `agents.defaults.models` is configured, the
+  response is the allowed catalog, including dynamically discovered models
+  for `provider/*` entries. Otherwise the response is the full gateway
+  catalog.
+- `"configured"`: picker-sized behavior. If `agents.defaults.models` is
+  configured, it still wins, including provider-scoped discovery for
+  `provider/*` entries. Without an allowlist, the response uses explicit
+  `models.providers.<provider>.models` entries, falling back to the full
+  catalog only when no configured model rows exist.
+- `"all"`: full gateway catalog, bypassing `agents.defaults.models`. Use for
+  diagnostics/discovery UIs, not normal model pickers.
 
 ## Exec 审批
 
-- 当 exec 请求需要批准时，网关会广播 `exec.approval.requested`。
-- 操作员客户端通过调用 `exec.approval.resolve` 来完成处理（需要 `operator.approvals` 范围）。
-- 对于 `host=node`，`exec.approval.request` 必须包含 `systemRunPlan`（规范化的 `argv`/`cwd`/`rawCommand`/会话元数据）。缺少 `systemRunPlan` 的请求会被拒绝。
-- 批准后，转发的 `node.invoke system.run` 调用会复用该规范化的 `systemRunPlan`，作为权威的命令/cwd/会话上下文。
-- 如果调用方在 prepare 与最终获批的 `system.run` 转发之间篡改了 `command`、`rawCommand`、`cwd`、`agentId` 或 `sessionKey`，网关会拒绝该运行，而不会信任被篡改的负载。
+- When an exec request needs approval, the gateway broadcasts
+  `exec.approval.requested`.
+- Operator clients resolve by calling `exec.approval.resolve` (requires
+  `operator.approvals`).
+- For `host=node`, `exec.approval.request` must include `systemRunPlan`
+  (canonical `argv`/`cwd`/`rawCommand`/session metadata). Requests missing
+  `systemRunPlan` are rejected.
+- After approval, forwarded `node.invoke system.run` calls reuse that
+  canonical `systemRunPlan` as the authoritative command/cwd/session context.
+- If a caller mutates `command`, `rawCommand`, `cwd`, `agentId`, or
+  `sessionKey` between prepare and the final approved `system.run` forward,
+  the gateway rejects the run instead of trusting the mutated payload.
 
 ## Agent 投递回退
 
-- `agent` 请求可以包含 `deliver=true` 以请求出站投递。
-- `bestEffortDeliver=false` 保持严格行为：未解析或仅内部可用的投递目标会返回 `INVALID_REQUEST`。
-- `bestEffortDeliver=true` 允许在无法解析到外部可投递路由时回退到仅会话执行（例如内部/webchat 会话或多通道配置不明确的情况）。
-- 最终的 `agent` 结果在请求了投递时，可能包含 `result.deliveryStatus`，其状态与 [`openclaw agent --json --deliver`](/cli/agent#json-delivery-status) 中文档化的 `sent`、`suppressed`、`partial_failed` 和 `failed` 状态一致。
+- `agent` requests can include `deliver=true` to request outbound delivery.
+- `bestEffortDeliver=false` (the default) keeps strict behavior: unresolved or
+  internal-only delivery targets return `INVALID_REQUEST`.
+- `bestEffortDeliver=true` allows fallback to session-only execution when no
+  external deliverable route can be resolved (for example internal/webchat
+  sessions or ambiguous multi-channel configs).
+- Final `agent` results may include `result.deliveryStatus` when delivery was
+  requested, using the same `sent`, `suppressed`, `partial_failed`, and
+  `failed` statuses documented for
+  [`openclaw agent --json --deliver`](/cli/agent#json-delivery-status).
 
 ## 版本管理
 
-- `PROTOCOL_VERSION` 位于 `packages/gateway-protocol/src/version.ts`。
-- 客户端发送 `minProtocol` + `maxProtocol`；服务器会拒绝不包含其当前协议版本的范围。当前客户端和服务器要求协议 v4。
-- 模式 + 模型由 TypeBox 定义生成：
+- `PROTOCOL_VERSION` and `MIN_CLIENT_PROTOCOL_VERSION` live in
+  `packages/gateway-protocol/src/version.ts`. Both are currently `4`.
+- Clients send `minProtocol` + `maxProtocol`; the gateway accepts a connect
+  when `maxProtocol >= PROTOCOL_VERSION && minProtocol <= PROTOCOL_VERSION`
+  (`src/gateway/server/ws-connection/message-handler.ts`). Current clients and
+  servers both run protocol v4.
+- Schemas and models are generated from TypeBox definitions:
   - `pnpm protocol:gen`
   - `pnpm protocol:gen:swift`
   - `pnpm protocol:check`
 
 ### 客户端常量
 
-`src/gateway/client.ts` 中的参考客户端使用这些默认值。该值在 protocol v4 中保持稳定，是第三方客户端预期的基线。
+The reference client implementation lives in `packages/gateway-client/src/`
+(OpenClaw wraps it via the thin `src/gateway/client.ts` facade). These
+defaults are stable across protocol v4 and are the expected baseline for
+third-party clients.
 
-| 常量                                      | 默认值                                                | 来源                                                                                     |
-| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `PROTOCOL_VERSION`                        | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                 |
-| `MIN_CLIENT_PROTOCOL_VERSION`             | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                 |
-| Request timeout (per RPC)                 | `30_000` ms                                           | `src/gateway/client.ts` (`requestTimeoutMs`)                                               |
-| Preauth / connect-challenge timeout       | `15_000` ms                                           | `src/gateway/handshake-timeouts.ts` (配置/环境可以提高配对的服务器/客户端预算) |
-| Initial reconnect backoff                 | `1_000` ms                                            | `src/gateway/client.ts` (`backoffMs`)                                                      |
-| Max reconnect backoff                     | `30_000` ms                                           | `src/gateway/client.ts` (`scheduleReconnect`)                                              |
-| Fast-retry clamp after device-token close | `250` ms                                              | `src/gateway/client.ts`                                                                    |
-| Force-stop grace before `terminate()`     | `250` ms                                              | `FORCE_STOP_TERMINATE_GRACE_MS`                                                            |
-| `stopAndWait()` default timeout           | `1_000` ms                                            | `STOP_AND_WAIT_TIMEOUT_MS`                                                                 |
-| Default tick interval (pre `hello-ok`)    | `30_000` ms                                           | `src/gateway/client.ts`                                                                    |
-| Tick-timeout close                        | code `4000` when silence exceeds `tickIntervalMs * 2` | `src/gateway/client.ts`                                                                    |
-| `MAX_PAYLOAD_BYTES`                       | `25 * 1024 * 1024` (25 MB)                            | `src/gateway/server-constants.ts`                                                          |
+| Constant                                  | Default                                               | Source                                                                                                                    |
+| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `PROTOCOL_VERSION`                        | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                                                |
+| `MIN_CLIENT_PROTOCOL_VERSION`             | `4`                                                   | `packages/gateway-protocol/src/version.ts`                                                                                |
+| Request timeout (per RPC)                 | `30_000` ms                                           | `packages/gateway-client/src/client.ts` (`requestTimeoutMs`)                                                              |
+| Preauth / connect-challenge timeout       | `15_000` ms                                           | `packages/gateway-client/src/timeouts.ts` (`OPENCLAW_HANDSHAKE_TIMEOUT_MS` env can raise the paired server/client budget) |
+| Initial reconnect backoff                 | `1_000` ms                                            | `packages/gateway-client/src/client.ts` (`backoffMs`)                                                                     |
+| Max reconnect backoff                     | `30_000` ms                                           | `packages/gateway-client/src/client.ts` (`scheduleReconnect`)                                                             |
+| Fast-retry clamp after device-token close | `250` ms                                              | `packages/gateway-client/src/client.ts`                                                                                   |
+| Force-stop grace before `terminate()`     | `250` ms                                              | `FORCE_STOP_TERMINATE_GRACE_MS`                                                                                           |
+| `stopAndWait()` default timeout           | `1_000` ms                                            | `STOP_AND_WAIT_TIMEOUT_MS`                                                                                                |
+| Default tick interval (pre `hello-ok`)    | `30_000` ms                                           | `packages/gateway-client/src/client.ts`                                                                                   |
+| Tick-timeout close                        | code `4000` when silence exceeds `tickIntervalMs * 2` | `packages/gateway-client/src/client.ts`                                                                                   |
+| `MAX_PAYLOAD_BYTES`                       | `25 * 1024 * 1024` (25 MB)                            | `src/gateway/server-constants.ts`                                                                                         |
 
-服务端会在 `hello-ok` 中通告实际生效的 `policy.tickIntervalMs`、`policy.maxPayload` 和 `policy.maxBufferedBytes`；客户端应遵守这些值，而不是握手前的默认值。
+The server advertises the effective `policy.tickIntervalMs`,
+`policy.maxPayload`, and `policy.maxBufferedBytes` in `hello-ok`; clients
+should honor those values rather than the pre-handshake defaults.
 
 ## 认证
 
 - Shared-secret gateway auth uses `connect.params.auth.token` or
-  `connect.params.auth.password`, depending on the configured auth mode.
-- Identity-bearing modes such as Tailscale Serve
-  (`gateway.auth.allowTailscale: true`) or non-loopback
-  `gateway.auth.mode: "trusted-proxy"` satisfy the connect auth check from
-  request headers instead of `connect.params.auth.*`.
+  `connect.params.auth.password`, depending on the configured
+  `gateway.auth.mode` (`"none" | "token" | "password" | "trusted-proxy"`).
+- Identity-bearing modes such as Tailscale Serve (`gateway.auth.allowTailscale: true`)
+  or non-loopback `gateway.auth.mode: "trusted-proxy"` satisfy the connect
+  auth check from request headers instead of `connect.params.auth.*`.
 - Private-ingress `gateway.auth.mode: "none"` skips shared-secret connect auth
   entirely; do not expose that mode on public/untrusted ingress.
-- After pairing, the Gateway issues a **device token** scoped to the connection
-  role + scopes. It is returned in `hello-ok.auth.deviceToken` and should be
-  persisted by the client for future connects.
-- Clients should persist the primary `hello-ok.auth.deviceToken` after any
-  successful connect.
-- Reconnecting with that **stored** device token should also reuse the stored
+- After pairing, the gateway issues a device token scoped to the connection
+  role + scopes, returned in `hello-ok.auth.deviceToken`. Clients should
+  persist it after any successful connect.
+- Reconnecting with that stored device token should also reuse the stored
   approved scope set for that token. This preserves read/probe/status access
-  that was already granted and avoids silently collapsing reconnects to a
-  narrower implicit admin-only scope.
+  already granted and avoids silently collapsing reconnects to a narrower
+  implicit admin-only scope.
 - Client-side connect auth assembly (`selectConnectAuth` in
-  `src/gateway/client.ts`):
-  - `auth.password` is orthogonal and is always forwarded when set.
+  `packages/gateway-client/src/client.ts`):
+  - `auth.password` is orthogonal and always forwarded when set.
   - `auth.token` is populated in priority order: explicit shared token first,
     then an explicit `deviceToken`, then a stored per-device token (keyed by
     `deviceId` + `role`).
-  - `auth.bootstrapToken` is sent only when none of the above resolved an
+  - `auth.bootstrapToken` is sent only when none of the above resolved
     `auth.token`. A shared token or any resolved device token suppresses it.
   - Auto-promotion of a stored device token on the one-shot
-    `AUTH_TOKEN_MISMATCH` retry is gated to **trusted endpoints only** —
-    loopback, or `wss://` with a pinned `tlsFingerprint`. Public `wss://`
-    without pinning does not qualify.
+    `AUTH_TOKEN_MISMATCH` retry is gated to trusted endpoints only: loopback,
+    or `wss://` with a pinned `tlsFingerprint`. Public `wss://` without pinning
+    does not qualify.
 - Built-in setup-code bootstrap returns the primary node
   `hello-ok.auth.deviceToken` plus a bounded operator token in
   `hello-ok.auth.deviceTokens` for trusted mobile handoff. The operator token
-  includes `operator.talk.secrets` for native Talk configuration reads and
-  excludes `operator.admin` and `operator.pairing`.
-- While a non-baseline setup-code bootstrap is waiting for approval, `PAIRING_REQUIRED`
-  details include `recommendedNextStep: "wait_then_retry"`, `retryable: true`,
-  and `pauseReconnect: false`. Clients should keep reconnecting with the same
-  bootstrap token until the request is approved or the token becomes invalid.
-- Persist `hello-ok.auth.deviceTokens` only when the connect used bootstrap auth
-  on a trusted transport such as `wss://` or loopback/local pairing.
-- If a client supplies an **explicit** `deviceToken` or explicit `scopes`, that
+  includes `operator.talk.secrets` for native Talk configuration reads, but
+  excludes pairing-mutation scopes and `operator.admin`.
+- While a non-baseline setup-code bootstrap waits for approval,
+  `PAIRING_REQUIRED` details include `recommendedNextStep: "wait_then_retry"`,
+  `retryable: true`, and `pauseReconnect: false`. Keep reconnecting with the
+  same bootstrap token until the request is approved or the token becomes
+  invalid.
+- Persist `hello-ok.auth.deviceTokens` only when the connect used bootstrap
+  auth on a trusted transport such as `wss://` or loopback/local pairing.
+- If a client supplies an explicit `deviceToken` or explicit `scopes`, that
   caller-requested scope set remains authoritative; cached scopes are only
   reused when the client is reusing the stored per-device token.
 - Device tokens can be rotated/revoked via `device.token.rotate` and
-  `device.token.revoke` (requires `operator.pairing` scope). Rotating or
-  revoking a node or other non-operator role also requires `operator.admin`.
+  `device.token.revoke` (requires `operator.pairing`). Rotating or revoking a
+  node or other non-operator role also requires `operator.admin`.
 - `device.token.rotate` returns rotation metadata. It echoes the replacement
-  bearer token only for same-device calls that are already authenticated with
-  that device token, so token-only clients can persist their replacement before
+  bearer token only for same-device calls already authenticated with that
+  device token, so token-only clients can persist their replacement before
   reconnecting. Shared/admin rotations do not echo the bearer token.
-- Token issuance, rotation, and revocation stay bounded to the approved role set
-  recorded in that device's pairing entry; token mutation cannot expand or
+- Token issuance, rotation, and revocation stay bounded to the approved role
+  set recorded in that device's pairing entry; token mutation cannot expand or
   target a device role that pairing approval never granted.
-- For paired-device token sessions, device management is self-scoped unless the
-  caller also has `operator.admin`: non-admin callers can manage only the
-  operator token for their **own** device entry. Node and other non-operator
-  token management is admin-only, even for the caller's own device.
-- `device.token.rotate` and `device.token.revoke` also check the target operator
-  token scope set against the caller's current session scopes. Non-admin callers
-  cannot rotate or revoke a broader operator token than they already hold.
+- For paired-device token sessions, device management is self-scoped unless
+  the caller also has `operator.admin`: non-admin callers can manage only the
+  operator token for their own device entry. Node and other non-operator token
+  management is admin-only, even for the caller's own device.
+- `device.token.rotate` and `device.token.revoke` also check the target
+  operator token scope set against the caller's current session scopes.
+  Non-admin callers cannot rotate or revoke a broader operator token than they
+  already hold.
 - Auth failures include `error.details.code` plus recovery hints:
   - `error.details.canRetryWithDeviceToken` (boolean)
-  - `error.details.recommendedNextStep` (`retry_with_device_token`, `update_auth_configuration`, `update_auth_credentials`, `wait_then_retry`, `review_auth_configuration`)
+  - `error.details.recommendedNextStep`: one of `retry_with_device_token`,
+    `update_auth_configuration`, `update_auth_credentials`,
+    `wait_then_retry`, `review_auth_configuration`
+    (`packages/gateway-protocol/src/connect-error-details.ts`).
 - Client behavior for `AUTH_TOKEN_MISMATCH`:
-  - Trusted clients may attempt one bounded retry with a cached per-device token.
-  - If that retry fails, clients should stop automatic reconnect loops and surface operator action guidance.
-- `AUTH_SCOPE_MISMATCH` means the device token was recognized but does not cover
-  the requested role/scopes. Clients should not present this as a bad token;
-  prompt the operator to re-pair or approve the narrower/broader scope contract.
+  - Trusted clients may attempt one bounded retry with a cached per-device
+    token.
+  - If that retry fails, stop automatic reconnect loops and surface operator
+    action guidance.
+- `AUTH_SCOPE_MISMATCH` means the device token was recognized but does not
+  cover the requested role/scopes. Do not present this as a bad token; prompt
+  the operator to re-pair or approve the narrower/broader scope contract.
 
-## 设备身份 + 配对
+## Device identity and pairing
 
 - Nodes should include a stable device identity (`device.id`) derived from a
   keypair fingerprint.
 - Gateways issue tokens per device + role.
-- Pairing approvals are required for new device IDs unless local auto-approval
-  is enabled.
+- Pairing approvals are required for new device IDs unless local
+  auto-approval is enabled.
 - Pairing auto-approval is centered on direct local loopback connects.
 - OpenClaw also has a narrow backend/container-local self-connect path for
   trusted shared-secret helper flows.
-- Same-host tailnet or LAN connects are still treated as remote for pairing and
-  require approval.
+- Same-host tailnet or LAN connects are still treated as remote for pairing
+  and require approval.
 - WS clients normally include `device` identity during `connect` (operator +
   node). The only device-less operator exceptions are explicit trust paths:
-  - `gateway.controlUi.allowInsecureAuth=true` for localhost-only insecure HTTP compatibility.
+  - `gateway.controlUi.allowInsecureAuth=true` for localhost-only insecure
+    HTTP compatibility.
   - successful `gateway.auth.mode: "trusted-proxy"` operator Control UI auth.
-  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` (break-glass, severe security downgrade).
+  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` (break-glass, severe
+    security downgrade).
   - direct-loopback `gateway-client` backend RPCs on the reserved internal
     helper path.
-- Omitting device identity has scope consequences. When a device-less operator
-  connection is allowed through an explicit trust path, OpenClaw still clears
-  self-declared scopes to an empty set unless that path has a named
-  scope-preservation exception. Scope-gated methods then fail with
+- Omitting device identity has scope consequences. When a device-less
+  operator connection is allowed through an explicit trust path, OpenClaw
+  still clears self-declared scopes to an empty set unless that path has a
+  named scope-preservation exception. Scope-gated methods then fail with
   `missing scope`.
 - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` is a Control UI
   break-glass scope-preservation path. It does not grant scopes to arbitrary
   custom backend or CLI-shaped WebSocket clients.
 - The reserved direct-loopback `gateway-client` backend helper path preserves
-  scopes only for internal local control-plane RPCs; custom backend IDs do not
-  receive this exception.
+  scopes only for internal local control-plane RPCs; custom backend IDs do
+  not receive this exception.
 - All connections must sign the server-provided `connect.challenge` nonce.
 
 ### 设备认证迁移诊断
 
-对于仍使用预挑战签名行为的旧客户端，`connect` 现在会在 `error.details.code` 下返回 `DEVICE_AUTH_*` 详情代码，并带有稳定的 `error.details.reason`。
+For legacy clients that still use pre-challenge signing behavior, `connect`
+returns `DEVICE_AUTH_*` detail codes under `error.details.code` with a stable
+`error.details.reason`.
 
 常见迁移失败：
 
@@ -761,23 +854,27 @@ context.
 
 迁移目标：
 
-- 始终等待 `connect.challenge`。
-- 签名包含服务器 nonce 的 v2 负载。
-- 在 `connect.params.device.nonce` 中发送相同的 nonce。
-- 首选签名负载为 `v3`，它除了 device/client/role/scopes/token/nonce 字段外，还会绑定 `platform` 和 `deviceFamily`。
-- 为兼容性，旧的 `v2` 签名仍然被接受，但已配对设备的元数据固定仍会在重连时控制命令策略。
+- Always wait for `connect.challenge`.
+- Sign the v2 payload that includes the server nonce.
+- Send the same nonce in `connect.params.device.nonce`.
+- Preferred signature payload is `v3`
+  (`buildDeviceAuthPayloadV3` in `packages/gateway-client/src/device-auth.ts`),
+  which binds `platform` and `deviceFamily` in addition to
+  device/client/role/scopes/token/nonce fields.
+- Legacy `v2` signatures remain accepted for compatibility, but paired-device
+  metadata pinning still controls command policy on reconnect.
 
-## TLS + 固定指纹
+## TLS and pinning
 
-- WS 连接支持 TLS。
-- 客户端可以选择固定网关证书指纹（参见 `gateway.tls`
-  配置以及 `gateway.remote.tlsFingerprint` 或 CLI `--tls-fingerprint`）。
+- TLS is supported for WS connections (`gateway.tls` config).
+- Clients may optionally pin the gateway cert fingerprint via
+  `gateway.remote.tlsFingerprint` or CLI `--tls-fingerprint`.
 
 ## 范围
 
-此协议暴露 **完整的网关 API**（status、channels、models、chat、
-agent、sessions、nodes、approvals 等）。确切的接口由
-`packages/gateway-protocol/src/schema.ts` 中的 TypeBox schemas 定义。
+This protocol exposes the full gateway API: status, channels, models, chat,
+agent, sessions, nodes, approvals, and more. The exact surface is defined by
+the TypeBox schemas re-exported from `packages/gateway-protocol/src/schema.ts`.
 
 ## 相关
 

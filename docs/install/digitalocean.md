@@ -8,10 +8,10 @@ title: "DigitalOcean"
 
 在 DigitalOcean Droplet 上运行一个持久的 OpenClaw Gateway（1 GB 基础套餐约 $6/月）。
 
-DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或免费的选项：
+DigitalOcean 是一个直接明了的付费 VPS 选择。对于更便宜或免费的选项：
 
-- [Hetzner](/install/hetzner) — €3.79/月，每美元可获得更多核心/RAM。
-- [Oracle Cloud](/install/oracle) — 始终免费的 ARM（最高 4 OCPU、24 GB RAM），但注册可能比较麻烦，而且仅支持 ARM。
+- [Hetzner](/install/hetzner) -- 每美元可获得更多核心/RAM。
+- [Oracle Cloud](/install/oracle) -- 永久在线免费 ARM 套餐（最多 4 OCPU、24 GB RAM），但注册可能比较麻烦，而且仅支持 ARM。
 
 ## 前提条件
 
@@ -60,7 +60,7 @@ DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或�
     openclaw --version
     ```
 
-    仅在系统引导阶段使用 root shell。请以非 root 的 `openclaw` 用户身份运行 OpenClaw 命令，这样状态会保存在 `/home/openclaw/.openclaw/` 下，并且 Gateway 会以该用户的 systemd 服务安装。
+    仅在系统引导阶段使用 root shell。请以非 root 的 `openclaw` 用户运行 OpenClaw 命令，这样状态会保存在 `/home/openclaw/.openclaw/` 下，并且 Gateway 会作为该用户的 systemd `--user` 服务安装。
 
   </Step>
 
@@ -69,7 +69,7 @@ DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或�
     openclaw onboard --install-daemon
     ```
 
-    向导会引导你完成模型认证、频道设置、gateway token 生成以及守护进程安装（systemd）。
+    向导会引导你完成模型认证、通道设置、gateway token 生成以及 daemon 安装（systemd 用户服务）。
 
   </Step>
 
@@ -114,7 +114,7 @@ DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或�
 
     然后从你 tailnet 中的任何设备打开 `https://<magicdns>/`。
 
-    Tailscale Serve 通过 tailnet 身份头验证 Control UI 和 WebSocket 流量，这默认假设 gateway 主机本身是可信的。无论如何，HTTP API 端点都会遵循 gateway 的正常认证模式（token/password）。如果你希望在 Serve 下强制使用显式共享密钥凭证，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
+    Tailscale Serve 会通过 tailnet 身份头对 Control UI 和 WebSocket 流量进行身份验证，这假设 gateway 主机本身是可信的。无论如何，HTTP API 端点仍然遵循 gateway 的正常认证模式（token/password）。若要通过 Serve 强制使用显式共享密钥凭据，请设置 `gateway.auth.allowTailscale: false`，并使用 `gateway.auth.mode: "token"` 或 `"password"`。
 
     **选项 C：Tailnet bind（不使用 Serve）**
 
@@ -132,8 +132,8 @@ DigitalOcean 是最简单的付费 VPS 方案。如果你更喜欢更便宜或�
 
 OpenClaw 状态存放在：
 
-- `~/.openclaw/` — `openclaw.json`、每个 agent 的 `auth-profiles.json`、频道/提供商状态以及会话数据。
-- `~/.openclaw/workspace/` — agent 工作区（SOUL.md、记忆、工件）。
+- `~/.openclaw/` -- `openclaw.json`、channel/provider 凭据、按 agent 划分的 `auth-profiles.json`，以及会话数据。
+- `~/.openclaw/workspace/` -- agent 工作区（SOUL.md、memory、artifacts）。
 
 这些内容会在 Droplet 重启后保留。要创建一个可移植的快照：
 
@@ -141,15 +141,15 @@ OpenClaw 状态存放在：
 openclaw backup create
 ```
 
-DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可以跨主机移植。
+DigitalOcean snapshots 会备份整个 Droplet；`openclaw backup create` 可跨主机移植。
 
 ## 1 GB RAM 提示
 
 这个 $6 的 Droplet 只有 1 GB RAM。为了保持顺畅：
 
-- 确保上面的 swap 步骤已经写入 `/etc/fstab`，这样重启后仍然有效。
-- 优先使用基于 API 的模型（Claude、GPT），而不是本地模型——本地 LLM 推理无法在 1 GB 内运行。
-- 如果在大提示词上遇到 OOM，请将 `agents.defaults.model.primary` 设置为更小的模型。
+- 确保上面的 swap 步骤已写入 `/etc/fstab`，这样重启后仍然有效。
+- 优先使用基于 API 的模型（Claude、GPT），而不是本地模型——本地 LLM 推理无法适配 1 GB 内存。
+- 如果在处理大提示词时遇到 OOM，将 `agents.defaults.model.primary` 设置为更小的模型。
 - 使用 `free -h` 和 `htop` 进行监控。
 
 ## 故障排除
@@ -158,7 +158,7 @@ DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可以跨�
 
 **端口已被占用** -- 运行 `lsof -i :18789` 找到对应进程，然后停止它。
 
-**内存不足** -- 使用 `free -h` 检查 swap 是否已启用。如果仍然遇到 OOM，请改用基于 API 的模型（Claude、GPT）而不是本地模型，或者升级到 2 GB Droplet。
+**内存不足** -- 使用 `free -h` 检查 swap 是否已启用。如果仍然出现 OOM，请切换到基于 API 的模型（Claude、GPT），而不是本地模型，或者升级到 2 GB 的 Droplet。
 
 ## 下一步
 
@@ -168,7 +168,7 @@ DigitalOcean 快照会备份整个 Droplet；`openclaw backup create` 可以跨�
 
 ## 相关
 
-- [Install overview](/install)
+- [安装概览](/install)
 - [Fly.io](/install/fly)
 - [Hetzner](/install/hetzner)
-- [VPS hosting](/vps)
+- [VPS 托管](/vps)

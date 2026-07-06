@@ -1,9 +1,9 @@
 ---
 summary: "重定向：flow 命令位于 `openclaw tasks flow` 下"
 read_when:
-  - You encounter `openclaw flows` in older docs or release notes
-  - You want a quick TaskFlow inspection reference
-title: "Flows (redirect)"
+  - 你在较旧的文档或发布说明中遇到 `openclaw flows`
+  - 你想要一个快速的 TaskFlow 检查参考
+title: "流程（重定向）"
 ---
 
 # `openclaw tasks flow`
@@ -18,8 +18,8 @@ openclaw tasks flow show   <lookup> [--json]
 openclaw tasks flow cancel <lookup>
 ```
 
-| Subcommand | Description                | Arguments / options                                                                   |
-| ---------- | -------------------------- | ------------------------------------------------------------------------------------- |
+| 子命令 | 描述                     | 参数 / 选项                                                                          |
+| ------ | ------------------------ | ------------------------------------------------------------------------------------- |
 | `list`     | 列出受跟踪的 TaskFlow。    | `--json` 机器可读输出；`--status <name>` 过滤（见下方状态值）。 |
 | `show`     | 显示一个 TaskFlow。         | `<lookup>` flow id 或 owner key；`--json` 机器可读输出。                    |
 | `cancel`   | 取消正在运行的 TaskFlow。 | `<lookup>` flow id 或 owner key。                                                      |
@@ -28,9 +28,7 @@ openclaw tasks flow cancel <lookup>
 
 ### 状态过滤值
 
-`list` 上的 `--status` 接受以下之一：
-
-`queued`, `running`, `waiting`, `blocked`, `succeeded`, `failed`, `cancelled`, `lost`
+`--status` 在 `list` 上接受以下值之一：`queued`、`running`、`waiting`、`blocked`、`succeeded`、`failed`、`cancelled`、`lost`。
 
 ## 示例
 
@@ -43,10 +41,10 @@ openclaw tasks flow show flow_abc123 --json
 openclaw tasks flow cancel flow_abc123
 ```
 
-有关完整的 TaskFlow 概念和编写方式，请参见 [TaskFlow](/automation/taskflow)。有关父级 `tasks` 命令，请参见 [tasks CLI reference](/cli/tasks)。
+有关 TaskFlow 概念和编写，请参见 [TaskFlow](/automation/taskflow)。有关父级 `tasks` 命令，请参见 [tasks CLI 参考](/cli/tasks)。
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Automation](/automation)
+- [CLI 参考](/cli)
+- [自动化](/automation)
 - [TaskFlow](/automation/taskflow)

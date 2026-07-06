@@ -13,12 +13,11 @@ title: "网络"
 
 大多数操作都通过 Gateway（`openclaw gateway`）进行，这是一个单独的长期运行进程，负责通道连接和 WebSocket 控制平面。
 
-- **优先使用回环地址**：Gateway WS 默认是 `ws://127.0.0.1:18789`。
-  非回环绑定需要有效的 gateway 身份验证路径：共享密钥
-  token/password 认证，或者正确配置的非回环
-  `trusted-proxy` 部署。
-- **每台主机一个 Gateway** 是推荐做法。为了隔离，可以使用独立的 profile 和端口运行多个 gateway（[多个 Gateway](/gateway/multiple-gateways)）。
-- **Canvas 主机** 与 Gateway 运行在同一端口（`/__openclaw__/canvas/`、`/__openclaw__/a2ui/`），当绑定超出回环地址时，会受到 Gateway 认证保护。
+- **优先使用回环地址**：Gateway 的 WS 默认是 `ws://127.0.0.1:18789`。
+  非回环绑定在没有有效的 gateway 身份验证路径时会拒绝启动：
+  共享密钥 token/password 认证，或正确配置的非回环 `trusted-proxy` 部署。
+- **建议每台主机仅运行一个 Gateway**。为实现隔离，可使用隔离的配置文件和端口运行多个 gateway（[多个 Gateway](/gateway/multiple-gateways)）。
+- **Canvas 主机** 通过与 Gateway 相同的端口提供服务（`/__openclaw__/canvas/`、`/__openclaw__/a2ui/`），当绑定到回环地址之外时，会受到 Gateway 身份验证保护。
 - **远程访问** 通常通过 SSH 隧道或 Tailscale VPN 实现（[远程访问](/gateway/remote)）。
 
 关键参考：
@@ -37,11 +36,10 @@ title: "网络"
 
 本地信任：
 
-- 直接的本地回环连接可以在配对时自动批准，以保持
-  同主机的用户体验流畅。
-- OpenClaw 还提供一条窄范围的后端/容器本地自连接路径，用于
-  受信任的共享密钥助手流程。
-- tailnet 和 LAN 客户端，包括同主机的 tailnet 绑定，仍然需要
+- 直接本地回环连接（没有转发/代理头）可以
+  自动批准配对，以保持同主机 UX 顺畅。
+- OpenClaw 还为受信任的共享密钥辅助流程提供了一条窄范围的后端/容器本地自连接路径。
+- Tailnet 和 LAN 客户端，包括同主机 tailnet 绑定，仍然需要
   显式的配对批准。
 
 ## 发现 + 传输

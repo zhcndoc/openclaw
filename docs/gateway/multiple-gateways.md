@@ -6,22 +6,17 @@ read_when:
 title: "多个网关"
 ---
 
-大多数部署应该只使用一个 Gateway，因为单个 Gateway 可以处理多个消息连接和代理。如果你需要更强的隔离或冗余（例如，救援机器人），请使用隔离的配置文件/端口运行独立的 Gateways。
+大多数场景只需要一个 Gateway——单个 Gateway 就能处理多个消息连接和代理。只有在你需要更强的隔离或冗余时（例如，用于救援机器人），才运行彼此隔离、使用独立配置文件/端口的多个 Gateway。
 
-## 最佳推荐方案
+## 救援机器人快速入门
 
-对大多数用户来说，最简单的救援机器人方案是：
+最简单的救援机器人设置：
 
-- 将主机器人保留在默认配置文件上
-- 使用 `--profile rescue` 运行救援机器人
-- 为救援账户使用一个完全独立的 Telegram 机器人
-- 将救援机器人放在不同的基础端口上，例如 `19789`
+- 将主机器人保持在默认配置文件上。
+- 使用 `--profile rescue` 运行救援机器人，并使用它自己的 Telegram 机器人令牌。
+- 为救援机器人设置不同的基础端口，例如 `19789`。
 
-这样可以使救援机器人与主机器人隔离，便于在主机器人宕机时进行调试或应用配置更改。请在基础端口之间至少保留 20 个端口，以免派生出的浏览器/canvas/CDP 端口发生冲突。
-
-## 救援机器人快速开始
-
-除非你有充分理由采用其他方式，否则请将此作为默认路径：
+这样可以确保当主机器人宕机时，救援机器人仍然能够进行调试或应用配置更改。请至少在基础端口之间保留 20 个端口，以避免派生的浏览器/CDP 端口发生冲突。
 
 ```bash
 # 救援机器人（独立的 Telegram 机器人、独立的配置文件、端口 19789）
@@ -29,53 +24,31 @@ openclaw --profile rescue onboard
 openclaw --profile rescue gateway install --port 19789
 ```
 
-如果你的主机器人已经在运行，那通常这就是你所需要的全部内容。
+如果你的主机器人已经在运行，那么通常只需要这些步骤。如果 onboarding 已经安装了救援服务，就跳过最后的 `gateway install`。
 
 在执行 `openclaw --profile rescue onboard` 期间：
 
-- 使用独立的 Telegram 机器人 token
-- 保持 `rescue` 配置文件
-- 使用至少比主机器人高 20 的基础端口
-- 除非你已经自己在管理一个工作区，否则接受默认的救援工作区
+- 使用单独的 Telegram 机器人令牌，专用于救援账户（便于仅限操作人员使用，独立于主机器人的频道/应用安装，并且提供一个基于私聊的简单恢复路径）。
+- 保持 `rescue` 配置文件名称不变。
+- 使用至少比主机器人高 20 的基础端口。
+- 如果你自己已经管理了工作区，则接受默认的救援工作区。
 
-如果 onboarding 已经为你安装了救援服务，那么最后的
-`gateway install` 就不需要了。
+### `--profile rescue onboard` 会更改什么
 
-## 为什么这样可行
+`--profile rescue onboard` 会运行正常的 onboarding 流程，但将所有内容写入一个单独的配置文件，因此救援机器人将拥有自己的：
 
-救援机器人保持独立，因为它拥有自己的：
-
-- 配置文件/配置
+- 配置文件/配置文件
 - 状态目录
-- 工作区
-- 基础端口（以及派生端口）
-- Telegram 机器人 token
-
-对于大多数部署，请为救援配置文件使用一个完全独立的 Telegram 机器人：
-
-- 更容易仅供操作员使用
-- 独立的机器人 token 和身份
-- 与主机器人的频道/app 安装相互独立
-- 当主机器人故障时，可通过简单的 DM 恢复路径进行处理
-
-## `--profile rescue onboard` 会做什么
-
-`openclaw --profile rescue onboard` 使用正常的 onboarding 流程，但它会将所有内容写入一个独立的配置文件中。
-
-实际上，这意味着救援机器人会拥有自己的：
-
-- 配置文件
-- 状态目录
-- 工作区（默认位于 `~/.openclaw/workspace-rescue`）
+- 工作区（默认：`~/.openclaw/workspace-rescue`）
 - 托管服务名称
+- 基础端口（以及派生端口）
+- Telegram 机器人令牌
 
-除此之外，提示内容与正常 onboarding 相同。
+除此之外，提示内容与正常 onboarding 完全相同。
 
 ## 通用多 gateway 配置
 
-上面的救援机器人布局是最简单的默认方案，但同样的隔离模式适用于一台主机上的任意一对或一组 Gateways。
-
-对于更通用的配置，请为每个额外的 Gateway 分配一个自己的命名配置文件和自己的基础端口：
+相同的隔离模式也适用于同一主机上的任意一对或一组 Gateway——为每个额外的 Gateway 分配各自命名的 profile 和基础端口：
 
 ```bash
 # 主实例（默认配置文件）
@@ -87,7 +60,7 @@ openclaw --profile ops setup
 openclaw --profile ops gateway --port 19789
 ```
 
-如果你希望两个 Gateways 都使用命名配置文件，这也可以：
+两侧都使用命名 profile 也同样可行：
 
 ```bash
 openclaw --profile main setup
@@ -104,36 +77,38 @@ openclaw gateway install
 openclaw --profile ops gateway install --port 19789
 ```
 
-当你想要一个备用操作通道时，请使用救援机器人快速开始方案。当你想要为不同的渠道、租户、工作区或操作角色运行多个长期存在的 Gateways 时，请使用通用的配置文件模式。
+为备用操作通道使用 rescue-bot 快速入门；对于跨不同频道、租户、工作区或运营角色的多个长期运行的 Gateway，请使用通用 profile 模式。
 
 ## 隔离检查清单
 
 为每个 Gateway 实例保留以下内容唯一：
 
-- `OPENCLAW_CONFIG_PATH` — 每个实例一个配置文件
-- `OPENCLAW_STATE_DIR` — 每个实例的会话、凭据、缓存
-- `agents.defaults.workspace` — 每个实例的工作区根目录
-- `gateway.port`（或 `--port`）— 每个实例唯一
-- 派生的浏览器/canvas/CDP 端口
+| 设置                         | 目的                                 |
+| ---------------------------- | ------------------------------------ |
+| `OPENCLAW_CONFIG_PATH`       | 每个实例的配置文件                   |
+| `OPENCLAW_STATE_DIR`         | 每个实例的会话、凭据、缓存           |
+| `agents.defaults.workspace`  | 每个实例的工作区根目录               |
+| `gateway.port`（或 `--port`） | 每个实例唯一                        |
+| 派生的浏览器/CDP 端口         | 见下文                               |
 
-如果这些被共享，你会遇到配置竞争和端口冲突。
+共享其中任何一项都会导致配置竞争和端口冲突。
 
 ## 端口映射（派生）
 
 基础端口 = `gateway.port`（或 `OPENCLAW_GATEWAY_PORT` / `--port`）。
 
-- 浏览器控制服务端口 = 基础端口 + 2（仅限回环）
-- canvas 主机通过 Gateway 的 HTTP 服务器提供服务（与 `gateway.port` 相同的端口）
-- 浏览器配置文件的 CDP 端口会自动从 `browser.controlPort + 9 .. + 108` 范围内分配
+- 浏览器控制服务端口 = 基础端口 + 2（仅回环）。
+- Canvas 主机由 Gateway HTTP 服务器本身提供（与 `gateway.port` 相同端口）。
+- 浏览器配置文件 CDP 端口会自动分配为 `browser control port + 9` 到 `+ 108`。
 
-如果你在配置或环境变量中覆盖了这些值中的任何一个，就必须确保它们在每个实例中都是唯一的。
+如果在配置或环境变量中覆盖了这些值，则必须确保每个实例的端口保持唯一。
 
 ## 浏览器/CDP 注意事项（常见坑）
 
 - 不要在多个实例上将 `browser.cdpUrl` 固定为相同的值。
-- 每个实例都需要自己的浏览器控制端口和 CDP 范围（由其 gateway 端口派生）。
-- 如果你需要显式指定 CDP 端口，请为每个实例设置 `browser.profiles.<name>.cdpPort`。
-- 远程 Chrome：使用 `browser.profiles.<name>.cdpUrl`（每个配置文件、每个实例）。
+- 每个实例都需要自己的浏览器控制端口和 CDP 范围（由其网关端口派生）。
+- 对于显式指定的 CDP 端口，请为每个实例设置 `browser.profiles.<name>.cdpPort`。
+- 对于远程 Chrome，请使用 `browser.profiles.<name>.cdpUrl`（按 profile、按实例）。
 
 ## 手动环境变量示例
 
@@ -158,13 +133,11 @@ openclaw --profile rescue status
 openclaw --profile rescue browser status
 ```
 
-解读：
-
-- `gateway status --deep` helps catch stale launchd/systemd/schtasks services from older installs.
-- `gateway probe` warning text such as `multiple reachable gateway identities detected` is expected only when you intentionally run more than one isolated gateway, or when OpenClaw cannot prove reachable probe targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway is one gateway with multiple transports, even when transport ports differ.
+- `gateway status --deep` 会捕获来自旧安装的过期 launchd/systemd/schtasks 服务。
+- 仅当你有意运行多个彼此隔离的 gateway，或者当 OpenClaw 无法证明可达的探测目标是同一个 gateway 时，`gateway probe` 才会出现诸如 `multiple reachable gateway identities detected` 的警告文本。指向同一 gateway 的 SSH 隧道、代理 URL 或已配置的远程 URL，尽管传输端口不同，也仍然算作一个 gateway，只是使用了多种传输方式。
 
 ## 相关内容
 
-- [Gateway runbook](/gateway)
-- [Gateway lock](/gateway/gateway-lock)
-- [Configuration](/gateway/configuration)
+- [Gateway 运行手册](/gateway)
+- [Gateway 锁](/gateway/gateway-lock)
+- [配置](/gateway/configuration)

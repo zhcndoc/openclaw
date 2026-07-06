@@ -6,44 +6,45 @@ read_when:
 title: "CLI 参考"
 ---
 
-`openclaw` 是主 CLI 入口。每个核心命令要么有专门的参考页面，要么与其别名对应的命令一起文档化；此索引列出了命令、全局标志以及适用于整个 CLI 的输出样式规则。
+`openclaw` 是主要的 CLI 入口点。每个核心命令都有专门的参考页面，或者与其别名的命令一起文档化；此索引列出了适用于整个 CLI 的命令、全局标志和输出样式规则。
 
-按用途使用以下 setup 命令：
+按用途设置命令：
 
-- `openclaw setup` 会创建基础配置和工作区，而不会走完整的引导式入门流程。
-- `openclaw onboard` 是面向 gateway、模型认证、工作区、频道、技能和健康检查的完整首次运行引导流程。
-- `openclaw configure` 会修改现有设置中的指定部分，例如模型认证、gateway、频道、插件或技能。
-- `openclaw channels add` 在基础配置存在后配置频道账户；不带标志运行时会进入引导式频道设置，带有频道特定标志时可用于脚本。
+- `openclaw setup` 和 `openclaw onboard` 运行网关、模型认证、工作区、渠道、技能和健康检查的完整引导式首次运行流程。
+- `openclaw setup --baseline` 在不经过引导式 onboarding 流程的情况下创建基础配置和工作区。
+- `openclaw configure` 更改现有设置中的指定部分：模型认证、网关、渠道、插件或技能。
+- `openclaw channels add` 在基础配置存在后配置渠道账户；不带标志运行可进入引导式设置，或者为脚本使用带上特定于渠道的标志。
 
 ## 命令页面
 
-| 区域                 | 命令                                                                                                                                                                                                                                  |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and onboarding | [`crestodian`](/cli/crestodian) · [`setup`](/cli/setup) · [`onboard`](/cli/onboard) · [`configure`](/cli/configure) · [`config`](/cli/config) · [`completion`](/cli/completion) · [`doctor`](/cli/doctor) · [`dashboard`](/cli/dashboard) |
-| Reset and uninstall  | [`backup`](/cli/backup) · [`reset`](/cli/reset) · [`uninstall`](/cli/uninstall) · [`update`](/cli/update)                                                                                                                                 |
-| Messaging and agents | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`acp`](/cli/acp) · [`mcp`](/cli/mcp)                                                                                                                       |
-| Health and sessions  | [`status`](/cli/status) · [`health`](/cli/health) · [`sessions`](/cli/sessions)                                                                                                                                                           |
-| Gateway and logs     | [`gateway`](/cli/gateway) · [`logs`](/cli/logs) · [`system`](/cli/system)                                                                                                                                                                 |
-| Models and inference | [`models`](/cli/models) · [`infer`](/cli/infer) · `capability`（[`infer`](/cli/infer) 的别名）· [`memory`](/cli/memory) · [`commitments`](/cli/commitments) · [`wiki`](/cli/wiki)                                                      |
-| Network and nodes    | [`directory`](/cli/directory) · [`nodes`](/cli/nodes) · [`devices`](/cli/devices) · [`node`](/cli/node)                                                                                                                                   |
-| Runtime and sandbox  | [`approvals`](/cli/approvals) · `exec-policy`（参见 [`approvals`](/cli/approvals)）· [`sandbox`](/cli/sandbox) · [`tui`](/cli/tui) · `chat`/`terminal`（[`tui --local`](/cli/tui) 的别名）· [`browser`](/cli/browser)                 |
-| Automation           | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`hooks`](/cli/hooks) · [`webhooks`](/cli/webhooks) · [`transcripts`](/cli/transcripts)                                                                                                     |
-| Discovery and docs   | [`dns`](/cli/dns) · [`docs`](/cli/docs)                                                                                                                                                                                                   |
-| Pairing and channels | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                                                                 |
-| Security and plugins | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins) · [`proxy`](/cli/proxy)                                                                                                     |
-| Legacy aliases       | [`daemon`](/cli/daemon)（gateway 服务）· [`clawbot`](/cli/clawbot)（命名空间）                                                                                                                                                         |
-| Plugins (optional)   | [`path`](/cli/path) · [`policy`](/cli/policy) · [`voicecall`](/cli/voicecall) · [`workboard`](/cli/workboard)（如果已安装）                                                                                                              |
+| 区域                         | 命令                                                                                                                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 设置与入门                   | [`crestodian`](/cli/crestodian) · [`setup`](/cli/setup) · [`onboard`](/cli/onboard) · [`configure`](/cli/configure) · [`config`](/cli/config) · [`completion`](/cli/completion) · [`doctor`](/cli/doctor) · [`dashboard`](/cli/dashboard) |
+| 重置、备份与迁移             | [`backup`](/cli/backup) · [`migrate`](/cli/migrate) · [`reset`](/cli/reset) · [`uninstall`](/cli/uninstall) · [`update`](/cli/update)                                                                                                     |
+| 消息与代理                   | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`attach`](/cli/attach) · [`acp`](/cli/acp) · [`mcp`](/cli/mcp)                                                                                             |
+| 健康状态与会话               | [`status`](/cli/status) · [`health`](/cli/health) · [`sessions`](/cli/sessions)                                                                                                                                                           |
+| 网关与日志                   | [`gateway`](/cli/gateway) · [`logs`](/cli/logs) · [`system`](/cli/system)                                                                                                                                                                 |
+| 模型与推理                   | [`models`](/cli/models) · [`infer`](/cli/infer) · `capability` (infer 的别名) · [`memory`](/cli/memory) · [`commitments`](/cli/commitments) · [`wiki`](/cli/wiki)                                                      |
+| 网络与节点                   | [`directory`](/cli/directory) · [`nodes`](/cli/nodes) · [`devices`](/cli/devices) · [`node`](/cli/node)                                                                                                                                   |
+| 运行时与沙箱                 | [`approvals`](/cli/approvals) · `exec-policy` (见 [`approvals`](/cli/approvals)) · [`sandbox`](/cli/sandbox) · [`tui`](/cli/tui) · `chat`/`terminal` (aliases for [`tui --local`](/cli/tui)) · [`browser`](/cli/browser)                 |
+| 自动化                       | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`hooks`](/cli/hooks) · [`webhooks`](/cli/webhooks) · [`transcripts`](/cli/transcripts)                                                                                                     |
+| 发现与文档                   | [`dns`](/cli/dns) · [`docs`](/cli/docs)                                                                                                                                                                                                   |
+| 配对与通道                   | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                                                                 |
+| 安全与插件                   | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins) · [`proxy`](/cli/proxy)                                                                                                     |
+| 旧版别名                     | [`daemon`](/cli/daemon)（网关服务） · [`clawbot`](/cli/clawbot)（命名空间）                                                                                                                                                         |
+| 插件（可选）                 | [`path`](/cli/path) · [`policy`](/cli/policy) · [`voicecall`](/cli/voicecall) · [`workboard`](/cli/workboard)（如已安装）                                                                                                              |
 
 ## 全局标志
 
-| 标志                    | 作用                                                               |
-| ----------------------- | ------------------------------------------------------------------ |
-| `--dev`                 | 将状态隔离到 `~/.openclaw-dev` 下，并调整默认端口                   |
-| `--profile <name>`      | 将状态隔离到 `~/.openclaw-<name>` 下                               |
-| `--container <name>`    | 目标执行到指定名称的容器                                           |
-| `--no-color`            | 禁用 ANSI 颜色（也会遵循 `NO_COLOR=1`）                             |
-| `--update`              | [`openclaw update`](/cli/update) 的简写（仅适用于源码安装）         |
-| `-V`, `--version`, `-v` | 打印版本并退出                                                     |
+| 标志                    | 用途                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--dev`                 | 将状态隔离到 `~/.openclaw-dev` 下，默认网关端口为 19001，并调整派生端口              |
+| `--profile <name>`      | 将状态隔离到 `~/.openclaw-<name>` 下（`OPENCLAW_STATE_DIR`/`OPENCLAW_CONFIG_PATH`）                  |
+| `--container <name>`    | 在名为 `<name>` 的正在运行的 Podman/Docker 容器中运行 CLI（默认：环境变量 `OPENCLAW_CONTAINER`） |
+| `--log-level <level>`   | 覆盖文件和控制台输出的全局日志级别                                                 |
+| `--no-color`            | 禁用 ANSI 颜色（也会尊重 `NO_COLOR=1`）                                                    |
+| `--update`              | [`openclaw update`](/cli/update) 的简写；适用于源码检出和包安装    |
+| `-V`, `--version`, `-v` | 输出版本并退出                                                                                  |
 
 ## 输出模式
 
@@ -52,11 +53,30 @@ title: "CLI 参考"
 - `--json`（以及受支持时的 `--plain`）会禁用样式以获得干净输出。
 - 长时间运行的命令会显示进度指示器（支持时使用 OSC 9;4）。
 
-调色板的唯一来源：`src/terminal/palette.ts`。
+## 颜色调色板
+
+OpenClaw 为 CLI 输出使用龙虾调色板：
+
+| Token          | Hex       | 用于                                 |
+| -------------- | --------- | ------------------------------------ |
+| `accent`       | `#FF5A2D` | 标题、标签、主要高亮                 |
+| `accentBright` | `#FF7A3D` | 命令名称、强调                       |
+| `accentDim`    | `#D14A22` | 次级高亮文本                         |
+| `info`         | `#FF8A5B` | 信息性数值                           |
+| `success`      | `#2FBF71` | 成功状态                             |
+| `warn`         | `#FFB020` | 警告、选项标志、回退                 |
+| `error`        | `#E23D2D` | 错误、失败                           |
+| `muted`        | `#8B7F77` | 弱化显示、元数据                     |
+
+调色板的唯一事实来源：`packages/terminal-core/src/palette.ts`。
 
 ## 命令树
 
 <Accordion title="完整命令树">
+
+此映射涵盖核心命令及其主要子命令。由插件添加的
+子命令（例如在 `skills`、`plugins` 和 `wiki` 下）会独立演进；
+请运行 `<command> --help` 获取权威的当前列表。
 
 ```
 openclaw [--dev] [--profile <name>] <command>
@@ -77,6 +97,10 @@ openclaw [--dev] [--profile <name>] <command>
   backup
     create
     verify
+  migrate
+    list
+    plan <provider>
+    apply <provider>
   security
     audit
   secrets
@@ -89,6 +113,7 @@ openclaw [--dev] [--profile <name>] <command>
   update
     wizard
     status
+    repair
   channels
     list
     status
@@ -107,11 +132,14 @@ openclaw [--dev] [--profile <name>] <command>
     search
     install
     update
+    verify
+    workshop list|inspect|propose-create|propose-update|revise|apply|reject|quarantine
     list
     info
     check
   plugins
     list
+    search
     inspect
     install
     uninstall
@@ -119,7 +147,11 @@ openclaw [--dev] [--profile <name>] <command>
     enable
     disable
     doctor
-    marketplace list
+    build
+    validate
+    init
+    registry
+    marketplace list|entries|refresh
   workboard
     list
     create
@@ -146,14 +178,16 @@ openclaw [--dev] [--profile <name>] <command>
     status
     doctor
     init
-    ingest
     compile
     lint
+    ingest
+    okf import
     search
     get
-    apply
+    apply synthesis|metadata
     bridge import
     unsafe-local import
+    chatgpt import|rollback
     obsidian status|search|open|command|daily
   message
     send
@@ -189,6 +223,7 @@ openclaw [--dev] [--profile <name>] <command>
     bind
     unbind
     set-identity
+  attach
   acp
   mcp
     serve
@@ -212,6 +247,8 @@ openclaw [--dev] [--profile <name>] <command>
     call
     usage-cost
     health
+    stability
+    diagnostics export
     status
     probe
     discover
@@ -242,18 +279,18 @@ openclaw [--dev] [--profile <name>] <command>
     fallbacks list|add|remove|clear
     image-fallbacks list|add|remove|clear
     scan
+    auth list|add|login|setup-token|paste-token|paste-api-key|login-github-copilot
+    auth order get|set|clear
   infer (alias: capability)
     list
     inspect
     model run|list|inspect|providers|auth login|logout|status
     image generate|edit|describe|describe-many|providers
     audio transcribe|providers
-    tts convert|voices|providers|status|enable|disable|set-provider
+    tts convert|voices|personas|providers|status|enable|disable|set-provider|set-persona
     video generate|describe|providers
     web search|fetch|providers
     embedding create|providers
-    auth add|login|login-github-copilot|setup-token|paste-token
-    auth order get|set|clear
   sandbox
     list
     recreate
@@ -369,8 +406,8 @@ openclaw [--dev] [--profile <name>] <command>
   terminal (alias: tui --local)
 ```
 
-Plugins can add additional top-level commands, such as
-[`openclaw workboard`](/cli/workboard) or `openclaw voicecall`.
+插件可以添加额外的顶层命令，例如
+[`openclaw workboard`](/cli/workboard) 或 `openclaw voicecall`。
 
 </Accordion>
 
@@ -380,17 +417,14 @@ Plugins can add additional top-level commands, such as
 
 要点：
 
-- `/status` — 快速诊断。
-- `/trace` — 会话范围的插件跟踪/调试行。
-- `/config` — 持久化的配置更改。
-- `/debug` — 仅运行时配置覆盖（仅驻留内存，不写入磁盘；需要 `commands.debug: true`）。
+- `/status` - 快速诊断。
+- `/trace` - 会话范围的插件跟踪/调试行。
+- `/config` - 持久化配置更改。
+- `/debug` - 仅运行时的配置覆盖（内存中，不写入磁盘；需要 `commands.debug: true`）。
 
 ## 使用情况跟踪
 
-当 OAuth/API 凭据可用时，`openclaw status --usage` 和 Control UI 会展示提供商的使用量/额度。数据直接来自提供商的使用情况
-端点，并归一化为 `X% left`。具有当前使用
-窗口的提供商：Anthropic、GitHub Copilot、Gemini CLI、OpenAI Codex、MiniMax、
-Xiaomi 和 z.ai。
+`openclaw status --usage` 和 Control UI 会在可用 OAuth/API 凭据时显示提供商的使用情况/配额。数据直接来自提供商的使用情况端点，并被规范化为 `X% left`。当前具有使用窗口的提供商：Anthropic、Gemini CLI、GitHub Copilot、MiniMax、OpenAI Codex、Xiaomi 和 z.ai。
 
 有关详细信息，请参见 [使用情况跟踪](/concepts/usage-tracking)。
 

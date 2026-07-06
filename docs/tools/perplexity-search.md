@@ -6,11 +6,9 @@ read_when:
 title: "Perplexity 搜索"
 ---
 
-OpenClaw 支持 Perplexity Search API 作为 `web_search` 提供方。
-它会返回包含 `title`、`url` 和 `snippet` 字段的结构化结果。
+OpenClaw 支持 Perplexity Search API 作为 `web_search` 提供方。它会返回包含 `title`、`url` 和 `snippet` 字段的结构化结果。
 
-为兼容起见，OpenClaw 也支持旧版 Perplexity Sonar/OpenRouter 配置。
-如果你使用 `OPENROUTER_API_KEY`、在 `plugins.entries.perplexity.config.webSearch.apiKey` 中使用 `sk-or-...` 密钥，或设置 `plugins.entries.perplexity.config.webSearch.baseUrl` / `model`，提供方会切换到 chat-completions 路径，并返回带引文的 AI 合成答案，而不是结构化的 Search API 结果。
+为了兼容性，OpenClaw 也支持旧版 Perplexity Sonar/OpenRouter 配置。如果你使用 `OPENROUTER_API_KEY`、在 `plugins.entries.perplexity.config.webSearch.apiKey` 中使用 `sk-or-...` 密钥，或者设置了 `plugins.entries.perplexity.config.webSearch.baseUrl` / `model`，该提供方将切换到 chat-completions 路径，并返回带有引用的 AI 生成答案，而不是结构化的 Search API 结果。
 
 ## 安装插件
 
@@ -23,9 +21,9 @@ openclaw gateway restart
 
 ## 获取 Perplexity API 密钥
 
-1. 在 [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) 创建一个 Perplexity 账户
-2. 在控制台中生成一个 API 密钥
-3. 将该密钥存储在配置中，或在 Gateway 环境中设置 `PERPLEXITY_API_KEY`
+1. 在 [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) 创建 Perplexity 账户。
+2. 在仪表板中生成 API 密钥。
+3. 将密钥存储在配置中，或在 Gateway 环境中设置 `PERPLEXITY_API_KEY`。
 
 ## OpenRouter 兼容性
 
@@ -38,7 +36,7 @@ openclaw gateway restart
 
 ## 配置示例
 
-### 原生 Perplexity Search API
+### 原生 Perplexity 搜索 API
 
 ```json5
 {
@@ -92,12 +90,9 @@ openclaw gateway restart
 
 ## 在哪里设置密钥
 
-**通过配置：** 运行 `openclaw configure --section web`。它会将密钥存储在
-`~/.openclaw/openclaw.json` 中的 `plugins.entries.perplexity.config.webSearch.apiKey` 下。
-该字段也接受 SecretRef 对象。
+**通过配置：** 运行 `openclaw configure --section web`。它会将密钥存储在 `~/.openclaw/openclaw.json` 中的 `plugins.entries.perplexity.config.webSearch.apiKey` 下。该字段也接受 SecretRef 对象。
 
-**通过环境变量：** 在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。
-如果是 gateway 安装，请将其放入 `~/.openclaw/.env`（或你的服务环境）中。参见 [环境变量](/help/faq#env-vars-and-env-loading)。
+**通过环境变量：** 在 Gateway 进程环境中设置 `PERPLEXITY_API_KEY` 或 `OPENROUTER_API_KEY`。对于 gateway 安装，请将其放入 `~/.openclaw/.env`（或你的服务环境）中。参见 [Env vars](/help/faq#env-vars-and-env-loading)。
 
 如果已配置 `provider: "perplexity"`，而 Perplexity 的 key SecretRef 未解析且没有环境变量回退，启动/重载将会快速失败。
 
@@ -147,9 +142,9 @@ ISO 639-1 语言代码（例如 `en`、`de`、`fr`）。
 
 对于旧版 Sonar/OpenRouter 兼容路径：
 
-- 接受 `query`、`count` 和 `freshness`
-- 其中 `count` 仅用于兼容；返回结果仍然是带引文的一条合成答案，而不是 N 条结果列表
-- 仅适用于 Search API 的过滤项，例如 `country`、`language`、`date_after`、`date_before`、`domain_filter`、`max_tokens` 和 `max_tokens_per_page` 会返回明确错误
+- `query`、`count` 和 `freshness` 可接受。
+- `count` 仅用于兼容；响应仍然是一个带引用的合成答案，而不是 N 条结果列表。
+- 仅搜索 API 的筛选项（`country`、`language`、`date_after`、`date_before`、`domain_filter`、`max_tokens`、`max_tokens_per_page`）会返回明确错误。
 
 **示例：**
 
@@ -196,30 +191,30 @@ await web_search({
 
 ### 域名过滤规则
 
-- 每个过滤器最多 20 个域名
-- 同一请求中不能同时混合白名单和黑名单
-- 黑名单条目使用 `-` 前缀（例如：`["-reddit.com"]`）
+- 每个过滤器最多 20 个域名。
+- 不能在同一次请求中混合白名单和黑名单条目。
+- 对黑名单条目使用 `-` 前缀（例如：`["-reddit.com"]`）。
 
 ## 说明
 
-- Perplexity Search API 返回结构化的网页搜索结果（`title`、`url`、`snippet`）
-- OpenRouter 或显式设置 `plugins.entries.perplexity.config.webSearch.baseUrl` / `model` 会将 Perplexity 切回 Sonar chat completions，以保持兼容性
-- Sonar/OpenRouter 兼容性返回一条带引文的合成答案，而不是结构化结果行
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）
+- Perplexity Search API 返回结构化的网页搜索结果（`title`、`url`、`snippet`）。
+- OpenRouter，或显式设置 `plugins.entries.perplexity.config.webSearch.baseUrl` / `model`，会将 Perplexity 切回 Sonar 聊天补全，以保证兼容性。
+- Sonar/OpenRouter 兼容模式会返回一个带引用的综合答案，而不是结构化的结果行。
+- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）。
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Web search overview" href="/tools/web" icon="globe">
+  <Card title="Web 搜索概览" href="/tools/web" icon="globe">
     所有提供方和自动检测规则。
   </Card>
-  <Card title="Brave search" href="/tools/brave-search" icon="shield">
+  <Card title="Brave 搜索" href="/tools/brave-search" icon="shield">
     具有国家和语言过滤器的结构化结果。
   </Card>
-  <Card title="Exa search" href="/tools/exa-search" icon="magnifying-glass">
+  <Card title="Exa 搜索" href="/tools/exa-search" icon="magnifying-glass">
     带内容提取的神经搜索。
   </Card>
-  <Card title="Perplexity Search API docs" href="https://docs.perplexity.ai/docs/search/quickstart" icon="arrow-up-right-from-square">
+  <Card title="Perplexity 搜索 API 文档" href="https://docs.perplexity.ai/docs/search/quickstart" icon="arrow-up-right-from-square">
     Perplexity Search API 官方快速入门和参考文档。
   </Card>
 </CardGroup>

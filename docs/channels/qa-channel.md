@@ -7,7 +7,7 @@ read_when:
   - 你正在迭代端到端 QA 自动化
 ---
 
-`qa-channel` 是一个为自动化 OpenClaw QA 打包的合成消息传输。它不是生产频道——它的存在是为了在保持状态确定且完全可检查的同时，练习与真实传输相同的频道插件边界。
+`qa-channel` 是一个仓库本地的合成消息传输，用于自动化 OpenClaw QA（`extensions/qa-channel`，私有包，不包含在打包安装中）。它不是生产频道——它的存在是为了在保持状态确定性且完全可检查的同时，测试与真实传输相同的频道插件边界。
 
 ## 它的作用
 
@@ -38,20 +38,16 @@ read_when:
 
 账户键：
 
-- `enabled` - 此账户的总开关。
-- `name` - 可选显示标签。
-- `baseUrl` - 合成总线 URL。
-- `botUserId` - 目标语法中使用的 Matrix 风格机器人用户 id。
-- `botDisplayName` - 出站消息的显示名称。
-- `pollTimeoutMs` - 长轮询等待窗口。介于 100 和 30000 之间的整数。
-- `allowFrom` - 发送者允许列表（用户 id 或 `"*"`）。直接消息和
-  允许列表中的群组策略都使用这些合成发送者 id。
-- `groupPolicy` - 共享房间策略：`"open"`（默认）、`"allowlist"`，或
-  `"disabled"`。
-- `groupAllowFrom` - 可选的共享房间发送者允许列表。在
-  `"allowlist"` 下省略时，QA Channel 会回退到 `allowFrom`。
-- `groups.<room>.requireMention` - 在特定群组/频道房间回复前要求提及机器人。
-  `groups."*"` 设置默认值。
+- `enabled` - 此账户的主开关。
+- `name` - 可选的显示标签。
+- `baseUrl` - 合成总线 URL。设置后该账户即视为已配置。
+- `botUserId` - 目标语法中使用的合成机器人用户 id（默认：`openclaw`）。
+- `botDisplayName` - 外发消息的显示名称（默认：`OpenClaw QA`）。
+- `pollTimeoutMs` - 长轮询等待窗口。100 到 30000 之间的整数（默认：1000）。
+- `allowFrom` - 发送者白名单（用户 id 或 `"*"`；默认：`["*"]`）。私信始终为 `open` 策略；白名单群组策略也使用这些合成发送者 id。
+- `groupPolicy` - 共享房间策略：`"open"`（默认）、`"allowlist"` 或 `"disabled"`。
+- `groupAllowFrom` - 可选的共享房间发送者白名单。在 `"allowlist"` 下省略时，QA Channel 会回退到 `allowFrom`。
+- `groups.<room>.requireMention` - 在特定群组/频道房间回复前是否要求先提及机器人（默认：false）。`groups."*"` 设置默认值；按房间的 `tools` / `toolsBySender` 设置工具策略覆盖。
 - `defaultTo` - 未提供目标时的回退目标。
 - `actions.messages` / `actions.reactions` / `actions.search` / `actions.threads` - 按操作进行的工具门控。
 
@@ -68,7 +64,7 @@ read_when:
 pnpm qa:e2e
 ```
 
-这会通过 `qa-lab`，启动仓库内的 QA 总线，启动内置的 `qa-channel` 运行时切片，并运行一个确定性自检。
+这会通过 `qa-lab` 路由，启动仓库内的 QA bus，加载 `qa-channel` 运行时切片，并运行确定性的自检。
 
 完整的仓库支持场景套件：
 
@@ -88,8 +84,8 @@ pnpm qa:lab:up
 
 ## 相关内容
 
-- [QA overview](/concepts/qa-e2e-automation) - 整体栈、传输适配器、场景编写
+- [QA 概览](/concepts/qa-e2e-automation) - 整体栈、传输适配器、场景编写
 - [Matrix QA](/concepts/qa-matrix) - 驱动真实频道的示例实时传输运行器
-- [Pairing](/channels/pairing)
-- [Groups](/channels/groups)
-- [Channels overview](/channels)
+- [配对](/channels/pairing)
+- [群组](/channels/groups)
+- [频道概览](/channels)

@@ -12,11 +12,11 @@ read_when:
 | Property               | Value                                    |
 | ---------------------- | ---------------------------------------- |
 | Provider id            | `groq`                                   |
-| Plugin                 | official external package                |
+| Plugin                 | 官方外部包                               |
 | Auth env var           | `GROQ_API_KEY`                           |
-| API                    | OpenAI-compatible (`openai-completions`) |
+| API                    | 兼容 OpenAI（`openai-completions`）       |
 | Base URL               | `https://api.groq.com/openai/v1`         |
-| Audio transcription    | `whisper-large-v3-turbo` (default)       |
+| Audio transcription    | `whisper-large-v3-turbo`（默认）          |
 | Suggested chat default | `groq/llama-3.3-70b-versatile`           |
 
 ## 安装插件
@@ -92,11 +92,7 @@ OpenClaw 会随附一个由清单支持的 Groq 目录，其中既包含推理�
 
 ## 推理模型
 
-OpenClaw 会将其共享的 `/think` 等级映射到 Groq 各模型特定的 `reasoning_effort` 值：
-
-- 对于 `qwen/qwen3-32b`，禁用思考会发送 `none`，启用思考会发送 `default`。
-- 对于 Groq GPT OSS 推理模型（`openai/gpt-oss-*`），OpenClaw 会根据 `/think` 等级发送 `low`、`medium` 或 `high`。禁用思考时会省略 `reasoning_effort`，因为这些模型不支持禁用值。
-- DeepSeek R1 Distill、Qwen QwQ 和 Compound 使用 Groq 的原生推理接口；`/think` 只控制可见性，但模型始终会进行推理。
+Groq 推理模型（上表中的 `reasoning: true`）将 OpenClaw 共享的 `/think` 等级映射为 `reasoning_effort` 的 `low`、`medium` 或 `high` 值。`/think off` 或 `/think none` 会从请求中省略 `reasoning_effort`，而不是发送一个禁用值。
 
 有关共享的 `/think` 等级以及 OpenClaw 如何针对每个提供方进行转换，请参阅 [思考模式](/tools/thinking)。
 

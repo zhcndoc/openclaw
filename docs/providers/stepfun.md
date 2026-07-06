@@ -6,7 +6,7 @@ read_when:
 title: "StepFun"
 ---
 
-StepFun 提供方插件支持两个 provider id：
+StepFun 作为外部官方插件（`@openclaw/stepfun-provider`）提供，包含两个 provider id：
 
 - `stepfun` 用于标准端点
 - `stepfun-plan` 用于 Step Plan 端点
@@ -16,8 +16,6 @@ StepFun 提供方插件支持两个 provider id：
 </Warning>
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/stepfun-provider
@@ -50,25 +48,23 @@ Step Plan (`stepfun-plan`)：
 
 ## 快速开始
 
-选择你的提供方入口并按照设置步骤进行。
-
 <Tabs>
   <Tab title="Standard">
-    **最适合：** 通过标准 StepFun 端点进行通用用途。
+    通过标准 StepFun 端点进行通用用途使用的最佳选择。
 
     <Steps>
-      <Step title="选择你的端点区域">
-        | Auth choice                      | Endpoint                         | Region        |
-        | -------------------------------- | -------------------------------- | ------------- |
-        | `stepfun-standard-api-key-intl`  | `https://api.stepfun.ai/v1`     | International |
-        | `stepfun-standard-api-key-cn`    | `https://api.stepfun.com/v1`    | China         |
+      <Step title="Choose your endpoint region">
+        | Auth choice                    | Endpoint                     | Region        |
+        | -------------------------------- | ----------------------------- | -------------- |
+        | `stepfun-standard-api-key-intl` | `https://api.stepfun.ai/v1`  | International |
+        | `stepfun-standard-api-key-cn`   | `https://api.stepfun.com/v1` | China          |
       </Step>
       <Step title="运行初始化">
         ```bash
         openclaw onboard --auth-choice stepfun-standard-api-key-intl
         ```
 
-        或者对于中国端点：
+        China endpoint:
 
         ```bash
         openclaw onboard --auth-choice stepfun-standard-api-key-cn
@@ -87,28 +83,26 @@ Step Plan (`stepfun-plan`)：
       </Step>
     </Steps>
 
-    ### 模型 refs
-
-    - 默认模型：`stepfun/step-3.5-flash`
+    默认模型：`stepfun/step-3.5-flash`
 
   </Tab>
 
   <Tab title="Step Plan">
-    **最适合：** Step Plan 推理端点。
+    适用于 Step Plan 推理端点的最佳选择。
 
     <Steps>
-      <Step title="选择你的端点区域">
-        | Auth choice                  | Endpoint                                | Region        |
-        | ---------------------------- | --------------------------------------- | ------------- |
-        | `stepfun-plan-api-key-intl`  | `https://api.stepfun.ai/step_plan/v1`  | International |
-        | `stepfun-plan-api-key-cn`    | `https://api.stepfun.com/step_plan/v1` | China         |
+      <Step title="Choose your endpoint region">
+        | Auth choice                 | Endpoint                                | Region        |
+        | ------------------------------ | ------------------------------------------ | -------------- |
+        | `stepfun-plan-api-key-intl` | `https://api.stepfun.ai/step_plan/v1`  | International |
+        | `stepfun-plan-api-key-cn`   | `https://api.stepfun.com/step_plan/v1` | China          |
       </Step>
       <Step title="运行初始化">
         ```bash
         openclaw onboard --auth-choice stepfun-plan-api-key-intl
         ```
 
-        或者对于中国端点：
+        China endpoint:
 
         ```bash
         openclaw onboard --auth-choice stepfun-plan-api-key-cn
@@ -127,13 +121,13 @@ Step Plan (`stepfun-plan`)：
       </Step>
     </Steps>
 
-    ### 模型 refs
-
-    - 默认模型：`stepfun-plan/step-3.5-flash`
-    - 备用模型：`stepfun-plan/step-3.5-flash-2603`
+    默认模型：`stepfun-plan/step-3.5-flash`
+    备用模型：`stepfun-plan/step-3.5-flash-2603`
 
   </Tab>
 </Tabs>
+
+一次认证流程会为 `stepfun` 和 `stepfun-plan` 写入与区域匹配的配置文件，因此在一次初始化运行后即可同时发现这两个端点。
 
 ## 高级配置
 
@@ -207,29 +201,23 @@ Step Plan (`stepfun-plan`)：
     ```
   </Accordion>
 
-  <Accordion title="备注">
-    - 该提供方是一个官方外部包；请在设置前先安装。
-    - `step-3.5-flash-2603` 当前仅在 `stepfun-plan` 上可用。
-    - 单一认证流程会为 `stepfun` 和 `stepfun-plan` 都写入与区域匹配的配置文件，因此两个入口可以一起被发现。
+  <Accordion title="注释">
+    - `step-3.5-flash-2603` 目前仅在 `stepfun-plan` 上开放。
     - 使用 `openclaw models list` 和 `openclaw models set <provider/model>` 来查看或切换模型。
 
   </Accordion>
 </AccordionGroup>
 
-<Note>
-如需更广泛的提供方概览，请参阅 [模型提供方](/concepts/model-providers)。
-</Note>
-
-## 相关内容
+## 相关
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    所有提供方、模型 refs 和故障转移行为的概览。
+  <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
+    提供方、模型引用以及故障转移行为的概览。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     提供方、模型和插件的完整配置模式。
   </Card>
-  <Card title="模型选择" href="/concepts/models" icon="brain">
+  <Card title="Models CLI" href="/concepts/models" icon="brain">
     如何选择和配置模型。
   </Card>
   <Card title="StepFun 平台" href="https://platform.stepfun.com" icon="globe">

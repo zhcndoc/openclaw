@@ -1,4 +1,4 @@
-我会严格保留原有 Markdown 结构，只翻译可见文本内容，代码和标签都不动。现在开始逐段翻译并直接输出结果。---
+---
 summary: "用于 2026 年 5 月性能、包大小、依赖和 shrinkwrap 清理的可视化摘要与技术证据"
 read_when:
   - 你正在验证 2026 年 5 月的性能和包大小清理
@@ -39,56 +39,24 @@ title: "发布性能扫描"
 
   </Card>
   <Card title="最新稳定安装" icon="hard-drive">
-    **361.7MiB 新鲜安装**
+    **361.7MiB 全新安装**
 
-    `v2026.5.28` 明显缩减了嵌套的 OpenClaw 依赖树，但本地安装审计中仍然保留了一个更小的 259.7MiB 嵌套树。
+    将嵌套的 OpenClaw 依赖树从 `2026.5.22`
+    shrinkwrap-introduction 峰值显著压缩，不过在本地安装审计中仍
+    保留着一个更小的 259.7MiB 嵌套树。
 
   </Card>
   <Card title="依赖图" icon="boxes">
     **300 个已安装包**
 
-    最新稳定发布，按在禁用脚本的全新安装中统计的唯一包名/版本根节点数计算。
+    在禁用脚本的全新安装中，按唯一的包名/版本根节点计量；比之前的稳定版本少 71 个根节点。
 
   </Card>
 </CardGroup>
 
-## 安装占用时间线
+## 5.28 中的变化
 
-<CardGroup cols={2}>
-  <Card title="月度高点" icon="triangle-alert">
-    **645 个依赖**
-
-    `2026.2.26` 是本样本中的月度依赖数量高点。
-
-  </Card>
-  <Card title="引入 shrinkwrap" icon="lock">
-    **1,020.6MB 安装**
-
-    `2026.5.22` 添加了根 shrinkwrap，并暴露出一个包结构问题：
-    911.8MB 落在嵌套的 `openclaw/node_modules` 下。
-
-  </Card>
-  <Card title="最新稳定版" icon="tag">
-    **361.7MiB 安装**
-
-    `2026.5.28` 相比 `2026.5.27` 将全新安装体积减少了 52.8%，但仍安装了一个 259.7MiB 的嵌套 OpenClaw 树。
-
-  </Card>
-  <Card title="依赖图" icon="scissors">
-    **300 个包根**
-
-    `2026.5.28` 比 `2026.5.27` 少安装了 71 个唯一的包名/版本根节点。
-
-  </Card>
-</CardGroup>
-
-<Tip>
-shrinkwrap 本身并不是问题。真正的问题是糟糕的包结构。`v2026.5.28` 仍然带着 shrinkwrap，但嵌套依赖树要小得多，而且在本地审计中，全平台的 canvas 扇出已经消失。
-</Tip>
-
-## 5.28 中发生了什么变化
-
-`v2026.5.27` 到 `v2026.5.28` 之间的清理缩小了默认安装图，而不是移除这些能力本身。
+在 `v2026.5.27` 到 `v2026.5.28` 之间的清理，缩小了默认安装图，而不是移除这些能力本身。
 
 <CardGroup cols={2}>
   <Card title="根默认图" icon="git-branch">
@@ -105,11 +73,21 @@ shrinkwrap 本身并不是问题。真正的问题是糟糕的包结构。`v2026
   </Card>
 </CardGroup>
 
-## 关键数字
+<Tip>
+Shrinkwrap 本身并不是问题。问题在于糟糕的包结构。
+`v2026.5.28` 仍然包含 shrinkwrap，但嵌套依赖树小得多，而且在本地审计中，全平台的 canvas 扇出已经消失。
+</Tip>
+
+## 标题数字
 
 不要把 4 月下旬损坏的行作为公开性能基线。`v2026.4.23` 和 `v2026.4.29` 可用于回归证据，但那些巨大的 `14x` 级别差异主要描述的是从坏发布线恢复的过程。
 
-对于博客叙述，请使用更早的 4 月已发布基线作为尺度：
+对于博客叙述，请使用较早的 4 月已发布基线作为尺度。
+该基线是来自已发布的 `clawgrit-reports`
+mock-provider 运行的 `v2026.4.14`（重复 3 次；那次运行仅因未输出诊断
+时间线而失败，因此冷启动、热启动和 RSS 中位数仍可
+作为粗略尺度使用）。请将其视为叙述背景，而非发布门禁
+统计。
 
 | 指标             | 更早的 4 月基线 | `v2026.5.28` |                    差值 |
 | --------------- | ----------------: | -----------: | -----------------------: |
@@ -117,9 +95,8 @@ shrinkwrap 本身并不是问题。真正的问题是糟糕的包结构。`v2026
 | 热启动代理回合   |            7,458ms |      1,870ms | 低 74.9%，快 4.0 倍 |
 | 代理峰值 RSS     |            686.2MB |      581.0MB |              低 15.3% |
 
-更早的 4 月基线是已发布 `clawgrit-reports` mock-provider 运行中的 `v2026.4.14`。该运行使用了重复 3 次，只是因为诊断时间线未输出而失败；冷启动、热启动和 RSS 中位数仍然可作为粗略尺度。请将此视为叙述背景，而不是发布门槛统计。
-
-在 5 月扫描中，最新发布分支行相较于 `v2026.5.2` 有了明显变化：
+在 5 月的扫描范围内，最新的发布分支行相较于
+`v2026.5.2` 有了显著变化：
 
 | 指标             | `v2026.5.2` | `v2026.5.28` |       差值 |
 | --------------- | ----------: | -----------: | ----------: |
@@ -196,7 +173,7 @@ shrinkwrap 本身并不是问题。真正的问题是糟糕的包结构。`v2026
 | `v2026.5.27`        | PASS |   2,231ms |   2,226ms |        649.0MB |
 | `v2026.5.28`        | PASS |   1,908ms |   1,870ms |        581.0MB |
 
-## Source probes
+## 源探针
 
 由于这些源代码树当时还没有所需的探针入口点，17 个成功的旧 ref 的源探针被跳过了。这些 ref 仍然存在 agent-turn 指标。
 
@@ -223,45 +200,33 @@ shrinkwrap 本身并不是问题。真正的问题是糟糕的包结构。`v2026
 
 | Point              | Installed deps | Fresh install | OpenClaw package | Nested `openclaw/node_modules` | Root shrinkwrap | Canvas install behavior                   |
 | ------------------ | -------------: | ------------: | ---------------: | -----------------------------: | --------------- | ----------------------------------------- |
-| Jan `2026.1.30`    |            605 |       438.4MB |           45.8MB |                          2.4MB | no              | top-level wrapper + `darwin-arm64`        |
-| Feb `2026.2.26`    |            645 |       575.7MB |          110.1MB |                          3.5MB | no              | top-level wrapper + `darwin-arm64`        |
-| Mar `2026.3.31`    |            438 |       584.1MB |          234.8MB |                            0MB | no              | top-level wrapper + `darwin-arm64`        |
-| Apr `2026.4.29`    |            392 |       335.0MB |           97.4MB |                            0MB | no              | none installed                            |
-| `2026.5.22`        |            401 |     1,020.6MB |        1,020.4MB |                        911.8MB | yes             | nested: all 12 `@napi-rs/canvas` packages |
-| May `2026.5.26`    |            371 |       767.5MB |          767.4MB |                        656.4MB | yes             | nested: all 12 `@napi-rs/canvas` packages |
-| `2026.5.27`        |            371 |      767.1MiB |         766.9MiB |                       656.1MiB | yes             | nested: all 12 `@napi-rs/canvas` packages |
-| Latest `2026.5.28` |            300 |      361.7MiB |         361.6MiB |                       259.7MiB | yes             | none installed                            |
+| Jan `2026.1.30`    |            605 |       438.4MB |           45.8MB |                          2.4MB | no              | 顶层包装器 + `darwin-arm64`        |
+| Feb `2026.2.26`    |            645 |       575.7MB |          110.1MB |                          3.5MB | no              | 顶层包装器 + `darwin-arm64`        |
+| Mar `2026.3.31`    |            438 |       584.1MB |          234.8MB |                            0MB | no              | 顶层包装器 + `darwin-arm64`        |
+| Apr `2026.4.29`    |            392 |       335.0MB |           97.4MB |                            0MB | no              | 未安装                            |
+| `2026.5.22`        |            401 |     1,020.6MB |        1,020.4MB |                        911.8MB | yes             | 嵌套：全部 12 个 `@napi-rs/canvas` 包 |
+| May `2026.5.26`    |            371 |       767.5MB |          767.4MB |                        656.4MB | yes             | 嵌套：全部 12 个 `@napi-rs/canvas` 包 |
+| `2026.5.27`        |            371 |      767.1MiB |         766.9MiB |                       656.1MiB | yes             | 嵌套：全部 12 个 `@napi-rs/canvas` 包 |
+| Latest `2026.5.28` |            300 |      361.7MiB |         361.6MiB |                       259.7MiB | yes             | 未安装                            |
 
 ### Shrinkwrap 边界
 
-<CardGroup cols={2}>
-  <Card title="Before shrinkwrap" icon="unlock">
-    `2026.5.20` 没有根 shrinkwrap，也没有大型的嵌套 OpenClaw 依赖树。
-  </Card>
-  <Card title="Introduced" icon="lock">
-    `2026.5.22` 添加了根 shrinkwrap，并在嵌套的 `openclaw/node_modules` 下安装了 911.8MB。
-  </Card>
-  <Card title="Latest stable" icon="tag">
-    `2026.5.28` 保留了 shrinkwrap，并且仍然在嵌套的 `openclaw/node_modules` 下安装了 259.7MiB。
-  </Card>
-  <Card title="Canvas fanout fixed" icon="check">
-    `2026.5.28` 在本地新鲜安装审计中不再安装任何 `@napi-rs/canvas` 包。
-  </Card>
-</CardGroup>
+`2026.5.20` 发布时没有根 shrinkwrap，也没有大型的嵌套 OpenClaw
+依赖树。`2026.5.22` 引入了根 shrinkwrap，并在嵌套的 `openclaw/node_modules` 下安装了 911.8MB。`2026.5.28` 保持了 shrinkwrap，且仍然会在嵌套的 `openclaw/node_modules` 下安装 259.7MiB，但在本地 fresh-install 审计中不再安装任何 `@napi-rs/canvas` 包。
 
 已发布 tarball 的检查验证了这个边界：
 
 | Version     | Published stable? | Root `npm-shrinkwrap.json` | Notes                                 |
 | ----------- | ----------------- | -------------------------- | ------------------------------------- |
-| `2026.5.20` | yes               | no                         | last stable release before shrinkwrap |
-| `2026.5.21` | no                | n/a                        | no stable npm release                 |
-| `2026.5.22` | yes               | yes                        | shrinkwrap introduced                 |
-| `2026.5.23` | no                | n/a                        | no stable npm release                 |
-| `2026.5.24` | no                | n/a                        | no stable npm release                 |
-| `2026.5.25` | no                | n/a                        | no stable npm release                 |
-| `2026.5.26` | yes               | yes                        | nested dependency tree still present  |
-| `2026.5.27` | yes               | yes                        | nested dependency tree still present  |
-| `2026.5.28` | yes               | yes                        | nested dependency tree much smaller   |
+| `2026.5.20` | yes               | no                         | shrinkwrap 之前的最后一个稳定版发布 |
+| `2026.5.21` | no                | n/a                        | 没有稳定的 npm 发布                 |
+| `2026.5.22` | yes               | yes                        | 引入了 shrinkwrap                 |
+| `2026.5.23` | no                | n/a                        | 没有稳定的 npm 发布                 |
+| `2026.5.24` | no                | n/a                        | 没有稳定的 npm 发布                 |
+| `2026.5.25` | no                | n/a                        | 没有稳定的 npm 发布                 |
+| `2026.5.26` | yes               | yes                        | 嵌套依赖树仍然存在  |
+| `2026.5.27` | yes               | yes                        | 嵌套依赖树仍然存在  |
+| `2026.5.28` | yes               | yes                        | 嵌套依赖树小得多   |
 
 关键区别在于：**问题并不在 shrinkwrap 本身**。`v2026.5.28` 仍然包含根 shrinkwrap。问题在于包的形态导致 npm 物化出一个很大的嵌套 OpenClaw 依赖树，以及全部 12 个 `@napi-rs/canvas` 平台包。`v2026.5.28` 中嵌套树更小了，而且 canvas 平台分发也 აღარ在本地审计中落地。
 

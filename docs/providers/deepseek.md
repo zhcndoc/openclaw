@@ -8,14 +8,14 @@ read_when:
 
 [DeepSeek](https://www.deepseek.com) 提供强大的 AI 模型，并带有兼容 OpenAI 的 API。
 
-| Property | Value                      |
+| 属性 | 值                         |
 | -------- | -------------------------- |
 | Provider | `deepseek`                 |
 | Auth     | `DEEPSEEK_API_KEY`         |
-| API      | OpenAI-compatible          |
+| API      | OpenAI 兼容                 |
 | Base URL | `https://api.deepseek.com` |
 
-## Install plugin
+## 安装插件
 
 安装官方插件，然后重启 Gateway：
 
@@ -24,7 +24,7 @@ openclaw plugins install @openclaw/deepseek-provider
 openclaw gateway restart
 ```
 
-## Getting started
+## 入门
 
 <Steps>
   <Step title="获取你的 API 密钥">
@@ -35,7 +35,7 @@ openclaw gateway restart
     openclaw onboard --auth-choice deepseek-api-key
     ```
 
-    这会提示你输入 API 密钥，并将 `deepseek/deepseek-v4-flash` 设置为默认模型。
+    会提示你输入 API 密钥，并将 `deepseek/deepseek-v4-flash` 设为默认模型。
 
   </Step>
   <Step title="验证模型是否可用">
@@ -43,8 +43,7 @@ openclaw gateway restart
     openclaw models list --provider deepseek
     ```
 
-    要在不运行 Gateway 的情况下查看插件的静态目录，
-    请使用：
+    如需在没有运行 Gateway 的情况下查看插件的静态目录：
 
     ```bash
     openclaw models list --all --provider deepseek
@@ -70,9 +69,7 @@ openclaw gateway restart
 </AccordionGroup>
 
 <Warning>
-如果 Gateway 以守护进程（launchd/systemd）运行，请确保 `DEEPSEEK_API_KEY`
-对该进程可用（例如，放在 `~/.openclaw/.env` 中或通过
-`env.shellEnv` 提供）。
+如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `DEEPSEEK_API_KEY` 对该进程可用（例如放在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供）。
 </Warning>
 
 ## 内置目录
@@ -87,32 +84,29 @@ openclaw gateway restart
 <Tip>
 V4 模型支持 DeepSeek 的 `thinking` 控制。OpenClaw 也会在后续轮次中重放
 DeepSeek 的 `reasoning_content`，因此带工具调用的 thinking 会话可以继续。
-使用 DeepSeek V4 模型时，可通过 `/think xhigh` 或 `/think max` 请求 DeepSeek 的
-最大 `reasoning_effort`。
+在 DeepSeek V4 模型上使用 `/think xhigh` 或 `/think max` 可请求 DeepSeek 的
+最大 `reasoning_effort`；这两者都会映射为 `"max"`。
 </Tip>
 
 ## Thinking 与工具
 
-DeepSeek V4 thinking 会话的重放契约比大多数兼容 OpenAI 的提供方更严格：
-在启用 thinking 的轮次使用工具后，DeepSeek 期望该轮中重放的 assistant 消息在后续请求里包含
-`reasoning_content`。OpenClaw 会在 DeepSeek 插件内部处理这一点，因此正常的多轮工具使用在
-`deepseek/deepseek-v4-flash` 和 `deepseek/deepseek-v4-pro` 上都能正常工作。
+DeepSeek V4 thinking 会话要求将来自启用了 thinking 的轮次的已重放 assistant 消息
+在后续请求中包含 `reasoning_content`。
+OpenClaw 的 DeepSeek 插件会自动回填该字段，因此正常的多轮工具使用可以在
+`deepseek/deepseek-v4-flash` 和 `deepseek/deepseek-v4-pro` 上正常工作，即使历史记录来自另一个
+OpenAI 兼容提供商（没有原生 `reasoning_content`）或普通的 assistant 消息。
+在会话中途切换提供商后，也不需要使用 `/new`。
 
-如果你将现有会话从另一个兼容 OpenAI 的提供方切换到 DeepSeek V4 模型，
-较早的 assistant 工具调用轮次可能没有原生的 DeepSeek `reasoning_content`。OpenClaw 会在
-重放给 DeepSeek V4 thinking 请求的 assistant 消息中补齐该缺失字段，这样提供方就能
-接受历史记录而不需要 `/new`。
+当 thinking 被禁用时（包括 UI 中选择 **None**），OpenClaw 会发送
+`thinking: { type: "disabled" }`，并从外发历史记录中移除重放的 `reasoning_content`，
+使会话保持在非 thinking 的 DeepSeek 路径上。
 
-当在 OpenClaw 中禁用 thinking 时（包括 UI 中的 **None** 选项），OpenClaw 会发送
-DeepSeek `thinking: { type: "disabled" }`，并从外发历史记录中移除重放的
-`reasoning_content`。这会让禁用 thinking 的会话走 DeepSeek 的非 thinking 路径。
-
-默认快速路径使用 `deepseek/deepseek-v4-flash`。当你想使用更强的 V4 模型并且可以接受
-更高成本或更高延迟时，使用 `deepseek/deepseek-v4-pro`。
+默认的快速路径请使用 `deepseek/deepseek-v4-flash`。当你能接受更高
+成本或延迟时，可使用更强的模型 `deepseek/deepseek-v4-pro`。
 
 ## 在线测试
 
-直接在线模型套件中包含现代模型集合里的 DeepSeek V4。要仅运行 DeepSeek V4 的直接模型检查：
+若只运行现代模型 live 套件中 DeepSeek V4 直接模型检查，请执行：
 
 ```bash
 OPENCLAW_LIVE_PROVIDERS=deepseek \
@@ -120,8 +114,7 @@ OPENCLAW_LIVE_MODELS="deepseek/deepseek-v4-flash,deepseek/deepseek-v4-pro" \
 pnpm test:live src/agents/models.profiles.live.test.ts
 ```
 
-该在线检查会验证两个 V4 模型都能完成，并且 thinking/tool 的后续轮次会保留 DeepSeek
-所要求的重放载荷。
+用于验证两个 V4 模型都能完成，并且 thinking/tool 后续轮次会保留 DeepSeek 所需的重放载荷。
 
 ## 配置示例
 

@@ -94,7 +94,7 @@ title: "Oracle Cloud"
     systemctl --user restart openclaw-gateway.service
     ```
 
-    这里的 `gateway.trustedProxies=["127.0.0.1"]` 仅用于本地 Tailscale Serve 代理的转发 IP/本地客户端处理。它**不是** `gateway.auth.mode: "trusted-proxy"`。在此设置下，Diff 查看器路由仍保持 fail-closed 行为：没有转发代理头的原始 `127.0.0.1` 查看器请求可能返回 `Diff not found`。如需附件，请使用 `mode=file` / `mode=both`；或者如果你需要可共享的查看器链接，可有意启用远程查看器并设置 `plugins.entries.diffs.config.viewerBaseUrl`（或传入代理的 `baseUrl`）。
+    `gateway.trustedProxies=["127.0.0.1"]` 这里只用于本地 Tailscale Serve 代理的转发 IP / 本地客户端处理。它**不是** `gateway.auth.mode: "trusted-proxy"`。在此设置中，Diff 查看器路由仍保持 fail-closed 行为：没有转发代理头的原始 `127.0.0.1` 查看器请求会返回 `Diff not found`。对于附件请使用 `mode=file` / `mode=both`，或者如果你需要可分享的查看器链接，可以有意启用远程查看器并设置 `plugins.entries.diffs.config.viewerBaseUrl`（或传入代理的 `baseUrl`）。
 
   </Step>
 
@@ -133,14 +133,14 @@ title: "Oracle Cloud"
 
 在 VCN 已锁定（仅开放 UDP 41641）且 Gateway 绑定到 loopback 的情况下，公共流量会在网络边缘被阻止，管理访问仅限 tailnet 内。这使得若干传统 VPS 加固步骤不再需要：
 
-| 传统步骤           | 需要吗？ | 原因                                                                      |
-| ------------------ | -------- | ------------------------------------------------------------------------- |
-| UFW 防火墙         | 否       | VCN 会在流量到达实例之前就将其阻止。                                      |
-| fail2ban           | 否       | 22 端口已在 VCN 处被阻止；没有暴力破解面。                                |
-| sshd 加固          | 否       | Tailscale SSH 不使用 sshd。                                               |
-| 禁用 root 登录     | 否       | Tailscale 通过 tailnet 身份进行认证，而不是系统用户。                    |
-| 仅限 SSH 密钥认证  | 否       | 同上——tailnet 身份取代了系统 SSH 密钥。                                  |
-| IPv6 加固          | 通常不需要 | 取决于 VCN/子网设置；请确认实际分配/暴露的内容。                           |
+| 传统步骤             | 需要吗？     | 原因                                                                       |
+| ------------------ | ----------- | ------------------------------------------------------------------------- |
+| UFW 防火墙          | 否          | VCN 会在流量到达实例前将其阻止。                    |
+| fail2ban           | 否          | 22 端口在 VCN 处已被阻止；没有暴力破解面。                    |
+| sshd 加固          | 否          | Tailscale SSH 不使用 sshd。                                          |
+| 禁用 root 登录      | 否          | Tailscale 通过 tailnet 身份进行认证，而不是系统用户。            |
+| 仅限 SSH 密钥认证    | 否          | 同上——tailnet 身份取代了系统 SSH 密钥。                        |
+| IPv6 加固           | 通常不需要 | 取决于 VCN/子网设置；请确认实际分配/暴露了什么。 |
 
 仍然建议：
 
@@ -176,8 +176,8 @@ Always Free 层是 ARM（`aarch64`）。大多数 OpenClaw 功能都能正常工
 
 OpenClaw 的状态位于：
 
-- `~/.openclaw/` — `openclaw.json`、每个代理的 `auth-profiles.json`、channel/provider 状态以及会话数据。
-- `~/.openclaw/workspace/` — 代理工作区（SOUL.md、memory、artifacts）。
+- `~/.openclaw/` -- `openclaw.json`、每个代理的 `auth-profiles.json`、通道/提供商状态，以及会话数据。
+- `~/.openclaw/workspace/` -- 代理工作区（SOUL.md、memory、artifacts）。
 
 这些内容会在重启后保留。要创建一个可移植快照：
 
@@ -207,12 +207,12 @@ ssh -L 18789:127.0.0.1:18789 ubuntu@openclaw
 
 ## 下一步
 
-- [Channels](/channels) -- 连接 Telegram、WhatsApp、Discord 等
-- [Gateway configuration](/gateway/configuration) -- 所有配置选项
-- [Updating](/install/updating) -- 保持 OpenClaw 最新
+- [渠道](/channels) -- 连接 Telegram、WhatsApp、Discord 等
+- [网关配置](/gateway/configuration) -- 所有配置选项
+- [更新](/install/updating) -- 保持 OpenClaw 最新
 
 ## 相关内容
 
-- [Install overview](/install)
+- [安装概览](/install)
 - [GCP](/install/gcp)
-- [VPS hosting](/vps)
+- [VPS 托管](/vps)

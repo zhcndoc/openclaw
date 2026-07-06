@@ -8,17 +8,16 @@ read_when:
 
 安装官方的腾讯云提供方插件，通过 TokenHub 端点（`tencent-tokenhub`）使用兼容 OpenAI 的 API 来访问腾讯 Hy3 预览版。
 
-| 属性             | 值                                                   |
-| ---------------- | ---------------------------------------------------- |
-| 提供方 id        | `tencent-tokenhub`                                   |
-| 包                | `@openclaw/tencent-provider`                         |
-| 认证环境变量      | `TOKENHUB_API_KEY`                                   |
-| 引导标志          | `--auth-choice tokenhub-api-key`                     |
-| 直接 CLI 标志     | `--tokenhub-api-key <key>`                           |
-| API              | 兼容 OpenAI（`openai-completions`）                  |
-| 默认基础 URL      | `https://tokenhub.tencentmaas.com/v1`                |
-| 全局基础 URL      | `https://tokenhub-intl.tencentmaas.com/v1`（覆盖）   |
-| 默认模型          | `tencent-tokenhub/hy3-preview`                    |
+| 属性            | 值                                         |
+| --------------- | ------------------------------------------ |
+| 提供方 id      | `tencent-tokenhub`                         |
+| 包              | `@openclaw/tencent-provider`              |
+| 认证环境变量    | `TOKENHUB_API_KEY`                         |
+| 引导标志        | `--auth-choice tokenhub-api-key`          |
+| 直接 CLI 标志   | `--tokenhub-api-key <key>`                |
+| API            | OpenAI 兼容（`openai-completions`）       |
+| 基础 URL       | `https://tokenhub.tencentmaas.com/v1`      |
+| 默认模型        | `tencent-tokenhub/hy3-preview`            |
 
 ## 快速开始
 
@@ -69,13 +68,17 @@ openclaw onboard --non-interactive \
   --accept-risk
 ```
 
+<Note>
+`--accept-risk` 与 `--non-interactive` 一起使用时是必需的。
+</Note>
+
 ## 内置目录
 
 | 模型引用                       | 名称                      | 输入 | 上下文    | 最大输出 | 备注                     |
 | ------------------------------ | ------------------------- | ---- | --------- | -------- | ------------------------ |
 | `tencent-tokenhub/hy3-preview` | Hy3 preview（TokenHub）   | 文本 | 256,000   | 64,000   | 默认；支持推理           |
 
-Hy3 preview 是腾讯混元推出的大型 MoE 语言模型，适用于推理、长上下文指令跟随、代码和智能体工作流。腾讯的 OpenAI 兼容示例使用 `hy3-preview` 作为模型 id，并支持标准的 chat-completions 工具调用以及 `reasoning_effort`。
+Hy3 preview 是腾讯混元的大型 MoE 语言模型，适用于推理、长上下文指令遵循、代码和智能体工作流。它支持标准的 chat-completions 工具调用以及 `reasoning_effort`。
 
 <Tip>
   模型 id 是 `hy3-preview`。不要将其与腾讯的 `HY-3D-*` 模型混淆，后者是 3D 生成 API，并不是此提供方配置的 OpenClaw 聊天模型。
@@ -97,13 +100,11 @@ Hy3 preview 是腾讯混元推出的大型 MoE 语言模型，适用于推理、
 
 <AccordionGroup>
   <Accordion title="端点覆盖">
-    OpenClaw 默认使用腾讯云的 `https://tokenhub.tencentmaas.com/v1` 端点。腾讯还提供了一个国际版 TokenHub 端点：
+    OpenClaw 内置目录使用腾讯云的 `https://tokenhub.tencentmaas.com/v1` 端点。仅当你的 TokenHub 账号或区域需要不同端点时才进行覆盖：
 
     ```bash
-    openclaw config set models.providers.tencent-tokenhub.baseUrl "https://tokenhub-intl.tencentmaas.com/v1"
+    openclaw config set models.providers.tencent-tokenhub.baseUrl "https://your-endpoint/v1"
     ```
-
-    仅当你的 TokenHub 账户或区域要求时，才覆盖此端点。
 
   </Accordion>
 
@@ -123,13 +124,13 @@ Hy3 preview 是腾讯混元推出的大型 MoE 语言模型，适用于推理、
   <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
     选择提供方、模型引用和故障切换行为。
   </Card>
-  <Card title="配置参考" href="/gateway/configuration" icon="gear">
-    包括提供方设置在内的完整配置 schema。
+  <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
+    包括提供方设置在内的完整配置模式。
   </Card>
   <Card title="腾讯 TokenHub" href="https://cloud.tencent.com/product/tokenhub" icon="arrow-up-right-from-square">
     腾讯云 TokenHub 的产品页面。
   </Card>
-  <Card title="Hy3 preview 模型卡" href="https://huggingface.co/tencent/Hy3-preview" icon="square-poll-horizontal">
-    腾讯混元 Hy3 preview 的详细信息和基准测试。
+  <Card title="Hy3 预览模型卡" href="https://huggingface.co/tencent/Hy3-preview" icon="square-poll-horizontal">
+    腾讯混元 Hy3 预览版的详细信息和基准测试。
   </Card>
 </CardGroup>

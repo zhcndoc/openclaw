@@ -7,17 +7,19 @@ title: "网关架构"
 
 ## 概览
 
-- 单个长期运行的 **Gateway** 统一管理所有消息入口（通过
-  Baileys 接入 WhatsApp、通过 grammY 接入 Telegram、Slack、Discord、Signal、iMessage、WebChat）。
-- 控制平面客户端（macOS 应用、CLI、Web UI、自动化）通过配置的绑定主机（默认
-  `127.0.0.1:18789`）上的 **WebSocket** 连接到
-  Gateway。
-- **Nodes**（macOS/iOS/Android/无头环境）也通过 **WebSocket** 连接，但会声明 `role: node` 并提供明确的 caps/commands。
+- 一个长期运行的 **Gateway** 负责所有消息接入面（通过
+  Baileys 的 WhatsApp、通过 grammY 的 Telegram、Slack、Discord、Signal、iMessage、WebChat）。
+- 控制平面客户端（macOS 应用、CLI、Web UI、自动化）通过 **WebSocket** 连接到
+  Gateway，连接地址为配置的绑定主机（默认
+  `127.0.0.1:18789`）。
+- **节点**（macOS/iOS/Android/headless）也通过 **WebSocket** 连接，但
+  声明 `role: node`，并带有明确的能力/命令。
 - 每台主机只运行一个 Gateway；只有它会打开 WhatsApp 会话。
-- **canvas host** 由 Gateway 的 HTTP 服务器提供，路径为：
-  - `/__openclaw__/canvas/`（可由 agent 编辑的 HTML/CSS/JS）
+- **画布主机**由 Gateway 的 HTTP 服务器提供，路径为：
+  - `/__openclaw__/canvas/`（代理可编辑的 HTML/CSS/JS）
   - `/__openclaw__/a2ui/`（A2UI 主机）
-    它使用与 Gateway 相同的端口（默认 `18789`）。
+
+  它使用与 Gateway 相同的端口（默认 `18789`）。
 
 ## 组件与流程
 
@@ -41,9 +43,7 @@ title: "网关架构"
   许可存放在设备配对存储中。
 - 暴露诸如 `canvas.*`、`camera.*`、`screen.record`、`location.get` 的命令。
 
-协议细节：
-
-- [Gateway protocol](/gateway/protocol)
+Protocol details: [Gateway 协议](/gateway/protocol)
 
 ### WebChat
 
@@ -59,16 +59,16 @@ sequenceDiagram
 
     Client->>Gateway: req:connect
     Gateway-->>Client: res (ok)
-    Note right of Gateway: or res error + close
-    Note left of Client: payload=hello-ok<br>snapshot: presence + health
+    Note right of Gateway: 或 res 错误 + 关闭
+    Note left of Client: payload=hello-ok<br>snapshot: 在线状态 + 健康状态
 
     Gateway-->>Client: event:presence
     Gateway-->>Client: event:tick
 
     Client->>Gateway: req:agent
-    Gateway-->>Client: res:agent<br>ack {runId, status:"accepted"}
-    Gateway-->>Client: event:agent<br>(streaming)
-    Gateway-->>Client: res:agent<br>final {runId, status, summary}
+    Gateway-->>Client: res:agent<br>确认 {runId, status:"accepted"}
+    Gateway-->>Client: event:agent<br>(流式传输)
+    Gateway-->>Client: res:agent<br>最终 {runId, status, summary}
 ```
 
 ## 线路协议（摘要）
@@ -92,18 +92,16 @@ sequenceDiagram
   服务器会维护一个短生命周期的去重缓存。
 - Nodes 必须在 `connect` 中包含 `role: "node"` 以及 caps/commands/permissions。
 
-## 配对 + 本地信任
+## 配对与本地信任
 
-- 所有 WS 客户端（操作者 + nodes）在 `connect` 中都包含一个 **device identity**。
-- 新设备 ID 需要配对批准；Gateway 会签发一个 **device token**
-  供后续连接使用。
-- 直接的本地 loopback 连接可以自动批准，以保持同主机 UX 顺畅。
-- OpenClaw 还具有一个窄范围的后端/容器本地自连接路径，用于受信任的共享密钥 helper 流程。
-- tailnet 和 LAN 连接，包括同主机 tailnet 绑定，仍然需要显式配对批准。
-- 所有连接都必须对 `connect.challenge` nonce 进行签名。
-- 签名载荷 `v3` 还会绑定 `platform` + `deviceFamily`；网关会在重连时固定已配对的元数据，并在元数据变化时要求重新配对修复。
-- **非本地**连接仍然需要显式批准。
-- Gateway auth（`gateway.auth.*`）仍适用于 **所有** 连接，无论本地还是远程。
+- 所有 WS 客户端（操作员 + 节点）在 `connect` 时都包含一个 **设备身份**。
+- 新设备 ID 需要配对批准；Gateway 会为后续连接发放一个 **设备令牌**。
+- 直接的本地回环连接可以自动批准，以保持同主机 UX 的流畅性。
+- OpenClaw 还提供一条窄范围的后端/容器本地自连接路径，用于受信任的共享密钥辅助流程。
+- Tailnet 和 LAN 连接，包括同主机 tailnet 绑定，仍然需要显式的配对批准。
+- 所有连接都必须对 `connect.challenge` nonce 进行签名。签名载荷 `v3` 还会绑定 `platform` 和 `deviceFamily`；网关在重新连接时会固定已配对的元数据，并且在元数据变更时要求重新配对修复。
+- **非本地** 连接仍然需要显式批准。
+- Gateway 认证（`gateway.auth.*`）仍然适用于**所有**连接，无论本地还是远程。
 
 详情：[Gateway protocol](/gateway/protocol)、[Pairing](/channels/pairing)、
 [Security](/gateway/security)。
@@ -120,7 +118,7 @@ sequenceDiagram
 - 替代方案：SSH 隧道
 
   ```bash
-  ssh -N -L 18789:127.0.0.1:18789 user@host
+  ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
   ```
 
 - 隧道中仍适用相同的握手 + 认证令牌。

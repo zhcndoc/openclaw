@@ -13,13 +13,17 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 | **Zen** | `opencode/...`    | `opencode`       |
 | **Go** | `opencode-go/...` | `opencode-go`    |
 
-这两个目录都使用同一个 OpenCode API key。OpenClaw 会将运行时提供方 id 分开，以便上游按模型路由时保持正确，但入门和文档会将它们视为同一个 OpenCode 配置。
+这两个目录共用一个 OpenCode API 密钥（`OPENCODE_API_KEY`，别名
+`OPENCODE_ZEN_API_KEY`）。OpenClaw 会将运行时 provider id 分开，
+以便上游按模型路由保持正确，但入门和文档会将它们视为
+同一个 OpenCode 配置。
 
 ## 开始使用
 
 <Tabs>
-  <Tab title="Zen 目录">
-    **最适合：** 经过精选的 OpenCode 多模型代理（Claude、GPT、Gemini）。
+  <Tab title="Zen catalog">
+    **最佳适用场景：** 精选的 OpenCode 多模型代理（Claude、GPT、Gemini、GLM、
+    DeepSeek、Kimi、MiniMax、Qwen）。
 
     <Steps>
       <Step title="运行入门配置">
@@ -47,8 +51,8 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
   </Tab>
 
-  <Tab title="Go 目录">
-    **最适合：** OpenCode 托管的 Kimi、GLM 和 MiniMax 系列。
+  <Tab title="Go catalog">
+    **最佳适用场景：** OpenCode 托管的 Kimi、GLM、MiniMax、Qwen 和 DeepSeek 系列。
 
     <Steps>
       <Step title="运行入门配置">
@@ -90,31 +94,39 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
 
 ### Zen
 
-| Property         | Value                                                                   |
-| ---------------- | ----------------------------------------------------------------------- |
-| Runtime provider | `opencode`                                                              |
-| Example models   | `opencode/claude-opus-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3-pro` |
+| Property         | Value                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| 运行时提供方 | `opencode`                                                                                    |
+| 示例模型   | `opencode/claude-opus-4-6`, `opencode/gpt-5.5`, `opencode/gemini-3.1-pro`, `opencode/glm-5.2` |
+
+运行 `openclaw models list --provider opencode` 查看完整的当前列表，其中
+还包括 `opencode/big-pickle` 和
+`opencode/deepseek-v4-flash-free` 等免费层级行。
 
 ### Go
 
 | Property         | Value                                                                    |
 | ---------------- | ------------------------------------------------------------------------ |
-| Runtime provider | `opencode-go`                                                            |
-| Example models   | `opencode-go/kimi-k2.6`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
+| 运行时提供方 | `opencode-go`                                                            |
+| 示例模型   | `opencode-go/kimi-k2.6`, `opencode-go/glm-5`, `opencode-go/minimax-m2.5` |
+
+参见 [OpenCode Go](/providers/opencode-go) 获取完整的 Go 模型表。
 
 ## 高级配置
 
 <AccordionGroup>
   <Accordion title="API key 别名">
-    `OPENCODE_ZEN_API_KEY` 也支持作为 `OPENCODE_API_KEY` 的别名。
+    `OPENCODE_ZEN_API_KEY` 也可作为 `OPENCODE_API_KEY` 的别名使用。
   </Accordion>
 
   <Accordion title="共享凭据">
     在设置过程中输入一个 OpenCode key 会为两个运行时提供方都存储凭据。你不需要分别为每个目录进行入门配置。
   </Accordion>
 
-  <Accordion title="计费与控制台">
-    你登录 OpenCode，添加计费信息，并复制你的 API key。计费和目录可用性由 OpenCode 控制台管理。
+  <Accordion title="获取 API key">
+    创建一个 OpenCode 账户，并在
+    [opencode.ai/auth](https://opencode.ai/auth) 生成 API key。计费和目录
+    可用性由 OpenCode 仪表板管理。
   </Accordion>
 
   <Accordion title="Gemini 回放行为">
@@ -126,15 +138,14 @@ OpenCode 在 OpenClaw 中提供两个托管目录：
   </Accordion>
 </AccordionGroup>
 
-<Tip>
-在设置过程中输入一个 OpenCode key 会为 Zen 和 Go 两个运行时提供方都存储凭据，因此你只需要配置一次。
-</Tip>
-
-## 相关内容
+## 相关
 
 <CardGroup cols={2}>
+  <Card title="OpenCode Go" href="/providers/opencode-go" icon="server">
+    完整的 Go 目录参考。
+  </Card>
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    选择提供方、模型引用和故障转移行为。
+    选择提供方、模型引用和故障切换行为。
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     agents、models 和 providers 的完整配置参考。

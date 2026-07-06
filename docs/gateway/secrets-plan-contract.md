@@ -7,9 +7,7 @@ read_when:
 title: "Secrets apply 计划契约"
 ---
 
-本页定义了由 `openclaw secrets apply` 强制执行的严格契约。
-
-如果某个目标不符合这些规则，apply 会在修改配置之前失败。
+本页定义了 `openclaw secrets apply` 强制执行的严格契约。如果某个目标不符合这些规则，`apply` 会在修改任何文件之前失败。
 
 ## Plan 文件形状
 
@@ -38,14 +36,16 @@ title: "Secrets apply 计划契约"
 }
 ```
 
-## Provider upserts and deletes
+`openclaw secrets configure` 会生成这种形状的计划。你也可以手动编写或编辑一个。
 
-计划还可以包含另外两个可选的顶层字段，它们会在逐个目标写入的同时修改 `secrets.providers` 映射：
+## 提供者上插入与删除
 
-- `providerUpserts` — 一个以 provider 别名为键的对象。每个值都是一个 provider 定义（与 `openclaw.json` 中 `secrets.providers.<alias>` 下接受的形状相同，例如 `exec` 或 `file` provider）。
-- `providerDeletes` — 一个要移除的 provider 别名数组。
+计划还可以包含两个可选的顶层字段，这些字段会在逐目标写入的同时修改 `secrets.providers` 映射：
 
-`providerUpserts` 会先于 `targets` 执行，因此 `target.ref.provider` 可以引用同一计划在 `providerUpserts` 中引入的 provider 别名。没有这一点时，引用了 `openclaw.json` 中尚未配置的别名的计划会失败，并报错 `provider "<alias>" is not configured`。
+- `providerUpserts` —— 一个以提供者别名为键的对象。每个值都是一个提供者定义（与 `openclaw.json` 中 `secrets.providers.<alias>` 下接受的形状相同，例如 `exec` 或 `file` 提供者）。
+- `providerDeletes` —— 一个要移除的提供者别名数组。
+
+`providerUpserts` 会在 `targets` 之前运行，因此 `target.ref.provider` 可以引用同一个计划在 `providerUpserts` 中引入的提供者别名。没有这个顺序的话，引用尚未在 `openclaw.json` 中配置的别名的计划会失败，并报错 `provider "<alias>" is not configured`。
 
 ```json5
 {
@@ -71,25 +71,23 @@ title: "Secrets apply 计划契约"
 }
 ```
 
-通过 `providerUpserts` 引入的 Exec provider 仍然受 [Exec provider consent behavior](#exec-provider-consent-behavior) 中的 exec 同意规则约束：包含 exec provider 的计划在写入模式下需要 `--allow-exec`。
+通过 `providerUpserts` 引入的 Exec 提供者仍然受 [Exec provider consent behavior](#exec-provider-consent-behavior) 中的 exec 同意规则约束：包含 exec 提供者的计划在写入模式下需要 `--allow-exec`。
 
-## Supported target scope
+## 支持的目标范围
 
-计划目标在以下位置的受支持凭据路径上被接受：
-
-- [SecretRef Credential Surface](/reference/secretref-credential-surface)
+对于 [SecretRef Credential Surface](/reference/secretref-credential-surface) 中支持的凭据路径，计划目标是可接受的。
 
 ## 目标类型行为
 
-通用规则：
+`target.type` 必须是一个可识别的目标类型，并且规范化后的 `target.path` 必须与该类型注册的路径形状匹配。
 
-- `target.type` 必须可识别，并且必须与规范化后的 `target.path` 形状匹配。
+某些目标类型除了其规范类型名称外，还会为现有计划接受一个兼容别名作为 `target.type`：
 
-以下兼容别名仍对现有计划被接受：
-
-- `models.providers.apiKey`
-- `skills.entries.apiKey`
-- `channels.googlechat.serviceAccount`
+| Canonical type                       | Accepted alias                                  |
+| ------------------------------------ | ----------------------------------------------- |
+| `models.providers.apiKey`            | `models.providers.*.apiKey`                     |
+| `skills.entries.apiKey`              | `skills.entries.*.apiKey`                       |
+| `channels.googlechat.serviceAccount` | `channels.googlechat.accounts.*.serviceAccount` |
 
 ## 路径校验规则
 
@@ -112,7 +110,7 @@ title: "Secrets apply 计划契约"
 Invalid plan target path for models.providers.apiKey: models.providers.openai.baseUrl
 ```
 
-无效计划不会提交任何写入。
+对于无效的 plan，不会提交任何写入：目标解析和路径校验会在任何文件被触碰之前运行。另一方面，一旦有效的 plan 开始写入，apply 会先为每个被触碰的文件创建快照，并在同一次运行中后续某次写入失败时恢复这些快照，因此部分写入绝不会导致 config、auth-profile 或 env 状态不同步。
 
 ## Exec provider 同意行为
 
@@ -122,8 +120,8 @@ Invalid plan target path for models.providers.apiKey: models.providers.openai.ba
 
 ## 运行时与审计范围说明
 
-- 仅引用的 `auth-profiles.json` 条目（`keyRef`/`tokenRef`）会纳入运行时解析和审计覆盖。
-- `secrets apply` 会写入受支持的 `openclaw.json` 目标、受支持的 `auth-profiles.json` 目标，以及可选的清理目标。
+- 仅引用的 `auth-profiles.json` 条目（`keyRef`/`tokenRef`）会包含在运行时凭证解析和审计覆盖范围内。
+- `secrets apply` 会写入受支持的 `openclaw.json` 目标、受支持的 `auth-profiles.json` 目标，以及三个可选的清理流程，且默认全部启用：`scrubEnv`（从 `.env` 中移除已迁移的明文值）、`scrubAuthProfilesForProviderTargets`（清除 `auth-profiles.json` 中针对计划刚迁移的提供方所遗留的明文/未使用引用残留）、以及 `scrubLegacyAuthJson`（从旧的 `auth.json` 存储中删除已迁移的 `api_key` 条目）。在计划中将 `options.scrubEnv`、`options.scrubAuthProfilesForProviderTargets`、`options.scrubLegacyAuthJson` 中任意项设为 `false`，即可跳过对应流程。
 
 ## 操作检查
 
@@ -143,7 +141,7 @@ openclaw secrets apply --from /tmp/openclaw-secrets-plan.json --allow-exec
 
 ## 相关文档
 
-- [Secrets Management](/gateway/secrets)
+- [秘密管理](/gateway/secrets)
 - [CLI `secrets`](/cli/secrets)
-- [SecretRef Credential Surface](/reference/secretref-credential-surface)
-- [Configuration Reference](/gateway/configuration-reference)
+- [SecretRef 凭证表面](/reference/secretref-credential-surface)
+- [配置参考](/gateway/configuration-reference)

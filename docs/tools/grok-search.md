@@ -9,33 +9,28 @@ title: "Grok 搜索"
 OpenClaw 支持将 Grok 作为 `web_search` 提供方，使用 xAI 基于网络的
 响应生成由实时搜索结果支撑并带有引用的 AI 综合答案。
 
-Grok 网页搜索在可用时会优先使用你现有的 xAI OAuth 登录。
-如果不存在 OAuth 配置文件，同一个 xAI API 密钥也可以为内置的
-`x_search` 工具提供支持，用于 X（前身为 Twitter）帖子搜索以及 `code_execution`
-工具。如果你将密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 下，
-OpenClaw 也会将其作为捆绑的 xAI 模型提供方的回退方案。
+如果有可用的现有 xAI OAuth 登录，Grok 网页搜索会优先使用它。
+如果不存在 OAuth 配置文件，同一个 xAI API 密钥也会为内置的
+`x_search` 工具（用于 X，前身为 Twitter 的帖子搜索）和 `code_execution`
+工具提供支持。将密钥存储在 `plugins.entries.xai.config.webSearch.apiKey` 处，也
+可以让 OpenClaw 将其作为捆绑的 xAI 模型提供方的后备方案重复使用。
 
-对于帖子级别的 X 指标，例如转发、回复、收藏或浏览量，请优先使用
-`x_search` 并提供精确的帖子 URL 或状态 ID，而不是宽泛的搜索
-查询。
+对于帖子级别的 X 指标（转发、回复、收藏、浏览量），请使用
+[`x_search`](/tools/web#x_search) 并提供精确的帖子 URL 或状态 ID，
+而不是宽泛的搜索查询。
 
 ## 入门与配置
 
-如果你在以下过程中选择 **Grok**：
+在 `openclaw onboard` 或 `openclaw configure --section
+web` 中选择 **Grok**，可让 OpenClaw 复用现有的 xAI OAuth 配置文件，而无需提示输入单独的网页搜索密钥。没有 OAuth 时，则会回退到 xAI API 密钥设置。
 
-- `openclaw onboard`
-- `openclaw configure --section web`
+随后，OpenClaw 会提供一个后续步骤，使用相同的 xAI 凭据启用 `x_search`。该后续步骤：
 
-OpenClaw 可以在不提示单独网页搜索密钥的情况下使用现有的 xAI OAuth 配置文件。
-如果 OAuth 不可用，则会回退到 xAI API 密钥设置。
-OpenClaw 还可以显示一个单独的后续步骤，使用相同的 xAI 凭据启用 `x_search`。
-该后续步骤：
+- 仅在你为 `web_search` 选择 Grok 之后才会出现
+- 不是一个单独的顶层网页搜索提供方选项
+- 还可以在同一流程中可选地设置 `x_search` 模型
 
-- 仅在你为 `web_search` 选择 Grok 之后出现
-- 不是一个独立的顶层网页搜索提供方选择
-- 也可以在同一流程中可选地设置 `x_search` 模型
-
-如果你跳过它，之后仍可以在配置中启用或更改 `x_search`。
+如果跳过它，可以稍后在配置中启用或更改 `x_search`。
 
 ## 登录或获取 API 密钥
 
@@ -90,10 +85,10 @@ OpenClaw 还可以显示一个单独的后续步骤，使用相同的 xAI 凭据
 }
 ```
 
-**凭据替代方案：**使用 `openclaw models auth login
---provider xai --method oauth` 登录，在 Gateway 环境中设置 `XAI_API_KEY`，
-或者存储 `plugins.entries.xai.config.webSearch.apiKey`。对于 gateway 安装，
-请将环境变量放在 `~/.openclaw/.env` 中。
+**凭证替代方案：** `openclaw models auth login --provider xai
+--method oauth`，Gateway 环境中的 `XAI_API_KEY`，或
+`plugins.entries.xai.config.webSearch.apiKey`。对于 gateway 安装，请将环境
+变量放入 `~/.openclaw/.env`。
 
 ## 工作原理
 
@@ -102,23 +97,17 @@ Grok 使用 xAI 基于网络的响应来综合答案，并在行内提供
 
 ## 支持的参数
 
-Grok 搜索支持 `query`。
+Grok search 支持 `query`。`count` 为了与共享的 `web_search`
+兼容而被接受，但 Grok 始终返回一个带引用的综合答案，
+而不是 N 条结果列表。不支持提供商特定的过滤器。
 
-`count` 为了兼容共享的 `web_search` 而被接受，但 Grok 仍然
-返回一条带引用的综合答案，而不是一个 N 个结果的列表。
-
-目前不支持特定于提供方的过滤器。
-
-Grok 使用特定于提供方的 60 秒默认超时，因为 xAI Responses
-基于网络的检索可能比共享的 `web_search` 默认值运行更久。设置
-`tools.web.search.timeoutSeconds` 可覆盖它。
+Grok 默认使用 60 秒超时，因为 xAI Responses 的网页检索
+搜索可能比共享的 `web_search` 默认耗时更长。你可以通过
+`tools.web.search.timeoutSeconds` 覆盖它。
 
 ## Base URL 覆盖
 
-当 Grok 网页搜索需要通过运营商代理或兼容 xAI 的 Responses 端点路由时，设置 `plugins.entries.xai.config.webSearch.baseUrl`。OpenClaw
-会在去除尾部斜杠后向 `<baseUrl>/responses` 发送请求。`x_search`
-使用相同的 `webSearch.baseUrl` 回退，除非
-`plugins.entries.xai.config.xSearch.baseUrl` 已设置。
+将 `plugins.entries.xai.config.webSearch.baseUrl` 设置为通过运算符代理或 xAI 兼容的 Responses 端点路由 Grok 网页搜索。OpenClaw 会在去除末尾斜杠后向 `<baseUrl>/responses` 发送请求。除非设置了 `plugins.entries.xai.config.xSearch.baseUrl`，否则 `x_search` 将回退到相同的 `webSearch.baseUrl`。
 
 ## 相关
 

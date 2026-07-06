@@ -12,16 +12,12 @@ title: "Exec 审批 — 高级"
 
 ## 安全二进制（仅 stdin）
 
-`tools.exec.safeBins` 定义了一小组**仅 stdin** 的二进制程序（例如
-`cut`），它们可以在 allowlist 模式下运行，**无需**显式的 allowlist
-条目。安全二进制会拒绝位置文件参数和类似路径的标记，因此它们
-只能作用于传入的流。请将其视为面向流过滤器的窄快速路径，
-而不是通用信任列表。
+`tools.exec.safeBins` 命名的是**仅 stdin** 二进制程序（例如 `cut`），它们在 allowlist 模式下运行，**不需要**显式 allowlist 条目。安全二进制会拒绝位置文件参数和类路径令牌，因此它们只能处理传入的流。请将其视为面向流过滤器的窄型快速路径，而不是通用信任列表。
 
 <Warning>
 不要将解释器或运行时二进制程序（例如 `python3`、`node`、
 `ruby`、`bash`、`sh`、`zsh`）加入 `safeBins`。如果某个命令按设计可以
-执行代码、运行子命令或读取文件，请优先使用显式 allowlist 条目，
+执行代码、运行子子命令或读取文件，请优先使用显式 allowlist 条目，
 并保持审批提示开启。自定义安全二进制必须在
 `tools.exec.safeBinProfiles.<bin>` 中定义显式配置文件。
 </Warning>
@@ -41,9 +37,9 @@ allowlist 条目。对于安全二进制模式下的 `grep`，请使用 `-e`/`--
 
 ### argv 验证与被拒绝的标志
 
-验证仅根据 argv 形状进行确定性判断（不检查宿主文件系统是否存在），
-这可以防止因 allow/deny 差异而产生文件存在性 oracle 行为。面向文件的选项会被默认安全二进制拒绝；
-长选项会以 fail-closed 方式验证（拒绝未知标志和歧义缩写）。
+验证仅基于 argv 形状确定（不进行主机文件系统存在性
+检查），这可防止因允许/拒绝差异而产生文件存在性探测行为。默认安全二进制的文件导向选项会被拒绝；长
+选项采用 fail-closed 验证（未知标志和歧义缩写都会被拒绝）。
 
 按安全二进制配置文件被拒绝的标志：
 
@@ -56,9 +52,9 @@ allowlist 条目。对于安全二进制模式下的 `grep`，请使用 `-e`/`--
 
 [//]: # "SAFE_BIN_DENIED_FLAGS:END"
 
-安全二进制还会在执行时将 argv 标记强制视为**字面文本**（不进行 glob 展开和
-`$VARS` 展开），适用于仅 stdin 的段，因此像 `*` 或 `$HOME/...`
-这样的模式不能被用来夹带文件读取。
+安全二进制还会在执行时强制将 argv token 视为**字面文本**（仅针对 stdin-only 段，不进行通配符展开和 `$VARS` 展开），因此诸如 `*` 或 `$HOME/...` 之类的模式不能用于偷偷读取文件。`awk`
+和 `sed` 永远不会被允许作为安全二进制（其语义无法验证为
+仅 stdin）；`jq` 可以选择启用，但 OpenClaw 在安全二进制模式下仍会拒绝 `env` 风格的过滤器（例如 `jq env` 或 `jq -n env`），因此如果没有显式 allowlist 路径或审批提示，`jq` 不能导出主机进程环境。
 
 ### 可信二进制目录
 
@@ -82,11 +78,12 @@ allowlist 条目。对于安全二进制模式下的 `grep`，请使用 `-e`/`--
 对于 Shell 包装器（`bash|sh|zsh ... -c/-lc`），请求范围内的环境变量覆盖会被缩减为一个小的显式
 allowlist（`TERM`、`LANG`、`LC_*`、`COLORTERM`、`NO_COLOR`、`FORCE_COLOR`）。
 
-对于 allowlist 模式下的 `allow-always` 决策，已知的分发包装器（`env`、
-`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会持久化内部可执行文件路径，
-而不是包装器路径。Shell 多路复用器（`busybox`、`toybox`）在 shell applet（`sh`、`ash` 等）上会
-以相同方式解除包装。如果包装器或多路复用器无法安全解除包装，则不会自动持久化任何
-allowlist 条目。
+对于 allowlist 模式中的 `allow-always` 决策，透明分发包装器
+（例如 `env`、`flock`、`nice`、`nohup`、`stdbuf`、`timeout`）会保留
+内部可执行文件路径而不是包装器路径。Shell 多路复用器
+（`busybox`、`toybox`）在 shell applet（`sh`、`ash` 等）上会以同样方式解除包装。
+如果包装器或多路复用器无法安全解除包装，则不会自动持久化任何 allowlist
+条目。
 
 如果你将 `python3` 或 `node` 之类的解释器加入 allowlist，请优先设置
 `tools.exec.strictInlineEval=true`，这样内联 eval 仍需要显式审批。在 strict 模式下，
@@ -131,10 +128,7 @@ allowlist 条目。
 }
 ```
 
-如果你显式将 `jq` 纳入 `safeBins`，OpenClaw 仍会在安全二进制模式下拒绝 `env` 内建，
-因此 `jq -n env` 无法在没有显式 allowlist 路径或审批提示的情况下转储宿主进程环境。
-
-## 解释器/运行时命令
+## Interpreter/runtime commands
 
 带审批的解释器/运行时运行会刻意保持保守：
 
@@ -149,12 +143,10 @@ allowlist 条目。
 - 对于这些工作流，请优先使用沙箱、单独的主机边界，或显式受信任的
   allowlist/完整工作流，由操作员接受更宽泛的运行时语义。
 
-当需要审批时，exec 工具会立即返回一个 approval id。使用该 id 来
-关联之后已批准运行的系统事件（`Exec finished`，以及在已配置时的 `Exec running`）。
-如果在超时前未收到任何决定，请求会被视为审批超时，并
-作为终态主机命令拒绝返回。对于带来源
-会话的主 agent 异步审批，OpenClaw 还会用内部 followup 恢复该会话，因此 agent 会观察到
-命令未运行，而不是稍后去修复缺失结果。
+当需要审批时，exec 工具会立即返回一个 approval id。使用该 id
+来关联后续已批准运行的系统事件（`Exec finished`，以及在配置了时的 `Exec running`）。
+如果在超时前没有收到决定，请求会被视为审批超时，并
+表现为终端主机命令拒绝。对于带有来源会话的主代理异步审批，OpenClaw 还会恢复该会话并附带一个内部 followup，这样代理就能观察到该命令没有运行，而不是在之后修复缺失结果。待处理的 exec 审批默认在 30 分钟后过期。
 
 ### 后续投递行为
 
@@ -199,7 +191,7 @@ allowlist 条目。
 /approve <id> deny
 ```
 
-`/approve` 命令同时处理 exec 审批和插件审批。如果该 ID 与待处理的 exec 审批不匹配，它会自动转而检查插件审批。
+`/approve` 命令同时处理 exec 审批和插件审批。如果 ID 不匹配任何待处理的 exec 审批，它会自动改为检查插件审批。这个回退仅限于“未找到审批”的失败；真正的 exec 审批拒绝/错误不会被静默地重试为插件审批。
 
 ### 插件审批转发
 
@@ -226,54 +218,37 @@ allowlist 条目。
 其配置形状与 `approvals.exec` 相同：`enabled`、`mode`、`agentFilter`、
 `sessionFilter` 和 `targets` 的工作方式一致。
 
-支持共享交互式回复的频道会为 exec 和插件审批渲染相同的审批按钮。不支持共享交互式 UI 的频道会回退到带 `/approve`
-说明的纯文本。
-插件审批请求可能会限制可用决策。审批界面使用请求声明的决策集，Gateway 会拒绝提交未被提供的决策。
+支持共享交互式回复的频道会为 exec 和
+插件审批渲染相同的审批按钮。不支持共享交互式 UI 的频道会退回为带有 `/approve`
+说明的纯文本。插件审批请求可能会限制可用决策：审批界面使用请求声明的决策集，而网关会拒绝提交未被提供的决策。
 
 ### 任意频道上的同聊审批
 
-当某个 exec 或插件审批请求起源于一个可投递的聊天界面时，同一个聊天
-现在默认可以用 `/approve` 来批准它。这同样适用于 Slack、Matrix 和
-Microsoft Teams 等频道，以及现有的 Web UI 和终端 UI 流程。
+当 exec 或插件审批请求来自可投递的聊天界面时，默认可以在同一聊天中用 `/approve`
+批准它。这适用于 Slack、Matrix、Microsoft Teams 以及类似的可投递聊天，此外还适用于现有的 Web UI 和终端 UI 流程，并使用该会话的正常频道认证模型。如果发起审批的聊天本来就可以发送命令并接收回复，那么审批请求就不再需要单独的原生投递适配器来保持待处理状态。
 
-这种共享文本命令路径会为该对话使用正常的频道认证模型。如果
-发起的聊天本来就能发送命令并接收回复，审批请求就不再需要
-单独的原生投递适配器来保持挂起状态。
-
-Discord 和 Telegram 也支持同聊 `/approve`，但即使禁用了原生审批投递，
-这些频道仍会使用其解析出的审批者列表进行授权。
-
-对于 Telegram 和其他直接调用 Gateway 的原生审批客户端，
-这种回退有意被限定在“找不到审批”的失败上。真正的 exec 审批拒绝/错误
-不会悄悄重试为插件审批。
+Discord、Telegram 和 QQ bot 也支持同聊 `/approve`，但即使禁用了原生审批投递，这些频道仍会使用其解析出的审批者列表进行授权。
 
 ### 原生审批投递
 
-某些频道也可以充当原生审批客户端。原生客户端在共享的同聊 `/approve`
-流程之上，增加了审批者私信、起源聊天分发，以及频道特定的交互式审批 UX。
+某些频道也可以充当原生审批客户端：Discord、Slack、Telegram、Matrix 和 QQ bot。原生客户端在共享的同聊 `/approve` 流程之上，增加了审批者私信、来源聊天广播，以及频道特定的交互式审批体验。
 
-当原生审批卡片/按钮可用时，该原生 UI 是面向 agent 的主要路径。
-除非工具结果表明聊天审批不可用，或手动审批是剩余的唯一路径，
-否则 agent 不应再额外回显一条重复的纯聊天 `/approve` 命令。
+当原生审批卡片/按钮可用时，该原生 UI 是面向代理的主要路径。除非工具结果表明聊天审批不可用，或者手动审批是唯一剩余路径，否则代理不应再额外回显重复的纯聊天 `/approve` 命令。
 
-如果配置了原生审批客户端，但起源频道没有激活原生运行时，OpenClaw 会保留本地确定性的
-`/approve` 提示可见。如果原生运行时已激活并尝试投递，但没有任何目标收到该卡片，
-OpenClaw 会发送一条同聊回退通知，并附上精确的 `/approve <id> <decision>` 命令，以便仍可解决该请求。
+如果配置了原生审批客户端，但发起审批的频道没有可用的原生运行时，OpenClaw 会保留本地确定性的 `/approve` 提示可见。如果原生运行时处于活动状态并尝试投递但没有任何目标收到卡片，OpenClaw 会发送一条同聊回退通知，包含精确的 `/approve <id> <decision>` 命令，以便请求仍可被解决。
 
 通用模型：
 
-- host exec policy still decides whether exec approval is required
-- `approvals.exec` controls forwarding approval prompts to other chat destinations
-- `channels.<channel>.execApprovals` controls whether Discord, Slack, Telegram, and similar
-  channel-specific native clients are enabled
-- Slack plugin approvals can use Slack's native approval client when the request comes from Slack
-  and Slack plugin approvers resolve; `approvals.plugin` can also route plugin approvals to Slack
-  sessions or targets even when Slack exec approvals are disabled
-- Google Chat native approval cards handle exec and plugin approvals that originate from Google
-  Chat spaces or threads when stable `users/<id>` approvers resolve from `dm.allowFrom` or
-  `defaultTo`; they do not use reaction events for decisions
-- WhatsApp and Signal reaction approval delivery are gated by `approvals.exec` and
-  `approvals.plugin`; they do not have `channels.<channel>.execApprovals` blocks
+- host exec policy 仍然决定是否需要 exec 审批
+- `approvals.exec` 控制将审批提示转发到其他聊天目的地
+- `channels.<channel>.execApprovals` 控制 Discord、Slack、Telegram、QQ bot 以及类似的
+  频道特定原生客户端是否启用
+- Slack 插件审批在请求来自 Slack 且 Slack 插件审批者可解析时，可以使用 Slack 的原生审批客户端；即使 Slack exec 审批被禁用，`approvals.plugin` 也可以将插件审批路由到 Slack
+  会话或目标
+- 当请求来自 Google Chat 空间或线程，并且能从 `dm.allowFrom` 或
+  `defaultTo` 解析出稳定的 `users/<id>` 审批者时，Google Chat 原生审批卡可处理 exec 和插件审批；它们不使用 reaction 事件来做决策
+- WhatsApp 和 Signal 的 reaction 审批投递受 `approvals.exec` 和
+  `approvals.plugin` 约束；它们没有 `channels.<channel>.execApprovals` 区块
 
 当满足以下条件时，原生审批客户端会自动启用“优先私信”投递：
 
@@ -282,70 +257,47 @@ OpenClaw 会发送一条同聊回退通知，并附上精确的 `/approve <id> <
   例如 `commands.ownerAllowFrom`
 - `channels.<channel>.execApprovals.enabled` 未设置或为 `"auto"`
 
-设置 `enabled: false` 可显式禁用原生审批客户端。设置 `enabled: true` 可在审批者解析成功时强制启用。
-公共起源聊天投递始终通过 `channels.<channel>.execApprovals.target` 显式设置。
+将 `enabled: false` 设为显式禁用某个原生审批客户端。将 `enabled: true` 设为在审批者可解析时强制启用它。公开的来源聊天投递仍通过 `channels.<channel>.execApprovals.target` 显式开启。当原生 `target` 启用来源聊天投递时，审批提示会包含命令文本。
 
-FAQ：[为什么聊天审批有两个 exec 审批配置？](/help/faq-first-run#why-are-there-two-exec-approval-configs-for-chat-approvals)
+FAQ: [为什么聊天审批有两个 exec 审批配置？](/help/faq-first-run)
 
 - Discord: `channels.discord.execApprovals.*`
 - Slack: `channels.slack.execApprovals.*`
 - Telegram: `channels.telegram.execApprovals.*`
-- Google Chat: configure stable approvers with `channels.googlechat.dm.allowFrom` or
-  `channels.googlechat.defaultTo`; no `execApprovals` block is required
-- WhatsApp: use `approvals.exec` and `approvals.plugin` to route approval prompts to WhatsApp
-- Signal: use `approvals.exec` and `approvals.plugin` to route approval prompts to Signal
+- QQ bot: `channels.qqbot.execApprovals.*`
+- Google Chat: 使用 `channels.googlechat.dm.allowFrom` 或
+  `channels.googlechat.defaultTo` 配置稳定的审批者；不需要 `execApprovals` 区块
+- WhatsApp: 使用 `approvals.exec` 和 `approvals.plugin` 将审批提示路由到 WhatsApp
+- Signal: 使用 `approvals.exec` 和 `approvals.plugin` 将审批提示路由到 Signal
 
-这些原生审批客户端在共享的同聊 `/approve` 流程和共享审批按钮之上，增加了私信路由和可选的频道分发。
+原生客户端特定路由：
 
-共享行为：
-
-- Slack, Matrix, Microsoft Teams, and similar deliverable chats use the normal channel auth model
-  for same-chat `/approve`
-- when a native approval client auto-enables, the default native delivery target is approver DMs
-- for Discord and Telegram, only resolved approvers can approve or deny
-- Discord approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
-- Telegram approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
-- Slack approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
-- Slack plugin approval DMs use Slack plugin approvers from `allowFrom` and account default
-  routing, not Slack exec approvers
-- Slack native buttons preserve approval id kind, so `plugin:` ids can resolve plugin approvals
-  without a second Slack-local fallback layer
-- Google Chat native cards preserve the manual `/approve` fallback in message text but card button
-  callbacks carry only opaque action tokens; approval id and decision are recovered from server-side
-  pending state
-- WhatsApp emoji approvals handle both exec and plugin prompts only when the matching top-level
-  forwarding family is enabled and routes to WhatsApp; target-only WhatsApp forwarding stays on
-  the shared forwarding path unless it matches the same native origin target
-- Signal reaction approvals handle both exec and plugin prompts only when the matching top-level
-  forwarding family is enabled and routes to Signal. Direct same-chat Signal exec approvals can
-  suppress the local `/approve` fallback without explicit approvers; Signal reaction resolution
-  still requires explicit Signal approvers from `channels.signal.allowFrom` or `defaultTo`.
-- Matrix native DM/channel routing and reaction shortcuts handle both exec and plugin approvals;
-  plugin authorization still comes from `channels.matrix.dm.allowFrom`
-- Matrix native prompts include `com.openclaw.approval` custom event content on the first prompt
-  event so OpenClaw-aware Matrix clients can read structured approval state while stock clients
-  keep the plain-text `/approve` fallback
-- the requester does not need to be an approver
-- the originating chat can approve directly with `/approve` when that chat already supports commands and replies
-- native Discord approval buttons route by approval id kind: `plugin:` ids go
-  straight to plugin approvals, everything else goes to exec approvals
-- native Telegram approval buttons follow the same bounded exec-to-plugin fallback as `/approve`
-- when native `target` enables origin-chat delivery, approval prompts include the command text
-- pending exec approvals expire after 30 minutes by default
-- if no operator UI or configured approval client can accept the request, the prompt falls back to `askFallback`
+- Telegram 默认使用审批者私信（`target: "dm"`）。切换为 `channel` 或 `both` 可将
+  审批提示也显示在发起的 Telegram 聊天/主题中。对于 Telegram 论坛主题，OpenClaw 会为审批提示和审批后的后续跟进保留该主题。
+- Discord 和 Telegram 审批者可以是显式的（`execApprovals.approvers`）或从
+  `commands.ownerAllowFrom` 推断得到；只有已解析出的审批者才能批准或拒绝。
+- Slack 审批者可以是显式的（`execApprovals.approvers`）或从
+  `commands.ownerAllowFrom` 推断得到。Slack 插件审批私信使用来自 `allowFrom`
+  和账户默认路由的 Slack 插件审批者，而不是 Slack exec 审批者。Slack 原生按钮会保留审批 ID
+  类型，因此 `plugin:` ID 可以直接解析插件审批，而无需第二层 Slack 本地回退。
+- Google Chat 原生卡片会在消息文本中保留手动 `/approve` 回退，但卡片按钮回调只携带不可见的操作令牌；审批 ID 和决策会从服务器端的待处理状态中恢复。
+- 只有当匹配的顶层转发族已启用并路由到 WhatsApp 时，WhatsApp emoji 审批才会同时处理 exec 和插件提示；仅目标的 WhatsApp 转发会继续走共享转发路径，除非它匹配相同的原生来源目标。
+- 只有当匹配的顶层转发族已启用并路由到 Signal 时，Signal reaction 审批才会同时处理 exec 和插件提示。直接的同聊 Signal exec 审批可以在没有显式审批者的情况下抑制本地 `/approve` 回退；但 Signal reaction 的解析仍然需要来自 `channels.signal.allowFrom` 或 `defaultTo` 的显式 Signal 审批者。
+- Matrix 原生私信/频道路由和 reaction 快捷方式同时处理 exec 和插件审批；插件授权仍来自 `channels.matrix.dm.allowFrom`。Matrix 原生提示会在第一个提示事件中包含 `com.openclaw.approval` 自定义事件内容，这样支持 OpenClaw 的 Matrix 客户端可以读取结构化审批状态，而原生客户端仍保留纯文本 `/approve` 回退。
+- 原生 Discord 审批按钮按审批 ID 类型路由：`plugin:` ID 直接进入插件审批，其他全部进入 exec 审批。原生 Telegram 审批按钮遵循与 `/approve` 相同的有界 exec 到插件回退逻辑。
+- 请求者不需要是审批者。
+- 如果没有任何操作员 UI 或已配置的审批客户端能够接受该请求，提示会回退到 `askFallback`。
 
 诸如 `/diagnostics` 和 `/export-trajectory` 之类的敏感 owner-only 组命令，对审批提示和最终结果使用私有的
 所有者路由。OpenClaw 会先尝试在所有者运行该命令的同一界面上进行私有路由。如果该界面没有私有所有者路由，
 它会回退到 `commands.ownerAllowFrom` 中第一个可用的所有者路由，因此即使 Telegram 是配置的主要私有界面，
 Discord 组命令仍然可以把审批和结果发送到所有者的 Telegram 私信。群聊只会收到一条简短确认。
 
-Telegram 默认使用审批者私信（`target: "dm"`）。当你希望审批提示也出现在起源 Telegram 聊天/话题中时，
-可以切换到 `channel` 或 `both`。对于 Telegram 论坛话题，OpenClaw 会在审批提示和审批后跟进中保留该话题。
-
 参见：
 
 - [Discord](/channels/discord)
 - [Telegram](/channels/telegram)
+- [QQ bot](/channels/qqbot)
 
 ### macOS IPC 流程
 

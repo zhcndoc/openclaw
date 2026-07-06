@@ -12,9 +12,7 @@ title: "TUI"
 
 打开连接到 Gateway 的终端 UI，或以本地嵌入式模式运行。
 
-相关：
-
-- TUI 指南：[TUI](/web/tui)
+相关指南：[TUI](/web/tui)
 
 ## 选项
 
@@ -31,19 +29,24 @@ title: "TUI"
 | `--timeout-ms <ms>`   | `agents.defaults.timeoutSeconds`          | agent 超时。无效值会记录警告并被忽略。                                               |
 | `--history-limit <n>` | `200`                                     | 连接时加载的历史条目数量。                                                          |
 
-别名：`openclaw chat` 和 `openclaw terminal` 会以隐含的 `--local` 调用同一个命令。
+别名：`openclaw chat` 和 `openclaw terminal` 会以
+隐含的 `--local` 调用此命令。
 
-注意：
+## 说明
 
-- `chat` 和 `terminal` 是 `openclaw tui --local` 的别名。
-- `--local` 不能与 `--url`、`--token` 或 `--password` 一起使用。
-- `tui` 会在可能时解析已配置的 gateway auth SecretRefs，用于 token/password 认证（`env`/`file`/`exec` 提供器）。
-- 当从已配置的 agent 工作区目录内部启动时，TUI 会自动为会话 key 默认值选择该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
-- 若要在非本地、基于 URL 的连接中在页脚显示 Gateway 主机名，请运行 `openclaw config set tui.footer.showRemoteHost true`。主机标签默认是关闭的，并且在回环或嵌入式本地连接中从不显示。
-- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具可用，但 Gateway 专有功能不可用。
-- 本地模式会在 TUI 命令界面中增加 `/auth [provider]`。
-- 插件审批门禁在本地模式下仍然适用。需要审批的工具会在终端中提示你做出决定；不会因为未使用 Gateway 而静默自动批准。
-- 会话 [目标](/tools/goal) 会显示在页脚中，并可通过 `/goal` 管理。
+- `--local` 不能与 `--url`、`--token` 或 `--password` 组合使用。
+- `tui` 会在可能时解析已配置的 Gateway 认证 SecretRefs，用于 token/password 认证
+  （`env`/`file`/`exec` 提供程序）。
+- 从已配置的 agent 工作区目录内部启动时，TUI 会自动为会话键默认选择
+  该 agent（除非 `--session` 明确指定为 `agent:<id>:...`）。
+- 要在页脚中显示非本地、基于 URL 的连接的 Gateway 主机名，请运行
+  `openclaw config set tui.footer.showRemoteHost true`。默认关闭；对于回环地址或嵌入式本地连接，永不显示。
+- 本地模式直接使用嵌入式 agent 运行时。大多数本地工具都可正常使用，
+  但仅 Gateway 可用的功能不可用。
+- 本地模式会向 TUI 命令界面添加 `/auth [provider]`。
+- 插件审批门控在本地模式下仍然适用：需要审批的工具会在终端中提示做出决定，不会静默自动批准。
+- 会话 [目标](/tools/goal) 会显示在页脚中，并可通过
+  `/goal` 进行管理。
 
 ## 示例
 
@@ -60,9 +63,11 @@ openclaw tui --session bugfix
 
 ## 配置修复循环
 
-当当前配置已经通过验证，并且你希望嵌入式 agent 检查它、将其与文档对比，并帮助你在同一个终端中修复它时，请使用本地模式：
+使用本地模式，让嵌入式代理检查当前配置，将其与文档进行比较，并帮助在同一个终端中修复它。
 
-如果 `openclaw config validate` 已经失败，请先使用 `openclaw configure` 或 `openclaw doctor --fix`。`openclaw chat` 不会绕过无效配置保护。
+如果 `openclaw config validate` 已经失败，请先运行 `openclaw configure` 或
+`openclaw doctor --fix`；`openclaw chat` 不会绕过
+无效配置保护。
 
 ```bash
 openclaw chat
@@ -77,10 +82,12 @@ openclaw chat
 !openclaw doctor
 ```
 
-使用 `openclaw config set` 或 `openclaw configure` 应用有针对性的修复，然后重新运行 `openclaw config validate`。参见 [TUI](/web/tui) 和 [Config](/cli/config)。
+使用 `openclaw config set` 或 `openclaw configure` 应用有针对性的修复，然后
+重新运行 `openclaw config validate`。参见 [TUI](/web/tui) 和
+[Config](/cli/config)。
 
 ## 相关
 
-- [CLI reference](/cli)
+- [CLI 参考](/cli)
 - [TUI](/web/tui)
-- [Goal](/tools/goal)
+- [目标](/tools/goal)

@@ -26,7 +26,7 @@ pnpm plugins:inventory:gen
 
 ## 安装插件
 
-使用每个条目中的安装路线来判断是否需要安装。标注为 `included in OpenClaw` 的插件已包含在核心包中。
+使用每个条目中的安装路线来判断是否需要安装。标注为 `included in OpenClaw` 的插件已包含在核心包中。  
 官方外部包需要安装一次，然后重启 Gateway。
 
 例如，Discord 是一个官方外部包：
@@ -37,8 +37,8 @@ openclaw gateway restart
 openclaw plugins inspect discord --runtime --json
 ```
 
-在发布切换期间，普通的裸包规范仍然会从 npm 安装。
-在需要明确来源时，请使用 `clawhub:@openclaw/discord` 或 `npm:@openclaw/discord`。
+在发布切换期间，普通的裸包规范仍然会从 npm 安装。  
+在需要明确来源时，请使用 `clawhub:@openclaw/discord` 或 `npm:@openclaw/discord`。  
 安装后，请按照插件的设置文档（例如
 [Discord](/channels/discord)）添加凭据和频道配置。有关更新、卸载和发布
 命令，请参见 [管理插件](/plugins/manage-plugins)。
@@ -47,7 +47,7 @@ openclaw plugins inspect discord --runtime --json
 
 ## 核心 npm 包
 
-59 个插件
+60 个插件
 
 - **[admin-http-rpc](/plugins/reference/admin-http-rpc)** (`@openclaw/admin-http-rpc`) - 包含在 OpenClaw 中。OpenClaw 管理 HTTP RPC 端点。
 
@@ -65,7 +65,9 @@ openclaw plugins inspect discord --runtime --json
 
 - **[canvas](/plugins/reference/canvas)** (`@openclaw/canvas-plugin`) - 包含在 OpenClaw 中。面向配对节点的实验性 Canvas 控制和 A2UI 渲染表面。
 
-- **[codex-supervisor](/plugins/reference/codex-supervisor)** (`@openclaw/codex-supervisor`) - 包含在 OpenClaw 中。监督 OpenClaw 中的 Codex app-server 会话。
+- **[clawrouter](/plugins/reference/clawrouter)** (`@openclaw/clawrouter`) - 包含在 OpenClaw 中。向 OpenClaw 添加 ClawRouter 模型提供方支持。
+
+- **[codex-supervisor](/plugins/reference/codex-supervisor)** (`@openclaw/codex-supervisor`) - 包含在 OpenClaw 中。从 OpenClaw 监管 Codex 应用服务器会话。
 
 - **[cohere](/plugins/reference/cohere)** (`@openclaw/cohere-provider`) - 包含在 OpenClaw 中；npm；ClawHub：`clawhub:@openclaw/cohere-provider`。OpenClaw Cohere 提供程序插件。
 

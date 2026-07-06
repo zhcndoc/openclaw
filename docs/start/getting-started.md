@@ -6,14 +6,12 @@ read_when:
 title: "入门"
 ---
 
-安装 OpenClaw，运行引导，并与你的 AI 助手聊天——全部只需
-大约 5 分钟。到最后，你将拥有一个正在运行的 Gateway、已配置的认证，
-以及一个可用的聊天会话。
+安装 OpenClaw，运行入门流程，并在大约 5 分钟内与你的 AI 助手聊天。到最后，你将拥有一个正在运行的 Gateway、已配置的认证，以及一个可用的聊天会话。
 
 ## 你需要什么
 
-- **Node.js** — 推荐使用 Node 24（也支持 Node 22.19+）
-- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）— 引导过程会提示你
+- **Node.js 22.19+, 23.11+, or 24+** (24 是推荐默认版本)
+- **来自模型提供商的 API 密钥**（Anthropic、OpenAI、Google 等）——入门时会提示你
 
 <Tip>
 使用 `node --version` 检查你的 Node 版本。
@@ -53,8 +51,11 @@ title: "入门"
     openclaw onboard --install-daemon
     ```
 
-    向导会带你选择模型提供商、设置 API 密钥，
-    并配置 Gateway。大约需要 2 分钟。
+    向导会引导你选择模型提供商、设置 API 密钥，
+    并配置 Gateway。QuickStart 通常只需几分钟，但
+    提供商登录、通道配对、daemon 安装、网络下载、技能，
+    或可选插件都可能让完整的引导过程花费更长时间。你可以跳过可选
+    步骤，稍后再使用 `openclaw configure` 返回继续。
 
     查看 [引导（CLI）](/start/wizard) 获取完整参考。
 

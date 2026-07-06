@@ -30,7 +30,7 @@ OpenClaw 通过 JSON-RPC 集成外部 CLI。目前使用两种模式。
 - `send`
 - `chats.list`（探测/诊断）
 
-有关旧版设置和寻址（推荐使用 `chat_id`），请参见 [iMessage](/channels/imessage)。
+请参见 [iMessage](/channels/imessage) 了解设置和寻址方式（优先使用 `chat_id`，而不是显示字符串）。
 
 ## 适配器指南
 

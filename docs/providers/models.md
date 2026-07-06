@@ -6,8 +6,7 @@ read_when:
 title: "模型提供商快速入门"
 ---
 
-OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后将默认
-模型设置为 `provider/model`。
+选择一个提供商，完成认证，然后将默认模型设置为 `provider/model`。
 
 ## 快速开始（两步）
 
@@ -27,27 +26,31 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后
 - [Anthropic（API + Claude CLI）](/providers/anthropic)
 - [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Chutes](/providers/chutes)
+- [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [Cohere](/providers/cohere)
 - [ComfyUI](/providers/comfy)
-- [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
 - [DeepInfra](/providers/deepinfra)
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
-- [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
-- [OpenAI（API + Codex）](/providers/openai)
-- [OpenCode（Zen + Go）](/providers/opencode)
+- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
+- [NovitaAI](/providers/novita)
+- [OpenAI (API + Codex)](/providers/openai)
+- [OpenCode (Zen + Go)](/providers/opencode)
 - [OpenRouter](/providers/openrouter)
 - [Qianfan](/providers/qianfan)
 - [Qwen](/providers/qwen)
 - [Runway](/providers/runway)
 - [StepFun](/providers/stepfun)
 - [Synthetic](/providers/synthetic)
+- [Venice (Venice AI)](/providers/venice)
 - [Vercel AI Gateway](/providers/vercel-ai-gateway)
-- [Venice（Venice AI）](/providers/venice)
 - [xAI](/providers/xai)
 - [Z.AI (GLM)](/providers/zai)
+
+有关完整的提供商目录和高级配置，请参阅
+[提供商目录](/providers/index) 和 [模型提供商](/concepts/model-providers)。
 
 ## 其他提供商变体
 
@@ -55,11 +58,9 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个，完成认证，然后
 - `copilot-proxy` - 本地 VS Code Copilot Proxy 桥接；使用 `openclaw onboard --auth-choice copilot-proxy`
 - `google-gemini-cli` - 非官方 Gemini CLI OAuth 流程；需要本地安装 `gemini`（`brew install gemini-cli` 或 `npm install -g @google/gemini-cli`）；默认模型 `google-gemini-cli/gemini-3-flash-preview`；使用 `openclaw onboard --auth-choice google-gemini-cli` 或 `openclaw models auth login --provider google-gemini-cli --set-default`
 
-有关完整的提供商目录（xAI、Groq、Mistral 等）和高级配置，
-请参阅 [模型提供商](/concepts/model-providers)。
-
 ## 相关内容
 
+- [提供商目录](/providers/index)
 - [模型选择](/concepts/model-providers)
 - [模型故障切换](/concepts/model-failover)
-- [Models CLI](/cli/models)
+- [模型 CLI](/cli/models)

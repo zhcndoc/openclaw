@@ -7,35 +7,33 @@ read_when:
 title: "测试"
 ---
 
-OpenClaw 有三个 Vitest 套件（unit/integration、e2e、live）以及一小组
-Docker 运行器。本文档是一份“我们如何测试”的指南：
-
-- 每个套件覆盖什么内容（以及它刻意不覆盖什么）。
-- 常见工作流（本地、pre-push、调试）该运行哪些命令。
-- live 测试如何发现凭证并选择模型/提供方。
-- 如何为真实世界的模型/提供方问题添加回归测试。
+OpenClaw has three Vitest suites (unit/integration, e2e, live) plus Docker
+runners. This page covers what each suite covers, which command to run for a
+given workflow, how live tests discover credentials, and how to add
+regressions for real-world provider/model bugs.
 
 <Note>
 **QA 栈（qa-lab、qa-channel、live transport lanes）** 另有文档说明：
 
-- [QA 概览](/concepts/qa-e2e-automation) - 架构、命令入口、场景编写。
-- [Matrix QA](/concepts/qa-matrix) - `pnpm openclaw qa matrix` 参考文档。
-- [QA 通道](/channels/qa-channel) - 仓库回放场景使用的合成传输插件。
+- [QA overview](/concepts/qa-e2e-automation) - architecture, command surface, scenario authoring.
+- [Matrix QA](/concepts/qa-matrix) - reference for `pnpm openclaw qa matrix`.
+- [Maturity scorecard](/maturity/scorecard) - how release QA evidence supports stability and LTS decisions.
+- [QA channel](/channels/qa-channel) - the synthetic transport plugin used by repo-backed scenarios.
 
-本页介绍如何运行常规测试套件以及 Docker/Parallels 运行器。下面的 QA 专用运行器部分（[QA 专用运行器](#qa-specific-runners)）列出了具体的 `qa` 调用方式，并会链接回上面的参考文档。
+This page covers the regular test suites and Docker/Parallels runners. [QA-specific runners](#qa-specific-runners) below lists the concrete `qa` invocations and points back at the references above.
 </Note>
 
 ## 快速开始
 
 大多数时候：
 
-- 完整门禁（推送前预期运行）：`pnpm build && pnpm check && pnpm check:test-types && pnpm test`
-- 在资源充足的机器上更快的本地全套运行：`pnpm test:max`
-- 直接的 Vitest watch 循环：`pnpm test:watch`
-- 直接指定文件现在也会路由 extension/channel 路径：`pnpm test extensions/discord/src/monitor/message-handler.preflight.test.ts`
-- 在迭代单个失败时，优先先做定向运行。
-- Docker 版 QA site：`pnpm qa:lab:up`
-- Linux VM 版 QA lane：`pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline`
+- Full gate (expected before push): `pnpm build && pnpm check && pnpm check:test-types && pnpm test`
+- Faster local full-suite run on a roomy machine: `pnpm test:max`
+- Direct Vitest watch loop: `pnpm test:watch`
+- Direct file targeting routes plugin/channel paths too: `pnpm test extensions/discord/src/monitor/message-handler.preflight.test.ts`
+- Prefer targeted runs first when iterating on a single failure.
+- Docker-backed QA site: `pnpm qa:lab:up`
+- Linux VM-backed QA lane: `pnpm openclaw qa suite --runner multipass --scenario channel-chat-baseline`
 
 当你修改测试或想要额外信心时：
 
@@ -44,15 +42,14 @@ Docker 运行器。本文档是一份“我们如何测试”的指南：
 
 ## 测试临时目录
 
-对于由测试拥有的临时目录，优先使用 `test/helpers/temp-dir.ts` 中的共享辅助函数。它们会明确所有权，并将清理保持在同一测试生命周期内：
+Use the shared helpers in `test/helpers/temp-dir.ts` for test-owned temporary
+directories so ownership is explicit and cleanup stays in the test lifecycle:
 
 ```ts
 import { afterEach } from "vitest";
-import { createTempDirTracker } from "../helpers/temp-dir.js";
+import { useAutoCleanupTempDirTracker } from "../helpers/temp-dir.js";
 
-const tempDirs = createTempDirTracker();
-
-afterEach(tempDirs.cleanup);
+const tempDirs = useAutoCleanupTempDirTracker(afterEach);
 
 it("uses a temp workspace", () => {
   const workspace = tempDirs.make("openclaw-example-");
@@ -60,56 +57,94 @@ it("uses a temp workspace", () => {
 });
 ```
 
-当测试已经拥有一个路径数组或集合时，请使用 `makeTempDir(tempDirs, prefix)` 和 `cleanupTempDirs(tempDirs)`。除非某个用例明确是在验证原始临时目录行为，否则避免在测试中新增裸 `fs.mkdtemp*` 调用。若某个测试确实需要裸临时目录，请添加一条可审计的 allow 注释并给出具体原因：
+`useAutoCleanupTempDirTracker(afterEach)` intentionally exposes no manual
+cleanup method - Vitest owns cleanup after each test. Older lower-level
+helpers (`makeTempDir`, `cleanupTempDirs`, `createTempDirTracker`) still exist
+for tests that have not migrated; avoid new usage of them and avoid new bare
+`fs.mkdtemp*` calls unless a test is explicitly verifying raw temp-dir
+behavior. When a bare temp dir is genuinely needed, add an auditable allow
+comment with a reason:
 
 ```ts
 // openclaw-temp-dir: allow verifies raw fs cleanup behavior
 const workspace = fs.mkdtempSync(prefix);
 ```
 
-为了便于迁移可见性，`node scripts/report-test-temp-creations.mjs` 会在新增 diff 行中报告新的裸临时目录创建，而不会阻止现有的清理方式。它的文件范围有意沿用与 `scripts/changed-lanes.mjs` 相同的测试路径分类，而不是维护单独的 test-helper 文件名启发式，同时会跳过共享辅助实现本身。`check:changed` 会针对变更的测试路径运行此报告，作为仅警告的 CI 信号；发现项会以 GitHub 警告注解的形式呈现，而不是失败。
+`node scripts/report-test-temp-creations.mjs` reports new bare temp-dir
+creation and new manual shared-helper usage in added diff lines, without
+blocking existing cleanup styles. It follows the same test-path classification
+as `scripts/changed-lanes.mjs` and skips the shared helper implementation
+itself. `check:changed` runs this report for changed test paths as a
+warning-only CI signal (GitHub warning annotations, not failures).
+
+## Live and Docker/Parallels workflows
 
 当调试真实提供方/模型（需要真实凭证）时：
 
-- Live 套件（模型 + gateway 工具/图像探针）：`pnpm test:live`
-- Quiet 地定位单个 live 文件：`pnpm test:live -- src/agents/models.profiles.live.test.ts`
-- 运行时性能报告：带上 `live_openai_candidate=true` 触发
-  `OpenClaw Performance`，用于一次真实的 `openai/gpt-5.5` agent 回合，或带上
-  `deep_profile=true` 获取 Kova 的 CPU/heap/trace 产物。每日定时运行会在
-  配置了 `CLAWGRIT_REPORTS_TOKEN` 时，将 mock-provider、deep-profile 和 GPT 5.5
-  lane 产物发布到 `openclaw/clawgrit-reports`。mock-provider 报告还包含源级 gateway 启动、内存、
-  插件压力、重复 fake-model hello-loop，以及 CLI 启动数值。
-- Docker live 模型扫测：`pnpm test:docker:live-models`
-  - 每个被选中的模型现在都会运行一次文本回合，以及一个小型文件读取探针。
-    元数据声明 `image` 输入的模型还会额外运行一个小型图像回合。
-    在隔离提供方故障时，可通过 `OPENCLAW_LIVE_MODEL_FILE_PROBE=0` 或
-    `OPENCLAW_LIVE_MODEL_IMAGE_PROBE=0` 禁用额外探针。
-  - CI 覆盖：每日的 `OpenClaw Scheduled Live And E2E Checks` 和手动的
-    `OpenClaw Release Checks` 都会调用可复用的 live/E2E workflow，并设置
-    `include_live_suites: true`，其中包含按提供方分片的独立 Docker live 模型矩阵作业。
-  - 为了聚焦 CI 重跑，可触发 `OpenClaw Live And E2E Checks (Reusable)` 并设置
-    `include_live_suites: true` 和 `live_models_only: true`。
-  - 将新的高信号提供方密钥添加到 `scripts/ci-hydrate-live-auth.sh`
-    以及 `.github/workflows/openclaw-live-and-e2e-checks-reusable.yml` 及其
-    scheduled/release 调用方中。
-- 原生 Codex 绑定聊天冒烟：`pnpm test:docker:live-codex-bind`
-  - 在 Docker live lane 中针对 Codex app-server 路径运行，绑定一个合成的 Slack DM 与 `/codex bind`，执行 `/codex fast` 和 `/codex permissions`，然后验证普通回复和图像附件是否通过原生插件绑定而不是 ACP 路由。
-- Codex app-server harness 冒烟：`pnpm test:docker:live-codex-harness`
-  - 通过插件拥有的 Codex app-server harness 运行 gateway agent 回合，验证 `/codex status` 和 `/codex models`，并且默认会探测图像、cron MCP、sub-agent 和 Guardian。为隔离其他 Codex app-server 故障时，可通过 `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=0` 禁用 sub-agent 探针。若要做聚焦的 sub-agent 检查，可关闭其他探针：
-    `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1 pnpm test:docker:live-codex-harness`。
-    除非设置 `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_ONLY=0`，否则它会在 sub-agent 探针后退出。
-- Codex 按需安装冒烟：`pnpm test:docker:codex-on-demand`
-  - 在 Docker 中安装打包后的 OpenClaw tarball，运行 OpenAI API key onboarding，并验证 Codex 插件和 `@openai/codex` 依赖已按需下载到受管的 npm project root。
-- Live 插件工具依赖冒烟：`pnpm test:docker:live-plugin-tool`
-  - 打包一个带有真实 `slugify` 依赖的 fixture 插件，通过 `npm-pack:` 安装，验证受管 npm project root 下的依赖，然后让一个 live OpenAI 模型调用该插件工具并返回隐藏的 slug。
-- Crestodian rescue 命令冒烟：`pnpm test:live:crestodian-rescue-channel`
-  - 面向消息通道 rescue 命令 surface 的可选“保险带+保险绳”检查。它会执行 `/crestodian status`、排队一个持久化的模型变更、回复 `/crestodian yes`，并验证审计/config 写入路径。
-- Crestodian planner Docker 冒烟：`pnpm test:docker:crestodian-planner`
-  - 在一个无配置容器中运行 Crestodian，`PATH` 上带一个假的 Claude CLI，并验证模糊 planner fallback 能转换为一次经过审计的 typed config 写入。
-- Crestodian 首次运行 Docker 冒烟：`pnpm test:docker:crestodian-first-run`
-  - 从一个空的 OpenClaw state dir 开始，验证现代化的 onboard Crestodian 入口点，应用 setup/model/agent/Discord plugin + SecretRef 写入，校验 config，并验证审计记录。同一条 Ring 0 setup 路径也在 QA Lab 中通过 `pnpm openclaw qa suite --scenario crestodian-ring-zero-setup` 覆盖。
-- Moonshot/Kimi 成本冒烟：在设置 `MOONSHOT_API_KEY` 后，运行
-  `openclaw models list --provider moonshot --json`，再运行一个隔离的
+- Live suite (models + gateway tool/image probes): `pnpm test:live`
+- Target one live file quietly: `pnpm test:live -- src/agents/models.profiles.live.test.ts`
+- Runtime performance reports: dispatch `OpenClaw Performance` with
+  `live_openai_candidate=true` for a real `openai/gpt-5.5` agent turn or
+  `deep_profile=true` for Kova CPU/heap/trace artifacts. Daily scheduled runs
+  publish mock-provider, deep-profile, and GPT 5.5 lane artifacts to
+  `openclaw/clawgrit-reports` when `CLAWGRIT_REPORTS_TOKEN` is configured. The
+  mock-provider report also includes source-level gateway boot, memory,
+  plugin-pressure, repeated fake-model hello-loop, and CLI startup numbers.
+- Docker live model sweep: `pnpm test:docker:live-models`
+  - Each selected model runs a text turn plus a small file-read-style probe.
+    Models whose metadata advertises `image` input also run a tiny image turn.
+    Disable the extra probes with `OPENCLAW_LIVE_MODEL_FILE_PROBE=0` or
+    `OPENCLAW_LIVE_MODEL_IMAGE_PROBE=0` when isolating provider failures.
+  - CI coverage: daily `OpenClaw Scheduled Live And E2E Checks` and manual
+    `OpenClaw Release Checks` both call the reusable live/E2E workflow with
+    `include_live_suites: true`, which includes Docker live model matrix jobs
+    sharded by provider.
+  - For focused CI reruns, dispatch `OpenClaw Live And E2E Checks (Reusable)`
+    with `include_live_suites: true` and `live_models_only: true`.
+  - Add new high-signal provider secrets to `scripts/ci-hydrate-live-auth.sh`
+    plus `.github/workflows/openclaw-live-and-e2e-checks-reusable.yml` and its
+    scheduled/release callers.
+- Native Codex bound-chat smoke: `pnpm test:docker:live-codex-bind`
+  - Runs a Docker live lane against the Codex app-server path, binds a
+    synthetic Slack DM with `/codex bind`, exercises `/codex fast` and
+    `/codex permissions`, then verifies a plain reply and an image attachment
+    route through the native plugin binding instead of ACP.
+- Codex app-server harness smoke: `pnpm test:docker:live-codex-harness`
+  - Runs gateway agent turns through the plugin-owned Codex app-server
+    harness, verifies `/codex status` and `/codex models`, and by default
+    exercises image, cron MCP, sub-agent, and Guardian probes. Disable the
+    sub-agent probe with `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=0` when
+    isolating other failures. For a focused sub-agent check, disable the
+    other probes:
+    `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0 OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_PROBE=1 pnpm test:docker:live-codex-harness`.
+    This exits after the sub-agent probe unless
+    `OPENCLAW_LIVE_CODEX_HARNESS_SUBAGENT_ONLY=0` is set.
+- Codex on-demand install smoke: `pnpm test:docker:codex-on-demand`
+  - Installs the packaged OpenClaw tarball in Docker, runs OpenAI API-key
+    onboarding, and verifies the Codex plugin plus `@openai/codex` dependency
+    were downloaded into the managed npm project root on demand.
+- Live plugin tool dependency smoke: `pnpm test:docker:live-plugin-tool`
+  - Packs a fixture plugin with a real `slugify` dependency, installs it
+    through `npm-pack:`, verifies the dependency under the managed npm
+    project root, then asks a live OpenAI model to call the plugin tool and
+    return the hidden slug.
+- Crestodian rescue command smoke: `pnpm test:live:crestodian-rescue-channel`
+  - Opt-in belt-and-suspenders check for the message-channel rescue command
+    surface. Exercises `/crestodian status`, queues a persistent model
+    change, replies `/crestodian yes`, and verifies the audit/config write
+    path.
+- Crestodian planner Docker smoke: `pnpm test:docker:crestodian-planner`
+  - Runs Crestodian in a configless container with a fake Claude CLI on
+    `PATH` and verifies the fuzzy planner fallback translates into an
+    audited typed config write.
+- Crestodian first-run Docker smoke: `pnpm test:docker:crestodian-first-run`
+  - Starts from an empty OpenClaw state dir, verifies the modern onboard
+    Crestodian entrypoint, applies setup/model/agent/Discord plugin +
+    SecretRef writes, validates config, and verifies audit entries. The same
+    Ring 0 setup path is also covered in QA Lab by
+    `pnpm openclaw qa suite --scenario crestodian-ring-zero-setup`.
+- Moonshot/Kimi cost smoke: with `MOONSHOT_API_KEY` set, run
+  `openclaw models list --provider moonshot --json`, then run an isolated
   `openclaw agent --local --session-id live-kimi-cost --message 'Reply exactly: KIMI_LIVE_OK' --thinking off --json`
   。验证 JSON 报告 Moonshot/K2.6，并且 assistant transcript 存储了归一化的
   `usage.cost`。
@@ -120,22 +155,24 @@ const workspace = fs.mkdtempSync(prefix);
 
 ## QA 专用运行器
 
-当你需要更接近 QA-lab 真实环境时，这些命令可与主测试套件并列使用：
+These commands sit beside the main test suites when you need QA-lab realism.
 
-CI 会在专门的工作流中运行 QA Lab。Agentic parity 嵌套在
-`QA-Lab - All Lanes` 和 release validation 之下，而不是一个独立的 PR 工作流。
-广泛验证应使用 `Full Release Validation` 并设置
-`rerun_group=qa-parity`，或使用 release-checks QA group。稳定/默认 release
-checks 会通过 `run_release_soak=true` 保留完整的 live/Docker soak；
-`full` profile 会强制开启 soak。`QA-Lab - All Lanes`
-在 `main` 分支上每晚运行，并可通过手动触发运行 mock parity lane、live
-Matrix lane、Convex 托管的 live Telegram lane，以及 Convex 托管的 live Discord
-lane，作为并行作业。Scheduled QA 和 release checks 会显式传入 Matrix
-`--profile fast`，而 Matrix CLI 与手动 workflow 输入的默认值仍然是 `all`；手动触发可以把 `all` 分片成 `transport`、
-`media`、`e2ee-smoke`、`e2ee-deep` 和 `e2ee-cli` 作业。`OpenClaw Release
-Checks` 在发布批准前会先运行 parity、fast Matrix 和 Telegram lanes，并使用
-`mock-openai/gpt-5.5` 执行 release transport checks，使其保持确定性并避免正常的提供方插件启动。这些 live transport
-gateway 会禁用 memory search；memory 行为仍由 QA parity 套件覆盖。
+CI runs QA Lab in dedicated workflows. Agentic parity is nested under
+`QA-Lab - All Lanes` and release validation, not a standalone PR workflow.
+Broad validation should use `Full Release Validation` with
+`rerun_group=qa-parity` or the release-checks QA group. Stable/default release
+checks keep exhaustive live/Docker soak behind `run_release_soak=true`; the
+`full` profile forces soak on. `QA-Lab - All Lanes` runs nightly on `main` and
+from manual dispatch with the mock parity lane, live Matrix lane,
+Convex-managed live Telegram lane, and Convex-managed live Discord lane as
+parallel jobs. Scheduled QA and release checks pass Matrix `--profile fast`
+explicitly, while the Matrix CLI and manual workflow input default remains
+`all`; manual dispatch can shard `all` into `transport`, `media`,
+`e2ee-smoke`, `e2ee-deep`, and `e2ee-cli` jobs. `OpenClaw Release Checks` runs
+parity plus the fast Matrix and Telegram lanes before release approval, using
+`mock-openai/gpt-5.5` for release transport checks so they stay deterministic
+and avoid normal provider-plugin startup. These live transport gateways
+disable memory search; memory behavior stays covered by the QA parity suites.
 
 完整的发布 live media 分片使用
 `ghcr.io/openclaw/openclaw-live-media-runner:ubuntu-24.04`，其中已包含
@@ -144,65 +181,127 @@ gateway 会禁用 memory search；memory 行为仍由 QA parity 套件覆盖。
 然后通过 `OPENCLAW_SKIP_DOCKER_BUILD=1` 拉取，而不是在每个分片内重新构建。
 
 - `pnpm openclaw qa suite`
-  - 直接在主机上运行由仓库支持的 QA 场景。
-  - 为所选场景集写出顶层的 `qa-evidence.json`、`qa-suite-summary.json` 和
-    `qa-suite-report.md` 产物，包括混合流程、Vitest 和 Playwright 场景选择。
-  - 当通过 `pnpm openclaw qa run --qa-profile <profile>` 分发时，会将所选 taxonomy profile 评分卡嵌入同一个 `qa-evidence.json` 中。
-    `smoke-ci` 会写入精简 evidence，设置 `evidenceMode: "slim"` 并省略
-    每条记录的 `execution`。`release` 覆盖经过筛选的发布就绪切片；
-    `all` 选择所有活跃成熟度类别，适用于需要完整评分卡产物的显式 QA
-    Profile Evidence 工作流分发。
-  - 默认使用隔离的 gateway worker 并行运行多个已选场景。`qa-channel` 默认并发为 4（受所选场景数量限制）。使用 `--concurrency <count>` 调整 worker 数量，或使用 `--concurrency 1` 走旧的串行 lane。
-  - 当任一场景失败时以非零状态退出。需要产物但不想让退出码失败时，使用 `--allow-failures`。
-  - 支持 provider 模式 `live-frontier`、`mock-openai` 和 `aimock`。`aimock` 会启动一个本地 AIMock 支持的 provider server，用于实验性 fixture 和 protocol-mock 覆盖，而不会替代具备场景感知能力的 `mock-openai` lane。
+  - Runs repo-backed QA scenarios directly on the host.
+  - Writes top-level `qa-evidence.json`, `qa-suite-summary.json`, and
+    `qa-suite-report.md` artifacts for the selected scenario set, including
+    mixed flow, Vitest, and Playwright scenario selections.
+  - When dispatched by `pnpm openclaw qa run --qa-profile <profile>`, embeds
+    the selected taxonomy profile scorecard in the same `qa-evidence.json`.
+    `smoke-ci` writes slim evidence (`evidenceMode: "slim"`, no per-entry
+    `execution`). `release` covers the curated release-readiness slice; `all`
+    selects every active maturity category and targets explicit QA Profile
+    Evidence workflow dispatches when a full scorecard artifact is needed.
+  - Runs multiple selected scenarios in parallel by default with isolated
+    gateway workers. `qa-channel` defaults to concurrency 4 (bounded by the
+    selected scenario count). Use `--concurrency <count>` to tune the worker
+    count, or `--concurrency 1` for the older serial lane.
+  - Exits non-zero when any scenario fails. Use `--allow-failures` for
+    artifacts without a failing exit code.
+  - Supports provider modes `live-frontier`, `mock-openai`, and `aimock`.
+    `aimock` starts a local AIMock-backed provider server for experimental
+    fixture and protocol-mock coverage without replacing the scenario-aware
+    `mock-openai` lane.
 - `pnpm openclaw qa coverage --match <query>`
-  - 搜索场景 ID、标题、surface、coverage ID、文档引用、代码引用、插件和提供方要求，然后打印匹配的 suite 目标。
-  - 当你知道受影响的行为或文件路径，但不知道最小场景时，在运行 QA Lab 之前先用它。它仅供参考；仍然应根据被修改的行为选择 mock、live、Multipass、Matrix 或 transport proof。
+  - Searches scenario IDs, titles, surfaces, coverage IDs, docs refs, code
+    refs, plugins, and provider requirements, then prints matching suite
+    targets.
+  - Use this before a QA Lab run when you know the touched behavior or file
+    path but not the smallest scenario. Advisory only - still choose mock,
+    live, Multipass, Matrix, or transport proof from the behavior being
+    changed.
 - `pnpm test:plugins:kitchen-sink-live`
-  - 通过 QA Lab 运行 live OpenAI Kitchen Sink plugin gauntlet。它会安装外部 Kitchen Sink 包，验证插件 SDK surface inventory，探测 `/healthz` 和 `/readyz`，记录 gateway CPU/RSS 证据，运行一次 live OpenAI 轮次，并检查 adversarial diagnostics。
-    需要 live OpenAI 认证，例如 `OPENAI_API_KEY`。在已注入凭证的 Testbox 会话中，当存在 `openclaw-testbox-env` helper 时，它会自动加载 Testbox live-auth profile。
+  - Runs the live OpenAI Kitchen Sink plugin gauntlet through QA Lab.
+    Installs the external Kitchen Sink package, verifies the plugin SDK
+    surface inventory, probes `/healthz` and `/readyz`, records gateway
+    CPU/RSS evidence, runs a live OpenAI turn, and checks adversarial
+    diagnostics. Requires live OpenAI auth such as `OPENAI_API_KEY`. In
+    hydrated Testbox sessions it automatically sources the Testbox live-auth
+    profile when the `openclaw-testbox-env` helper is present.
 - `pnpm test:gateway:cpu-scenarios`
-  - 运行 gateway 启动基准测试以及一小组 mock QA Lab 场景包
-    （`channel-chat-baseline`、`memory-failure-fallback`、
-    `gateway-restart-inflight-run`），并在 `.artifacts/gateway-cpu-scenarios/`
-    下写出一个合并后的 CPU 观察摘要。
-  - 默认仅标记持续性的高 CPU 观察（`--cpu-core-warn`
-    加上 `--hot-wall-warn-ms`），因此短暂的启动峰值会被记录为指标，
-    不会看起来像持续数分钟的 gateway 占满回归。
-  - 使用已构建的 `dist` 产物；如果 checkout 中还没有新的运行时输出，请先执行 build。
+  - Runs the gateway startup bench plus a small mock QA Lab scenario pack
+    (`channel-chat-baseline`, `memory-failure-fallback`,
+    `gateway-restart-inflight-run`) and writes a combined CPU observation
+    summary under `.artifacts/gateway-cpu-scenarios/`.
+  - Flags only sustained hot CPU observations by default (`--cpu-core-warn`,
+    default `0.9`; `--hot-wall-warn-ms`, default `30000`), so short startup
+    bursts are recorded as metrics without looking like the minutes-long
+    gateway peg regression.
+  - Runs against built `dist` artifacts; run a build first when the checkout
+    does not already have fresh runtime output.
 - `pnpm openclaw qa suite --runner multipass`
-  - 在一个可丢弃的 Multipass Linux VM 中运行相同的 QA suite。
-  - 保持与主机上的 `qa suite` 相同的场景选择行为。
-  - 复用与 `qa suite` 相同的 provider/model 选择标志。
-  - live 运行会转发对 guest 实用的受支持 QA auth 输入：
-    基于环境变量的提供方密钥、QA live provider 配置路径，以及存在时的 `CODEX_HOME`。
-  - 输出目录必须保留在仓库根目录下，以便 guest 能通过挂载的工作区回写。
-  - 在 `.artifacts/qa-e2e/...` 下写入常规 QA 报告 + 摘要以及 Multipass 日志。
+  - Runs the same QA suite inside a disposable Multipass Linux VM, keeping
+    the same scenario-selection and provider/model flags as `qa suite`.
+  - Live runs forward the QA auth inputs practical for the guest:
+    env-based provider keys, the QA live provider config path, and
+    `CODEX_HOME` when present.
+  - Output dirs must stay under the repo root so the guest can write back
+    through the mounted workspace.
+  - Writes the normal QA report + summary plus Multipass logs under
+    `.artifacts/qa-e2e/...`.
 - `pnpm qa:lab:up`
   - 启动 Docker 版 QA site，用于操作员式 QA 工作。
 - `pnpm test:docker:npm-onboard-channel-agent`
-  - 从当前 checkout 打包并安装一个 npm tarball 到 Docker 中，全局安装，运行非交互式 OpenAI API key onboarding，默认配置 Telegram，验证打包后的插件运行时能在无需启动时依赖修复的情况下加载，运行 doctor，并针对一个 mocked OpenAI 端点执行一次本地 agent 轮次。
-  - 使用 `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` 可用 Discord 运行相同的已打包安装 lane。
+  - Builds an npm tarball from the current checkout, installs it globally in
+    Docker, runs non-interactive OpenAI API-key onboarding, configures
+    Telegram by default, verifies the packaged plugin runtime loads without
+    startup dependency repair, runs doctor, and runs one local agent turn
+    against a mocked OpenAI endpoint.
+  - Use `OPENCLAW_NPM_ONBOARD_CHANNEL=discord` to run the same packaged-install
+    lane with Discord.
 - `pnpm test:docker:session-runtime-context`
-  - 为嵌入式 runtime context transcript 运行一个确定性的 built-app Docker 冒烟。
-    它验证隐藏的 OpenClaw runtime context 会以不可显示的自定义消息形式持久化，而不会泄露到可见的用户轮次中，
-    然后构造一个受影响的损坏 session JSONL，并验证
-    `openclaw doctor --fix` 会将其重写到当前分支并带有备份。
+  - Runs a deterministic built-app Docker smoke for embedded runtime context
+    transcripts. Verifies hidden OpenClaw runtime context persists as a
+    non-display custom message instead of leaking into the visible user
+    turn, then seeds an affected broken session JSONL and verifies
+    `openclaw doctor --fix` rewrites it to the active branch with a backup.
 - `pnpm test:docker:npm-telegram-live`
-  - 在 Docker 中安装 OpenClaw 包候选版本，运行已安装包的 onboarding，通过已安装的 CLI 配置 Telegram，然后复用 live Telegram QA lane，并将该已安装包作为 SUT Gateway。
-  - 包装器仅从 checkout 挂载 `qa-lab` harness 源；已安装包拥有 `dist`、`openclaw/plugin-sdk` 和捆绑的插件运行时，因此该 lane 不会将当前 checkout 的插件混入被测包中。
-  - 默认使用 `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`。设置 `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` 或 `OPENCLAW_CURRENT_PACKAGE_TGZ` 可测试已解析的本地 tarball，而不是从 registry 安装。
-  - 默认通过 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES=20` 在 `qa-evidence.json` 中输出重复 RTT 计时。可覆盖 `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`、
-    `OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS` 或
-    `OPENCLAW_NPM_TELEGRAM_RTT_MAX_FAILURES` 来调整 RTT 运行。
-    `OPENCLAW_NPM_TELEGRAM_RTT_CHECKS` 接受一个以逗号分隔的 Telegram QA 检查 ID 列表用于采样；未设置时，默认可用于 RTT 的检查是 `telegram-mentioned-message-reply`。
-  - 使用与 `pnpm openclaw qa telegram` 相同的 Telegram env 凭证或 Convex 凭证来源。用于 CI/release 自动化时，设置 `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex` 以及
-    `OPENCLAW_QA_CONVEX_SITE_URL` 和角色密钥。如果 `OPENCLAW_QA_CONVEX_SITE_URL` 和 Convex 角色密钥在 CI 中可用，Docker wrapper 会自动选择 Convex。
-  - 包装器会在 Docker build/install 工作之前在主机上验证 Telegram 或 Convex 凭证环境。仅在你有意调试预凭证设置时，才将 `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1` 设为 1。
-  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` 会覆盖仅对此 lane 生效的共享 `OPENCLAW_QA_CREDENTIAL_ROLE`。当选择 Convex 凭证且未设置角色时，wrapper 在 CI 中使用 `ci`，在 CI 外使用 `maintainer`。
-  - GitHub Actions 将此 lane 作为手动维护者工作流 `NPM Telegram Beta E2E` 暴露。它不会在合并时运行。该工作流使用 `qa-live-shared` 环境和 Convex CI 凭证租约。
-- GitHub Actions 还提供 `Package Acceptance`，用于对单个候选包进行旁路产品证明。它接受受信任的 ref、已发布的 npm spec、带 SHA-256 的 HTTPS tarball URL，或来自另一次运行的 tarball artifact，上传规范化的 `openclaw-current.tgz` 作为 `package-under-test`，然后运行现有的 Docker E2E 调度器，并使用 smoke、package、product、full 或 custom lane profile。将 `telegram_mode=mock-openai` 或 `live-frontier` 设为对同一个 `package-under-test` artifact 运行 Telegram QA 工作流。
-  - 最新 beta 产品证明：
+  - Installs an OpenClaw package candidate in Docker, runs installed-package
+    onboarding, configures Telegram through the installed CLI, then reuses
+    the live Telegram QA lane with that installed package as the SUT
+    Gateway.
+  - The wrapper mounts only the `qa-lab` harness source from the checkout;
+    the installed package owns `dist`, `openclaw/plugin-sdk`, and bundled
+    plugin runtime, so the lane does not mix current checkout plugins into
+    the package under test.
+  - Defaults to `OPENCLAW_NPM_TELEGRAM_PACKAGE_SPEC=openclaw@beta`; set
+    `OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ=/path/to/openclaw-current.tgz` or
+    `OPENCLAW_CURRENT_PACKAGE_TGZ` to test a resolved local tarball instead
+    of installing from the registry.
+  - Emits repeated RTT timing in `qa-evidence.json` by default with
+    `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES=20`. Override
+    `OPENCLAW_NPM_TELEGRAM_RTT_SAMPLES`,
+    `OPENCLAW_NPM_TELEGRAM_RTT_TIMEOUT_MS`, or
+    `OPENCLAW_NPM_TELEGRAM_RTT_MAX_FAILURES` to tune the run.
+    `OPENCLAW_NPM_TELEGRAM_RTT_CHECKS` accepts a comma-separated list of
+    Telegram QA check IDs to sample; when unset, the default RTT-capable
+    check is `telegram-mentioned-message-reply`.
+  - Uses the same Telegram env credentials or Convex credential source as
+    `pnpm openclaw qa telegram`. For CI/release automation, set
+    `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_SOURCE=convex` plus
+    `OPENCLAW_QA_CONVEX_SITE_URL` and a role secret. If
+    `OPENCLAW_QA_CONVEX_SITE_URL` and a Convex role secret are present in
+    CI, the Docker wrapper selects Convex automatically.
+  - The wrapper validates Telegram or Convex credential env on the host
+    before Docker build/install work. Set
+    `OPENCLAW_NPM_TELEGRAM_SKIP_CREDENTIAL_PREFLIGHT=1` only when
+    deliberately debugging pre-credential setup.
+  - `OPENCLAW_NPM_TELEGRAM_CREDENTIAL_ROLE=ci|maintainer` overrides the
+    shared `OPENCLAW_QA_CREDENTIAL_ROLE` for this lane only. When Convex
+    credentials are selected and no role is set, the wrapper uses `ci` in CI
+    and `maintainer` outside CI.
+  - GitHub Actions exposes this lane as the manual maintainer workflow
+    `NPM Telegram Beta E2E`. It does not run on merge. The workflow uses the
+    `qa-live-shared` environment and Convex CI credential leases.
+- GitHub Actions also exposes `Package Acceptance` for side-run product proof
+  against one candidate package. It accepts a Git ref, published npm spec,
+  HTTPS tarball URL plus SHA-256, trusted-URL policy, or tarball artifact
+  from another run (`source=ref|npm|url|trusted-url|artifact`), uploads the
+  normalized `openclaw-current.tgz` as `package-under-test`, then runs the
+  existing Docker E2E scheduler with `smoke`, `package`, `product`, `full`,
+  or `custom` lane profiles. Set `telegram_mode=mock-openai` or
+  `live-frontier` to run the Telegram QA workflow against the same
+  `package-under-test` artifact.
+  - Latest beta product proof:
 
 ```bash
 gh workflow run package-acceptance.yml --ref main \
@@ -246,48 +345,93 @@ gh workflow run package-acceptance.yml --ref main \
 ```
 
 - `pnpm test:docker:plugins`
-  - 在 Docker 中打包并安装当前 OpenClaw 构建，使用已配置 OpenAI 启动 Gateway，然后通过配置编辑启用随包附带的 channel/plugins。
-  - 验证 setup discovery 不会显示未配置的可下载插件，第一次配置后的 doctor 修复会显式安装每个缺失的可下载插件，第二次重启不会运行隐藏的依赖修复。
-  - 还会安装一个已知的旧 npm 基线，在运行 `openclaw update --tag <candidate>` 之前启用 Telegram，并验证候选版本更新后的 doctor 会清理旧版插件依赖残留，而不会在 harness 侧进行 postinstall 修复。
+  - Packs and installs the current OpenClaw build in Docker, starts the
+    Gateway with OpenAI configured, then enables bundled channel/plugins via
+    config edits.
+  - Verifies setup discovery leaves unconfigured downloadable plugins
+    absent, the first configured doctor repair installs each missing
+    downloadable plugin explicitly, and a second restart does not run
+    hidden dependency repair.
+  - Also installs a known older npm baseline, enables Telegram before
+    running `openclaw update --tag <candidate>`, and verifies the
+    candidate's post-update doctor cleans legacy plugin dependency debris
+    without a harness-side postinstall repair.
 - `pnpm test:parallels:npm-update`
-  - 在 Parallels guest 上运行原生打包安装更新冒烟。每个被选中的平台会先安装所请求的基线包，然后在同一个 guest 中运行已安装的 `openclaw update` 命令，并验证已安装版本、更新状态、gateway 就绪状态以及一次本地 agent 轮次。
-  - 在只迭代一个 guest 时，使用 `--platform macos`、`--platform windows` 或 `--platform linux`。使用 `--json` 获取摘要 artifact 路径和每个 lane 的状态。
-  - 默认情况下，OpenAI lane 会使用 `openai/gpt-5.5` 作为 live agent-turn 验证。若要刻意验证其他 OpenAI 模型，请传入 `--model <provider/model>` 或设置 `OPENCLAW_PARALLELS_OPENAI_MODEL`。
-  - 将较长的本地运行包裹在 host timeout 中，以免 Parallels 传输卡住而耗尽剩余测试窗口：
+  - Runs the native packaged-install update smoke across Parallels guests.
+    Each selected platform first installs the requested baseline package,
+    then runs the installed `openclaw update` command in the same guest and
+    verifies the installed version, update status, gateway readiness, and
+    one local agent turn.
+  - Use `--platform macos`, `--platform windows`, or `--platform linux`
+    while iterating on one guest. Use `--json` for the summary artifact
+    path and per-lane status.
+  - The OpenAI lane uses `openai/gpt-5.5` for the live agent-turn proof by
+    default. Pass `--model <provider/model>` or set
+    `OPENCLAW_PARALLELS_OPENAI_MODEL` to validate another OpenAI model.
+  - Wrap long local runs in a host timeout so Parallels transport stalls
+    cannot consume the rest of the testing window:
 
     ```bash
     timeout --foreground 150m pnpm test:parallels:npm-update -- --json
     timeout --foreground 90m pnpm test:parallels:npm-update -- --platform windows --json
     ```
 
-  - 该脚本会在 `/tmp/openclaw-parallels-npm-update.*` 下写入嵌套的 lane 日志。
-    在假定外层包装器卡住之前，请检查 `windows-update.log`、`macos-update.log` 或
-    `linux-update.log`。
-  - Windows 更新在冷 guest 上的 post-update doctor 和 package
-    update 工作中可能会花费 10 到 15 分钟；只要嵌套的 npm
-    debug log 还在前进，这仍然是正常的。
-  - 不要将此聚合包装器与单独的 Parallels macOS、Windows 或 Linux 冒烟 lanes 并行运行。它们共享 VM 状态，可能在 snapshot restore、package serving 或 guest gateway state 上发生冲突。
-  - post-update 证明会运行正常的 bundled plugin surface，因为像 speech、image generation 和 media
-    understanding 这样的 capability facades 即使在 agent
-    轮次本身只检查简单文本回复时，也会通过 bundled runtime APIs 加载。
+  - The script writes nested lane logs under
+    `/tmp/openclaw-parallels-npm-update.*`. Inspect `windows-update.log`,
+    `macos-update.log`, or `linux-update.log` before assuming the outer
+    wrapper is hung.
+  - Windows update can spend 10 to 15 minutes in post-update doctor and
+    package update work on a cold guest; that is still healthy when the
+    nested npm debug log is advancing.
+  - Do not run this aggregate wrapper in parallel with individual Parallels
+    macOS, Windows, or Linux smoke lanes. They share VM state and can
+    collide on snapshot restore, package serving, or guest gateway state.
+  - The post-update proof runs the normal bundled plugin surface because
+    capability facades such as speech, image generation, and media
+    understanding load through bundled runtime APIs even when the agent
+    turn itself only checks a simple text response.
 
 - `pnpm openclaw qa aimock`
   - 仅启动本地 AIMock 提供方服务器，用于直接的协议冒烟测试。
 - `pnpm openclaw qa matrix`
-  - 在一个可丢弃的、由 Docker 支持的 Tuwunel homeserver 上运行 Matrix live QA lane。仅限源码 checkout——已打包安装不包含 `qa-lab`。
-  - 完整 CLI、profile/scenario 目录、环境变量和产物布局： [Matrix QA](/concepts/qa-matrix)。
+  - Runs the Matrix live QA lane against a disposable Docker-backed Tuwunel
+    homeserver. Source-checkout only - packaged installs do not ship
+    `qa-lab`.
+  - Full CLI, profile/scenario catalog, env vars, and artifact layout:
+    [Matrix QA](/concepts/qa-matrix).
 - `pnpm openclaw qa telegram`
-  - 使用来自 env 的 driver 和 SUT bot token 运行针对真实私有群组的 Telegram live QA lane。
-  - 需要 `OPENCLAW_QA_TELEGRAM_GROUP_ID`、`OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN` 和 `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`。group id 必须是数字形式的 Telegram chat id。
-  - 支持 `--credential-source convex` 以使用共享的池化凭证。默认使用 env 模式，或设置 `OPENCLAW_QA_CREDENTIAL_SOURCE=convex` 以启用池化租约。
-  - 默认覆盖 canary、mention gating、命令寻址、`/status`、bot-to-bot mentioned replies 以及核心原生命令回复。`mock-openai` 默认还覆盖确定性的 reply-chain 和 Telegram final-message streaming 回归。对于可选探针（例如 `session_status`），请使用 `--list-scenarios`。
-  - 当任一场景失败时以非零状态退出。需要产物但不想让退出码失败时，使用 `--allow-failures`。
-  - 需要同一个私有群组中的两个不同 bot，且 SUT bot 需要暴露一个 Telegram 用户名。
-  - 为了稳定观测 bot-to-bot 行为，请在 `@BotFather` 中为两个 bot 都启用 Bot-to-Bot Communication Mode，并确保 driver bot 可以观察群组 bot 流量。
-  - 在 `.artifacts/qa-e2e/...` 下写入 Telegram QA 报告、摘要和 `qa-evidence.json`。回复类场景会包含从 driver 发送请求到观测到 SUT 回复的 RTT。
+  - Runs the Telegram live QA lane against a real private group using the
+    driver and SUT bot tokens from env.
+  - Requires `OPENCLAW_QA_TELEGRAM_GROUP_ID`,
+    `OPENCLAW_QA_TELEGRAM_DRIVER_BOT_TOKEN`, and
+    `OPENCLAW_QA_TELEGRAM_SUT_BOT_TOKEN`. The group id must be the numeric
+    Telegram chat id.
+  - Supports `--credential-source convex` for shared pooled credentials.
+    Use env mode by default, or set `OPENCLAW_QA_CREDENTIAL_SOURCE=convex`
+    to opt into pooled leases.
+  - Defaults cover canary, mention gating, command addressing, `/status`,
+    bot-to-bot mentioned replies, and core native command replies.
+    `mock-openai` defaults also cover deterministic reply-chain and
+    Telegram final-message streaming regressions. Use `--list-scenarios`
+    for optional probes such as `session_status`.
+  - Exits non-zero when any scenario fails. Use `--allow-failures` for
+    artifacts without a failing exit code.
+  - Requires two distinct bots in the same private group, with the SUT bot
+    exposing a Telegram username.
+  - For stable bot-to-bot observation, enable Bot-to-Bot Communication Mode
+    in `@BotFather` for both bots and ensure the driver bot can observe
+    group bot traffic.
+  - Writes a Telegram QA report, summary, and `qa-evidence.json` under
+    `.artifacts/qa-e2e/...`. Replying scenarios include RTT from driver send
+    request to observed SUT reply.
 
-`Mantis Telegram Live` 是该 lane 的 PR 证据包装器。它会使用 Convex 租用的 Telegram 凭证运行候选 ref，在 Crabbox 桌面浏览器中渲染脱敏后的 QA 报告/evidence bundle，记录 MP4 证据，生成带运动裁剪的 GIF，上传 artifact bundle，并在设置 `pr_number` 时通过 Mantis GitHub App 发布内联 PR 证据。维护者可以通过 Actions UI 中的 `Mantis Scenario`（`scenario_id:
-telegram-live`）启动它，或者直接通过拉取请求评论启动：
+`Mantis Telegram Live` is the PR-evidence wrapper around this lane. It runs
+the candidate ref with Convex-leased Telegram credentials, renders the
+redacted QA report/evidence bundle in a Crabbox desktop browser, records MP4
+evidence, generates a motion-trimmed GIF, uploads the artifact bundle, and
+posts inline PR evidence through the Mantis GitHub App when `pr_number` is
+set. Maintainers can start it from the Actions UI through `Mantis Scenario`
+(`scenario_id: telegram-live`) or directly from a pull request comment:
 
 ```text
 @openclaw-mantis telegram
@@ -301,23 +445,43 @@ telegram-live`）启动它，或者直接通过拉取请求评论启动：
 @openclaw-mantis telegram desktop proof
 ```
 
-Mantis agent 会读取 PR，决定什么样的 Telegram 可见行为能够证明改动，运行基线和候选 ref 的真实用户 Crabbox Telegram Desktop proof lane，反复迭代直到原生 GIF 具有足够说明力，写入成对的 `motionPreview` 清单，并在设置了 `pr_number` 时通过 Mantis GitHub App 发布同样的双栏 GIF 表格。
+The Mantis agent reads the PR, decides what Telegram-visible behavior proves
+the change, runs the real-user Crabbox Telegram Desktop proof lane on
+baseline and candidate refs, iterates until the native GIFs are useful,
+writes a paired `motionPreview` manifest, and posts the same 2-column GIF
+table through the Mantis GitHub App when `pr_number` is set.
 
 - `pnpm openclaw qa mantis telegram-desktop-builder`
-  - 租用或复用一个 Crabbox Linux 桌面，安装原生 Telegram Desktop，使用租用的 Telegram SUT bot token 配置 OpenClaw，启动 gateway，并从可见的 VNC 桌面录制截图/MP4 证据。
-  - 默认使用 `--credential-source convex`，因此工作流只需要 Convex broker secret。配合 `pnpm openclaw qa telegram` 相同的 `OPENCLAW_QA_TELEGRAM_*` 变量时，使用 `--credential-source env`。
-  - Telegram Desktop 仍需要用户登录/配置文件。bot token 只用于配置 OpenClaw。使用 `--telegram-profile-archive-env <name>` 传入 base64 的 `.tgz` 配置文件归档，或使用 `--keep-lease` 并通过 VNC 手动登录一次。
-  - 在输出目录下写入 `mantis-telegram-desktop-builder-report.md`、`mantis-telegram-desktop-builder-summary.json`、`telegram-desktop-builder.png` 和 `telegram-desktop-builder.mp4`。
+  - Leases or reuses a Crabbox Linux desktop, installs native Telegram
+    Desktop, configures OpenClaw with a leased Telegram SUT bot token,
+    starts the gateway, and records screenshot/MP4 evidence from the
+    visible VNC desktop.
+  - Defaults to `--credential-source convex` so workflows only need the
+    Convex broker secret. Use `--credential-source env` with the same
+    `OPENCLAW_QA_TELEGRAM_*` variables as `pnpm openclaw qa telegram`.
+  - Telegram Desktop still needs a user login/profile. The bot token
+    configures OpenClaw only. Use `--telegram-profile-archive-env <name>`
+    for a base64 `.tgz` profile archive, or use `--keep-lease` and log in
+    manually through VNC once.
+  - Writes `mantis-telegram-desktop-builder-report.md`,
+    `mantis-telegram-desktop-builder-summary.json`,
+    `telegram-desktop-builder.png`, and `telegram-desktop-builder.mp4`
+    under the output directory.
 
-Live transport lanes 共享一个标准契约，因此新的传输不会偏离；每个 lane 的覆盖矩阵位于 [QA 概览 → Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage)。`qa-channel` 是更广泛的合成套件，不属于该矩阵。
+Live transport lanes share one standard contract so new transports do not
+drift; the per-lane coverage matrix lives in
+[QA overview - Live transport coverage](/concepts/qa-e2e-automation#live-transport-coverage).
+`qa-channel` is the broad synthetic suite and is not part of that matrix.
 
 ### 通过 Convex 共享 Telegram 凭证（v1）
 
-当 `--credential-source convex`（或 `OPENCLAW_QA_CREDENTIAL_SOURCE=convex`）为 live transport QA 启用时，QA lab 会从一个由 Convex 支持的池中获取独占租约，在 lane 运行期间对该租约发送心跳，并在关闭时释放租约。该节名称早于 Discord、Slack 和 WhatsApp 支持；租约契约在各类之间是共享的。
+When `--credential-source convex` (or `OPENCLAW_QA_CREDENTIAL_SOURCE=convex`)
+is enabled for live transport QA, QA lab acquires an exclusive lease from a
+Convex-backed pool, heartbeats that lease while the lane is running, and
+releases the lease on shutdown. The section name predates Discord, Slack, and
+WhatsApp support; the lease contract is shared across kinds.
 
-参考 Convex 项目骨架：
-
-- `qa/convex-credential-broker/`
+Reference Convex project scaffold: `qa/convex-credential-broker/`
 
 必需环境变量：
 
@@ -357,7 +521,9 @@ pnpm openclaw qa credentials remove --credential-id <credential-id>
 endpoint prefix、HTTP timeout 以及 admin/list 可达性，而不会打印
 密钥值。脚本和 CI 工具中可使用 `--json` 以获得机器可读输出。
 
-默认 endpoint 契约（`OPENCLAW_QA_CONVEX_SITE_URL` + `/qa-credentials/v1`）：
+Default endpoint contract (`OPENCLAW_QA_CONVEX_SITE_URL` + `/qa-credentials/v1`).
+Requests authenticate with an `Authorization: Bearer <role secret>` header;
+bodies below omit that header:
 
 - `POST /acquire`
   - 请求：`{ kind, ownerId, actorRole, leaseTtlMs, heartbeatIntervalMs }`
@@ -401,52 +567,69 @@ Telegram real-user kind 的 payload 结构：
 - Discord: `{ guildId: string, channelId: string, driverBotToken: string, sutBotToken: string, sutApplicationId: string, voiceChannelId?: string }`
 - WhatsApp: `{ driverPhoneE164: string, sutPhoneE164: string, driverAuthArchiveBase64: string, sutAuthArchiveBase64: string, groupJid?: string }`
 
-Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Slack QA 运行器中，而不是 broker 中。Slack 行请使用
-`{ channelId: string, driverBotToken: string, sutBotToken: string, sutAppToken: string }`。
+Slack lanes can also lease from the pool, but Slack payload validation
+currently lives in the Slack QA runner rather than the broker. Use
+`{ channelId: string, driverBotToken: string, sutBotToken: string, sutAppToken: string }`
+for Slack rows.
 
 ### 向 QA 添加一个 channel
 
-新 channel adapter 的架构和 scenario-helper 名称位于 [QA 概览 → 添加一个 channel](/concepts/qa-e2e-automation#adding-a-channel)。最低要求：在共享的 `qa-lab` host seam 上实现传输运行器，在插件清单中声明 `qaRunners`，通过 `openclaw qa <runner>` 挂载，并在 `qa/scenarios/` 下编写场景。
+The architecture and scenario-helper names for new channel adapters live in
+[QA overview - Adding a channel](/concepts/qa-e2e-automation#adding-a-channel).
+The minimum bar: implement the transport runner on the shared `qa-lab` host
+seam, declare `qaRunners` in the plugin manifest, mount as
+`openclaw qa <runner>`, and author scenarios under `qa/scenarios/`.
 
 ## 测试套件（在哪运行什么）
 
-将这些套件看作“越来越接近真实环境”（同时也越来越不稳定/昂贵）：
+Think of the suites as "increasing realism" (and increasing flakiness/cost).
 
 ### 单元 / 集成（默认）
 
-- 命令：`pnpm test`
-- 配置：未定向运行会使用 `vitest.full-*.config.ts` 分片集合，并可能将多项目分片展开为按项目配置，以便并行调度
-- 文件：`src/**/*.test.ts`、`packages/**/*.test.ts` 和 `test/**/*.test.ts` 下的核心/单元清单；UI 单元测试在专用的 `unit-ui` 分片中运行
-- 范围：
-  - 纯单元测试
-  - 进程内集成测试（网关认证、路由、工具、解析、配置）
-  - 已知缺陷的确定性回归测试
-- 预期：
-  - 在 CI 中运行
-  - 不需要真实密钥
-  - 应该快速且稳定
-  - 解析器和公共表面加载器测试必须通过生成的微型插件夹具，证明广泛的 `api.js` 和
-    `runtime-api.js` 回退行为，而不是依赖真实打包后的插件源码 API。真实插件 API 加载应归入
-    由插件拥有的契约/集成套件。
+- Command: `pnpm test`
+- Config: untargeted runs use the `vitest.full-*.config.ts` shard set and may
+  expand multi-project shards into per-project configs for parallel
+  scheduling
+- Files: core/unit inventories under `src/**/*.test.ts`,
+  `packages/**/*.test.ts`, and `test/**/*.test.ts`; UI unit tests run in the
+  dedicated `unit-ui` shard
+- Scope:
+  - Pure unit tests
+  - In-process integration tests (gateway auth, routing, tooling, parsing, config)
+  - Deterministic regressions for known bugs
+- Expectations:
+  - Runs in CI
+  - No real keys required
+  - Should be fast and stable
+  - Resolver and public-surface loader tests must prove broad `api.js` and
+    `runtime-api.js` fallback behavior with generated tiny plugin fixtures,
+    not real bundled plugin source APIs. Real plugin API loads belong in
+    plugin-owned contract/integration suites.
 
 本地依赖策略：
 
-- 默认测试安装会跳过可选的原生 Discord opus 构建。Discord 语音使用捆绑的 `libopus-wasm`，而 `@discordjs/opus` 会在 `allowBuilds` 中保持禁用，因此本地测试和 Testbox 通道不会编译原生插件。
-- 请在 `libopus-wasm` 基准仓库中比较原生 opus 性能，不要在默认的 OpenClaw 安装/测试循环中比较。不要在默认的 `allowBuilds` 中将 `@discordjs/opus` 设为 `true`；那样会让无关的安装/测试循环编译原生代码。
+- Default test installs skip optional native Discord opus builds. Discord
+  voice uses bundled `libopus-wasm`, and `@discordjs/opus` stays disabled in
+  `allowBuilds` so local tests and Testbox lanes do not compile the native
+  addon.
+- Compare native opus performance in the `libopus-wasm` benchmark repo, not
+  in default OpenClaw install/test loops. Do not set `@discordjs/opus` to
+  `true` in the default `allowBuilds`; that makes unrelated install/test
+  loops compile native code.
 
 <AccordionGroup>
   <Accordion title="项目、分片与受限通道">
 
-    - 未定向的 `pnpm test` 会运行十二个更小的分片配置（`core-unit-fast`、`core-unit-src`、`core-unit-security`、`core-unit-ui`、`core-unit-support`、`core-support-boundary`、`core-contracts`、`core-bundled`、`core-runtime`、`agentic`、`auto-reply`、`extensions`），而不是一个巨大的原生根项目进程。这样可以降低加载较重机器上的峰值 RSS，并避免 auto-reply/扩展工作饿死无关套件。
-    - `pnpm test --watch` 仍然使用原生根 `vitest.config.ts` 项目图，因为多分片 watch 循环并不实际。
-    - `pnpm test`、`pnpm test:watch` 和 `pnpm test:perf:imports` 会先通过受限通道路由显式的文件/目录目标，因此 `pnpm test extensions/discord/src/monitor/message-handler.preflight.test.ts` 不会承担完整根项目启动成本。
-    - `pnpm test:changed` 默认会把变更的 git 路径展开为廉价的受限通道：直接测试编辑、同级 `*.test.ts` 文件、显式源码映射，以及本地导入图依赖项。除非你显式使用 `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed`，否则配置/设置/包的编辑不会广泛运行测试。
-    - `pnpm check:changed` 是窄范围工作的常规智能本地检查门禁。它会将差异分类为核心、核心测试、扩展、扩展测试、应用、文档、发布元数据、实时 Docker 工具以及工具，然后运行匹配的类型检查、lint 和守卫命令。它不会运行 Vitest 测试；如需测试证明，请调用 `pnpm test:changed` 或显式 `pnpm test <target>`。仅发布元数据的版本提升会运行定向的版本/配置/根依赖检查，并带有一个守卫，用于拒绝除顶层 version 字段之外的 package 变更。
-    - 实时 Docker ACP 运行器编辑会运行聚焦检查：实时 Docker 认证脚本的 shell 语法，以及实时 Docker 调度器的 dry-run。只有当差异仅限于 `scripts["test:docker:live-*"]` 时才包含 `package.json` 变更；依赖、导出、版本以及其他包表面编辑仍然使用更宽的守卫。
-    - 来自 agents、commands、plugins、auto-reply helpers、`plugin-sdk` 以及类似纯工具区域的轻导入单元测试，会通过 `unit-fast` 通道路由，该通道会跳过 `test/setup-openclaw-runtime.ts`；有状态/运行时较重的文件则保留在现有通道中。
-    - 选定的 `plugin-sdk` 和 `commands` 辅助源码文件在变更模式运行时也会映射到这些轻通道中的显式同级测试，因此辅助代码的编辑不会因为该目录而重新运行完整的重型套件。
-    - `auto-reply` 为顶层核心辅助程序、顶层 `reply.*` 集成测试，以及 `src/auto-reply/reply/**` 子树分别设置了专用桶。CI 还会把 reply 子树进一步拆分为 agent-runner、dispatch 和 commands/state-routing 分片，这样单个导入较重的桶就不会独占完整的 Node 尾部。
-    - 常规 PR/main CI 会刻意跳过扩展批量扫描和仅发布用的 `agentic-plugins` 分片。完整发布验证会在发布候选版本上为这些偏插件/扩展的套件单独触发 `Plugin Prerelease` 子工作流。
+    - Untargeted `pnpm test` runs thirteen smaller shard configs (`core-unit-fast`, `core-unit-src`, `core-unit-security`, `core-unit-ui`, `core-unit-support`, `core-support-boundary`, `core-tooling`, `core-contracts`, `core-bundled`, `core-runtime`, `agentic`, `auto-reply`, `extensions`) instead of one giant native root-project process. This cuts peak RSS on loaded machines and avoids auto-reply/plugin work starving unrelated suites.
+    - `pnpm test --watch` still uses the native root `vitest.config.ts` project graph, because a multi-shard watch loop is not practical.
+    - `pnpm test`, `pnpm test:watch`, and `pnpm test:perf:imports` route explicit file/directory targets through scoped lanes first, so `pnpm test extensions/discord/src/monitor/message-handler.preflight.test.ts` avoids paying the full root project startup tax.
+    - `pnpm test:changed` expands changed git paths into cheap scoped lanes by default: direct test edits, sibling `*.test.ts` files, explicit source mappings, and local import-graph dependents. Config/setup/package edits do not broad-run tests unless you explicitly use `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed`.
+    - `pnpm check:changed` is the normal smart local check gate for narrow work. It classifies the diff into core, core tests, extensions, extension tests, apps, docs, release metadata, live Docker tooling, and tooling, then runs the matching typecheck, lint, and guard commands. It does not run Vitest tests; call `pnpm test:changed` or explicit `pnpm test <target>` for test proof. Release metadata-only version bumps run targeted version/config/root-dependency checks, with a guard that rejects package changes outside the top-level version field.
+    - Live Docker ACP harness edits run focused checks: shell syntax for the live Docker auth scripts and a live Docker scheduler dry-run. `package.json` changes are included only when the diff is limited to `scripts["test:docker:live-*"]`; dependency, export, version, and other package-surface edits still use the broader guards.
+    - Import-light unit tests from agents, commands, plugins, auto-reply helpers, `plugin-sdk`, and similar pure utility areas route through the `unit-fast` lane, which skips `test/setup-openclaw-runtime.ts`; stateful/runtime-heavy files stay on the existing lanes.
+    - Selected `plugin-sdk` and `commands` helper source files also map changed-mode runs to explicit sibling tests in those light lanes, so helper edits avoid rerunning the full heavy suite for that directory.
+    - `auto-reply` has dedicated buckets for top-level core helpers, top-level `reply.*` integration tests, and the `src/auto-reply/reply/**` subtree. CI further splits the reply subtree into agent-runner, dispatch, and commands/state-routing shards so one import-heavy bucket does not own the full Node tail.
+    - Normal PR/main CI intentionally skips the bundled plugin batch sweep and release-only `agentic-plugins` shard. Full Release Validation dispatches the separate `Plugin Prerelease` child workflow for those plugin-heavy suites on release candidates.
 
   </Accordion>
 
@@ -464,79 +647,90 @@ Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Sl
 
   <Accordion title="Vitest 池和隔离默认值">
 
-    - 基础 Vitest 配置默认使用 `threads`。
-    - 共享 Vitest 配置固定 `isolate: false`，并在根项目、e2e 和 live 配置中使用
-      非隔离运行器。
-    - 根 UI 通道保留其 `jsdom` 设置和优化器，但也运行在
-      共享的非隔离运行器上。
-    - 每个 `pnpm test` 分片都会从共享 Vitest 配置继承相同的 `threads` + `isolate: false`
-      默认值。
-    - `scripts/run-vitest.mjs` 默认会为 Vitest 子 Node
-      进程添加 `--no-maglev`，以减少大型本地运行期间的 V8 编译抖动。
-      设置 `OPENCLAW_VITEST_ENABLE_MAGLEV=1` 可与原生 V8
-      行为进行对比。
-    - `scripts/run-vitest.mjs` 会在显式的非 watch Vitest 运行中，如果
-      5 分钟内没有 stdout 或 stderr 输出，就终止进程。设置
-      `OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS=0` 可为有意静默的调查禁用此看门狗。
+    - Base Vitest config defaults to `threads`.
+    - The shared Vitest config fixes `isolate: false` and uses the
+      non-isolated runner across the root projects, e2e, and live configs.
+    - The root UI lane keeps its `jsdom` setup and optimizer, but runs on the
+      shared non-isolated runner too.
+    - Each `pnpm test` shard inherits the same `threads` + `isolate: false`
+      defaults from the shared Vitest config.
+    - `scripts/run-vitest.mjs` adds `--no-maglev` for Vitest child Node
+      processes by default to reduce V8 compile churn during big local runs.
+      Set `OPENCLAW_VITEST_ENABLE_MAGLEV=1` to compare against stock V8
+      behavior.
+    - `scripts/run-vitest.mjs` terminates explicit non-watch Vitest runs
+      after 5 minutes with no stdout or stderr output. Set
+      `OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS=0` to disable the watchdog for
+      an intentionally silent investigation.
 
   </Accordion>
 
   <Accordion title="快速本地迭代">
 
-    - `pnpm changed:lanes` 会显示某个差异触发了哪些架构通道。
-    - pre-commit 钩子只做格式化。它会重新暂存已格式化的文件，
-      不会运行 lint、类型检查或测试。
-    - 在交接或推送前，如果需要智能本地检查门禁，请显式运行 `pnpm check:changed`。
-    - `pnpm test:changed` 默认会通过廉价的受限通道路由。仅当代理
-      判断某个运行器、配置、包或契约编辑确实需要更广泛的
-      Vitest 覆盖时，才使用 `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed`。
-    - `pnpm test:max` 和 `pnpm test:changed:max` 保持相同的路由
-      行为，只是提高了 worker 上限。
-    - 本地 worker 自动缩放是有意保守的，并且在主机负载平均值已经较高时会退让，
-      因此默认情况下多个并发 Vitest 运行造成的影响更小。
-    - 基础 Vitest 配置将项目/配置文件标记为
-      `forceRerunTriggers`，这样当测试
-      连接方式变化时，变更模式的重新运行仍然正确。
-    - 该配置在受支持的主机上保持启用 `OPENCLAW_VITEST_FS_MODULE_CACHE`；如果你想要
-      一个用于直接分析的显式缓存位置，可设置 `OPENCLAW_VITEST_FS_MODULE_CACHE_PATH=/abs/path`。
+    - `pnpm changed:lanes` shows which architectural lanes a diff triggers.
+    - The pre-commit hook is formatting-only. It restages formatted files
+      and does not run lint, typecheck, or tests.
+    - Run `pnpm check:changed` explicitly before handoff or push when you
+      need the smart local check gate.
+    - `pnpm test:changed` routes through cheap scoped lanes by default. Use
+      `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` only when the agent
+      decides a harness, config, package, or contract edit really needs
+      broader Vitest coverage.
+    - `pnpm test:max` and `pnpm test:changed:max` keep the same routing
+      behavior, just with a higher worker cap.
+    - Local worker auto-scaling is intentionally conservative and backs off
+      when the host load average is already high, so multiple concurrent
+      Vitest runs do less damage by default.
+    - The base Vitest config marks the projects/config files as
+      `forceRerunTriggers` so changed-mode reruns stay correct when test
+      wiring changes.
+    - The config keeps `OPENCLAW_VITEST_FS_MODULE_CACHE` enabled on
+      supported hosts; set `OPENCLAW_VITEST_FS_MODULE_CACHE_PATH=/abs/path`
+      for one explicit cache location for direct profiling.
 
   </Accordion>
 
   <Accordion title="性能调试">
 
-    - `pnpm test:perf:imports` 会启用 Vitest 导入耗时报告以及
-      导入分解输出。
-    - `pnpm test:perf:imports:changed` 会将相同的分析视图限定到
-      自 `origin/main` 以来发生变化的文件。
-    - 分片计时数据会写入 `.artifacts/vitest-shard-timings.json`。
-      整体配置运行会使用配置路径作为键；包含模式的 CI
-      分片会附加分片名称，以便可以分别跟踪过滤后的分片。
-    - 当某个热点测试仍然把大部分时间花在启动导入上时，
-      请把重依赖放在一个窄的本地 `*.runtime.ts` 边界之后，并直接 mock 该边界，
-      而不是深度导入运行时辅助程序只是为了通过 `vi.mock(...)` 传递它们。
-    - `pnpm test:perf:changed:bench -- --ref <git-ref>` 会把路由后的
-      `test:changed` 与该已提交差异的原生根项目路径进行比较，并打印墙钟时间以及 macOS 最大 RSS。
-    - `pnpm test:perf:changed:bench -- --worktree` 会通过
-      `scripts/test-projects.mjs` 和根 Vitest 配置，对当前脏工作区进行基准测试。
-    - `pnpm test:perf:profile:main` 会为 Vitest/Vite 启动和转换开销写入主线程 CPU profile。
-    - `pnpm test:perf:profile:runner` 会为禁用文件并行性的单元套件写入运行器 CPU+heap profile。
+    - `pnpm test:perf:imports` enables Vitest import-duration reporting plus
+      import-breakdown output.
+    - `pnpm test:perf:imports:changed` scopes the same profiling view to
+      files changed since `origin/main`.
+    - Shard timing data is written to `.artifacts/vitest-shard-timings.json`.
+      Whole-config runs use the config path as the key; include-pattern CI
+      shards append the shard name so filtered shards can be tracked
+      separately.
+    - When one hot test still spends most of its time in startup imports,
+      keep heavy dependencies behind a narrow local `*.runtime.ts` seam and
+      mock that seam directly instead of deep-importing runtime helpers
+      just to pass them through `vi.mock(...)`.
+    - `pnpm test:perf:changed:bench -- --ref <git-ref>` compares routed
+      `test:changed` against the native root-project path for that
+      committed diff and prints wall time plus macOS max RSS.
+    - `pnpm test:perf:changed:bench -- --worktree` benchmarks the current
+      dirty tree by routing the changed file list through
+      `scripts/test-projects.mjs` and the root Vitest config.
+    - `pnpm test:perf:profile:main` writes a main-thread CPU profile for
+      Vitest/Vite startup and transform overhead.
+    - `pnpm test:perf:profile:runner` writes runner CPU+heap profiles for
+      the unit suite with file parallelism disabled.
 
   </Accordion>
 </AccordionGroup>
 
 ### 稳定性（网关）
 
-- 命令：`pnpm test:stability:gateway`
-- 配置：`vitest.gateway.config.ts`，强制单 worker
-- 范围：
-  - 默认启用诊断并启动一个真实的回环 Gateway
-  - 通过诊断事件路径驱动合成的网关消息、内存和大负载 churn
-  - 通过 Gateway WS RPC 查询 `diagnostics.stability`
-  - 覆盖诊断稳定性 bundle 持久化辅助程序
-  - 断言记录器保持有界、合成 RSS 样本保持在压力预算之下，并且每个会话的队列深度回落到零
-- 预期：
-  - 对 CI 安全且无需密钥
-  - 这是用于稳定性回归跟进的窄通道，不是完整 Gateway 套件的替代品
+- Command: `pnpm test:stability:gateway`
+- Config: `test/vitest/vitest.gateway.config.ts`, `test/vitest/vitest.logging.config.ts`, and `test/vitest/vitest.infra.config.ts`, each forced to one worker
+- Scope:
+  - Starts a real loopback Gateway with diagnostics enabled by default
+  - Drives synthetic gateway message, memory, and large-payload churn through the diagnostic event path
+  - Queries `diagnostics.stability` over the Gateway WS RPC
+  - Covers diagnostic stability bundle persistence helpers
+  - Asserts the recorder remains bounded, synthetic RSS samples stay under the pressure budget, and per-session queue depths drain back to zero
+- Expectations:
+  - CI-safe and keyless
+  - Narrow lane for stability-regression follow-up, not a substitute for the full Gateway suite
 
 ### E2E（仓库聚合）
 
@@ -550,23 +744,23 @@ Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Sl
 
 ### E2E（gateway smoke）
 
-- 命令：`pnpm test:e2e:gateway`
-- 配置：`vitest.e2e.config.ts`
-- 文件：`src/**/*.e2e.test.ts`、`test/**/*.e2e.test.ts`，以及 `extensions/` 下打包插件的 E2E 测试
-- 运行时默认值：
-  - 使用 Vitest `threads` 且 `isolate: false`，与仓库其余部分一致。
-  - 使用自适应 worker（CI：最多 2 个，本地：默认 1 个）。
-  - 默认以静默模式运行，以降低控制台 I/O 开销。
-- 有用的覆盖项：
-  - `OPENCLAW_E2E_WORKERS=<n>` 用于强制 worker 数量（上限 16）。
-  - `OPENCLAW_E2E_VERBOSE=1` 用于重新启用详细控制台输出。
-- 范围：
-  - 多实例 gateway 端到端行为
-  - WebSocket/HTTP 表面、节点配对，以及更重的网络行为
-- 预期：
-  - 在 CI 中运行（当流水线启用时）
-  - 不需要真实密钥
-  - 比单元测试有更多活动部件（可能更慢）
+- Command: `pnpm test:e2e:gateway`
+- Config: `test/vitest/vitest.e2e.config.ts`
+- Files: `src/**/*.e2e.test.ts`, `test/**/*.e2e.test.ts`, and bundled-plugin E2E tests under `extensions/`
+- Runtime defaults:
+  - Uses Vitest `threads` with `isolate: false`, matching the rest of the repo.
+  - Uses adaptive workers (CI: up to 2, local: 1 by default).
+  - Runs in silent mode by default to reduce console I/O overhead.
+- Useful overrides:
+  - `OPENCLAW_E2E_WORKERS=<n>` to force worker count (capped at 16).
+  - `OPENCLAW_E2E_VERBOSE=1` to re-enable verbose console output.
+- Scope:
+  - Multi-instance gateway end-to-end behavior
+  - WebSocket/HTTP surfaces, node pairing, and heavier networking
+- Expectations:
+  - Runs in CI (when enabled in the pipeline)
+  - No real keys required
+  - More moving parts than unit tests (can be slower)
 
 ### E2E（Control UI 模拟浏览器）
 
@@ -584,44 +778,47 @@ Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Sl
 
 ### E2E：OpenShell 后端 smoke
 
-- 命令：`pnpm test:e2e:openshell`
-- 文件：`extensions/openshell/src/backend.e2e.test.ts`
-- 范围：
-  - 通过 Docker 在主机上启动一个隔离的 OpenShell 网关
-  - 从临时本地 Dockerfile 创建一个沙箱
-  - 通过真实的 `sandbox ssh-config` + SSH exec 测试 OpenClaw 的 OpenShell 后端
-  - 通过 sandbox fs 桥验证远端规范化的文件系统行为
-- 预期：
-  - 仅可选择启用；不属于默认的 `pnpm test:e2e` 运行
-  - 需要本地 `openshell` CLI 以及可用的 Docker 守护进程
-  - 使用隔离的 `HOME` / `XDG_CONFIG_HOME`，然后销毁测试网关和沙箱
-- 有用的覆盖项：
-  - `OPENCLAW_E2E_OPENSHELL=1` 用于在手动运行更广泛的 e2e 套件时启用该测试
-  - `OPENCLAW_E2E_OPENSHELL_COMMAND=/path/to/openshell` 用于指向非默认的 CLI 二进制文件或包装脚本
+- Command: `pnpm test:e2e:openshell`
+- File: `extensions/openshell/src/backend.e2e.test.ts`
+- Scope:
+  - Reuses an active local OpenShell gateway
+  - Creates a sandbox from a temporary local Dockerfile
+  - Exercises OpenClaw's OpenShell backend over real `sandbox ssh-config` + SSH exec
+  - Verifies remote-canonical filesystem behavior through the sandbox fs bridge
+- Expectations:
+  - Opt-in only; not part of the default `pnpm test:e2e` run
+  - Requires a local `openshell` CLI plus a working Docker daemon
+  - Requires an active local OpenShell gateway and its config source
+  - Uses isolated `HOME` / `XDG_CONFIG_HOME`, then destroys the test sandbox
+- Useful overrides:
+  - `OPENCLAW_E2E_OPENSHELL=1` to enable the test when running the broader e2e suite manually
+  - `OPENCLAW_E2E_OPENSHELL_COMMAND=/path/to/openshell` to point at a non-default CLI binary or wrapper script
+  - `OPENCLAW_E2E_OPENSHELL_CONFIG_HOME=/path/to/config` to expose the registered gateway config to the isolated test
+  - `OPENCLAW_E2E_OPENSHELL_HOST_IP=172.18.0.1` to override the Docker gateway IP used by the host policy fixture
 
 ### Live（真实提供方 + 真实模型）
 
-- 命令：`pnpm test:live`
-- 配置：`vitest.live.config.ts`
-- 文件：`src/**/*.live.test.ts`、`test/**/*.live.test.ts`，以及 `extensions/` 下打包插件的 live 测试
-- 默认：由 `pnpm test:live` **启用**（会设置 `OPENCLAW_LIVE_TEST=1`）
-- 范围：
-  - “这个提供方/模型今天用真实凭据真的能工作吗？”
-  - 捕获提供方格式变更、工具调用怪癖、认证问题和速率限制行为
-- 预期：
-  - 设计上不稳定于 CI（真实网络、真实提供方策略、配额、故障）
-  - 会花钱 / 消耗速率限制
-  - 优先运行缩小后的子集，而不是“全部”
-- live 运行使用已导出的 API 密钥和预先配置的认证配置文件。
-- 默认情况下，live 运行仍会隔离 `HOME`，并将配置/认证材料复制到临时测试 home，因此单元夹具不会修改你真实的 `~/.openclaw`。
-- 只有当你有意需要 live 测试使用真实 home 目录时，才设置 `OPENCLAW_LIVE_USE_REAL_HOME=1`。
-- `pnpm test:live` 默认采用更安静的模式：保留 `[live] ...` 进度输出，并静音网关启动日志/Bonjour 交谈。如果你想恢复完整启动日志，可设置 `OPENCLAW_LIVE_TEST_QUIET=0`。
-- API 密钥轮换（按提供方区分）：将 `*_API_KEYS` 设为逗号/分号格式，或使用 `*_API_KEY_1`、`*_API_KEY_2`（例如 `OPENAI_API_KEYS`、`ANTHROPIC_API_KEYS`、`GEMINI_API_KEYS`），也可通过 `OPENCLAW_LIVE_*_KEY` 覆盖到单个 live 测试；测试会在速率限制响应后重试。
-- 进度/心跳输出：
-  - live 套件现在会向 stderr 输出进度行，因此即使 Vitest 控制台捕获很安静，较长的提供方调用也会明显处于活跃状态。
-  - `vitest.live.config.ts` 会禁用 Vitest 控制台拦截，因此在 live 运行期间提供方/网关进度行会立即流式输出。
-  - 使用 `OPENCLAW_LIVE_HEARTBEAT_MS` 调整直接模型心跳。
-  - 使用 `OPENCLAW_LIVE_GATEWAY_HEARTBEAT_MS` 调整网关/探针心跳。
+- Command: `pnpm test:live`
+- Config: `test/vitest/vitest.live.config.ts`
+- Files: `src/**/*.live.test.ts`, `test/**/*.live.test.ts`, and bundled-plugin live tests under `extensions/`
+- Default: **enabled** by `pnpm test:live` (sets `OPENCLAW_LIVE_TEST=1`)
+- Scope:
+  - "Does this provider/model actually work _today_ with real creds?"
+  - Catch provider format changes, tool-calling quirks, auth issues, and rate limit behavior
+- Expectations:
+  - Not CI-stable by design (real networks, real provider policies, quotas, outages)
+  - Costs money / uses rate limits
+  - Prefer running narrowed subsets instead of "everything"
+- Live runs use already-exported API keys and staged auth profiles.
+- By default, live runs still isolate `HOME` and copy config/auth material into a temp test home so unit fixtures cannot mutate your real `~/.openclaw`.
+- Set `OPENCLAW_LIVE_USE_REAL_HOME=1` only when you intentionally need live tests to use your real home directory.
+- `pnpm test:live` defaults to a quieter mode: it keeps `[live] ...` progress output and mutes gateway bootstrap logs/Bonjour chatter. Set `OPENCLAW_LIVE_TEST_QUIET=0` if you want the full startup logs back.
+- API key rotation (provider-specific): set `*_API_KEYS` with comma/semicolon format or `*_API_KEY_1`, `*_API_KEY_2` (for example `OPENAI_API_KEYS`, `ANTHROPIC_API_KEYS`, `GEMINI_API_KEYS`) or per-live override via `OPENCLAW_LIVE_*_KEY`; tests retry on rate limit responses.
+- Progress/heartbeat output:
+  - Live suites emit progress lines to stderr so long provider calls are visibly active even when Vitest console capture is quiet.
+  - `test/vitest/vitest.live.config.ts` disables Vitest console interception so provider/gateway progress lines stream immediately during live runs.
+  - Tune direct-model heartbeats with `OPENCLAW_LIVE_HEARTBEAT_MS`.
+  - Tune gateway/probe heartbeats with `OPENCLAW_LIVE_GATEWAY_HEARTBEAT_MS`.
 
 ## 我应该运行哪个测试套件？
 
@@ -633,10 +830,13 @@ Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Sl
 
 ## Live（涉及网络）的测试
 
-对于 live 模型矩阵、CLI 后端 smoke、ACP smoke、Codex app-server harness，以及所有媒体提供方 live 测试（Deepgram、BytePlus、ComfyUI、image、music、video、media harness）——外加 live 运行的凭据处理——请参见
-[Testing live suites](/help/testing-live)。关于专门的更新与
-插件验证清单，请参见
-[Testing updates and plugins](/help/testing-updates-plugins)。
+For the live model matrix, CLI backend smokes, ACP smokes, Codex app-server
+harness, and all media-provider live tests (Deepgram, BytePlus, ComfyUI,
+image, music, video, media harness) - plus credential handling for live runs
+
+- see [Testing live suites](/help/testing-live). For the dedicated update and
+  plugin validation checklist, see
+  [Testing updates and plugins](/help/testing-updates-plugins).
 
 ## Docker 运行器（可选的“在 Linux 上可用”检查）
 
@@ -649,14 +849,17 @@ Slack lane 也可以从池中租用，不过 Slack payload 验证目前位于 Sl
   `OPENCLAW_LIVE_GATEWAY_MAX_MODELS=8`,
   `OPENCLAW_LIVE_GATEWAY_STEP_TIMEOUT_MS=45000`, and `OPENCLAW_LIVE_GATEWAY_MODEL_TIMEOUT_MS=90000`. Set `OPENCLAW_LIVE_MAX_MODELS`
   or the gateway env vars when you explicitly want a smaller cap or larger scan.
-- `test:docker:all` builds the live Docker image once via `test:docker:live-build`, packs OpenClaw once as an npm tarball through `scripts/package-openclaw-for-docker.mjs`, then builds/reuses two `scripts/e2e/Dockerfile` images. The bare image is only the Node/Git runner for install/update/plugin-dependency lanes; those lanes mount the prebuilt tarball. The functional image installs the same tarball into `/app` for built-app functionality lanes. Docker lane definitions live in `scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in `scripts/lib/docker-e2e-plan.mjs`; `scripts/test-docker-all.mjs` executes the selected plan. The aggregate uses a weighted local scheduler: `OPENCLAW_DOCKER_ALL_PARALLELISM` controls process slots, while resource caps keep heavy live, npm-install, and multi-service lanes from all starting at once. If a single lane is heavier than the active caps, the scheduler can still start it when the pool is empty and then keeps it running alone until capacity is available again. Defaults are 10 slots, `OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`, `OPENCLAW_DOCKER_ALL_NPM_LIMIT=5`, and `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`; tune `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` or `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT` only when the Docker host has more headroom. The runner performs a Docker preflight by default, removes stale OpenClaw E2E containers, prints status every 30 seconds, stores successful lane timings in `.artifacts/docker-tests/lane-timings.json`, and uses those timings to start longer lanes first on later runs. Use `OPENCLAW_DOCKER_ALL_DRY_RUN=1` to print the weighted lane manifest without building or running Docker, or `node scripts/test-docker-all.mjs --plan-json` to print the CI plan for selected lanes, package/image needs, and credentials.
-- `Package Acceptance` is the GitHub-native package gate for "does this installable tarball work as a product?" It resolves one candidate package from `source=npm`, `source=ref`, `source=url`, or `source=artifact`, uploads it as `package-under-test`, then runs the reusable Docker E2E lanes against that exact tarball instead of repacking the selected ref. Profiles are ordered by breadth: `smoke`, `package`, `product`, and `full`. See [Testing updates and plugins](/help/testing-updates-plugins) for the package/update/plugin contract, published-upgrade survivor matrix, release defaults, and failure triage.
-- Build and release checks run `scripts/check-cli-bootstrap-imports.mjs` after tsdown. The guard walks the static built graph from `dist/entry.js` and `dist/cli/run-main.js` and fails if pre-dispatch startup imports package dependencies such as Commander, prompt UI, undici, or logging before command dispatch; it also keeps the bundled gateway run chunk under budget and rejects static imports of known cold gateway paths. Packaged CLI smoke also covers root help, onboard help, doctor help, status, config schema, and a model-list command.
+- `test:docker:all` builds the live Docker image once via `test:docker:live-build`, packs OpenClaw once as an npm tarball through `scripts/package-openclaw-for-docker.mjs`, then builds/reuses two `scripts/e2e/Dockerfile` images. The bare image is only the Node/Git runner for install/update/plugin-dependency lanes; those lanes mount the prebuilt tarball. The functional image installs the same tarball into `/app` for built-app functionality lanes. Docker lane definitions live in `scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in `scripts/lib/docker-e2e-plan.mjs`; `scripts/test-docker-all.mjs` executes the selected plan. The aggregate uses a weighted local scheduler: `OPENCLAW_DOCKER_ALL_PARALLELISM` controls process slots, while resource caps keep heavy live, npm-install, and multi-service lanes from all starting at once. If a single lane is heavier than the active caps, the scheduler can still start it when the pool is empty and then keeps it running alone until capacity is available again. Defaults are 10 slots, `OPENCLAW_DOCKER_ALL_LIVE_LIMIT=9`, `OPENCLAW_DOCKER_ALL_NPM_LIMIT=5`, and `OPENCLAW_DOCKER_ALL_SERVICE_LIMIT=7`; tune `OPENCLAW_DOCKER_ALL_WEIGHT_LIMIT` or `OPENCLAW_DOCKER_ALL_DOCKER_LIMIT` (and other `OPENCLAW_DOCKER_ALL_<RESOURCE>_LIMIT` overrides) only when the Docker host has more headroom. The runner performs a Docker preflight by default, removes stale OpenClaw E2E containers, prints status every 30 seconds, stores successful lane timings in `.artifacts/docker-tests/lane-timings.json`, and uses those timings to start longer lanes first on later runs. Use `OPENCLAW_DOCKER_ALL_DRY_RUN=1` to print the weighted lane manifest without building or running Docker, or `node scripts/test-docker-all.mjs --plan-json` to print the CI plan for selected lanes, package/image needs, and credentials.
+- `Package Acceptance` is the GitHub-native package gate for "does this installable tarball work as a product?" It resolves one candidate package from `source=npm`, `source=ref`, `source=url`, `source=trusted-url`, or `source=artifact`, uploads it as `package-under-test`, then runs the reusable Docker E2E lanes against that exact tarball instead of repacking the selected ref. Profiles are ordered by breadth: `smoke`, `package`, `product`, and `full` (plus `custom` for an explicit lane list). See [Testing updates and plugins](/help/testing-updates-plugins) for the package/update/plugin contract, published-upgrade survivor matrix, release defaults, and failure triage.
+- Build and release checks run `scripts/check-cli-bootstrap-imports.mjs` after tsdown. The guard walks the static built graph from `dist/entry.js` and `dist/cli/run-main.js` and fails if that pre-dispatch bootstrap graph statically imports any external package (Commander, prompt UI, undici, logging, and similar startup-heavy deps all count) before command dispatch; it also caps the bundled gateway run chunk at 70 KB and rejects static imports of known cold gateway paths (`control-ui-assets`, `diagnostic-stability-bundle`, `onboard-helpers`, `process-respawn`, `restart-sentinel`, `server-close`, `server-reload-handlers`) from that chunk. `scripts/release-check.ts` separately smoke-tests the packed CLI with `--help`, `onboard --help`, `doctor --help`, `status --json --timeout 1`, `config schema`, and `models list --provider openai`.
 - Package Acceptance legacy compatibility is capped at `2026.4.25` (`2026.4.25-beta.*` included). Through that cutoff, the harness tolerates only shipped-package metadata gaps: omitted private QA inventory entries, missing `gateway install --wrapper`, missing patch files in the tarball-derived git fixture, missing persisted `update.channel`, legacy plugin install-record locations, missing marketplace install-record persistence, and config metadata migration during `plugins update`. For packages after `2026.4.25`, those paths are strict failures.
 - Container smoke runners: `test:docker:openwebui`, `test:docker:onboard`, `test:docker:npm-onboard-channel-agent`, `test:docker:release-user-journey`, `test:docker:release-typed-onboarding`, `test:docker:release-media-memory`, `test:docker:release-upgrade-user-journey`, `test:docker:release-plugin-marketplace`, `test:docker:skill-install`, `test:docker:update-channel-switch`, `test:docker:upgrade-survivor`, `test:docker:published-upgrade-survivor`, `test:docker:session-runtime-context`, `test:docker:agents-delete-shared-workspace`, `test:docker:gateway-network`, `test:docker:browser-cdp-snapshot`, `test:docker:mcp-channels`, `test:docker:agent-bundle-mcp-tools`, `test:docker:cron-mcp-cleanup`, `test:docker:plugins`, `test:docker:plugin-update`, `test:docker:plugin-lifecycle-matrix`, and `test:docker:config-reload` boot one or more real containers and verify higher-level integration paths.
 - Docker/Bash E2E lanes that install the packed OpenClaw tarball through `scripts/lib/openclaw-e2e-instance.sh` cap `npm install` at `OPENCLAW_E2E_NPM_INSTALL_TIMEOUT` (default `600s`; set `0` to disable the wrapper for debugging).
 
-live-model Docker 运行器也只挂载所需的 CLI auth homes（如果运行没有缩小范围，则挂载所有受支持的），然后在运行前把它们复制到容器 home 中，这样外部 CLI OAuth 就可以刷新 token，而不会修改宿主机 auth 存储：
+The live-model Docker runners also bind-mount only the needed CLI auth homes
+(or all supported ones when the run is not narrowed), then copy them into the
+container home before the run so external-CLI OAuth can refresh tokens
+without mutating the host auth store:
 
 - 直接模型：`pnpm test:docker:live-models` 和 `pnpm test:docker:live-gateway` 只在仓库 Docker 镜像中运行与其匹配的 profile-key live 文件（`src/agents/models.profiles.live.test.ts` 和 `src/gateway/gateway-models.profiles.live.test.ts`），并挂载你的本地配置目录、工作区和可选的 profile env 文件。对应的本地入口点是 `test:live:models-profiles` 和 `test:live:gateway-profiles`。
 - Docker live 运行器默认使用更小的 smoke 上限，因此完整的 Docker 扫描仍然可行：
@@ -707,49 +910,54 @@ OPENCLAW_DOCKER_E2E_IMAGE=openclaw-docker-e2e-functional:local OPENCLAW_SKIP_DOC
 
 像 `OPENCLAW_GATEWAY_NETWORK_E2E_IMAGE` 这样的套件专用镜像覆盖在设置时仍然优先。当 `OPENCLAW_SKIP_DOCKER_BUILD=1` 指向远程共享镜像时，如果该镜像本地尚不存在，脚本会拉取它。QR 和安装器 Docker 测试保留各自的 Dockerfile，因为它们验证的是包/安装行为，而不是共享的已构建应用运行时。
 
-The live-model Docker runners also bind-mount the current checkout read-only and
-stage it into a temporary workdir inside the container. This keeps the runtime
-image slim while still running Vitest against your exact local source/config.
-The staging step skips large local-only caches and app build outputs such as
-`.pnpm-store`, `.worktrees`, `__openclaw_vitest__`, and app-local `.build` or
-Gradle output directories so Docker live runs do not spend minutes copying
-machine-specific artifacts.
-They also set `OPENCLAW_SKIP_CHANNELS=1` so gateway live probes do not start
-real Telegram/Discord/etc. channel workers inside the container.
+The live-model Docker runners also bind-mount the current checkout read-only
+and stage it into a temporary workdir inside the container. This keeps the
+runtime image slim while still running Vitest against your exact local
+source/config. The staging step skips large local-only caches and app build
+outputs such as `.pnpm-store`, `.worktrees`, `__openclaw_vitest__`, and
+app-local `.build` or Gradle output directories so Docker live runs do not
+spend minutes copying machine-specific artifacts. They also set
+`OPENCLAW_SKIP_CHANNELS=1` so gateway live probes do not start real
+Telegram/Discord/etc. channel workers inside the container.
 `test:docker:live-models` still runs `pnpm test:live`, so pass through
 `OPENCLAW_LIVE_GATEWAY_*` as well when you need to narrow or exclude gateway
 live coverage from that Docker lane.
+
 `test:docker:openwebui` is a higher-level compatibility smoke: it starts an
 OpenClaw gateway container with the OpenAI-compatible HTTP endpoints enabled,
 starts a pinned Open WebUI container against that gateway, signs in through
 Open WebUI, verifies `/api/models` exposes `openclaw/default`, then sends a
-real chat request through Open WebUI's `/api/chat/completions` proxy.
-Set `OPENWEBUI_SMOKE_MODE=models` for release-path CI checks that should stop
+real chat request through Open WebUI's `/api/chat/completions` proxy. Set
+`OPENWEBUI_SMOKE_MODE=models` for release-path CI checks that should stop
 after Open WebUI sign-in and model discovery, without waiting on a live model
-completion.
-The first run can be noticeably slower because Docker may need to pull the
-Open WebUI image and Open WebUI may need to finish its own cold-start setup.
-This lane expects a usable live model key. Provide it through the process
-environment, staged auth profiles, or an explicit `OPENCLAW_PROFILE_FILE`.
-Successful runs print a small JSON payload like `{ "ok": true, "model":
-"openclaw/default", ... }`.
+completion. The first run can be noticeably slower because Docker may need to
+pull the Open WebUI image and Open WebUI may need to finish its own
+cold-start setup. This lane expects a usable live model key, provided through
+the process environment, staged auth profiles, or an explicit
+`OPENCLAW_PROFILE_FILE`. Successful runs print a small JSON payload like
+`{ "ok": true, "model": "openclaw/default", ... }`.
+
 `test:docker:mcp-channels` is intentionally deterministic and does not need a
 real Telegram, Discord, or iMessage account. It boots a seeded Gateway
 container, starts a second container that spawns `openclaw mcp serve`, then
-verifies routed conversation discovery, transcript reads, attachment metadata,
-live event queue behavior, outbound send routing, and Claude-style channel +
-permission notifications over the real stdio MCP bridge. The notification check
-inspects the raw stdio MCP frames directly so the smoke validates what the
-bridge actually emits, not just what a specific client SDK happens to surface.
-`test:docker:agent-bundle-mcp-tools` is deterministic and does not need a live
-model key. It builds the repo Docker image, starts a real stdio MCP probe server
-inside the container, materializes that server through the embedded OpenClaw bundle
-MCP runtime, executes the tool, then verifies `coding` and `messaging` keep
-`bundle-mcp` tools while `minimal` and `tools.deny: ["bundle-mcp"]` filter them.
-`test:docker:cron-mcp-cleanup` is deterministic and does not need a live model
-key. It starts a seeded Gateway with a real stdio MCP probe server, runs an
-isolated cron turn and a `sessions_spawn` one-shot child turn, then verifies
-the MCP child process exits after each run.
+verifies routed conversation discovery, transcript reads, attachment
+metadata, live event queue behavior, outbound send routing, and Claude-style
+channel + permission notifications over the real stdio MCP bridge. The
+notification check inspects the raw stdio MCP frames directly so the smoke
+validates what the bridge actually emits, not just what a specific client SDK
+happens to surface.
+
+`test:docker:agent-bundle-mcp-tools` is deterministic and does not need a
+live model key. It builds the repo Docker image, starts a real stdio MCP
+probe server inside the container, materializes that server through the
+embedded OpenClaw bundle MCP runtime, executes the tool, then verifies
+`coding` and `messaging` keep `bundle-mcp` tools while `minimal` and
+`tools.deny: ["bundle-mcp"]` filter them.
+
+`test:docker:cron-mcp-cleanup` is deterministic and does not need a live
+model key. It starts a seeded Gateway with a real stdio MCP probe server,
+runs an isolated cron turn and a `sessions_spawn` one-shot child turn, then
+verifies the MCP child process exits after each run.
 
 手动 ACP 纯语言线程 smoke（非 CI）：
 
@@ -758,23 +966,23 @@ the MCP child process exits after each run.
 
 有用的环境变量：
 
-- `OPENCLAW_CONFIG_DIR=...`（默认：`~/.openclaw`）挂载到 `/home/node/.openclaw`
-- `OPENCLAW_WORKSPACE_DIR=...`（默认：`~/.openclaw/workspace`）挂载到 `/home/node/.openclaw/workspace`
-- `OPENCLAW_PROFILE_FILE=...` 会在运行测试前挂载并 source
-- `OPENCLAW_DOCKER_PROFILE_ENV_ONLY=1` 用于仅验证来自 `OPENCLAW_PROFILE_FILE` 的 env 变量，使用临时 config/workspace 目录且不挂载外部 CLI auth
-- `OPENCLAW_DOCKER_CLI_TOOLS_DIR=...`（默认：`~/.cache/openclaw/docker-cli-tools`）挂载到 `/home/node/.npm-global`，用于在 Docker 内缓存 CLI 安装
-- `$HOME` 下的外部 CLI auth 目录/文件以只读方式挂载到 `/host-auth...`，然后在测试开始前复制到 `/home/node/...`
-  - 默认目录：`.minimax`
-  - 默认文件：`~/.codex/auth.json`、`~/.codex/config.toml`、`.claude.json`、`~/.claude/.credentials.json`、`~/.claude/settings.json`、`~/.claude/settings.local.json`
-  - 缩小范围的 provider 运行只挂载从 `OPENCLAW_LIVE_PROVIDERS` / `OPENCLAW_LIVE_GATEWAY_PROVIDERS` 推断出的所需目录/文件
-  - 可手动用 `OPENCLAW_DOCKER_AUTH_DIRS=all`、`OPENCLAW_DOCKER_AUTH_DIRS=none`，或像 `OPENCLAW_DOCKER_AUTH_DIRS=.claude,.codex` 这样的逗号列表覆盖
-- `OPENCLAW_LIVE_GATEWAY_MODELS=...` / `OPENCLAW_LIVE_MODELS=...` 用于缩小运行范围
-- `OPENCLAW_LIVE_GATEWAY_PROVIDERS=...` / `OPENCLAW_LIVE_PROVIDERS=...` 用于过滤容器内 provider
-- `OPENCLAW_SKIP_DOCKER_BUILD=1` 用于在不需要重建的重跑中复用现有的 `openclaw:local-live` 镜像
-- `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` 用于确保凭据来自 profile store（而不是 env）
-- `OPENCLAW_OPENWEBUI_MODEL=...` 用于选择 gateway 为 Open WebUI smoke 暴露的模型
-- `OPENCLAW_OPENWEBUI_PROMPT=...` 用于覆盖 Open WebUI smoke 使用的 nonce-check prompt
-- `OPENWEBUI_IMAGE=...` 用于覆盖固定的 Open WebUI 镜像 tag
+- `OPENCLAW_CONFIG_DIR=...` (default: `~/.openclaw`) mounted to `/home/node/.openclaw`
+- `OPENCLAW_WORKSPACE_DIR=...` (default: `~/.openclaw/workspace`) mounted to `/home/node/.openclaw/workspace`
+- `OPENCLAW_PROFILE_FILE=...` mounted and sourced before running tests
+- `OPENCLAW_DOCKER_PROFILE_ENV_ONLY=1` to verify only env vars sourced from `OPENCLAW_PROFILE_FILE`, using temporary config/workspace dirs and no external CLI auth mounts
+- `OPENCLAW_DOCKER_CLI_TOOLS_DIR=...` (default: `~/.cache/openclaw/docker-cli-tools`, unless the run already uses a CI/managed bind dir) mounted to `/home/node/.npm-global` for cached CLI installs inside Docker
+- External CLI auth dirs/files under `$HOME` are mounted read-only under `/host-auth...`, then copied into `/home/node/...` before tests start
+  - Default dirs (used when the run is not narrowed to specific providers): `.factory`, `.gemini`, `.minimax`
+  - Default files: `~/.codex/auth.json`, `~/.codex/config.toml`, `.claude.json`, `~/.claude/.credentials.json`, `~/.claude/settings.json`, `~/.claude/settings.local.json`
+  - Narrowed provider runs mount only the needed dirs/files inferred from `OPENCLAW_LIVE_PROVIDERS` / `OPENCLAW_LIVE_GATEWAY_PROVIDERS`
+  - Override manually with `OPENCLAW_DOCKER_AUTH_DIRS=all`, `OPENCLAW_DOCKER_AUTH_DIRS=none`, or a comma list like `OPENCLAW_DOCKER_AUTH_DIRS=.claude,.codex`
+- `OPENCLAW_LIVE_GATEWAY_MODELS=...` / `OPENCLAW_LIVE_MODELS=...` to narrow the run
+- `OPENCLAW_LIVE_GATEWAY_PROVIDERS=...` / `OPENCLAW_LIVE_PROVIDERS=...` to filter providers in-container
+- `OPENCLAW_SKIP_DOCKER_BUILD=1` to reuse an existing `openclaw:local-live` image for reruns that do not need a rebuild
+- `OPENCLAW_LIVE_REQUIRE_PROFILE_KEYS=1` to ensure creds come from the profile store (not env)
+- `OPENCLAW_OPENWEBUI_MODEL=...` to choose the model exposed by the gateway for the Open WebUI smoke
+- `OPENCLAW_OPENWEBUI_PROMPT=...` to override the nonce-check prompt used by the Open WebUI smoke
+- `OPENWEBUI_IMAGE=...` to override the pinned Open WebUI image tag
 
 ## 文档检查
 
@@ -809,11 +1017,11 @@ the MCP child process exits after each run.
 
 ## 契约测试（插件和通道形状）
 
-契约测试会验证每个已注册的插件和通道是否符合其
-接口契约。它们会遍历所有已发现的插件，并运行一组
-形状与行为断言。默认的 `pnpm test` 单测通道会有意
-跳过这些共享接缝和冒烟文件；当你修改共享通道或提供方
-表面时，请显式运行契约命令。
+Contract tests verify that every registered plugin and channel conforms to
+its interface contract. They iterate over all discovered plugins and run a
+suite of shape and behavior assertions. The default `pnpm test` unit lane
+intentionally skips these shared seam and smoke files; run the contract
+commands explicitly when you touch shared channel or provider surfaces.
 
 ### 命令
 
@@ -823,37 +1031,43 @@ the MCP child process exits after each run.
 
 ### 通道契约
 
-位于 `src/channels/plugins/contracts/*.contract.test.ts` 中：
+Located in `src/channels/plugins/contracts/*.contract.test.ts`. Current
+top-level categories:
 
-- **plugin** - 基本插件形态（id、name、capabilities）
-- **setup** - 设置向导契约
-- **session-binding** - 会话绑定行为
-- **outbound-payload** - 消息负载结构
-- **inbound** - 入站消息处理
-- **actions** - 通道动作处理器
-- **threading** - 线程 ID 处理
-- **directory** - 目录/名册 API
-- **group-policy** - 群组策略执行
+- **channel-catalog** - bundled/registry channel catalog entry metadata
+- **plugin** (registry-backed, sharded) - basic plugin registration shape
+- **surfaces-only** (registry-backed, sharded) - per-surface shape checks for `actions`, `setup`, `status`, `outbound`, `messaging`, `threading`, `directory`, and `gateway`
+- **session-binding** (registry-backed) - session binding behavior
+- **outbound-payload** - message payload structure and normalization
+- **group-policy** (fallback) - default group policy enforcement per channel
+- **threading** (registry-backed, sharded) - thread id handling
+- **directory** (registry-backed, sharded) - directory/roster API
+- **registry** and **plugins-core.\*** - channel plugin registry, loader, and config-write authorization internals
 
-### 提供方状态契约
-
-位于 `src/plugins/contracts/*.contract.test.ts`。
-
-- **status** - 通道状态探针
-- **registry** - 插件注册表形状
+Inbound dispatch-capture and outbound-payload harness helpers used by these
+suites are exposed internally through `src/plugin-sdk/channel-contract-testing.ts`
+(npm-excluded, not a public SDK subpath); there is no standalone
+`inbound.contract.test.ts` file in this directory.
 
 ### 提供方契约
 
-位于 `src/plugins/contracts/*.contract.test.ts` 中：
+Located in `src/plugins/contracts/*.contract.test.ts`. Current categories
+include:
 
-- **auth** - 认证流程契约
-- **auth-choice** - 认证选择/挑选
-- **catalog** - 模型目录 API
-- **discovery** - 插件发现
-- **loader** - 插件加载
-- **runtime** - 提供方运行时
-- **shape** - 插件形态/接口
-- **wizard** - 设置向导
+- **shape** - plugin manifest, API, and runtime export shape
+- **plugin-registration** (+ parallel) - manifest registration cases
+- **package-manifest** - package manifest requirements
+- **loader** - plugin loader setup/teardown behavior
+- **registry** - plugin contract registry contents and lookup
+- **providers** - shared provider behavior across bundled providers, plus web-search providers
+- **auth-choice** - auth choice metadata and setup behavior
+- **provider-catalog-deprecation** - deprecated provider catalog metadata
+- **wizard.choice-resolution**, **wizard.model-picker**, **wizard.setup-options** - provider setup wizard contracts
+- **embedding-provider**, **memory-embedding-provider**, **web-fetch-provider**, **tts** - capability-specific provider contracts
+- **session-actions**, **session-attachments**, **session-entry-projection** - plugin-owned session state contracts
+- **scheduled-turns** - plugin scheduled turn metadata and timestamp bounds
+- **host-hooks**, **run-context-lifecycle**, **runtime-import-side-effects**, **runtime-seams** - plugin host/runtime lifecycle and import-boundary contracts
+- **extension-runtime-dependencies** - runtime dependency placement for extensions
 
 ### 何时运行
 
@@ -867,14 +1081,14 @@ the MCP child process exits after each run.
 
 当你修复了线上发现的 provider/model 问题时：
 
-- 如果可能，添加一个 CI 安全的回归测试（mock/stub 提供方，或捕获精确的请求形态转换）
-- 如果它本质上只能在线运行（速率限制、认证策略），请保持线上测试范围窄，并通过环境变量设为可选
-- 优先针对能够捕获 bug 的最小层级：
-  - 提供方请求转换/回放 bug → 直接的 models 测试
-  - gateway 会话/历史/工具流水线 bug → gateway live smoke 或 CI 安全的 gateway mock 测试
-- SecretRef 遍历防护：
-  - `src/secrets/exec-secret-ref-id-parity.test.ts` 会从注册表元数据（`listSecretTargetRegistryEntries()`）中为每个 SecretRef 类派生一个采样目标，然后断言会拒绝 traversal-segment exec id。
-  - 如果你在 `src/secrets/target-registry-data.ts` 中添加了新的 `includeInPlan` SecretRef 目标族，请更新该测试中的 `classifyTargetClass`。该测试会故意在未分类的目标 id 上失败，因此新的类别不会被悄悄跳过。
+- Add a CI-safe regression if possible (mock/stub provider, or capture the exact request-shape transformation)
+- If it's inherently live-only (rate limits, auth policies), keep the live test narrow and opt-in via env vars
+- Prefer targeting the smallest layer that catches the bug:
+  - provider request conversion/replay bug -> direct models test
+  - gateway session/history/tool pipeline bug -> gateway live smoke or CI-safe gateway mock test
+- SecretRef traversal guardrail:
+  - `src/secrets/exec-secret-ref-id-parity.test.ts` derives one sampled target per SecretRef class from registry metadata (`listSecretTargetRegistryEntries()`), then asserts traversal-segment exec ids are rejected.
+  - If you add a new `includeInPlan` SecretRef target family in `src/secrets/target-registry-data.ts`, update `classifyTargetClass` in that test. The test intentionally fails on unclassified target ids so new classes cannot be skipped silently.
 
 ## 相关
 

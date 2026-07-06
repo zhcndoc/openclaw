@@ -8,7 +8,10 @@ title: "插件安装覆盖"
 sidebarTitle: "安装覆盖"
 ---
 
-插件安装覆盖允许维护者针对特定的 npm 包或本地 npm pack tarball 测试安装时插件安装。它们仅用于 E2E 和包验证。普通用户应使用
+插件安装覆盖允许维护者在设置时将插件安装指向
+某个特定的 npm 包或本地 npm-pack tarball，而不是目录、
+捆绑包或默认的 npm 源。它们仅用于端到端测试和包验证；
+普通用户通过
 [`openclaw plugins install`](/cli/plugins) 安装插件。
 
 <Warning>
@@ -29,23 +32,26 @@ export OPENCLAW_PLUGIN_INSTALL_OVERRIDES='{
 
 覆盖映射是以插件 id 为键的 JSON。值支持：
 
-- `npm:<registry-spec>` 用于注册表包以及精确版本或标签
-- `npm-pack:<path.tgz>` 用于由 `npm pack` 生成的本地 tarball
-
-相对的 `npm-pack:` 路径从当前工作目录解析。
+| 前缀                  | 来源                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `npm:<registry-spec>` | 注册表包、精确版本或标签                                                       |
+| `npm-pack:<path.tgz>` | 由 `npm pack` 生成的本地 tarball；相对路径从当前工作目录解析 |
 
 ## 行为
 
-当某个安装时流程要求安装一个其 id 出现在映射中的插件时，
-OpenClaw 会使用覆盖源，而不是目录、内置或默认的 npm 源。这适用于引导以及其他使用共享安装时插件安装器的流程。
+当一个 setup-time 流程安装其 id 出现在映射中的插件时，OpenClaw
+会使用覆盖源，而不是 catalog、bundled 或默认的 npm
+源。这适用于 onboarding 以及任何其他使用共享
+setup-time 插件安装器的流程。
 
-覆盖仍然会强制执行预期的插件 id。映射到 `codex` 的 tarball
-必须安装一个其清单 id 为 `codex` 的插件。
-
-覆盖不会继承官方受信任源状态。即使目录条目通常代表
-OpenClaw 拥有的包，覆盖也会被视为由操作者提供的测试输入。
-
-工作区 `.env` 文件不能启用安装覆盖。请在可信的 shell、CI 作业或启动 OpenClaw 的远程测试命令中设置这些变量。
+- 覆盖仍然会强制执行期望的插件 id：映射到 `codex` 的 tarball
+  必须安装一个 manifest id 为 `codex` 的插件。
+- 覆盖不会继承官方受信任源状态。即使
+  catalog 条目通常表示一个由 OpenClaw 拥有的包，覆盖也会被
+  视为由操作员提供的测试输入。
+- Workspace `.env` 文件不能启用安装覆盖；这两个环境变量都在
+  被阻止的 workspace dotenv 列表中。请在受信任的 shell、CI job，或
+  启动 OpenClaw 的远程测试命令中设置它们。
 
 ## 包 E2E
 
@@ -68,5 +74,4 @@ find "$OPENCLAW_STATE_DIR/npm/projects" -path '*/node_modules/@openclaw/codex/pa
 grep -R '"@openclaw/codex"' "$OPENCLAW_STATE_DIR/npm/projects"/*/package-lock.json
 ```
 
-对于实时提供方 E2E，在启动测试命令之前，请从可信 shell 或 CI 密钥中获取真实的 API 密钥。
-不要打印密钥；只报告来源以及密钥是否存在。
+对于实时 provider E2E，在启动测试命令之前，请从可信的 shell 或 CI 密钥中加载真实的 API key。不要打印密钥；只报告来源以及密钥是否存在。

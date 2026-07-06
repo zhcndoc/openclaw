@@ -6,7 +6,7 @@ read_when:
 title: "Gradium"
 ---
 
-[Gradium](https://gradium.ai) 是 OpenClaw 的一个文本转语音提供商。该插件可以渲染普通音频回复（WAV）、兼容语音笔记的 Opus 输出，以及用于电话场景的 8 kHz u-law 音频。
+[Gradium](https://gradium.ai) 是 OpenClaw 的文本转语音提供商。它可生成标准音频回复（WAV）、兼容语音备注的 Opus 输出，以及用于电话场景的 8 kHz u-law 音频。
 
 | Property      | Value                                |
 | ------------- | ------------------------------------ |
@@ -17,7 +17,7 @@ title: "Gradium"
 
 ## 安装插件
 
-安装官方插件，然后重启 Gateway：
+Gradium 是一个官方外部插件。安装它，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/gradium-speech
@@ -26,16 +26,16 @@ openclaw gateway restart
 
 ## 设置
 
-创建一个 Gradium API 密钥，然后通过环境变量或配置键将其提供给 OpenClaw。
+创建一个 Gradium API 密钥，然后通过环境变量或配置键将其暴露。配置优先于环境变量。
 
 <Tabs>
-  <Tab title="Env var">
+  <Tab title="环境变量">
     ```bash
     export GRADIUM_API_KEY="gsk_..."
     ```
   </Tab>
 
-  <Tab title="Config key">
+  <Tab title="配置键">
     ```json5
     {
       messages: {
@@ -53,8 +53,6 @@ openclaw gateway restart
     ```
   </Tab>
 </Tabs>
-
-该插件会先检查解析后的 `apiKey`，然后回退到 `GRADIUM_API_KEY` 环境变量。
 
 ## 配置
 
@@ -76,31 +74,29 @@ openclaw gateway restart
 }
 ```
 
-| Key                                             | Type   | Description                                                                                   |
-| ----------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
-| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和 secret 引用。                                               |
-| `messages.tts.providers.gradium.baseUrl`        | string | 覆盖 API 源地址。会移除末尾斜杠。默认值为 `https://api.gradium.ai`。                            |
-| `messages.tts.providers.gradium.speakerVoiceId` | string | 当没有指令覆盖时使用的默认语音 ID。                                                             |
+| 键                                              | 类型   | 描述                                                                              |
+| ----------------------------------------------- | ------ | --------------------------------------------------------------------------------- |
+| `messages.tts.providers.gradium.apiKey`         | string | 解析后的 API 密钥。支持 `${ENV}` 和 secret 引用。                                 |
+| `messages.tts.providers.gradium.baseUrl`        | string | API 源地址覆盖。会去掉末尾斜杠。默认值为 `https://api.gradium.ai`。                 |
+| `messages.tts.providers.gradium.speakerVoiceId` | string | 未指定覆盖指令时使用的默认语音 ID。                                                |
 
-输出音频格式会由运行时根据目标场景自动选择，不能通过 `openclaw.json` 配置。参见下方的 [输出](#output)。
+输出格式会根据目标平台自动选择（见 [输出](#output)），并且不能在 `openclaw.json` 中配置。
 
 ## 语音
 
-| 名称      | 语音 ID            |
-| --------- | ------------------ |
-| Emma      | `YTpq7expH9539ERJ` |
-| Kent      | `LFZvm12tW_z0xfGo` |
-| Tiffany   | `Eu9iL_CYe8N-Gkx_` |
-| Christina | `2H4HY2CBNyJHBCrP` |
-| Sydney    | `jtEKaLYNn6iif5PR` |
-| John      | `KWJiFWu2O9nMPYcR` |
-| Arthur    | `3jUdJyOi9pgbxBTK` |
-
-默认语音：Emma。
+| 名称               | 语音 ID           |
+| ------------------ | ------------------ |
+| Arthur             | `3jUdJyOi9pgbxBTK` |
+| Christina          | `2H4HY2CBNyJHBCrP` |
+| Emma **(默认)** | `YTpq7expH9539ERJ` |
+| John               | `KWJiFWu2O9nMPYcR` |
+| Kent               | `LFZvm12tW_z0xfGo` |
+| Sydney             | `jtEKaLYNn6iif5PR` |
+| Tiffany            | `Eu9iL_CYe8N-Gkx_` |
 
 ### 每条消息的语音覆盖
 
-当当前语音策略允许语音覆盖时，你可以使用指令令牌在行内切换语音。对于提供商原生语音 ID，请使用 `speakerVoiceId`。
+当启用的语音策略允许语音覆盖时，使用指令标记在行内切换语音（以下任意一种都等效，都会接受提供方原生的语音 ID）：
 
 ```text
 /voice:LFZvm12tW_z0xfGo
@@ -114,13 +110,13 @@ openclaw gateway restart
 
 ## 输出
 
-运行时会根据目标场景选择输出格式。当前提供商不会生成其他格式。
+输出格式由目标端选择；提供方不会合成其他格式。
 
-| Target         | Format      | File ext | Sample rate | Voice-compatible flag |
-| -------------- | ----------- | -------- | ----------- | --------------------- |
-| Standard audio | `wav`       | `.wav`   | provider    | no                    |
-| Voice note     | `opus`      | `.opus`  | provider    | yes                   |
-| Telephony      | `ulaw_8000` | n/a      | 8 kHz       | n/a                   |
+| 目标           | 格式         | 文件扩展名 | 采样率      | 语音兼容标志 |
+| -------------- | ------------ | -------- | ----------- | ------------- |
+| 标准音频       | `wav`       | `.wav`   | 提供方      | 否                    |
+| 语音笔记       | `opus`      | `.opus`  | 提供方      | 是                   |
+| 电话通信       | `ulaw_8000` | n/a      | 8 kHz       | n/a                   |
 
 ## 自动选择顺序
 

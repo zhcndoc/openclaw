@@ -44,14 +44,14 @@ Linux 配套应用计划中，但 Gateway 目前已完全支持。在 Windows �
 
 - 向导（推荐）: `openclaw onboard --install-daemon`
 - 直接安装: `openclaw gateway install`
-- 配置流程: `openclaw configure` → 选择 **Gateway service**
+- 配置流程: `openclaw configure` → 选择 **Gateway 服务**
 - 修复/迁移: `openclaw doctor`（会提示安装或修复该服务）
 
 服务目标取决于操作系统：
 
-- macOS: LaunchAgent (`ai.openclaw.gateway` or `ai.openclaw.<profile>`; legacy `com.openclaw.*`)
+- macOS: LaunchAgent (`ai.openclaw.gateway`, 或命名配置文件使用 `ai.openclaw.<profile>`)
 - Linux/WSL2: systemd 用户服务 (`openclaw-gateway[-<profile>].service`)
-- 原生 Windows: 计划任务 (`OpenClaw Gateway` or `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为每用户 Startup-folder 登录项
+- 原生 Windows: 计划任务 (`OpenClaw Gateway` 或 `OpenClaw Gateway (<profile>)`)，如果任务创建被拒绝，则回退为按用户的 Startup-folder 登录项
 
 ## 相关内容
 

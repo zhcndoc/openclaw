@@ -8,15 +8,11 @@ title: "Clawbot"
 
 # `openclaw clawbot`
 
-为向后兼容而保留的旧版别名命名空间。
-
-当前支持的别名：
-
-- `openclaw clawbot qr`（行为与 [`openclaw qr`](/cli/qr) 相同）
+为向后兼容而保留的旧版别名命名空间。它注册了与顶级 CLI 相同的 QR 命令，因此 `openclaw clawbot qr` 接受所有 [`openclaw qr`](/cli/qr) 标志。
 
 ## 迁移
 
-优先直接使用现代的顶层命令：
+优先使用现代的顶层命令：
 
 - `openclaw clawbot qr` -> `openclaw qr`
 

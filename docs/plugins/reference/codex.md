@@ -16,7 +16,7 @@ OpenClaw Codex app-server 运行时和模型提供方插件，带有由 Codex �
 
 ## 表面
 
-providers: codex; contracts: mediaUnderstandingProviders, migrationProviders, webSearchProviders
+providers: codex; contracts: mediaUnderstandingProviders, migrationProviders, tools, webSearchProviders
 
 ## 相关文档
 

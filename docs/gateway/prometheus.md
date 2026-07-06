@@ -8,16 +8,20 @@ read_when:
   - 你希望在不运行 OpenTelemetry collector 的情况下获取指标
 ---
 
-OpenClaw 可通过官方 `diagnostics-prometheus` 插件公开诊断指标。它会监听受信任的诊断事件以及核心发出的 gateway 稳定性事件，然后在以下地址渲染 Prometheus 文本端点：
+OpenClaw 可以通过官方的
+`diagnostics-prometheus` 插件公开诊断指标。它会监听受信任的诊断以及
+内部标记、由 dispatcher 拥有的诊断事件（队列、内存和
+会话恢复信号），并在以下地址渲染 Prometheus 文本端点：
 
 ```text
 GET /api/diagnostics/prometheus
 ```
 
-内容类型为 `text/plain; version=0.0.4; charset=utf-8`，这是标准的 Prometheus exposition 格式。
+Content type 为 `text/plain; version=0.0.4; charset=utf-8`，即标准的
+Prometheus 展现格式。
 
 <Warning>
-该路由使用 Gateway 身份验证（operator scope）。不要将其作为公开的、无需认证的 `/metrics` 端点暴露出去。请通过你用于其他 operator API 的同一认证路径来抓取它。
+该路由使用 Gateway 身份验证（operator 作用域，trusted-operator 范围）。不要将其作为公开的、无需身份验证的 `/metrics` 端点暴露。请通过你用于其他 operator API 的相同认证路径来抓取它。
 </Warning>
 
 关于 traces、logs、OTLP push 以及 OpenTelemetry GenAI 语义属性，请参见 [OpenTelemetry 导出](/gateway/opentelemetry)。
@@ -82,7 +86,7 @@ GET /api/diagnostics/prometheus
 </Steps>
 
 <Note>
-`diagnostics.enabled: true` 是必需的。否则，插件仍会注册 HTTP 路由，但不会有诊断事件流入导出器，因此响应会为空。
+`diagnostics.enabled` 默认为 `true`；仅在受严格限制的环境中将其设置为 `false`。如果它为 `false`，插件仍会注册 HTTP 路由，但没有诊断事件流入导出器，因此响应为空。
 </Note>
 
 ## 导出的指标
@@ -97,6 +101,7 @@ GET /api/diagnostics/prometheus
 | `openclaw_model_tokens_total`                    | counter   | `agent`, `channel`, `model`, `provider`, `token_type`                                     |
 | `openclaw_gen_ai_client_token_usage`             | histogram | `model`, `provider`, `token_type`                                                         |
 | `openclaw_model_cost_usd_total`                  | counter   | `agent`, `channel`, `model`, `provider`                                                   |
+| `openclaw_model_usage_duration_seconds`          | histogram | `agent`, `channel`, `model`, `provider`                                                   |
 | `openclaw_skill_used_total`                      | counter   | `activation`, `agent`, `skill`, `source`                                                  |
 | `openclaw_tool_execution_total`                  | counter   | `error_category`, `outcome`, `params_kind`, `tool`, `tool_owner`, `tool_source`           |
 | `openclaw_tool_execution_duration_seconds`       | histogram | `error_category`, `outcome`, `params_kind`, `tool`, `tool_owner`, `tool_source`           |
@@ -140,6 +145,8 @@ GET /api/diagnostics/prometheus
 | `openclaw_memory_pressure_total`                 | counter   | `level`, `reason`                                                                         |
 | `openclaw_telemetry_exporter_total`              | counter   | `exporter`, `reason`, `signal`, `status`                                                  |
 | `openclaw_prometheus_series_dropped_total`       | counter   | none                                                                                      |
+| `openclaw_diagnostic_async_queue_dropped_total`  | counter   | `drop_class`                                                                              |
+| `openclaw_diagnostic_async_queue_length`         | gauge     | none                                                                                      |
 
 ## 标签策略
 
@@ -207,7 +214,7 @@ OpenClaw 独立支持这两种方式。你可以运行其中一种、两种都�
   <Tab title="diagnostics-prometheus">
     - **拉取** 模式：Prometheus 抓取 `/api/diagnostics/prometheus`。
     - 不需要外部 collector。
-    - 通过正常的 Gateway auth 进行认证。
+    - 通过正常的 Gateway 认证进行认证。
     - 该方式仅提供指标（不包含 traces 或 logs）。
     - 适合已经标准化为 Prometheus + Grafana 的技术栈。
 
@@ -224,9 +231,9 @@ OpenClaw 独立支持这两种方式。你可以运行其中一种、两种都�
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="响应体为空">
-    - 检查配置中的 `diagnostics.enabled: true`。
-    - 确认插件已启用并通过 `openclaw plugins list --enabled` 加载。
+  <Accordion title="空响应体">
+    - 检查配置中 `diagnostics.enabled` 是否未设置为 `false`（默认值为 `true`）。
+    - 使用 `openclaw plugins list --enabled` 确认插件已启用并加载。
     - 生成一些流量；计数器和直方图只有在至少发生一次事件后才会输出行。
 
   </Accordion>

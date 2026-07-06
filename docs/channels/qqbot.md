@@ -7,16 +7,12 @@ read_when:
 title: QQ bot
 ---
 
-QQ Bot 通过官方 QQ Bot API（WebSocket 网关）连接到 OpenClaw。该
-插件支持 C2C 私聊、群 @消息，以及带
-富媒体（图片、语音、视频、文件）的频道消息。
+QQ Bot 通过官方 QQ Bot API（WebSocket 网关）连接到 OpenClaw。
+C2C 私聊和群聊中的 `@` 提及是主要聊天类型，支持富媒体（图片、语音、视频、文件）。频道消息仅支持文本和远程 URL 图片；频道中不支持语音、视频、文件上传以及本地/Base64 图片。任何地方都不支持反应和线程。
 
-状态：可下载插件。支持私聊、群聊、频道，以及
-媒体。不支持表情反应和线程。
+状态：官方可下载插件。
 
 ## 安装
-
-安装前先安装 QQ Bot：
 
 ```bash
 openclaw plugins install @openclaw/qqbot
@@ -29,8 +25,9 @@ openclaw plugins install @openclaw/qqbot
 2. 点击 **创建机器人** 创建一个新的 QQ bot。
 3. 在机器人设置页找到 **AppID** 和 **AppSecret**，并复制它们。
 
-> AppSecret 不会以明文存储——如果你离开页面前没有保存，
-> 你将需要重新生成一个新的。
+<Note>
+AppSecret 不会以明文存储。如果你在未保存的情况下离开页面，就必须重新生成一个新的。
+</Note>
 
 4. 添加频道：
 
@@ -40,14 +37,16 @@ openclaw channels add --channel qqbot --token "AppID:AppSecret"
 
 5. 重启 Gateway。
 
-交互式设置路径：
+交互式设置：
 
 ```bash
 openclaw channels add
-openclaw configure --section channels
 ```
 
-## 配置
+该向导还提供二维码绑定作为手动输入 AppID/AppSecret 的替代方案：
+使用与目标 QQ Bot 绑定的手机应用扫描二维码即可完成绑定。OpenClaw 会将返回的凭据持久化到该账户的配置作用域下。
+
+## Configure
 
 最小配置：
 
@@ -63,7 +62,7 @@ openclaw configure --section channels
 }
 ```
 
-默认账号环境变量：
+默认账号环境变量（仅顶层账号）：
 
 - `QQBOT_APP_ID`
 - `QQBOT_CLIENT_SECRET`
@@ -82,7 +81,7 @@ openclaw configure --section channels
 }
 ```
 
-Env SecretRef AppSecret:
+Env SecretRef AppSecret：
 
 ```json5
 {
@@ -98,12 +97,19 @@ Env SecretRef AppSecret:
 
 说明：
 
-- 环境变量回退仅适用于默认 QQ Bot 账号。
-- `openclaw channels add --channel qqbot --token-file ...` 只提供
-  AppSecret；AppID 必须已在配置中设置，或通过 `QQBOT_APP_ID` 提供。
-- `clientSecret` 也接受 SecretRef 输入，不仅仅是明文字符串。
-- 旧式的 `secretref:/...` 标记字符串不是有效的 `clientSecret` 值；
-  请使用上面的结构化 SecretRef 对象。
+- `openclaw channels add --channel qqbot --token-file ...` 仅设置 AppSecret；
+  `appId` 必须已经在配置中或 `QQBOT_APP_ID` 中设置。
+- `clientSecret` 接受明文字符串、文件路径（`clientSecretFile`）或结构化 SecretRef 对象。
+- 旧版 `secretref:...` / `secretref-env:...` 标记字符串会被 `clientSecret` 拒绝；
+  请改用结构化 SecretRef 对象。
+
+### Access policy
+
+- `allowFrom` / `groupAllowFrom` 控制谁可以在 C2C / 群聊场景中与机器人聊天。`dmPolicy` / `groupPolicy`（`open` | `allowlist` | `disabled`）
+  控制执行模式。只要 `allowFrom` 有具体的（非通配符）条目，`dmPolicy` 默认是 `allowlist`，否则为 `open`。
+  只要 `groupAllowFrom` 或 `allowFrom` 中有具体条目，`groupPolicy` 默认是 `allowlist`，否则为 `open`。
+- “Auth: allowlist” 斜杠命令要求 `allowFrom` 中存在明确的非通配符条目（群聊调用则要求 `groupAllowFrom`），
+  不受 `dmPolicy` / `groupPolicy` 影响——见 [Slash commands](#slash-commands)。
 
 ### 多账号设置
 
@@ -128,8 +134,8 @@ Env SecretRef AppSecret:
 }
 ```
 
-每个账号都会启动自己的 WebSocket 连接，并维护独立的
-令牌缓存（按 `appId` 隔离）。
+每个账号都拥有独立的 WebSocket 连接、API 客户端和 token 缓存，并按 `appId` 作为键区分。
+日志行会标记所属账号 id，因此当你在同一个 Gateway 下运行多个 bot 时，诊断信息仍然可以分开查看。
 
 通过 CLI 添加第二个 bot：
 
@@ -139,8 +145,7 @@ openclaw channels add --channel qqbot --account bot2 --token "222222222:secret-o
 
 ### 群聊
 
-QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
-加入群组，然后提及它，或者将群组配置为无需提及即可运行。
+群聊支持使用 QQ 群 OpenID，而不是显示名称。先将机器人添加到群里，然后 @ 它，或者将群配置为无需 @ 也能运行。
 
 ```json5
 {
@@ -169,28 +174,26 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
 }
 ```
 
-`groups["*"]` 为每个群设置默认值，而具体的
-`groups.GROUP_OPENID` 条目会覆盖该群的默认值。群组
-设置包括：
+`groups["*"]` 为所有群设置默认值；具体的 `groups.GROUP_OPENID` 条目会覆盖某个群的这些默认值。群设置如下：
 
-- `requireMention`: 在 bot 回复前是否必须先 @提及。默认值：`true`。
-- `commandLevel`: 控制哪些内置斜杠命令可在群组中运行。
-  默认值：`all`，在省略该设置时保持现有 QQBot 群行为不变。
-- `ignoreOtherMentions`: 丢弃提及了其他人但没有提及 bot 的消息。
-- `historyLimit`: 保留最近的非提及群消息，作为下一次被提及时的上下文。设为 `0` 可禁用。
-- `tools`: 为整个群组允许/拒绝工具。
-- `toolsBySender`: 按发送者覆盖群组工具限制；参见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。
-- `name`: 用于日志和群上下文中的友好名称。
-- `prompt`: 附加到代理上下文中的按群行为提示。
+| Field                 | Default          | Description                                                                                        |
+| --------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
+| `requireMention`      | `true`           | 在机器人回复前要求先 `@` 提及它。                                                                   |
+| `commandLevel`        | `all`            | 群内可运行哪些内置斜杠命令（见下文）。                                                              |
+| `ignoreOtherMentions` | `false`          | 丢弃提及了别人但没有提及机器人的消息。                                                              |
+| `historyLimit`        | `50`             | 为下一次被提及时保留的最近非提及消息上下文数量。`0` 可禁用历史记录。                                |
+| `tools`               | —                | 为整个群允许/拒绝工具。                                                                             |
+| `toolsBySender`       | —                | 按发送者覆盖工具设置；见 [Groups](/channels/groups#groupchannel-tool-restrictions-optional)。       |
+| `name`                | openid prefix    | 日志和群上下文中使用的友好名称。                                                                    |
+| `prompt`              | built-in default | 附加到代理上下文中的群级行为提示词。                                                                |
 
 `commandLevel` 接受：
 
-- `all`: 像以前一样保留已识别的内置命令可用。某些命令可能
-  仍会在菜单中隐藏，但授权用户仍可在群里运行它们。
-- `safety`: 允许常见协作命令，如 `/help`、`/btw` 和 `/stop`；对于
-  `/config`、`/tools` 和 `/bash` 等敏感命令，要求用户在私聊中运行。
-- `strict`: 仅允许严格群组运行所需的群会话控制。`/stop` 仍保持紧急，
-  因此授权发送者可以中断正在进行的运行。
+| Level    | Behavior                                                                                                                                      |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `all`    | 现有内置命令保持可用。部分命令会在菜单中隐藏，但授权用户仍可在群里运行它们。                                                                     |
+| `safety` | `/help`、`/btw`、`/stop` 在群里保持可见；敏感命令（`/config`、`/tools`、`/bash` 等）必须在私聊中运行。                                          |
+| `strict` | 仅允许严格运行所需的群会话控制命令。`/stop` 仍然可用，因此授权发送者可以中断当前运行。                                                            |
 
 旧版 QQBot 的 `toolPolicy` 条目已弃用。运行 `openclaw doctor --fix` 将其迁移到 `tools`。
 
@@ -198,9 +201,7 @@ QQ Bot 群聊支持使用 QQ 群 OpenID，而不是显示名称。将 bot
 `mention`；`requireMention: false` 映射到 `always`。当存在会话级激活
 覆盖时，其优先级高于配置。
 
-入站队列按对端分开。群对端获得更大的队列上限，在满载时优先保留人类
-消息而不是 bot 自己发出的消息，并将正常群消息的突发合并为一个带归属的
-轮次。斜杠命令仍然会逐个执行。
+入站队列按对端（peer）划分。群对端的队列上限更大（50，而私聊对端为 20），满时会优先驱逐机器人发送的消息而不是人类消息，并将普通群消息的短时间突发合并为一个带归属的轮次。斜杠命令逐个运行，不受任何合并批次影响。
 
 ### 语音（STT / TTS）
 
@@ -238,13 +239,9 @@ STT 和 TTS 支持两级配置，并按优先级回退：
 }
 ```
 
-将 `enabled: false` 设置在任一项上即可禁用。
-账号级 TTS 覆盖使用与 `messages.tts` 相同的结构，并在
-channel/global TTS 配置之上进行深度合并。
+将任一项设置为 `enabled: false` 即可禁用。账号级 TTS 覆盖的结构与 `messages.tts` 相同，并会在 channel/global TTS 配置之上进行深度合并。
 
-入站 QQ 语音附件会以音频媒体元数据的形式暴露给 agents，同时将原始语音文件
-排除在通用 `MediaPaths` 之外。`[[audio_as_voice]]` 纯文本
-回复会合成 TTS，并在配置了 TTS 时发送原生 QQ 语音消息。
+入站 QQ 语音附件会作为音频媒体元数据暴露给代理，同时将原始语音文件排除在通用的 `MediaPaths` 之外。纯文本回复中的 `[[audio_as_voice]]` 会合成 TTS，并在已配置 TTS 时发送原生 QQ 语音消息。
 
 出站音频上传/转码行为也可以通过
 `channels.qqbot.audioFormatPolicy` 进行调整：
@@ -261,62 +258,64 @@ channel/global TTS 配置之上进行深度合并。
 | `qqbot:group:GROUP_OPENID` | 群聊                 |
 | `qqbot:channel:CHANNEL_ID` | 频道                |
 
-> 每个 bot 都有自己的一组用户 OpenID。Bot A 收到的 OpenID **不能**
-> 用于通过 Bot B 发送消息。
+<Note>
+每个机器人都有自己的一组用户 OpenID。由 Bot A 接收到的 OpenID **不能**用于通过 Bot B 发送消息。
+</Note>
 
 ## 斜杠命令
 
 在 AI 队列之前拦截的内置命令：
 
-| Command        | Description                                                                                              |
-| -------------- | -------------------------------------------------------------------------------------------------------- |
-| `/bot-ping`    | 延迟测试                                                                                                 |
-| `/bot-version` | 显示 OpenClaw 框架版本                                                                                    |
-| `/bot-help`    | 列出所有命令                                                                                              |
-| `/bot-me`      | 显示发送者的 QQ 用户 ID（openid），用于 `allowFrom`/`groupAllowFrom` 设置                               |
-| `/bot-upgrade` | 显示 QQBot 升级指南链接                                                                                   |
-| `/bot-logs`    | 将最近的网关日志导出为文件                                                                                |
-| `/bot-approve` | 通过原生流程批准一个待处理的 QQ Bot 操作（例如，确认一次 C2C 或群上传）。 |
+| Command              | Auth      | Scope        | Description                                                                    |
+| -------------------- | --------- | ------------ | ------------------------------------------------------------------------------ |
+| `/bot-ping`          | —         | any          | 延迟测试                                                                   |
+| `/bot-help`          | —         | any          | 列出所有命令                                                              |
+| `/bot-me`            | —         | private only | 显示发送者的 QQ 用户 ID（openid），用于 `allowFrom` / `groupAllowFrom` 配置 |
+| `/bot-version`       | —         | private only | 显示 OpenClaw 框架版本和插件版本                         |
+| `/bot-upgrade`       | —         | private only | 显示 QQBot 升级指南链接                                              |
+| `/bot-approve`       | allowlist | private only | 管理命令执行审批配置（on / off / always / reset / status）  |
+| `/bot-logs`          | allowlist | private only | 将最近的网关日志导出为文件                                           |
+| `/bot-clear-storage` | allowlist | private only | 删除 QQBot 媒体目录下的缓存下载                        |
+| `/bot-streaming`     | allowlist | private only | 切换 C2C 流式回复                                                   |
+| `/bot-group-allways` | allowlist | private only | 切换默认群激活模式（需要提及 vs. 始终开启）      |
 
 在任何命令后追加 `?` 可查看用法帮助（例如 `/bot-upgrade ?`）。
 
-管理命令 (`/bot-me`, `/bot-upgrade`, `/bot-logs`, `/bot-clear-storage`, `/bot-streaming`, `/bot-approve`) 仅限私聊，并要求发送者的 openid 明确位于非通配符的 `allowFrom` 列表中。通配符 `allowFrom: ["*"]` 允许聊天，但不授予管理命令访问权限。群消息先匹配 `groupAllowFrom`，再回退到 `allowFrom`。在群里运行管理命令会返回提示，而不是静默丢弃。
+"Auth: allowlist" 命令还要求发送者的 openid 必须出现在一个
+明确的非通配符 `allowFrom` 列表中（群消息命令优先使用 `groupAllowFrom`，
+否则回退到 `allowFrom`）。`allowFrom: ["*"]` 这种通配符
+允许聊天，但不允许这些命令。在私聊之外运行这些命令，或未获授权时，
+会返回提示信息，而不是静默丢弃消息。
 
-当 QQ Bot exec 审批使用默认的同聊天回退时，原生审批按钮点击会遵循相同的显式非通配符命令允许列表。若要授予仅审批访问权限而不开放更广泛的命令访问，请配置 `channels.qqbot.execApprovals.approvers`。
+`/bot-me`、`/bot-version` 和 `/bot-upgrade` 仅限私聊，但不
+需要 allowlist——任何 C2C 发送者都可以运行它们。
 
-## 引擎架构
+当 QQ Bot 执行审批使用默认的同聊回退时，原生审批
+按钮点击遵循相同的明确非通配符命令 allowlist。若要在不授予更广泛命令权限的情况下
+仅授予审批访问权限，请配置
+`channels.qqbot.execApprovals.approvers`。原生执行审批默认已启用。
 
-QQ Bot 作为一个自包含引擎随插件发布：
+## 媒体与存储
 
-- 每个账号拥有隔离的资源栈（WebSocket 连接、API 客户端、令牌缓存、媒体存储根目录），并以 `appId` 作为键。账号之间从不共享入站/出站状态。
-- 多账号日志器会使用所属账号标记日志行，因此当你在一个网关下运行多个 bot 时，诊断信息仍然可以分开。
-- 入站、出站以及网关桥接路径共享 `~/.openclaw/media` 下的单一媒体载荷根目录，因此上传、下载和转码缓存会落在一个受保护目录中，而不是按子系统分别建树。
-- 富媒体交付通过一个用于 C2C 和群目标的 `sendMedia` 路径完成。大文件阈值以上的本地文件和缓冲区会使用 QQ 的分块上传端点，而较小载荷则使用一次性媒体 API。
-- 凭据可以作为标准 OpenClaw 凭据快照的一部分进行备份和恢复；引擎在恢复时会重新挂载每个账号的资源栈，而无需重新进行一次扫码配对。
-
-## 二维码入驻
-
-作为手动粘贴 `AppID:AppSecret` 的替代方式，引擎支持通过二维码为 QQ Bot 绑定 OpenClaw 的入驻流程：
-
-1. 运行 QQ Bot 设置路径（例如 `openclaw channels add --channel qqbot`），并在提示时选择二维码流程。
-2. 使用与目标 QQ Bot 绑定的手机应用扫描生成的二维码。
-3. 在手机上批准配对。OpenClaw 会将返回的凭据持久化到正确账号范围下的 `credentials/` 中。
-
-由 bot 自身生成的批准提示（例如 QQ Bot API 暴露的“是否允许此操作？”流程）会以原生 OpenClaw 提示的形式呈现，你可以使用 `/bot-approve` 接受，而不是通过原始 QQ 客户端回复。
+- 入站、出站和网关桥接媒体共享一个载荷根目录，位于
+  `~/.openclaw/media/qqbot`（在设置了 `OPENCLAW_HOME` 时会遵循该配置），因此上传、下载和转码缓存都保留在一个受保护的目录下。
+- 面向 C2C 和群目标的富媒体发送都通过同一个 `sendMedia`
+  路径。大小为 5&nbsp;MiB 或以上的本地文件和内存缓冲区使用 QQ 的分块上传端点；较小的载荷以及远程 URL/Base64 来源则使用一次性上传 API。
+- 如果热升级在 Gateway 完成写入 `openclaw.json` 之前中断，插件会在下次启动时从内部快照中恢复该账号上一次已知的 `appId` / `clientSecret`（绝不会覆盖有意的配置变更），因此无需重新扫描二维码。
 
 ## 故障排查
 
-- **Bot 回复 “gone to Mars”：** 凭据未配置或 Gateway 未启动。
-- **没有入站消息：** 验证 `appId` 和 `clientSecret` 是否正确，并且
-  bot 已在 QQ 开放平台上启用。
-- **重复自我回复：** OpenClaw 会将 QQ 出站引用索引记录为
-  bot 自己发出，并忽略当前 `msgIdx` 与
-  同一 bot 账号匹配的入站事件。这可以防止平台回声循环，同时仍允许用户
-  引用或回复先前的 bot 消息。
-- **使用 `--token-file` 设置后仍显示未配置：** `--token-file` 只设置
-  AppSecret。你仍然需要在配置中或通过 `QQBOT_APP_ID` 提供 `appId`。
-- **主动消息未送达：** 如果用户最近没有与 bot 交互，QQ 可能会拦截 bot 主动发出的消息。
-- **语音未转写：** 确保已配置 STT 且提供方可访问。
+- **Gateway does not start / no inbound messages:** 验证 `appId` 和
+  `clientSecret` 是否正确，并且机器人已在 QQ 开放平台上启用。
+  缺少凭据时会显示为 "QQBot not configured (missing appId or
+  clientSecret)"。
+- **Setup with `--token-file` still shows unconfigured:** `--token-file` 仅
+  设置 AppSecret。`appId` 仍必须在配置或 `QQBOT_APP_ID` 中设置。
+- **Bursty group replies collide:** 当对端队列满时，入站队列会优先驱逐
+  机器人发送的消息而不是人类消息，并将突发的普通（非命令）群消息合并为一次带归属的轮次，因此大量机器人聊天不应饿死人类消息。
+- **Proactive messages not arriving:** 如果用户最近没有互动，QQ 可能会
+  阻止机器人发起的消息。
+- **Voice not transcribed:** 确保已配置 STT 且提供方可访问。
 
 ## 相关
 

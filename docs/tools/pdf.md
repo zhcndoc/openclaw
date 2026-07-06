@@ -7,30 +7,18 @@ read_when:
   - 你正在调试原生 PDF 模式与提取回退
 ---
 
-`pdf` 会分析一个或多个 PDF 文档并返回文本。
-
-快速行为：
-
-- 对 Anthropic 和 Google 模型提供方使用原生提供方模式。
-- 对其他提供方使用提取回退模式（先提取文本，必要时再提取页面图像）。
-- 支持单个（`pdf`）或多个（`pdfs`）输入，每次调用最多 10 个 PDF。
+`pdf` 会分析一个或多个 PDF 文档并返回文本。它在 Anthropic 和 Google 模型上使用原生文档输入，而对其他所有提供方则回退到文本/图像提取。
 
 ## 可用性
 
-仅当 OpenClaw 能为代理解析出支持 PDF 的模型配置时，才会注册该工具：
+该工具仅在 OpenClaw 能为该代理解析出一个支持 PDF 的模型时才会注册。解析顺序：
 
-1. `agents.defaults.pdfModel`
-2. 回退到 `agents.defaults.imageModel`
-3. 回退到代理解析后的会话/默认模型
-4. 如果原生 PDF 提供方是基于认证的，则优先于通用图像回退候选项
+1. `agents.defaults.pdfModel`（显式主模型/回退模型）
+2. `agents.defaults.imageModel`（显式主模型/回退模型）
+3. 该代理已解析的会话/默认模型，如果其提供方支持原生 PDF 输入（Anthropic、Google），或已经配置了视觉模型
+4. 自动检测到的、带有可用认证信息的图像/视觉能力提供方，优先选择支持原生 PDF 的提供方
 
-如果无法解析出可用模型，则不会暴露 `pdf` 工具。
-
-可用性说明：
-
-- 回退链是感知认证状态的。只有当 OpenClaw 能为代理实际认证该提供方时，配置的 `provider/model` 才算有效。
-- 当前支持原生 PDF 的提供方是 **Anthropic** 和 **Google**。
-- 如果解析后的会话/默认提供方已经配置了可视化/PDF 模型，PDF 工具会先复用它，然后再回退到其他基于认证的提供方。
+每个回退候选在使用前都会进行认证检查，因此，已配置的 `provider/model` 只有在 OpenClaw 能为该代理对该提供方完成认证时才算有效。如果没有解析出可用模型，则不会暴露 `pdf` 工具。
 
 ## 输入参考
 
@@ -42,16 +30,16 @@ read_when:
 多个 PDF 路径或 URL，最多总计 10 个。
 </ParamField>
 
-<ParamField path="prompt" type="string" default="Analyze this PDF document.">
+<ParamField path="prompt" type="string" default="分析此 PDF 文档。">
 分析提示。
 </ParamField>
 
 <ParamField path="pages" type="string">
-页面过滤器，如 `1-5` 或 `1,3,7-9`。
+页面筛选，例如 `1-5` 或 `1,3,7-9`。原生提供方模式不支持。
 </ParamField>
 
 <ParamField path="password" type="string">
-加密 PDF 在提取回退模式下的密码。
+加密 PDF 的密码。适用于请求中的每个 PDF；仅在提取回退模式中使用。
 </ParamField>
 
 <ParamField path="model" type="string">
@@ -59,16 +47,13 @@ read_when:
 </ParamField>
 
 <ParamField path="maxBytesMb" type="number">
-每个 PDF 的大小上限，单位 MB。默认为 `agents.defaults.pdfMaxBytesMb` 或 `10`。
+每个 PDF 的大小上限，单位为 MB。默认为 `agents.defaults.pdfMaxBytesMb`，若未设置则为 `10`。
 </ParamField>
 
-输入说明：
+备注：
 
-- `pdf` 和 `pdfs` 会在加载前合并并去重。
-- 如果未提供 PDF 输入，工具会报错。
-- `pages` 会按从 1 开始的页码解析、去重、排序，并裁剪到配置的最大页数。
-- `password` 会应用于请求中的每个 PDF，并且仅用于提取回退模式。
-- `maxBytesMb` 默认为 `agents.defaults.pdfMaxBytesMb` 或 `10`。
+- `pdf` 和 `pdfs` 在加载前会合并并去重；至少需要提供一个。
+- `pages` 会按从 1 开始的页码解析、去重、排序，并限制到 `agents.defaults.pdfMaxPages`（默认 `20`）。如果某个范围不包含任何有效页码，则会在模型调用前报错。
 
 ## 支持的 PDF 引用
 
@@ -77,44 +62,33 @@ read_when:
 - `http://` 和 `https://` URL
 - OpenClaw 管理的入站引用，例如 `media://inbound/<id>`
 
-引用说明：
-
-- 其他 URI 方案（例如 `ftp://`）会被拒绝，并返回 `unsupported_pdf_reference`。
-- 在沙箱模式下，远程 `http(s)` URL 会被拒绝。
-- 启用仅工作区文件策略时，工作区允许根目录之外的本地文件路径会被拒绝。
-- 在仅工作区文件策略下，OpenClaw 的入站媒体存储中的受管入站引用和回放路径是允许的。
+其他 URI 方案（例如 `ftp://`）会返回 `details.error = "unsupported_pdf_reference"`。当工具在沙箱中运行时，远程 `http(s)` URL 会被拒绝。启用仅工作区文件策略后，不允许根目录之外的本地路径会被拒绝；但 OpenClaw 的入站媒体存储下的受管入站引用和重放路径仍然允许。
 
 ## 执行模式
 
 ### 原生提供方模式
 
-原生模式用于提供方 `anthropic` 和 `google`。
-该工具会将原始 PDF 字节直接发送到提供方 API。
+用于提供方 `anthropic` 和 `google`（目前唯一声明原生 PDF 文档支持的提供方）。原始 PDF 字节会作为每个文件的原生文档/内联 PDF 部分直接发送到提供方 API。
 
-原生模式限制：
+限制：
 
-- `pages` 不受支持。如果设置了该参数，工具会返回错误。
-- `password` 不受支持。请使用非原生模型来分析加密 PDF。
-- 支持多 PDF 输入；每个 PDF 会在提示前作为原生文档块 /
-  内联 PDF 部分发送。
+- 不支持 `pages`；如果设置了该项，工具会抛出 `pages is not supported with native PDF providers`。
+- 不支持 `password`；如果设置了该项，工具会抛出 `password is not supported with native PDF providers`。对于加密 PDF，请使用非原生模型。
 
 ### 提取回退模式
 
-回退模式用于非原生提供方。
+用于其他所有提供方。
 
-流程：
+1. 使用捆绑的 `document-extract` 插件从所选页面提取文本（最多 `agents.defaults.pdfMaxPages`，默认 `20`），该插件使用 `clawpdf` 包（PDFium WebAssembly）进行文本和图像提取。
+2. 如果提取出的文本短于 `200` 个字符，则将相同页面渲染为 PNG 图像。渲染预算总计为 `4,000,000` 像素，并在所有需要图像的页面之间共享（按剩余页面比例分配，而不是按每页分配），因此已经包含足够文本的页面会完全跳过渲染。
+3. 将提取的文本（以及任何渲染出的图像）和提示一起发送给所选模型。
 
-1. 从选定页面提取文本（最多到 `agents.defaults.pdfMaxPages`，默认 `20`）。
-2. 如果提取出的文本长度少于 `200` 个字符，则将选定页面渲染为 PNG 图像并一并包含。
-3. 将提取内容和提示发送给选定模型。
+详情：
 
-回退细节：
-
-- 页面图像提取使用 `4,000,000` 的像素预算。
-- 加密 PDF 可以使用顶层 `password` 参数打开。
-- 如果目标模型不支持图像输入且没有可提取文本，工具会报错。
-- 如果文本提取成功，但图像提取在仅文本模型上需要视觉能力，OpenClaw 会丢弃渲染图像并继续使用提取文本。
-- 提取回退使用内置的 `document-extract` 插件。该插件拥有 `clawpdf`，它通过 PDFium WebAssembly 提供文本提取和图像渲染。
+- 加密 PDF 使用顶层 `password` 参数打开。
+- 如果模型不支持图像输入且没有可提取文本，工具会报错。
+- 如果图像渲染失败，OpenClaw 会丢弃图像并继续使用提取出的文本。
+- 如果目标模型仅支持文本，而提取过程产生了图像，OpenClaw 会丢弃图像并仅发送文本。
 
 ## 配置
 
@@ -133,7 +107,13 @@ read_when:
 }
 ```
 
-有关完整字段详情，请参见[配置参考](/gateway/configuration-reference)。
+| 键                              | 默认值   | 含义                                                                                   |
+| ----------------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `agents.defaults.pdfModel`      | 未设置   | 明确指定主/备用 PDF 模型；若未命中，则回退到 `imageModel`，然后是会话模型。 |
+| `agents.defaults.pdfMaxBytesMb` | `10`    | 每个 PDF 的大小上限，单位为 MB。                                                                   |
+| `agents.defaults.pdfMaxPages`   | `20`    | 每个 PDF 处理的最大页数。                                                              |
+
+请参阅 [配置参考](/gateway/config-agents#agent-defaults) 以获取完整字段详情。
 
 ## 输出详情
 
@@ -149,14 +129,17 @@ read_when:
 
 - 单个 PDF 输入：`details.pdf`
 - 多个 PDF 输入：`details.pdfs[]`，其中包含 `pdf` 条目
-- 沙箱路径重写元数据（如适用）：`rewrittenFrom`
+- 沙箱路径重写元数据（适用时）：`rewrittenFrom`
 
 ## 错误行为
 
-- 缺少 PDF 输入：抛出 `pdf required: provide a path or URL to a PDF document`
-- PDF 过多：在 `details.error = "too_many_pdfs"` 中返回结构化错误
-- 不支持的引用方案：返回 `details.error = "unsupported_pdf_reference"`
-- 原生模式下使用 `pages`：抛出明确的 `pages is not supported with native PDF providers` 错误
+| 条件                              | 结果                                                         |
+| --------------------------------- | -------------------------------------------------------------- |
+| 没有 PDF 输入                     | 抛出 `pdf required: provide a path or URL to a PDF document` |
+| 超过 10 个 PDF                    | `details.error = "too_many_pdfs"`                              |
+| 不支持的引用方案                   | `details.error = "unsupported_pdf_reference"`                  |
+| 使用原生提供程序时传入 `pages`     | 抛出 `pages is not supported with native PDF providers`      |
+| 使用原生提供程序时传入 `password`  | 抛出 `password is not supported with native PDF providers`   |
 
 ## 示例
 

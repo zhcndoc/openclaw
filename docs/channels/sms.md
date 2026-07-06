@@ -6,7 +6,9 @@ read_when:
 title: "SMS"
 ---
 
-OpenClaw 可以通过 Twilio 电话号码或 Messaging Service 接收和发送 SMS。Gateway 默认会注册一个入站 webhook 路由，验证 Twilio 请求签名，并通过 Twilio 的 Messages API 将回复发送回去。
+OpenClaw 通过 Twilio 电话号码或 Messaging Service 接收和发送 SMS。Gateway 默认会注册一个入站 webhook 路由（默认 `/webhooks/sms`），验证 Twilio 请求签名，并通过 Twilio 的 Messages API 发送回复。
+
+状态：官方插件，需单独安装。仅支持文本：不支持 MMS/媒体，仅支持直接消息。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -24,13 +26,13 @@ OpenClaw 可以通过 Twilio 电话号码或 Messaging Service 接收和发送 S
 
 你需要：
 
-- 安装官方 SMS 插件：`openclaw plugins install @openclaw/sms`。
-- 一个 Twilio 账号，以及一个支持 SMS 的电话号码，或一个 Twilio Messaging Service。
+- 已通过 `openclaw plugins install @openclaw/sms` 安装官方 SMS 插件。
+- 一个 Twilio 账号，以及一个支持 SMS 的电话号码，或者一个 Twilio Messaging Service。
 - Twilio Account SID 和 Auth Token。
-- 一个可公开访问、能够连到你的 OpenClaw Gateway 的 HTTPS URL。
-- 一个发送方策略选择：`pairing` 用于私人使用，`allowlist` 用于预先批准的电话号码，`open` 仅用于有意公开的 SMS 访问。
+- 一个可访问你的 OpenClaw Gateway 的公开 HTTPS URL。
+- 一个发送方策略选择：`pairing`（默认）用于私人使用，`allowlist` 用于预先批准的电话号码，或 `open` 仅用于有意公开的 SMS 访问。
 
-如果同一个号码同时具备 SMS 和 Voice Call 功能，就把它同时用于两者。请在 Twilio 中分别配置 SMS webhook 和 Voice webhook；本页只涵盖 SMS webhook。
+如果一个 Twilio 号码同时具备这两种能力，它既可以用于 SMS，也可以用于 [Voice Call](/plugins/voice-call)。SMS webhook 和 Voice webhook 在 Twilio 中分别配置，并使用不同的 Gateway 路径；本页仅涵盖 SMS webhook。
 
 ## 快速设置
 
@@ -90,15 +92,15 @@ https://gateway.example.com/webhooks/sms
 
   </Step>
 
-  <Step title="暴露精确的 SMS webhook 路径">
-    你的公共 URL 必须将 SMS 路径路由到 Gateway 进程。如果你使用 Tailscale Funnel 进行本地测试，请显式暴露 `/webhooks/sms`：
+  <Step title="暴露准确的 SMS webhook 路径">
+    你的公网 URL 必须将 SMS 路径路由到 Gateway 进程（默认端口 `18789`）。如果你使用 Tailscale Funnel 进行本地测试，请显式暴露 `/webhooks/sms`：
 
 ```bash
 tailscale funnel --bg --set-path /webhooks/sms http://127.0.0.1:<gateway-port>/webhooks/sms
 tailscale funnel status
 ```
 
-    Voice Call 和 SMS 使用不同的 webhook 路径。如果同一个 Twilio 号码同时处理两者，请在 Twilio 和你的隧道中都保留这两条路由的配置。
+    语音通话和 SMS 使用不同的 webhook 路径。如果同一个 Twilio 号码同时处理两者，请在 Twilio 和你的隧道中都保留这两条路由的配置。
 
   </Step>
 
@@ -122,6 +124,24 @@ openclaw pairing approve sms <CODE>
 
 ## 配置示例
 
+所有键都位于 `channels.sms` 下（每个账号则位于 `channels.sms.accounts.<id>` 下）：
+
+| 键                                      | 默认值          | 目的                                                                |
+| --------------------------------------- | --------------- | ------------------------------------------------------------------- |
+| `enabled`                               | `true`          | 启用或禁用该渠道/账号。                                               |
+| `accountSid`                            | —               | Twilio 账号 SID（`AC...`）。                                         |
+| `authToken`                             | —               | Twilio Auth Token；明文字符串或 SecretRef。                          |
+| `fromNumber`                            | —               | E.164 发件人号码。                                                   |
+| `messagingServiceSid`                   | —               | 当未解析到 `fromNumber` 时使用的 Messaging Service SID（`MG...`）。 |
+| `defaultTo`                             | —               | 发送流程未指定显式目标时的默认目的地。                                 |
+| `webhookPath`                           | `/webhooks/sms` | 网关用于接收 Twilio 入站 webhook 的 HTTP 路径。                       |
+| `publicWebhookUrl`                      | —               | 在 Twilio 中配置的公网 URL；签名验证所必需。                          |
+| `dangerouslyDisableSignatureValidation` | `false`         | 跳过 `X-Twilio-Signature` 校验；仅用于本地隧道测试。                   |
+| `dmPolicy`                              | `"pairing"`     | `pairing`、`allowlist`、`open` 或 `disabled`。                        |
+| `allowFrom`                             | `[]`            | 允许的 E.164 发送方号码；若 `dmPolicy: "open"`，也可使用 `"*"`。     |
+| `textChunkLimit`                        | `1500`          | 每个外发 SMS 分片允许的最大字符数。                                    |
+| `accounts`, `defaultAccount`            | —               | 多账号映射和默认账号 id。                                              |
+
 ### 配置文件
 
 当你希望渠道定义随 Gateway 配置一起携带时，请使用配置文件方式：
@@ -143,7 +163,19 @@ openclaw pairing approve sms <CODE>
 
 ### 环境变量
 
-当你从主机环境获取密钥并进行单账号部署时，请使用环境变量方式：
+环境变量仅适用于默认账号；配置值的优先级高于环境变量值。
+
+| 变量                                             | 映射到                                             |
+| ----------------------------------------------- | -------------------------------------------------- |
+| `TWILIO_ACCOUNT_SID`                            | `accountSid`                                       |
+| `TWILIO_AUTH_TOKEN`                             | `authToken`                                        |
+| `TWILIO_PHONE_NUMBER` (别名 `TWILIO_SMS_FROM`)  | `fromNumber`                                       |
+| `TWILIO_MESSAGING_SERVICE_SID`                  | `messagingServiceSid`                              |
+| `SMS_PUBLIC_WEBHOOK_URL`                        | `publicWebhookUrl`                                 |
+| `SMS_WEBHOOK_PATH`                              | `webhookPath`                                      |
+| `SMS_ALLOWED_USERS`                             | `allowFrom`（逗号分隔）                             |
+| `SMS_TEXT_CHUNK_LIMIT`                          | `textChunkLimit`                                   |
+| `SMS_DANGEROUSLY_DISABLE_SIGNATURE_VALIDATION`  | `dangerouslyDisableSignatureValidation`（`"true"`） |
 
 ```bash
 export TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -165,11 +197,9 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 }
 ```
 
-`TWILIO_SMS_FROM` 也可作为 `TWILIO_PHONE_NUMBER` 的别名。当 Twilio 应通过 Messaging Service 选择发送方时，请使用 `TWILIO_MESSAGING_SERVICE_SID` 代替电话号码发送方。
-
 ### SecretRef auth token
 
-`authToken` 可以是一个 SecretRef。当 Gateway 应从 OpenClaw secrets runtime 解析 Twilio Auth Token，而不是将明文配置存储在本地时，请使用此方式：
+`authToken` 可以是 SecretRef（`source: "env" | "file" | "exec"`）。当 Gateway 应该从 OpenClaw secrets runtime 解析 Twilio Auth Token，而不是存储明文配置时，请使用此方式：
 
 ```json5
 {
@@ -188,27 +218,7 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 
 引用的环境变量或 secret provider 必须对 Gateway 运行时可见。修改主机环境变量后，请重启受管理的 Gateway 进程。
 
-### 仅限 allowlist 的私人号码
-
-当只有已知电话号码应该能够与代理通信时，请使用 `allowlist`：
-
-```json5
-{
-  channels: {
-    sms: {
-      enabled: true,
-      accountSid: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      authToken: "twilio-auth-token",
-      fromNumber: "+15551234567",
-      publicWebhookUrl: "https://gateway.example.com/webhooks/sms",
-      dmPolicy: "allowlist",
-      allowFrom: ["+15557654321"],
-    },
-  },
-}
-```
-
-### Messaging Service 发送方
+### Messaging Service sender
 
 当 Twilio 应通过 Messaging Service 选择发送方时，请使用 `messagingServiceSid` 代替 `fromNumber`：
 
@@ -252,22 +262,38 @@ export SMS_PUBLIC_WEBHOOK_URL="https://gateway.example.com/webhooks/sms"
 
 `channels.sms.dmPolicy` 控制直接 SMS 访问：
 
-- `pairing`（默认）
-- `allowlist`（要求 `allowFrom` 中至少有一个发送方）
-- `open`（要求 `allowFrom` 包含 `"*"`）
-- `disabled`
+- `pairing`（默认）：未知发件人会获得一个配对码；使用 `openclaw pairing approve sms <CODE>` 进行批准。
+- `allowlist`：仅处理 `allowFrom` 中的发件人。空的 `allowFrom` 会拒绝所有发件人（Gateway 会记录启动警告）。
+- `open`：配置校验要求 `allowFrom` 包含 `"*"`。如果没有通配符，则只有列出的号码可以聊天。
+- `disabled`：所有传入的私信都会被丢弃。
 
-`allowFrom` 条目应为 E.164 电话号码，例如 `+15551234567`。`sms:` 前缀也被接受并会被规范化。对于私人助手，建议使用带有明确电话号码的 `dmPolicy: "allowlist"`。
+`allowFrom` 条目应为 E.164 电话号码，例如 `+15551234567`。支持 `sms:` 和 `twilio-sms:` 前缀，并会自动规范化。对于私人助手，建议使用带有明确电话号码的 `dmPolicy: "allowlist"`：
+
+```json5
+{
+  channels: {
+    sms: {
+      enabled: true,
+      accountSid: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      authToken: "twilio-auth-token",
+      fromNumber: "+15551234567",
+      publicWebhookUrl: "https://gateway.example.com/webhooks/sms",
+      dmPolicy: "allowlist",
+      allowFrom: ["+15557654321"],
+    },
+  },
+}
+```
 
 ## 发送 SMS
 
-出站 SMS 目标使用带有已选择 SMS 渠道的 `sms:` 服务前缀：
+选择 SMS 渠道后，目标可接受裸露的 E.164 号码或 `sms:` 前缀：
 
 ```bash
 openclaw message send --channel sms --target sms:+15551234567 --message "hello"
 ```
 
-当渠道选择是隐式时，`twilio-sms:+15551234567` 会选择此渠道，而不会接管 iMessage 已在使用的现有、由渠道拥有的 `sms:` 服务前缀。
+当渠道选择是隐式的时，`twilio-sms:` 前缀会选择此渠道，而不会接管 `sms:` 服务前缀；`sms:` 是 iMessage 用来为其自身目标选择运营商 SMS 投递的前缀：
 
 ```bash
 openclaw message send --target twilio-sms:+15551234567 --message "hello"
@@ -277,14 +303,14 @@ CLI 需要显式的 `--target`。`defaultTo` 适用于自动化和代理发起�
 
 来自入站 SMS 对话的代理回复会通过已配置的 Twilio 发送方自动回复给发送者。
 
-SMS 输出为纯文本。OpenClaw 会去除 markdown、展平 fenced code blocks、保留可读链接，并在通过 Twilio 发送前拆分过长的回复。
+SMS 输出为纯文本。OpenClaw 会去除 markdown、展开围栏代码块、将链接重写为 `label (url)`，并在通过 Twilio 发送前将长回复拆分为最多 `textChunkLimit` 个字符的片段（默认 1500）。
 
 ## 验证设置
 
 Gateway 启动后：
 
-1. 确认 Gateway 日志显示了 SMS webhook 路由。
-2. 运行 Twilio 端探测：
+1. 确认 Gateway 日志显示 SMS webhook 路由。
+2. 运行一个 Twilio 侧探测（检查已配置的 Twilio webhook URL/方法以及最近的入站错误）：
 
 ```bash
 openclaw channels capabilities --channel sms
@@ -319,7 +345,15 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 
 默认情况下，OpenClaw 会使用 `publicWebhookUrl` 和 `authToken` 验证 `X-Twilio-Signature`。请确保 `publicWebhookUrl` 与 Twilio 中配置的 URL 完全逐字节一致，包括 scheme、host、path 和 query string。
 
-仅在本地隧道测试时，你可以设置：
+Webhook 路由还会独立于签名验证强制执行以下规则：
+
+- 仅允许 `POST`。
+- 每个源 IP 每分钟限流 30 次请求（超过则返回 HTTP 429）。
+- 载荷中的 `AccountSid` 必须与配置的 `accountSid` 匹配（否则返回 HTTP 403）。
+- 重放的 `MessageSid` 值会被去重 10 分钟。
+- 超过 32 KB 的请求体会被拒绝。
+
+仅用于本地隧道测试时，你可以设置：
 
 ```json5
 {
@@ -333,7 +367,7 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 
 不要在公共 Gateway 上使用已禁用的签名验证。
 
-## 多账号配置
+## 多账户配置
 
 当你运营多个 Twilio 号码时，请使用 `accounts`：
 
@@ -358,7 +392,7 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 }
 ```
 
-每个账号都应使用不同的 `webhookPath`。
+每个账户都必须使用不同的 `webhookPath`；Gateway 会拒绝注册路径已被其他账户占用的 webhook 路由。`TWILIO_*`/`SMS_*` 环境回退仅适用于默认账户；设置 `defaultAccount` 可更改该默认账户。
 
 ## 故障排除
 
@@ -366,7 +400,9 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 
 检查 `publicWebhookUrl` 是否与 Twilio 中配置的 URL 完全一致，包括协议、主机、路径和查询字符串。Twilio 会对公开 URL 字符串进行签名，因此代理重写和备用主机名都可能破坏签名验证。
 
-### 没有出现配对请求
+A 403 with `Invalid account` means the inbound payload's `AccountSid` does not match the configured `accountSid`; check that the webhook points at the account that owns the number.
+
+### 未出现配对请求
 
 检查 Twilio 号码的 **Messaging** webhook URL 和方法。它必须指向 SMS webhook URL，并且使用 `POST`。另外还要确认 Gateway 能通过公网或通过你的隧道访问。
 
@@ -377,7 +413,9 @@ imsg send --to "+15551234567" --service sms --text "reply exactly SMS pong" --js
 - 隧道或反向代理暴露了完全一致的 `webhookPath`；如果使用 Tailscale Funnel，运行 `tailscale funnel status` 并确认已列出 `/webhooks/sms`。
 - `publicWebhookUrl` 使用的协议、主机、路径和查询字符串与 Twilio 发送的一致，因此签名验证可以复现已签名的 URL。
 
-### 发送外发消息失败
+`openclaw channels status --channel sms --probe` 会同时显示 Twilio webhook 设置不匹配和最近的 `11200` 错误。
+
+### 外发发送失败
 
 确认 `accountSid`、`authToken`，以及 `fromNumber` 或 `messagingServiceSid` 已正确解析。如果你使用的是 Twilio 试用账户，目标号码在发送外发 SMS 前可能需要先在 Twilio 中完成验证。
 

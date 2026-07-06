@@ -14,12 +14,14 @@ read_when:
 | Package       | `@openclaw/vercel-ai-gateway-provider` |
 | Auth          | `AI_GATEWAY_API_KEY`                   |
 | API           | Anthropic Messages compatible          |
-| Model catalog | Auto-discovered via `/v1/models`       |
+| Base URL      | `https://ai-gateway.vercel.sh`         |
+| Model catalog | 通过 `/v1/models` 自动发现              |
 
 <Tip>
 OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
-`/models vercel-ai-gateway` 会包含当前的模型引用，例如
-`vercel-ai-gateway/openai/gpt-5.5` 和
+`/models vercel-ai-gateway` 聊天命令和
+`openclaw models list --provider vercel-ai-gateway` 都会包含当前模型
+引用，例如 `vercel-ai-gateway/openai/gpt-5.5` 和
 `vercel-ai-gateway/moonshotai/kimi-k2.6`。
 </Tip>
 
@@ -31,17 +33,12 @@ OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
     openclaw plugins install @openclaw/vercel-ai-gateway-provider
     ```
   </Step>
-  <Step title="设置 API key">
-    运行 onboarding 并选择 AI Gateway 认证选项：
-
+  <Step title="设置 API 密钥">
     ```bash
     openclaw onboard --auth-choice ai-gateway-api-key
     ```
-
   </Step>
   <Step title="设置默认模型">
-    将模型添加到你的 OpenClaw 配置中：
-
     ```json5
     {
       agents: {
@@ -51,7 +48,6 @@ OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
       },
     }
     ```
-
   </Step>
   <Step title="验证模型可用">
     ```bash
@@ -62,8 +58,6 @@ OpenClaw 会自动发现 Gateway 的 `/v1/models` 目录，因此
 
 ## 非交互式示例
 
-对于脚本或 CI 环境，请在命令行中传入所有值：
-
 ```bash
 openclaw onboard --non-interactive \
   --mode local \
@@ -73,7 +67,7 @@ openclaw onboard --non-interactive \
 
 ## 模型 ID 简写
 
-OpenClaw 接受 Vercel Claude 简写模型引用，并在运行时将其规范化：
+OpenClaw 在运行时会规范化 Claude 的简写模型引用：
 
 | 简写输入                            | 规范化后的模型引用                        |
 | ----------------------------------- | ----------------------------------------- |
@@ -81,7 +75,8 @@ OpenClaw 接受 Vercel Claude 简写模型引用，并在运行时将其规范�
 | `vercel-ai-gateway/opus-4.6`        | `vercel-ai-gateway/anthropic/claude-opus-4-6` |
 
 <Tip>
-你可以在配置中使用简写或完整的模型引用。OpenClaw 会自动解析规范形式。
+在你的配置中可以使用任一形式；OpenClaw 会自动解析规范的
+`anthropic/...` 引用。
 </Tip>
 
 ## 高级配置
@@ -100,16 +95,16 @@ OpenClaw 接受 Vercel Claude 简写模型引用，并在运行时将其规范�
   </Accordion>
 
   <Accordion title="提供方路由">
-    Vercel AI Gateway 会根据模型引用前缀将请求路由到上游提供方。例如，`vercel-ai-gateway/anthropic/claude-opus-4.6` 会通过
-    Anthropic 路由，而 `vercel-ai-gateway/openai/gpt-5.5` 会通过
-    OpenAI 路由，`vercel-ai-gateway/moonshotai/kimi-k2.6` 会通过
-    MoonshotAI 路由。你的单个 `AI_GATEWAY_API_KEY` 负责所有上游提供方的认证。
+    Vercel AI Gateway 会根据模型引用前缀将每个请求路由到上游提供方。例如，`vercel-ai-gateway/anthropic/claude-opus-4.6`
+    会通过 Anthropic 路由，`vercel-ai-gateway/openai/gpt-5.5` 会通过
+    OpenAI 路由，而 `vercel-ai-gateway/moonshotai/kimi-k2.6` 会通过
+    MoonshotAI 路由。一个 `AI_GATEWAY_API_KEY` 可对所有上游提供方进行身份验证。
   </Accordion>
-  <Accordion title="思考等级">
-    当 OpenClaw 知道上游提供方契约时，`/think` 选项会遵循受信任的上游模型前缀。`vercel-ai-gateway/anthropic/...` 使用
-    Claude 思考配置文件，包括 Claude 4.6 模型的自适应默认值。
-    `vercel-ai-gateway/openai/gpt-5.4`、`gpt-5.5` 和 Codex 风格的引用会像直接使用 OpenAI/OpenAI Codex 提供方一样提供
-    `/think xhigh`。其他命名空间引用会保持正常推理等级，除非其目录元数据声明了更多内容。
+  <Accordion title="思考层级">
+    当 OpenClaw 识别到 `/think` 选项时，会遵循上游模型前缀。`vercel-ai-gateway/anthropic/...` 使用 Claude 思考配置文件，
+    包括 Claude 4.6 模型的自适应默认值。受信任的
+    `vercel-ai-gateway/openai/...` 引用（`gpt-5.2` 及更新版本，以及向下到 `gpt-5.1-codex` 的 Codex
+    变体）会暴露 `/think xhigh`。其他命名空间引用则保持标准推理层级，除非其目录元数据声明了更多内容。
   </Accordion>
 </AccordionGroup>
 

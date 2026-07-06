@@ -7,7 +7,7 @@ read_when:
   - "`npm install -g` 因权限或 PATH 问题失败"
 ---
 
-OpenClaw 需要 **Node 22.19 或更高版本**。**Node 24 是安装、CI 和发布工作流中默认且推荐的运行时**。Node 22 仍通过当前 LTS 线路受到支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——本页适用于你想自行设置 Node，并确保一切配置正确的时候（版本、PATH、全局安装）。
+OpenClaw 需要 **Node 22.19+、Node 23.11+ 或 Node 24+**。**Node 24 是安装、CI 和发布工作流的默认且推荐的运行时**；Node 22 通过当前的 LTS 版本线仍受支持。[安装脚本](/install#alternative-install-methods) 会自动检测并安装 Node——当你想自己设置 Node 时，请使用本页（版本、PATH、全局安装）。
 
 ## 检查你的版本
 
@@ -15,7 +15,7 @@ OpenClaw 需要 **Node 22.19 或更高版本**。**Node 24 是安装、CI 和发
 node -v
 ```
 
-如果输出 `v24.x.x` 或更高版本，说明你使用的是推荐的默认版本。如果输出 `v22.19.x` 或更高版本，说明你使用的是受支持的 Node 22 LTS 路线，但我们仍建议在方便时升级到 Node 24。如果尚未安装 Node，或者版本过旧，请选择下面的一种安装方式。
+`v24.x.x` 或更高版本是推荐的默认版本。`v22.19.x` 或更高版本是受支持的 Node 22 LTS 路径（方便时升级到 Node 24）。`v23.11.0` 之前的 Node 23 构建版本不受支持。如果缺少 Node，或版本超出受支持范围，请选择下面的一种安装方法。
 
 ## 安装 Node
 
@@ -80,7 +80,7 @@ fnm use 24
 ```
 
   <Warning>
-  确保你的版本管理器已在 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）中初始化。否则，在新的终端会话中可能找不到 `openclaw`，因为 PATH 不会包含 Node 的 bin 目录。
+  请在你的 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）中初始化版本管理器。如果跳过这一步，在新的终端会话中可能找不到 `openclaw`，因为 PATH 不会包含 Node 的 bin 目录。
   </Warning>
 </Accordion>
 
@@ -137,6 +137,6 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 
 ## 相关内容
 
-- [Install Overview](/install) - 所有安装方式
-- [Updating](/install/updating) - 保持 OpenClaw 为最新版本
-- [Getting Started](/start/getting-started) - 安装后的第一步
+- [安装概览](/install) - 所有安装方式
+- [更新](/install/updating) - 保持 OpenClaw 为最新版本
+- [入门指南](/start/getting-started) - 安装后的第一步

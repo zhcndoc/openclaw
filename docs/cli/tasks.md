@@ -9,7 +9,8 @@ title: "`openclaw tasks`"
 检查持久化的后台任务和 Task Flow 状态。若不指定子命令，
 `openclaw tasks` 等同于 `openclaw tasks list`。
 
-有关生命周期和交付模型，请参见 [后台任务](/automation/tasks)。
+参见 [后台任务](/automation/tasks) 了解生命周期和投递
+模型，以及其 `tasks audit` 章节以获取完整的问题描述。
 
 ## 用法
 
@@ -31,9 +32,11 @@ openclaw tasks flow cancel <lookup>
 
 ## 根选项
 
-- `--json`：输出 JSON。
-- `--runtime <name>`：按类型筛选：`subagent`、`acp`、`cron` 或 `cli`。
-- `--status <name>`：按状态筛选：`queued`、`running`、`succeeded`、`failed`、`timed_out`、`cancelled` 或 `lost`。
+| Flag               | Description                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `--json`           | 输出 JSON。                                                                                       |
+| `--runtime <name>` | 按类型筛选：`subagent`、`acp`、`cron` 或 `cli`。                                               |
+| `--status <name>`  | 按状态筛选：`queued`、`running`、`succeeded`、`failed`、`timed_out`、`cancelled` 或 `lost`。 |
 
 ## 子命令
 
@@ -75,7 +78,15 @@ openclaw tasks cancel <lookup>
 openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--json]
 ```
 
-显示过期、丢失、传递失败或其他不一致的任务和 Task Flow 记录。保留到 `cleanupAfter` 的丢失任务会作为警告；已过期或未加时间戳的丢失任务会作为错误。
+显示过期、丢失、投递失败或其他不一致的任务和
+Task Flow 记录。保留到 `cleanupAfter` 的丢失任务属于警告；
+已过期或未打时间戳的丢失任务属于错误。
+
+`--code` 接受任务代码（`stale_queued`、`stale_running`、`lost`、
+`delivery_failed`、`missing_cleanup`、`inconsistent_timestamps`）和 Task
+Flow 代码（`restore_failed`、`stale_waiting`、`stale_blocked`、
+`cancel_stuck`、`missing_linked_tasks`、`blocked_task_missing`）。参见
+[后台任务](/automation/tasks) 了解每个代码的严重级别和触发详情。
 
 ### `maintenance`
 
@@ -83,12 +94,18 @@ openclaw tasks audit [--severity <warn|error>] [--code <name>] [--limit <n>] [--
 openclaw tasks maintenance [--apply] [--json]
 ```
 
-预览或应用任务和 Task Flow 的协调修复、清理标记、修剪，
-以及过期 cron 运行会话注册表清理。
-对于 cron 任务，协调会在将
-旧的活动任务标记为 `lost` 之前使用持久化运行日志/作业状态，因此已完成的 cron 运行不会仅仅因为内存中的 Gateway 运行时状态消失就变成错误的审计错误。离线 CLI 审计对 Gateway 进程本地的 cron 活动作业集合不具权威性。带有运行 ID/源 ID 的 CLI 任务在其实时 Gateway 运行上下文消失时会被标记为 `lost`，即使旧的子会话行仍然存在。
-在应用时，维护还会修剪 7 天以上的 `cron:<jobId>:run:<uuid>` 会话注册表
-行，同时保留当前正在运行的 cron 作业，并保持非 cron 会话行不变。
+预览或应用任务与 Task Flow 的协调修复、清理标记、
+修剪，以及过期 cron 运行会话注册表的清理。
+
+对于 cron 任务，在将旧的活跃任务标记为 `lost` 之前，
+协调会先使用持久化的运行日志/作业状态，因此已完成的 cron 运行不会
+仅仅因为内存中的 Gateway 运行时状态消失而成为错误的审计项。
+离线 CLI 审计并不是 Gateway 进程内 cron 活跃作业集合的权威来源。
+对于带有运行 ID/源 ID 的 CLI 任务，当其活动 Gateway 运行上下文消失时，
+即使旧的子会话行仍然存在，也会被标记为 `lost`。
+
+应用后，maintenance 还会修剪 7 天前的 `cron:<jobId>:run:<uuid>` 会话注册表行，
+同时保留当前正在运行的 cron 作业，并且不影响非 cron 会话行。
 
 ### `flow`
 
@@ -99,6 +116,8 @@ openclaw tasks flow cancel <lookup>
 ```
 
 检查或取消任务账本下持久化的 Task Flow 状态。
+`flow list --status` 接受 `queued`、`running`、`waiting`、`blocked`、
+`succeeded`、`failed`、`cancelled` 或 `lost`。
 
 ## 相关内容
 

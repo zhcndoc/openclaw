@@ -6,16 +6,17 @@ read_when:
 title: "Amazon Bedrock Mantle"
 ---
 
-OpenClaw 包含一个内置的 **Amazon Bedrock Mantle** 提供程序，用于连接
-Mantle 的 OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标准
-`/v1/chat/completions` 接口托管开源和第三方模型（GPT-OSS、Qwen、Kimi、GLM 等）。
+OpenClaw 包含一个内置的 **Amazon Bedrock Mantle** 提供方，可连接到
+Mantle OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的标准
+`/v1/chat/completions` 接口提供开源和第三方模型（GPT-OSS、Qwen、Kimi、GLM 等）。
+Mantle 还通过 Anthropic Messages 路由公开了两个 Anthropic Claude 模型。
 
-| 属性           | 值                                                                                          |
-| -------------- | ------------------------------------------------------------------------------------------- |
-| 提供程序 ID   | `amazon-bedrock-mantle`                                                                     |
-| API            | `openai-completions`（OpenAI 兼容）或 `anthropic-messages`（Anthropic Messages 路由） |
-| 认证           | 显式 `AWS_BEARER_TOKEN_BEDROCK` 或 IAM 凭证链 bearer token 生成                          |
-| 默认区域       | `us-east-1`（可通过 `AWS_REGION` 或 `AWS_DEFAULT_REGION` 覆盖）                            |
+| Property       | Value                                                                                          |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| Provider ID    | `amazon-bedrock-mantle`                                                                        |
+| API            | `openai-completions` for discovered OSS models, `anthropic-messages` for the two Claude models |
+| Auth           | Explicit `AWS_BEARER_TOKEN_BEDROCK` or IAM credential-chain bearer-token generation            |
+| Default region | `us-east-1` (override with `AWS_REGION` or `AWS_DEFAULT_REGION`)                               |
 
 ## 入门
 
@@ -36,19 +37,6 @@ Mantle 的 OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的�
         ```bash
         export AWS_REGION="us-west-2"
         ```
-      </Step>
-      <Step title="为 Claude Fable 5 启用提供程序数据共享">
-        Claude Fable 5 和 Claude Mythos 系列 Bedrock 模型在调用前需要先启用 Mantle 数据保留 API 模式 `provider_data_share`。此可选加入允许 Bedrock 与 Anthropic 共享提示词和生成结果，并将其保留最多 30 天，以用于信任与安全审查。
-
-        ```bash
-        AWS_REGION="${AWS_REGION:-us-east-1}"
-        curl -X PUT "https://bedrock-mantle.${AWS_REGION}.api.aws/v1/data_retention" \
-          -H "Authorization: Bearer $AWS_BEARER_TOKEN_BEDROCK" \
-          -H "Content-Type: application/json" \
-          -d '{ "mode": "provider_data_share" }'
-        ```
-
-        如果你无法接受该保留模式，请在配置中使用其他 Bedrock 模型。
       </Step>
       <Step title="验证模型已被发现">
         ```bash
@@ -95,10 +83,10 @@ Mantle 的 OpenAI 兼容端点。Mantle 通过由 Bedrock 基础设施支持的�
 OpenClaw 会尝试从 AWS 默认凭证链生成 Mantle bearer token。然后它会通过查询
 该区域的 `/v1/models` 端点来发现可用的 Mantle 模型。
 
-| 行为              | 详情                      |
-| ----------------- | ------------------------- |
-| 发现缓存         | 结果缓存 1 小时           |
-| IAM token 刷新   | 每小时                    |
+| 行为              | 详情                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| 发现缓存          | 结果会按每个区域缓存 1 小时；获取失败时返回上次缓存的结果 |
+| IAM token 刷新    | 每 2 小时一次，按每个区域缓存                                                     |
 
 要保持 Mantle 插件启用，但禁止自动发现和 IAM
 bearer token 生成，请禁用由插件拥有的发现开关：
@@ -151,51 +139,42 @@ bearer token 与标准 [Amazon Bedrock](/providers/bedrock) 提供程序使用�
 
 <AccordionGroup>
   <Accordion title="推理支持">
-    推理支持会根据模型 ID 中包含的模式进行推断，例如
-    `thinking`、`reasoner` 或 `gpt-oss-120b`。OpenClaw 会在发现过程中对匹配的模型自动设置
+    推理支持是根据模型 ID 中包含的模式推断出来的，例如
+    `thinking`、`reasoner`、`reasoning`、`deepseek.r`、`gpt-oss-120b` 或
+    `gpt-oss-safeguard-120b`。OpenClaw 在发现阶段会自动为匹配的模型设置
     `reasoning: true`。
   </Accordion>
 
   <Accordion title="端点不可用">
-    如果 Mantle 端点不可用或未返回任何模型，该提供程序会被
-    静默跳过。OpenClaw 不会报错；其他已配置的提供程序
+    如果 Mantle 端点不可用、未返回任何模型，或者 bearer token 解析失败，
+    则发现过程会返回空结果，并跳过隐式提供程序。OpenClaw 不会报错；其他已配置的提供程序
     会继续正常工作。
   </Accordion>
 
-  <Accordion title="通过 Anthropic Messages 路由使用 Claude Opus 4.7">
-    Mantle 还公开了一个 Anthropic Messages 路由，通过相同的 bearer 认证流支持 Claude 模型。Claude Opus 4.7（`amazon-bedrock-mantle/claude-opus-4.7`）可以通过此路由调用，并由提供程序自身管理流式传输，因此 AWS bearer token 不会被视为 Anthropic API key。
+  <Accordion title="通过 Anthropic Messages 路由使用 Claude Opus 4.7 和 Claude Mythos Preview">
+    无论 `/v1/models` 返回什么，OpenClaw 在成功发现后都会始终向 Mantle 目录附加两个 Claude 模型：
+    `amazon-bedrock-mantle/anthropic.claude-opus-4-7`（Claude Opus 4.7）和
+    `amazon-bedrock-mantle/anthropic.claude-mythos-preview`（Claude Mythos Preview）。这两个模型都使用
+    `anthropic-messages` API 形式，并通过同一个带 bearer 认证的 Anthropic 兼容端点
+    （`<mantle-base>/anthropic`）进行流式传输，因此 AWS bearer token 不会被视为
+    Anthropic API key。
 
-    当你在 Mantle 提供程序上固定一个 Anthropic Messages 模型时，OpenClaw 会为该模型使用 `anthropic-messages` API 接口而不是 `openai-completions`。认证仍然来自 `AWS_BEARER_TOKEN_BEDROCK`（或生成的 IAM bearer token）。
+    Claude Mythos Preview 始终请求推理；如果未设置 `/think` 级别，则默认使用 `high`
+    effort（从 `xhigh`/`max` 映射到 `high`，并将 `minimal` 提升到 `low`）。Mantle 上的 Opus 4.7
+    以不包含模型提供推理的方式进行流式传输，并且 OpenClaw 会省略其 `temperature`
+    参数，因为 Opus 4.7 在此路由上不接受采样覆盖；Mythos Preview 则通常接受
+    `temperature` 覆盖。
 
-    ```json5
-    {
-      models: {
-        providers: {
-          "amazon-bedrock-mantle": {
-            models: [
-              {
-                id: "claude-opus-4.7",
-                name: "Claude Opus 4.7",
-                api: "anthropic-messages",
-                reasoning: true,
-                input: ["text", "image"],
-                contextWindow: 1000000,
-                maxTokens: 32000,
-              },
-            ],
-          },
-        },
-      },
-    }
-    ```
+    这两个模型不能通过 `models.providers["amazon-bedrock-mantle"].models`
+    条目进行配置——它们在发现成功时总是会被自动添加，并且只有通过完全禁用发现
+    才会被移除。
 
   </Accordion>
 
   <Accordion title="与 Amazon Bedrock 提供程序的关系">
     Bedrock Mantle 是一个独立于标准
-    [Amazon Bedrock](/providers/bedrock) 提供程序的提供程序。Mantle 使用
-    与 OpenAI 兼容的 `/v1` 接口，而标准 Bedrock 提供程序使用
-    原生 Bedrock API。
+    [Amazon Bedrock](/providers/bedrock) 提供程序的提供程序。Mantle 为其 OSS 目录使用
+    兼容 OpenAI 的 `/v1` 接口，而标准 Bedrock 提供程序使用原生的 Bedrock Converse API。
 
     当存在时，这两个提供程序共享同一个 `AWS_BEARER_TOKEN_BEDROCK` 凭证。
 

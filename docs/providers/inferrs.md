@@ -7,18 +7,18 @@ read_when:
 title: "Inferrs"
 ---
 
-[inferrs](https://github.com/ericcurtin/inferrs) 可以通过兼容 OpenAI 的 `/v1` API 提供本地模型服务。OpenClaw 通过通用的 `openai-completions` 路径与 `inferrs` 协同工作。
+[inferrs](https://github.com/ericcurtin/inferrs) 在 OpenAI 兼容的 `/v1` API 后提供本地模型服务。OpenClaw 通过通用的 `openai-completions` 适配器与之对接。
 
-| Property           | Value                                                              |
-| ------------------ | ------------------------------------------------------------------ |
-| Provider id        | `inferrs`（自定义；在 `models.providers.inferrs` 下配置）           |
-| Plugin             | 无 — `inferrs` 不是内置的 OpenClaw 提供方插件                        |
-| Auth env var       | 可选。如果你的 inferrs 服务器没有认证，任何值都可以                   |
-| API                | 兼容 OpenAI（`openai-completions`）                                 |
-| Suggested base URL | `http://127.0.0.1:8080/v1`（或你的 inferrs 服务器所在位置）         |
+| Property           | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| Provider id        | `inferrs`（自定义；在 `models.providers.inferrs` 下配置）             |
+| Plugin             | none — 不是内置的 OpenClaw 提供方插件                                 |
+| Auth env var       | 不需要；如果你的 inferrs 服务器没有认证，任何值都可以                 |
+| API                | 兼容 OpenAI（`openai-completions`）                                  |
+| Suggested base URL | `http://127.0.0.1:8080/v1`（或你的 inferrs 服务器监听的其他地址）     |
 
 <Note>
-  `inferrs` 目前最好被视为一个自托管的、兼容 OpenAI 的自定义后端，而不是一个专用的 OpenClaw 提供方插件。你需要通过 `models.providers.inferrs` 来配置它，而不是通过入门选择标志。如果你需要一个带自动发现功能的真正内置插件，请参见 [SGLang](/providers/sglang) 或 [vLLM](/providers/vllm)。
+  `inferrs` 是一个自托管的、兼容 OpenAI 的自定义后端，不是专用的 OpenClaw 提供方插件：你需要在 `models.providers.inferrs` 下进行配置，而不是选择某个引导认证选项。若想要带自动发现的内置插件，请参阅 [SGLang](/providers/sglang) 或 [vLLM](/providers/vllm)。
 </Note>
 
 ## 快速开始
@@ -38,14 +38,14 @@ title: "Inferrs"
     curl http://127.0.0.1:8080/v1/models
     ```
   </Step>
-  <Step title="添加一个 OpenClaw 提供方条目">
-    添加一个显式的提供方条目，并将你的默认模型指向它。请参见下面的完整配置示例。
+  <Step title="添加一个 OpenClaw 提供商条目">
+    添加一个显式的提供商条目，并将你的默认模型指向它。请参见下面的配置示例。
   </Step>
 </Steps>
 
 ## 完整配置示例
 
-此示例使用本地 `inferrs` 服务器上的 Gemma 4。
+本地 `inferrs` 服务器上的 Gemma 4：
 
 ```json5
 {
@@ -88,7 +88,7 @@ title: "Inferrs"
 
 ## 按需启动
 
-只有在选择了 `inferrs/...` 模型时，OpenClaw 也可以启动 inferrs。将 `localService` 添加到同一个提供方条目中：
+OpenClaw 仅在选择 `inferrs/...` 模型时才会自行启动 `inferrs`。将 `localService` 添加到同一个 provider 条目中：
 
 ```json5
 {
@@ -135,41 +135,28 @@ title: "Inferrs"
 }
 ```
 
-`command` 必须是绝对路径。在 Gateway 主机上使用 `which inferrs` 并将该路径写入配置。完整字段参考请参见 [本地模型服务](/gateway/local-model-services)。
+`command` 必须是绝对路径。在 Gateway 主机上运行 `which inferrs` 并使用该路径。完整字段参考： [本地模型服务](/gateway/local-model-services)。
 
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="为什么 requiresStringContent 很重要">
-    某些 `inferrs` Chat Completions 路由只接受字符串类型的
-    `messages[].content`，而不接受结构化的内容分块数组。
+  <Accordion title="Why requiresStringContent matters">
+    Some `inferrs` Chat Completions routes accept only string `messages[].content`, not structured content-part arrays.
 
     <Warning>
-    如果 OpenClaw 运行失败，并出现如下错误：
+    If OpenClaw runs fail with:
 
     ```text
     messages[1].content: invalid type: sequence, expected a string
     ```
 
-    请在你的模型条目中设置 `compat.requiresStringContent: true`。
+    set `compat.requiresStringContent: true` in the model entry. OpenClaw then flattens pure text content parts into plain strings before sending the request.
     </Warning>
-
-    ```json5
-    compat: {
-      requiresStringContent: true
-    }
-    ```
-
-    在发送请求之前，OpenClaw 会将纯文本内容分块展平成普通字符串。
 
   </Accordion>
 
-  <Accordion title="Gemma 与工具 schema 的注意事项">
-    某些当前的 `inferrs` + Gemma 组合可以接受较小的直接
-    `/v1/chat/completions` 请求，但在完整的 OpenClaw agent-runtime
-    轮次中仍然会失败。
-
-    如果发生这种情况，先尝试以下配置：
+  <Accordion title="Gemma and tool-schema caveat">
+    Some `inferrs` + Gemma combinations accept small direct `/v1/chat/completions` requests but fail on full OpenClaw agent-runtime turns. Try disabling the tool schema surface first:
 
     ```json5
     compat: {
@@ -178,70 +165,52 @@ title: "Inferrs"
     }
     ```
 
-    这会禁用该模型的 OpenClaw 工具 schema 表面，并且可以减少对更严格的本地后端造成的提示词
-    压力。
-
-    如果较小的直接请求仍然可用，但正常的 OpenClaw agent 轮次继续在
-    `inferrs` 内部崩溃，那么剩余问题通常是上游模型/服务器
-    行为，而不是 OpenClaw 的传输层。
+    That reduces prompt pressure on stricter local backends. If tiny direct requests still work but normal OpenClaw agent turns keep crashing inside `inferrs`, treat it as an upstream model/server limitation rather than an OpenClaw transport issue.
 
   </Accordion>
 
-  <Accordion title="手动冒烟测试">
-    配置完成后，请测试两个层面：
+  <Accordion title="Manual smoke test">
+    Test both layers once configured:
 
     ```bash
     curl http://127.0.0.1:8080/v1/chat/completions \
       -H 'content-type: application/json' \
-      -d '{"model":"google/gemma-4-E2B-it","messages":[{"role":"user","content":"What is 2 + 2?"}],"stream":false}'
+      -d '{"model":"google/gemma-4-E2B-it","messages":[{"role":"user","content":"2 + 2 等于多少？"}],"stream":false}'
     ```
 
     ```bash
     openclaw infer model run \
       --model inferrs/google/gemma-4-E2B-it \
-      --prompt "What is 2 + 2? Reply with one short sentence." \
+      --prompt "2 + 2 等于多少？请用一句简短的话回答。" \
       --json
     ```
 
-    如果第一个命令可用但第二个失败，请查看下面的故障排除部分。
+    If the first command works but the second fails, see Troubleshooting below.
 
   </Accordion>
 
-  <Accordion title="代理式行为">
-    `inferrs` 被视为一种代理式、兼容 OpenAI 的 `/v1` 后端，而不是一个
-    原生的 OpenAI 端点。
-
-    - 这里不适用 OpenAI 原生专用的请求整形
-    - 没有 `service_tier`、没有 Responses `store`、没有 prompt-cache 提示，也没有
-      OpenAI reasoning-compat 负载整形
-    - 隐藏的 OpenClaw 归属头（`originator`、`version`、`User-Agent`）
-      不会注入到自定义 `inferrs` base URL 中
-
+  <Accordion title="Proxy-style behavior">
+    Because `inferrs` uses the generic `openai-completions` adapter (not `openai-responses`), native-OpenAI-only request shaping never applies: no `service_tier`, no Responses `store`, no prompt-cache hints, and no OpenAI reasoning-compat payload shaping get sent.
   </Accordion>
 </AccordionGroup>
 
 ## 故障排除
 
 <AccordionGroup>
-  <Accordion title="curl /v1/models 失败">
-    `inferrs` 没有运行、无法访问，或者没有绑定到预期的
-    host/port。请确保服务器已启动并正在监听你配置的地址。
+  <Accordion title="curl /v1/models fails">
+    `inferrs` 未运行、无法访问，或未绑定到你配置的主机/端口。请确认服务器已启动并在该地址上监听。
   </Accordion>
 
-  <Accordion title="messages[].content 预期为字符串">
-    在模型条目中设置 `compat.requiresStringContent: true`。有关详细信息，请参见上文
-    `requiresStringContent` 部分。
+  <Accordion title="messages[].content expected a string">
+    在模型条目中设置 `compat.requiresStringContent: true`（见上文）。
   </Accordion>
 
-  <Accordion title="直接调用 /v1/chat/completions 成功，但 openclaw infer model run 失败">
-    尝试设置 `compat.supportsTools: false` 以禁用工具 schema 表面。
-    请参见上面的 Gemma 工具 schema 注意事项。
+  <Accordion title="Direct /v1/chat/completions calls pass but openclaw infer model run fails">
+    设置 `compat.supportsTools: false` 以禁用工具 schema 表面（见上面的 Gemma 注意事项）。
   </Accordion>
 
-  <Accordion title="inferrs 在较大的 agent 轮次中仍然崩溃">
-    如果 OpenClaw 不再出现 schema 错误，但 `inferrs` 在较大的
-    agent 轮次中仍然崩溃，则应将其视为上游 `inferrs` 或模型限制。请降低
-    提示词压力，或切换到不同的本地后端或模型。
+  <Accordion title="inferrs still crashes on larger agent turns">
+    如果 schema 错误已经消失，但 `inferrs` 在较大的 agent 轮次中仍然崩溃，请将其视为上游 `inferrs` 或模型限制。减少提示词压力或切换后端/模型。
   </Accordion>
 </AccordionGroup>
 

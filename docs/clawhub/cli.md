@@ -9,48 +9,65 @@ title: "ClawHub CLI"
 
 # ClawHub CLI
 
-OpenClaw 为 ClawHub 提供两个命令行入口：
+有两个命令行入口可与 ClawHub 交互：
 
-- `openclaw skills` 和 `openclaw plugins` 用于在 OpenClaw 内安装和管理
-  ClawHub 包。
-- 独立的 `clawhub` CLI 处理发布者工作流，例如登录、
-  发布、转移和同步。
+- `openclaw skills` / `openclaw plugins` - 为本地 OpenClaw 代理或 Gateway 发现、安装和更新
+  包。
+- 独立的 `clawhub` CLI - 发布者工作流：登录、发布、同步
+  和转移。
 
 ## 发现与安装
-
-当你想为本地 OpenClaw 代理或 Gateway 安装或更新包时，请使用 OpenClaw 命令。
 
 ```bash
 openclaw skills search "calendar"
 openclaw skills install @owner/<slug>
+openclaw skills install @owner/<slug> --version <version> --global
 openclaw skills update @owner/<slug>
-openclaw skills verify @owner/<slug>
+openclaw skills update --all --acknowledge-clawhub-risk
+openclaw skills verify @owner/<slug> --card
 
 openclaw plugins search "calendar"
 openclaw plugins install clawhub:<package>
+openclaw plugins install clawhub:<package> --acknowledge-clawhub-risk
 openclaw plugins update <id-or-npm-spec>
+openclaw plugins update --all
 ```
 
-默认情况下，技能安装会目标指向当前工作区的 `skills/` 目录。添加
-`--global` 可安装到共享的受管技能目录中。
+技能默认安装到当前工作区的 `skills/` 目录；添加
+`--global` 可使用共享的托管技能目录。插件安装需要显式使用
+`clawhub:` 前缀，以强制优先通过 ClawHub 解析，而不是 npm、git 或
+本地路径。完整标志参考：[`openclaw skills`](/cli/skills) 和
+[`openclaw plugins`](/cli/plugins)。
 
-当你希望使用 ClawHub 解析而不是 npm 或其他安装来源时，插件安装会使用
-`clawhub:` 前缀。
+### 发布信任
+
+OpenClaw 会在下载之前检查发布的 ClawHub 信任状态，适用于
+skills 和 plugins。带版本号的发布会使用精确的发布信任元数据；
+基于解析器的 GitHub skills 会通过 ClawHub 的安装解析器，
+在返回固定提交前强制执行扫描和强制安装策略。
+
+- **恶意或被阻止** 的发布会被直接拒绝。
+- **有风险** 的发布（非干净扫描、非阻止性的审核状态）会打印
+  警告，并且需要使用 `--acknowledge-clawhub-risk` 才能继续
+  非交互式操作。
+- **官方 ClawHub 发布者/包以及捆绑的 OpenClaw 源代码** 会跳过
+  信任提示和安全裁决获取。
 
 ## 发布与维护
 
-为发布者工作流安装独立的 ClawHub CLI：
+先安装一次独立 CLI，然后登录：
 
 ```bash
 npm i -g clawhub
 clawhub login
 ```
 
-使用 `clawhub package publish` 发布插件包：
+使用 `clawhub package publish` 发布插件包（文件夹路径、GitHub 仓库 `owner/repo[@ref]`，或
+tarball URL）：
 
 ```bash
-clawhub package publish your-org/your-plugin --dry-run
-clawhub package publish your-org/your-plugin
+clawhub package publish ./my-plugin --dry-run
+clawhub package publish ./my-plugin
 clawhub package publish your-org/your-plugin@v1.0.0
 ```
 
@@ -58,14 +75,16 @@ clawhub package publish your-org/your-plugin@v1.0.0
 
 ```bash
 clawhub skill publish ./skills/review-helper
-clawhub skill publish ./skills/review-helper --version 1.0.0
+clawhub skill publish ./skills/review-helper --version 1.0.0 --owner your-org
 ```
 
-当本地技能扫描状态或包所有权需要维护时，请使用相应的独立命令：
+其他维护命令：
 
 ```bash
-clawhub sync --all
-clawhub package transfer @old-owner/package --to new-owner
+clawhub sync --all                                          # 扫描本地技能，发布新的/已更新的
+clawhub package transfer @old-owner/package --to new-owner   # 将一个插件包移动到另一个发布者
+clawhub skill rename old-slug new-slug                       # 重命名已发布的技能，并重定向旧的 slug
+clawhub explore --sort trending                              # 浏览注册表，按 trending 排序
 ```
 
 ## 相关内容

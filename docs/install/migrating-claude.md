@@ -79,7 +79,7 @@ OpenClaw 拒绝自动执行 hooks、信任 permission allowlists，或解码不�
 
 如果没有 `--from`，OpenClaw 会检查默认的 Claude Code home：`~/.claude`、采样到的 Claude Code `~/.claude.json` 状态文件，以及 macOS 上的 Claude Desktop MCP config。
 
-当 `--from` 指向项目根目录时，OpenClaw 只会导入该项目的 Claude 文件，例如 `CLAUDE.md`、`.claude/settings.json`、`.claude/commands/`、`.claude/skills/` 和 `.mcp.json`。在项目根目录导入时，它不会读取你的全局 Claude home。
+当 `--from` 指向项目根目录时，OpenClaw 只导入该项目的 Claude 文件，例如 `CLAUDE.md`、`.claude/settings.json`、`.claude/commands/`、`.claude/skills/` 和 `.mcp.json`。在项目根目录导入期间，它不会读取你的全局 Claude home。
 
 ## 推荐流程
 
@@ -136,7 +136,7 @@ openclaw migrate claude --dry-run --json
 openclaw migrate apply claude --json --yes
 ```
 
-在使用 `--json` 且不带 `--yes` 时，apply 会打印计划而不会修改状态。这是 CI 和共享脚本中最安全的模式。
+`--yes` 是 `migrate apply` 在非交互式终端中所必需的；如果没有它，OpenClaw 不会执行应用，而是报错，因此脚本和 CI 必须显式传入 `--yes`。先使用 `--dry-run --json` 进行预览，然后在计划看起来正确时，再使用 `--json --yes` 进行应用。
 
 ## 故障排除
 
@@ -162,4 +162,4 @@ openclaw migrate apply claude --json --yes
 - [从 Hermes 迁移](/install/migrating-hermes)：另一条跨系统导入路径。
 - [入职](/cli/onboard)：向导流程和非交互式标志。
 - [Doctor](/gateway/doctor)：迁移后的健康检查。
-- [Agent workspace](/concepts/agent-workspace)：`AGENTS.md`、`USER.md` 和 skills 的存放位置。
+- [Agent 工作区](/concepts/agent-workspace)：`AGENTS.md`、`USER.md` 和 skills 的存放位置。

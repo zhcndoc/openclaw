@@ -54,12 +54,13 @@ openclaw node run --host <gateway-host> --port 18789
 
 选项：
 
-- `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
-- `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
-- `--tls`：对 gateway 连接使用 TLS
-- `--tls-fingerprint <sha256>`：预期的 TLS 证书指纹（sha256）
-- `--node-id <id>`：覆盖节点 id（清除配对令牌）
-- `--display-name <name>`：覆盖节点显示名称
+- `--host <host>`: 网关 WebSocket 主机（默认：`127.0.0.1`）
+- `--port <port>`: 网关 WebSocket 端口（默认：`18789`）
+- `--context-path <path>`: 网关 WebSocket 上下文路径（例如 `/openclaw-gw`）。会附加到 WebSocket URL。
+- `--tls`: 为网关连接使用 TLS
+- `--tls-fingerprint <sha256>`: 期望的 TLS 证书指纹（sha256）
+- `--node-id <id>`: 覆盖节点 ID（清除配对令牌）
+- `--display-name <name>`: 覆盖节点显示名称
 
 ## 节点主机的 Gateway 认证
 
@@ -83,7 +84,7 @@ Tailscale。这是一个进程环境的显式启用选项，不是 `openclaw.jso
 
 ## 服务（后台）
 
-将无头节点主机作为用户服务安装。
+将无头 node 主机作为用户服务安装（macOS 上使用 launchd，Linux 上使用 systemd，Windows 上使用 Windows 任务计划程序）。
 
 ```bash
 openclaw node install --host <gateway-host> --port 18789
@@ -93,10 +94,11 @@ openclaw node install --host <gateway-host> --port 18789
 
 - `--host <host>`：Gateway WebSocket 主机（默认：`127.0.0.1`）
 - `--port <port>`：Gateway WebSocket 端口（默认：`18789`）
-- `--tls`：对 gateway 连接使用 TLS
-- `--tls-fingerprint <sha256>`：预期的 TLS 证书指纹（sha256）
-- `--node-id <id>`：覆盖节点 id（清除配对令牌）
-- `--display-name <name>`：覆盖节点显示名称
+- `--context-path <path>`：Gateway WebSocket 上下文路径（例如 `/openclaw-gw`）。将附加到 WebSocket URL。
+- `--tls`：为 gateway 连接使用 TLS
+- `--tls-fingerprint <sha256>`：期望的 TLS 证书指纹（sha256）
+- `--node-id <id>`：覆盖 node id（清除配对 token）
+- `--display-name <name>`：覆盖 node 显示名称
 - `--runtime <runtime>`：服务运行时（`node` 或 `bun`）
 - `--force`：如果已安装则重新安装/覆盖
 
@@ -114,7 +116,7 @@ openclaw node uninstall
 
 服务命令接受 `--json` 以输出机器可读格式。
 
-节点主机会在进程内重试 Gateway 重启和网络关闭。如果 Gateway 报告终止性的令牌/密码/启动认证暂停，节点主机会记录关闭详情并以非零状态退出，以便 launchd/systemd 可以用新的配置和凭据重新启动它。需要配对的暂停会保留在前台流程中，以便可以批准待处理请求。
+Node 主机会在进程内重试 Gateway 重启和网络关闭。如果 Gateway 报告终止性的 token/password/bootstrap auth 暂停，node 主机会记录关闭详情并以非零状态退出，以便 launchd/systemd/Windows 任务计划程序使用新的配置和凭据重新启动它。需要配对的暂停会保留在前台流程中，以便可以批准待处理的请求。
 
 ## 配对
 
@@ -140,22 +142,22 @@ openclaw devices approve <requestId>
 }
 ```
 
-默认情况下禁用。它只适用于没有请求作用域的全新 `role: node` 配对。
-操作员/浏览器客户端、Control UI、WebChat，以及 role、scope、metadata 或公钥升级仍然需要手动批准。
+默认情况下这是禁用的（`autoApproveCidrs` 未设置）。它仅适用于
+来自 Gateway 信任的客户端 IP、且没有请求任何 scopes 的全新 `role: node` 配对。
+Operator/browser 客户端、Control UI、WebChat，以及 role、scope、metadata 或 public-key 升级仍然需要手动批准。
 
 如果节点在重试配对时认证细节发生变化（role/scopes/public key），先前的待处理请求会被取代，并创建新的 `requestId`。
 在批准之前请再次运行 `openclaw devices list`。
 
-节点主机会将其节点 id、令牌、显示名称和 gateway 连接信息存储在
-`~/.openclaw/node.json` 中。
+节点主机将其 node id、token、显示名称以及 gateway 连接信息存储在 OpenClaw 状态目录中的 `node.json` 里（默认是 `~/.openclaw`，如果设置了 `$OPENCLAW_STATE_DIR` 则使用该目录）。
 
 ## Exec 批准
 
 `system.run` 受本地 exec 批准控制：
 
-- `$OPENCLAW_STATE_DIR/exec-approvals.json`, or
-  `~/.openclaw/exec-approvals.json` when the variable is unset
-- [Exec approvals](/tools/exec-approvals)
+- `$OPENCLAW_STATE_DIR/exec-approvals.json`，或
+  当变量未设置时为 `~/.openclaw/exec-approvals.json`
+- [Exec 批准](/tools/exec-approvals)
 - `openclaw approvals --node <id|name|ip>`（从 Gateway 编辑）
 
 对于已批准的异步节点 exec，OpenClaw 会在提示前准备一个规范化的 `systemRunPlan`。

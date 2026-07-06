@@ -15,7 +15,7 @@ read_when:
 </Note>
 
 <Tip>
-  想找的是操作指南而不是参考文档？请从 [Building plugins](/plugins/building-plugins) 开始；渠道插件请使用 [Channel plugins](/plugins/sdk-channel-plugins)；提供方插件请使用 [Provider plugins](/plugins/sdk-provider-plugins)；本地 AI CLI 后端请使用 [CLI backend plugins](/plugins/cli-backend-plugins)；工具或生命周期钩子插件请使用 [Plugin hooks](/plugins/hooks)。
+Looking for a how-to guide instead? Start with [Building plugins](/plugins/building-plugins). Use [Channel plugins](/plugins/sdk-channel-plugins) for channels, [Provider plugins](/plugins/sdk-provider-plugins) for model providers, [CLI backend plugins](/plugins/cli-backend-plugins) for local AI CLI backends, [Agent harness plugins](/plugins/sdk-agent-harness) for native agent executors, and [Plugin hooks](/plugins/hooks) for tool or lifecycle hooks.
 </Tip>
 
 ## 导入约定
@@ -82,22 +82,25 @@ import { defineChannelPluginEntry } from "openclaw/plugin-sdk/channel-core";
 
 ### 能力注册
 
-| 方法                                           | 注册内容                     |
-| ------------------------------------------------ | ------------------------------------- |
-| `api.registerProvider(...)`                      | 文本推理（LLM）                  |
-| `api.registerAgentHarness(...)`                  | 实验性的低级 agent 执行器 |
-| `api.registerCliBackend(...)`                    | 本地 CLI 推理后端           |
-| `api.registerChannel(...)`                       | 消息渠道                     |
-| `api.registerEmbeddingProvider(...)`             | 可复用的向量嵌入提供方    |
-| `api.registerSpeechProvider(...)`                | 文本转语音 / STT 合成        |
-| `api.registerRealtimeTranscriptionProvider(...)` | 流式实时转录      |
-| `api.registerRealtimeVoiceProvider(...)`         | 双工实时语音会话        |
-| `api.registerMediaUnderstandingProvider(...)`    | 图像/音频/视频分析            |
-| `api.registerImageGenerationProvider(...)`       | 图像生成                      |
-| `api.registerMusicGenerationProvider(...)`       | 音乐生成                      |
-| `api.registerVideoGenerationProvider(...)`       | 视频生成                      |
-| `api.registerWebFetchProvider(...)`              | Web 获取 / 抓取提供方           |
-| `api.registerWebSearchProvider(...)`             | Web 搜索                            |
+| Method                                           | What it registers                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `api.registerProvider(...)`                      | Text inference (LLM)                                                              |
+| `api.registerModelCatalogProvider(...)`          | Model catalog rows for text and media generation                                  |
+| `api.registerAgentHarness(...)`                  | [Experimental](/plugins/sdk-agent-harness) native agent executor (Codex, Copilot) |
+| `api.registerCliBackend(...)`                    | Local CLI inference backend                                                       |
+| `api.registerChannel(...)`                       | Messaging channel                                                                 |
+| `api.registerEmbeddingProvider(...)`             | Reusable vector embedding provider                                                |
+| `api.registerSpeechProvider(...)`                | Text-to-speech / STT synthesis                                                    |
+| `api.registerRealtimeTranscriptionProvider(...)` | Streaming realtime transcription                                                  |
+| `api.registerRealtimeVoiceProvider(...)`         | Duplex realtime voice sessions                                                    |
+| `api.registerMediaUnderstandingProvider(...)`    | Image/audio/video analysis                                                        |
+| `api.registerTranscriptSourceProvider(...)`      | Live or imported meeting transcript source                                        |
+| `api.registerImageGenerationProvider(...)`       | Image generation                                                                  |
+| `api.registerMusicGenerationProvider(...)`       | Music generation                                                                  |
+| `api.registerVideoGenerationProvider(...)`       | Video generation                                                                  |
+| `api.registerWebFetchProvider(...)`              | Web fetch / scrape provider                                                       |
+| `api.registerWebSearchProvider(...)`             | Web search                                                                        |
+| `api.registerCompactionProvider(...)`            | Pluggable transcript-compaction backend                                           |
 
 通过 `api.registerEmbeddingProvider(...)` 注册的 Embedding 提供方也必须列在插件清单的 `contracts.embeddingProviders` 中。这是用于可复用向量生成的通用 embedding 能力面。内存搜索可以消费这个通用提供方能力面。较旧的 `api.registerMemoryEmbeddingProvider(...)` 和 `contracts.memoryEmbeddingProviders` 接缝属于已弃用的兼容路径，供现有的内存专用提供方迁移使用。
 
@@ -146,19 +149,28 @@ guidance remain available to non-Codex prompt surfaces for compatibility.
 
 ### Infrastructure
 
-| 方法                                         | 注册内容                       |
-| ---------------------------------------------- | --------------------------------------- |
-| `api.registerHook(events, handler, opts?)`     | 事件钩子                              |
-| `api.registerHttpRoute(params)`                | Gateway HTTP 端点                   |
-| `api.registerGatewayMethod(name, handler)`     | Gateway RPC 方法                      |
-| `api.registerGatewayDiscoveryService(service)` | 本地 Gateway 发现广播器      |
-| `api.registerCli(registrar, opts?)`            | CLI 子命令                          |
-| `api.registerNodeCliFeature(registrar, opts?)` | `openclaw nodes` 下的 Node 功能 |
-| `api.registerService(service)`                 | 后台服务                      |
-| `api.registerInteractiveHandler(registration)` | 交互式处理器                     |
-| `api.registerAgentToolResultMiddleware(...)`   | 运行时工具结果中间件          |
-| `api.registerMemoryPromptSupplement(builder)`  | 额外的、与内存相邻的提示词部分 |
-| `api.registerMemoryCorpusSupplement(adapter)`  | 额外的内存搜索/读取语料      |
+| Method                                          | What it registers                                            |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `api.registerHook(events, handler, opts?)`      | Event hook                                                   |
+| `api.registerHttpRoute(params)`                 | Gateway HTTP endpoint                                        |
+| `api.registerGatewayMethod(name, handler)`      | Gateway RPC method                                           |
+| `api.registerGatewayDiscoveryService(service)`  | Local Gateway discovery advertiser                           |
+| `api.registerCli(registrar, opts?)`             | CLI subcommand                                               |
+| `api.registerNodeCliFeature(registrar, opts?)`  | Node feature CLI under `openclaw nodes`                      |
+| `api.registerService(service)`                  | Background service                                           |
+| `api.registerInteractiveHandler(registration)`  | Interactive handler                                          |
+| `api.registerAgentToolResultMiddleware(...)`    | Runtime tool-result middleware                               |
+| `api.registerMemoryPromptSupplement(builder)`   | Additive memory-adjacent prompt section                      |
+| `api.registerMemoryCorpusSupplement(adapter)`   | Additive memory search/read corpus                           |
+| `api.registerHostedMediaResolver(resolver)`     | Resolver for browser-style hosted media URLs                 |
+| `api.registerTextTransforms(transforms)`        | Plugin-owned prompt/message compatibility text rewrites      |
+| `api.registerConfigMigration(migrate)`          | Lightweight config migration run before plugin runtime loads |
+| `api.registerMigrationProvider(provider)`       | Importer for `openclaw migrate`                              |
+| `api.registerAutoEnableProbe(probe)`            | Config probe that can auto-enable this plugin                |
+| `api.registerReload(registration)`              | Restart/hot/noop config-prefix policy for reload handling    |
+| `api.registerNodeHostCommand(command)`          | Command handler exposed to paired nodes                      |
+| `api.registerNodeInvokePolicy(policy)`          | Allowlist/approval policy for node-invoked commands          |
+| `api.registerSecurityAuditCollector(collector)` | Findings collector for `openclaw security audit`             |
 
 ### 工作流插件的宿主钩子
 
@@ -167,21 +179,43 @@ guidance remain available to non-Codex prompt surfaces for compatibility.
 通用契约；Plan Mode 可以使用它们，审批工作流、
 工作区策略门禁、后台监视器、安装向导以及 UI 伴随插件也都可以使用。
 
-| 方法                                                                               | 契约所有内容                                                                                                                  |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `api.session.state.registerSessionExtension(...)`                                    | Plugin-owned, JSON-compatible session state projected through Gateway sessions                                                    |
-| `api.session.workflow.enqueueNextTurnInjection(...)`                                 | Durable exactly-once context injected into the next agent turn for one session                                                    |
-| `api.registerTrustedToolPolicy(...)`                                                 | Manifest-gated trusted pre-plugin tool policy that can block or rewrite tool params                                               |
-| `api.registerToolMetadata(...)`                                                      | Tool catalog display metadata without changing the tool implementation                                                            |
-| `api.registerCommand(...)`                                                           | Scoped plugin commands; command results can set `continueAgent: true`; Discord native commands support `descriptionLocalizations` |
-| `api.session.controls.registerControlUiDescriptor(...)`                              | Control UI contribution descriptors for session, tool, run, or settings surfaces                                                  |
-| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | Cleanup callbacks for plugin-owned runtime resources on reset/delete/reload paths                                                 |
-| `api.agent.events.registerAgentEventSubscription(...)`                               | Sanitized event subscriptions for workflow state and monitors                                                                     |
-| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | Per-run plugin scratch state cleared on terminal run lifecycle                                                                    |
-| `api.session.workflow.registerSessionSchedulerJob(...)`                              | Cleanup metadata for plugin-owned scheduler jobs; does not schedule work or create task records                                   |
-| `api.session.workflow.sendSessionAttachment(...)`                                    | Bundled-only host-mediated file attachment delivery to the active direct-outbound session route                                   |
-| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | Bundled-only Cron-backed scheduled session turns plus tag-based cleanup                                                           |
-| `api.session.controls.registerSessionAction(...)`                                    | Typed session actions clients can dispatch through the Gateway                                                                    |
+| Method                                                                               | Contract it owns                                                                                                                                           |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.session.state.registerSessionExtension(...)`                                    | Plugin-owned, JSON-compatible session state projected through Gateway sessions                                                                             |
+| `api.session.workflow.enqueueNextTurnInjection(...)`                                 | Durable exactly-once context injected into the next agent turn for one session                                                                             |
+| `api.registerTrustedToolPolicy(...)`                                                 | Manifest-gated trusted pre-plugin tool policy that can block or rewrite tool params                                                                        |
+| `api.registerToolMetadata(...)`                                                      | Tool catalog display metadata without changing the tool implementation                                                                                     |
+| `api.registerCommand(...)`                                                           | Scoped plugin commands; command results can set `continueAgent: true` or `suppressReply: true`; Discord native commands support `descriptionLocalizations` |
+| `api.session.controls.registerControlUiDescriptor(...)`                              | Control UI contribution descriptors for session, tool, run, settings, or tab surfaces                                                                      |
+| `api.lifecycle.registerRuntimeLifecycle(...)`                                        | Cleanup callbacks for plugin-owned runtime resources on reset/delete/reload paths                                                                          |
+| `api.agent.events.registerAgentEventSubscription(...)`                               | Sanitized event subscriptions for workflow state and monitors                                                                                              |
+| `api.runContext.setRunContext(...)` / `getRunContext(...)` / `clearRunContext(...)`  | Per-run plugin scratch state cleared on terminal run lifecycle                                                                                             |
+| `api.session.workflow.registerSessionSchedulerJob(...)`                              | Cleanup metadata for plugin-owned scheduler jobs; does not schedule work or create task records                                                            |
+| `api.session.workflow.sendSessionAttachment(...)`                                    | Bundled-only host-mediated file attachment delivery to the active direct-outbound session route                                                            |
+| `api.session.workflow.scheduleSessionTurn(...)` / `unscheduleSessionTurnsByTag(...)` | Bundled-only Cron-backed scheduled session turns plus tag-based cleanup                                                                                    |
+| `api.session.controls.registerSessionAction(...)`                                    | Typed session actions clients can dispatch through the Gateway                                                                                             |
+
+A `surface: "tab"` descriptor adds a sidebar tab to the Control UI. Active
+plugins' tab descriptors are advertised to dashboard clients in the gateway
+hello (`controlUiTabs`), so the tab appears only while the plugin is enabled.
+Bundled plugins may ship a first-class dashboard view for their tab; other
+plugins can set `path` to a plugin HTTP route (see
+`api.registerHttpRoute(...)`) that the dashboard renders in a sandboxed frame.
+`icon` is a dashboard icon name hint, `group` picks the sidebar section
+(`control` or `agent`), `order` sorts among plugin tabs, and `requiredScopes`
+hides the tab from connections lacking those operator scopes:
+
+```typescript
+api.session.controls.registerControlUiDescriptor({
+  surface: "tab",
+  id: "logbook",
+  label: "Logbook",
+  description: "Your day as a timeline, built from screen snapshots.",
+  icon: "sun",
+  group: "control",
+  requiredScopes: ["operator.write"],
+});
+```
 
 新插件代码请使用分组命名空间：
 
@@ -425,7 +459,7 @@ AI CLI 后端（例如 `claude-cli` 或 `my-cli`）的默认配置。
 
 在你的插件中，内部导入请使用本地 barrel 文件：
 
-```
+```text
 my-plugin/
   api.ts            # 面向外部使用者的公开导出
   runtime-api.ts    # 仅供内部使用的运行时导出

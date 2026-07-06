@@ -6,71 +6,65 @@ read_when:
   - 运行 agent-runtime 的 lint、typecheck 和实时测试流程时
 ---
 
-在 OpenClaw 中处理 OpenClaw 代理运行时的一个合理工作流。
+OpenClaw 仓库中代理运行时（`src/agents/`）的开发工作流。
 
 ## 类型检查和 lint
 
-- 默认本地门禁：`pnpm check`
-- 构建门禁：当更改可能影响构建产物、打包或懒加载/模块边界时，运行 `pnpm build`
-- agent-runtime 更改的完整合入门禁：`pnpm check && pnpm test`
+- 默认本地门禁：`pnpm check`（typecheck、lint、policy guards）
+- 构建门禁：当更改可能影响构建输出、打包或懒加载/模块边界时，运行 `pnpm build`
+- 完整的预推送门禁：`pnpm build && pnpm check && pnpm check:test-types && pnpm test`
 
 ## 运行 Agent Runtime 测试
 
-直接使用 Vitest 运行 agent-runtime 测试集：
+运行 agent runtime 单元测试套件：
 
 ```bash
 pnpm test \
   "src/agents/agent-*.test.ts" \
   "src/agents/embedded-agent-*.test.ts" \
-  "src/agents/agent-tools*.test.ts" \
-  "src/agents/agent-settings.test.ts" \
-  "src/agents/agent-tool-definition-adapter*.test.ts" \
   "src/agents/agent-hooks/**/*.test.ts"
 ```
 
-要包含实时提供者演练：
+第一个 glob 还涵盖 `agent-tools*`、`agent-settings` 和
+`agent-tool-definition-adapter*` 套件。
+
+Live 测试不包含在单元测试配置中；请通过 live
+wrapper 运行它们（会设置 `OPENCLAW_LIVE_TEST=1`，并且需要提供方凭据）：
 
 ```bash
-OPENCLAW_LIVE_TEST=1 pnpm test src/agents/embedded-agent-runner-extraparams.live.test.ts
+pnpm test:live src/agents/embedded-agent-runner-extraparams.live.test.ts
 ```
-
-这涵盖了主要的代理运行时单元测试套件：
-
-- `src/agents/agent-*.test.ts`
-- `src/agents/embedded-agent-*.test.ts`
-- `src/agents/agent-tools*.test.ts`
-- `src/agents/agent-settings.test.ts`
-- `src/agents/agent-tool-definition-adapter.test.ts`
-- `src/agents/agent-hooks/*.test.ts`
 
 ## 手动测试
 
-推荐流程：
+- 在开发模式下运行 Gateway（通过 `OPENCLAW_SKIP_CHANNELS=1` 跳过频道连接）：`pnpm gateway:dev`
+- 通过 Gateway 触发一次 agent 轮次：`pnpm openclaw agent --message "Hello" --thinking low`
+- 使用 TUI 进行交互式调试：`pnpm tui`
 
-- 以开发模式运行网关：
-  - `pnpm gateway:dev`
-- 直接触发代理：
-  - `pnpm openclaw agent --message "Hello" --thinking low`
-- 使用 TUI 进行交互式调试：
-  - `pnpm tui`
-
-对于工具调用行为，提示一个 `read` 或 `exec` 动作，这样你就可以看到工具流式传输和负载处理。
+对于工具调用行为，提示执行 `read` 或 `exec` 操作，这样你就可以观察
+工具流式传输和负载处理。
 
 ## 清理并重置状态
 
-状态存放在 OpenClaw 的状态目录下。默认是 `~/.openclaw`。如果设置了 `OPENCLAW_STATE_DIR`，则改用该目录。
+状态保存在 OpenClaw 状态目录中：默认情况下为 `~/.openclaw`，或者当设置了 `$OPENCLAW_STATE_DIR` 时为该路径。相对于该目录的路径如下：
 
-要重置所有内容：
+| 路径                                           | 内容                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| `openclaw.json`                                | 配置                                                              |
+| `state/openclaw.sqlite`                        | 共享运行时状态数据库                                                |
+| `agents/<agentId>/agent/openclaw-agent.sqlite` | 每个代理的模型认证配置文件（API 密钥 + OAuth）和运行时状态          |
+| `credentials/`                                | 认证配置文件存储之外的提供方/通道凭据                                |
+| `agents/<agentId>/sessions/`                  | 会话转录以及 `sessions.json` 索引                                     |
+| `sessions/`                                   | 旧版单代理会话存储（仅旧安装使用）                                  |
+| `workspace/`                                   | 默认代理工作区（额外代理使用 `workspace-<agentId>`）                |
 
-- `openclaw.json` 用于配置
-- `agents/<agentId>/agent/auth-profiles.json` 用于模型认证配置文件（API 密钥 + OAuth）
-- `credentials/` 用于仍然位于认证配置文件存储之外的提供方/通道状态
-- `agents/<agentId>/sessions/` 用于代理会话历史
-- `agents/<agentId>/sessions/sessions.json` 用于会话索引
-- `sessions/` 用于存在旧路径时
-- `workspace/` 如果你想要一个空白工作区
+删除这些路径即可完全重置。更精简的重置方式：
 
-如果你只想重置会话，删除该代理的 `agents/<agentId>/sessions/`。如果你想保留认证，请保留 `agents/<agentId>/agent/auth-profiles.json` 以及 `credentials/` 下的任何提供方状态不变。
+- 仅会话：删除该代理的 `agents/<agentId>/sessions/`。
+- 保留认证：保留 `agents/<agentId>/agent/openclaw-agent.sqlite` 和 `credentials/`。
+
+旧版 `auth-profiles.json` 文件在运行时不再读取；
+`openclaw doctor --fix` 会将它们导入到 SQLite 存储中。
 
 ## 参考资料
 
@@ -79,4 +73,4 @@ OPENCLAW_LIVE_TEST=1 pnpm test src/agents/embedded-agent-runner-extraparams.live
 
 ## 相关内容
 
-- [OpenClaw agent runtime architecture](/agent-runtime-architecture)
+- [OpenClaw 代理运行时架构](/agent-runtime-architecture)

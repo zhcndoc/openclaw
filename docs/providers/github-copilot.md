@@ -48,7 +48,7 @@ GitHub Copilot 是 GitHub 的 AI 编码助手。它为你的 GitHub 账户和套
     当你希望 GitHub 的 Copilot CLI 和 SDK 为所选 `github-copilot/*` 模型接管底层代理循环时，请安装外部 `@openclaw/copilot` 插件。
 
     ```bash
-    openclaw plugins install clawhub:@openclaw/copilot
+    openclaw plugins install @openclaw/copilot
     ```
 
     然后将某个模型或提供方切换到该运行时：
@@ -68,16 +68,25 @@ GitHub Copilot 是 GitHub 的 AI 编码助手。它为你的 GitHub 账户和套
     }
     ```
 
-    当你希望这些代理轮次使用原生 Copilot CLI 会话、SDK 管理的线程状态以及 Copilot 自有的压缩时，请选择此方式。完整运行时契约请参阅 [Copilot SDK harness](/plugins/copilot)。
+    当你希望使用原生 Copilot CLI 会话、由 SDK 管理的线程状态，以及 Copilot 为这些代理轮次负责压缩时，请选择此项。如果没有显式启用 `agentRuntime`，`github-copilot/*` 模型仍会使用内置提供方。有关完整的运行时契约，请参阅 [Copilot SDK harness](/plugins/copilot)。
 
   </Tab>
 
   <Tab title="Copilot Proxy 插件（copilot-proxy）">
-    使用 **Copilot Proxy** VS Code 扩展作为本地桥接。OpenClaw 连接到
-    代理的 `/v1` 端点，并使用你在那里配置的模型列表。
+    使用 **Copilot Proxy** VS Code 扩展作为本地桥接。OpenClaw 会与
+    代理的 `/v1` 端点通信（默认 `http://localhost:3000/v1`），并使用你配置的
+    模型列表。
+
+    `copilot-proxy` 插件随 OpenClaw 一起提供，并默认启用。
+    使用以下命令配置基础 URL 和模型 id：
+
+    ```bash
+    openclaw models auth login --provider copilot-proxy --set-default
+    ```
 
     <Note>
-    当你已经在 VS Code 中运行 Copilot Proxy，或者需要通过它进行路由时，请选择此方式。你必须启用该插件并保持 VS Code 扩展运行。
+    当你已经在 VS Code 中运行 Copilot Proxy，或需要通过它进行路由时，请选择此项。
+    VS Code 扩展必须保持运行。
     </Note>
 
   </Tab>
@@ -85,13 +94,13 @@ GitHub Copilot 是 GitHub 的 AI 编码助手。它为你的 GitHub 账户和套
 
 ## 可选标志
 
-| Flag            | Description                                         |
-| --------------- | --------------------------------------------------- |
-| `--yes`         | 跳过确认提示                        |
-| `--set-default` | 同时应用提供方推荐的默认模型 |
+| 命令                                                                   | 标志            | 描述                                                 |
+| ---------------------------------------------------------------------- | --------------- | ---------------------------------------------------- |
+| `openclaw models auth login-github-copilot`                            | `--yes`         | 在不提示的情况下覆盖现有的认证配置文件 |
+| `openclaw models auth login --provider github-copilot --method device` | `--set-default` | 同时应用该提供方推荐的默认模型 |
 
 ```bash
-# 跳过确认
+# 跳过重新登录确认
 openclaw models auth login-github-copilot --yes
 
 # 一步完成登录并设置默认模型
@@ -100,7 +109,7 @@ openclaw models auth login --provider github-copilot --method device --set-defau
 
 ## 非交互式引导
 
-如果你已经有用于 Copilot 的 GitHub OAuth 访问令牌，可以在无头设置期间使用 `openclaw onboard --non-interactive` 导入它：
+设备登录流程需要交互式 TTY。对于无头设置，请使用 `openclaw onboard --non-interactive` 导入现有的 GitHub OAuth 访问令牌：
 
 ```bash
 openclaw onboard --non-interactive --accept-risk \
@@ -116,7 +125,7 @@ openclaw onboard --non-interactive --accept-risk \
     设备登录流程需要交互式 TTY。请直接在终端中运行，不要在非交互式脚本或 CI 流水线中运行。
   </Accordion>
 
-  <Accordion title="Model availability depends on your plan">
+  <Accordion title="模型可用性取决于你的套餐">
     Copilot 模型的可用性取决于你的 GitHub 套餐。如果某个模型被拒绝，请尝试另一个 ID（例如 `github-copilot/gpt-5.5`）。请参阅 GitHub 的 [每个 Copilot 套餐支持的模型](https://docs.github.com/en/copilot/reference/ai-models/supported-models#supported-ai-models-per-copilot-plan) 了解当前模型列表。
   </Accordion>
 
@@ -139,37 +148,41 @@ openclaw onboard --non-interactive --accept-risk \
 
   </Accordion>
 
-  <Accordion title="传输选择">
-    Claude 模型 ID 会自动使用 Anthropic Messages 传输。GPT、o-series 和 Gemini 模型则保持使用 OpenAI Responses 传输。OpenClaw 会根据模型引用选择正确的传输方式。
+  <Accordion title="传输方式选择">
+    Claude 模型 ID 会自动使用 Anthropic Messages 传输方式。
+    Gemini 模型使用 OpenAI Chat Completions 传输方式；GPT 和 o 系列
+    模型保持使用 OpenAI Responses 传输方式。OpenClaw 会根据
+    模型引用选择正确的传输方式。
   </Accordion>
 
   <Accordion title="请求兼容性">
-    OpenClaw 会在 Copilot 传输上发送 Copilot IDE 风格的请求头，包括内置的压缩、工具结果和图像后续轮次。除非已针对 Copilot 的 API 验证过该行为，否则它不会为 Copilot 启用提供方级别的 Responses continuation。
+    OpenClaw 在 Copilot 传输上发送符合 Copilot IDE 风格的请求头
+    （VS Code 编辑器/插件版本以及 `vscode-chat` 集成 id），
+    将工具结果的后续回合标记为由代理发起，并在某一轮包含图像输入时
+    设置 Copilot vision 请求头。
   </Accordion>
 
   <Accordion title="环境变量解析顺序">
     OpenClaw 按以下优先级顺序从环境变量解析 Copilot 认证：
 
-    | Priority | Variable              | Notes                            |
-    | -------- | --------------------- | -------------------------------- |
-    | 1        | `COPILOT_GITHUB_TOKEN` | 最高优先级，Copilot 专用 |
-    | 2        | `GH_TOKEN`            | GitHub CLI 令牌（回退）      |
-    | 3        | `GITHUB_TOKEN`        | 标准 GitHub 令牌（最低）   |
+    | 优先级 | 变量                  | 说明                             |
+    | ------ | --------------------- | -------------------------------- |
+    | 1      | `COPILOT_GITHUB_TOKEN` | 最高优先级，Copilot 专用 |
+    | 2      | `GH_TOKEN`            | GitHub CLI 令牌（回退）      |
+    | 3      | `GITHUB_TOKEN`        | 标准 GitHub 令牌（最低）   |
 
     当设置了多个变量时，OpenClaw 会使用优先级最高的那个。设备登录流程（`openclaw models auth login-github-copilot`）会将其令牌存储在认证配置文件存储中，并且优先于所有环境变量。
 
   </Accordion>
 
   <Accordion title="令牌存储">
-    登录会将 GitHub 令牌存储在认证配置文件存储中，并在 OpenClaw 运行时将其交换为 Copilot API 令牌。你无需手动管理该令牌。
+    登录会在认证配置文件存储中保存一个 GitHub 令牌（配置文件 id
+    `github-copilot:github`），并在 OpenClaw 运行时将其交换为一个短期的 Copilot API
+    令牌。你无需手动管理该令牌。
   </Accordion>
 </AccordionGroup>
 
-<Warning>
-设备登录命令需要交互式 TTY。当你需要无头设置时，请使用非交互式引导。
-</Warning>
-
-## 记忆搜索嵌入
+## Memory search embeddings
 
 GitHub Copilot 也可以作为 [memory search](/concepts/memory-search) 的嵌入提供方。如果你有 Copilot 订阅并已登录，OpenClaw 可将其用于嵌入，而无需单独的 API 密钥。
 
@@ -193,11 +206,12 @@ GitHub Copilot 也可以作为 [memory search](/concepts/memory-search) 的嵌�
 
 ### 工作原理
 
-1. OpenClaw 解析你的 GitHub 令牌（来自环境变量或认证配置文件）。
-2. 将其交换为短期有效的 Copilot API 令牌。
-3. 查询 Copilot `/models` 端点以发现可用的嵌入模型。
-4. 选择最佳模型（优先 `text-embedding-3-small`）。
-5. 向 Copilot `/embeddings` 端点发送嵌入请求。
+1. OpenClaw 会解析你的 GitHub 令牌（来自环境变量或认证配置文件）。
+2. 将其兑换为一个短期有效的 Copilot API 令牌。
+3. 查询 Copilot 的 `/models` 端点以发现可用的嵌入模型。
+4. 选择最佳模型（优先级顺序：`text-embedding-3-small`、
+   `text-embedding-3-large`、`text-embedding-ada-002`）。
+5. 将嵌入请求发送到 Copilot 的 `/embeddings` 端点。
 
 模型可用性取决于你的 GitHub 套餐。如果没有可用的嵌入模型，OpenClaw 会跳过 Copilot 并尝试下一个提供方。
 

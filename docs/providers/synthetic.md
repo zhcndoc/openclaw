@@ -6,8 +6,8 @@ read_when:
 title: "Synthetic"
 ---
 
-[Synthetic](https://synthetic.new) 提供与 Anthropic 兼容的端点。
-OpenClaw 将其注册为 `synthetic` 提供方，并使用 Anthropic
+[Synthetic](https://synthetic.new) 提供 Anthropic 兼容的端点。
+OpenClaw 将其捆绑为 `synthetic` 提供方，并使用 Anthropic
 Messages API。
 
 | 属性     | 值                                    |
@@ -21,8 +21,8 @@ Messages API。
 
 <Steps>
   <Step title="获取 API 密钥">
-    从你的 Synthetic 账户中获取一个 `SYNTHETIC_API_KEY`，或者让
-    引导向导提示你输入一个。
+    从你的 Synthetic 账户中获取一个 `SYNTHETIC_API_KEY`，或者让引导流程
+    提示你输入一个。
   </Step>
   <Step title="运行引导">
     ```bash
@@ -30,8 +30,8 @@ Messages API。
     ```
   </Step>
   <Step title="验证默认模型">
-    完成引导后，默认模型会被设置为：
-    ```
+    引导流程会将默认模型设置为：
+    ```text
     synthetic/hf:MiniMaxAI/MiniMax-M2.5
     ```
   </Step>
@@ -112,13 +112,13 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
 </Tip>
 
 <AccordionGroup>
-  <Accordion title="模型允许列表">
-    如果你启用了模型允许列表（`agents.defaults.models`），请添加你计划使用的每一个
-    Synthetic 模型。不在允许列表中的模型将对代理隐藏。
+  <Accordion title="模型白名单">
+    如果你启用了模型白名单（`agents.defaults.models`），请添加你计划使用的每一个
+    Synthetic 模型。不在白名单中的模型会对代理隐藏。
   </Accordion>
 
-  <Accordion title="基础 URL 覆盖">
-    如果 Synthetic 更改了其 API 端点，请在配置中覆盖基础 URL：
+  <Accordion title="Base URL 覆盖">
+    如果 Synthetic 更改了其 API 端点，请覆盖 base URL：
 
     ```json5
     {
@@ -132,7 +132,7 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
     }
     ```
 
-    记住 OpenClaw 会自动追加 `/v1`。
+    OpenClaw 仍会自动附加 `/v1`。
 
   </Accordion>
 </AccordionGroup>
@@ -140,8 +140,8 @@ OpenClaw 的 Anthropic 客户端会自动在基础 URL 后追加 `/v1`，因此�
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="模型选择" href="/concepts/model-providers" icon="layers">
-    提供方规则、模型引用和故障切换行为。
+  <Card title="Model providers" href="/concepts/model-providers" icon="layers">
+    Provider rules, model refs, and failover behavior.
   </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
     包括提供方设置在内的完整配置模式。

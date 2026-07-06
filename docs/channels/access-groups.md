@@ -7,15 +7,15 @@ read_when:
 title: "访问组"
 ---
 
-访问组是你一次定义并在渠道允许列表中通过 `accessGroup:<name>` 引用的命名发送者列表。
+访问组是你在 `accessGroups` 下定义一次，并通过通道允许列表中的 `accessGroup:<name>` 引用的命名发送者列表。
 
 当同一批人需要在多个消息渠道中被允许，或者同一组受信任对象需要同时适用于 DM 和群组发送者授权时使用它们。
 
-访问组本身不会授予访问权限。只有当允许列表字段引用它时，某个组才会生效。
+组本身不会授予任何权限。只有在允许列表字段引用它时，它才会产生作用。
 
 ## 静态消息发送者组
 
-静态发送者组使用 `type: "message.senders"`。
+静态发送者组使用 `type: "message.senders"`。`members` 以 message-channel id 为键，另外还有 `"*"` 用于每个频道共享的条目：
 
 ```json5
 {
@@ -33,16 +33,12 @@ title: "访问组"
 }
 ```
 
-成员列表按消息渠道 id 进行键控：
+| 键                        | 含义                                                                     |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `"*"`                      | 对引用该组的每个消息频道都会检查的共享条目。 |
+| `discord`, `telegram`, ... | 仅针对该频道的 allowlist 匹配进行检查的条目。                 |
 
-| 键           | 含义                                                                    |
-| ------------ | ----------------------------------------------------------------------- |
-| `"*"`        | 对于引用该组的每个消息渠道都会检查的共享条目。                               |
-| `discord`    | 仅在 Discord 允许列表匹配时检查的条目。                                      |
-| `telegram`   | 仅在 Telegram 允许列表匹配时检查的条目。                                     |
-| `whatsapp`   | 仅在 WhatsApp 允许列表匹配时检查的条目。                                     |
-
-条目使用目标渠道的常规 `allowFrom` 规则进行匹配。OpenClaw 不会在渠道之间转换发送者 id。如果 Alice 有一个 Telegram id 和一个 Discord id，请将这两个 id 分别列在相应的键下。
+条目会按照目标频道的常规 `allowFrom` 规则进行匹配。OpenClaw 不会在不同频道之间转换发送者 id：如果 Alice 有一个 Telegram id 和一个 Discord id，请在匹配的频道键下同时列出这两个 id。
 
 ## 在允许列表中引用组
 
@@ -93,7 +89,7 @@ DM 允许列表示例：
       groupAllowFrom: ["accessGroup:oncall"],
     },
     googlechat: {
-      spaces: {
+      groups: {
         "spaces/AAA": {
           users: ["accessGroup:oncall"],
         },
@@ -118,33 +114,14 @@ DM 允许列表示例：
 
 ## 支持的消息渠道路径
 
-访问组可用于共享的消息渠道授权路径，包括：
+访问组可用于共享的消息渠道授权路径中：
 
-- 如 `channels.<channel>.allowFrom` 之类的 DM 发送者允许列表
-- 如 `channels.<channel>.groupAllowFrom` 之类的群组发送者允许列表
-- 使用相同发送者匹配规则的、按房间划分的特定渠道发送者允许列表
-- 重用消息渠道发送者允许列表的命令授权路径
+- DM 发送者允许列表，例如 `channels.<channel>.allowFrom`
+- 群组发送者允许列表，例如 `channels.<channel>.groupAllowFrom`
+- 使用相同发送者匹配规则的、按房间划分的频道特定发送者允许列表（例如 Google Chat `groups.<space>.users`）
+- 复用消息渠道发送者允许列表的命令授权路径
 
-Channel support depends on whether that channel is wired through the shared OpenClaw sender-authorization helpers. Current bundled support includes Discord, Feishu, Google Chat, iMessage, LINE, Mattermost, Microsoft Teams, Nextcloud Talk, Nostr, QQBot, Signal, WhatsApp, Zalo, and Zalo Personal. Static `message.senders` groups are designed to be channel-agnostic, so new message channels should support them by using the shared plugin SDK helpers instead of custom allowlist expansion.
-
-## 插件诊断
-
-插件作者可以在不将其展开回扁平 allowlist 的情况下检查结构化的访问组状态：
-
-```typescript
-import { resolveAccessGroupAllowFromState } from "openclaw/plugin-sdk/security-runtime";
-
-const state = await resolveAccessGroupAllowFromState({
-  accessGroups: cfg.accessGroups,
-  allowFrom: channelConfig.allowFrom,
-  channel: "my-channel",
-  accountId: "default",
-  senderId,
-  isSenderAllowed,
-});
-```
-
-结果会报告已引用、已匹配、缺失、不支持和失败的组。当你需要诊断或一致性测试时使用它。仅在仍然期望扁平 `allowFrom` 数组的兼容性路径中使用 `expandAllowFromWithAccessGroups(...)`。
+频道支持情况取决于该频道是否通过共享的 OpenClaw 发送者授权辅助函数接入。当前内置支持包括 ClickClack、Discord、飞书、Google Chat、iMessage、IRC、LINE、Mattermost、Microsoft Teams、Nextcloud Talk、Nostr、QQ Bot、Signal、Slack、SMS、Telegram、WhatsApp、Zalo 和 Zalo Personal。静态 `message.senders` 组与具体频道无关，因此新的消息频道可以通过使用共享的插件 SDK 入口辅助函数，而不是自定义允许列表扩展，来获得它们。
 
 ## Discord 渠道受众
 
@@ -169,7 +146,7 @@ Discord 还支持一种动态访问组类型：
 }
 ```
 
-`discord.channelAudience` 的意思是：“允许当前可以查看此服务器频道的 Discord DM 发送者”。OpenClaw 会在授权时通过 Discord 解析发送者，并应用 Discord 的 `ViewChannel` 权限规则。
+`discord.channelAudience` 表示“允许当前可以查看此服务器频道的 Discord 私信发送者”。OpenClaw 会在授权时通过 Discord 解析发送者，并应用 Discord 的 `ViewChannel` 权限规则。`membership` 是可选的，默认值为 `canViewChannel`。
 
 当某个 Discord 频道已经是团队的事实来源时使用它，例如 `#maintainers` 或 `#on-call`。
 
@@ -180,6 +157,25 @@ Discord 还支持一种动态访问组类型：
 - 当 Discord 返回 `Missing Access`、发送者无法被解析为服务器成员，或该频道属于另一个服务器时，访问组会以关闭失败的方式处理。
 
 更多 Discord 特定示例：[Discord 访问控制](/channels/discord#access-control-and-routing)
+
+## 插件诊断
+
+插件作者可以在不将其展开回扁平 allowlist 的情况下检查结构化的 access-group 状态：
+
+```typescript
+import { resolveAccessGroupAllowFromState } from "openclaw/plugin-sdk/access-groups";
+
+const state = await resolveAccessGroupAllowFromState({
+  accessGroups: cfg.accessGroups,
+  allowFrom: channelConfig.allowFrom,
+  channel: "my-channel",
+  accountId: "default",
+  senderId,
+  isSenderAllowed,
+});
+```
+
+结果会报告已引用、已匹配、缺失、不支持和失败的组。可将其用于诊断或一致性测试。仅在仍然期望扁平 `allowFrom` 数组的兼容性路径中使用 `expandAllowFromWithAccessGroups(...)`。
 
 ## 安全说明
 

@@ -9,29 +9,26 @@ sidebarTitle: "子代理"
 ---
 
 子代理是从现有代理运行中生成的后台代理运行。
-它们在各自的会话中运行（`agent:<agentId>:subagent:<uuid>`），并且在完成后，会将结果**通知**回请求者聊天
-频道。每个子代理运行都会被跟踪为一个
-[后台任务](/automation/tasks)。
+每个子代理都在自己的会话中运行（`agent:<agentId>:subagent:<uuid>`），并且在完成后会将其结果**通知**给请求者聊天频道。
+每个子代理运行都会被跟踪为一个[后台任务](/automation/tasks)。
 
-主要目标：
+目标：
 
-- 在不阻塞主运行的情况下，并行化“调研 / 长任务 / 慢工具”工作。
-- 默认保持子代理隔离（会话分离 + 可选沙箱）。
-- 尽量让工具面不易被滥用：默认情况下，子代理**不**获得会话工具。
-- 支持可配置的嵌套深度，以适配编排器模式。
+- 并行处理研究、长任务和缓慢的工具工作，而不阻塞主运行。
+- 默认保持子代理隔离（会话分离，可选沙箱）。
+- 保持工具面不易被滥用：子代理默认**不**获得会话或消息工具。
+- 支持可配置的嵌套深度，以满足编排器模式。
 
 <Note>
-**成本说明：** 默认情况下，每个子代理都有自己的上下文和令牌使用量。
-对于重型或重复性任务，请为子代理设置更便宜的模型，并让主代理使用更高质量的模型。
-可通过 `agents.defaults.subagents.model` 或按代理覆盖进行配置。
-当子代理确实需要请求者当前转录时，代理可以在那次生成中请求
-`context: "fork"`。线程绑定的子代理会话默认使用
-`context: "fork"`，因为它们会把当前对话分支到后续线程中。
+**费用说明：** 默认情况下，每个子代理都有自己的上下文和 token 用量。对于繁重或重复性的任务，为子代理设置更便宜的模型，并通过
+`agents.defaults.subagents.model` 或按代理覆盖的方式，让主代理使用更高质量的模型。当子代理确实需要请求者当前的转录内容时，请使用
+`context: "fork"` 启动它。线程绑定的子代理会话默认使用
+`context: "fork"`，因为它们会将当前对话分支为一个后续线程。
 </Note>
 
 ## 斜杠命令
 
-使用 `/subagents` 来检查当前会话的子代理运行：
+`/subagents` 检查**当前会话**的子代理运行：
 
 ```text
 /subagents list
@@ -39,14 +36,15 @@ sidebarTitle: "子代理"
 /subagents info <id|#>
 ```
 
-`/subagents info` 会显示运行元数据（状态、时间戳、会话 ID、
-转录路径、清理方式）。当你需要原始完整转录时，请使用 `sessions_history`
-查看受限且经过安全过滤的回溯视图；如需原始完整转录，请检查磁盘上的转录路径。
+`/subagents info` 显示运行元数据（状态、时间戳、会话 id、
+转录路径、清理）。`/subagents log` 打印某次运行最近的聊天轮次；
+添加 `tools` 标记可包含工具调用/结果消息（默认省略）。在代理轮次中，
+使用 `sessions_history` 获取有界、经过安全过滤的回忆视图，或者检查磁盘上的转录路径以获取原始完整转录。
 
 ### 线程绑定控制
 
-这些命令适用于支持持久线程绑定的频道。
-参见下面的[支持线程的频道](#thread-supporting-channels)。
+这些命令适用于具有持久线程绑定的通道。请参见下方的
+[支持线程的通道](#thread-supporting-channels)。
 
 ```text
 /focus <subagent-label|session-key|session-id|session-label>
@@ -58,29 +56,28 @@ sidebarTitle: "子代理"
 
 ### 生成行为
 
-代理会使用 `sessions_spawn` 启动后台子代理。子代理完成
-后会作为内部父会话事件返回；父/请求者代理决定
-是否需要面向用户的更新。
+Agents 使用 `sessions_spawn` 工具启动后台子代理。
+完成结果会作为内部父会话事件返回；父/请求者
+代理决定是否需要面向用户的更新。
 
 <AccordionGroup>
-  <Accordion title="非阻塞、基于推送的完成">
-    - `sessions_spawn` 是非阻塞的；它会立即返回一个运行 ID。
-    - 子代理完成后，会向父/请求者会话回报。
+  <Accordion title="非阻塞、推送式完成">
+    - `sessions_spawn` 是非阻塞的；它会立即返回一个运行 id。
+    - 完成后，子代理会向父/请求者会话报告。
     - 需要子结果的代理轮次应在生成所需工作后调用 `sessions_yield`。这会结束当前轮次，并让完成事件作为下一条模型可见消息到达。
-    - 完成是基于推送的。一旦生成，请不要仅为了等待其结束而循环轮询 `/subagents list`、`sessions_list` 或 `sessions_history`；只在需要调试可见性时按需检查状态。
-    - 子输出是供请求者代理综合整理的报告/证据。它不是用户编写的指令文本，不能覆盖系统、开发者或用户策略。
-    - 完成时，OpenClaw 会尽力先关闭该子代理会话打开的受跟踪浏览器标签页/进程，然后再继续通知清理流程。
+    - 完成采用推送式。一旦生成，请**不要**为了等待完成而循环轮询 `/subagents list`、`sessions_list` 或 `sessions_history`；仅在调试时按需检查状态。
+    - 子输出是供请求者代理综合的报告/证据。它不是用户编写的指令文本，不能覆盖系统、开发者或用户策略。
+    - 完成时，OpenClaw 会尽力关闭该子代理会话打开并受跟踪的浏览器标签页/进程，然后再继续公告清理流程。
 
   </Accordion>
-  <Accordion title="完成投递">
-    - OpenClaw 会通过带有稳定幂等键的 `agent` 轮次将完成结果交回请求者会话。
-    - 如果请求者运行仍然活跃，OpenClaw 会先尝试唤醒/引导该运行，而不是启动第二条可见回复路径。
-    - 如果无法唤醒活跃的请求者，OpenClaw 会使用相同的完成上下文回退到请求者代理交接，而不是丢弃通知。
-    - 即使父级决定不需要面向用户的更新，成功的父级交接也会完成子代理投递。
-    - 原生子代理不会获得消息工具。它们向父/请求者代理返回普通的 assistant 文本；面向人的可见回复由父/请求者代理的正常投递策略负责。
-    - 如果无法直接交接，则回退到队列路由。
-    - 如果队列路由仍然不可用，则会在最终放弃前以短指数退避重试通知。
-    - 完成投递会保留已解析的请求者路由：当线程绑定或会话绑定的完成路由可用时优先使用；如果完成来源只提供频道，OpenClaw 会从请求者会话已解析的路由（`lastChannel` / `lastTo` / `lastAccountId`）中补全缺失的目标/账户，这样直接投递仍然可用。
+  <Accordion title="完成传递">
+    - OpenClaw 通过带有稳定幂等键的 `agent` 轮次将完成结果交回请求者会话。
+    - 如果请求者运行仍然 सक्रिय，OpenClaw 会先尝试唤醒/引导该运行，而不是启动第二条可见回复路径。
+    - 如果无法唤醒活动的请求者，OpenClaw 会改为使用相同的完成上下文进行请求者代理交接，而不是丢弃公告。
+    - 即使父级决定不需要面向用户的可见更新，成功的父级交接也会完成子代理交付。
+    - 原生子代理没有 message 工具。它们向父/请求者代理返回纯 assistant 文本；面向人类可见的回复仍由父/请求者代理的常规交付策略负责。
+    - 如果不能直接交接，交付会回退到队列路由，然后在最终放弃前对公告进行一次简短的指数退避重试。
+    - 交付会保留解析后的请求者路由：只要可用，线程绑定或会话绑定的完成路由优先。如果完成来源只提供了通道，OpenClaw 会用请求者会话已解析的路由（`lastChannel` / `lastTo` / `lastAccountId`）补齐缺失的目标/账户，这样直接交付仍然可用。
 
   </Accordion>
   <Accordion title="完成交接元数据">
@@ -97,11 +94,11 @@ sidebarTitle: "子代理"
   </Accordion>
   <Accordion title="模式与 ACP 运行时">
     - `--model` 和 `--thinking` 会覆盖该特定运行的默认值。
-    - 使用 `info`/`log` 在完成后检查详细信息和输出。
-    - 对于持久的线程绑定会话，请使用 `sessions_spawn` 并设置 `thread: true` 和 `mode: "session"`。
-    - 如果请求者频道不支持线程绑定，请使用 `mode: "run"`，而不是重试不可能成功的线程绑定组合。
-    - 对于 ACP harness 会话（Claude Code、Gemini CLI、OpenCode，或显式请求的 Codex ACP/acpx），当工具声明了该运行时时，请使用 `sessions_spawn` 并设置 `runtime: "acp"`。调试完成结果或代理间循环时，请参见 [ACP 交付模型](/tools/acp-agents#delivery-model)。当启用 `codex` 插件时，Codex 聊天/线程控制应优先使用 `/codex ...` 而不是 ACP，除非用户明确要求 ACP/acpx。
-    - 在启用 ACP、请求者未处于沙箱中，并且已加载如 `acpx` 之类的后端插件之前，OpenClaw 会隐藏 `runtime: "acp"`。`runtime: "acp"` 需要一个外部 ACP harness ID，或一个 `runtime.type="acp"` 的 `agents.list[]` 条目；对于来自 `agents_list` 的 OpenClaw 常规配置代理，请使用默认的子代理运行时。
+    - 使用 `info`/`log` 在完成后检查细节和输出。
+    - 对于持久的线程绑定会话，使用带有 `thread: true` 和 `mode: "session"` 的 `sessions_spawn`。
+    - 如果请求者通道不支持线程绑定，请使用 `mode: "run"`，而不是重试一个不可能成功的线程绑定组合。
+    - 对于 ACP harness 会话（Claude Code、Gemini CLI、OpenCode，或显式的 Codex ACP/acpx），当工具声明支持该运行时时，使用带有 `runtime: "acp"` 的 `sessions_spawn`。调试完成或代理间循环时，请参见 [ACP 交付模型](/tools/acp-agents#delivery-model)。当启用 `codex` 插件时，Codex 聊天/线程控制应优先使用 `/codex ...` 而不是 ACP，除非用户明确要求 ACP/acpx。
+    - 当启用 ACP、请求者未被沙箱限制，并且加载了诸如 `acpx` 的后端插件时，OpenClaw 才会隐藏 `runtime: "acp"`。`runtime: "acp"` 期望一个外部 ACP harness id，或者一个 `runtime.type="acp"` 的 `agents.list[]` 条目；对于来自 `agents_list` 的正常 OpenClaw 配置代理，请使用默认的子代理运行时。
 
   </Accordion>
 </AccordionGroup>
@@ -125,10 +122,13 @@ sidebarTitle: "子代理"
 然后执行一个通知步骤，并将通知回复发布到请求者
 聊天频道。
 
-可用性取决于调用方的有效工具策略。`coding` 和
-`full` 配置默认暴露 `sessions_spawn`。`messaging` 配置不暴露；
-为应当委派工作的代理添加 `tools.alsoAllow: ["sessions_spawn", "sessions_yield",
-"subagents"]`，或者使用 `tools.profile: "coding"`。频道/组、提供方、沙箱以及按代理的允许/拒绝策略仍然可以在配置文件阶段之后移除此工具。可使用同一会话中的 `/tools` 来确认实际生效的工具列表。
+可用性取决于调用方的有效工具策略。内置
+`coding` 配置包含 `sessions_spawn`；`messaging` 和 `minimal` 不
+包含。`full` 允许所有工具。对于仍应委派工作的、处于较窄配置文件的代理，请添加 `tools.alsoAllow: ["sessions_spawn",
+"sessions_yield", "subagents"]`，或者使用 `tools.profile: "coding"`。
+频道/组、提供方、沙箱以及按代理的允许/拒绝策略
+在配置文件阶段之后仍可能移除此工具。请在同一会话中使用 `/tools`
+以确认有效工具列表。
 
 **默认值：**
 
@@ -137,9 +137,9 @@ sidebarTitle: "子代理"
 - **运行超时：** 当设置了 `agents.defaults.subagents.runTimeoutSeconds` 时，OpenClaw 会使用它；否则回退到 `0`（无超时）。`sessions_spawn` 不接受按调用覆盖的超时设置。
 - **任务投递：** 原生子代理会在其首条可见的 `[Subagent Task]` 消息中接收委派任务。子代理系统提示包含运行时规则和路由上下文，而不是任务的隐藏副本。
 
-被接受的原生子代理生成会在工具结果中包含已解析的子模型元数据：
+接受的原生子代理生成会在工具结果中包含已解析的子模型元数据：
 `resolvedModel` 包含已应用的模型引用，
-`resolvedProvider` 在引用带有提供方前缀时包含该前缀。
+当引用包含提供方前缀时，`resolvedProvider` 包含该前缀。
 
 ### 委派提示模式
 
@@ -148,7 +148,7 @@ sidebarTitle: "子代理"
 - `suggest`（默认）：保持标准提示，引导把更大或更慢的工作交给子代理。
 - `prefer`：提示主代理保持响应，并将任何比直接回复更复杂的工作通过 `sessions_spawn` 委派出去。
 
-按代理覆盖使用 `agents.list[].subagents.delegationMode`。
+按代理覆盖：`agents.list[].subagents.delegationMode`。
 
 ```json5
 {
@@ -175,7 +175,7 @@ sidebarTitle: "子代理"
   子代理的任务描述。
 </ParamField>
 <ParamField path="taskName" type="string">
-  后续状态输出中用于标识特定子项的可选稳定句柄。必须匹配 `[a-z][a-z0-9_-]{0,63}`，且不能是 `last` 或 `all` 等保留目标。
+  用于在后续状态输出中标识特定子任务的可选稳定句柄。必须匹配 `[a-z][a-z0-9_-]{0,63}`，且不能是保留目标，例如 `last` 或 `all`。
 </ParamField>
 <ParamField path="label" type="string">
   可选的人类可读标签。
@@ -205,14 +205,14 @@ sidebarTitle: "子代理"
   当为 `true` 时，为该子代理会话请求频道线程绑定。
 </ParamField>
 <ParamField path="mode" type='"run" | "session"' default="run">
-  如果设置了 `thread: true` 且省略了 `mode`，默认值将变为 `session`。`mode: "session"` 需要 `thread: true`。
-  如果请求者频道不支持线程绑定，请使用 `mode: "run"`。
+  如果 `thread: true` 且省略 `mode`，默认值变为 `session`。`mode: "session"` 需要 `thread: true`。
+  如果请求者频道不可用线程绑定，请改用 `mode: "run"`。
 </ParamField>
 <ParamField path="cleanup" type='"delete" | "keep"' default="keep">
-  `"delete"` 会在通知后立即归档（仍通过重命名保留转录）。
+  `"delete"` 会在通知后立即归档会话（但仍通过重命名保留转录）。
 </ParamField>
 <ParamField path="sandbox" type='"inherit" | "require"' default="inherit">
-  `require` 会拒绝生成，除非目标子运行时已启用沙箱。
+  `require` 会拒绝生成，除非目标子运行处于沙箱环境中。
 </ParamField>
 <ParamField path="context" type='"isolated" | "fork"' default="isolated">
   `fork` 会将请求者当前转录分支到子会话中。仅适用于原生子代理。线程绑定生成默认使用 `fork`；非线程生成默认使用 `isolated`。
@@ -241,27 +241,27 @@ sidebarTitle: "子代理"
 保留目标 `last` 和 `all` 不能作为有效的 `taskName` 值，
 因为它们已经具有控制含义。
 
-## 工具：`sessions_yield`
+## Tool: `sessions_yield`
 
-结束当前模型轮次，并等待运行时事件，主要是
-子代理完成事件，作为下一条消息到达。当请求者在这些完成到达之前
-无法给出最终答案时，请在生成所需子任务后使用它。
+End the current model turn and wait for runtime events, mainly
+subagent completion events, which will arrive as the next message. When the requester
+cannot provide a final answer before these completions arrive, use it after generating the required subtasks.
 
-`sessions_yield` 是等待原语。不要用
-对子代理、`sessions_list`、`sessions_history`、shell `sleep`
-或进程轮询的循环来替代它，只是为了检测子任务完成。
+`sessions_yield` is a waiting primitive. Do not use
+a loop over subagents, `sessions_list`, `sessions_history`, shell `sleep`
+or process polling just to detect subtask completion.
 
-只有当会话的有效工具列表包含它时，才使用 `sessions_yield`。
-某些最小或自定义工具配置文件可能会暴露 `sessions_spawn` 和
-`subagents`，但不暴露 `sessions_yield`；在这种情况下，不要为了等待完成而虚构轮询循环。
+Only use `sessions_yield` when the session’s effective tool list includes it.
+Some minimal or custom tool profiles may expose `sessions_spawn` and
+`subagents` but not `sessions_yield`; in that case, do not fake a polling loop to wait for completion.
 
-当存在活动子任务时，OpenClaw 会在正常轮次中注入一个紧凑的运行时生成的
-`Active Subagents` 提示块，以便请求者可以看到当前的子会话、运行 id、状态、标签、任务和
-`taskName` 别名，而无需轮询。该块中的任务和标签字段被引用为数据，而不是指令，因为它们可能来自用户/模型提供的生成参数。
+When there are active subtasks, OpenClaw will inject a compact runtime-generated
+`Active Subagents` prompt block during normal turns so the requester can see the current sub-sessions, run IDs, states, labels, tasks, and
+`taskName` aliases without polling. The task and label fields in that block are quoted as data, not instructions, because they may come from user/model-provided generation parameters.
 
 ## 工具：`subagents`
 
-列出由请求者会话拥有的已生成子代理运行。它的作用域
+列出由请求者会话拥有的已生成子代理运行。其作用域
 限定为当前请求者；子级只能看到自己所控制的子级。
 
 按需使用 `subagents` 获取状态和调试信息。使用 `sessions_yield`
@@ -274,12 +274,10 @@ sidebarTitle: "子代理"
 
 ### 支持线程的通道
 
-Any channel with a session-binding adapter can support persistent
-thread-bound subagent sessions (`sessions_spawn` with `thread: true`).
-Bundled adapters currently include Discord threads, Matrix threads,
-Telegram forum topics, and current-conversation bindings for Feishu.
-Use the per-channel `threadBindings` config keys for enablement,
-timeouts, and `spawnSessions`.
+当某个通道注册了会话绑定适配器时，它就支持持久化的线程绑定子代理会话
+（`sessions_spawn` 搭配 `thread: true`）。支持此功能的内置通道包括：**Discord**、
+**iMessage**、**Matrix** 和 **Telegram**。Discord 和 Matrix 默认会
+创建子线程；Telegram 和 iMessage 默认会绑定到当前会话。请使用各通道的 `threadBindings` 配置键来控制启用、超时以及 `spawnSessions`。
 
 ### 快速流程
 
@@ -304,13 +302,13 @@ timeouts, and `spawnSessions`.
 
 ### 手动控制
 
-| 命令               | 作用                                                                  |
-| ------------------ | --------------------------------------------------------------------- |
-| `/focus <target>`  | 将当前线程（或创建一个线程）绑定到某个子代理/会话目标                 |
-| `/unfocus`         | 移除当前已绑定线程的绑定关系                                           |
-| `/agents`          | 列出活动运行和绑定状态（`thread:<id>` 或 `unbound`）                  |
-| `/session idle`    | 检查/更新空闲自动取消聚焦（仅限已聚焦的绑定线程）                     |
-| `/session max-age` | 检查/更新硬性上限（仅限已聚焦的绑定线程）                             |
+| Command            | Effect                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `/focus <target>`  | 绑定当前线程（或创建一个线程）到某个子代理/会话目标                     |
+| `/unfocus`         | 移除当前已绑定线程的绑定                                           |
+| `/agents`          | 列出活动运行和绑定状态（`binding:<id>`、`unbound` 或 `bindings unavailable`） |
+| `/session idle`    | 检查/更新空闲自动取消聚焦（仅适用于已聚焦的绑定线程）                             |
+| `/session max-age` | 检查/更新硬性上限（仅适用于已聚焦的绑定线程）                                      |
 
 ### 配置开关
 
@@ -369,11 +367,11 @@ timeouts, and `spawnSessions`.
   agents: {
     defaults: {
       subagents: {
-        maxSpawnDepth: 2, // 允许子代理启动子级（默认值：1）
-        maxChildrenPerAgent: 5, // 每个代理会话的最大活动子级数（默认值：5）
-        maxConcurrent: 8, // 全局并发通道上限（默认值：8）
-        runTimeoutSeconds: 900, // sessions_spawn 的默认超时（0 = 不超时）
-        announceTimeoutMs: 120000, // 每次调用的网关 announce 超时
+        maxSpawnDepth: 2, // 允许子代理生成子级（默认：1，范围 1-5）
+        maxChildrenPerAgent: 5, // 每个代理会话的最大活动子级数（默认：5，范围 1-20）
+        maxConcurrent: 8, // 全局并发通道上限（默认：8）
+        runTimeoutSeconds: 900, // sessions_spawn 的默认超时（0 = 无超时）
+        announceTimeoutMs: 120000, // 每次调用的网关通知超时
       },
     },
   },
@@ -468,14 +466,14 @@ timeouts, and `spawnSessions`.
 
 announce 上下文会被规范化为稳定的内部事件块：
 
-| 字段           | 来源                                                                                                        |
-| -------------- | ------------------------------------------------------------------------------------------------------------- |
-| 来源           | `subagent` 或 `cron`                                                                                          |
-| 会话 id        | 子会话键/id                                                                                                  |
-| 类型           | announce 类型 + 任务标签                                                                                    |
-| 状态           | 根据运行时结果推导（`success`、`error`、`timeout` 或 `unknown`）——**不是**从模型文本推断 |
-| 结果内容       | 子级最新可见的 assistant 文本                                                                               |
-| 后续处理       | 说明何时应回复与何时保持静默的指令                                                                           |
+| Field          | Source                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| Source         | `subagent` or `cron`                                                                                     |
+| Session ids    | Child session key/id                                                                                     |
+| Type           | Announce type + task label                                                                               |
+| Status         | Derived from runtime outcome (`ok`, `error`, `timeout`, or `unknown`) — **not** inferred from model text |
+| Result content | Latest visible assistant text from the child                                                             |
+| Follow-up      | Instruction describing when to reply vs stay silent                                                      |
 
 终态失败运行会报告失败状态，而不会重放已捕获的
 回复文本。Tool/toolResult 输出不会被提升为子级结果文本。
@@ -494,25 +492,20 @@ announce 载荷会在末尾包含一行统计信息（即使已包裹）：
 
 ### 为什么优先使用 `sessions_history`
 
-`sessions_history` 是更安全的编排路径：
+`sessions_history` 是在 agent 回合中从子级读取转录内容时更安全的编排路径：
 
-- assistant 记忆会先被规范化：移除 thinking 标签；移除 `<relevant-memories>` / `<relevant_memories>` 脚手架；移除纯文本工具调用 XML 载荷块（`<tool_call>`、`<function_call>`、`<tool_calls>`、`<function_calls>`），包括未能完整闭合的截断载荷；移除降级的工具调用/结果脚手架和历史上下文标记；移除泄露的模型控制标记（`<|assistant|>`、其他 ASCII `<|...|>`、全角 `<｜...｜>`）；移除格式损坏的 MiniMax 工具调用 XML。
-- 会对凭证/令牌样式文本进行脱敏。
-- 长块内容可能会被截断。
-- 超大历史记录可能会丢弃较旧行，或将过大的单行替换为 `[sessions_history omitted: message too large]`。
-- 当你需要按字节逐字节查看完整转录时，可回退到原始磁盘转录检查。
+- 即使禁用了通用日志脱敏，也会对凭据/令牌样式文本进行脱敏。
+- 会截断长文本块（每块 4000 字符），并丢弃思考签名、推理回放载荷以及行内图片数据。
+- 强制实施 80 KB 响应上限；过大的行会被替换为 `[sessions_history omitted: message too large]`。
+- 当存在 `nextOffset` 时，使用它向后分页读取更早的转录窗口。
+- `sessions_history` 不会从消息文本中移除 reasoning 标签、`<relevant-memories>` 脚手架或工具调用 XML——它返回的是接近原始转录形态的结构化内容块，只是做了脱敏和大小限制。`/subagents log` 使用更强的散文净化器（会移除 reasoning 标签、记忆脚手架和工具调用 XML），因为它渲染的是普通聊天行，而不是结构化块。
+- 当你需要逐字节的完整转录时，原始磁盘上的转录检查是后备方案。
 
 ## 工具策略
 
 子代理使用与父代理或目标代理相同的 profile 和工具策略管道。之后，OpenClaw 会应用子代理限制层。
 
-在没有受限 `tools.profile` 的情况下，子代理会获得**除消息工具、会话工具和系统工具之外的所有工具**：
-
-- `sessions_list`
-- `sessions_history`
-- `sessions_send`
-- `sessions_spawn`
-- `message`
+无论深度或角色如何（系统级/交互式工具，或主代理应协调的工具），子代理都会失去 `gateway`、`agents_list`、`session_status` 和 `cron`。叶子子代理（默认的 depth-1 行为，并且在 depth 2 时始终如此）还会额外失去 `subagents`、`sessions_list`、`sessions_history` 和 `sessions_spawn`。子代理永远不会获得 `message` 工具——它在生成时就被禁用了，而不是通过这个拒绝列表过滤掉的——并且 `sessions_send` 仍然被拒绝，因此子代理只能通过 announce 链进行通信。
 
 `sessions_history` 在这里仍然是一个有边界、经过清理的回溯视图——它
 不是原始转录内容的完整转储。
@@ -573,23 +566,17 @@ profile 阶段添加 browser：
 
 ## 存活性与恢复
 
-OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。超过陈旧运行窗口的未结束运行，在 `/subagents list`、状态摘要、后代完成门控以及按会话的并发检查中，都不再计为活动/待处理。
+OpenClaw 不会将 `endedAt` 缺失视为子代理仍然存活的永久证据。超过陈旧运行窗口的未结束运行（2 小时，或配置的运行超时时间加上一小段宽限期，以较长者为准）在 `/subagents list`、状态摘要、后代完成门控以及每个会话的并发检查中，不再计为活动/待处理。
 
 在网关重启后，陈旧的未结束恢复运行会被清理，除非其子会话被标记为 `abortedLastRun: true`。这些重启后中止的子会话仍可通过子代理孤儿恢复流程找回；该流程会在清除中止标记之前发送一条合成的恢复消息。
 
 每个子会话的自动重启恢复都有边界。如果同一个子代理子会话在快速重新卡住窗口内被反复接受用于孤儿恢复，OpenClaw 会在该会话上持久化一个恢复墓碑，并在后续重启中停止自动恢复它。运行 `openclaw tasks maintenance --apply` 以协调任务记录，或运行 `openclaw doctor --fix` 清除墓碑会话上过期的中止恢复标记。
 
 <Note>
-If a sub-agent spawn fails with Gateway `PAIRING_REQUIRED` /
-`scope-upgrade`, check the RPC caller before editing pairing state.
-Internal `sessions_spawn` coordination dispatches in process when the
-caller is already running inside the gateway request context, so it does
-not open a loopback WebSocket or depend on the CLI's paired-device scope
-baseline. Callers outside the gateway process still use the WebSocket
-fallback as `client.id: "gateway-client"` with `client.mode: "backend"`
-over direct loopback shared-token/password auth. Remote callers, explicit
-`deviceIdentity`, explicit device-token paths, and browser/node clients
-still need normal device approval for scope upgrades.
+如果子代理启动因网关 `PAIRING_REQUIRED` /
+`scope-upgrade` 而失败，在编辑配对状态之前请检查 RPC 调用方。
+
+当调用方已经在网关请求上下文中运行时，内部 `sessions_spawn` 协调会在进程内分发，因此不会打开回环 WebSocket，也不依赖 CLI 的已配对设备作用域基线。网关进程外的调用方仍会使用 WebSocket 回退，并通过直接回环共享令牌/密码认证，以 `client.id: "gateway-client"` 和 `client.mode: "backend"` 运行。远程调用方、显式 `deviceIdentity`、显式设备令牌路径，以及浏览器/node 客户端，仍需要正常的设备批准来进行作用域升级。
 </Note>
 
 ## 停止
@@ -598,16 +585,16 @@ still need normal device approval for scope upgrades.
 
 ## 限制
 
-- 子代理公告是**尽力而为**的。如果网关重启，待处理的“回传公告”工作会丢失。
-- 子代理仍然共享同一个网关进程资源；请将 `maxConcurrent` 视为安全阀。
+- 子代理 announce 是**尽力而为**。如果网关重启，待处理的“announce back”工作会丢失。
+- 子代理仍然共享相同的网关进程资源；请将 `maxConcurrent` 视为安全阀。
 - `sessions_spawn` 始终是非阻塞的：它会立即返回 `{ status: "accepted", runId, childSessionKey }`。
-- 子代理上下文只注入 `AGENTS.md` 和 `TOOLS.md`（不包括 `SOUL.md`、`IDENTITY.md`、`USER.md`、`MEMORY.md`、`HEARTBEAT.md` 或 `BOOTSTRAP.md`）。Codex 原生子代理遵循相同边界：`TOOLS.md` 保留在继承的 Codex 线程指令中，而仅父级的人设、身份和用户文件会作为按轮次作用域的协作指令注入，因此子级不会克隆它们。
-- 最大嵌套深度为 5（`maxSpawnDepth` 范围：1–5）。对于大多数用例，建议使用深度 2。
-- `maxChildrenPerAgent` 限制每个会话的活动子级数量（默认 `5`，范围 `1–20`）。
+- 子代理上下文只注入 `AGENTS.md` 和 `TOOLS.md`（不包括 `SOUL.md`、`IDENTITY.md`、`USER.md`、`MEMORY.md`、`HEARTBEAT.md` 或 `BOOTSTRAP.md`）。Codex 原生子代理遵循相同边界：`TOOLS.md` 保留在继承的 Codex 线程指令中，而仅父级可见的人设、身份和用户文件会作为按轮次范围的协作指令注入，因此子代理不会克隆它们。
+- 最大嵌套深度为 5（`maxSpawnDepth` 范围：1-5）。对于大多数用例，推荐使用深度 2。
+- `maxChildrenPerAgent` 限制每个会话的活跃子代理数量（默认 `5`，范围 `1-20`）。
 
 ## 相关内容
 
-- [ACP agents](/tools/acp-agents)
-- [Agent send](/tools/agent-send)
+- [ACP 代理](/tools/acp-agents)
+- [代理发送](/tools/agent-send)
 - [后台任务](/automation/tasks)
 - [多代理沙箱工具](/tools/multi-agent-sandbox-tools)

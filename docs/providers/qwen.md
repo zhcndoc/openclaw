@@ -1,30 +1,28 @@
 ---
-summary: "通过其 OpenClaw 插件使用 Qwen Cloud"
+summary: "通过其 OpenClaw 插件使用 Qwen 云"
 read_when:
   - 你想在 OpenClaw 中使用 Qwen
   - 你之前使用过 Qwen OAuth
 title: "Qwen"
 ---
 
-OpenClaw 现在将 Qwen 视为一级提供方插件，其规范 id 为
-`qwen`。该提供方插件面向 Qwen Cloud / Alibaba DashScope 和
-Coding Plan 端点，保留 `modelstudio` 旧 id 作为兼容
-别名，同时也将 Qwen Portal 令牌流程暴露为提供方 `qwen-oauth`。
+Qwen 云是一个官方的外部 OpenClaw 提供商插件，规范 id 为 `qwen`。它面向 Qwen 云 / Alibaba DashScope Standard 和 Coding Plan 端点，保持旧的 `modelstudio` id 作为兼容别名可用，并将 Qwen 门户令牌流程作为单独的提供商 [`qwen-oauth`](/providers/qwen-oauth) 暴露出来。
 
-- 提供方: `qwen`
-- Portal 提供方: [`qwen-oauth`](/providers/qwen-oauth)
-- 首选环境变量: `QWEN_API_KEY`
-- 兼容接受的环境变量: `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY`
-- API 风格: 兼容 OpenAI
+| 属性                   | 值                                         |
+| ---------------------- | ------------------------------------------ |
+| 提供商                | `qwen`                                     |
+| 门户提供商            | [`qwen-oauth`](/providers/qwen-oauth)      |
+| 首选环境变量          | `QWEN_API_KEY`                             |
+| 也接受（兼容）        | `MODELSTUDIO_API_KEY`, `DASHSCOPE_API_KEY` |
+| API 风格              | 兼容 OpenAI                               |
 
 <Tip>
-如果你想使用 `qwen3.6-plus`，建议优先使用 **Standard（按量付费）** 端点。
-Coding Plan 的支持可能会滞后于公开目录。
+对于 `qwen3.6-plus`，请使用 **Standard（按量付费）** 端点。它在 Coding Plan 端点上不可用。
 </Tip>
 
 ## 安装插件
 
-安装官方插件，然后重启 Gateway：
+`qwen` 作为官方外部插件提供，不包含在核心中。安装后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/qwen-provider
@@ -85,8 +83,8 @@ openclaw gateway restart
 
   </Tab>
 
-  <Tab title="Standard（按量付费）">
-    **最适合：** 通过 Standard Model Studio 端点进行按量付费访问，包括像 `qwen3.6-plus` 这类可能在 Coding Plan 上不可用的模型。
+  <Tab title="Standard (pay-as-you-go)">
+    **最适合：** 通过 Standard Model Studio 端点按量付费访问，包括 `qwen3.6-plus` 这类在 Coding Plan 中不可用的模型。
 
     <Steps>
       <Step title="获取你的 API key">
@@ -165,8 +163,8 @@ openclaw gateway restart
     </Steps>
 
     <Note>
-    `qwen-oauth` 使用与 DashScope 提供方相同的 `QWEN_API_KEY` 环境变量名，
-    但在通过 OpenClaw 引导配置时，会将认证信息存储在 `qwen-oauth`
+    `qwen-oauth` 使用与 Qwen Cloud 提供方相同的 `QWEN_API_KEY` 环境变量名，
+    但在通过 OpenClaw onboarding 配置时，会将认证信息存储在 `qwen-oauth`
     提供方 id 下。
     </Note>
 
@@ -177,15 +175,15 @@ openclaw gateway restart
 
 | 计划                       | 区域   | 认证选项                   | 端点                                             |
 | -------------------------- | ------ | -------------------------- | ------------------------------------------------ |
-| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
-| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
 | Coding Plan (subscription) | China  | `qwen-api-key-cn`          | `coding.dashscope.aliyuncs.com/v1`               |
 | Coding Plan (subscription) | Global | `qwen-api-key`             | `coding-intl.dashscope.aliyuncs.com/v1`          |
 | Qwen Portal                | Global | `qwen-oauth`               | `portal.qwen.ai/v1`                              |
+| Standard (pay-as-you-go)   | China  | `qwen-standard-api-key-cn` | `dashscope.aliyuncs.com/compatible-mode/v1`      |
+| Standard (pay-as-you-go)   | Global | `qwen-standard-api-key`    | `dashscope-intl.aliyuncs.com/compatible-mode/v1` |
 
-该提供方会根据你的认证选项自动选择端点。规范的
-选项使用 `qwen-*` 系列；`modelstudio-*` 仍然仅用于兼容。
-你也可以在配置中使用自定义 `baseUrl` 覆盖。
+提供方会根据你的认证选择自动选择端点。标准化
+选项使用 `qwen-*` 系列；`modelstudio-*` 仅保留兼容模式。
+可通过配置中的自定义 `baseUrl` 覆盖。
 
 <Tip>
 **管理密钥：** [home.qwencloud.com/api-keys](https://home.qwencloud.com/api-keys) |
@@ -194,21 +192,21 @@ openclaw gateway restart
 
 ## 内置目录
 
-OpenClaw 目前随附此 Qwen 静态目录。已配置的目录会感知
-端点：Coding Plan 配置会省略那些仅已知可在 Standard 端点上工作的模型。
+OpenClaw 提供此 Qwen 静态目录。该目录支持端点感知：Coding
+Plan 配置会省略那些仅适用于 Standard 端点的模型。
 
-| Model ref                   | 输入         | 上下文    | 说明                                               |
-| --------------------------- | ------------ | --------- | -------------------------------------------------- |
-| `qwen/qwen3.5-plus`         | 文本, 图像    | 1,000,000 | 默认模型                                           |
-| `qwen/qwen3.6-plus`         | 文本, 图像    | 1,000,000 | 当你需要该模型时，优先使用 Standard 端点           |
-| `qwen/qwen3-max-2026-01-23` | 文本         | 262,144   | Qwen Max 系列                                      |
-| `qwen/qwen3-coder-next`     | 文本         | 262,144   | 编程                                               |
-| `qwen/qwen3-coder-plus`     | 文本         | 1,000,000 | 编程                                               |
-| `qwen/MiniMax-M2.5`         | 文本         | 1,000,000 | 支持推理                                           |
-| `qwen/glm-5`                | 文本         | 202,752   | GLM                                                |
-| `qwen/glm-4.7`              | 文本         | 202,752   | GLM                                                |
-| `qwen/kimi-k2.5`            | 文本, 图像    | 262,144   | 通过 Alibaba 提供的 Moonshot AI                    |
-| `qwen-oauth/qwen3.5-plus`   | 文本, 图像    | 1,000,000 | Qwen Portal 默认                                   |
+| Model ref                   | Input       | Context   | Notes                   |
+| --------------------------- | ----------- | --------- | ----------------------- |
+| `qwen/qwen3.5-plus`         | text, image | 1,000,000 | 默认模型                |
+| `qwen/qwen3.6-plus`         | text, image | 1,000,000 | 仅 Standard 端点可用    |
+| `qwen/qwen3-max-2026-01-23` | text        | 262,144   | Qwen Max 系列           |
+| `qwen/qwen3-coder-next`     | text        | 262,144   | 编码                    |
+| `qwen/qwen3-coder-plus`     | text        | 1,000,000 | 编码                    |
+| `qwen/MiniMax-M2.5`         | text        | 1,000,000 | 支持推理                |
+| `qwen/glm-5`                | text        | 202,752   | GLM                     |
+| `qwen/glm-4.7`              | text        | 202,752   | GLM                     |
+| `qwen/kimi-k2.5`            | text, image | 262,144   | 通过阿里巴巴接入的 Moonshot AI |
+| `qwen-oauth/qwen3.5-plus`   | text, image | 1,000,000 | Qwen Portal 默认        |
 
 <Note>
 即使某个模型存在于静态目录中，可用性仍可能因端点和计费计划而异。
@@ -216,19 +214,20 @@ OpenClaw 目前随附此 Qwen 静态目录。已配置的目录会感知
 
 ## 思考控制
 
-对于支持推理的 Qwen Cloud 模型，该提供方会将 OpenClaw 的
-thinking 级别映射到 DashScope 顶层的 `enable_thinking` 请求标志。禁用
-thinking 时发送 `enable_thinking: false`；其他 thinking 级别发送
-`enable_thinking: true`。
+`qwen/MiniMax-M2.5` 是内置目录中唯一支持推理的模型。对于 `qwen` 系列中的推理模型，提供方会将 OpenClaw 的思考级别映射到 DashScope 顶层的 `enable_thinking` 请求标志：禁用思考时发送 `enable_thinking: false`，其他任意级别都发送 `enable_thinking: true`。自定义模型可以通过在模型条目上设置 `compat.thinkingFormat: "qwen-chat-template"` 来启用另一种 chat-template 思考负载格式。
 
 ## 多模态附加能力
 
-`qwen` 插件还在 **Standard** DashScope 端点上暴露多模态能力（不包含 Coding Plan 端点）：
+`qwen` 插件仅在 **Standard** DashScope
+端点上公开多模态能力，不支持 Coding Plan 端点：
 
-- **视频理解**：通过 `qwen-vl-max-latest`
-- **Wan 视频生成**：通过 `wan2.6-t2v`（默认）、`wan2.6-i2v`、`wan2.6-r2v`、`wan2.6-r2v-flash`、`wan2.7-r2v`
+- 通过 `qwen-vl-max-latest` 进行**图像和视频理解**
+- 通过 `wan2.6-t2v`（默认）、`wan2.6-i2v`、`wan2.6-r2v`、`wan2.6-r2v-flash`、`wan2.7-r2v` 进行 **Wan 视频生成**
 
-要将 Qwen 设为默认视频提供方：
+媒体理解会根据已配置的 Qwen 认证信息自动解析；无需额外
+配置。请确保你使用的是 Standard（按量付费）端点，以便媒体理解正常工作。
+
+要将 Qwen 设为默认视频提供商：
 
 ```json5
 {
@@ -240,48 +239,66 @@ thinking 时发送 `enable_thinking: false`；其他 thinking 级别发送
 }
 ```
 
+视频生成限制：每次请求最多输出 1 个视频，最多 1 张输入图片
+（图生视频）、最多 4 个输入视频（视频转视频），时长最多 10 秒。
+支持 `size`、`aspectRatio`、`resolution`、`audio` 和
+`watermark`。参考图片/视频输入需要远程 http(s) URL；本地
+文件路径会在前置阶段直接被拒绝，因为 DashScope 视频端点不接受
+为这些引用上传本地缓冲区。
+
 <Note>
-请参见 [视频生成](/tools/video-generation) 了解共享工具参数、提供方选择和故障转移行为。
+参见 [视频生成](/tools/video-generation)，了解共享工具参数、提供商选择和故障转移行为。
 </Note>
 
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="图像和视频理解">
-    Qwen 插件会在 **Standard** DashScope 端点上注册媒体理解能力，适用于图像和视频
-    （不适用于 Coding Plan 端点）。
+  <Accordion title="Qwen 3.6 Plus availability">
+    `qwen3.6-plus` 可用于 Standard（按量付费）端点：
 
-    | 属性         | 值                    |
-    | ------------- | --------------------- |
-    | Model         | `qwen-vl-max-latest`  |
-    | 支持的输入     | 图像, 视频            |
-
-    媒体理解会根据已配置的 Qwen 认证自动解析——无需额外配置。
-    请确保你使用的是 Standard（按量付费）端点以支持媒体理解。
-
-  </Accordion>
-
-  <Accordion title="Qwen 3.6 Plus 可用性">
-    `qwen3.6-plus` 可在 Standard（按量付费）Model Studio
-    端点上使用：
-
-    - China: `dashscope.aliyuncs.com/compatible-mode/v1`
-    - Global: `dashscope-intl.aliyuncs.com/compatible-mode/v1`
+    - 中国：`dashscope.aliyuncs.com/compatible-mode/v1`
+    - 全球：`dashscope-intl.aliyuncs.com/compatible-mode/v1`
 
     如果 Coding Plan 端点对 `qwen3.6-plus` 返回 “unsupported model” 错误，
     请切换到 Standard（按量付费）而不是 Coding Plan
     端点/密钥对。
 
     OpenClaw 的 Qwen 静态目录不会在 Coding
-    Plan 端点上声明 `qwen3.6-plus`，但如果你在
-    `models.providers.qwen.models` 下为 `qwen/qwen3.6-plus` 显式配置了条目，并且该
-    条目使用的是 Coding Plan baseUrl，那么只要阿里云在你的订阅中启用了它，该模型就会被接受。上游 API 仍然会决定调用是否成功。
+    Plan 端点上标注 `qwen3.6-plus`，但如果在
+    `models.providers.qwen.models` 下显式配置了 `qwen/qwen3.6-plus` 条目，
+    那么在 Coding Plan 基础 URL 上也会被接受，因此如果阿里云在你的订阅中启用了它，
+    你可以选择启用该模型。调用最终是否成功仍由上游 API 决定。
 
   </Accordion>
 
-  <Accordion title="能力规划">
-    `qwen` 插件正被定位为完整 Qwen
-    Cloud 入口的厂商主页，而不只是编程/文本模型。
+  <Accordion title="Video generation region routing">
+    OpenClaw 会在提交视频任务之前，将已配置的 Qwen 区域映射到对应的 DashScope AIGC 主机：
+
+    - 全局/国际：`https://dashscope-intl.aliyuncs.com`
+    - 中国：`https://dashscope.aliyuncs.com`
+
+    指向 Coding Plan
+    或 Standard Qwen 主机的正常 `models.providers.qwen.baseUrl` 仍会将视频生成路由到对应的
+    区域性 DashScope 视频端点。
+
+  </Accordion>
+
+  <Accordion title="Streaming usage compatibility">
+    原生 Qwen 端点在共享的
+    `openai-completions` 传输层上声明支持流式 usage 兼容性，因此面向相同原生主机的 DashScope 兼容自定义提供方 id
+    会继承相同行为，而不需要特定使用内置的 `qwen` 提供方 id。此行为同时适用于 Coding
+    Plan 和 Standard 端点：
+
+    - `https://coding.dashscope.aliyuncs.com/v1`
+    - `https://coding-intl.dashscope.aliyuncs.com/v1`
+    - `https://dashscope.aliyuncs.com/compatible-mode/v1`
+    - `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+
+  </Accordion>
+
+  <Accordion title="Capability plan">
+    `qwen` 插件正在被定位为完整 Qwen
+    Cloud 能力的厂商主页，而不仅仅是编码/文本模型。
 
     - **文本/聊天模型：** 通过插件提供
     - **工具调用、结构化输出、思考：** 继承自兼容 OpenAI 的传输层
@@ -293,58 +310,9 @@ thinking 时发送 `enable_thinking: false`；其他 thinking 级别发送
 
   </Accordion>
 
-  <Accordion title="视频生成细节">
-    对于视频生成，OpenClaw 会在提交任务前将已配置的 Qwen 区域映射到
-    对应的 DashScope AIGC 主机：
-
-    - Global/Intl: `https://dashscope-intl.aliyuncs.com`
-    - China: `https://dashscope.aliyuncs.com`
-
-    这意味着，指向任一 Coding Plan 或 Standard Qwen 主机的正常
-    `models.providers.qwen.baseUrl` 仍会让视频生成使用正确的
-    区域 DashScope 视频端点。
-
-    当前 Qwen 视频生成限制：
-
-    - 每次请求最多 **1** 个输出视频
-    - 最多 **1** 张输入图片
-    - 最多 **4** 个输入视频
-    - 最长 **10 秒**
-    - 支持 `size`、`aspectRatio`、`resolution`、`audio` 和 `watermark`
-    - 参考图片/视频模式当前需要 **远程 http(s) URL**。本地
-      文件路径会在前置阶段被拒绝，因为 DashScope 视频端点不接受
-      为这些引用上传的本地缓冲区。
-
-  </Accordion>
-
-  <Accordion title="流式使用兼容性">
-    原生 Model Studio 端点在共享的 `openai-completions` 传输层上声明了流式使用兼容性。
-    OpenClaw 现在根据端点能力进行判断，因此指向
-    相同原生主机的 DashScope 兼容自定义提供方 id 会继承相同的
-    流式使用行为，而无需特意使用内置的 `qwen` 提供方 id。
-
-    原生流式使用兼容性同时适用于 Coding Plan 主机和
-    Standard DashScope 兼容主机：
-
-    - `https://coding.dashscope.aliyuncs.com/v1`
-    - `https://coding-intl.dashscope.aliyuncs.com/v1`
-    - `https://dashscope.aliyuncs.com/compatible-mode/v1`
-    - `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
-
-  </Accordion>
-
-  <Accordion title="多模态端点区域">
-    多模态能力（视频理解和 Wan 视频生成）使用
-    **Standard** DashScope 端点，而不是 Coding Plan 端点：
-
-    - Global/Intl Standard base URL: `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
-    - China Standard base URL: `https://dashscope.aliyuncs.com/compatible-mode/v1`
-
-  </Accordion>
-
-  <Accordion title="环境和守护进程设置">
-    如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `QWEN_API_KEY`
-    可供该进程使用（例如放在 `~/.openclaw/.env` 中，或通过
+  <Accordion title="Environment and daemon setup">
+    如果 Gateway 作为守护进程（launchd/systemd）运行，请确保 `QWEN_API_KEY` 对该进程可用
+    （例如，放在 `~/.openclaw/.env` 中，或通过
     `env.shellEnv` 提供）。
   </Accordion>
 </AccordionGroup>
@@ -358,8 +326,8 @@ thinking 时发送 `enable_thinking: false`；其他 thinking 级别发送
   <Card title="视频生成" href="/tools/video-generation" icon="video">
     共享的视频工具参数和提供商选择。
   </Card>
-  <Card title="阿里巴巴（ModelStudio）" href="/providers/alibaba" icon="cloud">
-    旧版 ModelStudio 提供商和迁移说明。
+  <Card title="Alibaba Model Studio" href="/providers/alibaba" icon="cloud">
+    同一 DashScope 平台上的捆绑 Wan 视频生成提供商。
   </Card>
   <Card title="故障排查" href="/help/troubleshooting" icon="wrench">
     常规故障排查和常见问题解答。

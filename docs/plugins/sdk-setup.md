@@ -43,6 +43,12 @@ read_when:
       "name": "@myorg/openclaw-my-plugin",
       "version": "1.0.0",
       "type": "module",
+      "dependencies": {
+        "typebox": "1.1.39"
+      },
+      "peerDependencies": {
+        "openclaw": ">=2026.3.24-beta.2"
+      },
       "openclaw": {
         "extensions": ["./index.ts"],
         "compat": {
@@ -60,29 +66,42 @@ read_when:
 </Tabs>
 
 <Note>
-如果你将插件作为外部插件发布到 ClawHub，这些 `compat` 和 `build` 字段是必需的。权威的发布示例位于 `docs/snippets/plugin-publish/`。
+在 ClawHub 上对外发布需要 `compat` 和 `build`。规范的发布片段位于 `docs/snippets/plugin-publish/`。
 </Note>
 
 ### `openclaw` 字段
 
 <ParamField path="extensions" type="string[]">
-  入口点文件（相对于包根目录）。
+  入口文件（相对于包根目录）。适用于工作区和 git 检出开发的有效源码入口。
+</ParamField>
+<ParamField path="runtimeExtensions" type="string[]">
+  `extensions` 对应的已构建 JavaScript 配对文件，当 OpenClaw 加载已安装的 npm 包时优先使用。有关源码/构建解析顺序，请参见 [SDK 入口点](/plugins/sdk-entrypoints)。
 </ParamField>
 <ParamField path="setupEntry" type="string">
   轻量级的仅设置入口（可选）。
 </ParamField>
+<ParamField path="runtimeSetupEntry" type="string">
+  `setupEntry` 对应的已构建 JavaScript 配对文件。需要同时设置 `setupEntry`。
+</ParamField>
+<ParamField path="plugin" type="object">
+  `{ id, label }` 的回退插件标识；当插件没有频道/提供者元数据可用于推导 id 或 label 时使用。
+</ParamField>
 <ParamField path="channel" type="object">
   用于设置、选择器、快速开始和状态界面的频道目录元数据。
 </ParamField>
-<ParamField path="providers" type="string[]">
-  由此插件注册的提供者 id。
-</ParamField>
 <ParamField path="install" type="object">
-  安装提示：`npmSpec`、`localPath`、`defaultChoice`、`minHostVersion`、`expectedIntegrity`、`allowInvalidConfigRecovery`。
+  安装提示：`npmSpec`、`localPath`、`defaultChoice`、`minHostVersion`、`expectedIntegrity`、`allowInvalidConfigRecovery`、`requiredPlatformPackages`。
 </ParamField>
 <ParamField path="startup" type="object">
   启动行为标志。
 </ParamField>
+<ParamField path="compat" type="object">
+  此插件支持的 `pluginApi` 版本范围。外部 ClawHub 发布时必需。
+</ParamField>
+
+<Note>
+提供者 id（`providers: string[]`）是清单元数据，不是包元数据。请在 `openclaw.plugin.json` 中声明它们，而不是这里——参见 [插件清单](/plugins/manifest)。
+</Note>
 
 ### `openclaw.channel`
 
@@ -156,18 +175,18 @@ read_when:
 
 | 字段                        | 类型                                | 含义                                                                     |
 | ---------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
-| `clawhubSpec`                | `string`                            | 用于安装/更新和引导式按需安装流程的规范化 ClawHub spec。                 |
-| `npmSpec`                    | `string`                            | 用于安装/更新回退流程的规范化 npm spec。                                 |
+| `clawhubSpec`                | `string`                            | 用于安装/更新和入门按需安装流程的规范化 ClawHub 规格。                  |
+| `npmSpec`                    | `string`                            | 用于安装/更新回退流程的规范化 npm 规格。                                 |
 | `localPath`                  | `string`                            | 本地开发或捆绑安装路径。                                                 |
 | `defaultChoice`              | `"clawhub"` \| `"npm"` \| `"local"` | 多个来源可用时的首选安装来源。                                           |
-| `minHostVersion`             | `string`                            | 最低受支持的 OpenClaw 版本，格式为 `>=x.y.z` 或 `>=x.y.z-prerelease`。 |
-| `expectedIntegrity`          | `string`                            | 预期的 npm dist integrity 字符串，通常为 `sha512-...`，用于固定安装。   |
-| `allowInvalidConfigRecovery` | `boolean`                           | 允许捆绑插件的重装流程从某些旧配置失败中恢复。                           |
-| `requiredPlatformPackages`   | `string[]`                          | 在 npm 安装期间验证的必需平台相关 npm 别名。                             |
+| `minHostVersion`             | `string`                            | 最低支持的 OpenClaw 版本，`>=x.y.z` 或 `>=x.y.z-prerelease`。           |
+| `expectedIntegrity`          | `string`                            | 预期的 npm 制品完整性字符串，通常为 `sha512-...`，用于固定安装。        |
+| `allowInvalidConfigRecovery` | `boolean`                           | 允许捆绑插件重装流程从特定的过时配置失败中恢复。                         |
+| `requiredPlatformPackages`   | `string[]`                          | 在 npm 安装期间验证所需的平台特定 npm 别名。                             |
 
 <AccordionGroup>
-  <Accordion title="引导行为">
-    交互式引导也会使用 `openclaw.install` 来支持按需安装界面。如果你的插件在运行时加载前公开了提供者认证选项或频道设置/目录元数据，引导可以显示该选项，提示选择 ClawHub、npm 或本地安装，安装或启用插件，然后继续所选流程。ClawHub 引导选项使用 `clawhubSpec`，在存在时会优先使用；npm 选项需要带有注册表 `npmSpec` 的受信任目录元数据；精确版本和 `expectedIntegrity` 是可选的 npm 固定项。如果存在 `expectedIntegrity`，安装/更新流程会对 npm 强制执行它。把“展示什么”的元数据放在 `openclaw.plugin.json` 中，把“如何安装”的元数据放在 `package.json` 中。
+  <Accordion title="入门行为">
+    交互式入门会将 `openclaw.install` 用于按需安装界面：如果你的插件在运行时加载之前暴露了提供者认证选项或频道设置/目录元数据，入门流程可以提示选择 ClawHub、npm 或本地安装，完成插件安装或启用，然后继续所选流程。ClawHub 选项使用 `clawhubSpec`，在存在时优先使用；npm 选项需要带有注册表 `npmSpec` 的可信目录元数据（精确版本和 `expectedIntegrity` 是可选固定值，在设置时会在安装/更新时强制执行）。将“展示什么”放在 `openclaw.plugin.json` 中，将“如何安装它”放在 `package.json` 中。
   </Accordion>
   <Accordion title="minHostVersion 强制执行">
     如果设置了 `minHostVersion`，安装以及非捆绑的清单注册表加载都会强制执行它。较旧的宿主会跳过外部插件；无效的版本字符串会被拒绝。捆绑源码插件默认视为与宿主检出版本一致。
@@ -188,8 +207,8 @@ read_when:
     ```
 
   </Accordion>
-  <Accordion title="allowInvalidConfigRecovery 的适用范围">
-    `allowInvalidConfigRecovery` 不是对损坏配置的通用绕过。它仅用于狭义的捆绑插件恢复，因此重装/设置可以修复已知的升级残留，例如缺失的捆绑插件路径，或同一插件的过期 `channels.<id>` 条目。如果配置因无关原因损坏，安装仍会失败并提示操作员运行 `openclaw doctor --fix`。
+  <Accordion title="allowInvalidConfigRecovery 作用范围">
+    `allowInvalidConfigRecovery` 不是对损坏配置的通用绕过。它只用于狭义的捆绑插件恢复，允许重装/设置修复已知的升级残留，例如缺失的捆绑插件路径，或同一插件中陈旧的 `channels.<id>` 条目。如果配置因无关原因损坏，安装仍会失败并提示操作员运行 `openclaw doctor --fix`。
   </Accordion>
 </AccordionGroup>
 
@@ -215,7 +234,7 @@ read_when:
 只有当你的 `setupEntry` 在网关开始监听前注册了网关所需的一切内容时，才启用延迟加载（频道注册、HTTP 路由、网关方法）。如果完整入口承担了必需的启动能力，请保持默认行为。
 </Warning>
 
-如果你的设置/完整入口注册了网关 RPC 方法，请将它们保留在插件专属前缀下。保留的核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍由核心拥有，并始终解析到 `operator.admin`。
+如果你的设置/完整入口注册了网关 RPC 方法，请将它们放在插件专用前缀下。保留的核心管理命名空间（`config.*`、`exec.approvals.*`、`wizard.*`、`update.*`）仍由核心拥有，并始终规范化为 `operator.admin`。
 
 ## 插件清单
 
@@ -239,12 +258,11 @@ read_when:
 }
 ```
 
-对于频道插件，添加 `kind` 和 `channels`：
+对于频道插件，添加 `channels`（提供方插件则添加 `providers`）：
 
 ```json
 {
   "id": "my-channel",
-  "kind": "channel",
   "channels": ["my-channel"],
   "configSchema": {
     "type": "object",
@@ -270,7 +288,7 @@ read_when:
 
 ## ClawHub 发布
 
-对于插件包，请使用包专用的 ClawHub 命令：
+Skills 和 plugin packages 使用单独的 ClawHub 发布命令。对于 plugin packages，请使用包特定的命令：
 
 ```bash
 clawhub package publish your-org/your-plugin --dry-run
@@ -278,12 +296,12 @@ clawhub package publish your-org/your-plugin
 ```
 
 <Note>
-旧的仅技能发布别名是给技能使用的。插件包应始终使用 `clawhub package publish`。
+`clawhub skill publish <path>` 是用于发布 skill 文件夹的不同命令，不是 plugin package。请参阅 [Publishing on ClawHub](/clawhub/publishing)。
 </Note>
 
 ## Setup 入口
 
-`setup-entry.ts` 文件是 `index.ts` 的轻量替代方案，OpenClaw 会在只需要设置相关界面（引导、配置修复、禁用频道检查）时加载它。
+`setup-entry.ts` 是 `index.ts` 的轻量替代方案，OpenClaw 仅在需要设置界面时加载它（引导、配置修复、已禁用频道检查）：
 
 ```typescript
 // setup-entry.ts
@@ -333,13 +351,13 @@ export default defineSetupPluginEntry(myChannelPlugin);
 
 当你想要完整的共享设置工具箱时，请使用更宽泛的 `plugin-sdk/setup` 接口，包括诸如 `moveSingleAccountChannelSectionToDefaultAccount(...)` 之类的配置补丁辅助工具。
 
-对于固定的设置向导文案，请使用 `createSetupTranslator(...)`。它会遵循 CLI 向导的语言环境（先读取 `OPENCLAW_LOCALE`，再读取系统语言环境变量），并回退到英文。插件专有的设置文案应保留在插件自有代码中，仅将通用的设置标签、状态文本以及官方打包插件的设置文案放入共享目录键。
+对于固定的设置向导文案，请使用 `createSetupTranslator(...)`。它遵循 CLI 向导的语言环境（先 `OPENCLAW_LOCALE`，然后是系统语言环境变量），并回退到英语。将插件特定的设置文本保留在插件自有代码中，仅对通用的设置标签、状态文本以及官方打包插件设置文案使用共享目录键。
 
 setup 补丁适配器在导入时对热路径是安全的。其打包后的单账户提升契约面查找是懒加载的，因此导入 `plugin-sdk/setup-runtime` 不会在适配器真正被使用之前就急切地加载打包契约面的发现逻辑。
 
 ### 频道拥有的单账户提升
 
-当某个频道从单账户顶层配置升级到 `channels.<id>.accounts.*` 时，默认共享行为是将被提升的账户范围值移动到 `accounts.default`。
+当频道从顶层单账户配置升级到 `channels.<id>.accounts.*` 时，默认的共享行为会将被提升的账户作用域值移动到 `accounts.default`。
 
 打包频道可以通过其 setup 契约面来收窄或覆盖该提升行为：
 
@@ -453,7 +471,7 @@ const setupWizard: ChannelSetupWizard = {
 };
 ```
 
-`ChannelSetupWizard` 类型支持更多内容，包括 `credentials`、`textInputs`、`dmPolicy`、`allowFrom`、`groupAccess`、`prepare` 和 `finalize`。完整示例请参阅打包的插件包（例如 Discord 插件的 `src/channel.setup.ts`）。
+`ChannelSetupWizard` 也支持 `textInputs`、`dmPolicy`、`allowFrom`、`groupAccess`、`prepare`、`finalize` 等更多功能。完整的打包示例请参见 Discord 插件的 `src/setup-core.ts`。
 
 <AccordionGroup>
   <Accordion title="共享 allowFrom 提示">
@@ -503,7 +521,7 @@ const setupWizard: ChannelSetupWizard = {
     openclaw plugins install @myorg/openclaw-my-plugin
     ```
 
-    纯包规格会在启动切换期间从 npm 安装。
+    普通包规格会在启动切换期间从 npm 安装，除非名称与某个内置或官方插件 id 匹配；在这种情况下，OpenClaw 会改用本地/官方副本。若要确定性地选择来源，请使用 `clawhub:`、`npm:`、`git:` 或 `npm-pack:` —— 参见 [管理插件](/plugins/manage-plugins)。
 
   </Tab>
   <Tab title="仅 ClawHub">
@@ -521,16 +539,10 @@ const setupWizard: ChannelSetupWizard = {
   </Tab>
 </Tabs>
 
-**仓库内插件：** 将它们放在已打包插件工作区树下，构建期间会自动发现。
-
-**用户可安装：**
-
-```bash
-openclaw plugins install <package-name>
-```
+**仓库内插件：** 放置在已打包插件的工作区树下；它们会在构建期间自动被发现。
 
 <Info>
-对于从 npm 源安装的插件，`openclaw plugins install` 会在 `~/.openclaw/npm/projects` 下为每个插件创建一个项目并安装该包，同时禁用生命周期脚本。请保持插件依赖树为纯 JS/TS，并避免使用需要 `postinstall` 构建的包。
+对于从 npm 源安装的插件，`openclaw plugins install` 会将包安装到 `~/.openclaw/npm/projects` 下按插件划分的项目中，并禁用生命周期脚本（`--ignore-scripts`）。请保持插件依赖树纯 JS/TS，并避免使用需要 `postinstall` 构建的包。
 </Info>
 
 <Note>

@@ -1,5 +1,5 @@
 ---
-summary: "通过 imsg（经 stdio 传输的 JSON-RPC）提供原生 iMessage 支持，并带有用于回复、tapback、效果、附件和群组管理的私有 API 操作。对于主机要求符合条件的新 OpenClaw iMessage 配置，优先推荐使用。"
+summary: "通过 imsg 提供原生 iMessage 支持（通过 stdio 传输的 JSON-RPC），并提供用于回复、tapback、效果、投票、附件和群组管理的私有 API 操作。对于符合主机要求的新 OpenClaw iMessage 设置，优先使用此方式。"
 read_when:
   - 设置 iMessage 支持
   - 调试 iMessage 发送/接收
@@ -16,11 +16,11 @@ title: "iMessage"
 BlueBubbles 支持已被移除。请将 `channels.bluebubbles` 配置迁移到 `channels.imessage`；OpenClaw 仅通过 `imsg` 支持 iMessage。从 [BlueBubbles 移除与 imsg iMessage 路径](/announcements/bluebubbles-imessage) 查看简短公告，或从 [来自 BlueBubbles](/channels/imessage-from-bluebubbles) 查看完整迁移表。
 </Warning>
 
-状态：原生外部 CLI 集成。Gateway 会启动 `imsg rpc`，并通过 stdio 上的 JSON-RPC 通信（没有单独的守护进程/端口）。高级操作需要 `imsg launch` 以及成功的私有 API 探测。
+状态：原生外部 CLI 集成。Gateway 会启动 `imsg rpc` 并通过 stdio 进行 JSON-RPC 通信——无需单独的守护进程或端口。高级操作需要 `imsg launch` 以及成功的私有 API 探测。
 
 <CardGroup cols={3}>
-  <Card title="私有 API 操作" icon="wand-sparkles" href="#private-api-actions">
-    回复、tapback、效果、附件和群组管理。
+  <Card title="Private API actions" icon="wand-sparkles" href="#private-api-actions">
+    回复、tapback、效果、投票、附件和群组管理。
   </Card>
   <Card title="配对" icon="link" href="/channels/pairing">
     iMessage 私信默认使用配对模式。
@@ -104,8 +104,8 @@ exec ssh -T gateway-host imsg "$@"
       cliPath: "~/.openclaw/scripts/imsg-ssh",
       remoteHost: "user@gateway-host", // 用于通过 SCP 拉取附件
       includeAttachments: true,
-      // 可选：覆盖允许的附件根目录。
-      // 默认包含 /Users/*/Library/Messages/Attachments
+      // 可选：额外允许的附件根目录（与默认的
+      // /Users/*/Library/Messages/Attachments 合并）。
       attachmentRoots: ["/Users/*/Library/Messages/Attachments"],
       remoteAttachmentRoots: ["/Users/*/Library/Messages/Attachments"],
     },
@@ -113,9 +113,9 @@ exec ssh -T gateway-host imsg "$@"
 }
 ```
 
-    如果未设置 `remoteHost`，OpenClaw 会尝试通过解析 SSH 包装脚本自动检测。
-    `remoteHost` 必须是 `host` 或 `user@host`（不能有空格或 SSH 选项）。
-    OpenClaw 对 SCP 使用严格的 host key 检查，因此中继主机的 host key 必须已经存在于 `~/.ssh/known_hosts` 中。
+    如果未设置 `remoteHost`，OpenClaw 会尝试通过解析 SSH 包装脚本自动检测它。
+    `remoteHost` 必须是 `host` 或 `user@host`（不能有空格或 SSH 选项）；不安全的值会被忽略。
+    OpenClaw 对 SCP 使用严格的主机密钥检查，因此中继主机密钥必须已存在于 `~/.ssh/known_hosts` 中。
     附件路径会根据允许的根目录（`attachmentRoots` / `remoteAttachmentRoots`）进行验证。
 
 <Warning>
@@ -133,15 +133,15 @@ exec ssh -T gateway-host imsg "$@"
   </Tab>
 </Tabs>
 
-## 要求和权限（macOS）
+## Requirements and permissions (macOS)
 
-- Messages 必须在运行 `imsg` 的 Mac 上已登录。
-- 运行 OpenClaw/`imsg` 的进程上下文需要完全磁盘访问权限（用于访问 Messages 数据库）。
-- 通过 Messages.app 发送消息需要自动化权限。
-- 对于高级操作（react / edit / unsend / threaded reply / effects / group ops），必须禁用系统完整性保护（SIP）——见下方 [启用 imsg 私有 API](#enabling-the-imsg-private-api)。基础文本和媒体收发在不禁用 SIP 的情况下也能工作。
+- Messages must be signed in on the Mac running `imsg`.
+- Full Disk Access is required for the process context running OpenClaw/`imsg` (Messages DB access).
+- Automation permission is required to send messages through Messages.app.
+- For advanced actions (react / edit / unsend / threaded reply / effects / polls / group ops), System Integrity Protection must be disabled — see [Enabling the imsg private API](#enabling-the-imsg-private-api). Basic text and media send/receive work without it.
 
 <Tip>
-权限是按进程上下文授予的。如果 gateway 以无头方式运行（LaunchAgent/SSH），请在相同上下文中运行一次交互式命令以触发权限提示：
+Permissions are granted per process context. If the gateway runs headless (LaunchAgent/SSH), run a one-time interactive command in that same context to trigger prompts:
 
 ```bash
 imsg chats --limit 1
@@ -164,7 +164,7 @@ Not authorized to send Apple events to Messages. (-1743)
 kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.apple.MobileSMS
 ```
 
-在这种状态下，重复执行 `tccutil reset AppleEvents` 或通过同一个 SSH 包装器重新运行 `imsg send` 可能仍会失败，因为需要 Messages Automation 的进程上下文是 SSH 包装器，而不是 UI 可以授予权限的某个应用。
+在这种状态下，重复执行 `tccutil reset AppleEvents` 或通过同一个 SSH 包装器重新运行 `imsg send` 可能仍然会失败，因为需要 Messages Automation 的进程上下文是 SSH 包装器，而不是 UI 可以授予权限的某个应用。
 
 请改用受支持的 `imsg` 进程上下文之一：
 
@@ -178,10 +178,10 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 `imsg` 提供两种运行模式：
 
-- **基础模式**（默认，不需要更改 SIP）：通过 `send` 发送外发文本和媒体、入站监控/历史、聊天列表。这就是在全新安装 `brew install steipete/tap/imsg` 并授予上面列出的标准 macOS 权限后可直接获得的能力。
-- **私有 API 模式**：`imsg` 会将一个 helper dylib 注入 `Messages.app`，以调用内部 `IMCore` 函数。这会解锁 `react`、`edit`、`unsend`、`reply`（线程式）、`sendWithEffect`、`renameGroup`、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`，以及输入状态指示和已读回执。
+- **基本模式**（默认，无需更改 SIP）：通过 `send` 发送文本和媒体、入站监控/历史记录、聊天列表。这就是你在全新安装 `brew install steipete/tap/imsg` 再加上上面的标准 macOS 权限后开箱即用所获得的能力。
+- **私有 API 模式**：`imsg` 会向 `Messages.app` 注入一个 helper dylib，以调用内部 `IMCore` 函数。这将解锁 `react`、`edit`、`unsend`、`reply`（线程式）、`sendWithEffect`、`poll` 和 `poll-vote`（原生 Messages 投票）、`renameGroup`、`setGroupIcon`、`addParticipant`、`removeParticipant`、`leaveGroup`，以及输入指示和已读回执。
 
-要达到本页面所描述的这个通道的高级操作能力，你需要私有 API 模式。`imsg` 的 README 明确说明了这一点：
+本页的高级操作接口需要私有 API 模式。`imsg` README 也明确说明了这一要求：
 
 > 诸如 `read`、`typing`、`launch`、基于桥接的富发送、消息变更和聊天管理等高级功能都是可选的。它们需要禁用 SIP，并将一个 helper dylib 注入到 `Messages.app` 中。启用 SIP 时，`imsg launch` 会拒绝注入。
 
@@ -190,7 +190,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 <Warning>
 **禁用 SIP 是真实的安全权衡。** SIP 是 macOS 防止运行被修改系统代码的核心保护之一；在系统范围内关闭它会带来额外的攻击面和副作用。尤其是，**在 Apple Silicon Mac 上禁用 SIP 也会禁用在你的 Mac 上安装和运行 iOS App 的能力**。
 
-请将其视为一个有意的运维决策，而不是默认设置。如果你的威胁模型不能接受关闭 SIP，那么内置 iMessage 仅限于基础模式——仅文本和媒体收发，不支持 reaction / edit / unsend / effects / group ops。
+请把这视为一个有意的运维选择，而不是默认配置。如果你的威胁模型无法接受关闭 SIP，那么捆绑的 iMessage 只能停留在基本模式——仅支持文本和媒体的发送/接收，不支持反应、编辑、撤回、效果或群组操作。
 </Warning>
 
 ### 设置
@@ -216,23 +216,19 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
    sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist DisableLibraryValidation -bool true
    ```
 
-   **macOS 26（Tahoe），已在 26.5.1 上验证：** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 当注入失败时，plist 是决定性因素，也是 Tahoe 上最常见的遗漏步骤：
-   - **有 plist：** `imsg launch` 会注入，且 `imsg status` 会报告 `advanced_features: true`。
-   - **没有 plist（即使关闭了 SIP）：** `imsg launch` 会失败并报出 `Failed to launch: Timeout waiting for Messages.app to initialize`。AMFI 在加载时拒绝该 adhoc helper，因此 bridge 永远无法就绪，启动也会超时。这个超时是 Tahoe 上大多数人遇到的症状，修复方法就是上面的 plist，而不是采取更激进的措施。
+   **macOS 26 (Tahoe), verified on 26.5.1:** 关闭 SIP **再加上**上面的 `DisableLibraryValidation` 命令，就足以在 26.0 到 26.5.x 之间注入 helper。**不需要 boot-args。** 该 plist 是决定性因素，也是 Tahoe 上注入失败时最常遗漏的一步：
+   - **有 plist：** `imsg launch` 会完成注入，并且 `imsg status` 会报告 `advanced_features: true`。
+   - **没有 plist（即使 SIP 已关闭）：** `imsg launch` 会失败，并报出 `Failed to launch: Timeout waiting for Messages.app to initialize`。AMFI 在加载时拒绝了 adhoc helper，因此 bridge 永远无法就绪，启动最终超时。这个超时是大多数人在 Tahoe 上遇到的症状；修复方法就是上面的 plist，而不是采取更激进的手段。
 
-   这一点已在 macOS 26.5.1（Apple Silicon）上通过受控的前后对比得到确认：有 plist 时，dylib 会映射进 `Messages.app`，bridge 会启动；移除 plist 并重启后，`imsg launch` 会产生上面的超时失败，并且 dylib 不会被映射。
+   如果在 macOS 升级后，`imsg launch` 注入失败，或者某些特定 `selectors` 开始返回 false，通常就是这个门槛导致的。在假设 SIP 步骤本身失败之前，请先检查你的 SIP 和 library-validation 状态。如果这些设置都正确，但 bridge 仍然无法注入，请收集 `imsg status --json` 和 `imsg launch` 的输出并反馈给 `imsg` 项目，而不是进一步削弱系统级安全控制。
 
-   如果在 macOS 升级后，`imsg launch` 注入或某些特定 `selectors` 开始返回 false，通常就是这个门槛导致的。在假设 SIP 步骤本身失败之前，请先检查你的 SIP 和 library-validation 状态。如果这些设置都正确，但 bridge 仍然无法注入，请收集 `imsg status --json` 和 `imsg launch` 的输出并反馈给 `imsg` 项目，而不是进一步削弱系统级安全控制。
-
-   在运行 `imsg launch` 之前，请按照 Apple 针对你的 Mac 的恢复模式流程禁用 SIP。
-
-3. **注入 helper。** 在 SIP 已禁用且 Messages.app 已登录的情况下：
+3. **注入 helper。** 在禁用 SIP 且已登录 Messages.app 的情况下：
 
    ```bash
    imsg launch
    ```
 
-   当 SIP 仍启用时，`imsg launch` 会拒绝注入，因此这也可作为第 2 步是否生效的确认。
+   当 SIP 仍然启用时，`imsg launch` 会拒绝注入，因此这也可作为第 2 步是否生效的确认。
 
 4. **从 OpenClaw 验证桥接：**
 
@@ -240,17 +236,17 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
    openclaw channels status --probe
    ```
 
-   iMessage 条目应报告为 `works`，并且 `imsg status --json | jq '.selectors'` 应显示 `retractMessagePart: true`，以及你的 macOS 构建所暴露的编辑 / 输入状态 / 已读等选择器。OpenClaw 插件在 `actions.ts` 中按方法进行的能力门控，只会公开其底层 selector 为 `true` 的操作，因此你在代理工具列表中看到的动作范围，反映了该主机上的桥接实际能做什么。
+   iMessage 条目应报告为 `works`，并且 `imsg status --json | jq '{rpc_methods, selectors}'` 应显示你的 macOS 构建所暴露的能力。创建投票需要 `selectors.pollPayloadMessage`；投票需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC method。OpenClaw 插件只会公开缓存探测所支持的操作，而空缓存则保持乐观，并在首次分发时进行探测。
 
 如果 `openclaw channels status --probe` 将该通道报告为 `works`，但在分发时某些特定操作抛出 “iMessage `<action>` requires the imsg private API bridge”，请再次运行 `imsg launch`——helper 可能会脱落（Messages.app 重启、系统更新等），而缓存的 `available: true` 状态会继续宣告这些操作，直到下一次探测刷新它为止。
 
-### 当你无法禁用 SIP 时
+### 当 SIP 保持启用时
 
-如果你的威胁模型不接受禁用 SIP：
+如果根据你的威胁模型不能关闭 SIP：
 
-- `imsg` 会回退到基础模式——仅文本 + 媒体 + 接收。
-- OpenClaw 插件仍会公开文本/媒体发送和入站监控；只是会根据按方法的能力门控，在动作面上隐藏 `react`、`edit`、`unsend`、`reply`、`sendWithEffect` 和群组操作。
-- 你可以在另一台非 Apple Silicon Mac（或一台专用 bot Mac）上关闭 SIP 来承担 iMessage 工作负载，同时在你的主设备上保持 SIP 启用。见下方 [专用 bot macOS 用户（独立 iMessage 身份）](#deployment-patterns)。
+- `imsg` 会回退到基本模式——仅支持文本 + 媒体 + 接收。
+- OpenClaw 插件仍会展示文本/媒体发送和入站监控；它会根据按方法能力门控隐藏 `react`、`edit`、`unsend`、`reply`、`sendWithEffect` 和群组操作。
+- 你可以使用一台独立的非 Apple Silicon Mac（或专用 bot Mac）在关闭 SIP 的情况下承担 iMessage 工作负载，同时在主设备上保持 SIP 启用。请参见下面的 [专用 bot macOS 用户（独立 iMessage 身份）](#deployment-patterns)。
 
 ## 访问控制和路由
 
@@ -258,9 +254,9 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
   <Tab title="DM 策略">
     `channels.imessage.dmPolicy` 控制私信：
 
-    - `pairing`（默认）
-    - `allowlist`
-    - `open`（要求 `allowFrom` 包含 `"*"`)
+    - `pairing` (default)
+    - `allowlist` (requires at least one `allowFrom` entry)
+    - `open` (requires `allowFrom` to include `"*"`)
     - `disabled`
 
     允许列表字段：`channels.imessage.allowFrom`。
@@ -272,7 +268,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
   <Tab title="群组策略 + 提及">
     `channels.imessage.groupPolicy` 控制群组处理：
 
-    - `allowlist`（配置时的默认值）
+    - `allowlist` (default)
     - `open`
     - `disabled`
 
@@ -280,23 +276,23 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
     `groupAllowFrom` 条目也可以引用静态发送者访问组（`accessGroup:<name>`）。
 
-    运行时回退：如果未设置 `groupAllowFrom`，iMessage 群组发送者检查会使用 `allowFrom`；当私信和群组准入应不同时时，请设置 `groupAllowFrom`。
-    运行时说明：如果完全缺少 `channels.imessage`，运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使设置了 `channels.defaults.groupPolicy` 也是如此）。
+    运行时回退：如果未设置 `groupAllowFrom`，iMessage 群组发送者检查会使用 `allowFrom`；当 DM 和群组准入需要不同设置时，请设置 `groupAllowFrom`。显式空的 `groupAllowFrom: []` 不会回退——它会在 `allowlist` 下阻止所有群组发送者。
+    运行时说明：如果 `channels.imessage` 完全缺失，运行时会回退到 `groupPolicy="allowlist"` 并记录警告（即使设置了 `channels.defaults.groupPolicy`）。
 
     <Warning>
-    群组路由有 **两个** 依次执行的允许列表门槛，而且两者都必须通过：
+    `groupPolicy: "allowlist"` 下的群组路由会连续运行 **两个** 门控：
 
-    1. **发送者 / 聊天目标允许列表**（`channels.imessage.groupAllowFrom`）——handle、`chat_guid`、`chat_identifier` 或 `chat_id`。
-    2. **群组注册表**（`channels.imessage.groups`）——在 `groupPolicy: "allowlist"` 下，这个门槛要求要么有一个 `groups: { "*": { ... } }` 通配条目（设置 `allowAll = true`），要么在 `groups` 下有一个显式的按 `chat_id` 条目。
+    1. **发送者允许列表**（`channels.imessage.groupAllowFrom`）——handle、`accessGroup:<name>`、`chat_guid`、`chat_identifier` 或 `chat_id`。空的有效列表（既没有 `groupAllowFrom` 也没有 `allowFrom` 回退）会阻止每个群组发送者。
+    2. **群组注册表**（`channels.imessage.groups`）——当映射中有条目时才强制执行：聊天必须匹配明确的按 `chat_id` 配置项，或匹配 `groups: { "*": { ... } }` 通配项。当 `groups` 为空或缺失时，仅由发送者允许列表决定是否准入。
 
-    如果第 2 个门槛为空，所有群组消息都会被丢弃。插件在默认日志级别下会发出两条 `warn` 级别信号：
+    如果未配置有效的群组发送者允许列表，则每条群组消息都会在注册表门控之前被丢弃。每个门控在默认日志级别下都有各自的 `warn` 级信号，并且各自对应不同的修复方式：
 
-    - 启动时每个账号一次：`imessage: groupPolicy="allowlist" but channels.imessage.groups is empty for account "<id>"`
-    - 运行时每个 `chat_id` 一次：`imessage: dropping group message from chat_id=<id> ...`
+    - 启动时每个账户只记录一次：当有效的群组发送者允许列表为空时，`imessage: groupPolicy="allowlist" for account "<id>" but no group sender allowlist is configured ...` —— 通过设置 `channels.imessage.groupAllowFrom`（或 `allowFrom`）来修复；仅添加 `groups` 条目会让门控 1 继续阻止所有发送者。
+    - 运行时每个 `chat_id` 只记录一次：当发送者通过了门控 1，但该聊天在已填充的 `groups` 注册表中缺失时，`imessage: dropping group message from chat_id=<id> ...` —— 通过在 `channels.imessage.groups` 下添加该 `chat_id`（或 `"*"`）来修复。
 
-    私信仍然可以工作，因为它们走的是不同的代码路径。
+    私信不受影响——它们走的是不同的代码路径。
 
-    在 `groupPolicy: "allowlist"` 下保持群组消息正常流动的最小配置：
+    在 `groupPolicy: "allowlist"` 下推荐的群组流配置：
 
     ```json5
     {
@@ -310,20 +306,19 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     }
     ```
 
-    如果网关日志中出现这些 `warn` 行，说明第 2 个门槛正在丢弃消息——请添加 `groups` 块。
+    仅 `groupAllowFrom` 就能允许这些发送者进入任何群组；再添加 `groups` 块即可限定允许哪些聊天（并设置诸如 `requireMention` 之类的每聊天选项）。
     </Warning>
 
     群组提及门控：
 
     - iMessage 没有原生提及元数据
-    - 提及检测使用正则模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
-    - 如果未配置任何模式，则无法执行提及门控
-
-    来自已授权发送者的控制命令可以绕过群组中的提及门控。
+    - 提及检测使用正则表达式模式（`agents.list[].groupChat.mentionPatterns`，回退为 `messages.groupChat.mentionPatterns`）
+    - 如果没有配置模式，则无法执行提及门控
+    - 来自授权发送者的控制命令会绕过提及门控
 
     每组 `systemPrompt`：
 
-    `channels.imessage.groups.*` 下的每个条目都接受一个可选的 `systemPrompt` 字符串。该值会在每次处理该组消息的回合中注入到代理的系统提示词里。其解析方式与 `channels.whatsapp.groups` 使用的按组提示词解析规则一致：
+    `channels.imessage.groups.*` 下的每个条目都接受一个可选的 `systemPrompt` 字符串，该字符串会在每一轮处理该群组消息时注入到代理的系统提示词中。解析方式与 `channels.whatsapp.groups` 一致：
 
     1. **组特定系统提示词**（`groups["<chat_id>"].systemPrompt`）：当映射中存在该特定组条目并且其 `systemPrompt` 键已定义时使用。如果 `systemPrompt` 为空字符串（`""`），则会抑制通配符，并且不会将系统提示词应用于该组。
     2. **组通配系统提示词**（`groups["*"].systemPrompt`）：当特定组条目在映射中完全不存在，或者它存在但未定义 `systemPrompt` 键时使用。
@@ -350,7 +345,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     }
     ```
 
-    每组提示词仅适用于群组消息——此通道中的直接消息不受影响。
+    每组提示词仅适用于群组消息——私信不受影响。
 
   </Tab>
 
@@ -370,7 +365,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 ## ACP 会话绑定
 
-传统 iMessage 聊天也可以绑定到 ACP 会话。
+iMessage 聊天可以绑定到 ACP 会话。
 
 快速操作流程：
 
@@ -379,7 +374,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 - `/new` 和 `/reset` 会就地重置同一个已绑定的 ACP 会话。
 - `/acp close` 会关闭 ACP 会话并移除绑定。
 
-通过顶层 `bindings[]` 条目支持已配置的持久绑定，使用 `type: "acp"` 和 `match.channel: "imessage"`。
+已配置的持久绑定使用顶层 `bindings[]` 条目，其中 `type: "acp"` 且 `match.channel: "imessage"`。
 
 `match.peer.id` 可以使用：
 
@@ -431,7 +426,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     1. 创建/登录一个专用的 macOS 用户。
     2. 在该用户中使用 bot Apple ID 登录 Messages。
     3. 在该用户中安装 `imsg`。
-    4. 创建 SSH 包装脚本，以便 OpenClaw 可以在该用户上下文中运行 `imsg`。
+    4. 创建一个 SSH 包装器，以便 OpenClaw 可以在该用户上下文中运行 `imsg`。
     5. 将 `channels.imessage.accounts.<id>.cliPath` 和 `.dbPath` 指向该用户配置文件。
 
     首次运行时，可能需要在该 bot 用户会话中进行 GUI 授权（Automation + Full Disk Access）。
@@ -491,22 +486,24 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 <AccordionGroup>
   <Accordion title="附件和媒体">
-    - 入站附件摄取**默认关闭**——将 `channels.imessage.includeAttachments: true` 设为开启后，才会把照片、语音备忘录、视频及其他附件转发给代理。若保持关闭，仅包含附件的 iMessage 会在到达代理之前被丢弃，并且可能根本不会生成任何 `Inbound message` 日志行。
-    - 当设置了 `remoteHost` 时，可通过 SCP 拉取远程附件路径
+    - 默认情况下，入站附件摄取是**关闭**的——设置 `channels.imessage.includeAttachments: true` 可将照片、语音备忘录、视频和其他附件转发给代理。若保持禁用，仅包含附件的 iMessage 会在到达代理之前被丢弃，甚至可能完全不会产生任何 `Inbound message` 日志行。
+    - 当设置了 `remoteHost` 时，可通过 SCP 获取远程附件路径
     - 附件路径必须匹配允许的根目录：
       - `channels.imessage.attachmentRoots`（本地）
       - `channels.imessage.remoteAttachmentRoots`（远程 SCP 模式）
-      - 默认根路径模式：`/Users/*/Library/Messages/Attachments`
+      - 配置的根目录会扩展默认根路径模式 `/Users/*/Library/Messages/Attachments`（是合并，不是替换）
     - SCP 使用严格的主机密钥检查（`StrictHostKeyChecking=yes`）
     - 出站媒体大小使用 `channels.imessage.mediaMaxMb`（默认 16 MB）
 
   </Accordion>
 
-  <Accordion title="出站分块">
-    - 文本分块限制：`channels.imessage.textChunkLimit`（默认 4000）
+  <Accordion title="出站文本和分块">
+    - 文本块限制：`channels.imessage.textChunkLimit`（默认 4000）
     - 分块模式：`channels.imessage.chunkMode`
       - `length`（默认）
       - `newline`（优先按段落拆分）
+    - 出站 markdown 中的粗体/斜体/下划线/删除线会转换为原生样式文本（macOS 15+ 的接收方会显示这些样式；较旧的接收方会看到不带标记的纯文本）；markdown 表格会根据通道的 markdown 表格模式进行转换
+    - `channels.imessage.sendTransport`（默认 `auto`，可选 `bridge`、`applescript`）用于选择 `imsg` 的发送方式
 
   </Accordion>
 
@@ -534,6 +531,8 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
 当 `imsg launch` 正在运行，并且 `openclaw channels status --probe` 报告 `privateApi.available: true` 时，消息工具除了正常文本发送之外，还可以使用 iMessage 原生动作。
 
+所有动作默认启用；使用 `channels.imessage.actions` 可以关闭单个动作：
+
 ```json5
 {
   channels: {
@@ -550,6 +549,7 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
         addParticipant: true,
         removeParticipant: true,
         leaveGroup: true,
+        polls: true,
       },
     },
   },
@@ -557,19 +557,23 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 ```
 
 <AccordionGroup>
-  <Accordion title="可用动作">
-    - **react**：添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。
-    - **reply**：对现有消息发送线程式回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to`）。
-    - **sendWithEffect**：发送带有 iMessage 效果的文本（`text` 或 `message`、`effect` 或 `effectId`）。
-    - **edit**：在支持的 macOS/私有 API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。
-    - **unsend**：在支持的 macOS/私有 API 版本上撤回已发送消息（`messageId`）。
-    - **upload-file**：发送媒体/文件（`buffer` 为 base64，或已加载的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
-    - **renameGroup**、**setGroupIcon**、**addParticipant**、**removeParticipant**、**leaveGroup**：当当前目标是群聊时，管理群聊。
+  <Accordion title="Available actions">
+    - **react**: 添加/移除 iMessage tapback（`messageId`、`emoji`、`remove`）。支持的 tapback 映射到 love、like、dislike、laugh、emphasize 和 question。不带 emoji 进行移除会清除已设置的任意 tapback。
+    - **reply**: 向现有消息发送线程回复（`messageId`、`text` 或 `message`，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。带附件的回复还需要一个 `imsg` 构建版本，其 `send-rich` 支持 `--file`。
+    - **sendWithEffect**: 发送带 iMessage 效果的文本（`text` 或 `message`，`effect` 或 `effectId`）。短名称：slam、loud、gentle、invisibleink、confetti、lasers、fireworks、balloon、heart、echo、happybirthday、shootingstar、sparkles、spotlight。
+    - **edit**: 在受支持的 macOS/private API 版本上编辑已发送消息（`messageId`、`text` 或 `newText`）。只能编辑网关自身发送的消息。
+    - **unsend**: 在受支持的 macOS/private API 版本上撤回已发送消息（`messageId`）。只能撤回网关自身发送的消息。
+    - **upload-file**: 发送媒体/文件（`buffer` 以 base64 形式，或已 hydrated 的 `media`/`path`/`filePath`，`filename`，可选 `asVoice`）。旧别名：`sendAttachment`。
+    - **renameGroup**、**setGroupIcon**、**addParticipant**、**removeParticipant**、**leaveGroup**: 当当前目标是群聊时管理群聊。这些操作会修改主机的 Messages 身份，因此需要 owner sender 或 `operator.admin` Gateway 客户端。
+    - **poll**: 创建原生 Apple Messages 投票（`pollQuestion`、`pollOption` 重复 2 到 12 次，以及 `chatGuid`、`chatId`、`chatIdentifier` 或 `to` 之一）。iOS/iPadOS/macOS 26+ 上的接收者会原生查看并投票；较旧的 OS 版本会收到“Sent a poll”文本回退。需要 `selectors.pollPayloadMessage`。
+    - **poll-vote**: 对现有投票进行投票（`pollId` 或 `messageId`，以及 `pollOptionIndex`、`pollOptionId` 或 `pollOptionText` 中恰好一个）。需要 `selectors.pollVoteMessage` 和 `poll.vote` RPC 方法。
+
+    被接受的入站投票会向代理呈现问题、带编号的选项标签、票数，以及 `poll-vote` 所需的投票消息 ID。
 
   </Accordion>
 
   <Accordion title="Message IDs">
-    入站 iMessage 上下文在可用时会同时包含简短的 `MessageSid` 值和完整的消息 GUID。简短 ID 的作用域限定在最近的 SQLite 后端回复缓存中，并且在使用前会先检查当前聊天。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
+    入站 iMessage 上下文在可用时同时包含简短的 `MessageSid` 值和完整的消息 GUID（`MessageSidFull`）。简短 ID 仅作用于最近的、基于 SQLite 的回复缓存，并且在使用前会先与当前聊天进行校验。如果简短 ID 已过期或属于其他聊天，请改用完整的 `MessageSidFull` 重试。
 
   </Accordion>
 
@@ -578,8 +582,8 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
 
   </Accordion>
 
-  <Accordion title="已读回执和输入状态">
-    当私有 API 桥接可用时，接受到的入站聊天会在分发前被标记为已读，并且在代理生成回复时会向发送者显示输入状态气泡。可通过以下方式禁用已读标记：
+  <Accordion title="Read receipts and typing">
+    当私有 API 桥接可用时，已接受的入站聊天会被标记为已读，而直接聊天会在回合被接受时立刻显示正在输入气泡，同时代理准备上下文并生成回复。可通过以下方式禁用已读标记：
 
     ```json5
     {
@@ -591,12 +595,12 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     }
     ```
 
-    早于按方法级别能力列表的旧版 `imsg` 构建会静默关闭输入状态/已读；OpenClaw 每次重启只会记录一次警告，因此缺失回执的原因可以追溯。
+    早于按方法能力列表门控的旧版 `imsg` 构建会静默关闭 typing/read；OpenClaw 会在每次重启后记录一次警告，以便将缺失的回执归因。
 
   </Accordion>
 
   <Accordion title="入站 tapback">
-    OpenClaw 会订阅 iMessage tapback，并将接受到的反应作为系统事件路由，而不是普通消息文本，因此用户的 tapback 不会触发普通回复循环。
+    OpenClaw 会订阅 iMessage tapback，并将收到的反应作为系统事件路由，而不是普通消息文本，因此用户的 tapback 不会触发普通回复循环。
 
     通知模式由 `channels.imessage.reactionNotifications` 控制：
 
@@ -615,14 +619,15 @@ kTCCServiceAppleEvents | /usr/libexec/sshd-keygen-wrapper | auth_value=0 | com.a
     - `👎`（Dislike tapback）→ `deny`
     - `allow-always` 仍然是手动回退方式：作为普通回复发送 `/approve <id> allow-always`。
 
-    反应处理要求作出反应的用户 handle 明确属于审批人。审批人列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；请添加用户的 E.164 格式电话号码或其 Apple ID 电子邮件。通配符条目 `"*"` 会被接受，但会允许任何发送者进行批准。该反应快捷方式会刻意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式审批人允许列表才是批准解析真正需要的唯一门槛。
+    反应处理要求作出反应的用户句柄必须是显式批准者。批准者列表从 `channels.imessage.allowFrom`（或 `channels.imessage.accounts.<id>.allowFrom`）读取；将用户的 E.164 格式电话号码或其 Apple ID 邮箱加入其中即可（如 `chat_id:*` 这样的聊天目标不是有效的批准者条目）。通配条目 `"*"` 会被接受，但会允许任何发送者批准；空批准者列表会完全禁用该反应快捷方式。该反应快捷方式刻意绕过 `reactionNotifications`、`dmPolicy` 和 `groupAllowFrom`，因为显式批准者白名单才是审批解析真正需要的唯一门槛。
 
-    **此版本的行为变化：** 当 `channels.imessage.allowFrom` 非空时，`/approve <id> <decision>` 文本命令现在会依据该审批人列表进行授权（而不是更宽泛的 DM 允许列表）。虽然在 DM 允许列表中获准但不在 `allowFrom` 中的发送者将收到明确拒绝。请将所有应该能够通过 `/approve`（以及通过反应）进行批准的操作员添加到 `allowFrom` 中，以保留先前行为。当 `allowFrom` 为空时，旧的“同聊天回退”仍然生效，且 `/approve` 继续授权任何 DM 允许列表所允许的用户。
+    `/approve` 文本命令的授权遵循相同列表：当 `channels.imessage.allowFrom` 非空时，`/approve <id> <decision>` 会依据该批准者列表进行授权（而不是更宽泛的 DM 白名单），而只在 DM 白名单中获准、但不在 `allowFrom` 中的发送者会收到明确拒绝。当 `allowFrom` 为空时，仍保持同聊天回退机制，`/approve` 会授权 DM 白名单允许的任何人。请把所有应当批准的操作员——无论是通过 `/approve` 还是通过反应——都加入 `allowFrom`。
 
     操作员说明：
-    - 该反应绑定会同时存储在内存中（TTL 与批准过期时间匹配）以及网关的持久键值存储中，因此在网关重启后不久到达的 tapback 仍可解析为该批准。
-    - 来自其他设备的 `is_from_me=true` tapback（操作者在已配对 Apple 设备上的自身反应）会被刻意忽略，因此机器人不能自我批准。
-    - 旧式文本风格 tapback（非常老旧 Apple 客户端发出的纯文本 `Liked "…"`）无法解析批准，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端发出的结构化 tapback 元数据。
+    - 反应绑定同时存储在内存和网关的持久化键值存储中（TTL 与审批过期时间一致），网关还会轮询待处理提示是否有 tapback，因此在网关重启后不久到达的 tapback 仍可解析为审批结果。
+    - 操作员自身的 `is_from_me=true` tapback（例如来自已配对的 Apple 设备）在该句柄是显式批准者时会解析该审批。
+    - 只有在配置了显式批准者时，审批提示才会路由到群聊；否则群组中的任何成员都可能批准。
+    - 旧式文本风格 tapback（来自非常旧的 Apple 客户端的纯文本 `Liked "…"`）无法解析审批，因为它们不携带消息 GUID；反应解析需要当前 macOS / iOS 客户端输出的结构化 tapback 元数据。
 
   </Accordion>
 </AccordionGroup>
@@ -652,7 +657,7 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 1. 一条文本消息（`"Dump"`）。
 2. 一条 URL 预览气泡（`"https://..."`），并附带 OG 预览图片作为附件。
 
-在大多数环境中，这两条记录会在约 0.8-2.0 秒内先后到达 OpenClaw。若不进行合并，代理会在第 1 轮只收到命令，随后回复（通常是“把 URL 发给我”），而直到第 2 轮才看到 URL——此时命令上下文已经丢失。这是 Apple 的发送流程导致的，不是 OpenClaw 或 `imsg` 引入的行为。
+在大多数配置中，这两行会在约 0.8-2.0 秒的间隔内到达 OpenClaw。如果不进行合并，代理在第 1 轮只会收到命令本身（而且通常会回复“请把 URL 发给我”），然后 URL 会在第 2 轮才到达。这是 Apple 的发送流程导致的，不是 OpenClaw 或 `imsg` 引入的。
 
 `channels.imessage.coalesceSameSenderDms` 会将 DM 纳入对同一发送者连续行的缓冲。当 `imsg` 在某条源记录上暴露结构化的 URL 预览标记 `balloon_bundle_id: "com.apple.messages.URLBalloonProvider"` 时，OpenClaw 只合并那次真实的拆分发送，并保持其他缓冲记录作为独立轮次。在较旧、完全不输出 balloon 元数据的 `imsg` 版本上，OpenClaw 无法区分拆分发送和独立发送，因此会回退为合并整个缓冲桶。这样可以保留元数据引入前的行为，而不是把 `Dump <url>` 的拆分发送退化成两轮。群聊仍按每条消息分发，以保留多用户轮次结构。
 
@@ -690,7 +695,7 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
       messages: {
         inbound: {
           byChannel: {
-            // 7000 ms covers observed Messages.app URL-preview delays.
+            // 7000 毫秒可覆盖已观察到的 Messages.app URL 预览延迟。
             imessage: 7000,
           },
         },
@@ -699,12 +704,12 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
     ```
 
   </Tab>
-  <Tab title="取舍">
-    - **精确合并依赖当前 `imsg` 的 payload 元数据。** 当 URL 行包含 `balloon_bundle_id` 时，只有那次真实的拆分发送会被合并，而其他缓冲行保持独立。在较旧、完全不暴露 balloon 元数据的 `imsg` 版本上，OpenClaw 会回退为合并缓冲桶，这样 `Dump <url>` 的拆分发送不会退化成两轮（这是临时的兼容行为；等 `imsg` 在上游把拆分发送合并后会移除）。
-    - **DM 消息会增加延迟。** 打开该标志后，每条 DM（包括独立控制命令和单条文本后续消息）都会在调度前最多等待一个防抖窗口，以便判断是否有 URL 预览行即将到来。群聊消息仍会立即分发。
-    - **合并输出有上限。** 合并后的文本最多 4000 个字符，并带有显式的 `…[truncated]` 标记；附件最多 20 个；源条目最多 10 个（超过后保留最早和最新）。每个源 GUID 都会记录在 `coalescedMessageGuids` 中，供下游遥测使用。
-    - **仅限 DM。** 群聊会继续按每条消息分发，因此当多人同时发言时机器人仍能保持响应。
-    - **按通道启用。** 其他通道（Telegram、WhatsApp、Slack、…）不受影响。仍使用旧 BlueBubbles 配置的 `channels.bluebubbles.coalesceSameSenderDms` 应迁移到 `channels.imessage.coalesceSameSenderDms`。
+  <Tab title="权衡">
+    - **精确合并需要当前 `imsg` 载荷元数据。** 当存在 `balloon_bundle_id` 时，只有真实的拆分发送才会被合并；上文所述的不含元数据的回退合并只是临时的向后兼容方案，待 `imsg` 在上游合并拆分发送后将被移除。
+    - **DM 消息会增加延迟。** 开启该标志后，每条 DM（包括独立的控制命令和单条文本后续消息）都会在分发前最多等待一个防抖窗口，以防后续会到达 URL 预览行。群聊消息仍保持即时分发。
+    - **合并输出有上限。** 合并后的文本最多 4000 个字符，并带有明确的 `…[truncated]` 标记；附件最多 20 个；源条目最多 10 条（超过后保留第一条和最新条）。每个源 GUID 都会在 `coalescedMessageGuids` 中跟踪，用于下游遥测。
+    - **仅限 DM。** 群聊会继续按单条消息分发，因此当多人同时发言时，机器人仍然保持响应。
+    - **按通道启用。** 其他通道（Discord、Slack、Telegram、WhatsApp，等等）不受影响。将旧的 BlueBubbles 配置中设置的 `channels.bluebubbles.coalesceSameSenderDms` 迁移到 `channels.imessage.coalesceSameSenderDms`。
 
   </Tab>
 </Tabs>
@@ -713,23 +718,23 @@ iMessage 默认允许由频道发起的配置写入（用于 `/config set|unset`
 
 “启用标志”列显示的是在会输出 `balloon_bundle_id` 的 `imsg` 构建版本上的行为。在更旧、完全不输出 balloon 元数据的 `imsg` 构建上，下方标记为“两轮”/“N 轮”的行会回退为旧式合并（1 轮）：OpenClaw 无法从结构上区分拆分发送和独立发送，因此会保留元数据引入前的合并行为。只有当构建版本开始输出 balloon 元数据后，精确分离才会启用。
 
-| User composes                                                      | `chat.db` produces                  | Flag off (default)                      | Flag on + window (imsg emits balloon metadata)                                                      |
+| 用户输入内容                                                     | `chat.db` 产生的结果               | 关闭标志（默认）                        | 打开标志 + 窗口（imsg 输出 balloon 元数据）                                                          |
 | ------------------------------------------------------------------ | ----------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `Dump https://example.com` (one send)                              | 2 rows ~1 s apart                   | Two agent turns: "Dump" alone, then URL | One turn: merged text `Dump https://example.com`                                                    |
-| `Save this 📎image.jpg caption` (attachment + text)                | 2 rows without URL balloon metadata | Two turns                               | Two turns after metadata is observed; one merged turn on old/pre-latch metadata-less sessions       |
-| `/status` (standalone command)                                     | 1 row                               | Instant dispatch                        | **Wait up to window, then dispatch**                                                                |
-| URL pasted alone                                                   | 1 row                               | Instant dispatch                        | Wait up to window, then dispatch                                                                    |
-| Text + URL sent as two deliberate separate messages, minutes apart | 2 rows outside window               | Two turns                               | Two turns (window expires between them)                                                             |
-| Rapid flood (>10 small DMs inside window)                          | N rows without URL balloon metadata | N turns                                 | N turns after metadata is observed; one bounded merged turn on old/pre-latch metadata-less sessions |
-| Two people typing in a group chat                                  | N rows from M senders               | M+ turns (one per sender bucket)        | M+ turns — group chats are not coalesced                                                            |
+| `Dump https://example.com`（一次发送）                             | 约 1 秒间隔的 2 行                  | 两轮代理轮次：“Dump” 单独一轮，然后是 URL | 一轮：合并后的文本 `Dump https://example.com`                                                       |
+| `Save this 📎image.jpg caption`（附件 + 文本）                     | 没有 URL balloon 元数据的 2 行       | 两轮                                   | 在观察到元数据后为两轮；在旧的/预闩锁的、无元数据会话中为一轮合并                                     |
+| `/status`（独立命令）                                              | 1 行                                | 立即分发                                | **最多等待一个窗口，然后分发**                                                                      |
+| 单独粘贴的 URL                                                     | 1 行                                | 立即分发                                | 最多等待一个窗口，然后分发                                                                         |
+| 文本 + URL 作为两条刻意分开的消息发送，且间隔数分钟               | 窗口外的 2 行                         | 两轮                                   | 两轮（窗口在它们之间过期）                                                                          |
+| 短时间内快速洪泛（窗口内超过 10 条小 DM）                         | 没有 URL balloon 元数据的 N 行       | N 轮                                   | 在观察到元数据后为 N 轮；在旧的/预闩锁的、无元数据会话中为一个有上限的合并轮次                       |
+| 群聊中两个人同时发言                                              | 来自 M 个发送者的 N 行               | M+ 轮（每个发送者桶一轮）               | M+ 轮——群聊不会被合并                                                                               |
 
 ## 桥接器或网关重启后的入站恢复
 
 iMessage 会恢复网关停机期间遗漏的消息，同时抑制 Apple 在 Push 恢复后可能一次性刷出的陈旧“积压爆发”。默认行为始终开启，建立在入站去重之上。
 
-- **重放去重。** 每条已分发的入站消息都会通过其 Apple GUID 记录到持久化插件状态（`imessage.inbound-dedupe`）中，在接收时认领，并在处理完成后提交（若发生临时失败则释放，以便重试）。任何已经处理过的内容都会被丢弃，而不会重复分发。这使得恢复可以激进地重放，而无需逐条记录状态。
-- **停机恢复。** 启动时，监控会记住最后一次分发的 `chat.db` 行号（每个账户持久化的游标），并将其作为 `since_rowid` 传给 `imsg watch.subscribe`，这样 `imsg` 就会重放网关停机期间到达的那些行，然后继续追踪实时流。重放范围限制在最近的若干行以及约 2 小时内的消息，去重机制会丢弃任何已经处理过的内容。
-- **陈旧积压年龄防线。** 启动边界之上的行是真正实时的；其中发送时间比到达时间早超过约 15 分钟的，则是 Push 刷出的积压消息，会被抑制。重放的行（处于边界之上或之下）则使用更宽的恢复窗口，因此最近遗漏的消息会被投递，而更早的历史消息不会。
+- **重放去重。** 每条已分发的入站消息都会通过其 Apple GUID 记录到持久化插件状态（`imessage.inbound-dedupe`）中，在接收时被认领，并在处理完成后提交（若发生瞬时失败则释放，以便重试）。任何已经处理过的内容都会被丢弃，而不会被重复分发。正因为如此，恢复重放才能激进进行，而无需逐条消息记账。
+- **停机恢复。** 在启动时，监视器会记住最后一次分发的 `chat.db` 行号（每个账户持久化的游标），并将其作为 `since_rowid` 传递给 `imsg watch.subscribe`，因此 imsg 会重放网关停机期间落入的行，然后切换为实时尾随。重放范围限制为最近 500 行以及约 2 小时内的消息，而去重机制会丢弃任何已处理过的内容。
+- **陈旧积压年龄防线。** 启动边界之上的行是真正的实时消息；其中发送时间比到达时间早超过约 15 分钟的，则属于 Push 刷新后的积压，会被抑制。被重放的行（位于边界处或低于边界）则改用更宽松的恢复窗口，因此最近遗漏的消息会被投递，而古老历史不会。
 
 恢复机制同时适用于本地和远程 `cliPath`，因为 `since_rowid` 重放通过同一个 `imsg` RPC 连接运行。区别在于窗口：当网关能够读取 `chat.db`（本地）时，它会锚定启动时的行号边界，限制重放跨度，并投递最多几小时前遗漏的消息；通过远程 SSH `cliPath` 时则无法读取数据库，因此重放不设上限，所有行都使用实时年龄防线——它仍会恢复最近遗漏的消息，也仍会抑制旧积压，只是使用更窄的实时窗口。要获得更宽的恢复窗口，请在 Messages 所在的 Mac 上运行网关。
 
@@ -737,13 +742,13 @@ iMessage 会恢复网关停机期间遗漏的消息，同时抑制 Apple 在 Pus
 
 被抑制的积压会按默认级别记录日志，不会静默丢弃（`recovery` 标志会显示当前使用了哪个窗口）：
 
-```
+```text
 imessage: suppressed stale inbound backlog account=<id> sent=<iso> recovery=<bool> (<N> suppressed since start)
 ```
 
 ### 迁移
 
-`channels.imessage.catchup.*` 已弃用——现在停机恢复已自动开启，新配置无需任何设置。现有配置中 `catchup.enabled: true` 仍会作为兼容性配置文件，保留用于恢复重放窗口。已禁用的 catchup 块（`enabled: false` 或未设置 `enabled: true`）已退役；`openclaw doctor --fix` 会将其移除。
+`channels.imessage.catchup.*` 已弃用——停机恢复是自动的，新配置无需任何设置。现有配置中 `catchup.enabled: true` 仍会作为兼容性配置保留，用于恢复重放窗口。已禁用的 catchup 块（`enabled: false` 或未设置 `enabled: true`）已退役；`openclaw doctor --fix` 会将其移除。
 
 ## 故障排查
 
@@ -757,7 +762,7 @@ imessage: suppressed stale inbound backlog account=<id> sent=<iso> recovery=<boo
     openclaw channels status --probe
     ```
 
-    如果探测报告不支持 RPC，请更新 `imsg`。如果私有 API 操作不可用，请在已登录的 macOS 用户会话中运行 `imsg launch`，然后再次探测。如果 Gateway 没有在 macOS 上运行，请改用上面的通过 SSH 连接远程 Mac 的设置，而不是默认的本地 `imsg` 路径。
+    如果探测报告不支持 RPC，请更新 `imsg`。如果私有 API 操作不可用，请在已登录的 macOS 用户会话中运行 `imsg launch`，然后再次进行探测。如果 Gateway 没有在 macOS 上运行，请改用上面的通过 SSH 远程连接 Mac 的方案，而不是默认的本地 `imsg` 路径。
 
   </Accordion>
 

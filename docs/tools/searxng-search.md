@@ -81,16 +81,7 @@ SearXNG 实例的插件级设置：
 }
 ```
 
-`baseUrl` 字段也接受 SecretRef 对象。
-
-传输规则：
-
-- `https://` 适用于公共或私有的 SearXNG 主机
-- `http://` 仅接受受信任的私有网络或回环主机
-- 公共 SearXNG 主机必须使用 `https://`
-- 私有/内部主机使用自托管网络防护；公共 `https://`
-  主机会继续使用严格的 web-search 防护，且不能重定向到私有
-  地址
+`baseUrl` 也接受一个 SecretRef 对象（例如 `{ source: "env", id: "SEARXNG_BASE_URL" }`）。
 
 ## 环境变量
 
@@ -100,7 +91,7 @@ SearXNG 实例的插件级设置：
 export SEARXNG_BASE_URL="http://localhost:8888"
 ```
 
-当设置了 `SEARXNG_BASE_URL` 且未显式配置提供商时，自动检测会自动选择 SearXNG（优先级最低 -- 任何带密钥的 API 驱动提供商会优先获胜）。
+解析顺序：已配置的 `baseUrl` 字符串，其次是 `baseUrl` 上的内联环境变量 SecretRef，然后是 `SEARXNG_BASE_URL`。当未设置任何配置路径且 `SEARXNG_BASE_URL` 存在、同时未显式选择提供方时，自动检测会选择 SearXNG。
 
 ## 插件配置参考
 
@@ -110,23 +101,21 @@ export SEARXNG_BASE_URL="http://localhost:8888"
 | `categories` | 以逗号分隔的分类，例如 `general`、`news` 或 `science`   |
 | `language`   | 结果的语言代码，例如 `en`、`de` 或 `fr`                |
 
-## 注意事项
+`web_search` 工具调用还接受 `count`（1-10 个结果）、`categories` 和 `language` 作为每次调用的覆盖参数。
+
+## 说明
 
 - **JSON API** -- 使用 SearXNG 原生的 `format=json` 端点，而不是 HTML 抓取
-- **图片结果 URL** -- 当 SearXNG 返回直接图片 URL 时，图片分类结果会包含 `img_src`
-- **无 API 密钥** -- 可直接与任何 SearXNG 实例配合使用
-- **基础 URL 校验** -- `baseUrl` 必须是有效的 `http://` 或 `https://`
-  URL；公共主机必须使用 `https://`
-- **网络防护** -- 私有/内部 SearXNG 端点会显式启用
-  私有网络访问；公共 `https://` SearXNG 端点会保持严格的 SSRF
-  防护
-- **自动检测顺序** -- 在已配置密钥的 API 驱动提供商之后检查 SearXNG（顺序 200）。
-  像 DuckDuckGo 或 Ollama Web Search 这样的无密钥提供商，如果没有明确选择提供商，不会被自动选中
+- **图片结果 URL** -- 图片类别结果在 SearXNG 返回直接图片 URL 时会包含 `img_src`
+- **无需 API 密钥** -- 可直接与任何 SearXNG 实例配合使用
+- **基础 URL 验证** -- `baseUrl` 必须是有效的 `http://` 或 `https://` URL
+- **网络保护** -- `http://` 基础 URL 必须指向受信任的私有或回环主机（公网主机必须使用 `https://`）；解析到私有/内部地址的 `https://` 基础 URL 享有相同的自托管许可，而解析到公网的 `https://` 基础 URL 则保持严格的 SSRF 保护
+- **自动检测顺序** -- SearXNG 需要配置 `baseUrl`（在已具备所需凭据的提供方中排序为 200）。像 DuckDuckGo 或 Ollama Web Search 这类无密钥提供方不会隐式赢得自动检测；它们仅在显式选择 `provider` 时激活
 - **自托管** -- 你可以控制实例、查询以及上游搜索引擎
-- **分类** 默认在未配置时为 `general`
-- **分类回退** -- 如果非 `general` 分类请求成功但
-  返回零结果，OpenClaw 会在返回空结果集之前，用 `general`
-  再尝试一次相同查询
+- **类别** 在未配置时默认为 `general`
+- **类别回退** -- 如果非 `general` 类别请求成功但返回零结果，OpenClaw 会在返回空结果集之前，使用 `general` 再重试一次相同查询
+- **结果缓存** -- 相同的查询（相同的 query、count、categories、language 和 base URL）会在进程内缓存一小段 TTL
+- **版本要求** -- 该插件声明 `minHostVersion: >=2026.6.9`
 
 <Tip>
   为了让 SearXNG JSON API 正常工作，请确保你的 SearXNG 实例在其 `settings.yml` 的 `search.formats` 下启用了 `json`

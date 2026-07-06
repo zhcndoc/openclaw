@@ -1,5 +1,5 @@
 ---
-summary: "通过 Token Plan 搜索 API 使用 MiniMax Search"
+summary: "通过 Token Plan 搜索 API 使用 MiniMax 搜索"
 read_when:
   - 你想将 MiniMax 用于 web_search
   - 你需要 MiniMax Token Plan 密钥或 OAuth 令牌
@@ -26,9 +26,11 @@ OpenClaw 通过 MiniMax Token Plan 搜索 API 支持将 MiniMax 作为 `web_sear
   </Step>
 </Steps>
 
-OpenClaw 也接受 `MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN` 和
-`MINIMAX_API_KEY` 作为环境变量别名。`MINIMAX_API_KEY` 应指向一个
-支持搜索的 Token Plan 凭据；普通的 MiniMax 模型 API 密钥可能不会被 Token Plan 搜索端点接受。
+OpenClaw 还接受 `MINIMAX_CODING_API_KEY`、`MINIMAX_OAUTH_TOKEN` 和
+`MINIMAX_API_KEY` 作为环境别名，会在
+`MINIMAX_CODE_PLAN_KEY` 之后按此顺序检查。`MINIMAX_API_KEY` 应指向一个支持搜索的
+Token Plan 凭据；普通的 MiniMax 模型 API 密钥可能不被
+Token Plan 搜索端点接受。
 
 ## 配置
 
@@ -83,10 +85,10 @@ web search 的注册 provider id 仍然是 `minimax`；OAuth 提供方的 base U
 
 ## 支持的参数
 
-| Parameter | Type    | Constraints | Description                                                                 |
-| --------- | ------- | ----------- | --------------------------------------------------------------------------- |
-| `query`   | string  | required    | 搜索查询字符串。                                                        |
-| `count`   | integer | 1-10        | 返回结果数量。OpenClaw 会将返回列表截断为此大小。 |
+| Parameter | Type    | Constraints     | Description                                                                 |
+| --------- | ------- | --------------- | --------------------------------------------------------------------------- |
+| `query`   | string  | required        | 搜索查询字符串。                                                        |
+| `count`   | integer | 1-10, default 5 | 返回结果的数量。OpenClaw 会将返回的列表截断为此大小。 |
 
 目前不支持提供方特定的筛选器。
 

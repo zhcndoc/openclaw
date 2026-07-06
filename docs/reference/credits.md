@@ -5,9 +5,7 @@ read_when:
 title: "致谢"
 ---
 
-## 名称的由来
-
-OpenClaw = CLAW + TARDIS，因为每只太空龙虾都需要一台时空机器。
+OpenClaw = CLAW + TARDIS：每只太空龙虾都需要一台时间与空间机器。
 
 ## 致谢
 
@@ -19,11 +17,11 @@ OpenClaw = CLAW + TARDIS，因为每只太空龙虾都需要一台时空机器�
 
 - **Maxim Vovshin** (@Hyaxia, [36747317+Hyaxia@users.noreply.github.com](mailto:36747317+Hyaxia@users.noreply.github.com)) - Blogwatcher 技能
 - **Nacho Iacovino** (@nachoiacovino, [nacho.iacovino@gmail.com](mailto:nacho.iacovino@gmail.com)) - 位置解析（Telegram 和 WhatsApp）
-- **Vincent Koc** ([@vincentkoc](https://github.com/vincentkoc), [@vincent_koc](https://x.com/vincent_koc)) - Agents、Telemetry、Hooks、Security
+- **Vincent Koc** ([@vincentkoc](https://github.com/vincentkoc), [@vincent_koc](https://x.com/vincent_koc)) - 代理、遥测、钩子、安全
 
 ## 许可证
 
-MIT - 像海洋里的龙虾一样自由。
+MIT，版权归 OpenClaw Foundation 所有。所纳入或改编代码的第三方声明见 `THIRD_PARTY_NOTICES.md`。
 
 > "我们都只是在摆弄自己的提示词。"（一位 AI，大概嗑了很多 token）
 

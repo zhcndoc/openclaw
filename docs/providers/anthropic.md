@@ -7,15 +7,24 @@ title: "Anthropic"
 
 Anthropic 构建了 **Claude** 模型家族。OpenClaw 支持两种认证方式：
 
-- **API key** — Anthropic API 直接访问，按使用量计费（`anthropic/*` 模型）
-- **Claude CLI** — 复用同一主机上现有的 Claude Code 登录
+- **API key** - 直接访问 Anthropic API，并按使用量计费（`anthropic/*` 模型）
+- **Claude CLI** - 在同一主机上复用现有的 Claude Code 登录
 
 <Warning>
-OpenClaw 的 Claude CLI 后端会以非交互式打印模式运行已安装的 Claude Code CLI。Anthropic 目前的 Claude Code 文档将 `claude -p` 描述为 Agent SDK/程序化用法。自 2026 年 6 月 15 日起，Anthropic 表示订阅计划中的 `claude -p` 使用不再从普通 Claude 订阅额度中扣除；它会先从单独的每月 Agent SDK credit 中扣除，之后在这些 credit 启用时再按标准 API 费率从 usage credits 中扣除。
+OpenClaw 的 Claude CLI 后端会以
+非交互式打印模式（`claude -p`）运行已安装的 Claude Code CLI。Anthropic 当前的 Claude Code 文档
+将该模式描述为 Agent SDK/程序化使用。Anthropic 于 2026 年 6 月 15 日
+发布的支持更新暂停了此前宣布的独立 Agent SDK 计费变更：Claude
+Agent SDK、`claude -p` 以及第三方应用使用仍然会消耗已登录订阅的使用额度，并且此前宣布的每月 Agent SDK
+额度在 Anthropic 修改该计划期间不可用。
 
-交互式 Claude Code 仍然会从已登录的 Claude 订阅额度中扣除。API key 认证仍然是直接的按量付费 API 计费。对于长期运行的网关主机、共享自动化和可预测的生产支出，请使用 Anthropic API key。
+交互式 Claude Code 仍然会消耗已登录 Claude 套餐的额度。
+API key 认证则是直接的按量付费计费，不依赖该套餐。
+对于长期运行的网关主机、共享自动化和可预测的生产
+支出，请使用 Anthropic API key。
 
-Anthropic 当前的公开文档：
+Anthropic 当前的支持文章可能会在不发布
+OpenClaw 版本的情况下更改此行为：
 
 - [Claude Code CLI 参考](https://code.claude.com/docs/en/cli-usage)
 - [将 Claude Agent SDK 与你的 Claude 套餐一起使用](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)
@@ -32,13 +41,13 @@ Anthropic 当前的公开文档：
     **最适合：** 标准 API 访问和按使用量计费。
 
     <Steps>
-      <Step title="获取你的 API key">
-        在 [Anthropic 控制台](https://console.anthropic.com/) 中创建一个 API key。
+      <Step title="获取你的 API 密钥">
+        在 [Anthropic 控制台](https://console.anthropic.com/) 中创建一个 API 密钥。
       </Step>
       <Step title="运行初始化">
         ```bash
         openclaw onboard
-        # 选择：Anthropic API key
+        # 选择：Anthropic API 密钥
         ```
 
         或直接传入密钥：
@@ -66,7 +75,7 @@ Anthropic 当前的公开文档：
   </Tab>
 
   <Tab title="Claude CLI">
-    **最适合：** 复用现有的 Claude CLI 登录，而无需单独的 API key。
+    **最适合：** 复用现有的 Claude CLI 登录，而无需单独的 API 密钥。
 
     <Steps>
       <Step title="确保 Claude CLI 已安装并已登录">
@@ -96,7 +105,13 @@ Anthropic 当前的公开文档：
     </Note>
 
     <Warning>
-    Claude CLI 复用要求 OpenClaw 进程与 Claude CLI 登录运行在同一主机上。像 [Podman](/install/podman) 这样的容器安装不会在设置或运行时挂载主机上的 `~/.claude`；在这种情况下请使用 Anthropic API key，或选择 OpenClaw 托管 OAuth 的提供方，例如 [OpenAI Codex](/providers/openai)。
+    Claude CLI 复用要求 OpenClaw 进程运行在与 Claude CLI 登录相同的主机上。
+    Docker 安装可以持久化容器 home，并在其中登录 Claude Code；参见
+    [Docker 中的 Claude CLI 后端](/install/docker#claude-cli-backend-in-docker)。
+    其他容器安装，例如 [Podman](/install/podman)，不会在设置或运行时将主机的
+    `~/.claude` 挂载进去；请在那里使用 Anthropic API 密钥，或者选择
+    一个由 OpenClaw 管理 OAuth 的提供方，例如
+    [OpenAI Codex](/providers/openai)。
     </Warning>
 
     ### 配置示例
@@ -124,27 +139,38 @@ Anthropic 当前的公开文档：
 
     OpenClaw 在 Claude CLI 运行中使用 Claude Code 的非交互式 `claude -p` 路径。Anthropic 目前将该路径视为 Agent SDK/程序化用法：
 
-    - 直到 2026 年 6 月 15 日，订阅计划的处理方式遵循 Anthropic 针对已登录账户的当前 Claude Code 规则。
-    - 自 2026 年 6 月 15 日起，订阅计划中的 `claude -p` 使用会先从用户的每月 Agent SDK credit 中扣除，然后在启用 usage credits 时按标准 API 费率从 usage credits 中扣除。
-    - Console/API key 登录使用按量付费的 API 计费，不会获得订阅版 Agent SDK credit。
+    - Anthropic 在 2026 年 6 月 15 日的支持更新中暂停了先前公布的独立 Agent SDK 积分计划。
+    - 订阅计划下的 Claude Agent SDK、`claude -p` 和第三方应用用量仍会计入已登录订阅的使用额度。
+    - 先前公布的每月 Agent SDK 积分在 Anthropic 调整该计划期间不可用。
+    - 控制台/API 密钥登录使用按量计费的 API 计费方式，不会获得订阅的 Agent SDK 积分。
 
-    Anthropic 可能会在不发布 OpenClaw 版本的情况下更改 Claude Code 的计费和速率限制行为。若计费可预测性很重要，请检查 `claude auth status`、`/status` 以及 Anthropic 链接的文档。
+    有关暂停通知，请参阅 Anthropic 的 [Agent SDK 计划文章](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan)，
+    有关 Claude Code 计划行为，请参阅
+    [Pro/Max](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-or-max-plan)
+    和
+    [Team/Enterprise](https://support.claude.com/en/articles/11845131-use-claude-code-with-your-team-or-enterprise-plan)
+    订阅相关文章。
+
+    Anthropic 可以在不发布 OpenClaw 版本的情况下更改 Claude Code 的计费和速率限制行为。
+    当计费可预测性很重要时，请查看 `claude auth status`、`/status` 以及 Anthropic 链接的文档。
 
     <Tip>
-    对于共享的生产自动化，请使用 Anthropic API key，而不是 Claude CLI。OpenClaw 也支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/zai) 的订阅式选项。
+    对于共享的生产自动化，请使用 Anthropic API 密钥，而不是 Claude CLI。OpenClaw 也支持来自 [OpenAI Codex](/providers/openai)、[Qwen Cloud](/providers/qwen)、[MiniMax](/providers/minimax) 和 [Z.AI / GLM](/providers/zai) 的订阅式选项。
     </Tip>
 
   </Tab>
 </Tabs>
 
-## Thinking defaults (Claude Fable 5, 4.8, and 4.6)
+## 思考默认值（Claude Fable 5、4.8 和 4.6）
 
-`anthropic/claude-fable-5` 始终使用自适应思考，并默认 `high`
-effort。由于 Anthropic 不允许为该模型禁用思考，
-`/think off` 和 `/think minimal` 使用 `low` effort。OpenClaw 也会省略 Fable 5 请求中的自定义
-temperature 值。
+`anthropic/claude-fable-5` 始终使用自适应思考，并默认设为 `high`
+effort。Anthropic 不允许为该模型禁用思考，因此
+`/think off` 和 `/think minimal` 会映射为 `low` effort。OpenClaw 也会
+省略 Fable 5 请求中的自定义温度值，因为 Anthropic 会拒绝对任何启用思考的请求进行温度覆盖。
 
-Claude Opus 4.8 在 OpenClaw 中默认关闭思考。 当你显式启用自适应思考并使用 `/think high|xhigh|max` 时，OpenClaw 会发送 Anthropic 的 Opus 4.8 effort 值；Claude 4.6 模型默认使用 `adaptive`。
+Claude Opus 4.8 在 OpenClaw 中默认关闭思考。当你通过 `/think high|xhigh|max`
+显式启用自适应思考时，OpenClaw 会发送 Anthropic 的 Opus 4.8 effort 值；Claude 4.6 模型（Opus 4.6 和 Sonnet 4.6）
+默认使用 `adaptive`。
 
 可通过 `/think:<level>` 按消息覆盖，或在模型参数中设置：
 
@@ -168,6 +194,64 @@ Claude Opus 4.8 在 OpenClaw 中默认关闭思考。 当你显式启用自适�
 - [扩展思考](https://platform.claude.com/docs/en/build-with-claude/extended-thinking)
 
 </Note>
+
+## Safety refusal fallback（Claude Fable 5）
+
+<Warning>
+使用 Claude Fable 5 也意味着同时使用 Claude Opus 4.8。Fable 5 配备了
+安全分类器，可能会拒绝某些请求，而 Anthropic 认可的
+恢复方式是让 `claude-opus-4-8` 接管该轮。OpenClaw 对直接 API key 请求会
+自动启用这一点，因此某些 Fable 轮次会由 Claude Opus 4.8 回答并计费。若你的策略或预算无法接受
+由 Opus 提供服务的轮次，请不要选择 `anthropic/claude-fable-5`。
+</Warning>
+
+### Why this exists
+
+Fable 5 分类器会对受限
+领域的请求返回 `stop_reason: "refusal"`，并且还会对看似无害但相近的工作产生误判（安全
+工具、生命科学，甚至要求模型复述其原始
+推理）。如果没有 fallback，即便
+另一个 Claude 模型本可以正常服务，这一轮也会因错误而失败 —— Anthropic 自己的拒绝消息
+会提示 API 集成方配置一个 fallback 模型。
+
+### How it works
+
+1. 对每个发往 `anthropic/claude-fable-5` 的直接 API key 请求，OpenClaw 都会
+   发送 Anthropic 服务器端 fallback 的启用信号：
+   `server-side-fallback-2026-06-01` beta header 以及
+   `fallbacks: [{"model": "claude-opus-4-8"}]`。Claude Opus 4.8 是 Anthropic 允许 Fable 5 使用的唯一
+   fallback 目标。
+2. 只有安全分类器的拒绝才会触发 fallback。速率限制、
+   过载和服务器错误的行为与以往完全相同，并会走 OpenClaw 的常规 [model failover](/concepts/model-failover)。
+3. 救援发生在同一次调用内部。任何输出之前的拒绝除了延迟之外不可见；整段回答都由 Opus 4.8 提供。若在流式输出中途被拒绝，已生成的部分文本会被保留为 fallback
+   模型继续生成时的前缀，而被拒绝模型的推理和工具调用会依据 Anthropic 的重放规则被丢弃（它们不得回显或
+   执行）。
+4. 如果 Claude Opus 4.8 也拒绝了，该轮会像在此功能出现之前一样，将拒绝作为
+   错误呈现。
+
+fallback 发生在 Anthropic API 层面，因此 `claude-opus-4-8` 不需要
+出现在你配置的模型列表或 fallback 链中——具备 Fable 能力的 API key 始终可以提供 Opus 服务。
+
+### Observability and billing
+
+- 由 fallback 提供服务的轮次会在 assistant 消息上记录一条 `provider_fallback` 诊断信息，标明
+  `fromModel` 和 `toModel`，并且该消息的 `responseModel` 会报告为 `claude-opus-4-8`。
+- Anthropic 按尝试次数计费：在输出前被拒绝是免费的，而救援
+  部分按 Claude Opus 4.8 的费率计费（当前为 Fable 5 费率的一半）。OpenClaw 的
+  每轮成本估算会按 Opus 费率为 fallback 提供服务的轮次定价，以保持一致。
+- 若在流式输出中途被拒绝，Anthropic 侧还会额外计费已经流出的 Fable 部分；该部分会在 API 的每次尝试使用量中报告，但不会折算进 OpenClaw 的每轮估算中。
+
+### Scope
+
+适用于 `anthropic/claude-fable-5`，在 `api.anthropic.com` 上使用 API key 认证。
+OAuth（Claude CLI 订阅复用）、代理 base URL、Bedrock、Vertex 和 Foundry 请求都不受影响，并且在这些场景下仍会将拒绝
+作为错误返回。
+
+已在真实环境验证：当不带 fallback 发送时，要求 Fable 5 复述其原始思维链的良性提示会被拒绝，返回 `category: "reasoning_extraction"`；而同样的提示通过 OpenClaw 发送时，则会返回正常的、由 Opus 提供服务的
+答案，并附带 `provider_fallback` 诊断信息。
+
+请参阅 Anthropic 的 [refusals and fallback
+guide](https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback) 了解其底层行为。
 
 ## 提示词缓存
 
@@ -236,8 +320,8 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 ## 高级配置
 
 <AccordionGroup>
-  <Accordion title="快速模式">
-    OpenClaw 的共享 `/fast` 开关支持直接 Anthropic 流量（API key 和到 `api.anthropic.com` 的 OAuth）。
+  <Accordion title="Fast mode">
+    OpenClaw 共享的 `/fast` 切换会为直接发送到 `api.anthropic.com` 的 API key 流量设置 Anthropic 的 `service_tier` 字段。
 
     | 命令 | 映射为 |
     |------|--------|
@@ -259,16 +343,16 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     ```
 
     <Note>
-    - 仅对直接 `api.anthropic.com` 请求注入。代理路由不会改动 `service_tier`。
-    - 当两者都设置时，显式的 `serviceTier` 或 `service_tier` 参数会覆盖 `/fast`。
-    - 在没有 Priority Tier 容量的账户上，`service_tier: "auto"` 可能会解析为 `standard`。
+    - 仅适用于使用 API key 直接请求 `api.anthropic.com`。OAuth/订阅令牌请求和代理路由不会携带 `service_tier` 字段。
+    - 当同时设置了显式的 `serviceTier` 或 `service_tier` 参数时，会覆盖 `/fast`。
+    - 对于没有 Priority Tier 容量的账户，`service_tier: "auto"` 可能会解析为 `standard`。
 
     </Note>
 
   </Accordion>
 
   <Accordion title="媒体理解（图片和 PDF）">
-    随附的 Anthropic 插件会注册图片和 PDF 理解能力。OpenClaw 会根据已配置的 Anthropic 认证自动解析媒体能力——无需额外配置。
+    内置的 Anthropic 插件已注册图片和 PDF 理解能力。OpenClaw 会根据已配置的 Anthropic 认证自动解析媒体能力；无需额外配置。
 
     | 属性            | 值                    |
     | --------------- | --------------------- |
@@ -279,8 +363,8 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
   </Accordion>
 
-  <Accordion title="1M context window">
-    Anthropic 的 1M 上下文窗口可用于具备 GA 能力的 Claude 4.x 模型，例如 Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6。OpenClaw 会自动将这些模型的上下文大小设为 1M：
+  <Accordion title="1M 上下文窗口">
+    Anthropic 的 1M 上下文窗口已在具备自适应思考的 Claude 4.x 模型上 GA：Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6。OpenClaw 会自动将这些模型的上下文大小设为 1,048,576 tokens，无需 `params.context1m`：
 
     ```json5
     {
@@ -294,9 +378,9 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
     }
     ```
 
-    旧配置可以保留 `params.context1m: true`，但 OpenClaw 不再发送已弃用的 `context-1m-2025-08-07` beta 头。旧的 `anthropicBeta` 配置中带有该值的条目会在请求头解析时被忽略，未受支持的旧 Claude 模型则仍保持其正常上下文窗口。
+    旧配置可以保留 `params.context1m: true`；对于这些模型来说这只是一个无害的空操作，而且 OpenClaw 现在无论如何都不会再发送已弃用的 `context-1m-2025-08-07` beta 头。旧的 `anthropicBeta` 配置项中包含该值的条目会在请求头解析时被丢弃，不受支持的旧 Claude 模型仍会保持其正常的上下文窗口。
 
-    `params.context1m: true` 也适用于 Claude CLI 后端（`claude-cli/*`）中符合条件、支持 GA 的 Opus 和 Sonnet 模型，以保留这些 CLI 会话的运行时上下文窗口，使其与直接 API 的行为一致。
+    对 Claude CLI 后端（`claude-cli/*`）来说，`params.context1m: true` 的行为也完全相同：符合条件且支持 GA 的 Opus 和 Sonnet 模型本就会自动获得 1M 窗口，因此这里该参数同样是可选的。
 
     <Warning>
     需要你的 Anthropic 凭证具备长上下文访问权限。OAuth/订阅令牌认证会保留其所需的 Anthropic beta 头，但如果旧配置中仍保留了已废弃的 1M beta 头，OpenClaw 会将其移除。
@@ -304,8 +388,8 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.8 1M context">
-    `anthropic/claude-opus-4-8` 及其 `claude-cli` 变体默认具有 1M 上下文窗口——无需 `params.context1m: true`。
+  <Accordion title="Claude Opus 4.8 1M 上下文">
+    `anthropic/claude-opus-4-8` 及其 `claude-cli` 变体默认具有 1M 上下文窗口；无需 `params.context1m: true`。
   </Accordion>
 </AccordionGroup>
 
@@ -317,7 +401,7 @@ OpenClaw 支持 Anthropic 的提示词缓存功能，适用于 API key 认证。
   </Accordion>
 
   <Accordion title='未找到提供方 "anthropic" 的 API key'>
-    Anthropic 认证是**按代理**生效的——新代理不会继承主代理的密钥。请为该代理重新运行初始化（或在网关主机上配置 API key），然后用 `openclaw models status` 验证。
+    Anthropic 认证是**按代理**生效的；新代理不会继承主代理的密钥。请为该代理重新运行初始化（或在网关主机上配置 API key），然后使用 `openclaw models status` 进行验证。
   </Accordion>
 
   <Accordion title='未找到配置文件 "anthropic:default" 的凭证'>

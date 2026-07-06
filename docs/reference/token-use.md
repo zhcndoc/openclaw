@@ -13,13 +13,21 @@ OpenAI 风格的模型在英文文本中平均每个 token 约 4 个字符。
 
 OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
-- 工具列表 + 简短说明
-- 技能列表（仅元数据；指令会按需通过 `read` 加载）。
-  原生 Codex 回合会将紧凑的技能块作为回合作用域的协作开发者指令；
-  其他 harness 会在正常提示表面接收它。其长度受 `skills.limits.maxSkillsPromptChars` 约束，
-  并可通过 `agents.list[].skillsLimits.maxSkillsPromptChars` 按代理覆盖。
-- 自更新指令
-- 工作区 + 启动文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新建时的 `BOOTSTRAP.md`，以及存在时的 `MEMORY.md`）。当该工作区可用记忆工具时，原生 Codex 回合不会从已配置的代理工作区直接粘贴原始 `MEMORY.md`；它们会在回合作用域的协作开发者指令中包含一个简短的记忆指针，并按需使用记忆工具。如果工具被禁用、记忆搜索不可用，或者活动工作区与代理记忆工作区不同，则 `MEMORY.md` 会走正常的有界回合上下文路径。小写的根目录 `memory.md` 不会被注入；它是 `openclaw doctor --fix` 在与 `MEMORY.md` 配对时使用的旧版修复输入。较大的注入文件会被 `agents.defaults.bootstrapMaxChars` 截断（默认：20000），总启动注入受 `agents.defaults.bootstrapTotalMaxChars` 限制（默认：60000）。`memory/*.md` 日常文件不属于正常的启动提示；它们在普通回合中仍可通过记忆工具按需获取，但重置/启动模型运行可以在第一个回合前附加一个一次性的启动上下文块，包含最近的日常记忆。裸聊天 `/new` 和 `/reset` 命令会被确认，但不会调用模型。启动前导由 `agents.defaults.startupContext` 控制。压缩后的 AGENTS.md 摘录是独立的，并需要显式启用 `agents.defaults.compaction.postCompactionSections`。
+- 工具列表 + 简要描述
+- 技能列表（仅元数据；说明会在需要时通过 `read` 加载）。原生
+  Codex 回合会将紧凑的技能块作为轮次范围内协作开发者指令获取；其他 harness 会在常规提示表面中获取。
+  受 `skills.limits.maxSkillsPromptChars` 限制，并可通过
+  `agents.list[].skillsLimits.maxSkillsPromptChars` 进行按代理覆盖。
+- 自更新说明
+- 工作区 + 引导文件（`AGENTS.md`、`SOUL.md`、`TOOLS.md`、
+  `IDENTITY.md`、`USER.md`、`HEARTBEAT.md`、新的 `BOOTSTRAP.md`，以及
+  存在时的 `MEMORY.md`）。较大的注入文件会被
+  `agents.defaults.bootstrapMaxChars` 截断（默认：`20000`）；引导注入总量上限为
+  `agents.defaults.bootstrapTotalMaxChars`（默认：`60000`）。
+  - 当该工作区可用 memory 工具时，原生 Codex 回合不会粘贴原始 `MEMORY.md`；它们会在轮次范围内的协作开发者指令中改为获取一个简短的 memory 指针，并按需使用 memory 工具。如果工具被禁用、memory 搜索不可用，或当前活动工作区与代理的 memory 工作区不同，则 `MEMORY.md` 会回退到常规的有界轮次上下文路径。
+  - 以小写形式存在于根目录的 `memory.md` 从不注入。它是供 `openclaw doctor --fix` 使用的遗留修复输入，该命令会将其迁移为 `MEMORY.md`。
+  - `memory/*.md` 每日文件不属于正常的 bootstrap 提示；它们在普通回合中仍通过 memory 工具按需获取。重置/启动模型运行可以在首次回合前预先附加一个一次性的启动上下文块，其中包含最近的每日 memory，由 `agents.defaults.startupContext` 控制。空闲聊天中的 `/new` 和 `/reset` 会被确认，但不会调用模型。
+  - 事后压缩后的 `AGENTS.md` 摘录是独立的，并且需要显式选择启用 `agents.defaults.compaction.postCompactionSections`。
 - 时间（UTC + 用户时区）
 - 回复标签 + 心跳行为
 - 运行时元数据（主机/操作系统/模型/思考）
@@ -34,111 +42,110 @@ OpenClaw 会在每次运行时组装自己的系统提示。它包括：
 
 模型接收到的所有内容都会计入上下文限制：
 
-- 系统提示（上面列出的所有部分）
-- 对话历史（用户 + 助手消息）
-- 工具调用和工具结果
-- 附件/转录（图像、音频、文件）
-- 压缩摘要和剪枝产物
-- 提供方包装或安全头部（不可见，但仍会计入）
+- System prompt (all sections above)
+- Conversation history (user + assistant messages)
+- Tool calls and tool results
+- Attachments/transcripts (images, audio, files)
+- Compaction summaries and pruning artifacts
+- Provider wrappers or safety headers (not visible, but still counted)
 
-某些运行时开销较大的表面有各自明确的上限：
+运行时占用较大的内容有各自明确的上限，位于
+`agents.defaults.contextLimits` 下（每个代理的覆盖项位于
+`agents.list[].contextLimits` 下）：
 
-- `agents.defaults.contextLimits.memoryGetMaxChars`
-- `agents.defaults.contextLimits.memoryGetDefaultLines`
-- `agents.defaults.contextLimits.toolResultMaxChars`
-- `agents.defaults.contextLimits.postCompactionMaxChars`
+| 键                      | 作用                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `memoryGetMaxChars`      | `memory_get` 返回并在截断前保留的最大字符数。                           |
+| `memoryGetDefaultLines`  | 当请求省略 `lines` 时，`memory_get` 的默认行窗口。                      |
+| `toolResultMaxChars`     | 单个实时工具结果的高级上限（最高可达 `1000000` 个字符）。              |
+| `postCompactionMaxChars` | 压缩后刷新期间从 `AGENTS.md` 保留的最大字符数。                         |
 
-按代理的覆盖项位于 `agents.list[].contextLimits` 下。这些旋钮用于
-有界的运行时摘录和注入的运行时拥有块。它们与引导限制、启动上下文限制以及技能提示
+这些都是有界的运行时摘录和注入的运行时所有块，
+它们与启动引导限制、启动上下文限制以及技能提示词
 限制是分开的。
 
-`toolResultMaxChars` 是一个高级上限（最高可达 `1000000`` 字符）。当它未设置时，OpenClaw 会根据有效模型上下文窗口选择实时工具结果上限：低于 100K token 时为 `16000` 个字符，100K+ token 时为 `32000` 个字符，200K+ token 时为 `64000` 个字符，同时仍受运行时上下文共享保护限制。
+`toolResultMaxChars` 默认未设置，因此 OpenClaw 会根据生效的模型上下文窗口来推导实时
+工具结果上限：在少于 100K tokens 时为 `16000` 个字符，100K+ tokens 时为 `32000` 个字符，200K+ tokens 时为 `64000` 个字符。
+即使配置了更大的显式上限，运行时上下文共享保护机制仍会将单个工具结果限制在上下文窗口的 30%。
 
-对于图像，OpenClaw 会在调用提供方之前对转录/工具图像载荷进行缩放。
-使用 `agents.defaults.imageMaxDimensionPx`（默认：`1200`）来调整此项：
+对于图片，OpenClaw 会在调用提供方之前对转录/工具图片载荷进行降采样。可通过
+`agents.defaults.imageMaxDimensionPx` 调整（默认：
+`1200`）：
 
-- 更低的值通常会降低视觉 token 使用量和载荷大小。
-- 更高的值可为 OCR/UI 密集型截图保留更多视觉细节。
+- 更低的值会减少视觉 token 的使用和载荷大小。
+- 更高的值会为 OCR/UI 密集型截图保留更多视觉细节。
 
-关于按注入文件、工具、技能和系统提示大小的实际拆解，请使用 `/context list` 或 `/context detail`。参见 [Context](/concepts/context)。
+如需按注入文件、工具、技能和系统提示词大小进行实际拆解，请使用 `/context list` 或 `/context detail`。另请参阅
+[上下文](/concepts/context)。
 
 ## 如何查看当前 token 使用量
 
-在聊天中使用这些命令：
+在聊天中：
 
-- `/status` → **带有丰富表情的状态卡**，显示会话模型、上下文使用量、
-  上一次响应的输入/输出 token，以及在为当前模型配置了本地定价时的
-  **估算成本**。
-- `/usage off|tokens|full` → 为每个回复追加一个 **每响应使用量页脚**。
-  - 以会话为单位持久化（存储为 `responseUsage`）。
-  - `/usage full` 仅在 OpenClaw 拥有使用量元数据且当前模型有本地定价时显示估算成本。否则只显示 token。
-- `/usage cost` → 显示来自 OpenClaw 会话日志的本地成本摘要。
+- `/status` -> 带表情符号的状态卡，显示会话模型、上下文使用量、
+  上一次响应的输入/输出 token，以及在为当前活动模型配置了本地定价时的估算成本。
+- `/usage off|tokens|full` -> 为每次回复附加使用量页脚。
+  按会话持久化（存储为 `responseUsage`）。
+  - `/usage reset`（别名：`inherit`、`clear`、`default`）会清除
+    会话覆盖值，使其重新继承已配置的默认值。
+  - `/usage tokens` 显示轮次 token/cache 详情。
+  - `/usage full` 显示精简的模型/上下文/成本详情；仅当 OpenClaw 具有使用元数据且为活动模型配置了本地定价时才会显示估算成本。自定义 `messages.usageTemplate` 布局可以包含 token/cache 字段。
+- `/usage cost` -> 来自 OpenClaw 会话日志的本地成本摘要。
 
 其他表面：
 
-- **TUI/Web TUI：** 支持 `/status` + `/usage`。
-- **CLI：** `openclaw status --usage` 和 `openclaw channels list` 会显示
-  规范化后的提供方配额窗口（`X% left`，不是按响应成本）。  
-  当前使用窗口提供方：Anthropic、GitHub Copilot、Gemini CLI、
-  OpenAI Codex、MiniMax、小米和 z.ai。
+- **TUI/Web TUI:** 支持 `/status` 和 `/usage`。
+- **CLI:** `openclaw status --usage` 和 `openclaw channels list` 会显示
+  规范化后的提供方配额窗口（`X% left`，而不是按响应计费）。
+  当前支持 usage-window 的提供方：Claude（Anthropic）、ClawRouter、Copilot
+ （GitHub）、DeepSeek、Gemini（Google Gemini CLI）、MiniMax、OpenAI、小米、
+  小米 Token Plan，以及 z.ai。
 
-Usage surfaces normalize common provider-native field aliases before display.
-For OpenAI-family Responses traffic, that includes both `input_tokens` /
-`output_tokens` and `prompt_tokens` / `completion_tokens`, so transport-specific
-field names do not change `/status`, `/usage`, or session summaries.
-Gemini CLI usage is normalized too: the default `stream-json` parser reads
-assistant `message` events, and `stats.cached` maps to `cacheRead` with
-`stats.input_tokens - stats.cached` used when the CLI omits an explicit
-`stats.input` field. Legacy JSON overrides still read reply text from
-`response`.
-For native OpenAI-family Responses traffic, WebSocket/SSE usage aliases are
-normalized the same way, and totals fall back to normalized input + output when
-`total_tokens` is missing or `0`.
-When the current session snapshot is sparse, `/status` and `session_status` can
-also recover token/cache counters and the active runtime model label from the
-most recent transcript usage log. Existing nonzero live values still take
-precedence over transcript fallback values, and larger prompt-oriented
-transcript totals can win when stored totals are missing or smaller.
-Usage auth for provider quota windows comes from provider-specific hooks when
-available; otherwise OpenClaw falls back to matching OAuth/API-key credentials
-from auth profiles, env, or config.
-Assistant transcript entries persist the same normalized usage shape, including
-`usage.cost` when the active model has pricing configured and the provider
-returns usage metadata. This gives `/usage cost` and transcript-backed session
-status a stable source even after the live runtime state is gone.
+使用界面在显示前会先规范化常见的提供方原生字段别名。对于 OpenAI 系列 Responses 流量，这包括 `input_tokens`/`output_tokens` 和 `prompt_tokens`/`completion_tokens`，因此传输层特定的字段名不会改变 `/status`、`/usage` 或会话摘要。Gemini CLI 的使用量也会被规范化：默认的 `stream-json`
+解析器会读取助手的 `message` 事件，而 `stats.cached` 会映射为
+`cacheRead`，当 CLI 省略显式的 `stats.input` 字段时，会使用 `stats.input_tokens - stats.cached`。
+旧版 JSON 覆盖仍然会从 `response` 中读取回复文本。
 
-OpenClaw 将提供方使用量核算与当前上下文
-快照分开。提供方 `usage.total` 可能包含缓存输入、输出以及多次
-工具循环模型调用，因此它适合用于成本和遥测，但可能会高估
-实时上下文窗口。上下文显示和诊断会使用最新的提示
-快照（`promptTokens`，或者在没有提示快照时使用最后一次模型调用）作为 `context.used`。
+对于原生 OpenAI 系列 Responses 流量，WebSocket/SSE 使用别名会以相同方式规范化，并且当 `total_tokens` 缺失或为 `0` 时，总数会回退为规范化后的输入 + 输出。
+
+当当前会话快照较为稀疏时，`/status` 和 `session_status`
+可以从最近的转录使用日志中恢复 token/cache 计数器以及活动运行时模型标签。
+现有的非零实时值仍然优先于转录回退值，而当存储的总数缺失或更小时，更大的、以 prompt 为导向的转录总数可以胜出。
+
+提供方配额窗口的使用认证优先来自提供方特定的钩子；如果某个提供方没有钩子（或钩子未解析出 token），OpenClaw 会回退到从 auth
+配置文件、环境变量或配置中匹配 OAuth/API key 凭据。
+
+助手转录条目会持久化相同的规范化使用量结构，
+包括当活动模型已配置定价且提供方返回使用元数据时的 `usage.cost`。这使得 `/usage cost` 和基于转录的会话状态即使在实时运行时状态消失后仍能有稳定的数据来源。
+
+OpenClaw 将提供方使用量统计与当前上下文快照分开维护。提供方 `usage.total` 可能包含缓存输入、输出以及多次工具循环中的模型调用，因此它有助于成本和遥测统计，但可能会高估实时上下文窗口。上下文显示和诊断会使用最新的 prompt 快照（`promptTokens`，或者在没有 prompt 快照时使用最后一次模型调用）来计算 `context.used`。
 
 ## 成本估算（显示时）
 
 成本根据你的模型定价配置进行估算：
 
-```
+```text
 models.providers.<provider>.models[].cost
 ```
 
-这些是 `input`、`output`、`cacheRead` 和 `cacheWrite` 的 **每 100 万 token 的美元成本**。如果缺少定价，OpenClaw 只显示 token。成本显示并不局限于 API key 认证：像 `aws-sdk` 这样的非 API key 提供方，只要其配置的模型条目包含本地定价且提供方返回使用量元数据，也可以显示估算成本。
+这些是 `input`、`output`、`cacheRead` 和 `cacheWrite` 的 **每 100 万 token 的 USD 价格**。如果缺少定价，`/usage full` 会省略成本；当你需要在每次回复中都包含 token/cache 详情时，请使用 `/usage tokens` 或自定义 `messages.usageTemplate`。成本显示不局限于 API key 认证：像 `aws-sdk` 这样的非 API key 提供方，如果其配置的模型条目包含本地定价且提供方返回了使用情况元数据，也可以显示估算成本。
 
-在 sidecars 和 channels 进入 Gateway ready 路径后，OpenClaw 会为尚未拥有本地定价的已配置模型引用启动一个可选的后台定价引导流程。该引导会获取远程 OpenRouter 和 LiteLLM 定价目录。将 `models.pricing.enabled: false` 设为 false 可在离线或受限网络中跳过这些目录获取；显式的 `models.providers.*.models[].cost` 条目仍会继续驱动本地成本估算。
+在 sidecars 和 channels 到达 Gateway ready 路径之后，OpenClaw 会为尚未具有本地定价的已配置模型引用启动一个可选的后台定价引导流程。该引导流程会获取远程的 OpenRouter 和 LiteLLM 定价目录。将 `models.pricing.enabled: false` 设为 false，可在离线或受限网络中跳过这些目录获取；显式的 `models.providers.*.models[].cost` 条目仍然会驱动本地成本估算。
 
 ## Cache TTL 和剪枝影响
 
-提供方提示缓存只在 cache TTL 窗口内生效。OpenClaw 可以选择运行 **cache-ttl 剪枝**：当 cache TTL
-过期后，它会剪枝会话，然后重置缓存窗口，这样后续请求就可以重用
-新缓存的上下文，而不是重新缓存完整历史。这会在会话闲置超过 TTL 后保持更低的 cache write 成本。
+Provider prompt caching only applies within the cache TTL window. OpenClaw
+可以选择性地运行 **cache-ttl 剪枝**：当会话的 cache TTL 过期后，它会剪枝该会话，然后重置缓存窗口，从而使后续请求复用新缓存的上下文，而不是重新缓存完整历史记录。
+这样可以在会话在 TTL 过期后进入空闲状态时，降低缓存写入成本。
 
 在 [Gateway configuration](/gateway/configuration) 中进行配置，并在 [Session pruning](/concepts/session-pruning) 中查看
 行为细节。
 
-Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模型 cache TTL
-是 `1h`，将 heartbeat 间隔设置得略低一些（例如 `55m`）可以避免
-重新缓存完整提示，从而降低 cache write 成本。
+Heartbeat 可以在空闲间隔期间保持缓存 **温热**。如果你的模型缓存 TTL 是 `1h`，将 heartbeat 间隔设置得略低于该值（例如 `55m`）可以
+避免重新缓存完整提示词，从而降低缓存写入成本。
 
-在多代理设置中，你可以保留一个共享的模型配置，并通过 `agents.list[].params.cacheRetention` 针对每个代理调整缓存行为。
+In multi-agent setups, you can keep one shared model config and tune cache
+behavior per agent with `agents.list[].params.cacheRetention`.
 
 关于逐项旋钮指南，请参见 [Prompt Caching](/reference/prompt-caching)。
 
@@ -183,12 +190,14 @@ agents:
         cacheRetention: "none" # 避免为突发通知写入缓存
 ```
 
-`agents.list[].params` 会在所选模型的 `params` 之上进行合并，因此你可以
-只覆盖 `cacheRetention`，并保持其他模型默认值不变。
+`agents.list[].params` 会在所选模型的 `params` 之上进行合并，因此你
+可以只覆盖 `cacheRetention`，而其他模型默认值保持
+不变。
 
 ### Anthropic 1M context
 
-OpenClaw 将 Claude 4.x 的 GA 级模型（如 Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6）按 Anthropic 的 1M 上下文窗口进行配置。对于这些模型，你不需要
+OpenClaw 为 Anthropic 的 1M 上下文窗口配置了可 GA 的 Claude 4.x 模型，例如 Opus 4.8、Opus 4.7、Opus
+4.6 和 Sonnet 4.6。对于这些模型，你不需要
 `params.context1m: true`。
 
 ```yaml
@@ -206,9 +215,10 @@ Anthropic 已弃用的 `context-1m-2025-08-07` beta 头部，并且
 要求：凭证必须具备长上下文使用资格。否则，
 Anthropic 会针对该请求返回提供方侧的速率限制错误。
 
-如果你使用 OAuth/订阅令牌（`sk-ant-oat-*`）对 Anthropic 进行认证，
-OpenClaw 会在保留 OAuth 所需的 Anthropic beta 头部的同时，移除
-旧配置中仍保留的已弃用 `context-1m-*` beta 头部。
+If you authenticate Anthropic with OAuth/subscription tokens
+(`sk-ant-oat-*`), OpenClaw preserves the OAuth-required Anthropic beta
+headers while stripping the retired `context-1m-*` beta if it remains in
+older config.
 
 ## 降低 token 压力的建议
 

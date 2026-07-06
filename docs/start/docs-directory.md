@@ -10,49 +10,49 @@ title: "文档目录"
 有关文档的完整地图，请参阅 [文档中心](/start/hubs)。
 </Note>
 
-## 从这里开始
+## From Here
 
-- [文档中心（所有页面链接）](/start/hubs)
-- [帮助](/help)
-- [配置](/gateway/configuration)
-- [配置示例](/gateway/configuration-examples)
-- [斜杠命令](/tools/slash-commands)
-- [多代理路由](/concepts/multi-agent)
-- [更新与回滚](/install/updating)
-- [配对（DM 和节点）](/channels/pairing)
-- [Nix 模式](/install/nix)
-- [OpenClaw 助手设置](/start/openclaw)
-- [技能](/tools/skills)
-- [技能配置](/tools/skills-config)
-- [工作区模板](/reference/templates/AGENTS)
-- [RPC 适配器](/reference/rpc)
-- [网关运行手册](/gateway)
-- [节点（iOS 和 Android）](/nodes)
-- [Web 界面（控制 UI）](/web)
-- [发现与传输](/gateway/discovery)
-- [远程访问](/gateway/remote)
+- [Documentation Center (All Page Links)](/start/hubs)
+- [Help](/help)
+- [Configuration](/gateway/configuration)
+- [Configuration Examples](/gateway/configuration-examples)
+- [Slash Commands](/tools/slash-commands)
+- [Multi-Agent Routing](/concepts/multi-agent)
+- [Updates and Rollbacks](/install/updating)
+- [Pairing (DM and Nodes)](/channels/pairing)
+- [Nix Mode](/install/nix)
+- [OpenClaw Assistant Setup](/start/openclaw)
+- [Skills](/tools/skills)
+- [Skill Configuration](/tools/skills-config)
+- [Workspace Templates](/reference/templates/AGENTS)
+- [RPC Adapter](/reference/rpc)
+- [Gateway Runbook](/gateway)
+- [Nodes (iOS and Android)](/nodes)
+- [Web Interface (Control UI)](/web)
+- [Discovery and Transport](/gateway/discovery)
+- [Remote Access](/gateway/remote)
 
-## 提供方与用户体验
+## 频道与用户体验
 
-- [WebChat](/web/webchat)
-- [控制 UI（浏览器）](/web/control-ui)
-- [Telegram](/channels/telegram)
+- [控制界面（浏览器）](/web/control-ui)
 - [Discord](/channels/discord)
-- [Mattermost](/channels/mattermost)
-- [QQ Bot](/channels/qqbot)
-- [iMessage](/channels/imessage)
 - [群组](/channels/groups)
-- [WhatsApp 群组消息](/channels/group-messages)
-- [媒体图片](/nodes/images)
+- [iMessage](/channels/imessage)
+- [Mattermost](/channels/mattermost)
 - [媒体音频](/nodes/audio)
+- [媒体图片](/nodes/images)
+- [QQ 机器人](/channels/qqbot)
+- [Telegram](/channels/telegram)
+- [WebChat](/web/webchat)
+- [WhatsApp 群组消息](/channels/group-messages)
 
 ## 配套应用
 
-- [macOS app](/platforms/macos)
-- [iOS app](/platforms/ios)
-- [Android app](/platforms/android)
+- [Android 应用](/platforms/android)
+- [iOS 应用](/platforms/ios)
+- [Linux 应用](/platforms/linux)
+- [macOS 应用](/platforms/macos)
 - [Windows Hub](/platforms/windows)
-- [Linux app](/platforms/linux)
 
 ## 运营与安全
 

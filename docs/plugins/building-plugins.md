@@ -25,11 +25,11 @@ openclaw plugins install clawhub:<package-name>
 
 ## 要求
 
-- 使用 Node 22.19 或更高版本，以及 `npm` 或 `pnpm` 之类的包管理器。
-- 熟悉 TypeScript ESM 模块。
-- 对于仓库内打包插件开发，请克隆仓库并运行 `pnpm install`。
-  源码检出的插件开发仅支持 pnpm，因为 OpenClaw 会从
-  `extensions/*` 工作区包加载打包后的插件。
+- Node 22.19+、Node 23.11+ 或 Node 24+，以及 `npm` 或 `pnpm`。
+- TypeScript ESM 模块。
+- 对于仓库内捆绑插件的开发，请克隆仓库并运行 `pnpm install`。
+  源码检出插件开发仅支持 pnpm，因为 OpenClaw 会从 `extensions/*` 工作区包中发现
+  捆绑插件。
 
 ## 选择插件形态
 
@@ -51,7 +51,7 @@ openclaw plugins install clawhub:<package-name>
 ## 快速开始
 
 通过注册一个必需的代理工具来构建一个最小工具插件。这是
-最短且有用的插件形态，并展示了包、清单、入口点和
+最短且实用的插件形态，涵盖包、清单、入口点和
 本地验证。
 
 <Steps>
@@ -63,6 +63,12 @@ openclaw plugins install clawhub:<package-name>
   "name": "@myorg/openclaw-my-plugin",
   "version": "1.0.0",
   "type": "module",
+  "dependencies": {
+    "typebox": "1.1.39"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24-beta.2"
+  },
   "openclaw": {
     "extensions": ["./index.ts"],
     "compat": {
@@ -100,15 +106,15 @@ openclaw plugins install clawhub:<package-name>
     已发布的外部插件应将运行时入口指向构建后的 JavaScript
     文件。有关完整的入口点契约，请参见 [SDK 入口点](/plugins/sdk-entrypoints)。
 
-    每个插件都需要一个清单，即使它没有配置。运行时工具
-    必须出现在 `contracts.tools` 中，这样 OpenClaw 才能在不急于加载所有插件运行时的情况下发现其归属。请有意设置 `activation.onStartup`。
-    此示例会在 Gateway 启动时启动。
+    每个插件都需要一个清单，即使没有配置也一样。运行时工具必须
+    出现在 `contracts.tools` 中，这样 OpenClaw 才能在不急于加载所有插件运行时的情况下发现所有权。
+    请有意设置 `activation.onStartup`；此示例会在 Gateway 启动时加载。
 
-    Host-trusted plugin surfaces 也受清单门控，并且需要对已安装插件显式启用。如果已安装插件注册了
-    `api.registerAgentToolResultMiddleware(...)`，请在
-    `contracts.agentToolResultMiddleware` 中声明每个目标运行时。如果它注册了
-    `api.registerTrustedToolPolicy(...)`，请在
-    `contracts.trustedToolPolicies` 中声明每个策略 id。这些声明可使安装时检查与运行时注册保持一致。
+    受宿主信任的插件能力同样由清单门控，并且对已安装插件需要显式声明：
+    `api.registerAgentToolResultMiddleware(...)`
+    需要在 `contracts.agentToolResultMiddleware` 中列出每个目标运行时，
+    而 `api.registerTrustedToolPolicy(...)` 需要在
+    `contracts.trustedToolPolicies` 中列出每个策略 ID。这些声明使安装时检查与运行时注册保持一致。
 
     每个清单字段的说明请参见 [插件清单](/plugins/manifest)。
 
@@ -138,8 +144,8 @@ openclaw plugins install clawhub:<package-name>
     });
     ```
 
-    非 channel 插件使用 `definePluginEntry`。channel 插件使用
-    `defineChannelPluginEntry`。
+    对于非通道插件，请使用 `definePluginEntry`。通道插件则应改用
+    `openclaw/plugin-sdk/core` 中的 `defineChannelPluginEntry`。
 
   </Step>
 
@@ -150,29 +156,57 @@ openclaw plugins install clawhub:<package-name>
     openclaw plugins inspect my-plugin --runtime --json
     ```
 
-    如果插件注册了 CLI 命令，也请运行该命令。例如，
-    一个演示命令应具有类似
-    `openclaw demo-plugin ping` 的执行证明。
+    如果插件注册了 CLI 命令，也请运行该命令并确认
+    输出，例如 `openclaw demo-plugin ping`。
 
     对于本仓库中的打包插件，OpenClaw 会从 `extensions/*` 工作区中发现源码检出的
     插件包。运行最接近的定向测试：
 
     ```bash
-    pnpm test -- extensions/my-plugin/
+    pnpm test extensions/my-plugin/
     pnpm check
     ```
 
   </Step>
 
+  <Step title="Test the package install">
+    在发布一个可直接打包的插件之前，请测试与用户将获得的相同安装形态。
+    首先添加构建步骤，将诸如
+    `openclaw.extensions` 之类的运行时入口指向构建后的 JavaScript，例如 `./dist/index.js`，并确保
+    `npm pack` 会包含该 `dist/` 输出。TypeScript 源文件入口仅适用于源码检出和本地开发路径。
+
+    然后打包插件，并使用 `npm-pack:` 安装 tarball：
+
+    ```bash
+    npm pack --pack-destination /tmp
+    openclaw plugins install npm-pack:/tmp/<plugin-package>.tgz --force
+    openclaw plugins inspect my-plugin --runtime --json
+    ```
+
+    `npm-pack:` 使用的是 OpenClaw 为每个插件托管的 npm 项目，因此它能发现
+    源码检出测试可能隐藏的运行时依赖错误。它验证的是
+    包和依赖形态，而不是目录链接的官方信任。
+    运行时导入必须放在 `dependencies` 或 `optionalDependencies` 中；
+    仅放在 `devDependencies` 里的依赖不会被安装到托管运行时项目中。
+
+    不要把原始归档/路径安装作为官方或特权插件行为的最终验证。
+    原始源码适合本地调试，但它不能证明与 npm 或 ClawHub 安装相同的依赖路径。
+    如果你的插件依赖受信任的官方插件状态，请通过一个基于目录的官方安装，
+    或一个记录官方信任的已发布包路径，再补充第二个验证。
+    有关安装根和依赖所有权的详细信息，请参见
+    [插件依赖解析](/plugins/dependency-resolution)。
+
+  </Step>
+
   <Step title="发布">
-    发布前请验证包：
+    在发布前验证包：
 
     ```bash
     clawhub package publish your-org/your-plugin --dry-run
     clawhub package publish your-org/your-plugin
     ```
 
-    规范的 ClawHub 示例片段位于 `docs/snippets/plugin-publish/`。
+    规范的 ClawHub 包片段位于 `docs/snippets/plugin-publish/`。
 
   </Step>
 
@@ -190,8 +224,8 @@ openclaw plugins install clawhub:<package-name>
 
 ## 注册工具
 
-工具可以是必需的或可选的。启用插件时，必需工具始终可用。
-可选工具需要用户选择启用。
+工具可以是必需的或可选的。必需工具在插件启用时始终可用。
+可选工具则需要用户显式选择启用后，OpenClaw 才会加载其所属插件的运行时。
 
 ```typescript
 register(api) {
@@ -209,7 +243,7 @@ register(api) {
 }
 ```
 
-使用 `api.registerTool(...)` 注册的每个工具也必须在插件清单中声明：
+通过 `api.registerTool(...)` 注册的每个工具也必须在插件清单中声明：
 
 ```json
 {
@@ -228,72 +262,75 @@ register(api) {
 
 ```json5
 {
-  tools: { allow: ["workflow_tool"] }, // 或 ["my-plugin"]，用于启用某个插件的全部工具
+  tools: { allow: ["workflow_tool"] }, // 或 ["my-plugin"]，表示启用该插件的所有工具
 }
 ```
 
-可选工具控制工具是否对模型可见。当工具
-或 hook 应在模型选择后、动作执行前请求批准时，请使用
+可选工具用于控制哪些工具对模型可见。当工具
+或 hook 应在模型选择之后、动作执行之前请求批准时，请使用
 [插件权限请求](/plugins/plugin-permission-requests)。
 
-对于副作用、非常规二进制文件或不应默认暴露的能力，请使用可选工具。
-工具名称不得与核心工具冲突；冲突会被跳过并在插件诊断中报告。
-格式错误的注册，包括缺少 `parameters` 的工具描述符，也会以同样方式被跳过并报告。
-已注册的工具是模型在策略和允许列表检查通过后可以调用的类型化函数。
+将可选工具用于副作用、非常规二进制文件，或默认情况下
+不应暴露的能力。工具名称不得与核心工具名称冲突；发生冲突时会被跳过并在插件诊断中报告。
+格式错误的注册也会以相同方式被跳过并报告：缺少非空的
+`name`、`execute` 不是函数，或工具描述符缺少
+`parameters` 对象。
 
-工具工厂会接收一个运行时提供的上下文对象。当工具需要记录、显示或根据当前轮次的活动模型进行适配时，请使用 `ctx.activeModel`。
-该对象可能包含 `provider`、`modelId` 和 `modelRef`。
-请将其视为信息性的运行时元数据，而不是对本地操作员、已安装插件代码或被修改过的 OpenClaw 运行时的安全边界。
-敏感的本地工具仍应要求明确的插件或操作员选择启用，并在缺少活动模型元数据或其不合适时安全失败。
+工具工厂会接收一个运行时提供的上下文对象。当工具需要记录、展示或
+根据当前轮次的活动模型进行适配时，请使用 `ctx.activeModel`；
+它可能包含 `provider`、`modelId` 和 `modelRef`。
+请将其视为信息性的运行时元数据，而不是针对本地操作员、已安装插件代码或被修改的 OpenClaw 运行时的安全边界。
+敏感的本地工具仍应要求显式的插件或操作员选择启用，
+并在缺少活动模型元数据或其不合适时安全失败。
 
 清单负责声明所有权和发现；执行时仍会调用实际已注册的工具实现。
 请将 `toolMetadata.<tool>.optional: true` 与 `api.registerTool(..., { optional: true })`
 保持一致，这样 OpenClaw 才能在该工具未被显式允许列表收录前避免加载该插件运行时。
 
-## 导入约定
+## Import Conventions
 
-从聚焦的 SDK 子路径导入：
+Import from focused SDK subpaths:
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
 ```
 
-不要从已弃用的根 barrel 导入：
+Do not import from the deprecated root barrel:
 
 ```typescript
 import { definePluginEntry } from "openclaw/plugin-sdk";
 ```
 
-在你的插件包内，内部导入请使用本地 barrel 文件，例如 `api.ts` 和
-`runtime-api.ts`。不要通过 SDK 路径导入你自己的插件。特定于 provider 的辅助函数应保留在 provider 包中，除非该边界确实是通用的。
+Within your plugin package, use local barrel files for internal imports, such as `api.ts` and
+`runtime-api.ts`. Do not import your own plugin through SDK paths. Provider-specific helpers should remain in the provider package unless that boundary is genuinely shared.
 
-自定义 Gateway RPC 方法是高级入口点。请为其保留插件专用前缀；像 `config.*`、
-`exec.approvals.*`、`operator.admin.*`、`wizard.*` 和 `update.*` 这样的核心管理命名空间保持保留，
-并解析到 `operator.admin`。`openclaw/plugin-sdk/gateway-method-runtime`
-桥接仅保留给声明了 `contracts.gatewayMethodDispatch: ["authenticated-request"]`
-的插件 HTTP 路由。
+Custom Gateway RPC methods are advanced entry points. Reserve plugin-specific prefixes for them; core admin namespaces like `config.*`,
+`exec.approvals.*`, `operator.admin.*`, `wizard.*`, and `update.*` are reserved
+and resolve to `operator.admin`. The `openclaw/plugin-sdk/gateway-method-runtime`
+bridge is only for plugin HTTP routes that declare
+`contracts.gatewayMethodDispatch: ["authenticated-request"]`.
 
-完整导入映射请参见 [Plugin SDK 概览](/plugins/sdk-overview)。
+See the full import map in [Plugin SDK Overview](/plugins/sdk-overview).
 
 ## 提交前检查清单
 
 <Check>**package.json** 具有正确的 `openclaw` 元数据</Check>
-<Check>**openclaw.plugin.json** 清单文件存在且有效</Check>
+<Check>**openclaw.plugin.json** 清单文件已存在且有效</Check>
 <Check>入口点使用 `defineChannelPluginEntry` 或 `definePluginEntry`</Check>
-<Check>所有导入都使用聚焦的 `plugin-sdk/<subpath>` 路径</Check>
-<Check>内部导入使用本地模块，而不是 SDK 自导入</Check>
-<Check>测试通过（`pnpm test -- <bundled-plugin-root>/my-plugin/`）</Check>
-<Check>`pnpm check` 通过（适用于仓库内插件）</Check>
+<Check>所有导入都使用精确的 `plugin-sdk/<subpath>` 路径</Check>
+<Check>内部导入使用本地模块，而不是 SDK 自身导入</Check>
+<Check>测试通过（`pnpm test <bundled-plugin-root>/my-plugin/`）</Check>
+<Check>`pnpm check` 通过（仓库内插件）</Check>
 
 ## 测试 beta 版本
 
-1. 关注 [openclaw/openclaw](https://github.com/openclaw/openclaw/releases) 上的 GitHub 发布标签，并通过 `Watch` > `Releases` 订阅。Beta 标签看起来像 `v2026.3.N-beta.1`。你也可以为 OpenClaw 官方 X 账号 [@openclaw](https://x.com/openclaw) 启用通知，以便及时获知发布公告。
-2. 一旦出现 beta 标签，立即用它测试你的插件。正式版发布前的窗口通常只有几个小时。
-3. 测试完成后，在你插件的 `plugin-forum` Discord 主题中回复 `all good`，或说明出现了什么问题。如果你还没有主题，请创建一个。
-4. 如果存在问题，请创建或更新一个标题为 `Beta blocker: <plugin-name> - <summary>` 的 issue，并添加 `beta-blocker` 标签。将该 issue 链接放到你的主题中。
-5. 针对 `main` 创建一个标题为 `fix(<plugin-id>): beta blocker - <summary>` 的 PR，并在 PR 和你的 Discord 主题中都附上 issue 链接。贡献者不能给 PR 添加标签，因此标题是维护者和自动化识别 PR 侧信号的方式。有 PR 的 blocker 会被合并；没有 PR 的 blocker 仍然可能随版本发布。维护者会在 beta 测试期间关注这些主题。
-6. 沉默即表示通过。如果你错过了这个窗口，你的修复很可能会在下一个周期才落地。
+1. 关注 [openclaw/openclaw](https://github.com/openclaw/openclaw/releases) 的发布（`Watch` > `Releases`）。Beta 标签看起来像 `v2026.3.N-beta.1`。你也可以在 X 上关注 [@openclaw](https://x.com/openclaw) 以获取发布公告。
+2. 一旦 beta 标签出现，立即用它测试你的插件。稳定版前的窗口通常只有几个小时。
+3. 测试后，在 `plugin-forum` Discord 频道（[discord.gg/clawd](https://discord.gg/clawd)）里你插件对应的线程中发帖，内容可以是 `all good` 或者说明哪里坏了。如果你还没有线程，请创建一个。
+4. 如果有东西坏了，打开或更新一个标题为 `Beta blocker: <plugin-name> - <summary>` 的 issue，并添加 `beta-blocker` 标签。在你的线程中链接该 issue。
+5. 向 `main` 提交一个 PR，标题为 `fix(<plugin-id>): beta blocker - <summary>`，并在 PR 和你的 Discord 线程中都链接该 issue。贡献者不能给 PR 添加标签，所以标题是面向维护者和自动化系统的 PR 侧信号。带有 PR 的阻塞问题会被合并；没有 PR 的阻塞问题也可能仍然发布。
+6. 沉默就表示通过。错过时间窗口通常意味着你的修复会在下一个周期生效。
 
 ## 后续步骤
 

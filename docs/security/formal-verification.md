@@ -7,164 +7,131 @@ read_when:
 permalink: /security/formal-verification/
 ---
 
-本页面跟踪 OpenClaw 的 **形式化安全模型**（目前为 TLA+/TLC；如有需要还会增加更多）。
+OpenClaw 的形式化安全模型（目前为 TLA+/TLC）提供了一个机器检查的论证：在明确陈述的假设下，特定的最高风险路径——授权、会话隔离、工具门控以及错误配置安全性——会强制执行其预期策略。
 
 > 注：某些较旧的链接可能仍指向之前的项目名称。
 
-**目标（北极星）：** 在明确假设下，提供一份机器验证的论证，证明 OpenClaw 会强制执行其
-预期的安全策略（授权、会话隔离、工具门控和
-错误配置安全性）。
+## 这是什么
 
-**当前是什么：** 一个可执行、由攻击者驱动的**安全回归测试套件**：
+一个可执行、由攻击者驱动的安全回归测试套件：
 
-- 每个声明都有一个可运行的模型检查，覆盖有限状态空间。
-- 许多声明都有配对的**负向模型**，能够为现实中的某类 bug 生成反例轨迹。
+- 每一条声明都带有一个可在有限状态空间上运行的模型检查。
+- 许多声明都配有一个成对的负向模型，它会为现实中的某类漏洞生成反例轨迹。
 
-**这还不是（目前）：** 不能证明“OpenClaw 在各方面都安全”，也不能证明完整的 TypeScript 实现是正确的。
+这**不是**对 OpenClaw 在所有方面都安全的证明，也不会验证完整的 TypeScript 实现。
 
 ## 模型存放位置
 
-这些模型维护在单独的仓库中：[vignesh07/openclaw-formal-models](https://github.com/vignesh07/openclaw-formal-models)。
+这些模型维护在一个单独的仓库中：[vignesh07/openclaw-formal-models](https://github.com/vignesh07/openclaw-formal-models)。
 
-## 重要注意事项
+<Note>
+该仓库目前无法访问（截至撰写本文时，GitHub 返回“Repository not found”）。如果对你来说它仍然有问题，请先在 OpenClaw 维护者频道中询问当前的位置，再假定这些模型已经被移除。
+</Note>
 
-- 这些是**模型**，不是完整的 TypeScript 实现。模型与代码之间可能存在偏差。
-- 结果受 TLC 所探索的状态空间限制；“绿色”并不意味着在所建模的假设和边界之外仍然安全。
-- 某些声明依赖显式的环境假设（例如正确部署、正确的配置输入）。
+## 注意事项
+
+- 这些是模型，不是完整的 TypeScript 实现——模型与代码之间可能存在偏差。
+- 结果受 TLC 探索的状态空间限制。绿色并不意味着在所建模的假设和边界之外也具备安全性。
+- 某些声明依赖于明确的环境假设（例如，正确的部署和正确的配置输入）。
 
 ## 复现结果
 
-目前，复现方式是将模型仓库克隆到本地并运行 TLC（见下文）。未来的迭代可以提供：
-
-- 在 CI 中运行模型，并提供公开产物（反例轨迹、运行日志）
-- 提供一个托管的“运行此模型”工作流，用于小规模、有界的检查
-
-开始使用：
+克隆 models 仓库并运行 TLC：
 
 ```bash
 git clone https://github.com/vignesh07/openclaw-formal-models
 cd openclaw-formal-models
 
 # 需要 Java 11+（TLC 运行在 JVM 上）。
-# 该仓库内置了固定版本的 `tla2tools.jar`（TLA+ 工具），并提供 `bin/tlc` + Make 目标。
+# 该仓库内置了一个固定版本的 tla2tools.jar，并提供 bin/tlc 以及 Make 目标。
 
 make <target>
 ```
 
-### 网关暴露与开放网关错误配置
+目前这个仓库还没有集成 CI；未来的迭代可以添加在 CI 中运行的模型，并提供公开产物（反例轨迹、运行日志），或者为小规模有界检查提供一个托管的“运行此模型”工作流。
 
-**声明：** 在没有认证的情况下绑定到回环地址之外，可能会导致远程入侵成为可能 / 增加暴露面；令牌/密码会阻止未经认证的攻击者（在模型假设下）。
+## 主张与目标
 
-- 绿色运行：
-  - `make gateway-exposure-v2`
-  - `make gateway-exposure-v2-protected`
-- 红色（预期）：
-  - `make gateway-exposure-v2-negative`
+### 网关暴露与开放网关配置错误
 
-另见：模型仓库中的 `docs/gateway-exposure-matrix.md`。
+**主张：** 在没有认证的情况下，绑定到回环地址之外可能导致远程被攻陷，并增加暴露面；根据模型假设，令牌/密码可以阻止未认证攻击者。
 
-### Node exec 管道（最高风险能力）
+| 结果           | 目标                                                             |
+| -------------- | ---------------------------------------------------------------- |
+| 绿色          | `make gateway-exposure-v2`, `make gateway-exposure-v2-protected` |
+| 红色（预期）  | `make gateway-exposure-v2-negative`                              |
 
-**声明：** `exec host=node` 需要：(a) node 命令允许列表以及已声明的命令，并且 (b) 在已配置时需要实时审批；审批使用令牌化以防止重放（在模型中）。
+另见模型仓库中的 `docs/gateway-exposure-matrix.md`。
 
-- 绿色运行：
-  - `make nodes-pipeline`
-  - `make approvals-token`
-- 红色（预期）：
-  - `make nodes-pipeline-negative`
-  - `make approvals-token-negative`
+### 节点 exec 管道（最高风险能力）
+
+**主张：** `exec host=node` 需要：(a) 节点命令白名单以及已声明的命令，且 (b) 在配置了审批时需要实时审批；在模型中，审批使用令牌化以防止重放。
+
+| 结果           | 目标                                                        |
+| -------------- | --------------------------------------------------------------- |
+| 绿色          | `make nodes-pipeline`, `make approvals-token`                   |
+| 红色（预期）  | `make nodes-pipeline-negative`, `make approvals-token-negative` |
 
 ### 配对存储（DM 门控）
 
 **声明：** 配对请求会遵守 TTL 和待处理请求上限。
 
-- 绿色运行：
-  - `make pairing`
-  - `make pairing-cap`
-- 红色（预期）：
-  - `make pairing-negative`
-  - `make pairing-cap-negative`
+| 结果           | 目标                                                 |
+| -------------- | ---------------------------------------------------- |
+| 绿色          | `make pairing`, `make pairing-cap`                   |
+| 红色（预期）  | `make pairing-negative`, `make pairing-cap-negative` |
 
-### 入口门控（mentions + control-command 绕过）
+### 入口门控（提及与控制命令绕过）
 
-**声明：** 在需要提及的群组上下文中，未经授权的“控制命令”不能绕过提及门控。
+**主张：** 在需要提及的群组上下文中，未经授权的控制命令不能绕过提及门控。
 
-- 绿色：
-  - `make ingress-gating`
-- 红色（预期）：
-  - `make ingress-gating-negative`
+| 结果           | 目标                        |
+| -------------- | ------------------------------ |
+| 绿色          | `make ingress-gating`          |
+| 红色（预期）  | `make ingress-gating-negative` |
 
-### 路由/会话密钥隔离
+### 路由与会话密钥隔离
 
-**声明：** 来自不同对端的 DM 不会合并到同一个会话中，除非显式链接/配置。
+**主张：** 来自不同对端的私信不会合并到同一会话中，除非显式关联或进行了配置。
 
-- 绿色：
-  - `make routing-isolation`
-- 红色（预期）：
-  - `make routing-isolation-negative`
+| 结果           | 目标                           |
+| -------------- | --------------------------------- |
+| 绿色          | `make routing-isolation`          |
+| 红色（预期）  | `make routing-isolation-negative` |
 
-## v1++：额外的有界模型（并发、重试、轨迹正确性）
+## v1++ 模型：并发、重试、追踪正确性
 
-这些是后续模型，围绕真实世界的故障模式（非原子更新、重试和消息扇出）进一步提高保真度。
+围绕真实世界故障模式进一步收紧保真度的后续模型：非原子更新、重试，以及消息扇出。
 
-### 配对存储并发 / 幂等性
+### 配对存储并发与幂等性
 
-**声明：** 即使在交错执行下，配对存储也应强制执行 `MaxPending` 和幂等性（即“先检查再写入”必须是原子的 / 加锁的；刷新不应创建重复项）。
+**声明：** 配对存储即使在交错执行下也能强制执行 `MaxPending` 和幂等性——检查再写入必须是原子/加锁的，刷新也不能创建重复项。具体来说：并发请求对某个通道的数量不能超过 `MaxPending`，并且对同一 `(channel, sender)` 的重复请求/刷新不会创建重复的存活待处理行。
 
-其含义是：
+| 结果           | 目标                                                                                                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 绿色          | `make pairing-race`（原子/加锁的上限检查）、`make pairing-idempotency`、`make pairing-refresh`、`make pairing-refresh-race`                                              |
+| 红色（预期） | `make pairing-race-negative`（非原子 begin/commit 上限竞争）、`make pairing-idempotency-negative`、`make pairing-refresh-negative`、`make pairing-refresh-race-negative` |
 
-- 在并发请求下，某个通道的 `MaxPending` 不能被超过。
-- 对同一个 `(channel, sender)` 的重复请求/刷新不应创建重复的有效待处理行。
+### 入口追踪关联与幂等性
 
-- 绿色运行：
-  - `make pairing-race`（原子/加锁的上限检查）
-  - `make pairing-idempotency`
-  - `make pairing-refresh`
-  - `make pairing-refresh-race`
-- 红色（预期）：
-  - `make pairing-race-negative`（非原子的 begin/commit 上限竞争）
-  - `make pairing-idempotency-negative`
-  - `make pairing-refresh-negative`
-  - `make pairing-refresh-race-negative`
+**声明：** 当一个外部事件变成多个内部消息时，摄取过程会在扇出过程中保持追踪关联，并且在提供方重试下保持幂等性。每个部分都保持相同的追踪/事件标识；重试不会重复处理；如果缺少提供方事件 ID，则去重会回退到一个安全键（例如 trace ID），以避免丢弃不同事件。
 
-### 入口轨迹关联 / 幂等性
+| 结果           | 目标                                                                                                                                        |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 绿色          | `make ingress-trace`、`make ingress-trace2`、`make ingress-idempotency`、`make ingress-dedupe-fallback`                                     |
+| 红色（预期） | `make ingress-trace-negative`、`make ingress-trace2-negative`、`make ingress-idempotency-negative`、`make ingress-dedupe-fallback-negative` |
 
-**声明：** 摄取应在消息扇出过程中保持轨迹关联，并且在提供方重试下保持幂等。
+### 路由 dmScope 优先级与 identityLinks
 
-其含义是：
+**声明：** 路由默认保持 DM 会话隔离，并且只有在显式配置时，才会通过通道优先级和身份链接折叠会话。通道特定的 `dmScope` 覆盖优先于全局默认值；`identityLinks` 只会在显式链接的分组内折叠会话，不会跨越不相关的对端。
 
-- 当一个外部事件变成多个内部消息时，每一部分都保留相同的轨迹/事件标识。
-- 重试不会导致重复处理。
-- 如果提供方事件 ID 缺失，去重会回退到安全键（例如 trace ID），以避免丢弃不同事件。
-
-- 绿色：
-  - `make ingress-trace`
-  - `make ingress-trace2`
-  - `make ingress-idempotency`
-  - `make ingress-dedupe-fallback`
-- 红色（预期）：
-  - `make ingress-trace-negative`
-  - `make ingress-trace2-negative`
-  - `make ingress-idempotency-negative`
-  - `make ingress-dedupe-fallback-negative`
-
-### 路由 dmScope 优先级 + identityLinks
-
-**声明：** 路由必须默认保持 DM 会话隔离，并且只有在显式配置时才合并会话（通道优先级 + identity links）。
-
-其含义是：
-
-- 通道特定的 dmScope 覆盖必须优先于全局默认值。
-- identityLinks 只应在显式链接的组内合并，不应跨不相关的对端。
-
-- 绿色：
-  - `make routing-precedence`
-  - `make routing-identitylinks`
-- 红色（预期）：
-  - `make routing-precedence-negative`
-  - `make routing-identitylinks-negative`
+| 结果           | 目标                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| 绿色          | `make routing-precedence`、`make routing-identitylinks`                   |
+| 红色（预期） | `make routing-precedence-negative`、`make routing-identitylinks-negative` |
 
 ## 相关内容
 
 - [威胁模型](/security/THREAT-MODEL-ATLAS)
-- [参与威胁模型贡献](/security/CONTRIBUTING-THREAT-MODEL)
+- [为威胁模型做贡献](/security/CONTRIBUTING-THREAT-MODEL)
+- [事件响应](/security/incident-response)

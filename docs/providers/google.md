@@ -6,14 +6,12 @@ read_when:
   - 你需要 API 密钥或 OAuth 身份验证流程
 ---
 
-Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，并通过
-Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、文本转语音和网页搜索。
+Google 插件通过 Google AI Studio 提供对 Gemini 模型的访问，同时还提供图像生成、媒体理解（图像/音频/视频）、文本转语音，以及通过 Gemini Grounding 实现的网页搜索。
 
 - Provider: `google`
 - Auth: `GEMINI_API_KEY` or `GOOGLE_API_KEY`
 - API: Google Gemini API
-- Runtime option: provider/model `agentRuntime.id: "google-gemini-cli"`
-  复用 Gemini CLI OAuth，同时保持模型引用规范为 `google/*`。
+- Runtime option: `agentRuntime.id: "google-gemini-cli"` 复用 Gemini CLI OAuth，同时保持模型引用为规范的 `google/*`。
 
 ## 开始使用
 
@@ -57,7 +55,7 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
     </Steps>
 
     <Tip>
-    环境变量 `GEMINI_API_KEY` 和 `GOOGLE_API_KEY` 都可以接受。请使用你已经配置好的那个。
+    `GEMINI_API_KEY` 和 `GOOGLE_API_KEY` 都可接受。请使用你已经配置好的那个。
     </Tip>
 
   </Tab>
@@ -105,10 +103,8 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
 
     **环境变量：**
 
-    - `OPENCLAW_GEMINI_OAUTH_CLIENT_ID`
-    - `OPENCLAW_GEMINI_OAUTH_CLIENT_SECRET`
-
-    （或 `GEMINI_CLI_*` 变体。）
+    - `OPENCLAW_GEMINI_OAUTH_CLIENT_ID` / `GEMINI_CLI_OAUTH_CLIENT_ID`
+    - `OPENCLAW_GEMINI_OAUTH_CLIENT_SECRET` / `GEMINI_CLI_OAUTH_CLIENT_SECRET`
 
     <Note>
     如果 Gemini CLI OAuth 请求在登录后失败，请在网关主机上设置 `GOOGLE_CLOUD_PROJECT` 或
@@ -127,7 +123,11 @@ Gemini Grounding 提供图像生成、媒体理解（图像/音频/视频）、�
   </Tab>
 </Tabs>
 
-## 功能支持
+<Note>
+`google/gemini-3-pro-preview` 已于 2026-03-09 停用；请改用 `google/gemini-3.1-pro-preview`。重新运行 Gemini API key 设置（`openclaw onboard --auth-choice gemini-api-key` 或 `openclaw models auth login --provider google`）会将已过期配置的默认模型改写为当前模型。
+</Note>
+
+## 功能
 
 | 功能                    | 支持情况                      |
 | ---------------------- | ----------------------------- |
@@ -184,9 +184,14 @@ Gemini 3、Gemini 3.1 和 `gemini-*-latest` 别名的推理控制映射到
 Google 可以自行选择级别；Gemini 2.5 会发送 Google 的动态哨兵值
 `thinkingBudget: -1`。
 
-Gemma 4 模型（例如 `gemma-4-26b-a4b-it`）支持思考模式。OpenClaw
-会将 `thinkingBudget` 重写为 Gemma 4 支持的 Google `thinkingLevel`。将思考设置为 `off` 时，会保留禁用思考状态，而不是映射到
+Gemma 4 模型（例如 `gemma-4-26b-a4b-it`）支持思考模式。OpenClaw 会将
+`thinkingBudget` 重写为 Gemma 4 支持的 Google `thinkingLevel`。
+将思考设置为 `off` 会保留禁用思考的状态，而不是映射到
 `MINIMAL`。
+
+Gemini 2.5 Pro 仅在思考模式下工作，并且会拒绝显式的
+`thinkingBudget: 0`；OpenClaw 会在 Gemini 2.5 Pro 请求中去除该值，
+而不是将其发送出去。
 </Tip>
 
 ## 图像生成
@@ -301,7 +306,7 @@ Google 的批量 Gemini TTS 路径会在完成的 `generateContent` 响应中返
         google: {
           model: "gemini-3.1-flash-tts-preview",
           speakerVoice: "Kore",
-          audioProfile: "Speak professionally with a calm tone.",
+          audioProfile: "以平静的语气专业地朗读。",
         },
       },
     },
@@ -337,11 +342,11 @@ Gemini Live API 支持的实时语音 provider，用于后端音频桥接，例�
 | Model                 | `plugins.entries.voice-call.config.realtime.providers.google.model` | `gemini-2.5-flash-native-audio-preview-12-2025`                                       |
 | Voice                 | `...google.voice`                                                   | `Kore`                                                                                |
 | Temperature           | `...google.temperature`                                             | (unset)                                                                               |
-| VAD start sensitivity | `...google.startSensitivity`                                        | (unset)                                                                               |
+| VAD start sensitivity | `...google.startSensitivity`                                          | (unset)                                                                               |
 | VAD end sensitivity   | `...google.endSensitivity`                                          | (unset)                                                                               |
 | Silence duration      | `...google.silenceDurationMs`                                       | (unset)                                                                               |
-| Activity handling     | `...google.activityHandling`                                        | Google default, `start-of-activity-interrupts`                                        |
-| Turn coverage         | `...google.turnCoverage`                                            | Google default, `only-activity`                                                       |
+| Activity handling     | `...google.activityHandling`                                        | Google 默认，`start-of-activity-interrupts`                                        |
+| Turn coverage         | `...google.turnCoverage`                                            | Google 默认，`only-activity`                                                       |
 | Disable auto VAD      | `...google.automaticActivityDetectionDisabled`                      | `false`                                                                               |
 | Session resumption    | `...google.sessionResumption`                                       | `true`                                                                                |
 | Context compression   | `...google.contextWindowCompression`                                | `true`                                                                                |
@@ -403,11 +408,13 @@ Gateway relay transport 运行，这会将 provider 凭据保留在 Gateway 上�
     对于直接的 Gemini API 运行（`api: "google-generative-ai"`），OpenClaw
     会将已配置的 `cachedContent` 句柄传递给 Gemini 请求。
 
-    - 可使用 `cachedContent` 或旧版 `cached_content` 配置按模型或全局参数
-    - 如果两者都存在，则以 `cachedContent` 为准
+    - 使用 `cachedContent` 或旧版 `cached_content`，按模型或全局范围配置参数
+    - 更具体作用域中的参数（模型级优先于全局）始终生效。
+      在同一作用域内，如果两个键都设置了，则 `cached_content` 生效。
+      每个作用域只使用一个键，以避免意外。
     - 示例值：`cachedContents/prebuilt-context`
-    - Gemini 缓存命中用量会从上游 `cachedContentTokenCount`
-      归一化为 OpenClaw 的 `cacheRead`
+    - Gemini 缓存命中用量会从上游的 `cachedContentTokenCount`
+      规范化为 OpenClaw 的 `cacheRead`
 
     ```json5
     {

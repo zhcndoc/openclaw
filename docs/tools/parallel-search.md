@@ -7,27 +7,25 @@ read_when:
 title: "Parallel 搜索"
 ---
 
-Parallel 插件提供两个 [Parallel](https://parallel.ai/) `web_search` 提供方：
+Parallel 插件提供两个 [Parallel](https://parallel.ai/) `web_search`
+提供程序，二者都会从为 AI 代理构建的网页索引中返回经过排序、针对 LLM 优化的摘录：
 
-- **Parallel Search (Free)** (`parallel-free`) -- Parallel 的免费
-  [Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)。无需
-  账户或 API 密钥。当你想使用 Parallel 托管的
-  无密钥搜索路径时，请显式选择它。
-- **Parallel Search** (`parallel`) -- Parallel 的付费 Search API。需要
-  `PARALLEL_API_KEY`，并提供更高的速率限制和更精细的调优。
+| 提供程序 | id | 认证 |
+| ---------------------- | --------------- | ------------------------------------------------------------------------------------------ |
+| Parallel Search（免费） | `parallel-free` | 无 -- Parallel 的免费 [Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) |
+| Parallel Search        | `parallel`      | `PARALLEL_API_KEY` -- 付费 Search API，更高的速率限制和目标调优 |
 
-两者都会从为 AI 代理构建的网页索引中返回排序后的、针对 LLM 优化的摘要。
-将 `tools.web.search.provider` 设置为 `parallel-free` 或 `parallel` 即可显式选择其一。
+将 `tools.web.search.provider` 设置为 `parallel-free` 或 `parallel` 以显式选择其中一个；二者都不会被自动检测。
 
 <Note>
-  OpenAI Responses 模型在 `tools.web.search.provider` 未设置时会使用 OpenAI 原生网页搜索，
-  因此会绕过 Parallel 提供方。将 `tools.web.search.provider` 设置为 `parallel-free` 或 `parallel`
-  可让它们通过 Parallel 路由。
+  直接使用 OpenAI Responses 模型（`api: "openai-responses"`、提供程序
+  `openai`、官方 API base URL）时，当 `tools.web.search.provider` 未设置、为空、为 `"auto"`，
+  或为 `"openai"` 时，会自动使用 OpenAI 托管的原生网页搜索——因此默认会绕过 Parallel。将
+  `tools.web.search.provider` 设置为 `parallel-free` 或 `parallel`，即可改为通过 Parallel
+  路由它们。参见 [Web Search 概览](/tools/web)。
 </Note>
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/parallel-plugin
@@ -36,8 +34,8 @@ openclaw gateway restart
 
 ## API 密钥（付费提供方）
 
-`parallel-free` 不需要 API 密钥，但仍然必须被选为
-托管提供方。付费的 `parallel` 提供方需要 API 密钥：
+`parallel-free` 不需要密钥，但仍必须显式选择。付费的
+`parallel` 提供方需要 API 密钥：
 
 <Steps>
   <Step title="创建账户">
@@ -73,8 +71,8 @@ openclaw gateway restart
   tools: {
     web: {
       search: {
-        // 对免费的 Search MCP 使用 "parallel-free"，或使用这里展示的
-        // 基于付费 API 的提供方 "parallel"。
+        // "parallel-free" 用于免费的 Search MCP，或 "parallel" 用于此处显示的
+        // 基于付费 API 的提供方。
         provider: "parallel",
       },
     },
@@ -82,23 +80,25 @@ openclaw gateway restart
 }
 ```
 
-**环境替代方案：** 在 Gateway 环境中设置 `PARALLEL_API_KEY`。
-对于 gateway 安装，请将其放入 `~/.openclaw/.env`。
+**环境替代方案：** 在 Gateway
+环境中设置 `PARALLEL_API_KEY`。对于 gateway 安装，请将其放入 `~/.openclaw/.env`。
 
 ## 基础 URL 覆盖
 
-基础 URL 覆盖仅适用于付费的 `parallel` 提供方。免费的
-`parallel-free` 提供方始终使用 `https://search.parallel.ai/mcp`。
+仅适用于付费的 `parallel` 提供方；`parallel-free` 始终使用
+`https://search.parallel.ai/mcp` 并忽略此设置。
 
-当 Parallel 请求应通过兼容代理或其他 Parallel 端点时，
-请设置 `plugins.entries.parallel.config.webSearch.baseUrl`（例如，Cloudflare AI Gateway）。
-OpenClaw 会通过添加 `https://` 来规范化裸主机，并附加 `/v1/search`，除非路径已以此结尾。
-解析后的端点会包含在搜索缓存键中，因此来自不同 Parallel 端点的结果不会共享。
+将 `plugins.entries.parallel.config.webSearch.baseUrl` 设置为通过兼容的代理或备用端点路由付费
+请求（例如 Cloudflare AI Gateway）。OpenClaw 会通过在裸主机前加上
+`https://` 来规范化它，并在路径尚未以 `/v1/search` 结尾时追加该路径。解析后的
+端点是搜索缓存键的一部分，因此来自不同端点的结果绝不会共享。
 
 ## 工具参数
 
-OpenClaw 公开了 Parallel 的原生搜索结构，因此模型可以同时填写自然语言目标和几个简短的关键词查询——这正是 Parallel
-[建议](https://docs.parallel.ai/search/best-practices)用于获得最佳结果的组合。
+Both providers expose Parallel's native search shape so the model fills in a
+自然语言目标 plus a few short keyword queries -- the pairing
+Parallel [recommends](https://docs.parallel.ai/search/best-practices) for
+best results.
 
 <ParamField path="objective" type="string" required>
 底层问题或目标的自然语言描述（最多 5000 个字符）。应当自包含。
@@ -114,27 +114,28 @@ OpenClaw 公开了 Parallel 的原生搜索结构，因此模型可以同时填�
 </ParamField>
 
 <ParamField path="session_id" type="string">
-可选的 Parallel 会话 id（`parallel` 上最多 1000 个字符；免费的
-`parallel-free` Search MCP 限制为 100）。在后续属于同一任务的搜索中传入先前
-Parallel 结果中的 `sessionId`，这样 Parallel 可以分组相关调用并改进后续结果。
-超出限制的 id 会被丢弃并生成一个新的 id。
+可选的 Parallel 会话 ID，来自先前结果的 `sessionId`。请在同一任务的后续搜索中传入它，以便 Parallel 对相关调用进行分组并改进后续结果。在 `parallel` 上最多 1000 个字符；免费的 `parallel-free` Search MCP 最多 100 个字符。超过限制的 ID 会被丢弃（付费版）或生成新的 ID（免费版）。
 </ParamField>
 
 <ParamField path="client_model" type="string">
-发起调用的模型的可选标识符（例如 `claude-opus-4-7`、`gpt-5.5`）。
-这能让 Parallel 根据你的模型能力调整默认设置。请传入准确的当前模型 slug；
-不要缩短为家族别名。
+调用该接口的模型可选标识符（例如 `claude-opus-4-7`、`gpt-5.5`），最多 100 个字符。这样 Parallel 可以根据你的模型能力调整默认设置。请传入当前活动模型的完整 slug；不要缩写为某个家族别名。
 </ParamField>
 
 ## 说明
 
-- Parallel 会根据 LLM 推理效用对结果进行排序和压缩，而不是按人类点击率；因此每个结果中应出现密集摘要，而不是整页内容
-- 结果摘要会以 `excerpts` 数组返回，并且也会合并到 `description` 字段中，以兼容通用的 `web_search` 契约
-- Parallel 会在每个响应中返回 `session_id`；OpenClaw 会在工具负载中将其作为 `sessionId` 暴露，以便调用方分组后续搜索
-- 当存在 `searchId`、`warnings` 和 `usage` 时，Parallel 会原样透传
-- OpenClaw 始终会将解析后的结果数量作为 `advanced_settings.max_results` 转发给 Parallel。优先使用调用方的 `count` 参数，其次是顶层 `tools.web.search.maxResults` 设置，否则使用 OpenClaw 的通用 `web_search` 默认值（5）。这能在切换提供方时保持结果数量一致；Parallel 自身默认值为 10
-- 结果默认缓存 15 分钟（可通过 `cacheTtlMinutes` 配置）
-- 免费的 `parallel-free` 提供方接受相同参数。它会在客户端应用 `count`，并在未提供 `session_id` 时为每次调用生成一个。
+- Parallel 会对结果进行排序和压缩，以提升 LLM 推理可用性，而不是面向人类
+  点击浏览；因此每条结果应预期为密集摘录，而非整页
+  内容。
+- 结果摘录会以 `excerpts` 数组返回，同时也会合并到
+  `description` 中，以兼容通用的 `web_search` 协议。
+- 两个提供方都会返回一个 `session_id`；OpenClaw 会在
+  工具负载中将其暴露为 `sessionId`，以便调用方对后续搜索进行分组。
+  如果是 Parallel 生成的 session id（即调用方未提供的），则会从
+  缓存条目中排除，因为具有相同查询的无关任务不应继承它。
+- 来自 Parallel 的 `searchId`、`warnings` 和 `usage` 在存在时都会原样透传。
+- OpenClaw 总是将解析后的结果数量传递给 Parallel，作为 `advanced_settings.max_results`（`parallel`），或者在 Parallel 返回固定大小结果后在客户端侧应用 `count`（`parallel-free`）。调用方的 `count` 参数优先，其次是 `tools.web.search.maxResults`，否则使用 OpenClaw 的通用 `web_search` 默认值（5）——而 Parallel 自身 API 的默认值是 10。
+- 结果默认缓存 15 分钟（`cacheTtlMinutes`）。
+- 当调用方未提供 `session_id` 时，`parallel-free` 会通过其 MCP 握手在每次调用时生成一个新的 `session_id`；在这种情况下，`parallel` 会保持不设置。
 
 ## 相关内容
 

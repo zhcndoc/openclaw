@@ -14,7 +14,7 @@ read_when:
 
 <Steps>
   <Step title="创建技能目录">
-    技能位于你工作区的 `skills/` 文件夹中。为你的新技能创建一个目录：
+    技能位于你的工作区 `skills/` 文件夹中：
 
     ```bash
     mkdir -p ~/.openclaw/workspace/skills/hello-world
@@ -30,7 +30,7 @@ read_when:
   </Step>
 
   <Step title="编写 SKILL.md">
-    在目录中创建 `SKILL.md`。frontmatter 定义元数据；正文则提供给 agent 的指令。
+    frontmatter 定义元数据；正文为 agent 提供指令。
 
     ```markdown
     ---
@@ -72,8 +72,6 @@ read_when:
   </Step>
 
   <Step title="测试它">
-    发送一条应该触发该技能的消息：
-
     ```bash
     openclaw agent --message "给我一个问候"
     ```
@@ -108,7 +106,7 @@ read_when:
 
 ### 使用 `{baseDir}`
 
-在技能正文中使用 `{baseDir}` 来引用技能目录中的文件，而不必硬编码路径：
+在技能目录内引用文件时，无需硬编码路径——agent 会将 `{baseDir}` 解析为技能自身目录：
 
 ```markdown
 在 `{baseDir}/scripts/run.sh` 运行 helper 脚本。
@@ -189,7 +187,8 @@ openclaw skills workshop propose-create \
   --proposal-dir ./hello-world-proposal/
 ```
 
-该目录必须包含 `PROPOSAL.md`。支持文件可以放在 `assets/`、`examples/`、`references/`、`scripts/` 或 `templates/` 中。
+该目录必须在其根目录下包含 `PROPOSAL.md`。支持文件应放在
+`assets/`、`examples/`、`references/`、`scripts/` 或 `templates/` 下。
 
 审核之后：
 
@@ -206,20 +205,22 @@ openclaw skills workshop apply <proposal-id>
   <Step title="确保你的 SKILL.md 完整">
     确保已设置 `name`、`description` 以及任何 `metadata.openclaw` 门控字段。如果你有项目页面，也可以添加 `homepage` URL。
   </Step>
-  <Step title="安装 ClawHub skill">
-    ClawHub skill 会记录当前发布命令的格式和所需元数据：
-
+  <Step title="安装独立的 ClawHub CLI 并登录">
     ```bash
-    openclaw skills install @openclaw/clawhub-publish
+    npm i -g clawhub
+    clawhub login
     ```
-
   </Step>
   <Step title="发布">
     ```bash
-    clawhub publish
+    clawhub skill publish ./path/to/hello-world
     ```
 
-    完整流程请参见 [ClawHub — Publishing](/clawhub/publishing)。
+    添加 `--version <version>` 或 `--owner <owner>` 以覆盖推断出的
+    版本，或以特定所有者身份发布。请参阅
+    [ClawHub — 发布](/clawhub/publishing) 和
+    [ClawHub CLI](/clawhub/cli) 以了解完整流程、所有者作用域以及其他
+    维护命令（`clawhub sync`、`clawhub skill rename`、...）。
 
   </Step>
 </Steps>
@@ -236,19 +237,19 @@ openclaw skills workshop apply <proposal-id>
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Skills reference" href="/tools/skills" icon="puzzle-piece">
+  <Card title="技能参考" href="/tools/skills" icon="puzzle-piece">
     加载顺序、门控、允许列表和 SKILL.md 格式。
   </Card>
-  <Card title="Skill Workshop" href="/tools/skill-workshop" icon="flask">
+  <Card title="技能工作坊" href="/tools/skill-workshop" icon="flask">
     供 agent 起草技能使用的提案队列。
   </Card>
-  <Card title="Skills config" href="/tools/skills-config" icon="gear">
+  <Card title="技能配置" href="/tools/skills-config" icon="gear">
     完整的 `skills.*` 配置 schema。
   </Card>
   <Card title="ClawHub" href="/clawhub" icon="cloud">
     浏览并在公共注册表中发布技能。
   </Card>
-  <Card title="Building plugins" href="/plugins/building-plugins" icon="plug">
+  <Card title="构建插件" href="/plugins/building-plugins" icon="plug">
     插件可以将技能与它们所文档化的工具一起发布。
   </Card>
 </CardGroup>

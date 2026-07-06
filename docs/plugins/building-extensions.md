@@ -5,7 +5,7 @@ read_when:
   - 旧链接指向 building-extensions
 ---
 
-此页面已移动到 [构建插件](/plugins/building-plugins)。
+此页面已移动。请参见 [构建插件](/plugins/building-plugins)。
 
 ## 相关内容
 

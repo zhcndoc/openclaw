@@ -11,7 +11,7 @@ OpenClaw 支持三种迁移路径：从另一个代理系统导入、将现有�
 
 ## 从另一个代理系统导入
 
-使用内置的迁移提供方将指令、MCP 服务器、技能、模型配置，以及（可选）API 密钥带入 OpenClaw。在任何更改之前都会预览计划，报告中的机密信息会被脱敏，而应用操作则由已验证的备份作为保障。
+捆绑的迁移提供器会将说明、MCP 服务器、技能、模型配置以及（可选）API 密钥导入到 OpenClaw 中。任何更改之前都会预览计划，报告中的机密信息会被隐藏，并且应用操作会由经过验证的备份提供支持。
 
 <CardGroup cols={2}>
   <Card title="从 Claude 迁移" href="/install/migrating-claude" icon="brain">
@@ -55,7 +55,7 @@ CLI 入口点是 [`openclaw migrate`](/cli/migrate)。当引导流程检测到�
   </Step>
 
   <Step title="在新机器上安装 OpenClaw">
-    在新机器上[安装](/install) CLI（以及需要时的 Node）。如果引导流程创建一个新的 `~/.openclaw/` 也没关系。你接下来会覆盖它。
+    在新机器上[安装](/install) CLI（如有需要也安装 Node）。即使入门流程创建了一个新的 `~/.openclaw/` 也没关系——下一步会覆盖它。
   </Step>
 
   <Step title="复制状态目录和工作区">
@@ -66,7 +66,7 @@ CLI 入口点是 [`openclaw migrate`](/cli/migrate)。当引导流程检测到�
     tar -xzf openclaw-state.tgz
     ```
 
-    确保隐藏目录已包含在内，并且文件所有权与将运行网关的用户匹配。
+    确认隐藏目录已包含在内，并且文件所有者与将运行网关的用户一致。
 
   </Step>
 

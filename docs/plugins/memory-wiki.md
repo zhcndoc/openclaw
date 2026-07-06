@@ -7,103 +7,45 @@ read_when:
 title: "Memory wiki"
 ---
 
-`memory-wiki` 是一个捆绑插件，它将持久记忆转化为一个编译后的
-知识库。
+`memory-wiki` 是一个捆绑插件，它将持久知识编译成一个可导航的 wiki：确定性的页面、带有证据的结构化声明、来源、仪表盘以及机器可读的摘要。
 
-它**不会**取代活动记忆插件。活动记忆插件仍然负责
-回忆、提升、索引和做梦。`memory-wiki` 位于其旁边，
-并将持久知识编译为一个可导航的 wiki，包含确定性的页面、
-结构化声明、来源、仪表盘和机器可读摘要。
+它不会替代活动记忆插件。回忆、晋升、索引和做梦仍然由所配置的记忆后端负责（`memory-core`、QMD、Honcho 等）。`memory-wiki` 作为其旁路存在，并将知识编译成一个受维护的 wiki 层。
 
-当你希望记忆更像一个维护中的知识层，
-而不是一堆 Markdown 文件时，就使用它。
-
-## 它增加了什么
-
-- 一个专用的 wiki 库，具有确定性的页面布局
-- 结构化的声明和证据元数据，而不只是散文
-- 页面级来源、置信度、矛盾和未解决问题
-- 供代理/运行时消费者使用的编译摘要
-- wiki 原生的 search/get/apply/lint 工具
-- 可导入到编译后 wiki 概念中的 Open Knowledge Format
-- 可选的桥接模式，可从活动记忆插件导入公开制品
-- 可选的 Obsidian 友好渲染模式和 CLI 集成
-
-## 它如何与记忆配合
-
-可以这样理解这个分层：
-
-| 层                                                      | 负责                                                                                       |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 活动记忆插件 (`memory-core`、QMD、Honcho 等)            | 回忆、语义搜索、提升、做梦、记忆运行时                                                     |
-| `memory-wiki`                                           | 编译后的 wiki 页面、带丰富来源的综合、仪表盘、wiki 专用搜索/get/apply                      |
-
-如果活动记忆插件暴露了共享回忆制品，OpenClaw 可以在一次遍历中同时搜索
-两个层级：`memory_search corpus=all`。
-
-当你需要 wiki 专用排序、来源信息或直接页面访问时，请改用
-wiki 原生工具。
-
-## 推荐的混合模式
-
-对于本地优先的设置，一个很好的默认方案是：
-
-- 使用 QMD 作为活动记忆后端，负责回忆和广泛语义搜索
-- 使用 `memory-wiki` 的 `bridge` 模式，生成持久化的综合知识页面
-
-这种分工效果很好，因为每一层都保持专注：
-
-- QMD 保持原始笔记、会话导出和额外集合可搜索
-- `memory-wiki` 编译稳定的实体、声明、仪表盘和来源页面
+| 层                    | 负责内容                                                                          |
+| --------------------- | --------------------------------------------------------------------------------- |
+| 活动记忆插件          | 回忆、语义搜索、晋升、做梦、记忆运行时                                            |
+| `memory-wiki`         | 编译后的 wiki 页面、带有丰富来源的综合内容、仪表盘、wiki 搜索/get/apply |
 
 实用规则：
 
-- 当你想要一次覆盖整个记忆的广泛回忆时，使用 `memory_search`
-- 当你想要带来源感知的 wiki 结果时，使用 `wiki_search` 和 `wiki_get`
-- 当你想让共享搜索跨越两个层级时，使用 `memory_search corpus=all`
+- `memory_search` 用于对已配置的任意语料库进行一次宽泛的回忆检索
+- `wiki_search` / `wiki_get` 用于你需要 wiki 特定排序、来源，或页面级信念结构时
+- 当活动记忆插件支持语料库选择时，使用 `memory_search corpus=all` 可在一次调用中跨越两层
 
-如果桥接模式报告导出的制品为零，则说明活动记忆插件
-目前还没有暴露公开的桥接输入。先运行 `openclaw wiki doctor`，
-然后确认活动记忆插件支持公开制品。
+一种常见的本地优先设置：使用 QMD 作为活动记忆后端负责回忆，而 `memory-wiki` 以 `bridge` 模式生成持久的综合页面。参见 [Configuration](#configuration) 下的 QMD + bridge 模式示例。
 
-当桥接模式处于激活状态且 `bridge.readMemoryArtifacts` 已启用时，
+如果 bridge 模式报告导出的工件数量为零，则说明活动记忆插件当前没有暴露公共 bridge 输入。先运行 `openclaw wiki doctor`，然后确认活动记忆插件支持公共工件。
+
+## Vault 模式
+
+- `isolated`（默认）：自有 vault，自有来源，不依赖于当前激活的 memory 插件。用于构建一个自包含的精选知识库。
+- `bridge`：通过公开的插件 SDK 接口，读取当前激活的 memory 插件中的公开 memory 产物和事件日志。用于在不接触私有插件内部实现的情况下，汇总 memory 插件导出的产物。
+- `unsafe-local`：面向本机私有路径的显式逃生通道。该模式有意保持实验性且不可移植；仅在你了解信任边界并且确实需要 bridge 模式无法提供的本地文件系统访问时使用。
+
+Bridge 模式可按 `bridge.*` 配置开关对以下内容建立索引：
+
+- 导出的 memory 产物（`indexMemoryRoot`）
+- 每日笔记（`indexDailyNotes`）
+- 梦境报告（`indexDreamReports`）
+- memory 事件日志（`followMemoryEvents`）
+
+当 bridge 模式处于激活状态且启用了 `bridge.readMemoryArtifacts` 时，
 `openclaw wiki status`、`openclaw wiki doctor` 和 `openclaw wiki bridge
-import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与运行时记忆插件上下文保持一致。若桥接被禁用或制品读取被关闭，这些命令仍会保持本地/离线行为。
-
-## 库模式
-
-`memory-wiki` 支持三种库模式：
-
-### `isolated`
-
-拥有自己的库、自己的来源，不依赖 `memory-core`。
-
-当你希望 wiki 成为自己独立策展的知识库时使用。
-
-### `bridge`
-
-通过公共插件 SDK 接口，从活动记忆插件读取公开记忆制品和记忆事件。
-
-当你希望 wiki 编译并组织记忆插件导出的制品，而不进入私有插件内部时使用。
-
-桥接模式可以索引：
-
-- 导出的记忆制品
-- 做梦报告
-- 每日笔记
-- 记忆根文件
-- 记忆事件日志
-
-### `unsafe-local`
-
-面向本机私有路径的显式逃生通道。
-
-此模式刻意设计为实验性且不可移植。仅在你理解信任边界，
-并且确实需要桥接模式无法提供的本地文件系统访问时使用。
+import` 会通过正在运行的 Gateway 路由，因此它们看到的 active memory
+插件上下文与 agent/runtime memory 中相同。若 bridge 被禁用，或未开启产物
+读取，这些命令将保持本地/离线行为。
 
 ## 库布局
-
-插件会初始化如下库结构：
 
 ```text
 <vault>/
@@ -121,134 +63,97 @@ import` 会通过正在运行的 Gateway 读取。这使 CLI 的桥接检查与�
   .openclaw-wiki/
 ```
 
-受管理内容保留在生成块内。人工笔记块会被保留。
+受管内容保留在生成的块内；人工笔记块会在重新生成时保留。
 
-主要页面分组如下：
-
-- `sources/`：用于导入的原始材料和由桥接支撑的页面
-- `entities/`：用于持久化的事物、人、系统、项目和对象
-- `concepts/`：用于想法、抽象、模式和策略
-- `syntheses/`：用于编译摘要和维护中的汇总
-- `reports/`：用于生成的仪表盘
+- `sources/`：导入的原始材料以及 bridge/unsafe-local-backed 页面
+- `entities/`：持久的事物、人物、系统、项目、对象
+- `concepts/`：想法、抽象、模式、政策（也是 OKF 导入的落脚点）
+- `syntheses/`：汇总摘要和维护中的汇总表
+- `reports/`：生成的仪表板
 
 ## Open Knowledge Format 导入
-
-`memory-wiki` 可以使用以下命令导入解包后的 Open Knowledge Format 捆绑包：
 
 ```bash
 openclaw wiki okf import ./bundles/ga4
 ```
 
-当数据目录、文档爬虫或丰富化代理已经生成 OKF 时，这是最合适的方式：
-保留 OKF 作为可移植的交换制品，然后让 `memory-wiki` 将其转换为
-OpenClaw 原生的概念页面和编译摘要。
+将一个未打包的 Open Knowledge Format 捆绑包导入到 wiki 概念页面中。适合数据目录、文档爬虫或增强代理已经生成 OKF 的场景：保留 OKF 作为可移植的交换工件，让 `memory-wiki` 将其转换为 OpenClaw 原生概念页面和编译后的摘要。
 
-导入器遵循 OKF v0.1 结构：
+- 未保留的 `.md` 文件是概念文档
+- 每个导入的概念都要求有一个非空的 `type` frontmatter 字段；缺失 `type` 会产生 `missing-type` 警告并跳过该文件
+- 未知的 `type` 值会作为通用概念被接受
+- `index.md` 和 `log.md` 是保留文件，绝不会作为概念导入
+- 损坏的或外部的 markdown 链接会保持不变
 
-- 非保留的 `.md` 文件会被视为概念文档
-- 每个导入的概念都需要一个非空的 `type` frontmatter 字段
-- 未知的 OKF `type` 值也会被接受
-- 保留的 `index.md` 和 `log.md` 文件不会作为概念导入
-- 断开的或外部的 markdown 链接会被保留
-
-导入的概念页面会平铺到 `concepts/` 下，因此现有的编译、
-搜索、get、仪表盘和提示摘要路径都能看到它们，而无需添加第二棵
-wiki 树。每个页面都会保留原始 OKF 概念 ID、源路径、`type`、
-`resource`、`tags`、时间戳以及完整的生产者 frontmatter。内部 OKF 链接
-会重写为生成的 wiki 概念页面，并且也会作为结构化的 `relationships`
-条目输出，`kind: okf-link`。
+导入的页面会在 `concepts/` 下扁平化，因此现有的 compile、search、get 和
+dashboard 流程无需第二个 wiki 树也能看到它们。每个页面都会保留原始的 OKF 概念 ID、
+源路径、`type`、`resource`、`tags`、时间戳，以及完整的 producer frontmatter。内部 OKF 链接会重写为生成的 wiki 概念页面，并同时发出结构化的 `relationships` 条目，`kind: okf-link`。
 
 ## 结构化声明和证据
 
-页面可以携带结构化的 `claims` frontmatter，而不只是自由文本。
+页面承载结构化的 `claims` frontmatter，而不只是自由格式文本。每条
+claim 都可以包含 `id`、`text`、`status`、`confidence`、`evidence[]` 和
+`updatedAt`。每条 evidence 记录都可以包含 `kind`、`sourceId`、`path`、
+`lines`、`weight`、`confidence`、`privacyTier`、`note` 和 `updatedAt`。
 
-每个声明都可以包含：
-
-- `id`
-- `text`
-- `status`
-- `confidence`
-- `evidence[]`
-- `updatedAt`
-
-证据条目可以包含：
-
-- `kind`
-- `sourceId`
-- `path`
-- `lines`
-- `weight`
-- `confidence`
-- `privacyTier`
-- `note`
-- `updatedAt`
-
-这就是让 wiki 更像一个信念层，而不是一个被动笔记堆的原因。
-声明可以被跟踪、评分、争议处理，并最终回溯到来源解决。
+这使得 wiki 更像一个信念层，而不是一个被动的笔记堆。声明可以被跟踪、评分、争议，并最终回溯到来源得到解决。
 
 ## 面向代理的实体元数据
 
-实体页面也可以携带用于代理的路由元数据。这是通用的
-frontmatter，因此适用于人、团队、系统、项目或任何其他
-实体类型。
+实体页面承载通用路由元数据，可用于人物、团队、
+系统、项目或任何其他实体类型：
 
-常见字段包括：
+- `entityType`：例如 `person`、`team`、`system`、`project`
+- `canonicalId`：跨别名和导入保持稳定的身份键
+- `aliases`：可解析到同一页面的名称、处理名或标签
+- `privacyTier`：自由格式字符串；`public` 视为无需审核，任何其他值（例如 `local-private`、`sensitive`、`confirm-before-use`）都会在 `reports/privacy-review.md` 中标记
+- `bestUsedFor` / `notEnoughFor`：简明路由提示
+- `lastRefreshedAt`：来源刷新时间戳，与页面编辑时间分开
+- `personCard`：可选的面向人物的路由卡片（处理名、社交账号、邮箱、时区、分工、ask-for、avoid-asking-for、confidence、privacy tier）
+- `relationships`：指向相关页面的有类型边（目标、关系类型、权重、置信度、证据类型、隐私级别、备注）
 
-- `entityType`：例如 `person`、`team`、`system` 或 `project`
-- `canonicalId`：在别名和导入之间使用的稳定身份键
-- `aliases`：应解析到同一页面的名称、账号或标签
-- `privacyTier`：`public`、`local-private`、`sensitive` 或 `confirm-before-use`
-- `bestUsedFor` / `notEnoughFor`：简洁的路由提示
-- `lastRefreshedAt`：独立于页面编辑时间的来源刷新时间戳
-- `personCard`：可选的人员专用路由卡，包含账号、社交链接、
-  邮箱、时区、轨道、可询问内容、避免询问内容、置信度和隐私
-- `relationships`：指向相关页面的类型化边，包含目标、关系类型、权重、
-  置信度、证据类型、隐私层级和备注
+对于人物 wiki，请先查看 `reports/person-agent-directory.md`，然后在使用联系方式或推断事实之前，先用
+`wiki_get` 打开该人物页面。
 
-对于人员 wiki，代理通常应先打开
-`reports/person-agent-directory.md`，然后在使用联系方式或推断事实之前，
-用 `wiki_get` 打开该人员页面。
-
-示例：
-
+<Accordion title="实体页面示例">
 ```yaml
 pageType: entity
 entityType: person
-id: entity.brad-groux
-canonicalId: maintainer.brad-groux
+id: entity.example-person
+canonicalId: maintainer.example-person
 aliases:
-  - Brad
-  - bgroux
+  - Alex
+  - example-handle
 privacyTier: local-private
 bestUsedFor:
-  - Microsoft Teams 和 Azure 路由
+  - 示例生态系统路由
 notEnoughFor:
   - 法律批准
 lastRefreshedAt: "2026-04-29T00:00:00.000Z"
 personCard:
   handles:
-    - "@bgroux"
+    - "@example-handle"
   socials:
-    - "https://x.example/bgroux"
+    - "https://x.example/example-handle"
   emails:
-    - brad@example.com
+    - alex@example.com
   timezone: America/Chicago
-  lane: Microsoft 生态系统
+  lane: 示例生态系统
   askFor:
-    - Teams rollout questions
+    - 示例上线问题
   avoidAskingFor:
     - 无关的计费决策
   confidence: 0.8
   privacyTier: confirm-before-use
 relationships:
-  - targetId: entity.alice
-    targetTitle: Alice
+  - targetId: entity.other-person
+    targetTitle: Other Person
     kind: collaborates-with
     confidence: 0.7
     evidenceKind: discrawl-stat
 claims:
-  - id: claim.brad.teams
-    text: Brad 对 Microsoft Teams 路由很有用。
+  - id: claim.example.routing
+    text: Alex is useful for example-ecosystem routing.
     status: supported
     confidence: 0.9
     evidence:
@@ -256,116 +161,72 @@ claims:
         sourceId: source.maintainers
         privacyTier: local-private
 ```
+</Accordion>
 
 ## 编译管线
 
-编译步骤会读取 wiki 页面、规范化摘要，并在以下位置输出稳定的
-面向机器的制品：
+Compile 会读取 wiki 页面，规范化摘要，并在以下位置生成稳定的、面向机器的工件：
 
 - `.openclaw-wiki/cache/agent-digest.json`
 - `.openclaw-wiki/cache/claims.jsonl`
 
-之所以存在这些摘要，是为了让代理和运行时代码不必去抓取 Markdown
-页面。
-
-编译输出还驱动：
-
-- 用于 search/get 流程的首轮 wiki 索引
-- 将 claim-id 回查到所属页面
-- 紧凑的提示词补充
-- 报告/仪表盘生成
+Agent 和运行时代码会读取这些摘要，而不是抓取 Markdown。编译后的输出还支持用于 search/get 的首次 wiki 索引、claim-id 回溯到所属页面、紧凑的提示补充内容，以及报告生成。
 
 ## 仪表盘和健康报告
 
-当启用 `render.createDashboards` 时，编译会在 `reports/` 下维护仪表盘。
+当启用 `render.createDashboards` 时，compile 会在
+`reports/` 下维护仪表盘：
 
-内置报告包括：
-
-- `reports/open-questions.md`
-- `reports/contradictions.md`
-- `reports/low-confidence.md`
-- `reports/claim-health.md`
-- `reports/stale-pages.md`
-- `reports/person-agent-directory.md`
-- `reports/relationship-graph.md`
-- `reports/provenance-coverage.md`
-- `reports/privacy-review.md`
-
-这些报告会跟踪如下内容：
-
-- 矛盾备注聚类
-- 竞争性声明聚类
-- 缺少结构化证据的声明
-- 低置信度页面和声明
-- 过时或未知新鲜度
-- 存在未解决问题的页面
-- 人员/实体路由卡
-- 结构化关系边
-- 证据类别覆盖情况
-- 需要在使用前审查的非公开隐私层级
+| 报告                                | 跟踪内容                                           |
+| ----------------------------------- | -------------------------------------------------- |
+| `reports/open-questions.md`         | 存在未解决问题的页面                                |
+| `reports/contradictions.md`         | 矛盾笔记簇                                           |
+| `reports/low-confidence.md`         | 置信度较低的页面和断言                               |
+| `reports/claim-health.md`           | 缺少结构化证据的断言                                 |
+| `reports/stale-pages.md`            | 陈旧或未知新鲜度                                     |
+| `reports/person-agent-directory.md` | 人物/实体路由卡                                      |
+| `reports/relationship-graph.md`     | 结构化关系边                                         |
+| `reports/provenance-coverage.md`    | 证据类别覆盖                                         |
+| `reports/privacy-review.md`         | 使用前需要审查的非公开隐私级别                        |
 
 ## 搜索与检索
 
-`memory-wiki` 支持两种搜索后端：
+两种搜索后端：
 
 - `shared`：在可用时使用共享记忆搜索流程
 - `local`：本地搜索 wiki
 
-它还支持三种语料库：
+三种语料库：`wiki`、`memory`、`all`。
 
-- `wiki`
-- `memory`
-- `all`
+- `wiki_search` / `wiki_get` 在可能时会先使用编译后的摘要作为第一步
+- claim id 会解析回所属页面
+- 有争议/过时/最新的 claim 会影响排序
+- 来源标签会保留到结果中
 
-重要行为：
+搜索模式（`--mode` / tool `mode` 参数）：
 
-- `wiki_search` 和 `wiki_get` 在可能时会先使用编译后的摘要
-- claim id 可以回解析到所属页面
-- 有争议/过时/新鲜的声明会影响排序
-- 来源标签可以保留到结果中
-- 搜索模式可以针对人员查找、问题路由、来源
-  证据或原始声明来偏置排序
+| 模式              | 加强项                                                         |
+| ----------------- | -------------------------------------------------------------- |
+| `auto`            | 平衡默认值                                                     |
+| `find-person`     | 类人物实体、别名、用户名、社交账号、规范 ID                    |
+| `route-question`   | agent cards、ask-for/best-used-for 提示、关系上下文             |
+| `source-evidence` | 来源页面和结构化证据元数据                                       |
+| `raw-claim`       | 匹配结构化 claim；返回 claim/evidence 元数据                    |
 
-实用规则：
-
-- 当你想要一次广泛回忆时，使用 `memory_search corpus=all`
-- 当你关心 wiki 专用排序、来源信息或页面级信念结构时，使用 `wiki_search` + `wiki_get`
-
-搜索模式：
-
-- `auto`：平衡的默认模式
-- `find-person`：提升类似人员的实体、别名、账号、社交信息和
-  规范 ID
-- `route-question`：提升代理卡片、可询问提示、最佳用途提示和
-  关系上下文
-- `source-evidence`：提升来源页面和结构化证据元数据
-- `raw-claim`：提升匹配的结构化声明，并在结果中返回声明/证据
-  元数据
-
-当结果匹配到结构化声明时，`wiki_search` 可以在其详细载荷中返回
+当某个结果匹配结构化 claim 时，`wiki_search` 会在其详情载荷中返回
 `matchedClaimId`、`matchedClaimStatus`、`matchedClaimConfidence`、
-`evidenceKinds` 和 `evidenceSourceIds`。当可用时，文本输出还会包含简洁的
+`evidenceKinds` 和 `evidenceSourceIds`。当可用时，文本输出会包含简洁的
 `Claim:` 和 `Evidence:` 行。
 
 ## 代理工具
 
-插件注册了以下工具：
-
-- `wiki_status`
-- `wiki_search`
-- `wiki_get`
-- `wiki_apply`
-- `wiki_lint`
-
-它们的作用：
-
-- `wiki_status`：当前库模式、健康状态、Obsidian CLI 可用性
-- `wiki_search`：搜索 wiki 页面，并在配置后搜索共享记忆语料库；
-  接受 `mode` 用于人员查找、问题路由、来源证据或原始
-  声明深挖
-- `wiki_get`：按 id/path 读取 wiki 页面，或回退到共享记忆语料库
-- `wiki_apply`：进行受限的综合/元数据修改，而不进行自由形式的页面手术
-- `wiki_lint`：结构检查、来源缺口、矛盾、开放问题
+| Tool          | Purpose                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wiki_status` | 当前 vault 模式、健康状态、Obsidian CLI 可用性                                                                                                                 |
+| `wiki_search` | 搜索 wiki 页面，并在已配置时搜索共享记忆语料库；接受 `mode` 参数，用于人物查找、问题路由、来源证据或原始断言下钻 |
+| `wiki_get`    | 通过 id/path 读取 wiki 页面；如果启用了共享搜索且查找未命中，则回退到共享记忆语料库                                     |
+| `wiki_apply`  | 进行局部综合/元数据变更，不进行自由形式的页面编辑                                                                                             |
+| `wiki_lint`   | 结构检查、来源缺口、矛盾、未解决问题                                                                                            |
 
 插件还注册了一个非独占的记忆语料补充，因此当活动记忆插件支持语料选择时，共享的
 `memory_search` 和 `memory_get` 也可以访问 wiki。
@@ -373,18 +234,9 @@ claims:
 ## 提示词和上下文行为
 
 当启用 `context.includeCompiledDigestPrompt` 时，记忆提示词部分会
-附加来自 `agent-digest.json` 的紧凑编译快照。
-
-该快照刻意保持小而高信号：
-
-- 仅保留顶部页面
-- 仅保留顶部声明
-- 矛盾数量
-- 问题数量
-- 置信度/新鲜度限定信息
-
-这是可选功能，因为它会改变提示词形状，主要适用于上下文引擎
-或显式消费记忆补充内容的旧式提示词组装。
+附加来自 `agent-digest.json` 的紧凑编译快照：仅包含顶部页面、仅包含顶部声明、矛盾计数、问题计数、置信度/新鲜度
+限定词。之所以这是可选功能，是因为它会改变提示词的形状；它主要适用于明确消费记忆补充内容的
+上下文引擎或提示词组装。
 
 ## 配置
 
@@ -416,6 +268,10 @@ claims:
             indexMemoryRoot: true,
             followMemoryEvents: true,
           },
+          unsafeLocal: {
+            allowPrivateMemoryCoreAccess: false,
+            paths: [],
+          },
           ingest: {
             autoCompile: true,
             maxConcurrentJobs: 1,
@@ -442,20 +298,24 @@ claims:
 
 关键开关：
 
-- `vaultMode`：`isolated`、`bridge`、`unsafe-local`
-- `vault.renderMode`：`native` 或 `obsidian`
-- `bridge.readMemoryArtifacts`：导入活动记忆插件的公开制品
-- `bridge.followMemoryEvents`：在桥接模式中包含事件日志
-- `search.backend`：`shared` 或 `local`
-- `search.corpus`：`wiki`、`memory` 或 `all`
-- `context.includeCompiledDigestPrompt`：将紧凑摘要快照附加到记忆提示词部分
-- `render.createBacklinks`：生成确定性的相关块
-- `render.createDashboards`：生成仪表盘页面
+| Key                                        | Values / default                               | Notes                                                    |
+| ------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------- |
+| `vaultMode`                                | `isolated` (default), `bridge`, `unsafe-local` |                                                          |
+| `vault.path`                               | default `~/.openclaw/wiki/main`                |                                                          |
+| `vault.renderMode`                         | `native` (default), `obsidian`                 |                                                          |
+| `bridge.readMemoryArtifacts`               | default `true`                                 | 导入活动 memory 插件的公开产物                           |
+| `bridge.followMemoryEvents`                | default `true`                                 | 在 bridge 模式下包含事件日志                             |
+| `unsafeLocal.allowPrivateMemoryCoreAccess` | default `false`                                | 运行 `unsafe-local` 导入所必需                            |
+| `unsafeLocal.paths`                        | default `[]`                                   | 在 `unsafe-local` 模式下显式导入的本地路径                |
+| `search.backend`                           | `shared` (default), `local`                    |                                                          |
+| `search.corpus`                            | `wiki` (default), `memory`, `all`              |                                                          |
+| `context.includeCompiledDigestPrompt`      | default `false`                                | 将紧凑的摘要快照附加到 memory 提示词部分                 |
+| `render.createBacklinks`                   | default `true`                                 | 生成确定性的相关块                                       |
+| `render.createDashboards`                  | default `true`                                 | 生成仪表盘页面                                           |
 
 ### 示例：QMD + 桥接模式
 
-当你希望使用 QMD 负责回忆，而 `memory-wiki` 负责维护
-知识层时，就使用这个方案：
+当你希望使用 QMD 进行回忆，并使用 `memory-wiki` 维护知识层时，可以使用此配置。每一层都保持专注：QMD 负责原始笔记、会话导出和额外集合的可搜索性，而 `memory-wiki` 负责编译稳定的实体、声明、仪表盘和源页面。
 
 ```json5
 {
@@ -490,15 +350,9 @@ claims:
 }
 ```
 
-这会保持：
+这会让 QMD 负责活动记忆回忆，让 `memory-wiki` 专注于已编译的页面和仪表盘，并且在你有意启用编译摘要提示之前，提示词结构保持不变。
 
-- 由 QMD 负责活动记忆回忆
-- `memory-wiki` 专注于编译后的页面和仪表盘
-- 在你显式启用编译摘要提示词之前，提示词形状保持不变
-
-## CLI
-
-`memory-wiki` 还提供顶层 CLI 接口：
+## 命令行界面
 
 ```bash
 openclaw wiki status
@@ -514,36 +368,44 @@ openclaw wiki bridge import
 openclaw wiki obsidian status
 ```
 
-完整命令参考请参见 [CLI: wiki](/cli/wiki)。
+请参见 [CLI: wiki](/cli/wiki) 获取完整的命令参考，包括
+`wiki okf import`、`wiki apply metadata`、`wiki unsafe-local import`、
+`wiki chatgpt import` / `wiki chatgpt rollback`，以及完整的 `wiki obsidian`
+子命令集合。
 
 ## Obsidian 支持
 
-当 `vault.renderMode` 为 `obsidian` 时，插件会写入适用于 Obsidian 的
-Markdown，并且可以选择使用官方的 `obsidian` CLI。
-
-支持的工作流包括：
-
-- 状态探测
-- vault 搜索
-- 打开页面
-- 调用 Obsidian 命令
-- 跳转到每日笔记
-
-这是一项可选功能。即使不使用 Obsidian，wiki 在原生模式下仍然可以工作。
+当 `vault.renderMode` 为 `obsidian` 时，插件会写入适配 Obsidian 的
+Markdown，并且可以选择使用官方 `obsidian` CLI 来进行状态
+探测、vault 搜索、打开页面、调用命令以及跳转到
+每日笔记。这个功能是可选的；即使不使用 Obsidian，wiki 仍然可以在原生模式下工作。
 
 ## 推荐工作流
 
-1. 保持你当前的 memory 插件，用于回忆/提升/梦想。
-2. 启用 `memory-wiki`。
-3. 除非你明确想要 bridge 模式，否则从 `isolated` 模式开始。
-4. 当需要关注来源时，使用 `wiki_search` / `wiki_get`。
-5. 对于较小的综合或元数据更新，使用 `wiki_apply`。
-6. 在有意义的更改后运行 `wiki_lint`。
-7. 如果你想查看过期信息/冲突，可打开仪表板。
+<Steps>
+<Step title="保留活跃的 memory 插件用于回忆">
+回忆、推广和梦境仍由已配置的 memory 后端负责。
+</Step>
+<Step title="启用 memory-wiki">
+除非你明确需要 bridge 模式，否则请从 `isolated` 模式开始。
+</Step>
+<Step title="在需要来源信息时使用 wiki_search / wiki_get">
+当你希望获得 wiki 特有的排序或页面级信念结构时，优先使用它们，而不是 `memory_search`。
+</Step>
+<Step title="在进行窄范围综合或元数据更新时使用 wiki_apply">
+避免手动编辑受管理的生成块。
+</Step>
+<Step title="在有意义的更改后运行 wiki_lint">
+它可以发现矛盾、未解决的问题以及来源缺口。
+</Step>
+<Step title="开启仪表板以查看过期/矛盾信息">
+设置 `render.createDashboards: true`（默认）。
+</Step>
+</Steps>
 
 ## 相关文档
 
 - [Memory 概览](/concepts/memory)
 - [CLI: memory](/cli/memory)
 - [CLI: wiki](/cli/wiki)
-- [Plugin SDK 概览](/plugins/sdk-overview)
+- [插件 SDK 概览](/plugins/sdk-overview)

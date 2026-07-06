@@ -12,21 +12,21 @@ Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则
 
 ## 优先级（从高到低）
 
-1. **进程环境**（Gateway 进程从父 shell/daemon 已继承到的内容）。
+1. **进程环境**（Gateway 进程从父 shell/daemon 继承的内容）。
 2. **当前工作目录中的 `.env`**（dotenv 默认行为；不会覆盖；会忽略提供商凭据和受保护的运行时控制项）。
 3. **全局 `.env`**：`~/.openclaw/.env`（也就是 `$OPENCLAW_STATE_DIR/.env`；推荐用于提供商 API key；不会覆盖）。
 4. **`~/.openclaw/openclaw.json` 中的 `env` 块**（仅在缺失时应用）。
 5. **可选的登录 shell 导入**（`env.shellEnv.enabled` 或 `OPENCLAW_LOAD_SHELL_ENV=1`），仅应用于缺失的预期键。
 
-在使用默认 state dir 的 Ubuntu 全新安装上，OpenClaw 还会将 `~/.config/openclaw/gateway.env` 视为全局 `.env` 之后的兼容回退。如果两个文件都存在且内容不一致，OpenClaw 会保留 `~/.openclaw/.env` 并打印警告。
+在使用默认状态目录的新装 Ubuntu 上，OpenClaw 还会在全局 `.env` 之后将 `~/.config/openclaw/gateway.env` 作为兼容性回退。如果这两个文件都存在且内容不一致，OpenClaw 会保留 `~/.openclaw/.env` 并打印警告。
 
 如果配置文件完全缺失，则跳过第 4 步；如果启用了 shell 导入，第 5 步仍会运行。
 
 ## 提供商凭据与 workspace `.env`
 
-不要只把提供商 API key 放在 workspace `.env` 里。OpenClaw 会忽略 workspace `.env` 文件中的提供商凭据环境变量，包括常见的 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY` 和 `FIRECRAWL_API_KEY`。
+不要只将提供商 API 密钥保存在 workspace `.env` 中。OpenClaw 会阻止从 workspace `.env` 文件中使用一大类提供商凭据和端点重定向密钥，包括所有已知的提供商认证环境变量（例如 `GEMINI_API_KEY`、`GOOGLE_API_KEY`、`XAI_API_KEY`、`MISTRAL_API_KEY`、`GROQ_API_KEY`、`DEEPSEEK_API_KEY`、`PERPLEXITY_API_KEY`、`BRAVE_API_KEY`、`TAVILY_API_KEY`、`EXA_API_KEY`、`FIRECRAWL_API_KEY`），以及任何以 `_API_HOST`、`_BASE_URL` 或 `_HOMESERVER` 结尾的键，还有整个 `OPENCLAW_*`、`CLAWHUB_*`、`ANTHROPIC_API_KEY_*` 和 `OPENAI_API_KEY_*` 命名空间。
 
-请使用以下受信任来源之一来存放提供商凭据：
+请改为使用以下受信任来源之一提供提供商凭据：
 
 - Gateway 进程环境，例如 shell、launchd/systemd 单元、容器 secret 或 CI secret。
 - 全局运行时 dotenv 文件：`~/.openclaw/.env` 或 `$OPENCLAW_STATE_DIR/.env`。
@@ -97,23 +97,22 @@ Workspace `.env` 文件属于低信任来源：OpenClaw 在应用优先级规则
 环境变量等价项：
 
 - `OPENCLAW_LOAD_SHELL_ENV=1`
-- `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`
+- `OPENCLAW_SHELL_ENV_TIMEOUT_MS=15000`（默认 `15000`）
 
 ## Exec shell snapshots
 
-在非 Windows 的 Gateway 主机上，bash 和 zsh 的 `exec` 命令默认使用启动快照。
-在 Gateway 进程环境中设置 `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` 可禁用此路径。
-`false`、`no` 和 `off` 也会禁用它。单次调用的 `exec.env` 值不能切换快照或重定向快照缓存。
+On non-Windows Gateway hosts, the `exec` command for bash and zsh uses startup snapshots by default.
+Setting `OPENCLAW_EXEC_SHELL_SNAPSHOT=0` in the Gateway process environment can disable this path.
+`false`, `no`, and `off` also disable it. The `exec.env` value for a single invocation cannot switch snapshots or redirect the snapshot cache.
 
 ## 运行时注入的环境变量
 
 OpenClaw 还会向派生的子进程注入上下文标记：
 
-- `OPENCLAW_SHELL=exec`：为通过 `exec` 工具运行的命令设置。
-- `OPENCLAW_SHELL=acp`：为 ACP 运行时后端进程派生设置（例如 `acpx`）。
-- `OPENCLAW_SHELL=acp-client`：为 `openclaw acp client` 派生 ACP 桥接进程时设置。
-- `OPENCLAW_SHELL=tui-local`：为本地 TUI `!` shell 命令设置。
-- `OPENCLAW_CLI=1`：为由 CLI 入口点派生的子进程设置。
+- `OPENCLAW_SHELL=exec`: 通过 `exec` 工具运行的命令会设置此项。
+- `OPENCLAW_SHELL=acp-client`: 当 `openclaw acp client` 启动 ACP bridge 进程时会设置此项。
+- `OPENCLAW_SHELL=tui-local`: 本地 TUI `!` shell 命令会设置此项。
+- `OPENCLAW_CLI=1`: 由 CLI 入口点派生的子进程会设置此项。
 
 这些是运行时标记（不是必需的用户配置）。它们可用于 shell/profile 逻辑
 以应用特定于上下文的规则。
@@ -124,9 +123,9 @@ OpenClaw 还会向派生的子进程注入上下文标记：
 - `OPENCLAW_THEME=dark`：强制使用深色 TUI 调色板。
 - `COLORFGBG`：如果终端导出了它，OpenClaw 会使用背景色提示自动选择 TUI 调色板。
 
-## 配置中的环境变量替换
+## Environment Variable Substitution in Configuration
 
-你可以在配置字符串值中直接使用 `${VAR_NAME}` 语法引用环境变量：
+You can directly use the `${VAR_NAME}` syntax in configuration string values to reference environment variables:
 
 ```json5
 {
@@ -140,7 +139,7 @@ OpenClaw 还会向派生的子进程注入上下文标记：
 }
 ```
 
-完整细节请参见 [Configuration: Env var substitution](/gateway/configuration-reference#env-var-substitution)。
+For full details, see [Configuration: Env var substitution](/gateway/configuration-reference#env-var-substitution).
 
 ## Secret refs vs `${ENV}` 字符串
 
@@ -157,10 +156,10 @@ OpenClaw 支持两种基于环境变量的模式：
 
 | 变量                     | 用途                                                                                                                                                                                                                                 |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENCLAW_HOME`          | 覆盖内部 OpenClaw 路径默认值所使用的 home 目录（`~/.openclaw/`、agent 目录、会话、凭据、安装器引导，以及默认开发检出目录）。当 OpenClaw 作为专用服务用户运行时很有用。 |
-| `OPENCLAW_STATE_DIR`     | 覆盖 state 目录（默认 `~/.openclaw`）。                                                                                                                                                                                   |
+| `OPENCLAW_HOME`          | 覆盖用于内部 OpenClaw 路径默认值的主目录（`~/.openclaw/`、agent 目录、sessions、credentials、installer onboarding，以及默认的开发检出目录）。在将 OpenClaw 作为专用服务用户运行时很有用。 |
+| `OPENCLAW_STATE_DIR`     | 覆盖状态目录（默认 `~/.openclaw`）。                                                                                                                                                                                   |
 | `OPENCLAW_CONFIG_PATH`   | 覆盖配置文件路径（默认 `~/.openclaw/openclaw.json`）。                                                                                                                                                                    |
-| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可以解析配置目录外文件的目录路径列表（默认：无——`$include` 仅限于配置目录）。会展开波浪号。                                                         |
+| `OPENCLAW_INCLUDE_ROOTS` | `$include` 指令可在其中解析配置目录之外文件的目录路径列表（默认：无——`$include` 限定在配置目录内）。支持波浪号展开。                                                         |
 
 ## 日志
 
@@ -221,9 +220,10 @@ OpenClaw 只读取 `OPENCLAW_*` 环境变量。早期版本中的旧前缀
 `CLAWDBOT_*` 和 `MOLTBOT_*` 会被静默
 忽略。
 
-如果在启动时 Gateway 进程上仍设置了这些变量中的任何一个，OpenClaw 会发出
-一条 Node 弃用警告（`OPENCLAW_LEGACY_ENV_VARS`），列出检测到的前缀和总数。
-请通过将旧前缀替换为 `OPENCLAW_` 来重命名每个值（例如 `CLAWDBOT_GATEWAY_TOKEN` →
+如果在 Gateway 进程启动时仍然设置了这些变量，OpenClaw 会发出一条
+Node 弃用警告（`OPENCLAW_LEGACY_ENV_VARS`），列出检测到的前缀和
+总数。请将每个值中的旧前缀替换为 `OPENCLAW_`（例如将
+`CLAWDBOT_GATEWAY_TOKEN` 改为
 `OPENCLAW_GATEWAY_TOKEN`）；旧名称不会生效。
 
 ## 相关内容

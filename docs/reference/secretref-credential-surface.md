@@ -7,14 +7,16 @@ read_when:
 title: "SecretRef 证书范围"
 ---
 
-此页面定义了规范化的 SecretRef 证书范围。
+此页面定义了规范化的 SecretRef 凭据面：哪些凭据字段接受 `SecretRef`（env/file/exec 支持的引用），而不是原始密钥值。
 
-范围意图：
+范围：
 
 - 范围内：严格由用户提供、且 OpenClaw 不会铸造或轮换的证书。
 - 范围外：运行时铸造或轮换的证书、OAuth 刷新材料，以及类会话工件。
 
-## 支持的证书
+以下列表由源目标注册表生成，并在 CI 中与 `docs/reference/secretref-user-supplied-credentials-matrix.json` 进行检查；不要手动编辑条目。
+
+## 支持的凭证
 
 ### `openclaw.json` 目标（`secrets configure` + `secrets apply` + `secrets audit`）
 
@@ -127,22 +129,15 @@ title: "SecretRef 证书范围"
 
 说明：
 
-- Auth-profile 计划目标需要 `agentId`。
-- 计划条目目标为 `profiles.*.key` / `profiles.*.token`，并写入相邻引用（`keyRef` / `tokenRef`）。
-- Auth-profile 引用包含在运行时解析和审计覆盖范围内。
-- 在 `openclaw.json` 中，SecretRef 必须使用结构化对象，例如 `{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}`。在 SecretRef 证书路径上会拒绝旧式 `secretref-env:<ENV_VAR>` 标记字符串；请运行 `openclaw doctor --fix` 迁移有效标记。
-- OAuth 策略保护：`auth.profiles.<id>.mode = "oauth"` 不能与该配置文件的 SecretRef 输入同时使用。违反此策略时，启动/重载和 auth-profile 解析会快速失败。
-- 对于由 SecretRef 管理的模型提供方，生成的 `agents/*/agent/models.json` 条目会保留非机密标记（而不是解析后的机密值），用于 `apiKey`/header 范围。
-- 标记持久化以源为准：OpenClaw 从活动源配置快照（解析前）写入标记，而不是从已解析的运行时机密值写入。
-- 对于网页搜索：
-  - 在显式提供方模式下（设置了 `tools.web.search.provider`），仅所选提供方的 key 处于激活状态。
-  - 在自动模式下（未设置 `tools.web.search.provider`），仅按优先级解析出的第一个提供方 key 处于激活状态。
-  - 在自动模式下，未被选中的提供方引用在被选中前都视为非激活。
-  - 旧式 `tools.web.search.*` 提供方路径在兼容期内仍可解析，但规范化的 SecretRef 范围是 `plugins.entries.<plugin>.config.webSearch.*`。
+- Auth-profile 计划目标需要 `agentId`；计划条目目标为 `profiles.*.key` / `profiles.*.token`，并写入相邻引用（`keyRef` / `tokenRef`）。Auth-profile 引用包含在运行时解析和审计覆盖范围内。
+- 在 `openclaw.json` 中，SecretRef 必须使用结构化对象，例如 `{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}`。在 SecretRef 凭证路径上，旧版 `secretref-env:<ENV_VAR>` 标记字符串会被拒绝；请运行 `openclaw doctor --fix` 迁移有效标记。
+- OAuth 策略守卫：`auth.profiles.<id>.mode = "oauth"` 不能与该配置文件的 SecretRef 输入同时使用。违反此策略时，启动/重载和 auth-profile 解析会快速失败。
+- 对于由 SecretRef 管理的模型提供方，生成的 `agents/*/agent/models.json` 条目会保留非机密标记（而非已解析的机密值），用于 `apiKey`/header 表面。标记持久化以源配置为准：OpenClaw 从活动源配置快照（解析前）写入标记，而不是从解析后的运行时机密值写入。
+- 对于网页搜索：在显式提供方模式（设置了 `tools.web.search.provider`）下，仅所选提供方密钥处于活动状态。在自动模式（未设置 `tools.web.search.provider`）下，仅按优先级解析出的第一个提供方密钥处于活动状态，未被选中的提供方引用在被选中前视为非活动。旧版 `tools.web.search.*` 提供方路径在兼容窗口内仍会解析，但规范的 SecretRef 表面是 `plugins.entries.<plugin>.config.webSearch.*`。
 
 ## 不支持的证书
 
-范围外的证书包括：
+这些凭证属于已签发、轮换、带会话或具有 OAuth 持久性的类型，不适合只读的外部 SecretRef 解析：
 
 [//]: # "secretref-unsupported-list-start"
 
@@ -158,11 +153,7 @@ title: "SecretRef 证书范围"
 
 [//]: # "secretref-unsupported-list-end"
 
-原因：
-
-- 这些证书属于铸造、轮换、带会话，或 OAuth 持久化的类别，不适合只读的外部 SecretRef 解析。
-
 ## 相关内容
 
-- [Secrets management](/gateway/secrets)
-- [Auth credential semantics](/auth-credential-semantics)
+- [密钥管理](/gateway/secrets)
+- [认证凭据语义](/auth-credential-semantics)

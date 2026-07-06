@@ -8,7 +8,7 @@ title: "网关"
 sidebarTitle: "网关"
 ---
 
-Gateway 是 OpenClaw 的 WebSocket 服务器（通道、节点、会话、钩子）。本页中的子命令位于 `openclaw gateway …` 下。
+The Gateway is OpenClaw's WebSocket server (channels, nodes, sessions, hooks). All subcommands below live under `openclaw gateway ...`.
 
 <CardGroup cols={3}>
   <Card title="Bonjour 发现" href="/gateway/bonjour">
@@ -24,28 +24,19 @@ Gateway 是 OpenClaw 的 WebSocket 服务器（通道、节点、会话、钩子
 
 ## 运行 Gateway
 
-运行一个本地 Gateway 进程：
-
 ```bash
 openclaw gateway
-```
-
-前台别名：
-
-```bash
-openclaw gateway run
+openclaw gateway run   # equivalent, explicit form
 ```
 
 <AccordionGroup>
-  <Accordion title="启动行为">
-    - 默认情况下，除非在 `~/.openclaw/openclaw.json` 中设置了 `gateway.mode=local`，否则 Gateway 会拒绝启动。临时/开发运行时可使用 `--allow-unconfigured`。
-    - 预期 `openclaw onboard --mode local` 和 `openclaw setup` 会写入 `gateway.mode=local`。如果文件存在但缺少 `gateway.mode`，请将其视为损坏或被覆盖的配置，并修复它，而不是隐式假定为本地模式。
-    - 如果文件存在且缺少 `gateway.mode`，Gateway 会将其视为可疑的配置损坏，并拒绝替你“猜测为本地模式”。
-    - 在没有认证的情况下，绑定到 loopback 之外的地址会被阻止（安全护栏）。
-    - 目前 `lan`、`tailnet` 和 `custom` 仅通过仅限 IPv4 的 BYOH 路径解析。
-    - 目前这条路径不原生支持仅 IPv6 的 BYOH。如果主机本身只有 IPv6，请使用 IPv4 sidecar 或代理。
-    - 授权时，`SIGUSR1` 会触发进程内重启（`commands.restart` 默认启用；将 `commands.restart: false` 可阻止手动重启，但仍允许 gateway 工具/配置 apply/update）。
-    - `SIGINT`/`SIGTERM` 处理器会停止 gateway 进程，但不会恢复任何自定义终端状态。如果你把 CLI 包装在 TUI 或 raw-mode 输入中，请在退出前恢复终端。
+  <Accordion title="Startup behavior">
+    - Refuses to start unless `gateway.mode=local` is set in `~/.openclaw/openclaw.json`. Use `--allow-unconfigured` for ad-hoc/dev runs; it bypasses the guard without writing or repairing config.
+    - `openclaw onboard --mode local` and `openclaw setup` write `gateway.mode=local`. If the config file exists but `gateway.mode` is missing, that is treated as damaged/clobbered config and the Gateway refuses to guess `local` for you — re-run onboarding, set the key manually, or pass `--allow-unconfigured`.
+    - Binding beyond loopback without auth is blocked.
+    - `--bind` values `lan`, `tailnet`, and `custom` resolve over IPv4-only paths today; IPv6-only bring-your-own-host setups need an IPv4 sidecar or proxy in front of the Gateway.
+    - `SIGUSR1` triggers an in-process restart when authorized. `commands.restart` (default: enabled) gates externally-sent `SIGUSR1`; set it to `false` to block manual OS-signal restarts while still allowing restart via the `gateway restart` command, the gateway tool, and config-apply/update.
+    - `SIGINT`/`SIGTERM` stop the process but do not restore custom terminal state — if you wrap the CLI in a TUI or raw-mode input, restore the terminal yourself before exit.
 
   </Accordion>
 </AccordionGroup>
@@ -53,75 +44,81 @@ openclaw gateway run
 ### 选项
 
 <ParamField path="--port <port>" type="number">
-  WebSocket 端口（默认来自配置/环境；通常为 `18789`）。
+  WebSocket port (default from config/env; usually `18789`).
 </ParamField>
-<ParamField path="--bind <loopback|lan|tailnet|auto|custom>" type="string">
-  监听器绑定模式。`lan`、`tailnet` 和 `custom` 目前仅通过仅限 IPv4 的路径解析。
-</ParamField>
-<ParamField path="--auth <token|password>" type="string">
-  认证模式覆盖。
+<ParamField path="--bind <mode>" type="string">
+  Bind mode: `loopback` (default), `lan`, `tailnet`, `auto`, `custom`.
 </ParamField>
 <ParamField path="--token <token>" type="string">
-  令牌覆盖（同时为该进程设置 `OPENCLAW_GATEWAY_TOKEN`）。
+  Shared token for `connect.params.auth.token`. Defaults to `OPENCLAW_GATEWAY_TOKEN` when set.
+</ParamField>
+<ParamField path="--auth <mode>" type="string">
+  Auth mode: `none`, `token`, `password`, `trusted-proxy`.
 </ParamField>
 <ParamField path="--password <password>" type="string">
-  密码覆盖。
+  Password for `--auth password`.
 </ParamField>
 <ParamField path="--password-file <path>" type="string">
-  从文件读取 gateway 密码。
+  Read the Gateway password from a file.
 </ParamField>
-<ParamField path="--tailscale <off|serve|funnel>" type="string">
-  通过 Tailscale 暴露 Gateway。
+<ParamField path="--tailscale <mode>" type="string">
+  Tailscale exposure: `off`, `serve`, `funnel`.
 </ParamField>
 <ParamField path="--tailscale-reset-on-exit" type="boolean">
   在关闭时重置 Tailscale serve/funnel 配置。
 </ParamField>
-<ParamField path="--bind custom + gateway.customBindHost" type="string">
-  目前预期是 IPv4 地址。对于仅 IPv6 的 BYOH，请在 Gateway 前放置一个 IPv4 sidecar 或代理，并让 OpenClaw 指向该 IPv4 端点。
-</ParamField>
 <ParamField path="--allow-unconfigured" type="boolean">
-  允许在配置中没有 `gateway.mode=local` 的情况下启动 gateway。仅绕过临时/开发引导的启动保护；不会写入或修复配置文件。
+  Start without enforcing `gateway.mode=local`. Ad-hoc/dev bootstrap only; does not persist or repair config.
 </ParamField>
 <ParamField path="--dev" type="boolean">
-  如果缺失则创建开发配置 + 工作区（跳过 BOOTSTRAP.md）。
+  Create a dev config + workspace if missing (skips `BOOTSTRAP.md`).
 </ParamField>
 <ParamField path="--reset" type="boolean">
-  重置开发配置 + 凭据 + 会话 + 工作区（需要 `--dev`）。
+  Reset dev config, credentials, sessions, and workspace. Requires `--dev`.
 </ParamField>
 <ParamField path="--force" type="boolean">
-  启动前杀掉所选端口上的任何现有监听器。
+  Kill any existing listener on the target port before starting.
 </ParamField>
 <ParamField path="--verbose" type="boolean">
-  详细日志。
+  Verbose logging to stdout/stderr.
 </ParamField>
 <ParamField path="--cli-backend-logs" type="boolean">
-  仅在控制台显示 CLI 后端日志（并启用 stdout/stderr）。
+  Only show CLI backend logs in the console (also enables stdout/stderr).
 </ParamField>
-<ParamField path="--ws-log <auto|full|compact>" type="string" default="auto">
-  WebSocket 日志样式。
+<ParamField path="--ws-log <style>" type="string" default="auto">
+  WebSocket log style: `auto`, `full`, `compact`.
 </ParamField>
 <ParamField path="--compact" type="boolean">
   `--ws-log compact` 的别名。
 </ParamField>
 <ParamField path="--raw-stream" type="boolean">
-  将原始模型流事件记录为 jsonl。
+  Log raw model stream events to JSONL.
 </ParamField>
 <ParamField path="--raw-stream-path <path>" type="string">
-  原始流 jsonl 路径。
+  Raw stream JSONL path.
 </ParamField>
 
-## 重启 Gateway
+`--claude-cli-logs` is a deprecated alias for `--cli-backend-logs`.
+
+For `--bind custom`, set `gateway.customBindHost` to an IPv4 address; the Gateway falls back to `0.0.0.0` if that address is unavailable. IPv6-only bring-your-own-host setups need an IPv4 sidecar or proxy in front of the Gateway.
+
+## Restart the Gateway
 
 ```bash
 openclaw gateway restart
 openclaw gateway restart --safe
 openclaw gateway restart --safe --skip-deferral
 openclaw gateway restart --force
+openclaw gateway restart --wait 30s
 ```
 
-`openclaw gateway restart --safe` 会在重启前要求正在运行的 Gateway 预检当前的 OpenClaw 工作。如果存在排队中的操作、回复投递、嵌入式运行或任务运行仍在活动，Gateway 会报告阻塞项，合并重复的安全重启请求，并在活动工作耗尽后重启。普通的 `restart` 为兼容性保留现有的服务管理器行为。仅当你明确希望立即覆盖路径时才使用 `--force`。
+`--safe` asks the running Gateway to preflight active work and schedule one coalesced restart after that work drains. The wait is bounded by `gateway.reload.deferralTimeoutMs` (default: 5 minutes / `300000`); when the budget expires the restart is forced. Set `deferralTimeoutMs: 0` to wait indefinitely (with periodic still-pending warnings) instead of forcing. `--safe` cannot combine with `--force` or `--wait`.
 
-`openclaw gateway restart --safe --skip-deferral` 会执行与 `--safe` 相同的 OpenClaw 感知协调重启，但会绕过活动工作延迟门控，因此即使报告了阻塞项，Gateway 也会立即发出重启。当延迟被卡住的任务运行钉住，而 `--safe` 单独使用会无限等待时，可将其作为操作员的逃生出口。`--skip-deferral` 需要 `--safe`。
+`--skip-deferral` bypasses the active-work deferral gate on a safe restart, so the Gateway restarts immediately even with reported blockers. It requires `--safe` — use it when a deferral is stuck on a runaway task.
+
+`--wait <duration>` overrides the drain budget for a plain (non-safe) restart. Accepts bare milliseconds or unit suffixes `ms`, `s`, `m`, `h`, `d` (e.g. `30s`, `5m`, `1h30m`); `--wait 0` waits indefinitely. Not compatible with `--force` or `--safe`.
+
+`--force` skips the active-work drain and restarts immediately. Plain `restart` (no flags) keeps the existing service-manager restart behavior.
 
 <Warning>
 行内 `--password` 可能会暴露在本地进程列表中。建议使用 `--password-file`、环境变量或由 SecretRef 支持的 `gateway.auth.password`。
@@ -129,12 +126,12 @@ openclaw gateway restart --force
 
 ### Gateway 性能剖析
 
-- 设置 `OPENCLAW_GATEWAY_STARTUP_TRACE=1`，可在 Gateway 启动期间记录各阶段耗时，包括每个阶段的 `eventLoopMax` 延迟，以及已安装索引、清单注册表、启动规划和 owner-map 工作的插件查找表计时。
-- 设置 `OPENCLAW_GATEWAY_RESTART_TRACE=1`，可记录重启范围内的 `restart trace:` 行，用于重启信号处理、活动工作耗尽、关闭阶段、下次启动、就绪时间以及内存指标。
-- 设置 `OPENCLAW_DIAGNOSTICS=timeline` 并配合 `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>`，可为外部 QA harness 写出尽力而为的 JSONL 启动诊断时间线。你也可以在配置中通过 `diagnostics.flags: ["timeline"]` 启用该标志；路径仍由环境变量提供。添加 `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` 可包含事件循环采样。
-- 先运行 `pnpm build`，然后运行 `pnpm test:startup:gateway -- --runs 5 --warmup 1`，即可针对构建后的 CLI 入口对 Gateway 启动进行基准测试。该基准会记录首次进程输出、`/healthz`、`/readyz`、启动追踪时间、事件循环延迟以及插件查找表计时细节。
-- 先运行 `pnpm build`，然后在 macOS 或 Linux 上运行 `pnpm test:restart:gateway -- --case skipChannels --runs 1 --restarts 5`，即可针对构建后的 CLI 入口对进程内 Gateway 重启进行基准测试。重启基准会使用 SIGUSR1，在子进程中启用启动和重启追踪，并记录下一个 `/healthz`、下一个 `/readyz`、停机时间、就绪时间、CPU、RSS 以及重启追踪指标。
-- 将 `/healthz` 视为存活探针，将 `/readyz` 视为可用就绪状态。追踪行和基准输出用于归属定位；不要把单条追踪跨度或单个样本当作完整的性能结论。
+- `OPENCLAW_GATEWAY_STARTUP_TRACE=1` logs phase timings during startup, including per-phase `eventLoopMax` delay and plugin lookup-table timings (installed-index, manifest registry, startup planning, owner-map work).
+- `OPENCLAW_GATEWAY_RESTART_TRACE=1` logs restart-scoped `restart trace:` lines: signal handling, active-work drain, shutdown phases, next start, ready timing, and memory metrics.
+- `OPENCLAW_DIAGNOSTICS=timeline` with `OPENCLAW_DIAGNOSTICS_TIMELINE_PATH=<path>` writes a best-effort JSONL startup diagnostics timeline for external QA harnesses (equivalent to config `diagnostics.flags: ["timeline"]`; the path is still env-only). Add `OPENCLAW_DIAGNOSTICS_EVENT_LOOP=1` to include event-loop samples.
+- `pnpm build` then `pnpm test:startup:gateway -- --runs 5 --warmup 1` benchmarks Gateway startup against the built CLI entry: first process output, `/healthz`, `/readyz`, startup trace timings, event-loop delay, and plugin lookup-table timing.
+- `pnpm build` then `pnpm test:restart:gateway -- --case skipChannels --runs 1 --restarts 5` benchmarks in-process restart on macOS or Linux (not supported on Windows; restart requires `SIGUSR1`). Uses `SIGUSR1`, enables both traces in the child process, and records next `/healthz`, next `/readyz`, downtime, ready timing, CPU, RSS, and restart trace metrics.
+- `/healthz` is liveness; `/readyz` is usable readiness. Treat trace lines and benchmark output as owner-attribution signal, not a complete performance conclusion from one span or sample.
 
 ## 查询正在运行的 Gateway
 
@@ -147,12 +144,12 @@ openclaw gateway restart --force
     - `--no-color`（或 `NO_COLOR=1`）：禁用 ANSI，同时保留人类布局。
 
   </Tab>
-  <Tab title="共享选项">
-    - `--url <url>`：Gateway WebSocket URL。
-    - `--token <token>`：Gateway 令牌。
-    - `--password <password>`：Gateway 密码。
-    - `--timeout <ms>`：超时/预算（因命令而异）。
-    - `--expect-final`：等待“final”响应（agent 调用）。
+  <Tab title="Shared options">
+    - `--url <url>`: Gateway WebSocket URL.
+    - `--token <token>`: Gateway token.
+    - `--password <password>`: Gateway password.
+    - `--timeout <ms>`: timeout/budget (default varies per command; see each command below).
+    - `--expect-final`: wait for a "final" response (agent calls).
 
   </Tab>
 </Tabs>
@@ -168,10 +165,10 @@ openclaw gateway health --url ws://127.0.0.1:18789
 openclaw gateway health --port 18789
 ```
 
-HTTP `/healthz` 端点是一个存活探针：当服务器能够响应 HTTP 时就会返回。HTTP `/readyz` 端点更严格，在启动插件 sidecar、channels 或已配置 hooks 仍在就绪过程中时会保持红色。本地或已认证的详细就绪响应包含一个 `eventLoop` 诊断块，其中包含事件循环延迟、事件循环利用率、CPU 核心比率以及 `degraded` 标志。
+`/healthz` is a liveness probe: it returns as soon as the server can answer HTTP. `/readyz` is stricter and stays red while startup plugin sidecars, channels, or configured hooks are still settling. Local or authenticated detailed `/readyz` responses include an `eventLoop` diagnostic block (delay, utilization, CPU-core ratio, `degraded` flag).
 
 <ParamField path="--port <port>" type="number">
-  以该端口上的本地 loopback Gateway 为目标。此项会覆盖此次 health 调用的 `OPENCLAW_GATEWAY_URL` 和 `OPENCLAW_GATEWAY_PORT`。
+  Target a local loopback Gateway on this port. Overrides `OPENCLAW_GATEWAY_URL` and `OPENCLAW_GATEWAY_PORT` for this call.
 </ParamField>
 
 ### `gateway usage-cost`
@@ -190,10 +187,10 @@ openclaw gateway usage-cost --json
   要包含的天数。
 </ParamField>
 <ParamField path="--agent <id>" type="string">
-  将成本摘要限定到一个已配置的 agent id。
+  Scope the summary to one configured agent id.
 </ParamField>
 <ParamField path="--all-agents" type="boolean">
-  汇总所有已配置 agent 的成本摘要。不能与 `--agent` 组合使用。
+  Aggregate across all configured agents. Cannot combine with `--agent`.
 </ParamField>
 
 ### `gateway stability`
@@ -209,16 +206,16 @@ openclaw gateway stability --json
 ```
 
 <ParamField path="--limit <limit>" type="number" default="25">
-  要包含的最近事件最大数量（最多 `1000`）。
+  Maximum recent events to include (max `1000`).
 </ParamField>
 <ParamField path="--type <type>" type="string">
-  按诊断事件类型过滤，例如 `payload.large` 或 `diagnostic.memory.pressure`。
+  Filter by diagnostic event type, e.g. `payload.large` or `diagnostic.memory.pressure`.
 </ParamField>
 <ParamField path="--since-seq <seq>" type="number">
   仅包含某个诊断序号之后的事件。
 </ParamField>
 <ParamField path="--bundle [path]" type="string">
-  读取已持久化的稳定性 bundle，而不是调用正在运行的 Gateway。使用 `--bundle latest`（或仅 `--bundle`）获取状态目录下最新的 bundle，或者直接传入 bundle JSON 路径。
+  Read a persisted stability bundle instead of calling the running Gateway. `--bundle latest` (or bare `--bundle`) picks the newest bundle under the state directory; you can also pass a bundle JSON path directly.
 </ParamField>
 <ParamField path="--export" type="boolean">
   写出一个可共享的支持诊断 zip，而不是打印稳定性细节。
@@ -228,16 +225,16 @@ openclaw gateway stability --json
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="隐私和 bundle 行为">
-    - 记录保留运行时元数据：事件名称、计数、字节大小、内存读数、队列/会话状态、channel/plugin 名称，以及已脱敏的会话摘要。它们不会保留聊天文本、webhook 正文、工具输出、原始请求或响应正文、令牌、cookie、密钥值、主机名或原始会话 id。设置 `diagnostics.enabled: false` 可完全禁用记录器。
-    - 在 Gateway 致命退出、关闭超时以及重启启动失败时，如果记录器有事件，OpenClaw 会将相同的诊断快照写入 `~/.openclaw/logs/stability/openclaw-stability-*.json`。使用 `openclaw gateway stability --bundle latest` 检查最新 bundle；`--limit`、`--type` 和 `--since-seq` 也适用于 bundle 输出。
+  <Accordion title="Privacy and bundle behavior">
+    - Records keep operational metadata: event names, counts, byte sizes, memory readings, queue/session state, approval ids, channel/plugin names, and redacted session summaries. They exclude chat text, webhook bodies, tool outputs, raw request/response bodies, tokens, cookies, secret values, hostnames, and raw session ids. Set `diagnostics.enabled: false` to disable the recorder entirely.
+    - Fatal Gateway exits, shutdown timeouts, and restart startup failures write the same diagnostic snapshot to `~/.openclaw/logs/stability/openclaw-stability-*.json` when the recorder has events. Inspect the newest bundle with `openclaw gateway stability --bundle latest`; `--limit`, `--type`, and `--since-seq` apply to bundle output too.
 
   </Accordion>
 </AccordionGroup>
 
 ### `gateway diagnostics export`
 
-写出一个本地诊断 zip，专为附加到 bug 报告中设计。关于隐私模型和 bundle 内容，请参见 [Diagnostics Export](/gateway/diagnostics)。
+Write a local diagnostics zip designed for bug reports. For the privacy model and bundle contents, see [Diagnostics Export](/gateway/diagnostics).
 
 ```bash
 openclaw gateway diagnostics export
@@ -273,13 +270,13 @@ openclaw gateway diagnostics export --json
   以 JSON 形式打印写入路径、大小和清单。
 </ParamField>
 
-导出内容包含清单、Markdown 摘要、配置形状、已净化的配置细节、已净化的日志摘要、已净化的 Gateway 状态/健康快照，以及（如果存在）最新的稳定性 bundle。
+The export bundles: `manifest.json` (file inventory), `summary.md` (Markdown summary), `diagnostics.json` (top-level config/logs/discovery/stability/status/health summary), `config/sanitized.json`, `status/gateway-status.json`, `health/gateway-health.json`, `logs/openclaw-sanitized.jsonl`, and `stability/latest.json` when a bundle exists.
 
-它专为共享而设计。它保留有助于调试的运行细节，例如安全的 OpenClaw 日志字段、子系统名称、状态码、持续时间、已配置模式、端口、插件 id、provider id、非密钥功能设置以及已脱敏的运行日志消息。它会省略或脱敏聊天文本、webhook 正文、工具输出、凭据、cookie、账户/消息标识符、提示/指令文本、主机名和密钥值。当一条类似 LogTape 风格的消息看起来像用户/聊天/工具载荷文本时，导出只保留“已省略该消息”以及其字节数。
+It is designed to be shared. It keeps operational details useful for debugging — safe log fields, subsystem names, status codes, durations, configured modes, ports, plugin/provider ids, non-secret feature settings, and redacted operational log messages — and omits or redacts chat text, webhook bodies, tool outputs, credentials, cookies, account/message identifiers, prompt/instruction text, hostnames, and secret values. When a log message looks like user/chat/tool payload text (e.g. "user said", "chat text", "tool output", "webhook body"), the export keeps only the fact that a message was omitted plus its byte count.
 
 ### `gateway status`
 
-`gateway status` 会显示 Gateway 服务（launchd/systemd/schtasks），以及一个可选的连通性/认证能力探测。
+Shows the Gateway service (launchd/systemd/schtasks) plus an optional connectivity/auth probe.
 
 ```bash
 openclaw gateway status
@@ -306,48 +303,41 @@ openclaw gateway status --require-rpc
   也扫描系统级服务。
 </ParamField>
 <ParamField path="--require-rpc" type="boolean">
-  将默认连通性探测升级为读探测，并在该读探测失败时以非零退出。不能与 `--no-probe` 组合使用。
+  Upgrade the connectivity probe to a read probe and exit non-zero if it fails. Cannot combine with `--no-probe`.
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="状态语义">
-    - 即使本地 CLI 配置缺失或无效，`gateway status` 仍可用于诊断。
-    - 默认的 `gateway status` 会证明服务状态、WebSocket 连接，以及握手时可见的认证能力。它不能证明读/写/管理操作可用。
-    - 对于首次设备认证，诊断探测是非变更性的：如果存在已缓存的设备令牌，它会复用该令牌，但不会为了检查状态而创建新的 CLI 设备身份或只读设备配对记录。
-    - `gateway status` 会在可能的情况下解析配置中的认证 SecretRef 以用于探测认证。
-    - 如果在该命令路径中必需的认证 SecretRef 无法解析，而探测连接/认证失败，`gateway status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password` 或先解析密钥来源。
-    - 如果探测成功，则会抑制未解析 auth-ref 的警告，以避免误报。
-    - 当启用探测时，如果正在运行的 Gateway 报告了版本，JSON 输出会包含 `gateway.version`；如果后续握手探测无法提供版本元数据，`--require-rpc` 可以回退到 `status.runtimeVersion` RPC 载荷。
-    - 当仅有监听服务还不够、你还需要读范围 RPC 调用也正常时，请在脚本和自动化中使用 `--require-rpc`。
-    - `--deep` 会尽力扫描额外的 launchd/systemd/schtasks 安装项。当检测到多个类似 gateway 的服务时，人类输出会打印清理提示，并警告大多数部署应该每台机器只运行一个 gateway。
-    - 如果服务进程因外部监督器重启而正常退出，`--deep` 还会报告最近一次 Gateway 监督器重启交接。
-    - `--deep` 会以插件感知模式运行配置验证（`pluginValidation: "full"`），并显示已配置的插件清单警告（例如缺失 channel 配置元数据），以便安装和更新冒烟检查能够发现问题。默认的 `gateway status` 保留快速只读路径，跳过插件验证。
-    - 人类输出会包含解析后的文件日志路径，以及 CLI 与服务配置路径/有效性快照，以帮助诊断 profile 或 state-dir 漂移。
+  <Accordion title="Status semantics">
+    - Stays available for diagnostics even when the local CLI config is missing or invalid.
+    - Default output proves service state, WebSocket connect, and the auth capability visible at handshake time — not read/write/admin operations.
+    - Probes are non-mutating for first-time device auth: they reuse an existing cached device token when one exists, but never create a new CLI device identity or read-only pairing record just to check status.
+    - Resolves configured auth SecretRefs for probe auth when possible. If a required SecretRef is unresolved, `--json` reports `rpc.authWarning` when probe connectivity/auth fails; pass `--token`/`--password` explicitly or fix the secret source. Unresolved-auth warnings are suppressed once the probe succeeds.
+    - JSON output includes `gateway.version` when the running Gateway reports it; `--require-rpc` can fall back to the `status.runtimeVersion` RPC payload if the handshake probe cannot supply version metadata.
+    - Use `--require-rpc` in scripts/automation when a listening service is not enough and you need read-scope RPC to be healthy too.
+    - `--deep` scans for extra launchd/systemd/schtasks installs; when multiple gateway-like services are found, human output prints cleanup hints (usually run one gateway per machine) and reports a recent supervisor restart handoff when relevant.
+    - `--deep` also runs config validation in plugin-aware mode (`pluginValidation: "full"`) and surfaces plugin manifest warnings (e.g. missing channel config metadata). Default `gateway status` keeps the fast read-only path that skips plugin validation.
+    - Human output includes the resolved file log path plus CLI-vs-service config paths/validity to help diagnose profile or state-dir drift.
 
   </Accordion>
-  <Accordion title="Linux systemd 认证漂移检查">
-    - 在 Linux systemd 安装中，服务认证漂移检查会从 unit 中读取 `Environment=` 和 `EnvironmentFile=` 两种值（包括 `%h`、带引号的路径、多个文件以及可选的 `-` 文件）。
-    - 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRef（先使用服务命令环境，再回退到进程环境）。
-    - 如果令牌认证实际上未启用（显式的 `gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可能生效而没有令牌候选可以生效），则 token 漂移检查会跳过配置令牌解析。
+  <Accordion title="Linux systemd auth-drift checks">
+    - Service auth drift checks read both `Environment=` and `EnvironmentFile=` from the unit (including `%h`, quoted paths, multiple files, and optional `-` files).
+    - Resolves `gateway.auth.token` SecretRefs using merged runtime env (service command env first, then process env fallback).
+    - Token-drift checks skip config token resolution when token auth is not effectively active (`gateway.auth.mode` explicitly `password`/`none`/`trusted-proxy`, or mode unset where password can win and no token candidate can win).
 
   </Accordion>
 </AccordionGroup>
 
 ### `gateway probe`
 
-`gateway probe` 是“调试一切”的命令。它总会探测：
+The "debug everything" command. It always probes:
 
-- 你已配置的远程 gateway（如果已设置），以及
-- localhost（loopback）**即使已配置远程**。
+- your configured remote gateway (if set), and
+- localhost (loopback), **even if remote is configured**.
 
-如果你传入 `--url`，该显式目标会被添加到两者之前。人类可读输出将目标标记为：
-
-- `URL (explicit)`
-- `Remote (configured)` 或 `Remote (configured, inactive)`
-- `Local loopback`
+Passing `--url` adds that explicit target ahead of both. Human output labels targets `URL (explicit)`, `Remote (configured)` / `Remote (configured, inactive)`, and `Local loopback`.
 
 <Note>
-如果多个探测目标都可达，它会全部打印出来。SSH 隧道、TLS/proxy URL 和已配置的远程 URL 即使传输端口不同，也可能指向同一个 gateway；`multiple_gateways` 仅保留给彼此不同或身份上无法区分的可达 gateway。使用隔离配置文件（例如救援 bot）时支持多个 gateway，但大多数安装仍只运行一个 gateway。
+If multiple probe targets are reachable, all are printed. An SSH tunnel, TLS/proxy URL, and configured remote URL can point at the same gateway even with different transport ports; `multiple_gateways` is reserved for distinct or identity-ambiguous reachable gateways. Running multiple gateways is supported for isolated profiles (e.g. a rescue bot), but most installs run a single gateway.
 </Note>
 
 ```bash
@@ -357,56 +347,49 @@ openclaw gateway probe --port 18789
 ```
 
 <ParamField path="--port <port>" type="number">
-  将此端口用于本地 loopback 探测目标和 SSH 隧道远程端口。若不带 `--url`，则此项会选择本地 loopback 目标，而不是已配置的 gateway 环境 URL、环境端口或远程目标。
+  Use this port for the local loopback probe target and SSH tunnel remote port. Without `--url`, this selects only the local loopback target instead of configured gateway environment URL, environment port, or remote targets.
 </ParamField>
 
 <AccordionGroup>
-  <Accordion title="解释">
-    - `Reachable: yes` 表示至少有一个目标接受了 WebSocket 连接。
-    - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` 报告探测能够证明的认证能力。这与可达性是分开的。
-    - `Read probe: ok` 表示读范围详细 RPC 调用（`health`/`status`/`system-presence`/`config.get`）也成功了。
-    - `Read probe: limited - missing scope: operator.read` 表示连接成功，但读范围 RPC 受限。这被报告为**降级**可达性，而不是完全失败。
-    - 在 `Connect: ok` 之后出现的 `Read probe: failed` 表示 Gateway 接受了 WebSocket 连接，但后续读诊断超时或失败。这同样是**降级**可达性，而不是不可达的 Gateway。
-    - 与 `gateway status` 一样，probe 会复用现有缓存的设备认证，但不会创建首次设备身份或配对状态。
-    - 只有当所有被探测的目标都不可达时，退出码才为非零。
+  <Accordion title="Interpretation">
+    - `Reachable: yes` means at least one target accepted a WebSocket connect.
+    - `Capability: read-only|write-capable|admin-capable|pairing-pending|connect-only` reports what the probe could prove about auth, separate from reachability.
+    - `Read probe: ok` means read-scope detail RPC calls (`health`/`status`/`system-presence`/`config.get`) also succeeded.
+    - `Read probe: limited - missing scope: operator.read` means connect succeeded but read-scope RPC is limited. Reported as **degraded** reachability, not full failure.
+    - `Read probe: failed` after `Connect: ok` means the WebSocket connected but follow-up read diagnostics timed out or failed — also **degraded**, not unreachable.
+    - Like `gateway status`, probe reuses existing cached device auth but does not create first-time device identity or pairing state.
+    - Exit code is non-zero only when no probed target is reachable.
 
   </Accordion>
   <Accordion title="JSON 输出">
     顶层：
 
-    - `ok`：至少有一个目标可达。
-    - `degraded`：至少有一个目标接受了连接，但未完成完整的详细 RPC 诊断。
-    - `capability`：在可达目标中看到的最佳能力（`read_only`、`write_capable`、`admin_capable`、`pairing_pending`、`connected_no_operator_scope` 或 `unknown`）。
-    - `primaryTargetId`：按以下优先级作为活动胜者的最佳目标：显式 URL、SSH 隧道、已配置远程，然后是本地 loopback。
-    - `warnings[]`：尽力而为的警告记录，包含 `code`、`message` 和可选的 `targetIds`。
-    - `network`：从当前配置和主机网络派生的本地 loopback/tailnet URL 提示。
-    - `discovery.timeoutMs` 和 `discovery.count`：本次探测实际使用的发现预算/结果数量。
+    - `ok`: at least one target is reachable.
+    - `degraded`: at least one target accepted a connection but did not complete full detail RPC diagnostics.
+    - `capability`: best capability seen across reachable targets (`read_only`, `write_capable`, `admin_capable`, `pairing_pending`, `connected_no_operator_scope`, or `unknown`).
+    - `primaryTargetId`: best target to treat as the active winner, in order: explicit URL, SSH tunnel, configured remote, local loopback.
+    - `warnings[]`: best-effort warning records with `code`, `message`, optional `targetIds`.
+    - `network`: local loopback/tailnet URL hints derived from current config and host networking.
+    - `discovery.timeoutMs` / `discovery.count`: the actual discovery budget/result count used for this probe pass.
 
-    每个目标（`targets[].connect`）：
+    Per target (`targets[].connect`): `ok` (reachability + degraded classification), `rpcOk` (full detail RPC success), `scopeLimited` (detail RPC failed on missing operator scope).
 
-    - `ok`：连接后的可达性 + 降级分类。
-    - `rpcOk`：完整详细 RPC 成功。
-    - `scopeLimited`：由于缺少 operator 范围，详细 RPC 失败。
-
-    每个目标（`targets[].auth`）：
-
-    - `role`：可用时在 `hello-ok` 中报告的认证角色。
-    - `scopes`：可用时在 `hello-ok` 中报告的已授予范围。
-    - `capability`：该目标显示出的认证能力分类。
+    Per target (`targets[].auth`): `role` and `scopes` reported in `hello-ok` when available, plus the surfaced `capability` classification.
 
   </Accordion>
   <Accordion title="Common warning codes">
-    - `ssh_tunnel_failed`: SSH 隧道设置失败；命令回退到直接探测。
-    - `multiple_gateways`: 探测到了不同的 gateway 身份，或者 OpenClaw 无法证明可达目标属于同一个 gateway。指向同一 gateway 的 SSH 隧道、代理 URL 或已配置远程 URL 不会触发此警告。
-    - `auth_secretref_unresolved`: 失败目标所配置的认证 SecretRef 无法解析。
-    - `probe_scope_limited`: WebSocket 连接成功，但读探测因缺少 `operator.read` 而受限。
+    - `ssh_tunnel_failed`: SSH tunnel setup failed; the command fell back to direct probes.
+    - `multiple_gateways`: distinct gateway identities were reachable, or OpenClaw could not prove reachable targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway does not trigger this.
+    - `auth_secretref_unresolved`: a configured auth SecretRef could not be resolved for a failed target.
+    - `probe_scope_limited`: WebSocket connect succeeded, but the read probe was limited by missing `operator.read`.
+    - `local_tls_runtime_unavailable`: local Gateway TLS is enabled but OpenClaw could not load the local certificate fingerprint.
 
   </Accordion>
 </AccordionGroup>
 
 #### 通过 SSH 的远程（Mac app parity）
 
-macOS 应用的“通过 SSH 的远程”模式使用本地端口转发，因此远程 gateway（可能仅绑定到 loopback）会变为可通过 `ws://127.0.0.1:<port>` 访问。
+The macOS app "Remote over SSH" mode uses a local port-forward so a loopback-only remote gateway becomes reachable at `ws://127.0.0.1:<port>`.
 
 CLI 等价命令：
 
@@ -424,10 +407,7 @@ openclaw gateway probe --ssh user@gateway-host
   从解析出的发现端点（`local.` 加上已配置的广域域名，如有）中选择发现到的第一个 gateway 主机作为 SSH 目标。TXT-only 提示会被忽略。
 </ParamField>
 
-配置（可选，作为默认值使用）：
-
-- `gateway.remote.sshTarget`
-- `gateway.remote.sshIdentity`
+Config defaults (optional): `gateway.remote.sshTarget`, `gateway.remote.sshIdentity`.
 
 ### `gateway call <method>`
 
@@ -435,7 +415,7 @@ openclaw gateway probe --ssh user@gateway-host
 
 ```bash
 openclaw gateway call status
-openclaw gateway call logs.tail --params '{"sinceMs": 60000}'
+openclaw gateway call logs.tail --params '{"limit": 200}'
 ```
 
 <ParamField path="--params <json>" type="string" default="{}">
@@ -450,8 +430,8 @@ openclaw gateway call logs.tail --params '{"sinceMs": 60000}'
 <ParamField path="--password <password>" type="string">
   Gateway 密码。
 </ParamField>
-<ParamField path="--timeout <ms>" type="number">
-  超时预算。
+<ParamField path="--timeout <ms>" type="number" default="10000">
+  Timeout budget.
 </ParamField>
 <ParamField path="--expect-final" type="boolean">
   主要用于会在最终载荷前流式传输中间事件的 agent 风格 RPC。
@@ -461,7 +441,7 @@ openclaw gateway call logs.tail --params '{"sinceMs": 60000}'
 </ParamField>
 
 <Note>
-`--params` 必须是有效的 JSON。
+`--params` must be valid JSON, and each method validates its own param shape (extra/misnamed fields are rejected).
 </Note>
 
 ## 管理 Gateway 服务
@@ -476,8 +456,7 @@ openclaw gateway uninstall
 
 ### 使用包装器安装
 
-当托管服务必须通过另一个可执行文件启动时，请使用 `--wrapper`，例如
-秘密管理器 shim 或 run-as 帮助程序。包装器会接收普通的 Gateway 参数，并负责最终以这些参数 exec `openclaw` 或 Node。
+Use `--wrapper` when the managed service must start through another executable, for example a secrets manager shim or a run-as helper. The wrapper receives the normal Gateway args and is responsible for eventually exec'ing `openclaw` or Node with those args.
 
 ```bash
 cat > ~/.local/bin/openclaw-doppler <<'EOF'
@@ -491,10 +470,7 @@ openclaw gateway install --wrapper ~/.local/bin/openclaw-doppler --force
 openclaw gateway restart
 ```
 
-你也可以通过环境变量设置包装器。`gateway install` 会验证该路径是
-一个可执行文件，将包装器写入服务的 `ProgramArguments`，并将
-`OPENCLAW_WRAPPER` 持久化到服务环境中，以便后续强制重装、更新和 doctor
-修复。
+You can also set the wrapper through the environment. `gateway install` validates that the path is an executable file, writes the wrapper into the service `ProgramArguments`, and persists `OPENCLAW_WRAPPER` in the service environment for later forced reinstalls, updates, and doctor repairs.
 
 ```bash
 OPENCLAW_WRAPPER="$HOME/.local/bin/openclaw-doppler" openclaw gateway install --force
@@ -511,20 +487,16 @@ openclaw gateway restart
 <AccordionGroup>
   <Accordion title="命令选项">
     - `gateway status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
-    - `gateway install`: `--port`, `--runtime <node|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`
+    - `gateway install`: `--port`, `--runtime <node|bun>` (default: `node`), `--token`, `--wrapper <path>`, `--force`, `--json`
     - `gateway restart`: `--safe`, `--skip-deferral`, `--force`, `--wait <duration>`, `--json`
     - `gateway uninstall|start`: `--json`
     - `gateway stop`: `--disable`, `--json`
 
   </Accordion>
-  <Accordion title="生命周期行为">
-    - 使用 `gateway restart` 重启托管服务。不要把 `gateway stop` 和 `gateway start` 连接起来当作重启替代方案。
-    - 在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`，它会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用——KeepAlive 的自动恢复仍会对未来的崩溃保持活动，且 `gateway start` 可在不手动执行 `launchctl enable` 的情况下干净地重新启用。传入 `--disable` 可持久化地抑制 KeepAlive 和 RunAtLoad，这样 gateway 在下一次显式 `gateway start` 之前不会重新启动；当手动停止需要在重启或系统重启后仍然生效时，请使用此选项。
-    - `gateway restart --safe` 会要求正在运行的 Gateway 对当前活跃的 OpenClaw 工作进行预检，并将重启延后，直到回复投递、内嵌运行和任务运行全部排空。`--safe` 不能与 `--force` 或 `--wait` 组合使用。
-    - `gateway restart --wait 30s` 会覆盖该次重启配置的排空预算。裸数字表示毫秒；支持 `s`、`m` 和 `h` 等单位。`--wait 0` 表示无限等待。
-    - `gateway restart --safe --skip-deferral` 会运行支持 OpenClaw 的安全重启，但绕过延后门控，因此即使报告了阻塞项，Gateway 也会立即发出重启。用于处理卡住的任务运行延后；需要 `--safe`。
-    - `gateway restart --force` 会跳过活跃工作排空并立即重启。当操作员已经检查过所列出的任务阻塞项并希望立刻恢复 gateway 时，请使用它。
-    - 生命周期命令支持 `--json`，便于脚本化。
+  <Accordion title="Lifecycle behavior">
+    - Use `gateway restart` to restart a managed service. Do not chain `gateway stop` and `gateway start` as a restart substitute.
+    - On macOS, `gateway stop` uses `launchctl bootout` by default, which removes the LaunchAgent from the current boot session without persisting a disable — KeepAlive auto-recovery stays active for future crashes and `gateway start` re-enables cleanly without a manual `launchctl enable`. Pass `--disable` to persistently suppress KeepAlive and RunAtLoad so the gateway does not respawn until the next explicit `gateway start`; use this when a manual stop should survive reboots.
+    - Lifecycle commands accept `--json` for scripting.
 
   </Accordion>
   <Accordion title="安装时的认证和 SecretRef">
@@ -541,20 +513,12 @@ openclaw gateway restart
 
 `gateway discover` 扫描 Gateway 信标（`_openclaw-gw._tcp`）。
 
-- 多播 DNS-SD：`local.`
-- 单播 DNS-SD（广域 Bonjour）：选择一个域（例如：`openclaw.internal.`），并配置分割 DNS + DNS 服务器；参见 [Bonjour](/gateway/bonjour)。
+- Multicast DNS-SD: `local.`
+- Unicast DNS-SD (wide-area Bonjour): choose a domain (example: `openclaw.internal.`) and set up split DNS + a DNS server; see [Bonjour](/gateway/bonjour).
 
 只有启用了 Bonjour 发现的 gateway（默认）才会广播该信标。
 
-广域发现记录可以包含以下 TXT 提示：
-
-- `role`（gateway 角色提示）
-- `transport`（传输提示，例如 `gateway`）
-- `gatewayPort`（WebSocket 端口，通常为 `18789`）
-- `sshPort`（仅完整发现模式；当缺失时，客户端默认将 SSH 目标设为 `22`）
-- `tailnetDns`（MagicDNS 主机名，如可用）
-- `gatewayTls` / `gatewayTlsSha256`（已启用 TLS + 证书指纹）
-- `cliPath`（仅完整发现模式）
+TXT hints on every beacon: `role` (gateway role hint), `transport` (transport hint, e.g. `gateway`), `gatewayPort` (WebSocket port, usually `18789`), `tailnetDns` (MagicDNS hostname, when available), `gatewayTls` / `gatewayTlsSha256` (TLS enabled + cert fingerprint). `sshPort` and `cliPath` are published only in full discovery mode (`discovery.mdns.mode: "full"`; default is `"minimal"`, which omits them — clients then default SSH targets to port `22`).
 
 ### `gateway discover`
 
@@ -577,9 +541,9 @@ openclaw gateway discover --json | jq '.beacons[].wsUrl'
 ```
 
 <Note>
-- CLI 会扫描 `local.` 以及已启用时配置的广域域。
-- JSON 输出中的 `wsUrl` 派生自已解析的服务端点，而不是仅来自 TXT 提示，例如 `lanHost` 或 `tailnetDns`。
-- 在 `local.` mDNS 和广域 DNS-SD 上，仅当 `discovery.mdns.mode` 为 `full` 时才会发布 `sshPort` 和 `cliPath`。
+- Scans `local.` plus the configured wide-area domain when one is enabled.
+- `wsUrl` in JSON output is derived from the resolved service endpoint, not from TXT-only hints such as `lanHost` or `tailnetDns`.
+- `discovery.mdns.mode` controls `sshPort`/`cliPath` publication on both `local.` mDNS and wide-area DNS-SD (see above).
 
 </Note>
 

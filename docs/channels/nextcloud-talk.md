@@ -5,50 +5,41 @@ read_when:
 title: "Nextcloud Talk"
 ---
 
-状态：捆绑插件（webhook bot）。支持私信、房间、反应和 markdown 消息。
+Nextcloud Talk 是一个可下载的频道插件（`@openclaw/nextcloud-talk`），它通过 Talk webhook 机器人将 OpenClaw 连接到一个自托管的 Nextcloud 实例。支持直接消息、房间、表情回应和 markdown 消息；媒体将以 URL 形式发送。
 
-## 捆绑插件
-
-Nextcloud Talk 在当前 OpenClaw 版本中作为捆绑插件提供，因此
-普通打包构建不需要单独安装。
-
-如果你使用的是较旧的构建版本，或者是一个排除了 Nextcloud Talk 的自定义安装，
-请直接安装 npm 包：
-
-通过 CLI 安装（npm registry）：
+## 安装
 
 ```bash
 openclaw plugins install @openclaw/nextcloud-talk
 ```
 
-使用裸包以跟随当前官方发布标签。只有在需要可复现安装时才固定到精确
-版本。
+使用裸包规格以跟随当前官方发布标签。只有在需要可复现的安装时，才固定到确切版本。
 
-本地检出（从 git 仓库运行时）：
+从本地检出（开发工作流）：
 
 ```bash
 openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 ```
 
-详情：[插件](/tools/plugin)
+安装后重启网关。详情：[插件](/tools/plugin)
 
 ## 快速设置（入门）
 
-1. 确保 Nextcloud Talk 插件可用。
-   - 当前打包版 OpenClaw 已经捆绑了它。
-   - 较旧/自定义安装可以使用上面的命令手动添加。
-2. 在你的 Nextcloud 服务器上创建一个 bot：
+1. 安装插件（见上文）。
+2. 在你的 Nextcloud 服务器上创建一个机器人：
 
    ```bash
    ./occ talk:bot:install "OpenClaw" "<shared-secret>" "<webhook-url>" --feature webhook --feature response --feature reaction
    ```
 
-3. 在目标房间设置中启用该 bot。
+   保留 `--feature response`：如果没有它，外发回复会以 401 失败。可使用 `./occ talk:bot:state --feature webhook --feature response --feature reaction <botId> 1` 修复已存在的机器人。
+
+3. 在目标房间设置中启用该机器人。
 4. 配置 OpenClaw：
-   - 配置：`channels.nextcloud-talk.baseUrl` + `channels.nextcloud-talk.botSecret`
+   - 配置项：`channels.nextcloud-talk.baseUrl` + `channels.nextcloud-talk.botSecret`
    - 或环境变量：`NEXTCLOUD_TALK_BOT_SECRET`（仅默认账户）
 
-   CLI 设置：
+   CLI 设置（`--url`/`--token` 是显式字段的别名；`nc-talk` 和 `nc` 可作为频道别名）：
 
    ```bash
    openclaw channels add --channel nextcloud-talk \
@@ -91,10 +82,12 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 
 ## 说明
 
-- bot 不能主动发起私信。用户必须先给 bot 发消息。
-- webhook URL 必须能被 Gateway 访问；如果位于代理后面，请设置 `webhookPublicUrl`。
-- bot API 不支持媒体上传；媒体会以 URL 的形式发送。
-- webhook 负载无法区分私信与房间；设置 `apiUser` + `apiPassword` 可启用房间类型查找（否则私信会被当作房间处理）。
+- Bot 不能主动发起私信。用户必须先给 bot 发送消息。
+- Webhook URL 必须能从 Nextcloud 服务器访问；当网关位于代理后面时，请设置 `webhookPublicUrl`。Webhook 请求使用 bot secret 进行 HMAC-SHA256 签名；无效签名会被拒绝并进行限流。
+- 该 bot API 不支持媒体上传；外发媒体会以 `Attachment: <url>` 行的形式附加。
+- Webhook 载荷无法区分私信和房间；设置 `apiUser` + `apiPassword` 以启用房间类型查询（缓存约 5 分钟）。如果不设置，它们，所有会话都会被视为房间。
+- 外发请求会经过 SSRF 防护。对于位于受信任私有/内部网络中的 Nextcloud 主机，可通过 `channels.nextcloud-talk.network.dangerouslyAllowPrivateNetwork: true` 显式允许。
+- 在设置了 `apiUser`/`apiPassword` 和 `webhookPublicUrl` 的情况下，`openclaw channels status` 会探测 bot，并在缺少 `response` 功能时发出警告。
 
 ## 访问控制（私信）
 
@@ -103,12 +96,12 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
   - `openclaw pairing list nextcloud-talk`
   - `openclaw pairing approve nextcloud-talk <CODE>`
 - 公开私信：`channels.nextcloud-talk.dmPolicy="open"` 再加上 `channels.nextcloud-talk.allowFrom=["*"]`。
-- `allowFrom` 仅匹配 Nextcloud 用户 ID；显示名称会被忽略。
+- `allowFrom` 仅匹配 Nextcloud 用户 ID（小写）；显示名称会被忽略。
 
 ## 房间（群组）
 
-- 默认：`channels.nextcloud-talk.groupPolicy = "allowlist"`（基于 mention 门控）。
-- 使用 `channels.nextcloud-talk.rooms` 将房间加入允许列表：
+- 默认：`channels.nextcloud-talk.groupPolicy = "allowlist"`（需提及门控）。
+- 使用 `channels.nextcloud-talk.rooms` 允许名单中的房间，以 room token 为键；`"*"` 设置通配默认值：
 
 ```json5
 {
@@ -122,7 +115,8 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 }
 ```
 
-- 若要不允许任何房间，保持允许列表为空，或设置 `channels.nextcloud-talk.groupPolicy="disabled"`。
+- 每个房间的键：`requireMention`（默认 true）、`enabled`（false 会禁用该房间）、`allowFrom`（每个房间的发送者允许名单）、`tools`（工具允许/拒绝覆盖）、`skills`（限制加载的技能）、`systemPrompt`。
+- 若要不允许任何房间，请保持允许名单为空，或设置 `channels.nextcloud-talk.groupPolicy="disabled"`。
 
 ## 能力
 
@@ -141,31 +135,35 @@ openclaw plugins install ./path/to/local/nextcloud-talk-plugin
 
 提供者选项：
 
-- `channels.nextcloud-talk.enabled`: 启用/禁用频道启动。
+- `channels.nextcloud-talk.enabled`: 启用/禁用通道启动。
 - `channels.nextcloud-talk.baseUrl`: Nextcloud 实例 URL。
-- `channels.nextcloud-talk.botSecret`: bot 共享密钥。
+- `channels.nextcloud-talk.botSecret`: bot 共享密钥（字符串或密钥引用）。
 - `channels.nextcloud-talk.botSecretFile`: 常规文件密钥路径。会拒绝符号链接。
-- `channels.nextcloud-talk.apiUser`: 用于房间查找的 API 用户（DM 检测）。
-- `channels.nextcloud-talk.apiPassword`: 用于房间查找的 API/app 密码。
+- `channels.nextcloud-talk.apiUser`: 用于房间查找（DM 检测）和状态探测的 API 用户。
+- `channels.nextcloud-talk.apiPassword`: 用于房间查找的 API/应用密码。
 - `channels.nextcloud-talk.apiPasswordFile`: API 密码文件路径。
 - `channels.nextcloud-talk.webhookPort`: webhook 监听端口（默认：8788）。
 - `channels.nextcloud-talk.webhookHost`: webhook 主机（默认：0.0.0.0）。
 - `channels.nextcloud-talk.webhookPath`: webhook 路径（默认：/nextcloud-talk-webhook）。
 - `channels.nextcloud-talk.webhookPublicUrl`: 外部可访问的 webhook URL。
-- `channels.nextcloud-talk.dmPolicy`: `pairing | allowlist | open | disabled`。
-- `channels.nextcloud-talk.allowFrom`: DM 允许列表（用户 ID）。`open` 需要 `"*"`.
-- `channels.nextcloud-talk.groupPolicy`: `allowlist | open | disabled`。
-- `channels.nextcloud-talk.groupAllowFrom`: 群组允许列表（用户 ID）。
-- `channels.nextcloud-talk.rooms`: 每个房间的设置和允许列表。
+- `channels.nextcloud-talk.dmPolicy`: `pairing | allowlist | open | disabled`（默认：pairing）。`open` 需要 `allowFrom=["*"]`。
+- `channels.nextcloud-talk.allowFrom`: DM 白名单（用户 ID）。
+- `channels.nextcloud-talk.groupPolicy`: `allowlist | open | disabled`（默认：allowlist）。
+- `channels.nextcloud-talk.groupAllowFrom`: 房间发送者白名单（用户 ID）；未设置时回退到 `allowFrom`。
+- `channels.nextcloud-talk.rooms`: 按房间设置和白名单（见上文）。
 - 静态发送者访问组可以通过 `accessGroup:<name>` 在 `allowFrom` 和 `groupAllowFrom` 中引用。
-- `channels.nextcloud-talk.historyLimit`: 群组历史记录上限（0 表示禁用）。
-- `channels.nextcloud-talk.dmHistoryLimit`: DM 历史记录上限（0 表示禁用）。
-- `channels.nextcloud-talk.dms`: 每个 DM 的覆盖设置（historyLimit）。
-- `channels.nextcloud-talk.textChunkLimit`: 出站文本分块大小（字符）。
-- `channels.nextcloud-talk.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）分割，再进行长度分块。
-- `channels.nextcloud-talk.blockStreaming`: 为此频道禁用块流式传输。
-- `channels.nextcloud-talk.blockStreamingCoalesce`: 块流式传输合并调优。
+- `channels.nextcloud-talk.historyLimit`: 群组历史记录限制（0 表示禁用）。
+- `channels.nextcloud-talk.dmHistoryLimit`: DM 历史记录限制（0 表示禁用）。
+- `channels.nextcloud-talk.dms`: 以用户 ID 为键的每个 DM 覆盖项（`historyLimit`）。
+- `channels.nextcloud-talk.textChunkLimit`: 外发文本分块大小（字符数，默认：4000）。
+- `channels.nextcloud-talk.chunkMode`: `length`（默认）或 `newline`，先按空行（段落边界）拆分，再进行长度分块。
+- `channels.nextcloud-talk.blockStreaming`: 为此通道禁用块流式传输。
+- `channels.nextcloud-talk.blockStreamingCoalesce`: 块流式合并调优。
+- `channels.nextcloud-talk.responsePrefix`: 外发回复前缀。
+- `channels.nextcloud-talk.markdown.tables`: markdown 表格渲染模式（`off | bullets | code | block`）。
 - `channels.nextcloud-talk.mediaMaxMb`: 入站媒体上限（MB）。
+- `channels.nextcloud-talk.network.dangerouslyAllowPrivateNetwork`: 允许私有/内部 Nextcloud 主机绕过 SSRF 防护。
+- `channels.nextcloud-talk.accounts.<id>`: 每个账号的覆盖项（相同键）；`defaultAccount` 选择默认账号。环境变量 `NEXTCLOUD_TALK_BOT_SECRET` / `NEXTCLOUD_TALK_API_PASSWORD` 仅适用于默认账号。
 
 ## 相关内容
 

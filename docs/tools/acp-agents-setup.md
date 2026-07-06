@@ -9,7 +9,7 @@ title: "ACP 代理 — 设置"
 
 关于概览、操作手册和概念，请参见 [ACP 代理](/tools/acp-agents)。
 
-下面的章节涵盖 acpx 运行时配置、用于 MCP 桥接的插件设置以及权限配置。
+本页涵盖 acpx harness 配置、用于 MCP 桥接的插件设置，以及权限配置。
 
 只有在设置 ACP/acpx 路径时才使用本页。对于原生 Codex
 app-server 运行时配置，请使用 [Codex harness](/plugins/codex-harness)。对于
@@ -19,7 +19,7 @@ OpenAI API 密钥或 Codex OAuth 模型提供方配置，请使用
 Codex 有两条 OpenClaw 路径：
 
 | Route                      | Config/command                                         | Setup page                              |
-| -------------------------- | ------------------------------------------------------ | --------------------------------------- |
+| ------------------------- | ------------------------------------------------------ | --------------------------------------- |
 | 原生 Codex app-server    | `/codex ...`, `openai/gpt-*` 代理引用                | [Codex harness](/plugins/codex-harness) |
 | 显式 Codex ACP 适配器 | `/acp spawn codex`, `runtime: "acp", agentId: "codex"` | 本页                               |
 
@@ -27,26 +27,35 @@ Codex 有两条 OpenClaw 路径：
 
 ## acpx 运行时支持（当前）
 
-当前 acpx 内置运行时别名：
+内置的 acpx harness 别名（来自固定版本的 `acpx` 依赖）：
 
-- `claude`
-- `codex`
-- `copilot`
-- `cursor`（Cursor CLI: `cursor-agent acp`）
-- `droid`
-- `gemini`
-- `iflow`
-- `kilocode`
-- `kimi`
-- `kiro`
-- `openclaw`
-- `opencode`
-- `qwen`
+| 别名         | 封装                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `claude`     | [Claude Code](https://claude.ai/code)                                                                           |
+| `codex`      | [Codex CLI](https://codex.openai.com)                                                                           |
+| `copilot`    | [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-chat/use-copilot-chat-in-the-command-line) |
+| `cursor`     | [Cursor CLI](https://cursor.com/docs/cli/acp) (`cursor-agent acp`)                                              |
+| `droid`      | [Factory Droid](https://www.factory.ai)                                                                         |
+| `fast-agent` | [fast-agent](https://fast-agent.ai)                                                                             |
+| `gemini`     | [Gemini CLI](https://github.com/google/gemini-cli)                                                              |
+| `iflow`       | [iFlow CLI](https://github.com/iflow-ai/iflow-cli)                                                              |
+| `kilocode`    | [Kilocode](https://kilocode.ai)                                                                                 |
+| `kimi`        | [Kimi CLI](https://github.com/MoonshotAI/kimi-cli)                                                              |
+| `kiro`        | [Kiro CLI](https://kiro.dev)                                                                                    |
+| `mux`         | [Mux](https://mux.coder.com)                                                                                    |
+| `opencode`    | [OpenCode](https://opencode.ai)                                                                                 |
+| `openclaw`    | OpenClaw ACP 桥接（原生 `openclaw acp`）                                                                        |
+| `pi`          | [Pi Coding Agent](https://github.com/mariozechner/pi)                                                           |
+| `qoder`       | [Qoder CLI](https://docs.qoder.com/cli/acp)                                                                     |
+| `qwen`        | [Qwen Code](https://github.com/QwenLM/qwen-code)                                                                |
+| `trae`        | [Trae CLI](https://docs.trae.cn/cli)                                                                            |
 
-当 OpenClaw 使用 acpx 后端时，除非你的 acpx 配置定义了自定义代理别名，否则优先为 `agentId` 使用这些值。
+`factory-droid` 和 `factorydroid` 也会解析为内置的 `droid` 适配器。
+
+当 OpenClaw 使用 acpx 后端时，除非你的 acpx 配置定义了自定义代理别名，否则会优先将这些值用于 `agentId`。
 如果你的本地 Cursor 安装仍然将 ACP 暴露为 `agent acp`，请在你的 acpx 配置中覆盖 `cursor` 代理命令，而不是更改内置默认值。
 
-直接使用 acpx CLI 时也可以通过 `--agent <command>` 目标任意适配器，但这个原始逃生口是 acpx CLI 的特性（不是正常的 OpenClaw `agentId` 路径）。
+直接使用 acpx CLI 时，也可以通过 `--agent <command>` 目标任意适配器，但这个原始逃生口是 acpx CLI 的特性（不是正常的 OpenClaw `agentId` 路径）。
 
 模型控制取决于适配器能力。Codex ACP 模型引用会在启动前由 OpenClaw
 规范化。其他运行时需要 ACP `models` 以及
@@ -78,13 +87,13 @@ ACP 核心基线：
       "kiro",
       "openclaw",
       "opencode",
-      "openclaw",
       "qwen",
     ],
     maxConcurrentSessions: 8,
     stream: {
-      coalesceIdleMs: 300,
-      maxChunkChars: 1200,
+      // 默认值为 coalesceIdleMs: 350、maxChunkChars: 1800；此处显式列出。
+      coalesceIdleMs: 350,
+      maxChunkChars: 1800,
     },
     runtime: {
       ttlMinutes: 120,
@@ -108,6 +117,7 @@ ACP 核心基线：
     discord: {
       threadBindings: {
         enabled: true,
+        // 默认值已经是 true；此处显式列出。
         spawnSessions: true,
       },
     },
@@ -161,34 +171,14 @@ openclaw plugins install ./path/to/local/acpx-plugin
 /acp doctor
 ```
 
-### acpx 命令和版本配置
+### acpx 运行时启动探测
 
-默认情况下，`acpx` 插件会在 Gateway
-启动期间注册内嵌的 ACP 后端，并在网关
-`ready` 信号之前等待内嵌运行时启动探测。仅当脚本或环境故意保持启动探测禁用时，才设置 `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=0` 或
-`OPENCLAW_SKIP_ACPX_RUNTIME_PROBE=1`。运行 `/acp doctor` 可进行显式的按需探测。
-
-在插件配置中覆盖命令或版本：
-
-```json
-{
-  "plugins": {
-    "entries": {
-      "acpx": {
-        "enabled": true,
-        "config": {
-          "command": "../acpx/dist/cli.js",
-          "expectedVersion": "any"
-        }
-      }
-    }
-  }
-}
-```
-
-- `command` 可接受绝对路径、相对路径（从 OpenClaw 工作区解析），或命令名。
-- `expectedVersion: "any"` 会禁用严格版本匹配。
-- 自定义 `command` 路径会禁用插件本地自动安装。
+`acpx` 插件直接嵌入 ACP 运行时（无需单独配置 `acpx` 二进制文件或
+版本）。默认情况下，它会在 Gateway 启动期间注册嵌入式后端，并在网关
+`ready` 信号之前等待启动探测。仅当脚本或环境有意保持启动探测禁用时，
+才设置 `OPENCLAW_ACPX_RUNTIME_STARTUP_PROBE=0` 或
+`OPENCLAW_SKIP_ACPX_RUNTIME_PROBE=1`。运行 `/acp doctor` 可执行显式的
+按需探测。
 
 当路径或标志值应保持为一个 argv token 时，可使用结构化参数覆盖单个 ACP 代理命令：
 
@@ -217,10 +207,10 @@ openclaw plugins install ./path/to/local/acpx-plugin
 
 参见 [插件](/tools/plugin)。
 
-### 自动依赖安装
+### 自动下载适配器
 
-当你通过 `npm install -g openclaw` 全局安装 OpenClaw 时，acpx
-运行时依赖（平台特定二进制文件）会通过 postinstall 钩子自动安装。若自动安装失败，网关仍会正常启动，并通过 `openclaw acp doctor` 报告缺失的依赖。
+`acpx` 会在首次使用时通过 `npx` 自动下载 ACP 适配器（例如 Claude 和 Codex ACP
+桥接）。你无需手动安装适配器包，OpenClaw 本身也没有单独的 postinstall 步骤。如果适配器下载或启动失败，`/acp doctor` 会报告该失败。
 
 ### Plugin tools MCP 桥接
 
@@ -266,7 +256,7 @@ openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 - 暴露选定的内置 OpenClaw 工具。初始服务器暴露 `cron`。
 - 保持核心工具暴露显式启用且默认关闭。
 
-### Runtime operation timeout configuration
+### 运行时操作超时配置
 
 默认情况下，`acpx` 插件会为内嵌运行时启动和控制操作提供 120
 秒。这为 Gemini CLI 之类较慢的 harness 留出足够时间完成 ACP 启动和初始化。如果你的主机需要不同的操作限制，请覆盖它：
@@ -275,9 +265,9 @@ openclaw config set plugins.entries.acpx.config.openClawToolsMcpBridge true
 openclaw config set plugins.entries.acpx.config.timeoutSeconds 180
 ```
 
-Runtime turns use OpenClaw agent/run timeouts, including `/acp timeout`.
-`sessions_spawn` does not accept per-call timeout overrides. Restart the
-gateway after changing this value.
+运行时将使用 OpenClaw 的 agent/run 超时设置，包括 `/acp timeout`。
+`sessions_spawn` 不接受按调用覆盖的超时；操作员路径为
+`agents.defaults.subagents.runTimeoutSeconds`。更改 `timeoutSeconds` 后请重启网关。
 
 ### 健康探测代理配置
 
@@ -297,9 +287,8 @@ ACP 会话以非交互方式运行——没有 TTY 可用于批准或拒绝文�
 
 这些 ACPX 运行时权限与 OpenClaw exec 审批以及 CLI 后端厂商绕过标志（例如 Claude CLI `--permission-mode bypassPermissions`）是分开的。ACPX `approve-all` 是 ACP 会话的运行时紧急开关。
 
-For the broader comparison between OpenClaw `tools.exec.mode`, Codex Guardian
-approvals, and ACPX harness permissions, see
-[Permission modes](/tools/permission-modes)。
+有关 OpenClaw `tools.exec.mode`、Codex Guardian 审批以及 ACPX harness 权限之间更广泛的比较，请参见
+[权限模式](/tools/permission-modes)。
 
 ### `permissionMode`
 
@@ -315,10 +304,10 @@ approvals, and ACPX harness permissions, see
 
 控制当本应显示权限提示但没有交互式 TTY 可用时会发生什么（ACP 会话始终如此）。
 
-| Value  | Behavior                                                          |
-| ------ | ----------------------------------------------------------------- |
-| `fail` | 使用 `AcpRuntimeError` 中止会话。**（默认）**                     |
-| `deny` | 静默拒绝该权限并继续（优雅降级）。                                |
+| Value  | Behavior                                                                 |
+| ------ | ------------------------------------------------------------------------ |
+| `fail` | 以 `PermissionPromptUnavailableError` 中止会话。**（默认）** |
+| `deny` | 静默拒绝该权限并继续（优雅降级）。        |
 
 ### 配置
 
@@ -332,7 +321,7 @@ openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
 更改这些值后重启网关。
 
 <Warning>
-OpenClaw 默认使用 `permissionMode=approve-reads` 和 `nonInteractivePermissions=fail`。在非交互式 ACP 会话中，任何触发权限提示的写入或执行都可能失败，并返回 `AcpRuntimeError: Permission prompt unavailable in non-interactive mode`。
+OpenClaw 默认使用 `permissionMode=approve-reads` 和 `nonInteractivePermissions=fail`。在非交互式 ACP 会话中，任何触发权限提示的写入或执行操作都可能失败，并报错 `PermissionPromptUnavailableError: Permission prompt unavailable in non-interactive mode`。
 
 如果你需要限制权限，请将 `nonInteractivePermissions` 设为 `deny`，这样会话会优雅降级而不是崩溃。
 </Warning>

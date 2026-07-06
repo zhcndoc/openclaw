@@ -6,25 +6,24 @@ read_when:
 title: "Xiaomi MiMo"
 ---
 
-Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 内置了一个 Xiaomi 插件，带有两个文本提供方预设：
+Xiaomi MiMo 是 **MiMo** 模型的 API 平台。捆绑的 `xiaomi`
+插件（`enabledByDefault: true`，无需安装步骤）注册了两个文本
+提供者以及一个语音（TTS）提供者：
 
-- `xiaomi` 用于按需付费密钥（`sk-...`）
-- `xiaomi-token-plan` 用于 Token Plan 密钥（`tp-...`），并带有区域端点预设
-
-同一个插件还会注册 `xiaomi` 语音（TTS）提供方。
+- `xiaomi` - 按需付费密钥（`sk-...`）
+- `xiaomi-token-plan` - 具有区域端点预设的 Token Plan 密钥（`tp-...`）
 
 | Property         | Value                                                                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Provider ids     | `xiaomi`（按需付费），`xiaomi-token-plan`（Token Plan）                                                                                          |
-| Plugin           | 内置，`enabledByDefault: true`                                                                                                                    |
-| Auth env vars    | `XIAOMI_API_KEY`，`XIAOMI_TOKEN_PLAN_API_KEY`                                                                                                    |
-| Onboarding flags | `--auth-choice xiaomi-api-key`，`--auth-choice xiaomi-token-plan-cn`，`--auth-choice xiaomi-token-plan-sgp`，`--auth-choice xiaomi-token-plan-ams` |
-| Direct CLI flags | `--xiaomi-api-key <key>`，`--xiaomi-token-plan-api-key <key>`                                                                                    |
-| Contracts        | chat completions + `speechProviders`                                                                                                              |
-| API              | OpenAI 兼容（`openai-completions`）                                                                                                               |
-| Base URLs        | 按需付费：`https://api.xiaomimimo.com/v1`；Token Plan 预设：`token-plan-{cn,sgp,ams}...`                                                        |
-| Default models   | `xiaomi/mimo-v2-flash`，`xiaomi-token-plan/mimo-v2.5-pro`                                                                                        |
-| TTS default      | `mimo-v2.5-tts`，voice `mimo_default`；voicedesign model `mimo-v2.5-tts-voicedesign`                                                            |
+| Provider ids     | `xiaomi`（按需付费），`xiaomi-token-plan`（Token Plan）                                                                                         |
+| Auth env vars    | `XIAOMI_API_KEY`, `XIAOMI_TOKEN_PLAN_API_KEY`                                                                                                      |
+| Onboarding flags | `--auth-choice xiaomi-api-key`, `--auth-choice xiaomi-token-plan-cn`, `--auth-choice xiaomi-token-plan-sgp`, `--auth-choice xiaomi-token-plan-ams` |
+| Direct CLI flags | `--xiaomi-api-key <key>`, `--xiaomi-token-plan-api-key <key>`                                                                                      |
+| API              | 兼容 OpenAI 的 chat completions（`openai-completions`）                                                                                          |
+| Speech contract  | `speechProviders: ["xiaomi"]`                                                                                                                      |
+| Base URLs        | 按需付费：`https://api.xiaomimimo.com/v1`; Token Plan：`token-plan-{cn,sgp,ams}.xiaomimimo.com/v1`                                            |
+| Default models   | `xiaomi/mimo-v2-flash`, `xiaomi-token-plan/mimo-v2.5-pro`                                                                                          |
+| TTS default      | `mimo-v2.5-tts`，语音 `mimo_default`；voicedesign 模型 `mimo-v2.5-tts-voicedesign`                                                               |
 
 ## 开始使用
 
@@ -62,7 +61,11 @@ Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 内置了一个 Xiaomi 
   </Step>
 </Steps>
 
-## 按需付费目录
+<Tip>
+Onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按需付费路径，或将 `sk-...` 密钥输入 Token Plan 路径时发出警告。
+</Tip>
+
+## 按需付费模型目录
 
 | Model ref              | Input       | Context   | Max output | Reasoning | Notes         |
 | ---------------------- | ----------- | --------- | ---------- | --------- | ------------- |
@@ -70,31 +73,30 @@ Xiaomi MiMo 是 **MiMo** 模型的 API 平台。OpenClaw 内置了一个 Xiaomi 
 | `xiaomi/mimo-v2-pro`   | text        | 1,048,576 | 32,000     | Yes       | 大上下文      |
 | `xiaomi/mimo-v2-omni`  | text, image | 262,144   | 32,000     | Yes       | 多模态       |
 
-<Tip>
-默认模型引用是 `xiaomi/mimo-v2-flash`。当设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，提供方会自动注入。
-</Tip>
-
-## Token Plan 目录
+## Token Plan 模型目录
 
 选择与 Xiaomi 订阅界面中显示的区域 base URL 匹配的 Token Plan 认证选项：
 
-- `xiaomi-token-plan-cn` -> `https://token-plan-cn.xiaomimimo.com/v1`
-- `xiaomi-token-plan-sgp` -> `https://token-plan-sgp.xiaomimimo.com/v1`
-- `xiaomi-token-plan-ams` -> `https://token-plan-ams.xiaomimimo.com/v1`
+| Auth choice             | Base URL                                   |
+| ----------------------- | ------------------------------------------ |
+| `xiaomi-token-plan-cn`  | `https://token-plan-cn.xiaomimimo.com/v1`  |
+| `xiaomi-token-plan-sgp` | `https://token-plan-sgp.xiaomimimo.com/v1` |
+| `xiaomi-token-plan-ams` | `https://token-plan-ams.xiaomimimo.com/v1` |
 
 | Model ref                         | Input       | Context   | Max output | Reasoning | Notes         |
 | --------------------------------- | ----------- | --------- | ---------- | --------- | ------------- |
 | `xiaomi-token-plan/mimo-v2.5-pro` | text        | 1,048,576 | 131,072    | Yes       | 默认模型       |
 | `xiaomi-token-plan/mimo-v2.5`     | text, image | 1,048,576 | 131,072    | Yes       | 多模态       |
 
-<Tip>
-Token Plan onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按需付费路径，或将 `sk-...` 密钥输入 Token Plan 路径时发出警告。
-</Tip>
+`xiaomi-token-plan` 需要一个区域 base URL 才能解析。支持的方式是使用打包的 Token Plan onboarding 选项，或显式提供带有 `baseUrl` 设置的 `models.providers.xiaomi-token-plan` 配置块；如果没有其中之一，则不会提供该 provider。
+
+## 推理模型
+
+`mimo-v2-pro`、`mimo-v2-omni`、`mimo-v2.5` 和 `mimo-v2.5-pro` 支持 OpenClaw 的 [`/think` 指令](/tools/thinking)，等级包括 `off`、`minimal`、`low`、`medium`、`high`、`xhigh` 和 `max`（默认 `high`）。`mimo-v2-flash` 不支持推理。
 
 ## 文本转语音
 
-捆绑的 `xiaomi` 插件还会将 Xiaomi MiMo 注册为 `messages.tts` 的语音提供方。它会调用 Xiaomi 的 chat-completions TTS 协议，将文本作为
-`assistant` 消息，并将可选的风格指导作为 `user` 消息。
+内置的 `xiaomi` 插件也会将 Xiaomi MiMo 注册为 `messages.tts` 的语音提供方。它使用 Xiaomi 的 chat-completions TTS 协议，将文本作为 `assistant` 消息，并将可选的风格指导作为 `user` 消息。
 
 | Property | Value                                    |
 | -------- | ---------------------------------------- |
@@ -124,15 +126,9 @@ Token Plan onboarding 会验证密钥格式，并在将 `tp-...` 密钥输入按
 }
 ```
 
-支持的内置语音包括 `mimo_default`、`default_zh`、`default_en`、
-`Mia`、`Chloe`、`Milo` 和 `Dean`。预设语音模型使用 `audio.voice`，因此
-OpenClaw 会为 `mimo-v2.5-tts` 和 `mimo-v2-tts` 发送 `speakerVoice`。
+内置语音：`mimo_default`、`default_zh`、`default_en`、`Mia`、`Chloe`、`Milo`、`Dean`。预设语音模型（`mimo-v2.5-tts`、`mimo-v2-tts`）使用 `audio.voice`，因此 OpenClaw 会为这些模型发送 `speakerVoice`。
 
-Xiaomi 的 voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言风格提示
-生成语音，而不是使用预设语音 id。使用所需的语音描述来配置
-`style`；OpenClaw 会将其作为 `user`
-消息发送，将待播报文本作为 `assistant` 消息发送，并且对该模型省略
-`audio.voice`。
+voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言风格提示词生成语音，而不是使用预设语音 id。将 `style` 设为所需的语音描述；OpenClaw 会将其作为 `user` 消息发送，将朗读文本作为 `assistant` 消息发送，并且对该模型省略 `audio.voice`。
 
 ```json5
 {
@@ -151,8 +147,7 @@ Xiaomi 的 voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言�
 }
 ```
 
-对于飞书和 Telegram 等语音消息目标，OpenClaw 会在投递前使用 `ffmpeg`
-将 Xiaomi 输出转码为 48kHz Opus。
+对于请求语音笔记合成目标的渠道（Discord、Feishu、Matrix、Telegram 和 WhatsApp），OpenClaw 会在交付前使用 `ffmpeg` 将 Xiaomi 输出转码为 48kHz 单声道 Opus。
 
 ## 配置示例
 
@@ -170,7 +165,7 @@ Xiaomi 的 voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言�
         models: [
           {
             id: "mimo-v2-flash",
-            name: "Xiaomi MiMo V2 Flash",
+            name: "小米 MiMo V2 Flash",
             reasoning: false,
             input: ["text"],
             contextWindow: 262144,
@@ -178,7 +173,7 @@ Xiaomi 的 voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言�
           },
           {
             id: "mimo-v2-pro",
-            name: "Xiaomi MiMo V2 Pro",
+            name: "小米 MiMo V2 Pro",
             reasoning: true,
             input: ["text"],
             contextWindow: 1048576,
@@ -186,7 +181,7 @@ Xiaomi 的 voicedesign 模型 `mimo-v2.5-tts-voicedesign` 会根据自然语言�
           },
           {
             id: "mimo-v2-omni",
-            name: "Xiaomi MiMo V2 Omni",
+            name: "小米 MiMo V2 Omni",
             reasoning: true,
             input: ["text", "image"],
             contextWindow: 262144,
@@ -217,7 +212,7 @@ Token Plan：
         models: [
           {
             id: "mimo-v2.5-pro",
-            name: "Xiaomi MiMo V2.5 Pro",
+            name: "小米 MiMo V2.5 Pro",
             reasoning: true,
             input: ["text"],
             contextWindow: 1048576,
@@ -225,7 +220,7 @@ Token Plan：
           },
           {
             id: "mimo-v2.5",
-            name: "Xiaomi MiMo V2.5",
+            name: "小米 MiMo V2.5",
             reasoning: true,
             input: ["text", "image"],
             contextWindow: 1048576,
@@ -242,15 +237,15 @@ Token Plan：
 
 <AccordionGroup>
   <Accordion title="自动注入行为">
-    当 `XIAOMI_API_KEY` 设置在环境中，或者存在认证配置文件时，`xiaomi` 提供方会自动注入。`xiaomi-token-plan` 需要区域 base URL，因此支持的路径是捆绑的 Token Plan onboarding 选项，或者显式的 `models.providers.xiaomi-token-plan` 配置块。
+    当你的环境中设置了 `XIAOMI_API_KEY` 或存在认证配置文件时，`xiaomi` 提供程序会自动启用。`xiaomi-token-plan` 需要区域性 base URL，因此受支持的路径是捆绑的 Token Plan 入门选择，或显式的 `models.providers.xiaomi-token-plan` 配置块。
   </Accordion>
 
   <Accordion title="模型详情">
-    - **mimo-v2-flash** — 轻量且快速，适合通用文本任务。不支持推理。
-    - **mimo-v2-pro** — 支持推理，拥有 100 万 token 的上下文窗口，适合长文档工作负载。
-    - **mimo-v2-omni** — 支持推理的多模态模型，可接受文本和图像输入。
-    - **mimo-v2.5-pro** — Xiaomi 当前 V2.5 推理栈的 Token Plan 默认模型。
-    - **mimo-v2.5** — Token Plan 多模态 V2.5 路由。
+    - **mimo-v2-flash** - 轻量且快速，适合通用文本任务。不支持推理。
+    - **mimo-v2-pro** - 支持推理，提供 100 万 token 上下文窗口，适用于长文档工作负载。
+    - **mimo-v2-omni** - 支持推理的多模态模型，接受文本和图像输入。
+    - **mimo-v2.5-pro** - Token Plan 默认模型，采用小米当前的 V2.5 推理栈。
+    - **mimo-v2.5** - Token Plan 多模态 V2.5 路由。
 
     <Note>
     按需付费模型使用 `xiaomi/` 前缀。Token Plan 模型使用 `xiaomi-token-plan/` 前缀。
@@ -276,8 +271,11 @@ Token Plan：
   <Card title="模型选择" href="/concepts/model-providers" icon="layers">
     选择提供方、模型引用以及故障转移行为。
   </Card>
+  <Card title="思考层级" href="/tools/thinking" icon="brain">
+    `/think` 指令语法和层级映射。
+  </Card>
   <Card title="配置参考" href="/gateway/configuration-reference" icon="gear">
-    完整的 OpenClaw 配置参考。
+    OpenClaw 完整配置参考。
   </Card>
   <Card title="Xiaomi MiMo 控制台" href="https://platform.xiaomimimo.com" icon="arrow-up-right-from-square">
     Xiaomi MiMo 仪表盘和 API 密钥管理。

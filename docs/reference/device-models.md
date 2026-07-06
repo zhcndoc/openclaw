@@ -6,24 +6,25 @@ read_when:
 title: "设备型号数据库"
 ---
 
-macOS 配套应用通过将 Apple 型号标识符（例如 `iPad16,6`、`Mac16,6`）映射为可读名称，在 **Instances** UI 中显示友好的 Apple 设备型号名称。
+macOS 配套应用的 **Instances** 界面会将 Apple 型号标识符映射为易读名称（`iPad16,6` -> "iPad Pro 13-inch (M4)"，`Mac16,6` -> "MacBook Pro (14-inch, 2024)"）。`DeviceModelCatalog` 还会使用标识符前缀（在回退时使用设备家族）为每个设备选择一个 SF Symbol。
 
-该映射以 JSON 形式放在以下目录中：
+位于 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/` 的文件：
 
-- `apps/macos/Sources/OpenClaw/Resources/DeviceModels/`
+| File                                   | Purpose                               |
+| -------------------------------------- | ------------------------------------- |
+| `ios-device-identifiers.json`          | iOS/iPadOS 标识符 -> 名称映射         |
+| `mac-device-identifiers.json`          | Mac 标识符 -> 名称映射                |
+| `NOTICE.md`                            | 固定的上游 commit SHA                |
+| `LICENSE.apple-device-identifiers.txt` | 上游 MIT 许可证                      |
 
 ## 数据源
 
-我们目前从以下 MIT 许可证仓库中引入该映射：
-
-- `kyle-seongwoo-jun/apple-device-identifiers`
-
-为保持构建结果可预测，这些 JSON 文件会固定到特定的上游提交（记录在 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md` 中）。
+来源于 MIT 许可的 `kyle-seongwoo-jun/apple-device-identifiers` GitHub 仓库。JSON 文件固定到 `NOTICE.md` 中记录的提交 SHA，以保持构建的确定性。
 
 ## 更新数据库
 
-1. 选择你想固定到的上游提交（iOS 一个，macOS 一个）。
-2. 更新 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md` 中的提交哈希。
+1. 选择要固定的上游提交 SHA（iOS 一个，macOS 一个）。
+2. 使用新的 SHA 更新 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/NOTICE.md`。
 3. 重新下载固定到这些提交的 JSON 文件：
 
 ```bash
@@ -37,8 +38,8 @@ curl -fsSL "https://raw.githubusercontent.com/kyle-seongwoo-jun/apple-device-ide
   -o apps/macos/Sources/OpenClaw/Resources/DeviceModels/mac-device-identifiers.json
 ```
 
-4. 确保 `apps/macos/Sources/OpenClaw/Resources/DeviceModels/LICENSE.apple-device-identifiers.txt` 仍与上游一致（如果上游许可证发生变化，请替换它）。
-5. 验证 macOS 应用可以干净构建（无警告）：
+4. 确认 `LICENSE.apple-device-identifiers.txt` 仍与上游一致；如果上游许可证已更改，则替换它。
+5. 验证 macOS 应用可以正常构建：
 
 ```bash
 swift build --package-path apps/macos
@@ -46,5 +47,5 @@ swift build --package-path apps/macos
 
 ## 相关内容
 
-- [Nodes](/nodes)
-- [Node troubleshooting](/nodes/troubleshooting)
+- [节点](/nodes)
+- [节点故障排除](/nodes/troubleshooting)

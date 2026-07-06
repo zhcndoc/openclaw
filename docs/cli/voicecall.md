@@ -8,9 +8,13 @@ title: "Voicecall"
 
 # `openclaw voicecall`
 
-`voicecall` 是一个由插件提供的命令。它只会在语音呼叫插件已安装并启用时出现。
+`voicecall` 是一个由插件提供的命令。它只会在语音呼叫
+插件已安装并启用时出现。
 
-当 Gateway 正在运行时，操作命令（`call`、`start`、`continue`、`speak`、`dtmf`、`end`、`status`）会路由到该 Gateway 的语音呼叫运行时。如果找不到可访问的 Gateway，则会回退到独立的 CLI 运行时。
+当 Gateway 正在运行时，操作命令（`call`、`start`、
+`continue`、`speak`、`dtmf`、`end`、`status`）会路由到该 Gateway 的
+语音呼叫运行时。如果没有可访问的 Gateway，它们会回退到独立的
+CLI 运行时。
 
 ## 子命令
 
@@ -57,7 +61,7 @@ openclaw voicecall setup --json
 
 ### `smoke`
 
-运行相同的就绪检查。除非同时提供 `--to` 和 `--yes`，否则不会拨打真实电话。
+运行相同的就绪检查。仅当同时提供 `--to` 和 `--yes` 时，才会拨打真实电话。
 
 | Flag               | Default                           | Description                             |
 | ------------------ | --------------------------------- | --------------------------------------- |
@@ -74,7 +78,7 @@ openclaw voicecall smoke --to "+15555550123" --yes  # 真实 notify 呼叫
 ```
 
 <Note>
-对于外部提供方（`twilio`、`telnyx`、`plivo`），`setup` 和 `smoke` 需要来自 `publicUrl`、隧道或 Tailscale 暴露的公共 webhook URL。由于运营商无法访问回环地址或私有的 serve 回退，因此会被拒绝。
+对于外部提供商（`plivo`、`telnyx`、`twilio`），`setup` 和 `smoke` 需要来自 `publicUrl`、隧道或 Tailscale 暴露的公网 webhook URL。回环或私有 serve 回退会被拒绝，因为运营商无法访问它。
 </Note>
 
 ## 呼叫生命周期
@@ -126,10 +130,10 @@ openclaw voicecall call -m "Heads up" --mode notify
 
 向一通活动呼叫发送 DTMF 按键。
 
-| Flag                | Required | Description                               |
-| ------------------- | -------- | ----------------------------------------- |
-| `--call-id <id>`    | yes      | 呼叫 ID。                                  |
-| `--digits <digits>` | yes      | DTMF 按键（例如用于等待的 `ww123456#`）。 |
+| Flag                | Required | Description                                      |
+| ------------------- | -------- | ------------------------------------------------ |
+| `--call-id <id>`    | yes      | 呼叫 ID。                                         |
+| `--digits <digits>` | yes      | DTMF 数字（例如用于等待的 `ww123456#`）。 |
 
 ### `end`
 
@@ -158,7 +162,8 @@ openclaw voicecall status --call-id <id>
 
 ### `tail`
 
-跟踪语音呼叫 JSONL 日志。启动时先打印 `--since` 指定的最后若干行，然后在写入新行时继续流式输出。
+跟踪语音通话的 JSONL 日志。启动时打印最近 `--since` 行，随后
+在有新行写入时持续流式输出。
 
 | Flag            | Default                    | Description                    |
 | --------------- | -------------------------- | ------------------------------ |
@@ -168,7 +173,8 @@ openclaw voicecall status --call-id <id>
 
 ### `latency`
 
-汇总 `calls.jsonl` 中的轮次延迟和等待收听指标。输出为 JSON，包含 `recordsScanned`、`turnLatency` 和 `listenWait` 的汇总。
+汇总 `calls.jsonl` 中的轮次延迟和等待收听指标。输出为包含
+`recordsScanned`、`turnLatency` 和 `listenWait` 汇总信息的 JSON。
 
 | Flag            | Default                    | Description                          |
 | --------------- | -------------------------- | ------------------------------------ |
@@ -179,7 +185,8 @@ openclaw voicecall status --call-id <id>
 
 ### `expose`
 
-启用、禁用或更改语音 webhook 的 Tailscale serve/funnel 配置。
+启用、禁用或更改 Tailscale serve/funnel 配置，以用于
+语音 webhook。
 
 | Flag                  | Default                                   | Description                                     |
 | --------------------- | ----------------------------------------- | ----------------------------------------------- |

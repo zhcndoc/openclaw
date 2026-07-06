@@ -28,9 +28,9 @@ title: "配对"
 
 配对码：
 
-- 8 个字符，全部大写，不含歧义字符（`0O1I`）。
-- **1 小时后过期**。机器人只会在创建新的请求时发送配对消息（大约每个发送者每小时一次）。
-- 待处理的 DM 配对请求默认上限为**每个频道 3 个**；在某个请求过期或被批准之前，额外请求会被忽略。
+- 8 个字符，大写，不包含易混淆字符（`0O1I`）。
+- **1 小时后过期**。机器人仅在创建新请求时发送配对消息（每个发送者大约每小时一次）。
+- 待处理的 DM 配对请求上限为**每个频道账号 3 个**；在某个请求过期或被批准之前，额外请求将被忽略。
 
 ### 批准发送者
 
@@ -39,13 +39,15 @@ openclaw pairing list telegram
 openclaw pairing approve telegram <CODE>
 ```
 
-如果尚未配置命令拥有者，批准 DM 配对码时也会引导初始化
-`commands.ownerAllowFrom`，将其设置为被批准的发送者，例如 `telegram:123456789`。
-这会为首次设置提供一个显式的拥有者，用于特权命令和执行
-审批提示。在拥有者存在之后，后续的配对批准只会授予 DM
+在批准命令中添加 `--notify`，会在同一频道通知请求者。多账号频道需要使用 `--account <id>`。
+
+如果尚未配置命令拥有者，批准一个 DM 配对码还会引导
+`commands.ownerAllowFrom` 指向被批准的发送者，例如 `telegram:123456789`。
+这会为首次设置提供一个明确的拥有者，用于特权命令和 exec
+批准提示。在拥有者存在之后，后续的配对批准只会授予 DM
 访问权限；不会再添加更多拥有者。
 
-Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `openclaw-weixin`, `signal`, `slack`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`.
+支持的频道（任何声明配对功能的已安装频道插件；像 `openclaw-weixin` 这样的外部插件可以添加更多）：`discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`, `matrix`, `mattermost`, `msteams`, `nextcloud-talk`, `nostr`, `signal`, `slack`, `sms`, `synology-chat`, `telegram`, `twitch`, `whatsapp`, `zalo`, `zalouser`。
 
 ### 可复用的发送者组
 
@@ -80,14 +82,13 @@ Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`
 存储在 `~/.openclaw/credentials/` 下：
 
 - 待处理请求：`<channel>-pairing.json`
-- 已批准白名单存储：
-  - 默认账号：`<channel>-allowFrom.json`
-  - 非默认账号：`<channel>-<accountId>-allowFrom.json`
+- 已批准的允许列表存储：`<channel>-<accountId>-allowFrom.json`（默认账号的批准使用 `<channel>-default-allowFrom.json`）
 
 账号范围行为：
 
-- 非默认账号只读写其作用域内的白名单文件。
-- 默认账号使用按频道划分的未加作用域白名单文件。
+- 非默认账号只会读写其作用域内的允许列表文件。
+- 默认账号还会继续遵循旧版安装中遗留的未加作用域的 `<channel>-allowFrom.json`
+  文件；读取时会合并这两个文件中的条目。
 
 请将这些文件视为敏感信息（它们控制对你的助手的访问）。
 
@@ -104,32 +105,46 @@ Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`
 节点以 `role: node` 的**设备**身份连接到 Gateway。Gateway
 会创建一个必须被批准的设备配对请求。
 
-### 通过 Telegram 配对（推荐用于 iOS）
+### 从 Control UI 配对（推荐）
+
+使用一个已经连接且具有 `operator.admin` 访问权限的 Control UI 会话：
+
+1. 打开 Control UI 并选择 **Nodes**。
+2. 在 **Devices** 中，点击 **Pair mobile device**。
+3. 在你的手机上，打开 OpenClaw 应用 → **Settings** → **Gateway**。
+4. 扫描二维码或粘贴设置码，然后连接。
+
+当官方 OpenClaw iOS 和 Android 应用的设置码元数据匹配时，它们会自动获得批准。如果 **Devices** 显示一个待处理请求（例如，来自非官方客户端或元数据不匹配），在批准前请检查其角色和作用域。
+
+当当前 Control UI 会话没有管理员访问权限时，该按钮会被禁用。在这种情况下，请使用下面来自 Gateway 主机的 CLI 批准流程。
+
+### 通过 Telegram 配对
 
 如果你使用 `device-pair` 插件，你可以完全通过 Telegram 完成首次设备配对：
 
-1. 在 Telegram 中给你的机器人发送：`/pair`
-2. 机器人会回复两条消息：一条说明消息和一条单独的**设置码**消息（在 Telegram 中很容易复制/粘贴）。
-3. 在手机上，打开 OpenClaw iOS 应用 → Settings → Gateway。
-4. 扫描二维码或粘贴设置码并连接。
-5. 回到 Telegram：`/pair pending`（查看请求 ID、角色和作用域），然后批准。
+1. 在 Telegram 中，给你的机器人发送消息：`/pair`
+2. 机器人会回复两条消息：一条说明消息，以及一条单独的 **设置码** 消息（在 Telegram 中很容易复制/粘贴）。
+3. 在你的手机上，打开 OpenClaw iOS 应用 → Settings → Gateway。
+4. 扫描二维码（`/pair qr`）或粘贴设置码并连接。
+5. 官方移动端应用会自动连接。如果 `/pair pending` 显示一个请求，在批准前请检查其角色和作用域。
 
 设置码是一个 base64 编码的 JSON 负载，其中包含：
 
-- `url`：Gateway WebSocket URL（`ws://...` 或 `wss://...`）
-- `bootstrapToken`：用于初始配对握手的短期单设备引导令牌
+- `url`: Gateway 的 WebSocket URL（`ws://...` 或 `wss://...`）
+- `urls`: 在可用时，移动应用可以按顺序尝试的 LAN/Tailnet 路由
+- `bootstrapToken`: 用于初始配对握手的一次性引导令牌（10 分钟后过期；负载中包含 `expiresAtMs`）
+
+配对完成后，运行 `/pair cleanup` 以使未使用的设置码失效。
 
 该引导令牌携带内置的配对引导配置：
 
-- 内置设置配置仅允许全新的二维码/设置码基础场景：
-  `node` 加上有范围限制的 `operator` 交接
+- 内置设置配置文件仅允许全新的二维码/设置码基线：
+  `node` 加上受限的 `operator` 交接
 - 交接后的 `node` 令牌保持 `scopes: []`
 - 交接后的 `operator` 令牌仅限于 `operator.approvals`、
-  `operator.read` 和 `operator.write`
-- 二维码/设置码引导不会授予 `operator.admin` 和 `operator.pairing`；
-  它们需要单独批准的 operator 配对或令牌流程
-- 之后的令牌轮换/撤销仍受设备已批准
-  角色契约和调用方会话的 operator 范围双重限制
+  `operator.read`、`operator.talk.secrets` 和 `operator.write`
+- 二维码/设置码引导不会授予 `operator.admin`；它需要单独批准的 operator 配对或令牌流程
+- 后续的令牌轮换/撤销仍同时受设备已批准角色契约和调用方会话的 operator 作用域约束
 
 在设置码有效期间，请将其视为密码。
 
@@ -139,7 +154,10 @@ Supported channels: `discord`, `feishu`, `googlechat`, `imessage`, `irc`, `line`
 模拟器主机。Tailnet CGNAT 地址、`.ts.net` 名称和公网主机仍会在
 二维码/设置码发放之前失败并关闭。
 
-### 批准节点设备
+对于 `gateway.bind=lan` 设置 URL，OpenClaw 会检测到持续存在的 Tailscale Serve
+HTTPS 根，这些根代理活动 Gateway 的回环端口，并将它们与 LAN 路由一起公布。特定网卡的 `custom` 和 `tailnet` 绑定不会获得该回退，因为回环 Serve 代理无法到达这些监听地址。iOS 应用会按顺序探测所公布的路由，并保存第一个可达的端点。
+
+### 批准一个节点设备
 
 ```bash
 openclaw devices list
@@ -186,7 +204,7 @@ Control UI/浏览器配对，而无需手动编辑 `devices/paired.json`。Gatew
 
 存储在 `~/.openclaw/devices/` 下：
 
-- `pending.json`（短期；待处理请求会过期）
+- `pending.json`（短期；待处理请求在 5 分钟后过期）
 - `paired.json`（已配对设备 + 令牌）
 
 ### 说明

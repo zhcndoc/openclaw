@@ -20,7 +20,7 @@ read_when:
 
 ## 启用承诺
 
-承诺默认关闭。可在配置中启用：
+承诺默认是关闭的（`commitments.enabled: false`）。在配置中启用它们：
 
 ```bash
 openclaw config set commitments.enabled true
@@ -42,7 +42,7 @@ openclaw config set commitments.maxPerDay 3
 
 ## 工作原理
 
-在代理回复后，OpenClaw 可能会在单独的上下文中运行一个隐藏的后台提取步骤。该步骤只查找推断式后续承诺。它不会写入可见对话，也不会让主代理去推理这次提取。
+在代理回复之后，OpenClaw 可能会在一个单独的上下文中运行一个隐藏的后台抽取过程，并禁用工具。该过程只查找可推断的后续承诺。它不会写入可见对话，也不会要求主代理去推理该抽取过程。
 
 当找到高置信度候选项时，OpenClaw 会存储一个承诺，其中包括：
 
@@ -53,9 +53,7 @@ openclaw config set commitments.maxPerDay 3
 - 简短的建议签到内容
 - 供 heartbeat 判断是否发送的非指令性元数据
 
-交付通过 heartbeat 进行。当某个承诺到期时，heartbeat 会将该承诺添加到同一代理和频道范围的 heartbeat 轮次中。
-模型可以发送一条自然的签到消息，或回复 `HEARTBEAT_OK` 将其忽略。
-如果 heartbeat 配置为 `target: "none"`，则到期的承诺会保持在内部，不会发送外部签到。承诺交付提示不会回放原始对话文本，而且到期承诺的 heartbeat 轮次会在没有 OpenClaw 工具的情况下运行。
+交付通过 heartbeat 完成。当某个承诺到期时，heartbeat 会将该承诺添加到同一代理和频道范围的 heartbeat 回合中。提示会明确警告承诺元数据是不可信的，并指示模型不要遵循其中的指令，也不要因为它而使用工具。模型可以发送一个自然的签到内容，或者回复 `HEARTBEAT_OK` 来忽略它。如果 heartbeat 配置为 `target: "none"`，到期承诺将保持在内部，不会发送外部签到。承诺交付提示不会重放原始对话文本，只会重放建议的签到内容和元数据，并且到期承诺的 heartbeat 回合在不使用 OpenClaw 工具的情况下运行。
 
 OpenClaw 绝不会在写入承诺后立刻交付它。到期时间至少会被钳制到创建承诺后的一个 heartbeat 间隔之后，因此该后续不会在被推断出来的同一时刻回声返回。
 
@@ -90,7 +88,7 @@ openclaw commitments --status snoozed
 openclaw commitments dismiss cm_abc123
 ```
 
-命令参考请见 [`openclaw commitments`](/cli/commitments)。
+查看 [`openclaw commitments`](/cli/commitments) 获取完整的命令参考。
 
 ## 隐私与成本
 
@@ -116,7 +114,7 @@ openclaw config set commitments.enabled false
 
 - [记忆概览](/concepts/memory)
 - [活动记忆](/concepts/active-memory)
-- [Heartbeat](/gateway/heartbeat)
+- [心跳](/gateway/heartbeat)
 - [计划任务](/automation/cron-jobs)
 - [`openclaw commitments`](/cli/commitments)
 - [配置参考](/gateway/configuration-reference#commitments)

@@ -14,14 +14,14 @@ ClawDock 是一个用于 Docker 部署的 OpenClaw 的小型 shell 辅助层。
 
 ## 安装
 
-使用标准辅助路径：
-
 ```bash
 mkdir -p ~/.clawdock && curl -sL https://raw.githubusercontent.com/openclaw/openclaw/main/scripts/clawdock/clawdock-helpers.sh -o ~/.clawdock/clawdock-helpers.sh
 echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 ```
 
-如果你之前是从 `scripts/shell-helpers/clawdock-helpers.sh` 安装的 ClawDock，请改为从新的 `scripts/clawdock/clawdock-helpers.sh` 路径重新安装。旧的 GitHub raw 路径已被移除。
+如果你之前是从 `scripts/shell-helpers/clawdock-helpers.sh` 安装的 ClawDock，请从当前的 `scripts/clawdock/clawdock-helpers.sh` 路径重新安装；旧的 GitHub 原始链接已被移除。
+
+这些辅助脚本会在首次使用时自动检测你的 OpenClaw 检出目录（会检查诸如 `~/openclaw`、`~/projects/openclaw` 等常见路径），并将结果缓存到 `~/.clawdock/config`。如果你的检出目录位于其他位置，请自行设置 `CLAWDOCK_DIR`。
 
 ## 你将获得什么
 
@@ -53,12 +53,12 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
 ### 设置和维护
 
-| 命令              | 说明                                      |
-| -------------------- | ------------------------------------------------ |
-| `clawdock-fix-token` | 在容器内配置网关令牌 |
-| `clawdock-update`    | 拉取、重建并重启                       |
-| `clawdock-rebuild`   | 仅重建 Docker 镜像                    |
-| `clawdock-clean`     | 移除容器和卷                    |
+| 命令              | 说明                                       |
+| -------------------- | ------------------------------------------------- |
+| `clawdock-fix-token` | 将网关令牌写入容器配置 |
+| `clawdock-update`    | 拉取、重建并重启                        |
+| `clawdock-rebuild`   | 仅重建 Docker 镜像                     |
+| `clawdock-clean`     | 移除容器和卷                     |
 
 ### 实用工具
 
@@ -68,8 +68,9 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 | `clawdock-token`       | 打印网关令牌                 |
 | `clawdock-cd`          | 跳转到 OpenClaw 项目目录  |
 | `clawdock-config`      | 打开 `~/.openclaw`                      |
-| `clawdock-show-config` | 打印已隐藏敏感值的配置文件 |
+| `clawdock-show-config` | 打印已脱敏值的配置文件 |
 | `clawdock-workspace`   | 打开工作区目录            |
+| `clawdock-help`        | 列出所有 ClawDock 命令              |
 
 ## 首次使用流程
 
@@ -88,14 +89,14 @@ clawdock-approve <request-id>
 
 ## 配置和密钥
 
-ClawDock 使用与 [Docker](/install/docker) 中描述的相同 Docker 配置拆分：
+ClawDock 读取两个独立的 `.env` 文件，与 [Docker](/install/docker) 中描述的拆分方式一致：
 
-- `<project>/.env` 用于 Docker 特定值，例如镜像名称、端口和网关令牌
-- `~/.openclaw/.env` 用于基于环境变量的提供者密钥和机器人令牌
-- `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` 用于存储的提供者 OAuth/API 密钥认证
-- `~/.openclaw/openclaw.json` 用于行为配置
+- `docker-compose.yml` 旁边的项目 `.env`：Docker 专用值，例如镜像名称、端口和 `OPENCLAW_GATEWAY_TOKEN`。`clawdock-token` 会从这里读取令牌。
+- `~/.openclaw/.env`（挂载到容器中）：OpenClaw 自身管理的基于环境变量的密钥，以及 `openclaw.json` 和 `agents/<agentId>/agent/auth-profiles.json`。
 
-当你想快速查看 `.env` 文件和 `openclaw.json` 时，使用 `clawdock-show-config`。它会在打印输出中隐藏 `.env` 值。
+`clawdock-fix-token` 会将项目 `.env` 中的令牌复制到容器的 `gateway.remote.token` 和 `gateway.auth.token` 配置值中，并重启网关。
+
+使用 `clawdock-show-config` 可以快速检查 `openclaw.json` 以及这两个 `.env` 文件；它会在打印输出中对 `.env` 值进行脱敏。
 
 ## 相关
 

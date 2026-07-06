@@ -20,8 +20,8 @@ OpenProse 是一种可移植的、markdown-first 的工作流格式，用于编�
   <Card title="运行程序" icon="play" href="#slash-command">
     使用 `/prose run` 执行一个 `.prose` 文件或远程程序。
   </Card>
-  <Card title="编写程序" icon="pencil" href="#example">
-    使用并行和顺序步骤编写多代理工作流。
+  <Card title="Write programs" icon="pencil" href="#example-parallel-research-and-synthesis">
+    编写具有并行和顺序步骤的多代理工作流。
   </Card>
 </CardGroup>
 
@@ -29,7 +29,7 @@ OpenProse 是一种可移植的、markdown-first 的工作流格式，用于编�
 
 <Steps>
   <Step title="启用插件">
-    捆绑插件默认是禁用的。启用 OpenProse：
+    OpenProse 已捆绑，但默认禁用。启用它：
 
     ```bash
     openclaw plugins enable open-prose
@@ -52,7 +52,8 @@ OpenProse 是一种可移植的、markdown-first 的工作流格式，用于编�
   </Step>
 </Steps>
 
-对于本地检出：`openclaw plugins install ./path/to/local/open-prose-plugin`
+从仓库检出内容后，你可以直接安装该插件：
+`openclaw plugins install ./extensions/open-prose`
 
 ## 斜杠命令
 
@@ -70,6 +71,9 @@ OpenProse 注册 `/prose` 作为用户可调用的技能命令：
 
 `/prose run <handle/slug>` 会解析为 `https://p.prose.md/<handle>/<slug>`。
 直接 URL 会使用 `web_fetch` 工具按原样抓取。
+
+顶层远程运行是显式的。`.prose` 程序中的远程导入是传递性的代码依赖：在 OpenProse 抓取任何远程 `use` 目标之前，它会显示解析后的导入列表，并要求操作者对该次运行准确回复
+`approve remote prose imports`。
 
 ## 它可以做什么
 
@@ -99,18 +103,18 @@ parallel:
     prompt: "总结 {topic}。"
 
 session "将 findings + draft 合并为最终答案。"
-context: { findings, draft }
+  context: { findings, draft }
 ```
 
 ## OpenClaw 运行时映射
 
 OpenProse 程序映射到 OpenClaw 原语：
 
-| OpenProse 概念         | OpenClaw 工具    |
-| ---------------------- | ---------------- |
-| Spawn session / Task tool | `sessions_spawn` |
-| File read / write         | `read` / `write` |
-| Web fetch                 | `web_fetch`      |
+| OpenProse 概念         | OpenClaw 工具                                   |
+| ------------------------- | ----------------------------------------------- |
+| 启动会话 / 任务工具 | `sessions_spawn`                                |
+| 文件读取 / 写入         | `read` / `write`                                |
+| Web 获取                 | `web_fetch`（需要 POST 时使用 `exec` + curl） |
 
 <Warning>
   如果你的工具允许列表阻止了 `sessions_spawn`、`read`、`write` 或
@@ -124,17 +128,18 @@ OpenProse 将状态保存在工作区中的 `.prose/` 下：
 
 ```text
 .prose/
-├── .env
+├── .env                      # 配置 (key=value)，例如 OPENPROSE_POSTGRES_URL
 ├── runs/
 │   └── {YYYYMMDD}-{HHMMSS}-{random}/
-│       ├── program.prose
-│       ├── state.md
+│       ├── program.prose     # 运行中的程序副本
+│       ├── state.md          # 执行状态
 │       ├── bindings/
+│       ├── imports/          # 嵌套的远程程序运行
 │       └── agents/
-└── agents/
+└── agents/                   # 项目范围内的持久化代理
 ```
 
-用户级持久化代理位于：
+用户级持久化代理（跨项目共享）位于：
 
 ```text
 ~/.prose/agents/
@@ -148,14 +153,17 @@ OpenProse 将状态保存在工作区中的 `.prose/` 下：
     依赖。
   </Accordion>
   <Accordion title="in-context">
-    保留在上下文窗口中的临时状态。适合小型、短生命周期
-    程序。
+    保存在上下文窗口中的临时状态；使用 `--in-context` 选择。
+    适合小型、短生命周期的程序。
   </Accordion>
   <Accordion title="sqlite (experimental)">
-    需要 `PATH` 上存在 `sqlite3` 二进制文件。
+    使用 `--state=sqlite` 选择。需要 `PATH` 中有 `sqlite3` 二进制文件
+    （缺失时回退到 filesystem）；状态会落在
+    `.prose/runs/{id}/state.db`。
   </Accordion>
   <Accordion title="postgres (experimental)">
-    需要 `psql` 和一个连接字符串。
+    使用 `--state=postgres` 选择。需要 `psql`，并在
+    `OPENPROSE_POSTGRES_URL` 中提供连接字符串（在 `.prose/.env` 中设置）。
 
     <Warning>
       Postgres 凭据会流入子代理日志。请使用专用的、
@@ -167,9 +175,10 @@ OpenProse 将状态保存在工作区中的 `.prose/` 下：
 
 ## 安全性
 
-请将 `.prose` 文件视为代码。在运行前审查它们。使用 OpenClaw 工具
-允许列表和审批门控来控制副作用。对于确定性、
-带审批门控的工作流，可与 [Lobster](/tools/lobster) 比较。
+将 `.prose` 文件视为代码。在运行之前审查它们，包括远程
+`use` 导入。顶层 `/prose run https://...` 请求是显式的，但
+传递性的远程导入在被获取或执行之前，每次运行都需要批准。使用 OpenClaw 工具白名单和审批门控来控制副作用。对于确定性、受审批门控的工作流，可与
+[Lobster](/tools/lobster) 比较。
 
 ## 相关
 

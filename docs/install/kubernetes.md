@@ -6,11 +6,11 @@ read_when:
 title: "Kubernetes"
 ---
 
-在 Kubernetes 上运行 OpenClaw 的最小起点——不是生产就绪的部署。它涵盖核心资源，旨在根据你的环境进行调整。
+在 Kubernetes 上运行 OpenClaw 的最小起点，不是可用于生产环境的部署。它涵盖了核心资源，并且旨在根据你的环境进行调整。
 
-## 为什么不用 Helm？
+## 为什么不用 Helm
 
-OpenClaw 是一个单容器应用，带有一些配置文件。真正有意思的自定义在于 agent 内容（markdown 文件、skills、配置覆盖），而不是基础设施模板化。Kustomize 可以处理覆盖层，而无需 Helm chart 的额外开销。如果你的部署变得更加复杂，可以在这些清单之上再叠加一个 Helm chart。
+OpenClaw 是一个包含一些配置文件的单容器。真正有意思的定制在于代理内容（Markdown 文件、技能、配置覆盖），而不是基础设施模板。Kustomize 可以处理覆盖层，而无需 Helm chart 的开销。如果你的部署变得更复杂，可以在这些清单之上再叠加一个 Helm chart。
 
 ## 你需要什么
 
@@ -29,7 +29,7 @@ kubectl port-forward svc/openclaw 18789:18789 -n openclaw
 open http://localhost:18789
 ```
 
-获取为 Control UI 配置的共享密钥。此部署脚本默认会创建 token 认证：
+`deploy.sh` 默认会创建 token 认证。为 Control UI 获取生成的 gateway token：
 
 ```bash
 kubectl get secret openclaw-secrets -n openclaw -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
@@ -52,7 +52,7 @@ kubectl get secret openclaw-secrets -n openclaw -o jsonpath='{.data.OPENCLAW_GAT
 
 ### 1) 部署
 
-**选项 A** — 环境变量中提供 API key（一步完成）：
+**选项 A：在环境中提供 API key（一步完成）**
 
 ```bash
 # 替换为你的提供商：ANTHROPIC、GEMINI、OPENAI 或 OPENROUTER
@@ -62,7 +62,7 @@ export <PROVIDER>_API_KEY="..."
 
 该脚本会创建一个包含 API key 和自动生成 gateway token 的 Kubernetes Secret，然后进行部署。如果 Secret 已存在，它会保留当前的 gateway token 以及未被更改的任何提供商 key。
 
-**选项 B** — 单独创建 secret：
+**选项 B：单独创建 secret**
 
 ```bash
 export <PROVIDER>_API_KEY="..."
@@ -70,7 +70,7 @@ export <PROVIDER>_API_KEY="..."
 ./scripts/k8s/deploy.sh
 ```
 
-如果你希望在本地测试时将 token 打印到 stdout，可以在任一命令中使用 `--show-token`。
+在任一命令中添加 `--show-token`，即可将 token 输出到 stdout，便于本地测试。
 
 ### 2) 访问 gateway
 
@@ -81,13 +81,13 @@ open http://localhost:18789
 
 ## 部署了什么
 
-```
-Namespace: openclaw（可通过 OPENCLAW_NAMESPACE 配置）
-├── Deployment/openclaw        # 单个 Pod，init 容器 + gateway
+```text
+Namespace: openclaw (可通过 OPENCLAW_NAMESPACE 配置)
+├── Deployment/openclaw        # 单个 Pod，init 容器 + 网关
 ├── Service/openclaw           # 18789 端口上的 ClusterIP
-├── PersistentVolumeClaim      # 10Gi，用于 agent 状态和配置
+├── PersistentVolumeClaim      # 为 agent 状态和配置提供 10Gi
 ├── ConfigMap/openclaw-config  # openclaw.json + AGENTS.md
-└── Secret/openclaw-secrets    # gateway token + API keys
+└── Secret/openclaw-secrets    # 网关 token + API 密钥
 ```
 
 ## 自定义
@@ -102,7 +102,7 @@ Namespace: openclaw（可通过 OPENCLAW_NAMESPACE 配置）
 
 ### Gateway 配置
 
-编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请查看 [Gateway configuration](/gateway/configuration)。
+编辑 `scripts/k8s/manifests/configmap.yaml` 中的 `openclaw.json`。完整参考请查看 [Gateway 配置](/gateway/configuration)。
 
 ### 添加提供商
 
@@ -136,18 +136,18 @@ OPENCLAW_NAMESPACE=my-namespace ./scripts/k8s/deploy.sh
 编辑 `scripts/k8s/manifests/deployment.yaml` 中的 `image` 字段：
 
 ```yaml
-image: ghcr.io/openclaw/openclaw:latest # 或从 https://github.com/openclaw/openclaw/releases 固定到某个特定版本
+image: ghcr.io/openclaw/openclaw:slim # 主镜像；官方 Docker Hub 镜像：openclaw/openclaw
 ```
 
 ### 超出 port-forward 的暴露方式
 
-默认清单将 gateway 绑定到 Pod 内部的 loopback。这可以与 `kubectl port-forward` 配合使用，但不能用于需要访问 Pod IP 的 Kubernetes `Service` 或 Ingress 路径。
+默认的 manifests 会将 gateway 绑定到 pod 内的 loopback。这适用于 `kubectl port-forward`，但不适用于需要直接访问 pod IP 的 Kubernetes `Service` 或 Ingress 路径。
 
-如果你想通过 Ingress 或负载均衡器暴露 gateway：
+要通过 Ingress 或负载均衡器暴露 gateway：
 
-- 将 `scripts/k8s/manifests/configmap.yaml` 中的 gateway 绑定从 `loopback` 改为与你的部署模式匹配的非 loopback 绑定
-- 保持 gateway 认证启用，并使用合适的 TLS 终止入口点
-- 使用受支持的 Web 安全模型为远程访问配置 Control UI（例如 HTTPS/Tailscale Serve，以及在需要时显式允许的来源）
+- 将 `scripts/k8s/manifests/configmap.yaml` 中的 gateway 绑定从 `loopback` 改为与你的部署模型匹配的非 loopback 绑定。
+- 保持 gateway 认证启用，并使用正确的 TLS 终止入口。
+- 使用支持的 Web 安全模型为远程访问配置 Control UI（例如 HTTPS/Tailscale Serve，以及在需要时显式允许的来源）。
 
 ## 重新部署
 
@@ -167,16 +167,16 @@ image: ghcr.io/openclaw/openclaw:latest # 或从 https://github.com/openclaw/ope
 
 ## 架构说明
 
-- gateway 默认绑定到 Pod 内部的 loopback，因此包含的设置适用于 `kubectl port-forward`
-- 不使用集群级资源——所有内容都位于单个命名空间中
-- 安全性：`readOnlyRootFilesystem`、`drop: ALL` 能力、非 root 用户（UID 1000）
-- 默认配置使 Control UI 保持在更安全的本地访问路径：loopback 绑定加上 `kubectl port-forward` 到 `http://127.0.0.1:18789`
-- 如果你要超出 localhost 访问，请使用受支持的远程模型：HTTPS/Tailscale，以及相应的 gateway 绑定和 Control UI origin 设置
-- Secret 在临时目录中生成并直接应用到集群——没有任何 secret 内容会写入仓库检出目录
+- 默认情况下，gateway 绑定到 Pod 内部的 loopback，因此所包含的设置适用于 `kubectl port-forward`。
+- 没有集群级资源；所有内容都位于单个命名空间中。
+- 安全加固：`readOnlyRootFilesystem`、`drop: ALL` capabilities、非 root 用户（UID 1000）。
+- 默认配置将 Control UI 保持在更安全的本地访问路径上：loopback 绑定，再通过 `kubectl port-forward` 访问 `http://127.0.0.1:18789`。
+- 如果你要超出 localhost 访问，请使用受支持的远程模式：HTTPS/Tailscale，以及相应的 gateway 绑定和 Control UI origin 设置。
+- Secret 会在临时目录中生成，并直接应用到集群；不会将任何 secret 内容写入仓库检出目录。
 
 ## 文件结构
 
-```
+```text
 scripts/k8s/
 ├── deploy.sh                   # 创建命名空间 + secret，通过 kustomize 部署
 ├── create-kind.sh              # 本地 Kind 集群（自动检测 docker/podman）

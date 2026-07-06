@@ -1,7 +1,7 @@
 ---
 summary: "安装 OpenClaw - 安装脚本、npm/pnpm/bun、源码、Docker 等"
 read_when:
-  - 当你需要除“Getting Started”快速入门之外的安装方式时
+  - 当你需要除“入门”快速开始之外的安装方式时
   - 当你想部署到云平台时
   - 当你需要更新、迁移或卸载时
 title: "安装"
@@ -9,9 +9,9 @@ title: "安装"
 
 ## 系统要求
 
-- **Node 24**（推荐）或 Node 22.19+ - 安装脚本会自动处理
-- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。参见 [Windows](/platforms/windows)。
-- `pnpm` 仅在你从源码构建时需要
+- **Node 22.19+、23.11+ 或 24+** - Node 24 是默认目标；安装脚本会自动处理这一点。
+- **macOS、Linux 或 Windows** - Windows 用户可以从原生 Windows Hub 应用、PowerShell CLI 安装程序或 WSL2 Gateway 开始。请参见 [Windows](/platforms/windows)。
+- 仅在从源代码构建时才需要 `pnpm`。
 
 ## 推荐：安装脚本
 
@@ -167,38 +167,20 @@ openclaw gateway status # 验证 Gateway 正在运行
 
 ## 托管与部署
 
-将 OpenClaw 部署到云服务器或 VPS：
+在云服务器或 VPS 上部署 OpenClaw。完整的
+提供商选择器请参见 [Linux 服务器](/vps)（DigitalOcean、Hetzner、Hostinger、Fly.io、GCP、Azure、Railway、
+Northflank、Oracle Cloud、Raspberry Pi 等），或者在
+[Render](/install/render) 上进行声明式部署。
 
 <CardGroup cols={3}>
   <Card title="VPS" href="/vps">
-    任何 Linux VPS。
+    选择一个提供商。
   </Card>
   <Card title="Docker VM" href="/install/docker-vm-runtime">
     共享 Docker 步骤。
   </Card>
   <Card title="Kubernetes" href="/install/kubernetes">
     K8s 部署。
-  </Card>
-  <Card title="Fly.io" href="/install/fly">
-    在 Fly.io 上部署。
-  </Card>
-  <Card title="Hetzner" href="/install/hetzner">
-    Hetzner 部署。
-  </Card>
-  <Card title="GCP" href="/install/gcp">
-    Google Cloud 部署。
-  </Card>
-  <Card title="Azure" href="/install/azure">
-    Azure 部署。
-  </Card>
-  <Card title="Railway" href="/install/railway">
-    Railway 部署。
-  </Card>
-  <Card title="Render" href="/install/render">
-    Render 部署。
-  </Card>
-  <Card title="Northflank" href="/install/northflank">
-    Northflank 部署。
   </Card>
 </CardGroup>
 
@@ -218,18 +200,10 @@ openclaw gateway status # 验证 Gateway 正在运行
 
 ## 故障排查：找不到 `openclaw`
 
-如果安装成功了，但在终端中找不到 `openclaw`：
+这几乎总是一个 PATH 问题：npm 的全局 bin 目录不在你的 shell 的 `PATH` 中。请参阅 [Node.js 故障排查](/install/node#troubleshooting) 获取完整修复方法，包括 Windows 路径。
 
 ```bash
 node -v           # Node 已安装？
 npm prefix -g     # 全局包位于哪里？
 echo "$PATH"      # 全局 bin 目录是否在 PATH 中？
 ```
-
-如果 `$(npm prefix -g)/bin` 不在你的 `$PATH` 中，请将其添加到你的 shell 启动文件（`~/.zshrc` 或 `~/.bashrc`）：
-
-```bash
-export PATH="$(npm prefix -g)/bin:$PATH"
-```
-
-然后打开一个新的终端。更多详情请参阅 [Node 设置](/install/node)。

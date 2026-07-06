@@ -6,22 +6,20 @@ read_when:
   - 你需要 Cerebras API 密钥环境变量或 CLI 认证选项
 ---
 
-[Cerebras](https://www.cerebras.ai) 提供在定制推理硬件上的高速、兼容 OpenAI 的推理服务。Cerebras 提供方插件包含一个静态的四模型目录。
+[Cerebras](https://www.cerebras.ai) 提供基于定制推理硬件的高速、兼容 OpenAI 的推理服务。该插件附带一个静态的四模型目录（无实时发现）。
 
-| Property        | Value                                    |
-| --------------- | ---------------------------------------- |
-| Provider id     | `cerebras`                               |
-| Plugin          | official external package                |
-| Auth env var    | `CEREBRAS_API_KEY`                       |
-| Onboarding flag | `--auth-choice cerebras-api-key`         |
-| Direct CLI flag | `--cerebras-api-key <key>`               |
-| API             | OpenAI-compatible (`openai-completions`) |
-| Base URL        | `https://api.cerebras.ai/v1`             |
-| Default model   | `cerebras/zai-glm-4.7`                   |
+| Property        | Value                                                     |
+| --------------- | --------------------------------------------------------- |
+| Provider id     | `cerebras`                                                |
+| Plugin          | official external package (`@openclaw/cerebras-provider`) |
+| Auth env var    | `CEREBRAS_API_KEY`                                        |
+| Onboarding flag | `--auth-choice cerebras-api-key`                          |
+| Direct CLI flag | `--cerebras-api-key <key>`                                |
+| API             | OpenAI-compatible (`openai-completions`)                  |
+| Base URL        | `https://api.cerebras.ai/v1`                              |
+| Default model   | `cerebras/zai-glm-4.7`                                    |
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/cerebras-provider
@@ -59,7 +57,7 @@ export CEREBRAS_API_KEY=csk-...
     openclaw models list --provider cerebras
     ```
 
-    列表应包含全部四个静态模型。如果 `CEREBRAS_API_KEY` 未解析，`openclaw models status --json` 会在 `auth.unusableProfiles` 下报告缺失的凭据。
+    列出全部四个静态模型。如果 `CEREBRAS_API_KEY` 未解析，`openclaw models status --json` 会在 `auth.unusableProfiles` 下报告缺失的凭据。
 
   </Step>
 </Steps>
@@ -75,22 +73,22 @@ openclaw onboard --non-interactive \
 
 ## 内置目录
 
-OpenClaw 提供了一个静态的 Cerebras 目录，与公开的 OpenAI 兼容端点一致。全部四个模型共享 128k 上下文和 8,192 最大输出 token。
+所有四个模型共享 128k 上下文窗口和 8,192 个最大输出 token。
 
 | Model ref                                 | Name                 | Reasoning | Notes                                  |
-| ----------------------------------------- | -------------------- | --------- | -------------------------------------- |
+| ---------------------------------------- | -------------------- | --------- | -------------------------------------- |
 | `cerebras/zai-glm-4.7`                    | Z.ai GLM 4.7         | yes       | 默认模型；预览版推理模型               |
 | `cerebras/gpt-oss-120b`                   | GPT OSS 120B         | yes       | 生产级推理模型                         |
 | `cerebras/qwen-3-235b-a22b-instruct-2507` | Qwen 3 235B Instruct | no        | 预览版非推理模型                       |
 | `cerebras/llama3.1-8b`                    | Llama 3.1 8B         | no        | 面向速度的生产模型                     |
 
 <Warning>
-  Cerebras 将 `zai-glm-4.7` 和 `qwen-3-235b-a22b-instruct-2507` 标记为预览模型，并且 `llama3.1-8b` 以及 `qwen-3-235b-a22b-instruct-2507` 文档说明将在 2026 年 5 月 27 日弃用。在将其用于生产工作负载之前，请查看 Cerebras 的支持模型页面。
+Cerebras 将 `zai-glm-4.7` 和 `qwen-3-235b-a22b-instruct-2507` 标记为预览模型，而 `llama3.1-8b` 以及 `qwen-3-235b-a22b-instruct-2507` 文档中注明将在 2026 年 5 月 27 日弃用。在将它们用于生产工作负载之前，请查看 Cerebras 的 [supported-models 页面](https://inference-docs.cerebras.ai/models/overview)。
 </Warning>
 
 ## 手动配置
 
-该插件通常意味着你只需要 API 密钥。当你想覆盖模型元数据，或在 `mode: "merge"` 下相对于静态目录运行时，请使用显式的 `models.providers.cerebras` 配置：
+大多数配置只需要 API 密钥。使用显式的 `models.providers.cerebras` 配置来覆盖模型元数据，或在静态目录上以 `mode: "merge"` 运行：
 
 ```json5
 {
@@ -118,7 +116,7 @@ OpenClaw 提供了一个静态的 Cerebras 目录，与公开的 OpenAI 兼容�
 ```
 
 <Note>
-  如果 Gateway 以守护进程方式运行（launchd、systemd、Docker），请确保 `CEREBRAS_API_KEY` 对该进程可用——例如放在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。仅在交互式 shell 中导出的密钥不会对托管服务生效，除非该环境变量被单独导入。
+如果 Gateway 作为守护进程运行（launchd、systemd、Docker），请确保 `CEREBRAS_API_KEY` 对该进程可用——例如放在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。仅在交互式 shell 中导出的密钥不会对受管服务生效，除非另外导入了环境变量。
 </Note>
 
 ## 相关内容

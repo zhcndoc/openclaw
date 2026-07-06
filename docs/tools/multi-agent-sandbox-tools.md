@@ -21,7 +21,7 @@ status: active
 </CardGroup>
 
 <Warning>
-认证按代理隔离：每个代理在 `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` 中都有自己的 `agentDir` 认证存储。绝不要在代理之间重复使用 `agentDir`。当代理没有本地配置文件时，它们可以读取默认/主代理的认证配置文件，但 OAuth 刷新令牌不会被克隆到次级代理存储中。如果你手动复制凭据，只能复制可移植的静态 `api_key` 或 `token` 配置文件。
+身份验证按代理作用域划分：每个代理都有自己位于 `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite` 的 `agentDir` 身份验证存储。切勿在不同代理之间复用 `agentDir`。当代理没有本地配置文件时，它们可以读取默认/主代理的身份验证配置文件，但 OAuth 刷新令牌不会被克隆到次级代理存储中。如果你手动复制凭据，只复制可移植的静态 `api_key` 或 `token` 配置文件。
 </Warning>
 
 ---
@@ -180,7 +180,7 @@ status: active
 
 特定代理设置会覆盖全局设置：
 
-```
+```text
 agents.list[].sandbox.mode > agents.defaults.sandbox.mode
 agents.list[].sandbox.scope > agents.defaults.sandbox.scope
 agents.list[].sandbox.workspaceRoot > agents.defaults.sandbox.workspaceRoot
@@ -287,15 +287,15 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 </Tabs>
 
 <Note>
-旧版 `agent.*` 配置会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.list`。
+旧版 `agents.defaults.*`/`agents.list[].*` 配置键（例如 `sandbox.perSession`、`agentRuntime`、`embeddedPi`）会由 `openclaw doctor` 迁移；今后请优先使用 `agents.defaults` + `agents.list`。
 </Note>
 
 ---
 
-## 工具限制示例
+## Tool Limitations Examples
 
 <Tabs>
-  <Tab title="只读代理">
+  <Tab title="Read-only Agent">
     ```json
     {
       "tools": {
@@ -305,7 +305,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     }
     ```
   </Tab>
-  <Tab title="禁用文件系统工具的 Shell 执行">
+  <Tab title="Disable Shell Execution for File System Tools">
     ```json
     {
       "tools": {
@@ -316,11 +316,11 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     ```
 
     <Warning>
-    此策略会禁用 OpenClaw 的文件系统工具，但 `exec` 仍然是一个 shell，并且可以在所选主机或沙箱文件系统允许的任何位置写入文件。对于只读代理，请拒绝 `exec` 和 `process`，或者将 shell 访问与沙箱文件系统控制结合使用，例如 `agents.defaults.sandbox.workspaceAccess: "ro"` 或 `"none"`。
+    This policy disables OpenClaw's file system tools, but `exec` is still a shell and can write files anywhere allowed by the selected host or sandbox file system. For a read-only agent, deny `exec` and `process`, or combine shell access with sandbox file system controls, such as `agents.defaults.sandbox.workspaceAccess: "ro"` or `"none"`.
     </Warning>
 
   </Tab>
-  <Tab title="仅通信">
+  <Tab title="Communication Only">
     ```json
     {
       "tools": {
@@ -331,7 +331,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     }
     ```
 
-    此配置文件中的 `sessions_history` 仍然返回受限、已清理的回忆视图，而不是原始转录输出。助手回忆会在脱敏前去除思考标签、`<relevant-memories>` 脚手架、纯文本工具调用 XML 载荷（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及截断的工具调用块）、降级的工具调用脚手架、泄露的 ASCII/全角模型控制标记，以及格式错误的 MiniMax 工具调用 XML。
+    `sessions_history` in this configuration file still returns a limited, sanitized memory view rather than the raw transcript output. Assistant memories remove thinking tags, `<relevant-memories>` scaffolding, plain-text tool call XML payloads (including `<tool_call>...</tool_call>`, `<function_call>...</function_call>`, `<tool_calls>...</tool_calls>`, `<function_calls>...</function_calls>`, and truncated tool call blocks), degraded tool call scaffolding, leaked ASCII/full-width model control tokens, and malformed MiniMax tool call XML before sanitization.
   </Tab>
 </Tabs>
 
@@ -340,7 +340,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
 ## 常见陷阱：“non-main”
 
 <Warning>
-`agents.defaults.sandbox.mode: "non-main"` 是基于 `session.mainKey`（默认 `"main"`），而不是代理 id。群组/频道会话总是有自己的 key，因此会被视为 non-main 并被沙箱化。如果你希望某个代理永远不进入沙箱，请将 `agents.list[].sandbox.mode` 设为 `"off"`。
+`agents.defaults.sandbox.mode: "non-main"` 会将会话密钥与主会话密钥进行检查（始终为 `"main"`；`session.mainKey` 不是用户可配置的，OpenClaw 会对任何其他值发出警告并忽略），而不是与 agent id 进行检查。群组/频道会话总是会获得自己的密钥，因此它们会被视为 non-main 并进入沙箱。如果你希望某个 agent 永远不进入沙箱，请将 `agents.list[].sandbox.mode: "off"`。
 </Warning>
 
 ---
@@ -367,7 +367,7 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
   </Step>
   <Step title="监控日志">
     ```bash
-    tail -f "${OPENCLAW_STATE_DIR:-$HOME/.openclaw}/logs/gateway.log" | grep -E "routing|sandbox|tools"
+    openclaw logs --follow | grep -E "routing|sandbox|tools"
     ```
   </Step>
 </Steps>
@@ -382,15 +382,15 @@ agents.list[].sandbox.prune.* > agents.defaults.sandbox.prune.*
     - 智能体特定配置具有更高优先级，因此请设置 `agents.list[].sandbox.mode: "all"`。
 
   </Accordion>
-  <Accordion title="尽管有拒绝列表，工具仍然可用">
-    - 检查工具过滤顺序：全局 → 智能体 → 沙箱 → 子智能体。
+  <Accordion title="尽管在拒绝列表中，工具仍然可用">
+    - 检查 [完整的过滤顺序](#tool-restrictions)：profile → provider profile → global policy → provider policy → agent policy → agent provider policy → sandbox → subagent。
     - 每一层只能进一步限制，不能重新授予权限。
-    - 使用日志验证：`[tools] filtering tools for agent:${agentId}`。
+    - 参见 [Sandbox vs tool policy vs elevated](/gateway/sandbox-vs-tool-policy-vs-elevated) 进行逐步调试。
 
   </Accordion>
   <Accordion title="容器未按智能体隔离">
-    - 在智能体特定的沙箱配置中设置 `scope: "agent"`。
-    - 默认值是 `"session"`，它会为每个会话创建一个容器。
+    - 默认 `scope` 为 `"agent"`（每个 agent id 对应一个容器）。
+    - 将 `scope: "session"` 设置为每个会话一个容器，或将 `scope: "shared"` 设置为在多个智能体之间复用一个容器。
 
   </Accordion>
 </AccordionGroup>

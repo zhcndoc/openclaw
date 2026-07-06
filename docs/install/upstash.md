@@ -18,8 +18,8 @@ title: "Upstash Box"
 
 ## 创建 Box
 
-在 Upstash 控制台中创建一个保活 Box。记下 Box ID，例如
-`right-flamingo-14486`，以及你的 Box API 密钥。
+在 Upstash Console 中创建一个 keep-alive Box。记下 Box ID（例如
+`right-flamingo-14486`）以及你的 Box API key。
 
 Upstash 目前维护的 OpenClaw Box 操作指南位于
 [OpenClaw 设置](https://upstash.com/docs/box/guides/openclaw-setup)。

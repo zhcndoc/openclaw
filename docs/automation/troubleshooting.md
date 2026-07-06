@@ -3,7 +3,7 @@ summary: "重定向到 /automation/cron-jobs"
 title: "自动化故障排除"
 ---
 
-此页面已移动到 [计划任务](/automation/cron-jobs#troubleshooting)。请参阅 [计划任务](/automation/cron-jobs#troubleshooting) 获取故障排除文档。
+此页面已移动。自动化故障排除现已位于 [Scheduled Tasks](/automation/cron-jobs#troubleshooting)。
 
 ## 相关内容
 

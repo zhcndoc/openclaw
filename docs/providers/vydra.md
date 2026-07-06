@@ -8,9 +8,9 @@ title: "Vydra"
 
 捆绑的 Vydra 插件新增了：
 
-- 通过 `vydra/grok-imagine` 进行图像生成
-- 通过 `vydra/veo3` 和 `vydra/kling` 进行视频生成
-- 通过 Vydra 基于 ElevenLabs 的 TTS 路由进行语音合成
+- 使用 `vydra/grok-imagine` 进行图像生成
+- 使用 `vydra/veo3`（文生视频）和 `vydra/kling`（图生视频）进行视频生成
+- 使用 Vydra 基于 ElevenLabs 的 TTS 路由进行语音合成
 
 OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
@@ -25,7 +25,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 | Base URL        | `https://www.vydra.ai/api/v1` (使用 `www` 主机)                           |
 
 <Warning>
-  请使用 `https://www.vydra.ai/api/v1` 作为基础 URL。Vydra 的顶级域名主机（`https://vydra.ai/api/v1`）当前会重定向到 `www`。某些 HTTP 客户端会在这种跨主机重定向时丢弃 `Authorization`，从而把有效的 API 密钥变成误导性的身份验证失败。捆绑插件直接使用 `www` 基础 URL 以避免这种情况。
+请使用 `https://www.vydra.ai/api/v1` 作为基础 URL。Vydra 的主域名主机（`https://vydra.ai/api/v1`）当前会重定向到 `www`。某些 HTTP 客户端会在这种跨主机重定向时丢弃 `Authorization`，这会把有效的 API 密钥变成误导性的身份验证失败。捆绑插件会将任何配置的 `vydra.ai` 基础 URL 规范化为 `www.vydra.ai`，以避免这种情况。
 </Warning>
 
 ## 设置
@@ -52,7 +52,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
 <AccordionGroup>
   <Accordion title="图像生成">
-    默认图像模型：
+    默认且唯一捆绑的图像模型：
 
     - `vydra/grok-imagine`
 
@@ -70,7 +70,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     }
     ```
 
-    当前捆绑的支持仅限于文本生成图像。Vydra 托管的编辑路由期望远程图像 URL，而 OpenClaw 目前尚未在捆绑插件中添加 Vydra 专用的上传桥接。
+    捆绑支持仅限文生图，每次请求最多一张图像。Vydra 托管的编辑路由期望接收远程图像 URL，而捆绑插件不会添加 Vydra 专用的上传桥接。
 
     <Note>
     有关共享工具参数、提供方选择和故障转移行为，请参见[图像生成](/tools/image-generation)。
@@ -81,8 +81,8 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
   <Accordion title="视频生成">
     已注册的视频模型：
 
-    - `vydra/veo3` 用于文本生成视频
-    - `vydra/kling` 用于图像生成视频
+    - `vydra/veo3` 用于文生视频（拒绝图像引用输入）
+    - `vydra/kling` 用于图生视频（要求恰好一个远程图像 URL）
 
     将 Vydra 设置为默认视频提供方：
 
@@ -100,10 +100,9 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
 
     注：
 
-    - `vydra/veo3` 目前仅作为文本生成视频捆绑。
-    - `vydra/kling` 当前需要一个远程图像 URL 引用。本地文件上传会被直接拒绝。
-    - Vydra 当前的 `kling` HTTP 路由在是否需要 `image_url` 或 `video_url` 方面表现不一致；捆绑的提供方会将同一个远程图像 URL 映射到这两个字段中。
-    - 捆绑插件保持保守，不会转发诸如宽高比、分辨率、水印或生成音频等未文档化的样式选项。
+    - `vydra/kling` 会在前端拒绝本地文件上传；只有远程图像 URL 引用可用。
+    - Vydra 的 `kling` HTTP 路由在是否需要 `image_url` 或 `video_url` 方面表现不一致；捆绑提供方会在这两个字段中发送同一个远程图像 URL。
+    - 捆绑插件保持保守，不会转发未文档化的样式参数，例如宽高比、分辨率、水印或生成音频。
 
     <Note>
     有关共享工具参数、提供方选择和故障转移行为，请参见[视频生成](/tools/video-generation)。
@@ -120,7 +119,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     pnpm test:live -- extensions/vydra/vydra.live.test.ts
     ```
 
-    现在捆绑的 Vydra 实时文件覆盖：
+    捆绑的 Vydra 实时文件涵盖：
 
     - `vydra/veo3` 文本生成视频
     - 使用远程图像 URL 的 `vydra/kling` 图像生成视频
@@ -144,7 +143,7 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
           providers: {
             vydra: {
               apiKey: "${VYDRA_API_KEY}",
-              speakerVoiceId: "21m00Tcm4TlvDq8ikWAM",
+              voiceId: "21m00Tcm4TlvDq8ikWAM",
             },
           },
         },
@@ -155,9 +154,9 @@ OpenClaw 对这三种能力都使用相同的 `VYDRA_API_KEY`。
     默认值：
 
     - 模型：`elevenlabs/tts`
-    - 语音 id：`21m00Tcm4TlvDq8ikWAM`
+    - 声音 id：`21m00Tcm4TlvDq8ikWAM`（"Rachel"）
 
-    当前捆绑插件仅暴露一个已知可用的默认语音，并返回 MP3 音频文件。
+    捆绑插件提供了这一已知可用的默认声音，并返回 MP3 音频文件。
 
   </Accordion>
 </AccordionGroup>

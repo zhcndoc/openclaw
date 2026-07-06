@@ -1,7 +1,7 @@
 ---
-summary: "CLI 参考：`openclaw channels`（账户、状态、登录/登出、日志）"
+summary: "openclaw channels 的 CLI 参考（账户、状态、能力、resolve、日志、登录/注销）"
 read_when:
-  - 你想添加/移除频道账户（WhatsApp/Telegram/Discord/Google Chat/Slack/Mattermost（插件）/Signal/iMessage/Matrix）
+  - 你想添加或移除频道账户（Discord、Google Chat、iMessage、Matrix、Signal、Slack、Telegram、WhatsApp 等）
   - 你想检查频道状态或跟踪频道日志
 title: "频道"
 ---
@@ -23,19 +23,18 @@ openclaw channels list --all
 openclaw channels status
 openclaw channels capabilities
 openclaw channels capabilities --channel discord --target channel:123
-openclaw channels capabilities --channel discord --target channel:<voice-channel-id>
 openclaw channels resolve --channel slack "#general" "@jane"
 openclaw channels logs --channel all
 ```
 
-`channels list` 仅显示聊天频道：默认情况下显示已配置账户，并为每个账户标注 `installed`、`configured` 和 `enabled` 状态标签。使用 `--all` 还会显示尚未配置账户的内置频道，以及尚未落盘但可从目录安装的频道。此处不再打印认证提供商（OAuth + API keys）和模型提供商的使用量/配额快照；请使用 `openclaw models auth list` 查看提供商认证配置文件，使用 `openclaw status` 或 `openclaw models list` 查看使用情况。
+`channels list` 仅显示聊天频道：默认显示已配置的账户，并按账户显示 `installed`、`configured` 和 `enabled` 状态标签（`--json` 用于机器输出）。传入 `--all` 还会显示尚未配置账户的内置频道，以及尚未下载到本地的可安装目录频道。提供方认证和模型使用情况在其他地方：`openclaw models auth list` 用于提供方认证配置文件，`openclaw status` 或 `openclaw models list` 用于查看使用量/配额。
 
 ## 状态 / 能力 / 解析 / 日志
 
-- `channels status`: `--channel <name>`, `--probe`, `--timeout <ms>`, `--json`
-- `channels capabilities`: `--channel <name>`, `--account <id>` (仅与 `--channel` 一起使用), `--target <dest>`, `--timeout <ms>`, `--json`
-- `channels resolve`: `<entries...>`, `--channel <name>`, `--account <id>`, `--kind <auto|user|group>`, `--json`
-- `channels logs`: `--channel <name|all>`, `--lines <n>`, `--json`
+- `channels status`: `--channel <name>`, `--probe`, `--timeout <ms>` (默认 `10000`), `--json`
+- `channels capabilities`: `--channel <name>`, `--account <id>` (需要 `--channel`), `--target <dest>` (需要 `--channel`), `--timeout <ms>` (默认 `10000`，上限 `30000`), `--json`
+- `channels resolve <entries...>`: `--channel <name>`, `--account <id>`, `--kind <auto|user|group>` (默认 `auto`), `--json`
+- `channels logs`: `--channel <name|all>` (默认 `all`), `--lines <n>` (默认 `200`), `--json`
 
 `channels status --probe` 是实时路径：在可达的 gateway 上，它会对每个账户运行
 `probeAccount` 和可选的 `auditAccount` 检查，因此输出可能包含传输
@@ -61,18 +60,20 @@ openclaw channels remove --channel telegram --delete
 `openclaw channels add --help` 会显示各频道专用的标志（token、private key、app token、signal-cli 路径等）。
 </Tip>
 
-`channels remove` 仅对已安装/已配置的频道插件生效。对于可安装目录中的频道，请先使用 `channels add`。
-对于基于运行时的频道插件，`channels remove` 还会先要求正在运行的 Gateway 停止所选账户，然后再更新配置，因此禁用或删除账户不会让旧监听器在重启前继续保持活动状态。
+`channels remove` 仅对已安装/已配置的频道插件生效。对于可安装的目录频道，请先使用 `channels add`。如果不带 `--delete`，它会询问是否禁用该账户并保留其配置；`--delete` 则会在不提示的情况下移除配置项。
+对于运行时支持的频道插件，`channels remove` 还会先请求正在运行的 Gateway 在更新配置之前停止所选账户，因此禁用或删除账户不会让旧监听器一直保持活动状态直到重启。
 
-常见的非交互式添加入口包括：
+跨频道共享的非交互式添加标志：`--account <id>`、`--name <name>`、`--token`、`--token-file`、`--bot-token`、`--app-token`、`--secret`、`--secret-file`、`--password`、`--cli-path`、`--url`、`--base-url`、`--http-url`、`--auth-dir` 和 `--use-env`（基于环境变量的认证，仅默认账户，在支持时可用）。频道特定标志包括：
 
-- bot-token 频道：`--token`、`--bot-token`、`--app-token`、`--token-file`
-- Signal/iMessage 传输字段：`--signal-number`、`--cli-path`、`--http-url`、`--http-host`、`--http-port`、`--db-path`、`--service`、`--region`
-- Google Chat 字段：`--webhook-path`、`--webhook-url`、`--audience-type`、`--audience`
-- Matrix 字段：`--homeserver`、`--user-id`、`--access-token`、`--password`、`--device-name`、`--initial-sync-limit`
-- Nostr 字段：`--private-key`、`--relay-urls`
-- Tlon 字段：`--ship`、`--url`、`--code`、`--group-channels`、`--dm-allowlist`、`--auto-discover-channels`
-- `--use-env` 用于支持基于环境变量的默认账户认证
+| Channel     | Flags                                                                                                |
+| ----------- | ---------------------------------------------------------------------------------------------------- |
+| Google Chat | `--webhook-path`、`--webhook-url`、`--audience-type`、`--audience`                                   |
+| iMessage    | `--cli-path`、`--db-path`、`--service`、`--region`                                                   |
+| Matrix      | `--homeserver`、`--user-id`、`--access-token`、`--password`、`--device-name`、`--initial-sync-limit` |
+| Nostr       | `--private-key`、`--relay-urls`                                                                      |
+| Signal      | `--signal-number`、`--cli-path`、`--http-url`、`--http-host`、`--http-port`                          |
+| Tlon        | `--ship`、`--url`、`--code`、`--group-channels`、`--dm-allowlist`、`--auto-discover-channels`        |
+| WhatsApp    | `--auth-dir`                                                                                         |
 
 如果频道插件需要在基于标志的添加命令期间安装，OpenClaw 会使用该频道的默认安装来源，而不会打开交互式插件安装提示。
 
@@ -86,7 +87,7 @@ openclaw channels remove --channel telegram --delete
 
 你也可以稍后使用 `openclaw agents bindings`、`openclaw agents bind` 和 `openclaw agents unbind` 管理相同的路由规则（参见 [agents](/cli/agents)）。
 
-当你向仍在使用单账户顶层设置的频道添加非默认账户时，OpenClaw 会在写入新账户之前，将账户范围的顶层值提升到该频道的账户映射中。大多数频道会把这些值放入 `channels.<channel>.accounts.default`，但打包频道可以保留现有的、匹配的已提升账户。Matrix 是当前示例：如果已经存在一个命名账户，或者 `defaultAccount` 指向一个现有的命名账户，则提升会保留该账户，而不是创建新的 `accounts.default`。
+当你向仍在使用单账户顶层设置的频道添加非默认账户时，OpenClaw 会先把这些顶层值提升到该频道的账户映射中，然后再写入新账户。提升时，如果该频道恰好已有一个命名账户，或者 `defaultAccount` 指向其中一个，就会重用现有的命名账户；否则，这些值会落到 `channels.<channel>.accounts.default`。
 
 路由行为保持一致：
 
@@ -94,7 +95,7 @@ openclaw channels remove --channel telegram --delete
 - 在非交互模式下，`channels add` 不会自动创建或重写绑定。
 - 交互式设置可以选择性地添加账户范围的绑定。
 
-如果你的配置已经处于混合状态（存在命名账户，同时顶层单账户值仍然保留），请运行 `openclaw doctor --fix`，把账户范围的值移动到该频道所选的已提升账户中。大多数频道会提升到 `accounts.default`；Matrix 则可以保留现有的命名/默认目标。
+如果你的配置已经处于混合状态（存在命名账户，同时顶层单账户值仍然设置着），请运行 `openclaw doctor --fix`，将账户范围的值移动到为该频道选定的已提升账户中。
 
 ## 登录和登出（交互式）
 
@@ -103,17 +104,17 @@ openclaw channels login --channel whatsapp
 openclaw channels logout --channel whatsapp
 ```
 
-- `channels login` 支持 `--verbose`。
-- 当只配置了一个受支持的登录目标时，`channels login` 和 `logout` 可以推断频道。
-- `channels logout` 在可达时优先使用实时 Gateway 路径，因此登出会在清除频道认证状态之前停止任何活动监听器。如果本地 Gateway 不可达，它会回退到本地认证清理。
-- 请在 gateway 主机上的终端中运行 `channels login`。Agent `exec` 会阻止这种交互式登录流程；如果可用，应在聊天中使用频道原生的 agent 登录工具，例如 `whatsapp_login`。
+- `channels login` 支持 `--account <id>` 和 `--verbose`；`channels logout` 支持 `--account <id>`。
+- 当只有一个已配置的 channel 支持该操作时，`channels login` 和 `logout` 可以推断出 channel；如果有多个，请传入 `--channel`。
+- `channels logout` 在可达时优先使用实时 Gateway 路径，因此登出会在清除 channel 认证状态之前停止任何活动的监听器。如果本地 Gateway 不可达，则回退到本地认证清理；在 `gateway.mode: "remote"` 下，Gateway 错误会直接使命令失败。
+- 登录成功后，CLI 会请求可达的本地 Gateway 启动该账户；在 remote 模式下，它会在本地保存认证信息，并提示远程运行时未重启。
+- 请在 gateway 主机上的终端中运行 `channels login`。Agent `exec` 会阻止此交互式登录流程；如果可用，应在聊天中使用 channel 原生的 agent 登录工具，例如 `whatsapp_login`。
 
 ## 故障排查
 
 - 运行 `openclaw status --deep` 进行广泛探测。
 - 使用 `openclaw doctor` 获取引导式修复。
-- `openclaw channels list` 不再打印模型提供商的使用量/配额快照。对于这些信息，请使用 `openclaw status`（总览）或 `openclaw models list`（按提供商）。
-- 当 gateway 不可达时，`openclaw channels status` 会回退到仅配置摘要。如果通过 SecretRef 配置了受支持的频道凭据，但在当前命令路径中不可用，则会将该账户报告为已配置并带有降级说明，而不是显示为未配置。
+- 当网关不可达时，`openclaw channels status` 会回退到仅基于配置的摘要。如果通过 SecretRef 配置了受支持的渠道凭据，但在当前命令路径中不可用，它会将该账户报告为已配置并附带降级说明，而不是显示为未配置。
 
 ## 能力探测
 
@@ -126,10 +127,10 @@ openclaw channels capabilities --channel discord --target channel:123
 
 说明：
 
-- `--channel` 是可选的；省略它可列出所有频道（包括扩展）。
+- `--channel` 是可选的；省略它可列出所有频道（包括由插件提供的频道）。
 - `--account` 仅在与 `--channel` 一起使用时有效。
-- `--target` 接受 `channel:<id>` 或原始数字频道 ID，且仅适用于 Discord。对于 Discord 语音频道，权限检查会标记缺失的 `ViewChannel`、`Connect`、`Speak`、`SendMessages` 和 `ReadMessageHistory`。
-- 探测因提供商而异：Discord intents + 可选频道权限；Slack bot + user scopes；Telegram bot 标志 + webhook；Signal daemon 版本；Microsoft Teams app token + Graph roles/scopes（在已知情况下会加注）。没有探测的频道会报告 `Probe: unavailable`。
+- `--target` 接受 `channel:<id>` 或原始的数字频道 ID，并且仅适用于 Discord。对于 Discord 语音频道，权限检查会标记缺少的 `ViewChannel`、`Connect`、`Speak`、`SendMessages` 和 `ReadMessageHistory`。
+- 探测是特定于提供商的：Discord 机器人身份 + intents 以及可选的频道权限；Slack 机器人 + 用户 scopes；Telegram 机器人标志 + webhook；Signal 守护进程版本；Microsoft Teams 应用令牌 + Graph 角色/scopes（在已知情况下会做注释）。没有探测的频道会报告 `Probe: unavailable`。
 
 ## 将名称解析为 ID
 

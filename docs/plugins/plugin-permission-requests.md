@@ -74,16 +74,17 @@ export default definePluginEntry({
 
 为将要批准该动作的人编写提示文本：
 
-- 保持 `title` 简短且以动作导向为主。Gateway 最多接受 80 个
-  字符。
-- 保持 `description` 具体且有边界。Gateway 最多接受 256 个
-  字符。
-- 包含动作、目标和风险。不要包含不应出现在聊天批准界面中的密钥、
-  token 或私有负载。
-- 仅对错误决策可能导致生产损害或数据丢失的操作使用
-  `severity: "critical"`。
-- 当对该动作进行持久化信任不安全时，使用
-  `allowedDecisions: ["allow-once", "deny"]`。
+- 保持 `title` 简短且以动作为中心；Gateway 将其上限设为 80 个字符。
+- 保持 `description` 具体且有边界；Gateway 将其上限设为 256
+  个字符。
+- 包含动作、目标和风险。不要包含不应出现在聊天审批界面中的密钥、令牌或
+  私有载荷。
+- 当省略 `severity` 时，默认值为 `"warning"`。仅对错误决定可能导致生产环境损坏
+  或数据丢失的操作使用 `"critical"`。
+- 当省略 `allowedDecisions` 时，默认值为 `["allow-once", "allow-always", "deny"]`。
+  对于持久信任对该动作不安全的情况，请传入 `["allow-once", "deny"]`。
+- `timeoutMs` 的默认值为 120000（2 分钟），并且无论请求值是多少，都会被限制
+  为 600000（10 分钟）。
 
 ## 决策行为
 
@@ -95,8 +96,8 @@ OpenClaw 会创建一个带有 `plugin:` ID 的待批准项，将其发送到
 | `allow-once`      | 当前调用继续执行。                                                         |
 | `allow-always`    | 当前调用继续执行，并将该决策传递给插件。                                   |
 | `deny`            | 该调用被阻止，并返回拒绝的工具结果。                                       |
-| 超时              | 除非 `timeoutBehavior` 为 `"allow"`，否则该调用会被阻止。                  |
-| 取消              | 当运行被中止时，该调用会被阻止。                                           |
+| 超时              | 除非 `timeoutBehavior` 为 `"allow"`，否则该调用将被阻止。                  |
+| 取消              | 当运行被中止时，该调用将被阻止。                                           |
 | 没有批准路由      | 由于没有连接的批准界面能够处理它，该调用被阻止。                            |
 
 `allow-always` 只有在请求的插件或运行时实现了
@@ -172,15 +173,14 @@ Codex 原生权限提示也可以通过插件批准流转，但它们与
 **`/approve` 拒绝该决策。** 该请求限制了
 `allowedDecisions`。请使用提示中打印出的决策之一。
 
-**Slack、Discord、Telegram 或 Matrix 提示的路由方式与 exec
-批准不同。** 插件批准和 exec 批准使用不同的配置，并且可能使用
-不同的授权检查。请验证 `approvals.plugin` 以及该渠道对
-插件批准的支持，而不仅仅是检查 `approvals.exec`。
+**Discord、Matrix、Slack 或 Telegram 的提示路由与 exec
+批准不同。** 插件批准和 exec 批准使用的是不同的配置，且可能采用不同的授权检查。请验证
+`approvals.plugin` 以及该频道对插件批准的支持，而不要只检查 `approvals.exec`。
 
 ## 相关内容
 
-- [插件 hooks](/plugins/hooks#tool-call-policy)
-- [构建插件](/plugins/building-plugins#registering-agent-tools)
-- [高级 exec 批准](/tools/exec-approvals-advanced#plugin-approval-forwarding)
-- [Gateway 协议](/gateway/protocol)
+- [插件钩子](/plugins/hooks#tool-call-policy)
+- [构建插件](/plugins/building-plugins#registering-tools)
+- [高级执行审批](/tools/exec-approvals-advanced#plugin-approval-forwarding)
+- [网关协议](/gateway/protocol)
 - [Codex harness 运行时](/plugins/codex-harness-runtime#native-permissions-and-mcp-elicitations)

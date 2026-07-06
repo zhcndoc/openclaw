@@ -9,36 +9,33 @@ title: "语音悬浮层"
 
 受众：macOS 应用贡献者。目标：当唤醒词与按住说话重叠时，让语音悬浮层保持可预测。
 
-## 当前意图
+## 行为
 
-- 如果悬浮层已经因唤醒词而可见，用户又按下热键，则热键会话会 _沿用_ 现有文本，而不是重置它。只要热键保持按下，悬浮层就会继续显示。用户松开时：如果有去除首尾空白后的文本就发送，否则关闭。
-- 单独使用唤醒词仍会在静音时自动发送；按住说话会在松开时立即发送。
+- 如果覆盖层已经因唤醒词而可见，而用户按下热键，则热键会话会沿用现有文本，而不是重置它。只要热键保持按下，覆盖层就会继续显示。松开时：如果有去除首尾空白后的文本，则发送；否则关闭。
+- 仅使用唤醒词时仍会在静默后自动发送；按住说话则会在松开时立即发送。
 
-## 已实现（2025 年 12 月 9 日）
+## 实现
 
-- 悬浮层会话现在为每次捕获（唤醒词或按住说话）携带一个令牌。当前缀不匹配时，会丢弃部分结果/最终结果/发送/关闭/音量更新，从而避免过期回调。
-- 按住说话会沿用任何可见的悬浮层文本作为前缀（因此当唤醒悬浮层已显示时按下热键，会保留文本并追加新的语音）。它最多等待 1.5 秒获取最终转写，然后回退到当前文本。
-- 钟声/悬浮层日志会以 `info` 级别输出到 `voicewake.overlay`、`voicewake.ptt` 和 `voicewake.chime` 类别（会话开始、部分结果、最终结果、发送、关闭、钟声原因）。
+- `VoiceSessionCoordinator`（`apps/macos/Sources/OpenClaw/VoiceSessionCoordinator.swift`）是活动语音会话的唯一拥有者。它是一个 `@MainActor @Observable` 单例，而不是 actor。API：`startSession`、`updatePartial`、`finalize`、`sendNow`、`dismiss`、`updateLevel`、`snapshot`。每个会话都携带一个 `UUID` 令牌；使用过期或不匹配令牌的调用会被丢弃。
+- `VoiceWakeOverlayController`（`VoiceWakeOverlayController+Session.swift`）负责渲染覆盖层，并通过会话令牌将用户操作（`requestSend`、`dismiss`）转发回协调器。它自身从不拥有会话状态。
+- 按住说话（`VoicePushToTalk.begin()`）会将任何可见的覆盖层文本作为 `adoptedPrefix` 采用（通过 `VoiceSessionCoordinator.shared.snapshot()`），这样当唤醒覆盖层已显示时按下热键，就会保留文本并追加新的语音。松开时，它会等待最长 1.5 秒以获取最终转写结果，然后再回退到当前文本。
+- 在 `dismiss` 时，覆盖层会调用 `VoiceSessionCoordinator.overlayDidDismiss`，这会触发 `VoiceWakeRuntime.refresh(state:)`，从而让手动点击 X 关闭、空文本关闭以及发送后关闭都恢复唤醒词监听。
+- 统一发送路径：如果修剪后的文本为空，则执行关闭；否则 `sendNow` 只播放一次发送提示音，通过 `VoiceWakeForwarder` 转发，然后关闭。
 
-## 下一步
+## 日志
 
-1. **VoiceSessionCoordinator（actor）**
-   - 同一时刻只持有一个 `VoiceSession`。
-   - API（基于令牌）：`beginWakeCapture`、`beginPushToTalk`、`updatePartial`、`endCapture`、`cancel`、`applyCooldown`。
-   - 丢弃携带过期令牌的回调（防止旧识别器重新打开悬浮层）。
-2. **VoiceSession（model）**
-   - 字段：`token`、`source`（wakeWord|pushToTalk）、已提交/临时文本、钟声标志、计时器（自动发送、空闲）、`overlayMode`（display|editing|sending）、冷却截止时间。
-3. **悬浮层绑定**
-   - `VoiceSessionPublisher`（`ObservableObject`）将活动会话映射到 SwiftUI。
-   - `VoiceWakeOverlayView` 仅通过发布器渲染；它不会直接修改全局单例。
-   - 悬浮层用户操作（`sendNow`、`dismiss`、`edit`）通过会话令牌回调协调器。
-4. **统一发送路径**
-   - 在 `endCapture` 时：如果去除首尾空白后的文本为空 → 关闭；否则 `performSend(session:)`（仅播放一次发送钟声、转发、关闭）。
-   - 按住说话：不延迟；唤醒词：自动发送可选延迟。
-   - 在按住说话结束后，对唤醒运行时应用短暂冷却，以免唤醒词立即再次触发。
-5. **日志**
-   - 协调器在 `ai.openclaw` 这个 subsystem 下，以 `voicewake.overlay` 和 `voicewake.chime` 类别输出 `.info` 日志。
-   - 关键事件：`session_started`、`adopted_by_push_to_talk`、`partial`、`finalized`、`send`、`dismiss`、`cancel`、`cooldown`。
+语音子系统为 `ai.openclaw`；每个组件都会在其自己的类别下记录日志：
+
+| 类别                    | 组件                                            |
+| ----------------------- | ----------------------------------------------- |
+| `voicewake.coordinator` | `VoiceSessionCoordinator`                       |
+| `voicewake.overlay`     | `VoiceWakeOverlayController`/`VoiceWakeOverlay` |
+| `voicewake.ptt`         | 按下说话热键和捕获                                  |
+| `voicewake.runtime`     | 唤醒词运行时                                      |
+| `voicewake.chime`       | 提示音播放                                        |
+| `voicewake.sync`        | 全局设置同步                                      |
+| `voicewake.forward`     | 转录转发                                        |
+| `voicewake.meter`       | 麦克风电平监视器                                    |
 
 ## 调试清单
 
@@ -48,16 +45,8 @@ title: "语音悬浮层"
   sudo log stream --predicate 'subsystem == "ai.openclaw" AND category CONTAINS "voicewake"' --level info --style compact
   ```
 
-- 确认只有一个活动会话令牌；过期回调应由协调器丢弃。
-- 确保按住说话松开时始终使用活动令牌调用 `endCapture`；如果文本为空，预期会执行 `dismiss`，且不会有钟声或发送。
-
-## 迁移步骤（建议）
-
-1. 添加 `VoiceSessionCoordinator`、`VoiceSession` 和 `VoiceSessionPublisher`。
-2. 重构 `VoiceWakeRuntime`，使其创建/更新/结束会话，而不是直接操作 `VoiceWakeOverlayController`。
-3. 重构 `VoicePushToTalk`，使其沿用现有会话并在松开时调用 `endCapture`；应用运行时冷却。
-4. 将 `VoiceWakeOverlayController` 连接到发布器；移除来自运行时/PTT 的直接调用。
-5. 添加会话沿用、冷却和空文本关闭的集成测试。
+- 验证只有一个活动会话令牌；协调器会丢弃过期回调。
+- 确认按住说话释放时始终使用活动令牌调用 `end()`；如果文本为空，应预期直接关闭，不播放提示音也不发送。
 
 ## 相关
 

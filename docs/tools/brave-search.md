@@ -43,8 +43,7 @@ OpenClaw 支持 Brave Search API 作为 `web_search` 提供方。
 }
 ```
 
-Brave 搜索的提供方特定设置现在位于 `plugins.entries.brave.config.webSearch.*` 下。
-旧的 `tools.web.search.apiKey` 仍会通过兼容层加载，但它已不再是标准配置路径。
+Provider-specific Brave 搜索设置位于 `plugins.entries.brave.config.webSearch.*` 下；这是标准配置路径。共享的顶层 `tools.web.search.apiKey` 和作用域化的 `tools.web.search.brave.*` 仍会通过兼容性合并加载，但新的配置应使用上面的插件作用域路径。
 
 `webSearch.mode` 控制 Brave 的传输方式：
 
@@ -121,9 +120,9 @@ await web_search({
 
 ## 注意事项
 
-- OpenClaw 使用 Brave **Search** 套餐。如果你有旧版订阅（例如最初的免费套餐，每月 2,000 次查询），它仍然有效，但不包含诸如 LLM Context 或更高速率限制等新功能。
+- OpenClaw 使用 Brave **搜索** 套餐。如果你有旧版订阅（例如最初的免费套餐，每月 2,000 次查询），它仍然有效，但不包含诸如 LLM Context 或更高速率限制等新功能。
 - 每个 Brave 套餐都包含 **每月 \$5 免费额度**（可续期）。Search 套餐每 1,000 次请求收费 \$5，因此这笔额度可覆盖每月 1,000 次查询。请在 Brave 仪表板中设置你的使用上限，以避免意外收费。有关当前套餐，请参阅 [Brave API portal](https://brave.com/search/api/)。
-- Search 套餐包括 LLM Context 端点和 AI 推理权利。将结果存储用于训练或微调模型，需要具有明确存储权利的套餐。请参阅 Brave [Terms of Service](https://api-dashboard.search.brave.com/terms-of-service)。
+- Search 套餐包括 LLM Context 端点和 AI 推理权利。将结果存储用于训练或微调模型，需要具有明确存储权利的套餐。请参阅 Brave [服务条款](https://api-dashboard.search.brave.com/terms-of-service)。
 - `llm-context` 模式返回有依据的来源条目，而不是普通 web-search 摘要的结构。
 - `llm-context` 模式支持 `freshness` 和受限的 `date_after` + `date_before` 范围。它不支持 `ui_lang`；如果没有 `date_after`，`date_before` 会被拒绝，因为 Brave 要求自定义时间范围同时包含开始和结束日期。
 - `ui_lang` 必须包含区域子标签，例如 `en-US`。
@@ -134,6 +133,6 @@ await web_search({
 
 ## 相关内容
 
-- [Web Search overview](/tools/web) -- 所有提供方和自动检测
+- [Web Search 概述](/tools/web) -- 所有提供方和自动检测
 - [Perplexity Search](/tools/perplexity-search) -- 带域名过滤的结构化结果
 - [Exa Search](/tools/exa-search) -- 带内容提取的神经搜索

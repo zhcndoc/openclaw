@@ -11,29 +11,34 @@ OpenClaw 会将回复**路由回消息来源的频道**。模型不会选择频�
 
 ## 关键术语
 
-- **Channel**: `telegram`, `whatsapp`, `discord`, `irc`, `googlechat`, `slack`, `signal`, `imessage`, `line`, plus plugin channels. `webchat` is the internal WebChat UI channel and is not a configurable outbound channel.
-- **AccountId**: per-channel account instance (when supported).
-- Optional channel default account: `channels.<channel>.defaultAccount` chooses
-  which account is used when an outbound path does not specify `accountId`.
-  - In multi-account setups, set an explicit default (`defaultAccount` or `accounts.default`) when two or more accounts are configured. Without it, fallback routing may pick the first normalized account ID.
-- **AgentId**: an isolated workspace + session store ("brain").
-- **SessionKey**: the bucket key used to store context and control concurrency.
+- **Channel**: 一个捆绑的渠道插件，例如 `discord`、`googlechat`、`imessage`、`irc`、`line`、`signal`、`slack`、`telegram` 或 `whatsapp`，以及已安装的插件渠道。`webchat` 是内部 WebChat UI 渠道，不是可配置的出站渠道。
+- **AccountId**: 每个渠道的账户实例（在支持的情况下）。
+- 可选的渠道默认账户：`channels.<channel>.defaultAccount` 用于选择
+  当出站路径未指定 `accountId` 时使用哪个账户。
+  - 在多账户设置中，当配置了两个或更多账户时，请设置一个明确的默认值（`defaultAccount` 或名为 `default` 的账户）。如果不设置，回退路由可能会选择第一个标准化后的账户 ID。
+- **AgentId**: 一个隔离的工作区 + 会话存储（"brain"）。
+- **SessionKey**: 用于存储上下文和控制并发的桶键。
 
-## Outbound target prefixes
+## 外发目标前缀
 
 显式的外发目标可以包含提供者前缀，例如 `telegram:123` 或 `tg:123`。当所选频道为 `last` 或其他未解析状态时，核心只会将该前缀视为频道选择提示，且前提是已加载的插件声明了该前缀。如果调用方已经显式选择了频道，则提供者前缀必须与该频道匹配；像通过 WhatsApp 发送到 `telegram:123` 这类跨频道组合会在插件特定目标规范化之前失败。
 
 `channel:<id>`、`user:<id>`、`room:<id>`、`thread:<id>`、`imessage:<handle>` 和 `sms:<number>` 等目标类型与服务前缀会保留在所选频道的语法中。它们本身不会选择提供者。
 
-## Session key shapes (examples)
+## 会话键形状（示例）
 
-Direct messages collapse to the agent's **main** session by default:
+私信默认会折叠到代理的 **主** 会话：
 
 - `agent:<agentId>:<mainKey>`（默认：`agent:main:main`）
 
-即使直接消息的对话历史与主会话共享，sandbox 和
-工具策略也会为外部 DM 使用一个派生的、按账号区分的直接聊天运行时键，
-这样来自频道的消息就不会被当作本地主会话运行处理。
+`session.dmScope` 控制私信折叠：`main`（默认）共享一个主
+会话，而 `per-peer`、`per-channel-peer` 和 `per-account-channel-peer`
+会将私信保留在独立会话中。路由绑定可以通过 `bindings[].session.dmScope`
+为其匹配的对等方覆盖该范围。
+
+即使私信对话历史与主会话共享，sandbox 和
+工具策略仍会为外部私信使用派生的按账户划分的 direct-chat 运行时键，
+因此频道发起的消息不会被视为本地主会话运行。
 
 群组和频道仍然按频道隔离：
 
@@ -52,16 +57,14 @@ Direct messages collapse to the agent's **main** session by default:
 
 ## 主 DM 路由固定
 
-When `session.dmScope` is `main`, direct messages may share one main session.
-To prevent the session's `lastRoute` from being overwritten by non-owner DMs,
-OpenClaw infers a pinned owner from `allowFrom` when all of these are true:
+当 `session.dmScope` 为 `main` 时，直接消息可能共享一个主会话。  
+为防止非拥有者的 DM 覆盖该会话的 `lastRoute`，当满足以下所有条件时，OpenClaw 会根据 `allowFrom` 推断出一个固定的拥有者：
 
 - `allowFrom` 恰好只有一个非通配符条目。
 - 该条目可以被规范化为该频道的具体发送者 ID。
 - 传入的 DM 发送者与该固定拥有者不匹配。
 
-在这种不匹配情况下，OpenClaw 仍会记录传入会话元数据，但会
-跳过更新主会话的 `lastRoute`。
+在这种不匹配情况下，OpenClaw 仍会记录传入会话元数据，但会跳过更新主会话的 `lastRoute`。
 
 ## 受保护的入站记录
 
@@ -74,14 +77,15 @@ OpenClaw 可以更新现有会话的元数据和 `lastRoute`，但不会因为�
 
 路由会为每条入站消息选择**一个代理**：
 
-1. **精确的 peer 匹配**（`bindings`，包含 `peer.kind` + `peer.id`）。
+1. **精确的 peer 匹配** (`bindings` with `peer.kind` + `peer.id`).
 2. **父级 peer 匹配**（线程继承）。
-3. **Guild + roles 匹配**（Discord），通过 `guildId` + `roles`。
-4. **Guild 匹配**（Discord），通过 `guildId`。
-5. **Team 匹配**（Slack），通过 `teamId`。
-6. **Account 匹配**（频道上的 `accountId`）。
-7. **Channel 匹配**（该频道上的任意账号，`accountId: "*"`）。
-8. **默认代理**（`agents.list[].default`，否则为第一个列表项，回退到 `main`）。
+3. **peer 通配符匹配**（某个 peer kind 下的 `peer.id: "*"`）。
+4. **Guild + roles 匹配**（Discord）通过 `guildId` + `roles`。
+5. **Guild 匹配**（Discord）通过 `guildId`。
+6. **Team 匹配**（Slack）通过 `teamId`。
+7. **Account 匹配**（通道上的 `accountId`）。
+8. **Channel 匹配**（该通道上的任意 account，`accountId: "*"`）。
+9. **默认代理**（`agents.list[].default`，否则取列表第一个，最后回退到 `main`）。
 
 当一个绑定包含多个匹配字段（`peer`、`guildId`、`teamId`、`roles`）时，**所有提供的字段都必须匹配**，该绑定才会生效。
 

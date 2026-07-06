@@ -7,8 +7,8 @@ title: "上手引导（macOS 应用）"
 sidebarTitle: "上手引导：macOS 应用"
 ---
 
-本文档描述了**当前**的首次运行设置流程。目标是提供一种顺畅的“第 0 天”体验：选择 Gateway 运行的位置，连接身份验证，运行向导，并让代理自动完成引导。
-有关上手路径的一般概述，请参阅 [Onboarding Overview](/start/onboarding-overview)。
+macOS 应用的首次运行流程：选择 Gateway 运行位置，连接已验证的 AI 后端，授予权限，然后交由代理自身的启动仪式继续。
+关于 CLI 上手流程以及两种路径的对比，请参见 [上手概览](/start/onboarding-overview)。
 
 <Steps>
 <Step title="批准 macOS 警告">
@@ -28,10 +28,10 @@ sidebarTitle: "上手引导：macOS 应用"
 
 安全信任模型：
 
-- 默认情况下，OpenClaw 是一个个人代理：只有一个受信任的操作员边界。
-- 共享/多用户设置需要锁定（拆分信任边界、将工具访问保持在最低限度，并遵循 [安全](/gateway/security)）。
-- 本地上手引导现在默认将新配置设置为 `tools.profile: "coding"`，因此新的本地设置会保留文件系统/运行时工具，而不会强制使用不受限制的 `full` 配置文件。
-- 如果启用了 hooks/webhooks 或其他不受信任的内容源，请使用强大的现代模型等级，并保持严格的工具策略/沙箱隔离。
+- 默认情况下，OpenClaw 是一个个人代理：一个受信任的操作者边界。
+- 共享/多用户设置需要锁定：拆分信任边界，尽量减少工具访问，并遵循 [安全](/gateway/security)。
+- 本地上手会将新配置默认设为 `tools.profile: "coding"`，因此新安装会保留文件系统/运行时工具，而不会使用不受限制的 `full` 配置。
+- 如果启用了 hooks/webhooks 或其他不受信任的内容源，请使用强大的现代模型层级，并保持严格的工具策略/沙箱隔离。
 
 </Step>
 <Step title="本地还是远程">
@@ -41,45 +41,58 @@ sidebarTitle: "上手引导：macOS 应用"
 
 **Gateway** 运行在哪里？
 
-- **This Mac (Local only):** 上手引导可以配置身份验证并将凭据写入本地。
-- **Remote (over SSH/Tailnet):** 上手引导**不会**配置本地身份验证；凭据必须存在于 gateway 主机上。远程 gateway token 字段存储 macOS 应用用于连接该 Gateway 的 token；现有的非明文 `gateway.remote.token` 值会被保留，直到你将其替换。
-- **Configure later:** 跳过设置并保持应用未配置状态。
+- **这台 Mac（仅本地）**：上手流程会配置身份验证并将凭据写入本地。
+- **远程（通过 SSH/Tailnet）**：上手流程**不会**配置本地身份验证；
+  凭据必须已经存在于 gateway 主机上。远程 gateway token
+  字段会存储 macOS 应用用于连接该 Gateway 的 token；
+  现有的 `gateway.remote.token` SecretRef 值会被保留，直到你
+  替换它们。
+- **稍后配置**：跳过设置并保持应用未配置。
 
 <Tip>
 **Gateway 身份验证提示：**
 
-- 向导现在即使对回环地址也会生成一个 **token**，因此本地 WS 客户端必须进行身份验证。
-- 如果你禁用身份验证，任何本地进程都可以连接；仅在完全受信任的机器上使用该选项。
-- 对于多机器访问或非回环绑定，请使用 **token**。
+- Gateway auth 模式默认是 `token`，即使是 loopback 绑定也是如此，因此本地 WS 客户端必须进行身份验证。
+- 设置 `gateway.auth.mode: "none"` 会让任何本地进程都能连接；仅应在完全受信任的机器上使用。
+- 对于多机器访问或非 loopback 绑定，请使用 token。
 
 </Tip>
 </Step>
+<Step title="CLI">
+  本地设置会通过 npm、pnpm 或 bun 安装全局 `openclaw` CLI，并优先使用 npm。Node 仍然是 Gateway
+  本身的推荐运行时。现有的兼容安装会被复用。
+</Step>
+<Step title="连接你的 AI">
+  一旦 Gateway 就绪，上手流程会查找你已经拥有的 AI 访问方式：
+  Claude Code、Codex 或 Gemini CLI 登录，或者 `OPENAI_API_KEY` /
+  `ANTHROPIC_API_KEY`。最佳选项会通过真实补全进行测试，并且
+  只有在它成功回答后才会保存；当测试失败时，应用会自动尝试
+  下一个选项，并说明前一个选项失败的原因。如果找到多个选项，
+  你可以在继续之前在它们之间切换。
+
+如果什么都没找到（或者都不可用），则可以通过手动步骤接受
+Anthropic、OpenAI 或 Google 的 API key，以相同方式进行验证，
+并将其存储为身份验证配置文件。只有当某个后端通过实时测试后，
+Next 才会解锁，因此第一轮代理对话绝不会在没有可用推理能力的情况下开始。
+Crestodian 聊天仍可从此页面（以及之后的 Settings → Crestodian）访问，以获得
+自然语言帮助。
+
+Configure Later 会跳过这一步。
+</Step>
 <Step title="权限">
-<Frame caption="选择你想授予 OpenClaw 哪些权限">
+
+<Frame caption="选择要授予 OpenClaw 的权限">
 <img src="/assets/macos-onboarding/05-permissions.png" alt="" />
 </Frame>
 
-上手引导会请求以下所需的 TCC 权限：
-
-- 自动化（AppleScript）
-- 通知
-- 辅助功能
-- 屏幕录制
-- 麦克风
-- 语音识别
-- 摄像头
-- 定位
+上手流程会请求以下 TCC 权限：Automation（AppleScript）、Notifications、Accessibility、Screen Recording、Microphone、Speech Recognition、Camera 和 Location。
 
 </Step>
-<Step title="CLI">
-  <Info>此步骤是可选的</Info>
-  应用可以通过 npm、pnpm 或 bun 安装全局 `openclaw` CLI。
-  它会优先使用 npm，然后是 pnpm，如果检测到的唯一包管理器是 bun，则使用 bun。对于 Gateway 运行时，Node 仍然是推荐路径。
-</Step>
-<Step title="上手引导聊天（专用会话）">
-  设置完成后，应用会打开一个专门的上手引导聊天会话，这样代理就可以
-  自我介绍并指导后续步骤。这使首次运行的引导与
-  你的常规对话分开。有关首次代理运行期间在 gateway 主机上发生的情况，请参阅 [Bootstrapping](/start/bootstrapping)。
+<Step title="上手聊天（专用会话）">
+  设置完成后，应用会打开一个单独的代理上手聊天，使代理能够
+  介绍自己并引导后续步骤，而不会把这段交流混入
+  正常的对话历史中。这延续了 Crestodian 的设置对话；
+  它并不替代它。有关代理首次真正开始运行时在 gateway 主机上会发生什么，请参见 [启动](/start/bootstrapping)。
 </Step>
 </Steps>
 

@@ -7,25 +7,21 @@ read_when:
 title: "本地模型服务"
 ---
 
-`models.providers.<id>.localService` 允许 OpenClaw 按需启动由提供者拥有的本地
-模型服务器。这是提供者级别的配置：当所选模型属于该提供者时，OpenClaw 会探测服务，
-如果端点不可用则启动进程，等待就绪，然后发送模型请求。
-
-它适用于那些全天运行成本较高的本地服务器，或者适用于只要选择模型就足以让后端启动的
-手动配置。
+`models.providers.<id>.localService` 按需启动由提供者拥有的本地模型服务器。当请求选择了该提供者的某个模型时，OpenClaw 会探测健康检查端点，如果服务已停止则启动进程，等待其就绪，然后发送请求。可用它来避免让昂贵的本地服务器全天运行。
 
 ## 工作原理
 
-1. 模型请求解析到一个已配置的提供者。
-2. 如果该提供者有 `localService`，OpenClaw 会探测 `healthUrl`。
-3. 如果探测成功，OpenClaw 使用现有服务器。
-4. 如果探测失败，OpenClaw 使用 `args` 启动 `command`。
-5. OpenClaw 轮询就绪状态，直到 `readyTimeoutMs` 过期。
-6. 模型请求通过正常的提供者传输发送。
-7. 如果 OpenClaw 启动了该进程，并且 `idleStopMs` 为正数，那么在最后一个正在处理中的请求空闲达到该时长后，进程会被停止。
+1. 模型请求解析到一个已配置的提供方。
+2. 如果该提供方有 `localService`，OpenClaw 会探测 `healthUrl`。
+3. 探测成功时，OpenClaw 使用已经运行的服务器。
+4. 探测失败时，OpenClaw 使用 `args` 启动 `command`。
+5. OpenClaw 会轮询健康检查端点，直到 `readyTimeoutMs` 到期。
+6. 模型请求通过正常的提供方传输进行。
+7. 如果 OpenClaw 启动了该进程，并且设置了 `idleStopMs`，那么它会在最后一个正在处理中的请求空闲达到该时长后停止该进程。
 
-OpenClaw 不会为此安装 launchd、systemd、Docker 或守护进程。该服务器是 OpenClaw 进程的子进程，
-由第一个需要它的 OpenClaw 进程创建。
+OpenClaw 不会为此安装 launchd、systemd、Docker 或任何守护进程。服务器只是第一个需要它的 OpenClaw 进程的普通子进程。
+
+每个提供方的 command/argument/env 集合的启动过程都是串行化的，因此对同一服务的并发请求不会生成重复的服务器。如果另一个 OpenClaw 进程已经在相同的 `healthUrl` 上拥有一个健康的服务器，这个进程会复用它，但不会接管它（每个进程只管理它自己启动的子进程）。活动中的流式响应会持有一个租约，因此空闲关闭会等待响应处理完成。
 
 ## 配置结构
 
@@ -50,7 +46,7 @@ OpenClaw 不会为此安装 launchd、systemd、Docker 或守护进程。该服�
         models: [
           {
             id: "my-local-model",
-            name: "My Local Model",
+            name: "我的本地模型",
             reasoning: false,
             input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -64,22 +60,23 @@ OpenClaw 不会为此安装 launchd、systemd、Docker 或守护进程。该服�
 }
 ```
 
+将 `timeoutSeconds` 设置在 provider 条目上（而不是 `localService`） ，这样较慢的冷启动和较长的生成过程就不会触发默认的模型请求超时。只要你的服务器在除基础 URL 的 `/models` 之外的其他位置暴露就绪检查，就请显式设置 `healthUrl`。
+
 ## 字段
 
-- `command`：绝对可执行文件路径。不使用 shell 查找。
-- `args`：进程参数。不应用 shell 展开、管道、通配符或引用规则。
-- `cwd`：进程的可选工作目录。
-- `env`：可选环境变量，会与 OpenClaw 进程环境进行合并覆盖。
-- `healthUrl`：就绪检查 URL。如果省略，OpenClaw 会在 `baseUrl` 后附加 `/models`，因此
-  `http://127.0.0.1:8000/v1` 会变成
-  `http://127.0.0.1:8000/v1/models`。
-- `readyTimeoutMs`：启动就绪截止时间。默认值：`120000`。
-- `idleStopMs`：OpenClaw 启动的进程的空闲关闭延迟。`0` 或省略会使进程保持运行，直到 OpenClaw 退出。
+| 字段             | 必需 | 描述                                                                                                                                     |
+| ---------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`        | 是   | 可执行文件的绝对路径。不进行 shell 的 PATH 查找。                                                                                       |
+| `args`           | 否   | 进程参数。不进行 shell 展开、管道、通配符匹配或引用处理。                                                                                   |
+| `cwd`            | 否   | 进程的工作目录。                                                                                                                         |
+| `env`            | 否   | 与 OpenClaw 进程环境合并的环境变量。                                                                                                     |
+| `healthUrl`      | 否   | 就绪检查 URL。默认在 `baseUrl` 后追加 `/models`（`http://127.0.0.1:8000/v1` 变为 `http://127.0.0.1:8000/v1/models`）。 |
+| `readyTimeoutMs` | 否   | 启动就绪截止时间。默认值：`120000`。                                                                                                     |
+| `idleStopMs`     | 否   | OpenClaw 启动的进程的空闲关闭延迟。`0` 或省略表示保持运行，直到 OpenClaw 退出。                                                           |
 
 ## Inferrs 示例
 
-Inferrs 是一个自定义的兼容 OpenAI 的 `/v1` 后端，因此同样的本地服务
-API 也适用于 `inferrs` 提供者条目。
+Inferrs 是一个自定义的 OpenAI 兼容 `/v1` 后端，因此相同的 `localService` API 可以与 `inferrs` provider 条目一起使用：
 
 ```json5
 {
@@ -121,9 +118,7 @@ API 也适用于 `inferrs` 提供者条目。
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 131072,
             maxTokens: 4096,
-            compat: {
-              requiresStringContent: true,
-            },
+            compat: { requiresStringContent: true },
           },
         ],
       },
@@ -132,12 +127,9 @@ API 也适用于 `inferrs` 提供者条目。
 }
 ```
 
-将 `command` 替换为在运行 OpenClaw 的机器上执行 `which inferrs` 的结果。
+将 `command` 替换为在运行 OpenClaw 的机器上执行 `which inferrs` 的结果。完整的 inferrs 设置： [Inferrs](/providers/inferrs)。
 
 ## ds4 示例
-
-完整的设置、上下文大小指导和验证命令，请参见
-[ds4](/providers/ds4)。
 
 ```json5
 {
@@ -174,13 +166,7 @@ API 也适用于 `inferrs` 提供者条目。
 }
 ```
 
-## 运行说明
-
-- 一个 OpenClaw 进程只管理它启动的子进程。另一个看到相同 health URL 已经在线的 OpenClaw 进程会复用它，但不会接管它。
-- 启动会按提供者命令和参数集串行化，因此并发请求不会为相同配置生成重复服务器。
-- 活跃的流式响应会持有租约；空闲关闭会等待响应体处理完成。
-- 对于较慢的本地提供者，请在 `timeoutSeconds` 中设置较大的值，这样冷启动和长时间生成就不会触发默认的模型请求超时。
-- 如果你的服务器在 `/v1/models` 之外的其他位置暴露就绪接口，请使用显式的 `healthUrl`。
+完整的设置、上下文大小调整和验证命令：[ds4](/providers/ds4)。
 
 ## 相关内容
 

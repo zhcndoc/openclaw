@@ -8,20 +8,11 @@ read_when:
   - 你需要带有安全默认值的受控、临时 diff 产物
 ---
 
-`diffs` 是一个可选插件工具，带有简短的内置系统指导，以及一个配套技能，可将变更内容转换为供代理使用的只读 diff 产物。
+`diffs` 是一个可选的捆绑插件工具，它会将修改前/后的文本或统一补丁转换为只读 diff 产物。它还会在系统提示中追加简短的代理指导，并附带一个配套技能以提供更完整的说明。
 
-它接受以下任一输入：
+输入：`before` + `after` 文本，或一个统一的 `patch`（二者互斥）。
 
-- `before` 和 `after` 文本
-- 一个统一的 `patch`
-
-它可以返回：
-
-- 用于画布展示的网关查看器 URL
-- 用于消息传递的已渲染文件路径（PNG 或 PDF）
-- 在一次调用中同时返回两种输出
-
-启用后，插件会将简洁的使用指导预置到 system-prompt 空间中，并且还会暴露一个详细技能，供代理需要更完整说明时使用。
+输出：用于画布展示的网关查看器 URL、用于消息传递的已渲染 PNG/PDF 文件路径，或两者都有。
 
 ## 快速开始
 
@@ -53,7 +44,7 @@ read_when:
         聊天文件传递：代理调用 `diffs` 时使用 `mode: "file"`，并通过 `message` 使用 `path` 或 `filePath` 发送 `details.filePath`。
       </Tab>
       <Tab title="both">
-        组合模式：代理调用 `diffs` 时使用 `mode: "both"`，一次调用即可获得两种产物。
+        组合模式（默认）：代理调用 `diffs` 时使用 `mode: "both"`，一次调用即可同时获取两种产物。
       </Tab>
     </Tabs>
   </Step>
@@ -61,7 +52,7 @@ read_when:
 
 ## 禁用内置系统指导
 
-如果你想保留 `diffs` 工具启用，但禁用其内置的 system-prompt 指导，请将 `plugins.entries.diffs.hooks.allowPromptInjection` 设为 `false`：
+要保留该工具但去掉前置的系统提示指导，请将 `plugins.entries.diffs.hooks.allowPromptInjection` 设置为 `false`：
 
 ```json5
 {
@@ -78,46 +69,7 @@ read_when:
 }
 ```
 
-这会阻止 diffs 插件的 `before_prompt_build` 钩子，同时保留插件、工具和配套技能可用。
-
-如果你想同时禁用指导和工具，请改为禁用插件。
-
-## 典型代理工作流
-
-<Steps>
-  <Step title="调用 diffs">
-    代理使用输入调用 `diffs` 工具。
-  </Step>
-  <Step title="读取详情">
-    代理读取响应中的 `details` 字段。
-  </Step>
-  <Step title="展示">
-    代理要么使用 `canvas present` 打开 `details.viewerUrl`，要么通过 `message` 使用 `path` 或 `filePath` 发送 `details.filePath`，或者两者都做。
-  </Step>
-</Steps>
-
-## 输入示例
-
-<Tabs>
-  <Tab title="Before and after">
-    ```json
-    {
-      "before": "# 你好\n\n一",
-      "after": "# 你好\n\n二",
-      "path": "docs/example.md",
-      "mode": "view"
-    }
-    ```
-  </Tab>
-  <Tab title="Patch">
-    ```json
-    {
-      "patch": "diff --git a/src/example.ts b/src/example.ts\n--- a/src/example.ts\n+++ b/src/example.ts\n@@ -1 +1 @@\n-const x = 1;\n+const x = 2;\n",
-      "mode": "both"
-    }
-    ```
-  </Tab>
-</Tabs>
+这会阻止该插件的 `before_prompt_build` 钩子，同时保留工具和技能可用。要同时禁用指导和工具，请改为禁用该插件。
 
 ## 工具输入参考
 
@@ -133,17 +85,16 @@ read_when:
   统一 diff 文本。与 `before` 和 `after` 互斥。
 </ParamField>
 <ParamField path="path" type="string">
-  before 和 after 模式下显示的文件名。
+  before/after 模式的显示文件名。
 </ParamField>
 <ParamField path="lang" type="string">
-  before 和 after 模式的语言覆盖提示。未知值以及默认查看器集之外的语言会回退为纯文本，除非安装了 Diff Viewer Language Pack 插件。
+  before/after 模式的语言覆盖提示。未知值以及默认查看器集合之外的语言会回退为纯文本，除非安装了 Diff Viewer Language Pack 插件。
 </ParamField>
-
 <ParamField path="title" type="string">
   查看器标题覆盖。
 </ParamField>
 <ParamField path="mode" type='"view" | "file" | "both"'>
-  输出模式。默认使用插件默认值 `defaults.mode`。已弃用别名：`"image"` 的行为与 `"file"` 相同，并且为了向后兼容仍可接受。
+  输出模式。默认使用插件默认值 `defaults.mode`（`both`）。已弃用别名：`"image"` 的行为与 `"file"` 完全相同。
 </ParamField>
 <ParamField path="theme" type='"light" | "dark"'>
   查看器主题。默认使用插件默认值 `defaults.theme`。
@@ -158,7 +109,7 @@ read_when:
   渲染文件格式。默认使用插件默认值 `defaults.fileFormat`。
 </ParamField>
 <ParamField path="fileQuality" type='"standard" | "hq" | "print"'>
-  PNG 或 PDF 渲染的质量预设。
+  PNG/PDF 渲染的质量预设。
 </ParamField>
 <ParamField path="fileScale" type="number">
   设备缩放覆盖值（`1`-`4`）。
@@ -167,7 +118,7 @@ read_when:
   CSS 像素中的最大渲染宽度（`640`-`2400`）。
 </ParamField>
 <ParamField path="ttlSeconds" type="number" default="1800">
-  查看器和独立文件输出的产物 TTL（秒）。最大 21600。
+  查看器和独立文件输出的 Artifact 存活时间（TTL），单位为秒。最大值 `21600`。
 </ParamField>
 <ParamField path="baseUrl" type="string">
   查看器 URL 源覆盖值。覆盖插件 `viewerBaseUrl`。必须是 `http` 或 `https`，且不能包含 query/hash。
@@ -184,49 +135,43 @@ read_when:
     - `imageMaxWidth` -> `fileMaxWidth`
 
   </Accordion>
-  <Accordion title="验证与限制">
-    - `before` 和 `after` 各自最大 512 KiB。
-    - `patch` 最大 2 MiB。
-    - `path` 最大 2048 字节。
-    - `lang` 最大 128 字节。
-    - `title` 最大 1024 字节。
-    - patch 复杂度上限：最多 128 个文件和 120000 总行数。
-    - `patch` 不能与 `before` 或 `after` 同时使用。
-    - 渲染文件的安全限制（适用于 PNG 和 PDF）：
+  <Accordion title="Validation and limits">
+    - `before`/`after`: 每个最大 512 KiB。
+    - `patch`: 最大 2 MiB。
+    - `path`: 最大 2048 字节。
+    - `lang`: 最大 128 字节。
+    - `title`: 最大 1024 字节。
+    - 补丁复杂度上限：最多 128 个文件和 120000 行总数。
+    - `patch` 与 `before`/`after` 同时提供将被拒绝。
+    - 渲染文件安全限制（PNG 和 PDF）：
       - `fileQuality: "standard"`：最大 8 MP（8,000,000 个渲染像素）。
-      - `fileQuality: "hq"`：最大 14 MP（14,000,000 个渲染像素）。
-      - `fileQuality: "print"`：最大 24 MP（24,000,000 个渲染像素）。
-      - PDF 还最多支持 50 页。
+      - `fileQuality: "hq"`：最大 14 MP。
+      - `fileQuality: "print"`：最大 24 MP。
+      - PDF 也最多限制为 50 页。
 
   </Accordion>
 </AccordionGroup>
 
-## Syntax highlighting
+## 语法高亮
 
-OpenClaw 包含对常见源代码、配置和文档语言的语法高亮：
+内置语言：
 
-`javascript`, `typescript`, `tsx`, `jsx`, `json`, `markdown`, `yaml`, `css`, `html`, `sh`, `python`, `go`, `rust`, `java`, `c`, `cpp`, `csharp`, `php`, `sql`, `docker`, `ruby`, `swift`, `kotlin`, `r`, `dart`, `lua`, `powershell`, `xml`, 和 `toml`。
+`javascript`, `typescript`, `tsx`, `jsx`, `json`, `markdown`, `yaml`, `css`, `html`, `sh`, `python`, `go`, `rust`, `java`, `c`, `cpp`, `csharp`, `php`, `sql`, `docker`, `ruby`, `swift`, `kotlin`, `r`, `dart`, `lua`, `powershell`, `xml`，和 `toml`。
 
-常见别名如 `js`, `ts`, `bash`, `md`, `yml`, `c++`, `dockerfile`, `rb`, `kt`, 和 `ps1` 会被规范化为这些默认语言。
+常见别名（`js`, `ts`, `bash`, `md`, `yml`, `c++`, `dockerfile`, `rb`, `kt`, `ps1` 等）会规范化为这些语言。
 
-安装 Diff Viewer Language Pack 插件以高亮其他语言：
+安装 Diff Viewer Language Pack 插件以支持更多语言（Astro、Vue、Svelte、MDX、GraphQL、Terraform/HCL、Nix、Clojure、Elixir、Haskell、OCaml、Scala、Zig、Solidity、Verilog/VHDL、Fortran、MATLAB、LaTeX、Mermaid、Sass/Less/SCSS、Nginx、Apache、CSV、dotenv、INI、diff 等）：
 
 ```bash
 openclaw plugins install clawhub:@openclaw/diffs-language-pack
 ```
 
-启用语言包后，OpenClaw 可以高亮更多语言。如果未安装该语言包，默认列表之外的文件仍会以可读的纯文本形式渲染。示例包括 Astro、Vue、Svelte、MDX、GraphQL、Terraform/HCL、Nix、Clojure、Elixir、Haskell、OCaml、Scala、Zig、Solidity、Verilog/VHDL、Fortran、MATLAB、LaTeX、Mermaid、Sass/Less/SCSS、Nginx、Apache、CSV、dotenv、INI 和 diff 文件。
-
-详见 [Diffs Language Pack plugin](/plugins/reference/diffs-language-pack) 和 [Shiki languages](https://shiki.style/languages) 以了解 Shiki 的上游语言与别名目录。
+没有该语言包时，不受支持的语言仍会以可读的纯文本形式渲染。有关上游目录，请参见 [Diffs Language Pack 插件](/plugins/reference/diffs-language-pack) 和 [Shiki 语言](https://shiki.style/languages)。
 
 ## 输出详情契约
 
-该工具会在 `details` 下返回结构化元数据。
-
 <AccordionGroup>
-  <Accordion title="查看器字段">
-    为创建查看器的模式提供的共享字段：
-
+  <Accordion title="查看器字段（view 和 both 模式）">
     - `artifactId`
     - `viewerUrl`
     - `viewerPath`
@@ -238,9 +183,7 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
     - `context`（在可用时包含 `agentId`、`sessionId`、`messageChannel`、`agentAccountId`）
 
   </Accordion>
-  <Accordion title="文件字段">
-    当渲染 PNG 或 PDF 时的文件字段：
-
+  <Accordion title="文件字段（file 和 both 模式）">
     - `artifactId`
     - `expiresAt`
     - `filePath`
@@ -252,34 +195,26 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
     - `fileMaxWidth`
 
   </Accordion>
-  <Accordion title="兼容别名">
-    也会为现有调用方返回：
-
-    - `format`（与 `fileFormat` 相同的值）
-    - `imagePath`（与 `filePath` 相同的值）
-    - `imageBytes`（与 `fileBytes` 相同的值）
-    - `imageQuality`（与 `fileQuality` 相同的值）
-    - `imageScale`（与 `fileScale` 相同的值）
-    - `imageMaxWidth`（与 `fileMaxWidth` 相同的值）
+  <Accordion title="兼容别名（始终返回）">
+    - `format` (= `fileFormat`)
+    - `imagePath` (= `filePath`)
+    - `imageBytes` (= `fileBytes`)
+    - `imageQuality` (= `fileQuality`)
+    - `imageScale` (= `fileScale`)
+    - `imageMaxWidth` (= `fileMaxWidth`)
 
   </Accordion>
 </AccordionGroup>
 
-模式行为摘要：
+| 模式     | 返回内容                                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| `"view"` | 仅返回查看器字段。                                                                                          |
+| `"file"` | 仅返回文件字段，不返回查看器 artifact。                                                                        |
+| `"both"` | 返回查看器字段加文件字段。如果文件渲染失败，查看器仍会返回，并带有 `fileError`/`imageError`。 |
 
-| 模式     | 返回内容                                                                                                             |
-| -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `"view"` | 仅返回查看器字段。                                                                                                   |
-| `"file"` | 仅返回文件字段，不返回查看器产物。                                                                                   |
-| `"both"` | 返回查看器字段和文件字段。如果文件渲染失败，仍会返回查看器，并附带 `fileError` 和 `imageError` 别名。 |
+### 折叠的未更改部分
 
-## 折叠的未更改部分
-
-- 查看器可以显示如 `N unmodified lines` 这样的行。
-- 这些行上的展开控件是有条件出现的，并不保证对每种输入类型都存在。
-- 当渲染后的 diff 具有可展开的上下文数据时，会显示展开控件，这在 before 和 after 输入中较为常见。
-- 对于许多统一 patch 输入，解析后的 patch hunk 中并不存在省略的上下文正文，因此该行可能在没有展开控件的情况下出现。这是预期行为。
-- `expandUnchanged` 仅在存在可展开上下文时生效。
+查看器会显示类似 `N 行未修改` 的行。只有当渲染后的 diff 包含可展开的上下文数据时，才会出现展开控件（通常用于 before/after 输入）。许多统一补丁在其 hunks 中省略了上下文正文，因此该行可能在没有展开控件的情况下出现——这是预期行为，不是 bug。`expandUnchanged` 仅在存在可展开上下文时生效。
 
 ## 插件默认值
 
@@ -316,30 +251,12 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 }
 ```
 
-支持的默认值：
-
-- `fontFamily`
-- `fontSize`
-- `lineSpacing`
-- `layout`
-- `showLineNumbers`
-- `diffIndicators`
-- `wordWrap`
-- `background`
-- `theme`
-- `fileFormat`
-- `fileQuality`
-- `fileScale`
-- `fileMaxWidth`
-- `mode`
-- `ttlSeconds`
-
-显式工具参数会覆盖这些默认值。
+支持的 `defaults` 键：`fontFamily`、`fontSize`、`lineSpacing`、`layout`、`showLineNumbers`、`diffIndicators`、`wordWrap`、`background`、`theme`、`fileFormat`、`fileQuality`、`fileScale`、`fileMaxWidth`、`mode`、`ttlSeconds`。显式传入的工具调用参数会覆盖这些默认值。
 
 ### 持久化查看器 URL 配置
 
 <ParamField path="viewerBaseUrl" type="string">
-  当工具调用未传入 `baseUrl` 时，插件拥有的返回查看器链接的后备值。必须是 `http` 或 `https`，且不能包含 query/hash。
+  当工具调用未传入 `baseUrl` 时，插件返回查看器链接时使用的后备值。必须是 `http` 或 `https`，且不能包含 query/hash。
 </ParamField>
 
 ```json5
@@ -360,7 +277,7 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 ## 安全配置
 
 <ParamField path="security.allowRemoteViewer" type="boolean" default="false">
-  `false`：会拒绝对 viewer 路由的非回环请求。`true`：如果带 token 的路径有效，则允许远程 viewer。
+  `false`：对 viewer 路由的非回环请求将被拒绝。`true`：如果带 token 的路径有效，则允许远程 viewer。
 </ParamField>
 
 ```json5
@@ -382,58 +299,36 @@ openclaw plugins install clawhub:@openclaw/diffs-language-pack
 
 ## 资源生命周期和存储
 
-- Artifacts 存储在临时子文件夹下：`$TMPDIR/openclaw-diffs`。
-- Viewer artifact 元数据包含：
-  - 随机 artifact ID（20 位十六进制字符）
-  - 随机 token（48 位十六进制字符）
-  - `createdAt` 和 `expiresAt`
-  - 存储的 `viewer.html` 路径
-- 未指定时，默认 artifact TTL 为 30 分钟。
-- 接受的最大 viewer TTL 为 6 小时。
-- 清理会在 artifact 创建后机会性运行。
-- 已过期的 artifacts 会被删除。
-- 当元数据缺失时，回退清理会移除超过 24 小时的陈旧文件夹。
+- 产物位于 `$TMPDIR/openclaw-diffs` 下。
+- 查看器元数据存储一个随机的 20 位十六进制产物 ID、一个随机的 48 位十六进制 token、`createdAt`/`expiresAt`，以及保存的 `viewer.html` 路径。
+- 默认产物 TTL：30 分钟。可接受的最大 TTL：6 小时。
+- 每次创建产物调用后会机会性地运行清理；过期产物会被删除。
+- 当元数据缺失时，回退扫描会移除超过 24 小时的陈旧文件夹。
 
-## Viewer URL 和网络行为
+## 查看器 URL 和网络行为
 
-Viewer 路由：
-
-- `/plugins/diffs/view/{artifactId}/{token}`
+Viewer route: `/plugins/diffs/view/{artifactId}/{token}`
 
 Viewer 资源：
 
 - `/plugins/diffs/assets/viewer.js`
 - `/plugins/diffs/assets/viewer-runtime.js`
-- `/plugins/diffs-language-pack/assets/viewer.js` 当 diff 使用了 Diff Viewer Language Pack 中的某种语言时
+- `/plugins/diffs-language-pack/assets/viewer.js` (仅当 diff 使用语言包语言时)
 
-Viewer 文档会相对于 viewer URL 解析这些资源，因此可选的 `baseUrl` 路径前缀也会同时保留给这两种资源请求。
+查看器文档会相对于 viewer URL 解析这些资源，因此可选的 `baseUrl` 路径前缀也会传递到资源请求中。
 
-URL 构造行为：
+URL 解析顺序：tool-call `baseUrl`（经过严格校验后）-> 插件 `viewerBaseUrl` -> 回环地址 `127.0.0.1` 默认值。如果 gateway 绑定模式为 `custom` 且设置了 `gateway.customBindHost`，则使用该主机而不是回环地址。
 
-- 如果提供了工具调用的 `baseUrl`，则会在严格验证后使用它。
-- 否则，如果配置了插件 `viewerBaseUrl`，则会使用它。
-- 若两者都未覆盖，viewer URL 默认指向回环地址 `127.0.0.1`。
-- 如果 gateway 绑定模式为 `custom` 且设置了 `gateway.customBindHost`，则使用该主机。
-
-`baseUrl` 规则：
-
-- 必须是 `http://` 或 `https://`。
-- 查询和 hash 会被拒绝。
-- 允许 origin 加上可选的 base path。
+`baseUrl` 规则：必须是 `http://` 或 `https://`；会拒绝 query 和 hash；允许 origin 加可选的基础路径。
 
 ## 安全模型
 
 <AccordionGroup>
-  <Accordion title="Viewer 加固">
-    - 默认仅允许回环。
-    - 带 token 的 viewer 路径，且对 ID 和 token 进行严格验证。
-    - Viewer 响应的 CSP：
-      - `default-src 'none'`
-      - 脚本和资源仅允许来自 self
-      - 不允许外发 `connect-src`
-    - 启用远程访问时的远程 miss 限流：
-      - 每 60 秒 40 次失败
-      - 60 秒锁定（`429 Too Many Requests`）
+  <Accordion title="查看器加固">
+    - 默认仅允许回环访问。
+    - 带令牌的查看器路径，并对 ID 和令牌模式进行严格验证。
+    - 查看器响应的 CSP：`default-src 'none'`; 脚本/资源仅允许来自自身；不允许任何外部 `connect-src`。
+    - 启用远程访问时的远程未命中限流：60 秒内 40 次失败将触发 60 秒锁定（`429 Too Many Requests`）。
 
   </Accordion>
   <Accordion title="文件渲染加固">
@@ -461,59 +356,50 @@ URL 构造行为：
 
   </Step>
   <Step title="平台回退">
-    平台命令/路径发现回退。
+    Chrome、Chromium、Edge 和 Brave 的常见安装路径及 `PATH` 查找。
   </Step>
 </Steps>
 
-常见失败文本：
-
-- `Diff PNG/PDF rendering requires a Chromium-compatible browser...`
-
-通过安装 Chrome、Chromium、Edge 或 Brave 来修复，或者设置上述某个可执行文件路径选项。
+常见失败提示：`Diff PNG/PDF rendering requires a Chromium-compatible browser...`。可通过安装 Chrome、Chromium、Edge 或 Brave，或设置上述任一可执行文件路径选项来修复。
 
 ## 故障排查
 
 <AccordionGroup>
   <Accordion title="输入验证错误">
-    - `Provide patch or both before and after text.` — 需要提供 `patch`，或者同时提供 `before` 和 `after` 文本。
-    - `Provide either patch or before/after input, not both.` — 请只使用一种输入模式，不要同时使用两者。
-    - `Invalid baseUrl: ...` — 使用带可选路径的 `http(s)` origin，不要包含 query/hash。
-    - `{field} exceeds maximum size (...)` — 减少负载大小。
-    - 大型 patch 被拒绝 — 减少 patch 的文件数量或总行数。
+    - `Provide patch or both before and after text.` -- 请同时提供 `before` 和 `after`，或者提供 `patch`。
+    - `Provide either patch or before/after input, not both.` -- 不要混合使用输入模式。
+    - `Invalid baseUrl: ...` -- 使用带可选路径的 `http(s)` 源点，不要包含 query/hash。
+    - `{field} exceeds maximum size (...)` -- 减少负载大小。
+    - Large patch rejection -- 减少 patch 文件数量或总行数。
 
   </Accordion>
-  <Accordion title="Viewer 可访问性">
-    - Viewer URL 默认解析为 `127.0.0.1`。
-    - 对于远程访问场景，请选择以下任一方式：
-      - 设置插件 `viewerBaseUrl`，或
-      - 在工具调用时传入 `baseUrl`，或
-      - 使用 `gateway.bind=custom` 和 `gateway.customBindHost`
-    - 如果 `gateway.trustedProxies` 为同主机代理（例如 Tailscale Serve）包含了回环地址，那么缺少转发客户端 IP 头的原始回环 viewer 请求会按设计失败并被关闭。
-    - 对于这种代理拓扑：
-      - 如果只需要附件，优先使用 `mode: "file"` 或 `mode: "both"`，或
-      - 当你需要可分享的 viewer URL 时，显式启用 `security.allowRemoteViewer`，并设置插件 `viewerBaseUrl` 或传入代理/公共 `baseUrl`
-    - 只有在你确实打算让外部访问 viewer 时，才启用 `security.allowRemoteViewer`。
+  <Accordion title="查看器可访问性">
+    - Viewer URL resolves to `127.0.0.1` by default.
+    - For remote access, either set plugin `viewerBaseUrl`, pass `baseUrl` per call, or use `gateway.bind=custom` with `gateway.customBindHost`.
+    - If `gateway.trustedProxies` includes loopback for a same-host proxy (for example Tailscale Serve), raw loopback viewer requests without forwarded client-IP headers fail closed by design.
+    - For that proxy topology, prefer `mode: "file"`/`"both"` for an attachment, or intentionally enable `security.allowRemoteViewer` plus plugin `viewerBaseUrl`/a proxy `baseUrl` for a shareable viewer link.
+    - Enable `security.allowRemoteViewer` only when external viewer access is intended.
 
   </Accordion>
-  <Accordion title="未修改行 row 没有展开按钮">
-    当 patch 输入不包含可展开的上下文时，可能会出现这种情况。这是预期行为，并不表示 viewer 出现故障。
+  <Accordion title="未修改行没有展开按钮">
+    对于缺少可展开上下文的 patch 输入，这是预期行为；不是查看器故障。
   </Accordion>
-  <Accordion title="未找到 Artifact">
-    - Artifact 已因 TTL 过期。
+  <Accordion title="未找到制品">
+    - 制品因 TTL 过期。
     - Token 或路径已更改。
-    - 清理操作已移除陈旧数据。
+    - 清理操作移除了过期数据。
 
   </Accordion>
 </AccordionGroup>
 
 ## 操作指南
 
-- 在 canvas 中进行本地交互式审查时，优先使用 `mode: "view"`。
-- 对于需要附件的外发聊天渠道，优先使用 `mode: "file"`。
-- 除非你的部署需要远程 viewer URL，否则保持 `allowRemoteViewer` 为禁用状态。
-- 对于敏感 diff，设置明确且较短的 `ttlSeconds`。
-- 在不需要时，避免在 diff 输入中发送敏感信息。
-- 如果你的渠道会严重压缩图片（例如 Telegram 或 WhatsApp），优先使用 PDF 输出（`fileFormat: "pdf"`）。
+- 本地在画布中进行交互式审阅时，优先使用 `mode: "view"`。
+- 需要附件的外部聊天频道中，优先使用 `mode: "file"`。
+- 除非你的部署需要远程查看器 URL，否则请保持 `allowRemoteViewer` 处于禁用状态。
+- 对于敏感差异，请设置明确且较短的 `ttlSeconds`。
+- 在不需要时，避免在差异输入中发送密钥。
+- 如果你的频道会对图片进行强压缩（例如 Telegram 或 WhatsApp），请优先使用 PDF 输出（`fileFormat: "pdf"`）。
 
 <Note>
 Diff 渲染引擎由 [Diffs](https://diffs.com) 提供支持。

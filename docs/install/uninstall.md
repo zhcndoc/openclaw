@@ -19,7 +19,7 @@ title: "卸载"
 openclaw uninstall
 ```
 
-使用 CLI 时，状态移除会保留已配置的工作区目录，除非你也选择 `--workspace`。
+状态删除会保留已配置的工作区目录，除非你也选择 `--workspace`。
 
 预览将要移除的内容（安全）：
 
@@ -33,6 +33,8 @@ openclaw uninstall --dry-run --all
 openclaw uninstall --all --yes --non-interactive
 npx -y openclaw uninstall --all --yes --non-interactive
 ```
+
+标志：`--service`、`--state`、`--workspace`、`--app` 选择单个作用域；`--all` 选择全部四项。
 
 手动步骤（结果相同）：
 
@@ -88,18 +90,18 @@ rm -rf /Applications/OpenClaw.app
 
 ### macOS（launchd）
 
-默认标签是 `ai.openclaw.gateway`（或 `ai.openclaw.<profile>`；旧版 `com.openclaw.*` 可能仍然存在）：
+默认标签是 `ai.openclaw.gateway`（如果使用了 profile，则为 `ai.openclaw.<profile>`）：
 
 ```bash
 launchctl bootout gui/$UID/ai.openclaw.gateway
 rm -f ~/Library/LaunchAgents/ai.openclaw.gateway.plist
 ```
 
-如果你使用了 profile，请将标签和 plist 名称替换为 `ai.openclaw.<profile>`。如果存在任何旧版 `com.openclaw.*` 的 plist，也一并移除。
+如果你使用了 profile，请将标签和 plist 名称替换为 `ai.openclaw.<profile>`。
 
 ### Linux（systemd 用户单元）
 
-默认单元名称是 `openclaw-gateway.service`（或 `openclaw-gateway-<profile>.service`）：
+默认单元名称是 `openclaw-gateway.service`（或 `openclaw-gateway-<profile>.service`）。在从非常旧的安装升级的机器上，旧名称 `clawdbot-gateway.service` 的单元可能仍然存在；`openclaw uninstall` / `openclaw gateway uninstall` 会自动检测并移除它。
 
 ```bash
 systemctl --user disable --now openclaw-gateway.service
@@ -110,7 +112,8 @@ systemctl --user daemon-reload
 ### Windows（计划任务）
 
 默认任务名称是 `OpenClaw Gateway`（或 `OpenClaw Gateway (<profile>)`）。
-任务脚本位于你的状态目录下，名为 `gateway.cmd`；当前安装版本还可能会创建一个无窗口的 `gateway.vbs` 启动器，供任务计划程序运行，而不是直接打开 `gateway.cmd`。
+该任务会在你的状态目录下启动一个无窗口的 `gateway.vbs` 脚本，随后
+运行 `gateway.cmd`；请将两者都删除。
 
 ```powershell
 schtasks /Delete /F /TN "OpenClaw Gateway"
@@ -121,20 +124,20 @@ Remove-Item -Force "$env:USERPROFILE\.openclaw\gateway.vbs" -ErrorAction Silentl
 如果你使用了 profile，请删除匹配的任务名称，以及位于 `~\.openclaw-<profile>` 下的 `gateway.cmd` /
 `gateway.vbs` 文件。
 
-## 正常安装 vs 源码检出
+## Normal Installation vs Source Checkout
 
-### 正常安装（install.sh / npm / pnpm / bun）
+### Normal Installation (install.sh / npm / pnpm / bun)
 
-如果你使用了 `https://openclaw.ai/install.sh` 或 `install.ps1`，CLI 是通过 `npm install -g openclaw@latest` 安装的。
-使用 `npm rm -g openclaw` 移除它（如果你是用 `pnpm remove -g` / `bun remove -g` 安装的，则使用相应命令）。
+If you used `https://openclaw.ai/install.sh` or `install.ps1`, the CLI was installed via `npm install -g openclaw@latest`.
+Remove it with `npm rm -g openclaw` (if you installed it with `pnpm remove -g` / `bun remove -g`, use the corresponding command).
 
-### 源码检出（git clone）
+### Source Checkout (git clone)
 
-如果你是从仓库检出中运行的（`git clone` + `openclaw ...` / `bun run openclaw ...`）：
+If you’re running from a repository checkout (`git clone` + `openclaw ...` / `bun run openclaw ...`):
 
-1. 在删除仓库之前先卸载 gateway 服务（使用上面的简单路径或手动移除服务）。
-2. 删除仓库目录。
-3. 按上面所示删除状态 + 工作区。
+1. Uninstall the gateway service before deleting the repository (using the simple path above or manually removing the service).
+2. Delete the repository directory.
+3. Delete state + workspace as shown above.
 
 ## 相关
 

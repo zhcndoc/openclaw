@@ -6,7 +6,7 @@ read_when:
 title: "SenseAudio"
 ---
 
-SenseAudio 可通过 OpenClaw 共享的 `tools.media.audio` 管道转写传入音频和语音笔记附件。OpenClaw 会将多部分音频发送到与 OpenAI 兼容的转写端点，并将返回的文本注入为 `{{Transcript}}` 以及一个 `[Audio]` 块。
+SenseAudio 通过 OpenClaw 共享的 `tools.media.audio` 流水线转写传入的音频和语音备忘录附件。OpenClaw 会将多部分音频发送到与 OpenAI 兼容的转写端点，并将返回的文本注入为 `{{Transcript}}` 以及一个 `[Audio]` 块。
 
 | Property      | Value                                            |
 | ------------- | ------------------------------------------------ |
@@ -19,7 +19,7 @@ SenseAudio 可通过 OpenClaw 共享的 `tools.media.audio` 管道转写传入�
 | Website       | [senseaudio.cn](https://senseaudio.cn)           |
 | Docs          | [senseaudio.cn/docs](https://senseaudio.cn/docs) |
 
-## Getting started
+## 快速开始
 
 <Steps>
   <Step title="设置你的 API key">
@@ -60,7 +60,7 @@ SenseAudio 可通过 OpenClaw 共享的 `tools.media.audio` 管道转写传入�
 在 OpenClaw 中，SenseAudio 仅支持批量 STT。语音通话的实时转写仍然使用支持流式 STT 的提供方。
 </Note>
 
-## Related
+## 相关
 
-- [Media understanding (audio)](/nodes/audio)
-- [Model providers](/concepts/model-providers)
+- [媒体理解（音频）](/nodes/audio)
+- [模型提供商](/concepts/model-providers)

@@ -8,29 +8,23 @@ title: "内存 LanceDB"
 sidebarTitle: "内存 LanceDB"
 ---
 
-`memory-lancedb` 是一个官方外部记忆插件，它将长期记忆存储在
-LanceDB 中，并使用嵌入进行召回。它可以在模型轮次之前自动召回相关
-记忆，并在响应后捕获重要事实。
+`memory-lancedb` 是一个官方外部插件，它使用向量搜索将长期记忆存储在
+LanceDB 中。它可以在模型
+运行前自动召回相关记忆，并在响应后自动捕获重要事实。
 
-当你需要一个用于记忆的本地向量数据库、需要一个
-OpenAI 兼容的嵌入端点，或者想要将记忆数据库保存在默认内置
-记忆存储之外时，请使用它。
+它适用于本地向量数据库、OpenAI 兼容的嵌入端点，或
+默认内置记忆后端之外的记忆存储。
 
 ## 安装
-
-在设置 `plugins.slots.memory = "memory-lancedb"` 之前，请先安装 `memory-lancedb`：
 
 ```bash
 openclaw plugins install @openclaw/memory-lancedb
 ```
 
-该插件已发布到 npm，并未打包进 OpenClaw 运行时镜像中。
-当没有其他插件拥有该槽位时，安装器会写入插件条目并切换内存槽位。
+该插件已发布到 npm；它未打包进 OpenClaw 运行时镜像。安装它会写入插件条目、启用它，并将 `plugins.slots.memory` 切换为 `memory-lancedb`。如果当前有其他插件占用了 memory 插槽，该插件会被禁用，并伴随一条警告。
 
 <Note>
-`memory-lancedb` 是一个处于激活状态的内存插件。通过选择内存
-槽位 `plugins.slots.memory = "memory-lancedb"` 来启用它。像
-`memory-wiki` 这样的配套插件可以与它并行运行，但只有一个插件拥有活动内存槽位。
+`memory-wiki` 等配套插件可以与 `memory-lancedb` 一起运行，但同一时间只有一个插件拥有活动的 memory 插槽。
 </Note>
 
 ## 快速开始
@@ -58,57 +52,43 @@ openclaw plugins install @openclaw/memory-lancedb
 }
 ```
 
-更改插件配置后，请重启 Gateway：
+更改插件配置后重启 Gateway，然后验证是否已加载：
 
 ```bash
 openclaw gateway restart
-```
-
-然后验证插件是否已加载：
-
-```bash
 openclaw plugins list
 ```
 
-## 由提供商支持的嵌入
+## 嵌入配置
 
-`memory-lancedb` 可以使用与
-`memory-core` 相同的内存嵌入提供商适配器。设置 `embedding.provider`，并省略 `embedding.apiKey`，以使用
-提供商配置的认证配置文件、环境变量，或
-`models.providers.<provider>.apiKey`。
+`embedding` 是必需的，且必须至少包含一个字段。`provider`
+默认值为 `openai`；`model` 默认值为 `text-embedding-3-small`。
 
-```json5
-{
-  plugins: {
-    slots: {
-      memory: "memory-lancedb",
-    },
-    entries: {
-      "memory-lancedb": {
-        enabled: true,
-        config: {
-          embedding: {
-            provider: "openai",
-            model: "text-embedding-3-small",
-          },
-          autoRecall: true,
-        },
-      },
-    },
-  },
-}
-```
+| 字段                   | 类型           | 说明                                                                     |
+| ---------------------- | -------------- | ------------------------------------------------------------------------ |
+| `embedding.provider`   | string         | 适配器 ID，例如 `openai`、`github-copilot`、`ollama`。默认 `openai`。 |
+| `embedding.model`      | string         | 默认 `text-embedding-3-small`。                                        |
+| `embedding.apiKey`     | string         | 可选；支持 `${ENV_VAR}` 展开。                               |
+| `embedding.baseUrl`    | string         | 可选；支持 `${ENV_VAR}` 展开。                               |
+| `embedding.dimensions` | integer (>=1)  | 对于不在内置表中的模型是必需的（见下文）。               |
 
-此路径适用于暴露嵌入凭据的提供商认证配置文件。
-例如，当 GitHub Copilot 配置文件/套餐支持
-嵌入时，可以使用 GitHub Copilot：
+存在两种请求路径：
+
+- **提供方适配器路径**（默认）：设置 `embedding.provider` 并省略
+  `embedding.apiKey`/`embedding.baseUrl`。插件会通过 `memory-core` 使用的
+  相同内存嵌入适配器，解析提供方已配置的认证配置文件、环境变量，或
+  `models.providers.<provider>.apiKey`。这是 `github-copilot`、`ollama`
+  以及任何其他带有嵌入支持的捆绑提供方所使用的路径。
+- **直接的 OpenAI 兼容客户端路径**：保持 `embedding.provider` 未设置
+  （或设为 `"openai"`），并设置 `embedding.apiKey` 与 `embedding.baseUrl`。当你使用的是一个原生的、没有捆绑提供方适配器的 OpenAI 兼容嵌入端点时，请使用此路径。
+
+OpenAI Codex / ChatGPT OAuth 不是 OpenAI Platform 的嵌入凭据。
+对于 OpenAI 嵌入，请使用 OpenAI API key 认证配置文件、`OPENAI_API_KEY`，或
+`models.providers.openai.apiKey`。仅支持 OAuth 的用户应选择其他支持嵌入的提供方，例如 `github-copilot` 或 `ollama`。
 
 ```json5
 {
   plugins: {
-    slots: {
-      memory: "memory-lancedb",
-    },
     entries: {
       "memory-lancedb": {
         enabled: true,
@@ -124,16 +104,43 @@ openclaw plugins list
 }
 ```
 
-OpenAI Codex / ChatGPT OAuth 不是 OpenAI Platform 嵌入凭据。
-对于 OpenAI 嵌入，请使用 OpenAI API key 认证配置文件、
-`OPENAI_API_KEY`，或 `models.providers.openai.apiKey`。仅使用 OAuth 的用户可以使用
-其他支持嵌入的提供商，例如 GitHub Copilot 或 Ollama。
+某些 OpenAI 兼容的嵌入端点会拒绝 `encoding_format`
+参数；另一些则会忽略它并始终返回 `number[]`。`memory-lancedb`
+在请求中省略 `encoding_format`，并接受浮点数组或
+base64 编码的 float32 响应，因此这两种响应形式都可在无需配置的情况下正常工作。
+
+### 维度
+
+OpenClaw 仅内置了 `text-embedding-3-small`（1536）和
+`text-embedding-3-large`（3072）的维度。任何其他模型都需要显式设置
+`embedding.dimensions`，以便 LanceDB 能创建向量列，例如智谱的
+`embedding-3`，维度为 2048：
+
+```json5
+{
+  plugins: {
+    entries: {
+      "memory-lancedb": {
+        enabled: true,
+        config: {
+          embedding: {
+            apiKey: "${ZHIPU_API_KEY}",
+            baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+            model: "embedding-3",
+            dimensions: 2048,
+          },
+        },
+      },
+    },
+  },
+}
+```
 
 ## Ollama 嵌入
 
-对于 Ollama 嵌入，建议优先使用捆绑的 Ollama 嵌入提供商。它使用
-原生 Ollama `/api/embed` 端点，并遵循与
-[Ollama](/providers/ollama) 文档中描述的 Ollama 提供商相同的认证/基础 URL 规则。
+使用捆绑的 Ollama 提供商适配器路径（`embedding.provider: "ollama"`）。
+它会调用 Ollama 原生的 `/api/embed` 端点，并遵循与 [Ollama](/providers/ollama) 提供商相同的认证/基础
+URL 规则。
 
 ```json5
 {
@@ -161,103 +168,64 @@ OpenAI Codex / ChatGPT OAuth 不是 OpenAI Platform 嵌入凭据。
 }
 ```
 
-对于非标准嵌入模型，请设置 `dimensions`。OpenClaw 知道
-`text-embedding-3-small` 和 `text-embedding-3-large` 的维度；自定义
-模型需要在配置中提供该值，以便 LanceDB 能够创建向量列。
-
-对于较小的本地嵌入模型，如果你看到来自本地服务器的上下文
-长度错误，请降低 `recallMaxChars`。
-
-## OpenAI 兼容提供商
-
-某些 OpenAI 兼容的嵌入提供商会拒绝 `encoding_format`
-参数，而另一些则会忽略它并始终返回 `number[]` 向量。
-因此，`memory-lancedb` 在嵌入请求中省略了 `encoding_format`，并
-接受浮点数组响应或 base64 编码的 float32 响应。
-
-如果你有一个原始的 OpenAI 兼容嵌入端点，但没有
-捆绑的提供商适配器，请省略 `embedding.provider`（或将其保留为 `openai`），并
-设置 `embedding.apiKey` 以及 `embedding.baseUrl`。这会保留直接的
-OpenAI 兼容客户端路径。
-
-对于模型维度未内置的提供商，请设置 `embedding.dimensions`。例如，
-ZhiPu `embedding-3` 使用 `2048` 维：
-
-```json5
-{
-  plugins: {
-    entries: {
-      "memory-lancedb": {
-        enabled: true,
-        config: {
-          embedding: {
-            apiKey: "${ZHIPU_API_KEY}",
-            baseUrl: "https://open.bigmodel.cn/api/paas/v4",
-            model: "embedding-3",
-            dimensions: 2048,
-          },
-        },
-      },
-    },
-  },
-}
-```
+`mxbai-embed-large` 不在内置维度表中，因此需要 `dimensions`。对于较小的本地嵌入模型，如果本地服务器返回上下文长度错误，请降低 `recallMaxChars`。
 
 ## 召回与捕获限制
 
-`memory-lancedb` 有两个独立的文本长度限制：
+| 设置 | 默认值 | 范围 | 适用对象 |
+| ----------------- | ------- | ---------------------------- | ---------------------------------------------------------- |
+| `recallMaxChars`  | `1000`  | 100-10000                    | 发送到 embedding API 用于召回的文本。                 |
+| `captureMaxChars` | `500`   | 100-10000                    | 有资格进行自动捕获的消息长度。                  |
+| `customTriggers`  | `[]`    | 0-50 项，每项小于等于 100 字符 | 使自动捕获将某条消息纳入考虑的字面短语。 |
 
-| 设置               | 默认值   | 范围       | 适用于                                                     |
-| ------------------ | ------- | --------- | --------------------------------------------------------- |
-| `recallMaxChars`   | `1000`  | 100-10000 | 发送到嵌入 API 用于召回的文本                               |
-| `captureMaxChars`   | `500`   | 100-10000 | 适合自动捕获的消息长度                                     |
-| `customTriggers`    | `[]`    | 0-50      | 使自动捕获考虑某条消息的字面短语                            |
+`recallMaxChars` 限定 `before_prompt_build` 自动召回查询、`memory_recall` 工具、`memory_forget` 查询路径以及 `openclaw ltm
+search`。自动召回会嵌入当前轮次中最新的用户消息；只有在不存在用户消息时，才回退到完整提示，从而避免将频道元数据和大型提示块包含进嵌入请求。
 
-`recallMaxChars` 控制自动召回、`memory_recall` 工具、
-`memory_forget` 查询路径以及 `openclaw ltm search`。自动召回会优先使用本轮中的最新用户消息，
-只有在没有用户消息可用时才回退到完整提示词。这可以将频道元数据和大型提示块
-排除在嵌入请求之外。
+`captureMaxChars` 用于判断当前轮次 `agent_end`
+事件中的用户消息是否足够短，从而可被纳入自动捕获；它不会影响
+召回查询。
 
-`captureMaxChars` 控制回复是否足够短，从而可被考虑进行
-自动捕获。它不会限制召回查询的嵌入。
+`customTriggers` 添加字面量的自动捕获短语，不使用正则表达式。内置
+触发器覆盖常见的英文、捷克文、中文、日文和韩文记忆短语（`remember`、`prefer`、`记住`、`覚えて`、`기억해` 等类似表达）。
 
-`customTriggers` 允许你添加字面量的自动捕获短语，而无需编写
-正则表达式。内置触发词包括常见的英文、捷克文、
-中文、日文和韩文记忆短语。
+自动捕获还会拒绝看起来像信封/传输元数据、提示注入载荷，或已经注入的 `<relevant-memories>` 上下文的文本，并且每个 agent 回合最多捕获 3 条记忆。
 
 ## 命令
 
-当 `memory-lancedb` 是活动内存插件时，它会注册 `ltm` CLI
-命名空间：
+`memory-lancedb` 在安装后会注册 `ltm` CLI 命名空间
+（不仅仅是在它拥有当前活动内存槽时）：
 
 ```bash
-openclaw ltm list
-openclaw ltm search "project preferences"
+openclaw ltm list [--limit <n>] [--order-by-created-at]
+openclaw ltm search <query> [--limit <n>]
 openclaw ltm stats
 ```
 
-`query` 子命令会直接对 LanceDB 表运行非向量查询：
+`ltm query` 直接对 LanceDB 表执行非向量查询：
 
 ```bash
 openclaw ltm query --cols id,text,createdAt --limit 20
 openclaw ltm query --filter "category = 'preference'" --order-by createdAt:desc
 ```
 
-- `--cols <columns>`：以逗号分隔的列白名单（默认 `id`、`text`、`importance`、`category`、`createdAt`）。
-- `--filter <condition>`：SQL 风格的 WHERE 子句；长度上限为 200 个字符，并且仅限于字母数字、比较运算符、引号、括号以及少量安全标点符号。
-- `--limit <n>`：正整数；默认 `10`。
-- `--order-by <column>:<asc|desc>`：在过滤后应用的内存排序；排序列会自动包含在投影中。
+| 标志                              | 默认值                                  | 说明                                                                                                                                     |
+| --------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `--cols <columns>`                | `id,text,importance,category,createdAt` | 以逗号分隔的列白名单。                                                                                                                     |
+| `--filter <condition>`            | 无                                       | SQL 风格的 WHERE 子句。最多 200 个字符；仅允许字母数字、`_-`、空白字符，以及 `='"<>!.,()%*`。                                              |
+| `--limit <n>`                     | `10`                                    | 正整数。                                                                                                                                 |
+| `--order-by <column>:<asc\|desc>` | 无                                       | 在过滤器运行后于内存中排序；排序列会自动添加到投影中，并在未被请求时从输出中剥离。                                                         |
 
-代理还会从活动内存插件获得 LanceDB 内存工具：
+代理可从活动内存插件获得三个工具：
 
-- `memory_recall` 用于基于 LanceDB 的召回
-- `memory_store` 用于保存重要事实、偏好、决策和实体
-- `memory_forget` 用于移除匹配的记忆
+- `memory_recall`：对已存储的记忆进行向量搜索。
+- `memory_store`：保存事实、偏好、决定或实体（会拒绝看起来像提示注入载荷的文本；
+  会跳过近似重复的存储）。
+- `memory_forget`：按 `memoryId` 删除，或按 `query` 删除（若分数高于 90%，则自动删除单个
+  匹配项，否则列出候选 ID 以消除歧义）。
 
 ## 存储
 
-默认情况下，LanceDB 数据位于 `~/.openclaw/memory/lancedb`。可以通过 `dbPath` 覆盖
-路径：
+LanceDB 数据默认存储在 `~/.openclaw/memory/lancedb`。可通过 `dbPath` 覆盖：
 
 ```json5
 {
@@ -278,8 +246,8 @@ openclaw ltm query --filter "category = 'preference'" --order-by createdAt:desc
 }
 ```
 
-`storageOptions` 接受用于 LanceDB 存储后端的字符串键/值对，并
-支持 `${ENV_VAR}` 展开：
+`storageOptions` 接受用于 LanceDB 存储后端的字符串键/值对
+（例如与 S3 兼容的对象存储），并支持 `${ENV_VAR}` 展开：
 
 ```json5
 {
@@ -305,32 +273,23 @@ openclaw ltm query --filter "category = 'preference'" --order-by createdAt:desc
 }
 ```
 
-## 运行时依赖
+## 运行时依赖和平台支持
 
-`memory-lancedb` 依赖原生 `@lancedb/lancedb` 包。打包后的
-OpenClaw 将该包视为插件包的一部分。Gateway 启动
-不会修复插件依赖；如果缺少该依赖，请重新安装或
-更新插件包并重启 Gateway。
+`memory-lancedb` 依赖于原生的 `@lancedb/lancedb` 包，该包由插件包拥有（而不是 OpenClaw 核心发布包）。Gateway 启动不会修复插件依赖；如果原生依赖缺失或加载失败，请重新安装或更新插件包并重启 Gateway。
 
-如果较旧的安装在插件加载期间记录了缺少 `dist/package.json` 或缺少
-`@lancedb/lancedb` 的错误，请升级 OpenClaw 并重启
-Gateway。
-
-如果插件日志显示 LanceDB 在 `darwin-x64` 上不可用，请在该机器上使用默认的
-内存后端，或将 Gateway 移动到受支持的平台，或者
-禁用 `memory-lancedb`。
+`@lancedb/lancedb` 未为 `darwin-x64`（Intel Mac）发布原生构建。在该平台上，插件会在加载时记录 LanceDB 不可用；请使用默认内存后端，在受支持的平台/架构上运行 Gateway，或禁用 `memory-lancedb`。
 
 ## 故障排除
 
 ### 输入长度超过上下文长度
 
-这通常意味着嵌入模型拒绝了召回查询：
+嵌入模型拒绝了回忆查询：
 
 ```text
 memory-lancedb: recall failed: Error: 400 the input length exceeds the context length
 ```
 
-设置更低的 `recallMaxChars`，然后重启 Gateway：
+降低 `recallMaxChars`，然后重启 Gateway：
 
 ```json5
 {
@@ -346,32 +305,28 @@ memory-lancedb: recall failed: Error: 400 the input length exceeds the context l
 }
 ```
 
-对于 Ollama，还要验证从 Gateway 主机是否能够访问嵌入服务器：
+对于 Ollama，还要使用其原生嵌入端点验证嵌入服务器是否可从 Gateway 主机访问：
 
 ```bash
-curl http://127.0.0.1:11434/v1/embeddings \
+curl http://127.0.0.1:11434/api/embed \
   -H "Content-Type: application/json" \
   -d '{"model":"mxbai-embed-large","input":"hello"}'
 ```
 
 ### 不支持的嵌入模型
 
-如果没有 `dimensions`，则只知道内置的 OpenAI 嵌入维度。
-对于本地或自定义嵌入模型，请将 `embedding.dimensions` 设置为该模型
-报告的向量大小。
+如果没有 `embedding.dimensions`，则只知道内置的 OpenAI 嵌入维度（`text-embedding-3-small`、`text-embedding-3-large`）。对于任何其他模型，请将 `embedding.dimensions` 设置为该模型报告的向量大小。
 
 ### 插件已加载但没有出现记忆
 
-检查 `plugins.slots.memory` 是否指向 `memory-lancedb`，然后运行：
+确认 `plugins.slots.memory` 指向 `memory-lancedb`，然后运行：
 
 ```bash
 openclaw ltm stats
 openclaw ltm search "recent preference"
 ```
 
-如果禁用了 `autoCapture`，插件会召回已有记忆，但不会
-自动存储新的记忆。若你希望自动捕获，请使用 `memory_store` 工具或启用
-`autoCapture`。
+如果 `autoCapture` 已禁用，插件仍会回忆已有记忆，但不会自动存储新记忆。请使用 `memory_store` 工具，或启用 `autoCapture`。
 
 ## 相关内容
 

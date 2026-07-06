@@ -7,13 +7,11 @@ read_when:
 title: "配置"
 ---
 
-OpenClaw 会从 `~/.openclaw/openclaw.json` 读取一个可选的 <Tooltip tip="JSON5 支持注释和尾随逗号">**JSON5**</Tooltip> 配置。
-活动配置路径必须是普通文件。符号链接的 `openclaw.json`
-布局不支持 OpenClaw 所有的写入操作；原子写入可能会替换该路径，
-而不是保留符号链接。如果你将配置保存在默认状态目录之外，
-请直接将 `OPENCLAW_CONFIG_PATH` 指向真实文件。
+OpenClaw reads an optional <Tooltip tip="JSON5 supports comments and trailing commas">**JSON5**</Tooltip> config from `~/.openclaw/openclaw.json`. If the file is missing, OpenClaw uses safe defaults.
 
-如果文件缺失，OpenClaw 将使用安全默认值。添加配置的常见原因包括：
+The active config path must be a regular file. OpenClaw-owned writes replace it atomically (rename onto the path), so a symlinked `openclaw.json` gets its target replaced rather than written through - avoid symlinked config layouts. If you keep config outside the default state directory, point `OPENCLAW_CONFIG_PATH` directly at the real file.
+
+Common reasons to add a config:
 
 - 连接通道并控制谁可以给机器人发消息
 - 设置模型、工具、沙箱或自动化（cron、hooks）
@@ -79,18 +77,20 @@ OpenClaw 只接受完全符合架构的配置。未知键、格式错误的类�
 
 当校验失败时：
 
-- Gateway 不会启动
-- 只有诊断命令可用（`openclaw doctor`、`openclaw logs`、`openclaw health`、`openclaw status`）
-- 运行 `openclaw doctor` 查看确切问题
-- 运行 `openclaw doctor --fix`（或 `--yes`）应用修复
+- The Gateway does not boot
+- Only diagnostic commands work (`openclaw doctor`, `openclaw logs`, `openclaw health`, `openclaw status`)
+- Run `openclaw doctor` to see exact issues
+- Run `openclaw doctor --fix` (`--repair` is the same flag; `--yes` skips prompts) to apply repairs
 
-Gateway 在每次成功启动后都会保留一份受信任的最近一次已知良好副本，
-但启动和热重载不会自动恢复它。如果 `openclaw.json`
-校验失败（包括插件本地校验），Gateway 启动会失败，或者
-重载会被跳过，而当前运行时会保留最后一次接受的配置。
-运行 `openclaw doctor --fix`（或 `--yes`）以修复带前缀/被覆盖的配置，或
-恢复最近一次已知良好副本。当候选配置包含诸如 `***`
-之类的被遮蔽密钥占位符时，不会提升为最近一次已知良好副本。
+The Gateway keeps a trusted last-known-good copy after each successful startup,
+but startup and hot reload do not restore it automatically - only `openclaw doctor --fix`
+does. If `openclaw.json` fails validation (including plugin-local validation), Gateway
+startup fails or the reload is skipped and the current runtime keeps the last accepted
+config. A rejected write is also saved as `<path>.rejected.<timestamp>` for inspection.
+The Gateway blocks writes that look like accidental clobbers - dropping `gateway.mode`,
+losing the `meta` block, or shrinking the file by more than half - unless the write
+explicitly allows destructive changes. Promotion to last-known-good is skipped when a
+candidate contains a redacted secret placeholder such as `***` or `[redacted]`.
 
 ## 常见任务
 
@@ -98,16 +98,16 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
   <Accordion title="设置通道（WhatsApp、Telegram、Discord 等）">
     每个通道在 `channels.<provider>` 下都有自己的配置部分。请参阅对应的通道页面了解设置步骤：
 
-    - [WhatsApp](/channels/whatsapp) - `channels.whatsapp`
-    - [Telegram](/channels/telegram) - `channels.telegram`
     - [Discord](/channels/discord) - `channels.discord`
     - [Feishu](/channels/feishu) - `channels.feishu`
     - [Google Chat](/channels/googlechat) - `channels.googlechat`
-    - [Microsoft Teams](/channels/msteams) - `channels.msteams`
-    - [Slack](/channels/slack) - `channels.slack`
-    - [Signal](/channels/signal) - `channels.signal`
     - [iMessage](/channels/imessage) - `channels.imessage`
     - [Mattermost](/channels/mattermost) - `channels.mattermost`
+    - [Microsoft Teams](/channels/msteams) - `channels.msteams`
+    - [Signal](/channels/signal) - `channels.signal`
+    - [Slack](/channels/slack) - `channels.slack`
+    - [Telegram](/channels/telegram) - `channels.telegram`
+    - [WhatsApp](/channels/whatsapp) - `channels.whatsapp`
 
     所有通道共享相同的 DM 策略模式：
 
@@ -155,15 +155,15 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
   </Accordion>
 
-  <Accordion title="控制谁可以给机器人发消息">
-    DM 访问通过 `dmPolicy` 按通道控制：
+  <Accordion title="Control who can message the bot">
+    DM access is controlled per channel via `dmPolicy` (default `"pairing"`):
 
-    - `"pairing"`（默认）：未知发送者会收到一次性的配对码以进行批准
-    - `"allowlist"`：仅限 `allowFrom` 中的发送者（或已配对允许存储）
-    - `"open"`：允许所有传入 DM（需要 `allowFrom: ["*"]`）
-    - `"disabled"`：忽略所有 DM
+    - `"pairing"`: unknown senders get a one-time pairing code to approve
+    - `"allowlist"`: only senders in `allowFrom` (or the paired allow store)
+    - `"open"`: allow all inbound DMs (requires `allowFrom: ["*"]`)
+    - `"disabled"`: ignore all DMs
 
-    对于群组，请使用 `groupPolicy` + `groupAllowFrom` 或通道特定允许列表。
+    For groups, use `groupPolicy` (`"allowlist" | "open" | "disabled"`) plus `groupAllowFrom` or channel-specific allowlists.
 
     查看[完整参考](/gateway/config-channels#dm-and-group-access)以了解各通道细节。
 
@@ -255,10 +255,10 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - 设置 `gateway.channelHealthCheckMinutes: 0` 可全局禁用健康监控重启。
-    - `channelStaleEventThresholdMinutes` 应大于或等于检查间隔。
-    - 使用 `channels.<provider>.healthMonitor.enabled` 或 `channels.<provider>.accounts.<id>.healthMonitor.enabled` 可仅为某个通道或账户禁用自动重启，而不关闭全局监控。
-    - 有关运行时调试，请参阅 [Health Checks](/gateway/health)；有关所有字段，请参阅[完整参考](/gateway/configuration-reference#gateway)。
+    - Values shown are the defaults. Set `gateway.channelHealthCheckMinutes: 0` to disable health-monitor restarts globally.
+    - `channelStaleEventThresholdMinutes` should be greater than or equal to the check interval.
+    - Use `channels.<provider>.healthMonitor.enabled` or `channels.<provider>.accounts.<id>.healthMonitor.enabled` to disable auto-restarts for one channel or account without disabling the global monitor.
+    - See [Health Checks](/gateway/health) for operational debugging and the [full reference](/gateway/configuration-reference#gateway) for all fields.
 
   </Accordion>
 
@@ -300,10 +300,10 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - `dmScope`: `main`（共享）| `per-peer` | `per-channel-peer` | `per-account-channel-peer`
-    - `threadBindings`：线程绑定会话路由的全局默认值（Discord 支持 `/focus`、`/unfocus`、`/agents`、`/session idle` 和 `/session max-age`）。
-    - 有关作用域、身份链接和发送策略，请参阅 [会话管理](/concepts/session)。
-    - 有关所有字段，请参阅[完整参考](/gateway/config-agents#session)。
+    - `dmScope`: `main` (shared) | `per-peer` | `per-channel-peer` | `per-account-channel-peer`
+    - `threadBindings`: global defaults for thread-bound session routing. `/focus`, `/unfocus`, `/agents`, `/session idle`, and `/session max-age` bind, unbind, list, and tune this per session (Discord binds threads, Telegram binds topics/conversations).
+    - See [Session Management](/concepts/session) for scoping, identity links, and send policy.
+    - See [full reference](/gateway/config-agents#session) for all fields.
 
   </Accordion>
 
@@ -330,7 +330,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
   </Accordion>
 
   <Accordion title="Enable relay-backed push for official iOS builds">
-    Relay-backed push for public App Store/TestFlight builds uses the hosted OpenClaw relay: `https://ios-push-relay.openclaw.ai`.
+    Relay-backed push for public App Store builds uses the hosted OpenClaw relay: `https://ios-push-relay.openclaw.ai`.
 
     Custom relay deployments require a deliberately separate iOS build/deployment path whose relay URL matches the gateway relay URL. If you are using a custom relay build, set this in gateway config:
 
@@ -366,7 +366,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
     端到端流程：
 
-    1. Install an official/TestFlight iOS build.
+    1. Install the official iOS app.
     2. Optional: configure `gateway.push.apns.relay.baseUrl` on the gateway only when using a deliberately separate custom relay build.
     3. Pair the iOS app to the gateway and let both node and operator sessions connect.
     4. The iOS app fetches the gateway identity, registers with the relay using App Attest plus the app receipt, and then publishes the relay-backed `push.apns.register` payload to the paired gateway.
@@ -380,7 +380,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     兼容性说明：
 
     - `OPENCLAW_APNS_RELAY_BASE_URL` and `OPENCLAW_APNS_RELAY_TIMEOUT_MS` still work as temporary env overrides.
-    - Custom gateway relay URLs must match the relay base URL baked into the iOS build. The public App Store release lane rejects custom iOS relay URL overrides.
+    - Custom gateway relay URLs must match the relay base URL baked into the iOS build; the public App Store release lane rejects custom iOS relay URL overrides.
     - `OPENCLAW_APNS_RELAY_ALLOW_HTTP=true` remains a loopback-only development escape hatch; do not persist HTTP relay URLs in config.
 
     有关端到端流程，请参阅 [iOS 应用](/platforms/ios#relay-backed-push-for-official-builds)；有关中继安全模型，请参阅 [认证与信任流程](/platforms/ios#authentication-and-trust-flow)。
@@ -401,10 +401,10 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - `every`：时长字符串（`30m`、`2h`）。设为 `0m` 可禁用。
-    - `target`：`last` | `none` | `<channel-id>`（例如 `discord`、`matrix`、`telegram` 或 `whatsapp`）
-    - `directPolicy`：用于 DM 风格心跳目标的 `allow`（默认）或 `block`
-    - 有关完整指南，请参阅 [Heartbeat](/gateway/heartbeat)。
+    - `every`: duration string (`30m`, `2h`). Set `0m` to disable. Default: `30m`.
+    - `target`: `last` | `none` | `<channel-id>` (for example `discord`, `matrix`, `telegram`, or `whatsapp`)
+    - `directPolicy`: `allow` (default) or `block` for DM-style heartbeat targets
+    - See [Heartbeat](/gateway/heartbeat) for the full guide.
 
   </Accordion>
 
@@ -424,7 +424,7 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     ```
 
     - `sessionRetention`: prune completed isolated run sessions from `sessions.json` (default `24h`; set `false` to disable).
-    - `runLog`: prune retained cron run-history rows per job. `maxBytes` remains accepted for older file-backed run logs.
+    - `runLog`: prune retained cron run-history rows per job. History is stored in SQLite; `maxBytes` (default `2_000_000`) is retained for compatibility with older file-backed run logs, `keepLines` defaults to `2000`.
     - See [Cron jobs](/automation/cron-jobs) for feature overview and CLI examples.
 
   </Accordion>
@@ -502,20 +502,24 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
     }
     ```
 
-    - **Single file**: 替换所包含的对象
-    - **Array of files**: 按顺序深度合并（后者覆盖前者）
-    - **Sibling keys**: 在 includes 之后合并（覆盖被包含的值）
-    - **Nested includes**: 支持最多 10 层嵌套
-    - **Relative paths**: 解析为相对于包含文件的路径
-    - **Path format**: include 路径不得包含空字节，并且在解析前后必须严格短于 4096 个字符
-    - **OpenClaw-owned writes**: 当某次写入只更改一个由单文件 include 支持的顶层部分时
-      例如 `plugins: { $include: "./plugins.json5" }`，
-      OpenClaw 会更新那个包含的文件，并保持 `openclaw.json` 不变
-    - **Unsupported write-through**: 根级 includes、include 数组以及带有同级覆盖的
-      includes 对于 OpenClaw 自身写入会失败关闭，而不是
-      展平配置
-    - **Confinement**: `$include` 路径必须解析到 `openclaw.json` 所在目录下。若要跨机器或用户共享树，请将 `OPENCLAW_INCLUDE_ROOTS` 设为一个路径列表（POSIX 上用 `:`，Windows 上用 `;`），其中包含可供 includes 引用的额外目录。符号链接会被解析并重新检查，因此一个在字面上位于配置目录中但其真实目标逃逸出所有允许根目录的路径仍会被拒绝。
-    - **Error handling**: 缺失文件、解析错误、循环包含、无效路径格式以及过长路径都会给出清晰错误
+    - **Single file**: replaces the containing object
+    - **Array of files**: deep-merged in order (later wins), up to 10 nested levels deep
+    - **Sibling keys**: merged after includes (override included values)
+    - **Relative paths**: resolved relative to the including file
+    - **Path format**: include paths must not contain null bytes and must be strictly shorter than 4096 characters before and after resolution
+    - **OpenClaw-owned writes**: when a write changes only one top-level section
+      backed by a single-file include such as `plugins: { $include: "./plugins.json5" }`,
+      OpenClaw updates that included file and leaves `openclaw.json` intact
+    - **Unsupported write-through**: root includes, include arrays, and includes
+      with sibling overrides fail closed for OpenClaw-owned writes instead of
+      flattening the config
+    - **Confinement**: `$include` paths must resolve under the directory holding
+      `openclaw.json`. To share a tree across machines or users, set
+      `OPENCLAW_INCLUDE_ROOTS` to a path-list (`:` on POSIX, `;` on Windows) of
+      additional directories that includes may reference. Symlinks are resolved
+      and re-checked, so a path that lexically lives in a config dir but whose
+      real target escapes every allowed root is still rejected.
+    - **Error handling**: clear errors for missing files, parse errors, circular includes, invalid path format, and excessive length
 
   </Accordion>
 </AccordionGroup>
@@ -524,12 +528,11 @@ Gateway 在每次成功启动后都会保留一份受信任的最近一次已知
 
 Gateway 会监视 `~/.openclaw/openclaw.json` 并自动应用更改——大多数设置无需手动重启。
 
-直接文件编辑在验证通过之前都被视为不可信。监视器会等待
-编辑器临时写入/重命名的抖动稳定下来，读取最终文件，并拒绝
-无效的外部编辑，而不会重写 `openclaw.json`。OpenClaw 自身的配置
-写入在写入前也会使用相同的架构门控；诸如
-删除 `gateway.mode` 或将文件缩小超过一半等破坏性覆盖会被拒绝，并
-保存为 `.rejected.*` 以供检查。
+Direct file edits are treated as untrusted until they validate. The watcher waits
+for editor temp-write/rename churn to settle, reads the final file, and rejects
+invalid external edits without rewriting `openclaw.json`. OpenClaw-owned config
+writes use the same schema gate before writing (see [Strict validation](#strict-validation)
+for the clobber/rollback rules that apply to every write).
 
 如果你看到 `config reload skipped (invalid config)` 或启动报告 `Invalid
 config`，请检查配置，运行 `openclaw config validate`，然后运行 `openclaw
@@ -555,21 +558,24 @@ doctor --fix` 进行修复。请参阅 [Gateway 故障排查](/gateway/troublesh
 
 ### 哪些可热应用，哪些需要重启
 
-大多数字段都可在不停机的情况下热应用。在 `hybrid` 模式下，需要重启的更改会自动处理。
+Most fields hot-apply without downtime; some hot-applied sections restart just that
+subsystem (channel, cron, heartbeat, health monitor) rather than the whole Gateway. In
+`hybrid` mode, Gateway-restart-required changes are handled automatically.
 
-| 类别                | 字段                                                              | 需要重启？ |
-| ------------------- | ----------------------------------------------------------------- | ---------- |
-| 通道                | `channels.*`、`web`（WhatsApp）- 所有内置和插件通道              | 否         |
-| 代理与模型          | `agent`、`agents`、`models`、`routing`                            | 否         |
-| 自动化              | `hooks`、`cron`、`agent.heartbeat`                                | 否         |
-| 会话与消息          | `session`、`messages`                                             | 否         |
-| 工具与媒体          | `tools`、`browser`、`skills`、`mcp`、`audio`、`talk`              | 否         |
-| UI 与其他           | `ui`、`logging`、`identity`、`bindings`                           | 否         |
-| Gateway 服务器      | `gateway.*`（port、bind、auth、tailscale、TLS、HTTP）              | **是**     |
-| 基础设施            | `discovery`、`plugins`                                            | **是**     |
+| Category            | Fields                                                                  | Gateway restart needed?      |
+| ------------------- | ----------------------------------------------------------------------- | ---------------------------- |
+| Channels            | `channels.*`, `web` (WhatsApp) - all built-in and plugin channels       | No (restarts that channel)   |
+| Agent & models      | `agent`, `agents`, `models`, `routing`                                  | No                           |
+| Automation          | `hooks`, `cron`, `agent.heartbeat`                                      | No (restarts that subsystem) |
+| Sessions & messages | `session`, `messages`                                                   | No                           |
+| Tools & media       | `tools`, `skills`, `mcp`, `audio`, `talk`                               | No                           |
+| Plugin config       | `plugins.entries.*`, `plugins.allow`, `plugins.deny`, `plugins.enabled` | No (reloads plugin runtime)  |
+| UI & misc           | `ui`, `logging`, `identity`, `bindings`                                 | No                           |
+| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP, push)              | **Yes**                      |
+| Infrastructure      | `discovery`, `browser`, `plugins.load`, `plugins.installs`              | **Yes**                      |
 
 <Note>
-`gateway.reload` 和 `gateway.remote` 是例外——更改它们不会触发重启。
+`gateway.reload` and `gateway.remote` are exceptions under `gateway.*` - changing them does **not** trigger a restart. Individual plugins can also override this table: a loaded plugin may declare its own restart-triggering config prefixes (for example the bundled Canvas plugin restarts the Gateway for `plugins.enabled`, `plugins.allow`, and `plugins.deny`, not just its own `plugins.entries.canvas`), so the actual behavior depends on which plugins are active.
 </Note>
 
 ### 重载规划
@@ -611,9 +617,9 @@ openclaw gateway call config.patch --params '{
 }'
 ```
 
-`config.apply` 和 `config.patch` 都接受 `raw`、`baseHash`、`sessionKey`、
-`note` 和 `restartDelayMs`。当
-配置已存在时，这两种方法都需要 `baseHash`。
+Both `config.apply` and `config.patch` accept `raw`, `baseHash`, `sessionKey`,
+`note`, and `restartDelayMs`. `baseHash` is required for both methods once a
+config file already exists (a first write with no existing config skips the check).
 
 `config.patch` 还接受 `replacePaths`，这是一个配置路径数组，用于表明数组替换是有意为之的。如果某个补丁会用更少的条目替换或删除现有数组，除非该精确路径出现在 `replacePaths` 中，否则 Gateway 会拒绝写入；数组条目下的嵌套数组使用 `[]` 表示，例如
 `agents.list[].skills`。这可以防止被截断的 `config.get` 快照在不知不觉中覆盖路由或 allowlist 数组。若你打算替换完整配置，请使用 `config.apply`。
@@ -647,7 +653,7 @@ OpenClaw 会从父进程以及以下位置读取环境变量：
 }
 ```
 
-环境变量等价项：`OPENCLAW_LOAD_SHELL_ENV=1`
+Env var equivalent: `OPENCLAW_LOAD_SHELL_ENV=1`. Default `timeoutMs`: `15000`.
 </Accordion>
 
 <Accordion title="配置值中的环境变量替换">

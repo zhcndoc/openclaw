@@ -8,14 +8,16 @@ read_when:
 title: "OAuth"
 ---
 
-OpenClaw 支持通过 OAuth 提供“订阅式认证”，适用于提供该能力的服务商
-（尤其是 **OpenAI Codex（ChatGPT OAuth）**）。对于 Anthropic，目前实际上的区分是：
+OpenClaw 支持为提供该功能的提供商使用 OAuth（“订阅认证”），
+尤其是 **OpenAI Codex（ChatGPT OAuth）** 和 **Anthropic Claude CLI 复用**。
+对于 Anthropic，实际可分为：
 
-- **Anthropic API key**：正常的 Anthropic API 计费
+- **Anthropic API key**：正常的 Anthropic API 计费。
 - **Anthropic Claude CLI / OpenClaw 内的订阅认证**：Anthropic 员工
-  告知我们此用法已再次被允许
-
-OpenAI Codex OAuth 明确支持用于 OpenClaw 这类外部工具。
+  告诉我们这种用法现在再次被允许，因此除非 Anthropic
+  发布新政策，否则 OpenClaw 会将 Claude CLI 复用和
+  `claude -p` 用法视为此集成的授权用法。对于生产环境中的 Anthropic，API key 认证仍然
+  是更安全、推荐的路径。
 
 OpenClaw 会将 OpenAI API key 认证和 ChatGPT/Codex OAuth 都存储在
 规范化的提供商 id `openai` 下。旧的 `openai-codex:*` 配置文件 id 和
@@ -23,16 +25,14 @@ OpenClaw 会将 OpenAI API key 认证和 ChatGPT/Codex OAuth 都存储在
 `openclaw doctor --fix` 修复；新配置请使用 `openai:*` 配置文件 id 和
 `auth.order.openai`。
 
-对于生产环境中的 Anthropic，API key 认证是更安全且更推荐的路径。
-
-本页说明：
+本页涵盖：
 
 - OAuth **令牌交换** 的工作方式（PKCE）
 - 令牌**存储**的位置（以及原因）
 - 如何处理**多个账号**（配置文件 + 按会话覆盖）
 
-OpenClaw 也支持**提供商插件**，它们会自带自己的 OAuth 或 API key
-流程。运行方式如下：
+提供其自身 OAuth 或 API key 流程的提供商插件都通过同一个
+入口点运行：
 
 ```bash
 openclaw models auth login --provider <id>
@@ -40,43 +40,42 @@ openclaw models auth login --provider <id>
 
 ## 令牌汇点（为什么会存在）
 
-OAuth 提供商在登录/刷新流程中通常会签发一个**新的刷新令牌**。某些提供商（或 OAuth 客户端）在同一用户/应用签发新令牌时，会使旧的刷新令牌失效。
+OAuth 提供商通常会在每次登录/刷新时新铸造一个新的刷新令牌。
+一些提供商在同一用户/应用发放新的刷新令牌时，会使之前的刷新令牌失效。实际表现：通过 OpenClaw 登录，以及通过 Claude Code / Codex CLI 登录，其中一个会在之后随机被登出。
 
-实际症状：
+为减少这种情况，OpenClaw 将认证配置文件存储视为一个**令牌汇点**：
 
-- 你通过 OpenClaw 和 Claude Code / Codex CLI 登录 → 之后其中一个会随机“登出”
-
-为降低这种情况，OpenClaw 将 `auth-profiles.json` 视为一个**令牌汇点**：
-
-- 运行时从**同一个位置**读取凭据
-- 我们可以保留多个配置文件并以确定性方式进行路由
-- 外部 CLI 复用是按提供商区分的：Codex CLI 可以为一个空的
-  `openai:default` 配置文件初始化，但一旦 OpenClaw 拥有了本地 OAuth 配置文件，
-  本地刷新令牌就是规范来源。如果该本地刷新令牌被拒绝，
-  OpenClaw 可以在运行时回退使用同一账号、可用的 Codex CLI 令牌；
-  其他集成可以继续由外部管理，并重新读取它们各自的 CLI 认证存储
-- 已经知道已配置提供商集合的状态和启动路径，会将外部 CLI 发现范围
-  限定在该集合内，因此单提供商配置不会去探测无关的 CLI 登录存储
+- 运行时从每个 agent 的一个位置读取凭据
+- 多个配置文件可以共存，并且能够确定性地路由
+- 外部 CLI 复用取决于提供商：一旦 OpenClaw 为某个提供商拥有了本地 OAuth 配置文件，本地刷新令牌就是权威来源。如果该本地刷新令牌被拒绝，OpenClaw 会报告该配置文件需要重新认证，而不是回退到外部 CLI 的令牌材料。Codex CLI 的引导范围更窄：它只能在 OpenClaw 尚未为该提供商拥有 OAuth 之前，先为一个空的 `openai:default` 风格配置文件播种；此后，由 OpenClaw 拥有的刷新流程保持权威
+- 状态/启动路径会将外部 CLI 发现范围限定为已配置的提供商集合，因此在单一提供商设置中，不会探测无关的 CLI 登录存储
 
 ## 存储（令牌存放在哪里）
 
-密钥存储在代理认证存储中：
+Secrets 按 agent 分开存储，以逻辑名称 `auth-profiles.json` 作为键（底层存储是 agent 的 SQLite 数据库；保留 JSON 名称是为了兼容性和工具展示）：
 
-- 认证配置文件（OAuth + API keys + 可选的值级引用）：`~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
-- 兼容旧版的文件：`~/.openclaw/agents/<agentId>/agent/auth.json`
-  （发现时会清理静态 `api_key` 条目）
+- Auth profiles（OAuth + API keys + 可选的值级引用）：
+  `~/.openclaw/agents/<agentId>/agent/auth-profiles.json`
+- 旧版兼容文件：`~/.openclaw/agents/<agentId>/agent/auth.json`
+  （发现静态 `api_key` 条目时会被清理）
 
 仅用于旧版导入的文件（仍受支持，但不是主存储）：
 
-- `~/.openclaw/credentials/oauth.json`（首次使用时导入到 `auth-profiles.json`）
+- `~/.openclaw/credentials/oauth.json`（首次使用时会导入到 auth profile 存储中）
 
-以上所有路径也都会遵守 `$OPENCLAW_STATE_DIR`（状态目录覆盖）。完整参考：[/gateway/configuration](/gateway/configuration-reference#auth-storage)
+以上所有路径也都会遵循 `$OPENCLAW_STATE_DIR`（状态目录覆盖）。完整参考：[/gateway/configuration-reference#auth-storage](/gateway/configuration-reference#auth-storage)
 
 关于静态密钥引用和运行时快照激活行为，见 [Secrets Management](/gateway/secrets)。
 
-当次级代理没有本地认证配置文件时，OpenClaw 会从默认/主代理存储中使用读取透传式继承。读取时不会将主代理的 `auth-profiles.json` 克隆到本地。OAuth 刷新令牌尤其敏感：普通复制流程默认会跳过它们，因为某些提供商会在使用后轮换或使刷新令牌失效。当某个代理需要独立账号时，请为其配置单独的 OAuth 登录。
+当次级 agent 没有本地 auth profile 时，OpenClaw 会从默认/主 agent 存储进行读穿式继承；读取时不会克隆主 agent 的存储。OAuth 刷新令牌尤其敏感：由于某些提供商会在使用后轮换或使刷新令牌失效，正常的复制流程默认会跳过它们。若某个 agent 需要独立账户，请为其单独配置 OAuth 登录。
 
-## Anthropic 旧令牌兼容性
+## Anthropic Claude CLI 复用
+
+OpenClaw 支持 Anthropic Claude CLI 复用以及 `claude -p` 作为经批准的
+身份验证路径。如果你已经在主机上有本地 Claude 登录，
+onboarding/configure 可以直接复用它。Anthropic setup-token 仍然
+作为受支持的 token-auth 路径可用，但 OpenClaw 在可用时更倾向于 Claude CLI
+复用。
 
 <Warning>
 Anthropic 的公开 Claude Code 文档说明，直接使用 Claude Code 仍属于 Claude 订阅额度内，且 Anthropic 员工告诉我们，类似 OpenClaw 的 Claude CLI 用法已再次获准。因此，除非 Anthropic
@@ -92,16 +91,9 @@ Codex](/providers/openai)、[Qwen Cloud Coding
 Plan](/providers/qwen)、[MiniMax Coding Plan](/providers/minimax)，以及 [Z.AI / GLM Coding Plan](/providers/zai)。
 </Warning>
 
-OpenClaw 还暴露了 Anthropic setup-token 作为受支持的 token-auth 路径，但在可用时现在更倾向于 Claude CLI 复用和 `claude -p`。
-
-## Anthropic Claude CLI 迁移
-
-OpenClaw 现再次支持复用 Anthropic Claude CLI。如果你在主机上已经有本地
-Claude 登录，上手/配置流程可以直接复用它。
-
 ## OAuth 交换（登录如何工作）
 
-OpenClaw 的交互式登录流程实现于 `openclaw/plugin-sdk/llm`，并由向导/命令接入。
+OpenClaw 的交互式登录流程实现在 `openclaw/plugin-sdk/llm.ts` 中，并接入了向导/命令。
 
 ### Anthropic setup-token
 
@@ -116,7 +108,7 @@ OpenClaw 的交互式登录流程实现于 `openclaw/plugin-sdk/llm`，并由向
 
 OpenAI Codex OAuth 明确支持在 Codex CLI 之外使用，包括 OpenClaw 工作流。
 
-登录命令仍然使用规范的 OpenAI provider id：
+登录命令使用规范的 OpenAI provider id：
 
 ```bash
 openclaw models auth login --provider openai
@@ -126,30 +118,29 @@ openclaw models auth login --provider openai
 
 流程形态（PKCE）：
 
-1. 生成 PKCE verifier/challenge + 随机 `state`
-2. 打开 `https://auth.openai.com/oauth/authorize?...`
-3. 尝试在 `http://127.0.0.1:1455/auth/callback` 捕获回调
-4. 如果回调无法绑定（或你是远程/无头环境），则粘贴重定向 URL/code
-5. 在 `https://auth.openai.com/oauth/token` 交换令牌
-6. 从访问令牌中提取 `accountId` 并存储 `{ access, refresh, expires, accountId }`
+1. 生成一个 PKCE verifier/challenge 和一个随机 `state`
+2. 打开 `https://auth.openai.com/oauth/authorize?...`（作用域
+   `openid profile email offline_access`）
+3. 尝试在 `http://localhost:1455/auth/callback` 捕获回调（回调主机默认是 `localhost`，并且只接受 loopback 主机；
+   可通过 `OPENCLAW_OAUTH_CALLBACK_HOST` 覆盖）
+4. 如果你能在回调到达前粘贴 code（或者你处于
+   远程/无头环境且回调无法绑定），则改为粘贴重定向 URL/code
+   —— 手动粘贴会与浏览器回调竞争，先完成的那个获胜
+5. 在 `https://auth.openai.com/oauth/token` 交换 code
+6. 从 access token 中提取 `accountId` 并存储 `{ access, refresh, expires, accountId }`
 
 向导路径是 `openclaw onboard` → auth choice `openai`。
 
 ## 刷新 + 过期
 
-配置文件会存储一个 `expires` 时间戳。
+Profiles 会存储一个 `expires` 时间戳。在运行时：
 
-运行时：
+- 如果 `expires` 在未来，则使用已存储的访问令牌
+- 如果已过期，则进行刷新（在文件锁下），并覆盖已存储的凭据
+- 如果某个辅助 agent 读取了继承的主 agent OAuth profile，则刷新会写回主 agent 存储，而不是把刷新令牌复制到辅助 agent 存储中
+- 外部管理的 CLI 凭据（Claude CLI、窄化的 Codex CLI 引导；见 [The token sink](#the-token-sink-why-it-exists)）会被重新读取，而不是消耗一个复制来的刷新令牌。如果受管刷新失败，OpenClaw 会报告受影响的 profile 需要重新认证，而不是返回外部 CLI 令牌内容。
 
-- 如果 `expires` 在未来 → 使用已存储的访问令牌
-- 如果已过期 → 在文件锁保护下刷新，并覆盖已存储的凭据
-- 如果次级代理读取了继承的主代理 OAuth 配置文件，刷新会写回主代理存储，而不是把刷新令牌复制到次级代理存储
-- 例外：某些外部 CLI 凭据保持由外部管理；OpenClaw 会重新读取这些 CLI 认证存储，而不是消耗复制过来的刷新令牌。
-  Codex CLI 初始化的范围故意更窄：它先为 `openai:default` 配置一个空配置文件，然后由 OpenClaw 托管的刷新保持本地
-  配置文件为规范来源。如果本地 Codex 刷新失败，而 Codex CLI 对同一账号有可用令牌，OpenClaw 可以在当前
-  运行时请求中使用该令牌，而不将其写回 `auth-profiles.json`。
-
-刷新流程是自动的；你通常不需要手动管理令牌。
+刷新流程是自动的；通常你无需手动管理令牌。
 
 ## 多账号（配置文件）+ 路由
 
@@ -168,9 +159,8 @@ openclaw agents add personal
 
 ### 2) 高级：一个代理中使用多个配置文件
 
-`auth-profiles.json` 支持同一提供商的多个配置文件 ID。
-
-选择使用哪个配置文件：
+认证配置存储支持同一提供方的多个配置文件 ID。
+选择要使用的配置文件：
 
 - 全局：通过配置顺序（`auth.order`）
 - 按会话：通过 `/model ...@<profileId>`
@@ -179,9 +169,11 @@ openclaw agents add personal
 
 - `/model Opus@anthropic:work`
 
-如何查看有哪些配置文件 ID：
+列出现有的配置文件 ID：
 
-- `openclaw channels list --json`（显示 `auth[]`）
+```bash
+openclaw models auth list --provider <id>
+```
 
 相关文档：
 

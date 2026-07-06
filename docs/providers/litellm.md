@@ -6,44 +6,26 @@ read_when:
   - 你需要通过 LiteLLM 进行成本跟踪、日志记录或模型路由
 ---
 
-[LiteLLM](https://litellm.ai) 是一个开源的 LLM 网关，提供面向 100+ 模型提供商的统一 API。通过 LiteLLM 路由 OpenClaw，可获得集中式成本跟踪、日志记录，以及无需更改 OpenClaw 配置即可切换后端的灵活性。
-
-<Tip>
-**为什么要将 LiteLLM 与 OpenClaw 一起使用？**
-
-- **成本跟踪** — 精确查看 OpenClaw 在所有模型上的花费
-- **模型路由** — 在 Claude、GPT-4、Gemini、Bedrock 之间切换，无需修改配置
-- **虚拟密钥** — 为 OpenClaw 创建带支出限制的密钥
-- **日志记录** — 完整的请求/响应日志，便于调试
-- **回退** — 当主提供商不可用时自动故障转移
-
-</Tip>
+[LiteLLM](https://litellm.ai) 是一个开源的 LLM 网关，提供统一的 API 以连接 100+ 个模型提供商。通过 LiteLLM 路由 OpenClaw，可实现集中式成本跟踪、日志记录、带消费限额的虚拟密钥，以及后端故障切换，而无需更改 OpenClaw 配置。
 
 ## 快速开始
 
 <Tabs>
-  <Tab title="入门引导（推荐）">
-    **最适合：** 快速获得可用的 LiteLLM 设置。
+  <Tab title="入门（推荐）">
+    ```bash
+    openclaw onboard --auth-choice litellm-api-key
+    ```
 
-    <Steps>
-      <Step title="运行入门引导">
-        ```bash
-        openclaw onboard --auth-choice litellm-api-key
-        ```
+    对于针对远程代理的非交互式设置，请显式传入代理 URL：
 
-        对于连接远程代理的非交互式设置，请显式传入代理 URL：
-
-        ```bash
-        openclaw onboard --non-interactive --auth-choice litellm-api-key --litellm-api-key "$LITELLM_API_KEY" --custom-base-url "https://litellm.example/v1"
-        ```
-      </Step>
-    </Steps>
+    ```bash
+    openclaw onboard --non-interactive --accept-risk --auth-choice litellm-api-key \
+      --litellm-api-key "$LITELLM_API_KEY" --custom-base-url "https://litellm.example/v1"
+    ```
 
   </Tab>
 
   <Tab title="手动设置">
-    **最适合：** 对安装和配置进行完全控制。
-
     <Steps>
       <Step title="启动 LiteLLM Proxy">
         ```bash
@@ -54,26 +36,14 @@ read_when:
       <Step title="将 OpenClaw 指向 LiteLLM">
         ```bash
         export LITELLM_API_KEY="your-litellm-key"
-
         openclaw
         ```
-
-        就是这样。OpenClaw 现在会通过 LiteLLM 路由。
       </Step>
     </Steps>
-
   </Tab>
 </Tabs>
 
 ## 配置
-
-### 环境变量
-
-```bash
-export LITELLM_API_KEY="sk-litellm-key"
-```
-
-### 配置文件
 
 ```json5
 {
@@ -112,13 +82,13 @@ export LITELLM_API_KEY="sk-litellm-key"
 }
 ```
 
-## 高级配置
+默认的模型 onboarding 写入为 `litellm/claude-opus-4-6`。
 
-### 图像生成
+## 图像生成
 
-LiteLLM 也可以通过与 OpenAI 兼容的
-`/images/generations` 和 `/images/edits` 路由来支持 `image_generate` 工具。请在
-`agents.defaults.imageGenerationModel` 下配置 LiteLLM 图像模型：
+LiteLLM 可以通过 OpenAI 兼容的 `/images/generations` 和
+`/images/edits` 路由为 `image_generate` 工具提供支持。默认图像模型是 `gpt-image-2`；可在
+`agents.defaults.imageGenerationModel` 下配置其他模型：
 
 ```json5
 {
@@ -141,10 +111,11 @@ LiteLLM 也可以通过与 OpenAI 兼容的
 }
 ```
 
-诸如 `http://localhost:4000` 的回环 LiteLLM URL 无需全局
-私有网络覆盖即可工作。对于局域网托管的代理，请设置
-`models.providers.litellm.request.allowPrivateNetwork: true`，因为 API 密钥
-将会发送到配置的代理主机。
+回环 LiteLLM URL（`http://localhost:4000`、`127.0.0.1`、`::1`、`host.docker.internal`）无需全局私有网络覆盖即可工作。
+对于部署在局域网主机上的代理，请设置
+`models.providers.litellm.request.allowPrivateNetwork: true`，因为 API 密钥会发送到该主机。
+
+## 高级
 
 <AccordionGroup>
   <Accordion title="虚拟密钥">
@@ -181,13 +152,11 @@ LiteLLM 也可以通过与 OpenAI 兼容的
           api_key: os.environ/OPENAI_API_KEY
     ```
 
-    OpenClaw 仍然只请求 `claude-opus-4-6` —— 路由由 LiteLLM 处理。
+    OpenClaw 持续请求 `claude-opus-4-6`; LiteLLM 负责路由。
 
   </Accordion>
 
-  <Accordion title="查看用量">
-    查看 LiteLLM 的仪表盘或 API：
-
+  <Accordion title="查看使用情况">
     ```bash
     # 密钥信息
     curl "http://localhost:4000/key/info" \
@@ -201,14 +170,13 @@ LiteLLM 也可以通过与 OpenAI 兼容的
   </Accordion>
 
   <Accordion title="代理行为说明">
-    - LiteLLM 默认运行在 `http://localhost:4000`
-    - OpenClaw 通过 LiteLLM 的代理式、与 OpenAI 兼容的 `/v1`
-      端点进行连接
-    - 通过 LiteLLM 时，不适用原生仅 OpenAI 的请求形状调整：
-      没有 `service_tier`，没有 Responses 的 `store`，没有提示缓存提示，也没有
-      OpenAI reasoning-compat 有效载荷形状调整
-    - 在自定义 LiteLLM base URL 上，不会注入隐藏的 OpenClaw 归因头
-      （`originator`、`version`、`User-Agent`）
+    - LiteLLM 默认运行在 `http://localhost:4000`。
+    - OpenClaw 通过 LiteLLM 的代理式、与 OpenAI 兼容的 `/v1` 端点连接。
+    - 通过已配置的 LiteLLM 基础 URL 时，不适用原生 OpenAI 专用的请求形状处理：
+      没有 `service_tier`，没有 Responses 的 `store`，没有 prompt-cache 提示，也没有 OpenAI reasoning-effort
+      负载形状处理。
+    - 隐藏的 OpenClaw 归属头（`originator`、`version`、`User-Agent`）只会发送到
+      已验证的原生 OpenAI 端点，因此不会在自定义 LiteLLM 基础 URL 上注入。
   </Accordion>
 </AccordionGroup>
 
@@ -228,7 +196,7 @@ LiteLLM 也可以通过与 OpenAI 兼容的
   <Card title="配置" href="/gateway/configuration" icon="gear">
     完整的配置参考。
   </Card>
-  <Card title="模型选择" href="/concepts/models" icon="brain">
+  <Card title="Models" href="/concepts/models" icon="brain">
     如何选择和配置模型。
   </Card>
 </CardGroup>

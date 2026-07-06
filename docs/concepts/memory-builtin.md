@@ -6,7 +6,7 @@ read_when:
   - 你想配置 embedding 提供商或混合搜索
 ---
 
-内置引擎是默认的内存后端。它将你的内存索引存储在每个代理各自的 SQLite 数据库中，且无需额外依赖即可开始使用。
+内置引擎是默认的内存后端。它将你的记忆索引存储在每个 agent 对应的 SQLite 数据库中，并且无需额外依赖即可开始使用。
 
 ## 它提供什么
 
@@ -18,9 +18,8 @@ read_when:
 
 ## 快速开始
 
-默认情况下，内置引擎使用 OpenAI embeddings。如果你已经配置了
-`OPENAI_API_KEY` 或 `models.providers.openai.apiKey`，向量搜索
-无需额外的内存配置即可工作。
+默认情况下，内置引擎使用 OpenAI embeddings。如果 `OPENAI_API_KEY` 或
+`models.providers.openai.apiKey` 已经配置好，那么向量搜索无需额外的内存配置即可工作。
 
 要显式设置提供商：
 
@@ -38,8 +37,8 @@ read_when:
 
 如果没有 embedding 提供商，则只能使用关键词搜索。
 
-要强制使用本地 GGUF embeddings，请安装官方 llama.cpp 提供商插件，
-然后将 `local.modelPath` 指向一个 GGUF 文件：
+要强制使用本地 GGUF embeddings，请安装官方的 llama.cpp 提供商
+插件，然后将 `local.modelPath` 指向一个 GGUF 文件：
 
 ```bash
 openclaw plugins install @openclaw/llama-cpp-provider
@@ -65,10 +64,11 @@ openclaw plugins install @openclaw/llama-cpp-provider
 
 | 提供商            | ID                  | 备注                                |
 | ----------------- | ------------------- | ----------------------------------- |
-| Bedrock           | `bedrock`           | 使用 AWS 凭证链                    |
-| DeepInfra         | `deepinfra`         | 默认：`BAAI/bge-m3`                |
-| Gemini            | `gemini`            | 支持多模态（图像 + 音频）           |
-| GitHub Copilot    | `github-copilot`    | 使用 Copilot 订阅                  |
+| Bedrock           | `bedrock`           | 使用 AWS 凭证链                   |
+| DeepInfra         | `deepinfra`         | 默认：`BAAI/bge-m3`              |
+| Gemini            | `gemini`            | 支持多模态（图像 + 音频） |
+| GitHub Copilot    | `github-copilot`    | 使用你的 Copilot 订阅      |
+| LM Studio         | `lmstudio`          | 本地/自托管                   |
 | Local             | `local`             | `@openclaw/llama-cpp-provider`      |
 | Mistral           | `mistral`           |                                     |
 | Ollama            | `ollama`            | 本地/自托管                          |
@@ -80,16 +80,14 @@ openclaw plugins install @openclaw/llama-cpp-provider
 
 ## 索引如何工作
 
-OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（约 400 个 token，重叠 80 个 token），并将它们存储在每个代理各自的 SQLite 数据库中。
+OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（默认每块 400 个 token，重叠 80 个 token），并存储在每个代理各自的 SQLite 数据库中。
 
 - **索引位置：** 拥有该索引的代理数据库位于
   `~/.openclaw/agents/<agentId>/agent/openclaw-agent.sqlite`
-- **存储维护：** SQLite WAL 辅助文件会通过定期和
-  关闭时检查点进行限制。
-- **文件监听：** 内存文件的更改会触发去抖动重建索引（1.5 秒）。
-- **自动重建索引：** 当 embedding 提供商、模型或分块配置
-  发生变化时，整个索引会自动重建。
-- **按需重建索引：** `openclaw memory index --force`
+- **存储维护：** SQLite WAL 侧文件会通过定期检查点和关闭时检查点进行限制。
+- **文件监听：** 对 memory 文件的更改会触发防抖式重新索引（默认 1.5 秒）。
+- **自动重新索引：** 当 embedding 提供方、模型、分块配置、已配置的来源或作用域发生变化时，索引会自动重建。
+- **按需重新索引：** `openclaw memory index --force`
 
 <Info>
 你也可以使用 `memorySearch.extraPaths` 索引工作区外的 Markdown 文件。请参阅
@@ -107,7 +105,7 @@ OpenClaw 会将 `MEMORY.md` 和 `memory/*.md` 索引为若干块（约 400 个 t
 
 如果你需要重排序、查询扩展，或者想索引工作区外的目录，可以考虑切换到 [QMD](/concepts/memory-qmd)。
 
-如果你想要带有自动用户建模的跨会话内存，可以考虑 [Honcho](/concepts/memory-honcho)。
+如果你希望获得带有自动用户建模的跨会话记忆，请考虑 [Honcho](/concepts/memory-honcho)。
 
 ## 故障排查
 
@@ -125,7 +123,11 @@ openclaw memory index --force --agent main
 
 **结果过时？** 运行 `openclaw memory index --force` 进行重建。监视器在极少数边缘情况下可能会漏掉更改。
 
-**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。`openclaw memory status --deep` 会将本地向量存储与 embedding 提供商分开报告，因此 `Vector store: unavailable` 指向 sqlite-vec 加载问题，而 `Embeddings: unavailable` 指向提供商/认证或模型就绪问题。请检查日志以获取具体的加载错误。
+**sqlite-vec 未加载？** OpenClaw 会自动回退到进程内余弦相似度。
+`openclaw memory status --deep` 会分别报告本地向量存储和嵌入提供商，因此 `Vector store:
+unavailable` 指向 sqlite-vec 加载问题，而 `Embeddings: unavailable`
+指向提供商/认证或模型就绪问题。请检查日志以获取具体的加载
+错误。
 
 ## 配置
 

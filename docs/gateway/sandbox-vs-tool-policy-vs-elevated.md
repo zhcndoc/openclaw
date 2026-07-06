@@ -5,11 +5,11 @@ read_when: "当你遇到“sandbox jail”或看到工具/elevated 被拒绝，�
 status: active
 ---
 
-OpenClaw 有三个相关（但不同）的控制项：
+OpenClaw 有三个相关但不同的控制项：
 
-1. **Sandbox** (`agents.defaults.sandbox.*` / `agents.list[].sandbox.*`) 决定 **工具在哪里运行**（sandbox 后端 vs 主机）。
-2. **Tool policy** (`tools.*`, `tools.sandbox.tools.*`, `agents.list[].tools.*`) 决定 **哪些工具可用/被允许**。
-3. **Elevated** (`tools.elevated.*`, `agents.list[].tools.elevated.*`) 是一个 **仅 exec 的逃生口**，用于在你处于 sandbox 中时在 sandbox 外运行（默认是 `gateway`，或者当 exec 目标配置为 `node` 时是 `node`）。
+1. **Sandbox** (`agents.defaults.sandbox.*` / `agents.list[].sandbox.*`) 决定**工具运行的位置**（sandbox 后端 vs 主机）。
+2. **Tool policy** (`tools.*`, `tools.sandbox.tools.*`, `agents.list[].tools.*`) 决定**哪些工具可用/被允许**。
+3. **Elevated** (`tools.elevated.*`, `agents.list[].tools.elevated.*`) 是一个**仅用于 exec 的逃生口**，用于在你处于 sandbox 中时在 sandbox 外运行（默认是 `gateway`，或者当 exec 目标配置为 `node` 时使用 `node`）。
 
 ## 快速调试
 
@@ -37,37 +37,39 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 - `"non-main"`：只有 non-main 会话会被 sandbox 化（群组/频道中常见的“意外情况”）。
 - `"all"`：所有内容都被 sandbox 化。
 
-完整矩阵（范围、工作区挂载、镜像）请参见 [Sandboxing](/gateway/sandboxing)。
+`agents.defaults.sandbox.workspaceAccess` 控制 sandbox 可见的内容：`"none"`、`"ro"` 或 `"rw"`。
+
+有关完整矩阵（scope、workspace mounts、images），请参见 [Sandboxing](/gateway/sandboxing)。
 
 ### 绑定挂载（安全快速检查）
 
-- `docker.binds` 会 _穿透_ sandbox 文件系统：你挂载的内容会以你设置的模式（`:ro` 或 `:rw`）在容器内可见。
-- 如果你省略模式，默认是可读写；源代码/密钥建议使用 `:ro`。
-- `scope: "shared"` 会忽略每个 agent 的绑定挂载（只应用全局挂载）。
-- OpenClaw 会两次验证绑定源：先在规范化后的源路径上验证，然后在通过最深的现有祖先解析之后再次验证。符号链接父目录逃逸不会绕过 blocked-path 或 allowed-root 检查。
-- 即使叶子路径不存在，也会安全检查。如果 `/workspace/alias-out/new-file` 通过一个带符号链接的父目录解析到被阻止的路径或超出配置的允许根目录，绑定仍会被拒绝。
-- 挂载 `/var/run/docker.sock` 实际上等于把主机控制权交给 sandbox；只有在有意这样做时才应这么操作。
-- 工作区访问（`workspaceAccess: "ro"`/`"rw"`）与绑定模式是相互独立的。
+- `docker.binds` 会 _穿透_ sandbox 文件系统：无论你挂载什么，都会以你设置的模式（`:ro` 或 `:rw`）在容器内可见。
+- 如果省略模式，默认是读写；涉及源代码/密钥时建议使用 `:ro`。
+- `scope: "shared"` 会忽略每个 agent 的绑定挂载（仅应用全局绑定）。
+- OpenClaw 会对绑定源进行两次校验：第一次在规范化后的源路径上，第二次在通过最深的现有祖先解析后再校验。符号链接父级逃逸不会绕过 blocked-path 或 allowed-root 检查。
+- 不存在的叶子路径也会被安全检查。如果 `/workspace/alias-out/new-file` 通过一个符号链接的父级解析到被阻止的路径或超出配置的允许根目录，绑定会被拒绝。
+- 挂载 `/var/run/docker.sock` 本质上等于把主机控制权交给 sandbox；只有在明确有意这样做时才使用。
+- workspace access（`workspaceAccess`）与绑定挂载模式彼此独立。
 
-## Tool policy：有哪些工具存在/可调用
+## 工具策略：有哪些工具存在/可调用
 
 有两层很重要：
 
-- **Tool profile**：`tools.profile` 和 `agents.list[].tools.profile`（基础允许列表）
-- **Provider tool profile**：`tools.byProvider[provider].profile` 和 `agents.list[].tools.byProvider[provider].profile`
+- **工具配置文件**：`tools.profile` 和 `agents.list[].tools.profile`（基础允许列表）
+- **提供方工具配置文件**：`tools.byProvider[provider].profile` 和 `agents.list[].tools.byProvider[provider].profile`
 - **全局/按 agent 的工具策略**：`tools.allow`/`tools.deny` 和 `agents.list[].tools.allow`/`agents.list[].tools.deny`
-- **Provider 工具策略**：`tools.byProvider[provider].allow/deny` 和 `agents.list[].tools.byProvider[provider].allow/deny`
+- **提供方工具策略**：`tools.byProvider[provider].allow/deny` 和 `agents.list[].tools.byProvider[provider].allow/deny`
 - **Sandbox 工具策略**（仅在 sandbox 中生效）：`tools.sandbox.tools.allow`/`tools.sandbox.tools.deny` 和 `agents.list[].tools.sandbox.tools.*`
 
 经验法则：
 
 - `deny` 永远优先。
-- 如果 `allow` 非空，那么其他所有内容都视为被阻止。
-- Tool policy 是最终拦截：`/exec` 不能覆盖被拒绝的 `exec` 工具。
-- Tool policy 只按名称过滤工具可用性；它不会检查 `exec` 内部的副作用。如果 `exec` 被允许，拒绝 `write`、`edit` 或 `apply_patch` 并不会让 shell 命令变成只读。
-- `/exec` 只会为被授权的发送者更改会话默认值；它不会授予工具访问权限。
-  Provider 工具键可以接受 `provider`（例如 `google-antigravity`）或 `provider/model`（例如 `openai/gpt-5.4`）。
-- 当工具策略步骤移除工具，或 sandbox 工具策略阻止调用时，Gateway 日志会包含 `agents/tool-policy` 审计条目。使用 `openclaw logs` 可以查看规则标签、配置键以及受影响的工具名称。
+- 如果 `allow` 非空，则其他一切都视为被阻止。
+- 工具策略是硬性停止：`/exec` 不能覆盖被拒绝的 `exec` 工具。
+- 工具策略按名称过滤工具可用性；它不会检查 `exec` 内部的副作用。如果 `exec` 被允许，拒绝 `write`、`edit` 或 `apply_patch` 并不会让 shell 命令变成只读。
+- `/exec` 只会为已授权的发送者更改会话默认值；它不会授予工具访问权限。
+- 提供方工具键既接受 `provider`（例如 `google-antigravity`），也接受 `provider/model`（例如 `openai/gpt-5.4`）。
+- 当工具策略步骤移除工具，或 sandbox 工具策略阻止调用时，Gateway 日志会包含 `agents/tool-policy` 审计条目。使用 `openclaw logs` 查看规则标签、配置键和受影响的工具名称。
 
 ### 工具组（简写）
 
@@ -87,20 +89,23 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 可用的组：
 
-- `group:runtime`: `exec`, `process`, `code_execution`（`bash` 也可作为 `exec` 的别名）
-- `group:fs`: `read`, `write`, `edit`, `apply_patch`
-  对于只读 agent，除了 sandbox 文件系统策略或其他主机边界已经强制只读约束外，也应拒绝 `group:runtime` 以及会修改文件系统的工具。
-- `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`
-- `group:memory`: `memory_search`, `memory_get`
-- `group:web`: `web_search`, `x_search`, `web_fetch`
-- `group:ui`: `browser`, `canvas`
-- `group:automation`: `heartbeat_respond`, `cron`, `gateway`
-- `group:messaging`: `message`
-- `group:nodes`: `nodes`
-- `group:agents`: `agents_list`, `update_plan`
-- `group:media`: `image`, `image_generate`, `music_generate`, `video_generate`, `tts`
-- `group:openclaw`: 所有内置 OpenClaw 工具（不包括 provider 插件）
-- `group:plugins`: 所有已加载的插件拥有的工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器
+| Group              | 工具                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `group:runtime`    | `exec`, `process`, `code_execution`（`bash` 也可作为 `exec` 的别名）                                                                            |
+| `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                                                     |
+| `group:sessions`   | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`                                    |
+| `group:memory`     | `memory_search`, `memory_get`                                                                                                                              |
+| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                                                      |
+| `group:ui`         | `browser`, `canvas`                                                                                                                                        |
+| `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                                                     |
+| `group:messaging`  | `message`                                                                                                                                                  |
+| `group:nodes`      | `nodes`                                                                                                                                                    |
+| `group:agents`     | `agents_list`, `get_goal`, `create_goal`, `update_goal`, `update_plan`, `skill_workshop`                                                                   |
+| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                                                       |
+| `group:openclaw`   | 大多数内置 OpenClaw 工具（不包括 `read`/`write`/`edit`/`apply_patch`/`exec`/`process` 文件系统和运行时原语、`canvas`，以及提供方插件） |
+| `group:plugins`    | 所有已加载的插件所属工具，包括通过 `bundle-mcp` 暴露的已配置 MCP 服务器                                                               |
+
+对于只读 agent，除非 sandbox 文件系统策略或单独的主机边界强制执行只读约束，否则也要拒绝 `group:runtime` 以及所有会修改文件系统的工具。
 
 对于被 sandbox 化的 MCP 服务器，sandbox 工具策略是第二道允许门。如果 `mcp.servers` 已配置，但在 sandbox 中只显示内置工具，请将 `bundle-mcp`、`group:plugins`，或者带服务器前缀的 MCP 工具名/glob（例如 `outlook__send_mail` 或 `outlook__*`）添加到 `tools.sandbox.tools.alsoAllow`，然后重启/重新加载 gateway 并重新捕获工具列表。服务器 glob 使用 provider-safe 的 MCP 服务器前缀：非 `[A-Za-z0-9_-]` 字符会变成 `-`，不以字母开头的名称会加上 `mcp-` 前缀，而较长或重复的前缀可能会被截断或加后缀。
 
@@ -108,14 +113,14 @@ Sandbox 由 `agents.defaults.sandbox.mode` 控制：
 
 ## Elevated：仅 exec 的“在主机上运行”
 
-Elevated **不会** 授予额外工具；它只影响 `exec`。
+Elevated **不会**授予额外工具；它只影响 `exec`。
 
-- 如果你处于 sandbox 中，`/elevated on`（或带 `elevated: true` 的 `exec`）会在 sandbox 外运行（但仍可能需要审批）。
-- 使用 `/elevated full` 可跳过该会话的 exec 审批。
-- 如果你已经在直接模式下运行，elevated 实际上不会产生作用（但仍受门控）。
-- Elevated **不** 作用于技能范围，也 **不会** 覆盖工具的允许/拒绝。
-- Elevated 不会从 `host=auto` 授予任意跨主机覆盖；它遵循正常的 exec 目标规则，并且仅在已配置/会话目标本来就是 `node` 时保留 `node`。
-- `/exec` 与 elevated 是分开的。它只会为被授权的发送者调整每个会话的 exec 默认值。
+- 如果你处于沙箱中，`/elevated on`（或带有 `elevated: true` 的 `exec`）会在沙箱外运行（但仍可能需要审批）。
+- 使用 `/elevated full` 可跳过本次会话的 exec 审批。
+- 如果你已经在直接环境中运行，elevated 实际上不会产生任何影响（但仍受门控）。
+- Elevated **不**按 skill 作用域生效，且**不会**覆盖工具的允许/拒绝设置。
+- Elevated 不会为 `host=auto` 提供任意跨主机覆盖；它遵循正常的 exec 目标规则，并且只有在已配置/会话目标已经是 `node` 时才保留 `node`。
+- `/exec` 与 elevated 是分开的。它只会为已授权的发送者调整每会话的 exec 默认值。
 
 门控：
 

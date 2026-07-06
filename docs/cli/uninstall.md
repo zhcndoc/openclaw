@@ -8,20 +8,25 @@ title: "卸载"
 
 # `openclaw uninstall`
 
-卸载网关服务 + 本地数据（CLI 保留）。
+卸载网关服务和/或本地数据。CLI 本身不会被移除；请通过 npm/pnpm 单独卸载它。
 
-选项：
+## 选项
 
-- `--service`：移除网关服务
-- `--state`：移除状态和配置
-- `--workspace`：移除工作区目录
-- `--app`：移除 macOS 应用
-- `--all`：移除服务、状态、工作区和应用
-- `--yes`：跳过确认提示
-- `--non-interactive`：禁用提示；需要 `--yes`
-- `--dry-run`：仅打印操作，不删除文件
+| 标志                | 默认值 | 描述                                             |
+| ------------------- | ------ | ------------------------------------------------ |
+| `--service`         | `false` | 移除 Gateway 服务。                             |
+| `--state`            | `false` | 移除状态和配置。                                 |
+| `--workspace`        | `false` | 移除工作区目录。                                 |
+| `--app`              | `false` | 移除 macOS 应用。                                |
+| `--all`              | `false` | `--service --state --workspace --app` 的简写。  |
+| `--yes`              | `false` | 跳过确认提示。                                   |
+| `--non-interactive`  | `false` | 禁用提示；需要 `--yes`。                         |
+| `--dry-run`          | `false` | 打印计划中的操作，但不删除文件。                 |
 
-示例：
+如果不指定范围标志，将通过交互式多选提示选择要移除的组件
+（默认预选服务、状态、工作区）。
+
+## 示例
 
 ```bash
 openclaw backup create
@@ -32,12 +37,10 @@ openclaw uninstall --all --yes
 openclaw uninstall --dry-run
 ```
 
-注意：
+## 说明
 
-- 如果你想在移除状态或工作区之前保留可恢复的快照，请先运行 `openclaw backup create`。
+- 在移除状态或工作区之前，先运行 `openclaw backup create` 以创建可恢复的快照。
 - `--state` 会保留已配置的工作区目录，除非同时选择了 `--workspace`。
-- `--all` 是同时移除服务、状态、工作区和应用的简写。
-- `--non-interactive` 需要 `--yes`。
 
 ## 相关
 

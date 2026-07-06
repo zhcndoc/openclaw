@@ -6,9 +6,9 @@ read_when:
   - 你需要 API 密钥环境变量或 CLI 认证方式的选择
 ---
 
-[Arcee AI](https://arcee.ai) 通过与 OpenAI 兼容的 API 提供对 Trinity 系列混合专家模型的访问。所有 Trinity 模型均采用 Apache 2.0 许可证。
+[Arcee AI](https://arcee.ai) 通过 OpenAI 兼容的 API 提供 Trinity 系列的混合专家模型。所有 Trinity 模型都采用 Apache 2.0 许可证。Arcee 是 OpenClaw 的官方插件，不包含在核心中，因此在开始使用前需要先执行安装步骤。
 
-可以通过 Arcee 平台直接访问 Arcee AI 模型，也可以通过 [OpenRouter](/providers/openrouter) 访问。
+你可以直接通过 Arcee 平台访问 Arcee 模型，或通过 [OpenRouter](/providers/openrouter) 访问。
 
 | 属性 | 值                                                                                 |
 | -------- | ------------------------------------------------------------------------------------- |
@@ -18,8 +18,6 @@ read_when:
 | 基础 URL | `https://api.arcee.ai/api/v1`（直接）或 `https://openrouter.ai/api/v1`（OpenRouter） |
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/arcee-provider
@@ -74,7 +72,7 @@ openclaw gateway restart
         }
         ```
 
-        相同的模型引用同时适用于直接方式和 OpenRouter 配置（例如 `arcee/trinity-large-thinking`）。
+        同样的模型引用同时适用于直接方式和 OpenRouter 配置。
       </Step>
     </Steps>
 
@@ -105,13 +103,11 @@ openclaw gateway restart
 
 ## 内置目录
 
-OpenClaw 目前随附此 Arcee 静态目录：
-
-| 模型引用                      | 名称                   | 输入 | 上下文 | 成本（每 100 万输入/输出） | 备注                                     |
-| ------------------------------ | ---------------------- | ----- | ------- | -------------------- | ----------------------------------------- |
-| `arcee/trinity-large-thinking` | Trinity Large Thinking | text  | 256K    | $0.25 / $0.90        | 默认模型；已启用推理                      |
-| `arcee/trinity-large-preview`  | Trinity Large Preview  | text  | 128K    | $0.25 / $1.00        | 通用用途；400B 参数，13B 激活              |
-| `arcee/trinity-mini`           | Trinity Mini 26B       | text  | 128K    | $0.045 / $0.15       | 快速且成本高效；支持函数调用               |
+| Model ref                      | Name                   | Input | Context | Max output | Cost (in/out per 1M) | Tools | Notes                                     |
+| ------------------------------ | ---------------------- | ----- | ------- | ---------- | -------------------- | ----- | ----------------------------------------- |
+| `arcee/trinity-large-thinking` | Trinity Large Thinking | text  | 256K    | 80K        | $0.25 / $0.90        | No    | 默认模型；扩展思考                        |
+| `arcee/trinity-large-preview`  | Trinity Large Preview  | text  | 128K    | 16K        | $0.25 / $1.00        | Yes   | 通用；400B 参数，13B 激活                 |
+| `arcee/trinity-mini`           | Trinity Mini 26B       | text  | 128K    | 80K        | $0.045 / $0.15       | Yes   | 快速且成本高效；函数调用                   |
 
 <Tip>
 引导预设会将 `arcee/trinity-large-thinking` 设置为默认模型。
@@ -129,14 +125,14 @@ OpenClaw 目前随附此 Arcee 静态目录：
 <AccordionGroup>
   <Accordion title="环境说明">
     如果 Gateway 作为守护进程运行（launchd/systemd），请确保 `ARCEEAI_API_KEY`
-    （或 `OPENROUTER_API_KEY`）对该进程可用（例如，在
-    `~/.openclaw/.env` 中，或通过 `env.shellEnv`）。
+    （或 `OPENROUTER_API_KEY`）对该进程可用，例如放在
+    `~/.openclaw/.env` 中，或通过 `env.shellEnv` 提供。
   </Accordion>
 
   <Accordion title="OpenRouter 路由">
     通过 OpenRouter 使用 Arcee 模型时，同样适用 `arcee/*` 模型引用。
-    OpenClaw 会根据你的认证选择透明地处理路由。有关 OpenRouter 特定的
-    配置细节，请参阅 [OpenRouter provider docs](/providers/openrouter)。
+    OpenClaw 会根据你的认证方式透明地进行路由。有关 OpenRouter 的特定
+    配置详情，请参阅 [OpenRouter provider docs](/providers/openrouter)。
   </Accordion>
 </AccordionGroup>
 

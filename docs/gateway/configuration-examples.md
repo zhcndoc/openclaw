@@ -51,7 +51,7 @@ title: "配置示例"
   messages: {
     visibleReplies: "automatic",
     groupChat: {
-      visibleReplies: "message_tool", // opt-in；可见输出需要 message(action=send)
+      visibleReplies: "message_tool", // 可选；可见输出需要 message(action=send)
       unmentionedInbound: "room_event",
     },
   },
@@ -137,7 +137,7 @@ title: "配置示例"
         enabled: true,
         maxBytes: 20971520,
         models: [
-          { provider: "openai", model: "gpt-4o-mini-transcribe" },
+          { provider: "openai", model: "gpt-4o-transcribe" },
           // 可选的 CLI 回退（Whisper 二进制）：
           // { type: "cli", command: "whisper", args: ["--model", "base", "{{MediaPath}}"] }
         ],
@@ -164,7 +164,7 @@ title: "配置示例"
       discord: { mode: "idle", idleMinutes: 10080 },
     },
     resetTriggers: ["/new", "/reset"],
-    store: "~/.openclaw/agents/default/sessions/sessions.json",
+    store: "~/.openclaw/agents/main/sessions/sessions.json",
     maintenance: {
       mode: "warn",
       pruneAfter: "30d",
@@ -208,8 +208,8 @@ title: "配置示例"
           slug: "friends-of-openclaw",
           requireMention: false,
           channels: {
-            general: { allow: true },
-            help: { allow: true, requireMention: true },
+            general: { enabled: true },
+            help: { enabled: true, requireMention: true },
           },
         },
       },
@@ -220,7 +220,7 @@ title: "配置示例"
       botToken: "xoxb-REPLACE_ME",
       appToken: "xapp-REPLACE_ME",
       channels: {
-        "#general": { allow: true, requireMention: true },
+        "#general": { enabled: true, requireMention: true },
       },
       dm: { enabled: true, allowFrom: ["U123"] },
       slashCommand: {
@@ -249,7 +249,7 @@ title: "配置示例"
         "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
         "openai/gpt-5.4": { alias: "gpt" },
       },
-      skills: ["github", "weather"], // 被省略 list[].skills 的 agent 将继承
+      skills: ["github", "weather"], // 未指定 list[].skills 的 agent 将继承
       thinkingDefault: "low",
       verboseDefault: "off",
       toolProgressDetail: "explain",
@@ -383,8 +383,8 @@ title: "配置示例"
   // Cron 任务
   cron: {
     enabled: true,
-    store: "~/.openclaw/cron/cron.json",
-    maxConcurrentRuns: 8, // 默认值；cron 调度 + 独立的 cron agent-turn 执行
+    store: "~/.openclaw/cron/jobs.json",
+    maxConcurrentRuns: 8, // 默认值；cron 调度 + 隔离的 cron agent-turn 执行
     sessionRetention: "24h",
     runLog: {
       maxBytes: "2mb",
@@ -447,7 +447,7 @@ title: "配置示例"
       allowTailscale: true,
     },
     tailscale: { mode: "serve", resetOnExit: false },
-    remote: { url: "ws://gateway.tailnet:18789", token: "remote-token" },
+    remote: { url: "ws://gateway-host.ts.net:18789", token: "remote-token" },
     reload: { mode: "hybrid", debounceMs: 300 },
   },
 
@@ -581,8 +581,8 @@ title: "配置示例"
 }
 ```
 
-对于 Discord/Slack/Google Chat/Microsoft Teams/Mattermost/IRC，发送者授权默认以 ID 为优先。
-只有当你明确接受该风险时，才为每个渠道启用直接的可变名称/邮箱/nick 匹配，并设置 `dangerouslyAllowNameMatching: true`。
+对于 Discord/Google Chat/IRC/Mattermost/Microsoft Teams/Slack，默认情况下发送者授权以 ID 优先。
+只有在你明确接受该风险时，才为每个频道启用 `dangerouslyAllowNameMatching: true`，以允许直接基于可变的名称/邮箱/nick 进行匹配。
 
 ### Anthropic API 密钥 + MiniMax 回退
 
@@ -644,8 +644,8 @@ title: "配置示例"
       enabled: true,
       botToken: "xoxb-...",
       channels: {
-        "#engineering": { allow: true, requireMention: true },
-        "#general": { allow: true, requireMention: true },
+        "#engineering": { enabled: true, requireMention: true },
+        "#general": { enabled: true, requireMention: true },
       },
     },
   },

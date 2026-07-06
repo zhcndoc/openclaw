@@ -6,8 +6,8 @@ read_when:
 title: "反应"
 ---
 
-代理可以使用带有 `react` 操作的 `message`
-工具，在消息上添加和移除表情反应。反应行为因渠道和传输方式而异。
+代理使用 `message` 工具的 `react`
+动作来添加和移除表情反应。行为会因渠道而异。
 
 ## 工作原理
 
@@ -19,10 +19,10 @@ title: "反应"
 }
 ```
 
-- 在添加反应时，`emoji` 为必需项。
-- 将 `emoji` 设为空字符串（`""`）可移除机器人的反应。
-- 设置 `remove: true` 可移除指定的表情（需要非空的 `emoji`）。
-- 在支持状态反应的渠道上，对反应设置 `trackToolCalls: true`，可让运行时使用该已反应的消息，在同一轮中为后续工具进度反应提供依据。
+- 在添加反应时，`emoji` 是必需的。
+- 将 `emoji` 设置为空字符串（`""`），可移除机器人在支持该功能的频道中的反应。
+- 将 `remove: true` 设置为移除一个特定表情符号（要求 `emoji` 非空）。
+- 在具有状态反应的频道中，反应上的 `trackToolCalls: true` 允许运行时重用该已反应消息，用于同一轮中的后续工具进度反应。
 
 ## 渠道行为
 
@@ -34,15 +34,15 @@ title: "反应"
   </Accordion>
 
   <Accordion title="Google Chat">
-    - 空的 `emoji` 会移除应用在该消息上的反应。
+    - 空的 `emoji`（或 `remove: true`）会移除机器人在该消息上的自身反应；如果设置了 `emoji`，则仅针对该 `emoji` 过滤。
     - `remove: true` 只会移除指定的表情。
 
   </Accordion>
 
   <Accordion title="Nextcloud Talk">
-    - 仅支持添加反应：`emoji` 为必需项，且必须非空。
-    - 目前不支持移除反应；带有 `remove: true`（或空 `emoji`）的调用会被明确报错拒绝，而不是静默无操作。
-    - 需要将 Talk 机器人注册为 `reaction` 功能（参见 [Nextcloud Talk channel docs](/channels/nextcloud-talk)）。
+    - 仅添加反应：`emoji` 是必需的，并且不能为空。
+    - 反应移除尚未接入删除调用；`remove: true` 会返回明确的错误，而不是静默地不执行任何操作。
+    - 需要在 Talk 中注册并启用了 `reaction` 功能的机器人（参见 [Nextcloud Talk channel docs](/channels/nextcloud-talk)）。
 
   </Accordion>
 
@@ -53,46 +53,47 @@ title: "反应"
   </Accordion>
 
   <Accordion title="WhatsApp">
-    - 空的 `emoji` 会移除机器人的反应。
-    - `remove: true` 在内部会映射为空表情（工具调用中仍需要 `emoji`）。
-    - WhatsApp 每条消息只有一个机器人反应槽；状态反应更新会替换该槽，而不是叠加多个表情。
+    - 空的 `emoji` 会移除机器人反应。
+    - `remove: true` 在内部会映射为空的 emoji（但在工具调用中仍然需要 `emoji`）。
+    - WhatsApp 对每条消息只有一个机器人反应槽位；发送新的反应会替换它，而不是叠加多个 emoji。
 
   </Accordion>
 
   <Accordion title="Zalo Personal (zalouser)">
-    - 需要非空的 `emoji`。
-    - `remove: true` 会移除该特定表情反应。
+    - 添加和移除都要求 `emoji` 非空。
+    - `remove: true` 会移除该特定 emoji 反应。
 
   </Accordion>
 
   <Accordion title="Feishu/Lark">
-    - 使用 `feishu_reaction` 工具，动作包括 `add`、`remove` 和 `list`。
-    - 添加/移除需要 `emoji_type`；移除还需要 `reaction_id`。
+    - 与其他渠道一样使用相同的 `react` 操作（通过消息反应 ID 进行添加/移除/列出），而不是单独的工具。
+    - 添加时要求 `emoji` 非空（映射到 Feishu 的 `emoji_type`，例如 `SMILE`、`THUMBSUP`、`HEART`）。
+    - `remove: true` 要求 `emoji` 非空，并移除机器人与该 emoji 类型匹配的自身反应。
+    - `clearAll: true` 配合空的 `emoji` 会移除机器人在该消息上的所有反应。
 
   </Accordion>
 
   <Accordion title="Signal">
-    - 入站反应通知由 `channels.signal.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人的消息做出反应时发出事件，而 `"all"` 会为所有反应发出事件。
+    - 入站反应通知由 `channels.signal.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人消息作出反应时发出事件，`"all"` 会为所有反应发出事件，而 `"allowlist"` 只会为 `channels.signal.reactionAllowlist` 中的发送者发出事件。
 
   </Accordion>
 
   <Accordion title="iMessage">
-    - 出站反应是 iMessage tapback（`love`、`like`、`dislike`、`laugh`、`emphasize` 和 `question`）。
-    - 入站 tapback 通知由 `channels.imessage.reactionNotifications` 控制：`"off"` 会禁用它们，`"own"`（默认）会在用户对机器人编写的消息做出反应时发出事件，而 `"all"` 会为来自已授权发送者的所有 tapback 发出事件。
+    - 出站反应是 iMessage tapbacks（`love`、`like`、`dislike`、`laugh`、`emphasize` 和 `question`）；`emoji` 必须映射到这些类型之一才能添加反应。
+    - 在没有可识别 tapback 类型的情况下使用 `remove: true` 会移除所有 tapback 类型；如果有可识别的类型，则只移除该一个。
 
   </Accordion>
 </AccordionGroup>
 
 ## 反应级别
 
-按渠道的 `reactionLevel` 配置控制代理使用反应的范围。其值通常为 `off`、`ack`、`minimal` 或 `extensive`。
+按频道设置的 `reactionLevel` 会限制代理发送自身反应的频率。可选值：`off`、`ack`、`minimal` 或 `extensive`。
 
-- [Telegram reactionLevel](/channels/telegram#reaction-notifications) — `channels.telegram.reactionLevel`
-- [WhatsApp reactionLevel](/channels/whatsapp#reaction-level) — `channels.whatsapp.reactionLevel`
-
-在各个渠道上为单独的 `reactionLevel` 进行设置，以调整代理在每个平台上对消息做出反应的积极程度。
+- [Telegram 反应通知](/channels/telegram#feature-reference) - `channels.telegram.reactionLevel`（默认 `minimal`）
+- [WhatsApp 反应级别](/channels/whatsapp#reaction-level) - `channels.whatsapp.reactionLevel`（默认 `minimal`）
+- [Signal 反应](/channels/signal#reactions-message-tool) - `channels.signal.reactionLevel`（默认 `minimal`）
 
 ## 相关内容
 
-- [Agent Send](/tools/agent-send) — 包含 `react` 的 `message` 工具
-- [Channels](/channels) — 按渠道划分的配置
+- [Agent Send](/tools/agent-send) - 包含 `react` 的 `message` 工具
+- [Channels](/channels) - 特定于频道的配置

@@ -15,16 +15,16 @@ sidebarTitle: "Linux 服务器"
 ## 选择提供商
 
 <CardGroup cols={2}>
-  <Card title="Railway" href="/install/railway">一键，浏览器设置</Card>
-  <Card title="Northflank" href="/install/northflank">一键，浏览器设置</Card>
-  <Card title="DigitalOcean" href="/install/digitalocean">简单的付费 VPS</Card>
-  <Card title="Oracle Cloud" href="/install/oracle">始终免费的 ARM 套餐</Card>
-  <Card title="Fly.io" href="/install/fly">Fly Machines</Card>
-  <Card title="Hetzner" href="/install/hetzner">在 Hetzner VPS 上使用 Docker</Card>
-  <Card title="Hostinger" href="/install/hostinger">带一键设置的 VPS</Card>
-  <Card title="GCP" href="/install/gcp">计算引擎</Card>
   <Card title="Azure" href="/install/azure">Linux 虚拟机</Card>
+  <Card title="DigitalOcean" href="/install/digitalocean">简单的付费 VPS</Card>
   <Card title="exe.dev" href="/install/exe-dev">带 HTTPS 代理的虚拟机</Card>
+  <Card title="Fly.io" href="/install/fly">Fly 机器</Card>
+  <Card title="GCP" href="/install/gcp">计算引擎</Card>
+  <Card title="Hetzner" href="/install/hetzner">Hetzner VPS 上的 Docker</Card>
+  <Card title="Hostinger" href="/install/hostinger">一键设置的 VPS</Card>
+  <Card title="Northflank" href="/install/northflank">一键式浏览器设置</Card>
+  <Card title="Oracle Cloud" href="/install/oracle">永久免费 ARM 层</Card>
+  <Card title="Railway" href="/install/railway">一键式浏览器设置</Card>
   <Card title="Raspberry Pi" href="/install/raspberry-pi">ARM 自托管</Card>
 </CardGroup>
 
@@ -36,10 +36,12 @@ sidebarTitle: "Linux 服务器"
 ## 云端设置如何工作
 
 - **Gateway 运行在 VPS 上**，并拥有状态 + 工作区。
-- 你可以从笔记本电脑或手机通过 **控制界面** 或 **Tailscale/SSH** 连接。
+- 你可以通过 **Control UI** 或 **Tailscale/SSH** 从你的笔记本电脑或手机连接。
 - 将 VPS 视为事实来源，并定期**备份**状态 + 工作区。
-- 默认更安全的做法：让 Gateway 仅绑定到 loopback，并通过 SSH 隧道或 Tailscale Serve 访问它。
-  如果你将其绑定到 `lan` 或 `tailnet`，请要求使用 `gateway.auth.token` 或 `gateway.auth.password`。
+- 安全默认设置：将 Gateway 保持在 loopback 上，并通过 SSH 隧道或 Tailscale Serve 访问它。  
+  如果你绑定到 `lan` 或 `tailnet`，Gateway 需要一个共享密钥  
+  (`gateway.auth.token` or `gateway.auth.password`)，除非认证委托给了一个  
+  受信任的代理。
 
 相关页面：[Gateway 远程访问](/gateway/remote)，[平台中心](/platforms)。
 
@@ -48,19 +50,17 @@ sidebarTitle: "Linux 服务器"
 在公共 VPS 上安装 OpenClaw 之前，先决定你要如何管理
 这台机器本身。
 
-- 如果你希望仅通过 Tailnet 进行管理访问，请先安装 Tailscale，将 VPS
-  加入你的 tailnet，验证通过 Tailscale IP 或
-  MagicDNS 名称建立的第二个 SSH 会话，然后限制公共 SSH。
-- 如果你不使用 Tailscale，请在暴露更多服务之前，为你的 SSH
-  路径应用等效的加固措施。
-- 这与 Gateway 访问是分开的。你仍然可以让 OpenClaw 绑定到
-  loopback，并通过 SSH 隧道或 Tailscale Serve 访问仪表板。
+- 对于仅通过 Tailnet 的管理访问：先安装 Tailscale，将 VPS 加入你的
+  tailnet，验证通过 Tailscale IP 或 MagicDNS 名称建立的第二个 SSH 会话，
+  然后限制公共 SSH。
+- 不使用 Tailscale：在暴露更多服务之前，对你的 SSH 路径应用等效的加固措施。
+- 这与 Gateway 访问是分开的。你仍然可以让 OpenClaw 仅绑定到回环地址，并使用 SSH 隧道或 Tailscale Serve 访问仪表盘。
 
 Tailscale 特定的 Gateway 选项位于 [Tailscale](/gateway/tailscale)。
 
 ## VPS 上的共享公司代理
 
-当所有用户都处于同一信任边界内，并且该代理仅用于业务时，为团队运行单个代理是一个有效的设置。
+当所有用户都处于同一信任边界内，且该代理仅用于业务时，为团队运行单个代理是一种有效的设置。
 
 - 将其保留在专用运行环境中（VPS/VM/容器 + 专用 OS 用户/账户）。
 - 不要让该运行环境登录到个人 Apple/Google 账户或个人浏览器/密码管理器配置文件。
@@ -68,7 +68,7 @@ Tailscale 特定的 Gateway 选项位于 [Tailscale](/gateway/tailscale)。
 
 安全模型细节：[安全](/gateway/security)。
 
-## 在 VPS 上使用节点
+## 使用 VPS 上的节点
 
 你可以将 Gateway 保持在云端，并在本地设备
 （Mac/iOS/Android/无头设备）上配对 **节点**。节点提供本地屏幕/摄像头/画布和 `system.run`
@@ -89,25 +89,21 @@ EOF
 source ~/.bashrc
 ```
 
-- `NODE_COMPILE_CACHE` 可提升重复命令的启动速度。
-- `OPENCLAW_NO_RESPAWN=1` 会让常规的 Gateway 重启保持在进程内完成，从而避免额外的进程交接，并使小型主机上的 PID 跟踪更简单。
-- 第一次运行命令会预热缓存；后续运行会更快。
-- 有关 Raspberry Pi 的具体说明，请参见 [Raspberry Pi](/install/raspberry-pi)。
+- `NODE_COMPILE_CACHE` 可提升重复命令的启动速度；首次运行会预热缓存。
+- `OPENCLAW_NO_RESPAWN=1` 会将常规 Gateway 重启保持在进程内完成，从而避免额外的进程交接，并让小型主机上的 PID 跟踪更简单。
+- 关于 Raspberry Pi 的具体说明，请参见 [Raspberry Pi](/install/raspberry-pi)。
 
 ### systemd 调优检查清单（可选）
 
 对于使用 `systemd` 的虚拟机主机，可以考虑：
 
-- 为稳定的启动路径添加服务环境变量：
-  - `OPENCLAW_NO_RESPAWN=1`
-  - `NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache`
-- 保持重启行为显式：
-  - `Restart=always`
-  - `RestartSec=2`
-  - `TimeoutStartSec=90`
-- 优先使用带 SSD 的磁盘作为状态/缓存路径，以减少随机 I/O 的冷启动惩罚。
+- 为稳定的启动路径设置服务环境变量：`OPENCLAW_NO_RESPAWN=1` 和
+  `NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache`
+- 明确的重启行为：`Restart=always`、`RestartSec=2`、`TimeoutStartSec=90`
+- 将状态/缓存路径放在 SSD 上，以减少随机 I/O 导致的冷启动开销。
 
-对于标准的 `openclaw onboard --install-daemon` 路径，编辑用户单元：
+标准的 `openclaw onboard --install-daemon` 路径会安装一个 systemd 用户
+单元；使用以下命令进行编辑：
 
 ```bash
 systemctl --user edit openclaw-gateway.service
@@ -122,8 +118,8 @@ RestartSec=2
 TimeoutStartSec=90
 ```
 
-如果你有意安装的是系统单元，则通过
-`sudo systemctl edit openclaw-gateway.service` 编辑 `openclaw-gateway.service`。
+如果你是特意安装了系统级单元，则通过
+`sudo systemctl edit openclaw-gateway.service` 来编辑它。
 
 `Restart=` 策略如何帮助自动恢复：
 [systemd 可以自动化服务恢复](https://www.redhat.com/en/blog/systemd-automate-recovery)。

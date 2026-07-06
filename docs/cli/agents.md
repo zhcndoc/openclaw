@@ -2,12 +2,12 @@
 summary: "openclaw agents 的 CLI 参考（list/add/delete/bindings/bind/unbind/set identity）"
 read_when:
   - 你需要多个隔离的 agent（工作区 + 路由 + 认证）
-title: "Agents"
+title: "Agent"
 ---
 
 # `openclaw agents`
 
-管理隔离的 agent（工作区 + 认证 + 路由）。
+管理隔离的 agent（工作区 + 认证 + 路由）。不带子命令运行 `openclaw agents` 等同于 `openclaw agents list`。
 
 相关：
 
@@ -31,11 +31,52 @@ openclaw agents set-identity --agent main --avatar avatars/openclaw.png
 openclaw agents delete work
 ```
 
+## 命令界面
+
+### `agents list`
+
+选项：`--json`、`--bindings`（包含完整路由规则，而不仅仅是每个 agent 的计数/摘要）。
+
+### `agents add [name]`
+
+选项：`--workspace <dir>`、`--model <id>`、`--agent-dir <dir>`、`--bind <channel[:accountId]>`（可重复）、`--non-interactive`、`--json`。
+
+- 传入任何明确的添加标志都会将命令切换为非交互路径。
+- 非交互模式需要同时提供 agent 名称和 `--workspace`。
+- `main` 为保留项，不能用作新的 agent id。
+- 交互模式会通过仅复制可移植的静态凭据（`api_key` 和静态 `token` 配置文件）来初始化认证，除非某个凭据通过 `copyToAgents: false` 选择不复制；OAuth 刷新令牌配置文件不会被复制，除非提供方通过 `copyToAgents: true` 选择复制。若不复制，OAuth 仅可通过从真实的 `main` agent 存储进行读穿继承来保持可用。如果配置的默认 agent 不是 `main`，请为新 agent 上的 OAuth 配置文件单独登录。
+
+### `agents bindings`
+
+选项：`--agent <id>`、`--json`。
+
+### `agents bind`
+
+选项：`--agent <id>`（默认为当前默认 agent）、`--bind <channel[:accountId]>`（可重复）、`--json`。
+
+### `agents unbind`
+
+选项：`--agent <id>`（默认为当前默认 agent）、`--bind <channel[:accountId]>`（可重复）、`--all`、`--json`。只接受 `--all` 或一个或多个 `--bind` 值，不能同时使用。
+
+### `agents set-identity`
+
+选项：`--agent <id>`、`--workspace <dir>`、`--identity-file <path>`、`--from-identity`、`--name <name>`、`--theme <theme>`、`--emoji <emoji>`、`--avatar <value>`、`--json`。另见下方的 [Set identity](#set-identity)。
+
+### `agents delete <id>`
+
+选项：`--force`、`--json`。
+
+- `main` 不能被删除。
+- 如果不使用 `--force`，则需要交互式确认（在非 TTY 会话中会失败；请使用 `--force` 重新运行）。
+- 工作区、agent 状态和会话记录目录会移动到废纸篓，而不是被永久删除。
+- 当 Gateway 可达时，删除会通过 Gateway 路由，因此配置和会话存储清理与运行时流量共享同一个写入端。如果 Gateway 不可达，CLI 会回退到离线本地路径。
+- 如果另一个 agent 的工作区与此工作区相同、位于此工作区内，或包含此工作区，则会保留该工作区，并且 `--json` 会报告 `workspaceRetained`、`workspaceRetainedReason` 和 `workspaceSharedWith`。
+
 ## 路由绑定
 
 使用路由绑定将入站频道流量固定到特定的 agent。
 
-如果你还想为每个 agent 配置不同的可见技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.list[].skills`。参见 [Skills 配置](/tools/skills-config) 和 [配置参考](/gateway/config-agents#agents-defaults-skills)。
+如果你还希望每个 agent 显示不同的技能，请在 `openclaw.json` 中配置 `agents.defaults.skills` 和 `agents.list[].skills`。参见 [Skills config](/tools/skills-config) 和 [Configuration reference](/gateway/config-agents#agentsdefaultsskills)。
 
 列出绑定：
 
@@ -63,10 +104,10 @@ openclaw agents add work --workspace ~/.openclaw/workspace-work --bind telegram:
 
 ### `--bind` 格式
 
-| 格式                         | 含义                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `--bind <channel>:*`         | 匹配该频道上的所有账户。                                                                |
-| `--bind <channel>:<account>` | 匹配一个账户。                                                                                |
+| Format                       | Meaning                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `--bind <channel>:*`         | 匹配该频道上的所有账户。                                                                                 |
+| `--bind <channel>:<account>` | 匹配一个账户。                                                                                     |
 | `--bind <channel>`           | 仅匹配默认账户，除非 CLI 能安全解析出特定于插件的账户作用域。 |
 
 ### 绑定作用域行为
@@ -100,119 +141,21 @@ openclaw agents unbind --agent work --bind telegram:ops
 openclaw agents unbind --agent work --all
 ```
 
-`unbind` 接受 `--all` 或一个或多个 `--bind` 值，但不能同时使用两者。
-
-## 命令表面
-
-### `agents`
-
-不带子命令直接运行 `openclaw agents` 等同于 `openclaw agents list`。
-
-### `agents list`
-
-选项：
-
-- `--json`
-- `--bindings`：包含完整路由规则，而不只是每个 agent 的计数/摘要
-
-### `agents add [name]`
-
-选项：
-
-- `--workspace <dir>`
-- `--model <id>`
-- `--agent-dir <dir>`
-- `--bind <channel[:accountId]>`（可重复）
-- `--non-interactive`
-- `--json`
-
-说明：
-
-- 传入任何显式的 add 参数都会使命令切换到非交互路径。
-- 非交互模式要求同时提供 agent 名称和 `--workspace`。
-- `main` 是保留值，不能作为新的 agent id 使用。
-- 在交互模式下，认证种子只会复制可移植的静态配置文件
-  （默认情况下包括 `api_key` 和静态 `token`）。OAuth 刷新令牌配置仍然
-  只能通过对真实 `main` agent 存储的读取继承来获得。
-  如果配置的默认 agent 不是 `main`，请在新 agent 上单独登录 OAuth
-  配置。
-
-### `agents bindings`
-
-选项：
-
-- `--agent <id>`
-- `--json`
-
-### `agents bind`
-
-选项：
-
-- `--agent <id>`（默认当前默认 agent）
-- `--bind <channel[:accountId]>`（可重复）
-- `--json`
-
-### `agents unbind`
-
-选项：
-
-- `--agent <id>`（默认当前默认 agent）
-- `--bind <channel[:accountId]>`（可重复）
-- `--all`
-- `--json`
-
-### `agents delete <id>`
-
-选项：
-
-- `--force`
-- `--json`
-
-说明：
-
-- `main` 不能被删除。
-- 未使用 `--force` 时，需要交互式确认。
-- 工作区、agent 状态以及会话转录目录会移动到废纸篓，而不是直接硬删除。
-- 当 Gateway 可达时，删除会通过 Gateway 发送，因此配置和会话存储清理会与运行时流量共享同一个写入方。如果 Gateway 不可达，CLI 会回退到离线本地路径。
-- 如果另一个 agent 的工作区与此工作区是同一路径、位于此工作区内部，或包含此工作区，
-  则会保留该工作区，并且 `--json` 会报告 `workspaceRetained`、
-  `workspaceRetainedReason` 和 `workspaceSharedWith`。
-
 ## 身份文件
 
 每个 agent 工作区都可以在工作区根目录包含一个 `IDENTITY.md`：
 
 - 示例路径：`~/.openclaw/workspace/IDENTITY.md`
-- `set-identity --from-identity` 会从工作区根目录（或显式指定的 `--identity-file`）读取
+- `set-identity --from-identity` 从工作区根目录（或显式指定的 `--identity-file`）读取。
 
-头像路径会相对于工作区根目录解析。
+头像路径会相对于工作区根目录解析，并且不能逃离该目录，即使通过符号链接也不行。
 
 ## 设置身份
 
-`set-identity` 会将字段写入 `agents.list[].identity`：
+`set-identity` 会将字段写入 `agents.list[].identity`：`name`、`theme`、`emoji`、`avatar`（工作区相对路径、http(s) URL 或 data URI）。
 
-- `name`
-- `theme`
-- `emoji`
-- `avatar`（工作区相对路径、http(s) URL 或 data URI）
-
-选项：
-
-- `--agent <id>`
-- `--workspace <dir>`
-- `--identity-file <path>`
-- `--from-identity`
-- `--name <name>`
-- `--theme <theme>`
-- `--emoji <emoji>`
-- `--avatar <value>`
-- `--json`
-
-说明：
-
-- `--agent` 或 `--workspace` 可用于选择目标 agent。
-- 如果你依赖 `--workspace`，且有多个 agent 共享该工作区，命令会失败并要求你传入 `--agent`。
-- 本地、相对于工作区的头像图片文件大小限制为 2 MB。HTTP(S) URL 和 `data:` URI 不受本地文件大小限制检查。
+- `--agent` 或 `--workspace` 用于选择目标代理。如果 `--workspace` 匹配多个代理，命令会失败，并提示你传入 `--agent`。
+- 本地工作区相对路径的头像图片文件大小限制为 2 MB。HTTP(S) URL 和 `data:` URI 不受本地文件大小限制检查。
 - 当未提供显式身份字段时，命令会从 `IDENTITY.md` 读取身份数据。
 
 从 `IDENTITY.md` 加载：
@@ -237,7 +180,7 @@ openclaw agents set-identity --agent main --name "OpenClaw" --emoji "🦞" --ava
         id: "main",
         identity: {
           name: "OpenClaw",
-          theme: "space lobster",
+          theme: "太空龙虾",
           emoji: "🦞",
           avatar: "avatars/openclaw.png",
         },

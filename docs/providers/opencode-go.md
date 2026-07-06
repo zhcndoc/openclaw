@@ -6,42 +6,15 @@ read_when:
 title: "OpenCode Go"
 ---
 
-OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。
-它使用与 Zen 目录相同的 `OPENCODE_API_KEY`，但保留运行时
-提供方 id `opencode-go`，以便上游按模型路由保持正确。
+OpenCode Go 是 [OpenCode](/providers/opencode) 中的 Go 目录。它与 Zen 目录共享
+`OPENCODE_API_KEY` 凭证，但保留自己的
+运行时提供方 id（`opencode-go`），因此上游按模型路由仍然保持正确。
 
-| 属性              | 值                              |
-| ----------------- | ------------------------------- |
-| 运行时提供方      | `opencode-go`                   |
-| 认证              | `OPENCODE_API_KEY`              |
-| 父级设置          | [OpenCode](/providers/opencode) |
-
-## 内置目录
-
-OpenClaw 大部分 Go 目录行来自内置的 OpenClaw 模型注册表，
-并在注册表更新期间补充当前的上游条目。运行
-`openclaw models list --provider opencode-go` 查看当前模型列表。
-
-该提供方包含：
-
-| 模型引用                        | 名称                  |
-| ------------------------------- | --------------------- |
-| `opencode-go/glm-5`             | GLM-5                 |
-| `opencode-go/glm-5.1`           | GLM-5.1               |
-| `opencode-go/glm-5.2`           | GLM-5.2               |
-| `opencode-go/kimi-k2.5`         | Kimi K2.5             |
-| `opencode-go/kimi-k2.6`         | Kimi K2.6 (3x limits) |
-| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 Code        |
-| `opencode-go/deepseek-v4-pro`   | DeepSeek V4 Pro       |
-| `opencode-go/deepseek-v4-flash` | DeepSeek V4 Flash     |
-| `opencode-go/mimo-v2-omni`      | MiMo V2 Omni          |
-| `opencode-go/mimo-v2-pro`       | MiMo V2 Pro           |
-| `opencode-go/minimax-m2.5`      | MiniMax M2.5          |
-| `opencode-go/minimax-m2.7`      | MiniMax M2.7          |
-| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus          |
-| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus          |
-
-GLM-5.2 使用 1M-token 上下文窗口，并支持最多 131K 输出 token。
+| Property         | Value                                              |
+| ---------------- | -------------------------------------------------- |
+| Runtime provider | `opencode-go`                                      |
+| Auth             | `OPENCODE_API_KEY` (别名: `OPENCODE_ZEN_API_KEY`) |
+| Parent setup     | [OpenCode](/providers/opencode)                    |
 
 ## 入门
 
@@ -91,22 +64,49 @@ GLM-5.2 使用 1M-token 上下文窗口，并支持最多 131K 输出 token。
 }
 ```
 
+## 内置目录
+
+运行 `openclaw models list --provider opencode-go` 以获取当前模型列表。
+捆绑行：
+
+| 模型引用                         | 名称              | 上下文   | 最大输出 | 图像输入 |
+| ------------------------------- | ----------------- | --------- | ---------- | ----------- |
+| `opencode-go/deepseek-v4-pro`   | DeepSeek V4 Pro   | 1M        | 384K       | 否          |
+| `opencode-go/deepseek-v4-flash` | DeepSeek V4 Flash | 1M        | 384K       | 否          |
+| `opencode-go/glm-5`             | GLM-5             | 202,752   | 32,768     | 否          |
+| `opencode-go/glm-5.1`           | GLM-5.1           | 202,752   | 32,768     | 否          |
+| `opencode-go/glm-5.2`           | GLM-5.2           | 1M        | 131,072    | 否          |
+| `opencode-go/hy3-preview`       | HY3 预览版       | 262,144   | 32,768     | 否          |
+| `opencode-go/kimi-k2.5`         | Kimi K2.5         | 262,144   | 65,536     | 是         |
+| `opencode-go/kimi-k2.6`         | Kimi K2.6         | 262,144   | 65,536     | 是         |
+| `opencode-go/kimi-k2.7-code`    | Kimi K2.7 代码版    | 262,144   | 262,144    | 是         |
+| `opencode-go/mimo-v2-omni`      | MiMo V2 全能版      | 262,144   | 32,000     | 是         |
+| `opencode-go/mimo-v2.5`         | MiMo V2.5         | 1M        | 128,000    | 是         |
+| `opencode-go/mimo-v2-pro`       | MiMo V2 专业版       | 1,048,576 | 32,000     | 否          |
+| `opencode-go/mimo-v2.5-pro`     | MiMo V2.5 专业版     | 1,048,576 | 128,000    | 否          |
+| `opencode-go/minimax-m2.5`      | MiniMax M2.5      | 204,800   | 65,536     | 否          |
+| `opencode-go/minimax-m2.7`      | MiniMax M2.7      | 204,800   | 131,072    | 否          |
+| `opencode-go/minimax-m3`        | MiniMax M3        | 204,800   | 131,072    | 否          |
+| `opencode-go/qwen3.5-plus`      | Qwen3.5 Plus      | 262,144   | 65,536     | 是         |
+| `opencode-go/qwen3.6-plus`      | Qwen3.6 Plus      | 262,144   | 65,536     | 是         |
+| `opencode-go/qwen3.7-max`       | Qwen3.7 Max       | 1M        | 65,536     | 否          |
+| `opencode-go/qwen3.7-plus`      | Qwen3.7 Plus      | 1M        | 65,536     | 是         |
+
 ## 高级配置
 
 <AccordionGroup>
   <Accordion title="路由行为">
-    当模型引用使用
-    `opencode-go/...` 时，OpenClaw 会自动处理按模型路由。无需额外的提供方配置。
+    OpenClaw 会自动路由任何 `opencode-go/...` 模型引用。无需额外的
+    提供方配置。
   </Accordion>
 
   <Accordion title="运行时引用约定">
-    运行时引用保持显式：Zen 使用 `opencode/...`，Go 使用 `opencode-go/...`。
-    这样可确保在两个目录中上游按模型路由都保持正确。
+    运行时引用保持显式：Zen 使用 `opencode/...`，Go 使用 `opencode-go/...`。这样可以确保上游按模型路由在两个目录中都保持正确。
   </Accordion>
 
   <Accordion title="共享凭据">
-    Zen 和 Go 目录都使用相同的 `OPENCODE_API_KEY`。在设置过程中输入
-    密钥会为两个运行时提供方存储凭据。
+    一个 `OPENCODE_API_KEY` 同时适用于 Zen 和 Go 两个目录。在设置过程中输入该
+    密钥会为两个运行时提供方保存凭据。
   </Accordion>
 </AccordionGroup>
 

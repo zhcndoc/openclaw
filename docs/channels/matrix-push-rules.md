@@ -6,7 +6,9 @@ read_when:
 title: "Matrix 静默预览推送规则"
 ---
 
-当 `channels.matrix.streaming` 为 `"quiet"` 时，OpenClaw 会就地编辑单个预览事件，并使用自定义内容标记将最终确认的编辑标记出来。Matrix 客户端仅在某个按用户设置的推送规则匹配该标记时，才会对最终编辑发送通知。本页面面向自托管 Matrix 的运维人员，帮助他们为每个收件人账户安装该规则。
+当 `channels.matrix.streaming` 为 `"quiet"` 时，OpenClaw 会通过就地编辑单个预览事件来流式传输回复。预览会作为不触发通知的 `m.notice` 事件发送，而最终编辑会被标记为 `content["com.openclaw.finalized_preview"] = true`。只有当某个按用户配置的推送规则匹配到该标记时，Matrix 客户端才会对这次最终编辑发出通知。此页面面向自行托管 Matrix、并希望为每个收件人账户安装该规则的运维人员。
+
+`streaming: "progress"` 也会通过相同路径完成其草稿，因此同样的规则也会对 progress 模式下的最终编辑生效。
 
 如果你只想使用标准的 Matrix 通知行为，请使用 `streaming: "partial"` 或保持 streaming 关闭。参见 [Matrix 频道设置](/channels/matrix#streaming-previews)。
 
@@ -14,9 +16,9 @@ title: "Matrix 静默预览推送规则"
 
 - recipient user = 应接收通知的人
 - bot user = 发送回复的 OpenClaw Matrix 账户
-- API 调用中使用收件人用户的访问令牌
-- 在推送规则中将 `sender` 与 bot 用户的完整 MXID 进行匹配
-- 收件人账户必须已经有可用的 pushers —— 只有在正常的 Matrix 推送投递运行良好时，静默预览规则才会生效
+- 对下面的 API 调用使用接收者用户的访问令牌
+- 将 push rule 中的 `sender` 与 bot 用户的完整 MXID 匹配
+- 接收者账户必须已经有正常工作的推送器；静默预览规则仅在正常的 Matrix 推送投递运行良好时才有效
 
 ## 步骤
 
@@ -64,7 +66,7 @@ curl -sS \
   </Step>
 
   <Step title="安装覆盖推送规则">
-    OpenClaw 会将最终确认的纯文本预览编辑标记为 `content["com.openclaw.finalized_preview"] = true`。安装一条规则，使其同时匹配该标记和 bot MXID 作为发送者：
+    安装一条匹配最终预览标记以及发送者为 bot MXID 的规则：
 
 ```bash
 curl -sS -X PUT \
@@ -122,7 +124,7 @@ curl -sS \
 
 推送规则按 `ruleId` 键控：对同一个 ID 重复执行 `PUT` 会更新同一条规则。对于多个 OpenClaw bot 向同一收件人发送通知的情况，请为每个 bot 创建一条规则，并使用不同的 sender 匹配。
 
-新建的用户定义 `override` 规则会插入到默认 suppress 规则之前，因此不需要额外的顺序参数。该规则只影响可就地最终确认的纯文本预览编辑；媒体回退和过期预览回退会使用正常的 Matrix 投递。
+新的用户自定义 `override` 规则会插入到服务器默认的 suppress 规则之前，因此不需要额外的排序参数。该规则只影响可在原处完成最终确认的纯文本预览编辑；媒体回复、过期预览的回退，以及会触发 Matrix 提及的最终文本，都会改为正常的通知消息发送。
 
 ## homeserver 说明
 

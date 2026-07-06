@@ -7,27 +7,22 @@ read_when:
 title: "Admin HTTP RPC 插件"
 ---
 
-捆绑的 `admin-http-rpc` 插件会通过 HTTP 公开部分 Gateway 控制平面方法，供无法使用常规 Gateway WebSocket RPC 客户端的受信任主机自动化使用。
+捆绑的 `admin-http-rpc` 插件通过 HTTP 公开一组允许列表中的 Gateway 控制平面方法，供无法保持 Gateway WebSocket 连接持续打开的受信任主机自动化使用。
 
-该插件随 OpenClaw 一起提供，但默认关闭。未启用时，不会注册该路由。启用后，它会增加：
+它随 OpenClaw 一起提供，但默认禁用；禁用时，不会注册该路由。启用后，它会在与 Gateway 相同的监听器上添加 `POST /api/v1/admin/rpc`（`http://<gateway-host>:<port>/api/v1/admin/rpc`）。
 
-- `POST /api/v1/admin/rpc`
-- 与 Gateway 相同的监听器：`http://<gateway-host>:<port>/api/v1/admin/rpc`
-
-仅将其用于私有主机工具、tailnet 自动化或受信任的内部入口。不要将此路由直接暴露到公共互联网。
+仅为私有主机工具、tailnet 自动化或受信任的内部入口启用它。切勿将此路由直接暴露到公共互联网。
 
 ## 在启用之前
 
-Admin HTTP RPC 是完整的运维控制平面接口。任何通过 Gateway HTTP 身份验证的调用方，都可以调用本页中列入允许列表的方法。
-
-当满足以下所有条件时使用它：
+Admin HTTP RPC 是一个完整的 operator 控制平面接口：任何通过 Gateway HTTP 认证的调用方都可以调用下面列入允许列表的方法。只有在以下所有条件都为真时才启用它：
 
 - 调用方被信任，可以操作 Gateway。
 - 调用方无法使用 WebSocket RPC 客户端。
 - 该路由只能在本地回环、tailnet 或私有且经过认证的入口上访问。
 - 你已经审查过允许的方法，并且它们与计划运行的自动化相匹配。
 
-对于可以保持 Gateway WebSocket 连接打开的 OpenClaw 客户端和交互式工具，请使用 WebSocket RPC 路径。
+对于可以保持 Gateway WebSocket 连接打开的 OpenClaw 客户端和交互式工具，请改用 WebSocket RPC。
 
 ## 启用
 
@@ -53,7 +48,7 @@ Admin HTTP RPC 是完整的运维控制平面接口。任何通过 Gateway HTTP 
   </Tab>
 </Tabs>
 
-该路由会在插件启动期间注册。更改插件配置后，请重启 Gateway。
+该路由会在插件启动期间注册，因此在更改插件配置后请重启 Gateway。
 
 当你不再需要该 HTTP 接口时，请将其禁用：
 
@@ -101,17 +96,13 @@ curl -sS http://<gateway-host>:<port>/api/v1/admin/rpc \
 
 请将此插件视为完整的 Gateway 运维接口。
 
-- 启用该插件会有意地在 `/api/v1/admin/rpc` 提供对允许列表中 admin RPC 方法的访问。
-- 该插件声明了保留的 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 清单契约，因此其经过 Gateway 身份验证的 HTTP 路由可以在进程内分发控制平面方法。
-- 共享密钥 Bearer 认证证明持有 gateway 运维密钥。
-- 对于 `token` 和 `password` 认证，更窄的 `x-openclaw-scopes` 头会被忽略，并恢复为正常的完整运维默认值。
-- 带有受信任身份的 HTTP 模式会在存在时遵守 `x-openclaw-scopes`。
-- `gateway.auth.mode="none"` 表示如果插件启用，该路由就是未认证的。仅应在你完全信任的私有入口后使用。
-- 在插件路由认证通过后，请求会像 WebSocket RPC 一样，通过相同的 Gateway 方法处理程序和作用域检查进行分发。
-- 请将此路由保留在本地回环、tailnet 或私有受信任入口上。不要直接暴露到公共互联网。
-- 插件清单契约不是沙箱。它们只会阻止误用受限的 SDK 辅助方法；受信任的插件仍然运行在 Gateway 进程中。
-
-当调用方跨越信任边界时，请使用不同的 gateway。
+- 启用该插件会有意提供对位于 `/api/v1/admin/rpc` 的 allowlist 中的 admin RPC 方法的访问权限。
+- 该插件声明了保留的 `contracts.gatewayMethodDispatch: ["authenticated-request"]` 清单契约，这使得其经过 Gateway 身份验证的 HTTP 路由能够在进程内分发控制平面方法。这不是沙箱：该契约可防止对保留的 SDK 辅助工具的误用，但受信任的插件仍然运行在 Gateway 进程中。
+- 共享密钥 bearer 认证（`token`/`password` 模式）证明持有 gateway 运维者密钥；该路径会忽略更窄的 `x-openclaw-scopes` 请求头，并恢复为正常的完整运维者默认权限。
+- 受信任的、携带身份的 HTTP 认证（`trusted-proxy` 模式）在存在 `x-openclaw-scopes` 时会遵守该请求头。
+- `gateway.auth.mode="none"` 表示如果插件已启用，则该路由未经过身份验证。仅在你完全信任的私有入口之后使用它。
+- 在插件路由认证通过后，请求会通过与 WebSocket RPC 相同的 Gateway 方法处理器和作用域检查进行分发。
+- 请将此路由仅保留在 loopback、tailnet 或受信任的私有入口上。不要直接向公共互联网暴露它。当调用方跨越信任边界时，请使用独立的 gateway。
 
 ## 请求
 
@@ -162,7 +153,16 @@ Gateway 方法错误使用：
 }
 ```
 
-HTTP 状态会尽可能跟随 Gateway 错误。例如，`INVALID_REQUEST` 返回 `400`，`UNAVAILABLE` 返回 `503`。
+HTTP 状态遵循错误代码：
+
+| 错误代码                   | HTTP 状态 |
+| -------------------------- | --------- |
+| `INVALID_REQUEST`          | 400       |
+| `APPROVAL_NOT_FOUND`       | 404       |
+| `NOT_LINKED`, `NOT_PAIRED` | 409       |
+| `UNAVAILABLE`              | 503       |
+| `AGENT_TIMEOUT`            | 504       |
+| any other code             | 500       |
 
 ## 允许的方法
 
@@ -199,6 +199,14 @@ HTTP 状态会尽可能跟随 Gateway 错误。例如，`INVALID_REQUEST` 返回
 
 : 请求未通过 Gateway HTTP 身份验证。请检查 Bearer token 或 trusted-proxy 身份头。
 
+`405 Method Not Allowed`
+
+: 请求使用了除 `POST` 之外的方法。
+
+`413 Payload Too Large`
+
+: 请求体超过了 1 MB 限制。
+
 `400 INVALID_REQUEST`
 
 : 请求体不是有效的 JSON，`method` 字段缺失，或者该方法不在插件允许列表中。
@@ -209,8 +217,8 @@ HTTP 状态会尽可能跟随 Gateway 错误。例如，`INVALID_REQUEST` 返回
 
 ## 相关内容
 
-- [Operator scopes](/gateway/operator-scopes)
-- [Gateway security](/gateway/security)
-- [Remote access](/gateway/remote)
-- [Plugin manifest](/plugins/manifest#contracts)
-- [SDK subpaths](/plugins/sdk-subpaths)
+- [操作符范围](/gateway/operator-scopes)
+- [网关安全](/gateway/security)
+- [远程访问](/gateway/remote)
+- [插件清单](/plugins/manifest#contracts-reference)
+- [SDK 子路径](/plugins/sdk-subpaths)

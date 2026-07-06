@@ -1,88 +1,69 @@
 ---
-summary: Node + tsx “__name 不是一个函数” 崩溃说明与临时解决方案
+summary: 历史上的 Node + tsx “__name 不是一个函数” 崩溃及其原因
 read_when:
-  - 调试仅在 Node 下运行的开发脚本或监视模式失败问题
-  - 排查 OpenClaw 中 tsx/esbuild 加载器崩溃
+  - 调查一个提到缺少 __name 辅助函数的 tsx/esbuild 加载器崩溃
 title: "Node + tsx 崩溃"
 ---
 
 # Node + tsx "\_\_name 不是一个函数" 崩溃
 
-## 摘要
+## 状态
 
-通过 Node 使用 `tsx` 运行 OpenClaw 时，会在启动阶段失败，报错如下：
+已解决。此崩溃在当前 `package.json` 中固定的 `tsx` 版本（`4.22.3`）以及当前 Node 发行版上均无法复现。保留在此处，以防未来 `tsx`/esbuild 升级后重新引入此问题。
 
-```
+## 原始症状
+
+通过 `tsx` 运行 OpenClaw 开发脚本时，在启动阶段失败，并出现：
+
+```text
 [openclaw] Failed to start CLI: TypeError: __name is not a function
-    at createSubsystemLogger (.../src/logging/subsystem.ts:203:25)
-    at .../src/agents/auth-profiles/constants.ts:25:20
+    at createSubsystemLogger (src/logging/subsystem.ts)
+    at <caller> (src/agents/auth-profiles/constants.ts)
 ```
 
-该问题出现在开发脚本从 Bun 切换到 `tsx` 之后（提交 `2871657e`，2026-01-06）。相同的运行路径在 Bun 下是可用的。
+行号已省略；自从最初崩溃以来，这两个文件都已更改，具体行号不再匹配。
 
-## 环境
+这出现在开发脚本从 Bun 切换到 `tsx`（`2871657e`，2026-01-06）之后，目的是让 Bun 成为可选项。等效的基于 Bun 的路径不会崩溃。最初是在 macOS 上的 Node v25.3.0 中观察到的；其他运行 Node 25 的平台也被认为可能受到影响。
 
-- Node: v25.x（已在 v25.3.0 上观察到）
-- tsx: 4.21.0
-- 操作系统: macOS（在其他运行 Node 25 的平台上也大概率可复现）
+## 原因
 
-## 复现（仅 Node）
+`tsx` 通过 esbuild 转换 TS/ESM，并在其转换选项中硬编码了 `keepNames: true`。这个设置会使 esbuild 将具名函数/类声明包裹在对 `__name` 辅助函数的调用中，这样 `fn.name` 就能在压缩和打包后仍然保留。此次崩溃意味着在受影响的 `tsx`/Node 组合中，该模块在调用位置缺少这个辅助函数，或该辅助函数被同名覆盖了，因此 `__name(...)` 抛出了异常，而不是返回被包装的值。
+
+## 当前复现检查
 
 ```bash
-# 在仓库根目录
 node --version
 pnpm install
 node --import tsx src/entry.ts status
 ```
 
-## 仓库中的最小复现
+最小隔离复现（仅加载原始堆栈跟踪中的模块）：
 
 ```bash
 node --import tsx scripts/repro/tsx-name-repro.ts
 ```
 
-## Node 版本检查
+这两个命令目前都会正常退出。如果其中任意一个再次抛出 `__name is not a
+function`，请在向上游提交问题之前，记录准确的 Node 版本、`tsx` 版本
+（`node_modules/tsx/package.json`）以及完整的堆栈跟踪。
 
-- Node 25.3.0：失败
-- Node 22.22.0（Homebrew `node@22`）：失败
-- Node 24：这里尚未安装；需要验证
+## 变通方案（如果崩溃再次出现）
 
-## 说明 / 假设
-
-- `tsx` 使用 esbuild 转换 TS/ESM。esbuild 的 `keepNames` 会生成一个 `__name` helper，并用 `__name(...)` 包裹函数定义。
-- 该崩溃表明运行时中 `__name` 确实存在，但它不是一个函数，这意味着在 Node 25 的加载器路径中，这个模块的 helper 丢失或被覆盖了。
-- 在其他 esbuild 使用者中，也曾报告过类似的 `__name` helper 问题，通常是 helper 丢失或被重写所致。
-
-## 回归历史
-
-- `2871657e`（2026-01-06）：脚本从 Bun 改为 tsx，以便让 Bun 成为可选项。
-- 在此之前（Bun 路径），`openclaw status` 和 `gateway:watch` 都可以正常工作。
-
-## 临时解决方案
-
-- 开发脚本继续使用 Bun（当前的临时回退）。
-- 使用 `tsgo` 进行仓库类型检查，然后运行构建产物：
+- 使用 Bun 运行开发脚本，而不是 `node --import tsx`。
+- 先运行 `pnpm tsgo` 进行类型检查，然后运行构建后的输出，而不是通过 `tsx` 直接运行源代码：
 
   ```bash
   pnpm tsgo
   node openclaw.mjs status
   ```
 
-- 历史说明：在调试这个 Node/tsx 问题时这里曾使用 `tsc`，但仓库的类型检查流程现在使用 `tsgo`。
-- 如果可能，在 TS 加载器中禁用 esbuild 的 keepNames（这样可以避免插入 `__name` helper）；但 tsx 目前没有暴露这个选项。
-- 测试 Node LTS（22/24）配合 `tsx`，看看问题是否仅限于 Node 25。
+- 尝试不同版本的 `tsx`（`pnpm add -D tsx@<version>` 属于依赖变更，需要按仓库策略审批），以二分法判断其捆绑的 esbuild 版本是否重新引入了该 bug。
+- 在不同的 Node 主版本/次版本上测试，看看故障是否与版本有关。
 
 ## 参考资料
 
-- [https://opennext.js.org/cloudflare/howtos/keep_names](https://opennext.js.org/cloudflare/howtos/keep_names)
 - [https://esbuild.github.io/api/#keep-names](https://esbuild.github.io/api/#keep-names)
 - [https://github.com/evanw/esbuild/issues/1031](https://github.com/evanw/esbuild/issues/1031)
-
-## 下一步
-
-- 在 Node 22/24 上复现，以确认是否为 Node 25 回归。
-- 测试 `tsx` nightly，或在已知存在回归时固定到更早版本。
-- 如果在 Node LTS 上也能复现，带上 `__name` 堆栈跟踪向上游提交一个最小复现。
 
 ## 相关
 

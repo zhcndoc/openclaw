@@ -8,19 +8,13 @@ title: "个人助手设置"
 
 OpenClaw 是一个自托管网关，可将 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 以及更多服务连接到 AI 代理。本指南涵盖“个人助手”设置：一个专用的 WhatsApp 号码，像你始终在线的 AI 助手一样工作。
 
-## ⚠️ 安全第一
+## 安全第一
 
-你正在把一个代理放在这样的位置：
+为代理提供一个通道使其能够在你的机器上运行命令（取决于你的工具策略）、读写工作区中的文件，并通过任何已连接的通道发送消息。请从保守配置开始：
 
-- 在你的机器上运行命令（取决于你的工具策略）
-- 读取/写入你工作区中的文件
-- 通过 WhatsApp/Telegram/Discord/Mattermost 及其他捆绑渠道向外发送消息
-
-请先保守配置：
-
-- 始终设置 `channels.whatsapp.allowFrom`（不要在你的个人 Mac 上对全世界开放运行）。
+- 始终设置 `channels.whatsapp.allowFrom`（切勿在你的个人 Mac 上对全世界开放运行）。
 - 为助手使用一个专用的 WhatsApp 号码。
-- 心跳默认现在为每 30 分钟一次。在你信任该设置之前，可通过设置 `agents.defaults.heartbeat.every: "0m"` 将其禁用。
+- 心跳默认每 30 分钟一次。在你信任该设置之前，通过设置 `agents.defaults.heartbeat.every: "0m"` 来禁用它。
 
 ## 前提条件
 
@@ -66,21 +60,25 @@ openclaw gateway --port 18789
 
 当初始化完成后，OpenClaw 会自动打开仪表盘，并打印一个干净的（未加 token 的）链接。如果仪表盘提示进行身份验证，请将已配置的共享密钥粘贴到 Control UI 设置中。初始化默认使用 token（`gateway.auth.token`），但如果你将 `gateway.auth.mode` 切换为 `password`，也可以使用密码验证。稍后重新打开：`openclaw dashboard`。
 
-## 给代理一个工作区（AGENTS）
+## 为代理提供工作区（AGENTS）
 
 OpenClaw 会从其工作区目录中读取操作说明和“记忆”。
 
-默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并会在设置/首次运行代理时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`）。`BOOTSTRAP.md` 只会在工作区是全新时创建（你删除后它不应再次出现）。`MEMORY.md` 是可选的（不会自动创建）；当它存在时，会在正常会话中加载。子代理会话只注入 `AGENTS.md` 和 `TOOLS.md`。
+默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为代理工作区，并会在入门流程或首次代理运行时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`）。`BOOTSTRAP.md` 只会在全新的工作区中创建一次，删除后不会再自动回来。`MEMORY.md` 是可选的，且不会自动创建；当它存在时，会在普通会话中加载。子代理会话只会注入 `AGENTS.md` 和 `TOOLS.md`。
 
 <Tip>
-把这个文件夹当作 OpenClaw 的记忆，并将其设为 git 仓库（最好是私有仓库），这样你的 `AGENTS.md` 和记忆文件就会被备份。如果安装了 git，新建工作区会自动初始化。
+把这个文件夹当作 OpenClaw 的记忆，并将其作为一个 git 仓库（最好是私有仓库），这样你的 `AGENTS.md` 和记忆文件就能得到备份。如果已安装 git，全新的工作区会自动执行 `git init`。
 </Tip>
 
+要在不运行完整入门向导的情况下创建工作区和配置文件夹：
+
 ```bash
-openclaw setup
+openclaw setup --baseline
 ```
 
-完整工作区布局 + 备份指南：[Agent workspace](/concepts/agent-workspace)
+（直接运行 `openclaw setup` 是 `openclaw onboard` 的别名，会执行完整的交互式向导。）
+
+完整的工作区布局 + 备份指南：[Agent workspace](/concepts/agent-workspace)
 记忆工作流：[Memory](/concepts/memory)
 
 可选：使用 `agents.defaults.workspace` 选择不同的工作区（支持 `~`）。
@@ -122,7 +120,7 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
   logging: { level: "info" },
   agents: {
     defaults: {
-      model: { primary: "anthropic/claude-opus-4-6" },
+      model: { primary: "anthropic/claude-opus-4-8" },
       workspace: "~/.openclaw/workspace",
       thinkingDefault: "high",
       timeoutSeconds: 1800,
@@ -162,9 +160,9 @@ OpenClaw 默认提供了适合助手的配置，但你通常还需要调整：
 ## 会话与记忆
 
 - 会话文件：`~/.openclaw/agents/<agentId>/sessions/{{SessionId}}.jsonl`
-- 会话元数据（token 使用量、最后路由等）：`~/.openclaw/agents/<agentId>/sessions/sessions.json`（旧版：`~/.openclaw/sessions/sessions.json`）
-- `/new` 或 `/reset` 会为该聊天开启一个全新的会话（可通过 `resetTriggers` 配置）。如果单独发送，OpenClaw 会确认重置而不会调用模型。
-- `/compact [instructions]` 会压缩会话上下文并报告剩余上下文预算。
+- 会话元数据（token 使用量、上次路由等）：`~/.openclaw/agents/<agentId>/sessions/sessions.json`
+- `/new` 或 `/reset` 会为该聊天启动一个全新的会话（可通过 `session.resetTriggers` 配置）。如果单独发送，OpenClaw 会确认重置而不调用模型。
+- `/compact [instructions]` 会压缩会话上下文并报告剩余的上下文预算。
 
 ## 心跳（主动模式）
 
@@ -214,15 +212,15 @@ OpenClaw 会把结构化媒体与文本一起发送。为了兼容性，旧式�
 - 本地路径可以是绝对路径、相对工作区路径，或使用 `~/` 的主目录相对路径。
 - 主机本地发送仍只允许媒体和安全文档类型（图片、音频、视频、PDF、Office 文档，以及经过验证的文本文档，如 Markdown/MD、TXT、JSON、YAML 和 YML）。这是对现有主机读取信任边界的扩展，不是秘密扫描器：如果代理可以读取某个主机本地的 `secret.txt` 或 `config.json`，并且其扩展名与内容验证匹配，那么它就可以附加该文件。
 
-这意味着，在你的 fs 策略已经允许这些读取的情况下，工作区外生成的图片/文件现在也可以发送，而任意主机本地文本扩展仍会被阻止。请将敏感文件放在代理可读文件系统之外，或者保持 `tools.fs.workspaceOnly=true` 以便更严格地限制本地路径发送。
+将敏感文件保留在代理可读文件系统之外，或者将 `tools.fs.workspaceOnly` 保持为 `true`，以便更严格地限制本地路径发送。
 
 ## 运维检查清单
 
 ```bash
 openclaw status          # 本地状态（凭据、会话、排队事件）
-openclaw status --all    # 完整诊断（只读、可直接粘贴）
-openclaw status --deep   # 在支持时向 gateway 请求带通道探测的实时健康探测
-openclaw health --json   # gateway 健康快照（WS；默认可返回新的缓存快照）
+openclaw status --all    # 完整诊断（只读，可直接粘贴）
+openclaw status --deep   # 探测通道（WhatsApp Web + Telegram + Discord + Slack + Signal）
+openclaw health --json   # 通过 WS 连接获取网关健康快照
 ```
 
 日志位于 `/tmp/openclaw/` 下（默认：`openclaw-YYYY-MM-DD.log`）。
@@ -230,17 +228,17 @@ openclaw health --json   # gateway 健康快照（WS；默认可返回新的缓�
 ## 下一步
 
 - WebChat: [WebChat](/web/webchat)
-- Gateway ops: [Gateway runbook](/gateway)
-- Cron + wakeups: [Cron jobs](/automation/cron-jobs)
-- macOS menu bar companion: [OpenClaw macOS app](/platforms/macos)
-- iOS node app: [iOS app](/platforms/ios)
-- Android node app: [Android app](/platforms/android)
+- Gateway 运维: [Gateway runbook](/gateway)
+- Cron + 唤醒: [Cron jobs](/automation/cron-jobs)
+- macOS 菜单栏伴侣： [OpenClaw macOS app](/platforms/macos)
+- iOS 节点应用: [iOS app](/platforms/ios)
+- Android 节点应用: [Android app](/platforms/android)
 - Windows Hub: [Windows](/platforms/windows)
-- Linux status: [Linux app](/platforms/linux)
-- Security: [Security](/gateway/security)
+- Linux 状态: [Linux app](/platforms/linux)
+- 安全: [Security](/gateway/security)
 
 ## 相关
 
-- [Getting started](/start/getting-started)
-- [Setup](/start/setup)
-- [Channels overview](/channels)
+- [入门指南](/start/getting-started)
+- [设置](/start/setup)
+- [频道概览](/channels)

@@ -8,13 +8,13 @@ title: "音乐生成"
 sidebarTitle: "音乐生成"
 ---
 
-`music_generate` 工具允许 agent 通过已配置的提供方使用共享的音乐生成能力来创建音乐或音频——目前支持 ComfyUI、fal、Google、MiniMax 和 OpenRouter。
-
-对于带会话的 agent 运行，OpenClaw 会将音乐生成作为后台任务启动，在任务账本中跟踪，并在音轨准备好时再次唤醒 agent，这样 agent 就可以告诉用户并附加完成的音频。完成 agent 会遵循会话的正常可见回复模式：如果已配置，则自动发送最终回复；如果会话需要使用消息工具，则使用 `message(action="send")`。如果请求方会话处于非活动状态，或者其活动唤醒失败，并且完成回复中仍缺少部分已生成音频，OpenClaw 会发送一个幂等的直接回退，只包含缺失的音频。
+`music_generate` 工具通过共享的音乐生成能力创建音乐或音频，底层由 ComfyUI、fal、Google、MiniMax 和 OpenRouter 提供支持。
 
 <Note>
-内置的共享工具只有在至少有一个音乐生成提供方可用时才会出现。如果你在 agent 的工具中看不到 `music_generate`，请配置 `agents.defaults.musicGenerationModel` 或设置提供方 API 密钥。
+只有在至少有一个音乐生成提供方可用时，`music_generate` 才会出现：例如显式配置了 `agents.defaults.musicGenerationModel`，或者已完成认证配置的提供方（比如已设置 API key）。
 </Note>
+
+对于基于会话的 agent 运行，`music_generate` 会先作为后台任务启动，在任务账本中跟踪进度，然后在音轨准备就绪时唤醒 agent，以便它告知用户并附加生成完成的音频。完成代理遵循会话的可见回复约定：在已配置时自动发送最终回复，或者在会话需要 message 工具时使用 `message(action="send")`。如果请求者会话处于非活动状态，或其唤醒失败且生成的音频仍未出现在回复中，OpenClaw 会发送一个幂等的直接回退，只包含缺失的音频。
 
 ## 快速开始
 
@@ -44,7 +44,7 @@ sidebarTitle: "音乐生成"
       </Step>
     </Steps>
 
-    对于没有基于会话的 agent 运行的直接同步上下文，内置工具仍会回退到内联生成，并在工具结果中返回最终媒体路径。
+    在没有基于会话的 agent 运行（直接/本地上下文）时，该工具会内联运行，并在同一个工具结果中返回最终媒体路径。
 
   </Tab>
   <Tab title="ComfyUI 工作流">
@@ -74,15 +74,35 @@ sidebarTitle: "音乐生成"
 生成一段充满活力的芯片音乐循环，主题是在日出时发射火箭。
 ```
 
+使用 `action: "list"` 来查看可用的提供方/模型，并使用
+`action: "status"` 来查看当前基于会话的音乐任务：
+
+```text
+/tool music_generate action=list
+/tool music_generate action=status
+```
+
+直接生成示例：
+
+```text
+/tool music_generate prompt="梦幻的 lo-fi 嘻哈，带有黑胶质感和轻柔雨声" instrumental=true
+```
+
 ## 支持的提供方
 
-| 提供方     | 默认模型                     | 参考输入           | 支持的控制项                                           | 认证                                   |
-| ---------- | ---------------------------- | ------------------ | ------------------------------------------------------ | -------------------------------------- |
-| ComfyUI    | `workflow`                   | 最多 1 张图片     | 由工作流定义的音乐或音频                                | `COMFY_API_KEY`, `COMFY_CLOUD_API_KEY` |
-| fal        | `fal-ai/minimax-music/v2.6`  | 无                | `lyrics`, `instrumental`, `durationSeconds`, `format` | `FAL_KEY` or `FAL_API_KEY`             |
-| Google     | `lyria-3-clip-preview`       | 最多 10 张图片    | `lyrics`, `instrumental`, `format`                    | `GEMINI_API_KEY`, `GOOGLE_API_KEY`     |
-| MiniMax    | `music-2.6`                  | 无                | `lyrics`, `instrumental`, `format=mp3`                | `MINIMAX_API_KEY` or MiniMax OAuth     |
-| OpenRouter | `google/lyria-3-pro-preview` | 最多 1 张图片     | `lyrics`, `instrumental`, `durationSeconds`, `format` | `OPENROUTER_API_KEY`                   |
+| 提供方      | 默认模型                     | 参考输入       | 支持的控制项                                       | 认证                                   |
+| ---------- | ---------------------------- | -------------- | -------------------------------------------------- | -------------------------------------- |
+| ComfyUI    | `workflow`                   | 最多 1 张图片  | 工作流定义的音乐或音频                             | `COMFY_API_KEY`, `COMFY_CLOUD_API_KEY` |
+| fal        | `fal-ai/minimax-music/v2.6`  | 无             | `lyrics`, `instrumental`, `durationSeconds`, `format` | `FAL_KEY` or `FAL_API_KEY`             |
+| Google     | `lyria-3-clip-preview`       | 最多 10 张图片  | `lyrics`, `instrumental`, `format`                    | `GEMINI_API_KEY`, `GOOGLE_API_KEY`     |
+| MiniMax    | `music-2.6`                  | 无             | `lyrics`, `instrumental`, `format`（仅 mp3）          | `MINIMAX_API_KEY` or MiniMax OAuth     |
+| OpenRouter | `google/lyria-3-pro-preview` | 最多 1 张图片  | `lyrics`, `instrumental`, `durationSeconds`, `format` | `OPENROUTER_API_KEY`                   |
+
+MiniMax 注册了两个共享同一模型的提供方 id：用于 API 密钥认证的 `minimax`，以及用于 OAuth 的 `minimax-portal`。模型引用遵循认证路径（`minimax/music-2.6` vs `minimax-portal/music-2.6`）；参见
+[MiniMax](/providers/minimax#music-generation)。
+
+fal 还在其默认的基于 MiniMax 的模型之外，提供 `fal-ai/ace-step/prompt-to-audio`（wav，不支持歌词，不支持 instrumental 开关）以及 `fal-ai/stable-audio-25/text-to-audio`（wav，仅支持提示词）。Google 的默认 `lyria-3-clip-preview` 仅输出 mp3；`lyria-3-pro-preview` 也支持 wav。MiniMax 还提供 `music-2.6-free`、`music-cover` 和
+`music-cover-free`。OpenRouter 还提供 `google/lyria-3-clip-preview`。
 
 ### 能力矩阵
 
@@ -95,24 +115,6 @@ sidebarTitle: "音乐生成"
 | Google     |     ✓      |   ✓    | 10 张图片  | `generate`, `edit`                                                  |
 | MiniMax    |     ✓      |   —    | 无         | `generate`                                                          |
 | OpenRouter |     ✓      |   ✓    | 1 张图片   | `generate`, `edit`                                                  |
-
-使用 `action: "list"` 在运行时检查可用的共享提供方和模型：
-
-```text
-/tool music_generate action=list
-```
-
-使用 `action: "status"` 检查当前基于会话的音乐任务：
-
-```text
-/tool music_generate action=status
-```
-
-直接生成示例：
-
-```text
-/tool music_generate prompt="带有黑胶质感和轻柔雨声的梦幻 lo-fi hip hop" instrumental=true
-```
 
 ## 工具参数
 
@@ -150,27 +152,30 @@ sidebarTitle: "音乐生成"
 并非所有提供方都支持所有参数。OpenClaw 仍会在提交前验证诸如输入数量之类的硬性限制。当某个提供方支持时长但其最大值小于请求值时，OpenClaw 会将其夹取到最接近的受支持时长。真正不受支持的可选提示会在所选提供方或模型无法满足时被忽略，并给出警告。工具结果会报告已应用的设置；`details.normalization` 会记录任何从请求值到应用值的映射。
 </Note>
 
-提供方请求超时时间仅由运维配置决定。OpenClaw 在配置了
-`agents.defaults.musicGenerationModel.timeoutMs` 时使用该值，将低于 120000ms 的值提升到 120000ms，否则默认将提供方请求超时设为
-300000ms。
+提供方请求超时仅属于运算符配置。OpenClaw 使用
+`agents.defaults.musicGenerationModel.timeoutMs`（如果已配置），会将
+低于 120000ms 的值提升到 120000ms，并且在其他情况下将提供方请求
+默认设为 300000ms。
 
 ## 异步行为
 
 基于会话的音乐生成会作为后台任务运行：
 
-- **后台任务：** `music_generate` 会创建一个后台任务，立即返回 started/task 响应，并在稍后的 agent 跟进消息中发布完成后的音轨。
-- **重复防护：** 当任务处于 `queued` 或 `running` 状态时，同一会话中的后续 `music_generate` 调用会返回任务状态，而不会启动另一个生成。使用 `action: "status"` 可显式检查。
-- **状态查询：** `openclaw tasks list` 或 `openclaw tasks show <taskId>` 可检查 queued、running 和终态。
-- **完成唤醒：** OpenClaw 会将内部完成事件注入回同一会话，以便模型自行撰写面向用户的后续消息。
-- **提示提示：** 当音乐任务已经在运行时，同一会话中的后续用户/手动轮次会获得一个轻量运行时提示，因此模型不会盲目再次调用 `music_generate`。
-- **无会话回退：** 没有真实 agent 会话的直接/本地上下文会内联运行，并在同一轮返回最终音频结果。
+- **后台任务：** `music_generate` 会创建一个后台任务，立即返回一个已开始/任务响应，并在稍后的后续 agent 消息中发布完成的音轨。
+- **重复防止：** 当任务处于 `queued` 或 `running` 状态时，同一会话中后续的 `music_generate` 调用会返回任务状态，而不会启动另一个生成。使用 `action: "status"` 可显式检查。最近完成的匹配请求也会在 2 分钟内去重。
+- **状态查询：** `openclaw tasks list` 或 `openclaw tasks show <taskId>` 可检查排队中、运行中以及终态状态。
+- **完成唤醒：** OpenClaw 会将一个内部完成事件注入回同一会话，因此模型可以自己编写面向用户的后续内容。
+- **提示线索：** 当音乐任务已经在运行中时，同一会话中后续的用户/手动轮次会得到一个较小的运行时提示，这样模型就不会再次盲目调用 `music_generate`。
+- **无会话回退：** 没有真实 agent 会话的直接/本地上下文会以内联方式运行，并在同一轮返回最终音频结果。
 
 ### 任务生命周期
 
-| 状态       | 含义                                                                                        |
-| -------- | ---------------------------------------------------------------------------------------------- |
-| `queued`    | 任务已创建，正在等待提供方接受。                                           |
-| `running`   | 提供方正在处理（通常需要 30 秒到 3 分钟，具体取决于提供方和时长）。 |
+音乐任务呈现与通用任务注册表相同的状态（完整状态机包括 `timed_out`、`cancelled` 和 `lost`，请参见 [Background tasks](/automation/tasks#task-lifecycle)）。大多数音乐运行会经过：
+
+| 状态       | 含义                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------- |
+| `queued`    | 任务已创建，等待提供方接受。                                           |
+| `running`   | 提供方正在处理（通常为 30 秒到 3 分钟，取决于提供方和时长）。 |
 | `succeeded` | 音轨已就绪；agent 被唤醒并将其发布到对话中。                                 |
 | `failed`    | 提供方错误或超时；agent 被唤醒并附带错误详情。                                 |
 
@@ -203,12 +208,12 @@ openclaw tasks cancel <taskId>
 
 OpenClaw 按以下顺序尝试提供方：
 
-1. 工具调用中的 `model` 参数（如果 agent 指定了）。
-2. 配置中的 `musicGenerationModel.primary`。
+1. `model` 参数来自工具调用（如果代理指定了一个）。
+2. 来自配置的 `musicGenerationModel.primary`。
 3. 按顺序使用 `musicGenerationModel.fallbacks`。
-4. 仅使用带认证的提供方默认值进行自动检测：
-   - 先使用当前默认提供方；
-   - 再按 provider-id 顺序使用其余已注册的音乐生成提供方。
+4. 仅使用带有认证支持的提供方默认值进行自动检测：
+   - 如果当前默认文本模型提供方也提供音乐生成，则优先使用；
+   - 其余已注册的音乐生成提供方，按提供方 id 的字母顺序排列。
 
 如果某个提供方失败，会自动尝试下一个候选项。如果全部失败，错误信息会包含每次尝试的详细信息。
 
@@ -221,13 +226,13 @@ OpenClaw 按以下顺序尝试提供方：
     由工作流驱动，并依赖已配置的图结构以及 prompt/output 字段的节点映射。随附的 `comfy` 插件通过音乐生成提供方注册表接入共享的 `music_generate` 工具。
   </Accordion>
   <Accordion title="fal">
-    通过共享的提供方认证路径使用 fal 模型端点。捆绑的提供方默认使用 `fal-ai/minimax-music/v2.6`，并且还为 prompt-to-audio 请求提供 `fal-ai/ace-step/prompt-to-audio` 和 `fal-ai/stable-audio-25/text-to-audio`。
+    通过共享的提供方授权路径使用 fal 模型端点。捆绑的提供方默认使用 `fal-ai/minimax-music/v2.6`，并且还为 prompt-to-audio 请求提供 `fal-ai/ace-step/prompt-to-audio` 和 `fal-ai/stable-audio-25/text-to-audio`。歌词和纯器乐模式仅适用于 MiniMax 模型；另外两个模型仅支持 prompt。
   </Accordion>
   <Accordion title="Google (Lyria 3)">
-    使用 Lyria 3 批量生成。当前捆绑流程支持提示词、可选歌词文本以及可选参考图片。
+    使用 Lyria 3 批量生成。当前捆绑的流程支持 prompt、可选的歌词文本以及可选的参考图像。默认的 `lyria-3-clip-preview` 模型仅输出 mp3；`lyria-3-pro-preview` 模型也支持 wav。
   </Accordion>
   <Accordion title="MiniMax">
-    使用批量 `music_generation` 端点。支持提示词、可选歌词、器乐模式，以及通过 `minimax` API key 认证或 `minimax-portal` OAuth 输出 mp3。
+    使用批量 `music_generation` 端点。通过 `minimax` API key 认证或 `minimax-portal` OAuth，支持 prompt、可选歌词、器乐模式以及 mp3 输出。还提供 `music-2.6-free`、`music-cover` 和 `music-cover-free` 模型。
   </Accordion>
   <Accordion title="OpenRouter">
     使用启用流式传输的 OpenRouter chat completions 音频输出。捆绑的提供方默认使用 `google/lyria-3-pro-preview`，并且还提供 `openrouter/google/lyria-3-clip-preview`。
@@ -244,14 +249,14 @@ OpenClaw 按以下顺序尝试提供方：
 行为，请从 [fal](/providers/fal)、[Google (Gemini)](/providers/google)、
 [MiniMax](/providers/minimax) 或 [OpenRouter](/providers/openrouter) 开始。
 
-## 提供方能力模式
+## Provider Capability Modes
 
-共享音乐生成契约支持显式的模式声明：
+The shared music generation contract supports explicit mode declarations:
 
-- `generate`：用于仅提示词生成。
-- `edit`：当请求包含一张或多张参考图片时使用。
+- `generate`: used for prompt-only generation.
+- `edit`: used when the request includes one or more reference images.
 
-新的提供方实现应优先使用显式的模式块：
+New provider implementations should prefer explicit mode blocks:
 
 ```typescript
 capabilities: {
@@ -269,32 +274,33 @@ capabilities: {
 }
 ```
 
-诸如 `maxInputImages`、`supportsLyrics` 和
-`supportsFormat` 之类的旧式扁平字段，**不足以**声明 edit 支持。提供方
-应显式声明 `generate` 和 `edit`，这样实时测试、契约
-测试以及共享的 `music_generate` 工具才能确定性地验证模式支持。
+Legacy flat fields such as `maxInputImages`, `supportsLyrics`, and
+`supportsFormat` are **not sufficient** to declare edit support. Providers
+should explicitly declare `generate` and `edit` so that live tests, contract
+tests, and the shared `music_generate` tool can deterministically verify mode support.
 
 ## 实时测试
 
-共享打包提供方的可选实时覆盖：
+为共享打包提供方（fal、Google、MiniMax、
+OpenRouter）启用按需实时覆盖：
 
 ```bash
 OPENCLAW_LIVE_TEST=1 pnpm test:live -- extensions/music-generation-providers.live.test.ts
 ```
 
-仓库包装命令：
+等效的仓库封装命令，驱动的是同一个测试文件：
 
 ```bash
-pnpm test:live:media music
+pnpm test:live:media:music
 ```
 
 此实时文件默认优先使用已导出的提供方环境变量，而不是存储的认证配置，并且在提供方启用 edit 模式时会同时运行 `generate` 和已声明的 `edit` 覆盖。当前覆盖情况：
 
-- `google`: `generate` 以及 `edit`
-- `fal`: 仅 `generate`
-- `minimax`: 仅 `generate`
-- `openrouter`: `generate` 以及 `edit`
-- `comfy`: 独立的 Comfy 实时覆盖，不属于共享提供方 sweep
+- `google`：`generate` 以及 `edit`
+- `fal`：仅 `generate`
+- `minimax`：仅 `generate`
+- `openrouter`：`generate` 以及 `edit`
+- `comfy`：独立的 Comfy 实时覆盖，不属于共享提供方 sweep
 
 打包的 ComfyUI 音乐路径的可选实时覆盖：
 

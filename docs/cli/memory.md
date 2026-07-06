@@ -1,5 +1,5 @@
 ---
-summary: "openclaw memory 的 CLI 参考（status/index/search/promote/promote-explain/rem-harness）"
+summary: "openclaw memory 的 CLI 参考（status/index/search/promote/promote-explain/rem-harness/rem-backfill）"
 read_when:
   - 你想索引或搜索语义记忆
   - 你在排查记忆可用性或索引问题
@@ -9,142 +9,163 @@ title: "记忆"
 
 # `openclaw memory`
 
-管理语义记忆的索引与搜索。  
-由随附的 `memory-core` 插件提供。当 `plugins.slots.memory` 选择 `memory-core`（默认值）时，该命令可用；其他记忆插件会公开它们自己的 CLI 命名空间。
+管理语义记忆的索引、搜索以及提升到 `MEMORY.md` 中。
+由捆绑的 `memory-core` 插件提供，在
+`plugins.slots.memory` 选择 `memory-core`（默认值）时可用。其他记忆
+插件会暴露它们各自的 CLI 命名空间。
 
-相关内容：
+相关内容：[Memory](/concepts/memory) 概念、[Dreaming](/concepts/dreaming)，
+[Memory config reference](/reference/memory-config)、[Memory Wiki](/plugins/memory-wiki)，
+[wiki](/cli/wiki)、[Plugins](/tools/plugin)。
 
-- 记忆概念：[Memory](/concepts/memory)
-- 记忆 Wiki：[Memory Wiki](/plugins/memory-wiki)
-- Wiki CLI：[wiki](/cli/wiki)
-- 插件：[Plugins](/tools/plugin)
-
-## 示例
-
-```bash
-openclaw memory status
-openclaw memory status --deep
-openclaw memory status --fix
-openclaw memory index --force
-openclaw memory search "会议笔记"
-openclaw memory search --query "部署" --max-results 20
-openclaw memory promote --limit 10 --min-score 0.75
-openclaw memory promote --apply
-openclaw memory promote --json --min-recall-count 0 --min-unique-queries 0
-openclaw memory promote-explain "路由器 vlan"
-openclaw memory promote-explain "路由器 vlan" --json
-openclaw memory rem-harness
-openclaw memory rem-harness --json
-openclaw memory status --json
-openclaw memory status --deep --index
-openclaw memory status --deep --index --verbose
-openclaw memory status --agent main
-openclaw memory index --agent main --verbose
-```
-
-## 选项
-
-`memory status` 和 `memory index`：
-
-- `--agent <id>`：限定到单个 agent。若不指定，这些命令会针对每个已配置的 agent 运行；如果未配置 agent 列表，则回退到默认 agent。
-- `--verbose`：在探测和索引过程中输出详细日志。
-
-`memory status`：
-
-- `--deep`: 探测本地向量存储就绪状态、embedding 提供者就绪状态，以及语义向量搜索就绪状态。普通的 `memory status` 保持快速，不会执行实时 embedding 或提供者发现工作；未知的向量存储或语义向量状态表示该命令中未对其进行探测。QMD 词法 `searchMode: "search"` 会跳过语义向量探测和 embedding 维护，即使使用 `--deep` 也是如此。
-- `--index`：如果存储是脏的，则执行重新索引（隐含 `--deep`）。
-- `--fix`：修复过期的回忆锁并规范化提升元数据。
-- `--json`：打印 JSON 输出。
-
-如果 `memory status` 显示 `Dreaming status: blocked`，说明受管的 dreaming 定时任务已启用，但驱动它的 heartbeat 没有为默认 agent 触发。有关两种常见原因，请参见 [Dreaming never runs](/concepts/dreaming#dreaming-never-runs-status-shows-blocked)。
-
-`memory index`：
-
-- `--force`：强制完整重新索引。
-
-`memory search`：
-
-- 查询输入：可传入位置参数 `[query]` 或 `--query <text>`。
-- 如果两者都提供，则以 `--query` 为准。
-- 如果两者都未提供，命令会以错误退出。
-- `--agent <id>`：限定到单个 agent（默认：默认 agent）。
-- `--max-results <n>`：限制返回结果数量。
-- `--min-score <n>`：过滤掉低分匹配。
-- `--json`：输出 JSON 结果。
-
-`memory promote`：
-
-预览并应用短期记忆提升。
+## `memory status`
 
 ```bash
-openclaw memory promote [--apply] [--limit <n>] [--include-promoted]
+openclaw memory status [--agent <id>] [--deep] [--index] [--fix] [--json] [--verbose]
 ```
 
-- `--apply` -- 将提升结果写入 `MEMORY.md`（默认：仅预览）。
-- `--limit <n>` -- 限制显示的候选项数量。
-- `--include-promoted` -- 包含此前周期中已提升的条目。
+如果不使用 `--agent`，则会对 `agents.list` 中的每个 agent 运行；如果没有配置 agent 列表，则回退到默认 agent。
 
-完整选项：
+| 标志        | 作用                                                                                                                                                                                                                                                                                                    |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--deep`    | 探测向量存储、embedding 提供方以及语义搜索的就绪状态（会隐式触发额外的 provider 调用）。普通的 `memory status` 会保持快速并跳过此步骤；未知的向量/语义状态表示未曾探测。即使在 `--deep` 下，QMD 词法 `searchMode: "search"` 也总是跳过语义向量探测。 |
+| `--index`   | 如果存储已变脏则重新索引。隐式包含 `--deep`。                                                                                                                                                                                                                                                          |
+| `--fix`     | 修复过期的 recall 锁并规范化 promotion 元数据。                                                                                                                                                                                                                                               |
+| `--json`    | 输出 JSON。                                                                                                                                                                                                                                                                                               |
+| `--verbose` | 输出每个阶段的详细日志。                                                                                                                                                                                                                                                                             |
 
-- 使用加权提升信号（`frequency`、`relevance`、`query diversity`、`recency`、`consolidation`、`conceptual richness`）对来自 `memory/YYYY-MM-DD.md` 的短期候选项进行排序。
-- 使用来自记忆回忆与每日摄取流程的短期信号，以及 light/REM 阶段的强化信号。
-- 启用 dreaming 时，`memory-core` 会自动管理一个定时任务，在后台执行完整扫描（`light -> REM -> deep`）（无需手动执行 `openclaw cron add`）。
-- `--agent <id>`：限定到单个 agent（默认：默认 agent）。
-- `--limit <n>`：返回/应用的最大候选数量。
-- `--min-score <n>`：最小加权提升分数。
-- `--min-recall-count <n>`：候选项所需的最小回忆次数。
-- `--min-unique-queries <n>`：候选项所需的最小不同查询数。
-- `--apply`：将选中的候选项追加到 `MEMORY.md` 并标记为已提升。
-- `--include-promoted`：在输出中包含已提升的候选项。
-- `--json`：输出 JSON。
+如果即使 `dreaming.enabled: true`，`Dreaming` 这一行仍然保持 `off`，或者
+计划中的 sweep 似乎从未运行，那么托管 dreaming 的 cron 依赖于
+默认 agent 的 heartbeat 触发来启动协调。有关调度细节，请参见
+[Dreaming](/concepts/dreaming)。
 
-`memory promote-explain`：
+状态还会列出来自 `agents.defaults.memorySearch.extraPaths` 的任何额外搜索路径。
 
-解释一个特定的提升候选项及其分数拆解。
+## `memory index`
+
+```bash
+openclaw memory index [--agent <id>] [--force] [--verbose]
+```
+
+与 `status` 相同的按 agent 作用域。`--force` 会运行完整重建索引，而不是
+增量索引。`--verbose` 会在显示索引进度之前打印每个 agent 的提供商、模型、来源以及
+额外路径详情。
+
+## `记忆搜索`
+
+```bash
+openclaw memory search [query] [--query <text>] [--agent <id>] [--max-results <n>] [--min-score <n>] [--json]
+```
+
+- 查询：位置参数 `[query]` 或 `--query <text>`。如果两者都设置了，则以 `--query`
+  为准。如果都未设置，命令将报错。
+- `--agent <id>`：默认为默认 agent（不是完整的 agent 列表）。
+- `--max-results <n>`：限制结果数量（正整数）。
+- `--min-score <n>`：过滤掉低于此分数的匹配项。
+
+## `memory promote`
+
+从 `memory/YYYY-MM-DD.md` 中对短期候选项进行排序，并可选择性地将
+排名靠前的条目附加到 `MEMORY.md`。
+
+```bash
+openclaw memory promote [--agent <id>] [--limit <n>] [--min-score <n>] \
+  [--min-recall-count <n>] [--min-unique-queries <n>] [--apply] [--include-promoted] [--json]
+```
+
+| 标志                       | 默认值       | 作用                                                              |
+| -------------------------- | ------------ | ----------------------------------------------------------------- |
+| `--limit <n>`              |              | 返回/应用的候选项上限。                                             |
+| `--min-score <n>`          | `0.75`       | 最低加权晋升分数。                                                 |
+| `--min-recall-count <n>`   | `3`          | 所需的最小召回次数。                                               |
+| `--min-unique-queries <n>` | `2`          | 所需的最小不同查询数量。                                           |
+| `--apply`                  | 仅预览       | 将选定候选项附加到 `MEMORY.md` 并将其标记为已晋升。                  |
+| `--include-promoted`       |              | 包含之前周期中已晋升的候选项。                                      |
+| `--json`                   |              | 输出 JSON。                                                        |
+
+这些 CLI 默认值与计划中的 dreaming 扫描的 deep-phase
+阈值不同（见下方的 [Dreaming](#dreaming)）；如需一次性手动运行并匹配
+扫描行为，请传入显式标志。
+
+排序信号包括：召回频率、检索相关性、查询多样性、
+时间上的新近性、跨日整合，以及衍生概念丰富度，来源于
+内存召回和每日摄取流程，并且还包含针对重复 dreaming 回访的轻量/REM 阶段
+强化提升。在写入之前，晋升会重新读取实时的日记，因此自排序以来对短期片段所做的编辑或删除
+都会被尊重，不会基于过时的快照进行晋升。
+
+## `memory promote-explain`
+
+解释一个晋升候选项的分数构成。
 
 ```bash
 openclaw memory promote-explain <selector> [--agent <id>] [--include-promoted] [--json]
 ```
 
-- `<selector>`：要查找的候选键、路径片段或摘录片段。
-- `--agent <id>`：限定到单个 agent（默认：默认 agent）。
-- `--include-promoted`：包含已提升的候选项。
-- `--json`：输出 JSON。
+`<selector>` 匹配候选项的键（精确匹配或子串匹配）、路径或片段文本。
 
-`memory rem-harness`：
+## `memory rem-harness`
 
-预览 REM 反思、候选真值以及深度提升输出，但不写入任何内容。
+预览 REM 反思、候选真相和深度阶段晋升输出
+而不写入任何内容。
 
 ```bash
-openclaw memory rem-harness [--agent <id>] [--include-promoted] [--json]
+openclaw memory rem-harness [--agent <id>] [--path <file-or-dir>] [--grounded] [--include-promoted] [--json]
 ```
 
-- `--agent <id>`：限定到单个 agent。
-- `--include-promoted`：包含已提升的深度候选项。
-- `--json`：输出 JSON。
+- `--path <file-or-dir>`: 从历史 `YYYY-MM-DD.md`
+  日常文件而不是实时工作区来为 harness 提供种子。
+- `--grounded`: 还从历史笔记中渲染一个有依据的 `What Happened` / `Reflections` /
+  `Possible Lasting Updates` 预览。
 
-## Dreaming
+## `memory rem-backfill`
 
-Dreaming 是后台记忆巩固系统，包含三个协同  
-阶段：**light**（对短期材料进行排序/分层）、**deep**（将持久  
-事实提升到 `MEMORY.md`）、以及 **REM**（反思并呈现主题）。
+将有依据的历史 REM 摘要写入 `DREAMS.md` 以供 UI 审核。  
+可逆。
 
-- 通过 `plugins.entries.memory-core.config.dreaming.enabled: true` 启用。
-- 可通过聊天使用 `/dreaming on|off` 切换（或使用 `/dreaming status` 查看）。
-- Dreaming 运行在一个受管的扫描计划（`dreaming.frequency`）上，并按顺序执行各阶段：light、REM、deep。
-- 只有 deep 阶段会将持久记忆写入 `MEMORY.md`。
-- 可读的人类可见阶段输出和日记条目会写入 `DREAMS.md`（或现有的 `dreams.md`），可选地还会在 `memory/dreaming/<phase>/YYYY-MM-DD.md` 中写入每阶段报告。
-- 排名使用加权信号：回忆频率、检索相关性、查询多样性、时间新近性、跨日巩固，以及派生的概念丰富度。
-- 提升会在写入 `MEMORY.md` 之前重新读取实时的每日笔记，因此已编辑或已删除的短期片段不会因过时的回忆存储快照而被提升。
-- 计划任务和手动 `memory promote` 运行共享相同的 deep 阶段默认值，除非你传入 CLI 阈值覆盖。
-- 自动运行会分散到已配置的记忆工作区。
+```bash
+openclaw memory rem-backfill --path <file-or-dir> [--agent <id>] [--stage-short-term] [--json]
+openclaw memory rem-backfill --rollback [--rollback-short-term] [--json]
+```
 
-默认调度：
+- `--path <file-or-dir>`：除非设置了 `--rollback`/`--rollback-short-term`，否则为必需。用于回填的历史日记内存文件或目录。
+- `--stage-short-term`：同时将有依据的持久候选项播种到实时短期晋升存储中，以便正常的深度阶段对其进行排序。
+- `--rollback`：从 `DREAMS.md` 中移除先前写入的有依据的日记条目。
+- `--rollback-short-term`：移除先前暂存的有依据的短期候选项。
 
-- **扫描频率**：`dreaming.frequency = 0 3 * * *`
-- **深度阈值**：`minScore=0.8`, `minRecallCount=3`, `minUniqueQueries=3`, `recencyHalfLifeDays=14`, `maxAgeDays=30`
+## 做梦
 
-示例：
+做梦是后台记忆巩固系统，包含三个协作
+阶段，按顺序在一个计划上运行：**light**（整理/分层短期
+材料）、**REM**（反思并浮现主题）、**deep**（将持久
+事实提升到 `MEMORY.md`）。只有 deep 会写入 `MEMORY.md`。
+
+- 通过 `plugins.entries.memory-core.config.dreaming.enabled: true`
+  启用（默认 `false`）；`memory-core` 会自动管理清扫 cron 任务，无需手动
+  `openclaw cron add`。
+- 可在聊天中使用 `/dreaming on|off` 切换；使用 `/dreaming status`
+  查看状态（或 `/dreaming`/`/dreaming help`）。`on`/`off` 需要频道拥有者状态
+  或网关 `operator.admin` 权限；`status` 和帮助对任何
+  能调用该命令的人都可用。
+- 人类可读的阶段输出写入 `DREAMS.md`（或已存在的 `dreams.md`）。
+  默认情况下（`dreaming.storage.mode: "separate"`）每个阶段还会写入一份
+  独立报告到 `memory/dreaming/<phase>/YYYY-MM-DD.md`；将 `mode:
+"inline"`` 设为将报告合并到每日记忆文件中，或者设为 `"both"`
+  则两者都写。
+- 计划运行和手动 `memory promote` 运行共享相同的 deep 阶段
+  排名信号；只有默认阈值不同（见上表与下方计划默认值）。
+- 计划运行会分发到每个已配置代理的记忆工作区。
+
+计划默认值（`plugins.entries.memory-core.config.dreaming`）：
+
+| 键                                     | 默认值      |
+| -------------------------------------- | ----------- |
+| `frequency`                            | `0 3 * * *` |
+| `phases.deep.minScore`                 | `0.8`       |
+| `phases.deep.minRecallCount`           | `3`         |
+| `phases.deep.minUniqueQueries`         | `3`         |
+| `phases.deep.recencyHalfLifeDays`      | `14`        |
+| `phases.deep.maxAgeDays`               | `30`        |
+| `phases.deep.maxPromotedSnippetTokens` | `160`       |
 
 ```json
 {
@@ -162,20 +183,16 @@ Dreaming 是后台记忆巩固系统，包含三个协同
 }
 ```
 
-注意：
+完整键列表和阶段详情：[Dreaming](/concepts/dreaming)，
+[Memory config reference](/reference/memory-config#dreaming)。
 
-- `memory index --verbose` 打印每个阶段的详细信息（provider、model、sources、batch activity）。
-- `memory status` 包含通过 `memorySearch.extraPaths` 配置的任何额外路径。
-- 如果有效启用的 memory remote API key 字段被配置为 SecretRefs，命令会从当前 gateway 快照中解析这些值。如果 gateway 不可用，命令会快速失败。
-- Gateway 版本偏差提示：此命令路径要求 gateway 支持 `secrets.resolve`；旧版 gateway 会返回 unknown-method 错误。
-- 可通过 `dreaming.frequency` 调整计划扫描频率。深度提升策略其余部分均为内部实现，唯一例外是 `dreaming.phases.deep.maxPromotedSnippetTokens`，它会在保留来源信息可见的同时限制提升片段的长度。需要一次性手动覆盖阈值时，请在 `memory promote` 上使用 CLI 标志。
-- `memory rem-harness --path <file-or-dir> --grounded` 可预览来自历史每日笔记的 grounded `What Happened`、`Reflections` 和 `Possible Lasting Updates`，不会写入任何内容。
-- `memory rem-backfill --path <file-or-dir>` 会将可回滚的 grounded 日记条目写入 `DREAMS.md` 供 UI 审阅。
-- `memory rem-backfill --path <file-or-dir> --stage-short-term` 也会将 grounded 的持久候选项注入到实时短期提升存储中，以便正常 deep 阶段进行排序。
-- `memory rem-backfill --rollback` 会移除先前写入的 grounded 日记条目，`memory rem-backfill --rollback-short-term` 会移除先前暂存的 grounded 短期候选项。
-- 参见 [Dreaming](/concepts/dreaming) 以获取完整的阶段说明和配置参考。
+## SecretRef 网关依赖
+
+如果活动内存远程 API key 字段配置为 SecretRefs，`memory`
+命令会从活动网关快照中解析它们；如果网关不可用，该命令会快速失败。这要求网关支持
+`secrets.resolve` 方法；较旧的网关会返回 unknown-method 错误。
 
 ## 相关
 
-- [CLI reference](/cli)
-- [Memory overview](/concepts/memory)
+- [CLI 参考](/cli)
+- [内存概览](/concepts/memory)

@@ -7,16 +7,13 @@ read_when:
 title: "Deepgram"
 ---
 
-Deepgram 是一个语音转文字 API。在 OpenClaw 中，它通过 `tools.media.audio` 用于入站
-音频/语音笔记转录，并通过 `plugins.entries.voice-call.config.streaming`
-用于 Voice Call 流式 STT。
+Deepgram 是一个语音转文本 API。OpenClaw 使用它通过 `tools.media.audio` 进行入站音频/语音笔记
+转录，并通过 `plugins.entries.voice-call.config.streaming` 进行 Voice Call 流式 STT。
 
-对于批量转录，OpenClaw 会将完整音频文件上传到 Deepgram，
-并将转录文本注入回复流水线（`{{Transcript}}` +
-`[Audio]` 块）。对于 Voice Call 流式传输，OpenClaw 会通过 Deepgram 的 WebSocket `listen`
-端点转发实时 G.711
-u-law 帧，并在 Deepgram 返回部分或
-完整转录时进行输出。
+批量转录会将完整的音频文件上传到 Deepgram，并将转录文本注入到回复流程中
+（`{{Transcript}}` + `[Audio]` 块）。
+Voice Call 流式转录会通过 Deepgram 的
+WebSocket `listen` 端点转发实时 G.711 u-law 帧，并在 Deepgram 返回部分/最终转录时发出它们。
 
 | 详情          | 值                                                         |
 | ------------- | ---------------------------------------------------------- |
@@ -28,13 +25,10 @@ u-law 帧，并在 Deepgram 返回部分或
 ## 入门
 
 <Steps>
-  <Step title="设置你的 API key">
-    将你的 Deepgram API key 添加到环境变量中：
-
-    ```
+  <Step title="设置你的 API 密钥">
+    ```bash
     DEEPGRAM_API_KEY=dg_...
     ```
-
   </Step>
   <Step title="启用音频提供方">
     ```json5
@@ -58,13 +52,14 @@ u-law 帧，并在 Deepgram 返回部分或
 
 ## 配置选项
 
-| 选项              | 路径                                                         | 描述                                  |
-| ----------------- | ------------------------------------------------------------ | ------------------------------------- |
-| `model`           | `tools.media.audio.models[].model`                           | Deepgram 模型 id（默认：`nova-3`）     |
-| `language`        | `tools.media.audio.models[].language`                        | 语言提示（可选）                      |
-| `detect_language` | `tools.media.audio.providerOptions.deepgram.detect_language` | 启用语言检测（可选）                  |
-| `punctuate`       | `tools.media.audio.providerOptions.deepgram.punctuate`       | 启用标点（可选）                      |
-| `smart_format`    | `tools.media.audio.providerOptions.deepgram.smart_format`    | 启用智能格式化（可选）                |
+| 选项       | 路径                                  | 描述                               |
+| ---------- | ------------------------------------- | ------------------------------------- |
+| `model`    | `tools.media.audio.models[].model`    | Deepgram 模型 ID（默认：`nova-3`）   |
+| `language` | `tools.media.audio.models[].language` | 语言提示（可选）                   |
+
+`providerOptions.deepgram` 会将额外的查询参数直接合并到
+Deepgram `/listen` 请求中，因此任何 Deepgram 支持的参数名都可以使用
+（例如 `detect_language`、`punctuate`、`smart_format`）：
 
 <Tabs>
   <Tab title="使用语言提示">

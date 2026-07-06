@@ -7,25 +7,13 @@ read_when:
 title: "常设指令"
 ---
 
-常设指令赋予你的代理对已定义程序的**永久操作权限**。你无需每次都给出单独的任务指令，而是定义具有清晰范围、触发条件和升级规则的程序——代理会在这些边界内自主执行。
-
-这就像你每周五都对助理说“发送周报”与授予常设权限之间的区别：“周报由你负责。每周五整理并发送；只有在看起来不对时才上报。”
+常设指令赋予你的代理针对已定义程序的**永久操作权限**。你无需为每项任务都单独提示代理，而是通过定义具有清晰范围、触发条件和升级规则的程序，让代理在这些边界内自主执行：“周报由你负责。每周五汇总并发送，只有在发现异常时才上报。”
 
 ## 为什么需要常设指令
 
-**没有常设指令时：**
+**没有常设指令：** 你需要为每项任务都去提示代理，日常工作会被遗忘或延迟，而你会成为瓶颈。
 
-- 你必须为每个任务提示代理
-- 代理会在请求之间闲置
-- 日常工作会被遗忘或延迟
-- 你会成为瓶颈
-
-**有了常设指令时：**
-
-- 代理会在定义好的边界内自主执行
-- 日常工作会按计划自动发生，无需提示
-- 只有在例外和需要审批时你才会介入
-- 代理会把空闲时间高效利用起来
+**有常设指令：** 代理会在定义好的边界内自主执行，日常工作按计划进行，而你只在例外情况和审批时介入。
 
 ## 它们如何工作
 
@@ -47,14 +35,14 @@ title: "常设指令"
 ## 常设指令的结构
 
 ```markdown
-## Program: Weekly Status Report
+## Program: 每周状态报告
 
 **Authority:** 汇总数据、生成报告、交付给利益相关者
 **Trigger:** 每周五下午 4 点（通过 cron 任务强制执行）
 **Approval gate:** 标准报告无需审批。将异常标记供人工审查。
 **Escalation:** 如果数据源不可用或指标看起来异常（偏离常态 >2σ）
 
-### Execution steps
+### 执行步骤
 
 1. 从已配置的数据源拉取指标
 2. 与上一周及目标进行比较
@@ -62,7 +50,7 @@ title: "常设指令"
 4. 通过已配置渠道发送摘要
 5. 将完成情况记录到 Agent/Logs/
 
-### What NOT to do
+### 不要做的事
 
 - Do not send reports to external parties
 - Do not modify source data
@@ -73,8 +61,8 @@ title: "常设指令"
 
 常设指令定义代理被授权做的**什么**。[Cron 任务](/automation/cron-jobs) 定义它**何时**发生。二者协同工作：
 
-```
-常设指令：“周记得做每日收件箱分诊”
+```text
+Standing Order: "You own the daily inbox triage"
     ↓
 Cron 任务（每天上午 8 点）：“根据常设指令执行收件箱分诊”
     ↓
@@ -100,7 +88,7 @@ openclaw cron add \
 ### 示例 1：内容和社交媒体（每周周期）
 
 ```markdown
-## Program: Content & Social Media
+## Program: 内容与社交媒体
 
 **Authority:** 起草内容、安排发布、汇总互动报告
 **Approval gate:** 前 30 天所有帖子都需要负责人审阅，之后为常设批准
@@ -123,7 +111,7 @@ openclaw cron add \
 ### 示例 2：财务运营（事件触发）
 
 ```markdown
-## Program: Financial Processing
+## Program: 财务处理
 
 **Authority:** 处理交易数据、生成报告、发送摘要
 **Approval gate:** 分析无需审批。建议需要负责人批准。
@@ -149,7 +137,7 @@ openclaw cron add \
 ### 示例 3：监控与告警（持续运行）
 
 ```markdown
-## Program: System Monitoring
+## Program: 系统监控
 
 **Authority:** 检查系统健康状况、重启服务、发送告警
 **Approval gate:** 自动重启服务。如重启两次都失败，则升级处理。
@@ -181,14 +169,14 @@ openclaw cron add \
 3. **报告** - 告诉所有者做了什么以及验证了什么
 
 ```markdown
-### Execution rules
+### 执行规则
 
-- Every task follows Execute-Verify-Report. No exceptions.
-- "I'll do that" is not execution. Do it, then report.
-- "Done" without verification is not acceptable. Prove it.
-- If execution fails: retry once with adjusted approach.
-- If still fails: report failure with diagnosis. Never silently fail.
-- Never retry indefinitely - 3 attempts max, then escalate.
+- 每个任务都遵循“执行-验证-报告”。没有例外。
+- “我会处理”不算执行。先做，再报告。
+- 没有验证就说“完成”是不可接受的。要证明它。
+- 如果执行失败：使用调整后的方法重试一次。
+- 如果仍然失败：报告失败并附带诊断。绝不要静默失败。
+- 永远不要无限重试——最多 3 次，然后升级处理。
 ```
 
 这种模式可以防止代理最常见的失败方式：只确认任务，却没有真正完成。

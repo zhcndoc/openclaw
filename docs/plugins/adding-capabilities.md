@@ -23,17 +23,17 @@ sidebarTitle: "添加能力"
 - **plugin** = 所有权边界
 - **capability** = 共享的核心契约
 
-不要一开始就直接把某个供应商接到通道或工具中。应先定义能力。
+不要直接将某个供应商接入通道或工具。请先定义能力。
 
 ## 何时创建能力
 
-仅当以下**全部**条件都满足时，才创建新的能力：
+仅当以下**全部**条件都成立时，才创建新的能力：
 
 1. 有不止一个供应商很可能实现它。
 2. 通道、工具或功能插件应当消费它，而无需关心供应商是谁。
 3. Core 需要拥有回退、策略、配置或交付行为。
 
-如果这项工作只属于某个供应商，而且目前还没有共享契约，请先停下来并定义契约。
+如果这项工作仅限于某个供应商，且尚不存在共享契约，则应先定义契约。
 
 ## 标准顺序
 
@@ -47,25 +47,11 @@ sidebarTitle: "添加能力"
 
 ## 各部分放哪里
 
-**Core：**
-
-- 请求/响应类型。
-- 提供者注册表 + 解析。
-- 回退行为。
-- 配置 schema，并在嵌套对象、通配符、数组项和组合节点上传播 `title` / `description` 文档元数据。
-- 运行时辅助函数入口。
-
-**Vendor 插件：**
-
-- 供应商 API 调用。
-- 供应商认证处理。
-- 供应商特定的请求归一化。
-- 该能力实现的注册。
-
-**Feature/channel 插件：**
-
-- 调用 `api.runtime.*` 或对应的 `plugin-sdk/*-runtime` 辅助函数。
-- 绝不直接调用某个供应商实现。
+| 层                        | 职责                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core**                   | 请求/响应类型；提供方注册与解析；回退行为；配置 schema，包括在嵌套对象、通配符、数组项和组合节点上传播的 `title`/`description` 文档元数据；运行时辅助接口。 |
+| **Vendor plugin**          | 厂商 API 调用、厂商认证处理、厂商特定的请求规范化，以及能力实现的注册。                                                                                                     |
+| **Feature/channel plugin** | 调用 `api.runtime.*` 或匹配的 `plugin-sdk/*-runtime` 辅助函数。绝不直接调用厂商实现。                                                                                                                    |
 
 ## 提供者与 harness 的边界
 
@@ -97,35 +83,30 @@ sidebarTitle: "添加能力"
 - 一个或多个内置插件包。
 - 配置、文档、测试。
 
-## 实例：图像生成
+## Example: Image Generation
 
-图像生成遵循标准形态：
+Image generation follows the standard pattern:
 
-1. Core 定义 `ImageGenerationProvider`。
-2. Core 暴露 `registerImageGenerationProvider(...)`。
-3. Core 暴露 `runtime.imageGeneration.generate(...)`。
-4. `openai`、`google`、`fal` 和 `minimax` 插件注册基于供应商的实现。
-5. 未来的供应商在不更改通道/工具的情况下注册同一契约。
+1. Core defines `ImageGenerationProvider`.
+2. Core exposes `registerImageGenerationProvider(...)`.
+3. Core exposes `api.runtime.imageGeneration.generate(...)` and `.listProviders(...)`.
+4. Vendor plugins (`comfy`, `deepinfra`, `fal`, `google`, `litellm`, `microsoft-foundry`, `minimax`, `openai`, `openrouter`, `vydra`, `xai`) register vendor-backed implementations.
+5. Future vendors register the same contract without changing channels/tools.
 
-配置键特意与视觉分析路由分开：
+Configuration keys are intentionally separated from the vision analysis routing:
 
-- `agents.defaults.imageModel` 用于分析图像。
-- `agents.defaults.imageGenerationModel` 用于生成图像。
+- `agents.defaults.imageModel` is used to analyze images.
+- `agents.defaults.imageGenerationModel` is used to generate images.
 
-请将它们分开，以便回退和策略保持显式。
+Keep them separate so that fallback and policy remain explicit.
 
-## Embedding providers
+## 嵌入提供器
 
-对可复用的向量嵌入提供者，请使用 `embeddingProviders`。这个契约
-有意比 memory 更宽：工具、搜索、检索、导入器，或未来的功能插件
-都可以消费 embeddings，而无需依赖 memory 引擎。
+使用 `registerEmbeddingProvider(...)` / 合约 `embeddingProviders` 来实现可复用的向量嵌入提供器。该合约的范围有意设计得比 memory 更广：工具、搜索、检索、导入器或未来的功能插件都可以在不依赖 memory 引擎的情况下使用嵌入。Memory 搜索也会使用通用的 `embeddingProviders`。
 
-Memory search 可以消费通用的 `embeddingProviders`。较旧的
-`memoryEmbeddingProviders` 契约是为向后兼容而保留的，适用于现有
-面向 memory 的提供者迁移；新的可复用 embedding 提供者应使用
-`embeddingProviders`。
+较旧的、仅面向 memory 的注册 API 和 `memoryEmbeddingProviders` 合约已被弃用。对于所有新的嵌入提供器，请使用 `registerEmbeddingProvider` 和 `embeddingProviders`。
 
-## Review checklist
+## 评审清单
 
 在发布新的能力之前，请确认：
 

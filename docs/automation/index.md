@@ -8,7 +8,7 @@ read_when:
 title: "自动化"
 ---
 
-OpenClaw 通过任务、计划作业、推断的承诺、事件 hooks 以及固定指令在后台运行工作。本页帮助你选择合适的机制，并理解它们如何协同工作。
+OpenClaw 通过任务、计划任务、推断出的 commitments、事件 hooks 和固定指令在后台运行工作。请使用本页来选择合适的机制。
 
 ## 快速决策指南
 
@@ -96,7 +96,7 @@ Task Flow 是位于后台任务之上的流程编排基础设施。它管理具�
 
 内部 hooks 是由代理生命周期事件
 (`/new`, `/reset`, `/stop`)、会话压缩、Gateway 启动以及消息
-流触发的事件驱动脚本。它们会从目录中自动发现，并可通过
+流触发的事件驱动脚本。它们从 hook 目录中发现，并通过
 `openclaw hooks` 管理。对于进程内工具调用拦截，请使用
 [Plugin hooks](/plugins/hooks)。
 
@@ -119,12 +119,12 @@ Heartbeat 是一个周期性的主会话轮次（默认每 30 分钟一次）。
 
 ## 相关内容
 
-- [Scheduled Tasks](/automation/cron-jobs) — 精确调度和一次性提醒
-- [Inferred Commitments](/concepts/commitments) — 类似记忆的后续跟进检查
-- [Background Tasks](/automation/tasks) — 所有分离工作的任务账本
-- [Task Flow](/automation/taskflow) — 持久化的多步骤流程编排
-- [Hooks](/automation/hooks) — 事件驱动的生命周期脚本
-- [Plugin hooks](/plugins/hooks) — 进程内工具、提示、消息和生命周期 hooks
-- [Standing Orders](/automation/standing-orders) — 持久化的代理指令
-- [Heartbeat](/gateway/heartbeat) — 周期性的主会话轮次
-- [Configuration Reference](/gateway/configuration-reference) — 所有配置键
+- [计划任务](/automation/cron-jobs) — 精确调度和一次性提醒
+- [推断承诺](/concepts/commitments) — 类似记忆的后续跟进检查
+- [后台任务](/automation/tasks) — 所有分离工作的任务账本
+- [任务流](/automation/taskflow) — 持久化的多步骤流程编排
+- [钩子](/automation/hooks) — 事件驱动的生命周期脚本
+- [插件钩子](/plugins/hooks) — 进程内工具、提示、消息和生命周期 hooks
+- [常驻指令](/automation/standing-orders) — 持久化的代理指令
+- [心跳](/gateway/heartbeat) — 周期性的主会话轮次
+- [配置参考](/gateway/configuration-reference) — 所有配置键

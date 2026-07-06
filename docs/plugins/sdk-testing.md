@@ -18,36 +18,7 @@ OpenClaw 插件的测试工具、模式和 lint 约束参考。
 
 ## 测试工具
 
-这些测试辅助子路径是仅限仓库内部的源入口点，用于 OpenClaw 自带的插件测试。它们不是面向第三方插件的包导出，并且可能会导入 Vitest 或其他仅限仓库内部的测试依赖。
-
-**插件 API mock 导入：** `openclaw/plugin-sdk/plugin-test-api`
-
-**Agent 运行时契约导入：** `openclaw/plugin-sdk/agent-runtime-test-contracts`
-
-**Channel 契约导入：** `openclaw/plugin-sdk/channel-contract-testing`
-
-**Channel 测试辅助导入：** `openclaw/plugin-sdk/channel-test-helpers`
-
-**Channel 目标测试导入：** `openclaw/plugin-sdk/channel-target-testing`
-
-**插件契约导入：** `openclaw/plugin-sdk/plugin-test-contracts`
-
-**插件运行时测试导入：** `openclaw/plugin-sdk/plugin-test-runtime`
-
-**Provider 契约导入：** `openclaw/plugin-sdk/provider-test-contracts`
-
-**Provider HTTP mock 导入：** `openclaw/plugin-sdk/provider-http-test-mocks`
-
-**环境/网络测试导入：** `openclaw/plugin-sdk/test-env`
-
-**通用 fixture 导入：** `openclaw/plugin-sdk/test-fixtures`
-
-**Node 内置 mock 导入：** `openclaw/plugin-sdk/test-node-mocks`
-
-在 OpenClaw 仓库内，新内置插件测试请优先使用下方这些更聚焦的子路径。宽泛的
-`openclaw/plugin-sdk/testing` 入口仅用于旧版兼容。
-仓库 guardrail 会拒绝从 `plugin-sdk/testing` 和
-`plugin-sdk/test-utils` 新增真实导入；这些名称仅作为兼容性记录测试的已弃用兼容表面保留。
+这些子路径是 OpenClaw 自带插件测试的仓库本地源入口点。它们不是面向第三方插件发布的 `package.json` 导出项，并且它们可能会导入 Vitest 或其他仅限仓库内部使用的测试依赖。
 
 ```typescript
 import {
@@ -72,97 +43,84 @@ import {
 import { mockNodeBuiltinModule } from "openclaw/plugin-sdk/test-node-mocks";
 ```
 
-### 可用导出
+新的自带插件测试请优先使用这些聚焦的子路径。较宽泛的
+`openclaw/plugin-sdk/testing` 入口和 `openclaw/plugin-sdk/test-utils` 别名
+仅用于旧版兼容：`pnpm run lint:plugins:no-extension-test-core-imports`
+（`scripts/check-no-extension-test-core-imports.ts`）会拒绝扩展测试文件中新引入这两者中的任意一个，而且二者目前仅为了
+兼容性记录测试而保留。
 
-| 导出                                                 | 用途                                                                                                                                      |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `createTestPluginApi`                                | 为直接注册的单元测试构建一个最小插件 API mock。导入自 `plugin-sdk/plugin-test-api`                                                      |
-| `AUTH_PROFILE_RUNTIME_CONTRACT`                      | 供原生 agent 运行时适配器使用的共享 auth-profile 契约 fixture。导入自 `plugin-sdk/agent-runtime-test-contracts`                         |
-| `DELIVERY_NO_REPLY_RUNTIME_CONTRACT`                 | 供原生 agent 运行时适配器使用的共享“抑制投递回复”契约 fixture。导入自 `plugin-sdk/agent-runtime-test-contracts`                          |
-| `OUTCOME_FALLBACK_RUNTIME_CONTRACT`                  | 供原生 agent 运行时适配器使用的共享回退分类契约 fixture。导入自 `plugin-sdk/agent-runtime-test-contracts`                               |
-| `createParameterFreeTool`                            | 为原生运行时契约测试构建动态工具 schema fixture。导入自 `plugin-sdk/agent-runtime-test-contracts`                                       |
-| `expectChannelInboundContextContract`                | 断言 channel 入站上下文形状。导入自 `plugin-sdk/channel-contract-testing`                                                                |
-| `installChannelOutboundPayloadContractSuite`         | 安装 channel 出站 payload 契约用例。导入自 `plugin-sdk/channel-contract-testing`                                                         |
-| `createStartAccountContext`                          | 构建 channel 账户生命周期上下文。导入自 `plugin-sdk/channel-test-helpers`                                                                |
-| `installChannelActionsContractSuite`                 | 安装通用的 channel 消息动作契约用例。导入自 `plugin-sdk/channel-test-helpers`                                                            |
-| `installChannelSetupContractSuite`                   | 安装通用的 channel 设置契约用例。导入自 `plugin-sdk/channel-test-helpers`                                                                 |
-| `installChannelStatusContractSuite`                  | 安装通用的 channel 状态契约用例。导入自 `plugin-sdk/channel-test-helpers`                                                                 |
-| `expectDirectoryIds`                                 | 断言来自目录列表函数的 channel 目录 id。导入自 `plugin-sdk/channel-test-helpers`                                                        |
-| `assertBundledChannelEntries`                        | 断言打包后的 channel 入口暴露出预期的公开契约。导入自 `plugin-sdk/channel-test-helpers`                                                  |
-| `formatEnvelopeTimestamp`                            | 格式化确定性的封装时间戳。导入自 `plugin-sdk/channel-test-helpers`                                                                       |
-| `expectPairingReplyText`                             | 断言 channel 配对回复文本并提取其代码。导入自 `plugin-sdk/channel-test-helpers`                                                         |
-| `describePluginRegistrationContract`                 | 安装插件注册契约检查。导入自 `plugin-sdk/plugin-test-contracts`                                                                           |
-| `registerSingleProviderPlugin`                       | 在加载器 smoke 测试中注册一个 provider 插件。导入自 `plugin-sdk/plugin-test-runtime`                                                    |
-| `registerProviderPlugin`                             | 从一个插件中捕获所有 provider 类型。导入自 `plugin-sdk/plugin-test-runtime`                                                             |
-| `registerProviderPlugins`                            | 跨多个插件捕获 provider 注册。导入自 `plugin-sdk/plugin-test-runtime`                                                                    |
-| `requireRegisteredProvider`                          | 断言 provider 集合包含某个 id。导入自 `plugin-sdk/plugin-test-runtime`                                                                   |
-| `createRuntimeEnv`                                   | 构建一个 mock 的 CLI/plugin 运行时环境。导入自 `plugin-sdk/plugin-test-runtime`                                                          |
-| `createPluginSetupWizardStatus`                      | 为 channel 插件构建设置状态辅助工具。导入自 `plugin-sdk/plugin-test-runtime`                                                             |
-| `describeOpenAIProviderRuntimeContract`              | 安装 provider 家族运行时契约检查。导入自 `plugin-sdk/provider-test-contracts`                                                            |
-| `expectPassthroughReplayPolicy`                      | 断言 provider 回放策略会透传 provider 拥有的工具和元数据。导入自 `plugin-sdk/provider-test-contracts`                                      |
-| `runRealtimeSttLiveTest`                             | 使用共享音频 fixture 运行一个实时语音转文字（STT）provider 测试。导入自 `plugin-sdk/provider-test-contracts`                               |
-| `normalizeTranscriptForMatch`                        | 在进行模糊断言前规范化实时转写输出。导入自 `plugin-sdk/provider-test-contracts`                                                            |
-| `expectExplicitVideoGenerationCapabilities`          | 断言视频 provider 声明了明确的生成模式能力。导入自 `plugin-sdk/provider-test-contracts`                                                   |
-| `expectExplicitMusicGenerationCapabilities`          | 断言音乐 provider 声明了明确的生成/编辑能力。导入自 `plugin-sdk/provider-test-contracts`                                                  |
-| `mockSuccessfulDashscopeVideoTask`                   | 安装一个成功的 DashScope 兼容视频任务响应。导入自 `plugin-sdk/provider-test-contracts`                                                   |
-| `getProviderHttpMocks`                               | 访问可选启用的 provider HTTP/auth Vitest mocks。导入自 `plugin-sdk/provider-http-test-mocks`                                            |
-| `installProviderHttpMockCleanup`                     | 在每个测试后重置 provider HTTP/auth mocks。导入自 `plugin-sdk/provider-http-test-mocks`                                                  |
-| `installCommonResolveTargetErrorCases`               | 用于目标解析错误处理的共享测试用例。导入自 `plugin-sdk/channel-target-testing`                                                          |
-| `shouldAckReaction`                                  | 检查 channel 是否应添加 ack reaction。导入自 `plugin-sdk/channel-feedback`                                                              |
-| `removeAckReactionAfterReply`                        | 在回复投递后移除 ack reaction。导入自 `plugin-sdk/channel-feedback`                                                                      |
-| `createTestRegistry`                                 | 构建 channel 插件 registry fixture。导入自 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers`                         |
-| `createEmptyPluginRegistry`                          | 构建一个空的插件 registry fixture。导入自 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers`                          |
-| `setActivePluginRegistry`                            | 为插件运行时测试安装一个 registry fixture。导入自 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers`                   |
-| `createRequestCaptureJsonFetch`                      | 在媒体辅助测试中捕获 JSON fetch 请求。导入自 `plugin-sdk/test-env`                                                                       |
-| `withServer`                                         | 针对一个可销毁的本地 HTTP 服务器运行测试。导入自 `plugin-sdk/test-env`                                                                   |
-| `createMockIncomingRequest`                          | 构建一个最小的传入 HTTP 请求对象。导入自 `plugin-sdk/test-env`                                                                           |
-| `withFetchPreconnect`                                | 在安装了 preconnect 钩子的情况下运行 fetch 测试。导入自 `plugin-sdk/test-env`                                                           |
-| `withEnv` / `withEnvAsync`                           | 临时修改环境变量。导入自 `plugin-sdk/test-env`                                                                                           |
-| `createTempHomeEnv` / `withTempHome` / `withTempDir` | 创建隔离的文件系统测试 fixture。导入自 `plugin-sdk/test-env`                                                                             |
-| `createMockServerResponse`                           | 创建一个最小的 HTTP server response mock。导入自 `plugin-sdk/test-env`                                                                    |
-| `createCliRuntimeCapture`                            | 在测试中捕获 CLI 运行时输出。导入自 `plugin-sdk/test-fixtures`                                                                           |
-| `importFreshModule`                                  | 使用新的查询 token 导入一个 ESM 模块，以绕过模块缓存。导入自 `plugin-sdk/test-fixtures`                                                  |
-| `bundledPluginRoot` / `bundledPluginFile`            | 解析内置插件源码或 dist fixture 路径。导入自 `plugin-sdk/test-fixtures`                                                                   |
-| `mockNodeBuiltinModule`                              | 安装窄范围的 Node 内置 Vitest mocks。导入自 `plugin-sdk/test-node-mocks`                                                                 |
-| `createSandboxTestContext`                           | 构建沙箱测试上下文。导入自 `plugin-sdk/test-fixtures`                                                                                     |
-| `writeSkill`                                         | 写入 skill fixture。导入自 `plugin-sdk/test-fixtures`                                                                                     |
-| `makeAgentAssistantMessage`                          | 构建 agent 转写消息 fixture。导入自 `plugin-sdk/test-fixtures`                                                                             |
-| `peekSystemEvents` / `resetSystemEventsForTest`      | 检查并重置系统事件 fixture。导入自 `plugin-sdk/test-fixtures`                                                                             |
-| `sanitizeTerminalText`                               | 为断言净化终端输出。导入自 `plugin-sdk/test-fixtures`                                                                                     |
-| `countLines` / `hasBalancedFences`                   | 断言分块输出形状。导入自 `plugin-sdk/test-fixtures`                                                                                        |
-| `runProviderCatalog`                                 | 使用测试依赖执行 provider catalog hook                                                                                                   |
-| `resolveProviderWizardOptions`                       | 在契约测试中解析 provider 设置向导选项                                                                                                    |
-| `resolveProviderModelPickerEntries`                  | 在契约测试中解析 provider 模型选择器条目                                                                                                   |
-| `buildProviderPluginMethodChoice`                    | 为断言构建 provider 向导 choice id                                                                                                        |
-| `setProviderWizardProvidersResolverForTest`          | 为隔离测试注入 provider 向导 providers                                                                                                    |
-| `createProviderUsageFetch`                           | 构建 provider 使用情况 fetch fixture                                                                                                       |
-| `useFrozenTime` / `useRealTime`                      | 为对时间敏感的测试冻结和恢复计时器。导入自 `plugin-sdk/test-env`                                                                           |
-| `createTestWizardPrompter`                           | 构建一个 mock 的设置向导提示器                                                                                                            |
-| `createRuntimeTaskFlow`                              | 创建隔离的运行时任务流状态                                                                                                                |
-| `typedCases`                                         | 为表驱动测试保留字面量类型。导入自 `plugin-sdk/test-fixtures`                                                                              |
+### 可用导出项
 
-内置插件契约套件也会为仅测试用的 registry、manifest、public-artifact 和运行时
-fixture 辅助工具使用 SDK 测试子路径。依赖于内置 OpenClaw 清单的仅核心套件保留在
-`src/plugins/contracts` 下。新的扩展测试请保持在已文档化的、聚焦的 SDK 子路径上，例如
-`plugin-sdk/plugin-test-api`、`plugin-sdk/channel-contract-testing`、
-`plugin-sdk/agent-runtime-test-contracts`、`plugin-sdk/channel-test-helpers`、
-`plugin-sdk/plugin-test-contracts`、`plugin-sdk/plugin-test-runtime`、
-`plugin-sdk/provider-test-contracts`、`plugin-sdk/provider-http-test-mocks`、
-`plugin-sdk/test-env` 或 `plugin-sdk/test-fixtures`，而不要直接导入广义的
-`plugin-sdk/testing` 兼容入口、仓库 `src/**` 文件或仓库 `test/helpers/*` 桥接。
+| 导出项                                               | 用途                                                                                                                                  |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `createTestPluginApi`                                | 为直接注册的单元测试构建一个最小插件 API Mock。请从 `plugin-sdk/plugin-test-api` 导入                             |
+| `AUTH_PROFILE_RUNTIME_CONTRACT`                      | 原生代理运行时适配器共享的 auth-profile 合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入            |
+| `DELIVERY_NO_REPLY_RUNTIME_CONTRACT`                 | 原生代理运行时适配器共享的禁止回复投递合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入    |
+| `OUTCOME_FALLBACK_RUNTIME_CONTRACT`                  | 原生代理运行时适配器共享的回退分类合同夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入 |
+| `createParameterFreeTool`                            | 为原生运行时合同测试构建动态工具 schema 夹具。请从 `plugin-sdk/agent-runtime-test-contracts` 导入              |
+| `expectChannelInboundContextContract`                | 断言 channel 入站上下文形状。请从 `plugin-sdk/channel-contract-testing` 导入                                                  |
+| `installChannelOutboundPayloadContractSuite`         | 安装 channel 出站负载合同测试用例。请从 `plugin-sdk/channel-contract-testing` 导入                                       |
+| `createStartAccountContext`                          | 构建 channel 账户生命周期上下文。请从 `plugin-sdk/channel-test-helpers` 导入                                                  |
+| `installChannelActionsContractSuite`                 | 安装通用 channel 消息动作合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                     |
+| `installChannelSetupContractSuite`                   | 安装通用 channel 设置合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                              |
+| `installChannelStatusContractSuite`                  | 安装通用 channel 状态合同测试用例。请从 `plugin-sdk/channel-test-helpers` 导入                                             |
+| `expectDirectoryIds`                                 | 断言目录列表函数返回的 channel 目录 id。请从 `plugin-sdk/channel-test-helpers` 导入                               |
+| `assertBundledChannelEntries`                        | 断言自带的 channel 入口暴露出预期的公共合同。请从 `plugin-sdk/channel-test-helpers` 导入                    |
+| `formatEnvelopeTimestamp`                            | 格式化确定性的 envelope 时间戳。请从 `plugin-sdk/channel-test-helpers` 导入                                                  |
+| `expectPairingReplyText`                             | 断言 channel 配对回复文本并提取其代码。请从 `plugin-sdk/channel-test-helpers` 导入                                    |
+| `describePluginRegistrationContract`                 | 安装插件注册合同检查。请从 `plugin-sdk/plugin-test-contracts` 导入                                              |
+| `registerSingleProviderPlugin`                       | 在加载器冒烟测试中注册一个 provider 插件。请从 `plugin-sdk/plugin-test-runtime` 导入                                         |
+| `registerProviderPlugin`                             | 捕获一个插件中的所有 provider 类型。请从 `plugin-sdk/plugin-test-runtime` 导入                                                 |
+| `registerProviderPlugins`                            | 跨多个插件捕获 provider 注册。请从 `plugin-sdk/plugin-test-runtime` 导入                                     |
+| `requireRegisteredProvider`                          | 断言 provider 集合包含某个 id。请从 `plugin-sdk/plugin-test-runtime` 导入                                           |
+| `createRuntimeEnv`                                   | 构建一个 mock 的 CLI/插件运行时环境。请从 `plugin-sdk/plugin-test-runtime` 导入                                              |
+| `createPluginRuntimeMock`                            | 构建一个 mock 的插件运行时表面。请从 `plugin-sdk/plugin-test-runtime` 导入                                                      |
+| `createPluginSetupWizardStatus`                      | 为 channel 插件构建设置状态辅助工具。请从 `plugin-sdk/plugin-test-runtime` 导入                                             |
+| `createTestWizardPrompter`                           | 构建一个 mock 的设置向导提示器。请从 `plugin-sdk/plugin-test-runtime` 导入                                                       |
+| `createRuntimeTaskFlow`                              | 创建隔离的运行时任务流状态。请从 `plugin-sdk/plugin-test-runtime` 导入                                                    |
+| `runProviderCatalog`                                 | 使用测试依赖执行一个 provider catalog 钩子。请从 `plugin-sdk/plugin-test-runtime` 导入                                     |
+| `resolveProviderWizardOptions`                       | 在合同测试中解析 provider 设置向导选项。请从 `plugin-sdk/plugin-test-runtime` 导入                                    |
+| `resolveProviderModelPickerEntries`                  | 在合同测试中解析 provider 模型选择器条目。请从 `plugin-sdk/plugin-test-runtime` 导入                                    |
+| `buildProviderPluginMethodChoice`                    | 为断言构建 provider 向导选项 id。请从 `plugin-sdk/plugin-test-runtime` 导入                                            |
+| `setProviderWizardProvidersResolverForTest`          | 为隔离测试注入 provider 向导提供者。请从 `plugin-sdk/plugin-test-runtime` 导入                                        |
+| `describeOpenAIProviderRuntimeContract`              | 安装 provider 家族运行时合同检查。请从 `plugin-sdk/provider-test-contracts` 导入                                        |
+| `expectPassthroughReplayPolicy`                      | 断言 provider 回放策略会透传 provider 自有工具和元数据。请从 `plugin-sdk/provider-test-contracts` 导入         |
+| `runRealtimeSttLiveTest`                             | 使用共享音频夹具运行实时语音转文字 provider 活测。请从 `plugin-sdk/provider-test-contracts` 导入                       |
+| `normalizeTranscriptForMatch`                        | 在模糊断言前规范化实时转写输出。请从 `plugin-sdk/provider-test-contracts` 导入                               |
+| `expectExplicitVideoGenerationCapabilities`          | 断言视频 provider 声明明确的生成模式能力。请从 `plugin-sdk/provider-test-contracts` 导入                   |
+| `expectExplicitMusicGenerationCapabilities`          | 断言音乐 provider 声明明确的生成/编辑能力。请从 `plugin-sdk/provider-test-contracts` 导入                   |
+| `mockSuccessfulDashscopeVideoTask`                   | 安装一个成功的 DashScope 兼容视频任务响应。请从 `plugin-sdk/provider-test-contracts` 导入                          |
+| `getProviderHttpMocks`                               | 访问可选启用的 provider HTTP/auth Vitest mocks。请从 `plugin-sdk/provider-http-test-mocks` 导入                                         |
+| `installProviderHttpMockCleanup`                     | 在每个测试后重置 provider HTTP/auth mocks。请从 `plugin-sdk/provider-http-test-mocks` 导入                                        |
+| `installCommonResolveTargetErrorCases`               | 用于目标解析错误处理的共享测试用例。请从 `plugin-sdk/channel-target-testing` 导入                                  |
+| `shouldAckReaction`                                  | 检查某个 channel 是否应添加确认表情反应。请从 `plugin-sdk/channel-feedback` 导入                                            |
+| `removeAckReactionAfterReply`                        | 在回复投递后移除确认表情反应。请从 `plugin-sdk/channel-feedback` 导入                                                      |
+| `createTestRegistry`                                 | 构建一个 channel 插件注册表示例。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入               |
+| `createEmptyPluginRegistry`                          | 构建一个空的插件注册表示例。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入                |
+| `setActivePluginRegistry`                            | 为插件运行时测试安装一个注册表夹具。请从 `plugin-sdk/plugin-test-runtime` 或 `plugin-sdk/channel-test-helpers` 导入   |
+| `createRequestCaptureJsonFetch`                      | 在媒体辅助测试中捕获 JSON fetch 请求。请从 `plugin-sdk/test-env` 导入                                                     |
+| `withServer`                                         | 在一个可丢弃的本地 HTTP 服务器上运行测试。请从 `plugin-sdk/test-env` 导入                                                      |
+| `createMockIncomingRequest`                          | 构建一个最小的传入 HTTP 请求对象。请从 `plugin-sdk/test-env` 导入                                                          |
+| `withFetchPreconnect`                                | 在已安装 preconnect 钩子的情况下运行 fetch 测试。请从 `plugin-sdk/test-env` 导入                                                       |
+| `withEnv` / `withEnvAsync`                           | 临时修改环境变量。请从 `plugin-sdk/test-env` 导入                                                               |
+| `createTempHomeEnv` / `withTempHome` / `withTempDir` | 创建隔离的文件系统测试夹具。请从 `plugin-sdk/test-env` 导入                                                              |
+| `createMockServerResponse`                           | 创建一个最小的 HTTP 服务器响应 mock。请从 `plugin-sdk/test-env` 导入                                                            |
+| `createProviderUsageFetch`                           | 构建 provider usage fetch 夹具。请从 `plugin-sdk/test-env` 导入                                                                   |
+| `useFrozenTime` / `useRealTime`                      | 为对时间敏感的测试冻结并恢复定时器。请从 `plugin-sdk/test-env` 导入                                                    |
+| `createCliRuntimeCapture`                            | 在测试中捕获 CLI 运行时输出。请从 `plugin-sdk/test-fixtures` 导入                                                              |
+| `importFreshModule`                                  | 使用新的查询令牌导入 ESM 模块以绕过模块缓存。请从 `plugin-sdk/test-fixtures` 导入                             |
+| `bundledPluginRoot` / `bundledPluginFile`            | 解析自带插件源代码或 dist 夹具路径。请从 `plugin-sdk/test-fixtures` 导入                                              |
+| `mockNodeBuiltinModule`                              | 安装窄范围的 Node 内置 Vitest mocks。请从 `plugin-sdk/test-node-mocks` 导入                                                       |
+| `createSandboxTestContext`                           | 构建沙箱测试上下文。请从 `plugin-sdk/test-fixtures` 导入                                                                      |
+| `writeSkill`                                         | 写入 skill 夹具。请从 `plugin-sdk/test-fixtures` 导入                                                                             |
+| `makeAgentAssistantMessage`                          | 构建代理转写消息夹具。请从 `plugin-sdk/test-fixtures` 导入                                                          |
+| `peekSystemEvents` / `resetSystemEventsForTest`      | 检查并重置系统事件夹具。请从 `plugin-sdk/test-fixtures` 导入                                                          |
+| `sanitizeTerminalText`                               | 对终端输出进行清理以便断言。请从 `plugin-sdk/test-fixtures` 导入                                                          |
+| `countLines` / `hasBalancedFences`                   | 断言分块输出形状。请从 `plugin-sdk/test-fixtures` 导入                                                                     |
+| `typedCases`                                         | 为表驱动测试保留字面量类型。请从 `plugin-sdk/test-fixtures` 导入                                                    |
 
-### 类型
-
-聚焦的测试子路径也会重新导出在测试文件中很有用的类型：
-
-```typescript
-import type {
-  ChannelAccountSnapshot,
-  ChannelGatewayContext,
-} from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
-import type { MockFn, PluginRuntime, RuntimeEnv } from "openclaw/plugin-sdk/plugin-test-runtime";
-```
+自带插件合同测试套件也会使用这些 SDK 测试子路径来获取仅供测试使用的注册表、清单、公共产物和运行时夹具辅助工具。
+依赖自带 OpenClaw 库存的核心专用套件则仍放在 `src/plugins/contracts` 下。
 
 ## 测试目标解析
 
@@ -192,13 +150,21 @@ describe("my-channel target resolution", () => {
 
 ### 测试注册契约
 
-将手写的 `api` mock 传给 `register(api)` 的单元测试并不会覆盖 OpenClaw 加载器的接受门控。请为插件依赖的每个注册入口至少添加一个由 loader 驱动的冒烟测试，尤其是 hooks 和诸如 memory 这类独占能力。
+将手写 `api` mock 传递给 `register(api)` 的单元测试，不会
+触发 OpenClaw 加载器的接受门槛。对于插件所依赖的每个注册入口，
+至少添加一个基于加载器的冒烟测试，尤其是 hooks 以及诸如内存之类的独占能力。
 
-真实加载器会在缺少必需元数据，或者插件调用了它不拥有的能力 API 时失败。例如，`api.registerHook(...)` 需要提供 hook 名称，而 `api.registerMemoryCapability(...)` 需要插件清单或导出的入口声明 `kind: "memory"`。
+真实加载器会在缺少必需元数据，或者插件调用了它不拥有的能力 API 时，
+拒绝插件注册。例如，`api.registerHook(...)` 需要提供 hook 名称，
+而 `api.registerMemoryCapability(...)` 则要求插件清单或导出的入口声明
+`kind: "memory"`。
 
 ### 测试运行时配置访问
 
-在测试打包后的频道插件时，优先使用来自 `openclaw/plugin-sdk/channel-test-helpers` 的共享插件运行时 mock。其已弃用的 `runtime.config.loadConfig()` 和 `runtime.config.writeConfigFile(...)` mock 默认会抛出错误，因此测试可以捕获对兼容性 API 的新用法。只有当测试明确覆盖旧版兼容行为时，才应覆盖这些 mock。
+优先使用来自 `openclaw/plugin-sdk/plugin-test-runtime` 的共享插件运行时 mock。
+其 `runtime.config.loadConfig()` 和 `runtime.config.writeConfigFile(...)`
+mock 默认会抛出异常，以便测试捕获对已废弃兼容性 API 的新使用。
+只有当测试明确覆盖旧版兼容行为时，才覆盖这些 mock。
 
 ### 频道插件的单元测试
 
@@ -310,60 +276,63 @@ client.sendMessage = vi.fn().mockResolvedValue({ id: "msg-1" });
 // MyChannelClient.prototype.sendMessage = vi.fn();
 ```
 
-## 契约测试（仓库内插件）
+## Contract Tests (In-repo Plugins)
 
-打包内置插件具有契约测试，用于验证注册所有权：
+Bundled built-in plugins include contract tests to verify registration ownership:
 
 ```bash
-pnpm test -- src/plugins/contracts/
+pnpm test src/plugins/contracts/
 ```
 
-这些测试会断言：
+These tests assert:
 
-- 哪些插件注册了哪些 providers
-- 哪些插件注册了哪些 speech providers
-- 注册形状是否正确
-- 运行时契约是否符合要求
+- Which plugins register which providers
+- Which plugins register which speech providers
+- Whether the registration shape is correct
+- Whether the runtime contract meets requirements
 
-### 运行指定范围的测试
+### Running Tests for a Specific Scope
 
-对于特定插件：
+For a specific plugin:
 
 ```bash
-pnpm test -- <bundled-plugin-root>/my-channel/
+pnpm test <bundled-plugin-root>/my-channel/
 ```
 
-仅运行契约测试：
+Run only contract tests:
 
 ```bash
-pnpm test -- src/plugins/contracts/shape.contract.test.ts
-pnpm test -- src/plugins/contracts/auth-choice.contract.test.ts
-pnpm test -- src/plugins/contracts/runtime-seams.contract.test.ts
+pnpm test src/plugins/contracts/shape.contract.test.ts
+pnpm test src/plugins/contracts/auth-choice.contract.test.ts
+pnpm test src/plugins/contracts/runtime-seams.contract.test.ts
 ```
 
 ## Lint 强制规则（仓库内插件）
 
-`pnpm check` 会对仓库内插件强制执行三条规则：
+`scripts/run-additional-boundary-checks.mjs` 会在 CI 中运行一组 `lint:plugins:*`
+import 边界检查；每一项也可以在本地单独运行：
 
-1. **禁止单体根导入** -- 拒绝使用 `openclaw/plugin-sdk` 根入口导出
-2. **禁止直接导入 `src/`** -- 插件不能直接导入 `../../src/`
-3. **禁止自我导入** -- 插件不能导入它自己的 `plugin-sdk/<name>` 子路径
+| Command                                                        | Enforces                                                                                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm run lint:plugins:no-monolithic-plugin-sdk-entry-imports` | 打包后的插件不能导入单体的 `openclaw/plugin-sdk` 根 barrel。                                             |
+| `pnpm run lint:plugins:no-extension-src-imports`               | 生产环境的扩展文件不能直接导入仓库的 `src/**` 树（`../../src/...`）。                                 |
+| `pnpm run lint:plugins:no-extension-test-core-imports`         | 扩展测试文件不能导入 `openclaw/plugin-sdk/testing`、`plugin-sdk/test-utils`，或其他仅供核心使用的测试辅助工具。 |
 
 外部插件不受这些 lint 规则约束，但仍建议遵循相同模式。
 
 ## 测试配置
 
-OpenClaw 使用带有 V8 覆盖率阈值的 Vitest。对于插件测试：
+OpenClaw 使用 Vitest 4 和 V8 覆盖率阈值。对于插件测试：
 
 ```bash
 # 运行所有测试
 pnpm test
 
 # 运行特定插件测试
-pnpm test -- <bundled-plugin-root>/my-channel/src/channel.test.ts
+pnpm test <bundled-plugin-root>/my-channel/src/channel.test.ts
 
 # 使用特定测试名称过滤器运行
-pnpm test -- <bundled-plugin-root>/my-channel/ -t "resolves account"
+pnpm test <bundled-plugin-root>/my-channel/ -t "resolves account"
 
 # 运行覆盖率
 pnpm test:coverage

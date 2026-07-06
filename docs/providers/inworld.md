@@ -6,19 +6,16 @@ read_when:
 title: "Inworld"
 ---
 
-Inworld 是一个流式文本转语音（TTS）提供商。在 OpenClaw 中，它会
-为外发回复合成音频（默认 MP3，语音备注为 OGG_OPUS）
-以及用于 Voice Call 等通话渠道的 PCM 音频。
+Inworld 是一个流式文本转语音（TTS）提供商。在 OpenClaw 中，它会为外发回复合成音频（默认 MP3，语音备注使用 OGG_OPUS）以及用于语音通话等电话渠道的原始 PCM 音频。
 
-OpenClaw 会向 Inworld 的流式 TTS 端点发送请求，将返回的
-base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音频管道。
+OpenClaw 会向 Inworld 的流式 TTS 端点发送请求，将返回的 base64 音频分块拼接成单个缓冲区，然后把结果交给标准的回复音频流水线。
 
 | 属性          | 值                                                              |
 | ------------- | --------------------------------------------------------------- |
 | Provider id   | `inworld`                                                       |
-| Plugin        | 官方外部包                                                      |
-| Contract      | `speechProviders` (仅 TTS)                                     |
-| Auth env var  | `INWORLD_API_KEY` (HTTP Basic，Base64 仪表盘凭证)              |
+| Plugin        | official external package (`@openclaw/inworld-speech`)          |
+| Contract      | `speechProviders` (TTS only)                                    |
+| Auth env var  | `INWORLD_API_KEY` (HTTP Basic, Base64 dashboard credential)     |
 | Base URL      | `https://api.inworld.ai`                                        |
 | Default voice | `Sarah`                                                         |
 | Default model | `inworld-tts-1.5-max`                                           |
@@ -28,8 +25,6 @@ base64 音频分片拼接为单个缓冲区，并将结果交给标准回复音�
 
 ## 安装插件
 
-安装官方插件，然后重启 Gateway：
-
 ```bash
 openclaw plugins install @openclaw/inworld-speech
 openclaw gateway restart
@@ -38,13 +33,10 @@ openclaw gateway restart
 ## 开始使用
 
 <Steps>
-  <Step title="设置你的 API 密钥">
-    从你的 Inworld 仪表盘（Workspace > API Keys）复制凭证
-    并将其设置为环境变量。该值会按原样作为 HTTP Basic
-    凭证发送，因此不要再次对其进行 Base64 编码，也不要将其转换为 bearer
-    token。
+  <Step title="Set your API key">
+    从 Inworld 仪表板（Workspace > API Keys）复制凭据，并将其设置为环境变量。该值会按原样作为 HTTP Basic 凭据发送，因此不要再次对其进行 Base64 编码，也不要将其转换为 bearer token。
 
-    ```
+    ```bash
     INWORLD_API_KEY=<base64-credential-from-dashboard>
     ```
 
@@ -58,7 +50,7 @@ openclaw gateway restart
           provider: "inworld",
           providers: {
             inworld: {
-              speakerVoiceId: "Sarah",
+              voiceId: "Sarah",
               modelId: "inworld-tts-1.5-max",
             },
           },
@@ -68,45 +60,34 @@ openclaw gateway restart
     ```
   </Step>
   <Step title="发送消息">
-    通过任意已连接的渠道发送回复。OpenClaw 会使用 Inworld 合成
-    音频，并将其作为 MP3（如果渠道
-    期望语音备注，则为 OGG_OPUS）交付。
+    通过任何已连接的渠道发送回复。OpenClaw 会使用 Inworld 合成音频，并将其以 MP3 形式发送（如果该渠道期望语音备注，则发送 OGG_OPUS）。
   </Step>
 </Steps>
 
 ## 配置选项
 
-| Option           | Path                                            | Description                                                       |
-| ---------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
-| `apiKey`         | `messages.tts.providers.inworld.apiKey`         | Base64 仪表盘凭证。回退到 `INWORLD_API_KEY`。     |
-| `baseUrl`        | `messages.tts.providers.inworld.baseUrl`        | 覆盖 Inworld API 基础 URL（默认 `https://api.inworld.ai`）。 |
-| `speakerVoiceId` | `messages.tts.providers.inworld.speakerVoiceId` | 语音标识符（默认 `Sarah`）。                               |
-| `modelId`        | `messages.tts.providers.inworld.modelId`        | TTS 模型 ID（默认 `inworld-tts-1.5-max`）。                     |
-| `temperature`    | `messages.tts.providers.inworld.temperature`    | 采样温度 `0..2`（可选）。                           |
+| Option        | Path                                         | Description                                                         |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------- |
+| `apiKey`      | `messages.tts.providers.inworld.apiKey`      | Base64 仪表板凭据。回退到 `INWORLD_API_KEY`。       |
+| `baseUrl`     | `messages.tts.providers.inworld.baseUrl`     | 覆盖 Inworld API 基础 URL（默认 `https://api.inworld.ai`）。   |
+| `voiceId`     | `messages.tts.providers.inworld.voiceId`     | 语音标识符（默认 `Sarah`）。旧别名：`speakerVoiceId`。 |
+| `modelId`     | `messages.tts.providers.inworld.modelId`     | TTS 模型 id（默认 `inworld-tts-1.5-max`）。                       |
+| `temperature` | `messages.tts.providers.inworld.temperature` | 采样温度，`0`（不含）到 `2`（可选）。            |
 
 ## 说明
 
 <AccordionGroup>
-  <Accordion title="认证">
-    Inworld 使用 HTTP Basic 认证，采用一个 Base64 编码的凭证
-    字符串。从 Inworld 仪表盘中原样复制即可。该提供商会将其作为
-    `Authorization: Basic <apiKey>` 发送，不会进行任何进一步编码，因此
-    不要自行对其进行 Base64 编码，也不要传入 bearer 风格的令牌。
-    参见 [TTS 认证说明](/tools/tts#inworld-primary) 获取同样的提示。
+  <Accordion title="Authentication">
+    Inworld 使用 HTTP Basic 身份验证，并使用单个 Base64 编码的凭据字符串。请从 Inworld 仪表板中原样复制它。该提供商会将其作为 `Authorization: Basic <apiKey>` 发送，不会进行任何进一步编码，因此不要自行对其进行 Base64 编码，也不要传入 bearer 风格的 token。有关相同提示，请参见 [TTS auth notes](/tools/tts#inworld-primary)。
   </Accordion>
-  <Accordion title="模型">
-    支持的模型 id：`inworld-tts-1.5-max`（默认）、
-    `inworld-tts-1.5-mini`、`inworld-tts-1-max`、`inworld-tts-1`。
+  <Accordion title="Models">
+    支持的模型 ids：`inworld-tts-1.5-max`（默认）、`inworld-tts-1.5-mini`、`inworld-tts-1-max`、`inworld-tts-1`。
   </Accordion>
-  <Accordion title="音频输出">
-    回复默认使用 MP3。当渠道目标是 `voice-note`
-    时，OpenClaw 会向 Inworld 请求 `OGG_OPUS`，以便音频作为原生
-    语音气泡播放。通话合成使用原始 `PCM`，采样率为 22050 Hz，
-    供通话桥接使用。
+  <Accordion title="Audio outputs">
+    回复默认使用 MP3。当天渠道目标是 `voice-note` 时，OpenClaw 会请求 Inworld 返回 `OGG_OPUS`，以便音频作为原生语音气泡播放。电话合成使用 22050 Hz 的原始 `PCM`，以供电话桥接使用。
   </Accordion>
-  <Accordion title="自定义端点">
-    使用 `messages.tts.providers.inworld.baseUrl` 覆盖 API 主机。
-    发送请求前会移除末尾的斜杠。
+  <Accordion title="Custom endpoints">
+    使用 `messages.tts.providers.inworld.baseUrl` 覆盖 API 主机。发送请求前会去除尾部斜杠。
   </Accordion>
 </AccordionGroup>
 
@@ -120,7 +101,7 @@ openclaw gateway restart
     包含 `messages.tts` 设置在内的完整配置参考。
   </Card>
   <Card title="Providers" href="/providers" icon="grid">
-    All supported OpenClaw providers.
+    所有受支持的 OpenClaw 提供商。
   </Card>
   <Card title="故障排除" href="/help/troubleshooting" icon="wrench">
     常见问题和调试步骤。

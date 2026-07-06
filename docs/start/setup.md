@@ -32,19 +32,19 @@ title: "设置"
 - **配置：** `~/.openclaw/openclaw.json`（JSON/JSON5 风格）
 - **工作区：** `~/.openclaw/workspace`（技能、提示词、记忆；建议将其设为私有 git 仓库）
 
-只需初始化一次：
+首次初始化 config/workspace 文件夹，而不运行完整的 onboarding 向导：
 
 ```bash
-openclaw setup
+openclaw setup --baseline
 ```
 
-在本仓库中，使用本地 CLI 入口：
+还没有全局安装？那就从这个仓库中运行：
 
 ```bash
-openclaw setup
+pnpm openclaw setup --baseline
 ```
 
-如果你还没有全局安装，可以通过 `pnpm openclaw setup` 运行它。
+（不带 `--baseline` 的 `openclaw setup` 是 `openclaw onboard` 的别名，会运行完整的交互式向导。）
 
 ## 从本仓库运行 Gateway
 
@@ -96,7 +96,11 @@ pnpm openclaw setup
 pnpm gateway:watch
 ```
 
-`gateway:watch` 会在一个命名的 tmux 会话中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离，并打印 `tmux attach -t openclaw-gateway-watch-main`；可使用 `OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 让交互式运行保持分离，或使用 `pnpm gateway:watch:raw` 以前台监视模式运行。监视器会在相关源码、配置和打包插件元数据发生变化时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次 `openclaw doctor --fix --non-interactive`，然后重试；设置 `OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用这一步仅用于开发的修复流程。`pnpm openclaw setup` 是在全新检出后进行一次性的本地配置/工作区初始化步骤。
+`gateway:watch` 会在一个命名的 tmux 会话（`openclaw-gateway-watch-main`）中启动或重启 Gateway 监视进程，并在交互式终端中自动附加。非交互式 shell 会保持分离状态，并输出
+`tmux attach -t openclaw-gateway-watch-main`；使用
+`OPENCLAW_GATEWAY_WATCH_ATTACH=0 pnpm gateway:watch` 可让交互式运行保持分离，或使用 `pnpm gateway:watch:raw` 进入前台监视模式。监视器会在相关源码、配置和捆绑插件元数据变更时重新加载。如果被监视的 Gateway 在启动期间退出，`gateway:watch` 会先运行一次
+`openclaw doctor --fix --non-interactive`，然后重试；设置
+`OPENCLAW_GATEWAY_WATCH_AUTO_DOCTOR=0` 可禁用这一步仅用于开发的修复流程。
 `pnpm gateway:watch` 不会重建 `dist/control-ui`，因此在 `ui/` 变更后请重新运行 `pnpm ui:build`，或者在开发 Control UI 时使用 `pnpm ui:dev`。
 
 ### 2) 将 macOS 应用指向你正在运行的 Gateway
@@ -108,7 +112,7 @@ pnpm gateway:watch
 
 ### 3) 验证
 
-- 应用内的 Gateway 状态应显示 **"Using existing gateway …"**
+- 应用内的 Gateway 状态应显示 **"使用现有 gateway …"**
 - 或通过 CLI：
 
 ```bash

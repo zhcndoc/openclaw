@@ -10,7 +10,7 @@ sidebarTitle: "环境房间事件"
 
 环境房间事件让 OpenClaw 能将未被点名的群组或频道聊天作为安静上下文来处理。代理可以更新记忆和会话状态，但除非代理显式调用 `message` 工具，否则房间保持静默。
 
-对于始终在线的群聊，这是推荐模式：将 `messages.groupChat.unmentionedInbound: "room_event"` 与 `messages.groupChat.visibleReplies: "message_tool"` 结合使用。当代理应该倾听、判断何时回复有价值，并避免旧的以回答 `NO_REPLY` 为模式的提示词时，请使用它。
+对于始终在线的群组聊天，请将 `messages.groupChat.unmentionedInbound: "room_event"` 与 `messages.groupChat.visibleReplies: "message_tool"` 结合使用。代理会监听，判断何时回复有用，并且不再需要旧的提示模式 `NO_REPLY`。
 
 目前受支持：Discord 公会频道、Slack 频道和私人频道、Slack 多人 DM，以及 Telegram 群组或超级群组。其他群组频道会保持其现有的群组行为，除非其频道页面说明它们支持环境房间事件。
 
@@ -30,17 +30,17 @@ sidebarTitle: "环境房间事件"
 }
 ```
 
-然后通过为该房间禁用提及门控，将房间本身配置为始终在线。该频道仍必须被其正常的 `groupPolicy`、房间允许列表和发送者允许列表允许。
+然后通过为该房间禁用提及门控，使该房间始终保持开启状态。该房间仍必须通过其正常的 `groupPolicy`、房间允许名单和发送者允许名单。
 
-保存配置后，Gateway 会热重载 `messages` 设置。只有在禁用文件监视或配置重载时才需要重启。
+保存配置后，Gateway 会热加载 `messages` 设置。仅当文件监视或配置重载被禁用时（`gateway.reload.mode: "off"`）才需要重启。
 
 ## 变化内容
 
 使用 `messages.groupChat.unmentionedInbound: "room_event"` 时：
 
-- 未被点名且被允许的群组或频道消息会变成安静的房间事件
-- 被点名的消息仍然是用户请求
-- 文本命令和原生命令仍然是用户请求
+- 未提及的允许群组或频道消息会变成静默的房间事件
+- 被提及的消息仍然是用户请求
+- 文本控制命令和原生命令仍然是用户请求
 - 中止或停止请求仍然是用户请求
 - 直接消息仍然是用户请求
 
@@ -71,17 +71,17 @@ sidebarTitle: "环境房间事件"
 }
 ```
 
-当只有一个频道应处于环境模式时，请使用按频道的 Discord 配置：
+当只有一个频道应为 ambient 时，使用按频道的 Discord 配置。在 `groupPolicy: "allowlist"` 下，列出该频道即表示允许它（`enabled: false` 会禁用一个条目）：
 
 ```json5
 {
   channels: {
     discord: {
+      groupPolicy: "allowlist",
       guilds: {
         "<DISCORD_SERVER_ID>": {
           channels: {
             "<DISCORD_CHANNEL_ID_OR_NAME>": {
-              allow: true,
               requireMention: false,
             },
           },
@@ -94,7 +94,7 @@ sidebarTitle: "环境房间事件"
 
 ## Slack 示例
 
-Slack 频道允许列表以 ID 为先。请使用诸如 `C12345678` 之类的频道 ID，而不是 `#channel-name`。
+Slack 频道允许名单以 ID 为先。请使用频道 ID，例如 `C12345678`，而不是 `#channel-name`。在 `channels.slack.channels` 下列出频道才会允许它（`enabled: false` 会禁用某个条目）：
 
 ```json5
 {
@@ -110,7 +110,6 @@ Slack 频道允许列表以 ID 为先。请使用诸如 `C12345678` 之类的频
       groupPolicy: "allowlist",
       channels: {
         "<SLACK_CHANNEL_ID>": {
-          allow: true,
           requireMention: false,
         },
       },
@@ -176,19 +175,17 @@ Telegram 群组 ID 通常是负数，例如 `-1001234567890`。可通过 `opencl
 
 ## 可见回复模式
 
-对于正常的群组/频道用户请求，`messages.groupChat.visibleReplies` 默认是 `"automatic"`。当你希望最终助手文本无需显式调用 message 工具就能可见地发帖时，请保持该默认值。
+对于普通群组/频道用户请求，`messages.groupChat.visibleReplies` 默认值为 `"automatic"`。当最终助手文本应当以可见方式发布且没有显式的 message-tool 调用时，请保持该默认值。
 
-对于环境化的始终在线房间，仍推荐使用 `messages.groupChat.visibleReplies: "message_tool"`，尤其是在最新一代、工具调用可靠的模型（如 GPT 5.5）上。它让代理通过调用 message 工具来决定何时发言。如果模型返回了最终文本但没有调用工具，OpenClaw 会将该最终文本保持私有，并记录被抑制的交付元数据。
+对于常驻的 ambient 房间，仍建议将 `messages.groupChat.visibleReplies` 设为 `"message_tool"`，尤其是在使用最新一代、工具调用可靠的模型（例如 GPT 5.5）时。它允许代理通过调用 message 工具来决定何时发言。如果模型在没有调用该工具的情况下返回最终文本，OpenClaw 会将该最终文本保留为私密，并记录被抑制投递的元数据。
 
-即使其他群组请求使用自动回复，房间事件仍保持严格模式。未点名的环境房间事件仍然需要 `message(action=send)` 才能可见输出。
+即使其他群组请求使用 automatic 回复，房间事件仍然保持严格模式。未被提及的 ambient 房间事件始终需要使用 `message(action=send)` 才能可见输出。
 
 ## 历史记录
 
-`messages.groupChat.historyLimit` 控制全局群组历史默认值。频道可以通过 `channels.<channel>.historyLimit` 覆盖它，并且某些频道还支持按账户的历史限制。
+`messages.groupChat.historyLimit` 设置全局群组历史记录默认值（未设置时为 50；必须是正整数）。各频道可以通过 `channels.<channel>.historyLimit` 覆盖它，且某些频道还支持按账户设置历史记录限制。将频道级 `historyLimit: 0` 设为 0，可禁用该频道的群组历史上下文。
 
-将 `historyLimit: 0` 设为禁用群组历史上下文。
-
-受支持的房间事件频道会将最近的环境房间消息保留为上下文。Discord 会一直保留房间事件历史，直到一次可见的 Discord 发送成功，因此在 message-tool 交付之前，安静上下文不会丢失。
+受支持的房间事件频道会将最近的环境房间消息保留为上下文。Telegram 会为每个群组维持一个始终开启的滚动窗口，并受 `historyLimit` 限制；用户请求轮次会在机器人上一次记录的回复之后选择条目，而房间事件轮次会接收完整的最近窗口，这样模型就能看到自己最近的发言。已弃用的 Telegram `includeGroupHistoryContext` 模式键会被 `openclaw doctor --fix` 移除。
 
 ## 故障排查
 
@@ -202,7 +199,7 @@ Telegram 群组 ID 通常是负数，例如 `-1001234567890`。可通过 `opencl
 
 如果 Telegram 环境房间完全没有触发，请检查 BotFather 隐私模式并确认 Gateway 正在接收正常的群组消息。
 
-如果 Slack 环境房间没有触发，请验证频道键是 Slack 频道 ID，并且该应用具有该房间类型所需的 `channels:history` 或 `groups:history` 范围。
+如果 Slack 环境房间没有触发，请验证频道键是否为 Slack 频道 ID，并且应用程序已拥有该房间类型的历史范围：`channels:history`（公开）、`groups:history`（私密）或 `mpim:history`（多人私信）。
 
 ## 相关内容
 

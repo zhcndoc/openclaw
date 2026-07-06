@@ -15,19 +15,17 @@ read_when:
 
 ## 何时使用
 
-在以下情况下使用 `trusted-proxy` 认证模式：
-
-- 你在 **身份感知代理**（Pomerium、Caddy + OAuth、nginx + oauth2-proxy、Traefik + forward auth）后运行 OpenClaw。
-- 你的代理处理所有认证，并通过请求头传递用户身份。
-- 你处于 Kubernetes 或容器环境中，代理是到 Gateway 的唯一路径。
-- 由于浏览器无法在 WS 负载中传递令牌，你遇到了 WebSocket `1008 unauthorized` 错误。
+- 你在 **身份感知代理**（Pomerium、Caddy + OAuth、nginx + oauth2-proxy、Traefik + forward auth）后面运行 OpenClaw。
+- 你的代理处理所有身份验证，并通过请求头传递用户身份。
+- 你处于 Kubernetes 或容器环境中，代理是通往 Gateway 的唯一路径。
+- 你遇到 WebSocket `1008 unauthorized` 错误，因为浏览器无法在 WS 负载中传递令牌。
 
 ## 何时不要使用
 
-- 如果你的代理不负责用户认证（只是 TLS 终止器或负载均衡器）。
-- 如果有任何绕过代理到达 Gateway 的路径（防火墙漏洞、内部网络访问）。
-- 如果你不确定代理是否正确剥离/覆盖了转发头。
-- 如果你只需要个人单用户访问（可考虑使用 Tailscale Serve + loopback 以获得更简单的配置）。
+- 你的代理不对用户进行身份验证（只是一个 TLS 终止器或负载均衡器）。
+- 到 Gateway 的任何路径会绕过代理（防火墙漏洞、内部网络访问）。
+- 你不确定代理是否会正确移除/覆盖转发头。
+- 你只需要个人单用户访问（可考虑改用 Tailscale Serve + loopback）。
 
 ## 工作原理
 
@@ -38,45 +36,23 @@ read_when:
   <Step title="代理添加身份头">
     代理添加一个包含已认证用户身份的请求头（例如 `x-forwarded-user: nick@example.com`）。
   </Step>
-  <Step title="Gateway 验证受信任来源">
-    OpenClaw 会检查请求是否来自 **受信任的代理 IP**（在 `gateway.trustedProxies` 中配置）。
+  <Step title="Gateway 验证可信来源">
+    OpenClaw 检查请求是否来自 **受信任的代理 IP**（`gateway.trustedProxies`），并且不是 Gateway 自身的回环地址或本地接口地址。
   </Step>
   <Step title="Gateway 提取身份">
-    OpenClaw 从配置的请求头中提取用户身份。
+    OpenClaw 读取所需的请求头，然后从配置的头中获取用户身份。
   </Step>
   <Step title="授权">
-    如果所有检查都通过，请求就会被授权。
+    如果一切检查通过，并且用户通过 `allowUsers`（在设置时）的校验，请求将被授权。
   </Step>
 </Steps>
-
-## Control UI 配对行为
-
-当 `gateway.auth.mode = "trusted-proxy"` 处于活动状态且请求通过 trusted-proxy 检查时，Control UI 的 WebSocket 会话可以在没有设备配对身份的情况下连接。
-
-范围影响：
-
-- 无设备的 Control UI WebSocket 会话可以连接，但默认不会获得任何操作员范围。OpenClaw 会将请求的范围列表清空为 `[]`，因此未绑定到已批准配对设备/令牌的会话无法自行声明权限。
-- 如果在成功建立 WebSocket 连接后方法仍因 `missing scope` 失败，请使用 HTTPS，以便浏览器可以生成设备身份并完成配对。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
-- 仅限紧急解锁：`gateway.controlUi.dangerouslyDisableDeviceAuth=true` 会在没有设备身份的情况下保留请求的范围。这会严重降低安全性；请尽快恢复。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
-
-反向代理范围上限控制：
-
-- 如果你的代理在 Control UI WebSocket 升级请求上发送 `x-openclaw-scopes`，OpenClaw 会将会话范围限制为请求范围与声明范围的交集。此请求头不会授予范围；它只会缩小会话可持有的范围。
-
-影响：
-
-- 在此模式下，配对不再是 Control UI 访问的主要门禁。
-- 你的反向代理认证策略和 `allowUsers` 将成为实际的访问控制。
-- 将 gateway ingress 仅锁定为受信任代理 IP（`gateway.trustedProxies` + 防火墙）。
-
-自定义 WebSocket 客户端不是 Control UI 会话。`gateway.controlUi.dangerouslyDisableDeviceAuth` 不会为任意 `client.mode: "backend"` 或类似 CLI 的客户端授予范围。自定义自动化应使用设备身份/配对、保留的直连本地 `client.id: "gateway-client"` 后端辅助路径，或在 HTTP 请求/响应更适合时使用 [admin HTTP RPC 插件](/plugins/admin-http-rpc)。
 
 ## 配置
 
 ```json5
 {
   gateway: {
-    // 默认情况下，trusted-proxy 认证期望请求来自非 loopback 的受信任代理源
+    // Trusted-proxy auth expects the proxy's source IP to be non-loopback by default
     bind: "lan",
 
     // 关键：这里只添加你的代理 IP
@@ -103,21 +79,25 @@ read_when:
 ```
 
 <Warning>
-**重要运行规则**
+**运行规则，按评估顺序**
 
-- Trusted-proxy auth 默认会拒绝来自 loopback 源的请求（`127.0.0.1`、`::1`、loopback CIDRs）。
-- 同主机 loopback 反向代理不会满足 trusted-proxy auth，除非你明确设置 `gateway.auth.trustedProxy.allowLoopback = true`，并将 loopback 地址包含在 `gateway.trustedProxies` 中。
-- `allowLoopback` 会将 Gateway 主机上的本地进程视为与反向代理同等可信。只有在 Gateway 仍然通过防火墙禁止直接远程访问，并且本地代理会剥离或覆盖客户端提供的身份头时才启用它。
-- 不经过反向代理的 Gateway 内部客户端应使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`，而不是 trusted-proxy 身份头。
-- 非 loopback 的 Control UI 部署仍然需要显式配置 `gateway.controlUi.allowedOrigins`。
-- **对于本地直接回退，转发头证据会覆盖 loopback 本地性。** 如果请求到达 loopback，但携带了 `Forwarded`、任何 `X-Forwarded-*` 或 `X-Real-IP` 头证据，这些证据会使本地直接密码回退和设备身份门控失效。启用 `allowLoopback: true` 后，trusted-proxy auth 仍然可以将该请求作为同主机代理请求接受，而 `requiredHeaders` 和 `allowUsers` 仍继续生效。
+1. 请求的源 IP 必须匹配 `gateway.trustedProxies`（支持 CIDR），否则会被拒绝（`trusted_proxy_untrusted_source`）。
+2. 来自 loopback 的请求（`127.0.0.1`、`::1`）会被拒绝，除非 `gateway.auth.trustedProxy.allowLoopback = true` 且 loopback 地址也在 `trustedProxies` 中（`trusted_proxy_loopback_source`）。此检查在请求头检查之前运行，因此即使同时缺少必需请求头，loopback 源也会以这种方式失败。
+3. 与 Gateway 主机自身本地网络接口地址匹配的非 loopback 源会被拒绝，作为防伪装保护（`trusted_proxy_local_interface_source`）。如果接口发现本身失败，请求也会被拒绝（`trusted_proxy_local_interface_check_failed`）。
+4. `requiredHeaders` 和 `userHeader` 必须存在且不能为空白。
+5. 如果 `allowUsers` 非空，则必须包含提取出的用户。
 
+**转发请求头证据会覆盖本地直连回退中的 loopback 本地性。** 如果请求到达 loopback，但携带 `Forwarded`、任意 `X-Forwarded-*` 或 `X-Real-IP` 请求头，这些证据会使其不符合本地直连密码回退和设备身份门控，即使它作为 loopback 仍然会因为 trusted-proxy 认证而失败。
+
+只有在 Gateway 仍然通过防火墙阻止直接远程访问，并且本地代理会剥离或覆盖客户端提供的身份请求头时，才启用 `allowLoopback`，因为这会信任与反向代理同等程度的 Gateway 主机本地进程。
+
+未经过反向代理、直接与 Gateway 通信的内部客户端应使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`，而不是 trusted-proxy 身份请求头。非 loopback 的 Control UI 部署仍然需要显式配置 `gateway.controlUi.allowedOrigins`。
 </Warning>
 
 ### 配置参考
 
 <ParamField path="gateway.trustedProxies" type="string[]" required>
-  要信任的代理 IP 地址数组。来自其他 IP 的请求将被拒绝。
+  要信任的代理 IP 地址（或 CIDR）数组。来自其他 IP 的请求会被拒绝。
 </ParamField>
 <ParamField path="gateway.auth.mode" type="string" required>
   必须是 `"trusted-proxy"`。
@@ -131,15 +111,57 @@ read_when:
 <ParamField path="gateway.auth.trustedProxy.allowUsers" type="string[]">
   用户身份的允许列表。为空表示允许所有已认证用户。
 </ParamField>
-<ParamField path="gateway.auth.trustedProxy.allowLoopback" type="boolean">
-  为同主机 loopback 反向代理提供的可选支持。默认值为 `false`。
+<ParamField path="gateway.auth.trustedProxy.allowLoopback" type="boolean" default="false">
+  对同主机 loopback 反向代理的可选支持。
 </ParamField>
 
 <Warning>
-仅当本地反向代理是预期的信任边界时才启用 `allowLoopback`。任何能够连接到 Gateway 的本地进程都可以尝试发送代理身份头，因此应将对 Gateway 的直接访问限制为仅本机，并要求使用代理拥有的请求头，例如 `x-forwarded-proto`，或者在代理支持的情况下使用签名断言头。
+只有在本地反向代理就是预期信任边界时才启用 `allowLoopback`。任何能够连接到 Gateway 的本地进程都可能尝试发送代理身份请求头，因此请将对 Gateway 的直接访问限制为仅本机，并要求使用代理拥有的请求头，例如 `x-forwarded-proto`，或者在你的代理支持时使用签名断言请求头。
 </Warning>
 
-## TLS 终止和 HSTS
+## 控制 UI 配对行为
+
+当 `gateway.auth.mode = "trusted-proxy"` 处于启用状态且请求通过 trusted-proxy 检查时，Control UI WebSocket 会话可以在没有设备配对身份的情况下连接。
+
+范围影响：
+
+- 无设备的 Control UI WebSocket 会话可以连接，但默认不会接收任何操作员范围。OpenClaw 会将请求的范围列表清空为 `[]`，因此未绑定到已批准配对设备/令牌的会话无法自行声明权限。
+- 如果在成功建立 WebSocket 连接后方法仍因 `missing scope` 失败，请改用 HTTPS，以便浏览器生成设备身份并完成配对。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
+- 仅限紧急绕过：`gateway.controlUi.dangerouslyDisableDeviceAuth=true` 会在没有设备身份的情况下仍保留请求的范围。这会严重降低安全性；请尽快恢复。参见 [Control UI 不安全 HTTP](/web/control-ui#insecure-http)。
+
+反向代理范围封顶：如果你的代理在 Control UI WebSocket 升级请求中发送 `x-openclaw-scopes`，OpenClaw 会将会话范围限制为请求范围与声明范围的交集。此头部不会授予范围；它只会缩小会话可持有的范围。
+
+影响：
+
+- 在此模式下，配对不再是 Control UI 访问的主要门槛。
+- 你的反向代理认证策略和 `allowUsers` 会成为实际的访问控制。
+- 保持 gateway 入口仅对受信任的代理 IP 开放（`gateway.trustedProxies` + 防火墙）。
+
+自定义 WebSocket 客户端不是 Control UI 会话。`gateway.controlUi.dangerouslyDisableDeviceAuth` 不会向任意 `client.mode: "backend"` 或 CLI 形态的客户端授予范围。自定义自动化应使用设备身份/配对、保留的直接本地 `client.id: "gateway-client"` 后端辅助路径，或者在 HTTP 请求/响应更合适时使用 [admin HTTP RPC 插件](/plugins/admin-http-rpc)。
+
+## 操作员作用域头
+
+Trusted-proxy 认证是一种**携带身份**的 HTTP 模式，因此调用方可以在 HTTP API 请求中通过 `x-openclaw-scopes` 选择性地声明操作员作用域。
+
+注意：WebSocket 作用域由 Gateway 协议握手和设备身份绑定共同决定。在 Control UI 的 WebSocket 升级请求中，`x-openclaw-scopes` 只会作为协商得到的会话作用域的上限，而不是授予权限。参见 [Control UI 配对行为](#control-ui-pairing-behavior)。
+
+示例：
+
+- `x-openclaw-scopes: operator.read`
+- `x-openclaw-scopes: operator.read,operator.write`
+- `x-openclaw-scopes: operator.admin,operator.write`
+
+行为：
+
+- 当该头存在时，OpenClaw 会遵循所声明的作用域集合。
+- 当该头存在但为空时，请求声明**没有**任何操作员作用域。
+- 当该头缺失时，普通携带身份的 HTTP API 会回退到标准的操作员默认作用域集合（`operator.admin`、`operator.read`、`operator.write`、`operator.approvals`、`operator.pairing`、`operator.talk.secrets`）。
+- Gateway-auth **插件 HTTP 路由**的默认范围更窄：当 `x-openclaw-scopes` 缺失时，它们的运行时作用域会回退为仅 `operator.write`。
+- 即使 trusted-proxy 认证成功，浏览器来源的 HTTP 请求仍然必须通过 `gateway.controlUi.allowedOrigins`（或有意启用的 Host 头回退模式）。
+
+实用规则：当你希望 trusted-proxy 请求比默认值更窄，或者当某个 gateway-auth 插件路由需要比 write 作用域更强的权限时，请显式发送 `x-openclaw-scopes`。
+
+## TLS 终止与 HSTS
 
 使用一个 TLS 终止点，并在那里应用 HSTS。
 
@@ -244,7 +266,7 @@ read_when:
 
     Caddyfile 片段：
 
-    ```
+    ```caddy
     openclaw.example.com {
         authenticate with oauth2_provider
         authorize with policy1
@@ -310,37 +332,14 @@ read_when:
 
 ## 混合令牌配置
 
-当 `gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）与 `trusted-proxy` 模式同时启用时，OpenClaw 会拒绝模糊不清的配置。混合令牌配置可能导致 loopback 请求在错误的认证路径上静默通过认证。
+如果同时还配置了共享令牌（`gateway.auth.token` 或 `OPENCLAW_GATEWAY_TOKEN`），Gateway 启动会拒绝 trusted-proxy 认证。这两者是互斥的，因为共享令牌会让同主机调用者通过与此模式要强制实施的代理验证身份完全不同的路径进行认证。
 
-如果启动时看到 `mixed_trusted_proxy_token` 错误：
+如果启动失败并出现类似 `gateway auth mode is trusted-proxy, but a shared token is also configured` 的错误：
 
 - 在使用 trusted-proxy 模式时移除共享令牌，或
 - 如果你打算使用基于令牌的认证，请将 `gateway.auth.mode` 切换为 `"token"`。
 
 loopback 的 trusted-proxy 身份头仍然会安全失败：同主机调用者不会被静默认证为代理用户。不经过代理的内部 OpenClaw 调用者可以改为使用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD` 进行认证。在 trusted-proxy 模式下，令牌回退仍然被有意不支持。
-
-## 操作员范围请求头
-
-Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以在 HTTP API 请求中选择性地通过 `x-openclaw-scopes` 声明操作员范围。
-
-注意：WebSocket 范围由 Gateway 协议握手和设备身份绑定决定。在 Control UI WebSocket 升级请求上，`x-openclaw-scopes` 只是对协商后会话范围的上限限制，而不是授权。有关 trusted-proxy 下的 WebSocket 范围行为，请参见 [Control UI 配对行为](#control-ui-配对行为)。
-
-示例：
-
-- `x-openclaw-scopes: operator.read`
-- `x-openclaw-scopes: operator.read,operator.write`
-- `x-openclaw-scopes: operator.admin,operator.write`
-
-行为：
-
-- 当该请求头存在时，OpenClaw 会遵循声明的范围集合。
-- 当该请求头存在但为空时，请求声明**没有**操作员范围。
-- 当该请求头缺失时，正常的带身份 HTTP API 会回退到标准的操作员默认范围集合。
-- Gateway-auth **插件 HTTP 路由**默认更窄：当 `x-openclaw-scopes` 缺失时，它们的运行时范围会回退到 `operator.write`。
-- 即使 trusted-proxy auth 成功，来自浏览器源的 HTTP 请求仍然必须通过 `gateway.controlUi.allowedOrigins`（或有意启用的 Host 头回退模式）。
-- 对于 Control UI WebSocket 会话，`x-openclaw-scopes` 在升级请求中存在时就是范围上限。空值则不会授予任何范围。
-
-实用规则：当你希望受信任代理请求比默认值更窄，或者当某个 gateway-auth 插件路由需要比 write scope 更强的权限时，请显式发送 `x-openclaw-scopes`。
 
 ## 安全检查清单
 
@@ -358,16 +357,17 @@ Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以
 
 ## 安全审计
 
-`openclaw security audit` 会将受信任代理认证标记为 **critical** 级别发现。这是有意为之——它是在提醒你，安全性已经委托给你的代理配置。
+`openclaw security audit` 会将受信任代理认证标记为 **严重** 级别的发现。这是有意为之；它是在提醒你，安全性被委托给了你的代理配置。
 
 审计会检查：
 
-- 基础的 `gateway.trusted_proxy_auth` 警告/critical 提示
-- 缺少 `trustedProxies` 配置
-- 缺少 `userHeader` 配置
-- `allowUsers` 为空（允许任何已认证用户）
-- 为同主机代理来源启用了 `allowLoopback`
-- 暴露的 Control UI 表面存在通配或缺失的浏览器来源策略
+- 基础 `gateway.trusted_proxy_auth` 警告/严重提醒。
+- 缺少 `trustedProxies` 配置。
+- 缺少 `userHeader` 配置。
+- 空的 `allowUsers`（允许任何已认证用户）。
+- 为同主机代理来源启用了 `allowLoopback`。
+
+当 Control UI 暴露时，还会应用一些独立的、非受信任代理特定的发现：`gateway.controlUi.allowedOrigins` 的通配符或缺失，以及 Host-header origin 回退。
 
 ## 故障排查
 
@@ -395,6 +395,17 @@ Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以
     - 对于有意使用的同主机反向代理，将 `gateway.auth.trustedProxy.allowLoopback = true`，把 loopback 地址保留在 `gateway.trustedProxies` 中，并确保代理会剥离或覆盖身份头。
 
   </Accordion>
+  <Accordion title="trusted_proxy_local_interface_source / trusted_proxy_local_interface_check_failed">
+    请求的源 IP 与 Gateway 主机自身某个非 loopback 网络接口地址匹配（而不是代理），这是对 tailnet 或 Docker bridge 网络上伪造同主机流量的防护。`..._check_failed` 表示接口发现过程本身出错，因此 OpenClaw 采取拒绝策略。
+
+    请检查：
+
+    - 是否有 Gateway 主机本机上的进程直接发送身份头，绕过了代理？
+    - 代理是否与 Gateway 运行在同一个网络命名空间中，并且其 IP 也显示为本地接口？
+
+    解决方法：将代理流量路由到一个不会被 Gateway 主机本地绑定的地址，或者仅在真正的同主机代理部署中使用 `allowLoopback`。
+
+  </Accordion>
   <Accordion title="trusted_proxy_user_missing">
     用户头为空或缺失。请检查：
 
@@ -412,6 +423,9 @@ Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以
   </Accordion>
   <Accordion title="trusted_proxy_user_not_allowed">
     用户已通过认证，但不在 `allowUsers` 中。请将其加入，或者移除允许列表。
+  </Accordion>
+  <Accordion title="trusted_proxy_no_proxies_configured / trusted_proxy_config_missing">
+    `gateway.auth.mode` 是 `"trusted-proxy"`，但 `gateway.trustedProxies` 为空，或者 `gateway.auth.trustedProxy` 本身缺失。在两者都设置之前，所有请求都会被拒绝。
   </Accordion>
   <Accordion title="trusted_proxy_origin_not_allowed">
     受信任代理认证已成功，但浏览器的 `Origin` 头未通过 Control UI 的来源检查。
@@ -450,16 +464,14 @@ Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以
   </Accordion>
 </AccordionGroup>
 
-## 从 token auth 迁移
-
-如果你要从 token auth 迁移到受信任代理：
+## 从 token 认证迁移
 
 <Steps>
   <Step title="配置代理">
-    配置你的代理以认证用户并传递头部。
+    配置你的代理以认证用户并传递请求头。
   </Step>
   <Step title="独立测试代理">
-    独立测试代理配置（使用带头部的 curl）。
+    独立测试代理配置（使用带请求头的 curl）。
   </Step>
   <Step title="更新 OpenClaw 配置">
     使用受信任代理认证更新 OpenClaw 配置。
@@ -477,7 +489,8 @@ Trusted-proxy auth 是一种**带身份**的 HTTP 模式，因此调用者可以
 
 ## 相关
 
-- [Configuration](/gateway/configuration) — 配置参考
-- [Remote access](/gateway/remote) — 其他远程访问模式
-- [Security](/gateway/security) — 完整安全指南
+- [配置](/gateway/configuration) — 配置参考
+- [Operator 作用域](/gateway/operator-scopes) — 角色、作用域和审批检查
+- [远程访问](/gateway/remote) — 其他远程访问模式
+- [安全性](/gateway/security) — 完整安全指南
 - [Tailscale](/gateway/tailscale) — 仅限 tailnet 访问的更简单替代方案

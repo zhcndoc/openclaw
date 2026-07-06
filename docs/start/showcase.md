@@ -7,7 +7,7 @@ read_when:
   - 更新社区项目亮点
 ---
 
-OpenClaw 项目并不是玩具演示。人们正在通过他们已经在使用的渠道交付 PR 审查循环、移动应用、家庭自动化、语音系统、开发工具和重度内存工作流——在 Telegram、WhatsApp、Discord 和终端上进行聊天原生构建；无需等待 API 就能实现真实的预订、购物和支持自动化；以及与打印机、扫地机器人、摄像头和家庭系统的物理世界集成。
+社区构建的 OpenClaw 项目：PR 审查循环、移动应用、家庭自动化、语音系统、开发工具和记忆工作流，原生聊天式构建于 Telegram、WhatsApp、Discord 和终端中。
 
 <Info>
 **想被展示出来吗？** 在 Discord 的 [#self-promotion](https://discord.gg/clawd) 分享你的项目，或在 X 上 [标记 @openclaw](https://x.com/openclaw)。
@@ -101,12 +101,10 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
   <img src="/assets/showcase/r2-upload.png" alt="ClawHub 上的 R2 上传技能" />
 </Card>
 
-<Card title="通过 Telegram 构建 iOS 应用" icon="mobile">
-  **@coard** • `ios` `xcode` `testflight`
+<Card title="iOS app via Telegram" icon="mobile">
+  **@coard** • `ios` `xcode` `app-store`
 
-完整构建了一个带地图和语音录制功能的 iOS 应用，并且完全通过 Telegram 聊天部署到 TestFlight。
-
-  <img src="/assets/showcase/ios-testflight.jpg" alt="TestFlight 上的 iOS 应用" />
+通过 Telegram 聊天完整构建了一个带地图和语音录制功能的 iOS 应用，并已为 App Store 分发做好准备。
 </Card>
 
 <Card title="Oura Ring 健康助手" icon="heart-pulse">
@@ -139,7 +137,7 @@ OpenCode 完成更改，打开 PR，OpenClaw 审查差异并在 Telegram 中回�
 
 ## 自动化和工作流
 
-日程安排、浏览器控制、支持循环，以及产品中“直接帮我把任务做了”的那一面。
+日程安排、浏览器控制、支持循环，以及产品中“直接帮我把任务做了”的一面。
 
 <CardGroup cols={2}>
 
@@ -224,7 +222,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 <CardGroup cols={2}>
 
 <Card title="xuezh 中文学习" icon="language" href="https://github.com/joshp123/xuezh">
-  **@joshp123** • `learning` `voice` `skill`
+  **@joshp123** • `学习` `语音` `技能`
 
 通过 OpenClaw 提供发音反馈和学习流程的中文学习引擎。
 
@@ -232,19 +230,19 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 </Card>
 
 <Card title="WhatsApp 记忆保险库" icon="vault">
-  **社区** • `memory` `transcription` `indexing`
+  **社区** • `记忆` `转录` `索引`
 
 导入完整的 WhatsApp 导出，转录 1000+ 条语音笔记，与 git 日志交叉核对，输出关联的 markdown 报告。
 </Card>
 
 <Card title="Karakeep 语义搜索" icon="magnifying-glass" href="https://github.com/jamesbrooksco/karakeep-semantic-search">
-  **@jamesbrooksco** • `search` `vector` `bookmarks`
+  **@jamesbrooksco** • `搜索` `向量` `书签`
 
 使用 Qdrant 以及 OpenAI 或 Ollama embeddings 为 Karakeep 书签添加向量搜索。
 </Card>
 
 <Card title="Inside-Out-2 记忆" icon="brain">
-  **社区** • `memory` `beliefs` `self-model`
+  **社区** • `记忆` `信念` `自我模型`
 
 独立的记忆管理器，将会话文件转化为记忆，再转化为信念，最后形成不断演化的自我模型。
 </Card>
@@ -263,7 +261,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 将 Vapi 语音助手连接到 OpenClaw 的 HTTP 桥接。可与你的智能体进行近乎实时的电话通话。
 </Card>
 
-<Card title="OpenRouter transcription" icon="microphone" href="https://clawhub.ai/obviyus/skills/openrouter-transcribe">
+<Card title="OpenRouter 转录" icon="microphone" href="https://clawhub.ai/obviyus/skills/openrouter-transcribe">
   **@obviyus** • `transcription` `multilingual` `skill`
 
 多语言音频转录，通过 OpenRouter（Gemini 等）实现。可在 ClawHub 上使用。
@@ -285,7 +283,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 运行在 Home Assistant OS 上的 OpenClaw 网关，支持 SSH 隧道和持久化状态。
 </Card>
 
-<Card title="Home Assistant skill" icon="toggle-on" href="https://clawhub.ai/homeofe/skills/openclaw-homeassistant">
+<Card title="Home Assistant 技能" icon="toggle-on" href="https://clawhub.ai/homeofe/skills/openclaw-homeassistant">
   **@homeofe** • `homeassistant` `skill` `automation`
 
 通过自然语言控制和自动化 Home Assistant 设备。
@@ -299,7 +297,7 @@ OpenClaw 连接到 Jira，然后即时生成了一个新技能（在它出现在
 开箱即用的 nix 化 OpenClaw 配置，用于可复现部署。
 </Card>
 
-<Card title="CalDAV calendar" icon="calendar" href="https://clawhub.ai/asleep123/skills/caldav-calendar">
+<Card title="CalDAV 日历" icon="calendar" href="https://clawhub.ai/asleep123/skills/caldav-calendar">
   **@asleep123** • `calendar` `caldav` `skill`
 
 使用 khal 和 vdirsyncer 的日历技能。自托管日历集成。

@@ -6,115 +6,116 @@ read_when:
 title: "exe.dev"
 ---
 
-目标：在 exe.dev 的 VM 上运行 OpenClaw Gateway，并可从你的笔记本通过以下地址访问：`https://<vm-name>.exe.xyz`
+**目标：** 在 [exe.dev](https://exe.dev) 的 VM 上运行 OpenClaw Gateway，可通过 `https://<vm-name>.exe.xyz` 访问。
 
-本页面假设使用 exe.dev 的默认 **exeuntu** 镜像。如果你选择了不同的发行版，请相应地映射软件包。
-
-## 初学者快速路径
-
-1. [https://exe.new/openclaw](https://exe.new/openclaw)
-2. 按需填写你的 auth key/token
-3. 点击你的 VM 旁边的“Agent”，等待 Shelley 完成配置
-4. 打开 `https://<vm-name>.exe.xyz/`，并使用已配置的共享密钥进行身份验证（本指南默认使用 token auth，但如果你切换 `gateway.auth.mode`，password auth 也可以使用）
-5. 使用 `openclaw devices approve <requestId>` 批准任何待处理的设备配对请求
+本指南假设使用 exe.dev 的默认 **exeuntu** 镜像。若使用其他发行版，请相应调整软件包。
 
 ## 你需要准备什么
 
 - exe.dev 账户
-- 访问 [exe.dev](https://exe.dev) 虚拟机的 `ssh exe.dev` 权限（可选）
+- `ssh exe.dev` 访问 exe.dev 虚拟机（可选，用于手动设置）
+
+## 新手快速路径
+
+1. 打开 [https://exe.new/openclaw](https://exe.new/openclaw)
+2. 根据需要填写你的 auth key/token
+3. 点击你的 VM 旁边的 “Agent”，等待 Shelley 完成 provisioning
+4. 打开 `https://<vm-name>.exe.xyz/`，并使用已配置的 shared secret 进行身份验证（默认使用 token auth；如果你切换 `gateway.auth.mode`，password auth 也可以使用）
+5. 使用 `openclaw devices approve <requestId>` 批准待处理的设备配对请求
 
 ## 使用 Shelley 自动安装
 
-Shelley，[exe.dev](https://exe.dev) 的 agent，可以通过我们的提示词立即安装 OpenClaw。所使用的提示词如下：
+Shelley，exe.dev 的代理，可以通过提示安装 OpenClaw：
 
-```
-在这台 VM 上设置 OpenClaw (https://docs.openclaw.ai/install)。为 openclaw onboarding 使用非交互式和 accept-risk 标志。按需添加提供的 auth 或 token。配置 nginx，将默认启用站点配置上的默认端口 18789 转发到根路径，确保启用 Websocket 支持。配对通过 "openclaw devices list" 和 "openclaw devices approve <request id>" 完成。确保仪表盘显示 OpenClaw 的健康状态为 OK。exe.dev 会为我们处理从端口 8000 到 80/443 的转发以及 HTTPS，因此最终的“可访问地址”应为 <vm-name>.exe.xyz，不要指定端口。
+```text
+在这台 VM 上设置 OpenClaw (https://docs.openclaw.ai/install)。对 openclaw onboarding 使用 non-interactive 和 accept-risk 标志。根据需要添加提供的 auth 或 token。将 nginx 配置为在默认启用的站点配置上，将默认端口 18789 转发到根路径，并确保启用 Websocket 支持。配对通过 "openclaw devices list" 和 "openclaw devices approve <request id>" 完成。确保仪表板显示 OpenClaw 的健康状态为 OK。exe.dev 会为我们处理从端口 8000 到 80/443 的转发以及 HTTPS，因此最终的 "reachable" 应该是 <vm-name>.exe.xyz，不需要指定端口。
 ```
 
 ## 手动安装
 
-## 1）创建 VM
+<Steps>
+  <Step title="创建虚拟机">
+    从你的设备：
 
-在你的设备上：
+    ```bash
+    ssh exe.dev new
+    ```
 
-```bash
-ssh exe.dev new
-```
+    然后连接：
 
-然后连接：
+    ```bash
+    ssh <vm-name>.exe.xyz
+    ```
 
-```bash
-ssh <vm-name>.exe.xyz
-```
+    <Tip>
+    保持这个虚拟机**有状态**。OpenClaw 会将 `openclaw.json`、每个代理的 `auth-profiles.json`、会话以及通道/提供方状态存储在 `~/.openclaw/` 下，并将工作区存储在 `~/.openclaw/workspace/` 下。
+    </Tip>
 
-<Tip>
-保持此 VM 为**有状态**。OpenClaw 会将 `openclaw.json`、按 agent 区分的 `auth-profiles.json`、会话以及 channel/provider 状态存储在 `~/.openclaw/` 下，同时将工作区存储在 `~/.openclaw/workspace/`。
-</Tip>
+  </Step>
 
-## 2）安装前置依赖（在 VM 上）
+  <Step title="安装先决条件（在虚拟机上）">
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y git curl jq ca-certificates openssl
+    ```
+  </Step>
 
-```bash
-sudo apt-get update
-sudo apt-get install -y git curl jq ca-certificates openssl
-```
+  <Step title="安装 OpenClaw">
+    ```bash
+    curl -fsSL https://openclaw.ai/install.sh | bash
+    ```
+  </Step>
 
-## 3）安装 OpenClaw
+  <Step title="配置 nginx 代理到 8000 端口">
+    编辑 `/etc/nginx/sites-enabled/default`：
 
-运行 OpenClaw 安装脚本：
+    ```nginx
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        listen 8000;
+        listen [::]:8000;
 
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
-```
+        server_name _;
 
-## 4）设置 nginx，将 OpenClaw 代理到端口 8000
+        location / {
+            proxy_pass http://127.0.0.1:18789;
+            proxy_http_version 1.1;
 
-使用以下内容编辑 `/etc/nginx/sites-enabled/default`
+            # WebSocket 支持
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
 
-```
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    listen 8000;
-    listen [::]:8000;
+            # 标准代理头
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Forwarded-Proto $scheme;
 
-    server_name _;
-
-    location / {
-        proxy_pass http://127.0.0.1:18789;
-        proxy_http_version 1.1;
-
-        # WebSocket 支持
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        # 标准代理头
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # 长连接的超时设置
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
+            # 长连接的超时设置
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+        }
     }
-}
-```
+    ```
 
-请覆盖转发头，而不是保留客户端提供的链路。
-OpenClaw 仅信任来自显式配置代理的转发 IP 元数据，
-而追加式 `X-Forwarded-For` 链路会被视为加固风险。
+    覆盖转发头，而不是保留客户端提供的链。OpenClaw 仅信任来自显式配置代理的转发 IP 元数据，而追加式 `X-Forwarded-For` 链被视为加固风险。
 
-## 5）访问 OpenClaw 并授予权限
+  </Step>
 
-访问 `https://<vm-name>.exe.xyz/`（参见 onboarding 输出中的 Control UI）。如果它提示进行身份验证，请粘贴
-VM 中配置的共享密钥。本指南使用 token auth，因此请通过 `openclaw config get gateway.auth.token`
-获取 `gateway.auth.token`（或者使用 `openclaw doctor --generate-gateway-token` 生成一个）。
-如果你将 gateway 改为 password auth，请改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
-使用 `openclaw devices list` 和 `openclaw devices approve <requestId>` 批准设备。如有疑问，请从浏览器中使用 Shelley！
+  <Step title="访问 OpenClaw 并批准设备">
+    打开 `https://<vm-name>.exe.xyz/`（请参见引导中的 Control UI 输出）。如果提示认证，请粘贴 VM 中配置的共享密钥。
+
+    本指南默认使用令牌认证，因此请使用 `openclaw config get gateway.auth.token` 获取 `gateway.auth.token`，或者使用 `openclaw doctor --n` 生成一个新的。如果你已将网关切换为密码认证，请改用 `gateway.auth.password` / `OPENCLAW_GATEWAY_PASSWORD`。
+
+    使用 `openclaw devices list` 和 `openclaw devices approve <requestId>` 批准设备。不确定时，请在浏览器中使用 Shelley。
+
+  </Step>
+</Steps>
 
 ## 远程通道设置
 
-对于远程主机，建议一次使用一个 `config patch` 调用，而不是多次 SSH 调用 `config set`。将真实 token 保留在 VM 环境或 `~/.openclaw/.env` 中，并且只在 `openclaw.json` 中放置 SecretRef。
+对于远程主机，优先使用一次 `config patch` 调用，而不是多次通过 SSH 调用 `config set`。将真实令牌保留在 VM 环境变量或 `~/.openclaw/.env` 中，只在 `openclaw.json` 里放置 SecretRef。有关完整的 SecretRef 约定，请参见 [Secrets management](/gateway/secrets)。
 
 在 VM 上，让服务环境包含它所需的密钥：
 
@@ -171,27 +172,25 @@ ssh <vm-name>.exe.xyz 'openclaw config patch --stdin' < ./openclaw.remote.patch.
 ssh <vm-name>.exe.xyz 'openclaw gateway restart && openclaw health'
 ```
 
-当嵌套 allowlist 应该精确变成补丁值时，请使用 `--replace-path`，例如在替换 Discord 通道 allowlist 时：
+当嵌套 allowlist 应精确变为补丁值时，请使用 `--replace-path`，例如替换 Discord 通道 allowlist：
 
 ```bash
 ssh <vm-name>.exe.xyz 'openclaw config patch --stdin --replace-path "channels.discord.guilds[\"123\"].channels"' < ./discord.patch.json5
 ```
 
+有关完整的通道配置参考，请参见 [Discord](/channels/discord) 和 [Slack](/channels/slack)。
+
 ## 远程访问
 
-远程访问由 [exe.dev](https://exe.dev) 的身份验证处理。默认情况下，从端口 8000 发出的 HTTP 流量会通过 email auth 转发到
-`https://<vm-name>.exe.xyz`。
+exe.dev 处理远程访问的身份验证。默认情况下，来自端口 8000 的 HTTP 流量会通过邮箱认证转发到 `https://<vm-name>.exe.xyz`。
 
 ## 更新
 
 ```bash
-npm i -g openclaw@latest
-openclaw doctor
-openclaw gateway restart
-openclaw health
+openclaw update
 ```
 
-指南：[更新](/install/updating)
+有关频道切换和手动恢复，请参见[更新](/install/updating)。
 
 ## 相关内容
 

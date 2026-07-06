@@ -13,10 +13,7 @@ sidebarTitle: "MCP"
 - 使用 `openclaw mcp serve` 将 OpenClaw 作为 MCP 服务器运行
 - 使用 `list`、`show`、`status`、`doctor`、`probe`、`add`、`set`、`configure`、`tools`、`login`、`logout`、`reload` 和 `unset` 管理 OpenClaw 托管的出站 MCP 服务器定义
 
-换句话说：
-
-- `serve` 是 OpenClaw 作为 MCP 服务器运行
-- 其他子命令则是 OpenClaw 作为 MCP 客户端侧注册表，用于管理其运行时后续可能消费的 MCP 服务器
+`serve` is OpenClaw acting as an MCP server. The other subcommands are OpenClaw acting as an MCP client-side registry for servers its own runtimes may consume later.
 
 <Note>
   `list`、`show`、`set` 和 `unset` 只会读取和写入 OpenClaw 配置中的 OpenClaw 托管 `mcp.servers` 条目。它们不包含来自 `config/mcporter.json` 的 mcporter 服务器；请使用 `mcporter list` 查看该注册表。
@@ -26,9 +23,7 @@ sidebarTitle: "MCP"
 
 ## 选择合适的 MCP 路径
 
-OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归属方相匹配的路径。
-
-| 目标                                                                | 使用                                                                  | 原因                                                                                                             |
+| Goal                                                                | Use                                                                  | Why                                                                                                             |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | 让外部 MCP 客户端读取/发送 OpenClaw 频道对话 | `openclaw mcp serve`                                                 | OpenClaw 作为 MCP 服务器，通过 stdio 暴露由 Gateway 支持的对话。                                 |
 | 为 OpenClaw 托管的代理运行保存第三方 MCP 服务器        | `openclaw mcp add`, `set`, `configure`, `tools`, `login`             | OpenClaw 作为 MCP 客户端侧注册表，之后会将这些服务器投影到符合条件的运行时中。               |
@@ -45,7 +40,7 @@ OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归
 
 这就是 `openclaw mcp serve` 路径。
 
-### 何时使用 `serve`
+### When to use serve
 
 在以下情况下使用 `openclaw mcp serve`：
 
@@ -92,8 +87,6 @@ OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归
 
 ### 选择客户端模式
 
-同一个桥接可以用两种不同方式使用：
-
 <Tabs>
   <Tab title="通用 MCP 客户端">
     仅使用标准 MCP 工具。使用 `conversations_list`、`messages_read`、`events_poll`、`events_wait`、`messages_send` 和审批工具。
@@ -107,7 +100,7 @@ OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归
 目前，`auto` 的行为与 `on` 相同。尚未进行客户端能力检测。
 </Note>
 
-### `serve` 暴露什么
+### What serve exposes
 
 该桥接使用现有的 Gateway 会话路由元数据来暴露由频道支持的对话。当 OpenClaw 已经拥有具有已知路由的会话状态时，会显示一个对话，例如：
 
@@ -152,35 +145,27 @@ OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归
 
 ### 桥接工具
 
-当前桥接暴露以下 MCP 工具：
-
 <AccordionGroup>
   <Accordion title="conversations_list">
     列出最近的、已绑定会话的对话，这些对话在 Gateway 会话状态中已经有路由元数据。
 
-    有用的过滤条件：
-
-    - `limit`
-    - `search`
-    - `channel`
-    - `includeDerivedTitles`
-    - `includeLastMessage`
+    Filters: `limit` (max 500), `search`, `channel`, `includeDerivedTitles`, `includeLastMessage`.
 
   </Accordion>
   <Accordion title="conversation_get">
     通过 `session_key` 使用直接的 Gateway 会话查找返回一个对话。
   </Accordion>
   <Accordion title="messages_read">
-    读取一个已绑定会话对话的最近转写消息。
+    Reads recent transcript messages for one session-backed conversation. `limit` defaults to 20, max 200.
   </Accordion>
   <Accordion title="attachments_fetch">
     从一条转写消息中提取非文本消息内容块。这是对转写内容的元数据视图，而不是独立的持久化附件 blob 存储。
   </Accordion>
   <Accordion title="events_poll">
-    从一个数值游标开始读取已排队的实时事件。
+    Reads queued live events since a numeric cursor. `limit` max 200.
   </Accordion>
   <Accordion title="events_wait">
-    长轮询直到下一个匹配的已排队事件到达或超时结束。
+    Long-polls until the next matching queued event arrives or a timeout expires (default 30s, max 300s).
 
     当通用 MCP 客户端需要接近实时的投递，但不使用 Claude 特定推送协议时，请使用这个工具。
 
@@ -251,10 +236,10 @@ OpenClaw 有多个 MCP 入口。请选择与代理运行时归属方和工具归
 
 当前桥接行为：
 
-- 入站 `user` 转写消息会作为 `notifications/claude/channel` 转发
-- 通过 MCP 接收的 Claude 权限请求会在内存中跟踪
-- 如果链接的对话后来发送了 `yes abcde` 或 `no abcde`，桥接会将其转换为 `notifications/claude/channel/permission`
-- 这些通知仅在实时会话中有效；如果 MCP 客户端断开连接，就没有推送目标了
+- inbound `user` transcript messages are forwarded as `notifications/claude/channel`
+- Claude permission requests received over MCP are tracked in-memory
+- if the command owner in the linked conversation later sends `yes <id>` or `no <id>` (`<id>` is the 5-letter request id, excluding `l`), the bridge converts that to `notifications/claude/channel/permission`
+- these notifications are live-session only; if the MCP client disconnects, there is no push target
 
 这故意是客户端特定的。通用 MCP 客户端应依赖标准轮询工具。
 
@@ -287,7 +272,7 @@ stdio 客户端配置示例：
 `openclaw mcp serve` 支持：
 
 <ParamField path="--url" type="string">
-  Gateway WebSocket URL。
+  Gateway WebSocket URL. Defaults to `gateway.remote.url` when configured.
 </ParamField>
 <ParamField path="--token" type="string">
   Gateway token。
@@ -302,7 +287,7 @@ stdio 客户端配置示例：
   从文件读取密码。
 </ParamField>
 <ParamField path="--claude-channel-mode" type='"auto" | "on" | "off"'>
-  Claude 通知模式。
+  Claude notification mode. Default `auto`.
 </ParamField>
 <ParamField path="-v, --verbose" type="boolean">
   在 stderr 上输出详细日志。
@@ -333,12 +318,7 @@ OpenClaw 为此桥接提供了确定性的 Docker 冒烟测试：
 pnpm test:docker:mcp-channels
 ```
 
-该冒烟测试会：
-
-- 启动一个带种子的 Gateway 容器
-- 启动第二个容器来运行 `openclaw mcp serve`
-- 验证对话发现、转写读取、附件元数据读取、实时事件队列行为，以及出站发送路由
-- 通过真实的 stdio MCP 桥接验证 Claude 风格的频道和权限通知
+That smoke runs a single container: it seeds conversation state, starts the Gateway, then spawns `openclaw mcp serve` as a stdio child process and drives it as an MCP client. It verifies conversation discovery, transcript reads, attachment metadata reads, live event queue behavior, and Claude-style channel and permission notifications over the real stdio MCP bridge. Outbound send routing (`messages_send` reusing the stored conversation route) is covered separately by unit tests in `src/mcp/channel-server.test.ts`.
 
 这是在不把真实的 Telegram、Discord 或 iMessage 账户接入测试运行的情况下证明桥接可用的最快方式。
 
@@ -406,9 +386,7 @@ Codex app-server 也支持每个服务器上的可选 `codex` 块。这是仅针
 
 ### 已保存的 MCP 服务器定义
 
-OpenClaw 还会在配置中存储一个轻量级的 MCP 服务器注册表，用于希望使用 OpenClaw 管理的 MCP 定义的界面。
-
-命令：
+Commands:
 
 - `openclaw mcp list`
 - `openclaw mcp show [name]`
@@ -426,20 +404,20 @@ OpenClaw 还会在配置中存储一个轻量级的 MCP 服务器注册表，用
 
 说明：
 
-- `list` 会对服务器名称排序。
-- 不带名称的 `show` 会打印完整配置的 MCP 服务器对象。
-- `status` 会在不连接的情况下对已配置的传输进行分类。`--verbose` 会包含已解析的启动、超时、OAuth、过滤器和并行调用细节。
-- `doctor` 会在不连接的情况下执行静态检查。当命令还应验证已启用服务器是否能连接时，添加 `--probe`。
-- `probe` 会连接并报告工具数量、resources/prompts 支持、列表变更支持以及诊断信息。
-- `add` 接受 stdio 标志，例如 `--command`、`--arg`、`--env` 和 `--cwd`，或者 HTTP 标志，例如 `--url`、`--transport`、`--header`、`--auth oauth`、TLS、超时和工具选择标志。
-- `set` 期望在命令行上提供一个 JSON 对象值。
-- `configure` 会更新启用状态、工具过滤器、超时、OAuth、TLS 和并行工具调用提示，而不会替换整个服务器定义。
-- `tools` 会更新每个服务器的工具过滤器。include/exclude 条目是 MCP 工具名称和简单的 `*` 通配符。
-- `login` 会为配置了 `auth: "oauth"` 的 HTTP 服务器运行 OAuth 流程。首次运行会打印授权 URL；在批准后带上 `--code` 重新运行。
-- `logout` 会清除指定服务器已存储的 OAuth 凭据，但不会移除已保存的服务器定义。
-- `reload` 会释放缓存的进程内 MCP 运行时。另一个进程中的网关或代理进程仍然需要它们各自的 reload 或重启路径。
-- 对于 Streamable HTTP MCP 服务器，请使用 `transport: "streamable-http"`。`openclaw mcp set` 也会为兼容性将 CLI 原生的 `type: "http"` 规范化为相同的规范配置形状。
-- 如果指定服务器不存在，`unset` 会失败。
+- `list` sorts server names.
+- `show` without a name prints the full configured MCP server object.
+- `status` classifies configured transports without connecting. `--verbose` includes resolved launch, timeout, OAuth, filter, and parallel-call details.
+- `doctor` performs static checks without connecting. Add `--probe` when the command should also verify that enabled servers connect.
+- `probe` connects and reports tool counts, resources/prompts support, list-change support, and diagnostics.
+- `add` accepts stdio flags such as `--command`, `--arg`, `--env`, and `--cwd`, or HTTP flags such as `--url`, `--transport`, `--header`, `--auth oauth`, TLS, timeout, and tool-selection flags.
+- `set` expects one JSON object value on the command line.
+- `configure` updates enablement, tool filters, timeouts, OAuth, TLS, and parallel-tool-call hints without replacing the whole server definition. Add `--probe` to verify the updated server before saving.
+- `tools` updates per-server tool filters. Include/exclude entries are MCP tool names and simple `*` globs.
+- `login` runs the OAuth flow for HTTP servers configured with `auth: "oauth"`. The first run prints an authorization URL; rerun with `--code` after approval.
+- `logout` clears stored OAuth credentials for the named server without removing the saved server definition.
+- `reload` disposes cached in-process MCP runtimes for the current CLI process only. Gateway or agent processes in another process still need their own reload or restart path.
+- Use `transport: "streamable-http"` for Streamable HTTP MCP servers. `openclaw mcp set` also normalizes CLI-native `type: "http"` to the same canonical config shape for compatibility.
+- `unset` fails if the named server does not exist.
 
 示例：
 
@@ -572,16 +550,16 @@ openclaw mcp unset context7
   <Accordion title="doctor --json">
     ```json
     {
-      "ok": false,
+      "ok": true,
       "path": "/home/user/.openclaw/openclaw.json",
       "servers": [
         {
           "name": "docs",
-          "ok": false,
+          "ok": true,
           "issues": [
             {
-              "level": "error",
-              "message": "OAuth 凭据未授权；请运行 openclaw mcp login docs"
+              "level": "warning",
+              "message": "OAuth credentials are not authorized; run openclaw mcp login docs"
             }
           ]
         }
@@ -589,20 +567,18 @@ openclaw mcp unset context7
     }
     ```
 
-    当任何已启用且被检查的服务器存在错误时，`doctor --json` 会以非零状态退出。警告会被报告，但不会单独导致命令失败。
+    `doctor --json` exits nonzero when any enabled checked server has an `error`-level issue. `warning` and `info` issues are reported but do not make the command fail by themselves.
 
   </Accordion>
   <Accordion title="probe --json">
     ```json
     {
-      "path": "/home/user/.openclaw/openclaw.json",
       "generatedAt": "2026-05-31T09:00:00.000Z",
       "servers": {
         "docs": {
           "launch": "streamable-http https://mcp.example.com/mcp",
           "tools": 2,
           "resources": true,
-          "prompts": false,
           "listChanged": {
             "tools": true,
             "resources": false,
@@ -615,7 +591,7 @@ openclaw mcp unset context7
     }
     ```
 
-    `probe` 会打开一个实时 MCP 客户端会话。请将其用于可达性和能力证明，而不是用于静态配置审计。
+    `probe --json` opens a live MCP client session and prints its result directly; unlike `status`/`doctor`, the output has no top-level `path` field. `resources` and `prompts` keys are present only when the server actually advertises that capability (a server without prompts omits the `prompts` key rather than reporting `false`). Use `probe` for reachability and capability proof, not for static config audits.
 
   </Accordion>
 </AccordionGroup>
@@ -667,7 +643,7 @@ openclaw mcp unset context7
 <Warning>
 **Stdio 环境变量安全过滤器**
 
-OpenClaw 会拒绝那些会在第一次 RPC 之前改变 stdio MCP 服务器启动方式的解释器启动环境变量键，即使它们出现在服务器的 `env` 块中。被阻止的键包括 `BASHOPTS`、`FPATH`、`KSH_ENV`、`NODE_OPTIONS`、`NODE_REDIRECT_WARNINGS`、`NODE_REPL_EXTERNAL_MODULE`、`NODE_REPL_HISTORY`、`NODE_V8_COVERAGE`、`PYTHONSTARTUP`、`PYTHONPATH`、`PERL5OPT`、`RUBYOPT`、`SHELLOPTS`、`PS4`、`TCLLIBPATH` 以及类似的运行时控制变量。启动时会以配置错误拒绝这些变量，因此它们不能注入隐式前导、替换解释器、启用调试器，或将运行时输出重定向到 stdio 进程之外。普通凭据、代理和特定服务器的环境变量（`GITHUB_TOKEN`、`HTTP_PROXY`、自定义 `*_API_KEY` 等）不受影响。
+OpenClaw rejects interpreter-startup, loader-hijack, and shell-init env keys before spawning a stdio MCP server, even if they appear in a server's `env` block. This uses the same host environment security policy as other OpenClaw-spawned processes: it blocks known interpreter startup hooks (for example `NODE_OPTIONS`, `PYTHONSTARTUP`, `PERL5OPT`, `RUBYOPT`, `BASHOPTS`, `KSH_ENV`), shared-library and function-injection prefixes (`DYLD_*`, `LD_*`, `BASH_FUNC_*`), and similar runtime-control variables. Startup drops these silently and logs a warning so they cannot inject an implicit prelude, swap the interpreter, enable a debugger, or hijack the dynamic linker against the stdio process. An explicit allowlist keeps ordinary MCP credential env vars usable (`GITHUB_TOKEN`, `GH_TOKEN`, `GITLAB_TOKEN`, `NPM_TOKEN`, `NODE_AUTH_TOKEN`, `DATABASE_URL`, `MONGODB_URI`, `REDIS_URL`, `AMQP_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`), along with ordinary proxy and server-specific env vars (`HTTP_PROXY`, custom `*_API_KEY`, etc.). Other `AWS_*` keys such as `AWS_CONFIG_FILE` and `AWS_SHARED_CREDENTIALS_FILE` remain blocked because they point at credential files rather than carry a credential value directly.
 
 如果你的 MCP 服务器确实需要其中某个被阻止的变量，请将其设置在网关主机进程上，而不是放在 stdio 服务器的 `env` 下。
 </Warning>

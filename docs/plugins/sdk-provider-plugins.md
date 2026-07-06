@@ -8,19 +8,20 @@ read_when:
   - 你需要了解提供方认证、目录和运行时钩子
 ---
 
-本指南将带你构建一个为 OpenClaw 添加模型提供方（LLM）的插件。到最后，你将拥有一个带有模型目录、API 密钥认证和动态模型解析能力的提供方。
+Build a provider plugin to add a model provider (LLM) to OpenClaw: a model
+catalog, API-key auth, and dynamic model resolution.
 
 <Info>
-  如果你之前没有构建过任何 OpenClaw 插件，请先阅读
-  [入门指南](/plugins/building-plugins)，了解基本的软件包
-  结构和清单配置。
+  New to OpenClaw plugins? Read [Getting Started](/plugins/building-plugins)
+  first for package structure and manifest setup.
 </Info>
 
 <Tip>
-  提供方插件会将模型添加到 OpenClaw 的常规推理循环中。如果模型
-  必须通过一个原生代理守护进程运行，并由该守护进程负责线程、压缩或工具
-  事件，那么应将该提供方与一个 [agent harness](/plugins/sdk-agent-harness)
-  配对使用，而不是把守护进程协议细节放进核心中。
+  Provider plugins add models to OpenClaw's normal inference loop. If the
+  model must run through a native agent daemon that owns threads, compaction,
+  or tool events, pair the provider with an [agent
+  harness](/plugins/sdk-agent-harness) instead of putting daemon protocol
+  details in core.
 </Tip>
 
 ## 操作流程
@@ -91,11 +92,15 @@ read_when:
     ```
     </CodeGroup>
 
-    清单声明 `setup.providers[].envVars`，这样 OpenClaw 就能在不加载你的插件运行时的情况下检测
-    凭据。当某个提供方变体应复用另一个提供方 id 的认证时，添加 `providerAuthAliases`。`modelSupport`
-    是可选项，它允许 OpenClaw 在运行时钩子存在之前，就从像 `acme-large` 这样的简写
-    模型 id 自动加载你的提供方插件。如果你在 ClawHub 上发布该提供方，那么 `package.json` 中的
-    `openclaw.compat` 和 `openclaw.build` 字段是必需的。
+    `setup.providers[].envVars` lets OpenClaw detect credentials without
+    loading your plugin runtime. Add `providerAuthAliases` when a provider
+    variant should reuse another provider id's auth. `modelSupport` is
+    optional and lets OpenClaw auto-load your provider plugin from shorthand
+    model ids like `acme-large` before runtime hooks exist. `openclaw.compat`
+    and `openclaw.build` in `package.json` are required for ClawHub
+    publishing (`openclaw.compat.pluginApi` and `openclaw.build.openclawVersion`
+    are the two required fields; `minGatewayVersion` falls back to
+    `openclaw.install.minHostVersion` when omitted).
 
   </Step>
 
@@ -191,14 +196,15 @@ read_when:
     });
     ```
 
-    `registerModelCatalogProvider` 是用于列表/帮助/选择器 UI 的较新的控制平面目录
-    表面。将它用于文本、图像生成、视频生成和音乐生成条目。把厂商端点调用和
-    响应映射保留在插件中；OpenClaw 负责共享的行形状、来源
-    标签和帮助渲染。
+    `registerModelCatalogProvider` is the newer control-plane catalog surface
+    for list/help/picker UI, covering `text`, `voice`, `image_generation`,
+    `video_generation`, and `music_generation` rows. Keep vendor endpoint
+    calls and response mapping in the plugin; OpenClaw owns the shared row
+    shape, source labels, and help rendering.
 
-    这就是一个可工作的提供方。用户现在可以
-    `openclaw onboard --acme-ai-api-key <key>` 并选择
-    `acme-ai/acme-large` 作为他们的模型。
+    That is a working provider. Users can now run
+    `openclaw onboard --acme-ai-api-key <key>` and select
+    `acme-ai/acme-large` as their model.
 
     ### Live model discovery
 
@@ -469,11 +475,12 @@ read_when:
 
     | Family | 作用 | 打包示例 |
     | --- | --- | --- |
-    | `openai-compatible` | OpenAI 兼容传输的共享 OpenAI 风格 replay 策略，包括 tool-call-id 清理、assistant-first 排序修复，以及在传输需要时的通用 Gemini turn 校验 | `moonshot`, `ollama`, `xai`, `zai` |
-    | `anthropic-by-model` | 根据 `modelId` 选择、感知 Claude 的 replay 策略，因此 Anthropic-message 传输只有在解析出的模型确实是 Claude id 时，才会执行 Claude 专属 thinking-block 清理 | `amazon-bedrock`, `anthropic-vertex` |
-    | `google-gemini` | 原生 Gemini replay 策略加上启动阶段 replay 清理。共享家族让 text-output Gemini CLI 在标记 reasoning 上保持一致；直接的 `google` 提供方会将 `resolveReasoningOutputMode` 覆盖为 `native`，因为 Gemini API 的 thinking 以原生 thought parts 形式到达。 | `google`, `google-gemini-cli` |
-    | `passthrough-gemini` | 适用于通过 OpenAI 兼容代理传输运行的 Gemini 模型的 Gemini thought-signature 清理；不会启用原生 Gemini replay 校验或启动阶段重写 | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
-    | `hybrid-anthropic-openai` | 混合策略，适用于在一个插件中同时混用 Anthropic-message 和 OpenAI 兼容模型表面的提供方；可选的仅 Claude thinking-block 删除仍然仅限于 Anthropic 一侧 | `minimax` |
+    | `openai-compatible` | Shared OpenAI-style replay policy for OpenAI-compatible transports, including tool-call-id sanitation, assistant-first ordering fixes, and generic Gemini-turn validation where the transport needs it | `moonshot`, `ollama`, `xai`, `zai` |
+    | `anthropic-by-model` | Claude-aware replay policy chosen by `modelId`, so Anthropic-message transports only get Claude-specific thinking-block cleanup when the resolved model is actually a Claude id | `amazon-bedrock` |
+    | `native-anthropic-by-model` | Same Claude-by-model policy as `anthropic-by-model`, plus tool-call-id sanitation and native Anthropic tool-use id preservation for transports that must keep vendor-native ids | `anthropic-vertex`, `clawrouter` |
+    | `google-gemini` | Native Gemini replay policy plus bootstrap replay sanitation. The shared family keeps the text-output Gemini CLI on tagged reasoning; the direct `google` provider overrides `resolveReasoningOutputMode` to `native` because Gemini API thinking arrives as native thought parts. | `google`, `google-gemini-cli` |
+    | `passthrough-gemini` | Gemini thought-signature sanitation for Gemini models running through OpenAI-compatible proxy transports; does not enable native Gemini replay validation or bootstrap rewrites | `openrouter`, `kilocode`, `opencode`, `opencode-go` |
+    | `hybrid-anthropic-openai` | Hybrid policy for providers that mix Anthropic-message and OpenAI-compatible model surfaces in one plugin; optional Claude-only thinking-block dropping stays scoped to the Anthropic side | `minimax` |
 
     当前可用的 stream 家族：
 
@@ -579,63 +586,68 @@ read_when:
       </Tab>
     </Tabs>
 
-    <Accordion title="所有可用的提供方钩子">
-      OpenClaw 会按以下顺序调用这些钩子。大多数提供方只会用到 2-3 个：
-      OpenClaw 不再调用的仅兼容字段，例如
-      `ProviderPlugin.capabilities` 和 `suppressBuiltInModel`，不在此列出。
+    <Accordion title="Common provider hooks">
+      OpenClaw calls hooks in roughly this order for model/provider plugins.
+      Most providers only use 2-3. This is not the full `ProviderPlugin`
+      contract - see [Internals: Provider Runtime
+      Hooks](/plugins/architecture-internals#provider-runtime-hooks) for the
+      complete, currently-accurate hook list and fallback notes.
+      Compatibility-only provider fields that OpenClaw no longer calls, such as
+      `ProviderPlugin.capabilities` and `suppressBuiltInModel`, are not listed
+      here.
 
-      | # | Hook | 适用场景 |
-      | --- | --- | --- |
-      | 1 | `catalog` | 模型目录或 base URL 默认值 |
-      | 2 | `applyConfigDefaults` | 配置实例化期间提供方拥有的全局默认值 |
-      | 3 | `normalizeModelId` | 查找前的旧版/预览版 model-id 别名清理 |
-      | 4 | `normalizeTransport` | 通用模型组装前的提供方家族 `api` / `baseUrl` 清理 |
-      | 5 | `normalizeConfig` | 规范化 `models.providers.<id>` 配置 |
-      | 6 | `applyNativeStreamingUsageCompat` | 配置提供方的原生流式 usage 兼容重写 |
-      | 7 | `resolveConfigApiKey` | 提供方拥有的 env-marker 认证解析 |
-      | 8 | `resolveSyntheticAuth` | 本地/自托管或配置支持的合成认证 |
-      | 9 | `shouldDeferSyntheticProfileAuth` | 将合成存储的 profile 占位符置于 env/config 认证之后 |
-      | 10 | `resolveDynamicModel` | 接受任意上游模型 ID |
-      | 11 | `prepareDynamicModel` | 在解析前异步获取元数据 |
-      | 12 | `normalizeResolvedModel` | 运行器之前的传输重写 |
-      | 13 | `normalizeToolSchemas` | 注册前提供方拥有的工具 schema 清理 |
-      | 14 | `inspectToolSchemas` | 提供方拥有的工具 schema 诊断 |
-      | 15 | `resolveReasoningOutputMode` | 标记式与原生 reasoning-output 契约 |
-      | 16 | `prepareExtraParams` | 默认请求参数 |
-      | 17 | `createStreamFn` | 完全自定义的 StreamFn 传输 |
-      | 19 | `wrapStreamFn` | 常规流路径上的自定义头/请求体包装器 |
-      | 20 | `resolveTransportTurnState` | 原生每轮头/元数据 |
-      | 21 | `resolveWebSocketSessionPolicy` | 原生 WS 会话头/冷却时间 |
-      | 22 | `formatApiKey` | 自定义运行时 token 形态 |
-      | 23 | `refreshOAuth` | 自定义 OAuth 刷新 |
-      | 24 | `buildAuthDoctorHint` | 认证修复指引 |
-      | 25 | `matchesContextOverflowError` | 提供方拥有的溢出检测 |
-      | 26 | `classifyFailoverReason` | 提供方拥有的速率限制/过载分类 |
-      | 27 | `isCacheTtlEligible` | 提示缓存 TTL 门控 |
-      | 28 | `buildMissingAuthMessage` | 自定义缺失认证提示 |
-      | 29 | `augmentModelCatalog` | 合成的前向兼容行 |
-      | 30 | `resolveThinkingProfile` | 模型特定的 `/think` 选项集 |
-      | 31 | `isBinaryThinking` | 二进制 thinking 开/关兼容性 |
-      | 32 | `supportsXHighThinking` | `xhigh` reasoning 支持兼容性 |
-      | 33 | `resolveDefaultThinkingLevel` | 默认 `/think` 策略兼容性 |
-      | 34 | `isModernModelRef` | Live/smoke 模型匹配 |
-      | 35 | `prepareRuntimeAuth` | 推理前 token 交换 |
-      | 36 | `resolveUsageAuth` | 自定义用量凭据解析 |
-      | 37 | `fetchUsageSnapshot` | 自定义用量端点 |
-      | 38 | `createEmbeddingProvider` | 用于 memory/search 的提供方拥有 embedding 适配器 |
-      | 39 | `buildReplayPolicy` | 自定义对话回放/压缩策略 |
-      | 40 | `sanitizeReplayHistory` | 通用清理后的提供方特定回放重写 |
-      | 41 | `validateReplayTurns` | 嵌入式运行器前的严格 replay-turn 校验 |
-      | 42 | `onModelSelected` | 选择后回调（例如遥测） |
+      | Hook | When to use |
+      | --- | --- |
+      | `catalog` | Model catalog or base URL defaults |
+      | `applyConfigDefaults` | Provider-owned global defaults during config materialization |
+      | `normalizeModelId` | Legacy/preview model-id alias cleanup before lookup |
+      | `normalizeTransport` | Provider-family `api` / `baseUrl` cleanup before generic model assembly |
+      | `normalizeConfig` | Normalize `models.providers.<id>` config |
+      | `applyNativeStreamingUsageCompat` | Native streaming-usage compat rewrites for config providers |
+      | `resolveConfigApiKey` | Provider-owned env-marker auth resolution |
+      | `resolveSyntheticAuth` | Local/self-hosted or config-backed synthetic auth |
+      | `resolveExternalAuthProfiles` | Overlay provider-owned external auth profiles for CLI/app-managed credentials |
+      | `shouldDeferSyntheticProfileAuth` | Lower synthetic stored-profile placeholders behind env/config auth |
+      | `resolveDynamicModel` | Accept arbitrary upstream model IDs |
+      | `prepareDynamicModel` | Async metadata fetch before resolving |
+      | `normalizeResolvedModel` | Transport rewrites before the runner |
+      | `normalizeToolSchemas` | Provider-owned tool-schema cleanup before registration |
+      | `inspectToolSchemas` | Provider-owned tool-schema diagnostics |
+      | `resolveReasoningOutputMode` | Tagged vs native reasoning-output contract |
+      | `prepareExtraParams` | Default request params |
+      | `createStreamFn` | Fully custom StreamFn transport |
+      | `wrapStreamFn` | Custom headers/body wrappers on the normal stream path |
+      | `resolveTransportTurnState` | Native per-turn headers/metadata |
+      | `resolveWebSocketSessionPolicy` | Native WS session headers/cool-down |
+      | `formatApiKey` | Custom runtime token shape |
+      | `refreshOAuth` | Custom OAuth refresh |
+      | `buildAuthDoctorHint` | Auth repair guidance |
+      | `matchesContextOverflowError` | Provider-owned overflow detection |
+      | `classifyFailoverReason` | Provider-owned rate-limit/overload classification |
+      | `isCacheTtlEligible` | Prompt cache TTL gating |
+      | `buildMissingAuthMessage` | Custom missing-auth hint |
+      | `augmentModelCatalog` | Synthetic forward-compat rows (deprecated - prefer `registerModelCatalogProvider`) |
+      | `resolveThinkingProfile` | Model-specific `/think` option set |
+      | `isBinaryThinking` | Binary thinking on/off compatibility (deprecated - prefer `resolveThinkingProfile`) |
+      | `supportsXHighThinking` | `xhigh` reasoning support compatibility (deprecated - prefer `resolveThinkingProfile`) |
+      | `resolveDefaultThinkingLevel` | Default `/think` policy compatibility (deprecated - prefer `resolveThinkingProfile`) |
+      | `isModernModelRef` | Live/smoke model matching |
+      | `prepareRuntimeAuth` | Token exchange before inference |
+      | `resolveUsageAuth` | Custom usage credential parsing |
+      | `fetchUsageSnapshot` | Custom usage endpoint |
+      | `createEmbeddingProvider` | Provider-owned embedding adapter for memory/search |
+      | `buildReplayPolicy` | Custom transcript replay/compaction policy |
+      | `sanitizeReplayHistory` | Provider-specific replay rewrites after generic cleanup |
+      | `validateReplayTurns` | Strict replay-turn validation before the embedded runner |
+      | `onModelSelected` | Post-selection callback (e.g. telemetry) |
 
       运行时回退说明：
 
-      - `normalizeConfig` 会先检查匹配的提供方，然后再检查其他具备钩子能力的提供方插件，直到某个插件真正修改了配置。如果没有任何提供方钩子重写受支持的 Google 家族配置条目，打包的 Google 配置规范化器仍会生效。
-      - `resolveConfigApiKey` 在暴露时会使用提供方钩子。Amazon Bedrock 会将 AWS env-marker 解析保留在其提供方插件中；当配置为 `auth: "aws-sdk"` 时，运行时认证本身仍使用 AWS SDK 默认链。
-      - `resolveThinkingProfile(ctx)` 会接收所选的 `provider`、`modelId`、可选的合并后 `reasoning` 目录提示，以及可选的合并后模型 `compat` 事实。仅使用 `compat` 来选择提供方的 thinking UI/profile。
-      - `resolveSystemPromptContribution` 允许提供方为某个模型家族注入具备缓存感知的系统提示指导。若行为属于某一个提供方/模型家族，并且应保留稳定/动态缓存拆分，请优先使用它，而不是 `before_prompt_build`。
+      - `normalizeConfig` resolves one owning plugin per provider id (bundled providers first, then the matched runtime plugin) and calls only that hook - there is no scan across other providers. Google's own `normalizeConfig` hook is what normalizes `google` / `google-vertex` / `google-antigravity` config entries; it is not a separate core fallback.
+      - `resolveConfigApiKey` uses the provider hook when exposed. Amazon Bedrock keeps AWS env-marker resolution in its provider plugin; runtime auth itself still uses the AWS SDK default chain when configured with `auth: "aws-sdk"`.
+      - `resolveThinkingProfile(ctx)` receives the selected `provider`, `modelId`, optional merged `reasoning` catalog hint, and optional merged model `compat` facts. Use `compat` only to select the provider's thinking UI/profile.
+      - `resolveSystemPromptContribution` lets a provider inject cache-aware system-prompt guidance for a model family. Prefer it over the legacy plugin-wide `before_prompt_build` hook when the behavior belongs to one provider/model family and should preserve the stable/dynamic cache split.
 
-      有关详细说明和真实示例，请参见 [内部机制：提供方运行时钩子](/plugins/architecture-internals#provider-runtime-hooks)。
     </Accordion>
 
   </Step>
@@ -828,19 +840,24 @@ read_when:
         契约，包括 memory search。`registerMemoryEmbeddingProvider(...)` 是面向现有 memory 专用适配器的
         弃用兼容方式。
       </Tab>
-      <Tab title="图像和视频生成">
-        视频能力使用一种**模式感知**的形状：`generate`、
-        `imageToVideo` 和 `videoToVideo`。像
-        `maxInputImages` / `maxInputVideos` / `maxDurationSeconds` 这样的扁平聚合字段
-        不足以清晰地声明转换模式支持或禁用模式。
-        音乐生成遵循相同模式，使用显式的 `generate` /
-        `edit` 块。
+      <Tab title="Image and video generation">
+        Image and video capabilities use a **mode-aware** shape. Image
+        providers declare required `generate` and `edit` capability blocks;
+        video providers declare `generate`, `imageToVideo`, and
+        `videoToVideo`. Flat aggregate fields like `maxInputImages` /
+        `maxInputVideos` / `maxDurationSeconds` are not enough to advertise
+        transform-mode support or disabled modes cleanly. Music generation
+        follows the same `generate` / `edit` pattern.
 
         ```typescript
         api.registerImageGenerationProvider({
           id: "acme-ai",
           label: "Acme Images",
-          generate: async (req) => ({ /* 图像结果 */ }),
+          capabilities: {
+            generate: { maxCount: 4, supportsSize: true },
+            edit: { enabled: false },
+          },
+          generateImage: async (req) => ({ images: [] }),
         });
 
         api.registerVideoGenerationProvider({
@@ -861,6 +878,10 @@ read_when:
           generateVideo: async (req) => ({ videos: [] }),
         });
         ```
+
+        `capabilities` is required on both provider types; `edit` and the
+        video transform blocks (`imageToVideo`, `videoToVideo`) always need an
+        explicit `enabled` flag.
       </Tab>
       <Tab title="网页抓取与搜索">
         ```typescript
@@ -887,9 +908,28 @@ read_when:
         api.registerWebSearchProvider({
           id: "acme-ai-search",
           label: "Acme Search",
-          search: async (req) => ({ content: [] }),
+          hint: "Search the web through Acme's search backend.",
+          envVars: ["ACME_SEARCH_API_KEY"],
+          placeholder: "acme-...",
+          signupUrl: "https://acme.example.com/search",
+          credentialPath: "plugins.entries.acme.config.webSearch.apiKey",
+          getCredentialValue: (searchConfig) => searchConfig?.acme?.apiKey,
+          setCredentialValue: (searchConfigTarget, value) => {
+            const acme = (searchConfigTarget.acme ??= {});
+            acme.apiKey = value;
+          },
+          createTool: () => ({
+            description: "Search the web through Acme Search.",
+            parameters: {},
+            execute: async (args) => ({ content: [] }),
+          }),
         });
         ```
+
+        Both provider types share the same credential-wiring shape:
+        `hint`, `envVars`, `placeholder`, `signupUrl`, `credentialPath`,
+        `getCredentialValue`, `setCredentialValue`, and `createTool` are all
+        required.
       </Tab>
     </Tabs>
 
@@ -940,8 +980,8 @@ clawhub package publish your-org/your-plugin --dry-run
 clawhub package publish your-org/your-plugin
 ```
 
-这里不要使用旧的仅技能发布别名；插件包应使用
-`clawhub package publish`。
+`clawhub skill publish <path>` is a different command for publishing a skill
+folder, not a plugin package - do not use it here.
 
 ## 文件结构
 

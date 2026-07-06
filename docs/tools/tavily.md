@@ -13,15 +13,16 @@ title: "Tavily"
 - 作为通用搜索工具的 `web_search` 提供方
 - 作为显式插件工具：`tavily_search` 和 `tavily_extract`
 
-Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索深度、主题过滤、域名过滤、AI 生成的答案摘要，以及从 URL 中提取内容（包括 JavaScript 渲染的页面）。
+Tavily 返回为 LLM 消费优化的结构化结果，具有可配置的搜索深度、主题过滤、域名过滤、AI 生成的答案摘要，以及从 URL 中提取内容的能力（包括由 JavaScript 渲染的页面）。
 
-| Property  | Value                               |
-| --------- | ----------------------------------- |
-| Plugin id | `tavily`                            |
-| Package   | `@openclaw/tavily-plugin`           |
-| Auth      | `TAVILY_API_KEY` or config `apiKey` |
-| Base URL  | `https://api.tavily.com` (default)  |
-| Tools     | `tavily_search`, `tavily_extract`   |
+| 属性      | 值                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------- |
+| 插件 id   | `tavily`                                                                                      |
+| 包        | `@openclaw/tavily-plugin`                                                                     |
+| 认证      | `TAVILY_API_KEY` 环境变量或配置 `apiKey`                                                      |
+| 基础 URL  | `https://api.tavily.com`（默认）；可使用 `TAVILY_BASE_URL` 环境变量或配置 `baseUrl` 覆盖      |
+| 超时      | 30 秒搜索，60 秒提取（默认）                                                                    |
+| 工具      | `tavily_search`, `tavily_extract`                                                             |
 
 ## 入门
 
@@ -75,20 +76,20 @@ Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索�
 
 当你需要 Tavily 特定的搜索控制，而不是通用的 `web_search` 时使用它。
 
-| Parameter         | Type         | Constraints / default                  | Description                                     |
-| ----------------- | ------------ | -------------------------------------- | ----------------------------------------------- |
-| `query`           | string       | required                               | 搜索查询字符串。请保持在 400 个字符以内。         |
-| `search_depth`    | enum         | `basic` (default), `advanced`          | `advanced` 更慢，但相关性更高。                  |
-| `topic`           | enum         | `general` (default), `news`, `finance` | 按主题类别过滤。                                 |
-| `max_results`     | integer      | 1-20                                   | 结果数量。                                       |
-| `include_answer`  | boolean      | default `false`                        | 包含 Tavily 生成的 AI 答案摘要。                 |
-| `time_range`       | enum         | `day`, `week`, `month`, `year`         | 按时效性过滤结果。                               |
-| `include_domains` | string array | (none)                                 | 仅包含这些域名的结果。                          |
-| `exclude_domains` | string array | (none)                                 | 排除这些域名的结果。                            |
+| 参数              | 类型         | 约束 / 默认                             | 描述                                          |
+| ----------------- | ------------ | -------------------------------------- | --------------------------------------------- |
+| `query`           | string       | 必填                                   | 搜索查询字符串。                               |
+| `search_depth`    | enum         | `basic`（默认）、`advanced`          | `advanced` 更慢，但相关性更高。                |
+| `topic`           | enum         | `general`（默认）、`news`、`finance` | 按主题类别筛选。                               |
+| `max_results`     | integer      | 1-20，默认 `5`                      | 结果数量。                                     |
+| `include_answer`  | boolean      | 默认 `false`                        | 包含 Tavily 生成的 AI 答案摘要。               |
+| `time_range`      | enum         | `day`、`week`、`month`、`year`         | 按时间新旧筛选结果。                           |
+| `include_domains` | string array | （无）                                 | 只包含这些域名中的结果。                       |
+| `exclude_domains` | string array | （无）                                 | 排除这些域名中的结果。                         |
 
 搜索深度取舍：
 
-| Depth      | Speed  | Relevance | Best for                             |
+| 深度       | 速度   | 相关性    | 最适合                              |
 | ---------- | ------ | --------- | ------------------------------------ |
 | `basic`    | 更快   | 高        | 通用查询（默认）。                    |
 | `advanced` | 更慢   | 最高      | 精准研究和事实查证。                  |
@@ -97,17 +98,17 @@ Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索�
 
 当你想从一个或多个 URL 中提取干净内容时使用它。它能处理 JavaScript 渲染的页面，并支持基于查询的分块，以便进行有针对性的提取。
 
-| Parameter           | Type         | Constraints / default         | Description                                                 |
+| 参数                | 类型         | 约束 / 默认                    | 描述                                                     |
 | ------------------- | ------------ | ----------------------------- | ----------------------------------------------------------- |
-| `urls`              | string array | required, 1-20                | 要从中提取内容的 URL。                                      |
-| `query`             | string       | (optional)                    | 按与此查询的相关性对提取出的片段重新排序。                   |
-| `extract_depth`     | enum         | `basic` (default), `advanced` | 对于 JS 内容较多的页面、SPA 或动态表格，请使用 `advanced`。 |
-| `chunks_per_source` | integer      | 1-5; **requires `query`**     | 每个 URL 返回的片段数。如果未设置 `query`，则报错。         |
-| `include_images`    | boolean      | default `false`               | 在结果中包含图片 URL。                                       |
+| `urls`              | string array | 必填，1-20                | 要从中提取内容的 URL。                                      |
+| `query`             | string       | （可选）                    | 按与此查询的相关性对提取出的片段重新排序。                   |
+| `extract_depth`     | enum         | `basic`（默认）、`advanced` | 对于 JS 内容较多的页面、SPA 或动态表格，请使用 `advanced`。 |
+| `chunks_per_source` | integer      | 1-5；**需要 `query`**     | 每个 URL 返回的片段数。如果未设置 `query`，则报错。         |
+| `include_images`    | boolean      | 默认 `false`               | 在结果中包含图片 URL。                                       |
 
 提取深度取舍：
 
-| Depth      | When to use                                |
+| 深度       | 何时使用                                |
 | ---------- | ------------------------------------------ |
 | `basic`    | 简单页面。优先尝试这个。                   |
 | `advanced` | JavaScript 渲染的 SPA、动态内容、表格。      |
@@ -137,12 +138,12 @@ Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索�
     1. `plugins.entries.tavily.config.webSearch.apiKey`（通过 SecretRefs 解析）。
     2. 网关环境中的 `TAVILY_API_KEY`。
 
-    如果两者都不存在，`tavily_extract` 会抛出设置错误。
+    `tavily_search` 和 `tavily_extract` 如果都不存在，则会抛出设置错误。
 
   </Accordion>
 
   <Accordion title="自定义基础 URL">
-    如果你通过代理转发 Tavily，可覆盖 `plugins.entries.tavily.config.webSearch.baseUrl`。默认值为 `https://api.tavily.com`。
+    如果你通过代理转发 Tavily，可以覆盖 `plugins.entries.tavily.config.webSearch.baseUrl`，或设置 `TAVILY_BASE_URL`。配置优先于环境变量。默认值是 `https://api.tavily.com`。
   </Accordion>
 
   <Accordion title="`chunks_per_source` 需要 `query`">
@@ -162,7 +163,7 @@ Tavily 返回为 LLM 消费优化的结构化结果，支持可配置的搜索�
   <Card title="Exa Search" href="/tools/exa-search" icon="binoculars">
     带内容提取的神经搜索。
   </Card>
-  <Card title="Configuration" href="/gateway/configuration" icon="gear">
+  <Card title="配置" href="/gateway/configuration" icon="gear">
     插件条目和工具路由的完整配置架构。
   </Card>
 </CardGroup>

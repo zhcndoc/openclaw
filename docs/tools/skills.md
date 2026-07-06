@@ -43,16 +43,14 @@ OpenClaw 从以下来源加载，**优先级从高到低**。当同名
 | 5           | 捆绑技能               | 随安装包一起提供                        |
 | 6 — 最低   | 额外目录               | `skills.load.extraDirs` + 插件技能       |
 
-技能根目录支持分组布局。只要 `SKILL.md` 出现在任一已配置根目录下，OpenClaw 就会发现该技能：
+技能根目录支持分组布局。只要在已配置的根目录下任意位置出现 `SKILL.md`，OpenClaw 就会发现该技能（最多向下 6 层）：
 
 ```text
 <workspace>/skills/research/SKILL.md          ✓ 发现为 "research"
 <workspace>/skills/personal/research/SKILL.md ✓ 也发现为 "research"
 ```
 
-文件夹路径仅用于组织。技能名称、斜杠命令和
-允许列表键都来自 `name` frontmatter 字段（或在
-缺少 `name` 时使用目录名）。
+文件夹路径仅用于组织。技能的名称和斜杠命令来自 `name` frontmatter 字段（如果缺少 `name`，则使用目录名）。代理允许列表（见下文）也会匹配这个 `name`。
 
 <Note>
   Codex CLI 的原生 `$CODEX_HOME/skills` 目录**不是** OpenClaw 的
@@ -93,13 +91,12 @@ OpenClaw 从以下来源加载，**优先级从高到低**。当同名
 
 <AccordionGroup>
   <Accordion title="允许列表规则">
-    - 省略 `agents.defaults.skills` 会让默认情况下所有技能都不受限制。
-    - 省略 `agents.list[].skills` 会继承 `agents.defaults.skills`。
-    - 将 `agents.list[].skills: []` 设置为对该代理不暴露任何技能。
-    - 非空的 `agents.list[].skills` 列表是**最终**集合——它不会
-      与 defaults 合并。
-    - 生效的允许列表适用于提示词构建、斜杠命令
-      发现、沙箱同步以及技能快照。
+    - 省略 `agents.defaults.skills`，则默认情况下所有技能都不受限制。
+    - 省略 `agents.list[].skills`，则继承 `agents.defaults.skills`。
+    - 将 `agents.list[].skills: []` 设置为不向该代理暴露任何技能。
+    - 非空的 `agents.list[].skills` 列表是**最终**集合——它不会与默认值合并。
+    - 生效的允许列表适用于提示词构建、斜杠菜单命令发现、沙盒同步和技能快照。
+    - 这不是主机 shell 的授权边界。如果同一代理可以使用 `exec`，请通过沙盒、OS 用户隔离、exec 拒绝/允许列表以及按资源的凭据单独限制该 shell。
   </Accordion>
 </AccordionGroup>
 
@@ -107,7 +104,7 @@ OpenClaw 从以下来源加载，**优先级从高到低**。当同名
 
 插件可以通过在 `openclaw.plugin.json` 中列出 `skills` 目录来提供自己的技能（路径相对于插件根目录）。当插件启用时，会加载插件技能——例如，浏览器插件提供了一个用于多步骤浏览器控制的 `browser-automation` 技能。
 
-插件技能目录与 `skills.load.extraDirs` 处于相同的低优先级层级进行合并，因此同名的捆绑、托管、代理或工作区技能会覆盖它们。通过插件配置项上的 `metadata.openclaw.requires.config` 对它们进行门控。
+插件技能目录的合并优先级与 `skills.load.extraDirs` 处于相同的较低优先级层级，因此同名的内置、托管、代理或工作区技能会覆盖它们。可以通过其 frontmatter 中的 `metadata.openclaw.requires` 来控制插件技能自身的适用性，方式与其他技能相同。
 
 有关完整插件系统，请参见 [插件](/tools/plugin) 和 [工具](/tools)。
 
@@ -186,14 +183,10 @@ openclaw skills workshop apply <proposal-id>
 
 <AccordionGroup>
   <Accordion title="Path containment">
-    Workspace, project-agent, and extra-dir skill discovery only accepts skill
-    roots whose resolved realpath stays inside the configured root, unless
-    `skills.load.allowSymlinkTargets` explicitly trusts a target root.
-    Skill Workshop writes through those trusted targets only when
-    `skills.workshop.allowSymlinkTargetWrites` is enabled.
-    Managed `~/.openclaw/skills` and personal `~/.agents/skills` may contain
-    symlinked skill folders, but every `SKILL.md` realpath must still stay
-    inside its resolved skill directory.
+    Workspace、project-agent 和 extra-dir 的技能发现仅接受其解析后的 realpath 仍位于已配置根目录内的技能根目录，除非
+    `skills.load.allowSymlinkTargets` 明确信任某个目标根目录。
+    只有在启用 `skills.workshop.allowSymlinkTargetWrites` 时，Skill Workshop 才会通过这些受信任的目标进行写入。
+    托管的 `~/.openclaw/skills` 和个人的 `~/.agents/skills` 可以包含带有符号链接的技能文件夹，但每个 `SKILL.md` 的 realpath 仍必须保持在其解析后的技能目录内。
   </Accordion>
   <Accordion title="操作者安装策略">
     配置 `security.installPolicy` 可在技能安装继续之前运行一个受信任的本地策略命令。该策略会接收元数据和暂存的源路径，适用于 ClawHub、上传、Git、本地、更新和
@@ -221,7 +214,11 @@ description: 通过基于提供商的图像工作流生成或编辑图像
 ```
 
 <Note>
-  OpenClaw 遵循 [AgentSkills](https://agentskills.io) 规范。frontmatter 解析器仅支持 **单行键** — `metadata` 必须是一个单行 JSON 对象。使用正文中的 `{baseDir}` 来引用 skill 文件夹路径。
+  OpenClaw 遵循 [AgentSkills](https://agentskills.io) 规范。Frontmatter
+  会先按 YAML 解析；如果失败，则回退到仅单行解析器。嵌套的 `metadata`
+  块（包括多行 YAML 映射）会被展平为 JSON 字符串，并重新按 JSON5 解析，因此
+  在 [Gating](#gating) 下展示的块形式可正常工作。请在正文中使用 `{baseDir}`
+  来引用 skill 文件夹路径。
 </Note>
 
 ### 可选 frontmatter 键
@@ -255,7 +252,7 @@ description: 通过基于提供商的图像工作流生成或编辑图像
 
 ## 门控
 
-OpenClaw 在加载时使用 `metadata.openclaw`（frontmatter 中的单行 JSON）对 skills 进行过滤。没有 `metadata.openclaw` 块的 skill 默认始终符合条件，除非被显式禁用。
+OpenClaw 在加载时使用 `metadata.openclaw`（嵌入在 frontmatter 中的 JSON5 对象，参见上面的解析说明）来过滤 skills。没有 `metadata.openclaw` 块的 skill 默认始终符合条件，除非被显式禁用。
 
 ```markdown
 ---
@@ -284,8 +281,8 @@ metadata:
   在 macOS Skills UI 中显示为“Website”的可选 URL。
 </ParamField>
 
-<ParamField path="os" type='"darwin" | "linux" | "win32"'>
-  平台过滤器。设置后，该 skill 仅在列出的操作系统上符合条件。
+<ParamField path="os" type='("darwin" | "linux" | "win32")[]'>
+  平台过滤器。设置后，该 skill 仅在所列 OS 上符合条件。
 </ParamField>
 
 <ParamField path="requires.bins" type="string[]">
@@ -353,10 +350,15 @@ metadata:
     - Node 安装会遵循 `openclaw.json` 中的 `skills.install.nodeManager`（默认：npm；可选：npm / pnpm / yarn / bun）。这只影响 skill 安装；Gateway 运行时仍应使用 Node。
     - Gateway 安装器优先级：Homebrew → uv → 已配置的 node manager → go → download。
   </Accordion>
-  <Accordion title="每种安装器的细节">
-    - **Homebrew：** OpenClaw 不会自动安装 Homebrew，也不会把 brew 配方转换为系统包管理命令。在没有 `brew` 的 Linux 容器中，纯 brew 安装器会被隐藏；请使用自定义镜像或手动安装依赖。
-    - **Go：** 如果缺少 `go` 且可用 `brew`，gateway 会先通过 Homebrew 安装 Go，并将 `GOBIN` 设置为 Homebrew 的 `bin` 目录。
-    - **Download：** `url`（必填）、`archive`（`tar.gz` | `tar.bz2` | `zip`）、`extract`（默认：检测到压缩包时自动解压）、`stripComponents`、`targetDir`（默认：`~/.openclaw/tools/<skillKey>`）。
+  <Accordion title="每个安装器的详细信息">
+    - **Homebrew:** OpenClaw 不会自动安装 Homebrew，也不会将 brew
+      formula 转换为系统包命令。在没有 `brew` 的 Linux 容器中，只显示非 brew 专用的安装器；请使用自定义镜像或手动安装依赖。
+    - **Go:** OpenClaw 进行自动 skill 安装时要求 Go 1.21 或更高版本。
+      如果缺少 `go` 且 Homebrew 可用，OpenClaw 会先通过 Homebrew 安装 Go；在没有 Homebrew 的 Linux 上，如果刷新后的 `golang-go` 候选版本满足最低版本要求，也可以改用 `apt-get` 以 root 或通过免密 `sudo` 来安装。依赖项实际执行的 `go install` 总是目标为专用的、由 OpenClaw 管理的 bin 目录（全新安装时为 Homebrew 的 `bin`，否则为 `~/.local/bin`），而不是你配置的 `GOBIN` —— 你自己的 `GOBIN`、`GOPATH` 和 `GOTOOLCHAIN`
+      环境变量会被读取，但绝不会被覆盖。
+    - **Download:** `url`（必填）、`archive`（`tar.gz` | `tar.bz2` | `zip`）、
+      `extract`（默认：检测到 archive 时自动）、`stripComponents`、
+      `targetDir`（默认：`~/.openclaw/tools/<skillKey>`）。
   </Accordion>
   <Accordion title="沙箱说明">
     `requires.bins` 会在 skill 加载时于**主机**上检查。如果 agent 在沙箱中运行，该二进制文件也必须存在于**容器内**。请通过 `agents.defaults.sandbox.docker.setupCommand` 或自定义镜像安装它。`setupCommand` 会在容器创建后运行一次，并且需要沙箱具备网络外连、可写的根文件系统以及 root 用户。
@@ -365,7 +367,7 @@ metadata:
 
 ## 配置覆盖
 
-在 `~/.openclaw/openclaw.json` 的 `skills.entries` 下切换并配置内置或已管理的 skills：
+在 `~/.openclaw/openclaw.json` 的 `skills.entries` 下切换并配置内置或已管理的技能：
 
 ```json5
 {
@@ -388,11 +390,11 @@ metadata:
 ```
 
 <ParamField path="enabled" type="boolean">
-  `false` 会禁用该 skill，即使它是内置或已安装的。`coding-agent` 内置 skill 默认不启用——需要设置 `skills.entries.coding-agent.enabled: true`，并确保已安装且完成认证的 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一。
+  `false` 会禁用该技能，即使它是内置或已安装的。`coding-agent` 内置技能默认不启用——需要设置 `skills.entries.coding-agent.enabled: true`，并确保已安装且完成认证的 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一。
 </ParamField>
 
 <ParamField path="apiKey" type='string | { source, provider, id }'>
-  适用于声明了 `metadata.openclaw.primaryEnv` 的 skill 的便捷字段。支持明文字符串或 SecretRef 对象。
+  适用于声明了 `metadata.openclaw.primaryEnv` 的技能的便捷字段。支持明文字符串或 SecretRef 对象。
 </ParamField>
 
 <ParamField path="env" type="Record<string, string>">
@@ -408,7 +410,9 @@ metadata:
 </ParamField>
 
 <Note>
-  默认情况下，配置键与**skill 名称**一致。如果某个 skill 定义了 `metadata.openclaw.skillKey`，请在 `skills.entries` 下使用该键。带连字符的名称需要加引号：JSON5 允许带引号的键。
+  默认情况下，配置键与**技能名称**匹配。如果某个技能定义了
+  `metadata.openclaw.skillKey`，则请改为在 `skills.entries` 下使用该键。
+  带连字符的名称需要加引号：JSON5 允许带引号的键。
 </Note>
 
 ## 环境注入
@@ -433,7 +437,7 @@ metadata:
 
 <Warning>
   环境注入仅作用于**主机**上的 agent 运行，而不作用于沙箱。在沙箱内，`env` 和 `apiKey` 不会生效。有关如何将密钥传递到沙箱运行，请参阅
-  [Skills config](/tools/skills-config#sandboxed-skills-and-env-vars)。
+  [Skills 配置](/tools/skills-config#sandboxed-skills-and-env-vars)。
 </Warning>
 
 对于内置的 `claude-cli` 后端，OpenClaw 还会将同一份符合条件的 skill 快照作为临时 Claude Code 插件落盘，并通过 `--plugin-dir` 传递。其他 CLI 后端只使用提示词目录。
@@ -459,8 +463,8 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
         load: {
           extraDirs: ["~/Projects/agent-scripts/skills"],
           allowSymlinkTargets: ["~/Projects/manager/skills"],
-          watch: true,
-          watchDebounceMs: 250,
+          watch: true, // 默认
+          watchDebounceMs: 250, // 默认
         },
       },
     }
@@ -481,16 +485,14 @@ OpenClaw 会在会话开始时对符合条件的 skills 进行快照，并在该
 
 ## Token 影响
 
-当 skills 符合条件时，OpenClaw 会在系统提示词中注入一个紧凑的 XML 块。其成本是确定性的：
+当 skills 符合条件时，OpenClaw 会在系统提示词中注入一个紧凑的 XML 块。其成本是确定性的，并且会随每个 skill 线性增长：
 
-```text
-total = 195 + Σ (97 + len(name) + len(description) + len(filepath))
-```
+- **基础开销**（仅在有 1 个或以上 skills 符合条件时）：一段固定的介绍性文本，加上 `<available_skills>` 包装器。
+- **每个 skill：**约 97 个字符 + 你的 `name`、`description` 和 `location` 字段长度。
+- XML 转义会将 `& < > " '` 展开为实体，因此每次出现都会增加少量字符。
+- 按每 token 约 4 个字符计算，97 个字符 ≈ 每个 skill 24 个 token，尚未计入字段长度。
 
-- **基础开销**（仅当 ≥ 1 个 skill 时）：约 195 个字符
-- **每个 skill：** 约 97 个字符 + 你的 `name`、`description` 和 `location` 字段长度
-- XML 转义会将 `& < > " '` 展开为实体，每次出现会额外增加少量字符
-- 按每 4 个字符约 1 个 token 计算，97 个字符约等于每个 skill 24 个 token，不含字段长度
+如果渲染后的块会超过配置的提示词预算（`skills.limits.maxSkillsPromptChars`），OpenClaw 会先去掉描述（紧凑格式：仅保留 name + location），然后截断 skill 列表，并添加一条指向 `openclaw skills check` 的提示。
 
 请保持描述简短且具有描述性，以尽量减少提示词开销
 

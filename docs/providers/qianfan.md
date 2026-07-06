@@ -6,14 +6,15 @@ read_when:
 title: "Qianfan"
 ---
 
-Qianfan 是百度的 MaaS 平台，提供一个**统一 API**，通过单一端点和 API 密钥将请求路由到其后面的多个模型。它兼容 OpenAI，因此只需切换基础 URL，大多数 OpenAI SDK 都可以工作。
+Qianfan 是百度的 MaaS 平台：一个统一的、兼容 OpenAI 的 API，通过单一端点和 API 密钥将请求路由到许多模型。OpenClaw 将其作为官方外部插件 `@openclaw/qianfan-provider` 提供。
 
-| 属性     | 值                                |
-| -------- | --------------------------------- |
-| 提供方   | `qianfan`                         |
-| 认证     | `QIANFAN_API_KEY`                 |
-| API      | 兼容 OpenAI                       |
-| 基础 URL | `https://qianfan.baidubce.com/v2` |
+| Property      | Value                                    |
+| ------------- | ---------------------------------------- |
+| Provider      | `qianfan`                                |
+| Auth          | `QIANFAN_API_KEY`                        |
+| API           | 兼容 OpenAI (`openai-completions`) |
+| Base URL      | `https://qianfan.baidubce.com/v2`        |
+| Default model | `qianfan/deepseek-v3.2`                  |
 
 ## 安装插件
 
@@ -31,12 +32,18 @@ openclaw gateway restart
     在 [Qianfan 控制台](https://console.bce.baidu.com/qianfan/ais/console/apiKey) 注册或登录，并确保你已启用 Qianfan API 访问权限。
   </Step>
   <Step title="生成 API 密钥">
-    创建一个新应用或选择一个现有应用，然后生成 API 密钥。密钥格式为 `bce-v3/ALTAK-...`。
+    创建一个新应用或选择一个已有应用，然后生成一个 API 密钥。百度云密钥使用 `bce-v3/ALTAK-...` 格式。
   </Step>
   <Step title="运行引导">
     ```bash
     openclaw onboard --auth-choice qianfan-api-key
     ```
+
+    非交互式运行会从 `--qianfan-api-key <key>` 或
+    `QIANFAN_API_KEY` 读取密钥。引导过程会写入提供商配置，为默认模型添加
+    `QIANFAN` 别名，并在未配置时将 `qianfan/deepseek-v3.2`
+    设为默认模型。
+
   </Step>
   <Step title="验证模型是否可用">
     ```bash
@@ -52,8 +59,10 @@ openclaw gateway restart
 | `qianfan/deepseek-v3.2`              | text        | 98,304  | 32,768   | Yes  | 默认模型      |
 | `qianfan/ernie-5.0-thinking-preview` | text, image | 119,000 | 64,000   | Yes  | 多模态        |
 
+目录是静态的；没有实时模型发现。
+
 <Tip>
-默认模型引用是 `qianfan/deepseek-v3.2`。只有在需要自定义基础 URL 或模型元数据时，才需要覆盖 `models.providers.qianfan`。
+只有在需要自定义基础 URL 或模型元数据时，才需要覆盖 `models.providers.qianfan`。
 </Tip>
 
 ## 配置示例
@@ -100,24 +109,19 @@ openclaw gateway restart
 }
 ```
 
+<Note>
+模型引用使用 `qianfan/` 前缀（例如 `qianfan/deepseek-v3.2`）。
+</Note>
+
 <AccordionGroup>
   <Accordion title="传输和兼容性">
-    Qianfan 走的是兼容 OpenAI 的传输路径，而不是原生 OpenAI 请求格式。这意味着标准 OpenAI SDK 功能可以使用，但可能不会转发提供方特定的参数。
-  </Accordion>
-
-  <Accordion title="目录和覆盖">
-    当前静态目录包含 `deepseek-v3.2` 和 `ernie-5.0-thinking-preview`。仅当你需要自定义基础 URL 或模型元数据时，才添加或覆盖 `models.providers.qianfan`。
-
-    <Note>
-    模型引用使用 `qianfan/` 前缀（例如 `qianfan/deepseek-v3.2`）。
-    </Note>
-
+    Qianfan 通过与 OpenAI 兼容的传输路径运行，而不是原生的 OpenAI 请求格式。标准 OpenAI SDK 功能可以正常工作，但特定于提供商的参数可能不会被传递。
   </Accordion>
 
   <Accordion title="故障排查">
-    - 确保你的 API 密钥以 `bce-v3/ALTAK-` 开头，并且已在百度云控制台启用 Qianfan API 访问权限。
-    - 如果未列出模型，请确认你的账号已激活 Qianfan 服务。
-    - 默认基础 URL 是 `https://qianfan.baidubce.com/v2`。只有在使用自定义端点或代理时才需要更改它。
+    - 确保你的 API 密钥以 `bce-v3/ALTAK-` 开头，并且已在百度智能云控制台中启用 Qianfan API 访问权限。
+    - 如果未列出模型，请确认你的账户已激活 Qianfan 服务。
+    - 只有在使用自定义端点或代理时才更改基础 URL。
 
   </Accordion>
 </AccordionGroup>

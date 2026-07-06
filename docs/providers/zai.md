@@ -8,12 +8,12 @@ title: "Z.AI"
 
 Z.AI 是 **GLM** 模型的 API 平台。它为 GLM 提供 REST API，并使用 API 密钥进行身份验证。请在 Z.AI 控制台中创建你的 API 密钥。OpenClaw 使用带有 Z.AI API 密钥的 `zai` 提供方。
 
-| Property | Value                                        |
+| 属性 | 值                                        |
 | -------- | -------------------------------------------- |
-| Provider | `zai`                                        |
-| Package  | `@openclaw/zai-provider`                     |
-| Auth     | `ZAI_API_KEY` (legacy alias: `Z_AI_API_KEY`) |
-| API      | Z.AI Chat Completions (Bearer auth)          |
+| 提供方 | `zai`                                        |
+| 包 | `@openclaw/zai-provider`                     |
+| 认证 | `ZAI_API_KEY` (旧别名: `Z_AI_API_KEY`) |
+| API | Z.AI Chat Completions (Bearer 认证)          |
 
 ## GLM 模型
 
@@ -53,7 +53,7 @@ openclaw plugins install @openclaw/zai-provider
     <Steps>
       <Step title="选择正确的初始化选项">
         ```bash
-        # Coding Plan Global（建议 Coding Plan 用户使用）
+        # Coding Plan 全局版（建议 Coding Plan 用户使用）
         openclaw onboard --auth-choice zai-coding-global
 
         # Coding Plan CN（中国区）
@@ -75,6 +75,17 @@ openclaw plugins install @openclaw/zai-provider
 
   </Tab>
 </Tabs>
+
+### 端点
+
+| 初始化选项          | 基础 URL                                      | 默认模型   |
+| ------------------- | --------------------------------------------- | ---------- |
+| `zai-global`        | `https://api.z.ai/api/paas/v4`                | `glm-5.1`  |
+| `zai-cn`            | `https://open.bigmodel.cn/api/paas/v4`        | `glm-5.1`  |
+| `zai-coding-global` | `https://api.z.ai/api/coding/paas/v4`         | `glm-5.2`  |
+| `zai-coding-cn`     | `https://open.bigmodel.cn/api/coding/paas/v4` | `glm-5.2`  |
+
+`zai-api-key` 会通过将你的密钥分别对每个端点的 chat-completions API 进行探测，自动识别这四个端点中的一个；它会先检查通用端点（`zai-global`，然后是 `zai-cn`），再检查 Coding Plan 端点（`zai-coding-global`，然后是 `zai-coding-cn`），并在第一个接受请求的端点处停止。如果你的密钥在两个端点上都可用，请使用显式的 `--auth-choice` 来强制指定 Coding Plan 端点。
 
 ## 配置示例
 
@@ -108,7 +119,7 @@ openclaw models list --all --provider zai
 
 当前由清单支持的目录包括：
 
-| Model ref            | Notes                           |
+| Model ref            | 说明                            |
 | -------------------- | ------------------------------- |
 | `zai/glm-5.2`        | Coding Plan 默认；100 万上下文 |
 | `zai/glm-5.1`        | 通用 API 默认                  |
@@ -129,17 +140,31 @@ openclaw models list --all --provider zai
 GLM 模型可通过 `zai/<model>` 使用（例如：`zai/glm-5`）。
 </Tip>
 
-<Tip>
-GLM-5.2 支持 `off`、`low`、`high` 和 `max` 思考级别。OpenClaw 会将
-`low` 和 `high` 映射为 Z.AI 的高推理强度，并将 `max` 映射为最大强度。
-</Tip>
-
 <Note>
-Coding Plan 设置默认使用 `zai/glm-5.2`；通用 API 设置保留
-`zai/glm-5.1`。当所选方案未暴露 GLM-5.2 时，端点自动检测会回退到
-`glm-5.1` 或 `glm-4.7`。GLM 版本和可用性可能会变化；运行
-`openclaw models list --all --provider zai` 查看你的已安装版本所知晓的目录。
+Coding Plan 设置默认为 `zai/glm-5.2`；通用 API 设置保留
+`zai/glm-5.1`。在 Coding Plan 端点上，当密钥/套餐未暴露 GLM-5.2 时，自动检测会回退到
+`glm-5.1`，然后再回退到 `glm-4.7`。GLM
+版本和可用性可能会变化；运行 `openclaw models list --all --provider zai`
+以查看你已安装版本所知的目录。
 </Note>
+
+## 思考级别
+
+<Tabs>
+  <Tab title="GLM-5.2">
+    全范围：`off`、`low`、`high`、`max`（默认 `off`）。OpenClaw 将
+    `low` 和 `high` 映射到 Z.AI 的 `high` 推理强度，并将 `max` 映射到 Z.AI 的
+    `max` 强度，通过请求负载中的 `reasoning_effort` 实现。
+  </Tab>
+  <Tab title="其他 GLM 模型">
+    仅二元切换：`off` 和 `low`（在选择器中显示为 `on`），默认
+    `off`。将思考设置为 `off` 会发送 `thinking: { type: "disabled" }`；
+    任何其他级别都不会修改请求负载（适用 Z.AI 自身的默认推理行为）。
+  </Tab>
+</Tabs>
+
+将思考设置为 `off` 可避免响应在可见文本之前将输出预算花在
+`reasoning_content` 上。
 
 ## 高级配置
 
@@ -169,13 +194,9 @@ Coding Plan 设置默认使用 `zai/glm-5.2`；通用 API 设置保留
 
   </Accordion>
 
-  <Accordion title="思考与保留思考">
-    Z.AI 的思考机制遵循 OpenClaw 的 `/think` 控制。关闭思考时，
-    OpenClaw 会发送 `thinking: { type: "disabled" }`，以避免响应在可见文本之前
-    将输出预算消耗在 `reasoning_content` 上。
-
-    保留思考是可选开启的，因为 Z.AI 需要回放完整的历史
-    `reasoning_content`，这会增加提示词 token。按模型启用：
+  <Accordion title="Preserved thinking">
+    Preserved thinking 是可选启用的，因为 Z.AI 需要重放完整的历史
+    `reasoning_content`，这会增加提示词 token。可按模型启用：
 
     ```json5
     {
@@ -191,9 +212,10 @@ Coding Plan 设置默认使用 `zai/glm-5.2`；通用 API 设置保留
     }
     ```
 
-    启用后并且思考开启时，OpenClaw 会发送
-    `thinking: { type: "enabled", clear_thinking: false }`，并为同一条
-    兼容 OpenAI 的会话轨迹回放先前的 `reasoning_content`。
+    启用后且 thinking 开启时，OpenClaw 会发送
+    `thinking: { type: "enabled", clear_thinking: false }`，并为同一份 OpenAI 兼容的对话记录重放之前的
+    `reasoning_content`。snake_case 的
+    `preserve_thinking` 参数键也可作为别名使用。
 
     高级用户仍然可以通过 `params.extra_body.thinking` 覆盖精确的提供方负载。
 

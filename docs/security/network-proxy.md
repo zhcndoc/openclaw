@@ -6,58 +6,9 @@ read_when:
   - 为 OpenClaw 运行时流量配置外部正向代理
 ---
 
-OpenClaw 可以将运行时 HTTP 和 WebSocket 流量通过由运维管理的正向代理进行路由。对于希望集中控制出站流量、增强 SSRF 防护并提升网络可审计性的部署而言，这是一种可选的纵深防御措施。
+OpenClaw 可以通过由运维人员管理的正向代理来路由运行时 HTTP 和 WebSocket 流量。这是一种可选的纵深防御：集中出口控制、更强的 SSRF 防护，以及在网络边界上的目标可审计性。由于代理会在连接时评估目标，即在 DNS 解析之后、并且在打开上游连接之前，它也缩小了 DNS rebinding 攻击所依赖的时间窗口——也就是早先应用层 DNS 检查与实际出站连接之间的间隙。单一代理策略还为运维人员提供了一个统一位置来强制执行目标规则、网络分段、速率限制或出站允许列表，而无需重建 OpenClaw。
 
-OpenClaw 不会提供、下载、启动、配置或认证任何代理。你负责运行适合你环境的代理技术，而 OpenClaw 会将正常的进程本地 HTTP 和 WebSocket 客户端通过它进行路由。
-
-## 为什么使用代理
-
-代理为运维人员提供了一个统一的出站 HTTP 和 WebSocket 流量网络控制点。即使不考虑 SSRF 加固，这也很有用：
-
-- 集中策略：维护一份出站策略，而不是依赖每个应用的 HTTP 调用点都正确处理网络规则。
-- 连接时检查：在 DNS 解析之后、代理打开上游连接之前评估目标。
-- DNS rebinding 防护：缩小应用层 DNS 检查与实际出站连接之间的时间窗口。
-- 更广泛的 JavaScript 覆盖范围：通过同一路径路由普通的 `fetch`、`node:http`、`node:https`、WebSocket、axios、got、node-fetch 以及类似客户端。
-- 可审计性：在出站边界记录允许和拒绝的目标。
-- 运维控制：无需重建 OpenClaw，即可强制执行目标规则、网络分段、速率限制或出站允许列表。
-
-代理路由是一种针对普通 HTTP 和 WebSocket 出站流量的进程级防护措施。它为运维人员提供了一条失败即关闭的路径，可将受支持的 JavaScript HTTP 客户端通过自己的过滤代理进行路由，但它不是 OS 级别的网络沙箱，也不会使 OpenClaw 对代理的目标策略进行认证。
-
-## OpenClaw 如何路由流量
-
-当 `proxy.enabled=true` 且已配置代理 URL 时，受保护的运行时进程（例如 `openclaw gateway run`、`openclaw node run` 和 `openclaw agent --local`）会将正常的 HTTP 和 WebSocket 出站流量通过所配置的代理进行路由：
-
-```text
-OpenClaw 进程
-  fetch                  -> 运维管理的过滤代理 -> 公共互联网
-  node:http and https    -> 运维管理的过滤代理 -> 公共互联网
-  WebSocket clients      -> 运维管理的过滤代理 -> 公共互联网
-```
-
-对外公开的契约是路由行为，而不是用于实现它的内部 Node 钩子。OpenClaw Gateway 控制平面 WebSocket 客户端在 Gateway URL 使用 `localhost` 或字面量回环 IP（例如 `127.0.0.1` 或 `[::1]`）时，会对本地回环 Gateway RPC 流量使用一条窄范围的直连路径。即使运维代理阻止回环目标，这条控制平面路径也必须能够访问回环 Gateway。正常的运行时 HTTP 和 WebSocket 请求仍然使用已配置的代理。
-
-内部上，OpenClaw 会为此功能安装 Proxyline 作为进程级路由运行时。Proxyline 覆盖 `fetch`、基于 undici 的客户端、Node 核心 `node:http` / `node:https` 调用方、常见 WebSocket 客户端以及辅助创建的 CONNECT 隧道。受管代理模式会替换调用方提供的 Node HTTP agent，因此显式 agent 不会意外绕过运维代理。
-
-一些插件拥有自定义传输，即使存在进程级路由，也需要显式的代理接线。例如，Telegram 的 Bot API 传输使用其自身的 HTTP/1 undici dispatcher，因此会在该插件专用的传输路径中遵循进程代理环境以及受管的 `OPENCLAW_PROXY_URL` 回退。
-
-代理 URL 本身可以使用 `http://` 或 `https://`。这些协议说明的是 OpenClaw 到代理端点的连接方式：
-
-- `http://proxy.example:3128`：OpenClaw 到正向代理建立普通 TCP 连接，并发送 HTTP 代理请求，其中包括针对 HTTPS 目标的 `CONNECT`。
-- `https://proxy.example:8443`：OpenClaw 到代理端点建立 TLS 连接，验证代理证书，然后在该 TLS 会话中发送 HTTP 代理请求。
-
-目标 HTTPS 与代理端点 TLS 是分开的。对于 HTTPS 目标，OpenClaw 仍然会向代理请求一个 HTTP `CONNECT` 隧道，然后通过该隧道发起目标 TLS。
-
-在代理处于活动状态时，OpenClaw 会清除 `no_proxy` 和 `NO_PROXY`。这些绕过列表是基于目标的，因此如果将 `localhost` 或 `127.0.0.1` 保留在那里，就会让高风险的 SSRF 目标跳过过滤代理。
-
-关闭时，OpenClaw 会恢复之前的代理环境，并重置缓存的进程路由状态。
-
-## 相关代理术语
-
-- `proxy.enabled` / `proxy.proxyUrl`：用于 OpenClaw 运行时出站流量的正向代理路由。本页对此功能进行了说明。
-- `gateway.auth.mode: "trusted-proxy"`：用于 Gateway 访问的入站、具备身份感知的反向代理认证。参见 [受信任代理认证](/gateway/trusted-proxy-auth)。
-- `openclaw proxy`：用于开发和支持的本地调试代理与抓包检查器。参见 [openclaw proxy](/cli/proxy)。
-- `tools.web.fetch.useTrustedEnvProxy`：为 `web_fetch` 提供可选能力，使运维控制的 HTTP(S) 环境代理在保留默认严格 DNS 固定和主机名策略的同时解析 DNS。参见 [Web fetch](/tools/web-fetch#trusted-env-proxy)。
-- 通道或提供者特定的代理设置：针对特定传输的所有者级覆盖。当目标是在整个运行时实现集中出站控制时，应优先使用受管网络代理。
+OpenClaw 不会提供、下载、启动、配置或认证代理。你运行适合你环境的代理技术；OpenClaw 会将其自身的 HTTP 和 WebSocket 客户端通过该代理进行路由。
 
 ## 配置
 
@@ -67,7 +18,33 @@ proxy:
   proxyUrl: http://127.0.0.1:3128
 ```
 
-对于带有私有代理 CA 的 HTTPS 代理端点：
+你也可以在环境中设置 URL，同时保持 `proxy.enabled: true` 在配置中：
+
+```bash
+OPENCLAW_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
+```
+
+`proxy.proxyUrl` 的优先级高于 `OPENCLAW_PROXY_URL`。如果 `proxy.enabled` 为 `true` 但没有解析出有效的 URL，受保护的命令会在启动时失败，而不是回退到直接网络访问。
+
+| Key                  | Type                                 | Default        | Notes                                                                                                                                 |
+| -------------------- | ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `proxy.enabled`      | boolean                              | unset          | 必须为 `true` 才能激活路由。                                                                                                           |
+| `proxy.proxyUrl`     | string                               | unset          | `http://` 或 `https://` 的正向代理 URL。URL 中嵌入的凭据会被视为敏感信息，并在快照/日志中被脱敏。                                      |
+| `proxy.tls.caFile`   | string                               | unset          | 用于验证由私有 CA 签名的 `https://` 代理端点的 CA 证书包。                                                                             |
+| `proxy.loopbackMode` | `gateway-only` \| `proxy` \| `block` | `gateway-only` | 控制回环绕过行为；见下文。                                                                                                             |
+
+对于托管网关服务，请将 URL 存储在配置中，这样即使重新安装也能保留，而不是依赖前台环境变量：
+
+```bash
+openclaw config set proxy.enabled true
+openclaw config set proxy.proxyUrl http://127.0.0.1:3128
+openclaw gateway install --force
+openclaw gateway start
+```
+
+`OPENCLAW_PROXY_URL` 环境变量回退最适合前台运行。若要在已安装的服务中使用它，请将其放入服务的持久环境中（`$OPENCLAW_STATE_DIR/.env`，默认 `~/.openclaw/.env`），然后重新安装，以便 launchd/systemd/计划任务能够读取它。
+
+### 使用私有 CA 的 HTTPS 代理端点
 
 ```yaml
 proxy:
@@ -77,17 +54,40 @@ proxy:
     caFile: /etc/openclaw/proxy-ca.pem
 ```
 
-你也可以通过环境变量提供 URL，同时在配置中保持 `proxy.enabled=true`：
+`proxy.tls.caFile` 用于验证代理端点自身的 TLS 证书。它不是目标 MITM 信任设置，不是客户端证书，也不能替代代理的目标策略。只有在整个 Node 进程必须从启动时起信任额外 CA 时，才改用 `NODE_EXTRA_CA_CERTS`（例如企业 TLS 检查系统为每个 HTTPS 目标证书重新签名）——该变量是进程全局的，必须在 Node 启动前设置，因此 OpenClaw 无法像应用 `proxy.tls.caFile` 那样在运行中间应用它。对于 HTTPS 代理端点信任，优先使用 `proxy.tls.caFile`：它的作用范围仅限于受管理的代理路由，而不是整个进程。
 
 ```bash
-OPENCLAW_PROXY_URL=http://127.0.0.1:3128 openclaw gateway run
+openclaw config set proxy.enabled true
+openclaw config set proxy.proxyUrl https://proxy.corp.example:8443
+openclaw config set proxy.tls.caFile /etc/openclaw/proxy-ca.pem
+openclaw gateway run
 ```
 
-`proxy.proxyUrl` 的优先级高于 `OPENCLAW_PROXY_URL`。
+## 路由工作原理
+
+当 `proxy.enabled: true` 且 URL 有效时，受保护的运行时进程（`openclaw gateway run`、`openclaw node run`、`openclaw agent --local`）会通过代理路由普通的 HTTP 和 WebSocket 出站流量：
+
+```text
+OpenClaw process
+  fetch, node:http, node:https, WebSocket clients  -> operator proxy -> destination
+```
+
+在内部，OpenClaw 将 [Proxyline](https://github.com/openclaw/proxyline) 作为进程级路由运行时。它覆盖 `fetch`、基于 undici 的客户端、`node:http`/`node:https`、常见的 WebSocket 客户端以及由辅助函数创建的 `CONNECT` 隧道，并且会替换调用方提供的 Node HTTP agents，因此显式指定的 agents（包括 `axios`、`got`、`node-fetch` 以及类似的基于 Node-agent 的客户端）不能悄悄绕过代理。
+
+代理 URL 的 scheme 描述的是从 OpenClaw 到代理的跳转，而不是到最终目标的跳转：
+
+- `http://proxy.example:3128` — 到代理的纯 TCP；OpenClaw 发送 HTTP 代理请求，包括面向 HTTPS 目标的 `CONNECT`。
+- `https://proxy.example:8443` — OpenClaw 先与代理本身建立 TLS（验证代理的证书），然后在该会话中发送 HTTP 代理请求。
+
+目标 TLS 与代理端点 TLS 相互独立：对于 HTTPS 目标，OpenClaw 总是向代理请求 `CONNECT` 隧道，并通过该隧道启动目标 TLS。
+
+当代理处于活动状态时，OpenClaw 会清除 `no_proxy`/`NO_PROXY`。这些绕过列表是基于目标地址的；如果把 `localhost` 或 `127.0.0.1` 留在里面，就会让 SSRF 目标完全跳过代理。关闭时，OpenClaw 会恢复之前的代理环境并重置缓存的路由状态。
+
+某些插件拥有自定义传输，即使进程级路由已启用，也需要它们自己的代理配置。Telegram 的 Bot API 客户端使用其自己的 HTTP/1 undici dispatcher，并且还会单独遵循进程代理环境变量以及 `OPENCLAW_PROXY_URL` 回退。
 
 ### Gateway 回环模式
 
-本地 Gateway 控制平面客户端通常会连接到类似 `ws://127.0.0.1:18789` 的回环 WebSocket。使用 `proxy.loopbackMode` 选择在受管代理处于活动状态时回环受管代理例外的行为：
+本地 Gateway 控制平面客户端通常连接到一个回环 WebSocket，例如 `ws://127.0.0.1:18789`。`proxy.loopbackMode` 控制这类流量是否绕过受管代理：
 
 ```yaml
 proxy:
@@ -96,84 +96,63 @@ proxy:
   loopbackMode: gateway-only # gateway-only, proxy, or block
 ```
 
-- `gateway-only`（默认）：OpenClaw 会在 Proxyline 的受管绕过策略中注册 Gateway 回环权限，以便本地 Gateway WebSocket 流量可以直接连接。自定义的 Gateway 回环端口也可正常工作，因为当前活动 Gateway URL 的主机和端口会被注册。捆绑的浏览器插件还可以为 OpenClaw 启动的受管浏览器注册精确的本地 CDP 就绪和 DevTools WebSocket 端点，而捆绑的 Ollama 记忆嵌入提供程序则可以为精确配置的主机本地回环嵌入来源使用其自身更窄的受保护直连路径。
-- `proxy`：OpenClaw 不会注册 Gateway 或 Ollama 的回环绕过，因此这类回环流量会通过受管代理发送。如果代理是远程的，它必须为 OpenClaw 主机的回环服务提供特殊路由，例如将其映射到代理可达的主机名、IP 或隧道。标准远程代理会从代理主机而不是从 OpenClaw 主机解析 `127.0.0.1` 和 `localhost`。
-- `block`：OpenClaw 会在打开 socket 之前拒绝 Gateway 回环控制平面连接和受保护的 Ollama 主机本地嵌入回环连接。
+| 模式                     | 行为                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gateway-only`（默认）   | OpenClaw 会将当前活动的 Gateway 回环 authority 注册为直连例外，因此本地 Gateway WebSocket 流量无需经过代理即可连接。自定义回环端口也可工作，因为该例外会精确指向已配置的 host/port。内置浏览器插件会为 OpenClaw 启动的受管浏览器的精确本地 CDP 就绪和 DevTools WebSocket URL 注册同类例外；内置 Ollama memory embedding provider 则为其精确配置的、主机本地回环 embedding origin 提供更窄的受保护直连路径。 |
+| `proxy`                  | 不注册任何回环例外；Gateway 和 Ollama 的回环流量会通过代理。远程代理必须能够将流量路由回 OpenClaw 主机的回环服务（例如通过可达的 hostname、IP 或隧道）——标准的远程代理会把 `127.0.0.1`/`localhost` 解析到它自己，而不是 OpenClaw 主机。                                                                                                                                                                                                                                                                                                                                                |
+| `block`                  | OpenClaw 会在打开 socket 之前，拒绝 Gateway 回环控制平面连接以及受保护的 Ollama 回环 embedding 连接。                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
-如果 `enabled=true` 但未配置有效的代理 URL，受保护的命令会在启动时失败，而不是回退到直接网络访问。
+Gateway 控制平面绕过仅限于 `localhost` 和字面量回环 IP URL——请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`。其他主机名会像普通流量一样路由。
 
-对于使用 `openclaw gateway start` 启动的托管 Gateway 服务，建议将 URL 存储在配置中：
+### 容器
 
-```bash
-openclaw config set proxy.enabled true
-openclaw config set proxy.proxyUrl http://127.0.0.1:3128
-openclaw gateway install --force
-openclaw gateway start
-```
+对于 `openclaw --container ...` 命令，当设置了 `OPENCLAW_PROXY_URL` 时，OpenClaw 会将其转发到面向容器的子 CLI。该 URL 必须能从容器内部访问——容器中的 `127.0.0.1` 指的是容器自身，而不是宿主机。对于面向容器的命令，OpenClaw 会拒绝回环代理 URL，除非你设置 `OPENCLAW_CONTAINER_ALLOW_LOOPBACK_PROXY_URL=1` 来显式覆盖该检查。
 
-环境变量回退更适合前台运行。如果你将它与已安装的服务一起使用，请把 `OPENCLAW_PROXY_URL` 放入服务的持久环境中，例如 `$OPENCLAW_STATE_DIR/.env` 或 `~/.openclaw/.env`，然后重新安装服务，以便 launchd、systemd 或计划任务使用该值启动 Gateway。
+## 相关代理术语
 
-对于 `openclaw --container ...` 命令，OpenClaw 会在设置了 `OPENCLAW_PROXY_URL` 时，将其转发到以容器为目标的子 CLI。该 URL 必须能从容器内部访问；`127.0.0.1` 指向的是容器自身，而不是宿主机。除非你显式覆盖该安全检查，否则 OpenClaw 会拒绝容器目标命令使用回环代理 URL。
+- `proxy.enabled` / `proxy.proxyUrl` — 运行时出口流量的出站正向代理路由。本页。
+- `gateway.auth.mode: "trusted-proxy"` — 用于 Gateway 访问的入站、具备身份感知的反向代理认证。参见 [受信任代理认证](/gateway/trusted-proxy-auth)。
+- `openclaw proxy` — 用于开发和支持的本地调试代理与抓包检查器。参见 [openclaw proxy](/cli/proxy)。
+- `tools.web.fetch.useTrustedEnvProxy` — 为 `web_fetch` 提供可选支持，使由操作员控制的 HTTP(S) 环境代理在默认保持严格 DNS 绑定和主机名策略的同时解析 DNS。参见 [Web fetch](/tools/web-fetch#trusted-env-proxy)。
+- 基于 Channel 或 provider 的代理设置 — 针对单个传输的所有者级覆盖。建议优先使用受管理的网络代理，以便在整个运行时中集中控制出口流量。
 
-## 代理要求
+## 验证代理
 
-代理策略就是安全边界。OpenClaw 无法验证代理是否阻止了正确的目标。
+代理的目标策略才是真正的安全边界；OpenClaw 无法验证你的代理是否阻止了正确的目标。请将其配置为：
 
-请将代理配置为：
+- 仅绑定到回环接口或私有可信接口，并且只能由 OpenClaw 进程/主机/容器/服务账户访问。
+- 自行解析目标，并在连接时于 DNS 解析之后按 IP 进行阻止，同时适用于普通 HTTP 和 HTTPS `CONNECT` 隧道。
+- 拒绝基于目标的绕过，包括回环、私有、链路本地、元数据、多播、保留和文档地址段。
+- 除非你完全信任 DNS 解析路径，否则不要使用主机名白名单。
+- 记录目标、决策、状态和原因——绝不要记录请求体、授权头、Cookie 或其他机密信息。
+- 将该策略纳入版本控制，并将变更视为安全敏感操作进行审查。
 
-- 仅绑定到回环或受信任的私有接口。
-- 限制访问，仅允许 OpenClaw 进程、主机、容器或服务账号使用。
-- 由代理自身解析目标，并在 DNS 解析后阻止目标 IP。
-- 对普通 HTTP 请求和 HTTPS `CONNECT` 隧道在连接时应用策略。
-- 拒绝基于目标的回环、私有、链路本地、元数据、多播、保留或文档地址段绕过。
-- 除非你完全信任 DNS 解析路径，否则不要使用基于主机名的允许列表。
-- 记录目标、决策、状态和原因，但不要记录请求体、授权头、cookie 或其他机密信息。
-- 将代理策略纳入版本控制，并像对待安全敏感配置一样审查变更。
-
-## 推荐阻止的目标
-
-将此拒绝列表作为任何正向代理、防火墙或出站策略的起点。
-
-OpenClaw application-level classifier logic lives in `src/infra/net/ssrf.ts` and `packages/net-policy/src/ip.ts`. The relevant parity hooks are `BLOCKED_HOSTNAMES`, `BLOCKED_IPV4_SPECIAL_USE_RANGES`, `BLOCKED_IPV6_SPECIAL_USE_RANGES`, `RFC2544_BENCHMARK_PREFIX`, and the embedded IPv4 sentinel handling for NAT64, 6to4, Teredo, ISATAP, and IPv4-mapped forms. Those files are useful references when maintaining an external proxy policy, but OpenClaw does not automatically export or enforce those rules in your proxy.
-
-| Range or host                                                                        | 为什么阻止                                      |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| `127.0.0.0/8`, `localhost`, `localhost.localdomain`                                  | IPv4 回环                                       |
-| `::1/128`                                                                            | IPv6 回环                                       |
-| `0.0.0.0/8`, `::/128`                                                                | 未指定地址和本网络地址                           |
-| `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`                                      | RFC1918 私有网络                                |
-| `169.254.0.0/16`, `fe80::/10`                                                        | 链路本地地址和常见云元数据路径                   |
-| `169.254.169.254`, `metadata.google.internal`                                        | 云元数据服务                                    |
-| `100.64.0.0/10`                                                                      | 运营商级 NAT 共享地址空间                       |
-| `198.18.0.0/15`, `2001:2::/48`                                                       | 基准测试地址段                                  |
-| `192.0.0.0/24`, `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32` | 特殊用途和文档地址段                             |
-| `224.0.0.0/4`, `ff00::/8`                                                            | 多播                                            |
-| `240.0.0.0/4`                                                                        | 保留的 IPv4                                     |
-| `fc00::/7`, `fec0::/10`                                                              | IPv6 本地/私有地址段                            |
-| `100::/64`, `2001:20::/28`                                                           | IPv6 丢弃和 ORCHIDv2 地址段                     |
-| `64:ff9b::/96`, `64:ff9b:1::/48`                                                     | 带嵌入 IPv4 的 NAT64 前缀                       |
-| `2002::/16`, `2001::/32`                                                             | 带嵌入 IPv4 的 6to4 和 Teredo                   |
-| `::/96`, `::ffff:0:0/96`                                                             | IPv4 兼容和 IPv4 映射的 IPv6                    |
-
-如果你的云提供商或网络平台记录了额外的元数据主机或保留地址段，也请一并添加。
-
-## 验证
-
-请从运行 OpenClaw 的同一台主机、容器或服务账号来验证代理：
+请在运行 OpenClaw 的同一主机/容器/服务账户下进行验证：
 
 ```bash
 openclaw proxy validate --proxy-url http://127.0.0.1:3128
 ```
 
-对于由私有 CA 签名的 HTTPS 代理端点：
+使用私有 CA 的 HTTPS 代理端点：
 
 ```bash
 openclaw proxy validate --proxy-url https://proxy.corp.example:8443 --proxy-ca-file /etc/openclaw/proxy-ca.pem
 ```
 
-默认情况下，如果没有提供自定义目标，命令会检查 `https://example.com/` 是否成功，并启动一个临时的回环 canary，而代理必须无法触达它。默认的拒绝检查在代理返回非 2xx 拒绝响应或以传输失败方式阻止 canary 时通过；如果有成功响应到达 canary，则失败。如果未启用并配置代理，验证会报告配置问题；在修改配置之前，可使用 `--proxy-url` 进行一次性预检。使用 `--allowed-url` 和 `--denied-url` 测试部署特定的预期结果。添加 `--apns-reachable` 还能验证直接 APNs HTTP/2 投递是否可以通过代理打开 CONNECT 隧道并收到 sandbox APNs 响应；该探测会使用故意无效的 provider token，因此预期返回 `403 InvalidProviderToken`，并且这会被视为可达。自定义的拒绝目标采用失败即关闭：任何 HTTP 响应都意味着该目标可以通过代理到达，而任何传输错误都会被报告为无法判定，因为 OpenClaw 无法证明代理阻止了一个可达源。验证失败时，命令以代码 1 退出。
+| 标志                     | 作用                                                              |
+| ------------------------ | -------------------------------------------------------------------- |
+| `--proxy-url <url>`      | 验证此 URL，而不是解析配置/环境。                   |
+| `--proxy-ca-file <path>` | HTTPS 代理端点的 CA 证书包。                               |
+| `--allowed-url <url>`    | 预期应成功的目标（可重复）。                        |
+| `--denied-url <url>`     | 预期应被阻止的目标（可重复）。                     |
+| `--apns-reachable`       | 另外验证代理是否可以隧穿一个直接的沙箱 APNs HTTP/2 探测。 |
+| `--apns-authority <url>` | 覆盖 `--apns-reachable` 探测所使用的 APNs authority。          |
+| `--timeout-ms <ms>`      | 每个请求的超时时间。                                                 |
+| `--json`                 | 机器可读输出。                                             |
 
-自动化场景可使用 `--json`。JSON 输出包含总体结果、有效代理配置来源、任何配置错误以及每个目标检查项。代理 URL 凭据会在文本和 JSON 输出中被脱敏：
+如果 `proxy.enabled` 不是 `true` 且未提供 `--proxy-url`，该命令会报告配置问题而不是执行验证；在修改配置之前，先传入 `--proxy-url` 进行一次性预检。
+
+如果没有提供 `--allowed-url`/`--denied-url`，默认检查为：`https://example.com/` 必须成功，并且代理绝不能访问到一个临时的回环探针服务器，且必须将其阻止。回环检查在传输失败时通过，或者在返回一个不包含该探针每次运行唯一 token 的非 2xx 响应时通过；如果返回 2xx 响应但缺少 token（即来自非探针的意外成功），则失败；尤其是在任何带有匹配 token 的响应上也会失败，因为这证明代理实际上转发了它本应拒绝的回环目标。自定义的 `--denied-url` 目标没有这样的探针 token，因此它们采用“失败即关闭”的策略：任何 HTTP 响应都视为可达（失败），而传输错误则被报告为不确定，而不是证明已阻止，因为 OpenClaw 无法确认是你的代理拒绝了一个可达的源，还是其他地方出了问题。`--apns-reachable` 会发送一个故意无效的提供者 token，因此返回 `403 InvalidProviderToken` 响应就可证明隧道已到达 Apple。命令在任何验证失败时以 `1` 退出；代理 URL 凭据会在文本和 JSON 输出中被脱敏。
 
 ```json
 {
@@ -185,23 +164,13 @@ openclaw proxy validate --proxy-url https://proxy.corp.example:8443 --proxy-ca-f
     "errors": []
   },
   "checks": [
-    {
-      "kind": "allowed",
-      "url": "https://example.com/",
-      "ok": true,
-      "status": 200
-    },
-    {
-      "kind": "apns",
-      "url": "https://api.sandbox.push.apple.com",
-      "ok": true,
-      "status": 403
-    }
+    { "kind": "allowed", "url": "https://example.com/", "ok": true, "status": 200 },
+    { "kind": "apns", "url": "https://api.sandbox.push.apple.com", "ok": true, "status": 403 }
   ]
 }
 ```
 
-你也可以使用 `curl` 手动验证：
+手动 `curl` 检查（公共请求应成功；回环和元数据请求应被代理本身阻止——单独使用 `curl` 无法像 `openclaw proxy validate` 的内置探针那样区分代理拒绝与目标不可达）：
 
 ```bash
 curl -x http://127.0.0.1:3128 https://example.com/
@@ -209,60 +178,44 @@ curl -x http://127.0.0.1:3128 http://127.0.0.1/
 curl -x http://127.0.0.1:3128 http://169.254.169.254/
 ```
 
-公共请求应当成功。回环和元数据请求应当被代理阻止。对于 `openclaw proxy validate`，内置的回环 canary 可以区分代理拒绝和可达源。自定义 `--denied-url` 检查没有这个 canary，因此除非你的代理暴露了可单独验证的部署特定拒绝信号，否则应将 HTTP 响应和含糊的传输失败都视为验证失败。
+## 推荐阻止的目标
 
-## Proxy CA trust
+任何正向代理、防火墙或出站策略的起始拒绝列表。OpenClaw 自身的 SSRF 分类器位于 `src/infra/net/ssrf.ts` 和 `packages/net-policy/src/ip.ts`（`BLOCKED_HOSTNAMES`、`BLOCKED_IPV4_SPECIAL_USE_RANGES`、`BLOCKED_IPV6_SPECIAL_USE_RANGES`、RFC 2544 基准前缀，以及针对 NAT64/6to4/Teredo/ISATAP/IPv4-mapped 形式的嵌入式 IPv4 处理）——这些是有用的参考，但 OpenClaw 不会在你的外部代理中导出或强制执行这些规则。
 
-当代理端点本身使用由私有 CA 签名的证书时，请使用受管的 `proxy.tls.caFile`：
+| 范围或主机                                                                       | 阻止原因                                           |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `127.0.0.0/8`, `localhost`, `localhost.localdomain`                                  | IPv4 回环                                        |
+| `::1/128`                                                                            | IPv6 回环                                        |
+| `0.0.0.0/8`, `::/128`                                                                | 未指定 / 本网络地址                                |
+| `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`                                      | RFC 1918 私有网络                                  |
+| `169.254.0.0/16`, `fe80::/10`                                                        | 链路本地，包括常见的云元数据路径                    |
+| `169.254.169.254`, `metadata.google.internal`                                        | 云元数据服务                                       |
+| `100.64.0.0/10`                                                                      | 运营商级 NAT 共享地址空间                          |
+| `198.18.0.0/15`, `2001:2::/48`                                                       | 基准测试范围                                        |
+| `192.0.0.0/24`, `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32` | 特殊用途和文档范围                                  |
+| `224.0.0.0/4`, `ff00::/8`                                                            | 组播                                               |
+| `240.0.0.0/4`                                                                        | 预留 IPv4                                          |
+| `fc00::/7`, `fec0::/10`                                                              | IPv6 本地/私有范围                                  |
+| `100::/64`, `2001:20::/28`                                                           | IPv6 丢弃和 ORCHIDv2 范围                          |
+| `64:ff9b::/96`, `64:ff9b:1::/48`                                                     | 带嵌入式 IPv4 的 NAT64 前缀                         |
+| `2002::/16`, `2001::/32`                                                             | 带嵌入式 IPv4 的 6to4 和 Teredo                    |
+| `::/96`, `::ffff:0:0/96`                                                             | IPv4 兼容和 IPv4 映射的 IPv6                        |
 
-```yaml
-proxy:
-  enabled: true
-  proxyUrl: https://proxy.corp.example:8443
-  tls:
-    caFile: /etc/openclaw/proxy-ca.pem
-```
-
-该 CA 用于对代理端点进行 TLS 验证。它不是目标 MITM 信任设置、客户端证书，也不是代理目标策略的替代方案。
-
-仅当整个 Node 进程必须从进程启动时就信任额外的 CA 时，才使用 `NODE_EXTRA_CA_CERTS`，例如企业 TLS 检测系统会为进程中的每个 HTTPS 客户端重新签名目标证书时。`NODE_EXTRA_CA_CERTS` 是进程全局的，并且必须在 Node 启动前存在。对于 HTTPS 代理端点信任，请优先使用 `proxy.tls.caFile`，因为它仅作用于受管代理路由。
-
-然后启用 OpenClaw 代理路由：
-
-```bash
-openclaw config set proxy.enabled true
-openclaw config set proxy.proxyUrl https://proxy.corp.example:8443
-openclaw config set proxy.tls.caFile /etc/openclaw/proxy-ca.pem
-openclaw gateway run
-```
-
-或者设置：
-
-```yaml
-proxy:
-  enabled: true
-  proxyUrl: https://proxy.corp.example:8443
-  tls:
-    caFile: /etc/openclaw/proxy-ca.pem
-```
+添加任何你的云提供商或网络平台文档中提到的其他元数据主机或保留范围。
 
 ## 限制
 
-- 代理可扩大进程本地 JavaScript HTTP 和 WebSocket 客户端的覆盖范围，但它不是操作系统级的网络沙箱。
-- Gateway 回环控制平面流量默认通过 `proxy.loopbackMode: "gateway-only"` 直接本地绕过。OpenClaw 通过在 Proxyline 的受管绕过策略中注册活动的 Gateway 回环权限来实现该绕过。运维人员可以将 `proxy.loopbackMode` 设置为 `"proxy"`，让 Gateway 回环流量通过受管代理；也可以设置为 `"block"`，拒绝回环 Gateway 连接。有关远程代理注意事项，请参见 [Gateway Loopback Mode](#gateway-loopback-mode)。
-- 原始 `net`、`tls` 和 `http2` 套接字、原生 addon，以及非 OpenClaw 子进程可能会绕过 Node 级代理路由，除非它们继承并遵守代理环境变量。fork 出来的 OpenClaw 子 CLI 会继承受管代理 URL 和 `proxy.loopbackMode` 状态。
-- IRC 是位于运维人员管理的前向代理路由之外的原始 TCP/TLS 通道。在要求所有出站流量都经过该前向代理的部署中，除非已明确批准直接 IRC 出站，否则请设置 `channels.irc.enabled=false`。
-- 本地调试代理是诊断工具，其针对代理请求和 CONNECT 隧道的直接上游转发在受管代理模式处于活动状态时默认禁用；仅在获得批准的本地诊断中才启用直接转发。
-- 当需要时，应在运维人员代理策略中将用户本地 WebUI 和本地模型服务器加入允许列表；OpenClaw 不为它们暴露通用的本地网络绕过。捆绑的 Ollama 内存嵌入提供程序范围更窄：它仅能对由配置的 `baseUrl` 派生出的、精确的主机本地回环嵌入源使用受保护的直接路径，以便在受管代理无法到达主机回环时，主机本地嵌入仍可正常工作。LAN、tailnet、私有网络和公网的 Ollama 嵌入主机仍使用受管代理路径。`proxy.loopbackMode: "proxy"` 会将此 Ollama 回环流量通过受管代理发送，而 `proxy.loopbackMode: "block"` 会在建立连接之前将其拒绝。
-- Gateway 控制平面代理绕过有意仅限于 `localhost` 和字面量回环 IP URL。对本地直连 Gateway 控制平面连接，请使用 `ws://127.0.0.1:18789`、`ws://[::1]:18789` 或 `ws://localhost:18789`；其他主机名会像普通基于主机名的流量一样进行路由。
-- OpenClaw 不会检查、测试或认证你的代理策略。
-- 请将代理策略更改视为安全敏感的运维变更。
+| 表面                                                      | 托管代理状态                                                                                                                                     |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetch`, `node:http`, `node:https`, 常见 WebSocket 客户端 | 配置后会通过托管代理钩子路由。                                                                                                      |
+| APNs 直接 HTTP/2                                           | 通过 APNs 托管的 `CONNECT` 助手路由。                                                                                                        |
+| 网关控制平面回环                               | 仅对精确配置的本地回环 Gateway URL 直接连接。                                                                                         |
+| 调试代理上游转发                              | 在托管代理模式处于活动状态时禁用，除非为本地诊断显式启用。                                                             |
+| IRC                                                          | 原始 TCP/TLS；不通过托管 HTTP 代理模式代理。如果你的部署要求所有出站流量都通过转发代理，请设置 `channels.irc.enabled: false`。 |
+| 其他原始 `net`、`tls` 或 `http2` 客户端调用              | 在落地前必须由原始套接字守卫进行分类。                                                                                               |
 
-| Surface                                                      | Managed proxy status                                                                               |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `fetch`, `node:http`, `node:https`, common WebSocket clients | 在配置后通过受管代理钩子进行路由。                                                                 |
-| APNs direct HTTP/2                                           | 通过 APNs 受管 CONNECT 辅助程序进行路由。                                                         |
-| Gateway control-plane loopback                               | 仅对已配置的本地回环 Gateway URL 直接连接。                                                       |
-| Debug proxy upstream forwarding                              | 在受管代理模式激活时被禁用，除非为本地诊断显式启用。                                               |
-| IRC                                                          | 原始 TCP/TLS；在受管 HTTP 代理模式下不会被代理。除非直接 IRC 出站已获批准，否则请禁用。           |
-| Other raw `net`, `tls`, or `http2` client calls              | 必须在落地前由原始套接字守卫进行分类。                                                             |
+- 这是针对 JavaScript HTTP/WebSocket 客户端的进程级覆盖，不是操作系统级网络沙箱。
+- 原始 `net`、`tls`、`http2` 套接字、原生插件以及非 OpenClaw 子进程可能会绕过 Node 级路由，除非它们继承并遵守代理环境变量。Fork 出的 OpenClaw 子 CLI 会继承托管代理 URL 和 `proxy.loopbackMode` 状态。
+- 用户本地 WebUI 和本地模型服务器不受通用本地网络绕过的覆盖——如有需要，请在运维代理策略中将它们加入允许列表。例外是捆绑的 Ollama 内存嵌入提供程序受保护的直接路径，其作用域限定为其配置的 `baseUrl` 中精确的主机本地域回环源；LAN、tailnet、私有网络和公共 Ollama 主机仍使用托管代理。
+- 在托管代理模式处于活动状态时，本地调试代理的直接上游转发（用于代理请求和 `CONNECT` 隧道）默认禁用；仅在获批的本地诊断中启用。
+- OpenClaw 不会检查、测试或认证你的代理策略。请将代理策略更改视为安全敏感的运维变更。

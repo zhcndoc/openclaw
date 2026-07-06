@@ -7,32 +7,26 @@ read_when:
 title: "Markdown 格式化"
 ---
 
-OpenClaw 通过先将出站 Markdown 转换为共享的中间
-表示（IR），再渲染为特定频道输出来进行格式化。IR 会保留
-源文本不变，同时携带样式/链接跨度，以便分块和渲染能
-在各频道之间保持一致。
-
-## 目标
-
-- **一致性：** 一次解析，多种渲染器。
-- **安全分块：** 在渲染前拆分文本，这样行内格式永远不会
-  跨越分块边界。
-- **频道适配：** 将同一 IR 映射到 Slack mrkdwn、Telegram HTML 和 Signal
-  样式范围，而无需重新解析 Markdown。
+OpenClaw 在渲染特定频道的输出之前，会将出站 Markdown 转换为共享的中间表示（IR）。IR 保留纯文本以及样式/链接跨度，因此一次解析即可服务于所有频道，并且分块时绝不会在跨度中间拆分格式。
 
 ## 流水线
 
-1. **解析 Markdown -> IR**
-   - IR 是纯文本加上样式跨度（粗体/斜体/删除线/代码/剧透）和链接跨度。
-   - 偏移量使用 UTF-16 代码单元，因此 Signal 的样式范围能与其 API 对齐。
-   - 仅当某个频道启用表格转换时，才会解析表格。
-2. **分块 IR（先格式化）**
-   - 分块发生在渲染之前，基于 IR 文本进行。
-   - 行内格式不会跨越分块边界；跨度会按每个分块进行切片。
-3. **按频道渲染**
-   - **Slack：** mrkdwn 令牌（粗体/斜体/删除线/代码），链接使用 `<url|label>`。
-   - **Telegram：** HTML 标签（`<b>`、`<i>`、`<s>`、`<code>`、`<pre><code>`、`<a href>`）。
-   - **Signal：** 纯文本 + `text-style` 范围；当标签与链接不同名时，链接会变成 `label (url)`。
+1. **将 Markdown 解析为 IR** (`markdownToIR`) - 纯文本加样式范围
+   （粗体、斜体、删除线、代码、代码块、spoiler、blockquote、
+   1-6 级标题）以及链接范围。偏移量使用 UTF-16 代码单元，因此 Signal 风格的
+   范围可以直接与其 API 对齐。只有当频道启用表格模式时，表格才会被解析。
+2. **对 IR 进行分块** (`chunkMarkdownIR` / `renderMarkdownIRChunksWithinLimit`)
+   - 分块发生在渲染之前的 IR 文本上，因此内联样式和链接会按每个块切分，
+   而不是跨越边界被截断。
+3. **按频道渲染** (`renderMarkdownWithMarkers`) - 样式标记映射
+   会将范围转换为该频道的原生标记语言。
+
+| Channel                                                          | Renderer                                                                             | Notes                                                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Slack                                                            | mrkdwn 记号（`*bold*`、`_italic_`、`` `code` ``、代码围栏）                      | 链接会变成 `<url\|label>`；解析时禁用自动链接，以避免重复链接      |
+| Telegram                                                         | HTML 标签（`<b>`、`<i>`、`<s>`、`<code>`、`<pre><code>`、`<a href>`、`<tg-spoiler>`） | 在启用 `richMessages` 时，还支持富消息表格和标题（`<h1>`-`<h6>`） |
+| Signal                                                           | 纯文本 + `text-style` 范围                                                     | 当标签与 URL 不同时，链接会渲染为 `label (url)`                        |
+| Discord, WhatsApp, iMessage, Microsoft Teams, and other channels | 纯文本                                                                           | 不使用基于 IR 的样式；Markdown 表格转换仍会通过 `convertMarkdownTables` 运行    |
 
 ## IR 示例
 
@@ -46,28 +40,27 @@ IR（示意）：
 
 ```json
 {
-  "text": "Hello world - see docs.",
+  "text": "你好 world - 查看 docs.",
   "styles": [{ "start": 6, "end": 11, "style": "bold" }],
-  "links": [{ "start": 19, "end": 23, "href": "https://docs.openclaw.ai" }]
+  "links": [{ "start": 18, "end": 22, "href": "https://docs.openclaw.ai" }]
 }
 ```
 
-## 使用位置
-
-- Slack、Telegram 和 Signal 的出站适配器都从 IR 渲染。
-- 其他频道（WhatsApp、iMessage、Microsoft Teams、Discord）仍然使用纯文本或
-  其各自的格式化规则，并在启用时于分块前应用 Markdown 表格转换。
-
 ## 表格处理
 
-Markdown 表格在聊天客户端中的支持并不一致。使用
-`markdown.tables` 来按频道（以及按账户）控制转换。
+`markdown.tables` 控制某个频道如何转换 Markdown 表格，可按
+频道设置，也可按账户单独设置：
 
-- `code`: 将表格渲染为代码块（大多数频道的默认值）。
-- `bullets`: 将每一行转换为项目符号列表（Matrix、Signal 和 WhatsApp 的默认值）。
-- `off`: 禁用表格解析和转换；原始表格文本直接透传。
+| 模式      | 行为                                                                                 |
+| --------- | ------------------------------------------------------------------------------------ |
+| `code`    | 在代码块中渲染为对齐的 ASCII 表格（回退默认值）                                      |
+| `bullets` | 将每一行转换为 `label: value` 项目符号列表                                            |
+| `block`    | 在传输支持原生表格时保留原生表格；否则回退到 `code`                                  |
+| `off`     | 禁用表格解析；原始表格文本将原样透传                                                   |
 
-配置键：
+各频道的插件默认值：Signal、WhatsApp 和 Matrix 的默认值为
+`bullets`；Mattermost 的默认值为 `off`；Telegram 的默认值为 `block`（当
+账户未启用 `richMessages` 时会解析为 `code`）。任何没有显式插件默认值的频道都会回退到 `code`。
 
 ```yaml
 channels:
@@ -82,56 +75,58 @@ channels:
 
 ## 分块规则
 
-- 分块限制来自频道适配器/配置，并应用于 IR 文本。
-- 代码围栏会作为单个块保留，并在末尾保留一个换行符，以便频道
-  能正确渲染它们。
-- 列表前缀和引用块前缀都是 IR 文本的一部分，因此分块时
-  不会在前缀中间拆分。
-- 行内样式（粗体/斜体/删除线/行内代码/剧透）绝不会跨越
-  分块；渲染器会在每个分块内重新开启样式。
+- 分块限制来自通道适配器/配置，并适用于 IR 文本，而不是
+  渲染后的输出。
+- 围栏代码块会作为一个整体保留，并在末尾附加一个换行符，以便
+  各通道能够正确渲染结束围栏。
+- 列表和引用前缀是 IR 文本的一部分，因此分块时不会在前缀中间
+  进行拆分。
+- 行内样式不会跨块拆分；渲染器会在下一块的开头重新打开已开启的
+  样式。
 
-如果你需要了解更多跨频道的分块行为，请参见
-[Streaming + chunking](/concepts/streaming)。
+有关块边界和跨通道传递行为，请参阅 [流式传输和分块](/concepts/streaming)。
 
 ## 链接策略
 
-- **Slack：** `[label](url)` -> `<url|label>`；裸 URL 仍保持裸链接。解析期间会禁用自动链接，
-  以避免重复链接。
+- **Slack：** `[label](url)` -> `<url|label>`；裸 URL 保持裸露。
 - **Telegram：** `[label](url)` -> `<a href="url">label</a>`（HTML 解析模式）。
-- **Signal：** `[label](url)` -> `label (url)`，除非标签与 URL 相同。
+- **Signal：** `[label](url)` -> `label (url)`，除非标签已经
+  与 URL 匹配。
 
 ## 剧透
 
-剧透标记（`||spoiler||`）仅为 Signal 解析，在那里它们会映射为
-SPOILER 样式范围。其他频道将其视为纯文本。
+剧透标记（`||spoiler||`）会在 Signal 中被解析（映射为 `SPOILER`
+样式范围），并在 Telegram 中被解析（映射为 `<tg-spoiler>`）。其他渠道会将
+`||...||` 视为普通文本。
 
-## 如何添加或更新频道格式化器
+## 添加或更新通道格式化器
 
-1. **解析一次：** 使用共享的 `markdownToIR(...)` 辅助函数，并配合频道适用的
-   选项（自动链接、标题样式、引用块前缀）。
-2. **渲染：** 实现一个带有 `renderMarkdownWithMarkers(...)` 和
-   样式标记映射（或 Signal 样式范围）的渲染器。
-3. **分块：** 在渲染前调用 `chunkMarkdownIR(...)`；对每个分块进行渲染。
-4. **接线适配器：** 更新该频道的出站适配器以使用新的分块器
-   和渲染器。
-5. **测试：** 如果该频道使用分块，添加或更新格式测试和出站交付测试。
+1. **解析一次**，使用 `markdownToIR(...)`，并传入与通道相适配的
+   选项（`autolink`、`headingStyle`、`blockquotePrefix`、`tableMode`）。
+2. 使用样式标记映射（或
+   对于像 Signal 这样的传输方式使用自定义样式范围逻辑）通过 `renderMarkdownWithMarkers(...)` 进行**渲染**。
+3. 在渲染每个块之前，使用 `chunkMarkdownIR(...)` 或
+   `renderMarkdownIRChunksWithinLimit(...)` 进行**分块**。
+4. **连接适配器**，从
+   出站发送路径中调用新的分块器和渲染器。
+5. 用格式测试以及通道进行分块时的出站投递测试进行**测试**。
 
 ## 常见陷阱
 
-- 必须保留 Slack 的尖括号令牌（`<@U123>`、`<#C123>`、`<https://...>`）；
-  要安全地转义原始 HTML。
-- Telegram HTML 需要对标签外的文本进行转义，以避免标记损坏。
-- Signal 样式范围依赖 UTF-16 偏移量；不要使用代码点偏移量。
-- 要保留围栏代码块末尾的换行符，这样结束标记会落在
-  自己单独的一行。
+- Slack angle-bracket tokens (`<@U123>`, `<#C123>`, `<https://...>`) 必须
+  在转义后仍然保留；原始 HTML 仍需要安全地进行转义。
+- Telegram HTML 要求对标签外的文本进行转义，以避免标记损坏。
+- Signal 样式范围使用 UTF-16 偏移量，而不是代码点偏移量。
+- 保留围栏代码块末尾的换行，以便闭合标记
+  单独位于一行。
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Streaming and chunking" href="/concepts/streaming" icon="bars-staggered">
+  <Card title="流式传输与分块" href="/concepts/streaming" icon="bars-staggered">
     出站流式传输行为、分块边界以及频道特定的交付。
   </Card>
-  <Card title="System prompt" href="/concepts/system-prompt" icon="message-lines">
+  <Card title="系统提示词" href="/concepts/system-prompt" icon="message-lines">
     模型在对话前看到的内容，包括注入的工作区文件。
   </Card>
 </CardGroup>

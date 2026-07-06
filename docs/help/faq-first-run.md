@@ -13,73 +13,67 @@ sidebarTitle: "首次运行 FAQ"
 ## 快速开始和首次运行设置
 
 <AccordionGroup>
-  <Accordion title="我卡住了，最快的脱困方法">
-    使用一个能**看到你的机器**的本地 AI 代理。这比在 Discord 里提问有效得多，因为大多数“我卡住了”的情况都是**本地配置或环境问题**，远程协助者无法检查。
+  <Accordion title="I am stuck, fastest way to get unstuck">
+    Use a local AI agent that can **see your machine**. Most "I'm stuck" cases are
+    **local config or environment issues** a remote helper cannot inspect, so this beats
+    asking in Discord.
 
     - **Claude Code**: [https://www.anthropic.com/claude-code/](https://www.anthropic.com/claude-code/)
     - **OpenAI Codex**: [https://openai.com/codex/](https://openai.com/codex/)
 
-    这些工具可以读取仓库、运行命令、检查日志，并帮助修复机器级别的设置（PATH、服务、权限、认证文件）。通过可折腾的（git）安装把**完整源码检出**提供给它们：
+    Give the agent the full source checkout via the hackable (git) install so it can read
+    code + docs and reason about the exact version you run:
 
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
     ```
 
-    这会从 git 检出版本安装 OpenClaw，因此代理可以读取代码和文档，并推理你正在运行的确切版本。以后你总能通过不带 `--install-method git` 重新运行安装程序切回稳定版。
+    Ask the agent to plan and supervise the fix step-by-step, then execute only the
+    necessary commands - smaller diffs are easier to audit.
 
-    提示：让代理**规划并监督**修复过程（逐步进行），然后只执行必要的命令。这样能让变更更小，也更容易审计。
+    Share these outputs when asking for help (in Discord or a GitHub issue):
 
-    如果你发现了真实 bug 或修复方案，请提交 GitHub issue 或 PR：
-    [https://github.com/openclaw/openclaw/issues](https://github.com/openclaw/openclaw/issues)
-    [https://github.com/openclaw/openclaw/pulls](https://github.com/openclaw/openclaw/pulls)
+    | Command | Shows |
+    | --- | --- |
+    | `openclaw status` | Gateway/agent health + basic config snapshot |
+    | `openclaw status --all` | Full read-only diagnosis, pasteable |
+    | `openclaw models status` | Provider auth + model availability |
+    | `openclaw doctor` | Validates and repairs common config/state issues |
+    | `openclaw logs --follow` | Live log tail |
+    | `openclaw gateway status --deep` | Deep gateway/config/plugin health check |
+    | `openclaw health --verbose` | Detailed health report |
 
-    先运行这些命令（求助时请共享输出）：
-
-    ```bash
-    openclaw status
-    openclaw models status
-    openclaw doctor
-    ```
-
-    它们的作用：
-
-    - `openclaw status`：快速查看网关/代理健康状态和基础配置。
-    - `openclaw models status`：检查提供商认证和模型可用性。
-    - `openclaw doctor`：验证并修复常见配置/状态问题。
-
-    其他有用的 CLI 检查：`openclaw status --all`、`openclaw logs --follow`、
-    `openclaw gateway status`、`openclaw health --verbose`。
+    Found a real bug or fix? File an issue or send a PR:
+    [Issues](https://github.com/openclaw/openclaw/issues) /
+    [Pull requests](https://github.com/openclaw/openclaw/pulls).
 
     快速调试循环：[如果有问题，前 60 秒该做什么](/help/faq#first-60-seconds-if-something-is-broken)。
     安装文档：[安装](/install)、[安装器参数](/install/installer)、[更新](/install/updating)。
 
   </Accordion>
 
-  <Accordion title="心跳一直被跳过。跳过原因是什么意思？">
-    常见的心跳跳过原因：
+  <Accordion title="Heartbeat keeps skipping. What do the skip reasons mean?">
+    | Skip reason | Meaning |
+    | --- | --- |
+    | `quiet-hours` | Outside the configured active-hours window |
+    | `empty-heartbeat-file` | `HEARTBEAT.md` exists but only has blank, comment, header, fence, or empty-checklist scaffolding |
+    | `no-tasks-due` | Task mode is active but no task interval is due yet |
+    | `alerts-disabled` | All heartbeat visibility is off (`showOk`, `showAlerts`, and `useIndicator` all disabled) |
 
-    - `quiet-hours`: 处于配置的活动时间窗口之外
-    - `empty-heartbeat-file`: `HEARTBEAT.md` 存在，但只包含空白、注释、标题、围栏，或空检查清单脚手架内容
-    - `no-tasks-due`: `HEARTBEAT.md` 任务模式已启用，但目前没有任何任务间隔到期
-    - `alerts-disabled`: 所有心跳可见性都已禁用（`showOk`、`showAlerts` 和 `useIndicator` 都关闭）
-
-    在任务模式下，只有一次真实的心跳运行完成后，到期时间戳才会前进。被跳过的运行不会把任务标记为完成。
+    In task mode, due timestamps advance only after a real heartbeat run completes.
+    Skipped runs do not mark tasks as completed.
 
     Docs: [Heartbeat](/gateway/heartbeat), [Automation](/automation).
 
   </Accordion>
 
-  <Accordion title="推荐的安装和设置 OpenClaw 的方式">
-    仓库推荐从源码运行并使用引导：
-
+  <Accordion title="Recommended way to install and set up OpenClaw">
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash
     openclaw onboard --install-daemon
     ```
 
-    向导也可以自动构建 UI 资源。完成引导后，通常会在 **18789** 端口运行 Gateway。
-
-    从源码安装（贡献者/开发者）：
+    From source (contributors/dev):
 
     ```bash
     git clone https://github.com/openclaw/openclaw.git
@@ -90,30 +84,33 @@ sidebarTitle: "首次运行 FAQ"
     openclaw onboard
     ```
 
-    如果你还没有全局安装，可以通过 `pnpm openclaw onboard` 运行。
+    No global install yet? Run `pnpm openclaw onboard` instead. If Control UI assets are
+    missing, onboarding tries to build them itself, falling back to `pnpm ui:build`.
 
   </Accordion>
 
-  <Accordion title="引导完成后我怎么打开仪表盘？">
-    向导会在引导完成后立即用一个干净的（非 token 化的）仪表盘 URL 打开浏览器，并在摘要中打印该链接。保持那个标签页打开；如果它没有自动启动，请在同一台机器上复制/粘贴打印出的 URL。
+  <Accordion title="How do I open the dashboard after onboarding?">
+    Onboarding opens your browser to a clean (non-tokenized) dashboard URL right after
+    setup and prints the link in the summary. Keep that tab open; if it did not launch,
+    copy/paste the printed URL on the same machine.
   </Accordion>
 
   <Accordion title="我在 localhost 和远程环境下该如何认证仪表盘？">
     **Localhost（同一台机器）：**
 
-    - 打开 `http://127.0.0.1:18789/`。
-    - 如果它要求共享密钥认证，请把已配置的 token 或密码粘贴到 Control UI 设置中。
-    - Token 来源：`gateway.auth.token`（或 `OPENCLAW_GATEWAY_TOKEN`）。
-    - 密码来源：`gateway.auth.password`（或 `OPENCLAW_GATEWAY_PASSWORD`）。
-    - 如果还没有配置共享密钥，可以用 `openclaw doctor --generate-gateway-token` 生成 token。
+    - Open `http://127.0.0.1:18789/`.
+    - If it asks for shared-secret auth, paste the configured token or password into Control UI settings.
+    - Token source: `gateway.auth.token` (or `OPENCLAW_GATEWAY_TOKEN`).
+    - Password source: `gateway.auth.password` (or `OPENCLAW_GATEWAY_PASSWORD`).
+    - No shared secret configured yet? Run `openclaw doctor --generate-gateway-token` (or `openclaw doctor --fix --generate-gateway-token`).
 
     **不是 localhost：**
 
-    - **Tailscale Serve**（推荐）：保持绑定 loopback，运行 `openclaw gateway --tailscale serve`，打开 `https://<magicdns>/`。如果 `gateway.auth.allowTailscale` 为 `true`，身份头即可满足 Control UI/WebSocket 认证（无需粘贴共享密钥，默认信任网关主机）；HTTP API 仍然需要共享密钥认证，除非你明确使用 private-ingress `none` 或受信任代理的 HTTP 认证。
-      来自同一客户端的不良并发 Serve 认证尝试会在失败认证限流器记录之前被串行化，因此第二次错误重试可能已经显示 `retry later`。
-    - **Tailnet 绑定**：运行 `openclaw gateway --bind tailnet --token "<token>"`（或配置密码认证），打开 `http://<tailscale-ip>:18789/`，然后在仪表盘设置中粘贴匹配的共享密钥。
-    - **具备身份感知的反向代理**：让 Gateway 位于受信任代理后面，配置 `gateway.auth.mode: "trusted-proxy"`，然后打开代理 URL。同主机的 loopback 代理需要显式设置 `gateway.auth.trustedProxy.allowLoopback = true`。
-    - **SSH 隧道**：`ssh -N -L 18789:127.0.0.1:18789 user@host`，然后打开 `http://127.0.0.1:18789/`。隧道上仍然适用共享密钥认证；如果提示，请粘贴已配置的 token 或密码。
+    - **Tailscale Serve** (recommended): keep bind loopback, run `openclaw gateway --tailscale serve`, open `https://<magicdns>/`. With `gateway.auth.allowTailscale: true`, identity headers satisfy Control UI/WebSocket auth (no pasted shared secret, assumes a trusted gateway host); HTTP APIs still need shared-secret auth unless you deliberately use private-ingress `none` or trusted-proxy HTTP auth.
+      Concurrent bad-auth Serve attempts from the same client are serialized before the failed-auth limiter records them, so a second bad retry can already show `retry later`.
+    - **Tailnet bind**: run `openclaw gateway --bind tailnet --token "<token>"` (or configure password auth), open `http://<tailscale-ip>:18789/`, paste the matching shared secret in dashboard settings.
+    - **Identity-aware reverse proxy**: keep the Gateway behind a trusted proxy, set `gateway.auth.mode: "trusted-proxy"`, open the proxy URL. Same-host loopback proxies need explicit `gateway.auth.trustedProxy.allowLoopback: true`.
+    - **SSH tunnel**: `ssh -N -L 18789:127.0.0.1:18789 user@gateway-host`, then open `http://127.0.0.1:18789/`. Shared-secret auth still applies over the tunnel; paste the configured token or password if prompted.
 
     有关绑定模式和认证细节，请参阅 [仪表盘](/web/dashboard) 和 [Web 表面](/web)。
 
@@ -122,49 +119,62 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="为什么聊天审批会有两个 exec approval 配置？">
     它们控制的是不同层：
 
-    - `approvals.exec`：把审批提示转发到聊天目的地
-    - `channels.<channel>.execApprovals`：让该频道作为 exec 审批的原生审批客户端
+    - `approvals.exec` - forwards approval prompts to chat destinations.
+    - `channels.<channel>.execApprovals` - makes that channel a native approval client for exec approvals.
 
-    主机上的 exec 策略仍然是真正的审批门槛。聊天配置只控制审批提示显示在哪里，以及人们如何回复它们。
+    The host exec policy is still the real approval gate; chat config only controls where
+    prompts appear and how people answer them.
 
-    在大多数设置里，你**不需要**两者都用：
+    You rarely need both:
 
-    - 如果聊天本身支持命令和回复，同一聊天中的 `/approve` 会通过共享路径工作。
-    - 如果受支持的原生频道可以安全地推断审批人，OpenClaw 现在会在 `channels.<channel>.execApprovals.enabled` 未设置或为 `"auto"` 时自动启用 DM 优先的原生审批。
-    - 当原生审批卡片/按钮可用时，那个原生 UI 是主路径；如果工具结果表明聊天审批不可用，或者手动审批是唯一路径，代理才应包含手动 `/approve` 命令。
-    - 只有当你明确希望把审批提示也转发到其他聊天或显式运维房间时，才使用 `approvals.exec`。
-    - 只有当你明确希望审批提示发回到原始房间/话题时，才使用 `channels.<channel>.execApprovals.target: "channel"` 或 `"both"`。
-    - 插件审批是另一回事：默认使用同一聊天中的 `/approve`，可选 `approvals.plugin` 转发，且只有某些原生频道会在此基础上保留插件审批原生处理。
+    - If the chat already supports commands and replies, same-chat `/approve` works through the shared path.
+    - When a supported native channel can infer approvers safely, OpenClaw auto-enables DM-first native approvals if `channels.<channel>.execApprovals.enabled` is unset or `"auto"`.
+    - When native approval cards/buttons are available, that UI is primary; only mention a manual `/approve` command if the tool result says chat approvals are unavailable.
+    - Use `approvals.exec` only when prompts must also reach other chats or explicit ops rooms.
+    - Use `channels.<channel>.execApprovals.target: "channel"` or `"both"` only when you want approval prompts posted back into the originating room/topic.
+    - Plugin approvals are separate: same-chat `/approve` by default, optional `approvals.plugin` forwarding, and only some native channels keep native handling for those too.
 
     简而言之：转发用于路由，原生客户端配置用于更丰富的频道专属体验。
     参见 [Exec 审批](/tools/exec-approvals)。
 
   </Accordion>
 
-  <Accordion title="我需要什么运行时？">
-    需要 Node **>= 22**。推荐使用 `pnpm`。不推荐在 Gateway 上使用 Bun。
+  <Accordion title="What runtime do I need?">
+    Node **22.19+** is required (Node 24 recommended). `pnpm` is the repo package manager.
+    Bun is **not recommended** for the Gateway.
   </Accordion>
 
-  <Accordion title="它能在 Raspberry Pi 上运行吗？">
-    可以。Gateway 很轻量——文档列出的个人用途足够配置是 **512MB-1GB RAM**、**1 核**，以及大约 **500MB**
-    磁盘，并指出 **Raspberry Pi 4 可以运行它**。
+  <Accordion title="Does it run on Raspberry Pi?">
+    Yes, but check RAM first: Pi 5 and Pi 4 (2 GB+) are the sweet spot; Pi 3B+ (1 GB) works but is slow; Pi Zero 2 W (512 MB) is not recommended.
 
-    如果你想要额外余量（日志、媒体、其他服务），**推荐 2GB**，但这不是硬性最低要求。
+    | Model | RAM | Fit |
+    | --- | --- | --- |
+    | Pi 5 | 4/8 GB | Best |
+    | Pi 4 | 4 GB | Good |
+    | Pi 4 | 2 GB | OK, add swap |
+    | Pi 4 | 1 GB | Tight |
+    | Pi 3B+ | 1 GB | Slow |
+    | Pi Zero 2 W | 512 MB | Not recommended |
 
-    Tip: a small Raspberry Pi/VPS can host the Gateway, and you can pair **nodes** on your laptop/phone for
-    local screen/camera/canvas or command execution. See [Nodes](/nodes).
+    Absolute minimum: 1 GB RAM, 1 core, 500 MB free disk, 64-bit OS. Since the Pi only runs
+    the Gateway (models call out to cloud APIs), even a modest Pi handles the load.
+
+    A small Pi/VPS can also host just the Gateway while you pair **nodes** on your
+    laptop/phone for local screen/camera/canvas or command execution. See [Nodes](/nodes).
+
+    Full setup walkthrough: [Raspberry Pi](/install/raspberry-pi).
 
   </Accordion>
 
-  <Accordion title="Raspberry Pi 安装有什么提示吗？">
-    简而言之：能用，但要预期一些粗糙边缘。
+  <Accordion title="Any tips for Raspberry Pi installs?">
+    - Use a **64-bit** OS; do not use 32-bit Raspberry Pi OS.
+    - Add swap on 2 GB or smaller boards.
+    - Prefer a **USB SSD** over an SD card for performance and longevity.
+    - Prefer the hackable (git) install so you can see logs and update fast.
+    - Start without channels/skills, add them one by one.
+    - Weird binary failures ("exec format error") are usually a missing ARM64 build for an optional skill tool.
 
-    - 使用 **64 位** 操作系统，并保持 Node >= 22。
-    - 优先使用**可折腾的（git）安装**，这样你能看到日志并快速更新。
-    - 先不启用频道/技能，之后一个一个加。
-    - 如果遇到奇怪的二进制问题，通常是 **ARM 兼容性** 问题。
-
-    文档：[Linux](/platforms/linux)、[安装](/install)。
+    Full guide: [Raspberry Pi](/install/raspberry-pi). Also see [Linux](/platforms/linux).
 
   </Accordion>
 
@@ -187,27 +197,32 @@ sidebarTitle: "首次运行 FAQ"
     openclaw logs --follow
     ```
 
-    3. 如果还是卡住，运行：
+    3. Still hanging? Run:
 
     ```bash
     openclaw doctor
     ```
 
-    如果 Gateway 是远程的，请确保隧道/Tailscale 连接已建立，并且 UI 指向的是正确的 Gateway。参见 [远程访问](/gateway/remote)。
+    If the Gateway is remote, confirm the tunnel/Tailscale connection is up and the UI
+    points at the right Gateway. See [Remote access](/gateway/remote).
 
   </Accordion>
 
-  <Accordion title="我可以把现有设置迁移到新机器（Mac mini）而不重新做引导吗？">
-    可以。复制**状态目录**和**工作区**，然后运行一次 Doctor。只要你把**两个**位置都复制了，这样就能让你的 bot“完全一样”（记忆、会话历史、认证和频道状态）：
+  <Accordion title="Can I migrate my setup to a new machine without redoing onboarding?">
+    Yes. Copy the **state directory** and **workspace**, then run Doctor once:
 
     1. 在新机器上安装 OpenClaw。
     2. 从旧机器复制 `$OPENCLAW_STATE_DIR`（默认：`~/.openclaw`）。
     3. 复制你的工作区（默认：`~/.openclaw/workspace`）。
     4. 运行 `openclaw doctor` 并重启 Gateway 服务。
 
-    这样会保留配置、认证配置文件、WhatsApp 凭据、会话和记忆。如果你使用远程模式，请记住网关主机拥有会话存储和工作区。
+    This preserves config, auth profiles, WhatsApp creds, sessions, and memory - it keeps
+    your bot exactly the same, as long as you copy **both** locations. In remote mode, the
+    gateway host owns the session store and workspace.
 
-    **重要：** 如果你只是把工作区提交/推送到 GitHub，你备份的是**记忆 + 引导文件**，但**不是**会话历史或认证。这些都位于 `~/.openclaw/` 下（例如 `~/.openclaw/agents/<agentId>/sessions/`）。
+    **Important:** if you only commit/push your workspace to GitHub, you back up
+    **memory + bootstrap files**, but not session history or auth. Those live under
+    `~/.openclaw/` (for example `~/.openclaw/agents/<agentId>/sessions/`).
 
     相关： [迁移](/install/migrating)、[磁盘上的文件存放位置](/help/faq#where-things-live-on-disk)、
     [代理工作区](/concepts/agent-workspace)、[Doctor](/gateway/doctor)、
@@ -219,16 +234,18 @@ sidebarTitle: "首次运行 FAQ"
     查看 GitHub 更新日志：
     [https://github.com/openclaw/openclaw/blob/main/CHANGELOG.md](https://github.com/openclaw/openclaw/blob/main/CHANGELOG.md)
 
-    最新条目在最上面。如果顶部部分标记为 **Unreleased**，那么下面第一个带日期的部分就是最新发布的版本。条目按 **Highlights**、**Changes** 和 **Fixes** 分组（在需要时还会有 docs/other 章节）。
+    Newest entries are at the top. If the top section is **Unreleased**, the next dated
+    section is the latest shipped version. Entries group under **Highlights**, **Changes**,
+    and **Fixes** (plus docs/other sections when needed).
 
   </Accordion>
 
-  <Accordion title="无法访问 docs.openclaw.ai（SSL 错误）">
-    某些 Comcast/Xfinity 连接会通过 Xfinity Advanced Security 错误地阻止 `docs.openclaw.ai`。
-    请禁用它或将 `docs.openclaw.ai` 加入白名单，然后重试。
-    请在这里报告，帮助我们解除封锁：[https://spa.xfinity.com/check_url_status](https://spa.xfinity.com/check_url_status)。
+  <Accordion title="Cannot access docs.openclaw.ai (SSL error)">
+    Some Comcast/Xfinity connections incorrectly block `docs.openclaw.ai` via Xfinity
+    Advanced Security. Disable it or allowlist `docs.openclaw.ai`, then retry. Help us
+    get it unblocked: [https://spa.xfinity.com/check_url_status](https://spa.xfinity.com/check_url_status).
 
-    如果你仍然无法访问该站点，文档在 GitHub 上有镜像：
+    Still blocked? Docs are mirrored on GitHub:
     [https://github.com/openclaw/openclaw/tree/main/docs](https://github.com/openclaw/openclaw/tree/main/docs)
 
   </Accordion>
@@ -237,20 +254,22 @@ sidebarTitle: "首次运行 FAQ"
     **Stable** 和 **beta** 是 **npm dist-tag**，不是两条不同的代码线：
 
     - `latest` = stable
-    - `beta` = 用于测试的早期构建
+    - `beta` = early build for testing (falls back to `latest` when beta is missing or older than the current stable release)
 
-    通常，一个稳定版会先进入 **beta**，然后通过一个显式的晋升步骤把同一个版本移动到 `latest`。维护者也可以在需要时直接发布到 `latest`。这就是为什么在晋升后 beta 和 stable 可以指向**同一个版本**。
+    A stable release usually lands on **beta** first, then an explicit promotion step
+    moves that same version to `latest` without changing the version number. Maintainers
+    can also publish straight to `latest`. That is why beta and stable can point at the
+    **same version** after promotion.
 
-    查看有哪些变化：
-    [https://github.com/openclaw/openclaw/blob/main/CHANGELOG.md](https://github.com/openclaw/openclaw/blob/main/CHANGELOG.md)
+    See what changed: [CHANGELOG.md](https://github.com/openclaw/openclaw/blob/main/CHANGELOG.md).
 
-    关于安装一键命令以及 beta 和 dev 的区别，请看下面的折叠项。
+    For install one-liners and the difference between beta and dev, see the next accordion.
 
   </Accordion>
 
-  <Accordion title="我如何安装 beta 版本，以及 beta 和 dev 有什么区别？">
-    **Beta** 是 npm dist-tag `beta`（晋升后可能与 `latest` 相同）。
-    **Dev** 是 `main`（git）的移动头；发布时会使用 npm dist-tag `dev`。
+  <Accordion title="How do I install the beta version and what is the difference between beta and dev?">
+    **Beta** is the npm dist-tag `beta` (may match `latest` after promotion).
+    **Dev** is the moving head of `main` (git); when published to npm it uses dist-tag `dev`.
 
     一键命令（macOS/Linux）：
 
@@ -262,8 +281,7 @@ sidebarTitle: "首次运行 FAQ"
     curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
     ```
 
-    Windows 安装器（PowerShell）：
-    [https://openclaw.ai/install.ps1](https://openclaw.ai/install.ps1)
+    Windows installer (PowerShell): `iwr -useb https://openclaw.ai/install.ps1 | iex`
 
     更多细节：[开发渠道](/install/development-channels) 和 [安装器参数](/install/installer)。
 
@@ -272,23 +290,22 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="我怎样尝试最新内容？">
     两种方式：
 
-    1. **Dev 渠道（git 检出）：**
+    1. **Dev channel (existing install):**
 
     ```bash
     openclaw update --channel dev
     ```
 
-    这会切换到 `main` 分支并从源码更新。
+    This switches to a git checkout of `main`, rebases on upstream, builds, and installs
+    the CLI from that checkout.
 
-    2. **可折腾安装（来自安装器网站）：**
+    2. **Hackable (git) install (fresh machine):**
 
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
     ```
 
-    这会给你一个可以本地编辑的仓库，然后通过 git 更新。
-
-    如果你更喜欢手动干净克隆，使用：
+    Prefer a manual clone:
 
     ```bash
     git clone https://github.com/openclaw/openclaw.git
@@ -297,51 +314,35 @@ sidebarTitle: "首次运行 FAQ"
     pnpm build
     ```
 
-    文档：[更新](/cli/update)、[开发渠道](/install/development-channels)、
-    [安装](/install)。
+    Docs: [Update](/cli/update), [Development channels](/install/development-channels), [Install](/install).
 
   </Accordion>
 
   <Accordion title="安装和引导通常要多久？">
     大致参考：
 
-    - **安装：** 2-5 分钟
-    - **引导：** 5-15 分钟，取决于你配置了多少频道/模型
+    - **Install:** 2-5 minutes.
+    - **QuickStart onboarding:** a few minutes (loopback gateway, auto token, default workspace).
+    - **Advanced/full onboarding:** longer when provider sign-in, channel pairing, daemon install, network downloads, or skills need extra setup.
 
-    如果卡住了，使用 [安装器卡住](#quick-start-and-first-run-setup)
-    以及 [我卡住了](#quick-start-and-first-run-setup) 中的快速调试循环。
+    The wizard shows this timeline up front. Skip optional steps and return later with
+    `openclaw configure`.
+
+    Hanging? See [I am stuck](#quick-start-and-first-run-setup) above.
 
   </Accordion>
 
-  <Accordion title="安装器卡住了？我怎样获取更多反馈？">
-    重新运行安装器并启用**详细输出**：
+  <Accordion title="Installer stuck? How do I get more feedback?">
+    Re-run with `--verbose`:
 
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --verbose
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --verbose
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --beta --verbose
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git --verbose
     ```
 
-    带详细输出的 beta 安装：
-
-    ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --beta --verbose
-    ```
-
-    对于可折腾的（git）安装：
-
-    ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git --verbose
-    ```
-
-    Windows（PowerShell）等效命令：
-
-    ```powershell
-    # install.ps1 目前还没有专用的 -Verbose 标志。
-    Set-PSDebug -Trace 1
-    & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
-    Set-PSDebug -Trace 0
-    ```
-
-    更多选项：[安装器参数](/install/installer)。
+    `install.ps1` has no dedicated verbose switch; wrap it in `Set-PSDebug -Trace 1` /
+    `-Trace 0` instead. Full flag reference: [Installer flags](/install/installer).
 
   </Accordion>
 
@@ -350,36 +351,28 @@ sidebarTitle: "首次运行 FAQ"
 
     **1）npm 错误 spawn git / git not found**
 
-    - 安装 **Git for Windows**，并确保 `git` 在你的 PATH 中。
-    - 关闭并重新打开 PowerShell，然后重新运行安装器。
+    - Install **Git for Windows**, make sure `git` is on PATH.
+    - Close and reopen PowerShell, then re-run the installer.
 
     **2）安装后 openclaw 未被识别**
 
-    - 你的 npm 全局 bin 目录没有加入 PATH。
-    - 检查路径：
+    - Your npm global bin folder is not on PATH.
+    - Check it: `npm config get prefix`.
+    - Add that directory to your user PATH (no `\bin` suffix needed; on most systems it is `%AppData%\npm`).
+    - Close and reopen PowerShell.
 
-      ```powershell
-      npm config get prefix
-      ```
-
-    - 把该目录加入你的用户 PATH（Windows 上不需要 `\bin` 后缀；大多数系统上它是 `%AppData%\npm`）。
-    - 更新 PATH 后关闭并重新打开 PowerShell。
-
-    For desktop setup, use the native **Windows Hub** app. For terminal-only
-    setup, the PowerShell installer and WSL2 Gateway paths are both supported.
-    Docs: [Windows](/platforms/windows).
+    Prefer a desktop app? Use **Windows Hub**. Terminal-only setup: the PowerShell
+    installer and WSL2 Gateway paths are both supported. Docs: [Windows](/platforms/windows).
 
   </Accordion>
 
-  <Accordion title="Windows exec 输出显示乱码中文 - 我该怎么办？">
-    这通常是原生 Windows shell 的控制台代码页不匹配导致的。
+  <Accordion title="Windows exec output shows garbled Chinese text - what should I do?">
+    Usually a console code page mismatch on native Windows shells.
 
-    症状：
+    Symptoms: `system.run`/`exec` output renders Chinese as mojibake; the same command
+    looks fine in another terminal profile.
 
-    - `system.run`/`exec` 输出把中文渲染成乱码
-    - 同一条命令在另一个终端配置文件里看起来正常
-
-    PowerShell 中的快速解决办法：
+    Workaround in PowerShell:
 
     ```powershell
     chcp 65001
@@ -388,77 +381,78 @@ sidebarTitle: "首次运行 FAQ"
     $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
     ```
 
-    然后重启 Gateway 并重试你的命令：
+    Then restart the Gateway and retry:
 
     ```powershell
     openclaw gateway restart
     ```
 
-    如果你在最新的 OpenClaw 上仍能复现，请在这里跟踪/报告：
-
-    - [Issue #30640](https://github.com/openclaw/openclaw/issues/30640)
+    Still reproducing this on latest OpenClaw? Track/report it: [Issue #30640](https://github.com/openclaw/openclaw/issues/30640).
 
   </Accordion>
 
-  <Accordion title="文档没有回答我的问题 - 我怎样获得更好的答案？">
-    使用**可折腾的（git）安装**，这样你在本地就有完整的源码和文档，然后在那个文件夹里向你的 bot（或 Claude/Codex）提问，这样它就可以读取仓库并准确回答。
+  <Accordion title="The docs did not answer my question - how do I get a better answer?">
+    Use the hackable (git) install so you have the full source and docs locally, then ask
+    your bot (or Claude/Codex) **from that folder** so it can read the repo and answer precisely.
 
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
     ```
 
     更多细节：[安装](/install) 和 [安装器参数](/install/installer)。
 
   </Accordion>
 
-  <Accordion title="我如何在 Linux 上安装 OpenClaw？">
-    简短答案：先按照 Linux 指南，然后运行引导。
-
-    - Linux 快速路径 + 服务安装：[Linux](/platforms/linux)。
-    - 完整流程：[入门指南](/start/getting-started)。
-    - 安装器 + 更新：[安装与更新](/install/updating)。
+  <Accordion title="How do I install OpenClaw on Linux?">
+    - Linux quick path + service install: [Linux](/platforms/linux).
+    - Full walkthrough: [Getting Started](/start/getting-started).
+    - Installer + updates: [Install & updates](/install/updating).
 
   </Accordion>
 
-  <Accordion title="我如何在 VPS 上安装 OpenClaw？">
-    任何 Linux VPS 都可以。先在服务器上安装，然后使用 SSH/Tailscale 访问 Gateway。
+  <Accordion title="How do I install OpenClaw on a VPS?">
+    Any Linux VPS works. Install on the server, then reach the Gateway over SSH/Tailscale.
 
     指南：[exe.dev](/install/exe-dev)、[Hetzner](/install/hetzner)、[Fly.io](/install/fly)。
     远程访问：[Gateway 远程模式](/gateway/remote)。
 
   </Accordion>
 
-  <Accordion title="云/VPS 安装指南在哪里？">
-    我们维护了一个包含常见提供商的**托管中心**。选择一个并按指南操作：
+  <Accordion title="Where are the cloud/VPS install guides?">
+    Hosting hub with common providers:
 
     - [VPS 托管](/vps)（把所有提供商放在一处）
     - [Fly.io](/install/fly)
     - [Hetzner](/install/hetzner)
     - [exe.dev](/install/exe-dev)
 
-    云端的工作方式：**Gateway 运行在服务器上**，你通过 Control UI（或 Tailscale/SSH）从笔记本/手机访问它。你的状态和工作区都保存在服务器上，因此应把主机视为唯一事实来源并做好备份。
+    In the cloud, the **Gateway runs on the server** and you access it from your laptop/phone
+    via the Control UI (or Tailscale/SSH). Your state + workspace live on the server, so
+    treat the host as the source of truth and back it up.
 
-    你可以把**节点**（Mac/iOS/Android/无头）配对到这个云 Gateway，以访问本地屏幕/摄像头/画布，或在你的笔记本上运行命令，同时让 Gateway 保持在云端。
+    Pair **nodes** (Mac/iOS/Android/headless) to that cloud Gateway for local
+    screen/camera/canvas or command execution on your laptop while the Gateway stays in
+    the cloud.
 
     中心：[平台](/platforms)。远程访问：[Gateway 远程模式](/gateway/remote)。
     节点：[节点](/nodes)、[节点 CLI](/cli/nodes)。
 
   </Accordion>
 
-  <Accordion title="我可以让 OpenClaw 自己更新自己吗？">
-    简短答案：**可以，但不推荐**。更新流程可能会重启 Gateway（这会断开当前会话），可能需要一个干净的 git 检出，并且可能会提示确认。更安全的做法：由操作员在 shell 中运行更新。
-
-    使用 CLI：
+  <Accordion title="Can I ask OpenClaw to update itself?">
+    Possible, not recommended. The update flow can restart the Gateway (dropping the
+    active session), may need a clean git checkout, and can prompt for confirmation.
+    Safer to run updates from a shell as the operator.
 
     ```bash
     openclaw update
     openclaw update status
-    openclaw update --channel stable|beta|dev
+    openclaw update --channel stable|extended-stable|beta|dev
     openclaw update --tag <dist-tag|version>
     openclaw update --no-restart
     ```
 
-    如果你必须从代理自动化执行：
+    Automating from an agent:
 
     ```bash
     openclaw update --yes --no-restart
@@ -469,68 +463,64 @@ sidebarTitle: "首次运行 FAQ"
 
   </Accordion>
 
-  <Accordion title="引导实际做了什么？">
-    `openclaw onboard` 是推荐的设置路径。在**本地模式**下，它会引导你完成：
+  <Accordion title="What does onboarding actually do?">
+    `openclaw onboard` is the recommended setup path. In **local mode** it walks through:
 
-    - **模型/认证设置**（提供商 OAuth、API key、Anthropic setup-token，以及本地模型选项如 LM Studio）
-    - **工作区** 位置 + 引导文件
-    - **Gateway 设置**（bind/port/auth/tailscale）
-    - **频道**（WhatsApp、Telegram、Discord、Mattermost、Signal、iMessage，以及捆绑的频道插件如 QQ Bot）
-    - **守护进程安装**（macOS 上的 LaunchAgent；Linux/WSL2 上的 systemd user unit）
-    - **健康检查** 和 **技能** 选择
+    1. **Model/Auth** - provider OAuth, API keys, or manual auth (including local options like LM Studio); pick a default model.
+    2. **Workspace** - location + bootstrap files.
+    3. **Gateway** - port, bind address, auth mode, Tailscale exposure.
+    4. **Channels** - built-in and official plugin chat channels: iMessage, Discord, Feishu, Google Chat, Mattermost, Microsoft Teams, QQ Bot, Signal, Slack, Telegram, WhatsApp, and more.
+    5. **Daemon** - LaunchAgent (macOS), systemd user unit (Linux/WSL2), or native Windows Scheduled Task.
+    6. **Health check** - starts the Gateway and verifies it is running.
+    7. **Skills** - installs recommended skills and optional dependencies.
 
-    它还会在你配置的模型未知或缺少认证时发出警告。
+    It sets duration expectations up front and warns if your configured model is unknown
+    or missing auth. Full breakdown: [Onboarding (CLI)](/start/wizard).
 
   </Accordion>
 
-  <Accordion title="运行这个需要 Claude 或 OpenAI 订阅吗？">
-    不需要。你可以使用 **API keys**（Anthropic/OpenAI/其他）运行 OpenClaw，也可以使用
-    **纯本地模型**，这样你的数据就会保留在设备上。订阅（Claude Pro/Max 或 OpenAI Codex）
-    只是用于认证这些提供商的可选方式。
+  <Accordion title="Do I need a Claude or OpenAI subscription to run this?">
+    No. Run OpenClaw with **API keys** (Anthropic/OpenAI/others) or **local-only models**
+    so your data stays on your device. Subscriptions (Claude Pro/Max, ChatGPT/Codex) are
+    optional ways to authenticate those providers.
 
-    对于 OpenClaw 中的 Anthropic，实际区分是：
+    For Anthropic: an **API key** gives standard pay-as-you-go billing; **Claude CLI**
+    reuses an existing Claude Code login on the same host. Anthropic currently treats
+    Claude CLI's non-interactive `claude -p` path as Agent SDK/programmatic usage that
+    still draws from your subscription's plan limits - check current Anthropic billing
+    docs before relying on subscription behavior. For long-lived gateway hosts and shared
+    automation, an Anthropic API key is the more predictable choice.
 
-    - **Anthropic API key**：正常的 Anthropic API 计费
-    - **Claude CLI / OpenClaw 中的 Claude 订阅认证**：Anthropic 员工
-      告诉我们这类用法现在再次被允许，而 OpenClaw 会把 `claude -p`
-      用法视为该集成的获准用法，除非 Anthropic 发布新政策
-
-    对于长期运行的网关主机，Anthropic API key 仍然是更可预测的设置。OpenAI Codex OAuth 也明确支持像 OpenClaw 这样的外部工具。
-
-    OpenClaw 还支持其他托管的订阅式选项，包括
-    **Qwen Cloud Coding Plan**、**MiniMax Coding Plan** 和
-    **Z.AI / GLM Coding Plan**。
+    OpenAI Codex OAuth (ChatGPT/Codex subscription) is fully supported for agent models.
+    OpenClaw also supports hosted subscription-style options including **Qwen Cloud
+    Coding Plan**, **MiniMax Coding Plan**, and **Z.AI / GLM Coding Plan**.
 
     Docs: [Anthropic](/providers/anthropic), [OpenAI](/providers/openai),
-    [Qwen Cloud](/providers/qwen),
-    [MiniMax](/providers/minimax), [Z.AI (GLM)](/providers/zai),
+    [Qwen Cloud](/providers/qwen), [MiniMax](/providers/minimax), [Z.AI (GLM)](/providers/zai),
     [Local models](/gateway/local-models), [Models](/concepts/models).
 
   </Accordion>
 
-  <Accordion title="我可以不用 API key 使用 Claude Max 订阅吗？">
-    可以。
-
-    Anthropic 员工告诉我们，OpenClaw 风格的 Claude CLI 用法现在再次被允许，因此
-    OpenClaw 会把 Claude 订阅认证和 `claude -p` 用法视为该集成的获准用法，
-    除非 Anthropic 发布新政策。如果你想要最可预测的服务端设置，
-    还是请使用 Anthropic API key。
-
+  <Accordion title="Can I use Claude Max subscription without an API key?">
+    Yes. OpenClaw supports Claude CLI reuse for Pro/Max/Team/Enterprise plans. Anthropic
+    currently treats the `claude -p` path OpenClaw uses as subscription-plan usage subject
+    to your plan's limits, not a separate free allowance - see
+    [Anthropic](/providers/anthropic) for the current billing detail and links to
+    Anthropic's own support articles. For the most predictable server-side setup, use an
+    Anthropic API key instead.
   </Accordion>
 
-  <Accordion title="你们支持 Claude 订阅认证（Claude Pro 或 Max）吗？">
-    支持。
+  <Accordion title="Do you support Claude subscription auth (Claude Pro or Max)?">
+    Yes, via Claude CLI reuse. Anthropic's billing treatment of `claude -p`/Agent SDK usage
+    has changed over time; see [Anthropic](/providers/anthropic) for the current state and
+    dated links to Anthropic's support articles before relying on specific billing
+    behavior.
 
-    Anthropic 员工告诉我们这类用法现在再次被允许，因此 OpenClaw 会把
-    Claude CLI 复用和 `claude -p` 用法视为该集成的获准用法，
-    除非 Anthropic 发布新政策。
-
-    Anthropic setup-token is still available as a supported OpenClaw token path, but OpenClaw now prefers Claude CLI reuse and `claude -p` when available.
-    For production or multi-user workloads, Anthropic API key auth is still the
-    safer, more predictable choice. If you want other subscription-style hosted
-    options in OpenClaw, see [OpenAI](/providers/openai), [Qwen / Model
-    Cloud](/providers/qwen), [MiniMax](/providers/minimax), and [GLM
-    Models](/providers/zai).
+    Anthropic setup-token auth is also still a supported token path, but OpenClaw prefers
+    Claude CLI reuse and `claude -p` when available. For production or multi-user
+    workloads, an Anthropic API key remains the safer, more predictable choice. Other
+    subscription-style hosted options: [OpenAI](/providers/openai), [Qwen Cloud](/providers/qwen),
+    [MiniMax](/providers/minimax), [Z.AI (GLM)](/providers/zai).
 
   </Accordion>
 
@@ -539,71 +529,69 @@ sidebarTitle: "首次运行 FAQ"
 <a id="why-am-i-seeing-http-429-ratelimiterror-from-anthropic"></a>
 
 <AccordionGroup>
-  <Accordion title="为什么我会看到来自 Anthropic 的 HTTP 429 rate_limit_error？">
-    这意味着你当前窗口的 **Anthropic 配额/速率限制** 已耗尽。如果你使用
-    **Claude CLI**，请等待窗口重置或升级你的计划。如果你使用
-    **Anthropic API key**，请在 Anthropic Console 中检查使用量/账单，
-    并根据需要提高限额。
+  <Accordion title="Why am I seeing HTTP 429 rate_limit_error from Anthropic?">
+    Your **Anthropic quota/rate limit** is exhausted for the current window. On **Claude
+    CLI**, wait for the window to reset or upgrade your plan. On an **Anthropic API key**,
+    check usage/billing in the Anthropic Console and raise limits as needed.
 
-    If the message is specifically:
-    `Extra usage is required for long context requests`, the request is trying to use
-    Anthropic's 1M context window (a GA-capable 1M Claude 4.x model or legacy
-    `context1m: true` config). That only works when your credential is eligible
-    for long-context billing (API key billing or the OpenClaw Claude-login path
-    with Extra Usage enabled).
+    If the message is specifically `Extra usage is required for long context requests`,
+    the request is trying to use Anthropic's 1M context window (a GA-capable 1M Claude 4.x
+    model, or legacy `params.context1m: true` config), and your current credential is not
+    eligible for long-context billing.
 
-    提示：设置一个**备用模型**，这样当某个提供商被限流时，OpenClaw 还能继续回复。
-    参见 [模型](/cli/models)、[OAuth](/concepts/oauth)，以及
-    [/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context](/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context)。
+    Set a **fallback model** so OpenClaw keeps replying while a provider is rate-limited.
+    See [Models](/cli/models), [OAuth](/concepts/oauth), and
+    [Anthropic 429 extra usage required for long context](/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context).
 
   </Accordion>
 
-  <Accordion title="支持 AWS Bedrock 吗？">
-    支持。OpenClaw 内置了 **Amazon Bedrock（Converse）** 提供商。在存在 AWS 环境标记时，OpenClaw 可以自动发现流式/文本 Bedrock 目录并将其作为隐式 `amazon-bedrock` 提供商合并；否则你也可以显式启用 `plugins.entries.amazon-bedrock.config.discovery.enabled` 或添加一个手动提供商条目。参见 [Amazon Bedrock](/providers/bedrock) 和 [模型提供商](/providers/models)。如果你更喜欢受管密钥流，在 Bedrock 前面放一个兼容 OpenAI 的代理仍然是有效选项。
+  <Accordion title="Is AWS Bedrock supported?">
+    Yes. OpenClaw has a bundled **Amazon Bedrock (Converse)** provider. With AWS env
+    markers present (`AWS_ACCESS_KEY_ID`, `AWS_PROFILE`, `AWS_BEARER_TOKEN_BEDROCK`),
+    OpenClaw auto-enables the implicit Bedrock provider for model discovery; otherwise
+    set `plugins.entries.amazon-bedrock.config.discovery.enabled: true` or add a manual
+    provider entry. See [Amazon Bedrock](/providers/bedrock) and [Model providers](/providers/models).
+    An OpenAI-compatible proxy in front of Bedrock is still a valid option if you prefer a managed key flow.
   </Accordion>
 
   <Accordion title="How does Codex auth work?">
-    OpenClaw supports **OpenAI Code (Codex)** via OAuth (ChatGPT sign-in). Use
-    `openai/gpt-5.5` for the common setup: ChatGPT/Codex subscription auth plus
-    native Codex app-server execution. Legacy Codex GPT refs are
-    legacy config repaired by `openclaw doctor --fix`. Direct OpenAI API-key
-    access remains available for non-agent OpenAI API surfaces and for agent
-    models through an ordered `openai` API-key profile.
-    See [Model providers](/concepts/model-providers) and [Onboarding (CLI)](/start/wizard).
+    OpenClaw supports **OpenAI Codex** via OAuth (ChatGPT sign-in). Use `openai/gpt-5.5`
+    for the default setup: ChatGPT/Codex subscription auth plus native Codex app-server
+    execution. Legacy Codex-prefixed model refs are legacy config repaired by
+    `openclaw doctor --fix`. Direct OpenAI API-key access remains available for non-agent
+    OpenAI API surfaces and, through an ordered `openai` API-key profile, for agent models
+    too. See [Model providers](/concepts/model-providers) and [Onboarding (CLI)](/start/wizard).
   </Accordion>
 
   <Accordion title="Why does OpenClaw still mention legacy OpenAI Codex prefix?">
-    `openai` is the provider and auth-profile id for both OpenAI API keys and
-    ChatGPT/Codex OAuth. You may still see legacy OpenAI Codex prefix in legacy config and
-    migration warnings.
-    Older configs also used it as a model prefix:
+    `openai` is the current provider and auth-profile id for both OpenAI API keys and
+    ChatGPT/Codex OAuth - OpenAI Codex is folded into it. You may still see a legacy
+    `openai-codex` prefix in older config and migration warnings:
 
-    - `openai/gpt-5.5` = ChatGPT/Codex subscription auth with native Codex runtime for agent turns
-    - legacy Codex GPT-5.5 ref = legacy model route repaired by `openclaw doctor --fix`
-    - `openai/gpt-5.5` plus an ordered `openai` API-key profile = API-key auth for an OpenAI agent model
-    - legacy Codex auth profile ids = legacy auth profile id migrated by `openclaw doctor --fix`
+    - `openai/gpt-5.5` = ChatGPT/Codex subscription auth with native Codex runtime for agent turns.
+    - Legacy `openai-codex/*` model refs = legacy route repaired by `openclaw doctor --fix`.
+    - `openai/gpt-5.5` plus an ordered `openai` API-key profile = API-key auth for an OpenAI agent model.
+    - Legacy `openai-codex` auth profile ids = legacy ids migrated by `openclaw doctor --fix`.
 
-    If you want the direct OpenAI Platform billing/limit path, set
-    `OPENAI_API_KEY`. If you want ChatGPT/Codex subscription auth, sign in with
-    `openclaw models auth login --provider openai`. Keep the model ref as
-    `openai/gpt-5.5`; legacy Codex model refs are legacy config that
-    `openclaw doctor --fix` rewrites.
+    Want direct OpenAI Platform billing? Set `OPENAI_API_KEY`. Want ChatGPT/Codex
+    subscription auth? Run `openclaw models auth login --provider openai`. Keep the model
+    ref as `openai/gpt-5.5`; legacy Codex-prefixed refs are what `openclaw doctor --fix` rewrites.
 
   </Accordion>
 
-  <Accordion title="为什么 Codex OAuth 限额可能和 ChatGPT 网页端不同？">
-    Codex OAuth 使用的是 OpenAI 管理的、与计划相关的配额窗口。实际上，
-    即使它们都绑定同一个账号，这些限额也可能和 ChatGPT 网站/应用体验不同。
+  <Accordion title="Why can Codex OAuth limits differ from ChatGPT web?">
+    Codex OAuth uses OpenAI-managed, plan-dependent quota windows that can differ from the
+    ChatGPT website/app experience, even on the same account.
 
-    OpenClaw 可以在 `openclaw models status` 中显示当前可见的提供商使用量/配额窗口，
-    但它不会把 ChatGPT 网页端的权限伪造成直接 API 访问。如果你想要直接的 OpenAI Platform
-    计费/限额路径，请使用带 API key 的 `openai/*`。
+    `openclaw models status` shows the currently visible provider usage/quota windows, but
+    does not invent or normalize ChatGPT-web entitlements into direct API access. For the
+    direct OpenAI Platform billing/limit path, use `openai/*` with an API key.
 
   </Accordion>
 
-  <Accordion title="你们支持 OpenAI 订阅认证（Codex OAuth）吗？">
-    支持。OpenClaw 完整支持 **OpenAI Code（Codex）订阅 OAuth**。
-    OpenAI 明确允许在像 OpenClaw 这样的外部工具/工作流中使用订阅 OAuth。引导流程可以替你运行 OAuth。
+  <Accordion title="Do you support OpenAI subscription auth (Codex OAuth)?">
+    Yes, fully. OpenAI explicitly allows subscription OAuth usage in external
+    tools/workflows like OpenClaw. Onboarding can run the OAuth flow for you.
 
     参见 [OAuth](/concepts/oauth)、[模型提供商](/concepts/model-providers) 和 [引导（CLI）](/start/wizard)。
 
@@ -612,104 +600,105 @@ sidebarTitle: "首次运行 FAQ"
   <Accordion title="我如何设置 Gemini CLI OAuth？">
     Gemini CLI 使用的是**插件认证流程**，而不是在 `openclaw.json` 中填 client id 或 secret。
 
-    步骤：
-
-    1. 在本地安装 Gemini CLI，确保 `gemini` 在 `PATH` 中
+    1. Install Gemini CLI locally so `gemini` is on `PATH`:
        - Homebrew: `brew install gemini-cli`
        - npm: `npm install -g @google/gemini-cli`
-    2. 启用插件：`openclaw plugins enable google`
-    3. 登录：`openclaw models auth login --provider google-gemini-cli --set-default`
-    4. 登录后默认模型：`google-gemini-cli/gemini-3-flash-preview`
-    5. 如果请求失败，在 gateway 主机上设置 `GOOGLE_CLOUD_PROJECT` 或 `GOOGLE_CLOUD_PROJECT_ID`
+    2. Enable the plugin: `openclaw plugins enable google`
+    3. Login: `openclaw models auth login --provider google-gemini-cli --set-default`
+    4. Default model after login: `google/gemini-3.1-pro-preview` (runtime `google-gemini-cli`)
+    5. Requests failing after login? Set `GOOGLE_CLOUD_PROJECT` or `GOOGLE_CLOUD_PROJECT_ID` on the gateway host and retry.
 
-    这会把 OAuth token 存储在 gateway 主机上的认证配置文件中。详情：[模型提供商](/concepts/model-providers)。
+    OAuth tokens are stored in auth profiles on the gateway host. Details: [Google](/providers/google), [Model providers](/concepts/model-providers).
 
   </Accordion>
 
-  <Accordion title="本地模型适合随便聊天吗？">
-    通常不适合。OpenClaw 需要大的上下文和强安全性；小模型会截断并泄漏。如果必须使用，请运行你本地能跑的**最大**模型构建（LM Studio），并查看 [/gateway/local-models](/gateway/local-models)。更小/量化模型会增加提示注入风险——参见 [安全性](/gateway/security)。
+  <Accordion title="Is a local model OK for casual chats?">
+    Usually no. OpenClaw needs large context + strong safety; small cards truncate context
+    and skip provider-side safety filters. If you must, run the **largest** model build you
+    can locally (LM Studio) - see [Local models](/gateway/local-models). Smaller/quantized
+    models raise prompt-injection risk - see [Security](/gateway/security).
   </Accordion>
 
-  <Accordion title="如何让托管模型流量保持在特定区域？">
-    选择按区域固定的端点。OpenRouter 为 MiniMax、Kimi 和 GLM 提供美国托管选项；选择美国托管变体可让数据留在该区域。你仍然可以通过使用 `models.mode: "merge"` 将 Anthropic/OpenAI 与这些一起列出，这样在尊重你选择的区域化提供商的同时，备用方案仍然可用。
+  <Accordion title="How do I keep hosted model traffic in a specific region?">
+    Pick region-pinned endpoints. OpenRouter exposes US-hosted options for MiniMax, Kimi,
+    and GLM; choose the US-hosted variant to keep data in-region. You can still list
+    Anthropic/OpenAI alongside these with `models.mode: "merge"` so fallbacks stay
+    available while respecting the regioned provider you select.
   </Accordion>
 
-  <Accordion title="我必须买 Mac Mini 才能安装这个吗？">
-    不需要。OpenClaw 可在 macOS 或 Linux 上运行（Windows 通过 WSL2）。Mac mini 是可选的——有些人会买它作为常开主机，但小型 VPS、家用服务器或 Raspberry Pi 级别的设备也可以。
+  <Accordion title="Do I have to buy a Mac Mini to install this?">
+    No. OpenClaw runs on macOS or Linux (Windows via WSL2). A Mac mini is a popular
+    always-on host choice, but a small VPS, home server, or Raspberry Pi-class box works too.
 
-    You only need a Mac **for macOS-only tools**. For iMessage, use [iMessage](/channels/imessage) with `imsg` on any Mac signed into Messages. If the Gateway runs on Linux or elsewhere, set `channels.imessage.cliPath` to an SSH wrapper that runs `imsg` on that Mac. If you want other macOS-only tools, run the Gateway on a Mac or pair a macOS node.
+    You only need a Mac **for macOS-only tools**. For iMessage, use [iMessage](/channels/imessage)
+    with `imsg` on any Mac signed into Messages - if the Gateway runs on Linux or elsewhere,
+    set `channels.imessage.cliPath` to an SSH wrapper that runs `imsg` on that Mac. For other
+    macOS-only tools, run the Gateway on a Mac or pair a macOS node.
 
     Docs: [iMessage](/channels/imessage), [Nodes](/nodes), [Mac remote mode](/platforms/mac/remote).
 
   </Accordion>
 
   <Accordion title="Do I need a Mac mini for iMessage support?">
-    You need **some macOS device** signed into Messages. It does **not** have to be a Mac mini -
-    any Mac works. **Use [iMessage](/channels/imessage)** with `imsg`; the Gateway can run on that Mac, or it can run elsewhere with an SSH wrapper `cliPath`.
+    You need **some macOS device** signed into Messages - not necessarily a Mac mini, any
+    Mac works. Use [iMessage](/channels/imessage) with `imsg`; the Gateway can run on that
+    Mac, or elsewhere with an SSH wrapper `cliPath`.
 
     常见方案：
 
-    - Run the Gateway on Linux/VPS, and set `channels.imessage.cliPath` to an SSH wrapper that runs `imsg` on a Mac signed into Messages.
-    - Run everything on the Mac if you want the simplest single-machine setup.
+    - Gateway on Linux/VPS, `channels.imessage.cliPath` set to an SSH wrapper that runs `imsg` on a Mac signed into Messages.
+    - Everything on one Mac for the simplest single-machine setup.
 
-    Docs: [iMessage](/channels/imessage), [Nodes](/nodes),
-    [Mac remote mode](/platforms/mac/remote).
+    Docs: [iMessage](/channels/imessage), [Nodes](/nodes), [Mac remote mode](/platforms/mac/remote).
 
   </Accordion>
 
-  <Accordion title="如果我买一台 Mac mini 跑 OpenClaw，我能把它连到我的 MacBook Pro 吗？">
-    可以。**Mac mini 可以运行 Gateway**，而你的 MacBook Pro 可以作为**节点**（伴随设备）连接。节点不运行 Gateway——它们提供额外能力，比如该设备上的屏幕/摄像头/画布和 `system.run`。
+  <Accordion title="If I buy a Mac mini to run OpenClaw, can I connect it to my MacBook Pro?">
+    Yes. The **Mac mini can run the Gateway**, and your MacBook Pro connects as a **node**
+    (companion device). Nodes do not run the Gateway - they add capabilities like
+    screen/camera/canvas and `system.run` on that device.
 
-    常见模式：
-
-    - Mac mini 上运行 Gateway（常开）。
-    - MacBook Pro 运行 macOS 应用或节点主机，并与 Gateway 配对。
-    - 使用 `openclaw nodes status` / `openclaw nodes list` 查看它。
+    Common pattern: Gateway on the always-on Mac mini; MacBook Pro runs the macOS app or a
+    node host and pairs to the Gateway. Check with `openclaw nodes status` / `openclaw nodes list`.
 
     文档：[节点](/nodes)、[节点 CLI](/cli/nodes)。
 
   </Accordion>
 
-  <Accordion title="可以使用 Bun 吗？">
-    不推荐使用 Bun。我们看到过运行时 bug，尤其是在 WhatsApp 和 Telegram 上。
-    稳定的 Gateway 请使用 **Node**。
+  <Accordion title="Can I use Bun?">
+    Not recommended - Bun has runtime bugs, especially with WhatsApp and Telegram. Use
+    **Node** for stable gateways. If you still want to experiment, do it on a
+    non-production gateway without WhatsApp/Telegram.
+  </Accordion>
 
-    如果你仍想用 Bun 做实验，请在非生产 Gateway 上进行，
-    不要启用 WhatsApp/Telegram。
+  <Accordion title="Telegram: what goes in allowFrom?">
+    `channels.telegram.allowFrom` is the **human sender's Telegram user ID** (numeric),
+    not the bot username. Setup asks for numeric user IDs only; `openclaw doctor --fix`
+    can try to resolve legacy `@username` entries.
+
+    Safer (no third-party bot): DM your bot, run `openclaw logs --follow`, read `from.id`.
+
+    Official Bot API: DM your bot, call `https://api.telegram.org/bot<bot_token>/getUpdates`, read `message.from.id`.
+
+    Third-party (less private): DM `@userinfobot` or `@getidsbot`.
+
+    See [Telegram access control](/channels/telegram#access-control-and-activation).
 
   </Accordion>
 
-  <Accordion title="Telegram：allowFrom 里填什么？">
-    `channels.telegram.allowFrom` 是**人类发送者的 Telegram 用户 ID**（数字），不是机器人用户名。
-
-    设置时只要求数字用户 ID。如果你已经在配置中有旧的 `@username` 条目，`openclaw doctor --fix` 可以尝试解析它们。
-
-    更安全的方式（不使用第三方机器人）：
-
-    - 给你的机器人发私信，然后运行 `openclaw logs --follow` 并读取 `from.id`。
-
-    官方 Bot API：
-
-    - 给你的机器人发私信，然后调用 `https://api.telegram.org/bot<bot_token>/getUpdates` 并读取 `message.from.id`。
-
-    第三方（隐私较差）：
-
-    - 给 `@userinfobot` 或 `@getidsbot` 发私信。
-
-    参见 [/channels/telegram](/channels/telegram#access-control-and-activation)。
-
+  <Accordion title="Can multiple people use one WhatsApp number with different OpenClaw instances?">
+    Yes, via **multi-agent routing**. Bind each sender's WhatsApp DM (`peer: { kind: "direct", id: "+15551234567" }`) to a different `agentId`, giving each person their own workspace and session store. Replies still come from the **same WhatsApp account**; DM access control (`channels.whatsapp.dmPolicy` / `channels.whatsapp.allowFrom`) is global per account. See [Multi-Agent Routing](/concepts/multi-agent) and [WhatsApp](/channels/whatsapp).
   </Accordion>
 
-  <Accordion title="多个不同的 OpenClaw 实例可以让多人共用一个 WhatsApp 号码吗？">
-    可以，通过**多代理路由**。把每个发送者的 WhatsApp **DM**（peer `kind: "direct"`，发送者 E.164 格式如 `+15551234567`）绑定到不同的 `agentId`，这样每个人都有自己的工作区和会话存储。回复仍然来自**同一个 WhatsApp 账号**，而 DM 访问控制（`channels.whatsapp.dmPolicy` / `channels.whatsapp.allowFrom`）在每个 WhatsApp 账号层面是全局的。参见 [多代理路由](/concepts/multi-agent) 和 [WhatsApp](/channels/whatsapp)。
+  <Accordion title='Can I run a "fast chat" agent and an "Opus for coding" agent?'>
+    Yes. Use multi-agent routing: give each agent its own default model, then bind inbound
+    routes (provider account or specific peers) to each agent. Example config:
+    [Multi-Agent Routing](/concepts/multi-agent). See also [Models](/concepts/models) and
+    [Configuration](/gateway/configuration).
   </Accordion>
 
-  <Accordion title='我可以运行一个“快速聊天”代理和一个“用于编码的 Opus”代理吗？'>
-    可以。使用多代理路由：给每个代理分配各自的默认模型，然后把入站路由（提供商账号或特定 peer）绑定到每个代理。示例配置见 [多代理路由](/concepts/multi-agent)。另请参见 [模型](/concepts/models) 和 [配置](/gateway/configuration)。
-  </Accordion>
-
-  <Accordion title="Homebrew 在 Linux 上可用吗？">
-    可以。Homebrew 支持 Linux（Linuxbrew）。快速设置：
+  <Accordion title="Does Homebrew work on Linux?">
+    Yes, via Linuxbrew:
 
     ```bash
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -718,114 +707,117 @@ sidebarTitle: "首次运行 FAQ"
     brew install <formula>
     ```
 
-    如果你通过 systemd 运行 OpenClaw，请确保服务 PATH 包含 `/home/linuxbrew/.linuxbrew/bin`（或你的 brew 前缀），这样 `brew` 安装的工具才能在非登录 shell 中解析。
-    最近的构建还会在 Linux systemd 服务中预先添加常见用户 bin 目录（例如 `~/.local/bin`、`~/.npm-global/bin`、`~/.local/share/pnpm`、`~/.bun/bin`），并在设置了相关变量时遵循 `PNPM_HOME`、`NPM_CONFIG_PREFIX`、`BUN_INSTALL`、`VOLTA_HOME`、`ASDF_DATA_DIR`、`NVM_DIR` 和 `FNM_DIR`。
+    Running OpenClaw via systemd: make sure the service PATH includes
+    `/home/linuxbrew/.linuxbrew/bin` (or your brew prefix) so `brew`-installed tools
+    resolve in non-login shells. Recent builds also prepend common user bin dirs on Linux
+    systemd services (for example `~/.local/bin`, `~/.npm-global/bin`,
+    `~/.local/share/pnpm`, `~/.bun/bin`) and honor `PNPM_HOME`, `NPM_CONFIG_PREFIX`,
+    `BUN_INSTALL`, `VOLTA_HOME`, `ASDF_DATA_DIR`, `NVM_DIR`, and `FNM_DIR` when set.
 
   </Accordion>
 
-  <Accordion title="可折腾的 git 安装和 npm 安装有什么区别">
-    - **可折腾（git）安装：** 完整源码检出，可编辑，最适合贡献者。
-      你在本地运行构建，并且可以修改代码/文档。
-    - **npm 安装：** 全局 CLI 安装，没有仓库，最适合“直接运行”。
-      更新来自 npm dist-tag。
+  <Accordion title="Difference between the hackable git install and npm install">
+    - **Hackable (git) install:** full source checkout, editable, best for contributors. You build locally and can patch code/docs.
+    - **npm install:** global CLI install, no repo, best for "just run it." Updates come from npm dist-tags.
 
     文档：[开始使用](/start/getting-started)、[更新](/install/updating)。
 
   </Accordion>
 
-  <Accordion title="以后我可以在 npm 和 git 安装之间切换吗？">
-    可以。当 OpenClaw 已经安装好时，使用 `openclaw update --channel ...`。
-    这**不会删除你的数据**——它只会更改 OpenClaw 的代码安装方式。
-    你的状态（`~/.openclaw`）和工作区（`~/.openclaw/workspace`）都会保持不变。
+  <Accordion title="Can I switch between npm and git installs later?">
+    Yes, with `openclaw update --channel ...` on an existing install. This does **not
+    delete your data** - only the OpenClaw code install changes. State (`~/.openclaw`) and
+    workspace (`~/.openclaw/workspace`) stay untouched.
 
-    从 npm 切到 git：
+    npm to git:
 
     ```bash
     openclaw update --channel dev
     ```
 
-    从 git 切到 npm：
+    git to npm:
 
     ```bash
     openclaw update --channel stable
     ```
 
-    添加 `--dry-run` 可以先预览计划中的模式切换。更新器会运行
-    Doctor 后续处理，为目标渠道刷新插件源，并在你没有传 `--no-restart` 时重启 gateway。
+    Add `--dry-run` to preview the planned mode switch first. The updater runs Doctor
+    follow-ups, refreshes plugin sources for the target channel, and restarts the gateway
+    unless you pass `--no-restart`.
 
     安装器也可以强制任一模式：
 
     ```bash
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method git
-    curl -fsSL https://openclaw.ai/install.sh | bash -s -- --install-method npm
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --install-method npm
     ```
 
-    Backup tips: see [Backup strategy](/help/faq#where-things-live-on-disk).
+    Backup tips: [Where things live on disk](/help/faq#where-things-live-on-disk).
 
   </Accordion>
 
-  <Accordion title="我应该把 Gateway 运行在笔记本上还是 VPS 上？">
-    简而言之：**如果你想要 24/7 可靠性，请用 VPS**。如果你想要
-    最低使用门槛，并且能接受睡眠/重启，那就本地运行。
+  <Accordion title="Should I run the Gateway on my laptop or a VPS?">
+    Want 24/7 reliability? Use a **VPS**. Want the lowest friction and you are OK with
+    sleep/restarts? Run it locally.
 
     **笔记本（本地 Gateway）**
 
-    - **优点：** 无服务器成本、直接访问本地文件、可见的浏览器窗口。
-    - **缺点：** 睡眠/断网 = 断开连接，系统更新/重启会中断，必须保持唤醒。
+    - **Pros:** no server cost, direct access to local files, a live browser window.
+    - **Cons:** sleep/network drops disconnect it, OS updates/reboots interrupt it, must stay awake.
 
     **VPS / 云**
 
-    - **优点：** 常开、网络稳定、没有笔记本睡眠问题、更容易持续运行。
-    - **缺点：** 通常无界面运行（用截图），只能远程访问文件，更新时必须通过 SSH。
+    - **Pros:** always-on, stable network, no laptop sleep issues, easier to keep running.
+    - **Cons:** often headless (use screenshots), remote file access only, SSH needed for updates.
 
-    **OpenClaw 的特定说明：** WhatsApp/Telegram/Slack/Mattermost/Discord 在 VPS 上都能正常工作。真正的取舍只是**无头浏览器**和可见窗口之间的区别。参见 [浏览器](/tools/browser)。
+    WhatsApp/Telegram/Slack/Mattermost/Discord all work fine from a VPS - the real
+    trade-off is headless browser vs a visible window. See [Browser](/tools/browser).
 
-    **推荐默认值：** 如果你以前遇到过 gateway 断开，就优先用 VPS。若你正在积极使用 Mac，并且想要本地文件访问或带可见浏览器的 UI 自动化，本地方式很棒。
+    Default recommendation: VPS if you have had gateway disconnects before; local is great
+    when you are actively using the Mac and want local file access or visible-browser UI
+    automation.
 
   </Accordion>
 
-  <Accordion title="把 OpenClaw 运行在专用机器上有多重要？">
-    不是必须，但**为了可靠性和隔离性，推荐这样做**。
+  <Accordion title="How important is it to run OpenClaw on a dedicated machine?">
+    Not required, but recommended for reliability and isolation.
 
     - **Dedicated host (VPS/Mac mini/Raspberry Pi):** always-on, fewer sleep/reboot interruptions, cleaner permissions, easier to keep running.
-    - **Shared laptop/desktop:** totally fine for testing and active use, but expect pauses when the machine sleeps or updates.
+    - **Shared laptop/desktop:** fine for testing and active use, but expect pauses when the machine sleeps or updates.
 
-    如果你想兼得两者，建议把 Gateway 放在专用主机上，并把笔记本作为**节点**配对，以便使用本地屏幕/摄像头/执行工具。参见 [节点](/nodes)。
-    安全指导请阅读 [安全性](/gateway/security)。
+    Best of both worlds: keep the Gateway on a dedicated host and pair your laptop as a
+    **node** for local screen/camera/exec tools. See [Nodes](/nodes) and [Security](/gateway/security).
 
   </Accordion>
 
-  <Accordion title="VPS 的最低要求和推荐操作系统是什么？">
-    OpenClaw 很轻量。对于一个基础 Gateway 加一个聊天频道：
+  <Accordion title="What are the minimum VPS requirements and recommended OS?">
+    - **Absolute minimum:** 1 vCPU, 1 GB RAM, ~500 MB disk.
+    - **Recommended:** 1-2 vCPU, 2 GB+ RAM for headroom (logs, media, multiple channels). Node tools and browser automation can be resource hungry.
 
-    - **绝对最低：** 1 vCPU、1GB RAM、约 500MB 磁盘。
-    - **推荐：** 1-2 vCPU，2GB RAM 或更多，以获得余量（日志、媒体、多频道）。节点工具和浏览器自动化可能比较吃资源。
-
-    操作系统：使用 **Ubuntu LTS**（或任何现代 Debian/Ubuntu）。Linux 安装路径在那里的测试最充分。
+    OS: **Ubuntu LTS** (or any modern Debian/Ubuntu) - the best-tested Linux install path.
 
     文档：[Linux](/platforms/linux)、[VPS 托管](/vps)。
 
   </Accordion>
 
-  <Accordion title="我可以在 VM 里运行 OpenClaw 吗？需要什么条件？">
-    可以。把 VM 当成 VPS 一样看待：它需要始终在线、可访问，并且有足够
-    的内存来运行 Gateway 和你启用的任何频道。
+  <Accordion title="Can I run OpenClaw in a VM and what are the requirements?">
+    Yes. Treat a VM like a VPS: it needs to be always on, reachable, and have enough RAM
+    for the Gateway and any channels you enable.
 
-    基本建议：
+    - **Absolute minimum:** 1 vCPU, 1 GB RAM.
+    - **Recommended:** 2 GB+ RAM for multiple channels, browser automation, or media tools.
+    - **OS:** Ubuntu LTS or another modern Debian/Ubuntu.
 
-    - **绝对最低：** 1 vCPU，1GB RAM。
-    - **推荐：** 如果你运行多个频道、浏览器自动化或媒体工具，建议 2GB RAM 或更多。
-    - **操作系统：** Ubuntu LTS 或其他现代 Debian/Ubuntu。
-
-    如果你在 Windows 上，请使用 **Windows Hub** 进行桌面设置，或者在你明确想要一个具备广泛工具兼容性的 Linux 风格 Gateway VM 时使用 WSL2。参见 [Windows](/platforms/windows)、[VPS 托管](/vps)。
-    如果你在 VM 中运行 macOS，请参见 [macOS VM](/install/macos-vm)。
+    On Windows, use **Windows Hub** for desktop setup, or WSL2 for a Linux-style Gateway VM
+    with broad tooling compatibility. See [Windows](/platforms/windows), [VPS hosting](/vps).
+    Running macOS in a VM: see [macOS VM](/install/macos-vm).
 
   </Accordion>
 </AccordionGroup>
 
 ## 相关内容
 
-- [FAQ](/help/faq) — 主 FAQ（模型、会话、网关、安全等）
-- [安装概览](/install)
-- [入门指南](/start/getting-started)
-- [故障排除](/help/troubleshooting)
+- [FAQ](/help/faq) - the main FAQ (models, sessions, gateway, security, more)
+- [Install overview](/install)
+- [Getting started](/start/getting-started)
+- [Troubleshooting](/help/troubleshooting)

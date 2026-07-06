@@ -5,27 +5,17 @@ read_when:
 title: "WhatsApp"
 ---
 
-状态：通过 WhatsApp Web（Baileys）达到生产就绪。Gateway 拥有已链接会话。
+状态：通过 WhatsApp Web（Baileys）达到生产可用。网关拥有已关联的会话；不存在单独的 Twilio WhatsApp 频道。
 
-## 安装（按需）
+## 安装
 
-- Onboarding (`openclaw onboard`) 和 `openclaw channels add --channel whatsapp`
-  会在你第一次选择它时提示安装 WhatsApp 插件。
-- `openclaw channels login --channel whatsapp` 在插件尚未存在时也会提供安装流程。
-- Dev channel + git checkout：默认使用本地插件路径。
-- Stable/Beta：先从 ClawHub 安装官方 `@openclaw/whatsapp` 插件，
-  如失败则回退到 npm。
-- WhatsApp 运行时分发在核心 OpenClaw npm 包之外，因此
-  WhatsApp 特定的运行时依赖会保留在外部插件中。
-
-也可以手动安装：
+`openclaw onboard` 和 `openclaw channels add --channel whatsapp` 会在你第一次选择它时提示安装插件；如果插件缺失，`openclaw channels login --channel whatsapp` 也会提供相同的安装流程。开发检出版本使用本地插件路径；稳定版/测试版会先从 ClawHub 安装 `@openclaw/whatsapp`，然后回退到 npm。WhatsApp 运行时不包含在核心 OpenClaw npm 包中，因此其运行时依赖保留在外部插件中。手动安装：
 
 ```bash
 openclaw plugins install clawhub:@openclaw/whatsapp
 ```
 
-仅在你需要 registry 回退时才使用裸 npm 包（`@openclaw/whatsapp`）。
-只有在你需要可复现安装时才固定到精确版本。
+仅在注册表回退时使用裸 npm 包（`@openclaw/whatsapp`）；只有为了可复现安装时才固定到精确版本。
 
 <CardGroup cols={3}>
   <Card title="配对" icon="link" href="/channels/pairing">
@@ -42,7 +32,7 @@ openclaw plugins install clawhub:@openclaw/whatsapp
 ## 快速设置
 
 <Steps>
-  <Step title="配置 WhatsApp 访问策略">
+  <Step title="配置访问策略">
 
 ```json5
 {
@@ -65,8 +55,7 @@ openclaw plugins install clawhub:@openclaw/whatsapp
 openclaw channels login --channel whatsapp
 ```
 
-    当前登录基于二维码。在远程或无头环境中，请确保在开始登录之前，
-    你有可靠的路径将实时二维码传送到将要扫描它的手机上。
+    登录仅支持二维码方式。在远程或无头主机上，请在开始登录前确保有可靠的路径将实时二维码传递到手机；终端渲染的二维码、截图或聊天附件在传输过程中可能会过期。
 
     对于特定账号：
 
@@ -74,7 +63,7 @@ openclaw channels login --channel whatsapp
 openclaw channels login --channel whatsapp --account work
 ```
 
-    在登录前附加现有/自定义的 WhatsApp Web 认证目录：
+    在登录前附加现有/自定义认证目录：
 
 ```bash
 openclaw channels add --channel whatsapp --account work --auth-dir /path/to/wa-auth
@@ -91,37 +80,29 @@ openclaw gateway
 
   </Step>
 
-  <Step title="批准首次配对请求（如果使用配对模式）">
+  <Step title="批准第一个配对请求（pairing 模式）">
 
 ```bash
 openclaw pairing list whatsapp
 openclaw pairing approve whatsapp <CODE>
 ```
 
-    配对请求在 1 小时后过期。每个频道最多保留 3 个待处理请求。
+    配对请求在 1 小时后过期；每个账号最多保留 3 个待处理请求。
 
   </Step>
 </Steps>
 
 <Note>
-OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（频道元数据和设置流程已针对这种配置进行了优化，但也支持个人号码配置。）
+建议使用独立的 WhatsApp 号码（相关设置和元数据已针对其优化），但个人号码/自聊配置也完全受支持。
 </Note>
-
-<Warning>
-当前 WhatsApp 设置流程仅支持二维码。终端渲染的二维码、截图、PDF 或聊天附件在从远程机器转发过程中可能会过期或变得不可读。对于远程/无头主机，优先使用直接的二维码图片传递路径，而不是手动终端截取。
-</Warning>
 
 ## 部署模式
 
 <AccordionGroup>
   <Accordion title="专用号码（推荐）">
-    这是最清晰的运维模式：
-
-    - 为 OpenClaw 使用独立的 WhatsApp 身份
+    - 为 OpenClaw 单独使用一个 WhatsApp 身份
     - 更清晰的 DM 白名单和路由边界
-    - 更低的自聊混淆风险
-
-    最小策略模式：
+    - 降低自聊混淆的可能性
 
     ```json5
     {
@@ -136,43 +117,96 @@ OpenClaw 建议在可能的情况下使用单独的号码运行 WhatsApp。（�
 
   </Accordion>
 
-  <Accordion title="个人号码回退">
-    入门流程支持个人号码模式，并会写入一个适合自聊的基础配置：
-
-    - `dmPolicy: "allowlist"`
-    - `allowFrom` 包含你的个人号码
-    - `selfChatMode: true`
-
-    运行时中，自聊保护会根据已链接的自号码以及 `allowFrom` 生效。
-
-  </Accordion>
-
-  <Accordion title="仅限 WhatsApp Web 的频道范围">
-    在当前 OpenClaw 频道架构中，消息平台频道基于 WhatsApp Web（`Baileys`）。
-
-    内置 chat-channel 注册表中没有单独的 Twilio WhatsApp 消息频道。
-
+  <Accordion title="个人号码回退模式">
+    引导流程支持个人号码模式，并会写入一个适合自聊的基础配置：`dmPolicy: "allowlist"`、`allowFrom` 包含你的号码、`selfChatMode: true`。运行时的自聊保护会根据已绑定的自号码以及 `allowFrom` 来生效。
   </Accordion>
 </AccordionGroup>
 
 ## 运行时模型
 
-- Gateway 拥有 WhatsApp socket 和重连循环。
-- 重连看门狗使用的是 WhatsApp Web 传输活动，而不仅仅是入站 app-message 数量，因此静默的已链接设备会话不会因为最近没人发消息就被重启。更长的应用静默上限仍会在传输帧持续到达但在看门狗窗口内没有处理任何应用消息时强制重连；对于近期活跃会话发生一次短暂重连后，该应用静默检查会在第一个恢复窗口中使用普通消息超时。
-- Baileys socket 时序在 `web.whatsapp.*` 下显式配置：`keepAliveIntervalMs` 控制 WhatsApp Web 应用 ping，`connectTimeoutMs` 控制建立连接握手超时，`defaultQueryTimeoutMs` 控制 Baileys 查询等待时间以及 OpenClaw 本地出站发送/presence 和入站已读回执操作边界。
-- 出站发送需要目标账号处于活动的 WhatsApp 监听状态。
-- 群组发送会在文本和媒体说明中的 `@+<digits>` 与 `@<digits>` 标记匹配当前 WhatsApp 参与者元数据时附加原生提及元数据，包括基于 LID 的群组。
-- 状态和广播聊天会被忽略（`@status`、`@broadcast`）。
-- 重连看门狗遵循的是 WhatsApp Web 传输活动，而不仅仅是入站 app-message 数量：只要传输帧持续，安静的已链接设备会话就会保持在线，但如果传输停滞，则会在稍后远程断开路径之前很久就强制重连。
-- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DMs 折叠到代理主会话）。
-- 群组会话是隔离的（`agent:<agentId>:whatsapp:group:<jid>`）。
-- WhatsApp 频道/新闻简报可以作为显式出站目标，使用其原生 `@newsletter` JID。出站新闻简报发送使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 会话语义。
-- WhatsApp Web 传输会遵守 gateway 主机上的标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY` / 小写变体）。优先使用主机级代理配置，而不是频道特定的 WhatsApp 代理设置。
-- 当启用 `messages.removeAckAfterReply` 时，OpenClaw 会在可见回复投递后清除 WhatsApp ack 反应。
+- 网关负责 WhatsApp socket 和重连循环。
+- 看门狗会独立追踪两个信号：原始 WhatsApp Web 传输活动和应用消息活动。即使会话保持连接但暂时安静，也不会因为最近没有收到消息就重启；只有当传输帧在固定的内部窗口内停止到达（不可由用户配置），或者应用消息在超过正常消息超时 4 倍后仍然沉默时，才会强制重连。对于最近活跃的会话，在刚重连后的第一个窗口会使用更短的正常消息超时，而不是 4 倍窗口。OpenClaw 可以自动回复 Baileys 在该次重连中较早投递的离线消息，其范围受入站消息 ID 去重生命周期限制；初始启动会保留较短的过期历史保护。
+- Baileys socket 的时序参数在 `web.whatsapp.*` 下显式配置：`keepAliveIntervalMs`（应用 ping 间隔）、`connectTimeoutMs`（建立握手超时）、`defaultQueryTimeoutMs`（Baileys 查询等待时间，以及 OpenClaw 的出站发送/在线状态和入站已读回执超时）。
+- 出站发送要求目标账号有活跃的 WhatsApp 监听器；否则发送会快速失败。
+- 群组发送会为 `@+<digits>` 和 `@<digits>` 令牌附加原生提及元数据（在正文和媒体标题中），前提是该令牌与当前参与者元数据匹配，包括基于 LID 的群组。
+- 状态和广播聊天（`@status`、`@broadcast`）会被忽略。
+- 直接聊天使用 DM 会话规则（`session.dmScope`；默认 `main` 会将 DM 合并到代理主会话中）。群组会话按 JID 隔离（`agent:<agentId>:whatsapp:group:<jid>`）。
+- WhatsApp Channels/Newsletters 可以通过其原生 `@newsletter` JID 作为明确的出站目标，使用频道会话元数据（`agent:<agentId>:whatsapp:channel:<jid>`），而不是 DM 语义。
+- WhatsApp Web 传输会在网关主机上遵循标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、`NO_PROXY`、小写变体）。优先使用主机级代理配置，而不是按频道配置。
+- 启用 `messages.removeAckAfterReply` 后，OpenClaw 会在发送可见回复后清除 ack 反应。
+
+## 使用 MeowCaller 呼叫当前请求者（实验性）
+
+该插件可以在源自 WhatsApp 的代理轮次中公开 `whatsapp_call`。它使用 [MeowCaller](https://github.com/purpshell/meowcaller) 向当前已授权的请求者发起 WhatsApp 语音通话，并在对方接听后播放一条 OpenClaw TTS 消息。该工具没有目标号码参数，因此提示无法重定向通话。默认禁用。
+
+<Warning>
+MeowCaller 处于实验阶段，没有标记发布版，并且使用的是单独配对的 whatsmeow 已链接设备会话——它不能复用插件的 Baileys 凭据。配对会为同一个 WhatsApp 账户添加一个额外的已链接设备；请使用 OpenClaw 所用的身份进行扫码。个人号码/自聊模式不能呼叫自己；请使用专用的 OpenClaw 号码呼叫你的个人号码。
+</Warning>
+
+<Steps>
+  <Step title="启用实验性通话">
+
+    在 WhatsApp 通道配置中添加 `actions.calls: true`，然后重启网关：
+
+```json
+{
+  "channels": {
+    "whatsapp": {
+      "actions": {
+        "calls": true
+      }
+    }
+  }
+}
+```
+
+    当该项缺失或为 `false` 时，OpenClaw 不会公开 `whatsapp_call` 工具。
+
+  </Step>
+
+  <Step title="安装经过审查的 MeowCaller CLI">
+
+    适配器期望网关主机的 `PATH` 中存在一个 `meowcaller` 可执行文件。在 [MeowCaller PR #7](https://github.com/purpshell/meowcaller/pull/7) 合并之前，请构建已审查分支：
+
+```bash
+git clone --branch feat/send-only-notify https://github.com/steipete/meowcaller.git
+cd meowcaller
+git checkout 752050471fc2bf7a8cdfbf7dbd3cd4e865d85d3f
+mkdir -p "$HOME/.local/bin"
+go build -o "$HOME/.local/bin/meowcaller" ./cmd/meowcaller
+```
+
+    确保 `$HOME/.local/bin` 已加入网关服务的 `PATH`。这个修订版具有显式的 `pair` 和仅发送的 `notify` 命令；`notify` 不会打开麦克风、扬声器、视频设备或诊断采集。不要用上游示例 CLI 的 `play` 命令替代。
+
+  </Step>
+
+  <Step title="配对 MeowCaller 已链接设备">
+
+    让 WhatsApp 代理检查通话设置（`whatsapp_call` 状态动作会报告账户特定的状态目录和配对命令）。对于默认账户：
+
+```bash
+state_dir="$HOME/.openclaw/credentials/whatsapp-calls/default"
+mkdir -p "$state_dir"
+chmod 700 "$state_dir"
+meowcaller pair --store "$state_dir/wa-voip.db"
+```
+
+    交互式运行此命令，扫描 **WhatsApp > 已链接设备** 中的二维码，并等待 `MeowCaller linked device ready`。请保持 `wa-voip.db` 私密——它是 MeowCaller 会话。非默认账户会从状态动作中获得各自的存储路径；在 Windows 上，请运行其 PowerShell 命令。
+
+  </Step>
+
+  <Step title="配置 TTS 并从 WhatsApp 发起通话">
+
+    配置一个支持电话功能的 [TTS 提供商](/tools/tts)，重启网关，然后发送类似 `Call me and say the build finished.` 的请求。该工具会从受信任的入站上下文中解析发送者，合成一个临时的私有 WAV 文件，在受限的通话窗口内运行 MeowCaller，并在之后删除音频文件。OpenClaw 会显式传递该账户的存储路径，等待接听/播放/挂断后的零退出状态，并将超时或非零退出视为工具调用失败。
+
+  </Step>
+</Steps>
+
+限制：仅限一对一的外呼音频通话，不支持任意目标号码，不与聊天连接共享认证，个人号码/自聊模式无法自呼，合成音频最长 60 秒，手持端不会提供除 MeowCaller 的接听/播放/挂断完成之外的可感知回执，并且 OpenClaw 会在一个受限的 115-175 秒窗口后停止伴随进程（覆盖 MeowCaller 的连接、接听、播放和关闭阶段）。
 
 ## 审批提示
 
-WhatsApp 可以通过 `👍` / `👎` 反应来呈现 exec 和 plugin 的审批提示。投递由顶层审批转发配置控制：
+WhatsApp 可以将 exec 和 plugin 的审批提示渲染为 `👍`/`👎` 反应，由顶层的审批转发配置控制：
 
 ```json5
 {
@@ -190,17 +224,13 @@ WhatsApp 可以通过 `👍` / `👎` 反应来呈现 exec 和 plugin 的审批�
 }
 ```
 
-`approvals.exec` 和 `approvals.plugin` 相互独立。将 WhatsApp 作为频道启用只会连接传输；除非匹配的审批家族已启用并路由到 WhatsApp，否则不会发送审批提示。Session mode 只会为源自 WhatsApp 的审批投递原生 emoji 审批。Target mode 使用共享转发管道处理显式 WhatsApp 目标，不会创建单独的审批人-DM 扇出。
+`approvals.exec` 和 `approvals.plugin` 是相互独立的；仅将 WhatsApp 启用为一个通道，只会连接传输层，并不会发送任何内容，除非对应的审批家族已启用并路由到那里。session 模式仅对源自 WhatsApp 的审批传递原生 emoji 审批。target 模式使用共享的转发管道处理显式目标，不会创建单独的 approver-DM 扇出。
 
-WhatsApp 审批反应需要来自 `allowFrom` 或 `"*"` 的显式 WhatsApp 审批者。
-`defaultTo` 控制普通默认消息目标；它不是审批审批者。手动
-`/approve` 命令在审批解析之前仍会先经过正常的 WhatsApp 发送者授权路径。
+WhatsApp 审批反应要求在 `allowFrom` 中显式指定审批人（或使用 `"*"`）。`defaultTo` 设置的是普通默认消息目标，而不是审批人列表。在审批解析之前，手动 `/approve` 命令仍会先经过正常的 WhatsApp 发送者授权路径。
 
 ## 插件钩子与隐私
 
-WhatsApp 入站消息可能包含个人消息内容、电话号码、
-群组标识符、发送者名称和会话关联字段。因此，
-除非你显式选择启用，否则 WhatsApp 不会将入站 `message_received` 钩子负载广播给插件：
+传入的 WhatsApp 消息可能包含个人内容、电话号码、群组标识符、发送者名称以及会话关联字段。除非你主动启用，否则 WhatsApp 不会将传入的 `message_received` 钩子载荷广播给插件：
 
 ```json5
 {
@@ -214,102 +244,68 @@ WhatsApp 入站消息可能包含个人消息内容、电话号码、
 }
 ```
 
-你可以将启用范围限定到某一个账号：
-
-```json5
-{
-  channels: {
-    whatsapp: {
-      accounts: {
-        work: {
-          pluginHooks: {
-            messageReceived: true,
-          },
-        },
-      },
-    },
-  },
-}
-```
-
-只应为你信任的插件启用此功能，让其接收入站 WhatsApp 消息
-内容和标识符。
+将该启用范围限定到 `channels.whatsapp.accounts.<id>.pluginHooks.messageReceived` 下的某一个账号。仅对你信任能够处理传入 WhatsApp 内容和标识符的插件启用此功能。
 
 ## 访问控制与激活
 
 <Tabs>
-  <Tab title="DM 策略">
-    `channels.whatsapp.dmPolicy` 控制直接聊天访问：
+  <Tab title="DM policy">
+    `channels.whatsapp.dmPolicy`:
 
-    - `pairing`（默认）
-    - `allowlist`
-    - `open`（要求 `allowFrom` 包含 `"*"`）
-    - `disabled`
+    | Value | Behavior |
+    | --- | --- |
+    | `pairing` (default) | 未知发送者请求配对；所有者批准 |
+    | `allowlist` | 仅允许 `allowFrom` 中的发送者 |
+    | `open` | 需要 `allowFrom` 包含 `"*"` |
+    | `disabled` | 阻止所有私信 |
 
-    `allowFrom` 接受 E.164 风格号码（内部会标准化）。
+    `allowFrom` 接受 E.164 风格号码（内部会规范化）。它仅是 DM 发送者访问控制列表——不会限制显式发往群组 JID 或 `@newsletter` 频道 JID 的外发消息。
 
-    `allowFrom` 是 DM 发送者访问控制列表。它不会限制显式发往 WhatsApp 群组 JID 或 `@newsletter` 频道 JID 的出站发送。
+    多账号覆盖：`channels.whatsapp.accounts.<id>.dmPolicy`（以及 `.allowFrom`）会优先于该账号的频道级默认值。
 
-    多账号覆盖：`channels.whatsapp.accounts.<id>.dmPolicy`（以及 `allowFrom`）优先于该账号的频道级默认值。
+    运行时说明：
 
-    运行时行为细节：
-
-    - 配对记录会持久化到频道允许存储中，并与已配置的 `allowFrom` 合并
-    - 定时自动化和心跳接收者回退会使用显式投递目标或已配置的 `allowFrom`；DM 配对批准不会被当作隐式 cron 或心跳接收者
-    - 如果未配置 allowlist，已链接的自有号码默认被允许
-    - OpenClaw 不会自动为出站 `fromMe` DM（你从已链接设备发给自己的消息）进行配对
+    - 配对会保留在频道 allow-store 中，并与已配置的 `allowFrom` 合并
+    - 定时自动化和心跳接收者回退会使用显式投递目标或已配置的 `allowFrom`；DM 配对批准不会被视为隐式的 cron/heartbeat 接收者
+    - 如果未配置 allowlist，默认允许已绑定的本人号码
+    - OpenClaw 永远不会自动配对 outbound `fromMe` DMs（你从已绑定设备自行发送的消息）
 
   </Tab>
 
-  <Tab title="群组策略 + 白名单">
+  <Tab title="Group policy and allowlists">
     群组访问有两层：
 
-    1. **群组成员白名单**（`channels.whatsapp.groups`）
-       - 如果省略 `groups`，则所有群组都符合条件
-       - 如果存在 `groups`，它将作为群组白名单（允许 `"*"`）
+    1. **群组成员 allowlist**（`channels.whatsapp.groups`）：如果省略 `groups`，则所有群组都符合条件；如果存在，则它充当群组 allowlist（`"*"` 允许全部）。
+    2. **群组发送者策略**（`channels.whatsapp.groupPolicy` + `groupAllowFrom`）：`open` 会绕过发送者 allowlist，`allowlist` 需要匹配 `groupAllowFrom`（或 `*`），`disabled` 会阻止所有群组入站。
 
-    2. **群组发送者策略**（`channels.whatsapp.groupPolicy` + `groupAllowFrom`）
-       - `open`：绕过发送者白名单
-       - `allowlist`：发送者必须匹配 `groupAllowFrom`（或 `*`）
-       - `disabled`：阻止所有群组入站
+    如果未设置 `groupAllowFrom`，当 `allowFrom` 有条目时，发送者检查会回退到 `allowFrom`。发送者 allowlist 会在提及/回复激活之前进行评估。
 
-    发送者白名单回退：
+    如果完全不存在 `channels.whatsapp` 块，运行时会回退到 `groupPolicy: "allowlist"`（并记录警告日志），即使 `channels.defaults.groupPolicy` 设置了其他值也是如此。
 
-    - 如果未设置 `groupAllowFrom`，运行时会在可用时回退到 `allowFrom`
-    - 发送者白名单会在 mention/reply 激活之前进行评估
-
-    注意：如果根本不存在 `channels.whatsapp` 块，运行时群组策略回退为 `allowlist`（并记录警告日志），即使设置了 `channels.defaults.groupPolicy` 也是如此。
+    <Note>
+    群组成员资格解析具有单账号安全兜底：如果只配置了一个 WhatsApp 账号，并且它的 `accounts.<id>.groups` 是显式空对象（`{}`），则会被视为“未设置”，并回退到根级 `channels.whatsapp.groups` 映射，而不是静默阻止所有群组。若配置了 2 个及以上账号，显式空的账号映射将保持为空且不会回退——这样可以让某个账号有意禁用所有群组而不影响其他账号。
+    </Note>
 
   </Tab>
 
-  <Tab title="提及 + /activation">
-    群组回复默认需要提及。
-
-    提及检测包括：
+  <Tab title="Mentions and /activation">
+    群组回复默认需要提及。提及检测包括：
 
     - 对 bot 身份的显式 WhatsApp 提及
     - 配置的提及正则模式（`agents.list[].groupChat.mentionPatterns`，回退到 `messages.groupChat.mentionPatterns`）
     - 授权群组消息的入站语音备忘录转录
     - 隐式回复到 bot 检测（回复发送者匹配 bot 身份）
 
-    安全说明：
+    安全性：引用/回复只满足提及门槛——它并**不会**授予发送者授权。使用 `groupPolicy: "allowlist"` 时，即使是回复一个被 allowlist 允许的用户消息，未被 allowlist 允许的发送者仍然会被阻止。
 
-    - 引用/回复只满足提及门控；它**不会**授予发送者授权
-    - 在 `groupPolicy: "allowlist"` 下，即使非白名单发送者回复了白名单用户的消息，也仍然会被阻止
-
-    会话级激活命令：
-
-    - `/activation mention`
-    - `/activation always`
-
-    `activation` 会更新会话状态（不是全局配置）。它受 owner 约束。
+    会话级激活命令：`/activation mention` 或 `/activation always`。这会更新会话状态（不是全局配置），并且受所有者保护。
 
   </Tab>
 </Tabs>
 
 ## 已配置的 ACP 绑定
 
-WhatsApp 支持带顶层 `bindings[]` 条目的持久化 ACP 绑定：
+WhatsApp 支持通过顶层 `bindings[]` 实现持久化 ACP 绑定：
 
 ```json5
 {
@@ -336,26 +332,17 @@ WhatsApp 支持带顶层 `bindings[]` 条目的持久化 ACP 绑定：
 }
 ```
 
-- 直接聊天匹配 E.164 号码，例如 `+15555550123`。
-- 群组匹配 WhatsApp 群组 JID，例如 `120363424282127706@g.us`。
-- 群组白名单、发送者策略以及提及或激活门控会在 OpenClaw 确保已配置的 ACP 会话存在之前运行。
-- 匹配到的已配置 ACP 绑定拥有该路由。WhatsApp 广播群组不会将该轮扇出到普通 WhatsApp 会话。
+私聊匹配 E.164 号码；群聊匹配 WhatsApp 群组 JID。群组允许名单、发送者策略以及提及/激活门控会在 OpenClaw 确保绑定的 ACP 会话存在之前运行。匹配到的绑定会拥有该路由——广播群不会把该轮消息分发到普通 WhatsApp 会话。
 
 ## 个人号码与自聊行为
 
-当已链接的自号码也存在于 `allowFrom` 中时，WhatsApp 自聊保护将被激活：
-
-- 跳过自聊轮次的已读回执
-- 忽略原本会 ping 到你自己的 mention-JID 自动触发行为
-- 如果未设置 `messages.responsePrefix`，自聊回复默认使用 `[{identity.name}]` 或 `[openclaw]`
+当关联的自号码也出现在 `allowFrom` 中时，会启用自聊保护：跳过自聊回合的已读回执，忽略会触发向自己发送提醒的 mention-JID 自动触发行为，并且当 `messages.responsePrefix` 未设置时，默认回复为 `[{identity.name}]`（或 `[openclaw]`）。
 
 ## 消息规范化与上下文
 
 <AccordionGroup>
-  <Accordion title="入站信封 + 回复上下文">
-    传入的 WhatsApp 消息会被包装进共享的入站信封。
-
-    如果存在引用回复，则上下文会按以下格式附加：
+  <Accordion title="传入封套与回复上下文">
+    传入消息会被包装在共享的传入封套中。引用回复会按以下形式附加上下文：
 
     ```text
     [Replying to <sender> id:<stanzaId>]
@@ -363,78 +350,38 @@ WhatsApp 支持带顶层 `bindings[]` 条目的持久化 ACP 绑定：
     [/Replying]
     ```
 
-    回复元数据字段在可用时也会被填充（`ReplyToId`、`ReplyToBody`、`ReplyToSender`、sender JID/E.164）。
-    当被引用的回复目标是可下载媒体时，OpenClaw 会通过
-    常规入站媒体存储保存它，并将其暴露为 `MediaPath`/`MediaType`，以便
-    代理可以检查引用的图片，而不只是看到
-    `<media:image>`。
+    回复元数据（`ReplyToId`、`ReplyToBody`、`ReplyToSender`、sender JID/E.164）会在可用时被填充。如果被引用的目标是可下载媒体，OpenClaw 会通过常规传入媒体存储保存它，并暴露 `MediaPath`/`MediaType`，以便代理可以直接检查它，而不是只看到 `<media:image>`。
 
   </Accordion>
 
-  <Accordion title="媒体占位符和位置/联系人提取">
-    仅媒体的入站消息会被规范化为如下占位符：
+  <Accordion title="媒体占位符与位置/联系人提取">
+    仅媒体消息会规范化为占位符：`<media:image>`、`<media:video>`、`<media:audio>`、`<media:document>`、`<media:sticker>`。
 
-    - `<media:image>`
-    - `<media:video>`
-    - `<media:audio>`
-    - `<media:document>`
-    - `<media:sticker>`
+    仅当正文只有 `<media:audio>` 时，授权群组语音会在提及门控之前先转写，因此在语音中说出机器人提及可以触发回复。如果转写内容仍未提及机器人，它会保留在待处理群历史中，而不是原始占位符。
 
-    当正文只有 `<media:audio>` 时，授权群组语音备忘录会在提及门控之前先进行转录，因此在语音备忘录中说出 bot 提及可以
-    触发回复。如果转录结果仍未提及 bot，则该转录会
-    被保留在待处理群组历史中，而不是原始占位符。
-
-    位置正文使用简洁的坐标文本。位置标签/备注以及联系人/vCard 详细信息会以 fenced 的不受信任元数据形式渲染，而不是行内提示文本。
+    位置正文会渲染为简洁的坐标文本。位置标签/备注和联系人/vCard 详情会渲染为带围栏的不受信任元数据，而不是内联提示文本。
 
   </Accordion>
 
-  <Accordion title="待处理群组历史注入">
-    对于群组，未处理消息可以被缓冲，并在 bot 最终被触发时作为上下文注入。
+  <Accordion title="待处理群历史注入">
+    未处理的群消息会缓冲，并在机器人最终被触发时作为上下文注入。
 
-    - 默认上限：`50`
-    - 配置：`channels.whatsapp.historyLimit`
-    - 回退：`messages.groupChat.historyLimit`
-    - `0` 可禁用
+    - 默认限制：`50`
+    - 配置：`channels.whatsapp.historyLimit`，回退到 `messages.groupChat.historyLimit`
+    - `0` 会禁用
 
-    注入标记：
-
-    - `[Chat messages since your last reply - for context]`
-    - `[Current message - respond to this]`
+    注入标记：`[Chat messages since your last reply - for context]` 和 `[Current message - respond to this]`。
 
   </Accordion>
 
   <Accordion title="已读回执">
-    对于被接受的 WhatsApp 入站消息，默认启用已读回执。
-
-    全局禁用：
+    对已接受的传入消息默认启用。全局禁用：
 
     ```json5
-    {
-      channels: {
-        whatsapp: {
-          sendReadReceipts: false,
-        },
-      },
-    }
+    { channels: { whatsapp: { sendReadReceipts: false } } }
     ```
 
-    按账号覆盖：
-
-    ```json5
-    {
-      channels: {
-        whatsapp: {
-          accounts: {
-            work: {
-              sendReadReceipts: false,
-            },
-          },
-        },
-      },
-    }
-    ```
-
-    即使全局启用，自聊轮次也会跳过已读回执。
+    按账户覆盖：`channels.whatsapp.accounts.<id>.sendReadReceipts`。即使全局启用，自身聊天的转发也不会发送已读回执。
 
   </Accordion>
 </AccordionGroup>
@@ -443,88 +390,69 @@ WhatsApp 支持带顶层 `bindings[]` 条目的持久化 ACP 绑定：
 
 <AccordionGroup>
   <Accordion title="文本分块">
-    - 默认分块上限：`channels.whatsapp.textChunkLimit = 4000`
-    - `channels.whatsapp.chunkMode = "length" | "newline"`
-    - `newline` 模式优先按段落边界（空行）分割，然后回退到长度安全的分块
+    - 默认分块限制：`channels.whatsapp.textChunkLimit = 4000`
+    - `channels.whatsapp.chunkMode = "length" | "newline"`；`newline` 优先使用段落边界（空行），然后回退到按长度安全分块
 
   </Accordion>
 
   <Accordion title="出站媒体行为">
-    - 支持图片、视频、音频（PTT 语音留言）和文档载荷
-    - 音频媒体通过 Baileys 的 `audio` 载荷发送，并带上 `ptt: true`，因此 WhatsApp 客户端会将其渲染为按键通话语音留言
-    - 回复载荷会保留 `audioAsVoice`；即使提供方返回 MP3 或 WebM，WhatsApp 的 TTS 语音留言输出也会继续走这条 PTT 路径
-    - 原生 Ogg/Opus 音频会以 `audio/ogg; codecs=opus` 发送，以保持语音留言兼容性
-    - 非 Ogg 音频，包括 Microsoft Edge TTS 的 MP3/WebM 输出，会在通过 PTT 投递前使用 `ffmpeg` 转码为 48 kHz 单声道 Ogg/Opus
-    - `/tts latest` 会将最新的助手回复作为一条语音留言发送，并阻止同一回复的重复发送；`/tts chat on|off|default` 控制当前 WhatsApp 聊天的自动 TTS
-    - 视频发送支持通过 `gifPlayback: true` 播放动画 GIF
-    - `forceDocument` / `asDocument` 会将出站图片、GIF 和视频通过 Baileys 文档载荷发送，以避免 WhatsApp 媒体压缩，同时保留解析后的文件名和 MIME 类型
-    - 在发送多媒体回复载荷时，字幕会应用到第一个媒体项上；但 PTT 语音留言会先发送音频、再单独发送可见文本，因为 WhatsApp 客户端不会一致地渲染语音留言字幕
-    - 媒体来源可以是 HTTP(S)、`file://` 或本地路径
+    - 支持图像、视频、音频（PTT 语音消息）和文档负载
+    - 音频会作为 Baileys 的 `audio` 负载发送，并设置 `ptt: true`，从而呈现为按住说话语音消息；`audioAsVoice` 会保留在回复负载中，因此无论提供方的源格式如何，TTS 语音消息输出都会保持走这一路径
+    - 原生 Ogg/Opus 音频会以 `audio/ogg; codecs=opus` 发送；其他任何格式（包括 Microsoft Edge TTS MP3/WebM 输出）都会在 PTT 投递前通过 `ffmpeg` 转码为 48 kHz 单声道 Ogg/Opus
+    - `/tts latest` 会将最新的助手回复作为一条语音消息发送，并抑制对同一回复的重复发送；`/tts chat on|off|default` 控制当前聊天的自动 TTS
+    - 发送视频时设置 `gifPlayback: true` 会启用动画 GIF 播放
+    - `forceDocument`/`asDocument` 会将出站图像、GIF 和视频通过 Baileys 文档负载路由，以避免 WhatsApp 的媒体压缩，并保留解析出的文件名和 MIME 类型
+    - 标题会应用到多媒体回复中的第一项媒体，但 PTT 语音消息除外：音频先发送且不带标题，然后标题作为单独的文本消息发送（WhatsApp 客户端对语音消息标题的渲染并不一致）
+    - 媒体源可以是 HTTP(S)、`file://` 或本地路径
 
   </Accordion>
 
-  <Accordion title="媒体大小限制和回退行为">
-    - 入站媒体保存上限：`channels.whatsapp.mediaMaxMb`（默认 `50`）
-    - 出站媒体发送上限：`channels.whatsapp.mediaMaxMb`（默认 `50`）
-    - 按账号覆盖使用 `channels.whatsapp.accounts.<accountId>.mediaMaxMb`
-    - 除非 `forceDocument` / `asDocument` 请求文档投递，否则图片会自动优化（调整尺寸/质量扫描）以符合限制
-    - 媒体发送失败时，首项回退会发送文本警告，而不是静默丢弃回复
+  <Accordion title="媒体大小限制与回退行为">
+    - 传入保存上限和出站发送上限：`channels.whatsapp.mediaMaxMb`（默认 `50`）
+    - 按账户覆盖：`channels.whatsapp.accounts.<id>.mediaMaxMb`
+    - 图像会自动优化（调整大小/质量扫描）以适应限制，除非 `forceDocument`/`asDocument` 请求以文档方式投递
+    - 媒体发送失败时，第一项的回退会发送文本警告，而不是静默丢弃回复
 
   </Accordion>
 </AccordionGroup>
 
 ## 回复引用
 
-WhatsApp 支持原生回复引用，即出站回复会可见地引用入站消息。通过 `channels.whatsapp.replyToMode` 进行控制。
+`channels.whatsapp.replyToMode` 控制原生回复引用（出站回复会明显引用传入消息）：
 
-| 值          | 行为                                                                 |
-| ----------- | -------------------------------------------------------------------- |
-| `"off"`     | 从不引用；作为普通消息发送                                           |
-| `"first"`   | 仅引用第一个出站回复分块                                             |
-| `"all"`     | 引用每个出站回复分块                                                 |
-| `"batched"` | 引用队列中的批量回复，同时让即时回复不带引用                         |
+| 值                | 行为                                                         |
+| ----------------- | ------------------------------------------------------------ |
+| `"off"`（默认）    | 从不引用；以普通消息发送                                     |
+| `"first"`         | 仅引用第一个出站回复分块                                     |
+| `"all"`           | 引用每个出站回复分块                                           |
+| `"batched"`       | 引用排队的批量回复；即时回复不引用                             |
 
-默认值为 `"off"`。按账号覆盖使用 `channels.whatsapp.accounts.<id>.replyToMode`。
+按账户覆盖：`channels.whatsapp.accounts.<id>.replyToMode`。
 
 ```json5
-{
-  channels: {
-    whatsapp: {
-      replyToMode: "first",
-    },
-  },
-}
+{ channels: { whatsapp: { replyToMode: "first" } } }
 ```
 
 ## 反应级别
 
-`channels.whatsapp.reactionLevel` 控制 agent 在 WhatsApp 上使用 emoji 反应的范围：
+`channels.whatsapp.reactionLevel` 控制代理使用表情回应的广泛程度：
 
-| 级别          | 确认反应 | agent 主动反应 | 描述                                     |
-| ------------- | -------- | -------------- | ---------------------------------------- |
-| `"off"`       | 否       | 否             | 完全不使用反应                           |
-| `"ack"`       | 是       | 否             | 仅确认反应（回复前接收确认）             |
-| `"minimal"`   | 是       | 是（保守）     | 确认 + agent 反应，采用保守指导           |
-| `"extensive"` | 是       | 是（鼓励）     | 确认 + agent 反应，采用鼓励性指导         |
+| Level                 | 确认回应 | 代理发起的回应  |
+| --------------------- | -------- | -------------------------- |
+| `"off"`               | 否            | 否                         |
+| `"ack"`               | 是           | 否                         |
+| `"minimal"` (default) | 是           | 是，保守引导 |
+| `"extensive"`         | 是           | 是，鼓励性引导   |
 
-默认值：`"minimal"`。
-
-按账号覆盖使用 `channels.whatsapp.accounts.<id>.reactionLevel`。
+按账户覆盖：`channels.whatsapp.accounts.<id>.reactionLevel`。
 
 ```json5
-{
-  channels: {
-    whatsapp: {
-      reactionLevel: "ack",
-    },
-  },
-}
+{ channels: { whatsapp: { reactionLevel: "ack" } } }
 ```
 
 ## 确认反应
 
-WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时立即发送确认反应。
-确认反应受 `reactionLevel` 限制——当 `reactionLevel` 为 `"off"` 时会被抑制。
+`channels.whatsapp.ackReaction` 会在收到入站消息时立即发送一个反应，并受 `reactionLevel` 控制（当为 `"off"` 时会被抑制）：
 
 ```json5
 {
@@ -540,17 +468,11 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 }
 ```
 
-行为说明：
-
-- 入站消息被接受后立即发送（在回复之前）
-- 如果 `ackReaction` 存在但没有 `emoji`，WhatsApp 会使用路由到的 agent 身份 emoji，并回退到 "👀"；省略 `ackReaction` 或设置 `emoji: ""` 可不发送确认反应
-- 失败会被记录日志，但不会阻止正常回复投递
-- 群组模式 `mentions` 会在提及触发的轮次上进行反应；群组激活 `always` 会绕过此检查
-- WhatsApp 使用 `channels.whatsapp.ackReaction`（此处不使用旧版 `messages.ackReaction`）
+注意：会在入站消息被接受后立即发送（在回复之前）；如果存在 `ackReaction` 但没有 `emoji`，WhatsApp 会使用被路由到的代理身份 emoji，并回退为 `"👀"`（如需不发送确认反应，请省略 `ackReaction` 或将 `emoji: ""`）；失败会被记录，但不会阻止回复投递；`group` 模式 `mentions` 仅对由提及触发的轮次生效，而 `group` 激活为 `always` 时会绕过该检查；WhatsApp 仅使用 `channels.whatsapp.ackReaction`（旧的 `messages.ackReaction` 不适用）。
 
 ## 生命周期状态反应
 
-将 `messages.statusReactions.enabled: true` 设为开启，即可让 WhatsApp 在一次轮次中用状态反应替代确认反应，而不是保留一个静态的回执 emoji。启用后，OpenClaw 会为 queued、thinking、tool activity、compaction、done 和 error 等生命周期状态使用同一个入站消息反应槽位。
+设置 `messages.statusReactions.enabled: true`，让 WhatsApp 在一次轮次中用状态反应替换 ack 反应，而不是保留静态的回执表情，状态会在 queued、thinking、tool activity、compaction、done 和 error 之间切换：
 
 ```json5
 {
@@ -567,35 +489,23 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 }
 ```
 
-行为说明：
-
-- `channels.whatsapp.ackReaction` 仍然控制状态反应是否可用于私信和群组。
-- queued 状态反应使用与普通确认反应相同的有效 ack emoji。
-- WhatsApp 对每条消息只有一个机器人反应槽位，因此生命周期更新会就地替换当前反应。
-- `messages.removeAckAfterReply: true` 会在配置的 done/error 保持时间后清除最终状态反应。
-- 工具 emoji 分类包括 `tool`、`coding`、`web`、`deploy`、`build` 和 `concierge`。
+注意：`channels.whatsapp.ackReaction` 仍然控制私信和群组的适用资格；queued 状态使用与普通 ack 反应相同的有效表情；WhatsApp 对每条消息只有一个机器人反应槽位，因此生命周期更新会就地替换当前反应；`messages.removeAckAfterReply: true` 会在配置的 done/error 保持时间结束后清除最终状态反应；工具表情类别包括 `tool`、`coding`、`web`、`deploy`、`build` 和 `concierge`。
 
 ## 多账号与凭据
 
 <AccordionGroup>
-  <Accordion title="账号选择与默认值">
-    - 账号 id 来自 `channels.whatsapp.accounts`
-    - 默认账号选择：如果存在则为 `default`，否则为第一个已配置的账号 id（按排序）
-    - 账号 id 在内部会被规范化以便查找
+  <Accordion title="账户选择和默认值">
+    账户 ID 来自 `channels.whatsapp.accounts`。如果存在，默认账户选择为 `default`；否则，使用第一个已配置的账户 ID（按字母顺序排序）。账户 ID 在内部会进行归一化以便查找。
+  </Accordion>
+
+  <Accordion title="凭据路径和旧版兼容性">
+    - 当前认证路径：`~/.openclaw/credentials/whatsapp/<accountId>/creds.json`（备份：`creds.json.bak`）
+    - 旧版默认认证位于 `~/.openclaw/credentials/`，对于默认账户流程仍会被识别/迁移
 
   </Accordion>
 
-  <Accordion title="凭据路径与旧版兼容">
-    - 当前认证路径：`~/.openclaw/credentials/whatsapp/<accountId>/creds.json`
-    - 备份文件：`creds.json.bak`
-    - 位于 `~/.openclaw/credentials/` 的旧默认认证在默认账号流程中仍可识别/迁移
-
-  </Accordion>
-
-  <Accordion title="登出行为">
-    `openclaw channels logout --channel whatsapp [--account <id>]` 会清除该账号的 WhatsApp 认证状态。
-
-    当 Gateway 可达时，登出会先停止所选账号的实时 WhatsApp 监听器，因此关联会话在下次重启前不会继续接收消息。`openclaw channels remove --channel whatsapp` 在禁用或删除账号配置之前也会先停止实时监听器。
+  <Accordion title="注销行为">
+    `openclaw channels logout --channel whatsapp [--account <id>]` 会清除该账户的 WhatsApp 认证状态。当网关可达时，注销会先停止该账户的实时监听，因此在下次重启前，已绑定的会话将不再接收消息。`openclaw channels remove --channel whatsapp` 也会在禁用或删除账户配置之前停止实时监听。
 
     在旧版认证目录中，`oauth.json` 会被保留，而 Baileys 认证文件会被移除。
 
@@ -605,10 +515,8 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 ## 工具、动作与配置写入
 
 - Agent 工具支持包括 WhatsApp 反应动作（`react`）。
-- 动作门控：
-  - `channels.whatsapp.actions.reactions`
-  - `channels.whatsapp.actions.polls`
-- 默认启用通道发起的配置写入（可通过 `channels.whatsapp.configWrites=false` 禁用）。
+- 动作开关：`channels.whatsapp.actions.reactions`、`channels.whatsapp.actions.polls`（现有动作默认值为 `true`）、`channels.whatsapp.actions.calls`（默认 `false`，见上面的 MeowCaller）。
+- 频道发起的配置写入默认启用；可通过 `channels.whatsapp.configWrites: false` 禁用。
 
 ## 故障排查
 
@@ -616,21 +524,19 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
   <Accordion title="未绑定（需要 QR）">
     症状：通道状态报告未绑定。
 
-    修复：
-
-    ```bash
-    openclaw channels login --channel whatsapp
-    openclaw channels status
-    ```
+```bash
+openclaw channels login --channel whatsapp
+openclaw channels status
+```
 
   </Accordion>
 
   <Accordion title="已绑定但断开连接 / 重连循环">
     症状：已绑定账号反复断开或尝试重连。
 
-    静默账号在超过正常消息超时后仍可能保持连接；当 WhatsApp Web 传输活动停止、socket 关闭，或应用层活动在更长的安全窗口内持续静默时，看门狗会重新启动。
+    静默账号可以在正常消息超时之后继续保持连接；看门狗仅在 WhatsApp Web 传输活动停止、socket 关闭，或应用层活动在更长的安全窗口内持续无响应时才会重启（参见上面的运行时模型）。
 
-    如果日志显示反复出现 `status=408 Request Time-out Connection was lost`，请调整 `web.whatsapp` 下的 Baileys socket 时序参数。可先将 `keepAliveIntervalMs` 调到低于你网络的空闲超时，并在慢速或丢包链接上增大 `connectTimeoutMs`：
+    如果日志显示反复出现 `status=408 Request Time-out Connection was lost`，请调整 `web.whatsapp` 下的 Baileys socket 定时参数。先将 `keepAliveIntervalMs` 调低到低于你网络的空闲超时，并在慢速或丢包链路上增大 `connectTimeoutMs`：
 
     ```json5
     {
@@ -653,8 +559,7 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
     openclaw gateway status
     ```
 
-    如果在主机连接性和时序都修正后循环仍然存在，请备份
-    该账号的认证目录并重新关联该账号：
+    如果在主机连接性和时序都修复后循环仍然存在，请备份账号认证目录并重新关联：
 
     ```bash
     cp -a ~/.openclaw/credentials/whatsapp/<accountId> \
@@ -663,51 +568,32 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
     openclaw channels login --channel whatsapp --account <accountId>
     ```
 
-    如果 `~/.openclaw/logs/whatsapp-health.log` 显示 `Gateway inactive`，但
-    `openclaw gateway status` 和 `openclaw channels status --probe` 显示
-    gateway 和 WhatsApp 运行正常，请运行 `openclaw doctor`。在 Linux 上，doctor
-    会警告仍在调用
-    `~/.openclaw/bin/ensure-whatsapp.sh` 的旧版 crontab 条目；请使用
-    `crontab -e` 删除这些过时条目，因为 cron 可能缺少 systemd user-bus 环境，
-    从而让这个旧脚本误报 gateway 健康状态。
-
-    如有需要，使用 `channels login` 重新关联。
+    如果 `~/.openclaw/logs/whatsapp-health.log` 显示 `Gateway inactive`，但 `openclaw gateway status` 和 `openclaw channels status --probe` 都显示正常，请运行 `openclaw doctor`。在 Linux 上，doctor 会警告那些调用已弃用的 `~/.openclaw/bin/ensure-whatsapp.sh` 脚本的旧 crontab 条目；请使用 `crontab -e` 删除这些条目——cron 可能缺少 systemd 用户总线环境，从而让旧脚本误报网关健康状态。
 
   </Accordion>
 
-  <Accordion title="代理后面的 QR 登录超时">
-    症状：`openclaw channels login --channel whatsapp` 在显示可用 QR 码之前失败，报 `status=408 Request Time-out` 或 TLS socket 断开。
+  <Accordion title="代理后方的 QR 登录超时">
+    症状：`openclaw channels login --channel whatsapp` 在显示可用 QR 之前就失败，报 `status=408 Request Time-out` 或 TLS socket 断开。
 
-    WhatsApp Web 登录使用网关主机的标准代理环境（`HTTPS_PROXY`、`HTTP_PROXY`、小写变体以及 `NO_PROXY`）。请确认网关进程继承了代理环境变量，并且 `NO_PROXY` 不会匹配 `mmg.whatsapp.net`。
+    WhatsApp Web 登录使用网关主机的标准代理环境变量（`HTTPS_PROXY`、`HTTP_PROXY`、小写变体、`NO_PROXY`）。请确认网关进程继承了代理环境变量，并且 `NO_PROXY` 不会匹配 `mmg.whatsapp.net`。
 
   </Accordion>
 
   <Accordion title="发送时没有活动监听器">
-    当目标账号不存在活动网关监听器时，出站发送会快速失败。
+    当目标账号不存在活动的网关监听器时，出站发送会快速失败。确认网关正在运行且该账号已关联。
+  </Accordion>
 
-    请确保网关正在运行且该账号已绑定。
+  <Accordion title="回复出现在转录中但没有出现在 WhatsApp 中">
+    转录行记录的是代理生成的内容；WhatsApp 投递会单独检查。OpenClaw 只有在 Baileys 为至少一条可见文本或媒体发送返回出站消息 id 之后，才会将自动回复视为已发送。
+
+    确认表情回应是独立的、回复前的回执——成功的表情回应并不能证明后续文本/媒体回复已被接受。请检查网关日志中的 `auto-reply delivery failed` 或 `auto-reply was not accepted by WhatsApp provider`。
 
   </Accordion>
 
-  <Accordion title="Reply appears in transcript but not in WhatsApp">
-    Transcript 行会记录 agent 生成了什么。WhatsApp 投递会单独检查：只有当 Baileys 至少返回一个可见的文本或媒体发送的出站消息 id 后，OpenClaw 才会将自动回复视为已发送。
+  <Accordion title="群消息意外被忽略">
+    请按以下顺序检查：`groupPolicy`、`groupAllowFrom`/`allowFrom`、`groups` 白名单条目、提及门控（`requireMention` + 提及模式），以及 `openclaw.json` 中的重复键（JSON5 中后面的条目会覆盖前面的条目——每个作用域只保留一个 `groupPolicy`）。
 
-    Ack 反应是独立的回复前回执。反应成功并不能证明后续的文本或媒体回复已被 WhatsApp 接受。
-
-    请检查网关日志中的 `auto-reply delivery failed` 或 `auto-reply was not accepted by WhatsApp provider`。
-
-  </Accordion>
-
-  <Accordion title="Group messages unexpectedly ignored">
-    按以下顺序检查：
-
-    - `groupPolicy`
-    - `groupAllowFrom` / `allowFrom`
-    - `groups` 白名单条目
-    - 提及门控（`requireMention` + 提及模式）
-    - `openclaw.json` 中的重复键（JSON5）：后面的条目会覆盖前面的，因此每个作用域只保留一个 `groupPolicy`
-
-    如果存在 `channels.whatsapp.groups`，WhatsApp 仍然可以观察到其他群组中的消息，但 OpenClaw 会在会话路由之前将它们丢弃。将群组 JID 添加到 `channels.whatsapp.groups`，或添加 `groups["*"]` 以允许所有群组，同时仍通过 `groupPolicy` 和 `groupAllowFrom` 维护发送者授权。
+    如果存在 `channels.whatsapp.groups`，WhatsApp 仍可能收到其他群组的消息，但 OpenClaw 会在会话路由之前将它们丢弃。将群组 JID 添加到 `channels.whatsapp.groups`，或者添加 `groups["*"]` 以允许所有群组，同时通过 `groupPolicy`/`groupAllowFrom` 保持发送者授权。
 
   </Accordion>
 
@@ -720,32 +606,29 @@ WhatsApp 支持通过 `channels.whatsapp.ackReaction` 在收到入站消息时�
 
 WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与私聊系统提示词。
 
-群组消息的解析层级：
+群组消息的解析方式：先确定最终有效的 `groups` 映射——如果某个账号定义了自己的 `groups` 键，那么它会完全替换根级 `groups` 映射（不会进行深度合并）。随后提示词查找只在这个单一结果映射上进行：
 
-先确定有效的 `groups` 映射：如果账号定义了自己的 `groups`，它会完全替换根级 `groups` 映射（不进行深度合并）。然后在结果中的单一映射上执行提示词查找：
+1. **群组特定提示词**（`groups["<groupId>"].systemPrompt`）：当群组条目存在并且其 `systemPrompt` 键已定义时使用。空字符串（`""`）会抑制通配符并且不应用任何提示词。
+2. **群组通配符提示词**（`groups["*"].systemPrompt`）：当特定群组条目不存在，或者存在但未定义 `systemPrompt` 键时使用。
 
-1. **群组特定系统提示词**（`groups["<groupId>"].systemPrompt`）：当映射中存在特定群组条目且其 `systemPrompt` 键已定义时使用。如果 `systemPrompt` 为空字符串（`""`），则会抑制通配符，不应用任何系统提示词。
-2. **群组通配系统提示词**（`groups["*"].systemPrompt`）：当特定群组条目在映射中完全不存在，或者存在但未定义 `systemPrompt` 键时使用。
-
-私聊消息的解析层级：
-
-先确定有效的 `direct` 映射：如果账号定义了自己的 `direct`，它会完全替换根级 `direct` 映射（不进行深度合并）。然后在结果中的单一映射上执行提示词查找：
-
-1. **私聊特定系统提示词**（`direct["<peerId>"].systemPrompt`）：当映射中存在特定对端条目且其 `systemPrompt` 键已定义时使用。如果 `systemPrompt` 为空字符串（`""`），则会抑制通配符，不应用任何系统提示词。
-2. **私聊通配系统提示词**（`direct["*"].systemPrompt`）：当特定对端条目在映射中完全不存在，或者存在但未定义 `systemPrompt` 键时使用。
+私聊消息的解析遵循同样的模式，作用于 `direct` 映射和 `direct["*"]`。
 
 <Note>
 `dms` 仍然是轻量级的每个 DM 历史覆盖桶（`dms.<id>.historyLimit`）。提示词覆盖位于 `direct` 下。
 </Note>
 
-**与 Telegram 多账号行为的区别：** 在 Telegram 中，根级 `groups` 会在多账号设置中被有意对所有账号抑制——即使那些没有定义自己 `groups` 的账号也一样——以防止机器人接收其不属于的群组消息。WhatsApp 不应用这个保护：根级 `groups` 和根级 `direct` 会始终被未定义账号级覆盖的账号继承，不管配置了多少账号。在多账号 WhatsApp 设置中，如果你想为不同账号设置群组或私聊提示词，请在每个账号下显式定义完整映射，而不要依赖根级默认值。
+<Note>
+这种账号替换根级的提示词解析行为只是一个普通的浅层覆盖：任何账号级 `groups`/`direct` 键，包括显式的空对象，都会替换根级映射。它不同于上文描述的群成员白名单检查，后者在意外出现空的 `groups: {}` 时，对单账号提供了安全兜底。
+</Note>
+
+**与 Telegram 的区别：** Telegram 会在多账号设置中为每个账号抑制根级 `groups`（即使该账号自己没有 `groups`），以防止机器人接收其不属于的群组消息。WhatsApp 不会应用这个保护——根级 `groups`/`direct` 会被任何没有自己覆盖项的账号继承，而不考虑账号数量。在多账号 WhatsApp 设置中，如果你希望按账号区分提示词，请在每个账号下显式定义完整映射。
 
 重要行为：
 
-- `channels.whatsapp.groups` 既是按群组的配置映射，也是聊天级群组白名单。无论是在根作用域还是账号作用域，`groups["*"]` 都表示该作用域内“允许所有群组”。
-- 只有在你本来就希望该作用域接收所有群组时，才添加带通配符的群组 `systemPrompt`。如果你仍然只想让固定的一组群组 ID 有资格被处理，就不要把 `groups["*"]` 用作提示词默认值。相反，请在每个显式加入白名单的群组条目上重复该提示词。
-- 群组接纳与发送者授权是两个独立的检查。`groups["*"]` 会扩大可进入群组处理的群组集合，但它本身并不会授权这些群组中的每个发送者。发送者访问仍由 `channels.whatsapp.groupPolicy` 和 `channels.whatsapp.groupAllowFrom` 单独控制。
-- `channels.whatsapp.direct` 对 DM 没有同样的副作用。`direct["*"]` 只是在 DM 已通过 `dmPolicy` 加上 `allowFrom` 或配对存储规则被接纳之后，提供一个默认的私聊配置。
+- `channels.whatsapp.groups` 既是每个群组的配置映射，也是聊天级别的群组白名单。在根级或账号级，`groups["*"]` 都表示“该作用域接纳所有群组”。
+- 只有在你已经希望该作用域接纳所有群组时，才添加通配符 `systemPrompt`。如果你只想让固定的一组群组 ID 有资格被接纳，请在每个显式白名单条目上重复提示词，而不是使用 `groups["*"]`。
+- 群组接纳和发送者授权是两个独立检查。`groups["*"]` 只是扩大哪些群组会进入群组处理流程；它不会授权这些群组中的每一位发送者——这仍由 `groupPolicy`/`groupAllowFrom` 控制。
+- `channels.whatsapp.direct` 对 DM 没有对应的副作用：`direct["*"]` 只会在一个 DM 已经通过 `dmPolicy` 加上 `allowFrom` 或配对存储规则被接纳后，提供默认配置。
 
 示例：
 
@@ -754,7 +637,7 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
   channels: {
     whatsapp: {
       groups: {
-        // 仅在你希望根作用域接纳所有群组时使用。
+        // 仅在你已经希望根作用域接纳所有群组时使用。
         // 适用于所有未定义自己 groups 映射的账号。
         "*": { systemPrompt: "所有群组的默认提示词。" },
       },
@@ -789,18 +672,16 @@ WhatsApp 通过 `groups` 和 `direct` 映射支持类似 Telegram 的群组与�
 
 ## 配置参考指针
 
-主要参考：
+主要参考：[配置参考 - WhatsApp](/gateway/config-channels#whatsapp)
 
-- [配置参考 - WhatsApp](/gateway/config-channels#whatsapp)
-
-高信号 WhatsApp 字段：
-
-- access: `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`
-- delivery: `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`
-- multi-account: `accounts.<id>.enabled`, `accounts.<id>.authDir`, account-level overrides
-- operations: `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`, `web.whatsapp.*`
-- session behavior: `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`
-- prompts: `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt`
+| 区域             | 字段                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| 访问           | `dmPolicy`, `allowFrom`, `groupPolicy`, `groupAllowFrom`, `groups`                                             |
+| 发送           | `textChunkLimit`, `chunkMode`, `mediaMaxMb`, `sendReadReceipts`, `ackReaction`, `reactionLevel`                |
+| 多账户    | `accounts.<id>.enabled`, `accounts.<id>.authDir`，以及其他每账户覆盖项                              |
+| 操作       | `configWrites`, `debounceMs`, `web.enabled`, `web.heartbeatSeconds`, `web.reconnect.*`, `web.whatsapp.*`       |
+| 会话行为 | `session.dmScope`, `historyLimit`, `dmHistoryLimit`, `dms.<id>.historyLimit`                                   |
+| 提示词          | `groups.<id>.systemPrompt`, `groups["*"].systemPrompt`, `direct.<id>.systemPrompt`, `direct["*"].systemPrompt` |
 
 ## 相关内容
 

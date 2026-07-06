@@ -6,75 +6,73 @@ read_when:
 title: "GMI Cloud"
 ---
 
-GMI Cloud 是一个为前沿模型和开源权重模型提供托管推理的平台，
-通过 OpenAI 兼容的 API 提供服务。在 OpenClaw 中，它是一个官方的外部提供方
-插件，这意味着你只需安装一次，将提供方 id 设为 `gmi`，
-通过常规模型认证存储凭据，并使用类似
-`gmi/google/gemini-3.1-flash-lite` 的模型引用。
+GMI Cloud 是一个托管推理平台，提供面向前沿模型和开源权重模型的
+OpenAI 兼容 API。在 OpenClaw 中，它是一个官方外部提供方
+插件：只需安装一次，通过常规模型认证存储凭据，并使用
+类似 `gmi/google/gemini-3.1-flash-lite` 的模型引用。
 
 当你希望用一个 API 密钥访问多个托管模型系列时，可以使用 GMI，包括
-Google、Anthropic、OpenAI、DeepSeek、Moonshot，以及 GMI 目录中公开的 Z.AI 路由。
-当你需要一个备用提供方用于模型回退、比较不同供应商的托管路由，
-或者当 GMI 比你的主提供方更早提供某个模型时，它会很有用。
+Anthropic、DeepSeek、Google、Moonshot、OpenAI 和 Z.AI 等由 GMI 目录
+暴露的路由。它可作为模型回退的次级提供方，用于比较
+不同厂商之间的托管路由，或在 GMI 已提供某个模型而你的
+主提供方尚未提供时使用。OpenClaw 负责提供方 id、认证配置文件、别名、
+模型目录种子和基础 URL；GMI 负责实时模型可用性、计费、
+速率限制以及任何提供方侧路由策略。
 
-此提供方使用与 OpenAI 兼容的聊天语义。OpenClaw 负责提供方
-id、认证配置文件、别名、模型目录种子和基础 URL；GMI 负责实时
-模型可用性、计费、速率限制以及任何提供方侧的路由策略。
+| Property      | Value                                    |
+| ------------- | ---------------------------------------- |
+| Provider id   | `gmi` (aliases: `gmi-cloud`, `gmicloud`) |
+| Package       | `@openclaw/gmi-provider`                 |
+| Auth env var  | `GMI_API_KEY`                            |
+| API           | OpenAI-compatible (`openai-completions`) |
+| Base URL      | `https://api.gmi-serving.com/v1`         |
+| Default model | `gmi/google/gemini-3.1-flash-lite`       |
 
 ## 设置
 
-Install the plugin, restart the gateway, then create an API key in GMI Cloud:
+安装插件，重启网关，然后在 GMI Cloud
+（`https://www.gmicloud.ai/`）中创建一个 API key：
 
 ```bash
 openclaw plugins install @openclaw/gmi-provider
 openclaw gateway restart
 ```
 
-Then run:
+然后运行：
 
 ```bash
 openclaw onboard --auth-choice gmi-api-key
 ```
 
-或者设置：
+非交互式设置可以传入 `--gmi-api-key <key>`，或设置：
 
 ```bash
 export GMI_API_KEY="<your-gmi-api-key>" # pragma: allowlist secret
 ```
 
-## 默认值
-
-- 提供方：`gmi`
-- 别名：`gmi-cloud`, `gmicloud`
-- 基础 URL：`https://api.gmi-serving.com/v1`
-- 环境变量：`GMI_API_KEY`
-- 默认模型：`gmi/google/gemini-3.1-flash-lite`
-
 ## 何时选择 GMI
 
-- 你想要一个托管的 OpenAI 兼容端点，而不是本地模型服务器。
-- 你想通过一个提供方账户尝试多个商业和开源权重模型系列。
-- 你想要一个备用提供方，其上游路由与 OpenRouter、
-  DeepInfra、Together 或直接供应商 API 不同。
-- 你需要 GMI 特定的模型 id、定价或账户控制。
+- 你需要的是托管的 OpenAI 兼容端点，而不是本地模型服务器。
+- 你希望通过一个提供商账号尝试多个商业和开源权重模型系列。
+- 你需要一个备用提供商，其上游路由不同于 DeepInfra、OpenRouter、Together 或直接的供应商 API。
+- 你需要 GMI 特定的模型 ID、定价或账户控制。
 
-如果你需要 GMI 没有通过其 OpenAI 兼容路由公开的供应商原生功能，
-请改用直接的供应商提供方。当数据本地性或本地
-GPU 控制比托管便利性更重要时，请使用本地提供方，例如 Ollama、LM Studio、vLLM 或 SGLang。
+当你需要 GMI 通过其 OpenAI 兼容路径无法提供的供应商原生功能时，请改为选择直接的供应商提供商。当数据本地性或本地 GPU 控制比托管带来的便利更重要时，请选择本地提供商，例如 LM Studio、Ollama、SGLang 或 vLLM。
 
 ## 模型
 
-The plugin catalog seeds commonly available GMI Cloud route ids, including:
+插件目录种子通常可用的 GMI Cloud 路由 ID：
 
-- `gmi/zai-org/GLM-5.1-FP8`
-- `gmi/deepseek-ai/DeepSeek-V3.2`
-- `gmi/moonshotai/Kimi-K2.5`
-- `gmi/google/gemini-3.1-flash-lite`
-- `gmi/anthropic/claude-sonnet-4.6`
-- `gmi/openai/gpt-5.4`
+| Model ref                          | Input        | Context   | Max output |
+| ---------------------------------- | ------------ | --------- | ---------- |
+| `gmi/anthropic/claude-sonnet-4.6`  | 文本 + 图像  | 200,000   | 64,000     |
+| `gmi/deepseek-ai/DeepSeek-V3.2`    | 文本         | 163,840   | 65,536     |
+| `gmi/google/gemini-3.1-flash-lite` | 文本 + 图像  | 1,048,576 | 65,536     |
+| `gmi/moonshotai/Kimi-K2.5`         | 文本 + 图像  | 262,144   | 65,536     |
+| `gmi/openai/gpt-5.4`               | 文本 + 图像  | 400,000   | 128,000    |
+| `gmi/zai-org/GLM-5.1-FP8`          | 文本         | 202,752   | 65,536     |
 
-该目录种子并不保证每个账户在任何时候都能调用每个模型。请使用 OpenClaw 的模型列表命令，
-查看你环境中已配置提供方报告的内容：
+目录只是一个种子，并不保证每个账号在任何时候都能调用每个模型。请列出你环境中配置的提供方所报告的内容：
 
 ```bash
 openclaw models list --provider gmi

@@ -14,10 +14,10 @@ SGLang 通过兼容 OpenAI 的 HTTP API 提供开源权重模型。OpenClaw 使�
 | Plugin                    | bundled, `enabledByDefault: true`                            |
 | Auth env var              | `SGLANG_API_KEY`（如果服务器没有认证，则任意非空值均可） |
 | Onboarding flag           | `--auth-choice sglang`                                       |
-| API                       | OpenAI-compatible (`openai-completions`)                     |
+| API                       | 兼容 OpenAI（`openai-completions`）                     |
 | Default base URL          | `http://127.0.0.1:30000/v1`                                  |
 | Default model placeholder | `sglang/Qwen/Qwen3-8B`                                       |
-| Streaming usage           | Yes (`supportsStreamingUsage: true`)                         |
+| Streaming usage           | 是（`supportsStreamingUsage: true`）                         |
 | Pricing                   | 标记为外部免费（`modelPricing.external: false`）        |
 
 OpenClaw 还会在你使用 `SGLANG_API_KEY` 时 **自动发现** SGLang 中可用的模型。若你同时配置了自定义的 SGLang base URL，请在 `agents.defaults.models` 中使用 `sglang/*` 以保持动态发现。参见下方 [模型发现（隐式提供方）](#model-discovery-implicit-provider)。
@@ -63,8 +63,8 @@ OpenClaw 还会在你使用 `SGLANG_API_KEY` 时 **自动发现** SGLang 中可�
 
 ## 模型发现（隐式提供方）
 
-当设置了 `SGLANG_API_KEY`（或存在认证配置文件）并且你**没有**
-定义 `models.providers.sglang` 时，OpenClaw 将查询：
+当设置了 `SGLANG_API_KEY`（或存在认证配置文件）且你**没有**
+定义 `models.providers.sglang` 时，OpenClaw 会查询：
 
 - `GET http://127.0.0.1:30000/v1/models`
 

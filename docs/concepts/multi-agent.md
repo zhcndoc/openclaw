@@ -6,68 +6,69 @@ read_when: "你希望在一个网关进程中运行多个隔离的代理（工�
 status: active
 ---
 
-在一个正在运行的 Gateway 中运行多个 _隔离的_ 代理——每个代理都有自己的工作区、状态目录（`agentDir`）和会话历史——以及多个通道账户（例如两个 WhatsApp）。入站消息会通过绑定路由到正确的代理。
+在一个 Gateway 进程中运行多个_隔离的_代理，每个代理都有自己的工作区、状态目录（`agentDir`）和会话存储，以及多个通道账户（例如两个 WhatsApp 号码）。传入消息通过**绑定**路由到正确的代理。
 
-这里的 **agent** 指的是完整的按角色范围：工作区文件、认证配置文件、模型注册表和会话存储。`agentDir` 是磁盘上的状态目录，用于保存这个按代理划分的配置，路径为 `~/.openclaw/agents/<agentId>/`。**binding** 会将一个通道账户（例如一个 Slack 工作区或一个 WhatsApp 号码）映射到这些代理中的某一个。
+**代理**是完整的按人格划分的作用域：工作区文件、认证配置文件、模型注册表和会话存储。**绑定**将一个通道账户（如一个 Slack 工作区、一个 WhatsApp 号码等）映射到这些代理中的某一个。
 
-## 什么是“一个 agent”？
+## 什么是一个 agent
 
-一个 **agent** 是一个完整范围的“脑”，它拥有自己的：
+每个 agent 都有自己的：
 
-- **工作区**（文件、AGENTS.md/SOUL.md/USER.md、本地笔记、角色规则）。
-- **状态目录**（`agentDir`），用于存放认证配置文件、模型注册表和按代理划分的配置。
-- **会话存储**（聊天历史 + 路由状态），位于 `~/.openclaw/agents/<agentId>/sessions` 下。
+- **工作区**：文件、`AGENTS.md`/`SOUL.md`/`USER.md`、本地笔记、人格规则。
+- **状态目录**（`agentDir`）：认证配置文件、模型注册表、每个 agent 的配置。
+- **会话存储**：位于 `~/.openclaw/agents/<agentId>/sessions` 下的聊天历史和路由状态。
 
-认证配置文件是 **按 agent 分隔** 的。每个 agent 都从自己的位置读取：
+认证配置文件是按 agent 分开的，读取自：
 
 ```text
 ~/.openclaw/agents/<agentId>/agent/auth-profiles.json
 ```
 
 <Note>
-这里的 `sessions_history` 同样是更安全的跨会话回忆路径：它返回的是受限、已清理的视图，而不是原始转录内容的完整导出。助手回忆会在重定向/截断前去除 thinking 标签、`<relevant-memories>` 支架、纯文本工具调用 XML 负载（包括 `<tool_call>...</tool_call>`、`<function_call>...</function_call>`、`<tool_calls>...</tool_calls>`、`<function_calls>...</function_calls>` 以及被截断的工具调用块）、降级的工具调用支架、泄露的 ASCII/全角模型控制标记，以及格式错误的 MiniMax 工具调用 XML。
+`sessions_history` 是更安全的跨会话回忆路径：它返回的是一个有边界、已去敏的视图，而不是原始转录的完整转储。它会去除 thinking-block 签名、工具结果载荷细节、`<relevant-memories>` 脚手架、工具调用 XML 标签（`<tool_call>`、`<function_call>` 及其复数/降级形式），以及 MiniMax 工具调用 XML，然后按字节大小对输出进行截断和上限控制。
 </Note>
 
 <Warning>
-绝不要在多个 agent 之间复用 `agentDir`（这会导致认证/会话冲突）。当本地没有配置文件时，agents 可以读取默认/主 agent 的认证配置文件，但 OpenClaw 不会把 OAuth 刷新令牌克隆到次级 agent 存储中。如果你想要一个独立的 OAuth 账户，请从该 agent 中登录；如果你手动复制凭据，请只复制可移植的静态 `api_key` 或 `token` 配置文件。
+切勿在不同 agent 之间复用 `agentDir` —— 这会导致认证/会话状态冲突。当某个次级 agent 的本地 OAuth 凭据过期或刷新失败时，OpenClaw 会回读同一 profile id 的默认/主 agent 凭据，并采用最新的那个 token，而不会把 refresh token 复制到次级 agent 的存储中。如果你想要一个完全独立的 OAuth 账号，请在那个 agent 里重新登录。如果你手动复制凭据，只复制可移植的静态 `api_key` 或 `token` 配置文件即可——OAuth 刷新材料默认不可移植（`copyToAgents` 可以显式将某个 profile 纳入）。
 </Warning>
 
-技能会从每个 agent 工作区以及共享根目录（如 `~/.openclaw/skills`）加载，然后在配置了有效 agent 技能白名单时按其过滤。使用 `agents.defaults.skills` 作为共享基线，使用 `agents.list[].skills` 作为每个 agent 的替换。参见 [Skills: per-agent vs shared](/tools/skills#per-agent-vs-shared-skills) 和 [Skills: agent skill allowlists](/tools/skills#agent-allowlists)。
-
-Gateway 可以托管 **一个 agent**（默认）或 **多个 agent** 并排运行。
+技能会从每个 agent 的工作区以及共享根目录（如 `~/.openclaw/skills`）加载，然后根据生效的 agent 技能允许列表进行过滤。使用 `agents.defaults.skills` 作为共享基线，并使用 `agents.list[].skills` 作为每个 agent 的替换项（显式条目会替换默认项，不会合并）。参见 [技能：按 agent 与共享](/tools/skills#per-agent-vs-shared-skills) 和 [技能：agent 允许列表](/tools/skills#agent-allowlists)。
 
 <Note>
 **工作区说明：** 每个 agent 的工作区都是**默认 cwd**，而不是硬性沙箱。相对路径会在工作区内解析，但只要未启用沙箱，绝对路径仍可访问其他主机位置。参见 [Sandboxing](/gateway/sandboxing)。
 </Note>
 
-## 路径（快速映射）
+## 路径
 
-- 配置：`~/.openclaw/openclaw.json`（或 `OPENCLAW_CONFIG_PATH`）
-- 状态目录：`~/.openclaw`（或 `OPENCLAW_STATE_DIR`）
-- 工作区：`~/.openclaw/workspace`（或 `~/.openclaw/workspace-<agentId>`）
-- Agent 目录：`~/.openclaw/agents/<agentId>/agent`（或 `agents.list[].agentDir`）
-- 会话：`~/.openclaw/agents/<agentId>/sessions`
+| 内容                      | 默认值                                                                                | 覆盖                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 配置                    | `~/.openclaw/openclaw.json`                                                            | `OPENCLAW_CONFIG_PATH`                                                                   |
+| 状态目录                 | `~/.openclaw`                                                                          | `OPENCLAW_STATE_DIR`                                                                     |
+| 默认代理的工作区         | `~/.openclaw/workspace`（如果设置了 `OPENCLAW_PROFILE`，则为 `workspace-<profile>`）      | `agents.list[].workspace`，然后是 `agents.defaults.workspace`，或 `OPENCLAW_WORKSPACE_DIR` |
+| 其他代理的工作区         | `<stateDir>/workspace-<agentId>`（如果已设置，则为 `<agents.defaults.workspace>/<agentId>`） | `agents.list[].workspace`                                                                |
+| 代理目录                 | `~/.openclaw/agents/<agentId>/agent`                                                   | `agents.list[].agentDir`                                                                 |
+| 会话                      | `~/.openclaw/agents/<agentId>/sessions`                                                | —                                                                                        |
 
 ### 单 agent 模式（默认）
 
-如果你什么都不做，OpenClaw 会运行一个单独的 agent：
+如果你不进行任何配置，OpenClaw 会运行一个 agent：
 
-- `agentId` 默认是 **`main`**。
-- 会话键为 `agent:main:<mainKey>`。
-- 工作区默认是 `~/.openclaw/workspace`（或者在设置了 `OPENCLAW_PROFILE` 时为 `~/.openclaw/workspace-<profile>`）。
+- `agentId` 默认值为 `main`。
+- 会话键为 `agent:main:<mainKey>`（`mainKey` 的默认值为 `main`）。
+- 工作区默认是 `~/.openclaw/workspace`（如果 `OPENCLAW_PROFILE` 设置为 `default` 之外的其他值，则为 `workspace-<profile>`）。
 - 状态默认是 `~/.openclaw/agents/main/agent`。
 
 ## Agent 助手
 
-使用 agent 向导添加一个新的隔离 agent：
+添加一个新的隔离代理：
 
 ```bash
 openclaw agents add work
 ```
 
-然后添加 `bindings`（或者让向导来做）以路由入站消息。
+标志：`--workspace <dir>`、`--model <id>`、`--agent-dir <dir>`、`--bind <channel[:accountId]>`（可重复）、`--non-interactive`（需要 `--workspace`）。
 
-使用以下命令验证：
+添加 `bindings` 以路由传入消息（向导会为你提供此操作），然后验证：
 
 ```bash
 openclaw agents list --bindings
@@ -77,8 +78,6 @@ openclaw agents list --bindings
 
 <Steps>
   <Step title="创建每个 agent 工作区">
-    使用向导或手动创建工作区：
-
     ```bash
     openclaw agents add coding
     openclaw agents add social
@@ -113,19 +112,19 @@ openclaw agents list --bindings
   </Step>
 </Steps>
 
-## 多个 agents = 多个人，多个角色
+## 多个代理，多个角色
 
-使用 **多个 agents** 时，每个 `agentId` 都会成为一个**完全隔离的角色**：
+每个已配置的 `agentId` 都是一个完全隔离的角色：
 
-- **不同的电话号码/账户**（按通道 `accountId` 区分）。
-- **不同的角色**（每个 agent 的工作区文件，如 `AGENTS.md` 和 `SOUL.md`）。
-- **独立的认证 + 会话**（除非显式启用，否则不会交叉通信）。
+- 每个频道使用不同的账号（按 `accountId` 区分）。
+- 不同的个性（按代理分别配置 `AGENTS.md`/`SOUL.md`）。
+- 独立的认证和会话，除非显式启用，否则不会互相通信。
 
-这使得**多个人**可以共享一台 Gateway 服务器，同时保持他们各自的 AI“脑袋”和数据隔离。
+这使得多人可以共享一个 Gateway，同时保持各自的代理状态彼此隔离。
 
 ## 跨 agent 的 QMD 内存搜索
 
-如果一个 agent 应该搜索另一个 agent 的 QMD 会话转录，请在 `agents.list[].memorySearch.qmd.extraCollections` 下添加额外集合。仅当每个 agent 都应继承相同的共享转录集合时，才使用 `agents.defaults.memorySearch.qmd.extraCollections`。
+要让一个 agent 搜索另一个 agent 的 QMD 会话转录，请在 `agents.list[].memorySearch.qmd.extraCollections` 下添加额外集合。若所有 agent 都应共享相同集合，请使用 `agents.defaults.memorySearch.qmd.extraCollections`。
 
 ```json5
 {
@@ -144,7 +143,7 @@ openclaw agents list --bindings
         workspace: "~/workspaces/main",
         memorySearch: {
           qmd: {
-            extraCollections: [{ path: "notes" }], // 在工作区内解析 -> 集合名为 "notes-main"
+            extraCollections: [{ path: "notes" }], // resolved within workspace -> collection name "notes-main"
           },
         },
       },
@@ -158,17 +157,15 @@ openclaw agents list --bindings
 }
 ```
 
-额外集合的路径可以在多个 agent 之间共享，但当路径位于 agent 工作区之外时，集合名称仍会保持显式指定。工作区内的路径仍然是按 agent 作用域的，因此每个 agent 都保留自己的转录搜索集合。
+额外集合的路径可以在多个 agent 之间共享，但当路径位于 agent 工作区之外时，其 `name` 仍需显式指定。工作区内的路径会保持 agent 作用域，因此每个 agent 都会保留自己的转录搜索集合。
 
 ## 一个 WhatsApp 号码，多个人（DM 拆分）
 
-你可以在保持**同一个 WhatsApp 账户**的情况下，将**不同的 WhatsApp 私聊**路由到不同的 agent。按发送者的 E.164 号码（例如 `+15551234567`）并结合 `peer.kind: "direct"` 进行匹配。回复仍然会从同一个 WhatsApp 号码发出（不会有按 agent 区分的发送者身份）。
+通过将发送者的 E.164（`+15551234567`）与 `peer.kind: "direct"` 匹配，把不同的 WhatsApp 私信路由给同一个 WhatsApp 账户上的不同代理。回复仍然来自同一个 WhatsApp 号码——不存在按代理区分的发送者身份。
 
 <Note>
-直接聊天会折叠到 agent 的**主会话键**，因此真正的隔离需要**每个人一个 agent**。
+直接聊天默认会折叠到代理的主会话键，因此要实现真正隔离，每个人都需要一个代理。
 </Note>
-
-示例：
 
 ```json5
 {
@@ -197,80 +194,35 @@ openclaw agents list --bindings
 }
 ```
 
-注意：
+DM 访问控制（配对/允许列表）是按 WhatsApp 账户全局生效的，而不是按代理分别设置。对于共享群组，请将该群组绑定到一个代理，或者使用 [广播群组](/channels/broadcast-groups)。
 
-- DM 访问控制是 **按 WhatsApp 账户全局生效** 的（配对/白名单），不是按 agent 生效。
-- 对于共享群组，将群组绑定到一个 agent，或者使用 [Broadcast groups](/channels/broadcast-groups)。
+## 路由规则
 
-## 路由规则（消息如何选择 agent）
+绑定是确定性的，且最具体的规则优先。完整的层级顺序请参见 [Channel routing](/channels/channel-routing#routing-rules-how-an-agent-is-chosen)（精确 peer、父级 peer、peer 通配符、guild+roles、guild、team、account、channel、默认 agent）。这里有几条值得特别指出的规则：
 
-bindings 是 **确定性的**，并且 **最具体的匹配优先**：
-
-<Steps>
-  <Step title="peer match">
-    精确的 DM/群组/通道 id。
-  </Step>
-  <Step title="parentPeer match">
-    线程继承。
-  </Step>
-  <Step title="guildId + roles">
-    Discord 角色路由。
-  </Step>
-  <Step title="guildId">
-    Discord。
-  </Step>
-  <Step title="teamId">
-    Slack。
-  </Step>
-  <Step title="accountId match for a channel">
-    按账户回退。
-  </Step>
-  <Step title="Channel-level match">
-    `accountId: "*"`.
-  </Step>
-  <Step title="Default agent">
-    回退到 `agents.list[].default`，否则使用列表中的第一项，默认：`main`。
-  </Step>
-</Steps>
-
-<AccordionGroup>
-  <Accordion title="优先级规则与 AND 语义">
-    - 如果多个 binding 在同一层级匹配，则按配置顺序中的第一个获胜。
-    - 如果一个 binding 设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须满足（`AND` 语义）。
-
-  </Accordion>
-  <Accordion title="账户范围细节">
-    - 省略 `accountId` 的 binding 仅匹配默认账户。它不会匹配所有账户。
-    - 使用 `accountId: "*"` 作为跨所有账户的通道级回退。
-    - 使用 `accountId: "<name>"` 匹配单个账户。
-    - 如果你后来为同一个 agent 添加了相同的 binding，并显式指定了账户 id，OpenClaw 会将现有的仅通道 binding 升级为账户作用域，而不是复制一份。
-
-  </Accordion>
-</AccordionGroup>
+- 如果同一层级中有多个绑定匹配，则配置顺序中的第一个生效。
+- 如果某个绑定设置了多个匹配字段（例如 `peer` + `guildId`），则所有指定字段都必须匹配（`AND` 语义）。
+- 省略 `accountId` 的绑定只匹配默认账户，而不是所有账户。使用 `accountId: "*"` 表示整个 channel 的回退规则，或使用 `accountId: "<name>"` 表示某一个账户。再次添加相同绑定并显式指定 account id，会将现有的仅 channel 绑定升级，而不是创建重复项。
 
 ## 多个账户 / 电话号码
 
-支持 **多个账户** 的通道（例如 WhatsApp）使用 `accountId` 来标识每次登录。每个 `accountId` 都可以路由到不同的 agent，因此一台服务器可以托管多个电话号码而不会混淆会话。
+支持多个账户的 Channels（例如 WhatsApp）使用 `accountId` 来标识每个登录。每个 `accountId` 都会路由到其对应的 agent，因此一台服务器可以托管多个电话号码，而不会混淆会话。
 
-如果你希望在省略 `accountId` 时有一个通道级默认账户，请设置 `channels.<channel>.defaultAccount`（可选）。如果未设置，OpenClaw 会回退到 `default`（若存在），否则回退到第一个已配置的账户 id（按排序）。
+设置 `channels.<channel>.defaultAccount` 以选择在省略 `accountId` 时使用的账户。若未设置，OpenClaw 会优先回退到 `default`（如果存在），否则使用第一个已配置的账户 id（按排序后的顺序）。
 
-支持这种模式的常见通道包括：
-
-- `whatsapp`, `telegram`, `discord`, `slack`, `signal`, `imessage`
-- `irc`, `line`, `googlechat`, `mattermost`, `matrix`, `nextcloud-talk`
-- `zalo`, `zalouser`, `nostr`, `feishu`
+支持多个账户的 Channels：`discord`、`feishu`、`googlechat`、`imessage`、`irc`、`line`、`mattermost`、`matrix`、`nextcloud-talk`、`nostr`、`signal`、`slack`、`telegram`、`whatsapp`、`zalo`、`zalouser`。
 
 ## 概念
 
-- `agentId`：一个“脑”（工作区、按 agent 的认证、按 agent 的会话存储）。
-- `accountId`：一个频道账号实例（例如 WhatsApp 账号 `"personal"` 与 `"biz"`）。
-- `binding`：通过 `(channel, accountId, peer)` 将入站消息路由到某个 `agentId`，并可选地包含 guild/team id。
-- 直接聊天会折叠为 `agent:<agentId>:<mainKey>`（按 agent 的“主键”；`session.mainKey`）。
+- `agentId`：一个“脑袋”（workspace、每个 agent 的认证、每个 agent 的会话存储）。
+- `accountId`：一个频道账号实例（例如 WhatsApp 账号 `personal` vs `biz`）。
+- `binding`：通过 `(channel, accountId, peer)` 将传入消息路由到某个 `agentId`，并可选地包含 guild/team id。
+- 直接聊天会折叠为 `agent:<agentId>:<mainKey>`（每个 agent 的“主会话”；见 `session.mainKey`）。
 
 ## 平台示例
 
 <AccordionGroup>
-  <Accordion title="Discord bots per agent">
+  <Accordion title="每个 agent 一个 Discord bot">
     每个 Discord bot 账号映射到唯一的 `accountId`。将每个账号绑定到一个 agent，并为每个 bot 保持 allowlist。
 
     ```json5
@@ -315,11 +267,11 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     }
     ```
 
-    - 将每个 bot 邀请到 guild，并启用 Message Content Intent。
+    - 将每个 bot 邀请到 guild，并启用消息内容 Intent。
     - 令牌存放在 `channels.discord.accounts.<id>.token` 中（默认账号可以使用 `DISCORD_BOT_TOKEN`）。
 
   </Accordion>
-  <Accordion title="Telegram bots per agent">
+  <Accordion title="每个 agent 一个 Telegram bot">
     ```json5
     {
       agents: {
@@ -351,15 +303,15 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     ```
 
     - 使用 BotFather 为每个 agent 创建一个 bot，并复制每个 token。
-    - 令牌存放在 `channels.telegram.accounts.<id>.botToken` 中（默认账号可以使用 `TELEGRAM_BOT_TOKEN`）。
-    - 若同一个 Telegram 群组中有多个 bot，邀请每个 bot，并 @ 提及应该响应的那个 bot。
-    - 对每个群组 bot 关闭 BotFather Privacy Mode，然后重新添加 bot 以便 Telegram 应用该设置。
-    - 使用 `channels.telegram.groups` 允许群组，或者仅在可信的群组部署中使用 `groupPolicy: "open"`。
+    - Token 存放在 `channels.telegram.accounts.<id>.botToken` 中（默认账号可以使用 `TELEGRAM_BOT_TOKEN`）。
+    - 对于同一个 Telegram 群组中的多个 bot，邀请每个 bot，并提及应该响应的那个。
+    - 为每个群组 bot 关闭 BotFather Privacy Mode（`/setprivacy` -> Disable），然后移除并重新添加该 bot，以便 Telegram 应用该设置。
+    - 使用 `channels.telegram.groups` 允许群组，或者仅在受信任的群组部署中使用 `groupPolicy: "open"`。
     - 将发送者用户 ID 放入 `groupAllowFrom`。群组和超级群组 ID 应放在 `channels.telegram.groups` 中，而不是 `groupAllowFrom`。
-    - 按 `accountId` 进行绑定，这样每个 bot 都会路由到它自己的 agent。
+    - 按 `accountId` 进行绑定，以便每个 bot 路由到自己的 agent。
 
   </Accordion>
-  <Accordion title="WhatsApp numbers per agent">
+  <Accordion title="每个 agent 一个 WhatsApp 号码">
     在启动网关之前先链接每个账号：
 
     ```bash
@@ -436,7 +388,7 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
 ## 常见模式
 
 <Tabs>
-  <Tab title="WhatsApp daily + Telegram deep work">
+  <Tab title="WhatsApp 日常 + Telegram 深度工作">
     按频道拆分：将 WhatsApp 路由到一个快速的日常 agent，将 Telegram 路由到一个 Opus agent。
 
     ```json5
@@ -464,13 +416,10 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     }
     ```
 
-    说明：
-
-    - 这些示例使用 `accountId: "*"`，这样即使你以后添加账户，绑定也仍然有效。
-    - 如果想将单个 DM/群组路由到 Opus，同时其余消息仍走 chat，请为该 peer 添加一个 `match.peer` binding；peer 匹配始终优先于通道级规则。
+    这些示例使用 `accountId: "*"`，因此即使你以后添加账号，绑定规则仍然有效。若要在保持其余消息走 chat 的同时，把某个单独的 DM/群组路由到 Opus，可以为该 peer 添加一个 `match.peer` 绑定——peer 匹配始终优先于按频道的规则。
 
   </Tab>
-  <Tab title="Same channel, one peer to Opus">
+  <Tab title="同一频道，将一个 peer 路由到 Opus">
     保持 WhatsApp 使用快速 agent，但将一个 DM 路由到 Opus：
 
     ```json5
@@ -501,10 +450,10 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     }
     ```
 
-    peer binding 始终优先，所以请把它们放在按频道的规则之上。
+    peer 绑定始终优先，所以请把它们放在按频道的规则之上。
 
   </Tab>
-  <Tab title="Family agent bound to a WhatsApp group">
+  <Tab title="绑定到 WhatsApp 群组的家庭 agent">
     将一个专用的家庭 agent 绑定到单个 WhatsApp 群组，并启用 mention gating 与更严格的工具策略：
 
     ```json5
@@ -550,10 +499,7 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
     }
     ```
 
-    说明：
-
-    - 工具 allow/deny 列表是 **tools**，不是 skills。如果某个 skill 需要运行二进制文件，请确保允许 `exec`，且该二进制文件存在于 sandbox 中。
-    - 若要更严格的 gating，请设置 `agents.list[].groupChat.mentionPatterns`，并为该频道保持 group allowlists 已启用。
+    工具 allow/deny 列表是 **tools**，不是 skills。如果某个 skill 需要运行二进制文件，请确保允许 `exec`，并且该二进制文件存在于 sandbox 中。若要更严格地进行门控，请设置 `agents.list[].groupChat.mentionPatterns`，并为该频道保持启用群组 allowlist。
 
   </Tab>
 </Tabs>
@@ -599,14 +545,14 @@ bindings 是 **确定性的**，并且 **最具体的匹配优先**：
 `setupCommand` 位于 `sandbox.docker` 下，并在容器创建时运行一次。若解析后的 scope 为 `"shared"`，则会忽略每个 agent 的 `sandbox.docker.*` 覆盖项。
 </Note>
 
-**优点：**
+这带来以下优势：
 
 - **安全隔离**：限制不受信任 agent 的工具。
 - **资源控制**：对特定 agent 使用 sandbox，同时让其他 agent 继续在主机上运行。
 - **灵活策略**：为不同 agent 提供不同权限。
 
 <Note>
-`tools.elevated` 是 **全局的** 且基于发送者；它不能按 agent 配置。如果你需要按 agent 划分边界，请使用 `agents.list[].tools` 来拒绝 `exec`。对于群组目标，请使用 `agents.list[].groupChat.mentionPatterns`，以便 @mention 能正确映射到预期的 agent。
+`tools.elevated` 同时具有全局门控（`tools.elevated.enabled`/`allowFrom`）和每个 agent 的门控（`agents.list[].tools.elevated.enabled`/`allowFrom`）。每个 agent 的门控只能进一步限制全局设置——发送者必须同时被两者允许，提升命令才会运行。对于群组定位，请使用 `agents.list[].groupChat.mentionPatterns`，以便 `@` 提及能够清晰映射到预期的 agent。
 </Note>
 
 查看 [多 agent 的 sandbox 和 tools](/tools/multi-agent-sandbox-tools) 以获取详细示例。

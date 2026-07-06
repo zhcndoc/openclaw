@@ -7,7 +7,7 @@ title: "macOS IPC"
 
 # OpenClaw macOS IPC 架构
 
-**当前模型：** 一个本地 Unix socket 将 **node 主机服务** 连接到 **macOS 应用**，用于 exec 审批和 `system.run`。`openclaw-mac` 调试 CLI 可用于发现/连接检查；agent 动作仍通过 Gateway WebSocket 和 `node.invoke` 流转。UI 自动化使用 PeekabooBridge。
+本地 Unix socket 将节点主机服务连接到 macOS 应用，用于执行审批和 `system.run`。存在一个 `openclaw-mac` 调试 CLI（`apps/macos/Sources/OpenClawMacCLI`）用于发现/连接检查；代理操作仍通过 Gateway WebSocket 和 `node.invoke` 进行。UI 自动化使用 PeekabooBridge。
 
 ## 目标
 
@@ -19,18 +19,20 @@ title: "macOS IPC"
 
 ### Gateway + node 传输
 
-- 应用运行 Gateway（本地模式）并作为一个 node 连接到它。
-- agent 动作通过 `node.invoke` 执行（例如 `system.run`、`system.notify`、`canvas.*`）。
+- 应用以本地模式运行 Gateway，并作为节点连接到它。
+- 代理操作通过 `node.invoke` 执行（例如：`system.run`、`system.notify`、`canvas.*`）。
+- 节点命令包括 `canvas.*`、`camera.snap`、`camera.clip`、`screen.snapshot`、`screen.record`、`system.run` 和 `system.notify`。
+- 节点会报告一个 `permissions` 映射，因此代理可以查看是否具备屏幕、摄像头、麦克风、语音、自动化或辅助功能访问权限。
 
 ### Node 服务 + app IPC
 
-- 一个无头 node 主机服务连接到 Gateway WebSocket。
-- `system.run` 请求通过本地 Unix socket 转发到 macOS 应用。
-- 应用在 UI 上下文中执行 exec，必要时进行提示，并返回输出。
+- 一个无头的节点宿主服务连接到 Gateway WebSocket。
+- `system.run` 请求会通过本地 Unix 套接字（`ExecApprovalsSocket.swift`）转发到 macOS 应用。
+- 应用在 UI 上下文中执行该命令，必要时提示用户，并返回输出。
 
 图示（SCI）：
 
-```
+```text
 Agent -> Gateway -> Node Service (WS)
                       |  IPC (UDS + token + HMAC + TTL)
                       v
@@ -39,26 +41,23 @@ Agent -> Gateway -> Node Service (WS)
 
 ### PeekabooBridge（UI 自动化）
 
-- UI 自动化使用一个名为 `bridge.sock` 的独立 UNIX socket 和 PeekabooBridge JSON 协议。
-- 主机偏好顺序（客户端侧）：Peekaboo.app → Claude.app → OpenClaw.app → 本地执行。
-- 安全性：bridge 主机要求允许的 TeamID；DEBUG 仅限的同 UID 逃生口由 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 保护（Peekaboo 约定）。
-- 详见：[PeekabooBridge 使用](/platforms/mac/peekaboo)。
+- UI 自动化使用一个独立的 UNIX 套接字（`~/Library/Application Support/OpenClaw/<socket>`）和 PeekabooBridge JSON 协议。
+- 主机偏好顺序（客户端侧）：Peekaboo.app -> Claude.app -> OpenClaw.app -> 本地执行。
+- 安全性：桥接主机需要在允许名单中的 TeamID（随附的 `PeekabooBridgeHostCoordinator` 会将一个固定团队以及应用自身的签名团队加入允许名单）；一个仅在 DEBUG 下可用的同 UID 逃生通道由 `PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1` 保护（Peekaboo 约定）。
+- 详见：[PeekabooBridge 使用](/platforms/mac/peekaboo) 。
 
 ## 运行流程
 
-- 重启/重建：`SIGN_IDENTITY="Apple Development: <Developer Name> (<TEAMID>)" scripts/restart-mac.sh`
-  - 终止现有实例
-  - Swift 构建 + 打包
-  - 写入/引导/启动 LaunchAgent
-- 单实例：如果检测到另一个具有相同 bundle ID 的实例正在运行，应用会提前退出。
+- 重启/重新构建：`scripts/restart-mac.sh` 会终止现有实例，通过 Swift 重新构建、重新打包并重新启动。它会自动检测可用的签名身份，并在未找到时回退到 `--no-sign`；传入 `--sign` 可强制要求签名（如果没有可用密钥则失败），或传入 `--no-sign` 强制走未签名路径。签名路径下在环境中设置的 `SIGN_IDENTITY` 会被取消设置，因此 `scripts/codesign-mac-app.sh` 自己的身份自动检测会选择证书。
+- 单实例：应用会检查 `NSWorkspace.runningApplications` 中是否存在重复的 bundle ID，并在发现多个实例时退出（`MenuBar.swift` 中的 `isDuplicateInstance()`）。
 
 ## 加固说明
 
-- 对所有特权面，优先要求 TeamID 匹配。
-- PeekabooBridge：`PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1`（仅 DEBUG）可能允许同 UID 调用者用于本地开发。
-- 所有通信都保持本地；不暴露网络 socket。
-- TCC 提示只来自 GUI 应用 bundle；在重建之间保持已签名 bundle ID 稳定。
-- IPC 加固：socket 模式 `0600`、token、对等 UID 检查、HMAC 挑战/响应、短 TTL。
+- 优先要求所有特权面都进行 TeamID 匹配。
+- PeekabooBridge：`PEEKABOO_ALLOW_UNSIGNED_SOCKET_CLIENTS=1`（仅 DEBUG）可允许同 UID 调用者用于本地开发。
+- 所有通信仍保持仅本地；不会暴露网络 socket。
+- TCC 提示仅来自 GUI 应用程序包；请在每次重新构建时保持已签名的 bundle ID 稳定。
+- Exec 授权 socket 加固：文件模式 `0600`、共享令牌、peer-UID 检查（`getpeereid`）、HMAC-SHA256 挑战/响应，以及请求的短 TTL。
 
 ## 相关内容
 

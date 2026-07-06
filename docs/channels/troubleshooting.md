@@ -29,7 +29,7 @@ openclaw channels status --probe
 
 ## 更新后
 
-当 Telegram、iMessage、BlueBubbles 时代的配置，或其他插件频道在更新后消失时使用此部分。
+在更新后，当 Telegram、iMessage、BlueBubbles 时代的配置，或其他插件通道消失时使用
 
 ```bash
 openclaw status --all
@@ -38,8 +38,7 @@ openclaw gateway restart
 openclaw status --all
 ```
 
-在 `openclaw status --all` 中查找 `plugin load failed: dependency tree corrupted; run openclaw doctor
---fix`。这意味着频道已配置，但插件设置/加载路径遇到了损坏的依赖树，而不是成功注册该频道。`openclaw doctor --fix` 会移除过时的插件依赖暂存目录和过时的认证阴影，然后 `openclaw gateway restart` 会重新加载干净状态。
+在 `openclaw status --all` 中查找 `plugin load failed: dependency tree corrupted; run openclaw doctor --fix`。这表示该通道已配置，但插件设置/加载时遇到了损坏的依赖树，导致没有注册该通道。`openclaw doctor --fix` 会清除过期的 plugin-runtime 依赖符号链接和过期的 auth shadow，然后 `openclaw gateway restart` 会重新加载干净状态。
 
 ## WhatsApp
 
@@ -107,9 +106,7 @@ openclaw status --all
 | 在 macOS 上可以发送但无法接收     | 检查 Messages automation 的 macOS 隐私权限 | 重新授予 TCC 权限并重启频道进程。                 |
 | DM 发送者被阻止                    | `openclaw pairing list imessage`                        | 批准配对或更新允许列表。                                  |
 
-完整故障排查：
-
-- [iMessage 故障排查](/channels/imessage#troubleshooting)
+完整故障排查：[iMessage 故障排查](/channels/imessage#troubleshooting)
 
 ## Signal
 
@@ -128,7 +125,7 @@ openclaw status --all
 ### QQ Bot 失败特征
 
 | 症状                         | 最快检查项                               | 修复方法                                                             |
-| --------------------------- | ------------------------------------------- | --------------------------------------------------------------- |
+| --------------------------- | --------------------------- | --------------------------------------------------------------- |
 | 机器人回复“去了火星”      | 验证配置中的 `appId` 和 `clientSecret` | 设置凭据或重启网关。                         |
 | 没有入站消息               | `openclaw channels status --probe`          | 验证 QQ Open Platform 上的凭据。                     |
 | 语音未转录                 | 检查 STT provider 配置                   | 配置 `channels.qqbot.stt` 或 `tools.media.audio`。          |

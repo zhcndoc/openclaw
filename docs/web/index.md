@@ -12,23 +12,11 @@ Gateway 会从与 Gateway WebSocket 相同的端口提供一个小型 **浏览�
 - 当 `gateway.tls.enabled: true` 时：`https://<host>:18789/`
 - 可选前缀：设置 `gateway.controlUi.basePath`（例如 `/openclaw`）
 
-功能详情见 [Control UI](/web/control-ui)。本页其余部分重点介绍绑定模式、安全性和面向 Web 的界面。
+功能位于 [控制 UI](/web/control-ui)。本页介绍绑定模式、安全性以及其他面向 Web 的表面。
 
-## Webhooks
+## 配置（默认开启）
 
-当 `hooks.enabled=true` 时，Gateway 还会在同一个 HTTP 服务器上暴露一个小型 webhook 端点。
-有关认证和载荷，请参见 [Gateway 配置](/gateway/configuration) → `hooks`。
-
-## Admin HTTP RPC
-
-Admin HTTP RPC 会在 `POST /api/v1/admin/rpc` 上公开部分 Gateway 控制平面方法。
-它默认关闭，并且仅在启用 `admin-http-rpc` 插件时注册。
-有关认证模型、允许的方法以及与 WebSocket 的对比，请参见 [Admin HTTP RPC](/plugins/admin-http-rpc)。
-
-## Config (default-on)
-
-当资源文件存在时（`dist/control-ui`），Control UI 会**默认启用**。
-你可以通过配置进行控制：
+当存在资源文件（`dist/control-ui`）时，控制 UI **默认启用**：
 
 ```json5
 {
@@ -38,91 +26,89 @@ Admin HTTP RPC 会在 `POST /api/v1/admin/rpc` 上公开部分 Gateway 控制平
 }
 ```
 
+## Webhooks
+
+当 `hooks.enabled=true` 时，Gateway 还会在同一个 HTTP 服务器上暴露一个 webhook 端点。有关认证和负载，请参见 [Gateway configuration reference](/gateway/configuration-reference#hooks) 中的 `hooks`。
+
+## 管理 HTTP RPC
+
+`POST /api/v1/admin/rpc` 通过 HTTP 暴露选定的 Gateway 控制平面方法。默认情况下关闭；仅在启用 `admin-http-rpc` 插件时才会注册。有关认证模型、允许的方法以及与 WebSocket API 的比较，请参阅 [管理 HTTP RPC](/plugins/admin-http-rpc)。
+
 ## Tailscale 访问
 
-### 集成 Serve（推荐）
+<Tabs>
+  <Tab title="集成式 Serve（推荐）">
+    保持 Gateway 监听在 loopback 上，并让 Tailscale Serve 代理它：
 
-让 Gateway 仅绑定在 loopback 上，并由 Tailscale Serve 代理它：
+    ```json5
+    {
+      gateway: {
+        bind: "loopback",
+        tailscale: { mode: "serve" },
+      },
+    }
+    ```
 
-```json5
-{
-  gateway: {
-    bind: "loopback",
-    tailscale: { mode: "serve" },
-  },
-}
-```
+    启动 gateway：
 
-然后启动 gateway：
+    ```bash
+    openclaw gateway
+    ```
 
-```bash
-openclaw gateway
-```
+    打开 `https://<magicdns>/`（或你配置的 `gateway.controlUi.basePath`）。
 
-打开：
+  </Tab>
+  <Tab title="Tailnet 绑定 + token">
+    ```json5
+    {
+      gateway: {
+        bind: "tailnet",
+        controlUi: { enabled: true },
+        auth: { mode: "token", token: "your-token" },
+      },
+    }
+    ```
 
-- `https://<magicdns>/`（或你配置的 `gateway.controlUi.basePath`）
+    启动 gateway（这个非 loopback 示例使用共享密钥 token 认证）：
 
-### Tailnet 绑定 + token
+    ```bash
+    openclaw gateway
+    ```
 
-```json5
-{
-  gateway: {
-    bind: "tailnet",
-    controlUi: { enabled: true },
-    auth: { mode: "token", token: "your-token" },
-  },
-}
-```
+    打开 `http://<tailscale-ip>:18789/`（或你配置的 `gateway.controlUi.basePath`）。
 
-然后启动 gateway（这个非 loopback 示例使用共享密钥 token
-认证）：
+  </Tab>
+  <Tab title="公网互联网（Funnel）">
+    ```json5
+    {
+      gateway: {
+        bind: "loopback",
+        tailscale: { mode: "funnel" },
+        auth: { mode: "password" }, // or OPENCLAW_GATEWAY_PASSWORD
+      },
+    }
+    ```
 
-```bash
-openclaw gateway
-```
+    `tailscale.mode: "funnel"` 需要 `gateway.auth.mode: "password"`；Serve 和 Funnel 都要求 `gateway.bind: "loopback"`。
 
-打开：
-
-- `http://<tailscale-ip>:18789/`（或你配置的 `gateway.controlUi.basePath`）
-
-### 公网（Funnel）
-
-```json5
-{
-  gateway: {
-    bind: "loopback",
-    tailscale: { mode: "funnel" },
-    auth: { mode: "password" }, // 或 OPENCLAW_GATEWAY_PASSWORD
-  },
-}
-```
+  </Tab>
+</Tabs>
 
 ## 安全说明
 
-- 默认情况下需要 Gateway 认证（启用时可使用 token、password、trusted-proxy，或 Tailscale Serve 身份标头）。
-- 非 loopback 绑定仍然**需要** gateway 认证。实际上，这意味着需要 token/password 认证，或使用支持身份感知的反向代理并将 `gateway.auth.mode` 设为 `"trusted-proxy"`。
-- 向导默认会创建共享密钥认证，并且通常会生成一个 gateway token（即使在 loopback 上也是如此）。
-- 在共享密钥模式下，UI 会发送 `connect.params.auth.token` 或 `connect.params.auth.password`。
-- 当 `gateway.tls.enabled: true` 时，本地仪表盘和状态辅助工具会渲染
-  `https://` 仪表盘 URL 和 `wss://` WebSocket URL。
-- 在 Tailscale Serve 或 `trusted-proxy` 等带身份的模式中，WebSocket 认证检查会改为通过请求标头满足。
-- 对于面向公网的非 loopback Control UI 部署，请显式设置 `gateway.controlUi.allowedOrigins`
-  （完整 origin）。对于 loopback、RFC1918/link-local、`.local`、`.ts.net` 和 Tailscale CGNAT 主机，允许私有同源 LAN/Tailnet 加载。
-- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true` 会启用
-  Host 标头 origin 回退模式，但这是一个危险的安全降级。
-- 使用 Serve 时，当 `gateway.auth.allowTailscale` 为 `true`，Tailscale 身份标头可满足 Control UI/WebSocket 认证
-  （无需 token/password）。
-  HTTP API 端点不会使用这些 Tailscale 身份标头；它们会遵循
-  gateway 的正常 HTTP 认证模式。设置
-  `gateway.auth.allowTailscale: false` 以要求显式凭据。请参见
-  [Tailscale](/gateway/tailscale) 和 [Security](/gateway/security)。此
-  无 token 流程假定 gateway 主机是可信的。
-- `gateway.tailscale.mode: "funnel"` 需要 `gateway.auth.mode: "password"`（共享密码）。
+- 默认情况下需要 Gateway 认证：token、password、trusted-proxy，或在启用时使用 Tailscale Serve 身份头。
+- 非 loopback 绑定仍然**需要** gateway 认证：token/password 认证，或带有 `gateway.auth.mode: "trusted-proxy"` 的感知身份反向代理。
+- 引导向导默认会创建共享密钥认证，通常也会生成一个 gateway token，即使在 loopback 上也是如此。
+- 在共享密钥模式下，UI 会在 WebSocket 握手期间发送 `connect.params.auth.token` 或 `connect.params.auth.password`。
+- 当 `gateway.tls.enabled: true` 时，本地 dashboard/status 辅助页面会渲染 `https://` URL 和 `wss://` WebSocket URL。
+- 在带身份的模式中（Tailscale Serve、`trusted-proxy`），WebSocket 认证检查会通过请求头满足，而不是通过共享密钥。
+- 对于公开的非 loopback Control UI 部署，请显式设置 `gateway.controlUi.allowedOrigins`（完整 origin）。对于 loopback、RFC1918/link-local、`.local`、`.ts.net` 和 Tailscale CGNAT 主机，允许无需设置即可进行私有同源加载。
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback: true` 启用基于 Host 头的 origin 回退；这是一项危险的安全降级。
+- 使用 Serve 时，当 `gateway.auth.allowTailscale: true`，Tailscale 身份头即可满足 Control UI/WebSocket 认证（不需要 token/password）。HTTP API 端点不会使用 Tailscale 身份头；它们始终遵循 gateway 的正常 HTTP 认证模式。将 `gateway.auth.allowTailscale: false` 可强制即使通过 Serve 也必须提供显式凭据。这个无 token 流程假设 gateway 主机本身是可信的。参见 [Tailscale](/gateway/tailscale) 和 [安全](/gateway/security)。
 
 ## 构建 UI
 
-Gateway 会从 `dist/control-ui` 提供静态文件。使用以下命令构建它们：
+Gateway 从 `dist/control-ui` 提供静态文件：
 
 ```bash
 pnpm ui:build

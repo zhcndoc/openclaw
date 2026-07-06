@@ -1,5 +1,5 @@
 ---
-summary: "入站频道位置解析（Telegram/WhatsApp/Matrix）与上下文字段"
+summary: "入站频道位置解析（Telegram、WhatsApp、Matrix、LINE）和上下文字段"
 read_when:
   - 添加或修改频道位置解析
   - 在代理提示或工具中使用位置上下文字段
@@ -13,32 +13,35 @@ OpenClaw 将来自聊天频道的共享位置规范化为：
 
 当前支持：
 
-- **Telegram**（位置标记 + 场所 + 实时位置）
-- **WhatsApp**（locationMessage + liveLocationMessage）
-- **Matrix**（带 `geo_uri` 的 `m.location`）
+- **LINE**（带标题/地址的位置消息）
+- **Matrix**（`m.location`，带 `geo_uri`）
+- **Telegram**（位置图钉 + 场所 + 实时位置）
+- **WhatsApp**（`locationMessage` + `liveLocationMessage`）
 
 ## 文本格式
 
-位置会以友好的行形式呈现，不带括号：
+位置会以友好的行形式显示，不带括号。坐标使用六位小数；精度四舍五入到整米：
 
 - 标记：
   - `📍 48.858844, 2.294351 ±12m`
-- 命名地点：
+- 名称地点（同一行；名称/地址仅进入元数据块）：
   - `📍 48.858844, 2.294351 ±12m`
 - 实时共享：
   - `🛰 实时位置：48.858844, 2.294351 ±12m`
 
-如果频道包含标签、地址或标题/评论，它会保留在上下文负载中，并作为带围栏的未受信任 JSON 显示在提示里：
+如果频道包含标签、地址或标题/评论，它会保留在上下文载荷中，并以带围栏的不受信任 JSON 形式出现在提示中（缺失时会省略字段）：
 
 ````text
-Location (untrusted metadata):
+位置（不受信任的元数据）：
 ```json
 {
   "latitude": 48.858844,
   "longitude": 2.294351,
-  "name": "埃菲尔铁塔",
-  "address": "战神广场，巴黎",
-  "caption": "在这里见面"
+  "accuracy_m": 12,
+  "source": "place",
+  "name": "Eiffel Tower",
+  "address": "Champ de Mars, Paris",
+  "caption": "Meet here"
 }
 ```
 ````
@@ -56,13 +59,16 @@ Location (untrusted metadata):
 - `LocationIsLive`（boolean）
 - `LocationCaption`（string；可选）
 
-提示渲染器将 `LocationName`、`LocationAddress` 和 `LocationCaption` 视为未受信任元数据，并通过与其他频道上下文相同的受限 JSON 路径进行序列化。
+当频道未设置显式来源时，OpenClaw 会推断它：live 分享变为 `live`，带有名称或地址的位置变为 `place`，其余情况均为 `pin`。
+
+提示渲染器将 `LocationName`、`LocationAddress` 和 `LocationCaption` 视为不受信任的元数据，并通过与其他频道上下文相同的受限 JSON 路径对它们进行序列化。
 
 ## 频道说明
 
-- **Telegram**：场所会映射到 `LocationName/LocationAddress`；实时位置使用 `live_period`。
-- **WhatsApp**：`locationMessage.comment` 和 `liveLocationMessage.caption` 会填充 `LocationCaption`。
-- **Matrix**：`geo_uri` 会被解析为标记位置；海拔会被忽略，且 `LocationIsLive` 始终为 false。
+- **LINE**：位置消息的 `title`/`address` 映射到 `LocationName`/`LocationAddress`；不支持实时位置。
+- **Matrix**：`geo_uri` 解析为固定位置；`u`（不确定性）参数映射到 `LocationAccuracy`，事件正文填充 `LocationCaption`，海拔被忽略，且 `LocationIsLive` 始终为 false。
+- **Telegram**：地点信息映射到 `LocationName`/`LocationAddress`；通过 `live_period` 检测实时位置。
+- **WhatsApp**：`locationMessage.comment` 和 `liveLocationMessage.caption` 填充 `LocationCaption`。
 
 ## 相关内容
 

@@ -33,11 +33,12 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [BytePlus（国际版）](/concepts/model-providers#byteplus-international)
 - [Cerebras](/providers/cerebras)
 - [Chutes](/providers/chutes)
-- [Cohere](/providers/cohere)
+- [ClawRouter（托管的多提供商路由）](/providers/clawrouter)
 - [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
+- [Cohere](/providers/cohere)
 - [ComfyUI](/providers/comfy)
 - [DeepSeek](/providers/deepseek)
-- [ds4 (本地 DeepSeek V4)](/providers/ds4)
+- [ds4（本地 DeepSeek V4）](/providers/ds4)
 - [ElevenLabs](/providers/elevenlabs)
 - [fal](/providers/fal)
 - [Fireworks](/providers/fireworks)
@@ -53,10 +54,10 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 - [LM Studio（本地模型）](/providers/lmstudio)
 - [MiniMax](/providers/minimax)
 - [Mistral](/providers/mistral)
-- [Moonshot AI（Kimi + Kimi Coding）](/providers/moonshot)
-- [NVIDIA](/providers/nvidia)
+- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
 - [NovitaAI](/providers/novita)
-- [Ollama (云端 + 本地模型)](/providers/ollama)
+- [NVIDIA](/providers/nvidia)
+- [Ollama (cloud + local models)](/providers/ollama)
 - [Ollama Cloud](/providers/ollama-cloud)
 - [OpenAI (API + Codex)](/providers/openai)
 - [OpenCode](/providers/opencode)
@@ -84,19 +85,19 @@ OpenClaw 可以使用许多 LLM 提供商。选择一个提供商，完成认证
 
 ## 共享概览页面
 
-- [附加捆绑变体](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
-- [图像生成](/tools/image-generation) - 共享 `image_generate` 工具、提供商选择和故障转移
-- [音乐生成](/tools/music-generation) - 共享 `music_generate` 工具、提供商选择和故障转移
-- [视频生成](/tools/video-generation) - 共享 `video_generate` 工具、提供商选择和故障转移
+- [Additional provider variants](/providers/models#additional-provider-variants) - Anthropic Vertex、Copilot Proxy 和 Gemini CLI OAuth
+- [Image Generation](/tools/image-generation) - 共享 `image_generate` 工具、提供方选择和故障转移
+- [Music Generation](/tools/music-generation) - 共享 `music_generate` 工具、提供方选择和故障转移
+- [Video Generation](/tools/video-generation) - 共享 `video_generate` 工具、提供方选择和故障转移
 
 ## 转录提供商
 
 - [Deepgram（音频转录）](/providers/deepgram)
 - [ElevenLabs](/providers/elevenlabs#speech-to-text)
 - [Mistral](/providers/mistral#audio-transcription-voxtral)
-- [OpenAI](/providers/openai#speech-to-text)
+- [OpenAI](/providers/openai)
 - [SenseAudio](/providers/senseaudio)
-- [xAI](/providers/xai#speech-to-text)
+- [xAI](/providers/xai)
 
 ## 社区工具
 

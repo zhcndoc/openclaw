@@ -7,18 +7,21 @@ read_when:
   - 你想了解默认模型、别名或发现行为
 ---
 
-[Chutes](https://chutes.ai) 通过一个与 OpenAI 兼容的 API 提供开源模型目录。OpenClaw 同时支持 `chutes` 提供程序的浏览器 OAuth 和直接 API 密钥认证。
+[Chutes](https://chutes.ai) 通过一个与 OpenAI 兼容的 API 提供开源模型目录。OpenClaw 同时支持浏览器 OAuth 和 API 密钥认证。
 
-| 属性     | 值                           |
-| -------- | ---------------------------- |
-| 提供程序 | `chutes`                     |
-| API      | 与 OpenAI 兼容               |
-| 基础 URL | `https://llm.chutes.ai/v1`   |
-| 认证     | OAuth 或 API 密钥（见下文） |
+| Property         | Value                                                   |
+| ---------------- | ------------------------------------------------------- |
+| Provider         | `chutes`                                                |
+| Plugin           | official external package (`@openclaw/chutes-provider`) |
+| API              | OpenAI-compatible                                       |
+| Base URL         | `https://llm.chutes.ai/v1`                              |
+| Auth             | OAuth or API key (see below)                            |
+| Runtime env vars | `CHUTES_API_KEY`, `CHUTES_OAUTH_TOKEN`                  |
+
+`CHUTES_OAUTH_TOKEN` 直接提供一个已获取的 OAuth 访问令牌
+（例如在 CI 中），从而绕过下面的交互式浏览器流程。
 
 ## 安装插件
-
-安装官方插件，然后重启 Gateway：
 
 ```bash
 openclaw plugins install @openclaw/chutes-provider
@@ -26,6 +29,9 @@ openclaw gateway restart
 ```
 
 ## 开始使用
+
+Both paths set the default model to `chutes/zai-org/GLM-4.7-TEE` and register
+the Chutes catalog.
 
 <Tabs>
   <Tab title="OAuth">
@@ -35,10 +41,6 @@ openclaw gateway restart
         openclaw onboard --auth-choice chutes
         ```
         OpenClaw 会在本地启动浏览器流程，或在远程/无头主机上显示 URL + 重定向粘贴流程。OAuth 令牌会通过 OpenClaw 认证配置文件自动刷新。
-      </Step>
-      <Step title="验证默认模型">
-        引导完成后，默认模型会设置为
-        `chutes/zai-org/GLM-4.7-TEE`，并注册 Chutes 静态目录。
       </Step>
     </Steps>
   </Tab>
@@ -53,27 +55,17 @@ openclaw gateway restart
         openclaw onboard --auth-choice chutes-api-key
         ```
       </Step>
-      <Step title="验证默认模型">
-        引导完成后，默认模型会设置为
-        `chutes/zai-org/GLM-4.7-TEE`，并注册 Chutes 静态目录。
-      </Step>
     </Steps>
   </Tab>
 </Tabs>
 
-<Note>
-两种认证方式都会注册 Chutes 静态目录，并将默认模型设置为
-`chutes/zai-org/GLM-4.7-TEE`。运行时环境变量：`CHUTES_API_KEY`、
-`CHUTES_OAUTH_TOKEN`。
-</Note>
-
 ## 发现行为
 
-当 Chutes 认证可用时，OpenClaw 会使用该凭据查询 Chutes 目录并采用发现到的模型。如果发现失败，OpenClaw 会回退到静态目录，因此引导和启动仍可正常工作。
+当 Chutes auth 可用时，OpenClaw 会使用该凭据查询 `GET /v1/models`，并使用发现到的模型；每个凭据的结果会缓存 5 分钟。对于已过期/未授权的密钥（HTTP 401），OpenClaw 会在不带凭据的情况下重试一次。如果发现结果仍然没有任何行、发生失败，或返回任何其他非 2xx 状态，则会回退到内置的静态目录（API key 和 OAuth 发现都使用同一路径）。如果在启动时发现失败，则会自动使用静态目录。
 
 ## 默认别名
 
-OpenClaw 会为 Chutes 静态目录注册三个便捷别名：
+OpenClaw 为 Chutes 目录注册了三个便捷别名：
 
 | 别名            | 目标模型                                            |
 | --------------- | --------------------------------------------------- |
@@ -83,7 +75,7 @@ OpenClaw 会为 Chutes 静态目录注册三个便捷别名：
 
 ## 内置起始目录
 
-静态回退目录包含当前 Chutes 引用：
+捆绑的回退目录包含 47 个模型。以下是当前引用的代表性样本：
 
 | 模型引用                                              |
 | ----------------------------------------------------- |
@@ -95,6 +87,8 @@ OpenClaw 会为 Chutes 静态目录注册三个便捷别名：
 | `chutes/chutesai/Mistral-Small-3.2-24B-Instruct-2506` |
 | `chutes/Qwen/Qwen3-Coder-Next-TEE`                    |
 | `chutes/openai/gpt-oss-120b-TEE`                      |
+
+运行 `openclaw models list --all --provider chutes` 获取完整列表。
 
 ## 配置示例
 
@@ -113,24 +107,23 @@ OpenClaw 会为 Chutes 静态目录注册三个便捷别名：
 ```
 
 <AccordionGroup>
-  <Accordion title="OAuth 覆盖项">
-    你可以使用可选的环境变量自定义 OAuth 流程：
+  <Accordion title="OAuth 覆盖">
+    使用可选的环境变量自定义 OAuth 流程：
 
     | 变量 | 作用 |
     | -------- | ------- |
-    | `CHUTES_CLIENT_ID` | 自定义 OAuth 客户端 ID |
-    | `CHUTES_CLIENT_SECRET` | 自定义 OAuth 客户端密钥 |
-    | `CHUTES_OAUTH_REDIRECT_URI` | 自定义重定向 URI |
-    | `CHUTES_OAUTH_SCOPES` | 自定义 OAuth 作用域 |
+    | `CHUTES_CLIENT_ID` | OAuth 客户端 ID（未设置时会提示输入） |
+    | `CHUTES_CLIENT_SECRET` | OAuth 客户端密钥 |
+    | `CHUTES_OAUTH_REDIRECT_URI` | 重定向 URI（默认 `http://127.0.0.1:1456/oauth-callback`） |
+    | `CHUTES_OAUTH_SCOPES` | 以空格分隔的范围（默认 `openid profile chutes:invoke`） |
 
     有关重定向应用要求和帮助，请参阅 [Chutes OAuth 文档](https://chutes.ai/docs/sign-in-with-chutes/overview)。
 
   </Accordion>
 
   <Accordion title="备注">
-    - API 密钥和 OAuth 发现都使用相同的 `chutes` 提供程序 ID。
-    - Chutes 模型会注册为 `chutes/<model-id>`。
-    - 如果启动时发现失败，会自动使用静态目录。
+    - Chutes 模型注册为 `chutes/<model-id>`。
+    - Chutes 在流式传输期间不会报告 token 使用情况（`supportsUsageInStreaming: false`）；流结束后仍会显示使用总量。
 
   </Accordion>
 </AccordionGroup>

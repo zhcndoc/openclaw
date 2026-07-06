@@ -7,24 +7,25 @@ read_when:
   - 你需要内置的 comfy 插件配置键
 ---
 
-OpenClaw 附带了一个内置的 `comfy` 插件，用于基于工作流的 ComfyUI 运行。该插件完全由工作流驱动，因此 OpenClaw 不会尝试将通用的 `size`、`aspectRatio`、`resolution`、`durationSeconds` 或类似 TTS 的控制项映射到你的图表中。
+OpenClaw 随附一个用于工作流驱动 ComfyUI 运行的 `comfy` 插件。该
+插件完全由工作流驱动：OpenClaw 不会将通用的 `size`、
+`aspectRatio`、`resolution`、`durationSeconds` 或 TTS 风格的控制项映射到
+你的图中。
 
-| Property        | Detail                                                                           |
-| --------------- | -------------------------------------------------------------------------------- |
-| Provider        | `comfy`                                                                          |
-| Models          | `comfy/workflow`                                                                 |
-| Shared surfaces | `image_generate`, `video_generate`, `music_generate`                             |
-| Auth            | 本地 ComfyUI 无需认证；Comfy Cloud 使用 `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
-| API             | ComfyUI `/prompt` / `/history` / `/view` 以及 Comfy Cloud `/api/*`                |
+| Property     | Detail                                                                           |
+| ------------ | -------------------------------------------------------------------------------- |
+| Provider     | `comfy`                                                                          |
+| Model        | `comfy/workflow`                                                                 |
+| Shared tools | `image_generate`, `video_generate`, `music_generate`                             |
+| Auth         | 本地 ComfyUI 不需要；Comfy Cloud 使用 `COMFY_API_KEY` 或 `COMFY_CLOUD_API_KEY` |
+| API          | ComfyUI `/prompt` / `/history` / `/view`; Comfy Cloud `/api/*`                   |
 
 ## 它支持什么
 
-- 从工作流 JSON 进行图像生成
-- 使用 1 张上传的参考图像进行图像编辑
-- 从工作流 JSON 进行视频生成
-- 使用 1 张上传的参考图像进行视频生成
-- 通过共享的 `music_generate` 工具进行音乐或音频生成
-- 从配置的节点或所有匹配的输出节点下载输出
+- 从工作流 JSON 生成和编辑图像（编辑需要 1 张上传的参考图像）
+- 从工作流 JSON 生成视频，支持文本生成视频或图像生成视频（1 张参考图像）
+- 通过共享的 `music_generate` 工具生成音乐/音频，可选使用 1 张参考图像
+- 从已配置的节点下载输出；如果未配置，则从所有匹配的输出节点下载
 
 ## 快速开始
 
@@ -42,7 +43,7 @@ OpenClaw 附带了一个内置的 `comfy` 插件，用于基于工作流的 Comf
         导出或创建一个 ComfyUI 工作流 JSON 文件。注意提示词输入节点和你希望 OpenClaw 读取的输出节点的节点 ID。
       </Step>
       <Step title="配置 provider">
-        设置 `mode: "local"` 并指向你的工作流文件。以下是一个最小图像示例：
+        设置 `mode: "local"` 并指向你的工作流文件。最小图片示例：
 
         ```json5
         {
@@ -96,10 +97,13 @@ OpenClaw 附带了一个内置的 `comfy` 插件，用于基于工作流的 Comf
         在 [comfy.org](https://comfy.org) 注册，并从你的账户仪表板生成一个 API key。
       </Step>
       <Step title="设置 API key">
-        通过以下任一方式提供你的 key：
+        通过以下任一方式提供你的密钥：
 
         ```bash
-        # 环境变量（推荐）
+        # Onboarding flag
+        openclaw onboard --comfy-api-key "your-key"
+
+        # 环境变量（推荐用于守护进程）
         export COMFY_API_KEY="your-key"
 
         # 备用环境变量
@@ -135,7 +139,7 @@ OpenClaw 附带了一个内置的 `comfy` 插件，用于基于工作流的 Comf
         ```
 
         <Tip>
-        云模式会将 `baseUrl` 默认设置为 `https://cloud.comfy.org`。只有在你使用自定义云端 endpoint 时才需要设置 `baseUrl`。
+        云模式默认将 `baseUrl` 设置为 `https://cloud.comfy.org`。仅在使用自定义云端点时设置 `baseUrl`。
         </Tip>
       </Step>
       <Step title="设置默认模型">
@@ -199,9 +203,9 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
 
 | Key                   | Type                   | Description                                                                           |
 | --------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
-| `mode`                | `"local"` or `"cloud"` | 连接模式。                                                                      |
-| `baseUrl`             | string                 | 本地默认为 `http://127.0.0.1:8188`，云端默认为 `https://cloud.comfy.org`。 |
-| `apiKey`              | string                 | 可选的内联 key，作为 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量的替代。 |
+| `mode`                | `"local"` or `"cloud"` | 连接模式。默认为 `"local"`。                                               |
+| `baseUrl`             | string                 | 本地模式默认为 `http://127.0.0.1:8188`，云模式默认为 `https://cloud.comfy.org`。 |
+| `apiKey`              | string                 | 可选的内联密钥，可替代 `COMFY_API_KEY` / `COMFY_CLOUD_API_KEY` 环境变量。 |
 | `allowPrivateNetwork` | boolean                | 在云模式下允许使用私有/LAN `baseUrl`。                                          |
 
 ### 按能力划分的键
@@ -210,19 +214,21 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
 
 | Key                          | Required | Default  | Description                                                                  |
 | ---------------------------- | -------- | -------- | ---------------------------------------------------------------------------- |
-| `workflow` or `workflowPath` | Yes      | --       | ComfyUI 工作流 JSON 文件的路径。                                      |
+| `workflow` or `workflowPath` | Yes      | --       | 内联工作流 JSON，或 ComfyUI 工作流 JSON 文件的路径。             |
 | `promptNodeId`               | Yes      | --       | 接收文本提示词的节点 ID。                                       |
-| `promptInputName`            | No       | `"text"` | 提示词节点上的输入名称。                                               |
-| `outputNodeId`               | No       | --       | 用于读取输出的节点 ID。若省略，则使用所有匹配的输出节点。 |
-| `pollIntervalMs`             | No       | --       | 作业完成的轮询间隔（毫秒）。                         |
-| `timeoutMs`                  | No       | --       | 工作流运行超时（毫秒）。                                |
+| `promptInputName`            | No       | `"text"` | 提示节点上的输入名称。                                               |
+| `outputNodeId`               | No       | --       | 要读取输出的节点 ID。若省略，则使用所有匹配的输出节点。 |
+| `pollIntervalMs`             | No       | `1500`   | 作业完成轮询间隔，单位为毫秒。                         |
+| `timeoutMs`                  | No       | `300000` | 工作流运行超时时间，单位为毫秒。                                |
 
-`image` 和 `video` 部分还支持：
+`image` 和 `video` 部分也支持一个参考图像输入节点：
 
 | Key                   | Required                             | Default   | Description                                         |
 | --------------------- | ------------------------------------ | --------- | --------------------------------------------------- |
 | `inputImageNodeId`    | Yes (when passing a reference image) | --        | 接收上传的参考图像的节点 ID。 |
 | `inputImageInputName` | No                                   | `"image"` | 图像节点上的输入名称。                       |
+
+`apiKey` 可以接受字面字符串或 [secret reference](/gateway/configuration-reference#secrets) 对象。
 
 ## 工作流详情
 
@@ -292,10 +298,10 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
   </Accordion>
 
   <Accordion title="音乐工作流">
-    内置插件为工作流定义的音频或音乐输出注册了一个音乐生成 provider，并通过共享的 `music_generate` 工具暴露：
+    捆绑的插件会注册一个音乐生成 provider，用于生成工作流定义的音频或音乐输出，并通过共享的 `music_generate` 工具提供。它接受一个可选的参考图像（最多 1 张）：
 
     ```text
-    /tool music_generate prompt="Warm ambient synth loop with soft tape texture"
+    /tool music_generate prompt="温暖的氛围感合成器循环，带有柔和的磁带质感"
     ```
 
     使用 `music` 配置部分指向你的音频工作流 JSON 和输出节点。
@@ -321,11 +327,7 @@ Comfy 支持共享的顶层连接设置以及按能力划分的工作流部分�
     }
     ```
 
-    OpenClaw 会将这种旧的结构视为图像工作流配置。你不需要立即迁移，但对于新设置，建议使用嵌套的 `image` / `video` / `music` 部分。
-
-    <Tip>
-    如果你只使用图像生成，旧的扁平配置和新的嵌套 `image` 部分在功能上是等价的。
-    </Tip>
+    OpenClaw 将该旧版结构视为图像工作流配置。你不需要立即迁移，但对于新设置，建议使用嵌套的 `image` / `video` / `music` 部分。如果你只使用图像生成，那么旧的扁平配置和新的嵌套 `image` 部分在功能上是等效的。
 
   </Accordion>
 

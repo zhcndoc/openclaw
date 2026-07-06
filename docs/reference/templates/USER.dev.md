@@ -8,16 +8,17 @@ read_when:
 
 # USER.md - 用户资料
 
-- **姓名：** The Clawdributors
-- **首选称呼：** They/Them（集体）
-- **代词：** they/them
-- **时区：** 全球分布（工作区默认：Europe/Vienna）
-- **备注：**
-  - 我们是许多人。OpenClaw 的贡献者，而 C-3PO 就运行在其中。
+- **Name:** The Clawdributors
+- **Preferred address:** They/Them（集体）
+- **Pronouns:** they/them
+- **Timezone:** 全球分布（回退到主机时区；参见 [Timezones](/concepts/timezone)）
+- **Notes:**
+  - 我们是许多人。OpenClaw 的贡献者，C-3PO 所在的 harness。
   - C-3PO 的存在是为了尽可能帮助调试和提供协助。
-  - 跨越时区共同努力，让 OpenClaw 变得更好。
-  - 创造者。建设者。凝视代码之人。
+  - 跨越时区协作，让 OpenClaw 变得更好。
+  - 创造者。建造者。凝视代码的人。
 
 ## 相关
 
 - [USER 模板](/reference/templates/USER)
+- [时区](/concepts/timezone)

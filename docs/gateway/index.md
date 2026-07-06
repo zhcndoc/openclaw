@@ -45,7 +45,7 @@ openclaw status
 openclaw logs --follow
 ```
 
-健康基线：`Runtime: running`、`Connectivity probe: ok`，以及符合预期的 `Capability: ...`。当你需要读范围 RPC 证明，而不只是可达性时，请使用 `openclaw gateway status --require-rpc`。
+健康基线：`Runtime: running`、`Connectivity probe: ok`，以及一行符合预期的 `Capability`。如果要证明读权限范围内的 RPC，而不只是连通性，请使用 `openclaw gateway status --require-rpc`。
 
   </Step>
 
@@ -55,36 +55,29 @@ openclaw logs --follow
 openclaw channels status --probe
 ```
 
-在 gateway 可达时，这会针对每个账号运行实时通道探测和可选审计。
-如果 gateway 不可达，CLI 会回退为仅配置的通道摘要，
-而不是实时探测输出。
+在网关可达时，这会针对每个账户运行实时通道探测以及可选审计。如果网关不可达，CLI 会回退为仅基于配置的通道摘要。
 
   </Step>
 </Steps>
 
 <Note>
-Gateway 配置重载会监视当前活动配置文件路径（从 profile/state 默认值解析而来，或在设置时使用 `OPENCLAW_CONFIG_PATH`）。
-默认模式是 `gateway.reload.mode="hybrid"`。
-首次成功加载后，运行中的进程会提供当前内存中的活动配置快照；成功重载会原子性地切换该快照。
+网关配置重载会监视当前活动配置文件路径（从 profile/state 默认值解析而来，或在设置了 `OPENCLAW_CONFIG_PATH` 时使用该路径）。默认模式是 `gateway.reload.mode="hybrid"`。在首次成功加载后，运行中的进程会提供当前的内存中配置快照；一次成功的重载会原子性地替换该快照。
 </Note>
 
 ## 运行模型
 
-- 仅有一个始终在线的进程，负责路由、控制平面和通道连接。
+- 一个始终运行的进程，用于路由、控制平面和通道连接。
 - 单一复用端口用于：
   - WebSocket 控制/RPC
   - HTTP API（`/v1/models`、`/v1/embeddings`、`/v1/chat/completions`、`/v1/responses`、`/tools/invoke`）
   - 插件 HTTP 路由，例如可选的 `/api/v1/admin/rpc`
-  - 控制界面和钩子
-- 默认绑定模式：`loopback`。
-- 默认要求认证。共享密钥方案使用
-  `gateway.auth.token` / `gateway.auth.password`（或
-  `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`），而非 loopback 的
-  反向代理方案可以使用 `gateway.auth.mode: "trusted-proxy"`。
+  - 控制界面和 hooks
+- 默认绑定模式：`loopback`。在检测到容器环境时，实际默认值为 `auto`（会解析为 `0.0.0.0`，用于端口转发），除非 Tailscale serve/funnel 处于活动状态，此时始终强制为 `loopback`。
+- 默认需要认证。共享密钥配置使用 `gateway.auth.token` / `gateway.auth.password`（或 `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_GATEWAY_PASSWORD`），非 loopback 的反向代理配置可以使用 `gateway.auth.mode: "trusted-proxy"`。
 
 ## OpenAI 兼容端点
 
-OpenClaw 最高价值的兼容性接口现在是：
+OpenClaw 的最高杠杆兼容性接触面：
 
 - `GET /v1/models`
 - `GET /v1/models/{id}`
@@ -98,11 +91,7 @@ OpenClaw 最高价值的兼容性接口现在是：
 - 许多 RAG 和 memory 流水线期望有 `/v1/embeddings`。
 - 原生 agent 客户端越来越倾向于 `/v1/responses`。
 
-规划说明：
-
-- `/v1/models` 以 agent 为先：它返回 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>`。
-- `openclaw/default` 是稳定别名，始终映射到已配置的默认 agent。
-- 当你想使用后端 provider/model 覆盖时，请使用 `x-openclaw-model`；否则所选 agent 的常规模型和 embedding 设置会继续生效。
+`/v1/models` 是 agent-first：它会为每个已配置的 agent 返回 `openclaw`、`openclaw/default` 和 `openclaw/<agentId>`。`openclaw/default` 是稳定别名，始终映射到已配置的默认 agent。需要后端 provider/model 覆盖时，请发送 `x-openclaw-model`；否则，所选 agent 的常规模型和 embedding 配置将保持控制权。
 
 所有这些端点都运行在主 Gateway 端口上，并使用与 Gateway 其余 HTTP API 相同的受信操作员认证边界。
 
@@ -110,14 +99,14 @@ Admin HTTP RPC (`POST /api/v1/admin/rpc`) 是一个独立的、默认关闭的�
 
 ### 端口和绑定优先级
 
-| 设置         | 解析顺序                                                      |
-| ------------ | ------------------------------------------------------------- |
-| Gateway 端口 | `--port` → `OPENCLAW_GATEWAY_PORT` → `gateway.port` → `18789` |
-| 绑定模式     | CLI/override → `gateway.bind` → `loopback`                    |
+| Setting      | Resolution order                                                     |
+| ------------ | -------------------------------------------------------------------- |
+| Gateway port | `--port` → `OPENCLAW_GATEWAY_PORT` → `gateway.port` → `18789`        |
+| Bind mode    | CLI/override → `gateway.bind` → `loopback` (or `auto` in containers) |
 
 已安装的 gateway 服务会在 supervisor 元数据中记录解析后的 `--port`。更改 `gateway.port` 后，请运行 `openclaw doctor --fix` 或 `openclaw gateway install --force`，以便 launchd/systemd/schtasks 在新端口上启动进程。
 
-Gateway 启动时会使用相同的有效端口和绑定方式来为非 loopback 绑定播种本地控制界面来源。例如，`--bind lan --port 3000` 会在运行时验证之前播种 `http://localhost:3000` 和 `http://127.0.0.1:3000`。请显式添加任何远程浏览器来源，例如 HTTPS 代理 URL，到 `gateway.controlUi.allowedOrigins` 中。
+Gateway 启动时使用相同的实际端口和绑定方式，并在为非 loopback 绑定播种本地 Control UI origins 时采用这些设置。例如，`--bind lan --port 3000` 会在运行时验证之前先播种 `http://localhost:3000` 和 `http://127.0.0.1:3000`。请将任何远程浏览器 origins，例如 HTTPS 代理 URL，显式添加到 `gateway.controlUi.allowedOrigins`。
 
 ### 热重载模式
 
@@ -142,13 +131,11 @@ openclaw logs --follow
 openclaw doctor
 ```
 
-`gateway status --deep` 用于额外的服务发现（LaunchDaemons/systemd system units/schtasks），而不是更深的 RPC 健康探测。
+`gateway status --deep` 用于额外的服务发现（LaunchDaemons/systemd 系统单元/schtasks），而不是更深入的 RPC 健康探测。
 
 ## 多个 gateway（同一主机）
 
-大多数安装场景应在每台机器上运行一个 gateway。单个 gateway 可以承载多个 agent 和通道。
-
-只有在你有意需要隔离或救援 bot 时，才需要多个 gateway。
+大多数安装应当每台机器只运行一个 gateway。单个 gateway 可以承载多个 agent 和 channel。只有在你有意需要隔离，或者需要一个救援 bot 时，才需要多个 gateway。
 
 有用的检查：
 
@@ -159,13 +146,9 @@ openclaw gateway probe
 
 预期结果：
 
-- `gateway status --deep` 可以报告 `Other gateway-like services detected (best effort)`，
-  并在仍然存在过期的 launchd/systemd/schtasks 安装时打印清理提示。
-- `gateway probe` 可以在不同 gateway 响应时，或当 OpenClaw 无法证明可达目标是同一个 gateway 时，
-  警告 `multiple reachable gateway identities`。
-  SSH 隧道、代理 URL，或指向同一 gateway 的已配置远程 URL，即使传输端口不同，
-  也属于一个 gateway 的多种传输方式。
-- 如果这是有意为之，请为每个 gateway 分别隔离端口、配置/状态和工作区根目录。
+- `gateway status --deep` can report `Other gateway-like services detected (best effort)` and print cleanup hints when stale launchd/systemd/schtasks installs are still around.
+- `gateway probe` can warn about `multiple reachable gateway identities` when distinct gateways answer, or when OpenClaw cannot prove reachable targets are the same gateway. An SSH tunnel, proxy URL, or configured remote URL to the same gateway is one gateway with multiple transports, even when transport ports differ.
+- 如果这是有意为之，请为每个 gateway 分别隔离端口、配置/状态以及工作区根目录。
 
 每个实例的检查清单：
 
@@ -189,7 +172,7 @@ OPENCLAW_CONFIG_PATH=~/.openclaw/b.json OPENCLAW_STATE_DIR=~/.openclaw-b opencla
 备选：SSH 隧道。
 
 ```bash
-ssh -N -L 18789:127.0.0.1:18789 user@host
+ssh -N -L 18789:127.0.0.1:18789 user@gateway-host
 ```
 
 然后在本地将客户端连接到 `ws://127.0.0.1:18789`。
@@ -216,7 +199,7 @@ openclaw gateway stop
 
 使用 `openclaw gateway restart` 进行重启。不要将 `openclaw gateway stop` 和 `openclaw gateway start` 串联起来代替重启。
 
-在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`——这会把 LaunchAgent 从当前启动会话中移除，而不会持久化禁用，因此在意外崩溃后 KeepAlive 自动恢复仍然有效，并且 `gateway start` 会干净地重新启用。若要在重启之间持久抑制自动重启，请传入 `--disable`：`openclaw gateway stop --disable`。
+在 macOS 上，`gateway stop` 默认使用 `launchctl bootout`。这会将 LaunchAgent 从当前启动会话中移除，但不会持久化禁用，因此在意外崩溃后仍可通过 KeepAlive 自动恢复，并且 `gateway start` 会干净地重新启用。若要在重启后持续抑制自动重启，请传入 `--disable`：`openclaw gateway stop --disable`。
 
 LaunchAgent 标签为 `ai.openclaw.gateway`（默认）或 `ai.openclaw.<profile>`（命名 profile）。`openclaw doctor` 会审计并修复服务配置漂移。
 
@@ -233,21 +216,26 @@ openclaw gateway status
 若要在注销后仍保持运行，请启用 lingering：
 
 ```bash
-sudo loginctl enable-linger <user>
+sudo loginctl enable-linger $(whoami)
 ```
 
-当你需要自定义安装路径时，可使用手动 user-unit 示例：
+在没有桌面会话的无头服务器上，在重试 `systemctl --user` 命令之前，也要确保已设置 `XDG_RUNTIME_DIR`（`export XDG_RUNTIME_DIR=/run/user/$(id -u)`）。
+
+需要自定义安装路径时，可参考手动 user-unit 示例：
 
 ```ini
 [Unit]
-Description=OpenClaw Gateway
+Description=OpenClaw 网关
 After=network-online.target
 Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
 
 [Service]
 ExecStart=/usr/local/bin/openclaw gateway --port 18789
 Restart=always
 RestartSec=5
+RestartPreventExitStatus=78
 TimeoutStopSec=30
 TimeoutStartSec=30
 SuccessExitStatus=0 143
@@ -307,8 +295,9 @@ openclaw --dev status
 ## 协议快速参考（操作员视图）
 
 - 首个客户端帧必须是 `connect`。
-- Gateway 返回 `hello-ok` 快照（`presence`、`health`、`stateVersion`、`uptimeMs`、限制/策略）。
-- `hello-ok.features.methods` / `events` 是保守的发现列表，不是所有可调用辅助路由的生成式转储。
+- 网关会返回一个带有 `snapshot`（`presence`、`health`、`stateVersion`、`uptimeMs`）以及 `policy` 限制（`maxPayload`、`maxBufferedBytes`、`tickIntervalMs`）的 `hello-ok` 帧。
+- `hello-ok.features.methods` / `events` 是一个保守的发现列表，而不是
+  每个可调用 helper 路由的自动生成完整清单。
 - 请求：`req(method, params)` → `res(ok/payload|error)`。
 - 常见事件包括 `connect.challenge`、`agent`、`chat`、
   `session.message`、`session.operation`、`session.tool`、`sessions.changed`、
@@ -343,12 +332,12 @@ openclaw health
 
 ## 常见失败特征
 
-| 特征                                                     | 可能问题                                                                    |
-| -------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `拒绝在没有认证的情况下绑定 gateway ...`                | 在非回环地址绑定，但缺少有效的 gateway 认证路径                              |
-| `另一个 gateway 实例已经在监听` / `EADDRINUSE`          | 端口冲突                                                                   |
-| `Gateway 启动被阻止：请将 gateway.mode 设为 local`      | 配置被设为远程模式，或损坏的配置中缺少本地模式标记                          |
-| 在 connect 期间出现 `unauthorized`                       | 客户端与 gateway 之间的认证不匹配                                            |
+| Signature                                                      | 可能的问题                                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `refusing to bind gateway ... without auth`                    | 非回环地址绑定，但没有有效的网关认证路径                           |
+| `another gateway instance is already listening` / `EADDRINUSE` | 端口冲突                                                                 |
+| `Gateway start blocked: set gateway.mode=local`                | 配置被设为远程模式，或损坏的配置中缺少 `gateway.mode` |
+| `unauthorized` during connect                                  | 客户端与网关之间的认证不匹配                                      |
 
 如需完整诊断阶梯，请使用 [Gateway Troubleshooting](/gateway/troubleshooting)。
 
@@ -358,20 +347,13 @@ openclaw health
 - 非法/非 `connect` 的首帧会被拒绝并关闭。
 - 优雅关闭会在 socket 关闭前发出 `shutdown` 事件。
 
----
+## 相关
 
-相关：
-
-- [故障排查](/gateway/troubleshooting)
+- [配置](/gateway/configuration)
+- [网关故障排除](/gateway/troubleshooting)
 - [后台进程](/gateway/background-process)
-- [配置](/gateway/configuration)
 - [健康状态](/gateway/health)
-- [Doctor](/gateway/doctor)
-- [认证](/gateway/authentication)
-
-## 相关内容
-
-- [配置](/gateway/configuration)
-- [Gateway 故障排查](/gateway/troubleshooting)
+- [诊断工具](/gateway/doctor)
+- [身份验证](/gateway/authentication)
 - [远程访问](/gateway/remote)
 - [密钥管理](/gateway/secrets)

@@ -6,36 +6,38 @@ read_when:
   - 你希望获得 AI 驱动的回忆和用户建模
 ---
 
-[Honcho](https://honcho.dev) 为 OpenClaw 添加了 AI 原生记忆。它会将
-对话持久化到一个专用服务中，并随着时间推移构建用户和代理模型，
-为你的代理提供超越工作区 Markdown
-文件的跨会话上下文。
+[Honcho](https://honcho.dev) 通过一个外部插件为 OpenClaw 添加 AI 原生记忆。它会将对话持久化到专用服务中，并随着时间构建用户和代理模型，为你的代理提供超越工作区 Markdown 文件的跨会话上下文。
 
 ## 它提供什么
 
-- **跨会话记忆** -- 每轮对话后都会持久化，因此上下文可跨越会话重置、压缩和频道切换。
-- **用户建模** -- Honcho 为每个用户维护一个档案（偏好、事实、沟通风格），并为代理维护一个档案（个性、已学习的行为）。
-- **语义搜索** -- 可在过去对话的观察内容上进行搜索，而不仅仅是当前会话。
-- **多代理感知** -- 父代理会自动跟踪已生成的子代理，并在子会话中将父代理添加为观察者。
+- **跨会话记忆** - 对话会在每一轮后持续保留，因此
+  上下文可跨会话重置、压缩和频道切换保持延续。
+- **用户建模** - Honcho 为每个用户维护一个档案（偏好、
+  事实、沟通风格）以及为代理维护一个档案（个性、已学会的
+  行为）。
+- **语义搜索** - 对过去对话中的观察内容进行搜索，而不只是
+ 当前会话。
+- **多代理感知** - 父代理会自动跟踪生成的
+  子代理，并将父代理作为观察者添加到子会话中。
 
-## 可用工具
+## Available Tools
 
-Honcho 会注册代理可在对话期间使用的工具：
+Honcho registers tools the agent can use during conversation:
 
-**数据检索（快速，无需 LLM 调用）：**
+**Data Retrieval (fast, no LLM call required):**
 
-| 工具                        | 功能说明                                           |
+| Tool                        | Description                                           |
 | --------------------------- | ------------------------------------------------------ |
-| `honcho_context`            | 跨会话的完整用户表示               |
-| `honcho_search_conclusions` | 对已存储结论进行语义搜索                |
-| `honcho_search_messages`    | 跨会话查找消息（按发送者、日期筛选） |
-| `honcho_session`            | 当前会话历史和摘要                    |
+| `honcho_context`            | Full user representation across sessions               |
+| `honcho_search_conclusions` | Semantic search over stored conclusions                |
+| `honcho_search_messages`    | Search messages across sessions (filter by sender, date) |
+| `honcho_session`            | Current session history and summary                    |
 
-**问答（由 LLM 驱动）：**
+**Q&A (LLM-powered):**
 
-| 工具         | 功能说明                                                              |
+| Tool         | Description                                                              |
 | ------------ | ------------------------------------------------------------------------- |
-| `honcho_ask` | 询问有关用户的问题。`depth='quick'` 用于事实，`'thorough'` 用于综合 |
+| `honcho_ask` | Ask questions about the user. `depth='quick'` for facts, `'thorough'` for synthesis |
 
 ## 开始使用
 
@@ -85,18 +87,18 @@ Honcho 可以完全在本地运行（自托管），也可以通过
 提供迁移选项。
 
 <Info>
-迁移是非破坏性的 -- 文件会被上传到 Honcho。原始文件
+迁移是非破坏性的——文件会上传到 Honcho。原始文件
 绝不会被删除或移动。
 </Info>
 
 ## 工作原理
 
-每次 AI 回合后，对话都会持久化到 Honcho。用户和
-代理消息都会被观察，从而使 Honcho 能够随着时间推移构建并优化其模型。
+在每次 AI 回合后，对话都会持久化到 Honcho。用户和
+代理消息都会被观察，从而让 Honcho 随着时间推移构建并优化其模型。
 
-在对话期间，Honcho 工具会在 `before_prompt_build`
-阶段查询服务，在模型看到提示词之前注入相关上下文。这确保了
-准确的轮次边界和相关回忆。
+在对话过程中，Honcho 工具会在 OpenClaw 的
+`before_prompt_build` 插件钩子中查询服务，在模型
+看到提示之前注入相关上下文。
 
 ## Honcho 与内置记忆
 
@@ -109,8 +111,7 @@ Honcho 可以完全在本地运行（自托管），也可以通过
 | **多代理**   | 未跟踪                  | 父/子感知              |
 | **依赖**  | 无（内置）或 QMD 二进制文件 | 安装插件                      |
 
-Honcho 和内置记忆系统可以协同工作。当配置了 QMD 时，
-会提供额外工具，用于在 Honcho 的跨会话记忆旁边搜索本地 Markdown 文件。
+Honcho 和内置记忆系统可以协同工作。当配置了 QMD 时，会提供额外工具，用于在 Honcho 的跨会话记忆之外搜索本地 Markdown 文件。
 
 ## CLI 命令
 
@@ -126,11 +127,10 @@ openclaw honcho search <query> [-k N] [-d D] # 对记忆进行语义搜索
 - [插件源代码](https://github.com/plastic-labs/openclaw-honcho)
 - [Honcho 文档](https://docs.honcho.dev)
 - [Honcho OpenClaw 集成指南](https://docs.honcho.dev/v3/guides/integrations/openclaw)
-- [记忆](/concepts/memory) -- OpenClaw 记忆概览
-- [上下文引擎](/concepts/context-engine) -- 插件上下文引擎的工作方式
 
 ## 相关内容
 
-- [记忆概览](/concepts/memory)
-- [内置记忆引擎](/concepts/memory-builtin)
-- [QMD 记忆引擎](/concepts/memory-qmd)
+- [内存概览](/concepts/memory)
+- [内置内存引擎](/concepts/memory-builtin)
+- [QMD 内存引擎](/concepts/memory-qmd)
+- [上下文引擎](/concepts/context-engine)

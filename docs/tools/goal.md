@@ -16,57 +16,33 @@ title: "目标"
 而不会把该目标变成后台任务、提醒、cron 作业或
 固定指令。
 
-目标属于会话状态。它会随会话键移动，跨进程
-重启保持存在，会显示在 `/goal` 中，可通过目标工具供模型使用，并在活动会话存在目标时显示在 TUI 页脚中。
+目标是会话状态：它会随会话键移动，跨进程重启保留，
+并会出现在 `/goal`、面向模型的目标工具以及 TUI
+页脚中。
 
 ## 快速开始
 
-设置目标：
-
 ```text
-/goal start 让 PR 87469 的 CI 变绿并推送修复
-```
-
-检查它：
-
-```text
+/goal start get CI green for PR 87469 and push the fix
 /goal
-```
-
-在工作有意等待时暂停它：
-
-```text
-/goal pause 等待 CI
-```
-
-恢复它：
-
-```text
+/goal pause waiting for CI
 /goal resume
-```
-
-将其标记为已完成：
-
-```text
-/goal complete 已推送并验证
-```
-
-清除它：
-
-```text
+/goal complete pushed and verified
 /goal clear
 ```
 
+`start` 是可选的：`/goal get CI green for PR 87469` 也会创建一个目标，
+因为任何位于 `/goal` 之后且不是已知动作词的文本都会被视为一个
+新目标。
+
 ## 目标的用途
 
-当某个会话有一个应在多轮对话中持续可见的具体结果时，使用目标：
+当一次会话有一个具体的结果，并且需要在多个回合中保持可见时，请使用目标：
 
-- PR 收尾：修复、验证、自动审查、推送，以及打开或更新 PR。
-- 调试流程：复现 bug、确定所属范围、修补，并证明修复有效。
-- 文档流程：阅读相关文档、编写新页面、建立交叉链接，并
-  验证文档构建。
-- 维护任务：检查当前状态、做受限修改、运行正确的
-  检查，并报告变更内容。
+- 一个 PR 收尾：修复、验证、自动审查、推送，并打开或更新 PR。
+- 一次调试运行：复现 bug，确定所属的范围，打补丁，并证明修复有效。
+- 一次文档处理：阅读相关文档，编写新页面，建立交叉链接，并验证文档构建。
+- 一项维护任务：检查当前状态，进行有界更改，运行正确的检查，并报告发生了什么变化。
 
 目标不是任务队列。当工作需要脱离主会话运行、
 按计划重复、拆分成受管子工作，或者作为策略持续存在时，请使用 [Task Flow](/automation/taskflow)、
@@ -75,7 +51,7 @@ title: "目标"
 
 ## 命令参考
 
-不带参数的 `/goal` 会打印当前目标摘要：
+`/goal` 不带参数时会打印当前目标摘要：
 
 ```text
 目标
@@ -87,74 +63,69 @@ token 预算：12k/50k
 命令：/goal pause, /goal complete, /goal clear
 ```
 
-命令：
+| 命令                                                | 作用                                                                     |
+| --------------------------------------------------- | ------------------------------------------------------------------------ |
+| `/goal` 或 `/goal status`                          | 显示当前目标。                                                           |
+| `/goal start <objective>`                          | 为当前会话创建一个新目标。                                               |
+| `/goal set <objective>`, `/goal create <objective>` | `start` 的别名。                                                         |
+| `/goal <objective>`                                | 也会创建一个新目标（任何未被识别为动作词的文本）。                        |
+| `/goal pause [note]`                               | 暂停一个活动目标。                                                       |
+| `/goal resume [note]`                              | 恢复一个已暂停、已阻塞、受使用限制或受预算限制的目标。                   |
+| `/goal complete [note]`                            | 将目标标记为已达成。                                                     |
+| `/goal done [note]`                                | `complete` 的别名。                                                      |
+| `/goal block [note]`                               | 将目标标记为已阻塞。                                                     |
+| `/goal blocked [note]`                             | `block` 的别名。                                                         |
+| `/goal clear`                                      | 从会话中移除目标。                                                       |
 
-- `/goal` 或 `/goal status` 显示当前目标。
-- `/goal start <objective>` 为当前会话创建一个新目标。
-- `/goal set <objective>` 和 `/goal create <objective>` 是 `start` 的别名。
-- `/goal pause [note]` 暂停一个活动目标。
-- `/goal resume [note]` 恢复一个已暂停、已阻塞、已受使用量限制或
-  已受预算限制的目标。
-- `/goal complete [note]` 将目标标记为已实现。
-- `/goal done [note]` 是 `complete` 的别名。
-- `/goal block [note]` 将目标标记为已阻塞。
-- `/goal blocked [note]` 是 `block` 的别名。
-- `/goal clear` 将目标从会话中移除。
+在一个会话中同一时间只能存在一个目标。创建第二个目标会失败，
+并显示 `Goal error: goal already exists`，直到当前目标被清除为止。
 
-每个会话一次只能存在一个目标。启动第二个目标会失败，
-直到当前目标被清除为止。
+`/goal start` 不接受 token 预算标志；预算只能通过面向模型的 `create_goal` 工具设置。
 
 ## 状态
 
-目标使用一组较小的状态集：
-
-- `active`：会话正在推进该目标。
-- `paused`：操作者暂停了目标；`/goal resume` 会让它再次变为活动状态。
-- `blocked`：代理或操作者报告了真实阻塞；当有新信息或状态可用时，`/goal resume`
-  会让它再次变为活动状态。
+- `active`：会话正在追求目标。
+- `paused`：操作员暂停了目标；`/goal resume` 会使其再次激活
+  。
+- `blocked`：代理或操作员报告了一个真实的阻塞；当有新的信息或状态可用时，`/goal resume`
+  会使其再次激活。
 - `budget_limited`：已达到配置的 token 预算；`/goal resume`
-  会从同一目标重新开始推进。
-- `usage_limited`：保留用于使用量限制停止状态；在允许时，`/goal resume`
-  会重新开始推进。
-- `complete`：目标已经达成。已完成的目标是终态；开始另一个目标前请先使用
-  `/goal clear`。
+  会使用新的预算窗口，从同一目标重新开始追求。
+- `usage_limited`：保留用于未来的使用限制停止状态；`/goal
+resume` 会以相同方式重新开始追求。
+- `complete`：目标已达成。已完成的目标是终态；在开始另一个目标之前，请使用 `/goal
+clear`。
 
-`/new` 和 `/reset` 会清除当前会话目标，因为它们会有意
-从新的会话上下文开始。
+`/new` 和 `/reset` 会清除当前会话目标，因为它们会刻意
+启动全新的会话上下文。
 
 ## Token 预算
 
-目标可以带一个可选的正整数 token 预算。该预算与目标一起存储，并从
-创建时会话的全新 token 计数开始计算。如果在目标开始时当前会话只有过期或未知的 token
-使用量，OpenClaw 会等待下一次新的会话 token 快照，并以此作为
-基线，因此在目标存在之前花费的 token 不会计入该目标。
+目标可以设置一个可选的正向 token 预算，通过 `create_goal` 工具的 `token_budget` 参数进行设置。该预算从目标创建时会话的最新 token 计数开始计算。如果目标开始时，会话只有过时或未知的 token 快照，OpenClaw 会等待下一次最新快照，并将其作为基线，因此在目标创建之前花费的 token 不会计入该目标。
 
-当 token 使用量达到预算时，目标会变为 `budget_limited`。这
-不会删除目标或抹去目标内容。它会告诉操作者和
-代理，该目标在恢复或清除之前不再被主动推进。
+当用量达到预算时，目标会进入 `budget_limited` 状态。这不会删除目标或抹除其目标；它只是告诉操作者和代理，该目标在恢复或清除之前不再被积极推进。恢复后，会在当前最新 token 计数处开始一个新的预算窗口。
 
-Token 预算是会话目标的保护线，不是计费上限。提供方配额、
-成本报告和上下文窗口行为仍然使用正常的 OpenClaw
-使用量和模型控制。
+Token 预算是会话-目标级别的保护栏，而不是计费上限。提供方配额、成本报告以及上下文窗口行为仍然使用标准的 OpenClaw 用量和模型控制。
 
 ## 模型工具
 
-OpenClaw 向代理宿主暴露三个核心目标工具：
+OpenClaw 向代理运行环境暴露了三个目标工具：
 
-- `get_goal`：读取当前会话目标，包括状态、目标内容、token
-  使用量和 token 预算。
-- `create_goal`：仅当用户、系统或开发者指令明确请求时才创建目标。
-  如果会话已经有目标，则会失败。
-- `update_goal`：将目标标记为 `complete` 或 `blocked`。
+| 工具          | 目的                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `get_goal`    | 读取当前会话目标：状态、目标、token 使用量以及 token 预算。                                         |
+| `create_goal` | 仅当用户或系统指令明确要求时才创建目标。如果会话中已存在目标，则失败。 |
+| `update_goal` | 将目标标记为 `complete` 或 `blocked`。                                                                                   |
 
-模型不能静默暂停、恢复、清除或替换目标。这些是通过 `/goal` 和重置命令进行的操作者/会话控制。这样既能防止代理悄悄移动目标，又保留了清晰路径供代理报告已达成结果或真实阻塞。
+模型不能静默暂停、恢复、清除或替换目标。这些仍然是通过 `/goal` 和重置命令进行的操作员/会话控制，因此代理
+可以报告已完成或真正的阻塞，而不会悄悄改变
+目标。
 
-`update_goal` 工具只有在目标确实已经达成时，才应将目标标记为 `complete`。
-只有当同样的阻塞条件已经重复出现，并且在没有新的用户输入或外部状态变化时代理无法取得有意义进展时，它才应将目标标记为 `blocked`。
+`update_goal` 只有在目标确实达成时，才应将其标记为 `complete`。只有在同一阻塞条件连续至少三次目标轮次中再次出现后，才应将其标记为 `blocked`，而不是因为普通的困难或缺少润色。
 
 ## TUI
 
-TUI 会在页脚中将活动会话的目标显示在代理、会话、模型、运行控制和 token 计数旁边。
+TUI 页脚会在 token/模式指示器之前，将当前会话的目标显示在 agent、session 和 model 字段旁边。
 
 页脚示例：
 
@@ -165,38 +136,31 @@ TUI 会在页脚中将活动会话的目标显示在代理、会话、模型、�
 - `Goal unmet (50k/50k)` 表示受预算限制的目标。
 - `Goal achieved (42k)` 表示已完成的目标。
 
-页脚刻意保持简洁。使用 `/goal` 查看完整的目标、备注、
-token 预算和可用命令。
+页脚刻意保持紧凑。请使用 `/goal` 查看完整目标、
+说明、token 预算以及可用命令。
 
 ## 通道行为
 
-`/goal` 命令适用于支持命令的 OpenClaw 会话，包括
-TUI 和允许文本命令的聊天界面。目标状态附加到
-会话键，而不是传输方式。如果两个界面使用同一个会话，它们会看到
-同一个目标。
+`/goal` 可在支持命令的 OpenClaw 会话中使用，包括允许文本命令的 TUI 和聊天界面。目标状态附加在会话密钥上，而不是传输通道上，因此共享同一会话密钥的两个界面会看到相同的目标。
 
-目标状态不是传递指令。它不会强制回复通过某个通道、
-改变队列行为、批准工具或调度工作。
+目标状态不是投递指令：它不会强制通过某个通道回复，不会改变队列行为，不会批准工具，也不会安排工作。
 
 ## 故障排查
 
-`Goal error: goal already exists` 表示该会话已经有一个目标。使用
-`/goal` 查看它，如果已经完成则使用 `/goal complete`，或者在
-开始不同目标前使用 `/goal clear`。
+| Message                                | Meaning                                                                                                                                      |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Goal error: goal already exists`      | 会话中已经存在一个目标。使用 `/goal` 查看它，如果已完成则使用 `/goal complete`，或者在开始不同目标之前使用 `/goal clear`。 |
+| `Goal error: goal not found`           | 会话中还没有目标。使用 `/goal start <objective>` 开始一个目标。                                                                       |
+| `Goal error: goal is already complete` | 该目标已终止。在开始或恢复另一个目标之前，请先清除它。                                                                |
 
-`Goal error: goal not found` 表示该会话还没有目标。使用
-`/goal start <objective>` 创建一个。
-
-`Goal error: goal is already complete` 表示该目标已进入终态。在开始或恢复另一个目标前先清除它。
-
-如果 token 使用量看起来像 `0` 或已过期，活动会话可能还没有新的
-token 快照。随着 OpenClaw 记录会话使用量和基于对话内容的总计，使用量会刷新。
+如果 token 用量显示为 `0` 或看起来是旧的，则当前活动会话可能还没有
+新的 token 快照。随着 OpenClaw 记录会话使用情况和基于转录的总计，使用量会刷新。
 
 ## 相关内容
 
-- [Slash commands](/tools/slash-commands)
+- [斜杠命令](/tools/slash-commands)
 - [TUI](/web/tui)
-- [Session tool](/concepts/session-tool)
-- [Compaction](/concepts/compaction)
-- [Task Flow](/automation/taskflow)
-- [Standing orders](/automation/standing-orders)
+- [会话工具](/concepts/session-tool)
+- [压缩](/concepts/compaction)
+- [任务流](/automation/taskflow)
+- [常设命令](/automation/standing-orders)

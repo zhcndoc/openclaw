@@ -176,12 +176,26 @@ OpenClaw 可以自动发现支持 **流式输出** 和 **文本输出** 的 Bedr
 
     | Option | Default | Description |
     | ------ | ------- | ----------- |
-    | `enabled` | auto | 在自动模式下，OpenClaw 只有在检测到受支持的 AWS env marker 时才启用隐式 Bedrock provider。设置为 `true` 可强制发现。 |
+    | `enabled` | auto | 在自动模式下，OpenClaw 仅在检测到受支持的 AWS env marker 时启用隐式 Bedrock provider。设置为 `true` 可强制发现。 |
     | `region` | `AWS_REGION` / `AWS_DEFAULT_REGION` / `us-east-1` | 用于发现 API 调用的 AWS 区域。 |
     | `providerFilter` | (all) | 匹配 Bedrock provider 名称（例如 `anthropic`、`amazon`）。 |
-    | `refreshInterval` | `3600` | 缓存持续时间（秒）。设为 `0` 可禁用缓存。 |
-    | `defaultContextWindow` | `32000` | 用于已发现模型的上下文窗口（如果你知道模型限制，可覆盖）。 |
-    | `defaultMaxTokens` | `4096` | 用于已发现模型的最大输出 tokens（如果你知道模型限制，可覆盖）。 |
+    | `refreshInterval` | `3600` | 缓存时长，单位为秒。设置为 `0` 可禁用缓存。 |
+    | `defaultContextWindow` | `32000` | 用于未知 token 限制的已发现模型的上下文窗口（如果你知道模型限制，可覆盖此值）。 |
+    | `defaultMaxTokens` | `4096` | 用于未知 token 限制的已发现模型的最大输出 token 数（如果你知道模型限制，可覆盖此值）。 |
+
+  </Accordion>
+
+  <Accordion title="Context window and max-token limits">
+    Bedrock 的 `ListFoundationModels` 和 `GetFoundationModel` API 不返回
+    token 限制元数据，只返回模型 ID、名称、模态和生命周期
+    状态。OpenClaw 为常见 Bedrock 模型（Claude、Nova、Llama、Mistral、DeepSeek
+    等）提供了已知上下文窗口和输出
+    限制的查找表，因此这些模型的会话管理、压缩阈值以及
+    上下文溢出检测都能正常工作。
+
+    未在表中的已发现模型会回退到 `defaultContextWindow`
+    和 `defaultMaxTokens`。如果你使用的模型缺少准确限制，请通过显式的
+    `models.providers["amazon-bedrock"].models` 条目进行覆盖。
 
   </Accordion>
 </AccordionGroup>
@@ -232,7 +246,7 @@ openclaw models list
 
 <AccordionGroup>
   <Accordion title="Inference profiles">
-    OpenClaw 会与基础模型一起发现 **区域和全局推理配置文件**。当某个配置文件映射到已知的基础模型时，该配置文件会继承该模型的能力（上下文窗口、最大 tokens、推理、视觉），并且会自动注入正确的 Bedrock 请求区域。这意味着跨区域 Claude 配置文件无需手动覆盖 provider 即可工作。
+    OpenClaw 会在基础模型之外一并发现 **区域和全局推理配置文件**。当配置文件映射到已知的基础模型时，该配置文件会继承该模型的能力（上下文窗口、最大 token 数、推理、视觉），并且会自动注入正确的 Bedrock 请求区域。这意味着跨区域 Claude 配置文件无需手动覆盖 provider 即可工作。全局跨区域配置文件（`global.*`）会在 `openclaw models list` 中优先显示，因为它们通常提供更好的容量和自动故障转移。
 
     推理配置文件 ID 形式如 `us.anthropic.claude-opus-4-6-v1:0`（区域）或 `anthropic.claude-opus-4-6-v1:0`（全局）。如果底层模型已经出现在发现结果中，配置文件会继承其完整能力集；否则将应用安全默认值。
 
@@ -274,28 +288,21 @@ openclaw models list
     }
     ```
 
-    有效值为 `default`、`flex`、`priority` 和 `reserved`。并非所有
-    模型都支持所有层级——如果请求了不受支持的层级，Bedrock 将
-    返回校验错误。注意：错误信息可能有些误导；
-    它可能会显示“所提供的模型标识符无效”，而不是指出
-    不支持的服务层级。如果看到此错误，请检查模型是否
-    支持所请求的层级。
+    有效值为 `default`、`flex`、`priority` 和 `reserved`。Claude
+    Fable 5 仅支持 `default` 层级；对于该模型请求 `flex`、`priority` 或 `reserved` 时，OpenClaw 会发出警告并忽略。对于其他模型，并非每个模型都支持每个层级——不受支持的层级会返回 Bedrock 验证错误，而且错误消息可能具有误导性（例如显示“所提供的模型标识符无效”，而不是指出问题出在层级上）。如果你看到此错误，请检查该模型是否支持所请求的层级。
 
   </Accordion>
 
-  <Accordion title="Claude Opus 4.7 temperature">
-    Bedrock 会拒绝 Claude Opus 4.7 的 `temperature` 参数。OpenClaw 会自动省略任何 Opus 4.7 Bedrock 引用的 `temperature`，包括基础模型 id、命名推理配置文件、其底层模型通过 `bedrock:GetInferenceProfile` 解析为 Opus 4.7 的应用推理配置文件，以及带可选区域前缀（`us.`、`eu.`、`ap.`、`apac.`、`au.`、`jp.`、`global.`）的带点形式 `opus-4.7` 变体。无需配置开关，该省略同时适用于请求 options 对象和 `inferenceConfig` 负载字段。
+  <Accordion title="Claude Opus 4.7 and 4.8 temperature">
+    Bedrock 会拒绝 Claude Opus 4.7 和 Opus
+    4.8 的 `temperature` 参数。OpenClaw 会针对任何匹配的 Bedrock 引用自动省略 `temperature`，包括基础模型 ID、命名推理配置文件、其底层模型通过 `bedrock:GetInferenceProfile` 解析为 Opus 4.7/4.8 的应用推理配置文件，以及带点号的 `opus-4.7`/`opus-4.8` 变体（可选区域前缀：`us.`、`eu.`、`ap.`、`apac.`、`au.`、`jp.`、`global.`）。无需任何配置开关，该省略会同时应用于请求 options 对象和 `inferenceConfig` 负载字段。
   </Accordion>
 
   <Accordion title="Claude Fable 5">
-    在 `us-east-1` 中使用 `amazon-bedrock/anthropic.claude-fable-5`，或使用
-    区域推理 id，例如 `us.anthropic.claude-fable-5`。
-    OpenClaw 会应用 Fable 的 100 万上下文窗口、128K 输出上限、始终开启的
-    自适应思考，以及受支持的 effort 映射。`/think off` 和
-    `/think minimal` 映射为 `low`；不支持的 temperature 和强制工具选择控制会被省略。
-    流式输出会在 Bedrock 返回终态之前保持，避免中途拒绝时暴露部分文本。
-    Fable 仅支持标准 service tier；OpenClaw 会忽略为此模型配置的
-    `flex`、`priority` 和 `reserved` 层级。
+    在 `us-east-1` 中使用 `amazon-bedrock/anthropic.claude-fable-5`，或者使用
+    如 `us.anthropic.claude-fable-5` 这样的区域推理 ID。
+    OpenClaw 会应用 Fable 的 1M 上下文窗口、128K 输出上限、始终开启的自适应思考，以及受支持的 effort 映射。`/think off` 和
+    `/think minimal` 映射为 `low`；temperature 和强制工具选择控制会被省略，这与 Opus 4.7/4.8 路由一致。流式输出会一直保持，直到 Bedrock 返回终止状态，因此中途拒绝不会暴露部分文本。
 
     AWS 要求在 Fable 可用之前显式选择加入 `provider_data_share` 数据保留。
     提示和补全内容会与 Anthropic 共享，并最多保留 30 天用于信任与安全。
@@ -329,12 +336,14 @@ openclaw models list
     }
     ```
 
-    | Option | Required | Description |
-    | ------ | -------- | ----------- |
-    | `guardrailIdentifier` | Yes | Guardrail ID（例如 `abc123`）或完整 ARN（例如 `arn:aws:bedrock:us-east-1:123456789012:guardrail/abc123`）。 |
-    | `guardrailVersion` | Yes | 已发布版本号，或工作草稿使用 `"DRAFT"`。 |
-    | `streamProcessingMode` | No | 流式处理期间用于 guardrail 评估的 `"sync"` 或 `"async"`。如果省略，Bedrock 将使用默认值。 |
-    | `trace` | No | 用于调试的 `"enabled"` 或 `"enabled_full"`；生产环境中可省略或设为 `"disabled"`。 |
+    `guardrailIdentifier` 和 `guardrailVersion` 是必需的。
+
+    | Option | Description |
+    | ------ | ----------- |
+    | `guardrailIdentifier` | Guardrail ID（例如 `abc123`）或完整 ARN（例如 `arn:aws:bedrock:us-east-1:123456789012:guardrail/abc123`）。 |
+    | `guardrailVersion` | 已发布的版本号，或用于工作草稿的 `"DRAFT"`。 |
+    | `streamProcessingMode` | 流式传输期间用于 guardrail 评估的 `"sync"` 或 `"async"`。如果省略，Bedrock 将使用其默认值。 |
+    | `trace` | 用于调试的 `"enabled"` 或 `"enabled_full"`；生产环境中省略或设为 `"disabled"`。 |
 
     <Warning>
     网关使用的 IAM 主体除了标准调用权限外，还必须具有 `bedrock:ApplyGuardrail` 权限。
@@ -358,7 +367,8 @@ openclaw models list
     }
     ```
 
-    Bedrock embeddings 使用与 inference 相同的 AWS SDK 凭证链（实例角色、SSO、访问密钥、共享配置和 web identity）。无需 API 密钥。显式设置 `memorySearch.provider: "bedrock"` 以使用 Bedrock embeddings。
+    Bedrock embeddings 使用与 inference 相同的 AWS SDK 凭证链（实例
+    角色、SSO、访问密钥、共享配置和 web identity）。不需要 API 密钥。
 
     支持的 embedding 模型包括 Amazon Titan Embed（v1、v2）、Amazon Nova Embed、Cohere Embed（v3、v4）以及 TwelveLabs Marengo。有关完整的模型列表和维度选项，请参见
     [Memory configuration reference -- Bedrock](/reference/memory-config#bedrock-embedding-config)。

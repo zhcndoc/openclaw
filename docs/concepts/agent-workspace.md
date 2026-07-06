@@ -7,7 +7,8 @@ title: "代理工作区"
 sidebarTitle: "代理工作区"
 ---
 
-工作区是代理的主目录。它是用于文件工具和工作区上下文的唯一工作目录。请保持私密，并将其视为记忆。
+工作区是代理的主目录：文件工具使用的工作目录
+以及工作区上下文。请保持其私密，并将其视为内存。
 
 这与 `~/.openclaw/` 不同，后者存储配置、凭据和会话。
 
@@ -19,9 +20,12 @@ sidebarTitle: "代理工作区"
 
 ## 默认位置
 
-- 默认：`~/.openclaw/workspace`
-- 如果设置了 `OPENCLAW_PROFILE` 且不是 `"default"`，默认值会变为 `~/.openclaw/workspace-<profile>`。
-- 在 `~/.openclaw/openclaw.json` 中覆盖：
+- 默认值：`~/.openclaw/workspace`
+- 如果设置了 `OPENCLAW_PROFILE` 且不为 `"default"`，默认值会变为 `~/.openclaw/workspace-<profile>`。
+- 设置 `OPENCLAW_WORKSPACE_DIR` 时，会覆盖以上两者。
+- 未显式指定工作区的非默认代理（`agents.list[]`）会解析为 `<state-dir>/workspace-<agentId>`，而不是共享的默认工作区。
+
+在 `~/.openclaw/openclaw.json` 中覆盖：
 
 ```json5
 {
@@ -33,13 +37,15 @@ sidebarTitle: "代理工作区"
 }
 ```
 
-`openclaw onboard`、`openclaw configure` 或 `openclaw setup` 会创建工作区，并在缺少引导文件时填充它们。
+按代理覆盖：`agents.list[].workspace`。
+
+`openclaw onboard`、`openclaw configure` 或 `openclaw setup` 会创建工作区，并在启动文件缺失时为其填充引导文件。
 
 <Note>
 沙箱种子复制只接受工作区内的普通文件；任何解析到源工作区外部的符号链接/硬链接别名都会被忽略。
 </Note>
 
-如果你已经自行管理工作区文件，可以禁用引导文件创建：
+如果你已经自行管理工作区文件，请禁用引导文件创建：
 
 ```json5
 { agents: { defaults: { skipBootstrap: true } } }
@@ -47,24 +53,22 @@ sidebarTitle: "代理工作区"
 
 ## 额外的工作区文件夹
 
-较旧的安装可能创建过 `~/openclaw`。保留多个工作区目录可能会导致令人困惑的认证或状态漂移，因为一次只有一个工作区处于活动状态。
+较旧的安装可能会创建 `~/openclaw`。保留多个工作区目录可能会导致令人困惑的认证问题或状态漂移，因为一次只有一个工作区处于活动状态。
 
 <Note>
-**建议：** 只保留一个活动工作区。如果你不再使用额外的文件夹，请将它们归档或移到废纸篓（例如 `trash ~/openclaw`）。如果你有意保留多个工作区，请确保 `agents.defaults.workspace` 指向当前活动的那个。
-
-`openclaw doctor` 在检测到额外工作区目录时会发出警告。
+**建议：** 只保留一个活动的工作区。如果你不再使用额外的文件夹，请将它们归档或移到废纸篓（例如 `trash ~/openclaw`）。如果你有意保留多个工作区，请确保 `agents.defaults.workspace`（或每个 agent 的 `workspace` 键）指向当前活动的那个。
 </Note>
 
 ## 工作区文件映射
 
-以下是 OpenClaw 期望工作区内存在的标准文件：
+OpenClaw 预期工作区内包含的标准文件：
 
 <AccordionGroup>
   <Accordion title="AGENTS.md - 操作说明">
     代理的操作说明以及它应如何使用记忆。在每个会话开始时加载。适合作为规则、优先级以及“应如何表现”等细节的存放处。
   </Accordion>
   <Accordion title="SOUL.md - 人设与语气">
-    人设、语气和边界。每次会话都会加载。指南：[SOUL.md personality guide](/concepts/soul)。
+    人设、语气和边界。每次会话都会加载。指南：[SOUL.md 人设指南](/concepts/soul)。
   </Accordion>
   <Accordion title="USER.md - 用户是谁">
     用户是谁，以及应该如何称呼他们。每次会话都会加载。
@@ -90,8 +94,8 @@ sidebarTitle: "代理工作区"
   <Accordion title="MEMORY.md - 精选长期记忆（可选）">
     精选长期记忆：持久的事实、偏好、决定以及简短摘要。将详细日志保留在 `memory/YYYY-MM-DD.md` 中，这样记忆工具就能按需检索它们，而无需将其注入到每个提示中。仅在主的私密会话中加载 `MEMORY.md`（不要在共享/群组上下文中加载）。有关工作流程和自动记忆刷新，请参阅 [Memory](/concepts/memory)。
   </Accordion>
-  <Accordion title="skills/ - 工作区技能（可选）">
-    工作区特定的技能。该工作区中优先级最高的技能位置。当名称冲突时，会覆盖项目代理技能、个人代理技能、托管技能、捆绑技能以及 `skills.load.extraDirs`。
+  <Accordion title="skills/ - workspace skills (optional)">
+    工作区特定技能。该工作区中优先级最高的技能位置，优先于项目代理技能、个人代理技能、托管技能、捆绑技能，以及名称冲突时的 `skills.load.extraDirs`。
   </Accordion>
   <Accordion title="canvas/ - Canvas UI 文件（可选）">
     用于节点显示的 Canvas UI 文件（例如 `canvas/index.html`）。
@@ -99,7 +103,7 @@ sidebarTitle: "代理工作区"
 </AccordionGroup>
 
 <Note>
-If any bootstrap file is missing, OpenClaw injects a "missing file" marker into the session and continues. Large bootstrap files are truncated when injected; adjust limits with `agents.defaults.bootstrapMaxChars` (default: 20000) and `agents.defaults.bootstrapTotalMaxChars` (default: 60000). `openclaw setup` can recreate missing defaults without overwriting existing files.
+如果缺少引导文件，OpenClaw 会向会话注入“缺失文件”标记并继续。较大的引导文件在注入时会被截断；可通过 `agents.defaults.bootstrapMaxChars`（默认：`20000`）和 `agents.defaults.bootstrapTotalMaxChars`（默认：`60000`）调整限制。`openclaw setup` 可以在不覆盖现有文件的情况下重新创建缺失的默认文件。
 </Note>
 
 ## 不属于工作区的内容
@@ -113,7 +117,7 @@ If any bootstrap file is missing, OpenClaw injects a "missing file" marker into 
 - `~/.openclaw/agents/<agentId>/sessions/`（会话记录 + 元数据）
 - `~/.openclaw/skills/`（托管技能）
 
-如果你需要迁移会话或配置，请单独复制它们，并使其脱离版本控制。
+如果你需要迁移会话或配置，请单独复制它们，并使它们脱离版本控制。
 
 ## Git 备份（推荐，私有）
 
@@ -129,7 +133,7 @@ If any bootstrap file is missing, OpenClaw injects a "missing file" marker into 
     cd ~/.openclaw/workspace
     git init
     git add AGENTS.md SOUL.md TOOLS.md IDENTITY.md USER.md HEARTBEAT.md memory/
-    git commit -m "Add agent workspace"
+    git commit -m "添加代理工作区"
     ```
 
   </Step>
@@ -172,7 +176,7 @@ If any bootstrap file is missing, OpenClaw injects a "missing file" marker into 
     ```bash
     git status
     git add .
-    git commit -m "Update memory"
+    git commit -m "更新记忆"
     git push
     ```
   </Step>
@@ -219,8 +223,8 @@ If any bootstrap file is missing, OpenClaw injects a "missing file" marker into 
 
 ## 高级说明
 
-- 多代理路由可以为不同代理使用不同的工作区。有关路由配置，请参见[Channel routing](/channels/channel-routing)。
-- 如果启用了 `agents.defaults.sandbox`，非主会话可以使用 `agents.defaults.sandbox.workspaceRoot` 下的每会话沙箱工作区。
+- 多智能体路由可以通过 `agents.list[].workspace` 为每个智能体使用不同的工作区。有关路由配置，请参见 [Channel routing](/channels/channel-routing)。
+- 如果启用了 `agents.defaults.sandbox`，非主会话可以在 `agents.defaults.sandbox.workspaceRoot` 下使用按会话划分的沙箱工作区。
 
 ## 相关内容
 

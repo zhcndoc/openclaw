@@ -54,12 +54,12 @@ read_when:
 ## 加载（`skills.load`）
 
 <ParamField path="skills.load.extraDirs" type="string[]">
-  额外要扫描的 skill 目录，优先级最低（在捆绑和插件 skill 之后）。路径支持 `~` 展开。
+  要扫描的额外 skill 目录，优先级最低（低于内置和插件 skill）。路径会展开，并支持 `~`。
 </ParamField>
 
 <ParamField path="skills.load.allowSymlinkTargets" type="string[]">
-  受信任的真实目标目录，符号链接的 skill 文件夹即使位于配置根目录之外，也可以解析到这些目录中。可用于有意的兄弟仓库布局，例如
-  `<workspace>/skills/manager -> ~/Projects/manager/skills`。请保持此列表范围很小——不要指向像 `~` 或 `~/Projects` 这样宽泛的根目录。
+  受信任的真实目标目录，符号链接的 skill 文件夹可以解析到这些目录中，即使符号链接位于配置的根目录之外。用于有意采用的兄弟仓库布局，例如
+  `<workspace>/skills/manager -> ~/Projects/manager/skills`。请将此列表保持得尽量精简——不要指向像 `~` 或 `~/Projects` 这样过于宽泛的根目录。
 </ParamField>
 
 <ParamField path="skills.load.watch" type="boolean" default="true">
@@ -77,7 +77,7 @@ read_when:
 </ParamField>
 
 <ParamField path="skills.install.nodeManager" type='"npm" | "pnpm" | "yarn" | "bun"' default='"npm"'>
-  skill 安装时偏好的 Node 包管理器。此项只影响 skill 安装——Gateway 运行时仍应使用 Node（不建议在 WhatsApp/Telegram 中使用 Bun）。使用 `openclaw setup --node-manager` 可设置 npm、pnpm 或 bun；为基于 Yarn 的 skill 安装请手动设置 `"yarn"`。
+  技能安装的 Node 包管理器偏好设置。此项仅影响技能安装——Gateway 运行时仍应使用 Node（不建议在 WhatsApp/Telegram 中使用 Bun）。`openclaw setup --node-manager` 和 `openclaw onboard --node-manager` 接受 `npm`、`pnpm` 或 `bun`；若要使用基于 Yarn 的技能安装，请在配置中直接设置 `"yarn"`。
 </ParamField>
 
 <ParamField path="skills.install.allowUploadedArchives" type="boolean" default="false">
@@ -86,7 +86,7 @@ read_when:
 
 ## 操作员安装策略（`security.installPolicy`）
 
-当操作员需要一个受信任的本地命令来根据主机特定策略批准或阻止 skill 和插件安装时，请使用 `security.installPolicy`。该策略会在 OpenClaw 暂存源材料之后、安装或更新继续之前运行。它适用于 ClawHub skills、上传的 skills、Git/本地 skills、skill 依赖安装器，以及插件安装/更新源。
+当操作员需要一个受信任的本地命令，依据主机特定策略来批准或阻止技能和插件安装时，请使用 `security.installPolicy`。该策略在 OpenClaw 完成源材料暂存之后、安装或更新继续之前运行。它适用于 ClawHub 技能、上传的技能、Git/本地技能、技能依赖安装器，以及插件安装/更新源。
 
 ```json5
 {
@@ -116,7 +116,7 @@ read_when:
 </ParamField>
 
 <ParamField path="security.installPolicy.targets" type='("skill" | "plugin")[]'>
-  可选的目标过滤器。省略时，策略会应用于每个受支持的目标，因此新的安装不会意外地失败并开放。
+  可选的目标过滤器。省略时，策略将应用于每个受支持的目标，因此新的安装不会意外地“失败开放”。
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.command" type="string">
@@ -132,7 +132,7 @@ read_when:
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.noOutputTimeoutMs" type="number" default="timeoutMs">
-  策略在没有 stdout 或 stderr 输出时，触发失败并关闭之前的最大时间。
+  在没有 stdout 或 stderr 输出的情况下，策略失败并关闭之前的最长时间。
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.maxOutputBytes" type="number" default="1048576">
@@ -144,7 +144,7 @@ read_when:
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.passEnv" type="string[]">
-  从 OpenClaw 进程复制到策略进程的环境变量名。只会传递命名变量。
+  从 OpenClaw 进程复制到策略进程的环境变量名称。仅传递命名的变量。
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.trustedDirs" type="string[]">
@@ -152,18 +152,19 @@ read_when:
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.allowInsecurePath" type="boolean" default="false">
-  绕过命令路径所有权和权限检查。仅在该路径由其他机制保护时使用。
+  绕过命令路径的所有权和权限检查。仅在该路径由其他机制保护时使用。
 </ParamField>
 
 <ParamField path="security.installPolicy.exec.allowSymlinkCommand" type="boolean" default="false">
-  允许配置的命令路径是符号链接。解析后的目标仍必须满足其他路径检查。解释器脚本参数必须是直接的普通文件，不能是符号链接。
+  允许配置的命令路径为符号链接。解析后的目标仍必须满足其他路径检查。解释器脚本参数必须是直接的普通文件，而不是符号链接。
 </ParamField>
 
-该策略在 stdin 上接收一个 JSON 对象，包含 `protocolVersion: 1`、`openclawVersion`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、可选的结构化 `source`、结构化 `origin` 和 `request`。它必须在 stdout 上写入一个 JSON 对象：`{ "protocolVersion": 1, "decision": "allow" }` 或 `{ "protocolVersion": 1, "decision": "block", "reason": "..." }`。非零退出、超时、JSON 格式错误、缺失字段或不支持的协议版本都会失败并关闭。
+策略会在 stdin 上接收一个 JSON 对象，其中包含 `protocolVersion: 1`、`openclawVersion`、`targetType`、`targetName`、`sourcePath`、`sourcePathKind`、可选的结构化 `source`、结构化 `origin` 和 `request`。它必须在 stdout 上写入一个 JSON 对象：`{ "protocolVersion": 1, "decision": "allow" }` 或 `{ "protocolVersion": 1, "decision": "block", "reason": "..." }`。非零退出、超时、JSON 格式错误、缺失字段或不支持的协议版本都会导致失败并关闭。
 
-OpenClaw 在正常 Gateway 启动期间不会执行安装策略。当策略已启用但不可用时，安装和更新会失败并关闭。`openclaw doctor` 执行静态验证，而 `openclaw doctor --deep` 会针对已配置的命令执行一个合成安装探针。
+OpenClaw 在正常 Gateway 启动期间不会执行安装策略。当启用策略但策略不可用时，安装和更新会失败并关闭。
+`openclaw doctor` 会执行静态验证；`openclaw doctor --deep` 会针对配置的命令执行一个合成安装探测。
 
-批量更新会按目标分别应用策略：被阻止的 skill 或插件更新只会让该目标失败，不会禁用策略，也不会跳过批次中的后续目标。
+批量更新会按目标分别应用策略：被阻止的技能或插件更新只会使该目标失败，而不会禁用策略，也不会在批处理中跳过后续目标。
 
 输入示例：
 
@@ -227,7 +228,9 @@ process.stdin.on("end", () => {
 ## 捆绑 skill 白名单
 
 <ParamField path="skills.allowBundled" type="string[]">
-  仅适用于 **bundled** skills 的可选白名单。设置后，只有列表中的 bundled skills 才有资格。托管的、按 agent 的和 workspace skills 不受影响。
+  仅适用于 **bundled** skills 的可选允许列表。设置后，只有列表中的 bundled
+  skills 才具备资格。Managed、agent-level 和 workspace
+  skills 不受影响。
 </ParamField>
 
 ## 按 skill 的条目（`skills.entries`）
@@ -235,7 +238,7 @@ process.stdin.on("end", () => {
 `entries` 下的键默认与 skill 的 `name` 匹配。如果某个 skill 定义了 `metadata.openclaw.skillKey`，则改用该键。带连字符的名称需要加引号（JSON5 允许带引号的键）。
 
 <ParamField path="skills.entries.<key>.enabled" type="boolean">
-  `false` 会禁用该 skill，即使它是 bundled 或已安装。`coding-agent` bundled skill 默认不启用——将其设为 `true`，并确保已安装并完成认证的 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一可用。
+  `false` 会在 skill 即使已捆绑或已安装时也将其禁用。`coding-agent` 捆绑的 skill 默认不启用——将其设为 `true`，并确保已安装且已认证 `claude`、`codex`、`opencode` 或其他受支持的 CLI 之一。
 </ParamField>
 
 <ParamField path="skills.entries.<key>.apiKey" type='string | { source, provider, id }'>
@@ -270,16 +273,20 @@ process.stdin.on("end", () => {
 ```
 
 <ParamField path="agents.defaults.skills" type="string[]">
-  被 agent 继承的共享基线允许列表；适用于省略 `agents.list[].skills` 的 agent。
-  若完全省略，则默认不限制技能。
+  被 agent 继承的共享基线允许列表，当它们省略
+  `agents.list[].skills` 时适用。若完全省略，则默认情况下让技能不受限制。
 </ParamField>
 
 <ParamField path="agents.list[].skills" type="string[]">
-  该 agent 的显式最终技能集。显式列表会**替换**继承的默认值，而不是合并。
-  设为 `[]` 可让该 agent 不暴露任何技能。
+  该 agent 的显式最终技能集合。显式列表会**替换**
+  继承的默认值——它们不会合并。设置为 `[]` 可让该 agent 暴露零技能。
 </ParamField>
 
-## 工作室（`skills.workshop`）
+<Warning>
+  Agent 技能允许列表是 OpenClaw 技能发现、提示词、斜杠命令发现、沙箱同步和技能快照的可见性与加载过滤器。它们不是 shell 运行时的授权边界。如果某个 agent 可以运行主机 `exec`，那么该 shell 仍然可以运行外部客户端，或读取执行用户可见的主机文件，包括诸如 `~/.openclaw/skills/config/mcporter.json` 之类的 MCP 客户端注册表。对于按 agent 隔离 MCP，请将技能允许列表与沙箱/OS 用户隔离结合使用，禁止或严格允许主机 `exec`，并优先在 MCP 服务器端为每个 agent 使用凭据。
+</Warning>
+
+## 工作坊 (`skills.workshop`)
 
 <ParamField path="skills.workshop.autonomous.enabled" type="boolean" default="false">
   当为 `true` 时，agent 在成功轮次后可根据持久化对话信号创建待处理提案。
@@ -287,22 +294,25 @@ process.stdin.on("end", () => {
 </ParamField>
 
 <ParamField path="skills.workshop.approvalPolicy" type='"pending" | "auto"' default='"pending"'>
-  `pending` 需要操作员批准后，agent 才能发起 apply、reject 或 quarantine。
-  `auto` 则允许这些操作无需批准。
+  `pending` 需要在 agent 发起 apply、reject
+  或 quarantine 之前获得操作员批准。`auto` 允许这些操作无需批准即可执行。
 </ParamField>
 
 <ParamField path="skills.workshop.allowSymlinkTargetWrites" type="boolean" default="false">
-  允许 Skill Workshop apply 通过工作区 skill 符号链接进行写入，只要其真实目标已被 `skills.load.allowSymlinkTargets` 信任。除非生成的提案应用需要修改该共享 skill 根目录，否则请保持此项禁用。
+  允许 Skill Workshop apply 通过工作区技能符号链接写入，其真实目标已被 `skills.load.allowSymlinkTargets` 视为受信任。
+  除非生成的提案 apply 应该修改该共享技能根目录，否则请保持禁用。
 </ParamField>
 
 <ParamField path="skills.workshop.maxPending" type="number" default="50">
-  每个工作区保留的待处理和已隔离提案上限。
+  每个工作区保留的待处理和已隔离提案的最大数量（允许范围：1-200）。
 </ParamField>
 
 <ParamField path="skills.workshop.maxSkillBytes" type="number" default="40000">
-  提案正文大小的最大字节数。由于提案描述会出现在发现和列表输出中，
-  因此其硬上限为 160 字节。
+  提案正文的最大字节数（允许范围：1024-200000）。提案描述单独硬性限制为 160 字节，因为它们会出现在发现和列表输出中。
 </ParamField>
+
+有关该配置控制的提案生命周期、CLI
+命令、agent 工具参数以及 Gateway 方法，请参见 [技能工作坊](/tools/skill-workshop)。
 
 ## 符号链接的技能根目录
 
@@ -324,11 +334,10 @@ process.stdin.on("end", () => {
 ```
 
 使用此配置后，`<workspace>/skills/manager -> ~/Projects/manager/skills`
-在 realpath 解析后会被接受。`extraDirs` 会直接扫描同级仓库；
-`allowSymlinkTargets` 则为现有布局保留符号链接路径。
+在 realpath 解析后会被接受。`extraDirs` 会直接扫描兄弟仓库；
+`allowSymlinkTargets` 会为现有布局保留符号链接路径。
 
-Skill Workshop apply 默认不会通过这些符号链接写入。若要让
-Workshop apply 修改已受信任的符号链接目标下的 skills，请单独启用：
+默认情况下，Skill Workshop apply 不会通过这些符号链接写入。若要让 Workshop apply 修改已受信任的符号链接目标下的技能，请单独启用：
 
 ```json5
 {
@@ -343,14 +352,16 @@ Workshop apply 修改已受信任的符号链接目标下的 skills，请单独�
 }
 ```
 
-受管的 `~/.openclaw/skills` 和个人 `~/.agents/skills` 目录
-已经接受 skill 目录的符号链接（但仍会应用按 skill 的 `SKILL.md` 约束）。
+受管理的 `~/.openclaw/skills` 和个人 `~/.agents/skills` 目录
+已经无条件接受技能目录符号链接（但每个技能的 `SKILL.md` 内容边界仍然适用）——
+`allowSymlinkTargets` 仅在 workspace、extra-dir 和 project-agent
+(`<workspace>/.agents/skills`) 根目录中需要。
 
 ## 沙箱化技能与环境变量
 
 <Warning>
-  `skills.entries.<skill>.env` 和 `apiKey` 仅适用于**主机**运行。在沙箱内它们无效——
-  依赖 `GEMINI_API_KEY` 的技能会因为 `apiKey 未配置` 而失败，除非沙箱单独提供了该变量。
+  `skills.entries.<skill>.env` 和 `apiKey` 仅适用于 **宿主机** 运行。
+  在沙箱中，它们不起作用——依赖 `GEMINI_API_KEY` 的技能会失败，并提示 `apiKey not configured`，除非为沙箱单独提供该变量。
 </Warning>
 
 将密钥传入 Docker 沙箱：
@@ -385,21 +396,21 @@ bundled skills
 skills.load.extraDirs (最低)
 ```
 
-当启用 watcher 时，对技能和配置的更改会在下一次新会话时生效；当 watcher 检测到更改时，则会在下一次 agent 轮次生效。
+对技能和配置的更改会在下一个新会话中生效（当 watcher 启用时），或者在 watcher 检测到更改后的下一个 agent 回合中生效。
 
 ## 相关内容
 
 <CardGroup cols={2}>
-  <Card title="Skills reference" href="/tools/skills" icon="puzzle-piece">
+  <Card title="技能参考" href="/tools/skills" icon="puzzle-piece">
     技能是什么、加载顺序、门控以及 `SKILL.md` 格式。
   </Card>
-  <Card title="Creating skills" href="/tools/creating-skills" icon="hammer">
+  <Card title="创建技能" href="/tools/creating-skills" icon="hammer">
     编写自定义工作区技能。
   </Card>
-  <Card title="Skill Workshop" href="/tools/skill-workshop" icon="flask">
+  <Card title="技能工作坊" href="/tools/skill-workshop" icon="flask">
     agent 草拟技能的提案队列。
   </Card>
-  <Card title="Slash commands" href="/tools/slash-commands" icon="terminal">
+  <Card title="斜杠命令" href="/tools/slash-commands" icon="terminal">
     原生斜杠命令目录和聊天指令。
   </Card>
 </CardGroup>

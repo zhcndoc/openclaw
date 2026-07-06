@@ -7,7 +7,7 @@ read_when:
 title: "Hostinger"
 ---
 
-通过 **一键** 托管部署或 **VPS** 安装，在 [Hostinger](https://www.hostinger.com/openclaw) 上运行一个持久的 OpenClaw Gateway。
+在 [Hostinger](https://www.hostinger.com/openclaw) 上运行一个持久的 OpenClaw Gateway，可作为由我们管理的 **一键** 部署，或者作为由您自行管理的 **VPS** 安装。
 
 ## 前提条件
 
@@ -16,7 +16,7 @@ title: "Hostinger"
 
 ## 选项 A：一键 OpenClaw
 
-最快的入门方式。Hostinger 会处理基础设施、Docker 和自动更新。
+Hostinger 负责基础设施、Docker 和自动更新。最快即可运行实例。
 
 <Steps>
   <Step title="购买并启动">
@@ -44,7 +44,7 @@ title: "Hostinger"
 
 ## 选项 B：在 VPS 上安装 OpenClaw
 
-对你的服务器拥有更多控制权。Hostinger 会通过 Docker 在你的 VPS 上部署 OpenClaw，你可以通过 hPanel 中的 **Docker Manager** 对其进行管理。
+对服务器有更多控制权。Hostinger 会通过 Docker 在你的 VPS 上部署 OpenClaw；你可以通过 hPanel 中的 **Docker Manager** 对其进行管理。
 
 <Steps>
   <Step title="购买 VPS">
@@ -72,19 +72,19 @@ title: "Hostinger"
 
 </Steps>
 
-日志、重启和更新都可直接通过 hPanel 中的 Docker Manager 界面进行管理。要更新，请在 Docker Manager 中按下 **Update**，这将拉取最新镜像。
+日志、重启和更新都通过 hPanel 中的 Docker Manager 界面运行。要更新，请在 Docker Manager 中点击 **Update** 以拉取最新镜像。
 
 ## 验证你的设置
 
-向你连接的通道上的助手发送“Hi”。OpenClaw 会回复并引导你完成初始偏好设置。
+在你连接的频道上向你的助手发送“Hi”。OpenClaw 会回复你，并引导你完成初始偏好设置。
 
 ## 故障排除
 
-**Dashboard not loading** -- 等待几分钟让容器完成配置。在 hPanel 中检查 Docker Manager 日志。
+**仪表盘未加载** -- 等待几分钟，让容器完成初始化，然后在 hPanel 中检查 Docker Manager 日志。
 
-**Docker container keeps restarting** -- 打开 Docker Manager 日志并查找配置错误（缺少令牌、无效的 API 密钥）。
+**Docker 容器不断重启** -- 打开 Docker Manager 日志并查找配置错误（缺少令牌、无效的 API 密钥）。
 
-**Telegram bot not responding** -- 直接从 Telegram 向你的 OpenClaw 聊天中发送配对代码消息，以完成连接。
+**Telegram 机器人没有响应** -- 如果需要 DM 配对，未知发送者会收到一段简短的配对码，而不是回复。请在 OpenClaw 仪表盘聊天中批准它，或者如果你可以访问容器的 shell，则使用 `openclaw pairing approve telegram <CODE>`。参见 [配对](/channels/pairing)。
 
 ## 后续步骤
 
@@ -93,6 +93,6 @@ title: "Hostinger"
 
 ## 相关内容
 
-- [Install overview](/install)
-- [VPS hosting](/vps)
+- [安装概述](/install)
+- [VPS 托管](/vps)
 - [DigitalOcean](/install/digitalocean)

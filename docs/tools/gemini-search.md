@@ -70,16 +70,14 @@ OpenClaw 支持内置
 Gemini 使用 Google Search grounding 生成带有行内引用的 AI 综合答案。结果同时包含综合后的答案和来源
 URL。
 
-- 来自 Gemini grounding 的引用 URL 会自动从 Google
-  重定向 URL 解析为直接 URL。
-- 在返回最终引用 URL 之前，重定向解析会使用 SSRF 防护路径（HEAD + 重定向检查 +
-  http/https 验证）。
-- 重定向解析使用严格的 SSRF 默认策略，因此会阻止重定向到
+- Gemini grounding 中的引用 URL 会通过 OpenClaw 受 SSRF 防护的抓取路径，经由 HEAD 请求自动从 Google
+  重定向 URL 解析为直接 URL（跟随重定向、http/https 验证）。
+- 重定向解析使用严格的 SSRF 默认设置，因此会阻止重定向到
   私有/内部目标。
 
 ## 支持的参数
 
-Gemini search 支持 `query`、`freshness`、`date_after` 和 `date_before`。
+Gemini 搜索支持 `query`、`freshness`、`date_after` 和 `date_before`。
 
 `count` 被接受用于共享 `web_search` 兼容性，但 Gemini grounding
 仍然只返回一个带引用的综合答案，而不是包含 N 个结果的列表。
@@ -90,17 +88,15 @@ Gemini search 支持 `query`、`freshness`、`date_after` 和 `date_before`。
 `date_after`/`date_before` 范围会设置 Gemini Google Search grounding 的
 `timeRangeFilter`。不支持 `country`、`language` 和 `domain_filter`。
 
-## 模型选择
+## Model Selection
 
-默认模型是 `gemini-2.5-flash`（快速且经济高效）。任何支持 grounding 的 Gemini
-模型都可以通过
-`plugins.entries.google.config.webSearch.model` 使用。
+The default model is `gemini-2.5-flash` (fast and cost-effective). Any Gemini model that supports grounding can be used via `plugins.entries.google.config.webSearch.model`.
 
 ## Base URL 覆盖
 
-当 Gemini web search 必须通过运营商代理或自定义的 Gemini 兼容端点路由时，
+当 Gemini 网页搜索必须通过运营商代理或自定义的 Gemini 兼容端点路由时，
 请设置 `plugins.entries.google.config.webSearch.baseUrl`。如果未设置该项，
-Gemini web search 会复用 `models.providers.google.baseUrl`。纯粹的
+Gemini 网页搜索会复用 `models.providers.google.baseUrl`。纯粹的
 `https://generativelanguage.googleapis.com` 值会被规范化为
 `https://generativelanguage.googleapis.com/v1beta`；自定义代理路径会在去除末尾斜杠后按提供的内容保留。
 

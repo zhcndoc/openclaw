@@ -7,18 +7,82 @@ read_when:
 title: "Task flow"
 ---
 
-Task Flow 是位于 [background tasks](/automation/tasks) 之上的流编排基础层。它管理具有自身状态、修订跟踪和同步语义的持久化多步骤流程，而单个任务仍然是分离工作的基本单位。
+Task Flow 是位于 [后台任务](/automation/tasks) 之上的编排层。flow 是多步骤工作的持久化记录，包含自身的状态、JSON 状态、修订计数器以及关联的任务记录。flow 会在网关重启后继续存在；单个任务仍然是分离工作的基本单位。
 
 ## 何时使用 Task Flow
 
-当工作跨越多个顺序步骤或分支步骤，并且你需要在 gateway 重启之间持续跟踪进度时，请使用 Task Flow。对于单个后台操作，普通的 [task](/automation/tasks) 就足够了。
+| 场景                                      | 使用方式                                      |
+| ----------------------------------------- | ------------------------------------------- |
+| 单个后台作业                             | 普通任务                                     |
+| 由插件代码驱动的多步骤流水线             | Task Flow（受管理）                         |
+| 分离的 ACP 或子代理启动                  | Task Flow（镜像，自动创建）                 |
+| 一次性提醒                               | Cron 作业                                   |
 
-| 场景                                  | 使用                 |
-| ------------------------------------- | -------------------- |
-| 单个后台作业                          | 普通 task           |
-| 多步骤流水线（A 然后 B 然后 C）        | Task Flow（managed） |
-| 观察外部创建的任务                    | Task Flow（mirrored） |
-| 一次性提醒                            | Cron job             |
+## 同步模式
+
+### 托管模式
+
+托管流有一个控制器：插件代码通过插件运行时 Task Flow API 创建该流，设置目标和必需的控制器 ID，然后显式驱动它。
+
+- 每个步骤都作为该流下创建的后台任务运行；该流的 owner key 和 requester origin 会传递给子任务。
+- 控制器在 `running`、`waiting` 和终态之间推进该流，并在流记录上存储任意 JSON 步骤状态。
+- 每次变更都会带上该流期望的 revision。过期写入会被作为 revision 冲突拒绝，而不是覆盖较新的状态。
+- 一旦请求取消，就会拒绝新的子任务；当不再有子任务处于活动状态时，该流会以 `cancelled` 结束。
+
+示例：一个每周报告流，依次执行 (1) 收集数据，(2) 生成报告，以及 (3) 交付报告，每个步骤对应一个后台任务：
+
+```
+Flow: weekly-report
+  Step 1: gather-data     → 任务已创建 → 成功
+  Step 2: generate-report → 任务已创建 → 成功
+  Step 3: deliver         → 任务已创建 → 运行中
+```
+
+### 镜像模式
+
+当一个 detached ACP 或 subagent 运行开始时，OpenClaw 会自动创建一个镜像的单任务流（带有可交付结果完成的 session 范围任务）。该流记录会镜像其唯一的底层任务——状态、目标和时间——因此 detached 启动会获得一个稳定的流句柄，用于状态和重试界面，而无需控制器。镜像流在 CLI 中显示同步模式 `task_mirrored`。
+
+## 流状态
+
+| 状态        | 含义                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `queued`    | 已创建，尚未开始推进                                                       |
+| `running`   | Flow 正在积极推进                                                           |
+| `waiting`    | 托管的 flow 因等待元数据而暂停（计时器、外部事件）                         |
+| `blocked`   | 某个步骤已完成但未得到可用结果；`blockedTaskId`/摘要会说明是哪一个         |
+| `succeeded` | 已成功完成                                                                 |
+| `failed`    | 已带错误完成                                                               |
+| `cancelled` | 已请求取消，且所有子任务都已结束                                           |
+| `lost`      | Flow 丢失了其权威的后备状态                                                |
+
+## 持久化状态和修订跟踪
+
+流程记录与任务记录一起持久化在共享的 SQLite 状态数据库（`~/.openclaw/state/openclaw.sqlite`，`flow_runs` 表）中，因此即使网关重启，进度也能继续保留。每次写入都会提升流程的 `revision`；通过传入过期的预期修订号进行并发写入时，会发生冲突，必须重新读取。WAL 增长由 SQLite 自动检查点机制加上定期的被动检查点共同限制，并在关闭时执行 truncate 检查点。旧版安装中的遗留 `flows/registry.sqlite` 辅助数据库会被 `openclaw doctor` 导入。
+
+## 取消行为
+
+`openclaw tasks flow cancel` 会在流程上设置一个持久化的取消意图，取消其正在运行的子任务，并拒绝新的受管子任务。只要不再有任何子任务处于活动状态，该流程就会最终变为 `cancelled` - 可能是立即完成，或者在子任务需要更长时间稳定下来时通过维护扫描完成。该意图会被持久化，因此即使网关在所有子任务终止之前重启，已取消的流程仍会保持为已取消状态。
+
+## CLI 命令
+
+```bash
+# 列出活动和最近的流程
+openclaw tasks flow list [--status <status>] [--json]
+
+# 显示特定流程的详细信息
+openclaw tasks flow show <lookup> [--json]
+
+# 取消正在运行的流程及其活动任务
+openclaw tasks flow cancel <lookup>
+```
+
+| 命令                              | 描述                                                                 |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `openclaw tasks flow list`        | 带有同步模式、状态、修订版、控制器、任务计数的受跟踪流程              |
+| `openclaw tasks flow show <id>`   | 通过流程 ID 或所有者键检查一个流程，包括关联任务                      |
+| `openclaw tasks flow cancel <id>` | 取消正在运行的流程及其活动任务                                        |
+
+流程也包含在 `openclaw tasks audit`（陈旧或损坏的流程发现）和 `openclaw tasks maintenance`（完成卡住的取消操作，在 7 天后清理终态流程）中。
 
 ## 可靠的计划工作流模式
 
@@ -33,7 +97,7 @@ Task Flow 是位于 [background tasks](/automation/tasks) 之上的流编排基�
 
 ```bash
 openclaw cron add \
-  --name "Market intelligence brief" \
+  --name "市场情报简报" \
   --cron "0 7 * * 1-5" \
   --tz "America/New_York" \
   --session session:market-intel \
@@ -43,7 +107,7 @@ openclaw cron add \
   --to "channel:C1234567890"
 ```
 
-当重复工作流需要有意保留历史、上次运行摘要或常驻上下文时，使用 `session:<id>` 而不是 `isolated`。当每次运行都应从新开始，并且所有所需状态都在工作流中显式提供时，使用 `isolated`。
+当重复工作流需要有意保留历史记录、上次运行摘要或常驻上下文时，请使用 `--session session:<id>`，而不是 `isolated`。当每次运行都应从头开始，并且所有所需状态都在工作流中显式提供时，请使用 `isolated`。
 
 在工作流内部，将可靠性检查放在 LLM 总结步骤之前：
 
@@ -92,64 +156,13 @@ steps:
 
 用于可复用的团队或社区工作流时，请将 CLI、`.lobster` 文件以及任何设置说明打包为 skill 或 plugin，并通过 [ClawHub](/clawhub) 发布。除非插件 API 缺少所需的通用能力，否则应将工作流特定的护栏保留在该包中。
 
-## 同步模式
-
-### Managed 模式
-
-Task Flow 端到端拥有生命周期。它将任务创建为流步骤，驱动它们完成，并自动推进流状态。
-
-示例：一个每周报告流，依次（1）收集数据，（2）生成报告，以及（3）交付报告。Task Flow 创建每一步作为后台任务，等待完成，然后进入下一步。
-
-```
-Flow: weekly-report
-  Step 1: gather-data     → task created → succeeded
-  Step 2: generate-report → task created → succeeded
-  Step 3: deliver         → task created → running
-```
-
-### Mirrored 模式
-
-Task Flow 观察外部创建的任务，并在不负责任务创建的情况下保持流状态同步。当任务来源于 cron jobs、CLI 命令或其他来源，而你希望将它们的进度统一视图为一个 flow 时，这非常有用。
-
-示例：三个独立的 cron jobs，共同构成一个“早间运维”例程。一个 mirrored flow 跟踪它们的整体进度，而不控制它们何时或如何运行。
-
-## 持久化状态与修订跟踪
-
-每个 flow 都会持久化自己的状态并跟踪修订，因此进度可在 gateway 重启后继续保留。修订跟踪可在多个来源尝试并发推进同一 flow 时实现冲突检测。
-flow registry 使用带有受限 write-ahead-log 维护的 SQLite，包括
-周期性检查点和关闭检查点，因此长期运行的 gateway 不会保留
-无限增长的 `registry.sqlite-wal` sidecar 文件。
-
-## 取消行为
-
-`openclaw tasks flow cancel` 会在 flow 上设置一个粘性的取消意图。flow 内的活动任务将被取消，并且不会启动新步骤。取消意图会在重启后持续存在，因此即使 gateway 在所有子任务终止之前重启，已取消的 flow 仍会保持取消状态。
-
-## CLI 命令
-
-```bash
-# 列出活动和最近的 flows
-openclaw tasks flow list
-
-# 显示特定 flow 的详细信息
-openclaw tasks flow show <lookup>
-
-# 取消正在运行的 flow 及其活动任务
-openclaw tasks flow cancel <lookup>
-```
-
-| 命令                              | 描述                                         |
-| --------------------------------- | -------------------------------------------- |
-| `openclaw tasks flow list`        | 显示已跟踪的 flows 及其状态和同步模式         |
-| `openclaw tasks flow show <id>`   | 通过 flow id 或 lookup key 检查某个 flow      |
-| `openclaw tasks flow cancel <id>` | 取消正在运行的 flow 及其活动任务              |
-
-## flow 与 task 的关系
+## flows 与 tasks 的关系
 
 flow 负责协调 task，而不是替代它们。单个 flow 在其生命周期内可以驱动多个后台任务。使用 `openclaw tasks` 检查单个任务记录，使用 `openclaw tasks flow` 检查编排该任务的 flow。
 
 ## 相关内容
 
-- [Background Tasks](/automation/tasks) — flows 协调的分离工作账本
-- [CLI: tasks](/cli/tasks) — `openclaw tasks flow` 的 CLI 命令参考
-- [Automation Overview](/automation) — 一览所有自动化机制
-- [Cron Jobs](/automation/cron-jobs) — 可能输入到 flows 中的定时作业
+- [后台任务](/automation/tasks) - 与流程协调的分离工作清单
+- [CLI：任务](/cli/tasks) - `openclaw tasks flow` 的 CLI 命令参考
+- [自动化概览](/automation) - 一目了然的所有自动化机制
+- [Cron 作业](/automation/cron-jobs) - 可能输入到流程中的计划作业

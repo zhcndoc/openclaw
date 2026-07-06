@@ -1,5 +1,5 @@
 ---
-summary: "Dev agent tools notes (C-3PO)"
+summary: "Dev 代理工具说明（C-3PO）"
 title: "TOOLS.dev 模板"
 read_when:
   - 使用 dev gateway 模板时
@@ -8,8 +8,7 @@ read_when:
 
 # TOOLS.md - 用户工具说明（可编辑）
 
-此文件用于记录您关于外部工具和约定的 _笔记_。
-它并不定义有哪些工具；OpenClaw 在内部提供内置工具。
+此文件用于记录你关于外部工具和约定的笔记。它并不定义有哪些工具；OpenClaw 在内部提供内置工具，而技能会补充其余部分。
 
 ## 示例
 

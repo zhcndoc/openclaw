@@ -7,34 +7,32 @@ read_when:
 title: "OC Path 插件"
 ---
 
-捆绑的 `oc-path` 插件为 [`openclaw path`](/cli/path) CLI 添加了
-`oc://` 工作区文件寻址方案。它随 OpenClaw 仓库一起提供，位于
-`extensions/oc-path/` 下，但默认是可选启用的——安装/构建后它会保持
-未激活状态，直到你启用它为止。
+捆绑的 `oc-path` 插件为 `oc://` 工作区文件寻址方案添加了 [`openclaw path`](/cli/path) CLI。它随 OpenClaw 仓库中的 `extensions/oc-path/` 一起提供，但默认是可选启用的：安装/构建后它会保持未启用状态，直到你将其打开。
 
-`oc://` 地址指向工作区文件中的单个叶子节点（或一组通配叶子节点）。该插件目前理解四种文件类型：
+`oc://` 地址指向工作区文件中的单个叶子节点（或一组通配符叶子节点）。该插件支持四种文件类型：
 
-- **markdown** (`.md`, `.mdx`): frontmatter、sections、items、fields
-- **jsonc** (`.jsonc`, `.json5`, `.json`): 保留注释和格式
+- **markdown** (`.md`)：frontmatter、sections、items、fields
+- **jsonc** (`.jsonc`, `.json`): 注释和格式会被保留
 - **jsonl** (`.jsonl`, `.ndjson`): 按行组织的记录
-- **yaml** (`.yaml`, `.yml`, `.lobster`): 通过 YAML 文档 API 处理 map/sequence/scalar 节点
+- **yaml** (`.yaml`, `.yml`, `.lobster`): 通过
+  `yaml` 包的 `Document` API 处理 map/sequence/scalar 节点
 
-自托管用户和编辑器扩展使用该 CLI 来读取或写入单个叶子节点，而无需直接针对 SDK 编写脚本；代理和 hooks 将其视为确定性的底层基础，因此字节级一致的往返以及重写哨兵保护会一致地应用于各种类型。
+自托管用户和编辑器扩展使用该 CLI 来读写单个叶子节点，而无需直接针对 SDK 编写脚本；代理和钩子则将其视为一种确定性的底层基础设施，因此字节级一致的往返转换以及 redaction
+sentinel 守卫会在所有类型上统一适用。有关完整语法、逐个动词的标志列表，以及按文件类型分类的示例，请参见
+[CLI 参考](/cli/path)；本页说明为什么以及如何启用该插件。
 
 ## 为什么启用它
 
-当你希望脚本、hooks 或本地代理工具无需为每种文件形状分别发明解析器，就能精确指向工作区状态中的某个片段时，请启用 `oc-path`。一个 `oc://` 地址可以指向 markdown frontmatter 键、section 条目、JSONC 配置叶子、JSONL 事件字段，或 YAML 工作流步骤。
+当脚本、钩子或本地代理工具需要指向工作区状态中的某个精确位置，而不想为每种文件形态各写一套专用解析器时，就启用 `oc-path`。一个 `oc://` 地址可以表示 markdown frontmatter 键、某个节项、JSONC 配置叶子节点、JSONL 事件字段，或者 YAML 工作流步骤。
 
-这对维护者工作流很重要，因为变更应该尽量小、可审计、可重复：检查一个值，查找匹配记录，预演一次写入，然后只应用该叶子节点，同时保留注释、行尾和附近格式不变。将其作为可选插件，可以为高级用户提供寻址底层能力，而不会把解析器依赖或 CLI 表面暴露带入那些从不需要它的核心安装中。
+这对于维护者工作流很重要，因为这类变更应该保持小、可审计、可重复：检查一个值，找到匹配记录，先 dry-run 一次写入，然后只应用那个叶子节点，同时保留注释、行尾和附近的格式不变。
 
 启用它的常见原因：
 
-- **本地自动化**：shell 脚本可以使用 `openclaw path … --json` 解析或更新一个工作区值，而无需分别编写 markdown、JSONC、JSONL 和 YAML 的解析代码。
-- **代理可见的编辑**：代理可以在写入前为一个被寻址的叶子节点展示 dry-run diff，这比自由格式的文件重写更容易审查。
-- **编辑器集成**：编辑器可以将 `oc://AGENTS.md/tools/gh` 映射到精确的 markdown 节点和行号，而无需根据标题文本猜测。
-- **诊断**：`emit` 会通过解析器和生成器对文件进行往返，因此你可以在依赖自动化编辑之前检查某种文件类型是否具备字节稳定性。
-
-具体示例：
+- **本地自动化**：shell 脚本使用 `openclaw path … --json` 解析或更新一个工作区值，而不是分别编写 markdown、JSONC、JSONL 和 YAML 的解析代码。
+- **代理可见的编辑**：代理在写入前会为一个已定位的叶子节点展示 dry-run diff，这比自由形式的文件重写更容易审查。
+- **编辑器集成**：编辑器将 `oc://AGENTS.md/tools/gh` 映射到确切的 markdown 节点和行号，而不是根据标题文本猜测。
+- **诊断**：`emit` 会让文件经过解析器和生成器再回到原样，因此你可以在依赖自动化编辑之前检查某种文件是否按字节稳定。
 
 ```bash
 # 此配置中 GitHub 插件是否已启用？
@@ -47,18 +45,18 @@ openclaw path find 'oc://session.jsonl/[event=tool_call]/name' --json
 openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 ```
 
-该插件有意不负责更高层语义。内存插件仍然负责内存写入，配置命令仍然负责完整的配置管理，LKG 逻辑仍然负责恢复/晋升。`oc-path` 只是更窄的寻址层和字节保留文件操作层，上层工具可以在其之上构建。
+`oc-path` 有意不负责更高层语义。内存插件仍然负责内存写入，配置命令仍然负责完整的配置管理，而 last-known-good（LKG）配置恢复仍然负责恢复/提升。`oc-path` 只是更高层工具可以围绕其构建的、用于精确定位且保持字节不变的文件操作层。
 
 ## 它运行在哪里
 
-该插件在你执行命令的主机上，**以进程内方式运行在 `openclaw` CLI 中**。它不需要正在运行的 Gateway，也不会打开任何网络套接字——每个动词都是对你指定文件的纯转换。
+该插件**以内嵌进程的方式运行在 `openclaw` CLI 内部**，并在你执行命令的主机上运行。它不需要运行中的 Gateway，也不会打开任何网络套接字；每个动词都是对你指定文件的纯转换。
 
 插件元数据位于 `extensions/oc-path/openclaw.plugin.json`：
 
 ```json
 {
   "id": "oc-path",
-  "name": "OC Path",
+  "name": "OC 路径",
   "activation": {
     "onStartup": false,
     "onCommands": ["path"]
@@ -67,8 +65,8 @@ openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 }
 ```
 
-`onStartup: false` 让插件不进入 Gateway 的热路径。`onCommands:
-["path"]` 告诉 CLI 在你第一次运行 `openclaw path …` 时再懒加载该插件，因此从不使用该动词的安装不会付出任何成本。
+`onStartup: false` 可将插件排除在 Gateway 的启动路径之外。  
+`commandAliases` 和 `activation.onCommands` 会告诉 CLI 在你第一次运行 `openclaw path …` 时按需加载该插件，因此从不使用该动词的安装不会承担任何成本。
 
 ## 启用
 
@@ -76,7 +74,9 @@ openclaw path set 'oc://config.jsonc/plugins/github/enabled' 'true' --dry-run
 openclaw plugins enable oc-path
 ```
 
-如果你运行了 Gateway，请重启它，以便清单快照获取新状态。在同一主机上，直接运行 `openclaw path` 会立即生效——CLI 会按需加载该插件。
+重启 Gateway（如果你在运行它）以便让清单快照获取到新的
+状态。裸的 `openclaw path` 调用会在同一主机上立即生效；
+CLI 会按需加载该插件。
 
 禁用方式：
 
@@ -86,33 +86,37 @@ openclaw plugins disable oc-path
 
 ## 依赖
 
-所有解析器依赖都是插件本地的——启用 `oc-path` 不会向核心运行时引入新包：
+所有解析器依赖都仅限于插件本地；启用 `oc-path` 不会将新包引入核心运行时：
 
 | 依赖项         | 用途                                                                   |
 | -------------- | ---------------------------------------------------------------------- |
-| `commander`    | 为 `resolve`、`find`、`set`、`validate`、`emit` 进行子命令绑定。       |
-| `jsonc-parser` | JSONC 解析 + 叶子节点编辑，并保留注释和尾随逗号。                       |
-| `markdown-it`  | 用于 section / item / field 模型的 Markdown 标记化。                   |
-| `yaml`         | 使用 YAML `Document` 进行 parse / emit / edit，并保留注释和 flow 样式。 |
+| `commander`    | `resolve`、`find`、`set`、`validate`、`emit` 的子命令连接。    |
+| `jsonc-parser` | 带注释和保留尾随逗号的 JSONC 解析和叶子编辑。     |
+| `markdown-it`  | 用于 section / item / field 模型的 Markdown 词法分析。            |
+| `yaml`         | 带注释和保留 flow style 的 YAML `Document` 解析 / 生成 / 编辑。            |
 
-JSONL 仍然是手写实现——按行解析比任何依赖都更简单，而且逐行的 JSONC 解析本来就会通过 `jsonc-parser`。
+JSONL 仍然采用手工实现：按行解析比任何依赖都更简单，而且逐行解析本身已经通过 `jsonc-parser` 进行。
 
 ## 它提供什么
 
 | 表面                        | 由以下内容提供                                             |
 | ------------------------------ | ------------------------------------------------------- |
 | `openclaw path` CLI            | `extensions/oc-path/cli-registration.ts`                |
-| `oc://` parser / formatter     | `extensions/oc-path/src/oc-path/oc-path.ts`             |
+| `oc://` 解析器 / 格式化器      | `extensions/oc-path/src/oc-path/oc-path.ts`             |
 | 按类型的 parse / emit / edit   | `extensions/oc-path/src/oc-path/{md,jsonc,jsonl,yaml}`  |
 | 通用 resolve / find / set      | `extensions/oc-path/src/oc-path/{resolve,find,edit}.ts` |
 | 重写哨兵保护                   | `extensions/oc-path/src/oc-path/sentinel.ts`            |
 
-目前 CLI 是唯一公开表面。底层基础动词对插件是私有的；消费者使用 CLI（或基于 SDK 自行构建插件）。
+目前 CLI 是唯一公开的表面。底层动词对插件是私有的；使用者通过 CLI（或基于 SDK 自行构建插件）来使用。
 
 ## 与其他插件的关系
 
-- **`memory-*`**：内存写入通过 memory 插件进行，而不是 `oc-path`。`oc-path` 是通用文件底层基础；memory 插件在其之上叠加自身语义。
-- **LKG**：`path` 不知道 Last-Known-Good 配置恢复。如果文件受 LKG 跟踪，那么下一次 `observe` 调用会决定是晋升还是恢复；通过 `set --batch` 在 LKG 晋升/恢复生命周期中实现原子多重设置，计划与 LKG 恢复底层基础一起推出。
+- **`memory-*`**：内存写入通过 memory 插件进行，而不是通过
+  `oc-path`。`oc-path` 是一个通用的文件底层层；memory 插件在其之上叠加
+  自己的语义。
+- **LKG**：`path` 不了解 last-known-good 配置恢复。如果你通过 `path` 编辑的
+  文件也被 LKG 跟踪，那么下一个配置 observe
+  周期会决定是提升还是恢复它；将一次 `path` 编辑视为对该文件的任何其他直接写入。
 
 ## 安全性
 

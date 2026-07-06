@@ -82,7 +82,7 @@ openclaw onboard --non-interactive \
 | `fireworks/accounts/fireworks/routers/kimi-k2p5-turbo` | Kimi K2.5 Turbo (Fire Pass) | 文本 + 图像  | 256,000 | 256,000    | 强制关闭（默认） |
 
 <Note>
-  OpenClaw 将所有 Fireworks Kimi 模型固定为 `thinking: off`，因为 Fireworks 在生产环境中会拒绝 Kimi 的 thinking 参数。通过 [Moonshot](/providers/moonshot) 直接路由同一模型，可以保留 Kimi 的推理输出。有关在提供方之间切换，请参见 [thinking modes](/tools/thinking)。
+  OpenClaw 将所有 Fireworks Kimi 模型固定为 `thinking: off`，因为 Fireworks 上的 Kimi 可能会在可见回复中泄露链式思维，除非请求明确禁用 thinking。通过 [Moonshot](/providers/moonshot) 直接路由同一模型可保留 Kimi 的推理输出。有关在提供商之间切换，请参见 [thinking modes](/tools/thinking)。
 </Note>
 
 ## 自定义 Fireworks 模型 id
@@ -113,7 +113,7 @@ OpenClaw 接受运行时的任意 Fireworks 模型或路由 id。请使用 Firew
   </Accordion>
 
   <Accordion title="为什么 Kimi 会强制关闭 thinking">
-    尽管 Kimi 可以通过 Moonshot 自己的 API 使用 thinking，但如果请求携带 `reasoning_*` 参数，Fireworks K2.6 会返回 400。提供方策略（`extensions/fireworks/thinking-policy.ts`）仅为 Kimi 模型 id 声明 `off` 这一 thinking 级别，因此手动的 `/think` 切换和提供方策略层会与运行时契约保持一致。
+    Fireworks 为 Kimi 提供服务时没有单独的推理通道，因此 chain-of-thought 可能会出现在可见的 `content` 流中。每次 Fireworks Kimi 请求时，OpenClaw 都会发送 `thinking: { type: "disabled" }`，并从负载中移除 `reasoning`、`reasoning_effort` 和 `reasoningEffort`（`extensions/fireworks/stream.ts`）。提供方策略（`extensions/fireworks/thinking-policy.ts`）仅为 Kimi 模型 id 宣告 `off` thinking 级别，因此手动 `/think` 切换和提供方策略界面会与运行时契约保持一致。
 
     若要端到端使用 Kimi 推理，请配置 [Moonshot 提供方](/providers/moonshot) 并通过它路由同一个模型。
 
@@ -126,7 +126,7 @@ OpenClaw 接受运行时的任意 Fireworks 模型或路由 id。请使用 Firew
       仅在交互式 shell 中导出的密钥，对 launchd 或 systemd 守护进程没有帮助，除非该环境也被导入其中。请将密钥设置在 `~/.openclaw/.env` 中，或通过 `env.shellEnv` 设置，以便网关进程能够读取。
     </Warning>
 
-    在 macOS 上，`openclaw gateway install` 已经会把 `~/.openclaw/.env` 连接到 LaunchAgent 环境文件。轮换密钥后，请重新运行安装（或 `openclaw doctor --fix`）。
+    OpenClaw 在加载配置时会加载 `~/.openclaw/.env`，因此存放在其中的密钥会在所有平台上送达受管的网关服务。轮换密钥后，请重启网关（或重新运行 `openclaw doctor --fix`）。
 
   </Accordion>
 </AccordionGroup>
@@ -137,7 +137,7 @@ OpenClaw 接受运行时的任意 Fireworks 模型或路由 id。请使用 Firew
   <Card title="模型提供方" href="/concepts/model-providers" icon="layers">
     选择提供方、模型引用和故障转移行为。
   </Card>
-  <Card title="Thinking modes" href="/tools/thinking" icon="brain">
+  <Card title="思考模式" href="/tools/thinking" icon="brain">
     `/think` 级别、提供方策略，以及路由具备推理能力的模型。
   </Card>
   <Card title="Moonshot" href="/providers/moonshot" icon="moon">

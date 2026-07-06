@@ -7,28 +7,36 @@ title: "菜单栏图标"
 
 # 菜单栏图标状态
 
-作者：steipete · 更新于：2025-12-06 · 范围：macOS 应用（`apps/macos`）
+Scope: macOS app (`apps/macos`). Rendering: `CritterIconRenderer.makeIcon(...)`. Animation/state wiring: `CritterStatusLabel` + `CritterStatusLabel+Behavior.swift`.
 
-- **空闲：** 正常图标动画（眨眼、偶尔轻微摆动）。
-- **暂停：** 状态项使用 `appearsDisabled`；无运动。
-- **语音触发（大耳朵）：** 当听到唤醒词时，语音唤醒检测器会调用 `AppState.triggerVoiceEars(ttl: nil)`，在捕获话语期间保持 `earBoostActive=true`。耳朵会放大（1.9x），并出现圆形耳洞以提高可读性，然后在 1 秒静默后通过 `stopVoiceEars()` 下降。仅由应用内语音管线触发。
-- **工作中（agent 运行中）：** `AppState.isWorking=true` 驱动一种“尾巴/腿快速移动”的微动效：在工作进行中时，腿部摆动更快并带有轻微偏移。目前在 WebChat agent 运行期间切换；当你接入其他长任务时，也请在同样位置加上这个切换。
+## 状态
 
-接线点
+| 状态                 | 触发                                   | 视觉                                                                                              |
+| --------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 空闲                  | 默认                                   | 正常眨眼/摆动动画                                                                               |
+| 已暂停                | `isPaused=true`                           | 状态项使用 `appearsDisabled`；无运动                                                       |
+| 语音唤醒（大耳朵） | 听到唤醒词                           | 耳朵缩放到 `1.9x`，并设置 `earHoles=true`（用于可读性的圆形孔洞）；静默后消失     |
+| 工作中               | `isWorking=true` 或活动的 `IconState` | 更快的腿部摆动（`legWiggle` 最高到 `1.0`），并带有轻微的水平偏移；叠加于空闲摆动之上 |
 
-- 语音唤醒：运行时/测试器在触发时调用 `AppState.triggerVoiceEars(ttl: nil)`，并在 1 秒静默后调用 `stopVoiceEars()`，以匹配捕获窗口。
-- Agent 活动：在工作跨度期间设置 `AppStateStore.shared.setWorking(true/false)`（WebChat agent 调用中已完成）。保持跨度尽量短，并在 `defer` 块中重置，以避免动画卡住。
+当会话有活动任务或工具时，可以在同一个小生物图标上方渲染一个工具活动徽标（SF Symbol 圆点，例如用于 exec 的 `chevron.left.slash.chevron.right`）。该徽标来自 `IconState`/`ActivityKind`；完整状态模型请参见 [菜单栏](/platforms/mac/menu-bar)。
 
-形状与尺寸
+## 语音唤耳
 
-- 基础图标绘制于 `CritterIconRenderer.makeIcon(blink:legWiggle:earWiggle:earScale:earHoles:)`。
-- 耳朵缩放默认值为 `1.0`；语音增强会设置 `earScale=1.9` 并切换 `earHoles=true`，而不改变整体框架（18×18 pt 模板图像渲染到 36×36 px Retina backing store）。
-- Scurry 会将腿部摆动提升到约 `1.0`，并带有轻微水平抖动；它会叠加到任何已有的空闲摆动上。
+- 触发：`AppStateStore.shared.triggerVoiceEars(ttl: nil)`，由语音唤醒采集管线（`VoiceWakeRuntime`）以及语音唤醒调试/测试工具（`VoiceWakeTester`、`VoiceWakeOverlayController`）调用。
+- 停止：`stopVoiceEars()`，在采集完成时调用。
+- 完成前的静默窗口：通常为 `2.0s`，如果只听到了唤醒词且后续没有语音，则为 `5.0s`（`VoiceWakeRuntime.silenceWindow` / `triggerOnlySilenceWindow`）。
+- 在增强期间，空闲时的眨眼/摆动/腿/耳定时器会暂停（`earBoostActive` 会在 `CritterStatusLabel+Behavior` 中对动画任务进行门控）。
 
-行为说明
+## 形状和尺寸
 
-- 没有用于耳朵/工作状态的外部 CLI/broker 切换；请保持它仅限于应用自身信号，以避免意外抖动。
-- 保持 TTL 较短（&lt;10s），这样如果任务挂起，图标能尽快回到基线状态。
+- Canvas：18x18pt 模板图像，渲染为 36x36px 位图 backing store（2x），这样图标在 Retina 上仍然保持清晰。
+- 耳朵缩放默认值为 `1.0`；语音增强会将 `earScale=1.9` 和 `earHoles=true`，而不改变整体框架。
+- 腿部快速移动使用 `legWiggle`，最大到 `1.0`，并带有轻微的水平抖动。
+
+## 行为说明
+
+- 耳朵或工作状态没有外部 CLI/代理切换；两者都由应用信号（`AppState.setWorking`、`AppState.triggerVoiceEars`）在内部驱动，以避免意外抖动。
+- 保持任何新的 TTL 较短（远低于 10 秒），这样如果任务卡住，图标就能快速恢复到基线状态。
 
 ## 相关
 

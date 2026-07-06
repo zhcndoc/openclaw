@@ -8,9 +8,7 @@ title: "守护进程"
 
 # `openclaw daemon`
 
-网关服务管理命令的旧别名。
-
-`openclaw daemon ...` 映射到与 `openclaw gateway ...` 服务命令相同的服务控制接口。
+网关服务管理的旧别名。`openclaw daemon ...` 映射到与 `openclaw gateway ...` 相同的服务控制命令。当前文档和示例请优先使用 [`openclaw gateway`](/cli/gateway)。
 
 ## 用法
 
@@ -23,43 +21,32 @@ openclaw daemon restart
 openclaw daemon uninstall
 ```
 
-## 子命令
+## 子命令和选项
 
-- `status`：显示服务安装状态并探测 Gateway 健康状况
-- `install`：安装服务（`launchd`/`systemd`/`schtasks`）
-- `uninstall`：移除服务
-- `start`：启动服务
-- `stop`：停止服务
-- `restart`：重启服务
+| 子命令       | 选项                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `status`     | `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json` |
+| `install`    | `--port`, `--runtime <node\|bun>`, `--token`, `--wrapper <path>`, `--force`, `--json`            |
+| `uninstall`  | `--json`                                                                                         |
+| `start`      | `--json`                                                                                         |
+| `stop`       | `--json`, `--disable`（仅限 launchd：在下次启动前持久禁止 KeepAlive/RunAtLoad）                   |
+| `restart`    | `--force`, `--safe`, `--skip-deferral`, `--wait <duration>`, `--json`                            |
 
-## 常用选项
+- `status`：显示服务安装状态（launchd/systemd/schtasks）并探测 Gateway 健康状态。
+- `install`：安装服务；`--force` 会重新安装/覆盖现有安装。
+- `restart --safe`：要求正在运行的 Gateway 预检查当前活跃工作，并在工作清空后安排一次合并后的重启，受 `gateway.reload.deferralTimeoutMs` 限制（默认 300000ms/5 分钟；设为 `0` 表示无限期等待）。当该预算过期时，仍会强制重启。普通 `restart` 直接使用服务管理器；`--force` 是立即覆盖。
+- `restart --safe --skip-deferral`：绕过活跃工作延迟门控，因此即使报告了阻塞项，Gateway 也会立即重启。需要 `--safe`。
 
-- `status`: `--url`, `--token`, `--password`, `--timeout`, `--no-probe`, `--require-rpc`, `--deep`, `--json`
-- `install`: `--port`, `--runtime <node|bun>`, `--token`, `--force`, `--json`
-- `restart`: `--safe`, `--skip-deferral`, `--force`, `--wait <duration>`, `--json`
-- lifecycle (`uninstall|start|stop`): `--json`
+## 注意事项
 
-注意：
-
-- `status` 会在可能的情况下解析已配置的认证 SecretRefs，用于探测认证。
-- 如果此命令路径中所需的认证 SecretRef 未解析，则 `daemon status --json` 在探测连接性/认证失败时会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析密钥来源。
-- 如果探测成功，会抑制未解析的认证引用警告，以避免误报。
-- `status --deep` 会额外执行尽力而为的系统级服务扫描。当它发现其他类似 gateway 的服务时，人工输出会打印清理提示，并警告每台机器运行一个 gateway 仍是常规建议。
-- `status --deep` 还会以插件感知模式运行配置验证，并展示已配置的插件清单警告（例如缺少 channel 配置元数据），以便安装和更新的冒烟检查能够捕获它们。默认的 `status` 保持快速、只读路径，会跳过插件验证。
-- 在 Linux systemd 安装中，`status` 的 token 漂移检查同时包含 `Environment=` 和 `EnvironmentFile=` 单元来源。
-- 漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRefs（先使用服务命令环境，再回退到进程环境）。
-- 如果 token 认证并未实际启用（显式的 `gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者模式未设置且密码可能生效而没有可生效的 token 候选），token 漂移检查会跳过配置 token 解析。
-- 当 token 认证需要 token 且 `gateway.auth.token` 由 SecretRef 管理时，`install` 会验证该 SecretRef 是否可解析，但不会把解析出的 token 持久化到服务环境元数据中。
-- 如果 token 认证需要 token 且已配置的 token SecretRef 未解析，安装将失败并关闭。
-- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，且 `gateway.auth.mode` 未设置，则会阻止安装，直到显式设置模式。
-- 在 macOS 上，`install` 会保持 LaunchAgent plist 仅限所有者访问，并通过仅所有者可访问的文件和包装器加载托管的服务环境值，而不是将 API 密钥或 auth-profile 环境引用序列化到 `EnvironmentVariables` 中。
-- 如果你有意在一台主机上运行多个 gateway，请隔离端口、配置/状态和工作区；参见 [/gateway#multiple-gateways-same-host](/gateway#multiple-gateways-same-host)。
-- `restart --safe` 会请求正在运行的 Gateway 预检当前工作，并在当前工作排空后安排一次合并重启。普通 `restart` 保持现有的服务管理器行为；`--force` 仍然是立即覆盖路径。
-- `restart --safe --skip-deferral` 会运行 OpenClaw 感知的安全重启，但绕过当前工作延迟门控，因此即使报告了阻塞，Gateway 也会立即发出重启。适用于任务卡住导致安全重启被挂起时的运维逃生通道；需要 `--safe`。
-
-## 优先使用
-
-当前文档和示例请使用 [`openclaw gateway`](/cli/gateway)。
+- `status` 会在可能的情况下解析已配置的认证 SecretRef，用于探针认证。如果必需的 SecretRef 未解析，`status --json` 会报告 `rpc.authWarning`；请显式传入 `--token`/`--password`，或先解析 secret 来源。当探针在其他方面已成功时，未解析认证的警告会被抑制。
+- `status --deep` 会额外进行一次尽力而为的系统级扫描，以查找其他类似网关的服务（会打印清理提示；仍然建议每台机器只运行一个 Gateway），并以插件感知模式运行配置验证，显示快速默认路径会跳过的插件清单警告。
+- 在 Linux 的 systemd 安装中，令牌漂移检查会同时检查 `Environment=` 和 `EnvironmentFile=` 单元来源。
+- 令牌漂移检查会使用合并后的运行时环境解析 `gateway.auth.token` SecretRef（优先使用服务命令环境，其次是进程环境）。如果令牌认证并未实际启用（`gateway.auth.mode` 为 `password`/`none`/`trusted-proxy`，或者未设置但密码能够生效），则会跳过配置令牌解析。
+- `install` 会验证由 SecretRef 管理的 `gateway.auth.token` 是否可解析，但绝不会将解析后的值写入服务环境元数据；如果无法解析，安装会失败并关闭。
+- 如果同时配置了 `gateway.auth.token` 和 `gateway.auth.password`，并且 `gateway.auth.mode` 未设置，`install` 会阻止继续，直到你显式设置该模式。
+- 在 macOS 上，`install` 会让 LaunchAgent plist 和生成的 env 文件/wrapper 保持仅所有者可访问（权限 `0600`/`0700`），而不是将 secret 嵌入 `EnvironmentVariables` 中。
+- 在一台主机上运行多个 Gateway：请隔离端口、配置/状态和工作区。参见 [Multiple gateways](/gateway#multiple-gateways-same-host)。
 
 ## 相关
 

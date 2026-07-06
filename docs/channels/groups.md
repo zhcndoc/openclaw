@@ -7,19 +7,19 @@ title: "群组"
 sidebarTitle: "群组"
 ---
 
-OpenClaw 会在各个界面上一致地处理群聊：Discord、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp、Zalo。
+OpenClaw 在所有支持群聊的渠道中应用相同的群组规则，包括 Discord、iMessage、Matrix、Microsoft Teams、QQBot、Signal、Slack、Telegram、WhatsApp 和 Zalo。
 
 有关应提供静默上下文、除非代理显式发送可见消息的始终在线房间，请参见 [Ambient room events](/channels/ambient-room-events)。
 
 ## 初学者简介（2 分钟）
 
-OpenClaw “运行”在你自己的消息账号上。并没有单独的 WhatsApp 机器人用户。如果 **你** 在某个群里，OpenClaw 就能看到该群并在那里回应。
+OpenClaw “运行”在你自己的消息账号上。这里没有单独的 WhatsApp 机器人用户：如果**你**在某个群里，OpenClaw 就能看到那个群并在那里响应。
 
 默认行为：
 
-- 群组受限（`groupPolicy: "allowlist"`）。
-- 回复需要提及，除非你显式禁用提及门控。
-- 群组/频道中的可见回复默认使用 `message` 工具。
+- 群组受限制（`groupPolicy: "allowlist"`）；在被加入允许名单之前，群消息发送者会被阻止。
+- 回复需要提及，除非你为某个群组禁用了提及门控。
+- 最终回复文本会自动发布到房间（`visibleReplies: "automatic"`）。
 
 翻译一下：在允许名单中的发送者可以通过提及 OpenClaw 来触发它。
 
@@ -34,7 +34,7 @@ OpenClaw “运行”在你自己的消息账号上。并没有单独的 WhatsAp
 
 快速流程（群消息会发生什么）：
 
-```
+```text
 groupPolicy? disabled -> drop
 groupPolicy? allowlist -> group allowed? no -> drop
 requireMention? yes -> mentioned? no -> store for context only
@@ -44,29 +44,23 @@ always-on group chatter -> user request, or room event when configured
 
 ## 可见回复
 
-对于正常的群组/频道请求，OpenClaw 默认将 `messages.groupChat.visibleReplies` 设为 `"automatic"`。最终的助手文本会通过旧的可见回复路径发布，除非你将该房间切换为仅使用 message 工具输出。
+对于普通的群组/频道请求，OpenClaw 默认使用 `messages.groupChat.visibleReplies: "automatic"`：最终的助手文本会作为可见回复发布到房间中。
 
-当共享房间应当让代理通过调用 `message(action=send)` 来决定何时发言时，请使用 `messages.groupChat.visibleReplies: "message_tool"`。这在由最新一代、工具可靠性高的模型（例如 GPT 5.5）驱动的群组房间中效果最佳。如果模型遗漏了该工具调用并返回了实质性的最终文本，OpenClaw 会将该最终文本保密，而不是发布到房间中。
+当共享房间需要让代理通过调用 `message(action=send)` 来决定何时发言时，请使用 `messages.groupChat.visibleReplies: "message_tool"`。这在对工具调用可靠的模型上效果最好（例如 GPT 5.5）。如果模型漏掉了工具调用并返回了实质性的最终文本，OpenClaw 会将该文本保密，而不是发布到房间中。
 
-对于较弱的模型或无法可靠理解仅工具交付的运行时，请使用 `"automatic"`。在自动模式下，代理的最终助手文本就是可见的源回复路径，因此无法始终一致调用 `message(action=send)` 的模型仍然可以正常回答。
+对于不可靠遵循仅工具交付的模型或运行时，请使用 `"automatic"`：普通文本最终结果会直接发布到房间中，而代理仍然可以调用 `message(action=send)` 发送无法随最终文本一起传递的文件、图片或其他附件。
 
-在自动模式下，普通文本形式的最终回复会直接发布到房间中。如果可见回复需要文件、图片或其他附件，代理仍然可以使用 `message(action=send)` 来发送该附件，而不是试图把它强行塞进最终文本回复里。
+如果在当前工具策略下消息工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。`openclaw doctor` 会对此类不匹配发出警告。
 
-如果在当前工具策略下 message 工具不可用，OpenClaw 会回退到自动可见回复，而不是静默抑制响应。
-`openclaw doctor` 会对此不匹配发出警告。
+对于直接聊天以及任何其他来源事件，`messages.visibleReplies: "message_tool"` 会全局应用相同的仅工具行为；`messages.groupChat.visibleReplies` 仍然是群组/频道房间的更具体覆盖项。内部 WebChat 的直接轮次默认使用自动最终回复交付，因此 Pi 和 Codex 接收到相同的可见回复契约。
 
-对于直接聊天和其他任何源事件，请使用 `messages.visibleReplies: "message_tool"` 在全局范围应用相同的仅工具可见回复行为。WebChat 的直接轮次默认使用自动最终回复交付，因此 Pi 和 Codex 会收到相同的可见回复契约。将 `messages.visibleReplies: "message_tool"` 设为显式要求 `message(action=send)` 以输出可见内容。`messages.groupChat.visibleReplies` 仍然是群组/频道房间更具体的覆盖项。
-
-这取代了旧模式：在大多数 lurk 模式轮次中强制模型回答 `NO_REPLY`。在仅工具模式下，提示词不会定义 `NO_REPLY` 契约。什么都不做、且不产生可见输出，只意味着不调用 message 工具。
+仅工具模式取代了旧的做法，即在大多数 lurk 模式轮次中强制模型回答 `NO_REPLY`。在仅工具模式下，提示词不再定义 `NO_REPLY` 契约；什么都不做、没有任何可见输出，就只是表示没有调用消息工具。
 
 插件拥有的会话绑定是例外。一旦插件绑定了一个线程并接管了传入轮次，插件返回的回复就是可见的绑定响应；它不需要 `message(action=send)`。该回复是插件运行时输出，而不是私有的模型最终文本。
 
-直接群组请求仍会发送输入指示。启用后，环境式 always-on 房间事件仍保持严格安静，除非代理调用 message 工具。
+直接群组请求仍会发送输入指示。启用后，环境式始终在线房间事件仍保持严格安静，除非代理调用 message 工具。
 
-Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
-可在当前会话中显示这些摘要以便调试，使用
-`/verbose off` 返回仅最终回复的行为。相同的 verbose 状态
-适用于直接聊天、群组、频道和论坛主题。
+会话默认会抑制冗长的工具/进度摘要。使用 `/verbose on`（或 `/verbose full`）可以在调试时为当前会话显示这些内容，使用 `/verbose off` 则恢复为仅最终回复的行为。verbose 状态按会话保存，并在直接聊天、群组、频道和论坛主题中以相同方式工作。
 
 要将未提及的始终在线群聊作为静默房间上下文而不是用户请求提交，请使用 [Ambient room events](/channels/ambient-room-events)：
 
@@ -80,9 +74,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 }
 ```
 
-默认值是 `unmentionedInbound: "user_request"`。
-
-被提及的消息、命令、中止请求和 DM 仍保持为用户请求。
+默认值是 `unmentionedInbound: "user_request"`。被提及的消息、命令、中止请求和私信仍然属于用户请求。
 
 要让群组/频道请求的可见输出必须通过 message 工具：
 
@@ -96,9 +88,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 }
 ```
 
-当文件保存后，Gateway 会热重载 `messages` 配置。只有在部署中禁用了文件监听或配置重载时才需要重启。
-
-要让每个来源聊天的可见输出都必须通过 message 工具：
+要对所有来源聊天都强制如此：
 
 ```json5
 {
@@ -108,32 +98,26 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 }
 ```
 
-原生斜杠命令（Discord、Telegram，以及其他支持原生命令的界面）会绕过 `visibleReplies: "message_tool"`，并始终可见回复，以便频道原生命令 UI 收到它期望的响应。这只适用于已验证的原生命令轮次；手动输入的文本 `/...` 命令和普通聊天轮次仍然遵循配置的群组默认值。
+网关在文件保存后会自动获取 `messages` 配置更改，无需重启。只有在禁用了配置重载时才需要重启（`gateway.reload.mode: "off"`）。
+
+命令轮次会绕过 `visibleReplies: "message_tool"` 并始终可见回复：原生斜杠命令（Discord、Telegram 以及其他支持原生命令的界面）和已授权的文本 `/...` 命令都会将其响应发布到源聊天中。群组中的未授权文本 `/...` 轮次仍然仅限消息工具；普通聊天轮次则遵循已配置的默认值。
 
 ## 上下文可见性和允许名单
 
 群组安全涉及两个不同的控制项：
 
-- **触发授权**：谁可以触发代理（`groupPolicy`、`groups`、`groupAllowFrom`、特定渠道的允许名单）。
-- **上下文可见性**：哪些补充上下文会注入到模型中（回复文本、引用、线程历史、转发元数据）。
+- **触发授权**：谁可以触发代理（`groupPolicy`、`groups`、`groupAllowFrom`、渠道特定允许名单）。
+- **上下文可见性**：哪些补充上下文会注入到模型中（回复/引用文本、线程历史、转发元数据）。
 
-默认情况下，OpenClaw 优先保持正常聊天行为，并尽量按接收到的样子保留上下文。这意味着允许名单主要决定谁能触发动作，而不是对每一段被引用或历史片段都构成一个通用的脱敏边界。
+默认情况下，OpenClaw 会按接收到的原样保留上下文：允许名单决定谁可以触发动作，而不是模型能看到哪些被引用或历史片段。若还想过滤补充上下文，请设置 `contextVisibility`：
 
-<AccordionGroup>
-  <Accordion title="当前行为是按渠道区分的">
-    - 某些渠道已经在特定路径中对补充上下文应用了基于发送者的过滤（例如 Slack 线程种子、Matrix 回复/线程查找）。
-    - 其他渠道仍会按接收到的样子传递引用/回复/转发上下文。
+| 模式                | 行为                                                                         |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `"all"`（默认）      | 按接收到的原样保留补充上下文。                                           |
+| `"allowlist"`       | 仅注入来自允许名单发送者的历史/线程/引用/转发上下文。     |
+| `"allowlist_quote"` | `allowlist`，并保留来自任意发送者的被明确引用/回复的消息。 |
 
-  </Accordion>
-  <Accordion title="加固方向（计划中）">
-    - `contextVisibility: "all"`（默认）保持当前“按接收样子”的行为。
-    - `contextVisibility: "allowlist"` 会将补充上下文过滤为仅允许名单中的发送者。
-    - `contextVisibility: "allowlist_quote"` 是 `allowlist` 再加一个明确的引用/回复例外。
-
-    在这个加固模型尚未在所有渠道一致实现之前，请预期不同表面会有差异。
-
-  </Accordion>
-</AccordionGroup>
+可按渠道设置（`channels.<channel>.contextVisibility`）、按账号设置（`channels.<channel>.accounts.<accountId>.contextVisibility`），或全局设置（`channels.defaults.contextVisibility`）。会获取补充上下文的渠道（Discord、Feishu、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp）在构建入站上下文时会应用该策略；未知的策略组合将以失败关闭（fail closed）方式处理，并省略该上下文。
 
 ![群消息流程](/images/groups-flow.svg)
 
@@ -153,14 +137,14 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 - 群组会话使用 `agent:<agentId>:<channel>:group:<id>` 会话键（房间/频道使用 `agent:<agentId>:<channel>:channel:<id>`）。
 - Telegram 论坛主题会在群组 id 后追加 `:topic:<threadId>`，因此每个主题都有自己的会话。
-- 直接聊天使用主会话（或按发送者单独配置时使用按发送者会话）。
-- 群组会话会跳过心跳。
+- 直接聊天使用主会话（如果配置了 `session.dmScope`，则使用按发送者划分的会话）。
+- 心跳运行在配置的心跳会话中（默认：agent 主会话）；群组会话不会运行自己的心跳。
 
 <a id="pattern-personal-dms-public-groups-single-agent"></a>
 
 ## 模式：个人 DM + 公开群组（单代理）
 
-可以——如果你的“个人”流量是 **DM**，而“公开”流量是 **群组**，这样做非常合适。
+可以——如果你的“个人”流量是 **DM**，而“公开”流量是 **群组**，这样做很合适。
 
 原因：在单代理模式下，DM 通常落到 **主** 会话键（`agent:main:main`），而群组总是使用 **非主** 会话键（`agent:main:<channel>:group:<id>`）。如果你启用了 `mode: "non-main"` 的沙箱，这些群组会话会在配置好的沙箱后端中运行，而你的主 DM 会话仍留在宿主机上。如果你不指定后端，Docker 是默认后端。
 
@@ -233,7 +217,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 ## 显示标签
 
 - UI 标签在可用时使用 `displayName`，格式为 `<channel>:<token>`。
-- `#room` 预留给房间/频道；群聊使用 `g-<slug>`（小写，空格 -> `-`，保留 `#@+._-`）。
+- `#room` 预留给房间/频道；群聊使用 `g-<slug>`（小写，空格 -> `-`，保留 `#@+._-`）。非常长的不可读 ID 会被缩短为一个稳定的 token，而不是将完整的路由 ID 泄露到 UI 中。
 
 ## 群组策略
 
@@ -248,7 +232,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
     },
     telegram: {
       groupPolicy: "disabled",
-      groupAllowFrom: ["123456789"], // 数字型 Telegram 用户 id（向导可以解析 @username）
+      groupAllowFrom: ["123456789"], // 数字形式的 Telegram 用户 ID（setup 会解析 @username）
     },
     signal: {
       groupPolicy: "disabled",
@@ -265,12 +249,12 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
     discord: {
       groupPolicy: "allowlist",
       guilds: {
-        GUILD_ID: { channels: { help: { allow: true } } },
+        GUILD_ID: { channels: { help: { enabled: true } } },
       },
     },
     slack: {
       groupPolicy: "allowlist",
-      channels: { "#general": { allow: true } },
+      channels: { "#general": { enabled: true } },
     },
     matrix: {
       groupPolicy: "allowlist",
@@ -292,17 +276,17 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 <AccordionGroup>
   <Accordion title="按渠道说明">
-    - `groupPolicy` 与提及门控是分开的（提及门控需要 @ 提及）。
+    - `groupPolicy` 与提及门控是分开的（提及门控需要 @mentions）。
     - WhatsApp/Telegram/Signal/iMessage/Microsoft Teams/Zalo：使用 `groupAllowFrom`（回退：显式 `allowFrom`）。
-    - Signal：`groupAllowFrom` 可以匹配传入的 Signal 群组 id 或发送者电话/UUID。
-    - DM 配对审批（`*-allowFrom` 存储项）仅适用于 DM 访问；群组发送者授权仍然显式依赖群组允许名单。
+    - Signal：`groupAllowFrom` 可以匹配入站 Signal 群组 id 或发送者电话/UUID。
+    - DM 配对批准（`*-allowFrom` 存储条目）仅适用于 DM 访问；群组发送者授权仍然显式地依赖群组允许名单。
     - Discord：允许名单使用 `channels.discord.guilds.<id>.channels`。
     - Slack：允许名单使用 `channels.slack.channels`。
-    - Matrix：允许名单使用 `channels.matrix.groups`。优先使用房间 ID 或别名；已加入房间名称查找尽力而为，未解析的名称会在运行时被忽略。使用 `channels.matrix.groupAllowFrom` 来限制发送者；也支持按房间的 `users` 允许名单。
-    - 群组 DM 由单独配置控制（`channels.discord.dm.*`、`channels.slack.dm.*`）。
-    - Telegram 允许名单可以匹配用户 ID（`"123456789"`、`"telegram:123456789"`、`"tg:123456789"`）或用户名（`"@alice"` 或 `"alice"`）；前缀不区分大小写。
-    - 默认值是 `groupPolicy: "allowlist"`；如果你的群组允许名单为空，群组消息会被阻止。
-    - 运行时安全：当某个 provider 配置块完全缺失（`channels.<provider>` 不存在）时，群组策略会回退到 fail-closed 模式（通常是 `allowlist`），而不是继承 `channels.defaults.groupPolicy`。
+    - Matrix：允许名单使用 `channels.matrix.groups`。使用房间 ID（`!room:server`）或别名（`#alias:server`）；房间名称键仅在 `channels.matrix.dangerouslyAllowNameMatching: true` 时匹配，未解析条目在运行时会被忽略。使用 `channels.matrix.groupAllowFrom` 来限制发送者；也支持按房间的 `users` 允许名单。
+    - 群组 DM 另行控制（`channels.discord.dm.*`、`channels.slack.dm.*`：`groupEnabled`、`groupChannels`）。
+    - Telegram：发送者允许名单仅接受数字用户 ID（`"123456789"`；`telegram:`/`tg:` 前缀会被不区分大小写地去除）。`@username` 条目在运行时不会匹配，并会记录警告；setup 会将 `@username` 解析为 ID。负数 chat ID 应放在 `channels.telegram.groups` 下，而不是发送者允许名单。
+    - 默认值为 `groupPolicy: "allowlist"`；如果你的群组允许名单为空，群组消息将被阻止。
+    - 运行时安全：当某个 provider 配置块完全缺失（`channels.<provider>` 不存在）时，群组策略会安全失败为 `allowlist`，而不是继承 `channels.defaults.groupPolicy`，并且网关会针对每个账户记录一次该回退。
 
   </Accordion>
 </AccordionGroup>
@@ -325,7 +309,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 群组消息默认需要提及，除非按群组单独覆盖。默认值按子系统存放在 `*.groups."*"` 下。
 
-当渠道支持回复元数据时，回复机器人消息会被视为隐式提及。在提供引用元数据的渠道上，引用机器人消息也可能被视为隐式提及。当前内置案例包括 Telegram、WhatsApp、Slack、Discord、Microsoft Teams 和 ZaloUser。
+回复机器人消息在频道暴露回复元数据时会被视为隐式提及；在频道暴露引用元数据时，引用机器人消息也可能被视为提及。目前内置的情况包括：Discord、Microsoft Teams、QQBot、Slack、Telegram、WhatsApp 和 Zalo personal。
 
 ```json5
 {
@@ -365,11 +349,11 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 ## 已配置的提及模式范围
 
-已配置的 `mentionPatterns` 是正则回退触发器。当平台不暴露原生机器人提及时使用它们，或者当你希望像 `openclaw:` 这样的纯文本也算作提及时使用。原生平台提及是单独处理的：当 Discord、Slack、Telegram、Matrix 或其他渠道能够证明消息明确提到了机器人时，即使已配置的正则模式被拒绝，原生提及仍然会触发。
+已配置的 `mentionPatterns` 是正则表达式的回退触发条件。当平台没有提供原生机器人提及时，或当诸如 `openclaw:` 这样的纯文本也应算作提及内容时，请使用它们。原生平台提及是独立的：当 Discord、Slack、Telegram、Matrix 或其他渠道能够证明消息明确提到了机器人时，即使已配置的正则模式被拒绝，该原生提及仍然会触发。
 
-默认情况下，已配置的提及模式会应用于该渠道将提供方和会话事实传入提及检测的所有位置。要避免宽泛模式在每个群组里都唤醒代理，请按渠道使用 `channels.<channel>.mentionPatterns` 进行作用域限制。
+默认情况下，只要该渠道在提及检测中能将提供方和会话事实传入，已配置的提及模式就会在所有地方生效。为了避免宽泛模式在每个群组中都唤醒代理，请使用 `channels.<channel>.mentionPatterns` 按渠道进行作用域限定。
 
-当正则提及模式默认应对某个渠道关闭时，使用 `mode: "deny"`，然后通过 `allowIn` 为特定房间显式启用：
+当某个渠道的正则提及模式默认应关闭时，请使用 `mode: "deny"`，然后通过 `allowIn` 为特定房间启用：
 
 ```json5
 {
@@ -389,7 +373,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 }
 ```
 
-当正则提及模式应广泛生效时，使用默认的 `mode: "allow"`（或省略 `mode`），然后通过 `denyIn` 在嘈杂房间中将其关闭：
+当正则提及模式应广泛适用时，请使用默认的 `mode: "allow"`（或省略 `mode`），然后通过 `denyIn` 在噪声较大的房间中将其关闭：
 
 ```json5
 {
@@ -427,23 +411,20 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 | Telegram | 群聊 ID，或论坛主题使用 `chatId:topic:threadId`。                   |
 | WhatsApp | 例如 `123@g.us` 这样的 WhatsApp 会话 ID。                           |
 
-账户级渠道配置可以在 `channels.<channel>.accounts.<accountId>.mentionPatterns` 下设置相同策略，当该渠道支持多个账户时适用。账户策略会覆盖该账户的顶层渠道策略。
+当该渠道支持多个账号时，账号级渠道配置可以在 `channels.<channel>.accounts.<accountId>.mentionPatterns` 下设置相同策略。账号策略优先于该账号对应的顶层渠道策略。
 
 <AccordionGroup>
   <Accordion title="提及门控说明">
-    - `mentionPatterns` 是不区分大小写的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略。
-    - 提供显式提及的界面仍然会通过；配置的正则模式只是回退方案。
-    - `channels.<channel>.mentionPatterns.mode: "deny"` 会按该渠道默认禁用已配置的提及模式；可通过 `allowIn` 为选定会话重新启用。
-    - `channels.<channel>.mentionPatterns.denyIn` 会针对特定会话 ID 禁用已配置的提及模式，而原生平台 @ 提及仍然会通过。
-    - 按代理覆盖：`agents.list[].groupChat.mentionPatterns`（适用于多个代理共享一个群组时）。
+    - `mentionPatterns` 是大小写不敏感的安全正则模式；无效模式和不安全的嵌套重复形式会被忽略（并给出警告）。
+    - 模式优先级：`agents.list[].groupChat.mentionPatterns`（当多个代理共享同一群组时很有用）会覆盖 `messages.groupChat.mentionPatterns`；当两者都未设置时，模式会根据代理身份名称/表情符号派生。
     - 只有在能够进行提及检测时才会强制执行提及门控（原生提及或已配置 `mentionPatterns`）。
-    - 将群组或发送者加入允许名单并不会禁用提及门控；如果所有消息都应触发，请将该群组的 `requireMention` 设为 `false`。
-    - 自动群聊提示上下文会在每一轮携带解析后的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
-    - 允许自动静默回复的群组会将干净的空回复或仅推理的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指导，而仅使用消息工具的群组回复会通过不调用 `message(action=send)` 来保持安静。
-    - 常驻的、始终开启的群聊默认使用用户请求语义。将 `messages.groupChat.unmentionedInbound: "room_event"` 设为以静默上下文提交。有关设置示例，请参阅[环境房间事件](/channels/ambient-room-events)。
-    - 房间事件不会被存储为伪造的用户请求，且来自无消息工具房间事件的私有助手文本不会作为聊天历史回放。
-    - Discord 默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
-    - 群组历史上下文在各渠道中统一包装。提及门控的群组会保留待处理的跳过消息；始终开启的群组在渠道支持时也可能保留最近处理过的房间消息。使用 `messages.groupChat.historyLimit` 作为全局默认值，使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）进行覆盖。设为 `0` 可禁用。
+    - 将某个群组或发送者加入允许名单，并不会禁用提及门控；如果希望所有消息都能触发，请将该群组的 `requireMention` 设为 `false`。
+    - 自动群聊提示上下文会在每一轮携带已解析的静默回复指令；工作区文件不应重复 `NO_REPLY` 机制。
+    - 允许自动静默回复的群组会将干净的空输出或仅推理输出的模型轮次视为静默，等同于 `NO_REPLY`。直接聊天永远不会收到 `NO_REPLY` 指引，而仅使用消息工具的群组回复则通过不调用 `message(action=send)` 来保持安静。
+    - 常驻开启的群聊默认使用用户请求语义。将 `messages.groupChat.unmentionedInbound: "room_event"` 设为将其作为安静上下文提交。有关设置示例请参见 [环境房间事件](/channels/ambient-room-events)。
+    - 房间事件不会被存储为伪造的用户请求，而没有消息工具的房间事件中的私有助手文本也不会作为聊天历史回放。
+    - Discord 的默认值位于 `channels.discord.guilds."*"`（可按 guild/channel 覆盖）。
+    - 群组历史上下文在各渠道间采用统一包装。受提及门控的群组会保留待处理的跳过消息；常驻开启的群组在渠道支持时也可能保留最近已处理的房间消息。全局默认使用 `messages.groupChat.historyLimit`，覆盖项使用 `channels.<channel>.historyLimit`（或 `channels.<channel>.accounts.*.historyLimit`）。设为 `0` 可禁用。
 
   </Accordion>
 </AccordionGroup>
@@ -452,8 +433,8 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 某些渠道配置支持限制在**特定群组/房间/渠道内部**可用的工具。
 
-- `tools`: 为整个群组允许/拒绝工具。
-- `toolsBySender`: 群组内按发送者覆盖。使用显式键前缀：`channel:<channelId>:<senderId>`、`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>` 和 `"*"` 通配符。渠道 id 使用 OpenClaw 规范渠道 id；像 `teams` 这样的别名会规范化为 `msteams`。旧版未加前缀的键仍然被接受，但只会按 `id:` 匹配。
+- `tools`: 为整个群组允许/拒绝工具（`allow`、`alsoAllow`、`deny`；`deny` 优先）。
+- `toolsBySender`: 群组内按发送者覆盖。使用显式键前缀：`channel:<channelId>:<senderId>`、`id:<senderId>`、`e164:<phone>`、`username:<handle>`、`name:<displayName>`，以及 `"*"` 通配符。Channel id 使用 OpenClaw 规范 channel id；`teams` 等别名会规范化为 `msteams`。旧的未加前缀键仍然接受，但只按 `id:` 匹配，并会记录弃用警告。
 
 解析顺序（越具体优先级越高）：
 
@@ -556,12 +537,12 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 
 ## 激活（仅所有者）
 
-群组所有者可以切换每个群组的激活方式：
+群组所有者可以通过一条独立消息切换每个群组的激活方式：
 
 - `/activation mention`
 - `/activation always`
 
-所有者由 `channels.whatsapp.allowFrom`（若未设置，则由机器人自身的 E.164）决定。将命令作为独立消息发送。其他界面当前会忽略 `/activation`。
+`/activation` 是一个核心的、仅限所有者的命令，并且只适用于群聊。所有者指的是发送者与频道的 `allowFrom` / `commands.ownerAllowFrom` 匹配（当未配置允许列表时，账号自身的 id 也算作所有者）。存储的模式会覆盖该群组在支持它的频道上的 `requireMention`（Google Chat、QQBot、Telegram、WhatsApp），并且群组系统提示词的介绍部分会在所有地方反映当前生效的模式。
 
 ## 上下文字段
 
@@ -573,7 +554,7 @@ Sessions 默认会抑制冗长的工具/进度摘要。使用 `/verbose on`
 - `WasMentioned`（提及门控结果）
 - Telegram 论坛主题还会包含 `MessageThreadId` 和 `IsForum`。
 
-代理系统提示在新群组会话的第一轮中包含群组简介。它会提醒模型像人类一样回复，尽量减少空行并遵循正常的聊天间距，避免输入字面的 `\n` 序列。非 Telegram 群组也会避免使用 Markdown 表格；Telegram 的富文本指导来自 Telegram 渠道提示。来自渠道的群组名称和参与者标签会作为带边界的未受信元数据呈现，而不是内联系统指令。
+代理系统提示会在新群组会话的第一轮（以及 `/activation` 变更之后）包含一个群组简介。它会提醒模型像人类一样回复，尽量减少空行并遵循正常的聊天间距，同时避免输入字面形式的 `\n` 序列。非 Telegram 群组也会避免使用 Markdown 表格；Telegram 的富文本指导来自 Telegram 频道提示。来自频道的群组名称和参与者标签会以带围栏的不可信元数据形式呈现，而不是以内联系统指令的形式呈现。
 
 ## iMessage 细节
 

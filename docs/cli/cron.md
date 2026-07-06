@@ -14,6 +14,10 @@ title: "Cron"
 运行 `openclaw cron --help` 查看完整命令集合。参见 [Cron jobs](/automation/cron-jobs) 获取概念性指南。
 </Tip>
 
+<Note>
+所有 cron 变更操作（`add`/`create`、`update`/`edit`、`remove`、`run`）都需要 `operator.admin`。Command-payload runs 会直接在 Gateway 进程中执行，而不是作为 agent 的 `tools.exec` 工具调用；`tools.exec.*` 和 exec 审批仍然约束模型可见的 exec 工具。
+</Note>
+
 ## 快速创建作业
 
 `openclaw cron create` 是 `openclaw cron add` 的别名。对于新作业，请先放置调度，再放置提示：
@@ -34,11 +38,7 @@ openclaw cron create "0 18 * * 1-5" \
   --webhook "https://example.invalid/openclaw/cron"
 ```
 
-对于应在 OpenClaw cron 内运行、且不启动隔离代理/模型运行的确定性 shell 风格作业，请使用 `--command`：
-
-<Note>
-命令型 cron 作业是由管理员编写的 Gateway 自动化。创建、编辑、移除或手动运行它们需要 `operator.admin`；计划运行稍后会在 Gateway 进程中执行，而不是作为代理 `tools.exec` 工具调用执行。`tools.exec.*` 和 exec 审批仍然约束模型可见的 exec 工具。
-</Note>
+对于在 OpenClaw cron 内部运行、且不启动隔离的 agent/model 运行的确定性 shell 风格作业，请使用 `--command`：
 
 ```bash
 openclaw cron create "*/15 * * * *" \
@@ -100,29 +100,19 @@ openclaw cron create "*/15 * * * *" \
 
 失败通知按以下顺序解析：
 
-1. 作业上的 `delivery.failureDestination`。
-2. 全局 `cron.failureDestination`。
-3. 作业的主 announce 目标（当未设置显式失败目标时）。
+1. `delivery.failureDestination` on the job.
+2. Global `cron.failureDestination`.
+3. 作业的主 announce 目标（当以上两者都无法解析为具体目标时）。
 
 <Note>
 主会话作业仅在主投递模式为 `webhook` 时才可使用 `delivery.failureDestination`。隔离作业在所有模式下都接受它。
 </Note>
 
-注意：隔离 cron 运行会将运行级代理失败视为作业错误，即使
-没有生成回复负载，因此模型/提供方失败仍然会增加错误
-计数并触发失败通知。
+隔离 cron 运行会将运行级代理失败视为作业错误，即使没有生成回复负载，因此模型/提供方失败仍会增加错误计数并触发失败通知。
 
-命令型 cron 作业不会启动隔离的代理回合。零退出码会记录为
-`ok`；非零退出、信号、超时或无输出超时会记录为 `error`，并
-可能触发相同的失败通知路径。
+命令型 cron 作业不会启动隔离的代理轮次。退出码为 0 会记录为 `ok`；非 0 退出、信号、超时或无输出超时会记录为 `error`，并且可以触发相同的失败通知路径。
 
-如果隔离运行在首次模型请求前超时，`openclaw cron show`
-和 `openclaw cron runs` 会包含特定阶段的错误，例如
-`setup timed out before runner start` 或
-`stalled before first model call (last phase: context-engine)`。
-对于基于 CLI 的提供方，在外部 CLI 回合启动之前，预模型看门狗会保持激活，
-因此会话查找、钩子、认证、提示以及 CLI 设置卡住都会被
-报告为模型前的 cron 失败。
+如果隔离运行在首次模型请求之前超时，`openclaw cron show` 和 `openclaw cron runs` 会包含一个特定阶段的错误，例如 `setup timed out before runner start`，或者包含最后已知启动阶段名称的卡住消息（例如 `context-engine`）。对于基于 CLI 的提供方，在外部 CLI 轮次开始之前，模型前看门狗会一直保持激活，因此会话查找、钩子、认证、提示词以及 CLI 设置方面的卡顿都会作为模型前 cron 失败报告。
 
 ## 调度
 
@@ -140,9 +130,9 @@ openclaw cron create "*/15 * * * *" \
 
 跳过的运行会与执行错误单独跟踪。它们不会影响重试退避，但 `openclaw cron edit <job-id> --failure-alert-include-skipped` 可以让失败告警包含重复的跳过运行通知。
 
-对于目标为本地已配置模型提供方的隔离作业，cron 会在启动代理回合前执行一次轻量级的提供方预检。Loopback、私有网络以及 `.local` 的 `api: "ollama"` 提供方会在 `/api/tags` 上探测；像 vLLM、SGLang 和 LM Studio 这样的本地 OpenAI 兼容提供方会在 `/models` 上探测。如果端点不可达，该运行会被记录为 `skipped` 并在之后的计划中重试；匹配的失效端点会缓存 5 分钟，以避免大量作业反复轰击同一台本地服务器。
+对于针对本地已配置模型提供方的隔离作业（环回地址、私有网络或 `.local` 上的 base URL），cron 会在启动代理轮次前执行一个轻量级的提供方预检：`api: "ollama"` 提供方会在 `/api/tags` 上探测；其他本地 OpenAI 兼容提供方（`api: "openai-completions"`，例如 vLLM、SGLang、LM Studio）会在 `/models` 上探测。如果端点不可达，该次运行会被记录为 `skipped`，并在之后的计划中重试；可达性结果会按端点缓存 5 分钟，因此针对同一本地服务器的多个作业不会因重复探测而造成负担。
 
-注意：cron 作业、待处理的运行时状态以及运行历史都存储在共享的 SQLite 状态数据库中。旧版 `jobs.json`、`jobs-state.json` 和 `runs/*.jsonl` 文件会被导入一次，并以 `.migrated` 后缀重命名。导入后，请使用 `openclaw cron add|edit|remove` 编辑计划，而不是编辑 JSON 文件。
+Cron 作业、待处理的运行时状态和运行历史存放在共享的 SQLite 状态数据库中。旧版 `jobs.json`、`<name>-state.json` 和 `runs/*.jsonl` 文件会被导入一次，并重命名为带有 `.migrated` 后缀的文件。导入完成后，请使用 `openclaw cron add|edit|remove` 来编辑计划，而不是直接编辑 JSON 文件。
 
 ### 手动运行
 
@@ -159,7 +149,7 @@ openclaw cron runs --id <job-id> --run-id <run-id>
 openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 ```
 
-使用 `--wait` 时，CLI 仍会先调用 `cron.run`，然后轮询 `cron.runs` 以获取返回的 `runId`。只有当运行以 `ok` 状态结束时，命令才会以 `0` 退出。当运行以 `error` 或 `skipped` 结束、Gateway 响应不包含 `runId`，或者 `--wait-timeout` 过期时，它会以非零状态退出。`--poll-interval` 必须大于零。
+使用 `--wait` 时，CLI 仍然会先调用 `cron.run`，然后轮询 `cron.runs` 以获取返回的 `runId`。只有当运行以 `ok` 状态结束时，命令才会以 `0` 退出。当运行以 `error` 或 `skipped` 结束、Gateway 响应未包含 `runId`，或 `--wait-timeout` 超时（默认 `10m`，默认每 `2s` 轮询一次）时，命令会以非零状态退出。`--poll-interval` 必须大于零。
 
 <Note>
 当你希望手动命令仅在作业当前到期时才运行，请使用 `--due`。如果 `--due --wait` 没有排队运行，命令会返回正常的非运行响应，而不是继续轮询。
@@ -167,7 +157,7 @@ openclaw cron run <job-id> --wait --wait-timeout 10m --poll-interval 2s
 
 ## 模型
 
-`cron add|edit --model <ref>` 选择该作业允许使用的模型。`cron add|edit --fallbacks <list>` 设置每个作业的回退模型，例如 `--fallbacks openrouter/gpt-4.1-mini,openai/gpt-5`；若要严格运行且没有回退，请传入 `--fallbacks ""`。`cron edit <job-id> --clear-fallbacks` 会移除每作业的回退覆盖。`cron edit <job-id> --clear-model` 会移除每作业的模型覆盖，使作业遵循正常的 cron 模型选择优先级（若存在则使用已存储的 cron 会话覆盖，否则使用代理/默认模型）；它不能与 `--model` 组合使用。
+`cron add|edit --model <ref>` 选择该作业允许的模型。`cron add|edit --fallbacks <list>` 设置每个作业的回退模型，例如 `--fallbacks openrouter/gpt-4.1-mini,openai/gpt-5`；传入 `--fallbacks ""` 可进行严格运行，不使用任何回退。`cron edit <job-id> --clear-fallbacks` 会移除每作业的回退覆盖。`cron edit <job-id> --clear-model` 会移除每作业的模型覆盖，使该作业遵循正常的 cron 模型选择优先级（如果存在已存储的 cron 会话覆盖，则优先使用，否则使用代理/默认模型）；它不能与 `--model` 同时使用。`cron add|edit --thinking <level>` 设置每作业的 thinking 覆盖；`cron edit <job-id> --clear-thinking` 会将其移除，使作业遵循正常的 cron thinking 优先级，并且它不能与 `--thinking` 同时使用。
 
 <Warning>
 如果模型不被允许或无法解析，cron 会以明确的验证错误使运行失败，而不是回退到作业的代理或默认模型选择。
@@ -212,7 +202,7 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ### 结构化拒绝
 
-隔离 cron 运行会使用嵌入式运行中的结构化执行拒绝元数据作为权威拒绝信号。它们也会在嵌套的结构化错误消息以 `SYSTEM_RUN_DENIED` 或 `INVALID_REQUEST` 开头时，尊重节点宿主的 `UNAVAILABLE` 包装。
+Isolated cron runs use structured execution-denial metadata from the embedded run (fatal exec-tool errors coded `SYSTEM_RUN_DENIED` or `INVALID_REQUEST`) as the authoritative denial signal. They also honor node-host `UNAVAILABLE` wrappers around a nested structured error carrying one of those codes.
 
 除非嵌入式运行也提供了结构化拒绝元数据，否则 cron 不会将最终输出散文或看起来像审批拒绝的短语归类为拒绝，因此普通的助手文本不会被视为被阻止的命令。
 
@@ -220,10 +210,10 @@ Cron `--model` 是一个 **作业主项**，不是聊天会话的 `/model` 覆�
 
 ## 保留
 
-保留和清理在配置中控制：
+保留和清理由配置控制：
 
-- `cron.sessionRetention`（默认 `24h`）会清理已完成的隔离运行会话。
-- `cron.runLog.keepLines` 会按作业清理保留的 SQLite 运行历史行。`cron.runLog.maxBytes` 仍然被接受，以兼容旧的文件后端运行日志。
+- `cron.sessionRetention`（默认 `24h`，或设为 `false` 以禁用）会清理已完成的隔离运行会话。
+- `cron.runLog.keepLines`（默认 `2000`）会按每个作业清理保留的 SQLite 运行历史行。`cron.runLog.maxBytes`（默认 `2000000`）仍被接受，以兼容较旧的基于文件的运行日志；SQLite 清理基于行数。
 
 ## 迁移旧作业
 
@@ -274,7 +264,7 @@ openclaw cron create "0 7 * * *" \
   --no-deliver
 ```
 
-`--light-context` 仅适用于隔离的代理回合作业。对于 cron 运行，轻量模式会保持引导上下文为空，而不是注入完整的工作区引导集合。
+`--light-context` 仅适用于隔离的代理回合式作业。对于 cron 运行，轻量模式会保持引导上下文为空，而不是注入完整的工作区引导集合。
 
 创建一个带精确 argv、cwd、env、stdin 和输出限制的命令作业：
 

@@ -8,28 +8,20 @@ title: "测试：更新和插件"
 sidebarTitle: "更新和插件测试"
 ---
 
-这是用于更新和插件验证的专用检查清单。目标很简单：证明可安装的包能够更新真实用户状态，通过 `doctor` 修复过时的旧状态，并且仍然可以从受支持的来源安装、加载、更新和卸载插件。
+更新和插件验证检查清单：证明可安装包能够
+更新真实用户状态，通过 `doctor` 修复过期的旧状态，并且仍然能够
+从所有受支持的来源安装、加载、更新和卸载插件。
 
 更全面的测试运行器地图请参见 [测试](/help/testing)。关于实时 provider key 和会触发网络的套件，请参见 [实时测试](/help/testing-live)。
 
 ## 我们保护的内容
 
-更新和插件测试保护以下契约：
-
-- 一个包 tarball 是完整的，具有有效的 `dist/postinstall-inventory.json`，
-  且不依赖未解包的仓库文件。
-- 用户可以从较旧的已发布包迁移到候选包，
-  而不会丢失配置、agents、sessions、workspaces、插件 allowlist 或
-  channel 配置。
-- `openclaw doctor --fix --non-interactive` 负责旧版清理和修复
-  路径。启动阶段不应再为过时的插件状态引入隐藏的兼容性迁移。
-- 插件安装可来自本地目录、git 仓库、npm 包，以及
-  ClawHub registry 路径。
-- 插件的 npm 依赖会在每个插件对应的受管 npm 项目中安装，
-  在信任前进行扫描，并在卸载时通过 npm 删除，因此 hoisted
-  依赖不会残留。
-- 当没有任何变化时，插件更新是稳定的：安装记录、解析后的
-  来源、已安装的依赖布局以及启用状态都保持不变。
+- 一个 package tarball 是完整的，具有有效的 `dist/postinstall-inventory.json`，并且不依赖于已解包的 repo 文件。
+- 用户可以从较旧的已发布 package 迁移到候选 package，而不会丢失 config、agents、sessions、workspaces、plugin allowlists 或 channel config。
+- `openclaw doctor --fix --non-interactive` 负责旧版清理和修复路径。启动时不应为过期的 plugin state 增加隐式的兼容性迁移。
+- Plugin 安装可从本地目录、git repos、npm packages 和 ClawHub registry path 正常工作。
+- Plugin 的 npm dependencies 在每个 plugin 的一个受管理 npm project 中安装，在信任之前会先进行扫描，并且在 plugin 卸载时通过 `npm uninstall` 移除，因此 hoisted dependencies 不会残留。
+- 当没有任何变化时，Plugin update 是无操作：install records、resolved source、installed dependency layout 和 enabled state 都保持不变。
 
 ## 开发期间的本地验证
 
@@ -53,7 +45,7 @@ pnpm test src/plugins/uninstall.test.ts src/infra/package-dist-inventory.test.ts
 pnpm release:check
 ```
 
-`release:check` 会运行配置/文档/API 漂移检查，写入包 dist 清单，运行 `npm pack --dry-run`，拒绝被打包的禁用文件，将 tarball 安装到临时前缀，运行 postinstall，并对打包内的 channel 入口点进行冒烟测试。
+`release:check` 会运行配置/文档/API 漂移检查（配置 schema、配置文档基线、插件 SDK API 基线和导出、插件版本/清单），写入包的 dist 清单，执行 `npm pack --dry-run`，拒绝被禁止的打包文件，将 tarball 安装到临时前缀，运行 postinstall，并对捆绑的 channel 入口点进行冒烟测试。
 
 ## Docker lanes
 
@@ -73,13 +65,35 @@ pnpm test:docker:update-migration
 
 重要 lanes：
 
-- `test:docker:plugins` 会验证插件安装冒烟测试、本地文件夹安装、本地文件夹更新跳过行为、带预装依赖的本地文件夹、`file:` 包安装、带 CLI 执行的 git 安装、git 移动引用更新、带提升式传递依赖的 npm registry 安装、npm 更新无操作、损坏的 npm 包元数据拒绝、本地 ClawHub fixture 安装与更新无操作、marketplace 更新行为，以及 Claude-bundle 启用/检查。将 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 设为 0 可使 ClawHub 区块保持 hermetic/离线。
-- `test:docker:plugin-lifecycle-matrix` 会在一个裸容器中安装候选包，运行一个 npm 插件完成安装、检查、禁用、启用、显式升级、显式降级，以及在删除插件代码后卸载。它会记录每个阶段的 RSS 和 CPU 指标。
-- `test:docker:plugin-update` 会验证在 `openclaw plugins update` 期间，未发生变化的已安装插件不会重新安装，也不会丢失安装元数据。
-- `test:docker:upgrade-survivor` 会在一个脏旧用户 fixture 上安装候选 tarball，运行包更新加非交互式 doctor，然后启动一个 loopback Gateway 并检查状态保留。
-- `test:docker:published-upgrade-survivor` 会先安装一个已发布基线，通过预先烘焙的 `openclaw config set` 配方进行配置，更新到候选 tarball，运行 doctor，检查旧版清理，启动 Gateway，并探测 `/healthz`、`/readyz` 和 RPC 状态。
-- `test:docker:update-restart-auth` 会安装候选包，启动一个受管的 token-auth Gateway，清除调用方 gateway auth 环境变量以供 `openclaw update --yes --json` 使用，并要求候选更新命令在正常探测之前重启 Gateway。
-- `test:docker:update-migration` 是一个重清理的已发布更新 lane。它从已配置的 Discord/Telegram 风格用户状态开始，运行基线 doctor，使已配置的插件依赖有机会落地，为一个已配置的打包插件播种旧版插件依赖残留，更新到候选 tarball，并要求更新后的 doctor 删除旧的依赖根目录。
+- `test:docker:plugins` 覆盖插件安装冒烟测试、本地文件夹安装、
+  本地文件夹更新跳过行为、带预安装
+  依赖的本地文件夹、`file:` 包安装、带 CLI 执行的 git 安装、git
+  移动引用更新、带提升的传递
+  依赖的 npm registry 安装、npm 更新无操作、格式错误的 npm 包元数据拒绝、
+  本地 ClawHub fixture 安装和更新无操作、marketplace 更新行为，
+  以及 Claude-bundle 启用/检查。设置 `OPENCLAW_PLUGINS_E2E_CLAWHUB=0` 以
+  保持 ClawHub 区块的整体性/离线。
+- `test:docker:plugin-lifecycle-matrix` 在一个裸
+  容器中安装候选包，运行一个 npm 插件，依次经过安装、检查、禁用、启用、
+  显式升级、显式降级，以及在删除插件
+  代码后的卸载。它会按阶段记录 RSS 和 CPU 指标。
+- `test:docker:plugin-update` 验证一个未更改的已安装插件在执行
+  `openclaw plugins update` 期间不会重新安装或丢失安装元数据。
+- `test:docker:upgrade-survivor` 在一个脏的
+  old-user fixture 上安装候选 tarball，运行包更新加非交互式 doctor，然后启动
+  loopback Gateway 并检查状态保留。
+- `test:docker:published-upgrade-survivor` 先安装一个已发布的基线，
+  通过预置的 `openclaw config set` 配方进行配置，更新到候选 tarball，
+  运行 doctor，检查旧版清理，启动 Gateway，并
+  探测 `/healthz`、`/readyz` 和 RPC 状态。
+- `test:docker:update-restart-auth` 安装候选包，启动一个受管理的 token-auth Gateway，
+  在 `openclaw update --yes --json` 前取消调用方 gateway auth 环境变量，
+  并要求候选更新命令在正常探测之前重启 Gateway。
+- `test:docker:update-migration` 是清理密集型的已发布更新 lane。它
+  从一个已配置的 Discord/Telegram 风格用户状态开始，运行基线
+  doctor 以便已配置的插件依赖有机会实例化，为一个已配置的打包插件播种
+  旧版插件依赖残留，更新到候选 tarball，
+  并要求更新后的 doctor 移除旧版依赖根。
 
 有用的 published-upgrade survivor 变体：
 
@@ -93,11 +107,12 @@ OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=bootstrap-persona \
 pnpm test:docker:published-upgrade-survivor
 ```
 
-可用场景为 `base`、`feishu-channel`、`bootstrap-persona`、
-`plugin-deps-cleanup`、`configured-plugin-installs`、
-`stale-source-plugin-shadow`、`tilde-log-path` 和 `versioned-runtime-deps`。在聚合运行中，
-`OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` 会展开为所有已报告
-问题形状的场景，包括已配置的插件安装迁移。
+可用场景：`base`、`acpx-openclaw-tools-bridge`、`feishu-channel`、
+`bootstrap-persona`、`channel-post-core-restore`、`plugin-deps-cleanup`、
+`configured-plugin-installs`、`stale-source-plugin-shadow`、`tilde-log-path`，
+以及 `versioned-runtime-deps`。在聚合运行中，`OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues`
+（别名 `far-reaching`）会展开为所有场景，包括
+已配置插件安装迁移。
 
 完整更新迁移有意与 Full Release CI 分离。当发布问题是“从 2026.4.23 起的每个
 已发布稳定版本都能更新到这个候选版本并清理插件依赖残留吗？”时，请使用手动
@@ -118,32 +133,26 @@ Package Acceptance 是 GitHub 原生的包门禁。它将一个候选包解析�
 
 候选来源：
 
-- `source=npm`: 验证 `openclaw@beta`、`openclaw@latest` 或某个精确的
-  已发布版本。
-- `source=ref`: 使用选定的当前
-  harness 打包受信任的分支、标签或提交。
-- `source=url`: 验证一个公共 HTTPS tarball，并要求提供 `package_sha256`。
-  此路径会拒绝 URL 凭据、非默认 HTTPS 端口、私有/内部
-  主机名或 DNS/IP 结果、特殊用途 IP 空间以及不安全的重定向。
-- `source=trusted-url`: 根据维护者拥有的策略，
-  对 `.github/package-trusted-sources.json` 中的 `trusted_source_id`
-  验证一个带 `package_sha256` 和 `trusted_source_id` 的 HTTPS tarball。请将其用于企业/私有
-  镜像，而不是通过输入级的 allow-private 开关来弱化 `source=url`。当策略配置了 Bearer 认证时，
-  使用固定的 `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret。
-- `source=artifact`: 复用由另一个 Actions 运行上传的 tarball。
+- `source=npm`: 验证 `openclaw@extended-stable`、`openclaw@beta`、
+  `openclaw@latest`，或一个精确的已发布版本。
+- `source=ref`: 使用所选的当前 harness 对一个受信任的分支、标签或提交进行打包。
+- `source=url`: 验证带有必需 `package_sha256` 的公开 HTTPS tarball。
+  该路径会拒绝 URL 凭据、非默认 HTTPS 端口、私有/内网主机名或 DNS/IP 解析结果、特殊用途 IP 空间，以及不安全的重定向。
+- `source=trusted-url`: 针对维护者拥有的 `.github/package-trusted-sources.json` 中的策略，验证带有必需
+  `package_sha256` 和 `trusted_source_id` 的 HTTPS tarball。对于企业/私有镜像，请使用此方式，而不是通过输入级别的 allow-private 开关来弱化 `source=url`。当策略配置了 Bearer 认证时，会使用固定的 `OPENCLAW_TRUSTED_PACKAGE_TOKEN` secret。
+- `source=artifact`: 重用由另一个 Actions 运行上传的 tarball。
 
-Full Release Validation uses `source=artifact` by default, built from the
-resolved release SHA. For post-publish proof, pass
-`package_acceptance_package_spec=openclaw@YYYY.M.PATCH` so the same upgrade matrix
-targets the shipped npm package instead.
+Full Release Validation 默认使用 `source=artifact`，其构建自解析后的发布 SHA。若要进行发布后证明，请传入
+`package_acceptance_package_spec=openclaw@YYYY.M.PATCH`，这样相同的升级矩阵
+就会改为针对已发布的 npm 包。
 
 发布检查会针对 package/update/restart/plugin 套件调用 Package Acceptance：
 
 ```text
-doctor-switch update-channel-switch update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update
+doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor root-managed-vps-upgrade update-restart-auth plugins-offline plugin-update plugin-binding-command-escape
 ```
 
-当启用发布 soak 时，它们还会传入：
+当启用 release soak 时（`release_profile=stable` 和 `full` 时强制开启），它们还会传入：
 
 ```text
 published_upgrade_survivor_baselines=last-stable-4 2026.4.23 2026.5.2 2026.4.15
@@ -183,7 +192,11 @@ gh workflow run package-acceptance.yml \
   -f telegram_mode=mock-openai
 ```
 
-当发布问题涉及 MCP channels、cron/subagent 清理、OpenAI web search 或 OpenWebUI 时，使用 `suite_profile=product`。仅当你需要完整的 Docker 发布路径覆盖时，才使用 `suite_profile=full`。
+对于已发布的 extended-stable 金丝雀，请设置
+`package_spec=openclaw@extended-stable`。Package Acceptance 会先将该
+选择器解析为精确的 tarball，然后再运行 Docker lanes。
+
+当发布问题包含 MCP channels、cron/subagent cleanup、OpenAI web search 或 OpenWebUI 时，请使用 `suite_profile=product`。仅当你需要完整的 Docker 发布路径覆盖时，才使用 `suite_profile=full`。
 
 ## 发布默认项
 
@@ -216,18 +229,15 @@ gh workflow run package-acceptance.yml \
 
 当更改更新或插件行为时，请在最可能以正确原因失败的最低层添加覆盖：
 
-- Pure path or metadata logic: unit test beside the source.
-- Package inventory or packed-file behavior: `package-dist-inventory` or tarball
-  checker test.
-- CLI install/update behavior: Docker lane assertion or fixture.
-- Published-release migration behavior: `published-upgrade-survivor` scenario.
-- Update-owned restart behavior: `update-restart-auth`.
-- Registry/package source behavior: `test:docker:plugins` fixture or ClawHub
-  fixture server.
-- Dependency layout or cleanup behavior: assert both runtime execution and the
-  filesystem boundary. npm dependencies may be hoisted inside the plugin's
-  managed npm project, so tests should prove that project is scanned/cleaned
-  instead of assuming only the plugin package-local `node_modules` tree.
+- 纯路径或元数据逻辑：在源文件旁边添加单元测试。
+- 包清单或已打包文件行为：使用 `package-dist-inventory` 或 tarball
+  检查器测试。
+- CLI 安装/更新行为：Docker lane 断言或 fixture。
+- 已发布版本迁移行为：`published-upgrade-survivor` 场景。
+- update-owned 重启行为：`update-restart-auth`。
+- 注册表/包源行为：`test:docker:plugins` fixture 或 ClawHub
+  fixture 服务器。
+- 依赖布局或清理行为：同时断言运行时执行和文件系统边界。npm 依赖可能会在插件托管的 npm 项目中被提升，因此测试应证明会扫描/清理该项目，而不是假设只有插件包本地的 `node_modules` 树。
 
 默认保持新的 Docker fixtures 为 hermetic。除非测试目标就是 live registry 行为，否则使用本地 fixture registry 和伪造包。
 
@@ -235,8 +245,12 @@ gh workflow run package-acceptance.yml \
 
 先从产物身份开始：
 
-- Package Acceptance 的 `resolve_package` 摘要：来源、版本、SHA-256 和产物名称。
-- Docker 产物：`.artifacts/docker-tests/**/summary.json`、`failures.json`、lane 日志和重跑命令。
-- Upgrade survivor 摘要：`.artifacts/upgrade-survivor/summary.json`，包括基线版本、候选版本、场景、阶段耗时和配方步骤。
+- Package Acceptance `resolve_package` summary: source, version, SHA-256, and
+  artifact name.
+- Docker artifacts: `.artifacts/docker-tests/**/summary.json`,
+  `failures.json`, lane logs, and rerun commands.
+- Upgrade survivor summary: `.artifacts/upgrade-survivor/summary.json`,
+  including baseline version, candidate version, scenario, phase timings, and
+  config recipe coverage.
 
 优先使用相同的包产物重跑失败的精确 lane，而不是重跑整个发布总流程。

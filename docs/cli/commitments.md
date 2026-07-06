@@ -9,7 +9,9 @@ title: "`openclaw commitments`"
 
 列出并管理推断的后续承诺。
 
-承诺是可选启用、短暂存在的后续记忆，由对话上下文创建。有关概念性指南，请参见 [推断的承诺](/concepts/commitments)。
+承诺是可选启用的（`commitments.enabled`），是由对话上下文创建并由 heartbeat 交付的短期后续记忆。
+参见
+[推断的承诺](/concepts/commitments) 了解概念指南和配置。
 
 在没有子命令的情况下，`openclaw commitments` 会列出待处理的承诺。
 
@@ -23,11 +25,14 @@ openclaw commitments dismiss <id...> [--json]
 
 ## 选项
 
-- `--all`：显示所有状态，而不仅仅是待处理的承诺。
-- `--agent <id>`：筛选到某个代理 id。
-- `--status <status>`：按状态筛选。取值：`pending`、`sent`、
-  `dismissed`、`snoozed` 或 `expired`。
-- `--json`：输出机器可读的 JSON。
+- `--all`: 显示所有状态，而不是仅显示待处理的承诺。
+- `--agent <id>`: 过滤到某个 agent id。
+- `--status <status>`: 按状态过滤。可选值：`pending`、`sent`、
+  `dismissed`、`snoozed` 或 `expired`。未知值将以错误退出。
+- `--json`: 输出机器可读的 JSON。
+
+`dismiss` 会将给定的承诺 id 标记为 `dismissed`，因此 heartbeat 不会
+投递它们。
 
 ## 示例
 
@@ -69,16 +74,18 @@ openclaw commitments --all --json
 
 ## 输出
 
-文本输出包括：
+文本输出会打印承诺数量、存储路径、任何活动过滤器，
+以及每条承诺一行：
 
-- 承诺 id
+- 承诺 ID
 - 状态
-- 类型
-- 最早到期时间
-- 作用域
-- 建议的检查文本
+- 类型（`event_check_in`、`deadline_check`、`care_check_in` 或 `open_loop`）
+- 最早截止时间
+- 范围（agent/channel/target）
+- 建议的签到文本
 
-JSON 输出还包括承诺存储路径和完整的已存储记录。
+JSON 输出包含数量、活动状态和 agent 过滤器、
+承诺存储路径，以及完整的存储记录。
 
 ## 相关内容
 

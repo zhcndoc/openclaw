@@ -8,7 +8,10 @@ read_when:
   - 你正在与 Gateway 的 agent 运行、会话、事件、审批、模型或工具集成
 ---
 
-外部应用今天应通过 Gateway 协议与 OpenClaw 通信。当脚本、仪表板、CI 作业、IDE 扩展或其他进程需要启动 agent 运行、流式接收事件、等待结果、取消工作或检查 Gateway 资源时，请使用 Gateway WebSocket 和 RPC 方法。
+外部应用通过 Gateway 协议与 OpenClaw 通信：WebSocket
+传输加上 RPC 方法。当脚本、仪表板、CI 作业、IDE
+扩展或其他进程需要启动 agent 运行、流式接收事件、等待
+结果、取消工作或检查 Gateway 资源时，请使用它。
 
 <Warning>
   目前还没有公开的 npm 客户端包。在发布说明宣布已发布的包并且此页面包含安装说明之前，不要将 OpenClaw 客户端包名称添加为应用依赖项。
@@ -27,7 +30,7 @@ read_when:
 | [`openclaw agent`](/cli/agent)         | 已就绪 | 当通过 shell 调用 CLI 已足够时，用于一次性脚本集成。                                             |
 | [`openclaw message`](/cli/message)     | 已就绪 | 从脚本发送消息或通道操作。                                                                       |
 
-源码树中包含未来客户端库的内部包开发工作，但这不是公开的安装入口。在这些包发布并完成版本管理之前，应将其视为预览实现细节。
+内部正在推进一个未来的客户端库包，但它目前还不是公开的安装入口。请将其视为预览实现细节，直到某个发布版本宣布了一个已发布、带版本号的包。
 
 ## 推荐路径
 
@@ -37,7 +40,7 @@ read_when:
 4. 固定你所测试的 OpenClaw 版本。
 5. 升级 OpenClaw 时重新检查 RPC 参考文档。
 
-对于 agent 运行，请从 `agent` RPC 开始；当你需要最终结果时，配合使用 `agent.wait`。对于持久化会话状态，请使用 `sessions.*` 方法。对于 UI 集成，请订阅 Gateway 事件，并且只渲染你的应用能够理解的事件族。
+对于代理运行，请从 `agent` RPC 开始，并将其与 `agent.wait` 配对，以获取最终结果。对于持久会话状态，请使用 `sessions.*` 方法。对于 UI 集成，请订阅 Gateway 事件，并且只渲染你的应用能够理解的事件族。
 
 ## 应用代码 vs 插件代码
 
@@ -62,13 +65,13 @@ read_when:
 
 ## 相关内容
 
-- [Gateway protocol](/gateway/protocol)
-- [Gateway RPC reference](/reference/rpc)
-- [CLI agent command](/cli/agent)
-- [CLI message command](/cli/message)
-- [Agent loop](/concepts/agent-loop)
-- [Agent runtimes](/concepts/agent-runtimes)
-- [Sessions](/concepts/session)
-- [Background tasks](/automation/tasks)
-- [ACP agents](/tools/acp-agents)
-- [Plugin SDK overview](/plugins/sdk-overview)
+- [网关协议](/gateway/protocol)
+- [网关 RPC 参考](/reference/rpc)
+- [CLI 代理命令](/cli/agent)
+- [CLI 消息命令](/cli/message)
+- [代理循环](/concepts/agent-loop)
+- [代理运行时](/concepts/agent-runtimes)
+- [会话](/concepts/session)
+- [后台任务](/automation/tasks)
+- [ACP 代理](/tools/acp-agents)
+- [插件 SDK 概览](/plugins/sdk-overview)

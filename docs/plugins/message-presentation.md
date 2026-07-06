@@ -11,14 +11,8 @@ read_when:
 消息展示是 OpenClaw 面向富出站聊天 UI 的共享契约。
 它允许代理、CLI 命令、审批流和插件只描述一次消息意图，而由各个频道插件尽可能渲染为最佳的原生形态。
 
-对可移植的消息 UI 使用展示能力：
-
-- 文本区块
-- 小型上下文/页脚文本
-- 分隔线
-- 按钮
-- 选择菜单
-- 卡片标题和语气
+使用展示来实现可移植的消息 UI：文本区块、小型上下文/页脚文本、
+分割线、按钮、选择菜单，以及卡片标题/色调。
 
 不要在共享消息工具中新增诸如 Discord `components`、Slack `blocks`、Telegram `buttons`、Teams `card` 或 Feishu `card` 之类的提供方原生字段。这些是由频道插件拥有的渲染器输出。
 
@@ -88,16 +82,16 @@ type ReplyPayloadDelivery = {
 
 按钮语义：
 
-- `action.type: "command"` 通过核心的命令路径运行原生斜杠命令。用于内置命令按钮和菜单。
-- `action.type: "callback"` 通过频道的交互路径传递不透明的插件数据。频道插件不得将回调数据重新解释为斜杠命令。
-- `value` 是旧版的不透明回调值。新控件应使用 `action`，这样频道插件就能无需猜测文本即可映射命令和回调。
+- `action.type: "command"` 通过 core 的 command 路径运行原生 slash 命令。用于内置命令按钮和菜单。
+- `action.type: "callback"` 通过频道的交互路径传递不透明的插件数据。频道插件不得将回调数据重新解释为 slash 命令。
+- `value` 是旧版的不透明回调值。新控件应使用 `action`，这样频道插件就可以在不根据文本猜测的情况下映射命令和回调。
 - `url` 是链接按钮。它可以在没有 `value` 的情况下存在。
-- `webApp` 描述频道原生的 Web 应用按钮。Telegram 会将其渲染为 `web_app`，且仅支持私聊。为了兼容性，`web_app` 仍可在宽松 JSON 载荷中接受，但 TypeScript 生产者应使用 `webApp`。
-- `label` 是必需项，并且也用于文本回退。
-- `style` 仅供参考。渲染器应将不支持的样式映射为安全默认值，而不是发送失败。
-- `priority` 是可选项。当频道声明动作限制且必须丢弃部分控件时，核心会优先保留更高优先级的按钮，并在相同优先级之间保留原始顺序。当所有控件都能容纳时，则保留作者编排的顺序。
-- `disabled` 是可选项。频道必须通过 `supportsDisabled` 显式启用；否则核心会将禁用控件降级为不可交互的回退文本。
-- `reusable` 是可选项。支持可复用原生回调的频道可以在一次成功交互后继续保留该动作。用于可重复或幂等的动作，例如刷新、查看详情或更多信息；对普通的一次性审批和破坏性动作则不要设置。
+- `webApp` 描述一个频道原生的 web 应用按钮。Telegram 会将其渲染为 `web_app`，且仅支持私聊。为了兼容性，`web_app` 在宽松的 JSON 载荷中仍被接受，但 TypeScript 生成方应使用 `webApp`。
+- `label` 是必需的，并且也会用于文本回退。
+- `style` 仅作建议。渲染器应将不支持的样式映射为安全的默认值，而不是发送失败。
+- `priority` 是可选的。当某个频道声明了动作限制且必须丢弃部分控件时，core 会优先保留更高优先级的按钮，并在相同优先级按钮之间保持原始顺序。当所有控件都能容纳时，会保留作者定义的顺序。
+- `disabled` 是可选的。频道必须通过 `supportsDisabled` 明确支持；否则 core 会将禁用控件降级为不可交互的回退文本。即使禁用按钮携带 `command` 动作，回退文本中也始终只显示标签，不可交互。
+- `reusable` 是可选的。支持可复用原生回调的频道可以在成功交互后继续保留该动作可用。可将其用于可重复或幂等的动作，例如刷新、检查或查看更多详情；普通的一次性审批和破坏性操作则不要设置它。
 
 选择器语义：
 
@@ -316,8 +310,18 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 - 按钮标签，包括链接按钮的 URL
 - 选择器选项标签
 
-不支持的原生控件应进行降级，而不是让整个发送失败。
-示例：
+### 按钮值回退可见性
+
+当某个频道无法渲染交互控件时，按钮和值选择会回退为纯文本。此回退行为在保持可用性的同时，会保护不透明的回调数据私密：
+
+- **`command` 类型的动作** 会渲染为 `label: \`command\``，这样用户可以复制该命令并在频道输入中手动运行。
+- **`callback` 类型的动作** 和旧版 **`value`** 字段会仅渲染标签。未公开的回调值不会出现在回退文本中。
+- **`url` / `webApp`** 按钮会连同按钮标签一起渲染 URL 文本，因为 URL 是面向用户的。
+- **选择器选项** 仅渲染标签。底层选项值不会出现在回退文本中。
+
+在回退 UI 中添加手动命令指引的频道适配器（例如飞书文档评论说明）必须从与回退渲染器相同的展示区块中派生命令存在性检查，因此只有在实际显示手动命令时，指引文本才会出现。
+
+不支持的原生控件应当降级，而不是让整个发送失败。例如：
 
 - 在禁用内联按钮的 Telegram 中会发送文本回退。
 - 不支持选择器的频道会将选择项作为文本列出。
@@ -330,15 +334,16 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 
 当前内置渲染器：
 
-| 频道           | 原生渲染目标                          | 说明                                                                                                                                                       |
-| -------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Discord        | 组件和组件容器                         | 为现有的提供方原生载荷生产者保留旧的 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                               |
-| Slack          | Block Kit                             | 为现有的提供方原生载荷生产者保留旧的 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                   |
-| Telegram       | 文本加内联键盘                          | 按钮/选择器要求目标表面具备内联按钮能力；否则使用文本回退。                                                                                                |
-| Mattermost     | 文本加交互属性                          | 其他区块会降级为文本。                                                                                                                                     |
-| Microsoft Teams | 自适应卡片                            | 当两者都提供时，纯 `message` 文本会与卡片一起包含。                                                                                                        |
-| 飞书           | 交互式卡片                              | 卡片头部可以使用 `title`；正文会避免重复该标题。                                                                                                           |
-| 纯文本频道      | 文本回退                               | 没有渲染器的频道仍会得到可读输出。                                                                                                                         |
+| Channel         | Native render target                      | Notes                                                                                                                                                                                                             |
+| --------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Discord         | 组件和组件容器       | 为现有提供方原生载荷生产者保留旧版 `channelData.discord.components`，但新的共享发送应使用 `presentation`。                                                                                                                              |
+| 飞书          | 交互式卡片                         | 卡片标题可使用 `title`；正文避免重复该标题。                                                                                                                                                  |
+| Matrix         | 文本回退加结构化事件字段 | 按钮/选择项会被标记为受支持，但目前每个块都仅渲染为 `renderMessagePresentationFallbackText` 的输出，并携带在 `com.openclaw.presentation` 事件字段中，而不是原生交互式组件。 |
+| Mattermost      | 文本加交互属性               | 不支持选择项和分隔线；这些块会降级为文本。                                                                                                                                             |
+| Microsoft Teams | 自适应卡片                            | 当同时提供时，纯 `message` 文本会与卡片一起包含。 不支持选择项、样式和禁用状态。                                                                                     |
+| Slack           | Block Kit                                 | 为现有提供方原生载荷生产者保留旧版 `channelData.slack.blocks`，但新的共享发送应使用 `presentation`。                                                                       |
+| Telegram        | 文本加内联键盘                | 按钮/选择项需要目标界面具备内联按钮能力；否则将使用文本回退。                                                                                                         |
+| 纯文本渠道  | 文本回退                             | 即使没有渲染器的渠道也能获得可读输出。                                                                                                                                                            |
 
 提供方原生载荷兼容性是为现有回复生产者提供的过渡性便利。它不是新增共享原生字段的理由。
 
@@ -365,12 +370,16 @@ core 负责回退行为，因此生产者可以保持与频道无关。频道插
 import {
   adaptMessagePresentationForChannel,
   applyPresentationActionLimits,
+  hasMessagePresentationBlocks,
   interactiveReplyToPresentation,
+  isMessagePresentationInteractiveBlock,
   normalizeMessagePresentation,
   presentationPageSize,
   presentationToInteractiveControlsReply,
   presentationToInteractiveReply,
   renderMessagePresentationFallbackText,
+  resolveMessagePresentationActionValue,
+  resolveMessagePresentationControlValue,
 } from "openclaw/plugin-sdk/interactive-runtime";
 ```
 
@@ -378,7 +387,19 @@ import {
 `interactive` 载荷是 `presentation` 的已弃用子集；运行时
 仍会为旧生产者保留支持。
 
-SDK 中旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
+值得了解的非弃用辅助函数：
+
+- `normalizeMessagePresentation(raw)` / `hasMessagePresentationBlocks(value)`
+  验证并强制转换一个未类型化载荷（例如来自 CLI
+  `--presentation` 标志的 JSON）为 `MessagePresentation`。
+- `isMessagePresentationInteractiveBlock(block)` 将一个区块缩窄为
+  `buttons` | `select` 联合类型。
+- `resolveMessagePresentationActionValue(action)` /
+  `resolveMessagePresentationControlValue(control)` 读取 `action` 上有效的
+  command/callback 值，并在 `resolveMessagePresentationControlValue` 中回退到旧的 `value`
+  字段。
+
+SDK 中的旧版 `InteractiveReply*` 类型和转换辅助函数已标记为
 `@deprecated`：
 
 - `InteractiveReply`、`InteractiveReplyBlock`、`InteractiveReplyButton`、

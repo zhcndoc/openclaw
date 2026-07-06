@@ -6,43 +6,42 @@ read_when:
 title: "Docker"
 ---
 
-Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docker 流程时才使用它。
+Docker is **optional**. Use it for an isolated, throwaway gateway environment or a host without local installs. If you already develop on your own machine, use the normal install flow instead.
 
-## Docker 适合我吗？
-
-- **是**：你想要一个隔离的、用完即弃的网关环境，或者想在没有本地安装的主机上运行 OpenClaw。
-- **否**：你是在自己的机器上运行，只想要最快的开发循环。请改用常规安装流程。
-- **沙箱说明**：默认的沙箱后端在启用沙箱时使用 Docker，但沙箱默认是关闭的，并且运行完整网关**不需要** Docker。也可使用 SSH 和 OpenShell 沙箱后端。参见 [沙箱](/gateway/sandboxing)。
+The default sandbox backend uses Docker when `agents.defaults.sandbox` is enabled, but sandboxing is off by default and does not require the gateway itself to run in Docker. SSH and OpenShell sandbox backends are also available; see [Sandboxing](/gateway/sandboxing).
 
 ## 前置条件
 
-- Docker Desktop（或 Docker Engine）+ Docker Compose v2
-- 构建镜像至少需要 2 GB RAM（在 1 GB 主机上，`pnpm install` 可能因内存不足被杀死并返回退出码 137）
-- 足够的磁盘空间用于镜像和日志
-- 如果运行在 VPS/公网主机上，请查看
-  [网络暴露的安全加固](/gateway/security)，
-  特别是 Docker `DOCKER-USER` 防火墙策略。
+- Docker Desktop (or Docker Engine) + Docker Compose v2
+- At least 2 GB RAM for image build (`pnpm install` may be OOM-killed on 1 GB hosts with exit 137)
+- Enough disk for images and logs
+- On a VPS/public host, review [Security hardening for network exposure](/gateway/security), especially the Docker `DOCKER-USER` firewall chain
 
 ## 容器化网关
 
 <Steps>
-  <Step title="构建镜像">
-    从仓库根目录运行设置脚本：
+  <Step title="Build the image">
+    From the repo root:
 
     ```bash
     ./scripts/docker/setup.sh
     ```
 
-    这会在本地构建网关镜像。若要改用预构建镜像：
+    This builds the gateway image locally as `openclaw:local`. To use a pre-built image instead:
 
     ```bash
     export OPENCLAW_IMAGE="ghcr.io/openclaw/openclaw:latest"
     ./scripts/docker/setup.sh
     ```
 
-    预构建镜像发布在
-    [GitHub Container Registry](https://github.com/openclaw/openclaw/pkgs/container/openclaw)。
-    常见标签：`main`、`latest`、`<version>`（例如 `2026.2.26`）。
+    Pre-built images are published first to the [GitHub Container Registry](https://github.com/openclaw/openclaw/pkgs/container/openclaw). GHCR is the primary registry for release automation, pinned deployments, and provenance checks. The same release publishes a Docker Hub mirror at `openclaw/openclaw`:
+
+    ```bash
+    export OPENCLAW_IMAGE="openclaw/openclaw:latest"
+    ./scripts/docker/setup.sh
+    ```
+
+    Use `ghcr.io/openclaw/openclaw` or `openclaw/openclaw` and avoid unofficial mirrors, which don't share OpenClaw's release timing or retention policy. Official tags: `main`, `latest`, `<version>` (e.g. `2026.2.26`), and beta tags such as `2026.2.26-beta.1` (betas never move `latest`/`main`). The default `main`/`latest`/`<version>` image bundles the `codex` and `diagnostics-otel` plugins. A `-browser` variant (e.g. `latest-browser`) also ships with Chromium baked in, useful for the [sandboxed browser](/gateway/sandboxing#sandboxed-browser) tool without a first-run Playwright install.
 
   </Step>
 
@@ -55,32 +54,26 @@ Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docke
     ./scripts/docker/setup.sh --offline
     ```
 
-    `--offline` 会验证 `OPENCLAW_IMAGE` 已经存在于本地，禁用隐式的 Compose 拉取和构建，然后运行正常的设置流程，例如
-    `.env` 同步、权限修复、入门配置、网关配置同步，以及 Compose 启动。
+    `--offline` verifies `OPENCLAW_IMAGE` already exists locally, disables implicit Compose pulls/builds, then runs the normal flow: `.env` sync, permission fixes, onboarding, gateway config sync, Compose startup.
 
-    如果 `OPENCLAW_SANDBOX=1`，离线设置还会检查配置的默认沙箱镜像以及位于
-    `OPENCLAW_DOCKER_SOCKET` 后的 daemon 上按代理启用的沙箱镜像。基于 Docker 的浏览器镜像也必须携带当前 OpenClaw 浏览器契约标签。当所需镜像缺失或不兼容时，设置会退出，并且不会更改沙箱配置，而不是在沙箱不可用的情况下报告成功。
+    If `OPENCLAW_SANDBOX=1`, offline setup also checks the configured default and per-agent sandbox images on the daemon behind `OPENCLAW_DOCKER_SOCKET`, including the browser-contract label on Docker-backed browser images. If a required image is missing or stale, setup exits without changing sandbox config rather than reporting a broken success.
 
   </Step>
 
   <Step title="Complete onboarding">
-    设置脚本会自动运行入门配置。它将：
+    The setup script runs onboarding automatically:
 
-    - 提示输入提供商 API 密钥
-    - 生成网关令牌并将其写入 `.env`
-    - 创建 auth-profile 机密密钥目录
-    - 通过 Docker Compose 启动网关
+    - prompts for provider API keys
+    - generates a gateway token and writes it to `.env`
+    - creates the auth-profile secret key directory
+    - starts the gateway via Docker Compose
 
-    在设置期间，预启动入门和配置写入会直接通过
-    `openclaw-gateway` 执行。`openclaw-cli` 用于网关容器已经存在
-    之后你运行的命令。
+    Pre-start onboarding and config writes run through `openclaw-gateway` directly (with `--no-deps --entrypoint node`), since `openclaw-cli` shares the gateway's network namespace and only works once the gateway container exists.
 
   </Step>
 
-  <Step title="打开控制界面">
-    在浏览器中打开 `http://127.0.0.1:18789/`，并将配置好的
-    共享密钥粘贴到 Settings 中。设置脚本默认会向 `.env` 写入一个令牌；
-    如果你将容器配置切换为密码认证，则改用该密码。
+  <Step title="Open the Control UI">
+    Open `http://127.0.0.1:18789/` and paste the token written to `.env` into Settings. If you switched the container to password auth, use that password instead.
 
     需要再次获取 URL？
 
@@ -90,9 +83,7 @@ Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docke
 
   </Step>
 
-  <Step title="配置通道（可选）">
-    使用 CLI 容器添加消息通道：
-
+  <Step title="Configure channels (optional)">
     ```bash
     # WhatsApp（二维码）
     docker compose run --rm openclaw-cli channels login
@@ -111,8 +102,6 @@ Docker 是**可选的**。只有在你想要一个容器化网关或验证 Docke
 
 ### 手动流程
 
-如果你更希望自己逐步执行每一步，而不是使用设置脚本：
-
 ```bash
 docker build -t openclaw:local -f Dockerfile .
 docker compose run --rm --no-deps --entrypoint node openclaw-gateway \
@@ -123,57 +112,50 @@ docker compose up -d openclaw-gateway
 ```
 
 <Note>
-从仓库根目录运行 `docker compose`。如果你启用了 `OPENCLAW_EXTRA_MOUNTS`
-或 `OPENCLAW_HOME_VOLUME`，设置脚本会写入 `docker-compose.extra.yml`；
-当两个覆盖文件都存在时，请将它们放在任何标准覆盖文件之后，例如
-`-f docker-compose.yml -f docker-compose.override.yml -f docker-compose.extra.yml`
-。
-</Note>
-
-<Note>
-由于 `openclaw-cli` 与 `openclaw-gateway` 共享网络命名空间，因此它是一个
-启动后的工具。在 `docker compose up -d openclaw-gateway` 之前，请通过
-带有 `--no-deps --entrypoint node` 的 `openclaw-gateway` 来运行入门配置
-和设置时的配置写入。
+Run `docker compose` from the repo root. If you enabled `OPENCLAW_EXTRA_MOUNTS` or `OPENCLAW_HOME_VOLUME`, the setup script writes `docker-compose.extra.yml`; include it after any `docker-compose.override.yml` you maintain yourself, e.g. `-f docker-compose.yml -f docker-compose.override.yml -f docker-compose.extra.yml`.
 </Note>
 
 ### 环境变量
 
-设置脚本接受以下可选环境变量：
+Optional variables accepted by `scripts/docker/setup.sh` (and, for the gateway container, by `docker-compose.yml` directly):
 
-| Variable                                   | Purpose                                                               |
-| ------------------------------------------ | --------------------------------------------------------------------- |
-| `OPENCLAW_IMAGE`                           | 使用远程镜像而不是本地构建                                            |
-| `OPENCLAW_IMAGE_APT_PACKAGES`              | 在构建期间安装额外的 apt 包（以空格分隔）                              |
-| `OPENCLAW_IMAGE_PIP_PACKAGES`              | 在构建期间安装额外的 Python 包（以空格分隔）                          |
-| `OPENCLAW_EXTENSIONS`                      | 在构建时预安装插件依赖项（以空格分隔的名称）                          |
-| `OPENCLAW_EXTRA_MOUNTS`                    | 额外的主机绑定挂载（以逗号分隔的 `source:target[:opts]`）             |
-| `OPENCLAW_HOME_VOLUME`                     | 将 `/home/node` 持久化到命名 Docker 卷中                              |
-| `OPENCLAW_SANDBOX`                         | 启用沙箱引导（`1`、`true`、`yes`、`on`）                               |
-| `OPENCLAW_SKIP_ONBOARDING`                 | 跳过交互式入门步骤（`1`、`true`、`yes`、`on`）                         |
-| `OPENCLAW_DOCKER_SOCKET`                   | 覆盖 Docker socket 路径                                               |
-| `OPENCLAW_DISABLE_BONJOUR`                 | 禁用 Bonjour/mDNS 广播（Docker 下默认为 `1`）                         |
-| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS` | 禁用捆绑的插件源码绑定挂载覆盖层                                      |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`              | OpenTelemetry 导出的共享 OTLP/HTTP 收集器端点                         |
-| `OTEL_EXPORTER_OTLP_*_ENDPOINT`            | 用于 traces、metrics 或 logs 的信号特定 OTLP 端点                     |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`              | OTLP 协议覆盖。当前仅支持 `http/protobuf`                             |
-| `OTEL_SERVICE_NAME`                        | 用于 OpenTelemetry 资源的服务名称                                      |
-| `OTEL_SEMCONV_STABILITY_OPT_IN`            | 采用最新的实验性 GenAI 语义属性                                         |
-| `OPENCLAW_OTEL_PRELOADED`                  | 当已预加载一个 OpenTelemetry SDK 时，跳过启动第二个                     |
+| Variable                                        | Purpose                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `OPENCLAW_IMAGE`                                | Use a remote image instead of building locally                                                          |
+| `OPENCLAW_IMAGE_APT_PACKAGES`                   | Install extra apt packages during build (space-separated). Legacy alias: `OPENCLAW_DOCKER_APT_PACKAGES` |
+| `OPENCLAW_IMAGE_PIP_PACKAGES`                   | Install extra Python packages during build (space-separated)                                            |
+| `OPENCLAW_EXTENSIONS`                           | Pre-install plugin dependencies at build time (comma- or space-separated ids)                           |
+| `OPENCLAW_DOCKER_BUILD_NODE_OPTIONS`            | Override the local source-build Node options (default `--max-old-space-size=8192`)                      |
+| `OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB` | Override the local source-build tsdown heap in MB                                                       |
+| `OPENCLAW_DOCKER_BUILD_SKIP_DTS`                | Skip declaration output during runtime-only local image builds (default `1`)                            |
+| `OPENCLAW_INSTALL_BROWSER`                      | Bake Chromium + Xvfb into the image at build time                                                       |
+| `OPENCLAW_EXTRA_MOUNTS`                         | Extra host bind mounts (comma-separated `source:target[:opts]`)                                         |
+| `OPENCLAW_HOME_VOLUME`                          | Persist `/home/node` in a named Docker volume                                                           |
+| `OPENCLAW_SANDBOX`                              | Opt in to sandbox bootstrap (`1`, `true`, `yes`, `on`)                                                  |
+| `OPENCLAW_SKIP_ONBOARDING`                      | Skip the interactive onboarding step (`1`, `true`, `yes`, `on`)                                         |
+| `OPENCLAW_DOCKER_SOCKET`                        | Override the Docker socket path                                                                         |
+| `OPENCLAW_DISABLE_BONJOUR`                      | Force Bonjour/mDNS advertising on (`0`) or off (`1`); see [Bonjour / mDNS](#bonjour--mdns)              |
+| `OPENCLAW_DISABLE_BUNDLED_SOURCE_OVERLAYS`      | Disable bundled plugin source bind-mount overlays                                                       |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`                   | Shared OTLP/HTTP collector endpoint for OpenTelemetry export                                            |
+| `OTEL_EXPORTER_OTLP_*_ENDPOINT`                 | Signal-specific OTLP endpoints for traces, metrics, or logs                                             |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`                   | OTLP protocol override. Only `http/protobuf` is supported today                                         |
+| `OTEL_SERVICE_NAME`                             | Service name used for OpenTelemetry resources                                                           |
+| `OTEL_SEMCONV_STABILITY_OPT_IN`                 | Opt in to latest experimental GenAI semantic attributes                                                 |
+| `OPENCLAW_OTEL_PRELOADED`                       | Skip starting a second OpenTelemetry SDK when one is preloaded                                          |
 
-官方 Docker 镜像不包含 Homebrew。在入门配置期间，当 OpenClaw 运行在没有 `brew` 的 Linux 容器中时，它会隐藏仅适用于 brew 的技能依赖安装器；这些依赖必须通过自定义镜像提供或手动安装。对于 Debian 软件包可提供的依赖，请在镜像构建期间使用 `OPENCLAW_IMAGE_APT_PACKAGES`。旧的 `OPENCLAW_DOCKER_APT_PACKAGES` 名称仍被接受。
-对于 Python 依赖，请使用 `OPENCLAW_IMAGE_PIP_PACKAGES`。这会在镜像构建期间运行 `python3 -m pip install --break-system-packages`，因此请固定软件包版本，并且只使用你信任的软件包索引。
+The official image ships no Homebrew. During onboarding, OpenClaw hides brew-only skill dependency installers in a Linux container without `brew`; provide those dependencies through a custom image or install manually. Use `OPENCLAW_IMAGE_APT_PACKAGES` for Debian-packaged dependencies and `OPENCLAW_IMAGE_PIP_PACKAGES` for Python dependencies (runs `python3 -m pip install --break-system-packages` at build time, so pin versions and use only indexes you trust).
 
-维护者可以通过将一个插件源码目录挂载到其打包源码路径上，来测试打包镜像上的打包插件源码，例如
-`OPENCLAW_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`。
-该挂载的源码目录会覆盖对应的已编译
-`/app/dist/extensions/synology-chat` bundle，且插件 id 相同。
+If Docker reports `ResourceExhausted`, `cannot allocate memory`, or aborts during `tsdown`, increase the Docker builder memory limit or retry with smaller explicit heaps:
+
+```bash
+OPENCLAW_DOCKER_BUILD_NODE_OPTIONS=--max-old-space-size=4096 OPENCLAW_DOCKER_BUILD_TSDOWN_MAX_OLD_SPACE_MB=4096
+```
+
+To test bundled plugin source against a packaged image, mount one plugin source directory over its packaged source path, e.g. `OPENCLAW_EXTRA_MOUNTS=/path/to/fork/extensions/synology-chat:/app/extensions/synology-chat:ro`. That overrides the matching compiled `/app/dist/extensions/synology-chat` bundle for the same plugin id.
 
 ### 可观测性
 
-OpenTelemetry 导出是从 Gateway 容器向你的 OTLP
-收集器的出站连接。它不需要发布 Docker 端口。如果你本地构建镜像并希望
-镜像内可用打包的 OpenTelemetry 导出器，请包含其运行时依赖：
+OpenTelemetry export is outbound from the Gateway container to your OTLP collector; it needs no published Docker port. To include the bundled exporter in a locally built image:
 
 ```bash
 export OPENCLAW_EXTENSIONS="diagnostics-otel"
@@ -182,23 +164,15 @@ export OTEL_SERVICE_NAME="openclaw-gateway"
 ./scripts/docker/setup.sh
 ```
 
-在启用导出之前，请从 ClawHub 安装官方的 `@openclaw/diagnostics-otel` 插件，
-用于打包的 Docker 安装。自定义源码构建的镜像仍然可以通过
-`OPENCLAW_EXTENSIONS=diagnostics-otel` 包含本地插件源码。要启用导出，请在配置中允许并启用
-`diagnostics-otel` 插件，然后设置
-`diagnostics.otel.enabled=true`，或者使用 [OpenTelemetry 导出](/gateway/opentelemetry) 中的配置示例。
-Collector 认证头通过 `diagnostics.otel.headers` 配置，而不是通过 Docker 环境变量。
+Official prebuilt images already bundle `diagnostics-otel`; install `clawhub:@openclaw/diagnostics-otel` yourself only if you removed it. To enable export, allow and enable the `diagnostics-otel` plugin in config, then set `diagnostics.otel.enabled=true` (see the full example in [OpenTelemetry export](/gateway/opentelemetry)). Collector auth headers go through `diagnostics.otel.headers`, not Docker environment variables.
 
-Prometheus 指标使用已经发布的 Gateway 端口。安装
-`clawhub:@openclaw/diagnostics-prometheus`，启用
-`diagnostics-prometheus` 插件，然后抓取：
+Prometheus metrics reuse the already-published Gateway port. Install `clawhub:@openclaw/diagnostics-prometheus`, enable the `diagnostics-prometheus` plugin, then scrape:
 
 ```text
 http://<gateway-host>:18789/api/diagnostics/prometheus
 ```
 
-该路由受 Gateway 身份验证保护。不要暴露单独的公开 `/metrics` 端口或未认证的反向代理路径。参见
-[Prometheus 指标](/gateway/prometheus)。
+The route is protected by Gateway authentication; don't expose a separate public `/metrics` port or unauthenticated reverse-proxy path. See [Prometheus metrics](/gateway/prometheus).
 
 ### 健康检查
 
@@ -209,9 +183,7 @@ curl -fsS http://127.0.0.1:18789/healthz   # 存活
 curl -fsS http://127.0.0.1:18789/readyz     # 就绪
 ```
 
-Docker 镜像包含一个内置的 `HEALTHCHECK`，会 ping `/healthz`。
-如果检查持续失败，Docker 会将容器标记为 `unhealthy`，并且
-编排系统可以重启或替换它。
+The image's built-in `HEALTHCHECK` pings `/healthz`; repeated failures mark the container `unhealthy` so orchestrators can restart or replace it.
 
 已认证的深度健康快照：
 
@@ -221,97 +193,136 @@ docker compose exec openclaw-gateway node dist/index.js health --token "$OPENCLA
 
 ### LAN 与 loopback
 
-`scripts/docker/setup.sh` 默认将 `OPENCLAW_GATEWAY_BIND=lan`，这样主机访问
-`http://127.0.0.1:18789` 时可与 Docker 端口发布配合工作。
+`scripts/docker/setup.sh` defaults `OPENCLAW_GATEWAY_BIND=lan` so `http://127.0.0.1:18789` on the host works with Docker port publishing.
 
-- `lan`（默认）：主机浏览器和主机 CLI 都可以访问已发布的网关端口。
-- `loopback`：只有容器网络命名空间中的进程才能直接访问
-  网关。
+- `lan` (default): host browser and host CLI can reach the published gateway port.
+- `loopback`: only processes inside the container network namespace can reach the gateway directly.
 
 <Note>
-请使用 `gateway.bind` 中的绑定模式值（`lan` / `loopback` / `custom` /
-`tailnet` / `auto`），不要使用像 `0.0.0.0` 或 `127.0.0.1` 这样的主机别名。
+Use bind mode values in `gateway.bind` (`lan` / `loopback` / `custom` / `tailnet` / `auto`), not host aliases like `0.0.0.0` or `127.0.0.1`.
 </Note>
 
-### 主机本地提供商
+### Host local providers
 
-当 OpenClaw 在 Docker 中运行时，容器内的 `127.0.0.1` 指的是容器
-本身，而不是你的主机。对于运行在主机上的 AI 提供商，请使用 `host.docker.internal`：
+Inside the container, `127.0.0.1` is the container itself, not the host. Use `host.docker.internal` for providers running on the host:
 
 | 提供商     | 主机默认 URL              | Docker 设置 URL                     |
 | ---------- | -------------------------- | ------------------------------------ |
 | LM Studio  | `http://127.0.0.1:1234`   | `http://host.docker.internal:1234`   |
 | Ollama     | `http://127.0.0.1:11434`  | `http://host.docker.internal:11434`  |
 
-打包的 Docker 设置使用这些主机 URL 作为 LM Studio 和 Ollama
-入门配置默认值，并且 `docker-compose.yml` 会将 `host.docker.internal` 映射到
-Linux Docker Engine 的 Docker host gateway。Docker Desktop 已经在 macOS 和 Windows 上提供
-相同的主机名。
-
-主机服务还必须监听 Docker 可访问的地址：
+The bundled setup uses those URLs as LM Studio/Ollama onboarding defaults, and `docker-compose.yml` maps `host.docker.internal` to the host gateway on Linux Docker Engine (Docker Desktop provides the same alias on macOS/Windows). Host services must listen on an address Docker can reach:
 
 ```bash
 lms server start --port 1234 --bind 0.0.0.0
 OLLAMA_HOST=0.0.0.0:11434 ollama serve
 ```
 
-如果你使用自己的 Compose 文件或 `docker run` 命令，请自行添加相同的主机
-映射，例如
-`--add-host=host.docker.internal:host-gateway`。
+Using your own Compose file or `docker run`? Add the same mapping yourself, e.g. `--add-host=host.docker.internal:host-gateway`.
+
+### Claude CLI backend in Docker
+
+The official image does not pre-install Claude Code. Install and log in inside the container's `node` user, then persist that container home so image upgrades don't erase the binary or auth state.
+
+For a new install, enable a persistent `/home/node` volume before running setup:
+
+```bash
+export OPENCLAW_IMAGE="ghcr.io/openclaw/openclaw:latest"
+export OPENCLAW_HOME_VOLUME="openclaw_home"
+./scripts/docker/setup.sh
+```
+
+For an existing install, stop the stack and reload the current `.env` values first — the setup script always rewrites `.env` from the current shell and defaults, it doesn't read the file on its own:
+
+```bash
+set -a
+. ./.env
+set +a
+export OPENCLAW_HOME_VOLUME="${OPENCLAW_HOME_VOLUME:-openclaw_home}"
+./scripts/docker/setup.sh
+```
+
+If `.env` contains values your shell can't source, re-export what you rely on manually first (`OPENCLAW_IMAGE`, ports, bind mode, custom paths, `OPENCLAW_EXTRA_MOUNTS`, sandbox, skip-onboarding). The generated overlay mounts the home volume for both `openclaw-gateway` and `openclaw-cli`; run the remaining commands with that overlay (and `docker-compose.override.yml` first, if you use one):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  --entrypoint sh openclaw-cli -lc \
+  'curl -fsSL https://claude.ai/install.sh | bash'
+```
+
+The native installer writes `claude` to `/home/node/.local/bin/claude`. Point OpenClaw at that path:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  openclaw-cli config set \
+  agents.defaults.cliBackends.claude-cli.command \
+  /home/node/.local/bin/claude
+```
+
+Log in and verify from the same persisted home:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  --entrypoint /home/node/.local/bin/claude openclaw-cli auth login
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  --entrypoint /home/node/.local/bin/claude openclaw-cli auth status --text
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  openclaw-cli models auth login \
+  --provider anthropic --method cli --set-default
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  openclaw-cli models list --provider anthropic
+```
+
+Then use the bundled `claude-cli` backend:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.extra.yml run --rm \
+  openclaw-cli agent \
+  --agent main \
+  --model claude-cli/claude-sonnet-4-6 \
+  --message "Say hello from Docker Claude CLI"
+```
+
+`OPENCLAW_HOME_VOLUME` persists the native install under `/home/node/.local/bin` and `/home/node/.local/share/claude`, plus Claude Code settings/auth under `/home/node/.claude` and `/home/node/.claude.json`. Persisting only `/home/node/.openclaw` is not enough; if you use `OPENCLAW_EXTRA_MOUNTS` instead of a home volume, mount all of those Claude paths into both services.
+
+<Note>
+For shared production automation or predictable Anthropic billing, prefer the Anthropic API-key path. Claude CLI reuse follows Claude Code's installed version, account login, billing, and update behavior.
+</Note>
 
 ### Bonjour / mDNS
 
-Docker bridge 网络通常不会可靠地转发 Bonjour/mDNS 组播
-（`224.0.0.251:5353`）。因此，打包的 Compose 设置默认
-`OPENCLAW_DISABLE_BONJOUR=1`，这样当 bridge 丢弃组播流量时，Gateway
-就不会陷入崩溃循环或在重启时反复广播。
+Docker bridge networking usually doesn't forward Bonjour/mDNS multicast (`224.0.0.251:5353`) reliably. When `OPENCLAW_DISABLE_BONJOUR` is unset, the bundled Bonjour plugin auto-disables LAN advertising once it detects it's running in a container, so it won't crash-loop retrying multicast the bridge drops. Set `OPENCLAW_DISABLE_BONJOUR=1` to force it off regardless of detection, or `0` to force it on (only on host networking, macvlan, or another network where mDNS multicast is known to work).
 
-Docker 主机请使用已发布的 Gateway URL、Tailscale 或广域 DNS-SD。
-仅当使用 host networking、macvlan 或其他已知 mDNS 组播可工作的网络时，才将
-`OPENCLAW_DISABLE_BONJOUR=0`。
-
-有关注意事项和故障排查，请参见 [Bonjour 发现](/gateway/bonjour)。
+Use the published Gateway URL, Tailscale, or wide-area DNS-SD for Docker hosts otherwise. See [Bonjour discovery](/gateway/bonjour) for gotchas and troubleshooting.
 
 ### 存储与持久化
 
-Docker Compose 将 `OPENCLAW_CONFIG_DIR` 挂载到 `/home/node/.openclaw`，
-将 `OPENCLAW_WORKSPACE_DIR` 挂载到 `/home/node/.openclaw/workspace`，并将
-`OPENCLAW_AUTH_PROFILE_SECRET_DIR` 挂载到 `/home/node/.config/openclaw`，因此这些
-路径在容器替换后仍会保留。当任一变量未设置时，捆绑的
-`docker-compose.yml` 会回退到 `${HOME}` 下；如果 `HOME` 本身也缺失，则回退到
-`/tmp`。这样可以避免 `docker compose up` 在裸环境中输出空源
-卷规范。
+Docker Compose bind-mounts `OPENCLAW_CONFIG_DIR` to `/home/node/.openclaw`, `OPENCLAW_WORKSPACE_DIR` to `/home/node/.openclaw/workspace`, and `OPENCLAW_AUTH_PROFILE_SECRET_DIR` to `/home/node/.config/openclaw`, so those paths survive container replacement. When a variable is unset, `docker-compose.yml` falls back under `${HOME}`, or `/tmp` if `HOME` itself is missing, so `docker compose up` never emits an empty-source volume spec on bare environments.
 
-该挂载的配置目录是 OpenClaw 存放以下内容的地方：
+That mounted config directory holds:
 
 - 用于行为配置的 `openclaw.json`
 - 用于保存的提供商 OAuth/API 密钥认证的 `agents/<agentId>/agent/auth-profiles.json`
 - 基于环境变量的运行时机密，如 `OPENCLAW_GATEWAY_TOKEN` 的 `.env`
 
-auth-profile 机密密钥目录存储用于 OAuth 支持的 auth profile 令牌材料的本地加密密钥。请将其与 Docker 主机状态一起保存，但要与 `OPENCLAW_CONFIG_DIR` 分开。
+The auth-profile secret directory stores the local encryption key for OAuth-backed auth profile token material. Keep it with your Docker host state, but separate from `OPENCLAW_CONFIG_DIR`.
 
-已安装的可下载插件会将其包状态保存在挂载的 OpenClaw home 下，因此插件安装记录和包根目录会在容器替换后保留。网关启动不会生成内置插件的依赖树。
+Installed downloadable plugins store package state under the mounted OpenClaw home, so install records and package roots survive container replacement; gateway startup does not regenerate bundled-plugin dependency trees.
 
-关于 VM 部署的完整持久化细节，请参见
-[Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where)。
+For full VM persistence details, see [Docker VM Runtime - What persists where](/install/docker-vm-runtime#what-persists-where).
 
-**磁盘增长热点：** 关注 `media/`、session JSONL 文件、共享的
-SQLite 状态数据库、已安装插件包根目录，以及 `/tmp/openclaw/` 下的滚动日志文件。
+**Disk growth hotspots:** `media/`, session JSONL files, the shared SQLite state database, installed plugin package roots, and rolling file logs under `/tmp/openclaw/`.
 
 ### Shell 助手（可选）
 
-为了更方便地进行日常 Docker 管理，请安装 `ClawDock`：
+For shorter day-to-day commands, install [ClawDock](/install/clawdock):
 
 ```bash
 mkdir -p ~/.clawdock && curl -sL https://raw.githubusercontent.com/openclaw/openclaw/main/scripts/clawdock/clawdock-helpers.sh -o ~/.clawdock/clawdock-helpers.sh
 echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 ```
 
-如果你是从旧的 `scripts/shell-helpers/clawdock-helpers.sh` 原始路径安装的 ClawDock，请重新运行上面的安装命令，以便你的本地助手文件跟踪到新位置。
-
-然后使用 `clawdock-start`、`clawdock-stop`、`clawdock-dashboard` 等命令。运行
-`clawdock-help` 查看全部命令。
-完整助手指南请参见 [ClawDock](/install/clawdock)。
+If you installed from the older `scripts/shell-helpers/clawdock-helpers.sh` path, rerun the command above so your local helper tracks the current location. Then use `clawdock-start`, `clawdock-stop`, `clawdock-dashboard`, etc. (run `clawdock-help` for the full list).
 
 <AccordionGroup>
   <Accordion title="为 Docker 网关启用代理沙箱">
@@ -328,10 +339,7 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     ./scripts/docker/setup.sh
     ```
 
-    脚本仅在沙箱前置条件通过后才会挂载 `docker.sock`。如果
-    沙箱设置无法完成，脚本会将 `agents.defaults.sandbox.mode`
-    重置为 `off`。在 OpenClaw 沙箱处于活动状态时，Codex code-mode 回合仍然仅受限于 Codex
-    `workspace-write`；不要将宿主机 Docker socket 挂载到代理沙箱容器中。
+    The script mounts `docker.sock` only after sandbox prerequisites pass. If sandbox setup can't complete, it resets `agents.defaults.sandbox.mode` to `off`. Codex code mode is disabled for turns where the OpenClaw sandbox is active (see [Sandboxing § Docker backend](/gateway/sandboxing#docker-backend)); never mount the host Docker socket into agent sandbox containers.
 
   </Accordion>
 
@@ -345,19 +353,12 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="共享网络安全说明">
-    `openclaw-cli` 使用 `network_mode: "service:openclaw-gateway"`，因此 CLI
-    命令可以通过 `127.0.0.1` 访问网关。请将其视为共享的信任边界。compose 配置会为
-    `openclaw-gateway` 和 `openclaw-cli` 同时移除 `NET_RAW`/`NET_ADMIN`
-    并启用 `no-new-privileges`。
+  <Accordion title="Shared-network security note">
+    `openclaw-cli` uses `network_mode: "service:openclaw-gateway"` so CLI commands can reach the gateway over `127.0.0.1`. Treat this as a shared trust boundary. The compose config drops `NET_RAW`/`NET_ADMIN` and enables `no-new-privileges` on both `openclaw-gateway` and `openclaw-cli`.
   </Accordion>
 
-  <Accordion title="openclaw-cli 中的 Docker Desktop DNS 失败">
-    某些 Docker Desktop 配置在移除 `NET_RAW` 后，会在共享网络的
-    `openclaw-cli` sidecar 中 DNS 查询失败，这会在诸如 `openclaw plugins install`
-    之类依赖 npm 的命令中表现为 `EAI_AGAIN`。正常网关运行时请保留默认的加固 compose 文件。
-    下方的本地覆盖文件会通过恢复 Docker 的默认 capabilities 来放宽 CLI 容器的安全策略，
-    因此它只应用于需要访问包注册表的一次性 CLI 命令，而不是作为默认的 Compose 调用：
+  <Accordion title="Docker Desktop DNS failures in openclaw-cli">
+    Some Docker Desktop setups fail DNS lookups from the shared-network `openclaw-cli` sidecar after `NET_RAW` is dropped, showing up as `EAI_AGAIN` during npm-backed commands like `openclaw plugins install`. Keep the default hardened compose file for normal operation. The override below restores default capabilities for the `openclaw-cli` container only — use it for the one-off command that needs registry access, not as your default invocation:
 
     ```bash
     printf '%s\n' \
@@ -369,31 +370,23 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
     docker compose -f docker-compose.yml -f docker-compose.cli-no-dropped-caps.local.yml run --rm openclaw-cli plugins install <package>
     ```
 
-    如果你已经创建了一个长期运行的 `openclaw-cli` 容器，请使用相同的覆盖重新创建它。
-    `docker compose exec` 和 `docker exec` 无法为已创建的容器更改 Linux capabilities。
+    If you already created a long-running `openclaw-cli` container, recreate it with the same override — `docker compose exec`/`docker exec` can't change Linux capabilities on an already-created container.
 
   </Accordion>
 
-  <Accordion title="权限与 EACCES">
-    镜像以 `node`（uid 1000）身份运行。如果你在
-    `/home/node/.openclaw` 上看到权限错误，请确保你的主机绑定挂载归 uid 1000 所有：
+  <Accordion title="Permissions and EACCES">
+    The image runs as `node` (uid 1000). If you see permission errors on `/home/node/.openclaw`, make sure your host bind mounts are owned by uid 1000:
 
     ```bash
     sudo chown -R 1000:1000 /path/to/openclaw-config /path/to/openclaw-workspace
     ```
 
-    同样的不匹配也可能表现为插件警告，例如
-    `blocked plugin candidate: suspicious ownership (... uid=1000, expected uid=0 or root)`
-    ，随后出现 `plugin present but blocked`。这意味着进程 uid 与
-    挂载的插件目录所有者不一致。请优先以默认 uid 1000 运行容器，并修正绑定挂载的所有权。
-    只有在你有意长期以 root 运行 OpenClaw 时，才将
-    `/path/to/openclaw-config/npm` chown 为 `root:root`。
+    The same mismatch can show up as `blocked plugin candidate: suspicious ownership (... uid=1000, expected uid=0 or root)` followed by `plugin present but blocked` — the process uid and the mounted plugin directory owner disagree. Prefer running as the default uid 1000 and fixing the bind mount ownership. Only chown `/path/to/openclaw-config/npm` to `root:root` if you intentionally run OpenClaw as root long term.
 
   </Accordion>
 
-  <Accordion title="更快的重建">
-    调整 Dockerfile 顺序，使依赖层可以被缓存。这样可以避免在 lockfile 没变时重复运行
-    `pnpm install`：
+  <Accordion title="Faster rebuilds">
+    Order your Dockerfile so dependency layers are cached, avoiding a `pnpm install` rerun unless lockfiles change:
 
     ```dockerfile
     FROM node:24-bookworm
@@ -415,55 +408,42 @@ echo 'source ~/.clawdock/clawdock-helpers.sh' >> ~/.zshrc && source ~/.zshrc
 
   </Accordion>
 
-  <Accordion title="高级用户容器选项">
-    默认镜像以安全优先为原则，并以非 root 的 `node` 运行。若要获得功能更完整的
-    容器：
+  <Accordion title="Power-user container options">
+    The default image is security-first and runs as non-root `node`. For a more full-featured container:
 
     1. **Persist `/home/node`**: `export OPENCLAW_HOME_VOLUME="openclaw_home"`
     2. **Bake system deps**: `export OPENCLAW_IMAGE_APT_PACKAGES="git curl jq"`
     3. **Bake Python deps**: `export OPENCLAW_IMAGE_PIP_PACKAGES="requests==2.32.5 humanize==4.14.0"`
-    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`
+    4. **Bake Playwright Chromium**: `export OPENCLAW_INSTALL_BROWSER=1`, or use the official `-browser` image tag
     5. **Or install Playwright browsers into a persisted volume**:
        ```bash
        docker compose run --rm openclaw-cli \
          node /app/node_modules/playwright-core/cli.js install chromium
        ```
-    6. **Persist browser downloads**: use `OPENCLAW_HOME_VOLUME` or
-       `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the Docker image's
-       Playwright-managed Chromium on Linux.
+    6. **Persist browser downloads**: use `OPENCLAW_HOME_VOLUME` or `OPENCLAW_EXTRA_MOUNTS`. OpenClaw auto-detects the image's Playwright-managed Chromium on Linux.
 
   </Accordion>
 
-  <Accordion title="OpenAI Codex OAuth（无头 Docker）">
-    如果你在向导中选择 OpenAI Codex OAuth，它会打开一个浏览器 URL。对于
-    Docker 或无头环境，请复制你最终到达的完整重定向 URL，并将其粘回向导中以完成认证。
+  <Accordion title="OpenAI Codex OAuth (headless Docker)">
+    If you pick OpenAI Codex OAuth in the wizard, it opens a browser URL. In Docker or headless setups, copy the full redirect URL you land on and paste it back into the wizard to finish auth.
   </Accordion>
 
-  <Accordion title="基础镜像元数据">
-    主 Docker 运行时镜像使用 `node:24-bookworm-slim`，并包含 `tini` 作为入口点初始化进程（PID 1），以确保长时间运行的容器能够正确回收僵尸进程并处理信号。它会发布 OCI 基础镜像注解，包括 `org.opencontainers.image.base.name`、
-    `org.opencontainers.image.source` 等。Node 基础镜像的摘要会通过 Dependabot Docker 基础镜像 PR 进行刷新；发布构建不会运行发行版升级层。参见
-    [OCI image annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)。
+  <Accordion title="Base image metadata">
+    The runtime image uses `node:24-bookworm-slim` and runs `tini` as PID 1 so zombie processes are reaped and signals handled correctly in long-running containers. It publishes OCI base-image annotations including `org.opencontainers.image.base.name` and `org.opencontainers.image.source`. Dependabot refreshes the pinned Node base digest; release builds don't run a separate distro upgrade layer. See [OCI image annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md).
   </Accordion>
 </AccordionGroup>
 
 ### 在 VPS 上运行？
 
-请参见 [Hetzner（Docker VPS）](/install/hetzner) 和
-[Docker VM Runtime](/install/docker-vm-runtime)，了解共享 VM 部署步骤，
-包括二进制打包、持久化和更新。
+See [Hetzner (Docker VPS)](/install/hetzner) and [Docker VM Runtime](/install/docker-vm-runtime) for shared VM deployment steps including binary baking, persistence, and updates.
 
 ## Agent 沙箱
 
-当使用 Docker 后端启用 `agents.defaults.sandbox` 时，网关会将代理工具执行（shell、文件读写等）
-放在隔离的 Docker 容器中运行，而网关本身仍保留在主机上。这为不受信任或多租户的代理会话提供了一道
-硬隔离墙，而无需将整个网关容器化。
+When `agents.defaults.sandbox` is enabled with the Docker backend, the gateway runs agent tool execution (shell, file read/write, etc.) inside isolated Docker containers while the gateway itself stays on the host — a hard wall around untrusted or multi-tenant agent sessions without containerizing the whole gateway.
 
-沙箱作用域可以是按代理（默认）、按会话或共享。每个作用域
-都有自己挂载在 `/workspace` 的工作区。你还可以配置
-允许/拒绝工具策略、网络隔离、资源限制和浏览器
-容器。
+Sandbox scope can be per-agent (default), per-session, or shared; each scope gets its own workspace mounted at `/workspace`. You can also configure allow/deny tool policies, network isolation, resource limits, and browser containers.
 
-有关完整配置、镜像、安全说明以及多代理配置文件，请参见：
+For full configuration, images, security notes, and multi-agent profiles:
 
 - [沙箱](/gateway/sandboxing) -- 完整沙箱参考
 - [OpenShell](/gateway/openshell) -- 对沙箱容器的交互式 shell 访问
@@ -495,23 +475,16 @@ scripts/sandbox-setup.sh
 ## 故障排查
 
 <AccordionGroup>
-  <Accordion title="镜像缺失或沙盒容器未启动">
-    使用
-    [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh)
-    （源码检出）或 [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) 中的内联 `docker build` 命令（npm install），
-    或将 `agents.defaults.sandbox.docker.image` 设置为你的自定义镜像。
-    容器会按会话按需自动创建。
+  <Accordion title="Image missing or sandbox container not starting">
+    Build the sandbox image with [`scripts/sandbox-setup.sh`](https://github.com/openclaw/openclaw/blob/main/scripts/sandbox-setup.sh) (source checkout) or the inline `docker build` command from [Sandboxing § Images and setup](/gateway/sandboxing#images-and-setup) (npm install), or set `agents.defaults.sandbox.docker.image` to your custom image. Containers are auto-created per session on demand.
   </Accordion>
 
-  <Accordion title="沙盒中的权限错误">
-    将 `docker.user` 设置为与已挂载工作区所有权匹配的 UID:GID，
-    或者对工作区文件夹执行 chown。
+  <Accordion title="Permission errors in sandbox">
+    Set `docker.user` to a UID:GID that matches your mounted workspace ownership, or chown the workspace folder.
   </Accordion>
 
-  <Accordion title="沙盒中找不到自定义工具">
-    OpenClaw 使用 `sh -lc`（登录 shell）运行命令，这会加载
-    `/etc/profile`，并可能重置 PATH。设置 `docker.env.PATH` 以在前面追加
-    你的自定义工具路径，或者在 Dockerfile 中的 `/etc/profile.d/` 下添加脚本。
+  <Accordion title="Custom tools not found in sandbox">
+    OpenClaw runs commands with `sh -lc` (login shell), which sources `/etc/profile` and may reset PATH. Set `docker.env.PATH` to prepend your custom tool paths, or add a script under `/etc/profile.d/` in your Dockerfile.
   </Accordion>
 
   <Accordion title="构建镜像时因 OOM 被杀死（exit 137）">

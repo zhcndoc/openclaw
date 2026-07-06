@@ -7,7 +7,7 @@ read_when:
 title: "Raspberry Pi"
 ---
 
-在 Raspberry Pi 上运行一个持久、始终在线的 OpenClaw Gateway。由于 Pi 只是网关（模型通过 API 在云端运行），即使是配置普通的 Pi 也能很好地承担这项工作——典型硬件成本为**一次性 35–80 美元**，没有月费。
+在 Raspberry Pi 上运行一个持久、始终在线的 OpenClaw Gateway。由于 Pi 只是网关（模型通过 API 在云端运行），即使是普通的 Pi 也能很好地处理工作负载——典型硬件成本为 **$35-80 一次性**，没有月费。
 
 ## 硬件兼容性
 
@@ -25,12 +25,12 @@ title: "Raspberry Pi"
 
 ## 前置条件
 
-- 具备 2 GB+ 内存的 Raspberry Pi 4 或 5（推荐 4 GB）
-- MicroSD 卡（16 GB+）或 USB SSD（性能更好）
-- 官方 Pi 电源适配器
-- 网络连接（以太网或 WiFi）
-- 64 位 Raspberry Pi OS（必需 -- 不要使用 32 位）
-- 大约 30 分钟
+- A Raspberry Pi 4 or 5 with 2 GB+ of memory (4 GB recommended)
+- MicroSD card (16 GB+) or USB SSD (better performance)
+- Official Pi power adapter
+- Network connection (Ethernet or WiFi)
+- 64-bit Raspberry Pi OS (required -- do not use 32-bit)
+- About 30 minutes
 
 ## 设置
 
@@ -132,9 +132,9 @@ title: "Raspberry Pi"
 
 ## 性能提示
 
-**使用 USB SSD** -- SD 卡速度慢且容易磨损。USB SSD 能显著提升性能。请参阅 [Pi USB 启动指南](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#usb-mass-storage-boot)。
+**使用 USB SSD** -- SD 卡速度慢，而且容易磨损。USB SSD 能显著提升性能，并支持更多写入周期；如果你将操作系统保留在 SD 卡上，建议将其用于 `OPENCLAW_STATE_DIR`。请参阅 [Pi USB 启动指南](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#usb-mass-storage-boot)。
 
-**启用模块编译缓存** -- 可加快在低功耗 Pi 主机上重复执行 CLI 的速度：
+**启用模块编译缓存** -- 可加快在低功耗 Pi 主机上重复执行 CLI 的速度。`OPENCLAW_NO_RESPAWN=1` 可让常规 Gateway 重启保持在进程内完成，避免额外的进程切换，并在小型主机上保持 PID 跟踪简单：
 
 ```bash
 grep -q 'NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache' ~/.bashrc || cat >> ~/.bashrc <<'EOF' # pragma: allowlist secret
@@ -145,7 +145,7 @@ EOF
 source ~/.bashrc
 ```
 
-`OPENCLAW_NO_RESPAWN=1` 会使常规 Gateway 重启在进程内完成，从而避免额外的进程切换，并让小型主机上的 PID 跟踪更简单。
+使用 `/var/tmp`，不要使用 `/tmp` -- 某些发行版会在启动时清空 `/tmp`，这会清除已预热的缓存。
 
 **降低内存使用** -- 对于无头设置，释放 GPU 内存并禁用未使用的服务：
 
@@ -173,7 +173,7 @@ TimeoutStartSec=90
 
 ## 推荐模型设置
 
-由于 Pi 只运行网关，请使用云端托管的 API 模型：
+由于 Pi 只运行网关，请使用云托管的 API 模型——不要在 Pi 上运行本地 LLM，即使是小型模型也太慢，无法实用：
 
 ```json
 {
@@ -188,26 +188,22 @@ TimeoutStartSec=90
 }
 ```
 
-不要在 Pi 上运行本地 LLM——即使是小模型也慢得不实用。让 Claude 或 GPT 负责模型推理工作。
-
 ## ARM 二进制说明
 
-大多数 OpenClaw 功能在 ARM64 上无需更改即可运行（Node.js、Telegram、WhatsApp/Baileys、Chromium）。偶尔缺少 ARM 构建的二进制，通常是技能包中附带的可选 Go/Rust CLI 工具。在回退到从源代码构建之前，请先检查缺失二进制的发布页面是否提供 `linux-arm64` / `aarch64` 构建产物。
+大多数 OpenClaw 功能在 ARM64 上无需修改即可运行（Node.js、Telegram、WhatsApp/Baileys、Chromium）。偶尔缺少 ARM 构建的二进制文件通常是由技能提供的可选 Go/Rust CLI 工具。先使用 `uname -m` 验证架构（应显示 `aarch64`），然后在缺失二进制文件的发布页面上检查是否有 `linux-arm64` / `aarch64` 产物，再在必要时回退为从源代码构建。
 
 ## 持久化与备份
 
 OpenClaw 的状态位于：
 
-- `~/.openclaw/` — `openclaw.json`、按 agent 区分的 `auth-profiles.json`、渠道/提供商状态、会话。
-- `~/.openclaw/workspace/` — agent 工作区（SOUL.md、memory、artifacts）。
+- `~/.openclaw/` -- `openclaw.json`、每个 agent 的 `auth-profiles.json`、channel/provider 状态、会话。
+- `~/.openclaw/workspace/` -- agent 工作区（SOUL.md、memory、artifacts）。
 
-这些内容会在重启后保留。可使用以下命令创建可移植快照：
+这些内容在重启后仍会保留，并且在性能和耐用性方面都能从 SSD 中受益，而不是使用 SD 卡。使用以下命令创建一个可移动的快照：
 
 ```bash
 openclaw backup create
 ```
-
-如果你将这些内容放在 SSD 上，性能和寿命都会优于 SD 卡。
 
 ## 故障排查
 
@@ -229,6 +225,6 @@ openclaw backup create
 
 ## 相关内容
 
-- [Install overview](/install)
-- [Linux server](/vps)
-- [Platforms](/platforms)
+- [安装概览](/install)
+- [Linux 服务器](/vps)
+- [平台](/platforms)

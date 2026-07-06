@@ -25,8 +25,8 @@ title: "OpenClaw"
 > _"EXFOLIATE! EXFOLIATE!"_ — 一只太空龙虾，大概吧
 
 <p align="center">
-  <strong>适用于 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等平台的任何操作系统网关，面向 AI 代理。</strong><br />
-  发送消息，随时从你的口袋里获取代理回复。通过内置通道、捆绑的通道插件、WebChat 和移动节点运行一个网关。
+  <strong>适用于跨 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等平台的任何操作系统 AI 代理网关。</strong><br />
+  发一条消息，就能从你的口袋里收到代理回复。通过频道插件、WebChat 和移动节点运行一个 Gateway。
 </p>
 
 <Columns>
@@ -43,16 +43,16 @@ title: "OpenClaw"
 
 ## 什么是 OpenClaw？
 
-OpenClaw 是一个 **自托管网关**，将你喜欢的聊天应用和通道界面——包括内置通道，以及捆绑或外部通道插件，如 Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等——连接到 AI 编码代理。你可以在自己的机器（或服务器）上运行一个网关进程，它就会成为你的消息应用与始终在线的 AI 助手之间的桥梁。
+OpenClaw 是一个**自托管网关**，可通过频道插件将你最喜欢的聊天应用——Discord、Google Chat、iMessage、Matrix、Microsoft Teams、Signal、Slack、Telegram、WhatsApp、Zalo 等更多应用——连接到 AI 编码代理。你只需在自己的机器（或服务器）上运行一个 Gateway 进程，它就会成为你的消息应用与一个始终可用的 AI 助手之间的桥梁。
 
 **它适合谁？** 适合希望拥有一个可以随时发消息的个人 AI 助手的开发者和高级用户——而且不必放弃对数据的控制，也不依赖托管服务。
 
 **它有何不同？**
 
-- **自托管**：运行在你的硬件上，按你的规则来
-- **多通道**：一个网关可同时服务内置通道以及捆绑或外部通道插件
-- **原生面向代理**：为具备工具使用、会话、记忆和多代理路由能力的编码代理而构建
-- **开源**：MIT 许可证，社区驱动
+- **自托管**：在你的硬件上运行，按你的规则办
+- **多频道**：一个 Gateway 可同时为所有已配置的频道插件提供服务
+- **面向代理**：为支持工具使用、会话、记忆和多代理路由的编码代理而构建
+- **开源**：MIT 许可，社区驱动
 
 **你需要什么？** Node 24（推荐），或 Node 22 LTS（`22.19+`）以保证兼容性、来自你所选提供商的 API 密钥，以及 5 分钟。为获得最佳质量和安全性，请使用可用的最强最新一代模型。
 
@@ -77,7 +77,7 @@ flowchart LR
     使用单个网关进程即可支持 Discord、iMessage、Signal、Slack、Telegram、WhatsApp、WebChat 等。
   </Card>
   <Card title="插件通道" icon="plug" href="/tools/plugin">
-    捆绑插件可在当前正常发布版本中添加 Matrix、Nostr、Twitch、Zalo 等更多通道。
+    通道插件可添加 Matrix、Nostr、Twitch、Zalo 等；官方插件可按需安装。
   </Card>
   <Card title="多代理路由" icon="route" href="/concepts/multi-agent">
     为每个代理、工作区或发送者隔离会话。
@@ -135,8 +135,8 @@ flowchart LR
 
 配置位于 `~/.openclaw/openclaw.json`。
 
-- 如果你**什么都不做**，OpenClaw 会使用捆绑的 OpenClaw agent runtime，并按发送者分配会话。
-- 如果你想加强限制，可以从 `channels.whatsapp.allowFrom` 开始设置，并且（针对群组）配置提及规则。
+- 如果你**什么都不做**，OpenClaw 会使用内置的 OpenClaw 代理运行时；私信会共享代理的主会话，而每个群聊都会获得自己的会话。
+- 如果你想加强限制，可以从 `channels.whatsapp.allowFrom` 和（对于群组）提及规则开始。
 
 示例：
 
@@ -164,8 +164,8 @@ flowchart LR
   <Card title="远程访问" href="/gateway/remote" icon="globe">
     SSH 和 tailnet 访问模式。
   </Card>
-  <Card title="通道" href="/channels/telegram" icon="message-square">
-    Feishu、Microsoft Teams、WhatsApp、Telegram、Discord 等的通道专属设置。
+  <Card title="Channels" href="/channels/telegram" icon="message-square">
+    针对 Discord、飞书、Microsoft Teams、Telegram、WhatsApp 等的频道专属设置。
   </Card>
   <Card title="节点" href="/nodes" icon="smartphone">
     带有配对、Canvas、摄像头和设备操作的 iOS 和 Android 节点。

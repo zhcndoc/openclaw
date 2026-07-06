@@ -127,7 +127,7 @@ const calendarCreate = await openclaw.tools.describe("mcp:calendar:create_event"
 
 ```js
 await openclaw.tools.call(calendarCreate.id, {
-  summary: "规划",
+  summary: "计划",
   start: "2026-05-09T14:00:00Z",
 });
 ```
@@ -217,7 +217,7 @@ openclaw config set tools.toolSearch true
 }
 ```
 
-调整代码模式超时和搜索结果限制：
+调整 code 模式的超时和搜索结果限制（所示值为默认值）：
 
 ```json5
 {
@@ -231,6 +231,9 @@ openclaw config set tools.toolSearch true
   },
 }
 ```
+
+运行时会将 `codeTimeoutMs` 限制在 1000-60000 之间，将 `maxSearchLimit` 限制在 1-50 之间，并且将
+`searchDefaultLimit` 限制在 1..`maxSearchLimit` 之间。
 
 禁用它：
 
@@ -261,10 +264,10 @@ openclaw config set tools.toolSearch true
 
 ## 端到端验证
 
-gateway E2E 运行器会借助 OpenClaw 运行时证明两条路径：
+QA 实验室网关场景使用 OpenClaw 运行时验证了两条路径：
 
 ```bash
-node --import tsx scripts/tool-search-gateway-e2e.ts
+pnpm openclaw qa suite --provider-mode mock-openai --scenario tool-search-gateway-e2e
 ```
 
 它会创建一个带有大型工具目录的临时假插件，启动 mock

@@ -7,12 +7,10 @@ read_when:
 title: "Moonshot AI"
 ---
 
-Moonshot 提供与 OpenAI 兼容端点的 Kimi API。配置该
-提供方并将默认模型设置为 `moonshot/kimi-k2.6`，或者使用
-`kimi/kimi-for-coding` 的 Kimi Coding。
+Moonshot 提供与 OpenAI 兼容的 Kimi API 端点。将默认模型设置为 `moonshot/kimi-k2.6`（适用于 Moonshot Open Platform），或设置为 `kimi/kimi-for-coding`（适用于 Kimi Coding）。
 
 <Warning>
-Moonshot 和 Kimi Coding 是**不同的提供方**。密钥不能互换，端点不同，模型引用也不同（`moonshot/...` vs `kimi/...`）。
+Moonshot 和 Kimi Coding 是**独立的提供方**，并且各自作为单独的外部插件提供。密钥不能互换，端点也不同，模型引用也不同（`moonshot/...` vs `kimi/...`）。
 </Warning>
 
 ## 内置模型目录
@@ -22,32 +20,48 @@ Moonshot 和 Kimi Coding 是**不同的提供方**。密钥不能互换，端点
 | Model ref                         | 名称                   | 推理 | 输入        | 上下文   | 最大输出   |
 | --------------------------------- | ---------------------- | ---- | ----------- | -------- | ---------- |
 | `moonshot/kimi-k2.6`              | Kimi K2.6              | 否   | text, image | 262,144  | 262,144    |
-| `moonshot/kimi-k2.7-code`         | Kimi K2.7 Code         | 始终开启 | text, image | 262,144 | 262,144    |
+| `moonshot/kimi-k2.7-code`         | Kimi K2.7 代码         | 始终开启 | text, image | 262,144 | 262,144    |
 | `moonshot/kimi-k2.5`              | Kimi K2.5              | 否   | text, image | 262,144  | 262,144    |
-| `moonshot/kimi-k2-thinking`       | Kimi K2 Thinking       | 是   | text        | 262,144  | 262,144    |
-| `moonshot/kimi-k2-thinking-turbo` | Kimi K2 Thinking Turbo | 是   | text        | 262,144  | 262,144    |
+| `moonshot/kimi-k2-thinking`       | Kimi K2 思考       | 是   | text        | 262,144  | 262,144    |
+| `moonshot/kimi-k2-thinking-turbo` | Kimi K2 思考 Turbo | 是   | text        | 262,144  | 262,144    |
 | `moonshot/kimi-k2-turbo`          | Kimi K2 Turbo          | 否   | text        | 256,000  | 16,384     |
 
 [//]: # "moonshot-kimi-k2-ids:end"
 
-当前 Moonshot 托管的 K2 模型目录成本估算使用 Moonshot 公布的按量付费费率：Kimi K2.7 Code 为 $0.19/MTok 缓存命中、$0.95/MTok 输入、$4.00/MTok 输出；Kimi K2.6 为 $0.16/MTok 缓存命中、$0.95/MTok 输入、$4.00/MTok 输出；Kimi K2.5 为 $0.10/MTok 缓存命中、$0.60/MTok 输入、$3.00/MTok 输出。其他旧版目录条目保持零成本占位符，除非你在配置中覆盖它们。
+目录成本估算使用 Moonshot 公布的按量付费费率：Kimi
+K2.7 Code 为每百万 token 缓存命中 $0.19、输入 $0.95、输出 $4.00；Kimi
+K2.6 为每百万 token 缓存命中 $0.16、输入 $0.95、输出 $4.00；Kimi K2.5
+为每百万 token 缓存命中 $0.10、输入 $0.60、输出 $3.00。除非你在配置中覆盖，其他目录
+条目保持零成本占位符。
 
-Kimi K2.7 Code 始终使用原生思考。OpenClaw 对该模型仅暴露 `on` 思考状态，并省略外发的 `thinking` 和 `reasoning_effort` 控制，这是 Moonshot 的要求。OpenClaw 也省略了 K2.7 固定为提供方默认值的采样覆盖项。Kimi K2.6 仍是入门默认值。
+Kimi K2.7 Code 始终使用原生思考。OpenClaw 仅为该模型暴露 `on`
+思考状态，并省略出站 `thinking` 和
+`reasoning_effort` 字段，这符合 Moonshot 的要求。它还省略采样
+覆盖项（`temperature`、`top_p`、`n`、`presence_penalty`、
+`frequency_penalty`），因为 K2.7 将它们固定为提供方默认值。Kimi K2.6 仍然是
+入门默认项。
 
 ## 开始使用
 
-选择你的提供方并按照设置步骤操作。
+Moonshot 和 Kimi Coding 都是外部插件 - 请先安装其中一个再进行
+引导。
 
 <Tabs>
   <Tab title="Moonshot API">
     **最适合：** 通过 Moonshot Open Platform 使用 Kimi K2 模型。
 
     <Steps>
+      <Step title="安装插件">
+        ```bash
+        openclaw plugins install @openclaw/moonshot-provider
+        openclaw gateway restart
+        ```
+      </Step>
       <Step title="选择你的端点区域">
-        | 认证选择               | 端点                         | 区域          |
-        | ---------------------- | ---------------------------- | ------------- |
-        | `moonshot-api-key`     | `https://api.moonshot.ai/v1` | 国际          |
-        | `moonshot-api-key-cn`  | `https://api.moonshot.cn/v1` | 中国          |
+        | Auth choice            | Endpoint                       | Region        |
+        | ---------------------- | ------------------------------ | ------------- |
+        | `moonshot-api-key`     | `https://api.moonshot.ai/v1`   | 国际          |
+        | `moonshot-api-key-cn`  | `https://api.moonshot.cn/v1`   | 中国          |
       </Step>
       <Step title="运行初始化">
         ```bash
@@ -191,22 +205,17 @@ Kimi K2.7 Code 始终使用原生思考。OpenClaw 对该模型仅暴露 `on` �
   </Tab>
 
   <Tab title="Kimi Coding">
-    安装官方插件，然后重启 Gateway：
-
-    ```bash
-    openclaw plugins install @openclaw/kimi-provider
-    openclaw gateway restart
-    ```
-    **最适合：** 通过 Kimi Coding 端点处理面向代码的任务。
+    **最适合：** 通过 Kimi Coding 端点进行以代码为中心的任务。
 
     <Note>
-    Kimi Coding 使用与 Moonshot（`moonshot/...`）不同的 API 密钥和提供方前缀（`kimi/...`）。稳定的 API 模型引用是 `kimi/kimi-for-coding`；旧版引用 `kimi/kimi-code` 和 `kimi/k2p5` 仍然被接受，并会规范化为该 API 模型 id。
+    Kimi Coding 使用与 Moonshot（`moonshot/...`）不同的 API 密钥和提供商前缀（`kimi/...`）。稳定的模型引用是 `kimi/kimi-for-coding`；旧版引用 `kimi/kimi-code` 和 `kimi/k2p5` 仍然被接受，并会规范化为该模型 id。
     </Note>
 
     <Steps>
       <Step title="安装插件">
         ```bash
         openclaw plugins install @openclaw/kimi-provider
+        openclaw gateway restart
         ```
       </Step>
       <Step title="运行初始化">
@@ -344,7 +353,7 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
     | 任何非 off 级别      | `thinking.type=enabled`    |
 
     <Warning>
-    当启用 Moonshot 思考时，`tool_choice` 必须是 `auto` 或 `none`。OpenClaw 会将不兼容的值规范化为 `auto`。这包括 Kimi K2.7 Code，因为为了保留固定的工具选择，它的思考模式不能被禁用。
+    当启用 Moonshot thinking 时，`tool_choice` 必须为 `auto` 或 `none`。固定的工具选择（`type: "tool"` 或 `type: "function"`）会将 thinking 强制设回 `disabled`，这样请求的工具仍会运行；`tool_choice: "required"` 会改为规范化为 `auto`。这适用于除 Kimi K2.7 Code 之外的所有 Moonshot 模型，因为该模型的思考模式无法关闭——当 `tool_choice` 不兼容时，其 `tool_choice` 会被规范化为 `auto`。
     </Warning>
 
     Kimi K2.6 还接受一个可选的 `thinking.keep` 字段，用于控制
@@ -373,31 +382,14 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
 
   </Accordion>
 
-  <Accordion title="工具调用 id 清理">
-    Moonshot Kimi 提供原生的 tool_call id，格式为 `functions.<name>:<index>`。对于 OpenAI-completions 传输，OpenClaw 会保留每个原生 Kimi id 的首次出现，并将后续重复项重写为确定性的 OpenAI 风格 `call_*` id。匹配的工具结果也会使用相同的 id 重新映射，因此回放保持唯一性，而不会删除 Kimi 的第一个原生 id。
-
-    若要在自定义的 OpenAI 兼容提供方上强制严格清理，请设置 `sanitizeToolCallIds: true`：
-
-    ```json5
-    {
-      models: {
-        providers: {
-          "my-kimi-proxy": {
-            api: "openai-completions",
-            sanitizeToolCallIds: true,
-          },
-        },
-      },
-    }
-    ```
-
+  <Accordion title="Tool call id sanitization">
+    Moonshot Kimi 提供的原生 tool_call id 形如 `functions.<name>:<index>`。OpenClaw 会保留每个原生 Kimi id 的首次出现，并将后续重复项重写为确定性的 OpenAI 风格 `call_*` id。匹配的工具结果会使用相同的 id 重新映射，因此重放时仍保持唯一性，而不会剥离 Kimi 的首个原生 id。此行为已集成到捆绑的 Moonshot provider 中，不是用户可配置的设置。
   </Accordion>
 
-  <Accordion title="流式 usage 兼容性">
+  <Accordion title="Streaming usage compatibility">
     原生 Moonshot 端点（`https://api.moonshot.ai/v1` 和
-    `https://api.moonshot.cn/v1`）在共享的 `openai-completions` 传输上声明了流式 usage 兼容性。OpenClaw 根据端点
-    能力进行判断，因此指向相同原生 Moonshot 主机的兼容自定义提供方 id
-    会继承相同的流式 usage 行为。
+    `https://api.moonshot.cn/v1`）声明支持流式 usage 兼容性。
+    OpenClaw 是根据端点 host 而不是 provider id 来判断的，因此指向相同原生 Moonshot host 的自定义 provider id 也会继承相同的流式 usage 行为。
 
     使用目录中 K2.6 的定价，包含输入、输出和缓存读取 token 的流式 usage
     也会转换为本地估算美元成本，用于 `/status`、`/usage full`、`/usage cost`
@@ -405,13 +397,13 @@ Moonshot 插件还会将 **Kimi** 注册为 `web_search` 提供方，由 Moonsho
 
   </Accordion>
 
-  <Accordion title="端点和模型引用参考">
-    | 提供方     | 模型引用前缀     | 端点                         | 认证环境变量        |
-    | ---------- | ---------------- | ---------------------------- | ------------------- |
+  <Accordion title="Endpoint and model ref reference">
+    | Provider   | Model ref prefix | Endpoint                      | Auth env var        |
+    | ---------- | ---------------- | ------------------------------ | ------------------- |
     | Moonshot   | `moonshot/`      | `https://api.moonshot.ai/v1`  | `MOONSHOT_API_KEY`  |
     | Moonshot CN| `moonshot/`      | `https://api.moonshot.cn/v1`  | `MOONSHOT_API_KEY`  |
-    | Kimi Coding| `kimi/`          | Kimi Coding 端点             | `KIMI_API_KEY`      |
-    | 网页搜索   | N/A              | 与 Moonshot API 区域相同      | `KIMI_API_KEY` 或 `MOONSHOT_API_KEY` |
+    | Kimi Coding| `kimi/`          | Kimi Coding endpoint           | `KIMI_API_KEY`      |
+    | Web search | N/A              | Same as Moonshot API region    | `KIMI_API_KEY` or `MOONSHOT_API_KEY` |
 
     - Kimi 网页搜索使用 `KIMI_API_KEY` 或 `MOONSHOT_API_KEY`，并默认使用 `https://api.moonshot.ai/v1` 和模型 `kimi-k2.6`。
     - 如有需要，可在 `models.providers` 中覆盖定价和上下文元数据。

@@ -6,11 +6,12 @@ read_when:
   - 你需要 account ID、gateway ID 或 API key 环境变量
 ---
 
-Cloudflare AI Gateway 位于提供方 API 之前，让你可以添加分析、缓存和控制功能。对于 Anthropic，OpenClaw 通过你的 Gateway 端点使用 Anthropic Messages API。
+[Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) 位于提供方 API 之前，并添加分析、缓存和控制功能。对于 Anthropic，OpenClaw 会通过你的 Gateway 端点使用 Anthropic Messages API。
 
 | Property      | Value                                                                                    |
 | ------------- | ---------------------------------------------------------------------------------------- |
 | Provider      | `cloudflare-ai-gateway`                                                                  |
+| Plugin        | official external package (`@openclaw/cloudflare-ai-gateway-provider`)                   |
 | Base URL      | `https://gateway.ai.cloudflare.com/v1/<account_id>/<gateway_id>/anthropic`               |
 | Default model | `cloudflare-ai-gateway/claude-sonnet-4-6`                                                |
 | API key       | `CLOUDFLARE_AI_GATEWAY_API_KEY`（你用于通过 Gateway 发起请求的提供方 API key） |
