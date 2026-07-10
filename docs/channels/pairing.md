@@ -141,7 +141,7 @@ The setup code is a base64-encoded JSON payload that contains:
 
 - `url`: the Gateway WebSocket URL (`ws://...` or `wss://...`)
 - `urls`: when available, the ordered LAN/Tailnet routes the mobile app can try
-- `bootstrapToken`: a single-use bootstrap token for the initial pairing handshake (expires after 10 minutes; `expiresAtMs` is included in the payload)
+- `bootstrapToken`: a single-use bootstrap token for the initial pairing handshake; the Gateway expires it after 10 minutes
 
 Run `/pair cleanup` to invalidate unused setup codes once pairing finishes.
 
@@ -183,7 +183,7 @@ openclaw devices reject <requestId>
 When an explicit approval is denied because the approving paired-device session
 was opened with pairing-only scope, the CLI retries the same request with
 `operator.admin`. This lets an existing admin-capable paired device recover a new
-Control UI/browser pairing without editing `devices/paired.json` by hand. The
+Control UI/browser pairing without editing the pairing store by hand. The
 Gateway still validates the retried connection; tokens that cannot authenticate
 with `operator.admin` remain blocked.
 
@@ -219,10 +219,13 @@ approval.
 
 ### Node pairing state storage
 
-Stored under `~/.openclaw/devices/`:
+Stored in the shared SQLite state database at `~/.openclaw/state/openclaw.sqlite`:
 
-- `pending.json` (short-lived; pending requests expire after 5 minutes)
-- `paired.json` (paired devices + tokens)
+- pending device pairing requests (short-lived; they expire after 5 minutes)
+- paired devices + tokens
+
+Older gateways kept this state in `~/.openclaw/devices/*.json`; those files are
+imported into SQLite at gateway startup and archived with a `.migrated` suffix.
 
 ### Notes
 
